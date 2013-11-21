@@ -17,11 +17,11 @@ import (
 
 var (
 	// tagk + tagv -> metrics
-	metric = make(map[Query]Present)
+	Metric = make(map[Query]Present)
 	// metric -> tag keys
-	tagk = make(map[string]Present)
+	Tagk = make(map[string]Present)
 	// metric + tagk -> tag values
-	tagv = make(map[Query]Present)
+	Tagv = make(map[Query]Present)
 
 	lock = sync.RWMutex{}
 )
@@ -66,21 +66,21 @@ func Process(c chan *opentsdb.DataPoint) {
 			var q Query
 			for k, v := range dp.Tags {
 				q.A, q.B = k, v
-				if _, ok := metric[q]; !ok {
-					metric[q] = make(Present)
+				if _, ok := Metric[q]; !ok {
+					Metric[q] = make(Present)
 				}
-				metric[q][dp.Metric] = nil
+				Metric[q][dp.Metric] = nil
 
-				if _, ok := tagk[dp.Metric]; !ok {
-					tagk[dp.Metric] = make(Present)
+				if _, ok := Tagk[dp.Metric]; !ok {
+					Tagk[dp.Metric] = make(Present)
 				}
-				tagk[dp.Metric][k] = nil
+				Tagk[dp.Metric][k] = nil
 
 				q.A, q.B = dp.Metric, k
-				if _, ok := tagv[q]; !ok {
-					tagv[q] = make(Present)
+				if _, ok := Tagv[q]; !ok {
+					Tagv[q] = make(Present)
 				}
-				tagv[q][v] = nil
+				Tagv[q][v] = nil
 			}
 		}(dp)
 	}
@@ -90,7 +90,7 @@ func Metrics(tagk, tagv string) []string {
 	lock.RLock()
 	defer lock.RUnlock()
 	var r []string
-	for k := range metric[Query{tagk, tagv}] {
+	for k := range Metric[Query{tagk, tagv}] {
 		r = append(r, k)
 	}
 	return r
@@ -100,7 +100,7 @@ func TagKeys(metric string) []string {
 	lock.RLock()
 	defer lock.RUnlock()
 	var r []string
-	for k := range tagk[metric] {
+	for k := range Tagk[metric] {
 		r = append(r, k)
 	}
 	return r
@@ -110,7 +110,7 @@ func TagValues(metric, tagk string) []string {
 	lock.RLock()
 	defer lock.RUnlock()
 	var r []string
-	for k := range tagv[Query{metric, tagk}] {
+	for k := range Tagv[Query{metric, tagk}] {
 		r = append(r, k)
 	}
 	return r
