@@ -1,15 +1,39 @@
-package main
+package web
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"log"
+	"net/http"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
-	tsdb "github.com/StackExchange/tsaf/opentsdb"
+	"github.com/StackExchange/tsaf/opentsdb"
 )
 
-func Chart(r tsdb.ResponseSet) *QueryResponse {
+func Chart(w http.ResponseWriter, r *http.Request) {
+	q := TSDBHttp + "api/query?start=5m-ago&m=sum:redis.keys{host=*}"
+	resp, err := http.Get(q)
+	if err != nil || resp.StatusCode != http.StatusOK {
+		log.Fatal("bad status", err, resp.StatusCode)
+	}
+	b, _ := ioutil.ReadAll(resp.Body)
+	var tr opentsdb.ResponseSet
+	if err := json.Unmarshal(b, &tr); err != nil {
+		log.Fatal("bad json", err)
+	}
+	qr := chart(tr)
+	tqx := r.FormValue("tqx")
+	qr.ReqId = strings.Split(tqx, ":")[1]
+
+	b, _ = json.Marshal(qr)
+	w.Write(b)
+}
+
+func chart(r opentsdb.ResponseSet) *QueryResponse {
 	cols := make([]Col, 1+len(r))
 	cols[0].Id = "date"
 	cols[0].Type = "datetime"
@@ -36,7 +60,7 @@ func Chart(r tsdb.ResponseSet) *QueryResponse {
 	for i, k := range rowstrs {
 		row := &rows[i]
 		row.Cells = make([]Cell, len(cols))
-		row.Cells[0].Value = ToJsonDate(k)
+		row.Cells[0].Value = toJsonDate(k)
 		for j, resp := range r {
 			if v, ok := resp.DPS[k]; ok {
 				row.Cells[j+1].Value = v
@@ -60,7 +84,7 @@ func Chart(r tsdb.ResponseSet) *QueryResponse {
 	return &qr
 }
 
-func ToJsonDate(d string) string {
+func toJsonDate(d string) string {
 	var i int64
 	var err error
 	if i, err = strconv.ParseInt(d, 10, 64); err != nil {

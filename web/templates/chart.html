@@ -10,11 +10,11 @@
 		var w = new google.visualization.ChartWrapper({
 			chartType: 'LineChart',
 			options: {
-				width: 800,
-				height: 500,
+				width: 1000,
+				height: 800,
 				curveType: 'function'
 			},
-			dataSourceUrl: '/chart',
+			dataSourceUrl: '/api/chart',
 			containerId: 'chart'
 		});
 		w.draw();

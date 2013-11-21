@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 )
 
 func Listen(addr string, relays ...func(*http.Request, []byte) error) error {
@@ -22,13 +23,20 @@ func Listen(addr string, relays ...func(*http.Request, []byte) error) error {
 			}
 		}
 	})
-	log.Println("begin listen", len(relays))
+	log.Println(len(relays), "relays listening on", addr)
 	return http.ListenAndServe(addr, mux)
 }
 
 func TSDBSend(dest string) func(*http.Request, []byte) error {
 	return func(r *http.Request, body []byte) error {
-		req, err := http.NewRequest(r.Method, dest, bytes.NewReader(body))
+		durl, err := url.Parse(dest)
+		if err != nil {
+			return err
+		}
+		durl.Path = r.URL.Path
+		durl.RawQuery = r.URL.RawQuery
+		durl.Fragment = r.URL.Fragment
+		req, err := http.NewRequest(r.Method, durl.String(), bytes.NewReader(body))
 		if err != nil {
 			return err
 		}
