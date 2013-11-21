@@ -13,17 +13,17 @@ type ResponseSet []*Response
 type Point float64
 
 type Response struct {
-	Metric        string            `json:"metric"`
-	Tags          map[string]string `json:"tags"`
-	AggregateTags []string          `json:"aggregateTags"`
-	DPS           map[string]Point  `json:"dps"`
+	Metric        string           `json:"metric"`
+	Tags          TagSet           `json:"tags"`
+	AggregateTags []string         `json:"aggregateTags"`
+	DPS           map[string]Point `json:"dps"`
 }
 
 type DataPoint struct {
-	Metric    string            `json:"metric"`
-	Timestamp int64             `json:"timestamp"`
-	Value     interface{}       `json:"value"`
-	Tags      map[string]string `json:"tags"`
+	Metric    string      `json:"metric"`
+	Timestamp int64       `json:"timestamp"`
+	Value     interface{} `json:"value"`
+	Tags      TagSet      `json:"tags"`
 }
 
 func (d *DataPoint) Telnet() string {
@@ -43,3 +43,5 @@ func (d *DataPoint) Json() io.Reader {
 }
 
 type MultiDataPoint []*DataPoint
+
+type TagSet map[string]string
