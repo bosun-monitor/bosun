@@ -9,7 +9,7 @@ import (
 	"net/url"
 )
 
-func Listen(addr string, relays ...func(*http.Request, []byte) error) error {
+func ListenHTTP(addr string, relays ...func(*http.Request, []byte) error) error {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		log.Println("req")
@@ -27,7 +27,7 @@ func Listen(addr string, relays ...func(*http.Request, []byte) error) error {
 	return http.ListenAndServe(addr, mux)
 }
 
-func TSDBSend(dest string) func(*http.Request, []byte) error {
+func TSDBSendHTTP(dest string) func(*http.Request, []byte) error {
 	return func(r *http.Request, body []byte) error {
 		durl, err := url.Parse(dest)
 		if err != nil {

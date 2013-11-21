@@ -32,7 +32,15 @@ type Query struct {
 	A, B string
 }
 
-func Extract(c chan *opentsdb.DataPoint) func(*http.Request, []byte) error {
+var (
+	dc = make(chan *opentsdb.DataPoint)
+)
+
+func init() {
+	go Process(dc)
+}
+
+func ExtractHTTP() func(*http.Request, []byte) error {
 	return func(r *http.Request, body []byte) error {
 		var dp opentsdb.DataPoint
 		var mdp opentsdb.MultiDataPoint
@@ -43,7 +51,7 @@ func Extract(c chan *opentsdb.DataPoint) func(*http.Request, []byte) error {
 			return err
 		}
 		for _, d := range mdp {
-			c <- d
+			dc <- d
 		}
 		return nil
 	}

@@ -4,8 +4,6 @@ import (
 	"log"
 	"os"
 	"strings"
-
-	"github.com/StackExchange/tsaf/opentsdb"
 	"github.com/StackExchange/tsaf/relay"
 	"github.com/StackExchange/tsaf/search"
 	"github.com/StackExchange/tsaf/web"
@@ -29,11 +27,9 @@ func init() {
 func main() {
 	log.Println("running")
 	go func() {
-		dc := make(chan *opentsdb.DataPoint)
-		go search.Process(dc)
-		send := relay.TSDBSend(TSDBHttp)
-		extract := search.Extract(dc)
-		log.Fatal(relay.Listen(RelayListen, send, extract))
+		send := relay.TSDBSendHTTP(TSDBHttp)
+		extract := search.ExtractHTTP()
+		log.Fatal(relay.ListenHTTP(RelayListen, send, extract))
 	}()
 	go log.Fatal(web.Listen(WebListen, WebDir, TSDBHttp))
 	select {}
