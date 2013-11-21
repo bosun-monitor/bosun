@@ -19,7 +19,6 @@ func Listen(addr, dir, tsdbhttp string) error {
 		dir + "/templates/chart.html",
 	)
 	if err != nil {
-		log.Println("hi")
 		log.Fatal(err)
 	}
 	router.HandleFunc("/", Index)
