@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"sort"
 	"strconv"
 	"strings"
@@ -15,8 +16,10 @@ import (
 )
 
 func Chart(w http.ResponseWriter, r *http.Request) {
-	q := TSDBHttp + "api/query?start=5m-ago&m=sum:redis.keys{host=*}"
-	resp, err := http.Get(q)
+	q, _ := url.Parse(TSDBHttp)
+	q.Path = "/api/query"
+	q.RawQuery = r.URL.RawQuery
+	resp, err := http.Get(q.String())
 	if err != nil || resp.StatusCode != http.StatusOK {
 		log.Fatal("bad status", err, resp.StatusCode)
 	}
