@@ -2,6 +2,8 @@ package main
 
 import (
 	"log"
+	"os"
+	"strings"
 
 	"github.com/StackExchange/tsaf/opentsdb"
 	"github.com/StackExchange/tsaf/relay"
@@ -17,6 +19,12 @@ var (
 
 	TSDBHttp = "http://" + TSDBHost + "/"
 )
+
+func init() {
+	if host, err := os.Hostname(); err == nil && strings.HasPrefix(host, "ny-devtsaf") {
+		WebListen = ":80"
+	}
+}
 
 func main() {
 	log.Println("running")
