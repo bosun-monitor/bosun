@@ -45,7 +45,10 @@ func chart(r opentsdb.ResponseSet) *QueryResponse {
 		for k := range resp.DPS {
 			rowkeys[k] = true
 		}
-		id := fmt.Sprintf("%v {%v%v}", resp.Metric, resp.Tags, resp.AggregateTags)
+		id := ""
+		for k, v := range resp.Tags {
+			id += fmt.Sprintf("%v:%v ", k, v)
+		}
 		cols[i+1] = Col{
 			Label: id,
 			Type:  "number",
