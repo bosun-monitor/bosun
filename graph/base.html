@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<body>
+	<div id="chart"></div>
+	<script type="text/javascript" src="https://www.google.com/jsapi"></script>
+	<script type="text/javascript">
+		google.load('visualization', '1.0', {'packages':['corechart']});
+	</script>
+	<script type="text/javascript">
+		var w = new google.visualization.ChartWrapper({
+			chartType: 'LineChart',
+			options: {
+				width: 800,
+				height: 500,
+				curveType: 'function'
+			},
+			dataSourceUrl: '/chart',
+			containerId: 'chart'
+		});
+		w.draw();
+	</script>
+</body>
+</html>
