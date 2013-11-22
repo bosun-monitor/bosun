@@ -1,34 +1,63 @@
 package main
 
 import (
+	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"time"
 
 	"github.com/StackExchange/tsaf/opentsdb"
 )
 
+const host = "localhost:4242"
+
 func main() {
-	put := func(d time.Duration, name string) {
+	put := func(d time.Duration, name string, useJson bool) {
 		i := 0
 		for t := range time.Tick(d) {
 			dp := opentsdb.DataPoint{
 				"cpu.test",
-				t.Unix(),
-				i,
+				t.UTC().Unix(),
+				i % 20,
 				map[string]string{"host": name},
 			}
-			resp, err := http.Post("http://localhost:4241/api/put", "application/json", dp.Json())
-			if err != nil {
-				log.Println("ERROR", name, t, i, err)
+			if useJson {
+				resp, err := http.Post("http://"+host+"/api/put", "application/json", dp.Json())
+				if err != nil {
+					log.Println("ERROR", name, t, i, err)
+				} else {
+					log.Println(name, t, i, resp.Status)
+					resp.Body.Close()
+				}
 			} else {
-				log.Println(name, t, i, resp.Status)
-				resp.Body.Close()
+				conn, err := net.Dial("tcp", host)
+				if err != nil {
+					log.Println("conn error", err)
+					continue
+				}
+				fmt.Fprintf(conn, dp.Telnet())
+				go func(t time.Time, i int) {
+					conn.SetDeadline(time.Now().Add(time.Second * 2))
+					buf := make([]byte, 1024)
+					if n, err := conn.Read(buf); n > 0 {
+						log.Println(string(buf))
+					} else if err != nil {
+						if e, ok := err.(net.Error); !ok || !e.Timeout() {
+							log.Println("tcp conn err", err)
+						} else {
+							log.Println(name, t, i, "TELNET SENT")
+						}
+					} else {
+						log.Println(name, t, i, "TELNET SENT")
+					}
+					conn.Close()
+				}(t, i)
 			}
 			i++
 		}
 	}
-	go put(time.Second*2, "2s")
-	go put(time.Second*3, "3s")
+	go put(time.Second*2, "2-s", false)
+	go put(time.Second*3, "3-s", false)
 	select {}
 }
