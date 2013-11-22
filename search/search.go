@@ -1,9 +1,7 @@
 package search
 
 import (
-	"encoding/json"
 	"log"
-	"net/http"
 	"strconv"
 	"strings"
 	"sync"
@@ -45,33 +43,38 @@ func init() {
 	go Process(dc)
 }
 
-func ExtractTCP() func([]byte) string {
-	return func(body []byte) (s string) {
-		sp := strings.Split(strings.TrimSpace(string(body)), " ")
-		if len(sp) < 4 {
-			return
-		} else if sp[0] != "put" {
-			return
-		}
-		i, err := strconv.ParseInt(sp[2], 10, 64)
-		if err != nil {
-			return
-		}
-		d := opentsdb.DataPoint{
-			Metric:    sp[1],
-			Timestamp: i,
-			Value:     sp[3],
-			Tags:      make(map[string]string),
-		}
-		for _, t := range sp[4:] {
-			ts := strings.Split(t, "=")
-			if len(ts) != 2 {
-				continue
-			}
-			d.Tags[ts[0]] = ts[1]
-		}
-		dc <- &d
+func TCPExtract(body []byte) {
+	sp := strings.Split(strings.TrimSpace(string(body)), " ")
+	if len(sp) < 4 {
 		return
+	} else if sp[0] != "put" {
+		return
+	}
+	i, err := strconv.ParseInt(sp[2], 10, 64)
+	if err != nil {
+		return
+	}
+	d := opentsdb.DataPoint{
+		Metric:    sp[1],
+		Timestamp: i,
+		Value:     sp[3],
+		Tags:      make(map[string]string),
+	}
+	for _, t := range sp[4:] {
+		ts := strings.Split(t, "=")
+		if len(ts) != 2 {
+			continue
+		}
+		d.Tags[ts[0]] = ts[1]
+	}
+	dc <- &d
+}
+
+/*
+func ExtractTCP() relay.TCPRelay {
+	return func(conn net.Conn, body []byte) error {
+		TCPExtract(body)
+		return nil
 	}
 }
 
@@ -91,6 +94,7 @@ func ExtractHTTP() func(*http.Request, []byte) error {
 		return nil
 	}
 }
+*/
 
 func Process(c chan *opentsdb.DataPoint) {
 	for dp := range c {
