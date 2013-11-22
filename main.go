@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	"strings"
+
 	"github.com/StackExchange/tsaf/relay"
 	"github.com/StackExchange/tsaf/search"
 	"github.com/StackExchange/tsaf/web"
@@ -26,10 +27,17 @@ func init() {
 
 func main() {
 	log.Println("running")
+	/*
+		go func() {
+			send := relay.TSDBSendHTTP(TSDBHttp)
+			extract := search.ExtractHTTP()
+			log.Fatal(relay.ListenHTTP(RelayListen, send, extract))
+		}()
+	*/
 	go func() {
-		send := relay.TSDBSendHTTP(TSDBHttp)
-		extract := search.ExtractHTTP()
-		log.Fatal(relay.ListenHTTP(RelayListen, send, extract))
+		send := relay.TSDBSendUDP(TSDBHost)
+		extract := search.ExtractTCP()
+		log.Fatal(relay.ListenTCP(RelayListen, send, extract))
 	}()
 	go log.Fatal(web.Listen(WebListen, WebDir, TSDBHttp))
 	select {}

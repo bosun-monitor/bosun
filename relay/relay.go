@@ -1,13 +1,67 @@
 package relay
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"net/url"
+	"time"
 )
+
+func ListenTCP(addr string, relays ...func([]byte) string) error {
+	ln, err := net.Listen("tcp", addr)
+	log.Println("tcp listen on", addr)
+	if err != nil {
+		return err
+	}
+	for {
+		conn, err := ln.Accept()
+		if err != nil {
+			log.Println("listen tcp accept error", err)
+			continue
+		}
+		go func(conn net.Conn) {
+			body, _ := ioutil.ReadAll(conn)
+			log.Println("body", string(body))
+			for i, relay := range relays {
+				log.Println("relay", i)
+				if res := relay(body); res != "" {
+					log.Println("tcp relay err", i, err)
+					conn.SetDeadline(time.Now().Add(time.Second * 5))
+					conn.Write([]byte(err.Error()))
+					break
+				}
+			}
+			if err := conn.Close(); err != nil {
+				log.Println("conn close err", err)
+			}
+		}(conn)
+	}
+}
+
+func TSDBSendUDP(dest string) func([]byte) string {
+	return func(body []byte) string {
+		conn, err := net.Dial("tcp", dest)
+		if err != nil {
+			return err.Error()
+		}
+		conn.Write(body)
+		conn.SetDeadline(time.Now().Add(time.Second * 5))
+		status, err := bufio.NewReader(conn).ReadString('\n')
+		if e, ok := err.(net.Error); ok && e.Timeout() {
+			// no-op
+		} else if err != nil {
+			return err.Error()
+		} else {
+			return status
+		}
+		return ""
+	}
+}
 
 func ListenHTTP(addr string, relays ...func(*http.Request, []byte) error) error {
 	mux := http.NewServeMux()

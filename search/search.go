@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/StackExchange/tsaf/opentsdb"
@@ -15,13 +17,16 @@ import (
 3) what tag values are available for a metric+tag key query?
 */
 
+type QMap map[Query]Present
+type SMap map[string]Present
+
 var (
 	// tagk + tagv -> metrics
-	Metric = make(map[Query]Present)
+	Metric = make(QMap)
 	// metric -> tag keys
-	Tagk = make(map[string]Present)
+	Tagk = make(SMap)
 	// metric + tagk -> tag values
-	Tagv = make(map[Query]Present)
+	Tagv = make(QMap)
 
 	lock = sync.RWMutex{}
 )
@@ -38,6 +43,36 @@ var (
 
 func init() {
 	go Process(dc)
+}
+
+func ExtractTCP() func([]byte) string {
+	return func(body []byte) (s string) {
+		sp := strings.Split(strings.TrimSpace(string(body)), " ")
+		if len(sp) < 4 {
+			return
+		} else if sp[0] != "put" {
+			return
+		}
+		i, err := strconv.ParseInt(sp[2], 10, 64)
+		if err != nil {
+			return
+		}
+		d := opentsdb.DataPoint{
+			Metric:    sp[1],
+			Timestamp: i,
+			Value:     sp[3],
+			Tags:      make(map[string]string),
+		}
+		for _, t := range sp[4:] {
+			ts := strings.Split(t, "=")
+			if len(ts) != 2 {
+				continue
+			}
+			d.Tags[ts[0]] = ts[1]
+		}
+		dc <- &d
+		return
+	}
 }
 
 func ExtractHTTP() func(*http.Request, []byte) error {
