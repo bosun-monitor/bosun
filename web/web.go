@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/StackExchange/tsaf/search"
 	"github.com/gorilla/mux"
 )
 
@@ -30,5 +31,12 @@ func Listen(addr, dir, tsdbhttp string) error {
 }
 
 func Index(w http.ResponseWriter, r *http.Request) {
-	templates.ExecuteTemplate(w, "chart.html", nil)
+	templates.ExecuteTemplate(w, "chart.html", struct {
+		Metric, Tagv search.QMap
+		Tagk         search.SMap
+	}{
+		search.Metric,
+		search.Tagv,
+		search.Tagk,
+	})
 }
