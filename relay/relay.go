@@ -28,7 +28,7 @@ func RelayTCP(listen, dest string) error {
 		}
 		go func(conn net.Conn) {
 			log.Println("new conn", conn.LocalAddr(), conn.RemoteAddr())
-			conn.SetDeadline(time.Now().Add(time.Second))
+			//conn.SetDeadline(time.Now().Add(time.Hour))
 			cb := bufio.NewReader(conn)
 			for {
 				bt, err := cb.ReadBytes('\n')
