@@ -21,12 +21,14 @@ func Chart(w http.ResponseWriter, r *http.Request) {
 	q.RawQuery = r.URL.RawQuery
 	resp, err := http.Get(q.String())
 	if err != nil || resp.StatusCode != http.StatusOK {
-		log.Fatal("bad status", err, resp.StatusCode)
+		log.Println("bad status", err, resp.StatusCode)
+		return
 	}
 	b, _ := ioutil.ReadAll(resp.Body)
 	var tr opentsdb.ResponseSet
 	if err := json.Unmarshal(b, &tr); err != nil {
-		log.Fatal("bad json", err)
+		log.Println("bad json", err)
+		return
 	}
 	qr := chart(tr)
 	tqx := r.FormValue("tqx")
