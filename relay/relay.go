@@ -32,7 +32,7 @@ func ListenTCP(addr string, relays ...func([]byte) string) error {
 				if res := relay(body); res != "" {
 					log.Println("tcp relay err", i, err)
 					conn.SetDeadline(time.Now().Add(time.Second * 5))
-					conn.Write([]byte(err.Error()))
+					conn.Write([]byte(res))
 					break
 				}
 			}
