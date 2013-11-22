@@ -40,7 +40,7 @@ func main() {
 			log.Fatal(relay.ListenTCP(RelayListen, send, extract))
 		}()
 	*/
-	go log.Fatal(relay.RelayTCP(RelayListen, TSDBHost))
-	go log.Fatal(web.Listen(WebListen, WebDir, TSDBHttp))
+	go func() { log.Fatal(relay.RelayTCP(RelayListen, TSDBHost)) }()
+	go func() { log.Fatal(web.Listen(WebListen, WebDir, TSDBHttp)) }()
 	select {}
 }
