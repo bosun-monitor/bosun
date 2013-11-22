@@ -81,6 +81,11 @@
 				$('#qbutton').trigger('click');
 			});
 		});
+		$(document).keypress(function(e) {
+			if (e.which == 13) {
+				$('#qbutton').trigger('click');
+			}
+		});
 	</script>
 </body>
 </html>
