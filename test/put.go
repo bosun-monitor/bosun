@@ -12,6 +12,8 @@ import (
 
 const host = "localhost:4242"
 
+//const host = "ny-devtsdb04.ds.stackexchange.com:4242"
+
 func main() {
 	put := func(d time.Duration, name string, useJson bool) {
 		i := 0
@@ -38,7 +40,7 @@ func main() {
 				}
 				fmt.Fprintf(conn, dp.Telnet())
 				go func(t time.Time, i int) {
-					conn.SetDeadline(time.Now().Add(time.Second * 2))
+					conn.SetDeadline(time.Now().Add(time.Second))
 					buf := make([]byte, 1024)
 					if n, err := conn.Read(buf); n > 0 {
 						log.Println(string(buf))
@@ -46,10 +48,10 @@ func main() {
 						if e, ok := err.(net.Error); !ok || !e.Timeout() {
 							log.Println("tcp conn err", err)
 						} else {
-							log.Println(name, t, i, "TELNET SENT")
+							log.Println(name, t, i, "TELNET1 SENT")
 						}
 					} else {
-						log.Println(name, t, i, "TELNET SENT")
+						log.Println(name, t, i, "TELNET2 SENT")
 					}
 					conn.Close()
 				}(t, i)
