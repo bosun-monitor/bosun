@@ -25,7 +25,7 @@ func Listen(addr, dir, tsdbhttp string) error {
 	router.HandleFunc("/", Index)
 	router.HandleFunc("/api/chart", Chart)
 	http.Handle("/", router)
-	//http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(dir))))
+	http.Handle("/static/", http.FileServer(http.Dir(dir)))
 	log.Println("web listening on", addr)
 	return http.ListenAndServe(addr, nil)
 }

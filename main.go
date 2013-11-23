@@ -13,7 +13,7 @@ var (
 	TSDBHost    = "ny-devtsdb04.ds.stackexchange.com:4242"
 	RelayListen = ":4242"
 	WebListen   = ":8080"
-	WebDir      = "web/"
+	WebDir      = "web"
 
 	TSDBHttp = "http://" + TSDBHost + "/"
 )
