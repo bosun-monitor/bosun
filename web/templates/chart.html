@@ -83,7 +83,8 @@
 		</script>
 		<script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
 		<script>
-			$('#qbutton').click(function() {
+			$('#qbutton').click(function(e) {
+				e.preventDefault();
 				var w = new google.visualization.ChartWrapper({
 					chartType: 'LineChart',
 					options: {
