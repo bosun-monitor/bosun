@@ -32,7 +32,7 @@ func RelayTCP(listen, dest string) error {
 			for {
 				bt, err := cb.ReadBytes('\n')
 				if len(bt) > 0 {
-					log.Println("tcp read", string(bt))
+					log.Println("tcp read", conn.RemoteAddr(), string(bt))
 					search.TCPExtract(bt)
 
 					dc, err := net.Dial("tcp", dest)
@@ -54,10 +54,7 @@ func RelayTCP(listen, dest string) error {
 								log.Println("conn write err", err)
 							}
 						}
-						if e, ok := err.(net.Error); ok && !e.Timeout() {
-							log.Println("br err", err)
-							break
-						} else if err != nil {
+						if e, ok := err.(net.Error); (ok && !e.Timeout()) || (!ok && err != nil) {
 							log.Println("br err", err)
 							break
 						}
