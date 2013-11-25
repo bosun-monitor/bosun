@@ -1,7 +1,6 @@
 package search
 
 import (
-	"log"
 	"strconv"
 	"strings"
 	"sync"
@@ -99,7 +98,6 @@ func ExtractHTTP() func(*http.Request, []byte) error {
 func Process(c chan *opentsdb.DataPoint) {
 	for dp := range c {
 		go func(dp *opentsdb.DataPoint) {
-			log.Println("proc", dp)
 			lock.Lock()
 			defer lock.Unlock()
 			var q Query

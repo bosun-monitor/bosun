@@ -27,7 +27,6 @@ func RelayTCP(listen, dest string) error {
 			continue
 		}
 		go func(conn net.Conn) {
-			log.Println("new conn", conn.LocalAddr(), conn.RemoteAddr())
 			//conn.SetDeadline(time.Now().Add(time.Hour))
 			cb := bufio.NewReader(conn)
 			for {
@@ -42,30 +41,28 @@ func RelayTCP(listen, dest string) error {
 						continue
 					}
 					dc.SetDeadline(time.Now().Add(time.Second))
-					if n, err := dc.Write(bt); err != nil {
+					if _, err := dc.Write(bt); err != nil {
 						log.Println("dc write err", err)
 						continue
-					} else {
-						log.Println("wrote bytes", n, err)
 					}
 					br := bufio.NewReader(dc)
 					for {
-						log.Println("read bytes dc", dest)
 						t, err := br.ReadBytes('\n')
-						log.Println("read", string(t), err)
 						if len(t) > 0 {
 							log.Println("br read", string(t))
 							if _, err := conn.Write(t); err != nil {
 								log.Println("conn write err", err)
 							}
 						}
-						if err != nil {
+						if e, ok := err.(net.Error); ok && !e.Timeout() {
+							log.Println("br err", err)
+							break
+						} else if err != nil {
 							log.Println("br err", err)
 							break
 						}
 					}
 					dc.Close()
-					log.Println("dc close")
 				}
 				if err != nil {
 					log.Println("bt err", err)
