@@ -242,6 +242,9 @@ Loop:
 		l.next()
 	}
 	l.ignore()
+	if l.peek() == '`' {
+		return lexRawString
+	}
 	return lexString
 }
 
@@ -253,6 +256,21 @@ func lexString(l *lexer) stateFn {
 			return lexSpace
 		}
 	}
+}
+
+func lexRawString(l *lexer) stateFn {
+	l.next()
+Loop:
+	for {
+		switch l.next() {
+		case eof:
+			return l.errorf("unterminated raw string")
+		case '`':
+			break Loop
+		}
+	}
+	l.emit(itemRawString)
+	return lexSpace
 }
 
 // isSpace reports whether r is a space character.
