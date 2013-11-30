@@ -226,17 +226,23 @@ func lexValue(l *lexer) stateFn {
 }
 
 func lexEqual(l *lexer) stateFn {
+Loop:
 	for {
 		switch r := l.next(); {
 		case r == '=':
 			l.emit(itemEqual)
-			return lexString
+			break Loop
 		case isSpace(r):
 			l.ignore()
 		default:
 			return l.errorf("expected =")
 		}
 	}
+	for isSpace(l.peek()) {
+		l.next()
+	}
+	l.ignore()
+	return lexString
 }
 
 func lexString(l *lexer) stateFn {
