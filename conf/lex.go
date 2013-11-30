@@ -160,6 +160,8 @@ func (l *lexer) run() {
 const (
 	leftDelim  = '['
 	rightDelim = ']'
+	comment    = '#'
+	newLine    = "\n"
 )
 
 // lexSpace scans until start of section or value
@@ -177,11 +179,24 @@ Loop:
 		case r == eof:
 			l.emit(itemEOF)
 			break Loop
+		case r == comment:
+			return lexComment
 		default:
 			return l.errorf("invalid character")
 		}
 	}
 	return nil
+}
+
+func lexComment(l *lexer) stateFn {
+	i := strings.Index(l.input[l.pos:], newLine)
+	if i < 0 {
+		l.emit(itemEOF)
+		return nil
+	}
+	l.pos += Pos(i + len(newLine))
+	l.ignore()
+	return lexSpace
 }
 
 func lexLeftDelim(l *lexer) stateFn {
