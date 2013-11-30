@@ -267,6 +267,7 @@ func lexString(l *lexer) stateFn {
 	for {
 		switch r := l.next(); {
 		case isEndOfLine(r) || r == eof:
+			l.backup()
 			l.emit(itemString)
 			return lexSpace
 		}
