@@ -45,7 +45,7 @@ const (
 	itemRawString  // raw string (includes quotes)
 	itemIdentifier // identifier for section and value names
 	itemRightDelim // ']'
-	itemString     // string (no quotes)
+	itemString     // string (excluding prefix whitespace and EOL or NL at EOL)
 )
 
 const eof = -1
