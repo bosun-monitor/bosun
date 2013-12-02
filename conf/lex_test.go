@@ -41,12 +41,11 @@ func TestLex(t *testing.T) {
 }
 
 func TestPrint(t *testing.T) {
-	input := `test = hi`
-	l := lex("test", input)
-	for i := range l.items {
-		fmt.Println("item", i)
-		if i.typ == itemEOF || i.typ == itemError {
-			break
-		}
+	fname := "test_valid/3"
+	c, err := ParseFile(fname)
+	if err != nil {
+		fmt.Println("error:", err)
+	} else {
+		fmt.Println(c)
 	}
 }
