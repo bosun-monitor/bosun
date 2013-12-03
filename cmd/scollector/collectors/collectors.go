@@ -89,7 +89,6 @@ func readProc(fname string, line func(string)) {
 	}
 	if err := scanner.Err(); err != nil {
 		l.Printf("%v: %v\n", fname, err)
-		return
 	}
 }
 
