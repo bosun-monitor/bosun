@@ -12,21 +12,15 @@ func init() {
 }
 
 func c_dfstat_darwin() opentsdb.MultiDataPoint {
-	b, err := command("df", "-lki")
-	if err != nil {
-		l.Println("df:", err)
-		return nil
-	}
 	var md opentsdb.MultiDataPoint
-	s := string(b)
-	for _, line := range strings.Split(s, "\n") {
+	readCommand(func(line string) {
 		fields := strings.Fields(line)
 		if line == "" || len(fields) < 9 || !IsDigit(fields[2]) {
-			continue
+			return
 		}
 		mount := fields[8]
 		if strings.HasPrefix(mount, "/Volumes/Time Machine Backups") {
-			continue
+			return
 		}
 		f5, _ := strconv.Atoi(fields[5])
 		f6, _ := strconv.Atoi(fields[6])
@@ -37,6 +31,6 @@ func c_dfstat_darwin() opentsdb.MultiDataPoint {
 		Add(&md, "df.inodes.total", f5+f6, tags)
 		Add(&md, "df.inodes.used", fields[5], tags)
 		Add(&md, "df.inodes.free", fields[6], tags)
-	}
+	}, "df", "-lki")
 	return md
 }

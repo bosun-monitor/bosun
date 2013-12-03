@@ -1,6 +1,7 @@
 package collectors
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
 	"os/exec"
@@ -24,5 +25,20 @@ func command(name string, arg ...string) ([]byte, error) {
 	case <-time.After(commandDuration):
 		c.Process.Kill()
 		return nil, fmt.Errorf("%v killed after %v", name, commandDuration)
+	}
+}
+
+func readCommand(line func(string), name string, arg ...string) {
+	b, err := command(name, arg...)
+	if err != nil {
+		l.Println(name, err)
+		return
+	}
+	scanner := bufio.NewScanner(bytes.NewBuffer(b))
+	for scanner.Scan() {
+		line(scanner.Text())
+	}
+	if err := scanner.Err(); err != nil {
+		l.Printf("%v: %v\n", name, err)
 	}
 }

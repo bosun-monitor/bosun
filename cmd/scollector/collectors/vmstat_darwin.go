@@ -11,20 +11,14 @@ func init() {
 }
 
 func c_vmstat_darwin() opentsdb.MultiDataPoint {
-	b, err := command("vm_stat")
-	if err != nil {
-		l.Println("vmstat", err)
-		return nil
-	}
 	var md opentsdb.MultiDataPoint
-	s := string(b)
-	for _, line := range strings.Split(s, "\n") {
+	readCommand(func(line string) {
 		if line == "" || strings.HasPrefix(line, "Object cache") || strings.HasPrefix(line, "Mach Virtual") {
-			continue
+			return
 		}
 		fields := strings.Split(line, ":")
 		if len(fields) < 2 {
-			continue
+			return
 		}
 		value := strings.TrimSpace(fields[1])
 		value = strings.Replace(value, ".", "", -1)
@@ -38,6 +32,6 @@ func c_vmstat_darwin() opentsdb.MultiDataPoint {
 		} else if fields[0] == "Pageouts" {
 			Add(&md, "vm.pageouts", value, nil)
 		}
-	}
+	}, "vm_stat")
 	return md
 }
