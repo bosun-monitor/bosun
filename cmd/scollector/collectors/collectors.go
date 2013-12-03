@@ -19,7 +19,7 @@ type Collector func() opentsdb.MultiDataPoint
 var l = log.New(os.Stdout, "", log.LstdFlags)
 
 var host = "unknown"
-var timestamp int64
+var timestamp int64 = time.Now().Unix()
 
 func init() {
 	if h, err := os.Hostname(); err == nil {
