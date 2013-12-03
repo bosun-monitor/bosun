@@ -1,6 +1,7 @@
 package collectors
 
 import (
+	"bufio"
 	"log"
 	"os"
 	"time"
@@ -57,4 +58,20 @@ func Add(md *opentsdb.MultiDataPoint, name string, value interface{}, tags opent
 		Tags:      tags,
 	}
 	*md = append(*md, &d)
+}
+
+func readProc(fname string, line func(string)) {
+	f, err := os.Open(fname)
+	if err != nil {
+		l.Printf("%v: %v\n", fname, err)
+		return
+	}
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line(scanner.Text())
+	}
+	if err := scanner.Err(); err != nil {
+		l.Printf("%v: %v\n", fname, err)
+		return
+	}
 }
