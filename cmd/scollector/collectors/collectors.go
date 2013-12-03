@@ -4,6 +4,9 @@ import (
 	"bufio"
 	"log"
 	"os"
+	"reflect"
+	"runtime"
+	"strings"
 	"time"
 
 	"github.com/StackExchange/tcollector/opentsdb"
@@ -27,6 +30,18 @@ func init() {
 			timestamp = t.Unix()
 		}
 	}()
+}
+
+// Search returns all collectors matching the pattern s.
+func Search(s string) []Collector {
+	var r []Collector
+	for _, c := range collectors {
+		v := runtime.FuncForPC(reflect.ValueOf(c).Pointer())
+		if strings.Contains(v.Name(), s) {
+			r = append(r, c)
+		}
+	}
+	return r
 }
 
 func Run() chan *opentsdb.DataPoint {
