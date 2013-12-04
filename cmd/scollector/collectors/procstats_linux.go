@@ -2,6 +2,7 @@ package collectors
 
 import (
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/StackExchange/tcollector/opentsdb"
@@ -106,6 +107,40 @@ func c_procstats_linux() opentsdb.MultiDataPoint {
 	})
 	readProc("/proc/sys/kernel/random/entropy_avail", func(s string) {
 		Add(&md, "proc.kernel.entropy_avail", strings.TrimSpace(s), nil)
+	})
+	num_cpus := 0
+	readProc("/proc/interrupts", func(s string) {
+		cols := strings.Fields(s)
+		if num_cpus == 0 {
+			num_cpus = len(cols)
+			return
+		} else if len(cols) < 2 {
+			return
+		}
+		irq_type := strings.TrimRight(cols[0], ":")
+		if !IsAlNum(irq_type) {
+			return
+		}
+		if IsDigit(irq_type) {
+			if cols[len(cols)-2] == "PCI-MSI-edge" && strings.Contains(cols[len(cols)-1], "eth") {
+				irq_type = cols[len(cols)-1]
+			} else {
+				// Interrupt type is just a number, ignore.
+				return
+			}
+		}
+		for i, val := range cols[1:] {
+			if i >= num_cpus {
+				// All values read, remaining cols contain textual description.
+				break
+			}
+			if !IsDigit(val) {
+				// Something is weird, there should only be digit values.
+				l.Println("interrupts: unexpected value", val)
+				break
+			}
+			Add(&md, "proc.interrupts", val, opentsdb.TagSet{"type": irq_type, "cpu": strconv.Itoa(i)})
+		}
 	})
 	return md
 }
