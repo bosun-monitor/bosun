@@ -59,7 +59,7 @@ func list() {
 func parseHost() *url.URL {
 	u := url.URL{
 		Scheme: "http",
-		Path: "/api/put",
+		Path:   "/api/put",
 	}
 	if !strings.Contains(*host, ":") {
 		*host += ":4242"
