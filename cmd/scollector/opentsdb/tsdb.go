@@ -1,11 +1,8 @@
 package opentsdb
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
-	"log"
 	"unicode"
 	"unicode/utf8"
 )
@@ -37,13 +34,11 @@ func (d *DataPoint) Telnet() string {
 	return fmt.Sprintf("put %s %d %v%s\n", d.Metric, d.Timestamp, d.Value, m)
 }
 
-func (d *DataPoint) Json() io.Reader {
-	d.clean()
-	b, err := json.Marshal(d)
-	if err != nil {
-		log.Fatal(err)
+func (m MultiDataPoint) Json() ([]byte, error) {
+	for _, d := range m {
+		d.clean()
 	}
-	return bytes.NewReader(b)
+	return json.Marshal(m)
 }
 
 type MultiDataPoint []*DataPoint
