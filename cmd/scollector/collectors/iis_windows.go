@@ -7,11 +7,11 @@ import (
 
 func init() {
 	collectors = append(collectors, c_iis_webservice)
-
 }
 
-//KMB: Might be worth monitoring cache at Win32_PerfRawData_W3SVC_WebServiceCache , but the type isn't 
-//accessible via MSDN currently (Getting Page Not Found)
+// KMB: Might be worth monitoring cache at
+// Win32_PerfRawData_W3SVC_WebServiceCache, but the type isn't accessible via
+// MSDN currently (getting Page Not Found).
 
 const IIS_WEBSERVICE_QUERY = `
 	SELECT 
@@ -27,7 +27,6 @@ const IIS_WEBSERVICE_QUERY = `
 	FROM Win32_PerfRawData_W3SVC_WebService
 	WHERE Name <> '_Total'
 `
-
 
 func c_iis_webservice() opentsdb.MultiDataPoint {
 	var dst []wmi.Win32_PerfRawData_W3SVC_WebService
