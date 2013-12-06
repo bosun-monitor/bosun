@@ -9,10 +9,6 @@ func init() {
 	collectors = append(collectors, c_mssql_general)
 }
 
-// KMB: Might be worth monitoring cache at
-// Win32_PerfRawData_W3SVC_WebServiceCache, but the type isn't accessible via
-// MSDN currently (getting Page Not Found).
-
 const SQL_GENERAL = `
 	SELECT 
 		UserConnections, ConnectionResetPersec, LoginsPersec, LogoutsPersec,
@@ -31,15 +27,15 @@ func c_mssql_general() opentsdb.MultiDataPoint {
 	}
 	var md opentsdb.MultiDataPoint
 	for _, v := range dst {
-		Add(&md, "mssql.user_connections", v.UserConnections, opentsdb.TagSet{})
-		Add(&md, "mssql.connection_resets", v.ConnectionResetPersec, opentsdb.TagSet{})
-		Add(&md, "mssql.logins", v.LoginsPersec, opentsdb.TagSet{})
-		Add(&md, "mssql.logouts", v.LogoutsPersec, opentsdb.TagSet{})
-		Add(&md, "mssql.mars_deadlocks", v.MarsDeadlocks, opentsdb.TagSet{})
-		Add(&md, "mssql.proc_blocked", v.Processesblocked, opentsdb.TagSet{})
-		Add(&md, "mssql.temptables_created", v.TempTablesCreationRate, opentsdb.TagSet{})
-		Add(&md, "mssql.temptables_to_destroy", v.TempTablesForDestruction, opentsdb.TagSet{})
-		Add(&md, "mssql.transactions", v.Transactions, opentsdb.TagSet{})
+		Add(&md, "mssql.user_connections", v.UserConnections, nil)
+		Add(&md, "mssql.connection_resets", v.ConnectionResetPersec, nil)
+		Add(&md, "mssql.logins", v.LoginsPersec, nil)
+		Add(&md, "mssql.logouts", v.LogoutsPersec, nil)
+		Add(&md, "mssql.mars_deadlocks", v.MarsDeadlocks, nil)
+		Add(&md, "mssql.proc_blocked", v.Processesblocked, nil)
+		Add(&md, "mssql.temptables_created", v.TempTablesCreationRate, nil)
+		Add(&md, "mssql.temptables_to_destroy", v.TempTablesForDestruction, nil)
+		Add(&md, "mssql.transactions", v.Transactions, nil)
 	}
 	return md
 }
