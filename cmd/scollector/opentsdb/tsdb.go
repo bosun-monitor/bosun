@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"unicode"
+	"unicode/utf8"
 )
 
 type ResponseSet []*Response
@@ -28,6 +30,7 @@ type DataPoint struct {
 
 func (d *DataPoint) Telnet() string {
 	m := ""
+	d.clean()
 	for k, v := range d.Tags {
 		m += fmt.Sprintf(" %s=%s", k, v)
 	}
@@ -35,6 +38,7 @@ func (d *DataPoint) Telnet() string {
 }
 
 func (d *DataPoint) Json() io.Reader {
+	d.clean()
 	b, err := json.Marshal(d)
 	if err != nil {
 		log.Fatal(err)
@@ -45,3 +49,32 @@ func (d *DataPoint) Json() io.Reader {
 type MultiDataPoint []*DataPoint
 
 type TagSet map[string]string
+
+func (d *DataPoint) clean() {
+	d.Tags.clean()
+	d.Metric = Clean(d.Metric)
+}
+
+func (t TagSet) clean() {
+	for k, v := range t {
+		kc := Clean(k)
+		vc := Clean(v)
+		delete(t, k)
+		t[kc] = vc
+	}
+}
+
+// Clean removes characters from s that are invalid for OpenTSDB metric and tag
+// values.
+// See: http://opentsdb.net/docs/build/html/user_guide/writing.html#metrics-and-tags
+func Clean(s string) string {
+	var c string
+	for len(s) > 0 {
+		r, size := utf8.DecodeRuneInString(s)
+		if unicode.IsLetter(r) || unicode.IsDigit(r) || r == '-' || r == '_' || r == '.' || r == '/' {
+			c += string(r)
+		}
+		s = s[size:]
+	}
+	return c
+}
