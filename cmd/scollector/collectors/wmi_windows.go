@@ -11,6 +11,7 @@ func init() {
 	collectors = append(collectors, c_network_windows)
 	collectors = append(collectors, c_physical_disk_windows)
 	collectors = append(collectors, c_simple_mem_windows)
+	collectors = append(collectors, c_disk_space_windows)
 }
 
 const CPU_QUERY = `
@@ -37,12 +38,20 @@ const PHYSICAL_DISK_QUERY = `
 		DiskWriteBytesPersec, DiskWritesPersec, 
 		SplitIOPerSec, PercentDiskReadTime, PercentDiskWriteTime
 	FROM Win32_PerfRawData_PerfDisk_PhysicalDisk
+	WHERE Name <> '_Total'
+`
+
+//Similar Breakdowns exist as to physical, but for now just using this for the space utilization 
+const DISKSPACE_QUERY = `
+	SELECT Name, FreeMegaBytes, PercentFreeSpace
+	FROM Win32_PerfRawData_PerfDisk_LogicalDisk
+	WHERE Name <> '_Total'
 `
 
 //Memory Needs to be expanded upon, Should be deeper in Utilization (What is Cache etc) 
 //as well as Saturation (i.e. Paging Activity). Lot of that is in Win32_PerfRawData_PerfOS_Memory
-
 //Win32_Operating_System's units are KBytes
+
 const SIMPLE_MEMORY_QUERY =  `
 	SELECT FreePhysicalMemory, FreeVirtualMemory,
 	TotalVisibleMemorySize, TotalVirtualMemorySize
@@ -78,6 +87,21 @@ func c_simple_mem_windows() opentsdb.MultiDataPoint {
 		Add(&md, "mem.virtual.free", v.FreeVirtualMemory * 1024, opentsdb.TagSet{})
 		Add(&md, "mem.physical.total", v.TotalVisibleMemorySize * 1024, opentsdb.TagSet{})
 		Add(&md, "mem.physical.free", v.FreePhysicalMemory * 1024, opentsdb.TagSet{})
+	}
+	return md
+}
+
+func c_disk_space_windows() opentsdb.MultiDataPoint {
+	var dst []wmi.Win32_PerfRawData_PerfDisk_LogicalDisk
+	err := wmi.Query(DISKSPACE_QUERY, &dst)
+	if err != nil {
+		l.Println("simple_mem:", err)
+		return nil
+	}
+	var md opentsdb.MultiDataPoint
+	for _, v := range dst {
+		Add(&md, "disk.logical.free_bytes", v.FreeMegabytes * 1048576, opentsdb.TagSet{"partition": v.Name})
+		Add(&md, "disk.logical.percent_free", v.PercentFreeSpace, opentsdb.TagSet{"partition": v.Name})
 	}
 	return md
 }
