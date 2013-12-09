@@ -18,9 +18,17 @@ const SQL_GENERAL = `
 	WHERE Name <> '_Total'
 `
 
+const SQL_STATISTICS = `
+	SELECT 
+		AutoParamAttemptsPersec, BatchRequestsPersec, GuidedplanexecutionsPersec,
+		MisguidedplanexecutionsPersec, 
+	FROM Win32_PerfRawData_MSSQLSERVER_SQLServerSQLStatistics
+	WHERE Name <> '_Total'
+`
+
 func c_mssql_general() opentsdb.MultiDataPoint {
 	var dst []wmi.Win32_PerfRawData_MSSQLSERVER_SQLServerGeneralStatistics
-	err := wmi.Query(SQL_GENERAL, &dst)
+	err := wmi.Query(`root\CIMV2`, SQL_GENERAL, &dst)
 	if err != nil {
 		l.Println("sql_general:", err)
 		return nil

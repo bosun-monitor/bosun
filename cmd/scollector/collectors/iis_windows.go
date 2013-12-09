@@ -7,6 +7,7 @@ import (
 
 func init() {
 	collectors = append(collectors, c_iis_webservice)
+	collectors = append(collectors, c_iis_pool)
 }
 
 // KMB: Might be worth monitoring cache at
@@ -28,9 +29,28 @@ const IIS_WEBSERVICE_QUERY = `
 	WHERE Name <> '_Total'
 `
 
+const IIS_APOOL_QUERY = `
+	SELECT AppPoolName, ProcessId
+	From WorkerProcess
+`
+
+func c_iis_pool() opentsdb.MultiDataPoint {
+	var dst []wmi.WorkerProcess
+	err := wmi.Query(`root\WebManagement`, IIS_APOOL_QUERY, &dst)
+	if err != nil {
+		l.Println("iis:", err)
+		return nil
+	}
+	var md opentsdb.MultiDataPoint
+	for _, v := range dst {
+		Add(&md, "iis.apool.pid", v.ProcessId, opentsdb.TagSet{"name": v.AppPoolName})
+	}
+	return md
+}
+
 func c_iis_webservice() opentsdb.MultiDataPoint {
 	var dst []wmi.Win32_PerfRawData_W3SVC_WebService
-	err := wmi.Query(IIS_WEBSERVICE_QUERY, &dst)
+	err := wmi.Query(`root\cimv2`, IIS_WEBSERVICE_QUERY, &dst)
 	if err != nil {
 		l.Println("iis:", err)
 		return nil
