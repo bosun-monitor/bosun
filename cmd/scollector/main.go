@@ -2,41 +2,47 @@ package main
 
 import (
 	"flag"
-	"fmt"
+	"log"
 	"net/url"
+	"os"
 	"reflect"
 	"runtime"
 	"strings"
 
 	"github.com/StackExchange/tcollector/collectors"
+	"github.com/StackExchange/tcollector/opentsdb"
 	"github.com/StackExchange/tcollector/queue"
 )
 
+var l = log.New(os.Stdout, "", log.LstdFlags)
+
 var flagTest = flag.String("test", "", "Test collector matching pattern")
 var flagList = flag.Bool("list", false, "List available collectors")
-var host = flag.String("host", "", `Required. OpenTSDB host. Ex: "tsdb.example.com". Can optionally specify port: "tsdb.example.com:4000", but will default to 4242 otherwise.`)
+var host = flag.String("host", "", `OpenTSDB host. Ex: "tsdb.example.com". Can optionally specify port: "tsdb.example.com:4000", but will default to 4242 otherwise. If not specified, will print to screen`)
 
 func main() {
 	flag.Parse()
+	u := parseHost()
 	if *flagTest != "" {
 		test(*flagTest)
 		return
 	} else if *flagList {
 		list()
 		return
-	} else if *host == "" {
-		fmt.Println("missing -host flag")
-		return
+	} else if *host != "" {
+		if u == nil {
+			l.Fatal("invalid host:", *host)
+		}
 	}
-	u := parseHost()
-	if u == nil {
-		fmt.Println("invalid host:", *host)
-		return
-	}
-	fmt.Println("OpenTSDB host:", u)
 
 	cdp := collectors.Run()
-	queue.New(u.String(), cdp)
+	if u != nil {
+		l.Println("OpenTSDB host:", u)
+		queue.New(u.String(), cdp)
+	} else {
+		l.Println("Outputting to screen")
+		printPut(cdp)
+	}
 	select {}
 }
 
@@ -44,7 +50,7 @@ func test(s string) {
 	for _, c := range collectors.Search(s) {
 		md := c()
 		for _, d := range md {
-			fmt.Print(d.Telnet())
+			l.Print(d.Telnet())
 		}
 	}
 }
@@ -52,11 +58,14 @@ func test(s string) {
 func list() {
 	for _, c := range collectors.Search("") {
 		v := runtime.FuncForPC(reflect.ValueOf(c).Pointer())
-		fmt.Println(v.Name())
+		l.Println(v.Name())
 	}
 }
 
 func parseHost() *url.URL {
+	if *host == "" {
+		return nil
+	}
 	u := url.URL{
 		Scheme: "http",
 		Path:   "/api/put",
@@ -66,4 +75,10 @@ func parseHost() *url.URL {
 	}
 	u.Host = *host
 	return &u
+}
+
+func printPut(c chan *opentsdb.DataPoint) {
+	for dp := range c {
+		l.Print(dp.Telnet())
+	}
 }
