@@ -57,7 +57,7 @@ func test(s string) {
 
 func list() {
 	for _, c := range collectors.Search("") {
-		v := runtime.FuncForPC(reflect.ValueOf(c).Pointer())
+		v := runtime.FuncForPC(reflect.ValueOf(c.F).Pointer())
 		l.Println(v.Name())
 	}
 }
