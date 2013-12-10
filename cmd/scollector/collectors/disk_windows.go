@@ -34,7 +34,7 @@ func c_diskspace_windows() opentsdb.MultiDataPoint {
 	var q = wmi.CreateQuery(&dst, `WHERE Name <> '_Total'`)
 	err := wmi.Query(q, &dst)
 	if err != nil {
-		l.Println("diskpace:", err)
+		l.Println("diskspace:", err)
 		return nil
 	}
 	var md opentsdb.MultiDataPoint
