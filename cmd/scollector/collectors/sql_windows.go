@@ -129,15 +129,15 @@ func c_mssql_databases() opentsdb.MultiDataPoint {
 		Add(&md, "mssql.bulkcopy_rows", v.BulkCopyRowsPersec, opentsdb.TagSet{"db": v.Name})
 		Add(&md, "mssql.bulkcopy_throughput", v.BulkCopyThroughputPersec, opentsdb.TagSet{"db": v.Name})
 		Add(&md, "mssql.commit_table_entries", v.Committableentries, opentsdb.TagSet{"db": v.Name})
-		Add(&md, "mssql.data_files_size", v.DataFilesSizeKB * 1024, opentsdb.TagSet{"db": v.Name})
+		Add(&md, "mssql.data_files_size", v.DataFilesSizeKB*1024, opentsdb.TagSet{"db": v.Name})
 		Add(&md, "mssql.dbcc_logical_scan_bytes", v.DBCCLogicalScanBytesPersec, opentsdb.TagSet{"db": v.Name})
 		Add(&md, "mssql.group_commit_time", v.GroupCommitTimePersec, opentsdb.TagSet{"db": v.Name})
 		Add(&md, "mssql.log_bytes_flushed", v.LogBytesFlushedPersec, opentsdb.TagSet{"db": v.Name})
 		Add(&md, "mssql.log_cache_hit_ratio", v.LogCacheHitRatio, opentsdb.TagSet{"db": v.Name})
 		Add(&md, "mssql.log_cache_hit_ratio_base", v.LogCacheHitRatio_Base, opentsdb.TagSet{"db": v.Name})
 		Add(&md, "mssql.log_cache_reads", v.LogCacheReadsPersec, opentsdb.TagSet{"db": v.Name})
-		Add(&md, "mssql.log_files_size", v.LogFilesSizeKB * 1024, opentsdb.TagSet{"db": v.Name})
-		Add(&md, "mssql.log_files_used_size", v.LogFilesUsedSizeKB * 1024, opentsdb.TagSet{"db": v.Name})
+		Add(&md, "mssql.log_files_size", v.LogFilesSizeKB*1024, opentsdb.TagSet{"db": v.Name})
+		Add(&md, "mssql.log_files_used_size", v.LogFilesUsedSizeKB*1024, opentsdb.TagSet{"db": v.Name})
 		Add(&md, "mssql.log_flushes", v.LogFlushesPersec, opentsdb.TagSet{"db": v.Name})
 		Add(&md, "mssql.log_flush_waits", v.LogFlushWaitsPersec, opentsdb.TagSet{"db": v.Name})
 		Add(&md, "mssql.log_flush_wait_time", v.LogFlushWaitTime, opentsdb.TagSet{"db": v.Name})
@@ -161,36 +161,36 @@ func c_mssql_databases() opentsdb.MultiDataPoint {
 }
 
 type Win32_PerfRawData_MSSQLSERVER_SQLServerDatabases struct {
-	ActiveTransactions uint64
+	ActiveTransactions               uint64
 	BackupPerRestoreThroughputPersec uint64
-	BulkCopyRowsPersec uint64
-	BulkCopyThroughputPersec uint64
-	Committableentries uint64
-	DataFilesSizeKB uint64
-	DBCCLogicalScanBytesPersec uint64
-	GroupCommitTimePersec uint64
-	LogBytesFlushedPersec uint64
-	LogCacheHitRatio uint64
-	LogCacheHitRatio_Base uint64
-	LogCacheReadsPersec uint64
-	LogFilesSizeKB uint64
-	LogFilesUsedSizeKB uint64
-	LogFlushesPersec uint64
-	LogFlushWaitsPersec uint64
-	LogFlushWaitTime uint64
-	LogFlushWriteTimems uint64
-	LogGrowths uint64
-	LogPoolCacheMissesPersec uint64
-	LogPoolDiskReadsPersec uint64
-	LogPoolRequestsPersec uint64
-	LogShrinks uint64
-	LogTruncations uint64
-	Name string
-	PercentLogUsed uint64
-	ReplPendingXacts uint64
-	ReplTransRate uint64
-	ShrinkDataMovementBytesPersec uint64
-	TrackedtransactionsPersec uint64
-	TransactionsPersec uint64
-	WriteTransactionsPersec uint64
+	BulkCopyRowsPersec               uint64
+	BulkCopyThroughputPersec         uint64
+	Committableentries               uint64
+	DataFilesSizeKB                  uint64
+	DBCCLogicalScanBytesPersec       uint64
+	GroupCommitTimePersec            uint64
+	LogBytesFlushedPersec            uint64
+	LogCacheHitRatio                 uint64
+	LogCacheHitRatio_Base            uint64
+	LogCacheReadsPersec              uint64
+	LogFilesSizeKB                   uint64
+	LogFilesUsedSizeKB               uint64
+	LogFlushesPersec                 uint64
+	LogFlushWaitsPersec              uint64
+	LogFlushWaitTime                 uint64
+	LogFlushWriteTimems              uint64
+	LogGrowths                       uint64
+	LogPoolCacheMissesPersec         uint64
+	LogPoolDiskReadsPersec           uint64
+	LogPoolRequestsPersec            uint64
+	LogShrinks                       uint64
+	LogTruncations                   uint64
+	Name                             string
+	PercentLogUsed                   uint64
+	ReplPendingXacts                 uint64
+	ReplTransRate                    uint64
+	ShrinkDataMovementBytesPersec    uint64
+	TrackedtransactionsPersec        uint64
+	TransactionsPersec               uint64
+	WriteTransactionsPersec          uint64
 }
