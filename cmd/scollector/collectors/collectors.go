@@ -47,7 +47,7 @@ func init() {
 func Search(s string) []Collector {
 	var r []Collector
 	for _, c := range collectors {
-		v := runtime.FuncForPC(reflect.ValueOf(c).Pointer())
+		v := runtime.FuncForPC(reflect.ValueOf(c.F).Pointer())
 		if strings.Contains(v.Name(), s) {
 			r = append(r, c)
 		}
