@@ -16,7 +16,7 @@ import (
 
 var collectors []Collector
 
-const DEFAULT_FREQ = time.Second * 15
+var DEFAULT_FREQ = time.Second * 15
 
 type Collector struct {
 	F        func() opentsdb.MultiDataPoint
@@ -60,15 +60,17 @@ func Run() chan *opentsdb.DataPoint {
 }
 
 func runCollector(dpchan chan *opentsdb.DataPoint, c Collector) {
-	interval := c.Interval
-	if interval == 0 {
-		interval = DEFAULT_FREQ
-	}
-	for _ = range time.Tick(interval) {
+	for {
+		interval := c.Interval
+		if interval == 0 {
+			interval = DEFAULT_FREQ
+		}
+		next := time.After(interval)
 		md := c.F()
 		for _, dp := range md {
 			dpchan <- dp
 		}
+		<-next
 	}
 }
 

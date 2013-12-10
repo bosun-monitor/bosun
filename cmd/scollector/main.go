@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/StackExchange/tcollector/collectors"
 	"github.com/StackExchange/tcollector/opentsdb"
@@ -35,6 +36,10 @@ func main() {
 		}
 	}
 
+	if u == nil {
+		collectors.DEFAULT_FREQ = time.Second * 3
+		l.Println("Set default frequency to", collectors.DEFAULT_FREQ)
+	}
 	cdp := collectors.Run()
 	if u != nil {
 		l.Println("OpenTSDB host:", u)
