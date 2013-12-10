@@ -47,3 +47,15 @@ func c_mssql_general() opentsdb.MultiDataPoint {
 	}
 	return md
 }
+
+type Win32_PerfRawData_MSSQLSERVER_SQLServerGeneralStatistics struct {
+	ConnectionResetPersec    uint64
+	LoginsPersec             uint64
+	LogoutsPersec            uint64
+	MarsDeadlocks            uint64
+	Processesblocked         uint64
+	TempTablesCreationRate   uint64
+	TempTablesForDestruction uint64
+	Transactions             uint64
+	UserConnections          uint64
+}

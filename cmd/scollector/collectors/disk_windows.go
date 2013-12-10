@@ -66,3 +66,27 @@ func c_physical_disk_windows() opentsdb.MultiDataPoint {
 	}
 	return md
 }
+
+type Win32_PerfRawData_PerfDisk_LogicalDisk struct {
+	FreeMegabytes    uint32
+	Name             string
+	PercentFreeSpace uint32
+}
+
+type Win32_PerfRawData_PerfDisk_PhysicalDisk struct {
+	AvgDiskReadQueueLength  uint64
+	AvgDiskSecPerRead       uint32
+	AvgDiskSecPerWrite      uint32
+	AvgDiskWriteQueueLength uint64
+	DiskReadBytesPerSec     uint64
+	DiskReadsPerSec         uint32
+	DiskWriteBytesPerSec    uint64
+	DiskWritesPerSec        uint32
+	Name                    string
+	PercentDiskReadTime     uint64
+	PercentDiskTime         uint64
+	PercentDiskTime_Base    uint64
+	PercentDiskWriteTime    uint64
+	PercentIdleTime         uint64
+	SplitIOPerSec           uint32
+}

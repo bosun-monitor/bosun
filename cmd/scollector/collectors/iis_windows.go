@@ -83,3 +83,36 @@ func c_iis_webservice() opentsdb.MultiDataPoint {
 	}
 	return md
 }
+
+type Win32_PerfRawData_W3SVC_WebService struct {
+	BytesReceivedPerSec          uint64
+	BytesSentPerSec              uint64
+	CGIRequestsPerSec            uint32
+	ConnectionAttemptsPerSec     uint32
+	CopyRequestsPerSec           uint32
+	CurrentConnections           uint32
+	DeleteRequestsPerSec         uint32
+	GetRequestsPerSec            uint32
+	HeadRequestsPerSec           uint32
+	ISAPIExtensionRequestsPerSec uint32
+	LockedErrorsPerSec           uint32
+	LockRequestsPerSec           uint32
+	MkcolRequestsPerSec          uint32
+	MoveRequestsPerSec           uint32
+	Name                         string
+	NotFoundErrorsPerSec         uint32
+	OptionsRequestsPerSec        uint32
+	PostRequestsPerSec           uint32
+	PropfindRequestsPerSec       uint32
+	ProppatchRequestsPerSec      uint32
+	PutRequestsPerSec            uint32
+	SearchRequestsPerSec         uint32
+	TraceRequestsPerSec          uint32
+	UnlockRequestsPerSec         uint32
+}
+
+type WorkerProcess struct {
+	AppPoolName string
+	Guid        string
+	ProcessId   uint32
+}

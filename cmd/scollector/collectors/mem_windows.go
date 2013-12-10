@@ -35,3 +35,10 @@ func c_simple_mem_windows() opentsdb.MultiDataPoint {
 	}
 	return md
 }
+
+type Win32_OperatingSystem struct {
+	FreePhysicalMemory     uint64
+	FreeVirtualMemory      uint64
+	TotalVirtualMemorySize uint64
+	TotalVisibleMemorySize uint64
+}

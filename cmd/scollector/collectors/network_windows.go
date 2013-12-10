@@ -44,3 +44,15 @@ func c_network_windows() opentsdb.MultiDataPoint {
 	}
 	return md
 }
+
+type Win32_PerfRawData_Tcpip_NetworkInterface struct {
+	BytesReceivedPerSec      uint32
+	BytesSentPerSec          uint32
+	Name                     string
+	PacketsOutboundDiscarded uint32
+	PacketsOutboundErrors    uint32
+	PacketsReceivedDiscarded uint32
+	PacketsReceivedErrors    uint32
+	PacketsReceivedPerSec    uint32
+	PacketsSentPerSec        uint32
+}
