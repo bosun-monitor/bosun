@@ -3,12 +3,12 @@ package collectors
 import (
 	"bufio"
 	"bytes"
+	"fmt"
 	"log"
 	"os"
 	"reflect"
 	"runtime"
 	"strings"
-	"fmt"
 	"time"
 	"unicode"
 	"unicode/utf8"
@@ -84,7 +84,7 @@ func CreateQuery(t interface{}, where string) string {
 	b.WriteString("SELECT ")
 
 	s := reflect.ValueOf(t).Elem()
-	
+
 	typeOfT := s.Type()
 	//Since we generally pass slices, this function takes the underlying or contained type of the slice
 	ContainedtypeOfT := typeOfT.Elem()
@@ -98,7 +98,7 @@ func CreateQuery(t interface{}, where string) string {
 
 	b.WriteString(fmt.Sprintf("FROM %s ", ContainedtypeOfT.Name()))
 	b.WriteString(where)
-	return(b.String())
+	return (b.String())
 }
 
 func readProc(fname string, line func(string)) {

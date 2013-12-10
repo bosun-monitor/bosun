@@ -71,16 +71,16 @@ func c_mssql_statistics() opentsdb.MultiDataPoint {
 }
 
 type Win32_PerfRawData_MSSQLSERVER_SQLServerSQLStatistics struct {
-	AutoParamAttemptsPersec uint64
-	BatchRequestsPersec uint64
-	FailedAutoParamsPersec uint64
+	AutoParamAttemptsPersec       uint64
+	BatchRequestsPersec           uint64
+	FailedAutoParamsPersec        uint64
 	ForcedParameterizationsPersec uint64
-	GuidedplanexecutionsPersec uint64
+	GuidedplanexecutionsPersec    uint64
 	MisguidedplanexecutionsPersec uint64
-	SafeAutoParamsPersec uint64
-	SQLCompilationsPersec uint64
-	SQLReCompilationsPersec uint64
-	UnsafeAutoParamsPersec uint64
+	SafeAutoParamsPersec          uint64
+	SQLCompilationsPersec         uint64
+	SQLReCompilationsPersec       uint64
+	UnsafeAutoParamsPersec        uint64
 }
 
 func c_mssql_locks() opentsdb.MultiDataPoint {
@@ -104,11 +104,11 @@ func c_mssql_locks() opentsdb.MultiDataPoint {
 }
 
 type Win32_PerfRawData_MSSQLSERVER_SQLServerLocks struct {
-	AverageWaitTimems uint64
-	LockRequestsPersec uint64
-	LockTimeoutsPersec uint64
+	AverageWaitTimems          uint64
+	LockRequestsPersec         uint64
+	LockTimeoutsPersec         uint64
 	LockTimeoutstimeout0Persec uint64
-	LockWaitsPersec uint64
-	Name string
-	NumberofDeadlocksPersec uint64
+	LockWaitsPersec            uint64
+	Name                       string
+	NumberofDeadlocksPersec    uint64
 }
