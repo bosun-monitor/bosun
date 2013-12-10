@@ -84,9 +84,6 @@ type Win32_PerfRawData_PerfDisk_PhysicalDisk struct {
 	DiskWritesPerSec        uint32
 	Name                    string
 	PercentDiskReadTime     uint64
-	PercentDiskTime         uint64
-	PercentDiskTime_Base    uint64
 	PercentDiskWriteTime    uint64
-	PercentIdleTime         uint64
 	SplitIOPerSec           uint32
 }
