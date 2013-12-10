@@ -6,7 +6,7 @@ import (
 )
 
 func init() {
-	collectors = append(collectors, c_physical_disk_windows)
+	//collectors = append(collectors, c_physical_disk_windows)
 	collectors = append(collectors, c_diskspace_windows)
 }
 
@@ -22,25 +22,33 @@ const PHYSICAL_DISK_QUERY = `
 
 // Similar breakdowns exist as to physical, but for now just using this for the
 // space utilization.
+
 const DISKSPACE_QUERY = `
-	SELECT Name, FreeMegaBytes, PercentFreeSpace
+	SELECT Name, FreeMegabytes, PercentFreeSpace
 	FROM Win32_PerfRawData_PerfDisk_LogicalDisk
 	WHERE Name <> '_Total'
 `
 
 func c_diskspace_windows() opentsdb.MultiDataPoint {
 	var dst []Win32_PerfRawData_PerfDisk_LogicalDisk
-	err := wmi.Query(DISKSPACE_QUERY, &dst)
+	var q = CreateQuery(&dst, `WHERE Name <> '_Total'`)
+	err := wmi.Query(q, &dst)
 	if err != nil {
 		l.Println("diskpace:", err)
 		return nil
 	}
 	var md opentsdb.MultiDataPoint
 	for _, v := range dst {
-		Add(&md, "disk.logical.free_bytes", v.FreeMegabytes*1048576, opentsdb.TagSet{"partition": v.Name})
+		//Add(&md, "disk.logical.free_bytes", v.FreeMegabytes*1048576, opentsdb.TagSet{"partition": v.Name})
 		Add(&md, "disk.logical.percent_free", v.PercentFreeSpace, opentsdb.TagSet{"partition": v.Name})
 	}
 	return md
+}
+
+type Win32_PerfRawData_PerfDisk_LogicalDisk struct {
+	//FreeMegabytes    uint32
+	Name             string
+	PercentFreeSpace uint32
 }
 
 func c_physical_disk_windows() opentsdb.MultiDataPoint {
@@ -65,12 +73,6 @@ func c_physical_disk_windows() opentsdb.MultiDataPoint {
 		Add(&md, "disk.physical.spltio", v.SplitIOPerSec, opentsdb.TagSet{"disk": v.Name})
 	}
 	return md
-}
-
-type Win32_PerfRawData_PerfDisk_LogicalDisk struct {
-	FreeMegabytes    uint32
-	Name             string
-	PercentFreeSpace uint32
 }
 
 type Win32_PerfRawData_PerfDisk_PhysicalDisk struct {

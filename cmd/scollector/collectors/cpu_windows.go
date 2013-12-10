@@ -9,15 +9,10 @@ func init() {
 	collectors = append(collectors, c_cpu_windows)
 }
 
-const CPU_QUERY = `
-	SELECT Name, PercentPrivilegedTime, PercentInterruptTime, PercentUserTime
-	FROM Win32_PerfRawData_PerfOS_Processor
-	WHERE Name <> '_Total'
-`
-
 func c_cpu_windows() opentsdb.MultiDataPoint {
 	var dst []Win32_PerfRawData_PerfOS_Processor
-	err := wmi.Query(CPU_QUERY, &dst)
+	var q = CreateQuery(&dst, `WHERE Name <> '_Total'`)
+	err := wmi.Query(q, &dst)
 	if err != nil {
 		l.Println("cpu:", err)
 		return nil

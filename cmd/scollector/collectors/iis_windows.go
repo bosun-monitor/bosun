@@ -7,27 +7,12 @@ import (
 
 func init() {
 	collectors = append(collectors, c_iis_webservice)
-	collectors = append(collectors, c_iis_pool)
+//	collectors = append(collectors, c_iis_pool)
 }
 
 // KMB: Might be worth monitoring cache at
 // Win32_PerfRawData_W3SVC_WebServiceCache, but the type isn't accessible via
 // MSDN currently (getting Page Not Found).
-
-const IIS_WEBSERVICE_QUERY = `
-	SELECT 
-		Name, 
-		BytesReceivedPerSec, BytesSentPersec,
-		ConnectionAttemptsPersec, CurrentConnections,
-		CGIRequestsPersec, CopyRequestsPersec, DeleteRequestsPersec, 
-		GetRequestsPersec, HeadRequestsPersec, ISAPIExtensionRequestsPersec, 
-		LockRequestsPersec, MkcolRequestsPersec, MoveRequestsPersec, OptionsRequestsPersec,
-		PostRequestsPersec, PropfindRequestsPersec, ProppatchRequestsPersec, PutRequestsPersec, 
-		SearchRequestsPersec, TraceRequestsPersec, UnlockRequestsPersec,
-		NotFoundErrorsPersec
-	FROM Win32_PerfRawData_W3SVC_WebService
-	WHERE Name <> '_Total'
-`
 
 const IIS_APOOL_QUERY = `
 	SELECT AppPoolName, ProcessId
@@ -48,71 +33,77 @@ func c_iis_pool() opentsdb.MultiDataPoint {
 	return md
 }
 
+type WorkerProcess struct {
+	AppPoolName string
+	Guid        string
+	ProcessId   uint32
+}
+
 func c_iis_webservice() opentsdb.MultiDataPoint {
 	var dst []Win32_PerfRawData_W3SVC_WebService
-	err := wmi.Query(IIS_WEBSERVICE_QUERY, &dst)
+	q := CreateQuery(&dst, `WHERE Name <> '_Total'`)
+	err := wmi.Query(q, &dst)
 	if err != nil {
 		l.Println("iis:", err)
 		return nil
 	}
 	var md opentsdb.MultiDataPoint
 	for _, v := range dst {
-		Add(&md, "iis.webservice.requests", v.CGIRequestsPerSec, opentsdb.TagSet{"site": v.Name, "method": "cgi"})
-		Add(&md, "iis.webservice.requests", v.CopyRequestsPerSec, opentsdb.TagSet{"site": v.Name, "method": "copy"})
-		Add(&md, "iis.webservice.requests", v.DeleteRequestsPerSec, opentsdb.TagSet{"site": v.Name, "method": "delete"})
-		Add(&md, "iis.webservice.requests", v.GetRequestsPerSec, opentsdb.TagSet{"site": v.Name, "method": "get"})
-		Add(&md, "iis.webservice.requests", v.HeadRequestsPerSec, opentsdb.TagSet{"site": v.Name, "method": "head"})
-		Add(&md, "iis.webservice.requests", v.ISAPIExtensionRequestsPerSec, opentsdb.TagSet{"site": v.Name, "method": "isapi"})
-		Add(&md, "iis.webservice.requests", v.LockRequestsPerSec, opentsdb.TagSet{"site": v.Name, "method": "lock"})
-		Add(&md, "iis.webservice.requests", v.MkcolRequestsPerSec, opentsdb.TagSet{"site": v.Name, "method": "mkcol"})
-		Add(&md, "iis.webservice.requests", v.MoveRequestsPerSec, opentsdb.TagSet{"site": v.Name, "method": "move"})
-		Add(&md, "iis.webservice.requests", v.OptionsRequestsPerSec, opentsdb.TagSet{"site": v.Name, "method": "options"})
-		Add(&md, "iis.webservice.requests", v.PostRequestsPerSec, opentsdb.TagSet{"site": v.Name, "method": "post"})
-		Add(&md, "iis.webservice.requests", v.PropfindRequestsPerSec, opentsdb.TagSet{"site": v.Name, "method": "propfind"})
-		Add(&md, "iis.webservice.requests", v.ProppatchRequestsPerSec, opentsdb.TagSet{"site": v.Name, "method": "proppatch"})
-		Add(&md, "iis.webservice.requests", v.PutRequestsPerSec, opentsdb.TagSet{"site": v.Name, "method": "put"})
-		Add(&md, "iis.webservice.requests", v.SearchRequestsPerSec, opentsdb.TagSet{"site": v.Name, "method": "search"})
-		Add(&md, "iis.webservice.requests", v.TraceRequestsPerSec, opentsdb.TagSet{"site": v.Name, "method": "trace"})
-		Add(&md, "iis.webservice.requests", v.UnlockRequestsPerSec, opentsdb.TagSet{"site": v.Name, "method": "unlock"})
-		Add(&md, "iis.webservice.errors", v.LockedErrorsPerSec, opentsdb.TagSet{"site": v.Name, "type": "locked"})
-		Add(&md, "iis.webservice.errors", v.NotFoundErrorsPerSec, opentsdb.TagSet{"site": v.Name, "type": "notfound"})
-		Add(&md, "iis.webservice.bytes", v.BytesSentPerSec, opentsdb.TagSet{"site": v.Name, "direction": "sent"})
-		Add(&md, "iis.webservice.bytes", v.BytesReceivedPerSec, opentsdb.TagSet{"site": v.Name, "direction": "received"})
-		Add(&md, "iis.webservice.connection_attempts", v.ConnectionAttemptsPerSec, opentsdb.TagSet{"site": v.Name})
-		Add(&md, "iis.webservice.connections", v.CurrentConnections, opentsdb.TagSet{"site": v.Name})
+		Add(&md, "iis.webservice.bytes", v.BytesReceivedPersec, opentsdb.TagSet{"site": v.Name, "direction": "received"})
+		Add(&md, "iis.webservice.bytes", v.BytesSentPersec, opentsdb.TagSet{"site": v.Name, "direction": "sent"})
+		// Add(&md, "iis.webservice.requests", v.CGIRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "cgi"})
+		// Add(&md, "iis.webservice.connection_attempts", v.ConnectionAttemptsPersec, opentsdb.TagSet{"site": v.Name})
+		// Add(&md, "iis.webservice.requests", v.CopyRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "copy"})
+		// Add(&md, "iis.webservice.connections", v.CurrentConnections, opentsdb.TagSet{"site": v.Name})
+		// Add(&md, "iis.webservice.requests", v.DeleteRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "delete"})
+		// Add(&md, "iis.webservice.requests", v.GetRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "get"})
+		// Add(&md, "iis.webservice.requests", v.HeadRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "head"})
+		// Add(&md, "iis.webservice.requests", v.ISAPIExtensionRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "isapi"})
+		// Add(&md, "iis.webservice.errors", v.LockedErrorsPersec, opentsdb.TagSet{"site": v.Name, "type": "locked"})
+		// Add(&md, "iis.webservice.requests", v.LockRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "lock"})
+		// Add(&md, "iis.webservice.requests", v.MkcolRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "mkcol"})
+		// Add(&md, "iis.webservice.requests", v.MoveRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "move"})
+		// Add(&md, "iis.webservice.errors", v.NotFoundErrorsPersec, opentsdb.TagSet{"site": v.Name, "type": "notfound"})
+		// Add(&md, "iis.webservice.requests", v.OptionsRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "options"})
+		// Add(&md, "iis.webservice.requests", v.PostRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "post"})
+		// Add(&md, "iis.webservice.requests", v.PropfindRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "propfind"})
+		// Add(&md, "iis.webservice.requests", v.ProppatchRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "proppatch"})
+		// Add(&md, "iis.webservice.requests", v.PutRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "put"})
+		// Add(&md, "iis.webservice.requests", v.SearchRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "search"})
+		// Add(&md, "iis.webservice.requests", v.TraceRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "trace"})
+		// Add(&md, "iis.webservice.requests", v.UnlockRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "unlock"})
+		
+		
 	}
 	return md
 }
 
+// TODO Adding Most of these fields is crashing tcollector, not sure why
 type Win32_PerfRawData_W3SVC_WebService struct {
-	BytesReceivedPerSec          uint64
-	BytesSentPerSec              uint64
-	CGIRequestsPerSec            uint32
-	ConnectionAttemptsPerSec     uint32
-	CopyRequestsPerSec           uint32
-	CurrentConnections           uint32
-	DeleteRequestsPerSec         uint32
-	GetRequestsPerSec            uint32
-	HeadRequestsPerSec           uint32
-	ISAPIExtensionRequestsPerSec uint32
-	LockedErrorsPerSec           uint32
-	LockRequestsPerSec           uint32
-	MkcolRequestsPerSec          uint32
-	MoveRequestsPerSec           uint32
+	BytesReceivedPersec          uint64
+	BytesSentPersec              uint64
+	// CGIRequestsPersec            uint32
+	// ConnectionAttemptsPersec     uint32
+	// CopyRequestsPersec           uint32
+	// CurrentConnections           uint32
+	// DeleteRequestsPersec         uint32
+	// GetRequestsPersec            uint32
+	// HeadRequestsPersec           uint32
+	// ISAPIExtensionRequestsPersec uint32
+	// LockedErrorsPersec           uint32
+	// LockRequestsPersec           uint32
+	// MkcolRequestsPersec          uint32
+	// MoveRequestsPersec           uint32
 	Name                         string
-	NotFoundErrorsPerSec         uint32
-	OptionsRequestsPerSec        uint32
-	PostRequestsPerSec           uint32
-	PropfindRequestsPerSec       uint32
-	ProppatchRequestsPerSec      uint32
-	PutRequestsPerSec            uint32
-	SearchRequestsPerSec         uint32
-	TraceRequestsPerSec          uint32
-	UnlockRequestsPerSec         uint32
+	// NotFoundErrorsPersec         uint32
+	// OptionsRequestsPersec        uint32
+	// PostRequestsPersec           uint32
+	// PropfindRequestsPersec       uint32
+	// ProppatchRequestsPersec      uint32
+	// PutRequestsPersec            uint32
+	// SearchRequestsPersec         uint32
+	// TraceRequestsPersec          uint32
+	// UnlockRequestsPersec         uint32
 }
 
-type WorkerProcess struct {
-	AppPoolName string
-	Guid        string
-	ProcessId   uint32
-}
+

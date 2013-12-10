@@ -13,15 +13,10 @@ func init() {
 // cache, etc.) as well as saturation (i.e., paging activity). Lot of that is in
 // Win32_PerfRawData_PerfOS_Memory. Win32_Operating_System's units are KBytes.
 
-const SIMPLE_MEMORY_QUERY = `
-	SELECT FreePhysicalMemory, FreeVirtualMemory,
-	TotalVisibleMemorySize, TotalVirtualMemorySize
-	FROM Win32_OperatingSystem
-`
-
 func c_simple_mem_windows() opentsdb.MultiDataPoint {
 	var dst []Win32_OperatingSystem
-	err := wmi.Query(SIMPLE_MEMORY_QUERY, &dst)
+	var q = CreateQuery(&dst, "")
+	err := wmi.Query(q, &dst)
 	if err != nil {
 		l.Println("simple_mem:", err)
 		return nil

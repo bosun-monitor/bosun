@@ -11,19 +11,12 @@ func init() {
 	collectors = append(collectors, c_network_windows)
 }
 
-const NETWORK_QUERY = `
-	SELECT Name, BytesReceivedPerSec, BytesSentPerSec,
-		PacketsReceivedPerSec, PacketsSentPerSec,
-		PacketsOutboundDiscarded, PacketsOutboundErrors,
-		PacketsReceivedDiscarded, PacketsReceivedErrors
-	FROM Win32_PerfRawData_Tcpip_NetworkInterface
-`
-
 var interfaceExclusions = regexp.MustCompile("isatap|Teredo")
 
 func c_network_windows() opentsdb.MultiDataPoint {
 	var dst []Win32_PerfRawData_Tcpip_NetworkInterface
-	err := wmi.Query(NETWORK_QUERY, &dst)
+	var q = CreateQuery(&dst, "")
+	err := wmi.Query(q, &dst)
 	if err != nil {
 		l.Println("network:", err)
 		return nil

@@ -11,35 +11,10 @@ func init() {
 	collectors = append(collectors, c_mssql_locks)
 }
 
-const SQL_GENERAL = `
-	SELECT 
-		UserConnections, ConnectionResetPersec, LoginsPersec, LogoutsPersec,
-		MarsDeadlocks, Processesblocked, TempTablesCreationRate, TempTablesForDestruction,
-		Transactions
-	FROM Win32_PerfRawData_MSSQLSERVER_SQLServerGeneralStatistics
-	WHERE Name <> '_Total'
-`
-
-const SQL_STATISTICS = `
-	SELECT 
-		AutoParamAttemptsPersec, FailedAutoParamsPersec, ForcedParameterizationsPersec,
-		SafeAutoParamsPersec, UnSafeAutoParamsPersec, BatchRequestsPersec, GuidedplanexecutionsPersec,
-		MisguidedplanexecutionsPersec, SQLCompilationsPersec, SQLReCompilationsPersec
-	FROM Win32_PerfRawData_MSSQLSERVER_SQLServerSQLStatistics
-	WHERE Name <> '_Total'
-`
-
-const SQL_LOCKS = `
-	SELECT 
-		Name, AverageWaitTimems, LockRequestsPersec, LockTimeoutsPersec,
-		LockWaitsPersec, LockWaitTimems, NumberofDeadlocksPersec 
-	FROM Win32_PerfRawData_MSSQLSERVER_SQLServerLocks
-	WHERE Name = 'Page' OR Name = 'Extent' OR Name = 'Object' or Name = 'Database'
-`
-
 func c_mssql_general() opentsdb.MultiDataPoint {
 	var dst []Win32_PerfRawData_MSSQLSERVER_SQLServerGeneralStatistics
-	err := wmi.Query(SQL_GENERAL, &dst)
+	var q = CreateQuery(&dst, `WHERE Name <> '_Total'`)
+	err := wmi.Query(q, &dst)
 	if err != nil {
 		l.Println("sql_general:", err)
 		return nil
@@ -73,7 +48,8 @@ type Win32_PerfRawData_MSSQLSERVER_SQLServerGeneralStatistics struct {
 
 func c_mssql_statistics() opentsdb.MultiDataPoint {
 	var dst []Win32_PerfRawData_MSSQLSERVER_SQLServerSQLStatistics
-	err := wmi.Query(`root\CIMV2`, SQL_STATISTICS, &dst)
+	var q = CreateQuery(&dst, `WHERE Name <> '_Total'`)
+	err := wmi.Query(q, &dst)
 	if err != nil {
 		l.Println("sql_stats:", err)
 		return nil
@@ -97,8 +73,6 @@ func c_mssql_statistics() opentsdb.MultiDataPoint {
 type Win32_PerfRawData_MSSQLSERVER_SQLServerSQLStatistics struct {
 	AutoParamAttemptsPersec uint64
 	BatchRequestsPersec uint64
-	Caption string
-	Description string
 	FailedAutoParamsPersec uint64
 	ForcedParameterizationsPersec uint64
 	GuidedplanexecutionsPersec uint64
@@ -111,7 +85,8 @@ type Win32_PerfRawData_MSSQLSERVER_SQLServerSQLStatistics struct {
 
 func c_mssql_locks() opentsdb.MultiDataPoint {
 	var dst []Win32_PerfRawData_MSSQLSERVER_SQLServerLocks
-	err := wmi.Query(`root\CIMV2`, SQL_LOCKS, &dst)
+	var q = CreateQuery(&dst, `WHERE Name = 'Page' OR Name = 'Extent' OR Name = 'Object' or Name = 'Database'`)
+	err := wmi.Query(q, &dst)
 	if err != nil {
 		l.Println("sql_locks:", err)
 		return nil
@@ -121,6 +96,7 @@ func c_mssql_locks() opentsdb.MultiDataPoint {
 		Add(&md, "mssql.lock_wait_time", v.AverageWaitTimems, opentsdb.TagSet{"type": v.Name})
 		Add(&md, "mssql.lock_requests", v.LockRequestsPersec, opentsdb.TagSet{"type": v.Name})
 		Add(&md, "mssql.lock_timeouts", v.LockTimeoutsPersec, opentsdb.TagSet{"type": v.Name})
+		Add(&md, "mssql.lock_timeouts0", v.LockTimeoutstimeout0Persec, opentsdb.TagSet{"type": v.Name})
 		Add(&md, "mssql.lock_waits", v.LockWaitsPersec, opentsdb.TagSet{"type": v.Name})
 		Add(&md, "mssql.deadlocks", v.NumberofDeadlocksPersec, opentsdb.TagSet{"type": v.Name})
 	}
@@ -129,8 +105,6 @@ func c_mssql_locks() opentsdb.MultiDataPoint {
 
 type Win32_PerfRawData_MSSQLSERVER_SQLServerLocks struct {
 	AverageWaitTimems uint64
-	Caption string
-	Description string
 	LockRequestsPersec uint64
 	LockTimeoutsPersec uint64
 	LockTimeoutstimeout0Persec uint64
