@@ -9,6 +9,7 @@ func init() {
 	collectors = append(collectors, Collector{c_mssql_general, DEFAULT_FREQ_SEC})
 	collectors = append(collectors, Collector{c_mssql_statistics, DEFAULT_FREQ_SEC})
 	collectors = append(collectors, Collector{c_mssql_locks, DEFAULT_FREQ_SEC})
+	collectors = append(collectors, Collector{c_mssql_databases, 120})
 }
 
 func c_mssql_general() opentsdb.MultiDataPoint {
@@ -111,4 +112,85 @@ type Win32_PerfRawData_MSSQLSERVER_SQLServerLocks struct {
 	LockWaitsPersec            uint64
 	Name                       string
 	NumberofDeadlocksPersec    uint64
+}
+
+func c_mssql_databases() opentsdb.MultiDataPoint {
+	var dst []Win32_PerfRawData_MSSQLSERVER_SQLServerDatabases
+	var q = CreateQuery(&dst, "")
+	err := wmi.Query(q, &dst)
+	if err != nil {
+		l.Println("sql_database:", err)
+		return nil
+	}
+	var md opentsdb.MultiDataPoint
+	for _, v := range dst {
+		Add(&md, "mssql.active_transactions", v.ActiveTransactions, opentsdb.TagSet{"db": v.Name})
+		Add(&md, "mssql.backup_restore_throughput", v.BackupPerRestoreThroughputPersec, opentsdb.TagSet{"db": v.Name})
+		Add(&md, "mssql.bulkcopy_rows", v.BulkCopyRowsPersec, opentsdb.TagSet{"db": v.Name})
+		Add(&md, "mssql.bulkcopy_throughput", v.BulkCopyThroughputPersec, opentsdb.TagSet{"db": v.Name})
+		Add(&md, "mssql.commit_table_entries", v.Committableentries, opentsdb.TagSet{"db": v.Name})
+		Add(&md, "mssql.data_files_size", v.DataFilesSizeKB * 1024, opentsdb.TagSet{"db": v.Name})
+		Add(&md, "mssql.dbcc_logical_scan_bytes", v.DBCCLogicalScanBytesPersec, opentsdb.TagSet{"db": v.Name})
+		Add(&md, "mssql.group_commit_time", v.GroupCommitTimePersec, opentsdb.TagSet{"db": v.Name})
+		Add(&md, "mssql.log_bytes_flushed", v.LogBytesFlushedPersec, opentsdb.TagSet{"db": v.Name})
+		Add(&md, "mssql.log_cache_hit_ratio", v.LogCacheHitRatio, opentsdb.TagSet{"db": v.Name})
+		Add(&md, "mssql.log_cache_hit_ratio_base", v.LogCacheHitRatio_Base, opentsdb.TagSet{"db": v.Name})
+		Add(&md, "mssql.log_cache_reads", v.LogCacheReadsPersec, opentsdb.TagSet{"db": v.Name})
+		Add(&md, "mssql.log_files_size", v.LogFilesSizeKB * 1024, opentsdb.TagSet{"db": v.Name})
+		Add(&md, "mssql.log_files_used_size", v.LogFilesUsedSizeKB * 1024, opentsdb.TagSet{"db": v.Name})
+		Add(&md, "mssql.log_flushes", v.LogFlushesPersec, opentsdb.TagSet{"db": v.Name})
+		Add(&md, "mssql.log_flush_waits", v.LogFlushWaitsPersec, opentsdb.TagSet{"db": v.Name})
+		Add(&md, "mssql.log_flush_wait_time", v.LogFlushWaitTime, opentsdb.TagSet{"db": v.Name})
+		Add(&md, "mssql.log_flush_write_time_ms", v.LogFlushWriteTimems, opentsdb.TagSet{"db": v.Name})
+		Add(&md, "mssql.log_growths", v.LogGrowths, opentsdb.TagSet{"db": v.Name})
+		Add(&md, "mssql.log_pool_cache_misses", v.LogPoolCacheMissesPersec, opentsdb.TagSet{"db": v.Name})
+		Add(&md, "mssql.log_pool_disk_reads", v.LogPoolDiskReadsPersec, opentsdb.TagSet{"db": v.Name})
+		Add(&md, "mssql.log_pool_requests", v.LogPoolRequestsPersec, opentsdb.TagSet{"db": v.Name})
+		Add(&md, "mssql.log_shrinks", v.LogShrinks, opentsdb.TagSet{"db": v.Name})
+		Add(&md, "mssql.log_truncations", v.LogTruncations, opentsdb.TagSet{"db": v.Name})
+		Add(&md, "mssql.name", v.Name, opentsdb.TagSet{"db": v.Name})
+		Add(&md, "mssql.percent_log_used", v.PercentLogUsed, opentsdb.TagSet{"db": v.Name})
+		Add(&md, "mssql.repl_pending_xacts", v.ReplPendingXacts, opentsdb.TagSet{"db": v.Name})
+		Add(&md, "mssql.repl_trans_rate", v.ReplTransRate, opentsdb.TagSet{"db": v.Name})
+		Add(&md, "mssql.shrink_data_movement_bytes", v.ShrinkDataMovementBytesPersec, opentsdb.TagSet{"db": v.Name})
+		Add(&md, "mssql.tracked_transactions", v.TrackedtransactionsPersec, opentsdb.TagSet{"db": v.Name})
+		Add(&md, "mssql.transactions", v.TransactionsPersec, opentsdb.TagSet{"db": v.Name})
+		Add(&md, "mssql.write_transactions", v.WriteTransactionsPersec, opentsdb.TagSet{"db": v.Name})
+	}
+	return md
+}
+
+type Win32_PerfRawData_MSSQLSERVER_SQLServerDatabases struct {
+	ActiveTransactions uint64
+	BackupPerRestoreThroughputPersec uint64
+	BulkCopyRowsPersec uint64
+	BulkCopyThroughputPersec uint64
+	Committableentries uint64
+	DataFilesSizeKB uint64
+	DBCCLogicalScanBytesPersec uint64
+	GroupCommitTimePersec uint64
+	LogBytesFlushedPersec uint64
+	LogCacheHitRatio uint64
+	LogCacheHitRatio_Base uint64
+	LogCacheReadsPersec uint64
+	LogFilesSizeKB uint64
+	LogFilesUsedSizeKB uint64
+	LogFlushesPersec uint64
+	LogFlushWaitsPersec uint64
+	LogFlushWaitTime uint64
+	LogFlushWriteTimems uint64
+	LogGrowths uint64
+	LogPoolCacheMissesPersec uint64
+	LogPoolDiskReadsPersec uint64
+	LogPoolRequestsPersec uint64
+	LogShrinks uint64
+	LogTruncations uint64
+	Name string
+	PercentLogUsed uint64
+	ReplPendingXacts uint64
+	ReplTransRate uint64
+	ShrinkDataMovementBytesPersec uint64
+	TrackedtransactionsPersec uint64
+	TransactionsPersec uint64
+	WriteTransactionsPersec uint64
 }
