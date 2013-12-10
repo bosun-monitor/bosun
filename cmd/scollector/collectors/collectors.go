@@ -18,7 +18,14 @@ import (
 
 var collectors []Collector
 
-type Collector func() opentsdb.MultiDataPoint
+const DEFAULT_FREQ_SEC = 15
+
+type Collector struct {
+	F func() opentsdb.MultiDataPoint
+	seconds time.Duration
+}
+
+//type Collector func() opentsdb.MultiDataPoint
 
 var l = log.New(os.Stdout, "", log.LstdFlags)
 
@@ -57,8 +64,8 @@ func Run() chan *opentsdb.DataPoint {
 }
 
 func runCollector(dpchan chan *opentsdb.DataPoint, c Collector) {
-	for _ = range time.Tick(time.Second * 3) {
-		md := c()
+	for _ = range time.Tick(time.Second * c.seconds) {
+		md := c.F()
 		for _, dp := range md {
 			dpchan <- dp
 		}

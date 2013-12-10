@@ -8,7 +8,7 @@ import (
 )
 
 func init() {
-	collectors = append(collectors, c_ifstat_linux)
+	collectors = append(collectors, Collector{c_ifstat_linux, DEFAULT_FREQ_SEC})
 }
 
 var FIELDS_NET = []string{

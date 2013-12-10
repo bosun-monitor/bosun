@@ -6,7 +6,7 @@ import (
 )
 
 func init() {
-	collectors = append(collectors, c_cpu_windows)
+	collectors = append(collectors, Collector{c_cpu_windows, DEFAULT_FREQ_SEC})
 }
 
 func c_cpu_windows() opentsdb.MultiDataPoint {

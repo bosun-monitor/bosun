@@ -6,7 +6,7 @@ import (
 )
 
 func init() {
-	collectors = append(collectors, c_iis_webservice)
+	collectors = append(collectors, Collector{c_iis_webservice, DEFAULT_FREQ_SEC})
 	//	collectors = append(collectors, c_iis_pool)
 }
 

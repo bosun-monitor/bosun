@@ -6,9 +6,9 @@ import (
 )
 
 func init() {
-	collectors = append(collectors, c_mssql_general)
-	collectors = append(collectors, c_mssql_statistics)
-	collectors = append(collectors, c_mssql_locks)
+	collectors = append(collectors, Collector{c_mssql_general, DEFAULT_FREQ_SEC})
+	collectors = append(collectors, Collector{c_mssql_statistics, DEFAULT_FREQ_SEC})
+	collectors = append(collectors, Collector{c_mssql_locks, DEFAULT_FREQ_SEC})
 }
 
 func c_mssql_general() opentsdb.MultiDataPoint {

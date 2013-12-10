@@ -48,7 +48,7 @@ func main() {
 
 func test(s string) {
 	for _, c := range collectors.Search(s) {
-		md := c()
+		md := c.F()
 		for _, d := range md {
 			l.Print(d.Telnet())
 		}

@@ -9,7 +9,7 @@ import (
 )
 
 func init() {
-	collectors = append(collectors, c_procstats_linux)
+	collectors = append(collectors, Collector{c_procstats_linux, DEFAULT_FREQ_SEC})
 }
 
 var uptimeRE = regexp.MustCompile(`(\S+)\s+(\S+)`)
