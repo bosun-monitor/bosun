@@ -7,7 +7,7 @@ import (
 
 func init() {
 	//collectors = append(collectors, Collector{c_physical_disk_windows, DEFAULT_FREQ_SEC})
-	collectors = append(collectors, Collector{c_diskspace_windows, DEFAULT_FREQ_SEC})
+	collectors = append(collectors, Collector{F: c_diskspace_windows})
 }
 
 const PHYSICAL_DISK_QUERY = `

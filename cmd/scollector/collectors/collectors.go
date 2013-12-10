@@ -2,8 +2,6 @@ package collectors
 
 import (
 	"bufio"
-	"bytes"
-	"fmt"
 	"log"
 	"os"
 	"reflect"
@@ -18,14 +16,12 @@ import (
 
 var collectors []Collector
 
-const DEFAULT_FREQ_SEC = 15
+const DEFAULT_FREQ = time.Second * 15
 
 type Collector struct {
-	F func() opentsdb.MultiDataPoint
-	seconds time.Duration
+	F        func() opentsdb.MultiDataPoint
+	Interval time.Duration
 }
-
-//type Collector func() opentsdb.MultiDataPoint
 
 var l = log.New(os.Stdout, "", log.LstdFlags)
 
@@ -64,7 +60,11 @@ func Run() chan *opentsdb.DataPoint {
 }
 
 func runCollector(dpchan chan *opentsdb.DataPoint, c Collector) {
-	for _ = range time.Tick(time.Second * c.seconds) {
+	interval := c.Interval
+	if interval == 0 {
+		interval = DEFAULT_FREQ
+	}
+	for _ = range time.Tick(interval) {
 		md := c.F()
 		for _, dp := range md {
 			dpchan <- dp

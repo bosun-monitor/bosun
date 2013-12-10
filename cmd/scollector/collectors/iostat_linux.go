@@ -8,7 +8,7 @@ import (
 )
 
 func init() {
-	collectors = append(collectors, Collector{c_iostat_linux, DEFAULT_FREQ_SEC})
+	collectors = append(collectors, Collector{F: c_iostat_linux})
 }
 
 var FIELDS_DISK = []string{

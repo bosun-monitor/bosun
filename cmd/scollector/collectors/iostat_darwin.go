@@ -7,7 +7,7 @@ import (
 )
 
 func init() {
-	collectors = append(collectors, Collector{c_iostat_darwin, DEFAULT_FREQ_SEC})
+	collectors = append(collectors, Collector{F: c_iostat_darwin})
 }
 
 func c_iostat_darwin() opentsdb.MultiDataPoint {
