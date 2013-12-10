@@ -27,8 +27,8 @@ const SQL_STATISTICS = `
 `
 
 func c_mssql_general() opentsdb.MultiDataPoint {
-	var dst []wmi.Win32_PerfRawData_MSSQLSERVER_SQLServerGeneralStatistics
-	err := wmi.Query(`root\CIMV2`, SQL_GENERAL, &dst)
+	var dst []Win32_PerfRawData_MSSQLSERVER_SQLServerGeneralStatistics
+	err := wmi.Query(SQL_GENERAL, &dst)
 	if err != nil {
 		l.Println("sql_general:", err)
 		return nil

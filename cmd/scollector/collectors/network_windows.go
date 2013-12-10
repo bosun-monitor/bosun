@@ -22,10 +22,10 @@ const NETWORK_QUERY = `
 var interfaceExclusions = regexp.MustCompile("isatap|Teredo")
 
 func c_network_windows() opentsdb.MultiDataPoint {
-	var dst []wmi.Win32_PerfRawData_Tcpip_NetworkInterface
-	err := wmi.Query(`root\CIMV2`, NETWORK_QUERY, &dst)
+	var dst []Win32_PerfRawData_Tcpip_NetworkInterface
+	err := wmi.Query(NETWORK_QUERY, &dst)
 	if err != nil {
-		l.Println(`root\CIMV2`, "network:", err)
+		l.Println("network:", err)
 		return nil
 	}
 	var md opentsdb.MultiDataPoint

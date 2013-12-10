@@ -16,8 +16,8 @@ const CPU_QUERY = `
 `
 
 func c_cpu_windows() opentsdb.MultiDataPoint {
-	var dst []wmi.Win32_PerfRawData_PerfOS_Processor
-	err := wmi.Query(`root\CIMV2`, CPU_QUERY, &dst)
+	var dst []Win32_PerfRawData_PerfOS_Processor
+	err := wmi.Query(CPU_QUERY, &dst)
 	if err != nil {
 		l.Println("cpu:", err)
 		return nil

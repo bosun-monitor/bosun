@@ -35,8 +35,8 @@ const IIS_APOOL_QUERY = `
 `
 
 func c_iis_pool() opentsdb.MultiDataPoint {
-	var dst []wmi.WorkerProcess
-	err := wmi.Query(`root\WebManagement`, IIS_APOOL_QUERY, &dst)
+	var dst []WorkerProcess
+	err := wmi.Query(IIS_APOOL_QUERY, &dst) // should use namespace root\WebManagement
 	if err != nil {
 		l.Println("iis:", err)
 		return nil
@@ -49,8 +49,8 @@ func c_iis_pool() opentsdb.MultiDataPoint {
 }
 
 func c_iis_webservice() opentsdb.MultiDataPoint {
-	var dst []wmi.Win32_PerfRawData_W3SVC_WebService
-	err := wmi.Query(`root\cimv2`, IIS_WEBSERVICE_QUERY, &dst)
+	var dst []Win32_PerfRawData_W3SVC_WebService
+	err := wmi.Query(IIS_WEBSERVICE_QUERY, &dst)
 	if err != nil {
 		l.Println("iis:", err)
 		return nil

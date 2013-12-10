@@ -20,8 +20,8 @@ const SIMPLE_MEMORY_QUERY = `
 `
 
 func c_simple_mem_windows() opentsdb.MultiDataPoint {
-	var dst []wmi.Win32_OperatingSystem
-	err := wmi.Query(`root\CIMV2`, SIMPLE_MEMORY_QUERY, &dst)
+	var dst []Win32_OperatingSystem
+	err := wmi.Query(SIMPLE_MEMORY_QUERY, &dst)
 	if err != nil {
 		l.Println("simple_mem:", err)
 		return nil

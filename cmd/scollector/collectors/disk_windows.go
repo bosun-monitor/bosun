@@ -28,8 +28,8 @@ const DISKSPACE_QUERY = `
 `
 
 func c_diskspace_windows() opentsdb.MultiDataPoint {
-	var dst []wmi.Win32_PerfRawData_PerfDisk_LogicalDisk
-	err := wmi.Query(`root\CIMV2`, DISKSPACE_QUERY, &dst)
+	var dst []Win32_PerfRawData_PerfDisk_LogicalDisk
+	err := wmi.Query(DISKSPACE_QUERY, &dst)
 	if err != nil {
 		l.Println("diskpace:", err)
 		return nil
@@ -43,8 +43,8 @@ func c_diskspace_windows() opentsdb.MultiDataPoint {
 }
 
 func c_physical_disk_windows() opentsdb.MultiDataPoint {
-	var dst []wmi.Win32_PerfRawData_PerfDisk_PhysicalDisk
-	err := wmi.Query(`root\CIMV2`, PHYSICAL_DISK_QUERY, &dst)
+	var dst []Win32_PerfRawData_PerfDisk_PhysicalDisk
+	err := wmi.Query(PHYSICAL_DISK_QUERY, &dst)
 	if err != nil {
 		l.Println("disk_physical:", err)
 		return nil
