@@ -20,7 +20,8 @@ const PHYSICAL_DISK_QUERY = `
 	WHERE Name <> '_Total'
 `
 
-//Similar Breakdowns exist as to physical, but for now just using this for the space utilization
+// Similar breakdowns exist as to physical, but for now just using this for the
+// space utilization.
 const DISKSPACE_QUERY = `
 	SELECT Name, FreeMegaBytes, PercentFreeSpace
 	FROM Win32_PerfRawData_PerfDisk_LogicalDisk
