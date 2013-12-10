@@ -86,28 +86,6 @@ func Add(md *opentsdb.MultiDataPoint, name string, value interface{}, tags opent
 	*md = append(*md, &d)
 }
 
-func CreateQuery(t interface{}, where string) string {
-	var b bytes.Buffer
-	b.WriteString("SELECT ")
-
-	s := reflect.ValueOf(t).Elem()
-
-	typeOfT := s.Type()
-	//Since we generally pass slices, this function takes the underlying or contained type of the slice
-	ContainedtypeOfT := typeOfT.Elem()
-
-	for i := 0; i < ContainedtypeOfT.NumField()-1; i++ {
-		b.WriteString(fmt.Sprintf("%s, ", ContainedtypeOfT.Field(i).Name))
-	}
-
-	//Last one has no Comma
-	b.WriteString(fmt.Sprintf("%s ", ContainedtypeOfT.Field(ContainedtypeOfT.NumField()-1).Name))
-
-	b.WriteString(fmt.Sprintf("FROM %s ", ContainedtypeOfT.Name()))
-	b.WriteString(where)
-	return (b.String())
-}
-
 func readProc(fname string, line func(string)) {
 	f, err := os.Open(fname)
 	if err != nil {

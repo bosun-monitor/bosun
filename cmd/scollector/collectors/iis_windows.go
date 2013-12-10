@@ -41,7 +41,7 @@ type WorkerProcess struct {
 
 func c_iis_webservice() opentsdb.MultiDataPoint {
 	var dst []Win32_PerfRawData_W3SVC_WebService
-	q := CreateQuery(&dst, `WHERE Name <> '_Total'`)
+	q := wmi.CreateQuery(&dst, `WHERE Name <> '_Total'`)
 	err := wmi.Query(q, &dst)
 	if err != nil {
 		l.Println("iis:", err)

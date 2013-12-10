@@ -31,7 +31,7 @@ const DISKSPACE_QUERY = `
 
 func c_diskspace_windows() opentsdb.MultiDataPoint {
 	var dst []Win32_PerfRawData_PerfDisk_LogicalDisk
-	var q = CreateQuery(&dst, `WHERE Name <> '_Total'`)
+	var q = wmi.CreateQuery(&dst, `WHERE Name <> '_Total'`)
 	err := wmi.Query(q, &dst)
 	if err != nil {
 		l.Println("diskpace:", err)

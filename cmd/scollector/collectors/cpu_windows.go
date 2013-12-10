@@ -11,7 +11,7 @@ func init() {
 
 func c_cpu_windows() opentsdb.MultiDataPoint {
 	var dst []Win32_PerfRawData_PerfOS_Processor
-	var q = CreateQuery(&dst, `WHERE Name <> '_Total'`)
+	var q = wmi.CreateQuery(&dst, `WHERE Name <> '_Total'`)
 	err := wmi.Query(q, &dst)
 	if err != nil {
 		l.Println("cpu:", err)
