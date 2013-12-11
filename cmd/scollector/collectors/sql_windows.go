@@ -148,7 +148,6 @@ func c_mssql_databases() opentsdb.MultiDataPoint {
 		Add(&md, "mssql.log_pool_requests", v.LogPoolRequestsPersec, opentsdb.TagSet{"db": v.Name})
 		Add(&md, "mssql.log_shrinks", v.LogShrinks, opentsdb.TagSet{"db": v.Name})
 		Add(&md, "mssql.log_truncations", v.LogTruncations, opentsdb.TagSet{"db": v.Name})
-		Add(&md, "mssql.name", v.Name, opentsdb.TagSet{"db": v.Name})
 		Add(&md, "mssql.percent_log_used", v.PercentLogUsed, opentsdb.TagSet{"db": v.Name})
 		Add(&md, "mssql.repl_pending_xacts", v.ReplPendingXacts, opentsdb.TagSet{"db": v.Name})
 		Add(&md, "mssql.repl_trans_rate", v.ReplTransRate, opentsdb.TagSet{"db": v.Name})
