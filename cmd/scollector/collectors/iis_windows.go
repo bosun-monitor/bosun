@@ -7,21 +7,13 @@ import (
 
 func init() {
 	collectors = append(collectors, Collector{F: c_iis_webservice})
-	//	collectors = append(collectors, c_iis_pool)
+	collectors = append(collectors, Collector{F: c_iis_pool})
 }
-
-// KMB: Might be worth monitoring cache at
-// Win32_PerfRawData_W3SVC_WebServiceCache, but the type isn't accessible via
-// MSDN currently (getting Page Not Found).
-
-const IIS_APOOL_QUERY = `
-	SELECT AppPoolName, ProcessId
-	From WorkerProcess
-`
 
 func c_iis_pool() opentsdb.MultiDataPoint {
 	var dst []WorkerProcess
-	err := wmi.Query(IIS_APOOL_QUERY, &dst) // should use namespace root\WebManagement
+	q := wmi.CreateQuery(&dst, "")
+	err := wmi.Query(q, &dst) // should use namespace root\WebManagement
 	if err != nil {
 		l.Println("iis:", err)
 		return nil
