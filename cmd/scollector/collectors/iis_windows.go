@@ -70,8 +70,8 @@ func c_iis_webservice() opentsdb.MultiDataPoint {
 
 // TODO Adding Most of these fields is crashing tcollector, not sure why
 type Win32_PerfRawData_W3SVC_WebService struct {
-	BytesReceivedPersec uint64
-	BytesSentPersec     uint64
+	BytesReceivedPersec          uint64
+	BytesSentPersec              uint64
 	CGIRequestsPersec            uint32
 	ConnectionAttemptsPersec     uint32
 	CopyRequestsPersec           uint32
@@ -80,11 +80,11 @@ type Win32_PerfRawData_W3SVC_WebService struct {
 	GetRequestsPersec            uint32
 	HeadRequestsPersec           uint32
 	ISAPIExtensionRequestsPersec uint32
-	LockedErrorsPersec           uint32
 	LockRequestsPersec           uint32
+	LockedErrorsPersec           uint32
 	MkcolRequestsPersec          uint32
 	MoveRequestsPersec           uint32
-	Name string
+	Name                         string
 	NotFoundErrorsPersec         uint32
 	OptionsRequestsPersec        uint32
 	PostRequestsPersec           uint32

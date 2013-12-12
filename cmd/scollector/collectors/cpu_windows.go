@@ -33,15 +33,15 @@ func c_cpu_windows() opentsdb.MultiDataPoint {
 }
 
 type Win32_PerfRawData_PerfOS_Processor struct {
+	DPCRate               uint32
+	InterruptsPersec      uint32
 	Name                  string
 	PercentC1Time         uint64
 	PercentC2Time         uint64
 	PercentC3Time         uint64
-	InterruptsPersec      uint32
-	DPCRate               uint32
+	PercentIdleTime       uint64
 	PercentInterruptTime  uint64
 	PercentPrivilegedTime uint64
-	PercentUserTime       uint64
 	PercentProcessorTime  uint64
-	PercentIdleTime       uint64
+	PercentUserTime       uint64
 }
