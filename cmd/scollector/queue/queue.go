@@ -77,6 +77,7 @@ func (q *Queue) sendBatch(batch opentsdb.MultiDataPoint) {
 		if err != nil {
 			l.Println(err)
 		} else {
+			l.Println(string(b))
 			l.Println(string(body))
 		}
 		goto Err
