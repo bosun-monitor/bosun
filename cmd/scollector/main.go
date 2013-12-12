@@ -17,18 +17,20 @@ import (
 
 var l = log.New(os.Stdout, "", log.LstdFlags)
 
-var flagTest = flag.String("test", "", "Test collector matching pattern")
-var flagList = flag.Bool("list", false, "List available collectors")
+var flagFilter = flag.String("f", "", "Filters collectors matching this term. Works with all other arguments.")
+var flagTest = flag.Bool("t", false, "Test - run collectors once, print, and exit.")
+var flagList = flag.Bool("l", false, "List")
 var host = flag.String("host", "", `OpenTSDB host. Ex: "tsdb.example.com". Can optionally specify port: "tsdb.example.com:4000", but will default to 4242 otherwise. If not specified, will print to screen`)
 
 func main() {
 	flag.Parse()
+	c := collectors.Search(*flagFilter)
 	u := parseHost()
-	if *flagTest != "" {
-		test(*flagTest)
+	if *flagTest {
+		test(c)
 		return
 	} else if *flagList {
-		list()
+		list(c)
 		return
 	} else if *host != "" {
 		if u == nil {
@@ -40,8 +42,9 @@ func main() {
 		collectors.DEFAULT_FREQ = time.Second * 3
 		l.Println("Set default frequency to", collectors.DEFAULT_FREQ)
 	}
-	cdp := collectors.Run()
+	cdp := collectors.Run(c)
 	if u != nil {
+		collectors.DEFAULT_FREQ = time.Second * 1
 		l.Println("OpenTSDB host:", u)
 		queue.New(u.String(), cdp)
 	} else {
@@ -51,8 +54,8 @@ func main() {
 	select {}
 }
 
-func test(s string) {
-	for _, c := range collectors.Search(s) {
+func test(cs []collectors.Collector) {
+	for _, c := range cs {
 		md := c.F()
 		for _, d := range md {
 			l.Print(d.Telnet())
@@ -60,8 +63,8 @@ func test(s string) {
 	}
 }
 
-func list() {
-	for _, c := range collectors.Search("") {
+func list(cs []collectors.Collector) {
+	for _, c := range cs {
 		v := runtime.FuncForPC(reflect.ValueOf(c.F).Pointer())
 		l.Println(v.Name())
 	}

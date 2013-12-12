@@ -51,9 +51,13 @@ func Search(s string) []Collector {
 	return r
 }
 
-func Run() chan *opentsdb.DataPoint {
+// Runs specified collectors. Use nil for all.
+func Run(cs []Collector) chan *opentsdb.DataPoint {
 	dpchan := make(chan *opentsdb.DataPoint)
-	for _, c := range collectors {
+	if cs == nil {
+		cs = collectors
+	}
+	for _, c := range cs {
 		go runCollector(dpchan, c)
 	}
 	return dpchan
