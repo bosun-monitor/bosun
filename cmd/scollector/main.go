@@ -20,7 +20,7 @@ var l = log.New(os.Stdout, "", log.LstdFlags)
 var flagFilter = flag.String("f", "", "Filters collectors matching this term. Works with all other arguments.")
 var flagTest = flag.Bool("t", false, "Test - run collectors once, print, and exit.")
 var flagList = flag.Bool("l", false, "List")
-var host = flag.String("host", "", `OpenTSDB host. Ex: "tsdb.example.com". Can optionally specify port: "tsdb.example.com:4000", but will default to 4242 otherwise. If not specified, will print to screen`)
+var host = flag.String("h", "", `OpenTSDB host. Ex: "tsdb.example.com". Can optionally specify port: "tsdb.example.com:4000", but will default to 4242 otherwise. If not specified, will print to screen`)
 
 func main() {
 	flag.Parse()
