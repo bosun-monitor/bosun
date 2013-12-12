@@ -64,7 +64,7 @@ func (d *DataPoint) clean() error {
 	om := d.Metric
 	d.Metric, err = Clean(d.Metric)
 	if err != nil {
-		return errors.New(fmt.Sprintf("%s. Orginal: [%s] Cleaned: [%s]", err.Error(), om, d.Metric))
+		return fmt.Errorf("%s. Orginal: [%s] Cleaned: [%s]", err.Error(), om, d.Metric)
 	}
 	return nil
 
@@ -74,11 +74,11 @@ func (t TagSet) clean() error {
 	for k, v := range t {
 		kc, err := Clean(k)
 		if err != nil {
-			return errors.New(fmt.Sprintf("%s. Orginal: [%s] Cleaned: [%s]", err.Error(), k, kc))
+			return fmt.Errorf("%s. Orginal: [%s] Cleaned: [%s]", err.Error(), k, kc)
 		}
 		vc, err := Clean(v)
 		if err != nil {
-			return errors.New(fmt.Sprintf("%s. Orginal: [%s] Cleaned: [%s]", err.Error(), v, vc))
+			return fmt.Errorf("%s. Orginal: [%s] Cleaned: [%s]", err.Error(), v, vc)
 		}
 		delete(t, k)
 		t[kc] = vc
