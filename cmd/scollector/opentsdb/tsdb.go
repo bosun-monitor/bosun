@@ -2,10 +2,15 @@ package opentsdb
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"log"
+	"os"
 	"unicode"
 	"unicode/utf8"
 )
+
+var l = log.New(os.Stdout, "", log.LstdFlags)
 
 type ResponseSet []*Response
 
@@ -35,35 +40,64 @@ func (d *DataPoint) Telnet() string {
 }
 
 func (m MultiDataPoint) Json() ([]byte, error) {
+	var md MultiDataPoint
 	for _, d := range m {
-		d.clean()
+		err := d.clean()
+		if err != nil {
+			l.Println(err, "Removing Datapoint", d)
+			continue
+		}
+		md = append(md, d)
 	}
-	return json.Marshal(m)
+	return json.Marshal(md)
 }
 
 type MultiDataPoint []*DataPoint
 
 type TagSet map[string]string
 
-func (d *DataPoint) clean() {
-	d.Tags.clean()
-	d.Metric = Clean(d.Metric)
+func (d *DataPoint) clean() error {
+	err := d.Tags.clean()
+	if err != nil {
+		return err
+	}
+	om := d.Metric
+	d.Metric, err = Clean(d.Metric)
+	if err != nil {
+		return fmt.Errorf("%s. Orginal: [%s] Cleaned: [%s]", err.Error(), om, d.Metric)
+	}
+	return nil
+
 }
 
-func (t TagSet) clean() {
+func (t TagSet) clean() error {
 	for k, v := range t {
-		kc := Clean(k)
-		vc := Clean(v)
+		kc, err := Clean(k)
+		if err != nil {
+			return fmt.Errorf("%s. Orginal: [%s] Cleaned: [%s]", err.Error(), k, kc)
+		}
+		vc, err := Clean(v)
+		if err != nil {
+			return fmt.Errorf("%s. Orginal: [%s] Cleaned: [%s]", err.Error(), v, vc)
+		}
 		delete(t, k)
 		t[kc] = vc
 	}
+	return nil
 }
 
 // Clean removes characters from s that are invalid for OpenTSDB metric and tag
 // values.
 // See: http://opentsdb.net/docs/build/html/user_guide/writing.html#metrics-and-tags
-func Clean(s string) string {
+func Clean(s string) (string, error) {
 	var c string
+	if len(s) == 0 {
+		// This one is perhaps better checked earlier in the pipeline, but since
+		// it makes sense to check that the resulting cleaned tag is not Zero length here I'm including it
+		// It also might be the case that this just shouldn't be happening and this is yet another side
+		// effect of WMI turning to Garbage....
+		return s, errors.New("Metric/Tagk/Tagv Cleaning Passed a Zero Length String")
+	}
 	for len(s) > 0 {
 		r, size := utf8.DecodeRuneInString(s)
 		if unicode.IsLetter(r) || unicode.IsDigit(r) || r == '-' || r == '_' || r == '.' || r == '/' {
@@ -71,5 +105,9 @@ func Clean(s string) string {
 		}
 		s = s[size:]
 	}
-	return c
+
+	if len(c) == 0 {
+		return c, errors.New("Cleaning Metric/Tagk/Tagv resulted in a Zero Length String")
+	}
+	return c, nil
 }
