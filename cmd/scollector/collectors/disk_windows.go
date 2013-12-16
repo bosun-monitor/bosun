@@ -6,8 +6,8 @@ import (
 )
 
 func init() {
-	collectors = append(collectors, Collector{F: c_physical_disk_windows})
-	collectors = append(collectors, Collector{F: c_diskspace_windows})
+	collectors = append(collectors, &IntervalCollector{F: c_physical_disk_windows})
+	collectors = append(collectors, &IntervalCollector{F: c_diskspace_windows})
 }
 
 func c_diskspace_windows() opentsdb.MultiDataPoint {

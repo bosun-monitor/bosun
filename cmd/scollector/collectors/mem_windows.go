@@ -6,7 +6,7 @@ import (
 )
 
 func init() {
-	collectors = append(collectors, Collector{F: c_simple_mem_windows})
+	collectors = append(collectors, &IntervalCollector{F: c_simple_mem_windows})
 }
 
 // Memory Needs to be expanded upon. Should be deeper in utilization (what is

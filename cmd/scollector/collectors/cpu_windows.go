@@ -6,8 +6,8 @@ import (
 )
 
 func init() {
-	collectors = append(collectors, Collector{F: c_cpu_windows})
-	collectors = append(collectors, Collector{F: c_cpu_info_windows})
+	collectors = append(collectors, &IntervalCollector{F: c_cpu_windows})
+	collectors = append(collectors, &IntervalCollector{F: c_cpu_info_windows})
 }
 
 func c_cpu_windows() opentsdb.MultiDataPoint {

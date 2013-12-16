@@ -5,8 +5,6 @@ import (
 	"log"
 	"net/url"
 	"os"
-	"reflect"
-	"runtime"
 	"strings"
 	"time"
 
@@ -54,18 +52,26 @@ func main() {
 }
 
 func test(cs []collectors.Collector) {
+	dpchan := make(chan *opentsdb.DataPoint)
 	for _, c := range cs {
-		md := c.F()
-		for _, d := range md {
-			l.Print(d.Telnet())
+		go c.Run(dpchan)
+		l.Println("run", c.Name())
+	}
+	next := time.After(time.Second * 2)
+Loop:
+	for {
+		select {
+		case dp := <-dpchan:
+			l.Print(dp.Telnet())
+		case <-next:
+			break Loop
 		}
 	}
 }
 
 func list(cs []collectors.Collector) {
 	for _, c := range cs {
-		v := runtime.FuncForPC(reflect.ValueOf(c.F).Pointer())
-		l.Println(v.Name())
+		l.Println(c.Name())
 	}
 }
 

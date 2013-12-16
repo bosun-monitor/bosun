@@ -7,7 +7,7 @@ import (
 )
 
 func init() {
-	collectors = append(collectors, Collector{F: c_iostat_darwin})
+	collectors = append(collectors, &IntervalCollector{F: c_iostat_darwin})
 }
 
 func c_iostat_darwin() opentsdb.MultiDataPoint {

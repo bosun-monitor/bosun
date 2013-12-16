@@ -7,7 +7,7 @@ import (
 )
 
 func init() {
-	collectors = append(collectors, Collector{F: c_tcollector})
+	collectors = append(collectors, &IntervalCollector{F: c_tcollector})
 }
 
 var (

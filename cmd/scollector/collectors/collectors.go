@@ -4,8 +4,6 @@ import (
 	"bufio"
 	"log"
 	"os"
-	"reflect"
-	"runtime"
 	"strings"
 	"time"
 	"unicode"
@@ -16,12 +14,12 @@ import (
 
 var collectors []Collector
 
-var DEFAULT_FREQ = time.Second * 15
-
-type Collector struct {
-	F        func() opentsdb.MultiDataPoint
-	Interval time.Duration
+type Collector interface {
+	Run(chan<- *opentsdb.DataPoint)
+	Name() string
 }
+
+var DEFAULT_FREQ = time.Second * 15
 
 var l = log.New(os.Stdout, "", log.LstdFlags)
 
@@ -43,8 +41,7 @@ func init() {
 func Search(s string) []Collector {
 	var r []Collector
 	for _, c := range collectors {
-		v := runtime.FuncForPC(reflect.ValueOf(c.F).Pointer())
-		if strings.Contains(v.Name(), s) {
+		if strings.Contains(c.Name(), s) {
 			r = append(r, c)
 		}
 	}
@@ -58,24 +55,9 @@ func Run(cs []Collector) chan *opentsdb.DataPoint {
 		cs = collectors
 	}
 	for _, c := range cs {
-		go runCollector(dpchan, c)
+		go c.Run(dpchan)
 	}
 	return dpchan
-}
-
-func runCollector(dpchan chan *opentsdb.DataPoint, c Collector) {
-	for {
-		interval := c.Interval
-		if interval == 0 {
-			interval = DEFAULT_FREQ
-		}
-		next := time.After(interval)
-		md := c.F()
-		for _, dp := range md {
-			dpchan <- dp
-		}
-		<-next
-	}
 }
 
 func Add(md *opentsdb.MultiDataPoint, name string, value interface{}, tags opentsdb.TagSet) {

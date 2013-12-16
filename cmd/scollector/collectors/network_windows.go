@@ -8,7 +8,7 @@ import (
 )
 
 func init() {
-	collectors = append(collectors, Collector{F: c_network_windows})
+	collectors = append(collectors, &IntervalCollector{F: c_network_windows})
 }
 
 var interfaceExclusions = regexp.MustCompile("isatap|Teredo")

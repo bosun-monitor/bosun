@@ -6,10 +6,10 @@ import (
 )
 
 func init() {
-	collectors = append(collectors, Collector{F: c_mssql_general})
-	collectors = append(collectors, Collector{F: c_mssql_statistics})
-	collectors = append(collectors, Collector{F: c_mssql_locks})
-	collectors = append(collectors, Collector{F: c_mssql_databases})
+	collectors = append(collectors, &IntervalCollector{F: c_mssql_general})
+	collectors = append(collectors, &IntervalCollector{F: c_mssql_statistics})
+	collectors = append(collectors, &IntervalCollector{F: c_mssql_locks})
+	collectors = append(collectors, &IntervalCollector{F: c_mssql_databases})
 }
 
 func c_mssql_general() opentsdb.MultiDataPoint {

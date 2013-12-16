@@ -8,7 +8,7 @@ import (
 )
 
 func init() {
-	collectors = append(collectors, Collector{F: c_iostat_linux})
+	collectors = append(collectors, &IntervalCollector{F: c_iostat_linux})
 }
 
 var FIELDS_DISK = []string{

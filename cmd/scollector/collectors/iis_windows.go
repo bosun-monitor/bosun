@@ -6,8 +6,8 @@ import (
 )
 
 func init() {
-	collectors = append(collectors, Collector{F: c_iis_webservice})
-	collectors = append(collectors, Collector{F: c_iis_pool})
+	collectors = append(collectors, &IntervalCollector{F: c_iis_webservice})
+	collectors = append(collectors, &IntervalCollector{F: c_iis_pool})
 }
 
 func c_iis_pool() opentsdb.MultiDataPoint {
