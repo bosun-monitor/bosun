@@ -44,7 +44,6 @@ func main() {
 	}
 	cdp := collectors.Run(c)
 	if u != nil {
-		collectors.DEFAULT_FREQ = time.Second * 1
 		l.Println("OpenTSDB host:", u)
 		queue.New(u.String(), cdp)
 	} else {
