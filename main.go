@@ -26,21 +26,7 @@ func init() {
 
 func main() {
 	log.Println("running")
-	/*
-		go func() {
-			send := relay.TSDBSendHTTP(TSDBHttp)
-			extract := search.ExtractHTTP()
-			log.Fatal(relay.ListenHTTP(RelayListen, send, extract))
-		}()
-	*/
-	/*
-		go func() {
-			send := relay.TSDBSendTCP(TSDBHost)
-			extract := search.ExtractTCP()
-			log.Fatal(relay.ListenTCP(RelayListen, send, extract))
-		}()
-	*/
-	go func() { log.Fatal(relay.RelayTCP(RelayListen, TSDBHost)) }()
+	go func() { log.Fatal(relay.RelayHTTP(RelayListen, TSDBHost)) }()
 	go func() { log.Fatal(web.Listen(WebListen, WebDir, TSDBHttp)) }()
 	select {}
 }

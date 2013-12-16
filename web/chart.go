@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/StackExchange/tsaf/opentsdb"
+	"github.com/StackExchange/tcollector/opentsdb"
 )
 
 func Chart(w http.ResponseWriter, r *http.Request) {

@@ -10,9 +10,9 @@ import (
 	"github.com/StackExchange/tsaf/opentsdb"
 )
 
-const host = "localhost:4242"
+//const host = "localhost:4242"
 
-//const host = "ny-devtsdb04.ds.stackexchange.com:4242"
+const host = "ny-devtsaf01.ds.stackexchange.com:4242"
 
 func main() {
 	put := func(d time.Duration, name string, useJson bool) {
