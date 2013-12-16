@@ -19,12 +19,14 @@ type Queue struct {
 	sync.Mutex
 	host  string
 	queue opentsdb.MultiDataPoint
+	c     chan *opentsdb.DataPoint
 }
 
 // Creates and starts a new Queue.
 func New(host string, c chan *opentsdb.DataPoint) *Queue {
 	q := Queue{
 		host: host,
+		c:    c,
 	}
 
 	go func() {
@@ -68,7 +70,7 @@ func (q *Queue) sendBatch(batch opentsdb.MultiDataPoint) {
 	}
 	resp, err := http.Post(q.host, "application/json", bytes.NewReader(b))
 	if err != nil {
-		l.Println(1, err)
+		l.Println(err)
 		goto Err
 	}
 	if resp.StatusCode != http.StatusNoContent {
@@ -76,8 +78,7 @@ func (q *Queue) sendBatch(batch opentsdb.MultiDataPoint) {
 		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
 			l.Println(err)
-		} else {
-			l.Println(string(b))
+		} else if len(body) > 0 {
 			l.Println(string(body))
 		}
 		goto Err
@@ -85,7 +86,7 @@ func (q *Queue) sendBatch(batch opentsdb.MultiDataPoint) {
 	return
 Err:
 	l.Println("error, restoring", len(batch))
-	q.Lock()
-	q.queue = append(q.queue, batch...)
-	q.Unlock()
+	for _, dp := range batch {
+		q.c <- dp
+	}
 }
