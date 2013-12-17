@@ -1,8 +1,8 @@
 package collectors
 
 import (
-	"bytes"
-	"io/ioutil"
+	"bufio"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -57,46 +57,42 @@ func InitContinuous(cpath string) {
 
 func (c *ContinuousCollector) Run(dpchan chan<- *opentsdb.DataPoint) {
 	cmd := exec.Command(c.Path)
-	var out bytes.Buffer
-	cmd.Stdout = &out
+	pr, pw := io.Pipe()
+	s := bufio.NewScanner(pr)
+	cmd.Stdout = pw
 	err := cmd.Start()
 	if err != nil {
 		l.Println(err)
 		return
 	}
-	for {
-		body, err := ioutil.ReadAll(&out)
+	for s.Scan() {
+		line := strings.TrimSpace(s.Text())
+		sp := strings.Fields(line)
+		if len(sp) < 3 {
+			continue
+		}
+		ts, err := strconv.ParseInt(sp[1], 10, 64)
 		if err != nil {
-			l.Println(err)
-			break
+			continue
 		}
-		for _, line := range strings.Split(strings.TrimSpace(string(body)), "\n") {
-			line = strings.TrimSpace(line)
-			sp := strings.Fields(line)
-			if len(sp) < 3 {
+		dp := opentsdb.DataPoint{
+			Metric:    sp[0],
+			Timestamp: ts,
+			Value:     sp[2],
+			Tags:      opentsdb.TagSet{"host": host},
+		}
+		for _, tag := range sp[3:] {
+			tsp := strings.Split(tag, "=")
+			if len(tsp) != 2 {
+				l.Fatal("bad tag", tsp)
 				continue
 			}
-			ts, err := strconv.ParseInt(sp[1], 10, 64)
-			if err != nil {
-				continue
-			}
-			dp := opentsdb.DataPoint{
-				Metric:    sp[0],
-				Timestamp: ts,
-				Value:     sp[2],
-				Tags:      opentsdb.TagSet{"host": host},
-			}
-			for _, tag := range sp[3:] {
-				tsp := strings.Split(tag, "=")
-				if len(tsp) != 2 {
-					continue
-				}
-				dp.Tags[tsp[0]] = tsp[1]
-			}
-			//l.Print("CMD ", dp.Telnet())
-			dpchan <- &dp
+			dp.Tags[tsp[0]] = tsp[1]
 		}
-		time.Sleep(time.Second)
+		dpchan <- &dp
+	}
+	if err := s.Err(); err != nil {
+		l.Println(err)
 	}
 }
 
