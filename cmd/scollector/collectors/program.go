@@ -56,15 +56,35 @@ func InitPrograms(cpath string) {
 }
 
 func (c *ProgramCollector) Run(dpchan chan<- *opentsdb.DataPoint) {
+	if c.Interval == 0 {
+		for {
+			if err := c.runProgram(dpchan); err != nil {
+				l.Println(err)
+			}
+			l.Println("restarting", c.Path)
+		}
+	} else {
+		for {
+			next := time.After(c.Interval)
+			c.runProgram(dpchan)
+			<-next
+		}
+	}
+}
+
+func (c *ProgramCollector) runProgram(dpchan chan<- *opentsdb.DataPoint) (progError error) {
 	cmd := exec.Command(c.Path)
 	pr, pw := io.Pipe()
 	s := bufio.NewScanner(pr)
 	cmd.Stdout = pw
 	err := cmd.Start()
 	if err != nil {
-		l.Println(err)
-		return
+		return err
 	}
+	go func() {
+		progError = cmd.Wait()
+		pw.Close()
+	}()
 	for s.Scan() {
 		line := strings.TrimSpace(s.Text())
 		sp := strings.Fields(line)
@@ -92,8 +112,9 @@ func (c *ProgramCollector) Run(dpchan chan<- *opentsdb.DataPoint) {
 		dpchan <- &dp
 	}
 	if err := s.Err(); err != nil {
-		l.Println(err)
+		return err
 	}
+	return
 }
 
 func (c *ProgramCollector) Name() string {
