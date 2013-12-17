@@ -24,7 +24,7 @@ var colDir = flag.String("c", "", `Passthrough collector directory. It should co
 func main() {
 	flag.Parse()
 	if *colDir != "" {
-		collectors.InitContinuous(*colDir)
+		collectors.InitPrograms(*colDir)
 	}
 	c := collectors.Search(*flagFilter)
 	u := parseHost()

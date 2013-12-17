@@ -13,12 +13,12 @@ import (
 	"github.com/StackExchange/tcollector/opentsdb"
 )
 
-type ContinuousCollector struct {
+type ProgramCollector struct {
 	Path     string
 	Interval time.Duration
 }
 
-func InitContinuous(cpath string) {
+func InitPrograms(cpath string) {
 	cdir, err := os.Open(cpath)
 	if err != nil {
 		l.Println(err)
@@ -47,7 +47,7 @@ func InitContinuous(cpath string) {
 			continue
 		}
 		for _, file := range files {
-			collectors = append(collectors, &ContinuousCollector{
+			collectors = append(collectors, &ProgramCollector{
 				Path:     filepath.Join(dir.Name(), file.Name()),
 				Interval: interval,
 			})
@@ -55,7 +55,7 @@ func InitContinuous(cpath string) {
 	}
 }
 
-func (c *ContinuousCollector) Run(dpchan chan<- *opentsdb.DataPoint) {
+func (c *ProgramCollector) Run(dpchan chan<- *opentsdb.DataPoint) {
 	cmd := exec.Command(c.Path)
 	pr, pw := io.Pipe()
 	s := bufio.NewScanner(pr)
@@ -96,6 +96,6 @@ func (c *ContinuousCollector) Run(dpchan chan<- *opentsdb.DataPoint) {
 	}
 }
 
-func (c *ContinuousCollector) Name() string {
+func (c *ProgramCollector) Name() string {
 	return c.Path
 }
