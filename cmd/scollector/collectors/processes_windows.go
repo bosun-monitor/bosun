@@ -13,30 +13,61 @@ func init() {
 
 // These are silly processes but exist on my machine, will need to update KMB
 var processInclusions = regexp.MustCompile("chrome|powershell|tcollector")
+var serviceInclusions = regexp.MustCompile("WinRM")
 
 func c_windows_processes() opentsdb.MultiDataPoint {
 	var dst []Win32_PerfRawData_PerfProc_Process
 	var q = wmi.CreateQuery(&dst, `WHERE Name <> '_Total'`)
 	err := wmi.Query(q, &dst)
 	if err != nil {
-		l.Println("cpu:", err)
+		l.Println("processes:", err)
 		return nil
 	}
+	var svc_dst []Win32_Service
+	var svc_q = wmi.CreateQuery(&svc_dst, `WHERE Name <> '_Total'`)
+	err = wmi.Query(svc_q, &svc_dst)
+	if err != nil {
+		l.Println("services:", err)
+		return nil
+	}
+
 	var md opentsdb.MultiDataPoint
 	for _, v := range dst {
-		if !processInclusions.MatchString(v.Name) {
-			continue
-		}
+		var name string
+		service_match := false
+		process_match := processInclusions.MatchString(v.Name)
+
 		id := "0"
-		raw_name := strings.Split(v.Name, "#")
-		name := raw_name[0]
-		if len(raw_name) == 2 {
-			id = raw_name[1]
+
+		if process_match {
+			raw_name := strings.Split(v.Name, "#")
+			name = raw_name[0]
+			if len(raw_name) == 2 {
+				id = raw_name[1]
+			}
+			// If you have a hash sign in your process name you don't deserve monitoring ;-)
+			if len(raw_name) > 2 {
+				continue
+			}
 		}
-		// If you have a hash sign in your process name you don't deserve monitoring ;-)
-		if len(raw_name) > 2 {
+
+		// A Service match could "overwrite" a process match, but that is probably what we would want
+		for _, svc := range svc_dst {
+			if serviceInclusions.MatchString(svc.Name) {
+				// It is possible the pid has gone and been reused, but I think this unlikely
+				// And I'm not aware of an atomic join we could do anyways
+				if svc.ProcessId == v.IDProcess {
+					id = "0"
+					service_match = true
+					name = svc.Name
+					break
+				}
+			}
+		}
+		if !(service_match || process_match) {
 			continue
 		}
+
 		Add(&md, "processes.elapsed_time", v.ElapsedTime, opentsdb.TagSet{"name": name, "id": id})
 		Add(&md, "processes.handle_count", v.HandleCount, opentsdb.TagSet{"name": name, "id": id})
 		Add(&md, "processes.io_bytes", v.IOOtherBytesPersec, opentsdb.TagSet{"name": name, "id": id, "type": "other"})
@@ -57,10 +88,10 @@ func c_windows_processes() opentsdb.MultiDataPoint {
 		Add(&md, "processes.private_bytes", v.PrivateBytes, opentsdb.TagSet{"name": name, "id": id})
 		Add(&md, "processes.thread_count", v.ThreadCount, opentsdb.TagSet{"name": name, "id": id})
 		Add(&md, "processes.virtual_bytes", v.VirtualBytes, opentsdb.TagSet{"name": name, "id": id})
-		Add(&md, "processes.virtual_bytespeak", v.VirtualBytesPeak, opentsdb.TagSet{"name": name, "id": id})
-		Add(&md, "processes.workingset", v.WorkingSet, opentsdb.TagSet{"name": name, "id": id})
-		Add(&md, "processes.workingset_peak", v.WorkingSetPeak, opentsdb.TagSet{"name": name, "id": id})
-		Add(&md, "processes.workingset_private", v.WorkingSetPrivate, opentsdb.TagSet{"name": name, "id": id})
+		Add(&md, "processes.virtual_bytes_peak", v.VirtualBytesPeak, opentsdb.TagSet{"name": name, "id": id})
+		Add(&md, "processes.working_set", v.WorkingSet, opentsdb.TagSet{"name": name, "id": id})
+		Add(&md, "processes.working_set_peak", v.WorkingSetPeak, opentsdb.TagSet{"name": name, "id": id})
+		Add(&md, "processes.working_set_private", v.WorkingSetPrivate, opentsdb.TagSet{"name": name, "id": id})
 	}
 	return md
 }
@@ -69,6 +100,7 @@ func c_windows_processes() opentsdb.MultiDataPoint {
 type Win32_PerfRawData_PerfProc_Process struct {
 	ElapsedTime             uint64
 	HandleCount             uint32
+	IDProcess               uint32
 	IOOtherBytesPersec      uint64
 	IOOtherOperationsPersec uint64
 	IOReadBytesPersec       uint64
@@ -92,4 +124,10 @@ type Win32_PerfRawData_PerfProc_Process struct {
 	WorkingSet              uint64
 	WorkingSetPeak          uint64
 	WorkingSetPrivate       uint64
+}
+
+//Actually a Win32_BaseServce
+type Win32_Service struct {
+	Name      string
+	ProcessId uint32
 }
