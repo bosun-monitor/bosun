@@ -7,27 +7,6 @@ import (
 
 func init() {
 	collectors = append(collectors, &IntervalCollector{F: c_iis_webservice})
-	collectors = append(collectors, &IntervalCollector{F: c_iis_pool})
-}
-
-func c_iis_pool() opentsdb.MultiDataPoint {
-	var dst []WorkerProcess
-	q := wmi.CreateQuery(&dst, "")
-	err := wmi.QueryNamespace(q, &dst, "root\\WebAdministration")
-	if err != nil {
-		l.Println("iis_worker:", err, "WQL Query: ", q, "NameSpace", "root\\WebAdministration")
-		return nil
-	}
-	var md opentsdb.MultiDataPoint
-	for _, v := range dst {
-		Add(&md, "iis.apool.pid", v.ProcessId, opentsdb.TagSet{"name": v.AppPoolName})
-	}
-	return md
-}
-
-type WorkerProcess struct {
-	AppPoolName string
-	ProcessId   uint32
 }
 
 func c_iis_webservice() opentsdb.MultiDataPoint {
@@ -68,7 +47,6 @@ func c_iis_webservice() opentsdb.MultiDataPoint {
 	return md
 }
 
-// TODO Adding Most of these fields is crashing tcollector, not sure why
 type Win32_PerfRawData_W3SVC_WebService struct {
 	BytesReceivedPersec          uint64
 	BytesSentPersec              uint64
