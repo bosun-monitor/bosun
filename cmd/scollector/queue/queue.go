@@ -2,7 +2,6 @@ package queue
 
 import (
 	"bytes"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -61,7 +60,7 @@ func (q *Queue) send() {
 }
 
 func (q *Queue) sendBatch(batch opentsdb.MultiDataPoint) {
-	fmt.Println("sending", len(batch))
+	l.Println("sending", len(batch))
 	b, err := batch.Json()
 	if err != nil {
 		l.Println(err)
