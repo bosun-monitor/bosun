@@ -18,8 +18,8 @@ type ContinuousCollector struct {
 	Interval time.Duration
 }
 
-func init() {
-	cdir, err := os.Open("collectors/collectors")
+func InitContinuous(cpath string) {
+	cdir, err := os.Open(cpath)
 	if err != nil {
 		l.Println(err)
 		return
