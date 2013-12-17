@@ -23,6 +23,7 @@ func c_windows_processes() opentsdb.MultiDataPoint {
 		l.Println("processes:", err)
 		return nil
 	}
+
 	var svc_dst []Win32_Service
 	var svc_q = wmi.CreateQuery(&svc_dst, `WHERE Name <> '_Total'`)
 	err = wmi.Query(svc_q, &svc_dst)
@@ -31,10 +32,19 @@ func c_windows_processes() opentsdb.MultiDataPoint {
 		return nil
 	}
 
+	var iis_dst []WorkerProcess
+	iis_q := wmi.CreateQuery(&iis_dst, "")
+	err = wmi.QueryNamespace(iis_q, &iis_dst, "root\\WebAdministration")
+	if err != nil {
+		l.Println("iis_worker:", err, "WQL Query: ", iis_q, "NameSpace", "root\\WebAdministration")
+		return nil
+	}
+
 	var md opentsdb.MultiDataPoint
 	for _, v := range dst {
 		var name string
 		service_match := false
+		iis_match := false
 		process_match := processInclusions.MatchString(v.Name)
 
 		id := "0"
@@ -64,7 +74,17 @@ func c_windows_processes() opentsdb.MultiDataPoint {
 				}
 			}
 		}
-		if !(service_match || process_match) {
+
+		for _, a_pool := range iis_dst {
+			if a_pool.ProcessId == v.IDProcess {
+				id = "0"
+				iis_match = true
+				name = strings.Join([]string{"iis", a_pool.AppPoolName}, "_")
+				break
+			}
+		}
+
+		if !(service_match || process_match || iis_match) {
 			continue
 		}
 
@@ -92,6 +112,7 @@ func c_windows_processes() opentsdb.MultiDataPoint {
 		Add(&md, "processes.working_set", v.WorkingSet, opentsdb.TagSet{"name": name, "id": id})
 		Add(&md, "processes.working_set_peak", v.WorkingSetPeak, opentsdb.TagSet{"name": name, "id": id})
 		Add(&md, "processes.working_set_private", v.WorkingSetPrivate, opentsdb.TagSet{"name": name, "id": id})
+
 	}
 	return md
 }
@@ -130,4 +151,9 @@ type Win32_PerfRawData_PerfProc_Process struct {
 type Win32_Service struct {
 	Name      string
 	ProcessId uint32
+}
+
+type WorkerProcess struct {
+	AppPoolName string
+	ProcessId   uint32
 }
