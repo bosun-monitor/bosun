@@ -73,13 +73,16 @@ func (q *Queue) sendBatch(batch opentsdb.MultiDataPoint) {
 		goto Err
 	}
 	if resp.StatusCode != http.StatusNoContent {
+		l.Println("RESP ERR", resp.Status)
 		defer resp.Body.Close()
 		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			l.Println(err)
-		} else if len(body) > 0 {
-			l.Println(string(body))
+			l.Println("ERR", err)
 		}
+		if len(body) > 0 {
+			l.Println("ERR BODY", string(body))
+		}
+		l.Println("REQ BODY", string(b))
 		goto Err
 	}
 	return
