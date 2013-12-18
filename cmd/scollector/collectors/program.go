@@ -58,9 +58,11 @@ func InitPrograms(cpath string) {
 func (c *ProgramCollector) Run(dpchan chan<- *opentsdb.DataPoint) {
 	if c.Interval == 0 {
 		for {
+			next := time.After(DEFAULT_FREQ)
 			if err := c.runProgram(dpchan); err != nil {
 				l.Println(err)
 			}
+			<-next
 			l.Println("restarting", c.Path)
 		}
 	} else {
