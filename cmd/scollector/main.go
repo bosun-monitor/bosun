@@ -20,11 +20,15 @@ var flagTest = flag.Bool("t", false, "Test - run collectors once, print, and exi
 var flagList = flag.Bool("l", false, "List")
 var host = flag.String("h", "", `OpenTSDB host. Ex: "tsdb.example.com". Can optionally specify port: "tsdb.example.com:4000", but will default to 4242 otherwise. If not specified, will print to screen`)
 var colDir = flag.String("c", "", `Passthrough collector directory. It should contain numbered directories like the OpenTSDB tcollector expects. Any executable file in those directories is run every N seconds, where N is the name of the directory. Use 0 for a program that should be run continuously and simply pass data through to OpenTSDB (the program will be restarted if it exits. Data output format is: "metric timestamp value tag1=val1 tag2=val2 ...". Timestamp is in Unix format (seconds since epoch). Tags are optional. A host tag is automatically added, but overridden if specified.`)
+var batchSize = flag.Int("b", 0, "OpenTSDB batch size. Used for debugging bad data.")
 
 func main() {
 	flag.Parse()
 	if *colDir != "" {
 		collectors.InitPrograms(*colDir)
+	}
+	if *batchSize > 0 {
+		queue.MAX_PERSEC = *batchSize
 	}
 	c := collectors.Search(*flagFilter)
 	u := parseHost()

@@ -39,7 +39,7 @@ func New(host string, c chan *opentsdb.DataPoint) *Queue {
 	return &q
 }
 
-const MAX_PERSEC = 50
+var MAX_PERSEC = 50
 
 func (q *Queue) send() {
 	for {
