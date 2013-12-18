@@ -1,0 +1,2 @@
+On OpenTSDB /api/put error: retry with '?details', and print out specific errors.
+Deduplicate data: if a previous data point is exactly the same, don't re-send it for 10 minutes. If a new data point (same metric, same tags, different timestamp and value) comes in, it must take the place (i.e., we shouldn't de dup from 2 points ago).
