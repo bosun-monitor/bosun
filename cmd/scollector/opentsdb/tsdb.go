@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"unicode"
 	"unicode/utf8"
 )
@@ -66,8 +67,16 @@ func (d *DataPoint) clean() error {
 	if err != nil {
 		return fmt.Errorf("%s. Orginal: [%s] Cleaned: [%s]", err.Error(), om, d.Metric)
 	}
+	if sv, ok := d.Value.(string); ok {
+		if i, err := strconv.ParseInt(sv, 10, 64); err == nil {
+			d.Value = i
+		} else if f, err := strconv.ParseFloat(sv, 64); err == nil {
+			d.Value = f
+		} else {
+			return fmt.Errorf("Unparseable number %v", sv)
+		}
+	}
 	return nil
-
 }
 
 func (t TagSet) clean() error {
