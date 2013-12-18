@@ -74,7 +74,7 @@ func Add(md *opentsdb.MultiDataPoint, name string, value interface{}, tags opent
 	*md = append(*md, &d)
 }
 
-func readProc(fname string, line func(string)) {
+func readLine(fname string, line func(string)) {
 	f, err := os.Open(fname)
 	if err != nil {
 		l.Printf("%v: %v\n", fname, err)

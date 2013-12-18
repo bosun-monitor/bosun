@@ -33,7 +33,7 @@ var CPU_FIELDS = []string{
 
 func c_procstats_linux() opentsdb.MultiDataPoint {
 	var md opentsdb.MultiDataPoint
-	readProc("/proc/uptime", func(s string) {
+	readLine("/proc/uptime", func(s string) {
 		m := uptimeRE.FindStringSubmatch(s)
 		if m == nil {
 			return
@@ -41,14 +41,14 @@ func c_procstats_linux() opentsdb.MultiDataPoint {
 		Add(&md, "proc.uptime.total", m[1], nil)
 		Add(&md, "proc.uptime.now", m[2], nil)
 	})
-	readProc("/proc/meminfo", func(s string) {
+	readLine("/proc/meminfo", func(s string) {
 		m := meminfoRE.FindStringSubmatch(s)
 		if m == nil {
 			return
 		}
 		Add(&md, "proc.meminfo."+strings.ToLower(m[1]), m[2], nil)
 	})
-	readProc("/proc/vmstat", func(s string) {
+	readLine("/proc/vmstat", func(s string) {
 		m := vmstatRE.FindStringSubmatch(s)
 		if m == nil {
 			return
@@ -58,7 +58,7 @@ func c_procstats_linux() opentsdb.MultiDataPoint {
 			Add(&md, "proc.vmstat."+m[1], m[2], nil)
 		}
 	})
-	readProc("/proc/stat", func(s string) {
+	readLine("/proc/stat", func(s string) {
 		m := statRE.FindStringSubmatch(s)
 		if m == nil {
 			return
@@ -94,7 +94,7 @@ func c_procstats_linux() opentsdb.MultiDataPoint {
 			Add(&md, "proc.stat.procs_blocked", m[2], nil)
 		}
 	})
-	readProc("/proc/loadavg", func(s string) {
+	readLine("/proc/loadavg", func(s string) {
 		m := loadavgRE.FindStringSubmatch(s)
 		if m == nil {
 			return
@@ -105,11 +105,11 @@ func c_procstats_linux() opentsdb.MultiDataPoint {
 		Add(&md, "proc.loadavg.runnable", m[4], nil)
 		Add(&md, "proc.loadavg.total_threads", m[5], nil)
 	})
-	readProc("/proc/sys/kernel/random/entropy_avail", func(s string) {
+	readLine("/proc/sys/kernel/random/entropy_avail", func(s string) {
 		Add(&md, "proc.kernel.entropy_avail", strings.TrimSpace(s), nil)
 	})
 	num_cpus := 0
-	readProc("/proc/interrupts", func(s string) {
+	readLine("/proc/interrupts", func(s string) {
 		cols := strings.Fields(s)
 		if num_cpus == 0 {
 			num_cpus = len(cols)

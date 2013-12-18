@@ -42,7 +42,7 @@ func c_ifstat_linux() opentsdb.MultiDataPoint {
 			return "in"
 		}
 	}
-	readProc("/proc/net/dev", func(s string) {
+	readLine("/proc/net/dev", func(s string) {
 		m := ifstatRE.FindStringSubmatch(s)
 		if m == nil {
 			return

@@ -34,7 +34,7 @@ var FIELDS_PART = []string{
 
 func c_iostat_linux() opentsdb.MultiDataPoint {
 	var md opentsdb.MultiDataPoint
-	readProc("/proc/diskstats", func(s string) {
+	readLine("/proc/diskstats", func(s string) {
 		values := strings.Fields(s)
 		if len(values) < 4 {
 			return
