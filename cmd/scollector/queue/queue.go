@@ -68,10 +68,17 @@ func (q *Queue) sendBatch(batch opentsdb.MultiDataPoint) {
 		return
 	}
 	resp, err := http.Post(q.host, "application/json", bytes.NewReader(b))
+	// Some problem with connecting to the server; retry later.
 	if err != nil {
 		l.Println(err)
-		goto Err
+		l.Println("restoring", len(batch))
+		for _, dp := range batch {
+			q.c <- dp
+		}
+		time.Sleep(time.Second * 5)
+		return
 	}
+	// TSDB didn't like our data. Don't put it back in the queue since it's bad.
 	if resp.StatusCode != http.StatusNoContent {
 		l.Println("RESP ERR", resp.Status)
 		defer resp.Body.Close()
@@ -83,12 +90,5 @@ func (q *Queue) sendBatch(batch opentsdb.MultiDataPoint) {
 			l.Println("ERR BODY", string(body))
 		}
 		l.Println("REQ BODY", string(b))
-		goto Err
-	}
-	return
-Err:
-	l.Println("error, restoring", len(batch))
-	for _, dp := range batch {
-		q.c <- dp
 	}
 }
