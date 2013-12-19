@@ -70,7 +70,9 @@ func (q *Queue) sendBatch(batch opentsdb.MultiDataPoint) {
 	resp, err := http.Post(q.host, "application/json", bytes.NewReader(b))
 	if err != nil {
 		l.Println(err)
-	} else if resp.StatusCode != http.StatusNoContent {
+		goto Err
+	}
+	if resp.StatusCode != http.StatusNoContent {
 		l.Println("RESP ERR", resp.Status)
 		defer resp.Body.Close()
 		body, err := ioutil.ReadAll(resp.Body)
@@ -81,5 +83,12 @@ func (q *Queue) sendBatch(batch opentsdb.MultiDataPoint) {
 			l.Println("ERR BODY", string(body))
 		}
 		l.Println("REQ BODY", string(b))
+		goto Err
+	}
+	return
+Err:
+	l.Println("error, restoring", len(batch))
+	for _, dp := range batch {
+		q.c <- dp
 	}
 }
