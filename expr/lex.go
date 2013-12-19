@@ -40,8 +40,20 @@ type itemType int
 const (
 	itemError itemType = iota // error occurred; value is text of error
 	itemEOF
-	itemNot    // '!'
-	itemNumber // simple number
+	itemNot       // '!'
+	itemAnd       // '&&'
+	itemOr        // '||'
+	itemGreater   // '>'
+	itemLess      // '<'
+	itemGreaterEq // '>='
+	itemLessEq    // '<='
+	itemEq        // '=='
+	itemNotEq     // '!='
+	itemPlus      // '+'
+	itemMinus     // '-'
+	itemMult      // '*'
+	itemDiv       // '/'
+	itemNumber    // simple number
 )
 
 const eof = -1
@@ -157,10 +169,10 @@ func lexItem(l *lexer) stateFn {
 Loop:
 	for {
 		switch r := l.next(); {
-		case r == '!':
-			l.emit(itemNot)
-			return lexNumber
-		case unicode.IsDigit(r) || r == '.' || r == '+' || r == '-':
+		case isSymbol(r):
+			l.backup()
+			return lexSymbol
+		case unicode.IsDigit(r) || r == '.':
 			l.backup()
 			return lexNumber
 		case unicode.IsLetter(r):
@@ -191,8 +203,6 @@ func lexNumber(l *lexer) stateFn {
 }
 
 func (l *lexer) scanNumber() bool {
-	// Optional leading sign.
-	l.accept("+-")
 	// Is it hex?
 	digits := "0123456789"
 	if l.accept("0") && l.accept("xX") {
@@ -209,6 +219,44 @@ func (l *lexer) scanNumber() bool {
 	return true
 }
 
+const symbols = "!<>=&|+-"
+
+func lexSymbol(l *lexer) stateFn {
+	l.acceptRun(symbols)
+	s := l.input[l.start:l.pos]
+	switch s {
+	case "!":
+		l.emit(itemNot)
+	case "&&":
+		l.emit(itemAnd)
+	case "||":
+		l.emit(itemOr)
+	case ">":
+		l.emit(itemGreater)
+	case "<":
+		l.emit(itemLess)
+	case ">=":
+		l.emit(itemGreaterEq)
+	case "<=":
+		l.emit(itemLessEq)
+	case "==":
+		l.emit(itemEq)
+	case "!=":
+		l.emit(itemNotEq)
+	case "+":
+		l.emit(itemPlus)
+	case "-":
+		l.emit(itemMinus)
+	case "*":
+		l.emit(itemMult)
+	case "/":
+		l.emit(itemDiv)
+	default:
+		l.emit(itemError)
+	}
+	return lexItem
+}
+
 func lexFunc(l *lexer) stateFn {
 	l.emit(itemError)
 	return lexItem
@@ -221,4 +269,8 @@ func isSpace(r rune) bool {
 
 func isVarchar(r rune) bool {
 	return r == '_' || unicode.IsLetter(r) || unicode.IsDigit(r)
+}
+
+func isSymbol(r rune) bool {
+	return strings.IndexRune(symbols, r) != -1
 }
