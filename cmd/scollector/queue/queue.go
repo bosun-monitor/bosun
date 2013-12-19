@@ -59,7 +59,11 @@ func (q *Queue) send() {
 	}
 }
 
+var qlock sync.Mutex
+
 func (q *Queue) sendBatch(batch opentsdb.MultiDataPoint) {
+	qlock.Lock()
+	defer qlock.Unlock()
 	l.Println("sending", len(batch))
 	b, err := batch.Json()
 	if err != nil {
