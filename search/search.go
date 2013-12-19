@@ -2,9 +2,9 @@ package search
 
 import (
 	"encoding/json"
-	"sync"
 	"sort"
-	
+	"sync"
+
 	"github.com/StackExchange/tcollector/opentsdb"
 )
 
@@ -114,7 +114,6 @@ func TagValuesByTagKey(tagk string) []string {
 	}
 	sort.Strings(tagvs)
 	return tagvs
-
 
 }
 
