@@ -3,7 +3,7 @@ package search
 import (
 	"encoding/json"
 	"sync"
-
+	"sort"
 	"github.com/StackExchange/tcollector/opentsdb"
 )
 
@@ -83,7 +83,41 @@ func Process(c chan *opentsdb.DataPoint) {
 	}
 }
 
-func Metrics(tagk, tagv string) []string {
+func UniqueMetrics() []string {
+	lock.RLock()
+	defer lock.RUnlock()
+	metrics := make([]string, len(Tagk))
+	i := 0
+	for k, _ := range Tagk {
+		metrics[i] = k
+		i++
+	}
+	sort.Strings(metrics)
+	return metrics
+}
+
+func TagValuesByTagKey(tagk string) []string {
+	lock.RLock()
+	defer lock.RUnlock()
+	tagvset := make(map[string]bool)
+	for _, metric := range UniqueMetrics() {
+		for _, tagv := range TagValuesByMetricTagKey(metric, tagk) {
+			tagvset[tagv] = true
+		}
+	}
+	tagvs := make([]string, len(tagvset))
+	i := 0
+	for k, _ := range tagvset {
+		tagvs[i] = k
+		i++
+	}
+	sort.Strings(tagvs)
+	return tagvs
+
+
+}
+
+func MetricsByTagPair(tagk, tagv string) []string {
 	lock.RLock()
 	defer lock.RUnlock()
 	var r []string
@@ -93,7 +127,7 @@ func Metrics(tagk, tagv string) []string {
 	return r
 }
 
-func TagKeys(metric string) []string {
+func TagKeysByMetric(metric string) []string {
 	lock.RLock()
 	defer lock.RUnlock()
 	var r []string
@@ -103,7 +137,7 @@ func TagKeys(metric string) []string {
 	return r
 }
 
-func TagValues(metric, tagk string) []string {
+func TagValuesByMetricTagKey(metric, tagk string) []string {
 	lock.RLock()
 	defer lock.RUnlock()
 	var r []string

@@ -24,6 +24,11 @@ func Listen(addr, dir, tsdbhttp string) error {
 	}
 	router.HandleFunc("/", Index)
 	router.HandleFunc("/api/chart", Chart)
+	router.HandleFunc("/api/metric", UniqueMetrics)
+	router.HandleFunc("/api/metric/{tagk}/{tagv}", MetricsByTagPair)
+	router.HandleFunc("/api/tagk/{metric}", TagKeysByMetric)
+	router.HandleFunc("/api/tagv/{tagk}/{metric}", TagValuesByMetricTagKey)
+	router.HandleFunc("/api/tagv/{tagk}", TagValuesByTagKey)
 	http.Handle("/", router)
 	http.Handle("/static/", http.FileServer(http.Dir(dir)))
 	log.Println("web listening on", addr)
@@ -40,3 +45,6 @@ func Index(w http.ResponseWriter, r *http.Request) {
 		search.Tagk,
 	})
 }
+
+
+
