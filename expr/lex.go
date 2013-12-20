@@ -179,7 +179,7 @@ Loop:
 			l.backup()
 			return lexFunc
 		case isSpace(r):
-			// ignore
+			l.ignore()
 		case r == eof:
 			l.emit(itemEOF)
 			break Loop
