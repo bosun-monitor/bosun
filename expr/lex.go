@@ -54,6 +54,12 @@ const (
 	itemMult      // '*'
 	itemDiv       // '/'
 	itemNumber    // simple number
+	itemComma
+	itemLeftParen
+	itemRightParen
+	itemString
+	itemQuery
+	itemFunc
 )
 
 const eof = -1
@@ -170,14 +176,21 @@ Loop:
 	for {
 		switch r := l.next(); {
 		case isSymbol(r):
-			l.backup()
 			return lexSymbol
-		case unicode.IsDigit(r) || r == '.':
-			l.backup()
+		case isNumber(r):
 			return lexNumber
 		case unicode.IsLetter(r):
-			l.backup()
 			return lexFunc
+		case r == '(':
+			l.emit(itemLeftParen)
+		case r == ')':
+			l.emit(itemRightParen)
+		case r == '[':
+			return lexQuery
+		case r == '"':
+			return lexString
+		case r == ',':
+			l.emit(itemComma)
 		case isSpace(r):
 			l.ignore()
 		case r == eof:
@@ -258,8 +271,40 @@ func lexSymbol(l *lexer) stateFn {
 }
 
 func lexFunc(l *lexer) stateFn {
-	l.emit(itemError)
-	return lexItem
+	for {
+		switch r := l.next(); {
+		case unicode.IsLetter(r):
+			// absorb
+		default:
+			l.backup()
+			l.emit(itemFunc)
+			return lexItem
+		}
+	}
+}
+
+func lexString(l *lexer) stateFn {
+	for {
+		switch l.next() {
+		case '"':
+			l.emit(itemString)
+			return lexItem
+		case eof:
+			return l.errorf("expected \"")
+		}
+	}
+}
+
+func lexQuery(l *lexer) stateFn {
+	for {
+		switch l.next() {
+		case ']':
+			l.emit(itemQuery)
+			return lexItem
+		case eof:
+			return l.errorf("expected ]")
+		}
+	}
 }
 
 // isSpace reports whether r is a space character.
@@ -273,4 +318,8 @@ func isVarchar(r rune) bool {
 
 func isSymbol(r rune) bool {
 	return strings.IndexRune(symbols, r) != -1
+}
+
+func isNumber(r rune) bool {
+	return unicode.IsDigit(r) || r == '.'
 }
