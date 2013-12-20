@@ -219,7 +219,7 @@ func (l *lexer) scanNumber() bool {
 	return true
 }
 
-const symbols = "!<>=&|+-"
+const symbols = "!<>=&|+-*/"
 
 func lexSymbol(l *lexer) stateFn {
 	l.acceptRun(symbols)
