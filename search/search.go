@@ -21,14 +21,14 @@ type MetricTagSet struct {
 }
 
 func (mts *MetricTagSet) key() string {
-	s := make([]string, len(mts.Tags)+1)
+	s := make([]string, len(mts.Tags))
 	i := 0
 	for k, v := range mts.Tags {
 		s[i] = strings.Join([]string{k, v}, "")
 		i++
 	}
 	sort.Strings(s)
-	s[i] = mts.Metric
+	s = append(s, mts.Metric)
 	return strings.Join(s, "")
 }
 
