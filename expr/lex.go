@@ -291,7 +291,7 @@ func lexString(l *lexer) stateFn {
 			l.emit(itemString)
 			return lexItem
 		case eof:
-			return l.errorf("expected \"")
+			return l.errorf("unterminated string")
 		}
 	}
 }
@@ -303,7 +303,7 @@ func lexQuery(l *lexer) stateFn {
 			l.emit(itemQuery)
 			return lexItem
 		case eof:
-			return l.errorf("expected ]")
+			return l.errorf("unterminated query")
 		}
 	}
 }
