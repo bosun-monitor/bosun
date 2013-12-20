@@ -178,6 +178,7 @@ Loop:
 		case isSymbol(r):
 			return lexSymbol
 		case isNumber(r):
+			l.backup()
 			return lexNumber
 		case unicode.IsLetter(r):
 			return lexFunc
