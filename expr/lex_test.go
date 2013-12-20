@@ -57,12 +57,38 @@ var (
 	tLt    = item{itemLess, 0, "<"}
 	tGt    = item{itemGreater, 0, ">"}
 	tOr    = item{itemOr, 0, "||"}
+	tNot   = item{itemNot, 0, "!"}
+	tAnd   = item{itemAnd, 0, "&&"}
+	tLtEq  = item{itemLessEq, 0, "<="}
+	tGtEq  = item{itemGreaterEq, 0, ">="}
+	tNotEq = item{itemNotEq, 0, "!="}
+	tEq    = item{itemEq, 0, "=="}
+	tPlus  = item{itemPlus, 0, "+"}
+	tMinus = item{itemMinus, 0, "-"}
+	tMult  = item{itemMult, 0, "*"}
+	tDiv   = item{itemDiv, 0, "/"}
 )
 
 var lexTests = []lexTest{
 	{"empty", "", []item{tEOF}},
 	{"spaces", " \t\n", []item{tEOF}},
 	{"text", `"now is the time"`, []item{{itemString, 0, `"now is the time"`}, tEOF}},
+	{"operators", "! && || < > <= >= == != + - * /", []item{
+		tNot,
+		tAnd,
+		tOr,
+		tLt,
+		tGt,
+		tLtEq,
+		tGtEq,
+		tEq,
+		tNotEq,
+		tPlus,
+		tMinus,
+		tMult,
+		tDiv,
+		tEOF,
+	}},
 	{"numbers", "1 02 0x14 7.2 1e3 1.2e-4", []item{
 		{itemNumber, 0, "1"},
 		{itemNumber, 0, "02"},
