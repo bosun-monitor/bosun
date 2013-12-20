@@ -51,7 +51,8 @@ func TestLex(t *testing.T) {
 		`avg([m=sum:sys.cpu.user{host=*-web*}], "1m") < 0.2 || avg([m=sum:sys.cpu.user{host=*-web*}], "1m") > 0.4`,
 	}
 	invalids := []string{
-		"avg(1)",
+		"1 -+ 2",
+		"avg(1 | 3)",
 	}
 	var lexTests []lexTest
 	for _, v := range valids {
