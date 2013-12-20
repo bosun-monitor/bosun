@@ -1,5 +1,5 @@
-package conf
 
+package expr
 import "testing"
 
 type lexTest struct {
