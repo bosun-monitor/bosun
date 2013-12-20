@@ -36,25 +36,17 @@ func TagValuesByMetricTagKey(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	metric := vars["metric"]
 	tagk := vars["tagk"]
-	values := search.TagValuesByMetricTagKey(metric, tagk)
-	b, err := json.Marshal(values)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+	q := r.URL.Query()
+	var values []string
+	if len(q) > 0 {
+		tsf := make(map[string]string)
+		for k, v := range q {
+			tsf[k] = strings.Join(v, "")
+		}
+		values = search.FilteredTagValuesByMetricTagKey(metric, tagk, tsf)
+	} else {
+		values = search.TagValuesByMetricTagKey(metric, tagk)
 	}
-	w.Write(b)
-}
-
-func FilteredTagValuesByMetricTagKey(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	metric := vars["metric"]
-	tagk := vars["tagk"]
-	split_pairs := strings.Split(vars["tsf"], ",")
-	tsf := make(map[string]string)
-	for i := 0; i < (len(split_pairs) - 1); i += 2 {
-		tsf[split_pairs[i]] = split_pairs[i+1]
-	}
-	values := search.FilteredTagValuesByMetricTagKey(metric, tagk, tsf)
 	b, err := json.Marshal(values)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

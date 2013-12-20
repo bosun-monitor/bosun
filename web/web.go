@@ -28,7 +28,6 @@ func Listen(addr, dir, tsdbhttp string) error {
 	router.HandleFunc("/api/metric/{tagk}/{tagv}", MetricsByTagPair)
 	router.HandleFunc("/api/tagk/{metric}", TagKeysByMetric)
 	router.HandleFunc("/api/tagv/{tagk}/{metric}", TagValuesByMetricTagKey)
-	router.HandleFunc("/api/tagv/{tagk}/{metric}/{tsf}", FilteredTagValuesByMetricTagKey)
 	router.HandleFunc("/api/tagv/{tagk}", TagValuesByTagKey)
 	http.Handle("/", router)
 	http.Handle("/static/", http.FileServer(http.Dir(dir)))
