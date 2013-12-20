@@ -3,6 +3,7 @@ package search
 import (
 	"encoding/json"
 	"sort"
+	"strings"
 	"sync"
 
 	"github.com/StackExchange/tcollector/opentsdb"
@@ -14,8 +15,26 @@ import (
 3) what tag values are available for a metric+tag key query?
 */
 
+type MetricTagSet struct {
+	Metric string          `json:"metric"`
+	Tags   opentsdb.TagSet `json:"tags"`
+}
+
+func (mts *MetricTagSet) key() string {
+	s := make([]string, len(mts.Tags)+1)
+	i := 0
+	for k, v := range mts.Tags {
+		s[i] = strings.Join([]string{k, v}, "")
+		i++
+	}
+	sort.Strings(s)
+	s[i] = mts.Metric
+	return strings.Join(s, "")
+}
+
 type QMap map[Query]Present
 type SMap map[string]Present
+type MTSMap map[string]MetricTagSet
 
 var (
 	// tagk + tagv -> metrics
@@ -24,6 +43,8 @@ var (
 	Tagk = make(SMap)
 	// metric + tagk -> tag values
 	Tagv = make(QMap)
+	// Each Record
+	MetricTags = make(MTSMap)
 
 	lock = sync.RWMutex{}
 )
@@ -61,6 +82,10 @@ func Process(c chan *opentsdb.DataPoint) {
 		go func(dp *opentsdb.DataPoint) {
 			lock.Lock()
 			defer lock.Unlock()
+			var mts MetricTagSet
+			mts.Metric = dp.Metric
+			mts.Tags = dp.Tags
+			MetricTags[mts.key()] = mts
 			var q Query
 			for k, v := range dp.Tags {
 				q.A, q.B = k, v
@@ -145,4 +170,37 @@ func TagValuesByMetricTagKey(metric, tagk string) []string {
 		r = append(r, k)
 	}
 	return r
+}
+
+func FilteredTagValuesByMetricTagKey(metric, tagk string, tsf map[string]string) []string {
+	lock.RLock()
+	defer lock.RUnlock()
+	tagvset := make(map[string]bool)
+	for _, mts := range MetricTags {
+		if metric == mts.Metric {
+			match := true
+			if tagv, ok := mts.Tags[tagk]; ok {
+				for tpk, tpv := range tsf {
+					if v, ok := mts.Tags[tpk]; ok {
+						if !(v == tpv) {
+							match = false
+						}
+					} else {
+						match = false
+					}
+				}
+				if match {
+					tagvset[tagv] = true
+				}
+			}
+		}
+	}
+	tagvs := make([]string, len(tagvset))
+	i := 0
+	for k, _ := range tagvset {
+		tagvs[i] = k
+		i++
+	}
+	sort.Strings(tagvs)
+	return tagvs
 }

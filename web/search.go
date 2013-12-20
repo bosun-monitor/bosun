@@ -3,6 +3,7 @@ package web
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/StackExchange/tsaf/search"
 	"github.com/gorilla/mux"
@@ -36,6 +37,24 @@ func TagValuesByMetricTagKey(w http.ResponseWriter, r *http.Request) {
 	metric := vars["metric"]
 	tagk := vars["tagk"]
 	values := search.TagValuesByMetricTagKey(metric, tagk)
+	b, err := json.Marshal(values)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Write(b)
+}
+
+func FilteredTagValuesByMetricTagKey(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	metric := vars["metric"]
+	tagk := vars["tagk"]
+	split_pairs := strings.Split(vars["tsf"], ",")
+	tsf := make(map[string]string)
+	for i := 0; i < (len(split_pairs) - 1); i += 2 {
+		tsf[split_pairs[i]] = split_pairs[i+1]
+	}
+	values := search.FilteredTagValuesByMetricTagKey(metric, tagk, tsf)
 	b, err := json.Marshal(values)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
