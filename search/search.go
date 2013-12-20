@@ -2,6 +2,7 @@ package search
 
 import (
 	"encoding/json"
+	"fmt"
 	"sort"
 	"strings"
 	"sync"
@@ -24,11 +25,11 @@ func (mts *MetricTagSet) key() string {
 	s := make([]string, len(mts.Tags))
 	i := 0
 	for k, v := range mts.Tags {
-		s[i] = strings.Join([]string{k, v}, "")
+		s[i] = fmt.Sprintf("%v=%v,", k, v)
 		i++
 	}
 	sort.Strings(s)
-	s = append(s, mts.Metric)
+	s = append(s, fmt.Sprintf("metric=%v", mts.Metric))
 	return strings.Join(s, "")
 }
 
