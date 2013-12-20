@@ -309,7 +309,7 @@ func lexQuery(l *lexer) stateFn {
 
 // isSpace reports whether r is a space character.
 func isSpace(r rune) bool {
-	return r == ' ' || r == '\t'
+	return unicode.IsSpace(r)
 }
 
 func isVarchar(r rune) bool {
