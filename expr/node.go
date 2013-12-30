@@ -101,6 +101,7 @@ func (c *FuncNode) String() string {
 		}
 		s += arg.String()
 	}
+	s += ")"
 	return s
 }
 

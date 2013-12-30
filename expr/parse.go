@@ -233,9 +233,7 @@ func (t *Tree) value() Node {
 func (t *Tree) Func() (f *FuncNode) {
 	token := t.next()
 	f = newFunc(token.pos, token.val)
-	if t.next().typ != itemLeftParen {
-		t.unexpected(token, "func")
-	}
+	t.expect(itemLeftParen, "func")
 	for {
 		switch token = t.next(); token.typ {
 		case itemNumber:
@@ -260,7 +258,7 @@ func (t *Tree) Func() (f *FuncNode) {
 		case itemComma:
 			// continue
 		case itemRightParen:
-			break
+			return
 		default:
 			t.unexpected(token, "func")
 		}

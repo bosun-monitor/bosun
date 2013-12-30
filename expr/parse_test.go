@@ -14,10 +14,10 @@ import (
 var debug = flag.Bool("debug", false, "show the errors produced by the main tests")
 
 type numberTest struct {
-	text      string
-	isInt     bool
-	isUint    bool
-	isFloat   bool
+	text    string
+	isInt   bool
+	isUint  bool
+	isFloat bool
 	int64
 	uint64
 	float64
@@ -26,9 +26,9 @@ type numberTest struct {
 var numberTests = []numberTest{
 	// basics
 	{"0", true, true, true, 0, 0, 0},
-	{"73", true, true, true,  73, 73, 73},
-	{"073", true, true, true,  073, 073, 073},
-	{"0x73", true, true, true,  0x73, 0x73, 0x73},
+	{"73", true, true, true, 73, 73, 73},
+	{"073", true, true, true, 073, 073, 073},
+	{"0x73", true, true, true, 0x73, 0x73, 0x73},
 	{"100", true, true, true, 100, 100, 100},
 	{"1e9", true, true, true, 1e9, 1e9, 1e9},
 	{"1e19", false, true, true, 0, 1e19, 1e19},
@@ -97,107 +97,18 @@ const (
 )
 
 var parseTests = []parseTest{
-	{"empty", "", noError,
-		``},
-	{"comment", "{{/*\n\n\n*/}}", noError,
-		``},
-	{"spaces", " \t\n", noError,
-		`" \t\n"`},
-	{"text", "some text", noError,
-		`"some text"`},
-	{"emptyAction", "{{}}", hasError,
-		`{{}}`},
-	{"field", "{{.X}}", noError,
-		`{{.X}}`},
-	{"simple command", "{{printf}}", noError,
-		`{{printf}}`},
-	{"$ invocation", "{{$}}", noError,
-		"{{$}}"},
-	{"variable invocation", "{{with $x := 3}}{{$x 23}}{{end}}", noError,
-		"{{with $x := 3}}{{$x 23}}{{end}}"},
-	{"variable with fields", "{{$.I}}", noError,
-		"{{$.I}}"},
-	{"multi-word command", "{{printf `%d` 23}}", noError,
-		"{{printf `%d` 23}}"},
-	{"pipeline", "{{.X|.Y}}", noError,
-		`{{.X | .Y}}`},
-	{"pipeline with decl", "{{$x := .X|.Y}}", noError,
-		`{{$x := .X | .Y}}`},
-	{"nested pipeline", "{{.X (.Y .Z) (.A | .B .C) (.E)}}", noError,
-		`{{.X (.Y .Z) (.A | .B .C) (.E)}}`},
-	{"field applied to parentheses", "{{(.Y .Z).Field}}", noError,
-		`{{(.Y .Z).Field}}`},
-	{"simple if", "{{if .X}}hello{{end}}", noError,
-		`{{if .X}}"hello"{{end}}`},
-	{"if with else", "{{if .X}}true{{else}}false{{end}}", noError,
-		`{{if .X}}"true"{{else}}"false"{{end}}`},
-	{"if with else if", "{{if .X}}true{{else if .Y}}false{{end}}", noError,
-		`{{if .X}}"true"{{else}}{{if .Y}}"false"{{end}}{{end}}`},
-	{"if else chain", "+{{if .X}}X{{else if .Y}}Y{{else if .Z}}Z{{end}}+", noError,
-		`"+"{{if .X}}"X"{{else}}{{if .Y}}"Y"{{else}}{{if .Z}}"Z"{{end}}{{end}}{{end}}"+"`},
-	{"simple range", "{{range .X}}hello{{end}}", noError,
-		`{{range .X}}"hello"{{end}}`},
-	{"chained field range", "{{range .X.Y.Z}}hello{{end}}", noError,
-		`{{range .X.Y.Z}}"hello"{{end}}`},
-	{"nested range", "{{range .X}}hello{{range .Y}}goodbye{{end}}{{end}}", noError,
-		`{{range .X}}"hello"{{range .Y}}"goodbye"{{end}}{{end}}`},
-	{"range with else", "{{range .X}}true{{else}}false{{end}}", noError,
-		`{{range .X}}"true"{{else}}"false"{{end}}`},
-	{"range over pipeline", "{{range .X|.M}}true{{else}}false{{end}}", noError,
-		`{{range .X | .M}}"true"{{else}}"false"{{end}}`},
-	{"range []int", "{{range .SI}}{{.}}{{end}}", noError,
-		`{{range .SI}}{{.}}{{end}}`},
-	{"range 1 var", "{{range $x := .SI}}{{.}}{{end}}", noError,
-		`{{range $x := .SI}}{{.}}{{end}}`},
-	{"range 2 vars", "{{range $x, $y := .SI}}{{.}}{{end}}", noError,
-		`{{range $x, $y := .SI}}{{.}}{{end}}`},
-	{"constants", "{{range .SI 1 -3.2i true false 'a' nil}}{{end}}", noError,
-		`{{range .SI 1 -3.2i true false 'a' nil}}{{end}}`},
-	{"template", "{{template `x`}}", noError,
-		`{{template "x"}}`},
-	{"template with arg", "{{template `x` .Y}}", noError,
-		`{{template "x" .Y}}`},
-	{"with", "{{with .X}}hello{{end}}", noError,
-		`{{with .X}}"hello"{{end}}`},
-	{"with with else", "{{with .X}}hello{{else}}goodbye{{end}}", noError,
-		`{{with .X}}"hello"{{else}}"goodbye"{{end}}`},
+	{"number", "1", noError, "1"},
+	{"function", `avg(1, "abc", [test])`, noError, `avg(1, "abc", [test])`},
 	// Errors.
-	{"unclosed action", "hello{{range", hasError, ""},
-	{"unmatched end", "{{end}}", hasError, ""},
-	{"missing end", "hello{{range .x}}", hasError, ""},
-	{"missing end after else", "hello{{range .x}}{{else}}", hasError, ""},
-	{"undefined function", "hello{{undefined}}", hasError, ""},
-	{"undefined variable", "{{$x}}", hasError, ""},
-	{"variable undefined after end", "{{with $x := 4}}{{end}}{{$x}}", hasError, ""},
-	{"variable undefined in template", "{{template $v}}", hasError, ""},
-	{"declare with field", "{{with $x.Y := 4}}{{end}}", hasError, ""},
-	{"template with field ref", "{{template .X}}", hasError, ""},
-	{"template with var", "{{template $v}}", hasError, ""},
-	{"invalid punctuation", "{{printf 3, 4}}", hasError, ""},
-	{"multidecl outside range", "{{with $v, $u := 3}}{{end}}", hasError, ""},
-	{"too many decls in range", "{{range $u, $v, $w := 3}}{{end}}", hasError, ""},
-	{"dot applied to parentheses", "{{printf (printf .).}}", hasError, ""},
-	{"adjacent args", "{{printf 3`x`}}", hasError, ""},
-	{"adjacent args with .", "{{printf `x`.}}", hasError, ""},
-	{"extra end after if", "{{if .X}}a{{else if .Y}}b{{end}}{{end}}", hasError, ""},
-	// Equals (and other chars) do not assignments make (yet).
-	{"bug0a", "{{$x := 0}}{{$x}}", noError, "{{$x := 0}}{{$x}}"},
-	{"bug0b", "{{$x = 1}}{{$x}}", hasError, ""},
-	{"bug0c", "{{$x ! 2}}{{$x}}", hasError, ""},
-	{"bug0d", "{{$x % 3}}{{$x}}", hasError, ""},
-	// Check the parse fails for := rather than comma.
-	{"bug0e", "{{range $x := $y := 3}}{{end}}", hasError, ""},
-	// Another bug: variable read must ignore following punctuation.
-	{"bug1a", "{{$x:=.}}{{$x!2}}", hasError, ""},                     // ! is just illegal here.
-	{"bug1b", "{{$x:=.}}{{$x+2}}", hasError, ""},                     // $x+2 should not parse as ($x) (+2).
-	{"bug1c", "{{$x:=.}}{{$x +2}}", noError, "{{$x := .}}{{$x +2}}"}, // It's OK with a space.
+	{"empty", "", hasError, ""},
+	{"unclosed function", "avg(", hasError, ""},
 }
 
 var builtins = map[string]interface{}{
-	"printf": fmt.Sprintf,
+	"avg": fmt.Sprintf,
 }
 
-func _TestParse(t *testing.T) {
+func TestParse(t *testing.T) {
 	textFormat = "%q"
 	defer func() { textFormat = "%s" }()
 	for _, test := range parseTests {
