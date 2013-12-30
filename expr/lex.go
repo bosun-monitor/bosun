@@ -11,10 +11,6 @@ import (
 	"unicode/utf8"
 )
 
-// Pos represents a byte position in the original input text from which
-// this template was parsed.
-type Pos int
-
 // item represents a token or text string returned from the scanner.
 type item struct {
 	typ itemType // The type of this item.
