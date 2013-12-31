@@ -82,11 +82,12 @@ type FuncNode struct {
 	NodeType
 	Pos
 	Name string
+	F    Func
 	Args []Node
 }
 
-func newFunc(pos Pos, name string) *FuncNode {
-	return &FuncNode{NodeType: NodeFunc, Pos: pos, Name: name}
+func newFunc(pos Pos, name string, f Func) *FuncNode {
+	return &FuncNode{NodeType: NodeFunc, Pos: pos, Name: name, F: f}
 }
 
 func (c *FuncNode) append(arg Node) {
@@ -103,6 +104,33 @@ func (c *FuncNode) String() string {
 	}
 	s += ")"
 	return s
+}
+
+func (c *FuncNode) check() error {
+	const errFuncType = "parse: bad argument type in %s, expected %s, got %s"
+	if len(c.Args) < len(c.F.Args)-c.F.Optional {
+		return fmt.Errorf("parse: not enough arguments for %s", c.Name)
+	} else if len(c.Args) > len(c.F.Args) {
+		return fmt.Errorf("parse: too many arguments for %s", c.Name)
+	}
+	for i, a := range c.Args {
+		t := c.F.Args[i]
+		switch a.(type) {
+		case *NumberNode:
+			if t != TYPE_NUMBER {
+				return fmt.Errorf(errFuncType, c.Name, t, "number")
+			}
+		case *StringNode:
+			if t != TYPE_STRING {
+				return fmt.Errorf(errFuncType, c.Name, t, "string")
+			}
+		case *QueryNode:
+			if t != TYPE_QUERY && t != TYPE_SERIES {
+				return fmt.Errorf(errFuncType, c.Name, t, "query")
+			}
+		}
+	}
+	return nil
 }
 
 // NumberNode holds a number: signed or unsigned integer or float.

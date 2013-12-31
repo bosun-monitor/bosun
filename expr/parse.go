@@ -22,17 +22,47 @@ type Tree struct {
 	Root      *BoolNode // top-level root of the tree.
 	text      string    // text parsed to create the template (or its parent)
 	// Parsing only; cleared after parse.
-	funcs     []map[string]interface{}
+	funcs     []map[string]Func
 	lex       *lexer
 	token     [1]item // one-token lookahead for parser.
 	peekCount int
 }
 
+type Func struct {
+	Args     []funcType
+	Return   funcType
+	Optional int // number of optional arguments
+}
+
+type funcType int
+
+func (f funcType) String() string {
+	switch f {
+	case TYPE_NUMBER:
+		return "number"
+	case TYPE_STRING:
+		return "string"
+	case TYPE_QUERY:
+		return "query"
+	case TYPE_SERIES:
+		return "series"
+	default:
+		return "unknown"
+	}
+}
+
+const (
+	TYPE_NUMBER funcType = iota
+	TYPE_STRING
+	TYPE_QUERY
+	TYPE_SERIES
+)
+
 // Parse returns a map from template name to parse.Tree, created by parsing the
 // templates described in the argument string. The top-level template will be
 // given the specified name. If an error is encountered, parsing stops and an
 // empty map is returned with the error.
-func Parse(name, text string, funcs ...map[string]interface{}) (t *Tree, err error) {
+func Parse(name, text string, funcs ...map[string]Func) (t *Tree, err error) {
 	t = New(name)
 	t.text = text
 	err = t.Parse(text, funcs...)
@@ -67,7 +97,7 @@ func (t *Tree) peek() item {
 // Parsing.
 
 // New allocates a new parse tree with the given name.
-func New(name string, funcs ...map[string]interface{}) *Tree {
+func New(name string, funcs ...map[string]Func) *Tree {
 	return &Tree{
 		Name:  name,
 		funcs: funcs,
@@ -144,7 +174,7 @@ func (t *Tree) recover(errp *error) {
 }
 
 // startParse initializes the parser, using the lexer.
-func (t *Tree) startParse(funcs []map[string]interface{}, lex *lexer) {
+func (t *Tree) startParse(funcs []map[string]Func, lex *lexer) {
 	t.Root = nil
 	t.lex = lex
 	t.funcs = funcs
@@ -160,7 +190,7 @@ func (t *Tree) stopParse() {
 // the template for execution. If either action delimiter string is empty, the
 // default ("{{" or "}}") is used. Embedded template definitions are added to
 // the treeSet map.
-func (t *Tree) Parse(text string, funcs ...map[string]interface{}) (err error) {
+func (t *Tree) Parse(text string, funcs ...map[string]Func) (err error) {
 	defer t.recover(&err)
 	t.ParseName = t.Name
 	t.startParse(funcs, lex(t.Name, text))
@@ -287,10 +317,11 @@ func (t *Tree) v() Node {
 
 func (t *Tree) Func() (f *FuncNode) {
 	token := t.next()
-	if !t.hasFunction(token.val) {
+	funcv, ok := t.getFunction(token.val)
+	if !ok {
 		t.errorf("non existent function %s", token.val)
 	}
-	f = newFunc(token.pos, token.val)
+	f = newFunc(token.pos, token.val, funcv)
 	t.expect(itemLeftParen, "func")
 	for {
 		switch token = t.next(); token.typ {
@@ -316,6 +347,9 @@ func (t *Tree) Func() (f *FuncNode) {
 		case itemComma:
 			// continue
 		case itemRightParen:
+			if err := f.check(); err != nil {
+				t.error(err)
+			}
 			return
 		default:
 			t.unexpected(token, "func")
@@ -324,14 +358,21 @@ func (t *Tree) Func() (f *FuncNode) {
 }
 
 // hasFunction reports if a function name exists in the Tree's maps.
-func (t *Tree) hasFunction(name string) bool {
+func (t *Tree) getFunction(name string) (v Func, ok bool) {
 	for _, funcMap := range t.funcs {
 		if funcMap == nil {
 			continue
 		}
-		if funcMap[name] != nil {
-			return true
+		if v, ok = funcMap[name]; ok {
+			return
 		}
 	}
-	return false
+	return
+}
+
+var builtins = map[string]Func{
+	"avg":    Func{[]funcType{TYPE_SERIES, TYPE_STRING}, TYPE_NUMBER, 1},
+	"band":   Func{[]funcType{TYPE_QUERY, TYPE_STRING, TYPE_STRING, TYPE_NUMBER}, TYPE_SERIES, 0},
+	"dev":    Func{[]funcType{TYPE_SERIES, TYPE_STRING}, TYPE_NUMBER, 1},
+	"recent": Func{[]funcType{TYPE_SERIES, TYPE_STRING}, TYPE_NUMBER, 1},
 }

@@ -97,19 +97,17 @@ const (
 
 var parseTests = []parseTest{
 	{"number", "1", noError, "1"},
-	{"function", `avg(1, "abc", [test])`, noError, `avg(1, "abc", [test])`},
+	{"function", `avg([test])`, noError, `avg([test])`},
 	{"addition", "1+2", noError, "1 + 2"},
 	{"expression", "1+2*3/4-5 && !2|| -4", noError, "1 + 2 * 3 / 4 - 5 && !2 || -4"},
-	{"expression with func", "avg(1,[query])>=0.7&&avg([q])!=3-0x8", noError,
-		"avg(1, [query]) >= 0.7 && avg([q]) != 3 - 0x8"},
+	{"expression with func", `avg([q], "1h")>=0.7&&avg([q])!=3-0x8`, noError,
+		`avg([q], "1h") >= 0.7 && avg([q]) != 3 - 0x8`},
 	// Errors.
 	{"empty", "", hasError, ""},
 	{"unclosed function", "avg(", hasError, ""},
 	{"bad function", "bad(1)", hasError, ""},
-}
-
-var builtins = map[string]interface{}{
-	"avg": fmt.Sprintf,
+	{"bad type", `band([q], "1h", "1m", "8")`, hasError, ""},
+	{"wrong number args", `avg([q], "1m", 1)`, hasError, ""},
 }
 
 func TestParse(t *testing.T) {
