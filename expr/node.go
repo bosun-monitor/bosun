@@ -183,3 +183,35 @@ func newQuery(pos Pos, orig, text string) *QueryNode {
 func (s *QueryNode) String() string {
 	return s.Bracketed
 }
+
+// BinaryNode holds two arguments and an operator.
+type BinaryNode struct {
+	NodeType
+	Pos
+	Args     [2]Node
+	Operator item
+}
+
+func newBinary(operator item, arg1, arg2 Node) *BinaryNode {
+	return &BinaryNode{NodeType: NodeBinary, Pos: operator.pos, Args: [2]Node{arg1, arg2}, Operator: operator}
+}
+
+func (b *BinaryNode) String() string {
+	return fmt.Sprintf("%s %s %s", b.Args[0], b.Operator.val, b.Args[1])
+}
+
+// UnaryNode holds one argument and an operator.
+type UnaryNode struct {
+	NodeType
+	Pos
+	Arg      Node
+	Operator item
+}
+
+func newUnary(operator item, arg Node) *UnaryNode {
+	return &UnaryNode{NodeType: NodeUnary, Pos: operator.pos, Arg: arg, Operator: operator}
+}
+
+func (u *UnaryNode) String() string {
+	return fmt.Sprintf("%s%s", u.Operator.val, u.Arg)
+}

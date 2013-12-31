@@ -99,6 +99,10 @@ const (
 var parseTests = []parseTest{
 	{"number", "1", noError, "1"},
 	{"function", `avg(1, "abc", [test])`, noError, `avg(1, "abc", [test])`},
+	{"addition", "1+2", noError, "1 + 2"},
+	{"expression", "1+2*3/4-5 && !2|| -4", noError, "1 + 2 * 3 / 4 - 5 && !2 || -4"},
+	{"expression with func", "avg(1,[query])>=0.7&&avg([q])!=3-0x8", noError,
+		"avg(1, [query]) >= 0.7 && avg([q]) != 3 - 0x8"},
 	// Errors.
 	{"empty", "", hasError, ""},
 	{"unclosed function", "avg(", hasError, ""},

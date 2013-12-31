@@ -174,10 +174,8 @@ func (t *Tree) Parse(text string, funcs ...map[string]interface{}) (err error) {
 // It runs to EOF.
 func (t *Tree) parse() {
 	t.Root = newBool(t.peek().pos)
-	t.Root.Expr = t.expr()
-	if p := t.peek(); p.typ != itemEOF {
-		t.errorf("unexpected %s", p)
-	}
+	t.Root.Expr = t.O()
+	t.expect(itemEOF, "input")
 }
 
 /* Grammar:
@@ -185,20 +183,92 @@ O -> A {"||" A}
 A -> C {"&&" C}
 C -> P {( "==" | "!=" | ">" | ">=" | "<" | "<=") P}
 P -> M {( "+" | "-" ) M}
-M -> P {( "*" | "/" ) P}
-P -> v | "(" O ")" | "!" O | "-" O
+M -> F {( "*" | "/" ) F}
+F -> v | "(" O ")" | "!" O | "-" O
 v -> number | func(..)
+Func -> name "(" param {"," param} ")"
 param -> number | "string" | [query]
-func -> name "(" param {"," param} ")"
 */
 
 // expr:
-func (t *Tree) expr() Node {
-	v := t.value()
-	return v
+func (t *Tree) O() Node {
+	n := t.A()
+	for {
+		switch t.peek().typ {
+		case itemOr:
+			n = newBinary(t.next(), n, t.A())
+		default:
+			return n
+		}
+	}
 }
 
-func (t *Tree) value() Node {
+func (t *Tree) A() Node {
+	n := t.C()
+	for {
+		switch t.peek().typ {
+		case itemAnd:
+			n = newBinary(t.next(), n, t.C())
+		default:
+			return n
+		}
+	}
+}
+
+func (t *Tree) C() Node {
+	n := t.P()
+	for {
+		switch t.peek().typ {
+		case itemEq, itemNotEq, itemGreater, itemGreaterEq, itemLess, itemLessEq:
+			n = newBinary(t.next(), n, t.P())
+		default:
+			return n
+		}
+	}
+}
+
+func (t *Tree) P() Node {
+	n := t.M()
+	for {
+		switch t.peek().typ {
+		case itemPlus, itemMinus:
+			n = newBinary(t.next(), n, t.M())
+		default:
+			return n
+		}
+	}
+}
+
+func (t *Tree) M() Node {
+	n := t.F()
+	for {
+		switch t.peek().typ {
+		case itemMult, itemDiv:
+			n = newBinary(t.next(), n, t.F())
+		default:
+			return n
+		}
+	}
+}
+
+func (t *Tree) F() Node {
+	switch token := t.peek(); token.typ {
+	case itemNumber, itemFunc:
+		return t.v()
+	case itemNot, itemMinus:
+		return newUnary(t.next(), t.O())
+	case itemLeftParen:
+		t.next()
+		n := t.O()
+		t.expect(itemRightParen, "input")
+		return n
+	default:
+		t.unexpected(token, "input")
+	}
+	return nil
+}
+
+func (t *Tree) v() Node {
 	switch token := t.next(); token.typ {
 	case itemNumber:
 		n, err := newNumber(token.pos, token.val)
