@@ -217,6 +217,9 @@ func (t *Tree) value() Node {
 
 func (t *Tree) Func() (f *FuncNode) {
 	token := t.next()
+	if !t.hasFunction(token.val) {
+		t.errorf("non existent function %s", token.val)
+	}
 	f = newFunc(token.pos, token.val)
 	t.expect(itemLeftParen, "func")
 	for {

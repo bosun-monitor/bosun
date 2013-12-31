@@ -102,6 +102,7 @@ var parseTests = []parseTest{
 	// Errors.
 	{"empty", "", hasError, ""},
 	{"unclosed function", "avg(", hasError, ""},
+	{"bad function", "bad(1)", hasError, ""},
 }
 
 var builtins = map[string]interface{}{
