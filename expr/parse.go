@@ -24,7 +24,7 @@ type Tree struct {
 	// Parsing only; cleared after parse.
 	funcs     []map[string]interface{}
 	lex       *lexer
-	token     [3]item // three-token lookahead for parser.
+	token     [1]item // one-token lookahead for parser.
 	peekCount int
 }
 
@@ -52,21 +52,6 @@ func (t *Tree) next() item {
 // backup backs the input stream up one token.
 func (t *Tree) backup() {
 	t.peekCount++
-}
-
-// backup2 backs the input stream up two tokens.
-// The zeroth token is already there.
-func (t *Tree) backup2(t1 item) {
-	t.token[1] = t1
-	t.peekCount = 2
-}
-
-// backup3 backs the input stream up three tokens
-// The zeroth token is already there.
-func (t *Tree) backup3(t2, t1 item) { // Reverse order: we're pushing back.
-	t.token[1] = t1
-	t.token[2] = t2
-	t.peekCount = 3
 }
 
 // peek returns but does not consume the next token.
