@@ -375,8 +375,8 @@ func (t *Tree) getFunction(name string) (v Func, ok bool) {
 }
 
 var builtins = map[string]Func{
-	"avg":    Func{[]funcType{TYPE_SERIES, TYPE_STRING}, TYPE_NUMBER, 1},
-	"band":   Func{[]funcType{TYPE_QUERY, TYPE_STRING, TYPE_STRING, TYPE_NUMBER}, TYPE_SERIES, 3},
-	"dev":    Func{[]funcType{TYPE_SERIES, TYPE_STRING}, TYPE_NUMBER, 1},
-	"recent": Func{[]funcType{TYPE_SERIES, TYPE_STRING}, TYPE_NUMBER, 1},
+	"avg":    {[]funcType{TYPE_SERIES, TYPE_STRING}, TYPE_NUMBER, 1},
+	"band":   {[]funcType{TYPE_QUERY, TYPE_STRING, TYPE_STRING, TYPE_NUMBER}, TYPE_SERIES, 3},
+	"dev":    {[]funcType{TYPE_SERIES, TYPE_STRING}, TYPE_NUMBER, 1},
+	"recent": {[]funcType{TYPE_SERIES, TYPE_STRING}, TYPE_NUMBER, 1},
 }
