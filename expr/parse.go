@@ -51,6 +51,10 @@ func (f funcType) String() string {
 	}
 }
 
+func (f funcType) IsSeries() bool {
+	return f == TYPE_QUERY || f == TYPE_SERIES
+}
+
 const (
 	TYPE_NUMBER funcType = iota
 	TYPE_STRING
@@ -206,6 +210,9 @@ func (t *Tree) parse() {
 	t.Root = newBool(t.peek().pos)
 	t.Root.Expr = t.O()
 	t.expect(itemEOF, "input")
+	if err := t.Root.Check(); err != nil {
+		t.error(err)
+	}
 }
 
 /* Grammar:
@@ -347,9 +354,6 @@ func (t *Tree) Func() (f *FuncNode) {
 		case itemComma:
 			// continue
 		case itemRightParen:
-			if err := f.check(); err != nil {
-				t.error(err)
-			}
 			return
 		default:
 			t.unexpected(token, "func")
@@ -372,7 +376,7 @@ func (t *Tree) getFunction(name string) (v Func, ok bool) {
 
 var builtins = map[string]Func{
 	"avg":    Func{[]funcType{TYPE_SERIES, TYPE_STRING}, TYPE_NUMBER, 1},
-	"band":   Func{[]funcType{TYPE_QUERY, TYPE_STRING, TYPE_STRING, TYPE_NUMBER}, TYPE_SERIES, 0},
+	"band":   Func{[]funcType{TYPE_QUERY, TYPE_STRING, TYPE_STRING, TYPE_NUMBER}, TYPE_SERIES, 3},
 	"dev":    Func{[]funcType{TYPE_SERIES, TYPE_STRING}, TYPE_NUMBER, 1},
 	"recent": Func{[]funcType{TYPE_SERIES, TYPE_STRING}, TYPE_NUMBER, 1},
 }

@@ -25,6 +25,8 @@ type Node interface {
 	//Copy() Node
 	Position() Pos // byte position of start of node in full original input string
 	// Make sure only functions in this package can create Nodes.
+	Check() error // performs type checking for itself and sub-nodes
+	Return() funcType
 	unexported()
 }
 
@@ -77,6 +79,12 @@ func (l *BoolNode) String() string {
 	return l.Expr.String()
 }
 
+func (b *BoolNode) Check() error {
+	return b.Expr.Check()
+}
+
+func (b *BoolNode) Return() funcType { return TYPE_NUMBER }
+
 // FuncNode holds a function invocation.
 type FuncNode struct {
 	NodeType
@@ -106,7 +114,7 @@ func (c *FuncNode) String() string {
 	return s
 }
 
-func (c *FuncNode) check() error {
+func (c *FuncNode) Check() error {
 	const errFuncType = "parse: bad argument type in %s, expected %s, got %s"
 	if len(c.Args) < len(c.F.Args)-c.F.Optional {
 		return fmt.Errorf("parse: not enough arguments for %s", c.Name)
@@ -132,6 +140,8 @@ func (c *FuncNode) check() error {
 	}
 	return nil
 }
+
+func (f *FuncNode) Return() funcType { return f.F.Return }
 
 // NumberNode holds a number: signed or unsigned integer or float.
 // The value is parsed and stored under all the types that can represent the value.
@@ -180,6 +190,12 @@ func (n *NumberNode) String() string {
 	return n.Text
 }
 
+func (n *NumberNode) Check() error {
+	return nil
+}
+
+func (n *NumberNode) Return() funcType { return TYPE_NUMBER }
+
 // StringNode holds a string constant. The value has been "unquoted".
 type StringNode struct {
 	NodeType
@@ -195,6 +211,12 @@ func newString(pos Pos, orig, text string) *StringNode {
 func (s *StringNode) String() string {
 	return s.Quoted
 }
+
+func (s *StringNode) Check() error {
+	return nil
+}
+
+func (s *StringNode) Return() funcType { return TYPE_STRING }
 
 // QueryNode holds a string constant. The value has been "unbracketed".
 type QueryNode struct {
@@ -212,6 +234,12 @@ func (s *QueryNode) String() string {
 	return s.Bracketed
 }
 
+func (q *QueryNode) Check() error {
+	return nil
+}
+
+func (q *QueryNode) Return() funcType { return TYPE_QUERY }
+
 // BinaryNode holds two arguments and an operator.
 type BinaryNode struct {
 	NodeType
@@ -228,6 +256,39 @@ func (b *BinaryNode) String() string {
 	return fmt.Sprintf("%s %s %s", b.Args[0], b.Operator.val, b.Args[1])
 }
 
+func (b *BinaryNode) Check() error {
+	t1 := b.Args[0].Return()
+	t2 := b.Args[1].Return()
+	/* valid:
+	n, n
+	n, s
+	*/
+	if t2 == TYPE_NUMBER {
+		t1, t2 = t2, t1
+	}
+	if t1 != TYPE_NUMBER {
+		return fmt.Errorf("parse: type error in %s: at least one side must be a number", b)
+	}
+	if t2 != TYPE_NUMBER && !t2.IsSeries() {
+		return fmt.Errorf("parse: type error in %s", b)
+	}
+	switch b.Operator.typ {
+	case itemPlus, itemMinus, itemMult, itemDiv:
+		// ignore
+	default:
+		if t2 != TYPE_NUMBER {
+			return fmt.Errorf("parse: type error in %s: both sides must be numbers", b)
+		}
+	}
+
+	if err := b.Args[0].Check(); err != nil {
+		return err
+	}
+	return b.Args[1].Check()
+}
+
+func (b *BinaryNode) Return() funcType { return TYPE_NUMBER }
+
 // UnaryNode holds one argument and an operator.
 type UnaryNode struct {
 	NodeType
@@ -243,3 +304,12 @@ func newUnary(operator item, arg Node) *UnaryNode {
 func (u *UnaryNode) String() string {
 	return fmt.Sprintf("%s%s", u.Operator.val, u.Arg)
 }
+
+func (u *UnaryNode) Check() error {
+	if t := u.Arg.Return(); t != TYPE_NUMBER {
+		return fmt.Errorf("parse: type error in %s, expected %s, got %s", u, "number", t)
+	}
+	return u.Arg.Check()
+}
+
+func (u *UnaryNode) Return() funcType { return TYPE_NUMBER }
