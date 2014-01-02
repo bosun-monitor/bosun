@@ -119,7 +119,7 @@ func TestParse(t *testing.T) {
 	defer func() { textFormat = "%s" }()
 	for _, test := range parseTests {
 		tmpl := New(test.name)
-		err := tmpl.Parse(test.input, builtins)
+		err := tmpl.Parse(test.input, Builtins)
 		switch {
 		case err == nil && !test.ok:
 			t.Errorf("%q: expected error; got none", test.name)

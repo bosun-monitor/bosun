@@ -246,10 +246,11 @@ type BinaryNode struct {
 	Pos
 	Args     [2]Node
 	Operator item
+	OpStr    string
 }
 
 func newBinary(operator item, arg1, arg2 Node) *BinaryNode {
-	return &BinaryNode{NodeType: NodeBinary, Pos: operator.pos, Args: [2]Node{arg1, arg2}, Operator: operator}
+	return &BinaryNode{NodeType: NodeBinary, Pos: operator.pos, Args: [2]Node{arg1, arg2}, Operator: operator, OpStr: operator.val}
 }
 
 func (b *BinaryNode) String() string {
@@ -295,10 +296,11 @@ type UnaryNode struct {
 	Pos
 	Arg      Node
 	Operator item
+	OpStr    string
 }
 
 func newUnary(operator item, arg Node) *UnaryNode {
-	return &UnaryNode{NodeType: NodeUnary, Pos: operator.pos, Arg: arg, Operator: operator}
+	return &UnaryNode{NodeType: NodeUnary, Pos: operator.pos, Arg: arg, Operator: operator, OpStr: operator.val}
 }
 
 func (u *UnaryNode) String() string {
