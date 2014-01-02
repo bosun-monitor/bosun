@@ -2,11 +2,10 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Package parse builds parse trees for templates as defined by text/template
-// and html/template. Clients should use those packages to construct templates
-// rather than this one, which provides shared internal data structures not
-// intended for general use.
-package expr
+// Package parse builds parse trees for expressions as defined by expr. Clients
+// should use that package to construct expressions rather than this one, which
+// provides shared internal data structures not intended for general use.
+package parse
 
 import (
 	"fmt"
@@ -15,7 +14,7 @@ import (
 	"strings"
 )
 
-// Tree is the representation of a single parsed template.
+// Tree is the representation of a single parsed expression.
 type Tree struct {
 	Name      string    // name of the template represented by the tree.
 	ParseName string    // name of the top-level template during parsing, for error messages.

@@ -4,7 +4,7 @@
 
 // Parse nodes.
 
-package expr
+package parse
 
 import (
 	"fmt"
