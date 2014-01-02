@@ -13,7 +13,7 @@ type Expr struct {
 }
 
 func New(expr string) (*Expr, error) {
-	t, err := parse.Parse(expr, expr, parse.Builtins)
+	t, err := parse.Parse(expr, expr, Builtins)
 	if err != nil {
 		return nil, err
 	}

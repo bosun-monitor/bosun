@@ -26,7 +26,7 @@ type Node interface {
 	Position() Pos // byte position of start of node in full original input string
 	// Make sure only functions in this package can create Nodes.
 	Check() error // performs type checking for itself and sub-nodes
-	Return() funcType
+	Return() FuncType
 	unexported()
 }
 
@@ -83,7 +83,7 @@ func (b *BoolNode) Check() error {
 	return b.Expr.Check()
 }
 
-func (b *BoolNode) Return() funcType { return TYPE_NUMBER }
+func (b *BoolNode) Return() FuncType { return TYPE_NUMBER }
 
 // FuncNode holds a function invocation.
 type FuncNode struct {
@@ -141,7 +141,7 @@ func (c *FuncNode) Check() error {
 	return nil
 }
 
-func (f *FuncNode) Return() funcType { return f.F.Return }
+func (f *FuncNode) Return() FuncType { return f.F.Return }
 
 // NumberNode holds a number: signed or unsigned integer or float.
 // The value is parsed and stored under all the types that can represent the value.
@@ -194,7 +194,7 @@ func (n *NumberNode) Check() error {
 	return nil
 }
 
-func (n *NumberNode) Return() funcType { return TYPE_NUMBER }
+func (n *NumberNode) Return() FuncType { return TYPE_NUMBER }
 
 // StringNode holds a string constant. The value has been "unquoted".
 type StringNode struct {
@@ -216,7 +216,7 @@ func (s *StringNode) Check() error {
 	return nil
 }
 
-func (s *StringNode) Return() funcType { return TYPE_STRING }
+func (s *StringNode) Return() FuncType { return TYPE_STRING }
 
 // QueryNode holds a string constant. The value has been "unbracketed".
 type QueryNode struct {
@@ -238,7 +238,7 @@ func (q *QueryNode) Check() error {
 	return nil
 }
 
-func (q *QueryNode) Return() funcType { return TYPE_QUERY }
+func (q *QueryNode) Return() FuncType { return TYPE_QUERY }
 
 // BinaryNode holds two arguments and an operator.
 type BinaryNode struct {
@@ -288,7 +288,7 @@ func (b *BinaryNode) Check() error {
 	return b.Args[1].Check()
 }
 
-func (b *BinaryNode) Return() funcType { return TYPE_NUMBER }
+func (b *BinaryNode) Return() FuncType { return TYPE_NUMBER }
 
 // UnaryNode holds one argument and an operator.
 type UnaryNode struct {
@@ -314,4 +314,4 @@ func (u *UnaryNode) Check() error {
 	return u.Arg.Check()
 }
 
-func (u *UnaryNode) Return() funcType { return TYPE_NUMBER }
+func (u *UnaryNode) Return() FuncType { return TYPE_NUMBER }

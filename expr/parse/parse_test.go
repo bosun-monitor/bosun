@@ -102,7 +102,7 @@ var parseTests = []parseTest{
 	{"expression", "1+2*3/4-5 && !2|| -4", noError, "1 + 2 * 3 / 4 - 5 && !2 || -4"},
 	{"expression with func", `avg([q], "1h")>=0.7&&avg([q])!=3-0x8`, noError,
 		`avg([q], "1h") >= 0.7 && avg([q]) != 3 - 0x8`},
-	{"func types", `dev([q])>avg([q])+recent([q])`, noError, "dev([q]) > avg([q]) + recent([q])"},
+	{"func types", `avg([q])>avg([q])+avg([q])`, noError, "avg([q]) > avg([q]) + avg([q])"},
 	// Errors.
 	{"empty", "", hasError, ""},
 	{"unclosed function", "avg(", hasError, ""},
@@ -119,7 +119,7 @@ func TestParse(t *testing.T) {
 	defer func() { textFormat = "%s" }()
 	for _, test := range parseTests {
 		tmpl := New(test.name)
-		err := tmpl.Parse(test.input, Builtins)
+		err := tmpl.Parse(test.input, builtins)
 		switch {
 		case err == nil && !test.ok:
 			t.Errorf("%q: expected error; got none", test.name)
@@ -140,4 +140,17 @@ func TestParse(t *testing.T) {
 			t.Errorf("%s=(%q): got\n\t%v\nexpected\n\t%v", test.name, test.input, result, test.result)
 		}
 	}
+}
+
+var builtins = map[string]Func{
+	"avg": {
+		[]FuncType{TYPE_SERIES, TYPE_STRING},
+		TYPE_NUMBER,
+		1,
+	},
+	"band": {
+		[]FuncType{TYPE_QUERY, TYPE_STRING, TYPE_STRING, TYPE_NUMBER},
+		TYPE_SERIES,
+		3,
+	},
 }

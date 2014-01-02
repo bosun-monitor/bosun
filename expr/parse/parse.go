@@ -28,14 +28,14 @@ type Tree struct {
 }
 
 type Func struct {
-	Args     []funcType
-	Return   funcType
+	Args     []FuncType
+	Return   FuncType
 	Optional int // number of optional arguments
 }
 
-type funcType int
+type FuncType int
 
-func (f funcType) String() string {
+func (f FuncType) String() string {
 	switch f {
 	case TYPE_NUMBER:
 		return "number"
@@ -50,12 +50,12 @@ func (f funcType) String() string {
 	}
 }
 
-func (f funcType) IsSeries() bool {
+func (f FuncType) IsSeries() bool {
 	return f == TYPE_QUERY || f == TYPE_SERIES
 }
 
 const (
-	TYPE_NUMBER funcType = iota
+	TYPE_NUMBER FuncType = iota
 	TYPE_STRING
 	TYPE_QUERY
 	TYPE_SERIES
@@ -371,11 +371,4 @@ func (t *Tree) getFunction(name string) (v Func, ok bool) {
 		}
 	}
 	return
-}
-
-var Builtins = map[string]Func{
-	"avg":    {[]funcType{TYPE_SERIES, TYPE_STRING}, TYPE_NUMBER, 1},
-	"band":   {[]funcType{TYPE_QUERY, TYPE_STRING, TYPE_STRING, TYPE_NUMBER}, TYPE_SERIES, 3},
-	"dev":    {[]funcType{TYPE_SERIES, TYPE_STRING}, TYPE_NUMBER, 1},
-	"recent": {[]funcType{TYPE_SERIES, TYPE_STRING}, TYPE_NUMBER, 1},
 }
