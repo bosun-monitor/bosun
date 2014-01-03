@@ -2,36 +2,34 @@ package expr
 
 import "testing"
 
-type exprTest struct {
-	input  string
-	output float64
-}
+func TestExprSimple(t *testing.T) {
+	var exprTests = []struct {
+		input  string
+		output Value
+	}{
+		{"!1", 0},
+		{"-2", -2},
+		{"1.444-010+2*3e2-4/5+0xff", 847.644},
+		{"1>2", 0},
+		{"3>2", 1},
+		{"1==1", 1},
+		{"1==2", 0},
+		{"1!=01", 0},
+		{"1!=2", 1},
+		{"1<2", 1},
+		{"2<1", 0},
+		{"1||0", 1},
+		{"0||0", 0},
+		{"1&&0", 0},
+		{"1&&2", 1},
+		{"1<=0", 0},
+		{"1<=1", 1},
+		{"1<=2", 1},
+		{"1>=0", 1},
+		{"1>=1", 1},
+		{"1>=2", 0},
+	}
 
-var exprTests = []exprTest{
-	{"!1", 0},
-	{"-2", -2},
-	{"1.444-010+2*3e2-4/5+0xff", 847.644},
-	{"1>2", 0},
-	{"3>2", 1},
-	{"1==1", 1},
-	{"1==2", 0},
-	{"1!=01", 0},
-	{"1!=2", 1},
-	{"1<2", 1},
-	{"2<1", 0},
-	{"1||0", 1},
-	{"0||0", 0},
-	{"1&&0", 0},
-	{"1&&2", 1},
-	{"1<=0", 0},
-	{"1<=1", 1},
-	{"1<=2", 1},
-	{"1>=0", 1},
-	{"1>=1", 1},
-	{"1>=2", 0},
-}
-
-func TestExpr(t *testing.T) {
 	for _, et := range exprTests {
 		e, err := New(et.input)
 		if err != nil {
@@ -41,8 +39,15 @@ func TestExpr(t *testing.T) {
 		r, err := e.Execute("")
 		if err != nil {
 			t.Error(err)
-		} else if r != et.output {
-			t.Errorf("expected %v, got %v: %v", et.output, r, et.input)
+			break
+		} else if len(r) != 1 {
+			t.Error("bad r len", len(r))
+			break
+		} else if len(r[0].Group) != 0 {
+			t.Error("bad group len", r[0].Group)
+			break
+		} else if r[0].Value != et.output {
+			t.Errorf("expected %v, got %v: %v", et.output, r[0].Value, et.input)
 		}
 	}
 }

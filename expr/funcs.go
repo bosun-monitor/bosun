@@ -71,7 +71,7 @@ func queryDuration(query, duration string, F func([]float64) float64) (r []Resul
 			f = append(f, float64(p))
 		}
 		r = append(r, Result{
-			Value: F(f),
+			Value: Value(F(f)),
 			Group: res.Tags,
 		})
 	}
