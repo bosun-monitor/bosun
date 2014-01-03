@@ -209,3 +209,40 @@ func ParseTags(t string) (TagSet, error) {
 	}
 	return ts, nil
 }
+
+func (q Query) String() string {
+	s := q.Aggregator + ":"
+	if q.Downsample != "" {
+		s += q.Downsample + ":"
+	}
+	if q.Rate {
+		s += "rate:"
+	}
+	s += q.Metric
+	if len(q.Tags) > 0 {
+		s += "{"
+		first := true
+		for k, v := range q.Tags {
+			if first {
+				first = false
+			} else {
+				s += ","
+			}
+			s += k + "=" + v
+		}
+		s += "}"
+	}
+	return s
+}
+
+func (r Request) String() string {
+	v := make(url.Values)
+	for _, q := range r.Queries {
+		v.Add("m", q.String())
+	}
+	v.Add("start", fmt.Sprint(r.Start))
+	if e := fmt.Sprint(r.End); r.End != nil && e != "" {
+		v.Add("end", e)
+	}
+	return v.Encode()
+}
