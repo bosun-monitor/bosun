@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"regexp"
 	"strconv"
+	"strings"
 	"unicode"
 	"unicode/utf8"
 )
@@ -119,4 +121,65 @@ func Clean(s string) (string, error) {
 		return c, errors.New("Cleaning Metric/Tagk/Tagv resulted in a Zero Length String")
 	}
 	return c, nil
+}
+
+type Request struct {
+	Start             interface{} `json:"start"`
+	End               interface{} `json:"end,omitempty"`
+	Queries           []Query     `json:"queries"`
+	NoAnnotations     bool        `json:"noAnnotations,omitempty"`
+	GlobalAnnotations bool        `json:"globalAnnotations,omitempty"`
+	MsResolution      bool        `json:"msResolution,omitempty"`
+	ShowTSUIDs        bool        `json:"showTSUIDs,omitempty"`
+}
+
+type Query struct {
+	Aggregator  string `json:"aggregator"`
+	Metric      string `json:"metric"`
+	Rate        bool   `json:"rate,omitempty"`
+	RateOptions `json:"rateOptions,omitempty"`
+	Downsample  string `json:"downsample,omitempty"`
+	Tags        TagSet `json:"tags,omitempty"`
+}
+
+type RateOptions struct {
+	Counter    bool `json:"counter,omitempty"`
+	CounterMax int  `json:"counterMax,omitempty"`
+	ResetValue int  `json:"resetValue,omitempty"`
+}
+
+var qRE = regexp.MustCompile(`^m=(\w+):(?:(\w+-\w+):)?(?:(rate):)?([\w./]+)(?:\{([\w./,=]+)\})?$`)
+
+func ParseQuery(query string) (*Request, error) {
+	r := Request{}
+	q := Query{}
+	m := qRE.FindStringSubmatch(query)
+	if m == nil {
+		return nil, fmt.Errorf("tsdb: bad query format: %s", query)
+	}
+	q.Aggregator = m[1]
+	q.Downsample = m[2]
+	q.Rate = m[3] == "rate"
+	q.Metric = m[4]
+	if m[5] != "" {
+		tags, err := ParseTags(m[5])
+		if err != nil {
+			return nil, err
+		}
+		q.Tags = tags
+	}
+	r.Queries = []Query{q}
+	return &r, nil
+}
+
+func ParseTags(t string) (TagSet, error) {
+	ts := make(TagSet)
+	for _, v := range strings.Split(t, ",") {
+		sp := strings.SplitN(v, "=", 2)
+		if len(sp) != 2 {
+			return nil, fmt.Errorf("tsdb: bad tag: %s", v)
+		}
+		ts[sp[0]] = sp[1]
+	}
+	return ts, nil
 }

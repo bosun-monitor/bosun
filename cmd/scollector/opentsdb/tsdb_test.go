@@ -17,5 +17,29 @@ func TestClean(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestParse(t *testing.T) {
+	tests := []struct {
+		query string
+		error bool
+	}{
+		{"m=sum:10m-avg:proc.stat.cpu{t=v,o=k}", false},
+		{"m=sum:10m-avg:rate:proc.stat.cpu", false},
+		{"m=sum:10m-avg:rate:proc.stat.cpu{t=v,o=k}", false},
+		{"m=sum:proc.stat.cpu", false},
+		{"m=sum:rate:proc.stat.cpu{t=v,o=k}", false},
+
+		{"m=", true},
+		{"m=sum:cpu+", true},
+		{"m=sum:cpu{}", true},
+
+	}
+	for _, q := range tests {
+		_, err := ParseQuery(q.query)
+		if err != nil && !q.error {
+			t.Errorf("got error: %s: %s", q.query, err)
+		} else if err == nil && q.error {
+			t.Errorf("expected error: %s", q.query)
+		}
 	}
 }
