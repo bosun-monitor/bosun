@@ -1,10 +1,13 @@
 package opentsdb
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"log"
+	"net/http"
 	"net/url"
 	"os"
 	"regexp"
@@ -245,4 +248,31 @@ func (r Request) String() string {
 		v.Add("end", e)
 	}
 	return v.Encode()
+}
+
+// Query performs a v2 OpenTSDB request to the given host. host should be of the
+// form hostname:port.
+func (r Request) Query(host string) (ResponseSet, error) {
+	u := url.URL{
+		Scheme: "http",
+		Host:   host,
+		Path:   "/api/query",
+	}
+	b, err := json.Marshal(&r)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := http.Post(u.String(), "application/json", bytes.NewReader(b))
+	if err != nil || resp.StatusCode != http.StatusOK {
+		return nil, err
+	}
+	b, err = ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	var tr ResponseSet
+	if err := json.Unmarshal(b, &tr); err != nil {
+		return nil, err
+	}
+	return tr, nil
 }
