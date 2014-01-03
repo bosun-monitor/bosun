@@ -24,7 +24,7 @@ func New(expr string) (*Expr, error) {
 }
 
 type Result struct {
-	Result bool
+	Value interface{}
 	Group  opentsdb.TagSet
 }
 
