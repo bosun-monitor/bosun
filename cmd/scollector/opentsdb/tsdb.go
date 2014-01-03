@@ -63,6 +63,18 @@ type MultiDataPoint []*DataPoint
 
 type TagSet map[string]string
 
+func (t TagSet) Equal(o TagSet) bool {
+	if len(t) != len(o) {
+		return false
+	}
+	for k, v := range t {
+		if o[k] != v {
+			return false
+		}
+	}
+	return true
+}
+
 func (d *DataPoint) clean() error {
 	err := d.Tags.clean()
 	if err != nil {
