@@ -146,11 +146,13 @@ var builtins = map[string]Func{
 	"avg": {
 		[]FuncType{TYPE_SERIES, TYPE_STRING},
 		TYPE_NUMBER,
-		1,
+		[]interface{}{nil},
+		nil,
 	},
 	"band": {
 		[]FuncType{TYPE_QUERY, TYPE_STRING, TYPE_STRING, TYPE_NUMBER},
 		TYPE_SERIES,
-		3,
+		[]interface{}{nil, nil, nil},
+		nil,
 	},
 }
