@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net/url"
 	"os"
 	"regexp"
 	"strconv"
@@ -126,7 +127,7 @@ func Clean(s string) (string, error) {
 type Request struct {
 	Start             interface{} `json:"start"`
 	End               interface{} `json:"end,omitempty"`
-	Queries           []Query     `json:"queries"`
+	Queries           []*Query    `json:"queries"`
 	NoAnnotations     bool        `json:"noAnnotations,omitempty"`
 	GlobalAnnotations bool        `json:"globalAnnotations,omitempty"`
 	MsResolution      bool        `json:"msResolution,omitempty"`
@@ -148,10 +149,35 @@ type RateOptions struct {
 	ResetValue int  `json:"resetValue,omitempty"`
 }
 
-var qRE = regexp.MustCompile(`^m=(\w+):(?:(\w+-\w+):)?(?:(rate):)?([\w./]+)(?:\{([\w./,=]+)\})?$`)
-
-func ParseQuery(query string) (*Request, error) {
+// ParsesRequest parses OpenTSDB requests of the form: start=1h-ago&m=avg:cpu.
+func ParseRequest(req string) (*Request, error) {
+	v, err := url.ParseQuery(req)
+	if err != nil {
+		return nil, err
+	}
 	r := Request{}
+	if s := v.Get("start"); s == "" {
+		return nil, fmt.Errorf("tsdb: missing start: %s", req)
+	} else {
+		r.Start = s
+	}
+	for _, m := range v["m"] {
+		q, err := ParseQuery(m)
+		if err != nil {
+			return nil, err
+		}
+		r.Queries = append(r.Queries, q)
+	}
+	if len(r.Queries) == 0 {
+		return nil, fmt.Errorf("tsdb: missing m: %s", req)
+	}
+	return &r, nil
+}
+
+var qRE = regexp.MustCompile(`^(\w+):(?:(\w+-\w+):)?(?:(rate):)?([\w./]+)(?:\{([\w./,=]+)\})?$`)
+
+// ParseQuery parses OpenTSDB queries of the form: avg:rate:cpu{k=v}.
+func ParseQuery(query string) (*Query, error) {
 	q := Query{}
 	m := qRE.FindStringSubmatch(query)
 	if m == nil {
@@ -168,10 +194,10 @@ func ParseQuery(query string) (*Request, error) {
 		}
 		q.Tags = tags
 	}
-	r.Queries = []Query{q}
-	return &r, nil
+	return &q, nil
 }
 
+// ParseTags parses OpenTSDB tagk=tagv pairs of the form: k=v,m=o.
 func ParseTags(t string) (TagSet, error) {
 	ts := make(TagSet)
 	for _, v := range strings.Split(t, ",") {
