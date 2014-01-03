@@ -32,7 +32,6 @@ func TestParse(t *testing.T) {
 		{"m=", true},
 		{"m=sum:cpu+", true},
 		{"m=sum:cpu{}", true},
-
 	}
 	for _, q := range tests {
 		_, err := ParseQuery(q.query)
