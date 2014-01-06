@@ -57,8 +57,6 @@ func queryDuration(query, duration string, F func([]float64) float64) (r []*Resu
 	s, err := req.Query("ny-devtsdb04:4242")
 	if err != nil {
 		return
-	} else if len(s) == 0 {
-		return
 	}
 	for _, res := range s {
 		if len(res.DPS) == 0 {
