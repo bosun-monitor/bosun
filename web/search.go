@@ -14,7 +14,7 @@ func UniqueMetrics(w http.ResponseWriter, r *http.Request) {
 	values := search.UniqueMetrics()
 	b, err := json.Marshal(values)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		serveError(w, err)
 		return
 	}
 	w.Write(b)
@@ -26,7 +26,7 @@ func TagKeysByMetric(w http.ResponseWriter, r *http.Request) {
 	keys := search.TagKeysByMetric(metric)
 	b, err := json.Marshal(keys)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		serveError(w, err)
 		return
 	}
 	w.Write(b)
@@ -49,7 +49,7 @@ func TagValuesByMetricTagKey(w http.ResponseWriter, r *http.Request) {
 	}
 	b, err := json.Marshal(values)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		serveError(w, err)
 		return
 	}
 	w.Write(b)
@@ -62,7 +62,7 @@ func MetricsByTagPair(w http.ResponseWriter, r *http.Request) {
 	values := search.MetricsByTagPair(tagk, tagv)
 	b, err := json.Marshal(values)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		serveError(w, err)
 		return
 	}
 	w.Write(b)
@@ -74,7 +74,7 @@ func TagValuesByTagKey(w http.ResponseWriter, r *http.Request) {
 	values := search.TagValuesByTagKey(tagk)
 	b, err := json.Marshal(values)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		serveError(w, err)
 		return
 	}
 	w.Write(b)

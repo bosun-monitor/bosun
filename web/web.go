@@ -45,3 +45,7 @@ func Index(w http.ResponseWriter, r *http.Request) {
 		search.Tagk,
 	})
 }
+
+func serveError(w http.ResponseWriter, err error) {
+	serveError(w, err)
+}
