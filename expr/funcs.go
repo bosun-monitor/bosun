@@ -58,7 +58,6 @@ func queryDuration(query, duration string, F func([]float64) float64) (r []*Resu
 	if err != nil {
 		return
 	} else if len(s) == 0 {
-		err = fmt.Errorf("expr: no results returned: %s", query)
 		return
 	}
 	for _, res := range s {
