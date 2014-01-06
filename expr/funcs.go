@@ -25,7 +25,7 @@ var Builtins = map[string]parse.Func{
 		[]parse.FuncType{parse.TYPE_QUERY, parse.TYPE_STRING, parse.TYPE_STRING, parse.TYPE_NUMBER},
 		parse.TYPE_SERIES,
 		[]interface{}{DefDuration, DefPeriod, DefNum},
-		band,
+		nil,
 	},
 	"dev": {
 		[]parse.FuncType{parse.TYPE_SERIES, parse.TYPE_STRING},
@@ -37,7 +37,7 @@ var Builtins = map[string]parse.Func{
 		[]parse.FuncType{parse.TYPE_SERIES, parse.TYPE_STRING},
 		parse.TYPE_NUMBER,
 		[]interface{}{DefDuration},
-		recent,
+		nil,
 	},
 }
 
@@ -104,6 +104,3 @@ func dev(x []float64) (d float64) {
 	d /= float64(len(x) - 1)
 	return math.Sqrt(d)
 }
-
-func recent() {}
-func band()   {}
