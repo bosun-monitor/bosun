@@ -115,7 +115,7 @@ func UniqueMetrics() []string {
 	defer lock.RUnlock()
 	metrics := make([]string, len(Tagk))
 	i := 0
-	for k, _ := range Tagk {
+	for k := range Tagk {
 		metrics[i] = k
 		i++
 	}
@@ -134,7 +134,7 @@ func TagValuesByTagKey(tagk string) []string {
 	}
 	tagvs := make([]string, len(tagvset))
 	i := 0
-	for k, _ := range tagvset {
+	for k := range tagvset {
 		tagvs[i] = k
 		i++
 	}
@@ -198,7 +198,7 @@ func FilteredTagValuesByMetricTagKey(metric, tagk string, tsf map[string]string)
 	}
 	tagvs := make([]string, len(tagvset))
 	i := 0
-	for k, _ := range tagvset {
+	for k := range tagvset {
 		tagvs[i] = k
 		i++
 	}

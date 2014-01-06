@@ -63,7 +63,7 @@ type Union struct {
 // wrap creates a new Result with a nil group and given value.
 func wrap(v float64) []*Result {
 	return []*Result{
-		&Result{
+		{
 			Value: Value(v),
 			Group: nil,
 		},

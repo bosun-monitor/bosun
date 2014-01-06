@@ -31,7 +31,7 @@ type Func struct {
 	Args     []FuncType
 	Return   FuncType
 	Defaults []interface{}
-	F interface{}
+	F        interface{}
 }
 
 func (f Func) Optional() int {
