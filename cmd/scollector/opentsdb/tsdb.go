@@ -68,7 +68,7 @@ func (t TagSet) Equal(o TagSet) bool {
 		return false
 	}
 	for k, v := range t {
-		if o[k] != v {
+		if ov, ok := o[k]; !ok || ov != v {
 			return false
 		}
 	}
