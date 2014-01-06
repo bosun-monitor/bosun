@@ -1,6 +1,10 @@
 package expr
 
-import "testing"
+import (
+	"encoding/json"
+	"fmt"
+	"testing"
+)
 
 func TestExprSimple(t *testing.T) {
 	var exprTests = []struct {
@@ -50,4 +54,17 @@ func TestExprSimple(t *testing.T) {
 			t.Errorf("expected %v, got %v: %v", et.output, r[0].Value, et.input)
 		}
 	}
+}
+
+func TestExprQuery(t *testing.T) {
+	e, err := New(`avg([avg:proc.stat.cpu{host=*}], "5m") > 4e7`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	r, err := e.Execute("")
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, _ := json.MarshalIndent(&r, "", "  ")
+	fmt.Println(string(b))
 }

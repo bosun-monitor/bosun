@@ -19,7 +19,7 @@ var Builtins = map[string]parse.Func{
 		[]parse.FuncType{parse.TYPE_SERIES, parse.TYPE_STRING},
 		parse.TYPE_NUMBER,
 		[]interface{}{DefDuration},
-		avg,
+		Avg,
 	},
 	"band": {
 		[]parse.FuncType{parse.TYPE_QUERY, parse.TYPE_STRING, parse.TYPE_STRING, parse.TYPE_NUMBER},
@@ -31,7 +31,7 @@ var Builtins = map[string]parse.Func{
 		[]parse.FuncType{parse.TYPE_SERIES, parse.TYPE_STRING},
 		parse.TYPE_NUMBER,
 		[]interface{}{DefDuration},
-		dev,
+		Dev,
 	},
 	"recent": {
 		[]parse.FuncType{parse.TYPE_SERIES, parse.TYPE_STRING},
@@ -41,7 +41,7 @@ var Builtins = map[string]parse.Func{
 	},
 }
 
-func queryDuration(query, duration string, F func([]float64) float64) (r []Result, err error) {
+func queryDuration(query, duration string, F func([]float64) float64) (r []*Result, err error) {
 	q, err := opentsdb.ParseQuery(query)
 	if err != nil {
 		return
@@ -70,7 +70,7 @@ func queryDuration(query, duration string, F func([]float64) float64) (r []Resul
 		for _, p := range res.DPS {
 			f = append(f, float64(p))
 		}
-		r = append(r, Result{
+		r = append(r, &Result{
 			Value: Value(F(f)),
 			Group: res.Tags,
 		})
@@ -78,7 +78,7 @@ func queryDuration(query, duration string, F func([]float64) float64) (r []Resul
 	return
 }
 
-func Avg(query, duration string) ([]Result, error) {
+func Avg(query, duration string) ([]*Result, error) {
 	return queryDuration(query, duration, avg)
 }
 
@@ -91,7 +91,7 @@ func avg(x []float64) (a float64) {
 	return
 }
 
-func Dev(query, duration string) ([]Result, error) {
+func Dev(query, duration string) ([]*Result, error) {
 	return queryDuration(query, duration, dev)
 }
 
