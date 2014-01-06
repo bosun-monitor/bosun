@@ -115,7 +115,7 @@
 				e.preventDefault();
 				$.getJSON('/api/expr?q=' + encodeURIComponent($('#expr').val()))
 					.done(function(data) {
-						$('#expr-result').empty().text(JSON.stringify(data, null, "  "));
+						$('#expr-result').text(JSON.stringify(data, null, "  "));
 					})
 					.fail(function(data) {
 						$('#expr-result').text("ERROR: " + data.responseText);
