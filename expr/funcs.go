@@ -3,6 +3,8 @@ package expr
 import (
 	"fmt"
 	"math"
+	"strconv"
+	"time"
 
 	"github.com/StackExchange/tcollector/opentsdb"
 	"github.com/StackExchange/tsaf/expr/parse"
@@ -37,11 +39,17 @@ var Builtins = map[string]parse.Func{
 		[]parse.FuncType{parse.TYPE_SERIES, parse.TYPE_STRING},
 		parse.TYPE_NUMBER,
 		[]interface{}{DefDuration},
-		nil,
+		Recent,
+	},
+	"since": {
+		[]parse.FuncType{parse.TYPE_SERIES, parse.TYPE_STRING},
+		parse.TYPE_NUMBER,
+		[]interface{}{DefDuration, "5m"},
+		Since,
 	},
 }
 
-func queryDuration(query, duration string, F func([]float64) float64) (r []*Result, err error) {
+func queryDuration(query, duration string, F func(map[string]opentsdb.Point) float64) (r []*Result, err error) {
 	q, err := opentsdb.ParseQuery(query)
 	if err != nil {
 		return
@@ -63,12 +71,8 @@ func queryDuration(query, duration string, F func([]float64) float64) (r []*Resu
 			// do something here?
 			continue
 		}
-		var f []float64
-		for _, p := range res.DPS {
-			f = append(f, float64(p))
-		}
 		r = append(r, &Result{
-			Value: Value(F(f)),
+			Value: Value(F(res.DPS)),
 			Group: res.Tags,
 		})
 	}
@@ -80,11 +84,11 @@ func Avg(query, duration string) ([]*Result, error) {
 }
 
 // avg returns the mean of x.
-func avg(x []float64) (a float64) {
-	for _, v := range x {
-		a += v
+func avg(dps map[string]opentsdb.Point) (a float64) {
+	for _, v := range dps {
+		a += float64(v)
 	}
-	a /= float64(len(x))
+	a /= float64(len(dps))
 	return
 }
 
@@ -93,12 +97,50 @@ func Dev(query, duration string) ([]*Result, error) {
 }
 
 // dev returns the sample standard deviation of x.
-func dev(x []float64) (d float64) {
-	a := avg(x)
-	for _, v := range x {
-		d += math.Pow(v-a, 2)
+func dev(dps map[string]opentsdb.Point) (d float64) {
+	a := avg(dps)
+	for _, v := range dps {
+		d += math.Pow(float64(v)-a, 2)
 	}
 	// how should we handle len(x) == 1?
-	d /= float64(len(x) - 1)
+	d /= float64(len(dps) - 1)
 	return math.Sqrt(d)
+}
+
+func Recent(query, duration string) ([]*Result, error) {
+	return queryDuration(query, duration, recent)
+}
+
+func recent(dps map[string]opentsdb.Point) (a float64) {
+	last := -1
+	for k, v := range dps {
+		d, err := strconv.Atoi(k)
+		if err != nil {
+			panic(err)
+		}
+		if d > last {
+			a = float64(v)
+		}
+	}
+	return
+}
+
+func Since(query, duration string) ([]*Result, error) {
+	return queryDuration(query, duration, since)
+}
+
+func since(dps map[string]opentsdb.Point) (a float64) {
+	var last time.Time
+	for k := range dps {
+		d, err := strconv.ParseInt(k, 10, 64)
+		if err != nil {
+			panic(err)
+		}
+		t := time.Unix(d, 0)
+		if t.After(last) {
+			last = t
+		}
+	}
+	s := time.Since(last)
+	return s.Seconds()
 }
