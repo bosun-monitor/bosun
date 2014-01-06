@@ -118,7 +118,7 @@
 						$('#expr-result').empty().text(JSON.stringify(data, null, "  "));
 					})
 					.fail(function(data) {
-						alert(data.responseText);
+						$('#expr-result').text("ERROR: " + data.responseText);
 					});
 			}).trigger('click');
 			$(function() {
