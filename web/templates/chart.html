@@ -24,7 +24,7 @@
 				<div class="col-lg-12">
 					<form role="form">
 						<div class="form-group">
-							<input type="text" class="form-control" id="query" value="start=5m-ago&m=sum:redis.latency{host=*}">
+							<input type="text" class="form-control" id="query" value="start=5m-ago&m=avg:proc.stat.cpu{host=*}">
 						</div>
 						<button type="submit" class="btn btn-default" id="qbutton">query</button>
 					</form>
