@@ -11,13 +11,11 @@ import (
 	"fmt"
 	"runtime"
 	"strconv"
-	"strings"
 )
 
 // Tree is the representation of a single parsed expression.
 type Tree struct {
 	Name      string    // name of the template represented by the tree.
-	ParseName string    // name of the top-level template during parsing, for error messages.
 	Root      *BoolNode // top-level root of the tree.
 	text      string    // text parsed to create the template (or its parent)
 	// Parsing only; cleared after parse.
@@ -66,10 +64,9 @@ const (
 	TYPE_SERIES
 )
 
-// Parse returns a map from template name to parse.Tree, created by parsing the
-// templates described in the argument string. The top-level template will be
-// given the specified name. If an error is encountered, parsing stops and an
-// empty map is returned with the error.
+// Parse returns a Tree, created by parsing the expression described in the
+// argument string. If an error is encountered, parsing stops and an empty Tree
+// is returned with the error.
 func Parse(name, text string, funcs ...map[string]Func) (t *Tree, err error) {
 	t = New(name)
 	t.text = text
@@ -114,27 +111,17 @@ func New(name string, funcs ...map[string]Func) *Tree {
 
 // ErrorContext returns a textual representation of the location of the node in the input text.
 func (t *Tree) ErrorContext(n Node) (location, context string) {
-	pos := int(n.Position())
-	text := t.text[:pos]
-	byteNum := strings.LastIndex(text, "\n")
-	if byteNum == -1 {
-		byteNum = pos // On first line.
-	} else {
-		byteNum++ // After the newline.
-		byteNum = pos - byteNum
-	}
-	lineNum := 1 + strings.Count(text, "\n")
 	context = n.String()
 	if len(context) > 20 {
 		context = fmt.Sprintf("%.20s...", context)
 	}
-	return fmt.Sprintf("%s:%d:%d", t.ParseName, lineNum, byteNum), context
+	return t.Name, context
 }
 
 // errorf formats the error and terminates processing.
 func (t *Tree) errorf(format string, args ...interface{}) {
 	t.Root = nil
-	format = fmt.Sprintf("template: %s:%d: %s", t.ParseName, t.lex.lineNumber(), format)
+	format = fmt.Sprintf("expr: %s", format)
 	panic(fmt.Errorf(format, args...))
 }
 
@@ -200,7 +187,6 @@ func (t *Tree) stopParse() {
 // the treeSet map.
 func (t *Tree) Parse(text string, funcs ...map[string]Func) (err error) {
 	defer t.recover(&err)
-	t.ParseName = t.Name
 	t.startParse(funcs, lex(t.Name, text))
 	t.text = text
 	t.parse()

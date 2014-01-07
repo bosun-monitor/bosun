@@ -13,8 +13,8 @@ type Expr struct {
 	*parse.Tree
 }
 
-func New(expr string) (*Expr, error) {
-	t, err := parse.Parse(expr, expr, Builtins)
+func New(name, expr string) (*Expr, error) {
+	t, err := parse.Parse(name, expr, Builtins)
 	if err != nil {
 		return nil, err
 	}

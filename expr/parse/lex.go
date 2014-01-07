@@ -194,7 +194,7 @@ Loop:
 			l.emit(itemEOF)
 			break Loop
 		default:
-			return l.errorf("invalid character")
+			return l.errorf("invalid character: %s", string(r))
 		}
 	}
 	return nil

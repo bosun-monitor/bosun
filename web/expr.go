@@ -9,7 +9,7 @@ import (
 )
 
 func Expr(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
-	e, err := expr.New(r.FormValue("q"))
+	e, err := expr.New("query", r.FormValue("q"))
 	if err != nil {
 		serveError(w, err)
 		return
