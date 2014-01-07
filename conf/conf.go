@@ -1,7 +1,6 @@
 package conf
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -23,12 +22,12 @@ func Parse(name string, r io.Reader) (*Conf, error) {
 	var i item
 	var varname string
 	parseError := func(reason string) error {
-		return fmt.Errorf("Parse error in %v:%v: %v (at %v)", name, l.lineNumber(), reason, i.val)
+		return fmt.Errorf("expr: %s:%d: %s", name, l.lineNumber(), reason)
 	}
 Loop:
 	for i = range l.items {
 		if i.typ == itemError {
-			return nil, errors.New(i.val)
+			return nil, parseError(i.val)
 		}
 		switch state {
 		case stateStart:

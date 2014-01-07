@@ -166,7 +166,7 @@ Loop:
 		case r == comment:
 			return lexComment
 		default:
-			return l.errorf("invalid character")
+			return l.errorf("invalid character: %v", string(r))
 		}
 	}
 	return nil
