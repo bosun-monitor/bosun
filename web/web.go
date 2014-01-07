@@ -32,7 +32,8 @@ func Listen(addr, dir, tsdbhttp string) error {
 	router.HandleFunc("/api/expr", Expr)
 	http.Handle("/", router)
 	http.Handle("/static/", http.FileServer(http.Dir(dir)))
-	log.Println("web listening on", addr)
+	log.Println("TSAF web listening on:", addr)
+	log.Println("TSAF web directory:", dir)
 	return http.ListenAndServe(addr, nil)
 }
 

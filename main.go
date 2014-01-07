@@ -1,32 +1,33 @@
 package main
 
 import (
+	"flag"
 	"log"
-	"os"
-	"strings"
 
+	"github.com/StackExchange/tsaf/conf"
 	"github.com/StackExchange/tsaf/relay"
 	"github.com/StackExchange/tsaf/web"
 )
 
 var (
-	TSDBHost    = "ny-devtsdb04.ds.stackexchange.com:4242"
-	RelayListen = ":4242"
-	WebListen   = ":8070"
-	WebDir      = "web"
-
-	TSDBHttp = "http://" + TSDBHost + "/"
+	confFile = flag.String("c", "dev.conf", "config file location")
 )
 
-func init() {
-	if host, err := os.Hostname(); err == nil && strings.HasPrefix(host, "ny-devtsaf") {
-		WebListen = ":80"
-	}
-}
-
 func main() {
-	log.Println("running")
-	go func() { log.Fatal(relay.RelayHTTP(RelayListen, TSDBHost)) }()
-	go func() { log.Fatal(web.Listen(WebListen, WebDir, TSDBHttp)) }()
+	flag.Parse()
+	c, err := conf.ParseFile(*confFile)
+	if err != nil {
+		log.Fatal(err)
+	}
+	webDir := c.Global.Get("webDir", "web")
+	webListen := c.Global.Get("webListen", ":8070")
+	relayListen := c.Global.Get("relayListen", ":4242")
+	tsdbHost := c.Global["tsdbHost"]
+	if tsdbHost == "" {
+		log.Fatal("tsaf: no tsdbHost in config file")
+	}
+	tsdbHttp := "http://" + tsdbHost + "/"
+	go func() { log.Fatal(relay.RelayHTTP(relayListen, tsdbHost)) }()
+	go func() { log.Fatal(web.Listen(webListen, webDir, tsdbHttp)) }()
 	select {}
 }

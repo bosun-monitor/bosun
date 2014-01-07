@@ -15,7 +15,8 @@ func RelayHTTP(addr, dest string) error {
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		handle(dest, w, r)
 	})
-	log.Println("listening on", addr, dest)
+	log.Println("OpenTSDB relay listening on:", addr)
+	log.Println("OpenTSDB destination:", dest)
 	return http.ListenAndServe(addr, mux)
 }
 

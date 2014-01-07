@@ -117,3 +117,10 @@ func (s Section) String() string {
 	}
 	return r
 }
+
+func (s Section) Get(key, fallback string) string {
+	if v, ok := s[key]; ok {
+		return v
+	}
+	return fallback
+}
