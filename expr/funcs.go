@@ -3,11 +3,14 @@ package expr
 import (
 	"fmt"
 	"math"
+	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/StackExchange/tcollector/opentsdb"
 	"github.com/StackExchange/tsaf/expr/parse"
+	"github.com/StackExchange/tsaf/search"
 )
 
 const (
@@ -54,6 +57,7 @@ func queryDuration(query, duration string, F func(map[string]opentsdb.Point) flo
 	if err != nil {
 		return
 	}
+	expandSearch(q)
 	d, err := ParseDuration(duration)
 	if err != nil {
 		return
@@ -77,6 +81,26 @@ func queryDuration(query, duration string, F func(map[string]opentsdb.Point) flo
 		})
 	}
 	return
+}
+
+func expandSearch(q *opentsdb.Query) {
+	for k, v := range q.Tags {
+		if v == "*" || !strings.Contains(v, "*") || strings.Contains(v, "|") {
+			continue
+		}
+		v = strings.Replace(v, ".", `\.`, -1)
+		v = strings.Replace(v, "*", ".*", -1)
+		v = "^" + v + "$"
+		re := regexp.MustCompile(v)
+		var nvs []string
+		vs := search.TagValuesByMetricTagKey(q.Metric, k)
+		for _, nv := range vs {
+			if re.MatchString(nv) {
+				nvs = append(nvs, nv)
+			}
+		}
+		q.Tags[k] = strings.Join(nvs, "|")
+	}
 }
 
 func Avg(query, duration string) ([]*Result, error) {
