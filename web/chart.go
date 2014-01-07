@@ -12,10 +12,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/MiniProfiler/go/miniprofiler"
 	"github.com/StackExchange/tcollector/opentsdb"
 )
 
-func Chart(w http.ResponseWriter, r *http.Request) {
+func Chart(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 	q, _ := url.Parse(TSDBHttp)
 	q.Path = "/api/query"
 	q.RawQuery = r.URL.RawQuery

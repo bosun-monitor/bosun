@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/MiniProfiler/go/miniprofiler"
 	"github.com/StackExchange/tsaf/search"
 	"github.com/gorilla/mux"
 )
@@ -12,6 +13,10 @@ import (
 var TSDBHttp string
 var templates *template.Template
 var router = mux.NewRouter()
+
+func init() {
+	miniprofiler.Position = "bottomleft"
+}
 
 func Listen(addr, dir, tsdbhttp string) error {
 	TSDBHttp = tsdbhttp
@@ -22,14 +27,14 @@ func Listen(addr, dir, tsdbhttp string) error {
 	if err != nil {
 		log.Fatal(err)
 	}
-	router.HandleFunc("/", Index)
-	router.HandleFunc("/api/chart", Chart)
-	router.HandleFunc("/api/metric", UniqueMetrics)
-	router.HandleFunc("/api/metric/{tagk}/{tagv}", MetricsByTagPair)
-	router.HandleFunc("/api/tagk/{metric}", TagKeysByMetric)
-	router.HandleFunc("/api/tagv/{tagk}", TagValuesByTagKey)
-	router.HandleFunc("/api/tagv/{tagk}/{metric}", TagValuesByMetricTagKey)
-	router.HandleFunc("/api/expr", Expr)
+	router.Handle("/", miniprofiler.NewHandler(Index))
+	router.Handle("/api/chart", miniprofiler.NewHandler(Chart))
+	router.Handle("/api/metric", miniprofiler.NewHandler(UniqueMetrics))
+	router.Handle("/api/metric/{tagk}/{tagv}", miniprofiler.NewHandler(MetricsByTagPair))
+	router.Handle("/api/tagk/{metric}", miniprofiler.NewHandler(TagKeysByMetric))
+	router.Handle("/api/tagv/{tagk}", miniprofiler.NewHandler(TagValuesByTagKey))
+	router.Handle("/api/tagv/{tagk}/{metric}", miniprofiler.NewHandler(TagValuesByMetricTagKey))
+	router.Handle("/api/expr", miniprofiler.NewHandler(Expr))
 	http.Handle("/", router)
 	http.Handle("/static/", http.FileServer(http.Dir(dir)))
 	log.Println("TSAF web listening on:", addr)
@@ -37,14 +42,16 @@ func Listen(addr, dir, tsdbhttp string) error {
 	return http.ListenAndServe(addr, nil)
 }
 
-func Index(w http.ResponseWriter, r *http.Request) {
+func Index(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 	templates.ExecuteTemplate(w, "chart.html", struct {
 		Metric, Tagv search.QMap
 		Tagk         search.SMap
+		Includes     template.HTML
 	}{
 		search.Metric,
 		search.Tagv,
 		search.Tagk,
+		t.Includes(),
 	})
 }
 

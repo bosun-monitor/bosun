@@ -5,12 +5,13 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/MiniProfiler/go/miniprofiler"
 	"github.com/StackExchange/tsaf/search"
 	"github.com/gorilla/mux"
 )
 
 // A Sorted List of Available Metrics
-func UniqueMetrics(w http.ResponseWriter, r *http.Request) {
+func UniqueMetrics(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 	values := search.UniqueMetrics()
 	b, err := json.Marshal(values)
 	if err != nil {
@@ -20,7 +21,7 @@ func UniqueMetrics(w http.ResponseWriter, r *http.Request) {
 	w.Write(b)
 }
 
-func TagKeysByMetric(w http.ResponseWriter, r *http.Request) {
+func TagKeysByMetric(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	metric := vars["metric"]
 	keys := search.TagKeysByMetric(metric)
@@ -32,7 +33,7 @@ func TagKeysByMetric(w http.ResponseWriter, r *http.Request) {
 	w.Write(b)
 }
 
-func TagValuesByMetricTagKey(w http.ResponseWriter, r *http.Request) {
+func TagValuesByMetricTagKey(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	metric := vars["metric"]
 	tagk := vars["tagk"]
@@ -55,7 +56,7 @@ func TagValuesByMetricTagKey(w http.ResponseWriter, r *http.Request) {
 	w.Write(b)
 }
 
-func MetricsByTagPair(w http.ResponseWriter, r *http.Request) {
+func MetricsByTagPair(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	tagk := vars["tagk"]
 	tagv := vars["tagv"]
@@ -68,7 +69,7 @@ func MetricsByTagPair(w http.ResponseWriter, r *http.Request) {
 	w.Write(b)
 }
 
-func TagValuesByTagKey(w http.ResponseWriter, r *http.Request) {
+func TagValuesByTagKey(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	tagk := vars["tagk"]
 	values := search.TagValuesByTagKey(tagk)

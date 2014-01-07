@@ -4,10 +4,11 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/MiniProfiler/go/miniprofiler"
 	"github.com/StackExchange/tsaf/expr"
 )
 
-func Expr(w http.ResponseWriter, r *http.Request) {
+func Expr(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 	e, err := expr.New(r.FormValue("q"))
 	if err != nil {
 		serveError(w, err)
