@@ -15,6 +15,7 @@ func Parse(name string, r io.Reader) (*Conf, error) {
 	}
 	l := lex(name, string(b))
 	c := Conf{
+		Name:     name,
 		Global:   make(Section),
 		Sections: make(map[string]Section),
 	}
@@ -76,6 +77,9 @@ Loop:
 			return nil, parseError("bad state")
 		}
 	}
+	if err := c.expandVars(); err != nil {
+		return nil, err
+	}
 	return &c, nil
 }
 
@@ -96,6 +100,7 @@ func ParseFile(fname string) (*Conf, error) {
 }
 
 type Conf struct {
+	Name     string
 	Global   Section
 	Sections map[string]Section
 }
