@@ -208,8 +208,9 @@ func (t *Tree) parsePair() *PairNode {
 
 func (t *Tree) parseSection() *SectionNode {
 	const context = "section declaration"
-	s := newSection(t.expect(itemLeftDelim, context).pos)
+	t.expect(itemLeftDelim, context)
 	token := t.expect(itemIdentifier, context)
+	s := newSection(token.pos)
 	s.Name = newString(token.pos, token.val, token.val)
 	t.expect(itemRightDelim, context)
 	for {
