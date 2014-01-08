@@ -19,14 +19,10 @@ var textFormat = "%s" // Changed to "%q" in tests for better error messages.
 type Node interface {
 	Type() NodeType
 	String() string
-	// Copy does a deep copy of the Node and all its components.
-	// To avoid type assertions, some XxxNodes also have specialized
-	// CopyXxx methods that return *XxxNode.
-	//Copy() Node
 	Position() Pos // byte position of start of node in full original input string
-	// Make sure only functions in this package can create Nodes.
 	Check() error // performs type checking for itself and sub-nodes
 	Return() FuncType
+	// Make sure only functions in this package can create Nodes.
 	unexported()
 }
 
