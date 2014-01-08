@@ -109,15 +109,6 @@ func New(name string, funcs ...map[string]Func) *Tree {
 	}
 }
 
-// ErrorContext returns a textual representation of the location of the node in the input text.
-func (t *Tree) ErrorContext(n Node) (location, context string) {
-	context = n.String()
-	if len(context) > 20 {
-		context = fmt.Sprintf("%.20s...", context)
-	}
-	return t.Name, context
-}
-
 // errorf formats the error and terminates processing.
 func (t *Tree) errorf(format string, args ...interface{}) {
 	t.Root = nil
