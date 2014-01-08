@@ -78,7 +78,7 @@ Loop:
 		}
 	}
 	if err := c.expandVars(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("conf: %s: %s", name, err)
 	}
 	return &c, nil
 }
@@ -137,7 +137,7 @@ func (c *Conf) get(section, key string, depth int) (v string, err error) {
 		if section == "" {
 			section = "[global]"
 		}
-		err = fmt.Errorf("conf: variable expansion loop: %s:%s", section, key)
+		err = fmt.Errorf("variable expansion loop: %s:%s", section, key)
 		return
 	}
 	var s Section
@@ -147,20 +147,26 @@ func (c *Conf) get(section, key string, depth int) (v string, err error) {
 	} else {
 		s, ok = c.Sections[section]
 		if !ok {
-			err = fmt.Errorf("conf: no section %s", section)
+			err = fmt.Errorf("no section %s", section)
 			return
 		}
 	}
 	v, ok = s[key]
 	if !ok {
-		err = fmt.Errorf("conf: no key %s in section %s", key, section)
+		if section == "" {
+			section = "[global]"
+		}
+		err = fmt.Errorf("no key %s in section %s", key, section)
 		return
 	}
 	v = exRE.ReplaceAllStringFunc(v, func(s string) string {
 		ns, e := c.get(section, s, depth+1)
 		if e != nil {
-			ns, e = c.get("", s, depth+1)
-			err = e
+			var e2 error
+			ns, e2 = c.get("", s, depth+1)
+			if e2 != nil {
+				err = e
+			}
 		}
 		return ns
 	})
