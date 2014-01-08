@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package conf
+package parse
 
 import (
 	"fmt"
@@ -10,10 +10,6 @@ import (
 	"unicode"
 	"unicode/utf8"
 )
-
-// Pos represents a byte position in the original input text from which
-// this template was parsed.
-type Pos int
 
 // item represents a token or text string returned from the scanner.
 type item struct {

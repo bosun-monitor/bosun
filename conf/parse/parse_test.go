@@ -1,4 +1,4 @@
-package conf
+package parse
 
 import (
 	"fmt"
@@ -42,10 +42,14 @@ func TestLex(t *testing.T) {
 
 func TestPrint(t *testing.T) {
 	fname := "test_valid/4"
-	c, err := ParseFile(fname)
+	b, err := ioutil.ReadFile(fname)
 	if err != nil {
-		fmt.Println("error:", err)
+		t.Fatal(err)
+	}
+	c, err := Parse(fname, string(b))
+	if err != nil {
+		t.Error(err)
 	} else {
-		fmt.Println(c)
+		fmt.Print(c.Root)
 	}
 }
