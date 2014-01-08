@@ -5,6 +5,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"regexp"
 )
 
 func Parse(name string, r io.Reader) (*Conf, error) {
@@ -122,4 +123,59 @@ func (s Section) Get(key, fallback string) string {
 		return v
 	}
 	return fallback
+}
+
+var exRE = regexp.MustCompile(`\$\w+`)
+
+func (c *Conf) get(section, key string, depth int) (v string, err error) {
+	if depth > 20 {
+		if section == "" {
+			section = "[global]"
+		}
+		err = fmt.Errorf("conf: variable expansion loop: %s:%s", section, key)
+		return
+	}
+	var s Section
+	var ok bool
+	if section == "" {
+		s = c.Global
+	} else {
+		s, ok = c.Sections[section]
+		if !ok {
+			err = fmt.Errorf("conf: no section %s", section)
+			return
+		}
+	}
+	v, ok = s[key]
+	if !ok {
+		err = fmt.Errorf("conf: no key %s in section %s", key, section)
+		return
+	}
+	v = exRE.ReplaceAllStringFunc(v, func(s string) string {
+		ns, e := c.get(section, s, depth+1)
+		if e != nil {
+			ns, e = c.get("", s, depth+1)
+			err = e
+		}
+		return ns
+	})
+	return
+}
+
+func (c *Conf) expandVars() (err error) {
+	for k := range c.Global {
+		c.Global[k], err = c.get("", k, 0)
+		if err != nil {
+			return
+		}
+	}
+	for n, s := range c.Sections {
+		for k := range s {
+			s[k], err = c.get(n, k, 0)
+			if err != nil {
+				return
+			}
+		}
+	}
+	return
 }

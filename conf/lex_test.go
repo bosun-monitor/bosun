@@ -41,7 +41,7 @@ func TestLex(t *testing.T) {
 }
 
 func TestPrint(t *testing.T) {
-	fname := "test_valid/3"
+	fname := "test_valid/4"
 	c, err := ParseFile(fname)
 	if err != nil {
 		fmt.Println("error:", err)
