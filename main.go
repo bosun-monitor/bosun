@@ -6,6 +6,7 @@ import (
 
 	"github.com/StackExchange/tsaf/conf"
 	"github.com/StackExchange/tsaf/relay"
+	"github.com/StackExchange/tsaf/sched"
 	"github.com/StackExchange/tsaf/web"
 )
 
@@ -29,5 +30,6 @@ func main() {
 	tsdbHttp := "http://" + tsdbHost + "/"
 	go func() { log.Fatal(relay.RelayHTTP(relayListen, tsdbHost)) }()
 	go func() { log.Fatal(web.Listen(webListen, webDir, tsdbHttp)) }()
+	go func() { log.Fatal(sched.Run(c)) }()
 	select {}
 }
