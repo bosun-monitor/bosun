@@ -9,6 +9,11 @@ import (
 	"github.com/StackExchange/tsaf/expr/parse"
 )
 
+type state struct {
+	*Expr
+	host string
+}
+
 type Expr struct {
 	*parse.Tree
 }
@@ -28,7 +33,11 @@ func New(expr string) (*Expr, error) {
 // returns one result per group.
 func (e *Expr) Execute(host string) (r []*Result, err error) {
 	defer errRecover(&err)
-	r = e.walk(e.Tree.Root)
+	s := &state{
+		e,
+		host,
+	}
+	r = s.walk(e.Tree.Root)
 	return
 }
 
@@ -87,7 +96,7 @@ func union(a, b []*Result) []Union {
 	return u
 }
 
-func (e *Expr) walk(node parse.Node) []*Result {
+func (e *state) walk(node parse.Node) []*Result {
 	switch node := node.(type) {
 	case *parse.BoolNode:
 		return e.walk(node.Expr)
@@ -104,7 +113,7 @@ func (e *Expr) walk(node parse.Node) []*Result {
 	}
 }
 
-func (e *Expr) walkBinary(node *parse.BinaryNode) []*Result {
+func (e *state) walkBinary(node *parse.BinaryNode) []*Result {
 	a := e.walk(node.Args[0])
 	b := e.walk(node.Args[1])
 	var res []*Result
@@ -181,7 +190,7 @@ func (e *Expr) walkBinary(node *parse.BinaryNode) []*Result {
 	return res
 }
 
-func (e *Expr) walkUnary(node *parse.UnaryNode) []*Result {
+func (e *state) walkUnary(node *parse.UnaryNode) []*Result {
 	a := e.walk(node.Arg)
 	for _, r := range a {
 		switch node.OpStr {
@@ -200,9 +209,11 @@ func (e *Expr) walkUnary(node *parse.UnaryNode) []*Result {
 	return a
 }
 
-func (e *Expr) walkFunc(node *parse.FuncNode) []*Result {
+func (e *state) walkFunc(node *parse.FuncNode) []*Result {
 	f := reflect.ValueOf(node.F.F)
-	var in []reflect.Value
+	var in = []reflect.Value{
+		reflect.ValueOf(e.host),
+	}
 	for _, a := range node.Args {
 		var v interface{}
 		switch t := a.(type) {

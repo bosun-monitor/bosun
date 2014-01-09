@@ -52,7 +52,7 @@ var Builtins = map[string]parse.Func{
 	},
 }
 
-func queryDuration(query, duration string, F func(map[string]opentsdb.Point) float64) (r []*Result, err error) {
+func queryDuration(host, query, duration string, F func(map[string]opentsdb.Point) float64) (r []*Result, err error) {
 	q, err := opentsdb.ParseQuery(query)
 	if err != nil {
 		return
@@ -66,7 +66,7 @@ func queryDuration(query, duration string, F func(map[string]opentsdb.Point) flo
 		Queries: []*opentsdb.Query{q},
 		Start:   fmt.Sprintf("%dms-ago", d.Nanoseconds()/1e6),
 	}
-	s, err := req.Query("ny-devtsdb04:4242")
+	s, err := req.Query(host)
 	if err != nil {
 		return
 	}
@@ -103,8 +103,8 @@ func expandSearch(q *opentsdb.Query) {
 	}
 }
 
-func Avg(query, duration string) ([]*Result, error) {
-	return queryDuration(query, duration, avg)
+func Avg(host, query, duration string) ([]*Result, error) {
+	return queryDuration(host, query, duration, avg)
 }
 
 // avg returns the mean of x.
@@ -116,8 +116,8 @@ func avg(dps map[string]opentsdb.Point) (a float64) {
 	return
 }
 
-func Dev(query, duration string) ([]*Result, error) {
-	return queryDuration(query, duration, dev)
+func Dev(host, query, duration string) ([]*Result, error) {
+	return queryDuration(host, query, duration, dev)
 }
 
 // dev returns the sample standard deviation of x.
@@ -131,8 +131,8 @@ func dev(dps map[string]opentsdb.Point) (d float64) {
 	return math.Sqrt(d)
 }
 
-func Recent(query, duration string) ([]*Result, error) {
-	return queryDuration(query, duration, recent)
+func Recent(host, query, duration string) ([]*Result, error) {
+	return queryDuration(host, query, duration, recent)
 }
 
 func recent(dps map[string]opentsdb.Point) (a float64) {
@@ -149,8 +149,8 @@ func recent(dps map[string]opentsdb.Point) (a float64) {
 	return
 }
 
-func Since(query, duration string) ([]*Result, error) {
-	return queryDuration(query, duration, since)
+func Since(host, query, duration string) ([]*Result, error) {
+	return queryDuration(host, query, duration, since)
 }
 
 func since(dps map[string]opentsdb.Point) (a float64) {
