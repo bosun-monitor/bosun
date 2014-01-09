@@ -1,125 +1,123 @@
 package sched
 
 import (
-	"encoding/json"
+	"bytes"
 	"fmt"
+	"log"
 	"strings"
+	"time"
 
+	"github.com/jordan-wright/email"
+
+	"github.com/StackExchange/tcollector/opentsdb"
 	"github.com/StackExchange/tsaf/conf"
 	"github.com/StackExchange/tsaf/expr"
 )
 
-type Alert struct {
-	Template
-	Name       string
-	Owner      string
-	Crit, Warn *expr.Expr
-
-	templateName string
-	overrideName string
-}
-
-type Template struct {
-	Name    string
-	Body    string
-	Subject string
-}
-
 type Schedule struct {
-	Templates map[string]*Template
-	Alerts    map[string]*Alert
+	*conf.Conf
+	Freq time.Duration
 }
 
-func Run(c *conf.Conf) error {
-	s, err := Load(c)
+var DefaultSched = Schedule{
+	Freq: time.Minute * 5,
+}
+
+// Loads a configuration into the default schedule
+func Load(c *conf.Conf) {
+	DefaultSched.Load(c)
+}
+
+// Runs the default schedule.
+func Run() error {
+	return DefaultSched.Run()
+}
+
+func (s *Schedule) Load(c *conf.Conf) {
+	s.Conf = c
+}
+
+func (s *Schedule) Run() error {
+	for {
+		wait := time.After(s.Freq)
+		if s.Freq < time.Second {
+			return fmt.Errorf("sched: frequency must be > 1 second")
+		}
+		if s.Conf == nil {
+			return fmt.Errorf("sched: nil configuration")
+		}
+		s.Check()
+		start := time.Now()
+		fmt.Printf("run at %v took %v\n", start, time.Since(start))
+		<-wait
+	}
+}
+
+func (s *Schedule) Check() {
+	for _, a := range s.Conf.Alerts {
+		s.CheckAlert(a)
+	}
+}
+
+func (s *Schedule) CheckAlert(a *conf.Alert) {
+	s.CheckExpr(a, a.Crit, true)
+	s.CheckExpr(a, a.Warn, false)
+}
+
+func (s *Schedule) CheckExpr(a *conf.Alert, e *expr.Expr, isCrit bool) {
+	if e == nil {
+		return
+	}
+	results, err := e.Execute(s.Conf.TsdbHost)
 	if err != nil {
-		return err
+		log.Println(err)
+		return
 	}
-	b, err := json.MarshalIndent(s, "", "  ")
-	fmt.Println(string(b), err)
-	select {}
-}
-
-func Load(c *conf.Conf) (*Schedule, error) {
-	s := Schedule{
-		Templates: make(map[string]*Template),
-		Alerts:    make(map[string]*Alert),
-	}
-	for k, v := range c.Sections {
-		sp := strings.SplitN(k, ".", 2)
-		if len(sp) != 2 {
-			return nil, fmt.Errorf("sched: bad section type: %s", k)
+	for _, r := range results {
+		if r.Value == 0 {
+			continue
 		}
-		switch sp[0] {
-		case "template":
-			if _, ok := s.Templates[sp[1]]; ok {
-				return nil, fmt.Errorf("sched: duplicate template: %s", sp[1])
-			}
-			t, err := NewTemplate(sp[1], v["body"], v["subject"])
+		typ := "CRITICAL"
+		if !isCrit {
+			typ = "WARNING"
+		}
+		log.Printf("%s: %s, group: %v\n", typ, a.Name, r.Group)
+		if !isCrit {
+			continue
+		}
+		body := new(bytes.Buffer)
+		subject := new(bytes.Buffer)
+		data := struct {
+			Alert *conf.Alert
+			Tags  opentsdb.TagSet
+		}{
+			a,
+			r.Group,
+		}
+		if a.Template.Body != nil {
+			err := a.Template.Body.Execute(body, &data)
 			if err != nil {
-				return nil, err
+				log.Println(err)
+				continue
 			}
-			s.Templates[sp[1]] = t
-		case "alert":
-			if _, ok := s.Alerts[sp[1]]; ok {
-				return nil, fmt.Errorf("sched: duplicate alert: %s", sp[1])
-			}
-			var crit, warn *expr.Expr
-			if cs, ok := v["crit"]; ok {
-				c, err := expr.New(c.Name, cs)
-				if err != nil {
-					return nil, fmt.Errorf("%s: %s", err, cs)
-				}
-				crit = c
-			}
-			if cs, ok := v["warn"]; ok {
-				c, err := expr.New(c.Name, cs)
-				if err != nil {
-					return nil, fmt.Errorf("%s: %s", err, cs)
-				}
-				warn = c
-			}
-			a, err := NewAlert(sp[1], v["owner"], v["template"], v["override"], crit, warn)
+		}
+		if a.Template.Subject != nil {
+			err := a.Template.Subject.Execute(subject, &data)
 			if err != nil {
-				return nil, err
+				log.Println(err)
+				continue
 			}
-			s.Alerts[sp[0]] = a
-		default:
-			return nil, fmt.Errorf("sched: unknown section type: %s", sp[0])
+		}
+		if a.Owner != "" {
+			e := email.NewEmail()
+			e.From = "tsaf@stackexchange.com"
+			e.To = strings.Split(a.Owner, ",")
+			e.Subject = subject.String()
+			e.Text = body.String()
+			err := e.Send("ny-mail:25", nil)
+			if err != nil {
+				log.Println(err)
+			}
 		}
 	}
-	return &s, nil
-}
-
-func NewTemplate(name, body, subject string) (*Template, error) {
-	t := Template{
-		Name:    name,
-		Body:    body,
-		Subject: subject,
-	}
-	if t.Name == "" {
-		return nil, fmt.Errorf("sched: missing template name")
-	}
-	if t.Body == "" {
-		return nil, fmt.Errorf("sched: missing template body in template.%s", name)
-	}
-	return &t, nil
-}
-
-func NewAlert(name, owner, template, override string, crit, warn *expr.Expr) (*Alert, error) {
-	a := Alert{
-		Name:         name,
-		Owner:        owner,
-		Warn:         warn,
-		Crit:         crit,
-		templateName: template,
-		overrideName: override,
-	}
-	if a.Name == "" {
-		return nil, fmt.Errorf("sched: missing alert name")
-	}
-	if a.Crit == nil && a.Warn == nil {
-		return nil, fmt.Errorf("sched: alert.%s missing crit or warn", name)
-	}
-	return &a, nil
 }
