@@ -166,6 +166,7 @@ func (c *Conf) loadTemplate(name string, s *parse.SectionNode) {
 	}
 	t := Template{
 		Vars: make(map[string]string),
+		Name: name,
 	}
 	for _, p := range s.Nodes {
 		c.at(p)
@@ -207,6 +208,7 @@ func (c *Conf) loadAlert(name string, s *parse.SectionNode) {
 	}
 	a := Alert{
 		Vars: make(map[string]string),
+		Name: name,
 	}
 	for _, p := range s.Nodes {
 		c.at(p)
