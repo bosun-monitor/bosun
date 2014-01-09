@@ -2,11 +2,11 @@ package conf
 
 import (
 	"fmt"
-	"html/template"
 	"io/ioutil"
 	"regexp"
 	"runtime"
 	"strings"
+	"text/template"
 
 	"github.com/StackExchange/tsaf/conf/parse"
 	"github.com/StackExchange/tsaf/expr"
