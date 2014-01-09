@@ -15,9 +15,8 @@ import (
 
 // Tree is the representation of a single parsed expression.
 type Tree struct {
-	Name      string    // name of the template represented by the tree.
-	Root      *BoolNode // top-level root of the tree.
-	text      string    // text parsed to create the template (or its parent)
+	Text string    // text parsed to create the expression
+	Root *BoolNode // top-level root of the tree.
 	// Parsing only; cleared after parse.
 	funcs     []map[string]Func
 	lex       *lexer
@@ -67,9 +66,9 @@ const (
 // Parse returns a Tree, created by parsing the expression described in the
 // argument string. If an error is encountered, parsing stops and an empty Tree
 // is returned with the error.
-func Parse(name, text string, funcs ...map[string]Func) (t *Tree, err error) {
-	t = New(name)
-	t.text = text
+func Parse(text string, funcs ...map[string]Func) (t *Tree, err error) {
+	t = New()
+	t.Text = text
 	err = t.Parse(text, funcs...)
 	return
 }
@@ -102,9 +101,8 @@ func (t *Tree) peek() item {
 // Parsing.
 
 // New allocates a new parse tree with the given name.
-func New(name string, funcs ...map[string]Func) *Tree {
+func New(funcs ...map[string]Func) *Tree {
 	return &Tree{
-		Name:  name,
 		funcs: funcs,
 	}
 }
@@ -178,8 +176,8 @@ func (t *Tree) stopParse() {
 // the treeSet map.
 func (t *Tree) Parse(text string, funcs ...map[string]Func) (err error) {
 	defer t.recover(&err)
-	t.startParse(funcs, lex(t.Name, text))
-	t.text = text
+	t.startParse(funcs, lex(text))
+	t.Text = text
 	t.parse()
 	t.stopParse()
 	return nil

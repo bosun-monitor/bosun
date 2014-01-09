@@ -202,8 +202,18 @@ func (c *Conf) loadAlert(name string, nodes []*parse.PairNode) {
 			a.override = c.expand(v, a.Vars)
 		case "crit":
 			a.crit = c.expand(v, a.Vars)
+			crit, err := expr.New(a.crit)
+			if err != nil {
+				c.error(err)
+			}
+			a.Crit = crit
 		case "warn":
 			a.warn = c.expand(v, a.Vars)
+			warn, err := expr.New(a.warn)
+			if err != nil {
+				c.error(err)
+			}
+			a.Warn = warn
 		default:
 			if !strings.HasPrefix(k, "$") {
 				c.errorf("unknown key %s", k)
