@@ -150,22 +150,22 @@ func (c *Conf) loadSection(s *parse.SectionNode) {
 	if len(sp) != 2 {
 		c.errorf("expected . in section name")
 	} else if sp[0] == "template" {
-		c.loadTemplate(sp[1], s.Nodes)
+		c.loadTemplate(sp[1], s)
 	} else if sp[0] == "alert" {
-		c.loadAlert(sp[1], s.Nodes)
+		c.loadAlert(sp[1], s)
 	} else {
 		c.errorf("unknown section type: %s", sp[0])
 	}
 }
 
-func (c *Conf) loadTemplate(name string, nodes []*parse.PairNode) {
+func (c *Conf) loadTemplate(name string, s *parse.SectionNode) {
 	if _, ok := c.Templates[name]; ok {
 		c.errorf("duplicate template name: %s", name)
 	}
 	t := Template{
 		Vars: make(map[string]string),
 	}
-	for _, p := range nodes {
+	for _, p := range s.Nodes {
 		c.at(p)
 		v := p.Val.Text
 		switch k := p.Key.Text; k {
@@ -180,17 +180,21 @@ func (c *Conf) loadTemplate(name string, nodes []*parse.PairNode) {
 			t.Vars[k] = c.expand(v, t.Vars)
 		}
 	}
+	c.at(s)
+	if t.Body == "" && t.Subject == "" {
+		c.errorf("neither body or subject specified")
+	}
 	c.Templates[name] = &t
 }
 
-func (c *Conf) loadAlert(name string, nodes []*parse.PairNode) {
+func (c *Conf) loadAlert(name string, s *parse.SectionNode) {
 	if _, ok := c.Alerts[name]; ok {
 		c.errorf("duplicate template name: %s", name)
 	}
 	a := Alert{
 		Vars: make(map[string]string),
 	}
-	for _, p := range nodes {
+	for _, p := range s.Nodes {
 		c.at(p)
 		v := p.Val.Text
 		switch k := p.Key.Text; k {
@@ -231,6 +235,10 @@ func (c *Conf) loadAlert(name string, nodes []*parse.PairNode) {
 			}
 			a.Vars[k] = c.expand(v, a.Vars)
 		}
+	}
+	c.at(s)
+	if a.Crit == nil && a.Warn == nil {
+		c.errorf("neither crit or warn specified")
 	}
 	c.Alerts[name] = &a
 }
