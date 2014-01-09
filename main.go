@@ -6,7 +6,6 @@ import (
 
 	"github.com/StackExchange/tsaf/conf"
 	"github.com/StackExchange/tsaf/relay"
-	"github.com/StackExchange/tsaf/sched"
 	"github.com/StackExchange/tsaf/web"
 )
 
@@ -20,16 +19,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	webDir := c.Global.Get("webDir", "web")
-	webListen := c.Global.Get("webListen", ":8070")
-	relayListen := c.Global.Get("relayListen", ":4242")
-	tsdbHost := c.Global["tsdbHost"]
-	if tsdbHost == "" {
-		log.Fatal("tsaf: no tsdbHost in config file")
-	}
-	tsdbHttp := "http://" + tsdbHost + "/"
-	go func() { log.Fatal(relay.RelayHTTP(relayListen, tsdbHost)) }()
-	go func() { log.Fatal(web.Listen(webListen, webDir, tsdbHttp)) }()
-	go func() { log.Fatal(sched.Run(c)) }()
+	tsdbHttp := "http://" + c.TsdbHost + "/"
+	go func() { log.Fatal(relay.RelayHTTP(c.RelayListen, c.TsdbHost)) }()
+	go func() { log.Fatal(web.Listen(c.HttpListen, c.WebDir, tsdbHttp)) }()
 	select {}
 }
