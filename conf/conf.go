@@ -2,191 +2,213 @@ package conf
 
 import (
 	"fmt"
-	"io"
 	"io/ioutil"
-	"os"
-	"regexp"
+	"runtime"
+	"strings"
+
+	"github.com/StackExchange/tsaf/conf/parse"
+	"github.com/StackExchange/tsaf/expr"
 )
-
-func Parse(name string, r io.Reader) (*Conf, error) {
-	b, err := ioutil.ReadAll(r)
-	if err != nil {
-		return nil, err
-	}
-	l := lex(name, string(b))
-	c := Conf{
-		Name:     name,
-		Global:   make(Section),
-		Sections: make(map[string]Section),
-	}
-	section := c.Global
-	state := stateStart
-	var i item
-	var varname string
-	parseError := func(reason string) error {
-		return fmt.Errorf("expr: %s:%d: %s", name, l.lineNumber(), reason)
-	}
-Loop:
-	for i = range l.items {
-		if i.typ == itemError {
-			return nil, parseError(i.val)
-		}
-		switch state {
-		case stateStart:
-			switch i.typ {
-			case itemLeftDelim:
-				state = stateSection
-			case itemIdentifier:
-				state = stateEqual
-				varname = i.val
-			case itemEOF:
-				break Loop
-			default:
-				return nil, parseError("expected [ or varname]")
-			}
-		case stateEqual:
-			switch i.typ {
-			case itemEqual:
-				state = stateValue
-			default:
-				return nil, parseError("expected =")
-			}
-		case stateValue:
-			switch i.typ {
-			case itemString, itemRawString:
-				section[varname] = i.val
-				state = stateStart
-			default:
-				return nil, parseError("expected string")
-			}
-		case stateSection:
-			switch i.typ {
-			case itemIdentifier:
-				section = make(Section)
-				c.Sections[i.val] = section
-				state = stateRightDelim
-			}
-		case stateRightDelim:
-			switch i.typ {
-			case itemRightDelim:
-				state = stateStart
-			default:
-				return nil, parseError("expected ]")
-			}
-		default:
-			return nil, parseError("bad state")
-		}
-	}
-	if err := c.expandVars(); err != nil {
-		return nil, fmt.Errorf("conf: %s: %s", name, err)
-	}
-	return &c, nil
-}
-
-const (
-	stateStart = iota
-	stateSection
-	stateEqual
-	stateRightDelim
-	stateValue
-)
-
-func ParseFile(fname string) (*Conf, error) {
-	f, err := os.Open(fname)
-	if err != nil {
-		return nil, err
-	}
-	return Parse(fname, f)
-}
 
 type Conf struct {
-	Name     string
-	Global   Section
-	Sections map[string]Section
+	Vars
+	Name        string // Config file name
+	WebDir      string // Static content web directory: web
+	TsdbHost    string // OpenTSDB relay and query destination: ny-devtsdb04:4242
+	RelayListen string // OpenTSDB relay listen address: :4242
+	HttpListen  string // Web server listen address: :80
+	Templates   map[string]*Template
+	Alerts      map[string]*Alert
+
+	tree *parse.Tree
+	node parse.Node
 }
 
-func (c *Conf) String() string {
-	r := c.Global.String()
-	for k, v := range c.Sections {
-		r += fmt.Sprintf("[%v]\n%v", k, v)
-	}
-	return r
+// at marks the state to be on node n, for error reporting.
+func (c *Conf) at(node parse.Node) {
+	c.node = node
 }
 
-type Section map[string]string
-
-func (s Section) String() string {
-	r := ""
-	for k, v := range s {
-		r += fmt.Sprintf("%v = %v\n", k, v)
-	}
-	return r
+func (c *Conf) error(err error) {
+	c.errorf(err.Error())
 }
 
-func (s Section) Get(key, fallback string) string {
-	if v, ok := s[key]; ok {
-		return v
-	}
-	return fallback
-}
-
-var exRE = regexp.MustCompile(`\$\w+`)
-
-func (c *Conf) get(section, key string, depth int) (v string, err error) {
-	if depth > 20 {
-		if section == "" {
-			section = "[global]"
-		}
-		err = fmt.Errorf("variable expansion loop: %s:%s", section, key)
-		return
-	}
-	var s Section
-	var ok bool
-	if section == "" {
-		s = c.Global
+// errorf formats the error and terminates processing.
+func (c *Conf) errorf(format string, args ...interface{}) {
+	if c.node == nil {
+		format = fmt.Sprintf("conf: %s: %s", c.Name, format)
 	} else {
-		s, ok = c.Sections[section]
-		if !ok {
-			err = fmt.Errorf("no section %s", section)
-			return
+		location, context := c.tree.ErrorContext(c.node)
+		format = fmt.Sprintf("conf: %s: at <%s>: %s", location, context, format)
+	}
+	panic(fmt.Errorf(format, args...))
+}
+
+// errRecover is the handler that turns panics into returns from the top
+// level of Parse.
+func errRecover(errp *error) {
+	e := recover()
+	if e != nil {
+		switch err := e.(type) {
+		case runtime.Error:
+			panic(e)
+		case error:
+			*errp = err
+		default:
+			panic(e)
 		}
 	}
-	v, ok = s[key]
-	if !ok {
-		if section == "" {
-			section = "[global]"
-		}
-		err = fmt.Errorf("no key %s in section %s", key, section)
-		return
+}
+
+type Alert struct {
+	Vars
+	Template
+	Name       string
+	Owner      string
+	Crit, Warn *expr.Expr
+	Overriders []*Alert
+	Overrides  *Alert
+
+	crit, warn string
+	template   string
+	override   string
+}
+
+type Template struct {
+	Vars
+	Name    string
+	Body    string
+	Subject string
+}
+
+type Vars map[string]string
+
+func ParseFile(fname string) (*Conf, error) {
+	f, err := ioutil.ReadFile(fname)
+	if err != nil {
+		return nil, err
 	}
-	v = exRE.ReplaceAllStringFunc(v, func(s string) string {
-		ns, e := c.get(section, s, depth+1)
-		if e != nil {
-			var e2 error
-			ns, e2 = c.get("", s, depth+1)
-			if e2 != nil {
-				err = e
-			}
+	return New(fname, string(f))
+}
+
+func New(name, text string) (c *Conf, err error) {
+	defer errRecover(&err)
+	t, e := parse.Parse(name, text)
+	if e != nil {
+		c.error(err)
+	}
+	c = &Conf{
+		tree:        t,
+		Name:        name,
+		HttpListen:  ":8070",
+		RelayListen: ":4242",
+		WebDir:      "web",
+		Vars:        make(map[string]string),
+		Templates:   make(map[string]*Template),
+		Alerts:      make(map[string]*Alert),
+	}
+	for _, n := range t.Root.Nodes {
+		c.at(n)
+		switch n := n.(type) {
+		case *parse.PairNode:
+			c.loadGlobal(n)
+		case *parse.SectionNode:
+			c.loadSection(n)
+		default:
+			c.errorf("unexpected parse node %s", n)
 		}
-		return ns
-	})
+	}
+	if c.TsdbHost == "" {
+		c.at(nil)
+		c.errorf("tsdbHost required")
+	}
 	return
 }
 
-func (c *Conf) expandVars() (err error) {
-	for k := range c.Global {
-		c.Global[k], err = c.get("", k, 0)
-		if err != nil {
-			return
+func (c *Conf) loadGlobal(p *parse.PairNode) {
+	v := p.Val.Text
+	switch k := p.Key.Text; k {
+	case "tsdbHost":
+		c.TsdbHost = v
+	case "httpListen":
+		c.HttpListen = v
+	case "relayListen":
+		c.RelayListen = v
+	case "c.webDir":
+		c.WebDir = v
+	default:
+		if !strings.HasPrefix(k, "$") {
+			c.errorf("unknown key %s", k)
 		}
+		c.Vars[k] = v
 	}
-	for n, s := range c.Sections {
-		for k := range s {
-			s[k], err = c.get(n, k, 0)
-			if err != nil {
-				return
+}
+
+func (c *Conf) loadSection(s *parse.SectionNode) {
+	sp := strings.SplitN(s.Name.Text, ".", 2)
+	if len(sp) != 2 {
+		c.errorf("expected . in section name")
+	} else if sp[0] == "template" {
+		c.loadTemplate(sp[1], s.Nodes)
+	} else if sp[0] == "alert" {
+		c.loadAlert(sp[1], s.Nodes)
+	} else {
+		c.errorf("unknown section type: %s", sp[0])
+	}
+}
+
+func (c *Conf) loadTemplate(name string, nodes []*parse.PairNode) {
+	if _, ok := c.Templates[name]; ok {
+		c.errorf("duplicate template name: %s", name)
+	}
+	t := Template{
+		Vars: make(map[string]string),
+	}
+	for _, p := range nodes {
+		c.at(p)
+		v := p.Val.Text
+		switch k := p.Key.Text; k {
+		case "body":
+			t.Body = k
+		case "subject":
+			t.Subject = k
+		default:
+			if !strings.HasPrefix(k, "$") {
+				c.errorf("unknown key %s", k)
 			}
+			t.Vars[k] = v
 		}
 	}
-	return
+	c.Templates[name] = &t
+}
+
+func (c *Conf) loadAlert(name string, nodes []*parse.PairNode) {
+	if _, ok := c.Alerts[name]; ok {
+		c.errorf("duplicate template name: %s", name)
+	}
+	a := Alert{
+		Vars: make(map[string]string),
+	}
+	for _, p := range nodes {
+		c.at(p)
+		v := p.Val.Text
+		switch k := p.Key.Text; k {
+		case "owner":
+			a.Owner = v
+		case "template":
+			a.template = v
+		case "override":
+			a.override = v
+		case "crit":
+			a.crit = v
+		case "warn":
+			a.warn = v
+		default:
+			if !strings.HasPrefix(k, "$") {
+				c.errorf("unknown key %s", k)
+			}
+			a.Vars[k] = v
+		}
+	}
+	c.Alerts[name] = &a
 }
