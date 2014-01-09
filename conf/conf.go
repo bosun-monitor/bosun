@@ -63,7 +63,7 @@ func errRecover(errp *error) {
 
 type Alert struct {
 	Vars
-	Template
+	*Template
 	Name       string
 	Owner      string
 	Crit, Warn *expr.Expr
@@ -198,8 +198,19 @@ func (c *Conf) loadAlert(name string, nodes []*parse.PairNode) {
 			a.Owner = c.expand(v, a.Vars)
 		case "template":
 			a.template = c.expand(v, a.Vars)
+			t, ok := c.Templates[a.template]
+			if !ok {
+				c.errorf("unknown template %s", a.template)
+			}
+			a.Template = t
 		case "override":
 			a.override = c.expand(v, a.Vars)
+			o, ok := c.Alerts[a.override]
+			if !ok {
+				c.errorf("unknown alert %s", a.override)
+			}
+			a.Overrides = o
+			o.Overriders = append(o.Overriders, &a)
 		case "crit":
 			a.crit = c.expand(v, a.Vars)
 			crit, err := expr.New(a.crit)
