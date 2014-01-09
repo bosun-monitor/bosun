@@ -2,6 +2,7 @@ package conf
 
 import (
 	"fmt"
+	"html/template"
 	"io/ioutil"
 	"regexp"
 	"runtime"
@@ -77,9 +78,10 @@ type Alert struct {
 
 type Template struct {
 	Vars
-	Name    string
-	Body    string
-	Subject string
+	Name          string
+	Body, Subject *template.Template
+
+	body, subject string
 }
 
 type Vars map[string]string
@@ -170,9 +172,21 @@ func (c *Conf) loadTemplate(name string, s *parse.SectionNode) {
 		v := p.Val.Text
 		switch k := p.Key.Text; k {
 		case "body":
-			t.Body = c.expand(v, t.Vars)
+			t.body = c.expand(v, t.Vars)
+			tmpl := template.New(name)
+			_, err := tmpl.Parse(t.body)
+			if err != nil {
+				c.error(err)
+			}
+			t.Body = tmpl
 		case "subject":
-			t.Subject = c.expand(v, t.Vars)
+			t.subject = c.expand(v, t.Vars)
+			tmpl := template.New(name)
+			_, err := tmpl.Parse(t.subject)
+			if err != nil {
+				c.error(err)
+			}
+			t.Subject = tmpl
 		default:
 			if !strings.HasPrefix(k, "$") {
 				c.errorf("unknown key %s", k)
@@ -181,7 +195,7 @@ func (c *Conf) loadTemplate(name string, s *parse.SectionNode) {
 		}
 	}
 	c.at(s)
-	if t.Body == "" && t.Subject == "" {
+	if t.Body == nil && t.Subject == nil {
 		c.errorf("neither body or subject specified")
 	}
 	c.Templates[name] = &t
