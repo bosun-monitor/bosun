@@ -20,7 +20,7 @@ type Node interface {
 	Type() NodeType
 	String() string
 	Position() Pos // byte position of start of node in full original input string
-	Check() error // performs type checking for itself and sub-nodes
+	Check() error  // performs type checking for itself and sub-nodes
 	Return() FuncType
 	// Make sure only functions in this package can create Nodes.
 	unexported()
