@@ -173,7 +173,7 @@ func (c *Conf) loadTemplate(name string, s *parse.SectionNode) {
 		v := p.Val.Text
 		switch k := p.Key.Text; k {
 		case "body":
-			t.body = c.expand(v, t.Vars)
+			t.body = v
 			tmpl := template.New(name)
 			_, err := tmpl.Parse(t.body)
 			if err != nil {
@@ -181,7 +181,7 @@ func (c *Conf) loadTemplate(name string, s *parse.SectionNode) {
 			}
 			t.Body = tmpl
 		case "subject":
-			t.subject = c.expand(v, t.Vars)
+			t.subject = v
 			tmpl := template.New(name)
 			_, err := tmpl.Parse(t.subject)
 			if err != nil {
@@ -192,7 +192,7 @@ func (c *Conf) loadTemplate(name string, s *parse.SectionNode) {
 			if !strings.HasPrefix(k, "$") {
 				c.errorf("unknown key %s", k)
 			}
-			t.Vars[k] = c.expand(v, t.Vars)
+			t.Vars[k] = v
 		}
 	}
 	c.at(s)
