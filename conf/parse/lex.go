@@ -155,7 +155,7 @@ Loop:
 			l.backup()
 			return lexValue
 		case isSpace(r) || isEndOfLine(r):
-			// ignore
+			l.ignore()
 		case r == eof:
 			l.emit(itemEOF)
 			break Loop
