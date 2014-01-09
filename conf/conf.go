@@ -3,6 +3,7 @@ package conf
 import (
 	"fmt"
 	"io/ioutil"
+	"regexp"
 	"runtime"
 	"strings"
 
@@ -129,18 +130,18 @@ func (c *Conf) loadGlobal(p *parse.PairNode) {
 	v := p.Val.Text
 	switch k := p.Key.Text; k {
 	case "tsdbHost":
-		c.TsdbHost = v
+		c.TsdbHost = c.expand(v, nil)
 	case "httpListen":
-		c.HttpListen = v
+		c.HttpListen = c.expand(v, nil)
 	case "relayListen":
-		c.RelayListen = v
+		c.RelayListen = c.expand(v, nil)
 	case "c.webDir":
-		c.WebDir = v
+		c.WebDir = c.expand(v, nil)
 	default:
 		if !strings.HasPrefix(k, "$") {
 			c.errorf("unknown key %s", k)
 		}
-		c.Vars[k] = v
+		c.Vars[k] = c.expand(v, nil)
 	}
 }
 
@@ -169,14 +170,14 @@ func (c *Conf) loadTemplate(name string, nodes []*parse.PairNode) {
 		v := p.Val.Text
 		switch k := p.Key.Text; k {
 		case "body":
-			t.Body = k
+			t.Body = c.expand(v, t.Vars)
 		case "subject":
-			t.Subject = k
+			t.Subject = c.expand(v, t.Vars)
 		default:
 			if !strings.HasPrefix(k, "$") {
 				c.errorf("unknown key %s", k)
 			}
-			t.Vars[k] = v
+			t.Vars[k] = c.expand(v, t.Vars)
 		}
 	}
 	c.Templates[name] = &t
@@ -194,21 +195,39 @@ func (c *Conf) loadAlert(name string, nodes []*parse.PairNode) {
 		v := p.Val.Text
 		switch k := p.Key.Text; k {
 		case "owner":
-			a.Owner = v
+			a.Owner = c.expand(v, a.Vars)
 		case "template":
-			a.template = v
+			a.template = c.expand(v, a.Vars)
 		case "override":
-			a.override = v
+			a.override = c.expand(v, a.Vars)
 		case "crit":
-			a.crit = v
+			a.crit = c.expand(v, a.Vars)
 		case "warn":
-			a.warn = v
+			a.warn = c.expand(v, a.Vars)
 		default:
 			if !strings.HasPrefix(k, "$") {
 				c.errorf("unknown key %s", k)
 			}
-			a.Vars[k] = v
+			a.Vars[k] = c.expand(v, a.Vars)
 		}
 	}
 	c.Alerts[name] = &a
+}
+
+var exRE = regexp.MustCompile(`\$\w+`)
+
+func (c *Conf) expand(v string, vars map[string]string) string {
+	v = exRE.ReplaceAllStringFunc(v, func(s string) string {
+		if vars != nil {
+			if n, ok := vars[s]; ok {
+				return n
+			}
+		}
+		n, ok := c.Vars[s]
+		if !ok {
+			c.errorf("unknown variable %s", s)
+		}
+		return n
+	})
+	return v
 }
