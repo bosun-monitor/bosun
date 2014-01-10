@@ -85,10 +85,14 @@ func union(a, b []*Result) []Union {
 	for _, ra := range a {
 		for _, rb := range b {
 			if ra.Group.Equal(rb.Group) || len(ra.Group) == 0 || len(rb.Group) == 0 {
+				g := ra.Group
+				if len(ra.Group) == 0 {
+					g = rb.Group
+				}
 				u = append(u, Union{
 					A:     ra.Value,
 					B:     rb.Value,
-					Group: ra.Group,
+					Group: g,
 				})
 			}
 		}
