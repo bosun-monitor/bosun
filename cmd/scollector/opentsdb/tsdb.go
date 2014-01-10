@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"os"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"unicode"
@@ -73,6 +74,24 @@ func (t TagSet) Equal(o TagSet) bool {
 		}
 	}
 	return true
+}
+
+// String converts t to an OpenTSDB-style {a=b,c=b} string, alphabetized by key.
+func (t TagSet) String() string {
+	var keys []string
+	for k := range t {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	b := bytes.NewBufferString("{")
+	for i, k := range keys {
+		if i > 0 {
+			fmt.Fprint(b, ",")
+		}
+		fmt.Fprintf(b, "%s=%s", k, t[k])
+	}
+	fmt.Fprint(b, "}")
+	return b.String()
 }
 
 func (d *DataPoint) clean() error {
