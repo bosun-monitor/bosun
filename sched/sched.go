@@ -16,10 +16,11 @@ import (
 
 type Schedule struct {
 	*conf.Conf
-	Freq time.Duration
+	Freq   time.Duration
+	Status map[AlertKey]*State
 }
 
-var DefaultSched = Schedule{
+var DefaultSched = &Schedule{
 	Freq: time.Minute * 5,
 }
 
@@ -35,6 +36,7 @@ func Run() error {
 
 func (s *Schedule) Load(c *conf.Conf) {
 	s.Conf = c
+	s.Status = make(map[AlertKey]*State)
 }
 
 func (s *Schedule) Run() error {
@@ -60,31 +62,48 @@ func (s *Schedule) Check() {
 }
 
 func (s *Schedule) CheckAlert(a *conf.Alert) {
-	s.CheckExpr(a, a.Crit, true)
-	s.CheckExpr(a, a.Warn, false)
+	ignore := s.CheckExpr(a, a.Crit, true, nil)
+	s.CheckExpr(a, a.Warn, false, ignore)
 }
 
-func (s *Schedule) CheckExpr(a *conf.Alert, e *expr.Expr, isCrit bool) {
+func (s *Schedule) CheckExpr(a *conf.Alert, e *expr.Expr, isCrit bool, ignore []AlertKey) (alerts []AlertKey) {
 	if e == nil {
 		return
 	}
 	results, err := e.Execute(s.Conf.TsdbHost)
 	if err != nil {
+		// todo: do something here?
 		log.Println(err)
 		return
 	}
+Loop:
 	for _, r := range results {
+		ak := AlertKey{a.Name, r.Group.String()}
+		for _, v := range ignore {
+			if ak == v {
+				continue Loop
+			}
+		}
+		state := s.Status[ak]
+		if state == nil {
+			state = new(State)
+		}
+		status := ST_WARN
 		if r.Value == 0 {
+			status = ST_NORM
+		} else if isCrit {
+			status = ST_CRIT
+		}
+		fmt.Println(ak, status, r.Value)
+		state.Append(status)
+		s.Status[ak] = state
+		if status != ST_NORM {
+			alerts = append(alerts, ak)
+		}
+		if status != ST_CRIT {
 			continue
 		}
-		typ := "CRITICAL"
-		if !isCrit {
-			typ = "WARNING"
-		}
-		log.Printf("%s: %s, group: %v\n", typ, a.Name, r.Group)
-		if !isCrit {
-			continue
-		}
+		continue
 		body := new(bytes.Buffer)
 		subject := new(bytes.Buffer)
 		data := struct {
@@ -119,5 +138,60 @@ func (s *Schedule) CheckExpr(a *conf.Alert, e *expr.Expr, isCrit bool) {
 				log.Println(err)
 			}
 		}
+	}
+	return
+}
+
+type AlertKey struct {
+	Name  string
+	Group string
+}
+
+type State struct {
+	// Most recent event last.
+	History []Event
+	Touched time.Time
+}
+
+func (s *State) Touch() {
+	s.Touched = time.Now().UTC()
+}
+
+// Appends status to the history if the status is different than the latest
+// status.
+func (s *State) Append(status Status) {
+	s.Touch()
+	if len(s.History) == 0 || s.Last().Status != status {
+		s.History = append(s.History, Event{status, time.Now().UTC()})
+	}
+}
+
+func (s *State) Last() Event {
+	return s.History[len(s.History)-1]
+}
+
+type Event struct {
+	Status
+	time.Time
+}
+
+type Status int
+
+const (
+	ST_NORM Status = iota
+	ST_WARN
+	ST_CRIT
+)
+
+func (s Status) String() string {
+	switch s {
+	case ST_NORM:
+		return "normal"
+	case ST_WARN:
+		return "warning"
+	case ST_CRIT:
+		return "critical"
+	default:
+		return "unknown"
 	}
 }
