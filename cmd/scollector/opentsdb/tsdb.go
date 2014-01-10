@@ -76,6 +76,16 @@ func (t TagSet) Equal(o TagSet) bool {
 	return true
 }
 
+// Subset returns true if all k=v pairs in o are in t.
+func (t TagSet) Subset(o TagSet) bool {
+	for k, v := range o {
+		if tv, ok := t[k]; !ok || tv != v {
+			return false
+		}
+	}
+	return true
+}
+
 // String converts t to an OpenTSDB-style {a=b,c=b} string, alphabetized by key.
 func (t TagSet) String() string {
 	var keys []string
