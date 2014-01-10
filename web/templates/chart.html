@@ -61,7 +61,7 @@
 							<th>touched</th>
 						</tr>
 						{{range $k, $v := .Schedule.Status}}
-						<tr>
+						<tr class="{{$v.Last.Status | status}}">
 							<td>{{$k.Name}}</td>
 							<td>{{$k.Group}}</td>
 							<td>{{$v.Last.Status}}</td>
