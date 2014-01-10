@@ -79,7 +79,8 @@ func wrap(v float64) []*Result {
 	}
 }
 
-// union returns the combination of a and b sharing the same group
+// union returns the combination of a and b where one is a strict subset of the
+// other.
 func union(a, b []*Result) []Union {
 	var u []Union
 	for _, ra := range a {
@@ -93,6 +94,18 @@ func union(a, b []*Result) []Union {
 					A:     ra.Value,
 					B:     rb.Value,
 					Group: g,
+				})
+			} else if ra.Group.Subset(rb.Group) {
+				u = append(u, Union{
+					A:     ra.Value,
+					B:     rb.Value,
+					Group: rb.Group,
+				})
+			} else if rb.Group.Subset(ra.Group) {
+				u = append(u, Union{
+					A:     ra.Value,
+					B:     rb.Value,
+					Group: ra.Group,
 				})
 			}
 		}
