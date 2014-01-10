@@ -189,7 +189,7 @@ func ParseRequest(req string) (*Request, error) {
 	return &r, nil
 }
 
-var qRE = regexp.MustCompile(`^(\w+):(?:(\w+-\w+):)?(?:(rate):)?([\w./]+)(?:\{([\w./,=*|]+)\})?$`)
+var qRE = regexp.MustCompile(`^(\w+):(?:(\w+-\w+):)?(?:(rate):)?([\w./]+)(?:\{([\w./,=*-|]+)\})?$`)
 
 // ParseQuery parses OpenTSDB queries of the form: avg:rate:cpu{k=v}.
 func ParseQuery(query string) (*Query, error) {
