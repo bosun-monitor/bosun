@@ -56,12 +56,14 @@ func TestExprSimple(t *testing.T) {
 	}
 }
 
+const TSDB_HOST = "ny-devtsdb04:4242"
+
 func TestExprQuery(t *testing.T) {
-	e, err := New(`avg([avg:proc.stat.cpu{host=*}], "5m") > 4e7`)
+	e, err := New(`avg([avg:proc.stat.cpu{host=*,type=idle}], "5m") > avg([avg:proc.stat.cpu{host=*}], "5m")`)
 	if err != nil {
 		t.Fatal(err)
 	}
-	r, err := e.Execute("")
+	r, err := e.Execute(TSDB_HOST)
 	if err != nil {
 		t.Fatal(err)
 	}
