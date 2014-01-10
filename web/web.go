@@ -1,6 +1,7 @@
 package web
 
 import (
+	"fmt"
 	"html/template"
 	"log"
 	"net/http"
@@ -47,7 +48,7 @@ func Listen(addr, dir, host string) error {
 }
 
 func Index(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
-	templates.ExecuteTemplate(w, "chart.html", struct {
+	err := templates.ExecuteTemplate(w, "chart.html", struct {
 		Metric, Tagv search.QMap
 		Tagk         search.SMap
 		Includes     template.HTML
@@ -59,6 +60,9 @@ func Index(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 		t.Includes(),
 		schedule,
 	})
+	if err != nil {
+		fmt.Println(err)
+	}
 }
 
 func serveError(w http.ResponseWriter, err error) {
