@@ -14,7 +14,7 @@ func Expr(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 		serveError(w, err)
 		return
 	}
-	res, err := e.Execute("")
+	res, err := e.Execute(tsdbHost)
 	if err != nil {
 		serveError(w, err)
 		return

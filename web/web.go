@@ -10,7 +10,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-var TSDBHttp string
+var tsdbHost string
 var templates *template.Template
 var router = mux.NewRouter()
 
@@ -18,8 +18,8 @@ func init() {
 	miniprofiler.Position = "bottomleft"
 }
 
-func Listen(addr, dir, tsdbhttp string) error {
-	TSDBHttp = tsdbhttp
+func Listen(addr, dir, host string) error {
+	tsdbHost = host
 	var err error
 	templates, err = template.New("").ParseFiles(
 		dir + "/templates/chart.html",
