@@ -6,13 +6,17 @@ import (
 	"net/http"
 
 	"github.com/MiniProfiler/go/miniprofiler"
+	"github.com/StackExchange/tsaf/sched"
 	"github.com/StackExchange/tsaf/search"
 	"github.com/gorilla/mux"
 )
 
-var tsdbHost string
-var templates *template.Template
-var router = mux.NewRouter()
+var (
+	tsdbHost  string
+	templates *template.Template
+	router    = mux.NewRouter()
+	schedule  = sched.DefaultSched
+)
 
 func init() {
 	miniprofiler.Position = "bottomleft"
@@ -47,11 +51,13 @@ func Index(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 		Metric, Tagv search.QMap
 		Tagk         search.SMap
 		Includes     template.HTML
+		Schedule     *sched.Schedule
 	}{
 		search.Metric,
 		search.Tagv,
 		search.Tagk,
 		t.Includes(),
+		schedule,
 	})
 }
 

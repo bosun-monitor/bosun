@@ -54,6 +54,28 @@
 				<div class="col-lg-12">
 					<table class="table">
 						<tr>
+							<th>alert</th>
+							<th>tags</th>
+							<th>status</th>
+							<th>status time</th>
+							<th>touched</th>
+						</tr>
+						{{range $k, $v := .Schedule.Status}}
+						<tr>
+							<td>{{$k.Name}}</td>
+							<td>{{$k.Group}}</td>
+							<td>{{$v.Last.Status}}</td>
+							<td>{{$v.Last.Time}}</td>
+							<td>{{$v.Touched}}</td>
+						</tr>
+						{{end}}
+					</table>
+				</div>
+			</div>
+			<div class="row">
+				<div class="col-lg-12">
+					<table class="table">
+						<tr>
 							<th>metrics by tag set</th>
 							<th>tag keys by metric</th>
 							<th>tag values by metric and tag key</th>
