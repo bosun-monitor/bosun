@@ -94,7 +94,6 @@ Loop:
 		} else if isCrit {
 			status = ST_CRIT
 		}
-		fmt.Println(ak, status, r.Value)
 		state.Append(status)
 		s.Status[ak] = state
 		if status != ST_NORM {
