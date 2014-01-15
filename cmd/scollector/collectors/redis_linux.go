@@ -95,6 +95,7 @@ func c_redis_linux() opentsdb.MultiDataPoint {
 		c, err := redis.Dial("tcp", fmt.Sprintf(":%d", port))
 		if err != nil {
 			l.Println(err)
+			continue
 		}
 		defer c.Close()
 		tags := opentsdb.TagSet{
