@@ -304,10 +304,11 @@ func (r Request) Query(host string) (ResponseSet, error) {
 		return nil, err
 	}
 	resp, err := http.Post(u.String(), "application/json", bytes.NewReader(b))
-	defer resp.Body.Close()
 	if err != nil {
 		return nil, err
-	} else if resp.StatusCode != http.StatusOK {
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
 		b, err = ioutil.ReadAll(resp.Body)
 		fmt.Println(string(b))
 		return nil, fmt.Errorf("tsdb: %s", resp.Status)
