@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/GaryBoone/GoStats/stats"
 	"github.com/StackExchange/tcollector/opentsdb"
 	"github.com/StackExchange/tsaf/expr/parse"
 	"github.com/StackExchange/tsaf/search"
@@ -49,6 +50,12 @@ var Builtins = map[string]parse.Func{
 		parse.TYPE_NUMBER,
 		[]interface{}{DefDuration, "5m"},
 		Since,
+	},
+	"forecastlr": {
+		[]parse.FuncType{parse.TYPE_SERIES, parse.TYPE_STRING, parse.TYPE_NUMBER},
+		parse.TYPE_NUMBER,
+		nil,
+		Forecast_lr,
 	},
 }
 
@@ -167,4 +174,57 @@ func since(dps map[string]opentsdb.Point) (a float64) {
 	}
 	s := time.Since(last)
 	return s.Seconds()
+}
+
+//forecast_lr Returns the number of seconds until the the series will have value Y according to a
+//Linear Regression
+func Forecast_lr(host, query, duration string, y float64) (r []*Result, err error) {
+	q, err := opentsdb.ParseQuery(query)
+	if err != nil {
+		return
+	}
+	expandSearch(q)
+	d, err := ParseDuration(duration)
+	if err != nil {
+		return
+	}
+	req := opentsdb.Request{
+		Queries: []*opentsdb.Query{q},
+		Start:   fmt.Sprintf("%dms-ago", d.Nanoseconds()/1e6),
+	}
+	s, err := req.Query(host)
+	if err != nil {
+		return
+	}
+	for _, res := range s {
+		if len(res.DPS) == 0 {
+			// do something here?
+			continue
+		}
+		r = append(r, &Result{
+			Value: Value(forecast_lr(res.DPS, y)),
+			Group: res.Tags,
+		})
+	}
+	return
+}
+
+func forecast_lr(dps map[string]opentsdb.Point, y_val float64) (a float64) {
+	var x []float64
+	var y []float64
+	for k, v := range dps {
+		d, err := strconv.ParseInt(k, 10, 64)
+		if err != nil {
+			panic(err)
+		}
+		x = append(x, float64(d))
+		y = append(y, float64(v))
+	}
+	var slope, intercept, _, _, _, _ = stats.LinearRegression(x, y)
+	//Apparently it is okay for slope to be Zero, there is no divide by zero, not sure why
+	intercept_time := (y_val - intercept) / slope
+	t := time.Unix(int64(intercept_time), 0)
+	s := time.Since(t)
+	return -s.Seconds()
+
 }
