@@ -50,7 +50,7 @@ func c_ifstat_linux() opentsdb.MultiDataPoint {
 		intf := m[1]
 		stats := strings.Fields(m[2])
 		for i, v := range stats {
-			Add(&md, "proc.net."+FIELDS_NET[i], v, opentsdb.TagSet{
+			Add(&md, "linux.net."+strings.Replace(FIELDS_NET[i], ".", "_", -1), v, opentsdb.TagSet{
 				"iface":     intf,
 				"direction": direction(i),
 			})

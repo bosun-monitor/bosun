@@ -26,11 +26,11 @@ func c_vmstat_darwin() opentsdb.MultiDataPoint {
 			name := strings.TrimSpace(fields[0])
 			name = strings.Replace(name, "Pages ", "", -1)
 			name = strings.Replace(name, " ", "", -1)
-			Add(&md, "vm.4kpages."+name, value, nil)
+			Add(&md, "darwin.mem.vm.4kpages."+name, value, nil)
 		} else if fields[0] == "Pageins" {
-			Add(&md, "vm.pageins", value, nil)
+			Add(&md, "darwin.mem.vm.pageins", value, nil)
 		} else if fields[0] == "Pageouts" {
-			Add(&md, "vm.pageouts", value, nil)
+			Add(&md, "darwin.mem.vm.pageouts", value, nil)
 		}
 	}, "vm_stat")
 	return md

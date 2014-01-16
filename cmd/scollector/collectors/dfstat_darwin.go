@@ -25,12 +25,12 @@ func c_dfstat_darwin() opentsdb.MultiDataPoint {
 		f5, _ := strconv.Atoi(fields[5])
 		f6, _ := strconv.Atoi(fields[6])
 		tags := opentsdb.TagSet{"mount": mount}
-		Add(&md, "df.1kblocks.total", fields[1], tags)
-		Add(&md, "df.1kblocks.used", fields[2], tags)
-		Add(&md, "df.1kblocks.free", fields[3], tags)
-		Add(&md, "df.inodes.total", f5+f6, tags)
-		Add(&md, "df.inodes.used", fields[5], tags)
-		Add(&md, "df.inodes.free", fields[6], tags)
+		Add(&md, "darwin.disk.fs.total", fields[1], tags)
+		Add(&md, "darwin.disk.fs.used", fields[2], tags)
+		Add(&md, "darwin.disk.fs.free", fields[3], tags)
+		Add(&md, "darwin.disk.fs.inodes.total", f5+f6, tags)
+		Add(&md, "darwin.disk.fs.inodes.used", fields[5], tags)
+		Add(&md, "darwin.disk.fs.inodes.free", fields[6], tags)
 	}, "df", "-lki")
 	return md
 }

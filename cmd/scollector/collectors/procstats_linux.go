@@ -38,15 +38,15 @@ func c_procstats_linux() opentsdb.MultiDataPoint {
 		if m == nil {
 			return
 		}
-		Add(&md, "proc.uptime.total", m[1], nil)
-		Add(&md, "proc.uptime.now", m[2], nil)
+		Add(&md, "linux.uptime_total", m[1], nil)
+		Add(&md, "linux.uptime_now", m[2], nil)
 	})
 	readLine("/proc/meminfo", func(s string) {
 		m := meminfoRE.FindStringSubmatch(s)
 		if m == nil {
 			return
 		}
-		Add(&md, "proc.meminfo."+strings.ToLower(m[1]), m[2], nil)
+		Add(&md, "linux.mem."+strings.ToLower(m[1]), m[2], nil)
 	})
 	readLine("/proc/vmstat", func(s string) {
 		m := vmstatRE.FindStringSubmatch(s)
@@ -55,7 +55,7 @@ func c_procstats_linux() opentsdb.MultiDataPoint {
 		}
 		switch m[1] {
 		case "pgpgin", "pgpgout", "pswpin", "pswpout", "pgfault", "pgmajfault":
-			Add(&md, "proc.vmstat."+m[1], m[2], nil)
+			Add(&md, "linux.mem."+m[1], m[2], nil)
 		}
 	})
 	readLine("/proc/stat", func(s string) {
@@ -82,16 +82,16 @@ func c_procstats_linux() opentsdb.MultiDataPoint {
 				if tag_cpu != "" {
 					tags["cpu"] = tag_cpu
 				}
-				Add(&md, "proc.stat.cpu"+metric_percpu, value, tags)
+				Add(&md, "linux.cpu"+metric_percpu, value, tags)
 			}
 		} else if m[1] == "intr" {
-			Add(&md, "proc.stat.intr", strings.Fields(m[2])[0], nil)
+			Add(&md, "linux.intr", strings.Fields(m[2])[0], nil)
 		} else if m[1] == "ctxt" {
-			Add(&md, "proc.stat.ctxt", m[2], nil)
+			Add(&md, "linux.ctxt", m[2], nil)
 		} else if m[1] == "processes" {
-			Add(&md, "proc.stat.processes", m[2], nil)
+			Add(&md, "linux.processes", m[2], nil)
 		} else if m[1] == "procs_blocked" {
-			Add(&md, "proc.stat.procs_blocked", m[2], nil)
+			Add(&md, "linux.procs_blocked", m[2], nil)
 		}
 	})
 	readLine("/proc/loadavg", func(s string) {
@@ -99,14 +99,14 @@ func c_procstats_linux() opentsdb.MultiDataPoint {
 		if m == nil {
 			return
 		}
-		Add(&md, "proc.loadavg.1min", m[1], nil)
-		Add(&md, "proc.loadavg.5min", m[2], nil)
-		Add(&md, "proc.loadavg.15min", m[3], nil)
-		Add(&md, "proc.loadavg.runnable", m[4], nil)
-		Add(&md, "proc.loadavg.total_threads", m[5], nil)
+		Add(&md, "linux.loadavg_1_min", m[1], nil)
+		Add(&md, "linux.loadavg_5_min", m[2], nil)
+		Add(&md, "linux.loadavg_15_min", m[3], nil)
+		Add(&md, "linux.loadavg_runnable", m[4], nil)
+		Add(&md, "linux.loadavg_total_threads", m[5], nil)
 	})
 	readLine("/proc/sys/kernel/random/entropy_avail", func(s string) {
-		Add(&md, "proc.kernel.entropy_avail", strings.TrimSpace(s), nil)
+		Add(&md, "linux.entropy_avail", strings.TrimSpace(s), nil)
 	})
 	num_cpus := 0
 	readLine("/proc/interrupts", func(s string) {
@@ -139,7 +139,7 @@ func c_procstats_linux() opentsdb.MultiDataPoint {
 				l.Println("interrupts: unexpected value", val)
 				break
 			}
-			Add(&md, "proc.interrupts", val, opentsdb.TagSet{"type": irq_type, "cpu": strconv.Itoa(i)})
+			Add(&md, "linux.interrupts", val, opentsdb.TagSet{"type": irq_type, "cpu": strconv.Itoa(i)})
 		}
 	})
 	return md

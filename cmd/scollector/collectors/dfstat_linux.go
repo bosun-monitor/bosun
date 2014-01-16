@@ -20,9 +20,10 @@ func c_dfstat_blocks_linux() opentsdb.MultiDataPoint {
 		}
 		mount := fields[5]
 		tags := opentsdb.TagSet{"mount": mount}
-		Add(&md, "df.1kblocks.total", fields[1], tags)
-		Add(&md, "df.1kblocks.used", fields[2], tags)
-		Add(&md, "df.1kblocks.free", fields[3], tags)
+		//Meta Data will need to indicate that these are 1kblocks
+		Add(&md, "linux.disk.fs.space_total", fields[1], tags)
+		Add(&md, "linux.disk.fs.space_used", fields[2], tags)
+		Add(&md, "linux.disk.fs.space_free", fields[3], tags)
 	}, "df", "-lP")
 	return md
 }
@@ -36,9 +37,9 @@ func c_dfstat_inodes_linux() opentsdb.MultiDataPoint {
 		}
 		mount := fields[5]
 		tags := opentsdb.TagSet{"mount": mount}
-		Add(&md, "df.inodes.total", fields[1], tags)
-		Add(&md, "df.inodes.used", fields[2], tags)
-		Add(&md, "df.inodes.free", fields[3], tags)
+		Add(&md, "linux.disk.fs.inodes_total", fields[1], tags)
+		Add(&md, "linux.disk.fs.inodes_used", fields[2], tags)
+		Add(&md, "linux.disk.fs.inodes_free", fields[3], tags)
 	}, "df", "-liP")
 	return md
 }

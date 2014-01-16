@@ -20,15 +20,15 @@ func c_cpu_windows() opentsdb.MultiDataPoint {
 	}
 	var md opentsdb.MultiDataPoint
 	for _, v := range dst {
-		Add(&md, "cpu.time", v.PercentPrivilegedTime, opentsdb.TagSet{"cpu": v.Name, "type": "privileged"})
-		Add(&md, "cpu.time", v.PercentInterruptTime, opentsdb.TagSet{"cpu": v.Name, "type": "interrupt"})
-		Add(&md, "cpu.time", v.PercentUserTime, opentsdb.TagSet{"cpu": v.Name, "type": "user"})
-		Add(&md, "cpu.time_idle", v.PercentIdleTime, opentsdb.TagSet{"cpu": v.Name})
-		Add(&md, "cpu.interrupts", v.InterruptsPersec, opentsdb.TagSet{"cpu": v.Name})
-		Add(&md, "cpu.dpcs", v.InterruptsPersec, opentsdb.TagSet{"cpu": v.Name})
-		Add(&md, "cpu.time_cstate", v.PercentC1Time, opentsdb.TagSet{"cpu": v.Name, "type": "c1"})
-		Add(&md, "cpu.time_cstate", v.PercentC2Time, opentsdb.TagSet{"cpu": v.Name, "type": "c2"})
-		Add(&md, "cpu.time_cstate", v.PercentC3Time, opentsdb.TagSet{"cpu": v.Name, "type": "c3"})
+		Add(&md, "win.cpu", v.PercentPrivilegedTime, opentsdb.TagSet{"cpu": v.Name, "type": "privileged"})
+		Add(&md, "win.cpu", v.PercentInterruptTime, opentsdb.TagSet{"cpu": v.Name, "type": "interrupt"})
+		Add(&md, "win.cpu", v.PercentUserTime, opentsdb.TagSet{"cpu": v.Name, "type": "user"})
+		Add(&md, "win.cpu", v.PercentIdleTime, opentsdb.TagSet{"cpu": v.Name, "type": "idle"})
+		Add(&md, "win.cpu.interrupts", v.InterruptsPersec, opentsdb.TagSet{"cpu": v.Name})
+		Add(&md, "win.cpu.dpcs", v.InterruptsPersec, opentsdb.TagSet{"cpu": v.Name})
+		Add(&md, "win.cpu.time_cstate", v.PercentC1Time, opentsdb.TagSet{"cpu": v.Name, "type": "c1"})
+		Add(&md, "win.cpu.time_cstate", v.PercentC2Time, opentsdb.TagSet{"cpu": v.Name, "type": "c2"})
+		Add(&md, "win.cpu.time_cstate", v.PercentC3Time, opentsdb.TagSet{"cpu": v.Name, "type": "c3"})
 	}
 	return md
 }
@@ -57,12 +57,12 @@ func c_cpu_info_windows() opentsdb.MultiDataPoint {
 	}
 	var md opentsdb.MultiDataPoint
 	for _, v := range dst {
-		Add(&md, "cpu.clock", v.CurrentClockSpeed, opentsdb.TagSet{"cpu": v.Name})
-		Add(&md, "cpu.clock_max", v.MaxClockSpeed, opentsdb.TagSet{"cpu": v.Name})
-		Add(&md, "cpu.voltage", v.CurrentVoltage, opentsdb.TagSet{"cpu": v.Name})
-		Add(&md, "cpu.load", v.LoadPercentage, opentsdb.TagSet{"cpu": v.Name})
-		Add(&md, "cpu.cores_physical", v.NumberOfCores, opentsdb.TagSet{"cpu": v.Name})
-		Add(&md, "cpu.cores_logical", v.NumberOfLogicalProcessors, opentsdb.TagSet{"cpu": v.Name})
+		Add(&md, "win.cpu.clock", v.CurrentClockSpeed, opentsdb.TagSet{"cpu": v.Name})
+		Add(&md, "win.cpu.clock_max", v.MaxClockSpeed, opentsdb.TagSet{"cpu": v.Name})
+		Add(&md, "win.cpu.voltage", v.CurrentVoltage, opentsdb.TagSet{"cpu": v.Name})
+		Add(&md, "win.cpu.load", v.LoadPercentage, opentsdb.TagSet{"cpu": v.Name})
+		Add(&md, "win.cpu.cores_physical", v.NumberOfCores, opentsdb.TagSet{"cpu": v.Name})
+		Add(&md, "win.cpu.cores_logical", v.NumberOfLogicalProcessors, opentsdb.TagSet{"cpu": v.Name})
 	}
 	return md
 }

@@ -26,25 +26,25 @@ func c_iostat_darwin() opentsdb.MultiDataPoint {
 		values := strings.Fields(line)
 		for _, cat := range categories {
 			if strings.HasPrefix(cat, "disk") {
-				Add(&md, "iostat.disk.KBt", values[i], opentsdb.TagSet{"disk": cat})
+				Add(&md, "darwin.disk.kilobytes_transfer", values[i], opentsdb.TagSet{"disk": cat})
 				i++
-				Add(&md, "iostat.disk.tps", values[i], opentsdb.TagSet{"disk": cat})
+				Add(&md, "darwin.disk.transactions", values[i], opentsdb.TagSet{"disk": cat})
 				i++
-				Add(&md, "iostat.disk.MBs", values[i], opentsdb.TagSet{"disk": cat})
+				Add(&md, "darwin.disk.megabytes", values[i], opentsdb.TagSet{"disk": cat})
 				i++
 			} else if cat == "cpu" {
-				Add(&md, "iostat.cpu.user", values[i], nil)
+				Add(&md, "darwin.cpu.user", values[i], nil)
 				i++
-				Add(&md, "iostat.cpu.sys", values[i], nil)
+				Add(&md, "darwin.cpu.sys", values[i], nil)
 				i++
-				Add(&md, "iostat.cpu.idle", values[i], nil)
+				Add(&md, "darwin.cpu.idle", values[i], nil)
 				i++
 			} else if cat == "load" {
-				Add(&md, "iostat.loadaverage.1m", values[i], nil)
+				Add(&md, "darwin.loadavg_1_min", values[i], nil)
 				i++
-				Add(&md, "iostat.loadaverage.5m", values[i], nil)
+				Add(&md, "darwin.loadavg_5_min", values[i], nil)
 				i++
-				Add(&md, "iostat.loadaverage.15m", values[i], nil)
+				Add(&md, "darwin.loadavg_15_min", values[i], nil)
 				i++
 			}
 		}

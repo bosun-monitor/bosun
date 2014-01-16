@@ -42,11 +42,11 @@ func c_iostat_linux() opentsdb.MultiDataPoint {
 			// Skip disks that haven't done a single read.
 			return
 		}
-		metric := "iostat.part."
+		metric := "linux.disk.part."
 		i0, _ := strconv.Atoi(values[0])
 		i1, _ := strconv.Atoi(values[1])
 		if i1%16 == 0 && i0 > 1 {
-			metric = "iostat.disk."
+			metric = "linux.disk."
 		}
 		device := values[2]
 		if len(values) == 14 {
