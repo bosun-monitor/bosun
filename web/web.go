@@ -8,7 +8,6 @@ import (
 
 	"github.com/MiniProfiler/go/miniprofiler"
 	"github.com/StackExchange/tsaf/sched"
-	"github.com/StackExchange/tsaf/search"
 	"github.com/gorilla/mux"
 )
 
@@ -49,14 +48,9 @@ func Listen(addr, dir, host string) error {
 
 func Index(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 	err := templates.ExecuteTemplate(w, "chart.html", struct {
-		Metric, Tagv search.QMap
-		Tagk         search.SMap
-		Includes     template.HTML
-		Schedule     *sched.Schedule
+		Includes template.HTML
+		Schedule *sched.Schedule
 	}{
-		search.Metric,
-		search.Tagv,
-		search.Tagk,
 		t.Includes(),
 		schedule,
 	})
