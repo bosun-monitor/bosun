@@ -61,13 +61,15 @@
 							<th>touched</th>
 						</tr>
 						{{range $k, $v := .Schedule.Status}}
-						<tr class="{{$v.Last.Status | status}}">
-							<td>{{$k.Name}}</td>
-							<td>{{$k.Group}}</td>
-							<td>{{$v.Last.Status}}</td>
-							<td>{{$v.Last.Time}}</td>
-							<td>{{$v.Touched}}</td>
-						</tr>
+							{{if or (eq $v.Last.Status 1) (eq $v.Last.Status 2)}}
+							<tr class="{{$v.Last.Status | status}}">
+								<td>{{$k.Name}}</td>
+								<td>{{$k.Group}}</td>
+								<td>{{$v.Last.Status}}</td>
+								<td>{{$v.Last.Time}}</td>
+								<td>{{$v.Touched}}</td>
+							</tr>
+							{{end}}
 						{{end}}
 					</table>
 				</div>
