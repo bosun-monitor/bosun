@@ -48,7 +48,7 @@ var Builtins = map[string]parse.Func{
 	"since": {
 		[]parse.FuncType{parse.TYPE_SERIES, parse.TYPE_STRING},
 		parse.TYPE_NUMBER,
-		[]interface{}{DefDuration, "5m"},
+		[]interface{}{DefDuration},
 		Since,
 	},
 	"forecastlr": {
