@@ -115,8 +115,6 @@ func union(a, b []*Result) []Union {
 
 func (e *state) walk(node parse.Node) []*Result {
 	switch node := node.(type) {
-	case *parse.BoolNode:
-		return e.walk(node.Expr)
 	case *parse.NumberNode:
 		return wrap(node.Float64)
 	case *parse.BinaryNode:

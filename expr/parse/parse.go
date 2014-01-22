@@ -15,8 +15,8 @@ import (
 
 // Tree is the representation of a single parsed expression.
 type Tree struct {
-	Text string    // text parsed to create the expression
-	Root *BoolNode // top-level root of the tree.
+	Text string // text parsed to create the expression.
+	Root Node   // top-level root of the tree, returns a number.
 	// Parsing only; cleared after parse.
 	funcs     []map[string]Func
 	lex       *lexer
@@ -186,11 +186,13 @@ func (t *Tree) Parse(text string, funcs ...map[string]Func) (err error) {
 // parse is the top-level parser for a template.
 // It runs to EOF.
 func (t *Tree) parse() {
-	t.Root = newBool(t.peek().pos)
-	t.Root.Expr = t.O()
+	t.Root = t.O()
 	t.expect(itemEOF, "input")
 	if err := t.Root.Check(); err != nil {
 		t.error(err)
+	}
+	if t.Root.Return() != TYPE_NUMBER {
+		t.errorf("root node must return a number")
 	}
 }
 

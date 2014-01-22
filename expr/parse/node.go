@@ -49,8 +49,7 @@ func (t NodeType) Type() NodeType {
 }
 
 const (
-	NodeBool   NodeType = iota // Boolean expression.
-	NodeFunc                   // A function call.
+	NodeFunc   NodeType = iota // A function call.
 	NodeBinary                 // Binary operator: math, logical, compare
 	NodeUnary                  // Unary operator: !, -
 	NodeQuery                  // An OpenTSDB Query.
@@ -59,27 +58,6 @@ const (
 )
 
 // Nodes.
-
-// BoolNode holds a boolean expression node.
-type BoolNode struct {
-	NodeType
-	Pos
-	Expr Node // A NodeNumber or other Node yielding a scalar.
-}
-
-func newBool(pos Pos) *BoolNode {
-	return &BoolNode{NodeType: NodeBool, Pos: pos}
-}
-
-func (l *BoolNode) String() string {
-	return l.Expr.String()
-}
-
-func (b *BoolNode) Check() error {
-	return b.Expr.Check()
-}
-
-func (b *BoolNode) Return() FuncType { return TYPE_NUMBER }
 
 // FuncNode holds a function invocation.
 type FuncNode struct {
