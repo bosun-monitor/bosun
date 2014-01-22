@@ -64,7 +64,9 @@ func queryDuration(host, query, duration string, F func(map[string]opentsdb.Poin
 	if err != nil {
 		return
 	}
-	expandSearch(q)
+	if err = expandSearch(q); err != nil {
+		return
+	}
 	d, err := ParseDuration(duration)
 	if err != nil {
 		return
@@ -90,8 +92,9 @@ func queryDuration(host, query, duration string, F func(map[string]opentsdb.Poin
 	return
 }
 
-func expandSearch(q *opentsdb.Query) {
-	for k, v := range q.Tags {
+func expandSearch(q *opentsdb.Query) error {
+	for k, ov := range q.Tags {
+		v := ov
 		if v == "*" || !strings.Contains(v, "*") || strings.Contains(v, "|") {
 			continue
 		}
@@ -106,8 +109,12 @@ func expandSearch(q *opentsdb.Query) {
 				nvs = append(nvs, nv)
 			}
 		}
+		if len(nvs) == 0 {
+			return fmt.Errorf("expr: no tags matching %s=%s", k, ov)
+		}
 		q.Tags[k] = strings.Join(nvs, "|")
 	}
+	return nil
 }
 
 func Avg(host, query, duration string) ([]*Result, error) {
