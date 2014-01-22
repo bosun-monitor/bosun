@@ -272,7 +272,7 @@ func (t *Tree) F() Node {
 	case itemNumber, itemFunc:
 		return t.v()
 	case itemNot, itemMinus:
-		return newUnary(t.next(), t.O())
+		return newUnary(t.next(), t.F())
 	case itemLeftParen:
 		t.next()
 		n := t.O()
