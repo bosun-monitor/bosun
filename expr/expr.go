@@ -228,9 +228,7 @@ func (e *state) walkUnary(node *parse.UnaryNode) []*Result {
 
 func (e *state) walkFunc(node *parse.FuncNode) []*Result {
 	f := reflect.ValueOf(node.F.F)
-	var in = []reflect.Value{
-		reflect.ValueOf(e.host),
-	}
+	var in []reflect.Value
 	for _, a := range node.Args {
 		var v interface{}
 		switch t := a.(type) {
@@ -250,7 +248,11 @@ func (e *state) walkFunc(node *parse.FuncNode) []*Result {
 		d := node.F.Defaults[i-ld]
 		in = append(in, reflect.ValueOf(d))
 	}
-	fr := f.Call(in)
+	args := []reflect.Value{
+		reflect.ValueOf(e.host),
+	}
+	args = append(args, in...)
+	fr := f.Call(args)
 	res := fr[0].Interface().([]*Result)
 	if len(fr) > 1 && !fr[1].IsNil() {
 		err := fr[1].Interface().(error)
