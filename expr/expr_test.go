@@ -28,6 +28,8 @@ func TestExprSimple(t *testing.T) {
 		{"1>=0", 1},
 		{"1>=1", 1},
 		{"1>=2", 0},
+		{"-1 > 0", 0},
+		{"-1 < 0", 1},
 	}
 
 	for _, et := range exprTests {
