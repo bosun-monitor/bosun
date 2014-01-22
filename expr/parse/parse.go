@@ -354,3 +354,7 @@ func (t *Tree) getFunction(name string) (v Func, ok bool) {
 	}
 	return
 }
+
+func (t *Tree) String() string {
+	return t.Root.StringAST()
+}

@@ -19,6 +19,7 @@ var textFormat = "%s" // Changed to "%q" in tests for better error messages.
 type Node interface {
 	Type() NodeType
 	String() string
+	StringAST() string
 	Position() Pos // byte position of start of node in full original input string
 	Check() error  // performs type checking for itself and sub-nodes
 	Return() FuncType
@@ -83,6 +84,18 @@ func (c *FuncNode) String() string {
 			s += ", "
 		}
 		s += arg.String()
+	}
+	s += ")"
+	return s
+}
+
+func (c *FuncNode) StringAST() string {
+	s := c.Name + "("
+	for i, arg := range c.Args {
+		if i > 0 {
+			s += ", "
+		}
+		s += arg.StringAST()
 	}
 	s += ")"
 	return s
@@ -164,6 +177,10 @@ func (n *NumberNode) String() string {
 	return n.Text
 }
 
+func (n *NumberNode) StringAST() string {
+	return n.String()
+}
+
 func (n *NumberNode) Check() error {
 	return nil
 }
@@ -184,6 +201,10 @@ func newString(pos Pos, orig, text string) *StringNode {
 
 func (s *StringNode) String() string {
 	return s.Quoted
+}
+
+func (s *StringNode) StringAST() string {
+	return s.String()
 }
 
 func (s *StringNode) Check() error {
@@ -208,6 +229,10 @@ func (s *QueryNode) String() string {
 	return s.Bracketed
 }
 
+func (s *QueryNode) StringAST() string {
+	return s.String()
+}
+
 func (q *QueryNode) Check() error {
 	return nil
 }
@@ -229,6 +254,10 @@ func newBinary(operator item, arg1, arg2 Node) *BinaryNode {
 
 func (b *BinaryNode) String() string {
 	return fmt.Sprintf("%s %s %s", b.Args[0], b.Operator.val, b.Args[1])
+}
+
+func (b *BinaryNode) StringAST() string {
+	return fmt.Sprintf("%s(%s, %s)", b.Operator.val, b.Args[0], b.Args[1])
 }
 
 func (b *BinaryNode) Check() error {
@@ -279,6 +308,10 @@ func newUnary(operator item, arg Node) *UnaryNode {
 
 func (u *UnaryNode) String() string {
 	return fmt.Sprintf("%s%s", u.Operator.val, u.Arg)
+}
+
+func (u *UnaryNode) StringAST() string {
+	return fmt.Sprintf("%s(%s)", u.Operator.val, u.Arg)
 }
 
 func (u *UnaryNode) Check() error {

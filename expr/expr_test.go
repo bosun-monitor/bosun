@@ -49,7 +49,7 @@ func TestExprSimple(t *testing.T) {
 			t.Error("bad group len", r[0].Group)
 			break
 		} else if r[0].Value != et.output {
-			t.Errorf("expected %v, got %v: %v", et.output, r[0].Value, et.input)
+			t.Errorf("expected %v, got %v: %v\nast: %v", et.output, r[0].Value, et.input, e)
 		}
 	}
 }
