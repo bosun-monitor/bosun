@@ -12,7 +12,7 @@ func init() {
 func c_iis_webservice() opentsdb.MultiDataPoint {
 	var dst []Win32_PerfRawData_W3SVC_WebService
 	q := wmi.CreateQuery(&dst, `WHERE Name <> '_Total'`)
-	err := wmi.Query(q, &dst)
+	err := queryWmi(q, &dst)
 	if err != nil {
 		l.Println("iis:", err, "WQL Query: ", q)
 		return nil

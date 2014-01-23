@@ -16,7 +16,7 @@ func init() {
 func c_simple_mem_windows() opentsdb.MultiDataPoint {
 	var dst []Win32_OperatingSystem
 	var q = wmi.CreateQuery(&dst, "")
-	err := wmi.Query(q, &dst)
+	err := queryWmi(q, &dst)
 	if err != nil {
 		l.Println("simple_mem:", err)
 		return nil

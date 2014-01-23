@@ -15,7 +15,7 @@ func init() {
 func c_mssql_general() opentsdb.MultiDataPoint {
 	var dst []Win32_PerfRawData_MSSQLSERVER_SQLServerGeneralStatistics
 	var q = wmi.CreateQuery(&dst, `WHERE Name <> '_Total'`)
-	err := wmi.Query(q, &dst)
+	err := queryWmi(q, &dst)
 	if err != nil {
 		l.Println("sql_general:", err)
 		return nil
@@ -50,7 +50,7 @@ type Win32_PerfRawData_MSSQLSERVER_SQLServerGeneralStatistics struct {
 func c_mssql_statistics() opentsdb.MultiDataPoint {
 	var dst []Win32_PerfRawData_MSSQLSERVER_SQLServerSQLStatistics
 	var q = wmi.CreateQuery(&dst, `WHERE Name <> '_Total'`)
-	err := wmi.Query(q, &dst)
+	err := queryWmi(q, &dst)
 	if err != nil {
 		l.Println("sql_stats:", err)
 		return nil
@@ -87,7 +87,7 @@ type Win32_PerfRawData_MSSQLSERVER_SQLServerSQLStatistics struct {
 func c_mssql_locks() opentsdb.MultiDataPoint {
 	var dst []Win32_PerfRawData_MSSQLSERVER_SQLServerLocks
 	var q = wmi.CreateQuery(&dst, `WHERE Name = 'Page' OR Name = 'Extent' OR Name = 'Object' or Name = 'Database'`)
-	err := wmi.Query(q, &dst)
+	err := queryWmi(q, &dst)
 	if err != nil {
 		l.Println("sql_locks:", err)
 		return nil
@@ -117,7 +117,7 @@ type Win32_PerfRawData_MSSQLSERVER_SQLServerLocks struct {
 func c_mssql_databases() opentsdb.MultiDataPoint {
 	var dst []Win32_PerfRawData_MSSQLSERVER_SQLServerDatabases
 	var q = wmi.CreateQuery(&dst, "")
-	err := wmi.Query(q, &dst)
+	err := queryWmi(q, &dst)
 	if err != nil {
 		l.Println("sql_database:", err)
 		return nil

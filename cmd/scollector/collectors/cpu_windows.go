@@ -13,7 +13,7 @@ func init() {
 func c_cpu_windows() opentsdb.MultiDataPoint {
 	var dst []Win32_PerfRawData_PerfOS_Processor
 	var q = wmi.CreateQuery(&dst, `WHERE Name <> '_Total'`)
-	err := wmi.Query(q, &dst)
+	err := queryWmi(q, &dst)
 	if err != nil {
 		l.Println("cpu:", err)
 		return nil
@@ -50,7 +50,7 @@ type Win32_PerfRawData_PerfOS_Processor struct {
 func c_cpu_info_windows() opentsdb.MultiDataPoint {
 	var dst []Win32_Processor
 	var q = wmi.CreateQuery(&dst, `WHERE Name <> '_Total'`)
-	err := wmi.Query(q, &dst)
+	err := queryWmi(q, &dst)
 	if err != nil {
 		l.Println("cpu_info:", err)
 		return nil

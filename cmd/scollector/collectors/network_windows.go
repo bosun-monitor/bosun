@@ -16,7 +16,7 @@ var interfaceExclusions = regexp.MustCompile("isatap|Teredo")
 func c_network_windows() opentsdb.MultiDataPoint {
 	var dst []Win32_PerfRawData_Tcpip_NetworkInterface
 	var q = wmi.CreateQuery(&dst, "")
-	err := wmi.Query(q, &dst)
+	err := queryWmi(q, &dst)
 	if err != nil {
 		l.Println("network:", err)
 		return nil

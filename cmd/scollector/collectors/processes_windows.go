@@ -18,7 +18,7 @@ var serviceInclusions = regexp.MustCompile("WinRM")
 func c_windows_processes() opentsdb.MultiDataPoint {
 	var dst []Win32_PerfRawData_PerfProc_Process
 	var q = wmi.CreateQuery(&dst, `WHERE Name <> '_Total'`)
-	err := wmi.Query(q, &dst)
+	err := queryWmi(q, &dst)
 	if err != nil {
 		l.Println("processes:", err)
 		return nil
@@ -26,7 +26,7 @@ func c_windows_processes() opentsdb.MultiDataPoint {
 
 	var svc_dst []Win32_Service
 	var svc_q = wmi.CreateQuery(&svc_dst, `WHERE Name <> '_Total'`)
-	err = wmi.Query(svc_q, &svc_dst)
+	err = queryWmi(svc_q, &svc_dst)
 	if err != nil {
 		l.Println("services:", err)
 		return nil
@@ -34,7 +34,7 @@ func c_windows_processes() opentsdb.MultiDataPoint {
 
 	var iis_dst []WorkerProcess
 	iis_q := wmi.CreateQuery(&iis_dst, "")
-	err = wmi.QueryNamespace(iis_q, &iis_dst, "root\\WebAdministration")
+	err = queryWmiNamespace(iis_q, &iis_dst, "root\\WebAdministration")
 	if err != nil {
 		l.Println("iis_worker:", err, "WQL Query: ", iis_q, "NameSpace", "root\\WebAdministration")
 		return nil

@@ -13,7 +13,7 @@ func init() {
 func c_diskspace_windows() opentsdb.MultiDataPoint {
 	var dst []Win32_PerfRawData_PerfDisk_LogicalDisk
 	var q = wmi.CreateQuery(&dst, `WHERE Name <> '_Total'`)
-	err := wmi.Query(q, &dst)
+	err := queryWmi(q, &dst)
 	if err != nil {
 		l.Println("diskspace:", err)
 		return nil
@@ -35,7 +35,7 @@ type Win32_PerfRawData_PerfDisk_LogicalDisk struct {
 func c_physical_disk_windows() opentsdb.MultiDataPoint {
 	var dst []Win32_PerfRawData_PerfDisk_PhysicalDisk
 	var q = wmi.CreateQuery(&dst, `WHERE Name <> '_Total'`)
-	err := wmi.Query(q, &dst)
+	err := queryWmi(q, &dst)
 	if err != nil {
 		l.Println("disk_physical:", err)
 		return nil
