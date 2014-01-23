@@ -1,10 +1,10 @@
-#include "stdafx.h"
-
 #define _WIN32_DCOM
 #include <iostream>
 using namespace std;
 #include <comdef.h>
 #include <Wbemidl.h>
+
+#include "SimpleJSON/JSONValue.h"
 
 # pragma comment(lib, "wbemuuid.lib")
 
@@ -91,7 +91,7 @@ int main(int argc, char** argv)
 		return 1;                // Program has failed.
 	}
 
-	cout << "Connected to ROOT\\CIMV2 WMI namespace" << endl;
+	//cout << "Connected to ROOT\\CIMV2 WMI namespace" << endl;
 
 	// Set the IWbemServices proxy so that impersonation
 	// of the user (client) occurs.
@@ -144,7 +144,7 @@ int main(int argc, char** argv)
 	{
 		IWbemClassObject *pclsObj;
 		ULONG uReturn = 0;
-
+		JSONArray root;
 		while (pEnumerator)
 		{
 			hres = pEnumerator->Next(WBEM_INFINITE, 1,
@@ -159,10 +159,12 @@ int main(int argc, char** argv)
 
 			// Get the value of the Name property
 			hres = pclsObj->Get(L"Name", 0, &vtProp, 0, 0);
-			wcout << "Process Name : " << vtProp.bstrVal << endl;
+			JSONObject node;
+			node[L"Name"] = new JSONValue(std::wstring(vtProp.bstrVal));
+			root.insert(root.end(), new JSONValue(node));
 			VariantClear(&vtProp);
 		}
-
+		wcout << JSONValue(root).Stringify() << endl;
 	}
 
 	// Cleanup
