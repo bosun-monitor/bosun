@@ -74,6 +74,21 @@ func Add(md *opentsdb.MultiDataPoint, name string, value interface{}, tags opent
 	*md = append(*md, &d)
 }
 
+func TSAdd(md *opentsdb.MultiDataPoint, name string, value interface{},
+	tags opentsdb.TagSet, ts int64) {
+	if tags == nil {
+		tags = make(opentsdb.TagSet)
+	}
+	tags["host"] = host
+	d := opentsdb.DataPoint{
+		Metric:    name,
+		Timestamp: timestamp,
+		Value:     value,
+		Tags:      tags,
+	}
+	*md = append(*md, &d)
+}
+
 func readLine(fname string, line func(string)) {
 	f, err := os.Open(fname)
 	if err != nil {

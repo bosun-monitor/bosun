@@ -31,7 +31,7 @@ var FIELDS_NET = []string{
 }
 
 var ifstatRE = regexp.MustCompile(`\s+(eth\d+|em\d+_\d+/\d+|em\d+_\d+|em\d+|` +
-	`p\d+p\d+_\d+/\d+|p\d+p\d+_\d+|p\d+p\d+):(.*)`)
+	`bond\d+|` + `p\d+p\d+_\d+/\d+|p\d+p\d+_\d+|p\d+p\d+):(.*)`)
 
 func c_ifstat_linux() opentsdb.MultiDataPoint {
 	var md opentsdb.MultiDataPoint
@@ -50,10 +50,17 @@ func c_ifstat_linux() opentsdb.MultiDataPoint {
 		intf := m[1]
 		stats := strings.Fields(m[2])
 		for i, v := range stats {
-			Add(&md, "linux.net."+strings.Replace(FIELDS_NET[i], ".", "_", -1), v, opentsdb.TagSet{
-				"iface":     intf,
-				"direction": direction(i),
-			})
+			if strings.HasPrefix(intf, "bond") {
+				Add(&md, "linux.net.bond."+strings.Replace(FIELDS_NET[i], ".", "_", -1), v, opentsdb.TagSet{
+					"iface":     intf,
+					"direction": direction(i),
+				})
+			} else {
+				Add(&md, "linux.net."+strings.Replace(FIELDS_NET[i], ".", "_", -1), v, opentsdb.TagSet{
+					"iface":     intf,
+					"direction": direction(i),
+				})
+			}
 		}
 	})
 	return md
