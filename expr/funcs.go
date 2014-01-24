@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -56,6 +57,12 @@ var Builtins = map[string]parse.Func{
 		parse.TYPE_NUMBER,
 		nil,
 		Forecast_lr,
+	},
+	"percentile": {
+		[]parse.FuncType{parse.TYPE_SERIES, parse.TYPE_STRING, parse.TYPE_NUMBER},
+		parse.TYPE_NUMBER,
+		nil,
+		Percentile,
 	},
 }
 
@@ -238,5 +245,57 @@ func forecast_lr(dps map[string]opentsdb.Point, y_val float64) (a float64) {
 	t := time.Unix(int64(intercept_time), 0)
 	s := time.Since(t)
 	return -s.Seconds()
+}
 
+func Percentile(host, query, duration string, p float64) (r []*Result, err error) {
+	if p < 0 || p > 1 {
+		return nil, fmt.Errorf("requested percentile must be inclusively between 0 and 1")
+	}
+	q, err := opentsdb.ParseQuery(query)
+	if err != nil {
+		return
+	}
+	expandSearch(q)
+	d, err := ParseDuration(duration)
+	if err != nil {
+		return
+	}
+	req := opentsdb.Request{
+		Queries: []*opentsdb.Query{q},
+		Start:   fmt.Sprintf("%dms-ago", d.Nanoseconds()/1e6),
+	}
+	s, err := req.Query(host)
+	if err != nil {
+		return
+	}
+	for _, res := range s {
+		if len(res.DPS) == 0 {
+			return nil, fmt.Errorf("Can not call percentile on a zero length array")
+		}
+		r = append(r, &Result{
+			Value: Value(percentile(res.DPS, p)),
+			Group: res.Tags,
+		})
+	}
+	return
+}
+
+//percentile returns the value at the corresponding percentile between 0 and 1. There is no standard
+//def of percentile so look the code to see how this one works. This also accepts 0 and 1 as special
+//cases and returns min and max respectively
+func percentile(dps map[string]opentsdb.Point, p float64) (a float64) {
+	var x []float64
+	for _, v := range dps {
+		x = append(x, float64(v))
+	}
+	sort.Float64s(x)
+	if p == 0 {
+		return x[0]
+	}
+	if p == 1 {
+		return x[len(x)-1]
+	}
+	i := p * float64(len(x)-1)
+	i = math.Ceil(i)
+	return x[int(i)]
 }
