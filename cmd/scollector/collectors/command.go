@@ -23,6 +23,7 @@ func command(name string, arg ...string) ([]byte, error) {
 	case err := <-done:
 		return b.Bytes(), err
 	case <-time.After(commandDuration):
+		// todo: figure out if this can leave the done chan hanging open
 		c.Process.Kill()
 		return nil, fmt.Errorf("%v killed after %v", name, commandDuration)
 	}
