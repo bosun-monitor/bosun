@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -12,8 +13,7 @@ import (
 	"github.com/StackExchange/wmi"
 )
 
-var namespace = flag.String("n", "", "WMI Namespace")
-var enableWmi = flag.Bool("w", false, "WMI Query mode. If specified, all other flags are ignored except -n. Pass the query as the remaining arguments: tcollector -w select name, processid from win32_process. On successful exit, prints JSON to stdout.")
+var enableWmi = flag.Bool("w", false, "WMI Query mode. If specified, all other flags are ignored except -n. Write queries on stdin, as wmi.WmiQuery JSON, one per line. Stdout will print one result per line in the same order as a wmi.Response JSON. Write an empty line to gracefully stop the process.")
 
 func init() {
 	mains = append(mains, wmi_main)
@@ -23,19 +23,42 @@ func wmi_main() {
 	if !*enableWmi {
 		return
 	}
-	q := strings.Join(flag.Args(), " ")
-	if len(q) == 0 {
-		log.Fatal("wmi: no query specified")
+	// WMI has heap corruption issues with the GC.
+	debug.SetGCPercent(-1)
+	s := bufio.NewScanner(os.Stdin)
+	for s.Scan() {
+		t := s.Bytes()
+		if len(t) == 0 {
+			break
+		}
+		r := runQuery(t)
+		b, _ := json.Marshal(r)
+		fmt.Println(string(b))
 	}
+	if err := s.Err(); err != nil {
+		log.Fatal(err)
+	}
+	os.Exit(0)
+}
+
+func runQuery(q []byte) (resp *wmi.Response) {
+	resp = new(wmi.Response)
 	var columns []string
-	for i, v := range flag.Args() {
+	var query wmi.WmiQuery
+	if err := json.Unmarshal(q, &query); err != nil {
+		resp.Error = err.Error()
+		return
+	}
+	for i, v := range strings.Fields(query.Query) {
 		if i == 0 {
 			if strings.ToLower(v) != "select" {
-				log.Fatal("wmi: expected select")
+				resp.Error = "wmi: expected select"
+				return
 			}
 			continue
 		} else if v == "*" {
-			log.Fatal("wmi: must specify columns, * not supported")
+			resp.Error = "wmi: must specify columns, * not supported"
+			return
 		} else if strings.ToLower(v) == "from" {
 			break
 		}
@@ -46,23 +69,15 @@ func wmi_main() {
 			}
 		}
 	}
-	if len(columns) == 0 {
-		log.Fatal("wmi: no columns specified")
-	}
-	// WMI has heap corruption issues with the GC.
-	debug.SetGCPercent(-1)
 	var args []interface{}
-	if *namespace != "" {
-		args = append(args, nil, *namespace)
+	if query.Namespace != "" {
+		args = append(args, nil, query.Namespace)
 	}
-	r, err := wmi.QueryGen(q, columns, args...)
+	r, err := wmi.QueryGen(query.Query, columns, args...)
 	if err != nil {
-		log.Fatal(err)
+		resp.Error = err.Error()
+		return
 	}
-	b, err := json.Marshal(r[:1])
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println(string(b))
-	os.Exit(0)
+	resp.Response = r
+	return
 }
