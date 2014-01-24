@@ -36,8 +36,8 @@ func c_windows_processes() opentsdb.MultiDataPoint {
 	iis_q := wmi.CreateQuery(&iis_dst, "")
 	err = queryWmiNamespace(iis_q, &iis_dst, "root\\WebAdministration")
 	if err != nil {
-		l.Println("iis_worker:", err, "WQL Query: ", iis_q, "NameSpace", "root\\WebAdministration")
-		return nil
+		//Don't Return from this error since the name space might exist
+		iis_dst = nil
 	}
 
 	var md opentsdb.MultiDataPoint
