@@ -1,15 +1,9 @@
 package sched
 
 import (
-	"bytes"
 	"fmt"
 	"log"
-	"strings"
 	"time"
-
-	"github.com/jordan-wright/email"
-
-	"github.com/StackExchange/tcollector/opentsdb"
 	"github.com/StackExchange/tsaf/conf"
 	"github.com/StackExchange/tsaf/expr"
 )
@@ -94,47 +88,13 @@ Loop:
 		} else if isCrit {
 			status = ST_CRIT
 		}
-		changed := state.Append(status)
+		state.Append(status)
 		s.Status[ak] = state
 		if status != ST_NORM {
 			alerts = append(alerts, ak)
 		}
-		if status != ST_CRIT || !changed {
-			continue
-		}
-		body := new(bytes.Buffer)
-		subject := new(bytes.Buffer)
-		data := struct {
-			Alert *conf.Alert
-			Tags  opentsdb.TagSet
-		}{
-			a,
-			r.Group,
-		}
-		if a.Template.Body != nil {
-			err := a.Template.Body.Execute(body, &data)
-			if err != nil {
-				log.Println(err)
-				continue
-			}
-		}
-		if a.Template.Subject != nil {
-			err := a.Template.Subject.Execute(subject, &data)
-			if err != nil {
-				log.Println(err)
-				continue
-			}
-		}
-		if a.Owner != "" {
-			e := email.NewEmail()
-			e.From = "tsaf@stackexchange.com"
-			e.To = strings.Split(a.Owner, ",")
-			e.Subject = subject.String()
-			e.Text = body.String()
-			err := e.Send(s.SmtpHost, nil)
-			if err != nil {
-				log.Println(err)
-			}
+		if !state.Emailed {
+			s.Email(a.Name, r.Group)
 		}
 	}
 	return
@@ -149,6 +109,7 @@ type State struct {
 	// Most recent event last.
 	History []Event
 	Touched time.Time
+	Emailed bool
 }
 
 func (s *State) Touch() {
@@ -157,13 +118,12 @@ func (s *State) Touch() {
 
 // Appends status to the history if the status is different than the latest
 // status. Returns true if the status was different.
-func (s *State) Append(status Status) bool {
+func (s *State) Append(status Status) {
 	s.Touch()
 	if len(s.History) == 0 || s.Last().Status != status {
 		s.History = append(s.History, Event{status, time.Now().UTC()})
-		return true
+		s.Emailed = status != ST_CRIT
 	}
-	return false
 }
 
 func (s *State) Last() Event {

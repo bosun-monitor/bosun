@@ -59,6 +59,7 @@
 							<th>status</th>
 							<th>status time</th>
 							<th>touched</th>
+							<th>emailed</th>
 						</tr>
 						{{range $k, $v := .Schedule.Status}}
 							{{if or (eq $v.Last.Status 1) (eq $v.Last.Status 2)}}
@@ -68,6 +69,13 @@
 								<td>{{$v.Last.Status}}</td>
 								<td>{{$v.Last.Time}}</td>
 								<td>{{$v.Touched}}</td>
+								<td>
+									{{if $v.Emailed}}
+										no
+									{{else}}
+										yes
+									{{end}}
+								</td>
 							</tr>
 							{{end}}
 						{{end}}
