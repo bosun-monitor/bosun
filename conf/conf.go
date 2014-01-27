@@ -19,6 +19,7 @@ type Conf struct {
 	TsdbHost    string // OpenTSDB relay and query destination: ny-devtsdb04:4242
 	RelayListen string // OpenTSDB relay listen address: :4242
 	HttpListen  string // Web server listen address: :80
+	SmtpHost    string // SMTP address: ny-mail:25
 	Templates   map[string]*Template
 	Alerts      map[string]*Alert
 
@@ -139,6 +140,8 @@ func (c *Conf) loadGlobal(p *parse.PairNode) {
 		c.RelayListen = c.expand(v, nil)
 	case "c.webDir":
 		c.WebDir = c.expand(v, nil)
+	case "smtpHost":
+		c.SmtpHost = c.expand(v, nil)
 	default:
 		if !strings.HasPrefix(k, "$") {
 			c.errorf("unknown key %s", k)
@@ -215,6 +218,9 @@ func (c *Conf) loadAlert(name string, s *parse.SectionNode) {
 		v := p.Val.Text
 		switch k := p.Key.Text; k {
 		case "owner":
+			if c.SmtpHost == "" {
+				c.errorf("no smtpHost specified, can't specify owner")
+			}
 			a.Owner = c.expand(v, a.Vars)
 		case "template":
 			a.template = c.expand(v, a.Vars)

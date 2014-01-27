@@ -131,7 +131,7 @@ Loop:
 			e.To = strings.Split(a.Owner, ",")
 			e.Subject = subject.String()
 			e.Text = body.String()
-			err := e.Send("ny-mail:25", nil)
+			err := e.Send(s.SmtpHost, nil)
 			if err != nil {
 				log.Println(err)
 			}
