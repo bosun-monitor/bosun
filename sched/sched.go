@@ -94,15 +94,14 @@ Loop:
 		} else if isCrit {
 			status = ST_CRIT
 		}
-		state.Append(status)
+		changed := state.Append(status)
 		s.Status[ak] = state
 		if status != ST_NORM {
 			alerts = append(alerts, ak)
 		}
-		if status != ST_CRIT {
+		if status != ST_CRIT || !changed {
 			continue
 		}
-		continue
 		body := new(bytes.Buffer)
 		subject := new(bytes.Buffer)
 		data := struct {
@@ -157,12 +156,14 @@ func (s *State) Touch() {
 }
 
 // Appends status to the history if the status is different than the latest
-// status.
-func (s *State) Append(status Status) {
+// status. Returns true if the status was different.
+func (s *State) Append(status Status) bool {
 	s.Touch()
 	if len(s.History) == 0 || s.Last().Status != status {
 		s.History = append(s.History, Event{status, time.Now().UTC()})
+		return true
 	}
+	return false
 }
 
 func (s *State) Last() Event {
