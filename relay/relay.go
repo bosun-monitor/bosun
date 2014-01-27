@@ -48,5 +48,4 @@ func handle(dest string, w http.ResponseWriter, r *http.Request) {
 	resp.Body.Close()
 	w.WriteHeader(resp.StatusCode)
 	w.Write(b)
-	log.Println("relayed", resp.Status)
 }
