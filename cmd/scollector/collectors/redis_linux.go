@@ -10,7 +10,7 @@ import (
 
 	"github.com/garyburd/redigo/redis"
 
-	"github.com/StackExchange/tcollector/opentsdb"
+	"github.com/StackExchange/scollector/opentsdb"
 )
 
 func init() {
@@ -44,7 +44,7 @@ var FIELDS_REDIS = map[string]bool{
 	"used_memory_rss":            true,
 }
 
-var tcRE = regexp.MustCompile(`^\s*#\s*tcollector.(\w+)\s*=\s*(.+)$`)
+var tcRE = regexp.MustCompile(`^\s*#\s*scollector.(\w+)\s*=\s*(.+)$`)
 
 var redisInstances map[int]string
 

@@ -9,7 +9,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/StackExchange/tcollector/opentsdb"
+	"github.com/StackExchange/scollector/opentsdb"
 )
 
 var collectors []Collector

@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/StackExchange/tcollector/opentsdb"
+	"github.com/StackExchange/scollector/opentsdb"
 )
 
 type ProgramCollector struct {

@@ -3,7 +3,7 @@ package collectors
 import (
 	"regexp"
 
-	"github.com/StackExchange/tcollector/opentsdb"
+	"github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/wmi"
 )
 

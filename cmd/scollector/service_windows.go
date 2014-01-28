@@ -20,7 +20,7 @@ func init() {
 }
 
 func win_service_main() {
-	const svcName = "tcollector"
+	const svcName = "scollector"
 
 	isIntSess, err := svc.IsAnInteractiveSession()
 	if err != nil {
@@ -53,7 +53,7 @@ func win_service_main() {
 }
 
 func exePath() (string, error) {
-	return "C:\\tcollector.exe", nil
+	return "C:\\scollector.exe", nil
 }
 
 func installService(name, desc string) error {

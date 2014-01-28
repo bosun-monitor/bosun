@@ -1,7 +1,7 @@
 package collectors
 
 import (
-	"github.com/StackExchange/tcollector/opentsdb"
+	"github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/wmi"
 	"regexp"
 	"strings"
@@ -12,7 +12,7 @@ func init() {
 }
 
 // These are silly processes but exist on my machine, will need to update KMB
-var processInclusions = regexp.MustCompile("chrome|powershell|tcollector")
+var processInclusions = regexp.MustCompile("chrome|powershell|scollector")
 var serviceInclusions = regexp.MustCompile("WinRM")
 
 func c_windows_processes() opentsdb.MultiDataPoint {

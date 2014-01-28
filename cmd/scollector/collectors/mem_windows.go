@@ -1,7 +1,7 @@
 package collectors
 
 import (
-	"github.com/StackExchange/tcollector/opentsdb"
+	"github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/wmi"
 )
 

@@ -4,7 +4,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/StackExchange/tcollector/opentsdb"
+	"github.com/StackExchange/scollector/opentsdb"
 )
 
 func init() {

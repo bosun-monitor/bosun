@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/StackExchange/tcollector/opentsdb"
+	"github.com/StackExchange/scollector/opentsdb"
 )
 
 var l = log.New(os.Stdout, "", log.LstdFlags)
