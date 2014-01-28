@@ -235,7 +235,7 @@ func (e *state) walkFunc(node *parse.FuncNode) []*Result {
 		case *parse.NumberNode:
 			v = t.Float64
 		case *parse.QueryNode:
-			v = t.Text
+			v = Query{host: e.host, query: t.Text}
 		default:
 			panic(fmt.Errorf("expr: unknown func arg type"))
 		}
@@ -246,11 +246,7 @@ func (e *state) walkFunc(node *parse.FuncNode) []*Result {
 		d := node.F.Defaults[i-ld]
 		in = append(in, reflect.ValueOf(d))
 	}
-	args := []reflect.Value{
-		reflect.ValueOf(e.host),
-	}
-	args = append(args, in...)
-	fr := f.Call(args)
+	fr := f.Call(in)
 	res := fr[0].Interface().([]*Result)
 	if len(fr) > 1 && !fr[1].IsNil() {
 		err := fr[1].Interface().(error)
