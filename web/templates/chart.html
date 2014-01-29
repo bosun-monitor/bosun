@@ -69,6 +69,7 @@
 							<th>status</th>
 							<th>status time</th>
 							<th>touched</th>
+							<th>rule</th>
 							<th>emailed</th>
 						</tr>
 						{{range $k, $v := .Schedule.Status}}
@@ -79,6 +80,7 @@
 								<td>{{$v.Last.Status}}</td>
 								<td>{{$v.Last.Time}}</td>
 								<td>{{$v.Touched}}</td>
+								<td>{{$v.Rule}}</td>
 								<td>
 									{{if $v.Emailed}}
 										no

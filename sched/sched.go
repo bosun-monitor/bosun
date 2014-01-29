@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"time"
+
 	"github.com/StackExchange/tsaf/conf"
 	"github.com/StackExchange/tsaf/expr"
 )
@@ -92,6 +93,7 @@ Loop:
 		s.Status[ak] = state
 		if status != ST_NORM {
 			alerts = append(alerts, ak)
+			state.Rule = e.Tree.Text
 		}
 		if !state.Emailed {
 			s.Email(a.Name, r.Group)
@@ -109,6 +111,7 @@ type State struct {
 	// Most recent event last.
 	History []Event
 	Touched time.Time
+	Rule    string
 	Emailed bool
 }
 
