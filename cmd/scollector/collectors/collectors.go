@@ -2,7 +2,6 @@ package collectors
 
 import (
 	"bufio"
-	"log"
 	"os"
 	"strings"
 	"time"
@@ -10,6 +9,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/StackExchange/scollector/opentsdb"
+	"github.com/StackExchange/slog"
 )
 
 var collectors []Collector
@@ -20,8 +20,6 @@ type Collector interface {
 }
 
 var DEFAULT_FREQ = time.Second * 15
-
-var l = log.New(os.Stdout, "", log.LstdFlags)
 
 var host = "unknown"
 var timestamp int64 = time.Now().Unix()
@@ -92,7 +90,7 @@ func TSAdd(md *opentsdb.MultiDataPoint, name string, value interface{},
 func readLine(fname string, line func(string)) {
 	f, err := os.Open(fname)
 	if err != nil {
-		l.Printf("%v: %v\n", fname, err)
+		slog.Infof("%v: %v\n", fname, err)
 		return
 	}
 	scanner := bufio.NewScanner(f)
@@ -100,7 +98,7 @@ func readLine(fname string, line func(string)) {
 		line(scanner.Text())
 	}
 	if err := scanner.Err(); err != nil {
-		l.Printf("%v: %v\n", fname, err)
+		slog.Infof("%v: %v\n", fname, err)
 	}
 }
 

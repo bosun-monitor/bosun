@@ -2,6 +2,7 @@ package collectors
 
 import (
 	"github.com/StackExchange/scollector/opentsdb"
+	"github.com/StackExchange/slog"
 	"github.com/StackExchange/wmi"
 )
 
@@ -14,7 +15,7 @@ func c_iis_webservice() opentsdb.MultiDataPoint {
 	q := wmi.CreateQuery(&dst, `WHERE Name <> '_Total'`)
 	err := queryWmi(q, &dst)
 	if err != nil {
-		l.Println("iis:", err, "WQL Query: ", q)
+		slog.Infoln("iis:", err, "WQL Query: ", q)
 		return nil
 	}
 	var md opentsdb.MultiDataPoint

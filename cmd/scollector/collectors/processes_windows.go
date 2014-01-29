@@ -1,10 +1,12 @@
 package collectors
 
 import (
-	"github.com/StackExchange/scollector/opentsdb"
-	"github.com/StackExchange/wmi"
 	"regexp"
 	"strings"
+
+	"github.com/StackExchange/scollector/opentsdb"
+	"github.com/StackExchange/slog"
+	"github.com/StackExchange/wmi"
 )
 
 func init() {
@@ -20,7 +22,7 @@ func c_windows_processes() opentsdb.MultiDataPoint {
 	var q = wmi.CreateQuery(&dst, `WHERE Name <> '_Total'`)
 	err := queryWmi(q, &dst)
 	if err != nil {
-		l.Println("processes:", err)
+		slog.Infoln("processes:", err)
 		return nil
 	}
 
@@ -28,7 +30,7 @@ func c_windows_processes() opentsdb.MultiDataPoint {
 	var svc_q = wmi.CreateQuery(&svc_dst, `WHERE Name <> '_Total'`)
 	err = queryWmi(svc_q, &svc_dst)
 	if err != nil {
-		l.Println("services:", err)
+		slog.Infoln("services:", err)
 		return nil
 	}
 

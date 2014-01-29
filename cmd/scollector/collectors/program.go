@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/StackExchange/scollector/opentsdb"
+	"github.com/StackExchange/slog"
 )
 
 type ProgramCollector struct {
@@ -21,29 +22,29 @@ type ProgramCollector struct {
 func InitPrograms(cpath string) {
 	cdir, err := os.Open(cpath)
 	if err != nil {
-		l.Println(err)
+		slog.Infoln(err)
 		return
 	}
 	idirs, err := cdir.Readdir(0)
 	if err != nil {
-		l.Println(err)
+		slog.Infoln(err)
 		return
 	}
 	for _, idir := range idirs {
 		i, err := strconv.Atoi(idir.Name())
 		if err != nil {
-			l.Println(err)
+			slog.Infoln(err)
 			continue
 		}
 		interval := time.Second * time.Duration(i)
 		dir, err := os.Open(filepath.Join(cdir.Name(), idir.Name()))
 		if err != nil {
-			l.Println(err)
+			slog.Infoln(err)
 			continue
 		}
 		files, err := dir.Readdir(0)
 		if err != nil {
-			l.Println(err)
+			slog.Infoln(err)
 			continue
 		}
 		for _, file := range files {
@@ -60,10 +61,10 @@ func (c *ProgramCollector) Run(dpchan chan<- *opentsdb.DataPoint) {
 		for {
 			next := time.After(DEFAULT_FREQ)
 			if err := c.runProgram(dpchan); err != nil {
-				l.Println(err)
+				slog.Infoln(err)
 			}
 			<-next
-			l.Println("restarting", c.Path)
+			slog.Infoln("restarting", c.Path)
 		}
 	} else {
 		for {
@@ -106,7 +107,7 @@ func (c *ProgramCollector) runProgram(dpchan chan<- *opentsdb.DataPoint) (progEr
 		for _, tag := range sp[3:] {
 			tsp := strings.Split(tag, "=")
 			if len(tsp) != 2 {
-				l.Fatal("bad tag", tsp)
+				slog.Fatal("bad tag", tsp)
 				continue
 			}
 			dp.Tags[tsp[0]] = tsp[1]

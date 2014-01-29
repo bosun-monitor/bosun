@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"sync"
 
+	"github.com/StackExchange/slog"
 	"github.com/StackExchange/wmi"
 )
 
@@ -41,7 +42,7 @@ func queryWmiNamespace(query string, dst interface{}, namespace string) error {
 		}
 		wmiOutReader = bufio.NewReader(wmiOut)
 		if err := wmiCmd.Start(); err != nil {
-			l.Println(err)
+			slog.Infoln(err)
 		}
 	}
 	wmiCount++
@@ -49,7 +50,7 @@ func queryWmiNamespace(query string, dst interface{}, namespace string) error {
 		if wmiCount > 50 {
 			wmiCount = 0
 			if err := wmiCmd.Process.Kill(); err != nil {
-				l.Println(err)
+				slog.Infoln(err)
 			}
 		}
 	}()

@@ -2,6 +2,7 @@ package collectors
 
 import (
 	"github.com/StackExchange/scollector/opentsdb"
+	"github.com/StackExchange/slog"
 	"github.com/StackExchange/wmi"
 )
 
@@ -15,7 +16,7 @@ func c_diskspace_windows() opentsdb.MultiDataPoint {
 	var q = wmi.CreateQuery(&dst, `WHERE Name <> '_Total'`)
 	err := queryWmi(q, &dst)
 	if err != nil {
-		l.Println("diskspace:", err)
+		slog.Infoln("diskspace:", err)
 		return nil
 	}
 	var md opentsdb.MultiDataPoint
@@ -37,7 +38,7 @@ func c_physical_disk_windows() opentsdb.MultiDataPoint {
 	var q = wmi.CreateQuery(&dst, `WHERE Name <> '_Total'`)
 	err := queryWmi(q, &dst)
 	if err != nil {
-		l.Println("disk_physical:", err)
+		slog.Infoln("disk_physical:", err)
 		return nil
 	}
 	var md opentsdb.MultiDataPoint

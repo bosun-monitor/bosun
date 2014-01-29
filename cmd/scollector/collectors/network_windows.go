@@ -4,6 +4,7 @@ import (
 	"regexp"
 
 	"github.com/StackExchange/scollector/opentsdb"
+	"github.com/StackExchange/slog"
 	"github.com/StackExchange/wmi"
 )
 
@@ -18,7 +19,7 @@ func c_network_windows() opentsdb.MultiDataPoint {
 	var q = wmi.CreateQuery(&dst, "")
 	err := queryWmi(q, &dst)
 	if err != nil {
-		l.Println("network:", err)
+		slog.Infoln("network:", err)
 		return nil
 	}
 	var md opentsdb.MultiDataPoint

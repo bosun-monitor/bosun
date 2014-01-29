@@ -16,6 +16,8 @@ import (
 	"strings"
 	"unicode"
 	"unicode/utf8"
+
+	"github.com/StackExchange/slog"
 )
 
 var l = log.New(os.Stdout, "", log.LstdFlags)
@@ -52,7 +54,7 @@ func (m MultiDataPoint) Json() ([]byte, error) {
 	for _, d := range m {
 		err := d.clean()
 		if err != nil {
-			l.Println(err, "Removing Datapoint", d)
+			slog.Infoln(err, "Removing Datapoint", d)
 			continue
 		}
 		md = append(md, d)

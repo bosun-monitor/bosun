@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/StackExchange/scollector/opentsdb"
+	"github.com/StackExchange/slog"
 )
 
 func init() {
@@ -50,7 +51,7 @@ func c_iostat_darwin() opentsdb.MultiDataPoint {
 		}
 	}, "iostat", "-c2", "-w1")
 	if ln < 4 {
-		l.Println("iostat: bad return value")
+		slog.Infoln("iostat: bad return value")
 	}
 	return md
 }

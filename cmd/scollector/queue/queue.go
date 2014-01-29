@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/StackExchange/scollector/opentsdb"
+	"github.com/StackExchange/slog"
 )
 
 var l = log.New(os.Stdout, "", log.LstdFlags)
@@ -64,18 +65,18 @@ var qlock sync.Mutex
 func (q *Queue) sendBatch(batch opentsdb.MultiDataPoint) {
 	qlock.Lock()
 	defer qlock.Unlock()
-	l.Println("sending", len(batch))
+	slog.Infoln("sending", len(batch))
 	b, err := batch.Json()
 	if err != nil {
-		l.Println(err)
+		slog.Infoln(err)
 		// bad JSON encoding, just give up
 		return
 	}
 	resp, err := http.Post(q.host, "application/json", bytes.NewReader(b))
 	// Some problem with connecting to the server; retry later.
 	if err != nil {
-		l.Println(err)
-		l.Println("restoring", len(batch))
+		slog.Infoln(err)
+		slog.Infoln("restoring", len(batch))
 		for _, dp := range batch {
 			q.c <- dp
 		}
@@ -84,15 +85,15 @@ func (q *Queue) sendBatch(batch opentsdb.MultiDataPoint) {
 	}
 	// TSDB didn't like our data. Don't put it back in the queue since it's bad.
 	if resp.StatusCode != http.StatusNoContent {
-		l.Println("RESP ERR", resp.Status)
+		slog.Infoln("RESP ERR", resp.Status)
 		defer resp.Body.Close()
 		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			l.Println("ERR", err)
+			slog.Infoln("ERR", err)
 		}
 		if len(body) > 0 {
-			l.Println("ERR BODY", string(body))
+			slog.Infoln("ERR BODY", string(body))
 		}
-		l.Println("REQ BODY", string(b))
+		slog.Infoln("REQ BODY", string(b))
 	}
 }

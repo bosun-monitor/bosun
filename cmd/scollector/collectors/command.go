@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"os/exec"
 	"time"
+
+	"github.com/StackExchange/slog"
 )
 
 // command executes the named program with the given arguments.
@@ -32,7 +34,7 @@ func command(name string, arg ...string) ([]byte, error) {
 func readCommand(line func(string), name string, arg ...string) {
 	b, err := command(name, arg...)
 	if err != nil {
-		l.Println(name, err)
+		slog.Infoln(name, err)
 		return
 	}
 	scanner := bufio.NewScanner(bytes.NewBuffer(b))
@@ -40,6 +42,6 @@ func readCommand(line func(string), name string, arg ...string) {
 		line(scanner.Text())
 	}
 	if err := scanner.Err(); err != nil {
-		l.Printf("%v: %v\n", name, err)
+		slog.Infof("%v: %v\n", name, err)
 	}
 }

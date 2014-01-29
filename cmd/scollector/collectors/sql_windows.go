@@ -2,6 +2,7 @@ package collectors
 
 import (
 	"github.com/StackExchange/scollector/opentsdb"
+	"github.com/StackExchange/slog"
 	"github.com/StackExchange/wmi"
 )
 
@@ -17,7 +18,7 @@ func c_mssql_general() opentsdb.MultiDataPoint {
 	var q = wmi.CreateQuery(&dst, `WHERE Name <> '_Total'`)
 	err := queryWmi(q, &dst)
 	if err != nil {
-		l.Println("sql_general:", err)
+		slog.Infoln("sql_general:", err)
 		return nil
 	}
 	var md opentsdb.MultiDataPoint
@@ -52,7 +53,7 @@ func c_mssql_statistics() opentsdb.MultiDataPoint {
 	var q = wmi.CreateQuery(&dst, `WHERE Name <> '_Total'`)
 	err := queryWmi(q, &dst)
 	if err != nil {
-		l.Println("sql_stats:", err)
+		slog.Infoln("sql_stats:", err)
 		return nil
 	}
 	var md opentsdb.MultiDataPoint
@@ -89,7 +90,7 @@ func c_mssql_locks() opentsdb.MultiDataPoint {
 	var q = wmi.CreateQuery(&dst, `WHERE Name = 'Page' OR Name = 'Extent' OR Name = 'Object' or Name = 'Database'`)
 	err := queryWmi(q, &dst)
 	if err != nil {
-		l.Println("sql_locks:", err)
+		slog.Infoln("sql_locks:", err)
 		return nil
 	}
 	var md opentsdb.MultiDataPoint
@@ -119,7 +120,7 @@ func c_mssql_databases() opentsdb.MultiDataPoint {
 	var q = wmi.CreateQuery(&dst, "")
 	err := queryWmi(q, &dst)
 	if err != nil {
-		l.Println("sql_database:", err)
+		slog.Infoln("sql_database:", err)
 		return nil
 	}
 	var md opentsdb.MultiDataPoint

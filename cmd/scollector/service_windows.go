@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"os"
 	"time"
 
@@ -11,6 +10,7 @@ import (
 	"code.google.com/p/winsvc/eventlog"
 	"code.google.com/p/winsvc/mgr"
 	"code.google.com/p/winsvc/svc"
+	"github.com/StackExchange/slog"
 )
 
 var win_service_command = flag.String("winsvc", "", "For Windows Service, can be install, remove, start, stop")
@@ -24,7 +24,7 @@ func win_service_main() {
 
 	isIntSess, err := svc.IsAnInteractiveSession()
 	if err != nil {
-		log.Fatalf("failed to determine if we are running in an interactive session: %v", err)
+		slog.Fatalf("failed to determine if we are running in an interactive session: %v", err)
 	}
 	if !isIntSess {
 		go runService(svcName, false)
@@ -37,8 +37,6 @@ func win_service_main() {
 	switch *win_service_command {
 	case "install":
 		err = installService(svcName, "Stack Exchange's Metric Collection Agent")
-		if err == nil {
-		}
 	case "remove":
 		err = removeService(svcName)
 	case "start":
@@ -47,7 +45,7 @@ func win_service_main() {
 		err = controlService(svcName, svc.Stop, svc.Stopped)
 	}
 	if err != nil {
-		log.Fatalf("failed to %s %s: %v", win_service_command, svcName, err)
+		slog.Fatalf("failed to %s %s: %v", *win_service_command, svcName, err)
 	}
 	os.Exit(0)
 }
@@ -155,8 +153,6 @@ func controlService(name string, c svc.Cmd, to svc.State) error {
 	return nil
 }
 
-var elog debug.Log
-
 type s struct{}
 
 func (m *s) Execute(args []string, r <-chan svc.ChangeRequest, changes chan<- svc.Status) (ssec bool, errno uint32) {
@@ -175,7 +171,7 @@ func (m *s) Execute(args []string, r <-chan svc.ChangeRequest, changes chan<- sv
 			case svc.Stop, svc.Shutdown:
 				os.Exit(0)
 			default:
-				elog.Error(1, fmt.Sprintf("unexpected control request #%d", c))
+				slog.Errorf("unexpected control request #%d", c)
 			}
 		}
 	}
@@ -184,26 +180,26 @@ func (m *s) Execute(args []string, r <-chan svc.ChangeRequest, changes chan<- sv
 }
 
 func runService(name string, isDebug bool) {
-	var err error
 	if isDebug {
-		elog = debug.New(name)
+		slog.SetEventLog(debug.New(name), 1)
 	} else {
-		elog, err = eventlog.Open(name)
+		elog, err := eventlog.Open(name)
 		if err != nil {
 			return
 		}
+		slog.SetEventLog(elog, 1)
+		defer elog.Close()
 	}
-	defer elog.Close()
 
-	elog.Info(1, fmt.Sprintf("starting %s service", name))
+	slog.Infof("starting %s service", name)
 	run := svc.Run
 	if isDebug {
 		run = debug.Run
 	}
-	err = run(name, &s{})
+	err := run(name, &s{})
 	if err != nil {
-		elog.Error(1, fmt.Sprintf("%s service failed: %v", name, err))
+		slog.Errorf("%s service failed: %v", name, err)
 		return
 	}
-	elog.Info(1, fmt.Sprintf("%s service stopped", name))
+	slog.Infof("%s service stopped", name)
 }

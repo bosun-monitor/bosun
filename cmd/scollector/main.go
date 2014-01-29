@@ -2,18 +2,15 @@ package main
 
 import (
 	"flag"
-	"log"
 	"net/url"
-	"os"
 	"strings"
 	"time"
 
 	"github.com/StackExchange/scollector/collectors"
 	"github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/scollector/queue"
+	"github.com/StackExchange/slog"
 )
-
-var l = log.New(os.Stdout, "", log.LstdFlags)
 
 var flagFilter = flag.String("f", "", "Filters collectors matching this term. Works with all other arguments.")
 var flagTest = flag.Bool("t", false, "Test - run collectors once, print, and exit.")
@@ -47,20 +44,20 @@ func main() {
 		return
 	} else if *host != "" {
 		if u == nil {
-			l.Fatal("invalid host:", *host)
+			slog.Fatal("invalid host:", *host)
 		}
 	}
 
 	if *flagPrint {
 		collectors.DEFAULT_FREQ = time.Second * 3
-		l.Println("Set default frequency to", collectors.DEFAULT_FREQ)
+		slog.Infoln("Set default frequency to", collectors.DEFAULT_FREQ)
 	}
 	cdp := collectors.Run(c)
 	if u != nil && !*flagPrint {
-		l.Println("OpenTSDB host:", u)
+		slog.Infoln("OpenTSDB host:", u)
 		queue.New(u.String(), cdp)
 	} else {
-		l.Println("Outputting to screen")
+		slog.Infoln("Outputting to screen")
 		printPut(cdp)
 	}
 	select {}
@@ -70,14 +67,14 @@ func test(cs []collectors.Collector) {
 	dpchan := make(chan *opentsdb.DataPoint)
 	for _, c := range cs {
 		go c.Run(dpchan)
-		l.Println("run", c.Name())
+		slog.Infoln("run", c.Name())
 	}
 	next := time.After(time.Second * 2)
 Loop:
 	for {
 		select {
 		case dp := <-dpchan:
-			l.Print(dp.Telnet())
+			slog.Info(dp.Telnet())
 		case <-next:
 			break Loop
 		}
@@ -86,7 +83,7 @@ Loop:
 
 func list(cs []collectors.Collector) {
 	for _, c := range cs {
-		l.Println(c.Name())
+		slog.Infoln(c.Name())
 	}
 }
 
@@ -107,6 +104,6 @@ func parseHost() *url.URL {
 
 func printPut(c chan *opentsdb.DataPoint) {
 	for dp := range c {
-		l.Print(dp.Telnet())
+		slog.Info(dp.Telnet())
 	}
 }

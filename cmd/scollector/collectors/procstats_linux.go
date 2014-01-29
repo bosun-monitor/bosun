@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/StackExchange/scollector/opentsdb"
+	"github.com/StackExchange/slog"
 )
 
 func init() {
@@ -136,7 +137,7 @@ func c_procstats_linux() opentsdb.MultiDataPoint {
 			}
 			if !IsDigit(val) {
 				// Something is weird, there should only be digit values.
-				l.Println("interrupts: unexpected value", val)
+				slog.Infoln("interrupts: unexpected value", val)
 				break
 			}
 			Add(&md, "linux.interrupts", val, opentsdb.TagSet{"type": irq_type, "cpu": strconv.Itoa(i)})

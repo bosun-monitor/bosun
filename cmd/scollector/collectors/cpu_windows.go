@@ -2,6 +2,7 @@ package collectors
 
 import (
 	"github.com/StackExchange/scollector/opentsdb"
+	"github.com/StackExchange/slog"
 	"github.com/StackExchange/wmi"
 )
 
@@ -15,7 +16,7 @@ func c_cpu_windows() opentsdb.MultiDataPoint {
 	var q = wmi.CreateQuery(&dst, `WHERE Name <> '_Total'`)
 	err := queryWmi(q, &dst)
 	if err != nil {
-		l.Println("cpu:", err)
+		slog.Infoln("cpu:", err)
 		return nil
 	}
 	var md opentsdb.MultiDataPoint
@@ -52,7 +53,7 @@ func c_cpu_info_windows() opentsdb.MultiDataPoint {
 	var q = wmi.CreateQuery(&dst, `WHERE Name <> '_Total'`)
 	err := queryWmi(q, &dst)
 	if err != nil {
-		l.Println("cpu_info:", err)
+		slog.Infoln("cpu_info:", err)
 		return nil
 	}
 	var md opentsdb.MultiDataPoint

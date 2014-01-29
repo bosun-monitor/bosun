@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/StackExchange/scollector/opentsdb"
+	"github.com/StackExchange/slog"
 )
 
 func init() {
@@ -58,7 +59,7 @@ func c_iostat_linux() opentsdb.MultiDataPoint {
 				Add(&md, metric+FIELDS_PART[i], v, opentsdb.TagSet{"dev": device})
 			}
 		} else {
-			l.Println("iostat: cannot parse")
+			slog.Infoln("iostat: cannot parse")
 		}
 	})
 	return md

@@ -11,6 +11,7 @@ import (
 	"github.com/garyburd/redigo/redis"
 
 	"github.com/StackExchange/scollector/opentsdb"
+	"github.com/StackExchange/slog"
 )
 
 func init() {
@@ -94,7 +95,7 @@ func c_redis_linux() opentsdb.MultiDataPoint {
 	for port, cluster := range redisInstances {
 		c, err := redis.Dial("tcp", fmt.Sprintf(":%d", port))
 		if err != nil {
-			l.Println(err)
+			slog.Infoln(err)
 			continue
 		}
 		defer c.Close()
@@ -104,7 +105,7 @@ func c_redis_linux() opentsdb.MultiDataPoint {
 		}
 		lines, err := c.Do("INFO")
 		if err != nil {
-			l.Println(err)
+			slog.Infoln(err)
 			continue
 		}
 		_ = tags

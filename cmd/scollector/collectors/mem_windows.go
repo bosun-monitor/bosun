@@ -2,6 +2,7 @@ package collectors
 
 import (
 	"github.com/StackExchange/scollector/opentsdb"
+	"github.com/StackExchange/slog"
 	"github.com/StackExchange/wmi"
 )
 
@@ -18,7 +19,7 @@ func c_simple_mem_windows() opentsdb.MultiDataPoint {
 	var q = wmi.CreateQuery(&dst, "")
 	err := queryWmi(q, &dst)
 	if err != nil {
-		l.Println("simple_mem:", err)
+		slog.Infoln("simple_mem:", err)
 		return nil
 	}
 	var md opentsdb.MultiDataPoint
