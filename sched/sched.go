@@ -93,7 +93,7 @@ Loop:
 		s.Status[ak] = state
 		if status != ST_NORM {
 			alerts = append(alerts, ak)
-			state.Rule = e.Tree.Text
+			state.Expr = e
 		}
 		if !state.Emailed {
 			s.Email(a.Name, r.Group)
@@ -111,7 +111,7 @@ type State struct {
 	// Most recent event last.
 	History []Event
 	Touched time.Time
-	Rule    string
+	Expr    *expr.Expr
 	Emailed bool
 }
 

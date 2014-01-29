@@ -19,7 +19,7 @@ import (
 type Tree struct {
 	Name string    // name of the template represented by the tree.
 	Root *ListNode // top-level root of the tree.
-	Text string    // text parsed to create the template (or its parent)
+	text string    // text parsed to create the template (or its parent)
 	// Parsing only; cleared after parse.
 	lex       *lexer
 	token     [1]item // one-token lookahead for parser.
@@ -31,7 +31,7 @@ type Tree struct {
 // is returned with the error.
 func Parse(name, text string) (t *Tree, err error) {
 	t = New(name)
-	t.Text = text
+	t.text = text
 	err = t.Parse(text)
 	return
 }
@@ -73,7 +73,7 @@ func New(name string) *Tree {
 // ErrorContext returns a textual representation of the location of the node in the input text.
 func (t *Tree) ErrorContext(n Node) (location, context string) {
 	pos := int(n.Position())
-	text := t.Text[:pos]
+	text := t.text[:pos]
 	byteNum := strings.LastIndex(text, "\n")
 	if byteNum == -1 {
 		byteNum = pos // On first line.
@@ -159,7 +159,7 @@ func (t *Tree) stopParse() {
 func (t *Tree) Parse(text string) (err error) {
 	defer t.recover(&err)
 	t.startParse(lex(t.Name, text))
-	t.Text = text
+	t.text = text
 	t.parse()
 	t.stopParse()
 	return nil
