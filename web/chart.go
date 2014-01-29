@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/MiniProfiler/go/miniprofiler"
-	"github.com/StackExchange/tcollector/opentsdb"
+	"github.com/StackExchange/scollector/opentsdb"
 )
 
 func Chart(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {

@@ -5,7 +5,7 @@ import (
 	"log"
 	"strings"
 
-	"github.com/StackExchange/tcollector/opentsdb"
+	"github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/tsaf/conf"
 	"github.com/jordan-wright/email"
 )

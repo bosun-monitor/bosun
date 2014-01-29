@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/GaryBoone/GoStats/stats"
-	"github.com/StackExchange/tcollector/opentsdb"
+	"github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/tsaf/expr/parse"
 	"github.com/StackExchange/tsaf/search"
 )
