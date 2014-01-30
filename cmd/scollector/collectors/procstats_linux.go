@@ -59,6 +59,7 @@ func c_procstats_linux() opentsdb.MultiDataPoint {
 			Add(&md, "linux.mem."+m[1], m[2], nil)
 		}
 	})
+	num_cores := 0
 	readLine("/proc/stat", func(s string) {
 		m := statRE.FindStringSubmatch(s)
 		if m == nil {
@@ -69,6 +70,7 @@ func c_procstats_linux() opentsdb.MultiDataPoint {
 			tag_cpu := ""
 			cpu_m := statCpuRE.FindStringSubmatch(m[1])
 			if cpu_m != nil {
+				num_cores += 1
 				metric_percpu = ".percpu"
 				tag_cpu = cpu_m[1]
 			}
@@ -141,6 +143,20 @@ func c_procstats_linux() opentsdb.MultiDataPoint {
 				break
 			}
 			Add(&md, "linux.interrupts", val, opentsdb.TagSet{"type": irq_type, "cpu": strconv.Itoa(i)})
+		}
+	})
+	readLine("/proc/uptime", func(s string) {
+		cols := strings.Fields(s)
+		if len(cols) < 2 {
+			return
+		}
+		total_time, err := strconv.ParseFloat(cols[0], 64)
+		idle_time, err := strconv.ParseFloat(cols[1], 64)
+		if err != nil {
+			return
+		}
+		if num_cores != 0 {
+			Add(&md, "os.cpu", (total_time-(idle_time/float64(num_cores)))*100, nil)
 		}
 	})
 	return md
