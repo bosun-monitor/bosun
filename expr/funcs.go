@@ -307,7 +307,7 @@ func Percentile(e *state, series []*Result, p float64) (r []*Result, err error) 
 }
 
 // percentile returns the value at the corresponding percentile between 0 and 1.
-// Min and Max can be simulated using p <= 0 and p >= 0, respectively.
+// Min and Max can be simulated using p <= 0 and p >= 1, respectively.
 func percentile(dps Series, args ...float64) (a float64) {
 	p := args[0]
 	var x []float64
