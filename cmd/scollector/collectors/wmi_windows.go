@@ -63,13 +63,11 @@ func queryWmiNamespace(query string, dst interface{}, namespace string) error {
 	if err != nil {
 		return err
 	}
-	//fmt.Println("QUERYING:", string(b))
 	fmt.Fprintln(wmiIn, string(b))
 	b2, err := wmiOutReader.ReadBytes('\n')
 	if err != nil {
 		return err
 	}
-	//fmt.Println("GOT BACK:", string(b2))
 	err = wmi.LoadJSON(b2, dst)
 	if err != nil {
 		return err
