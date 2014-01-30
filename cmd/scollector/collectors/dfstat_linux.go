@@ -1,6 +1,7 @@
 package collectors
 
 import (
+	"strconv"
 	"strings"
 
 	"github.com/StackExchange/scollector/opentsdb"
@@ -20,11 +21,22 @@ func c_dfstat_blocks_linux() opentsdb.MultiDataPoint {
 		}
 		mount := fields[5]
 		tags := opentsdb.TagSet{"mount": mount}
+		os_tags := opentsdb.TagSet{"disk": mount}
 		//Meta Data will need to indicate that these are 1kblocks
 		Add(&md, "linux.disk.fs.space_total", fields[1], tags)
 		Add(&md, "linux.disk.fs.space_used", fields[2], tags)
 		Add(&md, "linux.disk.fs.space_free", fields[3], tags)
-	}, "df", "-lP")
+		Add(&md, "os.disk.fs.space_total", fields[1], tags)
+		Add(&md, "os.disk.fs.space_used", fields[2], tags)
+		Add(&md, "os.disk.fs.space_free", fields[3], tags)
+		st, err := strconv.Atoi(fields[1])
+		sf, err := strconv.Atoi(fields[3])
+		if err == nil {
+			if st != 0 {
+				Add(&md, "os.disk.fs.perc_free", sf/st, os_tags)
+			}
+		}
+	}, "df", "-lP", "--block-size", "1")
 	return md
 }
 
