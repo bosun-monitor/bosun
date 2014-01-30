@@ -45,7 +45,7 @@ func (s *Schedule) Email(name string, group opentsdb.TagSet) {
 	e.From = "tsaf@stackexchange.com"
 	e.To = strings.Split(a.Owner, ",")
 	e.Subject = subject.String()
-	e.Text = body.String()
+	e.Text = body.Bytes()
 	err := e.Send(s.SmtpHost, nil)
 	if err != nil {
 		log.Println(err)
