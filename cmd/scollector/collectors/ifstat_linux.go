@@ -55,7 +55,7 @@ func c_ifstat_linux() opentsdb.MultiDataPoint {
 					"iface":     intf,
 					"direction": direction(i),
 				})
-				if i > 4 || (i <= 8 && i < 12) {
+				if i < 4 || (i >= 8 && i < 12) {
 					Add(&md, "os.net.bond."+strings.Replace(FIELDS_NET[i], ".", "_", -1), v, opentsdb.TagSet{
 						"iface":     intf,
 						"direction": direction(i),
@@ -66,7 +66,7 @@ func c_ifstat_linux() opentsdb.MultiDataPoint {
 					"iface":     intf,
 					"direction": direction(i),
 				})
-				if i > 4 || (i <= 8 && i < 12) {
+				if i < 4 || (i >= 8 && i < 12) {
 					Add(&md, "os.net."+strings.Replace(FIELDS_NET[i], ".", "_", -1), v, opentsdb.TagSet{
 						"iface":     intf,
 						"direction": direction(i),
