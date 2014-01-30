@@ -21,75 +21,60 @@ const (
 	DefNum      = 8
 )
 
-type Query struct {
-	host, query string
-}
-
-func (q *Query) Arrays() Arrays {
-	return nil
-}
-
-type Array struct {
-	Values []float64
-	Group  opentsdb.TagSet
-}
-
-type Arrays []*Array
-
-func (a Arrays) Arrays() Arrays { return a }
-
-type Series interface {
-	Arrays() Arrays
-}
-
 var Builtins = map[string]parse.Func{
 	"avg": {
-		[]parse.FuncType{parse.TYPE_SERIES, parse.TYPE_STRING},
+		[]parse.FuncType{parse.TYPE_SERIES},
 		parse.TYPE_NUMBER,
-		[]interface{}{DefDuration},
+		nil,
 		Avg,
 	},
 	"band": {
-		[]parse.FuncType{parse.TYPE_QUERY, parse.TYPE_STRING, parse.TYPE_STRING, parse.TYPE_NUMBER},
+		[]parse.FuncType{parse.TYPE_STRING, parse.TYPE_STRING, parse.TYPE_STRING, parse.TYPE_NUMBER},
 		parse.TYPE_SERIES,
 		[]interface{}{DefDuration, DefPeriod, DefNum},
 		Band,
 	},
 	"dev": {
-		[]parse.FuncType{parse.TYPE_SERIES, parse.TYPE_STRING},
+		[]parse.FuncType{parse.TYPE_SERIES},
 		parse.TYPE_NUMBER,
-		[]interface{}{DefDuration},
+		nil,
 		Dev,
 	},
 	"recent": {
-		[]parse.FuncType{parse.TYPE_SERIES, parse.TYPE_STRING},
+		[]parse.FuncType{parse.TYPE_SERIES},
 		parse.TYPE_NUMBER,
-		[]interface{}{DefDuration},
+		nil,
 		Recent,
 	},
 	"since": {
-		[]parse.FuncType{parse.TYPE_SERIES, parse.TYPE_STRING},
+		[]parse.FuncType{parse.TYPE_SERIES},
 		parse.TYPE_NUMBER,
-		[]interface{}{DefDuration},
+		nil,
 		Since,
 	},
 	"forecastlr": {
-		[]parse.FuncType{parse.TYPE_SERIES, parse.TYPE_STRING, parse.TYPE_NUMBER},
+		[]parse.FuncType{parse.TYPE_SERIES, parse.TYPE_NUMBER},
 		parse.TYPE_NUMBER,
 		nil,
 		Forecast_lr,
 	},
 	"percentile": {
-		[]parse.FuncType{parse.TYPE_SERIES, parse.TYPE_STRING, parse.TYPE_NUMBER},
+		[]parse.FuncType{parse.TYPE_SERIES, parse.TYPE_NUMBER},
 		parse.TYPE_NUMBER,
 		nil,
 		Percentile,
+	},
+	"q": {
+		[]parse.FuncType{parse.TYPE_STRING, parse.TYPE_STRING},
+		parse.TYPE_SERIES,
+		[]interface{}{DefDuration},
+		Query,
 	},
 }
 
 const tsdbFmt = "2006/01/02 15:04:05"
 
-func Band(query Query, duration, period string, num float64) (arrays Arrays, err error) {
+func Band(e *state, query, duration, period string, num float64) (r []*Result, err error) {
 	var d, p time.Duration
 	d, err = ParseDuration(duration)
 	if err != nil {
@@ -102,7 +87,7 @@ func Band(query Query, duration, period string, num float64) (arrays Arrays, err
 	if num < 1 || num > 100 {
 		err = fmt.Errorf("expr: Band: num out of bounds")
 	}
-	q, err := opentsdb.ParseQuery(query.query)
+	q, err := opentsdb.ParseQuery(query)
 	if err != nil {
 		return
 	}
@@ -117,36 +102,39 @@ func Band(query Query, duration, period string, num float64) (arrays Arrays, err
 		now = now.Add(-p)
 		req.End = now.Unix()
 		req.Start = now.Add(-d).Unix()
-		s, e := req.Query(query.host)
+		s, e := req.Query(e.host)
 		if e != nil {
 			err = e
 			return
 		}
 		for _, res := range s {
 			newarr := true
-			for _, a := range arrays {
+			for _, a := range r {
 				if !a.Group.Equal(res.Tags) {
 					continue
 				}
 				newarr = false
-				for _, v := range res.DPS {
-					a.Values = append(a.Values, float64(v))
+				values := a.Value.(Series)
+				for k, v := range res.DPS {
+					values[k] = v
 				}
 			}
 			if newarr {
-				a := &Array{Group: res.Tags}
-				for _, v := range res.DPS {
-					a.Values = append(a.Values, float64(v))
+				values := make(Series)
+				a := &Result{Group: res.Tags}
+				for k, v := range res.DPS {
+					values[k] = v
 				}
-				arrays = append(arrays, a)
+				a.Value = values
+				r = append(r, a)
 			}
 		}
 	}
 	return
 }
 
-func queryDuration(query Query, duration string, F func(map[string]opentsdb.Point, ...float64) float64, args ...float64) (r []*Result, err error) {
-	q, err := opentsdb.ParseQuery(query.query)
+func Query(e *state, query, duration string) (r []*Result, err error) {
+	q, err := opentsdb.ParseQuery(query)
 	if err != nil {
 		return
 	}
@@ -161,19 +149,34 @@ func queryDuration(query Query, duration string, F func(map[string]opentsdb.Poin
 		Queries: []*opentsdb.Query{q},
 		Start:   fmt.Sprintf("%dms-ago", d.Nanoseconds()/1e6),
 	}
-	s, err := req.Query(query.host)
+	s, err := req.Query(e.host)
 	if err != nil {
 		return
 	}
 	for _, res := range s {
-		if len(res.DPS) == 0 {
-			// do something here?
-			continue
-		}
 		r = append(r, &Result{
-			Value: Value(F(res.DPS, args...)),
+			Value: Series(res.DPS),
 			Group: res.Tags,
 		})
+	}
+	return
+}
+
+func reduce(e *state, series []*Result, F func(Series, ...float64) float64, args ...float64) (r []*Result, err error) {
+	for _, s := range series {
+		switch t := s.Value.(type) {
+		case Series:
+			if len(t) == 0 {
+				// do something here?
+				continue
+			}
+			r = append(r, &Result{
+				Value: Number(F(t, args...)),
+				Group: s.Group,
+			})
+		default:
+			panic(fmt.Errorf("expr: expected a series"))
+		}
 	}
 	return
 }
@@ -203,12 +206,12 @@ func expandSearch(q *opentsdb.Query) error {
 	return nil
 }
 
-func Avg(query Query, duration string) ([]*Result, error) {
-	return queryDuration(query, duration, avg)
+func Avg(e *state, series []*Result) ([]*Result, error) {
+	return reduce(e, series, avg)
 }
 
 // avg returns the mean of x.
-func avg(dps map[string]opentsdb.Point, args ...float64) (a float64) {
+func avg(dps Series, args ...float64) (a float64) {
 	for _, v := range dps {
 		a += float64(v)
 	}
@@ -216,12 +219,12 @@ func avg(dps map[string]opentsdb.Point, args ...float64) (a float64) {
 	return
 }
 
-func Dev(query Query, duration string) ([]*Result, error) {
-	return queryDuration(query, duration, dev)
+func Dev(e *state, series []*Result) ([]*Result, error) {
+	return reduce(e, series, dev)
 }
 
 // dev returns the sample standard deviation of x.
-func dev(dps map[string]opentsdb.Point, args ...float64) (d float64) {
+func dev(dps Series, args ...float64) (d float64) {
 	a := avg(dps)
 	for _, v := range dps {
 		d += math.Pow(float64(v)-a, 2)
@@ -231,11 +234,11 @@ func dev(dps map[string]opentsdb.Point, args ...float64) (d float64) {
 	return math.Sqrt(d)
 }
 
-func Recent(query Query, duration string) ([]*Result, error) {
-	return queryDuration(query, duration, recent)
+func Recent(e *state, series []*Result) ([]*Result, error) {
+	return reduce(e, series, recent)
 }
 
-func recent(dps map[string]opentsdb.Point, args ...float64) (a float64) {
+func recent(dps Series, args ...float64) (a float64) {
 	last := -1
 	for k, v := range dps {
 		d, err := strconv.Atoi(k)
@@ -249,11 +252,11 @@ func recent(dps map[string]opentsdb.Point, args ...float64) (a float64) {
 	return
 }
 
-func Since(query Query, duration string) ([]*Result, error) {
-	return queryDuration(query, duration, since)
+func Since(e *state, series []*Result) ([]*Result, error) {
+	return reduce(e, series, since)
 }
 
-func since(dps map[string]opentsdb.Point, args ...float64) (a float64) {
+func since(dps Series, args ...float64) (a float64) {
 	var last time.Time
 	for k := range dps {
 		d, err := strconv.ParseInt(k, 10, 64)
@@ -269,13 +272,13 @@ func since(dps map[string]opentsdb.Point, args ...float64) (a float64) {
 	return s.Seconds()
 }
 
-func Forecast_lr(query Query, duration string, y float64) (r []*Result, err error) {
-	return queryDuration(query, duration, forecast_lr, y)
+func Forecast_lr(e *state, series []*Result, y float64) (r []*Result, err error) {
+	return reduce(e, series, forecast_lr, y)
 }
 
 // forecast_lr returns the number of seconds a linear regression predicts the
 // series will take to reach y_val.
-func forecast_lr(dps map[string]opentsdb.Point, args ...float64) float64 {
+func forecast_lr(dps Series, args ...float64) float64 {
 	y_val := args[0]
 	var x []float64
 	var y []float64
@@ -299,13 +302,13 @@ func forecast_lr(dps map[string]opentsdb.Point, args ...float64) float64 {
 	return -s.Seconds()
 }
 
-func Percentile(query Query, duration string, p float64) (r []*Result, err error) {
-	return queryDuration(query, duration, percentile, p)
+func Percentile(e *state, series []*Result, p float64) (r []*Result, err error) {
+	return reduce(e, series, percentile, p)
 }
 
 // percentile returns the value at the corresponding percentile between 0 and 1.
 // Min and Max can be simulated using p <= 0 and p >= 0, respectively.
-func percentile(dps map[string]opentsdb.Point, args ...float64) (a float64) {
+func percentile(dps Series, args ...float64) (a float64) {
 	p := args[0]
 	var x []float64
 	for _, v := range dps {

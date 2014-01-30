@@ -84,7 +84,7 @@ Loop:
 			state = new(State)
 		}
 		status := ST_WARN
-		if r.Value == 0 {
+		if r.Value.(expr.Number) == 0 {
 			status = ST_NORM
 		} else if isCrit {
 			status = ST_CRIT

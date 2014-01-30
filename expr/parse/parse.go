@@ -43,8 +43,6 @@ func (f FuncType) String() string {
 		return "number"
 	case TYPE_STRING:
 		return "string"
-	case TYPE_QUERY:
-		return "query"
 	case TYPE_SERIES:
 		return "series"
 	default:
@@ -52,14 +50,9 @@ func (f FuncType) String() string {
 	}
 }
 
-func (f FuncType) IsSeries() bool {
-	return f == TYPE_QUERY || f == TYPE_SERIES
-}
-
 const (
 	TYPE_NUMBER FuncType = iota
 	TYPE_STRING
-	TYPE_QUERY
 	TYPE_SERIES
 )
 
@@ -325,9 +318,10 @@ func (t *Tree) Func() (f *FuncNode) {
 				t.error(err)
 			}
 			f.append(newString(token.pos, token.val, s))
-		case itemQuery:
-			s := token.val[1 : len(token.val)-1]
-			f.append(newQuery(token.pos, token.val, s))
+		case itemFunc:
+			t.backup()
+			n := t.Func()
+			f.append(n)
 		default:
 			t.unexpected(token, "func")
 		}

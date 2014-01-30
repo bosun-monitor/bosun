@@ -57,7 +57,20 @@ func errRecover(errp *error) {
 	}
 }
 
-type Value float64
+type Value interface {
+	Type() parse.FuncType
+	Value() interface{}
+}
+
+type Number float64
+
+func (n Number) Type() parse.FuncType { return parse.TYPE_NUMBER }
+func (n Number) Value() interface{}   { return n }
+
+type Series map[string]opentsdb.Point
+
+func (s Series) Type() parse.FuncType { return parse.TYPE_SERIES }
+func (s Series) Value() interface{}   { return s }
 
 type Result struct {
 	Value
@@ -73,7 +86,7 @@ type Union struct {
 func wrap(v float64) []*Result {
 	return []*Result{
 		{
-			Value: Value(v),
+			Value: Number(v),
 			Group: nil,
 		},
 	}
@@ -129,73 +142,22 @@ func (e *state) walk(node parse.Node) []*Result {
 }
 
 func (e *state) walkBinary(node *parse.BinaryNode) []*Result {
-	a := e.walk(node.Args[0])
-	b := e.walk(node.Args[1])
+	ar := e.walk(node.Args[0])
+	br := e.walk(node.Args[1])
 	var res []*Result
-	u := union(a, b)
+	u := union(ar, br)
 	for _, v := range u {
-		a := v.A
-		b := v.B
 		var r Value
-		switch node.OpStr {
-		case "+":
-			r = a + b
-		case "*":
-			r = a * b
-		case "-":
-			r = a - b
-		case "/":
-			r = a / b
-		case "==":
-			if a == b {
-				r = 1
-			} else {
-				r = 0
-			}
-		case ">":
-			if a > b {
-				r = 1
-			} else {
-				r = 0
-			}
-		case "!=":
-			if a != b {
-				r = 1
-			} else {
-				r = 0
-			}
-		case "<":
-			if a < b {
-				r = 1
-			} else {
-				r = 0
-			}
-		case ">=":
-			if a >= b {
-				r = 1
-			} else {
-				r = 0
-			}
-		case "<=":
-			if a <= b {
-				r = 1
-			} else {
-				r = 0
-			}
-		case "||":
-			if a != 0 || b != 0 {
-				r = 1
-			} else {
-				r = 0
-			}
-		case "&&":
-			if a != 0 && b != 0 {
-				r = 1
-			} else {
-				r = 0
+		switch at := v.A.(type) {
+		case Number:
+			switch bt := v.B.(type) {
+			case Number:
+				r = Number(operate(node.OpStr, float64(at), float64(bt)))
+			default:
+				panic("expr: unknown op type")
 			}
 		default:
-			panic(fmt.Errorf("expr: unknown operator %s", node.OpStr))
+			panic("expr: unknown op type")
 		}
 		res = append(res, &Result{
 			Value: r,
@@ -205,23 +167,97 @@ func (e *state) walkBinary(node *parse.BinaryNode) []*Result {
 	return res
 }
 
+func operate(op string, a, b float64) (r float64) {
+	switch op {
+	case "+":
+		r = a + b
+	case "*":
+		r = a * b
+	case "-":
+		r = a - b
+	case "/":
+		r = a / b
+	case "==":
+		if a == b {
+			r = 1
+		} else {
+			r = 0
+		}
+	case ">":
+		if a > b {
+			r = 1
+		} else {
+			r = 0
+		}
+	case "!=":
+		if a != b {
+			r = 1
+		} else {
+			r = 0
+		}
+	case "<":
+		if a < b {
+			r = 1
+		} else {
+			r = 0
+		}
+	case ">=":
+		if a >= b {
+			r = 1
+		} else {
+			r = 0
+		}
+	case "<=":
+		if a <= b {
+			r = 1
+		} else {
+			r = 0
+		}
+	case "||":
+		if a != 0 || b != 0 {
+			r = 1
+		} else {
+			r = 0
+		}
+	case "&&":
+		if a != 0 && b != 0 {
+			r = 1
+		} else {
+			r = 0
+		}
+	default:
+		panic(fmt.Errorf("expr: unknown operator %s", op))
+	}
+	return
+}
+
 func (e *state) walkUnary(node *parse.UnaryNode) []*Result {
 	a := e.walk(node.Arg)
 	for _, r := range a {
-		switch node.OpStr {
-		case "!":
-			if r.Value == 0 {
-				r.Value = 1
-			} else {
-				r.Value = 0
-			}
-		case "-":
-			r.Value = -r.Value
+		switch rt := r.Value.(type) {
+		case Number:
+			r.Value = Number(uoperate(node.OpStr, float64(rt)))
 		default:
-			panic(fmt.Errorf("expr: unknown operator %s", node.OpStr))
+			panic(fmt.Errorf("expr: unknown op type"))
 		}
 	}
 	return a
+}
+
+func uoperate(op string, a float64) (r float64) {
+	switch op {
+	case "!":
+		if a == 0 {
+			r = 1
+		} else {
+			r = 0
+		}
+	case "-":
+		r = -a
+	default:
+		panic(fmt.Errorf("expr: unknown operator %s", op))
+	}
+	return
 }
 
 func (e *state) walkFunc(node *parse.FuncNode) []*Result {
@@ -234,8 +270,8 @@ func (e *state) walkFunc(node *parse.FuncNode) []*Result {
 			v = t.Text
 		case *parse.NumberNode:
 			v = t.Float64
-		case *parse.QueryNode:
-			v = Query{host: e.host, query: t.Text}
+		case *parse.FuncNode:
+			v = e.walkFunc(t)
 		default:
 			panic(fmt.Errorf("expr: unknown func arg type"))
 		}
@@ -246,7 +282,7 @@ func (e *state) walkFunc(node *parse.FuncNode) []*Result {
 		d := node.F.Defaults[i-ld]
 		in = append(in, reflect.ValueOf(d))
 	}
-	fr := f.Call(in)
+	fr := f.Call(append([]reflect.Value{reflect.ValueOf(e)}, in...))
 	res := fr[0].Interface().([]*Result)
 	if len(fr) > 1 && !fr[1].IsNil() {
 		err := fr[1].Interface().(error)

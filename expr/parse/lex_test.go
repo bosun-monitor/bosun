@@ -31,7 +31,6 @@ var itemName = map[itemType]string{
 	itemLeftParen:  "(",
 	itemRightParen: ")",
 	itemString:     "string",
-	itemQuery:      "query",
 	itemFunc:       "func",
 }
 
@@ -98,21 +97,27 @@ var lexTests = []lexTest{
 		{itemNumber, 0, "1.2e-4"},
 		tEOF,
 	}},
-	{"expression", `avg([m=sum:sys.cpu.user{host=*-web*}], "1m") < 0.2 || avg([m=sum:sys.cpu.user{host=*-web*}], "1m") > 0.4`, []item{
+	{"expression", `avg(q("sum:sys.cpu.user{host=*-web*}", "1m")) < 0.2 || avg(q("sum:sys.cpu.user{host=*-web*}", "1m")) > 0.4`, []item{
 		{itemFunc, 0, "avg"},
 		tLpar,
-		{itemQuery, 0, "[m=sum:sys.cpu.user{host=*-web*}]"},
+		{itemFunc, 0, "q"},
+		tLpar,
+		{itemString, 0, `"sum:sys.cpu.user{host=*-web*}"`},
 		tComma,
 		{itemString, 0, `"1m"`},
+		tRpar,
 		tRpar,
 		tLt,
 		{itemNumber, 0, "0.2"},
 		tOr,
 		{itemFunc, 0, "avg"},
 		tLpar,
-		{itemQuery, 0, "[m=sum:sys.cpu.user{host=*-web*}]"},
+		{itemFunc, 0, "q"},
+		tLpar,
+		{itemString, 0, `"sum:sys.cpu.user{host=*-web*}"`},
 		tComma,
 		{itemString, 0, `"1m"`},
+		tRpar,
 		tRpar,
 		tGt,
 		{itemNumber, 0, "0.4"},
@@ -121,9 +126,6 @@ var lexTests = []lexTest{
 	// errors
 	{"unclosed quote", "\"", []item{
 		{itemError, 0, "unterminated string"},
-	}},
-	{"unclosed query", "[m=sum:m", []item{
-		{itemError, 0, "unterminated query"},
 	}},
 }
 

@@ -5,7 +5,7 @@ import "testing"
 func TestExprSimple(t *testing.T) {
 	var exprTests = []struct {
 		input  string
-		output Value
+		output Number
 	}{
 		{"!1", 0},
 		{"-2", -2},
@@ -57,7 +57,7 @@ func TestExprSimple(t *testing.T) {
 const TSDB_HOST = "ny-devtsdb04:4242"
 
 func TestExprQuery(t *testing.T) {
-	e, err := New(`avg([avg:proc.stat.cpu{host=*,type=idle}]) > avg([avg:proc.stat.cpu{host=*}], "5m")`)
+	e, err := New(`avg(q("avg:proc.stat.cpu{host=*,type=idle}")) > avg(q("avg:proc.stat.cpu{host=*}", "5m"))`)
 	if err != nil {
 		t.Fatal(err)
 	}

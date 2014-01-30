@@ -53,7 +53,6 @@ const (
 	NodeFunc   NodeType = iota // A function call.
 	NodeBinary                 // Binary operator: math, logical, compare
 	NodeUnary                  // Unary operator: !, -
-	NodeQuery                  // An OpenTSDB Query.
 	NodeString                 // A string constant.
 	NodeNumber                 // A numerical constant.
 )
@@ -118,10 +117,6 @@ func (c *FuncNode) Check() error {
 		case *StringNode:
 			if t != TYPE_STRING {
 				return fmt.Errorf(errFuncType, c.Name, t, "string")
-			}
-		case *QueryNode:
-			if t != TYPE_QUERY && t != TYPE_SERIES {
-				return fmt.Errorf(errFuncType, c.Name, t, "query")
 			}
 		}
 	}
@@ -213,32 +208,6 @@ func (s *StringNode) Check() error {
 
 func (s *StringNode) Return() FuncType { return TYPE_STRING }
 
-// QueryNode holds a string constant. The value has been "unbracketed".
-type QueryNode struct {
-	NodeType
-	Pos
-	Bracketed string // The original text query, with brackets.
-	Text      string // The string, after bracket processing.
-}
-
-func newQuery(pos Pos, orig, text string) *QueryNode {
-	return &QueryNode{NodeType: NodeString, Pos: pos, Bracketed: orig, Text: text}
-}
-
-func (s *QueryNode) String() string {
-	return s.Bracketed
-}
-
-func (s *QueryNode) StringAST() string {
-	return s.String()
-}
-
-func (q *QueryNode) Check() error {
-	return nil
-}
-
-func (q *QueryNode) Return() FuncType { return TYPE_QUERY }
-
 // BinaryNode holds two arguments and an operator.
 type BinaryNode struct {
 	NodeType
@@ -273,7 +242,7 @@ func (b *BinaryNode) Check() error {
 	if t1 != TYPE_NUMBER {
 		return fmt.Errorf("parse: type error in %s: at least one side must be a number", b)
 	}
-	if t2 != TYPE_NUMBER && !t2.IsSeries() {
+	if t2 != TYPE_NUMBER && t2 != TYPE_SERIES {
 		return fmt.Errorf("parse: type error in %s", b)
 	}
 	switch b.Operator.typ {

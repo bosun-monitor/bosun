@@ -5,40 +5,16 @@ import (
 	"testing"
 )
 
-func q(s string) Query {
-	return Query{
-		host:  TSDB_HOST,
-		query: s,
-	}
+var s = &state{
+	host: TSDB_HOST,
 }
 
-func _TestAvg(t *testing.T) {
-	_, err := Avg(q("avg:proc.stat.cpu{type=*}"), "30s")
-	if err != nil {
-		t.Fatal(err)
-	}
-}
-
-func _TestDev(t *testing.T) {
-	_, err := Dev(q("avg:proc.stat.cpu{type=*}"), "30s")
-	if err != nil {
-		t.Fatal(err)
-	}
-}
-
-func TestBand(t *testing.T) {
-	r, err := Band(q("avg:proc.stat.cpu{type=*}"), "1h", "1w", 4)
+func TestFuncs(t *testing.T) {
+	r, err := Query(s, "avg:proc.stat.cpu{type=*}", "1h")
 	if err != nil {
 		t.Fatal(err)
 	}
 	for _, a := range r {
-		fmt.Println(a.Group, len(a.Values))
+		fmt.Println(a.Group)
 	}
 }
-
-/*
-avg(band([avg:c], "1h", "1w", 8))
-avg(band([avg:c, "1h"], "1w", 8))
-avg([avg:c], "1h") // bad
-avg([avg:c, "1h"])
-*/

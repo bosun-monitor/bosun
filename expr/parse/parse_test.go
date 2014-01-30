@@ -97,21 +97,21 @@ const (
 
 var parseTests = []parseTest{
 	{"number", "1", noError, "1"},
-	{"function", `avg([test])`, noError, `avg([test])`},
+	{"function", `avg(q("test"))`, noError, `avg(q("test"))`},
 	{"addition", "1+2", noError, "1 + 2"},
 	{"expression", "1+2*3/4-5 && !2|| -4", noError, "1 + 2 * 3 / 4 - 5 && !2 || -4"},
-	{"expression with func", `avg([q], "1h")>=0.7&&avg([q])!=3-0x8`, noError,
-		`avg([q], "1h") >= 0.7 && avg([q]) != 3 - 0x8`},
-	{"func types", `avg([q])>avg([q])+avg([q])`, noError, "avg([q]) > avg([q]) + avg([q])"},
+	{"expression with func", `avg(q("q"), "1h")>=0.7&&avg(q("q"))!=3-0x8`, noError,
+		`avg(q("q"), "1h") >= 0.7 && avg(q("q")) != 3 - 0x8`},
+	{"func types", `avg(q("q"))>avg(q("q"))+avg(q("q"))`, noError, `avg(q("q")) > avg(q("q")) + avg(q("q"))`},
 	// Errors.
 	{"empty", "", hasError, ""},
 	{"unclosed function", "avg(", hasError, ""},
 	{"bad function", "bad(1)", hasError, ""},
-	{"bad type", `band([q], "1h", "1m", "8")`, hasError, ""},
-	{"wrong number args", `avg([q], "1m", 1)`, hasError, ""},
-	{"2 series math", `band([q])+band([q])`, hasError, ""},
-	{"series compare", `band([q])>0`, hasError, ""},
-	{"unary series", `!band([q])`, hasError, ""},
+	{"bad type", `band(q("q"), "1h", "1m", "8")`, hasError, ""},
+	{"wrong number args", `avg(q("q"), "1m", 1)`, hasError, ""},
+	{"2 series math", `band(q("q"))+band(q("q"))`, hasError, ""},
+	{"series compare", `band(q("q"))>0`, hasError, ""},
+	{"unary series", `!band(q("q"))`, hasError, ""},
 }
 
 func TestParse(t *testing.T) {
@@ -150,9 +150,15 @@ var builtins = map[string]Func{
 		nil,
 	},
 	"band": {
-		[]FuncType{TYPE_QUERY, TYPE_STRING, TYPE_STRING, TYPE_NUMBER},
+		[]FuncType{TYPE_STRING, TYPE_STRING, TYPE_STRING, TYPE_NUMBER},
 		TYPE_SERIES,
 		[]interface{}{nil, nil, nil},
+		nil,
+	},
+	"q": {
+		[]FuncType{TYPE_STRING, TYPE_STRING},
+		TYPE_SERIES,
+		[]interface{}{nil},
 		nil,
 	},
 }

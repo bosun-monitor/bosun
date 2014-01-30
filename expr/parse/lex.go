@@ -54,7 +54,6 @@ const (
 	itemLeftParen
 	itemRightParen
 	itemString
-	itemQuery
 	itemFunc
 )
 
@@ -180,8 +179,6 @@ Loop:
 			l.emit(itemLeftParen)
 		case r == ')':
 			l.emit(itemRightParen)
-		case r == '[':
-			return lexQuery
 		case r == '"':
 			return lexString
 		case r == ',':
@@ -286,18 +283,6 @@ func lexString(l *lexer) stateFn {
 			return lexItem
 		case eof:
 			return l.errorf("unterminated string")
-		}
-	}
-}
-
-func lexQuery(l *lexer) stateFn {
-	for {
-		switch l.next() {
-		case ']':
-			l.emit(itemQuery)
-			return lexItem
-		case eof:
-			return l.errorf("unterminated query")
 		}
 	}
 }
