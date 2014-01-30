@@ -12,7 +12,7 @@ func init() {
 }
 
 func c_diskspace_windows() opentsdb.MultiDataPoint {
-	var dst []Win32_PerfRawData_PerfDisk_LogicalDisk
+	var dst []Win32_PerfFormattedData_PerfDisk_LogicalDisk
 	var q = wmi.CreateQuery(&dst, `WHERE Name <> '_Total'`)
 	err := queryWmi(q, &dst)
 	if err != nil {
@@ -27,7 +27,7 @@ func c_diskspace_windows() opentsdb.MultiDataPoint {
 	return md
 }
 
-type Win32_PerfRawData_PerfDisk_LogicalDisk struct {
+type Win32_PerfFormattedData_PerfDisk_LogicalDisk struct {
 	FreeMegabytes    uint32
 	Name             string
 	PercentFreeSpace uint32
