@@ -79,7 +79,7 @@
 								<td>
 									<ul class="list-unstyled">
 									{{range $k, $v := $v.Group}}
-										<li><strong>{{$k}}</strong> {{$v}}</li>
+										<li><strong>{{$k}}</strong> <span title="{{$v}}">{{$v | tagv}}</span></li>
 									{{end}}
 									</ul>
 								</td>

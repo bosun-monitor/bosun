@@ -3,7 +3,9 @@ package web
 import (
 	"fmt"
 	"html/template"
+	"strings"
 	"time"
+
 	"github.com/StackExchange/tsaf/sched"
 )
 
@@ -24,7 +26,12 @@ func tsince(t time.Time) template.HTML {
 	return template.HTML(fmt.Sprintf("%s<br>%s ago", t.Format(tfmt), s))
 }
 
+func tagv(t string) string {
+	return strings.Split(t, ".ds.stackexchange.com")[0]
+}
+
 var funcs = template.FuncMap{
 	"status": status,
+	"tagv":   tagv,
 	"tsince": tsince,
 }
