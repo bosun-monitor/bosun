@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/StackExchange/slog"
@@ -53,9 +54,11 @@ func watcher() {
 			}
 		}
 	}()
-	err = watcher.Watch(".")
-	if err != nil {
-		slog.Error(err)
-		return
-	}
+	filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
+		if !info.IsDir() || (len(path) > 1 && path[0] == '.') {
+			return nil
+		}
+		watcher.Watch(path)
+		return nil
+	})
 }
