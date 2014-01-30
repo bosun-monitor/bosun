@@ -12,7 +12,7 @@ func init() {
 }
 
 func c_diskspace_windows() opentsdb.MultiDataPoint {
-	var dst []Win32_PerfRawData_PerfDisk_LogicalDisk
+	var dst []Win32_PerfFormattedData_PerfDisk_LogicalDisk
 	var q = wmi.CreateQuery(&dst, `WHERE Name <> '_Total'`)
 	err := queryWmi(q, &dst)
 	if err != nil {
@@ -21,13 +21,24 @@ func c_diskspace_windows() opentsdb.MultiDataPoint {
 	}
 	var md opentsdb.MultiDataPoint
 	for _, v := range dst {
-		Add(&md, "win.disk.fs.free_bytes", v.FreeMegabytes*1048576, opentsdb.TagSet{"partition": v.Name})
+		Add(&md, "win.disk.fs.space_free", v.FreeMegabytes*1048576, opentsdb.TagSet{"partition": v.Name})
+		Add(&md, "os.disk.fs.space_free", v.FreeMegabytes*1048576, opentsdb.TagSet{"disk": v.Name})
+		if v.PercentFreeSpace != 0 {
+			space_total := v.FreeMegabytes * 1048576 / v.PercentFreeSpace / 100
+			space_used := space_total - v.FreeMegabytes*1048576
+			Add(&md, "win.disk.fs.space_total", space_total, opentsdb.TagSet{"partition": v.Name})
+			Add(&md, "win.disk.fs.space_used", space_used, opentsdb.TagSet{"partition": v.Name})
+			Add(&md, "os.disk.fs.space_total", space_total, opentsdb.TagSet{"disk": v.Name})
+			Add(&md, "os.disk.fs.space_used", space_used, opentsdb.TagSet{"disk": v.Name})
+		}
+
 		Add(&md, "win.disk.fs.percent_free", v.PercentFreeSpace, opentsdb.TagSet{"partition": v.Name})
+		Add(&md, "os.disk.fs.percent_free", v.PercentFreeSpace, opentsdb.TagSet{"disk": v.Name})
 	}
 	return md
 }
 
-type Win32_PerfRawData_PerfDisk_LogicalDisk struct {
+type Win32_PerfFormattedData_PerfDisk_LogicalDisk struct {
 	FreeMegabytes    uint32
 	Name             string
 	PercentFreeSpace uint32
