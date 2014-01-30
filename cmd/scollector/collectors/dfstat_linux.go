@@ -33,7 +33,7 @@ func c_dfstat_blocks_linux() opentsdb.MultiDataPoint {
 		sf, err := strconv.Atoi(fields[3])
 		if err == nil {
 			if st != 0 {
-				Add(&md, "os.disk.fs.perc_free", sf/st, os_tags)
+				Add(&md, "os.disk.fs.percent_free", sf/st, os_tags)
 			}
 		}
 	}, "df", "-lP", "--block-size", "1")
