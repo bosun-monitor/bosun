@@ -10,6 +10,7 @@ import (
 
 	"github.com/StackExchange/tsaf/conf/parse"
 	"github.com/StackExchange/tsaf/expr"
+	eparse "github.com/StackExchange/tsaf/expr/parse"
 )
 
 type Conf struct {
@@ -243,12 +244,18 @@ func (c *Conf) loadAlert(name string, s *parse.SectionNode) {
 			if err != nil {
 				c.error(err)
 			}
+			if crit.Root.Return() != eparse.TYPE_NUMBER {
+				c.errorf("crit must return a number")
+			}
 			a.Crit = crit
 		case "warn":
 			a.warn = c.expand(v, a.Vars)
 			warn, err := expr.New(a.warn)
 			if err != nil {
 				c.error(err)
+			}
+			if warn.Root.Return() != eparse.TYPE_NUMBER {
+				c.errorf("warn must return a number")
 			}
 			a.Warn = warn
 		default:

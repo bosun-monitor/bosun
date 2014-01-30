@@ -184,9 +184,6 @@ func (t *Tree) parse() {
 	if err := t.Root.Check(); err != nil {
 		t.error(err)
 	}
-	if t.Root.Return() != TYPE_NUMBER {
-		t.errorf("root node must return a number")
-	}
 }
 
 /* Grammar:
