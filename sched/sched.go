@@ -5,6 +5,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/tsaf/conf"
 	"github.com/StackExchange/tsaf/expr"
 )
@@ -81,7 +82,9 @@ Loop:
 		}
 		state := s.Status[ak]
 		if state == nil {
-			state = new(State)
+			state = &State{
+				Group: r.Group,
+			}
 		}
 		status := ST_WARN
 		if r.Value.(expr.Number) == 0 {
@@ -113,6 +116,7 @@ type State struct {
 	Touched time.Time
 	Expr    *expr.Expr
 	Emailed bool
+	Group   opentsdb.TagSet
 }
 
 func (s *State) Touch() {
