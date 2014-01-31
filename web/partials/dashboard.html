@@ -1,0 +1,36 @@
+<table class="table">
+	<tr>
+		<th>alert</th>
+		<th>tags</th>
+		<th>status</th>
+		<th>status time</th>
+		<th>touched</th>
+		<th>rule</th>
+		<th>emailed</th>
+	</tr>
+	{{range $k, $v := .Schedule.Status}}
+		{{if or (eq $v.Last.Status 1) (eq $v.Last.Status 2)}}
+		<tr class="{{$v.Last.Status | status}}">
+			<td>{{$k.Name}}</td>
+			<td>
+				<ul class="list-unstyled">
+				{{range $k, $v := $v.Group}}
+					<li><strong>{{$k}}</strong> <span title="{{$v}}">{{$v | tagv}}</span></li>
+				{{end}}
+				</ul>
+			</td>
+			<td>{{$v.Last.Status}}</td>
+			<td>{{$v.Last.Time | tsince}}</td>
+			<td>{{$v.Touched | tsince}}</td>
+			<td>{{$v.Expr}}</td>
+			<td>
+				{{if $v.Emailed}}
+					no
+				{{else}}
+					yes
+				{{end}}
+			</td>
+		</tr>
+		{{end}}
+	{{end}}
+</table>

@@ -1,6 +1,7 @@
 package sched
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"time"
@@ -14,6 +15,22 @@ type Schedule struct {
 	*conf.Conf
 	Freq   time.Duration
 	Status map[AlertKey]*State
+}
+
+func (s *Schedule) MarshalJSON() ([]byte, error) {
+	t := struct {
+		Conf   *conf.Conf
+		Freq   time.Duration
+		Status map[AlertKey]*State
+	}{
+		s.Conf,
+		s.Freq,
+		make(map[AlertKey]*State),
+	}
+	for k, v := range s.Status {
+		t.Status[k] = v
+	}
+	return json.Marshal(&t)
 }
 
 var DefaultSched = &Schedule{
@@ -108,6 +125,10 @@ Loop:
 type AlertKey struct {
 	Name  string
 	Group string
+}
+
+func (a AlertKey) String() string {
+	return fmt.Sprintf("%v{%v}", a.Name, a.Group)
 }
 
 type State struct {
