@@ -26,12 +26,15 @@ func Listen(addr, dir, host string) error {
 	tsdbHost = host
 	var err error
 	templates, err = template.New("").Funcs(funcs).ParseFiles(
-		dir + "/templates/chart.html",
+		dir+"/templates/navbar.html",
+		dir+"/templates/chart.html",
+		dir+"/templates/items.html",
 	)
 	if err != nil {
 		log.Fatal(err)
 	}
 	router.Handle("/", miniprofiler.NewHandler(Index))
+	router.Handle("/items", miniprofiler.NewHandler(Items))
 	router.Handle("/api/chart", miniprofiler.NewHandler(Chart))
 	router.Handle("/api/metric", miniprofiler.NewHandler(UniqueMetrics))
 	router.Handle("/api/metric/{tagk}/{tagv}", miniprofiler.NewHandler(MetricsByTagPair))
@@ -53,6 +56,17 @@ func Index(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 	}{
 		t.Includes(),
 		schedule,
+	})
+	if err != nil {
+		fmt.Println(err)
+	}
+}
+
+func Items(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
+	err := templates.ExecuteTemplate(w, "items.html", struct {
+		Includes template.HTML
+	}{
+		t.Includes(),
 	})
 	if err != nil {
 		fmt.Println(err)
