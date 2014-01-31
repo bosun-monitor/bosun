@@ -2,11 +2,11 @@ package main
 
 import (
 	"flag"
+	"log"
 	"os"
 	"path/filepath"
 	"time"
 
-	"github.com/StackExchange/slog"
 	"github.com/StackExchange/tsaf/conf"
 	"github.com/StackExchange/tsaf/relay"
 	"github.com/StackExchange/tsaf/sched"
@@ -23,12 +23,12 @@ func main() {
 	flag.Parse()
 	c, err := conf.ParseFile(*confFile)
 	if err != nil {
-		slog.Fatal(err)
+		log.Fatal(err)
 	}
 	sched.Load(c)
-	go func() { slog.Fatal(relay.RelayHTTP(c.RelayListen, c.TsdbHost)) }()
-	go func() { slog.Fatal(web.Listen(c.HttpListen, c.WebDir, c.TsdbHost)) }()
-	go func() { slog.Fatal(sched.Run()) }()
+	go func() { log.Fatal(relay.RelayHTTP(c.RelayListen, c.TsdbHost)) }()
+	go func() { log.Fatal(web.Listen(c.HttpListen, c.WebDir, c.TsdbHost)) }()
+	go func() { log.Fatal(sched.Run()) }()
 	go watcher()
 	select {}
 }
@@ -40,17 +40,17 @@ func watcher() {
 	time.Sleep(time.Second)
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		slog.Error(err)
+		log.Print(err)
 		return
 	}
 	go func() {
 		for {
 			select {
 			case ev := <-watcher.Event:
-				slog.Info("file changed, exiting:", ev)
+				log.Print("file changed, exiting:", ev)
 				os.Exit(0)
 			case err := <-watcher.Error:
-				slog.Error(err)
+				log.Print(err)
 			}
 		}
 	}()
