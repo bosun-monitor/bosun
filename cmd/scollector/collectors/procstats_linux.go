@@ -42,18 +42,31 @@ func c_procstats_linux() opentsdb.MultiDataPoint {
 		Add(&md, "linux.uptime_total", m[1], nil)
 		Add(&md, "linux.uptime_now", m[2], nil)
 	})
+	mem := make(map[string]float64)
 	readLine("/proc/meminfo", func(s string) {
 		m := meminfoRE.FindStringSubmatch(s)
 		if m == nil {
 			return
 		}
+		i, err := strconv.ParseFloat(m[2], 64)
+		if err != nil {
+			slog.Errorln(err)
+		}
+		mem[m[1]] = i
 		Add(&md, "linux.mem."+strings.ToLower(m[1]), m[2], nil)
 	})
+	Add(&md, "os.mem.total", int(mem["MemTotal"])*1024, nil)
+	Add(&md, "os.mem.free", int(mem["MemFree"])*1024, nil)
+	if mem["MemTotal"] != 0 {
+		Add(&md, "os.mem.percent_free", (mem["MemFree"]+mem["Buffers"]+mem["Cached"])/mem["MemTotal"], nil)
+	}
+
 	readLine("/proc/vmstat", func(s string) {
 		m := vmstatRE.FindStringSubmatch(s)
 		if m == nil {
 			return
 		}
+
 		switch m[1] {
 		case "pgpgin", "pgpgout", "pswpin", "pswpout", "pgfault", "pgmajfault":
 			Add(&md, "linux.mem."+m[1], m[2], nil)
