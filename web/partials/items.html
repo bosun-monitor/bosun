@@ -1,18 +1,17 @@
-<div ng-controller="ItemsCtrl">
-	<div class="container">
-		<div class="row">
-			<div class="col-lg-6">
-				<h1>Metrics</h1>
-					<ul>
-						<li ng-repeat="metric in metrics">{{metric}}</li>
-					</ul>
-			</div>
-			<div class="col-lg-6">
-				<h2>Hosts</h2>
-				<ul>
-					<li ng-repeat="host in hosts">{{host}}</li>
-				</ul>
-			</div>
-		</div>
+<div class="row" ng-show="status">
+	<div class="col-lg-12" ng-bind="status"></div>
+</div>
+<div class="row">
+	<div class="col-lg-6">
+		<h1>Metrics</h1>
+			<ul>
+				<li ng-repeat="metric in metrics" ng-bind="metric"></li>
+			</ul>
+	</div>
+	<div class="col-lg-6">
+		<h2>Hosts</h2>
+		<ul>
+			<li ng-repeat="host in hosts" ng-bind="host"></li>
+		</ul>
 	</div>
 </div>
