@@ -32,7 +32,6 @@ func Listen(addr, dir, host string) error {
 	if err != nil {
 		log.Fatal(err)
 	}
-	router.Handle("/", miniprofiler.NewHandler(Index))
 	router.Handle("/api/alerts", miniprofiler.NewHandler(Alerts))
 	router.Handle("/api/chart", miniprofiler.NewHandler(Chart))
 	router.Handle("/api/metric", miniprofiler.NewHandler(UniqueMetrics))
@@ -41,7 +40,8 @@ func Listen(addr, dir, host string) error {
 	router.Handle("/api/tagv/{tagk}", miniprofiler.NewHandler(TagValuesByTagKey))
 	router.Handle("/api/tagv/{tagk}/{metric}", miniprofiler.NewHandler(TagValuesByMetricTagKey))
 	router.Handle("/api/expr", miniprofiler.NewHandler(Expr))
-	http.Handle("/", router)
+	http.Handle("/", miniprofiler.NewHandler(Index))
+	http.Handle("/api/", router)
 	http.Handle("/static/", http.FileServer(http.Dir(dir)))
 	http.Handle("/partials/", http.FileServer(http.Dir(dir)))
 	log.Println("TSAF web listening on:", addr)

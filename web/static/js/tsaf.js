@@ -6,7 +6,8 @@ var tsafApp = angular.module('tsafApp', [
 ]);
 
 tsafApp.config([
-    '$routeProvider', function ($routeProvider) {
+    '$routeProvider', '$locationProvider', function ($routeProvider, $locationProvider) {
+        $locationProvider.html5Mode(true);
         $routeProvider.when('/', {
             templateUrl: 'partials/dashboard.html',
             controller: 'DashboardCtrl'

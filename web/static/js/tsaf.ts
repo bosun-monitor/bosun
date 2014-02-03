@@ -6,7 +6,8 @@ var tsafApp = angular.module('tsafApp', [
 	'tsafControllers',
 ]);
 
-tsafApp.config(['$routeProvider', function($routeProvider: ng.route.IRouteProvider) {
+tsafApp.config(['$routeProvider', '$locationProvider', function($routeProvider: ng.route.IRouteProvider, $locationProvider: ng.ILocationProvider) {
+	$locationProvider.html5Mode(true);
 	$routeProvider.
 		when('/', {
 			templateUrl: 'partials/dashboard.html',
