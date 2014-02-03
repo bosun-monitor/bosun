@@ -19,16 +19,16 @@ type Schedule struct {
 
 func (s *Schedule) MarshalJSON() ([]byte, error) {
 	t := struct {
-		Conf   *conf.Conf
+		Alerts map[string]*conf.Alert
 		Freq   time.Duration
-		Status map[AlertKey]*State
+		Status map[string]*State
 	}{
-		s.Conf,
+		s.Conf.Alerts,
 		s.Freq,
-		make(map[AlertKey]*State),
+		make(map[string]*State),
 	}
 	for k, v := range s.Status {
-		t.Status[k] = v
+		t.Status[k.String()] = v
 	}
 	return json.Marshal(&t)
 }

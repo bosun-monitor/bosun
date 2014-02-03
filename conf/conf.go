@@ -65,13 +65,14 @@ func errRecover(errp *error) {
 }
 
 type Alert struct {
-	Vars
-	*Template
+	Vars       `json:"-"`
+	*Template  `json:"-"`
 	Name       string
-	Owner      string
-	Crit, Warn *expr.Expr
-	Overriders []*Alert
-	Overrides  *Alert
+	Owner      string     `json:",omitempty"`
+	Crit       *expr.Expr `json:",omitempty"`
+	Warn       *expr.Expr `json:",omitempty"`
+	Overriders []*Alert   `json:"-"`
+	Overrides  *Alert     `json:",omitempty"`
 
 	crit, warn string
 	template   string
