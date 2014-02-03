@@ -160,7 +160,7 @@ func (s *State) Last() Event {
 
 type Event struct {
 	Status
-	time.Time
+	Time time.Time // embedding this breaks JSON encoding
 }
 
 type Status int
