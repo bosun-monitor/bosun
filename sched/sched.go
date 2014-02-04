@@ -128,7 +128,7 @@ type AlertKey struct {
 }
 
 func (a AlertKey) String() string {
-	return fmt.Sprintf("%v{%v}", a.Name, a.Group)
+	return a.Name + a.Group
 }
 
 type State struct {
@@ -159,8 +159,8 @@ func (s *State) Last() Event {
 }
 
 type Event struct {
-	Status
-	Time time.Time // embedding this breaks JSON encoding
+	Status Status
+	Time   time.Time // embedding this breaks JSON encoding
 }
 
 type Status int
@@ -182,4 +182,8 @@ func (s Status) String() string {
 	default:
 		return "unknown"
 	}
+}
+
+func (s Status) MarshalJSON() ([]byte, error) {
+	return json.Marshal(s.String())
 }
