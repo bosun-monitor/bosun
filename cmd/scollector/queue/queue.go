@@ -20,6 +20,7 @@ type Queue struct {
 	host  string
 	queue opentsdb.MultiDataPoint
 	c     chan *opentsdb.DataPoint
+	purge time.Time
 }
 
 // Creates and starts a new Queue.
@@ -57,7 +58,26 @@ func (q *Queue) send() {
 		} else {
 			time.Sleep(time.Second)
 		}
+		q.Purge()
 	}
+}
+
+func (q *Queue) Purge() {
+	if time.Now().Before(q.purge) {
+		return
+	}
+	q.purge = time.Now().Add(time.Minute)
+	q.Lock()
+	defer q.Unlock()
+	t := time.Now().Add(-time.Minute * 30).Unix()
+	n := make(opentsdb.MultiDataPoint, 0, len(q.queue))
+	for _, d := range q.queue {
+		if d.Timestamp < t {
+			continue
+		}
+		n = append(n, d)
+	}
+	q.queue = n
 }
 
 var qlock sync.Mutex
