@@ -1,6 +1,7 @@
 package expr
 
 import (
+	"encoding/json"
 	"fmt"
 	"math"
 	"regexp"
@@ -10,6 +11,7 @@ import (
 	"time"
 
 	"github.com/GaryBoone/GoStats/stats"
+	"github.com/MiniProfiler/go/miniprofiler"
 	"github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/tsaf/expr/parse"
 	"github.com/StackExchange/tsaf/search"
@@ -74,66 +76,71 @@ var Builtins = map[string]parse.Func{
 
 const tsdbFmt = "2006/01/02 15:04:05"
 
-func Band(e *state, query, duration, period string, num float64) (r []*Result, err error) {
-	var d, p time.Duration
-	d, err = ParseDuration(duration)
-	if err != nil {
-		return
-	}
-	p, err = ParseDuration(period)
-	if err != nil {
-		return
-	}
-	if num < 1 || num > 100 {
-		err = fmt.Errorf("expr: Band: num out of bounds")
-	}
-	q, err := opentsdb.ParseQuery(query)
-	if err != nil {
-		return
-	}
-	if err = expandSearch(q); err != nil {
-		return
-	}
-	req := opentsdb.Request{
-		Queries: []*opentsdb.Query{q},
-	}
-	now := time.Now().UTC()
-	for i := 0; i < int(num); i++ {
-		now = now.Add(-p)
-		req.End = now.Unix()
-		req.Start = now.Add(-d).Unix()
-		s, e := req.Query(e.host)
-		if e != nil {
-			err = e
+func Band(e *state, T miniprofiler.Timer, query, duration, period string, num float64) (r []*Result, err error) {
+	T.Step("band", func(T miniprofiler.Timer) {
+		var d, p time.Duration
+		d, err = ParseDuration(duration)
+		if err != nil {
 			return
 		}
-		for _, res := range s {
-			newarr := true
-			for _, a := range r {
-				if !a.Group.Equal(res.Tags) {
-					continue
-				}
-				newarr = false
-				values := a.Value.(Series)
-				for k, v := range res.DPS {
-					values[k] = v
-				}
+		p, err = ParseDuration(period)
+		if err != nil {
+			return
+		}
+		if num < 1 || num > 100 {
+			err = fmt.Errorf("expr: Band: num out of bounds")
+		}
+		q, err := opentsdb.ParseQuery(query)
+		if err != nil {
+			return
+		}
+		if err = expandSearch(q); err != nil {
+			return
+		}
+		req := opentsdb.Request{
+			Queries: []*opentsdb.Query{q},
+		}
+		now := time.Now().UTC()
+		for i := 0; i < int(num); i++ {
+			now = now.Add(-p)
+			req.End = now.Unix()
+			req.Start = now.Add(-d).Unix()
+			b, _ := json.MarshalIndent(&req, "", "  ")
+			var s opentsdb.ResponseSet
+			T.StepCustomTiming("tsdb", "query", string(b), func() {
+				s, err = req.Query(e.host)
+			})
+			if err != nil {
+				return
 			}
-			if newarr {
-				values := make(Series)
-				a := &Result{Group: res.Tags}
-				for k, v := range res.DPS {
-					values[k] = v
+			for _, res := range s {
+				newarr := true
+				for _, a := range r {
+					if !a.Group.Equal(res.Tags) {
+						continue
+					}
+					newarr = false
+					values := a.Value.(Series)
+					for k, v := range res.DPS {
+						values[k] = v
+					}
 				}
-				a.Value = values
-				r = append(r, a)
+				if newarr {
+					values := make(Series)
+					a := &Result{Group: res.Tags}
+					for k, v := range res.DPS {
+						values[k] = v
+					}
+					a.Value = values
+					r = append(r, a)
+				}
 			}
 		}
-	}
+	})
 	return
 }
 
-func Query(e *state, query, duration string) (r []*Result, err error) {
+func Query(e *state, T miniprofiler.Timer, query, duration string) (r []*Result, err error) {
 	q, err := opentsdb.ParseQuery(query)
 	if err != nil {
 		return
@@ -149,7 +156,11 @@ func Query(e *state, query, duration string) (r []*Result, err error) {
 		Queries: []*opentsdb.Query{q},
 		Start:   fmt.Sprintf("%dms-ago", d.Nanoseconds()/1e6),
 	}
-	s, err := req.Query(e.host)
+	b, _ := json.MarshalIndent(&req, "", "  ")
+	var s opentsdb.ResponseSet
+	T.StepCustomTiming("tsdb", "query", string(b), func() {
+		s, err = req.Query(e.host)
+	})
 	if err != nil {
 		return
 	}
@@ -162,7 +173,7 @@ func Query(e *state, query, duration string) (r []*Result, err error) {
 	return
 }
 
-func reduce(e *state, series []*Result, F func(Series, ...float64) float64, args ...float64) (r []*Result, err error) {
+func reduce(e *state, T miniprofiler.Timer, series []*Result, F func(Series, ...float64) float64, args ...float64) (r []*Result, err error) {
 	for _, s := range series {
 		switch t := s.Value.(type) {
 		case Series:
@@ -206,8 +217,8 @@ func expandSearch(q *opentsdb.Query) error {
 	return nil
 }
 
-func Avg(e *state, series []*Result) ([]*Result, error) {
-	return reduce(e, series, avg)
+func Avg(e *state, T miniprofiler.Timer, series []*Result) ([]*Result, error) {
+	return reduce(e, T, series, avg)
 }
 
 // avg returns the mean of x.
@@ -219,8 +230,8 @@ func avg(dps Series, args ...float64) (a float64) {
 	return
 }
 
-func Dev(e *state, series []*Result) ([]*Result, error) {
-	return reduce(e, series, dev)
+func Dev(e *state, T miniprofiler.Timer, series []*Result) ([]*Result, error) {
+	return reduce(e, T, series, dev)
 }
 
 // dev returns the sample standard deviation of x.
@@ -234,8 +245,8 @@ func dev(dps Series, args ...float64) (d float64) {
 	return math.Sqrt(d)
 }
 
-func Recent(e *state, series []*Result) ([]*Result, error) {
-	return reduce(e, series, recent)
+func Recent(e *state, T miniprofiler.Timer, series []*Result) ([]*Result, error) {
+	return reduce(e, T, series, recent)
 }
 
 func recent(dps Series, args ...float64) (a float64) {
@@ -252,8 +263,8 @@ func recent(dps Series, args ...float64) (a float64) {
 	return
 }
 
-func Since(e *state, series []*Result) ([]*Result, error) {
-	return reduce(e, series, since)
+func Since(e *state, T miniprofiler.Timer, series []*Result) ([]*Result, error) {
+	return reduce(e, T, series, since)
 }
 
 func since(dps Series, args ...float64) (a float64) {
@@ -272,8 +283,8 @@ func since(dps Series, args ...float64) (a float64) {
 	return s.Seconds()
 }
 
-func Forecast_lr(e *state, series []*Result, y float64) (r []*Result, err error) {
-	return reduce(e, series, forecast_lr, y)
+func Forecast_lr(e *state, T miniprofiler.Timer, series []*Result, y float64) (r []*Result, err error) {
+	return reduce(e, T, series, forecast_lr, y)
 }
 
 // forecast_lr returns the number of seconds a linear regression predicts the
@@ -302,8 +313,8 @@ func forecast_lr(dps Series, args ...float64) float64 {
 	return -s.Seconds()
 }
 
-func Percentile(e *state, series []*Result, p float64) (r []*Result, err error) {
-	return reduce(e, series, percentile, p)
+func Percentile(e *state, T miniprofiler.Timer, series []*Result, p float64) (r []*Result, err error) {
+	return reduce(e, T, series, percentile, p)
 }
 
 // percentile returns the value at the corresponding percentile between 0 and 1.

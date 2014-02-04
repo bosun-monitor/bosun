@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"runtime"
 
+	"github.com/MiniProfiler/go/miniprofiler"
 	"github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/tsaf/expr/parse"
 )
@@ -31,13 +32,18 @@ func New(expr string) (*Expr, error) {
 
 // Execute applies a parse expression to the specified OpenTSDB host, and
 // returns one result per group.
-func (e *Expr) Execute(host string) (r []*Result, err error) {
+func (e *Expr) Execute(host string, T miniprofiler.Timer) (r []*Result, err error) {
 	defer errRecover(&err)
 	s := &state{
 		e,
 		host,
 	}
-	r = s.walk(e.Tree.Root)
+	if T == nil {
+		T = new(miniprofiler.Profile)
+	}
+	T.Step("expr execute", func(T miniprofiler.Timer) {
+		r = s.walk(e.Tree.Root, T)
+	})
 	return
 }
 
@@ -126,24 +132,24 @@ func union(a, b []*Result) []Union {
 	return u
 }
 
-func (e *state) walk(node parse.Node) []*Result {
+func (e *state) walk(node parse.Node, T miniprofiler.Timer) []*Result {
 	switch node := node.(type) {
 	case *parse.NumberNode:
 		return wrap(node.Float64)
 	case *parse.BinaryNode:
-		return e.walkBinary(node)
+		return e.walkBinary(node, T)
 	case *parse.UnaryNode:
-		return e.walkUnary(node)
+		return e.walkUnary(node, T)
 	case *parse.FuncNode:
-		return e.walkFunc(node)
+		return e.walkFunc(node, T)
 	default:
 		panic(fmt.Errorf("expr: unknown node type"))
 	}
 }
 
-func (e *state) walkBinary(node *parse.BinaryNode) []*Result {
-	ar := e.walk(node.Args[0])
-	br := e.walk(node.Args[1])
+func (e *state) walkBinary(node *parse.BinaryNode, T miniprofiler.Timer) []*Result {
+	ar := e.walk(node.Args[0], T)
+	br := e.walk(node.Args[1], T)
 	var res []*Result
 	u := union(ar, br)
 	for _, v := range u {
@@ -231,8 +237,8 @@ func operate(op string, a, b float64) (r float64) {
 	return
 }
 
-func (e *state) walkUnary(node *parse.UnaryNode) []*Result {
-	a := e.walk(node.Arg)
+func (e *state) walkUnary(node *parse.UnaryNode, T miniprofiler.Timer) []*Result {
+	a := e.walk(node.Arg, T)
 	for _, r := range a {
 		switch rt := r.Value.(type) {
 		case Number:
@@ -260,7 +266,7 @@ func uoperate(op string, a float64) (r float64) {
 	return
 }
 
-func (e *state) walkFunc(node *parse.FuncNode) []*Result {
+func (e *state) walkFunc(node *parse.FuncNode, T miniprofiler.Timer) []*Result {
 	f := reflect.ValueOf(node.F.F)
 	var in []reflect.Value
 	for _, a := range node.Args {
@@ -271,7 +277,7 @@ func (e *state) walkFunc(node *parse.FuncNode) []*Result {
 		case *parse.NumberNode:
 			v = t.Float64
 		case *parse.FuncNode:
-			v = e.walkFunc(t)
+			v = e.walkFunc(t, T)
 		default:
 			panic(fmt.Errorf("expr: unknown func arg type"))
 		}
@@ -282,7 +288,7 @@ func (e *state) walkFunc(node *parse.FuncNode) []*Result {
 		d := node.F.Defaults[i-ld]
 		in = append(in, reflect.ValueOf(d))
 	}
-	fr := f.Call(append([]reflect.Value{reflect.ValueOf(e)}, in...))
+	fr := f.Call(append([]reflect.Value{reflect.ValueOf(e), reflect.ValueOf(T)}, in...))
 	res := fr[0].Interface().([]*Result)
 	if len(fr) > 1 && !fr[1].IsNil() {
 		err := fr[1].Interface().(error)
