@@ -1,0 +1,18 @@
+<table class="table">
+	<tr>
+		<th>alert</th>
+		<th>status</th>
+		<th>status time</th>
+		<th>touched</th>
+		<th>rule</th>
+		<th>emailed</th>
+	</tr>
+	<tr ng-repeat="(name, status) in schedule.Status" ng-hide="last(status.History).Status == 'normal'">
+		<td ng-bind="name"></td>
+		<td ng-bind="last(status.History).Status"></td>
+		<td ng-bind="last(status.History).Time"></td>
+		<td ng-bind="status.Touched"></td>
+		<td ng-bind="status.Expr"></td>
+		<td ng-bind="status.Emailed"></td>
+	</tr>
+</table>

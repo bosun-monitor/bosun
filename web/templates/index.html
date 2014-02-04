@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html ng-app="tsafApp">
+	<head>
+		<title>TSAF</title>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<link href="/static/css/bootstrap.min.css" rel="stylesheet">
+		<style>
+			.navbar-static-top {
+				margin-bottom: 19px;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="navbar navbar-default navbar-static-top" role="navigation">
+			<div class="container">
+				<div class="navbar-header">
+					<a class="navbar-brand" href="/">TSAF</a>
+				</div>
+				<div class="navbar-collapse collapse">
+					<ul class="nav navbar-nav">
+						<li>
+							<a href="/items">Items</a>
+						</li>
+					</ul>
+				</div>
+			</div>
+		</div>
+
+		<div class="container">
+			<div class="row">
+				<div class="col-lg-12" ng-view>
+				</div>
+			</div>
+		</div>
+		<script src="/static/js/angular.min.js"></script>
+		<script src="/static/js/angular-route.min.js"></script>
+		<script src="/static/js/tsaf.js"></script>
+		<script type="text/javascript" src="https://www.google.com/jsapi"></script>
+		<script type="text/javascript">
+			google.load('visualization', '1.0', {'packages':['corechart']});
+		</script>
+		{{.Includes}}
+	</body>
+</html>

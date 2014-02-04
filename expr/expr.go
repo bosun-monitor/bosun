@@ -1,6 +1,7 @@
 package expr
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"runtime"
@@ -17,6 +18,10 @@ type state struct {
 
 type Expr struct {
 	*parse.Tree
+}
+
+func (e *Expr) MarshalJSON() ([]byte, error) {
+	return json.Marshal(e.String())
 }
 
 func New(expr string) (*Expr, error) {
