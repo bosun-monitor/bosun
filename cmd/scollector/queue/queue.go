@@ -20,7 +20,6 @@ type Queue struct {
 	host  string
 	queue opentsdb.MultiDataPoint
 	c     chan *opentsdb.DataPoint
-	purge time.Time
 }
 
 // Creates and starts a new Queue.
@@ -58,26 +57,7 @@ func (q *Queue) send() {
 		} else {
 			time.Sleep(time.Second)
 		}
-		q.Purge()
 	}
-}
-
-func (q *Queue) Purge() {
-	if time.Now().Before(q.purge) {
-		return
-	}
-	q.purge = time.Now().Add(time.Minute)
-	q.Lock()
-	defer q.Unlock()
-	t := time.Now().Add(-time.Minute * 30).Unix()
-	n := make(opentsdb.MultiDataPoint, 0, len(q.queue))
-	for _, d := range q.queue {
-		if d.Timestamp < t {
-			continue
-		}
-		n = append(n, d)
-	}
-	q.queue = n
 }
 
 var qlock sync.Mutex
@@ -96,11 +76,22 @@ func (q *Queue) sendBatch(batch opentsdb.MultiDataPoint) {
 	// Some problem with connecting to the server; retry later.
 	if err != nil {
 		slog.Error(err)
+		t := time.Now().Add(-time.Minute * 30).Unix()
+		old := 0
+		restored := 0
 		for _, dp := range batch {
+			if dp.Timestamp < t {
+				old++
+				continue
+			}
+			restored++
 			q.c <- dp
 		}
+		if old > 0 {
+			slog.Infof("removed %d old records", old)
+		}
 		d := time.Second * 5
-		slog.Infof("restored %d, sleeping %s", len(batch), d)
+		slog.Infof("restored %d, sleeping %s", restored, d)
 		time.Sleep(d)
 		return
 	}
