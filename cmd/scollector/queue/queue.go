@@ -88,32 +88,33 @@ func (q *Queue) sendBatch(batch opentsdb.MultiDataPoint) {
 	slog.Infoln("sending", len(batch))
 	b, err := batch.Json()
 	if err != nil {
-		slog.Infoln(err)
+		slog.Error(err)
 		// bad JSON encoding, just give up
 		return
 	}
 	resp, err := http.Post(q.host, "application/json", bytes.NewReader(b))
 	// Some problem with connecting to the server; retry later.
 	if err != nil {
-		slog.Infoln(err)
-		slog.Infoln("restoring", len(batch))
+		slog.Error(err)
 		for _, dp := range batch {
 			q.c <- dp
 		}
-		time.Sleep(time.Second * 5)
+		d := time.Second * 5
+		slog.Infof("restored %d, sleeping %s", len(batch), d)
+		time.Sleep(d)
 		return
 	}
 	// TSDB didn't like our data. Don't put it back in the queue since it's bad.
 	if resp.StatusCode != http.StatusNoContent {
-		slog.Infoln("RESP ERR", resp.Status)
+		slog.Error(resp.Status)
 		defer resp.Body.Close()
 		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			slog.Infoln("ERR", err)
+			slog.Error(err)
 		}
 		if len(body) > 0 {
-			slog.Infoln("ERR BODY", string(body))
+			slog.Error(string(body))
 		}
-		slog.Infoln("REQ BODY", string(b))
+		slog.Errorln("bad data:", string(b))
 	}
 }
