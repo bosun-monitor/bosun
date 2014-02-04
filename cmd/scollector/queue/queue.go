@@ -41,15 +41,15 @@ func New(host string, c chan *opentsdb.DataPoint) *Queue {
 	return &q
 }
 
-var MAX_PERSEC = 50
+var BatchSize = 50
 
 func (q *Queue) send() {
 	for {
 		if len(q.queue) > 0 {
 			q.Lock()
 			i := len(q.queue)
-			if i > MAX_PERSEC {
-				i = MAX_PERSEC
+			if i > BatchSize {
+				i = BatchSize
 			}
 			sending := q.queue[:i]
 			q.queue = q.queue[i:]

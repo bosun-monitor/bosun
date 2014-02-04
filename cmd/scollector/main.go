@@ -32,7 +32,7 @@ func main() {
 		collectors.InitPrograms(*colDir)
 	}
 	if *batchSize > 0 {
-		queue.MAX_PERSEC = *batchSize
+		queue.BatchSize = *batchSize
 	}
 	c := collectors.Search(*flagFilter)
 	u := parseHost()
