@@ -21,22 +21,15 @@ tsafApp.config([
 
 var tsafControllers = angular.module('tsafControllers', []);
 
-var Alert = (function () {
-    function Alert() {
-    }
-    return Alert;
-})();
-
-var Schedule = (function () {
-    function Schedule() {
-    }
-    return Schedule;
-})();
 
 tsafControllers.controller('DashboardCtrl', [
     '$scope', '$http', function ($scope, $http) {
         $http.get('/api/alerts').success(function (data) {
+            $scope.schedule = data;
         });
+        $scope.last = function (history) {
+            return history[history.length - 1];
+        };
     }]);
 
 tsafControllers.controller('ItemsCtrl', [
