@@ -17,6 +17,10 @@ tsafApp.config(['$routeProvider', '$locationProvider', function($routeProvider: 
 			templateUrl: 'partials/items.html',
 			controller: 'ItemsCtrl',
 		}).
+		when('/expr', {
+			templateUrl: 'partials/expr.html',
+			controller: 'ExprCtrl',
+		}).
 		otherwise({
 			redirectTo: '/',
 		});
@@ -58,14 +62,7 @@ class Status {
 
 interface IDashboardScope extends ng.IScope {
 	schedule: any;
-
 	last: (history: any[]) => any;
-}
-
-interface IItemsScope extends ng.IScope {
-	metrics: string[];
-	hosts: string[];
-	status: string;
 }
 
 tsafControllers.controller('DashboardCtrl', ['$scope', '$http', function($scope: IDashboardScope, $http: ng.IHttpService) {
@@ -76,6 +73,12 @@ tsafControllers.controller('DashboardCtrl', ['$scope', '$http', function($scope:
 		return history[history.length-1];
 	}
 }]);
+
+interface IItemsScope extends ng.IScope {
+	metrics: string[];
+	hosts: string[];
+	status: string;
+}
 
 tsafControllers.controller('ItemsCtrl', ['$scope', '$http', function($scope: IItemsScope, $http: ng.IHttpService){
 	$http.get('/api/metric')
@@ -92,4 +95,34 @@ tsafControllers.controller('ItemsCtrl', ['$scope', '$http', function($scope: IIt
 		.error(function (error) {
 			$scope.status = 'Unable to fetch hosts: ' + error;
 		});
+}]);
+
+interface IExprScope extends ng.IScope {
+	expr: string;
+	eval: () => void;
+	error: string;
+	running: string;
+	result: any;
+	json: (v: any) => string;
+}
+
+tsafControllers.controller('ExprCtrl', ['$scope', '$http', function($scope: IExprScope, $http: ng.IHttpService){
+	$scope.expr = 'avg(q("avg:os.cpu{host=*}", "5m"))';
+	$scope.eval = () => {
+		$scope.error = '';
+		$scope.running = $scope.expr;
+		$scope.result = {};
+		$http.get('/api/expr?q=' + encodeURIComponent($scope.expr))
+			.success((data) => {
+				$scope.result = data;
+				$scope.running = '';
+			})
+			.error((error) => {
+				$scope.error = error;
+				$scope.running = '';
+			});
+	};
+	$scope.json = (v: any) => {
+		return JSON.stringify(v, null, '  ');
+	};
 }]);
