@@ -16,6 +16,8 @@ type state struct {
 	host string
 }
 
+var ErrUnknownOp = fmt.Errorf("expr: unknown op type")
+
 type Expr struct {
 	*parse.Tree
 }
@@ -182,10 +184,10 @@ func (e *state) walkBinary(node *parse.BinaryNode, T miniprofiler.Timer) []*Resu
 				}
 				r = s
 			default:
-				panic(fmt.Errorf("expr: unknown op type"))
+				panic(ErrUnknownOp)
 			}
 		default:
-			panic(fmt.Errorf("expr: unknown op type"))
+			panic(ErrUnknownOp)
 		}
 		res = append(res, &Result{
 			Value: r,
@@ -272,7 +274,7 @@ func (e *state) walkUnary(node *parse.UnaryNode, T miniprofiler.Timer) []*Result
 			}
 			r.Value = s
 		default:
-			panic(fmt.Errorf("expr: unknown op type"))
+			panic(ErrUnknownOp)
 		}
 	}
 	return a
