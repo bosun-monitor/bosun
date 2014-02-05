@@ -165,10 +165,10 @@ func (e *state) walkBinary(node *parse.BinaryNode, T miniprofiler.Timer) []*Resu
 			case Number:
 				r = Number(operate(node.OpStr, float64(at), float64(bt)))
 			default:
-				panic("expr: unknown op type")
+				panic(fmt.Errorf("expr: unknown op type"))
 			}
 		default:
-			panic("expr: unknown op type")
+			panic(fmt.Errorf("expr: unknown op type"))
 		}
 		res = append(res, &Result{
 			Value: r,
