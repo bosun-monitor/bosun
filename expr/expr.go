@@ -164,6 +164,23 @@ func (e *state) walkBinary(node *parse.BinaryNode, T miniprofiler.Timer) []*Resu
 			switch bt := v.B.(type) {
 			case Number:
 				r = Number(operate(node.OpStr, float64(at), float64(bt)))
+			case Series:
+				s := make(Series)
+				for k, v := range bt {
+					s[k] = opentsdb.Point(operate(node.OpStr, float64(at), float64(v)))
+				}
+				r = s
+			default:
+				panic(ErrUnknownOp)
+			}
+		case Series:
+			switch bt := v.B.(type) {
+			case Number:
+				s := make(Series)
+				for k, v := range at {
+					s[k] = opentsdb.Point(operate(node.OpStr, float64(v), float64(bt)))
+				}
+				r = s
 			default:
 				panic(fmt.Errorf("expr: unknown op type"))
 			}
@@ -248,6 +265,12 @@ func (e *state) walkUnary(node *parse.UnaryNode, T miniprofiler.Timer) []*Result
 		switch rt := r.Value.(type) {
 		case Number:
 			r.Value = Number(uoperate(node.OpStr, float64(rt)))
+		case Series:
+			s := make(Series)
+			for k, v := range rt {
+				s[k] = opentsdb.Point(uoperate(node.OpStr, float64(v)))
+			}
+			r.Value = s
 		default:
 			panic(fmt.Errorf("expr: unknown op type"))
 		}

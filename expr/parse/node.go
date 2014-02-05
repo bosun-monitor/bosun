@@ -232,28 +232,15 @@ func (b *BinaryNode) StringAST() string {
 func (b *BinaryNode) Check() error {
 	t1 := b.Args[0].Return()
 	t2 := b.Args[1].Return()
-	/* valid:
-	n, n
-	n, s
-	*/
-	if t2 == TYPE_NUMBER {
-		t1, t2 = t2, t1
-	}
-	if t1 != TYPE_NUMBER {
+	if t1 == TYPE_SERIES && t2 == TYPE_SERIES {
 		return fmt.Errorf("parse: type error in %s: at least one side must be a number", b)
+	}
+	if t1 != TYPE_NUMBER && t1 != TYPE_SERIES {
+		return fmt.Errorf("parse: type error in %s", b)
 	}
 	if t2 != TYPE_NUMBER && t2 != TYPE_SERIES {
 		return fmt.Errorf("parse: type error in %s", b)
 	}
-	switch b.Operator.typ {
-	case itemPlus, itemMinus, itemMult, itemDiv:
-		// ignore
-	default:
-		if t2 != TYPE_NUMBER {
-			return fmt.Errorf("parse: type error in %s: both sides must be numbers", b)
-		}
-	}
-
 	if err := b.Args[0].Check(); err != nil {
 		return err
 	}
@@ -284,7 +271,7 @@ func (u *UnaryNode) StringAST() string {
 }
 
 func (u *UnaryNode) Check() error {
-	if t := u.Arg.Return(); t != TYPE_NUMBER {
+	if t := u.Arg.Return(); t != TYPE_NUMBER && t != TYPE_SERIES {
 		return fmt.Errorf("parse: type error in %s, expected %s, got %s", u, "number", t)
 	}
 	return u.Arg.Check()

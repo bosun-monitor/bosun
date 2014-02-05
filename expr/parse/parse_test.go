@@ -103,6 +103,8 @@ var parseTests = []parseTest{
 	{"expression with func", `avg(q("q"), "1h")>=0.7&&avg(q("q"))!=3-0x8`, noError,
 		`avg(q("q"), "1h") >= 0.7 && avg(q("q")) != 3 - 0x8`},
 	{"func types", `avg(q("q"))>avg(q("q"))+avg(q("q"))`, noError, `avg(q("q")) > avg(q("q")) + avg(q("q"))`},
+	{"series compare", `band(q("q"))>0`, noError, `band(q("q")) > 0`},
+	{"unary series", `!band(q("q"))`, noError, `!band(q("q"))`},
 	// Errors.
 	{"empty", "", hasError, ""},
 	{"unclosed function", "avg(", hasError, ""},
@@ -110,8 +112,6 @@ var parseTests = []parseTest{
 	{"bad type", `band(q("q"), "1h", "1m", "8")`, hasError, ""},
 	{"wrong number args", `avg(q("q"), "1m", 1)`, hasError, ""},
 	{"2 series math", `band(q("q"))+band(q("q"))`, hasError, ""},
-	{"series compare", `band(q("q"))>0`, hasError, ""},
-	{"unary series", `!band(q("q"))`, hasError, ""},
 }
 
 func TestParse(t *testing.T) {

@@ -57,7 +57,7 @@ func TestExprSimple(t *testing.T) {
 const TSDB_HOST = "ny-devtsdb04:4242"
 
 func TestExprQuery(t *testing.T) {
-	e, err := New(`avg(q("avg:proc.stat.cpu{host=*,type=idle}")) > avg(q("avg:proc.stat.cpu{host=*}", "5m"))`)
+	e, err := New(`-q("avg:os.cpu{host=ny-lb05.ds.stackexchange.com}", "1m")`)
 	if err != nil {
 		t.Fatal(err)
 	}
