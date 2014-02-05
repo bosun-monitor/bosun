@@ -30,13 +30,11 @@
 			<tbody>
 				<tr ng-repeat="r in result">
 					<td>
-						<ul class="list-unstyled">
-							<li>{</li>
-							<li ng-repeat="(k, v) in r.Group">
-								{{k}}={{v}}<span ng-hide="$last">,</span>
-							</li>
-							<li>}</li>
-						</ul>
+						{
+						<span ng-repeat="(k, v) in r.Group">
+							{{k}}={{v}}<span ng-hide="$last">,</span>
+						</span>
+						}
 					</td>
 					<td>
 						<pre ng-bind="json(r.Value)"></pre>
