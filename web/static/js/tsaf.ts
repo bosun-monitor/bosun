@@ -213,6 +213,7 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', function($scope: IGr
 			.success((data) => {
 				$scope.result = data.table;
 				$scope.running = '';
+				$scope.error = '';
 			})
 			.error((error) => {
 				$scope.error = error;
