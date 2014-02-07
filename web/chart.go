@@ -24,38 +24,25 @@ func Query(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 			ts[tags[i]] = tags[i+1]
 		}
 	}
-	rate, err := strconv.ParseBool(r.FormValue("rate"))
-	if err != nil {
-		log.Println(err)
-		return
-	}
 	oq := opentsdb.Query{
 		Aggregator: r.FormValue("aggregator"),
 		Metric:     r.FormValue("metric"),
 		Tags:       ts,
-		Rate:       rate,
+		Rate:       r.FormValue("rate") == "true",
 		Downsample: r.FormValue("downsample"),
 	}
-	oqs := make([]*opentsdb.Query, 0)
-	oqs = append(oqs, &oq)
 	oreq := opentsdb.Request{
 		Start:   r.FormValue("start"),
 		End:     r.FormValue("end"),
-		Queries: oqs,
+		Queries: []*opentsdb.Query{&oq},
 	}
-
 	tr, err := oreq.Query(tsdbHost)
 	if err != nil {
-		log.Println("Error Making OpenTSDB Query", err)
 		serveError(w, err)
 		return
 	}
 	qr := chart(tr)
-	//log.Println(qr)
-	//tqx := r.FormValue("tqx")
-	//qr.ReqId = strings.Split(tqx, ":")[1]
 	b, _ := json.Marshal(qr)
-	//log.Println(b)
 	w.Write(b)
 }
 
@@ -82,7 +69,6 @@ func Chart(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 	qr.ReqId = strings.Split(tqx, ":")[1]
 
 	b, _ = json.Marshal(qr)
-	log.Println(b)
 	w.Write(b)
 }
 
