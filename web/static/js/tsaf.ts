@@ -5,6 +5,7 @@
 var tsafApp = angular.module('tsafApp', [
 	'ngRoute',
 	'tsafControllers',
+	'mgcrea.ngStrap',
 ]);
 
 tsafApp.config(['$routeProvider', '$locationProvider', function($routeProvider: ng.route.IRouteProvider, $locationProvider: ng.ILocationProvider) {
@@ -136,21 +137,31 @@ interface TagSet {
 	[tagk: string]: string
 }
 
+interface TagV {
+	[tagk: string]: string[]
+}
+
 interface IGraphScope extends ng.IScope {
 	error: string;
+	running: string;
 	metric: string;
+	ds: string;
+	dstime: string;
 	metrics: string[];
+	tagvs: TagV;
 	tagset: TagSet;
 	query: string;
 	rate: string;
 	start: string;
 	end: string;
 	aggregators: string[];
+	dsaggregators: string[];
 	aggregator: string;
 	GetTagKByMetric: () => void;
 	MakeQuery: () => void;
 	TagsAsQs: (ts: TagSet) => string;
 	MakeParam: (k: string, v: string) => string;
+	GetTagVs: (k: string) => void;
 	result: any;
 	dt: any;
 }
@@ -158,17 +169,28 @@ interface IGraphScope extends ng.IScope {
 tsafControllers.controller('GraphCtrl', ['$scope', '$http', function($scope: IGraphScope, $http: ng.IHttpService){
 	//Might be better to get these from OpenTSDB's Aggregator API
 	$scope.aggregators = ["sum", "min", "max", "avg", "dev", "zimsum", "mimmin", "minmax"];
+	$scope.dsaggregators = ["", "sum", "min", "max", "avg", "dev", "zimsum", "mimmin", "minmax"];
+	$scope.ds = "";
 	$scope.aggregator = "sum";
 	$scope.rate = "false"
 	$scope.start = "1h-ago"
-	$scope.metric = "darwin.cpu.idle"
+	//$scope.metric = "darwin.cpu.idle"
+	$http.get('/api/metric')
+		.success(function (data: string[]) {
+			$scope.metrics = data;
+		})
+		.error(function (error) {
+			$scope.error = 'Unable to fetch metrics: ' + error;
+		});
 	$scope.GetTagKByMetric = function() {
 		$scope.tagset = {};
+		$scope.tagvs = {};
 		$http.get('/api/tagk/' + $scope.metric)
 			.success(function (data: string[]) {
 				if (data instanceof Array) {
 					for (var i = 0; i < data.length; i++) {
 						$scope.tagset[data[i]] = "";
+						GetTagVs(data[i]);
 					}
 				}
 			})
@@ -194,6 +216,15 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', function($scope: IGr
 		}
 		return "";
 	}
+	var GetTagVs = function(k: string) {
+		$http.get('/api/tagv/' + k + '/' + $scope.metric)
+			.success(function (data: string[]) {
+				$scope.tagvs[k] = data;
+			})
+			.error(function (error) {
+				$scope.error = 'Unable to fetch metrics: ' + error;
+			});
+	}
 	$scope.MakeQuery = function() {
 		var qs = "";
 		qs += MakeParam("start", $scope.start);
@@ -202,13 +233,19 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', function($scope: IGr
 		qs += MakeParam("metric", $scope.metric);
 		qs += encodeURIComponent("rate") + "=" + encodeURIComponent($scope.rate) + "&";
 		qs += MakeParam("tags", TagsAsQS($scope.tagset));
+		if ($scope.ds && $scope.dstime) {
+			qs += MakeParam("downsample", $scope.dstime + '-' + $scope.ds);
+		}
 		$scope.query = qs;
+		$scope.running = $scope.query;
 		$http.get('/api/query?' + $scope.query)
 			.success((data) => {
 				$scope.result = data.table;
+				$scope.running = '';
 			})
 			.error((error) => {
 				$scope.error = error;
+				$scope.running = '';
 			});
 
 	}

@@ -9,12 +9,16 @@
 					<div class="form-group">
 						<div class="input-group">
 							<span class="input-group-addon">Metric</span>
-							<input type="text" class="form-control" placeholder="Metric" ng-model="metric" ng-change="GetTagKByMetric()">
+							<input type="text" class="form-control" ng-model="metric" ng-options="m for m in metrics" placeholder="Metric" ng-change="GetTagKByMetric()" bs-typeahead>
+							
 						</div>
 					</div>
 
 					<div class="form-group">
-						<select ng-model="aggregator" ng-options="agg for agg in aggregators" class="form-control"></select>
+						<div class="input-group">
+							<span class="input-group-addon">Aggregator</span>
+							<select ng-model="aggregator" ng-options="agg for agg in aggregators" class="form-control"></select>
+						</div>
 					</div>
 
 					<div class="form-group">
@@ -32,21 +36,34 @@
 					</div>
 
 					<div class="form-group">
-						<div class="checkbox">
-							<label><input type="checkbox" ng-model="rate">Rate</label>
-						</div>
-					</div>
-
-					<div class="form-group">
 						<button class="btn btn-default" ng-click="MakeQuery()" class="form-control">Query</button>
 					</div>
 			</div>
-			<div class="col-lg-4">
+			<div class="col-lg-3">
+				<div class="form-group">
+					<div class="input-group">
+						<span class="input-group-addon">Downsample</span>
+						<select ng-model="ds" ng-options="agg for agg in dsaggregators" class="form-control"></select>
+					</div>
+				</div>
+
+				<div class="form-group">
+					<div class="input-group">
+						<span class="input-group-addon">Downsample Time</span>
+						<input type="text" class="form-control" ng-model="dstime">
+					</div>
+				</div>
+
+				<div class="form-group">
+					<button type="button" class="btn btn-default" ng-model="rate" bs-checkbox>Rate</button>
+				</div>
+			</div>
+			<div class="col-lg-5">
 					<div ng-repeat="(k, v) in tagset">
 						<div class="form-group">
 							<div class="input-group">
 								<span class="input-group-addon">{{k}}</span>
-								<input type="text" class="form-control" ng-model="tagset[k]">
+								<input type="text" class="form-control" ng-model="tagset[k]" ng-options="tv for tv in tagvs[k]" bs-typeahead>
 							</div>
 						</div>
 					</div>
@@ -59,12 +76,11 @@
 			<div class="alert alert-danger" ng-bind="error"></div>
 		</div>
 	</div>
-	<div class="row">
-		<div>
-			<p>{{query}}</p>
+	<div class="row" ng-show="running">
+		<div class="col-lg-12">
+			<div class="alert alert-info">Executing: {{running}}</div>
 		</div>
 	</div>
-
 	<div class="row">
 		<div google-chart ng-model="result" class="chart"></div>
 	</div>

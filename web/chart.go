@@ -39,6 +39,7 @@ func Query(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 		Metric:     r.FormValue("metric"),
 		Tags:       ts,
 		Rate:       rate,
+		Downsample: r.FormValue("downsample"),
 	}
 	oqs := make([]*opentsdb.Query, 0)
 	oqs = append(oqs, &oq)
