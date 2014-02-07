@@ -17,6 +17,9 @@ tsafApp.config([
         }).when('/expr', {
             templateUrl: 'partials/expr.html',
             controller: 'ExprCtrl'
+        }).when('/graph', {
+            templateUrl: 'partials/graph.html',
+            controller: 'GraphCtrl'
         }).otherwise({
             redirectTo: '/'
         });
@@ -66,5 +69,54 @@ tsafControllers.controller('ExprCtrl', [
         };
         $scope.json = function (v) {
             return JSON.stringify(v, null, '  ');
+        };
+    }]);
+
+tsafControllers.controller('GraphCtrl', [
+    '$scope', '$http', function ($scope, $http) {
+        //Might be better to get these from OpenTSDB's Aggregator API
+        $scope.aggregators = ["sum", "min", "max", "avg", "dev", "zimsum", "mimmin", "minmax"];
+        $scope.aggregator = "sum";
+        $scope.rate = "false";
+        $scope.start = "1h-ago";
+        $scope.GetTagKByMetric = function () {
+            $scope.tagset = {};
+            $http.get('/api/tagk/' + $scope.metric).success(function (data) {
+                if (data instanceof Array) {
+                    for (var i = 0; i < data.length; i++) {
+                        $scope.tagset[data[i]] = "";
+                    }
+                }
+            }).error(function (error) {
+                $scope.status = 'Unable to fetch metrics: ' + error;
+            });
+        };
+        var TagsAsQS = function (ts) {
+            var qts = new Array();
+            for (var key in $scope.tagset) {
+                if ($scope.tagset.hasOwnProperty(key)) {
+                    if ($scope.tagset[key] != "") {
+                        qts.push(key);
+                        qts.push($scope.tagset[key]);
+                    }
+                }
+            }
+            return qts.join();
+        };
+        var MakeParam = function (k, v) {
+            if (v) {
+                return encodeURIComponent(k) + "=" + encodeURIComponent(v) + "&";
+            }
+            return "";
+        };
+        $scope.MakeQuery = function () {
+            var qs = "";
+            qs += MakeParam("start", $scope.start);
+            qs += MakeParam("end", $scope.end);
+            qs += MakeParam("aggregator", $scope.aggregator);
+            qs += MakeParam("metric", $scope.metric);
+            qs += MakeParam("rate", $scope.rate);
+            qs += MakeParam("tags", TagsAsQS($scope.tagset));
+            $scope.query = qs;
         };
     }]);

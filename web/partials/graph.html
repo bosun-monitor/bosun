@@ -1,0 +1,59 @@
+<div class="container">
+	<form role="form">
+		<div class="row">
+			<div class="col-lg-4">
+				<fieldset class="form-horizontal">
+					<div class="form-group">
+						<div class="input-group">
+							<span class="input-group-addon">Metric</span>
+							<input type="text" class="form-control" placeholder="Metric" ng-model="metric" ng-change="GetTagKByMetric()">
+						</div>
+					</div>
+
+					<div class="form-group">
+						<select ng-model="aggregator" ng-options="agg for agg in aggregators" class="form-control"></select>
+					</div>
+
+					<div class="form-group">
+						<div class="input-group">
+							<span class="input-group-addon">Start Time</span>
+							<input type="text" class="form-control" ng-model="start">
+						</div>
+					</div>
+
+					<div class="form-group">
+						<div class="input-group">
+							<span class="input-group-addon">End Time</span>
+							<input type="text" class="form-control" ng-model="end">
+						</div>
+					</div>
+
+					<div class="form-group">
+						<div class="checkbox">
+							<label><input type="checkbox" ng-model="rate">Rate</label>
+						</div>
+					</div>
+
+					<div class="form-group">
+						<button class="btn btn-default" ng-click="MakeQuery()" class="form-control">Query</button>
+					</div>
+			</div>
+			<div class="col-lg-4">
+					<div ng-repeat="(k, v) in tagset">
+						<div class="form-group">
+							<div class="input-group">
+								<span class="input-group-addon">{{k}}</span>
+								<input type="text" class="form-control" ng-model="tagset[k]">
+							</div>
+						</div>
+					</div>
+				</fieldset>
+			</div>
+		</div>
+	</form>
+	<div class="row">
+		<div>
+			<p>{{query}}</p>
+		</div>
+	</div>
+</div>
