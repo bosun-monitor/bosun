@@ -1,3 +1,6 @@
+<style type="text/css">
+             .chart {height:600px;}
+         </style>
 <div class="container">
 	<form role="form">
 		<div class="row">
@@ -51,9 +54,18 @@
 			</div>
 		</div>
 	</form>
+	<div class="row" ng-show="error">
+		<div class="col-lg-12">
+			<div class="alert alert-danger" ng-bind="error"></div>
+		</div>
+	</div>
 	<div class="row">
 		<div>
 			<p>{{query}}</p>
 		</div>
+	</div>
+
+	<div class="row">
+		<div google-chart ng-model="result" class="chart"></div>
 	</div>
 </div>

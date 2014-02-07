@@ -34,6 +34,7 @@ func Listen(addr, dir, host string) error {
 	}
 	router.Handle("/api/alerts", miniprofiler.NewHandler(Alerts))
 	router.Handle("/api/chart", miniprofiler.NewHandler(Chart))
+	router.Handle("/api/query", miniprofiler.NewHandler(Query))
 	router.Handle("/api/metric", miniprofiler.NewHandler(UniqueMetrics))
 	router.Handle("/api/metric/{tagk}/{tagv}", miniprofiler.NewHandler(MetricsByTagPair))
 	router.Handle("/api/tagk/{metric}", miniprofiler.NewHandler(TagKeysByMetric))

@@ -16,6 +16,53 @@ import (
 	"github.com/StackExchange/scollector/opentsdb"
 )
 
+func Query(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
+	err := r.ParseForm()
+	if err != nil {
+		log.Println("Couldn't Parse Query String", err)
+		return
+	}
+	ts := make(opentsdb.TagSet)
+	tags := strings.Split(r.FormValue("tags"), ",")
+	for i := 0; i < len(tags); i += 2 {
+		if i+1 < len(tags) {
+			ts[tags[i]] = tags[i+1]
+		}
+	}
+	rate, err := strconv.ParseBool(r.FormValue("rate"))
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	oq := opentsdb.Query{
+		Aggregator: r.FormValue("aggregator"),
+		Metric:     r.FormValue("metric"),
+		Tags:       ts,
+		Rate:       rate,
+	}
+	oqs := make([]*opentsdb.Query, 0)
+	oqs = append(oqs, &oq)
+	oreq := opentsdb.Request{
+		Start:   r.FormValue("start"),
+		End:     r.FormValue("end"),
+		Queries: oqs,
+	}
+
+	tr, err := oreq.Query(tsdbHost)
+	if err != nil {
+		log.Println("Error Making OpenTSDB Query", err)
+		serveError(w, err)
+		return
+	}
+	qr := chart(tr)
+	//log.Println(qr)
+	//tqx := r.FormValue("tqx")
+	//qr.ReqId = strings.Split(tqx, ":")[1]
+	b, _ := json.Marshal(qr)
+	//log.Println(b)
+	w.Write(b)
+}
+
 func Chart(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 	q := &url.URL{
 		Scheme:   "http",
@@ -39,6 +86,7 @@ func Chart(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 	qr.ReqId = strings.Split(tqx, ":")[1]
 
 	b, _ = json.Marshal(qr)
+	log.Println(b)
 	w.Write(b)
 }
 

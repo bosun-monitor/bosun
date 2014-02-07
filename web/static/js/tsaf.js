@@ -1,5 +1,6 @@
 /// <reference path="angular.d.ts" />
 /// <reference path="angular-route.d.ts" />
+/// <reference path="google.visualization.d.ts" />
 var tsafApp = angular.module('tsafApp', [
     'ngRoute',
     'tsafControllers'
@@ -79,6 +80,7 @@ tsafControllers.controller('GraphCtrl', [
         $scope.aggregator = "sum";
         $scope.rate = "false";
         $scope.start = "1h-ago";
+        $scope.metric = "darwin.cpu.idle";
         $scope.GetTagKByMetric = function () {
             $scope.tagset = {};
             $http.get('/api/tagk/' + $scope.metric).success(function (data) {
@@ -88,7 +90,7 @@ tsafControllers.controller('GraphCtrl', [
                     }
                 }
             }).error(function (error) {
-                $scope.status = 'Unable to fetch metrics: ' + error;
+                $scope.error = 'Unable to fetch metrics: ' + error;
             });
         };
         var TagsAsQS = function (ts) {
@@ -115,8 +117,30 @@ tsafControllers.controller('GraphCtrl', [
             qs += MakeParam("end", $scope.end);
             qs += MakeParam("aggregator", $scope.aggregator);
             qs += MakeParam("metric", $scope.metric);
-            qs += MakeParam("rate", $scope.rate);
+            qs += encodeURIComponent("rate") + "=" + encodeURIComponent($scope.rate) + "&";
             qs += MakeParam("tags", TagsAsQS($scope.tagset));
             $scope.query = qs;
+            $http.get('/api/query?' + $scope.query).success(function (data) {
+                $scope.result = data.table;
+            }).error(function (error) {
+                $scope.error = error;
+            });
         };
     }]);
+
+tsafApp.directive("googleChart", function () {
+    return {
+        restrict: "A",
+        link: function (scope, elem, attrs) {
+            var chart;
+            var dt;
+            chart = new google.visualization.LineChart(elem[0]);
+            scope.$watch(attrs.ngModel, function (v, old_v) {
+                if (v != old_v) {
+                    dt = new google.visualization.DataTable(v);
+                    chart.draw(dt);
+                }
+            });
+        }
+    };
+});

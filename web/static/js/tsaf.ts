@@ -1,5 +1,6 @@
 /// <reference path="angular.d.ts" />
 /// <reference path="angular-route.d.ts" />
+/// <reference path="google.visualization.d.ts" />
 
 var tsafApp = angular.module('tsafApp', [
 	'ngRoute',
@@ -136,7 +137,7 @@ interface TagSet {
 }
 
 interface IGraphScope extends ng.IScope {
-	status: string;
+	error: string;
 	metric: string;
 	metrics: string[];
 	tagset: TagSet;
@@ -150,6 +151,8 @@ interface IGraphScope extends ng.IScope {
 	MakeQuery: () => void;
 	TagsAsQs: (ts: TagSet) => string;
 	MakeParam: (k: string, v: string) => string;
+	result: any;
+	dt: any;
 }
 
 tsafControllers.controller('GraphCtrl', ['$scope', '$http', function($scope: IGraphScope, $http: ng.IHttpService){
@@ -158,6 +161,7 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', function($scope: IGr
 	$scope.aggregator = "sum";
 	$scope.rate = "false"
 	$scope.start = "1h-ago"
+	$scope.metric = "darwin.cpu.idle"
 	$scope.GetTagKByMetric = function() {
 		$scope.tagset = {};
 		$http.get('/api/tagk/' + $scope.metric)
@@ -169,7 +173,7 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', function($scope: IGr
 				}
 			})
 			.error(function (error) {
-				$scope.status = 'Unable to fetch metrics: ' + error;
+				$scope.error = 'Unable to fetch metrics: ' + error;
 			});
 	}
 	var TagsAsQS = function(ts: TagSet) {
@@ -196,9 +200,34 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', function($scope: IGr
 		qs += MakeParam("end", $scope.end);
 		qs += MakeParam("aggregator", $scope.aggregator);
 		qs += MakeParam("metric", $scope.metric);
-		qs += MakeParam("rate", $scope.rate);
+		qs += encodeURIComponent("rate") + "=" + encodeURIComponent($scope.rate) + "&";
 		qs += MakeParam("tags", TagsAsQS($scope.tagset));
 		$scope.query = qs;
+		$http.get('/api/query?' + $scope.query)
+			.success((data) => {
+				$scope.result = data.table;
+			})
+			.error((error) => {
+				$scope.error = error;
+			});
+
 	}
 }]);
+ 
+tsafApp.directive("googleChart",function(){
+    return {
+        restrict : "A",
+        link: function(scope: IGraphScope, elem: any, attrs: any) {
+        	var chart : any;
+        	var dt : any;
+            chart = new google.visualization.LineChart(elem[0]);
+            scope.$watch(attrs.ngModel, function(v: any, old_v: any) {
+            	if (v != old_v) {
+					dt = new google.visualization.DataTable(v);
+					chart.draw(dt)
+				}
+	        });
+        }
+    }
+});
 
