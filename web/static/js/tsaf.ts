@@ -134,11 +134,11 @@ tsafControllers.controller('ExprCtrl', ['$scope', '$http', function($scope: IExp
 }]);
 
 interface TagSet {
-	[tagk: string]: string
+	[tagk: string]: string;
 }
 
 interface TagV {
-	[tagk: string]: string[]
+	[tagk: string]: string[];
 }
 
 interface IGraphScope extends ng.IScope {
@@ -172,9 +172,8 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', function($scope: IGr
 	$scope.dsaggregators = ["", "sum", "min", "max", "avg", "dev", "zimsum", "mimmin", "minmax"];
 	$scope.ds = "";
 	$scope.aggregator = "sum";
-	$scope.rate = "false"
-	$scope.start = "1h-ago"
-	//$scope.metric = "darwin.cpu.idle"
+	$scope.rate = "false";
+	$scope.start = "1h-ago";
 	$http.get('/api/metric')
 		.success(function (data: string[]) {
 			$scope.metrics = data;
@@ -252,19 +251,19 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', function($scope: IGr
 }]);
  
 tsafApp.directive("googleChart",function(){
-    return {
-        restrict : "A",
-        link: function(scope: IGraphScope, elem: any, attrs: any) {
-        	var chart : any;
-        	var dt : any;
-            chart = new google.visualization.LineChart(elem[0]);
-            scope.$watch(attrs.ngModel, function(v: any, old_v: any) {
-            	if (v != old_v) {
+	return {
+		restrict: "A",
+		link: function(scope: IGraphScope, elem: any, attrs: any) {
+			var chart: any;
+			var dt: any;
+			chart = new google.visualization.LineChart(elem[0]);
+			scope.$watch(attrs.ngModel, function(v: any, old_v: any) {
+				if (v != old_v) {
 					dt = new google.visualization.DataTable(v);
 					chart.draw(dt)
 				}
 	        });
-        }
-    }
+		}
+	}
 });
 
