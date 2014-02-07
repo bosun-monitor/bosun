@@ -2,13 +2,13 @@
 	.chart {height:600px;}
 </style>
 <div class="row">
-	<form role="form" class="form-horizontal">
-		<fieldset>
-			<div class="col-lg-4">
+	<form role="form">
+		<div class="col-lg-4">
+			<fieldset>
 				<div class="form-group">
 					<div class="input-group">
 						<span class="input-group-addon">Metric</span>
-						<input type="text" class="form-control" ng-model="metric" ng-options="m for m in metrics" placeholder="Metric" ng-change="GetTagKByMetric()" bs-typeahead>
+						<input type="text" class="form-control" ng-model="metric" ng-options="m for m in metrics" placeholder="Metric" ng-change="GetTagKByMetric()" limit="30" bs-typeahead>
 					</div>
 				</div>
 				<div class="form-group">
@@ -32,39 +32,38 @@
 				<div class="form-group">
 					<button class="btn btn-default" ng-click="MakeQuery()" class="form-control">Query</button>
 				</div>
+			</fieldset>
+		</div>
+		<div class="col-lg-3">
+			<div class="form-group">
+				<div class="input-group">
+					<span class="input-group-addon">Downsample</span>
+					<select ng-model="ds" ng-options="agg for agg in dsaggregators" class="form-control"></select>
+				</div>
 			</div>
-		</fieldset>
-		<fieldset>
-			<div class="col-lg-3">
+			<div class="form-group">
+				<div class="input-group">
+					<span class="input-group-addon">Downsample Time</span>
+					<input type="text" class="form-control" ng-model="dstime">
+				</div>
+			</div>
+			<div class="form-group">
+				<div class="checkbox">
+					<label><input type="checkbox" ng-model="rate">Rate</label>
+				</div>
+			</div>
+		</div>
+		<div class="col-lg-5">
+			<div ng-repeat="(k, v) in tagset">
 				<div class="form-group">
 					<div class="input-group">
-						<span class="input-group-addon">Downsample</span>
-						<select ng-model="ds" ng-options="agg for agg in dsaggregators" class="form-control"></select>
-					</div>
-				</div>
-				<div class="form-group">
-					<div class="input-group">
-						<span class="input-group-addon">Downsample Time</span>
-						<input type="text" class="form-control" ng-model="dstime">
-					</div>
-				</div>
-				<div class="form-group">
-					<button type="button" class="btn btn-default" ng-model="rate" bs-checkbox>Rate</button>
-				</div>
-			</div>
-		</fieldset>
-		<fieldset>
-			<div class="col-lg-5">
-				<div ng-repeat="(k, v) in tagset">
-					<div class="form-group">
-						<div class="input-group">
-							<span class="input-group-addon">{{k}}</span>
-							<input type="text" class="form-control" ng-model="tagset[k]" ng-options="tv for tv in tagvs[k]" bs-typeahead>
-						</div>
+						<span class="input-group-addon">{{k}}</span>
+						<input type="text" class="form-control" ng-model="tagset[k]" ng-options="tv for tv in tagvs[k]" bs-typeahead>
 					</div>
 				</div>
 			</div>
-		</fieldset>
+			
+		</div>
 	</form>
 </div>
 <div class="row" ng-show="error">
