@@ -293,8 +293,20 @@ func (r Request) String() string {
 	return v.Encode()
 }
 
+type RequestError struct {
+	Err struct {
+		Code    int    `json:"code"`
+		Message string `json:"message"`
+		Details string `json:"details"`
+	} `json:"error"`
+}
+
+func (r *RequestError) Error() string {
+	return fmt.Sprintf("tsdb: %s", r.Err.Message)
+}
+
 // Query performs a v2 OpenTSDB request to the given host. host should be of the
-// form hostname:port.
+// form hostname:port. Can return a RequestError.
 func (r Request) Query(host string) (ResponseSet, error) {
 	u := url.URL{
 		Scheme: "http",
@@ -313,7 +325,11 @@ func (r Request) Query(host string) (ResponseSet, error) {
 	if resp.StatusCode != http.StatusOK {
 		b, err = ioutil.ReadAll(resp.Body)
 		fmt.Println(string(b))
-		return nil, fmt.Errorf("tsdb: %s", resp.Status)
+		e := RequestError{}
+		if err := json.Unmarshal(b, &e); err == nil {
+			return nil, &e
+		}
+		return nil, fmt.Errorf("tsdb: %s", b)
 	}
 	b, err = ioutil.ReadAll(resp.Body)
 	if err != nil {
