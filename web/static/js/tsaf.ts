@@ -99,30 +99,34 @@ tsafControllers.controller('ItemsCtrl', ['$scope', '$http', function($scope: IIt
 
 interface IExprScope extends ng.IScope {
 	expr: string;
-	eval: () => void;
 	error: string;
 	running: string;
 	result: any;
+	set: () => void;
 	json: (v: any) => string;
 }
 
-tsafControllers.controller('ExprCtrl', ['$scope', '$http', function($scope: IExprScope, $http: ng.IHttpService){
-	$scope.expr = 'avg(q("avg:os.cpu{host=*}", "5m"))';
-	$scope.eval = () => {
-		$scope.error = '';
-		$scope.running = $scope.expr;
-		$scope.result = {};
-		$http.get('/api/expr?q=' + encodeURIComponent($scope.expr))
-			.success((data) => {
-				$scope.result = data;
-				$scope.running = '';
-			})
-			.error((error) => {
-				$scope.error = error;
-				$scope.running = '';
-			});
-	};
+tsafControllers.controller('ExprCtrl', ['$scope', '$http', '$location', function($scope: IExprScope, $http: ng.IHttpService, $location: ng.ILocationService){
+	var current: string = $location.hash();
+	if (!current) {
+		$location.hash('q("avg:os.cpu{host=*}", "5m") * -1');
+		return;
+	}
+	$scope.expr = current;
+	$scope.running = current;
+	$http.get('/api/expr?q=' + encodeURIComponent(current))
+		.success((data) => {
+			$scope.result = data;
+			$scope.running = '';
+		})
+		.error((error) => {
+			$scope.error = error;
+			$scope.running = '';
+		});
 	$scope.json = (v: any) => {
 		return JSON.stringify(v, null, '  ');
+	};
+	$scope.set = () => {
+		$location.hash($scope.expr);
 	};
 }]);

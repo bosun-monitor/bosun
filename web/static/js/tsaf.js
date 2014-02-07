@@ -24,7 +24,6 @@ tsafApp.config([
 
 var tsafControllers = angular.module('tsafControllers', []);
 
-
 tsafControllers.controller('DashboardCtrl', [
     '$scope', '$http', function ($scope, $http) {
         $http.get('/api/alerts').success(function (data) {
@@ -50,21 +49,25 @@ tsafControllers.controller('ItemsCtrl', [
     }]);
 
 tsafControllers.controller('ExprCtrl', [
-    '$scope', '$http', function ($scope, $http) {
-        $scope.expr = 'avg(q("avg:os.cpu{host=*}", "5m"))';
-        $scope.eval = function () {
-            $scope.error = '';
-            $scope.running = $scope.expr;
-            $scope.result = {};
-            $http.get('/api/expr?q=' + encodeURIComponent($scope.expr)).success(function (data) {
-                $scope.result = data;
-                $scope.running = '';
-            }).error(function (error) {
-                $scope.error = error;
-                $scope.running = '';
-            });
-        };
+    '$scope', '$http', '$location', function ($scope, $http, $location) {
+        var current = $location.hash();
+        if (!current) {
+            $location.hash('q("avg:os.cpu{host=*}", "5m") * -1');
+            return;
+        }
+        $scope.expr = current;
+        $scope.running = current;
+        $http.get('/api/expr?q=' + encodeURIComponent(current)).success(function (data) {
+            $scope.result = data;
+            $scope.running = '';
+        }).error(function (error) {
+            $scope.error = error;
+            $scope.running = '';
+        });
         $scope.json = function (v) {
             return JSON.stringify(v, null, '  ');
+        };
+        $scope.set = function () {
+            $location.hash($scope.expr);
         };
     }]);
