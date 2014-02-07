@@ -17,11 +17,6 @@ import (
 )
 
 func Query(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
-	err := r.ParseForm()
-	if err != nil {
-		log.Println("Couldn't Parse Query String", err)
-		return
-	}
 	ts := make(opentsdb.TagSet)
 	tags := strings.Split(r.FormValue("tags"), ",")
 	for i := 0; i < len(tags); i += 2 {
