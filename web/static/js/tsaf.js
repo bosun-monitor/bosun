@@ -141,11 +141,15 @@ tsafControllers.controller('GraphCtrl', [
             if ($scope.ds && $scope.dstime) {
                 qs += MakeParam("downsample", $scope.dstime + '-' + $scope.ds);
             }
+            qs += MakeParam("counter", $scope.counter);
+            qs += MakeParam("cmax", $scope.cmax);
+            qs += MakeParam("creset", $scope.creset);
             $scope.query = qs;
             $scope.running = $scope.query;
             $http.get('/api/query?' + $scope.query).success(function (data) {
                 $scope.result = data.table;
                 $scope.running = '';
+                $scope.error = '';
             }).error(function (error) {
                 $scope.error = error;
                 $scope.running = '';
