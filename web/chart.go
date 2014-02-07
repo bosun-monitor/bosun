@@ -16,6 +16,36 @@ import (
 	"github.com/StackExchange/scollector/opentsdb"
 )
 
+func Query(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
+	ts := make(opentsdb.TagSet)
+	tags := strings.Split(r.FormValue("tags"), ",")
+	for i := 0; i < len(tags); i += 2 {
+		if i+1 < len(tags) {
+			ts[tags[i]] = tags[i+1]
+		}
+	}
+	oq := opentsdb.Query{
+		Aggregator: r.FormValue("aggregator"),
+		Metric:     r.FormValue("metric"),
+		Tags:       ts,
+		Rate:       r.FormValue("rate") == "true",
+		Downsample: r.FormValue("downsample"),
+	}
+	oreq := opentsdb.Request{
+		Start:   r.FormValue("start"),
+		End:     r.FormValue("end"),
+		Queries: []*opentsdb.Query{&oq},
+	}
+	tr, err := oreq.Query(tsdbHost)
+	if err != nil {
+		serveError(w, err)
+		return
+	}
+	qr := chart(tr)
+	b, _ := json.Marshal(qr)
+	w.Write(b)
+}
+
 func Chart(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 	q := &url.URL{
 		Scheme:   "http",
