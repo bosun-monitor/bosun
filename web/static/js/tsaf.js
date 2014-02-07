@@ -83,8 +83,6 @@ tsafControllers.controller('GraphCtrl', [
         $scope.aggregator = "sum";
         $scope.rate = "false";
         $scope.start = "1h-ago";
-
-        //$scope.metric = "darwin.cpu.idle"
         $http.get('/api/metric').success(function (data) {
             $scope.metrics = data;
         }).error(function (error) {
@@ -104,7 +102,7 @@ tsafControllers.controller('GraphCtrl', [
                 $scope.error = 'Unable to fetch metrics: ' + error;
             });
         };
-        var TagsAsQS = function (ts) {
+        function TagsAsQS(ts) {
             var qts = new Array();
             for (var key in $scope.tagset) {
                 if ($scope.tagset.hasOwnProperty(key)) {
@@ -115,27 +113,27 @@ tsafControllers.controller('GraphCtrl', [
                 }
             }
             return qts.join();
-        };
-        var MakeParam = function (k, v) {
+        }
+        function MakeParam(k, v) {
             if (v) {
                 return encodeURIComponent(k) + "=" + encodeURIComponent(v) + "&";
             }
             return "";
-        };
-        var GetTagVs = function (k) {
+        }
+        function GetTagVs(k) {
             $http.get('/api/tagv/' + k + '/' + $scope.metric).success(function (data) {
                 $scope.tagvs[k] = data;
             }).error(function (error) {
                 $scope.error = 'Unable to fetch metrics: ' + error;
             });
-        };
+        }
         $scope.MakeQuery = function () {
             var qs = "";
             qs += MakeParam("start", $scope.start);
             qs += MakeParam("end", $scope.end);
             qs += MakeParam("aggregator", $scope.aggregator);
             qs += MakeParam("metric", $scope.metric);
-            qs += encodeURIComponent("rate") + "=" + encodeURIComponent($scope.rate) + "&";
+            qs += MakeParam("rate", $scope.rate);
             qs += MakeParam("tags", TagsAsQS($scope.tagset));
             if ($scope.ds && $scope.dstime) {
                 qs += MakeParam("downsample", $scope.dstime + '-' + $scope.ds);
@@ -156,13 +154,11 @@ tsafApp.directive("googleChart", function () {
     return {
         restrict: "A",
         link: function (scope, elem, attrs) {
-            var chart;
-            var dt;
-            chart = new google.visualization.LineChart(elem[0]);
+            var chart = new google.visualization.LineChart(elem[0]);
             scope.$watch(attrs.ngModel, function (v, old_v) {
                 if (v != old_v) {
-                    dt = new google.visualization.DataTable(v);
-                    chart.draw(dt);
+                    var dt = new google.visualization.DataTable(v);
+                    chart.draw(dt, null);
                 }
             });
         }

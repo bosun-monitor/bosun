@@ -197,7 +197,7 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', function($scope: IGr
 				$scope.error = 'Unable to fetch metrics: ' + error;
 			});
 	}
-	var TagsAsQS = function(ts: TagSet) {
+	function TagsAsQS(ts: TagSet) {
 		var qts = new Array<string>();
 		for (var key in $scope.tagset) {
 			if ($scope.tagset.hasOwnProperty(key)) {
@@ -209,13 +209,13 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', function($scope: IGr
 		}
 		return qts.join();
 	}
-	var MakeParam = function(k: string, v: string) {
+	function MakeParam(k: string, v: string) {
 		if (v) {
 			return encodeURIComponent(k) + "=" + encodeURIComponent(v) + "&";
 		}
 		return "";
 	}
-	var GetTagVs = function(k: string) {
+	function GetTagVs(k: string) {
 		$http.get('/api/tagv/' + k + '/' + $scope.metric)
 			.success(function (data: string[]) {
 				$scope.tagvs[k] = data;
@@ -230,7 +230,7 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', function($scope: IGr
 		qs += MakeParam("end", $scope.end);
 		qs += MakeParam("aggregator", $scope.aggregator);
 		qs += MakeParam("metric", $scope.metric);
-		qs += encodeURIComponent("rate") + "=" + encodeURIComponent($scope.rate) + "&";
+		qs += MakeParam("rate", $scope.rate);
 		qs += MakeParam("tags", TagsAsQS($scope.tagset));
 		if ($scope.ds && $scope.dstime) {
 			qs += MakeParam("downsample", $scope.dstime + '-' + $scope.ds);
@@ -246,24 +246,21 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', function($scope: IGr
 				$scope.error = error;
 				$scope.running = '';
 			});
-
 	}
 }]);
  
-tsafApp.directive("googleChart",function(){
+tsafApp.directive("googleChart", function() {
 	return {
 		restrict: "A",
 		link: function(scope: IGraphScope, elem: any, attrs: any) {
-			var chart: any;
-			var dt: any;
-			chart = new google.visualization.LineChart(elem[0]);
+			var chart = new google.visualization.LineChart(elem[0]);
 			scope.$watch(attrs.ngModel, function(v: any, old_v: any) {
 				if (v != old_v) {
-					dt = new google.visualization.DataTable(v);
-					chart.draw(dt)
+					var dt = new google.visualization.DataTable(v);
+					chart.draw(dt, null);
 				}
 	        });
-		}
-	}
+		},
+	};
 });
 
