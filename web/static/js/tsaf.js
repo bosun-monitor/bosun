@@ -199,7 +199,7 @@ tsafControllers.controller('GraphCtrl', [
         $scope.query = qs.join('&');
         $scope.running = $scope.query;
         $http.get('/api/query?' + $scope.query).success(function (data) {
-            $scope.result = data.table;
+            $scope.result = data;
             $scope.running = '';
             $scope.error = '';
         }).error(function (error) {
@@ -208,15 +208,33 @@ tsafControllers.controller('GraphCtrl', [
         });
     }]);
 
-tsafApp.directive("googleChart", function () {
+tsafApp.directive("rickShaw", function () {
     return {
         restrict: "A",
+        scope: {
+            series: '='
+        },
         link: function (scope, elem, attrs) {
-            var chart = new google.visualization.LineChart(elem[0]);
-            scope.$watch(attrs.ngModel, function (v, old_v) {
+            scope.$watch('series', function (v, old_v) {
                 if (v != old_v) {
-                    var dt = new google.visualization.DataTable(v);
-                    chart.draw(dt, null);
+                    elem[0].innerHTML = '';
+                    scope.series[0].color = "blue";
+                    console.log(scope.series);
+                    var graph = new Rickshaw.Graph({
+                        element: elem[0],
+                        //width: 300,
+                        //height: 200,
+                        series: scope.series
+                    });
+                    graph.render();
+                    var hoverDetail = new Rickshaw.Graph.HoverDetail({
+                        graph: graph
+                    });
+
+                    var legend = new Rickshaw.Graph.Legend({
+                        graph: graph,
+                        element: elem.find('.legend')[0]
+                    });
                 }
             });
         }
