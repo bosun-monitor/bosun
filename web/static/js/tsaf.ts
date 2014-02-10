@@ -139,7 +139,7 @@ interface IGraphScope extends ng.IScope {
 	tagvs: TagV;
 	tagset: TagSet;
 	query: string;
-	rate: string;
+	rate: boolean;
 	counter: string;
 	cmax: string;
 	creset: string;
@@ -158,12 +158,11 @@ interface IGraphScope extends ng.IScope {
 }
 
 tsafControllers.controller('GraphCtrl', ['$scope', '$http', function($scope: IGraphScope, $http: ng.IHttpService){
-	//Might be better to get these from OpenTSDB's Aggregator API
 	$scope.aggregators = ["sum", "min", "max", "avg", "dev", "zimsum", "mimmin", "minmax"];
 	$scope.dsaggregators = ["", "sum", "min", "max", "avg", "dev", "zimsum", "mimmin", "minmax"];
 	$scope.ds = "";
 	$scope.aggregator = "sum";
-	$scope.rate = "false";
+	$scope.rate = false;
 	$scope.start = "1h-ago";
 	$http.get('/api/metric')
 		.success(function (data: string[]) {
@@ -200,11 +199,10 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', function($scope: IGr
 		}
 		return qts.join();
 	}
-	function MakeParam(k: string, v: string) {
+	function MakeParam(qs: string[], k: string, v: string) {
 		if (v) {
-			return encodeURIComponent(k) + "=" + encodeURIComponent(v) + "&";
+			qs.push(encodeURIComponent(k) + "=" + encodeURIComponent(v));
 		}
-		return "";
 	}
 	function GetTagVs(k: string) {
 		$http.get('/api/tagv/' + k + '/' + $scope.metric)
@@ -216,20 +214,20 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', function($scope: IGr
 			});
 	}
 	$scope.MakeQuery = function() {
-		var qs = "";
-		qs += MakeParam("start", $scope.start);
-		qs += MakeParam("end", $scope.end);
-		qs += MakeParam("aggregator", $scope.aggregator);
-		qs += MakeParam("metric", $scope.metric);
-		qs += MakeParam("rate", $scope.rate);
-		qs += MakeParam("tags", TagsAsQS($scope.tagset));
+		var qs: string[] = [];
+		MakeParam(qs, "start", $scope.start);
+		MakeParam(qs, "end", $scope.end);
+		MakeParam(qs, "aggregator", $scope.aggregator);
+		MakeParam(qs, "metric", $scope.metric);
+		MakeParam(qs, "rate", $scope.rate.toString());
+		MakeParam(qs, "tags", TagsAsQS($scope.tagset));
 		if ($scope.ds && $scope.dstime) {
-			qs += MakeParam("downsample", $scope.dstime + '-' + $scope.ds);
+			MakeParam(qs, "downsample", $scope.dstime + '-' + $scope.ds);
 		}
-		qs += MakeParam("counter", $scope.counter);
-		qs += MakeParam("cmax", $scope.cmax);
-		qs += MakeParam("creset", $scope.creset);
-		$scope.query = qs;
+		MakeParam(qs, "counter", $scope.counter);
+		MakeParam(qs, "cmax", $scope.cmax);
+		MakeParam(qs, "creset", $scope.creset);
+		$scope.query = qs.join('&');
 		$scope.running = $scope.query;
 		$http.get('/api/query?' + $scope.query)
 			.success((data) => {
@@ -243,7 +241,7 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', function($scope: IGr
 			});
 	}
 }]);
- 
+
 tsafApp.directive("googleChart", function() {
 	return {
 		restrict: "A",
@@ -258,4 +256,3 @@ tsafApp.directive("googleChart", function() {
 		},
 	};
 });
-
