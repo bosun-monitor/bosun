@@ -8,7 +8,7 @@
 				<div class="form-group">
 					<div class="input-group">
 						<span class="input-group-addon">Metric</span>
-						<input type="text" class="form-control" ng-model="metric" ng-options="m for m in metrics" placeholder="Metric" ng-change="GetTagKByMetric()" limit="30" bs-typeahead>
+						<input type="text" class="form-control" ng-model="metric" ng-options="m for m in metrics" placeholder="Metric" ng-change="GetTagKByMetric()" ng-init="GetTagKByMetric()" limit="30" bs-typeahead>
 					</div>
 				</div>
 				<div class="form-group">
@@ -30,7 +30,7 @@
 					</div>
 				</div>
 				<div class="form-group">
-					<button class="btn btn-default" ng-click="MakeQuery()" class="form-control">Query</button>
+					<button class="btn btn-default" ng-click="Query()" class="form-control">Query</button>
 				</div>
 			</div>
 		</div>
