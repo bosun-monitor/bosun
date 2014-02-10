@@ -59,8 +59,13 @@ func Query(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 		serveError(w, err)
 		return
 	}
-	qr := chart(tr)
-	b, _ := json.Marshal(qr)
+	qr := rickchart(tr)
+
+	b, err := json.Marshal(qr)
+	if err != nil {
+		log.Println("Couldn't Marshal", err)
+	}
+	log.Println(qr)
 	w.Write(b)
 }
 
@@ -88,6 +93,61 @@ func Chart(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 
 	b, _ = json.Marshal(qr)
 	w.Write(b)
+}
+
+func rickchart(r opentsdb.ResponseSet) *[]RickSeries {
+	series := make([]RickSeries, len(r))
+	log.Println(len(r))
+	for i, resp := range r {
+		dps := make([]RickDP, len(resp.DPS))
+		j := 0
+		for k, v := range resp.DPS {
+			ki, err := strconv.ParseInt(k, 10, 64)
+			if err != nil {
+				log.Println(err)
+				return &series
+			}
+			dps[j] = RickDP{
+				X: ki,
+				Y: v,
+			}
+			j += 1
+		}
+		sort.Sort(ByX(dps))
+		series[i].Data = dps
+
+		id := ""
+		for k, v := range resp.Tags {
+			id += fmt.Sprintf("%v:%v ", k, v)
+		}
+		log.Println(id)
+		series[i].Name = id
+	}
+	return &series
+}
+
+type RickSeries struct {
+	Name string   `json:"name"`
+	Data []RickDP `json:"data"`
+}
+
+type RickDP struct {
+	X int64          `json:"x"`
+	Y opentsdb.Point `json:"y"`
+}
+
+type ByX []RickDP
+
+func (a ByX) Len() int {
+	return len(a)
+}
+
+func (a ByX) Swap(i, j int) {
+	a[i], a[j] = a[j], a[i]
+}
+
+func (a ByX) Less(i, j int) bool {
+	return a[i].X < a[j].X
 }
 
 func chart(r opentsdb.ResponseSet) *QueryResponse {
