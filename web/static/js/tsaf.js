@@ -91,27 +91,36 @@ tsafControllers.controller('ExprCtrl', [
     }]);
 
 tsafControllers.controller('GraphCtrl', [
-    '$scope', '$http', function ($scope, $http) {
+    '$scope', '$http', '$location', function ($scope, $http, $location) {
         $scope.aggregators = ["sum", "min", "max", "avg", "dev", "zimsum", "mimmin", "minmax"];
         $scope.dsaggregators = ["", "sum", "min", "max", "avg", "dev", "zimsum", "mimmin", "minmax"];
-        $scope.ds = "";
-        $scope.aggregator = "sum";
-        $scope.rate = false;
-        $scope.start = "1h-ago";
+        var search = $location.search();
+        $scope.ds = search.ds || '';
+        $scope.aggregator = search.aggregator || 'sum';
+        $scope.rate = search.rate == 'true';
+        $scope.start = search.start || '1d-ago';
+        $scope.metric = search.metric;
+        $scope.counter = search.counter == 'true';
+        $scope.dstime = search.dstime;
+        $scope.end = search.end;
+        $scope.cmax = search.cmax;
+        $scope.creset = search.creset;
+        $scope.tagset = search.tags ? JSON.parse(search.tags) : {};
         $http.get('/api/metric').success(function (data) {
             $scope.metrics = data;
         }).error(function (error) {
             $scope.error = 'Unable to fetch metrics: ' + error;
         });
         $scope.GetTagKByMetric = function () {
-            $scope.tagset = {};
+            var tagset = {};
             $scope.tagvs = {};
             $http.get('/api/tagk/' + $scope.metric).success(function (data) {
                 if (data instanceof Array) {
                     for (var i = 0; i < data.length; i++) {
-                        $scope.tagset[data[i]] = "";
+                        tagset[data[i]] = $scope.tagset[data[i]] || '';
                         GetTagVs(data[i]);
                     }
+                    $scope.tagset = tagset;
                 }
             }).error(function (error) {
                 $scope.error = 'Unable to fetch metrics: ' + error;
@@ -141,31 +150,45 @@ tsafControllers.controller('GraphCtrl', [
                 $scope.error = 'Unable to fetch metrics: ' + error;
             });
         }
-        $scope.MakeQuery = function () {
-            var qs = [];
-            MakeParam(qs, "start", $scope.start);
-            MakeParam(qs, "end", $scope.end);
-            MakeParam(qs, "aggregator", $scope.aggregator);
-            MakeParam(qs, "metric", $scope.metric);
-            MakeParam(qs, "rate", $scope.rate.toString());
-            MakeParam(qs, "tags", TagsAsQS($scope.tagset));
-            if ($scope.ds && $scope.dstime) {
-                MakeParam(qs, "downsample", $scope.dstime + '-' + $scope.ds);
-            }
-            MakeParam(qs, "counter", $scope.counter);
-            MakeParam(qs, "cmax", $scope.cmax);
-            MakeParam(qs, "creset", $scope.creset);
-            $scope.query = qs.join('&');
-            $scope.running = $scope.query;
-            $http.get('/api/query?' + $scope.query).success(function (data) {
-                $scope.result = data.table;
-                $scope.running = '';
-                $scope.error = '';
-            }).error(function (error) {
-                $scope.error = error;
-                $scope.running = '';
-            });
+        $scope.Query = function () {
+            $location.search('start', $scope.start || null);
+            $location.search('end', $scope.end || null);
+            $location.search('aggregator', $scope.aggregator);
+            $location.search('metric', $scope.metric);
+            $location.search('rate', $scope.rate.toString());
+            $location.search('ds', $scope.ds || null);
+            $location.search('dstime', $scope.dstime || null);
+            $location.search('counter', $scope.counter.toString());
+            $location.search('cmax', $scope.cmax || null);
+            $location.search('creset', $scope.creset || null);
+            $location.search('tags', JSON.stringify($scope.tagset));
         };
+        if (!$scope.metric) {
+            return;
+        }
+        var qs = [];
+        MakeParam(qs, "start", $scope.start);
+        MakeParam(qs, "end", $scope.end);
+        MakeParam(qs, "aggregator", $scope.aggregator);
+        MakeParam(qs, "metric", $scope.metric);
+        MakeParam(qs, "rate", $scope.rate.toString());
+        MakeParam(qs, "tags", TagsAsQS($scope.tagset));
+        if ($scope.ds && $scope.dstime) {
+            MakeParam(qs, "downsample", $scope.dstime + '-' + $scope.ds);
+        }
+        MakeParam(qs, "counter", $scope.counter.toString());
+        MakeParam(qs, "cmax", $scope.cmax);
+        MakeParam(qs, "creset", $scope.creset);
+        $scope.query = qs.join('&');
+        $scope.running = $scope.query;
+        $http.get('/api/query?' + $scope.query).success(function (data) {
+            $scope.result = data.table;
+            $scope.running = '';
+            $scope.error = '';
+        }).error(function (error) {
+            $scope.error = error;
+            $scope.running = '';
+        });
     }]);
 
 tsafApp.directive("googleChart", function () {
