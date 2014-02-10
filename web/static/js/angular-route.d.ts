@@ -51,6 +51,7 @@ declare module ng.route {
         };
 
         params: any;
+        loadedTemplateUrl: string;
     }
 
     interface IRouteProvider extends IServiceProvider {

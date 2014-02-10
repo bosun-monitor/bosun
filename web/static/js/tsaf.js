@@ -24,6 +24,19 @@ tsafApp.config([
 
 var tsafControllers = angular.module('tsafControllers', []);
 
+tsafControllers.controller('TsafCtrl', [
+    '$scope', '$route', function ($scope, $route) {
+        $scope.active = function (v) {
+            if (!$route.current) {
+                return null;
+            }
+            if ($route.current.loadedTemplateUrl == 'partials/' + v + '.html') {
+                return { active: true };
+            }
+            return null;
+        };
+    }]);
+
 tsafControllers.controller('DashboardCtrl', [
     '$scope', '$http', function ($scope, $http) {
         $http.get('/api/alerts').success(function (data) {

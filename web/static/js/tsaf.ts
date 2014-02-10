@@ -28,6 +28,22 @@ tsafApp.config(['$routeProvider', '$locationProvider', function($routeProvider: 
 
 var tsafControllers = angular.module('tsafControllers', []);
 
+interface ITsafScope extends ng.IScope {
+	active: (v: string) => any;
+}
+
+tsafControllers.controller('TsafCtrl', ['$scope', '$route', function($scope: ITsafScope, $route: ng.route.IRouteService) {
+	$scope.active = (v: string) => {
+		if (!$route.current) {
+			return null;
+		}
+		if ($route.current.loadedTemplateUrl == 'partials/' + v + '.html') {
+			return {active: true};
+		}
+		return null;
+	};
+}]);
+
 interface IDashboardScope extends ng.IScope {
 	schedule: any;
 	last: (history: any[]) => any;
