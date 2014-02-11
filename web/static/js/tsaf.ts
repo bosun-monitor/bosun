@@ -115,7 +115,7 @@ interface IExprScope extends ng.IScope {
 	json: (v: any) => string;
 }
 
-tsafControllers.controller('ExprCtrl', ['$scope', '$http', '$location', function($scope: IExprScope, $http: ng.IHttpService, $location: ng.ILocationService){
+tsafControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route', function($scope: IExprScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService){
 	var current: string = $location.hash();
 	if (!current) {
 		$location.hash('q("avg:os.cpu{host=*}", "5m") * -1');
@@ -137,6 +137,7 @@ tsafControllers.controller('ExprCtrl', ['$scope', '$http', '$location', function
 	};
 	$scope.set = () => {
 		$location.hash($scope.expr);
+		$route.reload();
 	};
 }]);
 
@@ -176,7 +177,7 @@ interface IGraphScope extends ng.IScope {
 	dt: any;
 }
 
-tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', function($scope: IGraphScope, $http: ng.IHttpService, $location: ng.ILocationService){
+tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route', function($scope: IGraphScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService){
 	$scope.aggregators = ["sum", "min", "max", "avg", "dev", "zimsum", "mimmin", "minmax"];
 	$scope.dsaggregators = ["", "sum", "min", "max", "avg", "dev", "zimsum", "mimmin", "minmax"];
 	var search = $location.search();
@@ -253,6 +254,7 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', functio
 		$location.search('cmax', $scope.cmax || null);
 		$location.search('creset', $scope.creset || null);
 		$location.search('tags', JSON.stringify($scope.tagset));
+		$route.reload();
 	};
 	if (!$scope.metric) {
 		return;
