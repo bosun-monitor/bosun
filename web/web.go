@@ -26,7 +26,7 @@ func init() {
 func Listen(addr, dir, host string) error {
 	tsdbHost = host
 	var err error
-	templates, err = template.New("").Funcs(funcs).ParseFiles(
+	templates, err = template.New("").ParseFiles(
 		dir + "/templates/index.html",
 	)
 	if err != nil {
