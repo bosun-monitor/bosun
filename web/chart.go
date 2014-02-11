@@ -59,10 +59,15 @@ func Query(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 		serveError(w, err)
 		return
 	}
-	qr := rickchart(tr)
+	qr, err := rickchart(tr)
+	if err != nil {
+		serveError(w, err)
+		return
+	}
 	b, err := json.Marshal(qr)
 	if err != nil {
-		log.Println("Couldn't Marshal", err)
+		serveError(w, err)
+		return
 	}
 	w.Write(b)
 }
@@ -92,11 +97,11 @@ func Chart(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 	w.Write(b)
 }
 
-func rickchart(r opentsdb.ResponseSet) *[]RickSeries {
+func rickchart(r opentsdb.ResponseSet) ([]*RickSeries, error) {
 	//This currently does a mod operation to limit DPs returned to 3000, will want to refactor this
 	//into something smarter
 	max_dp := 3000
-	series := make([]RickSeries, len(r))
+	series := make([]*RickSeries, len(r))
 	for i, resp := range r {
 		dps_mod := 1
 		if len(resp.DPS) > max_dp {
@@ -108,8 +113,7 @@ func rickchart(r opentsdb.ResponseSet) *[]RickSeries {
 			if j%dps_mod == 0 {
 				ki, err := strconv.ParseInt(k, 10, 64)
 				if err != nil {
-					log.Println(err)
-					return &series
+					return nil, err
 				}
 				dps = append(dps, RickDP{
 					X: ki,
@@ -120,13 +124,13 @@ func rickchart(r opentsdb.ResponseSet) *[]RickSeries {
 		}
 		sort.Sort(ByX(dps))
 		series[i].Data = dps
-		id := ""
+		var id []string
 		for k, v := range resp.Tags {
-			id += fmt.Sprintf("%v:%v ", k, v)
+			id = append(id, fmt.Sprintf("%v=%v", k, v))
 		}
-		series[i].Name = id
+		series[i].Name = strings.Join(id, ",")
 	}
-	return &series
+	return series, nil
 }
 
 type RickSeries struct {
@@ -141,17 +145,9 @@ type RickDP struct {
 
 type ByX []RickDP
 
-func (a ByX) Len() int {
-	return len(a)
-}
-
-func (a ByX) Swap(i, j int) {
-	a[i], a[j] = a[j], a[i]
-}
-
-func (a ByX) Less(i, j int) bool {
-	return a[i].X < a[j].X
-}
+func (a ByX) Len() int           { return len(a) }
+func (a ByX) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a ByX) Less(i, j int) bool { return a[i].X < a[j].X }
 
 func chart(r opentsdb.ResponseSet) *QueryResponse {
 	cols := make([]Col, 1+len(r))
