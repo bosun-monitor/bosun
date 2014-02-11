@@ -3,7 +3,6 @@
 		class="panel"
 		ng-repeat="(name, status) in schedule.Status"
 		ng-class="panel(status.last.Status)"
-		ng-hide="status.last.Status == 'normal'"
 	>
 		<div class="panel-heading">
 			<h4 class="panel-title">

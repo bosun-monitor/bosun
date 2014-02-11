@@ -28,6 +28,9 @@ func (s *Schedule) MarshalJSON() ([]byte, error) {
 		make(map[string]*State),
 	}
 	for k, v := range s.Status {
+		if v.Last().Status < ST_WARN {
+			continue
+		}
 		t.Status[k.String()] = v
 	}
 	return json.Marshal(&t)
