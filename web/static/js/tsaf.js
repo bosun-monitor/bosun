@@ -84,10 +84,10 @@ tsafControllers.controller('ItemsCtrl', [
     }]);
 
 tsafControllers.controller('ExprCtrl', [
-    '$scope', '$http', '$location', function ($scope, $http, $location) {
+    '$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
         var current = $location.hash();
         if (!current) {
-            $location.hash('q("avg:os.cpu{host=*}", "5m") * -1');
+            $location.hash('avg(q("avg:os.cpu{host=ny-devtsdb04.ds.stackexchange.com}", "5m")) > 0.5');
             return;
         }
         $scope.expr = current;
@@ -104,11 +104,12 @@ tsafControllers.controller('ExprCtrl', [
         };
         $scope.set = function () {
             $location.hash($scope.expr);
+            $route.reload();
         };
     }]);
 
 tsafControllers.controller('GraphCtrl', [
-    '$scope', '$http', '$location', function ($scope, $http, $location) {
+    '$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
         $scope.aggregators = ["sum", "min", "max", "avg", "dev", "zimsum", "mimmin", "minmax"];
         $scope.dsaggregators = ["", "sum", "min", "max", "avg", "dev", "zimsum", "mimmin", "minmax"];
         var search = $location.search();
@@ -179,6 +180,7 @@ tsafControllers.controller('GraphCtrl', [
             $location.search('cmax', $scope.cmax || null);
             $location.search('creset', $scope.creset || null);
             $location.search('tags', JSON.stringify($scope.tagset));
+            $route.reload();
         };
         if (!$scope.metric) {
             return;
