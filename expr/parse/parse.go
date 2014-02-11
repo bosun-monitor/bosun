@@ -25,14 +25,9 @@ type Tree struct {
 }
 
 type Func struct {
-	Args     []FuncType
-	Return   FuncType
-	Defaults []interface{}
-	F        interface{}
-}
-
-func (f Func) Optional() int {
-	return len(f.Defaults)
+	Args   []FuncType
+	Return FuncType
+	F      interface{}
 }
 
 type FuncType int

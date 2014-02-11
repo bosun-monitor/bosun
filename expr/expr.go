@@ -331,11 +331,6 @@ func (e *state) walkFunc(node *parse.FuncNode, T miniprofiler.Timer) []*Result {
 		}
 		in = append(in, reflect.ValueOf(v))
 	}
-	ld := len(node.F.Args) - len(node.F.Defaults)
-	for i, l := len(in), len(node.F.Args); i < l; i++ {
-		d := node.F.Defaults[i-ld]
-		in = append(in, reflect.ValueOf(d))
-	}
 	fr := f.Call(append([]reflect.Value{reflect.ValueOf(e), reflect.ValueOf(T)}, in...))
 	res := fr[0].Interface().([]*Result)
 	if len(fr) > 1 && !fr[1].IsNil() {
