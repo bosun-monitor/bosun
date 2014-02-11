@@ -2,7 +2,7 @@
 /// <reference path="angular-route.d.ts" />
 /// <reference path="bootstrap.d.ts" />
 /// <reference path="moment.d.ts" />
-/// <reference path="google.visualization.d.ts" />
+/// <reference path="rickshaw.d.ts" />
 
 var tsafApp = angular.module('tsafApp', [
 	'ngRoute',
@@ -174,6 +174,8 @@ interface IGraphScope extends ng.IScope {
 	GetTagVs: (k: string) => void;
 	result: any;
 	dt: any;
+	series: any;
+	height: number;
 }
 
 tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', function($scope: IGraphScope, $http: ng.IHttpService, $location: ng.ILocationService){
@@ -287,33 +289,48 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', functio
 tsafApp.directive("rickShaw", function() {
 	return {
 		restrict: "A",
+		templateUrl: '/partials/rick_template.html',
 		scope: {
-			series: '='
+			series: '=',
+			height: '=',
 		},
 		link: function(scope: IGraphScope, elem: any, attrs: any) {
 			scope.$watch('series', function(v: any, old_v: any) {
 				if (v != old_v) {
-					elem[0].innerHTML = '';
-					scope.series[0].color =  "blue";
-					console.log(scope.series)
-					var graph = new Rickshaw.Graph( {
-						element: elem[0], 
-						//width: 300, 
-						//height: 200,
-						series: scope.series,
-						//renderer: 'line',
+					var palette: any = new Rickshaw.Color.Palette();
+					angular.forEach(scope.series, function(i) {
+						if (!i.hasOwnProperty('color')) {
+							i.color = palette.color();
+						}
 					});
-		 			graph.render();
-		 			var hoverDetail = new Rickshaw.Graph.HoverDetail( {
-						graph: graph
-					} );
-
-					var legend = new Rickshaw.Graph.Legend( {
+					var graph: any = new Rickshaw.Graph( {
+						element: angular.element('#rgraph')[0],
+						height: scope.height,
+						min: 'auto',
+						series: scope.series,
+						renderer: 'line',
+					});
+					var x_axis: any = new Rickshaw.Graph.Axis.Time({
 						graph: graph,
-						element: elem.find('.legend')[0]
-					} );
-		 		}
-	 		});
+						timeFixture: new Rickshaw.Fixtures.Time(),
+					});
+					var y_axis: any = new Rickshaw.Graph.Axis.Y({
+						graph: graph,
+						orientation: 'left',
+						tickFormat: Rickshaw.Fixtures.Number.formatKMBT,
+						element: angular.element('#y_axis')[0]
+					});
+
+					var hoverDetail: any = new Rickshaw.Graph.HoverDetail( {
+						graph: graph
+					});
+					var legend: any = new Rickshaw.Graph.Legend( {
+						graph: graph,
+						element: angular.element('#legend')[0]
+					});
+					graph.render();
+				}
+			});
 		},
 	};
 });

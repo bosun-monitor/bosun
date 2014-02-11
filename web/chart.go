@@ -60,12 +60,10 @@ func Query(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	qr := rickchart(tr)
-
 	b, err := json.Marshal(qr)
 	if err != nil {
 		log.Println("Couldn't Marshal", err)
 	}
-	log.Println(qr)
 	w.Write(b)
 }
 
@@ -90,37 +88,42 @@ func Chart(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 	qr := chart(tr)
 	tqx := r.FormValue("tqx")
 	qr.ReqId = strings.Split(tqx, ":")[1]
-
 	b, _ = json.Marshal(qr)
 	w.Write(b)
 }
 
 func rickchart(r opentsdb.ResponseSet) *[]RickSeries {
+	//This currently does a mod operation to limit DPs returned to 3000, will want to refactor this
+	//into something smarter
+	max_dp := 3000
 	series := make([]RickSeries, len(r))
-	log.Println(len(r))
 	for i, resp := range r {
-		dps := make([]RickDP, len(resp.DPS))
+		dps_mod := 1
+		if len(resp.DPS) > max_dp {
+			dps_mod = (len(resp.DPS) + max_dp) / max_dp
+		}
+		dps := make([]RickDP, 0)
 		j := 0
 		for k, v := range resp.DPS {
-			ki, err := strconv.ParseInt(k, 10, 64)
-			if err != nil {
-				log.Println(err)
-				return &series
-			}
-			dps[j] = RickDP{
-				X: ki,
-				Y: v,
+			if j%dps_mod == 0 {
+				ki, err := strconv.ParseInt(k, 10, 64)
+				if err != nil {
+					log.Println(err)
+					return &series
+				}
+				dps = append(dps, RickDP{
+					X: ki,
+					Y: v,
+				})
 			}
 			j += 1
 		}
 		sort.Sort(ByX(dps))
 		series[i].Data = dps
-
 		id := ""
 		for k, v := range resp.Tags {
 			id += fmt.Sprintf("%v:%v ", k, v)
 		}
-		log.Println(id)
 		series[i].Name = id
 	}
 	return &series
