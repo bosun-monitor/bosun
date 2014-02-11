@@ -1,5 +1,7 @@
 /// <reference path="angular.d.ts" />
 /// <reference path="angular-route.d.ts" />
+/// <reference path="bootstrap.d.ts" />
+/// <reference path="moment.d.ts" />
 /// <reference path="google.visualization.d.ts" />
 
 var tsafApp = angular.module('tsafApp', [
@@ -52,15 +54,32 @@ tsafControllers.controller('TsafCtrl', ['$scope', '$route', function($scope: ITs
 
 interface IDashboardScope extends ng.IScope {
 	schedule: any;
-	last: (history: any[]) => any;
+	last: any;
+	collapse: (i: number) => void;
+	panel: (status: string) => string;
 }
 
 tsafControllers.controller('DashboardCtrl', ['$scope', '$http', function($scope: IDashboardScope, $http: ng.IHttpService) {
 	$http.get('/api/alerts').success(data => {
+		angular.forEach(data.Status, (v, k) => {
+			v.Touched = moment(v.Touched).utc();
+			angular.forEach(v.History, (v, k) => {
+				v.Time = moment(v.Time).utc();
+			});
+			v.last = v.History[v.History.length-1];
+		});
 		$scope.schedule = data;
 	});
-	$scope.last = (history: any[]) => {
-		return history[history.length-1];
+	$scope.collapse = (i: number) => {
+		$('#collapse' + i).collapse('toggle');
+	};
+	$scope.panel = (status: string) => {
+		if (status == "critical") {
+			return "panel-danger";
+		} else if (status == "warning") {
+			return "panel-warning";
+		}
+		return "panel-default";
 	};
 }]);
 

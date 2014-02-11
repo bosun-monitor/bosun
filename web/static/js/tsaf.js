@@ -1,5 +1,7 @@
 /// <reference path="angular.d.ts" />
 /// <reference path="angular-route.d.ts" />
+/// <reference path="bootstrap.d.ts" />
+/// <reference path="moment.d.ts" />
 /// <reference path="google.visualization.d.ts" />
 var tsafApp = angular.module('tsafApp', [
     'ngRoute',
@@ -45,10 +47,25 @@ tsafControllers.controller('TsafCtrl', [
 tsafControllers.controller('DashboardCtrl', [
     '$scope', '$http', function ($scope, $http) {
         $http.get('/api/alerts').success(function (data) {
+            angular.forEach(data.Status, function (v, k) {
+                v.Touched = moment(v.Touched).utc();
+                angular.forEach(v.History, function (v, k) {
+                    v.Time = moment(v.Time).utc();
+                });
+                v.last = v.History[v.History.length - 1];
+            });
             $scope.schedule = data;
         });
-        $scope.last = function (history) {
-            return history[history.length - 1];
+        $scope.collapse = function (i) {
+            $('#collapse' + i).collapse('toggle');
+        };
+        $scope.panel = function (status) {
+            if (status == "critical") {
+                return "panel-danger";
+            } else if (status == "warning") {
+                return "panel-warning";
+            }
+            return "panel-default";
         };
     }]);
 

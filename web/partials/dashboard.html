@@ -1,18 +1,49 @@
-<table class="table">
-	<tr>
-		<th>alert</th>
-		<th>status</th>
-		<th>status time</th>
-		<th>touched</th>
-		<th>rule</th>
-		<th>emailed</th>
-	</tr>
-	<tr ng-repeat="(name, status) in schedule.Status" ng-hide="last(status.History).Status == 'normal'">
-		<td ng-bind="name"></td>
-		<td ng-bind="last(status.History).Status"></td>
-		<td ng-bind="last(status.History).Time"></td>
-		<td ng-bind="status.Touched"></td>
-		<td ng-bind="status.Expr"></td>
-		<td ng-bind="status.Emailed"></td>
-	</tr>
-</table>
+<div class="panel-group" id="accordion">
+	<div
+		class="panel"
+		ng-repeat="(name, status) in schedule.Status"
+		ng-class="panel(status.last.Status)"
+		ng-hide="status.last.Status == 'normal'"
+	>
+		<div class="panel-heading">
+			<h4 class="panel-title">
+				<a data-toggle="collapse" data-parent="#accordion" ng-click="collapse($index)" href>
+					{{name}}
+					<span class="pull-right" ng-bind="status.last.Time.fromNow()"></span>
+				</a>
+			</h4>
+		</div>
+		<div id="collapse{{$index}}" class="panel-collapse collapse">
+			<div class="panel-body">
+				<div class="col-sm-6">
+					<div class="row">
+						<div class="col-sm-4 text-right"><strong>Name</strong></div>
+						<div class="col-sm-8" ng-bind="name"></div>
+					</div>
+					<div class="row">
+						<div class="col-sm-4 text-right"><strong>Status</strong></div>
+						<div class="col-sm-8" ng-bind="status.last.Status"></div>
+					</div>
+					<div class="row">
+						<div class="col-sm-4 text-right"><strong>Since</strong></div>
+						<div class="col-sm-8">
+							{{status.last.Time.format()}}
+							({{status.last.Time.fromNow()}})
+						</div>
+					</div>
+					<div class="row">
+						<div class="col-sm-4 text-right"><strong>Touched</strong></div>
+						<div class="col-sm-8">
+							{{status.Touched.format()}}
+							({{status.Touched.fromNow()}})
+						</div>
+					</div>
+					<div class="row">
+						<div class="col-sm-4 text-right"><strong>Expr</strong></div>
+						<div class="col-sm-8" ng-bind="status.Expr"></div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</div>
