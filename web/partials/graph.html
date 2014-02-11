@@ -1,5 +1,20 @@
 <style type="text/css">
-	.chart {height:600px;}
+	.chart {
+		margin: 50px;
+	}
+	.chart .x_tick .title {
+		bottom: -24px;
+	}
+	#rgraph {
+		position: relative;
+		left: 40px;
+	}
+	#y_axis {
+		position: absolute;
+		top: 0;
+		bottom: 0;
+		width: 40px;
+	}
 </style>
 <div class="row">
 	<form role="form">
@@ -96,6 +111,6 @@
 	</div>
 </div>
 <div class="row">
-	<div class="chart" rick-shaw series="result"></div> 
+	<div class="chart" rick-shaw series="result" height="500"></div>
 </div>
 
