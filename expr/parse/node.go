@@ -102,7 +102,7 @@ func (c *FuncNode) StringAST() string {
 
 func (c *FuncNode) Check() error {
 	const errFuncType = "parse: bad argument type in %s, expected %s, got %s"
-	if len(c.Args) < len(c.F.Args)-c.F.Optional() {
+	if len(c.Args) < len(c.F.Args) {
 		return fmt.Errorf("parse: not enough arguments for %s", c.Name)
 	} else if len(c.Args) > len(c.F.Args) {
 		return fmt.Errorf("parse: too many arguments for %s", c.Name)

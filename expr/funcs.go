@@ -17,59 +17,45 @@ import (
 	"github.com/StackExchange/tsaf/search"
 )
 
-const (
-	DefDuration = "1h"
-	DefPeriod   = "1w"
-	DefNum      = 8
-)
-
 var Builtins = map[string]parse.Func{
 	"avg": {
 		[]parse.FuncType{parse.TYPE_SERIES},
 		parse.TYPE_NUMBER,
-		nil,
 		Avg,
 	},
 	"band": {
 		[]parse.FuncType{parse.TYPE_STRING, parse.TYPE_STRING, parse.TYPE_STRING, parse.TYPE_NUMBER},
 		parse.TYPE_SERIES,
-		[]interface{}{DefDuration, DefPeriod, DefNum},
 		Band,
 	},
 	"dev": {
 		[]parse.FuncType{parse.TYPE_SERIES},
 		parse.TYPE_NUMBER,
-		nil,
 		Dev,
 	},
 	"recent": {
 		[]parse.FuncType{parse.TYPE_SERIES},
 		parse.TYPE_NUMBER,
-		nil,
 		Recent,
 	},
 	"since": {
 		[]parse.FuncType{parse.TYPE_SERIES},
 		parse.TYPE_NUMBER,
-		nil,
 		Since,
 	},
 	"forecastlr": {
 		[]parse.FuncType{parse.TYPE_SERIES, parse.TYPE_NUMBER},
 		parse.TYPE_NUMBER,
-		nil,
 		Forecast_lr,
 	},
 	"percentile": {
 		[]parse.FuncType{parse.TYPE_SERIES, parse.TYPE_NUMBER},
 		parse.TYPE_NUMBER,
-		nil,
 		Percentile,
 	},
 	"q": {
 		[]parse.FuncType{parse.TYPE_STRING, parse.TYPE_STRING},
 		parse.TYPE_SERIES,
-		[]interface{}{DefDuration},
 		Query,
 	},
 }
