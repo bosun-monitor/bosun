@@ -42,8 +42,8 @@ func New(expr string) (*Expr, error) {
 func (e *Expr) Execute(host string, T miniprofiler.Timer) (r []*Result, err error) {
 	defer errRecover(&err)
 	s := &state{
-		e,
-		host,
+		Expr: e,
+		host: host,
 	}
 	if T == nil {
 		T = new(miniprofiler.Profile)
@@ -86,11 +86,24 @@ func (s Series) Type() parse.FuncType { return parse.TYPE_SERIES }
 func (s Series) Value() interface{}   { return s }
 
 type Result struct {
+	Computations
 	Value
 	Group opentsdb.TagSet
 }
 
+type Computations []Computation
+
+type Computation struct {
+	Text  string
+	Value Number
+}
+
+func (r *Result) AddComputation(text string, result Number) {
+	r.Computations = append(r.Computations, Computation{text, result})
+}
+
 type Union struct {
+	Computations
 	A, B  Value
 	Group opentsdb.TagSet
 }
@@ -105,38 +118,39 @@ func wrap(v float64) []*Result {
 	}
 }
 
+func (u *Union) ExtendComputations(o *Result) {
+	u.Computations = append(u.Computations, o.Computations...)
+}
+
 // union returns the combination of a and b where one is a strict subset of the
 // other.
-func union(a, b []*Result) []Union {
-	var u []Union
+func union(a, b []*Result) []*Union {
+	var us []*Union
 	for _, ra := range a {
 		for _, rb := range b {
+			u := &Union{
+				A: ra.Value,
+				B: rb.Value,
+			}
 			if ra.Group.Equal(rb.Group) || len(ra.Group) == 0 || len(rb.Group) == 0 {
 				g := ra.Group
 				if len(ra.Group) == 0 {
 					g = rb.Group
 				}
-				u = append(u, Union{
-					A:     ra.Value,
-					B:     rb.Value,
-					Group: g,
-				})
+				u.Group = g
 			} else if ra.Group.Subset(rb.Group) {
-				u = append(u, Union{
-					A:     ra.Value,
-					B:     rb.Value,
-					Group: rb.Group,
-				})
+				u.Group = rb.Group
 			} else if rb.Group.Subset(ra.Group) {
-				u = append(u, Union{
-					A:     ra.Value,
-					B:     rb.Value,
-					Group: ra.Group,
-				})
+				u.Group = ra.Group
+			}
+			if u.Group != nil {
+				u.ExtendComputations(ra)
+				u.ExtendComputations(rb)
+				us = append(us, u)
 			}
 		}
 	}
-	return u
+	return us
 }
 
 func (e *state) walk(node parse.Node, T miniprofiler.Timer) []*Result {
@@ -160,18 +174,24 @@ func (e *state) walkBinary(node *parse.BinaryNode, T miniprofiler.Timer) []*Resu
 	var res []*Result
 	u := union(ar, br)
 	for _, v := range u {
-		var r Value
+		var value Value
+		r := Result{
+			Group:        v.Group,
+			Computations: v.Computations,
+		}
 		switch at := v.A.(type) {
 		case Number:
 			switch bt := v.B.(type) {
 			case Number:
-				r = Number(operate(node.OpStr, float64(at), float64(bt)))
+				n := Number(operate(node.OpStr, float64(at), float64(bt)))
+				r.AddComputation(node.String(), n)
+				value = n
 			case Series:
 				s := make(Series)
 				for k, v := range bt {
 					s[k] = opentsdb.Point(operate(node.OpStr, float64(at), float64(v)))
 				}
-				r = s
+				value = s
 			default:
 				panic(ErrUnknownOp)
 			}
@@ -182,17 +202,15 @@ func (e *state) walkBinary(node *parse.BinaryNode, T miniprofiler.Timer) []*Resu
 				for k, v := range at {
 					s[k] = opentsdb.Point(operate(node.OpStr, float64(v), float64(bt)))
 				}
-				r = s
+				value = s
 			default:
 				panic(ErrUnknownOp)
 			}
 		default:
 			panic(ErrUnknownOp)
 		}
-		res = append(res, &Result{
-			Value: r,
-			Group: v.Group,
-		})
+		r.Value = value
+		res = append(res, &r)
 	}
 	return res
 }
