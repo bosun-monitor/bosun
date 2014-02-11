@@ -103,7 +103,8 @@ Loop:
 		state := s.Status[ak]
 		if state == nil {
 			state = &State{
-				Group: r.Group,
+				Group:        r.Group,
+				Computations: r.Computations,
 			}
 		}
 		status := ST_WARN
@@ -136,11 +137,12 @@ func (a AlertKey) String() string {
 
 type State struct {
 	// Most recent event last.
-	History []Event
-	Touched time.Time
-	Expr    *expr.Expr
-	Emailed bool
-	Group   opentsdb.TagSet
+	History      []Event
+	Touched      time.Time
+	Expr         *expr.Expr
+	Emailed      bool
+	Group        opentsdb.TagSet
+	Computations expr.Computations
 }
 
 func (s *State) Touch() {
