@@ -242,7 +242,6 @@ tsafApp.directive("rickShaw", function () {
                         tickFormat: Rickshaw.Fixtures.Number.formatKMBT,
                         element: angular.element('#y_axis')[0]
                     });
-
                     var hoverDetail = new Rickshaw.Graph.HoverDetail({
                         graph: graph
                     });

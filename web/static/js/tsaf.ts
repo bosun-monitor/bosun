@@ -318,15 +318,14 @@ tsafApp.directive("rickShaw", function() {
 						graph: graph,
 						orientation: 'left',
 						tickFormat: Rickshaw.Fixtures.Number.formatKMBT,
-						element: angular.element('#y_axis')[0]
+						element: angular.element('#y_axis')[0],
 					});
-
 					var hoverDetail: any = new Rickshaw.Graph.HoverDetail( {
-						graph: graph
+						graph: graph,
 					});
 					var legend: any = new Rickshaw.Graph.Legend( {
 						graph: graph,
-						element: angular.element('#legend')[0]
+						element: angular.element('#legend')[0],
 					});
 					graph.render();
 				}
