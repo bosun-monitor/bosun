@@ -344,5 +344,10 @@ func (e *state) walkFunc(node *parse.FuncNode, T miniprofiler.Timer) []*Result {
 			panic(err)
 		}
 	}
+	if node.Return() == parse.TYPE_NUMBER {
+		for _, r := range res {
+			r.AddComputation(node.String(), r.Value.(Number))
+		}
+	}
 	return res
 }
