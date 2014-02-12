@@ -254,3 +254,12 @@ tsafApp.directive("tsRickshaw", function () {
         }
     };
 });
+
+tsafApp.directive("tooltip", function () {
+    return {
+        restrict: 'A',
+        link: function (scope, elem, attrs) {
+            angular.element(elem[0]).tooltip({ placement: "bottom" });
+        }
+    };
+});
