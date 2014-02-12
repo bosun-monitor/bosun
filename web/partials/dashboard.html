@@ -4,9 +4,9 @@
 		ng-repeat="(name, status) in schedule.Status"
 		ng-class="panel(status.last.Status)"
 	>
-		<div class="panel-heading">
+		<div class="panel-heading" ng-click="collapse($index)">
 			<h4 class="panel-title">
-				<a data-toggle="collapse" data-parent="#accordion" ng-click="collapse($index)" href>
+				<a data-toggle="collapse" data-parent="#accordion" href>
 					{{name}}
 					<span class="pull-right" ng-bind="status.last.Time.fromNow()"></span>
 				</a>
