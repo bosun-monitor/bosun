@@ -210,49 +210,46 @@ tsafControllers.controller('GraphCtrl', [
         });
     }]);
 
-tsafApp.directive("rickShaw", function () {
+tsafApp.directive("tsRickshaw", function () {
     return {
-        restrict: "A",
-        templateUrl: '/partials/rick_template.html',
-        scope: {
-            series: '=',
-            height: '='
-        },
+        templateUrl: '/partials/rickshaw.html',
         link: function (scope, elem, attrs) {
-            scope.$watch('series', function (v, old_v) {
-                if (v != old_v) {
-                    var palette = new Rickshaw.Color.Palette();
-                    angular.forEach(scope.series, function (i) {
-                        if (!i.hasOwnProperty('color')) {
-                            i.color = palette.color();
-                        }
-                    });
-                    var graph = new Rickshaw.Graph({
-                        element: angular.element('#rgraph')[0],
-                        height: scope.height,
-                        min: 'auto',
-                        series: scope.series,
-                        renderer: 'line'
-                    });
-                    var x_axis = new Rickshaw.Graph.Axis.Time({
-                        graph: graph,
-                        timeFixture: new Rickshaw.Fixtures.Time()
-                    });
-                    var y_axis = new Rickshaw.Graph.Axis.Y({
-                        graph: graph,
-                        orientation: 'left',
-                        tickFormat: Rickshaw.Fixtures.Number.formatKMBT,
-                        element: angular.element('#y_axis')[0]
-                    });
-                    var hoverDetail = new Rickshaw.Graph.HoverDetail({
-                        graph: graph
-                    });
-                    var legend = new Rickshaw.Graph.Legend({
-                        graph: graph,
-                        element: angular.element('#legend')[0]
-                    });
-                    graph.render();
+            scope.$watch(attrs.tsRickshaw, function (v) {
+                if (!v) {
+                    return;
                 }
+                var palette = new Rickshaw.Color.Palette();
+                angular.forEach(v, function (i) {
+                    if (!i.color) {
+                        i.color = palette.color();
+                    }
+                });
+                var rgraph = angular.element('.rgraph', elem);
+                var graph = new Rickshaw.Graph({
+                    element: rgraph[0],
+                    height: rgraph.height(),
+                    min: 'auto',
+                    series: v,
+                    renderer: 'line'
+                });
+                var x_axis = new Rickshaw.Graph.Axis.Time({
+                    graph: graph,
+                    timeFixture: new Rickshaw.Fixtures.Time()
+                });
+                var y_axis = new Rickshaw.Graph.Axis.Y({
+                    graph: graph,
+                    orientation: 'left',
+                    tickFormat: Rickshaw.Fixtures.Number.formatKMBT,
+                    element: angular.element('.y_axis', elem)[0]
+                });
+                var hoverDetail = new Rickshaw.Graph.HoverDetail({
+                    graph: graph
+                });
+                var legend = new Rickshaw.Graph.Legend({
+                    graph: graph,
+                    element: angular.element('.legend', elem)[0]
+                });
+                graph.render();
             });
         }
     };
