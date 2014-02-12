@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"sort"
 	"strconv"
 	"strings"
@@ -44,13 +45,17 @@ func Query(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 		Downsample:  r.FormValue("downsample"),
 		RateOptions: oro,
 	}
-
 	oreq := opentsdb.Request{
 		Start:   r.FormValue("start"),
 		End:     r.FormValue("end"),
 		Queries: []*opentsdb.Query{&oq},
 	}
-	tr, err := oreq.Query(tsdbHost)
+	var err error
+	var tr opentsdb.ResponseSet
+	q, _ := url.QueryUnescape(oreq.String())
+	t.StepCustomTiming("tsdb", "query", q, func() {
+		tr, err = oreq.Query(tsdbHost)
+	})
 	if err != nil {
 		serveError(w, err)
 		return
