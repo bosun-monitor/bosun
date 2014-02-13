@@ -301,7 +301,6 @@ interface IHostScope extends ng.IScope {
 
 }
 
-
 tsafControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route', function($scope: IHostScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService){
 	$scope.host = ($location.search()).host;
 	$scope.time = ($location.search()).time;
@@ -334,6 +333,18 @@ tsafControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route'
 						$scope.running = '';
 					});
 		})
+			$scope.running = '';
+			$scope.error = '';
+		})
+		.error((error) => {
+			$scope.error = error;
+			$scope.running = '';
+		});
+	var mem_total_q: string = 'metric=os.mem.total&aggregator=avg&start=' + $scope.time + 
+					'&tags=host,' + $scope.host
+	$http.get('/api/query?' + mem_total_q)
+		.success((data) => {
+			$scope.mem_total = data;
 			$scope.running = '';
 			$scope.error = '';
 		})
