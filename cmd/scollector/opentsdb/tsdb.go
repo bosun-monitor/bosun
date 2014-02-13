@@ -341,3 +341,46 @@ func (r Request) Query(host string) (ResponseSet, error) {
 	}
 	return tr, nil
 }
+
+type Context interface {
+	Query(Request) (ResponseSet, error)
+}
+
+type Host string
+
+func (h Host) Query(r Request) (ResponseSet, error) {
+	return r.Query(string(h))
+}
+
+type Cache struct {
+	host  string
+	cache map[string]*cacheResult
+}
+
+type cacheResult struct {
+	ResponseSet
+	Err error
+}
+
+func NewCache(host string) *Cache {
+	return &Cache{
+		host:  host,
+		cache: make(map[string]*cacheResult),
+	}
+}
+
+func (c *Cache) Query(r Request) (ResponseSet, error) {
+	b, err := json.Marshal(&r)
+	if err != nil {
+		return nil, err
+	}
+	s := string(b)
+	if v, ok := c.cache[s]; ok {
+		log.Println("CACHE HIT", s)
+		return v.ResponseSet, v.Err
+	}
+	log.Println("CACHE MISS", s)
+	rs, e := r.Query(c.host)
+	c.cache[s] = &cacheResult{rs, e}
+	return rs, e
+}
