@@ -13,7 +13,7 @@ import (
 
 type state struct {
 	*Expr
-	host string
+	context opentsdb.Context
 }
 
 var ErrUnknownOp = fmt.Errorf("expr: unknown op type")
@@ -37,13 +37,13 @@ func New(expr string) (*Expr, error) {
 	return e, nil
 }
 
-// Execute applies a parse expression to the specified OpenTSDB host, and
-// returns one result per group.
-func (e *Expr) Execute(host string, T miniprofiler.Timer) (r []*Result, err error) {
+// Execute applies a parse expression to the specified OpenTSDB context,
+// and returns one result per group.
+func (e *Expr) Execute(c opentsdb.Context, T miniprofiler.Timer) (r []*Result, err error) {
 	defer errRecover(&err)
 	s := &state{
-		Expr: e,
-		host: host,
+		Expr:    e,
+		context: c,
 	}
 	if T == nil {
 		T = new(miniprofiler.Profile)

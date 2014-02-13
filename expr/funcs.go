@@ -94,7 +94,7 @@ func Band(e *state, T miniprofiler.Timer, query, duration, period string, num fl
 			b, _ := json.MarshalIndent(&req, "", "  ")
 			var s opentsdb.ResponseSet
 			T.StepCustomTiming("tsdb", "query", string(b), func() {
-				s, err = req.Query(e.host)
+				s, err = e.context.Query(req)
 			})
 			if err != nil {
 				return
@@ -145,7 +145,7 @@ func Query(e *state, T miniprofiler.Timer, query, duration string) (r []*Result,
 	b, _ := json.MarshalIndent(&req, "", "  ")
 	var s opentsdb.ResponseSet
 	T.StepCustomTiming("tsdb", "query", string(b), func() {
-		s, err = req.Query(e.host)
+		s, err = e.context.Query(req)
 	})
 	if err != nil {
 		return

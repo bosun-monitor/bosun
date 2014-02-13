@@ -54,7 +54,7 @@ func Query(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 	var tr opentsdb.ResponseSet
 	q, _ := url.QueryUnescape(oreq.String())
 	t.StepCustomTiming("tsdb", "query", q, func() {
-		tr, err = oreq.Query(tsdbHost)
+		tr, err = tsdbHost.Query(oreq)
 	})
 	if err != nil {
 		serveError(w, err)
