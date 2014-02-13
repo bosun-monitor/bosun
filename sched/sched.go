@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"sync"
 	"time"
 
 	"github.com/StackExchange/scollector/opentsdb"
@@ -13,8 +14,10 @@ import (
 
 type Schedule struct {
 	*conf.Conf
+	sync.Mutex
 	Freq   time.Duration
 	Status map[AlertKey]*State
+	cache  *opentsdb.Cache
 }
 
 func (s *Schedule) MarshalJSON() ([]byte, error) {
@@ -72,6 +75,9 @@ func (s *Schedule) Run() error {
 }
 
 func (s *Schedule) Check() {
+	s.Lock()
+	defer s.Unlock()
+	s.cache = opentsdb.NewCache(s.Conf.TsdbHost)
 	for _, a := range s.Conf.Alerts {
 		s.CheckAlert(a)
 	}
@@ -86,7 +92,7 @@ func (s *Schedule) CheckExpr(a *conf.Alert, e *expr.Expr, isCrit bool, ignore []
 	if e == nil {
 		return
 	}
-	results, err := e.Execute(s.Conf.TsdbHost, nil)
+	results, err := e.Execute(s.cache, nil)
 	if err != nil {
 		// todo: do something here?
 		log.Println(err)
