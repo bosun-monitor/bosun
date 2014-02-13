@@ -376,10 +376,8 @@ func (c *Cache) Query(r Request) (ResponseSet, error) {
 	}
 	s := string(b)
 	if v, ok := c.cache[s]; ok {
-		log.Println("CACHE HIT", s)
 		return v.ResponseSet, v.Err
 	}
-	log.Println("CACHE MISS", s)
 	rs, e := r.Query(c.host)
 	c.cache[s] = &cacheResult{rs, e}
 	return rs, e
