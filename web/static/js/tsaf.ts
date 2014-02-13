@@ -29,6 +29,10 @@ tsafApp.config(['$routeProvider', '$locationProvider', function($routeProvider: 
 			templateUrl: 'partials/graph.html',
 			controller: 'GraphCtrl',
 		}).
+		when('/host', {
+			templateUrl: 'partials/host.html',
+			controller: 'HostCtrl',
+		}).
 		otherwise({
 			redirectTo: '/',
 		});
@@ -288,10 +292,61 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route
 		});
 }]);
 
+interface IHostScope extends ng.IScope {
+	host: string;
+	time: string;
+	interfaces: string[];
+	error: string;
+	running: string;
+
+}
+
+
+tsafControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route', function($scope: IHostScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService){
+	$scope.host = ($location.search()).host;
+	$scope.time = ($location.search()).time;
+	$scope.idata = {};
+	var cpu_q: string = 'metric=os.cpu&aggregator=avg&rate=true&start=' + $scope.time + '&tags=host,' + $scope.host;
+	$http.get('/api/query?' + cpu_q)
+		.success((data) => {
+			$scope.cpu = data;
+			$scope.running = '';
+			$scope.error = '';
+		})
+		.error((error) => {
+			$scope.error = error;
+			$scope.running = '';
+		});
+	$http.get('/api/tagv/iface/os.net.bytes?host=' + $scope.host)
+		.success((data) => {
+			$scope.interfaces = data;
+			angular.forEach($scope.interfaces, function(i) {
+				var net_bytes_q: string = 'metric=os.net.bytes&aggregator=avg&rate=true&start=' + $scope.time + 
+					'&tags=host,' + $scope.host + ',iface,' + i + ',direction,*' 
+				$http.get('/api/query?' + net_bytes_q)
+					.success((data) => {
+						$scope.idata[i] = data;
+						$scope.running = '';
+						$scope.error = '';
+					})
+					.error((error) => {
+						$scope.error = error;
+						$scope.running = '';
+					});
+		})
+			$scope.running = '';
+			$scope.error = '';
+		})
+		.error((error) => {
+			$scope.error = error;
+			$scope.running = '';
+		});
+}]);
+
 tsafApp.directive("tsRickshaw", function() {
 	return {
 		templateUrl: '/partials/rickshaw.html',
-		link: (scope: IGraphScope, elem: any, attrs: any) => {
+		link: (scope: ng.IScope, elem: any, attrs: any) => {
 			scope.$watch(attrs.tsRickshaw, function(v: any) {
 				if (!v) {
 					return;
@@ -303,13 +358,21 @@ tsafApp.directive("tsRickshaw", function() {
 					}
 				});
 				var rgraph = angular.element('.rgraph', elem);
-				var graph: any = new Rickshaw.Graph({
+				var graph_options: any = {
 					element: rgraph[0],
 					height: rgraph.height(),
 					min: 'auto',
 					series: v,
 					renderer: 'line',
-				});
+				}
+				if (attrs.max) {
+					graph_options.max = attrs.max;
+				}
+				if (attrs.renderer) {
+					graph_options.renderer = attrs.renderer;
+				}
+				var graph: any = new Rickshaw.Graph(graph_options);
+				console.log(graph)
 				var x_axis: any = new Rickshaw.Graph.Axis.Time({
 					graph: graph,
 					timeFixture: new Rickshaw.Fixtures.Time(),
@@ -323,10 +386,12 @@ tsafApp.directive("tsRickshaw", function() {
 				var hoverDetail: any = new Rickshaw.Graph.HoverDetail( {
 					graph: graph,
 				});
-				var legend: any = new Rickshaw.Graph.Legend( {
-					graph: graph,
-					element: angular.element('.legend', elem)[0],
-				});
+				if (attrs.legend) {
+					var legend: any = new Rickshaw.Graph.Legend( {
+						graph: graph,
+						element: angular.element('.legend', elem)[0],
+					});
+				}
 				graph.render();
 			});
 		},
@@ -335,8 +400,7 @@ tsafApp.directive("tsRickshaw", function() {
 
 tsafApp.directive("tooltip", function() {
 	return {
-		restrict: 'A',
-		link: function(scope: IGraphScope, elem: any, attrs: any) {
+		link: function(scope: ng.IScope, elem: any, attrs: any) {
 			angular.element(elem[0])
 				.tooltip({placement: "bottom"});
 		},
