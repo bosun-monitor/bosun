@@ -246,6 +246,15 @@ tsafControllers.controller('HostCtrl', [
             $scope.error = error;
             $scope.running = '';
         });
+        var mem_total_q = 'metric=os.mem.total&aggregator=avg&start=' + $scope.time + '&tags=host,' + $scope.host;
+        $http.get('/api/query?' + mem_total_q).success(function (data) {
+            $scope.mem_total = data;
+            $scope.running = '';
+            $scope.error = '';
+        }).error(function (error) {
+            $scope.error = error;
+            $scope.running = '';
+        });
     }]);
 
 tsafApp.directive("tsRickshaw", function () {
