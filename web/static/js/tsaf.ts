@@ -355,7 +355,6 @@ tsafApp.directive("tsRickshaw", function() {
 
 tsafApp.directive("tooltip", function() {
 	return {
-		restrict: 'A',
 		link: function(scope: IGraphScope, elem: any, attrs: any) {
 			angular.element(elem[0])
 				.tooltip({placement: "bottom"});
