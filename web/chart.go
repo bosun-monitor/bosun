@@ -77,8 +77,8 @@ func rickchart(r opentsdb.ResponseSet) ([]*RickSeries, error) {
 	//This currently does a mod operation to limit DPs returned to 3000, will want to refactor this
 	//into something smarter
 	max_dp := 3000
-	series := make([]*RickSeries, len(r))
-	for i, resp := range r {
+	var series []*RickSeries
+	for _, resp := range r {
 		dps_mod := 1
 		if len(resp.DPS) > max_dp {
 			dps_mod = (len(resp.DPS) + max_dp) / max_dp
@@ -103,9 +103,11 @@ func rickchart(r opentsdb.ResponseSet) ([]*RickSeries, error) {
 		for k, v := range resp.Tags {
 			id = append(id, fmt.Sprintf("%v=%v", k, v))
 		}
-		series[i] = &RickSeries{
-			Name: strings.Join(id, ","),
-			Data: dps,
+		if len(dps) > 0 {
+			series = append(series, &RickSeries{
+				Name: strings.Join(id, ","),
+				Data: dps,
+			})
 		}
 	}
 	return series, nil
