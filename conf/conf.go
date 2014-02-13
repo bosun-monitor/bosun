@@ -2,12 +2,14 @@ package conf
 
 import (
 	"fmt"
+	"io"
 	"io/ioutil"
 	"regexp"
 	"runtime"
 	"strings"
 	"text/template"
 
+	"github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/tsaf/conf/parse"
 	"github.com/StackExchange/tsaf/expr"
 	eparse "github.com/StackExchange/tsaf/expr/parse"
@@ -85,6 +87,26 @@ type Template struct {
 	Body, Subject *template.Template
 
 	body, subject string
+}
+
+type context struct {
+	Alert *Alert
+	Tags  opentsdb.TagSet
+}
+
+func (a *Alert) data(group opentsdb.TagSet) interface{} {
+	return &context{
+		a,
+		group,
+	}
+}
+
+func (a *Alert) ExecuteBody(w io.Writer, group opentsdb.TagSet) error {
+	return a.Template.Body.Execute(w, a.data(group))
+}
+
+func (a *Alert) ExecuteSubject(w io.Writer, group opentsdb.TagSet) error {
+	return a.Template.Subject.Execute(w, a.data(group))
 }
 
 type Vars map[string]string

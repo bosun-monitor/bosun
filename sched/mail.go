@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/StackExchange/scollector/opentsdb"
-	"github.com/StackExchange/tsaf/conf"
 	"github.com/jordan-wright/email"
 )
 
@@ -18,28 +17,22 @@ func (s *Schedule) Email(name string, group opentsdb.TagSet) {
 	a := s.Conf.Alerts[name]
 	if a == nil {
 		log.Println("sched: unknown alert name during email:", name)
+		return
 	}
 	if a.Owner == "" {
 		return
 	}
 	body := new(bytes.Buffer)
 	subject := new(bytes.Buffer)
-	data := struct {
-		Alert *conf.Alert
-		Tags  opentsdb.TagSet
-	}{
-		a,
-		group,
-	}
 	if a.Template.Body != nil {
-		err := a.Template.Body.Execute(body, &data)
+		err := a.ExecuteBody(body, group)
 		if err != nil {
 			log.Println(err)
 			return
 		}
 	}
 	if a.Template.Subject != nil {
-		err := a.Template.Subject.Execute(subject, &data)
+		err := a.ExecuteSubject(subject, group)
 		if err != nil {
 			log.Println(err)
 			return
