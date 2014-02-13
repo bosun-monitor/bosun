@@ -9,11 +9,12 @@ import (
 	"github.com/MiniProfiler/go/miniprofiler"
 	"github.com/gorilla/mux"
 
+	"github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/tsaf/sched"
 )
 
 var (
-	tsdbHost  string
+	tsdbHost  opentsdb.Host
 	templates *template.Template
 	router    = mux.NewRouter()
 	schedule  = sched.DefaultSched
@@ -24,7 +25,7 @@ func init() {
 }
 
 func Listen(addr, dir, host string) error {
-	tsdbHost = host
+	tsdbHost = opentsdb.Host(host)
 	var err error
 	templates, err = template.New("").ParseFiles(
 		dir + "/templates/index.html",
