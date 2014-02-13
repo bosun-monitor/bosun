@@ -1,0 +1,32 @@
+<style type="text/css">
+	.chart {
+		margin: 50px;
+	}
+	.chart .rgraph {
+		height: 250px;
+	}
+	.chart .x_tick .title {
+		bottom: -24px;
+	}
+	.rgraph {
+		position: relative;
+		left: 40px;
+	}
+	.y_axis {
+		position: absolute;
+		top: 0;
+		bottom: 0;
+		width: 40px;
+	}
+</style>
+<h1>{{host}}</h1>
+<div class="row">
+	<div class="col-lg-6">
+		<h2>CPU</h2>
+		<div class="chart cpu" ts-rickshaw="cpu" max="100" renderer="area"></div>
+	</div>
+</div>
+<div class="row" ng-repeat="(k, v) in idata">
+	<h2>Network Bytes: {{k}}</h2>
+	<div class="chart" ts-rickshaw="idata[k]"></div>
+</div>
