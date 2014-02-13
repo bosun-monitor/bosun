@@ -80,7 +80,7 @@ func Band(e *state, T miniprofiler.Timer, query, duration, period string, num fl
 		if err != nil {
 			return
 		}
-		if err = expandSearch(q); err != nil {
+		if err = ExpandSearch(q); err != nil {
 			return
 		}
 		req := opentsdb.Request{
@@ -131,7 +131,7 @@ func Query(e *state, T miniprofiler.Timer, query, duration string) (r []*Result,
 	if err != nil {
 		return
 	}
-	if err = expandSearch(q); err != nil {
+	if err = ExpandSearch(q); err != nil {
 		return
 	}
 	d, err := ParseDuration(duration)
@@ -178,7 +178,7 @@ func reduce(e *state, T miniprofiler.Timer, series []*Result, F func(Series, ...
 	return
 }
 
-func expandSearch(q *opentsdb.Query) error {
+func ExpandSearch(q *opentsdb.Query) error {
 	for k, ov := range q.Tags {
 		v := ov
 		if v == "*" || !strings.Contains(v, "*") || strings.Contains(v, "|") {

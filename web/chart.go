@@ -11,6 +11,7 @@ import (
 
 	"github.com/MiniProfiler/go/miniprofiler"
 	"github.com/StackExchange/scollector/opentsdb"
+	"github.com/StackExchange/tsaf/expr"
 )
 
 func Query(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
@@ -45,12 +46,16 @@ func Query(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 		Downsample:  r.FormValue("downsample"),
 		RateOptions: oro,
 	}
+	err := expr.ExpandSearch(&oq)
+	if err != nil {
+		serveError(w, err)
+		return
+	}
 	oreq := opentsdb.Request{
 		Start:   r.FormValue("start"),
 		End:     r.FormValue("end"),
 		Queries: []*opentsdb.Query{&oq},
 	}
-	var err error
 	var tr opentsdb.ResponseSet
 	q, _ := url.QueryUnescape(oreq.String())
 	t.StepCustomTiming("tsdb", "query", q, func() {
