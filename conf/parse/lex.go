@@ -37,10 +37,10 @@ const (
 	itemError itemType = iota // error occurred; value is text of error
 	itemEOF
 	itemEqual      // '='
-	itemLeftDelim  // '['
+	itemLeftDelim  // '{'
 	itemRawString  // raw string (includes quotes)
 	itemIdentifier // identifier for section and value names
-	itemRightDelim // ']'
+	itemRightDelim // '}'
 	itemString     // string (excluding prefix whitespace and EOL or NL at EOL)
 )
 
@@ -138,8 +138,9 @@ func (l *lexer) run() {
 // state functions
 
 const (
-	leftDelim  = '['
-	rightDelim = ']'
+	leftDelim  = '{'
+	rightDelim = '}'
+	equal      = '='
 	comment    = '#'
 	newLine    = "\n"
 )
@@ -151,6 +152,10 @@ Loop:
 		switch r := l.next(); {
 		case r == leftDelim:
 			return lexLeftDelim
+		case r == rightDelim:
+			return lexRightDelim
+		case r == equal:
+			return lexEqual
 		case isVarchar(r):
 			l.backup()
 			return lexValue
@@ -181,27 +186,10 @@ func lexComment(l *lexer) stateFn {
 
 func lexLeftDelim(l *lexer) stateFn {
 	l.emit(itemLeftDelim)
-	return lexVarname
-}
-
-func lexVarname(l *lexer) stateFn {
-	l.ignore()
-	for {
-		switch r := l.next(); {
-		case isVarchar(r):
-			// absorb
-		case r == rightDelim:
-			l.backup()
-			l.emit(itemIdentifier)
-			return lexRightDelim
-		default:
-			return l.errorf("invalid varname")
-		}
-	}
+	return lexSpace
 }
 
 func lexRightDelim(l *lexer) stateFn {
-	l.pos += Pos(len(string(rightDelim)))
 	l.emit(itemRightDelim)
 	return lexSpace
 }
@@ -215,24 +203,13 @@ func lexValue(l *lexer) stateFn {
 		default:
 			l.backup()
 			l.emit(itemIdentifier)
-			return lexEqual
+			return lexSpace
 		}
 	}
 }
 
 func lexEqual(l *lexer) stateFn {
-Loop:
-	for {
-		switch r := l.next(); {
-		case r == '=':
-			l.emit(itemEqual)
-			break Loop
-		case isSpace(r):
-			l.ignore()
-		default:
-			return l.errorf("expected =")
-		}
-	}
+	l.emit(itemEqual)
 	for isSpace(l.peek()) {
 		l.next()
 	}

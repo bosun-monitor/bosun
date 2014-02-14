@@ -22,7 +22,7 @@ type Tree struct {
 	text string    // text parsed to create the template (or its parent)
 	// Parsing only; cleared after parse.
 	lex       *lexer
-	token     [1]item // one-token lookahead for parser.
+	token     [2]item // two-token lookahead for parser.
 	peekCount int
 }
 
@@ -49,6 +49,13 @@ func (t *Tree) next() item {
 // backup backs the input stream up one token.
 func (t *Tree) backup() {
 	t.peekCount++
+}
+
+// backup2 backs the input stream up two tokens.
+// The zeroth token is already there.
+func (t *Tree) backup2(t1 item) {
+	t.token[1] = t1
+	t.peekCount = 2
 }
 
 // peek returns but does not consume the next token.
@@ -171,11 +178,18 @@ func (t *Tree) parse() {
 	t.Root = newList(t.peek().pos)
 	var n Node
 	for {
-		switch token := t.peek(); token.typ {
+		switch token := t.next(); token.typ {
 		case itemIdentifier:
-			n = t.parsePair()
-		case itemLeftDelim:
-			n = t.parseSection()
+			switch token2 := t.next(); token2.typ {
+			case itemEqual:
+				t.backup2(token)
+				n = t.parsePair()
+			case itemIdentifier:
+				t.backup2(token)
+				n = t.parseSection()
+			default:
+				t.unexpected(token, "input")
+			}
 		case itemEOF:
 			return
 		default:
@@ -209,15 +223,18 @@ func (t *Tree) parsePair() *PairNode {
 
 func (t *Tree) parseSection() *SectionNode {
 	const context = "section declaration"
-	s := newSection(t.expect(itemLeftDelim, context).pos)
 	token := t.expect(itemIdentifier, context)
+	s := newSection(token.pos)
+	s.SectionType = newString(token.pos, token.val, token.val)
+	token = t.expect(itemIdentifier, context)
 	s.Name = newString(token.pos, token.val, token.val)
-	t.expect(itemRightDelim, context)
+	t.expect(itemLeftDelim, context)
 	for {
-		switch token := t.peek(); token.typ {
+		switch token := t.next(); token.typ {
 		case itemIdentifier:
+			t.backup()
 			s.append(t.parsePair())
-		case itemLeftDelim, itemEOF:
+		case itemRightDelim, itemEOF:
 			return s
 		default:
 			t.unexpected(token, context)
