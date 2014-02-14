@@ -121,12 +121,7 @@ func ParseFile(fname string) (*Conf, error) {
 
 func New(name, text string) (c *Conf, err error) {
 	defer errRecover(&err)
-	t, e := parse.Parse(name, text)
-	if e != nil {
-		c.error(err)
-	}
 	c = &Conf{
-		tree:        t,
 		Name:        name,
 		HttpListen:  ":8070",
 		RelayListen: ":4242",
@@ -135,7 +130,11 @@ func New(name, text string) (c *Conf, err error) {
 		Templates:   make(map[string]*Template),
 		Alerts:      make(map[string]*Alert),
 	}
-	for _, n := range t.Root.Nodes {
+	c.tree, err = parse.Parse(name, text)
+	if err != nil {
+		c.error(err)
+	}
+	for _, n := range c.tree.Root.Nodes {
 		c.at(n)
 		switch n := n.(type) {
 		case *parse.PairNode:
