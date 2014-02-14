@@ -301,14 +301,14 @@ func (c *Conf) expand(v string, vars map[string]string) string {
 	v = exRE.ReplaceAllStringFunc(v, func(s string) string {
 		if vars != nil {
 			if n, ok := vars[s]; ok {
-				return n
+				return c.expand(n, vars)
 			}
 		}
 		n, ok := c.Vars[s]
 		if !ok {
 			c.errorf("unknown variable %s", s)
 		}
-		return n
+		return c.expand(n, nil)
 	})
 	return v
 }
