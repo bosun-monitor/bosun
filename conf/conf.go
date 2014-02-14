@@ -194,13 +194,19 @@ func (c *Conf) loadTemplate(s *parse.SectionNode) {
 		Vars: make(map[string]string),
 		Name: name,
 	}
+	V := func(v string) string {
+		return c.expand(v, t.Vars)
+	}
+	master := template.New(name).Funcs(template.FuncMap{
+		"V": V,
+	})
 	for _, p := range s.Nodes {
 		c.at(p)
 		v := p.Val.Text
 		switch k := p.Key.Text; k {
 		case "body":
 			t.body = v
-			tmpl := template.New(name)
+			tmpl := master.New(k)
 			_, err := tmpl.Parse(t.body)
 			if err != nil {
 				c.error(err)
@@ -208,7 +214,7 @@ func (c *Conf) loadTemplate(s *parse.SectionNode) {
 			t.Body = tmpl
 		case "subject":
 			t.subject = v
-			tmpl := template.New(name)
+			tmpl := master.New(k)
 			_, err := tmpl.Parse(t.subject)
 			if err != nil {
 				c.error(err)
