@@ -108,100 +108,133 @@ tsafControllers.controller('ExprCtrl', [
         };
     }]);
 
+var TagSet = (function () {
+    function TagSet() {
+    }
+    return TagSet;
+})();
+
+var TagV = (function () {
+    function TagV() {
+    }
+    return TagV;
+})();
+
+var RateOptions = (function () {
+    function RateOptions() {
+    }
+    return RateOptions;
+})();
+
+var QueryParams = (function () {
+    function QueryParams() {
+        this.rateOptions = new RateOptions;
+    }
+    return QueryParams;
+})();
+
+var Query = (function () {
+    function Query(qp) {
+        this.aggregator = qp.aggregator;
+        this.metric = qp.metric;
+        this.rate = qp.rate;
+        this.rateOptions = qp.rateOptions;
+        if (qp.dstime && qp.ds) {
+            this.Downsample = qp.dstime + '-' + qp.ds;
+        }
+        if (qp.tags) {
+            var ts = new TagSet;
+            angular.forEach(qp.tags, function (v, k) {
+                if (v) {
+                    ts[k] = v;
+                }
+            });
+        }
+        this.Tags = ts;
+    }
+    return Query;
+})();
+
+var Request = (function () {
+    function Request() {
+    }
+    return Request;
+})();
+
 tsafControllers.controller('GraphCtrl', [
     '$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
         $scope.aggregators = ["sum", "min", "max", "avg", "dev", "zimsum", "mimmin", "minmax"];
         $scope.dsaggregators = ["", "sum", "min", "max", "avg", "dev", "zimsum", "mimmin", "minmax"];
         var search = $location.search();
-        $scope.ds = search.ds || '';
-        $scope.aggregator = search.aggregator || 'sum';
-        $scope.rate = search.rate == 'true';
-        $scope.start = search.start || '1d-ago';
-        $scope.metric = search.metric;
-        $scope.counter = search.counter == 'true';
-        $scope.dstime = search.dstime;
-        $scope.end = search.end;
-        $scope.cmax = search.cmax;
-        $scope.creset = search.creset;
-        $scope.tagset = search.tags ? JSON.parse(search.tags) : {};
+        $scope.query_p = [];
+        $scope.query_p[0] = new QueryParams;
+        $scope.tagvs = [];
+        $scope.request = search.json ? JSON.parse(search.json) : new Request;
+        $scope.start = $scope.request.start || '1d-ago';
+        $scope.end = $scope.request.end;
+        angular.forEach($scope.request.queries, function (q) {
+            $scope.query_p[0].metric = q.metric;
+            $scope.query_p[0].ds = q.ds;
+            $scope.query_p[0].dstime = q.dstime;
+            $scope.query_p[0].aggregator = q.aggregator || 'sum';
+            $scope.query_p[0].rate = q.rate == true;
+            if (q.RateOptions) {
+                $scope.query_p[0].rateOptions.counter = q.rateOptions.counter == true;
+                $scope.query_p[0].rateOptions.counterMax = q.rateOptions.counterMax;
+                $scope.query_p[0].rateOptions.resetValue = q.rateOptions.resetValue;
+            }
+            $scope.query_p[0].tags = q.Tags || new TagSet;
+        });
+
+        //
         $http.get('/api/metric').success(function (data) {
             $scope.metrics = data;
         }).error(function (error) {
             $scope.error = 'Unable to fetch metrics: ' + error;
         });
         $scope.GetTagKByMetric = function () {
-            var tagset = {};
-            $scope.tagvs = {};
-            $http.get('/api/tagk/' + $scope.metric).success(function (data) {
+            var tags = {};
+            $scope.tagvs[0] = new TagV;
+            $http.get('/api/tagk/' + $scope.query_p[0].metric).success(function (data) {
                 if (data instanceof Array) {
                     for (var i = 0; i < data.length; i++) {
-                        tagset[data[i]] = $scope.tagset[data[i]] || '';
+                        tags[data[i]] = $scope.query_p[0].tags[data[i]] || '';
                         GetTagVs(data[i]);
                     }
-                    $scope.tagset = tagset;
+                    $scope.query_p[0].tags = tags;
                 }
             }).error(function (error) {
                 $scope.error = 'Unable to fetch metrics: ' + error;
             });
         };
-        function TagsAsQS(ts) {
-            var qts = new Array();
-            for (var key in $scope.tagset) {
-                if ($scope.tagset.hasOwnProperty(key)) {
-                    if ($scope.tagset[key] != "") {
-                        qts.push(key);
-                        qts.push($scope.tagset[key]);
-                    }
-                }
-            }
-            return qts.join();
-        }
-        function MakeParam(qs, k, v) {
-            if (v) {
-                qs.push(encodeURIComponent(k) + "=" + encodeURIComponent(v));
-            }
-        }
         function GetTagVs(k) {
-            $http.get('/api/tagv/' + k + '/' + $scope.metric).success(function (data) {
-                $scope.tagvs[k] = data;
+            $http.get('/api/tagv/' + k + '/' + $scope.query_p[0].metric).success(function (data) {
+                $scope.tagvs[0][k] = data;
             }).error(function (error) {
                 $scope.error = 'Unable to fetch metrics: ' + error;
             });
         }
         $scope.Query = function () {
-            $location.search('start', $scope.start || null);
-            $location.search('end', $scope.end || null);
-            $location.search('aggregator', $scope.aggregator);
-            $location.search('metric', $scope.metric);
-            $location.search('rate', $scope.rate.toString());
-            $location.search('ds', $scope.ds || null);
-            $location.search('dstime', $scope.dstime || null);
-            $location.search('counter', $scope.counter.toString());
-            $location.search('cmax', $scope.cmax || null);
-            $location.search('creset', $scope.creset || null);
-            $location.search('tags', JSON.stringify($scope.tagset));
+            $scope.queries = [];
+            angular.forEach($scope.query_p, function (p) {
+                var query = new Query(p);
+                $scope.queries.push(query);
+            });
+            $scope.request = {
+                start: $scope.start,
+                end: $scope.end,
+                queries: $scope.queries
+            };
+            $location.search('json', JSON.stringify($scope.request));
             $route.reload();
         };
-        if (!$scope.metric) {
+        if (!$scope.query_p[0].metric) {
+            console.log("metric not defined");
             return;
         }
-        var qs = [];
-        MakeParam(qs, "start", $scope.start);
-        MakeParam(qs, "end", $scope.end);
-        MakeParam(qs, "aggregator", $scope.aggregator);
-        MakeParam(qs, "metric", $scope.metric);
-        MakeParam(qs, "rate", $scope.rate.toString());
-        MakeParam(qs, "tags", TagsAsQS($scope.tagset));
-        if ($scope.ds && $scope.dstime) {
-            MakeParam(qs, "downsample", $scope.dstime + '-' + $scope.ds);
-        }
-        MakeParam(qs, "counter", $scope.counter.toString());
-        MakeParam(qs, "cmax", $scope.cmax);
-        MakeParam(qs, "creset", $scope.creset);
-        $scope.query = qs.join('&');
-        $scope.running = $scope.query;
-        $http.get('/api/query?' + $scope.query).success(function (data) {
+        $http.get('/api/query?' + 'json=' + encodeURIComponent(JSON.stringify($scope.request))).success(function (data) {
             $scope.result = data;
+            console.log(data);
             $scope.running = '';
             $scope.error = '';
         }).error(function (error) {

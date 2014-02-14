@@ -41,13 +41,13 @@
 				<div class="form-group">
 					<div class="input-group">
 						<span class="input-group-addon">Metric</span>
-						<input type="text" class="form-control" ng-model="metric" ng-options="m for m in metrics" placeholder="Metric" ng-change="GetTagKByMetric()" ng-init="GetTagKByMetric()" limit="30" bs-typeahead>
+						<input type="text" class="form-control" ng-model="query_p[0].metric" ng-options="m for m in metrics" placeholder="Metric" ng-change="GetTagKByMetric()" ng-init="GetTagKByMetric()" limit="30" bs-typeahead>
 					</div>
 				</div>
 				<div class="form-group">
 					<div class="input-group" tooltip title="The method used to combine multiple time series into a single time series. This behavior happens when specific or (*) values are omited for tags">
 						<span class="input-group-addon">Aggregator</span>
-						<select ng-model="aggregator" ng-options="agg for agg in aggregators" class="form-control"></select>
+						<select ng-model="query_p[0].aggregator" ng-options="agg for agg in aggregators" class="form-control"></select>
 					</div>
 				</div>
 				<div class="form-group">
@@ -71,46 +71,46 @@
 			<div class="form-group">
 				<div class="input-group" tooltip title="Downsample the data into fewer datapoints. Requires that the downsample window value is also provided.">
 					<span class="input-group-addon">Downsample</span>
-					<select ng-model="ds" ng-options="agg for agg in dsaggregators" class="form-control"></select>
+					<select ng-model="query_p[0].ds" ng-options="agg for agg in dsaggregators" class="form-control"></select>
 				</div>
 			</div>
 			<div class="form-group">
 				<div class="input-group" tooltip title="The time window to downsample to. For example 1h would return a datapoint for every hour by performing the downsample function over that hour. Time Units are ms (Millisecond), s (second), m (minute), h (hour), d (day), w (week), n (month), y (year).">
 					<span class="input-group-addon">Downsample Window</span>
-					<input type="text" class="form-control" ng-model="dstime">
+					<input type="text" class="form-control" ng-model="query_p[0].dstime">
 				</div>
 			</div>
 			<div class="form-group">
 				<div class="input-group" tooltip title="A positive integer representing the maximum value for the counter.">
 					<span class="input-group-addon">Counter Max</span>
-					<input type="text" class="form-control" ng-model="cmax">
+					<input type="text" class="form-control" ng-model="query_p[0].rateOptions.counterMax">
 				</div>
 			</div>
 			<div class="form-group">
 				<div class="input-group" tooltip title="An optional value for the rate that, when exceeded, will cause the aggregator to return a 0 instead of the calculated rate. Useful when data sources are frequently reset to avoid spurious spikes.">
 					<span class="input-group-addon">Counter Reset</span>
-					<input type="text" class="form-control" ng-model="creset">
+					<input type="text" class="form-control" ng-model="query_p[0].rateOptions.ResetValue">
 				</div>
 			</div>
 			<div class="form-inline">
 				<div class="form-group">
 					<div class="checkbox" tooltip title="Whether or not the data should be converted into deltas before returning.">
-						<label><input type="checkbox" ng-model="rate"> Rate</label>
+						<label><input type="checkbox" ng-model="query_p[0].rate"> Rate</label>
 					</div>
 				</div>
 				<div class="form-group">
 					<div class="checkbox" tooltip title="Whether or not the underlying data is a monotonically increasing counter that may roll over">
-						<label><input type="checkbox" ng-model="counter"> Counter</label>
+						<label><input type="checkbox" ng-model="query_p[0].rateOptions.counter"> Counter</label>
 					</div>
 				</div>
 			</div>
 		</div>
 		<div class="col-lg-5">
-			<div ng-repeat="(k, v) in tagset">
+			<div ng-repeat="(k, v) in query_p[0].tags">
 				<div class="form-group">
 					<div class="input-group" tooltip title="Tag values for the tag. Can have multiple seperate by | which will return a time series for each one. Can also be * which returns a time series for each possible value.">
 						<span class="input-group-addon">{{k}}</span>
-						<input type="text" class="form-control" ng-model="tagset[k]" ng-options="tv for tv in tagvs[k]" bs-typeahead>
+						<input type="text" class="form-control" ng-model="query_p[0].tags[k]" ng-options="tv for tv in tagvs[0][k]" bs-typeahead>
 					</div>
 				</div>
 			</div>
