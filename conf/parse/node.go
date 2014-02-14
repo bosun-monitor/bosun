@@ -97,8 +97,9 @@ func (l *ListNode) String() string {
 type SectionNode struct {
 	NodeType
 	Pos
-	Name  *StringNode
-	Nodes []*PairNode
+	SectionType *StringNode
+	Name        *StringNode
+	Nodes       []*PairNode
 }
 
 func newSection(pos Pos) *SectionNode {

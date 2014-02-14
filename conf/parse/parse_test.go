@@ -8,21 +8,12 @@ import (
 )
 
 func isValid(fname string, t *testing.T) bool {
-	t.Log(fname)
 	b, err := ioutil.ReadFile(fname)
 	if err != nil {
 		return false
 	}
-	l := lex(fname, string(b))
-	for i := range l.items {
-		t.Log("item", i)
-		if i.typ == itemEOF {
-			return true
-		} else if i.typ == itemError {
-			return false
-		}
-	}
-	return false
+	_, err = Parse(fname, string(b))
+	return err == nil
 }
 
 func testDir(dirname string, valid bool, t *testing.T) {
@@ -40,7 +31,7 @@ func TestLex(t *testing.T) {
 	testDir("test_invalid", false, t)
 }
 
-func TestPrint(t *testing.T) {
+func _TestPrint(t *testing.T) {
 	fname := "test_valid/4"
 	b, err := ioutil.ReadFile(fname)
 	if err != nil {

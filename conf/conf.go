@@ -175,19 +175,18 @@ func (c *Conf) loadGlobal(p *parse.PairNode) {
 }
 
 func (c *Conf) loadSection(s *parse.SectionNode) {
-	sp := strings.SplitN(s.Name.Text, ".", 2)
-	if len(sp) != 2 {
-		c.errorf("expected . in section name")
-	} else if sp[0] == "template" {
-		c.loadTemplate(sp[1], s)
-	} else if sp[0] == "alert" {
-		c.loadAlert(sp[1], s)
-	} else {
-		c.errorf("unknown section type: %s", sp[0])
+	switch s.SectionType.Text {
+	case "template":
+		c.loadTemplate(s)
+	case "alert":
+		c.loadAlert(s)
+	default:
+		c.errorf("unknown section type: %s", s.SectionType.Text)
 	}
 }
 
-func (c *Conf) loadTemplate(name string, s *parse.SectionNode) {
+func (c *Conf) loadTemplate(s *parse.SectionNode) {
+	name := s.Name.Text
 	if _, ok := c.Templates[name]; ok {
 		c.errorf("duplicate template name: %s", name)
 	}
@@ -229,7 +228,8 @@ func (c *Conf) loadTemplate(name string, s *parse.SectionNode) {
 	c.Templates[name] = &t
 }
 
-func (c *Conf) loadAlert(name string, s *parse.SectionNode) {
+func (c *Conf) loadAlert(s *parse.SectionNode) {
+	name := s.Name.Text
 	if _, ok := c.Alerts[name]; ok {
 		c.errorf("duplicate template name: %s", name)
 	}
