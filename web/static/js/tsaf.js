@@ -129,6 +129,8 @@ var RateOptions = (function () {
 var QueryParams = (function () {
     function QueryParams() {
         this.rateOptions = new RateOptions;
+        this.tags = new TagSet;
+        this.aggregator = 'sum';
     }
     return QueryParams;
 })();
@@ -165,25 +167,47 @@ tsafControllers.controller('GraphCtrl', [
     '$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
         $scope.aggregators = ["sum", "min", "max", "avg", "dev", "zimsum", "mimmin", "minmax"];
         $scope.dsaggregators = ["", "sum", "min", "max", "avg", "dev", "zimsum", "mimmin", "minmax"];
+        $scope.tabs = [1, 2];
         var search = $location.search();
         $scope.query_p = [];
         $scope.query_p[0] = new QueryParams;
+        $scope.query_p[1] = new QueryParams;
         $scope.tagvs = [];
         $scope.request = search.json ? JSON.parse(search.json) : new Request;
         $scope.start = $scope.request.start || '1d-ago';
         $scope.end = $scope.request.end;
-        angular.forEach($scope.request.queries, function (q) {
-            $scope.query_p[0].metric = q.metric;
-            $scope.query_p[0].ds = q.ds;
-            $scope.query_p[0].dstime = q.dstime;
-            $scope.query_p[0].aggregator = q.aggregator || 'sum';
-            $scope.query_p[0].rate = q.rate == true;
-            if (q.RateOptions) {
-                $scope.query_p[0].rateOptions.counter = q.rateOptions.counter == true;
-                $scope.query_p[0].rateOptions.counterMax = q.rateOptions.counterMax;
-                $scope.query_p[0].rateOptions.resetValue = q.rateOptions.resetValue;
+        var j = 0;
+        $scope.GetTagKByMetric = function (index) {
+            var tags = {};
+            $scope.tagvs[index] = new TagV;
+            if ($scope.query_p[index].metric) {
+                $http.get('/api/tagk/' + $scope.query_p[index].metric).success(function (data) {
+                    if (data instanceof Array) {
+                        for (var i = 0; i < data.length; i++) {
+                            tags[data[i]] = $scope.query_p[index].tags[data[i]] || '';
+                            GetTagVs(data[i]);
+                        }
+                        $scope.query_p[index].tags = tags;
+                    }
+                }).error(function (error) {
+                    $scope.error = 'Unable to fetch metrics: ' + error;
+                });
             }
-            $scope.query_p[0].tags = q.Tags || new TagSet;
+        };
+        angular.forEach($scope.request.queries, function (q) {
+            $scope.query_p[j].metric = q.metric;
+            $scope.query_p[j].ds = q.ds;
+            $scope.query_p[j].dstime = q.dstime;
+            $scope.query_p[j].aggregator = q.aggregator || 'sum';
+            $scope.query_p[j].rate = q.rate == true;
+            if (q.RateOptions) {
+                $scope.query_p[j].rateOptions.counter = q.rateOptions.counter == true;
+                $scope.query_p[j].rateOptions.counterMax = q.rateOptions.counterMax;
+                $scope.query_p[j].rateOptions.resetValue = q.rateOptions.resetValue;
+            }
+            $scope.query_p[j].tags = q.Tags || new TagSet;
+            $scope.GetTagKByMetric(j);
+            j += 1;
         });
 
         //
@@ -192,21 +216,7 @@ tsafControllers.controller('GraphCtrl', [
         }).error(function (error) {
             $scope.error = 'Unable to fetch metrics: ' + error;
         });
-        $scope.GetTagKByMetric = function () {
-            var tags = {};
-            $scope.tagvs[0] = new TagV;
-            $http.get('/api/tagk/' + $scope.query_p[0].metric).success(function (data) {
-                if (data instanceof Array) {
-                    for (var i = 0; i < data.length; i++) {
-                        tags[data[i]] = $scope.query_p[0].tags[data[i]] || '';
-                        GetTagVs(data[i]);
-                    }
-                    $scope.query_p[0].tags = tags;
-                }
-            }).error(function (error) {
-                $scope.error = 'Unable to fetch metrics: ' + error;
-            });
-        };
+
         function GetTagVs(k) {
             $http.get('/api/tagv/' + k + '/' + $scope.query_p[0].metric).success(function (data) {
                 $scope.tagvs[0][k] = data;
@@ -217,8 +227,10 @@ tsafControllers.controller('GraphCtrl', [
         $scope.Query = function () {
             $scope.queries = [];
             angular.forEach($scope.query_p, function (p) {
-                var query = new Query(p);
-                $scope.queries.push(query);
+                if (p.metric) {
+                    var query = new Query(p);
+                    $scope.queries.push(query);
+                }
             });
             $scope.request = {
                 start: $scope.start,
@@ -315,6 +327,17 @@ tsafApp.directive("tooltip", function () {
         restrict: 'A',
         link: function (scope, elem, attrs) {
             angular.element(elem[0]).tooltip({ placement: "bottom" });
+        }
+    };
+});
+
+tsafApp.directive('showtab', function () {
+    return {
+        link: function (scope, elem, attrs) {
+            elem.click(function (e) {
+                e.preventDefault();
+                $(elem).tab('show');
+            });
         }
     };
 });
