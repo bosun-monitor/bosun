@@ -162,7 +162,7 @@ func (c *Conf) loadGlobal(p *parse.PairNode) {
 		c.HttpListen = c.expand(v, nil)
 	case "relayListen":
 		c.RelayListen = c.expand(v, nil)
-	case "c.webDir":
+	case "webDir":
 		c.WebDir = c.expand(v, nil)
 	case "smtpHost":
 		c.SmtpHost = c.expand(v, nil)
