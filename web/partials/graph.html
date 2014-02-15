@@ -35,11 +35,12 @@
 	}
 </style>
 <ul class="nav nav-tabs">
-	<li ng-repeat="t in tabs" ng-class="{active : $first}"><a showtab href="{{'#query' + $index}}" data-toggle="tab">Query {{$index + 1}}</a></li>
+	<li ng-repeat="t in tabs track by $index" ng-class="{active : $first}"><a showtab href="{{'#query' + $index}}" data-toggle="tab">Query {{$index + 1}}</a></li>
+	<li><a href="" ng-click="AddTab()">+</a></li>
 </ul>
 <div class="row">
 	<div class="tab-content">
-		<div class="tab-pane fade" ng-class="{active : $first, in : $first}"id="{{'query' + $index}}" ng-repeat="t in tabs">
+		<div class="tab-pane fade" ng-class="{active : $first, in : $first}"id="{{'query' + $index}}" ng-repeat="t in tabs track by $index">
 			<form role="form">
 				<div class="col-lg-4">
 					<div class="form-horizontal">

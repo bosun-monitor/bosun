@@ -232,16 +232,18 @@ interface IGraphScope extends ng.IScope {
 tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route', function($scope: IGraphScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService){
 	$scope.aggregators = ["sum", "min", "max", "avg", "dev", "zimsum", "mimmin", "minmax"];
 	$scope.dsaggregators = ["", "sum", "min", "max", "avg", "dev", "zimsum", "mimmin", "minmax"];
-	$scope.tabs = [1,2];
 	var search = $location.search();
-	$scope.query_p = [];
-	$scope.query_p[0] = new QueryParams;
-	$scope.query_p[1] = new QueryParams;
 	$scope.tagvs = [];
+	$scope.tabs = [];
+	$scope.query_p = [];
 	$scope.request = search.json ? JSON.parse( search.json ) : new Request;
 	$scope.start = $scope.request.start || '1d-ago';
 	$scope.end = $scope.request.end;
 	var j = 0
+	$scope.AddTab = function() {
+		$scope.query_p.push(new QueryParams);
+		$scope.tabs.push(true)
+	}
 	$scope.GetTagKByMetric = function(index: number) {
 		var tags: TagSet = {};
 		$scope.tagvs[index] = new TagV;
@@ -262,6 +264,8 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route
 		}
 	}
 	angular.forEach($scope.request.queries, function(q) {
+		$scope.query_p.push(new QueryParams);
+		$scope.tabs.push(true);
 		$scope.query_p[j].metric = q.metric;
 		$scope.query_p[j].ds = q.ds;
 		$scope.query_p[j].dstime = q.dstime;
@@ -276,6 +280,10 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route
 		$scope.GetTagKByMetric(j)
 		j += 1
 	})
+	if (j = 0) {
+		$scope.query_p[0] = new QueryParams;
+		$scope.tabs = [true];
+	}
 	// 
 	$http.get('/api/metric')
 		.success(function (data: string[]) {
