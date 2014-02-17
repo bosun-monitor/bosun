@@ -132,18 +132,22 @@ func union(a, b []*Result) []*Union {
 				A: ra.Value,
 				B: rb.Value,
 			}
+			setGroup := false
 			if ra.Group.Equal(rb.Group) || len(ra.Group) == 0 || len(rb.Group) == 0 {
 				g := ra.Group
 				if len(ra.Group) == 0 {
 					g = rb.Group
 				}
 				u.Group = g
+				setGroup = true
 			} else if ra.Group.Subset(rb.Group) {
 				u.Group = rb.Group
+				setGroup = true
 			} else if rb.Group.Subset(ra.Group) {
 				u.Group = ra.Group
+				setGroup = true
 			}
-			if u.Group != nil {
+			if setGroup {
 				u.ExtendComputations(ra)
 				u.ExtendComputations(rb)
 				us = append(us, u)
