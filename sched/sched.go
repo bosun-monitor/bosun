@@ -67,8 +67,8 @@ func (s *Schedule) Run() error {
 		if s.Conf == nil {
 			return fmt.Errorf("sched: nil configuration")
 		}
-		s.Check()
 		start := time.Now()
+		s.Check()
 		fmt.Printf("run at %v took %v\n", start, time.Since(start))
 		<-wait
 	}
