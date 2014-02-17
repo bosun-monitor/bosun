@@ -129,14 +129,14 @@ func (a *Alert) data(group opentsdb.TagSet, c opentsdb.Context) interface{} {
 }
 
 func (a *Alert) ExecuteBody(w io.Writer, group opentsdb.TagSet, c opentsdb.Context) error {
-	if a.Template.Body == nil {
+	if a.Template == nil || a.Template.Body == nil {
 		return nil
 	}
 	return a.Template.Body.Execute(w, a.data(group, c))
 }
 
 func (a *Alert) ExecuteSubject(w io.Writer, group opentsdb.TagSet, c opentsdb.Context) error {
-	if a.Template.Subject == nil {
+	if a.Template == nil || a.Template.Subject == nil {
 		return nil
 	}
 	return a.Template.Subject.Execute(w, a.data(group, c))
