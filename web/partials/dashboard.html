@@ -6,8 +6,8 @@
 	>
 		<div class="panel-heading" ng-click="collapse($index)">
 			<h4 class="panel-title">
-				<a data-toggle="collapse" data-parent="#accordion" href>
-					{{name}}
+				<a data-toggle="collapse" data-parent="#accordion" title="{{name}}" href>
+					<span ng-bind="status.Subject || name"></span>
 					<span class="pull-right" ng-bind="status.last.Time.fromNow()"></span>
 				</a>
 			</h4>

@@ -25,14 +25,14 @@ func (s *Schedule) Email(name string, group opentsdb.TagSet) {
 	body := new(bytes.Buffer)
 	subject := new(bytes.Buffer)
 	if a.Template.Body != nil {
-		err := a.ExecuteBody(body, group)
+		err := a.ExecuteBody(body, group, s.cache)
 		if err != nil {
 			log.Println(err)
 			return
 		}
 	}
 	if a.Template.Subject != nil {
-		err := a.ExecuteSubject(subject, group)
+		err := a.ExecuteSubject(subject, group, s.cache)
 		if err != nil {
 			log.Println(err)
 			return
