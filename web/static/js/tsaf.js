@@ -193,12 +193,16 @@ tsafControllers.controller('GraphCtrl', [
                         }
                         $scope.query_p[index].tags = tags;
 
-                        //Make sure Host is always the first tag
+                        // Make sure host is always the first tag.
                         $scope.sorted_tagks[index] = Object.keys(tags);
-                        var hosti = $scope.sorted_tagks[index].indexOf("host");
-                        if (hosti > 0) {
-                            $scope.sorted_tagks[index].move(hosti, 0);
-                        }
+                        $scope.sorted_tagks[index].sort(function (a, b) {
+                            if (a == 'host') {
+                                return 1;
+                            } else if (b == 'host') {
+                                return -1;
+                            }
+                            return a.localeCompare(b);
+                        }).reverse();
                     }
                 }).error(function (error) {
                     $scope.error = 'Unable to fetch metrics: ' + error;
@@ -350,15 +354,3 @@ tsafApp.directive('showtab', function () {
         }
     };
 });
-
-
-Array.prototype.move = function (old_index, new_index) {
-    if (new_index >= this.length) {
-        var k = new_index - this.length;
-        while ((k--) + 1) {
-            this.push(undefined);
-        }
-    }
-    this.splice(new_index, 0, this.splice(old_index, 1)[0]);
-    return this;
-};
