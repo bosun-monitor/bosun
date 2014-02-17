@@ -126,7 +126,9 @@ Loop:
 			alerts = append(alerts, ak)
 			state.Expr = e
 			var subject = new(bytes.Buffer)
-			a.ExecuteSubject(subject, r.Group, s.cache)
+			if err := a.ExecuteSubject(subject, r.Group, s.cache); err != nil {
+				log.Println(err)
+			}
 			state.Subject = subject.String()
 		}
 		if !state.Emailed {
