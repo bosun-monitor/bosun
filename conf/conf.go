@@ -251,6 +251,7 @@ func (c *Conf) loadTemplate(s *parse.SectionNode) {
 				c.errorf("unknown key %s", k)
 			}
 			t.Vars[k] = v
+			t.Vars[k[1:]] = t.Vars[k]
 		}
 	}
 	c.at(s)
@@ -318,6 +319,7 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 				c.errorf("unknown key %s", k)
 			}
 			a.Vars[k] = c.expand(v, a.Vars)
+			a.Vars[k[1:]] = a.Vars[k]
 		}
 	}
 	c.at(s)
