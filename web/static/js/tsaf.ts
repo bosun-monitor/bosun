@@ -203,6 +203,10 @@ class Request {
 	start: string;
 	end: string;
 	Queries: Query[];
+	constructor() {
+		this.start = '1h-ago';
+		this.Queries = [];
+	}
 }
 
 interface IGraphScope extends ng.IScope {
@@ -223,10 +227,11 @@ interface IGraphScope extends ng.IScope {
 	dt: any;
 	series: any;
 	query_p: QueryParams[];
-	queries: any;
 	request: any;
 	start: string;
 	end: string;
+	tabs: boolean[];
+	AddTab: () => void;
 }
 
 tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route', function($scope: IGraphScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService){
@@ -237,9 +242,8 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route
 	$scope.tabs = [];
 	$scope.query_p = [];
 	$scope.request = search.json ? JSON.parse( search.json ) : new Request;
-	$scope.start = $scope.request.start || '1d-ago';
+	$scope.start = $scope.request.start;
 	$scope.end = $scope.request.end;
-	var j = 0
 	$scope.AddTab = function() {
 		$scope.query_p.push(new QueryParams);
 		$scope.tabs.push(true)
@@ -253,7 +257,7 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route
 					if (data instanceof Array) {
 						for (var i = 0; i < data.length; i++) {
 							tags[data[i]] = $scope.query_p[index].tags[data[i]] || '';
-							GetTagVs(data[i]);
+							GetTagVs(data[i], index);
 						}
 						$scope.query_p[index].tags = tags;
 					}
@@ -263,7 +267,8 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route
 				});
 		}
 	}
-	angular.forEach($scope.request.queries, function(q) {
+	var j = 0;
+	angular.forEach($scope.request.Queries, function(q) {
 		$scope.query_p.push(new QueryParams);
 		$scope.tabs.push(true);
 		$scope.query_p[j].metric = q.metric;
@@ -280,11 +285,9 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route
 		$scope.GetTagKByMetric(j)
 		j += 1
 	})
-	if (j = 0) {
-		$scope.query_p[0] = new QueryParams;
-		$scope.tabs = [true];
+	if (j == 0) {
+		$scope.AddTab();
 	}
-	// 
 	$http.get('/api/metric')
 		.success(function (data: string[]) {
 			$scope.metrics = data;
@@ -293,39 +296,34 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route
 			$scope.error = 'Unable to fetch metrics: ' + error;
 		});
 
-	function GetTagVs(k: string) {
-		$http.get('/api/tagv/' + k + '/' + $scope.query_p[0].metric)
+	function GetTagVs(k: string, index: number) {
+		$http.get('/api/tagv/' + k + '/' + $scope.query_p[index].metric)
 			.success(function (data: string[]) {
-				$scope.tagvs[0][k] = data;
+				$scope.tagvs[index][k] = data;
 			})
 			.error(function (error) {
 				$scope.error = 'Unable to fetch metrics: ' + error;
 			});
 	}
 	$scope.Query = function() {
-		$scope.queries = [];
+		$scope.request = new Request;
+		$scope.request.start = $scope.start;
+		$scope.request.end = $scope.end;
 		angular.forEach($scope.query_p, function (p) {
 			if (p.metric) {
 				var query = new Query(p);
-				$scope.queries.push(query);
+				$scope.request.Queries.push(query);
 			}
 		});
-		$scope.request = {
-			start: $scope.start,
-			end: $scope.end,
-			queries: $scope.queries
-		};
 		$location.search('json', JSON.stringify($scope.request));
 		$route.reload();
 	}
-	if (!$scope.query_p[0].metric) {
-		console.log("metric not defined")
+	if ($scope.request.Queries.length < 1) {
 		return;
 	}
 	$http.get('/api/query?' + 'json=' + encodeURIComponent(JSON.stringify($scope.request)))
 		.success((data) => {
 			$scope.result = data;
-			console.log(data)
 			$scope.running = '';
 			$scope.error = '';
 		})

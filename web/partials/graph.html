@@ -101,7 +101,7 @@
 						<div class="form-group">
 							<div class="input-group" tooltip title="Tag values for the tag. Can have multiple seperate by | which will return a time series for each one. Can also be * which returns a time series for each possible value.">
 								<span class="input-group-addon">{{k}}</span>
-								<input type="text" class="form-control" ng-model="query_p[$index].tags[k]" ng-options="tv for tv in tagvs[$index][k]" bs-typeahead>
+								<input type="text" class="form-control" ng-model="query_p[$parent.$index].tags[k]" ng-options="tv for tv in tagvs[$parent.$index][k]" bs-typeahead>
 							</div>
 						</div>
 					</div>	
