@@ -231,7 +231,6 @@ interface IGraphScope extends ng.IScope {
 	request: any;
 	start: string;
 	end: string;
-	tabs: boolean[];
 	AddTab: () => void;
 }
 
@@ -241,14 +240,12 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route
 	var search = $location.search();
 	$scope.tagvs = [];
 	$scope.sorted_tagks = [];
-	$scope.tabs = [];
 	$scope.query_p = [];
 	$scope.request = search.json ? JSON.parse(search.json) : new Request;
 	$scope.start = $scope.request.start;
 	$scope.end = $scope.request.end;
 	$scope.AddTab = function() {
 		$scope.query_p.push(new QueryParams);
-		$scope.tabs.push(true)
 	}
 	$scope.GetTagKByMetric = function(index: number) {
 		var tags: TagSet = {};
@@ -282,7 +279,6 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route
 	var j = 0;
 	angular.forEach($scope.request.Queries, function(q) {
 		$scope.query_p.push(new QueryParams);
-		$scope.tabs.push(true);
 		$scope.query_p[j].metric = q.metric;
 		$scope.query_p[j].ds = q.ds;
 		$scope.query_p[j].dstime = q.dstime;

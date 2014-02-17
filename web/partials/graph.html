@@ -35,37 +35,37 @@
 	}
 </style>
 <ul class="nav nav-tabs">
-	<li ng-repeat="t in tabs track by $index" ng-class="{active : $first}"><a showtab href="{{'#query' + $index}}" data-toggle="tab">Query {{$index + 1}}</a></li>
+	<li ng-repeat="t in query_p" ng-class="{active: $first}"><a showtab href="{{'#query' + $index}}" data-toggle="tab">Query {{$index + 1}}</a></li>
 	<li><a href="" ng-click="AddTab()">+</a></li>
 </ul>
 <div class="row">
 	<div class="tab-content">
-		<div class="tab-pane fade" ng-class="{active : $first, in : $first}"id="{{'query' + $index}}" ng-repeat="t in tabs track by $index">
+		<div class="tab-pane fade" ng-class="{active: $first, in: $first}" id="{{'query' + $index}}" ng-repeat="t in query_p">
 			<form role="form">
 				<div class="col-lg-4">
 					<div class="form-horizontal">
 						<div class="form-group">
 							<div class="input-group">
 								<span class="input-group-addon">Metric</span>
-								<input type="text" class="form-control" ng-model="query_p[$index].metric" ng-options="m for m in metrics" placeholder="Metric" ng-change="GetTagKByMetric($index)" ng-init="GetTagKByMetric($index)" limit="30" bs-typeahead>
+								<input type="text" class="form-control" ng-model="t.metric" ng-options="m for m in metrics" placeholder="Metric" ng-change="GetTagKByMetric($index)" ng-init="GetTagKByMetric($index)" limit="30" bs-typeahead>
 							</div>
 						</div>
 						<div class="form-group">
 							<div class="input-group" tooltip title="The method used to combine multiple time series into a single time series. This behavior happens when specific or (*) values are omited for tags">
 								<span class="input-group-addon">Aggregator</span>
-								<select ng-model="query_p[$index].aggregator" ng-options="agg for agg in aggregators" class="form-control"></select>
+								<select ng-model="t.aggregator" ng-options="agg for agg in aggregators" class="form-control"></select>
 							</div>
 						</div>
 						<div class="form-group">
 							<div class="input-group" tooltip title="Downsample the data into fewer datapoints. Requires that the downsample window value is also provided.">
 								<span class="input-group-addon">Downsample</span>
-								<select ng-model="query_p[$index].ds" ng-options="agg for agg in dsaggregators" class="form-control"></select>
+								<select ng-model="t.ds" ng-options="agg for agg in dsaggregators" class="form-control"></select>
 							</div>
 						</div>
 						<div class="form-group">
 							<div class="input-group" tooltip title="The time window to downsample to. For example 1h would return a datapoint for every hour by performing the downsample function over that hour. Time units are ms (millisecond), s (second), m (minute), h (hour), d (day), w (week), n (month), y (year).">
 								<span class="input-group-addon">Downsample Window</span>
-								<input type="text" class="form-control" ng-model="query_p[$index].dstime">
+								<input type="text" class="form-control" ng-model="t.dstime">
 							</div>
 						</div>
 					</div>
@@ -74,24 +74,24 @@
 					<div class="form-group">
 						<div class="input-group" tooltip title="A positive integer representing the maximum value for the counter.">
 							<span class="input-group-addon">Counter Max</span>
-							<input type="text" class="form-control" ng-model="query_p[$index].rateOptions.counterMax">
+							<input type="text" class="form-control" ng-model="t.rateOptions.counterMax">
 						</div>
 					</div>
 					<div class="form-group">
 						<div class="input-group" tooltip title="An optional value for the rate that, when exceeded, will cause the aggregator to return a 0 instead of the calculated rate. Useful when data sources are frequently reset to avoid spurious spikes.">
 							<span class="input-group-addon">Counter Reset</span>
-							<input type="text" class="form-control" ng-model="query_p[$index].rateOptions.ResetValue">
+							<input type="text" class="form-control" ng-model="t.rateOptions.ResetValue">
 						</div>
 					</div>
 					<div class="form-inline">
 						<div class="form-group">
 							<div class="checkbox" tooltip title="Whether or not the data should be converted into deltas before returning.">
-								<label><input type="checkbox" ng-model="query_p[$index].rate"> Rate</label>
+								<label><input type="checkbox" ng-model="t.rate"> Rate</label>
 							</div>
 						</div>
 						<div class="form-group">
 							<div class="checkbox" tooltip title="Whether or not the underlying data is a monotonically increasing counter that may roll over">
-								<label><input type="checkbox" ng-model="query_p[$index].rateOptions.counter"> Counter</label>
+								<label><input type="checkbox" ng-model="t.rateOptions.counter"> Counter</label>
 							</div>
 						</div>
 					</div>
@@ -101,7 +101,7 @@
 						<div class="form-group">
 							<div class="input-group" tooltip title="Tag values for the tag. Can have multiple seperate by | which will return a time series for each one. Can also be * which returns a time series for each possible value.">
 								<span class="input-group-addon">{{k}}</span>
-								<input type="text" class="form-control" ng-model="query_p[$parent.$index].tags[k]" ng-options="tv for tv in tagvs[$parent.$index][k]" bs-typeahead>
+								<input type="text" class="form-control" ng-model="t.tags[k]" ng-options="tv for tv in tagvs[$parent.$index][k]" bs-typeahead>
 							</div>
 						</div>
 					</div>	
