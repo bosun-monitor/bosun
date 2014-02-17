@@ -172,14 +172,12 @@ tsafControllers.controller('GraphCtrl', [
         var search = $location.search();
         $scope.tagvs = [];
         $scope.sorted_tagks = [];
-        $scope.tabs = [];
         $scope.query_p = [];
         $scope.request = search.json ? JSON.parse(search.json) : new Request;
         $scope.start = $scope.request.start;
         $scope.end = $scope.request.end;
         $scope.AddTab = function () {
             $scope.query_p.push(new QueryParams);
-            $scope.tabs.push(true);
         };
         $scope.GetTagKByMetric = function (index) {
             var tags = {};
@@ -212,7 +210,6 @@ tsafControllers.controller('GraphCtrl', [
         var j = 0;
         angular.forEach($scope.request.Queries, function (q) {
             $scope.query_p.push(new QueryParams);
-            $scope.tabs.push(true);
             $scope.query_p[j].metric = q.metric;
             $scope.query_p[j].ds = q.ds;
             $scope.query_p[j].dstime = q.dstime;
