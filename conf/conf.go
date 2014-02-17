@@ -90,23 +90,50 @@ type Template struct {
 }
 
 type context struct {
-	Alert *Alert
-	Tags  opentsdb.TagSet
+	Alert   *Alert
+	Tags    opentsdb.TagSet
+	Context opentsdb.Context
 }
 
-func (a *Alert) data(group opentsdb.TagSet) interface{} {
+// E executes the given expression and returns a value with corresponding tags
+// to the context's tags. If no such result is found, the first result with nil
+// tags is returned. If no such result is found, nil is returned.
+func (c *context) E(v string) expr.Value {
+	e, err := expr.New(v)
+	if err != nil {
+		return nil
+	}
+	res, err := e.Execute(c.Context, nil)
+	if err != nil {
+		return nil
+	}
+	for _, r := range res {
+		if r.Group.Equal(c.Tags) {
+			return r.Value
+		}
+	}
+	for _, r := range res {
+		if r.Group == nil {
+			return r.Value
+		}
+	}
+	return nil
+}
+
+func (a *Alert) data(group opentsdb.TagSet, c opentsdb.Context) interface{} {
 	return &context{
 		a,
 		group,
+		c,
 	}
 }
 
-func (a *Alert) ExecuteBody(w io.Writer, group opentsdb.TagSet) error {
-	return a.Template.Body.Execute(w, a.data(group))
+func (a *Alert) ExecuteBody(w io.Writer, group opentsdb.TagSet, c opentsdb.Context) error {
+	return a.Template.Body.Execute(w, a.data(group, c))
 }
 
-func (a *Alert) ExecuteSubject(w io.Writer, group opentsdb.TagSet) error {
-	return a.Template.Subject.Execute(w, a.data(group))
+func (a *Alert) ExecuteSubject(w io.Writer, group opentsdb.TagSet, c opentsdb.Context) error {
+	return a.Template.Subject.Execute(w, a.data(group, c))
 }
 
 type Vars map[string]string
