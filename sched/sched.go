@@ -1,6 +1,7 @@
 package sched
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -67,8 +68,8 @@ func (s *Schedule) Run() error {
 		if s.Conf == nil {
 			return fmt.Errorf("sched: nil configuration")
 		}
-		s.Check()
 		start := time.Now()
+		s.Check()
 		fmt.Printf("run at %v took %v\n", start, time.Since(start))
 		<-wait
 	}
@@ -124,6 +125,11 @@ Loop:
 		if status != ST_NORM {
 			alerts = append(alerts, ak)
 			state.Expr = e
+			var subject = new(bytes.Buffer)
+			if err := a.ExecuteSubject(subject, r.Group, s.cache); err != nil {
+				log.Println(err)
+			}
+			state.Subject = subject.String()
 		}
 		if !state.Emailed {
 			s.Email(a.Name, r.Group)
@@ -149,6 +155,7 @@ type State struct {
 	Emailed      bool
 	Group        opentsdb.TagSet
 	Computations expr.Computations
+	Subject      string
 }
 
 func (s *State) Touch() {
