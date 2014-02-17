@@ -215,6 +215,7 @@ interface IGraphScope extends ng.IScope {
 	metrics: string[];
 	tagvs: TagV[];
 	tags: TagSet;
+	sorted_tagks: string[][];
 	query: string;
 	aggregators: string[];
 	dsaggregators: string[];
@@ -239,6 +240,7 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route
 	$scope.dsaggregators = ["", "sum", "min", "max", "avg", "dev", "zimsum", "mimmin", "minmax"];
 	var search = $location.search();
 	$scope.tagvs = [];
+	$scope.sorted_tagks = [];
 	$scope.tabs = [];
 	$scope.query_p = [];
 	$scope.request = search.json ? JSON.parse( search.json ) : new Request;
@@ -260,6 +262,12 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route
 							GetTagVs(data[i], index);
 						}
 						$scope.query_p[index].tags = tags;
+						//Make sure Host is always the first tag
+						$scope.sorted_tagks[index] = Object.keys(tags);
+						var hosti: number = $scope.sorted_tagks[index].indexOf("host");
+						if (hosti > 0) {
+							$scope.sorted_tagks[index].move(hosti, 0);
+						}
 					}
 				})
 				.error(function (error) {
@@ -418,3 +426,19 @@ tsafApp.directive('showtab', function () {
 		}
 	};
 });
+
+//Extras
+interface Array {
+	move(old_index: number, new_index: number): string[];
+}
+
+Array.prototype.move = function (old_index, new_index) {
+	if (new_index >= this.length) {
+		var k = new_index - this.length;
+		while ((k--) + 1) {
+			this.push(undefined);
+		}
+	}
+	this.splice(new_index, 0, this.splice(old_index, 1)[0]);
+	return this; // for testing purposes
+};

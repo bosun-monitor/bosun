@@ -97,7 +97,7 @@
 					</div>
 				</div>
 				<div class="col-lg-5">
-					<div ng-repeat="(k, v) in query_p[$index].tags">
+					<div ng-repeat="k in sorted_tagks[$index]">
 						<div class="form-group">
 							<div class="input-group" tooltip title="Tag values for the tag. Can have multiple seperate by | which will return a time series for each one. Can also be * which returns a time series for each possible value.">
 								<span class="input-group-addon">{{k}}</span>
