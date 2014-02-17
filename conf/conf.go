@@ -121,12 +121,7 @@ func ParseFile(fname string) (*Conf, error) {
 
 func New(name, text string) (c *Conf, err error) {
 	defer errRecover(&err)
-	t, e := parse.Parse(name, text)
-	if e != nil {
-		c.error(err)
-	}
 	c = &Conf{
-		tree:        t,
 		Name:        name,
 		HttpListen:  ":8070",
 		RelayListen: ":4242",
@@ -135,7 +130,11 @@ func New(name, text string) (c *Conf, err error) {
 		Templates:   make(map[string]*Template),
 		Alerts:      make(map[string]*Alert),
 	}
-	for _, n := range t.Root.Nodes {
+	c.tree, err = parse.Parse(name, text)
+	if err != nil {
+		c.error(err)
+	}
+	for _, n := range c.tree.Root.Nodes {
 		c.at(n)
 		switch n := n.(type) {
 		case *parse.PairNode:
@@ -162,7 +161,7 @@ func (c *Conf) loadGlobal(p *parse.PairNode) {
 		c.HttpListen = c.expand(v, nil)
 	case "relayListen":
 		c.RelayListen = c.expand(v, nil)
-	case "c.webDir":
+	case "webDir":
 		c.WebDir = c.expand(v, nil)
 	case "smtpHost":
 		c.SmtpHost = c.expand(v, nil)
@@ -175,19 +174,18 @@ func (c *Conf) loadGlobal(p *parse.PairNode) {
 }
 
 func (c *Conf) loadSection(s *parse.SectionNode) {
-	sp := strings.SplitN(s.Name.Text, ".", 2)
-	if len(sp) != 2 {
-		c.errorf("expected . in section name")
-	} else if sp[0] == "template" {
-		c.loadTemplate(sp[1], s)
-	} else if sp[0] == "alert" {
-		c.loadAlert(sp[1], s)
-	} else {
-		c.errorf("unknown section type: %s", sp[0])
+	switch s.SectionType.Text {
+	case "template":
+		c.loadTemplate(s)
+	case "alert":
+		c.loadAlert(s)
+	default:
+		c.errorf("unknown section type: %s", s.SectionType.Text)
 	}
 }
 
-func (c *Conf) loadTemplate(name string, s *parse.SectionNode) {
+func (c *Conf) loadTemplate(s *parse.SectionNode) {
+	name := s.Name.Text
 	if _, ok := c.Templates[name]; ok {
 		c.errorf("duplicate template name: %s", name)
 	}
@@ -195,13 +193,19 @@ func (c *Conf) loadTemplate(name string, s *parse.SectionNode) {
 		Vars: make(map[string]string),
 		Name: name,
 	}
+	V := func(v string) string {
+		return c.expand(v, t.Vars)
+	}
+	master := template.New(name).Funcs(template.FuncMap{
+		"V": V,
+	})
 	for _, p := range s.Nodes {
 		c.at(p)
 		v := p.Val.Text
 		switch k := p.Key.Text; k {
 		case "body":
 			t.body = v
-			tmpl := template.New(name)
+			tmpl := master.New(k)
 			_, err := tmpl.Parse(t.body)
 			if err != nil {
 				c.error(err)
@@ -209,7 +213,7 @@ func (c *Conf) loadTemplate(name string, s *parse.SectionNode) {
 			t.Body = tmpl
 		case "subject":
 			t.subject = v
-			tmpl := template.New(name)
+			tmpl := master.New(k)
 			_, err := tmpl.Parse(t.subject)
 			if err != nil {
 				c.error(err)
@@ -229,7 +233,8 @@ func (c *Conf) loadTemplate(name string, s *parse.SectionNode) {
 	c.Templates[name] = &t
 }
 
-func (c *Conf) loadAlert(name string, s *parse.SectionNode) {
+func (c *Conf) loadAlert(s *parse.SectionNode) {
+	name := s.Name.Text
 	if _, ok := c.Alerts[name]; ok {
 		c.errorf("duplicate template name: %s", name)
 	}
@@ -301,14 +306,14 @@ func (c *Conf) expand(v string, vars map[string]string) string {
 	v = exRE.ReplaceAllStringFunc(v, func(s string) string {
 		if vars != nil {
 			if n, ok := vars[s]; ok {
-				return n
+				return c.expand(n, vars)
 			}
 		}
 		n, ok := c.Vars[s]
 		if !ok {
 			c.errorf("unknown variable %s", s)
 		}
-		return n
+		return c.expand(n, nil)
 	})
 	return v
 }

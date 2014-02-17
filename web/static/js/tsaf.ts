@@ -366,33 +366,35 @@ tsafApp.directive("tsRickshaw", function() {
 					element: angular.element('.y_axis', elem)[0],
 				});
 				graph.render();
-				var legend = angular.element('.rlegend', elem)[0]
+				var legend = angular.element('.rlegend', elem)[0];
 				var Hover = Rickshaw.Class.create(Rickshaw.Graph.HoverDetail, {
 					render: function(args: any) {
 						legend.innerHTML = args.formattedXValue;
-						args.detail.sort(function(a: any, b: any) { return a.order - b.order }).forEach( function(d: any) {
-							var line = document.createElement('div');
-							line.className = 'rline';
-							var swatch = document.createElement('div');
-							swatch.className = 'rswatch';
-							swatch.style.backgroundColor = d.series.color;
-							var label = document.createElement('div');
-							label.className = 'rlabel';
-							label.innerHTML = d.name + ": " + d.formattedYValue;
-							line.appendChild(swatch);
-							line.appendChild(label);
-							legend.appendChild(line);
-							var dot = document.createElement('div');
-							dot.className = 'dot';
-							dot.style.top = graph.y(d.value.y0 + d.value.y) + 'px';
-							dot.style.borderColor = d.series.color;
-							this.element.appendChild(dot);
-							dot.className = 'dot active';
-							this.show();
-						}, this );
-						}
+						args.detail.
+							sort((a: any, b: any) => { return a.order - b.order }).
+							forEach(function(d: any) {
+								var line = document.createElement('div');
+								line.className = 'rline';
+								var swatch = document.createElement('div');
+								swatch.className = 'rswatch';
+								swatch.style.backgroundColor = d.series.color;
+								var label = document.createElement('div');
+								label.className = 'rlabel';
+								label.innerHTML = d.name + ": " + d.formattedYValue;
+								line.appendChild(swatch);
+								line.appendChild(label);
+								legend.appendChild(line);
+								var dot = document.createElement('div');
+								dot.className = 'dot';
+								dot.style.top = graph.y(d.value.y0 + d.value.y) + 'px';
+								dot.style.borderColor = d.series.color;
+								this.element.appendChild(dot);
+								dot.className = 'dot active';
+								this.show();
+							}, this);
+					}
 				});
-				var hover = new Hover( { graph: graph } );
+				var hover = new Hover({graph: graph});
 			});
 		},
 	};
@@ -400,10 +402,8 @@ tsafApp.directive("tsRickshaw", function() {
 
 tsafApp.directive("tooltip", function() {
 	return {
-		restrict: 'A',
 		link: function(scope: IGraphScope, elem: any, attrs: any) {
-			angular.element(elem[0])
-				.tooltip({placement: "bottom"});
+			angular.element(elem[0]).tooltip({placement: "bottom"});
 		},
 	};
 });
