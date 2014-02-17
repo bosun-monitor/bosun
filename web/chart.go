@@ -6,7 +6,6 @@ import (
 	"github.com/MiniProfiler/go/miniprofiler"
 	"github.com/StackExchange/scollector/opentsdb"
 	//"github.com/StackExchange/tsaf/expr"
-	"log"
 	"net/http"
 	"net/url"
 	"sort"
@@ -21,7 +20,6 @@ func Query(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 		serveError(w, err)
 		return
 	}
-	log.Println(oreq)
 	var tr opentsdb.ResponseSet
 	q, _ := url.QueryUnescape(oreq.String())
 	t.StepCustomTiming("tsdb", "query", q, func() {
