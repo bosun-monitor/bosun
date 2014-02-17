@@ -38,7 +38,7 @@ func New(expr string) (*Expr, error) {
 }
 
 // Execute applies a parse expression to the specified OpenTSDB context,
-// and returns one result per group.
+// and returns one result per group. T may be nil to ignore timings.
 func (e *Expr) Execute(c opentsdb.Context, T miniprofiler.Timer) (r []*Result, err error) {
 	defer errRecover(&err)
 	s := &state{
