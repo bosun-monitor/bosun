@@ -1,6 +1,7 @@
 package sched
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -124,6 +125,9 @@ Loop:
 		if status != ST_NORM {
 			alerts = append(alerts, ak)
 			state.Expr = e
+			var subject = new(bytes.Buffer)
+			a.ExecuteSubject(subject, r.Group, s.cache)
+			state.Subject = subject.String()
 		}
 		if !state.Emailed {
 			s.Email(a.Name, r.Group)
@@ -149,6 +153,7 @@ type State struct {
 	Emailed      bool
 	Group        opentsdb.TagSet
 	Computations expr.Computations
+	Subject      string
 }
 
 func (s *State) Touch() {
