@@ -3,14 +3,15 @@ package web
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/MiniProfiler/go/miniprofiler"
-	"github.com/StackExchange/scollector/opentsdb"
-	//"github.com/StackExchange/tsaf/expr"
 	"net/http"
 	"net/url"
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/MiniProfiler/go/miniprofiler"
+	"github.com/StackExchange/scollector/opentsdb"
+	"github.com/StackExchange/tsaf/expr"
 )
 
 func Query(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
@@ -19,6 +20,12 @@ func Query(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		serveError(w, err)
 		return
+	}
+	for _, q := range oreq.Queries {
+		if err := expr.ExpandSearch(q); err != nil {
+			serveError(w, err)
+			return
+		}
 	}
 	var tr opentsdb.ResponseSet
 	q, _ := url.QueryUnescape(oreq.String())
