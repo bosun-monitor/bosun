@@ -185,12 +185,12 @@ class Query {
 		this.rate = qp.rate;
 		this.rateOptions = qp.rateOptions;
 		if (qp.dstime && qp.ds) {
-			this.Downsample = qp.dstime + '-' + qp.ds
+			this.Downsample = qp.dstime + '-' + qp.ds;
 		}
 		if (qp.tags) {
-			var ts: TagSet = new TagSet;
+			var ts = new TagSet;
 			angular.forEach(qp.tags, function(v, k) {
-				if(v) {
+				if (v) {
 					ts[k] = v;
 				}
 			});
@@ -243,7 +243,7 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route
 	$scope.sorted_tagks = [];
 	$scope.tabs = [];
 	$scope.query_p = [];
-	$scope.request = search.json ? JSON.parse( search.json ) : new Request;
+	$scope.request = search.json ? JSON.parse(search.json) : new Request;
 	$scope.start = $scope.request.start;
 	$scope.end = $scope.request.end;
 	$scope.AddTab = function() {
@@ -290,8 +290,8 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route
 			$scope.query_p[j].rateOptions.resetValue = q.rateOptions.resetValue;
 		}
 		$scope.query_p[j].tags = q.Tags || new TagSet;
-		$scope.GetTagKByMetric(j)
-		j += 1
+		$scope.GetTagKByMetric(j);
+		j += 1;
 	})
 	if (j == 0) {
 		$scope.AddTab();
@@ -423,7 +423,7 @@ tsafApp.directive('showtab', function () {
 				e.preventDefault();
 				$(elem).tab('show');
 			});
-		}
+		},
 	};
 });
 
