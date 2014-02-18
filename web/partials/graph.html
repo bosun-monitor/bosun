@@ -35,12 +35,12 @@
 	}
 </style>
 <ul class="nav nav-tabs">
-	<li ng-repeat="t in query_p" ng-class="{active: $first}"><a showtab href="{{'#query' + $index}}" data-toggle="tab">Query {{$index + 1}}</a></li>
-	<li><a href="" ng-click="AddTab()">+</a></li>
+	<li ng-repeat="t in query_p" ng-class="{active: $index == index}"><a href ng-click="setIndex($index)">Query {{$index + 1}}</a></li>
+	<li><a href ng-click="AddTab()">+</a></li>
 </ul>
 <div class="row">
 	<div class="tab-content">
-		<div class="tab-pane fade" ng-class="{active: $first, in: $first}" id="{{'query' + $index}}" ng-repeat="t in query_p">
+		<div class="tab-pane" ng-class="{active: $index == index}" ng-repeat="t in query_p">
 			<form role="form">
 				<div class="col-lg-4">
 					<div class="form-horizontal">
@@ -59,13 +59,13 @@
 						<div class="form-group">
 							<div class="input-group" tooltip title="Downsample the data into fewer datapoints. Requires that the downsample window value is also provided.">
 								<span class="input-group-addon">Downsample</span>
-								<select ng-model="t.ds" ng-options="agg for agg in dsaggregators" class="form-control"></select>
+								<select ng-model="t.ds" ng-change="t.setDs()" ng-options="agg for agg in dsaggregators" class="form-control"></select>
 							</div>
 						</div>
 						<div class="form-group">
 							<div class="input-group" tooltip title="The time window to downsample to. For example 1h would return a datapoint for every hour by performing the downsample function over that hour. Time units are ms (millisecond), s (second), m (minute), h (hour), d (day), w (week), n (month), y (year).">
 								<span class="input-group-addon">Downsample Window</span>
-								<input type="text" class="form-control" ng-model="t.dstime">
+								<input type="text" class="form-control" ng-model="t.dstime" ng-change="t.setDs()">
 							</div>
 						</div>
 					</div>
@@ -146,4 +146,3 @@
 <div class="row">
 	<div class="chart" ts-rickshaw="result"></div>
 </div>
-
