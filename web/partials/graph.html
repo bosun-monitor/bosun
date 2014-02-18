@@ -34,6 +34,29 @@
 		margin: 0 0 0 30px;
 	}
 </style>
+<div class="row">
+	<div class="form-horizontal">
+		<div class="col-lg-2">
+			<div class="form-group">
+				<div class="input-group" tooltip title="Can be absolute or relative time. Relative times follow the format <amount><time unit>-ago. Time Units are ms (Millisecond), s (second), m (minute), h (hour), d (day), w (week), n (month), y (year). Absolute time is in the format yyyy/MM/dd-HH:mm:ss , where any of the time (but not date) parts can be omitted.">
+					<span class="input-group-addon">Start</span>
+					<input type="text" class="form-control" ng-model="start">
+				</div>
+			</div>
+		</div>
+	</div>
+	<div class="col-lg-2">
+		<div class="form-group">
+			<div class="input-group" tooltip title="Current time if blank. Can be absolute or relative time. Relative times follow the format <amount><time unit>-ago. Time Units are ms (Millisecond), s (second), m (minute), h (hour), d (day), w (week), n (month), y (year). Absolute time is in the format yyyy/MM/dd-HH:mm:ss , where any of the time (but not date) parts can be omitted.">
+				<span class="input-group-addon">End</span>
+				<input type="text" class="form-control" ng-model="end">
+			</div>
+		</div>
+	</div>
+	<div class="form-group">
+		<button class="btn btn-primary form-control" ng-click="Query()">Query</button>
+	</div>
+</div>
 <ul class="nav nav-tabs">
 	<li ng-repeat="t in query_p" ng-class="{active: $index == index}"><a href ng-click="setIndex($index)">Query {{$index + 1}}</a></li>
 	<li><a href ng-click="AddTab()">+</a></li>
@@ -108,29 +131,6 @@
 				</div>
 			</form>
 		</div>
-	</div>
-</div>
-<div class="row">
-<div class="form-horizontal">
-	<div class="col-lg-4">
-		<div class="form-group">
-			<div class="input-group" tooltip title="Can be absolute or relative time. Relative times follow the format <amount><time unit>-ago. Time Units are ms (Millisecond), s (second), m (minute), h (hour), d (day), w (week), n (month), y (year). Absolute time is in the format yyyy/MM/dd-HH:mm:ss , where any of the time (but not date) parts can be omitted.">
-				<span class="input-group-addon">Start</span>
-				<input type="text" class="form-control" ng-model="start">
-			</div>
-		</div>
-	</div>
-</div>	
-	<div class="col-lg-4">
-		<div class="form-group">
-			<div class="input-group" tooltip title="Current time if blank. Can be absolute or relative time. Relative times follow the format <amount><time unit>-ago. Time Units are ms (Millisecond), s (second), m (minute), h (hour), d (day), w (week), n (month), y (year). Absolute time is in the format yyyy/MM/dd-HH:mm:ss , where any of the time (but not date) parts can be omitted.">
-				<span class="input-group-addon">End</span>
-				<input type="text" class="form-control" ng-model="end">
-			</div>
-		</div>
-	</div>
-	<div class="form-group">
-		<button class="btn btn-default" ng-click="Query()" class="form-control">Query</button>
 	</div>
 </div>
 <div class="row" ng-show="error">
