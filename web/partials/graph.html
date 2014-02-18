@@ -33,6 +33,10 @@
 		color: black;
 		margin: 0 0 0 30px;
 	}
+	.graph.nav-tabs {
+		margin-bottom: 15px;
+		margin-top: 15px;
+	}
 </style>
 <div class="row">
 	<div class="col-sm-12">
@@ -63,7 +67,7 @@
 </div>
 <div class="row">
 	<div class="col-sm-12">
-		<ul class="nav nav-tabs">
+		<ul class="graph nav nav-tabs">
 			<li ng-repeat="t in query_p" ng-class="{active: $index == index}"><a href ng-click="setIndex($index)">Query {{$index + 1}}</a></li>
 			<li><a href ng-click="AddTab()">+</a></li>
 		</ul>
