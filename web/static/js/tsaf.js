@@ -168,6 +168,7 @@ tsafControllers.controller('GraphCtrl', [
         $scope.start = request.start;
         $scope.end = request.end;
         $scope.AddTab = function () {
+            $scope.index = $scope.query_p.length;
             $scope.query_p.push(new Query({}));
         };
         $scope.setIndex = function (i) {
