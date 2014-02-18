@@ -35,27 +35,29 @@
 	}
 </style>
 <div class="row">
-	<div class="form-horizontal">
-		<div class="col-lg-2">
-			<div class="form-group">
-				<div class="input-group" tooltip title="Can be absolute or relative time. Relative times follow the format <amount><time unit>-ago. Time Units are ms (Millisecond), s (second), m (minute), h (hour), d (day), w (week), n (month), y (year). Absolute time is in the format yyyy/MM/dd-HH:mm:ss , where any of the time (but not date) parts can be omitted.">
-					<span class="input-group-addon">Start</span>
-					<input type="text" class="form-control" ng-model="start">
-				</div>
-			</div>
-		</div>
-	</div>
-	<div class="col-lg-2">
+	<form class="form-inline">
 		<div class="form-group">
-			<div class="input-group" tooltip title="Current time if blank. Can be absolute or relative time. Relative times follow the format <amount><time unit>-ago. Time Units are ms (Millisecond), s (second), m (minute), h (hour), d (day), w (week), n (month), y (year). Absolute time is in the format yyyy/MM/dd-HH:mm:ss , where any of the time (but not date) parts can be omitted.">
-				<span class="input-group-addon">End</span>
-				<input type="text" class="form-control" ng-model="end">
-			</div>
+			<input
+				type="text"
+				class="form-control col-sm-2"
+				ng-model="start"
+				placeholder="Start"
+				tooltip
+				title="Can be absolute or relative time. Relative times follow the format <amount><time unit>-ago. Time Units are ms (Millisecond), s (second), m (minute), h (hour), d (day), w (week), n (month), y (year). Absolute time is in the format yyyy/MM/dd-HH:mm:ss , where any of the time (but not date) parts can be omitted."
+				>
 		</div>
-	</div>
-	<div class="form-group">
-		<button class="btn btn-primary form-control" ng-click="Query()">Query</button>
-	</div>
+		<div class="form-group">
+			<input
+				type="text"
+				class="form-control col-sm-2"
+				ng-model="end"
+				placeholder="End"
+				tooltip
+				title="Current time if blank. Can be absolute or relative time. Relative times follow the format <amount><time unit>-ago. Time Units are ms (Millisecond), s (second), m (minute), h (hour), d (day), w (week), n (month), y (year). Absolute time is in the format yyyy/MM/dd-HH:mm:ss , where any of the time (but not date) parts can be omitted."
+				>
+		</div>
+		<button class="btn btn-primary" ng-click="Query()">Query</button>
+	</form>
 </div>
 <ul class="nav nav-tabs">
 	<li ng-repeat="t in query_p" ng-class="{active: $index == index}"><a href ng-click="setIndex($index)">Query {{$index + 1}}</a></li>
