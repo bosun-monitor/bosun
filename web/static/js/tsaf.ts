@@ -141,34 +141,70 @@ tsafControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route'
 	};
 }]);
 
-interface TagSet {
+class TagSet {
 	[tagk: string]: string;
 }
 
-interface TagV {
+class TagV {
 	[tagk: string]: string[];
 }
 
-interface IGraphScope extends ng.IScope {
-	error: string;
-	running: string;
+class RateOptions {
+	counter: boolean;
+	counterMax: string;
+	resetValue: string;
+}
+
+class Query {
+	aggregator: string;
 	metric: string;
+	rate: boolean;
+	rateOptions: RateOptions;
+	tags: TagSet;
+	downsample: string;
 	ds: string;
 	dstime: string;
-	metrics: string[];
-	tagvs: TagV;
-	tagset: TagSet;
-	query: string;
-	rate: boolean;
-	counter: boolean;
-	cmax: string;
-	creset: string;
+	constructor(qp: any) {
+		this.aggregator = qp.aggregator || 'sum';
+		this.metric = qp.metric;
+		this.rate = qp.rate || false;
+		this.rateOptions = qp.rateOptions || new RateOptions;
+		this.ds = qp.ds || '';
+		this.dstime = qp.dstime || '';
+		this.tags = qp.tags || new TagSet;
+		this.setDs();
+	}
+	setDs() {
+		if (this.dstime && this.ds) {
+			this.downsample = this.dstime + '-' + this.ds;
+		} else {
+			this.downsample = '';
+		}
+	}
+}
+
+class Request {
 	start: string;
 	end: string;
+	Queries: Query[];
+	constructor() {
+		this.start = '1h-ago';
+		this.Queries = [];
+	}
+}
+
+interface IGraphScope extends ng.IScope {
+	index: number;
+	error: string;
+	running: string;
+	metrics: string[];
+	tagvs: TagV[];
+	tags: TagSet;
+	sorted_tagks: string[][];
+	query: string;
 	aggregators: string[];
 	dsaggregators: string[];
-	aggregator: string;
-	GetTagKByMetric: () => void;
+	GetTagKByMetric: (index: number) => void;
 	Query: () => void;
 	TagsAsQs: (ts: TagSet) => string;
 	MakeParam: (k: string, v: string) => string;
@@ -176,24 +212,63 @@ interface IGraphScope extends ng.IScope {
 	result: any;
 	dt: any;
 	series: any;
-	height: number;
+	query_p: Query[];
+	start: string;
+	end: string;
+	AddTab: () => void;
+	setIndex: (i: number) => void;
 }
 
 tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route', function($scope: IGraphScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService){
 	$scope.aggregators = ["sum", "min", "max", "avg", "dev", "zimsum", "mimmin", "minmax"];
 	$scope.dsaggregators = ["", "sum", "min", "max", "avg", "dev", "zimsum", "mimmin", "minmax"];
 	var search = $location.search();
-	$scope.ds = search.ds || '';
-	$scope.aggregator = search.aggregator || 'sum';
-	$scope.rate = search.rate == 'true';
-	$scope.start = search.start || '1d-ago';
-	$scope.metric = search.metric;
-	$scope.counter = search.counter == 'true';
-	$scope.dstime = search.dstime;
-	$scope.end = search.end;
-	$scope.cmax = search.cmax;
-	$scope.creset = search.creset;
-	$scope.tagset = search.tags ? JSON.parse(search.tags) : {};
+	var request = search.json ? JSON.parse(search.json) : new Request;
+	$scope.index = parseInt($location.hash()) || 0;
+	$scope.tagvs = [];
+	$scope.sorted_tagks = [];
+	$scope.query_p = request.Queries;
+	$scope.start = request.start;
+	$scope.end = request.end;
+	$scope.AddTab = function() {
+		$scope.index = $scope.query_p.length;
+		$scope.query_p.push(new Query({}));
+	};
+	$scope.setIndex = function(i: number) {
+		$scope.index = i;
+	};
+	$scope.GetTagKByMetric = function(index: number) {
+		$scope.tagvs[index] = new TagV;
+		if ($scope.query_p[index].metric) {
+			$http.get('/api/tagk/' + $scope.query_p[index].metric)
+				.success(function (data: string[]) {
+					if (data instanceof Array) {
+						var tags: TagSet = {};
+						for (var i = 0; i < data.length; i++) {
+							tags[data[i]] = $scope.query_p[index].tags[data[i]] || '';
+							GetTagVs(data[i], index);
+						}
+						$scope.query_p[index].tags = tags;
+						// Make sure host is always the first tag.
+						$scope.sorted_tagks[index] = Object.keys(tags);
+						$scope.sorted_tagks[index].sort((a, b) => {
+							if (a == 'host') {
+								return 1;
+							} else if (b == 'host') {
+								return -1;
+							}
+							return a.localeCompare(b);
+						}).reverse();
+					}
+				})
+				.error(function (error) {
+					$scope.error = 'Unable to fetch metrics: ' + error;
+				});
+		}
+	};
+	if ($scope.query_p.length == 0) {
+		$scope.AddTab();
+	}
 	$http.get('/api/metric')
 		.success(function (data: string[]) {
 			$scope.metrics = data;
@@ -201,82 +276,45 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route
 		.error(function (error) {
 			$scope.error = 'Unable to fetch metrics: ' + error;
 		});
-	$scope.GetTagKByMetric = function() {
-		var tagset: TagSet = {};
-		$scope.tagvs = {};
-		$http.get('/api/tagk/' + $scope.metric)
+
+	function GetTagVs(k: string, index: number) {
+		$http.get('/api/tagv/' + k + '/' + $scope.query_p[index].metric)
 			.success(function (data: string[]) {
-				if (data instanceof Array) {
-					for (var i = 0; i < data.length; i++) {
-						tagset[data[i]] = $scope.tagset[data[i]] || '';
-						GetTagVs(data[i]);
-					}
-					$scope.tagset = tagset;
-				}
+				$scope.tagvs[index][k] = data;
 			})
 			.error(function (error) {
 				$scope.error = 'Unable to fetch metrics: ' + error;
 			});
 	}
-	function TagsAsQS(ts: TagSet) {
-		var qts = new Array<string>();
-		for (var key in $scope.tagset) {
-			if ($scope.tagset.hasOwnProperty(key)) {
-				if ($scope.tagset[key] != "") {
-					qts.push(key);
-					qts.push($scope.tagset[key])
-				}
+	function getRequest() {
+		request = new Request;
+		request.start = $scope.start;
+		request.end = $scope.end;
+		angular.forEach($scope.query_p, function (p) {
+			if (!p.metric) {
+				return
 			}
-		}
-		return qts.join();
-	}
-	function MakeParam(qs: string[], k: string, v: string) {
-		if (v) {
-			qs.push(encodeURIComponent(k) + "=" + encodeURIComponent(v));
-		}
-	}
-	function GetTagVs(k: string) {
-		$http.get('/api/tagv/' + k + '/' + $scope.metric)
-			.success(function (data: string[]) {
-				$scope.tagvs[k] = data;
-			})
-			.error(function (error) {
-				$scope.error = 'Unable to fetch metrics: ' + error;
+			var q = new Query(p);
+			var tags = q.tags;
+			q.tags = new TagSet;
+			angular.forEach(tags, function (v, k) {
+				if (v && k) {
+					q.tags[k] = v;
+				}
 			});
+			request.Queries.push(q);
+		});
+		return request;
 	}
 	$scope.Query = function() {
-		$location.search('start', $scope.start || null);
-		$location.search('end', $scope.end || null);
-		$location.search('aggregator', $scope.aggregator);
-		$location.search('metric', $scope.metric);
-		$location.search('rate', $scope.rate.toString());
-		$location.search('ds', $scope.ds || null);
-		$location.search('dstime', $scope.dstime || null);
-		$location.search('counter', $scope.counter.toString());
-		$location.search('cmax', $scope.cmax || null);
-		$location.search('creset', $scope.creset || null);
-		$location.search('tags', JSON.stringify($scope.tagset));
+		$location.search('json', JSON.stringify(getRequest()));
 		$route.reload();
-	};
-	if (!$scope.metric) {
+	}
+	request = getRequest();
+	if (!request.Queries.length) {
 		return;
 	}
-	var qs: string[] = [];
-	MakeParam(qs, "start", $scope.start);
-	MakeParam(qs, "end", $scope.end);
-	MakeParam(qs, "aggregator", $scope.aggregator);
-	MakeParam(qs, "metric", $scope.metric);
-	MakeParam(qs, "rate", $scope.rate.toString());
-	MakeParam(qs, "tags", TagsAsQS($scope.tagset));
-	if ($scope.ds && $scope.dstime) {
-		MakeParam(qs, "downsample", $scope.dstime + '-' + $scope.ds);
-	}
-	MakeParam(qs, "counter", $scope.counter.toString());
-	MakeParam(qs, "cmax", $scope.cmax);
-	MakeParam(qs, "creset", $scope.creset);
-	$scope.query = qs.join('&');
-	$scope.running = $scope.query;
-	$http.get('/api/query?' + $scope.query)
+	$http.get('/api/query?' + 'json=' + encodeURIComponent(JSON.stringify(request)))
 		.success((data) => {
 			$scope.result = data;
 			$scope.running = '';
