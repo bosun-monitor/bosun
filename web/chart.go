@@ -74,15 +74,18 @@ func rickchart(r opentsdb.ResponseSet) ([]*RickSeries, error) {
 			}
 			j += 1
 		}
-		sort.Sort(ByX(dps))
-		var id []string
-		id = append(id, fmt.Sprintf("(%v)", resp.Metric))
-		for k, v := range resp.Tags {
-			id = append(id, fmt.Sprintf("%v=%v", k, v))
-		}
 		if len(dps) > 0 {
+			sort.Sort(ByX(dps))
+			name := resp.Metric
+			var id []string
+			for k, v := range resp.Tags {
+				id = append(id, fmt.Sprintf("%v=%v", k, v))
+			}
+			if len(id) > 0 {
+				name = fmt.Sprintf("%s{%s}", name, strings.Join(id, ","))
+			}
 			series = append(series, &RickSeries{
-				Name: strings.Join(id, ","),
+				Name: name,
 				Data: dps,
 			})
 		}
