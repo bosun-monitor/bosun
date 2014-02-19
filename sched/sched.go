@@ -135,18 +135,30 @@ Loop:
 			state.Subject = subject.String()
 		}
 		for _, n := range a.Notification {
-			if len(n.Email) > 0 {
-				go s.Email(a, n, r.Group)
-			}
-			if n.Post != nil {
-				go s.Post(a, n, r.Group)
-			}
-			if n.Get != nil {
-				go s.Get(a, n, r.Group)
-			}
+			go s.Notify(state, a, n, r.Group)
 		}
 	}
 	return
+}
+
+func (s *Schedule) Notify(st *State, a *conf.Alert, n *conf.Notification, group opentsdb.TagSet) {
+	if st.Acknowledged {
+		return
+	}
+	if len(n.Email) > 0 {
+		go s.Email(a, n, group)
+	}
+	if n.Post != nil {
+		go s.Post(a, n, group)
+	}
+	if n.Get != nil {
+		go s.Get(a, n, group)
+	}
+	if n.Next == nil {
+		return
+	}
+	time.Sleep(n.Timeout)
+	s.Notify(st, a, n.Next, group)
 }
 
 type AlertKey struct {
@@ -166,6 +178,7 @@ type State struct {
 	Group        opentsdb.TagSet
 	Computations expr.Computations
 	Subject      string
+	Acknowledged bool
 }
 
 func (s *State) Touch() {
@@ -178,6 +191,7 @@ func (s *State) Append(status Status) {
 	s.Touch()
 	if len(s.History) == 0 || s.Last().Status != status {
 		s.History = append(s.History, Event{status, time.Now().UTC()})
+		s.Acknowledged = status != ST_CRIT
 	}
 }
 
