@@ -73,12 +73,9 @@ type Alert struct {
 	Owner      string     `json:",omitempty"`
 	Crit       *expr.Expr `json:",omitempty"`
 	Warn       *expr.Expr `json:",omitempty"`
-	Overriders []*Alert   `json:"-"`
-	Overrides  *Alert     `json:",omitempty"`
 
 	crit, warn string
 	template   string
-	override   string
 }
 
 type Template struct {
@@ -292,14 +289,6 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 				c.errorf("unknown template %s", a.template)
 			}
 			a.Template = t
-		case "override":
-			a.override = c.expand(v, a.Vars)
-			o, ok := c.Alerts[a.override]
-			if !ok {
-				c.errorf("unknown alert %s", a.override)
-			}
-			a.Overrides = o
-			o.Overriders = append(o.Overriders, &a)
 		case "crit":
 			a.crit = c.expand(v, a.Vars)
 			crit, err := expr.New(a.crit)
