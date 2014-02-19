@@ -97,7 +97,7 @@ func (q *Queue) sendBatch(batch opentsdb.MultiDataPoint) {
 	}
 	// TSDB didn't like our data. Don't put it back in the queue since it's bad.
 	if resp.StatusCode != http.StatusNoContent {
-		slog.Error(resp.Status)
+		slog.Errorln(resp.Status)
 		defer resp.Body.Close()
 		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
@@ -106,6 +106,6 @@ func (q *Queue) sendBatch(batch opentsdb.MultiDataPoint) {
 		if len(body) > 0 {
 			slog.Error(string(body))
 		}
-		slog.Errorln("bad data:", string(b))
+		slog.Errorln("bad data:", string(body))
 	}
 }
