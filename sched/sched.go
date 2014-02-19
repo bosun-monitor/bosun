@@ -134,8 +134,16 @@ Loop:
 			}
 			state.Subject = subject.String()
 		}
-		if !state.Emailed {
-			s.Email(a.Name, r.Group)
+		for _, n := range a.Notification {
+			if len(n.Email) > 0 {
+				go s.Email(a, n, r.Group)
+			}
+			if n.Post != nil {
+				go s.Post(a, n, r.Group)
+			}
+			if n.Get != nil {
+				go s.Get(a, n, r.Group)
+			}
 		}
 	}
 	return
@@ -155,7 +163,6 @@ type State struct {
 	History      []Event
 	Touched      time.Time
 	Expr         *expr.Expr
-	Emailed      bool
 	Group        opentsdb.TagSet
 	Computations expr.Computations
 	Subject      string
@@ -171,7 +178,6 @@ func (s *State) Append(status Status) {
 	s.Touch()
 	if len(s.History) == 0 || s.Last().Status != status {
 		s.History = append(s.History, Event{status, time.Now().UTC()})
-		s.Emailed = status != ST_CRIT
 	}
 }
 

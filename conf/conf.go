@@ -4,10 +4,13 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net/mail"
+	"net/url"
 	"regexp"
 	"runtime"
 	"strings"
 	"text/template"
+	"time"
 
 	"github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/tsaf/conf/parse"
@@ -17,14 +20,15 @@ import (
 
 type Conf struct {
 	Vars
-	Name        string // Config file name
-	WebDir      string // Static content web directory: web
-	TsdbHost    string // OpenTSDB relay and query destination: ny-devtsdb04:4242
-	RelayListen string // OpenTSDB relay listen address: :4242
-	HttpListen  string // Web server listen address: :80
-	SmtpHost    string // SMTP address: ny-mail:25
-	Templates   map[string]*Template
-	Alerts      map[string]*Alert
+	Name          string // Config file name
+	WebDir        string // Static content web directory: web
+	TsdbHost      string // OpenTSDB relay and query destination: ny-devtsdb04:4242
+	RelayListen   string // OpenTSDB relay listen address: :4242
+	HttpListen    string // Web server listen address: :80
+	SmtpHost      string // SMTP address: ny-mail:25
+	Templates     map[string]*Template
+	Alerts        map[string]*Alert
+	Notifications map[string]*Notification
 
 	tree *parse.Tree
 	node parse.Node
@@ -68,15 +72,17 @@ func errRecover(errp *error) {
 
 type Alert struct {
 	Vars
-	*Template `json:"-"`
-	Name      string
-	Crit      *expr.Expr `json:",omitempty"`
-	Warn      *expr.Expr `json:",omitempty"`
-	Squelch   map[string]*regexp.Regexp
+	*Template    `json:"-"`
+	Name         string
+	Crit         *expr.Expr `json:",omitempty"`
+	Warn         *expr.Expr `json:",omitempty"`
+	Squelch      map[string]*regexp.Regexp
+	Notification map[string]*Notification
 
-	crit, warn string
-	template   string
-	squelch    string
+	crit, warn   string
+	template     string
+	squelch      string
+	notification string
 }
 
 type Template struct {
@@ -85,6 +91,19 @@ type Template struct {
 	Body, Subject *template.Template
 
 	body, subject string
+}
+
+type Notification struct {
+	Vars
+	Name      string
+	Email     []*mail.Address
+	Post, Get *url.URL
+	Next      *Notification
+	Timeout   time.Duration
+
+	next      string
+	email     string
+	post, get string
 }
 
 type context struct {
@@ -166,13 +185,14 @@ func ParseFile(fname string) (*Conf, error) {
 func New(name, text string) (c *Conf, err error) {
 	defer errRecover(&err)
 	c = &Conf{
-		Name:        name,
-		HttpListen:  ":8070",
-		RelayListen: ":4242",
-		WebDir:      "web",
-		Vars:        make(map[string]string),
-		Templates:   make(map[string]*Template),
-		Alerts:      make(map[string]*Alert),
+		Name:          name,
+		HttpListen:    ":8070",
+		RelayListen:   ":4242",
+		WebDir:        "web",
+		Vars:          make(map[string]string),
+		Templates:     make(map[string]*Template),
+		Alerts:        make(map[string]*Alert),
+		Notifications: make(map[string]*Notification),
 	}
 	c.tree, err = parse.Parse(name, text)
 	if err != nil {
@@ -223,6 +243,8 @@ func (c *Conf) loadSection(s *parse.SectionNode) {
 		c.loadTemplate(s)
 	case "alert":
 		c.loadAlert(s)
+	case "notification":
+		c.loadNotification(s)
 	default:
 		c.errorf("unknown section type: %s", s.SectionType.Text)
 	}
@@ -281,7 +303,7 @@ func (c *Conf) loadTemplate(s *parse.SectionNode) {
 func (c *Conf) loadAlert(s *parse.SectionNode) {
 	name := s.Name.Text
 	if _, ok := c.Alerts[name]; ok {
-		c.errorf("duplicate template name: %s", name)
+		c.errorf("duplicate alert name: %s", name)
 	}
 	a := Alert{
 		Vars: make(map[string]string),
@@ -332,6 +354,17 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 				}
 				a.Squelch[k] = re
 			}
+		case "notification":
+			a.notification = c.expand(v, a.Vars)
+			a.Notification = make(map[string]*Notification)
+			for _, s := range strings.Split(a.notification, ",") {
+				s = strings.TrimSpace(s)
+				n, ok := c.Notifications[s]
+				if !ok {
+					c.errorf("unknown notification %s", s)
+				}
+				a.Notification[s] = n
+			}
 		default:
 			if !strings.HasPrefix(k, "$") {
 				c.errorf("unknown key %s", k)
@@ -345,6 +378,55 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 		c.errorf("neither crit or warn specified")
 	}
 	c.Alerts[name] = &a
+}
+
+func (c *Conf) loadNotification(s *parse.SectionNode) {
+	name := s.Name.Text
+	if _, ok := c.Notifications[name]; ok {
+		c.errorf("duplicate notification name: %s", name)
+	}
+	n := Notification{
+		Vars: make(map[string]string),
+		Name: name,
+	}
+	for _, p := range s.Nodes {
+		c.at(p)
+		v := p.Val.Text
+		switch k := p.Key.Text; k {
+		case "email":
+			n.email = c.expand(v, n.Vars)
+			email, err := mail.ParseAddressList(n.email)
+			if err != nil {
+				c.error(err)
+			}
+			n.Email = email
+		case "post":
+			n.post = c.expand(v, n.Vars)
+			post, err := url.Parse(n.post)
+			if err != nil {
+				c.error(err)
+			}
+			n.Post = post
+		case "get":
+			n.get = c.expand(v, n.Vars)
+			get, err := url.Parse(n.get)
+			if err != nil {
+				c.error(err)
+			}
+			n.Get = get
+		default:
+			if !strings.HasPrefix(k, "$") {
+				c.errorf("unknown key %s", k)
+			}
+			n.Vars[k] = c.expand(v, n.Vars)
+			n.Vars[k[1:]] = n.Vars[k]
+		}
+	}
+	c.at(s)
+	if n.Timeout > 0 && n.Next == nil {
+		c.errorf("timeout specified without next")
+	}
+	c.Notifications[name] = &n
 }
 
 var exRE = regexp.MustCompile(`\$\w+`)
