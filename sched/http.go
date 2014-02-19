@@ -1,0 +1,39 @@
+package sched
+
+import (
+	"bytes"
+	"log"
+	"net/http"
+
+	"github.com/StackExchange/scollector/opentsdb"
+	"github.com/StackExchange/tsaf/conf"
+)
+
+func (s *Schedule) Post(a *conf.Alert, n *conf.Notification, group opentsdb.TagSet) {
+	buf := new(bytes.Buffer)
+	err := a.ExecuteSubject(buf, group, s.cache)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	resp, err := http.Post(n.Post.String(), "application/x-www-form-urlencoded", buf)
+	defer resp.Body.Close()
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	if resp.StatusCode >= 300 {
+		log.Println("bad response on notification post:", resp.Status)
+	}
+}
+
+func (s *Schedule) Get(a *conf.Alert, n *conf.Notification, group opentsdb.TagSet) {
+	resp, err := http.Get(n.Get.String())
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	if resp.StatusCode >= 300 {
+		log.Println("bad response on notification get:", resp.Status)
+	}
+}
