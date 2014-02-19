@@ -1,56 +1,56 @@
 package sched
 
 import (
-	"bytes"
 	"crypto/tls"
 	"errors"
-	"log"
 	"net/mail"
 	"net/smtp"
-	"strings"
 
 	"github.com/StackExchange/scollector/opentsdb"
 	"github.com/jordan-wright/email"
 )
 
 func (s *Schedule) Email(name string, group opentsdb.TagSet) {
-	a := s.Conf.Alerts[name]
-	if a == nil {
-		log.Println("sched: unknown alert name during email:", name)
-		return
-	}
-	if a.Owner == "" {
-		return
-	}
-	body := new(bytes.Buffer)
-	subject := new(bytes.Buffer)
-	if a.Template.Body != nil {
-		err := a.ExecuteBody(body, group, s.cache)
-		if err != nil {
-			log.Println(err)
+	return
+	/*
+		a := s.Conf.Alerts[name]
+		if a == nil {
+			log.Println("sched: unknown alert name during email:", name)
 			return
 		}
-	}
-	if a.Template.Subject != nil {
-		err := a.ExecuteSubject(subject, group, s.cache)
-		if err != nil {
-			log.Println(err)
-			return
-		}
-	}
-	e := email.NewEmail()
-	e.From = "tsaf@stackexchange.com"
-	e.To = strings.Split(a.Owner, ",")
-	e.Subject = subject.String()
-	e.Text = body.Bytes()
-	err := Send(e, s.SmtpHost)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-	ak := AlertKey{a.Name, group.String()}
-	state := s.Status[ak]
-	state.Emailed = true
+			if a.Owner == "" {
+				return
+			}
+			body := new(bytes.Buffer)
+			subject := new(bytes.Buffer)
+			if a.Template.Body != nil {
+				err := a.ExecuteBody(body, group, s.cache)
+				if err != nil {
+					log.Println(err)
+					return
+				}
+			}
+			if a.Template.Subject != nil {
+				err := a.ExecuteSubject(subject, group, s.cache)
+				if err != nil {
+					log.Println(err)
+					return
+				}
+			}
+			e := email.NewEmail()
+			e.From = "tsaf@stackexchange.com"
+			e.To = strings.Split(a.Owner, ",")
+			e.Subject = subject.String()
+			e.Text = body.Bytes()
+			err := Send(e, s.SmtpHost)
+			if err != nil {
+				log.Println(err)
+				return
+			}
+			ak := AlertKey{a.Name, group.String()}
+			state := s.Status[ak]
+			state.Emailed = true
+	*/
 }
 
 // Send an email using the given host and SMTP auth (optional), returns any error thrown by smtp.SendMail

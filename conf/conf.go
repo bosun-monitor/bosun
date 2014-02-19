@@ -70,7 +70,6 @@ type Alert struct {
 	Vars
 	*Template  `json:"-"`
 	Name       string
-	Owner      string     `json:",omitempty"`
 	Crit       *expr.Expr `json:",omitempty"`
 	Warn       *expr.Expr `json:",omitempty"`
 
@@ -277,11 +276,6 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 		c.at(p)
 		v := p.Val.Text
 		switch k := p.Key.Text; k {
-		case "owner":
-			if c.SmtpHost == "" {
-				c.errorf("no smtpHost specified, can't specify owner")
-			}
-			a.Owner = c.expand(v, a.Vars)
 		case "template":
 			a.template = c.expand(v, a.Vars)
 			t, ok := c.Templates[a.template]
