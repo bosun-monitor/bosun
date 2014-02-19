@@ -392,6 +392,7 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 		Vars: make(map[string]string),
 		Name: name,
 	}
+	c.Notifications[name] = &n
 	for _, p := range s.Nodes {
 		c.at(p)
 		v := p.Val.Text
@@ -420,6 +421,19 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 				c.error(err)
 			}
 			n.Get = get
+		case "next":
+			n.next = c.expand(v, n.Vars)
+			next, ok := c.Notifications[n.next]
+			if !ok {
+				c.errorf("unknown notification %s", n.next)
+			}
+			n.Next = next
+		case "timeout":
+			d, err := time.ParseDuration(c.expand(v, n.Vars))
+			if err != nil {
+				c.error(err)
+			}
+			n.Timeout = d
 		default:
 			if !strings.HasPrefix(k, "$") {
 				c.errorf("unknown key %s", k)
@@ -432,7 +446,6 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 	if n.Timeout > 0 && n.Next == nil {
 		c.errorf("timeout specified without next")
 	}
-	c.Notifications[name] = &n
 }
 
 var exRE = regexp.MustCompile(`\$\w+`)
