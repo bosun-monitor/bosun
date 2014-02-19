@@ -101,6 +101,9 @@ func (s *Schedule) CheckExpr(a *conf.Alert, e *expr.Expr, isCrit bool, ignore []
 	}
 Loop:
 	for _, r := range results {
+		if a.Squelched(r.Group) {
+			continue
+		}
 		ak := AlertKey{a.Name, r.Group.String()}
 		for _, v := range ignore {
 			if ak == v {
