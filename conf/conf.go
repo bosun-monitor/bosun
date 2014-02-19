@@ -68,13 +68,15 @@ func errRecover(errp *error) {
 
 type Alert struct {
 	Vars
-	*Template  `json:"-"`
-	Name       string
-	Crit       *expr.Expr `json:",omitempty"`
-	Warn       *expr.Expr `json:",omitempty"`
+	*Template `json:"-"`
+	Name      string
+	Crit      *expr.Expr `json:",omitempty"`
+	Warn      *expr.Expr `json:",omitempty"`
+	Squelch   map[string]*regexp.Regexp
 
 	crit, warn string
 	template   string
+	squelch    string
 }
 
 type Template struct {
@@ -136,6 +138,19 @@ func (a *Alert) ExecuteSubject(w io.Writer, group opentsdb.TagSet, c opentsdb.Co
 		return nil
 	}
 	return a.Template.Subject.Execute(w, a.data(group, c))
+}
+
+func (a *Alert) Squelched(tags opentsdb.TagSet) bool {
+	if a.Squelch == nil {
+		return false
+	}
+	for k, v := range a.Squelch {
+		tagv, ok := tags[k]
+		if !ok || !v.MatchString(tagv) {
+			return false
+		}
+	}
+	return true
 }
 
 type Vars map[string]string
@@ -303,6 +318,20 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 				c.errorf("warn must return a number")
 			}
 			a.Warn = warn
+		case "squelch":
+			a.squelch = c.expand(v, a.Vars)
+			squelch, err := opentsdb.ParseTags(a.squelch)
+			if err != nil {
+				c.error(err)
+			}
+			a.Squelch = make(map[string]*regexp.Regexp)
+			for k, v := range squelch {
+				re, err := regexp.Compile(v)
+				if err != nil {
+					c.error(err)
+				}
+				a.Squelch[k] = re
+			}
 		default:
 			if !strings.HasPrefix(k, "$") {
 				c.errorf("unknown key %s", k)
