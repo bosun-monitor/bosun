@@ -25,7 +25,7 @@ func (s *Schedule) Email(a *conf.Alert, n *conf.Notification, group opentsdb.Tag
 		return
 	}
 	e := email.NewEmail()
-	e.From = "tsaf@stackexchange.com"
+	e.From = s.EmailFrom
 	for _, a := range n.Email {
 		e.To = append(e.To, a.Address)
 	}

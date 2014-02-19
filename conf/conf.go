@@ -26,6 +26,7 @@ type Conf struct {
 	RelayListen   string // OpenTSDB relay listen address: :4242
 	HttpListen    string // Web server listen address: :80
 	SmtpHost      string // SMTP address: ny-mail:25
+	EmailFrom     string
 	Templates     map[string]*Template
 	Alerts        map[string]*Alert
 	Notifications map[string]*Notification
@@ -229,6 +230,8 @@ func (c *Conf) loadGlobal(p *parse.PairNode) {
 		c.WebDir = c.expand(v, nil)
 	case "smtpHost":
 		c.SmtpHost = c.expand(v, nil)
+	case "emailFrom":
+		c.EmailFrom = c.expand(v, nil)
 	default:
 		if !strings.HasPrefix(k, "$") {
 			c.errorf("unknown key %s", k)
@@ -394,6 +397,9 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 		v := p.Val.Text
 		switch k := p.Key.Text; k {
 		case "email":
+			if c.SmtpHost == "" || c.EmailFrom == "" {
+				c.errorf("email notifications require both smtpHost and emailFrom to be set")
+			}
 			n.email = c.expand(v, n.Vars)
 			email, err := mail.ParseAddressList(n.email)
 			if err != nil {
