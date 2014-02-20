@@ -134,17 +134,16 @@ Loop:
 			}
 			state.Subject = subject.String()
 		}
-		for _, n := range a.Notification {
-			go s.Notify(state, a, n, r.Group)
+		if !state.Acknowledged {
+			for _, n := range a.Notification {
+				go s.Notify(state, a, n, r.Group)
+			}
 		}
 	}
 	return
 }
 
 func (s *Schedule) Notify(st *State, a *conf.Alert, n *conf.Notification, group opentsdb.TagSet) {
-	if st.Acknowledged {
-		return
-	}
 	if len(n.Email) > 0 {
 		go s.Email(a, n, group)
 	}
@@ -154,11 +153,16 @@ func (s *Schedule) Notify(st *State, a *conf.Alert, n *conf.Notification, group 
 	if n.Get != nil {
 		go s.Get(a, n, group)
 	}
-	if n.Next == nil {
+	// Cannot depend on <-st.ack always returning if it is closed because n.Timeout could be == 0, so check the bit here.
+	if n.Next == nil || st.Acknowledged {
 		return
 	}
-	time.Sleep(n.Timeout)
-	s.Notify(st, a, n.Next, group)
+	select {
+	case <-st.ack:
+		// break
+	case <-time.After(n.Timeout):
+		go s.Notify(st, a, n.Next, group)
+	}
 }
 
 type AlertKey struct {
@@ -179,6 +183,17 @@ type State struct {
 	Computations expr.Computations
 	Subject      string
 	Acknowledged bool
+	ack          chan interface{}
+}
+
+func (s *State) Acknowledge() {
+	if s.Acknowledged {
+		return
+	}
+	s.Acknowledged = true
+	if s.ack != nil {
+		close(s.ack)
+	}
 }
 
 func (s *State) Touch() {
@@ -192,6 +207,9 @@ func (s *State) Append(status Status) {
 	if len(s.History) == 0 || s.Last().Status != status {
 		s.History = append(s.History, Event{status, time.Now().UTC()})
 		s.Acknowledged = status != ST_CRIT
+		if !s.Acknowledged {
+			s.ack = make(chan interface{})
+		}
 	}
 }
 
