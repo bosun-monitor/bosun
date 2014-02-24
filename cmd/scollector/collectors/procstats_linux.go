@@ -57,7 +57,7 @@ func c_procstats_linux() opentsdb.MultiDataPoint {
 	})
 	Add(&md, "os.mem.total", int(mem["MemTotal"])*1024, nil)
 	Add(&md, "os.mem.free", int(mem["MemFree"])*1024, nil)
-	Add(&md, "os.mem.used", int(mem["MemTotal"])*1024-int(mem["MemFree"])*1024, nil)
+	Add(&md, "os.mem.used", (int(mem["MemTotal"])-(int(mem["MemFree"])+int(mem["Buffers"])+int(mem["Cached"])))*1024, nil)
 	if mem["MemTotal"] != 0 {
 		Add(&md, "os.mem.percent_free", (mem["MemFree"]+mem["Buffers"]+mem["Cached"])/mem["MemTotal"]*100, nil)
 	}
