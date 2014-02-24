@@ -7,50 +7,34 @@ import (
 	"log"
 	"net/mail"
 	"net/smtp"
-	"strings"
 
 	"github.com/StackExchange/scollector/opentsdb"
+	"github.com/StackExchange/tsaf/conf"
 	"github.com/jordan-wright/email"
 )
 
-func (s *Schedule) Email(name string, group opentsdb.TagSet) {
-	a := s.Conf.Alerts[name]
-	if a == nil {
-		log.Println("sched: unknown alert name during email:", name)
-		return
-	}
-	if a.Owner == "" {
-		return
-	}
+func (s *Schedule) Email(a *conf.Alert, n *conf.Notification, group opentsdb.TagSet) {
 	body := new(bytes.Buffer)
 	subject := new(bytes.Buffer)
-	if a.Template.Body != nil {
-		err := a.ExecuteBody(body, group)
-		if err != nil {
-			log.Println(err)
-			return
-		}
-	}
-	if a.Template.Subject != nil {
-		err := a.ExecuteSubject(subject, group)
-		if err != nil {
-			log.Println(err)
-			return
-		}
-	}
-	e := email.NewEmail()
-	e.From = "tsaf@stackexchange.com"
-	e.To = strings.Split(a.Owner, ",")
-	e.Subject = subject.String()
-	e.Text = body.Bytes()
-	err := Send(e, s.SmtpHost)
-	if err != nil {
+	if err := a.ExecuteBody(body, group, s.cache); err != nil {
 		log.Println(err)
 		return
 	}
-	ak := AlertKey{a.Name, group.String()}
-	state := s.Status[ak]
-	state.Emailed = true
+	if err := a.ExecuteSubject(subject, group, s.cache); err != nil {
+		log.Println(err)
+		return
+	}
+	e := email.NewEmail()
+	e.From = s.EmailFrom
+	for _, a := range n.Email {
+		e.To = append(e.To, a.Address)
+	}
+	e.Subject = subject.String()
+	e.Text = body.Bytes()
+	if err := Send(e, s.SmtpHost); err != nil {
+		log.Println(err)
+		return
+	}
 }
 
 // Send an email using the given host and SMTP auth (optional), returns any error thrown by smtp.SendMail

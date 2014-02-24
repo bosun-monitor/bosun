@@ -1,6 +1,7 @@
 package sched
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -67,8 +68,8 @@ func (s *Schedule) Run() error {
 		if s.Conf == nil {
 			return fmt.Errorf("sched: nil configuration")
 		}
-		s.Check()
 		start := time.Now()
+		s.Check()
 		fmt.Printf("run at %v took %v\n", start, time.Since(start))
 		<-wait
 	}
@@ -100,6 +101,9 @@ func (s *Schedule) CheckExpr(a *conf.Alert, e *expr.Expr, isCrit bool, ignore []
 	}
 Loop:
 	for _, r := range results {
+		if a.Squelched(r.Group) {
+			continue
+		}
 		ak := AlertKey{a.Name, r.Group.String()}
 		for _, v := range ignore {
 			if ak == v {
@@ -124,12 +128,41 @@ Loop:
 		if status != ST_NORM {
 			alerts = append(alerts, ak)
 			state.Expr = e
+			var subject = new(bytes.Buffer)
+			if err := a.ExecuteSubject(subject, r.Group, s.cache); err != nil {
+				log.Println(err)
+			}
+			state.Subject = subject.String()
 		}
-		if !state.Emailed {
-			s.Email(a.Name, r.Group)
+		if !state.Acknowledged {
+			for _, n := range a.Notification {
+				go s.Notify(state, a, n, r.Group)
+			}
 		}
 	}
 	return
+}
+
+func (s *Schedule) Notify(st *State, a *conf.Alert, n *conf.Notification, group opentsdb.TagSet) {
+	if len(n.Email) > 0 {
+		go s.Email(a, n, group)
+	}
+	if n.Post != nil {
+		go s.Post(a, n, group)
+	}
+	if n.Get != nil {
+		go s.Get(a, n, group)
+	}
+	// Cannot depend on <-st.ack always returning if it is closed because n.Timeout could be == 0, so check the bit here.
+	if n.Next == nil || st.Acknowledged {
+		return
+	}
+	select {
+	case <-st.ack:
+		// break
+	case <-time.After(n.Timeout):
+		go s.Notify(st, a, n.Next, group)
+	}
 }
 
 type AlertKey struct {
@@ -146,9 +179,21 @@ type State struct {
 	History      []Event
 	Touched      time.Time
 	Expr         *expr.Expr
-	Emailed      bool
 	Group        opentsdb.TagSet
 	Computations expr.Computations
+	Subject      string
+	Acknowledged bool
+	ack          chan interface{}
+}
+
+func (s *State) Acknowledge() {
+	if s.Acknowledged {
+		return
+	}
+	s.Acknowledged = true
+	if s.ack != nil {
+		close(s.ack)
+	}
 }
 
 func (s *State) Touch() {
@@ -161,7 +206,10 @@ func (s *State) Append(status Status) {
 	s.Touch()
 	if len(s.History) == 0 || s.Last().Status != status {
 		s.History = append(s.History, Event{status, time.Now().UTC()})
-		s.Emailed = status != ST_CRIT
+		s.Acknowledged = status != ST_CRIT
+		if !s.Acknowledged {
+			s.ack = make(chan interface{})
+		}
 	}
 }
 
