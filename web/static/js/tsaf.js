@@ -129,6 +129,12 @@ var RateOptions = (function () {
     return RateOptions;
 })();
 
+var dp = (function () {
+    function dp() {
+    }
+    return dp;
+})();
+
 var Query = (function () {
     function Query(qp) {
         this.aggregator = qp.aggregator || 'sum';
@@ -264,8 +270,16 @@ tsafControllers.controller('HostCtrl', [
         $scope.host = ($location.search()).host;
         $scope.time = ($location.search()).time;
         $scope.idata = {};
-        var cpu_q = 'metric=os.cpu&aggregator=avg&rate=true&start=' + $scope.time + '&tags=host,' + $scope.host;
-        $http.get('/api/query?' + cpu_q).success(function (data) {
+        $scope.fsdata = {};
+        $scope.fs_total = {};
+        var cpu_r = new Request();
+        cpu_r.start = $scope.time;
+        cpu_r.Queries = [new Query({
+                metric: "os.cpu",
+                rate: true,
+                tags: { host: $scope.host }
+            })];
+        $http.get('/api/query?' + 'json=' + encodeURIComponent(JSON.stringify(cpu_r))).success(function (data) {
             $scope.cpu = data;
             $scope.running = '';
             $scope.error = '';
@@ -276,8 +290,14 @@ tsafControllers.controller('HostCtrl', [
         $http.get('/api/tagv/iface/os.net.bytes?host=' + $scope.host).success(function (data) {
             $scope.interfaces = data;
             angular.forEach($scope.interfaces, function (i) {
-                var net_bytes_q = 'metric=os.net.bytes&aggregator=avg&rate=true&start=' + $scope.time + '&tags=host,' + $scope.host + ',iface,' + i + ',direction,*';
-                $http.get('/api/query?' + net_bytes_q).success(function (data) {
+                var net_bytes_r = new Request();
+                net_bytes_r.start = $scope.time;
+                net_bytes_r.Queries = [new Query({
+                        metric: "os.net.bytes",
+                        rate: true,
+                        tags: { host: $scope.host, iface: i, direction: "*" }
+                    })];
+                $http.get('/api/query?' + 'json=' + encodeURIComponent(JSON.stringify(net_bytes_r))).success(function (data) {
                     $scope.idata[i] = data;
                     $scope.running = '';
                     $scope.error = '';
@@ -292,9 +312,52 @@ tsafControllers.controller('HostCtrl', [
             $scope.error = error;
             $scope.running = '';
         });
-        var mem_total_q = 'metric=os.mem.total&aggregator=avg&start=' + $scope.time + '&tags=host,' + $scope.host;
-        $http.get('/api/query?' + mem_total_q).success(function (data) {
-            $scope.mem_total = data;
+        $http.get('/api/tagv/mount/os.disk.fs.space_total?host=' + $scope.host).success(function (data) {
+            $scope.fs = data;
+            angular.forEach($scope.fs, function (i) {
+                var fs_r = new Request();
+                fs_r.start = $scope.time;
+                fs_r.Queries.push(new Query({
+                    metric: "os.disk.fs.space_total",
+                    tags: { host: $scope.host, mount: i }
+                }));
+                fs_r.Queries.push(new Query({
+                    metric: "os.disk.fs.space_used",
+                    tags: { host: $scope.host, mount: i }
+                }));
+                $http.get('/api/query?' + 'json=' + encodeURIComponent(JSON.stringify(fs_r))).success(function (data) {
+                    $scope.fsdata[i] = [data[1]];
+                    $scope.fs_total[i] = Math.max.apply(null, data[0].data.map(function (i) {
+                        return i.y;
+                    }));
+                    $scope.running = '';
+                    $scope.error = '';
+                }).error(function (error) {
+                    $scope.error = error;
+                    $scope.running = '';
+                });
+            });
+            $scope.running = '';
+            $scope.error = '';
+        }).error(function (error) {
+            $scope.error = error;
+            $scope.running = '';
+        });
+        var mem_r = new Request();
+        mem_r.start = $scope.time;
+        mem_r.Queries.push(new Query({
+            metric: "os.mem.total",
+            tags: { host: $scope.host }
+        }));
+        mem_r.Queries.push(new Query({
+            metric: "os.mem.used",
+            tags: { host: $scope.host }
+        }));
+        $http.get('/api/query?' + 'json=' + encodeURIComponent(JSON.stringify(mem_r))).success(function (data) {
+            $scope.mem_total = Math.max.apply(null, data[0].data.map(function (i) {
+                return i.y;
+            }));
+            $scope.mem = [data[1]];
             $scope.running = '';
             $scope.error = '';
         }).error(function (error) {

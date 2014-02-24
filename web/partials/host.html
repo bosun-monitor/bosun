@@ -40,8 +40,16 @@
 		<h2>CPU</h2>
 		<div class="chart cpu" ts-rickshaw="cpu" max="100" renderer="area"></div>
 	</div>
+	<div class="col-lg-6">
+		<h2>MEM</h2>
+		<div class="chart mem" ts-rickshaw="mem" max="{{mem_total}}" renderer="area"></div>
+	</div>
 </div>
 <div class="row" ng-repeat="(k, v) in idata">
 	<h2>Network Bytes: {{k}}</h2>
-	<div class="chart" ts-rickshaw="idata[k]"></div>
+	<div class="chart" ts-rickshaw="v"></div>
+</div>
+<div class="row" ng-repeat="(k, v) in fsdata">
+	<h2>Disk: {{k}} ({{v[0].data.slice(-1)[0].y/fs_total[k]}})</h2>
+	<div class="chart" max="{{fs_total[k]}}" ts-rickshaw="v"></div>
 </div>
