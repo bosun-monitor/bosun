@@ -164,14 +164,23 @@ class Query {
 	downsample: string;
 	ds: string;
 	dstime: string;
-	constructor(qp: any) {
-		this.aggregator = qp.aggregator || 'sum';
+	constructor() {
+		this.aggregator = 'sum';
+		this.rate = false;
+		this.rateOptions = new RateOptions;
+		this.ds = '';
+		this.dstime = '';
+		this.tags = new TagSet;
+		this.setDs();
+	}
+	copy(qp: Query) {
+		this.aggregator = qp.aggregator;
 		this.metric = qp.metric;
-		this.rate = qp.rate || false;
-		this.rateOptions = qp.rateOptions || new RateOptions;
-		this.ds = qp.ds || '';
-		this.dstime = qp.dstime || '';
-		this.tags = qp.tags || new TagSet;
+		this.rate = qp.rate;
+		this.rateOptions = qp.rateOptions;
+		this.ds = qp.ds;
+		this.dstime = qp.dstime;
+		this.tags = qp.tags;
 		this.setDs();
 	}
 	setDs() {
@@ -232,7 +241,7 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route
 	$scope.end = request.end;
 	$scope.AddTab = function() {
 		$scope.index = $scope.query_p.length;
-		$scope.query_p.push(new Query({}));
+		$scope.query_p.push(new Query);
 	};
 	$scope.setIndex = function(i: number) {
 		$scope.index = i;
@@ -294,7 +303,8 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route
 			if (!p.metric) {
 				return
 			}
-			var q = new Query(p);
+			var q = new Query;
+			q.copy(p);
 			var tags = q.tags;
 			q.tags = new TagSet;
 			angular.forEach(tags, function (v, k) {

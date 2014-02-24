@@ -127,16 +127,25 @@ var RateOptions = (function () {
 })();
 
 var Query = (function () {
-    function Query(qp) {
-        this.aggregator = qp.aggregator || 'sum';
-        this.metric = qp.metric;
-        this.rate = qp.rate || false;
-        this.rateOptions = qp.rateOptions || new RateOptions;
-        this.ds = qp.ds || '';
-        this.dstime = qp.dstime || '';
-        this.tags = qp.tags || new TagSet;
+    function Query() {
+        this.aggregator = 'sum';
+        this.rate = false;
+        this.rateOptions = new RateOptions;
+        this.ds = '';
+        this.dstime = '';
+        this.tags = new TagSet;
         this.setDs();
     }
+    Query.prototype.copy = function (qp) {
+        this.aggregator = qp.aggregator;
+        this.metric = qp.metric;
+        this.rate = qp.rate;
+        this.rateOptions = qp.rateOptions;
+        this.ds = qp.ds;
+        this.dstime = qp.dstime;
+        this.tags = qp.tags;
+        this.setDs();
+    };
     Query.prototype.setDs = function () {
         if (this.dstime && this.ds) {
             this.downsample = this.dstime + '-' + this.ds;
@@ -169,7 +178,7 @@ tsafControllers.controller('GraphCtrl', [
         $scope.end = request.end;
         $scope.AddTab = function () {
             $scope.index = $scope.query_p.length;
-            $scope.query_p.push(new Query({}));
+            $scope.query_p.push(new Query);
         };
         $scope.setIndex = function (i) {
             $scope.index = i;
@@ -226,7 +235,8 @@ tsafControllers.controller('GraphCtrl', [
                 if (!p.metric) {
                     return;
                 }
-                var q = new Query(p);
+                var q = new Query;
+                q.copy(p);
                 var tags = q.tags;
                 q.tags = new TagSet;
                 angular.forEach(tags, function (v, k) {
