@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"os"
 	"sync"
 	"time"
 
@@ -59,7 +60,39 @@ func (s *Schedule) Load(c *conf.Conf) {
 	s.Status = make(map[AlertKey]*State)
 }
 
+func (s *Schedule) Save() {
+	f, err := os.Create(s.StateFile)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	var m []saveState
+	for k, v := range s.Status {
+		m = append(m, saveState{
+			Key:   k,
+			State: v,
+		})
+	}
+	b, _ := json.MarshalIndent(m, "", "  ")
+	f.Write(b)
+	if err := f.Close(); err != nil {
+		log.Println(err)
+		return
+	}
+	log.Println("sched: wrote state to", s.StateFile)
+}
+
+type saveState struct {
+	Key   AlertKey
+	State *State
+}
+
 func (s *Schedule) Run() error {
+	go func() {
+		for _ = range time.Tick(time.Second * 20) {
+			s.Save()
+		}
+	}()
 	for {
 		wait := time.After(s.Freq)
 		if s.Freq < time.Second {
@@ -160,12 +193,28 @@ func (s *Schedule) Notify(st *State, a *conf.Alert, n *conf.Notification, group 
 	if n.Next == nil || st.Acknowledged {
 		return
 	}
+	s.AddNotification(st, a, n, group)
+}
+
+func (s *Schedule) AddNotification(st *State, a *conf.Alert, n *conf.Notification, group opentsdb.TagSet) {
+	st.Lock()
+	if st.notifications == nil {
+		st.notifications = make(map[*conf.Notification]time.Time)
+	}
+	// Prevent duplicate notification chains on the same state.
+	if _, present := st.notifications[n]; !present {
+		st.notifications[n] = time.Now().UTC()
+	}
+	st.Unlock()
 	select {
 	case <-st.ack:
 		// break
 	case <-time.After(n.Timeout):
 		go s.Notify(st, a, n.Next, group)
 	}
+	st.Lock()
+	delete(st.notifications, n)
+	st.Unlock()
 }
 
 type AlertKey struct {
@@ -178,6 +227,8 @@ func (a AlertKey) String() string {
 }
 
 type State struct {
+	sync.Mutex
+
 	// Most recent event last.
 	History      []Event
 	Touched      time.Time
@@ -186,7 +237,26 @@ type State struct {
 	Computations expr.Computations
 	Subject      string
 	Acknowledged bool
-	ack          chan interface{}
+
+	ack           chan interface{}
+	notifications map[*conf.Notification]time.Time
+}
+
+func (s *State) MarshalJSON() ([]byte, error) {
+	m := make(map[string]interface{})
+	m["History"] = s.History
+	m["Touched"] = s.Touched
+	m["Expr"] = s.Expr
+	m["Group"] = s.Group
+	m["Computations"] = s.Computations
+	m["Subject"] = s.Subject
+	m["Acknowledged"] = s.Acknowledged
+	n := make(map[string]time.Time)
+	for k, t := range s.notifications {
+		n[k.Name] = t
+	}
+	m["Notifications"] = n
+	return json.Marshal(m)
 }
 
 func (s *State) Acknowledge() {
