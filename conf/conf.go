@@ -1,6 +1,7 @@
 package conf
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -27,6 +28,7 @@ type Conf struct {
 	HttpListen    string // Web server listen address: :80
 	SmtpHost      string // SMTP address: ny-mail:25
 	EmailFrom     string
+	StateFile     string
 	Templates     map[string]*Template
 	Alerts        map[string]*Alert
 	Notifications map[string]*Notification
@@ -106,6 +108,34 @@ type Notification struct {
 	next      string
 	email     string
 	post, get string
+}
+
+func (n *Notification) MarshalJSON() ([]byte, error) {
+	return nil, fmt.Errorf("conf: cannot json marshal notifications")
+	m := make(map[string]interface{})
+	if len(n.Vars) > 0 {
+		m["Vars"] = n.Vars
+	}
+	m["Name"] = n.Name
+	if n.email != "" {
+		m["Email"] = n.email
+	}
+	if n.post != "" {
+		m["Post"] = n.post
+	}
+	if n.get != "" {
+		m["Get"] = n.get
+	}
+	if n.Print {
+		m["Print"] = n.Print
+	}
+	if n.next != "" {
+		m["Next"] = n.next
+	}
+	if n.Timeout > 0 {
+		m["Timeout"] = n.Timeout
+	}
+	return json.Marshal(m)
 }
 
 type context struct {
@@ -191,6 +221,7 @@ func New(name, text string) (c *Conf, err error) {
 		HttpListen:    ":8070",
 		RelayListen:   ":4242",
 		WebDir:        "web",
+		StateFile:     "tsaf.state",
 		Vars:          make(map[string]string),
 		Templates:     make(map[string]*Template),
 		Alerts:        make(map[string]*Alert),
@@ -233,6 +264,8 @@ func (c *Conf) loadGlobal(p *parse.PairNode) {
 		c.SmtpHost = c.expand(v, nil)
 	case "emailFrom":
 		c.EmailFrom = c.expand(v, nil)
+	case "stateFile":
+		c.StateFile = c.expand(v, nil)
 	default:
 		if !strings.HasPrefix(k, "$") {
 			c.errorf("unknown key %s", k)
