@@ -99,6 +99,7 @@ type Notification struct {
 	Name      string
 	Email     []*mail.Address
 	Post, Get *url.URL
+	Print     bool
 	Next      *Notification
 	Timeout   time.Duration
 
@@ -421,6 +422,8 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 				c.error(err)
 			}
 			n.Get = get
+		case "print":
+			n.Print = true
 		case "next":
 			n.next = c.expand(v, n.Vars)
 			next, ok := c.Notifications[n.next]
