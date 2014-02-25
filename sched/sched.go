@@ -153,6 +153,9 @@ func (s *Schedule) Notify(st *State, a *conf.Alert, n *conf.Notification, group 
 	if n.Get != nil {
 		go s.Get(a, n, group)
 	}
+	if n.Print {
+		go s.Print(a, n, group)
+	}
 	// Cannot depend on <-st.ack always returning if it is closed because n.Timeout could be == 0, so check the bit here.
 	if n.Next == nil || st.Acknowledged {
 		return
