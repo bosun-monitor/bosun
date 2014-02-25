@@ -123,7 +123,7 @@ Loop:
 		} else if isCrit {
 			status = ST_CRIT
 		}
-		state.Append(status)
+		notify := state.Append(status)
 		s.Status[ak] = state
 		if status != ST_NORM {
 			alerts = append(alerts, ak)
@@ -134,7 +134,7 @@ Loop:
 			}
 			state.Subject = subject.String()
 		}
-		if !state.Acknowledged {
+		if notify {
 			for _, n := range a.Notification {
 				go s.Notify(state, a, n, r.Group)
 			}
@@ -204,8 +204,9 @@ func (s *State) Touch() {
 }
 
 // Appends status to the history if the status is different than the latest
-// status. Returns true if the status was different.
-func (s *State) Append(status Status) {
+// status. Returns true if the status was changed to ST_CRIT. If the status was
+// already ST_CRIT, returns false.
+func (s *State) Append(status Status) bool {
 	s.Touch()
 	if len(s.History) == 0 || s.Last().Status != status {
 		s.History = append(s.History, Event{status, time.Now().UTC()})
@@ -213,7 +214,9 @@ func (s *State) Append(status Status) {
 		if !s.Acknowledged {
 			s.ack = make(chan interface{})
 		}
+		return status == ST_CRIT
 	}
+	return false
 }
 
 func (s *State) Last() Event {
