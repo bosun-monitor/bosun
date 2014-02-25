@@ -160,7 +160,7 @@ Loop:
 		s.Status[ak] = state
 		if status != ST_NORM {
 			alerts = append(alerts, ak)
-			state.Expr = e
+			state.Expr = e.String()
 			var subject = new(bytes.Buffer)
 			if err := a.ExecuteSubject(subject, r.Group, s.cache); err != nil {
 				log.Println(err)
@@ -232,7 +232,7 @@ type State struct {
 	// Most recent event last.
 	History      []Event
 	Touched      time.Time
-	Expr         *expr.Expr
+	Expr         string
 	Group        opentsdb.TagSet
 	Computations expr.Computations
 	Subject      string
