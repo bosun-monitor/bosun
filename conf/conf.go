@@ -75,10 +75,10 @@ type Alert struct {
 	Vars
 	*Template    `json:"-"`
 	Name         string
-	Crit         *expr.Expr `json:",omitempty"`
-	Warn         *expr.Expr `json:",omitempty"`
-	Squelch      map[string]*regexp.Regexp
-	Notification map[string]*Notification
+	Crit         *expr.Expr                `json:",omitempty"`
+	Warn         *expr.Expr                `json:",omitempty"`
+	Squelch      map[string]*regexp.Regexp `json:"-"`
+	Notification map[string]*Notification  `json:"-"`
 
 	crit, warn   string
 	template     string
