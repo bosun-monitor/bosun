@@ -26,7 +26,9 @@ func c_iostat_darwin() opentsdb.MultiDataPoint {
 		}
 		values := strings.Fields(line)
 		for _, cat := range categories {
-			if strings.HasPrefix(cat, "disk") {
+			if i+3 > len(values) {
+				break
+			} else if strings.HasPrefix(cat, "disk") {
 				Add(&md, "darwin.disk.kilobytes_transfer", values[i], opentsdb.TagSet{"disk": cat})
 				i++
 				Add(&md, "darwin.disk.transactions", values[i], opentsdb.TagSet{"disk": cat})
