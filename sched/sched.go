@@ -129,7 +129,8 @@ func (s *Schedule) Save() {
 
 func (s *Schedule) Run() error {
 	go func() {
-		for _ = range time.Tick(time.Second * 20) {
+		for {
+			time.Sleep(time.Minute)
 			s.Save()
 		}
 	}()
