@@ -59,13 +59,21 @@ tsafControllers.controller('DashboardCtrl', [
         $scope.collapse = function (i) {
             $('#collapse' + i).collapse('toggle');
         };
-        $scope.panel = function (status) {
-            if (status == "critical") {
+        $scope.panelClass = function (status) {
+            if (status == 2) {
                 return "panel-danger";
-            } else if (status == "warning") {
+            } else if (status == 1) {
                 return "panel-warning";
             }
             return "panel-default";
+        };
+        $scope.statusString = function (status) {
+            if (status == 2) {
+                return "critical";
+            } else if (status == 1) {
+                return "warning";
+            }
+            return "normal";
         };
     }]);
 
