@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"sync"
@@ -57,34 +58,73 @@ func Run() error {
 
 func (s *Schedule) Load(c *conf.Conf) {
 	s.Conf = c
+	s.RestoreState()
+}
+
+// Restores notification and alert state from the file on disk.
+func (s *Schedule) RestoreState() {
+	s.Lock()
+	defer s.Unlock()
+	s.cache = opentsdb.NewCache(s.Conf.TsdbHost)
+	// Clear all existing notifications
+	for _, st := range s.Status {
+		st.Acknowledge()
+	}
 	s.Status = make(map[AlertKey]*State)
+	f, err := os.Open(s.StateFile)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	dec := json.NewDecoder(f)
+	for {
+		var ak AlertKey
+		var st State
+		if err := dec.Decode(&ak); err == io.EOF {
+			break
+		} else if err != nil {
+			log.Println(err)
+			return
+		}
+		if err := dec.Decode(&st); err != nil {
+			log.Println(err)
+			return
+		}
+		for k, v := range st.Notifications {
+			n, present := s.Notifications[k]
+			if !present {
+				log.Println("sched: notification not present during restore:", k)
+				continue
+			}
+			a, present := s.Alerts[ak.Name]
+			if !present {
+				log.Println("sched: alert not present during restore:", ak.Name)
+				continue
+			}
+			go s.AddNotification(&st, a, n, st.Group, v)
+		}
+		s.Status[ak] = &st
+	}
 }
 
 func (s *Schedule) Save() {
+	s.Lock()
+	defer s.Unlock()
 	f, err := os.Create(s.StateFile)
 	if err != nil {
 		log.Println(err)
 		return
 	}
-	var m []saveState
+	enc := json.NewEncoder(f)
 	for k, v := range s.Status {
-		m = append(m, saveState{
-			Key:   k,
-			State: v,
-		})
+		enc.Encode(k)
+		enc.Encode(v)
 	}
-	b, _ := json.MarshalIndent(m, "", "  ")
-	f.Write(b)
 	if err := f.Close(); err != nil {
 		log.Println(err)
 		return
 	}
 	log.Println("sched: wrote state to", s.StateFile)
-}
-
-type saveState struct {
-	Key   AlertKey
-	State *State
 }
 
 func (s *Schedule) Run() error {
@@ -193,27 +233,27 @@ func (s *Schedule) Notify(st *State, a *conf.Alert, n *conf.Notification, group 
 	if n.Next == nil || st.Acknowledged {
 		return
 	}
-	s.AddNotification(st, a, n, group)
+	s.AddNotification(st, a, n, group, time.Now())
 }
 
-func (s *Schedule) AddNotification(st *State, a *conf.Alert, n *conf.Notification, group opentsdb.TagSet) {
+func (s *Schedule) AddNotification(st *State, a *conf.Alert, n *conf.Notification, group opentsdb.TagSet, started time.Time) {
 	st.Lock()
-	if st.notifications == nil {
-		st.notifications = make(map[*conf.Notification]time.Time)
+	if st.Notifications == nil {
+		st.Notifications = make(map[string]time.Time)
 	}
 	// Prevent duplicate notification chains on the same state.
-	if _, present := st.notifications[n]; !present {
-		st.notifications[n] = time.Now().UTC()
+	if _, present := st.Notifications[n.Name]; !present {
+		st.Notifications[n.Name] = time.Now().UTC()
 	}
 	st.Unlock()
 	select {
 	case <-st.ack:
 		// break
-	case <-time.After(n.Timeout):
+	case <-time.After(n.Timeout - time.Since(started)):
 		go s.Notify(st, a, n.Next, group)
 	}
 	st.Lock()
-	delete(st.notifications, n)
+	delete(st.Notifications, n.Name)
 	st.Unlock()
 }
 
@@ -230,33 +270,16 @@ type State struct {
 	sync.Mutex
 
 	// Most recent event last.
-	History      []Event
-	Touched      time.Time
-	Expr         string
-	Group        opentsdb.TagSet
-	Computations expr.Computations
-	Subject      string
-	Acknowledged bool
+	History       []Event
+	Touched       time.Time
+	Expr          string
+	Group         opentsdb.TagSet
+	Computations  expr.Computations
+	Subject       string
+	Acknowledged  bool
+	Notifications map[string]time.Time
 
-	ack           chan interface{}
-	notifications map[*conf.Notification]time.Time
-}
-
-func (s *State) MarshalJSON() ([]byte, error) {
-	m := make(map[string]interface{})
-	m["History"] = s.History
-	m["Touched"] = s.Touched
-	m["Expr"] = s.Expr
-	m["Group"] = s.Group
-	m["Computations"] = s.Computations
-	m["Subject"] = s.Subject
-	m["Acknowledged"] = s.Acknowledged
-	n := make(map[string]time.Time)
-	for k, t := range s.notifications {
-		n[k.Name] = t
-	}
-	m["Notifications"] = n
-	return json.Marshal(m)
+	ack chan interface{}
 }
 
 func (s *State) Acknowledge() {
@@ -317,8 +340,4 @@ func (s Status) String() string {
 	default:
 		return "unknown"
 	}
-}
-
-func (s Status) MarshalJSON() ([]byte, error) {
-	return json.Marshal(s.String())
 }
