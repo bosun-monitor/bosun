@@ -161,7 +161,17 @@ class RateOptions {
 
 class dp {
 	x: number;
-	y: numbe;
+	y: number;
+}
+
+interface IQuery {
+	aggregator?: string;
+	metric: string;
+	rate?: boolean;
+	rateOptions?: RateOptions;
+	tags?: TagSet;
+	ds?: string;
+	dstime?: string;
 }
 
 class Query {
@@ -173,13 +183,14 @@ class Query {
 	downsample: string;
 	ds: string;
 	dstime: string;
-	constructor() {
-		this.aggregator = 'sum';
-		this.rate = false;
-		this.rateOptions = new RateOptions;
-		this.ds = '';
-		this.dstime = '';
-		this.tags = new TagSet;
+	constructor(q?: IQuery) {
+		this.aggregator = q && q.aggregator || 'sum';
+		this.metric = q && q.metric || '';
+		this.rate = q && q.rate || false;
+		this.rateOptions = q && q.rateOptions || new RateOptions;
+		this.ds = q && q.ds || '';
+		this.dstime = q && q.dstime || '';
+		this.tags = q && q.tags || new TagSet;
 		this.setDs();
 	}
 	copy(qp: Query) {
