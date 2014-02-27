@@ -412,6 +412,9 @@ tsafControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route'
 		.success((data) => {
 			$scope.fs = data;
 			angular.forEach($scope.fs, function(i) {
+				if ( i === '/dev/shm') {
+					return;
+				}
 				var fs_r = new Request();
 				fs_r.start = $scope.time;
 				fs_r.Queries.push(new Query({
