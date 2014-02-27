@@ -136,13 +136,14 @@ var dp = (function () {
 })();
 
 var Query = (function () {
-    function Query() {
-        this.aggregator = 'sum';
-        this.rate = false;
-        this.rateOptions = new RateOptions;
-        this.ds = '';
-        this.dstime = '';
-        this.tags = new TagSet;
+    function Query(q) {
+        this.aggregator = q && q.aggregator || 'sum';
+        this.metric = q && q.metric || '';
+        this.rate = q && q.rate || false;
+        this.rateOptions = q && q.rateOptions || new RateOptions;
+        this.ds = q && q.ds || '';
+        this.dstime = q && q.dstime || '';
+        this.tags = q && q.tags || new TagSet;
         this.setDs();
     }
     Query.prototype.copy = function (qp) {
@@ -279,9 +280,9 @@ tsafControllers.controller('HostCtrl', [
     '$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
         $scope.host = ($location.search()).host;
         $scope.time = ($location.search()).time;
-        $scope.idata = {};
-        $scope.fsdata = {};
-        $scope.fs_total = {};
+        $scope.idata = [];
+        $scope.fsdata = [];
+        $scope.fs_current = [];
         var cpu_r = new Request();
         cpu_r.start = $scope.time;
         cpu_r.Queries = [new Query({
@@ -308,7 +309,7 @@ tsafControllers.controller('HostCtrl', [
                         tags: { host: $scope.host, iface: i, direction: "*" }
                     })];
                 $http.get('/api/query?' + 'json=' + encodeURIComponent(JSON.stringify(net_bytes_r))).success(function (data) {
-                    $scope.idata[i] = data;
+                    $scope.idata[$scope.interfaces.indexOf(i)] = { name: i, data: data };
                     $scope.running = '';
                     $scope.error = '';
                 }).error(function (error) {
@@ -325,6 +326,9 @@ tsafControllers.controller('HostCtrl', [
         $http.get('/api/tagv/mount/os.disk.fs.space_total?host=' + $scope.host).success(function (data) {
             $scope.fs = data;
             angular.forEach($scope.fs, function (i) {
+                if (i === '/dev/shm') {
+                    return;
+                }
                 var fs_r = new Request();
                 fs_r.start = $scope.time;
                 fs_r.Queries.push(new Query({
@@ -336,10 +340,16 @@ tsafControllers.controller('HostCtrl', [
                     tags: { host: $scope.host, mount: i }
                 }));
                 $http.get('/api/query?' + 'json=' + encodeURIComponent(JSON.stringify(fs_r))).success(function (data) {
-                    $scope.fsdata[i] = [data[1]];
-                    $scope.fs_total[i] = Math.max.apply(null, data[0].data.map(function (i) {
+                    $scope.fsdata[$scope.fs.indexOf(i)] = { name: i, data: [data[1]] };
+                    var total = Math.max.apply(null, data[0].data.map(function (i) {
                         return i.y;
                     }));
+                    var c_val = data[1].data.slice(-1)[0].y;
+                    var percent_used = c_val / total * 100;
+                    $scope.fs_current[$scope.fs.indexOf(i)] = {
+                        total: total,
+                        c_val: c_val,
+                        percent_used: percent_used };
                     $scope.running = '';
                     $scope.error = '';
                 }).error(function (error) {
@@ -405,7 +415,6 @@ tsafApp.directive("tsRickshaw", function () {
                     graph_options.renderer = attrs.renderer;
                 }
                 var graph = new Rickshaw.Graph(graph_options);
-                console.log(graph);
                 var x_axis = new Rickshaw.Graph.Axis.Time({
                     graph: graph,
                     timeFixture: new Rickshaw.Fixtures.Time()
@@ -446,6 +455,11 @@ tsafApp.directive("tsRickshaw", function () {
                     }
                 });
                 var hover = new Hover({ graph: graph });
+
+                //Simulate a movemove so the hover appears on load
+                var e = document.createEvent('MouseEvents');
+                e.initEvent('mousemove', true, false);
+                rgraph[0].children[0].dispatchEvent(e);
             });
         }
     };
@@ -456,5 +470,20 @@ tsafApp.directive("tooltip", function () {
         link: function (scope, elem, attrs) {
             angular.element(elem[0]).tooltip({ placement: "bottom" });
         }
+    };
+});
+
+tsafApp.filter('bytes', function () {
+    return function (bytes, precision) {
+        if (bytes === 0) {
+            return '0 bytes';
+        }
+        ;
+        if (isNaN(parseFloat(bytes)) || !isFinite(bytes))
+            return '-';
+        if (typeof precision === 'undefined')
+            precision = 1;
+        var units = ['bytes', 'kB', 'MB', 'GB', 'TB', 'PB'], number = Math.floor(Math.log(bytes) / Math.log(1024));
+        return (bytes / Math.pow(1024, Math.floor(number))).toFixed(precision) + ' ' + units[number];
     };
 });

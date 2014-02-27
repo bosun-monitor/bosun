@@ -11,7 +11,7 @@
 	<div class="col-lg-6">
 		<h2>Hosts</h2>
 		<ul>
-			<li ng-repeat="host in hosts" ng-bind="host"></li>
+			<li ng-repeat="host in hosts"><a href="/host?host={{host}}&time=1d-ago">{{host}}</a></li>
 		</ul>
 	</div>
 </div>
