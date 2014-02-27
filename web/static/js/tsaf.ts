@@ -534,6 +534,10 @@ tsafApp.directive("tsRickshaw", function() {
 					}
 				});
 				var hover = new Hover({graph: graph});
+				//Simulate a movemove so the hover appears on load
+				var e = document.createEvent('MouseEvents');
+				e.initEvent('mousemove', true, false);
+				rgraph[0].children[0].dispatchEvent(e);
 			});
 		},
 	};
