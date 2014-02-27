@@ -357,8 +357,15 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route
 }]);
 
 interface IHostScope extends ng.IScope {
+	cpu: any;
 	host: string;
 	time: string;
+	idata: any;
+	fs: any;
+	fsdata: any;
+	fs_current: any;
+	mem: any;
+	mem_total: number;
 	interfaces: string[];
 	error: string;
 	running: string;
@@ -368,9 +375,9 @@ interface IHostScope extends ng.IScope {
 tsafControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route', function($scope: IHostScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService){
 	$scope.host = ($location.search()).host;
 	$scope.time = ($location.search()).time;
-	$scope.idata = {};
-	$scope.fsdata = {};
-	$scope.fs_total = {};
+	$scope.idata = [];
+	$scope.fsdata = [];
+	$scope.fs_current = [];
 	var cpu_r = new Request();
 	cpu_r.start = $scope.time;
 	cpu_r.Queries = [
@@ -403,7 +410,7 @@ tsafControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route'
 					})];
 				$http.get('/api/query?' + 'json=' + encodeURIComponent(JSON.stringify(net_bytes_r)))
 					.success((data) => {
-						$scope.idata[i] = data;
+						$scope.idata[$scope.interfaces.indexOf(i)] = {name: i, data: data};
 						$scope.running = '';
 						$scope.error = '';
 					})
@@ -438,8 +445,14 @@ tsafControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route'
 				}));
 				$http.get('/api/query?' + 'json=' + encodeURIComponent(JSON.stringify(fs_r)))
 					.success((data) => {
-						$scope.fsdata[i] = [data[1]];
-						$scope.fs_total[i] = Math.max.apply(null, data[0].data.map(function (i: dp) { return i.y }));
+						$scope.fsdata[$scope.fs.indexOf(i)] = {name: i, data: [data[1]]};
+						var total: number = Math.max.apply(null, data[0].data.map(function (i: dp) { return i.y }));
+						var c_val: number = data[1].data.slice(-1)[0].y;
+						var percent_used: number = c_val/total * 100;
+						$scope.fs_current[$scope.fs.indexOf(i)] = {
+								total: total,
+								c_val: c_val,
+								percent_used: percent_used};
 						$scope.running = '';
 						$scope.error = '';
 					})
@@ -507,7 +520,6 @@ tsafApp.directive("tsRickshaw", function() {
 					graph_options.renderer = attrs.renderer;
 				}
 				var graph: any = new Rickshaw.Graph(graph_options);
-				console.log(graph)
 				var x_axis: any = new Rickshaw.Graph.Axis.Time({
 					graph: graph,
 					timeFixture: new Rickshaw.Fixtures.Time(),
