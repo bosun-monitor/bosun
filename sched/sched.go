@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
+	"os"
 	"sync"
 	"time"
 
@@ -56,10 +58,82 @@ func Run() error {
 
 func (s *Schedule) Load(c *conf.Conf) {
 	s.Conf = c
+	s.RestoreState()
+}
+
+// Restores notification and alert state from the file on disk.
+func (s *Schedule) RestoreState() {
+	s.Lock()
+	defer s.Unlock()
+	s.cache = opentsdb.NewCache(s.Conf.TsdbHost)
+	// Clear all existing notifications
+	for _, st := range s.Status {
+		st.Acknowledge()
+	}
 	s.Status = make(map[AlertKey]*State)
+	f, err := os.Open(s.StateFile)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	dec := json.NewDecoder(f)
+	for {
+		var ak AlertKey
+		var st State
+		if err := dec.Decode(&ak); err == io.EOF {
+			break
+		} else if err != nil {
+			log.Println(err)
+			return
+		}
+		if err := dec.Decode(&st); err != nil {
+			log.Println(err)
+			return
+		}
+		for k, v := range st.Notifications {
+			n, present := s.Notifications[k]
+			if !present {
+				log.Println("sched: notification not present during restore:", k)
+				continue
+			}
+			a, present := s.Alerts[ak.Name]
+			if !present {
+				log.Println("sched: alert not present during restore:", ak.Name)
+				continue
+			}
+			go s.AddNotification(&st, a, n, st.Group, v)
+		}
+		s.Status[ak] = &st
+	}
+}
+
+func (s *Schedule) Save() {
+	s.Lock()
+	defer s.Unlock()
+	f, err := os.Create(s.StateFile)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	enc := json.NewEncoder(f)
+	for k, v := range s.Status {
+		enc.Encode(k)
+		enc.Encode(v)
+	}
+	if err := f.Close(); err != nil {
+		log.Println(err)
+		return
+	}
+	log.Println("sched: wrote state to", s.StateFile)
 }
 
 func (s *Schedule) Run() error {
+	go func() {
+		for {
+			time.Sleep(time.Minute)
+			s.Save()
+		}
+	}()
 	for {
 		wait := time.After(s.Freq)
 		if s.Freq < time.Second {
@@ -123,18 +197,18 @@ Loop:
 		} else if isCrit {
 			status = ST_CRIT
 		}
-		state.Append(status)
+		notify := state.Append(status)
 		s.Status[ak] = state
 		if status != ST_NORM {
 			alerts = append(alerts, ak)
-			state.Expr = e
+			state.Expr = e.String()
 			var subject = new(bytes.Buffer)
 			if err := a.ExecuteSubject(subject, r.Group, s.cache); err != nil {
 				log.Println(err)
 			}
 			state.Subject = subject.String()
 		}
-		if !state.Acknowledged {
+		if notify {
 			for _, n := range a.Notification {
 				go s.Notify(state, a, n, r.Group)
 			}
@@ -160,12 +234,28 @@ func (s *Schedule) Notify(st *State, a *conf.Alert, n *conf.Notification, group 
 	if n.Next == nil || st.Acknowledged {
 		return
 	}
+	s.AddNotification(st, a, n, group, time.Now())
+}
+
+func (s *Schedule) AddNotification(st *State, a *conf.Alert, n *conf.Notification, group opentsdb.TagSet, started time.Time) {
+	st.Lock()
+	if st.Notifications == nil {
+		st.Notifications = make(map[string]time.Time)
+	}
+	// Prevent duplicate notification chains on the same state.
+	if _, present := st.Notifications[n.Name]; !present {
+		st.Notifications[n.Name] = time.Now().UTC()
+	}
+	st.Unlock()
 	select {
 	case <-st.ack:
 		// break
-	case <-time.After(n.Timeout):
+	case <-time.After(n.Timeout - time.Since(started)):
 		go s.Notify(st, a, n.Next, group)
 	}
+	st.Lock()
+	delete(st.Notifications, n.Name)
+	st.Unlock()
 }
 
 type AlertKey struct {
@@ -178,15 +268,19 @@ func (a AlertKey) String() string {
 }
 
 type State struct {
+	sync.Mutex
+
 	// Most recent event last.
-	History      []Event
-	Touched      time.Time
-	Expr         *expr.Expr
-	Group        opentsdb.TagSet
-	Computations expr.Computations
-	Subject      string
-	Acknowledged bool
-	ack          chan interface{}
+	History       []Event
+	Touched       time.Time
+	Expr          string
+	Group         opentsdb.TagSet
+	Computations  expr.Computations
+	Subject       string
+	Acknowledged  bool
+	Notifications map[string]time.Time
+
+	ack chan interface{}
 }
 
 func (s *State) Acknowledge() {
@@ -204,8 +298,9 @@ func (s *State) Touch() {
 }
 
 // Appends status to the history if the status is different than the latest
-// status. Returns true if the status was different.
-func (s *State) Append(status Status) {
+// status. Returns true if the status was changed to ST_CRIT. If the status was
+// already ST_CRIT, returns false.
+func (s *State) Append(status Status) bool {
 	s.Touch()
 	if len(s.History) == 0 || s.Last().Status != status {
 		s.History = append(s.History, Event{status, time.Now().UTC()})
@@ -213,7 +308,9 @@ func (s *State) Append(status Status) {
 		if !s.Acknowledged {
 			s.ack = make(chan interface{})
 		}
+		return status == ST_CRIT
 	}
+	return false
 }
 
 func (s *State) Last() Event {
@@ -244,8 +341,4 @@ func (s Status) String() string {
 	default:
 		return "unknown"
 	}
-}
-
-func (s Status) MarshalJSON() ([]byte, error) {
-	return json.Marshal(s.String())
 }

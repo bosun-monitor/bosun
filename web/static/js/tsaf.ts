@@ -60,7 +60,8 @@ interface IDashboardScope extends ng.IScope {
 	schedule: any;
 	last: any;
 	collapse: (i: number) => void;
-	panel: (status: string) => string;
+	panelClass: (status: number) => string;
+	statusString: (status: number) => string;
 }
 
 tsafControllers.controller('DashboardCtrl', ['$scope', '$http', function($scope: IDashboardScope, $http: ng.IHttpService) {
@@ -77,13 +78,21 @@ tsafControllers.controller('DashboardCtrl', ['$scope', '$http', function($scope:
 	$scope.collapse = (i: number) => {
 		$('#collapse' + i).collapse('toggle');
 	};
-	$scope.panel = (status: string) => {
-		if (status == "critical") {
+	$scope.panelClass = (status: number) => {
+		if (status == 2) {
 			return "panel-danger";
-		} else if (status == "warning") {
+		} else if (status == 1) {
 			return "panel-warning";
 		}
 		return "panel-default";
+	};
+	$scope.statusString = (status: number) => {
+		if (status == 2) {
+			return "critical";
+		} else if (status == 1) {
+			return "warning";
+		}
+		return "normal";
 	};
 }]);
 
