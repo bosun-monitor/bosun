@@ -168,11 +168,6 @@ class RateOptions {
 	resetValue: string;
 }
 
-class dp {
-	x: number;
-	y: number;
-}
-
 interface IQuery {
 	aggregator?: string;
 	metric: string;
@@ -378,7 +373,6 @@ interface IHostScope extends ng.IScope {
 	interfaces: string[];
 	error: string;
 	running: string;
-
 }
 
 tsafControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route', function($scope: IHostScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService){
@@ -390,11 +384,12 @@ tsafControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route'
 	var cpu_r = new Request();
 	cpu_r.start = $scope.time;
 	cpu_r.Queries = [
-			new Query({
-				metric: "os.cpu",
-				rate: true,
-				tags: {host: $scope.host},
-			})];
+		new Query({
+			metric: "os.cpu",
+			rate: true,
+			tags: {host: $scope.host},
+		})
+	];
 	$http.get('/api/query?' + 'json=' + encodeURIComponent(JSON.stringify(cpu_r)))
 		.success((data) => {
 			$scope.cpu = data;
@@ -415,8 +410,9 @@ tsafControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route'
 					new Query({
 						metric: "os.net.bytes",
 						rate: true,
-						tags: {host: $scope.host, iface: i, direction: "*"}
-					})];
+						tags: {host: $scope.host, iface: i, direction: "*"},
+					})
+				];
 				$http.get('/api/query?' + 'json=' + encodeURIComponent(JSON.stringify(net_bytes_r)))
 					.success((data) => {
 						$scope.idata[$scope.interfaces.indexOf(i)] = {name: i, data: data};
@@ -439,29 +435,30 @@ tsafControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route'
 		.success((data) => {
 			$scope.fs = data;
 			angular.forEach($scope.fs, function(i) {
-				if ( i === '/dev/shm') {
+				if (i == '/dev/shm') {
 					return;
 				}
 				var fs_r = new Request();
 				fs_r.start = $scope.time;
 				fs_r.Queries.push(new Query({
 					metric: "os.disk.fs.space_total",
-					tags: {host: $scope.host, mount: i}
+					tags: {host: $scope.host, mount: i},
 				}));
 				fs_r.Queries.push(new Query({
 					metric: "os.disk.fs.space_used",
-					tags: {host: $scope.host, mount: i}
+					tags: {host: $scope.host, mount: i},
 				}));
 				$http.get('/api/query?' + 'json=' + encodeURIComponent(JSON.stringify(fs_r)))
 					.success((data) => {
 						$scope.fsdata[$scope.fs.indexOf(i)] = {name: i, data: [data[1]]};
-						var total: number = Math.max.apply(null, data[0].data.map(function (i: dp) { return i.y }));
+						var total: number = Math.max.apply(null, data[0].data.map((d: any) => { return d.y; }));
 						var c_val: number = data[1].data.slice(-1)[0].y;
 						var percent_used: number = c_val/total * 100;
 						$scope.fs_current[$scope.fs.indexOf(i)] = {
-								total: total,
-								c_val: c_val,
-								percent_used: percent_used};
+							total: total,
+							c_val: c_val,
+							percent_used: percent_used,
+						};
 						$scope.running = '';
 						$scope.error = '';
 					})
@@ -481,15 +478,15 @@ tsafControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route'
 	mem_r.start = $scope.time;
 	mem_r.Queries.push(new Query({
 		metric: "os.mem.total",
-		tags: {host: $scope.host}
+		tags: {host: $scope.host},
 	}));
 	mem_r.Queries.push(new Query({
 		metric: "os.mem.used",
-		tags: {host: $scope.host}
+		tags: {host: $scope.host},
 	}));
 	$http.get('/api/query?' + 'json=' + encodeURIComponent(JSON.stringify(mem_r)))
 		.success((data) => {
-			$scope.mem_total = Math.max.apply(null, data[0].data.map(function (i: dp) { return i.y }))
+			$scope.mem_total = Math.max.apply(null, data[0].data.map((d: any) => { return d.y; }));
 			$scope.mem = [data[1]];
 			$scope.running = '';
 			$scope.error = '';
@@ -588,9 +585,9 @@ tsafApp.directive("tooltip", function() {
 
 tsafApp.filter('bytes', function() {
 	return function(bytes: any, precision: number) {
-		if (bytes === 0) { return '0 bytes' };
+		if (!bytes) { return '0 bytes' };
 		if (isNaN(parseFloat(bytes)) || !isFinite(bytes)) return '-';
-		if (typeof precision === 'undefined') precision = 1;
+		if (typeof precision == 'undefined') precision = 1;
 		var units = ['bytes', 'kB', 'MB', 'GB', 'TB', 'PB'],
 			number = Math.floor(Math.log(bytes) / Math.log(1024));
 		return (bytes / Math.pow(1024, Math.floor(number))).toFixed(precision) +  ' ' + units[number];
