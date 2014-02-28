@@ -16,6 +16,7 @@ import (
 
 var (
 	confFile = flag.String("c", "dev.conf", "config file location")
+	test     = flag.Bool("t", false, "Only validate config then exit")
 	watch    = flag.Bool("w", false, "watch current directory and exit on changes; for use with an autorestarter")
 )
 
@@ -24,6 +25,10 @@ func main() {
 	c, err := conf.ParseFile(*confFile)
 	if err != nil {
 		log.Fatal(err)
+	}
+	if *test {
+		log.Println("Valid Config")
+		os.Exit(0)
 	}
 	sched.Load(c)
 	go func() { log.Fatal(relay.RelayHTTP(c.RelayListen, c.TsdbHost)) }()
