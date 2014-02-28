@@ -148,27 +148,45 @@ type context struct {
 
 // E executes the given expression and returns a value with corresponding tags
 // to the context's tags. If no such result is found, the first result with nil
-// tags is returned. If no such result is found, nil is returned.
-func (c *context) E(v string) expr.Value {
+// tags is returned. If no such result is found, nil is returned. The precision
+// of numbers is truncated for convienent display. Array expressions are not
+// supported.
+func (c *context) E(v string) (s string) {
 	e, err := expr.New(v)
 	if err != nil {
-		return nil
+		return
 	}
 	res, err := e.Execute(c.Context, nil)
 	if err != nil {
-		return nil
+		return
 	}
 	for _, r := range res {
 		if r.Group.Equal(c.Tags) {
-			return r.Value
+			s = truncate(r.Value)
 		}
 	}
 	for _, r := range res {
 		if r.Group == nil {
-			return r.Value
+			s = truncate(r.Value)
 		}
 	}
-	return nil
+	return
+}
+
+// truncate displays needed decimals for a Number.
+func truncate(v expr.Value) string {
+	switch t := v.(type) {
+	case expr.Number:
+		if t < 1 {
+			return fmt.Sprintf("%.4f", t)
+		} else if t < 100 {
+			return fmt.Sprintf("%.1f", t)
+		} else {
+			return fmt.Sprintf("%.0f", t)
+		}
+	default:
+		return ""
+	}
 }
 
 func (a *Alert) data(group opentsdb.TagSet, c opentsdb.Context) interface{} {
