@@ -329,7 +329,7 @@ tsafControllers.controller('HostCtrl', [
                 });
             });
         });
-        $http.get('/api/tagv/mount/os.disk.fs.space_total?host=' + $scope.host).success(function (data) {
+        $http.get('/api/tagv/disk/os.disk.fs.space_total?host=' + $scope.host).success(function (data) {
             $scope.fs = data;
             angular.forEach($scope.fs, function (i) {
                 if (i == '/dev/shm') {
@@ -339,11 +339,11 @@ tsafControllers.controller('HostCtrl', [
                 fs_r.start = $scope.time;
                 fs_r.Queries.push(new Query({
                     metric: "os.disk.fs.space_total",
-                    tags: { host: $scope.host, mount: i }
+                    tags: { host: $scope.host, disk: i }
                 }));
                 fs_r.Queries.push(new Query({
                     metric: "os.disk.fs.space_used",
-                    tags: { host: $scope.host, mount: i }
+                    tags: { host: $scope.host, disk: i }
                 }));
                 $http.get('/api/query?' + 'json=' + encodeURIComponent(JSON.stringify(fs_r))).success(function (data) {
                     data[1].name = "Used";
