@@ -384,7 +384,8 @@ tsafApp.directive("tsRickshaw", function () {
                     height: rgraph.height(),
                     min: 'auto',
                     series: v,
-                    renderer: 'line'
+                    renderer: 'line',
+                    interpolation: 'linear'
                 };
                 if (attrs.max) {
                     graph_options.max = attrs.max;
