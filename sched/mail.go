@@ -25,13 +25,13 @@ func (s *Schedule) Email(a *conf.Alert, n *conf.Notification, group opentsdb.Tag
 		return
 	}
 	e := email.NewEmail()
-	e.From = s.EmailFrom
+	e.From = s.Conf.EmailFrom
 	for _, a := range n.Email {
 		e.To = append(e.To, a.Address)
 	}
 	e.Subject = subject.String()
 	e.Text = body.Bytes()
-	if err := Send(e, s.SmtpHost); err != nil {
+	if err := Send(e, s.Conf.SmtpHost); err != nil {
 		log.Println(err)
 		return
 	}

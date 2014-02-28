@@ -75,17 +75,19 @@ func errRecover(errp *error) {
 
 type Alert struct {
 	Vars
-	*Template    `json:"-"`
-	Name         string
-	Crit         *expr.Expr                `json:",omitempty"`
-	Warn         *expr.Expr                `json:",omitempty"`
-	Squelch      map[string]*regexp.Regexp `json:"-"`
-	Notification map[string]*Notification  `json:"-"`
+	*Template        `json:"-"`
+	Name             string
+	Crit             *expr.Expr                `json:",omitempty"`
+	Warn             *expr.Expr                `json:",omitempty"`
+	Squelch          map[string]*regexp.Regexp `json:"-"`
+	CritNotification map[string]*Notification  `json:"-"`
+	WarnNotification map[string]*Notification  `json:"-"`
 
-	crit, warn   string
-	template     string
-	squelch      string
-	notification string
+	crit, warn       string
+	template         string
+	squelch          string
+	critNotification string
+	warnNotification string
 }
 
 type Template struct {
@@ -391,16 +393,27 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 				}
 				a.Squelch[k] = re
 			}
-		case "notification":
-			a.notification = c.expand(v, a.Vars)
-			a.Notification = make(map[string]*Notification)
-			for _, s := range strings.Split(a.notification, ",") {
+		case "critNotification":
+			a.critNotification = c.expand(v, a.Vars)
+			a.CritNotification = make(map[string]*Notification)
+			for _, s := range strings.Split(a.critNotification, ",") {
 				s = strings.TrimSpace(s)
 				n, ok := c.Notifications[s]
 				if !ok {
 					c.errorf("unknown notification %s", s)
 				}
-				a.Notification[s] = n
+				a.CritNotification[s] = n
+			}
+		case "warnNotification":
+			a.warnNotification = c.expand(v, a.Vars)
+			a.WarnNotification = make(map[string]*Notification)
+			for _, s := range strings.Split(a.warnNotification, ",") {
+				s = strings.TrimSpace(s)
+				n, ok := c.Notifications[s]
+				if !ok {
+					c.errorf("unknown notification %s", s)
+				}
+				a.WarnNotification[s] = n
 			}
 		default:
 			if !strings.HasPrefix(k, "$") {

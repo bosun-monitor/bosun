@@ -2,6 +2,7 @@ package sched
 
 import (
 	"bytes"
+	"encoding/gob"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -16,11 +17,15 @@ import (
 )
 
 type Schedule struct {
-	*conf.Conf
 	sync.Mutex
-	Freq   time.Duration
-	Status map[AlertKey]*State
-	cache  *opentsdb.Cache
+
+	Conf          *conf.Conf
+	Freq          time.Duration
+	Status        map[AlertKey]*State
+	Notifications map[AlertKey]map[string]time.Time
+
+	cache *opentsdb.Cache
+	nc    chan interface{}
 }
 
 func (s *Schedule) MarshalJSON() ([]byte, error) {
@@ -66,17 +71,34 @@ func (s *Schedule) RestoreState() {
 	s.Lock()
 	defer s.Unlock()
 	s.cache = opentsdb.NewCache(s.Conf.TsdbHost)
-	// Clear all existing notifications
-	for _, st := range s.Status {
-		st.Acknowledge()
-	}
+	s.Notifications = nil
 	s.Status = make(map[AlertKey]*State)
-	f, err := os.Open(s.StateFile)
+	f, err := os.Open(s.Conf.StateFile)
 	if err != nil {
 		log.Println(err)
 		return
 	}
-	dec := json.NewDecoder(f)
+	dec := gob.NewDecoder(f)
+	notifications := make(map[AlertKey]map[string]time.Time)
+	if err := dec.Decode(&notifications); err != nil {
+		log.Println(err)
+		return
+	}
+	for ak, ns := range notifications {
+		for name, t := range ns {
+			n, present := s.Conf.Notifications[name]
+			if !present {
+				log.Println("sched: notification not present during restore:", name)
+				continue
+			}
+			_, present = s.Conf.Alerts[ak.Name]
+			if !present {
+				log.Println("sched: alert not present during restore:", ak.Name)
+				continue
+			}
+			s.AddNotification(ak, n, t)
+		}
+	}
 	for {
 		var ak AlertKey
 		var st State
@@ -90,19 +112,6 @@ func (s *Schedule) RestoreState() {
 			log.Println(err)
 			return
 		}
-		for k, v := range st.Notifications {
-			n, present := s.Notifications[k]
-			if !present {
-				log.Println("sched: notification not present during restore:", k)
-				continue
-			}
-			a, present := s.Alerts[ak.Name]
-			if !present {
-				log.Println("sched: alert not present during restore:", ak.Name)
-				continue
-			}
-			go s.AddNotification(&st, a, n, st.Group, v)
-		}
 		s.Status[ak] = &st
 	}
 }
@@ -110,12 +119,16 @@ func (s *Schedule) RestoreState() {
 func (s *Schedule) Save() {
 	s.Lock()
 	defer s.Unlock()
-	f, err := os.Create(s.StateFile)
+	f, err := os.Create(s.Conf.StateFile)
 	if err != nil {
 		log.Println(err)
 		return
 	}
-	enc := json.NewEncoder(f)
+	enc := gob.NewEncoder(f)
+	if err := enc.Encode(s.Notifications); err != nil {
+		log.Println(err)
+		return
+	}
 	for k, v := range s.Status {
 		enc.Encode(k)
 		enc.Encode(v)
@@ -124,7 +137,7 @@ func (s *Schedule) Save() {
 		log.Println(err)
 		return
 	}
-	log.Println("sched: wrote state to", s.StateFile)
+	log.Println("sched: wrote state to", s.Conf.StateFile)
 }
 
 func (s *Schedule) Run() error {
@@ -134,6 +147,8 @@ func (s *Schedule) Run() error {
 			s.Save()
 		}
 	}()
+	s.nc = make(chan interface{}, 1)
+	go s.Poll()
 	for {
 		wait := time.After(s.Freq)
 		if s.Freq < time.Second {
@@ -149,21 +164,79 @@ func (s *Schedule) Run() error {
 	}
 }
 
+// Poll dispatches notification checks when needed.
+func (s *Schedule) Poll() {
+	var timeout time.Duration
+	for {
+		// Wait for one of these two.
+		select {
+		case <-time.After(timeout):
+		case <-s.nc:
+		}
+		timeout = s.CheckNotifications()
+	}
+}
+
+// CheckNotifications processes past notification events. It returns the
+func (s *Schedule) CheckNotifications() time.Duration {
+	s.Lock()
+	defer s.Unlock()
+	timeout := time.Hour
+	notifications := s.Notifications
+	s.Notifications = nil
+	for ak, ns := range notifications {
+		for name, t := range ns {
+			n, present := s.Conf.Notifications[name]
+			if !present {
+				continue
+			}
+			remaining := t.Add(n.Timeout).Sub(time.Now())
+			if remaining > 0 {
+				if remaining < timeout {
+					timeout = remaining
+				}
+				s.AddNotification(ak, n, t)
+				continue
+			}
+			st, present := s.Status[ak]
+			if !present {
+				continue
+			}
+			a, present := s.Conf.Alerts[ak.Name]
+			if !present {
+				continue
+			}
+			s.Notify(st, a, n)
+			if n.Timeout < timeout {
+				timeout = n.Timeout
+			}
+		}
+	}
+	return timeout
+}
+
 func (s *Schedule) Check() {
 	s.Lock()
 	defer s.Unlock()
 	s.cache = opentsdb.NewCache(s.Conf.TsdbHost)
+	changed := false
 	for _, a := range s.Conf.Alerts {
-		s.CheckAlert(a)
+		if s.CheckAlert(a) {
+			changed = true
+		}
+	}
+	if changed {
+		s.nc <- true
 	}
 }
 
-func (s *Schedule) CheckAlert(a *conf.Alert) {
-	ignore := s.CheckExpr(a, a.Crit, true, nil)
-	s.CheckExpr(a, a.Warn, false, ignore)
+func (s *Schedule) CheckAlert(a *conf.Alert) bool {
+	crits, cchange := s.CheckExpr(a, a.Crit, true, nil)
+	_, wchange := s.CheckExpr(a, a.Warn, false, crits)
+	return cchange || wchange
 }
 
-func (s *Schedule) CheckExpr(a *conf.Alert, e *expr.Expr, isCrit bool, ignore []AlertKey) (alerts []AlertKey) {
+func (s *Schedule) CheckExpr(a *conf.Alert, e *expr.Expr, isCrit bool, ignore []AlertKey) (alerts []AlertKey, change bool) {
 	if e == nil {
 		return
 	}
@@ -191,71 +264,74 @@ Loop:
 				Computations: r.Computations,
 			}
 		}
-		status := ST_WARN
-		if r.Value.(expr.Number) == 0 {
-			status = ST_NORM
-		} else if isCrit {
-			status = ST_CRIT
-		}
-		notify := state.Append(status)
-		s.Status[ak] = state
-		if status != ST_NORM {
+		status := ST_NORM
+		if r.Value.(expr.Number) != 0 {
 			alerts = append(alerts, ak)
-			state.Expr = e.String()
-			var subject = new(bytes.Buffer)
-			if err := a.ExecuteSubject(subject, r.Group, s.cache); err != nil {
-				log.Println(err)
+			if isCrit {
+				status = ST_CRIT
+			} else {
+				status = ST_WARN
 			}
-			state.Subject = subject.String()
 		}
-		if notify {
-			for _, n := range a.Notification {
-				go s.Notify(state, a, n, r.Group)
+		state.Expr = e.String()
+		var subject = new(bytes.Buffer)
+		if err := a.ExecuteSubject(subject, r.Group, s.cache); err != nil {
+			log.Println(err)
+		}
+		state.Subject = subject.String()
+		changed := state.Append(status)
+		s.Status[ak] = state
+		if changed {
+			change = true
+		}
+		if changed && status != ST_NORM {
+			notify := func(notifications map[string]*conf.Notification) {
+				for _, n := range notifications {
+					s.Notify(state, a, n)
+				}
+			}
+			switch status {
+			case ST_CRIT:
+				notify(a.CritNotification)
+			case ST_WARN:
+				notify(a.WarnNotification)
 			}
 		}
 	}
 	return
 }
 
-func (s *Schedule) Notify(st *State, a *conf.Alert, n *conf.Notification, group opentsdb.TagSet) {
+func (s *Schedule) Notify(st *State, a *conf.Alert, n *conf.Notification) {
 	if len(n.Email) > 0 {
-		go s.Email(a, n, group)
+		go s.Email(a, n, st.Group)
 	}
 	if n.Post != nil {
-		go s.Post(a, n, group)
+		go s.Post(a, n, st.Group)
 	}
 	if n.Get != nil {
-		go s.Get(a, n, group)
+		go s.Get(a, n, st.Group)
 	}
 	if n.Print {
-		go s.Print(a, n, group)
+		go s.Print(a, n, st.Group)
 	}
-	// Cannot depend on <-st.ack always returning if it is closed because n.Timeout could be == 0, so check the bit here.
-	if n.Next == nil || st.Acknowledged {
+	if n.Next == nil {
 		return
 	}
-	s.AddNotification(st, a, n, group, time.Now())
+	s.AddNotification(AlertKey{Name: a.Name, Group: st.Group.String()}, n, time.Now().UTC())
 }
 
-func (s *Schedule) AddNotification(st *State, a *conf.Alert, n *conf.Notification, group opentsdb.TagSet, started time.Time) {
-	st.Lock()
-	if st.Notifications == nil {
-		st.Notifications = make(map[string]time.Time)
+func (s *Schedule) AddNotification(ak AlertKey, n *conf.Notification, started time.Time) {
+	if s.Notifications == nil {
+		s.Notifications = make(map[AlertKey]map[string]time.Time)
 	}
-	// Prevent duplicate notification chains on the same state.
-	if _, present := st.Notifications[n.Name]; !present {
-		st.Notifications[n.Name] = time.Now().UTC()
+	if s.Notifications[ak] == nil {
+		s.Notifications[ak] = make(map[string]time.Time)
 	}
-	st.Unlock()
-	select {
-	case <-st.ack:
-		// break
-	case <-time.After(n.Timeout - time.Since(started)):
-		go s.Notify(st, a, n.Next, group)
+	stn := s.Notifications[ak]
+	// Prevent duplicate notifications restarting each other.
+	if _, present := stn[n.Name]; !present {
+		stn[n.Name] = started
 	}
-	st.Lock()
-	delete(st.Notifications, n.Name)
-	st.Unlock()
 }
 
 type AlertKey struct {
@@ -268,29 +344,19 @@ func (a AlertKey) String() string {
 }
 
 type State struct {
-	sync.Mutex
-
 	// Most recent event last.
-	History       []Event
-	Touched       time.Time
-	Expr          string
-	Group         opentsdb.TagSet
-	Computations  expr.Computations
-	Subject       string
-	Acknowledged  bool
-	Notifications map[string]time.Time
-
-	ack chan interface{}
+	History      []Event
+	Touched      time.Time
+	Expr         string
+	Group        opentsdb.TagSet
+	Computations expr.Computations
+	Subject      string
 }
 
-func (s *State) Acknowledge() {
-	if s.Acknowledged {
-		return
-	}
-	s.Acknowledged = true
-	if s.ack != nil {
-		close(s.ack)
-	}
+func (s *Schedule) Acknowledge(ak AlertKey) {
+	s.Lock()
+	delete(s.Notifications, ak)
+	s.Unlock()
 }
 
 func (s *State) Touch() {
@@ -298,17 +364,12 @@ func (s *State) Touch() {
 }
 
 // Appends status to the history if the status is different than the latest
-// status. Returns true if the status was changed to ST_CRIT. If the status was
-// already ST_CRIT, returns false.
+// status. Returns true if state was changed.
 func (s *State) Append(status Status) bool {
 	s.Touch()
 	if len(s.History) == 0 || s.Last().Status != status {
 		s.History = append(s.History, Event{status, time.Now().UTC()})
-		s.Acknowledged = status != ST_CRIT
-		if !s.Acknowledged {
-			s.ack = make(chan interface{})
-		}
-		return status == ST_CRIT
+		return true
 	}
 	return false
 }
