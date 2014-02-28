@@ -393,13 +393,8 @@ tsafControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route'
 	$http.get('/api/query?' + 'json=' + encodeURIComponent(JSON.stringify(cpu_r)))
 		.success((data) => {
 			$scope.cpu = data;
-			$scope.running = '';
-			$scope.error = '';
-		})
-		.error((error) => {
-			$scope.error = error;
-			$scope.running = '';
 		});
+
 	$http.get('/api/tagv/iface/os.net.bytes?host=' + $scope.host)
 		.success((data) => {
 			$scope.interfaces = data;
@@ -416,20 +411,8 @@ tsafControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route'
 				$http.get('/api/query?' + 'json=' + encodeURIComponent(JSON.stringify(net_bytes_r)))
 					.success((data) => {
 						$scope.idata[$scope.interfaces.indexOf(i)] = {name: i, data: data};
-						$scope.running = '';
-						$scope.error = '';
-					})
-					.error((error) => {
-						$scope.error = error;
-						$scope.running = '';
 					});
-		})
-			$scope.running = '';
-			$scope.error = '';
-		})
-		.error((error) => {
-			$scope.error = error;
-			$scope.running = '';
+			});
 		});
 	$http.get('/api/tagv/mount/os.disk.fs.space_total?host=' + $scope.host)
 		.success((data) => {
@@ -459,20 +442,8 @@ tsafControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route'
 							c_val: c_val,
 							percent_used: percent_used,
 						};
-						$scope.running = '';
-						$scope.error = '';
-					})
-					.error((error) => {
-						$scope.error = error;
-						$scope.running = '';
 					});
-		})
-			$scope.running = '';
-			$scope.error = '';
-		})
-		.error((error) => {
-			$scope.error = error;
-			$scope.running = '';
+			});
 		});
 	var mem_r = new Request();
 	mem_r.start = $scope.time;
@@ -488,12 +459,6 @@ tsafControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route'
 		.success((data) => {
 			$scope.mem_total = Math.max.apply(null, data[0].data.map((d: any) => { return d.y; }));
 			$scope.mem = [data[1]];
-			$scope.running = '';
-			$scope.error = '';
-		})
-		.error((error) => {
-			$scope.error = error;
-			$scope.running = '';
 		});
 }]);
 
