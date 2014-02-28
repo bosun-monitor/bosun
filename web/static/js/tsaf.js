@@ -295,6 +295,7 @@ tsafControllers.controller('HostCtrl', [
             })
         ];
         $http.get('/api/query?' + 'json=' + encodeURIComponent(JSON.stringify(cpu_r))).success(function (data) {
+            data[0].name = 'Percent Used';
             $scope.cpu = data;
         });
 
@@ -319,6 +320,9 @@ tsafControllers.controller('HostCtrl', [
                             d.data = d.data.map(function (dp) {
                                 return { x: dp.x, y: dp.y * -1 };
                             });
+                            d.name = "out";
+                        } else {
+                            d.name = "in";
                         }
                     });
                     $scope.idata[$scope.interfaces.indexOf(i)] = { name: i, data: data };
@@ -342,6 +346,7 @@ tsafControllers.controller('HostCtrl', [
                     tags: { host: $scope.host, mount: i }
                 }));
                 $http.get('/api/query?' + 'json=' + encodeURIComponent(JSON.stringify(fs_r))).success(function (data) {
+                    data[1].name = "Used";
                     $scope.fsdata[$scope.fs.indexOf(i)] = { name: i, data: [data[1]] };
                     var total = Math.max.apply(null, data[0].data.map(function (d) {
                         return d.y;
@@ -367,6 +372,7 @@ tsafControllers.controller('HostCtrl', [
             tags: { host: $scope.host }
         }));
         $http.get('/api/query?' + 'json=' + encodeURIComponent(JSON.stringify(mem_r))).success(function (data) {
+            data[1].name = "Used";
             $scope.mem_total = Math.max.apply(null, data[0].data.map(function (d) {
                 return d.y;
             }));
@@ -431,7 +437,6 @@ tsafApp.directive("tsRickshaw", [
                                 var label = document.createElement('div');
                                 label.className = 'rlabel';
                                 label.innerHTML = d.name + ": " + d.formattedYValue;
-                                console.log(attrs.bytes, attrs.max);
                                 if (attrs.bytes) {
                                     label.innerHTML = d.name + ": " + $filter('bytes')(d.formattedYValue);
                                 }

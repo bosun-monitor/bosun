@@ -52,7 +52,7 @@
 	<span ng-switch on="$index % 2">
 		<div class="row" ng-switch-when="0">
 			<div class="col-lg-{{12/rows.length}}" ng-show="idata[$parent.$index+$index]" ng-repeat="i in rows">
-				<h2>Network Bits: {{idata[$parent.$index+$index].name}}</h2>
+				<h2>Network Bit/s: {{idata[$parent.$index+$index].name}}</h2>
 				<div class="chart" bits="true" ts-rickshaw="idata[$parent.$index+$index].data"></div>
 			</div>
 		</div>
@@ -62,7 +62,7 @@
 	<span ng-switch on="$index % rows.length">
 		<div class="row" ng-switch-when="0">
 			<div class="col-lg-{{12/rows.length}}" ng-show="fsdata[$parent.$index+$index]" ng-repeat="i in rows">
-				<h2>Disk: {{fsdata[$parent.$index+$index].name}} <small>({{fs_current[$parent.$index+$index].c_val | bytes}} / {{fs_current[$parent.$index+$index].total | bytes}}) {{fs_current[$parent.$index+$index].percent_used|number:0}}% Used</small></h2>
+				<h2>Disk Space: {{fsdata[$parent.$index+$index].name}} <small>({{fs_current[$parent.$index+$index].c_val | bytes}} / {{fs_current[$parent.$index+$index].total | bytes}}) {{fs_current[$parent.$index+$index].percent_used|number:0}}% Used</small></h2>
 				<div class="chart" max="{{fs_total[fs_current[$parent.$index+$index].total]}}" bytes="true" ts-rickshaw="fsdata[$parent.$index+$index].data"></div>
 			</div>
 		</div>

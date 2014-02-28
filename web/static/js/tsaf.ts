@@ -392,6 +392,7 @@ tsafControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route'
 	];
 	$http.get('/api/query?' + 'json=' + encodeURIComponent(JSON.stringify(cpu_r)))
 		.success((data) => {
+			data[0].name = 'Percent Used';
 			$scope.cpu = data;
 		});
 
@@ -414,6 +415,9 @@ tsafControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route'
 							d.data = d.data.map((dp: any) => { return {x: dp.x, y: dp.y*8}});
 							if (d.name.indexOf("direction=out") != -1) {
 								d.data = d.data.map((dp: any) => { return {x: dp.x, y: dp.y*-1}});
+								d.name = "out";
+							} else {
+								d.name = "in";
 							}
 						});
 						$scope.idata[$scope.interfaces.indexOf(i)] = {name: i, data: data};
@@ -439,6 +443,7 @@ tsafControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route'
 				}));
 				$http.get('/api/query?' + 'json=' + encodeURIComponent(JSON.stringify(fs_r)))
 					.success((data) => {
+						data[1].name = "Used";
 						$scope.fsdata[$scope.fs.indexOf(i)] = {name: i, data: [data[1]]};
 						var total: number = Math.max.apply(null, data[0].data.map((d: any) => { return d.y; }));
 						var c_val: number = data[1].data.slice(-1)[0].y;
@@ -463,6 +468,7 @@ tsafControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route'
 	}));
 	$http.get('/api/query?' + 'json=' + encodeURIComponent(JSON.stringify(mem_r)))
 		.success((data) => {
+			data[1].name = "Used";
 			$scope.mem_total = Math.max.apply(null, data[0].data.map((d: any) => { return d.y; }));
 			$scope.mem = [data[1]];
 		});
@@ -524,7 +530,6 @@ tsafApp.directive("tsRickshaw", ['$filter', function($filter: ng.IFilterService)
 								var label = document.createElement('div');
 								label.className = 'rlabel';
 								label.innerHTML = d.name + ": " + d.formattedYValue;
-								console.log(attrs.bytes, attrs.max)
 								if (attrs.bytes) {
 									label.innerHTML = d.name + ": " + $filter('bytes')(d.formattedYValue);
 								}
