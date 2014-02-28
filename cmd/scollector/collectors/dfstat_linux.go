@@ -26,9 +26,9 @@ func c_dfstat_blocks_linux() opentsdb.MultiDataPoint {
 		Add(&md, "linux.disk.fs.space_total", fields[1], tags)
 		Add(&md, "linux.disk.fs.space_used", fields[2], tags)
 		Add(&md, "linux.disk.fs.space_free", fields[3], tags)
-		Add(&md, "os.disk.fs.space_total", fields[1], tags)
-		Add(&md, "os.disk.fs.space_used", fields[2], tags)
-		Add(&md, "os.disk.fs.space_free", fields[3], tags)
+		Add(&md, "os.disk.fs.space_total", fields[1], os_tags)
+		Add(&md, "os.disk.fs.space_used", fields[2], os_tags)
+		Add(&md, "os.disk.fs.space_free", fields[3], os_tags)
 		st, err := strconv.Atoi(fields[1])
 		sf, err := strconv.Atoi(fields[3])
 		if err == nil {
