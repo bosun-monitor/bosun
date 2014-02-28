@@ -410,6 +410,12 @@ tsafControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route'
 				];
 				$http.get('/api/query?' + 'json=' + encodeURIComponent(JSON.stringify(net_bytes_r)))
 					.success((data) => {
+						angular.forEach(data, function(d) {
+							d.data = d.data.map((dp: any) => { return {x: dp.x, y: dp.y*8}});
+							if (d.name.indexOf("direction=out") != -1) {
+								d.data = d.data.map((dp: any) => { return {x: dp.x, y: dp.y*-1}});
+							}
+						});
 						$scope.idata[$scope.interfaces.indexOf(i)] = {name: i, data: data};
 					});
 			});
@@ -462,7 +468,7 @@ tsafControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route'
 		});
 }]);
 
-tsafApp.directive("tsRickshaw", function() {
+tsafApp.directive("tsRickshaw", ['$filter', function($filter: ng.IFilterService) {
 	return {
 		templateUrl: '/partials/rickshaw.html',
 		link: (scope: ng.IScope, elem: any, attrs: any) => {
@@ -518,6 +524,13 @@ tsafApp.directive("tsRickshaw", function() {
 								var label = document.createElement('div');
 								label.className = 'rlabel';
 								label.innerHTML = d.name + ": " + d.formattedYValue;
+								console.log(attrs.bytes, attrs.max)
+								if (attrs.bytes) {
+									label.innerHTML = d.name + ": " + $filter('bytes')(d.formattedYValue);
+								}
+								if (attrs.bits) {
+									label.innerHTML = d.name + ": " + $filter('bits')(d.formattedYValue);
+								}
 								line.appendChild(swatch);
 								line.appendChild(label);
 								legend.appendChild(line);
@@ -539,7 +552,7 @@ tsafApp.directive("tsRickshaw", function() {
 			});
 		},
 	};
-});
+}]);
 
 tsafApp.directive("tooltip", function() {
 	return {
@@ -551,11 +564,25 @@ tsafApp.directive("tooltip", function() {
 
 tsafApp.filter('bytes', function() {
 	return function(bytes: any, precision: number) {
-		if (!bytes) { return '0 bytes' };
+		if (!bytes) { return '0 B' };
 		if (isNaN(parseFloat(bytes)) || !isFinite(bytes)) return '-';
 		if (typeof precision == 'undefined') precision = 1;
-		var units = ['bytes', 'kB', 'MB', 'GB', 'TB', 'PB'],
+		var units = ['B', 'kB', 'MB', 'GB', 'TB', 'PB'],
 			number = Math.floor(Math.log(bytes) / Math.log(1024));
 		return (bytes / Math.pow(1024, Math.floor(number))).toFixed(precision) +  ' ' + units[number];
+	}
+});
+
+tsafApp.filter('bits', function() {
+	return function(b: any, precision: number) {
+		if (!b) { return '0 b' };
+		if (b < 0) {
+			b = -b;
+		}
+		if (isNaN(parseFloat(b)) || !isFinite(b)) return '-';
+		if (typeof precision == 'undefined') precision = 1;
+		var units = ['b', 'kb', 'Mb', 'Gb', 'Tb', 'Pb'],
+			number = Math.floor(Math.log(b) / Math.log(1024));
+		return (b / Math.pow(1024, Math.floor(number))).toFixed(precision) +  ' ' + units[number];
 	}
 });

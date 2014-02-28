@@ -311,6 +311,16 @@ tsafControllers.controller('HostCtrl', [
                     })
                 ];
                 $http.get('/api/query?' + 'json=' + encodeURIComponent(JSON.stringify(net_bytes_r))).success(function (data) {
+                    angular.forEach(data, function (d) {
+                        d.data = d.data.map(function (dp) {
+                            return { x: dp.x, y: dp.y * 8 };
+                        });
+                        if (d.name.indexOf("direction=out") != -1) {
+                            d.data = d.data.map(function (dp) {
+                                return { x: dp.x, y: dp.y * -1 };
+                            });
+                        }
+                    });
                     $scope.idata[$scope.interfaces.indexOf(i)] = { name: i, data: data };
                 });
             });
@@ -364,85 +374,93 @@ tsafControllers.controller('HostCtrl', [
         });
     }]);
 
-tsafApp.directive("tsRickshaw", function () {
-    return {
-        templateUrl: '/partials/rickshaw.html',
-        link: function (scope, elem, attrs) {
-            scope.$watch(attrs.tsRickshaw, function (v) {
-                if (!v) {
-                    return;
-                }
-                var palette = new Rickshaw.Color.Palette();
-                angular.forEach(v, function (i) {
-                    if (!i.color) {
-                        i.color = palette.color();
+tsafApp.directive("tsRickshaw", [
+    '$filter', function ($filter) {
+        return {
+            templateUrl: '/partials/rickshaw.html',
+            link: function (scope, elem, attrs) {
+                scope.$watch(attrs.tsRickshaw, function (v) {
+                    if (!v) {
+                        return;
                     }
-                });
-                var rgraph = angular.element('.rgraph', elem);
-                var graph_options = {
-                    element: rgraph[0],
-                    height: rgraph.height(),
-                    min: 'auto',
-                    series: v,
-                    renderer: 'line',
-                    interpolation: 'linear'
-                };
-                if (attrs.max) {
-                    graph_options.max = attrs.max;
-                }
-                if (attrs.renderer) {
-                    graph_options.renderer = attrs.renderer;
-                }
-                var graph = new Rickshaw.Graph(graph_options);
-                var x_axis = new Rickshaw.Graph.Axis.Time({
-                    graph: graph,
-                    timeFixture: new Rickshaw.Fixtures.Time()
-                });
-                var y_axis = new Rickshaw.Graph.Axis.Y({
-                    graph: graph,
-                    orientation: 'left',
-                    tickFormat: Rickshaw.Fixtures.Number.formatKMBT,
-                    element: angular.element('.y_axis', elem)[0]
-                });
-                graph.render();
-                var legend = angular.element('.rlegend', elem)[0];
-                var Hover = Rickshaw.Class.create(Rickshaw.Graph.HoverDetail, {
-                    render: function (args) {
-                        legend.innerHTML = args.formattedXValue;
-                        args.detail.sort(function (a, b) {
-                            return a.order - b.order;
-                        }).forEach(function (d) {
-                            var line = document.createElement('div');
-                            line.className = 'rline';
-                            var swatch = document.createElement('div');
-                            swatch.className = 'rswatch';
-                            swatch.style.backgroundColor = d.series.color;
-                            var label = document.createElement('div');
-                            label.className = 'rlabel';
-                            label.innerHTML = d.name + ": " + d.formattedYValue;
-                            line.appendChild(swatch);
-                            line.appendChild(label);
-                            legend.appendChild(line);
-                            var dot = document.createElement('div');
-                            dot.className = 'dot';
-                            dot.style.top = graph.y(d.value.y0 + d.value.y) + 'px';
-                            dot.style.borderColor = d.series.color;
-                            this.element.appendChild(dot);
-                            dot.className = 'dot active';
-                            this.show();
-                        }, this);
+                    var palette = new Rickshaw.Color.Palette();
+                    angular.forEach(v, function (i) {
+                        if (!i.color) {
+                            i.color = palette.color();
+                        }
+                    });
+                    var rgraph = angular.element('.rgraph', elem);
+                    var graph_options = {
+                        element: rgraph[0],
+                        height: rgraph.height(),
+                        min: 'auto',
+                        series: v,
+                        renderer: 'line',
+                        interpolation: 'linear'
+                    };
+                    if (attrs.max) {
+                        graph_options.max = attrs.max;
                     }
-                });
-                var hover = new Hover({ graph: graph });
+                    if (attrs.renderer) {
+                        graph_options.renderer = attrs.renderer;
+                    }
+                    var graph = new Rickshaw.Graph(graph_options);
+                    var x_axis = new Rickshaw.Graph.Axis.Time({
+                        graph: graph,
+                        timeFixture: new Rickshaw.Fixtures.Time()
+                    });
+                    var y_axis = new Rickshaw.Graph.Axis.Y({
+                        graph: graph,
+                        orientation: 'left',
+                        tickFormat: Rickshaw.Fixtures.Number.formatKMBT,
+                        element: angular.element('.y_axis', elem)[0]
+                    });
+                    graph.render();
+                    var legend = angular.element('.rlegend', elem)[0];
+                    var Hover = Rickshaw.Class.create(Rickshaw.Graph.HoverDetail, {
+                        render: function (args) {
+                            legend.innerHTML = args.formattedXValue;
+                            args.detail.sort(function (a, b) {
+                                return a.order - b.order;
+                            }).forEach(function (d) {
+                                var line = document.createElement('div');
+                                line.className = 'rline';
+                                var swatch = document.createElement('div');
+                                swatch.className = 'rswatch';
+                                swatch.style.backgroundColor = d.series.color;
+                                var label = document.createElement('div');
+                                label.className = 'rlabel';
+                                label.innerHTML = d.name + ": " + d.formattedYValue;
+                                console.log(attrs.bytes, attrs.max);
+                                if (attrs.bytes) {
+                                    label.innerHTML = d.name + ": " + $filter('bytes')(d.formattedYValue);
+                                }
+                                if (attrs.bits) {
+                                    label.innerHTML = d.name + ": " + $filter('bits')(d.formattedYValue);
+                                }
+                                line.appendChild(swatch);
+                                line.appendChild(label);
+                                legend.appendChild(line);
+                                var dot = document.createElement('div');
+                                dot.className = 'dot';
+                                dot.style.top = graph.y(d.value.y0 + d.value.y) + 'px';
+                                dot.style.borderColor = d.series.color;
+                                this.element.appendChild(dot);
+                                dot.className = 'dot active';
+                                this.show();
+                            }, this);
+                        }
+                    });
+                    var hover = new Hover({ graph: graph });
 
-                //Simulate a movemove so the hover appears on load
-                var e = document.createEvent('MouseEvents');
-                e.initEvent('mousemove', true, false);
-                rgraph[0].children[0].dispatchEvent(e);
-            });
-        }
-    };
-});
+                    //Simulate a movemove so the hover appears on load
+                    var e = document.createEvent('MouseEvents');
+                    e.initEvent('mousemove', true, false);
+                    rgraph[0].children[0].dispatchEvent(e);
+                });
+            }
+        };
+    }]);
 
 tsafApp.directive("tooltip", function () {
     return {
@@ -455,14 +473,32 @@ tsafApp.directive("tooltip", function () {
 tsafApp.filter('bytes', function () {
     return function (bytes, precision) {
         if (!bytes) {
-            return '0 bytes';
+            return '0 B';
         }
         ;
         if (isNaN(parseFloat(bytes)) || !isFinite(bytes))
             return '-';
         if (typeof precision == 'undefined')
             precision = 1;
-        var units = ['bytes', 'kB', 'MB', 'GB', 'TB', 'PB'], number = Math.floor(Math.log(bytes) / Math.log(1024));
+        var units = ['B', 'kB', 'MB', 'GB', 'TB', 'PB'], number = Math.floor(Math.log(bytes) / Math.log(1024));
         return (bytes / Math.pow(1024, Math.floor(number))).toFixed(precision) + ' ' + units[number];
+    };
+});
+
+tsafApp.filter('bits', function () {
+    return function (b, precision) {
+        if (!b) {
+            return '0 b';
+        }
+        ;
+        if (b < 0) {
+            b = -b;
+        }
+        if (isNaN(parseFloat(b)) || !isFinite(b))
+            return '-';
+        if (typeof precision == 'undefined')
+            precision = 1;
+        var units = ['b', 'kb', 'Mb', 'Gb', 'Tb', 'Pb'], number = Math.floor(Math.log(b) / Math.log(1024));
+        return (b / Math.pow(1024, Math.floor(number))).toFixed(precision) + ' ' + units[number];
     };
 });
