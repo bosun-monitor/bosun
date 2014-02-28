@@ -296,12 +296,8 @@ tsafControllers.controller('HostCtrl', [
         ];
         $http.get('/api/query?' + 'json=' + encodeURIComponent(JSON.stringify(cpu_r))).success(function (data) {
             $scope.cpu = data;
-            $scope.running = '';
-            $scope.error = '';
-        }).error(function (error) {
-            $scope.error = error;
-            $scope.running = '';
         });
+
         $http.get('/api/tagv/iface/os.net.bytes?host=' + $scope.host).success(function (data) {
             $scope.interfaces = data;
             angular.forEach($scope.interfaces, function (i) {
@@ -316,18 +312,8 @@ tsafControllers.controller('HostCtrl', [
                 ];
                 $http.get('/api/query?' + 'json=' + encodeURIComponent(JSON.stringify(net_bytes_r))).success(function (data) {
                     $scope.idata[$scope.interfaces.indexOf(i)] = { name: i, data: data };
-                    $scope.running = '';
-                    $scope.error = '';
-                }).error(function (error) {
-                    $scope.error = error;
-                    $scope.running = '';
                 });
             });
-            $scope.running = '';
-            $scope.error = '';
-        }).error(function (error) {
-            $scope.error = error;
-            $scope.running = '';
         });
         $http.get('/api/tagv/mount/os.disk.fs.space_total?host=' + $scope.host).success(function (data) {
             $scope.fs = data;
@@ -357,18 +343,8 @@ tsafControllers.controller('HostCtrl', [
                         c_val: c_val,
                         percent_used: percent_used
                     };
-                    $scope.running = '';
-                    $scope.error = '';
-                }).error(function (error) {
-                    $scope.error = error;
-                    $scope.running = '';
                 });
             });
-            $scope.running = '';
-            $scope.error = '';
-        }).error(function (error) {
-            $scope.error = error;
-            $scope.running = '';
         });
         var mem_r = new Request();
         mem_r.start = $scope.time;
@@ -385,11 +361,6 @@ tsafControllers.controller('HostCtrl', [
                 return d.y;
             }));
             $scope.mem = [data[1]];
-            $scope.running = '';
-            $scope.error = '';
-        }).error(function (error) {
-            $scope.error = error;
-            $scope.running = '';
         });
     }]);
 
