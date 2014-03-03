@@ -3,14 +3,12 @@ package sched
 import (
 	"bytes"
 	"log"
-
-	"github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/tsaf/conf"
 )
 
-func (s *Schedule) Print(a *conf.Alert, n *conf.Notification, group opentsdb.TagSet) {
+func (s *Schedule) Print(a *conf.Alert, n *conf.Notification, st *State) {
 	buf := new(bytes.Buffer)
-	err := a.ExecuteSubject(buf, group, s.cache)
+	err := s.ExecuteSubject(buf, a, st)
 	if err != nil {
 		log.Println(err)
 		return
