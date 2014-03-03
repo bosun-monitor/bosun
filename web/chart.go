@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -24,7 +23,7 @@ func Query(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 		serveError(w, err)
 		return
 	}
-	ds, err := Autods(&oreq, 200)
+	err = Autods(&oreq, 200)
 	if err != nil {
 		serveError(w, err)
 		return
@@ -34,9 +33,7 @@ func Query(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 			serveError(w, err)
 			return
 		}
-		q.Downsample = ds
 	}
-	fmt.Println(ds)
 	var tr opentsdb.ResponseSet
 	q, _ := url.QueryUnescape(oreq.String())
 	t.StepCustomTiming("tsdb", "query", q, func() {
@@ -59,52 +56,21 @@ func Query(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 	w.Write(b)
 }
 
-//These should be moved to the opentsdb package probably
-var reltime = map[string]time.Duration{
-	"s": time.Second,
-	"m": time.Minute,
-	"h": time.Hour,
-	"d": time.Hour * 24,
-	"w": time.Hour * 24 * 7,
-	//Meh, a month is "30 days"
-	"n": time.Hour * 24 * 7 * 30,
-	"y": time.Hour * 24 * 7 * 30 * 365,
-}
-
-var reltime_m = regexp.MustCompile(`(\d+)([s,m,h,d,w,n,y])-ago`)
-
-func ParseRelTime(s string) (time.Duration, error) {
-	m := reltime_m.FindStringSubmatch(s)
-	if len(m) != 3 {
-		return 0, errors.New("Invalid Relative Time")
-	}
-	i, err := strconv.ParseInt(m[1], 10, 64)
-	if err != nil {
-		return 0, err
-	}
-	return time.Duration(i) * reltime[m[2]], nil
-}
-
 func ParseAbsTime(s string) (time.Time, error) {
 	var t time.Time
-	t, err := time.Parse("2006/01/02-15:04:05", s)
-	if err == nil {
-		return t, nil
+	t_formats := [...]string{
+		"2006/01/02-15:04:05",
+		"2006/01/02-15:04",
+		"2006/01/02-15",
+		"2006/01/02",
 	}
-	t, err = time.Parse("2006/01/02-15:04", s)
-	if err == nil {
-		return t, nil
+	for _, f := range t_formats {
+		t, err := time.Parse(f, s)
+		if err == nil {
+			return t, nil
+		}
 	}
-	t, err = time.Parse("2006/01/02-15", s)
-	if err == nil {
-		return t, nil
-	}
-	t, err = time.Parse("2006/01/02", s)
-	if err == nil {
-		return t, nil
-	}
-	var i int64
-	i, err = strconv.ParseInt(s, 10, 64)
+	i, err := strconv.ParseInt(s, 10, 64)
 	if err != nil {
 		return t, err
 	}
@@ -112,81 +78,77 @@ func ParseAbsTime(s string) (time.Time, error) {
 	return t, nil
 }
 
-func GetDuration(r opentsdb.Request) (time.Duration, error) {
-	start := time.Now()
-	end := time.Now()
-	var err error
-	var sd time.Duration
-	var ed time.Duration
-	if r.End != nil {
-		re := r.End.(string)
-		if re != "" {
-			if strings.Contains(re, "-ago") {
-				ed, err = ParseRelTime(re)
+func ParseTime(v interface{}) (t time.Time, err error) {
+	switch i := v.(type) {
+	case string:
+		if i != "" {
+			if strings.Contains(i, "-ago") {
+				s := strings.Split(i, "-ago")
+				now := time.Now()
+				d, err := expr.ParseDuration(s[0])
 				if err != nil {
-					return ed, err
+					return now, err
 				}
-				end = end.Add(-ed)
+				return now.Add(-d), nil
 			} else {
-				end, err = ParseAbsTime(re)
+				a, err := ParseAbsTime(i)
 				if err != nil {
-					return ed, err
+					return t, err
 				}
+				return a, nil
 			}
+		}
+	case int, int64:
+		return time.Unix(i.(int64), 0), nil
+	default:
+		return t, errors.New("Type must be string, int, or int64")
+	}
+	return
+}
+
+func GetDuration(r *opentsdb.Request) (t time.Duration, err error) {
+	switch r.Start.(type) {
+	case string:
+		if r.Start.(string) == "" {
+			return t, errors.New("Start Time Must be Provided")
 		}
 	}
-	if r.Start != nil {
-		rs := r.Start.(string)
-		if rs == "" {
-			return sd, errors.New("Start Time Must be Provided")
-		}
-		if strings.Contains(rs, "-ago") {
-			sd, err = ParseRelTime(rs)
-			if err != nil {
-				return sd, err
-			}
-			start = start.Add(-sd)
-		} else {
-			start, err = ParseAbsTime(rs)
-			if err != nil {
-				return sd, err
-			}
+	start, err := ParseTime(r.Start)
+	end := time.Now()
+	if r.End != nil {
+		end, err = ParseTime(r.End)
+		if err != nil {
+			return t, err
 		}
 	}
 	return end.Sub(start), nil
 }
 
-func Autods(r *opentsdb.Request, l int64) (string, error) {
-	cd, err := GetDuration(*r)
+func Autods(r *opentsdb.Request, l int64) error {
 	if l == 0 {
-		return "", errors.New("Target length must be greater than 0")
+		return errors.New("tsaf: target length must be > 0")
 	}
+	cd, err := GetDuration(r)
 	if err != nil {
-		return "", err
+		return err
 	}
-	si := time.Second * 15
-	est_cl := int64(cd / si)
-	if est_cl < l {
-		return "", nil
+	d := cd / time.Duration(l)
+	if d < time.Second*15 {
+		return nil
 	}
-	ds := int64(cd) / l
-	return fmt.Sprintf("%vs-avg", int64(time.Duration(ds)/time.Second)), nil
+	ds := fmt.Sprintf("%vs-avg", int64(d.Seconds()))
+	fmt.Println(ds)
+	for _, q := range r.Queries {
+		q.Downsample = ds
+	}
+	return nil
 }
 
 func rickchart(r opentsdb.ResponseSet) ([]*RickSeries, error) {
-	//This currently does a mod operation to limit DPs returned to 3000, will want to refactor this
-	//into something smarter
-	//max_dp := 3000
 	var series []*RickSeries
 	for _, resp := range r {
-		//dps_mod := 1
-		//if len(resp.DPS) > max_dp {
-		//	dps_mod = (len(resp.DPS) + max_dp) / max_dp
-		//}
 		dps := make([]RickDP, 0)
-		//j := 0
 		for k, v := range resp.DPS {
-			//if j%dps_mod == 0 {
 			ki, err := strconv.ParseInt(k, 10, 64)
 			if err != nil {
 				return nil, err
@@ -195,8 +157,6 @@ func rickchart(r opentsdb.ResponseSet) ([]*RickSeries, error) {
 				X: ki,
 				Y: v,
 			})
-			//}
-			//j += 1
 		}
 		if len(dps) > 0 {
 			sort.Sort(ByX(dps))
