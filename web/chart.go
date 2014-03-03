@@ -2,12 +2,15 @@ package web
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/MiniProfiler/go/miniprofiler"
 	"github.com/StackExchange/scollector/opentsdb"
@@ -27,6 +30,7 @@ func Query(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	Autods(&oreq, 200)
 	var tr opentsdb.ResponseSet
 	q, _ := url.QueryUnescape(oreq.String())
 	t.StepCustomTiming("tsdb", "query", q, func() {
@@ -47,6 +51,114 @@ func Query(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Write(b)
+}
+
+//These should be moved to the opentsdb package probably
+var reltime = map[string]time.Duration{
+	"s": time.Second,
+	"m": time.Minute,
+	"h": time.Hour,
+	"d": time.Hour * 24,
+	"w": time.Hour * 24 * 7,
+	//Meh, a month is "30 days"
+	"n": time.Hour * 24 * 7 * 30,
+	"y": time.Hour * 24 * 7 * 30 * 365,
+}
+
+var reltime_m = regexp.MustCompile(`(\d+)([s,m,h,d,w,n,y])-ago`)
+
+func ParseRelTime(s string) (time.Duration, error) {
+	m := reltime_m.FindStringSubmatch(s)
+	if len(m) != 3 {
+		return 0, errors.New("Invalid Relative Time")
+	}
+	i, err := strconv.ParseInt(m[1], 10, 64)
+	if err != nil {
+		return 0, err
+	}
+	return time.Duration(i) * reltime[m[2]], nil
+}
+
+func ParseAbsTime(s string) (time.Time, error) {
+	var t time.Time
+	t, err := time.Parse("2006/01/02-15:04:05", s)
+	if err == nil {
+		return t, nil
+	}
+	t, err = time.Parse("2006/01/02-15:04", s)
+	if err == nil {
+		return t, nil
+	}
+	t, err = time.Parse("2006/01/02-15", s)
+	if err == nil {
+		return t, nil
+	}
+	t, err = time.Parse("2006/01/02", s)
+	if err == nil {
+		return t, nil
+	}
+	var i int64
+	i, err = strconv.ParseInt(s, 10, 64)
+	if err != nil {
+		return t, err
+	}
+	t = time.Unix(i, 0)
+	return t, nil
+}
+
+func GetDuration(r opentsdb.Request) (time.Duration, error) {
+	start := time.Now()
+	end := time.Now()
+	var err error
+	var sd time.Duration
+	var ed time.Duration
+	if r.End != nil {
+		re := r.End.(string)
+		if re != "" {
+			if strings.Contains(re, "-ago") {
+				ed, err = ParseRelTime(re)
+				if err != nil {
+					return ed, err
+				}
+				end = end.Add(-ed)
+			} else {
+				end, err = ParseAbsTime(re)
+				fmt.Println(end)
+				if err != nil {
+					return ed, err
+				}
+			}
+		}
+	}
+	if r.Start != nil {
+		rs := r.Start.(string)
+		if rs == "" {
+			return sd, errors.New("Start Time Must be Provided")
+		}
+		if strings.Contains(rs, "-ago") {
+			sd, err = ParseRelTime(rs)
+			if err != nil {
+				return sd, err
+			}
+			start = start.Add(-sd)
+		} else {
+			start, err = ParseAbsTime(rs)
+			if err != nil {
+				return sd, err
+			}
+		}
+	}
+	return end.Sub(start), nil
+}
+
+func Autods(r *opentsdb.Request, p int64) error {
+	d, err := GetDuration(*r)
+	if err != nil {
+		return err
+	}
+	fmt.Println(int64(d / time.Second))
+	return nil
+
 }
 
 func rickchart(r opentsdb.ResponseSet) ([]*RickSeries, error) {
