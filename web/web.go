@@ -33,14 +33,14 @@ func Listen(addr, dir, host string) error {
 	if err != nil {
 		log.Fatal(err)
 	}
-	router.Handle("/api/alerts", miniprofiler.NewHandler(Alerts))
-	router.Handle("/api/expr", miniprofiler.NewHandler(Expr))
-	router.Handle("/api/metric", miniprofiler.NewHandler(UniqueMetrics))
-	router.Handle("/api/metric/{tagk}/{tagv}", miniprofiler.NewHandler(MetricsByTagPair))
-	router.Handle("/api/query", miniprofiler.NewHandler(Query))
-	router.Handle("/api/tagk/{metric}", miniprofiler.NewHandler(TagKeysByMetric))
-	router.Handle("/api/tagv/{tagk}", miniprofiler.NewHandler(TagValuesByTagKey))
-	router.Handle("/api/tagv/{tagk}/{metric}", miniprofiler.NewHandler(TagValuesByMetricTagKey))
+	router.Handle("/api/alerts", JSON(Alerts))
+	router.Handle("/api/expr", JSON(Expr))
+	router.Handle("/api/metric", JSON(UniqueMetrics))
+	router.Handle("/api/metric/{tagk}/{tagv}", JSON(MetricsByTagPair))
+	router.Handle("/api/query", JSON(Query))
+	router.Handle("/api/tagk/{metric}", JSON(TagKeysByMetric))
+	router.Handle("/api/tagv/{tagk}", JSON(TagValuesByTagKey))
+	router.Handle("/api/tagv/{tagk}/{metric}", JSON(TagValuesByMetricTagKey))
 	http.Handle("/", miniprofiler.NewHandler(Index))
 	http.Handle("/api/", router)
 	http.Handle("/partials/", http.FileServer(http.Dir(dir)))
@@ -65,11 +65,22 @@ func serveError(w http.ResponseWriter, err error) {
 	http.Error(w, err.Error(), http.StatusInternalServerError)
 }
 
-func Alerts(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
-	b, err := json.Marshal(schedule)
-	if err != nil {
-		serveError(w, err)
-		return
-	}
-	w.Write(b)
+func JSON(h func(miniprofiler.Timer, http.ResponseWriter, *http.Request) (interface{}, error)) http.Handler {
+	return miniprofiler.NewHandler(func(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
+		d, err := h(t, w, r)
+		if err != nil {
+			serveError(w, err)
+			return
+		}
+		b, err := json.Marshal(d)
+		if err != nil {
+			serveError(w, err)
+			return
+		}
+		w.Write(b)
+	})
+}
+
+func Alerts(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	return schedule, nil
 }
