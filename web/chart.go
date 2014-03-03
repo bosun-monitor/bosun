@@ -24,13 +24,19 @@ func Query(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 		serveError(w, err)
 		return
 	}
+	ds, err := Autods(&oreq, 200)
+	if err != nil {
+		serveError(w, err)
+		return
+	}
 	for _, q := range oreq.Queries {
 		if err := expr.ExpandSearch(q); err != nil {
 			serveError(w, err)
 			return
 		}
+		q.Downsample = ds
 	}
-	Autods(&oreq, 200)
+	fmt.Println(ds)
 	var tr opentsdb.ResponseSet
 	q, _ := url.QueryUnescape(oreq.String())
 	t.StepCustomTiming("tsdb", "query", q, func() {
@@ -123,7 +129,6 @@ func GetDuration(r opentsdb.Request) (time.Duration, error) {
 				end = end.Add(-ed)
 			} else {
 				end, err = ParseAbsTime(re)
-				fmt.Println(end)
 				if err != nil {
 					return ed, err
 				}
@@ -151,40 +156,47 @@ func GetDuration(r opentsdb.Request) (time.Duration, error) {
 	return end.Sub(start), nil
 }
 
-func Autods(r *opentsdb.Request, p int64) error {
-	d, err := GetDuration(*r)
-	if err != nil {
-		return err
+func Autods(r *opentsdb.Request, l int64) (string, error) {
+	cd, err := GetDuration(*r)
+	if l == 0 {
+		return "", errors.New("Target length must be greater than 0")
 	}
-	fmt.Println(int64(d / time.Second))
-	return nil
-
+	if err != nil {
+		return "", err
+	}
+	si := time.Second * 15
+	est_cl := int64(cd / si)
+	if est_cl < l {
+		return "", nil
+	}
+	ds := int64(cd) / l
+	return fmt.Sprintf("%vs-avg", int64(time.Duration(ds)/time.Second)), nil
 }
 
 func rickchart(r opentsdb.ResponseSet) ([]*RickSeries, error) {
 	//This currently does a mod operation to limit DPs returned to 3000, will want to refactor this
 	//into something smarter
-	max_dp := 3000
+	//max_dp := 3000
 	var series []*RickSeries
 	for _, resp := range r {
-		dps_mod := 1
-		if len(resp.DPS) > max_dp {
-			dps_mod = (len(resp.DPS) + max_dp) / max_dp
-		}
+		//dps_mod := 1
+		//if len(resp.DPS) > max_dp {
+		//	dps_mod = (len(resp.DPS) + max_dp) / max_dp
+		//}
 		dps := make([]RickDP, 0)
-		j := 0
+		//j := 0
 		for k, v := range resp.DPS {
-			if j%dps_mod == 0 {
-				ki, err := strconv.ParseInt(k, 10, 64)
-				if err != nil {
-					return nil, err
-				}
-				dps = append(dps, RickDP{
-					X: ki,
-					Y: v,
-				})
+			//if j%dps_mod == 0 {
+			ki, err := strconv.ParseInt(k, 10, 64)
+			if err != nil {
+				return nil, err
 			}
-			j += 1
+			dps = append(dps, RickDP{
+				X: ki,
+				Y: v,
+			})
+			//}
+			//j += 1
 		}
 		if len(dps) > 0 {
 			sort.Sort(ByX(dps))
