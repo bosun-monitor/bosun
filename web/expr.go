@@ -1,28 +1,20 @@
 package web
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/MiniProfiler/go/miniprofiler"
 	"github.com/StackExchange/tsaf/expr"
 )
 
-func Expr(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
+func Expr(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	e, err := expr.New(r.FormValue("q"))
 	if err != nil {
-		serveError(w, err)
-		return
+		return nil, err
 	}
 	res, err := e.Execute(tsdbHost, t)
 	if err != nil {
-		serveError(w, err)
-		return
+		return nil, err
 	}
-	b, err := json.Marshal(res)
-	if err != nil {
-		serveError(w, err)
-		return
-	}
-	w.Write(b)
+	return res, nil
 }
