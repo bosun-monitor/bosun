@@ -3,7 +3,6 @@ package conf
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"net/mail"
 	"net/url"
@@ -138,77 +137,6 @@ func (n *Notification) MarshalJSON() ([]byte, error) {
 		m["Timeout"] = n.Timeout
 	}
 	return json.Marshal(m)
-}
-
-type context struct {
-	Alert   *Alert
-	Tags    opentsdb.TagSet
-	Context opentsdb.Context
-}
-
-// E executes the given expression and returns a value with corresponding tags
-// to the context's tags. If no such result is found, the first result with nil
-// tags is returned. If no such result is found, nil is returned. The precision
-// of numbers is truncated for convienent display. Array expressions are not
-// supported.
-func (c *context) E(v string) (s string) {
-	e, err := expr.New(v)
-	if err != nil {
-		return
-	}
-	res, err := e.Execute(c.Context, nil)
-	if err != nil {
-		return
-	}
-	for _, r := range res {
-		if r.Group.Equal(c.Tags) {
-			s = truncate(r.Value)
-		}
-	}
-	for _, r := range res {
-		if r.Group == nil {
-			s = truncate(r.Value)
-		}
-	}
-	return
-}
-
-// truncate displays needed decimals for a Number.
-func truncate(v expr.Value) string {
-	switch t := v.(type) {
-	case expr.Number:
-		if t < 1 {
-			return fmt.Sprintf("%.4f", t)
-		} else if t < 100 {
-			return fmt.Sprintf("%.1f", t)
-		} else {
-			return fmt.Sprintf("%.0f", t)
-		}
-	default:
-		return ""
-	}
-}
-
-func (a *Alert) data(group opentsdb.TagSet, c opentsdb.Context) interface{} {
-	return &context{
-		a,
-		group,
-		c,
-	}
-}
-
-func (a *Alert) ExecuteBody(w io.Writer, group opentsdb.TagSet, c opentsdb.Context) error {
-	if a.Template == nil || a.Template.Body == nil {
-		return nil
-	}
-	return a.Template.Body.Execute(w, a.data(group, c))
-}
-
-func (a *Alert) ExecuteSubject(w io.Writer, group opentsdb.TagSet, c opentsdb.Context) error {
-	if a.Template == nil || a.Template.Subject == nil {
-		return nil
-	}
-	return a.Template.Subject.Execute(w, a.data(group, c))
 }
 
 func (a *Alert) Squelched(tags opentsdb.TagSet) bool {

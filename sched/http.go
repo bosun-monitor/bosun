@@ -5,13 +5,12 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/tsaf/conf"
 )
 
-func (s *Schedule) Post(a *conf.Alert, n *conf.Notification, group opentsdb.TagSet) {
+func (s *Schedule) Post(a *conf.Alert, n *conf.Notification, st *State) {
 	buf := new(bytes.Buffer)
-	err := a.ExecuteSubject(buf, group, s.cache)
+	err := s.ExecuteSubject(buf, a, st)
 	if err != nil {
 		log.Println(err)
 		return
@@ -27,7 +26,7 @@ func (s *Schedule) Post(a *conf.Alert, n *conf.Notification, group opentsdb.TagS
 	}
 }
 
-func (s *Schedule) Get(a *conf.Alert, n *conf.Notification, group opentsdb.TagSet) {
+func (s *Schedule) Get(a *conf.Alert, n *conf.Notification, st *State) {
 	resp, err := http.Get(n.Get.String())
 	if err != nil {
 		log.Println(err)
