@@ -58,7 +58,7 @@ func Query(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 
 func ParseAbsTime(s string) (time.Time, error) {
 	var t time.Time
-	t_formats := [...]string{
+	t_formats := [4]string{
 		"2006/01/02-15:04:05",
 		"2006/01/02-15:04",
 		"2006/01/02-15",
@@ -78,42 +78,45 @@ func ParseAbsTime(s string) (time.Time, error) {
 	return t, nil
 }
 
-func ParseTime(v interface{}) (t time.Time, err error) {
+func ParseTime(v interface{}) (time.Time, error) {
 	switch i := v.(type) {
 	case string:
 		if i != "" {
-			if strings.Contains(i, "-ago") {
-				s := strings.Split(i, "-ago")
-				now := time.Now()
-				d, err := expr.ParseDuration(s[0])
+			if strings.HasSuffix(i, "-ago") {
+				s := strings.TrimSuffix(i, "-ago")
+				d, err := expr.ParseDuration(s)
 				if err != nil {
-					return now, err
+					return time.Now().UTC(), err
 				}
-				return now.Add(-d), nil
+				return time.Now().UTC().Add(-d), nil
 			} else {
 				a, err := ParseAbsTime(i)
 				if err != nil {
-					return t, err
+					return time.Now().UTC(), err
 				}
 				return a, nil
 			}
+		} else {
+			return time.Now().UTC(), nil
 		}
-	case int, int64:
-		return time.Unix(i.(int64), 0), nil
+	case int:
+		return time.Unix(int64(i), 0), nil
+	case int64:
+		return time.Unix(i, 0), nil
 	default:
-		return t, errors.New("Type must be string, int, or int64")
+		return time.Now().UTC(), errors.New("type must be string, int, or int64")
 	}
-	return
 }
 
-func GetDuration(r *opentsdb.Request) (t time.Duration, err error) {
-	switch r.Start.(type) {
-	case string:
-		if r.Start.(string) == "" {
-			return t, errors.New("Start Time Must be Provided")
-		}
+func GetDuration(r *opentsdb.Request) (time.Duration, error) {
+	var t time.Duration
+	if v, ok := r.Start.(string); ok && v == "" {
+		return t, errors.New("start time must be provided")
 	}
 	start, err := ParseTime(r.Start)
+	if err != nil {
+		return t, err
+	}
 	end := time.Now()
 	if r.End != nil {
 		end, err = ParseTime(r.End)
@@ -136,8 +139,7 @@ func Autods(r *opentsdb.Request, l int64) error {
 	if d < time.Second*15 {
 		return nil
 	}
-	ds := fmt.Sprintf("%vs-avg", int64(d.Seconds()))
-	fmt.Println(ds)
+	ds := fmt.Sprintf("%ds-avg", d/time.Second)
 	for _, q := range r.Queries {
 		q.Downsample = ds
 	}
