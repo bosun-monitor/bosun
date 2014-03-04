@@ -375,6 +375,9 @@ func (s *State) Append(status Status) bool {
 }
 
 func (s *State) Last() Event {
+	if len(s.History) == 0 {
+		return Event{}
+	}
 	return s.History[len(s.History)-1]
 }
 
@@ -386,7 +389,8 @@ type Event struct {
 type Status int
 
 const (
-	ST_NORM Status = iota
+	ST_UNKNOWN Status = iota
+	ST_NORM
 	ST_WARN
 	ST_CRIT
 )
