@@ -73,6 +73,9 @@ func JSON(h func(miniprofiler.Timer, http.ResponseWriter, *http.Request) (interf
 			serveError(w, err)
 			return
 		}
+		if d == nil {
+			return
+		}
 		b, err := json.Marshal(d)
 		if err != nil {
 			serveError(w, err)
