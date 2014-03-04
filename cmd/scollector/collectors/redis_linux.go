@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"regexp"
-	"strconv"
 	"strings"
 	"time"
 
@@ -45,25 +44,18 @@ var FIELDS_REDIS = map[string]bool{
 	"used_memory_rss":            true,
 }
 
-var tcRE = regexp.MustCompile(`^\s*#\s*scollector.(\w+)\s*=\s*(.+)$`)
-
-var redisInstances map[int]string
+var (
+	tcRE           = regexp.MustCompile(`^\s*#\s*scollector.(\w+)\s*=\s*(.+)$`)
+	redisInstances map[string]string
+)
 
 func init() {
 	update := func() {
-		ri := make(map[int]string)
-		readCommand(func(line string) {
-			if !strings.Contains(line, "redis-server") {
-				return
-			}
-			sp := strings.Fields(line)
-			if len(sp) < 7 || !strings.Contains(sp[3], ":") {
-				return
-			}
-			pid, _ := strconv.Atoi(strings.Split(sp[6], "/")[0])
-			port, _ := strconv.Atoi(strings.Split(sp[3], ":")[1])
-			cluster := fmt.Sprintf("port-%d", port)
-			f, err := ioutil.ReadFile(fmt.Sprintf("/proc/%d/cmdline", pid))
+		ri := make(map[string]string)
+		oldRedis := false
+		add := func(port, pid string) {
+			cluster := fmt.Sprintf("port-%s", port)
+			f, err := ioutil.ReadFile(fmt.Sprintf("/proc/%s/cmdline", pid))
 			if err != nil {
 				return
 			}
@@ -79,7 +71,34 @@ func init() {
 				}
 			})
 			ri[port] = cluster
-		}, "netstat", "-tnlp")
+		}
+		readCommand(func(line string) {
+			sp := strings.Fields(line)
+			if len(sp) != 3 || !strings.HasSuffix(sp[1], "redis-server") {
+				return
+			}
+			if !strings.Contains(sp[2], ":") {
+				oldRedis = true
+				return
+			}
+			pid := sp[0]
+			port := strings.Split(sp[2], ":")[1]
+			add(port, pid)
+		}, "ps", "-e", "-o", "pid,args")
+		if oldRedis {
+			readCommand(func(line string) {
+				if !strings.Contains(line, "redis-server") {
+					return
+				}
+				sp := strings.Fields(line)
+				if len(sp) < 7 || !strings.Contains(sp[3], ":") {
+					return
+				}
+				pid := strings.Split(sp[6], "/")[0]
+				port := strings.Split(sp[3], ":")[1]
+				add(port, pid)
+			}, "netstat", "-tnlp")
+		}
 		redisInstances = ri
 	}
 	update()
@@ -93,7 +112,7 @@ func init() {
 func c_redis_linux() opentsdb.MultiDataPoint {
 	var md opentsdb.MultiDataPoint
 	for port, cluster := range redisInstances {
-		c, err := redis.Dial("tcp", fmt.Sprintf(":%d", port))
+		c, err := redis.Dial("tcp", fmt.Sprintf(":%s", port))
 		if err != nil {
 			slog.Infoln(err)
 			continue
@@ -101,7 +120,7 @@ func c_redis_linux() opentsdb.MultiDataPoint {
 		defer c.Close()
 		tags := opentsdb.TagSet{
 			"cluster": cluster,
-			"port":    strconv.Itoa(port),
+			"port":    port,
 		}
 		lines, err := c.Do("INFO")
 		if err != nil {
