@@ -3,8 +3,10 @@ package sched
 import (
 	"fmt"
 	"io"
+	"net/url"
+	"os"
+	"strings"
 
-	"github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/tsaf/conf"
 	"github.com/StackExchange/tsaf/expr"
 )
@@ -13,15 +15,32 @@ type context struct {
 	*State
 	Alert *conf.Alert
 
-	context opentsdb.Context
+	schedule *Schedule
 }
 
 func (s *Schedule) data(st *State, a *conf.Alert) interface{} {
 	return &context{
-		State:   st,
-		Alert:   a,
-		context: s.cache,
+		State:    st,
+		Alert:    a,
+		schedule: s,
 	}
+}
+
+// Ack returns the acknowledge link
+func (c *context) Ack() string {
+	u := url.URL{
+		Scheme: "http",
+		Host:   c.schedule.Conf.HttpListen,
+		Path:   fmt.Sprintf("/api/acknowledge/%s/%s", c.Alert.Name, c.State.Group.String()),
+	}
+	if strings.HasPrefix(c.schedule.Conf.HttpListen, ":") {
+		h, err := os.Hostname()
+		if err != nil {
+			return ""
+		}
+		u.Host = h + u.Host
+	}
+	return u.String()
 }
 
 func (s *Schedule) ExecuteBody(w io.Writer, a *conf.Alert, st *State) error {
@@ -48,7 +67,7 @@ func (c *context) E(v string) (s string) {
 	if err != nil {
 		return
 	}
-	res, err := e.Execute(c.context, nil)
+	res, err := e.Execute(c.schedule.cache, nil)
 	if err != nil {
 		return
 	}

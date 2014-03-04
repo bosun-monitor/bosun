@@ -33,6 +33,7 @@ func Listen(addr, dir, host string) error {
 	if err != nil {
 		log.Fatal(err)
 	}
+	router.Handle("/api/acknowledge/{alert}/{group}", JSON(Acknowledge))
 	router.Handle("/api/alerts", JSON(Alerts))
 	router.Handle("/api/expr", JSON(Expr))
 	router.Handle("/api/metric", JSON(UniqueMetrics))
@@ -83,4 +84,15 @@ func JSON(h func(miniprofiler.Timer, http.ResponseWriter, *http.Request) (interf
 
 func Alerts(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	return schedule, nil
+}
+
+func Acknowledge(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	vars := mux.Vars(r)
+	ak := sched.AlertKey{
+		Name:  vars["alert"],
+		Group: vars["group"],
+	}
+	log.Println("ACK", ak)
+	schedule.Acknowledge(ak)
+	return nil, nil
 }
