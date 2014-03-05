@@ -331,7 +331,7 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route
 		request.end = $scope.end;
 		angular.forEach($scope.query_p, function (p) {
 			if (!p.metric) {
-				return
+				return;
 			}
 			var q = new Query;
 			q.copy(p);
@@ -348,7 +348,7 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route
 	}
 	$scope.Query = function() {
 		$location.search('json', JSON.stringify(getRequest()));
-		$location.search('autods', $scope.autods)
+		$location.search('autods', $scope.autods);
 		$route.reload();
 	}
 	request = getRequest();
@@ -357,7 +357,7 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route
 	}
 	var autods: string = '';
 	if ($scope.autods) {
-		autods = '&autods=' + width
+		autods = '&autods=' + width;
 	}
 	$http.get('/api/query?' + 'json=' + encodeURIComponent(JSON.stringify(request)) + autods)
 		.success((data) => {
