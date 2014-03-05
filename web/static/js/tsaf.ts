@@ -257,7 +257,11 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route
 	$scope.aggregators = ["sum", "min", "max", "avg", "dev", "zimsum", "mimmin", "minmax"];
 	$scope.dsaggregators = ["", "sum", "min", "max", "avg", "dev", "zimsum", "mimmin", "minmax"];
 	var search = $location.search();
-	var request = search.json ? JSON.parse(search.json) : new Request;
+	var j = search.json;
+	if (search.b64) {
+		j = atob(search.b64);
+	}
+	var request = j ? JSON.parse(j) : new Request;
 	$scope.index = parseInt($location.hash()) || 0;
 	$scope.tagvs = [];
 	$scope.sorted_tagks = [];
@@ -268,7 +272,6 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route
 	if (typeof $scope.autods == 'undefined') {
 		$scope.autods = true;
 	}
-	var width: number = $('.chart').width();
 	$scope.AddTab = function() {
 		$scope.index = $scope.query_p.length;
 		$scope.query_p.push(new Query);
@@ -347,7 +350,7 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route
 		return request;
 	}
 	$scope.Query = function() {
-		$location.search('json', JSON.stringify(getRequest()));
+		$location.search('b64', btoa(JSON.stringify(getRequest())));
 		$location.search('autods', $scope.autods);
 		$route.reload();
 	}
@@ -355,11 +358,8 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route
 	if (!request.Queries.length) {
 		return;
 	}
-	var autods: string = '';
-	if ($scope.autods) {
-		autods = '&autods=' + width;
-	}
-	$http.get('/api/query?' + 'json=' + encodeURIComponent(JSON.stringify(request)) + autods)
+	var autods = $scope.autods ? autods = '&autods=' + $('.chart').width() : '';
+	$http.get('/api/graph?' + 'b64=' + btoa(JSON.stringify(request)) + autods)
 		.success((data) => {
 			$scope.result = data;
 			$scope.running = '';
