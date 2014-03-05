@@ -250,6 +250,7 @@ interface IGraphScope extends ng.IScope {
 	end: string;
 	AddTab: () => void;
 	setIndex: (i: number) => void;
+	autods: boolean;
 }
 
 tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route', function($scope: IGraphScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService){
@@ -263,6 +264,10 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route
 	$scope.query_p = request.Queries;
 	$scope.start = request.start;
 	$scope.end = request.end;
+	if (search.autods) {
+		$scope.autods = true;
+	}
+	var width: number = $('.chart').width();
 	$scope.AddTab = function() {
 		$scope.index = $scope.query_p.length;
 		$scope.query_p.push(new Query);
@@ -342,13 +347,18 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route
 	}
 	$scope.Query = function() {
 		$location.search('json', JSON.stringify(getRequest()));
+		$location.search('autods', $scope.autods)
 		$route.reload();
 	}
 	request = getRequest();
 	if (!request.Queries.length) {
 		return;
 	}
-	$http.get('/api/query?' + 'json=' + encodeURIComponent(JSON.stringify(request)))
+	var autods: string = '';
+	if ($scope.autods) {
+		autods = '&autods=' + width
+	}
+	$http.get('/api/query?' + 'json=' + encodeURIComponent(JSON.stringify(request)) + autods)
 		.success((data) => {
 			$scope.result = data;
 			$scope.running = '';
@@ -390,7 +400,8 @@ tsafControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route'
 			tags: {host: $scope.host},
 		})
 	];
-	$http.get('/api/query?' + 'json=' + encodeURIComponent(JSON.stringify(cpu_r)))
+	var width: number = $('.chart').width();
+	$http.get('/api/query?' + 'json=' + encodeURIComponent(JSON.stringify(cpu_r)) + '&autods=' + width)
 		.success((data) => {
 			data[0].name = 'Percent Used';
 			$scope.cpu = data;
@@ -409,7 +420,7 @@ tsafControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route'
 						tags: {host: $scope.host, iface: i, direction: "*"},
 					})
 				];
-				$http.get('/api/query?' + 'json=' + encodeURIComponent(JSON.stringify(net_bytes_r)))
+				$http.get('/api/query?' + 'json=' + encodeURIComponent(JSON.stringify(net_bytes_r)) + '&autods=' + width)
 					.success((data) => {
 						angular.forEach(data, function(d) {
 							d.data = d.data.map((dp: any) => { return {x: dp.x, y: dp.y*8}});
@@ -441,7 +452,7 @@ tsafControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route'
 					metric: "os.disk.fs.space_used",
 					tags: {host: $scope.host, disk: i},
 				}));
-				$http.get('/api/query?' + 'json=' + encodeURIComponent(JSON.stringify(fs_r)))
+				$http.get('/api/query?' + 'json=' + encodeURIComponent(JSON.stringify(fs_r)) + '&autods=' + width)
 					.success((data) => {
 						data[1].name = "Used";
 						$scope.fsdata[$scope.fs.indexOf(i)] = {name: i, data: [data[1]]};
@@ -466,7 +477,7 @@ tsafControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route'
 		metric: "os.mem.used",
 		tags: {host: $scope.host},
 	}));
-	$http.get('/api/query?' + 'json=' + encodeURIComponent(JSON.stringify(mem_r)))
+	$http.get('/api/query?' + 'json=' + encodeURIComponent(JSON.stringify(mem_r)) + '&autods=' + width)
 		.success((data) => {
 			data[1].name = "Used";
 			$scope.mem_total = Math.max.apply(null, data[0].data.map((d: any) => { return d.y; }));

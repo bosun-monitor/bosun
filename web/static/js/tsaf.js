@@ -188,6 +188,10 @@ tsafControllers.controller('GraphCtrl', [
         $scope.query_p = request.Queries;
         $scope.start = request.start;
         $scope.end = request.end;
+        if (search.autods) {
+            $scope.autods = true;
+        }
+        var width = $('.chart').width();
         $scope.AddTab = function () {
             $scope.index = $scope.query_p.length;
             $scope.query_p.push(new Query);
@@ -262,13 +266,18 @@ tsafControllers.controller('GraphCtrl', [
         }
         $scope.Query = function () {
             $location.search('json', JSON.stringify(getRequest()));
+            $location.search('autods', $scope.autods);
             $route.reload();
         };
         request = getRequest();
         if (!request.Queries.length) {
             return;
         }
-        $http.get('/api/query?' + 'json=' + encodeURIComponent(JSON.stringify(request))).success(function (data) {
+        var autods = '';
+        if ($scope.autods) {
+            autods = '&autods=' + width;
+        }
+        $http.get('/api/query?' + 'json=' + encodeURIComponent(JSON.stringify(request)) + autods).success(function (data) {
             $scope.result = data;
             $scope.running = '';
             $scope.error = '';
@@ -294,7 +303,8 @@ tsafControllers.controller('HostCtrl', [
                 tags: { host: $scope.host }
             })
         ];
-        $http.get('/api/query?' + 'json=' + encodeURIComponent(JSON.stringify(cpu_r))).success(function (data) {
+        var width = $('.chart').width();
+        $http.get('/api/query?' + 'json=' + encodeURIComponent(JSON.stringify(cpu_r)) + '&autods=' + width).success(function (data) {
             data[0].name = 'Percent Used';
             $scope.cpu = data;
         });
@@ -311,7 +321,7 @@ tsafControllers.controller('HostCtrl', [
                         tags: { host: $scope.host, iface: i, direction: "*" }
                     })
                 ];
-                $http.get('/api/query?' + 'json=' + encodeURIComponent(JSON.stringify(net_bytes_r))).success(function (data) {
+                $http.get('/api/query?' + 'json=' + encodeURIComponent(JSON.stringify(net_bytes_r)) + '&autods=' + width).success(function (data) {
                     angular.forEach(data, function (d) {
                         d.data = d.data.map(function (dp) {
                             return { x: dp.x, y: dp.y * 8 };
@@ -345,7 +355,7 @@ tsafControllers.controller('HostCtrl', [
                     metric: "os.disk.fs.space_used",
                     tags: { host: $scope.host, disk: i }
                 }));
-                $http.get('/api/query?' + 'json=' + encodeURIComponent(JSON.stringify(fs_r))).success(function (data) {
+                $http.get('/api/query?' + 'json=' + encodeURIComponent(JSON.stringify(fs_r)) + '&autods=' + width).success(function (data) {
                     data[1].name = "Used";
                     $scope.fsdata[$scope.fs.indexOf(i)] = { name: i, data: [data[1]] };
                     var total = Math.max.apply(null, data[0].data.map(function (d) {
@@ -371,7 +381,7 @@ tsafControllers.controller('HostCtrl', [
             metric: "os.mem.used",
             tags: { host: $scope.host }
         }));
-        $http.get('/api/query?' + 'json=' + encodeURIComponent(JSON.stringify(mem_r))).success(function (data) {
+        $http.get('/api/query?' + 'json=' + encodeURIComponent(JSON.stringify(mem_r)) + '&autods=' + width).success(function (data) {
             data[1].name = "Used";
             $scope.mem_total = Math.max.apply(null, data[0].data.map(function (d) {
                 return d.y;
