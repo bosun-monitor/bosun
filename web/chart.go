@@ -16,12 +16,11 @@ import (
 	"github.com/StackExchange/tsaf/expr"
 )
 
-func Query(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
+func Query(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	var oreq opentsdb.Request
 	err := json.Unmarshal([]byte(r.FormValue("json")), &oreq)
 	if err != nil {
-		serveError(w, err)
-		return
+		return nil, err
 	}
 	ads_v := r.FormValue("autods")
 	if ads_v != "" {
@@ -38,8 +37,7 @@ func Query(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 	}
 	for _, q := range oreq.Queries {
 		if err := expr.ExpandSearch(q); err != nil {
-			serveError(w, err)
-			return
+			return nil, err
 		}
 	}
 	var tr opentsdb.ResponseSet
@@ -48,20 +46,13 @@ func Query(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 		tr, err = tsdbHost.Query(oreq)
 	})
 	if err != nil {
-		serveError(w, err)
-		return
+		return nil, err
 	}
 	qr, err := rickchart(tr)
 	if err != nil {
-		serveError(w, err)
-		return
+		return nil, err
 	}
-	b, err := json.Marshal(qr)
-	if err != nil {
-		serveError(w, err)
-		return
-	}
-	w.Write(b)
+	return qr, nil
 }
 
 func ParseAbsTime(s string) (time.Time, error) {

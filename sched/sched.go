@@ -275,7 +275,7 @@ Loop:
 		}
 		state.Expr = e.String()
 		var subject = new(bytes.Buffer)
-		if err := a.ExecuteSubject(subject, r.Group, s.cache); err != nil {
+		if err := s.ExecuteSubject(subject, a, state); err != nil {
 			log.Println(err)
 		}
 		state.Subject = subject.String()
@@ -303,16 +303,16 @@ Loop:
 
 func (s *Schedule) Notify(st *State, a *conf.Alert, n *conf.Notification) {
 	if len(n.Email) > 0 {
-		go s.Email(a, n, st.Group)
+		go s.Email(a, n, st)
 	}
 	if n.Post != nil {
-		go s.Post(a, n, st.Group)
+		go s.Post(a, n, st)
 	}
 	if n.Get != nil {
-		go s.Get(a, n, st.Group)
+		go s.Get(a, n, st)
 	}
 	if n.Print {
-		go s.Print(a, n, st.Group)
+		go s.Print(a, n, st)
 	}
 	if n.Next == nil {
 		return
@@ -375,6 +375,9 @@ func (s *State) Append(status Status) bool {
 }
 
 func (s *State) Last() Event {
+	if len(s.History) == 0 {
+		return Event{}
+	}
 	return s.History[len(s.History)-1]
 }
 
@@ -386,7 +389,8 @@ type Event struct {
 type Status int
 
 const (
-	ST_NORM Status = iota
+	ST_UNKNOWN Status = iota
+	ST_NORM
 	ST_WARN
 	ST_CRIT
 )

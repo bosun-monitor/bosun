@@ -8,19 +8,18 @@ import (
 	"net/mail"
 	"net/smtp"
 
-	"github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/tsaf/conf"
 	"github.com/jordan-wright/email"
 )
 
-func (s *Schedule) Email(a *conf.Alert, n *conf.Notification, group opentsdb.TagSet) {
+func (s *Schedule) Email(a *conf.Alert, n *conf.Notification, st *State) {
 	body := new(bytes.Buffer)
 	subject := new(bytes.Buffer)
-	if err := a.ExecuteBody(body, group, s.cache); err != nil {
+	if err := s.ExecuteBody(body, a, st); err != nil {
 		log.Println(err)
 		return
 	}
-	if err := a.ExecuteSubject(subject, group, s.cache); err != nil {
+	if err := s.ExecuteSubject(subject, a, st); err != nil {
 		log.Println(err)
 		return
 	}
