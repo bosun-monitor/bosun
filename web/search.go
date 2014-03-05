@@ -1,7 +1,6 @@
 package web
 
 import (
-	"encoding/json"
 	"net/http"
 	"strings"
 
@@ -11,29 +10,19 @@ import (
 )
 
 // A Sorted List of Available Metrics
-func UniqueMetrics(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
+func UniqueMetrics(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	values := search.UniqueMetrics()
-	b, err := json.Marshal(values)
-	if err != nil {
-		serveError(w, err)
-		return
-	}
-	w.Write(b)
+	return values, nil
 }
 
-func TagKeysByMetric(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
+func TagKeysByMetric(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	metric := vars["metric"]
 	keys := search.TagKeysByMetric(metric)
-	b, err := json.Marshal(keys)
-	if err != nil {
-		serveError(w, err)
-		return
-	}
-	w.Write(b)
+	return keys, nil
 }
 
-func TagValuesByMetricTagKey(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
+func TagValuesByMetricTagKey(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	metric := vars["metric"]
 	tagk := vars["tagk"]
@@ -48,35 +37,20 @@ func TagValuesByMetricTagKey(t miniprofiler.Timer, w http.ResponseWriter, r *htt
 	} else {
 		values = search.TagValuesByMetricTagKey(metric, tagk)
 	}
-	b, err := json.Marshal(values)
-	if err != nil {
-		serveError(w, err)
-		return
-	}
-	w.Write(b)
+	return values, nil
 }
 
-func MetricsByTagPair(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
+func MetricsByTagPair(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	tagk := vars["tagk"]
 	tagv := vars["tagv"]
 	values := search.MetricsByTagPair(tagk, tagv)
-	b, err := json.Marshal(values)
-	if err != nil {
-		serveError(w, err)
-		return
-	}
-	w.Write(b)
+	return values, nil
 }
 
-func TagValuesByTagKey(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
+func TagValuesByTagKey(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	tagk := vars["tagk"]
 	values := search.TagValuesByTagKey(tagk)
-	b, err := json.Marshal(values)
-	if err != nil {
-		serveError(w, err)
-		return
-	}
-	w.Write(b)
+	return values, nil
 }
