@@ -23,7 +23,15 @@ func Query(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 		serveError(w, err)
 		return
 	}
-	err = Autods(&oreq, 200)
+	ads_v := r.FormValue("autods")
+	if ads_v != "" {
+		ads_i, err := strconv.ParseInt(ads_v, 10, 64)
+		if err != nil {
+			serveError(w, err)
+			return
+		}
+		err = Autods(&oreq, ads_i)
+	}
 	if err != nil {
 		serveError(w, err)
 		return
