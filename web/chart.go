@@ -1,9 +1,11 @@
 package web
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
 	"sort"
@@ -16,9 +18,24 @@ import (
 	"github.com/StackExchange/tsaf/expr"
 )
 
-func Query(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+// Graph takes an OpenTSDB request data structure and queries OpenTSDB. Use the
+// json parameter to pass JSON. Use the b64 parameter to pass base64-encoded
+// JSON.
+func Graph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	var oreq opentsdb.Request
-	err := json.Unmarshal([]byte(r.FormValue("json")), &oreq)
+	j := []byte(r.FormValue("json"))
+	if bs := r.FormValue("b64"); bs != "" {
+		b, err := base64.URLEncoding.DecodeString(bs)
+		if err != nil {
+			return nil, err
+		}
+		j = b
+		log.Println("b64", j)
+	}
+	if len(j) == 0 {
+		return nil, fmt.Errorf("either json or b64 required")
+	}
+	err := json.Unmarshal(j, &oreq)
 	if err != nil {
 		return nil, err
 	}
