@@ -27,13 +27,13 @@ func Query(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 		ads_i, err := strconv.ParseInt(ads_v, 10, 64)
 		if err != nil {
 			serveError(w, err)
-			return
+			return nil, err
 		}
 		err = Autods(&oreq, ads_i)
 	}
 	if err != nil {
 		serveError(w, err)
-		return
+		return nil, err
 	}
 	for _, q := range oreq.Queries {
 		if err := expr.ExpandSearch(q); err != nil {
