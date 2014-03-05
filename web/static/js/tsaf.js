@@ -188,7 +188,8 @@ tsafControllers.controller('GraphCtrl', [
         $scope.query_p = request.Queries;
         $scope.start = request.start;
         $scope.end = request.end;
-        if (search.autods) {
+        $scope.autods = search.autods;
+        if (typeof $scope.autods == 'undefined') {
             $scope.autods = true;
         }
         var width = $('.chart').width();
