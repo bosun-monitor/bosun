@@ -3,6 +3,7 @@
 /// <reference path="bootstrap.d.ts" />
 /// <reference path="moment.d.ts" />
 /// <reference path="rickshaw.d.ts" />
+/// <reference path="d3.d.ts" />
 
 var tsafApp = angular.module('tsafApp', [
 	'ngRoute',
@@ -522,7 +523,12 @@ tsafApp.directive("tsRickshaw", ['$filter', function($filter: ng.IFilterService)
 				var y_axis: any = new Rickshaw.Graph.Axis.Y({
 					graph: graph,
 					orientation: 'left',
-					tickFormat: Rickshaw.Fixtures.Number.formatKMBT,
+					tickFormat: function(y: any) {
+						var o: any = d3.formatPrefix(y)
+						// The precision arg to d3.formatPrefix seems broken, so using round
+						// http://stackoverflow.com/questions/10310613/variable-precision-in-d3-format
+						return d3.round(o.scale(y),2) + o.symbol;
+						},
 					element: angular.element('.y_axis', elem)[0],
 				});
 				graph.render();
