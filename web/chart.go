@@ -26,14 +26,11 @@ func Query(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 	if ads_v != "" {
 		ads_i, err := strconv.ParseInt(ads_v, 10, 64)
 		if err != nil {
-			serveError(w, err)
 			return nil, err
 		}
-		err = Autods(&oreq, ads_i)
-	}
-	if err != nil {
-		serveError(w, err)
-		return nil, err
+		if err := Autods(&oreq, ads_i); err != nil {
+			return nil, err
+		}
 	}
 	for _, q := range oreq.Queries {
 		if err := expr.ExpandSearch(q); err != nil {
@@ -48,11 +45,7 @@ func Query(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 	if err != nil {
 		return nil, err
 	}
-	qr, err := rickchart(tr)
-	if err != nil {
-		return nil, err
-	}
-	return qr, nil
+	return rickchart(tr)
 }
 
 func ParseAbsTime(s string) (time.Time, error) {
@@ -64,8 +57,7 @@ func ParseAbsTime(s string) (time.Time, error) {
 		"2006/01/02",
 	}
 	for _, f := range t_formats {
-		t, err := time.Parse(f, s)
-		if err == nil {
+		if t, err := time.Parse(f, s); err == nil {
 			return t, nil
 		}
 	}
@@ -73,11 +65,11 @@ func ParseAbsTime(s string) (time.Time, error) {
 	if err != nil {
 		return t, err
 	}
-	t = time.Unix(i, 0)
-	return t, nil
+	return time.Unix(i, 0), nil
 }
 
 func ParseTime(v interface{}) (time.Time, error) {
+	now := time.Now().UTC()
 	switch i := v.(type) {
 	case string:
 		if i != "" {
@@ -85,25 +77,21 @@ func ParseTime(v interface{}) (time.Time, error) {
 				s := strings.TrimSuffix(i, "-ago")
 				d, err := expr.ParseDuration(s)
 				if err != nil {
-					return time.Now().UTC(), err
+					return now, err
 				}
-				return time.Now().UTC().Add(-d), nil
+				return now.Add(-d), nil
 			} else {
-				a, err := ParseAbsTime(i)
-				if err != nil {
-					return time.Now().UTC(), err
-				}
-				return a, nil
+				return ParseAbsTime(i)
 			}
 		} else {
-			return time.Now().UTC(), nil
+			return now, nil
 		}
 	case int:
 		return time.Unix(int64(i), 0), nil
 	case int64:
 		return time.Unix(i, 0), nil
 	default:
-		return time.Now().UTC(), errors.New("type must be string, int, or int64")
+		return time.Time{}, errors.New("type must be string, int, or int64")
 	}
 }
 
@@ -116,12 +104,14 @@ func GetDuration(r *opentsdb.Request) (time.Duration, error) {
 	if err != nil {
 		return t, err
 	}
-	end := time.Now()
+	var end time.Time
 	if r.End != nil {
 		end, err = ParseTime(r.End)
 		if err != nil {
 			return t, err
 		}
+	} else {
+		end = time.Now()
 	}
 	return end.Sub(start), nil
 }
