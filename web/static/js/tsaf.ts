@@ -79,20 +79,19 @@ tsafControllers.controller('DashboardCtrl', ['$scope', '$http', function($scope:
 		$('#collapse' + i).collapse('toggle');
 	};
 	$scope.panelClass = (status: number) => {
-		if (status == 2) {
-			return "panel-danger";
-		} else if (status == 1) {
-			return "panel-warning";
+		switch (status) {
+		case 3: return "panel-danger"; break;
+		case 2: return "panel-warning"; break;
+		default: return "panel-default"; break;
 		}
-		return "panel-default";
 	};
 	$scope.statusString = (status: number) => {
-		if (status == 2) {
-			return "critical";
-		} else if (status == 1) {
-			return "warning";
+		switch (status) {
+		case 3: return "critical"; break;
+		case 2: return "warning"; break;
+		case 1: return "normal"; break;
+		default: return "unknown"; break;
 		}
-		return "normal";
 	};
 }]);
 
