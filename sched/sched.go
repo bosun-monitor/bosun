@@ -24,8 +24,9 @@ type Schedule struct {
 	Status        map[AlertKey]*State
 	Notifications map[AlertKey]map[string]time.Time
 
-	cache *opentsdb.Cache
-	nc    chan interface{}
+	cache     *opentsdb.Cache
+	runStates map[AlertKey]Status
+	nc        chan interface{}
 }
 
 func (s *Schedule) MarshalJSON() ([]byte, error) {
@@ -218,11 +219,36 @@ func (s *Schedule) CheckNotifications() time.Duration {
 func (s *Schedule) Check() {
 	s.Lock()
 	defer s.Unlock()
+	s.runStates = make(map[AlertKey]Status)
 	s.cache = opentsdb.NewCache(s.Conf.TsdbHost)
-	changed := false
 	for _, a := range s.Conf.Alerts {
-		if s.CheckAlert(a) {
+		s.CheckAlert(a)
+	}
+	changed := false
+	for ak, status := range s.runStates {
+		state := s.Status[ak]
+		change := state.Append(status)
+		if change {
 			changed = true
+		}
+		var subject = new(bytes.Buffer)
+		a := s.Conf.Alerts[ak.Name]
+		if err := s.ExecuteSubject(subject, a, state); err != nil {
+			log.Println(err)
+		}
+		state.Subject = subject.String()
+		if change && status > ST_NORM {
+			notify := func(notifications map[string]*conf.Notification) {
+				for _, n := range notifications {
+					s.Notify(state, a, n)
+				}
+			}
+			switch status {
+			case ST_CRIT:
+				notify(a.CritNotification)
+			case ST_WARN:
+				notify(a.WarnNotification)
+			}
 		}
 	}
 	if changed {
@@ -230,13 +256,12 @@ func (s *Schedule) Check() {
 	}
 }
 
-func (s *Schedule) CheckAlert(a *conf.Alert) bool {
-	crits, cchange := s.CheckExpr(a, a.Crit, true, nil)
-	_, wchange := s.CheckExpr(a, a.Warn, false, crits)
-	return cchange || wchange
+func (s *Schedule) CheckAlert(a *conf.Alert) {
+	crits := s.CheckExpr(a, a.Crit, true, nil)
+	s.CheckExpr(a, a.Warn, false, crits)
 }
 
-func (s *Schedule) CheckExpr(a *conf.Alert, e *expr.Expr, isCrit bool, ignore []AlertKey) (alerts []AlertKey, change bool) {
+func (s *Schedule) CheckExpr(a *conf.Alert, e *expr.Expr, isCrit bool, ignore []AlertKey) (alerts []AlertKey) {
 	if e == nil {
 		return
 	}
@@ -263,9 +288,11 @@ Loop:
 				Group:        r.Group,
 				Computations: r.Computations,
 			}
+			s.Status[ak] = state
 		}
 		status := ST_NORM
 		if r.Value.(expr.Number) != 0 {
+			state.Expr = e.String()
 			alerts = append(alerts, ak)
 			if isCrit {
 				status = ST_CRIT
@@ -273,30 +300,10 @@ Loop:
 				status = ST_WARN
 			}
 		}
-		state.Expr = e.String()
-		var subject = new(bytes.Buffer)
-		if err := s.ExecuteSubject(subject, a, state); err != nil {
-			log.Println(err)
+		if status > s.runStates[ak] {
+			s.runStates[ak] = status
 		}
-		state.Subject = subject.String()
-		changed := state.Append(status)
-		s.Status[ak] = state
-		if changed {
-			change = true
-		}
-		if changed && status != ST_NORM {
-			notify := func(notifications map[string]*conf.Notification) {
-				for _, n := range notifications {
-					s.Notify(state, a, n)
-				}
-			}
-			switch status {
-			case ST_CRIT:
-				notify(a.CritNotification)
-			case ST_WARN:
-				notify(a.WarnNotification)
-			}
-		}
+
 	}
 	return
 }
