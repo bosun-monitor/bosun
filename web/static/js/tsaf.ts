@@ -231,6 +231,7 @@ class Request {
 
 interface IGraphScope extends ng.IScope {
 	index: number;
+	url: string;
 	error: string;
 	running: string;
 	metrics: string[];
@@ -365,6 +366,7 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route
 	$http.get('/api/graph?' + 'b64=' + btoa(JSON.stringify(request)) + autods)
 		.success((data) => {
 			$scope.result = data;
+			$scope.url = $location.absUrl();
 			$scope.running = '';
 			$scope.error = '';
 		})
