@@ -181,18 +181,18 @@ type Request struct {
 }
 
 type Query struct {
-	Aggregator  string `json:"aggregator"`
-	Metric      string `json:"metric"`
-	Rate        bool   `json:"rate,omitempty"`
-	RateOptions `json:"rateOptions,omitempty"`
-	Downsample  string `json:"downsample,omitempty"`
-	Tags        TagSet `json:"tags,omitempty"`
+	Aggregator  string      `json:"aggregator"`
+	Metric      string      `json:"metric"`
+	Rate        bool        `json:"rate,omitempty"`
+	RateOptions RateOptions `json:"rateOptions,omitempty"`
+	Downsample  string      `json:"downsample,omitempty"`
+	Tags        TagSet      `json:"tags,omitempty"`
 }
 
 type RateOptions struct {
-	Counter    bool `json:"counter,omitempty"`
-	CounterMax int  `json:"counterMax,omitempty"`
-	ResetValue int  `json:"resetValue,omitempty"`
+	Counter    bool  `json:"counter,omitempty"`
+	CounterMax int64 `json:"counterMax,omitempty"`
+	ResetValue int64 `json:"resetValue,omitempty"`
 }
 
 // ParsesRequest parses OpenTSDB requests of the form: start=1h-ago&m=avg:cpu.
@@ -220,7 +220,7 @@ func ParseRequest(req string) (*Request, error) {
 	return &r, nil
 }
 
-var qRE = regexp.MustCompile(`^(\w+):(?:(\w+-\w+):)?(?:(rate):)?([\w./]+)(?:\{([\w./,=*-|]+)\})?$`)
+var qRE = regexp.MustCompile(`^(\w+):(?:(\w+-\w+):)?(?:(rate.*):)?([\w./]+)(?:\{([\w./,=*-|]+)\})?$`)
 
 // ParseQuery parses OpenTSDB queries of the form: avg:rate:cpu{k=v}.
 func ParseQuery(query string) (*Query, error) {
@@ -231,7 +231,22 @@ func ParseQuery(query string) (*Query, error) {
 	}
 	q.Aggregator = m[1]
 	q.Downsample = m[2]
-	q.Rate = m[3] == "rate"
+	q.Rate = strings.HasPrefix(m[3], "rate")
+	var err error
+	if q.Rate {
+		sp := strings.Split(m[3], ",")
+		q.RateOptions.Counter = len(sp) > 1
+		if len(sp) > 2 {
+			if q.RateOptions.CounterMax, err = strconv.ParseInt(sp[2], 10, 64); err != nil {
+				return nil, err
+			}
+		}
+		if len(sp) > 3 {
+			if q.RateOptions.ResetValue, err = strconv.ParseInt(sp[3], 10, 64); err != nil {
+				return nil, err
+			}
+		}
+	}
 	q.Metric = m[4]
 	if m[5] != "" {
 		tags, err := ParseTags(m[5])

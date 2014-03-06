@@ -25,7 +25,7 @@ func TestParseQuery(t *testing.T) {
 	}{
 		{"sum:10m-avg:proc.stat.cpu{t=v,o=k}", false},
 		{"sum:10m-avg:rate:proc.stat.cpu", false},
-		{"sum:10m-avg:rate:proc.stat.cpu{t=v,o=k}", false},
+		{"sum:10m-avg:rate,counter,1,2:proc.stat.cpu{t=v,o=k}", false},
 		{"sum:proc.stat.cpu", false},
 		{"sum:rate:proc.stat.cpu{t=v,o=k}", false},
 
