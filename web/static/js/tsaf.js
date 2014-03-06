@@ -176,6 +176,30 @@ var Request = (function () {
         this.start = '1h-ago';
         this.Queries = [];
     }
+    Request.prototype.prune = function () {
+        var _this = this;
+        for (var i = 0; i < this.Queries.length; i++) {
+            angular.forEach(this.Queries[i], function (v, k) {
+                switch (typeof v) {
+                    case "string":
+                        if (!v) {
+                            delete _this.Queries[i][k];
+                        }
+                        break;
+                    case "boolean":
+                        if (!v) {
+                            delete _this.Queries[i][k];
+                        }
+                        break;
+                    case "object":
+                        if (Object.keys(v).length == 0) {
+                            delete _this.Queries[i][k];
+                        }
+                        break;
+                }
+            });
+        }
+    };
     return Request;
 })();
 
@@ -280,6 +304,7 @@ tsafControllers.controller('GraphCtrl', [
             return;
         }
         var autods = $scope.autods ? autods = '&autods=' + $('.chart').width() : '';
+        request.prune();
         $http.get('/api/graph?' + 'b64=' + btoa(JSON.stringify(request)) + autods).success(function (data) {
             $scope.result = data;
             $scope.running = '';

@@ -203,6 +203,29 @@ class Request {
 		this.start = '1h-ago';
 		this.Queries = [];
 	}
+	prune() {
+		for(var i = 0; i < this.Queries.length; i++) {
+			angular.forEach(this.Queries[i], (v, k) => {
+				switch (typeof v) {
+				case "string":
+					if (!v) {
+						delete this.Queries[i][k];
+					}
+					break;
+				case "boolean":
+					if (!v) {
+						delete this.Queries[i][k];
+					}
+					break;
+				case "object":
+					if (Object.keys(v).length == 0) {
+						delete this.Queries[i][k];
+					}
+					break;
+				}
+			});
+		}
+	}
 }
 
 interface IGraphScope extends ng.IScope {
@@ -337,6 +360,7 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route
 		return;
 	}
 	var autods = $scope.autods ? autods = '&autods=' + $('.chart').width() : '';
+	request.prune();
 	$http.get('/api/graph?' + 'b64=' + btoa(JSON.stringify(request)) + autods)
 		.success((data) => {
 			$scope.result = data;
