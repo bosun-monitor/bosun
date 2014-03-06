@@ -7,10 +7,8 @@ import (
 	"net/http"
 
 	"github.com/MiniProfiler/go/miniprofiler"
-	"github.com/gorilla/mux"
-
-	"github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/tsaf/sched"
+	"github.com/gorilla/mux"
 )
 
 var (
@@ -50,6 +48,15 @@ func Listen(addr, dir, host string) error {
 }
 
 func Index(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path == "/graph" {
+		r.ParseForm()
+		if _, present := r.Form["png"]; present {
+			if _, err := Graph(t, w, r); err != nil {
+				serveError(w, err)
+			}
+			return
+		}
+	}
 	err := templates.ExecuteTemplate(w, "index.html", struct {
 		Includes template.HTML
 	}{
