@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"sort"
@@ -51,6 +52,24 @@ func Graph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 		if err := expr.ExpandSearch(q); err != nil {
 			return nil, err
 		}
+	}
+	if _, present := r.Form["png"]; present {
+		u := url.URL{
+			Scheme:   "http",
+			Host:     schedule.Conf.TsdbHost,
+			Path:     "/q",
+			RawQuery: oreq.String() + "&png",
+		}
+		resp, err := http.Get(u.String())
+		if err != nil {
+			return nil, err
+		}
+		for k, v := range resp.Header {
+			w.Header()[k] = v
+		}
+		w.WriteHeader(resp.StatusCode)
+		_, err = io.Copy(w, resp.Body)
+		return nil, err
 	}
 	var tr opentsdb.ResponseSet
 	q, _ := url.QueryUnescape(oreq.String())
