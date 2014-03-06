@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"net/url"
 	"sort"
@@ -30,7 +29,6 @@ func Graph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 			return nil, err
 		}
 		j = b
-		log.Println("b64", j)
 	}
 	if len(j) == 0 {
 		return nil, fmt.Errorf("either json or b64 required")
