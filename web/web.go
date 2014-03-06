@@ -93,7 +93,6 @@ func Acknowledge(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (
 		Name:  vars["alert"],
 		Group: vars["group"],
 	}
-	log.Println("ACK", ak)
 	schedule.Acknowledge(ak)
 	return nil, nil
 }
