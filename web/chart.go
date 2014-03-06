@@ -55,7 +55,7 @@ func Graph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 	var tr opentsdb.ResponseSet
 	q, _ := url.QueryUnescape(oreq.String())
 	t.StepCustomTiming("tsdb", "query", q, func() {
-		tr, err = tsdbHost.Query(oreq)
+		tr, err = oreq.Query(schedule.Conf.TsdbHost)
 	})
 	if err != nil {
 		return nil, err

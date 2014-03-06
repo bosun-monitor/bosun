@@ -14,7 +14,6 @@ import (
 )
 
 var (
-	tsdbHost  opentsdb.Host
 	templates *template.Template
 	router    = mux.NewRouter()
 	schedule  = sched.DefaultSched
@@ -25,7 +24,6 @@ func init() {
 }
 
 func Listen(addr, dir, host string) error {
-	tsdbHost = opentsdb.Host(host)
 	var err error
 	templates, err = template.New("").ParseFiles(
 		dir + "/templates/index.html",
