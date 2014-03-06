@@ -231,13 +231,13 @@ func (s *Schedule) Check() {
 		if change {
 			changed = true
 		}
-		var subject = new(bytes.Buffer)
-		a := s.Conf.Alerts[ak.Name]
-		if err := s.ExecuteSubject(subject, a, state); err != nil {
-			log.Println(err)
-		}
-		state.Subject = subject.String()
 		if change && status > ST_NORM {
+			var subject = new(bytes.Buffer)
+			a := s.Conf.Alerts[ak.Name]
+			if err := s.ExecuteSubject(subject, a, state); err != nil {
+				log.Println(err)
+			}
+			state.Subject = subject.String()
 			notify := func(notifications map[string]*conf.Notification) {
 				for _, n := range notifications {
 					s.Notify(state, a, n)
