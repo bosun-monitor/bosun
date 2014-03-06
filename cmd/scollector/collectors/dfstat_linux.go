@@ -1,6 +1,7 @@
 package collectors
 
 import (
+	"log"
 	"strconv"
 	"strings"
 
@@ -29,12 +30,14 @@ func c_dfstat_blocks_linux() opentsdb.MultiDataPoint {
 		Add(&md, "os.disk.fs.space_total", fields[1], os_tags)
 		Add(&md, "os.disk.fs.space_used", fields[2], os_tags)
 		Add(&md, "os.disk.fs.space_free", fields[3], os_tags)
-		st, err := strconv.ParseInt(fields[1], 10, 64)
-		sf, err := strconv.ParseInt(fields[3], 10, 64)
+		st, err := strconv.ParseFloat(fields[1], 64)
+		sf, err := strconv.ParseFloat(fields[3], 64)
 		if err == nil {
 			if st != 0 {
-				Add(&md, "os.disk.fs.percent_free", sf/st, os_tags)
+				Add(&md, "os.disk.fs.percent_free", sf/st*100, os_tags)
 			}
+		} else {
+			log.Println(err)
 		}
 	}, "df", "-lP", "--block-size", "1")
 	return md
