@@ -167,16 +167,6 @@ class RateOptions {
 	resetValue: number;
 }
 
-interface IQuery {
-	aggregator?: string;
-	metric: string;
-	rate?: boolean;
-	rateOptions?: RateOptions;
-	tags?: TagSet;
-	ds?: string;
-	dstime?: string;
-}
-
 class Query {
 	aggregator: string;
 	metric: string;
@@ -186,7 +176,7 @@ class Query {
 	downsample: string;
 	ds: string;
 	dstime: string;
-	constructor(q?: IQuery) {
+	constructor(q?: any) {
 		this.aggregator = q && q.aggregator || 'sum';
 		this.metric = q && q.metric || '';
 		this.rate = q && q.rate || false;
@@ -194,16 +184,6 @@ class Query {
 		this.ds = q && q.ds || '';
 		this.dstime = q && q.dstime || '';
 		this.tags = q && q.tags || new TagSet;
-		this.setDs();
-	}
-	copy(qp: Query) {
-		this.aggregator = qp.aggregator;
-		this.metric = qp.metric;
-		this.rate = qp.rate;
-		this.rateOptions = qp.rateOptions;
-		this.ds = qp.ds;
-		this.dstime = qp.dstime;
-		this.tags = qp.tags;
 		this.setDs();
 	}
 	setDs() {
@@ -335,8 +315,7 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route
 			if (!p.metric) {
 				return;
 			}
-			var q = new Query;
-			q.copy(p);
+			var q = new Query(p);
 			var tags = q.tags;
 			q.tags = new TagSet;
 			angular.forEach(tags, function (v, k) {
