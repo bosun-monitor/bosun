@@ -163,8 +163,8 @@ class TagV {
 
 class RateOptions {
 	counter: boolean;
-	counterMax: string;
-	resetValue: string;
+	counterMax: number;
+	resetValue: number;
 }
 
 interface IQuery {
