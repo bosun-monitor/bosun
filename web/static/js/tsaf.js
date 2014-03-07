@@ -334,7 +334,7 @@ tsafControllers.controller('HostCtrl', [
             })
         ];
         var width = $('.chart').width();
-        $http.get('/api/query?' + 'json=' + encodeURIComponent(JSON.stringify(cpu_r)) + '&autods=' + width).success(function (data) {
+        $http.get('/api/graph?' + 'json=' + encodeURIComponent(JSON.stringify(cpu_r)) + '&autods=' + width).success(function (data) {
             data[0].name = 'Percent Used';
             $scope.cpu = data;
         });
@@ -351,7 +351,7 @@ tsafControllers.controller('HostCtrl', [
                         tags: { host: $scope.host, iface: i, direction: "*" }
                     })
                 ];
-                $http.get('/api/query?' + 'json=' + encodeURIComponent(JSON.stringify(net_bytes_r)) + '&autods=' + width).success(function (data) {
+                $http.get('/api/graph?' + 'json=' + encodeURIComponent(JSON.stringify(net_bytes_r)) + '&autods=' + width).success(function (data) {
                     angular.forEach(data, function (d) {
                         d.data = d.data.map(function (dp) {
                             return { x: dp.x, y: dp.y * 8 };
@@ -385,7 +385,7 @@ tsafControllers.controller('HostCtrl', [
                     metric: "os.disk.fs.space_used",
                     tags: { host: $scope.host, disk: i }
                 }));
-                $http.get('/api/query?' + 'json=' + encodeURIComponent(JSON.stringify(fs_r)) + '&autods=' + width).success(function (data) {
+                $http.get('/api/graph?' + 'json=' + encodeURIComponent(JSON.stringify(fs_r)) + '&autods=' + width).success(function (data) {
                     data[1].name = "Used";
                     $scope.fsdata[$scope.fs.indexOf(i)] = { name: i, data: [data[1]] };
                     var total = Math.max.apply(null, data[0].data.map(function (d) {
@@ -411,7 +411,7 @@ tsafControllers.controller('HostCtrl', [
             metric: "os.mem.used",
             tags: { host: $scope.host }
         }));
-        $http.get('/api/query?' + 'json=' + encodeURIComponent(JSON.stringify(mem_r)) + '&autods=' + width).success(function (data) {
+        $http.get('/api/graph?' + 'json=' + encodeURIComponent(JSON.stringify(mem_r)) + '&autods=' + width).success(function (data) {
             data[1].name = "Used";
             $scope.mem_total = Math.max.apply(null, data[0].data.map(function (d) {
                 return d.y;
