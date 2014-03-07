@@ -3,6 +3,7 @@ package sched
 import (
 	"fmt"
 	"io"
+	"log"
 	"net/url"
 	"os"
 	"strings"
@@ -65,10 +66,12 @@ func (s *Schedule) ExecuteSubject(w io.Writer, a *conf.Alert, st *State) error {
 func (c *context) E(v string) (s string) {
 	e, err := expr.New(v)
 	if err != nil {
+		log.Printf("%s: %v", v, err)
 		return
 	}
 	res, err := e.Execute(c.schedule.cache, nil)
 	if err != nil {
+		log.Printf("%s: %v", v, err)
 		return
 	}
 	for _, r := range res {
