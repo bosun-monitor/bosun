@@ -407,7 +407,7 @@ tsafControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route'
 		})
 	];
 	var width: number = $('.chart').width();
-	$http.get('/api/query?' + 'json=' + encodeURIComponent(JSON.stringify(cpu_r)) + '&autods=' + width)
+	$http.get('/api/graph?' + 'json=' + encodeURIComponent(JSON.stringify(cpu_r)) + '&autods=' + width)
 		.success((data) => {
 			data[0].name = 'Percent Used';
 			$scope.cpu = data;
@@ -426,7 +426,7 @@ tsafControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route'
 						tags: {host: $scope.host, iface: i, direction: "*"},
 					})
 				];
-				$http.get('/api/query?' + 'json=' + encodeURIComponent(JSON.stringify(net_bytes_r)) + '&autods=' + width)
+				$http.get('/api/graph?' + 'json=' + encodeURIComponent(JSON.stringify(net_bytes_r)) + '&autods=' + width)
 					.success((data) => {
 						angular.forEach(data, function(d) {
 							d.data = d.data.map((dp: any) => { return {x: dp.x, y: dp.y*8}});
@@ -458,7 +458,7 @@ tsafControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route'
 					metric: "os.disk.fs.space_used",
 					tags: {host: $scope.host, disk: i},
 				}));
-				$http.get('/api/query?' + 'json=' + encodeURIComponent(JSON.stringify(fs_r)) + '&autods=' + width)
+				$http.get('/api/graph?' + 'json=' + encodeURIComponent(JSON.stringify(fs_r)) + '&autods=' + width)
 					.success((data) => {
 						data[1].name = "Used";
 						$scope.fsdata[$scope.fs.indexOf(i)] = {name: i, data: [data[1]]};
@@ -483,7 +483,7 @@ tsafControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route'
 		metric: "os.mem.used",
 		tags: {host: $scope.host},
 	}));
-	$http.get('/api/query?' + 'json=' + encodeURIComponent(JSON.stringify(mem_r)) + '&autods=' + width)
+	$http.get('/api/graph?' + 'json=' + encodeURIComponent(JSON.stringify(mem_r)) + '&autods=' + width)
 		.success((data) => {
 			data[1].name = "Used";
 			$scope.mem_total = Math.max.apply(null, data[0].data.map((d: any) => { return d.y; }));
