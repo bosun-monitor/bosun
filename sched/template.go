@@ -43,6 +43,23 @@ func (c *context) Ack() string {
 	return u.String()
 }
 
+func (c *context) HostView(host string) string {
+	u := url.URL{
+		Scheme:   "http",
+		Host:     c.schedule.Conf.HttpListen,
+		Path:     "/host",
+		RawQuery: fmt.Sprintf("time=1d-ago&host=%s", host),
+	}
+	if strings.HasPrefix(c.schedule.Conf.HttpListen, ":") {
+		h, err := os.Hostname()
+		if err != nil {
+			return ""
+		}
+		u.Host = h + u.Host
+	}
+	return u.String()
+}
+
 func (s *Schedule) ExecuteBody(w io.Writer, a *conf.Alert, st *State) error {
 	if a.Template == nil || a.Template.Body == nil {
 		return nil
