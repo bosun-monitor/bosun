@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
 	ttemplate "text/template"
 	"time"
@@ -246,11 +247,14 @@ func (c *Conf) loadTemplate(s *parse.SectionNode) {
 		Vars: make(map[string]string),
 		Name: name,
 	}
-	V := func(v string) string {
-		return c.expand(v, t.Vars)
-	}
 	funcs := ttemplate.FuncMap{
-		"V": V,
+		"V": func(v string) string {
+			return c.expand(v, t.Vars)
+		},
+		"bytes": func(v string) ByteSize {
+			f, _ := strconv.ParseFloat(v, 64)
+			return ByteSize(f)
+		},
 	}
 	for _, p := range s.Nodes {
 		c.at(p)
