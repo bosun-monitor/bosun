@@ -29,7 +29,7 @@ func (s *Schedule) Email(a *conf.Alert, n *conf.Notification, st *State) {
 		e.To = append(e.To, a.Address)
 	}
 	e.Subject = subject.String()
-	e.Text = body.Bytes()
+	e.HTML = body.Bytes()
 	if err := Send(e, s.Conf.SmtpHost); err != nil {
 		log.Println(err)
 		return
