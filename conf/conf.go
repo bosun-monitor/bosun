@@ -3,13 +3,14 @@ package conf
 import (
 	"encoding/json"
 	"fmt"
+	htemplate "html/template"
 	"io/ioutil"
 	"net/mail"
 	"net/url"
 	"regexp"
 	"runtime"
 	"strings"
-	"text/template"
+	ttemplate "text/template"
 	"time"
 
 	"github.com/StackExchange/scollector/opentsdb"
@@ -91,8 +92,9 @@ type Alert struct {
 
 type Template struct {
 	Vars
-	Name          string
-	Body, Subject *template.Template
+	Name    string
+	Body    *htemplate.Template
+	Subject *ttemplate.Template
 
 	body, subject string
 }
@@ -247,9 +249,9 @@ func (c *Conf) loadTemplate(s *parse.SectionNode) {
 	V := func(v string) string {
 		return c.expand(v, t.Vars)
 	}
-	master := template.New(name).Funcs(template.FuncMap{
+	funcs := ttemplate.FuncMap{
 		"V": V,
-	})
+	}
 	for _, p := range s.Nodes {
 		c.at(p)
 		v := p.Val.Text
@@ -257,7 +259,7 @@ func (c *Conf) loadTemplate(s *parse.SectionNode) {
 		case "body":
 			c.errEmpty(t.body)
 			t.body = v
-			tmpl := master.New(k)
+			tmpl := htemplate.New(k).Funcs(htemplate.FuncMap(funcs))
 			_, err := tmpl.Parse(t.body)
 			if err != nil {
 				c.error(err)
@@ -266,7 +268,7 @@ func (c *Conf) loadTemplate(s *parse.SectionNode) {
 		case "subject":
 			c.errEmpty(t.subject)
 			t.subject = v
-			tmpl := master.New(k)
+			tmpl := ttemplate.New(k).Funcs(funcs)
 			_, err := tmpl.Parse(t.subject)
 			if err != nil {
 				c.error(err)
