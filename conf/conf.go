@@ -255,6 +255,9 @@ func (c *Conf) loadTemplate(s *parse.SectionNode) {
 			f, _ := strconv.ParseFloat(v, 64)
 			return ByteSize(f)
 		},
+		"short": func(v string) string {
+			return strings.SplitN(v, ".", 2)[0]
+		},
 	}
 	for _, p := range s.Nodes {
 		c.at(p)
