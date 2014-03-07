@@ -255,6 +255,7 @@ func (c *Conf) loadTemplate(s *parse.SectionNode) {
 		v := p.Val.Text
 		switch k := p.Key.Text; k {
 		case "body":
+			c.errEmpty(t.body)
 			t.body = v
 			tmpl := master.New(k)
 			_, err := tmpl.Parse(t.body)
@@ -263,6 +264,7 @@ func (c *Conf) loadTemplate(s *parse.SectionNode) {
 			}
 			t.Body = tmpl
 		case "subject":
+			c.errEmpty(t.subject)
 			t.subject = v
 			tmpl := master.New(k)
 			_, err := tmpl.Parse(t.subject)
@@ -274,6 +276,7 @@ func (c *Conf) loadTemplate(s *parse.SectionNode) {
 			if !strings.HasPrefix(k, "$") {
 				c.errorf("unknown key %s", k)
 			}
+			c.errEmpty(t.Vars[k])
 			t.Vars[k] = v
 			t.Vars[k[1:]] = t.Vars[k]
 		}
@@ -299,6 +302,7 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 		v := p.Val.Text
 		switch k := p.Key.Text; k {
 		case "template":
+			c.errEmpty(a.template)
 			a.template = c.expand(v, a.Vars)
 			t, ok := c.Templates[a.template]
 			if !ok {
@@ -306,6 +310,7 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 			}
 			a.Template = t
 		case "crit":
+			c.errEmpty(a.crit)
 			a.crit = c.expand(v, a.Vars)
 			crit, err := expr.New(a.crit)
 			if err != nil {
@@ -316,6 +321,7 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 			}
 			a.Crit = crit
 		case "warn":
+			c.errEmpty(a.warn)
 			a.warn = c.expand(v, a.Vars)
 			warn, err := expr.New(a.warn)
 			if err != nil {
@@ -326,6 +332,7 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 			}
 			a.Warn = warn
 		case "squelch":
+			c.errEmpty(a.squelch)
 			a.squelch = c.expand(v, a.Vars)
 			squelch, err := opentsdb.ParseTags(a.squelch)
 			if err != nil {
@@ -340,6 +347,7 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 				a.Squelch[k] = re
 			}
 		case "critNotification":
+			c.errEmpty(a.critNotification)
 			a.critNotification = c.expand(v, a.Vars)
 			a.CritNotification = make(map[string]*Notification)
 			for _, s := range strings.Split(a.critNotification, ",") {
@@ -351,6 +359,7 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 				a.CritNotification[s] = n
 			}
 		case "warnNotification":
+			c.errEmpty(a.warnNotification)
 			a.warnNotification = c.expand(v, a.Vars)
 			a.WarnNotification = make(map[string]*Notification)
 			for _, s := range strings.Split(a.warnNotification, ",") {
@@ -365,6 +374,7 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 			if !strings.HasPrefix(k, "$") {
 				c.errorf("unknown key %s", k)
 			}
+			c.errEmpty(a.Vars[k])
 			a.Vars[k] = c.expand(v, a.Vars)
 			a.Vars[k[1:]] = a.Vars[k]
 		}
@@ -391,6 +401,7 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 		v := p.Val.Text
 		switch k := p.Key.Text; k {
 		case "email":
+			c.errEmpty(n.email)
 			if c.SmtpHost == "" || c.EmailFrom == "" {
 				c.errorf("email notifications require both smtpHost and emailFrom to be set")
 			}
@@ -401,6 +412,7 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 			}
 			n.Email = email
 		case "post":
+			c.errEmpty(n.post)
 			n.post = c.expand(v, n.Vars)
 			post, err := url.Parse(n.post)
 			if err != nil {
@@ -408,6 +420,7 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 			}
 			n.Post = post
 		case "get":
+			c.errEmpty(n.get)
 			n.get = c.expand(v, n.Vars)
 			get, err := url.Parse(n.get)
 			if err != nil {
@@ -415,8 +428,12 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 			}
 			n.Get = get
 		case "print":
+			if n.Print {
+				c.errEmpty(".")
+			}
 			n.Print = true
 		case "next":
+			c.errEmpty(n.next)
 			n.next = c.expand(v, n.Vars)
 			next, ok := c.Notifications[n.next]
 			if !ok {
@@ -424,6 +441,9 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 			}
 			n.Next = next
 		case "timeout":
+			if n.Timeout > 0 {
+				c.errEmpty(".")
+			}
 			d, err := time.ParseDuration(c.expand(v, n.Vars))
 			if err != nil {
 				c.error(err)
@@ -433,6 +453,7 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 			if !strings.HasPrefix(k, "$") {
 				c.errorf("unknown key %s", k)
 			}
+			c.errEmpty(n.Vars[k])
 			n.Vars[k] = c.expand(v, n.Vars)
 			n.Vars[k[1:]] = n.Vars[k]
 		}
@@ -459,4 +480,11 @@ func (c *Conf) expand(v string, vars map[string]string) string {
 		return c.expand(n, nil)
 	})
 	return v
+}
+
+// errEmpty panics if v is not "".
+func (c *Conf) errEmpty(v string) {
+	if v != "" {
+		c.errorf("duplicate key")
+	}
 }
