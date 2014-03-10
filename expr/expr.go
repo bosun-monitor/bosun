@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"regexp"
 	"runtime"
 
 	"github.com/MiniProfiler/go/miniprofiler"
@@ -98,7 +99,10 @@ type Computation struct {
 	Value Number
 }
 
+var RGroup_Re = regexp.MustCompile("{[^}]+}")
+
 func (r *Result) AddComputation(text string, result Number) {
+	text = RGroup_Re.ReplaceAllString(text, r.Group.String())
 	r.Computations = append(r.Computations, Computation{text, result})
 }
 
