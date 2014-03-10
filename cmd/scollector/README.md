@@ -23,3 +23,7 @@ scollector will, by default, report to the host `tsaf`, which you should configu
 1. Some collector details may be specific to our environment, and so may act weirdly in yours. These will eventually be moved out into config options so the defaults works well for everyone.
 1. An OpenTSDB 2.0 server is required, since it uses the HTTP API. You may have to enable chunked requests on your server (not sure about this).
 1. It is designed to be used with an upcoming and unreleased project we are working on (called TSAF), and so may not work in your environment.
+
+# snmp
+
+By default, scollector will collect data from the current host and report it to the TSDB server. scollector has an SNMP mode where it instead polls a given host: `scollector -s community@host`. Poll frequency currently defaults to 5 minutes. Some common OIDs regarding interfaces are collected. Others can be added easily.
