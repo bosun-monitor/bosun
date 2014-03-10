@@ -2,6 +2,7 @@ package collectors
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/slog"
@@ -9,9 +10,12 @@ import (
 
 // SNMPIfaces registers a SNMP Interfaces collector for the given community and host.
 func SNMPIfaces(community, host string) {
-	collectors = append(collectors, &IntervalCollector{F: func() opentsdb.MultiDataPoint {
-		return c_snmp_ifaces(community, host)
-	}})
+	collectors = append(collectors, &IntervalCollector{
+		F: func() opentsdb.MultiDataPoint {
+			return c_snmp_ifaces(community, host)
+		},
+		Interval: time.Minute * 5,
+	})
 }
 
 func c_snmp_ifaces(community, host string) opentsdb.MultiDataPoint {
