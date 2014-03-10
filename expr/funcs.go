@@ -58,6 +58,11 @@ var Builtins = map[string]parse.Func{
 		parse.TYPE_SERIES,
 		Query,
 	},
+	"ungroup": {
+		[]parse.FuncType{parse.TYPE_NUMBER},
+		parse.TYPE_NUMBER,
+		Ungroup,
+	},
 }
 
 const tsdbFmt = "2006/01/02 15:04:05"
@@ -321,4 +326,14 @@ func percentile(dps Series, args ...float64) (a float64) {
 	i := p * float64(len(x)-1)
 	i = math.Ceil(i)
 	return x[int(i)]
+}
+
+func Ungroup(e *state, T miniprofiler.Timer, d []*Result) ([]*Result, error) {
+	if len(d) > 1 {
+		return nil, fmt.Errorf("ungroup: more than 1 group not supported")
+	}
+	for _, v := range d {
+		v.Group = nil
+	}
+	return d, nil
 }
