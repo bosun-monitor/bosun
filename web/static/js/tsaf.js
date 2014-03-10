@@ -138,14 +138,15 @@ tsafControllers.controller('ExprCtrl', [
 
 tsafControllers.controller('EGraphCtrl', [
     '$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
-        var current = $location.hash();
+        var current = $location.search().q;
         if (!current) {
-            $location.hash('q("avg:os.cpu{host=ny-devtsdb04.ds.stackexchange.com}", "5m")');
+            $location.search('q', 'q("avg:os.cpu{host=ny-devtsdb04.ds.stackexchange.com}", "5m")');
             return;
         }
         $scope.expr = current;
         $scope.running = current;
-        $http.get('/api/egraph?q=' + encodeURIComponent(current)).success(function (data) {
+        var width = $('.chart').width();
+        $http.get('/api/egraph?q=' + encodeURIComponent(current) + '&autods=' + width).success(function (data) {
             $scope.result = data;
             $scope.running = '';
         }).error(function (error) {
@@ -156,7 +157,7 @@ tsafControllers.controller('EGraphCtrl', [
             return JSON.stringify(v, null, '  ');
         };
         $scope.set = function () {
-            $location.hash($scope.expr);
+            $location.search('q', $scope.expr);
             $route.reload();
         };
     }]);
