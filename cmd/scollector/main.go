@@ -59,8 +59,8 @@ func main() {
 	}
 
 	if *flagPrint {
-		collectors.DEFAULT_FREQ = time.Second * 3
-		slog.Infoln("Set default frequency to", collectors.DEFAULT_FREQ)
+		collectors.DefaultFreq = time.Second * 3
+		slog.Infoln("Set default frequency to", collectors.DefaultFreq)
 	}
 	cdp := collectors.Run(c)
 	if u != nil && !*flagPrint {

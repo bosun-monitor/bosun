@@ -17,7 +17,7 @@ func (c *IntervalCollector) Run(dpchan chan<- *opentsdb.DataPoint) {
 	for {
 		interval := c.Interval
 		if interval == 0 {
-			interval = DEFAULT_FREQ
+			interval = DefaultFreq
 		}
 		next := time.After(interval)
 		md := c.F()

@@ -37,7 +37,7 @@ const (
 	osNetUnicast   = "os.net.packets_unicast"
 )
 
-var DEFAULT_FREQ = time.Second * 15
+var DefaultFreq = time.Second * 15
 
 var host = "unknown"
 var timestamp int64 = time.Now().Unix()
