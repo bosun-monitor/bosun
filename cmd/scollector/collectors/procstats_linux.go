@@ -55,11 +55,11 @@ func c_procstats_linux() opentsdb.MultiDataPoint {
 		mem[m[1]] = i
 		Add(&md, "linux.mem."+strings.ToLower(m[1]), m[2], nil)
 	})
-	Add(&md, "os.mem.total", int(mem["MemTotal"])*1024, nil)
-	Add(&md, "os.mem.free", int(mem["MemFree"])*1024, nil)
-	Add(&md, "os.mem.used", (int(mem["MemTotal"])-(int(mem["MemFree"])+int(mem["Buffers"])+int(mem["Cached"])))*1024, nil)
+	Add(&md, osMemTotal, int(mem["MemTotal"])*1024, nil)
+	Add(&md, osMemFree, int(mem["MemFree"])*1024, nil)
+	Add(&md, osMemUsed, (int(mem["MemTotal"])-(int(mem["MemFree"])+int(mem["Buffers"])+int(mem["Cached"])))*1024, nil)
 	if mem["MemTotal"] != 0 {
-		Add(&md, "os.mem.percent_free", (mem["MemFree"]+mem["Buffers"]+mem["Cached"])/mem["MemTotal"]*100, nil)
+		Add(&md, osMemPctFree, (mem["MemFree"]+mem["Buffers"]+mem["Cached"])/mem["MemTotal"]*100, nil)
 	}
 
 	readLine("/proc/vmstat", func(s string) {
@@ -170,7 +170,7 @@ func c_procstats_linux() opentsdb.MultiDataPoint {
 			return
 		}
 		if num_cores != 0 {
-			Add(&md, "os.cpu", (total_time-(idle_time/float64(num_cores)))*100, nil)
+			Add(&md, osCPU, (total_time-(idle_time/float64(num_cores)))*100, nil)
 		}
 	})
 	return md

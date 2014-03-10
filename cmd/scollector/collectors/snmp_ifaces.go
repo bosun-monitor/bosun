@@ -45,16 +45,16 @@ func c_snmp_ifaces(community, host string) opentsdb.MultiDataPoint {
 		return nil
 	}
 	oids := []snmpAdd{
-		{".1.3.6.1.2.1.2.2.1.10", "os.net.bytes", "in"},
-		{".1.3.6.1.2.1.2.2.1.11", "os.net.packets_unicast", "in"},
-		{".1.3.6.1.2.1.2.2.1.12", "os.net.packets_broadcast", "in"},
-		{".1.3.6.1.2.1.2.2.1.13", "os.net.discards", "in"},
-		{".1.3.6.1.2.1.2.2.1.14", "os.net.errors", "in"},
-		{".1.3.6.1.2.1.2.2.1.16", "os.net.bytes", "out"},
-		{".1.3.6.1.2.1.2.2.1.17", "os.net.packets_unicast", "out"},
-		{".1.3.6.1.2.1.2.2.1.18", "os.net.packets_broadcast", "out"},
-		{".1.3.6.1.2.1.2.2.1.19", "os.net.discards", "out"},
-		{".1.3.6.1.2.1.2.2.1.20", "os.net.errors", "out"},
+		{".1.3.6.1.2.1.2.2.1.10", osNetBytes, "in"},
+		{".1.3.6.1.2.1.2.2.1.11", osNetUnicast, "in"},
+		{".1.3.6.1.2.1.2.2.1.12", osNetBroadcast, "in"},
+		{".1.3.6.1.2.1.2.2.1.13", osNetDropped, "in"},
+		{".1.3.6.1.2.1.2.2.1.14", osNetErrors, "in"},
+		{".1.3.6.1.2.1.2.2.1.16", osNetBytes, "out"},
+		{".1.3.6.1.2.1.2.2.1.17", osNetUnicast, "out"},
+		{".1.3.6.1.2.1.2.2.1.18", osNetBroadcast, "out"},
+		{".1.3.6.1.2.1.2.2.1.19", osNetDropped, "out"},
+		{".1.3.6.1.2.1.2.2.1.20", osNetErrors, "out"},
 	}
 	for _, o := range oids {
 		if err := add(o.oid, o.metric, o.dir); err != nil {

@@ -19,6 +19,24 @@ type Collector interface {
 	Name() string
 }
 
+const (
+	osCPU          = "os.cpu"
+	osDiskFree     = "os.disk.fs.space_free"
+	osDiskPctFree  = "os.disk.fs.percent_free"
+	osDiskTotal    = "os.disk.fs.space_total"
+	osDiskUsed     = "os.disk.fs.space_used"
+	osMemFree      = "os.mem.free"
+	osMemPctFree   = "os.mem.percent_free"
+	osMemTotal     = "os.mem.total"
+	osMemUsed      = "os.mem.used"
+	osNetBroadcast = "os.net.packets_broadcast"
+	osNetBytes     = "os.net.bytes"
+	osNetDropped   = "os.net.dropped"
+	osNetErrors    = "os.net.errs"
+	osNetPackets   = "os.net.packets"
+	osNetUnicast   = "os.net.packets_unicast"
+)
+
 var DEFAULT_FREQ = time.Second * 15
 
 var host = "unknown"

@@ -28,10 +28,10 @@ func c_simple_mem_windows() opentsdb.MultiDataPoint {
 		Add(&md, "win.mem.vm.free", v.FreeVirtualMemory*1024, nil)
 		Add(&md, "win.mem.total", v.TotalVisibleMemorySize*1024, nil)
 		Add(&md, "win.mem.free", v.FreePhysicalMemory*1024, nil)
-		Add(&md, "os.mem.total", v.TotalVisibleMemorySize*1024, nil)
-		Add(&md, "os.mem.free", v.FreePhysicalMemory*1024, nil)
-		Add(&md, "os.mem.used", v.TotalVisibleMemorySize*1024-v.FreePhysicalMemory*1024, nil)
-		Add(&md, "os.mem.percent_free", float64(v.FreePhysicalMemory)/float64(v.TotalVisibleMemorySize)*100, nil)
+		Add(&md, osMemTotal, v.TotalVisibleMemorySize*1024, nil)
+		Add(&md, osMemFree, v.FreePhysicalMemory*1024, nil)
+		Add(&md, osMemUsed, v.TotalVisibleMemorySize*1024-v.FreePhysicalMemory*1024, nil)
+		Add(&md, osMemPctFree, float64(v.FreePhysicalMemory)/float64(v.TotalVisibleMemorySize)*100, nil)
 	}
 	return md
 }

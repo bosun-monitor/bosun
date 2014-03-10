@@ -38,7 +38,7 @@ func c_cpu_windows() opentsdb.MultiDataPoint {
 		Add(&md, "win.cpu.time_cstate", v.PercentC3Time, opentsdb.TagSet{"cpu": v.Name, "type": "c3"})
 	}
 	if core_count != 0 {
-		Add(&md, "os.cpu", ((ts / 1e5) - (total_percent/core_count)/1e5), nil)
+		Add(&md, osCPU, ((ts / 1e5) - (total_percent/core_count)/1e5), nil)
 	}
 	return md
 }

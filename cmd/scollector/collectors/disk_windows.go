@@ -22,18 +22,18 @@ func c_diskspace_windows() opentsdb.MultiDataPoint {
 	var md opentsdb.MultiDataPoint
 	for _, v := range dst {
 		Add(&md, "win.disk.fs.space_free", v.FreeMegabytes*1048576, opentsdb.TagSet{"partition": v.Name})
-		Add(&md, "os.disk.fs.space_free", v.FreeMegabytes*1048576, opentsdb.TagSet{"disk": v.Name})
+		Add(&md, osDiskFree, v.FreeMegabytes*1048576, opentsdb.TagSet{"disk": v.Name})
 		if v.PercentFreeSpace != 0 {
 			space_total := v.FreeMegabytes * 1048576 * 100 / v.PercentFreeSpace
 			space_used := space_total - v.FreeMegabytes*1048576
 			Add(&md, "win.disk.fs.space_total", space_total, opentsdb.TagSet{"partition": v.Name})
 			Add(&md, "win.disk.fs.space_used", space_used, opentsdb.TagSet{"partition": v.Name})
-			Add(&md, "os.disk.fs.space_total", space_total, opentsdb.TagSet{"disk": v.Name})
-			Add(&md, "os.disk.fs.space_used", space_used, opentsdb.TagSet{"disk": v.Name})
+			Add(&md, osDiskTotal, space_total, opentsdb.TagSet{"disk": v.Name})
+			Add(&md, osDiskUsed, space_used, opentsdb.TagSet{"disk": v.Name})
 		}
 
 		Add(&md, "win.disk.fs.percent_free", v.PercentFreeSpace, opentsdb.TagSet{"partition": v.Name})
-		Add(&md, "os.disk.fs.percent_free", v.PercentFreeSpace, opentsdb.TagSet{"disk": v.Name})
+		Add(&md, osDiskPctFree, v.PercentFreeSpace, opentsdb.TagSet{"disk": v.Name})
 	}
 	return md
 }

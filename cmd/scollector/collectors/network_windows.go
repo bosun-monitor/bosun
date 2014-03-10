@@ -37,14 +37,14 @@ func c_network_windows() opentsdb.MultiDataPoint {
 		Add(&md, "win.net.dropped", v.PacketsReceivedDiscarded, opentsdb.TagSet{"iface": v.Name, "type": "discard", "direction": "in"})
 		Add(&md, "win.net.errs", v.PacketsOutboundErrors, opentsdb.TagSet{"iface": v.Name, "type": "error", "direction": "out"})
 		Add(&md, "win.net.errs", v.PacketsReceivedErrors, opentsdb.TagSet{"iface": v.Name, "type": "error", "direction": "in"})
-		Add(&md, "os.net.bytes", v.BytesReceivedPerSec, opentsdb.TagSet{"iface": v.Name, "direction": "in"})
-		Add(&md, "os.net.bytes", v.BytesSentPerSec, opentsdb.TagSet{"iface": v.Name, "direction": "out"})
-		Add(&md, "os.net.packets", v.PacketsReceivedPerSec, opentsdb.TagSet{"iface": v.Name, "direction": "in"})
-		Add(&md, "os.net.packets", v.PacketsSentPerSec, opentsdb.TagSet{"iface": v.Name, "direction": "out"})
-		Add(&md, "os.net.dropped", v.PacketsOutboundDiscarded, opentsdb.TagSet{"iface": v.Name, "type": "discard", "direction": "out"})
-		Add(&md, "os.net.dropped", v.PacketsReceivedDiscarded, opentsdb.TagSet{"iface": v.Name, "type": "discard", "direction": "in"})
-		Add(&md, "os.net.errs", v.PacketsOutboundErrors, opentsdb.TagSet{"iface": v.Name, "type": "error", "direction": "out"})
-		Add(&md, "os.net.errs", v.PacketsReceivedErrors, opentsdb.TagSet{"iface": v.Name, "type": "error", "direction": "in"})
+		Add(&md, osNetBytes, v.BytesReceivedPerSec, opentsdb.TagSet{"iface": v.Name, "direction": "in"})
+		Add(&md, osNetBytes, v.BytesSentPerSec, opentsdb.TagSet{"iface": v.Name, "direction": "out"})
+		Add(&md, osNetPackets, v.PacketsReceivedPerSec, opentsdb.TagSet{"iface": v.Name, "direction": "in"})
+		Add(&md, osNetPackets, v.PacketsSentPerSec, opentsdb.TagSet{"iface": v.Name, "direction": "out"})
+		Add(&md, osNetDropped, v.PacketsOutboundDiscarded, opentsdb.TagSet{"iface": v.Name, "type": "discard", "direction": "out"})
+		Add(&md, osNetDropped, v.PacketsReceivedDiscarded, opentsdb.TagSet{"iface": v.Name, "type": "discard", "direction": "in"})
+		Add(&md, osNetErrors, v.PacketsOutboundErrors, opentsdb.TagSet{"iface": v.Name, "type": "error", "direction": "out"})
+		Add(&md, osNetErrors, v.PacketsReceivedErrors, opentsdb.TagSet{"iface": v.Name, "type": "error", "direction": "in"})
 	}
 	return md
 }

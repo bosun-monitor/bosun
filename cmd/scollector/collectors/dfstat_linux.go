@@ -27,14 +27,14 @@ func c_dfstat_blocks_linux() opentsdb.MultiDataPoint {
 		Add(&md, "linux.disk.fs.space_total", fields[1], tags)
 		Add(&md, "linux.disk.fs.space_used", fields[2], tags)
 		Add(&md, "linux.disk.fs.space_free", fields[3], tags)
-		Add(&md, "os.disk.fs.space_total", fields[1], os_tags)
-		Add(&md, "os.disk.fs.space_used", fields[2], os_tags)
-		Add(&md, "os.disk.fs.space_free", fields[3], os_tags)
+		Add(&md, osDiskTotal, fields[1], os_tags)
+		Add(&md, osDiskUsed, fields[2], os_tags)
+		Add(&md, osDiskFree, fields[3], os_tags)
 		st, err := strconv.ParseFloat(fields[1], 64)
 		sf, err := strconv.ParseFloat(fields[3], 64)
 		if err == nil {
 			if st != 0 {
-				Add(&md, "os.disk.fs.percent_free", sf/st*100, os_tags)
+				Add(&md, osDiskPctFree, sf/st*100, os_tags)
 			}
 		} else {
 			log.Println(err)
