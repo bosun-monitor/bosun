@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -169,9 +170,35 @@ func Autods(r *opentsdb.Request, l int64) error {
 	return nil
 }
 
+var q_re = regexp.MustCompile(`"([^"]+)"\s*,\s*"([^"]+)"`)
+var r_re = regexp.MustCompile(`^(.*?")[^"]+(".*)`)
+
 func ExprGraph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	q := r.FormValue("q")
-	e, err := expr.New(r.FormValue("q"))
+	qs := q_re.FindStringSubmatch(q)
+	if len(q) < 3 {
+		return nil, errors.New("couldn't parse out query")
+	}
+	pq, err := opentsdb.ParseQuery(qs[1])
+	oreq := opentsdb.Request{
+		Start:   qs[2] + "-ago",
+		Queries: []*opentsdb.Query{pq},
+	}
+	ads_v := r.FormValue("autods")
+	if ads_v != "" {
+		ads_i, err := strconv.ParseInt(ads_v, 10, 64)
+		if err != nil {
+			return nil, err
+		}
+		if err := Autods(&oreq, ads_i); err != nil {
+			return nil, err
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	n_qs := r_re.ReplaceAllString(q, "${1}"+oreq.Queries[0].String()+"${2}")
+	e, err := expr.New(n_qs)
 	if err != nil {
 		return nil, err
 	}
@@ -179,7 +206,7 @@ func ExprGraph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (in
 	if err != nil {
 		return nil, err
 	}
-	rres, err := rickexpr(res, q)
+	rres, err := rickexpr(res, n_qs)
 	if err != nil {
 		return nil, err
 	}

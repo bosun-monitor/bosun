@@ -159,14 +159,15 @@ tsafControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route'
 }]);
 
 tsafControllers.controller('EGraphCtrl', ['$scope', '$http', '$location', '$route', function($scope: IExprScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService){
-	var current: string = $location.hash();
+	var current: string = $location.search().q;
 	if (!current) {
-		$location.hash('q("avg:os.cpu{host=ny-devtsdb04.ds.stackexchange.com}", "5m")');
+		$location.search('q', 'q("avg:os.cpu{host=ny-devtsdb04.ds.stackexchange.com}", "5m")');
 		return;
 	}
 	$scope.expr = current;
 	$scope.running = current;
-	$http.get('/api/egraph?q=' + encodeURIComponent(current))
+	var width: number = $('.chart').width()
+	$http.get('/api/egraph?q=' + encodeURIComponent(current) + '&autods=' + width)
 		.success((data) => {
 			$scope.result = data;
 			$scope.running = '';
@@ -179,7 +180,7 @@ tsafControllers.controller('EGraphCtrl', ['$scope', '$http', '$location', '$rout
 		return JSON.stringify(v, null, '  ');
 	};
 	$scope.set = () => {
-		$location.hash($scope.expr);
+		$location.search('q', $scope.expr);
 		$route.reload();
 	};
 }]);
