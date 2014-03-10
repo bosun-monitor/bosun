@@ -69,7 +69,9 @@ func test(cs []collectors.Collector) {
 		go c.Run(dpchan)
 		slog.Infoln("run", c.Name())
 	}
-	next := time.After(time.Second * 2)
+	dur := time.Second * 10
+	slog.Infoln("running for", dur)
+	next := time.After(dur)
 Loop:
 	for {
 		select {
