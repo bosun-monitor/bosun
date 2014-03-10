@@ -62,7 +62,9 @@ func Add(md *opentsdb.MultiDataPoint, name string, value interface{}, tags opent
 	if tags == nil {
 		tags = make(opentsdb.TagSet)
 	}
-	tags["host"] = host
+	if _, present := tags["host"]; !present {
+		tags["host"] = host
+	}
 	d := opentsdb.DataPoint{
 		Metric:    name,
 		Timestamp: timestamp,
