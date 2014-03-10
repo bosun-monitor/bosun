@@ -61,6 +61,24 @@ func (c *context) HostView(host string) string {
 	return u.String()
 }
 
+func (c *context) EGraph(v string) string {
+	q := url.QueryEscape(expr.RGroup_Re.ReplaceAllString(v, c.State.Group.String()))
+	u := url.URL{
+		Scheme:   "http",
+		Host:     c.schedule.Conf.HttpListen,
+		Path:     "/egraph",
+		RawQuery: fmt.Sprintf("q=%s", q),
+	}
+	if strings.HasPrefix(c.schedule.Conf.HttpListen, ":") {
+		h, err := os.Hostname()
+		if err != nil {
+			return ""
+		}
+		u.Host = h + u.Host
+	}
+	return u.String()
+}
+
 func (s *Schedule) ExecuteBody(w io.Writer, a *conf.Alert, st *State) error {
 	if a.Template == nil || a.Template.Body == nil {
 		return nil
