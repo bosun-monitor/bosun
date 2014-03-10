@@ -169,6 +169,59 @@ func Autods(r *opentsdb.Request, l int64) error {
 	return nil
 }
 
+func ExprGraph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	q := r.FormValue("q")
+	e, err := expr.New(r.FormValue("q"))
+	if err != nil {
+		return nil, err
+	}
+	res, err := e.Execute(opentsdb.Host(schedule.Conf.TsdbHost), t)
+	if err != nil {
+		return nil, err
+	}
+	rres, err := rickexpr(res, q)
+	if err != nil {
+		return nil, err
+	}
+	return rres, nil
+}
+
+func rickexpr(r []*expr.Result, q string) ([]*RickSeries, error) {
+	var series []*RickSeries
+	for _, res := range r {
+		dps := make([]RickDP, 0)
+		if _, ok := res.Value.(expr.Series); !ok {
+			return series, errors.New("expr must return a series")
+		}
+		for k, v := range res.Value.(expr.Series) {
+			ki, err := strconv.ParseInt(k, 10, 64)
+			if err != nil {
+				return nil, err
+			}
+			dps = append(dps, RickDP{
+				X: ki,
+				Y: v,
+			})
+		}
+		if len(dps) > 0 {
+			sort.Sort(ByX(dps))
+			name := q
+			var id []string
+			for k, v := range res.Group {
+				id = append(id, fmt.Sprintf("%v=%v", k, v))
+			}
+			if len(id) > 0 {
+				name = fmt.Sprintf("%s{%s}", name, strings.Join(id, ","))
+			}
+			series = append(series, &RickSeries{
+				Name: name,
+				Data: dps,
+			})
+		}
+	}
+	return series, nil
+}
+
 func rickchart(r opentsdb.ResponseSet) ([]*RickSeries, error) {
 	var series []*RickSeries
 	for _, resp := range r {

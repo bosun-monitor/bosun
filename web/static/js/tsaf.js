@@ -22,6 +22,9 @@ tsafApp.config([
         }).when('/expr', {
             templateUrl: 'partials/expr.html',
             controller: 'ExprCtrl'
+        }).when('/egraph', {
+            templateUrl: 'partials/egraph.html',
+            controller: 'EGraphCtrl'
         }).when('/graph', {
             templateUrl: 'partials/graph.html',
             controller: 'GraphCtrl'
@@ -118,6 +121,31 @@ tsafControllers.controller('ExprCtrl', [
         $scope.expr = current;
         $scope.running = current;
         $http.get('/api/expr?q=' + encodeURIComponent(current)).success(function (data) {
+            $scope.result = data;
+            $scope.running = '';
+        }).error(function (error) {
+            $scope.error = error;
+            $scope.running = '';
+        });
+        $scope.json = function (v) {
+            return JSON.stringify(v, null, '  ');
+        };
+        $scope.set = function () {
+            $location.hash($scope.expr);
+            $route.reload();
+        };
+    }]);
+
+tsafControllers.controller('EGraphCtrl', [
+    '$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
+        var current = $location.hash();
+        if (!current) {
+            $location.hash('q("avg:os.cpu{host=ny-devtsdb04.ds.stackexchange.com}", "5m")');
+            return;
+        }
+        $scope.expr = current;
+        $scope.running = current;
+        $http.get('/api/egraph?q=' + encodeURIComponent(current)).success(function (data) {
             $scope.result = data;
             $scope.running = '';
         }).error(function (error) {
