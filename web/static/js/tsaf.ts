@@ -26,6 +26,10 @@ tsafApp.config(['$routeProvider', '$locationProvider', function($routeProvider: 
 			templateUrl: 'partials/expr.html',
 			controller: 'ExprCtrl',
 		}).
+		when('/egraph', {
+			templateUrl: 'partials/egraph.html',
+			controller: 'EGraphCtrl',
+		}).
 		when('/graph', {
 			templateUrl: 'partials/graph.html',
 			controller: 'GraphCtrl',
@@ -137,6 +141,32 @@ tsafControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route'
 	$scope.expr = current;
 	$scope.running = current;
 	$http.get('/api/expr?q=' + encodeURIComponent(current))
+		.success((data) => {
+			$scope.result = data;
+			$scope.running = '';
+		})
+		.error((error) => {
+			$scope.error = error;
+			$scope.running = '';
+		});
+	$scope.json = (v: any) => {
+		return JSON.stringify(v, null, '  ');
+	};
+	$scope.set = () => {
+		$location.hash($scope.expr);
+		$route.reload();
+	};
+}]);
+
+tsafControllers.controller('EGraphCtrl', ['$scope', '$http', '$location', '$route', function($scope: IExprScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService){
+	var current: string = $location.hash();
+	if (!current) {
+		$location.hash('q("avg:os.cpu{host=ny-devtsdb04.ds.stackexchange.com}", "5m")');
+		return;
+	}
+	$scope.expr = current;
+	$scope.running = current;
+	$http.get('/api/egraph?q=' + encodeURIComponent(current))
 		.success((data) => {
 			$scope.result = data;
 			$scope.running = '';
