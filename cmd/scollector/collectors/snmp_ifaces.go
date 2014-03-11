@@ -8,6 +8,20 @@ import (
 	"github.com/StackExchange/slog"
 )
 
+const (
+	IfDescr         = ".1.3.6.1.2.1.2.2.1.2"
+	ifInOctets      = ".1.3.6.1.2.1.2.2.1.10"
+	ifInUcastPkts   = ".1.3.6.1.2.1.2.2.1.11"
+	ifInNUcastPkts  = ".1.3.6.1.2.1.2.2.1.12"
+	ifInDiscards    = ".1.3.6.1.2.1.2.2.1.13"
+	ifInErrors      = ".1.3.6.1.2.1.2.2.1.14"
+	ifOutOctets     = ".1.3.6.1.2.1.2.2.1.16"
+	ifOutUcastPkts  = ".1.3.6.1.2.1.2.2.1.17"
+	ifOutNUcastPkts = ".1.3.6.1.2.1.2.2.1.18"
+	ifOutDiscards   = ".1.3.6.1.2.1.2.2.1.19"
+	ifOutErrors     = ".1.3.6.1.2.1.2.2.1.20"
+)
+
 // SNMPIfaces registers a SNMP Interfaces collector for the given community and host.
 func SNMPIfaces(community, host string) {
 	collectors = append(collectors, &IntervalCollector{
@@ -19,7 +33,7 @@ func SNMPIfaces(community, host string) {
 }
 
 func c_snmp_ifaces(community, host string) opentsdb.MultiDataPoint {
-	n, err := snmp_subtree(host, community, ".1.3.6.1.2.1.2.2.1.2")
+	n, err := snmp_subtree(host, community, IfDescr)
 	if err != nil {
 		slog.Errorln("snmp ifaces1 :", err)
 		return nil
@@ -45,16 +59,16 @@ func c_snmp_ifaces(community, host string) opentsdb.MultiDataPoint {
 		return nil
 	}
 	oids := []snmpAdd{
-		{".1.3.6.1.2.1.2.2.1.10", osNetBytes, "in"},
-		{".1.3.6.1.2.1.2.2.1.11", osNetUnicast, "in"},
-		{".1.3.6.1.2.1.2.2.1.12", osNetBroadcast, "in"},
-		{".1.3.6.1.2.1.2.2.1.13", osNetDropped, "in"},
-		{".1.3.6.1.2.1.2.2.1.14", osNetErrors, "in"},
-		{".1.3.6.1.2.1.2.2.1.16", osNetBytes, "out"},
-		{".1.3.6.1.2.1.2.2.1.17", osNetUnicast, "out"},
-		{".1.3.6.1.2.1.2.2.1.18", osNetBroadcast, "out"},
-		{".1.3.6.1.2.1.2.2.1.19", osNetDropped, "out"},
-		{".1.3.6.1.2.1.2.2.1.20", osNetErrors, "out"},
+		{ifInOctets, osNetBytes, "in"},
+		{ifInUcastPkts, osNetUnicast, "in"},
+		{ifInNUcastPkts, osNetBroadcast, "in"},
+		{ifInDiscards, osNetDropped, "in"},
+		{ifInErrors, osNetErrors, "in"},
+		{ifOutOctets, osNetBytes, "out"},
+		{ifOutUcastPkts, osNetUnicast, "out"},
+		{ifOutNUcastPkts, osNetBroadcast, "out"},
+		{ifOutDiscards, osNetDropped, "out"},
+		{ifOutErrors, osNetErrors, "out"},
 	}
 	for _, o := range oids {
 		if err := add(o.oid, o.metric, o.dir); err != nil {
