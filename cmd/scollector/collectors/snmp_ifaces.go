@@ -52,9 +52,18 @@ func c_snmp_ifaces(community, host string) opentsdb.MultiDataPoint {
 		slog.Errorln("snmp ifaces1 :", err)
 		return nil
 	}
+	a, err := snmp_subtree(host, community, ifAlias)
+	if err != nil {
+		slog.Errorln("snmp ifaces1 :", err)
+		return nil
+	}
 	names := make(map[interface{}]string, len(n))
+	aliases := make(map[interface{}]string, len(a))
 	for k, v := range n {
 		names[k] = fmt.Sprintf("%s", v)
+	}
+	for k, v := range a {
+		aliases[k] = fmt.Sprintf("%s", v)
 	}
 	var md opentsdb.MultiDataPoint
 	add := func(oid, metric, dir string) error {
@@ -68,6 +77,7 @@ func c_snmp_ifaces(community, host string) opentsdb.MultiDataPoint {
 				"direction": dir,
 				"iface":     fmt.Sprint(k),
 				"iname":     names[k],
+				"alias":     aliases[k],
 			})
 		}
 		return nil
