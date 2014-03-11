@@ -22,6 +22,20 @@ const (
 	ifOutErrors     = ".1.3.6.1.2.1.2.2.1.20"
 )
 
+//IFXTable Constants
+const (
+	ifName               = ".1.3.6.1.2.1.31.1.1.1.1"
+	ifAlias              = ".1.3.6.1.2.1.31.1.1.1.18"
+	ifHCinOctets         = ".1.3.6.1.2.1.31.1.1.1.6"
+	ifHCInUcastPkts      = ".1.3.6.1.2.1.31.1.1.1.7"
+	ifHCInMulticastPkts  = ".1.3.6.1.2.1.31.1.1.1.8"
+	ifHCInBroadcastPkts  = ".1.3.6.1.2.1.31.1.1.1.9"
+	ifHCOutOctets        = ".1.3.6.1.2.1.31.1.1.1.10"
+	ifHCOutUcastPkts     = ".1.3.6.1.2.1.31.1.1.1.11"
+	ifHCOutMulticastPkts = ".1.3.6.1.2.1.31.1.1.1.12"
+	ifHCOutBroadcastPkts = ".1.3.6.1.2.1.31.1.1.1.13"
+)
+
 // SNMPIfaces registers a SNMP Interfaces collector for the given community and host.
 func SNMPIfaces(community, host string) {
 	collectors = append(collectors, &IntervalCollector{
@@ -59,14 +73,16 @@ func c_snmp_ifaces(community, host string) opentsdb.MultiDataPoint {
 		return nil
 	}
 	oids := []snmpAdd{
-		{ifInOctets, osNetBytes, "in"},
-		{ifInUcastPkts, osNetUnicast, "in"},
-		{ifInNUcastPkts, osNetBroadcast, "in"},
+		{ifHCinOctets, osNetBytes, "in"},
+		{ifHCInUcastPkts, osNetUnicast, "in"},
+		{ifHCInBroadcastPkts, osNetBroadcast, "in"},
+		{ifHCInMulticastPkts, osNetMulticast, "in"},
 		{ifInDiscards, osNetDropped, "in"},
 		{ifInErrors, osNetErrors, "in"},
-		{ifOutOctets, osNetBytes, "out"},
-		{ifOutUcastPkts, osNetUnicast, "out"},
-		{ifOutNUcastPkts, osNetBroadcast, "out"},
+		{ifHCOutOctets, osNetBytes, "out"},
+		{ifHCOutUcastPkts, osNetUnicast, "out"},
+		{ifHCOutBroadcastPkts, osNetBroadcast, "out"},
+		{ifHCOutMulticastPkts, osNetMulticast, "out"},
 		{ifOutDiscards, osNetDropped, "out"},
 		{ifOutErrors, osNetErrors, "out"},
 	}

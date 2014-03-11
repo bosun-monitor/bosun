@@ -35,6 +35,7 @@ const (
 	osNetErrors    = "os.net.errs"
 	osNetPackets   = "os.net.packets"
 	osNetUnicast   = "os.net.packets_unicast"
+	osNetMulticast = "os.net.packets_multicast"
 )
 
 var DefaultFreq = time.Second * 15
