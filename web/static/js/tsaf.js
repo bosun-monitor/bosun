@@ -112,7 +112,7 @@ tsafControllers.controller('ExprCtrl', [
     '$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
         var current = $location.hash();
         if (!current) {
-            $location.hash('avg(q("avg:os.cpu{host=ny-devtsdb04.ds.stackexchange.com}", "5m")) > 0.5');
+            $location.hash('avg(q("avg:rate:os.cpu{host=ny-devtsdb04}", "5m")) > 80');
             return;
         }
         $scope.expr = current;
