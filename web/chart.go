@@ -109,11 +109,11 @@ func ParseTime(v interface{}) (time.Time, error) {
 		if i != "" {
 			if strings.HasSuffix(i, "-ago") {
 				s := strings.TrimSuffix(i, "-ago")
-				d, err := expr.ParseDuration(s)
+				d, err := opentsdb.ParseDuration(s)
 				if err != nil {
 					return now, err
 				}
-				return now.Add(-d), nil
+				return now.Add(time.Duration(-d)), nil
 			} else {
 				return ParseAbsTime(i)
 			}
