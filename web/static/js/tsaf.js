@@ -138,9 +138,16 @@ tsafControllers.controller('ExprCtrl', [
 
 tsafControllers.controller('EGraphCtrl', [
     '$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
-        var current = $location.search().q;
+        var search = $location.search();
+        var current = search.q;
+        $scope.bytes = search.bytes;
+        if (typeof $scope.bytes == 'undefined') {
+            $scope.bytes = false;
+        }
+        $scope.renderers = ['area', 'bar', 'line', 'scatterplot'];
+        $scope.render = search.render || 'scatterplot';
         if (!current) {
-            $location.search('q', 'q("avg:os.cpu{host=ny-devtsdb04.ds.stackexchange.com}", "5m")');
+            $location.search('q', 'q("avg:rate:os.cpu{host=ny-devtsdb04}", "5m")');
             return;
         }
         $scope.expr = current;
@@ -158,6 +165,8 @@ tsafControllers.controller('EGraphCtrl', [
         };
         $scope.set = function () {
             $location.search('q', $scope.expr);
+            $location.search('render', $scope.render);
+            $location.search('bytes', $scope.bytes);
             $route.reload();
         };
     }]);
@@ -496,6 +505,11 @@ tsafApp.directive("tsRickshaw", [
                         },
                         element: angular.element('.y_axis', elem)[0]
                     });
+                    if (attrs.bytes == "true") {
+                        y_axis.tickFormat = function (y) {
+                            return $filter('bytes')(y);
+                        };
+                    }
                     graph.render();
                     var legend = angular.element('.rlegend', elem)[0];
                     var Hover = Rickshaw.Class.create(Rickshaw.Graph.HoverDetail, {
@@ -512,7 +526,7 @@ tsafApp.directive("tsRickshaw", [
                                 var label = document.createElement('div');
                                 label.className = 'rlabel';
                                 label.innerHTML = d.name + ": " + d.formattedYValue;
-                                if (attrs.bytes) {
+                                if (attrs.bytes == "true") {
                                     label.innerHTML = d.name + ": " + $filter('bytes')(d.formattedYValue);
                                 }
                                 if (attrs.bits) {

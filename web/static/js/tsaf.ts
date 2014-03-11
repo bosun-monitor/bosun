@@ -158,10 +158,29 @@ tsafControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route'
 	};
 }]);
 
-tsafControllers.controller('EGraphCtrl', ['$scope', '$http', '$location', '$route', function($scope: IExprScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService){
-	var current: string = $location.search().q;
+interface IEGraphScope extends ng.IScope {
+	expr: string;
+	error: string;
+	running: string;
+	result: any;
+	render: string;
+	renderers: string[];
+	bytes: boolean;
+	set: () => void;
+	json: (v: any) => string;
+}
+
+tsafControllers.controller('EGraphCtrl', ['$scope', '$http', '$location', '$route', function($scope: IEGraphScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService){
+	var search = $location.search();
+	var current = search.q;
+	$scope.bytes = search.bytes;
+	if (typeof $scope.bytes == 'undefined') {
+		$scope.bytes = false;
+	}
+	$scope.renderers = ['area', 'bar', 'line', 'scatterplot']
+	$scope.render = search.render || 'scatterplot';
 	if (!current) {
-		$location.search('q', 'q("avg:os.cpu{host=ny-devtsdb04.ds.stackexchange.com}", "5m")');
+		$location.search('q', 'q("avg:rate:os.cpu{host=ny-devtsdb04}", "5m")');
 		return;
 	}
 	$scope.expr = current;
@@ -181,6 +200,8 @@ tsafControllers.controller('EGraphCtrl', ['$scope', '$http', '$location', '$rout
 	};
 	$scope.set = () => {
 		$location.search('q', $scope.expr);
+		$location.search('render', $scope.render);
+		$location.search('bytes', $scope.bytes);
 		$route.reload();
 	};
 }]);
@@ -567,6 +588,11 @@ tsafApp.directive("tsRickshaw", ['$filter', function($filter: ng.IFilterService)
 						},
 					element: angular.element('.y_axis', elem)[0],
 				});
+				if (attrs.bytes == "true") {
+					y_axis.tickFormat = function(y: any) {
+						return $filter('bytes')(y);
+						}
+				}
 				graph.render();
 				var legend = angular.element('.rlegend', elem)[0];
 				var Hover = Rickshaw.Class.create(Rickshaw.Graph.HoverDetail, {
@@ -583,7 +609,7 @@ tsafApp.directive("tsRickshaw", ['$filter', function($filter: ng.IFilterService)
 								var label = document.createElement('div');
 								label.className = 'rlabel';
 								label.innerHTML = d.name + ": " + d.formattedYValue;
-								if (attrs.bytes) {
+								if (attrs.bytes == "true") {
 									label.innerHTML = d.name + ": " + $filter('bytes')(d.formattedYValue);
 								}
 								if (attrs.bits) {
