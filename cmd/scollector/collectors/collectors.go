@@ -45,7 +45,8 @@ var timestamp int64 = time.Now().Unix()
 
 func init() {
 	if h, err := os.Hostname(); err == nil {
-		host = h
+		h = strings.SplitN(h, ".", 2)[0]
+		host = strings.ToLower(h)
 	}
 	go func() {
 		for t := range time.Tick(time.Second) {
