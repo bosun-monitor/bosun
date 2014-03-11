@@ -69,12 +69,12 @@ const tsdbFmt = "2006/01/02 15:04:05"
 
 func Band(e *state, T miniprofiler.Timer, query, duration, period string, num float64) (r []*Result, err error) {
 	T.Step("band", func(T miniprofiler.Timer) {
-		var d, p time.Duration
-		d, err = ParseDuration(duration)
+		var d, p opentsdb.Duration
+		d, err = opentsdb.ParseDuration(duration)
 		if err != nil {
 			return
 		}
-		p, err = ParseDuration(period)
+		p, err = opentsdb.ParseDuration(period)
 		if err != nil {
 			return
 		}
@@ -93,9 +93,9 @@ func Band(e *state, T miniprofiler.Timer, query, duration, period string, num fl
 		}
 		now := time.Now().UTC()
 		for i := 0; i < int(num); i++ {
-			now = now.Add(-p)
+			now = now.Add(time.Duration(-p))
 			req.End = now.Unix()
-			req.Start = now.Add(-d).Unix()
+			req.Start = now.Add(time.Duration(-d)).Unix()
 			b, _ := json.MarshalIndent(&req, "", "  ")
 			var s opentsdb.ResponseSet
 			T.StepCustomTiming("tsdb", "query", string(b), func() {
@@ -139,13 +139,13 @@ func Query(e *state, T miniprofiler.Timer, query, duration string) (r []*Result,
 	if err = ExpandSearch(q); err != nil {
 		return
 	}
-	d, err := ParseDuration(duration)
+	d, err := opentsdb.ParseDuration(duration)
 	if err != nil {
 		return
 	}
 	req := opentsdb.Request{
 		Queries: []*opentsdb.Query{q},
-		Start:   fmt.Sprintf("%dms-ago", d.Nanoseconds()/1e6),
+		Start:   fmt.Sprintf("%s-ago", d),
 	}
 	b, _ := json.MarshalIndent(&req, "", "  ")
 	var s opentsdb.ResponseSet
