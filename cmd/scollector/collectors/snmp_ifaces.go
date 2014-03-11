@@ -64,6 +64,9 @@ func c_snmp_ifaces(community, host string) opentsdb.MultiDataPoint {
 	}
 	for k, v := range a {
 		aliases[k] = fmt.Sprintf("%s", v)
+		if aliases[k] == "" {
+			aliases[k] = "NA"
+		}
 	}
 	var md opentsdb.MultiDataPoint
 	add := func(oid, metric, dir string) error {
