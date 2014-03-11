@@ -23,6 +23,11 @@ var Builtins = map[string]parse.Func{
 		parse.TYPE_NUMBER,
 		Avg,
 	},
+	"sum": {
+		[]parse.FuncType{parse.TYPE_SERIES},
+		parse.TYPE_NUMBER,
+		Sum,
+	},
 	"band": {
 		[]parse.FuncType{parse.TYPE_STRING, parse.TYPE_STRING, parse.TYPE_STRING, parse.TYPE_NUMBER},
 		parse.TYPE_SERIES,
@@ -218,6 +223,17 @@ func avg(dps Series, args ...float64) (a float64) {
 		a += float64(v)
 	}
 	a /= float64(len(dps))
+	return
+}
+
+func Sum(e *state, T miniprofiler.Timer, series []*Result) ([]*Result, error) {
+	return reduce(e, T, series, sum)
+}
+
+func sum(dps Series, args ...float64) (a float64) {
+	for _, v := range dps {
+		a += float64(v)
+	}
 	return
 }
 

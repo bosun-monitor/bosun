@@ -135,7 +135,7 @@ interface IExprScope extends ng.IScope {
 tsafControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route', function($scope: IExprScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService){
 	var current: string = $location.hash();
 	if (!current) {
-		$location.hash('avg(q("avg:os.cpu{host=ny-devtsdb04.ds.stackexchange.com}", "5m")) > 0.5');
+		$location.hash('avg(q("avg:rate:os.cpu{host=ny-devtsdb04}", "5m")) > 80');
 		return;
 	}
 	$scope.expr = current;
