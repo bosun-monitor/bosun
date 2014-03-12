@@ -43,7 +43,7 @@ func SNMPIfaces(community, host string) {
 			return c_snmp_ifaces(community, host)
 		},
 		Interval: time.Minute * 5,
-		name:     fmt.Sprintf("SNMPIfaces-%s", host),
+		name:     fmt.Sprintf("snmp-ifaces-%s", host),
 	})
 }
 
