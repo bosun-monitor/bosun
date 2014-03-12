@@ -1,6 +1,10 @@
 package expr
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/StackExchange/scollector/opentsdb"
+)
 
 func TestExprSimple(t *testing.T) {
 	var exprTests = []struct {
@@ -38,7 +42,7 @@ func TestExprSimple(t *testing.T) {
 			t.Error(err)
 			break
 		}
-		r, err := e.Execute("", nil)
+		r, err := e.Execute(opentsdb.Host(""), nil)
 		if err != nil {
 			t.Error(err)
 			break
@@ -54,14 +58,14 @@ func TestExprSimple(t *testing.T) {
 	}
 }
 
-const TSDB_HOST = "ny-devtsdb04:4242"
+const TSDBHost = "ny-devtsdb04:4242"
 
 func TestExprQuery(t *testing.T) {
 	e, err := New(`-q("avg:os.cpu{host=ny-lb05.ds.stackexchange.com}", "1m")`)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err := e.Execute(TSDB_HOST, nil)
+	_, err = e.Execute(opentsdb.Host(TSDBHost), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
