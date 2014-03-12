@@ -11,6 +11,7 @@ import (
 type IntervalCollector struct {
 	F        func() opentsdb.MultiDataPoint
 	Interval time.Duration
+	name     string
 }
 
 func (c *IntervalCollector) Run(dpchan chan<- *opentsdb.DataPoint) {
@@ -29,6 +30,9 @@ func (c *IntervalCollector) Run(dpchan chan<- *opentsdb.DataPoint) {
 }
 
 func (c *IntervalCollector) Name() string {
+	if c.name != "" {
+		return c.name
+	}
 	v := runtime.FuncForPC(reflect.ValueOf(c.F).Pointer())
 	return v.Name()
 }
