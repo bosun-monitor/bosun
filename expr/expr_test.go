@@ -58,6 +58,24 @@ func TestExprSimple(t *testing.T) {
 	}
 }
 
+func TestExprParse(t *testing.T) {
+	var exprTests = []struct {
+		input string
+		valid bool
+	}{
+		{`avg(q("test", "1m", 1))`, false},
+	}
+
+	for _, et := range exprTests {
+		_, err := New(et.input)
+		if et.valid && err != nil {
+			t.Error(err)
+		} else if !et.valid && err == nil {
+			t.Errorf("expected invalid, but no error: %v", et.input)
+		}
+	}
+}
+
 const TSDBHost = "ny-devtsdb04:4242"
 
 func TestExprQuery(t *testing.T) {
