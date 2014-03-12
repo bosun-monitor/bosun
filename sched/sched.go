@@ -285,11 +285,11 @@ Loop:
 		state := s.Status[ak]
 		if state == nil {
 			state = &State{
-				Group:        r.Group,
-				Computations: r.Computations,
+				Group: r.Group,
 			}
 			s.Status[ak] = state
 		}
+		state.Computations = r.Computations
 		status := ST_NORM
 		if r.Value.(expr.Number) != 0 {
 			state.Expr = e.String()
@@ -303,7 +303,6 @@ Loop:
 		if status > s.runStates[ak] {
 			s.runStates[ak] = status
 		}
-
 	}
 	return
 }
