@@ -57,6 +57,9 @@ func init() {
 		oldRedis := false
 		add := func(port, pid string) {
 			cluster := fmt.Sprintf("port-%s", port)
+			defer func() {
+				ri[port] = cluster
+			}()
 			f, err := ioutil.ReadFile(fmt.Sprintf("/proc/%s/cmdline", pid))
 			if err != nil {
 				return
@@ -72,7 +75,6 @@ func init() {
 					cluster = strings.ToLower(result[1])
 				}
 			})
-			ri[port] = cluster
 		}
 		readCommand(func(line string) {
 			sp := strings.Fields(line)
