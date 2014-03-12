@@ -19,7 +19,7 @@ func init() {
 	collectors = append(collectors, &IntervalCollector{F: c_redis_linux})
 }
 
-var FIELDS_REDIS = map[string]bool{
+var redisFields = map[string]bool{
 	"aof_enabled":                  true,
 	"aof_rewrite_in_progress":      true,
 	"aof_rewrite_scheduled":        true,
@@ -63,7 +63,7 @@ var FIELDS_REDIS = map[string]bool{
 }
 
 //For master_link_status
-var MLS_MAP = map[string]string{
+var redisMlsMap = map[string]string{
 	"up":   "1",
 	"down": "0",
 }
@@ -165,11 +165,11 @@ func c_redis_linux() opentsdb.MultiDataPoint {
 		for _, line := range strings.Split(string(lines.([]uint8)), "\n") {
 			line = strings.TrimSpace(line)
 			sp := strings.Split(line, ":")
-			if len(sp) < 2 || !FIELDS_REDIS[sp[0]] {
+			if len(sp) < 2 || !redisFields[sp[0]] {
 				continue
 			}
 			if sp[0] == "master_link_status" {
-				Add(&md, "redis."+sp[0], MLS_MAP[sp[1]], tags)
+				Add(&md, "redis."+sp[0], redisMlsMap[sp[1]], tags)
 				continue
 			}
 			if sp[0] == "aof_last_bgrewrite_status" || sp[0] == "rdb_last_bgsave_status" {
