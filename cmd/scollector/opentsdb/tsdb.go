@@ -237,8 +237,10 @@ func ParseQuery(query string) (*Query, error) {
 		sp := strings.Split(m[3], ",")
 		q.RateOptions.Counter = len(sp) > 1
 		if len(sp) > 2 {
-			if q.RateOptions.CounterMax, err = strconv.ParseInt(sp[2], 10, 64); err != nil {
-				return nil, err
+			if sp[2] != "" {
+				if q.RateOptions.CounterMax, err = strconv.ParseInt(sp[2], 10, 64); err != nil {
+					return nil, err
+				}
 			}
 		}
 		if len(sp) > 3 {
