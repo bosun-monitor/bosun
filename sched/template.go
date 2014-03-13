@@ -86,7 +86,7 @@ func (c *context) E(v string) (s string) {
 		log.Printf("%s: %v", v, err)
 		return
 	}
-	res, err := e.Execute(c.schedule.cache, nil)
+	res, _, err := e.Execute(c.schedule.cache, nil)
 	if err != nil {
 		log.Printf("%s: %v", v, err)
 		return

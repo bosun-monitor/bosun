@@ -101,6 +101,7 @@ func Band(e *state, T miniprofiler.Timer, query, duration, period string, num fl
 			now = now.Add(time.Duration(-p))
 			req.End = now.Unix()
 			req.Start = now.Add(time.Duration(-d)).Unix()
+			e.addRequest(req)
 			b, _ := json.MarshalIndent(&req, "", "  ")
 			var s opentsdb.ResponseSet
 			T.StepCustomTiming("tsdb", "query", string(b), func() {
@@ -152,6 +153,7 @@ func Query(e *state, T miniprofiler.Timer, query, duration string) (r []*Result,
 		Queries: []*opentsdb.Query{q},
 		Start:   fmt.Sprintf("%s-ago", d),
 	}
+	e.addRequest(req)
 	b, _ := json.MarshalIndent(&req, "", "  ")
 	var s opentsdb.ResponseSet
 	T.StepCustomTiming("tsdb", "query", string(b), func() {
