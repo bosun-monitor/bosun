@@ -2,6 +2,7 @@ package web
 
 import (
 	"net/http"
+	"net/url"
 
 	"github.com/MiniProfiler/go/miniprofiler"
 	"github.com/StackExchange/scollector/opentsdb"
@@ -17,11 +18,17 @@ func Expr(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 	if err != nil {
 		return nil, err
 	}
-	return struct {
+	ret := struct {
 		Results []*expr.Result
-		Queries []opentsdb.Request
+		Queries map[string]opentsdb.Request
 	}{
 		res,
-		queries,
-	}, nil
+		make(map[string]opentsdb.Request),
+	}
+	for _, q := range queries {
+		if e, err := url.QueryUnescape(q.String()); err == nil {
+			ret.Queries[e] = q
+		}
+	}
+	return ret, nil
 }
