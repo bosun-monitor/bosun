@@ -2,6 +2,7 @@ package collectors
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/StackExchange/scollector/opentsdb"
@@ -47,6 +48,13 @@ func SNMPIfaces(community, host string) {
 	})
 }
 
+func switch_bond(metric, iname string) string {
+	if strings.Contains(iname, "port-channel") {
+		return "os.net.bond" + strings.TrimPrefix(metric, "os.net")
+	}
+	return metric
+}
+
 func c_snmp_ifaces(community, host string) opentsdb.MultiDataPoint {
 	n, err := snmp_subtree(host, community, IfDescr)
 	if err != nil {
@@ -76,7 +84,7 @@ func c_snmp_ifaces(community, host string) opentsdb.MultiDataPoint {
 			return err
 		}
 		for k, v := range m {
-			Add(&md, metric, v, opentsdb.TagSet{
+			Add(&md, switch_bond(metric, names[k]), v, opentsdb.TagSet{
 				"host":      host,
 				"direction": dir,
 				"iface":     fmt.Sprint(k),
