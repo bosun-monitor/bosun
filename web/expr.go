@@ -13,9 +13,15 @@ func Expr(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 	if err != nil {
 		return nil, err
 	}
-	res, err := e.Execute(opentsdb.Host(schedule.Conf.TsdbHost), t)
+	res, queries, err := e.Execute(opentsdb.Host(schedule.Conf.TsdbHost), t)
 	if err != nil {
 		return nil, err
 	}
-	return res, nil
+	return struct {
+		Results []*expr.Result
+		Queries []opentsdb.Request
+	}{
+		res,
+		queries,
+	}, nil
 }

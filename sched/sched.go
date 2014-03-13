@@ -265,7 +265,7 @@ func (s *Schedule) CheckExpr(a *conf.Alert, e *expr.Expr, isCrit bool, ignore []
 	if e == nil {
 		return
 	}
-	results, err := e.Execute(s.cache, nil)
+	results, _, err := e.Execute(s.cache, nil)
 	if err != nil {
 		// todo: do something here?
 		log.Println(err)

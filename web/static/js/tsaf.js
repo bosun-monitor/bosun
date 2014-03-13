@@ -46,6 +46,12 @@ tsafControllers.controller('TsafCtrl', [
             }
             return null;
         };
+        $scope.json = function (v) {
+            return JSON.stringify(v, null, '  ');
+        };
+        $scope.btoa = function (v) {
+            return btoa(v);
+        };
     }]);
 
 tsafControllers.controller('DashboardCtrl', [
@@ -118,15 +124,13 @@ tsafControllers.controller('ExprCtrl', [
         $scope.expr = current;
         $scope.running = current;
         $http.get('/api/expr?q=' + encodeURIComponent(current)).success(function (data) {
-            $scope.result = data;
+            $scope.result = data.Results;
+            $scope.queries = data.Queries;
             $scope.running = '';
         }).error(function (error) {
             $scope.error = error;
             $scope.running = '';
         });
-        $scope.json = function (v) {
-            return JSON.stringify(v, null, '  ');
-        };
         $scope.set = function () {
             $location.hash($scope.expr);
             $route.reload();

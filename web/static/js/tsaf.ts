@@ -43,6 +43,8 @@ var tsafControllers = angular.module('tsafControllers', []);
 
 interface ITsafScope extends ng.IScope {
 	active: (v: string) => any;
+	json: (v: any) => string;
+	btoa: (v: any) => string;
 }
 
 tsafControllers.controller('TsafCtrl', ['$scope', '$route', function($scope: ITsafScope, $route: ng.route.IRouteService) {
@@ -54,6 +56,12 @@ tsafControllers.controller('TsafCtrl', ['$scope', '$route', function($scope: ITs
 			return {active: true};
 		}
 		return null;
+	};
+	$scope.json = (v: any) => {
+		return JSON.stringify(v, null, '  ');
+	};
+	$scope.btoa = (v: any) => {
+		return btoa(v);
 	};
 }]);
 
@@ -124,8 +132,8 @@ interface IExprScope extends ng.IScope {
 	error: string;
 	running: string;
 	result: any;
+	queries: any;
 	set: () => void;
-	json: (v: any) => string;
 }
 
 tsafControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route', function($scope: IExprScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService){
@@ -138,16 +146,14 @@ tsafControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route'
 	$scope.running = current;
 	$http.get('/api/expr?q=' + encodeURIComponent(current))
 		.success((data) => {
-			$scope.result = data;
+			$scope.result = data.Results;
+			$scope.queries = data.Queries;
 			$scope.running = '';
 		})
 		.error((error) => {
 			$scope.error = error;
 			$scope.running = '';
 		});
-	$scope.json = (v: any) => {
-		return JSON.stringify(v, null, '  ');
-	};
 	$scope.set = () => {
 		$location.hash($scope.expr);
 		$route.reload();

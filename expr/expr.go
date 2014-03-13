@@ -14,6 +14,11 @@ import (
 type state struct {
 	*Expr
 	context opentsdb.Context
+	queries []opentsdb.Request
+}
+
+func (e *state) addRequest(r opentsdb.Request) {
+	e.queries = append(e.queries, r)
 }
 
 var ErrUnknownOp = fmt.Errorf("expr: unknown op type")
@@ -39,7 +44,7 @@ func New(expr string) (*Expr, error) {
 
 // Execute applies a parse expression to the specified OpenTSDB context,
 // and returns one result per group. T may be nil to ignore timings.
-func (e *Expr) Execute(c opentsdb.Context, T miniprofiler.Timer) (r []*Result, err error) {
+func (e *Expr) Execute(c opentsdb.Context, T miniprofiler.Timer) (r []*Result, queries []opentsdb.Request, err error) {
 	defer errRecover(&err)
 	s := &state{
 		Expr:    e,
@@ -51,6 +56,7 @@ func (e *Expr) Execute(c opentsdb.Context, T miniprofiler.Timer) (r []*Result, e
 	T.Step("expr execute", func(T miniprofiler.Timer) {
 		r = s.walk(e.Tree.Root, T)
 	})
+	queries = s.queries
 	return
 }
 
