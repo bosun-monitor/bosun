@@ -213,10 +213,12 @@ func rickexpr(r []*expr.Result, q string) ([]*RickSeries, error) {
 	var series []*RickSeries
 	for _, res := range r {
 		dps := make([]RickDP, 0)
-		if _, ok := res.Value.(expr.Series); !ok {
+		var rv expr.Series
+		var ok bool
+		if rv, ok = res.Value.(expr.Series); !ok {
 			return series, errors.New("expr must return a series")
 		}
-		for k, v := range res.Value.(expr.Series) {
+		for k, v := range rv {
 			ki, err := strconv.ParseInt(k, 10, 64)
 			if err != nil {
 				return nil, err
