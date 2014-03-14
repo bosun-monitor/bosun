@@ -19,6 +19,14 @@
 		<div class="alert alert-danger" ng-bind="error"></div>
 	</div>
 </div>
+<div class="row" ng-show="queries">
+	<div class="col-lg-12">
+		<h4>Queries</h4>
+	</div>
+	<div class="col-lg-12" ng-repeat="(s, q) in queries">
+		<a href="/graph?b64={{btoa(json(q))}}" ng-bind="s"></a>
+	</div>
+</div>
 <div class="row" ng-show="running">
 	<div class="col-lg-12">
 		<div class="alert alert-info">Executing: {{running}}</div>

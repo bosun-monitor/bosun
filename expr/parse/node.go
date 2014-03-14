@@ -109,7 +109,7 @@ func (c *FuncNode) Check() error {
 	}
 	for i, a := range c.Args {
 		t := c.F.Args[i]
-		switch a.(type) {
+		switch v := a.(type) {
 		case *NumberNode:
 			if t != TYPE_NUMBER {
 				return fmt.Errorf(errFuncType, c.Name, t, "number")
@@ -118,6 +118,15 @@ func (c *FuncNode) Check() error {
 			if t != TYPE_STRING {
 				return fmt.Errorf(errFuncType, c.Name, t, "string")
 			}
+		case *FuncNode:
+			if t != v.Return() {
+				return fmt.Errorf(errFuncType, c.Name, t, v.Return())
+			}
+			if err := v.Check(); err != nil {
+				return err
+			}
+		default:
+			panic("unchecked")
 		}
 	}
 	return nil

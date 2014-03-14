@@ -113,6 +113,10 @@ func (s *Schedule) RestoreState() {
 			log.Println(err)
 			return
 		}
+		if _, present := s.Conf.Alerts[ak.Name]; !present {
+			log.Println("sched: alert no longer present, ignoring:", ak)
+			continue
+		}
 		s.Status[ak] = &st
 	}
 }
@@ -265,7 +269,7 @@ func (s *Schedule) CheckExpr(a *conf.Alert, e *expr.Expr, isCrit bool, ignore []
 	if e == nil {
 		return
 	}
-	results, err := e.Execute(s.cache, nil)
+	results, _, err := e.Execute(s.cache, nil)
 	if err != nil {
 		// todo: do something here?
 		log.Println(err)
@@ -285,11 +289,11 @@ Loop:
 		state := s.Status[ak]
 		if state == nil {
 			state = &State{
-				Group:        r.Group,
-				Computations: r.Computations,
+				Group: r.Group,
 			}
 			s.Status[ak] = state
 		}
+		state.Computations = r.Computations
 		status := ST_NORM
 		if r.Value.(expr.Number) != 0 {
 			state.Expr = e.String()
@@ -303,7 +307,6 @@ Loop:
 		if status > s.runStates[ak] {
 			s.runStates[ak] = status
 		}
-
 	}
 	return
 }
