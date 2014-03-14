@@ -180,10 +180,8 @@ tsafControllers.controller('EGraphCtrl', ['$scope', '$http', '$location', '$rout
 	var search = $location.search();
 	var current = search.q;
 	$scope.bytes = search.bytes;
-	if (typeof $scope.bytes == 'undefined') {
-		$scope.bytes = false;
-	}
-	$scope.renderers = ['area', 'bar', 'line', 'scatterplot']
+	$scope.bytes = !!$scope.bytes;
+	$scope.renderers = ['area', 'bar', 'line', 'scatterplot'];
 	$scope.render = search.render || 'scatterplot';
 	if (!current) {
 		$location.search('q', 'q("avg:rate:os.cpu{host=ny-devtsdb04}", "5m")');
