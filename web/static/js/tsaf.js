@@ -162,9 +162,6 @@ tsafControllers.controller('EGraphCtrl', [
             $scope.error = error;
             $scope.running = '';
         });
-        $scope.json = function (v) {
-            return JSON.stringify(v, null, '  ');
-        };
         $scope.set = function () {
             $location.search('q', $scope.expr);
             $location.search('render', $scope.render);
