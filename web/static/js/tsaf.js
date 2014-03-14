@@ -145,9 +145,7 @@ tsafControllers.controller('EGraphCtrl', [
         var search = $location.search();
         var current = search.q;
         $scope.bytes = search.bytes;
-        if (typeof $scope.bytes == 'undefined') {
-            $scope.bytes = false;
-        }
+        $scope.bytes = !!$scope.bytes;
         $scope.renderers = ['area', 'bar', 'line', 'scatterplot'];
         $scope.render = search.render || 'scatterplot';
         if (!current) {
