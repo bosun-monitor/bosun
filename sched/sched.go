@@ -113,6 +113,10 @@ func (s *Schedule) RestoreState() {
 			log.Println(err)
 			return
 		}
+		if _, present := s.Conf.Alerts[ak.Name]; !present {
+			log.Println("sched: alert no longer present, ignoring:", ak)
+			continue
+		}
 		s.Status[ak] = &st
 	}
 }
