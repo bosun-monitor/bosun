@@ -173,7 +173,6 @@ interface IEGraphScope extends ng.IScope {
 	renderers: string[];
 	bytes: boolean;
 	set: () => void;
-	json: (v: any) => string;
 }
 
 tsafControllers.controller('EGraphCtrl', ['$scope', '$http', '$location', '$route', function($scope: IEGraphScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService){
@@ -199,9 +198,6 @@ tsafControllers.controller('EGraphCtrl', ['$scope', '$http', '$location', '$rout
 			$scope.error = error;
 			$scope.running = '';
 		});
-	$scope.json = (v: any) => {
-		return JSON.stringify(v, null, '  ');
-	};
 	$scope.set = () => {
 		$location.search('q', $scope.expr);
 		$location.search('render', $scope.render);
