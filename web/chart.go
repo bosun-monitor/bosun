@@ -202,7 +202,7 @@ func ExprGraph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (in
 	if err != nil {
 		return nil, err
 	}
-	res, err := e.Execute(opentsdb.Host(schedule.Conf.TsdbHost), t)
+	res, _, err := e.Execute(opentsdb.Host(schedule.Conf.TsdbHost), t)
 	if err != nil {
 		return nil, err
 	}
