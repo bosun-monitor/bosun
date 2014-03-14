@@ -3,7 +3,7 @@ package collectors
 import (
 	"io"
 
-	"github.com/masiulaniec/snmp"
+	"github.com/mjibson/snmp"
 )
 
 func snmp_subtree(host, community, oid string) (map[interface{}]interface{}, error) {
