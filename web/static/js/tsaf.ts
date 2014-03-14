@@ -674,3 +674,46 @@ tsafApp.filter('bits', function() {
 		return (b / Math.pow(1024, Math.floor(number))).toFixed(precision) +  ' ' + units[number];
 	}
 });
+
+//This is modeled after the linky function, but drops support for sanitize so we don't have to
+//import an unminified angular-sanitize module
+tsafApp.filter('linkq', function() {
+var QUERY_REGEXP: RegExp = /((q|band)\([^)]+\))/;
+	return function(text: string, target: string) {
+		if (!text) return text;
+		var text: string;
+		var raw = text;
+		var html: string[] = [];
+		var url: string;
+		var i: number;
+		var match: any;
+		while ((match = raw.match(QUERY_REGEXP))) {
+			url = '/egraph?q=' + encodeURIComponent(match[0]);
+			i = match.index;
+			addText(raw.substr(0, i));
+			addLink(url, match[0]);
+			raw = raw.substring(i + match[0].length);
+		}
+		addText(raw);
+		return html.join('');
+		function addText(text: string) {
+			if (!text) {
+				return;
+			}
+			html.push(text);
+		}
+		function addLink(url: string, text: string) {
+			html.push('<a ');
+			if (angular.isDefined(target)) {
+				html.push('target="');
+				html.push(target);
+				html.push('" ');
+			}
+			html.push('href="');
+			html.push(url);
+			html.push('">');
+			addText(text);
+			html.push('</a>');
+		}
+	};
+});
