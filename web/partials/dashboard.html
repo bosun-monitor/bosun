@@ -54,7 +54,7 @@
 						</thead>
 						<tbody>
 							<tr ng-repeat="c in status.Computations">
-								<td ng-bind="c.Text"></td>
+								<td ng-bind-html="c.Text | linkq:'_blank'"></td>
 								<td ng-bind="c.Value"></td>
 							</tr>
 						</tbody>
