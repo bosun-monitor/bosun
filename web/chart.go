@@ -176,7 +176,7 @@ var r_re = regexp.MustCompile(`^(.*?")[^"]+(".*)`)
 func ExprGraph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	q := r.FormValue("q")
 	qs := q_re.FindStringSubmatch(q)
-	if len(q) < 3 {
+	if qs == nil {
 		return nil, errors.New("couldn't parse out query")
 	}
 	pq, err := opentsdb.ParseQuery(qs[1])
