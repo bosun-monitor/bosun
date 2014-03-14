@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -167,6 +168,83 @@ func Autods(r *opentsdb.Request, l int64) error {
 		q.Downsample = ds
 	}
 	return nil
+}
+
+var q_re = regexp.MustCompile(`"([^"]+)"\s*,\s*"([^"]+)"`)
+var r_re = regexp.MustCompile(`^(.*?")[^"]+(".*)`)
+
+func ExprGraph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	q := r.FormValue("q")
+	qs := q_re.FindStringSubmatch(q)
+	if qs == nil {
+		return nil, errors.New("couldn't parse out query")
+	}
+	pq, err := opentsdb.ParseQuery(qs[1])
+	oreq := opentsdb.Request{
+		Start:   qs[2] + "-ago",
+		Queries: []*opentsdb.Query{pq},
+	}
+	ads_v := r.FormValue("autods")
+	if ads_v != "" {
+		ads_i, err := strconv.ParseInt(ads_v, 10, 64)
+		if err != nil {
+			return nil, err
+		}
+		if err := Autods(&oreq, ads_i); err != nil {
+			return nil, err
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	n_qs := r_re.ReplaceAllString(q, "${1}"+oreq.Queries[0].String()+"${2}")
+	e, err := expr.New(n_qs)
+	if err != nil {
+		return nil, err
+	}
+	res, _, err := e.Execute(opentsdb.Host(schedule.Conf.TsdbHost), t)
+	if err != nil {
+		return nil, err
+	}
+	return rickexpr(res, n_qs)
+}
+
+func rickexpr(r []*expr.Result, q string) ([]*RickSeries, error) {
+	var series []*RickSeries
+	for _, res := range r {
+		dps := make([]RickDP, 0)
+		var rv expr.Series
+		var ok bool
+		if rv, ok = res.Value.(expr.Series); !ok {
+			return series, errors.New("expr must return a series")
+		}
+		for k, v := range rv {
+			ki, err := strconv.ParseInt(k, 10, 64)
+			if err != nil {
+				return nil, err
+			}
+			dps = append(dps, RickDP{
+				X: ki,
+				Y: v,
+			})
+		}
+		if len(dps) > 0 {
+			sort.Sort(ByX(dps))
+			name := q
+			var id []string
+			for k, v := range res.Group {
+				id = append(id, fmt.Sprintf("%v=%v", k, v))
+			}
+			if len(id) > 0 {
+				name = fmt.Sprintf("%s{%s}", name, strings.Join(id, ","))
+			}
+			series = append(series, &RickSeries{
+				Name: name,
+				Data: dps,
+			})
+		}
+	}
+	return series, nil
 }
 
 func rickchart(r opentsdb.ResponseSet) ([]*RickSeries, error) {

@@ -1,0 +1,85 @@
+<style type="text/css">
+	.chart {
+		margin: 50px;
+	}
+	.chart .rgraph {
+		height: 500px;
+		margin-bottom: 24px;
+	}
+	.chart .x_tick .title {
+		bottom: -24px;
+	}
+	.rgraph {
+		position: relative;
+		left: 50px;
+	}
+	.y_axis {
+		position: absolute;
+		top: 0;
+		bottom: 0;
+		width: 50px;
+	}
+	.rswatch {
+		display: inline-block;
+		width: 10px;
+		height: 10px;
+		margin: 0 8px 0 0;
+	}
+	.rlabel {
+		display: inline-block;
+	}
+	.rline {
+		display: inline-block;
+		color: black;
+		margin: 0 0 0 30px;
+	}
+	.graph.nav-tabs {
+		margin-bottom: 15px;
+		margin-top: 15px;
+	}
+</style>
+<div class="row">
+	<div class="col-lg-12">
+		<form class="form-horizontal">
+			<div class="form-group">
+				<div class="col-lg-12">
+					<input type="text" class="form-control" ng-model="expr" ng-init="eval()">
+				</div>
+			</div>
+		</form>
+	</div>
+<div>
+<div class="row">
+	<div class="col-lg-12">
+		<form class="form-inline col-lg-12">
+			<div class="form-group">
+				<div>
+					<select class="form-control" ng-model="render" ng-options="r for r in renderers"></select>
+				</div>
+			</div>
+			<div class="checkbox">
+				<label>
+					<input type="checkbox" ng-model="bytes"> Format as Bytes
+				</label>
+			</div>
+			<div class="form-group">
+				<div>
+					<button class="btn btn-default" ng-click="set()">test</button>
+				</div>
+			</div>
+		</form>
+	</div>
+</div>
+<div class="row" ng-show="error">
+	<div class="col-lg-12">
+		<div class="alert alert-danger" ng-bind="error"></div>
+	</div>
+</div>
+<div class="row" ng-show="running">
+	<div class="col-lg-12">
+		<div class="alert alert-info">Executing: {{running}}</div>
+	</div>
+</div>
+<div class="row">
+	<div class="chart" ts-rickshaw="result" bytes="{{bytes}}" renderer="{{render}}"></div>
+</div>

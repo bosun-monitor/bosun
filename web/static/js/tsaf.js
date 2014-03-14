@@ -22,6 +22,9 @@ tsafApp.config([
         }).when('/expr', {
             templateUrl: 'partials/expr.html',
             controller: 'ExprCtrl'
+        }).when('/egraph', {
+            templateUrl: 'partials/egraph.html',
+            controller: 'EGraphCtrl'
         }).when('/graph', {
             templateUrl: 'partials/graph.html',
             controller: 'GraphCtrl'
@@ -133,6 +136,39 @@ tsafControllers.controller('ExprCtrl', [
         });
         $scope.set = function () {
             $location.hash($scope.expr);
+            $route.reload();
+        };
+    }]);
+
+tsafControllers.controller('EGraphCtrl', [
+    '$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
+        var search = $location.search();
+        var current = search.q;
+        $scope.bytes = search.bytes;
+        $scope.bytes = !!$scope.bytes;
+        $scope.renderers = ['area', 'bar', 'line', 'scatterplot'];
+        $scope.render = search.render || 'scatterplot';
+        if (!current) {
+            $location.search('q', 'q("avg:rate:os.cpu{host=ny-devtsdb04}", "5m")');
+            return;
+        }
+        $scope.expr = current;
+        $scope.running = current;
+        var width = $('.chart').width();
+        $http.get('/api/egraph?q=' + encodeURIComponent(current) + '&autods=' + width).success(function (data) {
+            $scope.result = data;
+            $scope.running = '';
+        }).error(function (error) {
+            $scope.error = error;
+            $scope.running = '';
+        });
+        $scope.json = function (v) {
+            return JSON.stringify(v, null, '  ');
+        };
+        $scope.set = function () {
+            $location.search('q', $scope.expr);
+            $location.search('render', $scope.render);
+            $location.search('bytes', $scope.bytes);
             $route.reload();
         };
     }]);
@@ -471,6 +507,11 @@ tsafApp.directive("tsRickshaw", [
                         },
                         element: angular.element('.y_axis', elem)[0]
                     });
+                    if (attrs.bytes == "true") {
+                        y_axis.tickFormat = function (y) {
+                            return $filter('bytes')(y);
+                        };
+                    }
                     graph.render();
                     var legend = angular.element('.rlegend', elem)[0];
                     var Hover = Rickshaw.Class.create(Rickshaw.Graph.HoverDetail, {
@@ -487,7 +528,7 @@ tsafApp.directive("tsRickshaw", [
                                 var label = document.createElement('div');
                                 label.className = 'rlabel';
                                 label.innerHTML = d.name + ": " + d.formattedYValue;
-                                if (attrs.bytes) {
+                                if (attrs.bytes == "true") {
                                     label.innerHTML = d.name + ": " + $filter('bytes')(d.formattedYValue);
                                 }
                                 if (attrs.bits) {
