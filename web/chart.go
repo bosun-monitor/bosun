@@ -206,11 +206,7 @@ func ExprGraph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (in
 	if err != nil {
 		return nil, err
 	}
-	rres, err := rickexpr(res, n_qs)
-	if err != nil {
-		return nil, err
-	}
-	return rres, nil
+	return rickexpr(res, n_qs)
 }
 
 func rickexpr(r []*expr.Result, q string) ([]*RickSeries, error) {
