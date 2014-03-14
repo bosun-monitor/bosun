@@ -62,12 +62,12 @@ func (c *context) HostView(host string) string {
 }
 
 func (c *context) EGraph(v string) string {
-	q := url.QueryEscape(expr.RGroup_Re.ReplaceAllString(v, c.State.Group.String()))
+	q := url.QueryEscape("q=" + expr.RGroup_Re.ReplaceAllString(v, c.State.Group.String()))
 	u := url.URL{
 		Scheme:   "http",
 		Host:     c.schedule.Conf.HttpListen,
 		Path:     "/egraph",
-		RawQuery: fmt.Sprintf("q=%s", q),
+		RawQuery: q,
 	}
 	if strings.HasPrefix(c.schedule.Conf.HttpListen, ":") {
 		h, err := os.Hostname()
