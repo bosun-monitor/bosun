@@ -47,6 +47,8 @@ var tsafControllers = angular.module('tsafControllers', []);
 
 interface ITsafScope extends ng.IScope {
 	active: (v: string) => any;
+	json: (v: any) => string;
+	btoa: (v: any) => string;
 }
 
 tsafControllers.controller('TsafCtrl', ['$scope', '$route', function($scope: ITsafScope, $route: ng.route.IRouteService) {
@@ -58,6 +60,12 @@ tsafControllers.controller('TsafCtrl', ['$scope', '$route', function($scope: ITs
 			return {active: true};
 		}
 		return null;
+	};
+	$scope.json = (v: any) => {
+		return JSON.stringify(v, null, '  ');
+	};
+	$scope.btoa = (v: any) => {
+		return btoa(v);
 	};
 }]);
 
@@ -128,8 +136,8 @@ interface IExprScope extends ng.IScope {
 	error: string;
 	running: string;
 	result: any;
+	queries: any;
 	set: () => void;
-	json: (v: any) => string;
 }
 
 tsafControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route', function($scope: IExprScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService){
@@ -142,16 +150,14 @@ tsafControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route'
 	$scope.running = current;
 	$http.get('/api/expr?q=' + encodeURIComponent(current))
 		.success((data) => {
-			$scope.result = data;
+			$scope.result = data.Results;
+			$scope.queries = data.Queries;
 			$scope.running = '';
 		})
 		.error((error) => {
 			$scope.error = error;
 			$scope.running = '';
 		});
-	$scope.json = (v: any) => {
-		return JSON.stringify(v, null, '  ');
-	};
 	$scope.set = () => {
 		$location.hash($scope.expr);
 		$route.reload();
@@ -251,28 +257,28 @@ class Query {
 class Request {
 	start: string;
 	end: string;
-	Queries: Query[];
+	queries: Query[];
 	constructor() {
 		this.start = '1h-ago';
-		this.Queries = [];
+		this.queries = [];
 	}
 	prune() {
-		for(var i = 0; i < this.Queries.length; i++) {
-			angular.forEach(this.Queries[i], (v, k) => {
+		for(var i = 0; i < this.queries.length; i++) {
+			angular.forEach(this.queries[i], (v, k) => {
 				switch (typeof v) {
 				case "string":
 					if (!v) {
-						delete this.Queries[i][k];
+						delete this.queries[i][k];
 					}
 					break;
 				case "boolean":
 					if (!v) {
-						delete this.Queries[i][k];
+						delete this.queries[i][k];
 					}
 					break;
 				case "object":
 					if (Object.keys(v).length == 0) {
-						delete this.Queries[i][k];
+						delete this.queries[i][k];
 					}
 					break;
 				}
@@ -321,7 +327,7 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route
 	$scope.index = parseInt($location.hash()) || 0;
 	$scope.tagvs = [];
 	$scope.sorted_tagks = [];
-	$scope.query_p = request.Queries;
+	$scope.query_p = request.queries;
 	$scope.start = request.start;
 	$scope.end = request.end;
 	$scope.autods = search.autods;
@@ -400,7 +406,7 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route
 					q.tags[k] = v;
 				}
 			});
-			request.Queries.push(q);
+			request.queries.push(q);
 		});
 		return request;
 	}
@@ -410,7 +416,7 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route
 		$route.reload();
 	}
 	request = getRequest();
-	if (!request.Queries.length) {
+	if (!request.queries.length) {
 		return;
 	}
 	var autods = $scope.autods ? autods = '&autods=' + $('.chart').width() : '';
@@ -451,7 +457,7 @@ tsafControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route'
 	$scope.fs_current = [];
 	var cpu_r = new Request();
 	cpu_r.start = $scope.time;
-	cpu_r.Queries = [
+	cpu_r.queries = [
 		new Query({
 			metric: "os.cpu",
 			rate: true,
@@ -471,7 +477,7 @@ tsafControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route'
 			angular.forEach($scope.interfaces, function(i) {
 				var net_bytes_r = new Request();
 				net_bytes_r.start = $scope.time;
-				net_bytes_r.Queries = [
+				net_bytes_r.queries = [
 					new Query({
 						metric: "os.net.bytes",
 						rate: true,
@@ -502,11 +508,11 @@ tsafControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route'
 				}
 				var fs_r = new Request();
 				fs_r.start = $scope.time;
-				fs_r.Queries.push(new Query({
+				fs_r.queries.push(new Query({
 					metric: "os.disk.fs.space_total",
 					tags: {host: $scope.host, disk: i},
 				}));
-				fs_r.Queries.push(new Query({
+				fs_r.queries.push(new Query({
 					metric: "os.disk.fs.space_used",
 					tags: {host: $scope.host, disk: i},
 				}));
@@ -527,11 +533,11 @@ tsafControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route'
 		});
 	var mem_r = new Request();
 	mem_r.start = $scope.time;
-	mem_r.Queries.push(new Query({
+	mem_r.queries.push(new Query({
 		metric: "os.mem.total",
 		tags: {host: $scope.host},
 	}));
-	mem_r.Queries.push(new Query({
+	mem_r.queries.push(new Query({
 		metric: "os.mem.used",
 		tags: {host: $scope.host},
 	}));
