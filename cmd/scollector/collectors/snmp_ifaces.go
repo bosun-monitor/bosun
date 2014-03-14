@@ -10,31 +10,20 @@ import (
 )
 
 const (
-	IfDescr         = ".1.3.6.1.2.1.2.2.1.2"
-	ifInOctets      = ".1.3.6.1.2.1.2.2.1.10"
-	ifInUcastPkts   = ".1.3.6.1.2.1.2.2.1.11"
-	ifInNUcastPkts  = ".1.3.6.1.2.1.2.2.1.12"
-	ifInDiscards    = ".1.3.6.1.2.1.2.2.1.13"
-	ifInErrors      = ".1.3.6.1.2.1.2.2.1.14"
-	ifOutOctets     = ".1.3.6.1.2.1.2.2.1.16"
-	ifOutUcastPkts  = ".1.3.6.1.2.1.2.2.1.17"
-	ifOutNUcastPkts = ".1.3.6.1.2.1.2.2.1.18"
-	ifOutDiscards   = ".1.3.6.1.2.1.2.2.1.19"
-	ifOutErrors     = ".1.3.6.1.2.1.2.2.1.20"
-)
-
-//IFXTable Constants
-const (
-	ifName               = ".1.3.6.1.2.1.31.1.1.1.1"
 	ifAlias              = ".1.3.6.1.2.1.31.1.1.1.18"
-	ifHCinOctets         = ".1.3.6.1.2.1.31.1.1.1.6"
-	ifHCInUcastPkts      = ".1.3.6.1.2.1.31.1.1.1.7"
-	ifHCInMulticastPkts  = ".1.3.6.1.2.1.31.1.1.1.8"
+	ifDescr              = ".1.3.6.1.2.1.2.2.1.2"
 	ifHCInBroadcastPkts  = ".1.3.6.1.2.1.31.1.1.1.9"
+	ifHCInMulticastPkts  = ".1.3.6.1.2.1.31.1.1.1.8"
+	ifHCInUcastPkts      = ".1.3.6.1.2.1.31.1.1.1.7"
+	ifHCOutBroadcastPkts = ".1.3.6.1.2.1.31.1.1.1.13"
+	ifHCOutMulticastPkts = ".1.3.6.1.2.1.31.1.1.1.12"
 	ifHCOutOctets        = ".1.3.6.1.2.1.31.1.1.1.10"
 	ifHCOutUcastPkts     = ".1.3.6.1.2.1.31.1.1.1.11"
-	ifHCOutMulticastPkts = ".1.3.6.1.2.1.31.1.1.1.12"
-	ifHCOutBroadcastPkts = ".1.3.6.1.2.1.31.1.1.1.13"
+	ifHCinOctets         = ".1.3.6.1.2.1.31.1.1.1.6"
+	ifInDiscards         = ".1.3.6.1.2.1.2.2.1.13"
+	ifInErrors           = ".1.3.6.1.2.1.2.2.1.14"
+	ifOutDiscards        = ".1.3.6.1.2.1.2.2.1.19"
+	ifOutErrors          = ".1.3.6.1.2.1.2.2.1.20"
 )
 
 // SNMPIfaces registers a SNMP Interfaces collector for the given community and host.
@@ -56,23 +45,23 @@ func switch_bond(metric, iname string) string {
 }
 
 func c_snmp_ifaces(community, host string) opentsdb.MultiDataPoint {
-	n, err := snmp_subtree(host, community, IfDescr)
+	n, err := snmp_subtree(host, community, ifDescr)
 	if err != nil {
-		slog.Errorln("snmp ifaces1 :", err)
+		slog.Errorln("snmp ifaces:", err)
 		return nil
 	}
 	a, err := snmp_subtree(host, community, ifAlias)
 	if err != nil {
-		slog.Errorln("snmp ifaces1 :", err)
+		slog.Errorln("snmp ifaces:", err)
 		return nil
 	}
 	names := make(map[interface{}]string, len(n))
 	aliases := make(map[interface{}]string, len(a))
 	for k, v := range n {
-		names[k] = fmt.Sprintf("%s", v)
+		names[k] = fmt.Sprint(v)
 	}
 	for k, v := range a {
-		aliases[k] = fmt.Sprintf("%s", v)
+		aliases[k] = fmt.Sprint(v)
 		if aliases[k] == "" {
 			aliases[k] = "NA"
 		}
@@ -95,22 +84,22 @@ func c_snmp_ifaces(community, host string) opentsdb.MultiDataPoint {
 		return nil
 	}
 	oids := []snmpAdd{
-		{ifHCinOctets, osNetBytes, "in"},
-		{ifHCInUcastPkts, osNetUnicast, "in"},
 		{ifHCInBroadcastPkts, osNetBroadcast, "in"},
 		{ifHCInMulticastPkts, osNetMulticast, "in"},
-		{ifInDiscards, osNetDropped, "in"},
-		{ifInErrors, osNetErrors, "in"},
-		{ifHCOutOctets, osNetBytes, "out"},
-		{ifHCOutUcastPkts, osNetUnicast, "out"},
+		{ifHCInUcastPkts, osNetUnicast, "in"},
 		{ifHCOutBroadcastPkts, osNetBroadcast, "out"},
 		{ifHCOutMulticastPkts, osNetMulticast, "out"},
+		{ifHCOutOctets, osNetBytes, "out"},
+		{ifHCOutUcastPkts, osNetUnicast, "out"},
+		{ifHCinOctets, osNetBytes, "in"},
+		{ifInDiscards, osNetDropped, "in"},
+		{ifInErrors, osNetErrors, "in"},
 		{ifOutDiscards, osNetDropped, "out"},
 		{ifOutErrors, osNetErrors, "out"},
 	}
 	for _, o := range oids {
 		if err := add(o.oid, o.metric, o.dir); err != nil {
-			slog.Errorln("snmp:", err)
+			slog.Errorln("snmp ifaces:", err)
 			return nil
 		}
 	}
