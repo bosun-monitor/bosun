@@ -235,23 +235,25 @@ func (s *Schedule) Check() {
 		if change {
 			changed = true
 		}
-		if change && status > ST_NORM {
+		if status > ST_NORM {
 			var subject = new(bytes.Buffer)
 			a := s.Conf.Alerts[ak.Name]
 			if err := s.ExecuteSubject(subject, a, state); err != nil {
 				log.Println(err)
 			}
 			state.Subject = subject.String()
-			notify := func(notifications map[string]*conf.Notification) {
-				for _, n := range notifications {
-					s.Notify(state, a, n)
+			if change {
+				notify := func(notifications map[string]*conf.Notification) {
+					for _, n := range notifications {
+						s.Notify(state, a, n)
+					}
 				}
-			}
-			switch status {
-			case ST_CRIT:
-				notify(a.CritNotification)
-			case ST_WARN:
-				notify(a.WarnNotification)
+				switch status {
+				case ST_CRIT:
+					notify(a.CritNotification)
+				case ST_WARN:
+					notify(a.WarnNotification)
+				}
 			}
 		}
 	}
