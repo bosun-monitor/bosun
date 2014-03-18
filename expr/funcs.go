@@ -63,6 +63,11 @@ var Builtins = map[string]parse.Func{
 		parse.TYPE_SERIES,
 		Query,
 	},
+	"t": {
+		[]parse.FuncType{parse.TYPE_NUMBER},
+		parse.TYPE_SERIES,
+		Transpose,
+	},
 	"ungroup": {
 		[]parse.FuncType{parse.TYPE_NUMBER},
 		parse.TYPE_NUMBER,
@@ -354,4 +359,20 @@ func Ungroup(e *state, T miniprofiler.Timer, d []*Result) ([]*Result, error) {
 		v.Group = nil
 	}
 	return d, nil
+}
+
+func Transpose(e *state, T miniprofiler.Timer, d []*Result) (r []*Result, err error) {
+	var s = make(Series)
+	for i, v := range d {
+		switch t := v.Value.(type) {
+		case Number:
+			s[strconv.Itoa(i)] = opentsdb.Point(t)
+		default:
+			panic(fmt.Errorf("expr: expected a number"))
+		}
+	}
+	return append(r, &Result{
+		Value: s,
+		Group: nil,
+	}), nil
 }
