@@ -19,6 +19,7 @@ var vmstatRE = regexp.MustCompile(`(\w+)\s+(\d+)`)
 var statRE = regexp.MustCompile(`(\w+)\s+(.*)`)
 var statCpuRE = regexp.MustCompile(`cpu(\d+)`)
 var loadavgRE = regexp.MustCompile(`(\S+)\s+(\S+)\s+(\S+)\s+(\d+)/(\d+)\s+`)
+var inoutRE = regexp.MustCompile(`(.*)(in|out)`)
 
 var CPU_FIELDS = []string{
 	"user",
@@ -70,7 +71,12 @@ func c_procstats_linux() opentsdb.MultiDataPoint {
 
 		switch m[1] {
 		case "pgpgin", "pgpgout", "pswpin", "pswpout", "pgfault", "pgmajfault":
-			Add(&md, "linux.mem."+m[1], m[2], nil)
+			mio := inoutRE.FindStringSubmatch(m[1])
+			if mio != nil {
+				Add(&md, "linux.mem."+mio[1], m[2], opentsdb.TagSet{"direction": mio[2]})
+			} else {
+				Add(&md, "linux.mem."+m[1], m[2], nil)
+			}
 		}
 	})
 	num_cores := 0
