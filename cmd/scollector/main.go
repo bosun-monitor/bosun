@@ -39,6 +39,7 @@ func main() {
 				slog.Fatal("invalid snmp string:", *snmp)
 			}
 			collectors.SNMPIfaces(sp[0], sp[1])
+			collectors.SNMPCisco(sp[0], sp[1])
 		}
 	}
 	if *batchSize > 0 {
