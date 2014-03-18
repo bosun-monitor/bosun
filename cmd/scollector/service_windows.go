@@ -21,19 +21,7 @@ func init() {
 
 func win_service_main() {
 	const svcName = "scollector"
-
-	isIntSess, err := svc.IsAnInteractiveSession()
-	if err != nil {
-		slog.Fatalf("failed to determine if we are running in an interactive session: %v", err)
-	}
-	if !isIntSess {
-		go runService(svcName, false)
-		return
-	}
-
-	if *win_service_command == "" {
-		return
-	}
+	var err error
 	switch *win_service_command {
 	case "install":
 		err = installService(svcName, "Stack Exchange's Metric Collection Agent")
@@ -43,6 +31,15 @@ func win_service_main() {
 		err = startService(svcName)
 	case "stop":
 		err = controlService(svcName, svc.Stop, svc.Stopped)
+	default:
+		isIntSess, err := svc.IsAnInteractiveSession()
+		if err != nil {
+			slog.Fatalf("failed to determine if we are running in an interactive session: %v", err)
+		}
+		if !isIntSess {
+			go runService(svcName, false)
+			return
+		}
 	}
 	if err != nil {
 		slog.Fatalf("failed to %s %s: %v", *win_service_command, svcName, err)
