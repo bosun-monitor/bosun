@@ -298,12 +298,9 @@ func (t *Tree) Func() (f *FuncNode) {
 	t.expect(itemLeftParen, "func")
 	for {
 		switch token = t.next(); token.typ {
-		case itemNumber:
-			n, err := newNumber(token.pos, token.val)
-			if err != nil {
-				t.error(err)
-			}
-			f.append(n)
+		default:
+			t.backup()
+			f.append(t.O())
 		case itemString:
 			s, err := strconv.Unquote(token.val)
 			if err != nil {
@@ -314,8 +311,6 @@ func (t *Tree) Func() (f *FuncNode) {
 			t.backup()
 			n := t.Func()
 			f.append(n)
-		default:
-			t.unexpected(token, "func")
 		}
 		switch token = t.next(); token.typ {
 		case itemComma:

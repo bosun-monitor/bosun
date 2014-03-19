@@ -105,6 +105,7 @@ var parseTests = []parseTest{
 	{"func types", `avg(q("q", "1m"))>avg(q("q", "1m"))+avg(q("q", "1m"))`, noError, `avg(q("q", "1m")) > avg(q("q", "1m")) + avg(q("q", "1m"))`},
 	{"series compare", `q("q", "1m")>0`, noError, `q("q", "1m") > 0`},
 	{"unary series", `!q("q", "1m")`, noError, `!q("q", "1m")`},
+	{"expr in func", `forecastlr(q("q", "1m"), -1)`, noError, `forecastlr(q("q", "1m"), -1)`},
 	// Errors.
 	{"empty", "", hasError, ""},
 	{"unclosed function", "avg(", hasError, ""},
@@ -156,6 +157,11 @@ var builtins = map[string]Func{
 	"q": {
 		[]FuncType{TYPE_STRING, TYPE_STRING},
 		TYPE_SERIES,
+		nil,
+	},
+	"forecastlr": {
+		[]FuncType{TYPE_SERIES, TYPE_NUMBER},
+		TYPE_NUMBER,
 		nil,
 	},
 }
