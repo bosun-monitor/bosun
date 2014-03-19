@@ -202,5 +202,21 @@ func c_procstats_linux() opentsdb.MultiDataPoint {
 			Add(&md, "linux.net.sockets.frag_mem", cols[4], nil)
 		}
 	})
+	ln := 0
+	var headers []string
+	readLine("/proc/net/netstat", func(s string) {
+		cols := strings.Fields(s)
+		if ln%2 == 0 {
+			headers = cols
+		} else {
+			root := strings.ToLower(strings.TrimSuffix(headers[0], "Ext:"))
+			for i, v := range cols[1:] {
+				i += 1
+				m := "linux.net.stat." + root + "." + strings.TrimPrefix(strings.ToLower(headers[i]), "tcp")
+				Add(&md, m, v, nil)
+			}
+		}
+		ln += 1
+	})
 	return md
 }
