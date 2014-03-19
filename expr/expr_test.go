@@ -9,7 +9,7 @@ import (
 func TestExprSimple(t *testing.T) {
 	var exprTests = []struct {
 		input  string
-		output Number
+		output Scalar
 	}{
 		{"!1", 0},
 		{"-2", -2},
@@ -79,7 +79,7 @@ func TestExprParse(t *testing.T) {
 const TSDBHost = "ny-devtsdb04:4242"
 
 func TestExprQuery(t *testing.T) {
-	e, err := New(`-q("avg:os.cpu{host=ny-lb05.ds.stackexchange.com}", "1m")`)
+	e, err := New(`forecastlr(q("avg:os.cpu{host=ny-lb05}", "1m"), -10)`)
 	if err != nil {
 		t.Fatal(err)
 	}

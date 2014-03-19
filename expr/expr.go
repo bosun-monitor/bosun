@@ -87,6 +87,11 @@ type Number float64
 func (n Number) Type() parse.FuncType { return parse.TYPE_NUMBER }
 func (n Number) Value() interface{}   { return n }
 
+type Scalar float64
+
+func (s Scalar) Type() parse.FuncType { return parse.TYPE_SCALAR }
+func (s Scalar) Value() interface{}   { return s }
+
 type Series map[string]opentsdb.Point
 
 func (s Series) Type() parse.FuncType { return parse.TYPE_SERIES }
@@ -122,7 +127,7 @@ type Union struct {
 func wrap(v float64) []*Result {
 	return []*Result{
 		{
-			Value: Number(v),
+			Value: Scalar(v),
 			Group: nil,
 		},
 	}
@@ -194,8 +199,31 @@ func (e *state) walkBinary(node *parse.BinaryNode, T miniprofiler.Timer) []*Resu
 			Computations: v.Computations,
 		}
 		switch at := v.A.(type) {
+		case Scalar:
+			switch bt := v.B.(type) {
+			case Scalar:
+				n := Scalar(operate(node.OpStr, float64(at), float64(bt)))
+				r.AddComputation(node.String(), Number(n))
+				value = n
+			case Number:
+				n := Number(operate(node.OpStr, float64(at), float64(bt)))
+				r.AddComputation(node.String(), n)
+				value = n
+			case Series:
+				s := make(Series)
+				for k, v := range bt {
+					s[k] = opentsdb.Point(operate(node.OpStr, float64(at), float64(v)))
+				}
+				value = s
+			default:
+				panic(ErrUnknownOp)
+			}
 		case Number:
 			switch bt := v.B.(type) {
+			case Scalar:
+				n := Number(operate(node.OpStr, float64(at), float64(bt)))
+				r.AddComputation(node.String(), Number(n))
+				value = n
 			case Number:
 				n := Number(operate(node.OpStr, float64(at), float64(bt)))
 				r.AddComputation(node.String(), n)
@@ -211,10 +239,11 @@ func (e *state) walkBinary(node *parse.BinaryNode, T miniprofiler.Timer) []*Resu
 			}
 		case Series:
 			switch bt := v.B.(type) {
-			case Number:
+			case Number, Scalar:
+				bv := reflect.ValueOf(bt).Float()
 				s := make(Series)
 				for k, v := range at {
-					s[k] = opentsdb.Point(operate(node.OpStr, float64(v), float64(bt)))
+					s[k] = opentsdb.Point(operate(node.OpStr, float64(v), bv))
 				}
 				value = s
 			default:
@@ -297,6 +326,8 @@ func (e *state) walkUnary(node *parse.UnaryNode, T miniprofiler.Timer) []*Result
 	a := e.walk(node.Arg, T)
 	for _, r := range a {
 		switch rt := r.Value.(type) {
+		case Scalar:
+			r.Value = Scalar(uoperate(node.OpStr, float64(rt)))
 		case Number:
 			r.Value = Number(uoperate(node.OpStr, float64(rt)))
 		case Series:
@@ -339,7 +370,11 @@ func (e *state) walkFunc(node *parse.FuncNode, T miniprofiler.Timer) []*Result {
 		case *parse.NumberNode:
 			v = t.Float64
 		case *parse.FuncNode:
-			v = e.walkFunc(t, T)
+			v = extractScalar(e.walkFunc(t, T))
+		case *parse.UnaryNode:
+			v = extractScalar(e.walkUnary(t, T))
+		case *parse.BinaryNode:
+			v = extractScalar(e.walkBinary(t, T))
 		default:
 			panic(fmt.Errorf("expr: unknown func arg type"))
 		}
@@ -357,6 +392,14 @@ func (e *state) walkFunc(node *parse.FuncNode, T miniprofiler.Timer) []*Result {
 		for _, r := range res {
 			r.AddComputation(node.String(), r.Value.(Number))
 		}
+	}
+	return res
+}
+
+// extractScalar will return a float64 if res contains exactly one scalar.
+func extractScalar(res []*Result) interface{} {
+	if len(res) == 1 && res[0].Type() == parse.TYPE_SCALAR {
+		return float64(res[0].Value.Value().(Scalar))
 	}
 	return res
 }

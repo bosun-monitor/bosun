@@ -29,7 +29,7 @@ var Builtins = map[string]parse.Func{
 		Sum,
 	},
 	"band": {
-		[]parse.FuncType{parse.TYPE_STRING, parse.TYPE_STRING, parse.TYPE_STRING, parse.TYPE_NUMBER},
+		[]parse.FuncType{parse.TYPE_STRING, parse.TYPE_STRING, parse.TYPE_STRING, parse.TYPE_SCALAR},
 		parse.TYPE_SERIES,
 		Band,
 	},
@@ -49,12 +49,12 @@ var Builtins = map[string]parse.Func{
 		Since,
 	},
 	"forecastlr": {
-		[]parse.FuncType{parse.TYPE_SERIES, parse.TYPE_NUMBER},
+		[]parse.FuncType{parse.TYPE_SERIES, parse.TYPE_SCALAR},
 		parse.TYPE_NUMBER,
 		Forecast_lr,
 	},
 	"percentile": {
-		[]parse.FuncType{parse.TYPE_SERIES, parse.TYPE_NUMBER},
+		[]parse.FuncType{parse.TYPE_SERIES, parse.TYPE_SCALAR},
 		parse.TYPE_NUMBER,
 		Percentile,
 	},
@@ -70,7 +70,7 @@ var Builtins = map[string]parse.Func{
 	},
 	"ungroup": {
 		[]parse.FuncType{parse.TYPE_NUMBER},
-		parse.TYPE_NUMBER,
+		parse.TYPE_SCALAR,
 		Ungroup,
 	},
 }
@@ -366,13 +366,17 @@ func Ungroup(e *state, T miniprofiler.Timer, d []*Result) ([]*Result, error) {
 	if len(d) > 1 {
 		return nil, fmt.Errorf("ungroup: more than 1 group not supported")
 	}
-	for _, v := range d {
-		v.Group = nil
+	r := make([]*Result, len(d))
+	for i, v := range d {
+		r[i] = &Result{
+			Value:        Scalar(v.Value.Value().(Number)),
+			Computations: v.Computations,
+		}
 	}
-	return d, nil
+	return r, nil
 }
 
-func Transpose(e *state, T miniprofiler.Timer, d []*Result) (r []*Result, err error) {
+func Transpose(e *state, T miniprofiler.Timer, d []*Result) ([]*Result, error) {
 	var s = make(Series)
 	for i, v := range d {
 		switch t := v.Value.(type) {
@@ -382,8 +386,9 @@ func Transpose(e *state, T miniprofiler.Timer, d []*Result) (r []*Result, err er
 			panic(fmt.Errorf("expr: expected a number"))
 		}
 	}
-	return append(r, &Result{
-		Value: s,
-		Group: nil,
-	}), nil
+	return []*Result{
+		{
+			Value: s,
+		},
+	}, nil
 }
