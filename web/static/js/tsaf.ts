@@ -51,6 +51,7 @@ interface ITsafScope extends ng.IScope {
 	active: (v: string) => any;
 	json: (v: any) => string;
 	btoa: (v: any) => string;
+	zws: (v: string) => string; // adds the unicode zero-width space character where appropriate
 }
 
 tsafControllers.controller('TsafCtrl', ['$scope', '$route', function($scope: ITsafScope, $route: ng.route.IRouteService) {
@@ -68,6 +69,9 @@ tsafControllers.controller('TsafCtrl', ['$scope', '$route', function($scope: ITs
 	};
 	$scope.btoa = (v: any) => {
 		return btoa(v);
+	};
+	$scope.zws = (v: string) => {
+		return v.replace(/([,{}])/, '$1\u200b');
 	};
 }]);
 
