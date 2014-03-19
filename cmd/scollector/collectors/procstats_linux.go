@@ -179,5 +179,28 @@ func c_procstats_linux() opentsdb.MultiDataPoint {
 			Add(&md, osCPU, (total_time-(idle_time/float64(num_cores)))*100, nil)
 		}
 	})
+	readLine("/proc/net/sockstat", func(s string) {
+		cols := strings.Fields(s)
+		switch cols[0] {
+		case "sockets:":
+			Add(&md, "linux.net.sockets.used", cols[2], nil)
+		case "TCP:":
+			Add(&md, "linux.net.sockets.tcp_in_use", cols[2], nil)
+			Add(&md, "linux.net.sockets.tcp_orphaned", cols[4], nil)
+			Add(&md, "linux.net.sockets.tcp_time_wait", cols[6], nil)
+			Add(&md, "linux.net.sockets.tcp_allocated", cols[8], nil)
+			Add(&md, "linux.net.sockets.tcp_mem", cols[10], nil)
+		case "UDP:":
+			Add(&md, "linux.net.sockets.udp_in_use", cols[2], nil)
+			Add(&md, "linux.net.sockets.udp_mem", cols[4], nil)
+		case "UDPLITE:":
+			Add(&md, "linux.net.sockets.udplite_in_use", cols[2], nil)
+		case "RAW:":
+			Add(&md, "linux.net.sockets.raw_in_use", cols[2], nil)
+		case "FRAG:":
+			Add(&md, "linux.net.sockets.frag_in_use", cols[2], nil)
+			Add(&md, "linux.net.sockets.frag_mem", cols[4], nil)
+		}
+	})
 	return md
 }
