@@ -40,6 +40,8 @@ func (f FuncType) String() string {
 		return "string"
 	case TYPE_SERIES:
 		return "series"
+	case TYPE_SCALAR:
+		return "scalar"
 	default:
 		return "unknown"
 	}
@@ -49,6 +51,7 @@ const (
 	TYPE_NUMBER FuncType = iota
 	TYPE_STRING
 	TYPE_SERIES
+	TYPE_SCALAR
 )
 
 // Parse returns a Tree, created by parsing the expression described in the

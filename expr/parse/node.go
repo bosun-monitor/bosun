@@ -177,7 +177,7 @@ func (n *NumberNode) Check() error {
 	return nil
 }
 
-func (n *NumberNode) Return() FuncType { return TYPE_NUMBER }
+func (n *NumberNode) Return() FuncType { return TYPE_SCALAR }
 
 // StringNode holds a string constant. The value has been "unquoted".
 type StringNode struct {
@@ -232,11 +232,12 @@ func (b *BinaryNode) Check() error {
 	if t1 == TYPE_SERIES && t2 == TYPE_SERIES {
 		return fmt.Errorf("parse: type error in %s: at least one side must be a number", b)
 	}
-	if t1 != TYPE_NUMBER && t1 != TYPE_SERIES {
-		return fmt.Errorf("parse: type error in %s", b)
+	check := t1
+	if t1 == TYPE_SERIES {
+		check = t2
 	}
-	if t2 != TYPE_NUMBER && t2 != TYPE_SERIES {
-		return fmt.Errorf("parse: type error in %s", b)
+	if check != TYPE_NUMBER && check != TYPE_SCALAR {
+		return fmt.Errorf("parse: type error in %s: expected a number", b)
 	}
 	if err := b.Args[0].Check(); err != nil {
 		return err
@@ -273,10 +274,14 @@ func (u *UnaryNode) StringAST() string {
 }
 
 func (u *UnaryNode) Check() error {
-	if t := u.Arg.Return(); t != TYPE_NUMBER && t != TYPE_SERIES {
+	switch t := u.Arg.Return(); t {
+	case TYPE_NUMBER, TYPE_SERIES, TYPE_SCALAR:
+		return u.Arg.Check()
+	default:
 		return fmt.Errorf("parse: type error in %s, expected %s, got %s", u, "number", t)
 	}
-	return u.Arg.Check()
 }
 
-func (u *UnaryNode) Return() FuncType { return u.Arg.Return() }
+func (u *UnaryNode) Return() FuncType {
+	return u.Arg.Return()
+}

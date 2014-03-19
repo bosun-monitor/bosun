@@ -150,7 +150,7 @@ var builtins = map[string]Func{
 		nil,
 	},
 	"band": {
-		[]FuncType{TYPE_STRING, TYPE_STRING, TYPE_STRING, TYPE_NUMBER},
+		[]FuncType{TYPE_STRING, TYPE_STRING, TYPE_STRING, TYPE_SCALAR},
 		TYPE_SERIES,
 		nil,
 	},
@@ -160,7 +160,7 @@ var builtins = map[string]Func{
 		nil,
 	},
 	"forecastlr": {
-		[]FuncType{TYPE_SERIES, TYPE_NUMBER},
+		[]FuncType{TYPE_SERIES, TYPE_SCALAR},
 		TYPE_NUMBER,
 		nil,
 	},
