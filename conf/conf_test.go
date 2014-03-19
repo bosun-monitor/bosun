@@ -6,7 +6,7 @@ import (
 )
 
 func TestPrint(t *testing.T) {
-	fname := "../dev.conf"
+	fname := "test.conf"
 	b, err := ioutil.ReadFile(fname)
 	if err != nil {
 		t.Fatal(err)
@@ -14,5 +14,17 @@ func TestPrint(t *testing.T) {
 	_, err = New(fname, string(b))
 	if err != nil {
 		t.Error(err)
+	}
+}
+
+func TestInvalid(t *testing.T) {
+	fname := "broken.conf"
+	b, err := ioutil.ReadFile(fname)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = New(fname, string(b))
+	if err == nil {
+		t.Error("expected error")
 	}
 }
