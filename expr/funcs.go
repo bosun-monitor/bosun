@@ -320,26 +320,20 @@ func forecast_lr(dps Series, args ...float64) float64 {
 	it := (yVal - intercept) / slope
 	var i64 int64
 	if it < math.MinInt64 {
-		println(1)
 		i64 = math.MinInt64
 	} else if it > math.MaxInt64 {
-	println(2)
 		i64 = math.MaxInt64
 	} else if math.IsNaN(it) {
-	println(3)
 		i64 = time.Now().Unix()
 	} else {
 		i64 = int64(it)
-		println(4)
 	}
 	t := time.Unix(i64, 0)
 	s := -time.Since(t)
 	if s < -tenYears {
-	println(5)
 		s = -tenYears
 	} else if s > tenYears {
 		s = tenYears
-		println(6)
 	}
 	return s.Seconds()
 }
