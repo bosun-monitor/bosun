@@ -96,7 +96,6 @@ const (
 )
 
 var parseTests = []parseTest{
-	{"error", "error", noError, "hello"},
 	{"number", "1", noError, "1"},
 	{"function", `avg(q("test", "1m"))`, noError, `avg(q("test", "1m"))`},
 	{"addition", "1+2", noError, "1 + 2"},
