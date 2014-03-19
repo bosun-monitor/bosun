@@ -71,7 +71,7 @@ tsafControllers.controller('TsafCtrl', ['$scope', '$route', function($scope: ITs
 		return btoa(v);
 	};
 	$scope.zws = (v: string) => {
-		return v.replace(/([,{}])/, '$1\u200b');
+		return v.replace(/([,{}()])/g, '$1\u200b');
 	};
 }]);
 

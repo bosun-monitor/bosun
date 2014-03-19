@@ -58,7 +58,7 @@ tsafControllers.controller('TsafCtrl', [
             return btoa(v);
         };
         $scope.zws = function (v) {
-            return v.replace(/([,{}])/, '$1\u200b');
+            return v.replace(/([,{}()])/g, '$1\u200b');
         };
     }]);
 
