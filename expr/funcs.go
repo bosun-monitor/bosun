@@ -363,8 +363,8 @@ func percentile(dps Series, args ...float64) (a float64) {
 }
 
 func Ungroup(e *state, T miniprofiler.Timer, d []*Result) ([]*Result, error) {
-	if len(d) > 1 {
-		return nil, fmt.Errorf("ungroup: more than 1 group not supported")
+	if len(d) != 1 {
+		return nil, fmt.Errorf("ungroup: requires exactly one group")
 	}
 	r := make([]*Result, len(d))
 	for i, v := range d {
