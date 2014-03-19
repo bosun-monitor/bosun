@@ -304,7 +304,8 @@ func Forecast_lr(e *state, T miniprofiler.Timer, series []*Result, y float64) (r
 // forecast_lr returns the number of seconds a linear regression predicts the
 // series will take to reach y_val.
 func forecast_lr(dps Series, args ...float64) float64 {
-	y_val := args[0]
+	const tenYears = time.Hour * 24 * 365 * 10
+	yVal := args[0]
 	var x []float64
 	var y []float64
 	for k, v := range dps {
@@ -316,15 +317,31 @@ func forecast_lr(dps Series, args ...float64) float64 {
 		y = append(y, float64(v))
 	}
 	var slope, intercept, _, _, _, _ = stats.LinearRegression(x, y)
-	// If the slope is basically 0, return -1 since forecast alerts wouldn't care about things that
-	// "already happened". There might be a better way to handle this, but this works for now
-	if int64(slope) == 0 {
-		return -1
+	it := (yVal - intercept) / slope
+	var i64 int64
+	if it < math.MinInt64 {
+		println(1)
+		i64 = math.MinInt64
+	} else if it > math.MaxInt64 {
+	println(2)
+		i64 = math.MaxInt64
+	} else if math.IsNaN(it) {
+	println(3)
+		i64 = time.Now().Unix()
+	} else {
+		i64 = int64(it)
+		println(4)
 	}
-	intercept_time := (y_val - intercept) / slope
-	t := time.Unix(int64(intercept_time), 0)
-	s := time.Since(t)
-	return -s.Seconds()
+	t := time.Unix(i64, 0)
+	s := -time.Since(t)
+	if s < -tenYears {
+	println(5)
+		s = -tenYears
+	} else if s > tenYears {
+		s = tenYears
+		println(6)
+	}
+	return s.Seconds()
 }
 
 func Percentile(e *state, T miniprofiler.Timer, series []*Result, p float64) (r []*Result, err error) {
