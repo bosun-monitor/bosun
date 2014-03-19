@@ -244,7 +244,12 @@ func (b *BinaryNode) Check() error {
 	return b.Args[1].Check()
 }
 
-func (b *BinaryNode) Return() FuncType { return TYPE_NUMBER }
+func (b *BinaryNode) Return() FuncType {
+	if b.Args[1].Return() == TYPE_SERIES {
+		return b.Args[1].Return()
+	}
+	return b.Args[0].Return()
+}
 
 // UnaryNode holds one argument and an operator.
 type UnaryNode struct {
@@ -274,4 +279,4 @@ func (u *UnaryNode) Check() error {
 	return u.Arg.Check()
 }
 
-func (u *UnaryNode) Return() FuncType { return TYPE_NUMBER }
+func (u *UnaryNode) Return() FuncType { return u.Arg.Return() }
