@@ -3,6 +3,7 @@ package sched
 import (
 	"bytes"
 	"log"
+
 	"github.com/StackExchange/tsaf/conf"
 )
 
