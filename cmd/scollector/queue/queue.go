@@ -79,14 +79,12 @@ func (c *Client) Post(url string, bodyType string, body io.Reader) (*http.Respon
 	ret := false
 	go func() {
 		time.AfterFunc(time.Second*10, func() {
-			println("timeout ret", ret)
 			if !ret {
-				println("cancelling")
 				transport.CancelRequest(req)
 			}
 		})
 	}()
-	defer func() { ret = true; println("returning") }()
+	defer func() { ret = true }()
 	return c.Client.Do(req)
 }
 
