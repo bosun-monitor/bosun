@@ -179,5 +179,72 @@ func c_procstats_linux() opentsdb.MultiDataPoint {
 			Add(&md, osCPU, (total_time-(idle_time/float64(num_cores)))*100, nil)
 		}
 	})
+	readLine("/proc/net/sockstat", func(s string) {
+		cols := strings.Fields(s)
+		switch cols[0] {
+		case "sockets:":
+			if len(cols) < 3 {
+				slog.Infoln("sockstat: error parsing sockets line")
+				break
+			}
+			Add(&md, "linux.net.sockets.used", cols[2], nil)
+		case "TCP:":
+			if len(cols) < 11 {
+				slog.Infoln("sockstat: error parsing tcp line")
+				break
+			}
+			Add(&md, "linux.net.sockets.tcp_in_use", cols[2], nil)
+			Add(&md, "linux.net.sockets.tcp_orphaned", cols[4], nil)
+			Add(&md, "linux.net.sockets.tcp_time_wait", cols[6], nil)
+			Add(&md, "linux.net.sockets.tcp_allocated", cols[8], nil)
+			Add(&md, "linux.net.sockets.tcp_mem", cols[10], nil)
+		case "UDP:":
+			if len(cols) < 5 {
+				slog.Infoln("sockstat: error parsing udp line")
+				break
+			}
+			Add(&md, "linux.net.sockets.udp_in_use", cols[2], nil)
+			Add(&md, "linux.net.sockets.udp_mem", cols[4], nil)
+		case "UDPLITE:":
+			if len(cols) < 3 {
+				slog.Infoln("sockstat: error parsing udplite line")
+				break
+			}
+			Add(&md, "linux.net.sockets.udplite_in_use", cols[2], nil)
+		case "RAW:":
+			if len(cols) < 3 {
+				slog.Infoln("sockstat: error parsing raw line")
+				break
+			}
+			Add(&md, "linux.net.sockets.raw_in_use", cols[2], nil)
+		case "FRAG:":
+			if len(cols) < 5 {
+				slog.Infoln("sockstat: error parsing frag line")
+				break
+			}
+			Add(&md, "linux.net.sockets.frag_in_use", cols[2], nil)
+			Add(&md, "linux.net.sockets.frag_mem", cols[4], nil)
+		}
+	})
+	ln := 0
+	var headers []string
+	readLine("/proc/net/netstat", func(s string) {
+		cols := strings.Fields(s)
+		if ln%2 == 0 {
+			headers = cols
+		} else {
+			if len(cols) < 1 || len(cols) != len(headers) {
+				slog.Warningln("netstat: parsing failed")
+				return
+			}
+			root := strings.ToLower(strings.TrimSuffix(headers[0], "Ext:"))
+			for i, v := range cols[1:] {
+				i += 1
+				m := "linux.net.stat." + root + "." + strings.TrimPrefix(strings.ToLower(headers[i]), "tcp")
+				Add(&md, m, v, nil)
+			}
+		}
+		ln += 1
+	})
 	return md
 }
