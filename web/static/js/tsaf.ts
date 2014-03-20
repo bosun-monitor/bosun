@@ -190,7 +190,7 @@ interface IEGraphScope extends ng.IScope {
 tsafControllers.controller('EGraphCtrl', ['$scope', '$http', '$location', '$route', function($scope: IEGraphScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService){
 	var search = $location.search();
 	var current = search.q;
-	if (!current) {
+	if (!current && search.b64) {
 		current = atob(search.b64);
 	}
 	$scope.bytes = search.bytes;

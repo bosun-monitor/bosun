@@ -154,7 +154,7 @@ tsafControllers.controller('EGraphCtrl', [
     '$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
         var search = $location.search();
         var current = search.q;
-        if (!current) {
+        if (!current && search.b64) {
             current = atob(search.b64);
         }
         $scope.bytes = search.bytes;
