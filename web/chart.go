@@ -2,7 +2,6 @@ package web
 
 import (
 	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -23,7 +22,6 @@ import (
 // json parameter to pass JSON. Use the b64 parameter to pass base64-encoded
 // JSON.
 func Graph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	var oreq opentsdb.Request
 	j := []byte(r.FormValue("json"))
 	if bs := r.FormValue("b64"); bs != "" {
 		b, err := base64.URLEncoding.DecodeString(bs)
@@ -35,7 +33,7 @@ func Graph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 	if len(j) == 0 {
 		return nil, fmt.Errorf("either json or b64 required")
 	}
-	err := json.Unmarshal(j, &oreq)
+	oreq, err := opentsdb.RequestFromJSON(j)
 	if err != nil {
 		return nil, err
 	}
@@ -45,7 +43,7 @@ func Graph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 		if err != nil {
 			return nil, err
 		}
-		if err := Autods(&oreq, ads_i); err != nil {
+		if err := Autods(oreq, ads_i); err != nil {
 			return nil, err
 		}
 	}
@@ -121,12 +119,10 @@ func ParseTime(v interface{}) (time.Time, error) {
 		} else {
 			return now, nil
 		}
-	case int:
-		return time.Unix(int64(i), 0), nil
 	case int64:
 		return time.Unix(i, 0), nil
 	default:
-		return time.Time{}, errors.New("type must be string, int, or int64")
+		return time.Time{}, errors.New("type must be string or int64")
 	}
 }
 
