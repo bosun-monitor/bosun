@@ -2,8 +2,10 @@ package queue
 
 import (
 	"bytes"
+	"io"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"sync"
@@ -61,6 +63,45 @@ func (q *Queue) send() {
 }
 
 var qlock sync.Mutex
+var transport *http.Transport
+var client *Client
+
+type Client struct {
+	*http.Client
+}
+
+func (c *Client) Post(url string, bodyType string, body io.Reader) (*http.Response, error) {
+	req, err := http.NewRequest("POST", url, body)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", bodyType)
+	ret := false
+	go func() {
+		time.AfterFunc(time.Second*10, func() {
+			println("timeout ret", ret)
+			if !ret {
+				println("cancelling")
+				transport.CancelRequest(req)
+			}
+		})
+	}()
+	defer func() { ret = true; println("returning") }()
+	return c.Client.Do(req)
+}
+
+func init() {
+	transport = &http.Transport{
+		Dial: func(network, addr string) (net.Conn, error) {
+			return net.DialTimeout(network, addr, time.Second*5)
+		},
+	}
+	client = &Client{
+		Client: &http.Client{
+			Transport: transport,
+		},
+	}
+}
 
 func (q *Queue) sendBatch(batch opentsdb.MultiDataPoint) {
 	qlock.Lock()
@@ -72,7 +113,7 @@ func (q *Queue) sendBatch(batch opentsdb.MultiDataPoint) {
 		// bad JSON encoding, just give up
 		return
 	}
-	resp, err := http.Post(q.host, "application/json", bytes.NewReader(b))
+	resp, err := client.Post(q.host, "application/json", bytes.NewReader(b))
 	// Some problem with connecting to the server; retry later.
 	if err != nil {
 		slog.Error(err)
