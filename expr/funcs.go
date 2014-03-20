@@ -64,7 +64,7 @@ var Builtins = map[string]parse.Func{
 		Query,
 	},
 	"t": {
-		[]parse.FuncType{parse.TYPE_NUMBER},
+		[]parse.FuncType{parse.TYPE_NUMBER, parse.TYPE_STRING},
 		parse.TYPE_SERIES,
 		Transpose,
 	},
@@ -376,19 +376,38 @@ func Ungroup(e *state, T miniprofiler.Timer, d []*Result) ([]*Result, error) {
 	return r, nil
 }
 
-func Transpose(e *state, T miniprofiler.Timer, d []*Result) ([]*Result, error) {
-	var s = make(Series)
-	for i, v := range d {
+func Transpose(e *state, T miniprofiler.Timer, d []*Result, gp string) ([]*Result, error) {
+	//var s = make(Series)
+	gps := strings.Split(gp, ",")
+	m := make(map[string]*Result)
+	for _, v := range d {
+		ts := make(opentsdb.TagSet)
+		for k, v := range v.Group {
+			for _, b := range gps {
+				if k == b {
+					ts[k] = v
+				}
+			}
+		}
+		if _, ok := m[ts.String()]; !ok {
+			m[ts.String()] = &Result{
+				Group: ts,
+				Value: make(Series),
+			}
+		}
 		switch t := v.Value.(type) {
 		case Number:
-			s[strconv.Itoa(i)] = opentsdb.Point(t)
+			i := strconv.Itoa((len(m[ts.String()].Value.(Series))))
+			m[ts.String()].Value.(Series)[i] = opentsdb.Point(t)
 		default:
 			panic(fmt.Errorf("expr: expected a number"))
 		}
 	}
-	return []*Result{
-		{
-			Value: s,
-		},
-	}, nil
+	r := make([]*Result, len(m))
+	i := 0
+	for _, res := range m {
+		r[i] = res
+		i++
+	}
+	return r, nil
 }
