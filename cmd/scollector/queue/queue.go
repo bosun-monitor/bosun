@@ -79,6 +79,9 @@ func (q *Queue) sendBatch(batch opentsdb.MultiDataPoint) {
 		return
 	}
 	resp, err := client.Post(q.host, "application/json", bytes.NewReader(b))
+	if resp != nil && resp.Body != nil {
+		defer func() { resp.Body.Close() }()
+	}
 	// Some problem with connecting to the server; retry later.
 	if err != nil {
 		slog.Error(err)
@@ -104,7 +107,6 @@ func (q *Queue) sendBatch(batch opentsdb.MultiDataPoint) {
 	// TSDB didn't like our data. Don't put it back in the queue since it's bad.
 	if resp.StatusCode != http.StatusNoContent {
 		slog.Errorln(resp.Status)
-		defer resp.Body.Close()
 		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
 			slog.Error(err)
