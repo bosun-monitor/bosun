@@ -40,7 +40,7 @@ func (s *Schedule) MarshalJSON() ([]byte, error) {
 		make(map[string]*State),
 	}
 	for k, v := range s.Status {
-		if v.Last().Status < ST_WARN {
+		if v.Last().Status < stWarning {
 			continue
 		}
 		t.Status[k.String()] = v
@@ -235,7 +235,7 @@ func (s *Schedule) Check() {
 		if change {
 			changed = true
 		}
-		if status > ST_NORM {
+		if status > stNormal {
 			var subject = new(bytes.Buffer)
 			a := s.Conf.Alerts[ak.Name]
 			if err := s.ExecuteSubject(subject, a, state); err != nil {
@@ -249,9 +249,9 @@ func (s *Schedule) Check() {
 					}
 				}
 				switch status {
-				case ST_CRIT:
+				case stCritical:
 					notify(a.CritNotification)
-				case ST_WARN:
+				case stWarning:
 					notify(a.WarnNotification)
 				}
 			}
@@ -263,11 +263,11 @@ func (s *Schedule) Check() {
 }
 
 func (s *Schedule) CheckAlert(a *conf.Alert) {
-	crits := s.CheckExpr(a, a.Crit, true, nil)
-	s.CheckExpr(a, a.Warn, false, crits)
+	crits := s.CheckExpr(a, a.Crit, stCritical, nil)
+	s.CheckExpr(a, a.Warn, stWarning, crits)
 }
 
-func (s *Schedule) CheckExpr(a *conf.Alert, e *expr.Expr, isCrit bool, ignore []AlertKey) (alerts []AlertKey) {
+func (s *Schedule) CheckExpr(a *conf.Alert, e *expr.Expr, status Status, ignore []AlertKey) (alerts []AlertKey) {
 	if e == nil {
 		return
 	}
@@ -296,15 +296,11 @@ Loop:
 			s.Status[ak] = state
 		}
 		state.Computations = r.Computations
-		status := ST_NORM
 		if r.Value.(expr.Number) != 0 {
 			state.Expr = e.String()
 			alerts = append(alerts, ak)
-			if isCrit {
-				status = ST_CRIT
-			} else {
-				status = ST_WARN
-			}
+		} else {
+			status = stNormal
 		}
 		if status > s.runStates[ak] {
 			s.runStates[ak] = status
@@ -401,19 +397,19 @@ type Event struct {
 type Status int
 
 const (
-	ST_UNKNOWN Status = iota
-	ST_NORM
-	ST_WARN
-	ST_CRIT
+	stUnknown Status = iota
+	stNormal
+	stWarning
+	stCritical
 )
 
 func (s Status) String() string {
 	switch s {
-	case ST_NORM:
+	case stNormal:
 		return "normal"
-	case ST_WARN:
+	case stWarning:
 		return "warning"
-	case ST_CRIT:
+	case stCritical:
 		return "critical"
 	default:
 		return "unknown"
