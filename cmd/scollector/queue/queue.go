@@ -2,10 +2,8 @@ package queue
 
 import (
 	"bytes"
-	"io"
 	"io/ioutil"
 	"log"
-	"net"
 	"net/http"
 	"os"
 	"sync"
@@ -13,6 +11,7 @@ import (
 
 	"github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/slog"
+	"github.com/mreiferson/go-httpclient"
 )
 
 var l = log.New(os.Stdout, "", log.LstdFlags)
@@ -63,42 +62,10 @@ func (q *Queue) send() {
 }
 
 var qlock sync.Mutex
-var transport *http.Transport
-var client *Client
-
-type Client struct {
-	*http.Client
-}
-
-func (c *Client) Post(url string, bodyType string, body io.Reader) (*http.Response, error) {
-	req, err := http.NewRequest("POST", url, body)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", bodyType)
-	ret := false
-	go func() {
-		time.AfterFunc(time.Second*10, func() {
-			if !ret {
-				transport.CancelRequest(req)
-			}
-		})
-	}()
-	defer func() { ret = true }()
-	return c.Client.Do(req)
-}
-
-func init() {
-	transport = &http.Transport{
-		Dial: func(network, addr string) (net.Conn, error) {
-			return net.DialTimeout(network, addr, time.Second*5)
-		},
-	}
-	client = &Client{
-		Client: &http.Client{
-			Transport: transport,
-		},
-	}
+var client = &http.Client{
+	Transport: &httpclient.Transport{
+		RequestTimeout: 10 * time.Second,
+	},
 }
 
 func (q *Queue) sendBatch(batch opentsdb.MultiDataPoint) {
