@@ -180,6 +180,20 @@ type Request struct {
 	ShowTSUIDs        bool        `json:"showTSUIDs,omitempty"`
 }
 
+func RequestFromJSON(b []byte) (*Request, error) {
+	var r Request
+	if err := json.Unmarshal(b, &r); err != nil {
+		return nil, err
+	}
+	if v, ok := r.Start.(float64); ok {
+		r.Start = int64(v)
+	}
+	if v, ok := r.End.(float64); ok {
+		r.End = int64(v)
+	}
+	return &r, nil
+}
+
 type Query struct {
 	Aggregator  string      `json:"aggregator"`
 	Metric      string      `json:"metric"`
