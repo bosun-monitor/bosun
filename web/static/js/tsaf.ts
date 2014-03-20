@@ -147,9 +147,15 @@ interface IExprScope extends ng.IScope {
 }
 
 tsafControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route', function($scope: IExprScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService){
-	var current: string = $location.hash();
+	var current = $location.hash();
+	try {
+		current = atob(current);
+	}
+	catch (e) {
+		current = '';
+	}
 	if (!current) {
-		$location.hash('avg(q("avg:rate:os.cpu{host=ny-devtsdb04}", "5m")) > 80');
+		$location.hash(btoa('avg(q("avg:rate:os.cpu{host=ny-devtsdb04}", "5m")) > 80'));
 		return;
 	}
 	$scope.expr = current;
@@ -165,7 +171,7 @@ tsafControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route'
 			$scope.running = '';
 		});
 	$scope.set = () => {
-		$location.hash($scope.expr);
+		$location.hash(btoa($scope.expr));
 		$route.reload();
 	};
 }]);
@@ -184,6 +190,9 @@ interface IEGraphScope extends ng.IScope {
 tsafControllers.controller('EGraphCtrl', ['$scope', '$http', '$location', '$route', function($scope: IEGraphScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService){
 	var search = $location.search();
 	var current = search.q;
+	if (!current) {
+		current = atob(search.b64);
+	}
 	$scope.bytes = search.bytes;
 	$scope.bytes = !!$scope.bytes;
 	$scope.renderers = ['area', 'bar', 'line', 'scatterplot'];
@@ -205,7 +214,7 @@ tsafControllers.controller('EGraphCtrl', ['$scope', '$http', '$location', '$rout
 			$scope.running = '';
 		});
 	$scope.set = () => {
-		$location.search('q', $scope.expr);
+		$location.search('q', btoa($scope.expr));
 		$location.search('render', $scope.render);
 		$location.search('bytes', $scope.bytes);
 		$route.reload();
@@ -689,7 +698,7 @@ tsafApp.filter('linkq',  ['$sanitize', function($sanitize: ng.sanitize.ISanitize
 		var i: number;
 		var match: any;
 		while ((match = raw.match(QUERY_REGEXP))) {
-			url = '/egraph?q=' + encodeURIComponent(match[0]);
+			url = '/egraph?b64=' + btoa(match[0]);
 			i = match.index;
 			addText(raw.substr(0, i));
 			addLink(url, match[0]);
