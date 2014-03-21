@@ -41,6 +41,8 @@ func handle(dest string, w http.ResponseWriter, r *http.Request) {
 	durl.Fragment = r.URL.Fragment
 	req, err := http.NewRequest(r.Method, durl.String(), bytes.NewReader(body))
 	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
 		log.Println(err)
 		return
 	}
@@ -49,6 +51,8 @@ func handle(dest string, w http.ResponseWriter, r *http.Request) {
 	req.ContentLength = int64(len(body))
 	resp, err := client.Do(req)
 	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
 		log.Println(err)
 		return
 	}
