@@ -84,8 +84,19 @@ func (q *Queue) sendBatch(batch opentsdb.MultiDataPoint) {
 		defer func() { resp.Body.Close() }()
 	}
 	// Some problem with connecting to the server; retry later.
-	if err != nil {
-		slog.Error(err)
+	if err != nil || resp.StatusCode != http.StatusNoContent {
+		if err != nil {
+			slog.Error(err)
+		} else if resp.StatusCode != http.StatusNoContent {
+			slog.Errorln(resp.Status)
+			body, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				slog.Error(err)
+			}
+			if len(body) > 0 {
+				slog.Error(string(body))
+			}
+		}
 		t := time.Now().Add(-time.Minute * 30).Unix()
 		old := 0
 		restored := 0
@@ -104,19 +115,8 @@ func (q *Queue) sendBatch(batch opentsdb.MultiDataPoint) {
 		slog.Infof("restored %d, sleeping %s", restored, d)
 		time.Sleep(d)
 		return
-	}
-	// TSDB didn't like our data. Don't put it back in the queue since it's bad.
-	if resp.StatusCode != http.StatusNoContent {
-		slog.Errorln(resp.Status)
-		body, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			slog.Error(err)
-		}
-		if len(body) > 0 {
-			slog.Error(string(body))
-		}
-		slog.Errorln("bad data:", string(body))
 	} else {
+		slog.Infoln("sent", len(batch))
 		collectors.IncScollector("sent", len(batch))
 	}
 }
