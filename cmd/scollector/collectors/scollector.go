@@ -1,6 +1,7 @@
 package collectors
 
 import (
+	"runtime"
 	"sync"
 
 	"github.com/StackExchange/scollector/opentsdb"
@@ -26,5 +27,9 @@ func c_scollector() opentsdb.MultiDataPoint {
 	for k, v := range scollectorCounters {
 		Add(&md, "scollector."+k, v, nil)
 	}
+	var ms runtime.MemStats
+	runtime.ReadMemStats(&ms)
+	Add(&md, "scollector.alloc", ms.Alloc, nil)
+	Add(&md, "scollector.goroutines", runtime.NumGoroutine(), nil)
 	return md
 }
