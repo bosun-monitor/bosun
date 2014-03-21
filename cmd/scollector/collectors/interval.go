@@ -12,6 +12,13 @@ type IntervalCollector struct {
 	F        func() opentsdb.MultiDataPoint
 	Interval time.Duration
 	name     string
+	init     func()
+}
+
+func (c *IntervalCollector) Init() {
+	if c.init != nil {
+		c.init()
+	}
 }
 
 func (c *IntervalCollector) Run(dpchan chan<- *opentsdb.DataPoint) {

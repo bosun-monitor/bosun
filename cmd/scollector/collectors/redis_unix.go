@@ -16,7 +16,7 @@ import (
 )
 
 func init() {
-	collectors = append(collectors, &IntervalCollector{F: c_redis_linux})
+	collectors = append(collectors, &IntervalCollector{F: c_redis_linux, init: redisInit})
 }
 
 var redisFields = map[string]bool{
@@ -81,7 +81,7 @@ var (
 	redisInstances map[string]string
 )
 
-func init() {
+func redisInit() {
 	update := func() {
 		ri := make(map[string]string)
 		oldRedis := false

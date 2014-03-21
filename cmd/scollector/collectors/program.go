@@ -75,6 +75,9 @@ func (c *ProgramCollector) Run(dpchan chan<- *opentsdb.DataPoint) {
 	}
 }
 
+func (c *ProgramCollector) Init() {
+}
+
 func (c *ProgramCollector) runProgram(dpchan chan<- *opentsdb.DataPoint) (progError error) {
 	cmd := exec.Command(c.Path)
 	pr, pw := io.Pipe()

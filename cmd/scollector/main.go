@@ -46,6 +46,9 @@ func main() {
 		queue.BatchSize = *batchSize
 	}
 	c := collectors.Search(*flagFilter)
+	for _, col := range c {
+		col.Init()
+	}
 	u := parseHost()
 	if *flagTest {
 		test(c)

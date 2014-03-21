@@ -17,6 +17,7 @@ var collectors []Collector
 type Collector interface {
 	Run(chan<- *opentsdb.DataPoint)
 	Name() string
+	Init()
 }
 
 const (
