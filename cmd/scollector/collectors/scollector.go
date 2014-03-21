@@ -11,14 +11,14 @@ func init() {
 }
 
 var (
-	scollectorCounters = make(map[string]int)
+	scollectorCounters = make(map[string]int64)
 	tlock              = sync.Mutex{}
 )
 
-func IncScollector(key string) {
+func IncScollector(key string, inc int) {
 	tlock.Lock()
 	defer tlock.Unlock()
-	scollectorCounters[key]++
+	scollectorCounters[key] += int64(inc)
 }
 
 func c_scollector() opentsdb.MultiDataPoint {

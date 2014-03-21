@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/StackExchange/scollector/collectors"
 	"github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/slog"
 	"github.com/mreiferson/go-httpclient"
@@ -115,5 +116,7 @@ func (q *Queue) sendBatch(batch opentsdb.MultiDataPoint) {
 			slog.Error(string(body))
 		}
 		slog.Errorln("bad data:", string(body))
+	} else {
+		collectors.IncScollector("sent", len(batch))
 	}
 }
