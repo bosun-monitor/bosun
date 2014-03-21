@@ -99,6 +99,9 @@ func init() {
 				return
 			}
 			cfg := fsp[len(fsp)-2]
+			if len(cfg) == 0 {
+				return
+			}
 			readLine(cfg, func(cfgline string) {
 				result := tcRE.FindStringSubmatch(cfgline)
 				if len(result) > 2 && strings.ToLower(result[0]) == "cluster" {
