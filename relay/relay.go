@@ -6,8 +6,10 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/StackExchange/tsaf/search"
+	"github.com/mreiferson/go-httpclient"
 )
 
 func RelayHTTP(addr, dest string) error {
@@ -18,6 +20,12 @@ func RelayHTTP(addr, dest string) error {
 	log.Println("OpenTSDB relay listening on:", addr)
 	log.Println("OpenTSDB destination:", dest)
 	return http.ListenAndServe(addr, mux)
+}
+
+var client = &http.Client{
+	Transport: &httpclient.Transport{
+		RequestTimeout: 10 * time.Second,
+	},
 }
 
 func handle(dest string, w http.ResponseWriter, r *http.Request) {
@@ -39,7 +47,7 @@ func handle(dest string, w http.ResponseWriter, r *http.Request) {
 	req.Header = r.Header
 	req.TransferEncoding = append(req.TransferEncoding, "identity")
 	req.ContentLength = int64(len(body))
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		log.Println(err)
 		return
