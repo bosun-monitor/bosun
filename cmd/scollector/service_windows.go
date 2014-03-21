@@ -38,8 +38,8 @@ func win_service_main() {
 		}
 		if !isIntSess {
 			go runService(svcName, false)
-			return
 		}
+		return
 	}
 	if err != nil {
 		slog.Fatalf("failed to %s %s: %v", *win_service_command, svcName, err)
