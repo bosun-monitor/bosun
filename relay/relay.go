@@ -53,7 +53,7 @@ func handle(dest string, w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
-		log.Println(err)
+		//log.Println(err)
 		return
 	}
 	b, _ := ioutil.ReadAll(resp.Body)
