@@ -24,7 +24,7 @@ func RelayHTTP(addr, dest string) error {
 
 var client = &http.Client{
 	Transport: &httpclient.Transport{
-		RequestTimeout: 10 * time.Second,
+		RequestTimeout: time.Minute,
 	},
 }
 
