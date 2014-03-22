@@ -267,7 +267,7 @@ func (s *Schedule) CheckAlert(a *conf.Alert) {
 	s.CheckExpr(a, a.Warn, stWarning, crits)
 }
 
-func (s *Schedule) CheckExpr(a *conf.Alert, e *expr.Expr, status Status, ignore []AlertKey) (alerts []AlertKey) {
+func (s *Schedule) CheckExpr(a *conf.Alert, e *expr.Expr, checkStatus Status, ignore []AlertKey) (alerts []AlertKey) {
 	if e == nil {
 		return
 	}
@@ -295,6 +295,7 @@ Loop:
 			}
 			s.Status[ak] = state
 		}
+		status := checkStatus
 		state.Computations = r.Computations
 		if r.Value.(expr.Number) != 0 {
 			state.Expr = e.String()
