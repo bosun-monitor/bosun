@@ -65,7 +65,7 @@ func (q *Queue) send() {
 var qlock sync.Mutex
 var client = &http.Client{
 	Transport: &httpclient.Transport{
-		RequestTimeout: 10 * time.Second,
+		RequestTimeout: time.Minute,
 	},
 }
 
