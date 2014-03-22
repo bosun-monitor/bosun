@@ -163,8 +163,9 @@ func (s *Schedule) Run() error {
 			return fmt.Errorf("sched: nil configuration")
 		}
 		start := time.Now()
+		log.Printf("starting run at %v\n", start)
 		s.Check()
-		fmt.Printf("run at %v took %v\n", start, time.Since(start))
+		log.Printf("run at %v took %v\n", start, time.Since(start))
 		<-wait
 	}
 }
@@ -264,7 +265,8 @@ func (s *Schedule) Check() {
 
 func (s *Schedule) CheckAlert(a *conf.Alert) {
 	crits := s.CheckExpr(a, a.Crit, stCritical, nil)
-	s.CheckExpr(a, a.Warn, stWarning, crits)
+	warns := s.CheckExpr(a, a.Warn, stWarning, crits)
+	log.Printf("checking alert %v: %v crits, %v warns", a.Name, len(crits), len(warns))
 }
 
 func (s *Schedule) CheckExpr(a *conf.Alert, e *expr.Expr, checkStatus Status, ignore []AlertKey) (alerts []AlertKey) {
