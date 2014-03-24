@@ -79,7 +79,7 @@ func TestExprParse(t *testing.T) {
 const TSDBHost = "ny-devtsdb04:4242"
 
 func TestExprQuery(t *testing.T) {
-	e, err := New(`forecastlr(q("avg:os.cpu{host=ny-lb05}", "1m"), -10)`)
+	e, err := New(`forecastlr(q("avg:os.cpu{host=ny-lb05}", "1m", ""), -10)`)
 	if err != nil {
 		t.Fatal(err)
 	}
