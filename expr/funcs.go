@@ -33,6 +33,11 @@ var Builtins = map[string]parse.Func{
 		parse.TYPE_SERIES,
 		Band,
 	},
+	"change": {
+		[]parse.FuncType{parse.TYPE_STRING, parse.TYPE_STRING, parse.TYPE_STRING},
+		parse.TYPE_NUMBER,
+		Change,
+	},
 	"dev": {
 		[]parse.FuncType{parse.TYPE_SERIES},
 		parse.TYPE_NUMBER,
@@ -182,6 +187,30 @@ func Query(e *state, T miniprofiler.Timer, query, sduration, eduration string) (
 		})
 	}
 	return
+}
+
+func Change(e *state, T miniprofiler.Timer, query, sduration, eduration string) (r []*Result, err error) {
+	sd, err := opentsdb.ParseDuration(sduration)
+	if err != nil {
+		return
+	}
+	var ed opentsdb.Duration
+	if eduration != "" {
+		ed, err = opentsdb.ParseDuration(eduration)
+		if err != nil {
+			return
+		}
+	}
+	r, err = Query(e, T, query, sduration, eduration)
+	if err != nil {
+		return
+	}
+	r, err = reduce(e, T, r, change, (sd - ed).Seconds())
+	return
+}
+
+func change(dps Series, args ...float64) float64 {
+	return avg(dps) * args[0]
 }
 
 func reduce(e *state, T miniprofiler.Timer, series []*Result, F func(Series, ...float64) float64, args ...float64) (r []*Result, err error) {
