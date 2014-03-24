@@ -205,7 +205,7 @@ func Change(e *state, T miniprofiler.Timer, query, sduration, eduration string) 
 	if err != nil {
 		return
 	}
-	r, err = reduce(e, T, r, change, time.Duration((sd - ed)).Seconds())
+	r, err = reduce(e, T, r, change, time.Duration(sd-ed).Seconds())
 	return
 }
 
@@ -218,8 +218,6 @@ func change(dps Series, args ...float64) (a float64) {
 			panic(err)
 		}
 		a += float64(v)
-		min = x
-		max = x
 		if x < min {
 			min = x
 		}
