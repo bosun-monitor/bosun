@@ -201,35 +201,25 @@ func Change(e *state, T miniprofiler.Timer, query, sduration, eduration string) 
 			return
 		}
 	}
-	//is time.Duration(d) safe?
-	fsd := float64(time.Duration(sd) / time.Second)
-	fed := float64(time.Duration(ed) / time.Second)
 	r, err = Query(e, T, query, sduration, eduration)
 	if err != nil {
 		return
 	}
-	r, err = reduce(e, T, r, change, fsd-fed)
+	r, err = reduce(e, T, r, change, time.Duration((sd - ed)).Seconds())
 	return
 }
 
 func change(dps Series, args ...float64) (a float64) {
-	if len(args) != 1 {
-		panic(fmt.Errorf("diff should have had time param, shouldn't be here"))
-	}
-	var min float64
-	var max float64
-	var i float64
+	var min = math.MaxFloat64
+	var max = -math.MaxFloat64
 	for k, v := range dps {
 		x, err := strconv.ParseFloat(k, 64)
 		if err != nil {
 			panic(err)
 		}
 		a += float64(v)
-		if i == 0 {
-			min = x
-			max = x
-		}
-		i++
+		min = x
+		max = x
 		if x < min {
 			min = x
 		}
@@ -238,14 +228,11 @@ func change(dps Series, args ...float64) (a float64) {
 		}
 	}
 	var adj float64 = args[0]
-	if td := (max - min); td != 0 {
-		a = td * a
+	if td := max - min; td != 0 {
+		a *= td
 		adj = args[0] / td
 	}
-	if i == 0 {
-		panic(fmt.Errorf("diff should have non zero length series, shouldn't be here"))
-	}
-	a = a * adj / i
+	a *= adj / float64(len(dps))
 	return
 }
 
