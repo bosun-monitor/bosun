@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"runtime"
 	"sync"
 	"time"
 
@@ -30,9 +31,19 @@ func New(host string, c chan *opentsdb.DataPoint) *Queue {
 		host: host,
 		c:    c,
 	}
-
+	var m runtime.MemStats
+	go func() {
+		for _ = range time.Tick(time.Minute) {
+			runtime.ReadMemStats(&m)
+		}
+	}()
+	const _100MB = 1024 * 1024 * 1
 	go func() {
 		for dp := range c {
+			if m.Alloc > _100MB {
+				collectors.IncScollector("dropped", 1)
+				continue
+			}
 			q.Lock()
 			q.queue = append(q.queue, dp)
 			q.Unlock()
