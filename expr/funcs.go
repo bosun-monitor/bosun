@@ -39,7 +39,7 @@ var Builtins = map[string]parse.Func{
 		Dev,
 	},
 	"diff": {
-		[]parse.FuncType{parse.TYPE_STRING, parse.TYPE_STRING},
+		[]parse.FuncType{parse.TYPE_STRING, parse.TYPE_STRING, parse.TYPE_STRING},
 		parse.TYPE_SERIES,
 		Diff,
 	},
@@ -64,7 +64,7 @@ var Builtins = map[string]parse.Func{
 		Percentile,
 	},
 	"q": {
-		[]parse.FuncType{parse.TYPE_STRING, parse.TYPE_STRING},
+		[]parse.FuncType{parse.TYPE_STRING, parse.TYPE_STRING, parse.TYPE_STRING},
 		parse.TYPE_SERIES,
 		Query,
 	},
@@ -147,7 +147,7 @@ func Band(e *state, T miniprofiler.Timer, query, duration, period string, num fl
 	return
 }
 
-func Query(e *state, T miniprofiler.Timer, query, duration string) (r []*Result, err error) {
+func Query(e *state, T miniprofiler.Timer, query, sduration, eduration string) (r []*Result, err error) {
 	q, err := opentsdb.ParseQuery(query)
 	if err != nil {
 		return
@@ -155,13 +155,23 @@ func Query(e *state, T miniprofiler.Timer, query, duration string) (r []*Result,
 	if err = ExpandSearch(q); err != nil {
 		return
 	}
-	d, err := opentsdb.ParseDuration(duration)
+	sd, err := opentsdb.ParseDuration(sduration)
 	if err != nil {
 		return
 	}
+	var ed opentsdb.Duration
+	if eduration != "" {
+		ed, err = opentsdb.ParseDuration(eduration)
+		if err != nil {
+			return
+		}
+	}
 	req := opentsdb.Request{
 		Queries: []*opentsdb.Query{q},
-		Start:   fmt.Sprintf("%s-ago", d),
+		Start:   fmt.Sprintf("%s-ago", sd),
+	}
+	if ed != 0 {
+		req.End = fmt.Sprintf("%s-ago", ed)
 	}
 	e.addRequest(req)
 	b, _ := json.MarshalIndent(&req, "", "  ")
@@ -181,21 +191,29 @@ func Query(e *state, T miniprofiler.Timer, query, duration string) (r []*Result,
 	return
 }
 
-func Diff(e *state, T miniprofiler.Timer, query, duration string) (r []*Result, err error) {
-	d, err := opentsdb.ParseDuration(duration)
+func Diff(e *state, T miniprofiler.Timer, query, sduration, eduration string) (r []*Result, err error) {
+	sd, err := opentsdb.ParseDuration(sduration)
 	if err != nil {
 		return
+	}
+	var ed opentsdb.Duration
+	if eduration != "" {
+		ed, err = opentsdb.ParseDuration(eduration)
+		if err != nil {
+			return
+		}
 	}
 	//is time.Duration(d) safe?
-	fd := float64(time.Duration(d) / time.Second)
+	fsd := float64(time.Duration(sd) / time.Second)
+	fed := float64(time.Duration(ed) / time.Second)
 	if err != nil {
 		return
 	}
-	r, err = Query(e, T, query, duration)
+	r, err = Query(e, T, query, sduration, eduration)
 	if err != nil {
 		return
 	}
-	r, err = reduce(e, T, r, diff, fd)
+	r, err = reduce(e, T, r, diff, fsd-fed)
 	return
 }
 
