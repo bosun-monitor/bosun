@@ -154,18 +154,16 @@ func Query(e *state, T miniprofiler.Timer, query, sduration, eduration string) (
 	if err != nil {
 		return
 	}
-	var ed opentsdb.Duration
-	if eduration != "" {
-		ed, err = opentsdb.ParseDuration(eduration)
-		if err != nil {
-			return
-		}
-	}
 	req := opentsdb.Request{
 		Queries: []*opentsdb.Query{q},
 		Start:   fmt.Sprintf("%s-ago", sd),
 	}
-	if ed != 0 {
+	if eduration != "" {
+		var ed opentsdb.Duration
+		ed, err = opentsdb.ParseDuration(eduration)
+		if err != nil {
+			return
+		}
 		req.End = fmt.Sprintf("%s-ago", ed)
 	}
 	e.addRequest(req)
