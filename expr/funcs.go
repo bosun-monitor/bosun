@@ -216,19 +216,15 @@ func change(dps Series, args ...float64) (a float64) {
 	if len(args) != 1 {
 		panic(fmt.Errorf("diff should have had time param, shouldn't be here"))
 	}
-	if len(dps) < 2 {
-		return 0
-	}
 	var min float64
 	var max float64
-	var y float64
 	var i float64
 	for k, v := range dps {
 		x, err := strconv.ParseFloat(k, 64)
 		if err != nil {
 			panic(err)
 		}
-		y += float64(v)
+		a += float64(v)
 		if i == 0 {
 			min = x
 			max = x
@@ -241,13 +237,15 @@ func change(dps Series, args ...float64) (a float64) {
 			max = x
 		}
 	}
-	var adj float64
-	adj = 1
+	var adj float64 = args[0]
 	if td := (max - min); td != 0 {
-		a = td * y / i
+		a = td * a
 		adj = args[0] / td
 	}
-	a = a * adj
+	if i == 0 {
+		panic(fmt.Errorf("diff should have non zero length series, shouldn't be here"))
+	}
+	a = a * adj / i
 	return
 }
 
