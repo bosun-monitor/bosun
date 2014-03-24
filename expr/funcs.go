@@ -33,6 +33,11 @@ var Builtins = map[string]parse.Func{
 		parse.TYPE_SERIES,
 		Band,
 	},
+	"change": {
+		[]parse.FuncType{parse.TYPE_STRING, parse.TYPE_STRING, parse.TYPE_STRING},
+		parse.TYPE_SERIES,
+		Change,
+	},
 	"dev": {
 		[]parse.FuncType{parse.TYPE_SERIES},
 		parse.TYPE_NUMBER,
@@ -181,6 +186,68 @@ func Query(e *state, T miniprofiler.Timer, query, sduration, eduration string) (
 			Group: res.Tags,
 		})
 	}
+	return
+}
+
+func Change(e *state, T miniprofiler.Timer, query, sduration, eduration string) (r []*Result, err error) {
+	sd, err := opentsdb.ParseDuration(sduration)
+	if err != nil {
+		return
+	}
+	var ed opentsdb.Duration
+	if eduration != "" {
+		ed, err = opentsdb.ParseDuration(eduration)
+		if err != nil {
+			return
+		}
+	}
+	//is time.Duration(d) safe?
+	fsd := float64(time.Duration(sd) / time.Second)
+	fed := float64(time.Duration(ed) / time.Second)
+	r, err = Query(e, T, query, sduration, eduration)
+	if err != nil {
+		return
+	}
+	r, err = reduce(e, T, r, change, fsd-fed)
+	return
+}
+
+func change(dps Series, args ...float64) (a float64) {
+	if len(args) != 1 {
+		panic(fmt.Errorf("diff should have had time param, shouldn't be here"))
+	}
+	if len(dps) < 2 {
+		return 0
+	}
+	var min float64
+	var max float64
+	var y float64
+	var i float64
+	for k, v := range dps {
+		x, err := strconv.ParseFloat(k, 64)
+		if err != nil {
+			panic(err)
+		}
+		y += float64(v)
+		if i == 0 {
+			min = x
+			max = x
+		}
+		i++
+		if x < min {
+			min = x
+		}
+		if x > max {
+			max = x
+		}
+	}
+	var adj float64
+	adj = 1
+	if td := (max - min); td != 0 {
+		a = td * y / i
+		adj = args[0] / td
+	}
+	a = a * adj
 	return
 }
 
