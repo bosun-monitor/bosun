@@ -189,6 +189,9 @@ func Diff(e *state, T miniprofiler.Timer, query, duration string) (r []*Result, 
 		return
 	}
 	r, err = Query(e, T, query, duration)
+	if err != nil {
+		return
+	}
 	r, err = reduce(e, T, r, diff, fd)
 	return
 }
