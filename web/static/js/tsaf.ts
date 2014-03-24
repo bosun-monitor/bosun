@@ -190,15 +190,16 @@ interface IEGraphScope extends ng.IScope {
 tsafControllers.controller('EGraphCtrl', ['$scope', '$http', '$location', '$route', function($scope: IEGraphScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService){
 	var search = $location.search();
 	var current = search.q;
-	if (!current && search.b64) {
-		current = atob(search.b64);
+	try {
+		current = atob(current);
 	}
+	catch (e) {}
 	$scope.bytes = search.bytes;
 	$scope.bytes = !!$scope.bytes;
 	$scope.renderers = ['area', 'bar', 'line', 'scatterplot'];
 	$scope.render = search.render || 'scatterplot';
 	if (!current) {
-		$location.search('q', 'q("avg:rate:os.cpu{host=ny-devtsdb04}", "5m")');
+		$location.search('q', btoa('q("avg:rate:os.cpu{host=ny-devtsdb04}", "5m")'));
 		return;
 	}
 	$scope.expr = current;
@@ -698,7 +699,7 @@ tsafApp.filter('linkq',  ['$sanitize', function($sanitize: ng.sanitize.ISanitize
 		var i: number;
 		var match: any;
 		while ((match = raw.match(QUERY_REGEXP))) {
-			url = '/egraph?b64=' + btoa(match[0]);
+			url = '/egraph?q=' + btoa(match[0]);
 			i = match.index;
 			addText(raw.substr(0, i));
 			addLink(url, match[0]);
