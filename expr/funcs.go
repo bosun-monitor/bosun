@@ -183,6 +183,9 @@ func Query(e *state, T miniprofiler.Timer, query, duration string) (r []*Result,
 
 func Diff(e *state, T miniprofiler.Timer, query, duration string) (r []*Result, err error) {
 	d, err := opentsdb.ParseDuration(duration)
+	if err != nil {
+		return
+	}
 	//is time.Duration(d) safe?
 	fd := float64(time.Duration(d) / time.Second)
 	if err != nil {
