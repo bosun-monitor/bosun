@@ -130,3 +130,7 @@ func leadingInt(s string) (x int64, rem string, err error) {
 func (d Duration) String() string {
 	return fmt.Sprintf("%dms", time.Duration(d).Nanoseconds()/1e6)
 }
+
+func (d Duration) Seconds() float64 {
+	return time.Duration(d).Seconds()
+}
