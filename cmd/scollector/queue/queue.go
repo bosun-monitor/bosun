@@ -37,7 +37,7 @@ func New(host string, c chan *opentsdb.DataPoint) *Queue {
 			runtime.ReadMemStats(&m)
 		}
 	}()
-	const _100MB = 1024 * 1024 * 1
+	const _100MB = 1024 * 1024 * 100
 	go func() {
 		for dp := range c {
 			if m.Alloc > _100MB {
