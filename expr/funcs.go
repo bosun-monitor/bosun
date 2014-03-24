@@ -38,6 +38,11 @@ var Builtins = map[string]parse.Func{
 		parse.TYPE_NUMBER,
 		Dev,
 	},
+	"diff": {
+		[]parse.FuncType{parse.TYPE_STRING, parse.TYPE_STRING},
+		parse.TYPE_SERIES,
+		Diff,
+	},
 	"recent": {
 		[]parse.FuncType{parse.TYPE_SERIES},
 		parse.TYPE_NUMBER,
@@ -173,6 +178,68 @@ func Query(e *state, T miniprofiler.Timer, query, duration string) (r []*Result,
 			Group: res.Tags,
 		})
 	}
+	return
+}
+
+func Diff(e *state, T miniprofiler.Timer, query, duration string) (r []*Result, err error) {
+	d, err := opentsdb.ParseDuration(duration)
+	if err != nil {
+		return
+	}
+	//is time.Duration(d) safe?
+	fd := float64(time.Duration(d) / time.Second)
+	if err != nil {
+		return
+	}
+	r, err = Query(e, T, query, duration)
+	if err != nil {
+		return
+	}
+	r, err = reduce(e, T, r, diff, fd)
+	return
+}
+
+type dp struct {
+	x float64
+	y float64
+}
+
+func diff(dps Series, args ...float64) (a float64) {
+	if len(args) != 1 {
+		panic(fmt.Errorf("diff should have had time param, shouldn't be here"))
+	}
+	if len(dps) < 2 {
+		return 0
+	}
+	var min dp
+	var max dp
+	i := 0
+	for k, v := range dps {
+		x, err := strconv.ParseFloat(k, 64)
+		if err != nil {
+			panic(err)
+		}
+		f := float64(v)
+		if i == 0 {
+			min = dp{x: x, y: f}
+			max = dp{x: x, y: f}
+		}
+		i++
+		if x < min.x {
+			min.x = x
+			min.y = f
+		}
+		if x > max.x {
+			max.x = x
+			max.y = f
+		}
+	}
+	var adj float64
+	adj = 1
+	if td := (max.x - min.x); td != 0 {
+		adj = args[0] / td
+	}
+	a = (max.y - min.y) * adj
 	return
 }
 
