@@ -38,6 +38,11 @@ var Builtins = map[string]parse.Func{
 		parse.TYPE_NUMBER,
 		Dev,
 	},
+	"diff": {
+		[]parse.FuncType{parse.TYPE_STRING, parse.TYPE_STRING, parse.TYPE_STRING},
+		parse.TYPE_SERIES,
+		Diff,
+	},
 	"recent": {
 		[]parse.FuncType{parse.TYPE_SERIES},
 		parse.TYPE_NUMBER,
@@ -59,7 +64,7 @@ var Builtins = map[string]parse.Func{
 		Percentile,
 	},
 	"q": {
-		[]parse.FuncType{parse.TYPE_STRING, parse.TYPE_STRING},
+		[]parse.FuncType{parse.TYPE_STRING, parse.TYPE_STRING, parse.TYPE_STRING},
 		parse.TYPE_SERIES,
 		Query,
 	},
@@ -142,7 +147,7 @@ func Band(e *state, T miniprofiler.Timer, query, duration, period string, num fl
 	return
 }
 
-func Query(e *state, T miniprofiler.Timer, query, duration string) (r []*Result, err error) {
+func Query(e *state, T miniprofiler.Timer, query, sduration, eduration string) (r []*Result, err error) {
 	q, err := opentsdb.ParseQuery(query)
 	if err != nil {
 		return
@@ -150,13 +155,23 @@ func Query(e *state, T miniprofiler.Timer, query, duration string) (r []*Result,
 	if err = ExpandSearch(q); err != nil {
 		return
 	}
-	d, err := opentsdb.ParseDuration(duration)
+	sd, err := opentsdb.ParseDuration(sduration)
 	if err != nil {
 		return
 	}
+	var ed opentsdb.Duration
+	if eduration != "" {
+		ed, err = opentsdb.ParseDuration(eduration)
+		if err != nil {
+			return
+		}
+	}
 	req := opentsdb.Request{
 		Queries: []*opentsdb.Query{q},
-		Start:   fmt.Sprintf("%s-ago", d),
+		Start:   fmt.Sprintf("%s-ago", sd),
+	}
+	if ed != 0 {
+		req.End = fmt.Sprintf("%s-ago", ed)
 	}
 	e.addRequest(req)
 	b, _ := json.MarshalIndent(&req, "", "  ")
@@ -173,6 +188,76 @@ func Query(e *state, T miniprofiler.Timer, query, duration string) (r []*Result,
 			Group: res.Tags,
 		})
 	}
+	return
+}
+
+func Diff(e *state, T miniprofiler.Timer, query, sduration, eduration string) (r []*Result, err error) {
+	sd, err := opentsdb.ParseDuration(sduration)
+	if err != nil {
+		return
+	}
+	var ed opentsdb.Duration
+	if eduration != "" {
+		ed, err = opentsdb.ParseDuration(eduration)
+		if err != nil {
+			return
+		}
+	}
+	//is time.Duration(d) safe?
+	fsd := float64(time.Duration(sd) / time.Second)
+	fed := float64(time.Duration(ed) / time.Second)
+	if err != nil {
+		return
+	}
+	r, err = Query(e, T, query, sduration, eduration)
+	if err != nil {
+		return
+	}
+	r, err = reduce(e, T, r, diff, fsd-fed)
+	return
+}
+
+type dp struct {
+	x float64
+	y float64
+}
+
+func diff(dps Series, args ...float64) (a float64) {
+	if len(args) != 1 {
+		panic(fmt.Errorf("diff should have had time param, shouldn't be here"))
+	}
+	if len(dps) < 2 {
+		return 0
+	}
+	var min dp
+	var max dp
+	i := 0
+	for k, v := range dps {
+		x, err := strconv.ParseFloat(k, 64)
+		if err != nil {
+			panic(err)
+		}
+		f := float64(v)
+		if i == 0 {
+			min = dp{x: x, y: f}
+			max = dp{x: x, y: f}
+		}
+		i++
+		if x < min.x {
+			min.x = x
+			min.y = f
+		}
+		if x > max.x {
+			max.x = x
+			max.y = f
+		}
+	}
+	var adj float64
+	adj = 1
+	if td := (max.x - min.x); td != 0 {
+		adj = args[0] / td
+	}
+	a = (max.y - min.y) * adj
 	return
 }
 
