@@ -22,20 +22,23 @@ import (
 
 type Conf struct {
 	Vars
-	Name          string // Config file name
-	WebDir        string // Static content web directory: web
-	TsdbHost      string // OpenTSDB relay and query destination: ny-devtsdb04:4242
-	RelayListen   string // OpenTSDB relay listen address: :4242
-	HttpListen    string // Web server listen address: :80
-	SmtpHost      string // SMTP address: ny-mail:25
-	EmailFrom     string
-	StateFile     string
-	Templates     map[string]*Template
-	Alerts        map[string]*Alert
-	Notifications map[string]*Notification
+	Name            string // Config file name
+	WebDir          string // Static content web directory: web
+	TsdbHost        string // OpenTSDB relay and query destination: ny-devtsdb04:4242
+	RelayListen     string // OpenTSDB relay listen address: :4242
+	HttpListen      string // Web server listen address: :80
+	SmtpHost        string // SMTP address: ny-mail:25
+	EmailFrom       string
+	StateFile       string
+	Unknown         time.Duration
+	UnknownTemplate *Template
+	Templates       map[string]*Template
+	Alerts          map[string]*Alert
+	Notifications   map[string]*Notification
 
-	tree *parse.Tree
-	node parse.Node
+	tree            *parse.Tree
+	node            parse.Node
+	unknownTemplate string
 }
 
 // at marks the state to be on node n, for error reporting.
@@ -83,6 +86,7 @@ type Alert struct {
 	Squelch          map[string]*regexp.Regexp `json:"-"`
 	CritNotification map[string]*Notification  `json:"-"`
 	WarnNotification map[string]*Notification  `json:"-"`
+	Unknown          time.Duration
 
 	crit, warn       string
 	template         string
@@ -219,6 +223,22 @@ func (c *Conf) loadGlobal(p *parse.PairNode) {
 		c.EmailFrom = v
 	case "stateFile":
 		c.StateFile = v
+	case "unknown":
+		d, err := time.ParseDuration(v)
+		if err != nil {
+			c.error(err)
+		}
+		if d < time.Second {
+			c.errorf("unknown duration must be at least 1s")
+		}
+		c.Unknown = d
+	case "unknownTemplate":
+		c.unknownTemplate = v
+		t, ok := c.Templates[c.unknownTemplate]
+		if !ok {
+			c.errorf("template not found: %s", c.unknownTemplate)
+		}
+		c.UnknownTemplate = t
 	default:
 		if !strings.HasPrefix(k, "$") {
 			c.errorf("unknown key %s", k)
@@ -317,7 +337,7 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 			a.template = v
 			t, ok := c.Templates[a.template]
 			if !ok {
-				c.errorf("unknown template %s", a.template)
+				c.errorf("template not found %s", a.template)
 			}
 			a.Template = t
 		case "crit":
@@ -376,6 +396,15 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 				}
 				a.WarnNotification[s] = n
 			}
+		case "unknown":
+			d, err := time.ParseDuration(v)
+			if err != nil {
+				c.error(err)
+			}
+			if d < time.Second {
+				c.errorf("unknown duration must be at least 1s")
+			}
+			a.Unknown = d
 		default:
 			if !strings.HasPrefix(k, "$") {
 				c.errorf("unknown key %s", k)

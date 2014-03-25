@@ -79,18 +79,27 @@ func (c *context) EGraph(v string) string {
 	return u.String()
 }
 
+func (s *Schedule) Template(a *conf.Alert, st *State) *conf.Template {
+	if st.Last().Status == stUnknown {
+		return s.Conf.UnknownTemplate
+	}
+	return a.Template
+}
+
 func (s *Schedule) ExecuteBody(w io.Writer, a *conf.Alert, st *State) error {
-	if a.Template == nil || a.Template.Body == nil {
+	t := s.Template(a, st)
+	if t == nil || t.Body == nil {
 		return nil
 	}
-	return a.Template.Body.Execute(w, s.data(st, a))
+	return t.Body.Execute(w, s.data(st, a))
 }
 
 func (s *Schedule) ExecuteSubject(w io.Writer, a *conf.Alert, st *State) error {
-	if a.Template == nil || a.Template.Subject == nil {
+	t := s.Template(a, st)
+	if t == nil || t.Subject == nil {
 		return nil
 	}
-	return a.Template.Subject.Execute(w, s.data(st, a))
+	return t.Subject.Execute(w, s.data(st, a))
 }
 
 // E executes the given expression and returns a value with corresponding tags
