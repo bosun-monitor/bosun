@@ -33,6 +33,9 @@ tsafApp.config([
         }).when('/host', {
             templateUrl: 'partials/host.html',
             controller: 'HostCtrl'
+        }).when('/rule', {
+            templateUrl: 'partials/rule.html',
+            controller: 'RuleCtrl'
         }).otherwise({
             redirectTo: '/'
         });
@@ -469,6 +472,35 @@ tsafControllers.controller('HostCtrl', [
             }));
             $scope.mem = [data[1]];
         });
+    }]);
+
+tsafControllers.controller('RuleCtrl', [
+    '$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
+        var current = $location.hash();
+        try  {
+            current = atob(current);
+        } catch (e) {
+            current = '';
+        }
+        if (!current) {
+            var def = '$t = "5m"\n' + 'crit = avg(q("avg:os.cpu", $t, "")) > 10';
+            $location.hash(btoa(def));
+            return;
+        }
+        $scope.expr = current;
+        $scope.running = current;
+        $http.get('/api/rule?q=' + encodeURIComponent(current)).success(function (data) {
+            $scope.result = data.Results;
+            $scope.queries = data.Queries;
+            $scope.running = '';
+        }).error(function (error) {
+            $scope.error = error;
+            $scope.running = '';
+        });
+        $scope.set = function () {
+            $location.hash(btoa($scope.expr));
+            $route.reload();
+        };
     }]);
 
 tsafApp.directive("tsRickshaw", [
