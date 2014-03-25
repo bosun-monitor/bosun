@@ -182,10 +182,12 @@ func New(name, text string) (c *Conf, err error) {
 	if err != nil {
 		c.error(err)
 	}
+	saw := make(map[string]bool)
 	for _, n := range c.tree.Root.Nodes {
 		c.at(n)
 		switch n := n.(type) {
 		case *parse.PairNode:
+			c.seen(n.Key.Text, saw)
 			c.loadGlobal(n)
 		case *parse.SectionNode:
 			c.loadSection(n)
@@ -201,27 +203,27 @@ func New(name, text string) (c *Conf, err error) {
 }
 
 func (c *Conf) loadGlobal(p *parse.PairNode) {
-	v := p.Val.Text
+	v := c.Expand(p.Val.Text, nil)
 	switch k := p.Key.Text; k {
 	case "tsdbHost":
-		c.TsdbHost = c.expand(v, nil)
+		c.TsdbHost = v
 	case "httpListen":
-		c.HttpListen = c.expand(v, nil)
+		c.HttpListen = v
 	case "relayListen":
-		c.RelayListen = c.expand(v, nil)
+		c.RelayListen = v
 	case "webDir":
-		c.WebDir = c.expand(v, nil)
+		c.WebDir = v
 	case "smtpHost":
-		c.SmtpHost = c.expand(v, nil)
+		c.SmtpHost = v
 	case "emailFrom":
-		c.EmailFrom = c.expand(v, nil)
+		c.EmailFrom = v
 	case "stateFile":
-		c.StateFile = c.expand(v, nil)
+		c.StateFile = v
 	default:
 		if !strings.HasPrefix(k, "$") {
 			c.errorf("unknown key %s", k)
 		}
-		c.Vars[k] = c.expand(v, nil)
+		c.Vars[k] = v
 	}
 }
 
@@ -249,7 +251,7 @@ func (c *Conf) loadTemplate(s *parse.SectionNode) {
 	}
 	funcs := ttemplate.FuncMap{
 		"V": func(v string) string {
-			return c.expand(v, t.Vars)
+			return c.Expand(v, t.Vars)
 		},
 		"bytes": func(v string) ByteSize {
 			f, _ := strconv.ParseFloat(v, 64)
@@ -259,12 +261,13 @@ func (c *Conf) loadTemplate(s *parse.SectionNode) {
 			return strings.SplitN(v, ".", 2)[0]
 		},
 	}
+	saw := make(map[string]bool)
 	for _, p := range s.Nodes {
 		c.at(p)
+		c.seen(p.Key.Text, saw)
 		v := p.Val.Text
 		switch k := p.Key.Text; k {
 		case "body":
-			c.errEmpty(t.body)
 			t.body = v
 			tmpl := htemplate.New(k).Funcs(htemplate.FuncMap(funcs))
 			_, err := tmpl.Parse(t.body)
@@ -273,7 +276,6 @@ func (c *Conf) loadTemplate(s *parse.SectionNode) {
 			}
 			t.Body = tmpl
 		case "subject":
-			c.errEmpty(t.subject)
 			t.subject = v
 			tmpl := ttemplate.New(k).Funcs(funcs)
 			_, err := tmpl.Parse(t.subject)
@@ -285,7 +287,6 @@ func (c *Conf) loadTemplate(s *parse.SectionNode) {
 			if !strings.HasPrefix(k, "$") {
 				c.errorf("unknown key %s", k)
 			}
-			c.errEmpty(t.Vars[k])
 			t.Vars[k] = v
 			t.Vars[k[1:]] = t.Vars[k]
 		}
@@ -306,21 +307,21 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 		Vars: make(map[string]string),
 		Name: name,
 	}
+	saw := make(map[string]bool)
 	for _, p := range s.Nodes {
 		c.at(p)
-		v := p.Val.Text
+		c.seen(p.Key.Text, saw)
+		v := c.Expand(p.Val.Text, a.Vars)
 		switch k := p.Key.Text; k {
 		case "template":
-			c.errEmpty(a.template)
-			a.template = c.expand(v, a.Vars)
+			a.template = v
 			t, ok := c.Templates[a.template]
 			if !ok {
 				c.errorf("unknown template %s", a.template)
 			}
 			a.Template = t
 		case "crit":
-			c.errEmpty(a.crit)
-			a.crit = c.expand(v, a.Vars)
+			a.crit = v
 			crit, err := expr.New(a.crit)
 			if err != nil {
 				c.error(err)
@@ -330,8 +331,7 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 			}
 			a.Crit = crit
 		case "warn":
-			c.errEmpty(a.warn)
-			a.warn = c.expand(v, a.Vars)
+			a.warn = v
 			warn, err := expr.New(a.warn)
 			if err != nil {
 				c.error(err)
@@ -341,8 +341,7 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 			}
 			a.Warn = warn
 		case "squelch":
-			c.errEmpty(a.squelch)
-			a.squelch = c.expand(v, a.Vars)
+			a.squelch = v
 			squelch, err := opentsdb.ParseTags(a.squelch)
 			if err != nil {
 				c.error(err)
@@ -356,8 +355,7 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 				a.Squelch[k] = re
 			}
 		case "critNotification":
-			c.errEmpty(a.critNotification)
-			a.critNotification = c.expand(v, a.Vars)
+			a.critNotification = v
 			a.CritNotification = make(map[string]*Notification)
 			for _, s := range strings.Split(a.critNotification, ",") {
 				s = strings.TrimSpace(s)
@@ -368,8 +366,7 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 				a.CritNotification[s] = n
 			}
 		case "warnNotification":
-			c.errEmpty(a.warnNotification)
-			a.warnNotification = c.expand(v, a.Vars)
+			a.warnNotification = v
 			a.WarnNotification = make(map[string]*Notification)
 			for _, s := range strings.Split(a.warnNotification, ",") {
 				s = strings.TrimSpace(s)
@@ -383,8 +380,7 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 			if !strings.HasPrefix(k, "$") {
 				c.errorf("unknown key %s", k)
 			}
-			c.errEmpty(a.Vars[k])
-			a.Vars[k] = c.expand(v, a.Vars)
+			a.Vars[k] = v
 			a.Vars[k[1:]] = a.Vars[k]
 		}
 	}
@@ -404,56 +400,48 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 		Vars: make(map[string]string),
 		Name: name,
 	}
+	saw := make(map[string]bool)
 	c.Notifications[name] = &n
 	for _, p := range s.Nodes {
 		c.at(p)
-		v := p.Val.Text
+		c.seen(p.Key.Text, saw)
+		v := c.Expand(p.Val.Text, n.Vars)
 		switch k := p.Key.Text; k {
 		case "email":
-			c.errEmpty(n.email)
 			if c.SmtpHost == "" || c.EmailFrom == "" {
 				c.errorf("email notifications require both smtpHost and emailFrom to be set")
 			}
-			n.email = c.expand(v, n.Vars)
+			n.email = v
 			email, err := mail.ParseAddressList(n.email)
 			if err != nil {
 				c.error(err)
 			}
 			n.Email = email
 		case "post":
-			c.errEmpty(n.post)
-			n.post = c.expand(v, n.Vars)
+			n.post = v
 			post, err := url.Parse(n.post)
 			if err != nil {
 				c.error(err)
 			}
 			n.Post = post
 		case "get":
-			c.errEmpty(n.get)
-			n.get = c.expand(v, n.Vars)
+			n.get = v
 			get, err := url.Parse(n.get)
 			if err != nil {
 				c.error(err)
 			}
 			n.Get = get
 		case "print":
-			if n.Print {
-				c.errEmpty(".")
-			}
 			n.Print = true
 		case "next":
-			c.errEmpty(n.next)
-			n.next = c.expand(v, n.Vars)
+			n.next = v
 			next, ok := c.Notifications[n.next]
 			if !ok {
 				c.errorf("unknown notification %s", n.next)
 			}
 			n.Next = next
 		case "timeout":
-			if n.Timeout > 0 {
-				c.errEmpty(".")
-			}
-			d, err := time.ParseDuration(c.expand(v, n.Vars))
+			d, err := time.ParseDuration(v)
 			if err != nil {
 				c.error(err)
 			}
@@ -462,8 +450,7 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 			if !strings.HasPrefix(k, "$") {
 				c.errorf("unknown key %s", k)
 			}
-			c.errEmpty(n.Vars[k])
-			n.Vars[k] = c.expand(v, n.Vars)
+			n.Vars[k] = v
 			n.Vars[k[1:]] = n.Vars[k]
 		}
 	}
@@ -475,25 +462,25 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 
 var exRE = regexp.MustCompile(`\$\w+`)
 
-func (c *Conf) expand(v string, vars map[string]string) string {
+func (c *Conf) Expand(v string, vars map[string]string) string {
 	v = exRE.ReplaceAllStringFunc(v, func(s string) string {
 		if vars != nil {
 			if n, ok := vars[s]; ok {
-				return c.expand(n, vars)
+				return c.Expand(n, vars)
 			}
 		}
 		n, ok := c.Vars[s]
 		if !ok {
 			c.errorf("unknown variable %s", s)
 		}
-		return c.expand(n, nil)
+		return c.Expand(n, nil)
 	})
 	return v
 }
 
-// errEmpty panics if v is not "".
-func (c *Conf) errEmpty(v string) {
-	if v != "" {
-		c.errorf("duplicate key")
+func (c *Conf) seen(v string, m map[string]bool) {
+	if m[v] {
+		c.errorf("duplicate key: %s", v)
 	}
+	m[v] = true
 }

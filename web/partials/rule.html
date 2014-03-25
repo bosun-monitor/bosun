@@ -1,0 +1,71 @@
+<div class="row">
+	<div class="col-lg-12">
+		<form class="form-horizontal">
+			<div class="form-group">
+				<div class="col-lg-12">
+					<textarea class="form-control" rows="5" ng-model="expr" ng-init="eval()"></textarea>
+				</div>
+			</div>
+			<div class="form-group">
+				<div class="col-lg-12">
+					<button class="btn btn-default" ng-click="set()">test</button>
+				</div>
+			</div>
+		</form>
+	</div>
+</div>
+<div class="row" ng-show="error">
+	<div class="col-lg-12">
+		<div class="alert alert-danger" ng-bind="error"></div>
+	</div>
+</div>
+<div class="row" ng-show="queries">
+	<div class="col-lg-12">
+		<h4>Queries</h4>
+	</div>
+	<div class="col-lg-12" ng-repeat="(s, q) in queries">
+		<a href="/graph?b64={{btoa(json(q))}}" ng-bind="s"></a>
+	</div>
+</div>
+<div class="row" ng-show="running">
+	<div class="col-lg-12">
+		<div class="alert alert-info">Executing: {{running}}</div>
+	</div>
+</div>
+<div class="row">
+	<div class="col-sm-12">
+		<table class="table">
+			<thead>
+				<tr>
+					<th>group</th>
+					<th>result</th>
+					<th>computations</th>
+				</tr>
+			</thead>
+			<tbody>
+				<tr ng-repeat="r in result">
+					<td>
+						{
+						<span ng-repeat="(k, v) in r.Group">
+							{{k}}={{v}}<span ng-hide="$last">,</span>
+						</span>
+						}
+					</td>
+					<td>
+						<pre ng-bind="json(r.Value)"></pre>
+					</td>
+					<td>
+						<table class="table table-striped table-condensed">
+							<tbody>
+								<tr ng-repeat="c in r.Computations">
+									<td ng-bind="c.Text"></td>
+									<td ng-bind="c.Value"></td>
+								</tr>
+							</tbody>
+						</table>
+					</td>
+				</tr>
+			</tbody>
+		</table>
+	</div>
+</div>
