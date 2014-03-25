@@ -35,7 +35,7 @@ var Builtins = map[string]parse.Func{
 	},
 	"change": {
 		[]parse.FuncType{parse.TYPE_STRING, parse.TYPE_STRING, parse.TYPE_STRING},
-		parse.TYPE_SERIES,
+		parse.TYPE_NUMBER,
 		Change,
 	},
 	"dev": {
