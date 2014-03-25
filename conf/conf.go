@@ -203,7 +203,7 @@ func New(name, text string) (c *Conf, err error) {
 }
 
 func (c *Conf) loadGlobal(p *parse.PairNode) {
-	v := c.expand(p.Val.Text, nil)
+	v := c.Expand(p.Val.Text, nil)
 	switch k := p.Key.Text; k {
 	case "tsdbHost":
 		c.TsdbHost = v
@@ -251,7 +251,7 @@ func (c *Conf) loadTemplate(s *parse.SectionNode) {
 	}
 	funcs := ttemplate.FuncMap{
 		"V": func(v string) string {
-			return c.expand(v, t.Vars)
+			return c.Expand(v, t.Vars)
 		},
 		"bytes": func(v string) ByteSize {
 			f, _ := strconv.ParseFloat(v, 64)
@@ -311,7 +311,7 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 	for _, p := range s.Nodes {
 		c.at(p)
 		c.seen(p.Key.Text, saw)
-		v := c.expand(p.Val.Text, a.Vars)
+		v := c.Expand(p.Val.Text, a.Vars)
 		switch k := p.Key.Text; k {
 		case "template":
 			a.template = v
@@ -405,7 +405,7 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 	for _, p := range s.Nodes {
 		c.at(p)
 		c.seen(p.Key.Text, saw)
-		v := c.expand(p.Val.Text, n.Vars)
+		v := c.Expand(p.Val.Text, n.Vars)
 		switch k := p.Key.Text; k {
 		case "email":
 			if c.SmtpHost == "" || c.EmailFrom == "" {
@@ -462,18 +462,18 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 
 var exRE = regexp.MustCompile(`\$\w+`)
 
-func (c *Conf) expand(v string, vars map[string]string) string {
+func (c *Conf) Expand(v string, vars map[string]string) string {
 	v = exRE.ReplaceAllStringFunc(v, func(s string) string {
 		if vars != nil {
 			if n, ok := vars[s]; ok {
-				return c.expand(n, vars)
+				return c.Expand(n, vars)
 			}
 		}
 		n, ok := c.Vars[s]
 		if !ok {
 			c.errorf("unknown variable %s", s)
 		}
-		return c.expand(n, nil)
+		return c.Expand(n, nil)
 	})
 	return v
 }

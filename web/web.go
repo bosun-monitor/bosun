@@ -35,6 +35,7 @@ func Listen(addr, dir, host string) error {
 	router.Handle("/api/egraph", JSON(ExprGraph))
 	router.Handle("/api/metric", JSON(UniqueMetrics))
 	router.Handle("/api/metric/{tagk}/{tagv}", JSON(MetricsByTagPair))
+	router.Handle("/api/rule", JSON(Rule))
 	router.Handle("/api/graph", JSON(Graph))
 	router.Handle("/api/tagk/{metric}", JSON(TagKeysByMetric))
 	router.Handle("/api/tagv/{tagk}", JSON(TagValuesByTagKey))
