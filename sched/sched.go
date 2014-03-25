@@ -85,21 +85,6 @@ func (s *Schedule) RestoreState() {
 		log.Println(err)
 		return
 	}
-	for ak, ns := range notifications {
-		for name, t := range ns {
-			n, present := s.Conf.Notifications[name]
-			if !present {
-				log.Println("sched: notification not present during restore:", name)
-				continue
-			}
-			_, present = s.Conf.Alerts[ak.Name]
-			if !present {
-				log.Println("sched: alert not present during restore:", ak.Name)
-				continue
-			}
-			s.AddNotification(ak, n, t)
-		}
-	}
 	for {
 		var ak AlertKey
 		var st State
@@ -113,11 +98,22 @@ func (s *Schedule) RestoreState() {
 			log.Println(err)
 			return
 		}
-		if _, present := s.Conf.Alerts[ak.Name]; !present {
+		if a, present := s.Conf.Alerts[ak.Name]; !present {
 			log.Println("sched: alert no longer present, ignoring:", ak)
+			continue
+		} else if a.Squelched(st.Group) {
+			log.Println("sched: alert now squelched:", ak)
 			continue
 		}
 		s.Status[ak] = &st
+		for name, t := range notifications[ak] {
+			n, present := s.Conf.Notifications[name]
+			if !present {
+				log.Println("sched: notification not present during restore:", name)
+				continue
+			}
+			s.AddNotification(ak, n, t)
+		}
 	}
 }
 
