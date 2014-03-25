@@ -205,33 +205,12 @@ func Change(e *state, T miniprofiler.Timer, query, sduration, eduration string) 
 	if err != nil {
 		return
 	}
-	r, err = reduce(e, T, r, change, time.Duration(sd-ed).Seconds())
+	r, err = reduce(e, T, r, change, (sd - ed).Seconds())
 	return
 }
 
-func change(dps Series, args ...float64) (a float64) {
-	var min = math.MaxFloat64
-	var max = -math.MaxFloat64
-	for k, v := range dps {
-		x, err := strconv.ParseFloat(k, 64)
-		if err != nil {
-			panic(err)
-		}
-		a += float64(v)
-		if x < min {
-			min = x
-		}
-		if x > max {
-			max = x
-		}
-	}
-	var adj float64 = args[0]
-	if td := max - min; td != 0 {
-		a *= td
-		adj = args[0] / td
-	}
-	a *= adj / float64(len(dps))
-	return
+func change(dps Series, args ...float64) float64 {
+	return avg(dps) * args[0]
 }
 
 func reduce(e *state, T miniprofiler.Timer, series []*Result, F func(Series, ...float64) float64, args ...float64) (r []*Result, err error) {
