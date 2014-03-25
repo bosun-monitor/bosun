@@ -225,37 +225,67 @@ func (s *Schedule) Check() {
 	for _, a := range s.Conf.Alerts {
 		s.CheckAlert(a)
 	}
-	changed := false
+	s.CheckUnknown()
+	checkNotify := false
 	for ak, status := range s.runStates {
 		state := s.Status[ak]
-		change := state.Append(status)
-		if change {
-			changed = true
-		}
+		last := state.Append(status)
+		a := s.Conf.Alerts[ak.Name]
 		if status > stNormal {
 			var subject = new(bytes.Buffer)
-			a := s.Conf.Alerts[ak.Name]
 			if err := s.ExecuteSubject(subject, a, state); err != nil {
 				log.Println(err)
 			}
 			state.Subject = subject.String()
-			if change {
-				notify := func(notifications map[string]*conf.Notification) {
-					for _, n := range notifications {
-						s.Notify(state, a, n)
-					}
-				}
-				switch status {
-				case stCritical:
-					notify(a.CritNotification)
-				case stWarning:
-					notify(a.WarnNotification)
-				}
+		}
+		// On state increase, clear old notifications and notify current.
+		// On state decrease, and if the old alert was already acknowledged, notify current.
+		// If the old alert was not acknowledged, do nothing.
+		// Do nothing if state did not change.
+		notify := func(notifications map[string]*conf.Notification) {
+			for _, n := range notifications {
+				s.Notify(state, a, n)
+				checkNotify = true
+			}
+		}
+		notifyCurrent := func() {
+			switch status {
+			case stCritical, stUnknown:
+				notify(a.CritNotification)
+			case stWarning:
+				notify(a.WarnNotification)
+			}
+		}
+		clearOld := func() {
+			delete(s.Notifications, ak)
+		}
+		if status > last {
+			clearOld()
+			notifyCurrent()
+		} else if status < last {
+			if _, hasOld := s.Notifications[ak]; hasOld {
+				notifyCurrent()
 			}
 		}
 	}
-	if changed {
+	if checkNotify {
 		s.nc <- true
+	}
+}
+
+func (s *Schedule) CheckUnknown() {
+	for ak, st := range s.Status {
+		t := s.Conf.Alerts[ak.Name].Unknown
+		if t == 0 {
+			t = s.Conf.Unknown
+		}
+		if t == 0 {
+			continue
+		}
+		if time.Since(st.Touched) < t {
+			continue
+		}
+		s.runStates[ak] = stUnknown
 	}
 }
 
@@ -293,6 +323,7 @@ Loop:
 			}
 			s.Status[ak] = state
 		}
+		state.Touch()
 		status := checkStatus
 		state.Computations = r.Computations
 		if r.Value.(expr.Number) != 0 {
@@ -371,14 +402,13 @@ func (s *State) Touch() {
 }
 
 // Appends status to the history if the status is different than the latest
-// status. Returns true if state was changed.
-func (s *State) Append(status Status) bool {
-	s.Touch()
+// status. Returns the previous status.
+func (s *State) Append(status Status) Status {
+	last := s.Last()
 	if len(s.History) == 0 || s.Last().Status != status {
 		s.History = append(s.History, Event{status, time.Now().UTC()})
-		return true
 	}
-	return false
+	return last.Status
 }
 
 func (s *State) Last() Event {
@@ -390,16 +420,17 @@ func (s *State) Last() Event {
 
 type Event struct {
 	Status Status
-	Time   time.Time // embedding this breaks JSON encoding
+	Time   time.Time
 }
 
 type Status int
 
 const (
-	stUnknown Status = iota
+	stNone Status = iota
 	stNormal
 	stWarning
 	stCritical
+	stUnknown
 )
 
 func (s Status) String() string {
@@ -410,7 +441,9 @@ func (s Status) String() string {
 		return "warning"
 	case stCritical:
 		return "critical"
-	default:
+	case stUnknown:
 		return "unknown"
+	default:
+		return "none"
 	}
 }
