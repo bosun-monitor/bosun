@@ -563,7 +563,11 @@ tsafControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route'
 		});
 }]);
 
-tsafControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route', function($scope: IExprScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService){
+interface IRuleScope extends IExprScope {
+	shiftEnter: ($event: any) => void;
+}
+
+tsafControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route', function($scope: IRuleScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService){
 	var current = $location.hash();
 	try {
 		current = atob(current);
@@ -589,6 +593,11 @@ tsafControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route'
 			$scope.error = error;
 			$scope.running = '';
 		});
+	$scope.shiftEnter = function($event: any) {
+		if ($event.keyCode == 13 && $event.shiftKey) {
+			$scope.set();
+		}
+	}
 	$scope.set = () => {
 		$location.hash(btoa($scope.expr));
 		$route.reload();

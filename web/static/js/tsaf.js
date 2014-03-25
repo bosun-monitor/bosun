@@ -497,6 +497,11 @@ tsafControllers.controller('RuleCtrl', [
             $scope.error = error;
             $scope.running = '';
         });
+        $scope.shiftEnter = function ($event) {
+            if ($event.keyCode == 13 && $event.shiftKey) {
+                $scope.set();
+            }
+        };
         $scope.set = function () {
             $location.hash(btoa($scope.expr));
             $route.reload();
