@@ -61,7 +61,9 @@ func c_snmp_ifaces(community, host string) opentsdb.MultiDataPoint {
 		names[k] = fmt.Sprintf("%s", v)
 	}
 	for k, v := range a {
-		aliases[k] = fmt.Sprintf("%s", v)
+		// In case clean would come up empty, prevent the point from being removed
+		// by setting our own empty case.
+		aliases[k], _ = opentsdb.Clean(fmt.Sprintf("%s", v))
 		if aliases[k] == "" {
 			aliases[k] = "NA"
 		}
