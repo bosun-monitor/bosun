@@ -58,10 +58,12 @@ func c_snmp_ifaces(community, host string) opentsdb.MultiDataPoint {
 	names := make(map[interface{}]string, len(n))
 	aliases := make(map[interface{}]string, len(a))
 	for k, v := range n {
-		names[k] = fmt.Sprint(v)
+		names[k] = fmt.Sprintf("%s", v)
 	}
 	for k, v := range a {
-		aliases[k] = fmt.Sprint(v)
+		// In case clean would come up empty, prevent the point from being removed
+		// by setting our own empty case.
+		aliases[k], _ = opentsdb.Clean(fmt.Sprintf("%s", v))
 		if aliases[k] == "" {
 			aliases[k] = "NA"
 		}
@@ -76,7 +78,7 @@ func c_snmp_ifaces(community, host string) opentsdb.MultiDataPoint {
 			Add(&md, switch_bond(metric, names[k]), v, opentsdb.TagSet{
 				"host":      host,
 				"direction": dir,
-				"iface":     fmt.Sprint(k),
+				"iface":     fmt.Sprintf("%s", k),
 				"iname":     names[k],
 				"alias":     aliases[k],
 			})
