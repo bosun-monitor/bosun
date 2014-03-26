@@ -244,6 +244,7 @@ func (c *Conf) loadGlobal(p *parse.PairNode) {
 			c.errorf("unknown key %s", k)
 		}
 		c.Vars[k] = v
+		c.Vars[k[1:]] = c.Vars[k]
 	}
 }
 
