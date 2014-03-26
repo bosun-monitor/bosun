@@ -104,6 +104,14 @@ func (s *Schedule) RestoreState() {
 		} else if a.Squelched(st.Group) {
 			log.Println("sched: alert now squelched:", ak)
 			continue
+		} else {
+			t := a.Unknown
+			if t == 0 {
+				t = s.Conf.Unknown
+			}
+			if t == 0 && st.Last().Status == stUnknown {
+				st.Append(stNormal)
+			}
 		}
 		s.Status[ak] = &st
 		for name, t := range notifications[ak] {
