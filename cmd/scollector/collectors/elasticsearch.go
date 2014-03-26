@@ -2,6 +2,7 @@ package collectors
 
 import (
 	"encoding/json"
+	"errors"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -41,6 +42,18 @@ func esReq(path, query string, v interface{}) error {
 	b, _ := ioutil.ReadAll(resp.Body)
 	resp.Body.Close()
 	return json.Unmarshal(b, v)
+}
+
+func divInterfaceFlt(a, b interface{}) (float64, error) {
+	af, ok := a.(float64)
+	if !ok {
+		return af, errors.New("couldn't convert to float64")
+	}
+	bf, ok := b.(float64)
+	if !ok {
+		return bf, errors.New("couldn't convert to float64")
+	}
+	return af / bf, nil
 }
 
 func c_elasticsearch() opentsdb.MultiDataPoint {
@@ -98,23 +111,44 @@ func c_elasticsearch() opentsdb.MultiDataPoint {
 			case "indexing":
 				add("indexing.index_total", v["index_total"], nil)
 				add("indexing.index_time", v["index_time_in_millis"], nil)
+				if f, err := divInterfaceFlt(v["index_time_in_millis"], v["index_total"]); err == nil {
+					add("indexing.time_per_index", f, nil)
+				}
 				add("indexing.index_current", v["index_current"], nil)
 				add("indexing.delete_total", v["delete_total"], nil)
-				add("indexing.delete_time_in_millis", v["delete_time_in_millis"], nil)
+				add("indexing.delete_time", v["delete_time_in_millis"], nil)
 				add("indexing.delete_current", v["delete_current"], nil)
+				if f, err := divInterfaceFlt(v["delete_time_in_millis"], v["delete_total"]); err == nil {
+					add("indexing.time_per_delete", f, nil)
+				}
 			case "get":
 				add("get.total", v["total"], nil)
 				add("get.time", v["time_in_millis"], nil)
+				if f, err := divInterfaceFlt(v["time_in_millis"], v["total"]); err == nil {
+					add("get.time_per_get", f, nil)
+				}
 				add("get.exists_total", v["exists_total"], nil)
 				add("get.exists_time", v["exists_time_in_millis"], nil)
+				if f, err := divInterfaceFlt(v["exists_time_in_millis"], v["exists_total"]); err == nil {
+					add("get.time_per_get_exists", f, nil)
+				}
 				add("get.missing_total", v["missing_total"], nil)
 				add("get.missing_time", v["missing_time_in_millis"], nil)
+				if f, err := divInterfaceFlt(v["missing_time_in_millis"], v["missing_total"]); err == nil {
+					add("get.time_per_get_missing", f, nil)
+				}
 			case "search":
 				add("search.query_total", v["query_total"], nil)
 				add("search.query_time", v["query_time_in_millis"], nil)
+				if f, err := divInterfaceFlt(v["query_time_in_millis"], v["query_total"]); err == nil {
+					add("search.time_per_query", f, nil)
+				}
 				add("search.query_current", v["query_current"], nil)
 				add("search.fetch_total", v["fetch_total"], nil)
 				add("search.fetch_time", v["fetch_time_in_millis"], nil)
+				if f, err := divInterfaceFlt(v["fetch_time_in_millis"], v["fetch_total"]); err == nil {
+					add("search.time_per_fetch", f, nil)
+				}
 				add("search.fetch_current", v["fetch_current"], nil)
 			case "cache":
 				add("cache.field.evictions", v["field_evictions"], nil)
@@ -125,7 +159,10 @@ func c_elasticsearch() opentsdb.MultiDataPoint {
 			case "merges":
 				add("merges.current", v["current"], nil)
 				add("merges.total", v["total"], nil)
-				add("merges.total_time", v["total_time_in_millis"].(float64)/1000, nil)
+				add("merges.total_time", v["total_time_in_millis"], nil)
+				if f, err := divInterfaceFlt(v["total_time_in_millis"], v["total"]); err == nil {
+					add("merges.time_per_merge", f, nil)
+				}
 			}
 		}
 		for k, v := range nstats.Process {
