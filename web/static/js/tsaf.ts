@@ -604,6 +604,12 @@ tsafControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route'
 	};
 }]);
 
+tsafApp.directive('tsResults', function() {
+	return {
+		templateUrl: '/partials/results.html',
+	};
+});
+
 tsafApp.directive("tsRickshaw", ['$filter', function($filter: ng.IFilterService) {
 	return {
 		templateUrl: '/partials/rickshaw.html',

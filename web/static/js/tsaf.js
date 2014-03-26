@@ -508,6 +508,12 @@ tsafControllers.controller('RuleCtrl', [
         };
     }]);
 
+tsafApp.directive('tsResults', function () {
+    return {
+        templateUrl: '/partials/results.html'
+    };
+});
+
 tsafApp.directive("tsRickshaw", [
     '$filter', function ($filter) {
         return {
