@@ -49,9 +49,16 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 	if a == nil || a.Crit == nil {
 		return nil, fmt.Errorf("missing crit expression")
 	}
-	res, queries, err := a.Crit.Execute(opentsdb.Host(schedule.Conf.TsdbHost), t)
+	all, queries, err := a.Crit.Execute(opentsdb.Host(schedule.Conf.TsdbHost), t)
 	if err != nil {
 		return nil, err
+	}
+	var res []*expr.Result
+	for _, r := range all {
+		if a.Squelched(r.Group) {
+			continue
+		}
+		res = append(res, r)
 	}
 	ret := struct {
 		Results []*expr.Result
