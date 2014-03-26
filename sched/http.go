@@ -16,7 +16,9 @@ func (s *Schedule) Post(a *conf.Alert, n *conf.Notification, st *State) {
 		return
 	}
 	resp, err := http.Post(n.Post.String(), "application/x-www-form-urlencoded", buf)
-	defer resp.Body.Close()
+	if resp != nil && resp.Body != nil {
+		defer resp.Body.Close()
+	}
 	if err != nil {
 		log.Println(err)
 		return
