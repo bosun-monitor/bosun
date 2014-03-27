@@ -20,7 +20,6 @@ type Schedule struct {
 	sync.Mutex
 
 	Conf          *conf.Conf
-	Freq          time.Duration
 	Status        map[AlertKey]*State
 	Notifications map[AlertKey]map[string]time.Time
 
@@ -32,11 +31,9 @@ type Schedule struct {
 func (s *Schedule) MarshalJSON() ([]byte, error) {
 	t := struct {
 		Alerts map[string]*conf.Alert
-		Freq   time.Duration
 		Status map[string]*State
 	}{
 		s.Conf.Alerts,
-		s.Freq,
 		make(map[string]*State),
 	}
 	for k, v := range s.Status {
@@ -48,9 +45,7 @@ func (s *Schedule) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&t)
 }
 
-var DefaultSched = &Schedule{
-	Freq: time.Minute * 5,
-}
+var DefaultSched = &Schedule{}
 
 // Loads a configuration into the default schedule
 func Load(c *conf.Conf) {
@@ -159,8 +154,8 @@ func (s *Schedule) Run() error {
 	s.nc = make(chan interface{}, 1)
 	go s.Poll()
 	for {
-		wait := time.After(s.Freq)
-		if s.Freq < time.Second {
+		wait := time.After(s.Conf.CheckFrequency)
+		if s.Conf.CheckFrequency < time.Second {
 			return fmt.Errorf("sched: frequency must be > 1 second")
 		}
 		if s.Conf == nil {
