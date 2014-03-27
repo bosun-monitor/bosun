@@ -8,6 +8,15 @@ import (
 
 type Duration time.Duration
 
+const (
+	Nanosecond  Duration = 1
+	Microsecond          = 1000 * Nanosecond
+	Millisecond          = 1000 * Microsecond
+	Second               = 1000 * Millisecond
+	Minute               = 60 * Second
+	Hour                 = 60 * Minute
+)
+
 var unitMap = map[string]float64{
 	"ms": float64(time.Millisecond),
 	"s":  float64(time.Second),
