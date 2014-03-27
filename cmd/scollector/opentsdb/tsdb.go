@@ -410,7 +410,7 @@ func (r *Request) AutoDownsample(l int64) error {
 	if d < Duration(time.Second)*15 {
 		return nil
 	}
-	ds := fmt.Sprintf("%ds-avg", d/Second)
+	ds := fmt.Sprintf("%ds-avg", int64(d.Seconds()))
 	for _, q := range r.Queries {
 		q.Downsample = ds
 	}
