@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/MiniProfiler/go/miniprofiler"
 	"github.com/StackExchange/scollector/opentsdb"
@@ -16,7 +17,7 @@ func Expr(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 	if err != nil {
 		return nil, err
 	}
-	res, queries, err := e.Execute(opentsdb.Host(schedule.Conf.TsdbHost), t)
+	res, queries, err := e.Execute(opentsdb.NewCache(schedule.Conf.TsdbHost), t)
 	if err != nil {
 		return nil, err
 	}
@@ -40,7 +41,7 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 	tsdbHost = %s
 	alert _ {
 		%s
-	}`, schedule.Conf.TsdbHost, r.FormValue("q"))
+	}`, schedule.Conf.TsdbHost, r.FormValue("rule"))
 	c, err := conf.New("-", txt)
 	if err != nil {
 		return nil, err
@@ -49,7 +50,20 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 	if a == nil || a.Crit == nil {
 		return nil, fmt.Errorf("missing crit expression")
 	}
-	all, queries, err := a.Crit.Execute(opentsdb.Host(schedule.Conf.TsdbHost), t)
+	now := time.Now().UTC()
+	if fd := r.FormValue("date"); len(fd) > 0 {
+		if ft := r.FormValue("time"); len(ft) > 0 {
+			fd += " " + ft
+		} else {
+			fd += " " + now.Format("15:04")
+		}
+		if t, err := time.Parse("2006-01-02 15:04", fd); err == nil {
+			now = t
+		} else {
+			return nil, err
+		}
+	}
+	all, queries, err := a.Crit.Execute(opentsdb.NewDateCache(schedule.Conf.TsdbHost, now), t)
 	if err != nil {
 		return nil, err
 	}
