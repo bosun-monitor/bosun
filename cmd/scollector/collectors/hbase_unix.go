@@ -16,14 +16,12 @@ func init() {
 
 var hbaseEnabled bool
 
-const hbrUrl = "http://localhost:60030/jmx?qry=hadoop:service=RegionServer,name=RegionServerStatistics"
+const hbrURL = "http://localhost:60030/jmx?qry=hadoop:service=RegionServer,name=RegionServerStatistics"
 
 func hbrInit() {
 	update := func() {
-		_, err := http.Get(hbrUrl)
-		if err == nil {
-			hbaseEnabled = true
-		}
+		_, err := http.Get(hbrURL)
+		hbaseEnabled = err == nil
 	}
 	update()
 	go func() {
@@ -38,7 +36,7 @@ func c_hbase_region() opentsdb.MultiDataPoint {
 		return nil
 	}
 	var md opentsdb.MultiDataPoint
-	res, err := http.Get(hbrUrl)
+	res, err := http.Get(hbrURL)
 	if err != nil {
 		slog.Errorln(err)
 		return nil
