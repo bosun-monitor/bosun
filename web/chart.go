@@ -11,7 +11,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/MiniProfiler/go/miniprofiler"
 	"github.com/StackExchange/scollector/opentsdb"
@@ -43,7 +42,7 @@ func Graph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 		if err != nil {
 			return nil, err
 		}
-		if err := Autods(oreq, ads_i); err != nil {
+		if err := oreq.AutoDownsample(ads_i); err != nil {
 			return nil, err
 		}
 	}
@@ -81,91 +80,6 @@ func Graph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 	return rickchart(tr)
 }
 
-func ParseAbsTime(s string) (time.Time, error) {
-	var t time.Time
-	t_formats := [4]string{
-		"2006/01/02-15:04:05",
-		"2006/01/02-15:04",
-		"2006/01/02-15",
-		"2006/01/02",
-	}
-	for _, f := range t_formats {
-		if t, err := time.Parse(f, s); err == nil {
-			return t, nil
-		}
-	}
-	i, err := strconv.ParseInt(s, 10, 64)
-	if err != nil {
-		return t, err
-	}
-	return time.Unix(i, 0), nil
-}
-
-func ParseTime(v interface{}) (time.Time, error) {
-	now := time.Now().UTC()
-	switch i := v.(type) {
-	case string:
-		if i != "" {
-			if strings.HasSuffix(i, "-ago") {
-				s := strings.TrimSuffix(i, "-ago")
-				d, err := opentsdb.ParseDuration(s)
-				if err != nil {
-					return now, err
-				}
-				return now.Add(time.Duration(-d)), nil
-			} else {
-				return ParseAbsTime(i)
-			}
-		} else {
-			return now, nil
-		}
-	case int64:
-		return time.Unix(i, 0), nil
-	default:
-		return time.Time{}, errors.New("type must be string or int64")
-	}
-}
-
-func GetDuration(r *opentsdb.Request) (time.Duration, error) {
-	var t time.Duration
-	if v, ok := r.Start.(string); ok && v == "" {
-		return t, errors.New("start time must be provided")
-	}
-	start, err := ParseTime(r.Start)
-	if err != nil {
-		return t, err
-	}
-	var end time.Time
-	if r.End != nil {
-		end, err = ParseTime(r.End)
-		if err != nil {
-			return t, err
-		}
-	} else {
-		end = time.Now()
-	}
-	return end.Sub(start), nil
-}
-
-func Autods(r *opentsdb.Request, l int64) error {
-	if l == 0 {
-		return errors.New("tsaf: target length must be > 0")
-	}
-	cd, err := GetDuration(r)
-	if err != nil {
-		return err
-	}
-	d := cd / time.Duration(l)
-	if d < time.Second*15 {
-		return nil
-	}
-	ds := fmt.Sprintf("%ds-avg", d/time.Second)
-	for _, q := range r.Queries {
-		q.Downsample = ds
-	}
-	return nil
-}
-
 var q_re = regexp.MustCompile(`"([^"]+)"\s*,\s*"([^"]+)"`)
 var r_re = regexp.MustCompile(`^(.*?")[^"]+(".*)`)
 
@@ -186,7 +100,7 @@ func ExprGraph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (in
 		if err != nil {
 			return nil, err
 		}
-		if err := Autods(&oreq, ads_i); err != nil {
+		if err := oreq.AutoDownsample(ads_i); err != nil {
 			return nil, err
 		}
 	}

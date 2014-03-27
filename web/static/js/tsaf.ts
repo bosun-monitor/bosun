@@ -564,11 +564,16 @@ tsafControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route'
 }]);
 
 interface IRuleScope extends IExprScope {
+	date: string;
+	time: string;
 	shiftEnter: ($event: any) => void;
 }
 
 tsafControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route', function($scope: IRuleScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService){
-	var current = $location.hash();
+	var search = $location.search();
+	var current = search.rule;
+	$scope.date = search.date || '';
+	$scope.time = search.time || '';
 	try {
 		current = atob(current);
 	}
@@ -578,12 +583,15 @@ tsafControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route'
 	if (!current) {
 		var def = '$t = "5m"\n' +
 			'crit = avg(q("avg:os.cpu", $t, "")) > 10';
-		$location.hash(btoa(def));
+		$location.search('rule', btoa(def));
 		return;
 	}
 	$scope.expr = current;
 	$scope.running = current;
-	$http.get('/api/rule?q=' + encodeURIComponent(current))
+	$http.get('/api/rule?' +
+		'rule=' + encodeURIComponent(current) +
+		'&date=' + encodeURIComponent($scope.date) +
+		'&time=' + encodeURIComponent($scope.time))
 		.success((data) => {
 			$scope.result = data.Results;
 			$scope.queries = data.Queries;
@@ -599,7 +607,9 @@ tsafControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route'
 		}
 	}
 	$scope.set = () => {
-		$location.hash(btoa($scope.expr));
+		$location.search('rule', btoa($scope.expr));
+		$location.search('date', $scope.date || null);
+		$location.search('time', $scope.time || null);
 		$route.reload();
 	};
 }]);
