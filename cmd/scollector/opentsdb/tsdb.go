@@ -14,6 +14,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 	"unicode"
 	"unicode/utf8"
 
@@ -324,16 +325,96 @@ func (r Request) String() string {
 	return v.Encode()
 }
 
-type RequestError struct {
-	Err struct {
-		Code    int    `json:"code"`
-		Message string `json:"message"`
-		Details string `json:"details"`
-	} `json:"error"`
+// ParseAbsTime returns the time of s, which must be of any non-relative (not
+// "X-ago") format supported by OpenTSDB.
+func ParseAbsTime(s string) (time.Time, error) {
+	var t time.Time
+	t_formats := [4]string{
+		"2006/01/02-15:04:05",
+		"2006/01/02-15:04",
+		"2006/01/02-15",
+		"2006/01/02",
+	}
+	for _, f := range t_formats {
+		if t, err := time.Parse(f, s); err == nil {
+			return t, nil
+		}
+	}
+	i, err := strconv.ParseInt(s, 10, 64)
+	if err != nil {
+		return t, err
+	}
+	return time.Unix(i, 0), nil
 }
 
-func (r *RequestError) Error() string {
-	return fmt.Sprintf("tsdb: %s", r.Err.Message)
+// ParseTime returns the time of v, which can be of any format supported by
+// OpenTSDB.
+func ParseTime(v interface{}) (time.Time, error) {
+	now := time.Now().UTC()
+	switch i := v.(type) {
+	case string:
+		if i != "" {
+			if strings.HasSuffix(i, "-ago") {
+				s := strings.TrimSuffix(i, "-ago")
+				d, err := ParseDuration(s)
+				if err != nil {
+					return now, err
+				}
+				return now.Add(time.Duration(-d)), nil
+			} else {
+				return ParseAbsTime(i)
+			}
+		} else {
+			return now, nil
+		}
+	case int64:
+		return time.Unix(i, 0), nil
+	default:
+		return time.Time{}, errors.New("type must be string or int64")
+	}
+}
+
+// GetDuration returns the duration from the request's start to end.
+func GetDuration(r *Request) (Duration, error) {
+	var t Duration
+	if v, ok := r.Start.(string); ok && v == "" {
+		return t, errors.New("start time must be provided")
+	}
+	start, err := ParseTime(r.Start)
+	if err != nil {
+		return t, err
+	}
+	var end time.Time
+	if r.End != nil {
+		end, err = ParseTime(r.End)
+		if err != nil {
+			return t, err
+		}
+	} else {
+		end = time.Now()
+	}
+	t = Duration(end.Sub(start))
+	return t, nil
+}
+
+// AutoDownsample sets the avg downsample aggregator to produce l points.
+func (r *Request) AutoDownsample(l int64) error {
+	if l == 0 {
+		return errors.New("tsaf: target length must be > 0")
+	}
+	cd, err := GetDuration(r)
+	if err != nil {
+		return err
+	}
+	d := cd / Duration(l)
+	if d < Duration(time.Second)*15 {
+		return nil
+	}
+	ds := fmt.Sprintf("%ds-avg", d.Seconds())
+	for _, q := range r.Queries {
+		q.Downsample = ds
+	}
+	return nil
 }
 
 // Query performs a v2 OpenTSDB request to the given host. host should be of the
@@ -371,6 +452,18 @@ func (r Request) Query(host string) (ResponseSet, error) {
 		return nil, err
 	}
 	return tr, nil
+}
+
+type RequestError struct {
+	Err struct {
+		Code    int    `json:"code"`
+		Message string `json:"message"`
+		Details string `json:"details"`
+	} `json:"error"`
+}
+
+func (r *RequestError) Error() string {
+	return fmt.Sprintf("tsdb: %s", r.Err.Message)
 }
 
 type Context interface {
@@ -412,4 +505,38 @@ func (c *Cache) Query(r Request) (ResponseSet, error) {
 	rs, e := r.Query(c.host)
 	c.cache[s] = &cacheResult{rs, e}
 	return rs, e
+}
+
+type DateCache struct {
+	*Cache
+	now time.Time
+}
+
+func NewDateCache(host string, now time.Time) *DateCache {
+	return &DateCache{
+		Cache: NewCache(host),
+		now:   now,
+	}
+}
+
+func (c *DateCache) Query(r Request) (ResponseSet, error) {
+	start, err := ParseTime(r.Start)
+	if err != nil {
+		return nil, err
+	}
+	var end time.Time
+	if r.End != nil {
+		end, err = ParseTime(r.End)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		end = time.Now()
+	}
+	diff := c.now.Sub(end)
+	start = start.Add(diff)
+	end = end.Add(diff)
+	r.Start = start.Unix()
+	r.End = end.Unix()
+	return c.Cache.Query(r)
 }
