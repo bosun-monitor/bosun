@@ -4,20 +4,20 @@ import (
 	"encoding/json"
 	"errors"
 	"io/ioutil"
+	"math"
 	"net/http"
 	"net/url"
 	"regexp"
+	"time"
 
 	"github.com/StackExchange/scollector/opentsdb"
 )
 
 func init() {
-	collectors = append(collectors, &IntervalCollector{F: c_elasticsearch})
+	collectors = append(collectors, &IntervalCollector{F: c_elasticsearch, init: esInit})
 }
 
-const (
-	esURL = "http://localhost:9200/"
-)
+const esURL = "http://localhost:9200/"
 
 var (
 	esPreV1     = regexp.MustCompile(`^0\.`)
@@ -26,37 +26,26 @@ var (
 		"yellow": 1,
 		"red":    2,
 	}
+	esEnabled bool
 )
 
-func esReq(path, query string, v interface{}) error {
-	u := &url.URL{
-		Scheme:   "http",
-		Host:     "localhost:9200",
-		Path:     path,
-		RawQuery: query,
+func esInit() {
+	update := func() {
+		_, err := http.Get(esURL)
+		esEnabled = err == nil
 	}
-	resp, err := http.Get(u.String())
-	if err != nil || resp.StatusCode != http.StatusOK {
-		return nil
-	}
-	b, _ := ioutil.ReadAll(resp.Body)
-	resp.Body.Close()
-	return json.Unmarshal(b, v)
-}
-
-func divInterfaceFlt(a, b interface{}) (float64, error) {
-	af, ok := a.(float64)
-	if !ok {
-		return af, errors.New("couldn't convert to float64")
-	}
-	bf, ok := b.(float64)
-	if !ok {
-		return bf, errors.New("couldn't convert to float64")
-	}
-	return af / bf, nil
+	update()
+	go func() {
+		for _ = range time.Tick(time.Minute * 5) {
+			update()
+		}
+	}()
 }
 
 func c_elasticsearch() opentsdb.MultiDataPoint {
+	if !esEnabled {
+		return nil
+	}
 	var status esStatus
 	if err := esReq("/", "", &status); err != nil {
 		return nil
@@ -235,6 +224,22 @@ func c_elasticsearch() opentsdb.MultiDataPoint {
 	return md
 }
 
+func esReq(path, query string, v interface{}) error {
+	u := &url.URL{
+		Scheme:   "http",
+		Host:     "localhost:9200",
+		Path:     path,
+		RawQuery: query,
+	}
+	resp, err := http.Get(u.String())
+	if err != nil || resp.StatusCode != http.StatusOK {
+		return nil
+	}
+	b, _ := ioutil.ReadAll(resp.Body)
+	resp.Body.Close()
+	return json.Unmarshal(b, v)
+}
+
 func esStatsURL(version string) string {
 	if esPreV1.MatchString(version) {
 		return "/_cluster/nodes/_local/stats"
@@ -264,4 +269,22 @@ type esStats struct {
 
 type esClusterState struct {
 	MasterNode string `json:"master_node"`
+}
+
+func divInterfaceFlt(a, b interface{}) (float64, error) {
+	af, ok := a.(float64)
+	if !ok {
+		return 0, errors.New("elasticsearch: expected float64")
+	}
+	bf, ok := b.(float64)
+	if !ok {
+		return 0, errors.New("elasticsearch: expected float64")
+	}
+	r := af / bf
+	if math.IsNaN(r) {
+		return 0, errors.New("elasticsearch: got NaN")
+	} else if math.IsInf(r, 0) {
+		return 0, errors.New("elasticsearch: got Inf")
+	}
+	return r, nil
 }
