@@ -22,12 +22,13 @@ import (
 
 type Conf struct {
 	Vars
-	Name            string // Config file name
-	WebDir          string // Static content web directory: web
-	TsdbHost        string // OpenTSDB relay and query destination: ny-devtsdb04:4242
-	RelayListen     string // OpenTSDB relay listen address: :4242
-	HttpListen      string // Web server listen address: :80
-	SmtpHost        string // SMTP address: ny-mail:25
+	Name            string        // Config file name
+	CheckFrequency  time.Duration // Time between alert checks: 5m
+	WebDir          string        // Static content web directory: web
+	TsdbHost        string        // OpenTSDB relay and query destination: ny-devtsdb04:4242
+	RelayListen     string        // OpenTSDB relay listen address: :4242
+	HttpListen      string        // Web server listen address: :80
+	SmtpHost        string        // SMTP address: ny-mail:25
 	EmailFrom       string
 	StateFile       string
 	Unknown         time.Duration
@@ -172,15 +173,16 @@ func ParseFile(fname string) (*Conf, error) {
 func New(name, text string) (c *Conf, err error) {
 	defer errRecover(&err)
 	c = &Conf{
-		Name:          name,
-		HttpListen:    ":8070",
-		RelayListen:   ":4242",
-		WebDir:        "web",
-		StateFile:     "tsaf.state",
-		Vars:          make(map[string]string),
-		Templates:     make(map[string]*Template),
-		Alerts:        make(map[string]*Alert),
-		Notifications: make(map[string]*Notification),
+		Name:           name,
+		CheckFrequency: time.Minute * 5,
+		HttpListen:     ":8070",
+		RelayListen:    ":4242",
+		WebDir:         "web",
+		StateFile:      "tsaf.state",
+		Vars:           make(map[string]string),
+		Templates:      make(map[string]*Template),
+		Alerts:         make(map[string]*Alert),
+		Notifications:  make(map[string]*Notification),
 	}
 	c.tree, err = parse.Parse(name, text)
 	if err != nil {
@@ -209,6 +211,15 @@ func New(name, text string) (c *Conf, err error) {
 func (c *Conf) loadGlobal(p *parse.PairNode) {
 	v := c.Expand(p.Val.Text, nil)
 	switch k := p.Key.Text; k {
+	case "checkFrequency":
+		d, err := time.ParseDuration(v)
+		if err != nil {
+			c.error(err)
+		}
+		if d < time.Second {
+			c.errorf("checkFrequency duration must be at least 1s")
+		}
+		c.CheckFrequency = d
 	case "tsdbHost":
 		c.TsdbHost = v
 	case "httpListen":
