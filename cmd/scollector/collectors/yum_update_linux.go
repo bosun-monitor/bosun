@@ -15,7 +15,7 @@ func yum_update_stats_linux() opentsdb.MultiDataPoint {
 	var md opentsdb.MultiDataPoint
 	regular_c := 0
 	kernel_c := 0
-	readCommand(func(line string) {
+	err := readCommand(func(line string) {
 		fields := strings.Fields(line)
 		if len(fields) > 1 && !strings.HasPrefix(fields[0], "Updated Packages") {
 			if strings.HasPrefix(fields[0], "kern") {
@@ -26,6 +26,9 @@ func yum_update_stats_linux() opentsdb.MultiDataPoint {
 		}
 
 	}, "yum", "list", "updates", "-q")
+	if err != nil {
+		return nil
+	}
 	Add(&md, "linux.updates.count", regular_c, opentsdb.TagSet{"type": "non-kernel"})
 	Add(&md, "linux.updates.count", kernel_c, opentsdb.TagSet{"type": "kernel"})
 	return md
