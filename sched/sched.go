@@ -447,7 +447,6 @@ func (s *Schedule) AddNotification(ak AlertKey, n *conf.Notification, started ti
 		s.Notifications[ak] = make(map[string]time.Time)
 	}
 	s.Notifications[ak][n.Name] = started
-	}
 }
 
 type AlertKey struct {
