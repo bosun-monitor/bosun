@@ -36,9 +36,10 @@ func (s *Schedule) URL() *url.URL {
 	if strings.HasPrefix(s.Conf.HttpListen, ":") {
 		h, err := os.Hostname()
 		if err != nil {
-			return ""
+			u.Host = "localhost" + u.Host
+		} else {
+			u.Host = h + u.Host
 		}
-		u.Host = h + u.Host
 	}
 	return &u
 }
