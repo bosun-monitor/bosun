@@ -44,6 +44,10 @@ tsafApp.config(['$routeProvider', '$locationProvider', function($routeProvider: 
 			templateUrl: 'partials/rule.html',
 			controller: 'RuleCtrl',
 		}).
+		when('/silence', {
+			templateUrl: 'partials/silence.html',
+			controller: 'SilenceCtrl',
+		}).
 		otherwise({
 			redirectTo: '/',
 		});
@@ -611,6 +615,68 @@ tsafControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route'
 		$location.search('date', $scope.date || null);
 		$location.search('time', $scope.time || null);
 		$route.reload();
+	};
+}]);
+
+interface ISilenceScope extends IExprScope {
+	silences: any;
+	error: string;
+	start: string;
+	end: string;
+	duration: string;
+	text: string;
+	testSilences: any;
+	test: () => void;
+	confirm: () => void;
+}
+
+tsafControllers.controller('SilenceCtrl', ['$scope', '$http', function($scope: ISilenceScope, $http: ng.IHttpService){
+	$scope.duration = '1h';
+	$scope.text = 'host=ny-.*';
+	function get() {
+		$http.get('/api/silence/get')
+			.success((data) => {
+				$scope.silences = data;
+			})
+			.error((error) => {
+				$scope.error = error;
+			});
+	}
+	get();
+	$scope.test = () => {
+		$scope.error = null;
+		var data = {
+			start: $scope.start,
+			end: $scope.end,
+			duration: $scope.duration,
+			text: $scope.text,
+		};
+		$http.post('/api/silence/set', data)
+			.success((data) => {
+				$scope.testSilences = data;
+			})
+			.error((error) => {
+				$scope.error = error;
+			});
+	};
+	$scope.confirm = () => {
+		$scope.error = null;
+		$scope.testSilences = null;
+		var data = {
+			start: $scope.start,
+			end: $scope.end,
+			duration: $scope.duration,
+			text: $scope.text,
+			confirm: "true",
+		};
+		$http.post('/api/silence/set', data)
+			.error((error) => {
+				$scope.error = error;
+			})
+			.finally(() => {
+				$scope.testSilences = null;
+				get();
+			});
 	};
 }]);
 

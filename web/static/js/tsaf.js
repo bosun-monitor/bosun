@@ -36,6 +36,9 @@ tsafApp.config([
         }).when('/rule', {
             templateUrl: 'partials/rule.html',
             controller: 'RuleCtrl'
+        }).when('/silence', {
+            templateUrl: 'partials/silence.html',
+            controller: 'SilenceCtrl'
         }).otherwise({
             redirectTo: '/'
         });
@@ -510,6 +513,51 @@ tsafControllers.controller('RuleCtrl', [
             $location.search('date', $scope.date || null);
             $location.search('time', $scope.time || null);
             $route.reload();
+        };
+    }]);
+
+tsafControllers.controller('SilenceCtrl', [
+    '$scope', '$http', function ($scope, $http) {
+        $scope.duration = '1h';
+        $scope.text = 'host=ny-.*';
+        function get() {
+            $http.get('/api/silence/get').success(function (data) {
+                $scope.silences = data;
+            }).error(function (error) {
+                $scope.error = error;
+            });
+        }
+        get();
+        $scope.test = function () {
+            $scope.error = null;
+            var data = {
+                start: $scope.start,
+                end: $scope.end,
+                duration: $scope.duration,
+                text: $scope.text
+            };
+            $http.post('/api/silence/set', data).success(function (data) {
+                $scope.testSilences = data;
+            }).error(function (error) {
+                $scope.error = error;
+            });
+        };
+        $scope.confirm = function () {
+            $scope.error = null;
+            $scope.testSilences = null;
+            var data = {
+                start: $scope.start,
+                end: $scope.end,
+                duration: $scope.duration,
+                text: $scope.text,
+                confirm: "true"
+            };
+            $http.post('/api/silence/set', data).error(function (error) {
+                $scope.error = error;
+            }).finally(function () {
+                $scope.testSilences = null;
+                get();
+            });
         };
     }]);
 
