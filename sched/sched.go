@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"regexp"
 	"sync"
 	"time"
 
@@ -22,10 +23,90 @@ type Schedule struct {
 	Conf          *conf.Conf
 	Status        map[AlertKey]*State
 	Notifications map[AlertKey]map[string]time.Time
+	Silence       []*Silence
 
 	cache     *opentsdb.Cache
 	runStates map[AlertKey]Status
 	nc        chan interface{}
+}
+
+type Silence struct {
+	Start, End time.Time
+	Text       string
+	match      map[string]*regexp.Regexp
+}
+
+func (s *Silence) Silenced(tags opentsdb.TagSet) bool {
+	now := time.Now()
+	if now.Before(s.Start) || now.After(s.End) {
+		return false
+	}
+	for k, re := range s.match {
+		tagv, ok := tags[k]
+		if !ok || !re.MatchString(tagv) {
+			return false
+		}
+	}
+	return true
+}
+
+// Silenced returns all currently silenced AlertKeys and the time they will
+// be unsilenced.
+func (s *Schedule) Silenced() map[AlertKey]time.Time {
+	aks := make(map[AlertKey]time.Time)
+	for _, si := range s.Silence {
+		for ak, st := range s.Status {
+			if si.Silenced(st.Group) {
+				if aks[ak].Before(si.End) {
+					aks[ak] = si.End
+				}
+				break
+			}
+		}
+	}
+	return aks
+}
+
+func (s *Schedule) AddSilence(start, end time.Time, text string, confirm bool) ([]AlertKey, error) {
+	if start.IsZero() || end.IsZero() {
+		return nil, fmt.Errorf("both start and end must be specified")
+	}
+	if start.After(end) {
+		return nil, fmt.Errorf("start time must be before end time")
+	}
+	tags, err := opentsdb.ParseTags(text)
+	if err != nil {
+		return nil, err
+	} else if len(tags) == 0 {
+		return nil, fmt.Errorf("empty text")
+	}
+	si := Silence{
+		Start: start,
+		End:   end,
+		Text:  text,
+		match: make(map[string]*regexp.Regexp),
+	}
+	for k, v := range tags {
+		re, err := regexp.Compile(v)
+		if err != nil {
+			return nil, err
+		}
+		si.match[k] = re
+	}
+	if confirm {
+		s.Lock()
+		s.Silence = append(s.Silence, &si)
+		s.Unlock()
+		return nil, nil
+	}
+	var aks []AlertKey
+	for ak, st := range s.Status {
+		if si.Silenced(st.Group) {
+			aks = append(aks, ak)
+			break
+		}
+	}
+	return aks, nil
 }
 
 func (s *Schedule) MarshalJSON() ([]byte, error) {
