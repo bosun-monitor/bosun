@@ -1,43 +1,79 @@
-package sched
+package conf
 
 import (
 	"bytes"
 	"crypto/tls"
 	"errors"
 	"log"
+	"net/http"
 	"net/mail"
 	"net/smtp"
 
-	"github.com/StackExchange/tsaf/conf"
 	"github.com/jordan-wright/email"
 )
 
-func (s *Schedule) Email(a *conf.Alert, n *conf.Notification, st *State) {
-	body := new(bytes.Buffer)
-	subject := new(bytes.Buffer)
-	if err := s.ExecuteBody(body, a, st); err != nil {
+func (n *Notification) Notify(subject, body []byte, from, smtpHost string) {
+	if len(n.Email) > 0 {
+		go n.DoEmail(subject, body, from, smtpHost)
+	}
+	if n.Post != nil {
+		go n.DoPost(subject)
+	}
+	if n.Get != nil {
+		go n.DoGet()
+	}
+	if n.Print {
+		go n.DoPrint(subject)
+	}
+}
+
+func (n *Notification) DoPrint(subject []byte) {
+	log.Println(string(subject))
+}
+
+func (n *Notification) DoPost(subject []byte) {
+	resp, err := http.Post(n.Post.String(), "application/x-www-form-urlencoded", bytes.NewBuffer(subject))
+	if resp != nil && resp.Body != nil {
+		defer resp.Body.Close()
+	}
+	if err != nil {
 		log.Println(err)
 		return
 	}
-	if err := s.ExecuteSubject(subject, a, st); err != nil {
+	if resp.StatusCode >= 300 {
+		log.Println("bad response on notification post:", resp.Status)
+	}
+}
+
+func (n *Notification) DoGet() {
+	resp, err := http.Get(n.Get.String())
+	if err != nil {
 		log.Println(err)
 		return
 	}
+	if resp.StatusCode >= 300 {
+		log.Println("bad response on notification get:", resp.Status)
+	}
+}
+
+func (n *Notification) DoEmail(subject, body []byte, from, smtpHost string) {
 	e := email.NewEmail()
-	e.From = s.Conf.EmailFrom
+	e.From = from
 	for _, a := range n.Email {
 		e.To = append(e.To, a.Address)
 	}
-	e.Subject = subject.String()
-	e.HTML = body.Bytes()
-	if err := Send(e, s.Conf.SmtpHost); err != nil {
+	e.Subject = string(subject)
+	e.HTML = body
+	if err := Send(e, smtpHost); err != nil {
 		log.Println(err)
 		return
 	}
 }
 
-// Send an email using the given host and SMTP auth (optional), returns any error thrown by smtp.SendMail
-// This function merges the To, Cc, and Bcc fields and calls the smtp.SendMail function using the Email.Bytes() output as the message
+// Send an email using the given host and SMTP auth (optional), returns any
+// error thrown by smtp.SendMail. This function merges the To, Cc, and Bcc
+// fields and calls the smtp.SendMail function using the Email.Bytes() output as
+// the message.
 func Send(e *email.Email, addr string) error {
 	// Merge the To, Cc, and Bcc fields
 	to := make([]string, 0, len(e.To)+len(e.Cc)+len(e.Bcc))
