@@ -27,37 +27,34 @@ func (s *Schedule) data(st *State, a *conf.Alert) *context {
 	}
 }
 
-// Ack returns the acknowledge link
-func (c *context) Ack() string {
+// URL returns a prepopulated URL for external access, with path and query empty.
+func (s *Schedule) URL() *url.URL {
 	u := url.URL{
 		Scheme: "http",
-		Host:   c.schedule.Conf.HttpListen,
-		Path:   fmt.Sprintf("/api/acknowledge/%s/%s", c.Alert.Name, c.State.Group.String()),
+		Host:   s.Conf.HttpListen,
 	}
-	if strings.HasPrefix(c.schedule.Conf.HttpListen, ":") {
+	if strings.HasPrefix(s.Conf.HttpListen, ":") {
 		h, err := os.Hostname()
 		if err != nil {
 			return ""
 		}
 		u.Host = h + u.Host
 	}
+	return &u
+}
+
+// Ack returns the URL to acknowledge an alert.
+func (c *context) Ack() string {
+	u := c.schedule.URL()
+	u.Path = fmt.Sprintf("/api/acknowledge/%s/%s", c.Alert.Name, c.State.Group.String())
 	return u.String()
 }
 
+// HostView returns the URL to the host view page.
 func (c *context) HostView(host string) string {
-	u := url.URL{
-		Scheme:   "http",
-		Host:     c.schedule.Conf.HttpListen,
-		Path:     "/host",
-		RawQuery: fmt.Sprintf("time=1d-ago&host=%s", host),
-	}
-	if strings.HasPrefix(c.schedule.Conf.HttpListen, ":") {
-		h, err := os.Hostname()
-		if err != nil {
-			return ""
-		}
-		u.Host = h + u.Host
-	}
+	u := c.schedule.URL()
+	u.Path = "/host"
+	u.RawQuery = fmt.Sprintf("time=1d-ago&host=%s", host)
 	return u.String()
 }
 
