@@ -424,18 +424,15 @@ Loop:
 }
 
 func (s *Schedule) Notify(st *State, a *conf.Alert, n *conf.Notification) {
-	if len(n.Email) > 0 {
-		go s.Email(a, n, st)
+	subject := new(bytes.Buffer)
+	if err := s.ExecuteSubject(subject, a, st); err != nil {
+		log.Println(err)
 	}
-	if n.Post != nil {
-		go s.Post(a, n, st)
+	body := new(bytes.Buffer)
+	if err := s.ExecuteBody(body, a, st); err != nil {
+		log.Println(err)
 	}
-	if n.Get != nil {
-		go s.Get(a, n, st)
-	}
-	if n.Print {
-		go s.Print(a, n, st)
-	}
+	n.Notify(subject.Bytes(), body.Bytes(), s.Conf.EmailFrom, s.Conf.SmtpHost)
 	if n.Next == nil {
 		return
 	}
@@ -449,10 +446,7 @@ func (s *Schedule) AddNotification(ak AlertKey, n *conf.Notification, started ti
 	if s.Notifications[ak] == nil {
 		s.Notifications[ak] = make(map[string]time.Time)
 	}
-	stn := s.Notifications[ak]
-	// Prevent duplicate notifications restarting each other.
-	if _, present := stn[n.Name]; !present {
-		stn[n.Name] = started
+	s.Notifications[ak][n.Name] = started
 	}
 }
 
