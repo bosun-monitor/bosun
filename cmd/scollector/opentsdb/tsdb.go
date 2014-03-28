@@ -283,6 +283,11 @@ func ParseTags(t string) (TagSet, error) {
 		if len(sp) != 2 {
 			return nil, fmt.Errorf("tsdb: bad tag: %s", v)
 		}
+		sp[0] = strings.TrimSpace(sp[0])
+		sp[1] = strings.TrimSpace(sp[1])
+		if _, present := ts[sp[0]]; present {
+			return nil, fmt.Errorf("tsdb: duplicated tag: %s", v)
+		}
 		ts[sp[0]] = sp[1]
 	}
 	return ts, nil
