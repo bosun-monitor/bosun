@@ -19,7 +19,7 @@ type context struct {
 	schedule *Schedule
 }
 
-func (s *Schedule) data(st *State, a *conf.Alert) interface{} {
+func (s *Schedule) data(st *State, a *conf.Alert) *context {
 	return &context{
 		State:    st,
 		Alert:    a,
