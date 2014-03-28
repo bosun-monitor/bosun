@@ -3,8 +3,10 @@ package web
 import (
 	"encoding/json"
 	"html/template"
+	"io/ioutil"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/MiniProfiler/go/miniprofiler"
 	"github.com/StackExchange/tsaf/sched"
@@ -31,12 +33,14 @@ func Listen(addr, dir, host string) error {
 	}
 	router.Handle("/api/acknowledge/{alert}/{group}", JSON(Acknowledge))
 	router.Handle("/api/alerts", JSON(Alerts))
-	router.Handle("/api/expr", JSON(Expr))
 	router.Handle("/api/egraph", JSON(ExprGraph))
+	router.Handle("/api/expr", JSON(Expr))
+	router.Handle("/api/graph", JSON(Graph))
 	router.Handle("/api/metric", JSON(UniqueMetrics))
 	router.Handle("/api/metric/{tagk}/{tagv}", JSON(MetricsByTagPair))
 	router.Handle("/api/rule", JSON(Rule))
-	router.Handle("/api/graph", JSON(Graph))
+	router.Handle("/api/silence/get", JSON(SilenceGet))
+	router.Handle("/api/silence/set", JSON(SilenceSet))
 	router.Handle("/api/tagk/{metric}", JSON(TagKeysByMetric))
 	router.Handle("/api/tagv/{tagk}", JSON(TagValuesByTagKey))
 	router.Handle("/api/tagv/{tagk}/{metric}", JSON(TagValuesByMetricTagKey))
@@ -104,4 +108,54 @@ func Acknowledge(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (
 	}
 	schedule.Acknowledge(ak)
 	return nil, nil
+}
+
+func SilenceGet(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	s := schedule.Silence
+	if s == nil {
+		return []struct{}{}, nil
+	}
+	return s, nil
+}
+
+var silenceLayouts = []string{
+	"2006-01-02 15:04:05 MST",
+	"2006-01-02 15:04:05 -0700",
+	"2006-01-02 15:04 MST",
+	"2006-01-02 15:04 -0700",
+	"2006-01-02 15:04",
+}
+
+func SilenceSet(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	var start, end time.Time
+	var err error
+	var data map[string]string
+	b, _ := ioutil.ReadAll(r.Body)
+	r.Body.Close()
+	if err := json.Unmarshal(b, &data); err != nil {
+		return nil, err
+	}
+	for _, layout := range silenceLayouts {
+		start, err = time.Parse(layout, data["start"])
+		if err == nil {
+			break
+		}
+	}
+	for _, layout := range silenceLayouts {
+		start, err = time.Parse(layout, data["end"])
+		if err == nil {
+			break
+		}
+	}
+	if start.IsZero() {
+		start = time.Now().UTC()
+	}
+	if end.IsZero() {
+		d, err := time.ParseDuration(data["duration"])
+		if err != nil {
+			return nil, err
+		}
+		end = start.Add(d)
+	}
+	return schedule.AddSilence(start, end, data["text"], len(data["confirm"]) > 0)
 }
