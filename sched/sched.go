@@ -264,6 +264,7 @@ func (s *Schedule) Poll() {
 }
 
 // CheckNotifications processes past notification events. It returns the
+// duration until the soonest notification triggers.
 func (s *Schedule) CheckNotifications() time.Duration {
 	s.Lock()
 	defer s.Unlock()
