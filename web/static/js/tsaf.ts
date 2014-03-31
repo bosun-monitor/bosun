@@ -656,6 +656,9 @@ tsafControllers.controller('SilenceCtrl', ['$scope', '$http', function($scope: I
 		};
 		$http.post('/api/silence/set', data)
 			.success((data) => {
+				if (data.length == 0) {
+					data = [{Name: '(none)'}];
+				}
 				$scope.testSilences = data;
 			})
 			.error((error) => {
