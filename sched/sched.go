@@ -2,6 +2,7 @@ package sched
 
 import (
 	"bytes"
+	"crypto/sha1"
 	"encoding/gob"
 	"encoding/json"
 	"fmt"
@@ -23,7 +24,7 @@ type Schedule struct {
 	Conf          *conf.Conf
 	Status        map[AlertKey]*State
 	Notifications map[AlertKey]map[string]time.Time
-	Silence       []*Silence
+	Silence       map[string]*Silence
 
 	cache     *opentsdb.Cache
 	runStates map[AlertKey]Status
@@ -41,6 +42,10 @@ func (s *Silence) Silenced(tags opentsdb.TagSet) bool {
 	if now.Before(s.Start) || now.After(s.End) {
 		return false
 	}
+	return s.Matches(tags)
+}
+
+func (s *Silence) Matches(tags opentsdb.TagSet) bool {
 	for k, re := range s.match {
 		tagv, ok := tags[k]
 		if !ok || !re.MatchString(tagv) {
@@ -50,8 +55,14 @@ func (s *Silence) Silenced(tags opentsdb.TagSet) bool {
 	return true
 }
 
-// Silenced returns all currently silenced AlertKeys and the time they will
-// be unsilenced.
+func (s Silence) ID() string {
+	h := sha1.New()
+	fmt.Fprintf(h, "%s%s%s", s.Start, s.End, s.Text)
+	return fmt.Sprintf("%x", h.Sum(nil))
+}
+
+// Silenced returns all currently silenced AlertKeys and the time they will be
+// unsilenced.
 func (s *Schedule) Silenced() map[AlertKey]time.Time {
 	aks := make(map[AlertKey]time.Time)
 	for _, si := range s.Silence {
@@ -80,7 +91,7 @@ func (s *Schedule) AddSilence(start, end time.Time, text string, confirm bool) (
 	} else if len(tags) == 0 {
 		return nil, fmt.Errorf("empty text")
 	}
-	si := Silence{
+	si := &Silence{
 		Start: start,
 		End:   end,
 		Text:  text,
@@ -95,18 +106,28 @@ func (s *Schedule) AddSilence(start, end time.Time, text string, confirm bool) (
 	}
 	if confirm {
 		s.Lock()
-		s.Silence = append(s.Silence, &si)
+		s.Silence[si.ID()] = si
 		s.Unlock()
 		return nil, nil
 	}
 	var aks []AlertKey
 	for ak, st := range s.Status {
-		if si.Silenced(st.Group) {
+		if si.Matches(st.Group) {
 			aks = append(aks, ak)
 			break
 		}
 	}
 	return aks, nil
+}
+
+func (s *Schedule) ClearSilence(id string) error {
+	if _, present := s.Silence[id]; !present {
+		return fmt.Errorf("silence: no such id %s", id)
+	}
+	s.Lock()
+	delete(s.Silence, id)
+	s.Unlock()
+	return nil
 }
 
 func (s *Schedule) MarshalJSON() ([]byte, error) {
@@ -140,6 +161,7 @@ func Run() error {
 
 func (s *Schedule) Load(c *conf.Conf) {
 	s.Conf = c
+	s.Silence = make(map[string]*Silence)
 	s.RestoreState()
 }
 
@@ -312,6 +334,7 @@ func (s *Schedule) Check() {
 	}
 	s.CheckUnknown()
 	checkNotify := false
+	silenced := s.Silenced()
 	for ak, status := range s.runStates {
 		state := s.Status[ak]
 		last := state.Append(status)
@@ -334,6 +357,11 @@ func (s *Schedule) Check() {
 			}
 		}
 		notifyCurrent := func() {
+			state.NeedAck = true
+			if _, present := silenced[ak]; present {
+				log.Println("SILENCED", ak)
+				return
+			}
 			switch status {
 			case stCritical, stUnknown:
 				notify(a.CritNotification)
@@ -342,6 +370,7 @@ func (s *Schedule) Check() {
 			}
 		}
 		clearOld := func() {
+			state.NeedAck = false
 			delete(s.Notifications, ak)
 		}
 		if status > last {
@@ -467,11 +496,15 @@ type State struct {
 	Group        opentsdb.TagSet
 	Computations expr.Computations
 	Subject      string
+	NeedAck      bool
 }
 
 func (s *Schedule) Acknowledge(ak AlertKey) {
 	s.Lock()
 	delete(s.Notifications, ak)
+	if st := s.Status[ak]; st != nil {
+		st.NeedAck = false
+	}
 	s.Unlock()
 }
 
