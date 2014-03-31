@@ -111,7 +111,7 @@ func (s *Schedule) AddSilence(start, end time.Time, text string, confirm bool) (
 		s.Unlock()
 		return nil, nil
 	}
-	var aks AlertKeys
+	aks := make(AlertKeys, 0)
 	for ak, st := range s.Status {
 		if si.Matches(st.Group) {
 			aks = append(aks, ak)
