@@ -63,8 +63,8 @@
 			</thead>
 			<tbody>
 				<tr ng-repeat="(id, s) in silences">
-					<td ng-bind="s.Start"></td>
-					<td ng-bind="s.End"></td>
+					<td ts-time="s.Start"></td>
+					<td ts-time="s.End"></td>
 					<td ng-bind="s.Text"></td>
 					<td>
 						<button class="btn btn-danger btn-xs" ng-click="clear(id)">clear</button>

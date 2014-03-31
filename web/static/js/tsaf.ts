@@ -62,10 +62,10 @@ interface ITsafScope extends ng.IScope {
 	zws: (v: string) => string; // adds the unicode zero-width space character where appropriate
 	time: (v: any) => string; // formats a timestamp
 	timeanddate: number[];
-	setTimeAndDate: (v: number[]) => void;
+	schedule: any;
 }
 
-tsafControllers.controller('TsafCtrl', ['$scope', '$route', function($scope: ITsafScope, $route: ng.route.IRouteService) {
+tsafControllers.controller('TsafCtrl', ['$scope', '$route', '$http', function($scope: ITsafScope, $route: ng.route.IRouteService, $http: ng.IHttpService) {
 	$scope.active = (v: string) => {
 		if (!$route.current) {
 			return null;
@@ -84,20 +84,6 @@ tsafControllers.controller('TsafCtrl', ['$scope', '$route', function($scope: ITs
 	$scope.zws = (v: string) => {
 		return v.replace(/([,{}()])/g, '$1\u200b');
 	};
-	$scope.setTimeAndDate = (v: number[]) => {
-		$scope.timeanddate = v;
-	};
-}]);
-
-interface IDashboardScope extends ITsafScope {
-	schedule: any;
-	last: any;
-	collapse: (i: number) => void;
-	panelClass: (status: number) => string;
-	statusString: (status: number) => string;
-}
-
-tsafControllers.controller('DashboardCtrl', ['$scope', '$http', function($scope: IDashboardScope, $http: ng.IHttpService) {
 	$http.get('/api/alerts').success(data => {
 		angular.forEach(data.Status, (v, k) => {
 			v.Touched = moment(v.Touched).utc();
@@ -107,8 +93,18 @@ tsafControllers.controller('DashboardCtrl', ['$scope', '$http', function($scope:
 			v.last = v.History[v.History.length-1];
 		});
 		$scope.schedule = data;
-		$scope.setTimeAndDate(data.TimeAndDate);
+		$scope.timeanddate = data.TimeAndDate;
 	});
+}]);
+
+interface IDashboardScope extends ITsafScope {
+	last: any;
+	collapse: (i: number) => void;
+	panelClass: (status: number) => string;
+	statusString: (status: number) => string;
+}
+
+tsafControllers.controller('DashboardCtrl', ['$scope', function($scope: IDashboardScope) {
 	$scope.collapse = (i: number) => {
 		$('#collapse' + i).collapse('toggle');
 	};
@@ -706,7 +702,7 @@ tsafApp.directive('tsResults', function() {
 tsafApp.directive("tsTime", function() {
 	return {
 		link: function(scope: ITsafScope, elem: any, attrs: any) {
-			scope.$watch(attrs.tsTime, function(v: any) {
+			scope.$watch(attrs.tsTime, (v: any) => {
 				var m = moment(v).utc();
 				var el = document.createElement('a');
 				el.innerText = m.format('YYYY-MM-DD HH:MM:SS ZZ') +
