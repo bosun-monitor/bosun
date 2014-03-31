@@ -66,6 +66,9 @@ tsafControllers.controller('TsafCtrl', [
         $scope.zws = function (v) {
             return v.replace(/([,{}()])/g, '$1\u200b');
         };
+        $scope.setTimeAndDate = function (v) {
+            $scope.timeanddate = v;
+        };
     }]);
 
 tsafControllers.controller('DashboardCtrl', [
@@ -79,6 +82,7 @@ tsafControllers.controller('DashboardCtrl', [
                 v.last = v.History[v.History.length - 1];
             });
             $scope.schedule = data;
+            $scope.setTimeAndDate(data.TimeAndDate);
         });
         $scope.collapse = function (i) {
             $('#collapse' + i).collapse('toggle');
@@ -571,6 +575,25 @@ tsafControllers.controller('SilenceCtrl', [
 tsafApp.directive('tsResults', function () {
     return {
         templateUrl: '/partials/results.html'
+    };
+});
+
+tsafApp.directive("tsTime", function () {
+    return {
+        link: function (scope, elem, attrs) {
+            scope.$watch(attrs.tsTime, function (v) {
+                var m = moment(v).utc();
+                var el = document.createElement('a');
+                el.innerText = m.format('YYYY-MM-DD HH:MM:SS ZZ') + ' (' + m.fromNow() + ')';
+                el.href = 'http://www.timeanddate.com/worldclock/converted.html?iso=';
+                el.href += m.format('YYYYMMDDTHHMM');
+                el.href += '&p1=0';
+                angular.forEach(scope.timeanddate, function (v, k) {
+                    el.href += '&p' + (k + 2) + '=' + v;
+                });
+                elem.html(el);
+            });
+        }
     };
 });
 

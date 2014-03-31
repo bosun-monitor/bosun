@@ -31,6 +31,7 @@ type Conf struct {
 	SmtpHost        string        // SMTP address: ny-mail:25
 	EmailFrom       string
 	StateFile       string
+	TimeAndDate     []int // timeanddate.com cities list
 	Unknown         time.Duration
 	UnknownTemplate *Template
 	Templates       map[string]*Template
@@ -234,6 +235,17 @@ func (c *Conf) loadGlobal(p *parse.PairNode) {
 		c.EmailFrom = v
 	case "stateFile":
 		c.StateFile = v
+	case "timeAndDate":
+		sp := strings.Split(v, ",")
+		var t []int
+		for _, s := range sp {
+			i, err := strconv.Atoi(strings.TrimSpace(s))
+			if err != nil {
+				c.error(err)
+			}
+			t = append(t, i)
+		}
+		c.TimeAndDate = t
 	case "unknown":
 		d, err := time.ParseDuration(v)
 		if err != nil {
