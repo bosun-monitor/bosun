@@ -114,7 +114,6 @@ func (s *Schedule) AddSilence(start, end time.Time, text string, confirm bool) (
 	for ak, st := range s.Status {
 		if si.Matches(st.Group) {
 			aks = append(aks, ak)
-			break
 		}
 	}
 	return aks, nil
