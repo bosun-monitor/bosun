@@ -739,7 +739,9 @@ tsafApp.filter('linkq', [
                 if (!text) {
                     return;
                 }
-                html.push(text);
+                var el = document.createElement('div');
+                el.innerText = el.textContent = text;
+                html.push(el.innerHTML);
             }
             function addLink(url, text) {
                 html.push('<a ');

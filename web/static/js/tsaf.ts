@@ -848,7 +848,9 @@ tsafApp.filter('linkq',  ['$sanitize', function($sanitize: ng.sanitize.ISanitize
 			if (!text) {
 				return;
 			}
-			html.push(text);
+			var el = document.createElement('div');
+			el.innerText = el.textContent = text;
+			html.push(el.innerHTML);
 		}
 		function addLink(url: string, text: string) {
 			html.push('<a ');
