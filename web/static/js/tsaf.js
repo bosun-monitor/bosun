@@ -47,7 +47,7 @@ tsafApp.config([
 var tsafControllers = angular.module('tsafControllers', []);
 
 tsafControllers.controller('TsafCtrl', [
-    '$scope', '$route', function ($scope, $route) {
+    '$scope', '$route', '$http', function ($scope, $route, $http) {
         $scope.active = function (v) {
             if (!$route.current) {
                 return null;
@@ -66,13 +66,6 @@ tsafControllers.controller('TsafCtrl', [
         $scope.zws = function (v) {
             return v.replace(/([,{}()])/g, '$1\u200b');
         };
-        $scope.setTimeAndDate = function (v) {
-            $scope.timeanddate = v;
-        };
-    }]);
-
-tsafControllers.controller('DashboardCtrl', [
-    '$scope', '$http', function ($scope, $http) {
         $http.get('/api/alerts').success(function (data) {
             angular.forEach(data.Status, function (v, k) {
                 v.Touched = moment(v.Touched).utc();
@@ -82,8 +75,12 @@ tsafControllers.controller('DashboardCtrl', [
                 v.last = v.History[v.History.length - 1];
             });
             $scope.schedule = data;
-            $scope.setTimeAndDate(data.TimeAndDate);
+            $scope.timeanddate = data.TimeAndDate;
         });
+    }]);
+
+tsafControllers.controller('DashboardCtrl', [
+    '$scope', function ($scope) {
         $scope.collapse = function (i) {
             $('#collapse' + i).collapse('toggle');
         };
