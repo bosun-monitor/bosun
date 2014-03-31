@@ -39,6 +39,7 @@ func Listen(addr, dir, host string) error {
 	router.Handle("/api/metric", JSON(UniqueMetrics))
 	router.Handle("/api/metric/{tagk}/{tagv}", JSON(MetricsByTagPair))
 	router.Handle("/api/rule", JSON(Rule))
+	router.Handle("/api/silence/clear", JSON(SilenceClear))
 	router.Handle("/api/silence/get", JSON(SilenceGet))
 	router.Handle("/api/silence/set", JSON(SilenceSet))
 	router.Handle("/api/tagk/{metric}", JSON(TagKeysByMetric))
@@ -111,11 +112,7 @@ func Acknowledge(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (
 }
 
 func SilenceGet(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	s := schedule.Silence
-	if s == nil {
-		return []struct{}{}, nil
-	}
-	return s, nil
+	return schedule.Silence, nil
 }
 
 var silenceLayouts = []string{
@@ -123,6 +120,7 @@ var silenceLayouts = []string{
 	"2006-01-02 15:04:05 -0700",
 	"2006-01-02 15:04 MST",
 	"2006-01-02 15:04 -0700",
+	"2006-01-02 15:04:05",
 	"2006-01-02 15:04",
 }
 
@@ -158,4 +156,14 @@ func SilenceSet(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (i
 		end = start.Add(d)
 	}
 	return schedule.AddSilence(start, end, data["text"], len(data["confirm"]) > 0)
+}
+
+func SilenceClear(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	var data map[string]string
+	b, _ := ioutil.ReadAll(r.Body)
+	r.Body.Close()
+	if err := json.Unmarshal(b, &data); err != nil {
+		return nil, err
+	}
+	return nil, schedule.ClearSilence(data["id"])
 }

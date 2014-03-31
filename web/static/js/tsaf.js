@@ -519,7 +519,6 @@ tsafControllers.controller('RuleCtrl', [
 tsafControllers.controller('SilenceCtrl', [
     '$scope', '$http', function ($scope, $http) {
         $scope.duration = '1h';
-        $scope.text = 'host=ny-.*';
         function get() {
             $http.get('/api/silence/get').success(function (data) {
                 $scope.silences = data;
@@ -556,6 +555,14 @@ tsafControllers.controller('SilenceCtrl', [
                 $scope.error = error;
             }).finally(function () {
                 $scope.testSilences = null;
+                get();
+            });
+        };
+        $scope.clear = function (id) {
+            $scope.error = null;
+            $http.post('/api/silence/clear', { id: id }).error(function (error) {
+                $scope.error = error;
+            }).finally(function () {
                 get();
             });
         };

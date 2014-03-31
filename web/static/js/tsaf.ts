@@ -628,11 +628,11 @@ interface ISilenceScope extends IExprScope {
 	testSilences: any;
 	test: () => void;
 	confirm: () => void;
+	clear: (id: string) => void;
 }
 
 tsafControllers.controller('SilenceCtrl', ['$scope', '$http', function($scope: ISilenceScope, $http: ng.IHttpService){
 	$scope.duration = '1h';
-	$scope.text = 'host=ny-.*';
 	function get() {
 		$http.get('/api/silence/get')
 			.success((data) => {
@@ -675,6 +675,16 @@ tsafControllers.controller('SilenceCtrl', ['$scope', '$http', function($scope: I
 			})
 			.finally(() => {
 				$scope.testSilences = null;
+				get();
+			});
+	};
+	$scope.clear = (id: string) => {
+		$scope.error = null;
+		$http.post('/api/silence/clear', {id: id})
+			.error((error) => {
+				$scope.error = error;
+			})
+			.finally(() => {
 				get();
 			});
 	};
