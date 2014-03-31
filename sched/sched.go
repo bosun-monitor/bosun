@@ -133,11 +133,13 @@ func (s *Schedule) ClearSilence(id string) error {
 
 func (s *Schedule) MarshalJSON() ([]byte, error) {
 	t := struct {
-		Alerts map[string]*conf.Alert
-		Status map[string]*State
+		Alerts      map[string]*conf.Alert
+		Status      map[string]*State
+		TimeAndDate []int
 	}{
 		s.Conf.Alerts,
 		make(map[string]*State),
+		s.Conf.TimeAndDate,
 	}
 	for k, v := range s.Status {
 		if v.Last().Status < stWarning {

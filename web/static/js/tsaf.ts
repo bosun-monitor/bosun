@@ -60,6 +60,9 @@ interface ITsafScope extends ng.IScope {
 	json: (v: any) => string;
 	btoa: (v: any) => string;
 	zws: (v: string) => string; // adds the unicode zero-width space character where appropriate
+	time: (v: any) => string; // formats a timestamp
+	timeanddate: number[];
+	setTimeAndDate: (v: number[]) => void;
 }
 
 tsafControllers.controller('TsafCtrl', ['$scope', '$route', function($scope: ITsafScope, $route: ng.route.IRouteService) {
@@ -81,9 +84,12 @@ tsafControllers.controller('TsafCtrl', ['$scope', '$route', function($scope: ITs
 	$scope.zws = (v: string) => {
 		return v.replace(/([,{}()])/g, '$1\u200b');
 	};
+	$scope.setTimeAndDate = (v: number[]) => {
+		$scope.timeanddate = v;
+	};
 }]);
 
-interface IDashboardScope extends ng.IScope {
+interface IDashboardScope extends ITsafScope {
 	schedule: any;
 	last: any;
 	collapse: (i: number) => void;
@@ -101,6 +107,7 @@ tsafControllers.controller('DashboardCtrl', ['$scope', '$http', function($scope:
 			v.last = v.History[v.History.length-1];
 		});
 		$scope.schedule = data;
+		$scope.setTimeAndDate(data.TimeAndDate);
 	});
 	$scope.collapse = (i: number) => {
 		$('#collapse' + i).collapse('toggle');
@@ -693,6 +700,28 @@ tsafControllers.controller('SilenceCtrl', ['$scope', '$http', function($scope: I
 tsafApp.directive('tsResults', function() {
 	return {
 		templateUrl: '/partials/results.html',
+	};
+});
+
+tsafApp.directive("tsTime", function() {
+	return {
+		link: function(scope: ITsafScope, elem: any, attrs: any) {
+			scope.$watch(attrs.tsTime, function(v: any) {
+				var m = moment(v).utc();
+				var el = document.createElement('a');
+				el.innerText = m.format('YYYY-MM-DD HH:MM:SS ZZ') +
+					' (' +
+					m.fromNow() +
+					')';
+				el.href = 'http://www.timeanddate.com/worldclock/converted.html?iso=';
+				el.href += m.format('YYYYMMDDTHHMM');
+				el.href += '&p1=0';
+				angular.forEach(scope.timeanddate, (v, k) => {
+					el.href += '&p' + (k + 2) + '=' + v;
+				});
+				elem.html(el);
+			});
+		},
 	};
 });
 

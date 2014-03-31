@@ -25,17 +25,11 @@
 					</div>
 					<div class="row">
 						<div class="col-sm-3 text-right"><strong>Since</strong></div>
-						<div class="col-sm-9">
-							{{status.last.Time.format()}}
-							({{status.last.Time.fromNow()}})
-						</div>
+						<div class="col-sm-9" ts-time="status.last.Time"></div>
 					</div>
 					<div class="row">
 						<div class="col-sm-3 text-right"><strong>Touched</strong></div>
-						<div class="col-sm-9">
-							{{status.Touched.format()}}
-							({{status.Touched.fromNow()}})
-						</div>
+						<div class="col-sm-9" ts-time="status.Touched"></div>
 					</div>
 					<div class="row">
 						<div class="col-sm-3 text-right"><strong>Expr</strong></div>
