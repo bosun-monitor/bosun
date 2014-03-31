@@ -10,6 +10,7 @@ import (
 	"log"
 	"os"
 	"regexp"
+	"sort"
 	"sync"
 	"time"
 
@@ -78,7 +79,7 @@ func (s *Schedule) Silenced() map[AlertKey]time.Time {
 	return aks
 }
 
-func (s *Schedule) AddSilence(start, end time.Time, text string, confirm bool) ([]AlertKey, error) {
+func (s *Schedule) AddSilence(start, end time.Time, text string, confirm bool) (AlertKeys, error) {
 	if start.IsZero() || end.IsZero() {
 		return nil, fmt.Errorf("both start and end must be specified")
 	}
@@ -110,12 +111,13 @@ func (s *Schedule) AddSilence(start, end time.Time, text string, confirm bool) (
 		s.Unlock()
 		return nil, nil
 	}
-	var aks []AlertKey
+	var aks AlertKeys
 	for ak, st := range s.Status {
 		if si.Matches(st.Group) {
 			aks = append(aks, ak)
 		}
 	}
+	sort.Sort(aks)
 	return aks, nil
 }
 
@@ -408,7 +410,7 @@ func (s *Schedule) CheckAlert(a *conf.Alert) {
 	log.Printf("checking alert %v: %v crits, %v warns", a.Name, len(crits), len(warns))
 }
 
-func (s *Schedule) CheckExpr(a *conf.Alert, e *expr.Expr, checkStatus Status, ignore []AlertKey) (alerts []AlertKey) {
+func (s *Schedule) CheckExpr(a *conf.Alert, e *expr.Expr, checkStatus Status, ignore AlertKeys) (alerts AlertKeys) {
 	if e == nil {
 		return
 	}
@@ -485,6 +487,17 @@ type AlertKey struct {
 
 func (a AlertKey) String() string {
 	return a.Name + a.Group
+}
+
+type AlertKeys []AlertKey
+
+func (a AlertKeys) Len() int      { return len(a) }
+func (a AlertKeys) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+func (a AlertKeys) Less(i, j int) bool {
+	if a[i].Name == a[j].Name {
+		return a[i].Group < a[j].Group
+	}
+	return a[i].Name < a[j].Name
 }
 
 type State struct {
