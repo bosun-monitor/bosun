@@ -57,7 +57,10 @@
 	</div>
 	<div class="col-sm-12">
 		<ul class="list-unstyled">
-			<li ng-repeat="silence in testSilences" ng-bind="silence.Name + silence.Group"></li>
+			<li ng-repeat="silence in testSilences">
+				<span ng-bind="silence.Name + silence.Group"></span>
+				<span class="label label-primary" ng-show="alertActive(silence)">active</span>
+			</li>
 		<ul>
 	</div>
 	<div class="col-sm-12">

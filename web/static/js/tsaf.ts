@@ -63,6 +63,7 @@ interface ITsafScope extends ng.IScope {
 	time: (v: any) => string; // formats a timestamp
 	timeanddate: number[];
 	schedule: any;
+	alertActive: (ak: any) => boolean; // returns true if the AlertKey is a currently active alert
 }
 
 tsafControllers.controller('TsafCtrl', ['$scope', '$route', '$http', function($scope: ITsafScope, $route: ng.route.IRouteService, $http: ng.IHttpService) {
@@ -83,6 +84,14 @@ tsafControllers.controller('TsafCtrl', ['$scope', '$route', '$http', function($s
 	};
 	$scope.zws = (v: string) => {
 		return v.replace(/([,{}()])/g, '$1\u200b');
+	};
+	$scope.alertActive = (ak: any) => {
+		var key = ak.Name + ak.Group;
+		var st = $scope.schedule.Status[key];
+		if (!st) {
+			return false;
+		}
+		return st.last.Status > 1;
 	};
 	$http.get('/api/alerts').success(data => {
 		angular.forEach(data.Status, (v, k) => {

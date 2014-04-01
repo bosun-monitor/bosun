@@ -66,6 +66,14 @@ tsafControllers.controller('TsafCtrl', [
         $scope.zws = function (v) {
             return v.replace(/([,{}()])/g, '$1\u200b');
         };
+        $scope.alertActive = function (ak) {
+            var key = ak.Name + ak.Group;
+            var st = $scope.schedule.Status[key];
+            if (!st) {
+                return false;
+            }
+            return st.last.Status > 1;
+        };
         $http.get('/api/alerts').success(function (data) {
             angular.forEach(data.Status, function (v, k) {
                 v.Touched = moment(v.Touched).utc();
