@@ -528,15 +528,26 @@ tsafControllers.controller('SilenceCtrl', [
             });
         }
         get();
-        $scope.test = function () {
-            $scope.error = null;
+        function getData() {
+            var tags = $scope.tags.split(',');
+            if ($scope.hosts) {
+                tags.push('host=' + $scope.hosts.split(/[ ,|]+/).join('|'));
+            }
+            tags = tags.filter(function (v) {
+                return v != "";
+            });
             var data = {
                 start: $scope.start,
                 end: $scope.end,
                 duration: $scope.duration,
-                text: $scope.text
+                alert: $scope.alert,
+                tags: tags.join(',')
             };
-            $http.post('/api/silence/set', data).success(function (data) {
+            return data;
+        }
+        $scope.test = function () {
+            $scope.error = null;
+            $http.post('/api/silence/set', getData()).success(function (data) {
                 if (data.length == 0) {
                     data = [{ Name: '(none)' }];
                 }
@@ -548,13 +559,8 @@ tsafControllers.controller('SilenceCtrl', [
         $scope.confirm = function () {
             $scope.error = null;
             $scope.testSilences = null;
-            var data = {
-                start: $scope.start,
-                end: $scope.end,
-                duration: $scope.duration,
-                text: $scope.text,
-                confirm: "true"
-            };
+            var data = getData();
+            data.confirm = "true";
             $http.post('/api/silence/set', data).error(function (error) {
                 $scope.error = error;
             }).finally(function () {

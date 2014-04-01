@@ -155,7 +155,7 @@ func SilenceSet(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (i
 		}
 		end = start.Add(d)
 	}
-	return schedule.AddSilence(start, end, data["text"], len(data["confirm"]) > 0)
+	return schedule.AddSilence(start, end, data["alert"], data["tags"], len(data["confirm"]) > 0)
 }
 
 func SilenceClear(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
