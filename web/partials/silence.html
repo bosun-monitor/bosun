@@ -7,41 +7,41 @@
 	<div class="form-group">
 		<label class="col-sm-2 control-label">start date</label>
 		<div class="col-sm-6">
-			<input type="text" class="form-control" placeholder="yyyy-mm-dd HH:MM[:SS] [MST/-0700]" ng-model="start">
+			<input type="text" class="form-control" placeholder="yyyy-mm-dd HH:MM[:SS] [MST/-0700]" ng-model="start" ng-change="change()">
 			<p class="help-block">UTC if no timezone. Uses now if blank.</p>
 		</div>
 	</div>
 	<div class="form-group">
 		<label class="col-sm-2 control-label">end date</label>
 		<div class="col-sm-6">
-			<input type="text" class="form-control" placeholder="yyyy-mm-dd HH:MM[:SS] [MST/-0700]" ng-model="end">
+			<input type="text" class="form-control" placeholder="yyyy-mm-dd HH:MM[:SS] [MST/-0700]" ng-model="end" ng-change="change()">
 		</div>
 	</div>
 	<div class="form-group">
 		<label class="col-sm-2 control-label">duration</label>
 		<div class="col-sm-6">
-			<input type="text" class="form-control" placeholder="1h" ng-model="duration">
+			<input type="text" class="form-control" placeholder="1h" ng-model="duration" ng-change="change()">
 			<p class="help-block">Specify either end date or <a href="http://golang.org/pkg/time/#ParseDuration">duration</a>.</p>
 		</div>
 	</div>
 	<div class="form-group">
 		<label class="col-sm-2 control-label">alert</label>
 		<div class="col-sm-10">
-			<input type="text" class="form-control" placeholder="high_cpu" ng-model="alert">
+			<input type="text" class="form-control" placeholder="high_cpu" ng-model="alert" ng-change="change()">
 			<p class="help-block">Optional.</p>
 		</div>
 	</div>
 	<div class="form-group">
 		<label class="col-sm-2 control-label">hosts</label>
 		<div class="col-sm-10">
-			<input type="text" class="form-control" placeholder="ny-web01, ny-redis*" ng-model="hosts">
+			<input type="text" class="form-control" placeholder="ny-web01, ny-redis*" ng-model="hosts" ng-change="change()">
 			<p class="help-block">Optional. Globs, separated by commas (,), pipes (|), or spaces.</p>
 		</div>
 	</div>
 	<div class="form-group">
 		<label class="col-sm-2 control-label">other tags</label>
 		<div class="col-sm-10">
-			<input type="text" class="form-control" placeholder="port=637?" ng-model="tags">
+			<input type="text" class="form-control" placeholder="port=637?" ng-model="tags" ng-change="change()">
 			<p class="help-block">Ex: port=637?,cluster=1,iface=lo*|if*. tagvs are <a href="http://golang.org/pkg/path/filepath/#Match">globs</a>, separated by pipes (|).</p>
 		</div>
 	</div>
@@ -64,7 +64,7 @@
 		<ul>
 	</div>
 	<div class="col-sm-12">
-		<button class="btn btn-primary" ng-click="confirm()">confirm</button>
+		<button class="btn btn-primary" ng-click="confirm()" ng-disabled="disableConfirm">confirm</button>
 	</div>
 </div>
 <div class="row">

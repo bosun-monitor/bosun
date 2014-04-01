@@ -643,11 +643,18 @@ interface ISilenceScope extends IExprScope {
 	test: () => void;
 	confirm: () => void;
 	clear: (id: string) => void;
+	change: () => void;
+	disableConfirm: boolean;
 }
 
-tsafControllers.controller('SilenceCtrl', ['$scope', '$http', function($scope: ISilenceScope, $http: ng.IHttpService){
-	$scope.duration = '1h';
-	$scope.tags = '';
+tsafControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$route', function($scope: ISilenceScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService){
+	var search = $location.search();
+	$scope.start = search.start;
+	$scope.end = search.end;
+	$scope.duration = search.duration;
+	$scope.alert = search.alert;
+	$scope.hosts = search.hosts;
+	$scope.tags = search.tags;
 	function get() {
 		$http.get('/api/silence/get')
 			.success((data) => {
@@ -659,7 +666,7 @@ tsafControllers.controller('SilenceCtrl', ['$scope', '$http', function($scope: I
 	}
 	get();
 	function getData() {
-		var tags = $scope.tags.split(',');
+		var tags = ($scope.tags || '').split(',');
 		if ($scope.hosts) {
 			tags.push('host=' + $scope.hosts.split(/[ ,|]+/).join('|'));
 		}
@@ -673,9 +680,14 @@ tsafControllers.controller('SilenceCtrl', ['$scope', '$http', function($scope: I
 		};
 		return data;
 	}
-	$scope.test = () => {
+	var any = search.start || search.end || search.duration || search.alert || search.hosts || search.tags;
+	var state = getData();
+	$scope.change = () => {
+		$scope.disableConfirm = true;
+	};
+	if (any) {
 		$scope.error = null;
-		$http.post('/api/silence/set', getData())
+		$http.post('/api/silence/set', state)
 			.success((data) => {
 				if (data.length == 0) {
 					data = [{Name: '(none)'}];
@@ -685,13 +697,21 @@ tsafControllers.controller('SilenceCtrl', ['$scope', '$http', function($scope: I
 			.error((error) => {
 				$scope.error = error;
 			});
+	}
+	$scope.test = () => {
+		$location.search('start', $scope.start || null);
+		$location.search('end', $scope.end || null);
+		$location.search('duration', $scope.duration || null);
+		$location.search('alert', $scope.alert || null);
+		$location.search('hosts', $scope.hosts || null);
+		$location.search('tags', $scope.tags || null);
+		$route.reload();
 	};
 	$scope.confirm = () => {
 		$scope.error = null;
 		$scope.testSilences = null;
-		var data = getData();
-		data.confirm = "true";
-		$http.post('/api/silence/set', data)
+		state.confirm = "true";
+		$http.post('/api/silence/set', state)
 			.error((error) => {
 				$scope.error = error;
 			})
