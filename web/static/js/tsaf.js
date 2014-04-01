@@ -603,7 +603,7 @@ tsafApp.directive("tsRickshaw", [
             templateUrl: '/partials/rickshaw.html',
             link: function (scope, elem, attrs) {
                 scope.$watch(attrs.tsRickshaw, function (v) {
-                    if (!v) {
+                    if (!angular.isArray(v) || v.length == 0) {
                         return;
                     }
                     var palette = new Rickshaw.Color.Palette();
