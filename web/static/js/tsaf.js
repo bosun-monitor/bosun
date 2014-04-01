@@ -599,6 +599,9 @@ tsafControllers.controller('SilenceCtrl', [
             });
         };
         $scope.clear = function (id) {
+            if (!window.confirm('Clear this silence?')) {
+                return;
+            }
             $scope.error = null;
             $http.post('/api/silence/clear', { id: id }).error(function (error) {
                 $scope.error = error;
