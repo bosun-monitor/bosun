@@ -729,7 +729,7 @@ tsafApp.directive("tsRickshaw", ['$filter', function($filter: ng.IFilterService)
 		templateUrl: '/partials/rickshaw.html',
 		link: (scope: ng.IScope, elem: any, attrs: any) => {
 			scope.$watch(attrs.tsRickshaw, function(v: any) {
-				if (!v) {
+				if (!angular.isArray(v) || v.length == 0) {
 					return;
 				}
 				var palette: any = new Rickshaw.Color.Palette();
