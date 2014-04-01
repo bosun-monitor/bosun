@@ -2,6 +2,7 @@ package web
 
 import (
 	"encoding/json"
+	"fmt"
 	"html/template"
 	"io/ioutil"
 	"log"
@@ -133,16 +134,26 @@ func SilenceSet(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (i
 	if err := json.Unmarshal(b, &data); err != nil {
 		return nil, err
 	}
-	for _, layout := range silenceLayouts {
-		start, err = time.Parse(layout, data["start"])
-		if err == nil {
-			break
+	if s := data["start"]; s != "" {
+		for _, layout := range silenceLayouts {
+			start, err = time.Parse(layout, s)
+			if err == nil {
+				break
+			}
+		}
+		if start.IsZero() {
+			return nil, fmt.Errorf("unrecognized start time format: %s", s)
 		}
 	}
-	for _, layout := range silenceLayouts {
-		start, err = time.Parse(layout, data["end"])
-		if err == nil {
-			break
+	if s := data["end"]; s != "" {
+		for _, layout := range silenceLayouts {
+			end, err = time.Parse(layout, s)
+			if err == nil {
+				break
+			}
+		}
+		if end.IsZero() {
+			return nil, fmt.Errorf("unrecognized end time format: %s", s)
 		}
 	}
 	if start.IsZero() {
