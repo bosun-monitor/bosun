@@ -92,6 +92,9 @@ func (s *Schedule) AddSilence(start, end time.Time, alert, tagList string, confi
 	if start.After(end) {
 		return nil, fmt.Errorf("start time must be before end time")
 	}
+	if time.Since(end) > 0 {
+		return nil, fmt.Errorf("end time must be in the future")
+	}
 	tags, err := opentsdb.ParseTags(tagList)
 	if err != nil {
 		return nil, err
