@@ -166,7 +166,7 @@ tsafControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route'
 		current = '';
 	}
 	if (!current) {
-		$location.hash(btoa('avg(q("avg:rate:os.cpu{host=ny-devtsdb04}", "5m", "")) > 80'));
+		$location.hash(btoa('avg(q("avg:rate:os.cpu{host=ny-devtsaf01}", "5m", "")) > 80'));
 		return;
 	}
 	$scope.expr = current;
@@ -210,7 +210,7 @@ tsafControllers.controller('EGraphCtrl', ['$scope', '$http', '$location', '$rout
 	$scope.renderers = ['area', 'bar', 'line', 'scatterplot'];
 	$scope.render = search.render || 'scatterplot';
 	if (!current) {
-		$location.search('q', btoa('q("avg:rate:os.cpu{host=ny-devtsdb04}", "5m", "")'));
+		$location.search('q', btoa('q("avg:rate:os.cpu{host=ny-devtsaf01}", "5m", "")'));
 		return;
 	}
 	$scope.expr = current;
