@@ -95,25 +95,27 @@ func (s *Schedule) AddSilence(start, end time.Time, alert, tagList string, confi
 	if time.Since(end) > 0 {
 		return nil, fmt.Errorf("end time must be in the future")
 	}
-	tags, err := opentsdb.ParseTags(tagList)
-	if err != nil {
-		return nil, err
-	} else if len(tags) == 0 {
-		return nil, fmt.Errorf("empty text")
-	}
 	si := &Silence{
 		Start: start,
 		End:   end,
 		Alert: alert,
-		Tags:  tagList,
 		match: make(map[string]string),
 	}
-	for k, v := range tags {
-		_, err := Match(v, "")
+	if tagList != "" {
+		tags, err := opentsdb.ParseTags(tagList)
 		if err != nil {
 			return nil, err
+		} else if len(tags) == 0 {
+			return nil, fmt.Errorf("empty text")
 		}
-		si.match[k] = v
+		si.Tags = tagList
+		for k, v := range tags {
+			_, err := Match(v, "")
+			if err != nil {
+				return nil, err
+			}
+			si.match[k] = v
+		}
 	}
 	if confirm {
 		s.Lock()
