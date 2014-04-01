@@ -59,6 +59,7 @@ interface ITsafScope extends ng.IScope {
 	active: (v: string) => any;
 	json: (v: any) => string;
 	btoa: (v: any) => string;
+	encode: (v: string) => string;
 	zws: (v: string) => string; // adds the unicode zero-width space character where appropriate
 	time: (v: any) => string; // formats a timestamp
 	timeanddate: number[];
@@ -84,6 +85,9 @@ tsafControllers.controller('TsafCtrl', ['$scope', '$route', '$http', function($s
 	};
 	$scope.zws = (v: string) => {
 		return v.replace(/([,{}()])/g, '$1\u200b');
+	};
+	$scope.encode = (v: string) => {
+		return encodeURIComponent(v);
 	};
 	$scope.alertActive = (ak: any) => {
 		var key = ak.Name + ak.Group;

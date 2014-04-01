@@ -448,6 +448,8 @@ Loop:
 		state := s.Status[ak]
 		if state == nil {
 			state = &State{
+				Alert: ak.Name,
+				Tags:  r.Group.Tags(),
 				Group: r.Group,
 			}
 			s.Status[ak] = state
@@ -519,6 +521,8 @@ type State struct {
 	History      []Event
 	Touched      time.Time
 	Expr         string
+	Alert        string // helper data since AlertKeys don't serialize to JSON well
+	Tags         string // string representation of Group
 	Group        opentsdb.TagSet
 	Computations expr.Computations
 	Subject      string
