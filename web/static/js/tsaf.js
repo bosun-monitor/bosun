@@ -520,6 +520,7 @@ tsafControllers.controller('RuleCtrl', [
 tsafControllers.controller('SilenceCtrl', [
     '$scope', '$http', function ($scope, $http) {
         $scope.duration = '1h';
+        $scope.tags = '';
         function get() {
             $http.get('/api/silence/get').success(function (data) {
                 $scope.silences = data;
