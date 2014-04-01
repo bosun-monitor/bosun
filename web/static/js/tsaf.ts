@@ -627,7 +627,9 @@ interface ISilenceScope extends IExprScope {
 	start: string;
 	end: string;
 	duration: string;
-	text: string;
+	alert: string;
+	hosts: string;
+	tags: string;
 	testSilences: any;
 	test: () => void;
 	confirm: () => void;
@@ -646,15 +648,24 @@ tsafControllers.controller('SilenceCtrl', ['$scope', '$http', function($scope: I
 			});
 	}
 	get();
-	$scope.test = () => {
-		$scope.error = null;
-		var data = {
+	function getData() {
+		var tags = $scope.tags.split(',');
+		if ($scope.hosts) {
+			tags.push('host=' + $scope.hosts.split(/[ ,|]+/).join('|'));
+		}
+		tags = tags.filter((v) => { return v != ""; });
+		var data: any = {
 			start: $scope.start,
 			end: $scope.end,
 			duration: $scope.duration,
-			text: $scope.text,
+			alert: $scope.alert,
+			tags: tags.join(','),
 		};
-		$http.post('/api/silence/set', data)
+		return data;
+	}
+	$scope.test = () => {
+		$scope.error = null;
+		$http.post('/api/silence/set', getData())
 			.success((data) => {
 				if (data.length == 0) {
 					data = [{Name: '(none)'}];
@@ -668,13 +679,8 @@ tsafControllers.controller('SilenceCtrl', ['$scope', '$http', function($scope: I
 	$scope.confirm = () => {
 		$scope.error = null;
 		$scope.testSilences = null;
-		var data = {
-			start: $scope.start,
-			end: $scope.end,
-			duration: $scope.duration,
-			text: $scope.text,
-			confirm: "true",
-		};
+		var data = getData();
+		data.confirm = "true";
 		$http.post('/api/silence/set', data)
 			.error((error) => {
 				$scope.error = error;
