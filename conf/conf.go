@@ -304,6 +304,7 @@ func (c *Conf) loadTemplate(s *parse.SectionNode) {
 		"short": func(v string) string {
 			return strings.SplitN(v, ".", 2)[0]
 		},
+		"replace": strings.Replace,
 	}
 	saw := make(map[string]bool)
 	for _, p := range s.Nodes {
