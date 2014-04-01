@@ -526,9 +526,14 @@ tsafControllers.controller('RuleCtrl', [
     }]);
 
 tsafControllers.controller('SilenceCtrl', [
-    '$scope', '$http', function ($scope, $http) {
-        $scope.duration = '1h';
-        $scope.tags = '';
+    '$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
+        var search = $location.search();
+        $scope.start = search.start;
+        $scope.end = search.end;
+        $scope.duration = search.duration;
+        $scope.alert = search.alert;
+        $scope.hosts = search.hosts;
+        $scope.tags = search.tags;
         function get() {
             $http.get('/api/silence/get').success(function (data) {
                 $scope.silences = data;
@@ -538,7 +543,7 @@ tsafControllers.controller('SilenceCtrl', [
         }
         get();
         function getData() {
-            var tags = $scope.tags.split(',');
+            var tags = ($scope.tags || '').split(',');
             if ($scope.hosts) {
                 tags.push('host=' + $scope.hosts.split(/[ ,|]+/).join('|'));
             }
@@ -554,9 +559,14 @@ tsafControllers.controller('SilenceCtrl', [
             };
             return data;
         }
-        $scope.test = function () {
+        var any = search.start || search.end || search.duration || search.alert || search.hosts || search.tags;
+        var state = getData();
+        $scope.change = function () {
+            $scope.disableConfirm = true;
+        };
+        if (any) {
             $scope.error = null;
-            $http.post('/api/silence/set', getData()).success(function (data) {
+            $http.post('/api/silence/set', state).success(function (data) {
                 if (data.length == 0) {
                     data = [{ Name: '(none)' }];
                 }
@@ -564,13 +574,21 @@ tsafControllers.controller('SilenceCtrl', [
             }).error(function (error) {
                 $scope.error = error;
             });
+        }
+        $scope.test = function () {
+            $location.search('start', $scope.start || null);
+            $location.search('end', $scope.end || null);
+            $location.search('duration', $scope.duration || null);
+            $location.search('alert', $scope.alert || null);
+            $location.search('hosts', $scope.hosts || null);
+            $location.search('tags', $scope.tags || null);
+            $route.reload();
         };
         $scope.confirm = function () {
             $scope.error = null;
             $scope.testSilences = null;
-            var data = getData();
-            data.confirm = "true";
-            $http.post('/api/silence/set', data).error(function (error) {
+            state.confirm = "true";
+            $http.post('/api/silence/set', state).error(function (error) {
                 $scope.error = error;
             }).finally(function () {
                 $scope.testSilences = null;
