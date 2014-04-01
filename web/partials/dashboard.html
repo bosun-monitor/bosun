@@ -37,6 +37,12 @@
 							<a ng-href="/expr#{{btoa(status.Expr)}}" ng-bind="zws(status.Expr)"></a>
 						</div>
 					</div>
+					<div class="row">
+						<div class="col-sm-3 text-right"><strong>Silence</strong></div>
+						<div class="col-sm-9">
+							<a class="btn btn-default btn-xs" ng-href="/silence?duration=1h&alert={{status.Alert}}&tags={{encode(status.Tags)}}">1 hour</a>
+						</div>
+					</div>
 				</div>
 				<div class="col-sm-7">
 					<table class="table table-striped table-condensed">
