@@ -638,6 +638,7 @@ interface ISilenceScope extends IExprScope {
 
 tsafControllers.controller('SilenceCtrl', ['$scope', '$http', function($scope: ISilenceScope, $http: ng.IHttpService){
 	$scope.duration = '1h';
+	$scope.tags = '';
 	function get() {
 		$http.get('/api/silence/get')
 			.success((data) => {
