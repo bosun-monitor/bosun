@@ -120,7 +120,7 @@ func ExprGraph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (in
 }
 
 func rickexpr(r []*expr.Result, q string) ([]*RickSeries, error) {
-	var series []*RickSeries
+	series := make([]*RickSeries, 0)
 	for _, res := range r {
 		dps := make([]RickDP, 0)
 		var rv expr.Series
