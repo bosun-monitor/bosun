@@ -745,18 +745,20 @@ tsafApp.directive('tsResults', function() {
 	};
 });
 
+var timeFormat = 'YYYY-MM-DD HH:mm:ss ZZ';
+
 tsafApp.directive("tsTime", function() {
 	return {
 		link: function(scope: ITsafScope, elem: any, attrs: any) {
 			scope.$watch(attrs.tsTime, (v: any) => {
 				var m = moment(v).utc();
 				var el = document.createElement('a');
-				el.innerText = m.format('YYYY-MM-DD HH:MM:SS ZZ') +
+				el.innerText = m.format(timeFormat) +
 					' (' +
 					m.fromNow() +
 					')';
 				el.href = 'http://www.timeanddate.com/worldclock/converted.html?iso=';
-				el.href += m.format('YYYYMMDDTHHMM');
+				el.href += m.format('YYYYMMDDTHHmm');
 				el.href += '&p1=0';
 				angular.forEach(scope.timeanddate, (v, k) => {
 					el.href += '&p' + (k + 2) + '=' + v;
