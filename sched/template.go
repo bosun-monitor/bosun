@@ -60,7 +60,7 @@ func (c *context) HostView(host string) string {
 }
 
 func (c *context) EGraph(v string) string {
-	q := url.QueryEscape("q=" + expr.RGroup_Re.ReplaceAllString(v, c.State.Group.String()))
+	q := url.QueryEscape("q=" + v)
 	u := url.URL{
 		Scheme:   "http",
 		Host:     c.schedule.Conf.HttpListen,
