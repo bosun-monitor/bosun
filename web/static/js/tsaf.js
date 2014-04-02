@@ -77,6 +77,13 @@ tsafControllers.controller('TsafCtrl', [
             }
             return st.last.Status > 1;
         };
+        $scope.req_from_m = function (m) {
+            var r = new Request();
+            var q = new Query();
+            q.metric = m;
+            r.queries.push(q);
+            return r;
+        };
         $http.get('/api/alerts').success(function (data) {
             angular.forEach(data.Status, function (v, k) {
                 v.Touched = moment(v.Touched).utc();

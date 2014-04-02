@@ -5,7 +5,7 @@
 	<div class="col-lg-6">
 		<h1>Metrics</h1>
 			<ul>
-				<li ng-repeat="metric in metrics" ng-bind="metric"></li>
+				<li ng-repeat="metric in metrics"><a href="/graph?b64={{btoa(json(req_from_m(metric)))}}" ng-bind="metric"></a></li>
 			</ul>
 	</div>
 	<div class="col-lg-6">
