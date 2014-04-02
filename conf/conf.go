@@ -371,7 +371,10 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 			if err != nil {
 				c.error(err)
 			}
-			if crit.Root.Return() != eparse.TYPE_NUMBER {
+			switch crit.Root.Return() {
+			case eparse.TYPE_NUMBER, eparse.TYPE_SCALAR:
+				// break
+			default:
 				c.errorf("crit must return a number")
 			}
 			a.Crit = crit
@@ -381,7 +384,10 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 			if err != nil {
 				c.error(err)
 			}
-			if warn.Root.Return() != eparse.TYPE_NUMBER {
+			switch warn.Root.Return() {
+			case eparse.TYPE_NUMBER, eparse.TYPE_SCALAR:
+				// break
+			default:
 				c.errorf("warn must return a number")
 			}
 			a.Warn = warn

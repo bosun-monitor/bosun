@@ -463,7 +463,16 @@ Loop:
 		state.Touch()
 		status := checkStatus
 		state.Computations = r.Computations
-		if r.Value.(expr.Number) != 0 {
+		var n float64
+		switch v := r.Value.(type) {
+		case expr.Number:
+			n = float64(v)
+		case expr.Scalar:
+			n = float64(v)
+		default:
+			panic("expected number or scalar")
+		}
+		if n != 0 {
 			state.Expr = e.String()
 			alerts = append(alerts, ak)
 		} else {
