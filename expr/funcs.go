@@ -33,6 +33,11 @@ var Builtins = map[string]parse.Func{
 		parse.TYPE_SERIES,
 		Band,
 	},
+	"count": {
+		[]parse.FuncType{parse.TYPE_STRING, parse.TYPE_STRING, parse.TYPE_STRING},
+		parse.TYPE_SCALAR,
+		Count,
+	},
 	"change": {
 		[]parse.FuncType{parse.TYPE_STRING, parse.TYPE_STRING, parse.TYPE_STRING},
 		parse.TYPE_NUMBER,
@@ -268,6 +273,16 @@ func avg(dps Series, args ...float64) (a float64) {
 	}
 	a /= float64(len(dps))
 	return
+}
+
+func Count(e *state, T miniprofiler.Timer, query, sduration, eduration string) (r []*Result, err error) {
+	r, err = Query(e, T, query, sduration, eduration)
+	if err != nil {
+		return
+	}
+	return []*Result{&Result{
+		Value: Scalar(len(r)),
+	}}, nil
 }
 
 func Sum(e *state, T miniprofiler.Timer, series []*Result) ([]*Result, error) {
