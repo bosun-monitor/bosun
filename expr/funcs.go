@@ -223,23 +223,21 @@ func change(dps Series, args ...float64) float64 {
 	return avg(dps) * args[0]
 }
 
-func reduce(e *state, T miniprofiler.Timer, series []*Result, F func(Series, ...float64) float64, args ...float64) (r []*Result, err error) {
+func reduce(e *state, T miniprofiler.Timer, series []*Result, F func(Series, ...float64) float64, args ...float64) ([]*Result, error) {
+	var res []*Result
 	for _, s := range series {
 		switch t := s.Value.(type) {
 		case Series:
 			if len(t) == 0 {
-				// do something here?
 				continue
 			}
-			r = append(r, &Result{
-				Value: Number(F(t, args...)),
-				Group: s.Group,
-			})
+			s.Value = Number(F(t, args...))
+			res = append(res, s)
 		default:
 			panic(fmt.Errorf("expr: expected a series"))
 		}
 	}
-	return
+	return res, nil
 }
 
 func ExpandSearch(q *opentsdb.Query) error {
@@ -268,13 +266,10 @@ func ExpandSearch(q *opentsdb.Query) error {
 }
 
 func Abs(e *state, T miniprofiler.Timer, series []*Result) []*Result {
-	r := make([]*Result, len(series))
-	for i, v := range series {
-		r[i] = &Result{
-			Value: Number(math.Abs(float64(v.Value.Value().(Number)))),
-		}
+	for _, s := range series {
+		s.Value = Number(math.Abs(float64(s.Value.Value().(Number))))
 	}
-	return r
+	return series
 }
 
 func Avg(e *state, T miniprofiler.Timer, series []*Result) ([]*Result, error) {
@@ -433,18 +428,11 @@ func Ungroup(e *state, T miniprofiler.Timer, d []*Result) ([]*Result, error) {
 	if len(d) != 1 {
 		return nil, fmt.Errorf("ungroup: requires exactly one group")
 	}
-	r := make([]*Result, len(d))
-	for i, v := range d {
-		r[i] = &Result{
-			Value:        Scalar(v.Value.Value().(Number)),
-			Computations: v.Computations,
-		}
-	}
-	return r, nil
+	d[0].Group = nil
+	return d, nil
 }
 
 func Transpose(e *state, T miniprofiler.Timer, d []*Result, gp string) ([]*Result, error) {
-	//var s = make(Series)
 	gps := strings.Split(gp, ",")
 	m := make(map[string]*Result)
 	for _, v := range d {
@@ -464,8 +452,10 @@ func Transpose(e *state, T miniprofiler.Timer, d []*Result, gp string) ([]*Resul
 		}
 		switch t := v.Value.(type) {
 		case Number:
-			i := strconv.Itoa((len(m[ts.String()].Value.(Series))))
-			m[ts.String()].Value.(Series)[i] = opentsdb.Point(t)
+			r := m[ts.String()]
+			i := strconv.Itoa((len(r.Value.(Series))))
+			r.Value.(Series)[i] = opentsdb.Point(t)
+			r.Computations = append(r.Computations, v.Computations...)
 		default:
 			panic(fmt.Errorf("expr: expected a number"))
 		}
