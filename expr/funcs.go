@@ -18,6 +18,11 @@ import (
 )
 
 var Builtins = map[string]parse.Func{
+	"abs": {
+		[]parse.FuncType{parse.TYPE_NUMBER},
+		parse.TYPE_NUMBER,
+		Abs,
+	},
 	"avg": {
 		[]parse.FuncType{parse.TYPE_SERIES},
 		parse.TYPE_NUMBER,
@@ -260,6 +265,16 @@ func ExpandSearch(q *opentsdb.Query) error {
 		q.Tags[k] = strings.Join(nvs, "|")
 	}
 	return nil
+}
+
+func Abs(e *state, T miniprofiler.Timer, series []*Result) []*Result {
+	r := make([]*Result, len(series))
+	for i, v := range series {
+		r[i] = &Result{
+			Value: Number(math.Abs(float64(v.Value.Value().(Number)))),
+		}
+	}
+	return r
 }
 
 func Avg(e *state, T miniprofiler.Timer, series []*Result) ([]*Result, error) {
