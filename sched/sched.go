@@ -9,7 +9,6 @@ import (
 	"io"
 	"log"
 	"os"
-	"regexp"
 	"sort"
 	"sync"
 	"time"
@@ -33,23 +32,30 @@ type Schedule struct {
 }
 
 type Silence struct {
-	Start, End time.Time
-	Text       string
-	match      map[string]*regexp.Regexp
+	Start, End  time.Time
+	Alert, Tags string
+	match       map[string]string
 }
 
-func (s *Silence) Silenced(tags opentsdb.TagSet) bool {
+func (s *Silence) Silenced(alert string, tags opentsdb.TagSet) bool {
 	now := time.Now()
 	if now.Before(s.Start) || now.After(s.End) {
 		return false
 	}
-	return s.Matches(tags)
+	return s.Matches(alert, tags)
 }
 
-func (s *Silence) Matches(tags opentsdb.TagSet) bool {
-	for k, re := range s.match {
+func (s *Silence) Matches(alert string, tags opentsdb.TagSet) bool {
+	if s.Alert != "" && s.Alert != alert {
+		return false
+	}
+	for k, pattern := range s.match {
 		tagv, ok := tags[k]
-		if !ok || !re.MatchString(tagv) {
+		if !ok {
+			return false
+		}
+		matched, _ := Match(pattern, tagv)
+		if !matched {
 			return false
 		}
 	}
@@ -58,7 +64,7 @@ func (s *Silence) Matches(tags opentsdb.TagSet) bool {
 
 func (s Silence) ID() string {
 	h := sha1.New()
-	fmt.Fprintf(h, "%s%s%s", s.Start, s.End, s.Text)
+	fmt.Fprintf(h, "%s%s%s{%s}", s.Start, s.End, s.Alert, s.Tags)
 	return fmt.Sprintf("%x", h.Sum(nil))
 }
 
@@ -68,7 +74,7 @@ func (s *Schedule) Silenced() map[AlertKey]time.Time {
 	aks := make(map[AlertKey]time.Time)
 	for _, si := range s.Silence {
 		for ak, st := range s.Status {
-			if si.Silenced(st.Group) {
+			if si.Silenced(ak.Name, st.Group) {
 				if aks[ak].Before(si.End) {
 					aks[ak] = si.End
 				}
@@ -79,41 +85,49 @@ func (s *Schedule) Silenced() map[AlertKey]time.Time {
 	return aks
 }
 
-func (s *Schedule) AddSilence(start, end time.Time, text string, confirm bool) (AlertKeys, error) {
+func (s *Schedule) AddSilence(start, end time.Time, alert, tagList string, confirm bool, edit string) (AlertKeys, error) {
 	if start.IsZero() || end.IsZero() {
 		return nil, fmt.Errorf("both start and end must be specified")
 	}
 	if start.After(end) {
 		return nil, fmt.Errorf("start time must be before end time")
 	}
-	tags, err := opentsdb.ParseTags(text)
-	if err != nil {
-		return nil, err
-	} else if len(tags) == 0 {
-		return nil, fmt.Errorf("empty text")
+	if time.Since(end) > 0 {
+		return nil, fmt.Errorf("end time must be in the future")
 	}
 	si := &Silence{
 		Start: start,
 		End:   end,
-		Text:  text,
-		match: make(map[string]*regexp.Regexp),
+		Alert: alert,
+		match: make(map[string]string),
 	}
-	for k, v := range tags {
-		re, err := regexp.Compile(v)
+	if tagList != "" {
+		tags, err := opentsdb.ParseTags(tagList)
 		if err != nil {
 			return nil, err
+		} else if len(tags) == 0 {
+			return nil, fmt.Errorf("empty text")
 		}
-		si.match[k] = re
+		si.Tags = tagList
+		for k, v := range tags {
+			_, err := Match(v, "")
+			if err != nil {
+				return nil, err
+			}
+			si.match[k] = v
+		}
 	}
 	if confirm {
 		s.Lock()
+		delete(s.Silence, edit)
 		s.Silence[si.ID()] = si
 		s.Unlock()
+		s.Save()
 		return nil, nil
 	}
 	aks := make(AlertKeys, 0)
 	for ak, st := range s.Status {
-		if si.Matches(st.Group) {
+		if si.Matches(ak.Name, st.Group) {
 			aks = append(aks, ak)
 		}
 	}
@@ -122,12 +136,10 @@ func (s *Schedule) AddSilence(start, end time.Time, text string, confirm bool) (
 }
 
 func (s *Schedule) ClearSilence(id string) error {
-	if _, present := s.Silence[id]; !present {
-		return fmt.Errorf("silence: no such id %s", id)
-	}
 	s.Lock()
 	delete(s.Silence, id)
 	s.Unlock()
+	s.Save()
 	return nil
 }
 
@@ -186,6 +198,10 @@ func (s *Schedule) RestoreState() {
 		log.Println(err)
 		return
 	}
+	if err := dec.Decode(&s.Silence); err != nil {
+		log.Println(err)
+		return
+	}
 	for {
 		var ak AlertKey
 		var st State
@@ -227,6 +243,11 @@ func (s *Schedule) RestoreState() {
 }
 
 func (s *Schedule) Save() {
+	// todo: debounce this call
+	go s.save()
+}
+
+func (s *Schedule) save() {
 	s.Lock()
 	defer s.Unlock()
 	f, err := os.Create(s.Conf.StateFile)
@@ -239,6 +260,7 @@ func (s *Schedule) Save() {
 		log.Println(err)
 		return
 	}
+	enc.Encode(s.Silence)
 	for k, v := range s.Status {
 		enc.Encode(k)
 		enc.Encode(v)
@@ -251,12 +273,6 @@ func (s *Schedule) Save() {
 }
 
 func (s *Schedule) Run() error {
-	go func() {
-		for {
-			time.Sleep(time.Minute)
-			s.Save()
-		}
-	}()
 	s.nc = make(chan interface{}, 1)
 	go s.Poll()
 	for {
@@ -285,6 +301,7 @@ func (s *Schedule) Poll() {
 		case <-s.nc:
 		}
 		timeout = s.CheckNotifications()
+		s.Save()
 	}
 }
 
@@ -388,6 +405,7 @@ func (s *Schedule) Check() {
 	if checkNotify {
 		s.nc <- true
 	}
+	s.Save()
 }
 
 func (s *Schedule) CheckUnknown() {
@@ -436,6 +454,8 @@ Loop:
 		state := s.Status[ak]
 		if state == nil {
 			state = &State{
+				Alert: ak.Name,
+				Tags:  r.Group.Tags(),
 				Group: r.Group,
 			}
 			s.Status[ak] = state
@@ -507,6 +527,8 @@ type State struct {
 	History      []Event
 	Touched      time.Time
 	Expr         string
+	Alert        string // helper data since AlertKeys don't serialize to JSON well
+	Tags         string // string representation of Group
 	Group        opentsdb.TagSet
 	Computations expr.Computations
 	Subject      string
@@ -520,6 +542,7 @@ func (s *Schedule) Acknowledge(ak AlertKey) {
 		st.NeedAck = false
 	}
 	s.Unlock()
+	s.Save()
 }
 
 func (s *State) Touch() {

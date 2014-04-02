@@ -7,28 +7,42 @@
 	<div class="form-group">
 		<label class="col-sm-2 control-label">start date</label>
 		<div class="col-sm-6">
-			<input type="text" class="form-control" placeholder="yyyy-mm-dd HH:MM[:SS] [MST/-0700]" ng-model="start">
+			<input type="text" class="form-control" placeholder="yyyy-mm-dd HH:MM[:SS] [MST/-0700]" ng-model="start" ng-change="change()">
 			<p class="help-block">UTC if no timezone. Uses now if blank.</p>
 		</div>
 	</div>
 	<div class="form-group">
 		<label class="col-sm-2 control-label">end date</label>
 		<div class="col-sm-6">
-			<input type="text" class="form-control" placeholder="yyyy-mm-dd HH:MM[:SS] [MST/-0700]" ng-model="end">
+			<input type="text" class="form-control" placeholder="yyyy-mm-dd HH:MM[:SS] [MST/-0700]" ng-model="end" ng-change="change()">
 		</div>
 	</div>
 	<div class="form-group">
 		<label class="col-sm-2 control-label">duration</label>
 		<div class="col-sm-6">
-			<input type="text" class="form-control" placeholder="1h" ng-model="duration">
-			<p class="help-block">Specify either end date or duration.</p>
+			<input type="text" class="form-control" placeholder="1h" ng-model="duration" ng-change="change()">
+			<p class="help-block">Specify either end date or <a href="http://golang.org/pkg/time/#ParseDuration">duration</a>.</p>
 		</div>
 	</div>
 	<div class="form-group">
-		<label class="col-sm-2 control-label">silence</label>
+		<label class="col-sm-2 control-label">alert</label>
 		<div class="col-sm-10">
-			<input type="text" class="form-control" placeholder="host=.*-dev.*" ng-model="text">
-			<p class="help-block">tagk=tagv,tagk2=tagv2,etc. tagvs are regexes.</p>
+			<input type="text" class="form-control" placeholder="high_cpu" ng-model="alert" ng-change="change()">
+			<p class="help-block">Optional.</p>
+		</div>
+	</div>
+	<div class="form-group">
+		<label class="col-sm-2 control-label">hosts</label>
+		<div class="col-sm-10">
+			<input type="text" class="form-control" placeholder="ny-web01, ny-redis*" ng-model="hosts" ng-change="change()">
+			<p class="help-block">Optional. Globs, separated by commas (,), pipes (|), or spaces.</p>
+		</div>
+	</div>
+	<div class="form-group">
+		<label class="col-sm-2 control-label">other tags</label>
+		<div class="col-sm-10">
+			<input type="text" class="form-control" placeholder="port=637?" ng-model="tags" ng-change="change()">
+			<p class="help-block">Ex: port=637?,cluster=1,iface=lo*|if*. tagvs are <a href="http://golang.org/pkg/path/filepath/#Match">globs</a>, separated by pipes (|).</p>
 		</div>
 	</div>
 	<div class="form-group">
@@ -43,30 +57,37 @@
 	</div>
 	<div class="col-sm-12">
 		<ul class="list-unstyled">
-			<li ng-repeat="silence in testSilences" ng-bind="silence.Name + silence.Group"></li>
+			<li ng-repeat="silence in testSilences">
+				<span ng-bind="silence.Name + silence.Group"></span>
+				<span class="label label-primary" ng-show="alertActive(silence)">active</span>
+			</li>
 		<ul>
 	</div>
 	<div class="col-sm-12">
-		<button class="btn btn-primary" ng-click="confirm()">confirm</button>
+		<button class="btn btn-primary" ng-click="confirm()" ng-disabled="disableConfirm">confirm</button>
+		<span ng-show="edit" class="label label-warning">editing rule {{edit}}</span>
 	</div>
 </div>
 <div class="row">
 	<div class="col-sm-12">
-		<table class="table">
+		<table class="table" ts-table-sort="[[1,0]]">
 			<thead>
 				<tr>
 					<th>start</th>
 					<th>end</th>
-					<th>silence</th>
-					<th>clear</th>
+					<th>alert</th>
+					<th>tags</th>
+					<th>edit</th>
 				</tr>
 			</thead>
 			<tbody>
 				<tr ng-repeat="(id, s) in silences">
 					<td ts-time="s.Start"></td>
 					<td ts-time="s.End"></td>
-					<td ng-bind="s.Text"></td>
+					<td ng-bind="s.Alert"></td>
+					<td ng-bind="s.Tags"></td>
 					<td>
+						<a class="btn btn-primary btn-xs" ng-href="/silence?start={{time(s.Start)}}&end={{time(s.End)}}&alert={{s.Alert}}&tags={{encode(s.Tags)}}&edit={{id}}">edit</a>
 						<button class="btn btn-danger btn-xs" ng-click="clear(id)">clear</button>
 					</td>
 				</tr>
