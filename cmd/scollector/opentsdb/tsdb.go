@@ -91,19 +91,23 @@ func (t TagSet) Subset(o TagSet) bool {
 
 // String converts t to an OpenTSDB-style {a=b,c=b} string, alphabetized by key.
 func (t TagSet) String() string {
+	return fmt.Sprintf("{%s}", t.Tags())
+}
+
+// Tags is identical to String() but without { and }.
+func (t TagSet) Tags() string {
 	var keys []string
 	for k := range t {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
-	b := bytes.NewBufferString("{")
+	b := &bytes.Buffer{}
 	for i, k := range keys {
 		if i > 0 {
 			fmt.Fprint(b, ",")
 		}
 		fmt.Fprintf(b, "%s=%s", k, t[k])
 	}
-	fmt.Fprint(b, "}")
 	return b.String()
 }
 
