@@ -66,6 +66,17 @@ tsafControllers.controller('TsafCtrl', [
         $scope.zws = function (v) {
             return v.replace(/([,{}()])/g, '$1\u200b');
         };
+        $scope.encode = function (v) {
+            return encodeURIComponent(v);
+        };
+        $scope.alertActive = function (ak) {
+            var key = ak.Name + ak.Group;
+            var st = $scope.schedule.Status[key];
+            if (!st) {
+                return false;
+            }
+            return st.last.Status > 1;
+        };
         $http.get('/api/alerts').success(function (data) {
             angular.forEach(data.Status, function (v, k) {
                 v.Touched = moment(v.Touched).utc();
@@ -138,7 +149,7 @@ tsafControllers.controller('ExprCtrl', [
             current = '';
         }
         if (!current) {
-            $location.hash(btoa('avg(q("avg:rate:os.cpu{host=ny-devtsdb04}", "5m", "")) > 80'));
+            $location.hash(btoa('avg(q("avg:rate:os.cpu{host=ny-devtsaf01}", "5m", "")) > 80'));
             return;
         }
         $scope.expr = current;
@@ -170,7 +181,7 @@ tsafControllers.controller('EGraphCtrl', [
         $scope.renderers = ['area', 'bar', 'line', 'scatterplot'];
         $scope.render = search.render || 'scatterplot';
         if (!current) {
-            $location.search('q', btoa('q("avg:rate:os.cpu{host=ny-devtsdb04}", "5m", "")'));
+            $location.search('q', btoa('q("avg:rate:os.cpu{host=ny-devtsaf01}", "5m", "")'));
             return;
         }
         $scope.expr = current;
@@ -518,8 +529,15 @@ tsafControllers.controller('RuleCtrl', [
     }]);
 
 tsafControllers.controller('SilenceCtrl', [
-    '$scope', '$http', function ($scope, $http) {
-        $scope.duration = '1h';
+    '$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
+        var search = $location.search();
+        $scope.start = search.start;
+        $scope.end = search.end;
+        $scope.duration = search.duration;
+        $scope.alert = search.alert;
+        $scope.hosts = search.hosts;
+        $scope.tags = search.tags;
+        $scope.edit = search.edit;
         function get() {
             $http.get('/api/silence/get').success(function (data) {
                 $scope.silences = data;
@@ -528,15 +546,32 @@ tsafControllers.controller('SilenceCtrl', [
             });
         }
         get();
-        $scope.test = function () {
-            $scope.error = null;
+        function getData() {
+            var tags = ($scope.tags || '').split(',');
+            if ($scope.hosts) {
+                tags.push('host=' + $scope.hosts.split(/[ ,|]+/).join('|'));
+            }
+            tags = tags.filter(function (v) {
+                return v != "";
+            });
             var data = {
                 start: $scope.start,
                 end: $scope.end,
                 duration: $scope.duration,
-                text: $scope.text
+                alert: $scope.alert,
+                tags: tags.join(','),
+                edit: $scope.edit
             };
-            $http.post('/api/silence/set', data).success(function (data) {
+            return data;
+        }
+        var any = search.start || search.end || search.duration || search.alert || search.hosts || search.tags;
+        var state = getData();
+        $scope.change = function () {
+            $scope.disableConfirm = true;
+        };
+        if (any) {
+            $scope.error = null;
+            $http.post('/api/silence/set', state).success(function (data) {
                 if (data.length == 0) {
                     data = [{ Name: '(none)' }];
                 }
@@ -544,18 +579,21 @@ tsafControllers.controller('SilenceCtrl', [
             }).error(function (error) {
                 $scope.error = error;
             });
+        }
+        $scope.test = function () {
+            $location.search('start', $scope.start || null);
+            $location.search('end', $scope.end || null);
+            $location.search('duration', $scope.duration || null);
+            $location.search('alert', $scope.alert || null);
+            $location.search('hosts', $scope.hosts || null);
+            $location.search('tags', $scope.tags || null);
+            $route.reload();
         };
         $scope.confirm = function () {
             $scope.error = null;
             $scope.testSilences = null;
-            var data = {
-                start: $scope.start,
-                end: $scope.end,
-                duration: $scope.duration,
-                text: $scope.text,
-                confirm: "true"
-            };
-            $http.post('/api/silence/set', data).error(function (error) {
+            state.confirm = "true";
+            $http.post('/api/silence/set', state).error(function (error) {
                 $scope.error = error;
             }).finally(function () {
                 $scope.testSilences = null;
@@ -563,12 +601,19 @@ tsafControllers.controller('SilenceCtrl', [
             });
         };
         $scope.clear = function (id) {
+            if (!window.confirm('Clear this silence?')) {
+                return;
+            }
             $scope.error = null;
             $http.post('/api/silence/clear', { id: id }).error(function (error) {
                 $scope.error = error;
             }).finally(function () {
                 get();
             });
+        };
+        $scope.time = function (v) {
+            var m = moment(v).utc();
+            return m.format(timeFormat);
         };
     }]);
 
@@ -578,15 +623,17 @@ tsafApp.directive('tsResults', function () {
     };
 });
 
+var timeFormat = 'YYYY-MM-DD HH:mm:ss ZZ';
+
 tsafApp.directive("tsTime", function () {
     return {
         link: function (scope, elem, attrs) {
             scope.$watch(attrs.tsTime, function (v) {
                 var m = moment(v).utc();
                 var el = document.createElement('a');
-                el.innerText = m.format('YYYY-MM-DD HH:MM:SS ZZ') + ' (' + m.fromNow() + ')';
+                el.innerText = m.format(timeFormat) + ' (' + m.fromNow() + ')';
                 el.href = 'http://www.timeanddate.com/worldclock/converted.html?iso=';
-                el.href += m.format('YYYYMMDDTHHMM');
+                el.href += m.format('YYYYMMDDTHHmm');
                 el.href += '&p1=0';
                 angular.forEach(scope.timeanddate, function (v, k) {
                     el.href += '&p' + (k + 2) + '=' + v;
@@ -603,7 +650,7 @@ tsafApp.directive("tsRickshaw", [
             templateUrl: '/partials/rickshaw.html',
             link: function (scope, elem, attrs) {
                 scope.$watch(attrs.tsRickshaw, function (v) {
-                    if (!v) {
+                    if (!angular.isArray(v) || v.length == 0) {
                         return;
                     }
                     var palette = new Rickshaw.Color.Palette();
@@ -702,6 +749,19 @@ tsafApp.directive("tooltip", function () {
         }
     };
 });
+
+tsafApp.directive('tsTableSort', [
+    '$timeout', function ($timeout) {
+        return {
+            link: function (scope, elem, attrs) {
+                $timeout(function () {
+                    $(elem).tablesorter({
+                        sortList: scope.$eval(attrs.tsTableSort)
+                    });
+                });
+            }
+        };
+    }]);
 
 tsafApp.filter('bytes', function () {
     return function (bytes, precision) {
