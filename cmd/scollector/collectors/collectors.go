@@ -110,11 +110,11 @@ func TSAdd(md *opentsdb.MultiDataPoint, name string, value interface{},
 	*md = append(*md, &d)
 }
 
-func readLine(fname string, line func(string)) {
+func readLine(fname string, line func(string)) error {
 	f, err := os.Open(fname)
 	if err != nil {
 		slog.Infof("%v: %v\n", fname, err)
-		return
+		return err
 	}
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
@@ -123,6 +123,7 @@ func readLine(fname string, line func(string)) {
 	if err := scanner.Err(); err != nil {
 		slog.Infof("%v: %v\n", fname, err)
 	}
+	return nil
 }
 
 // IsDigit returns true if s consists of decimal digits.
