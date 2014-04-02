@@ -444,9 +444,8 @@ func (r Request) Query(host string) (ResponseSet, error) {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		b, err = ioutil.ReadAll(resp.Body)
-		fmt.Println(string(b))
-		e := RequestError{}
+		e := RequestError{Request: string(b)}
+		b, _ = ioutil.ReadAll(resp.Body)
 		if err := json.Unmarshal(b, &e); err == nil {
 			return nil, &e
 		}
@@ -464,7 +463,8 @@ func (r Request) Query(host string) (ResponseSet, error) {
 }
 
 type RequestError struct {
-	Err struct {
+	Request string
+	Err     struct {
 		Code    int    `json:"code"`
 		Message string `json:"message"`
 		Details string `json:"details"`
@@ -472,7 +472,7 @@ type RequestError struct {
 }
 
 func (r *RequestError) Error() string {
-	return fmt.Sprintf("tsdb: %s", r.Err.Message)
+	return fmt.Sprintf("tsdb: %s: %s", r.Request, r.Err.Message)
 }
 
 type Context interface {
