@@ -85,7 +85,7 @@ func (s *Schedule) Silenced() map[AlertKey]time.Time {
 	return aks
 }
 
-func (s *Schedule) AddSilence(start, end time.Time, alert, tagList string, confirm bool) (AlertKeys, error) {
+func (s *Schedule) AddSilence(start, end time.Time, alert, tagList string, confirm bool, edit string) (AlertKeys, error) {
 	if start.IsZero() || end.IsZero() {
 		return nil, fmt.Errorf("both start and end must be specified")
 	}
@@ -119,6 +119,7 @@ func (s *Schedule) AddSilence(start, end time.Time, alert, tagList string, confi
 	}
 	if confirm {
 		s.Lock()
+		delete(s.Silence, edit)
 		s.Silence[si.ID()] = si
 		s.Unlock()
 		return nil, nil

@@ -643,12 +643,14 @@ interface ISilenceScope extends IExprScope {
 	alert: string;
 	hosts: string;
 	tags: string;
+	edit: string;
 	testSilences: any;
 	test: () => void;
 	confirm: () => void;
 	clear: (id: string) => void;
 	change: () => void;
 	disableConfirm: boolean;
+	time: (v: any) => string;
 }
 
 tsafControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$route', function($scope: ISilenceScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService){
@@ -659,6 +661,7 @@ tsafControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$rou
 	$scope.alert = search.alert;
 	$scope.hosts = search.hosts;
 	$scope.tags = search.tags;
+	$scope.edit = search.edit;
 	function get() {
 		$http.get('/api/silence/get')
 			.success((data) => {
@@ -681,6 +684,7 @@ tsafControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$rou
 			duration: $scope.duration,
 			alert: $scope.alert,
 			tags: tags.join(','),
+			edit: $scope.edit,
 		};
 		return data;
 	}
@@ -736,6 +740,10 @@ tsafControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$rou
 			.finally(() => {
 				get();
 			});
+	};
+	$scope.time = (v: any) => {
+		var m = moment(v).utc();
+		return m.format(timeFormat);
 	};
 }]);
 

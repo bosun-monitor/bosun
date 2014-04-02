@@ -537,6 +537,7 @@ tsafControllers.controller('SilenceCtrl', [
         $scope.alert = search.alert;
         $scope.hosts = search.hosts;
         $scope.tags = search.tags;
+        $scope.edit = search.edit;
         function get() {
             $http.get('/api/silence/get').success(function (data) {
                 $scope.silences = data;
@@ -558,7 +559,8 @@ tsafControllers.controller('SilenceCtrl', [
                 end: $scope.end,
                 duration: $scope.duration,
                 alert: $scope.alert,
-                tags: tags.join(',')
+                tags: tags.join(','),
+                edit: $scope.edit
             };
             return data;
         }
@@ -608,6 +610,10 @@ tsafControllers.controller('SilenceCtrl', [
             }).finally(function () {
                 get();
             });
+        };
+        $scope.time = function (v) {
+            var m = moment(v).utc();
+            return m.format(timeFormat);
         };
     }]);
 

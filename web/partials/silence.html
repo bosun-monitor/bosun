@@ -65,6 +65,7 @@
 	</div>
 	<div class="col-sm-12">
 		<button class="btn btn-primary" ng-click="confirm()" ng-disabled="disableConfirm">confirm</button>
+		<span ng-show="edit" class="label label-warning">editing rule {{edit}}</span>
 	</div>
 </div>
 <div class="row">
@@ -76,7 +77,7 @@
 					<th>end</th>
 					<th>alert</th>
 					<th>tags</th>
-					<th>clear</th>
+					<th>edit</th>
 				</tr>
 			</thead>
 			<tbody>
@@ -86,6 +87,7 @@
 					<td ng-bind="s.Alert"></td>
 					<td ng-bind="s.Tags"></td>
 					<td>
+						<a class="btn btn-primary btn-xs" ng-href="/silence?start={{time(s.Start)}}&end={{time(s.End)}}&alert={{s.Alert}}&tags={{encode(s.Tags)}}&edit={{id}}">edit</a>
 						<button class="btn btn-danger btn-xs" ng-click="clear(id)">clear</button>
 					</td>
 				</tr>
