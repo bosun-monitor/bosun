@@ -14,7 +14,7 @@ func init() {
 func c_conntrack_linux() opentsdb.MultiDataPoint {
 	var md opentsdb.MultiDataPoint
 	var max, count float64
-	err := readLine("/proc/sys/net/netfilter/nf_conntrack_count", func(s string) {
+	if err := readLine("/proc/sys/net/netfilter/nf_conntrack_count", func(s string) {
 		values := strings.Fields(s)
 		if len(values) > 0 {
 			var err error
@@ -24,21 +24,20 @@ func c_conntrack_linux() opentsdb.MultiDataPoint {
 			}
 			Add(&md, "linux.net.conntrack.count", count, nil)
 		}
-	})
-	if err != nil {
+	}); err != nil {
 		return nil
 	}
-	err = readLine("/proc/sys/net/netfilter/nf_conntrack_max", func(s string) {
+	if err := readLine("/proc/sys/net/netfilter/nf_conntrack_max", func(s string) {
 		values := strings.Fields(s)
 		if len(values) > 0 {
+			var err error
 			max, err = strconv.ParseFloat(values[0], 64)
 			if err != nil {
 				return
 			}
 			Add(&md, "linux.net.conntrack.max", max, nil)
 		}
-	})
-	if err != nil {
+	}); err != nil {
 		return nil
 	}
 	if max != 0 {

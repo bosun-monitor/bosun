@@ -113,7 +113,6 @@ func TSAdd(md *opentsdb.MultiDataPoint, name string, value interface{},
 func readLine(fname string, line func(string)) error {
 	f, err := os.Open(fname)
 	if err != nil {
-		slog.Infof("%v: %v\n", fname, err)
 		return err
 	}
 	scanner := bufio.NewScanner(f)
