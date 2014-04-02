@@ -246,10 +246,12 @@ func (b *BinaryNode) Check() error {
 }
 
 func (b *BinaryNode) Return() FuncType {
-	if b.Args[1].Return() == TYPE_SERIES {
-		return b.Args[1].Return()
+	t0 := b.Args[0].Return()
+	t1 := b.Args[1].Return()
+	if t1 > t0 {
+		return t1
 	}
-	return b.Args[0].Return()
+	return t0
 }
 
 // UnaryNode holds one argument and an operator.
