@@ -880,6 +880,22 @@ tsafApp.directive("tooltip", function() {
 	};
 });
 
+interface JQuery {
+	tablesorter(v: any):JQuery;
+}
+
+tsafApp.directive('tsTableSort', ['$timeout', ($timeout: ng.ITimeoutService) => {
+	return {
+		link: (scope: ng.IScope, elem: any, attrs: any) => {
+			$timeout(() => {
+				$(elem).tablesorter({
+					sortList: scope.$eval(attrs.tsTableSort),
+				});
+			});
+		},
+	};
+}]);
+
 tsafApp.filter('bytes', function() {
 	return function(bytes: any, precision: number) {
 		if (!bytes) { return '0 B' };

@@ -750,6 +750,19 @@ tsafApp.directive("tooltip", function () {
     };
 });
 
+tsafApp.directive('tsTableSort', [
+    '$timeout', function ($timeout) {
+        return {
+            link: function (scope, elem, attrs) {
+                $timeout(function () {
+                    $(elem).tablesorter({
+                        sortList: scope.$eval(attrs.tsTableSort)
+                    });
+                });
+            }
+        };
+    }]);
+
 tsafApp.filter('bytes', function () {
     return function (bytes, precision) {
         if (!bytes) {
