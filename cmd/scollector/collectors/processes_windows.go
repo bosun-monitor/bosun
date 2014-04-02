@@ -14,7 +14,7 @@ func init() {
 }
 
 // These are silly processes but exist on my machine, will need to update KMB
-var processInclusions = regexp.MustCompile("chrome|powershell|scollector")
+var processInclusions = regexp.MustCompile("chrome|powershell|scollector|SocketServer")
 var serviceInclusions = regexp.MustCompile("WinRM")
 
 func c_windows_processes() opentsdb.MultiDataPoint {
