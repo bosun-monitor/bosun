@@ -243,6 +243,11 @@ func (s *Schedule) RestoreState() {
 }
 
 func (s *Schedule) Save() {
+	// todo: debounce this call
+	go s.save()
+}
+
+func (s *Schedule) save() {
 	s.Lock()
 	defer s.Unlock()
 	f, err := os.Create(s.Conf.StateFile)
@@ -268,12 +273,6 @@ func (s *Schedule) Save() {
 }
 
 func (s *Schedule) Run() error {
-	go func() {
-		for {
-			time.Sleep(time.Minute)
-			s.Save()
-		}
-	}()
 	s.nc = make(chan interface{}, 1)
 	go s.Poll()
 	for {
@@ -302,6 +301,7 @@ func (s *Schedule) Poll() {
 		case <-s.nc:
 		}
 		timeout = s.CheckNotifications()
+		s.Save()
 	}
 }
 
@@ -405,6 +405,7 @@ func (s *Schedule) Check() {
 	if checkNotify {
 		s.nc <- true
 	}
+	s.Save()
 }
 
 func (s *Schedule) CheckUnknown() {
@@ -541,6 +542,7 @@ func (s *Schedule) Acknowledge(ak AlertKey) {
 		st.NeedAck = false
 	}
 	s.Unlock()
+	s.Save()
 }
 
 func (s *State) Touch() {
