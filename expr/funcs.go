@@ -53,6 +53,11 @@ var Builtins = map[string]parse.Func{
 		parse.TYPE_NUMBER,
 		Dev,
 	},
+	"len": {
+		[]parse.FuncType{parse.TYPE_SERIES},
+		parse.TYPE_NUMBER,
+		Length,
+	},
 	"recent": {
 		[]parse.FuncType{parse.TYPE_SERIES},
 		parse.TYPE_NUMBER,
@@ -319,6 +324,14 @@ func dev(dps Series, args ...float64) (d float64) {
 	// how should we handle len(x) == 1?
 	d /= float64(len(dps) - 1)
 	return math.Sqrt(d)
+}
+
+func Length(e *state, T miniprofiler.Timer, series []*Result) ([]*Result, error) {
+	return reduce(e, T, series, length)
+}
+
+func length(dps Series, args ...float64) (a float64) {
+	return float64(len(dps))
 }
 
 func Recent(e *state, T miniprofiler.Timer, series []*Result) ([]*Result, error) {
