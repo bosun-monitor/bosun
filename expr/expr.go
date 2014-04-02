@@ -154,9 +154,9 @@ func union(a, b []*Result) []*Union {
 				}
 				u.Group = g
 			} else if ra.Group.Subset(rb.Group) {
-				u.Group = rb.Group
-			} else if rb.Group.Subset(ra.Group) {
 				u.Group = ra.Group
+			} else if rb.Group.Subset(ra.Group) {
+				u.Group = rb.Group
 			} else {
 				continue
 			}
