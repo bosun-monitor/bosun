@@ -3,6 +3,7 @@ package expr
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"reflect"
 	"regexp"
 	"runtime"
@@ -82,15 +83,28 @@ type Value interface {
 	Value() interface{}
 }
 
+func marshalFloat(n float64) ([]byte, error) {
+	if math.IsNaN(n) {
+		return json.Marshal("NaN")
+	} else if math.IsInf(n, 1) {
+		return json.Marshal("+Inf")
+	} else if math.IsInf(n, -1) {
+		return json.Marshal("-Inf")
+	}
+	return json.Marshal(n)
+}
+
 type Number float64
 
-func (n Number) Type() parse.FuncType { return parse.TYPE_NUMBER }
-func (n Number) Value() interface{}   { return n }
+func (n Number) Type() parse.FuncType         { return parse.TYPE_NUMBER }
+func (n Number) Value() interface{}           { return n }
+func (n Number) MarshalJSON() ([]byte, error) { return marshalFloat(float64(n)) }
 
 type Scalar float64
 
-func (s Scalar) Type() parse.FuncType { return parse.TYPE_SCALAR }
-func (s Scalar) Value() interface{}   { return s }
+func (s Scalar) Type() parse.FuncType         { return parse.TYPE_SCALAR }
+func (s Scalar) Value() interface{}           { return s }
+func (s Scalar) MarshalJSON() ([]byte, error) { return marshalFloat(float64(s)) }
 
 type Series map[string]opentsdb.Point
 
