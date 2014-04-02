@@ -122,6 +122,7 @@ func (s *Schedule) AddSilence(start, end time.Time, alert, tagList string, confi
 		delete(s.Silence, edit)
 		s.Silence[si.ID()] = si
 		s.Unlock()
+		s.Save()
 		return nil, nil
 	}
 	aks := make(AlertKeys, 0)
@@ -135,12 +136,10 @@ func (s *Schedule) AddSilence(start, end time.Time, alert, tagList string, confi
 }
 
 func (s *Schedule) ClearSilence(id string) error {
-	if _, present := s.Silence[id]; !present {
-		return fmt.Errorf("silence: no such id %s", id)
-	}
 	s.Lock()
 	delete(s.Silence, id)
 	s.Unlock()
+	s.Save()
 	return nil
 }
 
@@ -199,6 +198,10 @@ func (s *Schedule) RestoreState() {
 		log.Println(err)
 		return
 	}
+	if err := dec.Decode(&s.Silence); err != nil {
+		log.Println(err)
+		return
+	}
 	for {
 		var ak AlertKey
 		var st State
@@ -252,6 +255,7 @@ func (s *Schedule) Save() {
 		log.Println(err)
 		return
 	}
+	enc.Encode(s.Silence)
 	for k, v := range s.Status {
 		enc.Encode(k)
 		enc.Encode(v)
