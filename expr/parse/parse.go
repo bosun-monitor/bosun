@@ -48,10 +48,10 @@ func (f FuncType) String() string {
 }
 
 const (
-	TYPE_NUMBER FuncType = iota
-	TYPE_STRING
-	TYPE_SERIES
+	TYPE_STRING FuncType = iota
 	TYPE_SCALAR
+	TYPE_NUMBER
+	TYPE_SERIES
 )
 
 // Parse returns a Tree, created by parsing the expression described in the
