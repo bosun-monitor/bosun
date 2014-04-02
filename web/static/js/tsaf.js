@@ -617,15 +617,17 @@ tsafApp.directive('tsResults', function () {
     };
 });
 
+var timeFormat = 'YYYY-MM-DD HH:mm:ss ZZ';
+
 tsafApp.directive("tsTime", function () {
     return {
         link: function (scope, elem, attrs) {
             scope.$watch(attrs.tsTime, function (v) {
                 var m = moment(v).utc();
                 var el = document.createElement('a');
-                el.innerText = m.format('YYYY-MM-DD HH:MM:SS ZZ') + ' (' + m.fromNow() + ')';
+                el.innerText = m.format(timeFormat) + ' (' + m.fromNow() + ')';
                 el.href = 'http://www.timeanddate.com/worldclock/converted.html?iso=';
-                el.href += m.format('YYYYMMDDTHHMM');
+                el.href += m.format('YYYYMMDDTHHmm');
                 el.href += '&p1=0';
                 angular.forEach(scope.timeanddate, function (v, k) {
                     el.href += '&p' + (k + 2) + '=' + v;
