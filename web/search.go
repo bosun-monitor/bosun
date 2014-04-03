@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/MiniProfiler/go/miniprofiler"
 	"github.com/StackExchange/tsaf/search"
-	"github.com/gorilla/mux"
+	"github.com/StackExchange/tsaf/third_party/github.com/MiniProfiler/go/miniprofiler"
+	"github.com/StackExchange/tsaf/third_party/github.com/gorilla/mux"
 )
 
 // A Sorted List of Available Metrics

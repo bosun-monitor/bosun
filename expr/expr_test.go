@@ -3,7 +3,7 @@ package expr
 import (
 	"testing"
 
-	"github.com/StackExchange/scollector/opentsdb"
+	"github.com/StackExchange/tsaf/third_party/github.com/StackExchange/scollector/opentsdb"
 )
 
 func TestExprSimple(t *testing.T) {

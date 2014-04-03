@@ -7,7 +7,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/StackExchange/scollector/opentsdb"
+	"github.com/StackExchange/tsaf/third_party/github.com/StackExchange/scollector/opentsdb"
 )
 
 /* Questions we want to ask:
