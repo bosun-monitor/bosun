@@ -27,6 +27,7 @@ type Queue struct {
 
 // Creates and starts a new Queue.
 func New(host string, c chan *opentsdb.DataPoint) *Queue {
+	const _100MB = 1024 * 1024 * 100
 	q := Queue{
 		host: host,
 		c:    c,
@@ -35,9 +36,11 @@ func New(host string, c chan *opentsdb.DataPoint) *Queue {
 	go func() {
 		for _ = range time.Tick(time.Minute) {
 			runtime.ReadMemStats(&m)
+			if m.Alloc > _100MB {
+				runtime.GC()
+			}
 		}
 	}()
-	const _100MB = 1024 * 1024 * 100
 	go func() {
 		for dp := range c {
 			if m.Alloc > _100MB {
