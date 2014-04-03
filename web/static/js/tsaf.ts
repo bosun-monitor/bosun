@@ -909,14 +909,17 @@ tsafApp.filter('nfmt', function() {
 	return function(n: any, precision: number) {
 		if (!n) { return '0' };
 		if (isNaN(parseFloat(n)) || !isFinite(n)) return '-';
+		var a = Math.abs(n);
 		if (typeof precision == 'undefined') {
-			if (n < 1) precision = 4;
-			else if (n < 100) precision = 3;
+			if (a < 1) precision = 4;
+			else if (a < 100) precision = 3;
 			else precision = 2;
 		}
 		var units = ['', 'K', 'M', 'B', 'T'],
-			number = Math.floor(Math.log(n) / Math.log(1000));
-		return (n / Math.pow(1000, Math.floor(number))).toFixed(precision) +  ' ' + units[number];
+			number = Math.floor(Math.log(a) / Math.log(1000));
+		a /= Math.pow(1000, Math.floor(number));
+		if (n < 0) a = -a;
+		return a.toFixed(precision) +  ' ' + units[number];
 	}
 });
 
