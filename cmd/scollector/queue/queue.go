@@ -68,8 +68,9 @@ func (q *Queue) send() {
 			}
 			sending := q.queue[:i]
 			q.queue = q.queue[i:]
-			go q.sendBatch(sending)
 			q.Unlock()
+			slog.Infof("sending: %d, remaining: %d", len(sending), len(q.queue))
+			q.sendBatch(sending)
 		} else {
 			time.Sleep(time.Second)
 		}
@@ -84,9 +85,6 @@ var client = &http.Client{
 }
 
 func (q *Queue) sendBatch(batch opentsdb.MultiDataPoint) {
-	qlock.Lock()
-	defer qlock.Unlock()
-	slog.Infoln("sending", len(batch))
 	b, err := batch.Json()
 	if err != nil {
 		slog.Error(err)
