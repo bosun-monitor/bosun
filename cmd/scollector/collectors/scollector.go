@@ -24,6 +24,8 @@ func IncScollector(key string, inc int) {
 
 func c_scollector() opentsdb.MultiDataPoint {
 	var md opentsdb.MultiDataPoint
+	tlock.Lock()
+	defer tlock.Unlock()
 	for k, v := range scollectorCounters {
 		Add(&md, "scollector."+k, v, nil)
 	}
