@@ -10,8 +10,8 @@ import (
 	"github.com/StackExchange/tsaf/conf"
 	"github.com/StackExchange/tsaf/relay"
 	"github.com/StackExchange/tsaf/sched"
+	"github.com/StackExchange/tsaf/third_party/github.com/howeyc/fsnotify"
 	"github.com/StackExchange/tsaf/web"
-	"github.com/howeyc/fsnotify"
 )
 
 var (

@@ -9,9 +9,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/MiniProfiler/go/miniprofiler"
 	"github.com/StackExchange/tsaf/sched"
-	"github.com/gorilla/mux"
+	"github.com/StackExchange/tsaf/third_party/github.com/MiniProfiler/go/miniprofiler"
+	"github.com/StackExchange/tsaf/third_party/github.com/gorilla/mux"
 )
 
 var (
