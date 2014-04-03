@@ -773,7 +773,7 @@ tsafApp.directive('tsTableSort', [
 
 tsafApp.filter('nfmt', function () {
     return function (n, precision) {
-        if (!n) {
+        if (!n || parseFloat(n) == 0) {
             return '0';
         }
         ;

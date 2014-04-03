@@ -907,7 +907,7 @@ tsafApp.directive('tsTableSort', ['$timeout', ($timeout: ng.ITimeoutService) => 
 
 tsafApp.filter('nfmt', function() {
 	return function(n: any, precision: number) {
-		if (!n) { return '0' };
+		if (!n || parseFloat(n) == 0) { return '0' };
 		if (isNaN(parseFloat(n)) || !isFinite(n)) return '-';
 		var a = Math.abs(n);
 		if (typeof precision == 'undefined') {
