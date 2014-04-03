@@ -851,13 +851,13 @@ tsafApp.directive("tsRickshaw", ['$filter', function($filter: ng.IFilterService)
 								swatch.style.backgroundColor = d.series.color;
 								var label = document.createElement('div');
 								label.className = 'rlabel';
-								label.innerHTML = d.name + ": " + d.formattedYValue;
-								if (attrs.bytes == "true") {
-									label.innerHTML = d.name + ": " + $filter('bytes')(d.formattedYValue);
+								var fmter = 'nfmt';
+								if (attrs.bytes) {
+									fmter = 'bytes';
+								} else if (attrs.bits) {
+									fmter = 'bits';
 								}
-								if (attrs.bits) {
-									label.innerHTML = d.name + ": " + $filter('bits')(d.formattedYValue);
-								}
+								label.innerHTML = d.name + ": " + $filter(fmter)(d.formattedYValue);
 								line.appendChild(swatch);
 								line.appendChild(label);
 								legend.appendChild(line);
@@ -904,6 +904,21 @@ tsafApp.directive('tsTableSort', ['$timeout', ($timeout: ng.ITimeoutService) => 
 		},
 	};
 }]);
+
+tsafApp.filter('nfmt', function() {
+	return function(n: any, precision: number) {
+		if (!n) { return '0' };
+		if (isNaN(parseFloat(n)) || !isFinite(n)) return '-';
+		if (typeof precision == 'undefined') {
+			if (n < 1) precision = 4;
+			else if (n < 100) precision = 3;
+			else precision = 2;
+		}
+		var units = ['', 'K', 'M', 'B', 'T'],
+			number = Math.floor(Math.log(n) / Math.log(1000));
+		return (n / Math.pow(1000, Math.floor(number))).toFixed(precision) +  ' ' + units[number];
+	}
+});
 
 tsafApp.filter('bytes', function() {
 	return function(bytes: any, precision: number) {
