@@ -307,20 +307,21 @@ class Request {
 	prune() {
 		for(var i = 0; i < this.queries.length; i++) {
 			angular.forEach(this.queries[i], (v, k) => {
+				var qi: any = this.queries[i];
 				switch (typeof v) {
 				case "string":
 					if (!v) {
-						delete this.queries[i][k];
+						delete qi[k];
 					}
 					break;
 				case "boolean":
 					if (!v) {
-						delete this.queries[i][k];
+						delete qi[k];
 					}
 					break;
 				case "object":
 					if (Object.keys(v).length == 0) {
-						delete this.queries[i][k];
+						delete qi[k];
 					}
 					break;
 				}

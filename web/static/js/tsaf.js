@@ -257,20 +257,21 @@ var Request = (function () {
         var _this = this;
         for (var i = 0; i < this.queries.length; i++) {
             angular.forEach(this.queries[i], function (v, k) {
+                var qi = _this.queries[i];
                 switch (typeof v) {
                     case "string":
                         if (!v) {
-                            delete _this.queries[i][k];
+                            delete qi[k];
                         }
                         break;
                     case "boolean":
                         if (!v) {
-                            delete _this.queries[i][k];
+                            delete qi[k];
                         }
                         break;
                     case "object":
                         if (Object.keys(v).length == 0) {
-                            delete _this.queries[i][k];
+                            delete qi[k];
                         }
                         break;
                 }
