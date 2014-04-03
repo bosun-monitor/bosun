@@ -33,5 +33,6 @@ func c_scollector() opentsdb.MultiDataPoint {
 	runtime.ReadMemStats(&ms)
 	Add(&md, "scollector.alloc", ms.Alloc, nil)
 	Add(&md, "scollector.goroutines", runtime.NumGoroutine(), nil)
+	Add(&md, "scollector.numgc", ms.NumGC, nil)
 	return md
 }
