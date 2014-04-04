@@ -906,20 +906,25 @@ tsafApp.directive('tsTableSort', ['$timeout', ($timeout: ng.ITimeoutService) => 
 }]);
 
 tsafApp.filter('nfmt', function() {
-	return function(n: any, precision: number) {
-		if (!n || parseFloat(n) == 0) { return '0' };
-		if (isNaN(parseFloat(n)) || !isFinite(n)) return '-';
+	return function(s: string, precision: number) {
+		var n = parseFloat(s);
+		if (!n || n == 0) { return '0' };
+		if (isNaN(n) || !isFinite(n)) return '-';
 		var a = Math.abs(n);
 		if (typeof precision == 'undefined') {
 			if (a < 1) precision = 4;
-			else if (a < 100) precision = 3;
+			else if (a < 10) precision = 2;
 			else precision = 2;
 		}
 		var units = ['', 'K', 'M', 'B', 'T'],
 			number = Math.floor(Math.log(a) / Math.log(1000));
 		a /= Math.pow(1000, Math.floor(number));
 		if (n < 0) a = -a;
-		return a.toFixed(precision) +  ' ' + units[number];
+		var r = a.toFixed(precision);
+		if (units[number]) {
+			r += ' ' + units[number];
+		}
+		return r;
 	}
 });
 
