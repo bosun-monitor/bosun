@@ -53,6 +53,11 @@ var Builtins = map[string]parse.Func{
 		parse.TYPE_NUMBER,
 		Dev,
 	},
+	"drop": {
+		[]parse.FuncType{parse.TYPE_SERIES, parse.TYPE_STRING, parse.TYPE_SCALAR},
+		parse.TYPE_SERIES,
+		Drop,
+	},
 	"len": {
 		[]parse.FuncType{parse.TYPE_SERIES},
 		parse.TYPE_NUMBER,
@@ -222,6 +227,31 @@ func Change(e *state, T miniprofiler.Timer, query, sduration, eduration string) 
 	}
 	r, err = reduce(e, T, r, change, (sd - ed).Seconds())
 	return
+}
+
+func Drop(e *state, T miniprofiler.Timer, series []*Result, op string, num float64) ([]*Result, error) {
+	var res []*Result
+	for _, s := range series {
+		if t, ok := s.Value.(Series); ok {
+			if len(t) == 0 {
+				continue
+			}
+			m := make(Series)
+			for ts, v := range t {
+				if operate(op, num, float64(v)) == 1 {
+					m[ts] = v
+				}
+			}
+			res = append(res, &Result{
+				Value:        m,
+				Computations: s.Computations,
+				Group:        s.Group,
+			})
+		} else {
+			panic(fmt.Errorf("expr: expected a series"))
+		}
+	}
+	return res, nil
 }
 
 func change(dps Series, args ...float64) float64 {
