@@ -77,7 +77,26 @@ func Graph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 	if err != nil {
 		return nil, err
 	}
-	return rickchart(tr)
+	chart, err := rickchart(tr)
+	if err != nil {
+		return nil, err
+	}
+	return RickGraph{QFromR(oreq), chart}, nil
+}
+
+func QFromR(req *opentsdb.Request) []string {
+	queries := make([]string, len(req.Queries))
+	var start, end string
+	if s, ok := req.Start.(string); ok {
+		start = strings.TrimSuffix(s, "-ago")
+	}
+	if s, ok := req.End.(string); ok {
+		end = strings.TrimSuffix(s, "-ago")
+	}
+	for i, q := range req.Queries {
+		queries[i] = fmt.Sprintf(`q("%v", "%v", "%v")`, q, start, end)
+	}
+	return queries
 }
 
 var q_re = regexp.MustCompile(`"([^"]+)"\s*,\s*"([^"]+)"`)
@@ -188,6 +207,11 @@ func rickchart(r opentsdb.ResponseSet) ([]*RickSeries, error) {
 		}
 	}
 	return series, nil
+}
+
+type RickGraph struct {
+	Queries []string      `json:"queries"`
+	Series  []*RickSeries `json:"series"`
 }
 
 type RickSeries struct {

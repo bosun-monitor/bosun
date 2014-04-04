@@ -348,6 +348,7 @@ interface IGraphScope extends ng.IScope {
 	MakeParam: (k: string, v: string) => string;
 	GetTagVs: (k: string) => void;
 	result: any;
+	queries: string[];
 	dt: any;
 	series: any;
 	query_p: Query[];
@@ -466,7 +467,8 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route
 	request.prune();
 	$http.get('/api/graph?' + 'b64=' + btoa(JSON.stringify(request)) + autods)
 		.success((data) => {
-			$scope.result = data;
+			$scope.result = data.series;
+			$scope.queries = data.queries;
 			$scope.url = $location.absUrl();
 			$scope.running = '';
 			$scope.error = '';
