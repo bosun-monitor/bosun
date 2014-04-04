@@ -772,19 +772,20 @@ tsafApp.directive('tsTableSort', [
     }]);
 
 tsafApp.filter('nfmt', function () {
-    return function (n, precision) {
-        if (!n || parseFloat(n) == 0) {
+    return function (s, precision) {
+        var n = parseFloat(s);
+        if (!n || n == 0) {
             return '0';
         }
         ;
-        if (isNaN(parseFloat(n)) || !isFinite(n))
+        if (isNaN(n) || !isFinite(n))
             return '-';
         var a = Math.abs(n);
         if (typeof precision == 'undefined') {
             if (a < 1)
                 precision = 4;
-            else if (a < 100)
-                precision = 3;
+            else if (a < 10)
+                precision = 2;
             else
                 precision = 2;
         }
@@ -792,7 +793,11 @@ tsafApp.filter('nfmt', function () {
         a /= Math.pow(1000, Math.floor(number));
         if (n < 0)
             a = -a;
-        return a.toFixed(precision) + ' ' + units[number];
+        var r = a.toFixed(precision);
+        if (units[number]) {
+            r += ' ' + units[number];
+        }
+        return r;
     };
 });
 
