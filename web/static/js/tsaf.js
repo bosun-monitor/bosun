@@ -186,7 +186,7 @@ tsafControllers.controller('EGraphCtrl', [
         $scope.bytes = search.bytes;
         $scope.bytes = !!$scope.bytes;
         $scope.renderers = ['area', 'bar', 'line', 'scatterplot'];
-        $scope.render = search.render || 'scatterplot';
+        $scope.render = search.render || 'line';
         if (!current) {
             $location.search('q', btoa('q("avg:rate:os.cpu{host=ny-devtsaf01}", "5m", "")'));
             return;
