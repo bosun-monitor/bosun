@@ -303,7 +303,19 @@ func (q Query) String() string {
 		s += q.Downsample + ":"
 	}
 	if q.Rate {
-		s += "rate:"
+		s += "rate"
+		if q.RateOptions.Counter {
+			s += ",counter"
+			if q.RateOptions.CounterMax != 0 {
+				s += ","
+				s += strconv.FormatInt(q.RateOptions.CounterMax, 10)
+				if q.RateOptions.ResetValue != 0 {
+					s += ","
+					s += strconv.FormatInt(q.RateOptions.ResetValue, 10)
+				}
+			}
+		}
+		s += ":"
 	}
 	s += q.Metric
 	if len(q.Tags) > 0 {
