@@ -83,7 +83,7 @@ func Graph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 	}
 	return struct {
 		Queries []string
-		Series  []*RickSeries `json:"series"`
+		Series  []*RickSeries
 	}{
 		QFromR(oreq),
 		chart,

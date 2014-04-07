@@ -467,7 +467,7 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route
 	request.prune();
 	$http.get('/api/graph?' + 'b64=' + btoa(JSON.stringify(request)) + autods)
 		.success((data) => {
-			$scope.result = data.series;
+			$scope.result = data.Series;
 			$scope.queries = data.Queries;
 			$scope.url = $location.absUrl();
 			$scope.running = '';
