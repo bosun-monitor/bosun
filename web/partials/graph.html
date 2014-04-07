@@ -164,3 +164,12 @@
 <div class="row">
 	<div class="chart" ts-rickshaw="result"></div>
 </div>
+<div class="row">
+	<ul>
+		<li ng-repeat="q in queries">{{q}}
+			<a href="/expr#{{btoa(q)}}" target="_blank"><sup>(Expr)</sup></a>
+			<a href="/egraph?q={{btoa(q)}}" target="_blank"><sup>(ExprGraph)</sup></a>
+			<a href="/rule?rule={{btoa('crit = avg(' + q + ')')}}" target="_blank"><sup>(Rule)</sup></a>
+		</li>
+	</ul>
+</div>

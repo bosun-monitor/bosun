@@ -77,7 +77,32 @@ func Graph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 	if err != nil {
 		return nil, err
 	}
-	return rickchart(tr)
+	chart, err := rickchart(tr)
+	if err != nil {
+		return nil, err
+	}
+	return struct {
+		Queries []string
+		Series  []*RickSeries
+	}{
+		QFromR(oreq),
+		chart,
+	}, nil
+}
+
+func QFromR(req *opentsdb.Request) []string {
+	queries := make([]string, len(req.Queries))
+	var start, end string
+	if s, ok := req.Start.(string); ok && strings.Contains(s, "-ago") {
+		start = strings.TrimSuffix(s, "-ago")
+	}
+	if s, ok := req.End.(string); ok && strings.Contains(s, "-ago") {
+		end = strings.TrimSuffix(s, "-ago")
+	}
+	for i, q := range req.Queries {
+		queries[i] = fmt.Sprintf(`q("%v", "%v", "%v")`, q, start, end)
+	}
+	return queries
 }
 
 var q_re = regexp.MustCompile(`"([^"]+)"\s*,\s*"([^"]+)"`)
