@@ -309,13 +309,10 @@ func (q Query) String() string {
 			if q.RateOptions.CounterMax != 0 {
 				s += ","
 				s += strconv.FormatInt(q.RateOptions.CounterMax, 10)
-			}
-			if q.RateOptions.ResetValue != 0 {
-				if q.RateOptions.CounterMax == 0 {
+				if q.RateOptions.ResetValue != 0 {
 					s += ","
+					s += strconv.FormatInt(q.RateOptions.ResetValue, 10)
 				}
-				s += ","
-				s += strconv.FormatInt(q.RateOptions.CounterMax, 10)
 			}
 		}
 		s += ":"
