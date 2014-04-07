@@ -303,20 +303,20 @@ func (q Query) String() string {
 		s += q.Downsample + ":"
 	}
 	if q.Rate {
-		s += "rate:"
-	}
-	if q.RateOptions.Counter {
-		s += "counter"
-		if q.RateOptions.CounterMax != 0 {
-			s += ","
-			s += strconv.FormatInt(q.RateOptions.CounterMax, 10)
-		}
-		if q.RateOptions.ResetValue != 0 {
-			if q.RateOptions.CounterMax == 0 {
+		s += "rate"
+		if q.RateOptions.Counter {
+			s += ",counter"
+			if q.RateOptions.CounterMax != 0 {
 				s += ","
+				s += strconv.FormatInt(q.RateOptions.CounterMax, 10)
 			}
-			s += ","
-			s += strconv.FormatInt(q.RateOptions.CounterMax, 10)
+			if q.RateOptions.ResetValue != 0 {
+				if q.RateOptions.CounterMax == 0 {
+					s += ","
+				}
+				s += ","
+				s += strconv.FormatInt(q.RateOptions.CounterMax, 10)
+			}
 		}
 		s += ":"
 	}
