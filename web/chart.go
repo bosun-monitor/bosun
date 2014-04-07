@@ -81,7 +81,13 @@ func Graph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 	if err != nil {
 		return nil, err
 	}
-	return RickGraph{QFromR(oreq), chart}, nil
+	return struct {
+		Queries []string
+		Series  []*RickSeries `json:"series"`
+	}{
+		QFromR(oreq),
+		chart,
+	}, nil
 }
 
 func QFromR(req *opentsdb.Request) []string {
@@ -207,11 +213,6 @@ func rickchart(r opentsdb.ResponseSet) ([]*RickSeries, error) {
 		}
 	}
 	return series, nil
-}
-
-type RickGraph struct {
-	Queries []string      `json:"queries"`
-	Series  []*RickSeries `json:"series"`
 }
 
 type RickSeries struct {
