@@ -183,8 +183,7 @@ tsafControllers.controller('EGraphCtrl', [
             current = atob(current);
         } catch (e) {
         }
-        $scope.bytes = search.bytes;
-        $scope.bytes = !!$scope.bytes;
+        $scope.bytes = search.bytes == 'true';
         $scope.renderers = ['area', 'bar', 'line', 'scatterplot'];
         $scope.render = search.render || 'line';
         if (!current) {
@@ -204,7 +203,7 @@ tsafControllers.controller('EGraphCtrl', [
         $scope.set = function () {
             $location.search('q', btoa($scope.expr));
             $location.search('render', $scope.render);
-            $location.search('bytes', $scope.bytes);
+            $location.search('bytes', $scope.bytes ? 'true' : undefined);
             $route.reload();
         };
     }]);
@@ -706,6 +705,13 @@ tsafApp.directive("tsRickshaw", [
                         };
                     }
                     graph.render();
+                    var fmter = 'nfmt';
+                    if (attrs.bytes == 'true') {
+                        fmter = 'bytes';
+                    } else if (attrs.bits == 'true') {
+                        fmter = 'bits';
+                    }
+                    var fmt = $filter(fmter);
                     var legend = angular.element('.rlegend', elem)[0];
                     var Hover = Rickshaw.Class.create(Rickshaw.Graph.HoverDetail, {
                         render: function (args) {
@@ -720,13 +726,7 @@ tsafApp.directive("tsRickshaw", [
                                 swatch.style.backgroundColor = d.series.color;
                                 var label = document.createElement('div');
                                 label.className = 'rlabel';
-                                var fmter = 'nfmt';
-                                if (attrs.bytes) {
-                                    fmter = 'bytes';
-                                } else if (attrs.bits) {
-                                    fmter = 'bits';
-                                }
-                                label.innerHTML = d.name + ": " + $filter(fmter)(d.formattedYValue);
+                                label.innerHTML = d.name + ": " + fmt(d.formattedYValue);
                                 line.appendChild(swatch);
                                 line.appendChild(label);
                                 legend.appendChild(line);
@@ -772,66 +772,44 @@ tsafApp.directive('tsTableSort', [
         };
     }]);
 
+function nfmt(s, mult, suffix, opts) {
+    opts = opts || {};
+    var n = parseFloat(s);
+    if (opts.round)
+        n = Math.round(n);
+    if (!n)
+        return suffix ? '0 ' + suffix : '0';
+    if (isNaN(n) || !isFinite(n))
+        return '-';
+    var a = Math.abs(n);
+    var precision = a < 1 ? 4 : 2;
+    var units = ['', 'k', 'M', 'G', 'T', 'P', 'E'];
+    var number = Math.floor(Math.log(a) / Math.log(mult));
+    a /= Math.pow(mult, Math.floor(number));
+    if (n < 0)
+        a = -a;
+    var r = a.toFixed(precision);
+    if (units[number]) {
+        r += units[number] + suffix;
+    }
+    return r;
+}
+
 tsafApp.filter('nfmt', function () {
-    return function (s, precision) {
-        var n = parseFloat(s);
-        if (!n || n == 0) {
-            return '0';
-        }
-        ;
-        if (isNaN(n) || !isFinite(n))
-            return '-';
-        var a = Math.abs(n);
-        if (typeof precision == 'undefined') {
-            if (a < 1)
-                precision = 4;
-            else if (a < 10)
-                precision = 2;
-            else
-                precision = 2;
-        }
-        var units = ['', 'K', 'M', 'B', 'T'], number = Math.floor(Math.log(a) / Math.log(1000));
-        a /= Math.pow(1000, Math.floor(number));
-        if (n < 0)
-            a = -a;
-        var r = a.toFixed(precision);
-        if (units[number]) {
-            r += ' ' + units[number];
-        }
-        return r;
+    return function (s) {
+        return nfmt(s, 1000, '', {});
     };
 });
 
 tsafApp.filter('bytes', function () {
-    return function (bytes, precision) {
-        if (!bytes) {
-            return '0 B';
-        }
-        ;
-        if (isNaN(parseFloat(bytes)) || !isFinite(bytes))
-            return '-';
-        if (typeof precision == 'undefined')
-            precision = 1;
-        var units = ['B', 'kB', 'MB', 'GB', 'TB', 'PB'], number = Math.floor(Math.log(bytes) / Math.log(1024));
-        return (bytes / Math.pow(1024, Math.floor(number))).toFixed(precision) + ' ' + units[number];
+    return function (s) {
+        return nfmt(s, 1024, 'B', { round: true });
     };
 });
 
 tsafApp.filter('bits', function () {
-    return function (b, precision) {
-        if (!b) {
-            return '0 b';
-        }
-        ;
-        if (b < 0) {
-            b = -b;
-        }
-        if (isNaN(parseFloat(b)) || !isFinite(b))
-            return '-';
-        if (typeof precision == 'undefined')
-            precision = 1;
-        var units = ['b', 'kb', 'Mb', 'Gb', 'Tb', 'Pb'], number = Math.floor(Math.log(b) / Math.log(1024));
-        return (b / Math.pow(1024, Math.floor(number))).toFixed(precision) + ' ' + units[number];
+    return function (s) {
+        return nfmt(s, 1024, 'b', { round: true });
     };
 });
 
