@@ -31,8 +31,13 @@ var (
 
 func esInit() {
 	update := func() {
-		_, err := http.Get(esURL)
-		esEnabled = err == nil
+		resp, err := http.Get(esURL)
+		if err != nil {
+			esEnabled = false
+			return
+		}
+		resp.Body.Close()
+		esEnabled = resp.StatusCode == 200
 	}
 	update()
 	go func() {
