@@ -65,3 +65,77 @@ func TestParseRequest(t *testing.T) {
 		}
 	}
 }
+
+func TestQueryString(t *testing.T) {
+	tests := []struct {
+		in  Query
+		out string
+	}{
+		{
+			Query{
+				Aggregator: "avg",
+				Metric:     "test.metric",
+				Rate:       true,
+				RateOptions: RateOptions{
+					Counter:    true,
+					CounterMax: 1,
+					ResetValue: 2,
+				},
+			},
+			"avg:rate,counter,1,2:test.metric",
+		},
+		{
+			Query{
+				Aggregator: "avg",
+				Metric:     "test.metric",
+				Rate:       true,
+				RateOptions: RateOptions{
+					Counter:    true,
+					CounterMax: 1,
+				},
+			},
+			"avg:rate,counter,1:test.metric",
+		},
+		{
+			Query{
+				Aggregator: "avg",
+				Metric:     "test.metric",
+				Rate:       true,
+				RateOptions: RateOptions{
+					Counter: true,
+				},
+			},
+			"avg:rate,counter:test.metric",
+		},
+		{
+			Query{
+				Aggregator: "avg",
+				Metric:     "test.metric",
+				Rate:       true,
+				RateOptions: RateOptions{
+					CounterMax: 1,
+					ResetValue: 2,
+				},
+			},
+			"avg:rate:test.metric",
+		},
+		{
+			Query{
+				Aggregator: "avg",
+				Metric:     "test.metric",
+				RateOptions: RateOptions{
+					Counter:    true,
+					CounterMax: 1,
+					ResetValue: 2,
+				},
+			},
+			"avg:test.metric",
+		},
+	}
+	for _, q := range tests {
+		s := q.in.String()
+		if s != q.out {
+			t.Errorf(`got "%s", expected "%s"`, s, q.out)
+		}
+	}
+}
