@@ -93,10 +93,10 @@ func Graph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 func QFromR(req *opentsdb.Request) []string {
 	queries := make([]string, len(req.Queries))
 	var start, end string
-	if s, ok := req.Start.(string); ok {
+	if s, ok := req.Start.(string); ok && strings.Contains(s, "-ago") {
 		start = strings.TrimSuffix(s, "-ago")
 	}
-	if s, ok := req.End.(string); ok {
+	if s, ok := req.End.(string); ok && strings.Contains(s, "-ago") {
 		end = strings.TrimSuffix(s, "-ago")
 	}
 	for i, q := range req.Queries {
