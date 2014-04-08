@@ -27,23 +27,24 @@ type Queue struct {
 
 // Creates and starts a new Queue.
 func New(host string, c chan *opentsdb.DataPoint) *Queue {
-	const _100MB = 1024 * 1024 * 100
+	const maxQueueLen = 200000
+	const maxMem = 500 * 1024 * 1024 // 500MB
 	q := Queue{
 		host: host,
 		c:    c,
 	}
-	var m runtime.MemStats
 	go func() {
+		var m runtime.MemStats
 		for _ = range time.Tick(time.Minute) {
 			runtime.ReadMemStats(&m)
-			if m.Alloc > _100MB {
-				runtime.GC()
+			if m.Alloc > maxMem {
+				panic("memory max reached")
 			}
 		}
 	}()
 	go func() {
 		for dp := range c {
-			if m.Alloc > _100MB {
+			if len(q.queue) > maxQueueLen {
 				collectors.IncScollector("dropped", 1)
 				continue
 			}
