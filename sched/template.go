@@ -10,6 +10,7 @@ import (
 
 	"github.com/StackExchange/tsaf/conf"
 	"github.com/StackExchange/tsaf/expr"
+	"github.com/StackExchange/tsaf/third_party/github.com/StackExchange/scollector/opentsdb"
 )
 
 type context struct {
@@ -60,7 +61,7 @@ func (c *context) HostView(host string) string {
 }
 
 func (c *context) EGraph(v string) string {
-	q := url.QueryEscape("q=" + v)
+	q := url.QueryEscape("q=" + opentsdb.ReplaceTags(v, c.Group))
 	u := url.URL{
 		Scheme:   "http",
 		Host:     c.schedule.Conf.HttpListen,
