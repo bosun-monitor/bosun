@@ -25,7 +25,7 @@ func TestParseQuery(t *testing.T) {
 	}{
 		{"sum:10m-avg:proc.stat.cpu{t=v,o=k}", false},
 		{"sum:10m-avg:rate:proc.stat.cpu", false},
-		{"sum:10m-avg:rate,counter,1,2:proc.stat.cpu{t=v,o=k}", false},
+		{"sum:10m-avg:rate{counter,1,2}:proc.stat.cpu{t=v,o=k}", false},
 		{"sum:proc.stat.cpu", false},
 		{"sum:rate:proc.stat.cpu{t=v,o=k}", false},
 
@@ -82,7 +82,7 @@ func TestQueryString(t *testing.T) {
 					ResetValue: 2,
 				},
 			},
-			"avg:rate,counter,1,2:test.metric",
+			"avg:rate{counter,1,2}:test.metric",
 		},
 		{
 			Query{
@@ -94,7 +94,7 @@ func TestQueryString(t *testing.T) {
 					CounterMax: 1,
 				},
 			},
-			"avg:rate,counter,1:test.metric",
+			"avg:rate{counter,1}:test.metric",
 		},
 		{
 			Query{
@@ -105,7 +105,7 @@ func TestQueryString(t *testing.T) {
 					Counter: true,
 				},
 			},
-			"avg:rate,counter:test.metric",
+			"avg:rate{counter}:test.metric",
 		},
 		{
 			Query{

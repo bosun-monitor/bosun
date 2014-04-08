@@ -252,18 +252,23 @@ func ParseQuery(query string) (*Query, error) {
 	q.Downsample = m[2]
 	q.Rate = strings.HasPrefix(m[3], "rate")
 	var err error
-	if q.Rate {
-		sp := strings.Split(m[3], ",")
-		q.RateOptions.Counter = len(sp) > 1
-		if len(sp) > 2 {
-			if sp[2] != "" {
-				if q.RateOptions.CounterMax, err = strconv.ParseInt(sp[2], 10, 64); err != nil {
+	if q.Rate && len(m[3]) > 4 {
+		s := m[3][4:]
+		if !strings.HasSuffix(s, "}") || !strings.HasPrefix(s, "{") {
+			return nil, err
+		}
+		sp := strings.Split(s[1:len(s)-1], ",")
+		fmt.Println(sp[0])
+		q.RateOptions.Counter = sp[0] == "counter"
+		if len(sp) > 1 {
+			if sp[1] != "" {
+				if q.RateOptions.CounterMax, err = strconv.ParseInt(sp[1], 10, 64); err != nil {
 					return nil, err
 				}
 			}
 		}
-		if len(sp) > 3 {
-			if q.RateOptions.ResetValue, err = strconv.ParseInt(sp[3], 10, 64); err != nil {
+		if len(sp) > 2 {
+			if q.RateOptions.ResetValue, err = strconv.ParseInt(sp[2], 10, 64); err != nil {
 				return nil, err
 			}
 		}
@@ -325,15 +330,19 @@ func (q Query) String() string {
 	if q.Rate {
 		s += "rate"
 		if q.RateOptions.Counter {
-			s += ",counter"
+			s += "{counter"
 			if q.RateOptions.CounterMax != 0 {
 				s += ","
 				s += strconv.FormatInt(q.RateOptions.CounterMax, 10)
-				if q.RateOptions.ResetValue != 0 {
-					s += ","
-					s += strconv.FormatInt(q.RateOptions.ResetValue, 10)
-				}
 			}
+			if q.RateOptions.ResetValue != 0 {
+				if q.RateOptions.CounterMax == 0 {
+					s += ","
+				}
+				s += ","
+				s += strconv.FormatInt(q.RateOptions.ResetValue, 10)
+			}
+			s += "}"
 		}
 		s += ":"
 	}
