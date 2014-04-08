@@ -297,6 +297,26 @@ func ParseTags(t string) (TagSet, error) {
 	return ts, nil
 }
 
+var groupRE = regexp.MustCompile("{[^}]+}")
+
+// ReplaceTags replaces all tag-like strings with tags from the given
+// group. For example, given the string "test.metric{host=*}" and a TagSet
+// with host=test.com, this returns "test.metric{host=test.com}".
+func ReplaceTags(text string, group TagSet) string {
+	return groupRE.ReplaceAllStringFunc(text, func(s string) string {
+		tags, err := ParseTags(s[1 : len(s)-1])
+		if err != nil {
+			return s
+		}
+		for k := range tags {
+			if group[k] != "" {
+				tags[k] = group[k]
+			}
+		}
+		return tags.Tags()
+	})
+}
+
 func (q Query) String() string {
 	s := q.Aggregator + ":"
 	if q.Downsample != "" {
