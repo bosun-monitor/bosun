@@ -281,7 +281,7 @@ var Request = (function () {
 })();
 
 tsafControllers.controller('GraphCtrl', [
-    '$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
+    '$scope', '$http', '$location', '$route', '$timeout', function ($scope, $http, $location, $route, $timeout) {
         $scope.aggregators = ["sum", "min", "max", "avg", "dev", "zimsum", "mimmin", "minmax"];
         $scope.dsaggregators = ["", "sum", "min", "max", "avg", "dev", "zimsum", "mimmin", "minmax"];
         var search = $location.search();
@@ -297,6 +297,7 @@ tsafControllers.controller('GraphCtrl', [
         $scope.start = request.start;
         $scope.end = request.end;
         $scope.autods = search.autods;
+        $scope.refresh = search.refresh;
         if (typeof $scope.autods == 'undefined') {
             $scope.autods = true;
         }
@@ -371,9 +372,12 @@ tsafControllers.controller('GraphCtrl', [
             });
             return request;
         }
+        var timer;
         $scope.Query = function () {
             $location.search('b64', btoa(JSON.stringify(getRequest())));
             $location.search('autods', $scope.autods);
+            $location.search('refresh', $scope.refresh);
+            $timeout.cancel(timer);
             $route.reload();
         };
         request = getRequest();
@@ -382,16 +386,27 @@ tsafControllers.controller('GraphCtrl', [
         }
         var autods = $scope.autods ? autods = '&autods=' + $('.chart').width() : '';
         request.prune();
-        $http.get('/api/graph?' + 'b64=' + btoa(JSON.stringify(request)) + autods).success(function (data) {
-            $scope.result = data.Series;
-            $scope.queries = data.Queries;
-            $scope.url = $location.absUrl();
-            $scope.running = '';
-            $scope.error = '';
-        }).error(function (error) {
-            $scope.error = error;
-            $scope.running = '';
-        });
+        var i = 0;
+        $scope.get = function () {
+            $http.get('/api/graph?' + 'b64=' + btoa(JSON.stringify(request)) + autods).success(function (data) {
+                $scope.result = data.Series;
+                $scope.queries = data.Queries;
+                $scope.url = $location.absUrl();
+                $scope.running = '';
+                $scope.error = '';
+            }).error(function (error) {
+                $scope.error = error;
+                $scope.running = '';
+            }).then(function () {
+                if ($scope.refresh) {
+                    i += 1;
+                    console.log(i);
+                    timer = $timeout($scope.get, 5000);
+                }
+                ;
+            });
+        };
+        $scope.get();
     }]);
 
 tsafControllers.controller('HostCtrl', [
@@ -655,12 +670,13 @@ tsafApp.directive("tsTime", function () {
 tsafApp.directive("tsRickshaw", [
     '$filter', function ($filter) {
         return {
-            templateUrl: '/partials/rickshaw.html',
+            //templateUrl: '/partials/rickshaw.html',
             link: function (scope, elem, attrs) {
                 scope.$watch(attrs.tsRickshaw, function (v) {
                     if (!angular.isArray(v) || v.length == 0) {
                         return;
                     }
+                    elem[0].innerHTML = '<div class="row"><div class="col-lg-12"><div class="y_axis"></div><div class="rgraph"></div></div></div><div class="row"><div class="col-lg-12"><div class="rlegend"></div></div></div>';
                     var palette = new Rickshaw.Color.Palette();
                     angular.forEach(v, function (i) {
                         if (!i.color) {

@@ -356,9 +356,11 @@ interface IGraphScope extends ng.IScope {
 	AddTab: () => void;
 	setIndex: (i: number) => void;
 	autods: boolean;
+	refresh: boolean;
+	get: () => void;
 }
 
-tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route', function($scope: IGraphScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService){
+tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route', '$timeout', function($scope: IGraphScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService, $timeout: ng.ITimeoutService){
 	$scope.aggregators = ["sum", "min", "max", "avg", "dev", "zimsum", "mimmin", "minmax"];
 	$scope.dsaggregators = ["", "sum", "min", "max", "avg", "dev", "zimsum", "mimmin", "minmax"];
 	var search = $location.search();
@@ -374,6 +376,7 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route
 	$scope.start = request.start;
 	$scope.end = request.end;
 	$scope.autods = search.autods;
+	$scope.refresh = search.refresh;
 	if (typeof $scope.autods == 'undefined') {
 		$scope.autods = true;
 	}
@@ -453,9 +456,12 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route
 		});
 		return request;
 	}
+	var timer;
 	$scope.Query = function() {
 		$location.search('b64', btoa(JSON.stringify(getRequest())));
 		$location.search('autods', $scope.autods);
+		$location.search('refresh', $scope.refresh);
+		$timeout.cancel(timer);
 		$route.reload();
 	}
 	request = getRequest();
@@ -464,18 +470,29 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route
 	}
 	var autods = $scope.autods ? autods = '&autods=' + $('.chart').width() : '';
 	request.prune();
-	$http.get('/api/graph?' + 'b64=' + btoa(JSON.stringify(request)) + autods)
-		.success((data) => {
-			$scope.result = data.Series;
-			$scope.queries = data.Queries;
-			$scope.url = $location.absUrl();
-			$scope.running = '';
-			$scope.error = '';
-		})
-		.error((error) => {
-			$scope.error = error;
-			$scope.running = '';
-		});
+	var i = 0;
+	$scope.get = function() {
+		$http.get('/api/graph?' + 'b64=' + btoa(JSON.stringify(request)) + autods)
+			.success((data) => {
+				$scope.result = data.Series;
+				$scope.queries = data.Queries;
+				$scope.url = $location.absUrl();
+				$scope.running = '';
+				$scope.error = '';
+			})
+			.error((error) => {
+				$scope.error = error;
+				$scope.running = '';
+			})
+			.then(() => {
+				if ($scope.refresh) {
+					i += 1;
+					console.log(i);
+					timer = $timeout($scope.get, 5000);
+				};
+			});
+	};
+	$scope.get();
 }]);
 
 interface IHostScope extends ng.IScope {
@@ -789,12 +806,13 @@ tsafApp.directive("tsTime", function() {
 
 tsafApp.directive("tsRickshaw", ['$filter', function($filter: ng.IFilterService) {
 	return {
-		templateUrl: '/partials/rickshaw.html',
+		//templateUrl: '/partials/rickshaw.html',
 		link: (scope: ng.IScope, elem: any, attrs: any) => {
 			scope.$watch(attrs.tsRickshaw, function(v: any) {
 				if (!angular.isArray(v) || v.length == 0) {
 					return;
 				}
+				elem[0].innerHTML = '<div class="row"><div class="col-lg-12"><div class="y_axis"></div><div class="rgraph"></div></div></div><div class="row"><div class="col-lg-12"><div class="rlegend"></div></div></div>';
 				var palette: any = new Rickshaw.Color.Palette();
 				angular.forEach(v, function(i) {
 					if (!i.color) {
