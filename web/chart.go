@@ -165,16 +165,8 @@ func rickexpr(r []*expr.Result, q string) ([]*RickSeries, error) {
 		}
 		if len(dps) > 0 {
 			sort.Sort(ByX(dps))
-			name := q
-			var id []string
-			for k, v := range res.Group {
-				id = append(id, fmt.Sprintf("%v=%v", k, v))
-			}
-			if len(id) > 0 {
-				name = fmt.Sprintf("%s{%s}", name, strings.Join(id, ","))
-			}
 			series = append(series, &RickSeries{
-				Name: name,
+				Name: opentsdb.ReplaceTags(q, res.Group),
 				Data: dps,
 			})
 		}

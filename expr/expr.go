@@ -124,7 +124,7 @@ type Computation struct {
 }
 
 func (r *Result) AddComputation(text string, result Number) {
-	r.Computations = append(r.Computations, Computation{text, result})
+	r.Computations = append(r.Computations, Computation{opentsdb.ReplaceTags(text, r.Group), result})
 }
 
 type Union struct {
