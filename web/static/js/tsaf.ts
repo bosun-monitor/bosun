@@ -357,8 +357,9 @@ interface IGraphScope extends ng.IScope {
 	setIndex: (i: number) => void;
 	autods: boolean;
 	refresh: boolean;
-	get: () => void;
 }
+
+var graphRefresh: any;
 
 tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route', '$timeout', function($scope: IGraphScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService, $timeout: ng.ITimeoutService){
 	$scope.aggregators = ["sum", "min", "max", "avg", "dev", "zimsum", "mimmin", "minmax"];
@@ -376,7 +377,7 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route
 	$scope.start = request.start;
 	$scope.end = request.end;
 	$scope.autods = search.autods;
-	$scope.refresh = search.refresh;
+	$scope.refresh = search.refresh == 'true';
 	if (typeof $scope.autods == 'undefined') {
 		$scope.autods = true;
 	}
@@ -456,12 +457,10 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route
 		});
 		return request;
 	}
-	var timer;
 	$scope.Query = function() {
 		$location.search('b64', btoa(JSON.stringify(getRequest())));
 		$location.search('autods', $scope.autods);
-		$location.search('refresh', $scope.refresh);
-		$timeout.cancel(timer);
+		$location.search('refresh', $scope.refresh ? 'true' : undefined);
 		$route.reload();
 	}
 	request = getRequest();
@@ -470,8 +469,8 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route
 	}
 	var autods = $scope.autods ? autods = '&autods=' + $('.chart').width() : '';
 	request.prune();
-	var i = 0;
-	$scope.get = function() {
+	function get() {
+		$timeout.cancel(graphRefresh);
 		$http.get('/api/graph?' + 'b64=' + btoa(JSON.stringify(request)) + autods)
 			.success((data) => {
 				$scope.result = data.Series;
@@ -484,15 +483,13 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route
 				$scope.error = error;
 				$scope.running = '';
 			})
-			.then(() => {
+			.finally(() => {
 				if ($scope.refresh) {
-					i += 1;
-					console.log(i);
-					timer = $timeout($scope.get, 5000);
+					graphRefresh = $timeout(get, 5000);
 				};
 			});
 	};
-	$scope.get();
+	get();
 }]);
 
 interface IHostScope extends ng.IScope {

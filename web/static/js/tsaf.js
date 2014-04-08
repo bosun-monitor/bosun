@@ -280,6 +280,8 @@ var Request = (function () {
     return Request;
 })();
 
+var graphRefresh;
+
 tsafControllers.controller('GraphCtrl', [
     '$scope', '$http', '$location', '$route', '$timeout', function ($scope, $http, $location, $route, $timeout) {
         $scope.aggregators = ["sum", "min", "max", "avg", "dev", "zimsum", "mimmin", "minmax"];
@@ -297,7 +299,7 @@ tsafControllers.controller('GraphCtrl', [
         $scope.start = request.start;
         $scope.end = request.end;
         $scope.autods = search.autods;
-        $scope.refresh = search.refresh;
+        $scope.refresh = search.refresh == 'true';
         if (typeof $scope.autods == 'undefined') {
             $scope.autods = true;
         }
@@ -372,12 +374,10 @@ tsafControllers.controller('GraphCtrl', [
             });
             return request;
         }
-        var timer;
         $scope.Query = function () {
             $location.search('b64', btoa(JSON.stringify(getRequest())));
             $location.search('autods', $scope.autods);
-            $location.search('refresh', $scope.refresh);
-            $timeout.cancel(timer);
+            $location.search('refresh', $scope.refresh ? 'true' : undefined);
             $route.reload();
         };
         request = getRequest();
@@ -386,8 +386,8 @@ tsafControllers.controller('GraphCtrl', [
         }
         var autods = $scope.autods ? autods = '&autods=' + $('.chart').width() : '';
         request.prune();
-        var i = 0;
-        $scope.get = function () {
+        function get() {
+            $timeout.cancel(graphRefresh);
             $http.get('/api/graph?' + 'b64=' + btoa(JSON.stringify(request)) + autods).success(function (data) {
                 $scope.result = data.Series;
                 $scope.queries = data.Queries;
@@ -397,16 +397,15 @@ tsafControllers.controller('GraphCtrl', [
             }).error(function (error) {
                 $scope.error = error;
                 $scope.running = '';
-            }).then(function () {
+            }).finally(function () {
                 if ($scope.refresh) {
-                    i += 1;
-                    console.log(i);
-                    timer = $timeout($scope.get, 5000);
+                    graphRefresh = $timeout(get, 5000);
                 }
                 ;
             });
-        };
-        $scope.get();
+        }
+        ;
+        get();
     }]);
 
 tsafControllers.controller('HostCtrl', [
