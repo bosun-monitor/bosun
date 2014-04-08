@@ -281,7 +281,6 @@ func ParseQuery(query string) (*Query, error) {
 		}
 		q.Tags = tags
 	}
-	fmt.Println(q)
 	return &q, nil
 }
 
