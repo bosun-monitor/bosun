@@ -318,7 +318,7 @@ func ReplaceTags(text string, group TagSet) string {
 				tags[k] = group[k]
 			}
 		}
-		return tags.Tags()
+		return fmt.Sprintf("{%s}", tags.Tags())
 	})
 }
 
