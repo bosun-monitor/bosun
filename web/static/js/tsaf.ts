@@ -962,7 +962,7 @@ tsafApp.filter('bits', function() {
 //This is modeled after the linky function, but drops support for sanitize so we don't have to
 //import an unminified angular-sanitize module
 tsafApp.filter('linkq',  ['$sanitize', function($sanitize: ng.sanitize.ISanitizeService) {
-	var QUERY_REGEXP: RegExp = /((q|band)\([^)]+\))/;
+	var QUERY_REGEXP: RegExp = /((q|band|change|count)\([^)]+\))/;
 	return function(text: string, target: string) {
 		if (!text) return text;
 		var raw = text;
