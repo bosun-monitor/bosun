@@ -372,6 +372,7 @@ tsafControllers.controller('GraphCtrl', [
                 });
                 request.queries.push(q);
             });
+            request.prune();
             return request;
         }
         $scope.Query = function () {
@@ -385,7 +386,6 @@ tsafControllers.controller('GraphCtrl', [
             return;
         }
         var autods = $scope.autods ? autods = '&autods=' + $('.chart').width() : '';
-        request.prune();
         function get() {
             $timeout.cancel(graphRefresh);
             $http.get('/api/graph?' + 'b64=' + btoa(JSON.stringify(request)) + autods).success(function (data) {
