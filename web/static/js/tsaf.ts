@@ -922,6 +922,8 @@ tsafApp.directive('tsTableSort', ['$timeout', ($timeout: ng.ITimeoutService) => 
 	};
 }]);
 
+var fmtUnits = ['', 'k', 'M', 'G', 'T', 'P', 'E'];
+
 function nfmt(s: any, mult: number, suffix: string, opts: any) {
 	opts = opts || {};
 	var n = parseFloat(s);
@@ -929,16 +931,17 @@ function nfmt(s: any, mult: number, suffix: string, opts: any) {
 	if (!n) return suffix ? '0 ' + suffix : '0';
 	if (isNaN(n) || !isFinite(n)) return '-';
 	var a = Math.abs(n);
-	var precision = a < 1 ? 4 : 2;
-	var units = ['', 'k', 'M', 'G', 'T', 'P', 'E'];
-	var number = Math.floor(Math.log(a) / Math.log(mult));
-	a /= Math.pow(mult, Math.floor(number));
+	var precision = a < 1 ? 2 : 4;
+	if (a >= 1) {
+		var number = Math.floor(Math.log(a) / Math.log(mult));
+		a /= Math.pow(mult, Math.floor(number));
+		if (fmtUnits[number]) {
+			suffix = fmtUnits[number] + suffix;
+		}
+	}
 	if (n < 0) a = -a;
 	var r = a.toFixed(precision);
-	if (units[number]) {
-		r += units[number] + suffix;
-	}
-	return r;
+	return r + suffix;
 }
 
 tsafApp.filter('nfmt', function() {
