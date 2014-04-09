@@ -46,7 +46,7 @@ func c_snmp_cisco(community, host string) opentsdb.MultiDataPoint {
 		slog.Infoln("snmp cisco mem:", err)
 	}
 	for id, name := range names {
-		n := fmt.Sprintf("%", name)
+		n := fmt.Sprintf("%s", name)
 		u, present := used[id]
 		if !present {
 			continue
