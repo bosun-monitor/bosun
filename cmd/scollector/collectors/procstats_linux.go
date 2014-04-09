@@ -80,6 +80,7 @@ func c_procstats_linux() opentsdb.MultiDataPoint {
 		}
 	})
 	num_cores := 0
+	var t_util float64
 	readLine("/proc/stat", func(s string) {
 		m := statRE.FindStringSubmatch(s)
 		if m == nil {
@@ -107,6 +108,24 @@ func c_procstats_linux() opentsdb.MultiDataPoint {
 				}
 				Add(&md, "linux.cpu"+metric_percpu, value, tags)
 			}
+			if metric_percpu == "" {
+				if len(fields) != len(CPU_FIELDS) {
+					return
+				}
+				user, err := strconv.ParseFloat(fields[0], 64)
+				if err != nil {
+					return
+				}
+				nice, err := strconv.ParseFloat(fields[1], 64)
+				if err != nil {
+					return
+				}
+				system, err := strconv.ParseFloat(fields[2], 64)
+				if err != nil {
+					return
+				}
+				t_util = user + nice + system
+			}
 		} else if m[1] == "intr" {
 			Add(&md, "linux.intr", strings.Fields(m[2])[0], nil)
 		} else if m[1] == "ctxt" {
@@ -117,6 +136,9 @@ func c_procstats_linux() opentsdb.MultiDataPoint {
 			Add(&md, "linux.procs_blocked", m[2], nil)
 		}
 	})
+	if num_cores != 0 && t_util != 0 {
+		Add(&md, "os.cpu", t_util/float64(num_cores), nil)
+	}
 	readLine("/proc/loadavg", func(s string) {
 		m := loadavgRE.FindStringSubmatch(s)
 		if m == nil {
@@ -163,20 +185,6 @@ func c_procstats_linux() opentsdb.MultiDataPoint {
 				break
 			}
 			Add(&md, "linux.interrupts", val, opentsdb.TagSet{"type": irq_type, "cpu": strconv.Itoa(i)})
-		}
-	})
-	readLine("/proc/uptime", func(s string) {
-		cols := strings.Fields(s)
-		if len(cols) < 2 {
-			return
-		}
-		total_time, err := strconv.ParseFloat(cols[0], 64)
-		idle_time, err := strconv.ParseFloat(cols[1], 64)
-		if err != nil {
-			return
-		}
-		if num_cores != 0 {
-			Add(&md, osCPU, (total_time-(idle_time/float64(num_cores)))*100, nil)
 		}
 	})
 	readLine("/proc/net/sockstat", func(s string) {
