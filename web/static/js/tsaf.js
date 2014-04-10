@@ -349,6 +349,7 @@ tsafControllers.controller('GraphCtrl', [
 
         function GetTagVs(k, index) {
             $http.get('/api/tagv/' + k + '/' + $scope.query_p[index].metric).success(function (data) {
+                data.sort();
                 $scope.tagvs[index][k] = data;
             }).error(function (error) {
                 $scope.error = 'Unable to fetch metrics: ' + error;

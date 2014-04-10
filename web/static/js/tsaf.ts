@@ -431,6 +431,7 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route
 	function GetTagVs(k: string, index: number) {
 		$http.get('/api/tagv/' + k + '/' + $scope.query_p[index].metric)
 			.success(function (data: string[]) {
+				data.sort();
 				$scope.tagvs[index][k] = data;
 			})
 			.error(function (error) {
