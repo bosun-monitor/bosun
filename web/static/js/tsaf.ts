@@ -455,11 +455,12 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route
 			});
 			request.queries.push(q);
 		});
-		request.prune();
 		return request;
 	}
 	$scope.Query = function() {
-		$location.search('b64', btoa(JSON.stringify(getRequest())));
+		var r = getRequest();
+		r.prune();
+		$location.search('b64', btoa(JSON.stringify(r)));
 		$location.search('autods', $scope.autods);
 		$location.search('refresh', $scope.refresh ? 'true' : undefined);
 		$route.reload();
