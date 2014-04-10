@@ -258,7 +258,6 @@ func ParseQuery(query string) (*Query, error) {
 			return nil, err
 		}
 		sp := strings.Split(s[1:len(s)-1], ",")
-		fmt.Println(sp[0])
 		q.RateOptions.Counter = sp[0] == "counter"
 		if len(sp) > 1 {
 			if sp[1] != "" {
