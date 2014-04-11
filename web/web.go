@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/StackExchange/tsaf/conf"
 	"github.com/StackExchange/tsaf/sched"
 	"github.com/StackExchange/tsaf/third_party/github.com/MiniProfiler/go/miniprofiler"
 	"github.com/StackExchange/tsaf/third_party/github.com/gorilla/mux"
@@ -40,6 +41,8 @@ func Listen(addr, dir, host string) error {
 	router.Handle("/api/metric", JSON(UniqueMetrics))
 	router.Handle("/api/metric/{tagk}/{tagv}", JSON(MetricsByTagPair))
 	router.Handle("/api/rule", JSON(Rule))
+	router.Handle("/api/config", miniprofiler.NewHandler(Config))
+	router.Handle("/api/config_test", miniprofiler.NewHandler(ConfigTest))
 	router.Handle("/api/silence/clear", JSON(SilenceClear))
 	router.Handle("/api/silence/get", JSON(SilenceGet))
 	router.Handle("/api/silence/set", JSON(SilenceSet))
@@ -177,4 +180,15 @@ func SilenceClear(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) 
 		return nil, err
 	}
 	return nil, schedule.ClearSilence(data["id"])
+}
+
+func ConfigTest(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
+	_, err := conf.New("test", r.FormValue("config_text"))
+	if err != nil {
+		fmt.Fprintf(w, err.Error())
+	}
+}
+
+func Config(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, schedule.Conf.RawText)
 }

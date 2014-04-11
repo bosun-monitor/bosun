@@ -48,6 +48,10 @@ tsafApp.config(['$routeProvider', '$locationProvider', function($routeProvider: 
 			templateUrl: 'partials/silence.html',
 			controller: 'SilenceCtrl',
 		}).
+		when('/config', {
+			templateUrl: 'partials/config.html',
+			controller: 'ConfigCtrl',
+		}).
 		otherwise({
 			redirectTo: '/',
 		});
@@ -664,6 +668,59 @@ tsafControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route'
 		$route.reload();
 	};
 }]);
+
+interface IConfigScope extends ng.IScope {
+	current: string;
+	result: string;
+	running: string;
+	error: string;
+	config_text: string;
+	set: () => void;
+}
+
+
+tsafControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$route', function($scope: IConfigScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService){
+	var search = $location.search();
+	var current = search.config_text;
+	try {
+		current = atob(current);
+	}
+	catch (e) {
+		current = '';
+	}
+	if (!current) {
+		var def = '';
+		$http.get('/api/config')
+			.success((data) => {
+				def = data;
+			})
+			.finally(() => {
+				$location.search('config_text', btoa(def));
+				return;
+			});
+	}
+	$scope.config_text = current;
+	$scope.running = current;
+	$http.get('/api/config_test' + '?config_text=' + encodeURIComponent(current))
+		.success((data) => {
+			if (data == "") {
+				$scope.result = "Valid";
+			} else {
+				$scope.result = data;
+			}
+			$scope.running = '';
+		})
+		.error((error) => {
+			$scope.error = error;
+			$scope.running = '';
+		});
+	$scope.set = () => {
+		console.log("set")
+		$location.search('config_text', btoa($scope.config_text));
+		$route.reload();
+	};
+}]);
+
 
 interface ISilenceScope extends IExprScope {
 	silences: any;

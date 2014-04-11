@@ -39,6 +39,9 @@ tsafApp.config([
         }).when('/silence', {
             templateUrl: 'partials/silence.html',
             controller: 'SilenceCtrl'
+        }).when('/config', {
+            templateUrl: 'partials/config.html',
+            controller: 'ConfigCtrl'
         }).otherwise({
             redirectTo: '/'
         });
@@ -553,6 +556,44 @@ tsafControllers.controller('RuleCtrl', [
             $location.search('rule', btoa($scope.expr));
             $location.search('date', $scope.date || null);
             $location.search('time', $scope.time || null);
+            $route.reload();
+        };
+    }]);
+
+tsafControllers.controller('ConfigCtrl', [
+    '$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
+        var search = $location.search();
+        var current = search.config_text;
+        try  {
+            current = atob(current);
+        } catch (e) {
+            current = '';
+        }
+        if (!current) {
+            var def = '';
+            $http.get('/api/config').success(function (data) {
+                def = data;
+            }).finally(function () {
+                $location.search('config_text', btoa(def));
+                return;
+            });
+        }
+        $scope.config_text = current;
+        $scope.running = current;
+        $http.get('/api/config_test' + '?config_text=' + encodeURIComponent(current)).success(function (data) {
+            if (data == "") {
+                $scope.result = "Valid";
+            } else {
+                $scope.result = data;
+            }
+            $scope.running = '';
+        }).error(function (error) {
+            $scope.error = error;
+            $scope.running = '';
+        });
+        $scope.set = function () {
+            console.log("set");
+            $location.search('config_text', btoa($scope.config_text));
             $route.reload();
         };
     }]);
