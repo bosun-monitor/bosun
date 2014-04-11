@@ -314,25 +314,30 @@ tsafControllers.controller('GraphCtrl', [
             $scope.tagvs[index] = new TagV;
             if ($scope.query_p[index].metric) {
                 $http.get('/api/tagk/' + $scope.query_p[index].metric).success(function (data) {
-                    if (data instanceof Array) {
-                        var tags = {};
-                        for (var i = 0; i < data.length; i++) {
-                            tags[data[i]] = $scope.query_p[index].tags[data[i]] || '';
-                            GetTagVs(data[i], index);
-                        }
-                        $scope.query_p[index].tags = tags;
-
-                        // Make sure host is always the first tag.
-                        $scope.sorted_tagks[index] = Object.keys(tags);
-                        $scope.sorted_tagks[index].sort(function (a, b) {
-                            if (a == 'host') {
-                                return 1;
-                            } else if (b == 'host') {
-                                return -1;
-                            }
-                            return a.localeCompare(b);
-                        }).reverse();
+                    if (!angular.isArray(data)) {
+                        return;
                     }
+                    var tags = {};
+                    for (var i = 0; i < data.length; i++) {
+                        if ($scope.query_p[index].tags) {
+                            tags[data[i]] = $scope.query_p[index].tags[data[i]] || '';
+                        } else {
+                            tags[data[i]] = '';
+                        }
+                        GetTagVs(data[i], index);
+                    }
+                    $scope.query_p[index].tags = tags;
+
+                    // Make sure host is always the first tag.
+                    $scope.sorted_tagks[index] = Object.keys(tags);
+                    $scope.sorted_tagks[index].sort(function (a, b) {
+                        if (a == 'host') {
+                            return 1;
+                        } else if (b == 'host') {
+                            return -1;
+                        }
+                        return a.localeCompare(b);
+                    }).reverse();
                 }).error(function (error) {
                     $scope.error = 'Unable to fetch metrics: ' + error;
                 });
@@ -349,6 +354,7 @@ tsafControllers.controller('GraphCtrl', [
 
         function GetTagVs(k, index) {
             $http.get('/api/tagv/' + k + '/' + $scope.query_p[index].metric).success(function (data) {
+                data.sort();
                 $scope.tagvs[index][k] = data;
             }).error(function (error) {
                 $scope.error = 'Unable to fetch metrics: ' + error;
@@ -372,11 +378,12 @@ tsafControllers.controller('GraphCtrl', [
                 });
                 request.queries.push(q);
             });
-            request.prune();
             return request;
         }
         $scope.Query = function () {
-            $location.search('b64', btoa(JSON.stringify(getRequest())));
+            var r = getRequest();
+            r.prune();
+            $location.search('b64', btoa(JSON.stringify(r)));
             $location.search('autods', $scope.autods);
             $location.search('refresh', $scope.refresh ? 'true' : undefined);
             $route.reload();
