@@ -426,8 +426,8 @@ tsafControllers.controller('HostCtrl', [
         ];
         var width = $('.chart').width();
         $http.get('/api/graph?' + 'json=' + encodeURIComponent(JSON.stringify(cpu_r)) + '&autods=' + width).success(function (data) {
-            data[0].name = 'Percent Used';
-            $scope.cpu = data;
+            data.Series[0].name = 'Percent Used';
+            $scope.cpu = data.Series;
         });
 
         $http.get('/api/tagv/iface/os.net.bytes?host=' + $scope.host).success(function (data) {
@@ -443,7 +443,7 @@ tsafControllers.controller('HostCtrl', [
                     })
                 ];
                 $http.get('/api/graph?' + 'json=' + encodeURIComponent(JSON.stringify(net_bytes_r)) + '&autods=' + width).success(function (data) {
-                    angular.forEach(data, function (d) {
+                    angular.forEach(data.Series, function (d) {
                         d.data = d.data.map(function (dp) {
                             return { x: dp.x, y: dp.y * 8 };
                         });
@@ -456,7 +456,7 @@ tsafControllers.controller('HostCtrl', [
                             d.name = "in";
                         }
                     });
-                    $scope.idata[$scope.interfaces.indexOf(i)] = { name: i, data: data };
+                    $scope.idata[$scope.interfaces.indexOf(i)] = { name: i, data: data.Series };
                 });
             });
         });
@@ -477,12 +477,12 @@ tsafControllers.controller('HostCtrl', [
                     tags: { host: $scope.host, disk: i }
                 }));
                 $http.get('/api/graph?' + 'json=' + encodeURIComponent(JSON.stringify(fs_r)) + '&autods=' + width).success(function (data) {
-                    data[1].name = "Used";
-                    $scope.fsdata[$scope.fs.indexOf(i)] = { name: i, data: [data[1]] };
-                    var total = Math.max.apply(null, data[0].data.map(function (d) {
+                    data.Series[1].name = "Used";
+                    $scope.fsdata[$scope.fs.indexOf(i)] = { name: i, data: [data.Series[1]] };
+                    var total = Math.max.apply(null, data.Series[0].data.map(function (d) {
                         return d.y;
                     }));
-                    var c_val = data[1].data.slice(-1)[0].y;
+                    var c_val = data.Series[1].data.slice(-1)[0].y;
                     var percent_used = c_val / total * 100;
                     $scope.fs_current[$scope.fs.indexOf(i)] = {
                         total: total,
@@ -503,11 +503,11 @@ tsafControllers.controller('HostCtrl', [
             tags: { host: $scope.host }
         }));
         $http.get('/api/graph?' + 'json=' + encodeURIComponent(JSON.stringify(mem_r)) + '&autods=' + width).success(function (data) {
-            data[1].name = "Used";
-            $scope.mem_total = Math.max.apply(null, data[0].data.map(function (d) {
+            data.Series[1].name = "Used";
+            $scope.mem_total = Math.max.apply(null, data.Series[0].data.map(function (d) {
                 return d.y;
             }));
-            $scope.mem = [data[1]];
+            $scope.mem = [data.Series[1]];
         });
     }]);
 
