@@ -53,16 +53,14 @@ func c_iostat_linux() opentsdb.MultiDataPoint {
 		if len(values) == 14 {
 			var read_sectors, msec_read, write_sectors, msec_write float64
 			for i, v := range values[3:] {
-				if FIELDS_DISK[i] == "read_sectors" {
+				switch FIELDS_DISK[i] {
+				case "read_sectors":
 					read_sectors, _ = strconv.ParseFloat(v, 64)
-				}
-				if FIELDS_DISK[i] == "msec_read" {
+				case "msec_read":
 					msec_read, _ = strconv.ParseFloat(v, 64)
-				}
-				if FIELDS_DISK[i] == "write_sectors" {
+				case "write_sectors":
 					write_sectors, _ = strconv.ParseFloat(v, 64)
-				}
-				if FIELDS_DISK[i] == "msec_write" {
+				case "msec_write":
 					msec_write, _ = strconv.ParseFloat(v, 64)
 				}
 				Add(&md, metric+FIELDS_DISK[i], v, opentsdb.TagSet{"dev": device})
