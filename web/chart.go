@@ -2,6 +2,7 @@ package web
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -70,8 +71,8 @@ func Graph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 		return nil, err
 	}
 	var tr opentsdb.ResponseSet
-	q, _ := url.QueryUnescape(oreq.String())
-	t.StepCustomTiming("tsdb", "query", q, func() {
+	b, _ := json.MarshalIndent(oreq, "", "  ")
+	t.StepCustomTiming("tsdb", "query", string(b), func() {
 		tr, err = oreq.Query(schedule.Conf.TsdbHost)
 	})
 	if err != nil {
