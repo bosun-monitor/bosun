@@ -376,7 +376,7 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route
 	$scope.query_p = request.queries;
 	$scope.start = request.start;
 	$scope.end = request.end;
-	$scope.autods = search.autods;
+	$scope.autods = search.autods == 'true';
 	$scope.refresh = search.refresh == 'true';
 	if (typeof $scope.autods == 'undefined') {
 		$scope.autods = true;
@@ -467,7 +467,7 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route
 		var r = getRequest();
 		r.prune();
 		$location.search('b64', btoa(JSON.stringify(r)));
-		$location.search('autods', $scope.autods);
+		$location.search('autods', $scope.autods ? 'true' : undefined);
 		$location.search('refresh', $scope.refresh ? 'true' : undefined);
 		$route.reload();
 	}
