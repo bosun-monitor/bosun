@@ -15,4 +15,8 @@
 		</form>
 	</div>
 </div>
-<div ng-bind="result"></div>
+<div ng-bind="result"></div><row>
+	<div class="col-lg-12">
+		<div ng-class="(result=='Valid') ? 'alert-info' : 'alert-danger'" ng-bind="result"></div>
+	</div>
+</row>
