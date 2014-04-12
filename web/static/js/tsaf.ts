@@ -11,6 +11,7 @@ var tsafApp = angular.module('tsafApp', [
 	'tsafControllers',
 	'mgcrea.ngStrap',
 	'ngSanitize',
+	'ui.codemirror',
 ]);
 
 tsafApp.config(['$routeProvider', '$locationProvider', function($routeProvider: ng.route.IRouteProvider, $locationProvider: ng.ILocationProvider) {
@@ -675,6 +676,7 @@ interface IConfigScope extends ng.IScope {
 	running: string;
 	error: string;
 	config_text: string;
+	editorOptions: any;
 	set: () => void;
 }
 
@@ -682,6 +684,9 @@ interface IConfigScope extends ng.IScope {
 tsafControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$route', function($scope: IConfigScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService){
 	var search = $location.search();
 	var current = search.config_text;
+	$scope.editorOptions = {
+        lineNumbers: true,
+    };
 	try {
 		current = atob(current);
 	}
@@ -715,7 +720,6 @@ tsafControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rout
 			$scope.running = '';
 		});
 	$scope.set = () => {
-		console.log("set")
 		$location.search('config_text', btoa($scope.config_text));
 		$route.reload();
 	};
