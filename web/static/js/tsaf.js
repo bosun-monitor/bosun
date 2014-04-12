@@ -9,7 +9,8 @@ var tsafApp = angular.module('tsafApp', [
     'ngRoute',
     'tsafControllers',
     'mgcrea.ngStrap',
-    'ngSanitize'
+    'ngSanitize',
+    'ui.codemirror'
 ]);
 
 tsafApp.config([
@@ -564,6 +565,9 @@ tsafControllers.controller('ConfigCtrl', [
     '$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
         var search = $location.search();
         var current = search.config_text;
+        $scope.editorOptions = {
+            lineNumbers: true
+        };
         try  {
             current = atob(current);
         } catch (e) {
@@ -592,7 +596,6 @@ tsafControllers.controller('ConfigCtrl', [
             $scope.running = '';
         });
         $scope.set = function () {
-            console.log("set");
             $location.search('config_text', btoa($scope.config_text));
             $route.reload();
         };
