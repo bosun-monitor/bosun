@@ -11,6 +11,7 @@ var tsafApp = angular.module('tsafApp', [
 	'tsafControllers',
 	'mgcrea.ngStrap',
 	'ngSanitize',
+	'ui.codemirror',
 ]);
 
 tsafApp.config(['$routeProvider', '$locationProvider', function($routeProvider: ng.route.IRouteProvider, $locationProvider: ng.ILocationProvider) {
@@ -47,6 +48,10 @@ tsafApp.config(['$routeProvider', '$locationProvider', function($routeProvider: 
 		when('/silence', {
 			templateUrl: 'partials/silence.html',
 			controller: 'SilenceCtrl',
+		}).
+		when('/config', {
+			templateUrl: 'partials/config.html',
+			controller: 'ConfigCtrl',
 		}).
 		otherwise({
 			redirectTo: '/',
@@ -664,6 +669,78 @@ tsafControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route'
 		$route.reload();
 	};
 }]);
+
+interface IConfigScope extends ng.IScope {
+	current: string;
+	result: string;
+	running: string;
+	error: string;
+	config_text: string;
+	editorOptions: any;
+	editor: any;
+	codemirrorLoaded: (editor: any) => void;
+	set: () => void;
+}
+
+tsafControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$route', function($scope: IConfigScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService){
+	var search = $location.search();
+	var current = search.config_text;
+	var line_re = /test:(\d+)/;
+	function jumpToLine(i: number) {
+		$scope.editor.setCursor(i-1);
+		$scope.editor.addLineClass(i, null, "center-me");
+		var line = $('.CodeMirror-lines .center-me');
+		var h = line.parent();
+		$('.CodeMirror-scroll').scrollTop(0).scrollTop(line.offset().top - $('.CodeMirror-scroll').offset().top - Math.round($('.CodeMirror-scroll').height()/2));
+	}
+	$scope.editor = {};
+	$scope.codemirrorLoaded = function(editor){
+		$scope.editor = editor;
+		var doc = editor.getDoc();
+		editor.focus();
+		editor.setOption('lineNumbers', true);
+		doc.markClean();
+	};
+	try {
+		current = atob(current);
+	}
+	catch (e) {
+		current = '';
+	}
+	if (!current) {
+		var def = '';
+		$http.get('/api/config')
+			.success((data) => {
+				def = data;
+			})
+			.finally(() => {
+				$location.search('config_text', btoa(def));
+			});
+		return;
+	}
+	$scope.config_text = current;
+	$scope.running = current;
+	$http.get('/api/config_test?config_text=' + encodeURIComponent(current))
+		.success((data) => {
+			if (data == "") {
+				$scope.result = "Valid";
+			} else {
+				$scope.result = data;
+				var m = data.match(line_re);
+				if (angular.isArray(m) && (m.length > 1)) {
+					jumpToLine(parseInt(m[1]));
+				}
+			}
+		})
+		.error((error) => {
+			$scope.error = error;
+		});
+	$scope.set = () => {
+		$location.search('config_text', btoa($scope.config_text));
+		$route.reload();
+	};
+}]);
+
 
 interface ISilenceScope extends IExprScope {
 	silences: any;

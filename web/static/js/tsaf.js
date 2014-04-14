@@ -9,7 +9,8 @@ var tsafApp = angular.module('tsafApp', [
     'ngRoute',
     'tsafControllers',
     'mgcrea.ngStrap',
-    'ngSanitize'
+    'ngSanitize',
+    'ui.codemirror'
 ]);
 
 tsafApp.config([
@@ -39,6 +40,9 @@ tsafApp.config([
         }).when('/silence', {
             templateUrl: 'partials/silence.html',
             controller: 'SilenceCtrl'
+        }).when('/config', {
+            templateUrl: 'partials/config.html',
+            controller: 'ConfigCtrl'
         }).otherwise({
             redirectTo: '/'
         });
@@ -553,6 +557,61 @@ tsafControllers.controller('RuleCtrl', [
             $location.search('rule', btoa($scope.expr));
             $location.search('date', $scope.date || null);
             $location.search('time', $scope.time || null);
+            $route.reload();
+        };
+    }]);
+
+tsafControllers.controller('ConfigCtrl', [
+    '$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
+        var search = $location.search();
+        var current = search.config_text;
+        var line_re = /test:(\d+)/;
+        function jumpToLine(i) {
+            $scope.editor.setCursor(i - 1);
+            $scope.editor.addLineClass(i, null, "center-me");
+            var line = $('.CodeMirror-lines .center-me');
+            var h = line.parent();
+            $('.CodeMirror-scroll').scrollTop(0).scrollTop(line.offset().top - $('.CodeMirror-scroll').offset().top - Math.round($('.CodeMirror-scroll').height() / 2));
+        }
+        $scope.editor = {};
+        $scope.codemirrorLoaded = function (editor) {
+            $scope.editor = editor;
+            var doc = editor.getDoc();
+            editor.focus();
+            editor.setOption('lineNumbers', true);
+            doc.markClean();
+        };
+        try  {
+            current = atob(current);
+        } catch (e) {
+            current = '';
+        }
+        if (!current) {
+            var def = '';
+            $http.get('/api/config').success(function (data) {
+                def = data;
+            }).finally(function () {
+                $location.search('config_text', btoa(def));
+            });
+            return;
+        }
+        $scope.config_text = current;
+        $scope.running = current;
+        $http.get('/api/config_test?config_text=' + encodeURIComponent(current)).success(function (data) {
+            if (data == "") {
+                $scope.result = "Valid";
+            } else {
+                $scope.result = data;
+                var m = data.match(line_re);
+                if (angular.isArray(m) && (m.length > 1)) {
+                    jumpToLine(parseInt(m[1]));
+                }
+            }
+        }).error(function (error) {
+            $scope.error = error;
+        });
+        $scope.set = function () {
+            $location.search('config_text', btoa($scope.config_text));
             $route.reload();
         };
     }]);
