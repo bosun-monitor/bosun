@@ -565,8 +565,21 @@ tsafControllers.controller('ConfigCtrl', [
     '$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
         var search = $location.search();
         var current = search.config_text;
-        $scope.editorOptions = {
-            lineNumbers: true
+        var line_re = /test:(\d+)/;
+        function jumpToLine(i) {
+            $scope.editor.setCursor(i - 1);
+            $scope.editor.addLineClass(i, null, "center-me");
+            var line = $('.CodeMirror-lines .center-me');
+            var h = line.parent();
+            $('.CodeMirror-scroll').scrollTop(0).scrollTop(line.offset().top - $('.CodeMirror-scroll').offset().top - Math.round($('.CodeMirror-scroll').height() / 2));
+        }
+        $scope.editor = {};
+        $scope.codemirrorLoaded = function (editor) {
+            $scope.editor = editor;
+            var doc = editor.getDoc();
+            editor.focus();
+            editor.setOption('lineNumbers', true);
+            doc.markClean();
         };
         try  {
             current = atob(current);
@@ -589,6 +602,12 @@ tsafControllers.controller('ConfigCtrl', [
                 $scope.result = "Valid";
             } else {
                 $scope.result = data;
+                var m = data.match(line_re);
+                if (angular.isArray(m)) {
+                    if (m.length > 1) {
+                        jumpToLine(parseInt(m[1]));
+                    }
+                }
             }
             $scope.running = '';
         }).error(function (error) {
