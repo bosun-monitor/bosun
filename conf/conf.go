@@ -37,6 +37,7 @@ type Conf struct {
 	Templates       map[string]*Template
 	Alerts          map[string]*Alert
 	Notifications   map[string]*Notification
+	RawText         string
 
 	tree            *parse.Tree
 	node            parse.Node
@@ -184,6 +185,7 @@ func New(name, text string) (c *Conf, err error) {
 		Templates:      make(map[string]*Template),
 		Alerts:         make(map[string]*Alert),
 		Notifications:  make(map[string]*Notification),
+		RawText:        text,
 	}
 	c.tree, err = parse.Parse(name, text)
 	if err != nil {
