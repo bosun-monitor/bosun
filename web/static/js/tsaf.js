@@ -592,27 +592,23 @@ tsafControllers.controller('ConfigCtrl', [
                 def = data;
             }).finally(function () {
                 $location.search('config_text', btoa(def));
-                return;
             });
+            return;
         }
         $scope.config_text = current;
         $scope.running = current;
-        $http.get('/api/config_test' + '?config_text=' + encodeURIComponent(current)).success(function (data) {
+        $http.get('/api/config_test?config_text=' + encodeURIComponent(current)).success(function (data) {
             if (data == "") {
                 $scope.result = "Valid";
             } else {
                 $scope.result = data;
                 var m = data.match(line_re);
-                if (angular.isArray(m)) {
-                    if (m.length > 1) {
-                        jumpToLine(parseInt(m[1]));
-                    }
+                if (angular.isArray(m) && (m.length > 1)) {
+                    jumpToLine(parseInt(m[1]));
                 }
             }
-            $scope.running = '';
         }).error(function (error) {
             $scope.error = error;
-            $scope.running = '';
         });
         $scope.set = function () {
             $location.search('config_text', btoa($scope.config_text));
