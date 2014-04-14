@@ -596,7 +596,6 @@ tsafControllers.controller('ConfigCtrl', [
             return;
         }
         $scope.config_text = current;
-        $scope.running = current;
         $http.get('/api/config_test?config_text=' + encodeURIComponent(current)).success(function (data) {
             if (data == "") {
                 $scope.result = "Valid";

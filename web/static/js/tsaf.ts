@@ -673,7 +673,6 @@ tsafControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route'
 interface IConfigScope extends ng.IScope {
 	current: string;
 	result: string;
-	running: string;
 	error: string;
 	config_text: string;
 	editorOptions: any;
@@ -719,7 +718,6 @@ tsafControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rout
 		return;
 	}
 	$scope.config_text = current;
-	$scope.running = current;
 	$http.get('/api/config_test?config_text=' + encodeURIComponent(current))
 		.success((data) => {
 			if (data == "") {
