@@ -2,6 +2,7 @@ package queue
 
 import (
 	"bytes"
+	"compress/gzip"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -92,7 +93,27 @@ func (q *Queue) sendBatch(batch opentsdb.MultiDataPoint) {
 		// bad JSON encoding, just give up
 		return
 	}
-	resp, err := client.Post(q.host, "application/json", bytes.NewReader(b))
+	var buf bytes.Buffer
+	g := gzip.NewWriter(&buf)
+	_, err = g.Write(b)
+	if err != nil {
+		slog.Error(err)
+	}
+	err = g.Flush()
+	if err != nil {
+		slog.Error(err)
+	}
+	err = g.Close()
+	if err != nil {
+		slog.Error(err)
+	}
+	req, err := http.NewRequest("POST", q.host, bytes.NewReader(buf.Bytes()))
+	if err != nil {
+		slog.Error(err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Encoding", "gzip")
+	resp, err := client.Do(req)
 	if resp != nil && resp.Body != nil {
 		defer func() { resp.Body.Close() }()
 	}
