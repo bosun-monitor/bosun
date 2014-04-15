@@ -95,17 +95,13 @@ func (q *Queue) sendBatch(batch opentsdb.MultiDataPoint) {
 	}
 	var buf bytes.Buffer
 	g := gzip.NewWriter(&buf)
-	_, err = g.Write(b)
-	if err != nil {
+	if _, err = g.Write(b); err != nil {
 		slog.Error(err)
+		return
 	}
-	err = g.Flush()
-	if err != nil {
+	if err = g.Close(); err != nil {
 		slog.Error(err)
-	}
-	err = g.Close()
-	if err != nil {
-		slog.Error(err)
+		return
 	}
 	req, err := http.NewRequest("POST", q.host, &buf)
 	if err != nil {
