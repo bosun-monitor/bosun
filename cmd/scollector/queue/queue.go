@@ -107,7 +107,7 @@ func (q *Queue) sendBatch(batch opentsdb.MultiDataPoint) {
 	if err != nil {
 		slog.Error(err)
 	}
-	req, err := http.NewRequest("POST", q.host, bytes.NewReader(buf.Bytes()))
+	req, err := http.NewRequest("POST", q.host, &buf)
 	if err != nil {
 		slog.Error(err)
 	}
