@@ -596,23 +596,23 @@ tsafControllers.controller('ConfigCtrl', [
             return;
         }
         $scope.config_text = current;
-        $http.get('/api/config_test?config_text=' + encodeURIComponent(current)).success(function (data) {
-            if (data == "") {
-                $scope.result = "Valid";
-            } else {
-                $scope.result = data;
-                var m = data.match(line_re);
-                if (angular.isArray(m) && (m.length > 1)) {
-                    jumpToLine(parseInt(m[1]));
-                }
-            }
-        }).error(function (error) {
-            $scope.error = error;
-        });
         $scope.set = function () {
-            $location.search('config_text', btoa($scope.config_text));
-            $route.reload();
+            $scope.result = null;
+            $http.get('/api/config_test?config_text=' + encodeURIComponent($scope.config_text)).success(function (data) {
+                if (data == "") {
+                    $scope.result = "Valid";
+                } else {
+                    $scope.result = data;
+                    var m = data.match(line_re);
+                    if (angular.isArray(m) && (m.length > 1)) {
+                        jumpToLine(parseInt(m[1]));
+                    }
+                }
+            }).error(function (error) {
+                $scope.error = error || 'Error';
+            });
         };
+        $scope.set();
     }]);
 
 tsafControllers.controller('SilenceCtrl', [
