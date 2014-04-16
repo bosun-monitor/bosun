@@ -3,7 +3,6 @@ package collectors
 import (
 	"encoding/json"
 	"errors"
-	"io/ioutil"
 	"math"
 	"net/http"
 	"net/url"
@@ -237,12 +236,15 @@ func esReq(path, query string, v interface{}) error {
 		RawQuery: query,
 	}
 	resp, err := http.Get(u.String())
-	if err != nil || resp.StatusCode != http.StatusOK {
+	if err != nil {
 		return nil
 	}
-	b, _ := ioutil.ReadAll(resp.Body)
-	resp.Body.Close()
-	return json.Unmarshal(b, v)
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil
+	}
+	j := json.NewDecoder(resp.Body)
+	return j.Decode(v)
 }
 
 func esStatsURL(version string) string {

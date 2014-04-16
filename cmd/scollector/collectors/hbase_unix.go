@@ -2,7 +2,6 @@ package collectors
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"net/http"
 	"time"
 
@@ -41,16 +40,12 @@ func c_hbase_region() opentsdb.MultiDataPoint {
 		slog.Errorln(err)
 		return nil
 	}
-	b, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		slog.Errorln(err)
-		return nil
-	}
-	res.Body.Close()
+	defer res.Body.Close()
 	var r struct {
 		Beans []map[string]interface{} `json:"beans"`
 	}
-	if err := json.Unmarshal(b, &r); err != nil {
+	j := json.NewDecoder(res.Body)
+	if err := j.Decode(&r); err != nil {
 		slog.Errorln(err)
 		return nil
 	}
