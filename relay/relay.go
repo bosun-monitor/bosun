@@ -31,7 +31,6 @@ var client = &http.Client{
 func handle(dest string, w http.ResponseWriter, r *http.Request) {
 	body, _ := ioutil.ReadAll(r.Body)
 	search.HTTPExtract(body)
-	r.Body.Close()
 	durl := url.URL{
 		Scheme: "http",
 		Host:   dest,

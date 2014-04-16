@@ -132,7 +132,6 @@ func SilenceSet(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (i
 	var err error
 	var data map[string]string
 	j := json.NewDecoder(r.Body)
-	defer r.Body.Close()
 	if err := j.Decode(&data); err != nil {
 		return nil, err
 	}
@@ -174,7 +173,6 @@ func SilenceSet(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (i
 func SilenceClear(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	var data map[string]string
 	j := json.NewDecoder(r.Body)
-	defer r.Body.Close()
 	if err := j.Decode(&data); err != nil {
 		return nil, err
 	}
