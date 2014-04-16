@@ -399,9 +399,12 @@ tsafControllers.controller('GraphCtrl', [
             $http.get('/api/graph?' + 'b64=' + btoa(JSON.stringify(request)) + autods).success(function (data) {
                 $scope.result = data.Series;
                 $scope.queries = data.Queries;
-                $scope.url = $location.absUrl();
                 $scope.running = '';
                 $scope.error = '';
+                var u = $location.absUrl();
+                u = u.substr(0, u.indexOf('?')) + '?';
+                u += 'b64=' + search.b64 + autods;
+                $scope.url = u;
             }).error(function (error) {
                 $scope.error = error;
                 $scope.running = '';
