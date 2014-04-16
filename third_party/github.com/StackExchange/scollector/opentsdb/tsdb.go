@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
@@ -258,7 +257,6 @@ func ParseQuery(query string) (*Query, error) {
 			return nil, err
 		}
 		sp := strings.Split(s[1:len(s)-1], ",")
-		fmt.Println(sp[0])
 		q.RateOptions.Counter = sp[0] == "counter"
 		if len(sp) > 1 {
 			if sp[1] != "" {
@@ -486,18 +484,15 @@ func (r Request) Query(host string) (ResponseSet, error) {
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		e := RequestError{Request: string(b)}
-		b, _ = ioutil.ReadAll(resp.Body)
-		if err := json.Unmarshal(b, &e); err == nil {
+		j := json.NewDecoder(resp.Body)
+		if err := j.Decode(&e); err == nil {
 			return nil, &e
 		}
 		return nil, fmt.Errorf("tsdb: %s", b)
 	}
-	b, err = ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
+	j := json.NewDecoder(resp.Body)
 	var tr ResponseSet
-	if err := json.Unmarshal(b, &tr); err != nil {
+	if err := j.Decode(&tr); err != nil {
 		return nil, err
 	}
 	return tr, nil
