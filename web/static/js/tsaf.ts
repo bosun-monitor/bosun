@@ -484,9 +484,12 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route
 			.success((data) => {
 				$scope.result = data.Series;
 				$scope.queries = data.Queries;
-				$scope.url = $location.absUrl();
 				$scope.running = '';
 				$scope.error = '';
+				var u = $location.absUrl();
+				u = u.substr(0, u.indexOf('?')) + '?';
+				u += 'b64=' + search.b64 + autods;
+				$scope.url = u;
 			})
 			.error((error) => {
 				$scope.error = error;
