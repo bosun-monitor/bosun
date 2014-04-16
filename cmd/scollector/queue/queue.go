@@ -93,8 +93,8 @@ func (q *Queue) sendBatch(batch opentsdb.MultiDataPoint) {
 		return
 	}
 	resp, err := client.Post(q.host, "application/json", bytes.NewReader(b))
-	if resp != nil && resp.Body != nil {
-		defer func() { resp.Body.Close() }()
+	if err == nil {
+		defer resp.Body.Close()
 	}
 	// Some problem with connecting to the server; retry later.
 	if err != nil || resp.StatusCode != http.StatusNoContent {
