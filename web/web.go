@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"time"
@@ -132,9 +131,9 @@ func SilenceSet(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (i
 	var start, end time.Time
 	var err error
 	var data map[string]string
-	b, _ := ioutil.ReadAll(r.Body)
-	r.Body.Close()
-	if err := json.Unmarshal(b, &data); err != nil {
+	j := json.NewDecoder(r.Body)
+	defer r.Body.Close()
+	if err := j.Decode(&data); err != nil {
 		return nil, err
 	}
 	if s := data["start"]; s != "" {
@@ -174,9 +173,9 @@ func SilenceSet(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (i
 
 func SilenceClear(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	var data map[string]string
-	b, _ := ioutil.ReadAll(r.Body)
-	r.Body.Close()
-	if err := json.Unmarshal(b, &data); err != nil {
+	j := json.NewDecoder(r.Body)
+	defer r.Body.Close()
+	if err := j.Decode(&data); err != nil {
 		return nil, err
 	}
 	return nil, schedule.ClearSilence(data["id"])
