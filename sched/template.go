@@ -31,15 +31,17 @@ func (s *Schedule) data(st *State, a *conf.Alert) *context {
 
 type unknownContext struct {
 	Time  time.Time
+	Name  string
 	Group AlertKeys
 
 	schedule *Schedule
 }
 
-func (s *Schedule) unknownData(t time.Time, group AlertKeys) *unknownContext {
+func (s *Schedule) unknownData(t time.Time, name string, group AlertKeys) *unknownContext {
 	return &unknownContext{
 		Time:     t,
 		Group:    group,
+		Name:     name,
 		schedule: s,
 	}
 }
