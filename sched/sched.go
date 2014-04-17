@@ -1,15 +1,12 @@
 package sched
 
 import (
-	"bytes"
-	"crypto/sha1"
 	"encoding/gob"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"os"
-	"sort"
 	"sync"
 	"time"
 
@@ -25,10 +22,12 @@ type Schedule struct {
 	Status        map[AlertKey]*State
 	Notifications map[AlertKey]map[string]time.Time
 	Silence       map[string]*Silence
+	Group         map[time.Time]AlertKeys
 
-	cache     *opentsdb.Cache
-	runStates map[AlertKey]Status
-	nc        chan interface{}
+	nc            chan interface{}
+	cache         *opentsdb.Cache
+	runStates     map[AlertKey]Status
+	notifications map[*conf.Notification][]*State
 }
 
 func (s *Schedule) MarshalJSON() ([]byte, error) {
@@ -65,6 +64,7 @@ func Run() error {
 func (s *Schedule) Load(c *conf.Conf) {
 	s.Conf = c
 	s.Silence = make(map[string]*Silence)
+	s.Group = make(map[time.Time]AlertKeys)
 	s.RestoreState()
 }
 
@@ -132,7 +132,7 @@ func (s *Schedule) RestoreState() {
 
 func (s *Schedule) Save() {
 	// todo: debounce this call
-	go s.save()
+	//go s.save()
 }
 
 func (s *Schedule) save() {
@@ -179,88 +179,16 @@ func (s *Schedule) Run() error {
 	}
 }
 
-// Poll dispatches notification checks when needed.
-func (s *Schedule) Poll() {
-	var timeout time.Duration
-	for {
-		// Wait for one of these two.
-		select {
-		case <-time.After(timeout):
-		case <-s.nc:
-		}
-		timeout = s.CheckNotifications()
-		s.Save()
-	}
-}
-
-// CheckNotifications processes past notification events. It returns the
-// duration until the soonest notification triggers.
-func (s *Schedule) CheckNotifications() time.Duration {
-	s.Lock()
-	defer s.Unlock()
-	timeout := time.Hour
-	notifications := s.Notifications
-	s.Notifications = nil
-	for ak, ns := range notifications {
-		for name, t := range ns {
-			n, present := s.Conf.Notifications[name]
-			if !present {
-				continue
-			}
-			remaining := t.Add(n.Timeout).Sub(time.Now())
-			if remaining > 0 {
-				if remaining < timeout {
-					timeout = remaining
-				}
-				s.AddNotification(ak, n, t)
-				continue
-			}
-			st, present := s.Status[ak]
-			if !present {
-				continue
-			}
-			a, present := s.Conf.Alerts[ak.Name]
-			if !present {
-				continue
-			}
-			s.Notify(st, a, n)
-			if n.Timeout < timeout {
-				timeout = n.Timeout
-			}
-		}
-	}
-	return timeout
-}
-
-func (s *Schedule) Notify(st *State, a *conf.Alert, n *conf.Notification) {
-	subject := new(bytes.Buffer)
-	if err := s.ExecuteSubject(subject, a, st); err != nil {
-		log.Println(err)
-	}
-	body := new(bytes.Buffer)
-	if err := s.ExecuteBody(body, a, st); err != nil {
-		log.Println(err)
-	}
-	n.Notify(subject.Bytes(), body.Bytes(), s.Conf.EmailFrom, s.Conf.SmtpHost)
-	if n.Next == nil {
-		return
-	}
-	s.AddNotification(AlertKey{Name: a.Name, Group: st.Group.String()}, n, time.Now().UTC())
-}
-
-func (s *Schedule) AddNotification(ak AlertKey, n *conf.Notification, started time.Time) {
-	if s.Notifications == nil {
-		s.Notifications = make(map[AlertKey]map[string]time.Time)
-	}
-	if s.Notifications[ak] == nil {
-		s.Notifications[ak] = make(map[string]time.Time)
-	}
-	s.Notifications[ak][n.Name] = started
-}
-
 type AlertKey struct {
 	Name  string
 	Group string
+}
+
+func NewAlertKey(name string, group opentsdb.TagSet) AlertKey {
+	return AlertKey{
+		Name:  name,
+		Group: group.String(),
+	}
 }
 
 func (a AlertKey) String() string {
@@ -289,6 +217,10 @@ type State struct {
 	Computations expr.Computations
 	Subject      string
 	NeedAck      bool
+}
+
+func (s *State) AlertKey() AlertKey {
+	return NewAlertKey(s.Alert, s.Group)
 }
 
 func (s *Schedule) Acknowledge(ak AlertKey) {

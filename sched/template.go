@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/StackExchange/tsaf/conf"
 	"github.com/StackExchange/tsaf/expr"
@@ -24,6 +25,21 @@ func (s *Schedule) data(st *State, a *conf.Alert) *context {
 	return &context{
 		State:    st,
 		Alert:    a,
+		schedule: s,
+	}
+}
+
+type unknownContext struct {
+	Time  time.Time
+	Group AlertKeys
+
+	schedule *Schedule
+}
+
+func (s *Schedule) unknownData(t time.Time, group AlertKeys) *unknownContext {
+	return &unknownContext{
+		Time:     t,
+		Group:    group,
 		schedule: s,
 	}
 }
@@ -78,15 +94,8 @@ func (c *context) EGraph(v string) string {
 	return u.String()
 }
 
-func (s *Schedule) Template(a *conf.Alert, st *State) *conf.Template {
-	if st.Last().Status == stUnknown {
-		return s.Conf.UnknownTemplate
-	}
-	return a.Template
-}
-
 func (s *Schedule) ExecuteBody(w io.Writer, a *conf.Alert, st *State) error {
-	t := s.Template(a, st)
+	t := a.Template
 	if t == nil || t.Body == nil {
 		return nil
 	}
@@ -94,7 +103,7 @@ func (s *Schedule) ExecuteBody(w io.Writer, a *conf.Alert, st *State) error {
 }
 
 func (s *Schedule) ExecuteSubject(w io.Writer, a *conf.Alert, st *State) error {
-	t := s.Template(a, st)
+	t := a.Template
 	if t == nil || t.Subject == nil {
 		return nil
 	}
