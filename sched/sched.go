@@ -132,7 +132,7 @@ func (s *Schedule) RestoreState() {
 
 func (s *Schedule) Save() {
 	// todo: debounce this call
-	//go s.save()
+	go s.save()
 }
 
 func (s *Schedule) save() {
