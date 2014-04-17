@@ -79,8 +79,8 @@ func (s *Schedule) sendNotifications() {
 				s.AddNotification(st.AlertKey(), n, time.Now().UTC())
 			}
 		}
-		for _, group := range GroupSets(ustates) {
-			s.unotify(group, n)
+		for name, group := range GroupSets(ustates) {
+			s.unotify(name, group, n)
 		}
 	}
 }
@@ -98,13 +98,13 @@ func (s *Schedule) notify(st *State, n *conf.Notification) {
 	n.Notify(subject.Bytes(), body.Bytes(), s.Conf.EmailFrom, s.Conf.SmtpHost)
 }
 
-func (s *Schedule) unotify(group AlertKeys, n *conf.Notification) {
+func (s *Schedule) unotify(name string, group AlertKeys, n *conf.Notification) {
 	subject := new(bytes.Buffer)
 	body := new(bytes.Buffer)
 	now := time.Now().UTC()
 	s.Group[now] = group
 	if t := s.Conf.UnknownTemplate; t != nil {
-		data := s.unknownData(now, group)
+		data := s.unknownData(now, name, group)
 		if t.Body != nil {
 			if err := t.Body.Execute(body, &data); err != nil {
 				log.Println("unknown template error:", err)
@@ -129,13 +129,13 @@ func (s *Schedule) AddNotification(ak AlertKey, n *conf.Notification, started ti
 	s.Notifications[ak][n.Name] = started
 }
 
-// GroupSets returns slices of TagSets, grouped by most common ancestor. Empty
-// TagSets are grouped together.
-func GroupSets(states []*State) []AlertKeys {
+// GroupSets returns slices of TagSets, grouped by most common ancestor. Those
+// with no shared ancestor are grouped by alert name.
+func GroupSets(states []*State) map[string]AlertKeys {
 	type Pair struct {
 		k, v string
 	}
-	var groups []AlertKeys
+	groups := make(map[string]AlertKeys)
 	seen := make(map[*State]bool)
 	for {
 		counts := make(map[Pair]int)
@@ -158,6 +158,9 @@ func GroupSets(states []*State) []AlertKeys {
 				pair = p
 			}
 		}
+		if max == 1 {
+			break
+		}
 		var group AlertKeys
 		for _, s := range states {
 			if seen[s] {
@@ -170,19 +173,27 @@ func GroupSets(states []*State) []AlertKeys {
 			group = append(group, s.AlertKey())
 		}
 		if len(group) > 0 {
-			groups = append(groups, group)
+			groups[group[0].Group] = group
 		}
 	}
-	// empties
-	var group AlertKeys
-	for _, s := range states {
-		if seen[s] {
-			continue
+	// alerts
+	for {
+		if len(seen) == len(states) {
+			break
 		}
-		group = append(group, s.AlertKey())
-	}
-	if len(group) > 0 {
-		groups = append(groups, group)
+		var group AlertKeys
+		for _, s := range states {
+			if seen[s] {
+				continue
+			}
+			if group == nil || s.AlertKey().Name == group[0].Name {
+				group = append(group, s.AlertKey())
+				seen[s] = true
+			}
+		}
+		if len(group) > 0 {
+			groups[group[0].Name] = group
+		}
 	}
 	return groups
 }
