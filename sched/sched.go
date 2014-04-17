@@ -283,3 +283,7 @@ func (s Status) String() string {
 		return "none"
 	}
 }
+
+func (s Status) MarshalJSON() ([]byte, error) {
+	return json.Marshal(s.String())
+}

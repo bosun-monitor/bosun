@@ -126,29 +126,20 @@ tsafControllers.controller('TsafCtrl', ['$scope', '$route', '$http', function($s
 interface IDashboardScope extends ITsafScope {
 	last: any;
 	collapse: (i: number) => void;
-	panelClass: (status: number) => string;
-	statusString: (status: number) => string;
+	panelClass: (status: string) => string;
 }
 
 tsafControllers.controller('DashboardCtrl', ['$scope', function($scope: IDashboardScope) {
 	$scope.collapse = (i: number) => {
 		$('#collapse' + i).collapse('toggle');
 	};
-	$scope.panelClass = (status: number) => {
+	$scope.panelClass = (status: string) => {
 		switch (status) {
-		case 3:
-		case 4:
+		case "critical":
+		case "unknown":
 			return "panel-danger"; break;
-		case 2: return "panel-warning"; break;
+		case "warning": return "panel-warning"; break;
 		default: return "panel-default"; break;
-		}
-	};
-	$scope.statusString = (status: number) => {
-		switch (status) {
-		case 3: return "critical"; break;
-		case 2: return "warning"; break;
-		case 1: return "normal"; break;
-		default: return "unknown"; break;
 		}
 	};
 }]);
