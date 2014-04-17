@@ -1,66 +1,19 @@
 <div class="panel-group" id="accordion">
 	<div
 		class="panel"
-		ng-repeat="(name, status) in schedule.Status"
-		ng-class="panelClass(status.last.Status)"
+		ng-repeat="(name, state) in schedule.Status"
+		ng-class="panelClass(state.last.Status)"
 	>
 		<div class="panel-heading" ng-click="collapse($index)">
 			<h4 class="panel-title">
 				<a data-toggle="collapse" data-parent="#accordion" title="{{name}}" href>
-					<span ng-bind="status.Subject || name"></span>
-					<span class="pull-right" ng-bind="status.last.Time.fromNow()"></span>
+					<span ng-bind="state.Subject || name"></span>
+					<span class="pull-right" ng-bind="state.last.Time.fromNow()"></span>
 				</a>
 			</h4>
 		</div>
 		<div id="collapse{{$index}}" class="panel-collapse collapse">
-			<div class="panel-body">
-				<div class="col-sm-5">
-					<div class="row">
-						<div class="col-sm-3 text-right"><strong>Name</strong></div>
-						<div class="col-sm-9" ng-bind="zws(name)"></div>
-					</div>
-					<div class="row">
-						<div class="col-sm-3 text-right"><strong>Status</strong></div>
-						<div class="col-sm-9" ng-bind="statusString(status.last.Status)"></div>
-					</div>
-					<div class="row">
-						<div class="col-sm-3 text-right"><strong>Since</strong></div>
-						<div class="col-sm-9" ts-time="status.last.Time"></div>
-					</div>
-					<div class="row">
-						<div class="col-sm-3 text-right"><strong>Touched</strong></div>
-						<div class="col-sm-9" ts-time="status.Touched"></div>
-					</div>
-					<div class="row">
-						<div class="col-sm-3 text-right"><strong>Expr</strong></div>
-						<div class="col-sm-9">
-							<a ng-href="/expr#{{btoa(status.Expr)}}" ng-bind="zws(status.Expr)"></a>
-						</div>
-					</div>
-					<div class="row">
-						<div class="col-sm-3 text-right"><strong>Silence</strong></div>
-						<div class="col-sm-9">
-							<a class="btn btn-default btn-xs" ng-href="/silence?duration=1h&alert={{status.Alert}}&tags={{encode(status.Tags)}}">1 hour</a>
-						</div>
-					</div>
-				</div>
-				<div class="col-sm-7">
-					<table class="table table-striped table-condensed">
-						<thead>
-							<tr>
-								<th>Computation</th>
-								<th>Value</th>
-							</tr>
-						</thead>
-						<tbody>
-							<tr ng-repeat="c in status.Computations">
-								<td ng-bind-html="c.Text | linkq:'_blank'"></td>
-								<td ng-bind="c.Value"></td>
-							</tr>
-						</tbody>
-					</table>
-				</div>
-			</div>
+			<div class="panel-body" ts-state></div>
 		</div>
 	</div>
 </div>

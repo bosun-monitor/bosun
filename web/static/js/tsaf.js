@@ -711,6 +711,12 @@ tsafApp.directive('tsResults', function () {
     };
 });
 
+tsafApp.directive('tsState', function () {
+    return {
+        templateUrl: '/partials/alertstate.html'
+    };
+});
+
 var timeFormat = 'YYYY-MM-DD HH:mm:ss ZZ';
 
 tsafApp.directive("tsTime", function () {
