@@ -136,7 +136,9 @@ tsafControllers.controller('DashboardCtrl', ['$scope', function($scope: IDashboa
 	};
 	$scope.panelClass = (status: number) => {
 		switch (status) {
-		case 3: return "panel-danger"; break;
+		case 3:
+		case 4:
+			return "panel-danger"; break;
 		case 2: return "panel-warning"; break;
 		default: return "panel-default"; break;
 		}
