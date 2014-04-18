@@ -71,9 +71,21 @@ interface ITsafScope extends ng.IScope {
 	schedule: any;
 	alertActive: (ak: any) => boolean; // returns true if the AlertKey is a currently active alert
 	req_from_m: (m: string) => Request;
+	lookup: (names: string[]) => any; // converts []AlertKey into map[AlertKey]State
 }
 
 tsafControllers.controller('TsafCtrl', ['$scope', '$route', '$http', function($scope: ITsafScope, $route: ng.route.IRouteService, $http: ng.IHttpService) {
+	$scope.lookup = (names: string[]) => {
+		var m: any = {};
+		angular.forEach(names, (v) => {
+			var s = $scope.schedule.Status[v];
+			if (!s) {
+				return;
+			}
+			m[v] = s;
+		});
+		return m;
+	}
 	$scope.active = (v: string) => {
 		if (!$route.current) {
 			return null;
@@ -125,13 +137,15 @@ tsafControllers.controller('TsafCtrl', ['$scope', '$route', '$http', function($s
 
 interface IDashboardScope extends ITsafScope {
 	last: any;
-	collapse: (i: number) => void;
+	shown: any;
+	collapse: (i: any) => void;
 	panelClass: (status: string) => string;
 }
 
 tsafControllers.controller('DashboardCtrl', ['$scope', function($scope: IDashboardScope) {
-	$scope.collapse = (i: number) => {
-		$('#collapse' + i).collapse('toggle');
+	$scope.shown = {};
+	$scope.collapse = (i: any) => {
+		$scope.shown[i] = !$scope.shown[i];
 	};
 	$scope.panelClass = (status: string) => {
 		switch (status) {

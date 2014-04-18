@@ -1,19 +1,17 @@
-<div class="panel-group" id="accordion">
-	<div
-		class="panel"
-		ng-repeat="(name, state) in schedule.Status"
-		ng-class="panelClass(state.last.Status)"
-	>
-		<div class="panel-heading" ng-click="collapse($index)">
-			<h4 class="panel-title">
-				<a data-toggle="collapse" data-parent="#accordion" title="{{name}}" href>
-					<span ng-bind="state.Subject || name"></span>
-					<span class="pull-right" ng-bind="state.last.Time.fromNow()"></span>
-				</a>
-			</h4>
-		</div>
-		<div id="collapse{{$index}}" class="panel-collapse collapse">
-			<div class="panel-body" ts-state></div>
+<div class="panel-group">
+	<div ng-repeat="(status, groups) in schedule.Groups">
+		<div class="panel" ng-class="panelClass(status)" ng-repeat="(groupname, group) in groups" ng-init="sindex = $index; ci = status + $index">
+			<div class="panel-heading" ng-click="collapse(ci)">
+				<h4 class="panel-title">
+					{{status}} - {{groupname}}
+					<span class="pull-right">{{group.length}} alerts</span>
+				</h4>
+			</div>
+			<div class="panel-body panel-group" ng-if="shown[ci]" >
+				<div class="panel panel-default" ng-repeat="(name, state) in lookup(group)"ng-init="si = status + sindex + '-' + $index">
+					<div ts-state></div>
+				</div>
+			</div>
 		</div>
 	</div>
 </div>

@@ -19,7 +19,7 @@ type Schedule struct {
 	sync.Mutex
 
 	Conf          *conf.Conf
-	Status        map[AlertKey]*State
+	Status        States
 	Notifications map[AlertKey]map[string]time.Time
 	Silence       map[string]*Silence
 	Group         map[time.Time]AlertKeys
@@ -30,15 +30,99 @@ type Schedule struct {
 	notifications map[*conf.Notification][]*State
 }
 
+type States map[AlertKey]*State
+
+func (s States) GroupStatus() map[Status]States {
+	r := make(map[Status]States)
+	for k, v := range s {
+		st := v.Last().Status
+		if _, present := r[st]; !present {
+			r[st] = make(States)
+		}
+		r[st][k] = v
+	}
+	return r
+}
+
+// GroupSets returns slices of TagSets, grouped by most common ancestor. Those
+// with no shared ancestor are grouped by alert name.
+func (states States) GroupSets() map[string]AlertKeys {
+	type Pair struct {
+		k, v string
+	}
+	groups := make(map[string]AlertKeys)
+	seen := make(map[*State]bool)
+	for {
+		counts := make(map[Pair]int)
+		for _, s := range states {
+			if seen[s] {
+				continue
+			}
+			for k, v := range s.Group {
+				counts[Pair{k, v}]++
+			}
+		}
+		if len(counts) == 0 {
+			break
+		}
+		max := 0
+		var pair Pair
+		for p, c := range counts {
+			if c > max {
+				max = c
+				pair = p
+			}
+		}
+		if max == 1 {
+			break
+		}
+		var group AlertKeys
+		for _, s := range states {
+			if seen[s] {
+				continue
+			}
+			if s.Group[pair.k] != pair.v {
+				continue
+			}
+			seen[s] = true
+			group = append(group, s.AlertKey())
+		}
+		if len(group) > 0 {
+			groups[fmt.Sprintf("{%s=%s}", pair.k, pair.v)] = group
+		}
+	}
+	// alerts
+	for {
+		if len(seen) == len(states) {
+			break
+		}
+		var group AlertKeys
+		for _, s := range states {
+			if seen[s] {
+				continue
+			}
+			if group == nil || s.AlertKey().Name == group[0].Name {
+				group = append(group, s.AlertKey())
+				seen[s] = true
+			}
+		}
+		if len(group) > 0 {
+			groups[group[0].Name] = group
+		}
+	}
+	return groups
+}
+
 func (s *Schedule) MarshalJSON() ([]byte, error) {
 	t := struct {
 		Alerts      map[string]*conf.Alert
 		Status      map[string]*State
+		Groups      map[string]map[string][]string // status -> group name -> keys
 		TimeAndDate []int
 	}{
-		s.Conf.Alerts,
-		make(map[string]*State),
-		s.Conf.TimeAndDate,
+		Alerts:      s.Conf.Alerts,
+		Status:      make(map[string]*State),
+		TimeAndDate: s.Conf.TimeAndDate,
 	}
 	for k, v := range s.Status {
 		if v.Last().Status < stWarning {
@@ -46,6 +130,20 @@ func (s *Schedule) MarshalJSON() ([]byte, error) {
 		}
 		t.Status[k.String()] = v
 	}
+	groups := make(map[string]map[string][]string)
+	for status, states := range s.Status.GroupStatus() {
+		if status <= stNormal {
+			continue
+		}
+		s := make(map[string][]string)
+		groups[status.String()] = s
+		for name, group := range states.GroupSets() {
+			for _, ak := range group {
+				s[name] = append(s[name], ak.String())
+			}
+		}
+	}
+	t.Groups = groups
 	return json.Marshal(&t)
 }
 

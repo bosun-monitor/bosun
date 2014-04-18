@@ -52,6 +52,17 @@ var tsafControllers = angular.module('tsafControllers', []);
 
 tsafControllers.controller('TsafCtrl', [
     '$scope', '$route', '$http', function ($scope, $route, $http) {
+        $scope.lookup = function (names) {
+            var m = {};
+            angular.forEach(names, function (v) {
+                var s = $scope.schedule.Status[v];
+                if (!s) {
+                    return;
+                }
+                m[v] = s;
+            });
+            return m;
+        };
         $scope.active = function (v) {
             if (!$route.current) {
                 return null;
@@ -103,8 +114,9 @@ tsafControllers.controller('TsafCtrl', [
 
 tsafControllers.controller('DashboardCtrl', [
     '$scope', function ($scope) {
+        $scope.shown = {};
         $scope.collapse = function (i) {
-            $('#collapse' + i).collapse('toggle');
+            $scope.shown[i] = !$scope.shown[i];
         };
         $scope.panelClass = function (status) {
             switch (status) {
