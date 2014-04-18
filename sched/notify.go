@@ -68,10 +68,10 @@ func (s *Schedule) CheckNotifications() time.Duration {
 
 func (s *Schedule) sendNotifications() {
 	for n, states := range s.notifications {
-		var ustates []*State
+		ustates := make(States)
 		for _, st := range states {
 			if st.Last().Status == stUnknown {
-				ustates = append(ustates, st)
+				ustates[st.AlertKey()] = st
 			} else {
 				s.notify(st, n)
 			}
@@ -79,7 +79,7 @@ func (s *Schedule) sendNotifications() {
 				s.AddNotification(st.AlertKey(), n, time.Now().UTC())
 			}
 		}
-		for name, group := range GroupSets(ustates) {
+		for name, group := range ustates.GroupSets() {
 			s.unotify(name, group, n)
 		}
 	}
@@ -127,73 +127,4 @@ func (s *Schedule) AddNotification(ak AlertKey, n *conf.Notification, started ti
 		s.Notifications[ak] = make(map[string]time.Time)
 	}
 	s.Notifications[ak][n.Name] = started
-}
-
-// GroupSets returns slices of TagSets, grouped by most common ancestor. Those
-// with no shared ancestor are grouped by alert name.
-func GroupSets(states []*State) map[string]AlertKeys {
-	type Pair struct {
-		k, v string
-	}
-	groups := make(map[string]AlertKeys)
-	seen := make(map[*State]bool)
-	for {
-		counts := make(map[Pair]int)
-		for _, s := range states {
-			if seen[s] {
-				continue
-			}
-			for k, v := range s.Group {
-				counts[Pair{k, v}]++
-			}
-		}
-		if len(counts) == 0 {
-			break
-		}
-		max := 0
-		var pair Pair
-		for p, c := range counts {
-			if c > max {
-				max = c
-				pair = p
-			}
-		}
-		if max == 1 {
-			break
-		}
-		var group AlertKeys
-		for _, s := range states {
-			if seen[s] {
-				continue
-			}
-			if s.Group[pair.k] != pair.v {
-				continue
-			}
-			seen[s] = true
-			group = append(group, s.AlertKey())
-		}
-		if len(group) > 0 {
-			groups[group[0].Group] = group
-		}
-	}
-	// alerts
-	for {
-		if len(seen) == len(states) {
-			break
-		}
-		var group AlertKeys
-		for _, s := range states {
-			if seen[s] {
-				continue
-			}
-			if group == nil || s.AlertKey().Name == group[0].Name {
-				group = append(group, s.AlertKey())
-				seen[s] = true
-			}
-		}
-		if len(group) > 0 {
-			groups[group[0].Name] = group
-		}
-	}
-	return groups
 }
