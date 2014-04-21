@@ -19,8 +19,13 @@ const hbrURL = "http://localhost:60030/jmx?qry=hadoop:service=RegionServer,name=
 
 func hbrInit() {
 	update := func() {
-		_, err := http.Get(hbrURL)
-		hbaseEnabled = err == nil
+		resp, err := http.Get(esURL)
+		if err != nil {
+			esEnabled = false
+			return
+		}
+		resp.Body.Close()
+		esEnabled = resp.StatusCode == 200
 	}
 	update()
 	go func() {
