@@ -8,8 +8,7 @@
 				</h4>
 			</div>
 			<div class="panel-body panel-group" ng-if="shown[ci]" >
-				<div class="panel panel-default" ng-repeat="(name, state) in lookup(group)"ng-init="si = status + sindex + '-' + $index">
-					<div ts-state></div>
+				<div class="panel panel-default" ng-repeat="(name, state) in lookup(group)"ng-init="si = status + sindex + '-' + $index" ts-state>
 				</div>
 			</div>
 		</div>
