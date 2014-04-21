@@ -903,7 +903,7 @@ tsafApp.filter('bits', function () {
 //import an unminified angular-sanitize module
 tsafApp.filter('linkq', [
     '$sanitize', function ($sanitize) {
-        var QUERY_REGEXP = /((q|band|change|count)\([^)]+\))/;
+        var QUERY_REGEXP = /((q|band)\([^)]+\))/;
         return function (text, target) {
             if (!text)
                 return text;
