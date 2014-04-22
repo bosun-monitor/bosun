@@ -1,6 +1,7 @@
 <div class="panel-heading" ng-click="collapse(si)">
 	<h4 class="panel-title">
 		<a title="{{name}}" href>
+			<span class="glyphicon" ng-class="{'glyphicon-exclamation-sign': state.last.Status != 'normal'}"></span>
 			<span ng-bind="state.Subject || name"></span>
 			<span class="pull-right" ng-bind="state.last.Time.fromNow()"></span>
 		</a>
