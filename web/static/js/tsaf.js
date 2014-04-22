@@ -84,14 +84,6 @@ tsafControllers.controller('TsafCtrl', [
         $scope.encode = function (v) {
             return encodeURIComponent(v);
         };
-        $scope.alertActive = function (ak) {
-            var key = ak.Name + ak.Group;
-            var st = $scope.schedule.Status[key];
-            if (!st) {
-                return false;
-            }
-            return st.last.Status > 1;
-        };
         $scope.req_from_m = function (m) {
             var r = new Request();
             var q = new Query();
