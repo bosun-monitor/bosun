@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"sync"
+	"time"
 
 	"github.com/StackExchange/slog"
 	"github.com/StackExchange/wmi"
@@ -15,6 +16,7 @@ import (
 
 var (
 	wmiLock      sync.Mutex
+	wmiReadLock  sync.Mutex
 	wmiCount     = 0
 	wmiCmd       *exec.Cmd
 	wmiIn        io.WriteCloser
@@ -26,32 +28,41 @@ func queryWmi(query string, dst interface{}) error {
 	return queryWmiNamespace(query, dst, "")
 }
 
-func queryWmiNamespace(query string, dst interface{}, namespace string) error {
+func queryWmiNamespace(query string, dst interface{}, namespace string) (err error) {
 	wmiLock.Lock()
 	defer wmiLock.Unlock()
-	if wmiCount == 0 || (wmiCmd != nil && wmiCmd.ProcessState != nil && wmiCmd.ProcessState.Exited()) {
-		var err error
+	IncScollector("wmi.queries", 1)
+	if wmiCount == 0 || wmiCmd == nil {
+		IncScollector("wmi.exec", 1)
 		wmiCmd = exec.Command(os.Args[0], "-w")
+		if wmiIn != nil {
+			wmiIn.Close()
+		}
 		wmiIn, err = wmiCmd.StdinPipe()
 		if err != nil {
-			return err
+			return
+		}
+		if wmiOut != nil {
+			wmiOut.Close()
 		}
 		wmiOut, err = wmiCmd.StdoutPipe()
 		if err != nil {
-			return err
+			return
 		}
 		wmiOutReader = bufio.NewReader(wmiOut)
-		if err := wmiCmd.Start(); err != nil {
-			slog.Infoln(err)
+		if err = wmiCmd.Start(); err != nil {
+			wmiCmd = nil
+			return
 		}
 	}
 	wmiCount++
 	defer func() {
 		if wmiCount > 50 {
-			wmiCount = 0
 			if err := wmiCmd.Process.Kill(); err != nil {
 				slog.Infoln(err)
 			}
+			wmiCmd = nil
+			wmiCount = 0
 		}
 	}()
 
@@ -64,13 +75,22 @@ func queryWmiNamespace(query string, dst interface{}, namespace string) error {
 		return err
 	}
 	fmt.Fprintln(wmiIn, string(b))
-	b2, err := wmiOutReader.ReadBytes('\n')
-	if err != nil {
-		return err
+	done := make(chan error, 1)
+	go func() {
+		wmiReadLock.Lock()
+		defer wmiReadLock.Unlock()
+		b, err = wmiOutReader.ReadBytes('\n')
+		if err != nil {
+			done <- err
+			return
+		}
+		done <- wmi.LoadJSON(b, dst)
+	}()
+	select {
+	case err = <-done:
+		// return
+	case <-time.After(time.Second * 20):
+		err = fmt.Errorf("wmi query timeout")
 	}
-	err = wmi.LoadJSON(b2, dst)
-	if err != nil {
-		return err
-	}
-	return nil
+	return
 }
