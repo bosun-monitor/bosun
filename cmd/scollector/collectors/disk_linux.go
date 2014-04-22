@@ -44,9 +44,7 @@ func removable(major, minor string) bool {
 	if err != nil {
 		return false
 	}
-	if strings.Trim(string(b), "\n") == "1" {
-		return true
-	}
+	return strings.Trim(string(b), "\n") == "1"
 	return false
 }
 
