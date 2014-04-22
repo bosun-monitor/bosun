@@ -121,8 +121,10 @@ tsafControllers.controller('DashboardCtrl', [
         $scope.panelClass = function (status) {
             switch (status) {
                 case "critical":
-                case "unknown":
                     return "panel-danger";
+                    break;
+                case "unknown":
+                    return "panel-info";
                     break;
                 case "warning":
                     return "panel-warning";
