@@ -51,7 +51,7 @@ func removable(major, minor string) bool {
 	return false
 }
 
-var sdiskRE = regexp.MustCompile(`/dev/(sd[a-z])[0-1]?`)
+var sdiskRE = regexp.MustCompile(`/dev/(sd[a-z])[0-9]?`)
 
 func removable_fs(name string) bool {
 	s := sdiskRE.FindStringSubmatch(name)
@@ -60,9 +60,7 @@ func removable_fs(name string) bool {
 		if err != nil {
 			return false
 		}
-		if strings.Trim(string(b), "\n") == "1" {
-			return true
-		}
+		return strings.Trim(string(b), "\n") == "1"
 	}
 	return false
 }
@@ -85,13 +83,13 @@ func c_iostat_linux() opentsdb.MultiDataPoint {
 			metric = "linux.disk."
 		}
 		device := values[2]
-		ts := opentsdb.TagSet{"dev": device}
+		ts := opentsdb.TagSet{"dev": device, "removable": "false"}
 		if removable(values[0], values[1]) {
 			removables = append(removables, device)
 		}
 		for _, r := range removables {
 			if strings.HasPrefix(device, r) {
-				ts = opentsdb.TagSet{"dev": device, "removable": "true"}
+				ts["removable"] = "true"
 			}
 		}
 		if len(values) == 14 {
@@ -127,7 +125,6 @@ func c_iostat_linux() opentsdb.MultiDataPoint {
 }
 
 func c_dfstat_blocks_linux() opentsdb.MultiDataPoint {
-	// Could read removeable from /sys/dev/block/Major:Minor
 	var md opentsdb.MultiDataPoint
 	readCommand(func(line string) {
 		fields := strings.Fields(line)
@@ -136,13 +133,13 @@ func c_dfstat_blocks_linux() opentsdb.MultiDataPoint {
 		}
 		fs := fields[0]
 		mount := fields[5]
-		tags := opentsdb.TagSet{"mount": mount}
-		os_tags := opentsdb.TagSet{"disk": mount}
+		tags := opentsdb.TagSet{"mount": mount, "removable": "false"}
+		os_tags := opentsdb.TagSet{"disk": mount, "removable": "false"}
 		if removable_fs(fs) {
-			tags = opentsdb.TagSet{"mount": mount, "removable": "true"}
-			os_tags = opentsdb.TagSet{"disk": mount, "removable": "true"}
+			tags["removable"] = "true"
+			os_tags["removable"] = "true"
 		}
-		//Meta Data will need to indicate that these are 1kblocks
+		// Meta Data will need to indicate that these are 1kblocks.
 		Add(&md, "linux.disk.fs.space_total", fields[1], tags)
 		Add(&md, "linux.disk.fs.space_used", fields[2], tags)
 		Add(&md, "linux.disk.fs.space_free", fields[3], tags)
@@ -171,9 +168,9 @@ func c_dfstat_inodes_linux() opentsdb.MultiDataPoint {
 		}
 		mount := fields[5]
 		fs := fields[0]
-		tags := opentsdb.TagSet{"mount": mount}
+		tags := opentsdb.TagSet{"mount": mount, "removable": "false"}
 		if removable_fs(fs) {
-			tags = opentsdb.TagSet{"mount": mount, "removable": "true"}
+			tags["removable"] = "true"
 		}
 		Add(&md, "linux.disk.fs.inodes_total", fields[1], tags)
 		Add(&md, "linux.disk.fs.inodes_used", fields[2], tags)
