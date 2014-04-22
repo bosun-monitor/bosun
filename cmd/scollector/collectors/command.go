@@ -16,7 +16,7 @@ func command(name string, arg ...string) ([]byte, error) {
 	c := exec.Command(name, arg...)
 	var b bytes.Buffer
 	c.Stdout = &b
-	done := make(chan error)
+	done := make(chan error, 1)
 	go func() {
 		done <- c.Run()
 	}()
