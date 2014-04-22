@@ -45,7 +45,6 @@ func (s *Schedule) Check() {
 		notifyCurrent := func() {
 			state.NeedAck = true
 			if _, present := silenced[ak]; present {
-				log.Println("SILENCED", ak)
 				return
 			}
 			switch status {
