@@ -80,13 +80,13 @@ func c_iostat_linux() opentsdb.MultiDataPoint {
 			metric = "linux.disk."
 		}
 		device := values[2]
-		ts := opentsdb.TagSet{"dev": device, "removable": "false"}
+		ts := opentsdb.TagSet{"dev": device}
 		if removable(values[0], values[1]) {
 			removables = append(removables, device)
 		}
 		for _, r := range removables {
 			if strings.HasPrefix(device, r) {
-				ts["removable"] = "true"
+				metric += "rem."
 			}
 		}
 		if len(values) == 14 {
@@ -130,19 +130,21 @@ func c_dfstat_blocks_linux() opentsdb.MultiDataPoint {
 		}
 		fs := fields[0]
 		mount := fields[5]
-		tags := opentsdb.TagSet{"mount": mount, "removable": "false"}
-		os_tags := opentsdb.TagSet{"disk": mount, "removable": "false"}
+		tags := opentsdb.TagSet{"mount": mount}
+		os_tags := opentsdb.TagSet{"disk": mount}
+		metric := "linux.disk.fs."
+		ometric := "os.disk.fs."
 		if removable_fs(fs) {
-			tags["removable"] = "true"
-			os_tags["removable"] = "true"
+			metric += "rem."
+			ometric += "rem."
 		}
 		// Meta Data will need to indicate that these are 1kblocks.
-		Add(&md, "linux.disk.fs.space_total", fields[1], tags)
-		Add(&md, "linux.disk.fs.space_used", fields[2], tags)
-		Add(&md, "linux.disk.fs.space_free", fields[3], tags)
-		Add(&md, osDiskTotal, fields[1], os_tags)
-		Add(&md, osDiskUsed, fields[2], os_tags)
-		Add(&md, osDiskFree, fields[3], os_tags)
+		Add(&md, metric+"space_total", fields[1], tags)
+		Add(&md, metric+"space_used", fields[2], tags)
+		Add(&md, metric+"space_free", fields[3], tags)
+		Add(&md, ometric+"space_total", fields[1], os_tags)
+		Add(&md, ometric+"space_used", fields[2], os_tags)
+		Add(&md, ometric+"space_used", fields[3], os_tags)
 		st, _ := strconv.ParseFloat(fields[1], 64)
 		sf, _ := strconv.ParseFloat(fields[3], 64)
 		if st != 0 {
@@ -161,13 +163,14 @@ func c_dfstat_inodes_linux() opentsdb.MultiDataPoint {
 		}
 		mount := fields[5]
 		fs := fields[0]
-		tags := opentsdb.TagSet{"mount": mount, "removable": "false"}
+		tags := opentsdb.TagSet{"mount": mount}
+		metric := "linux.disk.fs."
 		if removable_fs(fs) {
-			tags["removable"] = "true"
+			metric += "rem."
 		}
-		Add(&md, "linux.disk.fs.inodes_total", fields[1], tags)
-		Add(&md, "linux.disk.fs.inodes_used", fields[2], tags)
-		Add(&md, "linux.disk.fs.inodes_free", fields[3], tags)
+		Add(&md, metric+"inodes_total", fields[1], tags)
+		Add(&md, metric+"inodes_used", fields[2], tags)
+		Add(&md, metric+"inodes_free", fields[3], tags)
 	}, "df", "-liP")
 	return md
 }
