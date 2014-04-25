@@ -3,6 +3,8 @@ package collectors
 import (
 	"encoding/json"
 	"net/http"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/StackExchange/scollector/opentsdb"
@@ -14,14 +16,41 @@ func init() {
 }
 
 var rgEnabled bool
+var rgListenRE = regexp.MustCompile(`^stats.listen\s+?=\s+?([0-9.:]+)`)
+var rgURL string
 
-const rgURL = "http://localhost:24088/"
+func parseRailUrl() string {
+	var config string
+	var url string
+	readCommand(func(line string) {
+		fields := strings.Fields(line)
+		if len(fields) == 0 || !strings.Contains(fields[0], "rg-listener") {
+			return
+		}
+		for i, s := range fields {
+			if s == "-config" && len(fields) > i {
+				config = fields[i+1]
+			}
+		}
+	}, "ps", "-e", "-o", "args")
+	if config == "" {
+		return config
+	}
+	readLine(config, func(s string) {
+		if m := rgListenRE.FindStringSubmatch(s); len(m) > 0 {
+			url = "http://" + m[1]
+		}
+	})
+	return url
+}
 
 func rgInit() {
 	update := func() {
+		rgURL = parseRailUrl()
+		slog.Infoln(rgURL)
 		resp, err := http.Get(rgURL)
 		if err != nil {
-			hbaseEnabled = false
+			rgEnabled = false
 			return
 		}
 		resp.Body.Close()
@@ -52,12 +81,10 @@ func c_railgun() opentsdb.MultiDataPoint {
 		slog.Errorln(err)
 		return nil
 	}
-	slog.Infoln(r)
 	for k, v := range r {
 		if _, ok := v.(float64); ok {
 			Add(&md, "railgun."+k, v, nil)
 		}
 	}
-
 	return md
 }
