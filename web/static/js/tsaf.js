@@ -190,6 +190,11 @@ tsafControllers.controller('EGraphCtrl', [
         var width = $('.chart').width();
         $http.get('/api/egraph?q=' + encodeURIComponent(current) + '&autods=' + width).success(function (data) {
             $scope.result = data;
+            if ($scope.result.length == 0) {
+                $scope.warning = 'No Results';
+            } else {
+                $scope.warning = '';
+            }
             $scope.running = '';
         }).error(function (error) {
             $scope.error = error;
@@ -387,8 +392,14 @@ tsafControllers.controller('GraphCtrl', [
         var autods = $scope.autods ? autods = '&autods=' + $('.chart').width() : '';
         function get() {
             $timeout.cancel(graphRefresh);
+            $scope.running = 'Running';
             $http.get('/api/graph?' + 'b64=' + btoa(JSON.stringify(request)) + autods).success(function (data) {
                 $scope.result = data.Series;
+                if ($scope.result == null) {
+                    $scope.warning = 'No Results';
+                } else {
+                    $scope.warning = '';
+                }
                 $scope.queries = data.Queries;
                 $scope.running = '';
                 $scope.error = '';

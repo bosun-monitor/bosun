@@ -213,6 +213,7 @@ tsafControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route'
 interface IEGraphScope extends ng.IScope {
 	expr: string;
 	error: string;
+	warning: string;
 	running: string;
 	result: any;
 	render: string;
@@ -241,6 +242,11 @@ tsafControllers.controller('EGraphCtrl', ['$scope', '$http', '$location', '$rout
 	$http.get('/api/egraph?q=' + encodeURIComponent(current) + '&autods=' + width)
 		.success((data) => {
 			$scope.result = data;
+			if ($scope.result.length == 0) {
+				$scope.warning = 'No Results';
+			} else {
+				$scope.warning = '';
+			}
 			$scope.running = '';
 		})
 		.error((error) => {
@@ -336,6 +342,7 @@ interface IGraphScope extends ng.IScope {
 	url: string;
 	error: string;
 	running: string;
+	warning: string;
 	metrics: string[];
 	tagvs: TagV[];
 	tags: TagSet;
@@ -477,9 +484,15 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route
 	var autods = $scope.autods ? autods = '&autods=' + $('.chart').width() : '';
 	function get() {
 		$timeout.cancel(graphRefresh);
+		$scope.running = 'Running';
 		$http.get('/api/graph?' + 'b64=' + btoa(JSON.stringify(request)) + autods)
 			.success((data) => {
 				$scope.result = data.Series;
+				if ($scope.result == null) {
+					$scope.warning = 'No Results';
+				} else {
+					$scope.warning = '';
+				}
 				$scope.queries = data.Queries;
 				$scope.running = '';
 				$scope.error = '';
