@@ -38,33 +38,49 @@
 	}
 </style>
 <h1 ng-bind="host"></h1>
-<div class="row">
-	<div class="col-lg-6">
-		<h2>CPU</h2>
-		<div class="chart" ts-rickshaw="cpu" max="100" renderer="area"></div>
-	</div>
-	<div class="col-lg-6">
-		<h2>Memory <small>Total: {{mem_total | bytes}}</small></h2>
-		<div class="chart" ts-rickshaw="mem" max="{{mem_total}}" bytes='true' renderer="area"></div>
-	</div>
-</div>
-<div ng-repeat="i in idata track by $index" ng-init="rows = [1,2]">
-	<span ng-switch on="$index % 2">
-		<div class="row" ng-switch-when="0">
-			<div class="col-lg-{{12/rows.length}}" ng-show="idata[$parent.$index+$index]" ng-repeat="i in rows">
-				<h2>Network Bit/s: {{idata[$parent.$index+$index].name}}</h2>
-				<div class="chart" bits="true" ts-rickshaw="idata[$parent.$index+$index].data"></div>
+<ul class="nav nav-tabs">
+	<li ng-class="{active: tab == 'stats'}"><a href ng-click="setTab('stats')">Primary Stats</a></li>
+	<li ng-class="{active: tab == 'metrics'}"><a href ng-click="setTab('metrics')">Available Metrics</a></li>
+</ul>
+<div class="tab-content">
+	<div class="tab-pane" ng-class="{active: tab == 'stats'}">
+		<div class="row">
+			<div class="col-lg-6">
+				<h2>CPU</h2>
+				<div class="chart" ts-rickshaw="cpu" max="100" renderer="area"></div>
+			</div>
+			<div class="col-lg-6">
+				<h2>Memory <small>Total: {{mem_total | bytes}}</small></h2>
+				<div class="chart" ts-rickshaw="mem" max="{{mem_total}}" bytes='true' renderer="area"></div>
 			</div>
 		</div>
-	</span>
-</div>
-<div ng-repeat="i in fsdata track by $index" ng-init="rows = [1,2]">
-	<span ng-switch on="$index % rows.length">
-		<div class="row" ng-switch-when="0">
-			<div class="col-lg-{{12/rows.length}}" ng-show="fsdata[$parent.$index+$index]" ng-repeat="i in rows">
-				<h2>Disk Space: {{fsdata[$parent.$index+$index].name}} <small>({{fs_current[$parent.$index+$index].c_val | bytes}} / {{fs_current[$parent.$index+$index].total | bytes}}) {{fs_current[$parent.$index+$index].percent_used|number:0}}% Used</small></h2>
-				<div class="chart" max="{{fs_total[fs_current[$parent.$index+$index].total]}}" bytes="true" ts-rickshaw="fsdata[$parent.$index+$index].data"></div>
-			</div>
+		<div ng-repeat="i in idata track by $index" ng-init="rows = [1,2]">
+			<span ng-switch on="$index % 2">
+				<div class="row" ng-switch-when="0">
+					<div class="col-lg-{{12/rows.length}}" ng-show="idata[$parent.$index+$index]" ng-repeat="i in rows">
+						<h2>Network Bit/s: {{idata[$parent.$index+$index].name}}</h2>
+						<div class="chart" bits="true" ts-rickshaw="idata[$parent.$index+$index].data"></div>
+					</div>
+				</div>
+			</span>
 		</div>
-	</span>
+		<div ng-repeat="i in fsdata track by $index" ng-init="rows = [1,2]">
+			<span ng-switch on="$index % rows.length">
+				<div class="row" ng-switch-when="0">
+					<div class="col-lg-{{12/rows.length}}" ng-show="fsdata[$parent.$index+$index]" ng-repeat="i in rows">
+						<h2>Disk Space: {{fsdata[$parent.$index+$index].name}} <small>({{fs_current[$parent.$index+$index].c_val | bytes}} / {{fs_current[$parent.$index+$index].total | bytes}}) {{fs_current[$parent.$index+$index].percent_used|number:0}}% Used</small></h2>
+						<div class="chart" max="{{fs_total[fs_current[$parent.$index+$index].total]}}" bytes="true" ts-rickshaw="fsdata[$parent.$index+$index].data"></div>
+					</div>
+				</div>
+			</span>
+		</div>
+	</div>
+	<div class="tab-pane" ng-class="{active: tab == 'metrics'}">
+		<div class="row">
+			<h1>Metrics</h1>
+			<ul>
+				<li ng-repeat="metric in metrics"><a href="/graph?b64={{btoa(json(mlink(metric)))}}" ng-bind="metric"></a></li>
+			</ul>
+		</div>
+	</div>
 </div>
