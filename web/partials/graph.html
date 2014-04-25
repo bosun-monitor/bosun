@@ -116,31 +116,13 @@
 					<div class="form-group">
 						<label class="col-sm-4 control-label" tooltip title="A positive integer representing the maximum value for the counter.">Counter Max</label>
 						<div class="col-sm-8">
-							<input type="number" class="form-control" ng-model="t.rateOptions.counterMax">
+							<input type="number" class="form-control" ng-model="t.rateOptions.counterMax" ng-disabled="t.derivative != 'counter'">
 						</div>
 					</div>
 					<div class="form-group">
-						<label class="col-sm-4 control-label" tooltip title="An optional value for the rate that, when exceeded, will cause the aggregator to return a 0 instead of the calculated rate. Useful when data sources are frequently reset to avoid spurious spikes.">Counter Reset</label>
+						<label class="col-sm-4 control-label" tooltip title="Returns a per-second rate of change between points. If the values always increase (except for resets and rollovers), use counter. If the values can go down, use rate.">Derivative </label>
 						<div class="col-sm-8">
-							<input type="number" class="form-control" ng-model="t.rateOptions.resetValue">
-						</div>
-					</div>
-					<div class="form-group">
-						<div class="col-sm-offset-4 col-sm-8">
-							<div class="checkbox" tooltip title="Whether or not the data should be converted into deltas before returning.">
-								<label>
-									<input type="checkbox" ng-model="t.rate"> Rate
-								</label>
-							</div>
-						</div>
-					</div>
-					<div class="form-group">
-						<div class="col-sm-offset-4 col-sm-8">
-							<div class="checkbox" tooltip title="Whether or not the underlying data is a monotonically increasing counter that may roll over">
-								<label>
-									<input type="checkbox" ng-model="t.rateOptions.counter"> Counter
-								</label>
-							</div>
+							<select ng-model="t.derivative" ng-change="t.setDerivative()" ng-options="r for r in rate_options" class="form-control"></select>
 						</div>
 					</div>
 				</form>
