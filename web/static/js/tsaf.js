@@ -412,11 +412,25 @@ tsafControllers.controller('GraphCtrl', [
 
 tsafControllers.controller('HostCtrl', [
     '$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
-        $scope.host = ($location.search()).host;
-        $scope.time = ($location.search()).time;
+        var search = $location.search();
+        $scope.host = search.host;
+        $scope.time = search.time;
+        $scope.tab = search.tab || "stats";
         $scope.idata = [];
         $scope.fsdata = [];
         $scope.fs_current = [];
+        $scope.metrics = [];
+        $scope.mlink = function (m) {
+            var r = new Request();
+            var q = new Query();
+            q.metric = m;
+            q.tags = { 'host': $scope.host };
+            r.queries.push(q);
+            return r;
+        };
+        $http.get('/api/metric/host/' + $scope.host).success(function (data) {
+            $scope.metrics = data;
+        });
         var cpu_r = new Request();
         cpu_r.start = $scope.time;
         cpu_r.queries = [
@@ -426,6 +440,11 @@ tsafControllers.controller('HostCtrl', [
                 tags: { host: $scope.host }
             })
         ];
+        $scope.setTab = function (t) {
+            $scope.tab = t;
+            $location.search('tab', $scope.tab);
+            $route.reload();
+        };
         var width = $('.chart').width();
         $http.get('/api/graph?' + 'json=' + encodeURIComponent(JSON.stringify(cpu_r)) + '&autods=' + width).success(function (data) {
             data.Series[0].name = 'Percent Used';
