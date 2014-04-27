@@ -278,21 +278,43 @@ class Query {
 	downsample: string;
 	ds: string;
 	dstime: string;
+	derivative: string;
 	constructor(q?: any) {
 		this.aggregator = q && q.aggregator || 'sum';
 		this.metric = q && q.metric || '';
 		this.rate = q && q.rate || false;
+		this.derivative = q && q.derivative || '';
 		this.rateOptions = q && q.rateOptions || new RateOptions;
 		this.ds = q && q.ds || '';
 		this.dstime = q && q.dstime || '';
 		this.tags = q && q.tags || new TagSet;
 		this.setDs();
+		this.setDerivative();
 	}
 	setDs() {
 		if (this.dstime && this.ds) {
 			this.downsample = this.dstime + '-' + this.ds;
 		} else {
 			this.downsample = '';
+		}
+	}
+	setDerivative() {
+		switch (this.derivative) {
+		case "rate":
+			this.rate = true;
+			this.rateOptions.counter = false;
+			break;
+		case "counter":
+			this.rate = true;
+			this.rateOptions.counter = true;
+			if (this.rateOptions.resetValue == undefined) {
+				this.rateOptions.resetValue = 1;
+			}
+			break;
+		case "":
+			this.rate = false;
+			this.rateOptions.counter = false;
+			break;
 		}
 	}
 }
@@ -342,6 +364,7 @@ interface IGraphScope extends ng.IScope {
 	sorted_tagks: string[][];
 	query: string;
 	aggregators: string[];
+	rate_options: string[];
 	dsaggregators: string[];
 	GetTagKByMetric: (index: number) => void;
 	Query: () => void;
@@ -366,6 +389,7 @@ var graphRefresh: any;
 tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route', '$timeout', function($scope: IGraphScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService, $timeout: ng.ITimeoutService){
 	$scope.aggregators = ["sum", "min", "max", "avg", "dev", "zimsum", "mimmin", "minmax"];
 	$scope.dsaggregators = ["", "sum", "min", "max", "avg", "dev", "zimsum", "mimmin", "minmax"];
+	$scope.rate_options = ["", "counter", "rate"];
 	var search = $location.search();
 	var j = search.json;
 	if (search.b64) {
@@ -376,6 +400,9 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route
 	$scope.tagvs = [];
 	$scope.sorted_tagks = [];
 	$scope.query_p = request.queries;
+	angular.forEach($scope.query_p, (q, i) => {
+		$scope.query_p[i] = new Query(q);
+		});
 	$scope.start = request.start;
 	$scope.end = request.end;
 	$scope.autods = search.autods != 'false';
