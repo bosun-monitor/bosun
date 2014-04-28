@@ -250,9 +250,7 @@ var Query = (function () {
             case "counter":
                 this.rate = true;
                 this.rateOptions.counter = true;
-                if (this.rateOptions.resetValue == undefined) {
-                    this.rateOptions.resetValue = 1;
-                }
+                this.rateOptions.resetValue = 1;
                 break;
             case "":
                 this.rate = false;
@@ -312,8 +310,8 @@ tsafControllers.controller('GraphCtrl', [
         $scope.index = parseInt($location.hash()) || 0;
         $scope.tagvs = [];
         $scope.sorted_tagks = [];
-        $scope.query_p = request.queries;
-        angular.forEach($scope.query_p, function (q, i) {
+        $scope.query_p = [];
+        angular.forEach(request.queries, function (q, i) {
             $scope.query_p[i] = new Query(q);
         });
         $scope.start = request.start;
