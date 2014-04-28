@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/StackExchange/tsaf/search"
-	"github.com/StackExchange/tsaf/third_party/github.com/mreiferson/go-httpclient"
+	"github.com/StackExchange/tsaf/_third_party/github.com/mreiferson/go-httpclient"
 )
 
 func RelayHTTP(addr, dest string) error {

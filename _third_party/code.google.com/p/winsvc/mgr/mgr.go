@@ -10,7 +10,7 @@
 package mgr
 
 import (
-	"github.com/StackExchange/tsaf/third_party/code.google.com/p/winsvc/winapi"
+	"github.com/StackExchange/tsaf/_third_party/code.google.com/p/winsvc/winapi"
 	"syscall"
 )
 
