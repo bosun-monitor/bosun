@@ -10,8 +10,8 @@ import (
 
 	"github.com/StackExchange/tsaf/conf"
 	"github.com/StackExchange/tsaf/sched"
-	"github.com/StackExchange/tsaf/third_party/github.com/MiniProfiler/go/miniprofiler"
-	"github.com/StackExchange/tsaf/third_party/github.com/gorilla/mux"
+	"github.com/StackExchange/tsaf/_third_party/github.com/MiniProfiler/go/miniprofiler"
+	"github.com/StackExchange/tsaf/_third_party/github.com/gorilla/mux"
 )
 
 var (

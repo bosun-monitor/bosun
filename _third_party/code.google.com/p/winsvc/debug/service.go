@@ -7,7 +7,7 @@
 package debug
 
 import (
-	"github.com/StackExchange/tsaf/third_party/code.google.com/p/winsvc/svc"
+	"github.com/StackExchange/tsaf/_third_party/code.google.com/p/winsvc/svc"
 	"os"
 	"os/signal"
 	"syscall"
