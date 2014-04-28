@@ -488,7 +488,7 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route
 		$http.get('/api/graph?' + 'b64=' + btoa(JSON.stringify(request)) + autods)
 			.success((data) => {
 				$scope.result = data.Series;
-				if ($scope.result == null) {
+				if (!$scope.result) {
 					$scope.warning = 'No Results';
 				} else {
 					$scope.warning = '';
