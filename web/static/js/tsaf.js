@@ -247,19 +247,20 @@ var Query = (function () {
         }
     };
     Query.prototype.setDerivative = function () {
+        var max = this.rateOptions.counterMax;
+        this.rateOptions = new RateOptions();
         switch (this.derivative) {
             case "rate":
                 this.rate = true;
-                this.rateOptions.counter = false;
                 break;
             case "counter":
                 this.rate = true;
                 this.rateOptions.counter = true;
+                this.rateOptions.counterMax = max;
                 this.rateOptions.resetValue = 1;
                 break;
             case "":
                 this.rate = false;
-                this.rateOptions.counter = false;
                 break;
         }
     };
