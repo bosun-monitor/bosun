@@ -137,7 +137,7 @@ func c_procstats_linux() opentsdb.MultiDataPoint {
 		}
 	})
 	if num_cores != 0 && t_util != 0 {
-		Add(&md, "os.cpu", t_util/float64(num_cores), nil)
+		Add(&md, osCPU, t_util/float64(num_cores), nil)
 	}
 	readLine("/proc/loadavg", func(s string) {
 		m := loadavgRE.FindStringSubmatch(s)
