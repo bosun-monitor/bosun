@@ -477,8 +477,8 @@ tsafControllers.controller('HostCtrl', [
             cpu_r.start = $scope.time;
             cpu_r.queries = [
                 new Query({
-                    metric: "os.cpu",
-                    rate: true,
+                    metric: 'os.cpu',
+                    derivative: 'counter',
                     tags: { host: $scope.host }
                 })
             ];
