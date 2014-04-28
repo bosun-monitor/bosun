@@ -162,6 +162,7 @@ func MetricsByTagPair(tagk, tagv string) []string {
 	for k := range Metric[Query{tagk, tagv}] {
 		r = append(r, k)
 	}
+	sort.Strings(r)
 	return r
 }
 
