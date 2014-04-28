@@ -238,7 +238,7 @@ tsafControllers.controller('EGraphCtrl', ['$scope', '$http', '$location', '$rout
 	}
 	$scope.expr = current;
 	$scope.running = current;
-	var width: number = $('.chart').width()
+	var width: number = $('.chart').width();
 	$http.get('/api/egraph?q=' + encodeURIComponent(current) + '&autods=' + width)
 		.success((data) => {
 			$scope.result = data;
@@ -576,107 +576,109 @@ tsafControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route'
 		r.queries.push(q);
 		return r;
 	};
-	$http.get('/api/metric/host/' + $scope.host)
-		.success(function (data: string[]) {
-			$scope.metrics = data;
-		});
-	var cpu_r = new Request();
-	cpu_r.start = $scope.time;
-	cpu_r.queries = [
-		new Query({
-			metric: "os.cpu",
-			rate: true,
-			tags: {host: $scope.host},
-		})
-	];
 	$scope.setTab = function(t: string) {
 		$scope.tab = t;
 		$location.search('tab', $scope.tab);
 		$route.reload();
 	};
-	var width: number = $('.chart').width();
-	$http.get('/api/graph?' + 'json=' + encodeURIComponent(JSON.stringify(cpu_r)) + '&autods=' + width)
-		.success((data) => {
-			data.Series[0].name = 'Percent Used';
-			$scope.cpu = data.Series;
+	if ($scope.tab == 'metrics') {
+	$http.get('/api/metric/host/' + $scope.host)
+		.success(function (data: string[]) {
+			$scope.metrics = data || [];
 		});
-
-	$http.get('/api/tagv/iface/os.net.bytes?host=' + $scope.host)
-		.success((data) => {
-			$scope.interfaces = data;
-			angular.forEach($scope.interfaces, function(i) {
-				var net_bytes_r = new Request();
-				net_bytes_r.start = $scope.time;
-				net_bytes_r.queries = [
-					new Query({
-						metric: "os.net.bytes",
-						rate: true,
-						tags: {host: $scope.host, iface: i, direction: "*"},
-					})
-				];
-				$http.get('/api/graph?' + 'json=' + encodeURIComponent(JSON.stringify(net_bytes_r)) + '&autods=' + width)
-					.success((data) => {
-						angular.forEach(data.Series, function(d) {
-							d.data = d.data.map((dp: any) => { return {x: dp.x, y: dp.y*8}});
-							if (d.name.indexOf("direction=out") != -1) {
-								d.data = d.data.map((dp: any) => { return {x: dp.x, y: dp.y*-1}});
-								d.name = "out";
-							} else {
-								d.name = "in";
-							}
+	} else if ($scope.tab == 'stats') {	
+		var cpu_r = new Request();
+		cpu_r.start = $scope.time;
+		cpu_r.queries = [
+			new Query({
+				metric: "os.cpu",
+				rate: true,
+				tags: {host: $scope.host},
+			})
+		];
+		var width = 500;
+		$http.get('/api/graph?' + 'json=' + encodeURIComponent(JSON.stringify(cpu_r)) + '&autods=' + width)
+			.success((data) => {
+				data.Series[0].name = 'Percent Used';
+				$scope.cpu = data.Series;
+			});
+		$http.get('/api/tagv/iface/os.net.bytes?host=' + $scope.host)
+			.success((data) => {
+				$scope.interfaces = data;
+				angular.forEach($scope.interfaces, function(i) {
+					var net_bytes_r = new Request();
+					net_bytes_r.start = $scope.time;
+					net_bytes_r.queries = [
+						new Query({
+							metric: "os.net.bytes",
+							rate: true,
+							tags: {host: $scope.host, iface: i, direction: "*"},
+						})
+					];
+					$http.get('/api/graph?' + 'json=' + encodeURIComponent(JSON.stringify(net_bytes_r)) + '&autods=' + width)
+						.success((data) => {
+							angular.forEach(data.Series, function(d) {
+								d.data = d.data.map((dp: any) => { return {x: dp.x, y: dp.y*8}});
+								if (d.name.indexOf("direction=out") != -1) {
+									d.data = d.data.map((dp: any) => { return {x: dp.x, y: dp.y*-1}});
+									d.name = "out";
+								} else {
+									d.name = "in";
+								}
+							});
+							$scope.idata[$scope.interfaces.indexOf(i)] = {name: i, data: data.Series};
 						});
-						$scope.idata[$scope.interfaces.indexOf(i)] = {name: i, data: data.Series};
-					});
+				});
 			});
-		});
-	$http.get('/api/tagv/disk/os.disk.fs.space_total?host=' + $scope.host)
-		.success((data) => {
-			$scope.fs = data;
-			angular.forEach($scope.fs, function(i) {
-				if (i == '/dev/shm') {
-					return;
-				}
-				var fs_r = new Request();
-				fs_r.start = $scope.time;
-				fs_r.queries.push(new Query({
-					metric: "os.disk.fs.space_total",
-					tags: {host: $scope.host, disk: i},
-				}));
-				fs_r.queries.push(new Query({
-					metric: "os.disk.fs.space_used",
-					tags: {host: $scope.host, disk: i},
-				}));
-				$http.get('/api/graph?' + 'json=' + encodeURIComponent(JSON.stringify(fs_r)) + '&autods=' + width)
-					.success((data) => {
-						data.Series[1].name = "Used";
-						$scope.fsdata[$scope.fs.indexOf(i)] = {name: i, data: [data.Series[1]]};
-						var total: number = Math.max.apply(null, data.Series[0].data.map((d: any) => { return d.y; }));
-						var c_val: number = data.Series[1].data.slice(-1)[0].y;
-						var percent_used: number = c_val/total * 100;
-						$scope.fs_current[$scope.fs.indexOf(i)] = {
-							total: total,
-							c_val: c_val,
-							percent_used: percent_used,
-						};
-					});
+		$http.get('/api/tagv/disk/os.disk.fs.space_total?host=' + $scope.host)
+			.success((data) => {
+				$scope.fs = data;
+				angular.forEach($scope.fs, function(i) {
+					if (i == '/dev/shm') {
+						return;
+					}
+					var fs_r = new Request();
+					fs_r.start = $scope.time;
+					fs_r.queries.push(new Query({
+						metric: "os.disk.fs.space_total",
+						tags: {host: $scope.host, disk: i},
+					}));
+					fs_r.queries.push(new Query({
+						metric: "os.disk.fs.space_used",
+						tags: {host: $scope.host, disk: i},
+					}));
+					$http.get('/api/graph?' + 'json=' + encodeURIComponent(JSON.stringify(fs_r)) + '&autods=' + width)
+						.success((data) => {
+							data.Series[1].name = "Used";
+							$scope.fsdata[$scope.fs.indexOf(i)] = {name: i, data: [data.Series[1]]};
+							var total: number = Math.max.apply(null, data.Series[0].data.map((d: any) => { return d.y; }));
+							var c_val: number = data.Series[1].data.slice(-1)[0].y;
+							var percent_used: number = c_val/total * 100;
+							$scope.fs_current[$scope.fs.indexOf(i)] = {
+								total: total,
+								c_val: c_val,
+								percent_used: percent_used,
+							};
+						});
+				});
 			});
-		});
-	var mem_r = new Request();
-	mem_r.start = $scope.time;
-	mem_r.queries.push(new Query({
-		metric: "os.mem.total",
-		tags: {host: $scope.host},
-	}));
-	mem_r.queries.push(new Query({
-		metric: "os.mem.used",
-		tags: {host: $scope.host},
-	}));
-	$http.get('/api/graph?' + 'json=' + encodeURIComponent(JSON.stringify(mem_r)) + '&autods=' + width)
-		.success((data) => {
-			data.Series[1].name = "Used";
-			$scope.mem_total = Math.max.apply(null, data.Series[0].data.map((d: any) => { return d.y; }));
-			$scope.mem = [data.Series[1]];
-		});
+		var mem_r = new Request();
+		mem_r.start = $scope.time;
+		mem_r.queries.push(new Query({
+			metric: "os.mem.total",
+			tags: {host: $scope.host},
+		}));
+		mem_r.queries.push(new Query({
+			metric: "os.mem.used",
+			tags: {host: $scope.host},
+		}));
+		$http.get('/api/graph?' + 'json=' + encodeURIComponent(JSON.stringify(mem_r)) + '&autods=' + width)
+			.success((data) => {
+				data.Series[1].name = "Used";
+				$scope.mem_total = Math.max.apply(null, data.Series[0].data.map((d: any) => { return d.y; }));
+				$scope.mem = [data.Series[1]];
+			});
+	}
 }]);
 
 interface IRuleScope extends IExprScope {
