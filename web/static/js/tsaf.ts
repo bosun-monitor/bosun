@@ -530,6 +530,10 @@ interface IHostScope extends ng.IScope {
 	cpu: any;
 	host: string;
 	time: string;
+	tab: string;
+	metrics: string[];
+	mlink: (m: string) => Request;
+	setTab: (m: string) => void;
 	idata: any;
 	fs: any;
 	fsdata: any;
@@ -542,11 +546,26 @@ interface IHostScope extends ng.IScope {
 }
 
 tsafControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route', function($scope: IHostScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService){
-	$scope.host = ($location.search()).host;
-	$scope.time = ($location.search()).time;
+	var search = $location.search();
+	$scope.host = search.host;
+	$scope.time = search.time;
+	$scope.tab = search.tab || "stats";
 	$scope.idata = [];
 	$scope.fsdata = [];
 	$scope.fs_current = [];
+	$scope.metrics = [];
+	$scope.mlink = (m: string) => {
+		var r = new Request();
+		var q = new Query();
+		q.metric = m;
+		q.tags = {'host': $scope.host};
+		r.queries.push(q);
+		return r;
+	};
+	$http.get('/api/metric/host/' + $scope.host)
+		.success(function (data: string[]) {
+			$scope.metrics = data;
+		});
 	var cpu_r = new Request();
 	cpu_r.start = $scope.time;
 	cpu_r.queries = [
@@ -556,6 +575,11 @@ tsafControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route'
 			tags: {host: $scope.host},
 		})
 	];
+	$scope.setTab = function(t: string) {
+		$scope.tab = t;
+		$location.search('tab', $scope.tab);
+		$route.reload();
+	};
 	var width: number = $('.chart').width();
 	$http.get('/api/graph?' + 'json=' + encodeURIComponent(JSON.stringify(cpu_r)) + '&autods=' + width)
 		.success((data) => {
