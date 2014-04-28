@@ -158,7 +158,7 @@ func TagValuesByTagKey(tagk string) []string {
 func MetricsByTagPair(tagk, tagv string) []string {
 	lock.RLock()
 	defer lock.RUnlock()
-	var r []string
+	r := make([]string, 0)
 	for k := range Metric[Query{tagk, tagv}] {
 		r = append(r, k)
 	}
