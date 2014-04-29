@@ -947,6 +947,17 @@ tsafApp.directive("tsTime", function() {
 	};
 });
 
+tsafApp.directive("tsSince", function() {
+	return {
+		link: function(scope: ITsafScope, elem: any, attrs: any) {
+			scope.$watch(attrs.tsSince, (v: any) => {
+				var m = moment(v).utc();
+				elem.text(m.fromNow());
+			});
+		},
+	};
+});
+
 tsafApp.directive("tsRickshaw", ['$filter', function($filter: ng.IFilterService) {
 	return {
 		//templateUrl: '/partials/rickshaw.html',
