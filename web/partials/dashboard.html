@@ -5,7 +5,7 @@
 			<h4 class="panel-title">
 				<a href>
 					<span class="glyphicon" ng-class="{'glyphicon-exclamation-sign': state.last.Status && state.last.Status != 'normal'}"></span>
-					<span ng-bind="group.Subject"></span>
+					<span ng-bind="group.Subject || group.Key"></span>
 					<span class="pull-right" ng-show="group.Len">{{group.Len}} alerts</span>
 					<span class="pull-right" ng-show="group.Ago" ng-bind="group.Ago"></span>
 				</a>
@@ -18,7 +18,7 @@
 					<h4 class="panel-title">
 						<a href>
 							<span class="glyphicon" ng-class="{'glyphicon-exclamation-sign': state.last.Status && state.last.Status != 'normal'}"></span>
-							<span ng-bind="child.Subject"></span>
+							<span ng-bind="child.Subject || child.Key"></span>
 							<span class="pull-right" ng-show="child.Ago" ng-bind="child.Ago"></span>
 						</a>
 					</h4>
