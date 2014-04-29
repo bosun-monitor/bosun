@@ -1,3 +1,8 @@
+<style>
+	h4.panel-title {
+		cursor: pointer; cursor: hand;
+	}
+</style>
 <div class="panel-group" ng-repeat="(ack, groups) in schedule.Groups">
 	<h2 ng-bind="ack"></h2>
 	<div class="panel" ng-class="panelClass(group.Status)" ng-repeat="group in groups" ng-init="idx = $index; state = schedule.Status[group.Key]; name = group.Key">
