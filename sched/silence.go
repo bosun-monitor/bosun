@@ -73,6 +73,9 @@ func (s *Schedule) AddSilence(start, end time.Time, alert, tagList string, confi
 	if time.Since(end) > 0 {
 		return nil, fmt.Errorf("end time must be in the future")
 	}
+	if alert == "" && tagList == "" {
+		return nil, fmt.Errorf("must specify either alert or tags")
+	}
 	si := &Silence{
 		Start: start,
 		End:   end,
