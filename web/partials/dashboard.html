@@ -1,15 +1,28 @@
-<div class="panel-group">
-	<div ng-repeat="(status, groups) in schedule.Groups">
-		<div class="panel" ng-class="panelClass(status)" ng-repeat="(groupname, group) in groups" ng-init="sindex = $index; ci = status + $index">
-			<div class="panel-heading" ng-click="collapse(ci)">
-				<h4 class="panel-title">
-					{{status}} - {{groupname}}
-					<span class="pull-right">{{group.length}} alerts</span>
-				</h4>
-			</div>
-			<div class="panel-body panel-group" ng-if="shown[ci]" >
-				<div class="panel panel-default" ng-repeat="(name, state) in lookup(group)"ng-init="si = status + sindex + '-' + $index" ts-state>
+<div class="panel-group" ng-repeat="(ack, groups) in schedule.Groups">
+	<h2 ng-bind="ack"></h2>
+	<div class="panel" ng-class="panelClass(group.Status)" ng-repeat="group in groups" ng-init="idx = $index; state = schedule.Status[group.Key]; name = group.Key">
+		<div class="panel-heading" ng-click="collapse(idx)">
+			<h4 class="panel-title">
+				<a href>
+					<span class="glyphicon" ng-class="{'glyphicon-exclamation-sign': state.last.Status && state.last.Status != 'normal'}"></span>
+					<span ng-bind="group.Subject"></span>
+					<span class="pull-right" ng-show="group.Len">{{group.Len}} alerts</span>
+					<span class="pull-right" ng-show="group.Ago" ng-bind="group.Ago"></span>
+				</a>
+			</h4>
+		</div>
+		<div class="panel-body panel-group" ng-if="group.Children && shown[idx]">
+			<div class="panel" ng-class="panelClass(state.last.Status)" ng-repeat="child in group.Children" ng-init="idx = idx + '-' + $index; state = schedule.Status[child.Key]; name = child.Key">
+				<div class="panel-heading" ng-click="collapse(idx)">
+					<h4 class="panel-title">
+						<a href>
+							<span class="glyphicon" ng-class="{'glyphicon-exclamation-sign': state.last.Status && state.last.Status != 'normal'}"></span>
+							<span ng-bind="child.Subject"></span>
+							<span class="pull-right" ng-show="child.Ago" ng-bind="child.Ago"></span>
+						</a>
+					</h4>
 				</div>
+				<div class="panel-body" ng-if="state && shown[idx]" ts-state></div>
 			</div>
 		</div>
 	</div>
