@@ -204,7 +204,7 @@ func marshalTime(t time.Time) string {
 	if t.IsZero() {
 		return ""
 	}
-	b, _ := t.MarshalJSON()
+	b, _ := t.MarshalText()
 	return string(b)
 }
 
