@@ -1,59 +1,46 @@
-<div class="panel-heading" ng-click="collapse(si)">
-	<h4 class="panel-title">
-		<a title="{{name}}" href>
-			<span class="glyphicon" ng-class="{'glyphicon-exclamation-sign': state.last.Status != 'normal'}"></span>
-			<span ng-bind="state.Subject || name"></span>
-			<span class="pull-right" ng-bind="state.last.Time.fromNow()"></span>
-		</a>
-	</h4>
-</div>
-<div class="panel-body" ng-if="shown[si]">
-	<div>
-		<div class="col-sm-5">
-			<div class="row">
-				<div class="col-sm-3 text-right"><strong>Name</strong></div>
-				<div class="col-sm-9" ng-bind="zws(name)"></div>
-			</div>
-			<div class="row">
-				<div class="col-sm-3 text-right"><strong>Status</strong></div>
-				<div class="col-sm-9" ng-bind="state.last.Status"></div>
-			</div>
-			<div class="row">
-				<div class="col-sm-3 text-right"><strong>Since</strong></div>
-				<div class="col-sm-9" ts-time="state.last.Time"></div>
-			</div>
-			<div class="row">
-				<div class="col-sm-3 text-right"><strong>Touched</strong></div>
-				<div class="col-sm-9" ts-time="state.Touched"></div>
-			</div>
-			<div class="row">
-				<div class="col-sm-3 text-right"><strong>Expr</strong></div>
-				<div class="col-sm-9">
-					<a ng-href="/expr#{{btoa(state.Expr)}}" ng-bind="zws(state.Expr)"></a>
-				</div>
-			</div>
-			<div class="row">
-				<div class="col-sm-3 text-right"><strong>Silence</strong></div>
-				<div class="col-sm-9">
-					<a class="btn btn-default btn-xs" ng-href="/silence?duration=1h&alert={{state.Alert}}&tags={{encode(state.Tags)}}">1 hour</a>
-				</div>
-			</div>
-		</div>
-		<div class="col-sm-7">
-			<table class="table table-striped table-condensed">
-				<thead>
-					<tr>
-						<th>Computation</th>
-						<th>Value</th>
-					</tr>
-				</thead>
-				<tbody>
-					<tr ng-repeat="c in state.Computations">
-						<td ng-bind-html="c.Text | linkq:'_blank'"></td>
-						<td ng-bind="c.Value"></td>
-					</tr>
-				</tbody>
-			</table>
+<div class="col-sm-5">
+	<div class="row">
+		<div class="col-sm-3 text-right"><strong>Name</strong></div>
+		<div class="col-sm-9" ng-bind="zws(name)"></div>
+	</div>
+	<div class="row">
+		<div class="col-sm-3 text-right"><strong>Status</strong></div>
+		<div class="col-sm-9" ng-bind="state.last.Status"></div>
+	</div>
+	<div class="row">
+		<div class="col-sm-3 text-right"><strong>Since</strong></div>
+		<div class="col-sm-9" ts-time="state.last.Time"></div>
+	</div>
+	<div class="row">
+		<div class="col-sm-3 text-right"><strong>Touched</strong></div>
+		<div class="col-sm-9" ts-time="state.Touched"></div>
+	</div>
+	<div class="row">
+		<div class="col-sm-3 text-right"><strong>Expr</strong></div>
+		<div class="col-sm-9">
+			<a ng-href="/expr#{{btoa(state.Expr)}}" ng-bind="zws(state.Expr)"></a>
 		</div>
 	</div>
+	<div class="row">
+		<div class="col-sm-3 text-right"><strong>Silence</strong></div>
+		<div class="col-sm-9">
+			<a class="btn btn-default btn-xs" ng-href="/silence?duration=1h&alert={{state.Alert}}&tags={{encode(state.Tags)}}">1 hour</a>
+		</div>
+	</div>
+</div>
+<div class="col-sm-7">
+	<table class="table table-striped table-condensed">
+		<thead>
+			<tr>
+				<th>Computation</th>
+				<th>Value</th>
+			</tr>
+		</thead>
+		<tbody>
+			<tr ng-repeat="c in state.Computations">
+				<td ng-bind-html="c.Text | linkq:'_blank'"></td>
+				<td ng-bind="c.Value"></td>
+			</tr>
+		</tbody>
+	</table>
 </div>

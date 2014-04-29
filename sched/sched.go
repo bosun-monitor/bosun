@@ -10,9 +10,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/StackExchange/tsaf/_third_party/github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/tsaf/conf"
 	"github.com/StackExchange/tsaf/expr"
-	"github.com/StackExchange/tsaf/_third_party/github.com/StackExchange/scollector/opentsdb"
 )
 
 type Schedule struct {
@@ -32,14 +32,25 @@ type Schedule struct {
 
 type States map[AlertKey]*State
 
-func (s States) GroupStatus() map[Status]States {
-	r := make(map[Status]States)
-	for k, v := range s {
-		st := v.Last().Status
-		if _, present := r[st]; !present {
-			r[st] = make(States)
+type StateTuple struct {
+	NeedAck bool
+	Active  bool
+	Status  Status
+}
+
+// GroupStates groups by NeedAck, Active, and Status.
+func (s States) GroupStates() map[StateTuple]States {
+	r := make(map[StateTuple]States)
+	for ak, st := range s {
+		t := StateTuple{
+			st.NeedAck,
+			st.Last().Status != stNormal,
+			st.Last().Status,
 		}
-		r[st][k] = v
+		if _, present := r[t]; !present {
+			r[t] = make(States)
+		}
+		r[t][ak] = st
 	}
 	return r
 }
@@ -114,10 +125,23 @@ func (states States) GroupSets() map[string]AlertKeys {
 }
 
 func (s *Schedule) MarshalJSON() ([]byte, error) {
+	type Grouped struct {
+		Active   bool
+		Status   Status
+		Subject  string
+		Len      int
+		Key      string `json:",omitempty"`
+		AlertKey AlertKey
+		Ago      string     `json:",omitempty"`
+		Children []*Grouped `json:",omitempty"`
+	}
 	t := struct {
-		Alerts      map[string]*conf.Alert
-		Status      map[string]*State
-		Groups      map[string]map[string][]string // status -> group name -> keys
+		Alerts map[string]*conf.Alert
+		Status map[string]*State
+		Groups struct {
+			NeedAck      []*Grouped `json:",omitempty"`
+			Acknowledged []*Grouped `json:",omitempty"`
+		}
 		TimeAndDate []int
 	}{
 		Alerts:      s.Conf.Alerts,
@@ -130,21 +154,56 @@ func (s *Schedule) MarshalJSON() ([]byte, error) {
 		}
 		t.Status[k.String()] = v
 	}
-	groups := make(map[string]map[string][]string)
-	for status, states := range s.Status.GroupStatus() {
-		if status <= stNormal {
-			continue
-		}
-		s := make(map[string][]string)
-		groups[status.String()] = s
-		for name, group := range states.GroupSets() {
-			for _, ak := range group {
-				s[name] = append(s[name], ak.String())
+	for tuple, states := range s.Status.GroupStates() {
+		var grouped []*Grouped
+		switch tuple.Status {
+		case stWarning, stCritical:
+			for ak, state := range states {
+				g := Grouped{
+					Active:   tuple.Active,
+					Status:   tuple.Status,
+					AlertKey: ak,
+					Key:      ak.String(),
+					Subject:  state.Subject,
+					Ago:      fmt.Sprintf("%s ago", sinceSecond(state.Last().Time)),
+				}
+				grouped = append(grouped, &g)
+			}
+		case stUnknown:
+			for name, group := range states.GroupSets() {
+				g := Grouped{
+					Active:  tuple.Active,
+					Status:  tuple.Status,
+					Subject: fmt.Sprintf("%s - %s", tuple.Status, name),
+					Len:     len(group),
+				}
+				for _, ak := range group {
+					st := s.Status[ak]
+					g.Children = append(g.Children, &Grouped{
+						Active:   tuple.Active,
+						Status:   tuple.Status,
+						AlertKey: ak,
+						Key:      ak.String(),
+						Subject:  st.Subject,
+						Ago:      fmt.Sprintf("%s ago", sinceSecond(st.Last().Time)),
+					})
+				}
+				grouped = append(grouped, &g)
 			}
 		}
+		if tuple.NeedAck {
+			t.Groups.NeedAck = append(t.Groups.NeedAck, grouped...)
+		} else {
+			t.Groups.Acknowledged = append(t.Groups.Acknowledged, grouped...)
+		}
 	}
-	t.Groups = groups
 	return json.Marshal(&t)
+}
+
+func sinceSecond(t time.Time) time.Duration {
+	d := time.Since(t)
+	d -= d % time.Second
+	return d
 }
 
 var DefaultSched = &Schedule{}
