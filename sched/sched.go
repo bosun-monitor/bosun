@@ -132,7 +132,7 @@ func (s *Schedule) MarshalJSON() ([]byte, error) {
 		Len      int
 		Key      string `json:",omitempty"`
 		AlertKey AlertKey
-		Ago      string     `json:",omitempty"`
+		Ago      time.Time
 		Children []*Grouped `json:",omitempty"`
 	}
 	t := struct {
@@ -165,7 +165,7 @@ func (s *Schedule) MarshalJSON() ([]byte, error) {
 					AlertKey: ak,
 					Key:      ak.String(),
 					Subject:  state.Subject,
-					Ago:      fmt.Sprintf("%s ago", sinceSecond(state.Last().Time)),
+					Ago:      state.Last().Time,
 				}
 				grouped = append(grouped, &g)
 			}
@@ -185,7 +185,7 @@ func (s *Schedule) MarshalJSON() ([]byte, error) {
 						AlertKey: ak,
 						Key:      ak.String(),
 						Subject:  st.Subject,
-						Ago:      fmt.Sprintf("%s ago", sinceSecond(st.Last().Time)),
+						Ago:      st.Last().Time,
 					})
 				}
 				grouped = append(grouped, &g)
@@ -198,12 +198,6 @@ func (s *Schedule) MarshalJSON() ([]byte, error) {
 		}
 	}
 	return json.Marshal(&t)
-}
-
-func sinceSecond(t time.Time) time.Duration {
-	d := time.Since(t)
-	d -= d % time.Second
-	return d
 }
 
 var DefaultSched = &Schedule{}
