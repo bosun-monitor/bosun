@@ -67,7 +67,6 @@ interface ITsafScope extends ng.IScope {
 	btoa: (v: any) => string;
 	encode: (v: string) => string;
 	zws: (v: string) => string; // adds the unicode zero-width space character where appropriate
-	time: (v: any) => string; // formats a timestamp
 	timeanddate: number[];
 	schedule: any;
 	req_from_m: (m: string) => Request;
