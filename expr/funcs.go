@@ -83,15 +83,20 @@ var Builtins = map[string]parse.Func{
 		parse.TYPE_SERIES,
 		Query,
 	},
-	"groupby": {
+	"regroup": {
 		[]parse.FuncType{parse.TYPE_NUMBER, parse.TYPE_STRING},
-		parse.TYPE_SCALAR,
-		GroupBy,
+		parse.TYPE_NUMBER,
+		Regroup,
 	},
 	"t": {
 		[]parse.FuncType{parse.TYPE_NUMBER, parse.TYPE_STRING},
 		parse.TYPE_SERIES,
 		Transpose,
+	},
+	"ungroup": {
+		[]parse.FuncType{parse.TYPE_NUMBER},
+		parse.TYPE_SCALAR,
+		Ungroup,
 	},
 }
 
@@ -437,17 +442,28 @@ func percentile(dps Series, args ...float64) (a float64) {
 	return x[int(i)]
 }
 
-func GroupBy(e *state, T miniprofiler.Timer, d []*Result, gp string) ([]*Result, error) {
+func Ungroup(e *state, T miniprofiler.Timer, d []*Result) ([]*Result, error) {
+	if len(d) != 1 {
+		return nil, fmt.Errorf("ungroup: requires exactly one group")
+	}
+	d[0].Group = nil
+	return d, nil
+}
+
+func Regroup(e *state, T miniprofiler.Timer, d []*Result, gp string) ([]*Result, error) {
 	for _, v := range d {
-		ts := make(opentsdb.TagSet)
-		for k, v := range v.Group {
-			for _, b := range strings.Split(gp, ",") {
+		for k, _ := range v.Group {
+			found := false
+			g := strings.Split(gp, ",")
+			for _, b := range g {
 				if k == b {
-					ts[k] = v
+					found = true
 				}
 			}
+			if !found {
+				delete(v.Group, k)
+			}
 		}
-		v.Group = ts
 	}
 	return d, nil
 }
