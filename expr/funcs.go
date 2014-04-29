@@ -10,11 +10,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/StackExchange/tsaf/expr/parse"
-	"github.com/StackExchange/tsaf/search"
 	"github.com/StackExchange/tsaf/_third_party/github.com/GaryBoone/GoStats/stats"
 	"github.com/StackExchange/tsaf/_third_party/github.com/MiniProfiler/go/miniprofiler"
 	"github.com/StackExchange/tsaf/_third_party/github.com/StackExchange/scollector/opentsdb"
+	"github.com/StackExchange/tsaf/expr/parse"
+	"github.com/StackExchange/tsaf/search"
 )
 
 var Builtins = map[string]parse.Func{
