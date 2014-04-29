@@ -83,6 +83,11 @@ var Builtins = map[string]parse.Func{
 		parse.TYPE_SERIES,
 		Query,
 	},
+	"regroup": {
+		[]parse.FuncType{parse.TYPE_NUMBER, parse.TYPE_STRING},
+		parse.TYPE_NUMBER,
+		Regroup,
+	},
 	"t": {
 		[]parse.FuncType{parse.TYPE_NUMBER, parse.TYPE_STRING},
 		parse.TYPE_SERIES,
@@ -442,6 +447,24 @@ func Ungroup(e *state, T miniprofiler.Timer, d []*Result) ([]*Result, error) {
 		return nil, fmt.Errorf("ungroup: requires exactly one group")
 	}
 	d[0].Group = nil
+	return d, nil
+}
+
+func Regroup(e *state, T miniprofiler.Timer, d []*Result, gp string) ([]*Result, error) {
+	for _, v := range d {
+		for k, _ := range v.Group {
+			found := false
+			g := strings.Split(gp, ",")
+			for _, b := range g {
+				if k == b {
+					found = true
+				}
+			}
+			if !found {
+				delete(v.Group, k)
+			}
+		}
+	}
 	return d, nil
 }
 
