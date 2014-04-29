@@ -4,7 +4,7 @@
 		<div class="panel-heading" ng-click="collapse(idx)">
 			<h4 class="panel-title">
 				<a href>
-					<span class="glyphicon" ng-class="{'glyphicon-exclamation-sign': state.last.Status && state.last.Status != 'normal'}"></span>
+					<span class="glyphicon" ng-class="{'glyphicon-exclamation-sign': group.Active || (state.last.Status && state.last.Status != 'normal')}"></span>
 					<span ng-bind="group.Subject || group.Key"></span>
 					<span class="pull-right" ng-show="group.Len">{{group.Len}} alerts</span>
 					<span class="pull-right" ng-show="group.Ago" ng-bind="group.Ago"></span>
