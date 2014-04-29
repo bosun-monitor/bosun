@@ -451,16 +451,13 @@ func Ungroup(e *state, T miniprofiler.Timer, d []*Result) ([]*Result, error) {
 }
 
 func Regroup(e *state, T miniprofiler.Timer, d []*Result, gp string) ([]*Result, error) {
+	m := make(map[string]bool)
+	for _, g := range strings.Split(gp, ",") {
+		m[g] = true
+	}
 	for _, v := range d {
 		for k, _ := range v.Group {
-			found := false
-			g := strings.Split(gp, ",")
-			for _, b := range g {
-				if k == b {
-					found = true
-				}
-			}
-			if !found {
+			if !m[k] {
 				delete(v.Group, k)
 			}
 		}
