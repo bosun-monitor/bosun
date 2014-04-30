@@ -1,7 +1,7 @@
 /**
  * Adapted from jQuery Lined Textarea Plugin
  * http://alan.blog-city.com/jquerylinedtextarea.htm
- * 
+ *
  * Released under the MIT License:
  * http://www.opensource.org/licenses/mit-license.php
  */
@@ -46,5 +46,4 @@
 			textarea.scroll();
 		});
 	};
-
 })(jQuery);
