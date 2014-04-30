@@ -332,7 +332,7 @@ class Request {
 		this.queries = [];
 	}
 	prune() {
-		for(var i = 0; i < this.queries.length; i++) {
+		for (var i = 0; i < this.queries.length; i++) {
 			angular.forEach(this.queries[i], (v, k) => {
 				var qi: any = this.queries[i];
 				switch (typeof v) {
@@ -991,14 +991,14 @@ tsafApp.directive("tsRickshaw", ['$filter', function($filter: ng.IFilterService)
 						var o: any = d3.formatPrefix(y)
 						// The precision arg to d3.formatPrefix seems broken, so using round
 						// http://stackoverflow.com/questions/10310613/variable-precision-in-d3-format
-						return d3.round(o.scale(y),2) + o.symbol;
-						},
+						return d3.round(o.scale(y), 2) + o.symbol;
+					},
 					element: angular.element('.y_axis', elem)[0],
 				});
 				if (attrs.bytes == "true") {
 					y_axis.tickFormat = function(y: any) {
 						return $filter('bytes')(y);
-						}
+					}
 				}
 				graph.render();
 				var fmter = 'nfmt';
@@ -1063,7 +1063,7 @@ tsafApp.directive('tsLine', () => {
 });
 
 interface JQuery {
-	tablesorter(v: any):JQuery;
+	tablesorter(v: any): JQuery;
 }
 
 tsafApp.directive('tsTableSort', ['$timeout', ($timeout: ng.ITimeoutService) => {
@@ -1120,7 +1120,7 @@ tsafApp.filter('bits', function() {
 
 //This is modeled after the linky function, but drops support for sanitize so we don't have to
 //import an unminified angular-sanitize module
-tsafApp.filter('linkq',  ['$sanitize', function($sanitize: ng.sanitize.ISanitizeService) {
+tsafApp.filter('linkq', ['$sanitize', function($sanitize: ng.sanitize.ISanitizeService) {
 	var QUERY_REGEXP: RegExp = /((q|band)\([^)]+\))/;
 	return function(text: string, target: string) {
 		if (!text) return text;
