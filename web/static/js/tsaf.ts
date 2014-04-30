@@ -11,7 +11,6 @@ var tsafApp = angular.module('tsafApp', [
 	'tsafControllers',
 	'mgcrea.ngStrap',
 	'ngSanitize',
-	'ui.codemirror',
 ]);
 
 tsafApp.config(['$routeProvider', '$locationProvider', function($routeProvider: ng.route.IRouteProvider, $locationProvider: ng.ILocationProvider) {
@@ -743,21 +742,12 @@ tsafControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rout
 	var search = $location.search();
 	var current = search.config_text;
 	var line_re = /test:(\d+)/;
-	function jumpToLine(i: number) {
-		$scope.editor.setCursor(i-1);
-		$scope.editor.addLineClass(i, null, "center-me");
-		var line = $('.CodeMirror-lines .center-me');
-		var h = line.parent();
-		$('.CodeMirror-scroll').scrollTop(0).scrollTop(line.offset().top - $('.CodeMirror-scroll').offset().top - Math.round($('.CodeMirror-scroll').height()/2));
+	function lineHighlight(line: any) {
+		$(".lines div").eq(line-1).addClass("lineerror");
 	}
-	$scope.editor = {};
-	$scope.codemirrorLoaded = function(editor){
-		$scope.editor = editor;
-		var doc = editor.getDoc();
-		editor.focus();
-		editor.setOption('lineNumbers', true);
-		doc.markClean();
-	};
+	function lineClear() {
+		$(".lineerror").removeClass("lineerror");
+	}
 	try {
 		current = atob(current);
 	}
@@ -778,6 +768,7 @@ tsafControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rout
 	$scope.config_text = current;
 	$scope.set = () => {
 		$scope.result = null;
+		lineClear();
 		$http.get('/api/config_test?config_text=' + encodeURIComponent($scope.config_text))
 			.success((data) => {
 				if (data == "") {
@@ -786,7 +777,7 @@ tsafControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rout
 					$scope.result = data;
 					var m = data.match(line_re);
 					if (angular.isArray(m) && (m.length > 1)) {
-						jumpToLine(parseInt(m[1]));
+						lineHighlight(m[1]);
 					}
 				}
 			})
@@ -1059,6 +1050,14 @@ tsafApp.directive("tooltip", function() {
 	return {
 		link: function(scope: IGraphScope, elem: any, attrs: any) {
 			angular.element(elem[0]).tooltip({placement: "bottom"});
+		},
+	};
+});
+
+tsafApp.directive('tsLine', () => {
+	return {
+		link: (scope: any, elem: any, attrs: any) => {
+			elem.linedtextarea();
 		},
 	};
 });
