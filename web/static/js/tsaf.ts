@@ -742,12 +742,6 @@ tsafControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rout
 	var search = $location.search();
 	var current = search.config_text;
 	var line_re = /test:(\d+)/;
-	function lineHighlight(line: any) {
-		$(".lines div").eq(line-1).addClass("lineerror");
-	}
-	function lineClear() {
-		$(".lineerror").removeClass("lineerror");
-	}
 	try {
 		current = atob(current);
 	}
@@ -768,7 +762,7 @@ tsafControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rout
 	$scope.config_text = current;
 	$scope.set = () => {
 		$scope.result = null;
-		lineClear();
+		$scope.line = null;
 		$http.get('/api/config_test?config_text=' + encodeURIComponent($scope.config_text))
 			.success((data) => {
 				if (data == "") {
@@ -777,7 +771,7 @@ tsafControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rout
 					$scope.result = data;
 					var m = data.match(line_re);
 					if (angular.isArray(m) && (m.length > 1)) {
-						lineHighlight(m[1]);
+						$scope.line = m[1];
 					}
 				}
 			})
@@ -1058,6 +1052,20 @@ tsafApp.directive('tsLine', () => {
 	return {
 		link: (scope: any, elem: any, attrs: any) => {
 			elem.linedtextarea();
+			var parent = elem.parent();
+			var linesDiv = parent
+			function lineHighlight(line: any) {
+				parent.find('.lines div').eq(line-1).addClass('lineerror');
+			}
+			function lineClear() {
+				parent.find('.lineerror').removeClass('lineerror');
+			}
+			scope.$watch(attrs.tsLine, (v: any) => {
+				lineClear();
+				if (v) {
+					lineHighlight(v);
+				}
+			});
 		},
 	};
 });
