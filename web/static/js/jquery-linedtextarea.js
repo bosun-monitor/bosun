@@ -12,6 +12,10 @@
 		 * the current system
 		 */
 		var fillOutLines = function(linesDiv, h, lineNo) {
+			while (linesDiv.height() > h) {
+				linesDiv.find('div').last().remove();
+				lineNo--;
+			}
 			while (linesDiv.height() <= h) {
 				linesDiv.append("<div>" + lineNo + "</div>");
 				lineNo++;
