@@ -182,10 +182,10 @@ func SilenceClear(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) 
 func ConfigTest(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 	_, err := conf.New("test", r.FormValue("config_text"))
 	if err != nil {
-		fmt.Fprintf(w, err.Error())
+		fmt.Fprint(w, err.Error())
 	}
 }
 
 func Config(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, schedule.Conf.RawText)
+	fmt.Fprint(w, schedule.Conf.RawText)
 }
