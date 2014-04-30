@@ -609,12 +609,6 @@ tsafControllers.controller('ConfigCtrl', [
         var search = $location.search();
         var current = search.config_text;
         var line_re = /test:(\d+)/;
-        function lineHighlight(line) {
-            $(".lines div").eq(line - 1).addClass("lineerror");
-        }
-        function lineClear() {
-            $(".lineerror").removeClass("lineerror");
-        }
         try  {
             current = atob(current);
         } catch (e) {
@@ -632,7 +626,7 @@ tsafControllers.controller('ConfigCtrl', [
         $scope.config_text = current;
         $scope.set = function () {
             $scope.result = null;
-            lineClear();
+            $scope.line = null;
             $http.get('/api/config_test?config_text=' + encodeURIComponent($scope.config_text)).success(function (data) {
                 if (data == "") {
                     $scope.result = "Valid";
@@ -640,7 +634,7 @@ tsafControllers.controller('ConfigCtrl', [
                     $scope.result = data;
                     var m = data.match(line_re);
                     if (angular.isArray(m) && (m.length > 1)) {
-                        lineHighlight(m[1]);
+                        $scope.line = m[1];
                     }
                 }
             }).error(function (error) {
@@ -895,6 +889,20 @@ tsafApp.directive('tsLine', function () {
     return {
         link: function (scope, elem, attrs) {
             elem.linedtextarea();
+            var parent = elem.parent();
+            var linesDiv = parent;
+            function lineHighlight(line) {
+                parent.find('.lines div').eq(line - 1).addClass('lineerror');
+            }
+            function lineClear() {
+                parent.find('.lineerror').removeClass('lineerror');
+            }
+            scope.$watch(attrs.tsLine, function (v) {
+                lineClear();
+                if (v) {
+                    lineHighlight(v);
+                }
+            });
         }
     };
 });
