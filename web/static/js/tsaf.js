@@ -892,6 +892,10 @@ tsafApp.directive('tsLine', function () {
             var parent = elem.parent();
             var linesDiv = parent;
             function lineHighlight(line) {
+                var lineHeight = elem[0].scrollHeight;
+                var jump = (line - 1) * lineHeight;
+                elem.scrollTop(jump);
+                elem.scroll();
                 parent.find('.lines div').eq(line - 1).addClass('lineerror');
             }
             function lineClear() {

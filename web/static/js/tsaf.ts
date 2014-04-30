@@ -736,6 +736,7 @@ interface IConfigScope extends ng.IScope {
 	editor: any;
 	codemirrorLoaded: (editor: any) => void;
 	set: () => void;
+	line: number;
 }
 
 tsafControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$route', function($scope: IConfigScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService){
@@ -1055,7 +1056,11 @@ tsafApp.directive('tsLine', () => {
 			var parent = elem.parent();
 			var linesDiv = parent
 			function lineHighlight(line: any) {
-				parent.find('.lines div').eq(line-1).addClass('lineerror');
+				var lineHeight = elem[0].scrollHeight;
+				var jump = (line - 1) * lineHeight;
+				elem.scrollTop(jump);
+				elem.scroll();
+				parent.find('.lines div').eq(line - 1).addClass('lineerror');
 			}
 			function lineClear() {
 				parent.find('.lineerror').removeClass('lineerror');
