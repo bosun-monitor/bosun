@@ -78,8 +78,13 @@
 	<div class="tab-pane" ng-class="{active: tab == 'metrics'}">
 		<div class="row">
 			<h1>Metrics</h1>
+			<form role="form">
+				<div class="form-group">
+					<input class="form-control" placeholder="Filter Metrics" ng-model="filterMetrics">
+				</div>
+			</form>
 			<ul>
-				<li ng-repeat="metric in metrics"><a href="/graph?b64={{btoa(json(mlink(metric)))}}" ng-bind="metric"></a></li>
+				<li ng-repeat="metric in metrics | filter:filterMetrics"><a href="/graph?b64={{btoa(json(mlink(metric)))}}" ng-bind="metric"></a></li>
 			</ul>
 		</div>
 	</div>
