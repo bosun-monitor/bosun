@@ -150,6 +150,8 @@ tsafControllers.controller('DashboardCtrl', ['$scope', function($scope: IDashboa
 interface IItemsScope extends ng.IScope {
 	metrics: string[];
 	hosts: string[];
+	filterMetrics: string;
+	filterHosts: string;
 	status: string;
 }
 
@@ -556,6 +558,7 @@ interface IHostScope extends ng.IScope {
 	interfaces: string[];
 	error: string;
 	running: string;
+	filterMetrics: string;
 }
 
 tsafControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route', function($scope: IHostScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService){
