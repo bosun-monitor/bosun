@@ -4,14 +4,24 @@
 <div class="row">
 	<div class="col-lg-6">
 		<h1>Metrics</h1>
-			<ul>
-				<li ng-repeat="metric in metrics"><a href="/graph?b64={{btoa(json(req_from_m(metric)))}}" ng-bind="metric"></a></li>
-			</ul>
+		<form role="form">
+			<div class="form-group">
+				<input class="form-control" placeholder="Filter Metrics" ng-model="filterMetrics">
+			</div>
+		</form>
+		<ul>
+			<li ng-repeat="metric in metrics | filter:filterMetrics"><a href="/graph?b64={{btoa(json(req_from_m(metric)))}}" ng-bind="metric"></a></li>
+		</ul>
 	</div>
 	<div class="col-lg-6">
-		<h2>Hosts</h2>
+		<h1>Hosts</h1>
+		<form role="form">
+			<div class="form-group">
+				<input class="form-control" placeholder="Filter Hosts" ng-model="filterHosts">
+			</div>
+		</form>
 		<ul>
-			<li ng-repeat="host in hosts"><a href="/host?host={{host}}&time=1d-ago" ng-bind="host"></a></li>
+			<li ng-repeat="host in hosts | filter:filterHosts"><a href="/host?host={{host}}&time=1d-ago" ng-bind="host"></a></li>
 		</ul>
 	</div>
 </div>
