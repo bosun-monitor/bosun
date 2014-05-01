@@ -14,10 +14,10 @@ import (
 	ttemplate "text/template"
 	"time"
 
+	"github.com/StackExchange/tsaf/_third_party/github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/tsaf/conf/parse"
 	"github.com/StackExchange/tsaf/expr"
 	eparse "github.com/StackExchange/tsaf/expr/parse"
-	"github.com/StackExchange/tsaf/_third_party/github.com/StackExchange/scollector/opentsdb"
 )
 
 type Conf struct {

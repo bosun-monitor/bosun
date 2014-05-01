@@ -13,9 +13,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/StackExchange/tsaf/expr"
 	"github.com/StackExchange/tsaf/_third_party/github.com/MiniProfiler/go/miniprofiler"
 	"github.com/StackExchange/tsaf/_third_party/github.com/StackExchange/scollector/opentsdb"
+	"github.com/StackExchange/tsaf/expr"
 )
 
 // Graph takes an OpenTSDB request data structure and queries OpenTSDB. Use the

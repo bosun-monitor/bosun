@@ -5,9 +5,9 @@ import (
 	"log"
 	"time"
 
+	"github.com/StackExchange/tsaf/_third_party/github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/tsaf/conf"
 	"github.com/StackExchange/tsaf/expr"
-	"github.com/StackExchange/tsaf/_third_party/github.com/StackExchange/scollector/opentsdb"
 )
 
 func (s *Schedule) Check() {

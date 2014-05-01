@@ -7,10 +7,10 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/StackExchange/tsaf/_third_party/github.com/howeyc/fsnotify"
 	"github.com/StackExchange/tsaf/conf"
 	"github.com/StackExchange/tsaf/relay"
 	"github.com/StackExchange/tsaf/sched"
-	"github.com/StackExchange/tsaf/_third_party/github.com/howeyc/fsnotify"
 	"github.com/StackExchange/tsaf/web"
 )
 
