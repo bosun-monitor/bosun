@@ -361,16 +361,51 @@ func (q Query) String() string {
 	return s
 }
 
-func (r Request) String() string {
+func (r *Request) String() string {
 	v := make(url.Values)
 	for _, q := range r.Queries {
 		v.Add("m", q.String())
 	}
-	v.Add("start", fmt.Sprint(r.Start))
-	if e := fmt.Sprint(r.End); r.End != nil && e != "" {
-		v.Add("end", e)
+	if start, err := CanonicalTime(r.Start); err == nil {
+		v.Add("start", start)
+	}
+	if end, err := CanonicalTime(r.End); err == nil {
+		v.Add("end", end)
 	}
 	return v.Encode()
+}
+
+// Search returns a string suitable for OpenTSDB's `/` route.
+func (r *Request) Search() string {
+	// OpenTSDB uses the URL hash, not search parameters, to do this. The values are
+	// not URL encoded. So it's the same as a url.Values just left as normal
+	// strings.
+	v, err := url.ParseQuery(r.String())
+	if err != nil {
+		return ""
+	}
+	buf := &bytes.Buffer{}
+	for k, values := range v {
+		for _, value := range values {
+			fmt.Fprintf(buf, "%s=%s&", k, value)
+		}
+	}
+	return buf.String()
+}
+
+// CanonicalTime converts v to a string for use with OpenTSDB's `/` route.
+func CanonicalTime(v interface{}) (string, error) {
+	if s, ok := v.(string); ok {
+		if strings.HasSuffix(s, "-ago") {
+			return s, nil
+		}
+	}
+	const f = "2006/01/02-15:04:05"
+	t, err := ParseTime(v)
+	if err != nil {
+		return "", err
+	}
+	return t.Format(f), nil
 }
 
 // ParseAbsTime returns the time of s, which must be of any non-relative (not
@@ -467,7 +502,7 @@ func (r *Request) AutoDownsample(l int64) error {
 
 // Query performs a v2 OpenTSDB request to the given host. host should be of the
 // form hostname:port. Can return a RequestError.
-func (r Request) Query(host string) (ResponseSet, error) {
+func (r *Request) Query(host string) (ResponseSet, error) {
 	u := url.URL{
 		Scheme: "http",
 		Host:   host,
@@ -512,12 +547,12 @@ func (r *RequestError) Error() string {
 }
 
 type Context interface {
-	Query(Request) (ResponseSet, error)
+	Query(*Request) (ResponseSet, error)
 }
 
 type Host string
 
-func (h Host) Query(r Request) (ResponseSet, error) {
+func (h Host) Query(r *Request) (ResponseSet, error) {
 	return r.Query(string(h))
 }
 
@@ -538,7 +573,7 @@ func NewCache(host string) *Cache {
 	}
 }
 
-func (c *Cache) Query(r Request) (ResponseSet, error) {
+func (c *Cache) Query(r *Request) (ResponseSet, error) {
 	b, err := json.Marshal(&r)
 	if err != nil {
 		return nil, err
@@ -564,7 +599,7 @@ func NewDateCache(host string, now time.Time) *DateCache {
 	}
 }
 
-func (c *DateCache) Query(r Request) (ResponseSet, error) {
+func (c *DateCache) Query(r *Request) (ResponseSet, error) {
 	start, err := ParseTime(r.Start)
 	if err != nil {
 		return nil, err
