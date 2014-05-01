@@ -6,10 +6,10 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/StackExchange/tsaf/conf"
-	"github.com/StackExchange/tsaf/expr"
 	"github.com/StackExchange/tsaf/_third_party/github.com/MiniProfiler/go/miniprofiler"
 	"github.com/StackExchange/tsaf/_third_party/github.com/StackExchange/scollector/opentsdb"
+	"github.com/StackExchange/tsaf/conf"
+	"github.com/StackExchange/tsaf/expr"
 )
 
 func Expr(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {

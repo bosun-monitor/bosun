@@ -8,8 +8,8 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/StackExchange/tsaf/search"
 	"github.com/StackExchange/tsaf/_third_party/github.com/mreiferson/go-httpclient"
+	"github.com/StackExchange/tsaf/search"
 )
 
 func RelayHTTP(addr, dest string) error {

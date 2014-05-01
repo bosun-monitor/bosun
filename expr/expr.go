@@ -7,9 +7,9 @@ import (
 	"reflect"
 	"runtime"
 
-	"github.com/StackExchange/tsaf/expr/parse"
 	"github.com/StackExchange/tsaf/_third_party/github.com/MiniProfiler/go/miniprofiler"
 	"github.com/StackExchange/tsaf/_third_party/github.com/StackExchange/scollector/opentsdb"
+	"github.com/StackExchange/tsaf/expr/parse"
 )
 
 type state struct {
