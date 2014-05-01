@@ -1056,7 +1056,7 @@ tsafApp.directive('tsLine', () => {
 			var parent = elem.parent();
 			var linesDiv = parent
 			function lineHighlight(line: any) {
-				var lineHeight = elem[0].scrollHeight;
+				var lineHeight = elem[0].scrollHeight / (elem[0].value.match(/\n/g).length + 1);
 				var jump = (line - 1) * lineHeight;
 				elem.scrollTop(jump);
 				elem.scroll();
