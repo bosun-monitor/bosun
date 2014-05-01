@@ -361,7 +361,7 @@ func (q Query) String() string {
 	return s
 }
 
-func (r Request) String() string {
+func (r *Request) String() string {
 	v := make(url.Values)
 	for _, q := range r.Queries {
 		v.Add("m", q.String())
@@ -467,7 +467,7 @@ func (r *Request) AutoDownsample(l int64) error {
 
 // Query performs a v2 OpenTSDB request to the given host. host should be of the
 // form hostname:port. Can return a RequestError.
-func (r Request) Query(host string) (ResponseSet, error) {
+func (r *Request) Query(host string) (ResponseSet, error) {
 	u := url.URL{
 		Scheme: "http",
 		Host:   host,
@@ -512,12 +512,12 @@ func (r *RequestError) Error() string {
 }
 
 type Context interface {
-	Query(Request) (ResponseSet, error)
+	Query(*Request) (ResponseSet, error)
 }
 
 type Host string
 
-func (h Host) Query(r Request) (ResponseSet, error) {
+func (h Host) Query(r *Request) (ResponseSet, error) {
 	return r.Query(string(h))
 }
 
@@ -538,7 +538,7 @@ func NewCache(host string) *Cache {
 	}
 }
 
-func (c *Cache) Query(r Request) (ResponseSet, error) {
+func (c *Cache) Query(r *Request) (ResponseSet, error) {
 	b, err := json.Marshal(&r)
 	if err != nil {
 		return nil, err
@@ -564,7 +564,7 @@ func NewDateCache(host string, now time.Time) *DateCache {
 	}
 }
 
-func (c *DateCache) Query(r Request) (ResponseSet, error) {
+func (c *DateCache) Query(r *Request) (ResponseSet, error) {
 	start, err := ParseTime(r.Start)
 	if err != nil {
 		return nil, err
