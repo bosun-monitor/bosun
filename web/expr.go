@@ -63,7 +63,7 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 			return nil, err
 		}
 	}
-	all, queries, err := a.Crit.Execute(opentsdb.NewDateCache(schedule.Conf.TsdbHost, now), t)
+	all, queries, err := a.Crit.ExecuteTime(opentsdb.NewCache(schedule.Conf.TsdbHost), t, now)
 	if err != nil {
 		return nil, err
 	}

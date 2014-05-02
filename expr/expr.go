@@ -6,6 +6,7 @@ import (
 	"math"
 	"reflect"
 	"runtime"
+	"time"
 
 	"github.com/StackExchange/tsaf/_third_party/github.com/MiniProfiler/go/miniprofiler"
 	"github.com/StackExchange/tsaf/_third_party/github.com/StackExchange/scollector/opentsdb"
@@ -14,6 +15,7 @@ import (
 
 type state struct {
 	*Expr
+	now     time.Time
 	context opentsdb.Context
 	queries []opentsdb.Request
 }
@@ -46,10 +48,16 @@ func New(expr string) (*Expr, error) {
 // Execute applies a parse expression to the specified OpenTSDB context,
 // and returns one result per group. T may be nil to ignore timings.
 func (e *Expr) Execute(c opentsdb.Context, T miniprofiler.Timer) (r []*Result, queries []opentsdb.Request, err error) {
+	return e.ExecuteTime(c, T, time.Now().UTC())
+}
+
+// ExecuteTime is identical to Execute, but OpenTSDB queries
+func (e *Expr) ExecuteTime(c opentsdb.Context, T miniprofiler.Timer, now time.Time) (r []*Result, queries []opentsdb.Request, err error) {
 	defer errRecover(&err)
 	s := &state{
 		Expr:    e,
 		context: c,
+		now:     now,
 	}
 	if T == nil {
 		T = new(miniprofiler.Profile)
