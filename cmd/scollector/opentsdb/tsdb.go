@@ -17,7 +17,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/StackExchange/slog"
+	"github.com/StackExchange/tsaf/_third_party/github.com/StackExchange/slog"
 )
 
 var l = log.New(os.Stdout, "", log.LstdFlags)
@@ -393,6 +393,8 @@ func (r *Request) Search() string {
 	return buf.String()
 }
 
+const TSDBTimeFormat = "2006/01/02-15:04:05"
+
 // CanonicalTime converts v to a string for use with OpenTSDB's `/` route.
 func CanonicalTime(v interface{}) (string, error) {
 	if s, ok := v.(string); ok {
@@ -400,12 +402,11 @@ func CanonicalTime(v interface{}) (string, error) {
 			return s, nil
 		}
 	}
-	const f = "2006/01/02-15:04:05"
 	t, err := ParseTime(v)
 	if err != nil {
 		return "", err
 	}
-	return t.Format(f), nil
+	return t.Format(TSDBTimeFormat), nil
 }
 
 // ParseAbsTime returns the time of s, which must be of any non-relative (not
@@ -451,9 +452,9 @@ func ParseTime(v interface{}) (time.Time, error) {
 			return now, nil
 		}
 	case int64:
-		return time.Unix(i, 0), nil
+		return time.Unix(i, 0).UTC(), nil
 	default:
-		return time.Time{}, errors.New("type must be string or int64")
+		return time.Time{}, fmt.Errorf("type must be string or int64, got: %v", v)
 	}
 }
 
@@ -496,6 +497,28 @@ func (r *Request) AutoDownsample(l int64) error {
 	ds := fmt.Sprintf("%ds-avg", int64(d.Seconds()))
 	for _, q := range r.Queries {
 		q.Downsample = ds
+	}
+	return nil
+}
+
+// SetTime adjusts the start and end time of the request to assume t is now.
+// Relative times ("1m-ago") are changed to absolute times. Existing absolute
+// times are adjusted by the difference between time.Now() and t.
+func (r *Request) SetTime(t time.Time) error {
+	diff := -time.Since(t)
+	start, err := ParseTime(r.Start)
+	if err != nil {
+		return err
+	}
+	r.Start = start.Add(diff).Format(TSDBTimeFormat)
+	if r.End != nil {
+		end, err := ParseTime(r.End)
+		if err != nil {
+			return err
+		}
+		r.End = end.Add(diff).Format(TSDBTimeFormat)
+	} else {
+		r.End = t.UTC().Format(TSDBTimeFormat)
 	}
 	return nil
 }
@@ -585,38 +608,4 @@ func (c *Cache) Query(r *Request) (ResponseSet, error) {
 	rs, e := r.Query(c.host)
 	c.cache[s] = &cacheResult{rs, e}
 	return rs, e
-}
-
-type DateCache struct {
-	*Cache
-	now time.Time
-}
-
-func NewDateCache(host string, now time.Time) *DateCache {
-	return &DateCache{
-		Cache: NewCache(host),
-		now:   now,
-	}
-}
-
-func (c *DateCache) Query(r *Request) (ResponseSet, error) {
-	start, err := ParseTime(r.Start)
-	if err != nil {
-		return nil, err
-	}
-	var end time.Time
-	if r.End != nil {
-		end, err = ParseTime(r.End)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		end = time.Now()
-	}
-	diff := c.now.Sub(end)
-	start = start.Add(diff)
-	end = end.Add(diff)
-	r.Start = start.Unix()
-	r.End = end.Unix()
-	return c.Cache.Query(r)
 }
