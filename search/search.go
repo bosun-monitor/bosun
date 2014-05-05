@@ -173,6 +173,7 @@ func TagKeysByMetric(metric string) []string {
 	for k := range Tagk[metric] {
 		r = append(r, k)
 	}
+	sort.Strings(r)
 	return r
 }
 
@@ -183,6 +184,7 @@ func TagValuesByMetricTagKey(metric, tagk string) []string {
 	for k := range Tagv[Query{metric, tagk}] {
 		r = append(r, k)
 	}
+	sort.Strings(r)
 	return r
 }
 
