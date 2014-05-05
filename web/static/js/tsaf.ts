@@ -62,6 +62,11 @@ tsafApp.config(['$routeProvider', '$locationProvider', function($routeProvider: 
 			templateUrl: 'partials/config.html',
 			controller: 'ConfigCtrl',
 		}).
+		when('/action', {
+			title: 'Action',
+			templateUrl: 'partials/action.html',
+			controller: 'ActionCtrl',
+		}).
 		otherwise({
 			redirectTo: '/',
 		});
@@ -88,21 +93,10 @@ interface ITsafScope extends ng.IScope {
 	timeanddate: number[];
 	schedule: any;
 	req_from_m: (m: string) => Request;
-	lookup: (names: string[]) => any; // converts []AlertKey into map[AlertKey]State
+	refresh: () => void;
 }
 
 tsafControllers.controller('TsafCtrl', ['$scope', '$route', '$http', function($scope: ITsafScope, $route: ng.route.IRouteService, $http: ng.IHttpService) {
-	$scope.lookup = (names: string[]) => {
-		var m: any = {};
-		angular.forEach(names, (v) => {
-			var s = $scope.schedule.Status[v];
-			if (!s) {
-				return;
-			}
-			m[v] = s;
-		});
-		return m;
-	}
 	$scope.active = (v: string) => {
 		if (!$route.current) {
 			return null;
@@ -131,17 +125,19 @@ tsafControllers.controller('TsafCtrl', ['$scope', '$route', '$http', function($s
 		r.queries.push(q);
 		return r;
 	};
-	$http.get('/api/alerts').success(data => {
-		angular.forEach(data.Status, (v, k) => {
-			v.Touched = moment(v.Touched).utc();
-			angular.forEach(v.History, (v, k) => {
-				v.Time = moment(v.Time).utc();
+	$scope.refresh = () => {
+		$http.get('/api/alerts').success(data => {
+			angular.forEach(data.Status, (v, k) => {
+				v.Touched = moment(v.Touched).utc();
+				angular.forEach(v.History, (v, k) => {
+					v.Time = moment(v.Time).utc();
+				});
+				v.last = v.History[v.History.length-1];
 			});
-			v.last = v.History[v.History.length-1];
+			$scope.schedule = data;
+			$scope.timeanddate = data.TimeAndDate;
 		});
-		$scope.schedule = data;
-		$scope.timeanddate = data.TimeAndDate;
-	});
+	};
 }]);
 
 interface IDashboardScope extends ITsafScope {
@@ -152,6 +148,7 @@ interface IDashboardScope extends ITsafScope {
 }
 
 tsafControllers.controller('DashboardCtrl', ['$scope', function($scope: IDashboardScope) {
+	$scope.refresh();
 	$scope.shown = {};
 	$scope.collapse = (i: any) => {
 		$scope.shown[i] = !$scope.shown[i];
@@ -807,7 +804,6 @@ tsafControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rout
 	$scope.set();
 }]);
 
-
 interface ISilenceScope extends IExprScope {
 	silences: any;
 	error: string;
@@ -921,6 +917,39 @@ tsafControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$rou
 	};
 }]);
 
+interface IActionScope extends IExprScope {
+	type: string;
+	user: string;
+	message: string;
+	keys: string[];
+	submit: () => void;
+}
+
+tsafControllers.controller('ActionCtrl', ['$scope', '$http', '$location', '$route', function($scope: IActionScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService){
+	var search = $location.search();
+	$scope.type = search.type;
+	if (!angular.isArray(search.key)) {
+		$scope.keys = [search.key];
+	} else {
+		$scope.keys = search.key;
+	}
+	$scope.submit = () => {
+		var data = {
+			type: $scope.type,
+			user: $scope.user,
+			message: $scope.message,
+			key: $scope.keys[0],
+		};
+		$http.post('/api/action', data)
+			.success((data) => {
+				$location.url('/');
+			})
+			.error((error) => {
+				alert(error);
+			});
+	};
+}]);
+
 tsafApp.directive('tsResults', function() {
 	return {
 		templateUrl: '/partials/results.html',
@@ -930,6 +959,33 @@ tsafApp.directive('tsResults', function() {
 tsafApp.directive('tsState', function() {
 	return {
 		templateUrl: '/partials/alertstate.html',
+		link: function(scope: any, elem: any, attrs: any) {
+			scope.action = (type: string) => {
+				var key = encodeURIComponent(scope.name);
+				return '/action?type=' + type + '&key=' + key;
+			};
+		},
+	};
+});
+
+tsafApp.directive('tsAck', () => {
+	return {
+		restrict: 'E',
+		templateUrl: '/partials/ack.html',
+	};
+});
+
+tsafApp.directive('tsClose', () => {
+	return {
+		restrict: 'E',
+		templateUrl: '/partials/close.html',
+	};
+});
+
+tsafApp.directive('tsForget', () => {
+	return {
+		restrict: 'E',
+		templateUrl: '/partials/forget.html',
 	};
 });
 

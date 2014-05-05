@@ -52,6 +52,10 @@ tsafApp.config([
             title: 'Configuration',
             templateUrl: 'partials/config.html',
             controller: 'ConfigCtrl'
+        }).when('/action', {
+            title: 'Action',
+            templateUrl: 'partials/action.html',
+            controller: 'ActionCtrl'
         }).otherwise({
             redirectTo: '/'
         });
@@ -68,17 +72,6 @@ var tsafControllers = angular.module('tsafControllers', []);
 
 tsafControllers.controller('TsafCtrl', [
     '$scope', '$route', '$http', function ($scope, $route, $http) {
-        $scope.lookup = function (names) {
-            var m = {};
-            angular.forEach(names, function (v) {
-                var s = $scope.schedule.Status[v];
-                if (!s) {
-                    return;
-                }
-                m[v] = s;
-            });
-            return m;
-        };
         $scope.active = function (v) {
             if (!$route.current) {
                 return null;
@@ -107,21 +100,24 @@ tsafControllers.controller('TsafCtrl', [
             r.queries.push(q);
             return r;
         };
-        $http.get('/api/alerts').success(function (data) {
-            angular.forEach(data.Status, function (v, k) {
-                v.Touched = moment(v.Touched).utc();
-                angular.forEach(v.History, function (v, k) {
-                    v.Time = moment(v.Time).utc();
+        $scope.refresh = function () {
+            $http.get('/api/alerts').success(function (data) {
+                angular.forEach(data.Status, function (v, k) {
+                    v.Touched = moment(v.Touched).utc();
+                    angular.forEach(v.History, function (v, k) {
+                        v.Time = moment(v.Time).utc();
+                    });
+                    v.last = v.History[v.History.length - 1];
                 });
-                v.last = v.History[v.History.length - 1];
+                $scope.schedule = data;
+                $scope.timeanddate = data.TimeAndDate;
             });
-            $scope.schedule = data;
-            $scope.timeanddate = data.TimeAndDate;
-        });
+        };
     }]);
 
 tsafControllers.controller('DashboardCtrl', [
     '$scope', function ($scope) {
+        $scope.refresh();
         $scope.shown = {};
         $scope.collapse = function (i) {
             $scope.shown[i] = !$scope.shown[i];
@@ -750,6 +746,30 @@ tsafControllers.controller('SilenceCtrl', [
         };
     }]);
 
+tsafControllers.controller('ActionCtrl', [
+    '$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
+        var search = $location.search();
+        $scope.type = search.type;
+        if (!angular.isArray(search.key)) {
+            $scope.keys = [search.key];
+        } else {
+            $scope.keys = search.key;
+        }
+        $scope.submit = function () {
+            var data = {
+                type: $scope.type,
+                user: $scope.user,
+                message: $scope.message,
+                key: $scope.keys[0]
+            };
+            $http.post('/api/action', data).success(function (data) {
+                $location.url('/');
+            }).error(function (error) {
+                alert(error);
+            });
+        };
+    }]);
+
 tsafApp.directive('tsResults', function () {
     return {
         templateUrl: '/partials/results.html'
@@ -758,7 +778,34 @@ tsafApp.directive('tsResults', function () {
 
 tsafApp.directive('tsState', function () {
     return {
-        templateUrl: '/partials/alertstate.html'
+        templateUrl: '/partials/alertstate.html',
+        link: function (scope, elem, attrs) {
+            scope.action = function (type) {
+                var key = encodeURIComponent(scope.name);
+                return '/action?type=' + type + '&key=' + key;
+            };
+        }
+    };
+});
+
+tsafApp.directive('tsAck', function () {
+    return {
+        restrict: 'E',
+        templateUrl: '/partials/ack.html'
+    };
+});
+
+tsafApp.directive('tsClose', function () {
+    return {
+        restrict: 'E',
+        templateUrl: '/partials/close.html'
+    };
+});
+
+tsafApp.directive('tsForget', function () {
+    return {
+        restrict: 'E',
+        templateUrl: '/partials/forget.html'
     };
 });
 

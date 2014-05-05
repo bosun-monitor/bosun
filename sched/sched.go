@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -19,7 +20,7 @@ type Schedule struct {
 	sync.Mutex
 
 	Conf          *conf.Conf
-	Status        States
+	status        States
 	Notifications map[AlertKey]map[string]time.Time
 	Silence       map[string]*Silence
 	Group         map[time.Time]AlertKeys
@@ -44,8 +45,8 @@ func (s States) GroupStates() map[StateTuple]States {
 	for ak, st := range s {
 		t := StateTuple{
 			st.NeedAck,
-			st.Last().Status != stNormal,
-			st.Last().Status,
+			st.IsActive(),
+			st.Status(),
 		}
 		if _, present := r[t]; !present {
 			r[t] = make(States)
@@ -112,13 +113,13 @@ func (states States) GroupSets() map[string]AlertKeys {
 			if seen[s] {
 				continue
 			}
-			if group == nil || s.AlertKey().Name == group[0].Name {
+			if group == nil || s.AlertKey().Name() == group[0].Name() {
 				group = append(group, s.AlertKey())
 				seen[s] = true
 			}
 		}
 		if len(group) > 0 {
-			groups[group[0].Name] = group
+			groups[group[0].Name()] = group
 		}
 	}
 	return groups
@@ -130,14 +131,14 @@ func (s *Schedule) MarshalJSON() ([]byte, error) {
 		Status   Status
 		Subject  string
 		Len      int
-		Key      string `json:",omitempty"`
+		Alert    string
 		AlertKey AlertKey
 		Ago      string
 		Children []*Grouped `json:",omitempty"`
 	}
 	t := struct {
 		Alerts map[string]*conf.Alert
-		Status map[string]*State
+		Status States
 		Groups struct {
 			NeedAck      []*Grouped `json:",omitempty"`
 			Acknowledged []*Grouped `json:",omitempty"`
@@ -145,16 +146,17 @@ func (s *Schedule) MarshalJSON() ([]byte, error) {
 		TimeAndDate []int
 	}{
 		Alerts:      s.Conf.Alerts,
-		Status:      make(map[string]*State),
+		Status:      make(States),
 		TimeAndDate: s.Conf.TimeAndDate,
 	}
-	for k, v := range s.Status {
+	s.Lock()
+	for k, v := range s.status {
 		if v.Last().Status < stWarning {
 			continue
 		}
-		t.Status[k.String()] = v
+		t.Status[k] = v
 	}
-	for tuple, states := range s.Status.GroupStates() {
+	for tuple, states := range s.status.GroupStates() {
 		var grouped []*Grouped
 		switch tuple.Status {
 		case stWarning, stCritical:
@@ -163,7 +165,7 @@ func (s *Schedule) MarshalJSON() ([]byte, error) {
 					Active:   tuple.Active,
 					Status:   tuple.Status,
 					AlertKey: ak,
-					Key:      ak.String(),
+					Alert:    ak.Name(),
 					Subject:  state.Subject,
 					Ago:      marshalTime(state.Last().Time),
 				}
@@ -178,12 +180,12 @@ func (s *Schedule) MarshalJSON() ([]byte, error) {
 					Len:     len(group),
 				}
 				for _, ak := range group {
-					st := s.Status[ak]
+					st := s.status[ak]
 					g.Children = append(g.Children, &Grouped{
 						Active:   tuple.Active,
 						Status:   tuple.Status,
 						AlertKey: ak,
-						Key:      ak.String(),
+						Alert:    ak.Name(),
 						Subject:  st.Subject,
 						Ago:      marshalTime(st.Last().Time),
 					})
@@ -197,6 +199,7 @@ func (s *Schedule) MarshalJSON() ([]byte, error) {
 			t.Groups.Acknowledged = append(t.Groups.Acknowledged, grouped...)
 		}
 	}
+	s.Unlock()
 	return json.Marshal(&t)
 }
 
@@ -233,7 +236,7 @@ func (s *Schedule) RestoreState() {
 	defer s.Unlock()
 	s.cache = opentsdb.NewCache(s.Conf.TsdbHost)
 	s.Notifications = nil
-	s.Status = make(map[AlertKey]*State)
+	s.status = make(States)
 	f, err := os.Open(s.Conf.StateFile)
 	if err != nil {
 		log.Println(err)
@@ -262,7 +265,7 @@ func (s *Schedule) RestoreState() {
 			log.Println(err)
 			return
 		}
-		if a, present := s.Conf.Alerts[ak.Name]; !present {
+		if a, present := s.Conf.Alerts[ak.Name()]; !present {
 			log.Println("sched: alert no longer present, ignoring:", ak)
 			continue
 		} else if a.Squelched(st.Group) {
@@ -277,7 +280,7 @@ func (s *Schedule) RestoreState() {
 				st.Append(stNormal)
 			}
 		}
-		s.Status[ak] = &st
+		s.status[ak] = &st
 		for name, t := range notifications[ak] {
 			n, present := s.Conf.Notifications[name]
 			if !present {
@@ -308,7 +311,7 @@ func (s *Schedule) save() {
 		return
 	}
 	enc.Encode(s.Silence)
-	for k, v := range s.Status {
+	for k, v := range s.status {
 		enc.Encode(k)
 		enc.Encode(v)
 	}
@@ -338,7 +341,18 @@ func (s *Schedule) Run() error {
 	}
 }
 
-type AlertKey struct {
+type AlertKey string
+
+func NewAlertKey(name string, group opentsdb.TagSet) AlertKey {
+	return AlertKey(name + group.String())
+}
+
+func (a AlertKey) Name() string {
+	return strings.SplitN(string(a), "{", 2)[0]
+}
+
+/*
+type AlertKey11 struct {
 	Name  string
 	Group string
 }
@@ -353,21 +367,18 @@ func NewAlertKey(name string, group opentsdb.TagSet) AlertKey {
 func (a AlertKey) String() string {
 	return a.Name + a.Group
 }
+*/
 
 type AlertKeys []AlertKey
 
-func (a AlertKeys) Len() int      { return len(a) }
-func (a AlertKeys) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
-func (a AlertKeys) Less(i, j int) bool {
-	if a[i].Name == a[j].Name {
-		return a[i].Group < a[j].Group
-	}
-	return a[i].Name < a[j].Name
-}
+func (a AlertKeys) Len() int           { return len(a) }
+func (a AlertKeys) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a AlertKeys) Less(i, j int) bool { return a[i] < a[j] }
 
 type State struct {
-	// Most recent event last.
+	// Most recent last.
 	History      []Event
+	Actions      []Action
 	Touched      time.Time
 	Expr         string
 	Alert        string // helper data since AlertKeys don't serialize to JSON well
@@ -376,24 +387,75 @@ type State struct {
 	Computations expr.Computations
 	Subject      string
 	NeedAck      bool
+	Open         bool
+	Forgotten    bool
 }
 
 func (s *State) AlertKey() AlertKey {
 	return NewAlertKey(s.Alert, s.Group)
 }
 
-func (s *Schedule) Acknowledge(ak AlertKey) {
+func (s *State) Status() Status {
+	return s.Last().Status
+}
+
+func (s *State) IsActive() bool {
+	return s.Status() > stNormal
+}
+
+func (s *Schedule) Action(user, message string, t ActionType, ak AlertKey) error {
 	s.Lock()
-	delete(s.Notifications, ak)
-	if st := s.Status[ak]; st != nil {
-		st.NeedAck = false
+	defer func() {
+		s.Unlock()
+		s.Save()
+	}()
+	st := s.status[ak]
+	if st == nil {
+		return fmt.Errorf("no such alert key: %v", ak)
 	}
-	s.Unlock()
-	s.Save()
+	switch t {
+	case ActionAcknowledge:
+		if !st.NeedAck {
+			return fmt.Errorf("alert already acknowledged")
+		}
+		if !st.Open {
+			return fmt.Errorf("cannot acknowledge closed alert")
+		}
+		delete(s.Notifications, ak)
+		st.NeedAck = false
+	case ActionClose:
+		if st.NeedAck {
+			return fmt.Errorf("cannot close unacknowledged alert")
+		}
+		if st.IsActive() {
+			return fmt.Errorf("cannot close active alert")
+		}
+		st.Open = false
+	case ActionForget:
+		if st.NeedAck {
+			return fmt.Errorf("cannot close unacknowledged alert")
+		}
+		if st.IsActive() {
+			return fmt.Errorf("cannot forget active alert")
+		}
+		st.Open = false
+		st.Forgotten = true
+		delete(s.status, ak)
+	default:
+		return fmt.Errorf("unknown action type: %v", t)
+	}
+	st.Actions = append(st.Actions, Action{
+		User:    user,
+		Message: message,
+		Type:    t,
+		Time:    time.Now().UTC(),
+	})
+	return nil
 }
 
 func (s *State) Touch() {
 	s.Touched = time.Now().UTC()
+	s.Forgotten = false
 }
 
 // Appends status to the history if the status is different than the latest
@@ -446,3 +508,19 @@ func (s Status) String() string {
 func (s Status) MarshalJSON() ([]byte, error) {
 	return json.Marshal(s.String())
 }
+
+type Action struct {
+	User    string
+	Message string
+	Time    time.Time
+	Type    ActionType
+}
+
+type ActionType int
+
+const (
+	ActionNone ActionType = iota
+	ActionAcknowledge
+	ActionClose
+	ActionForget
+)
