@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"log"
+	_ "net/http/pprof"
 	"os"
 	"path/filepath"
 	"time"
