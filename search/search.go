@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"sort"
 	"strings"
 	"sync"
@@ -79,10 +80,10 @@ func HTTPExtract(body []byte) {
 	}
 	var dp opentsdb.DataPoint
 	var mdp opentsdb.MultiDataPoint
-	var err error
-	if err = json.Unmarshal(body, &dp); err == nil {
+	if err := json.Unmarshal(body, &mdp); err == nil {
 		mdp = append(mdp, &dp)
-	} else if err := json.Unmarshal(body, &mdp); err != nil {
+	} else if err = json.Unmarshal(body, &mdp); err != nil {
+		log.Printf("search: could not unmarshal: %s", body)
 		return
 	}
 	for _, d := range mdp {
