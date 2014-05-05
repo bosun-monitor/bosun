@@ -6,6 +6,7 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"path/filepath"
+	"runtime"
 	"time"
 
 	"github.com/StackExchange/tsaf/_third_party/github.com/StackExchange/scollector/collect"
@@ -35,6 +36,7 @@ func main() {
 	if err := collect.Init(c.RelayListen, "tsaf"); err != nil {
 		log.Fatal(err)
 	}
+	runtime.GOMAXPROCS(runtime.NumCPU())
 	sched.Load(c)
 	go func() { log.Fatal(relay.RelayHTTP(c.RelayListen, c.TsdbHost)) }()
 	go func() { log.Fatal(web.Listen(c.HttpListen, c.WebDir, c.TsdbHost)) }()

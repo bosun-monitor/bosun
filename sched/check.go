@@ -10,9 +10,14 @@ import (
 	"github.com/StackExchange/tsaf/expr"
 )
 
-func (s *Schedule) Check() {
+func (s *Schedule) Status(ak AlertKey) *State {
 	s.Lock()
-	defer s.Unlock()
+	st := s.status[ak]
+	s.Unlock()
+	return st
+}
+
+func (s *Schedule) Check() {
 	s.runStates = make(map[AlertKey]Status)
 	s.cache = opentsdb.NewCache(s.Conf.TsdbHost)
 	for _, a := range s.Conf.Alerts {
@@ -22,15 +27,16 @@ func (s *Schedule) Check() {
 	checkNotify := false
 	silenced := s.Silenced()
 	for ak, status := range s.runStates {
-		state := s.Status[ak]
+		state := s.Status(ak)
 		last := state.Append(status)
-		a := s.Conf.Alerts[ak.Name]
+		a := s.Conf.Alerts[ak.Name()]
 		if status > stNormal {
 			var subject = new(bytes.Buffer)
 			if err := s.ExecuteSubject(subject, a, state); err != nil {
 				log.Println(err)
 			}
 			state.Subject = subject.String()
+			state.Open = true
 		}
 		// On state increase, clear old notifications and notify current.
 		// On state decrease, and if the old alert was already acknowledged, notify current.
@@ -56,7 +62,9 @@ func (s *Schedule) Check() {
 		}
 		clearOld := func() {
 			state.NeedAck = false
+			s.Lock()
 			delete(s.Notifications, ak)
+			s.Unlock()
 		}
 		if status > last {
 			clearOld()
@@ -74,8 +82,12 @@ func (s *Schedule) Check() {
 }
 
 func (s *Schedule) CheckUnknown() {
-	for ak, st := range s.Status {
-		t := s.Conf.Alerts[ak.Name].Unknown
+	s.Lock()
+	for ak, st := range s.status {
+		if st.Forgotten {
+			continue
+		}
+		t := s.Conf.Alerts[ak.Name()].Unknown
 		if t == 0 {
 			t = s.Conf.Unknown
 		}
@@ -87,6 +99,7 @@ func (s *Schedule) CheckUnknown() {
 		}
 		s.runStates[ak] = stUnknown
 	}
+	s.Unlock()
 }
 
 func (s *Schedule) CheckAlert(a *conf.Alert) {
@@ -116,14 +129,16 @@ Loop:
 				continue Loop
 			}
 		}
-		state := s.Status[ak]
+		state := s.Status(ak)
 		if state == nil {
 			state = &State{
-				Alert: ak.Name,
+				Alert: ak.Name(),
 				Tags:  r.Group.Tags(),
 				Group: r.Group,
 			}
-			s.Status[ak] = state
+			s.Lock()
+			s.status[ak] = state
+			s.Unlock()
 		}
 		state.Touch()
 		status := checkStatus

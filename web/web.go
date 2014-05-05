@@ -33,7 +33,7 @@ func Listen(addr, dir, host string) error {
 	if err != nil {
 		log.Fatal(err)
 	}
-	router.Handle("/api/acknowledge/{alert}/{group}", JSON(Acknowledge))
+	router.Handle("/api/action", JSON(Action))
 	router.Handle("/api/alerts", JSON(Alerts))
 	router.Handle("/api/config", miniprofiler.NewHandler(Config))
 	router.Handle("/api/config_test", miniprofiler.NewHandler(ConfigTest))
@@ -108,14 +108,23 @@ func Alerts(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (inter
 	return schedule, nil
 }
 
-func Acknowledge(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	vars := mux.Vars(r)
-	ak := sched.AlertKey{
-		Name:  vars["alert"],
-		Group: vars["group"],
+func Action(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	var data map[string]string
+	j := json.NewDecoder(r.Body)
+	if err := j.Decode(&data); err != nil {
+		return nil, err
 	}
-	schedule.Acknowledge(ak)
-	return nil, nil
+	var at sched.ActionType
+	switch data["type"] {
+	case "ack":
+		at = sched.ActionAcknowledge
+	case "close":
+		at = sched.ActionClose
+	case "forget":
+		at = sched.ActionForget
+	}
+	err := schedule.Action(data["user"], data["message"], at, sched.AlertKey(data["key"]))
+	return nil, err
 }
 
 func SilenceGet(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {

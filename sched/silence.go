@@ -50,9 +50,10 @@ func (s Silence) ID() string {
 // unsilenced.
 func (s *Schedule) Silenced() map[AlertKey]time.Time {
 	aks := make(map[AlertKey]time.Time)
+	s.Lock()
 	for _, si := range s.Silence {
-		for ak, st := range s.Status {
-			if si.Silenced(ak.Name, st.Group) {
+		for ak, st := range s.status {
+			if si.Silenced(ak.Name(), st.Group) {
 				if aks[ak].Before(si.End) {
 					aks[ak] = si.End
 				}
@@ -60,6 +61,7 @@ func (s *Schedule) Silenced() map[AlertKey]time.Time {
 			}
 		}
 	}
+	s.Unlock()
 	return aks
 }
 
@@ -98,17 +100,17 @@ func (s *Schedule) AddSilence(start, end time.Time, alert, tagList string, confi
 			si.match[k] = v
 		}
 	}
+	s.Lock()
+	defer s.Unlock()
 	if confirm {
-		s.Lock()
 		delete(s.Silence, edit)
 		s.Silence[si.ID()] = si
-		s.Unlock()
 		s.Save()
 		return nil, nil
 	}
 	aks := make(AlertKeys, 0)
-	for ak, st := range s.Status {
-		if si.Matches(ak.Name, st.Group) {
+	for ak, st := range s.status {
+		if si.Matches(ak.Name(), st.Group) {
 			aks = append(aks, ak)
 		}
 	}
