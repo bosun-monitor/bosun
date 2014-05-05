@@ -17,7 +17,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/StackExchange/tsaf/_third_party/github.com/StackExchange/slog"
+	"github.com/StackExchange/slog"
 )
 
 var l = log.New(os.Stdout, "", log.LstdFlags)
