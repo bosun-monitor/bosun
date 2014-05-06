@@ -8,19 +8,20 @@ import (
 )
 
 func init() {
-	collectors = append(collectors, &IntervalCollector{F: puppet_disabled_func_linux, init: puppetInit})
+	collectors = append(collectors, &IntervalCollector{F: puppet_disabled_linux, init: puppetInit})
 }
 
 var puppetExists bool
 
-const puppetPath = "/var/lib/puppet/"
-const puppetDisabled = "/var/lib/puppet/state/agent_disabled.lock"
+const (
+	puppetPath     = "/var/lib/puppet/"
+	puppetDisabled = "/var/lib/puppet/state/agent_disabled.lock"
+)
 
 func puppetInit() {
 	update := func() {
-		if _, err := os.Stat(puppetPath); err == nil {
-			puppetExists = true
-		}
+		_, err := os.Stat(puppetPath)
+		puppetExists = err == nil
 	}
 	update()
 	go func() {
@@ -30,7 +31,7 @@ func puppetInit() {
 	}()
 }
 
-func puppet_disabled_func_linux() opentsdb.MultiDataPoint {
+func puppet_disabled_linux() opentsdb.MultiDataPoint {
 	if !puppetExists {
 		return nil
 	}
