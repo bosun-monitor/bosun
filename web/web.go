@@ -6,6 +6,7 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"path/filepath"
 	"time"
 
 	"github.com/StackExchange/tsaf/_third_party/github.com/MiniProfiler/go/miniprofiler"
@@ -50,8 +51,11 @@ func Listen(addr, dir, host string) error {
 	router.Handle("/api/tagv/{tagk}/{metric}", JSON(TagValuesByMetricTagKey))
 	http.Handle("/", miniprofiler.NewHandler(Index))
 	http.Handle("/api/", router)
-	http.Handle("/partials/", http.FileServer(http.Dir(dir)))
-	http.Handle("/static/", http.FileServer(http.Dir(dir)))
+	fs := http.FileServer(http.Dir(dir))
+	http.Handle("/partials/", fs)
+	http.Handle("/static/", fs)
+	static := http.FileServer(http.Dir(filepath.Join(dir, "static")))
+	http.Handle("/favicon.ico", static)
 	log.Println("TSAF web listening on:", addr)
 	log.Println("TSAF web directory:", dir)
 	return http.ListenAndServe(addr, nil)

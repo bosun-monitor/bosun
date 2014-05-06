@@ -2,12 +2,16 @@
 <html ng-app="tsafApp">
 	<head>
 		<title>TSAF</title>
+		<link rel="shortcut icon" href="/favicon.ico">
 		<meta name="viewport" content="width=device-width, initial-scale=1.0">
 		<link href="/static/css/bootstrap.min.css" rel="stylesheet">
 		<link href="/static/css/rickshaw.min.css" rel="stylesheet">
 		<style>
 			.navbar-static-top {
 				margin-bottom: 19px;
+			}
+			a.navbar-brand img {
+				margin-top: -5px;
 			}
 			.tablesorter-headerAsc .tablesorter-header-inner::before {
 				content: '▲';
@@ -27,7 +31,7 @@
 						<span class="icon-bar"></span>
 						<span class="icon-bar"></span>
 					</button>
-					<a class="navbar-brand" href="/">TSAF</a>
+					<a class="navbar-brand" href="/"><img src="/static/img/tsaf-logo-small.png"></a>
 				</div>
 				<div class="navbar-collapse collapse" id="navbar-collapse">
 					<ul class="nav navbar-nav">
