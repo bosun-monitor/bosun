@@ -48,20 +48,30 @@ var Builtins = map[string]parse.Func{
 		parse.TYPE_NUMBER,
 		Change,
 	},
+	"diff": {
+		[]parse.FuncType{parse.TYPE_STRING, parse.TYPE_STRING, parse.TYPE_STRING},
+		parse.TYPE_NUMBER,
+		Diff,
+	},
 	"dev": {
 		[]parse.FuncType{parse.TYPE_SERIES},
 		parse.TYPE_NUMBER,
 		Dev,
+	},
+	"first": {
+		[]parse.FuncType{parse.TYPE_SERIES},
+		parse.TYPE_NUMBER,
+		First,
 	},
 	"len": {
 		[]parse.FuncType{parse.TYPE_SERIES},
 		parse.TYPE_NUMBER,
 		Length,
 	},
-	"recent": {
+	"last": {
 		[]parse.FuncType{parse.TYPE_SERIES},
 		parse.TYPE_NUMBER,
-		Recent,
+		Last,
 	},
 	"since": {
 		[]parse.FuncType{parse.TYPE_SERIES},
@@ -243,6 +253,19 @@ func change(dps Series, args ...float64) float64 {
 	return avg(dps) * args[0]
 }
 
+func Diff(e *state, T miniprofiler.Timer, query, sduration, eduration string) (r []*Result, err error) {
+	r, err = Query(e, T, query, sduration, eduration)
+	if err != nil {
+		return
+	}
+	r, err = reduce(e, T, r, diff)
+	return
+}
+
+func diff(dps Series, args ...float64) float64 {
+	return last(dps) - first(dps)
+}
+
 func reduce(e *state, T miniprofiler.Timer, series []*Result, F func(Series, ...float64) float64, args ...float64) ([]*Result, error) {
 	var res []*Result
 	for _, s := range series {
@@ -349,11 +372,11 @@ func length(dps Series, args ...float64) (a float64) {
 	return float64(len(dps))
 }
 
-func Recent(e *state, T miniprofiler.Timer, series []*Result) ([]*Result, error) {
-	return reduce(e, T, series, recent)
+func Last(e *state, T miniprofiler.Timer, series []*Result) ([]*Result, error) {
+	return reduce(e, T, series, last)
 }
 
-func recent(dps Series, args ...float64) (a float64) {
+func last(dps Series, args ...float64) (a float64) {
 	last := -1
 	for k, v := range dps {
 		d, err := strconv.Atoi(k)
@@ -362,6 +385,26 @@ func recent(dps Series, args ...float64) (a float64) {
 		}
 		if d > last {
 			a = float64(v)
+			last = d
+		}
+	}
+	return
+}
+
+func First(e *state, T miniprofiler.Timer, series []*Result) ([]*Result, error) {
+	return reduce(e, T, series, first)
+}
+
+func first(dps Series, args ...float64) (a float64) {
+	first := math.MaxInt64
+	for k, v := range dps {
+		d, err := strconv.Atoi(k)
+		if err != nil {
+			panic(err)
+		}
+		if d < first {
+			a = float64(v)
+			first = d
 		}
 	}
 	return
