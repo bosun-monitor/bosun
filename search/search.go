@@ -80,7 +80,7 @@ func HTTPExtract(body []byte) {
 	}
 	var dp opentsdb.DataPoint
 	var mdp opentsdb.MultiDataPoint
-	if err := json.Unmarshal(body, &mdp); err == nil {
+	if err := json.Unmarshal(body, &dp); err == nil {
 		mdp = append(mdp, &dp)
 	} else if err = json.Unmarshal(body, &mdp); err != nil {
 		log.Printf("search: could not unmarshal: %s", body)
