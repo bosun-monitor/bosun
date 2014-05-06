@@ -120,7 +120,7 @@
 						</div>
 					</div>
 					<div class="form-group">
-						<label class="col-sm-4 control-label" tooltip title="Returns a per-second rate of change between points. If the values always increase (except for resets and rollovers), use counter. If the values can go down, use rate.">Derivative </label>
+						<label class="col-sm-4 control-label" tooltip title="If not set to gauge, this returns a per-second rate of change between points. If the values always increase (except for resets and rollovers), use counter. If the values can go down, use rate.">Series Type </label>
 						<div class="col-sm-8">
 							<select ng-model="t.derivative" ng-change="t.setDerivative()" ng-options="r for r in rate_options" class="form-control"></select>
 						</div>

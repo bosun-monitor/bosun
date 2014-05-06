@@ -231,7 +231,7 @@ var Query = (function () {
         this.aggregator = q && q.aggregator || 'sum';
         this.metric = q && q.metric || '';
         this.rate = q && q.rate || false;
-        this.derivative = q && q.derivative || '';
+        this.derivative = q && q.derivative || 'counter';
         this.rateOptions = q && q.rateOptions || new RateOptions;
         this.ds = q && q.ds || '';
         this.dstime = q && q.dstime || '';
@@ -259,7 +259,7 @@ var Query = (function () {
                 this.rateOptions.counterMax = max;
                 this.rateOptions.resetValue = 1;
                 break;
-            case "":
+            case "gauge":
                 this.rate = false;
                 break;
         }
@@ -306,7 +306,7 @@ tsafControllers.controller('GraphCtrl', [
     '$scope', '$http', '$location', '$route', '$timeout', function ($scope, $http, $location, $route, $timeout) {
         $scope.aggregators = ["sum", "min", "max", "avg", "dev", "zimsum", "mimmin", "minmax"];
         $scope.dsaggregators = ["", "sum", "min", "max", "avg", "dev", "zimsum", "mimmin", "minmax"];
-        $scope.rate_options = ["", "counter", "rate"];
+        $scope.rate_options = ["gauge", "counter", "rate"];
         var search = $location.search();
         var j = search.json;
         if (search.b64) {
