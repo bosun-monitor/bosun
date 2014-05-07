@@ -15,15 +15,15 @@ import (
 )
 
 var (
+	// Freq is how often metrics are sent to OpenTSDB. Counters are timestamped at the time
+	// they are added to the queue.
+	Freq = time.Second * 15
+
 	host     string
 	mr       string
 	tchan    chan *opentsdb.DataPoint
 	counters = make(map[string]*opentsdb.DataPoint)
 	lock     = sync.Mutex{}
-
-	// Freq is how often metrics are sent to OpenTSDB. Counters are timestamped at the time
-	// they are added to the queue.
-	Freq = time.Second * 15
 )
 
 // Init sets up the channels and the queue for sending data to OpenTSDB. It also
