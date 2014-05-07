@@ -16,35 +16,51 @@ tsafApp.config([
     '$routeProvider', '$locationProvider', function ($routeProvider, $locationProvider) {
         $locationProvider.html5Mode(true);
         $routeProvider.when('/', {
+            title: 'Dashboard',
             templateUrl: 'partials/dashboard.html',
             controller: 'DashboardCtrl'
         }).when('/items', {
+            title: 'Items',
             templateUrl: 'partials/items.html',
             controller: 'ItemsCtrl'
         }).when('/expr', {
+            title: 'Expression',
             templateUrl: 'partials/expr.html',
             controller: 'ExprCtrl'
         }).when('/egraph', {
+            title: 'Expression Graph',
             templateUrl: 'partials/egraph.html',
             controller: 'EGraphCtrl'
         }).when('/graph', {
+            title: 'Graph',
             templateUrl: 'partials/graph.html',
             controller: 'GraphCtrl'
         }).when('/host', {
+            title: 'Host View',
             templateUrl: 'partials/host.html',
             controller: 'HostCtrl',
             reloadOnSearch: false
         }).when('/rule', {
+            title: 'Rule',
             templateUrl: 'partials/rule.html',
             controller: 'RuleCtrl'
         }).when('/silence', {
+            title: 'Silence',
             templateUrl: 'partials/silence.html',
             controller: 'SilenceCtrl'
         }).when('/config', {
+            title: 'Configuration',
             templateUrl: 'partials/config.html',
             controller: 'ConfigCtrl'
         }).otherwise({
             redirectTo: '/'
+        });
+    }]);
+
+tsafApp.run([
+    '$location', '$rootScope', function ($location, $rootScope) {
+        $rootScope.$on('$routeChangeSuccess', function (event, current, previous) {
+            $rootScope.title = current.$$route.title;
         });
     }]);
 
