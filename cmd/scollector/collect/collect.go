@@ -15,8 +15,8 @@ import (
 )
 
 var (
-	// Freq is how often metrics are sent to OpenTSDB. Counters are timestamped at the time
-	// they are added to the queue.
+	// Freq is how often metrics are sent to OpenTSDB. Counters are timestamped at
+	// the time they are added to the queue.
 	Freq = time.Second * 15
 
 	host     string
@@ -68,8 +68,8 @@ func setHostName() error {
 	return nil
 }
 
-// Add takes a metric and increments a counter for that metric. The metric name is appended to
-// the basename specified in the Init function.
+// Add takes a metric and increments a counter for that metric. The metric name
+// is appended to the basename specified in the Init function.
 func Add(metric string, inc int64, ts opentsdb.TagSet) error {
 	if tchan == nil || mr == "" {
 		return errors.New("Init must be called before calling Add")
