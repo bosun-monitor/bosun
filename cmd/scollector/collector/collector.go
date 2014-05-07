@@ -1,4 +1,4 @@
-// Package collector provides functions for sending data to OpenTSDB
+// Package collector provides functions for sending data to OpenTSDB.
 package collector
 
 import (
@@ -19,14 +19,13 @@ var (
 	tchan    chan *opentsdb.DataPoint
 	counters = make(map[string]*opentsdb.DataPoint)
 	lock     = sync.Mutex{}
+	// Freq is how often metrics are sent to OpenTSDB. Counters are timestamped at the time
+	// they are added to the queue.
+	Freq = time.Second * 15
 )
 
-// Frequency is how often metrics are sent to OpenTSDB. Counters are timestamped at the time
-// they are added to the queue
-const Freq = time.Second * 15
-
 // Init sets up the channels and the queue for sending data to OpenTSDB. It also
-// sets up the basename for all metrics
+// sets up the basename for all metrics.
 func Init(tsdbhost, metric_root string) error {
 	if err := setHostName(); err != nil {
 		return err
@@ -64,8 +63,8 @@ func setHostName() error {
 	return nil
 }
 
-// Add takes a metric and increments a counter for that metric. The metric name is added to the
-// basename specified in the Init function.
+// Add takes a metric and increments a counter for that metric. The metric name is appended to
+// the basename specified in the Init function.
 func Add(metric string, inc int64, ts opentsdb.TagSet) error {
 	if ts == nil {
 		ts = make(opentsdb.TagSet)
@@ -74,23 +73,21 @@ func Add(metric string, inc int64, ts opentsdb.TagSet) error {
 		return errors.New("Init must be called before calling Add")
 	}
 	ts["host"] = host
-	if metric == "" {
-		return errors.New("metric may not be an empty string")
-	}
-	if m, _ := opentsdb.Clean(metric); metric != m {
-		return errors.New("metric may only contain a to z, A to Z, 0 to 9, -, _, ., / or Unicode letters")
+
+	if err := checkClean(metric, "metric"); err != nil {
+		return err
 	}
 	for k, v := range ts {
-		if kc, _ := opentsdb.Clean(k); kc != k {
-			return errors.New("tagk may only contain a to z, A to Z, 0 to 9, -, _, ., / or Unicode letters")
+		if err := checkClean(k, "tagk"); err != nil {
+			return err
 		}
-		if vc, _ := opentsdb.Clean(v); vc != v {
-			return errors.New("tagv may only contain a to z, A to Z, 0 to 9, -, _, ., / or Unicode letters")
+		if err := checkClean(v, "tagv"); err != nil {
+			return err
 		}
 	}
 	tss := metric + ts.String()
 	lock.Lock()
-	if _, present := counters[tss]; !present {
+	if counters[tss] == nil {
 		counters[tss] = &opentsdb.DataPoint{
 			Metric: mr + metric,
 			Tags:   ts,
@@ -100,6 +97,13 @@ func Add(metric string, inc int64, ts opentsdb.TagSet) error {
 	v := counters[tss].Value.(int64)
 	counters[tss].Value = v + inc
 	lock.Unlock()
+	return nil
+}
+
+func checkClean(s, t string) error {
+	if sc, err := opentsdb.Clean(s); s != sc || err != nil {
+		return errors.New(t + s + " may only contain a to z, A to Z, 0 to 9, -, _, ., / or Unicode letters and may not be empty")
+	}
 	return nil
 }
 
