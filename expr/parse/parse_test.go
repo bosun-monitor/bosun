@@ -106,6 +106,7 @@ var parseTests = []parseTest{
 	{"series compare", `q("q", "1m")>0`, noError, `q("q", "1m") > 0`},
 	{"unary series", `!q("q", "1m")`, noError, `!q("q", "1m")`},
 	{"expr in func", `forecastlr(q("q", "1m"), -1)`, noError, `forecastlr(q("q", "1m"), -1)`},
+	{"nested func expr", `avg(q("q","1m")>0)`, noError, `avg(q("q", "1m") > 0)`},
 	// Errors.
 	{"empty", "", hasError, ""},
 	{"unclosed function", "avg(", hasError, ""},
