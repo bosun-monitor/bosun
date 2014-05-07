@@ -1,5 +1,5 @@
-// Package collector provides functions for sending data to OpenTSDB.
-package collector
+// Package collect provides functions for sending data to OpenTSDB.
+package collect
 
 import (
 	"errors"
