@@ -7,7 +7,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"runtime"
 	"sync"
 	"time"
 
@@ -22,10 +21,6 @@ var (
 	// be discarded. 200,000 guarantees the queue will not take more than around
 	// 150MB memory.
 	MaxQueueLen = 200000
-
-	// MaxMem, if != 0, is the number of bytes of allocated memory at which a panic
-	// is issued.
-	MaxMem uint64 = 0
 )
 
 var l = log.New(os.Stdout, "", log.LstdFlags)
@@ -43,18 +38,6 @@ func New(host string, c chan *opentsdb.DataPoint) *Queue {
 		host: host,
 		c:    c,
 	}
-	go func() {
-		var m runtime.MemStats
-		for _ = range time.Tick(time.Minute) {
-			if MaxMem == 0 {
-				continue
-			}
-			runtime.ReadMemStats(&m)
-			if m.Alloc > MaxMem {
-				panic("memory max reached")
-			}
-		}
-	}()
 	go func() {
 		for dp := range c {
 			if len(q.queue) > MaxQueueLen {

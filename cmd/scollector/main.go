@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"net/url"
+	"runtime"
 	"strings"
 	"time"
 
@@ -72,8 +73,17 @@ func main() {
 	cdp := collectors.Run(c)
 	if u != nil && !*flagPrint {
 		slog.Infoln("OpenTSDB host:", u)
-		queue.MaxMem = 500 * 1024 * 1024 // 500MB
 		queue.New(u.String(), cdp)
+		go func() {
+			const maxMem = 500 * 1024 * 1024 // 500MB
+			var m runtime.MemStats
+			for _ = range time.Tick(time.Minute) {
+				runtime.ReadMemStats(&m)
+				if m.Alloc > maxMem {
+					panic("memory max reached")
+				}
+			}
+		}()
 	} else {
 		slog.Infoln("Outputting to screen")
 		printPut(cdp)
