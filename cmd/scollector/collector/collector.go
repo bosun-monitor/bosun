@@ -3,6 +3,7 @@ package collector
 
 import (
 	"errors"
+	"fmt"
 	"net/url"
 	"os"
 	"strings"
@@ -19,6 +20,7 @@ var (
 	tchan    chan *opentsdb.DataPoint
 	counters = make(map[string]*opentsdb.DataPoint)
 	lock     = sync.Mutex{}
+
 	// Freq is how often metrics are sent to OpenTSDB. Counters are timestamped at the time
 	// they are added to the queue.
 	Freq = time.Second * 15
@@ -30,8 +32,8 @@ func Init(tsdbhost, metric_root string) error {
 	if err := setHostName(); err != nil {
 		return err
 	}
-	if metric_root == "" {
-		return errors.New("the root metric name may not be an empty string")
+	if err := checkClean(metric_root, "metric root"); err != nil {
+		return err
 	}
 	if tsdbhost == "" {
 		return errors.New("must specify non-empty tsdb host")
@@ -60,22 +62,26 @@ func setHostName() error {
 		return err
 	}
 	host = strings.SplitN(strings.ToLower(h), ".", 2)[0]
+	if err := checkClean(host, "host tag"); err != nil {
+		return err
+	}
 	return nil
 }
 
 // Add takes a metric and increments a counter for that metric. The metric name is appended to
 // the basename specified in the Init function.
 func Add(metric string, inc int64, ts opentsdb.TagSet) error {
-	if ts == nil {
-		ts = make(opentsdb.TagSet)
-	}
 	if tchan == nil || mr == "" {
 		return errors.New("Init must be called before calling Add")
 	}
-	ts["host"] = host
-
 	if err := checkClean(metric, "metric"); err != nil {
 		return err
+	}
+	if ts == nil {
+		ts = make(opentsdb.TagSet)
+	}
+	if _, present := ts["host"]; !present {
+		ts["host"] = host
 	}
 	for k, v := range ts {
 		if err := checkClean(k, "tagk"); err != nil {
@@ -102,26 +108,23 @@ func Add(metric string, inc int64, ts opentsdb.TagSet) error {
 
 func checkClean(s, t string) error {
 	if sc, err := opentsdb.Clean(s); s != sc || err != nil {
-		return errors.New(t + s + " may only contain a to z, A to Z, 0 to 9, -, _, ., / or Unicode letters and may not be empty")
+		if err != nil {
+			return err
+		}
+		return fmt.Errorf("%s %s may only contain a to z, A to Z, 0 to 9, -, _, ., / or Unicode letters and may not be empty", t, s)
 	}
 	return nil
 }
 
 func send() {
 	for {
-		var md opentsdb.MultiDataPoint
 		lock.Lock()
 		now := time.Now().Unix()
 		for _, dp := range counters {
 			dp.Timestamp = now
-			md = append(md, dp)
+			tchan <- dp
 		}
 		lock.Unlock()
-		go func() {
-			for _, dp := range md {
-				tchan <- dp
-			}
-		}()
 		time.Sleep(Freq)
 	}
 }
