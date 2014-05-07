@@ -33,7 +33,7 @@ type Queue struct {
 }
 
 // Creates and starts a new Queue.
-func New(host string, c chan *opentsdb.DataPoint) *Queue {
+func New(host string, c chan *opentsdb.DataPoint) {
 	q := Queue{
 		host: host,
 		c:    c,
@@ -50,7 +50,6 @@ func New(host string, c chan *opentsdb.DataPoint) *Queue {
 		}
 	}()
 	go q.send()
-	return &q
 }
 
 var BatchSize = 50
