@@ -17,6 +17,17 @@ import (
 	"github.com/mreiferson/go-httpclient"
 )
 
+var (
+	// MaxQueueLen is the maximum size of the queue, above which incoming data will
+	// be discarded. 200,000 guarantees the queue will not take more than around
+	// 150MB memory.
+	MaxQueueLen = 200000
+
+	// MaxMem, if != 0, is the number of bytes of allocated memory at which a panic
+	// is issued.
+	MaxMem uint64 = 0
+)
+
 var l = log.New(os.Stdout, "", log.LstdFlags)
 
 type Queue struct {
@@ -28,8 +39,6 @@ type Queue struct {
 
 // Creates and starts a new Queue.
 func New(host string, c chan *opentsdb.DataPoint) *Queue {
-	const maxQueueLen = 200000
-	const maxMem = 500 * 1024 * 1024 // 500MB
 	q := Queue{
 		host: host,
 		c:    c,
@@ -37,15 +46,18 @@ func New(host string, c chan *opentsdb.DataPoint) *Queue {
 	go func() {
 		var m runtime.MemStats
 		for _ = range time.Tick(time.Minute) {
+			if MaxMem == 0 {
+				continue
+			}
 			runtime.ReadMemStats(&m)
-			if m.Alloc > maxMem {
+			if m.Alloc > MaxMem {
 				panic("memory max reached")
 			}
 		}
 	}()
 	go func() {
 		for dp := range c {
-			if len(q.queue) > maxQueueLen {
+			if len(q.queue) > MaxQueueLen {
 				collectors.IncScollector("dropped", 1)
 				continue
 			}

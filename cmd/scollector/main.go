@@ -72,6 +72,7 @@ func main() {
 	cdp := collectors.Run(c)
 	if u != nil && !*flagPrint {
 		slog.Infoln("OpenTSDB host:", u)
+		queue.MaxMem = 500 * 1024 * 1024 // 500MB
 		queue.New(u.String(), cdp)
 	} else {
 		slog.Infoln("Outputting to screen")
