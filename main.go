@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/StackExchange/scollector/collect"
 	"github.com/StackExchange/tsaf/_third_party/github.com/howeyc/fsnotify"
 	"github.com/StackExchange/tsaf/conf"
 	"github.com/StackExchange/tsaf/relay"
@@ -31,6 +32,7 @@ func main() {
 		log.Println("Valid Config")
 		os.Exit(0)
 	}
+	collect.Init("localhost", "tsaf")
 	sched.Load(c)
 	go func() { log.Fatal(relay.RelayHTTP(c.RelayListen, c.TsdbHost)) }()
 	go func() { log.Fatal(web.Listen(c.HttpListen, c.WebDir, c.TsdbHost)) }()

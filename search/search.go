@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/StackExchange/scollector/collect"
 	"github.com/StackExchange/tsaf/_third_party/github.com/StackExchange/scollector/opentsdb"
 )
 
@@ -78,6 +79,7 @@ func HTTPExtract(body []byte) {
 		}
 		r.Close()
 	}
+	collect.Add("puts_relayed", 1, nil)
 	var dp opentsdb.DataPoint
 	var mdp opentsdb.MultiDataPoint
 	if err := json.Unmarshal(body, &dp); err == nil {
@@ -86,6 +88,7 @@ func HTTPExtract(body []byte) {
 		log.Printf("search: could not unmarshal: %s", body)
 		return
 	}
+	collect.Add("datapoints_relayed", int64(len(mdp)), nil)
 	for _, d := range mdp {
 		dc <- d
 	}
