@@ -66,6 +66,14 @@ type MultiDataPoint []*DataPoint
 
 type TagSet map[string]string
 
+func (t TagSet) Copy() TagSet {
+	n := make(TagSet)
+	for k, v := range t {
+		n[k] = v
+	}
+	return n
+}
+
 func (t TagSet) Equal(o TagSet) bool {
 	if len(t) != len(o) {
 		return false

@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/StackExchange/scollector/collect"
 	"github.com/StackExchange/slog"
 	"github.com/StackExchange/wmi"
 )
@@ -31,9 +32,9 @@ func queryWmi(query string, dst interface{}) error {
 func queryWmiNamespace(query string, dst interface{}, namespace string) (err error) {
 	wmiLock.Lock()
 	defer wmiLock.Unlock()
-	IncScollector("wmi.queries", 1)
+	collect.Add("wmi.queries", 1)
 	if wmiCount == 0 || wmiCmd == nil {
-		IncScollector("wmi.exec", 1)
+		collect.Add("wmi.exec", 1)
 		wmiCmd = exec.Command(os.Args[0], "-w")
 		if wmiIn != nil {
 			wmiIn.Close()

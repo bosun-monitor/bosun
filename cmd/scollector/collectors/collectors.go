@@ -67,16 +67,16 @@ func Search(s string) []Collector {
 	return r
 }
 
-// Runs specified collectors. Use nil for all.
+// Runs specified collectors. Use nil for all collectors.
 func Run(cs []Collector) chan *opentsdb.DataPoint {
-	dpchan := make(chan *opentsdb.DataPoint)
 	if cs == nil {
 		cs = collectors
 	}
+	ch := make(chan *opentsdb.DataPoint)
 	for _, c := range cs {
-		go c.Run(dpchan)
+		go c.Run(ch)
 	}
-	return dpchan
+	return ch
 }
 
 func Add(md *opentsdb.MultiDataPoint, name string, value interface{}, tags opentsdb.TagSet) {
@@ -86,21 +86,6 @@ func Add(md *opentsdb.MultiDataPoint, name string, value interface{}, tags opent
 	if _, present := tags["host"]; !present {
 		tags["host"] = host
 	}
-	d := opentsdb.DataPoint{
-		Metric:    name,
-		Timestamp: timestamp,
-		Value:     value,
-		Tags:      tags,
-	}
-	*md = append(*md, &d)
-}
-
-func TSAdd(md *opentsdb.MultiDataPoint, name string, value interface{},
-	tags opentsdb.TagSet, ts int64) {
-	if tags == nil {
-		tags = make(opentsdb.TagSet)
-	}
-	tags["host"] = host
 	d := opentsdb.DataPoint{
 		Metric:    name,
 		Timestamp: timestamp,
