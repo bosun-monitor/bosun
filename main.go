@@ -33,8 +33,7 @@ func main() {
 		os.Exit(0)
 	}
 	if err := collect.Init(c.RelayListen, "tsaf"); err != nil {
-		log.Println(err)
-		os.Exit(1)
+		log.Fatal(err)
 	}
 	sched.Load(c)
 	go func() { log.Fatal(relay.RelayHTTP(c.RelayListen, c.TsdbHost)) }()
