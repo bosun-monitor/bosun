@@ -11,7 +11,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/StackExchange/scollector/collect"
+	"github.com/StackExchange/tsaf/_third_party/github.com/StackExchange/scollector/collect"
 	"github.com/StackExchange/tsaf/_third_party/github.com/StackExchange/scollector/opentsdb"
 )
 

@@ -34,6 +34,8 @@ if err != nil {
 defer resp.Body.Close()
 ```
 
+*Note:* you will want to re-use a single client object rather than creating one for each request, otherwise you will end up [leaking connections](https://code.google.com/p/go/issues/detail?id=4049#c3).
+
 ### Reference Docs
 
 For API docs see [godoc](http://godoc.org/github.com/mreiferson/go-httpclient).
