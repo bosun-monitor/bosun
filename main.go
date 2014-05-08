@@ -32,7 +32,10 @@ func main() {
 		log.Println("Valid Config")
 		os.Exit(0)
 	}
-	collect.Init("localhost", "tsaf")
+	if err := collect.Init(c.RelayListen, "tsaf"); err != nil {
+		log.Println(err)
+		os.Exit(1)
+	}
 	sched.Load(c)
 	go func() { log.Fatal(relay.RelayHTTP(c.RelayListen, c.TsdbHost)) }()
 	go func() { log.Fatal(web.Listen(c.HttpListen, c.WebDir, c.TsdbHost)) }()
