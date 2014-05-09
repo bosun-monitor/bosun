@@ -1,7 +1,6 @@
 package web
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -22,22 +21,13 @@ func Expr(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 	if err != nil {
 		return nil, err
 	}
-	var vt string
-	for i, v := range res {
-		t := v.Value.Type().String()
-		if i > 0 {
-			if t != vt {
-				return res, errors.New("mismatched value types in expression result")
-			}
-		}
-		vt = t
-	}
+
 	ret := struct {
-		ResultType string
-		Results    []*expr.Result
-		Queries    map[string]opentsdb.Request
+		Type    string
+		Results []*expr.Result
+		Queries map[string]opentsdb.Request
 	}{
-		vt,
+		e.Tree.Root.Return().String(),
 		res,
 		make(map[string]opentsdb.Request),
 	}

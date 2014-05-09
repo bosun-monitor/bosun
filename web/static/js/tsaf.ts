@@ -219,7 +219,7 @@ tsafControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route'
 		.success((data) => {
 			$scope.result = data.Results;
 			$scope.queries = data.Queries;
-			$scope.result_type = data.ResultType;
+			$scope.result_type = data.Type;
 			$scope.running = '';
 		})
 		.error((error) => {
