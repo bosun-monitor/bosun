@@ -11,7 +11,9 @@
 					<button class="btn btn-default" ng-click="set()">test</button>
 				</div>
 				<div class="col-lg-11" ng-show="result_type == 'series'">
-					<a href="/egraph?q={{btoa(expr)}}">Expression Graph</a>
+					<span class="pull-right">
+						<a href="/egraph?q={{btoa(expr)}}" class="btn btn-default">Expression Graph</a>
+					</span>
 				</div>
 			</div>
 		</form>
