@@ -62,13 +62,13 @@ var redisFields = map[string]bool{
 	"used_memory_rss":              true,
 }
 
-//For master_link_status
+// For master_link_status.
 var redisMlsMap = map[string]string{
 	"up":   "1",
 	"down": "0",
 }
 
-//For aof_last_bgrewrite_status, rdb_last_bgsave_status
+// For aof_last_bgrewrite_status, rdb_last_bgsave_status.
 func status(s string) string {
 	if s == "ok" {
 		return "1"
