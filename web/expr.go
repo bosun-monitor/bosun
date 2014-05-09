@@ -12,6 +12,11 @@ import (
 	"github.com/StackExchange/tsaf/expr"
 )
 
+type ResultVT struct {
+	expr.Result
+	ValueType string
+}
+
 func Expr(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	e, err := expr.New(r.FormValue("q"))
 	if err != nil {
@@ -21,11 +26,15 @@ func Expr(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 	if err != nil {
 		return nil, err
 	}
+	var resv []*ResultVT
+	for _, v := range res {
+		resv = append(resv, &ResultVT{*v, v.Value.Type().String()})
+	}
 	ret := struct {
-		Results []*expr.Result
+		Results []*ResultVT
 		Queries map[string]opentsdb.Request
 	}{
-		res,
+		resv,
 		make(map[string]opentsdb.Request),
 	}
 	for _, q := range queries {
