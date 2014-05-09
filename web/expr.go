@@ -21,7 +21,6 @@ func Expr(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 	if err != nil {
 		return nil, err
 	}
-
 	ret := struct {
 		Type    string
 		Results []*expr.Result
