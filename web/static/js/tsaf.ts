@@ -141,26 +141,10 @@ tsafControllers.controller('TsafCtrl', ['$scope', '$route', '$http', function($s
 }]);
 
 interface IDashboardScope extends ITsafScope {
-	last: any;
-	shown: any;
-	collapse: (i: any) => void;
-	panelClass: (status: string) => string;
 }
 
 tsafControllers.controller('DashboardCtrl', ['$scope', function($scope: IDashboardScope) {
 	$scope.refresh();
-	$scope.shown = {};
-	$scope.collapse = (i: any) => {
-		$scope.shown[i] = !$scope.shown[i];
-	};
-	$scope.panelClass = (status: string) => {
-		switch (status) {
-		case "critical": return "panel-danger"; break;
-		case "unknown": return "panel-info"; break;
-		case "warning": return "panel-warning"; break;
-		default: return "panel-default"; break;
-		}
-	};
 }]);
 
 interface IItemsScope extends ng.IScope {
@@ -953,6 +937,31 @@ tsafControllers.controller('ActionCtrl', ['$scope', '$http', '$location', '$rout
 tsafApp.directive('tsResults', function() {
 	return {
 		templateUrl: '/partials/results.html',
+	};
+});
+
+tsafApp.directive('tsAckGroup', function() {
+	return {
+		scope: {
+			ack: '=',
+			groups: '=tsAckGroup',
+			schedule: '=schedule',
+		},
+		templateUrl: '/partials/ackgroup.html',
+		link: (scope: any, elem: any, attrs: any) => {
+			scope.panelClass = (status: string) => {
+				switch (status) {
+				case "critical": return "panel-danger";
+				case "unknown": return "panel-info";
+				case "warning": return "panel-warning";
+				default: return "panel-default";
+				}
+			};
+			scope.shown = {};
+			scope.collapse = (i: any) => {
+				scope.shown[i] = !scope.shown[i];
+			};
+		},
 	};
 });
 
