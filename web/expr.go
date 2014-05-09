@@ -22,9 +22,11 @@ func Expr(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 		return nil, err
 	}
 	ret := struct {
+		Type    string
 		Results []*expr.Result
 		Queries map[string]opentsdb.Request
 	}{
+		e.Tree.Root.Return().String(),
 		res,
 		make(map[string]opentsdb.Request),
 	}
