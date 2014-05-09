@@ -34,23 +34,23 @@ func send() {
 func sendBatch(batch opentsdb.MultiDataPoint) {
 	b, err := batch.Json()
 	if err != nil {
-		slog.Error(3, err)
+		slog.Error(err)
 		// bad JSON encoding, just give up
 		return
 	}
 	var buf bytes.Buffer
 	g := gzip.NewWriter(&buf)
 	if _, err = g.Write(b); err != nil {
-		slog.Error(4, err)
+		slog.Error(err)
 		return
 	}
 	if err = g.Close(); err != nil {
-		slog.Error(5, err)
+		slog.Error(err)
 		return
 	}
 	req, err := http.NewRequest("POST", tsdbURL, &buf)
 	if err != nil {
-		slog.Error(6, err)
+		slog.Error(err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Content-Encoding", "gzip")
@@ -61,15 +61,15 @@ func sendBatch(batch opentsdb.MultiDataPoint) {
 	// Some problem with connecting to the server; retry later.
 	if err != nil || resp.StatusCode != http.StatusNoContent {
 		if err != nil {
-			slog.Error(7, err)
+			slog.Error(err)
 		} else if resp.StatusCode != http.StatusNoContent {
-			slog.Errorln(8, resp.Status)
+			slog.Errorln(resp.Status)
 			body, err := ioutil.ReadAll(resp.Body)
 			if err != nil {
-				slog.Error(1, err)
+				slog.Error(err)
 			}
 			if len(body) > 0 {
-				slog.Error(2, string(body))
+				slog.Error(string(body))
 			}
 		}
 		t := time.Now().Add(-time.Minute * 30).Unix()
@@ -92,6 +92,8 @@ func sendBatch(batch opentsdb.MultiDataPoint) {
 		return
 	} else {
 		slog.Infoln("sent", len(batch))
+		slock.Lock()
 		sent += int64(len(batch))
+		slock.Unlock()
 	}
 }

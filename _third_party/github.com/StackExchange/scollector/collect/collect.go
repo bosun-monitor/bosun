@@ -35,15 +35,15 @@ var (
 	// Sent is the number of sent data points.
 	sent int64
 
-	tchan        chan *opentsdb.DataPoint
-	tsdbURL      string
-	osHostname   string
-	metricRoot   string
-	queue        opentsdb.MultiDataPoint
-	qlock, mlock sync.Mutex
-	counters                  = make(map[string]*addMetric)
-	sets                      = make(map[string]*setMetric)
-	client       *http.Client = &http.Client{
+	tchan               chan *opentsdb.DataPoint
+	tsdbURL             string
+	osHostname          string
+	metricRoot          string
+	queue               opentsdb.MultiDataPoint
+	qlock, mlock, slock sync.Mutex   // Locks for queues, maps, stats.
+	counters                         = make(map[string]*addMetric)
+	sets                             = make(map[string]*setMetric)
+	client              *http.Client = &http.Client{
 		Transport: &httpclient.Transport{
 			RequestTimeout: time.Minute,
 		},
@@ -81,7 +81,9 @@ func InitChan(tsdbhost, metric_root string, ch chan *opentsdb.DataPoint) error {
 			qlock.Lock()
 			for {
 				if len(queue) > MaxQueueLen {
+					slock.Lock()
 					dropped++
+					slock.Unlock()
 					break
 				}
 				queue = append(queue, dp)
@@ -98,11 +100,17 @@ func InitChan(tsdbhost, metric_root string, ch chan *opentsdb.DataPoint) error {
 	go send()
 
 	go collect()
-	Set("collect.dropped", nil, func() int64 {
-		return dropped
+	Set("collect.dropped", nil, func() (i int64) {
+		slock.Lock()
+		i = dropped
+		slock.Unlock()
+		return
 	})
-	Set("collect.sent", nil, func() int64 {
-		return sent
+	Set("collect.sent", nil, func() (i int64) {
+		slock.Lock()
+		i = sent
+		slock.Unlock()
+		return
 	})
 	Set("collect.alloc", nil, func() int64 {
 		var ms runtime.MemStats
