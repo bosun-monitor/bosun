@@ -144,7 +144,7 @@ func c_dfstat_blocks_linux() opentsdb.MultiDataPoint {
 		Add(&md, metric+"space_free", fields[3], tags)
 		Add(&md, ometric+"space_total", fields[1], os_tags)
 		Add(&md, ometric+"space_used", fields[2], os_tags)
-		Add(&md, ometric+"space_used", fields[3], os_tags)
+		Add(&md, ometric+"space_free", fields[3], os_tags)
 		st, _ := strconv.ParseFloat(fields[1], 64)
 		sf, _ := strconv.ParseFloat(fields[3], 64)
 		if st != 0 {
