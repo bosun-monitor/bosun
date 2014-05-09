@@ -118,26 +118,6 @@ tsafControllers.controller('TsafCtrl', [
 tsafControllers.controller('DashboardCtrl', [
     '$scope', function ($scope) {
         $scope.refresh();
-        $scope.shown = {};
-        $scope.collapse = function (i) {
-            $scope.shown[i] = !$scope.shown[i];
-        };
-        $scope.panelClass = function (status) {
-            switch (status) {
-                case "critical":
-                    return "panel-danger";
-                    break;
-                case "unknown":
-                    return "panel-info";
-                    break;
-                case "warning":
-                    return "panel-warning";
-                    break;
-                default:
-                    return "panel-default";
-                    break;
-            }
-        };
     }]);
 
 tsafControllers.controller('ItemsCtrl', [
@@ -773,6 +753,35 @@ tsafControllers.controller('ActionCtrl', [
 tsafApp.directive('tsResults', function () {
     return {
         templateUrl: '/partials/results.html'
+    };
+});
+
+tsafApp.directive('tsAckGroup', function () {
+    return {
+        scope: {
+            ack: '=',
+            groups: '=tsAckGroup',
+            schedule: '=schedule'
+        },
+        templateUrl: '/partials/ackgroup.html',
+        link: function (scope, elem, attrs) {
+            scope.panelClass = function (status) {
+                switch (status) {
+                    case "critical":
+                        return "panel-danger";
+                    case "unknown":
+                        return "panel-info";
+                    case "warning":
+                        return "panel-warning";
+                    default:
+                        return "panel-default";
+                }
+            };
+            scope.shown = {};
+            scope.collapse = function (i) {
+                scope.shown[i] = !scope.shown[i];
+            };
+        }
     };
 });
 
