@@ -32,9 +32,9 @@ func queryWmi(query string, dst interface{}) error {
 func queryWmiNamespace(query string, dst interface{}, namespace string) (err error) {
 	wmiLock.Lock()
 	defer wmiLock.Unlock()
-	collect.Add("wmi.queries", 1)
+	collect.Add("wmi.queries", 1, nil)
 	if wmiCount == 0 || wmiCmd == nil {
-		collect.Add("wmi.exec", 1)
+		collect.Add("wmi.exec", 1, nil)
 		wmiCmd = exec.Command(os.Args[0], "-w")
 		if wmiIn != nil {
 			wmiIn.Close()
