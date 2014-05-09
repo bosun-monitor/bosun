@@ -1,6 +1,7 @@
 package web
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -12,11 +13,6 @@ import (
 	"github.com/StackExchange/tsaf/expr"
 )
 
-type ResultVT struct {
-	expr.Result
-	ValueType string
-}
-
 func Expr(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	e, err := expr.New(r.FormValue("q"))
 	if err != nil {
@@ -26,15 +22,23 @@ func Expr(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 	if err != nil {
 		return nil, err
 	}
-	var resv []*ResultVT
-	for _, v := range res {
-		resv = append(resv, &ResultVT{*v, v.Value.Type().String()})
+	var vt string
+	for i, v := range res {
+		t := v.Value.Type().String()
+		if i > 0 {
+			if t != vt {
+				return res, errors.New("mismatched value types in expression result")
+			}
+		}
+		vt = t
 	}
 	ret := struct {
-		Results []*ResultVT
-		Queries map[string]opentsdb.Request
+		ResultType string
+		Results    []*expr.Result
+		Queries    map[string]opentsdb.Request
 	}{
-		resv,
+		vt,
+		res,
 		make(map[string]opentsdb.Request),
 	}
 	for _, q := range queries {
