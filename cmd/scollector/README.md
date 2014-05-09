@@ -25,6 +25,10 @@ scollector will, by default, report to the host `tsaf`, which you should configu
 1. It is designed to be used with an upcoming and unreleased project we are working on (called TSAF), and so may not work in your environment.
 1. scollector (as of mid April 2014) sends gzipped data to OpenTSDB. This feature will be available by default with OpenTSDB 2.1, but is not yet in the next branch. [A patch is available to enable this manually.](https://groups.google.com/forum/#!topic/opentsdb/JQ7azVR5x_g)
 
+# Windows
+
+scollector has full Windows support. It can be run standalone, or installed as a service (see --help for options). The Event Log is used when installed as a service.
+
 # snmp
 
 By default, scollector will collect data from the current host and report it to the TSDB server. scollector has an SNMP mode where it instead polls a given host: `scollector -s community@host`. Poll frequency currently defaults to 5 minutes. Some common OIDs regarding interfaces are collected. Others can be added easily.
