@@ -175,6 +175,7 @@ tsafControllers.controller('ExprCtrl', [
         $http.get('/api/expr?q=' + encodeURIComponent(current)).success(function (data) {
             $scope.result = data.Results;
             $scope.queries = data.Queries;
+            $scope.result_type = data.ResultType;
             $scope.running = '';
         }).error(function (error) {
             $scope.error = error;
