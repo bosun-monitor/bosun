@@ -78,12 +78,20 @@ func InitChan(tsdbhost, metric_root string, ch chan *opentsdb.DataPoint) error {
 	tchan = ch
 	go func() {
 		for dp := range tchan {
-			if len(queue) > MaxQueueLen {
-				dropped++
-				continue
-			}
 			qlock.Lock()
-			queue = append(queue, dp)
+			for {
+				if len(queue) > MaxQueueLen {
+					dropped++
+					break
+				}
+				queue = append(queue, dp)
+				select {
+				case dp = <-tchan:
+					continue
+				default:
+				}
+				break
+			}
 			qlock.Unlock()
 		}
 	}()

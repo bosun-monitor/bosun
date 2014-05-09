@@ -13,8 +13,8 @@ import (
 
 func send() {
 	for {
+		qlock.Lock()
 		if len(queue) > 0 {
-			qlock.Lock()
 			i := len(queue)
 			if i > BatchSize {
 				i = BatchSize
@@ -25,6 +25,7 @@ func send() {
 			slog.Infof("sending: %d, remaining: %d", len(sending), len(queue))
 			sendBatch(sending)
 		} else {
+			qlock.Unlock()
 			time.Sleep(time.Second)
 		}
 	}
