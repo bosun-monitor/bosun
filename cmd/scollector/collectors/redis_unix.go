@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/garyburd/redigo/redis"
@@ -79,6 +80,7 @@ func status(s string) string {
 var (
 	tcRE           = regexp.MustCompile(`^\s*#\s*scollector.(\w+)\s*=\s*(.+)$`)
 	redisInstances map[string]string
+	redisLock      sync.Mutex
 )
 
 func redisInit() {
@@ -136,7 +138,9 @@ func redisInit() {
 				add(port, pid)
 			}, "netstat", "-tnlp")
 		}
+		redisLock.Lock()
 		redisInstances = ri
+		redisLock.Unlock()
 	}
 	update()
 	go func() {
@@ -148,6 +152,7 @@ func redisInit() {
 
 func c_redis_linux() opentsdb.MultiDataPoint {
 	var md opentsdb.MultiDataPoint
+	redisLock.Lock()
 	for port, cluster := range redisInstances {
 		c, err := redis.Dial("tcp", fmt.Sprintf(":%s", port))
 		if err != nil {
@@ -182,5 +187,6 @@ func c_redis_linux() opentsdb.MultiDataPoint {
 			Add(&md, "redis."+sp[0], sp[1], tags)
 		}
 	}
+	redisLock.Unlock()
 	return md
 }

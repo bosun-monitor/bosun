@@ -3,6 +3,7 @@ package collectors
 import (
 	"encoding/json"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/StackExchange/scollector/opentsdb"
@@ -13,19 +14,31 @@ func init() {
 	collectors = append(collectors, &IntervalCollector{F: c_hbase_region, init: hbrInit})
 }
 
-var hbaseEnabled bool
+var (
+	hbaseEnable bool
+	hbaseLock   sync.Mutex
+)
+
+func hbaseEnabled() (b bool) {
+	hbaseLock.Lock()
+	b = hbaseEnable
+	hbaseLock.Unlock()
+	return
+}
 
 const hbrURL = "http://localhost:60030/jmx?qry=hadoop:service=RegionServer,name=RegionServerStatistics"
 
 func hbrInit() {
 	update := func() {
 		resp, err := http.Get(hbrURL)
+		hbaseLock.Lock()
+		defer hbaseLock.Unlock()
 		if err != nil {
-			hbaseEnabled = false
+			hbaseEnable = false
 			return
 		}
 		resp.Body.Close()
-		hbaseEnabled = resp.StatusCode == 200
+		hbaseEnable = resp.StatusCode == 200
 	}
 	update()
 	go func() {
@@ -36,7 +49,7 @@ func hbrInit() {
 }
 
 func c_hbase_region() opentsdb.MultiDataPoint {
-	if !hbaseEnabled {
+	if !hbaseEnabled() {
 		return nil
 	}
 	var md opentsdb.MultiDataPoint

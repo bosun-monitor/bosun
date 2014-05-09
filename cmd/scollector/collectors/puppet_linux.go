@@ -2,6 +2,7 @@ package collectors
 
 import (
 	"os"
+	"sync"
 	"time"
 
 	"github.com/StackExchange/scollector/opentsdb"
@@ -11,17 +12,29 @@ func init() {
 	collectors = append(collectors, &IntervalCollector{F: puppet_disabled_linux, init: puppetInit})
 }
 
-var puppetExists bool
+var (
+	puppetEnable bool
+	puppetLock   sync.Mutex
+)
 
 const (
 	puppetPath     = "/var/lib/puppet/"
 	puppetDisabled = "/var/lib/puppet/state/agent_disabled.lock"
 )
 
+func puppetEnabled() (b bool) {
+	puppetLock.Lock()
+	b = puppetEnable
+	puppetLock.Unlock()
+	return
+}
+
 func puppetInit() {
 	update := func() {
 		_, err := os.Stat(puppetPath)
-		puppetExists = err == nil
+		puppetLock.Lock()
+		puppetEnable = err == nil
+		puppetLock.Unlock()
 	}
 	update()
 	go func() {
@@ -32,7 +45,7 @@ func puppetInit() {
 }
 
 func puppet_disabled_linux() opentsdb.MultiDataPoint {
-	if !puppetExists {
+	if !puppetEnabled() {
 		return nil
 	}
 	var md opentsdb.MultiDataPoint

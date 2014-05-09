@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/StackExchange/scollector/opentsdb"
@@ -15,9 +16,19 @@ func init() {
 	collectors = append(collectors, &IntervalCollector{F: c_railgun, init: rgInit})
 }
 
-var rgEnabled bool
-var rgListenRE = regexp.MustCompile(`^stats.listen\s+?=\s+?([0-9.:]+)`)
-var rgURL string
+var (
+	rgEnable   bool
+	rgLock     sync.Mutex
+	rgListenRE = regexp.MustCompile(`^stats.listen\s+?=\s+?([0-9.:]+)`)
+	rgURL      string
+)
+
+func rgEnabled() (b bool) {
+	rgLock.Lock()
+	b = rgEnable
+	rgLock.Unlock()
+	return
+}
 
 func parseRailUrl() string {
 	var config string
@@ -47,14 +58,15 @@ func parseRailUrl() string {
 func rgInit() {
 	update := func() {
 		rgURL = parseRailUrl()
-		slog.Infoln(rgURL)
 		resp, err := http.Get(rgURL)
+		rgLock.Lock()
+		defer rgLock.Unlock()
 		if err != nil {
-			rgEnabled = false
+			rgEnable = false
 			return
 		}
 		resp.Body.Close()
-		rgEnabled = resp.StatusCode == 200
+		rgEnable = resp.StatusCode == 200
 	}
 	update()
 	go func() {
@@ -65,7 +77,7 @@ func rgInit() {
 }
 
 func c_railgun() opentsdb.MultiDataPoint {
-	if !rgEnabled {
+	if !rgEnabled() {
 		return nil
 	}
 	var md opentsdb.MultiDataPoint

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"sync"
 	"time"
 
 	"github.com/StackExchange/scollector/opentsdb"
@@ -25,18 +26,28 @@ var (
 		"yellow": 1,
 		"red":    2,
 	}
-	esEnabled bool
+	esEnable bool
+	esLock   sync.Mutex
 )
+
+func esEnabled() (b bool) {
+	esLock.Lock()
+	b = esEnable
+	esLock.Unlock()
+	return
+}
 
 func esInit() {
 	update := func() {
 		resp, err := http.Get(esURL)
+		esLock.Lock()
+		defer esLock.Unlock()
 		if err != nil {
-			esEnabled = false
+			esEnable = false
 			return
 		}
 		resp.Body.Close()
-		esEnabled = resp.StatusCode == 200
+		esEnable = resp.StatusCode == 200
 	}
 	update()
 	go func() {
@@ -47,7 +58,7 @@ func esInit() {
 }
 
 func c_elasticsearch() opentsdb.MultiDataPoint {
-	if !esEnabled {
+	if !esEnabled() {
 		return nil
 	}
 	var status esStatus

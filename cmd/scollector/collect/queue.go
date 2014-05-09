@@ -92,6 +92,8 @@ func sendBatch(batch opentsdb.MultiDataPoint) {
 		return
 	} else {
 		slog.Infoln("sent", len(batch))
+		slock.Lock()
 		sent += int64(len(batch))
+		slock.Unlock()
 	}
 }

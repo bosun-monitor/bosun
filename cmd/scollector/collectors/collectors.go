@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"os"
 	"strings"
+	"sync"
 	"time"
 	"unicode"
 	"unicode/utf8"
@@ -39,10 +40,15 @@ const (
 	osNetMulticast = "os.net.packets_multicast"
 )
 
-var DefaultFreq = time.Second * 15
+var (
+	// DefaultFreq is the duration between collection intervals if none is
+	// specified.
+	DefaultFreq = time.Second * 15
 
-var host = "unknown"
-var timestamp int64 = time.Now().Unix()
+	host      = "unknown"
+	timestamp = time.Now().Unix()
+	tlock     sync.Mutex
+)
 
 func init() {
 	if h, err := os.Hostname(); err == nil {
@@ -51,9 +57,18 @@ func init() {
 	}
 	go func() {
 		for t := range time.Tick(time.Second) {
+			tlock.Lock()
 			timestamp = t.Unix()
+			tlock.Unlock()
 		}
 	}()
+}
+
+func now() (t int64) {
+	tlock.Lock()
+	t = timestamp
+	tlock.Unlock()
+	return
 }
 
 // Search returns all collectors matching the pattern s.
@@ -88,7 +103,7 @@ func Add(md *opentsdb.MultiDataPoint, name string, value interface{}, tags opent
 	}
 	d := opentsdb.DataPoint{
 		Metric:    name,
-		Timestamp: timestamp,
+		Timestamp: now(),
 		Value:     value,
 		Tags:      tags,
 	}
