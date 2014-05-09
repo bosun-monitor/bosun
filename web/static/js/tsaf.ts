@@ -197,6 +197,7 @@ interface IExprScope extends ng.IScope {
 	running: string;
 	result: any;
 	queries: any;
+	result_type: string;
 	set: () => void;
 }
 
@@ -218,6 +219,7 @@ tsafControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route'
 		.success((data) => {
 			$scope.result = data.Results;
 			$scope.queries = data.Queries;
+			$scope.result_type = data.Type;
 			$scope.running = '';
 		})
 		.error((error) => {
