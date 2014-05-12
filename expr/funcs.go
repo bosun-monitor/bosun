@@ -514,7 +514,7 @@ func Regroup(e *state, T miniprofiler.Timer, d []*Result, gp string) ([]*Result,
 		m[g] = true
 	}
 	for _, v := range d {
-		for k, _ := range v.Group {
+		for k := range v.Group {
 			if !m[k] {
 				delete(v.Group, k)
 			}
