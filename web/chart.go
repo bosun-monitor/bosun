@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"image/color"
 	"io"
 	"net/http"
 	"net/url"
@@ -16,6 +17,8 @@ import (
 	"github.com/StackExchange/tsaf/_third_party/github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/tsaf/expr"
 	"github.com/StackExchange/tsaf/expr/parse"
+	"github.com/vdobler/chart"
+	"github.com/vdobler/chart/imgg"
 )
 
 // Graph takes an OpenTSDB request data structure and queries OpenTSDB. Use the
@@ -125,6 +128,29 @@ func ExprGraph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (in
 	res, _, err := e.ExecuteOpts(opentsdb.NewCache(schedule.Conf.TsdbHost, schedule.Conf.ResponseLimit), t, time.Now(), autods)
 	if err != nil {
 		return nil, err
+	}
+	if r.FormValue("png") != "" {
+		c := chart.ScatterChart{
+			Title: q,
+		}
+		for ri, r := range res {
+			rv := r.Value.(expr.Series)
+			pts := make([]chart.EPoint, len(rv))
+			idx := 0
+			for k, v := range rv {
+				i, err := strconv.ParseInt(k, 10, 64)
+				if err != nil {
+					return nil, err
+				}
+				//names[idx] = time.Unix(i, 0).Format("02 Jan 15:04")
+				pts[idx].X = float64(i)
+				pts[idx].Y = float64(v)
+				idx++
+			}
+			c.AddData(r.Group.String(), pts, chart.PlotStyleLinesPoints, chart.AutoStyle(ri, false))
+		}
+		g := imgg.New(800, 600, color.RGBA{0xff, xff, 0xff, ff}, nil, nil)
+		c.Plot(g)
 	}
 	return rickexpr(res, q)
 }
