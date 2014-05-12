@@ -17,7 +17,6 @@ func init() {
 	collectors = append(collectors, &IntervalCollector{F: c_omreport_ps, Interval: time.Minute * 5})
 	collectors = append(collectors, &IntervalCollector{F: c_omreport_ps_amps, Interval: time.Minute * 5})
 	collectors = append(collectors, &IntervalCollector{F: c_omreport_ps_volts, Interval: time.Minute * 5})
-
 }
 
 func c_omreport_chassis() opentsdb.MultiDataPoint {
@@ -174,7 +173,7 @@ func c_omreport_storage_controller() opentsdb.MultiDataPoint {
 	return md
 }
 
-// The following is called from controller, since it needs the encapsulating id
+// c_omreport_storage_pdisk is called from the controller func, since it needs the encapsulating id.
 func c_omreport_storage_pdisk(id string, md *opentsdb.MultiDataPoint) {
 	readCommand(func(line string) {
 		fields := strings.Split(line, ";")
