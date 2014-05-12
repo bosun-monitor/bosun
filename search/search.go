@@ -62,11 +62,11 @@ type Query struct {
 }
 
 var (
-	dc = make(chan *opentsdb.DataPoint)
+	dc = make(chan opentsdb.MultiDataPoint)
 )
 
 func init() {
-	go Process(dc)
+	go Process()
 }
 
 // HTTPExtract populates the search indexes with OpenTSDB tags and metrics from
@@ -89,16 +89,16 @@ func HTTPExtract(body []byte) {
 		return
 	}
 	collect.Add("datapoints_relayed", int64(len(mdp)), nil)
-	for _, d := range mdp {
-		dc <- d
+	select {
+	case dc <- mdp:
+	default:
 	}
 }
 
-func Process(c chan *opentsdb.DataPoint) {
-	for dp := range c {
-		go func(dp *opentsdb.DataPoint) {
-			lock.Lock()
-			defer lock.Unlock()
+func Process() {
+	for mdp := range dc {
+		lock.Lock()
+		for _, dp := range mdp {
 			var mts MetricTagSet
 			mts.Metric = dp.Metric
 			mts.Tags = dp.Tags
@@ -122,7 +122,8 @@ func Process(c chan *opentsdb.DataPoint) {
 				}
 				Tagv[q][v] = nil
 			}
-		}(dp)
+		}
+		lock.Unlock()
 	}
 }
 
