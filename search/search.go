@@ -10,6 +10,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/StackExchange/tsaf/_third_party/github.com/StackExchange/scollector/collect"
 	"github.com/StackExchange/tsaf/_third_party/github.com/StackExchange/scollector/opentsdb"
@@ -91,7 +92,8 @@ func HTTPExtract(body []byte) {
 	collect.Add("datapoints_relayed", int64(len(mdp)), nil)
 	select {
 	case dc <- mdp:
-	default:
+	case <-time.After(time.Millisecond * 5):
+		collect.Add("search.dropped", 1, nil)
 	}
 }
 
