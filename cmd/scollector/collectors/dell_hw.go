@@ -111,12 +111,13 @@ func c_omreport_ps_amps() opentsdb.MultiDataPoint {
 		if len(fields) != 2 || !strings.Contains(fields[0], "Current") {
 			return
 		}
-		i_fields := strings.Fields(fields[0])
+		i_fields := strings.Split(fields[0], "Current")
 		v_fields := strings.Fields(fields[1])
 		if len(i_fields) < 2 && len(v_fields) < 2 {
 			return
 		}
-		Add(&md, "hw.ps.current", v_fields[0], opentsdb.TagSet{"id": i_fields[0]})
+		id := strings.Replace(i_fields[0], " ", "", -1)
+		Add(&md, "hw.ps.current", v_fields[0], opentsdb.TagSet{"id": id})
 	}, "omreport", "chassis", "pwrmonitoring", "-fmt", "ssv")
 	return md
 }
@@ -128,12 +129,13 @@ func c_omreport_ps_volts() opentsdb.MultiDataPoint {
 		if len(fields) != 8 || !strings.Contains(fields[2], "Voltage") || fields[3] == "[N/A]" {
 			return
 		}
-		i_fields := strings.Fields(fields[2])
+		i_fields := strings.Split(fields[2], "Voltage")
 		v_fields := strings.Fields(fields[3])
 		if len(i_fields) < 2 && len(v_fields) < 2 {
 			return
 		}
-		Add(&md, "hw.ps.volts", v_fields[0], opentsdb.TagSet{"id": i_fields[0]})
+		id := strings.Replace(i_fields[0], " ", "", -1)
+		Add(&md, "hw.ps.volts", v_fields[0], opentsdb.TagSet{"id": id})
 	}, "omreport", "chassis", "volts", "-fmt", "ssv")
 	return md
 }
