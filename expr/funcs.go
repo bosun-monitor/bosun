@@ -221,6 +221,11 @@ func Query(e *state, T miniprofiler.Timer, query, sduration, eduration string) (
 
 func timeRequest(e *state, T miniprofiler.Timer, req *opentsdb.Request) (s opentsdb.ResponseSet, err error) {
 	r := *req
+	if e.autods > 0 {
+		if err := r.AutoDownsample(e.autods); err != nil {
+			return nil, err
+		}
+	}
 	e.addRequest(r)
 	b, _ := json.MarshalIndent(&r, "", "  ")
 	T.StepCustomTiming("tsdb", "query", string(b), func() {

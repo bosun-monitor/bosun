@@ -3,19 +3,19 @@ package web
 import (
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
-	"regexp"
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/StackExchange/tsaf/_third_party/github.com/MiniProfiler/go/miniprofiler"
 	"github.com/StackExchange/tsaf/_third_party/github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/tsaf/expr"
+	"github.com/StackExchange/tsaf/expr/parse"
 )
 
 // Graph takes an OpenTSDB request data structure and queries OpenTSDB. Use the
@@ -39,7 +39,7 @@ func Graph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 	}
 	ads_v := r.FormValue("autods")
 	if ads_v != "" {
-		ads_i, err := strconv.ParseInt(ads_v, 10, 64)
+		ads_i, err := strconv.Atoi(ads_v)
 		if err != nil {
 			return nil, err
 		}
@@ -106,54 +106,34 @@ func QFromR(req *opentsdb.Request) []string {
 	return queries
 }
 
-var q_re = regexp.MustCompile(`"([^"]+)"\s*,\s*"([^"]+)"`)
-var r_re = regexp.MustCompile(`^(.*?")[^"]+(".*)`)
-
 func ExprGraph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	q := r.FormValue("q")
-	qs := q_re.FindStringSubmatch(q)
-	if qs == nil {
-		return nil, errors.New("couldn't parse out query")
+	e, err := expr.New(q)
+	if err != nil {
+		return nil, err
+	} else if e.Root.Return() != parse.TYPE_SERIES {
+		return nil, fmt.Errorf("egraph: requires an expression that returns a series")
 	}
-	pq, err := opentsdb.ParseQuery(qs[1])
-	oreq := opentsdb.Request{
-		Start:   qs[2] + "-ago",
-		Queries: []*opentsdb.Query{pq},
-	}
-	ads_v := r.FormValue("autods")
-	if ads_v != "" {
-		ads_i, err := strconv.ParseInt(ads_v, 10, 64)
+	autods := 0
+	if a := r.FormValue("autods"); a != "" {
+		i, err := strconv.Atoi(a)
 		if err != nil {
 			return nil, err
 		}
-		if err := oreq.AutoDownsample(ads_i); err != nil {
-			return nil, err
-		}
+		autods = i
 	}
+	res, _, err := e.ExecuteOpts(opentsdb.NewCache(schedule.Conf.TsdbHost), t, time.Now(), autods)
 	if err != nil {
 		return nil, err
 	}
-	n_qs := r_re.ReplaceAllString(q, "${1}"+oreq.Queries[0].String()+"${2}")
-	e, err := expr.New(n_qs)
-	if err != nil {
-		return nil, err
-	}
-	res, _, err := e.Execute(opentsdb.Host(schedule.Conf.TsdbHost), t)
-	if err != nil {
-		return nil, err
-	}
-	return rickexpr(res, n_qs)
+	return rickexpr(res, q)
 }
 
 func rickexpr(r []*expr.Result, q string) ([]*RickSeries, error) {
 	series := make([]*RickSeries, 0)
 	for _, res := range r {
 		dps := make([]RickDP, 0)
-		var rv expr.Series
-		var ok bool
-		if rv, ok = res.Value.(expr.Series); !ok {
-			return series, errors.New("expr must return a series")
-		}
+		rv := res.Value.(expr.Series)
 		for k, v := range rv {
 			ki, err := strconv.ParseInt(k, 10, 64)
 			if err != nil {

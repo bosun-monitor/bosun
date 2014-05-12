@@ -16,6 +16,7 @@ import (
 type state struct {
 	*Expr
 	now     time.Time
+	autods  int
 	context opentsdb.Context
 	queries []opentsdb.Request
 }
@@ -48,16 +49,17 @@ func New(expr string) (*Expr, error) {
 // Execute applies a parse expression to the specified OpenTSDB context,
 // and returns one result per group. T may be nil to ignore timings.
 func (e *Expr) Execute(c opentsdb.Context, T miniprofiler.Timer) (r []*Result, queries []opentsdb.Request, err error) {
-	return e.ExecuteTime(c, T, time.Now().UTC())
+	return e.ExecuteOpts(c, T, time.Now().UTC(), 0)
 }
 
-// ExecuteTime is identical to Execute, but OpenTSDB queries
-func (e *Expr) ExecuteTime(c opentsdb.Context, T miniprofiler.Timer, now time.Time) (r []*Result, queries []opentsdb.Request, err error) {
+// ExecuteOpts is identical to Execute, supports time setting and auto downsampling.
+func (e *Expr) ExecuteOpts(c opentsdb.Context, T miniprofiler.Timer, now time.Time, autods int) (r []*Result, queries []opentsdb.Request, err error) {
 	defer errRecover(&err)
 	s := &state{
 		Expr:    e,
 		context: c,
 		now:     now,
+		autods:  autods,
 	}
 	if T == nil {
 		T = new(miniprofiler.Profile)
