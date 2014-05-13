@@ -234,7 +234,7 @@ func (s *Schedule) Load(c *conf.Conf) {
 func (s *Schedule) RestoreState() {
 	s.Lock()
 	defer s.Unlock()
-	s.cache = opentsdb.NewCache(s.Conf.TsdbHost)
+	s.cache = opentsdb.NewCache(s.Conf.TsdbHost, s.Conf.ResponseLimit)
 	s.Notifications = nil
 	s.status = make(States)
 	f, err := os.Open(s.Conf.StateFile)
