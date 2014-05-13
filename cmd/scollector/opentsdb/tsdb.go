@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"net/url"
@@ -534,6 +535,20 @@ func (r *Request) SetTime(t time.Time) error {
 // Query performs a v2 OpenTSDB request to the given host. host should be of the
 // form hostname:port. Can return a RequestError.
 func (r *Request) Query(host string) (ResponseSet, error) {
+	resp, err := r.QueryResponse(host)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	j := json.NewDecoder(resp.Body)
+	var tr ResponseSet
+	if err := j.Decode(&tr); err != nil {
+		return nil, err
+	}
+	return tr, nil
+}
+
+func (r *Request) QueryResponse(host string) (*http.Response, error) {
 	u := url.URL{
 		Scheme: "http",
 		Host:   host,
@@ -547,21 +562,16 @@ func (r *Request) Query(host string) (ResponseSet, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		e := RequestError{Request: string(b)}
+		defer resp.Body.Close()
 		j := json.NewDecoder(resp.Body)
 		if err := j.Decode(&e); err == nil {
 			return nil, &e
 		}
 		return nil, fmt.Errorf("tsdb: %s", b)
 	}
-	j := json.NewDecoder(resp.Body)
-	var tr ResponseSet
-	if err := j.Decode(&tr); err != nil {
-		return nil, err
-	}
-	return tr, nil
+	return resp, nil
 }
 
 type RequestError struct {
@@ -589,6 +599,7 @@ func (h Host) Query(r *Request) (ResponseSet, error) {
 
 type Cache struct {
 	host  string
+	limit int64
 	cache map[string]*cacheResult
 }
 
@@ -597,9 +608,10 @@ type cacheResult struct {
 	Err error
 }
 
-func NewCache(host string) *Cache {
+func NewCache(host string, limit int64) *Cache {
 	return &Cache{
 		host:  host,
+		limit: limit,
 		cache: make(map[string]*cacheResult),
 	}
 }
@@ -613,7 +625,21 @@ func (c *Cache) Query(r *Request) (ResponseSet, error) {
 	if v, ok := c.cache[s]; ok {
 		return v.ResponseSet, v.Err
 	}
-	rs, e := r.Query(c.host)
-	c.cache[s] = &cacheResult{rs, e}
-	return rs, e
+	resp, err := r.QueryResponse(c.host)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	lr := &io.LimitedReader{resp.Body, c.limit}
+	j := json.NewDecoder(lr)
+	var tr ResponseSet
+	err = j.Decode(&tr)
+	if lr.N == 0 {
+		return nil, fmt.Errorf("TSDB response too large: limited to %E bytes", float64(c.limit))
+	}
+	if err != nil {
+		return nil, err
+	}
+	c.cache[s] = &cacheResult{tr, err}
+	return tr, err
 }
