@@ -48,6 +48,10 @@ tsafApp.config([
             title: 'Silence',
             templateUrl: 'partials/silence.html',
             controller: 'SilenceCtrl'
+        }).when('/test_template', {
+            title: 'Test Template',
+            templateUrl: 'partials/test_template.html',
+            controller: 'TestTemplateCtrl'
         }).when('/config', {
             title: 'Configuration',
             templateUrl: 'partials/config.html',
@@ -593,6 +597,41 @@ tsafControllers.controller('RuleCtrl', [
             $location.search('rule', btoa($scope.expr));
             $location.search('date', $scope.date || null);
             $location.search('time', $scope.time || null);
+            $route.reload();
+        };
+    }]);
+
+tsafControllers.controller('TestTemplateCtrl', [
+    '$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
+        var search = $location.search();
+        var current = search.config;
+        try  {
+            current = atob(current);
+        } catch (e) {
+            current = '';
+        }
+        if (!current) {
+            var def = 'template test {\n' + '    body = `<h1>Name: {{replace .Alert.Name "." " " -1}}</h1>`\n' + '    subject = `{{.Last.Status}}: {{replace .Alert.Name "." " " -1}}: {{.E .Alert.Vars.q}} on {{.Group.host}}`\n' + '}\n\n' + 'alert test {\n' + '    template = test\n' + '    $t = "5m"\n' + '    $q = avg(q("avg:rate{counter,,1}:os.cpu{host=*}", $t, ""))\n' + '    crit = $q > 10\n' + '}';
+            $location.search('config', btoa(def));
+            return;
+        }
+        $scope.config = current;
+        $scope.running = "Running";
+        $http.get('/api/template?' + 'config=' + encodeURIComponent($scope.config)).success(function (data) {
+            $scope.subject = data.Subject;
+            $scope.body = data.Body;
+            $scope.running = '';
+        }).error(function (error) {
+            $scope.error = error;
+            $scope.running = '';
+        });
+        $scope.shiftEnter = function ($event) {
+            if ($event.keyCode == 13 && $event.shiftKey) {
+                $scope.set();
+            }
+        };
+        $scope.set = function () {
+            $location.search('config', btoa($scope.config));
             $route.reload();
         };
     }]);

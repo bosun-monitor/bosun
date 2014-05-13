@@ -95,33 +95,29 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 }
 
 func Template(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	// For now just hardcode the alert and template, will be taken from Form
-	template := `template _t {
-	body = <h1>Name: {{replace .Alert.Name "." " " -1}}</h1>
-	subject = {{.Last.Status}}: {{replace .Alert.Name "." " " -1}}: {{.E .Alert.Vars.q}} on {{.Group.host}}
-	}`
 	txt := fmt.Sprintf(`
 		tsdbHost = localhost:4242
-		%s
-		alert _ {
-			template = _t
-			$t = "5m"
-			$q = avg(q("avg:rate{counter,,1}:os.cpu{host=*}", $t, ""))
-			crit = $q > 0
-		}`, template)
+		%s`, r.FormValue("config"))
 	c, err := conf.New("-", txt)
 	if err != nil {
 		return nil, err
 	}
-	a := c.Alerts["_"]
+	if len(c.Alerts) != 1 {
+		return nil, fmt.Errorf("exactly one alert must be defined")
+	}
+	var a *conf.Alert
+	for k, _ := range c.Alerts {
+		a = c.Alerts[k]
+		break
+	}
 	s := &sched.Schedule{}
 	s.Load(c)
 	m := s.CheckExpr(a, a.Crit, 0, nil)
 	var instance *sched.State
-	// Just pick the first instance for now
-	if len(m) > 1 {
-		//Do something
+	if len(m) < 1 {
+		return nil, fmt.Errorf("no results returned")
 	}
+	// Just pick the first instance for now. Can let users submit tagset if people want it
 	for _, v := range m {
 		instance = s.Status(v)
 		break
