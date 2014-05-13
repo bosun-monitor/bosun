@@ -14,18 +14,18 @@ import (
 	"github.com/StackExchange/tsaf/expr"
 )
 
-type Context struct {
+type context struct {
 	*State
 	Alert *conf.Alert
 
-	Schedule *Schedule
+	schedule *Schedule
 }
 
-func (s *Schedule) data(st *State, a *conf.Alert) *Context {
-	return &Context{
+func (s *Schedule) data(st *State, a *conf.Alert) *context {
+	return &context{
 		State:    st,
 		Alert:    a,
-		Schedule: s,
+		schedule: s,
 	}
 }
 
@@ -64,29 +64,29 @@ func (s *Schedule) URL() *url.URL {
 }
 
 // Ack returns the URL to acknowledge an alert.
-func (c *Context) Ack() string {
-	u := c.Schedule.URL()
+func (c *context) Ack() string {
+	u := c.schedule.URL()
 	u.Path = fmt.Sprintf("/api/acknowledge/%s/%s", c.Alert.Name, c.State.Group.String())
 	return u.String()
 }
 
 // HostView returns the URL to the host view page.
-func (c *Context) HostView(host string) string {
-	u := c.Schedule.URL()
+func (c *context) HostView(host string) string {
+	u := c.schedule.URL()
 	u.Path = "/host"
 	u.RawQuery = fmt.Sprintf("time=1d-ago&host=%s", host)
 	return u.String()
 }
 
-func (c *Context) EGraph(v string) string {
+func (c *context) EGraph(v string) string {
 	q := url.QueryEscape("q=" + opentsdb.ReplaceTags(v, c.Group))
 	u := url.URL{
 		Scheme:   "http",
-		Host:     c.Schedule.Conf.HttpListen,
+		Host:     c.schedule.Conf.HttpListen,
 		Path:     "/egraph",
 		RawQuery: q,
 	}
-	if strings.HasPrefix(c.Schedule.Conf.HttpListen, ":") {
+	if strings.HasPrefix(c.schedule.Conf.HttpListen, ":") {
 		h, err := os.Hostname()
 		if err != nil {
 			return ""
@@ -113,17 +113,17 @@ func (s *Schedule) ExecuteSubject(w io.Writer, a *conf.Alert, st *State) error {
 }
 
 // E executes the given expression and returns a value with corresponding tags
-// to the Context's tags. If no such result is found, the first result with nil
+// to the context's tags. If no such result is found, the first result with nil
 // tags is returned. If no such result is found, nil is returned. The precision
 // of numbers is truncated for convienent display. Array expressions are not
 // supported.
-func (c *Context) E(v string) (s string) {
+func (c *context) E(v string) (s string) {
 	e, err := expr.New(v)
 	if err != nil {
 		log.Printf("%s: %v", v, err)
 		return
 	}
-	res, _, err := e.Execute(c.Schedule.cache, nil)
+	res, _, err := e.Execute(c.schedule.cache, nil)
 	if err != nil {
 		log.Printf("%s: %v", v, err)
 		return
