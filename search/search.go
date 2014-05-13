@@ -92,7 +92,7 @@ func HTTPExtract(body []byte) {
 	collect.Add("datapoints_relayed", int64(len(mdp)), nil)
 	select {
 	case dc <- mdp:
-	case <-time.After(time.Millisecond * 5):
+	case <-time.After(time.Millisecond * 100):
 		collect.Add("search.dropped", 1, nil)
 	}
 }
