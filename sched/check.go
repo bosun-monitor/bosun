@@ -19,7 +19,7 @@ func (s *Schedule) Status(ak AlertKey) *State {
 
 func (s *Schedule) Check() {
 	s.runStates = make(map[AlertKey]Status)
-	s.cache = opentsdb.NewCache(s.Conf.TsdbHost)
+	s.cache = opentsdb.NewCache(s.Conf.TsdbHost, s.Conf.ResponseLimit)
 	for _, a := range s.Conf.Alerts {
 		s.CheckAlert(a)
 	}

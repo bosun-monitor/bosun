@@ -32,6 +32,7 @@ type Conf struct {
 	EmailFrom       string
 	StateFile       string
 	TimeAndDate     []int // timeanddate.com cities list
+	ResponseLimit   int64
 	Unknown         time.Duration
 	UnknownTemplate *Template
 	Templates       map[string]*Template
@@ -181,6 +182,7 @@ func New(name, text string) (c *Conf, err error) {
 		RelayListen:    ":4242",
 		WebDir:         "web",
 		StateFile:      "tsaf.state",
+		ResponseLimit:  1 << 20, // 1MB
 		Vars:           make(map[string]string),
 		Templates:      make(map[string]*Template),
 		Alerts:         make(map[string]*Alert),
@@ -248,6 +250,15 @@ func (c *Conf) loadGlobal(p *parse.PairNode) {
 			t = append(t, i)
 		}
 		c.TimeAndDate = t
+	case "responseLimit":
+		i, err := strconv.ParseInt(v, 10, 64)
+		if err != nil {
+			c.error(err)
+		}
+		if i <= 0 {
+			c.errorf("responseLimit must be > 0")
+		}
+		c.ResponseLimit = i
 	case "unknown":
 		d, err := time.ParseDuration(v)
 		if err != nil {
