@@ -104,9 +104,11 @@ func (s *Schedule) CheckUnknown() {
 }
 
 func (s *Schedule) CheckAlert(a *conf.Alert) {
+	log.Printf("checking alert %v", a.Name)
+	start := time.Now()
 	crits := s.CheckExpr(a, a.Crit, stCritical, nil)
 	warns := s.CheckExpr(a, a.Warn, stWarning, crits)
-	log.Printf("checking alert %v: %v crits, %v warns", a.Name, len(crits), len(warns))
+	log.Printf("done checking alert %v (%s): %v crits, %v warns", a.Name, time.Since(start), len(crits), len(warns))
 }
 
 func (s *Schedule) CheckExpr(a *conf.Alert, e *expr.Expr, checkStatus Status, ignore AlertKeys) (alerts AlertKeys) {
