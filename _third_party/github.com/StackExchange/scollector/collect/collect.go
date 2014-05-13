@@ -100,25 +100,25 @@ func InitChan(tsdbhost, metric_root string, ch chan *opentsdb.DataPoint) error {
 	go send()
 
 	go collect()
-	Set("collect.dropped", nil, func() (i int64) {
+	Set("collect.dropped", nil, func() (i float64) {
 		slock.Lock()
-		i = dropped
+		i = float64(dropped)
 		slock.Unlock()
 		return
 	})
-	Set("collect.sent", nil, func() (i int64) {
+	Set("collect.sent", nil, func() (i float64) {
 		slock.Lock()
-		i = sent
+		i = float64(sent)
 		slock.Unlock()
 		return
 	})
-	Set("collect.alloc", nil, func() int64 {
+	Set("collect.alloc", nil, func() float64 {
 		var ms runtime.MemStats
 		runtime.ReadMemStats(&ms)
-		return int64(ms.Alloc)
+		return float64(ms.Alloc)
 	})
-	Set("collect.goroutines", nil, func() int64 {
-		return int64(runtime.NumGoroutine())
+	Set("collect.goroutines", nil, func() float64 {
+		return float64(runtime.NumGoroutine())
 	})
 	return nil
 }
@@ -144,10 +144,10 @@ func setHostName() error {
 type setMetric struct {
 	metric string
 	ts     opentsdb.TagSet
-	f      func() int64
+	f      func() float64
 }
 
-func Set(metric string, ts opentsdb.TagSet, f func() int64) error {
+func Set(metric string, ts opentsdb.TagSet, f func() float64) error {
 	if err := check(metric, &ts); err != nil {
 		return err
 	}
@@ -161,12 +161,12 @@ func Set(metric string, ts opentsdb.TagSet, f func() int64) error {
 type addMetric struct {
 	metric string
 	ts     opentsdb.TagSet
-	value  int64
+	value  float64
 }
 
 // Add takes a metric and increments a counter for that metric. The metric name
 // is appended to the basename specified in the Init function.
-func Add(metric string, inc int64, ts opentsdb.TagSet) error {
+func Add(metric string, ts opentsdb.TagSet, inc float64) error {
 	if err := check(metric, &ts); err != nil {
 		return err
 	}
@@ -184,9 +184,6 @@ func Add(metric string, inc int64, ts opentsdb.TagSet) error {
 }
 
 func check(metric string, ts *opentsdb.TagSet) error {
-	if tchan == nil {
-		return fmt.Errorf("Init must be called before calling Add")
-	}
 	if err := checkClean(metric, "metric"); err != nil {
 		return err
 	}
