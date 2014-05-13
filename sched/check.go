@@ -117,7 +117,7 @@ func (s *Schedule) CheckExpr(a *conf.Alert, e *expr.Expr, checkStatus Status, ig
 	}
 	results, _, err := e.Execute(s.cache, nil)
 	if err != nil {
-		collect.Add("check.errs", 1, opentsdb.TagSet{"metric": a.Name})
+		collect.Add("check.errs", opentsdb.TagSet{"metric": a.Name}, 1)
 		log.Println(err)
 		return
 	}

@@ -80,7 +80,7 @@ func HTTPExtract(body []byte) {
 		}
 		r.Close()
 	}
-	collect.Add("puts_relayed", 1, nil)
+	collect.Add("puts_relayed", nil, 1)
 	var dp opentsdb.DataPoint
 	var mdp opentsdb.MultiDataPoint
 	if err := json.Unmarshal(body, &dp); err == nil {
@@ -89,11 +89,11 @@ func HTTPExtract(body []byte) {
 		log.Printf("search: could not unmarshal: %s", body)
 		return
 	}
-	collect.Add("datapoints_relayed", int64(len(mdp)), nil)
+	collect.Add("datapoints_relayed", nil, float64(len(mdp)))
 	select {
 	case dc <- mdp:
 	case <-time.After(time.Millisecond * 100):
-		collect.Add("search.dropped", 1, nil)
+		collect.Add("search.dropped", nil, 1)
 	}
 }
 
