@@ -1,7 +1,9 @@
 package web
 
 import (
+	"bytes"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"time"
@@ -10,6 +12,7 @@ import (
 	"github.com/StackExchange/tsaf/_third_party/github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/tsaf/conf"
 	"github.com/StackExchange/tsaf/expr"
+	"github.com/StackExchange/tsaf/sched"
 )
 
 func Expr(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
@@ -89,4 +92,59 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 		}
 	}
 	return ret, nil
+}
+
+func Template(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	// For now just hardcode the alert and template, will be taken from Form
+	template := `template _t {
+	body = <h1>Name: {{replace .Alert.Name "." " " -1}}</h1>
+	subject = {{.Last.Status}}: {{replace .Alert.Name "." " " -1}}: {{.E .Alert.Vars.q}} on {{.Group.host}}
+	}`
+	txt := fmt.Sprintf(`
+		tsdbHost = localhost:4242
+		%s
+		alert _ {
+			template = _t
+			$t = "5m"
+			$q = avg(q("avg:rate{counter,,1}:os.cpu{host=*}", $t, ""))
+			crit = $q > 0
+		}`, template)
+	c, err := conf.New("-", txt)
+	if err != nil {
+		return nil, err
+	}
+	a := c.Alerts["_"]
+	s := &sched.Schedule{}
+	s.Load(c)
+	m := s.CheckExpr(a, a.Crit, 0, nil)
+	var instance *sched.State
+	// Just pick the first instance for now
+	if len(m) > 1 {
+		//Do something
+	}
+	for _, v := range m {
+		instance = s.Status(v)
+		break
+	}
+	body := new(bytes.Buffer)
+	subject := new(bytes.Buffer)
+	c.Alerts["_"].Template.Body.Execute(body, &sched.Context{
+		State:    instance,
+		Alert:    a,
+		Schedule: s,
+	})
+	c.Alerts["_"].Template.Subject.Execute(subject, &sched.Context{
+		State:    instance,
+		Alert:    a,
+		Schedule: s,
+	})
+	b, _ := ioutil.ReadAll(body)
+	sub, _ := ioutil.ReadAll(subject)
+	return struct {
+		Body    string
+		Subject string
+	}{
+		string(b),
+		string(sub),
+	}, nil
 }
