@@ -490,7 +490,7 @@ func GetDuration(r *Request) (Duration, error) {
 }
 
 // AutoDownsample sets the avg downsample aggregator to produce l points.
-func (r *Request) AutoDownsample(l int64) error {
+func (r *Request) AutoDownsample(l int) error {
 	if l == 0 {
 		return errors.New("tsaf: target length must be > 0")
 	}
