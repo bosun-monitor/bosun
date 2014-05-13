@@ -5,6 +5,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/StackExchange/tsaf/_third_party/github.com/StackExchange/scollector/collect"
 	"github.com/StackExchange/tsaf/_third_party/github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/tsaf/conf"
 	"github.com/StackExchange/tsaf/expr"
@@ -114,7 +115,7 @@ func (s *Schedule) CheckExpr(a *conf.Alert, e *expr.Expr, checkStatus Status, ig
 	}
 	results, _, err := e.Execute(s.cache, nil)
 	if err != nil {
-		// todo: do something here?
+		collect.Add("check.errs", 1, opentsdb.TagSet{"metric": a.Name})
 		log.Println(err)
 		return
 	}
