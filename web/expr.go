@@ -128,16 +128,8 @@ func Template(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (int
 	}
 	body := new(bytes.Buffer)
 	subject := new(bytes.Buffer)
-	c.Alerts["_"].Template.Body.Execute(body, &sched.Context{
-		State:    instance,
-		Alert:    a,
-		Schedule: s,
-	})
-	c.Alerts["_"].Template.Subject.Execute(subject, &sched.Context{
-		State:    instance,
-		Alert:    a,
-		Schedule: s,
-	})
+	s.ExecuteBody(body, a, instance)
+	s.ExecuteSubject(subject, a, instance)
 	b, _ := ioutil.ReadAll(body)
 	sub, _ := ioutil.ReadAll(subject)
 	return struct {
