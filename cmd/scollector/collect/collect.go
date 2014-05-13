@@ -184,9 +184,6 @@ func Add(metric string, inc int64, ts opentsdb.TagSet) error {
 }
 
 func check(metric string, ts *opentsdb.TagSet) error {
-	if tchan == nil {
-		return fmt.Errorf("Init must be called before calling Add")
-	}
 	if err := checkClean(metric, "metric"); err != nil {
 		return err
 	}
