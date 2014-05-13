@@ -158,6 +158,9 @@ Loop:
 		} else {
 			status = stNormal
 		}
+		if s.runStates == nil {
+			s.runStates = make(map[AlertKey]Status)
+		}
 		if status > s.runStates[ak] {
 			s.runStates[ak] = status
 		}
