@@ -36,6 +36,7 @@ func Listen(addr, dir, host string) error {
 	router.Handle("/api/action", JSON(Action))
 	router.Handle("/api/alerts", JSON(Alerts))
 	router.Handle("/api/config", miniprofiler.NewHandler(Config))
+	router.Handle("/api/template", JSON(Template))
 	router.Handle("/api/config_test", miniprofiler.NewHandler(ConfigTest))
 	router.Handle("/api/egraph", JSON(ExprGraph))
 	router.Handle("/api/expr", JSON(Expr))

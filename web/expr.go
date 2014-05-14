@@ -1,15 +1,19 @@
 package web
 
 import (
+	"bytes"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/url"
+	"sort"
 	"time"
 
 	"github.com/StackExchange/tsaf/_third_party/github.com/MiniProfiler/go/miniprofiler"
 	"github.com/StackExchange/tsaf/_third_party/github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/tsaf/conf"
 	"github.com/StackExchange/tsaf/expr"
+	"github.com/StackExchange/tsaf/sched"
 )
 
 func Expr(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
@@ -89,4 +93,48 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 		}
 	}
 	return ret, nil
+}
+
+func Template(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	txt := fmt.Sprintf(`
+		tsdbHost = %s
+		%s`, schedule.Conf.TsdbHost, r.FormValue("config"))
+	c, err := conf.New("-", txt)
+	if err != nil {
+		return nil, err
+	}
+	if len(c.Alerts) != 1 {
+		return nil, fmt.Errorf("exactly one alert must be defined")
+	}
+	var a *conf.Alert
+	for k, _ := range c.Alerts {
+		a = c.Alerts[k]
+		break
+	}
+	s := &sched.Schedule{}
+	s.Load(c)
+	ak := s.CheckExpr(a, a.Crit, 0, nil)
+	var instance *sched.State
+	if len(ak) < 1 {
+		return nil, fmt.Errorf("no results returned")
+	}
+	sort.Sort(ak)
+	instance = s.Status(ak[0])
+	body := new(bytes.Buffer)
+	subject := new(bytes.Buffer)
+	if err := s.ExecuteBody(body, a, instance); err != nil {
+		return nil, err
+	}
+	if err := s.ExecuteSubject(subject, a, instance); err != nil {
+		return nil, err
+	}
+	b, _ := ioutil.ReadAll(body)
+	sub, _ := ioutil.ReadAll(subject)
+	return struct {
+		Body    string
+		Subject string
+	}{
+		string(b),
+		string(sub),
+	}, nil
 }
