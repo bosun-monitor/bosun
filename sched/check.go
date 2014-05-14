@@ -34,8 +34,12 @@ func (s *Schedule) Check() {
 		a := s.Conf.Alerts[ak.Name()]
 		if status > stNormal {
 			var subject = new(bytes.Buffer)
-			if err := s.ExecuteSubject(subject, a, state); err != nil {
-				log.Println(err)
+			if status == stUnknown {
+				fmt.Fprint(subject, "unknown")
+			} else {
+				if err := s.ExecuteSubject(subject, a, state); err != nil {
+					log.Println(err)
+				}
 			}
 			state.Subject = subject.String()
 			state.Open = true
