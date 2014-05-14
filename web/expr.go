@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"sort"
 	"time"
 
 	"github.com/StackExchange/tsaf/_third_party/github.com/MiniProfiler/go/miniprofiler"
@@ -96,8 +97,8 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 
 func Template(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	txt := fmt.Sprintf(`
-		tsdbHost = localhost:4242
-		%s`, r.FormValue("config"))
+		tsdbHost = %s
+		%s`, schedule.Conf.TsdbHost, r.FormValue("config"))
 	c, err := conf.New("-", txt)
 	if err != nil {
 		return nil, err
@@ -112,20 +113,21 @@ func Template(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (int
 	}
 	s := &sched.Schedule{}
 	s.Load(c)
-	m := s.CheckExpr(a, a.Crit, 0, nil)
+	ak := s.CheckExpr(a, a.Crit, 0, nil)
 	var instance *sched.State
-	if len(m) < 1 {
+	if len(ak) < 1 {
 		return nil, fmt.Errorf("no results returned")
 	}
-	// Just pick the first instance for now. Can let users submit tagset if people want it
-	for _, v := range m {
-		instance = s.Status(v)
-		break
-	}
+	sort.Sort(ak)
+	instance = s.Status(ak[0])
 	body := new(bytes.Buffer)
 	subject := new(bytes.Buffer)
-	s.ExecuteBody(body, a, instance)
-	s.ExecuteSubject(subject, a, instance)
+	if err := s.ExecuteBody(body, a, instance); err != nil {
+		return nil, err
+	}
+	if err := s.ExecuteSubject(subject, a, instance); err != nil {
+		return nil, err
+	}
 	b, _ := ioutil.ReadAll(body)
 	sub, _ := ioutil.ReadAll(subject)
 	return struct {

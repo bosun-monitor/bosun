@@ -118,6 +118,9 @@ func (s *Schedule) CheckExpr(a *conf.Alert, e *expr.Expr, checkStatus Status, ig
 		log.Println(err)
 		return
 	}
+	if s.runStates == nil {
+		s.runStates = make(map[AlertKey]Status)
+	}
 Loop:
 	for _, r := range results {
 		if a.Squelched(r.Group) {
@@ -157,9 +160,6 @@ Loop:
 			alerts = append(alerts, ak)
 		} else {
 			status = stNormal
-		}
-		if s.runStates == nil {
-			s.runStates = make(map[AlertKey]Status)
 		}
 		if status > s.runStates[ak] {
 			s.runStates[ak] = status
