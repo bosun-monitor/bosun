@@ -130,9 +130,6 @@ func (s *Schedule) CheckExpr(a *conf.Alert, e *expr.Expr, checkStatus Status, ig
 	if err != nil {
 		return
 	}
-	if s.runStates == nil {
-		s.runStates = make(map[AlertKey]Status)
-	}
 Loop:
 	for _, r := range results {
 		if a.Squelched(r.Group) {
@@ -174,7 +171,7 @@ Loop:
 		} else {
 			status = stNormal
 		}
-		if status > s.runStates[ak] {
+		if s.runStates != nil && status > s.runStates[ak] {
 			s.runStates[ak] = status
 		}
 	}
