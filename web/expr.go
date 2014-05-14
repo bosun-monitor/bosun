@@ -113,7 +113,10 @@ func Template(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (int
 	}
 	s := &sched.Schedule{}
 	s.Load(c)
-	ak := s.CheckExpr(a, a.Crit, 0, nil)
+	ak, err := s.CheckExpr(a, a.Crit, 0, nil)
+	if err != nil {
+		return nil, err
+	}
 	var instance *sched.State
 	if len(ak) < 1 {
 		return nil, fmt.Errorf("no results returned")
