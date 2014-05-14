@@ -611,7 +611,7 @@ tsafControllers.controller('TestTemplateCtrl', [
             current = '';
         }
         if (!current) {
-            var def = 'template test {\n' + '    body = `<h1>Name: {{replace .Alert.Name "." " " -1}}</h1>`\n' + '    subject = `{{.Last.Status}}: {{replace .Alert.Name "." " " -1}}: {{.E .Alert.Vars.q}} on {{.Group.host}}`\n' + '}\n\n' + 'alert test {\n' + '    template = test\n' + '    $t = "5m"\n' + '    $q = avg(q("avg:rate{counter,,1}:os.cpu{host=*}", $t, ""))\n' + '    crit = $q > 10\n' + '}';
+            var def = 'template test {\n' + '    body = `<h1>Name: {{.Alert.Name}}</h1>`\n' + '    subject = `{{.Last.Status}}: {{.Alert.Name}}: {{.E .Alert.Vars.q}} on {{.Group.host}}`\n' + '}\n\n' + 'alert test {\n' + '    template = test\n' + '    $t = "5m"\n' + '    $q = avg(q("avg:rate{counter,,1}:os.cpu{host=*}", $t, ""))\n' + '    crit = $q > 10\n' + '}';
             $location.search('config', btoa(def));
             return;
         }
