@@ -616,7 +616,7 @@ func NewCache(host string, limit int64) *Cache {
 	}
 }
 
-func (c *Cache) Query(r *Request) (ResponseSet, error) {
+func (c *Cache) Query(r *Request) (tr ResponseSet, err error) {
 	b, err := json.Marshal(&r)
 	if err != nil {
 		return nil, err
@@ -625,21 +625,23 @@ func (c *Cache) Query(r *Request) (ResponseSet, error) {
 	if v, ok := c.cache[s]; ok {
 		return v.ResponseSet, v.Err
 	}
+	defer func() {
+		c.cache[s] = &cacheResult{tr, err}
+	}()
 	resp, err := r.QueryResponse(c.host)
 	if err != nil {
-		return nil, err
+		return
 	}
 	defer resp.Body.Close()
 	lr := &io.LimitedReader{resp.Body, c.limit}
 	j := json.NewDecoder(lr)
-	var tr ResponseSet
 	err = j.Decode(&tr)
 	if lr.N == 0 {
-		return nil, fmt.Errorf("TSDB response too large: limited to %E bytes", float64(c.limit))
+		err = fmt.Errorf("TSDB response too large: limited to %E bytes", float64(c.limit))
+		return
 	}
 	if err != nil {
-		return nil, err
+		return
 	}
-	c.cache[s] = &cacheResult{tr, err}
-	return tr, err
+	return
 }
