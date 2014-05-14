@@ -106,19 +106,27 @@ func (s *Schedule) CheckUnknown() {
 func (s *Schedule) CheckAlert(a *conf.Alert) {
 	log.Printf("checking alert %v", a.Name)
 	start := time.Now()
-	crits := s.CheckExpr(a, a.Crit, stCritical, nil)
-	warns := s.CheckExpr(a, a.Warn, stWarning, crits)
+	crits, err := s.CheckExpr(a, a.Crit, stCritical, nil)
+	var warns AlertKeys
+	if err == nil {
+		warns, _ = s.CheckExpr(a, a.Warn, stWarning, crits)
+	}
 	log.Printf("done checking alert %v (%s): %v crits, %v warns", a.Name, time.Since(start), len(crits), len(warns))
 }
 
-func (s *Schedule) CheckExpr(a *conf.Alert, e *expr.Expr, checkStatus Status, ignore AlertKeys) (alerts AlertKeys) {
+func (s *Schedule) CheckExpr(a *conf.Alert, e *expr.Expr, checkStatus Status, ignore AlertKeys) (alerts AlertKeys, err error) {
 	if e == nil {
 		return
 	}
-	results, _, err := e.Execute(s.cache, nil)
-	if err != nil {
+	defer func() {
+		if err == nil {
+			return
+		}
 		collect.Add("check.errs", opentsdb.TagSet{"metric": a.Name}, 1)
 		log.Println(err)
+	}()
+	results, _, err := e.Execute(s.cache, nil)
+	if err != nil {
 		return
 	}
 Loop:
