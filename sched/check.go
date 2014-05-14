@@ -2,6 +2,7 @@ package sched
 
 import (
 	"bytes"
+	"fmt"
 	"log"
 	"time"
 
@@ -161,7 +162,8 @@ Loop:
 		case expr.Scalar:
 			n = float64(v)
 		default:
-			panic("expected number or scalar")
+			err = fmt.Errorf("expected number or scalar")
+			return
 		}
 		if n != 0 {
 			state.Expr = e.String()
