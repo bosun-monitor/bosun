@@ -4,7 +4,10 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"image"
 	"image/color"
+	"image/draw"
+	"image/png"
 	"io"
 	"net/http"
 	"net/url"
@@ -17,6 +20,7 @@ import (
 	"github.com/StackExchange/tsaf/_third_party/github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/tsaf/expr"
 	"github.com/StackExchange/tsaf/expr/parse"
+	"github.com/bradfitz/slice"
 	"github.com/vdobler/chart"
 	"github.com/vdobler/chart/imgg"
 )
@@ -111,6 +115,16 @@ func QFromR(req *opentsdb.Request) []string {
 
 func ExprGraph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	q := r.FormValue("q")
+	if bs := r.FormValue("b64"); bs != "" {
+		b, err := base64.URLEncoding.DecodeString(bs)
+		if err != nil {
+			return nil, err
+		}
+		q = string(b)
+	}
+	if len(q) == 0 {
+		return nil, fmt.Errorf("either q or b64 required")
+	}
 	e, err := expr.New(q)
 	if err != nil {
 		return nil, err
@@ -133,6 +147,7 @@ func ExprGraph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (in
 		c := chart.ScatterChart{
 			Title: q,
 		}
+		c.XRange.Time = true
 		for ri, r := range res {
 			rv := r.Value.(expr.Series)
 			pts := make([]chart.EPoint, len(rv))
@@ -147,10 +162,19 @@ func ExprGraph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (in
 				pts[idx].Y = float64(v)
 				idx++
 			}
+			slice.Sort(pts, func(i, j int) bool {
+				return pts[i].X < pts[j].X
+			})
 			c.AddData(r.Group.String(), pts, chart.PlotStyleLinesPoints, chart.AutoStyle(ri, false))
 		}
-		g := imgg.New(800, 600, color.RGBA{0xff, xff, 0xff, ff}, nil, nil)
-		c.Plot(g)
+		i := image.NewRGBA(image.Rect(0, 0, 800, 600))
+		white := color.RGBA{0xff, 0xff, 0xff, 0xff}
+		bg := image.NewUniform(white)
+		draw.Draw(i, i.Bounds(), bg, image.ZP, draw.Src)
+		igr := imgg.AddTo(i, 0, 0, 800, 600, white, nil, nil)
+		c.Plot(igr)
+		err := png.Encode(w, i)
+		return nil, err
 	}
 	return rickexpr(res, q)
 }
