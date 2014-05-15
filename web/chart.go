@@ -165,6 +165,7 @@ func ExprGraph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (in
 			})
 			c.AddData(r.Group.String(), pts, chart.PlotStyleLinesPoints, chart.AutoStyle(ri, false))
 		}
+		w.Header().Set("Content-Type", "image/svg+xml")
 		white := color.RGBA{0xff, 0xff, 0xff, 0xff}
 		const width = 800
 		const height = 600
