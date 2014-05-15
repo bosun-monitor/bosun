@@ -94,7 +94,6 @@ interface ITsafScope extends ng.IScope {
 	json: (v: any) => string;
 	btoa: (v: any) => string;
 	encode: (v: string) => string;
-	zws: (v: string) => string; // adds the unicode zero-width space character where appropriate
 	timeanddate: number[];
 	schedule: any;
 	req_from_m: (m: string) => Request;
@@ -116,9 +115,6 @@ tsafControllers.controller('TsafCtrl', ['$scope', '$route', '$http', function($s
 	};
 	$scope.btoa = (v: any) => {
 		return btoa(v);
-	};
-	$scope.zws = (v: string) => {
-		return v.replace(/([,{}()])/g, '$1\u200b');
 	};
 	$scope.encode = (v: string) => {
 		return encodeURIComponent(v);
@@ -1031,6 +1027,9 @@ tsafApp.directive('tsState', function() {
 			scope.action = (type: string) => {
 				var key = encodeURIComponent(scope.name);
 				return '/action?type=' + type + '&key=' + key;
+			};
+			scope.zws = (v: string) => {
+				return v.replace(/([,{}()])/g, '$1\u200b');
 			};
 		},
 	};
