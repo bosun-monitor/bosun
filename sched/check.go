@@ -20,6 +20,7 @@ func (s *Schedule) Status(ak AlertKey) *State {
 }
 
 func (s *Schedule) Check() {
+	s.checkStart = time.Now().UTC()
 	s.runStates = make(map[AlertKey]Status)
 	s.cache = opentsdb.NewCache(s.Conf.TsdbHost, s.Conf.ResponseLimit)
 	for _, a := range s.Conf.Alerts {
@@ -128,7 +129,7 @@ func (s *Schedule) CheckExpr(a *conf.Alert, e *expr.Expr, checkStatus Status, ig
 		collect.Add("check.errs", opentsdb.TagSet{"metric": a.Name}, 1)
 		log.Println(err)
 	}()
-	results, _, err := e.Execute(s.cache, nil)
+	results, _, err := e.ExecuteOpts(s.cache, nil, s.checkStart, 0)
 	if err != nil {
 		return
 	}
