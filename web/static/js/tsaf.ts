@@ -255,7 +255,7 @@ tsafControllers.controller('EGraphCtrl', ['$scope', '$http', '$location', '$rout
 			}
 			$scope.running = '';
 			$scope.error = '';
-			$scope.url = url + '&png=.png';
+			$scope.url = url;
 		})
 		.error((error) => {
 			$scope.error = error;
