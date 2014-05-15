@@ -223,6 +223,7 @@ interface IEGraphScope extends ng.IScope {
 	render: string;
 	renderers: string[];
 	bytes: boolean;
+	url: string;
 	set: () => void;
 }
 
@@ -243,7 +244,8 @@ tsafControllers.controller('EGraphCtrl', ['$scope', '$http', '$location', '$rout
 	$scope.expr = current;
 	$scope.running = current;
 	var width: number = $('.chart').width();
-	$http.get('/api/egraph?q=' + encodeURIComponent(current) + '&autods=' + width)
+	var url = '/api/egraph?b64=' + btoa(current) + '&autods=' + width;
+	$http.get(url)
 		.success((data) => {
 			$scope.result = data;
 			if ($scope.result.length == 0) {
@@ -252,6 +254,8 @@ tsafControllers.controller('EGraphCtrl', ['$scope', '$http', '$location', '$rout
 				$scope.warning = '';
 			}
 			$scope.running = '';
+			$scope.error = '';
+			$scope.url = url + '&png=.png';
 		})
 		.error((error) => {
 			$scope.error = error;
