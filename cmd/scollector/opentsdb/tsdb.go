@@ -6,10 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
-	"os"
 	"regexp"
 	"sort"
 	"strconv"
@@ -20,8 +18,6 @@ import (
 
 	"github.com/StackExchange/slog"
 )
-
-var l = log.New(os.Stdout, "", log.LstdFlags)
 
 type ResponseSet []*Response
 
