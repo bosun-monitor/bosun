@@ -91,9 +91,6 @@ tsafControllers.controller('TsafCtrl', [
         $scope.btoa = function (v) {
             return btoa(v);
         };
-        $scope.zws = function (v) {
-            return v.replace(/([,{}()])/g, '$1\u200b');
-        };
         $scope.encode = function (v) {
             return encodeURIComponent(v);
         };
@@ -831,6 +828,9 @@ tsafApp.directive('tsState', function () {
             scope.action = function (type) {
                 var key = encodeURIComponent(scope.name);
                 return '/action?type=' + type + '&key=' + key;
+            };
+            scope.zws = function (v) {
+                return v.replace(/([,{}()])/g, '$1\u200b');
             };
         }
     };
