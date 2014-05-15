@@ -143,7 +143,7 @@ func ExprGraph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (in
 	}
 	if r.FormValue("svg") != "" {
 		c := chart.ScatterChart{
-			Title: q,
+			Title: fmt.Sprintf("%s - %s", q, time.Now().Format(time.RFC1123)),
 		}
 		c.XRange.Time = true
 		for ri, r := range res {
@@ -171,7 +171,6 @@ func ExprGraph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (in
 		const height = 600
 		s := svg.New(w)
 		s.Start(width, height)
-		s.Title(q)
 		s.Rect(0, 0, width, height, "fill: #ffffff")
 		sgr := svgg.AddTo(s, 0, 0, width, height, "", 12, white)
 		c.Plot(sgr)
