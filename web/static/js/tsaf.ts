@@ -423,7 +423,6 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route
 	$scope.end = request.end;
 	$scope.autods = search.autods != 'false';
 	$scope.refresh = search.refresh == 'true';
-	// Moment Stuff
 	var ot = 'YYYY/MM/DD-HH:mm:ss';
 	var orelativeTime =  {
 		future: "in %s",
