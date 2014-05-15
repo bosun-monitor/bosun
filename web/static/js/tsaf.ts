@@ -421,6 +421,61 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route
 	$scope.end = request.end;
 	$scope.autods = search.autods != 'false';
 	$scope.refresh = search.refresh == 'true';
+	// Moment Stuff
+	var ot = 'YYYY/MM/DD-HH:mm:ss';
+	orelativeTime =  {
+		future: "in %s",
+		past:   "%s-ago",
+		s:  "%ds",
+		m:  "$dm",
+		mm: "%dm",
+		h:  "%dh",
+		hh: "%dh",
+		d:  "%dd",
+		dd: "%dd",
+		M:  "%dn",
+		MM: "%dn",
+		y:  "%dy",
+		yy: "%dy"
+	};
+	moment.lang('opentsdb', {
+	    relativeTime : orelativeTime,
+	});
+	moment.lang('en');
+	var duration_map = {
+		"s": "s",
+		"m": "m",
+		"h": "h",
+		"d": "d",
+		"w": "w",
+		"n": "M",
+		"y": "y",
+	};
+	var isRel = /^(\d+)(\w)-ago$/
+	function RelToAbs(m: RegExpExecArray) {
+		return moment().subtract(parseFloat(m[1]), duration_map[m[2]]).format(ot);
+	}
+	function AbsToRel(s: string) {
+		//Not strict Parsing
+		moment.lang('opentsdb');
+		var t = moment(s, ot).fromNow();
+		moment.lang('en');
+		return t;
+	}
+	function SwapTime(s: string) {
+		if (!s) {
+			return moment().format(ot);
+		}
+		m = isRel.exec(s);
+		if (m) {
+			return RelToAbs(m);
+		}
+		return AbsToRel(s);
+	}
+	$scope.SwitchTimes = function() {
+		$scope.start = SwapTime($scope.start);
+		$scope.end = SwapTime($scope.end);
+	}
 	$scope.AddTab = function() {
 		$scope.index = $scope.query_p.length;
 		$scope.query_p.push(new Query);
@@ -465,6 +520,9 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route
 	if ($scope.query_p.length == 0) {
 		$scope.AddTab();
 	}
+
+
+
 	$http.get('/api/metric')
 		.success(function (data: string[]) {
 			$scope.metrics = data;
@@ -1059,8 +1117,6 @@ tsafApp.directive('tsForget', () => {
 		templateUrl: '/partials/forget.html',
 	};
 });
-
-var timeFormat = 'YYYY-MM-DD HH:mm:ss ZZ';
 
 tsafApp.directive("tsTime", function() {
 	return {
