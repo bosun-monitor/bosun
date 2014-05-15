@@ -299,6 +299,25 @@ var Request = (function () {
 
 var graphRefresh;
 
+moment.defaultFormat = 'YYYY/MM/DD-HH:mm:ss';
+
+moment.lang('en', {
+    relativeTime: {
+        future: "in %s",
+        past: "%s-ago",
+        s: "%ds",
+        m: "$dm",
+        mm: "%dm",
+        h: "%dh",
+        hh: "%dh",
+        d: "%dd",
+        dd: "%dd",
+        M: "%dn",
+        MM: "%dn",
+        y: "%dy",
+        yy: "%dy" }
+});
+
 tsafControllers.controller('GraphCtrl', [
     '$scope', '$http', '$location', '$route', '$timeout', function ($scope, $http, $location, $route, $timeout) {
         $scope.aggregators = ["sum", "min", "max", "avg", "dev", "zimsum", "mimmin", "minmax"];
@@ -321,6 +340,38 @@ tsafControllers.controller('GraphCtrl', [
         $scope.end = request.end;
         $scope.autods = search.autods != 'false';
         $scope.refresh = search.refresh == 'true';
+        var duration_map = {
+            "s": "s",
+            "m": "m",
+            "h": "h",
+            "d": "d",
+            "w": "w",
+            "n": "M",
+            "y": "y"
+        };
+        var isRel = /^(\d+)(\w)-ago$/;
+        function RelToAbs(m) {
+            return moment().utc().subtract(parseFloat(m[1]), duration_map[m[2]]).format();
+        }
+        function AbsToRel(s) {
+            //Not strict parsing of the time format. For example, just "2014" will be valid
+            var t = moment.utc(s, moment.defaultFormat).fromNow();
+            return t;
+        }
+        function SwapTime(s) {
+            if (!s) {
+                return moment().utc().format();
+            }
+            var m = isRel.exec(s);
+            if (m) {
+                return RelToAbs(m);
+            }
+            return AbsToRel(s);
+        }
+        $scope.SwitchTimes = function () {
+            $scope.start = SwapTime($scope.start);
+            $scope.end = SwapTime($scope.end);
+        };
         $scope.AddTab = function () {
             $scope.index = $scope.query_p.length;
             $scope.query_p.push(new Query);
