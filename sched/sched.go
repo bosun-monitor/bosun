@@ -46,7 +46,7 @@ func (s States) GroupStates() map[StateTuple]States {
 		t := StateTuple{
 			st.NeedAck,
 			st.IsActive(),
-			st.Status(),
+			st.AbnormalStatus(),
 		}
 		if _, present := r[t]; !present {
 			r[t] = make(States)
@@ -151,12 +151,12 @@ func (s *Schedule) MarshalJSON() ([]byte, error) {
 	}
 	s.Lock()
 	for k, v := range s.status {
-		if v.Last().Status < stWarning {
+		if !v.Open {
 			continue
 		}
 		t.Status[k] = v
 	}
-	for tuple, states := range s.status.GroupStates() {
+	for tuple, states := range t.Status.GroupStates() {
 		var grouped []*Grouped
 		switch tuple.Status {
 		case stWarning, stCritical:
@@ -192,6 +192,8 @@ func (s *Schedule) MarshalJSON() ([]byte, error) {
 				}
 				grouped = append(grouped, &g)
 			}
+		default:
+			return nil, fmt.Errorf("unexpected status %v in %v", tuple.Status, tuple)
 		}
 		if tuple.NeedAck {
 			t.Groups.NeedAck = append(t.Groups.NeedAck, grouped...)
@@ -397,6 +399,17 @@ func (s *State) AlertKey() AlertKey {
 
 func (s *State) Status() Status {
 	return s.Last().Status
+}
+
+// AbnormalStatus returns the most recent non-normal status, or stNone if none
+// found.
+func (s *State) AbnormalStatus() Status {
+	for i := len(s.History) - 1; i >= 0; i-- {
+		if st := s.History[i].Status; st > stNormal {
+			return st
+		}
+	}
+	return stNone
 }
 
 func (s *State) IsActive() bool {
