@@ -4,10 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"image"
 	"image/color"
-	"image/draw"
-	"image/png"
 	"io"
 	"net/http"
 	"net/url"
@@ -20,9 +17,10 @@ import (
 	"github.com/StackExchange/tsaf/_third_party/github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/tsaf/expr"
 	"github.com/StackExchange/tsaf/expr/parse"
+	svg "github.com/ajstarks/svgo"
 	"github.com/bradfitz/slice"
 	"github.com/vdobler/chart"
-	"github.com/vdobler/chart/imgg"
+	"github.com/vdobler/chart/svgg"
 )
 
 // Graph takes an OpenTSDB request data structure and queries OpenTSDB. Use the
@@ -143,7 +141,7 @@ func ExprGraph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (in
 	if err != nil {
 		return nil, err
 	}
-	if r.FormValue("png") != "" {
+	if r.FormValue("svg") != "" {
 		c := chart.ScatterChart{
 			Title: q,
 		}
@@ -167,13 +165,16 @@ func ExprGraph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (in
 			})
 			c.AddData(r.Group.String(), pts, chart.PlotStyleLinesPoints, chart.AutoStyle(ri, false))
 		}
-		i := image.NewRGBA(image.Rect(0, 0, 800, 600))
 		white := color.RGBA{0xff, 0xff, 0xff, 0xff}
-		bg := image.NewUniform(white)
-		draw.Draw(i, i.Bounds(), bg, image.ZP, draw.Src)
-		igr := imgg.AddTo(i, 0, 0, 800, 600, white, nil, nil)
-		c.Plot(igr)
-		err := png.Encode(w, i)
+		const width = 800
+		const height = 600
+		s := svg.New(w)
+		s.Start(width, height)
+		s.Title(q)
+		s.Rect(0, 0, width, height, "fill: #ffffff")
+		sgr := svgg.AddTo(s, 0, 0, width, height, "", 12, white)
+		c.Plot(sgr)
+		s.End()
 		return nil, err
 	}
 	return rickexpr(res, q)

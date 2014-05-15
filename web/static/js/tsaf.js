@@ -192,7 +192,7 @@ tsafControllers.controller('EGraphCtrl', [
             }
             $scope.running = '';
             $scope.error = '';
-            $scope.url = url + '&png=.png';
+            $scope.url = url;
         }).error(function (error) {
             $scope.error = error;
             $scope.running = '';
