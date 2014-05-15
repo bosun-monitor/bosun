@@ -112,6 +112,7 @@ func Template(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (int
 		break
 	}
 	s := &sched.Schedule{}
+	s.CheckStart = time.Now().UTC()
 	s.Load(c)
 	ak, err := s.CheckExpr(a, a.Crit, 0, nil)
 	if err != nil {
