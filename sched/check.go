@@ -34,9 +34,7 @@ func (s *Schedule) Check() {
 		a := s.Conf.Alerts[ak.Name()]
 		if status > stNormal {
 			var subject = new(bytes.Buffer)
-			if status == stUnknown {
-				fmt.Fprint(subject, "unknown")
-			} else {
+			if status != stUnknown {
 				if err := s.ExecuteSubject(subject, a, state); err != nil {
 					log.Println(err)
 				}
