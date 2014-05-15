@@ -324,7 +324,7 @@ tsafControllers.controller('GraphCtrl', [
 
         // Moment Stuff
         var ot = 'YYYY/MM/DD-HH:mm:ss';
-        orelativeTime = {
+        var orelativeTime = {
             future: "in %s",
             past: "%s-ago",
             s: "%ds",
@@ -367,7 +367,7 @@ tsafControllers.controller('GraphCtrl', [
             if (!s) {
                 return moment().format(ot);
             }
-            m = isRel.exec(s);
+            var m = isRel.exec(s);
             if (m) {
                 return RelToAbs(m);
             }
@@ -420,7 +420,6 @@ tsafControllers.controller('GraphCtrl', [
         if ($scope.query_p.length == 0) {
             $scope.AddTab();
         }
-
         $http.get('/api/metric').success(function (data) {
             $scope.metrics = data;
         }).error(function (error) {
@@ -916,6 +915,8 @@ tsafApp.directive('tsForget', function () {
         templateUrl: '/partials/forget.html'
     };
 });
+
+var timeFormat = 'YYYY-MM-DD HH:mm:ss ZZ';
 
 tsafApp.directive("tsTime", function () {
     return {

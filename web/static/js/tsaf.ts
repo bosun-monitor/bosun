@@ -396,6 +396,8 @@ interface IGraphScope extends ng.IScope {
 	setIndex: (i: number) => void;
 	autods: boolean;
 	refresh: boolean;
+	SwitchTimes: () => void;
+	duration_map: any;
 }
 
 var graphRefresh: any;
@@ -423,7 +425,7 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route
 	$scope.refresh = search.refresh == 'true';
 	// Moment Stuff
 	var ot = 'YYYY/MM/DD-HH:mm:ss';
-	orelativeTime =  {
+	var orelativeTime =  {
 		future: "in %s",
 		past:   "%s-ago",
 		s:  "%ds",
@@ -442,7 +444,7 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route
 	    relativeTime : orelativeTime,
 	});
 	moment.lang('en');
-	var duration_map = {
+	var duration_map: any = {
 		"s": "s",
 		"m": "m",
 		"h": "h",
@@ -466,7 +468,7 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route
 		if (!s) {
 			return moment().format(ot);
 		}
-		m = isRel.exec(s);
+		var m = isRel.exec(s);
 		if (m) {
 			return RelToAbs(m);
 		}
@@ -520,9 +522,6 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route
 	if ($scope.query_p.length == 0) {
 		$scope.AddTab();
 	}
-
-
-
 	$http.get('/api/metric')
 		.success(function (data: string[]) {
 			$scope.metrics = data;
@@ -1117,6 +1116,8 @@ tsafApp.directive('tsForget', () => {
 		templateUrl: '/partials/forget.html',
 	};
 });
+
+var timeFormat = 'YYYY-MM-DD HH:mm:ss ZZ';
 
 tsafApp.directive("tsTime", function() {
 	return {
