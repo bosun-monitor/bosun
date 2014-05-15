@@ -299,6 +299,25 @@ var Request = (function () {
 
 var graphRefresh;
 
+moment.defaultFormat = 'YYYY/MM/DD-HH:mm:ss';
+
+moment.lang('en', {
+    relativeTime: {
+        future: "in %s",
+        past: "%s-ago",
+        s: "%ds",
+        m: "$dm",
+        mm: "%dm",
+        h: "%dh",
+        hh: "%dh",
+        d: "%dd",
+        dd: "%dd",
+        M: "%dn",
+        MM: "%dn",
+        y: "%dy",
+        yy: "%dy" }
+});
+
 tsafControllers.controller('GraphCtrl', [
     '$scope', '$http', '$location', '$route', '$timeout', function ($scope, $http, $location, $route, $timeout) {
         $scope.aggregators = ["sum", "min", "max", "avg", "dev", "zimsum", "mimmin", "minmax"];
@@ -321,26 +340,6 @@ tsafControllers.controller('GraphCtrl', [
         $scope.end = request.end;
         $scope.autods = search.autods != 'false';
         $scope.refresh = search.refresh == 'true';
-        var ot = 'YYYY/MM/DD-HH:mm:ss';
-        var orelativeTime = {
-            future: "in %s",
-            past: "%s-ago",
-            s: "%ds",
-            m: "$dm",
-            mm: "%dm",
-            h: "%dh",
-            hh: "%dh",
-            d: "%dd",
-            dd: "%dd",
-            M: "%dn",
-            MM: "%dn",
-            y: "%dy",
-            yy: "%dy"
-        };
-        moment.lang('opentsdb', {
-            relativeTime: orelativeTime
-        });
-        moment.lang('en');
         var duration_map = {
             "s": "s",
             "m": "m",
@@ -352,18 +351,16 @@ tsafControllers.controller('GraphCtrl', [
         };
         var isRel = /^(\d+)(\w)-ago$/;
         function RelToAbs(m) {
-            return moment().subtract(parseFloat(m[1]), duration_map[m[2]]).format(ot);
+            return moment().utc().subtract(parseFloat(m[1]), duration_map[m[2]]).format();
         }
         function AbsToRel(s) {
-            //Not strict Parsing
-            moment.lang('opentsdb');
-            var t = moment(s, ot).fromNow();
-            moment.lang('en');
+            //Not strict parsing of the time format. For example, just "2014" will be valid
+            var t = moment.utc(s, moment.defaultFormat).fromNow();
             return t;
         }
         function SwapTime(s) {
             if (!s) {
-                return moment().format(ot);
+                return moment().utc().format();
             }
             var m = isRel.exec(s);
             if (m) {
