@@ -17,7 +17,7 @@ interface ISilenceScope extends IExprScope {
 	time: (v: any) => string;
 }
 
-tsafControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$route', function($scope: ISilenceScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService){
+tsafControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$route', function($scope: ISilenceScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService) {
 	var search = $location.search();
 	$scope.start = search.start;
 	$scope.end = search.end;
@@ -62,7 +62,7 @@ tsafControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$rou
 		$http.post('/api/silence/set', state)
 			.success((data) => {
 				if (data.length == 0) {
-					data = [{Name: '(none)'}];
+					data = [{ Name: '(none)' }];
 				}
 				$scope.testSilences = data;
 			})
@@ -97,7 +97,7 @@ tsafControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$rou
 			return;
 		}
 		$scope.error = null;
-		$http.post('/api/silence/clear', {id: id})
+		$http.post('/api/silence/clear', { id: id })
 			.error((error) => {
 				$scope.error = error;
 			})

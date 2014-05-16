@@ -13,9 +13,9 @@ tsafApp.directive("tsTime", function() {
 				var m = moment(v).utc();
 				var el = document.createElement('a');
 				el.innerText = m.format(timeFormat) +
-					' (' +
-					m.fromNow() +
-					')';
+				' (' +
+				m.fromNow() +
+				')';
 				el.href = 'http://www.timeanddate.com/worldclock/converted.html?iso=';
 				el.href += m.format('YYYYMMDDTHHmm');
 				el.href += '&p1=0';
@@ -42,7 +42,7 @@ tsafApp.directive("tsSince", function() {
 tsafApp.directive("tooltip", function() {
 	return {
 		link: function(scope: IGraphScope, elem: any, attrs: any) {
-			angular.element(elem[0]).tooltip({placement: "bottom"});
+			angular.element(elem[0]).tooltip({ placement: "bottom" });
 		},
 	};
 });
@@ -119,13 +119,13 @@ tsafApp.filter('nfmt', function() {
 
 tsafApp.filter('bytes', function() {
 	return function(s: any) {
-		return nfmt(s, 1024, 'B', {round: true});
+		return nfmt(s, 1024, 'B', { round: true });
 	}
 });
 
 tsafApp.filter('bits', function() {
 	return function(s: any) {
-		return nfmt(s, 1024, 'b', {round: true});
+		return nfmt(s, 1024, 'b', { round: true });
 	}
 });
 

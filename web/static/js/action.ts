@@ -6,7 +6,7 @@ interface IActionScope extends IExprScope {
 	submit: () => void;
 }
 
-tsafControllers.controller('ActionCtrl', ['$scope', '$http', '$location', '$route', function($scope: IActionScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService){
+tsafControllers.controller('ActionCtrl', ['$scope', '$http', '$location', '$route', function($scope: IActionScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService) {
 	var search = $location.search();
 	$scope.type = search.type;
 	if (!angular.isArray(search.key)) {

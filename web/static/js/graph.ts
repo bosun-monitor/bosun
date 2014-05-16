@@ -45,18 +45,18 @@ class Query {
 		var max = this.rateOptions.counterMax;
 		this.rateOptions = new RateOptions();
 		switch (this.derivative) {
-		case "rate":
-			this.rate = true;
-			break;
-		case "counter":
-			this.rate = true;
-			this.rateOptions.counter = true;
-			this.rateOptions.counterMax = max;
-			this.rateOptions.resetValue = 1;
-			break;
-		case "gauge":
-			this.rate = false;
-			break;
+			case "rate":
+				this.rate = true;
+				break;
+			case "counter":
+				this.rate = true;
+				this.rateOptions.counter = true;
+				this.rateOptions.counterMax = max;
+				this.rateOptions.resetValue = 1;
+				break;
+			case "gauge":
+				this.rate = false;
+				break;
 		}
 	}
 }
@@ -74,21 +74,21 @@ class Request {
 			angular.forEach(this.queries[i], (v, k) => {
 				var qi: any = this.queries[i];
 				switch (typeof v) {
-				case "string":
-					if (!v) {
-						delete qi[k];
-					}
-					break;
-				case "boolean":
-					if (!v) {
-						delete qi[k];
-					}
-					break;
-				case "object":
-					if (Object.keys(v).length == 0) {
-						delete qi[k];
-					}
-					break;
+					case "string":
+						if (!v) {
+							delete qi[k];
+						}
+						break;
+					case "boolean":
+						if (!v) {
+							delete qi[k];
+						}
+						break;
+					case "object":
+						if (Object.keys(v).length == 0) {
+							delete qi[k];
+						}
+						break;
 				}
 			});
 		}
@@ -131,7 +131,7 @@ interface IGraphScope extends ng.IScope {
 	duration_map: any;
 }
 
-tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route', '$timeout', function($scope: IGraphScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService, $timeout: ng.ITimeoutService){
+tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route', '$timeout', function($scope: IGraphScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService, $timeout: ng.ITimeoutService) {
 	$scope.aggregators = ["sum", "min", "max", "avg", "dev", "zimsum", "mimmin", "minmax"];
 	$scope.dsaggregators = ["", "sum", "min", "max", "avg", "dev", "zimsum", "mimmin", "minmax"];
 	$scope.rate_options = ["gauge", "counter", "rate"];
@@ -195,7 +195,7 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route
 		$scope.tagvs[index] = new TagV;
 		if ($scope.query_p[index].metric) {
 			$http.get('/api/tagk/' + $scope.query_p[index].metric)
-				.success(function (data: string[]) {
+				.success(function(data: string[]) {
 					if (!angular.isArray(data)) {
 						return;
 					}
@@ -220,7 +220,7 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route
 						return a.localeCompare(b);
 					}).reverse();
 				})
-				.error(function (error) {
+				.error(function(error) {
 					$scope.error = 'Unable to fetch metrics: ' + error;
 				});
 		}
@@ -229,20 +229,20 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route
 		$scope.AddTab();
 	}
 	$http.get('/api/metric')
-		.success(function (data: string[]) {
+		.success(function(data: string[]) {
 			$scope.metrics = data;
 		})
-		.error(function (error) {
+		.error(function(error) {
 			$scope.error = 'Unable to fetch metrics: ' + error;
 		});
 
 	function GetTagVs(k: string, index: number) {
 		$http.get('/api/tagv/' + k + '/' + $scope.query_p[index].metric)
-			.success(function (data: string[]) {
+			.success(function(data: string[]) {
 				data.sort();
 				$scope.tagvs[index][k] = data;
 			})
-			.error(function (error) {
+			.error(function(error) {
 				$scope.error = 'Unable to fetch metrics: ' + error;
 			});
 	}
@@ -250,14 +250,14 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route
 		request = new Request;
 		request.start = $scope.start;
 		request.end = $scope.end;
-		angular.forEach($scope.query_p, function (p) {
+		angular.forEach($scope.query_p, function(p) {
 			if (!p.metric) {
 				return;
 			}
 			var q = new Query(p);
 			var tags = q.tags;
 			q.tags = new TagSet;
-			angular.forEach(tags, function (v, k) {
+			angular.forEach(tags, function(v, k) {
 				if (v && k) {
 					q.tags[k] = v;
 				}

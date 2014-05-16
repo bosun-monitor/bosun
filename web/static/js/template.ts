@@ -5,7 +5,7 @@ interface ITestTemplateScope extends IExprScope {
 	body: string;
 }
 
-tsafControllers.controller('TestTemplateCtrl', ['$scope', '$http', '$location', '$route', function($scope: ITestTemplateScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService){
+tsafControllers.controller('TestTemplateCtrl', ['$scope', '$http', '$location', '$route', function($scope: ITestTemplateScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService) {
 	var search = $location.search();
 	var current = search.config;
 	try {

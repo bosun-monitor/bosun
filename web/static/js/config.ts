@@ -10,7 +10,7 @@ interface IConfigScope extends ng.IScope {
 	line: number;
 }
 
-tsafControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$route', function($scope: IConfigScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService){
+tsafControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$route', function($scope: IConfigScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService) {
 	var search = $location.search();
 	var current = search.config_text;
 	var line_re = /test:(\d+)/;
