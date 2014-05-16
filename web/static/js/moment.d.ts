@@ -321,6 +321,8 @@ interface MomentStatic {
 	normalizeUnits(unit: string): string;
 	
 	invalid(parsingFlags?: Object): Moment;
+
+	defaultFormat: string;
 }
 
 declare var moment: MomentStatic;
