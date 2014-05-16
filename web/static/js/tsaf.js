@@ -132,7 +132,8 @@ moment.lang('en', {
         M: "%dn",
         MM: "%dn",
         y: "%dy",
-        yy: "%dy" }
+        yy: "%dy"
+    }
 });
 tsafControllers.controller('ActionCtrl', [
     '$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {

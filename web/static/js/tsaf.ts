@@ -82,7 +82,7 @@ interface IRootScope extends ng.IScope {
 }
 
 tsafApp.run(['$location', '$rootScope', function($location: ng.ILocationService, $rootScope: IRootScope) {
-	$rootScope.$on('$routeChangeSuccess', function (event, current, previous) {
+	$rootScope.$on('$routeChangeSuccess', function(event, current, previous) {
 		$rootScope.title = current.$$route.title;
 	});
 }]);
@@ -106,7 +106,7 @@ tsafControllers.controller('TsafCtrl', ['$scope', '$route', '$http', function($s
 			return null;
 		}
 		if ($route.current.loadedTemplateUrl == 'partials/' + v + '.html') {
-			return {active: true};
+			return { active: true };
 		}
 		return null;
 	};
@@ -133,7 +133,7 @@ tsafControllers.controller('TsafCtrl', ['$scope', '$route', '$http', function($s
 				angular.forEach(v.History, (v, k) => {
 					v.Time = moment(v.Time).utc();
 				});
-				v.last = v.History[v.History.length-1];
+				v.last = v.History[v.History.length - 1];
 			});
 			$scope.schedule = data;
 			$scope.timeanddate = data.TimeAndDate;
@@ -144,18 +144,19 @@ tsafControllers.controller('TsafCtrl', ['$scope', '$route', '$http', function($s
 moment.defaultFormat = 'YYYY/MM/DD-HH:mm:ss';
 
 moment.lang('en', {
-    relativeTime : {
+	relativeTime: {
 		future: "in %s",
-		past:   "%s-ago",
-		s:  "%ds",
-		m:  "$dm",
+		past: "%s-ago",
+		s: "%ds",
+		m: "$dm",
 		mm: "%dm",
-		h:  "%dh",
+		h: "%dh",
 		hh: "%dh",
-		d:  "%dd",
+		d: "%dd",
 		dd: "%dd",
-		M:  "%dn",
+		M: "%dn",
 		MM: "%dn",
-		y:  "%dy",
-		yy: "%dy"},
+		y: "%dy",
+		yy: "%dy"
+	},
 });

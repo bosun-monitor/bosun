@@ -11,13 +11,13 @@ interface IEGraphScope extends ng.IScope {
 	set: () => void;
 }
 
-tsafControllers.controller('EGraphCtrl', ['$scope', '$http', '$location', '$route', function($scope: IEGraphScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService){
+tsafControllers.controller('EGraphCtrl', ['$scope', '$http', '$location', '$route', function($scope: IEGraphScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService) {
 	var search = $location.search();
 	var current = search.q;
 	try {
 		current = atob(current);
 	}
-	catch (e) {}
+	catch (e) { }
 	$scope.bytes = search.bytes == 'true';
 	$scope.renderers = ['area', 'bar', 'line', 'scatterplot'];
 	$scope.render = search.render || 'line';

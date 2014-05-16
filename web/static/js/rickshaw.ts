@@ -85,7 +85,7 @@ tsafApp.directive("tsRickshaw", ['$filter', function($filter: ng.IFilterService)
 							}, this);
 					}
 				});
-				var hover = new Hover({graph: graph});
+				var hover = new Hover({ graph: graph });
 				//Simulate a movemove so the hover appears on load
 				var e = document.createEvent('MouseEvents');
 				e.initEvent('mousemove', true, false);

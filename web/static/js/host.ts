@@ -18,7 +18,7 @@ interface IHostScope extends ng.IScope {
 	filterMetrics: string;
 }
 
-tsafControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route', function($scope: IHostScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService){
+tsafControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route', function($scope: IHostScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService) {
 	var search = $location.search();
 	$scope.host = search.host;
 	$scope.time = search.time;
@@ -31,7 +31,7 @@ tsafControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route'
 		var r = new Request();
 		var q = new Query();
 		q.metric = m;
-		q.tags = {'host': $scope.host};
+		q.tags = { 'host': $scope.host };
 		r.queries.push(q);
 		return r;
 	};
@@ -40,7 +40,7 @@ tsafControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route'
 		$scope.tab = t;
 	};
 	$http.get('/api/metric/host/' + $scope.host)
-		.success(function (data: string[]) {
+		.success(function(data: string[]) {
 			$scope.metrics = data || [];
 		});
 	var cpu_r = new Request();
@@ -49,7 +49,7 @@ tsafControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route'
 		new Query({
 			metric: 'os.cpu',
 			derivative: 'counter',
-			tags: {host: $scope.host},
+			tags: { host: $scope.host },
 		})
 	];
 	var width = 500;
@@ -68,21 +68,21 @@ tsafControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route'
 					new Query({
 						metric: "os.net.bytes",
 						rate: true,
-						tags: {host: $scope.host, iface: i, direction: "*"},
+						tags: { host: $scope.host, iface: i, direction: "*" },
 					})
 				];
 				$http.get('/api/graph?' + 'json=' + encodeURIComponent(JSON.stringify(net_bytes_r)) + '&autods=' + width)
 					.success((data) => {
 						angular.forEach(data.Series, function(d) {
-							d.data = d.data.map((dp: any) => { return {x: dp.x, y: dp.y*8}});
+							d.data = d.data.map((dp: any) => { return { x: dp.x, y: dp.y * 8 } });
 							if (d.name.indexOf("direction=out") != -1) {
-								d.data = d.data.map((dp: any) => { return {x: dp.x, y: dp.y*-1}});
+								d.data = d.data.map((dp: any) => { return { x: dp.x, y: dp.y * -1 } });
 								d.name = "out";
 							} else {
 								d.name = "in";
 							}
 						});
-						$scope.idata[$scope.interfaces.indexOf(i)] = {name: i, data: data.Series};
+						$scope.idata[$scope.interfaces.indexOf(i)] = { name: i, data: data.Series };
 					});
 			});
 		});
@@ -97,19 +97,19 @@ tsafControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route'
 				fs_r.start = $scope.time;
 				fs_r.queries.push(new Query({
 					metric: "os.disk.fs.space_total",
-					tags: {host: $scope.host, disk: i},
+					tags: { host: $scope.host, disk: i },
 				}));
 				fs_r.queries.push(new Query({
 					metric: "os.disk.fs.space_used",
-					tags: {host: $scope.host, disk: i},
+					tags: { host: $scope.host, disk: i },
 				}));
 				$http.get('/api/graph?' + 'json=' + encodeURIComponent(JSON.stringify(fs_r)) + '&autods=' + width)
 					.success((data) => {
 						data.Series[1].name = "Used";
-						$scope.fsdata[$scope.fs.indexOf(i)] = {name: i, data: [data.Series[1]]};
+						$scope.fsdata[$scope.fs.indexOf(i)] = { name: i, data: [data.Series[1]] };
 						var total: number = Math.max.apply(null, data.Series[0].data.map((d: any) => { return d.y; }));
 						var c_val: number = data.Series[1].data.slice(-1)[0].y;
-						var percent_used: number = c_val/total * 100;
+						var percent_used: number = c_val / total * 100;
 						$scope.fs_current[$scope.fs.indexOf(i)] = {
 							total: total,
 							c_val: c_val,
@@ -122,11 +122,11 @@ tsafControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route'
 	mem_r.start = $scope.time;
 	mem_r.queries.push(new Query({
 		metric: "os.mem.total",
-		tags: {host: $scope.host},
+		tags: { host: $scope.host },
 	}));
 	mem_r.queries.push(new Query({
 		metric: "os.mem.used",
-		tags: {host: $scope.host},
+		tags: { host: $scope.host },
 	}));
 	$http.get('/api/graph?' + 'json=' + encodeURIComponent(JSON.stringify(mem_r)) + '&autods=' + width)
 		.success((data) => {
