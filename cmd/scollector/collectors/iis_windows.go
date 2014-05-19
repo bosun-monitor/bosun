@@ -1,19 +1,38 @@
 package collectors
 
 import (
+	"sync"
+
 	"github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/slog"
-	"github.com/StackExchange/wmi"
 )
 
 func init() {
-	collectors = append(collectors, &IntervalCollector{F: c_iis_webservice})
+	collectors = append(collectors, &IntervalCollector{
+		F:    c_iis_webservice,
+		init: wmiInit(&iisEnable, &iisLock, []Win32_PerfRawData_W3SVC_WebService{}, `WHERE Name <> '_Total'`, &iisQuery),
+	})
+}
+
+var (
+	iisEnable bool
+	iisLock   sync.Mutex
+	iisQuery  string
+)
+
+func iisEnabled() (b bool) {
+	iisLock.Lock()
+	b = iisEnable
+	iisLock.Unlock()
+	return
 }
 
 func c_iis_webservice() opentsdb.MultiDataPoint {
+	if !iisEnabled() {
+		return nil
+	}
 	var dst []Win32_PerfRawData_W3SVC_WebService
-	q := wmi.CreateQuery(&dst, `WHERE Name <> '_Total'`)
-	err := queryWmi(q, &dst)
+	err := queryWmi(iisQuery, &dst)
 	if err != nil {
 		slog.Infoln("iis:", err)
 		return nil
@@ -43,7 +62,6 @@ func c_iis_webservice() opentsdb.MultiDataPoint {
 		Add(&md, "iis.requests", v.SearchRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "search"})
 		Add(&md, "iis.requests", v.TraceRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "trace"})
 		Add(&md, "iis.requests", v.UnlockRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "unlock"})
-
 	}
 	return md
 }
