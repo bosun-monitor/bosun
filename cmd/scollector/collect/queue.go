@@ -22,7 +22,6 @@ func send() {
 			sending := queue[:i]
 			queue = queue[i:]
 			qlock.Unlock()
-			slog.Infof("sending: %d, remaining: %d", len(sending), len(queue))
 			sendBatch(sending)
 		} else {
 			qlock.Unlock()
@@ -91,7 +90,6 @@ func sendBatch(batch opentsdb.MultiDataPoint) {
 		time.Sleep(d)
 		return
 	} else {
-		slog.Infoln("sent", len(batch))
 		slock.Lock()
 		sent += int64(len(batch))
 		slock.Unlock()
