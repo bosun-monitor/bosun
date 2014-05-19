@@ -112,10 +112,11 @@ func (s *SectionNode) append(p *PairNode) {
 
 func (s *SectionNode) String() string {
 	b := new(bytes.Buffer)
-	fmt.Fprintf(b, "[%s]\n", s.Name)
+	fmt.Fprintf(b, "%s %s {\n", s.SectionType, s.Name)
 	for _, n := range s.Nodes {
-		fmt.Fprintln(b, n)
+		fmt.Fprintln(b, "    "+n.String())
 	}
+	fmt.Fprint(b, "}")
 	return b.String()
 }
 
