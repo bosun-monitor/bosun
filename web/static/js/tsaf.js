@@ -1135,34 +1135,54 @@ tsafApp.directive('tsForget', function () {
 tsafControllers.controller('TestTemplateCtrl', [
     '$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
         var search = $location.search();
-        var current = search.config;
+        var current_alert = search.alert;
+        var current_template = search.template;
+        $scope.date = search.date || '';
+        $scope.time = search.time || '';
+        $scope.tab = search.tab || 'results';
         try  {
-            current = atob(current);
+            current_alert = atob(current_alert);
         } catch (e) {
-            current = '';
+            current_alert = '';
         }
-        if (!current) {
-            var def = 'template test {\n' + '    body = `<h1>Name: {{.Alert.Name}}</h1>`\n' + '    subject = `{{.Last.Status}}: {{.Alert.Name}}: {{.E .Alert.Vars.q}} on {{.Group.host}}`\n' + '}\n\n' + 'alert test {\n' + '    template = test\n' + '    $t = "5m"\n' + '    $q = avg(q("avg:rate{counter,,1}:os.cpu{host=*}", $t, ""))\n' + '    crit = $q > 10\n' + '}';
-            $location.search('config', btoa(def));
+        if (!current_alert) {
+            var alert_def = 'alert test {\n' + '    template = test\n' + '    $t = "5m"\n' + '    $q = avg(q("avg:rate{counter,,1}:os.cpu{host=*}", $t, ""))\n' + '    crit = $q > 10\n' + '}';
+            $location.search('alert', btoa(alert_def));
             return;
         }
-        $scope.config = current;
-        $scope.running = "Running";
-        $http.get('/api/template?' + 'config=' + encodeURIComponent($scope.config)).success(function (data) {
-            $scope.subject = data.Subject;
-            $scope.body = data.Body;
-            $scope.running = '';
-        }).error(function (error) {
-            $scope.error = error;
-            $scope.running = '';
-        });
+        $scope.alert = current_alert;
+        try  {
+            current_template = atob(current_template);
+        } catch (e) {
+            current_template = '';
+        }
+        if (!current_template) {
+            var template_def = 'template test {\n' + '    body = `<h1>Name: {{.Alert.Name}}</h1>`\n' + '    subject = `{{.Last.Status}}: {{.Alert.Name}}: {{.E .Alert.Vars.q}} on {{.Group.host}}`\n' + '}';
+            $location.search('template', btoa(template_def));
+            return;
+        }
+        $scope.template = current_template;
         $scope.shiftEnter = function ($event) {
             if ($event.keyCode == 13 && $event.shiftKey) {
                 $scope.set();
             }
         };
         $scope.set = function () {
-            $location.search('config', btoa($scope.config));
-            $route.reload();
+            $scope.running = "Running";
+            $location.search('alert', btoa($scope.alert));
+            $location.search('template', btoa($scope.template));
+            $location.search('date', $scope.date || null);
+            $location.search('time', $scope.time || null);
+            $location.search('tab', $scope.tab || 'results');
+            $http.get('/api/template?' + 'alert=' + encodeURIComponent($scope.alert) + '&template=' + encodeURIComponent($scope.template) + '&date=' + encodeURIComponent($scope.date) + '&time=' + encodeURIComponent($scope.time)).success(function (data) {
+                $scope.subject = data.Subject;
+                $scope.body = data.Body;
+                $scope.result = data.Result;
+                $scope.running = '';
+            }).error(function (error) {
+                $scope.error = error;
+                $scope.running = '';
+            });
         };
+        $scope.set();
     }]);

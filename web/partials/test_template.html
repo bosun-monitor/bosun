@@ -1,40 +1,71 @@
 <div class="row">
-	<div class="col-lg-12">
-		<form class="form-horizontal">
+	<div class="col-lg-6">
+		<form class="form">
 			<div class="form-group">
-				<label class="col-lg-1 control-label">Config</label>
-				<div class="col-lg-11">
-					<textarea class="form-control" rows="15" ng-model="config" ng-keydown="shiftEnter($event)" ng-init="eval()"></textarea>
-				</div>
+				<label class="control-label">Alert</label>
+				<textarea class="form-control" rows="15" ng-model="alert" ng-keydown="shiftEnter($event)" ng-init="eval()"></textarea>
 			</div>
+		</form>
+	</div>
+	<div class="col-lg-6">
+		<form class="form">
 			<div class="form-group">
-				<div class="col-lg-11 col-lg-offset-1">
-					<button class="btn btn-default" ng-click="set()">test</button>
-					<span class="help-block">shift-enter to submit<span>
-				</div>
+				<label class="control-label">Template</label>
+				<textarea class="form-control" rows="15" ng-model="template" ng-keydown="shiftEnter($event)" ng-init="eval()"></textarea>
 			</div>
 		</form>
 	</div>
 </div>
-<div class="row" ng-show="running">
-	<div class="col-lg-12">
-		<div class="alert alert-info">Executing: {{running}}</div>
+<div class="row">
+	<div class="col-lg-6">
+	<form class="form-inline">
+		<div class="form-group">
+			<label class="control-label">Date</label>
+			<input type="date" class="form-control" ng-model="date" placeholder="yyyy-mm-dd">
+		</div>
+		<div class="form-group">
+			<label class="control-label">Time</label>
+			<input type="time" class="form-control" ng-model="time" placeholder="HH:MM">
+		</div>
+		<div class="form-group">
+			<button class="btn btn-default" ng-click="set()">Test</button>
+		</div>
+		<div class="form-group">
+			<span class="help-block">shift-enter to submit<span>
+		</div>
+	</form>
 	</div>
 </div>
-<div class="row" ng-show="error">
-	<div class="col-lg-12">
-		<div class="alert alert-danger" ng-bind="error"></div>
+<ul class="nav nav-tabs">
+	<li ng-class="{active: tab == 'results'}"><a href ng-click="tab = 'results'">Results</a></li>
+	<li ng-class="{active: tab == 'template'}"><a href ng-click="tab = 'template'">Template</a></li>
+</ul>
+<div class="tab-content">
+	<div class="tab-pane" ng-class="{active: tab == 'template'}">
+		<div class="row" ng-show="running">
+			<div class="col-lg-12">
+				<div class="alert alert-info">Executing: {{running}}</div>
+			</div>
+		</div>
+		<div class="row" ng-show="error">
+			<div class="col-lg-12">
+				<div class="alert alert-danger" ng-bind="error"></div>
+			</div>
+		</div>
+		<div class="panel panel-default">
+			<div class="panel-heading">
+				<h3 class="panel-title">Subject</h3>
+			</div>
+			<div class="panel-body" ng-bind=subject></div>
+		</div>
+		<div class="panel panel-default">
+			<div class="panel-heading">
+				<h3 class="panel-title">Body</h3>
+			</div>
+			<div class="panel-body" ng-bind-html=body></div>
+		</div>
 	</div>
-</div>
-<div class="panel panel-default">
-	<div class="panel-heading">
-		<h3 class="panel-title">Subject</h3>
+	<div class="tab-pane" ng-class="{active: tab == 'results'}">
+		<div ts-results></div>
 	</div>
-	<div class="panel-body" ng-bind=subject></div>
-</div>
-<div class="panel panel-default">
-	<div class="panel-heading">
-		<h3 class="panel-title">Body</h3>
-	</div>
-	<div class="panel-body" ng-bind-html=body></div>
 </div>

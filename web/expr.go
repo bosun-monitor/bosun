@@ -98,8 +98,11 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 func Template(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	txt := fmt.Sprintf(`
 		tsdbHost = %s
-		%s`, schedule.Conf.TsdbHost, r.FormValue("config"))
-	c, err := conf.New("-", txt)
+
+		%s
+
+		%s`, schedule.Conf.TsdbHost, r.FormValue("template"), r.FormValue("alert"))
+	c, err := conf.New("Test Config", txt)
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +115,20 @@ func Template(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (int
 		break
 	}
 	s := &sched.Schedule{}
-	s.CheckStart = time.Now().UTC()
+	now := time.Now().UTC()
+	if fd := r.FormValue("date"); len(fd) > 0 {
+		if ft := r.FormValue("time"); len(ft) > 0 {
+			fd += " " + ft
+		} else {
+			fd += " " + now.Format("15:04")
+		}
+		if t, err := time.Parse("2006-01-02 15:04", fd); err == nil {
+			now = t
+		} else {
+			return nil, err
+		}
+	}
+	s.CheckStart = now
 	s.Load(c)
 	ak, err := s.CheckExpr(a, a.Crit, 0, nil)
 	if err != nil {
@@ -121,6 +137,15 @@ func Template(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (int
 	var instance *sched.State
 	if len(ak) < 1 {
 		return nil, fmt.Errorf("no results returned")
+	}
+	var res []*expr.Result
+	for _, v := range ak {
+		status := s.Status(v)
+		if len(status.Computations) < 1 {
+			return nil, fmt.Errorf("alert %s has no computations", status.Alert)
+		}
+		value := status.Computations[len(status.Computations)-1].Value
+		res = append(res, &expr.Result{status.Computations, value, status.Group})
 	}
 	sort.Sort(ak)
 	instance = s.Status(ak[0])
@@ -137,8 +162,10 @@ func Template(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (int
 	return struct {
 		Body    string
 		Subject string
+		Result  []*expr.Result
 	}{
 		string(b),
 		string(sub),
+		res,
 	}, nil
 }
