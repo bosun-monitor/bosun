@@ -1,5 +1,7 @@
 interface ITestTemplateScope extends IExprScope {
 	shiftEnter: ($event: any) => void;
+	alerts: any;
+	templates: any;
 	template: string;
 	alert: string;
 	tab: string;
@@ -16,6 +18,15 @@ tsafControllers.controller('TestTemplateCtrl', ['$scope', '$http', '$location', 
 	$scope.date = search.date || '';
 	$scope.time = search.time || '';
 	$scope.tab = search.tab || 'results';
+	$scope.selected_alert = '';
+	$http.get('/api/config/alerts')
+			.success((data) => {
+				$scope.alerts = data;
+			})
+	$http.get('/api/config/templates')
+			.success((data) => {
+				$scope.templates = data;
+			})
 	try {
 		current_alert = atob(current_alert);
 	}

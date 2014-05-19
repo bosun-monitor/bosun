@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/StackExchange/tsaf/_third_party/github.com/MiniProfiler/go/miniprofiler"
@@ -95,13 +96,35 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 	return ret, nil
 }
 
+type ResState struct {
+	expr.Result
+	State string
+}
+
 func Template(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	var notifications string
+	for _, v := range schedule.Conf.Notifications {
+		notifications += "\n" + v.Def + "\n"
+	}
+	var vars string
+	for k, v := range schedule.Conf.Vars {
+		if strings.HasPrefix(k, "$") {
+			vars += "\n" + k + "=" + v + "\n"
+		}
+	}
 	txt := fmt.Sprintf(`
 		tsdbHost = %s
+		smtpHost = %s
+		emailFrom = %s
 
 		%s
 
-		%s`, schedule.Conf.TsdbHost, r.FormValue("template"), r.FormValue("alert"))
+		%s
+
+		%s
+
+		%s`, schedule.Conf.TsdbHost, schedule.Conf.SmtpHost, schedule.Conf.EmailFrom, vars,
+		r.FormValue("template"), notifications, r.FormValue("alert"))
 	c, err := conf.New("Test Config", txt)
 	if err != nil {
 		return nil, err
@@ -130,9 +153,18 @@ func Template(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (int
 	}
 	s.CheckStart = now
 	s.Load(c)
-	ak, err := s.CheckExpr(a, a.Crit, 0, nil)
+	ak, err := s.CheckExpr(a, a.Crit, 0, nil, false)
 	if err != nil {
 		return nil, err
+	}
+	warns, _ := s.CheckExpr(a, a.Warn, 0, ak, false)
+	for _, v := range warns {
+		ak = append(ak, v)
+	}
+	// This has a caveat that it assumes both Warn and Crit are the same expression with different thresholds.
+	goods, _ := s.CheckExpr(a, a.Warn, 0, ak, true)
+	for _, v := range goods {
+		ak = append(ak, v)
 	}
 	var instance *sched.State
 	if len(ak) < 1 {

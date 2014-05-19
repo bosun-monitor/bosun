@@ -97,6 +97,7 @@ func (l *ListNode) String() string {
 type SectionNode struct {
 	NodeType
 	Pos
+	RawText     string
 	SectionType *StringNode
 	Name        *StringNode
 	Nodes       []*PairNode

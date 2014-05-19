@@ -225,6 +225,7 @@ func (t *Tree) parseSection() *SectionNode {
 	const context = "section declaration"
 	token := t.expect(itemIdentifier, context)
 	s := newSection(token.pos)
+	start := token.pos
 	s.SectionType = newString(token.pos, token.val, token.val)
 	token = t.expect(itemIdentifier, context)
 	s.Name = newString(token.pos, token.val, token.val)
@@ -235,6 +236,8 @@ func (t *Tree) parseSection() *SectionNode {
 			t.backup()
 			s.append(t.parsePair())
 		case itemRightDelim, itemEOF:
+			//TODO Find out if t.text length could be less than token.post+1
+			s.RawText = t.text[start : token.pos+1]
 			return s
 		default:
 			t.unexpected(token, context)
