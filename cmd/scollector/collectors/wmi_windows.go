@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/scollector/collect"
 	"github.com/StackExchange/slog"
 	"github.com/StackExchange/wmi"
@@ -32,9 +33,9 @@ func queryWmi(query string, dst interface{}) error {
 func queryWmiNamespace(query string, dst interface{}, namespace string) (err error) {
 	wmiLock.Lock()
 	defer wmiLock.Unlock()
-	collect.Add("wmi.queries", 1, nil)
+	collect.Add("wmi.queries", opentsdb.TagSet{}, 1)
 	if wmiCount == 0 || wmiCmd == nil {
-		collect.Add("wmi.exec", 1, nil)
+		collect.Add("wmi.exec", opentsdb.TagSet{}, 1)
 		wmiCmd = exec.Command(os.Args[0], "-w")
 		if wmiIn != nil {
 			wmiIn.Close()
