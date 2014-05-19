@@ -31,7 +31,7 @@ func win_service_main() {
 		err = startService(svcName)
 	case "stop":
 		err = controlService(svcName, svc.Stop, svc.Stopped)
-	default:
+	case "":
 		isIntSess, err := svc.IsAnInteractiveSession()
 		if err != nil {
 			slog.Fatalf("failed to determine if we are running in an interactive session: %v", err)
@@ -40,6 +40,8 @@ func win_service_main() {
 			go runService(svcName, false)
 		}
 		return
+	default:
+		slog.Fatalf("unknown winsvc command: %v", *win_service_command)
 	}
 	if err != nil {
 		slog.Fatalf("failed to %s %s: %v", *win_service_command, svcName, err)
