@@ -91,6 +91,7 @@ type Alert struct {
 	CritNotification map[string]*Notification  `json:"-"`
 	WarnNotification map[string]*Notification  `json:"-"`
 	Unknown          time.Duration
+	Def              string
 
 	crit, warn       string
 	template         string
@@ -102,6 +103,7 @@ type Alert struct {
 type Template struct {
 	Vars
 	Name    string
+	Def     string
 	Body    *htemplate.Template
 	Subject *ttemplate.Template
 
@@ -111,6 +113,7 @@ type Template struct {
 type Notification struct {
 	Vars
 	Name      string
+	Def       string
 	Email     []*mail.Address
 	Post, Get *url.URL
 	Print     bool
@@ -304,6 +307,7 @@ func (c *Conf) loadTemplate(s *parse.SectionNode) {
 	}
 	t := Template{
 		Vars: make(map[string]string),
+		Def:  s.RawText,
 		Name: name,
 	}
 	funcs := ttemplate.FuncMap{
@@ -364,6 +368,7 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 	a := Alert{
 		Vars: make(map[string]string),
 		Name: name,
+		Def:  s.RawText,
 	}
 	saw := make(map[string]bool)
 	for _, p := range s.Nodes {
@@ -471,6 +476,7 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 	}
 	n := Notification{
 		Vars: make(map[string]string),
+		Def:  s.RawText,
 		Name: name,
 	}
 	saw := make(map[string]bool)

@@ -233,6 +233,13 @@ func (s *Schedule) Load(c *conf.Conf) {
 	s.RestoreState()
 }
 
+func (s *Schedule) TestLoad(c *conf.Conf) {
+	s.Conf = c
+	s.Silence = make(map[string]*Silence)
+	s.Group = make(map[time.Time]AlertKeys)
+	s.cache = opentsdb.NewCache(s.Conf.TsdbHost, s.Conf.ResponseLimit)
+}
+
 // Restores notification and alert state from the file on disk.
 func (s *Schedule) RestoreState() {
 	s.Lock()
