@@ -148,7 +148,7 @@ moment.lang('en', {
 		future: "in %s",
 		past: "%s-ago",
 		s: "%ds",
-		m: "$dm",
+		m: "%dm",
 		mm: "%dm",
 		h: "%dh",
 		hh: "%dh",
