@@ -56,9 +56,6 @@ func InitChan(tsdbhost, metric_root string, ch chan *opentsdb.DataPoint) error {
 	if tchan != nil {
 		return fmt.Errorf("cannot init twice")
 	}
-	if err := setHostName(); err != nil {
-		return err
-	}
 	if err := checkClean(metric_root, "metric root"); err != nil {
 		return err
 	}
@@ -195,10 +192,15 @@ func check(metric string, ts *opentsdb.TagSet) error {
 			return err
 		}
 	}
+	if osHostname == "" {
+		if err := setHostName(); err != nil {
+			return err
+		}
+	}
 	if *ts == nil {
 		*ts = make(opentsdb.TagSet)
 	}
-	if _, present := (*ts)["host"]; !present {
+	if (*ts)["host"] == "" {
 		(*ts)["host"] = osHostname
 	}
 	return nil
