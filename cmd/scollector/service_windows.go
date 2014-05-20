@@ -21,6 +21,9 @@ func init() {
 }
 
 func win_service_main() {
+	if *enableWmi {
+		return
+	}
 	const svcName = "scollector"
 	var err error
 	switch *win_service_command {
