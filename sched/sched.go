@@ -237,6 +237,7 @@ func (s *Schedule) TestLoad(c *conf.Conf) {
 	s.Conf = c
 	s.Silence = make(map[string]*Silence)
 	s.Group = make(map[time.Time]AlertKeys)
+	s.status = make(States)
 	s.cache = opentsdb.NewCache(s.Conf.TsdbHost, s.Conf.ResponseLimit)
 }
 
