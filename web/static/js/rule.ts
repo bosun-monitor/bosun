@@ -9,6 +9,7 @@ interface IRuleScope extends IExprScope {
 	time: string;
 	subject: string;
 	body: string;
+	warning: string[];
 }
 
 tsafControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route', function($scope: IRuleScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService) {
@@ -23,7 +24,6 @@ tsafControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route'
 	$scope.date = search.date || '';
 	$scope.time = search.time || '';
 	$scope.tab = search.tab || 'results';
-	$scope.selected_alert = '';
 	$http.get('/api/config/alerts')
 			.success((data) => {
 				$scope.alerts = data;
@@ -73,6 +73,7 @@ tsafControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route'
 	}
 	$scope.set = () => {
 		$scope.running = "Running";
+		$scope.warning = [];
 		$location.search('alert', btoa($scope.alert));
 		$location.search('template', btoa($scope.template));
 		$location.search('date', $scope.date || null);
@@ -89,6 +90,9 @@ tsafControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route'
 				$scope.result = data.Result;
 				angular.forEach($scope.result, function(v) {
 					v.status_number = status_map[v.Status]
+				});
+				angular.forEach(data.Warning, function(v) {
+					$scope.warning.push(v)
 				});
 				$scope.running = '';
 			})
