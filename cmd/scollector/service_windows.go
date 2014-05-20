@@ -157,21 +157,16 @@ type s struct{}
 func (m *s) Execute(args []string, r <-chan svc.ChangeRequest, changes chan<- svc.Status) (ssec bool, errno uint32) {
 	const cmdsAccepted = svc.AcceptStop | svc.AcceptShutdown
 	changes <- svc.Status{State: svc.StartPending}
-	tick := time.Tick(2 * time.Second)
 	changes <- svc.Status{State: svc.Running, Accepts: cmdsAccepted}
-	for {
-		select {
-		case <-tick:
-			fmt.Println("foo")
-		case c := <-r:
-			switch c.Cmd {
-			case svc.Interrogate:
-				changes <- c.CurrentStatus
-			case svc.Stop, svc.Shutdown:
-				os.Exit(0)
-			default:
-				slog.Errorf("unexpected control request #%d", c)
-			}
+loop:
+	for c := range r {
+		switch c.Cmd {
+		case svc.Interrogate:
+			changes <- c.CurrentStatus
+		case svc.Stop, svc.Shutdown:
+			break loop
+		default:
+			slog.Errorf("unexpected control request #%d", c)
 		}
 	}
 	changes <- svc.Status{State: svc.StopPending}
