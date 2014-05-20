@@ -37,7 +37,7 @@ type Conf struct {
 	UnknownTemplate *Template
 	Templates       map[string]*Template
 	Alerts          map[string]*Alert
-	Notifications   map[string]*Notification
+	Notifications   map[string]*Notification `json:"-"`
 	RawText         string
 
 	tree            *parse.Tree
@@ -104,8 +104,8 @@ type Template struct {
 	Def string
 	Vars
 	Name    string
-	Body    *htemplate.Template
-	Subject *ttemplate.Template
+	Body    *htemplate.Template `json:"-"`
+	Subject *ttemplate.Template `json:"-"`
 
 	body, subject string
 }
