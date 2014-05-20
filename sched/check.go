@@ -110,15 +110,15 @@ func (s *Schedule) CheckUnknown() {
 func (s *Schedule) CheckAlert(a *conf.Alert) {
 	log.Printf("checking alert %v", a.Name)
 	start := time.Now()
-	crits, err := s.CheckExpr(a, a.Crit, stCritical, nil, false)
+	crits, _, err := s.CheckExpr(a, a.Crit, stCritical, nil)
 	var warns AlertKeys
 	if err == nil {
-		warns, _ = s.CheckExpr(a, a.Warn, stWarning, crits, false)
+		warns, _, _ = s.CheckExpr(a, a.Warn, stWarning, crits)
 	}
 	log.Printf("done checking alert %v (%s): %v crits, %v warns", a.Name, time.Since(start), len(crits), len(warns))
 }
 
-func (s *Schedule) CheckExpr(a *conf.Alert, e *expr.Expr, checkStatus Status, ignore AlertKeys, returnOkay bool) (alerts AlertKeys, err error) {
+func (s *Schedule) CheckExpr(a *conf.Alert, e *expr.Expr, checkStatus Status, ignore AlertKeys) (alerts AlertKeys, oks AlertKeys, err error) {
 	if e == nil {
 		return
 	}
@@ -168,11 +168,12 @@ Loop:
 			err = fmt.Errorf("expected number or scalar")
 			return
 		}
-		if returnOkay || n != 0 {
+		if n != 0 {
 			state.Expr = e.String()
 			alerts = append(alerts, ak)
 		} else {
 			status = stNormal
+			oks = append(oks, ak)
 		}
 		if s.runStates != nil && status > s.runStates[ak] {
 			s.runStates[ak] = status
