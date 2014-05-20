@@ -96,9 +96,23 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 	return ret, nil
 }
 
-type ResState struct {
+type ResStatus struct {
 	expr.Result
-	State string
+	Status string
+	key    sched.AlertKey
+}
+
+type ResStatuses []ResStatus
+
+func (a ResStatuses) Len() int           { return len(a) }
+func (a ResStatuses) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a ResStatuses) Less(i, j int) bool { return a[i].key < a[j].key }
+
+func ToResult(s *sched.Schedule, ak sched.AlertKey) expr.Result {
+	status := s.Status(ak)
+	//TODO Get value in a better way, don't blow up if computations len is 0
+	value := status.Computations[len(status.Computations)-1].Value
+	return expr.Result{status.Computations, value, status.Group}
 }
 
 func Template(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
@@ -153,34 +167,35 @@ func Template(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (int
 	}
 	s.CheckStart = now
 	s.Load(c)
-	ak, err := s.CheckExpr(a, a.Crit, 0, nil, false)
+	critks, noncritks, err := s.CheckExpr(a, a.Crit, 0, nil)
 	if err != nil {
 		return nil, err
 	}
-	warns, _ := s.CheckExpr(a, a.Warn, 0, ak, false)
-	for _, v := range warns {
-		ak = append(ak, v)
+	warnks, nonwarnks, err := s.CheckExpr(a, a.Warn, 0, critks)
+	if err != nil {
+		return nil, err
 	}
-	// This has a caveat that it assumes both Warn and Crit are the same expression with different thresholds.
-	goods, _ := s.CheckExpr(a, a.Warn, 0, ak, true)
-	for _, v := range goods {
-		ak = append(ak, v)
+	var res ResStatuses
+	for _, v := range critks {
+		res = append(res, ResStatus{ToResult(s, v), "Crit", v})
 	}
-	var instance *sched.State
-	if len(ak) < 1 {
+	for _, v := range warnks {
+		res = append(res, ResStatus{ToResult(s, v), "Warn", v})
+	}
+	okset := make(map[sched.AlertKey]bool)
+	for _, v := range append(noncritks, nonwarnks...) {
+		okset[v] = true
+	}
+	for _, v := range append(critks, warnks...) {
+		delete(okset, v)
+	}
+	for k, _ := range okset {
+		res = append(res, ResStatus{ToResult(s, k), "Ok", k})
+	}
+	if len(res) < 1 {
 		return nil, fmt.Errorf("no results returned")
 	}
-	var res []*expr.Result
-	for _, v := range ak {
-		status := s.Status(v)
-		if len(status.Computations) < 1 {
-			return nil, fmt.Errorf("alert %s has no computations", status.Alert)
-		}
-		value := status.Computations[len(status.Computations)-1].Value
-		res = append(res, &expr.Result{status.Computations, value, status.Group})
-	}
-	sort.Sort(ak)
-	instance = s.Status(ak[0])
+	instance := s.Status(res[0].key)
 	body := new(bytes.Buffer)
 	subject := new(bytes.Buffer)
 	if err := s.ExecuteBody(body, a, instance); err != nil {
@@ -191,10 +206,11 @@ func Template(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (int
 	}
 	b, _ := ioutil.ReadAll(body)
 	sub, _ := ioutil.ReadAll(subject)
+	sort.Sort(res)
 	return struct {
 		Body    string
 		Subject string
-		Result  []*expr.Result
+		Result  ResStatuses
 	}{
 		string(b),
 		string(sub),
