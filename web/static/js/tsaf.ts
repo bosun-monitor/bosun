@@ -52,11 +52,6 @@ tsafApp.config(['$routeProvider', '$locationProvider', function($routeProvider: 
 			templateUrl: 'partials/silence.html',
 			controller: 'SilenceCtrl',
 		}).
-		when('/test_template', {
-			title: 'Test Template',
-			templateUrl: 'partials/test_template.html',
-			controller: 'TestTemplateCtrl',
-		}).
 		when('/config', {
 			title: 'Configuration',
 			templateUrl: 'partials/config.html',

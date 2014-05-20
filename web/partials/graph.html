@@ -166,7 +166,7 @@
 					<td ng-bind="q"></td>
 					<td><a href="/expr#{{btoa(q)}}" target="_blank">Expression</a></td>
 					<td><a href="/egraph?q={{btoa(q)}}" target="_blank">Expression Graph</a></td>
-					<td><a href="/rule?rule={{btoa('crit = avg(' + q + ')')}}" target="_blank">Rule</a></td>
+					<td><a href="/rule?alert={{btoa('alert test {\n    crit = avg(' + q + ')\n}')}}" target="_blank">Rule</a></td>
 				</tr>
 			</tbody>
 		</table>
