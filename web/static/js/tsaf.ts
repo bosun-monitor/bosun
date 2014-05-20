@@ -31,11 +31,6 @@ tsafApp.config(['$routeProvider', '$locationProvider', function($routeProvider: 
 			templateUrl: 'partials/expr.html',
 			controller: 'ExprCtrl',
 		}).
-		when('/egraph', {
-			title: 'Expression Graph',
-			templateUrl: 'partials/egraph.html',
-			controller: 'EGraphCtrl',
-		}).
 		when('/graph', {
 			title: 'Graph',
 			templateUrl: 'partials/graph.html',
@@ -148,7 +143,7 @@ moment.lang('en', {
 		future: "in %s",
 		past: "%s-ago",
 		s: "%ds",
-		m: "$dm",
+		m: "%dm",
 		mm: "%dm",
 		h: "%dh",
 		hh: "%dh",

@@ -1,1 +1,1 @@
-tsc -w --noImplicitAny --out tsaf.js tsaf.ts angular.d.ts angular-route.d.ts angular-sanitize.d.ts bootstrap.d.ts d3.d.ts jquery.d.ts moment.d.ts rickshaw.d.ts action.ts config.ts dashboard.ts directives.ts egraph.ts expr.ts graph.ts host.ts items.ts rickshaw.ts rule.ts silence.ts state.ts template.ts
+tsc -w --noImplicitAny --out tsaf.js tsaf.ts action.ts config.ts dashboard.ts directives.ts expr.ts graph.ts host.ts items.ts rickshaw.ts rule.ts silence.ts state.ts template.ts
