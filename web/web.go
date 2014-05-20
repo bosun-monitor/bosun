@@ -7,7 +7,6 @@ import (
 	"log"
 	"net/http"
 	"path/filepath"
-	"sort"
 	"time"
 
 	"github.com/StackExchange/tsaf/_third_party/github.com/MiniProfiler/go/miniprofiler"
@@ -211,43 +210,5 @@ type ConfigSection struct {
 }
 
 func CJson(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	return struct {
-		Alerts    []ConfigSection
-		Templates []ConfigSection
-	}{
-		calerts(),
-		ctemplates(),
-	}, nil
-}
-
-func calerts() []ConfigSection {
-	l := make([]ConfigSection, len(schedule.Conf.Alerts))
-	keys := make([]string, len(schedule.Conf.Alerts))
-	i := 0
-	for k, _ := range schedule.Conf.Alerts {
-		keys[i] = k
-		i++
-	}
-	sort.Strings(keys)
-	for i, v := range keys {
-		l[i] = ConfigSection{schedule.Conf.Alerts[v].Name, schedule.Conf.Alerts[v].Def}
-		i++
-	}
-	return l
-}
-
-func ctemplates() []ConfigSection {
-	l := make([]ConfigSection, len(schedule.Conf.Templates))
-	keys := make([]string, len(schedule.Conf.Templates))
-	i := 0
-	for k, _ := range schedule.Conf.Templates {
-		keys[i] = k
-		i++
-	}
-	sort.Strings(keys)
-	for i, v := range keys {
-		l[i] = ConfigSection{schedule.Conf.Templates[v].Name, schedule.Conf.Templates[v].Def}
-		i++
-	}
-	return l
+	return schedule.Conf, nil
 }
