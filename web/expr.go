@@ -77,13 +77,9 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 		tsdbHost = %s
 		smtpHost = %s
 		emailFrom = %s
-
 		%s
-
 		%s
-
 		%s
-
 		%s`, schedule.Conf.TsdbHost, schedule.Conf.SmtpHost, schedule.Conf.EmailFrom, vars,
 		r.FormValue("template"), notifications, r.FormValue("alert"))
 	c, err := conf.New("Test Config", txt)
@@ -96,7 +92,6 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 	var a *conf.Alert
 	for k, _ := range c.Alerts {
 		a = c.Alerts[k]
-		break
 	}
 	s := &sched.Schedule{}
 	now := time.Now().UTC()
@@ -114,11 +109,11 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 	}
 	s.CheckStart = now
 	s.TestLoad(c)
-	critks, noncritks, err := s.CheckExpr(a, a.Crit, 0, nil)
+	critks, err := s.CheckExpr(a, a.Crit, 0, nil)
 	if err != nil {
 		return nil, err
 	}
-	warnks, nonwarnks, err := s.CheckExpr(a, a.Warn, 0, critks)
+	warnks, err := s.CheckExpr(a, a.Warn, 0, critks)
 	if err != nil {
 		return nil, err
 	}
@@ -129,15 +124,12 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 	for _, v := range warnks {
 		res = append(res, ResStatus{ToResult(s, v), "Warn", v})
 	}
-	okset := make(map[sched.AlertKey]bool)
-	for _, v := range append(noncritks, nonwarnks...) {
-		okset[v] = true
-	}
-	for _, v := range append(critks, warnks...) {
-		delete(okset, v)
-	}
-	for k, _ := range okset {
-		res = append(res, ResStatus{ToResult(s, k), "Ok", k})
+	for k, _ := range s.RunStates {
+		status := s.Status(k)
+		//TODO Get value in a better way, don't blow up if computations len is 0
+		value := status.Computations[len(status.Computations)-1].Value
+		r := expr.Result{status.Computations, value, status.Group}
+		res = append(res, ResStatus{r, "Ok", k})
 	}
 	if len(res) < 1 {
 		return nil, fmt.Errorf("no results returned")

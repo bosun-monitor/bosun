@@ -942,11 +942,9 @@ tsafControllers.controller('RuleCtrl', [
         $scope.date = search.date || '';
         $scope.time = search.time || '';
         $scope.tab = search.tab || 'results';
-        $http.get('/api/config/alerts').success(function (data) {
-            $scope.alerts = data;
-        });
-        $http.get('/api/config/templates').success(function (data) {
-            $scope.templates = data;
+        $http.get('/api/config/json').success(function (data) {
+            $scope.alerts = data.Alerts;
+            $scope.templates = data.Templates;
         });
         try  {
             current_alert = atob(current_alert);

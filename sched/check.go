@@ -21,7 +21,7 @@ func (s *Schedule) Status(ak AlertKey) *State {
 
 func (s *Schedule) Check() {
 	s.CheckStart = time.Now().UTC()
-	s.runStates = make(map[AlertKey]Status)
+	s.RunStates = make(map[AlertKey]Status)
 	s.cache = opentsdb.NewCache(s.Conf.TsdbHost, s.Conf.ResponseLimit)
 	for _, a := range s.Conf.Alerts {
 		s.CheckAlert(a)
@@ -29,7 +29,7 @@ func (s *Schedule) Check() {
 	s.CheckUnknown()
 	checkNotify := false
 	silenced := s.Silenced()
-	for ak, status := range s.runStates {
+	for ak, status := range s.RunStates {
 		state := s.Status(ak)
 		last := state.Append(status)
 		a := s.Conf.Alerts[ak.Name()]
@@ -102,7 +102,7 @@ func (s *Schedule) CheckUnknown() {
 		if time.Since(st.Touched) < t {
 			continue
 		}
-		s.runStates[ak] = stUnknown
+		s.RunStates[ak] = stUnknown
 	}
 	s.Unlock()
 }
@@ -110,17 +110,21 @@ func (s *Schedule) CheckUnknown() {
 func (s *Schedule) CheckAlert(a *conf.Alert) {
 	log.Printf("checking alert %v", a.Name)
 	start := time.Now()
-	crits, _, err := s.CheckExpr(a, a.Crit, stCritical, nil)
+	crits, err := s.CheckExpr(a, a.Crit, stCritical, nil)
 	var warns AlertKeys
 	if err == nil {
-		warns, _, _ = s.CheckExpr(a, a.Warn, stWarning, crits)
+		warns, _ = s.CheckExpr(a, a.Warn, stWarning, crits)
 	}
 	log.Printf("done checking alert %v (%s): %v crits, %v warns", a.Name, time.Since(start), len(crits), len(warns))
 }
 
-func (s *Schedule) CheckExpr(a *conf.Alert, e *expr.Expr, checkStatus Status, ignore AlertKeys) (alerts AlertKeys, oks AlertKeys, err error) {
+func (s *Schedule) CheckExpr(a *conf.Alert, e *expr.Expr, checkStatus Status, ignore AlertKeys) (alerts AlertKeys, err error) {
 	if e == nil {
 		return
+	}
+	if s.RunStates == nil {
+		s.RunStates = make(map[AlertKey]Status)
+
 	}
 	defer func() {
 		if err == nil {
@@ -173,10 +177,9 @@ Loop:
 			alerts = append(alerts, ak)
 		} else {
 			status = stNormal
-			oks = append(oks, ak)
 		}
-		if s.runStates != nil && status > s.runStates[ak] {
-			s.runStates[ak] = status
+		if s.RunStates != nil && status > s.RunStates[ak] {
+			s.RunStates[ak] = status
 		}
 	}
 	return

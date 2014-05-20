@@ -27,7 +27,7 @@ type Schedule struct {
 
 	nc            chan interface{}
 	cache         *opentsdb.Cache
-	runStates     map[AlertKey]Status
+	RunStates     map[AlertKey]Status
 	CheckStart    time.Time
 	notifications map[*conf.Notification][]*State
 }

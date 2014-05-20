@@ -37,8 +37,7 @@ func Listen(addr, dir, host string) error {
 	router.Handle("/api/action", JSON(Action))
 	router.Handle("/api/alerts", JSON(Alerts))
 	router.Handle("/api/config", miniprofiler.NewHandler(Config))
-	router.Handle("/api/config/alerts", JSON(CAlerts))
-	router.Handle("/api/config/templates", JSON(CTemplates))
+	router.Handle("/api/config/json", JSON(CJson))
 	router.Handle("/api/config_test", miniprofiler.NewHandler(ConfigTest))
 	router.Handle("/api/egraph", JSON(ExprGraph))
 	router.Handle("/api/expr", JSON(Expr))
@@ -211,7 +210,17 @@ type ConfigSection struct {
 	Def  string
 }
 
-func CAlerts(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func CJson(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	return struct {
+		Alerts    []ConfigSection
+		Templates []ConfigSection
+	}{
+		calerts(),
+		ctemplates(),
+	}, nil
+}
+
+func calerts() []ConfigSection {
 	l := make([]ConfigSection, len(schedule.Conf.Alerts))
 	keys := make([]string, len(schedule.Conf.Alerts))
 	i := 0
@@ -224,10 +233,10 @@ func CAlerts(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (inte
 		l[i] = ConfigSection{schedule.Conf.Alerts[v].Name, schedule.Conf.Alerts[v].Def}
 		i++
 	}
-	return l, nil
+	return l
 }
 
-func CTemplates(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func ctemplates() []ConfigSection {
 	l := make([]ConfigSection, len(schedule.Conf.Templates))
 	keys := make([]string, len(schedule.Conf.Templates))
 	i := 0
@@ -240,5 +249,5 @@ func CTemplates(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (i
 		l[i] = ConfigSection{schedule.Conf.Templates[v].Name, schedule.Conf.Templates[v].Def}
 		i++
 	}
-	return l, nil
+	return l
 }
