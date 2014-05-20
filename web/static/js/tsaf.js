@@ -983,7 +983,7 @@ tsafControllers.controller('RuleCtrl', [
             $location.search('date', $scope.date || null);
             $location.search('time', $scope.time || null);
             $location.search('tab', $scope.tab || 'results');
-            $http.get('/api/template?' + 'alert=' + encodeURIComponent($scope.alert) + '&template=' + encodeURIComponent($scope.template) + '&date=' + encodeURIComponent($scope.date) + '&time=' + encodeURIComponent($scope.time)).success(function (data) {
+            $http.get('/api/rule?' + 'alert=' + encodeURIComponent($scope.alert) + '&template=' + encodeURIComponent($scope.template) + '&date=' + encodeURIComponent($scope.date) + '&time=' + encodeURIComponent($scope.time)).success(function (data) {
                 $scope.subject = data.Subject;
                 $scope.body = data.Body;
                 $scope.result = data.Result;
