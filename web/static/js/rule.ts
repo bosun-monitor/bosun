@@ -24,13 +24,10 @@ tsafControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route'
 	$scope.date = search.date || '';
 	$scope.time = search.time || '';
 	$scope.tab = search.tab || 'results';
-	$http.get('/api/config/alerts')
+	$http.get('/api/config/json')
 			.success((data) => {
-				$scope.alerts = data;
-			})
-	$http.get('/api/config/templates')
-			.success((data) => {
-				$scope.templates = data;
+				$scope.alerts = data.Alerts;
+				$scope.templates = data.Templates;
 			})
 	try {
 		current_alert = atob(current_alert);

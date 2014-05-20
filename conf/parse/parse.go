@@ -236,7 +236,6 @@ func (t *Tree) parseSection() *SectionNode {
 			t.backup()
 			s.append(t.parsePair())
 		case itemRightDelim, itemEOF:
-			//TODO Find out if t.text length could be less than token.post+1
 			s.RawText = t.text[start : token.pos+1]
 			return s
 		default:

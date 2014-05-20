@@ -82,6 +82,7 @@ func errRecover(errp *error) {
 }
 
 type Alert struct {
+	Def string
 	Vars
 	*Template        `json:"-"`
 	Name             string
@@ -91,7 +92,6 @@ type Alert struct {
 	CritNotification map[string]*Notification  `json:"-"`
 	WarnNotification map[string]*Notification  `json:"-"`
 	Unknown          time.Duration
-	Def              string
 
 	crit, warn       string
 	template         string
@@ -101,9 +101,9 @@ type Alert struct {
 }
 
 type Template struct {
+	Def string
 	Vars
 	Name    string
-	Def     string
 	Body    *htemplate.Template
 	Subject *ttemplate.Template
 
@@ -111,9 +111,9 @@ type Template struct {
 }
 
 type Notification struct {
+	Def string
 	Vars
 	Name      string
-	Def       string
 	Email     []*mail.Address
 	Post, Get *url.URL
 	Print     bool
@@ -306,8 +306,8 @@ func (c *Conf) loadTemplate(s *parse.SectionNode) {
 		c.errorf("duplicate template name: %s", name)
 	}
 	t := Template{
-		Vars: make(map[string]string),
 		Def:  s.RawText,
+		Vars: make(map[string]string),
 		Name: name,
 	}
 	funcs := ttemplate.FuncMap{
@@ -366,9 +366,9 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 		c.errorf("duplicate alert name: %s", name)
 	}
 	a := Alert{
+		Def:  s.RawText,
 		Vars: make(map[string]string),
 		Name: name,
-		Def:  s.RawText,
 	}
 	saw := make(map[string]bool)
 	for _, p := range s.Nodes {
@@ -475,8 +475,8 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 		c.errorf("duplicate notification name: %s", name)
 	}
 	n := Notification{
-		Vars: make(map[string]string),
 		Def:  s.RawText,
+		Vars: make(map[string]string),
 		Name: name,
 	}
 	saw := make(map[string]bool)
