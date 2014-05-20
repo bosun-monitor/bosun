@@ -27,10 +27,6 @@ tsafApp.config([
             title: 'Expression',
             templateUrl: 'partials/expr.html',
             controller: 'ExprCtrl'
-        }).when('/egraph', {
-            title: 'Expression Graph',
-            templateUrl: 'partials/egraph.html',
-            controller: 'EGraphCtrl'
         }).when('/graph', {
             title: 'Graph',
             templateUrl: 'partials/graph.html',
@@ -123,7 +119,7 @@ moment.lang('en', {
         future: "in %s",
         past: "%s-ago",
         s: "%ds",
-        m: "$dm",
+        m: "%dm",
         mm: "%dm",
         h: "%dh",
         hh: "%dh",
@@ -375,46 +371,6 @@ tsafApp.filter('linkq', [
             }
         };
     }]);
-tsafControllers.controller('EGraphCtrl', [
-    '$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
-        var search = $location.search();
-        var current = search.q;
-        try  {
-            current = atob(current);
-        } catch (e) {
-        }
-        $scope.bytes = search.bytes == 'true';
-        $scope.renderers = ['area', 'bar', 'line', 'scatterplot'];
-        $scope.render = search.render || 'line';
-        if (!current) {
-            $location.search('q', btoa('q("avg:rate:os.cpu{host=ny-devtsaf01}", "5m", "")'));
-            return;
-        }
-        $scope.expr = current;
-        $scope.running = current;
-        var width = $('.chart').width();
-        var url = '/api/egraph?b64=' + btoa(current) + '&autods=' + width;
-        $http.get(url).success(function (data) {
-            $scope.result = data;
-            if ($scope.result.length == 0) {
-                $scope.warning = 'No Results';
-            } else {
-                $scope.warning = '';
-            }
-            $scope.running = '';
-            $scope.error = '';
-            $scope.url = url;
-        }).error(function (error) {
-            $scope.error = error;
-            $scope.running = '';
-        });
-        $scope.set = function () {
-            $location.search('q', btoa($scope.expr));
-            $location.search('render', $scope.render);
-            $location.search('bytes', $scope.bytes ? 'true' : undefined);
-            $route.reload();
-        };
-    }]);
 tsafControllers.controller('ExprCtrl', [
     '$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
         var current = $location.hash();
@@ -429,10 +385,15 @@ tsafControllers.controller('ExprCtrl', [
         }
         $scope.expr = current;
         $scope.running = current;
+        $scope.tab = 'results';
         $http.get('/api/expr?q=' + encodeURIComponent(current)).success(function (data) {
             $scope.result = data.Results;
             $scope.queries = data.Queries;
             $scope.result_type = data.Type;
+            if (data.Type == 'series') {
+                $scope.svg_url = '/api/egraph/' + btoa(current) + '/svg?now=' + (new Date).getTime() / 1000;
+                $scope.graph = toRickshaw(data.Results);
+            }
             $scope.running = '';
         }).error(function (error) {
             $scope.error = error;
@@ -442,6 +403,35 @@ tsafControllers.controller('ExprCtrl', [
             $location.hash(btoa($scope.expr));
             $route.reload();
         };
+        function toRickshaw(res) {
+            var graph = [];
+            angular.forEach(res, function (d, idx) {
+                var data = [];
+                angular.forEach(d.Value, function (val, ts) {
+                    data.push({
+                        x: +ts,
+                        y: val
+                    });
+                });
+                if (data.length == 0) {
+                    return;
+                }
+                var name = '{';
+                angular.forEach(d.Group, function (tagv, tagk) {
+                    if (name.length > 1) {
+                        name += ',';
+                    }
+                    name += tagk + '=' + tagv;
+                });
+                name += '}';
+                var series = {
+                    data: data,
+                    name: name
+                };
+                graph[idx] = series;
+            });
+            return graph;
+        }
     }]);
 var TagSet = (function () {
     function TagSet() {
@@ -843,101 +833,102 @@ tsafControllers.controller('ItemsCtrl', [
             $scope.status = 'Unable to fetch hosts: ' + error;
         });
     }]);
-tsafApp.directive("tsRickshaw", [
-    '$filter', function ($filter) {
+tsafApp.directive('tsRickshaw', [
+    '$filter', '$timeout', function ($filter, $timeout) {
         return {
-            //templateUrl: '/partials/rickshaw.html',
             link: function (scope, elem, attrs) {
                 scope.$watch(attrs.tsRickshaw, function (v) {
-                    if (!angular.isArray(v) || v.length == 0) {
-                        return;
-                    }
-                    elem[0].innerHTML = '<div class="row"><div class="col-lg-12"><div class="y_axis"></div><div class="rgraph"></div></div></div><div class="row"><div class="col-lg-12"><div class="rlegend"></div></div></div>';
-                    var palette = new Rickshaw.Color.Palette();
-                    angular.forEach(v, function (i) {
-                        if (!i.color) {
-                            i.color = palette.color();
+                    $timeout(function () {
+                        if (!angular.isArray(v) || v.length == 0) {
+                            return;
                         }
-                    });
-                    var rgraph = angular.element('.rgraph', elem);
-                    var graph_options = {
-                        element: rgraph[0],
-                        height: rgraph.height(),
-                        min: 'auto',
-                        series: v,
-                        renderer: 'line',
-                        interpolation: 'linear'
-                    };
-                    if (attrs.max) {
-                        graph_options.max = attrs.max;
-                    }
-                    if (attrs.renderer) {
-                        graph_options.renderer = attrs.renderer;
-                    }
-                    var graph = new Rickshaw.Graph(graph_options);
-                    var x_axis = new Rickshaw.Graph.Axis.Time({
-                        graph: graph,
-                        timeFixture: new Rickshaw.Fixtures.Time()
-                    });
-                    var y_axis = new Rickshaw.Graph.Axis.Y({
-                        graph: graph,
-                        orientation: 'left',
-                        tickFormat: function (y) {
-                            var o = d3.formatPrefix(y);
-
-                            // The precision arg to d3.formatPrefix seems broken, so using round
-                            // http://stackoverflow.com/questions/10310613/variable-precision-in-d3-format
-                            return d3.round(o.scale(y), 2) + o.symbol;
-                        },
-                        element: angular.element('.y_axis', elem)[0]
-                    });
-                    if (attrs.bytes == "true") {
-                        y_axis.tickFormat = function (y) {
-                            return $filter('bytes')(y);
+                        elem[0].innerHTML = '<div class="row"><div class="col-lg-12"><div class="y_axis"></div><div class="rgraph"></div></div></div><div class="row"><div class="col-lg-12"><div class="rlegend"></div></div></div>';
+                        var palette = new Rickshaw.Color.Palette();
+                        angular.forEach(v, function (i) {
+                            if (!i.color) {
+                                i.color = palette.color();
+                            }
+                        });
+                        var rgraph = angular.element('.rgraph', elem);
+                        var graph_options = {
+                            element: rgraph[0],
+                            height: rgraph.height(),
+                            min: 'auto',
+                            series: v,
+                            renderer: 'line',
+                            interpolation: 'linear'
                         };
-                    }
-                    graph.render();
-                    var fmter = 'nfmt';
-                    if (attrs.bytes == 'true') {
-                        fmter = 'bytes';
-                    } else if (attrs.bits == 'true') {
-                        fmter = 'bits';
-                    }
-                    var fmt = $filter(fmter);
-                    var legend = angular.element('.rlegend', elem)[0];
-                    var Hover = Rickshaw.Class.create(Rickshaw.Graph.HoverDetail, {
-                        render: function (args) {
-                            legend.innerHTML = args.formattedXValue;
-                            args.detail.sort(function (a, b) {
-                                return a.order - b.order;
-                            }).forEach(function (d) {
-                                var line = document.createElement('div');
-                                line.className = 'rline';
-                                var swatch = document.createElement('div');
-                                swatch.className = 'rswatch';
-                                swatch.style.backgroundColor = d.series.color;
-                                var label = document.createElement('div');
-                                label.className = 'rlabel';
-                                label.innerHTML = d.name + ": " + fmt(d.formattedYValue);
-                                line.appendChild(swatch);
-                                line.appendChild(label);
-                                legend.appendChild(line);
-                                var dot = document.createElement('div');
-                                dot.className = 'dot';
-                                dot.style.top = graph.y(d.value.y0 + d.value.y) + 'px';
-                                dot.style.borderColor = d.series.color;
-                                this.element.appendChild(dot);
-                                dot.className = 'dot active';
-                                this.show();
-                            }, this);
+                        if (attrs.max) {
+                            graph_options.max = attrs.max;
                         }
-                    });
-                    var hover = new Hover({ graph: graph });
+                        if (attrs.renderer) {
+                            graph_options.renderer = attrs.renderer;
+                        }
+                        var graph = new Rickshaw.Graph(graph_options);
+                        var x_axis = new Rickshaw.Graph.Axis.Time({
+                            graph: graph,
+                            timeFixture: new Rickshaw.Fixtures.Time()
+                        });
+                        var y_axis = new Rickshaw.Graph.Axis.Y({
+                            graph: graph,
+                            orientation: 'left',
+                            tickFormat: function (y) {
+                                var o = d3.formatPrefix(y);
 
-                    //Simulate a movemove so the hover appears on load
-                    var e = document.createEvent('MouseEvents');
-                    e.initEvent('mousemove', true, false);
-                    rgraph[0].children[0].dispatchEvent(e);
+                                // The precision arg to d3.formatPrefix seems broken, so using round
+                                // http://stackoverflow.com/questions/10310613/variable-precision-in-d3-format
+                                return d3.round(o.scale(y), 2) + o.symbol;
+                            },
+                            element: angular.element('.y_axis', elem)[0]
+                        });
+                        if (attrs.bytes == "true") {
+                            y_axis.tickFormat = function (y) {
+                                return $filter('bytes')(y);
+                            };
+                        }
+                        graph.render();
+                        var fmter = 'nfmt';
+                        if (attrs.bytes == 'true') {
+                            fmter = 'bytes';
+                        } else if (attrs.bits == 'true') {
+                            fmter = 'bits';
+                        }
+                        var fmt = $filter(fmter);
+                        var legend = angular.element('.rlegend', elem)[0];
+                        var Hover = Rickshaw.Class.create(Rickshaw.Graph.HoverDetail, {
+                            render: function (args) {
+                                legend.innerHTML = args.formattedXValue;
+                                args.detail.sort(function (a, b) {
+                                    return a.order - b.order;
+                                }).forEach(function (d) {
+                                    var line = document.createElement('div');
+                                    line.className = 'rline';
+                                    var swatch = document.createElement('div');
+                                    swatch.className = 'rswatch';
+                                    swatch.style.backgroundColor = d.series.color;
+                                    var label = document.createElement('div');
+                                    label.className = 'rlabel';
+                                    label.innerHTML = d.name + ": " + fmt(d.formattedYValue);
+                                    line.appendChild(swatch);
+                                    line.appendChild(label);
+                                    legend.appendChild(line);
+                                    var dot = document.createElement('div');
+                                    dot.className = 'dot';
+                                    dot.style.top = graph.y(d.value.y0 + d.value.y) + 'px';
+                                    dot.style.borderColor = d.series.color;
+                                    this.element.appendChild(dot);
+                                    dot.className = 'dot active';
+                                    this.show();
+                                }, this);
+                            }
+                        });
+                        var hover = new Hover({ graph: graph });
+
+                        //Simulate a movemove so the hover appears on load
+                        var e = document.createEvent('MouseEvents');
+                        e.initEvent('mousemove', true, false);
+                        rgraph[0].children[0].dispatchEvent(e);
+                    });
                 });
             }
         };
