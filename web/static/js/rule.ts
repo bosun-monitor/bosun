@@ -78,7 +78,7 @@ tsafControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route'
 		$location.search('date', $scope.date || null);
 		$location.search('time', $scope.time || null);
 		$location.search('tab', $scope.tab || 'results');
-		$http.get('/api/template?' +
+		$http.get('/api/rule?' +
 			'alert=' + encodeURIComponent($scope.alert) +
 			'&template=' + encodeURIComponent($scope.template) +
 			'&date=' + encodeURIComponent($scope.date) +
