@@ -116,7 +116,7 @@ func startService(name string) error {
 		return fmt.Errorf("could not access service: %v", err)
 	}
 	defer s.Close()
-	err = s.Start([]string{"p1", "p2", "p3"})
+	err = s.Start(nil)
 	if err != nil {
 		return fmt.Errorf("could not start service: %v", err)
 	}
