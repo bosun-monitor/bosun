@@ -10,6 +10,7 @@ import (
 	"code.google.com/p/winsvc/eventlog"
 	"code.google.com/p/winsvc/mgr"
 	"code.google.com/p/winsvc/svc"
+	"github.com/StackExchange/scollector/collectors"
 	"github.com/StackExchange/slog"
 )
 
@@ -164,6 +165,7 @@ loop:
 		case svc.Interrogate:
 			changes <- c.CurrentStatus
 		case svc.Stop, svc.Shutdown:
+			collectors.KillWMI()
 			break loop
 		default:
 			slog.Errorf("unexpected control request #%d", c)

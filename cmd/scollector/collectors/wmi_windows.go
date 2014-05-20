@@ -29,6 +29,14 @@ func queryWmi(query string, dst interface{}) error {
 	return queryWmiNamespace(query, dst, "")
 }
 
+func KillWMI() {
+	if err := wmiCmd.Process.Kill(); err != nil {
+		slog.Infoln(err)
+	}
+	wmiCmd = nil
+	wmiCount = 0
+}
+
 func queryWmiNamespace(query string, dst interface{}, namespace string) (err error) {
 	wmiLock.Lock()
 	defer wmiLock.Unlock()
@@ -59,11 +67,7 @@ func queryWmiNamespace(query string, dst interface{}, namespace string) (err err
 	wmiCount++
 	defer func() {
 		if wmiCount > 50 {
-			if err := wmiCmd.Process.Kill(); err != nil {
-				slog.Infoln(err)
-			}
-			wmiCmd = nil
-			wmiCount = 0
+			KillWMI()
 		}
 	}()
 
