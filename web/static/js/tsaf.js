@@ -27,10 +27,6 @@ tsafApp.config([
             title: 'Expression',
             templateUrl: 'partials/expr.html',
             controller: 'ExprCtrl'
-        }).when('/egraph', {
-            title: 'Expression Graph',
-            templateUrl: 'partials/egraph.html',
-            controller: 'EGraphCtrl'
         }).when('/graph', {
             title: 'Graph',
             templateUrl: 'partials/graph.html',
@@ -395,7 +391,7 @@ tsafControllers.controller('ExprCtrl', [
             $scope.queries = data.Queries;
             $scope.result_type = data.Type;
             if (data.Type == 'series') {
-                $scope.svg_url = '/api/egraph?b64=' + btoa(current) + '&autods=1000&svg=.svg';
+                $scope.svg_url = '/api/egraph/' + btoa(current) + '/svg?now=' + (new Date).getTime() / 1000;
                 $scope.graph = toRickshaw(data.Results);
             }
             $scope.running = '';

@@ -141,7 +141,7 @@ tsafApp.filter('linkq', ['$sanitize', function($sanitize: ng.sanitize.ISanitizeS
 		var i: number;
 		var match: any;
 		while ((match = raw.match(QUERY_REGEXP))) {
-			url = '/egraph?q=' + btoa(match[0]);
+			url = '/graph?q=' + btoa(match[0]);
 			i = match.index;
 			addText(raw.substr(0, i));
 			addLink(url, match[0]);
