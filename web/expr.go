@@ -145,11 +145,12 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 	instance := s.Status(res[0].key)
 	body := new(bytes.Buffer)
 	subject := new(bytes.Buffer)
+	var warning []string
 	if err := s.ExecuteBody(body, a, instance); err != nil {
-		return nil, err
+		warning = append(warning, err.Error())
 	}
 	if err := s.ExecuteSubject(subject, a, instance); err != nil {
-		return nil, err
+		warning = append(warning, err.Error())
 	}
 	b, _ := ioutil.ReadAll(body)
 	sub, _ := ioutil.ReadAll(subject)
@@ -158,9 +159,11 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 		Body    string
 		Subject string
 		Result  ResStatuses
+		Warning []string
 	}{
 		string(b),
 		string(sub),
 		res,
+		warning,
 	}, nil
 }
