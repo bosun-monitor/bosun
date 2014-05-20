@@ -15,6 +15,11 @@ tsafControllers.controller('TestTemplateCtrl', ['$scope', '$http', '$location', 
 	var search = $location.search();
 	var current_alert = search.alert;
 	var current_template = search.template;
+	var status_map: any = {
+		"Ok": 0,
+		"Warn": 1,
+		"Crit": 2,
+	}
 	$scope.date = search.date || '';
 	$scope.time = search.time || '';
 	$scope.tab = search.tab || 'results';
@@ -82,6 +87,9 @@ tsafControllers.controller('TestTemplateCtrl', ['$scope', '$http', '$location', 
 				$scope.subject = data.Subject;
 				$scope.body = data.Body;
 				$scope.result = data.Result;
+				angular.forEach($scope.result, function(v) {
+					v.status_number = status_map[v.Status]
+				});
 				$scope.running = '';
 			})
 			.error((error) => {

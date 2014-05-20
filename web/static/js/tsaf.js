@@ -340,7 +340,7 @@ tsafApp.filter('linkq', [
             var i;
             var match;
             while ((match = raw.match(QUERY_REGEXP))) {
-                url = '/egraph?q=' + btoa(match[0]);
+                url = '/graph?q=' + btoa(match[0]);
                 i = match.index;
                 addText(raw.substr(0, i));
                 addLink(url, match[0]);
@@ -391,7 +391,7 @@ tsafControllers.controller('ExprCtrl', [
             $scope.queries = data.Queries;
             $scope.result_type = data.Type;
             if (data.Type == 'series') {
-                $scope.svg_url = '/api/egraph/' + btoa(current) + '/svg?now=' + (new Date).getTime() / 1000;
+                $scope.svg_url = '/api/egraph?b64=' + btoa(current) + '&autods=1000&svg=.svg';
                 $scope.graph = toRickshaw(data.Results);
             }
             $scope.running = '';
@@ -1128,6 +1128,11 @@ tsafControllers.controller('TestTemplateCtrl', [
         var search = $location.search();
         var current_alert = search.alert;
         var current_template = search.template;
+        var status_map = {
+            "Ok": 0,
+            "Warn": 1,
+            "Crit": 2
+        };
         $scope.date = search.date || '';
         $scope.time = search.time || '';
         $scope.tab = search.tab || 'results';
@@ -1176,6 +1181,9 @@ tsafControllers.controller('TestTemplateCtrl', [
                 $scope.subject = data.Subject;
                 $scope.body = data.Body;
                 $scope.result = data.Result;
+                angular.forEach($scope.result, function (v) {
+                    v.status_number = status_map[v.Status];
+                });
                 $scope.running = '';
             }).error(function (error) {
                 $scope.error = error;
