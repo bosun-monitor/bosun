@@ -27,7 +27,7 @@ type Schedule struct {
 
 	nc            chan interface{}
 	cache         *opentsdb.Cache
-	RunHistory    map[AlertKey]Event
+	RunHistory    map[AlertKey]*Event
 	CheckStart    time.Time
 	notifications map[*conf.Notification][]*State
 }
@@ -284,8 +284,7 @@ func (s *Schedule) RestoreState() {
 				t = s.Conf.Unknown
 			}
 			if t == 0 && st.Last().Status == StUnknown {
-				st.History = append(st.History, Event{Status: StNormal})
-				//st.Append(StNormal)
+				st.Append(&Event{Status: StNormal})
 			}
 		}
 		s.status[ak] = &st
@@ -478,10 +477,10 @@ func (s *State) Touch() {
 
 // Appends status to the history if the status is different than the latest
 // status. Returns the previous status.
-func (s *State) Append(event Event) Status {
+func (s *State) Append(event *Event) Status {
 	last := s.Last()
 	if len(s.History) == 0 || s.Last().Status != event.Status {
-		s.History = append(s.History, event)
+		s.History = append(s.History, *event)
 	}
 	return last.Status
 }
