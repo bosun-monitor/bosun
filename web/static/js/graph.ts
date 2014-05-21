@@ -279,9 +279,11 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route
 		return;
 	}
 	var autods = $scope.autods ? autods = '&autods=' + $('.chart').width() : '';
-	function get() {
+	function get(noRunning: boolean) {
 		$timeout.cancel(graphRefresh);
-		$scope.running = 'Running';
+		if (!noRunning) {
+			$scope.running = 'Running';
+		}
 		$http.get('/api/graph?' + 'b64=' + btoa(JSON.stringify(request)) + autods)
 			.success((data) => {
 				$scope.result = data.Series;
@@ -304,9 +306,9 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route
 			})
 			.finally(() => {
 				if ($scope.refresh) {
-					graphRefresh = $timeout(get, 5000);
+					graphRefresh = $timeout(() => { get(true); }, 5000);
 				};
 			});
 	};
-	get();
+	get(false);
 }]);
