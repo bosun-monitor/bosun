@@ -128,3 +128,97 @@ tsafApp.filter('bits', function() {
 		return nfmt(s, 1024, 'b', { round: true });
 	}
 });
+
+tsafApp.directive('tsGraph', ['$filter', function($filter: ng.IFilterService) {
+	var margin = {
+		top: 20,
+		right: 80,
+		bottom: 30,
+		left: 80,
+	};
+	return {
+		scope: {
+			data: '=',
+		},
+		link: (scope: ng.IScope, elem: any, attrs: any) => {
+			var svgHeight = elem.height();
+			var height = svgHeight - margin.top - margin.bottom;
+			var svgWidth = elem.width();
+			var width = svgWidth - margin.left - margin.right;
+			var xScale = d3.time.scale.utc().range([0, width]);
+			var yScale = d3.scale.linear().range([height, 0]);
+			var xAxis = d3.svg.axis()
+				.scale(xScale)
+				.orient('bottom');
+			var yAxis = d3.svg.axis()
+				.scale(yScale)
+				.orient('left');
+			var line = d3.svg.line()
+				.x((d) => { return xScale(d.x * 1000); })
+				.y((d) => { return yScale(d.y); });
+			var svg = d3.select(elem[0])
+				.append('svg')
+				.attr('width', svgWidth)
+				.attr('height', svgHeight)
+				.append('g')
+				.attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
+			svg.append('defs')
+				.append('clipPath')
+				.attr('id', 'clip')
+				.append('rect')
+				.attr('width', width)
+				.attr('height', height);
+			var chart = svg.append('g')
+				.attr('clip-path', 'url(#clip)');
+			svg.append('g')
+				.attr('class', 'x axis')
+				.attr('transform', 'translate(0,' + height + ')');
+			svg.append('g')
+				.attr('class', 'y axis');
+			var color = d3.scale.category10();
+
+			scope.$watch('data', update);
+			var oldx = 0;
+			function update(v: any) {
+				if (!angular.isArray(v) || v.length == 0) {
+					return;
+				}
+				var xdomain = [
+					d3.min(v, (d: any) => { return d3.min(d.data, (c: any) => { return c.x; }); }) * 1000,
+					d3.max(v, (d: any) => { return d3.max(d.data, (c: any) => { return c.x; }); }) * 1000,
+				];
+				xScale.domain(xdomain);
+				yScale.domain([
+					d3.min(v, (d: any) => { return d3.min(d.data, (c: any) => { return c.y; }); }),
+					d3.max(v, (d: any) => { return d3.max(d.data, (c: any) => { return c.y; }); }),
+				]);
+				if (!oldx) {
+					oldx = xdomain[1];
+				} else if (oldx == xdomain[1]) {
+					return;
+				}
+				svg.select('.x.axis')
+					.transition()
+					.call(xAxis);
+				svg.select('.y.axis')
+					.transition()
+					.call(yAxis);
+				var queries = chart.selectAll('.line')
+					.data(v, (d) => { return d.name; });
+				queries.enter()
+					.append('path')
+					.attr('stroke', (d: any) => { return color(d.name); })
+					.attr('class', 'line');
+				queries.exit()
+					.remove();
+				queries
+					.attr('d', (d: any) => { return line(d.data); })
+					.attr('transform', null)
+					.transition()
+					.ease('linear')
+					.attr('transform', 'translate(' + (xScale(oldx) - xScale(xdomain[1])) + ')');
+				oldx = xdomain[1];
+			};
+		},
+	};
+}]);

@@ -3,7 +3,6 @@
 /// <reference path="angular-sanitize.d.ts" />
 /// <reference path="bootstrap.d.ts" />
 /// <reference path="moment.d.ts" />
-/// <reference path="rickshaw.d.ts" />
 /// <reference path="d3.d.ts" />
 var tsafApp = angular.module('tsafApp', [
     'ngRoute',
@@ -321,6 +320,94 @@ tsafApp.filter('bits', function () {
         return nfmt(s, 1024, 'b', { round: true });
     };
 });
+
+tsafApp.directive('tsGraph', [
+    '$filter', function ($filter) {
+        var margin = {
+            top: 20,
+            right: 80,
+            bottom: 30,
+            left: 80
+        };
+        return {
+            scope: {
+                data: '='
+            },
+            link: function (scope, elem, attrs) {
+                var svgHeight = elem.height();
+                var height = svgHeight - margin.top - margin.bottom;
+                var svgWidth = elem.width();
+                var width = svgWidth - margin.left - margin.right;
+                var xScale = d3.time.scale.utc().range([0, width]);
+                var yScale = d3.scale.linear().range([height, 0]);
+                var xAxis = d3.svg.axis().scale(xScale).orient('bottom');
+                var yAxis = d3.svg.axis().scale(yScale).orient('left');
+                var line = d3.svg.line().x(function (d) {
+                    return xScale(d.x * 1000);
+                }).y(function (d) {
+                    return yScale(d.y);
+                });
+                var svg = d3.select(elem[0]).append('svg').attr('width', svgWidth).attr('height', svgHeight).append('g').attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
+                svg.append('defs').append('clipPath').attr('id', 'clip').append('rect').attr('width', width).attr('height', height);
+                var chart = svg.append('g').attr('clip-path', 'url(#clip)');
+                svg.append('g').attr('class', 'x axis').attr('transform', 'translate(0,' + height + ')');
+                svg.append('g').attr('class', 'y axis');
+                var color = d3.scale.category10();
+
+                scope.$watch('data', update);
+                var oldx = 0;
+                function update(v) {
+                    if (!angular.isArray(v) || v.length == 0) {
+                        return;
+                    }
+                    var xdomain = [
+                        d3.min(v, function (d) {
+                            return d3.min(d.data, function (c) {
+                                return c.x;
+                            });
+                        }) * 1000,
+                        d3.max(v, function (d) {
+                            return d3.max(d.data, function (c) {
+                                return c.x;
+                            });
+                        }) * 1000
+                    ];
+                    xScale.domain(xdomain);
+                    yScale.domain([
+                        d3.min(v, function (d) {
+                            return d3.min(d.data, function (c) {
+                                return c.y;
+                            });
+                        }),
+                        d3.max(v, function (d) {
+                            return d3.max(d.data, function (c) {
+                                return c.y;
+                            });
+                        })
+                    ]);
+                    if (!oldx) {
+                        oldx = xdomain[1];
+                    } else if (oldx == xdomain[1]) {
+                        return;
+                    }
+                    svg.select('.x.axis').transition().call(xAxis);
+                    svg.select('.y.axis').transition().call(yAxis);
+                    var queries = chart.selectAll('.line').data(v, function (d) {
+                        return d.name;
+                    });
+                    queries.enter().append('path').attr('stroke', function (d) {
+                        return color(d.name);
+                    }).attr('class', 'line');
+                    queries.exit().remove();
+                    queries.attr('d', function (d) {
+                        return line(d.data);
+                    }).attr('transform', null).transition().ease('linear').attr('transform', 'translate(' + (xScale(oldx) - xScale(xdomain[1])) + ')');
+                    oldx = xdomain[1];
+                }
+                ;
+            }
+        };
+    }]);
 tsafControllers.controller('ExprCtrl', [
     '$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
         var current = $location.hash();
@@ -621,9 +708,11 @@ tsafControllers.controller('GraphCtrl', [
             return;
         }
         var autods = $scope.autods ? autods = '&autods=' + $('.chart').width() : '';
-        function get() {
+        function get(noRunning) {
             $timeout.cancel(graphRefresh);
-            $scope.running = 'Running';
+            if (!noRunning) {
+                $scope.running = 'Running';
+            }
             $http.get('/api/graph?' + 'b64=' + btoa(JSON.stringify(request)) + autods).success(function (data) {
                 $scope.result = data.Series;
                 if (!$scope.result) {
@@ -643,13 +732,15 @@ tsafControllers.controller('GraphCtrl', [
                 $scope.running = '';
             }).finally(function () {
                 if ($scope.refresh) {
-                    graphRefresh = $timeout(get, 5000);
+                    graphRefresh = $timeout(function () {
+                        get(true);
+                    }, 5000);
                 }
                 ;
             });
         }
         ;
-        get();
+        get(false);
     }]);
 tsafControllers.controller('HostCtrl', [
     '$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
@@ -782,106 +873,6 @@ tsafControllers.controller('ItemsCtrl', [
         }).error(function (error) {
             $scope.status = 'Unable to fetch hosts: ' + error;
         });
-    }]);
-tsafApp.directive('tsRickshaw', [
-    '$filter', '$timeout', function ($filter, $timeout) {
-        return {
-            link: function (scope, elem, attrs) {
-                scope.$watch(attrs.tsRickshaw, function (v) {
-                    $timeout(function () {
-                        if (!angular.isArray(v) || v.length == 0) {
-                            return;
-                        }
-                        elem[0].innerHTML = '<div class="row"><div class="col-lg-12"><div class="y_axis"></div><div class="rgraph"></div></div></div><div class="row"><div class="col-lg-12"><div class="rlegend"></div></div></div>';
-                        var palette = new Rickshaw.Color.Palette();
-                        angular.forEach(v, function (i) {
-                            if (!i.color) {
-                                i.color = palette.color();
-                            }
-                        });
-                        var rgraph = angular.element('.rgraph', elem);
-                        var graph_options = {
-                            element: rgraph[0],
-                            height: rgraph.height(),
-                            min: 'auto',
-                            series: v,
-                            renderer: 'line',
-                            interpolation: 'linear'
-                        };
-                        if (attrs.max) {
-                            graph_options.max = attrs.max;
-                        }
-                        if (attrs.renderer) {
-                            graph_options.renderer = attrs.renderer;
-                        }
-                        var graph = new Rickshaw.Graph(graph_options);
-                        var x_axis = new Rickshaw.Graph.Axis.Time({
-                            graph: graph,
-                            timeFixture: new Rickshaw.Fixtures.Time()
-                        });
-                        var y_axis = new Rickshaw.Graph.Axis.Y({
-                            graph: graph,
-                            orientation: 'left',
-                            tickFormat: function (y) {
-                                var o = d3.formatPrefix(y);
-
-                                // The precision arg to d3.formatPrefix seems broken, so using round
-                                // http://stackoverflow.com/questions/10310613/variable-precision-in-d3-format
-                                return d3.round(o.scale(y), 2) + o.symbol;
-                            },
-                            element: angular.element('.y_axis', elem)[0]
-                        });
-                        if (attrs.bytes == "true") {
-                            y_axis.tickFormat = function (y) {
-                                return $filter('bytes')(y);
-                            };
-                        }
-                        graph.render();
-                        var fmter = 'nfmt';
-                        if (attrs.bytes == 'true') {
-                            fmter = 'bytes';
-                        } else if (attrs.bits == 'true') {
-                            fmter = 'bits';
-                        }
-                        var fmt = $filter(fmter);
-                        var legend = angular.element('.rlegend', elem)[0];
-                        var Hover = Rickshaw.Class.create(Rickshaw.Graph.HoverDetail, {
-                            render: function (args) {
-                                legend.innerHTML = args.formattedXValue;
-                                args.detail.sort(function (a, b) {
-                                    return a.order - b.order;
-                                }).forEach(function (d) {
-                                    var line = document.createElement('div');
-                                    line.className = 'rline';
-                                    var swatch = document.createElement('div');
-                                    swatch.className = 'rswatch';
-                                    swatch.style.backgroundColor = d.series.color;
-                                    var label = document.createElement('div');
-                                    label.className = 'rlabel';
-                                    label.innerHTML = d.name + ": " + fmt(d.formattedYValue);
-                                    line.appendChild(swatch);
-                                    line.appendChild(label);
-                                    legend.appendChild(line);
-                                    var dot = document.createElement('div');
-                                    dot.className = 'dot';
-                                    dot.style.top = graph.y(d.value.y0 + d.value.y) + 'px';
-                                    dot.style.borderColor = d.series.color;
-                                    this.element.appendChild(dot);
-                                    dot.className = 'dot active';
-                                    this.show();
-                                }, this);
-                            }
-                        });
-                        var hover = new Hover({ graph: graph });
-
-                        //Simulate a movemove so the hover appears on load
-                        var e = document.createEvent('MouseEvents');
-                        e.initEvent('mousemove', true, false);
-                        rgraph[0].children[0].dispatchEvent(e);
-                    });
-                });
-            }
-        };
     }]);
 tsafControllers.controller('RuleCtrl', [
     '$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
