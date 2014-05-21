@@ -228,6 +228,7 @@ func Run() error {
 
 func (s *Schedule) Init(c *conf.Conf) {
 	s.Conf = c
+	s.RunHistory = make(map[AlertKey]*Event)
 	s.Silence = make(map[string]*Silence)
 	s.Group = make(map[time.Time]AlertKeys)
 	s.status = make(States)
