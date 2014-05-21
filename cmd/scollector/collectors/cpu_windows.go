@@ -71,18 +71,19 @@ func c_cpu_info_windows() opentsdb.MultiDataPoint {
 		Add(&md, "win.cpu.clock", v.CurrentClockSpeed, opentsdb.TagSet{"cpu": v.Name})
 		Add(&md, "win.cpu.clock_max", v.MaxClockSpeed, opentsdb.TagSet{"cpu": v.Name})
 		Add(&md, "win.cpu.voltage", v.CurrentVoltage, opentsdb.TagSet{"cpu": v.Name})
-		Add(&md, "win.cpu.load", v.LoadPercentage, opentsdb.TagSet{"cpu": v.Name})
 		Add(&md, "win.cpu.cores_physical", v.NumberOfCores, opentsdb.TagSet{"cpu": v.Name})
 		Add(&md, "win.cpu.cores_logical", v.NumberOfLogicalProcessors, opentsdb.TagSet{"cpu": v.Name})
+		if v.LoadPercentage != nil {
+			Add(&md, "win.cpu.load", *v.LoadPercentage, opentsdb.TagSet{"cpu": v.Name})
+		}
 	}
 	return md
 }
 
-//This is actually a CIM_Processor according to C# reflection
 type Win32_Processor struct {
 	CurrentClockSpeed         uint32
 	CurrentVoltage            uint16
-	LoadPercentage            uint16
+	LoadPercentage            *uint16
 	MaxClockSpeed             uint32
 	Name                      string
 	NumberOfCores             uint32
