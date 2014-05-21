@@ -226,28 +226,24 @@ func Run() error {
 	return DefaultSched.Run()
 }
 
-func (s *Schedule) Load(c *conf.Conf) {
-	s.Conf = c
-	s.Silence = make(map[string]*Silence)
-	s.Group = make(map[time.Time]AlertKeys)
-	s.RestoreState()
-}
-
-func (s *Schedule) TestLoad(c *conf.Conf) {
+func (s *Schedule) Init(c *conf.Conf) {
 	s.Conf = c
 	s.Silence = make(map[string]*Silence)
 	s.Group = make(map[time.Time]AlertKeys)
 	s.status = make(States)
 	s.cache = opentsdb.NewCache(s.Conf.TsdbHost, s.Conf.ResponseLimit)
+}
+
+func (s *Schedule) Load(c *conf.Conf) {
+	s.Init(c)
+	s.RestoreState()
 }
 
 // Restores notification and alert state from the file on disk.
 func (s *Schedule) RestoreState() {
 	s.Lock()
 	defer s.Unlock()
-	s.cache = opentsdb.NewCache(s.Conf.TsdbHost, s.Conf.ResponseLimit)
 	s.Notifications = nil
-	s.status = make(States)
 	f, err := os.Open(s.Conf.StateFile)
 	if err != nil {
 		log.Println(err)
