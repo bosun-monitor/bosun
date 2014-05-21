@@ -20,8 +20,16 @@ func (s *Schedule) Status(ak AlertKey) *State {
 }
 
 func (s *Schedule) Check() {
+	checkNotify := s.RunChecks()
+	if checkNotify {
+		s.nc <- true
+	}
+	s.Save()
+}
+
+func (s *Schedule) RunChecks() bool {
 	s.CheckStart = time.Now().UTC()
-	s.RunStates = make(map[AlertKey]Status)
+	s.RunHistory = make(map[AlertKey]Event)
 	s.cache = opentsdb.NewCache(s.Conf.TsdbHost, s.Conf.ResponseLimit)
 	for _, a := range s.Conf.Alerts {
 		s.CheckAlert(a)
@@ -29,13 +37,16 @@ func (s *Schedule) Check() {
 	s.CheckUnknown()
 	checkNotify := false
 	silenced := s.Silenced()
-	for ak, status := range s.RunStates {
+	for ak, event := range s.RunHistory {
 		state := s.Status(ak)
-		last := state.Append(status)
+		// This got the last, and also put the current status onto history. So now I can populate
+		// History lower in the stack
+		last := state.Append(event)
+		//last := state.Last().Status
 		a := s.Conf.Alerts[ak.Name()]
-		if status > stNormal {
+		if event.Status > StNormal {
 			var subject = new(bytes.Buffer)
-			if status != stUnknown {
+			if event.Status != StUnknown {
 				if err := s.ExecuteSubject(subject, a, state); err != nil {
 					log.Println(err)
 				}
@@ -58,10 +69,10 @@ func (s *Schedule) Check() {
 			if _, present := silenced[ak]; present {
 				return
 			}
-			switch status {
-			case stCritical, stUnknown:
+			switch event.Status {
+			case StCritical, StUnknown:
 				notify(a.CritNotification)
-			case stWarning:
+			case StWarning:
 				notify(a.WarnNotification)
 			}
 		}
@@ -71,19 +82,16 @@ func (s *Schedule) Check() {
 			delete(s.Notifications, ak)
 			s.Unlock()
 		}
-		if status > last {
+		if event.Status > last {
 			clearOld()
 			notifyCurrent()
-		} else if status < last {
+		} else if event.Status < last {
 			if _, hasOld := s.Notifications[ak]; hasOld {
 				notifyCurrent()
 			}
 		}
 	}
-	if checkNotify {
-		s.nc <- true
-	}
-	s.Save()
+	return checkNotify
 }
 
 func (s *Schedule) CheckUnknown() {
@@ -102,7 +110,7 @@ func (s *Schedule) CheckUnknown() {
 		if time.Since(st.Touched) < t {
 			continue
 		}
-		s.RunStates[ak] = stUnknown
+		s.RunHistory[ak] = Event{Status: StUnknown}
 	}
 	s.Unlock()
 }
@@ -110,10 +118,10 @@ func (s *Schedule) CheckUnknown() {
 func (s *Schedule) CheckAlert(a *conf.Alert) {
 	log.Printf("checking alert %v", a.Name)
 	start := time.Now()
-	crits, err := s.CheckExpr(a, a.Crit, stCritical, nil)
-	var warns AlertKeys
+	var crits AlertKeys
+	warns, err := s.CheckExpr(a, a.Warn, StWarning, nil)
 	if err == nil {
-		warns, _ = s.CheckExpr(a, a.Warn, stWarning, crits)
+		crits, _ = s.CheckExpr(a, a.Crit, StCritical, nil)
 	}
 	log.Printf("done checking alert %v (%s): %v crits, %v warns", a.Name, time.Since(start), len(crits), len(warns))
 }
@@ -121,10 +129,6 @@ func (s *Schedule) CheckAlert(a *conf.Alert) {
 func (s *Schedule) CheckExpr(a *conf.Alert, e *expr.Expr, checkStatus Status, ignore AlertKeys) (alerts AlertKeys, err error) {
 	if e == nil {
 		return
-	}
-	if s.RunStates == nil {
-		s.RunStates = make(map[AlertKey]Status)
-
 	}
 	defer func() {
 		if err == nil {
@@ -172,14 +176,29 @@ Loop:
 			err = fmt.Errorf("expected number or scalar")
 			return
 		}
-		if n != 0 {
-			state.Expr = e.String()
-			alerts = append(alerts, ak)
+		var event Event
+		if v, present := s.RunHistory[ak]; present {
+			event = v
 		} else {
-			status = stNormal
+			event = Event{Status: StNormal}
 		}
-		if s.RunStates != nil && status > s.RunStates[ak] {
-			s.RunStates[ak] = status
+		switch checkStatus {
+		case StWarning:
+			event.WarnResult = r
+			event.WarnExpr = e.String()
+		case StCritical:
+			event.CritResult = r
+			event.CritExpr = e.String()
+		}
+		event.Time = time.Now().UTC()
+		if n != 0 {
+			alerts = append(alerts, ak)
+		}
+		if n != 0 && status > s.RunHistory[ak].Status {
+			event.Status = status
+			s.RunHistory[ak] = event
+		} else {
+			s.RunHistory[ak] = event
 		}
 	}
 	return
