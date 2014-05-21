@@ -39,10 +39,7 @@ func (s *Schedule) RunChecks() bool {
 	silenced := s.Silenced()
 	for ak, event := range s.RunHistory {
 		state := s.Status(ak)
-		// This got the last, and also put the current status onto history. So now I can populate
-		// History lower in the stack
 		last := state.Append(event)
-		//last := state.Last().Status
 		a := s.Conf.Alerts[ak.Name()]
 		if event.Status > StNormal {
 			var subject = new(bytes.Buffer)
@@ -118,10 +115,10 @@ func (s *Schedule) CheckUnknown() {
 func (s *Schedule) CheckAlert(a *conf.Alert) {
 	log.Printf("checking alert %v", a.Name)
 	start := time.Now()
-	var crits AlertKeys
-	warns, err := s.CheckExpr(a, a.Warn, StWarning, nil)
+	var warns AlertKeys
+	crits, err := s.CheckExpr(a, a.Crit, StCritical, nil)
 	if err == nil {
-		crits, _ = s.CheckExpr(a, a.Crit, StCritical, nil)
+		crits, _ = s.CheckExpr(a, a.Warn, StWarning, crits)
 	}
 	log.Printf("done checking alert %v (%s): %v crits, %v warns", a.Name, time.Since(start), len(crits), len(warns))
 }
@@ -179,12 +176,8 @@ Loop:
 		event := s.RunHistory[ak]
 		if event == nil {
 			event = new(Event)
-			s.RunHistory[ak] = event
-		}
-		if v, present := s.RunHistory[ak]; present {
-			event = v
-		} else {
 			event.Status = StNormal
+			s.RunHistory[ak] = event
 		}
 		switch checkStatus {
 		case StWarning:

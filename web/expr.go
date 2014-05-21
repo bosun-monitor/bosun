@@ -1,7 +1,9 @@
 package web
 
 import (
+	"bytes"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
@@ -40,10 +42,9 @@ func Expr(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 	return ret, nil
 }
 
-type ResStatus struct {
-	expr.Result
-	Status string
-	key    sched.AlertKey
+type Res struct {
+	*sched.Event
+	Key sched.AlertKey
 }
 
 func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
@@ -89,68 +90,49 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 	}
 	s.CheckStart = now
 	s.Init(c)
-	s.RunChecks()
-	for k, v := range s.RunHistory {
-		fmt.Println(k, v)
+	var a *conf.Alert
+	for _, v := range c.Alerts {
+		a = v
 	}
-	return s.RunHistory, nil
-
-	// critks, err := s.CheckExpr(a, a.Crit, 0, nil)
-	// for _, v := range critks {
-	// 	s.Status(v).Append(sched.StCritical)
-	// }
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// warnks, err := s.CheckExpr(a, a.Warn, 0, critks)
-	// for _, v := range critks {
-	// 	s.Status(v).Append(sched.StWarning)
-	// }
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// res := make(sched.States)
-	// for _, v := range append(critks, warnks...) {
-	// 	res[v] = s.Status(v)
-	// }
-	// for k, _ := range s.RunStates {
-	// 	s.Status(k).Append(sched.StNormal)
-	// 	res[k] = s.Status(k)
-	// }
-	// if len(res) < 1 {
-	// 	return nil, fmt.Errorf("no results returned")
-	// }
-	// keys := make(sched.AlertKeys, len(res))
-	// i := 0
-	// for k, _ := range res {
-	// 	fmt.Println(k)
-	// 	keys[i] = k
-	// 	i++
-	// }
-	// sort.Sort(keys)
-	// fmt.Println(keys, res)
-	// instance := res[keys[0]]
-	// fmt.Println(instance)
-	// body := new(bytes.Buffer)
-	// subject := new(bytes.Buffer)
-	// var warning []string
-	// if err := s.ExecuteBody(body, a, instance); err != nil {
-	// 	warning = append(warning, err.Error())
-	// }
-	// if err := s.ExecuteSubject(subject, a, instance); err != nil {
-	// 	warning = append(warning, err.Error())
-	// }
-	// b, _ := ioutil.ReadAll(body)
-	// sub, _ := ioutil.ReadAll(subject)
-	// return struct {
-	// 	Body    string
-	// 	Subject string
-	// 	Result  sched.States
-	// 	Warning []string
-	// }{
-	// 	string(b),
-	// 	string(sub),
-	// 	res,
-	// 	warning,
-	// }, nil
+	s.CheckExpr(a, a.Crit, sched.StCritical, nil)
+	s.CheckExpr(a, a.Warn, sched.StWarning, nil)
+	i := 0
+	if len(s.RunHistory) < 1 {
+		return nil, fmt.Errorf("no results returned")
+	}
+	keys := make(sched.AlertKeys, len(s.RunHistory))
+	for k, _ := range s.RunHistory {
+		fmt.Println(k)
+		keys[i] = k
+		i++
+	}
+	instance := s.Status(keys[0])
+	body := new(bytes.Buffer)
+	subject := new(bytes.Buffer)
+	var warning []string
+	if err := s.ExecuteBody(body, a, instance); err != nil {
+		warning = append(warning, err.Error())
+	}
+	if err := s.ExecuteSubject(subject, a, instance); err != nil {
+		warning = append(warning, err.Error())
+	}
+	b, _ := ioutil.ReadAll(body)
+	sub, _ := ioutil.ReadAll(subject)
+	res := make([]*sched.Event, len(s.RunHistory))
+	i = 0
+	for _, v := range s.RunHistory {
+		res[i] = v
+		i++
+	}
+	return struct {
+		Body    string
+		Subject string
+		Result  []*sched.Event
+		Warning []string
+	}{
+		string(b),
+		string(sub),
+		res,
+		warning,
+	}, nil
 }
