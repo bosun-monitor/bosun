@@ -340,7 +340,7 @@ tsafApp.filter('linkq', [
             var i;
             var match;
             while ((match = raw.match(QUERY_REGEXP))) {
-                url = '/egraph?q=' + btoa(match[0]);
+                url = '/graph?q=' + btoa(match[0]);
                 i = match.index;
                 addText(raw.substr(0, i));
                 addLink(url, match[0]);
@@ -391,7 +391,7 @@ tsafControllers.controller('ExprCtrl', [
             $scope.queries = data.Queries;
             $scope.result_type = data.Type;
             if (data.Type == 'series') {
-                $scope.svg_url = '/api/egraph/' + btoa(current) + '/svg?now=' + (new Date).getTime() / 1000;
+                $scope.svg_url = '/api/egraph?b64=' + btoa(current) + '&autods=1000&svg=.svg';
                 $scope.graph = toRickshaw(data.Results);
             }
             $scope.running = '';
