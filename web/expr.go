@@ -108,7 +108,7 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 		}
 	}
 	s.CheckStart = now
-	s.TestLoad(c)
+	s.Init(c)
 	critks, err := s.CheckExpr(a, a.Crit, 0, nil)
 	if err != nil {
 		return nil, err
