@@ -29,7 +29,7 @@ func (s *Schedule) Check() {
 
 func (s *Schedule) RunChecks() bool {
 	s.CheckStart = time.Now().UTC()
-	s.RunHistory = make(map[AlertKey]Event)
+	s.RunHistory = make(map[AlertKey]*Event)
 	s.cache = opentsdb.NewCache(s.Conf.TsdbHost, s.Conf.ResponseLimit)
 	for _, a := range s.Conf.Alerts {
 		s.CheckAlert(a)
@@ -110,7 +110,7 @@ func (s *Schedule) CheckUnknown() {
 		if time.Since(st.Touched) < t {
 			continue
 		}
-		s.RunHistory[ak] = Event{Status: StUnknown}
+		s.RunHistory[ak] = &Event{Status: StUnknown}
 	}
 	s.Unlock()
 }
@@ -176,11 +176,15 @@ Loop:
 			err = fmt.Errorf("expected number or scalar")
 			return
 		}
-		var event Event
+		event := s.RunHistory[ak]
+		if event == nil {
+			event = new(Event)
+			s.RunHistory[ak] = event
+		}
 		if v, present := s.RunHistory[ak]; present {
 			event = v
 		} else {
-			event = Event{Status: StNormal}
+			event.Status = StNormal
 		}
 		switch checkStatus {
 		case StWarning:
