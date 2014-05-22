@@ -359,24 +359,6 @@ func (a AlertKey) Name() string {
 	return strings.SplitN(string(a), "{", 2)[0]
 }
 
-/*
-type AlertKey11 struct {
-	Name  string
-	Group string
-}
-
-func NewAlertKey(name string, group opentsdb.TagSet) AlertKey {
-	return AlertKey{
-		Name:  name,
-		Group: group.String(),
-	}
-}
-
-func (a AlertKey) String() string {
-	return a.Name + a.Group
-}
-*/
-
 type AlertKeys []AlertKey
 
 func (a AlertKeys) Len() int           { return len(a) }
@@ -384,18 +366,19 @@ func (a AlertKeys) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a AlertKeys) Less(i, j int) bool { return a[i] < a[j] }
 
 type State struct {
+	*Result
+
 	// Most recent last.
-	History      []Event
-	Actions      []Action
-	Touched      time.Time
-	Alert        string // helper data since AlertKeys don't serialize to JSON well
-	Tags         string // string representation of Group
-	Group        opentsdb.TagSet
-	Computations expr.Computations
-	Subject      string
-	NeedAck      bool
-	Open         bool
-	Forgotten    bool
+	History   []Event
+	Actions   []Action
+	Touched   time.Time
+	Alert     string // helper data since AlertKeys don't serialize to JSON well
+	Tags      string // string representation of Group
+	Group     opentsdb.TagSet
+	Subject   string
+	NeedAck   bool
+	Open      bool
+	Forgotten bool
 }
 
 func (s *State) AlertKey() AlertKey {
@@ -495,12 +478,14 @@ func (s *State) Last() Event {
 }
 
 type Event struct {
-	WarnResult *expr.Result
-	CritResult *expr.Result
+	Warn, Crit *Result
 	Status     Status
-	WarnExpr   string
-	CritExpr   string
 	Time       time.Time
+}
+
+type Result struct {
+	*expr.Result
+	Expr string
 }
 
 type Status int
