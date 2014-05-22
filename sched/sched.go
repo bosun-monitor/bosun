@@ -27,7 +27,7 @@ type Schedule struct {
 
 	nc            chan interface{}
 	cache         *opentsdb.Cache
-	runStates     map[AlertKey]Status
+	RunHistory    map[AlertKey]*Event
 	CheckStart    time.Time
 	notifications map[*conf.Notification][]*State
 }
@@ -160,7 +160,7 @@ func (s *Schedule) MarshalJSON() ([]byte, error) {
 	for tuple, states := range t.Status.GroupStates() {
 		var grouped []*Grouped
 		switch tuple.Status {
-		case stWarning, stCritical:
+		case StWarning, StCritical:
 			for ak, state := range states {
 				g := Grouped{
 					Active:   tuple.Active,
@@ -172,7 +172,7 @@ func (s *Schedule) MarshalJSON() ([]byte, error) {
 				}
 				grouped = append(grouped, &g)
 			}
-		case stUnknown:
+		case StUnknown:
 			for name, group := range states.GroupSets() {
 				g := Grouped{
 					Active:  tuple.Active,
@@ -226,10 +226,17 @@ func Run() error {
 	return DefaultSched.Run()
 }
 
-func (s *Schedule) Load(c *conf.Conf) {
+func (s *Schedule) Init(c *conf.Conf) {
 	s.Conf = c
+	s.RunHistory = make(map[AlertKey]*Event)
 	s.Silence = make(map[string]*Silence)
 	s.Group = make(map[time.Time]AlertKeys)
+	s.status = make(States)
+	s.cache = opentsdb.NewCache(s.Conf.TsdbHost, s.Conf.ResponseLimit)
+}
+
+func (s *Schedule) Load(c *conf.Conf) {
+	s.Init(c)
 	s.RestoreState()
 }
 
@@ -237,9 +244,7 @@ func (s *Schedule) Load(c *conf.Conf) {
 func (s *Schedule) RestoreState() {
 	s.Lock()
 	defer s.Unlock()
-	s.cache = opentsdb.NewCache(s.Conf.TsdbHost, s.Conf.ResponseLimit)
 	s.Notifications = nil
-	s.status = make(States)
 	f, err := os.Open(s.Conf.StateFile)
 	if err != nil {
 		log.Println(err)
@@ -279,8 +284,8 @@ func (s *Schedule) RestoreState() {
 			if t == 0 {
 				t = s.Conf.Unknown
 			}
-			if t == 0 && st.Last().Status == stUnknown {
-				st.Append(stNormal)
+			if t == 0 && st.Last().Status == StUnknown {
+				st.Append(&Event{Status: StNormal})
 			}
 		}
 		s.status[ak] = &st
@@ -383,7 +388,6 @@ type State struct {
 	History      []Event
 	Actions      []Action
 	Touched      time.Time
-	Expr         string
 	Alert        string // helper data since AlertKeys don't serialize to JSON well
 	Tags         string // string representation of Group
 	Group        opentsdb.TagSet
@@ -402,19 +406,19 @@ func (s *State) Status() Status {
 	return s.Last().Status
 }
 
-// AbnormalStatus returns the most recent non-normal status, or stNone if none
+// AbnormalStatus returns the most recent non-normal status, or StNone if none
 // found.
 func (s *State) AbnormalStatus() Status {
 	for i := len(s.History) - 1; i >= 0; i-- {
-		if st := s.History[i].Status; st > stNormal {
+		if st := s.History[i].Status; st > StNormal {
 			return st
 		}
 	}
-	return stNone
+	return StNone
 }
 
 func (s *State) IsActive() bool {
-	return s.Status() > stNormal
+	return s.Status() > StNormal
 }
 
 func (s *Schedule) Action(user, message string, t ActionType, ak AlertKey) error {
@@ -474,10 +478,11 @@ func (s *State) Touch() {
 
 // Appends status to the history if the status is different than the latest
 // status. Returns the previous status.
-func (s *State) Append(status Status) Status {
+func (s *State) Append(event *Event) Status {
 	last := s.Last()
-	if len(s.History) == 0 || s.Last().Status != status {
-		s.History = append(s.History, Event{status, time.Now().UTC()})
+	if len(s.History) == 0 || s.Last().Status != event.Status {
+		event.Time = time.Now().UTC()
+		s.History = append(s.History, *event)
 	}
 	return last.Status
 }
@@ -490,29 +495,33 @@ func (s *State) Last() Event {
 }
 
 type Event struct {
-	Status Status
-	Time   time.Time
+	WarnResult *expr.Result
+	CritResult *expr.Result
+	Status     Status
+	WarnExpr   string
+	CritExpr   string
+	Time       time.Time
 }
 
 type Status int
 
 const (
-	stNone Status = iota
-	stNormal
-	stWarning
-	stCritical
-	stUnknown
+	StNone Status = iota
+	StNormal
+	StWarning
+	StCritical
+	StUnknown
 )
 
 func (s Status) String() string {
 	switch s {
-	case stNormal:
+	case StNormal:
 		return "normal"
-	case stWarning:
+	case StWarning:
 		return "warning"
-	case stCritical:
+	case StCritical:
 		return "critical"
-	case stUnknown:
+	case StUnknown:
 		return "unknown"
 	default:
 		return "none"
