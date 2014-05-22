@@ -36,7 +36,7 @@ func Listen(addr, dir, host string) error {
 	router.Handle("/api/action", JSON(Action))
 	router.Handle("/api/alerts", JSON(Alerts))
 	router.Handle("/api/config", miniprofiler.NewHandler(Config))
-	router.Handle("/api/config/json", JSON(CJson))
+	router.Handle("/api/config/json", JSON(ConfigJSON))
 	router.Handle("/api/config_test", miniprofiler.NewHandler(ConfigTest))
 	router.Handle("/api/egraph", JSON(ExprGraph))
 	router.Handle("/api/expr", JSON(Expr))
@@ -204,11 +204,6 @@ func Config(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, schedule.Conf.RawText)
 }
 
-type ConfigSection struct {
-	Name string
-	Def  string
-}
-
-func CJson(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func ConfigJSON(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	return schedule.Conf, nil
 }
