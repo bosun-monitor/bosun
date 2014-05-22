@@ -92,6 +92,7 @@ tsafControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route'
 					$scope.warning.push(v)
 				});
 				$scope.running = '';
+				$scope.error = '';
 			})
 			.error((error) => {
 				$scope.error = error;

@@ -992,6 +992,7 @@ tsafControllers.controller('RuleCtrl', [
                     $scope.warning.push(v);
                 });
                 $scope.running = '';
+                $scope.error = '';
             }).error(function (error) {
                 $scope.error = error;
                 $scope.running = '';
