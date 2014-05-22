@@ -27,7 +27,7 @@ func c_omreport_chassis() opentsdb.MultiDataPoint {
 			return
 		}
 		sev := 0
-		if fields[0] != "Ok" {
+		if fields[0] != "Ok" && fields[0] != "Non-Critical" {
 			sev = 1
 		}
 		component := strings.Replace(fields[1], " ", "_", -1)
@@ -44,7 +44,7 @@ func c_omreport_system() opentsdb.MultiDataPoint {
 			return
 		}
 		sev := 0
-		if fields[0] != "Ok" {
+		if fields[0] != "Ok" && fields[0] != "Non-Critical" {
 			sev = 1
 		}
 		component := strings.Replace(fields[1], " ", "_", -1)
