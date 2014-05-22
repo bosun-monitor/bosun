@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"sort"
 	"strings"
 	"time"
 
@@ -91,21 +92,20 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 	s.CheckStart = now
 	s.Init(c)
 	var a *conf.Alert
-	for _, v := range c.Alerts {
-		a = v
+	for _, a = range c.Alerts {
 	}
-	s.CheckExpr(a, a.Crit, sched.StCritical, nil)
 	s.CheckExpr(a, a.Warn, sched.StWarning, nil)
+	s.CheckExpr(a, a.Crit, sched.StCritical, nil)
 	i := 0
 	if len(s.RunHistory) < 1 {
 		return nil, fmt.Errorf("no results returned")
 	}
 	keys := make(sched.AlertKeys, len(s.RunHistory))
 	for k, _ := range s.RunHistory {
-		fmt.Println(k)
 		keys[i] = k
 		i++
 	}
+	sort.Sort(keys)
 	instance := s.Status(keys[0])
 	body := new(bytes.Buffer)
 	subject := new(bytes.Buffer)
