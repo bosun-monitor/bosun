@@ -7,6 +7,7 @@ tsafApp.directive('tsAckGroup', function() {
 		},
 		templateUrl: '/partials/ackgroup.html',
 		link: (scope: any, elem: any, attrs: any) => {
+			scope.canAckSelected = scope.ack == 'Needs Acknowldgement';
 			scope.panelClass = (status: string) => {
 				switch (status) {
 					case "critical": return "panel-danger";
@@ -18,6 +19,55 @@ tsafApp.directive('tsAckGroup', function() {
 			scope.shown = {};
 			scope.collapse = (i: any) => {
 				scope.shown[i] = !scope.shown[i];
+			};
+			scope.click = ($event: any, idx: number) => {
+				scope.collapse(idx);
+				if ($event.shiftKey && scope.schedule.checkIdx != undefined) {
+					var checked = scope.groups[scope.schedule.checkIdx].checked;
+					var start = Math.min(idx, scope.schedule.checkIdx);
+					var end = Math.max(idx, scope.schedule.checkIdx);
+					for (var i = start; i <= end; i++) {
+						if (i == idx) {
+							continue;
+						}
+						scope.groups[i].checked = checked;
+					}
+				}
+				scope.schedule.checkIdx = idx;
+				scope.update();
+			};
+			scope.select = (checked: boolean) => {
+				for (var i = 0; i < scope.groups.length; i++) {
+					scope.groups[i].checked = checked;
+				}
+				scope.update();
+			};
+			scope.update = () => {
+				scope.canCloseSelected = scope.canForgetSelected = true;
+				scope.anySelected = false;
+				for (var i = 0; i < scope.groups.length; i++) {
+					var g = scope.groups[i];
+					if (!g.checked) {
+						continue;
+					}
+					scope.anySelected = true;
+					if (g.Active) {
+						scope.canCloseSelected = false;
+						scope.canForgetSelected = false;
+					}
+					if (g.Status != "unknown") {
+						scope.canForgetSelected = false;
+					}
+				}
+			};
+			scope.multiaction = (type: string) => {
+				var url = '/action?type=' + type;
+				angular.forEach(scope.groups, (group) => {
+					if (group.checked) {
+						url += '&key=' + encodeURIComponent(group.AlertKey);
+					}
+				});
+				return url;
 			};
 		},
 	};

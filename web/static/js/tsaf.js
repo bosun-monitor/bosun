@@ -138,10 +138,10 @@ tsafControllers.controller('ActionCtrl', [
         }
         $scope.submit = function () {
             var data = {
-                type: $scope.type,
-                user: $scope.user,
-                message: $scope.message,
-                key: $scope.keys[0]
+                Type: $scope.type,
+                User: $scope.user,
+                Message: $scope.message,
+                Keys: $scope.keys
             };
             $http.post('/api/action', data).success(function (data) {
                 $location.url('/');
@@ -1097,6 +1097,7 @@ tsafApp.directive('tsAckGroup', function () {
         },
         templateUrl: '/partials/ackgroup.html',
         link: function (scope, elem, attrs) {
+            scope.canAckSelected = scope.ack == 'Needs Acknowldgement';
             scope.panelClass = function (status) {
                 switch (status) {
                     case "critical":
@@ -1112,6 +1113,55 @@ tsafApp.directive('tsAckGroup', function () {
             scope.shown = {};
             scope.collapse = function (i) {
                 scope.shown[i] = !scope.shown[i];
+            };
+            scope.click = function ($event, idx) {
+                scope.collapse(idx);
+                if ($event.shiftKey && scope.schedule.checkIdx != undefined) {
+                    var checked = scope.groups[scope.schedule.checkIdx].checked;
+                    var start = Math.min(idx, scope.schedule.checkIdx);
+                    var end = Math.max(idx, scope.schedule.checkIdx);
+                    for (var i = start; i <= end; i++) {
+                        if (i == idx) {
+                            continue;
+                        }
+                        scope.groups[i].checked = checked;
+                    }
+                }
+                scope.schedule.checkIdx = idx;
+                scope.update();
+            };
+            scope.select = function (checked) {
+                for (var i = 0; i < scope.groups.length; i++) {
+                    scope.groups[i].checked = checked;
+                }
+                scope.update();
+            };
+            scope.update = function () {
+                scope.canCloseSelected = scope.canForgetSelected = true;
+                scope.anySelected = false;
+                for (var i = 0; i < scope.groups.length; i++) {
+                    var g = scope.groups[i];
+                    if (!g.checked) {
+                        continue;
+                    }
+                    scope.anySelected = true;
+                    if (g.Active) {
+                        scope.canCloseSelected = false;
+                        scope.canForgetSelected = false;
+                    }
+                    if (g.Status != "unknown") {
+                        scope.canForgetSelected = false;
+                    }
+                }
+            };
+            scope.multiaction = function (type) {
+                var url = '/action?type=' + type;
+                angular.forEach(scope.groups, function (group) {
+                    if (group.checked) {
+                        url += '&key=' + encodeURIComponent(group.AlertKey);
+                    }
+                });
+                return url;
             };
         }
     };

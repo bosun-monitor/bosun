@@ -2,6 +2,15 @@
 	.panel-heading {
 		cursor: pointer; cursor: hand;
 	}
+	label.select {
+		margin-left: 12px;
+		margin-top: -2px;
+	}
+	.with-selected {
+		margin-right: 5px;
+		border-right: 1px solid #ccc;
+		padding-right: 5px;
+	}
 </style>
-<div ts-ack-group="schedule.Groups.NeedAck" ack="'Needs Acknowldegement'" schedule="schedule"></div>
+<div ts-ack-group="schedule.Groups.NeedAck" ack="'Needs Acknowldgement'" schedule="schedule"></div>
 <div ts-ack-group="schedule.Groups.Acknowledged" ack="'Acknowledged'" schedule="schedule"></div>
