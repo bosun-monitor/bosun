@@ -17,6 +17,7 @@ import (
 	"github.com/StackExchange/tsaf/_third_party/github.com/StackExchange/scollector/opentsdb"
 	svg "github.com/StackExchange/tsaf/_third_party/github.com/ajstarks/svgo"
 	"github.com/StackExchange/tsaf/_third_party/github.com/bradfitz/slice"
+	"github.com/StackExchange/tsaf/_third_party/github.com/gorilla/mux"
 	"github.com/StackExchange/tsaf/_third_party/github.com/vdobler/chart"
 	"github.com/StackExchange/tsaf/_third_party/github.com/vdobler/chart/svgg"
 	"github.com/StackExchange/tsaf/expr"
@@ -112,16 +113,15 @@ func QFromR(req *opentsdb.Request) []string {
 }
 
 func ExprGraph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	q := r.FormValue("q")
-	if bs := r.FormValue("b64"); bs != "" {
-		b, err := base64.URLEncoding.DecodeString(bs)
-		if err != nil {
-			return nil, err
-		}
-		q = string(b)
+	vars := mux.Vars(r)
+	bs := vars["bs"]
+	b, err := base64.URLEncoding.DecodeString(bs)
+	if err != nil {
+		return nil, err
 	}
+	q := string(b)
 	if len(q) == 0 {
-		return nil, fmt.Errorf("either q or b64 required")
+		return nil, fmt.Errorf("missing expression")
 	}
 	e, err := expr.New(q)
 	if err != nil {
@@ -129,7 +129,7 @@ func ExprGraph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (in
 	} else if e.Root.Return() != parse.TYPE_SERIES {
 		return nil, fmt.Errorf("egraph: requires an expression that returns a series")
 	}
-	autods := 0
+	autods := 1000
 	if a := r.FormValue("autods"); a != "" {
 		i, err := strconv.Atoi(a)
 		if err != nil {
@@ -137,73 +137,52 @@ func ExprGraph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (in
 		}
 		autods = i
 	}
-	res, _, err := e.ExecuteOpts(opentsdb.NewCache(schedule.Conf.TsdbHost, schedule.Conf.ResponseLimit), t, time.Now(), autods)
+	now := time.Now().UTC()
+	if n := r.FormValue("now"); n != "" {
+		i, err := strconv.ParseInt(n, 10, 64)
+		if err != nil {
+			return nil, err
+		}
+		now = time.Unix(i, 0).UTC()
+	}
+	res, _, err := e.ExecuteOpts(opentsdb.NewCache(schedule.Conf.TsdbHost, schedule.Conf.ResponseLimit), t, now, autods)
 	if err != nil {
 		return nil, err
 	}
-	if r.FormValue("svg") != "" {
-		c := chart.ScatterChart{
-			Title: fmt.Sprintf("%s - %s", q, time.Now().Format(time.RFC1123)),
-		}
-		c.XRange.Time = true
-		for ri, r := range res {
-			rv := r.Value.(expr.Series)
-			pts := make([]chart.EPoint, len(rv))
-			idx := 0
-			for k, v := range rv {
-				i, err := strconv.ParseInt(k, 10, 64)
-				if err != nil {
-					return nil, err
-				}
-				//names[idx] = time.Unix(i, 0).Format("02 Jan 15:04")
-				pts[idx].X = float64(i)
-				pts[idx].Y = float64(v)
-				idx++
-			}
-			slice.Sort(pts, func(i, j int) bool {
-				return pts[i].X < pts[j].X
-			})
-			c.AddData(r.Group.String(), pts, chart.PlotStyleLinesPoints, chart.AutoStyle(ri, false))
-		}
-		w.Header().Set("Content-Type", "image/svg+xml")
-		white := color.RGBA{0xff, 0xff, 0xff, 0xff}
-		const width = 800
-		const height = 600
-		s := svg.New(w)
-		s.Start(width, height)
-		s.Rect(0, 0, width, height, "fill: #ffffff")
-		sgr := svgg.AddTo(s, 0, 0, width, height, "", 12, white)
-		c.Plot(sgr)
-		s.End()
-		return nil, err
+	c := chart.ScatterChart{
+		Title: fmt.Sprintf("%s - %s", q, now.Format(time.RFC1123)),
 	}
-	return rickexpr(res, q)
-}
-
-func rickexpr(r []*expr.Result, q string) ([]*RickSeries, error) {
-	series := make([]*RickSeries, 0)
-	for _, res := range r {
-		dps := make([]RickDP, 0)
-		rv := res.Value.(expr.Series)
+	c.XRange.Time = true
+	for ri, r := range res {
+		rv := r.Value.(expr.Series)
+		pts := make([]chart.EPoint, len(rv))
+		idx := 0
 		for k, v := range rv {
-			ki, err := strconv.ParseInt(k, 10, 64)
+			i, err := strconv.ParseInt(k, 10, 64)
 			if err != nil {
 				return nil, err
 			}
-			dps = append(dps, RickDP{
-				X: ki,
-				Y: v,
-			})
+			//names[idx] = time.Unix(i, 0).Format("02 Jan 15:04")
+			pts[idx].X = float64(i)
+			pts[idx].Y = float64(v)
+			idx++
 		}
-		if len(dps) > 0 {
-			sort.Sort(ByX(dps))
-			series = append(series, &RickSeries{
-				Name: opentsdb.ReplaceTags(q, res.Group),
-				Data: dps,
-			})
-		}
+		slice.Sort(pts, func(i, j int) bool {
+			return pts[i].X < pts[j].X
+		})
+		c.AddData(r.Group.String(), pts, chart.PlotStyleLinesPoints, chart.AutoStyle(ri, false))
 	}
-	return series, nil
+	w.Header().Set("Content-Type", "image/svg+xml")
+	white := color.RGBA{0xff, 0xff, 0xff, 0xff}
+	const width = 800
+	const height = 600
+	s := svg.New(w)
+	s.Start(width, height)
+	s.Rect(0, 0, width, height, "fill: #ffffff")
+	sgr := svgg.AddTo(s, 0, 0, width, height, "", 12, white)
+	c.Plot(sgr)
+	s.End()
+	return nil, err
 }
 
 func rickchart(r opentsdb.ResponseSet) ([]*RickSeries, error) {
