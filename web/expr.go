@@ -49,26 +49,19 @@ type Res struct {
 }
 
 func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	var notifications string
-	for _, v := range schedule.Conf.Notifications {
-		notifications += "\n" + v.Def + "\n"
-	}
-	var vars string
+	var buf bytes.Buffer
+	fmt.Fprintf(&buf, "tsdbHost = %s\nsmtpHost = %s\nemailFrom = %s\n",
+		schedule.Conf.TsdbHost, schedule.Conf.SmtpHost, schedule.Conf.EmailFrom)
 	for k, v := range schedule.Conf.Vars {
 		if strings.HasPrefix(k, "$") {
-			vars += "\n" + k + "=" + v + "\n"
+			fmt.Fprintf(&buf, "%s=%s\n", k, v)
 		}
 	}
-	txt := fmt.Sprintf(`
-		tsdbHost = %s
-		smtpHost = %s
-		emailFrom = %s
-		%s
-		%s
-		%s
-		%s`, schedule.Conf.TsdbHost, schedule.Conf.SmtpHost, schedule.Conf.EmailFrom, vars,
-		r.FormValue("template"), notifications, r.FormValue("alert"))
-	c, err := conf.New("Test Config", txt)
+	for _, v := range schedule.Conf.Notifications {
+		fmt.Fprintln(&buf, v.Def)
+	}
+	fmt.Fprintf(&buf, "%s\n%s\n", r.FormValue("template"), r.FormValue("alert"))
+	c, err := conf.New("Test Config", buf.String())
 	if err != nil {
 		return nil, err
 	}
