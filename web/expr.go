@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/StackExchange/tsaf/_third_party/github.com/MiniProfiler/go/miniprofiler"
@@ -42,20 +43,34 @@ func Expr(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 	return ret, nil
 }
 
+type Res struct {
+	*sched.Event
+	Key sched.AlertKey
+}
+
 func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	txt := fmt.Sprintf(`
-	tsdbHost = %s
-	alert _ {
-		%s
-	}`, schedule.Conf.TsdbHost, r.FormValue("rule"))
-	c, err := conf.New("-", txt)
+	var buf bytes.Buffer
+	fmt.Fprintf(&buf, "tsdbHost = %s\n", schedule.Conf.TsdbHost)
+	fmt.Fprintf(&buf, "smtpHost = %s\n", schedule.Conf.SmtpHost)
+	fmt.Fprintf(&buf, "emailFrom = %s\n", schedule.Conf.EmailFrom)
+	for k, v := range schedule.Conf.Vars {
+		if strings.HasPrefix(k, "$") {
+			fmt.Fprintf(&buf, "%s=%s\n", k, v)
+		}
+	}
+	for _, v := range schedule.Conf.Notifications {
+		fmt.Fprintln(&buf, v.Def)
+	}
+	fmt.Fprintf(&buf, "%s\n", r.FormValue("template"))
+	fmt.Fprintf(&buf, "%s\n", r.FormValue("alert"))
+	c, err := conf.New("Test Config", buf.String())
 	if err != nil {
 		return nil, err
 	}
-	a := c.Alerts["_"]
-	if a == nil || a.Crit == nil {
-		return nil, fmt.Errorf("missing crit expression")
+	if len(c.Alerts) != 1 {
+		return nil, fmt.Errorf("exactly one alert must be defined")
 	}
+	s := &sched.Schedule{}
 	now := time.Now().UTC()
 	if fd := r.FormValue("date"); len(fd) > 0 {
 		if ft := r.FormValue("time"); len(ft) > 0 {
@@ -69,76 +84,51 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 			return nil, err
 		}
 	}
-	all, queries, err := a.Crit.ExecuteOpts(opentsdb.NewCache(schedule.Conf.TsdbHost, schedule.Conf.ResponseLimit), t, now, 0)
-	if err != nil {
-		return nil, err
-	}
-	var res []*expr.Result
-	for _, r := range all {
-		if a.Squelched(r.Group) {
-			continue
-		}
-		res = append(res, r)
-	}
-	ret := struct {
-		Results []*expr.Result
-		Queries map[string]opentsdb.Request
-	}{
-		res,
-		make(map[string]opentsdb.Request),
-	}
-	for _, q := range queries {
-		if e, err := url.QueryUnescape(q.String()); err == nil {
-			ret.Queries[e] = q
-		}
-	}
-	return ret, nil
-}
-
-func Template(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	txt := fmt.Sprintf(`
-		tsdbHost = %s
-		%s`, schedule.Conf.TsdbHost, r.FormValue("config"))
-	c, err := conf.New("-", txt)
-	if err != nil {
-		return nil, err
-	}
-	if len(c.Alerts) != 1 {
-		return nil, fmt.Errorf("exactly one alert must be defined")
-	}
+	s.CheckStart = now
+	s.Init(c)
 	var a *conf.Alert
-	for k, _ := range c.Alerts {
-		a = c.Alerts[k]
-		break
+	for _, a = range c.Alerts {
 	}
-	s := &sched.Schedule{}
-	s.CheckStart = time.Now().UTC()
-	s.Load(c)
-	ak, err := s.CheckExpr(a, a.Crit, 0, nil)
-	if err != nil {
-		return nil, err
-	}
-	var instance *sched.State
-	if len(ak) < 1 {
+	s.CheckExpr(a, a.Warn, sched.StWarning, nil)
+	s.CheckExpr(a, a.Crit, sched.StCritical, nil)
+	i := 0
+	if len(s.RunHistory) < 1 {
 		return nil, fmt.Errorf("no results returned")
 	}
-	sort.Sort(ak)
-	instance = s.Status(ak[0])
+	keys := make(sched.AlertKeys, len(s.RunHistory))
+	for k, v := range s.RunHistory {
+		v.Time = now
+		keys[i] = k
+		i++
+	}
+	sort.Sort(keys)
+	instance := s.Status(keys[0])
 	body := new(bytes.Buffer)
 	subject := new(bytes.Buffer)
+	var warning []string
 	if err := s.ExecuteBody(body, a, instance); err != nil {
-		return nil, err
+		warning = append(warning, err.Error())
 	}
 	if err := s.ExecuteSubject(subject, a, instance); err != nil {
-		return nil, err
+		warning = append(warning, err.Error())
 	}
 	b, _ := ioutil.ReadAll(body)
 	sub, _ := ioutil.ReadAll(subject)
+	res := make([]*sched.Event, len(s.RunHistory))
+	i = 0
+	for _, v := range s.RunHistory {
+		res[i] = v
+		i++
+	}
 	return struct {
 		Body    string
 		Subject string
+		Result  []*sched.Event
+		Warning []string
 	}{
 		string(b),
 		string(sub),
+		res,
+		warning,
 	}, nil
 }

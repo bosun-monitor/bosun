@@ -37,7 +37,7 @@ type Conf struct {
 	UnknownTemplate *Template
 	Templates       map[string]*Template
 	Alerts          map[string]*Alert
-	Notifications   map[string]*Notification
+	Notifications   map[string]*Notification `json:"-"`
 	RawText         string
 
 	tree            *parse.Tree
@@ -82,6 +82,7 @@ func errRecover(errp *error) {
 }
 
 type Alert struct {
+	Def string
 	Vars
 	*Template        `json:"-"`
 	Name             string
@@ -100,15 +101,17 @@ type Alert struct {
 }
 
 type Template struct {
+	Def string
 	Vars
 	Name    string
-	Body    *htemplate.Template
-	Subject *ttemplate.Template
+	Body    *htemplate.Template `json:"-"`
+	Subject *ttemplate.Template `json:"-"`
 
 	body, subject string
 }
 
 type Notification struct {
+	Def string
 	Vars
 	Name      string
 	Email     []*mail.Address
@@ -303,6 +306,7 @@ func (c *Conf) loadTemplate(s *parse.SectionNode) {
 		c.errorf("duplicate template name: %s", name)
 	}
 	t := Template{
+		Def:  s.RawText,
 		Vars: make(map[string]string),
 		Name: name,
 	}
@@ -362,6 +366,7 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 		c.errorf("duplicate alert name: %s", name)
 	}
 	a := Alert{
+		Def:  s.RawText,
 		Vars: make(map[string]string),
 		Name: name,
 	}
@@ -470,6 +475,7 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 		c.errorf("duplicate notification name: %s", name)
 	}
 	n := Notification{
+		Def:  s.RawText,
 		Vars: make(map[string]string),
 		Name: name,
 	}

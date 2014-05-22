@@ -21,7 +21,7 @@ func (s *Schedule) Status(ak AlertKey) *State {
 
 func (s *Schedule) Check() {
 	s.CheckStart = time.Now().UTC()
-	s.runStates = make(map[AlertKey]Status)
+	s.RunHistory = make(map[AlertKey]*Event)
 	s.cache = opentsdb.NewCache(s.Conf.TsdbHost, s.Conf.ResponseLimit)
 	for _, a := range s.Conf.Alerts {
 		s.CheckAlert(a)
@@ -29,13 +29,13 @@ func (s *Schedule) Check() {
 	s.CheckUnknown()
 	checkNotify := false
 	silenced := s.Silenced()
-	for ak, status := range s.runStates {
+	for ak, event := range s.RunHistory {
 		state := s.Status(ak)
-		last := state.Append(status)
+		last := state.Append(event)
 		a := s.Conf.Alerts[ak.Name()]
-		if status > stNormal {
+		if event.Status > StNormal {
 			var subject = new(bytes.Buffer)
-			if status != stUnknown {
+			if event.Status != StUnknown {
 				if err := s.ExecuteSubject(subject, a, state); err != nil {
 					log.Println(err)
 				}
@@ -58,10 +58,10 @@ func (s *Schedule) Check() {
 			if _, present := silenced[ak]; present {
 				return
 			}
-			switch status {
-			case stCritical, stUnknown:
+			switch event.Status {
+			case StCritical, StUnknown:
 				notify(a.CritNotification)
-			case stWarning:
+			case StWarning:
 				notify(a.WarnNotification)
 			}
 		}
@@ -71,10 +71,10 @@ func (s *Schedule) Check() {
 			delete(s.Notifications, ak)
 			s.Unlock()
 		}
-		if status > last {
+		if event.Status > last {
 			clearOld()
 			notifyCurrent()
-		} else if status < last {
+		} else if event.Status < last {
 			if _, hasOld := s.Notifications[ak]; hasOld {
 				notifyCurrent()
 			}
@@ -102,7 +102,7 @@ func (s *Schedule) CheckUnknown() {
 		if time.Since(st.Touched) < t {
 			continue
 		}
-		s.runStates[ak] = stUnknown
+		s.RunHistory[ak] = &Event{Status: StUnknown}
 	}
 	s.Unlock()
 }
@@ -110,10 +110,10 @@ func (s *Schedule) CheckUnknown() {
 func (s *Schedule) CheckAlert(a *conf.Alert) {
 	log.Printf("checking alert %v", a.Name)
 	start := time.Now()
-	crits, err := s.CheckExpr(a, a.Crit, stCritical, nil)
 	var warns AlertKeys
+	crits, err := s.CheckExpr(a, a.Crit, StCritical, nil)
 	if err == nil {
-		warns, _ = s.CheckExpr(a, a.Warn, stWarning, crits)
+		warns, _ = s.CheckExpr(a, a.Warn, StWarning, crits)
 	}
 	log.Printf("done checking alert %v (%s): %v crits, %v warns", a.Name, time.Since(start), len(crits), len(warns))
 }
@@ -168,14 +168,26 @@ Loop:
 			err = fmt.Errorf("expected number or scalar")
 			return
 		}
+		event := s.RunHistory[ak]
+		if event == nil {
+			event = new(Event)
+			s.RunHistory[ak] = event
+		}
+		switch checkStatus {
+		case StWarning:
+			event.WarnResult = r
+			event.WarnExpr = e.String()
+		case StCritical:
+			event.CritResult = r
+			event.CritExpr = e.String()
+		}
 		if n != 0 {
-			state.Expr = e.String()
 			alerts = append(alerts, ak)
 		} else {
-			status = stNormal
+			status = StNormal
 		}
-		if s.runStates != nil && status > s.runStates[ak] {
-			s.runStates[ak] = status
+		if status > s.RunHistory[ak].Status {
+			event.Status = status
 		}
 	}
 	return

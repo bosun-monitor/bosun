@@ -97,6 +97,7 @@ func (l *ListNode) String() string {
 type SectionNode struct {
 	NodeType
 	Pos
+	RawText     string
 	SectionType *StringNode
 	Name        *StringNode
 	Nodes       []*PairNode
@@ -111,12 +112,7 @@ func (s *SectionNode) append(p *PairNode) {
 }
 
 func (s *SectionNode) String() string {
-	b := new(bytes.Buffer)
-	fmt.Fprintf(b, "[%s]\n", s.Name)
-	for _, n := range s.Nodes {
-		fmt.Fprintln(b, n)
-	}
-	return b.String()
+	return s.RawText
 }
 
 // StringNode holds a string constant. The value has been "unquoted".
