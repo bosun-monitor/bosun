@@ -6,30 +6,27 @@
 </style>
 <div class="row">
 	<div class="col-lg-6">
-		<form>
-			<div class="form-group">
-				<label class="control-label" tooltip title="Downsample the data into fewer datapoints. Requires that the downsample window value is also provided.">Alert </label>
-				<select ng-model="selected_alert" ng-change="alert = selected_alert.Def" ng-options="k for (k, v) in alerts" class="form-control">
-					<option value="">Load Alert Definition</option>
-				</select>
-			</div>
-			<div class="form-group">
-				<textarea class="form-control" rows="15" ng-model="alert" ng-keydown="shiftEnter($event)" ng-init="eval()"></textarea>
-			</div>
-		</form>
+		<div class="form-group">
+			<label class="control-label" tooltip title="Downsample the data into fewer datapoints. Requires that the downsample window value is also provided.">Alert </label>
+			<select ng-model="selected_alert" ng-change="alert = selected_alert.Def" ng-options="k for (k, v) in alerts" class="form-control">
+				<option value="">Load Alert Definition</option>
+			</select>
+		</div>
+		<div class="form-group">
+			<textarea class="form-control" rows="15" ng-model="alert" ng-keydown="shiftEnter($event)" ng-init="eval()"></textarea>
+		</div>
+
 	</div>
 	<div class="col-lg-6">
-		<form>
-			<div class="form-group">
-				<label class="control-label" tooltip title="Downsample the data into fewer datapoints. Requires that the downsample window value is also provided.">Template </label>
-				<select ng-model="selected_template" ng-change="template = selected_template.Def" ng-options="k for (k, v) in templates" class="form-control">
-					<option value="">Load Template Definition</option>
-				</select>
-			</div>
-			<div class="form-group">
-				<textarea class="form-control" rows="15" ng-model="template" ng-keydown="shiftEnter($event)" ng-init="eval()"></textarea>
-			</div>
-		</form>
+		<div class="form-group">
+			<label class="control-label" tooltip title="Downsample the data into fewer datapoints. Requires that the downsample window value is also provided.">Template </label>
+			<select ng-model="selected_template" ng-change="template = selected_template.Def" ng-options="k for (k, v) in templates" class="form-control">
+				<option value="">Load Template Definition</option>
+			</select>
+		</div>
+		<div class="form-group">
+			<textarea class="form-control" rows="15" ng-model="template" ng-keydown="shiftEnter($event)" ng-init="eval()"></textarea>
+		</div>
 	</div>
 </div>
 <div class="row">
