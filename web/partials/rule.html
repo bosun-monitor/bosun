@@ -110,7 +110,7 @@
 						</tr>
 					</thead>
 					<tbody ng-repeat="r in result | orderBy:'-status_number'">
-						<tr>
+						<tr ng-show="r.CritResult.Value >= 0">
 							<td rowspan="2">
 								{
 								<span ng-repeat="(k, v) in r.CritResult.Group">
@@ -134,7 +134,7 @@
 								</table>
 							</td>
 						</tr>
-						<tr>
+						<tr ng-show="r.WarnResult.Value >= 0">
 							<td>warning</td>
 							<td>
 								<pre ng-bind="json(r.WarnResult.Value)"></pre>
