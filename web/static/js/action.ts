@@ -16,10 +16,10 @@ tsafControllers.controller('ActionCtrl', ['$scope', '$http', '$location', '$rout
 	}
 	$scope.submit = () => {
 		var data = {
-			type: $scope.type,
-			user: $scope.user,
-			message: $scope.message,
-			key: $scope.keys[0],
+			Type: $scope.type,
+			User: $scope.user,
+			Message: $scope.message,
+			Keys: $scope.keys,
 		};
 		$http.post('/api/action', data)
 			.success((data) => {

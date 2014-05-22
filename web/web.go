@@ -110,13 +110,18 @@ func Alerts(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (inter
 }
 
 func Action(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	var data map[string]string
+	var data struct {
+		Type    string
+		User    string
+		Message string
+		Keys    []string
+	}
 	j := json.NewDecoder(r.Body)
 	if err := j.Decode(&data); err != nil {
 		return nil, err
 	}
 	var at sched.ActionType
-	switch data["type"] {
+	switch data.Type {
 	case "ack":
 		at = sched.ActionAcknowledge
 	case "close":
@@ -124,8 +129,24 @@ func Action(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (inter
 	case "forget":
 		at = sched.ActionForget
 	}
-	err := schedule.Action(data["user"], data["message"], at, sched.AlertKey(data["key"]))
-	return nil, err
+	errs := make(MultiError)
+	r.ParseForm()
+	for _, key := range data.Keys {
+		err := schedule.Action(data.User, data.Message, at, sched.AlertKey(key))
+		if err != nil {
+			errs[key] = err
+		}
+	}
+	if len(errs) != 0 {
+		return nil, errs
+	}
+	return nil, nil
+}
+
+type MultiError map[string]error
+
+func (m MultiError) Error() string {
+	return fmt.Sprint(m)
 }
 
 func SilenceGet(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {

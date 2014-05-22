@@ -1,8 +1,26 @@
 <div class="panel-group" ng-show="groups">
-	<h2 ng-bind="ack"></h2>
+	<div class="clearfix">
+		<h2 ng-bind="ack" class="pull-left"></h2>
+		<span class="pull-right">
+			select
+			<br>
+			<button class="btn btn-default btn-sm" ng-click="select(true)">all</button>
+			<button class="btn btn-default btn-sm" ng-click="select(false)">none</button>
+		</span>
+		<span class="pull-right with-selected" ng-show="anySelected">
+			with selected
+			<br>
+			<a class="btn btn-primary btn-sm" ng-href="{{multiaction('ack')}}" ng-disabled="!canAckSelected">acknowledge</a>
+			<button class="btn btn-warning btn-sm" ng-click="" ng-disabled="!canCloseSelected">close</button>
+			<button class="btn btn-danger btn-sm" ng-click="" ng-disabled="!canForgetSelected">forget</button>
+		</span>
+	</div>
 	<div class="panel" ng-class="panelClass(group.Status)" ng-repeat="group in groups" ng-init="idx = $index; state = schedule.Status[group.AlertKey]; name = group.AlertKey">
 		<div class="panel-heading" ng-click="collapse(idx)">
 			<h4 class="panel-title">
+				<label class="pull-right select">
+					<input type="checkbox" class="pull-right" ng-model="group.checked" ng-click="click($event, $index)" ng-change="update()">
+				</label>
 				<a href>
 					<span class="glyphicon" ng-class="{'glyphicon-exclamation-sign': group.Active || (state.last.Status && state.last.Status != 'normal')}"></span>
 					<span ng-bind="group.Subject || group.AlertKey"></span>
