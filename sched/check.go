@@ -181,7 +181,6 @@ Loop:
 			event.CritResult = r
 			event.CritExpr = e.String()
 		}
-		event.Time = time.Now().UTC()
 		if n != 0 {
 			alerts = append(alerts, ak)
 		} else {

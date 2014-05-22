@@ -481,6 +481,7 @@ func (s *State) Touch() {
 func (s *State) Append(event *Event) Status {
 	last := s.Last()
 	if len(s.History) == 0 || s.Last().Status != event.Status {
+		event.Time = time.Now().UTC()
 		s.History = append(s.History, *event)
 	}
 	return last.Status

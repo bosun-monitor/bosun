@@ -96,7 +96,8 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 		return nil, fmt.Errorf("no results returned")
 	}
 	keys := make(sched.AlertKeys, len(s.RunHistory))
-	for k := range s.RunHistory {
+	for k, v := range s.RunHistory {
+		v.Time = now
 		keys[i] = k
 		i++
 	}
