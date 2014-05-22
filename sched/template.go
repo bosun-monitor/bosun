@@ -78,12 +78,12 @@ func (c *context) HostView(host string) string {
 	return u.String()
 }
 
-func (c *context) EGraph(v string) string {
+func (c *context) Expr(v string) string {
 	q := url.QueryEscape("q=" + opentsdb.ReplaceTags(v, c.Group))
 	u := url.URL{
 		Scheme:   "http",
 		Host:     c.schedule.Conf.HttpListen,
-		Path:     "/egraph",
+		Path:     "/expr",
 		RawQuery: q,
 	}
 	if strings.HasPrefix(c.schedule.Conf.HttpListen, ":") {

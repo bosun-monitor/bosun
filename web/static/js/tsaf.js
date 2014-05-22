@@ -387,7 +387,7 @@ tsafControllers.controller('ExprCtrl', [
             $scope.queries = data.Queries;
             $scope.result_type = data.Type;
             if (data.Type == 'series') {
-                $scope.svg_url = '/api/egraph?b64=' + btoa(current) + '&autods=1000&svg=.svg';
+                $scope.svg_url = '/api/egraph/' + btoa(current) + '.svg?now=' + Math.floor(Date.now() / 1000);
                 $scope.graph = toRickshaw(data.Results);
             }
             $scope.running = '';
