@@ -70,7 +70,7 @@ func (s *Schedule) sendNotifications() {
 	for n, states := range s.notifications {
 		ustates := make(States)
 		for _, st := range states {
-			if st.Last().Status == stUnknown {
+			if st.Last().Status == StUnknown {
 				ustates[st.AlertKey()] = st
 			} else {
 				s.notify(st, n)

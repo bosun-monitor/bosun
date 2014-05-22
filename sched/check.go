@@ -20,14 +20,6 @@ func (s *Schedule) Status(ak AlertKey) *State {
 }
 
 func (s *Schedule) Check() {
-	checkNotify := s.RunChecks()
-	if checkNotify {
-		s.nc <- true
-	}
-	s.Save()
-}
-
-func (s *Schedule) RunChecks() bool {
 	s.CheckStart = time.Now().UTC()
 	s.RunHistory = make(map[AlertKey]*Event)
 	s.cache = opentsdb.NewCache(s.Conf.TsdbHost, s.Conf.ResponseLimit)
@@ -88,7 +80,10 @@ func (s *Schedule) RunChecks() bool {
 			}
 		}
 	}
-	return checkNotify
+	if checkNotify {
+		s.nc <- true
+	}
+	s.Save()
 }
 
 func (s *Schedule) CheckUnknown() {
@@ -176,7 +171,6 @@ Loop:
 		event := s.RunHistory[ak]
 		if event == nil {
 			event = new(Event)
-			event.Status = StNormal
 			s.RunHistory[ak] = event
 		}
 		switch checkStatus {
@@ -190,12 +184,11 @@ Loop:
 		event.Time = time.Now().UTC()
 		if n != 0 {
 			alerts = append(alerts, ak)
-		}
-		if n != 0 && status > s.RunHistory[ak].Status {
-			event.Status = status
-			s.RunHistory[ak] = event
 		} else {
-			s.RunHistory[ak] = event
+			status = StNormal
+		}
+		if status > s.RunHistory[ak].Status {
+			event.Status = status
 		}
 	}
 	return

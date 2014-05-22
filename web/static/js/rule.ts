@@ -17,9 +17,9 @@ tsafControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route'
 	var current_alert = search.alert;
 	var current_template = search.template;
 	var status_map: any = {
-		"Ok": 0,
-		"Warn": 1,
-		"Crit": 2,
+		"normal": 0,
+		"warning": 1,
+		"critical": 2,
 	}
 	$scope.date = search.date || '';
 	$scope.time = search.time || '';
