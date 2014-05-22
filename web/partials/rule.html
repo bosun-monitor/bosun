@@ -1,6 +1,12 @@
+<style type="text/css">
+	.nav-tabs {
+		margin-bottom: 15px;
+		margin-top: 15px;
+	}
+</style>
 <div class="row">
 	<div class="col-lg-6">
-		<form class="form">
+		<form>
 			<div class="form-group">
 				<label class="control-label" tooltip title="Downsample the data into fewer datapoints. Requires that the downsample window value is also provided.">Alert </label>
 				<select ng-model="selected_alert" ng-change="alert = selected_alert.Def" ng-options="k for (k, v) in alerts" class="form-control">
@@ -13,7 +19,7 @@
 		</form>
 	</div>
 	<div class="col-lg-6">
-		<form class="form">
+		<form>
 			<div class="form-group">
 				<label class="control-label" tooltip title="Downsample the data into fewer datapoints. Requires that the downsample window value is also provided.">Template </label>
 				<select ng-model="selected_template" ng-change="template = selected_template.Def" ng-options="k for (k, v) in templates" class="form-control">
@@ -28,22 +34,22 @@
 </div>
 <div class="row">
 	<div class="col-lg-6">
-	<form class="form-inline">
-		<div class="form-group">
-			<label class="control-label">Date </label>
-			<input type="date" class="form-control" ng-model="date" placeholder="yyyy-mm-dd">
-		</div>
-		<div class="form-group">
-			<label class="control-label">Time </label>
-			<input type="time" class="form-control" ng-model="time" placeholder="HH:MM">
-		</div>
-		<div class="form-group">
-			<button class="btn btn-default" ng-click="set()">Test</button>
-		</div>
-		<div class="form-group">
-			<span class="help-block">shift-enter to submit<span>
-		</div>
-	</form>
+		<form class="form-inline">
+			<div class="form-group">
+				<label class="control-label">Date</label>
+				<input type="date" class="form-control" ng-model="date" placeholder="yyyy-mm-dd">
+			</div>
+			<div class="form-group">
+				<label class="control-label">Time</label>
+				<input type="time" class="form-control" ng-model="time" placeholder="HH:MM">
+			</div>
+			<div class="form-group">
+				<button class="btn btn-default" ng-click="set()">Test</button>
+			</div>
+			<div class="form-group">
+				<span class="help-block">shift-enter to submit<span>
+			</div>
+		</form>
 	</div>
 </div>
 <ul class="nav nav-tabs">
@@ -71,13 +77,13 @@
 			<div class="panel-heading">
 				<h3 class="panel-title">Subject</h3>
 			</div>
-			<div class="panel-body" ng-bind=subject></div>
+			<div class="panel-body" ng-bind="subject"></div>
 		</div>
 		<div class="panel panel-default">
 			<div class="panel-heading">
 				<h3 class="panel-title">Body</h3>
 			</div>
-			<div class="panel-body" ng-bind-html=body></div>
+			<div class="panel-body" ng-bind-html="body"></div>
 		</div>
 	</div>
 	<div class="tab-pane" ng-class="{active: tab == 'results'}">
@@ -128,6 +134,7 @@
 								</table>
 							</td>
 						</tr>
+						<tr>
 							<td>warning</td>
 							<td>
 								<pre ng-bind="json(r.WarnResult.Value)"></pre>
