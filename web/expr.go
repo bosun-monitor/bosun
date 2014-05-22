@@ -114,21 +114,15 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 	}
 	b, _ := ioutil.ReadAll(body)
 	sub, _ := ioutil.ReadAll(subject)
-	res := make([]*sched.Event, len(s.RunHistory))
-	i = 0
-	for _, v := range s.RunHistory {
-		res[i] = v
-		i++
-	}
 	return struct {
 		Body    string
 		Subject string
-		Result  []*sched.Event
+		Result  map[sched.AlertKey]*sched.Event
 		Warning []string
 	}{
 		string(b),
 		string(sub),
-		res,
+		s.RunHistory,
 		warning,
 	}, nil
 }

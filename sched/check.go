@@ -157,7 +157,6 @@ Loop:
 		}
 		state.Touch()
 		status := checkStatus
-		state.Computations = r.Computations
 		var n float64
 		switch v := r.Value.(type) {
 		case expr.Number:
@@ -173,13 +172,15 @@ Loop:
 			event = new(Event)
 			s.RunHistory[ak] = event
 		}
+		result := Result{
+			Result: r,
+			Expr:   e.String(),
+		}
 		switch checkStatus {
 		case StWarning:
-			event.WarnResult = r
-			event.WarnExpr = e.String()
+			event.Warn = &result
 		case StCritical:
-			event.CritResult = r
-			event.CritExpr = e.String()
+			event.Crit = &result
 		}
 		if n != 0 {
 			alerts = append(alerts, ak)
@@ -188,6 +189,7 @@ Loop:
 		}
 		if status > s.RunHistory[ak].Status {
 			event.Status = status
+			state.Result = &result
 		}
 	}
 	return
