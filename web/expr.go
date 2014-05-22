@@ -50,8 +50,9 @@ type Res struct {
 
 func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	var buf bytes.Buffer
-	fmt.Fprintf(&buf, "tsdbHost = %s\nsmtpHost = %s\nemailFrom = %s\n",
-		schedule.Conf.TsdbHost, schedule.Conf.SmtpHost, schedule.Conf.EmailFrom)
+	fmt.Fprintf(&buf, "tsdbHost = %s\n", schedule.Conf.TsdbHost)
+	fmt.Fprintf(&buf, "smtpHost = %s\n", schedule.Conf.SmtpHost)
+	fmt.Fprintf(&buf, "emailFrom = %s\n", schedule.Conf.EmailFrom)
 	for k, v := range schedule.Conf.Vars {
 		if strings.HasPrefix(k, "$") {
 			fmt.Fprintf(&buf, "%s=%s\n", k, v)
@@ -60,7 +61,8 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 	for _, v := range schedule.Conf.Notifications {
 		fmt.Fprintln(&buf, v.Def)
 	}
-	fmt.Fprintf(&buf, "%s\n%s\n", r.FormValue("template"), r.FormValue("alert"))
+	fmt.Fprintf(&buf, "%s\n", r.FormValue("template"))
+	fmt.Fprintf(&buf, "%s\n", r.FormValue("alert"))
 	c, err := conf.New("Test Config", buf.String())
 	if err != nil {
 		return nil, err
@@ -94,7 +96,7 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 		return nil, fmt.Errorf("no results returned")
 	}
 	keys := make(sched.AlertKeys, len(s.RunHistory))
-	for k, _ := range s.RunHistory {
+	for k := range s.RunHistory {
 		keys[i] = k
 		i++
 	}

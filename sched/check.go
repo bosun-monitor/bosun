@@ -113,7 +113,7 @@ func (s *Schedule) CheckAlert(a *conf.Alert) {
 	var warns AlertKeys
 	crits, err := s.CheckExpr(a, a.Crit, StCritical, nil)
 	if err == nil {
-		crits, _ = s.CheckExpr(a, a.Warn, StWarning, crits)
+		warns, _ = s.CheckExpr(a, a.Warn, StWarning, crits)
 	}
 	log.Printf("done checking alert %v (%s): %v crits, %v warns", a.Name, time.Since(start), len(crits), len(warns))
 }
