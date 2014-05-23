@@ -46,7 +46,7 @@
 		</thead>
 		<tbody>
 			<tr ng-repeat="c in state.Computations">
-				<td ng-bind-html="c.Text | linkq:'_blank'"></td>
+				<td><a ng-href="/expr#{{btoa(c.Text)}}" ng-bind="c.Text"></a></td>
 				<td ng-bind="c.Value"></td>
 			</tr>
 		</tbody>
