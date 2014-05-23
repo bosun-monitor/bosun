@@ -139,9 +139,10 @@ tsafApp.directive('tsGraph', ['$filter', function($filter: ng.IFilterService) {
 	return {
 		scope: {
 			data: '=',
+			height: '=',
 		},
-		link: (scope: ng.IScope, elem: any, attrs: any) => {
-			var svgHeight = elem.height();
+		link: (scope: any, elem: any, attrs: any) => {
+			var svgHeight = +scope.height || 150;
 			var height = svgHeight - margin.top - margin.bottom;
 			var svgWidth = elem.width();
 			var width = svgWidth - margin.left - margin.right;
@@ -175,6 +176,7 @@ tsafApp.directive('tsGraph', ['$filter', function($filter: ng.IFilterService) {
 				.attr('transform', 'translate(0,' + height + ')');
 			svg.append('g')
 				.attr('class', 'y axis');
+			var legend = d3.select(elem[0]).append('div');
 			var color = d3.scale.category10();
 
 			scope.$watch('data', update);
@@ -218,6 +220,16 @@ tsafApp.directive('tsGraph', ['$filter', function($filter: ng.IFilterService) {
 					.ease('linear')
 					.attr('transform', 'translate(' + (xScale(oldx) - xScale(xdomain[1])) + ')');
 				oldx = xdomain[1];
+				var names = legend.selectAll('.series')
+					.data(v, (d) => { return d.name; });
+				names.enter()
+					.append('div')
+					.attr('class', 'series');
+				names.exit()
+					.remove();
+				names
+					.text((d: any) => { return d.name; })
+					.style('color', (d: any) => { return color(d.name); });
 			};
 		},
 	};
