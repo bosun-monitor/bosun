@@ -331,10 +331,11 @@ tsafApp.directive('tsGraph', [
         };
         return {
             scope: {
-                data: '='
+                data: '=',
+                height: '='
             },
             link: function (scope, elem, attrs) {
-                var svgHeight = elem.height();
+                var svgHeight = +scope.height || 150;
                 var height = svgHeight - margin.top - margin.bottom;
                 var svgWidth = elem.width();
                 var width = svgWidth - margin.left - margin.right;
@@ -352,6 +353,7 @@ tsafApp.directive('tsGraph', [
                 var chart = svg.append('g').attr('clip-path', 'url(#clip)');
                 svg.append('g').attr('class', 'x axis').attr('transform', 'translate(0,' + height + ')');
                 svg.append('g').attr('class', 'y axis');
+                var legend = d3.select(elem[0]).append('div');
                 var color = d3.scale.category10();
 
                 scope.$watch('data', update);
@@ -403,6 +405,16 @@ tsafApp.directive('tsGraph', [
                         return line(d.data);
                     }).attr('transform', null).transition().ease('linear').attr('transform', 'translate(' + (xScale(oldx) - xScale(xdomain[1])) + ')');
                     oldx = xdomain[1];
+                    var names = legend.selectAll('.series').data(v, function (d) {
+                        return d.name;
+                    });
+                    names.enter().append('div').attr('class', 'series');
+                    names.exit().remove();
+                    names.text(function (d) {
+                        return d.name;
+                    }).style('color', function (d) {
+                        return color(d.name);
+                    });
                 }
                 ;
             }
@@ -707,7 +719,7 @@ tsafControllers.controller('GraphCtrl', [
         if (!request.queries.length) {
             return;
         }
-        var autods = $scope.autods ? autods = '&autods=' + $('.chart').width() : '';
+        var autods = $scope.autods ? autods = '&autods=' + $('#chart').width() : '';
         function get(noRunning) {
             $timeout.cancel(graphRefresh);
             if (!noRunning) {

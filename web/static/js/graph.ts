@@ -278,7 +278,7 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route
 	if (!request.queries.length) {
 		return;
 	}
-	var autods = $scope.autods ? autods = '&autods=' + $('.chart').width() : '';
+	var autods = $scope.autods ? autods = '&autods=' + $('#chart').width() : '';
 	function get(noRunning: boolean) {
 		$timeout.cancel(graphRefresh);
 		if (!noRunning) {
