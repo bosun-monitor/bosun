@@ -1110,6 +1110,7 @@ tsafApp.directive('tsAckGroup', function () {
                         return "panel-default";
                 }
             };
+            scope.btoa = scope.$parent.btoa;
             scope.shown = {};
             scope.collapse = function (i) {
                 scope.shown[i] = !scope.shown[i];
