@@ -52,6 +52,10 @@ tsafApp.config([
             title: 'Action',
             templateUrl: 'partials/action.html',
             controller: 'ActionCtrl'
+        }).when('/history', {
+            title: 'Alert History',
+            templateUrl: 'partials/history.html',
+            controller: 'HistoryCtrl'
         }).otherwise({
             redirectTo: '/'
         });
@@ -220,6 +224,17 @@ tsafApp.directive("tsTime", function () {
     };
 });
 
+tsafApp.directive("tsTimeAndSince", function () {
+    return {
+        link: function (scope, elem, attrs) {
+            scope.$watch(attrs.tsTimeAndSince, function (v) {
+                var m = moment(v).utc();
+                elem.text(m.format(timeFormat) + ' (' + m.fromNow() + ')');
+            });
+        }
+    };
+});
+
 tsafApp.directive("tsSince", function () {
     return {
         link: function (scope, elem, attrs) {
@@ -319,6 +334,15 @@ tsafApp.filter('bytes', function () {
 tsafApp.filter('bits', function () {
     return function (s) {
         return nfmt(s, 1024, 'b', { round: true });
+    };
+});
+
+tsafApp.filter('reverse', function () {
+    return function (items) {
+        if (typeof items === 'undefined') {
+            return;
+        }
+        return angular.isArray(items) ? items.slice().reverse() : (items + '').split('').reverse().join('');
     };
 });
 tsafControllers.controller('ExprCtrl', [
@@ -1168,3 +1192,38 @@ tsafApp.directive('tsForget', function () {
         templateUrl: '/partials/forget.html'
     };
 });
+tsafControllers.controller('HistoryCtrl', [
+    '$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
+        var search = $location.search();
+        $scope.ak = search.ak;
+        var status;
+
+        // TODO This function is part tsAckGroup, so we need to dedupe this....
+        $scope.panelClass = function (status) {
+            switch (status) {
+                case "critical":
+                    return "panel-danger";
+                case "unknown":
+                    return "panel-info";
+                case "warning":
+                    return "panel-warning";
+                default:
+                    return "panel-default";
+            }
+        };
+        $scope.shown = {};
+
+        // TODO Also Duplicated
+        $scope.collapse = function (i) {
+            $scope.shown[i] = !$scope.shown[i];
+        };
+        $http.get('/api/alerts').success(function (data) {
+            status = data.Status;
+            $scope.error = '';
+            if (!status.hasOwnProperty($scope.ak)) {
+                $scope.error = 'Alert Key: ' + ak + ' not found';
+                return;
+            }
+            $scope.alert_history = status[$scope.ak].History;
+        });
+    }]);

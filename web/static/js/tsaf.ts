@@ -62,6 +62,11 @@ tsafApp.config(['$routeProvider', '$locationProvider', function($routeProvider: 
 			templateUrl: 'partials/action.html',
 			controller: 'ActionCtrl',
 		}).
+		when('/history', {
+			title: 'Alert History',
+			templateUrl: 'partials/history.html',
+			controller: 'HistoryCtrl',
+		}).
 		otherwise({
 			redirectTo: '/',
 		});

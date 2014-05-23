@@ -28,6 +28,17 @@ tsafApp.directive("tsTime", function() {
 	};
 });
 
+tsafApp.directive("tsTimeAndSince", function() {
+	return {
+		link: function(scope: ITsafScope, elem: any, attrs: any) {
+			scope.$watch(attrs.tsTimeAndSince, (v: any) => {
+				var m = moment(v).utc();
+				elem.text(m.format(timeFormat) + ' (' + m.fromNow() + ')');
+			});
+		},
+	};
+});
+
 tsafApp.directive("tsSince", function() {
 	return {
 		link: function(scope: ITsafScope, elem: any, attrs: any) {
@@ -127,4 +138,13 @@ tsafApp.filter('bits', function() {
 	return function(s: any) {
 		return nfmt(s, 1024, 'b', { round: true });
 	}
+});
+
+tsafApp.filter('reverse', function() {
+	return function(items: any) {
+		if(typeof items === 'undefined') { return; }
+		return angular.isArray(items) ?
+			items.slice().reverse() : // If it is an array, split and reverse it
+			(items + '').split('').reverse().join(''); // else make it a string (if it isn't already), and reverse it
+	};
 });
