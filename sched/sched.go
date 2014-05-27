@@ -4,7 +4,6 @@ import (
 	"encoding/gob"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"strings"
@@ -16,6 +15,10 @@ import (
 	"github.com/StackExchange/tsaf/expr"
 	"github.com/StackExchange/tsaf/search"
 )
+
+func init() {
+	gob.Register(expr.Number(0))
+}
 
 type Schedule struct {
 	sync.Mutex
@@ -277,19 +280,12 @@ func (s *Schedule) RestoreState() {
 		log.Println(err)
 		return
 	}
-	for {
-		var ak AlertKey
-		var st State
-		if err := dec.Decode(&ak); err == io.EOF {
-			break
-		} else if err != nil {
-			log.Println(err)
-			return
-		}
-		if err := dec.Decode(&st); err != nil {
-			log.Println(err)
-			return
-		}
+	status := make(States)
+	if err := dec.Decode(&status); err != nil {
+		log.Println(err)
+		return
+	}
+	for ak, st := range status {
 		if a, present := s.Conf.Alerts[ak.Name()]; !present {
 			log.Println("sched: alert no longer present, ignoring:", ak)
 			continue
@@ -305,7 +301,7 @@ func (s *Schedule) RestoreState() {
 				st.Append(&Event{Status: StNormal})
 			}
 		}
-		s.status[ak] = &st
+		s.status[ak] = st
 		for name, t := range notifications[ak] {
 			n, present := s.Conf.Notifications[name]
 			if !present {
@@ -351,10 +347,13 @@ func (s *Schedule) save() {
 		log.Println(err)
 		return
 	}
-	enc.Encode(s.Silence)
-	for k, v := range s.status {
-		enc.Encode(k)
-		enc.Encode(v)
+	if err := enc.Encode(s.Silence); err != nil {
+		log.Println(err)
+		return
+	}
+	if err := enc.Encode(s.status); err != nil {
+		log.Println(err)
+		return
 	}
 	if err := f.Close(); err != nil {
 		log.Println(err)
