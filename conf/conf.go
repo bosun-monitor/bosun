@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net/mail"
 	"net/url"
+	"os"
 	"regexp"
 	"runtime"
 	"strconv"
@@ -539,7 +540,7 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 	}
 }
 
-var exRE = regexp.MustCompile(`\$\w+`)
+var exRE = regexp.MustCompile(`\$\{?\w+\}?`)
 
 func (c *Conf) Expand(v string, vars map[string]string) string {
 	v = exRE.ReplaceAllStringFunc(v, func(s string) string {
@@ -548,8 +549,14 @@ func (c *Conf) Expand(v string, vars map[string]string) string {
 				return c.Expand(n, vars)
 			}
 		}
-		n, ok := c.Vars[s]
-		if !ok {
+		var n string
+		if strings.HasPrefix(s, "${") && strings.HasSuffix(s, "}") {
+			n = os.Getenv(s[2 : len(s)-1])
+		}
+		if _n, ok := c.Vars[s]; ok {
+			n = _n
+		}
+		if n == "" {
 			c.errorf("unknown variable %s", s)
 		}
 		return c.Expand(n, nil)
