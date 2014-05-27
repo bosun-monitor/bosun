@@ -10,6 +10,7 @@ interface IRuleScope extends IExprScope {
 	subject: string;
 	body: string;
 	warning: string[];
+	results: any;
 }
 
 tsafControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route', function($scope: IRuleScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService) {
@@ -84,9 +85,15 @@ tsafControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route'
 			.success((data) => {
 				$scope.subject = data.Subject;
 				$scope.body = data.Body;
-				$scope.result = data.Result;
-				angular.forEach($scope.result, function(v) {
-					v.status_number = status_map[v.Status]
+				$scope.results = [];
+				angular.forEach(data.Result, function(v, k) {
+					$scope.results.push({
+						group: k,
+						result: v,
+					})
+				});
+				$scope.results.sort((a: any, b: any) => {
+					return status_map[b.result.Status] - status_map[a.result.Status];
 				});
 				angular.forEach(data.Warning, function(v) {
 					$scope.warning.push(v)

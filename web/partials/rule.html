@@ -94,7 +94,7 @@
 				<div class="alert alert-info">Executing: {{running}}</div>
 			</div>
 		</div>
-		<div class="row" ng-show="result">
+		<div class="row" ng-show="results">
 			<div class="col-sm-12">
 				<table class="table">
 					<thead>
@@ -106,8 +106,8 @@
 							<th>Computations</th>
 						</tr>
 					</thead>
-					<tbody>
-						<tr ng-repeat-start="(group, r) in result | orderBy:'-status_number'">
+					<tbody ng-repeat="result in results" ng-init="r = result.result; group = result.group">
+						<tr>
 							<td rowspan="2" ng-bind="group"></td>
 							<td rowspan="2" ng-bind="r.Status"></td>
 							<td>critical</td>
@@ -125,7 +125,7 @@
 								</table>
 							</td>
 						</tr>
-						<tr ng-repeat-end>
+						<tr>
 							<td>warning</td>
 							<td>
 								<pre ng-bind="json(r.Warn.Value)" ng-show="r.Warn"></pre>
