@@ -97,6 +97,20 @@ tsafControllers.controller('TsafCtrl', [
             r.queries.push(q);
             return r;
         };
+        $scope.panelClass = function (status) {
+            switch (status) {
+                case "critical":
+                    return "panel-danger";
+                case "unknown":
+                    return "panel-info";
+                case "warning":
+                    return "panel-warning";
+                case "normal":
+                    return "panel-success";
+                default:
+                    return "panel-default";
+            }
+        };
         $scope.refresh = function () {
             $http.get('/api/alerts').success(function (data) {
                 angular.forEach(data.Status, function (v, k) {
@@ -1143,18 +1157,7 @@ tsafApp.directive('tsAckGroup', function () {
         templateUrl: '/partials/ackgroup.html',
         link: function (scope, elem, attrs) {
             scope.canAckSelected = scope.ack == 'Needs Acknowldgement';
-            scope.panelClass = function (status) {
-                switch (status) {
-                    case "critical":
-                        return "panel-danger";
-                    case "unknown":
-                        return "panel-info";
-                    case "warning":
-                        return "panel-warning";
-                    default:
-                        return "panel-default";
-                }
-            };
+            scope.panelClass = scope.$parent.panelClass;
             scope.btoa = scope.$parent.btoa;
             scope.encode = scope.$parent.encode;
             scope.shown = {};
@@ -1254,23 +1257,6 @@ tsafControllers.controller('HistoryCtrl', [
         var search = $location.search();
         $scope.ak = search.ak;
         var status;
-
-        // TODO This function is part tsAckGroup, so we need to dedupe this....
-        $scope.panelClass = function (status) {
-            switch (status) {
-                case "critical":
-                    return "panel-danger";
-                case "unknown":
-                    return "panel-info";
-                case "warning":
-                    return "panel-warning";
-                default:
-                    return "panel-default";
-            }
-        };
-        $scope.shown = {};
-
-        // TODO Also Duplicated
         $scope.collapse = function (i) {
             $scope.shown[i] = !$scope.shown[i];
         };
@@ -1278,9 +1264,11 @@ tsafControllers.controller('HistoryCtrl', [
             status = data.Status;
             $scope.error = '';
             if (!status.hasOwnProperty($scope.ak)) {
-                $scope.error = 'Alert Key: ' + ak + ' not found';
+                $scope.error = 'Alert Key: ' + $scope.ak + ' not found';
                 return;
             }
             $scope.alert_history = status[$scope.ak].History;
+        }).error(function (error) {
+            $scope.error = error;
         });
     }]);

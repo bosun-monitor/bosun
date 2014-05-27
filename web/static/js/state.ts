@@ -8,14 +8,7 @@ tsafApp.directive('tsAckGroup', function() {
 		templateUrl: '/partials/ackgroup.html',
 		link: (scope: any, elem: any, attrs: any) => {
 			scope.canAckSelected = scope.ack == 'Needs Acknowldgement';
-			scope.panelClass = (status: string) => {
-				switch (status) {
-					case "critical": return "panel-danger";
-					case "unknown": return "panel-info";
-					case "warning": return "panel-warning";
-					default: return "panel-default";
-				}
-			};
+			scope.panelClass = scope.$parent.panelClass;
 			scope.btoa = scope.$parent.btoa;
 			scope.encode = scope.$parent.encode;
 			scope.shown = {};
