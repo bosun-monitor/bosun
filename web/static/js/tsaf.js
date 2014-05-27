@@ -938,9 +938,15 @@ tsafControllers.controller('RuleCtrl', [
             $http.get('/api/rule?' + 'alert=' + encodeURIComponent($scope.alert) + '&template=' + encodeURIComponent($scope.template) + '&date=' + encodeURIComponent($scope.date) + '&time=' + encodeURIComponent($scope.time)).success(function (data) {
                 $scope.subject = data.Subject;
                 $scope.body = data.Body;
-                $scope.result = data.Result;
-                angular.forEach($scope.result, function (v) {
-                    v.status_number = status_map[v.Status];
+                $scope.results = [];
+                angular.forEach(data.Result, function (v, k) {
+                    $scope.results.push({
+                        group: k,
+                        result: v
+                    });
+                });
+                $scope.results.sort(function (a, b) {
+                    return status_map[b.result.Status] - status_map[a.result.Status];
                 });
                 angular.forEach(data.Warning, function (v) {
                     $scope.warning.push(v);
