@@ -1057,7 +1057,7 @@ tsafApp.directive('tsAckGroup', function () {
         scope: {
             ack: '=',
             groups: '=tsAckGroup',
-            schedule: '=schedule'
+            schedule: '='
         },
         templateUrl: '/partials/ackgroup.html',
         link: function (scope, elem, attrs) {
