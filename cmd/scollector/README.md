@@ -23,7 +23,7 @@ scollector will, by default, report to the host `tsaf`, which you should configu
 1. Some collector details may be specific to our environment, and so may act weirdly in yours. These will eventually be moved out into config options so the defaults works well for everyone.
 1. An OpenTSDB 2.0 server is required, since it uses the HTTP API. You may have to enable chunked requests on your server (not sure about this).
 1. It is designed to be used with an upcoming and unreleased project we are working on (called TSAF), and so may not work in your environment.
-1. scollector (as of mid April 2014) sends gzipped data to OpenTSDB. This feature will be available by default with OpenTSDB 2.1, but is not yet in the next branch. [A patch is available to enable this manually.](https://groups.google.com/forum/#!topic/opentsdb/JQ7azVR5x_g)
+1. scollector (as of mid April 2014) sends gzipped data to OpenTSDB. This feature will be available by default with OpenTSDB 2.1, but is not yet in the next branch. [A patch is available to enable this manually.](https://groups.google.com/d/msg/opentsdb/JQ7azVR5x_g/37yLYukU5R4J)
 
 # Windows
 
