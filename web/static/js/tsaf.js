@@ -1075,6 +1075,7 @@ tsafApp.directive('tsAckGroup', function () {
                 }
             };
             scope.btoa = scope.$parent.btoa;
+            scope.encode = scope.$parent.encode;
             scope.shown = {};
             scope.collapse = function (i) {
                 scope.shown[i] = !scope.shown[i];
