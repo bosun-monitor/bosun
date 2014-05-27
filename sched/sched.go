@@ -14,6 +14,7 @@ import (
 	"github.com/StackExchange/tsaf/_third_party/github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/tsaf/conf"
 	"github.com/StackExchange/tsaf/expr"
+	"github.com/StackExchange/tsaf/search"
 )
 
 type Schedule struct {
@@ -251,6 +252,22 @@ func (s *Schedule) RestoreState() {
 		return
 	}
 	dec := gob.NewDecoder(f)
+	if err := dec.Decode(&search.Metric); err != nil {
+		log.Println(err)
+		return
+	}
+	if err := dec.Decode(&search.Tagk); err != nil {
+		log.Println(err)
+		return
+	}
+	if err := dec.Decode(&search.Tagv); err != nil {
+		log.Println(err)
+		return
+	}
+	if err := dec.Decode(&search.MetricTags); err != nil {
+		log.Println(err)
+		return
+	}
 	notifications := make(map[AlertKey]map[string]time.Time)
 	if err := dec.Decode(&notifications); err != nil {
 		log.Println(err)
@@ -314,6 +331,22 @@ func (s *Schedule) save() {
 		return
 	}
 	enc := gob.NewEncoder(f)
+	if err := enc.Encode(search.Metric); err != nil {
+		log.Println(err)
+		return
+	}
+	if err := enc.Encode(search.Tagk); err != nil {
+		log.Println(err)
+		return
+	}
+	if err := enc.Encode(search.Tagv); err != nil {
+		log.Println(err)
+		return
+	}
+	if err := enc.Encode(search.MetricTags); err != nil {
+		log.Println(err)
+		return
+	}
 	if err := enc.Encode(s.Notifications); err != nil {
 		log.Println(err)
 		return
