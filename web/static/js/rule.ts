@@ -11,6 +11,7 @@ interface IRuleScope extends IExprScope {
 	body: string;
 	warning: string[];
 	results: any;
+	resultTime: string;
 }
 
 tsafControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route', function($scope: IRuleScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService) {
@@ -85,6 +86,7 @@ tsafControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route'
 			.success((data) => {
 				$scope.subject = data.Subject;
 				$scope.body = data.Body;
+				$scope.resultTime = moment.unix(data.Time).utc().format('YYYY-MM-DD HH:mm:ss');
 				$scope.results = [];
 				angular.forEach(data.Result, function(v, k) {
 					$scope.results.push({
