@@ -89,6 +89,7 @@ interface ITsafScope extends ng.IScope {
 	json: (v: any) => string;
 	btoa: (v: any) => string;
 	encode: (v: string) => string;
+	panelClass: (v: string) => string;
 	timeanddate: number[];
 	schedule: any;
 	req_from_m: (m: string) => Request;
@@ -120,6 +121,15 @@ tsafControllers.controller('TsafCtrl', ['$scope', '$route', '$http', function($s
 		q.metric = m;
 		r.queries.push(q);
 		return r;
+	};
+	$scope.panelClass = (status: string) => {
+		switch (status) {
+			case "critical": return "panel-danger";
+			case "unknown": return "panel-info";
+			case "warning": return "panel-warning";
+			case "normal": return "panel-success";
+			default: return "panel-default";
+		}
 	};
 	$scope.refresh = () => {
 		$http.get('/api/alerts').success(data => {
