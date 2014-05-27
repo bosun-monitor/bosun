@@ -293,6 +293,63 @@ tsafApp.directive('tsTableSort', [
         };
     }]);
 
+tsafApp.directive('ahTimeLine', function () {
+    //2014-05-26T21:46:37.435056942Z
+    var format = d3.time.format.utc("%Y-%m-%dT%X");
+    var parseDate = function (s) {
+        return format.parse(s.split(".")[0]);
+    };
+    var margin = {
+        top: 20,
+        right: 80,
+        bottom: 30,
+        left: 80
+    };
+    return {
+        replace: false,
+        scope: {
+            data: '='
+        },
+        link: function (scope, elem, attrs) {
+            var svgHeight = elem.height();
+            var height = svgHeight - margin.top - margin.bottom;
+            var svgWidth = elem.width();
+            var width = svgWidth - margin.left - margin.right;
+            var xScale = d3.time.scale.utc().range([0, width]);
+            var xAxis = d3.svg.axis().scale(xScale).orient('bottom');
+            var svg = d3.select(elem[0]).append('svg').attr('width', svgWidth).attr('height', svgHeight).append('g').attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
+            svg.append('defs').append('clipPath').attr('id', 'clip').append('rect').attr('width', width).attr('height', height);
+            var chart = svg.append('g').attr('clip-path', 'url(#clip)');
+            svg.append('g').attr('class', 'x axis').attr('transform', 'translate(0,' + height + ')');
+            svg.append('g').attr('class', 'y axis');
+            scope.$watch('data', update);
+            function update(v) {
+                if (!angular.isArray(v) || v.length == 0) {
+                    return;
+                }
+                xScale.domain([
+                    d3.min(v, function (d) {
+                        return parseDate(d.Time);
+                    }),
+                    new Date()
+                ]);
+                svg.select('.x.axis').transition().call(xAxis);
+                chart.selectAll(".bars").data(v).enter().append("rect").attr("class", function (d) {
+                    return d.Status;
+                }).attr("x", function (d) {
+                    return xScale(parseDate(d.Time));
+                }).attr("y", 0).attr("height", height).attr("width", function (d, i) {
+                    if (i + 1 < v.length) {
+                        return xScale(parseDate(v[i + 1].Time)) - xScale(parseDate(d.Time));
+                    }
+                    return xScale(new Date()) - xScale(parseDate(d.Time));
+                });
+            }
+            ;
+        }
+    };
+});
+
 var fmtUnits = ['', 'k', 'M', 'G', 'T', 'P', 'E'];
 
 function nfmt(s, mult, suffix, opts) {
