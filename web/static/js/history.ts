@@ -2,7 +2,7 @@ interface IHistoryScope extends ITsafScope {
 	ak: string;
 	alert_history: any;
 	error: string;
-	shown: boolean[];
+	shown: any[];
 	collapse: (i: any) => void;
 }
 
@@ -10,6 +10,7 @@ tsafControllers.controller('HistoryCtrl', ['$scope', '$http', '$location', '$rou
 	var search = $location.search();
 	$scope.ak = search.ak;
 	var status: any;
+	$scope.shown = [];
 	$scope.collapse = (i: any) => {
 		$scope.shown[i] = !$scope.shown[i];
 	};
