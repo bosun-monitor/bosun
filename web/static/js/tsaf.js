@@ -1257,6 +1257,7 @@ tsafControllers.controller('HistoryCtrl', [
         var search = $location.search();
         $scope.ak = search.ak;
         var status;
+        $scope.shown = [];
         $scope.collapse = function (i) {
             $scope.shown[i] = !$scope.shown[i];
         };
