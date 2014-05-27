@@ -119,10 +119,12 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 		Subject string
 		Result  map[sched.AlertKey]*sched.Event
 		Warning []string
+		Time int64
 	}{
 		string(b),
 		string(sub),
 		s.RunHistory,
 		warning,
+		now.Unix(),
 	}, nil
 }
