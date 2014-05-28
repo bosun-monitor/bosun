@@ -357,7 +357,7 @@ tsafApp.directive('tsGraph', [
                 var oldx = 0;
                 var data;
                 var focus = svg.append('g').attr('class', 'focus');
-                focus.append('line').style('stroke', 'black');
+                focus.append('line');
                 var clickrect = chart.append('rect').attr('class', 'click-capture').style('visibility', 'hidden').attr('x', 0).attr('y', 0).attr('height', height).on('mousemove', function () {
                     var pt = d3.mouse(this);
                     mousex = pt[0];
