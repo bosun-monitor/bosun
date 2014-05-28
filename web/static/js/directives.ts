@@ -102,9 +102,10 @@ tsafApp.directive('tsTableSort', ['$timeout', ($timeout: ng.ITimeoutService) => 
 
 tsafApp.directive('ahTimeLine', () => {
 	//2014-05-26T21:46:37.435056942Z
-	var format = d3.time.format.utc("%Y-%m-%dT%X")
+	var format = d3.time.format.utc("%Y-%m-%dT%X");
+	var tsdbFormat = d3.time.format.utc("%Y/%m/%d-%X");
 	var parseDate = function(s: string) {
-		return format.parse(s.split(".")[0])
+		return format.parse(s.split(".")[0]);
 	}
 	var margin = {
 		top: 20,
@@ -112,6 +113,16 @@ tsafApp.directive('ahTimeLine', () => {
 		bottom: 30,
 		left: 80,
 	};
+	var customTimeFormat = d3.time.format.multi([
+		[".%L", function(d: any) { return d.getMilliseconds(); }],
+		[":%S", function(d: any) { return d.getSeconds(); }],
+		["%I:%M", function(d: any) { return d.getMinutes(); }],
+		["%H", function(d: any) { return d.getHours(); }],
+		["%a %d", function(d: any) { return d.getDay() && d.getDate() != 1; }],
+		["%b %d", function(d: any) { return d.getDate() != 1; }],
+		["%B", function(d: any) { return d.getMonth(); }],
+		["%Y", function() { return true; }]
+	]);
 	return {
 		replace: false,
 		scope: {
@@ -125,6 +136,7 @@ tsafApp.directive('ahTimeLine', () => {
 			var xScale = d3.time.scale.utc().range([0, width]);
 			var xAxis = d3.svg.axis()
 				.scale(xScale)
+				.tickFormat(customTimeFormat)
 				.orient('bottom');
 			var svg = d3.select(elem[0])
 				.append('svg')
@@ -145,6 +157,9 @@ tsafApp.directive('ahTimeLine', () => {
 				.attr('transform', 'translate(0,' + height + ')');
 			svg.append('g')
 				.attr('class', 'y axis');
+			var legend = d3.select('.legend')
+				.append("p")
+				.text(tsdbFormat(new Date));
 			scope.$watch('data', update);
 			function update(v: any) {
 				if (!angular.isArray(v) || v.length == 0) {
@@ -170,7 +185,17 @@ tsafApp.directive('ahTimeLine', () => {
 							return xScale(parseDate(v[i+1].Time)) - xScale(parseDate(d.Time));
 						}
 						return xScale(new Date()) - xScale(parseDate(d.Time));
+					})
+					.on("mousemove", mousemove)
+					.on("click", function(d) {
+						var e = $("#" + 'a' + d.Time.replace( /(:|\.|\[|\])/g, "\\$1" ))
+						e.click();
 					});
+				function mousemove() {
+					var x: any = xScale.invert(d3.mouse(this)[0]);
+					legend
+						.text(tsdbFormat(x));
+				}
 			};
 		},
 	};

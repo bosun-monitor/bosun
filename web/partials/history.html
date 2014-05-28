@@ -42,8 +42,11 @@
 <div class="row">
 	<div class="timeline" ah-time-line data="alert_history"></div>
 </div>
+<div class="row">
+	<div class="col-lg-12 legend"></div>
+</div>
 <div class="panel" ng-class="panelClass(v.Status)" ng-repeat="v in alert_history | reverse">
-	<div class="panel-heading" ng-click="collapse($index)">
+	<div class="panel-heading" ng-click="collapse($index)" id="{{'a' + v.Time}}">
 		<h4 class="panel-title">
 			<a href>
 				<span ng-bind="v.Status"></span>
