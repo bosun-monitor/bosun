@@ -180,9 +180,7 @@ tsafApp.directive('tsGraph', ['$window', function($window: ng.IWindowService) {
 			var data: any;
 			var focus = svg.append('g')
 				.attr('class', 'focus');
-			focus.append('line')
-				.attr('y1', 0)
-				.attr('y2', height);
+			focus.append('line');
 			function mouseover() {
 				var pt = d3.mouse(this);
 				mousex = pt[0];
@@ -213,7 +211,9 @@ tsafApp.directive('tsGraph', ['$window', function($window: ng.IWindowService) {
 				}
 				focus.select('line')
 					.attr('x1', x)
-					.attr('x2', x);
+					.attr('x2', x)
+					.attr('y1', 0)
+					.attr('y2', height);
 			}
 			var clickrect = chart
 				.append('rect')
