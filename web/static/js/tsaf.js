@@ -322,7 +322,7 @@ tsafApp.filter('bits', function () {
 });
 
 tsafApp.directive('tsGraph', [
-    '$filter', function ($filter) {
+    '$window', function ($window) {
         var margin = {
             top: 10,
             right: 10,
@@ -337,19 +337,17 @@ tsafApp.directive('tsGraph', [
             link: function (scope, elem, attrs) {
                 var svgHeight = +scope.height || 150;
                 var height = svgHeight - margin.top - margin.bottom;
-                var svgWidth = elem.width();
-                var width = svgWidth - margin.left - margin.right;
-                var xScale = d3.time.scale.utc().range([0, width]);
+                var svgWidth;
+                var width;
                 var yScale = d3.scale.linear().range([height, 0]);
-                var xAxis = d3.svg.axis().scale(xScale).orient('bottom');
+                var xScale;
+                var xAxis = d3.svg.axis().orient('bottom');
                 var yAxis = d3.svg.axis().scale(yScale).orient('left');
-                var line = d3.svg.line().x(function (d) {
-                    return xScale(d.x * 1000);
-                }).y(function (d) {
+                var line = d3.svg.line().y(function (d) {
                     return yScale(d.y);
                 });
-                var svg = d3.select(elem[0]).append('svg').attr('width', svgWidth).attr('height', svgHeight).append('g').attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
-                svg.append('defs').append('clipPath').attr('id', 'clip').append('rect').attr('width', width).attr('height', height);
+                var svg = d3.select(elem[0]).append('svg').attr('height', svgHeight).append('g').attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
+                var defs = svg.append('defs').append('clipPath').attr('id', 'clip').append('rect').attr('height', height);
                 var chart = svg.append('g').attr('pointer-events', 'all').attr('clip-path', 'url(#clip)');
                 svg.append('g').attr('class', 'x axis').attr('transform', 'translate(0,' + height + ')');
                 svg.append('g').attr('class', 'y axis');
@@ -360,7 +358,7 @@ tsafApp.directive('tsGraph', [
                 var data;
                 var focus = svg.append('g').attr('class', 'focus');
                 focus.append('line').style('stroke', 'black');
-                chart.append('rect').attr('class', 'click-capture').style('visibility', 'hidden').attr('x', 0).attr('y', 0).attr('width', width).attr('height', height).on('mousemove', function () {
+                var clickrect = chart.append('rect').attr('class', 'click-capture').style('visibility', 'hidden').attr('x', 0).attr('y', 0).attr('height', height).on('mousemove', function () {
                     var pt = d3.mouse(this);
                     mousex = pt[0];
                     var names = legend.selectAll('.series').data(data, function (d) {
@@ -380,6 +378,26 @@ tsafApp.directive('tsGraph', [
                 });
 
                 scope.$watch('data', update);
+                var w = angular.element($window);
+                scope.$watch(function () {
+                    return w.width();
+                }, resize, true);
+                w.bind('resize', function () {
+                    scope.$apply();
+                });
+                function resize() {
+                    svgWidth = elem.width();
+                    width = svgWidth - margin.left - margin.right;
+                    xScale = d3.time.scale.utc().range([0, width]);
+                    xAxis.scale(xScale);
+                    line.x(function (d) {
+                        return xScale(d.x * 1000);
+                    });
+                    svg.attr('width', svgWidth);
+                    defs.attr('width', width);
+                    clickrect.attr('width', width);
+                    draw();
+                }
                 var oldx = 0;
                 var bisect = d3.bisector(function (d) {
                     return d.x;
@@ -392,6 +410,9 @@ tsafApp.directive('tsGraph', [
                     draw();
                 }
                 function draw() {
+                    if (!data || !xScale) {
+                        return;
+                    }
                     var xdomain = [
                         d3.min(data, function (d) {
                             return d3.min(d.data, function (c) {
