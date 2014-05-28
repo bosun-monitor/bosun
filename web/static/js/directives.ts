@@ -180,8 +180,7 @@ tsafApp.directive('tsGraph', ['$window', function($window: ng.IWindowService) {
 			var data: any;
 			var focus = svg.append('g')
 				.attr('class', 'focus');
-			focus.append('line')
-				.style('stroke', 'black');
+			focus.append('line');
 			var clickrect = chart
 				.append('rect')
 				.attr('class', 'click-capture')
