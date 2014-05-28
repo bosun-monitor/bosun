@@ -324,8 +324,8 @@ tsafApp.filter('bits', function () {
 tsafApp.directive('tsGraph', [
     '$filter', function ($filter) {
         var margin = {
-            top: 20,
-            right: 80,
+            top: 10,
+            right: 10,
             bottom: 30,
             left: 80
         };
