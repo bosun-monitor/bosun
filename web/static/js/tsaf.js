@@ -350,25 +350,55 @@ tsafApp.directive('tsGraph', [
                 });
                 var svg = d3.select(elem[0]).append('svg').attr('width', svgWidth).attr('height', svgHeight).append('g').attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
                 svg.append('defs').append('clipPath').attr('id', 'clip').append('rect').attr('width', width).attr('height', height);
-                var chart = svg.append('g').attr('clip-path', 'url(#clip)');
+                var chart = svg.append('g').attr('pointer-events', 'all').attr('clip-path', 'url(#clip)');
                 svg.append('g').attr('class', 'x axis').attr('transform', 'translate(0,' + height + ')');
                 svg.append('g').attr('class', 'y axis');
                 var legend = d3.select(elem[0]).append('div');
                 var color = d3.scale.category10();
+                var mousex = 0;
+                var oldx = 0;
+                var data;
+                var focus = svg.append('g').attr('class', 'focus');
+                focus.append('line').style('stroke', 'black');
+                chart.append('rect').attr('class', 'click-capture').style('visibility', 'hidden').attr('x', 0).attr('y', 0).attr('width', width).attr('height', height).on('mousemove', function () {
+                    var pt = d3.mouse(this);
+                    mousex = pt[0];
+                    var names = legend.selectAll('.series').data(data, function (d) {
+                        return d.name;
+                    });
+                    names.enter().append('div').attr('class', 'series');
+                    names.exit().remove();
+                    names.text(function (d) {
+                        var pt = d.data[bisect(d.data, xScale.invert(mousex).getTime() / 1000)];
+                        if (pt) {
+                            return d.name + ': ' + pt.y;
+                        }
+                    }).style('color', function (d) {
+                        return color(d.name);
+                    });
+                    focus.select('line').attr('x1', mousex).attr('x2', mousex).attr('y1', 0).attr('y2', height);
+                });
 
                 scope.$watch('data', update);
                 var oldx = 0;
+                var bisect = d3.bisector(function (d) {
+                    return d.x;
+                }).right;
                 function update(v) {
                     if (!angular.isArray(v) || v.length == 0) {
                         return;
                     }
+                    data = v;
+                    draw();
+                }
+                function draw() {
                     var xdomain = [
-                        d3.min(v, function (d) {
+                        d3.min(data, function (d) {
                             return d3.min(d.data, function (c) {
                                 return c.x;
                             });
                         }) * 1000,
-                        d3.max(v, function (d) {
+                        d3.max(data, function (d) {
                             return d3.max(d.data, function (c) {
                                 return c.x;
                             });
@@ -376,12 +406,12 @@ tsafApp.directive('tsGraph', [
                     ];
                     xScale.domain(xdomain);
                     yScale.domain([
-                        d3.min(v, function (d) {
+                        d3.min(data, function (d) {
                             return d3.min(d.data, function (c) {
                                 return c.y;
                             });
                         }),
-                        d3.max(v, function (d) {
+                        d3.max(data, function (d) {
                             return d3.max(d.data, function (c) {
                                 return c.y;
                             });
@@ -394,7 +424,7 @@ tsafApp.directive('tsGraph', [
                     }
                     svg.select('.x.axis').transition().call(xAxis);
                     svg.select('.y.axis').transition().call(yAxis);
-                    var queries = chart.selectAll('.line').data(v, function (d) {
+                    var queries = chart.selectAll('.line').data(data, function (d) {
                         return d.name;
                     });
                     queries.enter().append('path').attr('stroke', function (d) {
@@ -405,16 +435,6 @@ tsafApp.directive('tsGraph', [
                         return line(d.data);
                     }).attr('transform', null).transition().ease('linear').attr('transform', 'translate(' + (xScale(oldx) - xScale(xdomain[1])) + ')');
                     oldx = xdomain[1];
-                    var names = legend.selectAll('.series').data(v, function (d) {
-                        return d.name;
-                    });
-                    names.enter().append('div').attr('class', 'series');
-                    names.exit().remove();
-                    names.text(function (d) {
-                        return d.name;
-                    }).style('color', function (d) {
-                        return color(d.name);
-                    });
                 }
                 ;
             }
