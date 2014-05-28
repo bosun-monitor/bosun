@@ -173,6 +173,7 @@ tsafApp.directive('tsGraph', ['$window', function($window: ng.IWindowService) {
 				.attr('transform', 'translate(0,' + height + ')');
 			svg.append('g')
 				.attr('class', 'y axis');
+			var xloc = d3.select(elem[0]).append('div');
 			var legend = d3.select(elem[0]).append('div');
 			var color = d3.scale.category10();
 			var mousex = 0;
@@ -194,9 +195,12 @@ tsafApp.directive('tsGraph', ['$window', function($window: ng.IWindowService) {
 					.attr('class', 'series');
 				names.exit()
 					.remove();
+				var xi = xScale.invert(mousex);
+				xloc.text('Time: ' + moment(xi).utc().format());
+				var t = xi.getTime() / 1000;
 				names
 					.text((d: any) => {
-						var idx = bisect(d.data, xScale.invert(mousex).getTime() / 1000);
+						var idx = bisect(d.data, t);
 						if (idx >= d.data.length) {
 							idx = d.data.length - 1;
 						}
