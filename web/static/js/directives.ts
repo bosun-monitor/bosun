@@ -187,9 +187,6 @@ tsafApp.directive('tsGraph', ['$window', function($window: ng.IWindowService) {
 				drawLegend();
 			}
 			function drawLegend() {
-				if (!data || !xScale) {
-					return;
-				}
 				var names = legend.selectAll('.series')
 					.data(data, (d) => { return d.name; });
 				names.enter()
@@ -199,7 +196,11 @@ tsafApp.directive('tsGraph', ['$window', function($window: ng.IWindowService) {
 					.remove();
 				names
 					.text((d: any) => {
-						var pt = d.data[bisect(d.data, xScale.invert(mousex).getTime() / 1000)];
+						var idx = bisect(d.data, xScale.invert(mousex).getTime() / 1000);
+						if (idx >= d.data.length) {
+							idx = d.data.length - 1;
+						}
+						var pt = d.data[idx];
 						if (pt) {
 							return d.name + ': ' + pt.y;
 						}
@@ -243,7 +244,6 @@ tsafApp.directive('tsGraph', ['$window', function($window: ng.IWindowService) {
 				svg.attr('width', svgWidth);
 				defs.attr('width', width);
 				clickrect.attr('width', width);
-				drawLegend();
 				draw();
 			}
 			var oldx = 0;
@@ -294,6 +294,7 @@ tsafApp.directive('tsGraph', ['$window', function($window: ng.IWindowService) {
 					.ease('linear')
 					.attr('transform', 'translate(' + (xScale(oldx) - xScale(xdomain[1])) + ')');
 				oldx = xdomain[1];
+				drawLegend();
 			};
 		},
 	};
