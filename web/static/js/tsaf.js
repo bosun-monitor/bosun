@@ -357,7 +357,7 @@ tsafApp.directive('tsGraph', [
                 var oldx = 0;
                 var data;
                 var focus = svg.append('g').attr('class', 'focus');
-                focus.append('line').attr('y1', 0).attr('y2', height);
+                focus.append('line');
                 function mouseover() {
                     var pt = d3.mouse(this);
                     mousex = pt[0];
@@ -384,7 +384,7 @@ tsafApp.directive('tsGraph', [
                     if (x > width) {
                         x = 0;
                     }
-                    focus.select('line').attr('x1', x).attr('x2', x);
+                    focus.select('line').attr('x1', x).attr('x2', x).attr('y1', 0).attr('y2', height);
                 }
                 var clickrect = chart.append('rect').attr('class', 'click-capture').style('visibility', 'hidden').attr('x', 0).attr('y', 0).attr('height', height).on('mousemove', mouseover);
                 scope.$watch('data', update);
