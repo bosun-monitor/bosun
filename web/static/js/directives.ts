@@ -180,7 +180,41 @@ tsafApp.directive('tsGraph', ['$window', function($window: ng.IWindowService) {
 			var data: any;
 			var focus = svg.append('g')
 				.attr('class', 'focus');
-			focus.append('line');
+			focus.append('line')
+				.attr('y1', 0)
+				.attr('y2', height);
+			function mouseover() {
+				var pt = d3.mouse(this);
+				mousex = pt[0];
+				drawLegend();
+			}
+			function drawLegend() {
+				if (!data || !xScale) {
+					return;
+				}
+				var names = legend.selectAll('.series')
+					.data(data, (d) => { return d.name; });
+				names.enter()
+					.append('div')
+					.attr('class', 'series');
+				names.exit()
+					.remove();
+				names
+					.text((d: any) => {
+						var pt = d.data[bisect(d.data, xScale.invert(mousex).getTime() / 1000)];
+						if (pt) {
+							return d.name + ': ' + pt.y;
+						}
+					})
+					.style('color', (d: any) => { return color(d.name); });
+				var x = mousex;
+				if (x > width) {
+					x = 0;
+				}
+				focus.select('line')
+					.attr('x1', x)
+					.attr('x2', x);
+			}
 			var clickrect = chart
 				.append('rect')
 				.attr('class', 'click-capture')
@@ -188,31 +222,7 @@ tsafApp.directive('tsGraph', ['$window', function($window: ng.IWindowService) {
 				.attr('x', 0)
 				.attr('y', 0)
 				.attr('height', height)
-				.on('mousemove', function() {
-					var pt = d3.mouse(this);
-					mousex = pt[0];
-					var names = legend.selectAll('.series')
-						.data(data, (d) => { return d.name; });
-					names.enter()
-						.append('div')
-						.attr('class', 'series');
-					names.exit()
-						.remove();
-					names
-						.text((d: any) => {
-							var pt = d.data[bisect(d.data, xScale.invert(mousex).getTime() / 1000)];
-							if (pt) {
-								return d.name + ': ' + pt.y;
-							}
-						})
-						.style('color', (d: any) => { return color(d.name); });
-					focus.select('line')
-						.attr('x1', mousex)
-						.attr('x2', mousex)
-						.attr('y1', 0)
-						.attr('y2', height);
-				});
-
+				.on('mousemove', mouseover);
 			scope.$watch('data', update);
 			var w = angular.element($window);
 			scope.$watch(() => {
@@ -227,9 +237,13 @@ tsafApp.directive('tsGraph', ['$window', function($window: ng.IWindowService) {
 				xScale = d3.time.scale.utc().range([0, width]);
 				xAxis.scale(xScale);
 				line.x((d) => { return xScale(d.x * 1000); });
+				if (!mousex) {
+					mousex = width + 1;
+				}
 				svg.attr('width', svgWidth);
 				defs.attr('width', width);
 				clickrect.attr('width', width);
+				drawLegend();
 				draw();
 			}
 			var oldx = 0;

@@ -357,10 +357,16 @@ tsafApp.directive('tsGraph', [
                 var oldx = 0;
                 var data;
                 var focus = svg.append('g').attr('class', 'focus');
-                focus.append('line');
-                var clickrect = chart.append('rect').attr('class', 'click-capture').style('visibility', 'hidden').attr('x', 0).attr('y', 0).attr('height', height).on('mousemove', function () {
+                focus.append('line').attr('y1', 0).attr('y2', height);
+                function mouseover() {
                     var pt = d3.mouse(this);
                     mousex = pt[0];
+                    drawLegend();
+                }
+                function drawLegend() {
+                    if (!data || !xScale) {
+                        return;
+                    }
                     var names = legend.selectAll('.series').data(data, function (d) {
                         return d.name;
                     });
@@ -374,9 +380,13 @@ tsafApp.directive('tsGraph', [
                     }).style('color', function (d) {
                         return color(d.name);
                     });
-                    focus.select('line').attr('x1', mousex).attr('x2', mousex).attr('y1', 0).attr('y2', height);
-                });
-
+                    var x = mousex;
+                    if (x > width) {
+                        x = 0;
+                    }
+                    focus.select('line').attr('x1', x).attr('x2', x);
+                }
+                var clickrect = chart.append('rect').attr('class', 'click-capture').style('visibility', 'hidden').attr('x', 0).attr('y', 0).attr('height', height).on('mousemove', mouseover);
                 scope.$watch('data', update);
                 var w = angular.element($window);
                 scope.$watch(function () {
@@ -393,9 +403,13 @@ tsafApp.directive('tsGraph', [
                     line.x(function (d) {
                         return xScale(d.x * 1000);
                     });
+                    if (!mousex) {
+                        mousex = width + 1;
+                    }
                     svg.attr('width', svgWidth);
                     defs.attr('width', width);
                     clickrect.attr('width', width);
+                    drawLegend();
                     draw();
                 }
                 var oldx = 0;
