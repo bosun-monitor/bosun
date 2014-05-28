@@ -129,7 +129,7 @@ tsafApp.filter('bits', function() {
 	}
 });
 
-tsafApp.directive('tsGraph', ['$filter', function($filter: ng.IFilterService) {
+tsafApp.directive('tsGraph', ['$window', function($window: ng.IWindowService) {
 	var margin = {
 		top: 10,
 		right: 10,
@@ -144,30 +144,26 @@ tsafApp.directive('tsGraph', ['$filter', function($filter: ng.IFilterService) {
 		link: (scope: any, elem: any, attrs: any) => {
 			var svgHeight = +scope.height || 150;
 			var height = svgHeight - margin.top - margin.bottom;
-			var svgWidth = elem.width();
-			var width = svgWidth - margin.left - margin.right;
-			var xScale = d3.time.scale.utc().range([0, width]);
+			var svgWidth: number;
+			var width: number;
 			var yScale = d3.scale.linear().range([height, 0]);
+			var xScale: any; // todo: figure out the correct type
 			var xAxis = d3.svg.axis()
-				.scale(xScale)
 				.orient('bottom');
 			var yAxis = d3.svg.axis()
 				.scale(yScale)
 				.orient('left');
 			var line = d3.svg.line()
-				.x((d) => { return xScale(d.x * 1000); })
 				.y((d) => { return yScale(d.y); });
 			var svg = d3.select(elem[0])
 				.append('svg')
-				.attr('width', svgWidth)
 				.attr('height', svgHeight)
 				.append('g')
 				.attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
-			svg.append('defs')
+			var defs = svg.append('defs')
 				.append('clipPath')
 				.attr('id', 'clip')
 				.append('rect')
-				.attr('width', width)
 				.attr('height', height);
 			var chart = svg.append('g')
 				.attr('pointer-events', 'all')
@@ -186,13 +182,12 @@ tsafApp.directive('tsGraph', ['$filter', function($filter: ng.IFilterService) {
 				.attr('class', 'focus');
 			focus.append('line')
 				.style('stroke', 'black');
-			chart
+			var clickrect = chart
 				.append('rect')
 				.attr('class', 'click-capture')
 				.style('visibility', 'hidden')
 				.attr('x', 0)
 				.attr('y', 0)
-				.attr('width', width)
 				.attr('height', height)
 				.on('mousemove', function() {
 					var pt = d3.mouse(this);
@@ -220,6 +215,24 @@ tsafApp.directive('tsGraph', ['$filter', function($filter: ng.IFilterService) {
 				});
 
 			scope.$watch('data', update);
+			var w = angular.element($window);
+			scope.$watch(() => {
+				return w.width();
+			}, resize, true);
+			w.bind('resize', () => {
+				scope.$apply();
+			});
+			function resize() {
+				svgWidth = elem.width();
+				width = svgWidth - margin.left - margin.right;
+				xScale = d3.time.scale.utc().range([0, width]);
+				xAxis.scale(xScale);
+				line.x((d) => { return xScale(d.x * 1000); });
+				svg.attr('width', svgWidth);
+				defs.attr('width', width);
+				clickrect.attr('width', width);
+				draw();
+			}
 			var oldx = 0;
 			var bisect = d3.bisector((d) => { return d.x; }).right;
 			function update(v: any) {
@@ -230,6 +243,9 @@ tsafApp.directive('tsGraph', ['$filter', function($filter: ng.IFilterService) {
 				draw();
 			}
 			function draw() {
+				if (!data || !xScale) {
+					return;
+				}
 				var xdomain = [
 					d3.min(data, (d: any) => { return d3.min(d.data, (c: any) => { return c.x; }); }) * 1000,
 					d3.max(data, (d: any) => { return d3.max(d.data, (c: any) => { return c.x; }); }) * 1000,
