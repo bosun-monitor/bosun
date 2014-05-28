@@ -629,7 +629,7 @@ func (c *Cache) Query(r *Request) (tr ResponseSet, err error) {
 		return
 	}
 	defer resp.Body.Close()
-	lr := &io.LimitedReader{resp.Body, c.limit}
+	lr := &io.LimitedReader{R: resp.Body, N: c.limit}
 	j := json.NewDecoder(lr)
 	err = j.Decode(&tr)
 	if lr.N == 0 {
