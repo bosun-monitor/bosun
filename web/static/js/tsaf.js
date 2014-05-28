@@ -388,6 +388,9 @@ tsafApp.directive('ahTimeLine', function () {
                 }).on("mousemove", mousemove).on("click", function (d) {
                     var e = $("#" + 'a' + d.Time.replace(/(:|\.|\[|\])/g, "\\$1"));
                     e.click();
+                    $('html, body').animate({
+                        scrollTop: e.offset().top
+                    }, 1000);
                 });
                 function mousemove() {
                     var x = xScale.invert(d3.mouse(this)[0]);
