@@ -170,6 +170,7 @@ tsafApp.directive('tsGraph', ['$filter', function($filter: ng.IFilterService) {
 				.attr('width', width)
 				.attr('height', height);
 			var chart = svg.append('g')
+				.attr('pointer-events', 'all')
 				.attr('clip-path', 'url(#clip)');
 			svg.append('g')
 				.attr('class', 'x axis')
@@ -178,21 +179,65 @@ tsafApp.directive('tsGraph', ['$filter', function($filter: ng.IFilterService) {
 				.attr('class', 'y axis');
 			var legend = d3.select(elem[0]).append('div');
 			var color = d3.scale.category10();
+			var mousex = 0;
+			var oldx = 0;
+			var data: any;
+			var focus = svg.append('g')
+				.attr('class', 'focus');
+			focus.append('line')
+				.style('stroke', 'black');
+			chart
+				.append('rect')
+				.attr('class', 'click-capture')
+				.style('visibility', 'hidden')
+				.attr('x', 0)
+				.attr('y', 0)
+				.attr('width', width)
+				.attr('height', height)
+				.on('mousemove', function() {
+					var pt = d3.mouse(this);
+					mousex = pt[0];
+					var names = legend.selectAll('.series')
+						.data(data, (d) => { return d.name; });
+					names.enter()
+						.append('div')
+						.attr('class', 'series');
+					names.exit()
+						.remove();
+					names
+						.text((d: any) => {
+							var pt = d.data[bisect(d.data, xScale.invert(mousex).getTime() / 1000)];
+							if (pt) {
+								return d.name + ': ' + pt.y;
+							}
+						})
+						.style('color', (d: any) => { return color(d.name); });
+					focus.select('line')
+						.attr('x1', mousex)
+						.attr('x2', mousex)
+						.attr('y1', 0)
+						.attr('y2', height);
+				});
 
 			scope.$watch('data', update);
 			var oldx = 0;
+			var bisect = d3.bisector((d) => { return d.x; }).right;
 			function update(v: any) {
 				if (!angular.isArray(v) || v.length == 0) {
 					return;
 				}
+				data = v;
+				draw();
+			}
+			function draw() {
 				var xdomain = [
-					d3.min(v, (d: any) => { return d3.min(d.data, (c: any) => { return c.x; }); }) * 1000,
-					d3.max(v, (d: any) => { return d3.max(d.data, (c: any) => { return c.x; }); }) * 1000,
+					d3.min(data, (d: any) => { return d3.min(d.data, (c: any) => { return c.x; }); }) * 1000,
+					d3.max(data, (d: any) => { return d3.max(d.data, (c: any) => { return c.x; }); }) * 1000,
 				];
 				xScale.domain(xdomain);
 				yScale.domain([
-					d3.min(v, (d: any) => { return d3.min(d.data, (c: any) => { return c.y; }); }),
-					d3.max(v, (d: any) => { return d3.max(d.data, (c: any) => { return c.y; }); }),
+					d3.min(data, (d: any) => { return d3.min(d.data, (c: any) => { return c.y; }); }),
+					d3.max(data, (d: any) => { return d3.max(d.data, (c: any) => { return c.y; }); }),
 				]);
 				if (!oldx) {
 					oldx = xdomain[1];
@@ -206,7 +251,7 @@ tsafApp.directive('tsGraph', ['$filter', function($filter: ng.IFilterService) {
 					.transition()
 					.call(yAxis);
 				var queries = chart.selectAll('.line')
-					.data(v, (d) => { return d.name; });
+					.data(data, (d) => { return d.name; });
 				queries.enter()
 					.append('path')
 					.attr('stroke', (d: any) => { return color(d.name); })
@@ -220,16 +265,6 @@ tsafApp.directive('tsGraph', ['$filter', function($filter: ng.IFilterService) {
 					.ease('linear')
 					.attr('transform', 'translate(' + (xScale(oldx) - xScale(xdomain[1])) + ')');
 				oldx = xdomain[1];
-				var names = legend.selectAll('.series')
-					.data(v, (d) => { return d.name; });
-				names.enter()
-					.append('div')
-					.attr('class', 'series');
-				names.exit()
-					.remove();
-				names
-					.text((d: any) => { return d.name; })
-					.style('color', (d: any) => { return color(d.name); });
 			};
 		},
 	};
