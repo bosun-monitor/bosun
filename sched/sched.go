@@ -34,6 +34,9 @@ type Schedule struct {
 	RunHistory    map[AlertKey]*Event
 	CheckStart    time.Time
 	notifications map[*conf.Notification][]*State
+	saveTimer     <-chan time.Time
+	saveNudge     chan struct{}
+	lastSave      time.Time
 }
 
 type States map[AlertKey]*State
@@ -242,6 +245,17 @@ func (s *Schedule) Init(c *conf.Conf) {
 func (s *Schedule) Load(c *conf.Conf) {
 	s.Init(c)
 	s.RestoreState()
+	s.saveNudge = make(chan struct{})
+	s.lastSave = time.Now()
+	go func() {
+		for {
+			select {
+			case <-s.saveTimer:
+				s.save()
+			case <-s.saveNudge:
+			}
+		}
+	}()
 }
 
 // Restores notification and alert state from the file on disk.
@@ -314,13 +328,20 @@ func (s *Schedule) RestoreState() {
 }
 
 func (s *Schedule) Save() {
-	// todo: debounce this call
-	go s.save()
+	if time.Since(s.lastSave) > s.Conf.CheckFrequency {
+		go s.save()
+		return
+	}
+	s.saveTimer = time.After(time.Second * 5)
+	s.saveNudge <- struct{}{}
 }
 
 func (s *Schedule) save() {
 	s.Lock()
 	defer s.Unlock()
+	s.lastSave = time.Now()
+	s.saveTimer = nil
+	s.saveNudge <- struct{}{}
 	f, err := os.Create(s.Conf.StateFile)
 	if err != nil {
 		log.Println(err)
