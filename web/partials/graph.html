@@ -1,38 +1,4 @@
 <style type="text/css">
-	.chart {
-		margin: 50px;
-	}
-	.chart .rgraph {
-		height: 500px;
-		margin-bottom: 24px;
-	}
-	.chart .x_tick .title {
-		bottom: -24px;
-	}
-	.rgraph {
-		position: relative;
-		left: 50px;
-	}
-	.y_axis {
-		position: absolute;
-		top: 0;
-		bottom: 0;
-		width: 50px;
-	}
-	.rswatch {
-		display: inline-block;
-		width: 10px;
-		height: 10px;
-		margin: 0 8px 0 0;
-	}
-	.rlabel {
-		display: inline-block;
-	}
-	.rline {
-		display: inline-block;
-		color: black;
-		margin: 0 0 0 30px;
-	}
 	.graph.nav-tabs {
 		margin-bottom: 15px;
 		margin-top: 15px;
@@ -155,7 +121,9 @@
 	</div>
 </div>
 <div class="row">
-	<div class="chart" ts-rickshaw="result"></div>
+	<div class="col-lg-12">
+		<div id="chart" ts-graph data="result" height="400"></div>
+	</div>
 </div>
 <div class="row" ng-show="queries">
 	<div class="col-lg-12">

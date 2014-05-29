@@ -239,11 +239,203 @@ tsafApp.filter('bits', function() {
 	}
 });
 
-tsafApp.filter('reverse', function() {
-	return function(items: any) {
-		if(typeof items === 'undefined') { return; }
-		return angular.isArray(items) ?
-			items.slice().reverse() : // If it is an array, split and reverse it
-			(items + '').split('').reverse().join(''); // else make it a string (if it isn't already), and reverse it
+tsafApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWindowService, fmtfilter: any) {
+	var margin = {
+		top: 10,
+		right: 10,
+		bottom: 30,
+		left: 80,
 	};
-});
+	return {
+		scope: {
+			data: '=',
+			height: '=',
+			generator: '=',
+		},
+		link: (scope: any, elem: any, attrs: any) => {
+			var svgHeight = +scope.height || 150;
+			var height = svgHeight - margin.top - margin.bottom;
+			var svgWidth: number;
+			var width: number;
+			var yScale = d3.scale.linear().range([height, 0]);
+			var xScale: any; // todo: figure out the correct type
+			var xAxis = d3.svg.axis()
+				.orient('bottom');
+			var yAxis = d3.svg.axis()
+				.scale(yScale)
+				.orient('left')
+				.ticks(Math.min(10, height / 20))
+				.tickFormat(fmtfilter);
+			var line: any;
+			switch (scope.generator) {
+			case 'area':
+				line = d3.svg.area();
+				break;
+			default:
+				line = d3.svg.line();
+			}
+			line.y((d: any) => { return yScale(d.y); });
+			line.x((d: any) => { return xScale(d.x * 1000); });
+			var svg = d3.select(elem[0])
+				.append('svg')
+				.attr('height', svgHeight)
+				.append('g')
+				.attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
+			var defs = svg.append('defs')
+				.append('clipPath')
+				.attr('id', 'clip')
+				.append('rect')
+				.attr('height', height);
+			var chart = svg.append('g')
+				.attr('pointer-events', 'all')
+				.attr('clip-path', 'url(#clip)');
+			svg.append('g')
+				.attr('class', 'x axis')
+				.attr('transform', 'translate(0,' + height + ')');
+			svg.append('g')
+				.attr('class', 'y axis');
+			var xloc = d3.select(elem[0]).append('div');
+			var legend = d3.select(elem[0]).append('div');
+			var color = d3.scale.category10();
+			var mousex = 0;
+			var oldx = 0;
+			var data: any;
+			var focus = svg.append('g')
+				.attr('class', 'focus');
+			focus.append('line');
+			function mouseover() {
+				var pt = d3.mouse(this);
+				mousex = pt[0];
+				if (data) {
+					drawLegend();
+				}
+			}
+			function drawLegend() {
+				var names = legend.selectAll('.series')
+					.data(data, (d) => { return d.name; });
+				names.enter()
+					.append('div')
+					.attr('class', 'series');
+				names.exit()
+					.remove();
+				var xi = xScale.invert(mousex);
+				xloc.text('Time: ' + moment(xi).utc().format());
+				var t = xi.getTime() / 1000;
+				names
+					.text((d: any) => {
+						var idx = bisect(d.data, t);
+						if (idx >= d.data.length) {
+							idx = d.data.length - 1;
+						}
+						var pt = d.data[idx];
+						if (pt) {
+							return d.name + ': ' + pt.y;
+						}
+					})
+					.style('color', (d: any) => { return color(d.name); });
+				var x = mousex;
+				if (x > width) {
+					x = 0;
+				}
+				focus.select('line')
+					.attr('x1', x)
+					.attr('x2', x)
+					.attr('y1', 0)
+					.attr('y2', height);
+			}
+			scope.$watch('data', update);
+			var w = angular.element($window);
+			scope.$watch(() => {
+				return w.width();
+			}, resize, true);
+			w.bind('resize', () => {
+				scope.$apply();
+			});
+			function resize() {
+				svgWidth = elem.width();
+				width = svgWidth - margin.left - margin.right;
+				xScale = d3.time.scale.utc().range([0, width]);
+				xAxis.scale(xScale);
+				if (!mousex) {
+					mousex = width + 1;
+				}
+				svg.attr('width', svgWidth);
+				defs.attr('width', width);
+				xAxis.ticks(width / 60);
+				draw();
+				chart.selectAll('rect.click-capture').remove();
+				chart.append('rect')
+					.attr('class', 'click-capture')
+					.style('visibility', 'hidden')
+					.attr('x', 0)
+					.attr('y', 0)
+					.attr('height', height)
+					.attr('width', width)
+					.on('mousemove', mouseover);
+			}
+			var oldx = 0;
+			var bisect = d3.bisector((d) => { return d.x; }).right;
+			function update(v: any) {
+				if (!angular.isArray(v) || v.length == 0) {
+					return;
+				}
+				data = v;
+				resize();
+			}
+			function draw() {
+				if (!data || !xScale) {
+					return;
+				}
+				var xdomain = [
+					d3.min(data, (d: any) => { return d3.min(d.data, (c: any) => { return c.x; }); }) * 1000,
+					d3.max(data, (d: any) => { return d3.max(d.data, (c: any) => { return c.x; }); }) * 1000,
+				];
+				if (!oldx) {
+					oldx = xdomain[1];
+				} else if (oldx == xdomain[1]) {
+					return;
+				}
+				xScale.domain(xdomain);
+				yScale.domain([
+					d3.min(data, (d: any) => { return d3.min(d.data, (c: any) => { return c.y; }); }),
+					d3.max(data, (d: any) => { return d3.max(d.data, (c: any) => { return c.y; }); }),
+				]);
+				if (scope.generator == 'area') {
+					line.y0(yScale(0));
+				}
+				svg.select('.x.axis')
+					.transition()
+					.call(xAxis);
+				svg.select('.y.axis')
+					.transition()
+					.call(yAxis);
+				var queries = chart.selectAll('.line')
+					.data(data, (d) => { return d.name; });
+				switch (scope.generator) {
+				case 'area':
+					queries.enter()
+						.append('path')
+						.attr('stroke', (d: any) => { return color(d.name); })
+						.attr('class', 'line')
+						.style('fill', (d: any) => { return color(d.name); });
+					break;
+				default:
+					queries.enter()
+						.append('path')
+						.attr('stroke', (d: any) => { return color(d.name); })
+						.attr('class', 'line');
+				}
+				queries.exit()
+					.remove();
+				queries
+					.attr('d', (d: any) => { return line(d.data); })
+					.attr('transform', null)
+					.transition()
+					.ease('linear')
+					.attr('transform', 'translate(' + (xScale(oldx) - xScale(xdomain[1])) + ')');
+				oldx = xdomain[1];
+				drawLegend();
+			};
+		},
+	};
+}]);

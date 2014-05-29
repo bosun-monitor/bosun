@@ -26,8 +26,19 @@ class Query {
 		this.aggregator = q && q.aggregator || 'sum';
 		this.metric = q && q.metric || '';
 		this.rate = q && q.rate || false;
-		this.derivative = q && q.derivative || 'counter';
 		this.rateOptions = q && q.rateOptions || new RateOptions;
+		if (q && !q.derivative) {
+			// back compute derivative from q
+			if (!this.rate) {
+				this.derivative = 'gauge';
+			} else if (this.rateOptions.counter) {
+				this.derivative = 'counter';
+			} else {
+				this.derivative = 'rate';
+			}
+		} else {
+			this.derivative = q && q.derivative || 'counter';
+		}
 		this.ds = q && q.ds || '';
 		this.dstime = q && q.dstime || '';
 		this.tags = q && q.tags || new TagSet;
@@ -278,10 +289,12 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route
 	if (!request.queries.length) {
 		return;
 	}
-	var autods = $scope.autods ? autods = '&autods=' + $('.chart').width() : '';
-	function get() {
+	var autods = $scope.autods ? autods = '&autods=' + $('#chart').width() : '';
+	function get(noRunning: boolean) {
 		$timeout.cancel(graphRefresh);
-		$scope.running = 'Running';
+		if (!noRunning) {
+			$scope.running = 'Running';
+		}
 		$http.get('/api/graph?' + 'b64=' + btoa(JSON.stringify(request)) + autods)
 			.success((data) => {
 				$scope.result = data.Series;
@@ -304,9 +317,9 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route
 			})
 			.finally(() => {
 				if ($scope.refresh) {
-					graphRefresh = $timeout(get, 5000);
+					graphRefresh = $timeout(() => { get(true); }, 5000);
 				};
 			});
 	};
-	get();
+	get(false);
 }]);
