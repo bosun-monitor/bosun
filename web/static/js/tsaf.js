@@ -322,7 +322,7 @@ tsafApp.filter('bits', function () {
 });
 
 tsafApp.directive('tsGraph', [
-    '$window', function ($window) {
+    '$window', 'nfmtFilter', function ($window, fmtfilter) {
         var margin = {
             top: 10,
             right: 10,
@@ -332,7 +332,8 @@ tsafApp.directive('tsGraph', [
         return {
             scope: {
                 data: '=',
-                height: '='
+                height: '=',
+                generator: '='
             },
             link: function (scope, elem, attrs) {
                 var svgHeight = +scope.height || 150;
@@ -342,9 +343,20 @@ tsafApp.directive('tsGraph', [
                 var yScale = d3.scale.linear().range([height, 0]);
                 var xScale;
                 var xAxis = d3.svg.axis().orient('bottom');
-                var yAxis = d3.svg.axis().scale(yScale).orient('left');
-                var line = d3.svg.line().y(function (d) {
+                var yAxis = d3.svg.axis().scale(yScale).orient('left').ticks(Math.min(10, height / 20)).tickFormat(fmtfilter);
+                var line;
+                switch (scope.generator) {
+                    case 'area':
+                        line = d3.svg.area();
+                        break;
+                    default:
+                        line = d3.svg.line();
+                }
+                line.y(function (d) {
                     return yScale(d.y);
+                });
+                line.x(function (d) {
+                    return xScale(d.x * 1000);
                 });
                 var svg = d3.select(elem[0]).append('svg').attr('height', svgHeight).append('g').attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
                 var defs = svg.append('defs').append('clipPath').attr('id', 'clip').append('rect').attr('height', height);
@@ -406,14 +418,12 @@ tsafApp.directive('tsGraph', [
                     width = svgWidth - margin.left - margin.right;
                     xScale = d3.time.scale.utc().range([0, width]);
                     xAxis.scale(xScale);
-                    line.x(function (d) {
-                        return xScale(d.x * 1000);
-                    });
                     if (!mousex) {
                         mousex = width + 1;
                     }
                     svg.attr('width', svgWidth);
                     defs.attr('width', width);
+                    xAxis.ticks(width / 60);
                     draw();
                     chart.selectAll('rect.click-capture').remove();
                     chart.append('rect').attr('class', 'click-capture').style('visibility', 'hidden').attr('x', 0).attr('y', 0).attr('height', height).attr('width', width).on('mousemove', mouseover);
@@ -427,7 +437,7 @@ tsafApp.directive('tsGraph', [
                         return;
                     }
                     data = v;
-                    draw();
+                    resize();
                 }
                 function draw() {
                     if (!data || !xScale) {
@@ -445,6 +455,11 @@ tsafApp.directive('tsGraph', [
                             });
                         }) * 1000
                     ];
+                    if (!oldx) {
+                        oldx = xdomain[1];
+                    } else if (oldx == xdomain[1]) {
+                        return;
+                    }
                     xScale.domain(xdomain);
                     yScale.domain([
                         d3.min(data, function (d) {
@@ -458,19 +473,27 @@ tsafApp.directive('tsGraph', [
                             });
                         })
                     ]);
-                    if (!oldx) {
-                        oldx = xdomain[1];
-                    } else if (oldx == xdomain[1]) {
-                        return;
+                    if (scope.generator == 'area') {
+                        line.y0(yScale(0));
                     }
                     svg.select('.x.axis').transition().call(xAxis);
                     svg.select('.y.axis').transition().call(yAxis);
                     var queries = chart.selectAll('.line').data(data, function (d) {
                         return d.name;
                     });
-                    queries.enter().append('path').attr('stroke', function (d) {
-                        return color(d.name);
-                    }).attr('class', 'line');
+                    switch (scope.generator) {
+                        case 'area':
+                            queries.enter().append('path').attr('stroke', function (d) {
+                                return color(d.name);
+                            }).attr('class', 'line').style('fill', function (d) {
+                                return color(d.name);
+                            });
+                            break;
+                        default:
+                            queries.enter().append('path').attr('stroke', function (d) {
+                                return color(d.name);
+                            }).attr('class', 'line');
+                    }
                     queries.exit().remove();
                     queries.attr('d', function (d) {
                         return line(d.data);
@@ -835,7 +858,6 @@ tsafControllers.controller('HostCtrl', [
         $scope.tab = search.tab || "stats";
         $scope.idata = [];
         $scope.fsdata = [];
-        $scope.fs_current = [];
         $scope.metrics = [];
         $scope.mlink = function (m) {
             var r = new Request();
@@ -852,6 +874,7 @@ tsafControllers.controller('HostCtrl', [
         $http.get('/api/metric/host/' + $scope.host).success(function (data) {
             $scope.metrics = data || [];
         });
+        var autods = '&autods=100';
         var cpu_r = new Request();
         cpu_r.start = $scope.time;
         cpu_r.queries = [
@@ -861,24 +884,44 @@ tsafControllers.controller('HostCtrl', [
                 tags: { host: $scope.host }
             })
         ];
-        var width = 500;
-        $http.get('/api/graph?' + 'json=' + encodeURIComponent(JSON.stringify(cpu_r)) + '&autods=' + width).success(function (data) {
+        $http.get('/api/graph?' + 'json=' + encodeURIComponent(JSON.stringify(cpu_r)) + autods).success(function (data) {
             data.Series[0].name = 'Percent Used';
             $scope.cpu = data.Series;
         });
+        var mem_r = new Request();
+        mem_r.start = $scope.time;
+        mem_r.queries.push(new Query({
+            metric: "os.mem.total",
+            tags: { host: $scope.host }
+        }));
+        mem_r.queries.push(new Query({
+            metric: "os.mem.used",
+            tags: { host: $scope.host }
+        }));
+        $http.get('/api/graph?' + 'json=' + encodeURIComponent(JSON.stringify(mem_r)) + autods).success(function (data) {
+            data.Series[1].name = "Used";
+            $scope.mem_total = Math.max.apply(null, data.Series[0].data.map(function (d) {
+                return d.y;
+            }));
+            $scope.mem = [data.Series[1]];
+        });
         $http.get('/api/tagv/iface/os.net.bytes?host=' + $scope.host).success(function (data) {
             $scope.interfaces = data;
-            angular.forEach($scope.interfaces, function (i) {
+            angular.forEach($scope.interfaces, function (i, idx) {
+                $scope.idata[idx] = {
+                    name: i
+                };
                 var net_bytes_r = new Request();
                 net_bytes_r.start = $scope.time;
                 net_bytes_r.queries = [
                     new Query({
                         metric: "os.net.bytes",
                         rate: true,
+                        rateOptions: { counter: true, resetValue: 1 },
                         tags: { host: $scope.host, iface: i, direction: "*" }
                     })
                 ];
-                $http.get('/api/graph?' + 'json=' + encodeURIComponent(JSON.stringify(net_bytes_r)) + '&autods=' + width).success(function (data) {
+                $http.get('/api/graph?' + 'json=' + encodeURIComponent(JSON.stringify(net_bytes_r)) + autods).success(function (data) {
                     angular.forEach(data.Series, function (d) {
                         d.data = d.data.map(function (dp) {
                             return { x: dp.x, y: dp.y * 8 };
@@ -892,13 +935,12 @@ tsafControllers.controller('HostCtrl', [
                             d.name = "in";
                         }
                     });
-                    $scope.idata[$scope.interfaces.indexOf(i)] = { name: i, data: data.Series };
+                    $scope.idata[idx].data = data.Series;
                 });
             });
         });
         $http.get('/api/tagv/disk/os.disk.fs.space_total?host=' + $scope.host).success(function (data) {
-            $scope.fs = data;
-            angular.forEach($scope.fs, function (i) {
+            angular.forEach(data, function (i, idx) {
                 if (i == '/dev/shm') {
                     return;
                 }
@@ -912,38 +954,22 @@ tsafControllers.controller('HostCtrl', [
                     metric: "os.disk.fs.space_used",
                     tags: { host: $scope.host, disk: i }
                 }));
-                $http.get('/api/graph?' + 'json=' + encodeURIComponent(JSON.stringify(fs_r)) + '&autods=' + width).success(function (data) {
-                    data.Series[1].name = "Used";
-                    $scope.fsdata[$scope.fs.indexOf(i)] = { name: i, data: [data.Series[1]] };
+                $scope.fsdata[idx] = {
+                    name: i
+                };
+                $http.get('/api/graph?' + 'json=' + encodeURIComponent(JSON.stringify(fs_r)) + autods).success(function (data) {
+                    data.Series[1].name = 'Used';
                     var total = Math.max.apply(null, data.Series[0].data.map(function (d) {
                         return d.y;
                     }));
                     var c_val = data.Series[1].data.slice(-1)[0].y;
                     var percent_used = c_val / total * 100;
-                    $scope.fs_current[$scope.fs.indexOf(i)] = {
-                        total: total,
-                        c_val: c_val,
-                        percent_used: percent_used
-                    };
+                    $scope.fsdata[idx].total = total;
+                    $scope.fsdata[idx].c_val = c_val;
+                    $scope.fsdata[idx].percent_used = percent_used;
+                    $scope.fsdata[idx].data = [data.Series[1]];
                 });
             });
-        });
-        var mem_r = new Request();
-        mem_r.start = $scope.time;
-        mem_r.queries.push(new Query({
-            metric: "os.mem.total",
-            tags: { host: $scope.host }
-        }));
-        mem_r.queries.push(new Query({
-            metric: "os.mem.used",
-            tags: { host: $scope.host }
-        }));
-        $http.get('/api/graph?' + 'json=' + encodeURIComponent(JSON.stringify(mem_r)) + '&autods=' + width).success(function (data) {
-            data.Series[1].name = "Used";
-            $scope.mem_total = Math.max.apply(null, data.Series[0].data.map(function (d) {
-                return d.y;
-            }));
-            $scope.mem = [data.Series[1]];
         });
     }]);
 tsafControllers.controller('ItemsCtrl', [

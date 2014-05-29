@@ -11,29 +11,21 @@
 				<div class="chart" ts-graph data="cpu"></div>
 			</div>
 			<div class="col-lg-6">
-				<h4>Memory <small>Total: {{mem_total | bytes}}</small></h4>
+				<h4>Memory <small ng-show="mem_total">Total: {{mem_total | bytes}}</small></h4>
 				<div class="chart" ts-graph data="mem" bytes="true"></div>
 			</div>
 		</div>
-		<div ng-repeat="i in idata track by $index" ng-init="rows = [1,2]">
-			<span ng-switch on="$index % 2">
-				<div class="row" ng-switch-when="0">
-					<div class="col-lg-{{12/rows.length}}" ng-show="idata[$parent.$index+$index]" ng-repeat="i in rows">
-						<h4>Network Bit/s: {{idata[$parent.$index+$index].name}}</h4>
-						<div class="chart" bits="true" ts-graph data="idata[$parent.$index+$index].data"></div>
-					</div>
-				</div>
-			</span>
+		<div class="row">
+			<div class="col-lg-6" ng-repeat="i in idata">
+				<h4>Network Bit/s: {{i.name}}</h4>
+				<div class="chart" bytes="true" ts-graph data="i.data" generator="'area'"></div>
+			</div>
 		</div>
-		<div ng-repeat="i in fsdata track by $index" ng-init="rows = [1,2]">
-			<span ng-switch on="$index % rows.length">
-				<div class="row" ng-switch-when="0">
-					<div class="col-lg-{{12/rows.length}}" ng-show="fsdata[$parent.$index+$index]" ng-repeat="i in rows">
-						<h4>Disk Space: {{fsdata[$parent.$index+$index].name}} <small>({{fs_current[$parent.$index+$index].c_val | bytes}} / {{fs_current[$parent.$index+$index].total | bytes}}) {{fs_current[$parent.$index+$index].percent_used|number:0}}% Used</small></h4>
-						<div class="chart" bytes="true" ts-graph data="fsdata[$parent.$index+$index].data"></div>
-					</div>
-				</div>
-			</span>
+		<div class="row">
+			<div class="col-lg-6" ng-repeat="fs in fsdata">
+				<h4>Disk Space: {{fs.name}} <small>({{fs.c_val | bytes}} / {{fs.total | bytes}}) {{fs.percent_used | number:0}}% Used</small></h4>
+				<div class="chart" bytes="true" ts-graph data="fs.data"></div>
+			</div>
 		</div>
 	</div>
 	<div class="tab-pane" ng-class="{active: tab == 'metrics'}">
