@@ -103,7 +103,7 @@ tsafApp.directive('ahTimeLine', () => {
 	var format = d3.time.format.utc("%Y-%m-%dT%X");
 	var tsdbFormat = d3.time.format.utc("%Y/%m/%d-%X");
 	function parseDate(s: Moment) {
-		return s.unix();
+		return s.toDate();
 	}
 	var margin = {
 		top: 20,
@@ -111,10 +111,10 @@ tsafApp.directive('ahTimeLine', () => {
 		bottom: 30,
 		left: 80,
 	};
-	var customTimeFormat = d3.time.format.multi([
+	var customTimeFormat = d3.time.format.utc.multi([
 		[".%L", (d: any) => { return d.getMilliseconds(); }],
 		[":%S", (d: any) => { return d.getSeconds(); }],
-		["%I:%M", (d: any) => { return d.getMinutes(); }],
+		["%H:%M", (d: any) => { return d.getMinutes(); }],
 		["%H", (d: any) => { return d.getHours(); }],
 		["%a %d", (d: any) => { return d.getDay() && d.getDate() != 1; }],
 		["%b %d", (d: any) => { return d.getDate() != 1; }],
@@ -122,9 +122,6 @@ tsafApp.directive('ahTimeLine', () => {
 		["%Y", () => { return true; }]
 	]);
 	return {
-		scope: {
-			data: '=',
-		},
 		link: (scope: any, elem: any, attrs: any) => {
 			var svgHeight = elem.height();
 			var height = svgHeight - margin.top - margin.bottom;
@@ -157,11 +154,12 @@ tsafApp.directive('ahTimeLine', () => {
 			var legend = d3.select('.legend')
 				.append('p')
 				.text(tsdbFormat(new Date));
-			scope.$watch('data', update);
+			scope.$watch(attrs.data, update);
 			function update(v: any) {
 				if (!angular.isArray(v) || v.length == 0) {
 					return;
 				}
+			//console.log(v);
 				xScale.domain([
 					d3.min(v, (d: any) => { return parseDate(d.Time); }),
 					new Date(),
@@ -178,16 +176,12 @@ tsafApp.directive('ahTimeLine', () => {
 					.attr('y', 0)
 					.attr('height', height)
 					.attr('width', (d: any, i: any) => {
-						if (i+1 < v.length) {
-							return xScale(parseDate(v[i+1].Time)) - xScale(parseDate(d.Time));
-						}
-						return xScale(new Date()) - xScale(parseDate(d.Time));
+						return xScale(parseDate(d.EndTime)) - xScale(parseDate(d.Time));
 					})
 					.on('mousemove', mousemove)
-					.on('click', function(d) {
-						var e = $('#' + 'a' + d.Time.replace( /(:|\.|\[|\])/g, '\\$1' ))
-						e.click();
-						$('html, body').scrollTop(e.offset().top);
+					.on('click', function(d, i) {
+						scope.$apply(scope.collapse(i));
+						$('html, body').scrollTop($("#panel" + i).offset().top);
 					});
 				function mousemove() {
 					var x = xScale.invert(d3.mouse(this)[0]);

@@ -40,14 +40,14 @@
 	</div>
 </div>
 <div class="row">
-	<div class="col-lg-12 timeline" ah-time-line data="alert_history"></div>
+	<div class="col-lg-12 timeline" ah-time-line data="alert_history"</div>
 </div>
 <div class="row">
 	<div class="col-lg-12 legend"></div>
 </div>
 <div class="panel-group">
 	<div class="panel" ng-class="panelClass(v.Status)" ng-repeat="v in alert_history">
-		<div class="panel-heading" ng-click="collapse($index)" id="{{'a' + v.Time}}">
+		<div class="panel-heading" ng-click="collapse($index)" id="{{'panel' + $index}}">
 			<h4 class="panel-title">
 				<a href>
 					<span ng-bind="v.Status"></span>
