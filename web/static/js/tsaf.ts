@@ -3,7 +3,6 @@
 /// <reference path="angular-sanitize.d.ts" />
 /// <reference path="bootstrap.d.ts" />
 /// <reference path="moment.d.ts" />
-/// <reference path="rickshaw.d.ts" />
 /// <reference path="d3.d.ts" />
 
 var tsafApp = angular.module('tsafApp', [
