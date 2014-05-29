@@ -26,8 +26,19 @@ class Query {
 		this.aggregator = q && q.aggregator || 'sum';
 		this.metric = q && q.metric || '';
 		this.rate = q && q.rate || false;
-		this.derivative = q && q.derivative || 'counter';
 		this.rateOptions = q && q.rateOptions || new RateOptions;
+		if (q && !q.derivative) {
+			// back compute derivative from q
+			if (!this.rate) {
+				this.derivative = 'gauge';
+			} else if (this.rateOptions.counter) {
+				this.derivative = 'counter';
+			} else {
+				this.derivative = 'rate';
+			}
+		} else {
+			this.derivative = q && q.derivative || 'counter';
+		}
 		this.ds = q && q.ds || '';
 		this.dstime = q && q.dstime || '';
 		this.tags = q && q.tags || new TagSet;
