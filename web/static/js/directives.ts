@@ -6,34 +6,32 @@ tsafApp.directive('tsResults', function() {
 
 var timeFormat = 'YYYY-MM-DD HH:mm:ss ZZ';
 
+interface ITimeScope extends ITsafScope {
+	noLink: string;
+}
+
 tsafApp.directive("tsTime", function() {
 	return {
-		link: function(scope: ITsafScope, elem: any, attrs: any) {
+		link: function(scope: ITimeScope, elem: any, attrs: any) {
 			scope.$watch(attrs.tsTime, (v: any) => {
 				var m = moment(v).utc();
-				var el = document.createElement('a');
-				el.innerText = m.format(timeFormat) +
+				var text = m.format(timeFormat) +
 				' (' +
 				m.fromNow() +
 				')';
-				el.href = 'http://www.timeanddate.com/worldclock/converted.html?iso=';
-				el.href += m.format('YYYYMMDDTHHmm');
-				el.href += '&p1=0';
-				angular.forEach(scope.timeanddate, (v, k) => {
-					el.href += '&p' + (k + 2) + '=' + v;
-				});
-				elem.html(el);
-			});
-		},
-	};
-});
-
-tsafApp.directive("tsTimeAndSince", function() {
-	return {
-		link: function(scope: ITsafScope, elem: any, attrs: any) {
-			scope.$watch(attrs.tsTimeAndSince, (v: any) => {
-				var m = moment(v).utc();
-				elem.text(m.format(timeFormat) + ' (' + m.fromNow() + ')');
+				if (attrs.noLink) {
+					elem.text(m.format(timeFormat) + ' (' + m.fromNow() + ')');
+				} else {
+					var el = document.createElement('a');
+					el.innerText = text ;
+					el.href = 'http://www.timeanddate.com/worldclock/converted.html?iso=';
+					el.href += m.format('YYYYMMDDTHHmm');
+					el.href += '&p1=0';
+					angular.forEach(scope.timeanddate, (v, k) => {
+						el.href += '&p' + (k + 2) + '=' + v;
+					});
+					elem.html(el);
+				}
 			});
 		},
 	};
@@ -104,7 +102,7 @@ tsafApp.directive('ahTimeLine', () => {
 	//2014-05-26T21:46:37.435056942Z
 	var format = d3.time.format.utc("%Y-%m-%dT%X");
 	var tsdbFormat = d3.time.format.utc("%Y/%m/%d-%X");
-	var parseDate = function(s: string) {
+	function parseDate(s: string) {
 		return format.parse(s.split(".")[0]);
 	}
 	var margin = {
@@ -114,17 +112,16 @@ tsafApp.directive('ahTimeLine', () => {
 		left: 80,
 	};
 	var customTimeFormat = d3.time.format.multi([
-		[".%L", function(d: any) { return d.getMilliseconds(); }],
-		[":%S", function(d: any) { return d.getSeconds(); }],
-		["%I:%M", function(d: any) { return d.getMinutes(); }],
-		["%H", function(d: any) { return d.getHours(); }],
-		["%a %d", function(d: any) { return d.getDay() && d.getDate() != 1; }],
-		["%b %d", function(d: any) { return d.getDate() != 1; }],
-		["%B", function(d: any) { return d.getMonth(); }],
-		["%Y", function() { return true; }]
+		[".%L", (d: any) => { return d.getMilliseconds(); }],
+		[":%S", (d: any) => { return d.getSeconds(); }],
+		["%I:%M", (d: any) => { return d.getMinutes(); }],
+		["%H", (d: any) => { return d.getHours(); }],
+		["%a %d", (d: any) => { return d.getDay() && d.getDate() != 1; }],
+		["%b %d", (d: any) => { return d.getDate() != 1; }],
+		["%B", (d: any) => { return d.getMonth(); }],
+		["%Y", () => { return true; }]
 	]);
 	return {
-		replace: false,
 		scope: {
 			data: '=',
 		},
@@ -158,7 +155,7 @@ tsafApp.directive('ahTimeLine', () => {
 			svg.append('g')
 				.attr('class', 'y axis');
 			var legend = d3.select('.legend')
-				.append("p")
+				.append('p')
 				.text(tsdbFormat(new Date));
 			scope.$watch('data', update);
 			function update(v: any) {
@@ -172,30 +169,28 @@ tsafApp.directive('ahTimeLine', () => {
 				svg.select('.x.axis')
 					.transition()
 					.call(xAxis);
-				chart.selectAll(".bars")
+				chart.selectAll('.bars')
 					.data(v)
 					.enter()
-					.append("rect")
-					.attr("class", (d: any) => { return d.Status; } )
-					.attr("x", (d: any) => { return xScale(parseDate(d.Time)); })
-					.attr("y", 0)
-					.attr("height", height)
-					.attr("width", (d: any, i: any) => {
+					.append('rect')
+					.attr('class', (d: any) => { return d.Status; } )
+					.attr('x', (d: any) => { return xScale(parseDate(d.Time)); })
+					.attr('y', 0)
+					.attr('height', height)
+					.attr('width', (d: any, i: any) => {
 						if (i+1 < v.length) {
 							return xScale(parseDate(v[i+1].Time)) - xScale(parseDate(d.Time));
 						}
 						return xScale(new Date()) - xScale(parseDate(d.Time));
 					})
-					.on("mousemove", mousemove)
-					.on("click", function(d) {
-						var e = $("#" + 'a' + d.Time.replace( /(:|\.|\[|\])/g, "\\$1" ))
+					.on('mousemove', mousemove)
+					.on('click', function(d) {
+						var e = $('#' + 'a' + d.Time.replace( /(:|\.|\[|\])/g, '\\$1' ))
 						e.click();
-						$('html, body').animate({
-							scrollTop: e.offset().top
-						}, 1000);
+						$('html, body').scrollTop(e.offset().top);
 					});
 				function mousemove() {
-					var x: any = xScale.invert(d3.mouse(this)[0]);
+					var x = xScale.invert(d3.mouse(this)[0]);
 					legend
 						.text(tsdbFormat(x));
 				}

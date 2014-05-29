@@ -224,26 +224,20 @@ tsafApp.directive("tsTime", function () {
         link: function (scope, elem, attrs) {
             scope.$watch(attrs.tsTime, function (v) {
                 var m = moment(v).utc();
-                var el = document.createElement('a');
-                el.innerText = m.format(timeFormat) + ' (' + m.fromNow() + ')';
-                el.href = 'http://www.timeanddate.com/worldclock/converted.html?iso=';
-                el.href += m.format('YYYYMMDDTHHmm');
-                el.href += '&p1=0';
-                angular.forEach(scope.timeanddate, function (v, k) {
-                    el.href += '&p' + (k + 2) + '=' + v;
-                });
-                elem.html(el);
-            });
-        }
-    };
-});
-
-tsafApp.directive("tsTimeAndSince", function () {
-    return {
-        link: function (scope, elem, attrs) {
-            scope.$watch(attrs.tsTimeAndSince, function (v) {
-                var m = moment(v).utc();
-                elem.text(m.format(timeFormat) + ' (' + m.fromNow() + ')');
+                var text = m.format(timeFormat) + ' (' + m.fromNow() + ')';
+                if (attrs.noLink) {
+                    elem.text(m.format(timeFormat) + ' (' + m.fromNow() + ')');
+                } else {
+                    var el = document.createElement('a');
+                    el.innerText = text;
+                    el.href = 'http://www.timeanddate.com/worldclock/converted.html?iso=';
+                    el.href += m.format('YYYYMMDDTHHmm');
+                    el.href += '&p1=0';
+                    angular.forEach(scope.timeanddate, function (v, k) {
+                        el.href += '&p' + (k + 2) + '=' + v;
+                    });
+                    elem.html(el);
+                }
             });
         }
     };
@@ -311,9 +305,9 @@ tsafApp.directive('ahTimeLine', function () {
     //2014-05-26T21:46:37.435056942Z
     var format = d3.time.format.utc("%Y-%m-%dT%X");
     var tsdbFormat = d3.time.format.utc("%Y/%m/%d-%X");
-    var parseDate = function (s) {
+    function parseDate(s) {
         return format.parse(s.split(".")[0]);
-    };
+    }
     var margin = {
         top: 20,
         right: 80,
@@ -347,7 +341,6 @@ tsafApp.directive('ahTimeLine', function () {
             }]
     ]);
     return {
-        replace: false,
         scope: {
             data: '='
         },
@@ -363,7 +356,7 @@ tsafApp.directive('ahTimeLine', function () {
             var chart = svg.append('g').attr('clip-path', 'url(#clip)');
             svg.append('g').attr('class', 'x axis').attr('transform', 'translate(0,' + height + ')');
             svg.append('g').attr('class', 'y axis');
-            var legend = d3.select('.legend').append("p").text(tsdbFormat(new Date));
+            var legend = d3.select('.legend').append('p').text(tsdbFormat(new Date));
             scope.$watch('data', update);
             function update(v) {
                 if (!angular.isArray(v) || v.length == 0) {
@@ -376,21 +369,19 @@ tsafApp.directive('ahTimeLine', function () {
                     new Date()
                 ]);
                 svg.select('.x.axis').transition().call(xAxis);
-                chart.selectAll(".bars").data(v).enter().append("rect").attr("class", function (d) {
+                chart.selectAll('.bars').data(v).enter().append('rect').attr('class', function (d) {
                     return d.Status;
-                }).attr("x", function (d) {
+                }).attr('x', function (d) {
                     return xScale(parseDate(d.Time));
-                }).attr("y", 0).attr("height", height).attr("width", function (d, i) {
+                }).attr('y', 0).attr('height', height).attr('width', function (d, i) {
                     if (i + 1 < v.length) {
                         return xScale(parseDate(v[i + 1].Time)) - xScale(parseDate(d.Time));
                     }
                     return xScale(new Date()) - xScale(parseDate(d.Time));
-                }).on("mousemove", mousemove).on("click", function (d) {
-                    var e = $("#" + 'a' + d.Time.replace(/(:|\.|\[|\])/g, "\\$1"));
+                }).on('mousemove', mousemove).on('click', function (d) {
+                    var e = $('#' + 'a' + d.Time.replace(/(:|\.|\[|\])/g, '\\$1'));
                     e.click();
-                    $('html, body').animate({
-                        scrollTop: e.offset().top
-                    }, 1000);
+                    $('html, body').scrollTop(e.offset().top);
                 });
                 function mousemove() {
                     var x = xScale.invert(d3.mouse(this)[0]);
@@ -1295,18 +1286,17 @@ tsafControllers.controller('HistoryCtrl', [
         var search = $location.search();
         $scope.ak = search.ak;
         var status;
-        $scope.shown = [];
+        $scope.shown = {};
         $scope.collapse = function (i) {
             $scope.shown[i] = !$scope.shown[i];
         };
         $http.get('/api/alerts').success(function (data) {
             status = data.Status;
-            $scope.error = '';
-            if (!status.hasOwnProperty($scope.ak)) {
+            if (!status[$scope.ak]) {
                 $scope.error = 'Alert Key: ' + $scope.ak + ' not found';
                 return;
             }
-            $scope.alert_history = status[$scope.ak].History;
+            $scope.alert_history = status[$scope.ak].History.reverse();
         }).error(function (error) {
             $scope.error = error;
         });
