@@ -129,7 +129,7 @@ tsafApp.filter('bits', function() {
 	}
 });
 
-tsafApp.directive('tsGraph', ['$window', function($window: ng.IWindowService) {
+tsafApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWindowService, fmtfilter: any) {
 	var margin = {
 		top: 10,
 		right: 10,
@@ -140,6 +140,7 @@ tsafApp.directive('tsGraph', ['$window', function($window: ng.IWindowService) {
 		scope: {
 			data: '=',
 			height: '=',
+			generator: '=',
 		},
 		link: (scope: any, elem: any, attrs: any) => {
 			var svgHeight = +scope.height || 150;
@@ -152,9 +153,19 @@ tsafApp.directive('tsGraph', ['$window', function($window: ng.IWindowService) {
 				.orient('bottom');
 			var yAxis = d3.svg.axis()
 				.scale(yScale)
-				.orient('left');
-			var line = d3.svg.line()
-				.y((d) => { return yScale(d.y); });
+				.orient('left')
+				.ticks(Math.min(10, height / 20))
+				.tickFormat(fmtfilter);
+			var line: any;
+			switch (scope.generator) {
+			case 'area':
+				line = d3.svg.area();
+				break;
+			default:
+				line = d3.svg.line();
+			}
+			line.y((d: any) => { return yScale(d.y); });
+			line.x((d: any) => { return xScale(d.x * 1000); });
 			var svg = d3.select(elem[0])
 				.append('svg')
 				.attr('height', svgHeight)
@@ -235,12 +246,12 @@ tsafApp.directive('tsGraph', ['$window', function($window: ng.IWindowService) {
 				width = svgWidth - margin.left - margin.right;
 				xScale = d3.time.scale.utc().range([0, width]);
 				xAxis.scale(xScale);
-				line.x((d) => { return xScale(d.x * 1000); });
 				if (!mousex) {
 					mousex = width + 1;
 				}
 				svg.attr('width', svgWidth);
 				defs.attr('width', width);
+				xAxis.ticks(width / 60);
 				draw();
 				chart.selectAll('rect.click-capture').remove();
 				chart.append('rect')
@@ -259,7 +270,7 @@ tsafApp.directive('tsGraph', ['$window', function($window: ng.IWindowService) {
 					return;
 				}
 				data = v;
-				draw();
+				resize();
 			}
 			function draw() {
 				if (!data || !xScale) {
@@ -269,15 +280,18 @@ tsafApp.directive('tsGraph', ['$window', function($window: ng.IWindowService) {
 					d3.min(data, (d: any) => { return d3.min(d.data, (c: any) => { return c.x; }); }) * 1000,
 					d3.max(data, (d: any) => { return d3.max(d.data, (c: any) => { return c.x; }); }) * 1000,
 				];
+				if (!oldx) {
+					oldx = xdomain[1];
+				} else if (oldx == xdomain[1]) {
+					return;
+				}
 				xScale.domain(xdomain);
 				yScale.domain([
 					d3.min(data, (d: any) => { return d3.min(d.data, (c: any) => { return c.y; }); }),
 					d3.max(data, (d: any) => { return d3.max(d.data, (c: any) => { return c.y; }); }),
 				]);
-				if (!oldx) {
-					oldx = xdomain[1];
-				} else if (oldx == xdomain[1]) {
-					return;
+				if (scope.generator == 'area') {
+					line.y0(yScale(0));
 				}
 				svg.select('.x.axis')
 					.transition()
@@ -287,10 +301,20 @@ tsafApp.directive('tsGraph', ['$window', function($window: ng.IWindowService) {
 					.call(yAxis);
 				var queries = chart.selectAll('.line')
 					.data(data, (d) => { return d.name; });
-				queries.enter()
-					.append('path')
-					.attr('stroke', (d: any) => { return color(d.name); })
-					.attr('class', 'line');
+				switch (scope.generator) {
+				case 'area':
+					queries.enter()
+						.append('path')
+						.attr('stroke', (d: any) => { return color(d.name); })
+						.attr('class', 'line')
+						.style('fill', (d: any) => { return color(d.name); });
+					break;
+				default:
+					queries.enter()
+						.append('path')
+						.attr('stroke', (d: any) => { return color(d.name); })
+						.attr('class', 'line');
+				}
 				queries.exit()
 					.remove();
 				queries
