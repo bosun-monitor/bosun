@@ -393,7 +393,6 @@ tsafApp.directive('tsGraph', [
                     }
                     focus.select('line').attr('x1', x).attr('x2', x).attr('y1', 0).attr('y2', height);
                 }
-                var clickrect = chart.append('rect').attr('class', 'click-capture').style('visibility', 'hidden').attr('x', 0).attr('y', 0).attr('height', height).on('mousemove', mouseover);
                 scope.$watch('data', update);
                 var w = angular.element($window);
                 scope.$watch(function () {
@@ -415,8 +414,9 @@ tsafApp.directive('tsGraph', [
                     }
                     svg.attr('width', svgWidth);
                     defs.attr('width', width);
-                    clickrect.attr('width', width);
                     draw();
+                    chart.selectAll('rect.click-capture').remove();
+                    chart.append('rect').attr('class', 'click-capture').style('visibility', 'hidden').attr('x', 0).attr('y', 0).attr('height', height).attr('width', width).on('mousemove', mouseover);
                 }
                 var oldx = 0;
                 var bisect = d3.bisector(function (d) {
