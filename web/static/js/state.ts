@@ -58,9 +58,15 @@ tsafApp.directive('tsAckGroup', function() {
 			scope.multiaction = (type: string) => {
 				var url = '/action?type=' + type;
 				angular.forEach(scope.groups, (group) => {
-					if (group.checked) {
+					if (!group.checked) {
+						return;
+					}
+					if (group.AlertKey) {
 						url += '&key=' + encodeURIComponent(group.AlertKey);
 					}
+					angular.forEach(group.Children, (child) => {
+						url += '&key=' + encodeURIComponent(child.AlertKey);
+					});
 				});
 				return url;
 			};
