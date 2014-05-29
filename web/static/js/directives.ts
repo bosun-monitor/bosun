@@ -185,7 +185,9 @@ tsafApp.directive('tsGraph', ['$window', function($window: ng.IWindowService) {
 			function mouseover() {
 				var pt = d3.mouse(this);
 				mousex = pt[0];
-				drawLegend();
+				if (data) {
+					drawLegend();
+				}
 			}
 			function drawLegend() {
 				var names = legend.selectAll('.series')
