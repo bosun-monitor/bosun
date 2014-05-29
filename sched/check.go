@@ -187,7 +187,7 @@ Loop:
 		} else {
 			status = StNormal
 		}
-		if status != s.RunHistory[ak].Status {
+		if status > s.RunHistory[ak].Status {
 			event.Status = status
 			state.Result = &result
 		}
