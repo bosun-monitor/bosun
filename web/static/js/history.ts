@@ -21,6 +21,13 @@ tsafControllers.controller('HistoryCtrl', ['$scope', '$http', '$location', '$rou
 			return;
 		}
 		$scope.alert_history = state.History.slice();
+		angular.forEach($scope.alert_history, function(h: any, i: number) {
+			if ( i+1 < $scope.alert_history.length) {
+				h.EndTime = $scope.alert_history[i+1].Time;
+			} else {
+				h.EndTime = moment.utc();
+			}
+		});
 		$scope.alert_history.reverse();
 	}
 	if ($scope.schedule) {

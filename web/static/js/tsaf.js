@@ -308,7 +308,7 @@ tsafApp.directive('ahTimeLine', function () {
     var format = d3.time.format.utc("%Y-%m-%dT%X");
     var tsdbFormat = d3.time.format.utc("%Y/%m/%d-%X");
     function parseDate(s) {
-        return s.unix();
+        return s.toDate();
     }
     var margin = {
         top: 20,
@@ -316,14 +316,14 @@ tsafApp.directive('ahTimeLine', function () {
         bottom: 30,
         left: 80
     };
-    var customTimeFormat = d3.time.format.multi([
+    var customTimeFormat = d3.time.format.utc.multi([
         [".%L", function (d) {
                 return d.getMilliseconds();
             }],
         [":%S", function (d) {
                 return d.getSeconds();
             }],
-        ["%I:%M", function (d) {
+        ["%H:%M", function (d) {
                 return d.getMinutes();
             }],
         ["%H", function (d) {
@@ -343,9 +343,6 @@ tsafApp.directive('ahTimeLine', function () {
             }]
     ]);
     return {
-        scope: {
-            data: '='
-        },
         link: function (scope, elem, attrs) {
             var svgHeight = elem.height();
             var height = svgHeight - margin.top - margin.bottom;
@@ -359,11 +356,13 @@ tsafApp.directive('ahTimeLine', function () {
             svg.append('g').attr('class', 'x axis').attr('transform', 'translate(0,' + height + ')');
             svg.append('g').attr('class', 'y axis');
             var legend = d3.select('.legend').append('p').text(tsdbFormat(new Date));
-            scope.$watch('data', update);
+            scope.$watch(attrs.data, update);
             function update(v) {
                 if (!angular.isArray(v) || v.length == 0) {
                     return;
                 }
+
+                //console.log(v);
                 xScale.domain([
                     d3.min(v, function (d) {
                         return parseDate(d.Time);
@@ -376,14 +375,10 @@ tsafApp.directive('ahTimeLine', function () {
                 }).attr('x', function (d) {
                     return xScale(parseDate(d.Time));
                 }).attr('y', 0).attr('height', height).attr('width', function (d, i) {
-                    if (i + 1 < v.length) {
-                        return xScale(parseDate(v[i + 1].Time)) - xScale(parseDate(d.Time));
-                    }
-                    return xScale(new Date()) - xScale(parseDate(d.Time));
-                }).on('mousemove', mousemove).on('click', function (d) {
-                    var e = $('#' + 'a' + d.Time.replace(/(:|\.|\[|\])/g, '\\$1'));
-                    e.click();
-                    $('html, body').scrollTop(e.offset().top);
+                    return xScale(parseDate(d.EndTime)) - xScale(parseDate(d.Time));
+                }).on('mousemove', mousemove).on('click', function (d, i) {
+                    scope.$apply(scope.collapse(i));
+                    $('html, body').scrollTop($("#panel" + i).offset().top);
                 });
                 function mousemove() {
                     var x = xScale.invert(d3.mouse(this)[0]);
@@ -1399,6 +1394,13 @@ tsafControllers.controller('HistoryCtrl', [
                 return;
             }
             $scope.alert_history = state.History.slice();
+            angular.forEach($scope.alert_history, function (h, i) {
+                if (i + 1 < $scope.alert_history.length) {
+                    h.EndTime = $scope.alert_history[i + 1].Time;
+                } else {
+                    h.EndTime = moment.utc();
+                }
+            });
             $scope.alert_history.reverse();
         }
         if ($scope.schedule) {
