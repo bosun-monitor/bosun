@@ -110,7 +110,7 @@ tsafControllers.controller('TsafCtrl', [
                     return "panel-default";
             }
         };
-        $scope.refresh = function () {
+        $scope.refresh = function (cb) {
             $http.get('/api/alerts').success(function (data) {
                 angular.forEach(data.Status, function (v, k) {
                     v.Touched = moment(v.Touched).utc();
@@ -121,6 +121,9 @@ tsafControllers.controller('TsafCtrl', [
                 });
                 $scope.schedule = data;
                 $scope.timeanddate = data.TimeAndDate;
+                if (cb) {
+                    cb();
+                }
             });
         };
     }]);
@@ -305,7 +308,7 @@ tsafApp.directive('ahTimeLine', function () {
     var format = d3.time.format.utc("%Y-%m-%dT%X");
     var tsdbFormat = d3.time.format.utc("%Y/%m/%d-%X");
     function parseDate(s) {
-        return format.parse(s.split(".")[0]);
+        return s.unix();
     }
     var margin = {
         top: 20,
@@ -1389,14 +1392,18 @@ tsafControllers.controller('HistoryCtrl', [
         $scope.collapse = function (i) {
             $scope.shown[i] = !$scope.shown[i];
         };
-        $http.get('/api/alerts').success(function (data) {
-            status = data.Status;
-            if (!status[$scope.ak]) {
+        function done() {
+            var state = $scope.schedule.Status[$scope.ak];
+            if (!state) {
                 $scope.error = 'Alert Key: ' + $scope.ak + ' not found';
                 return;
             }
-            $scope.alert_history = status[$scope.ak].History.reverse();
-        }).error(function (error) {
-            $scope.error = error;
-        });
+            $scope.alert_history = state.History.slice();
+            $scope.alert_history.reverse();
+        }
+        if ($scope.schedule) {
+            done();
+        } else {
+            $scope.refresh(done);
+        }
     }]);

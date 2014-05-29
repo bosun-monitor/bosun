@@ -14,16 +14,18 @@ tsafControllers.controller('HistoryCtrl', ['$scope', '$http', '$location', '$rou
 	$scope.collapse = (i: any) => {
 		$scope.shown[i] = !$scope.shown[i];
 	};
-	$http.get('/api/alerts')
-		.success((data) => {
-			status = data.Status;
-			if (!status[$scope.ak]) {
-				$scope.error = 'Alert Key: ' + $scope.ak + ' not found';
-				return;
-			}
-			$scope.alert_history = status[$scope.ak].History.reverse();
-		})
-		.error((error) => {
-			$scope.error = error;
-		});
+	function done() {
+		var state = $scope.schedule.Status[$scope.ak];
+		if (!state) {
+			$scope.error = 'Alert Key: ' + $scope.ak + ' not found';
+			return;
+		}
+		$scope.alert_history = state.History.slice();
+		$scope.alert_history.reverse();
+	}
+	if ($scope.schedule) {
+		done();
+	} else {
+		$scope.refresh(done);
+	}
 }]);
