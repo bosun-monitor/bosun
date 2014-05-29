@@ -47,7 +47,8 @@ The OpenTSDB Setup:
 12. Put the run-opentsdb.sh in /root/opentsdb and run it. Tail the nohup log, heopfully things are working. You can visit opentsdb at your http://yourhost:4242
 
 Example Conf:
-`tsd.core.auto_create_metrics=true
+```
+tsd.core.auto_create_metrics=true
 tsd.core.meta.enable_realtime_ts=false
 tsd.core.meta.enable_realtime_uid=false
 tsd.core.meta.enable_tsuid_incrementing=false
@@ -80,10 +81,12 @@ tsd.storage.hbase.tree_table=tsdb-tree
 tsd.storage.hbase.uid_table=tsdb-uid
 tsd.storage.hbase.zk_basedir=/hbase
 tsd.storage.hbase.zk_quorum=or-devtsdb01.ds.stackexchange.com
-tsd.storage.fix_duplicates=true`
+tsd.storage.fix_duplicates=true
+```
 
 The run-opentsdb.sh scipt:
-`#!/bin/bash
+```
+#!/bin/bash
 
 CONFIG_FILE=/root/opentsdb/opentsdb.conf
 
@@ -91,6 +94,6 @@ tsdtmp=${TMPDIR-'/tmp'}/tsd
 mkdir -p "$tsdtmp"
 nohup 2>&1 tsdb tsd --port=4242 --staticroot=/usr/local/share/opentsdb/static --cachedir="$tsdtmp" --config $CONFIG_FILE &
 echo To see log: tail -f $(pwd)/nohup.out`
-
+```
 
 
