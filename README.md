@@ -42,7 +42,7 @@ The OpenTSDB Setup:
 7. `./build.sh`
 8. `cd src`
 9. `make install`
-10. Create the tables (This will hang after the first table if you skipped the step in cloudera with LZO) `env COMPRESSION=LZO HBASE_HOME=/opt/cloudera/parcels/CDH-4.6.0-1.cdh4.6.0.p0.26 /root/opentsdb/next-1401309842/src/create_table.sh`. Your exact next-blah timestamp and CDH-4... version may be a little different so adjust the command accordinly.
+10. Create the tables (This will hang after the first table if you skipped the step in cloudera with LZO) `env COMPRESSION=LZO HBASE_HOME=/opt/cloudera/parcels/CDH-4.6.0-1.cdh4.6.0.p0.26 /root/opentsdb/next-1401309842/src/create_table.sh`. Your exact next-blah timestamp and CDH-4... version may be a little different so adjust the command accordinly. You should be able to verify that the tables are looking go (And not in transition) via http://yourhost:60010/master-status
 11. Put an opentsdb.conf file in /root/opentsdb that is something like the file below
 12. Put the run-opentsdb.sh in /root/opentsdb and run it. Tail the nohup log, heopfully things are working. You can visit opentsdb at your http://yourhost:4242
 
