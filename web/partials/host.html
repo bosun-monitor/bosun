@@ -23,7 +23,7 @@
 		</div>
 		<div class="row">
 			<div class="col-lg-6" ng-repeat="fs in fsdata">
-				<h4>Disk Space: {{fs.name}} <small>({{fs.c_val | bytes}} / {{fs.total | bytes}}) {{fs.percent_used | number:0}}% Used</small></h4>
+				<h4>Disk Space: {{fs.name}} <small ng-show="fs.c_val">({{fs.c_val | bytes}} / {{fs.total | bytes}}) {{fs.percent_used | number:0}}% Used</small></h4>
 				<div class="chart" bytes="true" ts-graph data="fs.data"></div>
 			</div>
 		</div>
