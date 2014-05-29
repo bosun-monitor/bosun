@@ -51,6 +51,10 @@ tsafApp.config([
             title: 'Action',
             templateUrl: 'partials/action.html',
             controller: 'ActionCtrl'
+        }).when('/history', {
+            title: 'Alert History',
+            templateUrl: 'partials/history.html',
+            controller: 'HistoryCtrl'
         }).otherwise({
             redirectTo: '/'
         });
@@ -91,6 +95,20 @@ tsafControllers.controller('TsafCtrl', [
             q.metric = m;
             r.queries.push(q);
             return r;
+        };
+        $scope.panelClass = function (status) {
+            switch (status) {
+                case "critical":
+                    return "panel-danger";
+                case "unknown":
+                    return "panel-info";
+                case "warning":
+                    return "panel-warning";
+                case "normal":
+                    return "panel-success";
+                default:
+                    return "panel-default";
+            }
         };
         $scope.refresh = function () {
             $http.get('/api/alerts').success(function (data) {
@@ -205,15 +223,20 @@ tsafApp.directive("tsTime", function () {
         link: function (scope, elem, attrs) {
             scope.$watch(attrs.tsTime, function (v) {
                 var m = moment(v).utc();
-                var el = document.createElement('a');
-                el.innerText = m.format(timeFormat) + ' (' + m.fromNow() + ')';
-                el.href = 'http://www.timeanddate.com/worldclock/converted.html?iso=';
-                el.href += m.format('YYYYMMDDTHHmm');
-                el.href += '&p1=0';
-                angular.forEach(scope.timeanddate, function (v, k) {
-                    el.href += '&p' + (k + 2) + '=' + v;
-                });
-                elem.html(el);
+                var text = m.format(timeFormat) + ' (' + m.fromNow() + ')';
+                if (attrs.noLink) {
+                    elem.text(m.format(timeFormat) + ' (' + m.fromNow() + ')');
+                } else {
+                    var el = document.createElement('a');
+                    el.innerText = text;
+                    el.href = 'http://www.timeanddate.com/worldclock/converted.html?iso=';
+                    el.href += m.format('YYYYMMDDTHHmm');
+                    el.href += '&p1=0';
+                    angular.forEach(scope.timeanddate, function (v, k) {
+                        el.href += '&p' + (k + 2) + '=' + v;
+                    });
+                    elem.html(el);
+                }
             });
         }
     };
@@ -276,6 +299,98 @@ tsafApp.directive('tsTableSort', [
             }
         };
     }]);
+
+tsafApp.directive('ahTimeLine', function () {
+    //2014-05-26T21:46:37.435056942Z
+    var format = d3.time.format.utc("%Y-%m-%dT%X");
+    var tsdbFormat = d3.time.format.utc("%Y/%m/%d-%X");
+    function parseDate(s) {
+        return format.parse(s.split(".")[0]);
+    }
+    var margin = {
+        top: 20,
+        right: 80,
+        bottom: 30,
+        left: 80
+    };
+    var customTimeFormat = d3.time.format.multi([
+        [".%L", function (d) {
+                return d.getMilliseconds();
+            }],
+        [":%S", function (d) {
+                return d.getSeconds();
+            }],
+        ["%I:%M", function (d) {
+                return d.getMinutes();
+            }],
+        ["%H", function (d) {
+                return d.getHours();
+            }],
+        ["%a %d", function (d) {
+                return d.getDay() && d.getDate() != 1;
+            }],
+        ["%b %d", function (d) {
+                return d.getDate() != 1;
+            }],
+        ["%B", function (d) {
+                return d.getMonth();
+            }],
+        ["%Y", function () {
+                return true;
+            }]
+    ]);
+    return {
+        scope: {
+            data: '='
+        },
+        link: function (scope, elem, attrs) {
+            var svgHeight = elem.height();
+            var height = svgHeight - margin.top - margin.bottom;
+            var svgWidth = elem.width();
+            var width = svgWidth - margin.left - margin.right;
+            var xScale = d3.time.scale.utc().range([0, width]);
+            var xAxis = d3.svg.axis().scale(xScale).tickFormat(customTimeFormat).orient('bottom');
+            var svg = d3.select(elem[0]).append('svg').attr('width', svgWidth).attr('height', svgHeight).append('g').attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
+            svg.append('defs').append('clipPath').attr('id', 'clip').append('rect').attr('width', width).attr('height', height);
+            var chart = svg.append('g').attr('clip-path', 'url(#clip)');
+            svg.append('g').attr('class', 'x axis').attr('transform', 'translate(0,' + height + ')');
+            svg.append('g').attr('class', 'y axis');
+            var legend = d3.select('.legend').append('p').text(tsdbFormat(new Date));
+            scope.$watch('data', update);
+            function update(v) {
+                if (!angular.isArray(v) || v.length == 0) {
+                    return;
+                }
+                xScale.domain([
+                    d3.min(v, function (d) {
+                        return parseDate(d.Time);
+                    }),
+                    new Date()
+                ]);
+                svg.select('.x.axis').transition().call(xAxis);
+                chart.selectAll('.bars').data(v).enter().append('rect').attr('class', function (d) {
+                    return d.Status;
+                }).attr('x', function (d) {
+                    return xScale(parseDate(d.Time));
+                }).attr('y', 0).attr('height', height).attr('width', function (d, i) {
+                    if (i + 1 < v.length) {
+                        return xScale(parseDate(v[i + 1].Time)) - xScale(parseDate(d.Time));
+                    }
+                    return xScale(new Date()) - xScale(parseDate(d.Time));
+                }).on('mousemove', mousemove).on('click', function (d) {
+                    var e = $('#' + 'a' + d.Time.replace(/(:|\.|\[|\])/g, '\\$1'));
+                    e.click();
+                    $('html, body').scrollTop(e.offset().top);
+                });
+                function mousemove() {
+                    var x = xScale.invert(d3.mouse(this)[0]);
+                    legend.text(tsdbFormat(x));
+                }
+            }
+            ;
+        }
+    };
+});
 
 var fmtUnits = ['', 'k', 'M', 'G', 'T', 'P', 'E'];
 
@@ -1164,18 +1279,7 @@ tsafApp.directive('tsAckGroup', function () {
         templateUrl: '/partials/ackgroup.html',
         link: function (scope, elem, attrs) {
             scope.canAckSelected = scope.ack == 'Needs Acknowldgement';
-            scope.panelClass = function (status) {
-                switch (status) {
-                    case "critical":
-                        return "panel-danger";
-                    case "unknown":
-                        return "panel-info";
-                    case "warning":
-                        return "panel-warning";
-                    default:
-                        return "panel-default";
-                }
-            };
+            scope.panelClass = scope.$parent.panelClass;
             scope.btoa = scope.$parent.btoa;
             scope.encode = scope.$parent.encode;
             scope.shown = {};
@@ -1270,3 +1374,23 @@ tsafApp.directive('tsForget', function () {
         templateUrl: '/partials/forget.html'
     };
 });
+tsafControllers.controller('HistoryCtrl', [
+    '$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
+        var search = $location.search();
+        $scope.ak = search.ak;
+        var status;
+        $scope.shown = {};
+        $scope.collapse = function (i) {
+            $scope.shown[i] = !$scope.shown[i];
+        };
+        $http.get('/api/alerts').success(function (data) {
+            status = data.Status;
+            if (!status[$scope.ak]) {
+                $scope.error = 'Alert Key: ' + $scope.ak + ' not found';
+                return;
+            }
+            $scope.alert_history = status[$scope.ak].History.reverse();
+        }).error(function (error) {
+            $scope.error = error;
+        });
+    }]);

@@ -6,23 +6,32 @@ tsafApp.directive('tsResults', function() {
 
 var timeFormat = 'YYYY-MM-DD HH:mm:ss ZZ';
 
+interface ITimeScope extends ITsafScope {
+	noLink: string;
+}
+
 tsafApp.directive("tsTime", function() {
 	return {
-		link: function(scope: ITsafScope, elem: any, attrs: any) {
+		link: function(scope: ITimeScope, elem: any, attrs: any) {
 			scope.$watch(attrs.tsTime, (v: any) => {
 				var m = moment(v).utc();
-				var el = document.createElement('a');
-				el.innerText = m.format(timeFormat) +
+				var text = m.format(timeFormat) +
 				' (' +
 				m.fromNow() +
 				')';
-				el.href = 'http://www.timeanddate.com/worldclock/converted.html?iso=';
-				el.href += m.format('YYYYMMDDTHHmm');
-				el.href += '&p1=0';
-				angular.forEach(scope.timeanddate, (v, k) => {
-					el.href += '&p' + (k + 2) + '=' + v;
-				});
-				elem.html(el);
+				if (attrs.noLink) {
+					elem.text(m.format(timeFormat) + ' (' + m.fromNow() + ')');
+				} else {
+					var el = document.createElement('a');
+					el.innerText = text ;
+					el.href = 'http://www.timeanddate.com/worldclock/converted.html?iso=';
+					el.href += m.format('YYYYMMDDTHHmm');
+					el.href += '&p1=0';
+					angular.forEach(scope.timeanddate, (v, k) => {
+						el.href += '&p' + (k + 2) + '=' + v;
+					});
+					elem.html(el);
+				}
 			});
 		},
 	};
@@ -88,6 +97,107 @@ tsafApp.directive('tsTableSort', ['$timeout', ($timeout: ng.ITimeoutService) => 
 		},
 	};
 }]);
+
+tsafApp.directive('ahTimeLine', () => {
+	//2014-05-26T21:46:37.435056942Z
+	var format = d3.time.format.utc("%Y-%m-%dT%X");
+	var tsdbFormat = d3.time.format.utc("%Y/%m/%d-%X");
+	function parseDate(s: string) {
+		return format.parse(s.split(".")[0]);
+	}
+	var margin = {
+		top: 20,
+		right: 80,
+		bottom: 30,
+		left: 80,
+	};
+	var customTimeFormat = d3.time.format.multi([
+		[".%L", (d: any) => { return d.getMilliseconds(); }],
+		[":%S", (d: any) => { return d.getSeconds(); }],
+		["%I:%M", (d: any) => { return d.getMinutes(); }],
+		["%H", (d: any) => { return d.getHours(); }],
+		["%a %d", (d: any) => { return d.getDay() && d.getDate() != 1; }],
+		["%b %d", (d: any) => { return d.getDate() != 1; }],
+		["%B", (d: any) => { return d.getMonth(); }],
+		["%Y", () => { return true; }]
+	]);
+	return {
+		scope: {
+			data: '=',
+		},
+		link: (scope: any, elem: any, attrs: any) => {
+			var svgHeight = elem.height();
+			var height = svgHeight - margin.top - margin.bottom;
+			var svgWidth = elem.width();
+			var width = svgWidth - margin.left - margin.right;
+			var xScale = d3.time.scale.utc().range([0, width]);
+			var xAxis = d3.svg.axis()
+				.scale(xScale)
+				.tickFormat(customTimeFormat)
+				.orient('bottom');
+			var svg = d3.select(elem[0])
+				.append('svg')
+				.attr('width', svgWidth)
+				.attr('height', svgHeight)
+				.append('g')
+				.attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
+			svg.append('defs')
+				.append('clipPath')
+				.attr('id', 'clip')
+				.append('rect')
+				.attr('width', width)
+				.attr('height', height);
+			var chart = svg.append('g')
+				.attr('clip-path', 'url(#clip)');
+			svg.append('g')
+				.attr('class', 'x axis')
+				.attr('transform', 'translate(0,' + height + ')');
+			svg.append('g')
+				.attr('class', 'y axis');
+			var legend = d3.select('.legend')
+				.append('p')
+				.text(tsdbFormat(new Date));
+			scope.$watch('data', update);
+			function update(v: any) {
+				if (!angular.isArray(v) || v.length == 0) {
+					return;
+				}
+				xScale.domain([
+					d3.min(v, (d: any) => { return parseDate(d.Time); }),
+					new Date(),
+				]);
+				svg.select('.x.axis')
+					.transition()
+					.call(xAxis);
+				chart.selectAll('.bars')
+					.data(v)
+					.enter()
+					.append('rect')
+					.attr('class', (d: any) => { return d.Status; } )
+					.attr('x', (d: any) => { return xScale(parseDate(d.Time)); })
+					.attr('y', 0)
+					.attr('height', height)
+					.attr('width', (d: any, i: any) => {
+						if (i+1 < v.length) {
+							return xScale(parseDate(v[i+1].Time)) - xScale(parseDate(d.Time));
+						}
+						return xScale(new Date()) - xScale(parseDate(d.Time));
+					})
+					.on('mousemove', mousemove)
+					.on('click', function(d) {
+						var e = $('#' + 'a' + d.Time.replace( /(:|\.|\[|\])/g, '\\$1' ))
+						e.click();
+						$('html, body').scrollTop(e.offset().top);
+					});
+				function mousemove() {
+					var x = xScale.invert(d3.mouse(this)[0]);
+					legend
+						.text(tsdbFormat(x));
+				}
+			};
+		},
+	};
+});
 
 var fmtUnits = ['', 'k', 'M', 'G', 'T', 'P', 'E'];
 

@@ -1002,6 +1002,7 @@ declare module D3 {
                 (specifier: string): TimeFormat;
                 utc: (specifier: string) => TimeFormat;
                 iso: TimeFormat;
+                multi: any;
             };
 
             scale: {
