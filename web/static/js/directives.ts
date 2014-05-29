@@ -102,8 +102,8 @@ tsafApp.directive('ahTimeLine', () => {
 	//2014-05-26T21:46:37.435056942Z
 	var format = d3.time.format.utc("%Y-%m-%dT%X");
 	var tsdbFormat = d3.time.format.utc("%Y/%m/%d-%X");
-	function parseDate(s: string) {
-		return format.parse(s.split(".")[0]);
+	function parseDate(s: Moment) {
+		return s.unix();
 	}
 	var margin = {
 		top: 20,
