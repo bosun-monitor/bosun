@@ -349,6 +349,7 @@ tsafApp.directive('ahTimeLine', function () {
             var svgWidth = elem.width();
             var width = svgWidth - margin.left - margin.right;
             var xScale = d3.time.scale.utc().range([0, width]);
+            var yScale = d3.scale.linear().range([height, 0]);
             var xAxis = d3.svg.axis().scale(xScale).tickFormat(customTimeFormat).orient('bottom');
             var svg = d3.select(elem[0]).append('svg').attr('width', svgWidth).attr('height', svgHeight).append('g').attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
             svg.append('defs').append('clipPath').attr('id', 'clip').append('rect').attr('width', width).attr('height', height);
@@ -361,29 +362,62 @@ tsafApp.directive('ahTimeLine', function () {
                 if (!angular.isArray(v) || v.length == 0) {
                     return;
                 }
-
-                //console.log(v);
+                var max_date = new Date(-8640000000000000);
+                var min_date = new Date(8640000000000000);
+                v.forEach(function (a) {
+                    a.History.forEach(function (d) {
+                        if (parseDate(d.Time) < min_date) {
+                            min_date = parseDate(d.Time);
+                        }
+                        if (parseDate(d.EndTime) > max_date) {
+                            max_date = parseDate(d.EndTime);
+                        }
+                    });
+                });
                 xScale.domain([
-                    d3.min(v, function (d) {
-                        return parseDate(d.Time);
-                    }),
-                    new Date()
+                    min_date,
+                    max_date
+                ]);
+                yScale.domain([
+                    0,
+                    v.length
                 ]);
                 svg.select('.x.axis').transition().call(xAxis);
-                chart.selectAll('.bars').data(v).enter().append('rect').attr('class', function (d) {
-                    return d.Status;
-                }).attr('x', function (d) {
-                    return xScale(parseDate(d.Time));
-                }).attr('y', 0).attr('height', height).attr('width', function (d, i) {
-                    return xScale(parseDate(d.EndTime)) - xScale(parseDate(d.Time));
-                }).on('mousemove', mousemove).on('click', function (d, i) {
-                    scope.$apply(scope.collapse(i));
-                    $('html, body').scrollTop($("#panel" + i).offset().top);
+                v.forEach(function (a, i) {
+                    chart.selectAll('.bars').data(a.History).enter().append('rect').attr('class', function (d) {
+                        return d.Status;
+                    }).attr('x', function (d) {
+                        return xScale(parseDate(d.Time));
+                    }).attr('y', yScale(i + 1)).attr('height', height - yScale(.9)).attr('width', function (d) {
+                        return xScale(parseDate(d.EndTime)) - xScale(parseDate(d.Time));
+                    });
                 });
-                function mousemove() {
-                    var x = xScale.invert(d3.mouse(this)[0]);
-                    legend.text(tsdbFormat(x));
-                }
+                chart.selectAll("text").data(v).enter().append("text").attr("text-anchor", "right").attr("x", 0).attr('y', function (d, i) {
+                    return yScale(i);
+                }).text(function (d) {
+                    return d.Name;
+                });
+                // chart.selectAll('.bars')
+                // 	.data(v)
+                // 	.enter()
+                // 	.append('rect')
+                // 	.attr('class', (d: any) => { return d.Status; } )
+                // 	.attr('x', (d: any) => { return xScale(parseDate(d.Time)); })
+                // 	.attr('y', 0)
+                // 	.attr('height', height)
+                // 	.attr('width', (d: any, i: any) => {
+                // 		return xScale(parseDate(d.EndTime)) - xScale(parseDate(d.Time));
+                // 	})
+                // 	.on('mousemove', mousemove)
+                // 	.on('click', function(d, i) {
+                // 		scope.$apply(scope.collapse(i));
+                // 		$('html, body').scrollTop($("#panel" + i).offset().top);
+                // 	});
+                // function mousemove() {
+                // 	var x = xScale.invert(d3.mouse(this)[0]);
+                // 	legend
+                // 		.text(tsdbFormat(x));
+                // }
             }
             ;
         }
@@ -1387,21 +1421,29 @@ tsafControllers.controller('HistoryCtrl', [
         $scope.collapse = function (i) {
             $scope.shown[i] = !$scope.shown[i];
         };
+        var selected_alerts = [];
         function done() {
-            var state = $scope.schedule.Status[$scope.ak];
-            if (!state) {
-                $scope.error = 'Alert Key: ' + $scope.ak + ' not found';
-                return;
-            }
-            $scope.alert_history = state.History.slice();
-            angular.forEach($scope.alert_history, function (h, i) {
-                if (i + 1 < $scope.alert_history.length) {
-                    h.EndTime = $scope.alert_history[i + 1].Time;
-                } else {
-                    h.EndTime = moment.utc();
-                }
+            var status = $scope.schedule.Status;
+
+            // if (!status) {
+            // 	$scope.error = 'Alert Key: ' + $scope.ak + ' not found';
+            // 	return;
+            // }
+            angular.forEach(status, function (v, ak) {
+                angular.forEach(v.History, function (h, i) {
+                    if (i + 1 < v.History.length) {
+                        h.EndTime = v.History[i + 1].Time;
+                    } else {
+                        h.EndTime = moment.utc();
+                    }
+                });
+                v.History.reverse();
+                var dict = {};
+                dict['Name'] = ak;
+                dict['History'] = v.History;
+                selected_alerts.push(dict);
             });
-            $scope.alert_history.reverse();
+            $scope.alert_history = selected_alerts.slice(0, 30);
         }
         if ($scope.schedule) {
             done();

@@ -14,21 +14,28 @@ tsafControllers.controller('HistoryCtrl', ['$scope', '$http', '$location', '$rou
 	$scope.collapse = (i: any) => {
 		$scope.shown[i] = !$scope.shown[i];
 	};
+	var selected_alerts = [];
 	function done() {
-		var state = $scope.schedule.Status[$scope.ak];
-		if (!state) {
-			$scope.error = 'Alert Key: ' + $scope.ak + ' not found';
-			return;
-		}
-		$scope.alert_history = state.History.slice();
-		angular.forEach($scope.alert_history, function(h: any, i: number) {
-			if ( i+1 < $scope.alert_history.length) {
-				h.EndTime = $scope.alert_history[i+1].Time;
-			} else {
-				h.EndTime = moment.utc();
-			}
+		var status = $scope.schedule.Status;
+		// if (!status) {
+		// 	$scope.error = 'Alert Key: ' + $scope.ak + ' not found';
+		// 	return;
+		// }
+		angular.forEach(status, function(v, ak) {
+			angular.forEach(v.History, function(h: any, i: number) {
+				if ( i+1 < v.History.length) {
+					h.EndTime = v.History[i+1].Time;
+				} else {
+					h.EndTime = moment.utc();
+				}
+			});
+			v.History.reverse();
+			var dict = {};
+			dict['Name'] = ak;
+			dict['History'] = v.History;
+			selected_alerts.push(dict);
 		});
-		$scope.alert_history.reverse();
+		$scope.alert_history = selected_alerts.slice(0,30);
 	}
 	if ($scope.schedule) {
 		done();

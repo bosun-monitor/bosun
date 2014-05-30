@@ -128,6 +128,7 @@ tsafApp.directive('ahTimeLine', () => {
 			var svgWidth = elem.width();
 			var width = svgWidth - margin.left - margin.right;
 			var xScale = d3.time.scale.utc().range([0, width]);
+			var yScale = d3.scale.linear().range([height, 0]);
 			var xAxis = d3.svg.axis()
 				.scale(xScale)
 				.tickFormat(customTimeFormat)
@@ -159,35 +160,71 @@ tsafApp.directive('ahTimeLine', () => {
 				if (!angular.isArray(v) || v.length == 0) {
 					return;
 				}
-			//console.log(v);
+				var max_date = new Date(-8640000000000000);
+				var min_date = new Date(8640000000000000);
+				v.forEach(function(a) {
+					a.History.forEach(function(d) {
+						if (parseDate(d.Time) < min_date) {
+							min_date = parseDate(d.Time);
+						}
+						if (parseDate(d.EndTime) > max_date) {
+							max_date = parseDate(d.EndTime);
+						}
+					});
+				});
 				xScale.domain([
-					d3.min(v, (d: any) => { return parseDate(d.Time); }),
-					new Date(),
+					min_date,
+					max_date,
+				]);
+				yScale.domain([
+					0,
+					v.length,
 				]);
 				svg.select('.x.axis')
 					.transition()
 					.call(xAxis);
-				chart.selectAll('.bars')
+				v.forEach(function(a, i) {
+					chart.selectAll('.bars')
+						.data(a.History)
+						.enter()
+						.append('rect')
+						.attr('class', (d: any) => { return d.Status; } )
+						.attr('x', (d: any) => { return xScale(parseDate(d.Time)); })
+						.attr('y', yScale(i + 1))
+						.attr('height', height - yScale(.9))
+						.attr('width', (d: any) => {
+							return xScale(parseDate(d.EndTime)) - xScale(parseDate(d.Time));
+						});
+				});
+				chart.selectAll("text")
 					.data(v)
 					.enter()
-					.append('rect')
-					.attr('class', (d: any) => { return d.Status; } )
-					.attr('x', (d: any) => { return xScale(parseDate(d.Time)); })
-					.attr('y', 0)
-					.attr('height', height)
-					.attr('width', (d: any, i: any) => {
-						return xScale(parseDate(d.EndTime)) - xScale(parseDate(d.Time));
-					})
-					.on('mousemove', mousemove)
-					.on('click', function(d, i) {
-						scope.$apply(scope.collapse(i));
-						$('html, body').scrollTop($("#panel" + i).offset().top);
-					});
-				function mousemove() {
-					var x = xScale.invert(d3.mouse(this)[0]);
-					legend
-						.text(tsdbFormat(x));
-				}
+					.append("text")
+					.attr("text-anchor", "right")
+					.attr("x", 0)
+					.attr('y', function(d, i) { return yScale(i);})
+					.text(function(d) { return d.Name;});
+				// chart.selectAll('.bars')
+				// 	.data(v)
+				// 	.enter()
+				// 	.append('rect')
+				// 	.attr('class', (d: any) => { return d.Status; } )
+				// 	.attr('x', (d: any) => { return xScale(parseDate(d.Time)); })
+				// 	.attr('y', 0)
+				// 	.attr('height', height)
+				// 	.attr('width', (d: any, i: any) => {
+				// 		return xScale(parseDate(d.EndTime)) - xScale(parseDate(d.Time));
+				// 	})
+				// 	.on('mousemove', mousemove)
+				// 	.on('click', function(d, i) {
+				// 		scope.$apply(scope.collapse(i));
+				// 		$('html, body').scrollTop($("#panel" + i).offset().top);
+				// 	});
+				// function mousemove() {
+				// 	var x = xScale.invert(d3.mouse(this)[0]);
+				// 	legend
+				// 		.text(tsdbFormat(x));
+				// }
 			};
 		},
 	};
