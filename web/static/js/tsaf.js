@@ -361,8 +361,6 @@ tsafApp.directive('ahTimeLine', function () {
                 if (!angular.isArray(v) || v.length == 0) {
                     return;
                 }
-
-                //console.log(v);
                 xScale.domain([
                     d3.min(v, function (d) {
                         return parseDate(d.Time);
