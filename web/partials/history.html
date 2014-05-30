@@ -49,7 +49,7 @@
 		<div class="panel panel-default">
 			<div class="panel-heading panel-title" ng-click="collapse('group' + $index)">
 				<span ng-bind="a.Name"></span>
-				<span class="pull-right" ng-bind="a.History.length + ' alerts'"></span>
+				<span class="pull-right" ng-bind="a.History.length + ' events'"></span>
 			</div>
 			<div class="panel-body" ng-if="shown['group' + $index]">
 				<div class="panel-group">
@@ -72,7 +72,7 @@
 										</tr>
 									</thead>
 									<tbody>
-										<tr  ng-repeat="c in v.Warn.Computations">
+										<tr ng-repeat="c in v.Warn.Computations">
 											<td><a ng-href="/expr#{{btoa(c.Text)}}" ng-bind="c.Text"></a></td>
 											<td ng-bind="c.Value"></td>
 										</tr>

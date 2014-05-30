@@ -311,8 +311,8 @@ tsafApp.directive('ahTimeLine', function () {
         return s.toDate();
     }
     var margin = {
-        top: 20,
-        right: 80,
+        top: 10,
+        right: 10,
         bottom: 30,
         left: 250
     };
@@ -362,19 +362,22 @@ tsafApp.directive('ahTimeLine', function () {
                 var legend = d3.select(elem[0]).append('div').attr('class', 'legend');
                 var time_legend = legend.append('div').text(tsdbFormat(new Date()));
                 var alert_legend = legend.append('div').text('Alert');
-                var max_date = new Date(-8640000000000000);
-                var min_date = new Date(8640000000000000);
-                v.forEach(function (a) {
-                    a.History.forEach(function (d) {
-                        if (parseDate(d.Time) < min_date) {
-                            min_date = parseDate(d.Time);
-                        }
-                        if (parseDate(d.EndTime) > max_date) {
-                            max_date = parseDate(d.EndTime);
-                        }
-                    });
-                });
-                xScale.domain([min_date, max_date]);
+                xScale.range([0, width]);
+                yScale.range([height, 0]);
+                svg.attr('width', svgWidth).attr('height', svgHeight);
+                x_axis.attr('transform', 'translate(0,' + height + ')');
+                xScale.domain([
+                    d3.min(v, function (d) {
+                        return d3.min(d.History, function (c) {
+                            return c.Time;
+                        });
+                    }),
+                    d3.max(v, function (d) {
+                        return d3.max(d.History, function (c) {
+                            return c.EndTime;
+                        });
+                    })
+                ]);
                 yScale.domain([0, v.length]);
                 chart.select('.x.axis').transition().call(xAxis);
                 v.forEach(function (a, i) {
@@ -388,8 +391,9 @@ tsafApp.directive('ahTimeLine', function () {
                         alert_legend.text(a.Name);
                     }).on('click', function (d, j) {
                         var id = 'panel' + i + '-' + j;
-                        scope.$apply(scope.shown['group' + i] = true);
-                        scope.$apply(scope.shown[id] = true);
+                        scope.shown['group' + i] = true;
+                        scope.shown[id] = true;
+                        scope.$apply();
                         $('html, body').scrollTop($("#" + id).offset().top);
                     });
                 });
