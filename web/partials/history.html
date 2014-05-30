@@ -17,9 +17,6 @@
 		stroke: black;
 		stroke-width: 1;
 	}
-	.timeline {
-		height: 800px;
-	}
 	.normal {
 		fill: #3c763d;
 	}
@@ -32,61 +29,75 @@
 	.unknown {
 		fill: #d9edf7;
 	}
+	.legend {
+		font-weight: bold;
+		margin-bottom: 10px;
+		border-color: black;
+		border-width: 2px;
+	}
 </style>
-<h2 ng-bind="'Alert History: ' + ak"></h2>
 <div class="row" ng-show="error">
 	<div class="col-lg-12">
 		<div class="alert alert-danger" ng-bind="error"></div>
 	</div>
 </div>
 <div class="row">
-	<div class="col-lg-12 timeline" ah-time-line data="alert_history"</div>
+	<div class="col-lg-12 timeline" ah-time-line data="alert_history"></div>
 </div>
 <div class="row">
-	<div class="col-lg-12 legend"></div>
-</div>
-<div class="panel-group">
-	<div class="panel" ng-class="panelClass(v.Status)" ng-repeat="v in alert_history">
-		<div class="panel-heading" ng-click="collapse($index)" id="{{'panel' + $index}}">
-			<h4 class="panel-title">
-				<a href>
-					<span ng-bind="v.Status"></span>
-					<span class="pull-right" ng-show="v.Time" ts-time="v.Time" no-link="true"></span>
-				</a>
-			</h4>
-		</div>
-		<div class="panel-body" ng-if="shown[$index]">
-			<div class="col-sm-6">
-				<table class="table table-striped table-condensed" ng-if="v.Warn">
-					<thead>
-						<tr>
-							<th>Warn Computations</th>
-							<th>Value</th>
-						</tr>
-					</thead>
-					<tbody>
-						<tr  ng-repeat="c in v.Warn.Computations">
-							<td><a ng-href="/expr#{{btoa(c.Text)}}" ng-bind="c.Text"></a></td>
-							<td ng-bind="c.Value"></td>
-						</tr>
-					</tbody>
-				</table>
+	<div class="panel-group" ng-repeat="a in alert_history">
+		<div class="panel panel-default">
+			<div class="panel-heading panel-title" ng-click="collapse('group' + $index)">
+				<span ng-bind="a.Name"></span>
+				<span class="pull-right" ng-bind="a.History.length + ' alerts'"></span>
 			</div>
-			<div class="col-sm-6">
-				<table class="table table-striped table-condensed" ng-if="v.Crit">
-					<thead>
-						<tr>
-							<th>Crit Computations</th>
-							<th>Value</th>
-						</tr>
-					</thead>
-					<tbody>
-						<tr ng-repeat="c in v.Crit.Computations">
-							<td><a ng-href="/expr#{{btoa(c.Text)}}" ng-bind="c.Text"></a></td>
-							<td ng-bind="c.Value"></td>
-						</tr>
-					</tbody>
-				</table>
+			<div class="panel-body" ng-if="shown['group' + $index]">
+				<div class="panel-group">
+					<div class="panel" ng-class="panelClass(v.Status)" ng-repeat="v in a.History">
+						<div class="panel-heading" ng-click="collapse('panel' + $parent.$index + '-' + $index)" id="{{'panel' + $parent.$index + '-' + $index}}">
+							<h4 class="panel-title">
+								<a href>
+									<span ng-bind="a.Name + ': ' + v.Status"></span>
+									<span class="pull-right" ng-show="v.Time" ts-time="v.Time" no-link="true"></span>
+								</a>
+							</h4>
+						</div>
+						<div class="panel-body" ng-if="shown['panel' + $parent.$index + '-' + $index]">
+							<div class="col-sm-6">
+								<table class="table table-striped table-condensed" ng-if="v.Warn">
+									<thead>
+										<tr>
+											<th>Warn Computations</th>
+											<th>Value</th>
+										</tr>
+									</thead>
+									<tbody>
+										<tr  ng-repeat="c in v.Warn.Computations">
+											<td><a ng-href="/expr#{{btoa(c.Text)}}" ng-bind="c.Text"></a></td>
+											<td ng-bind="c.Value"></td>
+										</tr>
+									</tbody>
+								</table>
+							</div>
+							<div class="col-sm-6">
+								<table class="table table-striped table-condensed" ng-if="v.Crit">
+									<thead>
+										<tr>
+											<th>Crit Computations</th>
+											<th>Value</th>
+										</tr>
+									</thead>
+									<tbody>
+										<tr ng-repeat="c in v.Crit.Computations">
+											<td><a ng-href="/expr#{{btoa(c.Text)}}" ng-bind="c.Text"></a></td>
+											<td ng-bind="c.Value"></td>
+										</tr>
+									</tbody>
+								</table>
+							</div>
+						</div>
+					</div>
+				</div>
 			</div>
 		</div>
 	</div>

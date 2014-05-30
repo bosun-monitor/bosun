@@ -314,7 +314,7 @@ tsafApp.directive('ahTimeLine', function () {
         top: 20,
         right: 80,
         bottom: 30,
-        left: 80
+        left: 250
     };
     var customTimeFormat = d3.time.format.utc.multi([
         [".%L", function (d) {
@@ -344,24 +344,24 @@ tsafApp.directive('ahTimeLine', function () {
     ]);
     return {
         link: function (scope, elem, attrs) {
-            var svgHeight = elem.height();
-            var height = svgHeight - margin.top - margin.bottom;
-            var svgWidth = elem.width();
-            var width = svgWidth - margin.left - margin.right;
-            var xScale = d3.time.scale.utc().range([0, width]);
-            var yScale = d3.scale.linear().range([height, 0]);
-            var xAxis = d3.svg.axis().scale(xScale).tickFormat(customTimeFormat).orient('bottom');
-            var svg = d3.select(elem[0]).append('svg').attr('width', svgWidth).attr('height', svgHeight).append('g').attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
-            svg.append('defs').append('clipPath').attr('id', 'clip').append('rect').attr('width', width).attr('height', height);
-            var chart = svg.append('g').attr('clip-path', 'url(#clip)');
-            svg.append('g').attr('class', 'x axis').attr('transform', 'translate(0,' + height + ')');
-            svg.append('g').attr('class', 'y axis');
-            var legend = d3.select('.legend').append('p').text(tsdbFormat(new Date));
             scope.$watch(attrs.data, update);
             function update(v) {
                 if (!angular.isArray(v) || v.length == 0) {
                     return;
                 }
+                var svgHeight = v.length * 15 + margin.top + margin.bottom;
+                var height = svgHeight - margin.top - margin.bottom;
+                var svgWidth = elem.width();
+                var width = svgWidth - margin.left - margin.right;
+                var xScale = d3.time.scale.utc().range([0, width]);
+                var yScale = d3.scale.linear().range([height, 0]);
+                var xAxis = d3.svg.axis().scale(xScale).tickFormat(customTimeFormat).orient('bottom');
+                var chart = d3.select(elem[0]).append('svg').attr('width', svgWidth).attr('height', svgHeight).append('g').attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
+                chart.append('g').attr('class', 'x axis').attr('transform', 'translate(0,' + height + ')');
+                chart.append('g').attr('class', 'y axis');
+                var legend = d3.select(elem[0]).append('div').attr('class', 'legend');
+                var time_legend = legend.append('div').text(tsdbFormat(new Date()));
+                var alert_legend = legend.append('div').text('Alert');
                 var max_date = new Date(-8640000000000000);
                 var min_date = new Date(8640000000000000);
                 v.forEach(function (a) {
@@ -374,50 +374,39 @@ tsafApp.directive('ahTimeLine', function () {
                         }
                     });
                 });
-                xScale.domain([
-                    min_date,
-                    max_date
-                ]);
-                yScale.domain([
-                    0,
-                    v.length
-                ]);
-                svg.select('.x.axis').transition().call(xAxis);
+                xScale.domain([min_date, max_date]);
+                yScale.domain([0, v.length]);
+                chart.select('.x.axis').transition().call(xAxis);
                 v.forEach(function (a, i) {
                     chart.selectAll('.bars').data(a.History).enter().append('rect').attr('class', function (d) {
                         return d.Status;
                     }).attr('x', function (d) {
                         return xScale(parseDate(d.Time));
-                    }).attr('y', yScale(i + 1)).attr('height', height - yScale(.9)).attr('width', function (d) {
+                    }).attr('y', yScale(i + 1)).attr('height', height - yScale(.95)).attr('width', function (d) {
                         return xScale(parseDate(d.EndTime)) - xScale(parseDate(d.Time));
+                    }).on('mousemove.x', mousemove_x).on('mousemove.y', function (d) {
+                        alert_legend.text(a.Name);
+                    }).on('click', function (d, j) {
+                        var id = 'panel' + i + '-' + j;
+                        scope.$apply(scope.shown['group' + i] = true);
+                        scope.$apply(scope.shown[id] = true);
+                        $('html, body').scrollTop($("#" + id).offset().top);
                     });
                 });
-                chart.selectAll("text").data(v).enter().append("text").attr("text-anchor", "right").attr("x", 0).attr('y', function (d, i) {
-                    return yScale(i);
+                chart.selectAll('.labels').data(v).enter().append('text').attr('text-anchor', 'end').attr('x', 0).attr('dx', '-.5em').attr('dy', '.25em').attr('y', function (d, i) {
+                    return yScale(i) - (height - yScale(.5));
                 }).text(function (d) {
                     return d.Name;
                 });
-                // chart.selectAll('.bars')
-                // 	.data(v)
-                // 	.enter()
-                // 	.append('rect')
-                // 	.attr('class', (d: any) => { return d.Status; } )
-                // 	.attr('x', (d: any) => { return xScale(parseDate(d.Time)); })
-                // 	.attr('y', 0)
-                // 	.attr('height', height)
-                // 	.attr('width', (d: any, i: any) => {
-                // 		return xScale(parseDate(d.EndTime)) - xScale(parseDate(d.Time));
-                // 	})
-                // 	.on('mousemove', mousemove)
-                // 	.on('click', function(d, i) {
-                // 		scope.$apply(scope.collapse(i));
-                // 		$('html, body').scrollTop($("#panel" + i).offset().top);
-                // 	});
-                // function mousemove() {
-                // 	var x = xScale.invert(d3.mouse(this)[0]);
-                // 	legend
-                // 		.text(tsdbFormat(x));
-                // }
+                chart.selectAll('.sep').data(v).enter().append('rect').attr('y', function (d, i) {
+                    return yScale(i) - (height - yScale(.05));
+                }).attr('height', function (d, i) {
+                    return (height - yScale(.05));
+                }).attr('x', 0).attr('width', width).on('mousemove.x', mousemove_x);
+                function mousemove_x() {
+                    var x = xScale.invert(d3.mouse(this)[0]);
+                    time_legend.text(tsdbFormat(x));
+                }
             }
             ;
         }
@@ -1373,6 +1362,21 @@ tsafApp.directive('tsAckGroup', function () {
                 });
                 return url;
             };
+            scope.history = function () {
+                var url = '/history?';
+                angular.forEach(scope.groups, function (group) {
+                    if (!group.checked) {
+                        return;
+                    }
+                    if (group.AlertKey) {
+                        url += '&key=' + encodeURIComponent(group.AlertKey);
+                    }
+                    angular.forEach(group.Children, function (child) {
+                        url += '&key=' + encodeURIComponent(child.AlertKey);
+                    });
+                });
+                return url;
+            };
         }
     };
 });
@@ -1415,7 +1419,14 @@ tsafApp.directive('tsForget', function () {
 tsafControllers.controller('HistoryCtrl', [
     '$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
         var search = $location.search();
-        $scope.ak = search.ak;
+        var keys = {};
+        if (angular.isArray(search.key)) {
+            angular.forEach(search.key, function (v) {
+                keys[v] = true;
+            });
+        } else {
+            keys[search.key] = true;
+        }
         var status;
         $scope.shown = {};
         $scope.collapse = function (i) {
@@ -1424,12 +1435,10 @@ tsafControllers.controller('HistoryCtrl', [
         var selected_alerts = [];
         function done() {
             var status = $scope.schedule.Status;
-
-            // if (!status) {
-            // 	$scope.error = 'Alert Key: ' + $scope.ak + ' not found';
-            // 	return;
-            // }
             angular.forEach(status, function (v, ak) {
+                if (!keys[ak]) {
+                    return;
+                }
                 angular.forEach(v.History, function (h, i) {
                     if (i + 1 < v.History.length) {
                         h.EndTime = v.History[i + 1].Time;
@@ -1443,7 +1452,11 @@ tsafControllers.controller('HistoryCtrl', [
                 dict['History'] = v.History;
                 selected_alerts.push(dict);
             });
-            $scope.alert_history = selected_alerts.slice(0, 30);
+            if (selected_alerts.length > 0) {
+                $scope.alert_history = selected_alerts;
+            } else {
+                $scope.error = 'No Matching Alerts Found';
+            }
         }
         if ($scope.schedule) {
             done();
