@@ -251,7 +251,7 @@ tsafApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWin
 			var svgWidth: number;
 			var width: number;
 			var yScale = d3.scale.linear().range([height, 0]);
-			var xScale: any; // todo: figure out the correct type
+			var xScale = d3.time.scale.utc();
 			var xAxis = d3.svg.axis()
 				.orient('bottom');
 			var yAxis = d3.svg.axis()
@@ -347,7 +347,7 @@ tsafApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWin
 			function resize() {
 				svgWidth = elem.width();
 				width = svgWidth - margin.left - margin.right;
-				xScale = d3.time.scale.utc().range([0, width]);
+				xScale.range([0, width]);
 				xAxis.scale(xScale);
 				if (!mousex) {
 					mousex = width + 1;

@@ -452,7 +452,7 @@ tsafApp.directive('tsGraph', [
                 var svgWidth;
                 var width;
                 var yScale = d3.scale.linear().range([height, 0]);
-                var xScale;
+                var xScale = d3.time.scale.utc();
                 var xAxis = d3.svg.axis().orient('bottom');
                 var yAxis = d3.svg.axis().scale(yScale).orient('left').ticks(Math.min(10, height / 20)).tickFormat(fmtfilter);
                 var line;
@@ -527,7 +527,7 @@ tsafApp.directive('tsGraph', [
                 function resize() {
                     svgWidth = elem.width();
                     width = svgWidth - margin.left - margin.right;
-                    xScale = d3.time.scale.utc().range([0, width]);
+                    xScale.range([0, width]);
                     xAxis.scale(xScale);
                     if (!mousex) {
                         mousex = width + 1;
