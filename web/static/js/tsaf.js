@@ -358,14 +358,6 @@ tsafApp.directive('ahTimeLine', function () {
                 var xAxis = d3.svg.axis().scale(xScale).tickFormat(customTimeFormat).orient('bottom');
                 var chart = d3.select(elem[0]).append('svg').attr('width', svgWidth).attr('height', svgHeight).append('g').attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
                 chart.append('g').attr('class', 'x axis').attr('transform', 'translate(0,' + height + ')');
-                chart.append('g').attr('class', 'y axis');
-                var legend = d3.select(elem[0]).append('div').attr('class', 'legend');
-                var time_legend = legend.append('div').text(tsdbFormat(new Date()));
-                var alert_legend = legend.append('div').text('Alert');
-                xScale.range([0, width]);
-                yScale.range([height, 0]);
-                svg.attr('width', svgWidth).attr('height', svgHeight);
-                x_axis.attr('transform', 'translate(0,' + height + ')');
                 xScale.domain([
                     d3.min(v, function (d) {
                         return d3.min(d.History, function (c) {
@@ -378,6 +370,10 @@ tsafApp.directive('ahTimeLine', function () {
                         });
                     })
                 ]);
+                chart.append('g').attr('class', 'y axis');
+                var legend = d3.select(elem[0]).append('div').attr('class', 'legend');
+                var time_legend = legend.append('div').text(tsdbFormat(new Date()));
+                var alert_legend = legend.append('div').text('Alert');
                 yScale.domain([0, v.length]);
                 chart.select('.x.axis').transition().call(xAxis);
                 v.forEach(function (a, i) {
