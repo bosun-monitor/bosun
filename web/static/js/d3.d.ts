@@ -998,7 +998,6 @@ declare module D3 {
             fridays: Range;
             saturdays: Range;
             format: {
-
                 (specifier: string): TimeFormat;
                 utc: (specifier: string) => TimeFormat;
                 iso: TimeFormat;

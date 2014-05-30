@@ -13,6 +13,7 @@
 			<a class="btn btn-primary btn-sm" ng-href="{{multiaction('ack')}}" ng-disabled="!canAckSelected">acknowledge</a>
 			<a class="btn btn-warning btn-sm" ng-href="{{multiaction('close')}}" ng-disabled="!canCloseSelected">close</a>
 			<a class="btn btn-danger btn-sm" ng-href="{{multiaction('forget')}}" ng-disabled="!canForgetSelected">forget</a>
+			<a class="btn btn-default btn-sm" ng-href="{{history()}}">History</a>
 		</span>
 	</div>
 	<div class="panel" ng-class="panelClass(group.Status)" ng-repeat="group in groups" ng-init="idx = $index; state = schedule.Status[group.AlertKey]; name = group.AlertKey">
