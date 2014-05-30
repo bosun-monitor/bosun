@@ -106,10 +106,10 @@ tsafApp.directive('ahTimeLine', () => {
 		return s.toDate();
 	}
 	var margin = {
-		top: 20,
-		right: 80,
+		top: 10,
+		right: 10,
 		bottom: 30,
-		left: 80,
+		left: 250,
 	};
 	var customTimeFormat = d3.time.format.utc.multi([
 		[".%L", (d: any) => { return d.getMilliseconds(); }],
@@ -123,68 +123,95 @@ tsafApp.directive('ahTimeLine', () => {
 	]);
 	return {
 		link: (scope: any, elem: any, attrs: any) => {
-			var svgHeight = elem.height();
-			var height = svgHeight - margin.top - margin.bottom;
-			var svgWidth = elem.width();
-			var width = svgWidth - margin.left - margin.right;
-			var xScale = d3.time.scale.utc().range([0, width]);
-			var xAxis = d3.svg.axis()
-				.scale(xScale)
-				.tickFormat(customTimeFormat)
-				.orient('bottom');
-			var svg = d3.select(elem[0])
-				.append('svg')
-				.attr('width', svgWidth)
-				.attr('height', svgHeight)
-				.append('g')
-				.attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
-			svg.append('defs')
-				.append('clipPath')
-				.attr('id', 'clip')
-				.append('rect')
-				.attr('width', width)
-				.attr('height', height);
-			var chart = svg.append('g')
-				.attr('clip-path', 'url(#clip)');
-			svg.append('g')
-				.attr('class', 'x axis')
-				.attr('transform', 'translate(0,' + height + ')');
-			svg.append('g')
-				.attr('class', 'y axis');
-			var legend = d3.select('.legend')
-				.append('p')
-				.text(tsdbFormat(new Date));
 			scope.$watch(attrs.data, update);
 			function update(v: any) {
 				if (!angular.isArray(v) || v.length == 0) {
 					return;
 				}
+				var svgHeight = v.length * 15 + margin.top + margin.bottom;
+				var height = svgHeight - margin.top - margin.bottom;
+				var svgWidth = elem.width();
+				var width = svgWidth - margin.left - margin.right;
+				var xScale = d3.time.scale.utc().range([0, width]);
+				var yScale = d3.scale.linear().range([height, 0]);
+				var xAxis = d3.svg.axis()
+					.scale(xScale)
+					.tickFormat(customTimeFormat)
+					.orient('bottom');
+				var chart = d3.select(elem[0])
+					.append('svg')
+					.attr('width', svgWidth)
+					.attr('height', svgHeight)
+					.append('g')
+					.attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
+				chart.append('g')
+					.attr('class', 'x axis')
+					.attr('transform', 'translate(0,' + height + ')');
 				xScale.domain([
-					d3.min(v, (d: any) => { return parseDate(d.Time); }),
-					new Date(),
+					d3.min(v, (d: any) => { return d3.min(d.History, (c: any) => { return c.Time; }); }),
+					d3.max(v, (d: any) => { return d3.max(d.History, (c: any) => { return c.EndTime; }); }),
 				]);
-				svg.select('.x.axis')
+				chart.append('g')
+					.attr('class', 'y axis');
+				var legend = d3.select(elem[0])
+					.append('div')
+					.attr('class', 'legend');
+				var time_legend = legend
+					.append('div')
+					.text(tsdbFormat(new Date()));
+				var alert_legend = legend
+					.append('div')
+					.text('Alert');
+				yScale.domain([0, v.length]);
+				chart.select('.x.axis')
 					.transition()
 					.call(xAxis);
-				chart.selectAll('.bars')
+				v.forEach(function(a: any, i: number) {
+					chart.selectAll('.bars')
+						.data(a.History)
+						.enter()
+						.append('rect')
+						.attr('class', (d: any) => { return d.Status; } )
+						.attr('x', (d: any) => { return xScale(parseDate(d.Time)); })
+						.attr('y', yScale(i + 1))
+						.attr('height', height - yScale(.95))
+						.attr('width', (d: any) => {
+							return xScale(parseDate(d.EndTime)) - xScale(parseDate(d.Time));
+						})
+						.on('mousemove.x', mousemove_x)
+						.on('mousemove.y', function(d) {
+							alert_legend.text(a.Name);
+						})
+						.on('click', function(d, j) {
+							var id = 'panel' + i + '-' + j;
+							scope.shown['group' + i] = true;
+							scope.shown[id] = true;
+							scope.$apply();
+							$('html, body').scrollTop($("#" + id).offset().top);
+						});
+				});
+				chart.selectAll('.labels')
+					.data(v)
+					.enter()
+					.append('text')
+					.attr('text-anchor', 'end')
+					.attr('x', 0)
+					.attr('dx', '-.5em')
+					.attr('dy', '.25em')
+					.attr('y', function(d: any, i: number) { return yScale(i) - (height - yScale(.5));})
+					.text(function(d: any) { return d.Name;});
+				chart.selectAll('.sep')
 					.data(v)
 					.enter()
 					.append('rect')
-					.attr('class', (d: any) => { return d.Status; } )
-					.attr('x', (d: any) => { return xScale(parseDate(d.Time)); })
-					.attr('y', 0)
-					.attr('height', height)
-					.attr('width', (d: any, i: any) => {
-						return xScale(parseDate(d.EndTime)) - xScale(parseDate(d.Time));
-					})
-					.on('mousemove', mousemove)
-					.on('click', function(d, i) {
-						scope.$apply(scope.collapse(i));
-						$('html, body').scrollTop($("#panel" + i).offset().top);
-					});
-				function mousemove() {
+					.attr('y', function(d: any, i: number) { return yScale(i) - (height - yScale(.05));})
+					.attr('height', function(d: any, i: number) { return (height - yScale(.05));})
+					.attr('x', 0)
+					.attr('width', width)
+					.on('mousemove.x', mousemove_x);
+				function mousemove_x() {
 					var x = xScale.invert(d3.mouse(this)[0]);
-					legend
+					time_legend
 						.text(tsdbFormat(x));
 				}
 			};
