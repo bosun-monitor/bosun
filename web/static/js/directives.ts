@@ -211,7 +211,7 @@ function nfmt(s: any, mult: number, suffix: string, opts: any) {
 	}
 	if (n < 0) a = -a;
 	var r = a.toFixed(precision);
-	return r + suffix;
+	return +r + suffix;
 }
 
 tsafApp.filter('nfmt', function() {
