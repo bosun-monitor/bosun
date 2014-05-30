@@ -551,7 +551,7 @@ tsafApp.directive('tsGraph', [
                     resize();
                 }
                 function draw() {
-                    if (!data || !xScale) {
+                    if (!data) {
                         return;
                     }
                     var xdomain = [
