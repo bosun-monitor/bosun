@@ -70,6 +70,21 @@ tsafApp.directive('tsAckGroup', function() {
 				});
 				return url;
 			};
+			scope.history = () => {
+				var url = '/history?';
+				angular.forEach(scope.groups, (group) => {
+					if (!group.checked) {
+						return;
+					}
+					if (group.AlertKey) {
+						url += '&key=' + encodeURIComponent(group.AlertKey);
+					}
+					angular.forEach(group.Children, (child) => {
+						url += '&key=' + encodeURIComponent(child.AlertKey);
+					});
+				});
+				return url;
+			};
 		},
 	};
 });

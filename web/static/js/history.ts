@@ -8,27 +8,44 @@ interface IHistoryScope extends ITsafScope {
 
 tsafControllers.controller('HistoryCtrl', ['$scope', '$http', '$location', '$route', function($scope: IHistoryScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService) {
 	var search = $location.search();
-	$scope.ak = search.ak;
+	var keys: any = {};
+	if (angular.isArray(search.key)) {
+		angular.forEach(search.key, function(v) {
+			keys[v] = true;
+		});
+	} else {
+		keys[search.key] = true;
+	}
 	var status: any;
 	$scope.shown = {};
 	$scope.collapse = (i: any) => {
 		$scope.shown[i] = !$scope.shown[i];
 	};
+	var selected_alerts: string[] = [];
 	function done() {
-		var state = $scope.schedule.Status[$scope.ak];
-		if (!state) {
-			$scope.error = 'Alert Key: ' + $scope.ak + ' not found';
-			return;
-		}
-		$scope.alert_history = state.History.slice();
-		angular.forEach($scope.alert_history, function(h: any, i: number) {
-			if ( i+1 < $scope.alert_history.length) {
-				h.EndTime = $scope.alert_history[i+1].Time;
-			} else {
-				h.EndTime = moment.utc();
+		var status = $scope.schedule.Status;
+		angular.forEach(status, function(v, ak) {
+			if (!keys[ak]) {
+				return;
 			}
+			angular.forEach(v.History, function(h: any, i: number) {
+				if (i+1 < v.History.length) {
+					h.EndTime = v.History[i+1].Time;
+				} else {
+					h.EndTime = moment.utc();
+				}
+			});
+			v.History.reverse();
+			var dict: any = {};
+			dict['Name'] = ak;
+			dict['History'] = v.History;
+			selected_alerts.push(dict);
 		});
-		$scope.alert_history.reverse();
+		if (selected_alerts.length > 0) {
+			$scope.alert_history = selected_alerts;
+		} else {
+			$scope.error = 'No Matching Alerts Found';
+		}
 	}
 	if ($scope.schedule) {
 		done();
