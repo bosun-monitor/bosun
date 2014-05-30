@@ -299,7 +299,7 @@ tsafApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWin
 			function mouseover() {
 				var pt = d3.mouse(this);
 				mousex = pt[0];
-				if (data && width) {
+				if (data) {
 					drawLegend();
 				}
 			}

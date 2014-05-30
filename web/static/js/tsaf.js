@@ -485,7 +485,7 @@ tsafApp.directive('tsGraph', [
                 function mouseover() {
                     var pt = d3.mouse(this);
                     mousex = pt[0];
-                    if (data && width) {
+                    if (data) {
                         drawLegend();
                     }
                 }
