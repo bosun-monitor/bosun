@@ -1000,7 +1000,7 @@ declare module D3 {
             format: {
 
                 (specifier: string): TimeFormat;
-                utc: (specifier: string) => TimeFormat;
+                utc: any;
                 iso: TimeFormat;
                 multi: any;
             };
