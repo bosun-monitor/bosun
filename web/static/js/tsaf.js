@@ -436,7 +436,7 @@ function nfmt(s, mult, suffix, opts) {
     if (n < 0)
         a = -a;
     var r = a.toFixed(precision);
-    return r + suffix;
+    return +r + suffix;
 }
 
 tsafApp.filter('nfmt', function () {
@@ -477,7 +477,7 @@ tsafApp.directive('tsGraph', [
                 var svgWidth;
                 var width;
                 var yScale = d3.scale.linear().range([height, 0]);
-                var xScale;
+                var xScale = d3.time.scale.utc();
                 var xAxis = d3.svg.axis().orient('bottom');
                 var yAxis = d3.svg.axis().scale(yScale).orient('left').ticks(Math.min(10, height / 20)).tickFormat(fmtfilter);
                 var line;
@@ -501,7 +501,7 @@ tsafApp.directive('tsGraph', [
                 svg.append('g').attr('class', 'y axis');
                 var xloc = d3.select(elem[0]).append('div');
                 var legend = d3.select(elem[0]).append('div');
-                var color = d3.scale.category10();
+                var color = d3.scale.category20();
                 var mousex = 0;
                 var oldx = 0;
                 var data;
@@ -552,7 +552,7 @@ tsafApp.directive('tsGraph', [
                 function resize() {
                     svgWidth = elem.width();
                     width = svgWidth - margin.left - margin.right;
-                    xScale = d3.time.scale.utc().range([0, width]);
+                    xScale.range([0, width]);
                     xAxis.scale(xScale);
                     if (!mousex) {
                         mousex = width + 1;
@@ -576,7 +576,7 @@ tsafApp.directive('tsGraph', [
                     resize();
                 }
                 function draw() {
-                    if (!data || !xScale) {
+                    if (!data) {
                         return;
                     }
                     var xdomain = [
