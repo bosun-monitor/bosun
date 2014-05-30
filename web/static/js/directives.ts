@@ -159,7 +159,6 @@ tsafApp.directive('ahTimeLine', () => {
 				if (!angular.isArray(v) || v.length == 0) {
 					return;
 				}
-			//console.log(v);
 				xScale.domain([
 					d3.min(v, (d: any) => { return parseDate(d.Time); }),
 					new Date(),
