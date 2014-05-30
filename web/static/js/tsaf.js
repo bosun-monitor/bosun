@@ -476,7 +476,7 @@ tsafApp.directive('tsGraph', [
                 svg.append('g').attr('class', 'y axis');
                 var xloc = d3.select(elem[0]).append('div');
                 var legend = d3.select(elem[0]).append('div');
-                var color = d3.scale.category10();
+                var color = d3.scale.category20();
                 var mousex = 0;
                 var oldx = 0;
                 var data;
