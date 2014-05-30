@@ -376,7 +376,7 @@ tsafApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWin
 				resize();
 			}
 			function draw() {
-				if (!data || !xScale) {
+				if (!data) {
 					return;
 				}
 				var xdomain = [
