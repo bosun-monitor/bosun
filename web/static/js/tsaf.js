@@ -504,18 +504,17 @@ tsafApp.directive('tsGraph', [
                 var color = d3.scale.category20();
                 var mousex = 0;
                 var oldx = 0;
-                var data;
                 var focus = svg.append('g').attr('class', 'focus');
                 focus.append('line');
                 function mouseover() {
                     var pt = d3.mouse(this);
                     mousex = pt[0];
-                    if (data) {
+                    if (scope.data) {
                         drawLegend();
                     }
                 }
                 function drawLegend() {
-                    var names = legend.selectAll('.series').data(data, function (d) {
+                    var names = legend.selectAll('.series').data(scope.data, function (d) {
                         return d.name;
                     });
                     names.enter().append('div').attr('class', 'series');
@@ -572,20 +571,21 @@ tsafApp.directive('tsGraph', [
                     if (!angular.isArray(v) || v.length == 0) {
                         return;
                     }
-                    data = v;
+
+                    //scope.data = v;
                     resize();
                 }
                 function draw() {
-                    if (!data) {
+                    if (!scope.data) {
                         return;
                     }
                     var xdomain = [
-                        d3.min(data, function (d) {
+                        d3.min(scope.data, function (d) {
                             return d3.min(d.data, function (c) {
                                 return c.x;
                             });
                         }) * 1000,
-                        d3.max(data, function (d) {
+                        d3.max(scope.data, function (d) {
                             return d3.max(d.data, function (c) {
                                 return c.x;
                             });
@@ -598,12 +598,12 @@ tsafApp.directive('tsGraph', [
                     }
                     xScale.domain(xdomain);
                     yScale.domain([
-                        d3.min(data, function (d) {
+                        d3.min(scope.data, function (d) {
                             return d3.min(d.data, function (c) {
                                 return c.y;
                             });
                         }),
-                        d3.max(data, function (d) {
+                        d3.max(scope.data, function (d) {
                             return d3.max(d.data, function (c) {
                                 return c.y;
                             });
@@ -614,7 +614,7 @@ tsafApp.directive('tsGraph', [
                     }
                     svg.select('.x.axis').transition().call(xAxis);
                     svg.select('.y.axis').transition().call(yAxis);
-                    var queries = chart.selectAll('.line').data(data, function (d) {
+                    var queries = chart.selectAll('.line').data(scope.data, function (d) {
                         return d.name;
                     });
                     switch (scope.generator) {
