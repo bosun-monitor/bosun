@@ -319,20 +319,19 @@ tsafApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWin
 			var color = d3.scale.category20();
 			var mousex = 0;
 			var oldx = 0;
-			var data: any;
 			var focus = svg.append('g')
 				.attr('class', 'focus');
 			focus.append('line');
 			function mouseover() {
 				var pt = d3.mouse(this);
 				mousex = pt[0];
-				if (data) {
+				if (scope.data) {
 					drawLegend();
 				}
 			}
 			function drawLegend() {
 				var names = legend.selectAll('.series')
-					.data(data, (d) => { return d.name; });
+					.data(scope.data, (d) => { return d.name; });
 				names.enter()
 					.append('div')
 					.attr('class', 'series');
@@ -399,16 +398,16 @@ tsafApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWin
 				if (!angular.isArray(v) || v.length == 0) {
 					return;
 				}
-				data = v;
+				//scope.data = v;
 				resize();
 			}
 			function draw() {
-				if (!data) {
+				if (!scope.data) {
 					return;
 				}
 				var xdomain = [
-					d3.min(data, (d: any) => { return d3.min(d.data, (c: any) => { return c.x; }); }) * 1000,
-					d3.max(data, (d: any) => { return d3.max(d.data, (c: any) => { return c.x; }); }) * 1000,
+					d3.min(scope.data, (d: any) => { return d3.min(d.data, (c: any) => { return c.x; }); }) * 1000,
+					d3.max(scope.data, (d: any) => { return d3.max(d.data, (c: any) => { return c.x; }); }) * 1000,
 				];
 				if (!oldx) {
 					oldx = xdomain[1];
@@ -417,8 +416,8 @@ tsafApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWin
 				}
 				xScale.domain(xdomain);
 				yScale.domain([
-					d3.min(data, (d: any) => { return d3.min(d.data, (c: any) => { return c.y; }); }),
-					d3.max(data, (d: any) => { return d3.max(d.data, (c: any) => { return c.y; }); }),
+					d3.min(scope.data, (d: any) => { return d3.min(d.data, (c: any) => { return c.y; }); }),
+					d3.max(scope.data, (d: any) => { return d3.max(d.data, (c: any) => { return c.y; }); }),
 				]);
 				if (scope.generator == 'area') {
 					line.y0(yScale(0));
@@ -430,7 +429,7 @@ tsafApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWin
 					.transition()
 					.call(yAxis);
 				var queries = chart.selectAll('.line')
-					.data(data, (d) => { return d.name; });
+					.data(scope.data, (d) => { return d.name; });
 				switch (scope.generator) {
 				case 'area':
 					queries.enter()
