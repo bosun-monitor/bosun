@@ -72,7 +72,7 @@ func init() {
 // HTTPExtract populates the search indexes with OpenTSDB tags and metrics from
 // body. body is a JSON string of an OpenTSDB v2 /api/put request. body may be
 // gzipped.
-func HTTPExtract(body []byte) {
+func HTTPExtract(body []byte) error {
 	if r, err := gzip.NewReader(bytes.NewBuffer(body)); err == nil {
 		if b, err := ioutil.ReadAll(r); err == nil {
 			body = b
