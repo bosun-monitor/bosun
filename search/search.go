@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"sort"
 	"strings"
 	"sync"
@@ -86,8 +85,7 @@ func HTTPExtract(body []byte) {
 	if err := json.Unmarshal(body, &dp); err == nil {
 		mdp = append(mdp, &dp)
 	} else if err = json.Unmarshal(body, &mdp); err != nil {
-		log.Printf("search: could not unmarshal: %s", body)
-		return
+		return err
 	}
 	collect.Add("search.datapoints_relayed", nil, float64(len(mdp)))
 	select {
@@ -95,6 +93,7 @@ func HTTPExtract(body []byte) {
 	case <-time.After(time.Millisecond * 100):
 		collect.Add("search.timeout_drop", nil, 1)
 	}
+	return nil
 }
 
 func Process() {
