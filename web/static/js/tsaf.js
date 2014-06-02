@@ -530,7 +530,7 @@ tsafApp.directive('tsGraph', [
                         }
                         var pt = d.data[idx];
                         if (pt) {
-                            return d.name + ': ' + pt.y;
+                            return d.name + ': ' + fmtfilter(pt.y);
                         }
                     }).style('color', function (d) {
                         return color(d.name);
