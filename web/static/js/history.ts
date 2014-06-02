@@ -50,6 +50,7 @@ tsafControllers.controller('HistoryCtrl', ['$scope', '$http', '$location', '$rou
 	if ($scope.schedule) {
 		done();
 	} else {
-		$scope.refresh(done);
+		$scope.refresh()
+			.success(done);
 	}
 }]);
