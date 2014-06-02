@@ -29,8 +29,8 @@ tsafControllers.controller('HistoryCtrl', ['$scope', '$http', '$location', '$rou
 				return;
 			}
 			angular.forEach(v.History, function(h: any, i: number) {
-				if (i+1 < v.History.length) {
-					h.EndTime = v.History[i+1].Time;
+				if (i + 1 < v.History.length) {
+					h.EndTime = v.History[i + 1].Time;
 				} else {
 					h.EndTime = moment.utc();
 				}

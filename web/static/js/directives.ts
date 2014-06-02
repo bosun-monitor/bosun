@@ -16,14 +16,14 @@ tsafApp.directive("tsTime", function() {
 			scope.$watch(attrs.tsTime, (v: any) => {
 				var m = moment(v).utc();
 				var text = m.format(timeFormat) +
-				' (' +
-				m.fromNow() +
-				')';
+					' (' +
+					m.fromNow() +
+					')';
 				if (attrs.noLink) {
 					elem.text(m.format(timeFormat) + ' (' + m.fromNow() + ')');
 				} else {
 					var el = document.createElement('a');
-					el.innerText = text ;
+					el.innerText = text;
 					el.href = 'http://www.timeanddate.com/worldclock/converted.html?iso=';
 					el.href += m.format('YYYYMMDDTHHmm');
 					el.href += '&p1=0';
@@ -171,7 +171,7 @@ tsafApp.directive('ahTimeLine', () => {
 						.data(a.History)
 						.enter()
 						.append('rect')
-						.attr('class', (d: any) => { return d.Status; } )
+						.attr('class', (d: any) => { return d.Status; })
 						.attr('x', (d: any) => { return xScale(parseDate(d.Time)); })
 						.attr('y', yScale(i + 1))
 						.attr('height', height - yScale(.95))
@@ -198,14 +198,14 @@ tsafApp.directive('ahTimeLine', () => {
 					.attr('x', 0)
 					.attr('dx', '-.5em')
 					.attr('dy', '.25em')
-					.attr('y', function(d: any, i: number) { return yScale(i) - (height - yScale(.5));})
-					.text(function(d: any) { return d.Name;});
+					.attr('y', function(d: any, i: number) { return yScale(i) - (height - yScale(.5)); })
+					.text(function(d: any) { return d.Name; });
 				chart.selectAll('.sep')
 					.data(v)
 					.enter()
 					.append('rect')
-					.attr('y', function(d: any, i: number) { return yScale(i) - (height - yScale(.05));})
-					.attr('height', function(d: any, i: number) { return (height - yScale(.05));})
+					.attr('y', function(d: any, i: number) { return yScale(i) - (height - yScale(.05)); })
+					.attr('height', function(d: any, i: number) { return (height - yScale(.05)); })
 					.attr('x', 0)
 					.attr('width', width)
 					.on('mousemove.x', mousemove_x);
@@ -288,11 +288,11 @@ tsafApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWin
 				.tickFormat(fmtfilter);
 			var line: any;
 			switch (scope.generator) {
-			case 'area':
-				line = d3.svg.area();
-				break;
-			default:
-				line = d3.svg.line();
+				case 'area':
+					line = d3.svg.area();
+					break;
+				default:
+					line = d3.svg.line();
 			}
 			line.y((d: any) => { return yScale(d.y); });
 			line.x((d: any) => { return xScale(d.x * 1000); });
@@ -432,18 +432,18 @@ tsafApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWin
 				var queries = chart.selectAll('.line')
 					.data(scope.data, (d) => { return d.name; });
 				switch (scope.generator) {
-				case 'area':
-					queries.enter()
-						.append('path')
-						.attr('stroke', (d: any) => { return color(d.name); })
-						.attr('class', 'line')
-						.style('fill', (d: any) => { return color(d.name); });
-					break;
-				default:
-					queries.enter()
-						.append('path')
-						.attr('stroke', (d: any) => { return color(d.name); })
-						.attr('class', 'line');
+					case 'area':
+						queries.enter()
+							.append('path')
+							.attr('stroke', (d: any) => { return color(d.name); })
+							.attr('class', 'line')
+							.style('fill', (d: any) => { return color(d.name); });
+						break;
+					default:
+						queries.enter()
+							.append('path')
+							.attr('stroke', (d: any) => { return color(d.name); })
+							.attr('class', 'line');
 				}
 				queries.exit()
 					.remove();
