@@ -131,6 +131,7 @@ tsafControllers.controller('TsafCtrl', ['$scope', '$route', '$http', function($s
 		}
 	};
 	$scope.refresh = () => {
+		$scope.schedule = null;
 		return $http.get('/api/alerts').success(data => {
 			angular.forEach(data.Status, (v, k) => {
 				v.Touched = moment(v.Touched).utc();

@@ -111,6 +111,7 @@ tsafControllers.controller('TsafCtrl', [
             }
         };
         $scope.refresh = function () {
+            $scope.schedule = null;
             return $http.get('/api/alerts').success(function (data) {
                 angular.forEach(data.Status, function (v, k) {
                     v.Touched = moment(v.Touched).utc();
