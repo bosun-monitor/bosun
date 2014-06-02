@@ -494,7 +494,7 @@ tsafApp.directive('tsGraph', [
                 line.x(function (d) {
                     return xScale(d.x * 1000);
                 });
-                var svg = d3.select(elem[0]).append('svg').attr('height', svgHeight).append('g').attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
+                var svg = d3.select(elem[0]).append('svg').attr('height', svgHeight).attr('width', '100%').append('g').attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
                 var defs = svg.append('defs').append('clipPath').attr('id', 'clip').append('rect').attr('height', height);
                 var chart = svg.append('g').attr('pointer-events', 'all').attr('clip-path', 'url(#clip)');
                 svg.append('g').attr('class', 'x axis').attr('transform', 'translate(0,' + height + ')');

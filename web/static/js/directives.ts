@@ -299,6 +299,7 @@ tsafApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWin
 			var svg = d3.select(elem[0])
 				.append('svg')
 				.attr('height', svgHeight)
+				.attr('width', '100%')
 				.append('g')
 				.attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
 			var defs = svg.append('defs')
