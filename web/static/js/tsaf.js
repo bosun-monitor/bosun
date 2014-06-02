@@ -110,8 +110,8 @@ tsafControllers.controller('TsafCtrl', [
                     return "panel-default";
             }
         };
-        $scope.refresh = function (cb) {
-            $http.get('/api/alerts').success(function (data) {
+        $scope.refresh = function () {
+            return $http.get('/api/alerts').success(function (data) {
                 angular.forEach(data.Status, function (v, k) {
                     v.Touched = moment(v.Touched).utc();
                     angular.forEach(v.History, function (v, k) {
@@ -121,9 +121,6 @@ tsafControllers.controller('TsafCtrl', [
                 });
                 $scope.schedule = data;
                 $scope.timeanddate = data.TimeAndDate;
-                if (cb) {
-                    cb();
-                }
             });
         };
     }]);
@@ -211,7 +208,13 @@ tsafControllers.controller('ConfigCtrl', [
     }]);
 tsafControllers.controller('DashboardCtrl', [
     '$scope', function ($scope) {
-        $scope.refresh();
+        $scope.loading = 'Loading';
+        $scope.error = '';
+        $scope.refresh().success(function () {
+            $scope.loading = '';
+        }).error(function (err) {
+            $scope.error = 'Unable to fetch alerts: ' + err;
+        });
     }]);
 tsafApp.directive('tsResults', function () {
     return {
@@ -1461,6 +1464,6 @@ tsafControllers.controller('HistoryCtrl', [
         if ($scope.schedule) {
             done();
         } else {
-            $scope.refresh(done);
+            $scope.refresh().success(done);
         }
     }]);

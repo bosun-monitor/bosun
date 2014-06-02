@@ -92,7 +92,7 @@ interface ITsafScope extends ng.IScope {
 	timeanddate: number[];
 	schedule: any;
 	req_from_m: (m: string) => Request;
-	refresh: (cb?: () => void) => void;
+	refresh: () => any;
 }
 
 tsafControllers.controller('TsafCtrl', ['$scope', '$route', '$http', function($scope: ITsafScope, $route: ng.route.IRouteService, $http: ng.IHttpService) {
@@ -130,8 +130,8 @@ tsafControllers.controller('TsafCtrl', ['$scope', '$route', '$http', function($s
 			default: return "panel-default";
 		}
 	};
-	$scope.refresh = (cb: () => void) => {
-		$http.get('/api/alerts').success(data => {
+	$scope.refresh = () => {
+		return $http.get('/api/alerts').success(data => {
 			angular.forEach(data.Status, (v, k) => {
 				v.Touched = moment(v.Touched).utc();
 				angular.forEach(v.History, (v, k) => {
@@ -141,9 +141,6 @@ tsafControllers.controller('TsafCtrl', ['$scope', '$route', '$http', function($s
 			});
 			$scope.schedule = data;
 			$scope.timeanddate = data.TimeAndDate;
-			if (cb) {
-				cb();
-			}
 		});
 	};
 }]);
