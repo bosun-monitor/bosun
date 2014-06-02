@@ -349,7 +349,7 @@ tsafApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWin
 						}
 						var pt = d.data[idx];
 						if (pt) {
-							return d.name + ': ' + pt.y;
+							return d.name + ': ' + fmtfilter(pt.y);
 						}
 					})
 					.style('color', (d: any) => { return color(d.name); });
