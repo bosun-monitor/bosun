@@ -30,7 +30,10 @@ var client = &http.Client{
 
 func handle(dest string, w http.ResponseWriter, r *http.Request) {
 	body, _ := ioutil.ReadAll(r.Body)
-	search.HTTPExtract(body)
+	if err := search.HTTPExtract(body); err != nil {
+		log.Printf("search: %s: %s", r.RemoteAddr, string(body))
+		return
+	}
 	durl := url.URL{
 		Scheme: "http",
 		Host:   dest,
