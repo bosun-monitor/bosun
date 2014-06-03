@@ -22,7 +22,11 @@ func Expr(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 	if err != nil {
 		return nil, err
 	}
-	res, queries, err := e.Execute(opentsdb.NewCache(schedule.Conf.TsdbHost, schedule.Conf.ResponseLimit), t)
+	now, err := getTime(r)
+	if err != nil {
+		return nil, err
+	}
+	res, queries, err := e.ExecuteOpts(opentsdb.NewCache(schedule.Conf.TsdbHost, schedule.Conf.ResponseLimit), t, now, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -41,6 +45,19 @@ func Expr(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 		}
 	}
 	return ret, nil
+}
+
+func getTime(r *http.Request) (now time.Time, err error) {
+	now = time.Now().UTC()
+	if fd := r.FormValue("date"); len(fd) > 0 {
+		if ft := r.FormValue("time"); len(ft) > 0 {
+			fd += " " + ft
+		} else {
+			fd += " " + now.Format("15:04")
+		}
+		now, err = time.Parse("2006-01-02 15:04", fd)
+	}
+	return
 }
 
 type Res struct {
@@ -71,18 +88,9 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 		return nil, fmt.Errorf("exactly one alert must be defined")
 	}
 	s := &sched.Schedule{}
-	now := time.Now().UTC()
-	if fd := r.FormValue("date"); len(fd) > 0 {
-		if ft := r.FormValue("time"); len(ft) > 0 {
-			fd += " " + ft
-		} else {
-			fd += " " + now.Format("15:04")
-		}
-		if t, err := time.Parse("2006-01-02 15:04", fd); err == nil {
-			now = t
-		} else {
-			return nil, err
-		}
+	now, err := getTime(r)
+	if err != nil {
+		return nil, err
 	}
 	s.CheckStart = now
 	s.Init(c)

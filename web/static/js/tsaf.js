@@ -647,20 +647,23 @@ tsafApp.directive('tsGraph', [
     }]);
 tsafControllers.controller('ExprCtrl', [
     '$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
-        var current = $location.hash();
+        var search = $location.search();
+        var current;
         try  {
-            current = atob(current);
+            current = atob(search.expr);
         } catch (e) {
             current = '';
         }
         if (!current) {
-            $location.hash(btoa('avg(q("avg:rate:os.cpu{host=ny-devtsaf01}", "5m", "")) > 80'));
+            $location.search('expr', btoa('avg(q("avg:rate:os.cpu{host=ny-devtsaf01}", "5m", "")) > 80'));
             return;
         }
+        $scope.date = search.date || '';
+        $scope.time = search.time || '';
         $scope.expr = current;
         $scope.running = current;
         $scope.tab = 'results';
-        $http.get('/api/expr?q=' + encodeURIComponent(current)).success(function (data) {
+        $http.get('/api/expr?q=' + encodeURIComponent(current) + '&date=' + encodeURIComponent($scope.date) + '&time=' + encodeURIComponent($scope.time)).success(function (data) {
             $scope.result = data.Results;
             $scope.queries = data.Queries;
             $scope.result_type = data.Type;
@@ -674,7 +677,12 @@ tsafControllers.controller('ExprCtrl', [
             $scope.running = '';
         });
         $scope.set = function () {
-            $location.hash(btoa($scope.expr));
+            $location.search('expr', btoa($scope.expr));
+            if (typeof $scope.date == 'object') {
+                $scope.date = moment($scope.date).utc().format('YYYY-MM-DD');
+            }
+            $location.search('date', $scope.date || null);
+            $location.search('time', $scope.time || null);
             $route.reload();
         };
         function toRickshaw(res) {

@@ -1,4 +1,4 @@
-interface ISilenceScope extends IExprScope {
+interface ISilenceScope extends ng.IScope {
 	silences: any;
 	error: string;
 	start: string;
