@@ -3,6 +3,11 @@
 		margin-bottom: 15px;
 		margin-top: 15px;
 	}
+	.brush .extent {
+		stroke: #fff;
+		fill-opacity: .125;
+		shape-rendering: crispEdges;
+	}
 </style>
 <div class="row">
 	<div class="col-sm-12">
@@ -122,7 +127,7 @@
 </div>
 <div class="row">
 	<div class="col-lg-12">
-		<div id="chart" ts-graph data="result" height="400"></div>
+		<div id="chart" ts-graph data="result" height="400" bstart="start" bend="end" enable-brush="true"></div>
 	</div>
 </div>
 <div class="row" ng-show="queries">
