@@ -412,7 +412,6 @@ tsafApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWin
 				if (!angular.isArray(v) || v.length == 0) {
 					return;
 				}
-				//scope.data = v;
 				resize();
 			}
 			function draw() {
