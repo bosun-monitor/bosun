@@ -271,6 +271,9 @@ tsafApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWin
 			data: '=',
 			height: '=',
 			generator: '=',
+			brushStart: '=bstart',
+			brushEnd: '=bend',
+			enableBrush: '@',
 		},
 		link: (scope: any, elem: any, attrs: any) => {
 			var svgHeight = +scope.height || 150;
@@ -294,6 +297,9 @@ tsafApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWin
 				default:
 					line = d3.svg.line();
 			}
+			var brush = d3.svg.brush()
+				.x(xScale)
+				.on('brush', brushed);
 			line.y((d: any) => { return yScale(d.y); });
 			line.x((d: any) => { return xScale(d.x * 1000); });
 			var top = d3.select(elem[0])
@@ -316,6 +322,9 @@ tsafApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWin
 				.attr('transform', 'translate(0,' + height + ')');
 			svg.append('g')
 				.attr('class', 'y axis');
+			var paths = chart.append('g');
+			chart.append('g')
+				.attr('class', 'x brush');
 			top.append('rect')
 				.style('opacity', 0)
 				.attr('x', 0)
@@ -329,9 +338,10 @@ tsafApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWin
 			var mousex = 0;
 			var oldx = 0;
 			var focus = svg.append('g')
-				.attr('class', 'focus');
+				.attr('class', 'focus')
+				.style('pointer-events', 'none');
 			focus.append('line');
-			function mouseover() {
+			function mousemove() {
 				var pt = d3.mouse(this);
 				mousex = pt[0];
 				if (scope.data) {
@@ -396,15 +406,6 @@ tsafApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWin
 				defs.attr('width', width);
 				xAxis.ticks(width / 60);
 				draw();
-				chart.selectAll('rect.click-capture').remove();
-				chart.append('rect')
-					.attr('class', 'click-capture')
-					.style('visibility', 'hidden')
-					.attr('x', 0)
-					.attr('y', 0)
-					.attr('height', height)
-					.attr('width', width)
-					.on('mousemove', mouseover);
 			}
 			var oldx = 0;
 			var bisect = d3.bisector((d) => { return d.x; }).right;
@@ -446,7 +447,7 @@ tsafApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWin
 				svg.select('.y.axis')
 					.transition()
 					.call(yAxis);
-				var queries = chart.selectAll('.line')
+				var queries = paths.selectAll('.line')
 					.data(scope.data, (d) => { return d.name; });
 				switch (scope.generator) {
 					case 'area':
@@ -470,9 +471,24 @@ tsafApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWin
 					.transition()
 					.ease('linear')
 					.attr('transform', 'translate(' + (xScale(oldx) - xScale(xdomain[1])) + ')');
+				if (scope.enableBrush) {
+					chart.select('.x.brush')
+						.call(brush)
+						.selectAll('rect')
+						.attr('height', height);
+				}
+				chart.select('.x.brush')
+					.on('mousemove', mousemove);
 				oldx = xdomain[1];
 				drawLegend();
 			};
+			function brushed() {
+				var e = brush.extent();
+				var mfmt = 'YYYY/MM/DD-HH:mm:ss';
+				scope.brushStart = moment(e[0]).utc().format(mfmt);
+				scope.brushEnd = moment(e[1]).utc().format(mfmt);
+				scope.$apply();
+			}
 		},
 	};
 }]);
