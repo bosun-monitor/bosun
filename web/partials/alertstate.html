@@ -24,7 +24,7 @@
 	<div class="row">
 		<div class="col-sm-3 text-right"><strong>Expr</strong></div>
 		<div class="col-sm-9">
-			<a ng-href="/expr#{{btoa(state.Expr)}}" ng-bind="zws(state.Expr)"></a>
+			<a ng-href="/expr?expr={{btoa(state.Expr)}}" ng-bind="zws(state.Expr)"></a>
 		</div>
 	</div>
 	<div class="row">
@@ -52,7 +52,7 @@
 		</thead>
 		<tbody>
 			<tr ng-repeat="c in state.Computations">
-				<td><a ng-href="/expr#{{btoa(c.Text)}}" ng-bind="c.Text"></a></td>
+				<td><a ng-href="/expr?expr={{btoa(c.Text)}}" ng-bind="c.Text"></a></td>
 				<td ng-bind="c.Value"></td>
 			</tr>
 		</tbody>
