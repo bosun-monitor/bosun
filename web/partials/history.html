@@ -73,7 +73,7 @@
 									</thead>
 									<tbody>
 										<tr ng-repeat="c in v.Warn.Computations">
-											<td><a ng-href="/expr#{{btoa(c.Text)}}" ng-bind="c.Text"></a></td>
+											<td><a ng-href="/expr?expr={{btoa(c.Text)}}" ng-bind="c.Text"></a></td>
 											<td ng-bind="c.Value"></td>
 										</tr>
 									</tbody>
@@ -89,7 +89,7 @@
 									</thead>
 									<tbody>
 										<tr ng-repeat="c in v.Crit.Computations">
-											<td><a ng-href="/expr#{{btoa(c.Text)}}" ng-bind="c.Text"></a></td>
+											<td><a ng-href="/expr?expr={{btoa(c.Text)}}" ng-bind="c.Text"></a></td>
 											<td ng-bind="c.Value"></td>
 										</tr>
 									</tbody>
