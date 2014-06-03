@@ -9,24 +9,32 @@ interface IExprScope extends ng.IScope {
 	tab: string;
 	graph: any;
 	svg_url: string;
+	date: string;
+	time: string;
 }
 
 tsafControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route', function($scope: IExprScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService) {
-	var current = $location.hash();
+	var search = $location.search();
+	var current: string;
 	try {
-		current = atob(current);
+		current = atob(search.expr);
 	}
 	catch (e) {
 		current = '';
 	}
 	if (!current) {
-		$location.hash(btoa('avg(q("avg:rate:os.cpu{host=ny-devtsaf01}", "5m", "")) > 80'));
+		$location.search('expr', btoa('avg(q("avg:rate:os.cpu{host=ny-devtsaf01}", "5m", "")) > 80'));
 		return;
 	}
+	$scope.date = search.date || '';
+	$scope.time = search.time || '';
 	$scope.expr = current;
 	$scope.running = current;
 	$scope.tab = 'results';
-	$http.get('/api/expr?q=' + encodeURIComponent(current))
+	$http.get('/api/expr?q=' +
+		encodeURIComponent(current) +
+		'&date=' + encodeURIComponent($scope.date) +
+		'&time=' + encodeURIComponent($scope.time))
 		.success((data) => {
 			$scope.result = data.Results;
 			$scope.queries = data.Queries;
@@ -42,7 +50,12 @@ tsafControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route'
 			$scope.running = '';
 		});
 	$scope.set = () => {
-		$location.hash(btoa($scope.expr));
+		$location.search('expr', btoa($scope.expr));
+		if (typeof $scope.date == 'object') {
+			$scope.date = moment($scope.date).utc().format('YYYY-MM-DD');
+		}
+		$location.search('date', $scope.date || null);
+		$location.search('time', $scope.time || null);
 		$route.reload();
 	};
 	function toRickshaw(res: any) {
