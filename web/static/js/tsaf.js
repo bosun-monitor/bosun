@@ -498,11 +498,13 @@ tsafApp.directive('tsGraph', [
                 line.x(function (d) {
                     return xScale(d.x * 1000);
                 });
-                var svg = d3.select(elem[0]).append('svg').attr('height', svgHeight).attr('width', '100%').append('g').attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
+                var top = d3.select(elem[0]).append('svg').attr('height', svgHeight).attr('width', '100%');
+                var svg = top.append('g').attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
                 var defs = svg.append('defs').append('clipPath').attr('id', 'clip').append('rect').attr('height', height);
                 var chart = svg.append('g').attr('pointer-events', 'all').attr('clip-path', 'url(#clip)');
                 svg.append('g').attr('class', 'x axis').attr('transform', 'translate(0,' + height + ')');
                 svg.append('g').attr('class', 'y axis');
+                top.append('rect').style('opacity', 0).attr('x', 0).attr('y', 0).attr('height', height).attr('width', margin.left).on('click', yaxisToggle);
                 var xloc = d3.select(elem[0]).append('div');
                 var legend = d3.select(elem[0]).append('div');
                 var color = d3.scale.category20();
@@ -516,6 +518,11 @@ tsafApp.directive('tsGraph', [
                     if (scope.data) {
                         drawLegend();
                     }
+                }
+                var yaxisZero = false;
+                function yaxisToggle() {
+                    yaxisZero = !yaxisZero;
+                    draw();
                 }
                 function drawLegend() {
                     var names = legend.selectAll('.series').data(scope.data, function (d) {
@@ -597,22 +604,27 @@ tsafApp.directive('tsGraph', [
                     ];
                     if (!oldx) {
                         oldx = xdomain[1];
-                    } else if (oldx == xdomain[1]) {
-                        return;
                     }
                     xScale.domain(xdomain);
-                    yScale.domain([
-                        d3.min(scope.data, function (d) {
-                            return d3.min(d.data, function (c) {
-                                return c.y;
-                            });
-                        }),
-                        d3.max(scope.data, function (d) {
-                            return d3.max(d.data, function (c) {
-                                return c.y;
-                            });
-                        })
-                    ]);
+                    var ymin = d3.min(scope.data, function (d) {
+                        return d3.min(d.data, function (c) {
+                            return c.y;
+                        });
+                    });
+                    var ymax = d3.max(scope.data, function (d) {
+                        return d3.max(d.data, function (c) {
+                            return c.y;
+                        });
+                    });
+                    if (yaxisZero) {
+                        if (ymin > 0) {
+                            ymin = 0;
+                        } else if (ymax < 0) {
+                            ymax = 0;
+                        }
+                    }
+                    var ydomain = [ymin, ymax];
+                    yScale.domain(ydomain);
                     if (scope.generator == 'area') {
                         line.y0(yScale(0));
                     }
