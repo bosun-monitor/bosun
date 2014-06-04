@@ -511,8 +511,13 @@ tsafApp.directive('tsGraph', [
                 var paths = chart.append('g');
                 chart.append('g').attr('class', 'x brush');
                 top.append('rect').style('opacity', 0).attr('x', 0).attr('y', 0).attr('height', height).attr('width', margin.left).on('click', yaxisToggle);
-                var xloc = d3.select(elem[0]).append('div');
+                var legendTop = d3.select(elem[0]).append('div');
+                var xloc = legendTop.append('div');
+                xloc.style('float', 'left');
+                var brushText = legendTop.append('div');
+                brushText.style('float', 'right');
                 var legend = d3.select(elem[0]).append('div');
+                legend.style('clear', 'both');
                 var color = d3.scale.category20();
                 var mousex = 0;
                 var oldx = 0;
@@ -556,6 +561,13 @@ tsafApp.directive('tsGraph', [
                         x = 0;
                     }
                     focus.select('line').attr('x1', x).attr('x2', x).attr('y1', 0).attr('y2', height);
+                    if (extentStart) {
+                        var s = extentStart;
+                        if (extentEnd != extentStart) {
+                            s += ' - ' + extentEnd;
+                        }
+                        brushText.text(s);
+                    }
                 }
                 scope.$watch('data', update);
                 var w = angular.element($window);
@@ -652,20 +664,28 @@ tsafApp.directive('tsGraph', [
                     queries.attr('d', function (d) {
                         return line(d.data);
                     }).attr('transform', null).transition().ease('linear').attr('transform', 'translate(' + (xScale(oldx) - xScale(xdomain[1])) + ')');
-                    if (scope.enableBrush) {
-                        chart.select('.x.brush').call(brush).selectAll('rect').attr('height', height);
-                    }
-                    chart.select('.x.brush').on('mousemove', mousemove);
+                    chart.select('.x.brush').call(brush).selectAll('rect').attr('height', height).on('mousemove', mousemove);
+                    chart.select('.x.brush .extent').style('stroke', '#fff').style('fill-opacity', '.125').style('shape-rendering', 'crispEdges');
                     oldx = xdomain[1];
                     drawLegend();
                 }
                 ;
+                var extentStart;
+                var extentEnd;
                 function brushed() {
-                    var e = brush.extent();
-                    var mfmt = 'YYYY/MM/DD-HH:mm:ss';
-                    scope.brushStart = moment(e[0]).utc().format(mfmt);
-                    scope.brushEnd = moment(e[1]).utc().format(mfmt);
-                    scope.$apply();
+                    var extent = brush.extent();
+                    extentStart = datefmt(extent[0]);
+                    extentEnd = datefmt(extent[1]);
+                    drawLegend();
+                    if (scope.enableBrush) {
+                        scope.brushStart = extentStart;
+                        scope.brushEnd = extentEnd;
+                        scope.$apply();
+                    }
+                }
+                var mfmt = 'YYYY/MM/DD-HH:mm:ss';
+                function datefmt(d) {
+                    return moment(d).utc().format(mfmt);
                 }
             }
         };

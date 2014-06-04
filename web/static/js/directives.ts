@@ -332,8 +332,13 @@ tsafApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWin
 				.attr('height', height)
 				.attr('width', margin.left)
 				.on('click', yaxisToggle);
-			var xloc = d3.select(elem[0]).append('div');
+			var legendTop = d3.select(elem[0]).append('div');
+			var xloc = legendTop.append('div');
+			xloc.style('float', 'left');
+			var brushText = legendTop.append('div');
+			brushText.style('float', 'right');
 			var legend = d3.select(elem[0]).append('div');
+			legend.style('clear', 'both');
 			var color = d3.scale.category20();
 			var mousex = 0;
 			var oldx = 0;
@@ -385,6 +390,13 @@ tsafApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWin
 					.attr('x2', x)
 					.attr('y1', 0)
 					.attr('y2', height);
+				if (extentStart) {
+					var s = extentStart;
+					if (extentEnd != extentStart) {
+						s += ' - ' + extentEnd;
+					}
+					brushText.text(s);
+				}
 			}
 			scope.$watch('data', update);
 			var w = angular.element($window);
@@ -471,23 +483,34 @@ tsafApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWin
 					.transition()
 					.ease('linear')
 					.attr('transform', 'translate(' + (xScale(oldx) - xScale(xdomain[1])) + ')');
-				if (scope.enableBrush) {
-					chart.select('.x.brush')
-						.call(brush)
-						.selectAll('rect')
-						.attr('height', height);
-				}
 				chart.select('.x.brush')
+					.call(brush)
+					.selectAll('rect')
+					.attr('height', height)
 					.on('mousemove', mousemove);
+				chart.select('.x.brush .extent')
+					.style('stroke', '#fff')
+					.style('fill-opacity', '.125')
+					.style('shape-rendering', 'crispEdges');
 				oldx = xdomain[1];
 				drawLegend();
 			};
+			var extentStart: string;
+			var extentEnd: string;
 			function brushed() {
-				var e = brush.extent();
-				var mfmt = 'YYYY/MM/DD-HH:mm:ss';
-				scope.brushStart = moment(e[0]).utc().format(mfmt);
-				scope.brushEnd = moment(e[1]).utc().format(mfmt);
-				scope.$apply();
+				var extent = brush.extent();
+				extentStart = datefmt(extent[0]);
+				extentEnd = datefmt(extent[1]);
+				drawLegend();
+				if (scope.enableBrush) {
+					scope.brushStart = extentStart;
+					scope.brushEnd = extentEnd;
+					scope.$apply();
+				}
+			}
+			var mfmt = 'YYYY/MM/DD-HH:mm:ss';
+			function datefmt(d: any) {
+				return moment(d).utc().format(mfmt);
 			}
 		},
 	};
