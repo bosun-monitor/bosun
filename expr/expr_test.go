@@ -76,6 +76,7 @@ func TestExprParse(t *testing.T) {
 	}
 }
 
+/*
 const TSDBHost = "ny-devtsdb04:4242"
 
 func TestExprQuery(t *testing.T) {
@@ -88,3 +89,4 @@ func TestExprQuery(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+*/
