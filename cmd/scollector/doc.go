@@ -59,7 +59,7 @@ SNMP
 
 By default, scollector will collect data from the current host and report it to the TSDB server. scollector has an SNMP mode where it instead polls a given host:
 
-	scollector -s community@host`
+	scollector -s community@host[,community@host...]
 
 Poll frequency currently defaults to 5 minutes. Some common OIDs regarding interfaces are collected. Others can be added easily.
 
