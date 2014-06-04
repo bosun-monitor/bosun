@@ -52,7 +52,7 @@ var (
 	// Each Record
 	MetricTags = make(MTSMap)
 
-	lock = sync.RWMutex{}
+	Lock = sync.RWMutex{}
 )
 
 type Present map[string]interface{}
@@ -98,7 +98,7 @@ func HTTPExtract(body []byte) error {
 
 func Process() {
 	for mdp := range dc {
-		lock.Lock()
+		Lock.Lock()
 		for _, dp := range mdp {
 			var mts MetricTagSet
 			mts.Metric = dp.Metric
@@ -124,13 +124,13 @@ func Process() {
 				Tagv[q][v] = nil
 			}
 		}
-		lock.Unlock()
+		Lock.Unlock()
 	}
 }
 
 func UniqueMetrics() []string {
-	lock.RLock()
-	defer lock.RUnlock()
+	Lock.RLock()
+	defer Lock.RUnlock()
 	metrics := make([]string, len(Tagk))
 	i := 0
 	for k := range Tagk {
@@ -142,8 +142,8 @@ func UniqueMetrics() []string {
 }
 
 func TagValuesByTagKey(tagk string) []string {
-	lock.RLock()
-	defer lock.RUnlock()
+	Lock.RLock()
+	defer Lock.RUnlock()
 	tagvset := make(map[string]bool)
 	for _, metric := range UniqueMetrics() {
 		for _, tagv := range TagValuesByMetricTagKey(metric, tagk) {
@@ -162,8 +162,8 @@ func TagValuesByTagKey(tagk string) []string {
 }
 
 func MetricsByTagPair(tagk, tagv string) []string {
-	lock.RLock()
-	defer lock.RUnlock()
+	Lock.RLock()
+	defer Lock.RUnlock()
 	r := make([]string, 0)
 	for k := range Metric[Query{tagk, tagv}] {
 		r = append(r, k)
@@ -173,8 +173,8 @@ func MetricsByTagPair(tagk, tagv string) []string {
 }
 
 func TagKeysByMetric(metric string) []string {
-	lock.RLock()
-	defer lock.RUnlock()
+	Lock.RLock()
+	defer Lock.RUnlock()
 	var r []string
 	for k := range Tagk[metric] {
 		r = append(r, k)
@@ -184,8 +184,8 @@ func TagKeysByMetric(metric string) []string {
 }
 
 func TagValuesByMetricTagKey(metric, tagk string) []string {
-	lock.RLock()
-	defer lock.RUnlock()
+	Lock.RLock()
+	defer Lock.RUnlock()
 	var r []string
 	for k := range Tagv[Query{metric, tagk}] {
 		r = append(r, k)
@@ -195,8 +195,8 @@ func TagValuesByMetricTagKey(metric, tagk string) []string {
 }
 
 func FilteredTagValuesByMetricTagKey(metric, tagk string, tsf map[string]string) []string {
-	lock.RLock()
-	defer lock.RUnlock()
+	Lock.RLock()
+	defer Lock.RUnlock()
 	tagvset := make(map[string]bool)
 	for _, mts := range MetricTags {
 		if metric == mts.Metric {

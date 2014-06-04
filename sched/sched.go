@@ -320,6 +320,8 @@ func (s *Schedule) Save() {
 
 func (s *Schedule) save() {
 	s.Lock()
+	search.Lock.Lock()
+	defer search.Lock.Unlock()
 	defer s.Unlock()
 	f, err := os.Create(s.Conf.StateFile)
 	if err != nil {
