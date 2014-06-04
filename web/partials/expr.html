@@ -41,7 +41,7 @@
 <div class="row">
 	<div class="col-sm-12">
 		<div class="form-group">
-			<input type="text" class="form-control" ng-model="expr" ng-init="eval()">
+			<input type="text" class="form-control" ng-model="expr" ng-keydown="keydown($event)" ng-init="eval()">
 		</div>
 		<form class="form-inline">
 			<div class="form-group">

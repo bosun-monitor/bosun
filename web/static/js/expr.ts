@@ -11,6 +11,7 @@ interface IExprScope extends ng.IScope {
 	svg_url: string;
 	date: string;
 	time: string;
+	keydown: ($event: any) => void;
 }
 
 tsafControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route', function($scope: IExprScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService) {
@@ -86,5 +87,10 @@ tsafControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route'
 			graph[idx] = series;
 		});
 		return graph;
+	}
+	$scope.keydown = function($event: any) {
+		if ($event.keyCode == 13) {
+			$scope.set();
+		}
 	}
 }]);
