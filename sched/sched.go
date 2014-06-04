@@ -248,6 +248,8 @@ func (s *Schedule) Load(c *conf.Conf) {
 func (s *Schedule) RestoreState() {
 	s.Lock()
 	defer s.Unlock()
+	search.Lock.Lock()
+	defer search.Lock.Unlock()
 	s.Notifications = nil
 	f, err := os.Open(s.Conf.StateFile)
 	if err != nil {
