@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/StackExchange/tsaf/_third_party/github.com/StackExchange/scollector/opentsdb"
+	"github.com/StackExchange/tsaf/_third_party/github.com/bradfitz/slice"
 	"github.com/StackExchange/tsaf/conf"
 	"github.com/StackExchange/tsaf/expr"
 	"github.com/StackExchange/tsaf/search"
@@ -207,6 +208,23 @@ func (s *Schedule) MarshalJSON() ([]byte, error) {
 		}
 	}
 	s.Unlock()
+	gsort := func(grp []*Grouped) func(i, j int) bool {
+		return func(i, j int) bool {
+			a := grp[i]
+			b := grp[j]
+			if a.Active && !b.Active {
+				return true
+			} else if !a.Active && b.Active {
+				return false
+			}
+			if a.Status != b.Status {
+				return a.Status > b.Status
+			}
+			return a.AlertKey < b.AlertKey
+		}
+	}
+	slice.Sort(t.Groups.NeedAck, gsort(t.Groups.NeedAck))
+	slice.Sort(t.Groups.Acknowledged, gsort(t.Groups.Acknowledged))
 	return json.Marshal(&t)
 }
 
