@@ -146,7 +146,7 @@ func Action(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (inter
 type MultiError map[string]error
 
 func (m MultiError) Error() string {
-	return fmt.Sprint(m)
+	return fmt.Sprint(map[string]error(m))
 }
 
 func SilenceGet(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
