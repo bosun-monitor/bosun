@@ -125,12 +125,14 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 	return struct {
 		Body    string
 		Subject string
+		Data    interface{}
 		Result  map[sched.AlertKey]*sched.Event
 		Warning []string
 		Time    int64
 	}{
 		string(b),
 		string(sub),
+		s.Data(instance, a),
 		s.RunHistory,
 		warning,
 		now.Unix(),

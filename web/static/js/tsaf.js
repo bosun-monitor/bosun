@@ -1245,6 +1245,7 @@ tsafControllers.controller('RuleCtrl', [
             $http.get('/api/rule?' + 'alert=' + encodeURIComponent($scope.alert) + '&template=' + encodeURIComponent($scope.template) + '&date=' + encodeURIComponent($scope.date) + '&time=' + encodeURIComponent($scope.time)).success(function (data) {
                 $scope.subject = data.Subject;
                 $scope.body = data.Body;
+                $scope.data = JSON.stringify(data.Data, null, '  ');
                 $scope.resultTime = moment.unix(data.Time).utc().format('YYYY-MM-DD HH:mm:ss');
                 $scope.results = [];
                 angular.forEach(data.Result, function (v, k) {

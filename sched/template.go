@@ -14,15 +14,15 @@ import (
 	"github.com/StackExchange/tsaf/expr"
 )
 
-type context struct {
+type Context struct {
 	*State
 	Alert *conf.Alert
 
 	schedule *Schedule
 }
 
-func (s *Schedule) data(st *State, a *conf.Alert) *context {
-	return &context{
+func (s *Schedule) Data(st *State, a *conf.Alert) *Context {
+	return &Context{
 		State:    st,
 		Alert:    a,
 		schedule: s,
@@ -64,21 +64,21 @@ func (s *Schedule) URL() *url.URL {
 }
 
 // Ack returns the URL to acknowledge an alert.
-func (c *context) Ack() string {
+func (c *Context) Ack() string {
 	u := c.schedule.URL()
 	u.Path = fmt.Sprintf("/api/acknowledge/%s/%s", c.Alert.Name, c.State.Group.String())
 	return u.String()
 }
 
 // HostView returns the URL to the host view page.
-func (c *context) HostView(host string) string {
+func (c *Context) HostView(host string) string {
 	u := c.schedule.URL()
 	u.Path = "/host"
 	u.RawQuery = fmt.Sprintf("time=1d-ago&host=%s", host)
 	return u.String()
 }
 
-func (c *context) Expr(v string) string {
+func (c *Context) Expr(v string) string {
 	q := url.QueryEscape("q=" + opentsdb.ReplaceTags(v, c.Group))
 	u := url.URL{
 		Scheme:   "http",
@@ -101,7 +101,7 @@ func (s *Schedule) ExecuteBody(w io.Writer, a *conf.Alert, st *State) error {
 	if t == nil || t.Body == nil {
 		return nil
 	}
-	return t.Body.Execute(w, s.data(st, a))
+	return t.Body.Execute(w, s.Data(st, a))
 }
 
 func (s *Schedule) ExecuteSubject(w io.Writer, a *conf.Alert, st *State) error {
@@ -109,7 +109,7 @@ func (s *Schedule) ExecuteSubject(w io.Writer, a *conf.Alert, st *State) error {
 	if t == nil || t.Subject == nil {
 		return nil
 	}
-	return t.Subject.Execute(w, s.data(st, a))
+	return t.Subject.Execute(w, s.Data(st, a))
 }
 
 // E executes the given expression and returns a value with corresponding tags
@@ -117,7 +117,7 @@ func (s *Schedule) ExecuteSubject(w io.Writer, a *conf.Alert, st *State) error {
 // tags is returned. If no such result is found, nil is returned. The precision
 // of numbers is truncated for convienent display. Array expressions are not
 // supported.
-func (c *context) E(v string) (s string) {
+func (c *Context) E(v string) (s string) {
 	e, err := expr.New(v)
 	if err != nil {
 		log.Printf("%s: %v", v, err)
