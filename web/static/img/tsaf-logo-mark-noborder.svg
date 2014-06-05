@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+	"http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="700" height="700" xmlns="http://www.w3.org/2000/svg">
+	<rect width="700" height="350" rx="25" ry="25" style="fill: #4ba2d9"/>
+	<rect width="700" height="350" y="350" rx="25" ry="25" style="fill: #1f5296"/>
+	<path d="M 150 150 l 200 200 l -200 200 l -200 -200 Z" fill="#356eb6" stroke="white" stroke-width="15"/>
+	<path d="M 550 150 l 200 200 l -200 200 l -200 -200 Z" fill="#356eb6" stroke="white" stroke-width="15"/>
+	<rect width="1" height="100%" x="150" fill="white" stroke="white" stroke-width="5"/>
+	<rect width="1" height="100%" x="350" fill="white" stroke="white" stroke-width="5"/>
+	<rect width="1" height="100%" x="550" fill="white" stroke="white" stroke-width="5"/>
+	<circle cx="150" cy="150" r="62.5" fill="#1f5296" stroke="white" stroke-width="25"/>
+	<circle cx="550" cy="150" r="62.5" fill="#1f5296" stroke="white" stroke-width="25"/>
+	<circle cx="150" cy="550" r="62.5" fill="#4ba2d9" stroke="white" stroke-width="25"/>
+	<circle cx="550" cy="550" r="62.5" fill="#4ba2d9" stroke="white" stroke-width="25"/>
+</svg>
