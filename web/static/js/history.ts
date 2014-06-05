@@ -21,7 +21,7 @@ tsafControllers.controller('HistoryCtrl', ['$scope', '$http', '$location', '$rou
 	$scope.collapse = (i: any) => {
 		$scope.shown[i] = !$scope.shown[i];
 	};
-	var selected_alerts: string[] = [];
+	var selected_alerts: any[] = [];
 	function done() {
 		var status = $scope.schedule.Status;
 		angular.forEach(status, function(v, ak) {
@@ -36,10 +36,10 @@ tsafControllers.controller('HistoryCtrl', ['$scope', '$http', '$location', '$rou
 				}
 			});
 			v.History.reverse();
-			var dict: any = {};
-			dict['Name'] = ak;
-			dict['History'] = v.History;
-			selected_alerts.push(dict);
+			selected_alerts.push({
+				Name: ak,
+				History: v.History,
+			});
 		});
 		if (selected_alerts.length > 0) {
 			$scope.alert_history = selected_alerts;
