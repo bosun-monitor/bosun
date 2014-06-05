@@ -1514,10 +1514,10 @@ tsafControllers.controller('HistoryCtrl', [
                     }
                 });
                 v.History.reverse();
-                var dict = {};
-                dict['Name'] = ak;
-                dict['History'] = v.History;
-                selected_alerts.push(dict);
+                selected_alerts.push({
+                    Name: ak,
+                    History: v.History
+                });
             });
             if (selected_alerts.length > 0) {
                 $scope.alert_history = selected_alerts;
