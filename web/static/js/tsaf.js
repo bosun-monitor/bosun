@@ -112,7 +112,8 @@ tsafControllers.controller('TsafCtrl', [
         };
         $scope.refresh = function () {
             $scope.schedule = null;
-            return $http.get('/api/alerts').success(function (data) {
+            $scope.animate();
+            var p = $http.get('/api/alerts').success(function (data) {
                 angular.forEach(data.Status, function (v, k) {
                     v.Touched = moment(v.Touched).utc();
                     angular.forEach(v.History, function (v, k) {
@@ -123,6 +124,73 @@ tsafControllers.controller('TsafCtrl', [
                 $scope.schedule = data;
                 $scope.timeanddate = data.TimeAndDate;
             });
+            p.finally($scope.stop);
+            return p;
+        };
+        var sz = 30;
+        var orig = 700;
+        var light = '#4ba2d9';
+        var dark = '#1f5296';
+        var med = '#356eb6';
+        var mult = sz / orig;
+        var bgrad = 25 * mult;
+        var circles = [
+            [150, 150, dark],
+            [550, 150, dark],
+            [150, 550, light],
+            [550, 550, light]
+        ];
+        var svg = d3.select('#logo').append('svg').attr('height', sz).attr('width', sz);
+        svg.selectAll('rect.bg').data([[0, light], [sz / 2, dark]]).enter().append('rect').attr('class', 'bg').attr('width', sz).attr('height', sz / 2).attr('rx', bgrad).attr('ry', bgrad).attr('fill', function (d) {
+            return d[1];
+        }).attr('y', function (d) {
+            return d[0];
+        });
+        svg.selectAll('path.diamond').data([150, 550]).enter().append('path').attr('d', function (d) {
+            var s = 'M ' + d * mult + ' ' + 150 * mult;
+            var w = 200 * mult;
+            s += ' l ' + w + ' ' + w;
+            s += ' l ' + -w + ' ' + w;
+            s += ' l ' + -w + ' ' + -w + ' Z';
+            return s;
+        }).attr('fill', med).attr('stroke', 'white').attr('stroke-width', 15 * mult);
+        svg.selectAll('rect.white').data([150, 350, 550]).enter().append('rect').attr('class', 'white').attr('width', 1).attr('height', '100%').attr('fill', 'white').attr('stroke', 'white').attr('stroke-width', 5 * mult).attr('x', function (d) {
+            return d * mult;
+        });
+        svg.selectAll('circle').data(circles).enter().append('circle').attr('cx', function (d) {
+            return d[0] * mult;
+        }).attr('cy', function (d) {
+            return d[1] * mult;
+        }).attr('r', 62.5 * mult).attr('fill', function (d) {
+            return d[2];
+        }).attr('stroke', 'white').attr('stroke-width', 25 * mult);
+        var stopped = true;
+        var transitionDuration = 500;
+        $scope.animate = function () {
+            if (!stopped) {
+                return;
+            }
+            stopped = false;
+            doAnimate();
+        };
+        function doAnimate() {
+            if (stopped) {
+                return;
+            }
+            d3.shuffle(circles);
+            svg.selectAll('circle').data(circles, function (d, i) {
+                return i;
+            }).transition().ease('linear').duration(transitionDuration).attr('cx', function (d) {
+                return d[0] * mult;
+            }).attr('cy', function (d) {
+                return d[1] * mult;
+            }).attr('fill', function (d) {
+                return d[2];
+            });
+            setTimeout(doAnimate, transitionDuration);
+        }
+        $scope.stop = function () {
+            stopped = true;
         };
     }]);
 
@@ -707,6 +775,7 @@ tsafControllers.controller('ExprCtrl', [
         $scope.expr = current;
         $scope.running = current;
         $scope.tab = 'results';
+        $scope.animate();
         $http.get('/api/expr?q=' + encodeURIComponent(current) + '&date=' + encodeURIComponent($scope.date) + '&time=' + encodeURIComponent($scope.time)).success(function (data) {
             $scope.result = data.Results;
             $scope.queries = data.Queries;
@@ -719,6 +788,8 @@ tsafControllers.controller('ExprCtrl', [
         }).error(function (error) {
             $scope.error = error;
             $scope.running = '';
+        }).finally(function () {
+            $scope.stop();
         });
         $scope.set = function () {
             $location.search('expr', btoa($scope.expr));
@@ -1018,6 +1089,7 @@ tsafControllers.controller('GraphCtrl', [
             if (!noRunning) {
                 $scope.running = 'Running';
             }
+            $scope.animate();
             $http.get('/api/graph?' + 'b64=' + btoa(JSON.stringify(request)) + autods).success(function (data) {
                 $scope.result = data.Series;
                 if (!$scope.result) {
@@ -1036,6 +1108,7 @@ tsafControllers.controller('GraphCtrl', [
                 $scope.error = error;
                 $scope.running = '';
             }).finally(function () {
+                $scope.stop();
                 if ($scope.refresh) {
                     graphRefresh = $timeout(function () {
                         get(true);
@@ -1242,6 +1315,7 @@ tsafControllers.controller('RuleCtrl', [
             $location.search('date', $scope.date || null);
             $location.search('time', $scope.time || null);
             $location.search('tab', $scope.tab || 'results');
+            $scope.animate();
             $http.get('/api/rule?' + 'alert=' + encodeURIComponent($scope.alert) + '&template=' + encodeURIComponent($scope.template) + '&date=' + encodeURIComponent($scope.date) + '&time=' + encodeURIComponent($scope.time)).success(function (data) {
                 $scope.subject = data.Subject;
                 $scope.body = data.Body;
@@ -1265,6 +1339,8 @@ tsafControllers.controller('RuleCtrl', [
             }).error(function (error) {
                 $scope.error = error;
                 $scope.running = '';
+            }).finally(function () {
+                $scope.stop();
             });
         };
         $scope.set();

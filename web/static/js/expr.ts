@@ -12,6 +12,8 @@ interface IExprScope extends ng.IScope {
 	date: string;
 	time: string;
 	keydown: ($event: any) => void;
+	animate: () => any;
+	stop: () => any;
 }
 
 tsafControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route', function($scope: IExprScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService) {
@@ -32,6 +34,7 @@ tsafControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route'
 	$scope.expr = current;
 	$scope.running = current;
 	$scope.tab = 'results';
+	$scope.animate();
 	$http.get('/api/expr?q=' +
 		encodeURIComponent(current) +
 		'&date=' + encodeURIComponent($scope.date) +
@@ -49,6 +52,9 @@ tsafControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route'
 		.error((error) => {
 			$scope.error = error;
 			$scope.running = '';
+		})
+		.finally(() => {
+			$scope.stop();
 		});
 	$scope.set = () => {
 		$location.search('expr', btoa($scope.expr));

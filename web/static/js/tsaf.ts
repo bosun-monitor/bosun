@@ -93,6 +93,8 @@ interface ITsafScope extends ng.IScope {
 	schedule: any;
 	req_from_m: (m: string) => Request;
 	refresh: () => any;
+	animate: () => any;
+	stop: () => any;
 }
 
 tsafControllers.controller('TsafCtrl', ['$scope', '$route', '$http', function($scope: ITsafScope, $route: ng.route.IRouteService, $http: ng.IHttpService) {
@@ -132,17 +134,112 @@ tsafControllers.controller('TsafCtrl', ['$scope', '$route', '$http', function($s
 	};
 	$scope.refresh = () => {
 		$scope.schedule = null;
-		return $http.get('/api/alerts').success(data => {
-			angular.forEach(data.Status, (v, k) => {
-				v.Touched = moment(v.Touched).utc();
-				angular.forEach(v.History, (v, k) => {
-					v.Time = moment(v.Time).utc();
+		$scope.animate();
+		var p = $http.get('/api/alerts')
+			.success(data => {
+				angular.forEach(data.Status, (v, k) => {
+					v.Touched = moment(v.Touched).utc();
+					angular.forEach(v.History, (v, k) => {
+						v.Time = moment(v.Time).utc();
+					});
+					v.last = v.History[v.History.length - 1];
 				});
-				v.last = v.History[v.History.length - 1];
+				$scope.schedule = data;
+				$scope.timeanddate = data.TimeAndDate;
 			});
-			$scope.schedule = data;
-			$scope.timeanddate = data.TimeAndDate;
-		});
+		p.finally($scope.stop);
+		return p;
+	};
+	var sz = 30;
+	var orig = 700;
+	var light = '#4ba2d9';
+	var dark = '#1f5296';
+	var med = '#356eb6';
+	var mult = sz / orig;
+	var bgrad = 25 * mult;
+	var circles = [
+		[150, 150, dark],
+		[550, 150, dark],
+		[150, 550, light],
+		[550, 550, light],
+	];
+	var svg = d3.select('#logo')
+		.append('svg')
+		.attr('height', sz)
+		.attr('width', sz);
+	svg.selectAll('rect.bg')
+		.data([[0, light], [sz/2, dark]])
+		.enter()
+		.append('rect')
+		.attr('class', 'bg')
+		.attr('width', sz)
+		.attr('height', sz / 2)
+		.attr('rx', bgrad)
+		.attr('ry', bgrad)
+		.attr('fill', (d: any) => { return d[1]; })
+		.attr('y', (d: any) => { return d[0]; });
+	svg.selectAll('path.diamond')
+		.data([150, 550])
+		.enter()
+		.append('path')
+		.attr('d', (d: any) => {
+			var s = 'M ' + d * mult + ' ' + 150 * mult;
+			var w = 200 * mult;
+			s += ' l ' + w + ' ' + w;
+			s += ' l ' + -w + ' ' + w;
+			s += ' l ' + -w + ' ' + -w + ' Z';
+			return s;
+		})
+		.attr('fill', med)
+		.attr('stroke', 'white')
+		.attr('stroke-width', 15 * mult);
+	svg.selectAll('rect.white')
+		.data([150, 350, 550])
+		.enter()
+		.append('rect')
+		.attr('class', 'white')
+		.attr('width', 1)
+		.attr('height', '100%')
+		.attr('fill', 'white')
+		.attr('stroke', 'white')
+		.attr('stroke-width', 5 * mult)
+		.attr('x', (d: any) => { return d * mult; });
+	svg.selectAll('circle')
+		.data(circles)
+		.enter()
+		.append('circle')
+		.attr('cx', (d: any) => { return d[0] * mult; })
+		.attr('cy', (d: any) => { return d[1] * mult; })
+		.attr('r', 62.5 * mult)
+		.attr('fill', (d: any) => { return d[2]; })
+		.attr('stroke', 'white')
+		.attr('stroke-width', 25 * mult);
+	var stopped = true;
+	var transitionDuration = 500;
+	$scope.animate = () => {
+		if (!stopped) {
+			return;
+		}
+		stopped = false;
+		doAnimate();
+	};
+	function doAnimate() {
+		if (stopped) {
+			return;
+		}
+		d3.shuffle(circles);
+		svg.selectAll('circle')
+			.data(circles, (d: any, i: any) => { return i; })
+			.transition()
+			.ease('linear')
+			.duration(transitionDuration)
+			.attr('cx', (d: any) => { return d[0] * mult; })
+			.attr('cy', (d: any) => { return d[1] * mult; })
+			.attr('fill', (d: any) => { return d[2]; });
+		setTimeout(doAnimate, transitionDuration);
+	}
+	$scope.stop = () => {
+		stopped = true;
 	};
 }]);
 
