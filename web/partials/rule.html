@@ -15,7 +15,6 @@
 		<div class="form-group">
 			<textarea class="form-control" rows="15" ng-model="alert" ng-keydown="shiftEnter($event)" ng-init="eval()"></textarea>
 		</div>
-
 	</div>
 	<div class="col-lg-6">
 		<div class="form-group">
@@ -49,22 +48,22 @@
 		</form>
 	</div>
 </div>
+<div class="row" ng-show="running">
+	<div class="col-lg-12">
+		<div class="alert alert-info">Executing: {{running}}</div>
+	</div>
+</div>
+<div class="row" ng-show="error">
+	<div class="col-lg-12">
+		<div class="alert alert-danger" ng-bind="error"></div>
+	</div>
+</div>
 <ul class="nav nav-tabs">
 	<li ng-class="{active: tab == 'results'}"><a href ng-click="tab = 'results'">Results</a></li>
 	<li ng-class="{active: tab == 'template'}"><a href ng-click="tab = 'template'">Template</a></li>
 </ul>
 <div class="tab-content">
 	<div class="tab-pane" ng-class="{active: tab == 'template'}">
-		<div class="row" ng-show="running">
-			<div class="col-lg-12">
-				<div class="alert alert-info">Executing: {{running}}</div>
-			</div>
-		</div>
-		<div class="row" ng-show="error">
-			<div class="col-lg-12">
-				<div class="alert alert-danger" ng-bind="error"></div>
-			</div>
-		</div>
 		<div class="row" ng-show="warning.length > 0">
 			<div class="col-lg-12" ng-repeat="w in warning track by $index">
 				<div class="alert alert-warning" ng-bind="w"></div>
@@ -84,16 +83,6 @@
 		</div>
 	</div>
 	<div class="tab-pane" ng-class="{active: tab == 'results'}">
-		<div class="row" ng-show="error">
-			<div class="col-lg-12">
-				<div class="alert alert-danger" ng-bind="error"></div>
-			</div>
-		</div>
-		<div class="row" ng-show="running">
-			<div class="col-lg-12">
-				<div class="alert alert-info">Executing: {{running}}</div>
-			</div>
-		</div>
 		<div class="row" ng-show="results">
 			<div class="col-sm-12">
 				<h4>Time: {{resultTime}}</h4>
