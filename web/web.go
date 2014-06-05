@@ -23,6 +23,7 @@ var (
 
 func init() {
 	miniprofiler.Position = "bottomleft"
+	miniprofiler.StartHidden = true
 }
 
 func Listen(addr, dir, host string) error {
