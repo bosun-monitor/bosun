@@ -353,15 +353,17 @@ tsafApp.directive('ahTimeLine', function () {
                 if (!angular.isArray(v) || v.length == 0) {
                     return;
                 }
-                var svgHeight = v.length * 15 + margin.top + margin.bottom;
+                var barheight = 500 / v.length;
+                barheight = Math.min(barheight, 45);
+                barheight = Math.max(barheight, 15);
+                var svgHeight = v.length * barheight + margin.top + margin.bottom;
                 var height = svgHeight - margin.top - margin.bottom;
                 var svgWidth = elem.width();
                 var width = svgWidth - margin.left - margin.right;
                 var xScale = d3.time.scale.utc().range([0, width]);
-                var yScale = d3.scale.linear().range([height, 0]);
                 var xAxis = d3.svg.axis().scale(xScale).tickFormat(customTimeFormat).orient('bottom');
-                var chart = d3.select(elem[0]).append('svg').attr('width', svgWidth).attr('height', svgHeight).append('g').attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
-                chart.append('g').attr('class', 'x axis').attr('transform', 'translate(0,' + height + ')');
+                var svg = d3.select(elem[0]).append('svg').attr('width', svgWidth).attr('height', svgHeight).append('g').attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
+                svg.append('g').attr('class', 'x axis').attr('transform', 'translate(0,' + height + ')');
                 xScale.domain([
                     d3.min(v, function (d) {
                         return d3.min(d.History, function (c) {
@@ -374,18 +376,17 @@ tsafApp.directive('ahTimeLine', function () {
                         });
                     })
                 ]);
-                chart.append('g').attr('class', 'y axis');
                 var legend = d3.select(elem[0]).append('div').attr('class', 'legend');
                 var time_legend = legend.append('div').text(tsdbFormat(new Date()));
                 var alert_legend = legend.append('div').text('Alert');
-                yScale.domain([0, v.length]);
-                chart.select('.x.axis').transition().call(xAxis);
+                svg.select('.x.axis').transition().call(xAxis);
+                var chart = svg.append('g');
                 v.forEach(function (a, i) {
                     chart.selectAll('.bars').data(a.History).enter().append('rect').attr('class', function (d) {
                         return d.Status;
                     }).attr('x', function (d) {
                         return xScale(parseDate(d.Time));
-                    }).attr('y', yScale(i + 1)).attr('height', height - yScale(.95)).attr('width', function (d) {
+                    }).attr('y', i * barheight).attr('height', barheight).attr('width', function (d) {
                         return xScale(parseDate(d.EndTime)) - xScale(parseDate(d.Time));
                     }).on('mousemove.x', mousemove_x).on('mousemove.y', function (d) {
                         alert_legend.text(a.Name);
@@ -398,15 +399,13 @@ tsafApp.directive('ahTimeLine', function () {
                     });
                 });
                 chart.selectAll('.labels').data(v).enter().append('text').attr('text-anchor', 'end').attr('x', 0).attr('dx', '-.5em').attr('dy', '.25em').attr('y', function (d, i) {
-                    return yScale(i) - (height - yScale(.5));
+                    return (i + .5) * barheight;
                 }).text(function (d) {
                     return d.Name;
                 });
                 chart.selectAll('.sep').data(v).enter().append('rect').attr('y', function (d, i) {
-                    return yScale(i) - (height - yScale(.05));
-                }).attr('height', function (d, i) {
-                    return (height - yScale(.05));
-                }).attr('x', 0).attr('width', width).on('mousemove.x', mousemove_x);
+                    return (i + 1) * barheight;
+                }).attr('height', 1).attr('x', 0).attr('width', width).on('mousemove.x', mousemove_x);
                 function mousemove_x() {
                     var x = xScale.invert(d3.mouse(this)[0]);
                     time_legend.text(tsdbFormat(x));

@@ -128,31 +128,31 @@ tsafApp.directive('ahTimeLine', () => {
 				if (!angular.isArray(v) || v.length == 0) {
 					return;
 				}
-				var svgHeight = v.length * 15 + margin.top + margin.bottom;
+				var barheight = 500 / v.length;
+				barheight = Math.min(barheight, 45);
+				barheight = Math.max(barheight, 15);
+				var svgHeight = v.length * barheight + margin.top + margin.bottom;
 				var height = svgHeight - margin.top - margin.bottom;
 				var svgWidth = elem.width();
 				var width = svgWidth - margin.left - margin.right;
 				var xScale = d3.time.scale.utc().range([0, width]);
-				var yScale = d3.scale.linear().range([height, 0]);
 				var xAxis = d3.svg.axis()
 					.scale(xScale)
 					.tickFormat(customTimeFormat)
 					.orient('bottom');
-				var chart = d3.select(elem[0])
+				var svg = d3.select(elem[0])
 					.append('svg')
 					.attr('width', svgWidth)
 					.attr('height', svgHeight)
 					.append('g')
 					.attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
-				chart.append('g')
+				svg.append('g')
 					.attr('class', 'x axis')
 					.attr('transform', 'translate(0,' + height + ')');
 				xScale.domain([
 					d3.min(v, (d: any) => { return d3.min(d.History, (c: any) => { return c.Time; }); }),
 					d3.max(v, (d: any) => { return d3.max(d.History, (c: any) => { return c.EndTime; }); }),
 				]);
-				chart.append('g')
-					.attr('class', 'y axis');
 				var legend = d3.select(elem[0])
 					.append('div')
 					.attr('class', 'legend');
@@ -162,10 +162,10 @@ tsafApp.directive('ahTimeLine', () => {
 				var alert_legend = legend
 					.append('div')
 					.text('Alert');
-				yScale.domain([0, v.length]);
-				chart.select('.x.axis')
+				svg.select('.x.axis')
 					.transition()
 					.call(xAxis);
+				var chart = svg.append('g');
 				v.forEach(function(a: any, i: number) {
 					chart.selectAll('.bars')
 						.data(a.History)
@@ -173,8 +173,8 @@ tsafApp.directive('ahTimeLine', () => {
 						.append('rect')
 						.attr('class', (d: any) => { return d.Status; })
 						.attr('x', (d: any) => { return xScale(parseDate(d.Time)); })
-						.attr('y', yScale(i + 1))
-						.attr('height', height - yScale(.95))
+						.attr('y', i * barheight)
+						.attr('height', barheight)
 						.attr('width', (d: any) => {
 							return xScale(parseDate(d.EndTime)) - xScale(parseDate(d.Time));
 						})
@@ -198,14 +198,14 @@ tsafApp.directive('ahTimeLine', () => {
 					.attr('x', 0)
 					.attr('dx', '-.5em')
 					.attr('dy', '.25em')
-					.attr('y', function(d: any, i: number) { return yScale(i) - (height - yScale(.5)); })
+					.attr('y', function(d: any, i: number) { return (i + .5) * barheight; })
 					.text(function(d: any) { return d.Name; });
 				chart.selectAll('.sep')
 					.data(v)
 					.enter()
 					.append('rect')
-					.attr('y', function(d: any, i: number) { return yScale(i) - (height - yScale(.05)); })
-					.attr('height', function(d: any, i: number) { return (height - yScale(.05)); })
+					.attr('y', function(d: any, i: number) { return (i + 1) * barheight })
+					.attr('height', 1)
 					.attr('x', 0)
 					.attr('width', width)
 					.on('mousemove.x', mousemove_x);
