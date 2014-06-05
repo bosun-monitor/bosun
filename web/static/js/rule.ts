@@ -13,6 +13,8 @@ interface IRuleScope extends IExprScope {
 	results: any;
 	resultTime: string;
 	data: any;
+	animate: () => any;
+	stop: () => any;
 }
 
 tsafControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route', function($scope: IRuleScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService) {
@@ -82,6 +84,7 @@ tsafControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route'
 		$location.search('date', $scope.date || null);
 		$location.search('time', $scope.time || null);
 		$location.search('tab', $scope.tab || 'results');
+		$scope.animate();
 		$http.get('/api/rule?' +
 			'alert=' + encodeURIComponent($scope.alert) +
 			'&template=' + encodeURIComponent($scope.template) +
@@ -111,6 +114,9 @@ tsafControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route'
 			.error((error) => {
 				$scope.error = error;
 				$scope.running = '';
+			})
+			.finally(() => {
+				$scope.stop();
 			});
 	};
 	$scope.set();

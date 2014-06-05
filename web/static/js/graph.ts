@@ -141,6 +141,8 @@ interface IGraphScope extends ng.IScope {
 	SwitchTimes: () => void;
 	duration_map: any;
 	keydown: ($event: any) => void;
+	animate: () => any;
+	stop: () => any;
 }
 
 tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route', '$timeout', function($scope: IGraphScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService, $timeout: ng.ITimeoutService) {
@@ -296,6 +298,7 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route
 		if (!noRunning) {
 			$scope.running = 'Running';
 		}
+		$scope.animate();
 		$http.get('/api/graph?' + 'b64=' + btoa(JSON.stringify(request)) + autods)
 			.success((data) => {
 				$scope.result = data.Series;
@@ -317,6 +320,7 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route
 				$scope.running = '';
 			})
 			.finally(() => {
+				$scope.stop();
 				if ($scope.refresh) {
 					graphRefresh = $timeout(() => { get(true); }, 5000);
 				};

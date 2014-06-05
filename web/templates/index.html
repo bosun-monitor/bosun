@@ -9,8 +9,13 @@
 			.navbar-static-top {
 				margin-bottom: 19px;
 			}
+			#logo {
+				position: absolute;
+				top: 10px;
+			}
 			a.navbar-brand img {
 				margin-top: -5px;
+				margin-left: 35px;
 			}
 			.tablesorter-headerAsc .tablesorter-header-inner::before {
 				content: '▲';
@@ -43,7 +48,10 @@
 						<span class="icon-bar"></span>
 						<span class="icon-bar"></span>
 					</button>
-					<a class="navbar-brand" href="/"><img src="/static/img/tsaf-logo-small.png"></a>
+					<a class="navbar-brand" href="/">
+						<div id="logo"></div>
+						<img src="/static/img/tsaf-logo-text-small.png">
+					</a>
 				</div>
 				<div class="navbar-collapse collapse" id="navbar-collapse">
 					<ul class="nav navbar-nav">
