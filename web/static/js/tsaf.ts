@@ -198,11 +198,9 @@ tsafControllers.controller('TsafCtrl', ['$scope', '$route', '$http', function($s
 		.enter()
 		.append('rect')
 		.attr('class', 'white')
-		.attr('width', 1)
+		.attr('width', .5)
 		.attr('height', '100%')
 		.attr('fill', 'white')
-		.attr('stroke', 'white')
-		.attr('stroke-width', 5 * mult)
 		.attr('x', (d: any) => { return d * mult; });
 	svg.selectAll('circle')
 		.data(circles)
