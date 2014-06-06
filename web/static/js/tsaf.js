@@ -706,6 +706,9 @@ tsafApp.directive('tsGraph', [
                             return c.y;
                         });
                     });
+                    var diff = (ymax - ymin) / 50;
+                    ymin -= diff;
+                    ymax += diff;
                     if (yaxisZero) {
                         if (ymin > 0) {
                             ymin = 0;
