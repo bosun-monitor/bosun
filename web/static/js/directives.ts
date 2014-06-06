@@ -450,6 +450,9 @@ tsafApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWin
 				xScale.domain(xdomain);
 				var ymin = d3.min(scope.data, (d: any) => { return d3.min(d.data, (c: any) => { return c.y; }); });
 				var ymax = d3.max(scope.data, (d: any) => { return d3.max(d.data, (c: any) => { return c.y; }); });
+				var diff = (ymax - ymin) / 50;
+				ymin -= diff;
+				ymax += diff;
 				if (yaxisZero) {
 					if (ymin > 0) {
 						ymin = 0;
