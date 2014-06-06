@@ -339,7 +339,16 @@ tsafApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWin
 			brushText.style('float', 'right');
 			var legend = d3.select(elem[0]).append('div');
 			legend.style('clear', 'both');
-			var color = d3.scale.category20();
+			var color = d3.scale.ordinal().range([
+				'#e41a1c',
+				'#377eb8',
+				'#4daf4a',
+				'#984ea3',
+				'#ff7f00',
+				'#a65628',
+				'#f781bf',
+				'#999999',
+			]);
 			var mousex = 0;
 			var oldx = 0;
 			var focus = svg.append('g')
