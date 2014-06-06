@@ -154,7 +154,7 @@ tsafControllers.controller('TsafCtrl', [
             s += ' l ' + -w + ' ' + -w + ' Z';
             return s;
         }).attr('fill', med).attr('stroke', 'white').attr('stroke-width', 15 * mult);
-        svg.selectAll('rect.white').data([150, 350, 550]).enter().append('rect').attr('class', 'white').attr('width', 1).attr('height', '100%').attr('fill', 'white').attr('stroke', 'white').attr('stroke-width', 5 * mult).attr('x', function (d) {
+        svg.selectAll('rect.white').data([150, 350, 550]).enter().append('rect').attr('class', 'white').attr('width', .5).attr('height', '100%').attr('fill', 'white').attr('x', function (d) {
             return d * mult;
         });
         svg.selectAll('circle').data(circles).enter().append('circle').attr('cx', function (d) {
