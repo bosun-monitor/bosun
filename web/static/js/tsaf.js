@@ -55,6 +55,10 @@ tsafApp.config([
             title: 'Alert History',
             templateUrl: 'partials/history.html',
             controller: 'HistoryCtrl'
+        }).when('/put', {
+            title: 'Data Entry',
+            templateUrl: 'partials/put.html',
+            controller: 'PutCtrl'
         }).otherwise({
             redirectTo: '/'
         });
@@ -1618,4 +1622,64 @@ tsafControllers.controller('HistoryCtrl', [
         } else {
             $scope.refresh().success(done);
         }
+    }]);
+var Tag = (function () {
+    function Tag() {
+    }
+    return Tag;
+})();
+
+var DP = (function () {
+    function DP() {
+    }
+    return DP;
+})();
+
+tsafControllers.controller('PutCtrl', [
+    '$scope', '$http', '$route', function ($scope, $http, $route) {
+        var mfmt = 'YYYY/MM/DD-HH:mm:ss';
+        $scope.tags = [new Tag];
+        var dp = new DP;
+        dp.k = moment().utc().format(mfmt);
+        $scope.dps = [dp];
+
+        //TODO Redefined from the Graph Ctrl, should fetch in the same way we fetch /api/alerts ?
+        $http.get('/api/metric').success(function (data) {
+            $scope.metrics = data;
+        }).error(function (error) {
+            $scope.error = 'Unable to fetch metrics: ' + error;
+        });
+        $scope.doIt = function () {
+            console.log($scope.tags);
+        };
+        $scope.AddTag = function () {
+            var last = $scope.tags[$scope.tags.length - 1];
+            if (last.k && last.v) {
+                $scope.tags.push(new Tag);
+            }
+        };
+        $scope.AddDP = function () {
+            var last = $scope.dps[$scope.dps.length - 1];
+            if (last.k && last.v) {
+                var dp = new DP;
+                dp.k = moment.utc(last.k, mfmt).add("seconds", 15).format(mfmt);
+                $scope.dps.push(dp);
+            }
+        };
+        $scope.GetTagKByMetric = function () {
+            $http.get('/api/tagk/' + $scope.metric).success(function (data) {
+                if (!angular.isArray(data)) {
+                    return;
+                }
+                $scope.tags = [];
+                for (var i = 0; i < data.length; i++) {
+                    var t = new Tag;
+                    t.k = data[i];
+                    $scope.tags.push(t);
+                }
+                console.log($scope.tags);
+            }).error(function (error) {
+                $scope.error = 'Unable to fetch metrics: ' + error;
+            });
+        };
     }]);
