@@ -140,7 +140,6 @@ interface IGraphScope extends ng.IScope {
 	refresh: boolean;
 	SwitchTimes: () => void;
 	duration_map: any;
-	keydown: ($event: any) => void;
 	animate: () => any;
 	stop: () => any;
 }
@@ -327,9 +326,4 @@ tsafControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route
 			});
 	};
 	get(false);
-	$scope.keydown = function($event: any) {
-		if ($event.keyCode == 13) {
-			$scope.Query();
-		}
-	}
 }]);
