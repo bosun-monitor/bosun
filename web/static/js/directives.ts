@@ -339,7 +339,16 @@ tsafApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWin
 			brushText.style('float', 'right');
 			var legend = d3.select(elem[0]).append('div');
 			legend.style('clear', 'both');
-			var color = d3.scale.category20();
+			var color = d3.scale.ordinal().range([
+				'#e41a1c',
+				'#377eb8',
+				'#4daf4a',
+				'#984ea3',
+				'#ff7f00',
+				'#a65628',
+				'#f781bf',
+				'#999999',
+			]);
 			var mousex = 0;
 			var oldx = 0;
 			var focus = svg.append('g')
@@ -441,6 +450,9 @@ tsafApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWin
 				xScale.domain(xdomain);
 				var ymin = d3.min(scope.data, (d: any) => { return d3.min(d.data, (c: any) => { return c.y; }); });
 				var ymax = d3.max(scope.data, (d: any) => { return d3.max(d.data, (c: any) => { return c.y; }); });
+				var diff = (ymax - ymin) / 50;
+				ymin -= diff;
+				ymax += diff;
 				if (yaxisZero) {
 					if (ymin > 0) {
 						ymin = 0;
