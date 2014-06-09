@@ -1,11 +1,7 @@
 package search
 
 import (
-	"bytes"
-	"compress/gzip"
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"sort"
 	"strings"
 	"sync"
@@ -72,28 +68,14 @@ func init() {
 // HTTPExtract populates the search indexes with OpenTSDB tags and metrics from
 // body. body is a JSON string of an OpenTSDB v2 /api/put request. body may be
 // gzipped.
-func HTTPExtract(body []byte) error {
-	if r, err := gzip.NewReader(bytes.NewBuffer(body)); err == nil {
-		if b, err := ioutil.ReadAll(r); err == nil {
-			body = b
-		}
-		r.Close()
-	}
+func HTTPExtract(mdp opentsdb.MultiDataPoint) {
 	collect.Add("search.puts_relayed", nil, 1)
-	var dp opentsdb.DataPoint
-	var mdp opentsdb.MultiDataPoint
-	if err := json.Unmarshal(body, &dp); err == nil {
-		mdp = append(mdp, &dp)
-	} else if err = json.Unmarshal(body, &mdp); err != nil {
-		return err
-	}
 	collect.Add("search.datapoints_relayed", nil, float64(len(mdp)))
 	select {
 	case dc <- mdp:
 	case <-time.After(time.Millisecond * 100):
 		collect.Add("search.timeout_drop", nil, 1)
 	}
-	return nil
 }
 
 func Process() {

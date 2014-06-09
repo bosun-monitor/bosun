@@ -2,12 +2,16 @@ package relay
 
 import (
 	"bytes"
+	"compress/gzip"
+	"encoding/json"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
+	"github.com/StackExchange/tsaf/_third_party/github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/tsaf/_third_party/github.com/mreiferson/go-httpclient"
 	"github.com/StackExchange/tsaf/search"
 )
@@ -29,10 +33,27 @@ var client = &http.Client{
 }
 
 func handle(dest string, w http.ResponseWriter, r *http.Request) {
-	body, _ := ioutil.ReadAll(r.Body)
-	if err := search.HTTPExtract(body); err != nil {
-		log.Printf("search: %s: %s", r.RemoteAddr, string(body))
+	reader := r.Body
+	if r, err := gzip.NewReader(reader); err == nil {
+		reader = r
+		defer r.Close()
+	}
+	body, err := ioutil.ReadAll(reader)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
 		return
+	}
+	if r.URL.Path == "/api/put" {
+		var dp opentsdb.DataPoint
+		var mdp opentsdb.MultiDataPoint
+		if err = json.Unmarshal(body, &mdp); err == nil {
+		} else if err = json.Unmarshal(body, &dp); err == nil {
+			mdp = opentsdb.MultiDataPoint{&dp}
+		}
+		if len(mdp) > 0 {
+			search.HTTPExtract(mdp)
+		}
 	}
 	durl := url.URL{
 		Scheme: "http",
@@ -45,17 +66,22 @@ func handle(dest string, w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
-		log.Println(err)
 		return
 	}
-	req.Header = r.Header
+	for k, v := range r.Header {
+		if strings.HasPrefix(strings.ToLower(k), "content-") {
+			continue
+		}
+		for _, h := range v {
+			req.Header.Add(k, h)
+		}
+	}
 	req.TransferEncoding = append(req.TransferEncoding, "identity")
 	req.ContentLength = int64(len(body))
 	resp, err := client.Do(req)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
-		//log.Println(err)
 		return
 	}
 	b, _ := ioutil.ReadAll(resp.Body)
