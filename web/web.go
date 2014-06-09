@@ -12,6 +12,7 @@ import (
 	"github.com/StackExchange/tsaf/_third_party/github.com/MiniProfiler/go/miniprofiler"
 	"github.com/StackExchange/tsaf/_third_party/github.com/gorilla/mux"
 	"github.com/StackExchange/tsaf/conf"
+	"github.com/StackExchange/tsaf/relay"
 	"github.com/StackExchange/tsaf/sched"
 )
 
@@ -51,6 +52,7 @@ func Listen(addr, dir, host string) error {
 	router.Handle("/api/tagk/{metric}", JSON(TagKeysByMetric))
 	router.Handle("/api/tagv/{tagk}", JSON(TagValuesByTagKey))
 	router.Handle("/api/tagv/{tagk}/{metric}", JSON(TagValuesByMetricTagKey))
+	router.HandleFunc("/api/put", relay.Handle(host))
 	http.Handle("/", miniprofiler.NewHandler(Index))
 	http.Handle("/api/", router)
 	fs := http.FileServer(http.Dir(dir))
