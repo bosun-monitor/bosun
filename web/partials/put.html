@@ -69,4 +69,18 @@
 		</div>
 	</div>
 </div>	
-
+<div class="row" ng-show="running">
+	<div class="col-lg-12">
+		<div class="alert alert-info" ng-bind="running"></div>
+	</div>
+</div>
+<div class="row" ng-show="success">
+	<div class="col-lg-12">
+		<div class="alert alert-success" ng-bind="success"></div>
+	</div>
+</div>
+<div class="row" ng-show="error">
+	<div class="col-lg-12">
+		<div class="alert alert-danger" ng-bind="error"></div>
+	</div>
+</div>
