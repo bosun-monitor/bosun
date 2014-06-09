@@ -1646,13 +1646,21 @@ tsafControllers.controller('PutCtrl', [
             var data = [];
             var tags = {};
             angular.forEach($scope.tags, function (v, k) {
-                if (v.k && v.v) {
+                if (v.k || v.v) {
+                    if (!v.k) {
+                        $scope.error = 'Tag value ' + v.v + ' must have a key';
+                        return;
+                    }
+                    if (!v.v) {
+                        $scope.error = 'Tag key ' + v.k + ' must have a value';
+                        return;
+                    }
                     tags[v.k] = v.v;
                 }
             });
             angular.forEach($scope.dps, function (v, k) {
                 if (v.k && v.v) {
-                    var ts = moment.utc(v.k, mfmt).format("X");
+                    var ts = moment.utc(v.k, mfmt).format('X');
                     data.push({
                         metric: $scope.metric,
                         timestamp: ts,
@@ -1661,7 +1669,16 @@ tsafControllers.controller('PutCtrl', [
                     });
                 }
             });
-            console.log(JSON.stringify(data));
+            $scope.running = 'submitting data...';
+            $scope.success = '';
+            $scope.error = '';
+            $http.post('/api/put', data).success(function () {
+                $scope.running = '';
+                $scope.success = 'Data Submitted';
+            }).error(function (error) {
+                $scope.running = '';
+                $scope.error = error.error.message;
+            });
         };
         $scope.AddTag = function () {
             var last = $scope.tags[$scope.tags.length - 1];
@@ -1673,7 +1690,7 @@ tsafControllers.controller('PutCtrl', [
             var last = $scope.dps[$scope.dps.length - 1];
             if (last.k && last.v) {
                 var dp = new DP;
-                dp.k = moment.utc(last.k, mfmt).add("seconds", 15).format(mfmt);
+                dp.k = moment.utc(last.k, mfmt).add('seconds', 15).format(mfmt);
                 $scope.dps.push(dp);
             }
         };
