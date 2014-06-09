@@ -1135,11 +1135,6 @@ tsafControllers.controller('GraphCtrl', [
         }
         ;
         get(false);
-        $scope.keydown = function ($event) {
-            if ($event.keyCode == 13) {
-                $scope.Query();
-            }
-        };
     }]);
 tsafControllers.controller('HostCtrl', [
     '$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
