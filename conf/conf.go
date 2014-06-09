@@ -44,6 +44,8 @@ type Conf struct {
 	tree            *parse.Tree
 	node            parse.Node
 	unknownTemplate string
+	bodies          *htemplate.Template
+	subjects        *ttemplate.Template
 }
 
 // at marks the state to be on node n, for error reporting.
@@ -192,6 +194,8 @@ func New(name, text string) (c *Conf, err error) {
 		Alerts:         make(map[string]*Alert),
 		Notifications:  make(map[string]*Notification),
 		RawText:        text,
+		bodies:         htemplate.New(name),
+		subjects:       ttemplate.New(name),
 	}
 	c.tree, err = parse.Parse(name, text)
 	if err != nil {
@@ -332,7 +336,7 @@ func (c *Conf) loadTemplate(s *parse.SectionNode) {
 		switch k := p.Key.Text; k {
 		case "body":
 			t.body = v
-			tmpl := htemplate.New(k).Funcs(htemplate.FuncMap(funcs))
+			tmpl := c.bodies.New(name).Funcs(htemplate.FuncMap(funcs))
 			_, err := tmpl.Parse(t.body)
 			if err != nil {
 				c.error(err)
@@ -340,7 +344,7 @@ func (c *Conf) loadTemplate(s *parse.SectionNode) {
 			t.Body = tmpl
 		case "subject":
 			t.subject = v
-			tmpl := ttemplate.New(k).Funcs(funcs)
+			tmpl := c.subjects.New(name).Funcs(funcs)
 			_, err := tmpl.Parse(t.subject)
 			if err != nil {
 				c.error(err)
