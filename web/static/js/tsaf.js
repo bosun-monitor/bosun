@@ -154,7 +154,7 @@ tsafControllers.controller('TsafCtrl', [
             s += ' l ' + -w + ' ' + -w + ' Z';
             return s;
         }).attr('fill', med).attr('stroke', 'white').attr('stroke-width', 15 * mult);
-        svg.selectAll('rect.white').data([150, 350, 550]).enter().append('rect').attr('class', 'white').attr('width', 1).attr('height', '100%').attr('fill', 'white').attr('stroke', 'white').attr('stroke-width', 5 * mult).attr('x', function (d) {
+        svg.selectAll('rect.white').data([150, 350, 550]).enter().append('rect').attr('class', 'white').attr('width', .5).attr('height', '100%').attr('fill', 'white').attr('x', function (d) {
             return d * mult;
         });
         svg.selectAll('circle').data(circles).enter().append('circle').attr('cx', function (d) {
@@ -585,7 +585,16 @@ tsafApp.directive('tsGraph', [
                 brushText.style('float', 'right');
                 var legend = d3.select(elem[0]).append('div');
                 legend.style('clear', 'both');
-                var color = d3.scale.category20();
+                var color = d3.scale.ordinal().range([
+                    '#e41a1c',
+                    '#377eb8',
+                    '#4daf4a',
+                    '#984ea3',
+                    '#ff7f00',
+                    '#a65628',
+                    '#f781bf',
+                    '#999999'
+                ]);
                 var mousex = 0;
                 var oldx = 0;
                 var focus = svg.append('g').attr('class', 'focus').style('pointer-events', 'none');
@@ -697,6 +706,9 @@ tsafApp.directive('tsGraph', [
                             return c.y;
                         });
                     });
+                    var diff = (ymax - ymin) / 50;
+                    ymin -= diff;
+                    ymax += diff;
                     if (yaxisZero) {
                         if (ymin > 0) {
                             ymin = 0;
