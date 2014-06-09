@@ -1642,15 +1642,31 @@ tsafControllers.controller('PutCtrl', [
         var dp = new DP;
         dp.k = moment().utc().format(mfmt);
         $scope.dps = [dp];
-
-        //TODO Redefined from the Graph Ctrl, should fetch in the same way we fetch /api/alerts ?
         $http.get('/api/metric').success(function (data) {
             $scope.metrics = data;
         }).error(function (error) {
             $scope.error = 'Unable to fetch metrics: ' + error;
         });
-        $scope.doIt = function () {
-            console.log($scope.tags);
+        $scope.Submit = function () {
+            var data = [];
+            var tags = {};
+            angular.forEach($scope.tags, function (v, k) {
+                if (v.k && v.v) {
+                    tags[v.k] = v.v;
+                }
+            });
+            angular.forEach($scope.dps, function (v, k) {
+                if (v.k && v.v) {
+                    var ts = moment.utc(v.k, mfmt).format("X");
+                    data.push({
+                        metric: $scope.metric,
+                        timestamp: ts,
+                        value: v.v,
+                        tags: tags
+                    });
+                }
+            });
+            console.log(JSON.stringify(data));
         };
         $scope.AddTag = function () {
             var last = $scope.tags[$scope.tags.length - 1];
@@ -1677,7 +1693,6 @@ tsafControllers.controller('PutCtrl', [
                     t.k = data[i];
                     $scope.tags.push(t);
                 }
-                console.log($scope.tags);
             }).error(function (error) {
                 $scope.error = 'Unable to fetch metrics: ' + error;
             });
