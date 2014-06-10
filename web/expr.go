@@ -97,8 +97,12 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 	var a *conf.Alert
 	for _, a = range c.Alerts {
 	}
-	s.CheckExpr(a, a.Warn, sched.StWarning, nil)
-	s.CheckExpr(a, a.Crit, sched.StCritical, nil)
+	if _, err := s.CheckExpr(a, a.Warn, sched.StWarning, nil); err != nil {
+		return nil, err
+	}
+	if _, err := s.CheckExpr(a, a.Crit, sched.StCritical, nil); err != nil {
+		return nil, err
+	}
 	i := 0
 	if len(s.RunHistory) < 1 {
 		return nil, fmt.Errorf("no results returned")
