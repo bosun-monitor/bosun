@@ -29,6 +29,9 @@ var (
 	// BatchSize is the maximum length of data points sent at once to OpenTSDB.
 	BatchSize = 50
 
+	// Debug enables debug logging.
+	Debug = false
+
 	// Dropped is the number of dropped data points due to a full queue.
 	dropped int64
 
