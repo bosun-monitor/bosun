@@ -75,6 +75,9 @@ var tsafControllers = angular.module('tsafControllers', []);
 
 tsafControllers.controller('TsafCtrl', [
     '$scope', '$route', '$http', function ($scope, $route, $http) {
+        $scope.$on('$routeChangeSuccess', function (event, current, previous) {
+            $scope.stop();
+        });
         $scope.active = function (v) {
             if (!$route.current) {
                 return null;
@@ -295,18 +298,23 @@ tsafApp.directive('tsResults', function () {
     };
 });
 
-var timeFormat = 'YYYY-MM-DD HH:mm:ss ZZ';
+var timeFormat = 'YYYY/MM/DD-HH:mm:ss';
+
+function fmtTime(v) {
+    var m = moment(v).utc();
+    return m.format(timeFormat) + ' (' + m.fromNow() + ')';
+}
 
 tsafApp.directive("tsTime", function () {
     return {
         link: function (scope, elem, attrs) {
             scope.$watch(attrs.tsTime, function (v) {
-                var m = moment(v).utc();
-                var text = m.format(timeFormat) + ' (' + m.fromNow() + ')';
+                var text = fmtTime(v);
                 if (attrs.noLink) {
-                    elem.text(m.format(timeFormat) + ' (' + m.fromNow() + ')');
+                    elem.text(text);
                 } else {
                     var el = document.createElement('a');
+                    var m = moment(v).utc();
                     el.innerText = text;
                     el.href = 'http://www.timeanddate.com/worldclock/converted.html?iso=';
                     el.href += m.format('YYYYMMDDTHHmm');
@@ -500,7 +508,6 @@ function nfmt(s, mult, suffix, opts) {
     if (isNaN(n) || !isFinite(n))
         return '-';
     var a = Math.abs(n);
-    var precision = a < 1 ? 2 : 4;
     if (a >= 1) {
         var number = Math.floor(Math.log(a) / Math.log(mult));
         a /= Math.pow(mult, Math.floor(number));
@@ -510,7 +517,7 @@ function nfmt(s, mult, suffix, opts) {
     }
     if (n < 0)
         a = -a;
-    var r = a.toFixed(precision);
+    var r = a.toFixed(5);
     return +r + suffix;
 }
 
@@ -622,7 +629,7 @@ tsafApp.directive('tsGraph', [
                     names.enter().append('div').attr('class', 'series');
                     names.exit().remove();
                     var xi = xScale.invert(mousex);
-                    xloc.text('Time: ' + moment(xi).utc().format());
+                    xloc.text('Time: ' + fmtTime(xi));
                     var t = xi.getTime() / 1000;
                     names.text(function (d) {
                         var idx = bisect(d.data, t);
@@ -1317,6 +1324,7 @@ tsafControllers.controller('RuleCtrl', [
         };
         $scope.set = function () {
             $scope.running = "Running";
+            $scope.error = '';
             $scope.warning = [];
             $location.search('alert', btoa($scope.alert));
             $location.search('template', btoa($scope.template));

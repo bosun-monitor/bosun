@@ -4,7 +4,12 @@ tsafApp.directive('tsResults', function() {
 	};
 });
 
-var timeFormat = 'YYYY-MM-DD HH:mm:ss ZZ';
+var timeFormat = 'YYYY/MM/DD-HH:mm:ss';
+
+function fmtTime(v: any) {
+	var m = moment(v).utc();
+	return m.format(timeFormat) + ' (' + m.fromNow() + ')';
+}
 
 interface ITimeScope extends ITsafScope {
 	noLink: string;
@@ -14,15 +19,12 @@ tsafApp.directive("tsTime", function() {
 	return {
 		link: function(scope: ITimeScope, elem: any, attrs: any) {
 			scope.$watch(attrs.tsTime, (v: any) => {
-				var m = moment(v).utc();
-				var text = m.format(timeFormat) +
-					' (' +
-					m.fromNow() +
-					')';
+				var text = fmtTime(v);
 				if (attrs.noLink) {
-					elem.text(m.format(timeFormat) + ' (' + m.fromNow() + ')');
+					elem.text(text);
 				} else {
 					var el = document.createElement('a');
+					var m = moment(v).utc();
 					el.innerText = text;
 					el.href = 'http://www.timeanddate.com/worldclock/converted.html?iso=';
 					el.href += m.format('YYYYMMDDTHHmm');
@@ -228,7 +230,6 @@ function nfmt(s: any, mult: number, suffix: string, opts: any) {
 	if (!n) return suffix ? '0 ' + suffix : '0';
 	if (isNaN(n) || !isFinite(n)) return '-';
 	var a = Math.abs(n);
-	var precision = a < 1 ? 2 : 4;
 	if (a >= 1) {
 		var number = Math.floor(Math.log(a) / Math.log(mult));
 		a /= Math.pow(mult, Math.floor(number));
@@ -237,7 +238,7 @@ function nfmt(s: any, mult: number, suffix: string, opts: any) {
 		}
 	}
 	if (n < 0) a = -a;
-	var r = a.toFixed(precision);
+	var r = a.toFixed(5);
 	return +r + suffix;
 }
 
@@ -376,7 +377,7 @@ tsafApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWin
 				names.exit()
 					.remove();
 				var xi = xScale.invert(mousex);
-				xloc.text('Time: ' + moment(xi).utc().format());
+				xloc.text('Time: ' + fmtTime(xi));
 				var t = xi.getTime() / 1000;
 				names
 					.text((d: any) => {
