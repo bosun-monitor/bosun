@@ -32,7 +32,7 @@ func main() {
 		log.Println("Valid Config")
 		os.Exit(0)
 	}
-	if err := collect.Init(c.RelayListen, "tsaf"); err != nil {
+	if err := collect.Init(c.RelayListen, "bosun"); err != nil {
 		log.Fatal(err)
 	}
 	sched.Load(c)
