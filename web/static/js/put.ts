@@ -53,11 +53,11 @@ tsafControllers.controller('PutCtrl', ['$scope', '$http', '$route', function($sc
 		});
 		angular.forEach($scope.dps, (v, k) => {
 			if (v.k && v.v) {
-				var ts = moment.utc(v.k, mfmt).format('X');
+				var ts = parseInt(moment.utc(v.k, mfmt).format('X'));
 				data.push({
 					metric: $scope.metric,
 					timestamp: ts,
-					value: v.v,
+					value: parseFloat(v.v),
 					tags: tags,
 				});
 			}
