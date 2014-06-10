@@ -1320,6 +1320,7 @@ tsafControllers.controller('RuleCtrl', [
         };
         $scope.set = function () {
             $scope.running = "Running";
+            $scope.error = '';
             $scope.warning = [];
             $location.search('alert', btoa($scope.alert));
             $location.search('template', btoa($scope.template));

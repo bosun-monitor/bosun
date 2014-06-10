@@ -75,6 +75,7 @@ tsafControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route'
 	}
 	$scope.set = () => {
 		$scope.running = "Running";
+		$scope.error = '';
 		$scope.warning = [];
 		$location.search('alert', btoa($scope.alert));
 		$location.search('template', btoa($scope.template));
