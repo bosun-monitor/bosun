@@ -11,9 +11,12 @@ func TestPrint(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = New(fname, string(b))
+	c, err := New(fname, string(b))
 	if err != nil {
 		t.Error(err)
+	}
+	if w := c.Alerts["os.high_cpu"].Warn.Text; w != `avg(q("avg:rate:os.cpu{host=ny-nexpose01}", "2m", "")) > 80` {
+		t.Error("bad warn:", w)
 	}
 }
 
