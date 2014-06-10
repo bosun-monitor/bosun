@@ -623,7 +623,7 @@ tsafApp.directive('tsGraph', [
                     names.enter().append('div').attr('class', 'series');
                     names.exit().remove();
                     var xi = xScale.invert(mousex);
-                    xloc.text('Time: ' + moment(xi).utc().format());
+                    xloc.text('Time: ' + fmtTime(xi));
                     var t = xi.getTime() / 1000;
                     names.text(function (d) {
                         var idx = bisect(d.data, t);

@@ -378,7 +378,7 @@ tsafApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWin
 				names.exit()
 					.remove();
 				var xi = xScale.invert(mousex);
-				xloc.text('Time: ' + moment(xi).utc().format());
+				xloc.text('Time: ' + fmtTime(xi));
 				var t = xi.getTime() / 1000;
 				names
 					.text((d: any) => {
