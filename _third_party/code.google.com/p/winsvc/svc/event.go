@@ -6,7 +6,7 @@ package svc
 
 import (
 	"errors"
-	"github.com/StackExchange/tsaf/_third_party/code.google.com/p/winsvc/winapi"
+	"github.com/StackExchange/bosun/_third_party/code.google.com/p/winsvc/winapi"
 	"syscall"
 )
 

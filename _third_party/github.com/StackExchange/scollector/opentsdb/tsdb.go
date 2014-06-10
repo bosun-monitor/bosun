@@ -16,7 +16,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/StackExchange/tsaf/_third_party/github.com/StackExchange/slog"
+	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/slog"
 )
 
 type ResponseSet []*Response
@@ -490,7 +490,7 @@ func GetDuration(r *Request) (Duration, error) {
 // AutoDownsample sets the avg downsample aggregator to produce l points.
 func (r *Request) AutoDownsample(l int) error {
 	if l == 0 {
-		return errors.New("tsaf: target length must be > 0")
+		return errors.New("bosun: target length must be > 0")
 	}
 	cd, err := GetDuration(r)
 	if err != nil {

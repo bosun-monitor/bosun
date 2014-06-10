@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/StackExchange/tsaf/_third_party/github.com/StackExchange/scollector/opentsdb"
-	"github.com/StackExchange/tsaf/_third_party/github.com/StackExchange/slog"
+	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/opentsdb"
+	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/slog"
 )
 
 func send() {

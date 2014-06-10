@@ -9,7 +9,7 @@ import (
 	"net/mail"
 	"net/smtp"
 
-	"github.com/StackExchange/tsaf/_third_party/github.com/jordan-wright/email"
+	"github.com/StackExchange/bosun/_third_party/github.com/jordan-wright/email"
 )
 
 func (n *Notification) Notify(subject, body []byte, from, smtpHost string) {

@@ -15,10 +15,10 @@ import (
 	ttemplate "text/template"
 	"time"
 
-	"github.com/StackExchange/tsaf/_third_party/github.com/StackExchange/scollector/opentsdb"
-	"github.com/StackExchange/tsaf/conf/parse"
-	"github.com/StackExchange/tsaf/expr"
-	eparse "github.com/StackExchange/tsaf/expr/parse"
+	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/opentsdb"
+	"github.com/StackExchange/bosun/conf/parse"
+	"github.com/StackExchange/bosun/expr"
+	eparse "github.com/StackExchange/bosun/expr/parse"
 )
 
 type Conf struct {
@@ -187,7 +187,7 @@ func New(name, text string) (c *Conf, err error) {
 		HttpListen:     ":8070",
 		RelayListen:    ":4242",
 		WebDir:         "web",
-		StateFile:      "tsaf.state",
+		StateFile:      "bosun.state",
 		ResponseLimit:  1 << 20, // 1MB
 		Vars:           make(map[string]string),
 		Templates:      make(map[string]*Template),
