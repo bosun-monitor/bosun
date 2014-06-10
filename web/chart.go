@@ -13,15 +13,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/StackExchange/tsaf/_third_party/github.com/MiniProfiler/go/miniprofiler"
-	"github.com/StackExchange/tsaf/_third_party/github.com/StackExchange/scollector/opentsdb"
-	svg "github.com/StackExchange/tsaf/_third_party/github.com/ajstarks/svgo"
-	"github.com/StackExchange/tsaf/_third_party/github.com/bradfitz/slice"
-	"github.com/StackExchange/tsaf/_third_party/github.com/gorilla/mux"
-	"github.com/StackExchange/tsaf/_third_party/github.com/vdobler/chart"
-	"github.com/StackExchange/tsaf/_third_party/github.com/vdobler/chart/svgg"
-	"github.com/StackExchange/tsaf/expr"
-	"github.com/StackExchange/tsaf/expr/parse"
+	"github.com/StackExchange/bosun/_third_party/github.com/MiniProfiler/go/miniprofiler"
+	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/opentsdb"
+	svg "github.com/StackExchange/bosun/_third_party/github.com/ajstarks/svgo"
+	"github.com/StackExchange/bosun/_third_party/github.com/bradfitz/slice"
+	"github.com/StackExchange/bosun/_third_party/github.com/gorilla/mux"
+	"github.com/StackExchange/bosun/_third_party/github.com/vdobler/chart"
+	"github.com/StackExchange/bosun/_third_party/github.com/vdobler/chart/svgg"
+	"github.com/StackExchange/bosun/expr"
+	"github.com/StackExchange/bosun/expr/parse"
 )
 
 // Graph takes an OpenTSDB request data structure and queries OpenTSDB. Use the

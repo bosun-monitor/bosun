@@ -8,12 +8,12 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/StackExchange/tsaf/_third_party/github.com/StackExchange/scollector/collect"
-	"github.com/StackExchange/tsaf/_third_party/github.com/howeyc/fsnotify"
-	"github.com/StackExchange/tsaf/conf"
-	"github.com/StackExchange/tsaf/relay"
-	"github.com/StackExchange/tsaf/sched"
-	"github.com/StackExchange/tsaf/web"
+	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/collect"
+	"github.com/StackExchange/bosun/_third_party/github.com/howeyc/fsnotify"
+	"github.com/StackExchange/bosun/conf"
+	"github.com/StackExchange/bosun/relay"
+	"github.com/StackExchange/bosun/sched"
+	"github.com/StackExchange/bosun/web"
 )
 
 var (

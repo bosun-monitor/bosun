@@ -5,7 +5,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/StackExchange/tsaf/conf"
+	"github.com/StackExchange/bosun/conf"
 )
 
 // Poll dispatches notification checks when needed.
