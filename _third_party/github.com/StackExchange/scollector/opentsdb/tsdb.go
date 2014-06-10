@@ -246,8 +246,8 @@ func ParseRequest(req string) (*Request, error) {
 var qRE = regexp.MustCompile(`^(\w+):(?:(\w+-\w+):)?(?:(rate.*):)?([\w./]+)(?:\{([\w./,=*-|]+)\})?$`)
 
 // ParseQuery parses OpenTSDB queries of the form: avg:rate:cpu{k=v}.
-func ParseQuery(query string) (*Query, error) {
-	q := Query{}
+func ParseQuery(query string) (q *Query, err error) {
+	q = new(Query)
 	m := qRE.FindStringSubmatch(query)
 	if m == nil {
 		return nil, fmt.Errorf("tsdb: bad query format: %s", query)
@@ -255,36 +255,37 @@ func ParseQuery(query string) (*Query, error) {
 	q.Aggregator = m[1]
 	q.Downsample = m[2]
 	q.Rate = strings.HasPrefix(m[3], "rate")
-	var err error
 	if q.Rate && len(m[3]) > 4 {
 		s := m[3][4:]
 		if !strings.HasSuffix(s, "}") || !strings.HasPrefix(s, "{") {
-			return nil, err
+			err = fmt.Errorf("tsdb: invalid rate options")
+			return
 		}
 		sp := strings.Split(s[1:len(s)-1], ",")
 		q.RateOptions.Counter = sp[0] == "counter"
 		if len(sp) > 1 {
 			if sp[1] != "" {
 				if q.RateOptions.CounterMax, err = strconv.ParseInt(sp[1], 10, 64); err != nil {
-					return nil, err
+					return
 				}
 			}
 		}
 		if len(sp) > 2 {
 			if q.RateOptions.ResetValue, err = strconv.ParseInt(sp[2], 10, 64); err != nil {
-				return nil, err
+				return
 			}
 		}
 	}
 	q.Metric = m[4]
 	if m[5] != "" {
-		tags, err := ParseTags(m[5])
-		if err != nil {
-			return nil, err
+		tags, e := ParseTags(m[5])
+		if e != nil {
+			err = e
+			return
 		}
 		q.Tags = tags
 	}
-	return &q, nil
+	return
 }
 
 // ParseTags parses OpenTSDB tagk=tagv pairs of the form: k=v,m=o.
