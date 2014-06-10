@@ -71,6 +71,9 @@ var tsafControllers = angular.module('tsafControllers', []);
 
 tsafControllers.controller('TsafCtrl', [
     '$scope', '$route', '$http', function ($scope, $route, $http) {
+        $scope.$on('$routeChangeSuccess', function (event, current, previous) {
+            $scope.stop();
+        });
         $scope.active = function (v) {
             if (!$route.current) {
                 return null;
