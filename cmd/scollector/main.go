@@ -23,6 +23,7 @@ var (
 	batchSize  = flag.Int("b", 0, "OpenTSDB batch size. Used for debugging bad data.")
 	snmp       = flag.String("s", "", "SNMP host to poll of the format: \"community@host[,community@host...]\".")
 	fake       = flag.Int("fake", 0, "Generates X fake data points on the test.fake metric per second.")
+	debug      = flag.Bool("d", false, "Enables debug output.")
 
 	mains []func()
 )
@@ -49,6 +50,7 @@ func main() {
 	if *fake > 0 {
 		collectors.InitFake(*fake)
 	}
+	collect.Debug = *debug
 	c := collectors.Search(*flagFilter)
 	for _, col := range c {
 		col.Init()
