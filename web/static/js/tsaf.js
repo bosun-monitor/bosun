@@ -501,7 +501,6 @@ function nfmt(s, mult, suffix, opts) {
     if (isNaN(n) || !isFinite(n))
         return '-';
     var a = Math.abs(n);
-    var precision = a < 1 ? 2 : 4;
     if (a >= 1) {
         var number = Math.floor(Math.log(a) / Math.log(mult));
         a /= Math.pow(mult, Math.floor(number));
@@ -511,7 +510,7 @@ function nfmt(s, mult, suffix, opts) {
     }
     if (n < 0)
         a = -a;
-    var r = a.toFixed(precision);
+    var r = a.toFixed(5);
     return +r + suffix;
 }
 
