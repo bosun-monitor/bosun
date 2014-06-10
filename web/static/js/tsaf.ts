@@ -103,6 +103,9 @@ interface ITsafScope extends ng.IScope {
 }
 
 tsafControllers.controller('TsafCtrl', ['$scope', '$route', '$http', function($scope: ITsafScope, $route: ng.route.IRouteService, $http: ng.IHttpService) {
+	$scope.$on('$routeChangeSuccess', function(event, current, previous) {
+		$scope.stop();
+	});
 	$scope.active = (v: string) => {
 		if (!$route.current) {
 			return null;

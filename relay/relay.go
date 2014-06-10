@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/json"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
-	"strings"
 	"time"
 
 	"github.com/StackExchange/tsaf/_third_party/github.com/StackExchange/scollector/opentsdb"
@@ -32,21 +32,17 @@ var client = &http.Client{
 
 func Handle(dest string) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		reader := r.Body
-		if r, err := gzip.NewReader(reader); err == nil {
-			reader = r
-			defer r.Close()
-		}
-		body, err := ioutil.ReadAll(reader)
-		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(err.Error()))
-			return
-		}
+		orig, _ := ioutil.ReadAll(r.Body)
 		if r.URL.Path == "/api/put" {
+			var reader io.Reader = bytes.NewReader(orig)
+			if r, err := gzip.NewReader(reader); err == nil {
+				reader = r
+				defer r.Close()
+			}
+			body, _ := ioutil.ReadAll(reader)
 			var dp opentsdb.DataPoint
 			var mdp opentsdb.MultiDataPoint
-			if err = json.Unmarshal(body, &mdp); err == nil {
+			if err := json.Unmarshal(body, &mdp); err == nil {
 			} else if err = json.Unmarshal(body, &dp); err == nil {
 				mdp = opentsdb.MultiDataPoint{&dp}
 			}
@@ -61,22 +57,15 @@ func Handle(dest string) func(http.ResponseWriter, *http.Request) {
 		durl.Path = r.URL.Path
 		durl.RawQuery = r.URL.RawQuery
 		durl.Fragment = r.URL.Fragment
-		req, err := http.NewRequest(r.Method, durl.String(), bytes.NewReader(body))
+		req, err := http.NewRequest(r.Method, durl.String(), bytes.NewReader(orig))
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte(err.Error()))
 			return
 		}
-		for k, v := range r.Header {
-			if strings.HasPrefix(strings.ToLower(k), "content-") {
-				continue
-			}
-			for _, h := range v {
-				req.Header.Add(k, h)
-			}
-		}
-		req.TransferEncoding = append(req.TransferEncoding, "identity")
-		req.ContentLength = int64(len(body))
+		req.Header = r.Header
+		req.TransferEncoding = r.TransferEncoding
+		req.ContentLength = r.ContentLength
 		resp, err := client.Do(req)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)

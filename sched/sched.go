@@ -468,6 +468,10 @@ func (s *Schedule) Action(user, message string, t ActionType, ak AlertKey) error
 	if st == nil {
 		return fmt.Errorf("no such alert key: %v", ak)
 	}
+	ack := func() {
+		delete(s.Notifications, ak)
+		st.NeedAck = false
+	}
 	switch t {
 	case ActionAcknowledge:
 		if !st.NeedAck {
@@ -476,11 +480,10 @@ func (s *Schedule) Action(user, message string, t ActionType, ak AlertKey) error
 		if !st.Open {
 			return fmt.Errorf("cannot acknowledge closed alert")
 		}
-		delete(s.Notifications, ak)
-		st.NeedAck = false
+		ack()
 	case ActionClose:
 		if st.NeedAck {
-			return fmt.Errorf("cannot close unacknowledged alert")
+			ack()
 		}
 		if st.IsActive() {
 			return fmt.Errorf("cannot close active alert")
@@ -488,7 +491,7 @@ func (s *Schedule) Action(user, message string, t ActionType, ak AlertKey) error
 		st.Open = false
 	case ActionForget:
 		if st.NeedAck {
-			return fmt.Errorf("cannot close unacknowledged alert")
+			ack()
 		}
 		if st.IsActive() {
 			return fmt.Errorf("cannot forget active alert")
