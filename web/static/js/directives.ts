@@ -230,7 +230,6 @@ function nfmt(s: any, mult: number, suffix: string, opts: any) {
 	if (!n) return suffix ? '0 ' + suffix : '0';
 	if (isNaN(n) || !isFinite(n)) return '-';
 	var a = Math.abs(n);
-	var precision = a < 1 ? 2 : 4;
 	if (a >= 1) {
 		var number = Math.floor(Math.log(a) / Math.log(mult));
 		a /= Math.pow(mult, Math.floor(number));
@@ -239,7 +238,7 @@ function nfmt(s: any, mult: number, suffix: string, opts: any) {
 		}
 	}
 	if (n < 0) a = -a;
-	var r = a.toFixed(precision);
+	var r = a.toFixed(5);
 	return +r + suffix;
 }
 
