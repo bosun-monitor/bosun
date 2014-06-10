@@ -295,18 +295,23 @@ tsafApp.directive('tsResults', function () {
     };
 });
 
-var timeFormat = 'YYYY-MM-DD HH:mm:ss ZZ';
+var timeFormat = 'YYYY/MM/DD-HH:mm:ss';
+
+function fmtTime(v) {
+    var m = moment(v).utc();
+    return m.format(timeFormat) + ' (' + m.fromNow() + ')';
+}
 
 tsafApp.directive("tsTime", function () {
     return {
         link: function (scope, elem, attrs) {
             scope.$watch(attrs.tsTime, function (v) {
-                var m = moment(v).utc();
-                var text = m.format(timeFormat) + ' (' + m.fromNow() + ')';
+                var text = fmtTime(v);
                 if (attrs.noLink) {
-                    elem.text(m.format(timeFormat) + ' (' + m.fromNow() + ')');
+                    elem.text(text);
                 } else {
                     var el = document.createElement('a');
+                    var m = moment(v).utc();
                     el.innerText = text;
                     el.href = 'http://www.timeanddate.com/worldclock/converted.html?iso=';
                     el.href += m.format('YYYYMMDDTHHmm');
@@ -622,7 +627,7 @@ tsafApp.directive('tsGraph', [
                     names.enter().append('div').attr('class', 'series');
                     names.exit().remove();
                     var xi = xScale.invert(mousex);
-                    xloc.text('Time: ' + moment(xi).utc().format());
+                    xloc.text('Time: ' + fmtTime(xi));
                     var t = xi.getTime() / 1000;
                     names.text(function (d) {
                         var idx = bisect(d.data, t);

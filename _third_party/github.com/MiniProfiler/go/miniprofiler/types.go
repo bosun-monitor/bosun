@@ -28,10 +28,12 @@ import (
 	"time"
 )
 
-var rnd = rand.NewSource(time.Now().UnixNano())
+func init() {
+	rand.Seed(time.Now().UnixNano())
+}
 
 func newGuid() string {
-	return fmt.Sprintf("%016x", rnd.Int63())
+	return fmt.Sprintf("%016x", rand.Int63())
 }
 
 type Profile struct {
