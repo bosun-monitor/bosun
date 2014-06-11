@@ -321,13 +321,24 @@ type nodePair struct {
 	val  string
 }
 
-func (c *Conf) getPairs(s *parse.SectionNode, vars Vars, ignoreBadExpand bool) []nodePair {
+type sectionType int
+
+const (
+	sNormal sectionType = iota
+	sMacro
+)
+
+func (c *Conf) getPairs(s *parse.SectionNode, vars Vars, st sectionType) []nodePair {
 	saw := make(map[string]bool)
 	var pairs []nodePair
+	ignoreBadExpand := st == sMacro
 	add := func(n parse.Node, k, v string) {
 		c.seen(k, saw)
 		if strings.HasPrefix(k, "$") {
 			vars[k] = v
+			if st != sMacro {
+				vars[k[1:]] = v
+			}
 		} else {
 			pairs = append(pairs, nodePair{
 				node: n,
@@ -365,12 +376,8 @@ func (c *Conf) loadMacro(s *parse.SectionNode) {
 		Vars: make(map[string]string),
 		Name: name,
 	}
-	for _, p := range c.getPairs(s, m.Vars, true) {
-		c.at(p.node)
-		switch p.key {
-		default:
-			m.Vars[p.key] = p.val
-		}
+	for _, p := range c.getPairs(s, m.Vars, sMacro) {
+		m.Vars[p.key] = p.val
 	}
 	c.at(s)
 	c.macros[name] = &m
@@ -446,7 +453,7 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 		Vars: make(map[string]string),
 		Name: name,
 	}
-	for _, p := range c.getPairs(s, a.Vars, false) {
+	for _, p := range c.getPairs(s, a.Vars, sNormal) {
 		c.at(p.node)
 		v := p.val
 		switch p.key {
@@ -550,7 +557,7 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 		Name: name,
 	}
 	c.Notifications[name] = &n
-	for _, p := range c.getPairs(s, n.Vars, false) {
+	for _, p := range c.getPairs(s, n.Vars, sNormal) {
 		c.at(p.node)
 		v := p.val
 		switch k := p.key; k {
