@@ -17,7 +17,7 @@ interface ISilenceScope extends ng.IScope {
 	time: (v: any) => string;
 }
 
-tsafControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$route', function($scope: ISilenceScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService) {
+bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$route', function($scope: ISilenceScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService) {
 	var search = $location.search();
 	$scope.start = search.start;
 	$scope.end = search.end;

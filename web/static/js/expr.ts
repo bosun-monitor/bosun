@@ -16,7 +16,7 @@ interface IExprScope extends ng.IScope {
 	stop: () => any;
 }
 
-tsafControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route', function($scope: IExprScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService) {
+bosunControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route', function($scope: IExprScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService) {
 	var search = $location.search();
 	var current: string;
 	try {
@@ -26,7 +26,7 @@ tsafControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route'
 		current = '';
 	}
 	if (!current) {
-		$location.search('expr', btoa('avg(q("avg:rate:os.cpu{host=ny-devtsaf01}", "5m", "")) > 80'));
+		$location.search('expr', btoa('avg(q("avg:rate:os.cpu{host=*bosun*}", "5m", "")) > 80'));
 		return;
 	}
 	$scope.date = search.date || '';

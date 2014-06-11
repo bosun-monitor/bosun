@@ -786,7 +786,7 @@ bosunControllers.controller('ExprCtrl', [
             current = '';
         }
         if (!current) {
-            $location.search('expr', btoa('avg(q("avg:rate:os.cpu{host=ny-devbosun01}", "5m", "")) > 80'));
+            $location.search('expr', btoa('avg(q("avg:rate:os.cpu{host=*bosun*}", "5m", "")) > 80'));
             return;
         }
         $scope.date = search.date || '';

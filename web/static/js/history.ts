@@ -1,4 +1,4 @@
-interface IHistoryScope extends ITsafScope {
+interface IHistoryScope extends IBosunScope {
 	ak: string;
 	alert_history: any;
 	error: string;
@@ -6,7 +6,7 @@ interface IHistoryScope extends ITsafScope {
 	collapse: (i: any) => void;
 }
 
-tsafControllers.controller('HistoryCtrl', ['$scope', '$http', '$location', '$route', function($scope: IHistoryScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService) {
+bosunControllers.controller('HistoryCtrl', ['$scope', '$http', '$location', '$route', function($scope: IHistoryScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService) {
 	var search = $location.search();
 	var keys: any = {};
 	if (angular.isArray(search.key)) {
