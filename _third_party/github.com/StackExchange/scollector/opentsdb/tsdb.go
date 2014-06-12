@@ -201,7 +201,7 @@ func RequestFromJSON(b []byte) (*Request, error) {
 	}
 	if t, err := ParseTime(r.End); err == nil {
 		r.End = t.Unix()
-	} else {
+	} else if r.End != nil {
 		return nil, err
 	}
 	return &r, nil
