@@ -194,11 +194,15 @@ func RequestFromJSON(b []byte) (*Request, error) {
 	if err := json.Unmarshal(b, &r); err != nil {
 		return nil, err
 	}
-	if v, ok := r.Start.(float64); ok {
-		r.Start = int64(v)
+	if t, err := ParseTime(r.Start); err == nil {
+		r.Start = t.Unix()
+	} else {
+		return nil, err
 	}
-	if v, ok := r.End.(float64); ok {
-		r.End = int64(v)
+	if t, err := ParseTime(r.End); err == nil {
+		r.End = t.Unix()
+	} else {
+		return nil, err
 	}
 	return &r, nil
 }
@@ -459,6 +463,8 @@ func ParseTime(v interface{}) (time.Time, error) {
 		}
 	case int64:
 		return time.Unix(i, 0).UTC(), nil
+	case float64:
+		return time.Unix(int64(i), 0).UTC(), nil
 	default:
 		return time.Time{}, fmt.Errorf("type must be string or int64, got: %v", v)
 	}
