@@ -16,7 +16,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/StackExchange/tsaf/_third_party/github.com/StackExchange/slog"
+	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/slog"
 )
 
 type ResponseSet []*Response
@@ -194,11 +194,15 @@ func RequestFromJSON(b []byte) (*Request, error) {
 	if err := json.Unmarshal(b, &r); err != nil {
 		return nil, err
 	}
-	if v, ok := r.Start.(float64); ok {
-		r.Start = int64(v)
+	if t, err := ParseTime(r.Start); err == nil {
+		r.Start = t.Unix()
+	} else {
+		return nil, err
 	}
-	if v, ok := r.End.(float64); ok {
-		r.End = int64(v)
+	if t, err := ParseTime(r.End); err == nil {
+		r.End = t.Unix()
+	} else if r.End != nil {
+		return nil, err
 	}
 	return &r, nil
 }
@@ -226,7 +230,7 @@ func ParseRequest(req string) (*Request, error) {
 	}
 	r := Request{}
 	if s := v.Get("start"); s == "" {
-		return nil, fmt.Errorf("tsdb: missing start: %s", req)
+		return nil, fmt.Errorf("opentsdb: missing start: %s", req)
 	} else {
 		r.Start = s
 	}
@@ -238,7 +242,7 @@ func ParseRequest(req string) (*Request, error) {
 		r.Queries = append(r.Queries, q)
 	}
 	if len(r.Queries) == 0 {
-		return nil, fmt.Errorf("tsdb: missing m: %s", req)
+		return nil, fmt.Errorf("opentsdb: missing m: %s", req)
 	}
 	return &r, nil
 }
@@ -250,7 +254,7 @@ func ParseQuery(query string) (q *Query, err error) {
 	q = new(Query)
 	m := qRE.FindStringSubmatch(query)
 	if m == nil {
-		return nil, fmt.Errorf("tsdb: bad query format: %s", query)
+		return nil, fmt.Errorf("opentsdb: bad query format: %s", query)
 	}
 	q.Aggregator = m[1]
 	q.Downsample = m[2]
@@ -258,7 +262,7 @@ func ParseQuery(query string) (q *Query, err error) {
 	if q.Rate && len(m[3]) > 4 {
 		s := m[3][4:]
 		if !strings.HasSuffix(s, "}") || !strings.HasPrefix(s, "{") {
-			err = fmt.Errorf("tsdb: invalid rate options")
+			err = fmt.Errorf("opentsdb: invalid rate options")
 			return
 		}
 		sp := strings.Split(s[1:len(s)-1], ",")
@@ -294,12 +298,12 @@ func ParseTags(t string) (TagSet, error) {
 	for _, v := range strings.Split(t, ",") {
 		sp := strings.SplitN(v, "=", 2)
 		if len(sp) != 2 {
-			return nil, fmt.Errorf("tsdb: bad tag: %s", v)
+			return nil, fmt.Errorf("opentsdb: bad tag: %s", v)
 		}
 		sp[0] = strings.TrimSpace(sp[0])
 		sp[1] = strings.TrimSpace(sp[1])
 		if _, present := ts[sp[0]]; present {
-			return nil, fmt.Errorf("tsdb: duplicated tag: %s", v)
+			return nil, fmt.Errorf("opentsdb: duplicated tag: %s", v)
 		}
 		ts[sp[0]] = sp[1]
 	}
@@ -459,6 +463,8 @@ func ParseTime(v interface{}) (time.Time, error) {
 		}
 	case int64:
 		return time.Unix(i, 0).UTC(), nil
+	case float64:
+		return time.Unix(int64(i), 0).UTC(), nil
 	default:
 		return time.Time{}, fmt.Errorf("type must be string or int64, got: %v", v)
 	}
@@ -490,7 +496,7 @@ func GetDuration(r *Request) (Duration, error) {
 // AutoDownsample sets the avg downsample aggregator to produce l points.
 func (r *Request) AutoDownsample(l int) error {
 	if l == 0 {
-		return errors.New("tsaf: target length must be > 0")
+		return errors.New("opentsdb: target length must be > 0")
 	}
 	cd, err := GetDuration(r)
 	if err != nil {
@@ -566,7 +572,7 @@ func (r *Request) QueryResponse(host string) (*http.Response, error) {
 		if err := j.Decode(&e); err == nil {
 			return nil, &e
 		}
-		return nil, fmt.Errorf("tsdb: %s", b)
+		return nil, fmt.Errorf("opentsdb: %s", b)
 	}
 	return resp, nil
 }
@@ -581,7 +587,7 @@ type RequestError struct {
 }
 
 func (r *RequestError) Error() string {
-	return fmt.Sprintf("tsdb: %s: %s", r.Request, r.Err.Message)
+	return fmt.Sprintf("opentsdb: %s: %s", r.Request, r.Err.Message)
 }
 
 type Context interface {

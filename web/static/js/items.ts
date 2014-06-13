@@ -6,7 +6,7 @@ interface IItemsScope extends ng.IScope {
 	status: string;
 }
 
-tsafControllers.controller('ItemsCtrl', ['$scope', '$http', function($scope: IItemsScope, $http: ng.IHttpService) {
+bosunControllers.controller('ItemsCtrl', ['$scope', '$http', function($scope: IItemsScope, $http: ng.IHttpService) {
 	$http.get('/api/metric')
 		.success(function(data: string[]) {
 			$scope.metrics = data;

@@ -10,11 +10,11 @@ import (
 	"sync"
 	"time"
 
-	"github.com/StackExchange/tsaf/_third_party/github.com/StackExchange/scollector/opentsdb"
-	"github.com/StackExchange/tsaf/_third_party/github.com/bradfitz/slice"
-	"github.com/StackExchange/tsaf/conf"
-	"github.com/StackExchange/tsaf/expr"
-	"github.com/StackExchange/tsaf/search"
+	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/opentsdb"
+	"github.com/StackExchange/bosun/_third_party/github.com/bradfitz/slice"
+	"github.com/StackExchange/bosun/conf"
+	"github.com/StackExchange/bosun/expr"
+	"github.com/StackExchange/bosun/search"
 )
 
 func init() {

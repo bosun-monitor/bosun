@@ -1,23 +1,23 @@
-tsaf
+bosun
 ====
 
 Time Series Alerting Framework
 
 # usage
 
-`tsaf [-c=dev.conf] [-t]`
+`bosun [-c=dev.conf] [-t]`
 
 `-c` specifies the config file to use, defaults to `dev.conf`. `-t` parses the config file, validates it, and exits.
 
 # installation
 
 1. `export GOPATH=$HOME/go`
-1. `mkdir -p $GOPATH/src/github.com/StackExchange/tsaf`
-1. `cd $GOPATH/src/github.com/StackExchange/tsaf`
-1. `git clone git@github.com:StackExchange/tsaf.git .`
+1. `mkdir -p $GOPATH/src/github.com/StackExchange/bosun`
+1. `cd $GOPATH/src/github.com/StackExchange/bosun`
+1. `git clone git@github.com:StackExchange/bosun.git .`
 1. `go build .`
 
-Now you have a `tsaf` executable in that directory.
+Now you have a `bosun` executable in that directory.
 
 Getting HBase and OpenTSDB Up with Cloudera on CentOS
 ====

@@ -5,14 +5,14 @@
 /// <reference path="moment.d.ts" />
 /// <reference path="d3.d.ts" />
 
-var tsafApp = angular.module('tsafApp', [
+var bosunApp = angular.module('bosunApp', [
 	'ngRoute',
-	'tsafControllers',
+	'bosunControllers',
 	'mgcrea.ngStrap',
 	'ngSanitize',
 ]);
 
-tsafApp.config(['$routeProvider', '$locationProvider', function($routeProvider: ng.route.IRouteProvider, $locationProvider: ng.ILocationProvider) {
+bosunApp.config(['$routeProvider', '$locationProvider', function($routeProvider: ng.route.IRouteProvider, $locationProvider: ng.ILocationProvider) {
 	$locationProvider.html5Mode(true);
 	$routeProvider.
 		when('/', {
@@ -80,15 +80,15 @@ interface IRootScope extends ng.IScope {
 	title: string;
 }
 
-tsafApp.run(['$location', '$rootScope', function($location: ng.ILocationService, $rootScope: IRootScope) {
+bosunApp.run(['$location', '$rootScope', function($location: ng.ILocationService, $rootScope: IRootScope) {
 	$rootScope.$on('$routeChangeSuccess', function(event, current, previous) {
 		$rootScope.title = current.$$route.title;
 	});
 }]);
 
-var tsafControllers = angular.module('tsafControllers', []);
+var bosunControllers = angular.module('bosunControllers', []);
 
-interface ITsafScope extends ng.IScope {
+interface IBosunScope extends ng.IScope {
 	active: (v: string) => any;
 	json: (v: any) => string;
 	btoa: (v: any) => string;
@@ -102,7 +102,7 @@ interface ITsafScope extends ng.IScope {
 	stop: () => any;
 }
 
-tsafControllers.controller('TsafCtrl', ['$scope', '$route', '$http', function($scope: ITsafScope, $route: ng.route.IRouteService, $http: ng.IHttpService) {
+bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', function($scope: IBosunScope, $route: ng.route.IRouteService, $http: ng.IHttpService) {
 	$scope.$on('$routeChangeSuccess', function(event, current, previous) {
 		$scope.stop();
 	});

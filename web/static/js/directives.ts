@@ -1,4 +1,4 @@
-tsafApp.directive('tsResults', function() {
+bosunApp.directive('tsResults', function() {
 	return {
 		templateUrl: '/partials/results.html',
 	};
@@ -11,11 +11,11 @@ function fmtTime(v: any) {
 	return m.format(timeFormat) + ' (' + m.fromNow() + ')';
 }
 
-interface ITimeScope extends ITsafScope {
+interface ITimeScope extends IBosunScope {
 	noLink: string;
 }
 
-tsafApp.directive("tsTime", function() {
+bosunApp.directive("tsTime", function() {
 	return {
 		link: function(scope: ITimeScope, elem: any, attrs: any) {
 			scope.$watch(attrs.tsTime, (v: any) => {
@@ -39,9 +39,9 @@ tsafApp.directive("tsTime", function() {
 	};
 });
 
-tsafApp.directive("tsSince", function() {
+bosunApp.directive("tsSince", function() {
 	return {
-		link: function(scope: ITsafScope, elem: any, attrs: any) {
+		link: function(scope: IBosunScope, elem: any, attrs: any) {
 			scope.$watch(attrs.tsSince, (v: any) => {
 				var m = moment(v).utc();
 				elem.text(m.fromNow());
@@ -50,7 +50,7 @@ tsafApp.directive("tsSince", function() {
 	};
 });
 
-tsafApp.directive("tooltip", function() {
+bosunApp.directive("tooltip", function() {
 	return {
 		link: function(scope: IGraphScope, elem: any, attrs: any) {
 			angular.element(elem[0]).tooltip({ placement: "bottom" });
@@ -58,7 +58,7 @@ tsafApp.directive("tooltip", function() {
 	};
 });
 
-tsafApp.directive('tsLine', () => {
+bosunApp.directive('tsLine', () => {
 	return {
 		link: (scope: any, elem: any, attrs: any) => {
 			elem.linedtextarea();
@@ -88,7 +88,7 @@ interface JQuery {
 	tablesorter(v: any): JQuery;
 }
 
-tsafApp.directive('tsTableSort', ['$timeout', ($timeout: ng.ITimeoutService) => {
+bosunApp.directive('tsTableSort', ['$timeout', ($timeout: ng.ITimeoutService) => {
 	return {
 		link: (scope: ng.IScope, elem: any, attrs: any) => {
 			$timeout(() => {
@@ -100,7 +100,7 @@ tsafApp.directive('tsTableSort', ['$timeout', ($timeout: ng.ITimeoutService) => 
 	};
 }]);
 
-tsafApp.directive('ahTimeLine', () => {
+bosunApp.directive('ahTimeLine', () => {
 	//2014-05-26T21:46:37.435056942Z
 	var format = d3.time.format.utc("%Y-%m-%dT%X");
 	var tsdbFormat = d3.time.format.utc("%Y/%m/%d-%X");
@@ -242,25 +242,25 @@ function nfmt(s: any, mult: number, suffix: string, opts: any) {
 	return +r + suffix;
 }
 
-tsafApp.filter('nfmt', function() {
+bosunApp.filter('nfmt', function() {
 	return function(s: any) {
 		return nfmt(s, 1000, '', {});
 	}
 });
 
-tsafApp.filter('bytes', function() {
+bosunApp.filter('bytes', function() {
 	return function(s: any) {
 		return nfmt(s, 1024, 'B', { round: true });
 	}
 });
 
-tsafApp.filter('bits', function() {
+bosunApp.filter('bits', function() {
 	return function(s: any) {
 		return nfmt(s, 1024, 'b', { round: true });
 	}
 });
 
-tsafApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWindowService, fmtfilter: any) {
+bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWindowService, fmtfilter: any) {
 	var margin = {
 		top: 10,
 		right: 10,
