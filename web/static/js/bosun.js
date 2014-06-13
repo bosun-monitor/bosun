@@ -1287,7 +1287,7 @@ bosunControllers.controller('RuleCtrl', [
         $scope.date = search.date || '';
         $scope.time = search.time || '';
         $scope.tab = search.tab || 'results';
-        $http.get('/api/config/json').success(function (data) {
+        $http.get('/api/templates').success(function (data) {
             $scope.alerts = data.Alerts;
             $scope.templates = data.Templates;
         });
