@@ -9,11 +9,11 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/StackExchange/tsaf/_third_party/github.com/MiniProfiler/go/miniprofiler"
-	"github.com/StackExchange/tsaf/_third_party/github.com/gorilla/mux"
-	"github.com/StackExchange/tsaf/conf"
-	"github.com/StackExchange/tsaf/relay"
-	"github.com/StackExchange/tsaf/sched"
+	"github.com/StackExchange/bosun/_third_party/github.com/MiniProfiler/go/miniprofiler"
+	"github.com/StackExchange/bosun/_third_party/github.com/gorilla/mux"
+	"github.com/StackExchange/bosun/conf"
+	"github.com/StackExchange/bosun/relay"
+	"github.com/StackExchange/bosun/sched"
 )
 
 var (
@@ -60,8 +60,8 @@ func Listen(addr, dir, host string) error {
 	http.Handle("/static/", fs)
 	static := http.FileServer(http.Dir(filepath.Join(dir, "static")))
 	http.Handle("/favicon.ico", static)
-	log.Println("TSAF web listening on:", addr)
-	log.Println("TSAF web directory:", dir)
+	log.Println("bosun web listening on:", addr)
+	log.Println("bosun web directory:", dir)
 	return http.ListenAndServe(addr, nil)
 }
 

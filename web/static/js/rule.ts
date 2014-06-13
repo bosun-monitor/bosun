@@ -17,7 +17,7 @@ interface IRuleScope extends IExprScope {
 	stop: () => any;
 }
 
-tsafControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route', function($scope: IRuleScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService) {
+bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route', function($scope: IRuleScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService) {
 	var search = $location.search();
 	var current_alert = search.alert;
 	var current_template = search.template;

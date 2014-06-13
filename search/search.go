@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/StackExchange/tsaf/_third_party/github.com/StackExchange/scollector/collect"
-	"github.com/StackExchange/tsaf/_third_party/github.com/StackExchange/scollector/opentsdb"
+	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/collect"
+	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/opentsdb"
 )
 
 /* Questions we want to ask:
@@ -128,7 +128,7 @@ func TagValuesByTagKey(tagk string) []string {
 	defer Lock.RUnlock()
 	tagvset := make(map[string]bool)
 	for _, metric := range UniqueMetrics() {
-		for _, tagv := range TagValuesByMetricTagKey(metric, tagk) {
+		for _, tagv := range tagValuesByMetricTagKey(metric, tagk) {
 			tagvset[tagv] = true
 		}
 	}
@@ -140,7 +140,6 @@ func TagValuesByTagKey(tagk string) []string {
 	}
 	sort.Strings(tagvs)
 	return tagvs
-
 }
 
 func MetricsByTagPair(tagk, tagv string) []string {
@@ -165,15 +164,19 @@ func TagKeysByMetric(metric string) []string {
 	return r
 }
 
-func TagValuesByMetricTagKey(metric, tagk string) []string {
-	Lock.RLock()
-	defer Lock.RUnlock()
+func tagValuesByMetricTagKey(metric, tagk string) []string {
 	var r []string
 	for k := range Tagv[Query{metric, tagk}] {
 		r = append(r, k)
 	}
 	sort.Strings(r)
 	return r
+}
+
+func TagValuesByMetricTagKey(metric, tagk string) []string {
+	Lock.RLock()
+	defer Lock.RUnlock()
+	return tagValuesByMetricTagKey(metric, tagk)
 }
 
 func FilteredTagValuesByMetricTagKey(metric, tagk string, tsf map[string]string) []string {

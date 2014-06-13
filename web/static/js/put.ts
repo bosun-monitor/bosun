@@ -22,11 +22,10 @@ interface IPutScope extends ng.IScope {
 	AddDP: () => void;
 }
 
-tsafControllers.controller('PutCtrl', ['$scope', '$http', '$route', function($scope: IPutScope, $http: ng.IHttpService, $route: ng.route.IRouteService) {
-	var mfmt = 'YYYY/MM/DD-HH:mm:ss';
+bosunControllers.controller('PutCtrl', ['$scope', '$http', '$route', function($scope: IPutScope, $http: ng.IHttpService, $route: ng.route.IRouteService) {
 	$scope.tags = [new Tag];
 	var dp = new DP;
-	dp.k = moment().utc().format(mfmt);
+	dp.k = moment().utc().format(timeFormat);
 	$scope.dps = [dp];
 	$http.get('/api/metric')
 		.success(function(data: string[]) {
@@ -53,7 +52,7 @@ tsafControllers.controller('PutCtrl', ['$scope', '$http', '$route', function($sc
 		});
 		angular.forEach($scope.dps, (v, k) => {
 			if (v.k && v.v) {
-				var ts = parseInt(moment.utc(v.k, mfmt).format('X'));
+				var ts = parseInt(moment.utc(v.k, timeFormat).format('X'));
 				data.push({
 					metric: $scope.metric,
 					timestamp: ts,
@@ -85,7 +84,7 @@ tsafControllers.controller('PutCtrl', ['$scope', '$http', '$route', function($sc
 		var last = $scope.dps[$scope.dps.length - 1];
 		if (last.k && last.v) {
 			var dp = new DP;
-			dp.k = moment.utc(last.k, mfmt).add('seconds', 15).format(mfmt);
+			dp.k = moment.utc(last.k, timeFormat).add('seconds', 15).format(timeFormat);
 			$scope.dps.push(dp);
 		}
 	}

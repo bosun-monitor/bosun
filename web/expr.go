@@ -10,11 +10,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/StackExchange/tsaf/_third_party/github.com/MiniProfiler/go/miniprofiler"
-	"github.com/StackExchange/tsaf/_third_party/github.com/StackExchange/scollector/opentsdb"
-	"github.com/StackExchange/tsaf/conf"
-	"github.com/StackExchange/tsaf/expr"
-	"github.com/StackExchange/tsaf/sched"
+	"github.com/StackExchange/bosun/_third_party/github.com/MiniProfiler/go/miniprofiler"
+	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/opentsdb"
+	"github.com/StackExchange/bosun/conf"
+	"github.com/StackExchange/bosun/expr"
+	"github.com/StackExchange/bosun/sched"
 )
 
 func Expr(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
@@ -70,6 +70,7 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 	fmt.Fprintf(&buf, "tsdbHost = %s\n", schedule.Conf.TsdbHost)
 	fmt.Fprintf(&buf, "smtpHost = %s\n", schedule.Conf.SmtpHost)
 	fmt.Fprintf(&buf, "emailFrom = %s\n", schedule.Conf.EmailFrom)
+	fmt.Fprintf(&buf, "responseLimit = %d\n", schedule.Conf.ResponseLimit)
 	for k, v := range schedule.Conf.Vars {
 		if strings.HasPrefix(k, "$") {
 			fmt.Fprintf(&buf, "%s=%s\n", k, v)

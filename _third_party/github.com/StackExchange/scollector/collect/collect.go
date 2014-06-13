@@ -14,8 +14,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/StackExchange/tsaf/_third_party/github.com/StackExchange/scollector/opentsdb"
-	"github.com/StackExchange/tsaf/_third_party/github.com/mreiferson/go-httpclient"
+	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/opentsdb"
+	"github.com/StackExchange/bosun/_third_party/github.com/mreiferson/go-httpclient"
 )
 
 var (

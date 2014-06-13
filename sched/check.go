@@ -6,10 +6,10 @@ import (
 	"log"
 	"time"
 
-	"github.com/StackExchange/tsaf/_third_party/github.com/StackExchange/scollector/collect"
-	"github.com/StackExchange/tsaf/_third_party/github.com/StackExchange/scollector/opentsdb"
-	"github.com/StackExchange/tsaf/conf"
-	"github.com/StackExchange/tsaf/expr"
+	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/collect"
+	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/opentsdb"
+	"github.com/StackExchange/bosun/conf"
+	"github.com/StackExchange/bosun/expr"
 )
 
 func (s *Schedule) Status(ak AlertKey) *State {

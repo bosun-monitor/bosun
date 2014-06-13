@@ -1,4 +1,4 @@
-tsafApp.directive('tsAckGroup', function() {
+bosunApp.directive('tsAckGroup', function() {
 	return {
 		scope: {
 			ack: '=',
@@ -89,7 +89,7 @@ tsafApp.directive('tsAckGroup', function() {
 	};
 });
 
-tsafApp.directive('tsState', function() {
+bosunApp.directive('tsState', function() {
 	return {
 		templateUrl: '/partials/alertstate.html',
 		link: function(scope: any, elem: any, attrs: any) {
@@ -104,21 +104,21 @@ tsafApp.directive('tsState', function() {
 	};
 });
 
-tsafApp.directive('tsAck', () => {
+bosunApp.directive('tsAck', () => {
 	return {
 		restrict: 'E',
 		templateUrl: '/partials/ack.html',
 	};
 });
 
-tsafApp.directive('tsClose', () => {
+bosunApp.directive('tsClose', () => {
 	return {
 		restrict: 'E',
 		templateUrl: '/partials/close.html',
 	};
 });
 
-tsafApp.directive('tsForget', () => {
+bosunApp.directive('tsForget', () => {
 	return {
 		restrict: 'E',
 		templateUrl: '/partials/forget.html',

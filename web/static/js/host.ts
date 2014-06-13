@@ -16,7 +16,7 @@ interface IHostScope extends ng.IScope {
 	filterMetrics: string;
 }
 
-tsafControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route', function($scope: IHostScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService) {
+bosunControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route', function($scope: IHostScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService) {
 	var search = $location.search();
 	$scope.host = search.host;
 	$scope.time = search.time;

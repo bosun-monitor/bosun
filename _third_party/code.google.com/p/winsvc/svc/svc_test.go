@@ -7,8 +7,8 @@
 package svc_test
 
 import (
-	"github.com/StackExchange/tsaf/_third_party/code.google.com/p/winsvc/mgr"
-	"github.com/StackExchange/tsaf/_third_party/code.google.com/p/winsvc/svc"
+	"github.com/StackExchange/bosun/_third_party/code.google.com/p/winsvc/mgr"
+	"github.com/StackExchange/bosun/_third_party/code.google.com/p/winsvc/svc"
 	"io/ioutil"
 	"os"
 	"os/exec"

@@ -15,10 +15,10 @@ import (
 	ttemplate "text/template"
 	"time"
 
-	"github.com/StackExchange/tsaf/_third_party/github.com/StackExchange/scollector/opentsdb"
-	"github.com/StackExchange/tsaf/conf/parse"
-	"github.com/StackExchange/tsaf/expr"
-	eparse "github.com/StackExchange/tsaf/expr/parse"
+	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/opentsdb"
+	"github.com/StackExchange/bosun/conf/parse"
+	"github.com/StackExchange/bosun/expr"
+	eparse "github.com/StackExchange/bosun/expr/parse"
 )
 
 type Conf struct {
@@ -40,6 +40,7 @@ type Conf struct {
 	Alerts          map[string]*Alert
 	Notifications   map[string]*Notification `json:"-"`
 	RawText         string
+	macros          map[string]*Macro
 
 	tree            *parse.Tree
 	node            parse.Node
@@ -82,6 +83,12 @@ func errRecover(errp *error) {
 			panic(e)
 		}
 	}
+}
+
+type Macro struct {
+	Def string
+	Vars
+	Name string
 }
 
 type Alert struct {
@@ -187,7 +194,7 @@ func New(name, text string) (c *Conf, err error) {
 		HttpListen:     ":8070",
 		RelayListen:    ":4242",
 		WebDir:         "web",
-		StateFile:      "tsaf.state",
+		StateFile:      "bosun.state",
 		ResponseLimit:  1 << 20, // 1MB
 		Vars:           make(map[string]string),
 		Templates:      make(map[string]*Template),
@@ -196,6 +203,7 @@ func New(name, text string) (c *Conf, err error) {
 		RawText:        text,
 		bodies:         htemplate.New(name),
 		subjects:       ttemplate.New(name),
+		macros:         make(map[string]*Macro),
 	}
 	c.tree, err = parse.Parse(name, text)
 	if err != nil {
@@ -222,7 +230,7 @@ func New(name, text string) (c *Conf, err error) {
 }
 
 func (c *Conf) loadGlobal(p *parse.PairNode) {
-	v := c.Expand(p.Val.Text, nil)
+	v := c.Expand(p.Val.Text, nil, false)
 	switch k := p.Key.Text; k {
 	case "checkFrequency":
 		d, err := time.ParseDuration(v)
@@ -300,9 +308,79 @@ func (c *Conf) loadSection(s *parse.SectionNode) {
 		c.loadAlert(s)
 	case "notification":
 		c.loadNotification(s)
+	case "macro":
+		c.loadMacro(s)
 	default:
 		c.errorf("unknown section type: %s", s.SectionType.Text)
 	}
+}
+
+type nodePair struct {
+	node parse.Node
+	key  string
+	val  string
+}
+
+type sectionType int
+
+const (
+	sNormal sectionType = iota
+	sMacro
+)
+
+func (c *Conf) getPairs(s *parse.SectionNode, vars Vars, st sectionType) []nodePair {
+	saw := make(map[string]bool)
+	var pairs []nodePair
+	ignoreBadExpand := st == sMacro
+	add := func(n parse.Node, k, v string) {
+		c.seen(k, saw)
+		if strings.HasPrefix(k, "$") {
+			vars[k] = v
+			if st != sMacro {
+				vars[k[1:]] = v
+			}
+		} else {
+			pairs = append(pairs, nodePair{
+				node: n,
+				key:  k,
+				val:  v,
+			})
+		}
+	}
+	for _, n := range s.Nodes {
+		c.at(n)
+		v := c.Expand(n.Val.Text, vars, ignoreBadExpand)
+		switch k := n.Key.Text; k {
+		case "macro":
+			m, ok := c.macros[v]
+			if !ok {
+				c.errorf("macro not found: %s", v)
+			}
+			for k, v := range m.Vars {
+				add(n, k, c.Expand(v, vars, ignoreBadExpand))
+			}
+		default:
+			add(n, k, v)
+		}
+	}
+	return pairs
+}
+
+func (c *Conf) loadMacro(s *parse.SectionNode) {
+	name := s.Name.Text
+	if _, ok := c.macros[name]; ok {
+		c.errorf("duplicate macro name: %s", name)
+	}
+	m := Macro{
+		Def:  s.RawText,
+		Vars: make(map[string]string),
+		Name: name,
+	}
+	for _, p := range c.getPairs(s, m.Vars, sMacro) {
+		m.Vars[p.key] = p.val
+	}
+	c.at(s)
+	c.macros[name] = &m
 }
 
 func (c *Conf) loadTemplate(s *parse.SectionNode) {
@@ -317,7 +395,7 @@ func (c *Conf) loadTemplate(s *parse.SectionNode) {
 	}
 	funcs := ttemplate.FuncMap{
 		"V": func(v string) string {
-			return c.Expand(v, t.Vars)
+			return c.Expand(v, t.Vars, false)
 		},
 		"bytes": func(v string) ByteSize {
 			f, _ := strconv.ParseFloat(v, 64)
@@ -375,12 +453,10 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 		Vars: make(map[string]string),
 		Name: name,
 	}
-	saw := make(map[string]bool)
-	for _, p := range s.Nodes {
-		c.at(p)
-		c.seen(p.Key.Text, saw)
-		v := c.Expand(p.Val.Text, a.Vars)
-		switch k := p.Key.Text; k {
+	for _, p := range c.getPairs(s, a.Vars, sNormal) {
+		c.at(p.node)
+		v := p.val
+		switch p.key {
 		case "template":
 			a.template = v
 			t, ok := c.Templates[a.template]
@@ -460,11 +536,7 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 			}
 			a.Unknown = d
 		default:
-			if !strings.HasPrefix(k, "$") {
-				c.errorf("unknown key %s", k)
-			}
-			a.Vars[k] = v
-			a.Vars[k[1:]] = a.Vars[k]
+			c.errorf("unknown key %s", p.key)
 		}
 	}
 	c.at(s)
@@ -484,13 +556,11 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 		Vars: make(map[string]string),
 		Name: name,
 	}
-	saw := make(map[string]bool)
 	c.Notifications[name] = &n
-	for _, p := range s.Nodes {
-		c.at(p)
-		c.seen(p.Key.Text, saw)
-		v := c.Expand(p.Val.Text, n.Vars)
-		switch k := p.Key.Text; k {
+	for _, p := range c.getPairs(s, n.Vars, sNormal) {
+		c.at(p.node)
+		v := p.val
+		switch k := p.key; k {
 		case "email":
 			if c.SmtpHost == "" || c.EmailFrom == "" {
 				c.errorf("email notifications require both smtpHost and emailFrom to be set")
@@ -531,11 +601,7 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 			}
 			n.Timeout = d
 		default:
-			if !strings.HasPrefix(k, "$") {
-				c.errorf("unknown key %s", k)
-			}
-			n.Vars[k] = v
-			n.Vars[k[1:]] = n.Vars[k]
+			c.errorf("unknown key %s", k)
 		}
 	}
 	c.at(s)
@@ -546,13 +612,8 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 
 var exRE = regexp.MustCompile(`\$\{?\w+\}?`)
 
-func (c *Conf) Expand(v string, vars map[string]string) string {
-	v = exRE.ReplaceAllStringFunc(v, func(s string) string {
-		if vars != nil {
-			if n, ok := vars[s]; ok {
-				return c.Expand(n, vars)
-			}
-		}
+func (c *Conf) Expand(v string, vars map[string]string, ignoreBadExpand bool) string {
+	return exRE.ReplaceAllStringFunc(v, func(s string) string {
 		var n string
 		if strings.HasPrefix(s, "${") && strings.HasSuffix(s, "}") {
 			n = os.Getenv(s[2 : len(s)-1])
@@ -560,12 +621,14 @@ func (c *Conf) Expand(v string, vars map[string]string) string {
 		if _n, ok := c.Vars[s]; ok {
 			n = _n
 		}
-		if n == "" {
+		if _n, ok := vars[s]; ok {
+			n = _n
+		}
+		if n == "" && !ignoreBadExpand {
 			c.errorf("unknown variable %s", s)
 		}
-		return c.Expand(n, nil)
+		return c.Expand(n, vars, ignoreBadExpand)
 	})
-	return v
 }
 
 func (c *Conf) seen(v string, m map[string]bool) {

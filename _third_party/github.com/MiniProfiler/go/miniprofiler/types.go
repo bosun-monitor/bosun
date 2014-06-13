@@ -28,12 +28,28 @@ import (
 	"time"
 )
 
-func init() {
-	rand.Seed(time.Now().UnixNano())
+var rnd = rand.New(&lockedSource{src: rand.NewSource(time.Now().UnixNano())})
+
+type lockedSource struct {
+	lk  sync.Mutex
+	src rand.Source
+}
+
+func (r *lockedSource) Int63() (n int64) {
+	r.lk.Lock()
+	n = r.src.Int63()
+	r.lk.Unlock()
+	return
+}
+
+func (r *lockedSource) Seed(seed int64) {
+	r.lk.Lock()
+	r.src.Seed(seed)
+	r.lk.Unlock()
 }
 
 func newGuid() string {
-	return fmt.Sprintf("%016x", rand.Int63())
+	return fmt.Sprintf("%016x", rnd.Int63())
 }
 
 type Profile struct {

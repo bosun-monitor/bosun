@@ -790,7 +790,7 @@ bosunControllers.controller('ExprCtrl', [
             current = '';
         }
         if (!current) {
-            $location.search('expr', btoa('avg(q("avg:rate:os.cpu{host=ny-devbosun01}", "5m", "")) > 80'));
+            $location.search('expr', btoa('avg(q("avg:rate:os.cpu{host=*bosun*}", "5m", "")) > 80'));
             return;
         }
         $scope.date = search.date || '';
@@ -1638,12 +1638,11 @@ var DP = (function () {
     return DP;
 })();
 
-tsafControllers.controller('PutCtrl', [
+bosunControllers.controller('PutCtrl', [
     '$scope', '$http', '$route', function ($scope, $http, $route) {
-        var mfmt = 'YYYY/MM/DD-HH:mm:ss';
         $scope.tags = [new Tag];
         var dp = new DP;
-        dp.k = moment().utc().format(mfmt);
+        dp.k = moment().utc().format(timeFormat);
         $scope.dps = [dp];
         $http.get('/api/metric').success(function (data) {
             $scope.metrics = data;
@@ -1668,7 +1667,7 @@ tsafControllers.controller('PutCtrl', [
             });
             angular.forEach($scope.dps, function (v, k) {
                 if (v.k && v.v) {
-                    var ts = parseInt(moment.utc(v.k, mfmt).format('X'));
+                    var ts = parseInt(moment.utc(v.k, timeFormat).format('X'));
                     data.push({
                         metric: $scope.metric,
                         timestamp: ts,
@@ -1698,7 +1697,7 @@ tsafControllers.controller('PutCtrl', [
             var last = $scope.dps[$scope.dps.length - 1];
             if (last.k && last.v) {
                 var dp = new DP;
-                dp.k = moment.utc(last.k, mfmt).add('seconds', 15).format(mfmt);
+                dp.k = moment.utc(last.k, timeFormat).add('seconds', 15).format(timeFormat);
                 $scope.dps.push(dp);
             }
         };
