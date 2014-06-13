@@ -14,7 +14,7 @@ The flags are:
 		OpenTSDB host; can optionally specify a port
 		("tsdb.example.com:4000"), but will default to 4242
 	-c=""
-		passthrough collector directory; t should contain numbered
+		passthrough collector directory; it should contain numbered
 		directories like OpenTSDB tcollector expects; any executable
 		file in those directories is run every N seconds, where N is the
 		name of the directory; use 0 for a program that should be run
@@ -34,7 +34,7 @@ The flags are:
 		list enabled collectors
 	-p
 		print to screen instead of sending to a host
-	-f=0
+	-fake=0
 		generates X fake data points per second on the test.fake metric
 	-b=0
 		OpenTSDB batch size; used for debugging bad data
