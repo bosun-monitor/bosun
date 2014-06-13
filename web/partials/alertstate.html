@@ -53,7 +53,7 @@
 		<tbody>
 			<tr ng-repeat="c in state.Computations">
 				<td><a ng-href="/expr?expr={{btoa(c.Text)}}" ng-bind="c.Text"></a></td>
-				<td ng-bind="c.Value"></td>
+				<td ng-bind="c.Value | nfmt"></td>
 			</tr>
 		</tbody>
 	</table>
