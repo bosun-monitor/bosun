@@ -29,7 +29,7 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
 	$scope.date = search.date || '';
 	$scope.time = search.time || '';
 	$scope.tab = search.tab || 'results';
-	$http.get('/api/config/json')
+	$http.get('/api/templates')
 		.success((data) => {
 			$scope.alerts = data.Alerts;
 			$scope.templates = data.Templates;

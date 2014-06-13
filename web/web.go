@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"path/filepath"
+	"text/template/parse"
 	"time"
 
 	"github.com/StackExchange/bosun/_third_party/github.com/MiniProfiler/go/miniprofiler"
@@ -38,7 +39,7 @@ func Listen(addr, dir, host string) error {
 	router.Handle("/api/action", JSON(Action))
 	router.Handle("/api/alerts", JSON(Alerts))
 	router.Handle("/api/config", miniprofiler.NewHandler(Config))
-	router.Handle("/api/config/json", JSON(ConfigJSON))
+	router.Handle("/api/templates", JSON(Templates))
 	router.Handle("/api/config_test", miniprofiler.NewHandler(ConfigTest))
 	router.Handle("/api/egraph/{bs}.svg", JSON(ExprGraph))
 	router.Handle("/api/expr", JSON(Expr))
@@ -228,6 +229,90 @@ func Config(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, schedule.Conf.RawText)
 }
 
-func ConfigJSON(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	return schedule.Conf, nil
+func nilFunc() {}
+
+var builtins = template.FuncMap{
+	"and":      nilFunc,
+	"call":     nilFunc,
+	"html":     nilFunc,
+	"index":    nilFunc,
+	"js":       nilFunc,
+	"len":      nilFunc,
+	"not":      nilFunc,
+	"or":       nilFunc,
+	"print":    nilFunc,
+	"printf":   nilFunc,
+	"println":  nilFunc,
+	"urlquery": nilFunc,
+	"eq":       nilFunc,
+	"ge":       nilFunc,
+	"gt":       nilFunc,
+	"le":       nilFunc,
+	"lt":       nilFunc,
+	"ne":       nilFunc,
+
+	"html_template_attrescaper":     nilFunc,
+	"html_template_commentescaper":  nilFunc,
+	"html_template_cssescaper":      nilFunc,
+	"html_template_cssvaluefilter":  nilFunc,
+	"html_template_htmlnamefilter":  nilFunc,
+	"html_template_htmlescaper":     nilFunc,
+	"html_template_jsregexpescaper": nilFunc,
+	"html_template_jsstrescaper":    nilFunc,
+	"html_template_jsvalescaper":    nilFunc,
+	"html_template_nospaceescaper":  nilFunc,
+	"html_template_rcdataescaper":   nilFunc,
+	"html_template_urlescaper":      nilFunc,
+	"html_template_urlfilter":       nilFunc,
+	"html_template_urlnormalizer":   nilFunc,
+}
+
+func Templates(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	templates := make(map[string]string)
+	for name, template := range schedule.Conf.Templates {
+		incl := map[string]bool{name: true}
+		parseTemplate := func(s string) error {
+			trees, err := parse.Parse("", s, "", "", nil, builtins)
+			if err != nil {
+				return err
+			}
+			for _, node := range trees[""].Root.Nodes {
+				switch node := node.(type) {
+				case *parse.TemplateNode:
+					incl[node.Name] = true
+				}
+			}
+			return nil
+		}
+		if template.Body != nil {
+			if err := parseTemplate(template.Body.Tree.Root.String()); err != nil {
+				return nil, err
+			}
+		}
+		if template.Subject != nil {
+			if err := parseTemplate(template.Subject.Tree.Root.String()); err != nil {
+				return nil, err
+			}
+		}
+		first := true
+		for n := range incl {
+			t := schedule.Conf.Templates[n]
+			if t == nil {
+				continue
+			}
+			if first {
+				first = false
+			} else {
+				templates[name] += "\n\n"
+			}
+			templates[name] += t.Def
+		}
+	}
+	return struct {
+		Templates map[string]string
+		Alerts    map[string]string
+	}{
+		templates,
+		nil,
+	}, nil
 }
