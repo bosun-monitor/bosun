@@ -32,7 +32,7 @@ func SNMPIfaces(community, host string) {
 		F: func() opentsdb.MultiDataPoint {
 			return c_snmp_ifaces(community, host)
 		},
-		Interval: time.Minute * 5,
+		Interval: time.Second * 30,
 		name:     fmt.Sprintf("snmp-ifaces-%s", host),
 	})
 }
