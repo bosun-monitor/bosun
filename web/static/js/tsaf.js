@@ -55,6 +55,10 @@ bosunApp.config([
             title: 'Alert History',
             templateUrl: 'partials/history.html',
             controller: 'HistoryCtrl'
+        }).when('/put', {
+            title: 'Data Entry',
+            templateUrl: 'partials/put.html',
+            controller: 'PutCtrl'
         }).otherwise({
             redirectTo: '/'
         });
@@ -1621,4 +1625,96 @@ bosunControllers.controller('HistoryCtrl', [
         } else {
             $scope.refresh().success(done);
         }
+    }]);
+var Tag = (function () {
+    function Tag() {
+    }
+    return Tag;
+})();
+
+var DP = (function () {
+    function DP() {
+    }
+    return DP;
+})();
+
+tsafControllers.controller('PutCtrl', [
+    '$scope', '$http', '$route', function ($scope, $http, $route) {
+        var mfmt = 'YYYY/MM/DD-HH:mm:ss';
+        $scope.tags = [new Tag];
+        var dp = new DP;
+        dp.k = moment().utc().format(mfmt);
+        $scope.dps = [dp];
+        $http.get('/api/metric').success(function (data) {
+            $scope.metrics = data;
+        }).error(function (error) {
+            $scope.error = 'Unable to fetch metrics: ' + error;
+        });
+        $scope.Submit = function () {
+            var data = [];
+            var tags = {};
+            angular.forEach($scope.tags, function (v, k) {
+                if (v.k || v.v) {
+                    if (!v.k) {
+                        $scope.error = 'Tag value ' + v.v + ' must have a key';
+                        return;
+                    }
+                    if (!v.v) {
+                        $scope.error = 'Tag key ' + v.k + ' must have a value';
+                        return;
+                    }
+                    tags[v.k] = v.v;
+                }
+            });
+            angular.forEach($scope.dps, function (v, k) {
+                if (v.k && v.v) {
+                    var ts = parseInt(moment.utc(v.k, mfmt).format('X'));
+                    data.push({
+                        metric: $scope.metric,
+                        timestamp: ts,
+                        value: parseFloat(v.v),
+                        tags: tags
+                    });
+                }
+            });
+            $scope.running = 'submitting data...';
+            $scope.success = '';
+            $scope.error = '';
+            $http.post('/api/put', data).success(function () {
+                $scope.running = '';
+                $scope.success = 'Data Submitted';
+            }).error(function (error) {
+                $scope.running = '';
+                $scope.error = error.error.message;
+            });
+        };
+        $scope.AddTag = function () {
+            var last = $scope.tags[$scope.tags.length - 1];
+            if (last.k && last.v) {
+                $scope.tags.push(new Tag);
+            }
+        };
+        $scope.AddDP = function () {
+            var last = $scope.dps[$scope.dps.length - 1];
+            if (last.k && last.v) {
+                var dp = new DP;
+                dp.k = moment.utc(last.k, mfmt).add('seconds', 15).format(mfmt);
+                $scope.dps.push(dp);
+            }
+        };
+        $scope.GetTagKByMetric = function () {
+            $http.get('/api/tagk/' + $scope.metric).success(function (data) {
+                if (!angular.isArray(data)) {
+                    return;
+                }
+                $scope.tags = [];
+                for (var i = 0; i < data.length; i++) {
+                    var t = new Tag;
+                    t.k = data[i];
+                    $scope.tags.push(t);
+                }
+            }).error(function (error) {
+                $scope.error = 'Unable to fetch metrics: ' + error;
+            });
+        };
     }]);
