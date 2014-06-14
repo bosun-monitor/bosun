@@ -39,14 +39,6 @@ bosunControllers.controller('PutCtrl', ['$scope', '$http', '$route', function($s
 		var tags: any = {};
 		angular.forEach($scope.tags, (v, k) => {
 			if (v.k || v.v) {
-				if (!v.k) {
-					$scope.error = 'Tag value ' + v.v + ' must have a key';
-					return;
-				}
-				if (!v.v) {
-					$scope.error = 'Tag key ' + v.k + ' must have a value';
-					return;
-				}
 				tags[v.k] =  v.v;
 			}
 		});
