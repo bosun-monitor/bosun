@@ -20,55 +20,56 @@
 		</form>
 	</div>
 </div>
-<div class="row">
-	<div class="col-sm-12">
-		<form class="form-inline">
-				<div class="col-sm-2">
-					<label class="control-label">Time</label> 
-				</div>
-				<div class="col-sm-2">
-					<label class="control-label">Value</label> 
-				</div>
-				<div class="col-sm-1"></div>
-				<div class="col-sm-2">
-					<label class="control-label">Tag Key</label> 
-				</div>
-				<div class="col-sm-2">
-					<label class="control-label">Tag Value</label> 
-				</div>	
-		</form>
-	</div>
-</div>
 <div class="row top-buffer">
 	<div class="col-sm-12">
-		<div class="col-sm-4">
-			<form class="form-horizontal" ng-repeat="(k, v) in dps">
-				<div class="form-group">
-					<div class="col-sm-6">
-						<input type="text" ng-model="dps[k].k" class="form-control" ng-change="AddDP()">
-					</div>
-					<div class="col-sm-6">
-						<input type="text" ng-model="dps[k].v" class="form-control" ng-change="AddDP()">
-					</div>
-				</div>
-			</form>
-		</div>
-		<div class="col-sm-1">
-		</div>
-		<div class="col-sm-4">
-			<form class="form-horizontal" ng-repeat="t in tags">
-				<div class="form-group">
-					<div class="col-sm-6">
-						<input type="text" ng-model="tags[$index].k" class="form-control" ng-change="AddTag()">
-					</div>
-					<div class="col-sm-6">
-						<input type="text" ng-model="tags[$index].v" class="form-control" ng-change="AddTag()">
+		<div class="col-sm-6">
+			<div class="row">
+				<p>Datapoints</p>
+			</div>
+			<div class="form-horizontal" ng-repeat="(k, v) in dps">
+				<div class="col-sm-6">
+					<div class="form-group">
+						<label class="col-sm-2 control-label">Time</label>
+						<div class="col-sm-10">
+							<input class="form-control" type="text" ng-model="dps[k].k" ng-change="AddDP()">
+						</div>
 					</div>
 				</div>
-			</form>
+				<div class="col-sm-6">
+					<div class="form-group">
+						<label class="col-sm-2 control-label">Value</label>
+						<div class="col-sm-10">
+							<input type="text" class="form-control" ng-model="dps[k].v" ng-change="AddDP()">
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<div class="col-sm-6">
+			<div class="row">
+				<p>Tags</p>
+			</div>
+			<div class="form-horizontal" ng-repeat="t in tags">
+				<div class="col-sm-6">
+					<div class="form-group">
+						<label class="col-sm-2 control-label">Key</label>
+						<div class="col-sm-10">
+							<input type="text" class="form-control" ng-model="tags[$index].k" ng-change="AddTag()">
+						</div>
+					</div>
+				</div>
+				<div class="col-sm-6">
+					<div class="form-group">
+						<label class="col-sm-2 control-label">Value</label>
+						<div class="col-sm-10">
+							<input type="text" class="form-control" ng-model="tags[$index].v" ng-change="AddTag()">
+						</div>
+					</div><div class="col-sm-10"></div>
+				</div>
+			</div>
 		</div>
 	</div>
-</div>	
+</div>
 <div class="row" ng-show="running">
 	<div class="col-lg-12">
 		<div class="alert alert-info" ng-bind="running"></div>
