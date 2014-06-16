@@ -324,11 +324,15 @@ func Templates(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (in
 			templates[name] += "\n\n" + t.Def
 		}
 	}
+	alerts := make(map[string]string)
+	for name, alert := range schedule.Conf.Alerts {
+		alerts[name] = alert.Def
+	}
 	return struct {
 		Templates map[string]string
 		Alerts    map[string]string
 	}{
 		templates,
-		nil,
+		alerts,
 	}, nil
 }
