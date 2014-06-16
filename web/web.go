@@ -326,7 +326,16 @@ func Templates(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (in
 	}
 	alerts := make(map[string]string)
 	for name, alert := range schedule.Conf.Alerts {
-		alerts[name] = alert.Def
+		var add func([]string)
+		add = func(macros []string) {
+			for _, macro := range macros {
+				m := schedule.Conf.Macros[macro]
+				add(m.Macros)
+				alerts[name] += m.Def + "\n\n"
+			}
+		}
+		add(alert.Macros)
+		alerts[name] += alert.Def
 	}
 	return struct {
 		Templates map[string]string
