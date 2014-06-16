@@ -14,16 +14,16 @@ import (
 )
 
 var (
-	flagFilter = flag.String("f", "", "Filters collectors matching this term. Works with all other arguments.")
-	flagTest   = flag.Bool("t", false, "Test - run collectors once, print, and exit.")
-	flagList   = flag.Bool("l", false, "List")
-	flagPrint  = flag.Bool("p", false, "Print to screen instead of sending to a host")
-	host       = flag.String("h", "tsaf", `OpenTSDB host. Ex: "tsdb.example.com". Can optionally specify port: "tsdb.example.com:4000", but will default to 4242 otherwise`)
-	colDir     = flag.String("c", "", `Passthrough collector directory. It should contain numbered directories like the OpenTSDB scollector expects. Any executable file in those directories is run every N seconds, where N is the name of the directory. Use 0 for a program that should be run continuously and simply pass data through to OpenTSDB (the program will be restarted if it exits. Data output format is: "metric timestamp value tag1=val1 tag2=val2 ...". Timestamp is in Unix format (seconds since epoch). Tags are optional. A host tag is automatically added, but overridden if specified.`)
-	batchSize  = flag.Int("b", 0, "OpenTSDB batch size. Used for debugging bad data.")
-	snmp       = flag.String("s", "", "SNMP host to poll of the format: \"community@host[,community@host...]\".")
-	fake       = flag.Int("fake", 0, "Generates X fake data points on the test.fake metric per second.")
-	debug      = flag.Bool("d", false, "Enables debug output.")
+	flagFilter    = flag.String("f", "", "Filters collectors matching this term. Works with all other arguments.")
+	flagTest      = flag.Bool("t", false, "Test - run collectors once, print, and exit.")
+	flagList      = flag.Bool("l", false, "List")
+	flagPrint     = flag.Bool("p", false, "Print to screen instead of sending to a host")
+	flagHost      = flag.String("h", "tsaf", `OpenTSDB host. Ex: "tsdb.example.com". Can optionally specify port: "tsdb.example.com:4000", but will default to 4242 otherwise`)
+	flagColDir    = flag.String("c", "", `Passthrough collector directory. It should contain numbered directories like the OpenTSDB scollector expects. Any executable file in those directories is run every N seconds, where N is the name of the directory. Use 0 for a program that should be run continuously and simply pass data through to OpenTSDB (the program will be restarted if it exits. Data output format is: "metric timestamp value tag1=val1 tag2=val2 ...". Timestamp is in Unix format (seconds since epoch). Tags are optional. A host tag is automatically added, but overridden if specified.`)
+	flagBatchSize = flag.Int("b", 0, "OpenTSDB batch size. Used for debugging bad data.")
+	flagSNMP      = flag.String("s", "", "SNMP host to poll of the format: \"community@host[,community@host...]\".")
+	flagFake      = flag.Int("fake", 0, "Generates X fake data points on the test.fake metric per second.")
+	flagDebug     = flag.Bool("d", false, "Enables debug output.")
 
 	mains []func()
 )
@@ -34,23 +34,23 @@ func main() {
 		m()
 	}
 
-	if *colDir != "" {
-		collectors.InitPrograms(*colDir)
+	if *flagColDir != "" {
+		collectors.InitPrograms(*flagColDir)
 	}
-	if *snmp != "" {
-		for _, s := range strings.Split(*snmp, ",") {
+	if *flagSNMP != "" {
+		for _, s := range strings.Split(*flagSNMP, ",") {
 			sp := strings.Split(s, "@")
 			if len(sp) != 2 {
-				slog.Fatal("invalid snmp string:", *snmp)
+				slog.Fatal("invalid snmp string:", *flagSNMP)
 			}
 			collectors.SNMPIfaces(sp[0], sp[1])
 			collectors.SNMPCisco(sp[0], sp[1])
 		}
 	}
-	if *fake > 0 {
-		collectors.InitFake(*fake)
+	if *flagFake > 0 {
+		collectors.InitFake(*flagFake)
 	}
-	collect.Debug = *debug
+	collect.Debug = *flagDebug
 	c := collectors.Search(*flagFilter)
 	for _, col := range c {
 		col.Init()
@@ -62,9 +62,9 @@ func main() {
 	} else if *flagList {
 		list(c)
 		return
-	} else if *host != "" {
+	} else if *flagHost != "" {
 		if u == nil {
-			slog.Fatal("invalid host:", *host)
+			slog.Fatal("invalid host:", *flagHost)
 		}
 	}
 	if *flagPrint {
@@ -77,8 +77,8 @@ func main() {
 		if err := collect.InitChan(u.Host, "scollector", cdp); err != nil {
 			slog.Fatal(err)
 		}
-		if *batchSize > 0 {
-			collect.BatchSize = *batchSize
+		if *flagBatchSize > 0 {
+			collect.BatchSize = *flagBatchSize
 		}
 		go func() {
 			const maxMem = 500 * 1024 * 1024 // 500MB
@@ -124,17 +124,17 @@ func list(cs []collectors.Collector) {
 }
 
 func parseHost() *url.URL {
-	if *host == "" {
+	if *flagHost == "" {
 		return nil
 	}
 	u := url.URL{
 		Scheme: "http",
 		Path:   "/api/put",
 	}
-	if !strings.Contains(*host, ":") {
-		*host += ":4242"
+	if !strings.Contains(*flagHost, ":") {
+		*flagHost += ":4242"
 	}
-	u.Host = *host
+	u.Host = *flagHost
 	return &u
 }
 
