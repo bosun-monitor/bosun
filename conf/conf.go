@@ -40,7 +40,7 @@ type Conf struct {
 	Alerts          map[string]*Alert
 	Notifications   map[string]*Notification `json:"-"`
 	RawText         string
-	macros          map[string]*Macro
+	Macros          map[string]*Macro
 
 	tree            *parse.Tree
 	node            parse.Node
@@ -88,7 +88,8 @@ func errRecover(errp *error) {
 type Macro struct {
 	Def string
 	Vars
-	Name string
+	Name   string
+	Macros []string
 }
 
 type Alert struct {
@@ -102,6 +103,7 @@ type Alert struct {
 	CritNotification map[string]*Notification  `json:"-"`
 	WarnNotification map[string]*Notification  `json:"-"`
 	Unknown          time.Duration
+	Macros           []string
 
 	crit, warn       string
 	template         string
@@ -203,7 +205,7 @@ func New(name, text string) (c *Conf, err error) {
 		RawText:        text,
 		bodies:         htemplate.New(name).Funcs(htemplate.FuncMap(defaultFuncs)),
 		subjects:       ttemplate.New(name).Funcs(defaultFuncs),
-		macros:         make(map[string]*Macro),
+		Macros:         make(map[string]*Macro),
 	}
 	c.tree, err = parse.Parse(name, text)
 	if err != nil {
@@ -328,7 +330,7 @@ const (
 	sMacro
 )
 
-func (c *Conf) getPairs(s *parse.SectionNode, vars Vars, st sectionType) []nodePair {
+func (c *Conf) getPairs(s *parse.SectionNode, vars Vars, st sectionType, used *[]string) []nodePair {
 	saw := make(map[string]bool)
 	var pairs []nodePair
 	ignoreBadExpand := st == sMacro
@@ -352,9 +354,12 @@ func (c *Conf) getPairs(s *parse.SectionNode, vars Vars, st sectionType) []nodeP
 		v := c.Expand(n.Val.Text, vars, ignoreBadExpand)
 		switch k := n.Key.Text; k {
 		case "macro":
-			m, ok := c.macros[v]
+			m, ok := c.Macros[v]
 			if !ok {
 				c.errorf("macro not found: %s", v)
+			}
+			if used != nil {
+				*used = append(*used, v)
 			}
 			for k, v := range m.Vars {
 				add(n, k, c.Expand(v, vars, ignoreBadExpand))
@@ -368,19 +373,20 @@ func (c *Conf) getPairs(s *parse.SectionNode, vars Vars, st sectionType) []nodeP
 
 func (c *Conf) loadMacro(s *parse.SectionNode) {
 	name := s.Name.Text
-	if _, ok := c.macros[name]; ok {
+	if _, ok := c.Macros[name]; ok {
 		c.errorf("duplicate macro name: %s", name)
 	}
 	m := Macro{
-		Def:  s.RawText,
-		Vars: make(map[string]string),
-		Name: name,
+		Def:    s.RawText,
+		Vars:   make(map[string]string),
+		Name:   name,
+		Macros: make([]string, 0),
 	}
-	for _, p := range c.getPairs(s, m.Vars, sMacro) {
+	for _, p := range c.getPairs(s, m.Vars, sMacro, &m.Macros) {
 		m.Vars[p.key] = p.val
 	}
 	c.at(s)
-	c.macros[name] = &m
+	c.Macros[name] = &m
 }
 
 var defaultFuncs = ttemplate.FuncMap{
@@ -452,11 +458,12 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 		c.errorf("duplicate alert name: %s", name)
 	}
 	a := Alert{
-		Def:  s.RawText,
-		Vars: make(map[string]string),
-		Name: name,
+		Def:    s.RawText,
+		Vars:   make(map[string]string),
+		Name:   name,
+		Macros: make([]string, 0),
 	}
-	for _, p := range c.getPairs(s, a.Vars, sNormal) {
+	for _, p := range c.getPairs(s, a.Vars, sNormal, &a.Macros) {
 		c.at(p.node)
 		v := p.val
 		switch p.key {
@@ -560,7 +567,7 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 		Name: name,
 	}
 	c.Notifications[name] = &n
-	for _, p := range c.getPairs(s, n.Vars, sNormal) {
+	for _, p := range c.getPairs(s, n.Vars, sNormal, nil) {
 		c.at(p.node)
 		v := p.val
 		switch k := p.key; k {
