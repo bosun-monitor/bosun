@@ -20,13 +20,10 @@ func c_cpu_windows() opentsdb.MultiDataPoint {
 		return nil
 	}
 	var md opentsdb.MultiDataPoint
-	var total_percent uint64 = 0
-	var core_count uint64 = 0
-	var ts uint64 = 0
+	var idle, total uint64
 	for _, v := range dst {
-		total_percent += v.PercentIdleTime
-		core_count += 1
-		ts = v.Timestamp_Sys100NS
+		idle += v.PercentIdleTime
+		total += v.Timestamp_Sys100NS
 		Add(&md, "win.cpu", v.PercentPrivilegedTime, opentsdb.TagSet{"cpu": v.Name, "type": "privileged"})
 		Add(&md, "win.cpu", v.PercentInterruptTime, opentsdb.TagSet{"cpu": v.Name, "type": "interrupt"})
 		Add(&md, "win.cpu", v.PercentUserTime, opentsdb.TagSet{"cpu": v.Name, "type": "user"})
@@ -37,8 +34,8 @@ func c_cpu_windows() opentsdb.MultiDataPoint {
 		Add(&md, "win.cpu.time_cstate", v.PercentC2Time, opentsdb.TagSet{"cpu": v.Name, "type": "c2"})
 		Add(&md, "win.cpu.time_cstate", v.PercentC3Time, opentsdb.TagSet{"cpu": v.Name, "type": "c3"})
 	}
-	if core_count != 0 {
-		Add(&md, osCPU, ((ts / 1e5) - (total_percent/core_count)/1e5), nil)
+	if total > 0 {
+		Add(&md, osCPU, (total-idle)/1e5, nil)
 	}
 	return md
 }
