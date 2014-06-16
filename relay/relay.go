@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/json"
-	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -34,12 +33,13 @@ func Handle(dest string) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		orig, _ := ioutil.ReadAll(r.Body)
 		if r.URL.Path == "/api/put" {
-			var reader io.Reader = bytes.NewReader(orig)
-			if r, err := gzip.NewReader(reader); err == nil {
-				reader = r
-				defer r.Close()
+			var body []byte
+			if r, err := gzip.NewReader(bytes.NewReader(orig)); err == nil {
+				body, _ = ioutil.ReadAll(r)
+				r.Close()
+			} else {
+				body = orig
 			}
-			body, _ := ioutil.ReadAll(reader)
 			var dp opentsdb.DataPoint
 			var mdp opentsdb.MultiDataPoint
 			if err := json.Unmarshal(body, &mdp); err == nil {
