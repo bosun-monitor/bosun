@@ -201,8 +201,8 @@ func New(name, text string) (c *Conf, err error) {
 		Alerts:         make(map[string]*Alert),
 		Notifications:  make(map[string]*Notification),
 		RawText:        text,
-		bodies:         htemplate.New(name),
-		subjects:       ttemplate.New(name),
+		bodies:         htemplate.New(name).Funcs(htemplate.FuncMap(defaultFuncs)),
+		subjects:       ttemplate.New(name).Funcs(defaultFuncs),
 		macros:         make(map[string]*Macro),
 	}
 	c.tree, err = parse.Parse(name, text)
@@ -383,6 +383,17 @@ func (c *Conf) loadMacro(s *parse.SectionNode) {
 	c.macros[name] = &m
 }
 
+var defaultFuncs = ttemplate.FuncMap{
+	"bytes": func(v string) ByteSize {
+		f, _ := strconv.ParseFloat(v, 64)
+		return ByteSize(f)
+	},
+	"short": func(v string) string {
+		return strings.SplitN(v, ".", 2)[0]
+	},
+	"replace": strings.Replace,
+}
+
 func (c *Conf) loadTemplate(s *parse.SectionNode) {
 	name := s.Name.Text
 	if _, ok := c.Templates[name]; ok {
@@ -397,14 +408,6 @@ func (c *Conf) loadTemplate(s *parse.SectionNode) {
 		"V": func(v string) string {
 			return c.Expand(v, t.Vars, false)
 		},
-		"bytes": func(v string) ByteSize {
-			f, _ := strconv.ParseFloat(v, 64)
-			return ByteSize(f)
-		},
-		"short": func(v string) string {
-			return strings.SplitN(v, ".", 2)[0]
-		},
-		"replace": strings.Replace,
 	}
 	saw := make(map[string]bool)
 	for _, p := range s.Nodes {
