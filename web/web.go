@@ -251,6 +251,7 @@ var builtins = template.FuncMap{
 	"lt":       nilFunc,
 	"ne":       nilFunc,
 
+	// HTML-specific funcs
 	"html_template_attrescaper":     nilFunc,
 	"html_template_commentescaper":  nilFunc,
 	"html_template_cssescaper":      nilFunc,
@@ -265,6 +266,12 @@ var builtins = template.FuncMap{
 	"html_template_urlescaper":      nilFunc,
 	"html_template_urlfilter":       nilFunc,
 	"html_template_urlnormalizer":   nilFunc,
+
+	// bosun-specific funcs
+	"V":       nilFunc,
+	"bytes":   nilFunc,
+	"replace": nilFunc,
+	"short":   nilFunc,
 }
 
 func Templates(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
