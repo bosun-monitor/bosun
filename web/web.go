@@ -278,41 +278,50 @@ func Templates(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (in
 	templates := make(map[string]string)
 	for name, template := range schedule.Conf.Templates {
 		incl := map[string]bool{name: true}
+		var parseSection func(*conf.Template) error
 		parseTemplate := func(s string) error {
-			trees, err := parse.Parse("", s, "", "", nil, builtins)
+			trees, err := parse.Parse("", s, "", "", builtins)
 			if err != nil {
 				return err
 			}
 			for _, node := range trees[""].Root.Nodes {
 				switch node := node.(type) {
 				case *parse.TemplateNode:
+					if incl[node.Name] {
+						continue
+					}
 					incl[node.Name] = true
+					if err := parseSection(schedule.Conf.Templates[node.Name]); err != nil {
+						return err
+					}
 				}
 			}
 			return nil
 		}
-		if template.Body != nil {
-			if err := parseTemplate(template.Body.Tree.Root.String()); err != nil {
-				return nil, err
+		parseSection = func(s *conf.Template) error {
+			if s.Body != nil {
+				if err := parseTemplate(s.Body.Tree.Root.String()); err != nil {
+					return err
+				}
 			}
-		}
-		if template.Subject != nil {
-			if err := parseTemplate(template.Subject.Tree.Root.String()); err != nil {
-				return nil, err
+			if s.Subject != nil {
+				if err := parseTemplate(s.Subject.Tree.Root.String()); err != nil {
+					return err
+				}
 			}
+			return nil
 		}
-		first := true
+		if err := parseSection(template); err != nil {
+			return nil, err
+		}
+		delete(incl, name)
+		templates[name] = template.Def
 		for n := range incl {
 			t := schedule.Conf.Templates[n]
 			if t == nil {
 				continue
 			}
-			if first {
-				first = false
-			} else {
-				templates[name] += "\n\n"
-			}
-			templates[name] += t.Def
+			templates[name] += "\n\n" + t.Def
 		}
 	}
 	return struct {
