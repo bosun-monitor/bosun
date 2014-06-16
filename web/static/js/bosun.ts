@@ -66,6 +66,11 @@ bosunApp.config(['$routeProvider', '$locationProvider', function($routeProvider:
 			templateUrl: 'partials/history.html',
 			controller: 'HistoryCtrl',
 		}).
+		when('/put', {
+			title: 'Data Entry',
+			templateUrl: 'partials/put.html',
+			controller: 'PutCtrl',
+		}).
 		otherwise({
 			redirectTo: '/',
 		});
