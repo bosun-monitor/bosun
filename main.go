@@ -11,8 +11,8 @@ import (
 	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/collect"
 	"github.com/StackExchange/bosun/_third_party/github.com/howeyc/fsnotify"
 	"github.com/StackExchange/bosun/conf"
-	"github.com/StackExchange/bosun/relay"
 	"github.com/StackExchange/bosun/sched"
+	"github.com/StackExchange/bosun/search"
 	"github.com/StackExchange/bosun/web"
 )
 
@@ -36,7 +36,7 @@ func main() {
 		log.Fatal(err)
 	}
 	sched.Load(c)
-	go func() { log.Fatal(relay.RelayHTTP(c.RelayListen, c.TsdbHost)) }()
+	go func() { log.Fatal(search.RelayHTTP(c.RelayListen, c.TsdbHost)) }()
 	go func() { log.Fatal(web.Listen(c.HttpListen, c.WebDir, c.TsdbHost)) }()
 	go func() { log.Fatal(sched.Run()) }()
 	go watcher()

@@ -13,8 +13,8 @@ import (
 	"github.com/StackExchange/bosun/_third_party/github.com/MiniProfiler/go/miniprofiler"
 	"github.com/StackExchange/bosun/_third_party/github.com/gorilla/mux"
 	"github.com/StackExchange/bosun/conf"
-	"github.com/StackExchange/bosun/relay"
 	"github.com/StackExchange/bosun/sched"
+	"github.com/StackExchange/bosun/search"
 )
 
 var (
@@ -53,7 +53,7 @@ func Listen(addr, dir, host string) error {
 	router.Handle("/api/tagk/{metric}", JSON(TagKeysByMetric))
 	router.Handle("/api/tagv/{tagk}", JSON(TagValuesByTagKey))
 	router.Handle("/api/tagv/{tagk}/{metric}", JSON(TagValuesByMetricTagKey))
-	router.HandleFunc("/api/put", relay.Handle(host))
+	router.HandleFunc("/api/put", search.Handle(host))
 	http.Handle("/", miniprofiler.NewHandler(Index))
 	http.Handle("/api/", router)
 	fs := http.FileServer(http.Dir(dir))

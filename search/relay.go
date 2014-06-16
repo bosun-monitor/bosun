@@ -1,4 +1,4 @@
-package relay
+package search
 
 import (
 	"bytes"
@@ -12,7 +12,6 @@ import (
 
 	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/bosun/_third_party/github.com/mreiferson/go-httpclient"
-	"github.com/StackExchange/bosun/search"
 )
 
 func RelayHTTP(addr, dest string) error {
@@ -47,7 +46,7 @@ func Handle(dest string) func(http.ResponseWriter, *http.Request) {
 				mdp = opentsdb.MultiDataPoint{&dp}
 			}
 			if len(mdp) > 0 {
-				search.HTTPExtract(mdp)
+				HTTPExtract(mdp)
 			}
 		}
 		durl := url.URL{
