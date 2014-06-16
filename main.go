@@ -6,6 +6,7 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"path/filepath"
+	"runtime"
 	"time"
 
 	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/collect"
