@@ -22,12 +22,12 @@ bosunControllers.controller('HistoryCtrl', ['$scope', '$http', '$location', '$ro
 	$scope.collapse = (i: any) => {
 		$scope.shown[i] = !$scope.shown[i];
 	};
-	var selected_alerts: any[] = [];
 	$scope.dtqs = (dt: string) => {
 		var m = moment.utc(dt, timeFormat);
 		return "&date=" + encodeURIComponent(m.format("YYYY-MM-DD")) + "&time=" + encodeURIComponent(m.format("HH:mm"));
 	}
 	function done() {
+		var selected_alerts: any[] = [];
 		var status = $scope.schedule.Status;
 		angular.forEach(status, function(v, ak) {
 			if (!keys[ak]) {
@@ -40,10 +40,9 @@ bosunControllers.controller('HistoryCtrl', ['$scope', '$http', '$location', '$ro
 					h.EndTime = moment.utc();
 				}
 			});
-			v.History.reverse();
 			selected_alerts.push({
 				Name: ak,
-				History: v.History,
+				History: v.History.slice().reverse(),
 			});
 		});
 		if (selected_alerts.length > 0) {
