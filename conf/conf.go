@@ -1,7 +1,6 @@
 package conf
 
 import (
-	"encoding/json"
 	"fmt"
 	htemplate "html/template"
 	"io/ioutil"
