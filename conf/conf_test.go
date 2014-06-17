@@ -19,7 +19,7 @@ func TestPrint(t *testing.T) {
 		t.Error("bad warn:", w)
 	}
 	if w := c.Alerts["m"].Crit.Text; w != `avg(q("", "", "")) > 1` {
-		t.Errorf("bad crit:", w)
+		t.Errorf("bad crit: %v", w)
 	}
 }
 
