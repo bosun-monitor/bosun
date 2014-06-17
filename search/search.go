@@ -49,6 +49,8 @@ var (
 	MetricTags = make(MTSMap)
 
 	Lock = sync.RWMutex{}
+
+	dc = make(chan opentsdb.MultiDataPoint)
 )
 
 type Present map[string]interface{}
@@ -56,10 +58,6 @@ type Present map[string]interface{}
 type Query struct {
 	A, B string
 }
-
-var (
-	dc = make(chan opentsdb.MultiDataPoint)
-)
 
 func init() {
 	go Process()
@@ -156,7 +154,7 @@ func MetricsByTagPair(tagk, tagv string) []string {
 func TagKeysByMetric(metric string) []string {
 	Lock.RLock()
 	defer Lock.RUnlock()
-	var r []string
+	r := make([]string, 0)
 	for k := range Tagk[metric] {
 		r = append(r, k)
 	}
@@ -165,7 +163,7 @@ func TagKeysByMetric(metric string) []string {
 }
 
 func tagValuesByMetricTagKey(metric, tagk string) []string {
-	var r []string
+	r := make([]string, 0)
 	for k := range Tagv[Query{metric, tagk}] {
 		r = append(r, k)
 	}
