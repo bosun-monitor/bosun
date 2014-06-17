@@ -1595,6 +1595,10 @@ bosunControllers.controller('HistoryCtrl', [
             $scope.shown[i] = !$scope.shown[i];
         };
         var selected_alerts = [];
+        $scope.dtqs = function (dt) {
+            var m = moment.utc(dt, timeFormat);
+            return "&date=" + encodeURIComponent(m.format("YYYY-MM-DD")) + "&time=" + encodeURIComponent(m.format("HH:mm"));
+        };
         function done() {
             var status = $scope.schedule.Status;
             angular.forEach(status, function (v, ak) {

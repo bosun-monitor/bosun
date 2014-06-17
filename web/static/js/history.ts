@@ -4,6 +4,7 @@ interface IHistoryScope extends IBosunScope {
 	error: string;
 	shown: any;
 	collapse: (i: any) => void;
+	dtqs: (dt: string) => string;
 }
 
 bosunControllers.controller('HistoryCtrl', ['$scope', '$http', '$location', '$route', function($scope: IHistoryScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService) {
@@ -22,6 +23,10 @@ bosunControllers.controller('HistoryCtrl', ['$scope', '$http', '$location', '$ro
 		$scope.shown[i] = !$scope.shown[i];
 	};
 	var selected_alerts: any[] = [];
+	$scope.dtqs = (dt: string) => {
+		var m = moment.utc(dt, timeFormat);
+		return "&date=" + encodeURIComponent(m.format("YYYY-MM-DD")) + "&time=" + encodeURIComponent(m.format("HH:mm"));
+	}
 	function done() {
 		var status = $scope.schedule.Status;
 		angular.forEach(status, function(v, ak) {
