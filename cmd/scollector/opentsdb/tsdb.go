@@ -194,16 +194,9 @@ func RequestFromJSON(b []byte) (*Request, error) {
 	if err := json.Unmarshal(b, &r); err != nil {
 		return nil, err
 	}
-	if t, err := ParseTime(r.Start); err == nil {
-		r.Start = t.Unix()
-	} else {
-		return nil, err
-	}
-	if t, err := ParseTime(r.End); err == nil {
-		r.End = t.Unix()
-	} else if r.End != nil {
-		return nil, err
-	}
+	r.Start = TryParseAbsTime(r.Start)
+	r.End = TryParseAbsTime(r.End)
+	fmt.Println("start", r.Start, "end", r.End)
 	return &r, nil
 }
 
@@ -417,6 +410,16 @@ func CanonicalTime(v interface{}) (string, error) {
 		return "", err
 	}
 	return t.Format(TSDBTimeFormat), nil
+}
+
+func TryParseAbsTime(v interface{}) interface{} {
+	if s, ok := v.(string); ok {
+		d, err := ParseAbsTime(s)
+		if err == nil {
+			return d.Unix()
+		}
+	}
+	return v
 }
 
 // ParseAbsTime returns the time of s, which must be of any non-relative (not
