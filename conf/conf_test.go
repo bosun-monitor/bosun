@@ -13,10 +13,13 @@ func TestPrint(t *testing.T) {
 	}
 	c, err := New(fname, string(b))
 	if err != nil {
-		t.Error(err)
+		t.Fatal(err)
 	}
 	if w := c.Alerts["os.high_cpu"].Warn.Text; w != `avg(q("avg:rate:os.cpu{host=ny-nexpose01}", "2m", "")) > 80` {
 		t.Error("bad warn:", w)
+	}
+	if w := c.Alerts["m"].Crit.Text; w != `avg(q("", "", "")) > 1` {
+		t.Errorf("bad crit:", w)
 	}
 }
 
