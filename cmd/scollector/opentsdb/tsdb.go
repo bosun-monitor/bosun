@@ -196,7 +196,6 @@ func RequestFromJSON(b []byte) (*Request, error) {
 	}
 	r.Start = TryParseAbsTime(r.Start)
 	r.End = TryParseAbsTime(r.End)
-	fmt.Println("start", r.Start, "end", r.End)
 	return &r, nil
 }
 
