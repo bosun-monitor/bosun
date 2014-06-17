@@ -14,7 +14,6 @@ import (
 	"net/smtp"
 	"net/textproto"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -80,7 +79,7 @@ func (e *Email) AttachFile(filename string) (a *Attachment, err error) {
 		return
 	}
 	ct := mime.TypeByExtension(filepath.Ext(filename))
-	basename := path.Base(filename)
+	basename := filepath.Base(filename)
 	return e.Attach(f, basename, ct)
 }
 
@@ -115,6 +114,9 @@ func (e *Email) msgHeaders() textproto.MIMEHeader {
 	}
 	if _, ok := res["Date"]; !ok {
 		res.Set("Date", time.Now().Format(time.RFC1123Z))
+	}
+	if _, ok := res["Mime-Version"]; !ok {
+		res.Set("Mime-Version", "1.0")
 	}
 	for field, vals := range e.Headers {
 		if _, ok := res[field]; !ok {
@@ -194,6 +196,13 @@ func (e *Email) Send(addr string, a smtp.Auth) error {
 	// Merge the To, Cc, and Bcc fields
 	to := make([]string, 0, len(e.To)+len(e.Cc)+len(e.Bcc))
 	to = append(append(append(to, e.To...), e.Cc...), e.Bcc...)
+	for i := 0; i < len(to); i++ {
+		addr, err := mail.ParseAddress(to[i])
+		if err != nil {
+			return err
+		}
+		to[i] = addr.Address
+	}
 	// Check to make sure there is at least one recipient and one "From" address
 	if e.From == "" || len(to) == 0 {
 		return errors.New("Must specify at least one From address and one To address")

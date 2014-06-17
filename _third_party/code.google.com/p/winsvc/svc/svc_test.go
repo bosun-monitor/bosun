@@ -88,6 +88,18 @@ func TestExample(t *testing.T) {
 	}
 	waitState(t, s, svc.Running)
 	time.Sleep(1 * time.Second)
+
+	// testing deadlock from https://code.google.com/p/winsvc/issues/detail?id=4
+	_, err = s.Control(svc.Interrogate)
+	if err != nil {
+		t.Fatalf("Control(%s) failed: %s", s.Name, err)
+	}
+	_, err = s.Control(svc.Interrogate)
+	if err != nil {
+		t.Fatalf("Control(%s) failed: %s", s.Name, err)
+	}
+	time.Sleep(1 * time.Second)
+
 	_, err = s.Control(svc.Stop)
 	if err != nil {
 		t.Fatalf("Control(%s) failed: %s", s.Name, err)
