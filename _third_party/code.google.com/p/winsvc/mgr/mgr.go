@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// +build windows
+
 // Package mgr can be used to manage Windows service programs.
 // It can be used to install and remove them. It can also start,
 // stop, pause and so on. It can query current service state.
