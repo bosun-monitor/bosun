@@ -1031,14 +1031,16 @@ bosunControllers.controller('GraphCtrl', [
                     if (!angular.isArray(data)) {
                         return;
                     }
-                    var tags = {};
+                    var tags = $scope.query_p[index].tags || {};
                     for (var i = 0; i < data.length; i++) {
+                        var d = data[i];
                         if ($scope.query_p[index].tags) {
-                            tags[data[i]] = $scope.query_p[index].tags[data[i]] || '';
-                        } else {
-                            tags[data[i]] = '';
+                            tags[d] = $scope.query_p[index].tags[d];
                         }
-                        GetTagVs(data[i], index);
+                        if (!tags[d]) {
+                            tags[d] = '';
+                        }
+                        GetTagVs(d, index);
                     }
                     $scope.query_p[index].tags = tags;
 
