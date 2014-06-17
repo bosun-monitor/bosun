@@ -634,7 +634,10 @@ func (c *Conf) Expand(v string, vars map[string]string, ignoreBadExpand bool) st
 		if _n, ok := vars[s]; ok {
 			n = _n
 		}
-		if n == "" && !ignoreBadExpand {
+		if n == "" {
+			if ignoreBadExpand {
+				return s
+			}
 			c.errorf("unknown variable %s", s)
 		}
 		return c.Expand(n, vars, ignoreBadExpand)
