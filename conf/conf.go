@@ -139,30 +139,6 @@ type Notification struct {
 
 func (n *Notification) MarshalJSON() ([]byte, error) {
 	return nil, fmt.Errorf("conf: cannot json marshal notifications")
-	m := make(map[string]interface{})
-	if len(n.Vars) > 0 {
-		m["Vars"] = n.Vars
-	}
-	m["Name"] = n.Name
-	if n.email != "" {
-		m["Email"] = n.email
-	}
-	if n.post != "" {
-		m["Post"] = n.post
-	}
-	if n.get != "" {
-		m["Get"] = n.get
-	}
-	if n.Print {
-		m["Print"] = n.Print
-	}
-	if n.next != "" {
-		m["Next"] = n.next
-	}
-	if n.Timeout > 0 {
-		m["Timeout"] = n.Timeout
-	}
-	return json.Marshal(m)
 }
 
 func (a *Alert) Squelched(tags opentsdb.TagSet) bool {
