@@ -156,6 +156,7 @@ func (s *Schedule) MarshalJSON() ([]byte, error) {
 		TimeAndDate: s.Conf.TimeAndDate,
 	}
 	s.Lock()
+	defer s.Unlock()
 	for k, v := range s.status {
 		if !v.Open {
 			continue
@@ -207,7 +208,6 @@ func (s *Schedule) MarshalJSON() ([]byte, error) {
 			t.Groups.Acknowledged = append(t.Groups.Acknowledged, grouped...)
 		}
 	}
-	s.Unlock()
 	gsort := func(grp []*Grouped) func(i, j int) bool {
 		return func(i, j int) bool {
 			a := grp[i]
