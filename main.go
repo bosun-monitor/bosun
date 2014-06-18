@@ -25,7 +25,7 @@ var (
 
 func main() {
 	flag.Parse()
-	log.Println("GOMAXPROCS:", runtime.GOMAXPROCS(0))
+	runtime.GOMAXPROCS(runtime.NumCPU())
 	c, err := conf.ParseFile(*confFile)
 	if err != nil {
 		log.Fatal(err)
