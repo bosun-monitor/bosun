@@ -38,6 +38,7 @@ func Listen(addr, dir, host string) error {
 	}
 	router.Handle("/api/action", JSON(Action))
 	router.Handle("/api/alerts", JSON(Alerts))
+	router.Handle("/api/alerts/details", JSON(AlertDetails))
 	router.Handle("/api/config", miniprofiler.NewHandler(Config))
 	router.Handle("/api/config_test", miniprofiler.NewHandler(ConfigTest))
 	router.Handle("/api/egraph/{bs}.svg", JSON(ExprGraph))
@@ -111,6 +112,20 @@ func JSON(h func(miniprofiler.Timer, http.ResponseWriter, *http.Request) (interf
 
 func Alerts(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	return schedule, nil
+}
+
+func AlertDetails(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	r.ParseForm()
+	states := make(sched.States)
+	for _, v := range r.Form["key"] {
+		k := sched.AlertKey(v)
+		s := schedule.Status(k)
+		if s == nil {
+			return nil, fmt.Errorf("unknown key: %v", v)
+		}
+		states[k] = s
+	}
+	return states, nil
 }
 
 func Action(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
