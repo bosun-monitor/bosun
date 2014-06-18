@@ -11,6 +11,8 @@ func init() {
 	collectors = append(collectors, &IntervalCollector{F: c_cpu_info_windows})
 }
 
+var cpuWindowsFirst = true
+
 func c_cpu_windows() opentsdb.MultiDataPoint {
 	var dst []Win32_PerfRawData_PerfOS_Processor
 	var q = wmi.CreateQuery(&dst, `WHERE Name <> '_Total'`)
@@ -20,10 +22,10 @@ func c_cpu_windows() opentsdb.MultiDataPoint {
 		return nil
 	}
 	var md opentsdb.MultiDataPoint
-	var idle, total uint64
+	var used, num uint64
 	for _, v := range dst {
-		idle += v.PercentIdleTime
-		total += v.Timestamp_Sys100NS
+		used += v.Timestamp_Sys100NS - v.PercentIdleTime
+		num++
 		Add(&md, "win.cpu", v.PercentPrivilegedTime, opentsdb.TagSet{"cpu": v.Name, "type": "privileged"})
 		Add(&md, "win.cpu", v.PercentInterruptTime, opentsdb.TagSet{"cpu": v.Name, "type": "interrupt"})
 		Add(&md, "win.cpu", v.PercentUserTime, opentsdb.TagSet{"cpu": v.Name, "type": "user"})
@@ -34,8 +36,10 @@ func c_cpu_windows() opentsdb.MultiDataPoint {
 		Add(&md, "win.cpu.time_cstate", v.PercentC2Time, opentsdb.TagSet{"cpu": v.Name, "type": "c2"})
 		Add(&md, "win.cpu.time_cstate", v.PercentC3Time, opentsdb.TagSet{"cpu": v.Name, "type": "c3"})
 	}
-	if total > 0 {
-		Add(&md, osCPU, (total-idle)/1e5, nil)
+	if num > 0 && !cpuWindowsFirst {
+		Add(&md, osCPU, used/1e5/num, nil)
+	} else {
+		cpuWindowsFirst = false
 	}
 	return md
 }
