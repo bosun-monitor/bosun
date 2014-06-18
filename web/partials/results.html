@@ -43,7 +43,7 @@
 							<tbody>
 								<tr ng-repeat="c in r.Computations">
 									<td ng-bind="c.Text"></td>
-									<td ng-bind="c.Value"></td>
+									<td ng-bind="c.Value | nfmt"></td>
 								</tr>
 							</tbody>
 						</table>
