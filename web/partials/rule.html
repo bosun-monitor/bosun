@@ -3,6 +3,13 @@
 		margin-bottom: 15px;
 		margin-top: 15px;
 	}
+	.template table {
+		border-spacing: 2px;
+		border-collapse: separate;
+	}
+	.template td, .template th {
+		padding: 1px;
+	}
 </style>
 <div class="row">
 	<div class="col-lg-6">
@@ -73,13 +80,13 @@
 			<div class="panel-heading">
 				<h3 class="panel-title">Subject</h3>
 			</div>
-			<div class="panel-body" ng-bind="subject"></div>
+			<div class="panel-body template" ng-bind="subject"></div>
 		</div>
 		<div class="panel panel-default">
 			<div class="panel-heading">
 				<h3 class="panel-title">Body</h3>
 			</div>
-			<div class="panel-body" ng-bind-html="body"></div>
+			<div class="panel-body template" ng-bind-html="body"></div>
 		</div>
 		<h4>Available Variables</h4>
 		<pre ng-bind="data"></pre>
