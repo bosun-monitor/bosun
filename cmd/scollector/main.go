@@ -2,7 +2,11 @@ package main
 
 import (
 	"flag"
+	"fmt"
+	"io/ioutil"
 	"net/url"
+	"os"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
@@ -28,11 +32,57 @@ var (
 	mains []func()
 )
 
+func readConf() {
+	p, err := exePath()
+	if err != nil {
+		slog.Error(err)
+		return
+	}
+	dir := filepath.Dir(p)
+	p = filepath.Join(dir, "scollector.conf")
+	b, err := ioutil.ReadFile(p)
+	if err != nil {
+		if *flagDebug {
+			slog.Error(err)
+		}
+		return
+	}
+	for i, line := range strings.Split(string(b), "\n") {
+		sp := strings.SplitN(line, "=", 2)
+		if len(sp) != 2 {
+			if *flagDebug {
+				slog.Errorf("expected = in %v:%v", p, i+1)
+			}
+			continue
+		}
+		k := strings.TrimSpace(sp[0])
+		v := strings.TrimSpace(sp[1])
+		f := func(s *string) {
+			*s = v
+		}
+		switch k {
+		case "host":
+			f(flagHost)
+		case "filter":
+			f(flagFilter)
+		case "coldir":
+			f(flagColDir)
+		case "snmp":
+			f(flagSNMP)
+		default:
+			if *flagDebug {
+				slog.Errorf("unknown key in %v:%v", p, i+1)
+			}
+		}
+	}
+}
+
 func main() {
 	flag.Parse()
 	for _, m := range mains {
 		m()
 	}
+	readConf()
 
 	if *flagColDir != "" {
 		collectors.InitPrograms(*flagColDir)
@@ -95,6 +145,32 @@ func main() {
 		printPut(cdp)
 	}
 	select {}
+}
+
+func exePath() (string, error) {
+	prog := os.Args[0]
+	p, err := filepath.Abs(prog)
+	if err != nil {
+		return "", err
+	}
+	fi, err := os.Stat(p)
+	if err == nil {
+		if !fi.Mode().IsDir() {
+			return p, nil
+		}
+		err = fmt.Errorf("%s is directory", p)
+	}
+	if filepath.Ext(p) == "" {
+		p += ".exe"
+		fi, err := os.Stat(p)
+		if err == nil {
+			if !fi.Mode().IsDir() {
+				return p, nil
+			}
+			err = fmt.Errorf("%s is directory", p)
+		}
+	}
+	return "", err
 }
 
 func test(cs []collectors.Collector) {

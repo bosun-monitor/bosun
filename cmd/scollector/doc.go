@@ -45,6 +45,14 @@ Additional flags on Windows:
 
 scollector will, by default, report to the host `tsaf`, which you should configure on your local nameserver to point to your TSDB server. This makes it possible to run scollector correctly with zero configuration or command line flags.
 
+Configuration File
+
+If scollector.conf exists in the same directory as the scollector executable, it will set configuration flags. Configuration file values overwrite command line flags. The configuration file is of the form key = value, one per line. Supported keys are: host (-h), filter (-f), coldir (-c), snmp (-s). Example:
+
+	host = other-tsdb:1234
+	filter = snmp
+	snmp = com@theswitch
+
 Warning
 
 scollector is in testing, and you should not depend on it for production use yet. We are using it internally at Stack Exchange, but we are still fixing bugs. It is designed to be used with an upcoming and unreleased project we are working on (called TSAF), and so may not work in your environment. Some collector details may be specific to our environment, and so may act weirdly in yours. These will eventually be moved out into config options so the defaults works well for everyone.
