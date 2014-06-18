@@ -1600,13 +1600,18 @@ bosunControllers.controller('HistoryCtrl', [
             var m = moment.utc(dt, timeFormat);
             return "&date=" + encodeURIComponent(m.format("YYYY-MM-DD")) + "&time=" + encodeURIComponent(m.format("HH:mm"));
         };
-        function done() {
+        var params = Object.keys(keys).map(function (v) {
+            return 'key=' + encodeURIComponent(v);
+        }).join('&');
+        $http.get('/api/alerts/details?' + params).success(function (data) {
             var selected_alerts = [];
-            var status = $scope.schedule.Status;
-            angular.forEach(status, function (v, ak) {
+            angular.forEach(data, function (v, ak) {
                 if (!keys[ak]) {
                     return;
                 }
+                v.History.map(function (h) {
+                    h.Time = moment.utc(h.Time);
+                });
                 angular.forEach(v.History, function (h, i) {
                     if (i + 1 < v.History.length) {
                         h.EndTime = v.History[i + 1].Time;
@@ -1616,7 +1621,7 @@ bosunControllers.controller('HistoryCtrl', [
                 });
                 selected_alerts.push({
                     Name: ak,
-                    History: v.History.slice().reverse()
+                    History: v.History.reverse()
                 });
             });
             if (selected_alerts.length > 0) {
@@ -1624,12 +1629,7 @@ bosunControllers.controller('HistoryCtrl', [
             } else {
                 $scope.error = 'No Matching Alerts Found';
             }
-        }
-        if ($scope.schedule) {
-            done();
-        } else {
-            $scope.refresh().success(done);
-        }
+        });
     }]);
 var Tag = (function () {
     function Tag() {

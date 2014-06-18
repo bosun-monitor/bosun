@@ -161,7 +161,14 @@ func (s *Schedule) MarshalJSON() ([]byte, error) {
 		if !v.Open {
 			continue
 		}
-		t.Status[k] = v
+		d := *v
+		if len(v.History) > 0 {
+			d.History = v.History[len(v.History)-1:]
+		}
+		if len(v.Actions) > 0 {
+			d.Actions = v.Actions[len(v.Actions)-1:]
+		}
+		t.Status[k] = &d
 	}
 	for tuple, states := range t.Status.GroupStates() {
 		var grouped []*Grouped
@@ -200,7 +207,7 @@ func (s *Schedule) MarshalJSON() ([]byte, error) {
 				grouped = append(grouped, &g)
 			}
 		default:
-			return nil, fmt.Errorf("unexpected status %v in %v", tuple.Status, tuple)
+			continue
 		}
 		if tuple.NeedAck {
 			t.Groups.NeedAck = append(t.Groups.NeedAck, grouped...)
@@ -423,8 +430,8 @@ type State struct {
 	*Result
 
 	// Most recent last.
-	History   []Event
-	Actions   []Action
+	History   []Event  `json:",omitempty"`
+	Actions   []Action `json:",omitempty"`
 	Touched   time.Time
 	Alert     string // helper data since AlertKeys don't serialize to JSON well
 	Tags      string // string representation of Group
