@@ -102,7 +102,7 @@ type Alert struct {
 	CritNotification map[string]*Notification  `json:"-"`
 	WarnNotification map[string]*Notification  `json:"-"`
 	Unknown          time.Duration
-	Macros           []string
+	Macros           []string `json:"-"`
 
 	crit, warn       string
 	template         string
