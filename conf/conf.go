@@ -595,7 +595,7 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 	}
 }
 
-var exRE = regexp.MustCompile(`\$\{?\w+\}?`)
+var exRE = regexp.MustCompile(`\$(?:\w+|\{\w+\})`)
 
 func (c *Conf) Expand(v string, vars map[string]string, ignoreBadExpand bool) string {
 	return exRE.ReplaceAllStringFunc(v, func(s string) string {
