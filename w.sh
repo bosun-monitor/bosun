@@ -1,7 +1,7 @@
 #!/bin/sh
 
 while true; do
-	go run -race main.go -w
+	go run main.go -w
 	if [ $? != 0 ] ; then
 		exit
 	fi
