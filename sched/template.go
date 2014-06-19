@@ -114,31 +114,36 @@ func (s *Schedule) ExecuteSubject(w io.Writer, a *conf.Alert, st *State) error {
 
 // E executes the given expression and returns a value with corresponding tags
 // to the context's tags. If no such result is found, the first result with nil
-// tags is returned. If no such result is found, nil is returned. The precision
-// of numbers is truncated for convienent display. Array expressions are not
+// tags is returned. If no such result is found, "" is returned. The precision
+// of numbers is truncated for convienent display. Series expressions are not
 // supported.
-func (c *Context) E(v string) (s string) {
+func (c *Context) E(v string) string {
 	e, err := expr.New(v)
 	if err != nil {
 		log.Printf("%s: %v", v, err)
-		return
+		return ""
 	}
 	res, _, err := e.ExecuteOpts(c.schedule.cache, nil, c.schedule.CheckStart, 0)
 	if err != nil {
 		log.Printf("%s: %v", v, err)
-		return
+		return ""
 	}
 	for _, r := range res {
 		if r.Group.Equal(c.State.Group) {
-			s = truncate(r.Value)
+			return truncate(r.Value)
+		}
+	}
+	for _, r := range res {
+		if c.State.Group.Subset(r.Group) {
+			return truncate(r.Value)
 		}
 	}
 	for _, r := range res {
 		if r.Group == nil {
-			s = truncate(r.Value)
+			return truncate(r.Value)
 		}
 	}
-	return
+	return ""
 }
 
 // truncate displays needed decimals for a Number.
