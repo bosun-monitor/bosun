@@ -1303,8 +1303,9 @@ bosunControllers.controller('ItemsCtrl', [
 bosunControllers.controller('RuleCtrl', [
     '$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
         var search = $location.search();
-        var current_alert = search.alert;
+        var current_alert = atob(search.alert || '');
         var current_template = search.template;
+        var expr = atob(search.expr || '') || 'avg(q("avg:rate{counter,,1}:os.cpu{host=*}", "5m", "")) > 10';
         var status_map = {
             "normal": 0,
             "warning": 1,
@@ -1313,18 +1314,10 @@ bosunControllers.controller('RuleCtrl', [
         $scope.date = search.date || '';
         $scope.time = search.time || '';
         $scope.tab = search.tab || 'results';
-        $http.get('/api/templates').success(function (data) {
-            $scope.alerts = data.Alerts;
-            $scope.templates = data.Templates;
-        });
-        try  {
-            current_alert = atob(current_alert);
-        } catch (e) {
-            current_alert = '';
-        }
         if (!current_alert) {
-            var alert_def = 'alert test {\n' + '    template = test\n' + '    $t = "5m"\n' + '    $q = avg(q("avg:rate{counter,,1}:os.cpu{host=*}", $t, ""))\n' + '    crit = $q > 10\n' + '}';
+            var alert_def = 'alert test {\n' + '    template = test\n' + '    crit = ' + expr + '\n' + '}';
             $location.search('alert', btoa(alert_def));
+            $location.search('expr', null);
             return;
         }
         $scope.alert = current_alert;
@@ -1334,7 +1327,7 @@ bosunControllers.controller('RuleCtrl', [
             current_template = '';
         }
         if (!current_template) {
-            var template_def = 'template test {\n' + '    body = `<h1>Name: {{.Alert.Name}}</h1>`\n' + '    subject = `{{.Last.Status}}: {{.Alert.Name}}: {{.E .Alert.Vars.q}} on {{.Group.host}}`\n' + '}';
+            var template_def = 'template test {\n' + '    subject = {{.Last.Status}}: {{.Alert.Name}} on {{.Group.host}}\n' + '    body = `<p>Name: {{.Alert.Name}}\n' + '    <p>Tags:\n' + '    <table>\n' + '        {{range $k, $v := .Group}}\n' + '            <tr><td>{{$k}}</td><td>{{$v}}</td></tr>\n' + '        {{end}}\n' + '    </table>`\n' + '}';
             $location.search('template', btoa(template_def));
             return;
         }
@@ -1387,6 +1380,10 @@ bosunControllers.controller('RuleCtrl', [
         $scope.zws = function (v) {
             return v.replace(/([,{}()])/g, '$1\u200b');
         };
+        $http.get('/api/templates').success(function (data) {
+            $scope.alerts = data.Alerts;
+            $scope.templates = data.Templates;
+        });
         $scope.set();
     }]);
 bosunControllers.controller('SilenceCtrl', [
