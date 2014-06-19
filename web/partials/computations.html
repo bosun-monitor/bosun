@@ -1,0 +1,16 @@
+<table class="table table-striped table-condensed">
+	<thead ng-show="header">
+		<tr>
+			<th ng-bind="header"></th>
+			<th>Value</th>
+		</tr>
+	</thead>
+	<tbody>
+		<tr ng-repeat="c in computations">
+			<td style="word-break: break-all;">
+				<a ng-href="/expr?expr={{btoa(c.Text) + timeParam}}" ng-bind="c.Text"></a>
+			</td>
+			<td ng-bind="c.Value | nfmt"></td>
+		</tr>
+	</tbody>
+</table>

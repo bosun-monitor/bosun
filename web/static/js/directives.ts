@@ -4,6 +4,26 @@ bosunApp.directive('tsResults', function() {
 	};
 });
 
+bosunApp.directive('tsComputations', () => {
+	return {
+		scope: {
+			computations: '=tsComputations',
+			time: '=',
+			header: '=',
+		},
+		templateUrl: '/partials/computations.html',
+		link: (scope: any, elem: any, attrs: any) => {
+			if (scope.time) {
+				var m = moment.utc(scope.time, timeFormat);
+				scope.timeParam = "&date=" + encodeURIComponent(m.format("YYYY-MM-DD")) + "&time=" + encodeURIComponent(m.format("HH:mm"));
+			}
+			scope.btoa = (v: any) => {
+				return btoa(v);
+			};
+		},
+	};
+});
+
 var timeFormat = 'YYYY/MM/DD-HH:mm:ss';
 
 function fmtTime(v: any) {
