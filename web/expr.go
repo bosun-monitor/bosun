@@ -116,6 +116,7 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 	}
 	sort.Sort(keys)
 	instance := s.Status(keys[0])
+	instance.History = []sched.Event{*s.RunHistory[keys[0]]}
 	body := new(bytes.Buffer)
 	subject := new(bytes.Buffer)
 	var warning []string
