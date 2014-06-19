@@ -298,6 +298,26 @@ bosunApp.directive('tsResults', function () {
     };
 });
 
+bosunApp.directive('tsComputations', function () {
+    return {
+        scope: {
+            computations: '=tsComputations',
+            time: '=',
+            header: '='
+        },
+        templateUrl: '/partials/computations.html',
+        link: function (scope, elem, attrs) {
+            if (scope.time) {
+                var m = moment.utc(scope.time, timeFormat);
+                scope.timeParam = "&date=" + encodeURIComponent(m.format("YYYY-MM-DD")) + "&time=" + encodeURIComponent(m.format("HH:mm"));
+            }
+            scope.btoa = function (v) {
+                return btoa(v);
+            };
+        }
+    };
+});
+
 var timeFormat = 'YYYY/MM/DD-HH:mm:ss';
 
 function fmtTime(v) {
@@ -1595,10 +1615,6 @@ bosunControllers.controller('HistoryCtrl', [
         $scope.shown = {};
         $scope.collapse = function (i) {
             $scope.shown[i] = !$scope.shown[i];
-        };
-        $scope.dtqs = function (dt) {
-            var m = moment.utc(dt, timeFormat);
-            return "&date=" + encodeURIComponent(m.format("YYYY-MM-DD")) + "&time=" + encodeURIComponent(m.format("HH:mm"));
         };
         var params = Object.keys(keys).map(function (v) {
             return 'key=' + encodeURIComponent(v);

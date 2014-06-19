@@ -64,36 +64,10 @@
 						</div>
 						<div class="panel-body" ng-if="shown['panel' + $parent.$index + '-' + $index]">
 							<div class="col-sm-6">
-								<table class="table table-striped table-condensed" ng-if="v.Warn">
-									<thead>
-										<tr>
-											<th>Warn Computations</th>
-											<th>Value</th>
-										</tr>
-									</thead>
-									<tbody>
-										<tr ng-repeat="c in v.Warn.Computations">
-											<td><a ng-href="/expr?expr={{btoa(c.Text) + dtqs(v.Time)}}" ng-bind="c.Text"></a></td>
-											<td ng-bind="c.Value | nfmt"></td>
-										</tr>
-									</tbody>
-								</table>
+								<div ng-show="v.Warn" ts-computations="v.Warn.Computations" time="v.Time" header="'Warn Computations'"></div>
 							</div>
 							<div class="col-sm-6">
-								<table class="table table-striped table-condensed" ng-if="v.Crit">
-									<thead>
-										<tr>
-											<th>Crit Computations</th>
-											<th>Value</th>
-										</tr>
-									</thead>
-									<tbody>
-										<tr ng-repeat="c in v.Crit.Computations">
-											<td><a ng-href="/expr?expr={{btoa(c.Text) + dtqs(v.Time)}}" ng-bind="c.Text"></a></td>
-											<td ng-bind="c.Value | nfmt"></td>
-										</tr>
-									</tbody>
-								</table>
+								<div ng-show="v.Crit" ts-computations="v.Crit.Computations" time="v.Time" header="'Crit Computations'"></div>
 							</div>
 						</div>
 					</div>
