@@ -15,6 +15,7 @@ interface IRuleScope extends IExprScope {
 	data: any;
 	animate: () => any;
 	stop: () => any;
+	zws: (v: string) => string;
 }
 
 bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route', function($scope: IRuleScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService) {
@@ -119,6 +120,9 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
 			.finally(() => {
 				$scope.stop();
 			});
+	};
+	$scope.zws = (v: string) => {
+		return v.replace(/([,{}()])/g, '$1\u200b');
 	};
 	$scope.set();
 }]);

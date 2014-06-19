@@ -1384,6 +1384,9 @@ bosunControllers.controller('RuleCtrl', [
                 $scope.stop();
             });
         };
+        $scope.zws = function (v) {
+            return v.replace(/([,{}()])/g, '$1\u200b');
+        };
         $scope.set();
     }]);
 bosunControllers.controller('SilenceCtrl', [
