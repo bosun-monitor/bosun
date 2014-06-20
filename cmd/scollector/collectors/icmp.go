@@ -40,12 +40,10 @@ func c_icmp(host string) opentsdb.MultiDataPoint {
 		Add(&md, "ping.rtt", float64(t)/float64(time.Millisecond), opentsdb.TagSet{"dst_host": host})
 		timeout = 0
 	})
-	p.AddHandler("idle", func() {
-		Add(&md, "ping.timeout", timeout, opentsdb.TagSet{"dst_host": host})
-	})
 	if err := p.Run(); err != nil {
 		slog.Error(err)
 		return nil
 	}
+	Add(&md, "ping.timeout", timeout, opentsdb.TagSet{"dst_host": host})
 	return md
 }
