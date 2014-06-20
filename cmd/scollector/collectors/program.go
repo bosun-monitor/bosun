@@ -48,6 +48,9 @@ func InitPrograms(cpath string) {
 			continue
 		}
 		for _, file := range files {
+			if file.Mode()&0111 == 0 {
+				continue
+			}
 			collectors = append(collectors, &ProgramCollector{
 				Path:     filepath.Join(dir.Name(), file.Name()),
 				Interval: interval,
