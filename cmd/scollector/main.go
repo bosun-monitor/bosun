@@ -26,6 +26,7 @@ var (
 	flagColDir    = flag.String("c", "", `Passthrough collector directory. It should contain numbered directories like the OpenTSDB scollector expects. Any executable file in those directories is run every N seconds, where N is the name of the directory. Use 0 for a program that should be run continuously and simply pass data through to OpenTSDB (the program will be restarted if it exits. Data output format is: "metric timestamp value tag1=val1 tag2=val2 ...". Timestamp is in Unix format (seconds since epoch). Tags are optional. A host tag is automatically added, but overridden if specified.`)
 	flagBatchSize = flag.Int("b", 0, "OpenTSDB batch size. Used for debugging bad data.")
 	flagSNMP      = flag.String("s", "", "SNMP host to poll of the format: \"community@host[,community@host...]\".")
+	flagICMP      = flag.String("i", "", "ICMP host to ping of the format: \"host[,host...]\".")
 	flagFake      = flag.Int("fake", 0, "Generates X fake data points on the test.fake metric per second.")
 	flagDebug     = flag.Bool("d", false, "Enables debug output.")
 
@@ -69,6 +70,8 @@ func readConf() {
 			f(flagColDir)
 		case "snmp":
 			f(flagSNMP)
+		case "icmp":
+			f(flagICMP)
 		default:
 			if *flagDebug {
 				slog.Errorf("unknown key in %v:%v", p, i+1)
@@ -95,6 +98,11 @@ func main() {
 			}
 			collectors.SNMPIfaces(sp[0], sp[1])
 			collectors.SNMPCisco(sp[0], sp[1])
+		}
+	}
+	if *flagICMP != "" {
+		for _, s := range strings.Split(*flagICMP, ",") {
+			collectors.ICMP(s)
 		}
 	}
 	if *flagFake > 0 {
