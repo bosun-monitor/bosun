@@ -162,12 +162,6 @@ func (s *Schedule) MarshalJSON() ([]byte, error) {
 			continue
 		}
 		d := *v
-		if len(v.History) > 0 {
-			d.History = v.History[len(v.History)-1:]
-		}
-		if len(v.Actions) > 0 {
-			d.Actions = v.Actions[len(v.Actions)-1:]
-		}
 		t.Status[k] = &d
 	}
 	for tuple, states := range t.Status.GroupStates() {
@@ -213,6 +207,14 @@ func (s *Schedule) MarshalJSON() ([]byte, error) {
 			t.Groups.NeedAck = append(t.Groups.NeedAck, grouped...)
 		} else {
 			t.Groups.Acknowledged = append(t.Groups.Acknowledged, grouped...)
+		}
+	}
+	for _, v := range t.Status {
+		if len(v.History) > 1 {
+			v.History = v.History[len(v.History)-1:]
+		}
+		if len(v.Actions) > 1 {
+			v.Actions = v.Actions[len(v.Actions)-1:]
 		}
 	}
 	gsort := func(grp []*Grouped) func(i, j int) bool {
