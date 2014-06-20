@@ -26,6 +26,9 @@ The flags are:
 	-s=""
 		SNMP host to poll of the format:
 		"community@host[,community@host...]"
+	-i=""
+		ICMP host to ping of the format:
+		"host[,host...]"
 	-f=""
 		filter collectors matching this term (regex)
 	-t
