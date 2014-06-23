@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -48,7 +49,7 @@ func InitPrograms(cpath string) {
 			continue
 		}
 		for _, file := range files {
-			if file.Mode()&0111 == 0 {
+			if !isExecutable(file) {
 				continue
 			}
 			collectors = append(collectors, &ProgramCollector{
@@ -56,6 +57,22 @@ func InitPrograms(cpath string) {
 				Interval: interval,
 			})
 		}
+	}
+}
+
+func isExecutable(f os.FileInfo) bool {
+	switch runtime.GOOS {
+	case "windows":
+		exts := strings.Split(os.Getenv("PATHEXT"), ";")
+		fileExt := filepath.Ext(strings.ToUpper(f.Name()))
+		for _, ext := range exts {
+			if filepath.Ext(strings.ToUpper(ext)) == fileExt {
+				return true
+			}
+		}
+		return false
+	default:
+		return f.Mode()&0111 != 0
 	}
 }
 
