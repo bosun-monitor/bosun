@@ -738,6 +738,9 @@ bosunApp.directive('tsGraph', [
                         });
                     });
                     var diff = (ymax - ymin) / 50;
+                    if (!diff) {
+                        diff = 1;
+                    }
                     ymin -= diff;
                     ymax += diff;
                     if (yaxisZero) {
