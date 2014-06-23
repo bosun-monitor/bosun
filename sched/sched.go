@@ -592,6 +592,11 @@ func (s Status) MarshalJSON() ([]byte, error) {
 	return json.Marshal(s.String())
 }
 
+func (s Status) IsNormal() bool   { return s == StNormal }
+func (s Status) IsWarning() bool  { return s == StWarning }
+func (s Status) IsCritical() bool { return s == StCritical }
+func (s Status) IsUnknown() bool  { return s == StUnknown }
+
 type Action struct {
 	User    string
 	Message string
