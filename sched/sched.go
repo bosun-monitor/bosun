@@ -481,6 +481,7 @@ func (s *Schedule) Action(user, message string, t ActionType, ak AlertKey) error
 		delete(s.Notifications, ak)
 		st.NeedAck = false
 	}
+	isUnknown := st.Last().Status == StUnknown
 	switch t {
 	case ActionAcknowledge:
 		if !st.NeedAck {
@@ -499,11 +500,11 @@ func (s *Schedule) Action(user, message string, t ActionType, ak AlertKey) error
 		}
 		st.Open = false
 	case ActionForget:
+		if !isUnknown {
+			return fmt.Errorf("can only forget unknowns")
+		}
 		if st.NeedAck {
 			ack()
-		}
-		if st.IsActive() {
-			return fmt.Errorf("cannot forget active alert")
 		}
 		st.Open = false
 		st.Forgotten = true

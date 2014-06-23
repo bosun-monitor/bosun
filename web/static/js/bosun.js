@@ -1483,7 +1483,7 @@ bosunApp.directive('tsAckGroup', function () {
         },
         templateUrl: '/partials/ackgroup.html',
         link: function (scope, elem, attrs) {
-            scope.canAckSelected = scope.ack == 'Needs Acknowldgement';
+            scope.canAckSelected = scope.ack == 'Needs Acknowledgement';
             scope.panelClass = scope.$parent.panelClass;
             scope.btoa = scope.$parent.btoa;
             scope.encode = scope.$parent.encode;
@@ -1514,7 +1514,8 @@ bosunApp.directive('tsAckGroup', function () {
                 scope.update();
             };
             scope.update = function () {
-                scope.canCloseSelected = scope.canForgetSelected = true;
+                scope.canCloseSelected = true;
+                scope.canForgetSelected = true;
                 scope.anySelected = false;
                 for (var i = 0; i < scope.groups.length; i++) {
                     var g = scope.groups[i];
@@ -1522,11 +1523,10 @@ bosunApp.directive('tsAckGroup', function () {
                         continue;
                     }
                     scope.anySelected = true;
-                    if (g.Active) {
+                    if (g.Active && g.Status != 'unknown') {
                         scope.canCloseSelected = false;
-                        scope.canForgetSelected = false;
                     }
-                    if (g.Status != "unknown") {
+                    if (g.Status != 'unknown') {
                         scope.canForgetSelected = false;
                     }
                 }
