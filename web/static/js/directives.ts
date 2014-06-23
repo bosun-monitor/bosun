@@ -472,6 +472,9 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWi
 				var ymin = d3.min(scope.data, (d: any) => { return d3.min(d.data, (c: any) => { return c.y; }); });
 				var ymax = d3.max(scope.data, (d: any) => { return d3.max(d.data, (c: any) => { return c.y; }); });
 				var diff = (ymax - ymin) / 50;
+				if (!diff) {
+					diff = 1;
+				}
 				ymin -= diff;
 				ymax += diff;
 				if (yaxisZero) {
