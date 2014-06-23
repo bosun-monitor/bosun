@@ -342,9 +342,16 @@ func (s *Schedule) RestoreState() {
 	}
 }
 
+var savePending bool
+
 func (s *Schedule) Save() {
-	// todo: debounce this call
-	go s.save()
+	s.Lock()
+	defer s.Unlock()
+	if savePending {
+		return
+	}
+	savePending = true
+	time.AfterFunc(time.Second*5, s.save)
 }
 
 func (s *Schedule) save() {
@@ -352,6 +359,7 @@ func (s *Schedule) save() {
 	search.Lock.Lock()
 	defer search.Lock.Unlock()
 	defer s.Unlock()
+	savePending = false
 	f, err := os.Create(s.Conf.StateFile)
 	if err != nil {
 		log.Println(err)
