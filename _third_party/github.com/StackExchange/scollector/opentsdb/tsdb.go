@@ -603,9 +603,12 @@ func (h Host) Query(r *Request) (ResponseSet, error) {
 }
 
 type Cache struct {
-	host  string
-	limit int64
-	cache map[string]*cacheResult
+	Host string
+	// Limit limits response size in bytes
+	Limit int64
+	// FilterTags removes tagks from results if that tagk was not in the request
+	FilterTags bool
+	cache      map[string]*cacheResult
 }
 
 type cacheResult struct {
@@ -615,9 +618,10 @@ type cacheResult struct {
 
 func NewCache(host string, limit int64) *Cache {
 	return &Cache{
-		host:  host,
-		limit: limit,
-		cache: make(map[string]*cacheResult),
+		Host:       host,
+		Limit:      limit,
+		FilterTags: true,
+		cache:      make(map[string]*cacheResult),
 	}
 }
 
@@ -633,20 +637,38 @@ func (c *Cache) Query(r *Request) (tr ResponseSet, err error) {
 	defer func() {
 		c.cache[s] = &cacheResult{tr, err}
 	}()
-	resp, err := r.QueryResponse(c.host)
+	resp, err := r.QueryResponse(c.Host)
 	if err != nil {
 		return
 	}
 	defer resp.Body.Close()
-	lr := &io.LimitedReader{R: resp.Body, N: c.limit}
+	lr := &io.LimitedReader{R: resp.Body, N: c.Limit}
 	j := json.NewDecoder(lr)
 	err = j.Decode(&tr)
 	if lr.N == 0 {
-		err = fmt.Errorf("TSDB response too large: limited to %E bytes", float64(c.limit))
+		err = fmt.Errorf("TSDB response too large: limited to %E bytes", float64(c.Limit))
 		return
 	}
 	if err != nil {
 		return
 	}
+	if c.FilterTags {
+		FilterTags(r, tr)
+	}
 	return
+}
+
+// FilterTags removes tagks in tr not present in r. Does nothing in the event of
+// multiple queries in the request.
+func FilterTags(r *Request, tr ResponseSet) {
+	if len(r.Queries) != 1 {
+		return
+	}
+	for _, resp := range tr {
+		for k := range resp.Tags {
+			if _, present := r.Queries[0].Tags[k]; !present {
+				delete(resp.Tags, k)
+			}
+		}
+	}
 }
