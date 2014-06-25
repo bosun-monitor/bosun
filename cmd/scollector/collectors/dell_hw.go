@@ -8,15 +8,16 @@ import (
 )
 
 func init() {
-	collectors = append(collectors, &IntervalCollector{F: c_omreport_chassis, Interval: time.Minute * 5})
-	collectors = append(collectors, &IntervalCollector{F: c_omreport_system, Interval: time.Minute * 5})
-	collectors = append(collectors, &IntervalCollector{F: c_omreport_storage_enclosure, Interval: time.Minute * 5})
-	collectors = append(collectors, &IntervalCollector{F: c_omreport_storage_vdisk, Interval: time.Minute * 5})
-	collectors = append(collectors, &IntervalCollector{F: c_omreport_storage_controller, Interval: time.Minute * 5})
-	collectors = append(collectors, &IntervalCollector{F: c_omreport_storage_battery, Interval: time.Minute * 5})
-	collectors = append(collectors, &IntervalCollector{F: c_omreport_ps, Interval: time.Minute * 5})
-	collectors = append(collectors, &IntervalCollector{F: c_omreport_ps_amps, Interval: time.Minute * 5})
-	collectors = append(collectors, &IntervalCollector{F: c_omreport_ps_volts, Interval: time.Minute * 5})
+	const interval = time.Minute * 5
+	collectors = append(collectors, &IntervalCollector{F: c_omreport_chassis, Interval: interval})
+	collectors = append(collectors, &IntervalCollector{F: c_omreport_system, Interval: interval})
+	collectors = append(collectors, &IntervalCollector{F: c_omreport_storage_enclosure, Interval: interval})
+	collectors = append(collectors, &IntervalCollector{F: c_omreport_storage_vdisk, Interval: interval})
+	collectors = append(collectors, &IntervalCollector{F: c_omreport_storage_controller, Interval: interval})
+	collectors = append(collectors, &IntervalCollector{F: c_omreport_storage_battery, Interval: interval})
+	collectors = append(collectors, &IntervalCollector{F: c_omreport_ps, Interval: interval})
+	collectors = append(collectors, &IntervalCollector{F: c_omreport_ps_amps, Interval: interval})
+	collectors = append(collectors, &IntervalCollector{F: c_omreport_ps_volts, Interval: interval})
 }
 
 func c_omreport_chassis() opentsdb.MultiDataPoint {
