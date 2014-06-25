@@ -167,19 +167,7 @@ func (s *Schedule) MarshalJSON() ([]byte, error) {
 	for tuple, states := range t.Status.GroupStates() {
 		var grouped []*Grouped
 		switch tuple.Status {
-		case StWarning, StCritical:
-			for ak, state := range states {
-				g := Grouped{
-					Active:   tuple.Active,
-					Status:   tuple.Status,
-					AlertKey: ak,
-					Alert:    ak.Name(),
-					Subject:  state.Subject,
-					Ago:      marshalTime(state.Last().Time),
-				}
-				grouped = append(grouped, &g)
-			}
-		case StUnknown:
+		case StWarning, StCritical, StUnknown:
 			for name, group := range states.GroupSets() {
 				g := Grouped{
 					Active:  tuple.Active,
