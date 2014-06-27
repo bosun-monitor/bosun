@@ -17,7 +17,7 @@ func metaWindowsVersion() {
 		if len(fields) == 0 {
 			return
 		}
-		AddMeta("", nil, "version", strings.Join(fields, " "))
+		AddMeta("", nil, "version", strings.Join(fields, " "), true)
 	}, "cmd", "/c", "ver")
 }
 
@@ -32,7 +32,7 @@ func metaWindowsIfaces() {
 		if line[0] != ' ' {
 			iface = sp[0]
 		} else if strings.HasPrefix(line, "   IPv4 Address") {
-			AddMeta("", opentsdb.TagSet{"iface": iface}, "addr", strings.TrimSpace(sp[1]))
+			AddMeta("", opentsdb.TagSet{"iface": iface}, "addr", strings.TrimSpace(sp[1]), true)
 		}
 	}, "ipconfig")
 }

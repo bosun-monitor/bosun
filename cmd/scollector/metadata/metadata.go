@@ -53,11 +53,11 @@ var (
 	metafuncs    []func()
 )
 
-func AddMeta(metric string, tags opentsdb.TagSet, name string, value interface{}) {
+func AddMeta(metric string, tags opentsdb.TagSet, name string, value interface{}, setHost bool) {
 	if tags == nil {
 		tags = make(opentsdb.TagSet)
 	}
-	if _, present := tags["host"]; !present {
+	if _, present := tags["host"]; setHost && !present {
 		tags["host"] = util.Hostname
 	}
 	ts := tags.Tags()
@@ -96,9 +96,9 @@ func collectMetadataOmreport() {
 		}
 		switch fields[0] {
 		case "Chassis Service Tag":
-			AddMeta("", nil, "svctag", fields[1])
+			AddMeta("", nil, "svctag", fields[1], true)
 		case "Chassis Model":
-			AddMeta("", nil, "model", fields[1])
+			AddMeta("", nil, "model", fields[1], true)
 		}
 	}, "omreport", "chassis", "info", "-fmt", "ssv")
 }

@@ -106,13 +106,13 @@ func Add(md *opentsdb.MultiDataPoint, name string, value interface{}, tags opent
 	}
 	*md = append(*md, &d)
 	if rate != metadata.Unknown {
-		metadata.AddMeta(name, nil, "rate", rate)
+		metadata.AddMeta(name, nil, "rate", rate, false)
 	}
 	if unit != metadata.None {
-		metadata.AddMeta(name, nil, "unit", unit)
+		metadata.AddMeta(name, nil, "unit", unit, false)
 	}
 	if desc != "" {
-		metadata.AddMeta(name, nil, "desc", desc)
+		metadata.AddMeta(name, nil, "desc", desc, false)
 	}
 }
 

@@ -14,7 +14,7 @@ func init() {
 
 func metaLinuxVersion() {
 	util.ReadCommand(func(line string) {
-		AddMeta("", nil, "uname", line)
+		AddMeta("", nil, "uname", line, true)
 	}, "uname", "-a")
 	util.ReadCommand(func(line string) {
 		fields := strings.Fields(line)
@@ -32,7 +32,7 @@ func metaLinuxVersion() {
 		if !hasNum {
 			return
 		}
-		AddMeta("", nil, "version", strings.Join(fields, " "))
+		AddMeta("", nil, "version", strings.Join(fields, " "), true)
 	}, "cat", "/etc/issue")
 }
 
@@ -53,7 +53,7 @@ func metaLinuxIfaces() {
 		if len(sp) > 1 && sp[0] == "inet" {
 			asp := strings.Split(sp[1], ":")
 			if len(asp) == 2 && asp[0] == "addr" {
-				AddMeta("", opentsdb.TagSet{"iface": iface}, "addr", asp[1])
+				AddMeta("", opentsdb.TagSet{"iface": iface}, "addr", asp[1], true)
 			}
 		}
 	}, "ifconfig")
