@@ -398,13 +398,15 @@ func (s *Schedule) RestoreState() {
 var savePending bool
 
 func (s *Schedule) Save() {
-	s.Lock()
-	defer s.Unlock()
-	if savePending {
-		return
-	}
-	savePending = true
-	time.AfterFunc(time.Second*5, s.save)
+	go func() {
+		s.Lock()
+		defer s.Unlock()
+		if savePending {
+			return
+		}
+		savePending = true
+		time.AfterFunc(time.Second*5, s.save)
+	}()
 }
 
 func (s *Schedule) save() {
