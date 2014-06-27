@@ -27,8 +27,13 @@ const (
 type Unit int
 
 const (
-	None Unit = iota
-	Byte
+	None  Unit = iota
+	Event      // Unitless.
+	Bytes
+	Pct // Range of 0-100.
+	Second
+	PerSecond // Events per second.
+	BytesPerSecond
 )
 
 type Metakey struct {
@@ -46,18 +51,17 @@ func (m Metakey) TagSet() opentsdb.TagSet {
 }
 
 var (
-	metadata     = make(map[Metakey]interface{})
-	metalock     sync.Mutex
-	metainterval = time.Second * 2
-	metahost     string
-	metafuncs    []func()
+	metadata  = make(map[Metakey]interface{})
+	metalock  sync.Mutex
+	metahost  string
+	metafuncs []func()
 )
 
-func AddMeta(metric string, tags opentsdb.TagSet, name string, value interface{}) {
+func AddMeta(metric string, tags opentsdb.TagSet, name string, value interface{}, setHost bool) {
 	if tags == nil {
 		tags = make(opentsdb.TagSet)
 	}
-	if _, present := tags["host"]; !present {
+	if _, present := tags["host"]; setHost && !present {
 		tags["host"] = util.Hostname
 	}
 	ts := tags.Tags()
@@ -76,11 +80,15 @@ func Init(host string) {
 }
 
 func collectMetadata() {
-	for _ = range time.Tick(metainterval) {
+	// Wait a bit so hopefully our collectors have run once and populated the
+	// metadata.
+	time.Sleep(time.Second * 5)
+	for {
 		for _, f := range metafuncs {
 			f()
 		}
 		sendMetadata()
+		time.Sleep(time.Hour)
 	}
 }
 
@@ -96,9 +104,9 @@ func collectMetadataOmreport() {
 		}
 		switch fields[0] {
 		case "Chassis Service Tag":
-			AddMeta("", nil, "svctag", fields[1])
+			AddMeta("", nil, "svctag", fields[1], true)
 		case "Chassis Model":
-			AddMeta("", nil, "model", fields[1])
+			AddMeta("", nil, "model", fields[1], true)
 		}
 	}, "omreport", "chassis", "info", "-fmt", "ssv")
 }
