@@ -14,7 +14,7 @@ func TestRelay(t *testing.T) {
 	relayAddr := ":52366"
 	addr := ":52367"
 	httpAddr := fmt.Sprintf("http://%s/api/put", addr)
-	http.HandleFunc("/", Handle(addr))
+	http.HandleFunc("/", Handle(addr, nil))
 	go func() {
 		err := http.ListenAndServe(addr, nil)
 		log.Fatal(err)
