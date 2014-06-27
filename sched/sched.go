@@ -67,6 +67,7 @@ func (s *Schedule) PutMetadata(k metadata.Metakey, v interface{}) {
 	}
 	if changed {
 		s.Metadata[k] = append(md, mv)
+		s.Save()
 	}
 	s.Unlock()
 }
