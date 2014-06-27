@@ -1,6 +1,7 @@
 package metadata
 
 import (
+	"strconv"
 	"strings"
 
 	"github.com/StackExchange/scollector/opentsdb"
@@ -16,11 +17,22 @@ func metaLinuxVersion() {
 		AddMeta("", nil, "uname", line)
 	}, "uname", "-a")
 	util.ReadCommand(func(line string) {
-		f := strings.Fields(line)
-		if len(f) < 1 || f[0] != "CentOS" {
+		fields := strings.Fields(line)
+		hasNum := false
+		for i := 0; i < len(fields); {
+			if strings.HasPrefix(fields[i], `\`) {
+				fields = append(fields[:i], fields[i+1:]...)
+			} else {
+				if v, _ := strconv.ParseFloat(fields[i], 32); v > 0 {
+					hasNum = true
+				}
+				i++
+			}
+		}
+		if !hasNum {
 			return
 		}
-		AddMeta("", nil, "version", line)
+		AddMeta("", nil, "version", strings.Join(fields, " "))
 	}, "cat", "/etc/issue")
 }
 
