@@ -46,11 +46,10 @@ func (m Metakey) TagSet() opentsdb.TagSet {
 }
 
 var (
-	metadata     = make(map[Metakey]interface{})
-	metalock     sync.Mutex
-	metainterval = time.Second * 2
-	metahost     string
-	metafuncs    []func()
+	metadata  = make(map[Metakey]interface{})
+	metalock  sync.Mutex
+	metahost  string
+	metafuncs []func()
 )
 
 func AddMeta(metric string, tags opentsdb.TagSet, name string, value interface{}, setHost bool) {
@@ -76,11 +75,14 @@ func Init(host string) {
 }
 
 func collectMetadata() {
-	for _ = range time.Tick(metainterval) {
+	// Wait a bit to seed metric unit data.
+	time.Sleep(time.Second * 5)
+	for {
 		for _, f := range metafuncs {
 			f()
 		}
 		sendMetadata()
+		time.Sleep(time.Hour)
 	}
 }
 
