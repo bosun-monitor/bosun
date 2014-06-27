@@ -30,7 +30,7 @@ func init() {
 	miniprofiler.StartHidden = true
 }
 
-func Listen(addr, dir, host string) error {
+func Listen(addr, dir, host, relayListen string) error {
 	var err error
 	templates, err = template.New("").ParseFiles(
 		dir + "/templates/index.html",
@@ -38,6 +38,7 @@ func Listen(addr, dir, host string) error {
 	if err != nil {
 		log.Fatal(err)
 	}
+	search.RelayHTTP(relayListen, host, JSON(PutMetadata))
 	router.Handle("/api/action", JSON(Action))
 	router.Handle("/api/alerts", JSON(Alerts))
 	router.Handle("/api/alerts/details", JSON(AlertDetails))
@@ -58,7 +59,7 @@ func Listen(addr, dir, host string) error {
 	router.Handle("/api/templates", JSON(Templates))
 	router.Handle("/api/metadata/put", JSON(PutMetadata))
 	router.Handle("/api/metadata/get", JSON(GetMetadata))
-	router.HandleFunc("/api/put", search.Handle(host))
+	router.HandleFunc("/api/put", search.Handle(host, JSON(PutMetadata)))
 	http.Handle("/", miniprofiler.NewHandler(Index))
 	http.Handle("/api/", router)
 	fs := http.FileServer(http.Dir(dir))

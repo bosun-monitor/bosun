@@ -14,12 +14,12 @@ import (
 	"github.com/StackExchange/bosun/_third_party/github.com/mreiferson/go-httpclient"
 )
 
-func RelayHTTP(addr, dest string) error {
+func RelayHTTP(addr, dest string, metaHandler http.Handler) {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/", Handle(dest))
+	mux.HandleFunc("/", Handle(dest, metaHandler))
 	log.Println("OpenTSDB relay listening on:", addr)
 	log.Println("OpenTSDB destination:", dest)
-	return http.ListenAndServe(addr, mux)
+	go func() { log.Fatal(http.ListenAndServe(addr, mux)) }()
 }
 
 var client = &http.Client{
@@ -28,8 +28,12 @@ var client = &http.Client{
 	},
 }
 
-func Handle(dest string) func(http.ResponseWriter, *http.Request) {
+func Handle(dest string, metaHandler http.Handler) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/api/metadata/put" {
+			metaHandler.ServeHTTP(w, r)
+			return
+		}
 		orig, _ := ioutil.ReadAll(r.Body)
 		if r.URL.Path == "/api/put" {
 			var body []byte
