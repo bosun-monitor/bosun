@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/StackExchange/bosun/_third_party/github.com/MiniProfiler/go/miniprofiler"
+	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/metadata"
+	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/bosun/_third_party/github.com/gorilla/mux"
 	"github.com/StackExchange/bosun/conf"
 	"github.com/StackExchange/bosun/sched"
@@ -54,6 +56,8 @@ func Listen(addr, dir, host string) error {
 	router.Handle("/api/tagv/{tagk}", JSON(TagValuesByTagKey))
 	router.Handle("/api/tagv/{tagk}/{metric}", JSON(TagValuesByMetricTagKey))
 	router.Handle("/api/templates", JSON(Templates))
+	router.Handle("/api/metadata/put", JSON(PutMetadata))
+	router.Handle("/api/metadata/get", JSON(GetMetadata))
 	router.HandleFunc("/api/put", search.Handle(host))
 	http.Handle("/", miniprofiler.NewHandler(Index))
 	http.Handle("/api/", router)
@@ -108,6 +112,36 @@ func JSON(h func(miniprofiler.Timer, http.ResponseWriter, *http.Request) (interf
 		}
 		w.Write(b)
 	})
+}
+
+func PutMetadata(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	d := json.NewDecoder(r.Body)
+	var ms []metadata.Metasend
+	if err := d.Decode(&ms); err != nil {
+		return nil, err
+	}
+	for _, m := range ms {
+		schedule.PutMetadata(metadata.Metakey{
+			Metric: m.Metric,
+			Tags:   m.Tags,
+			Name:   m.Name,
+		}, m.Value)
+	}
+	w.WriteHeader(204)
+	return nil, nil
+}
+
+func GetMetadata(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	tags := make(opentsdb.TagSet)
+	r.ParseForm()
+	vals := r.Form["tagv"]
+	for i, k := range r.Form["tagk"] {
+		if len(vals) <= i {
+			return nil, fmt.Errorf("unpaired tagk/tagv")
+		}
+		tags[k] = vals[i]
+	}
+	return schedule.GetMetadata(r.FormValue("metric"), tags), nil
 }
 
 func Alerts(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {

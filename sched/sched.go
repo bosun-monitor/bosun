@@ -6,10 +6,12 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"reflect"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/metadata"
 	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/bosun/_third_party/github.com/bradfitz/slice"
 	"github.com/StackExchange/bosun/conf"
@@ -29,12 +31,69 @@ type Schedule struct {
 	Notifications map[AlertKey]map[string]time.Time
 	Silence       map[string]*Silence
 	Group         map[time.Time]AlertKeys
+	Metadata      map[metadata.Metakey]Metavalues
 
 	nc            chan interface{}
 	cache         *opentsdb.Cache
 	RunHistory    map[AlertKey]*Event
 	CheckStart    time.Time
 	notifications map[*conf.Notification][]*State
+}
+
+type Metavalues []Metavalue
+
+func (m Metavalues) Last() (v interface{}, present bool) {
+	if len(m) > 0 {
+		return m[len(m)-1].Value, true
+	}
+	return
+}
+
+type Metavalue struct {
+	Time  time.Time
+	Value interface{}
+}
+
+func (s *Schedule) PutMetadata(k metadata.Metakey, v interface{}) {
+	s.Lock()
+	md := s.Metadata[k]
+	mv := Metavalue{time.Now(), v}
+	changed := false
+	if md == nil {
+		changed = true
+	} else {
+		last := md[len(md)-1]
+		changed = !reflect.DeepEqual(last.Value, v)
+	}
+	if changed {
+		s.Metadata[k] = append(md, mv)
+	}
+	s.Unlock()
+}
+
+func (s *Schedule) GetMetadata(metric string, subset opentsdb.TagSet) []metadata.Metasend {
+	s.Lock()
+	ms := make([]metadata.Metasend, 0)
+	for k, v := range s.Metadata {
+		if metric != "" && k.Metric != metric {
+			continue
+		}
+		if !k.TagSet().Subset(subset) {
+			continue
+		}
+		val, ok := v.Last()
+		if !ok {
+			continue
+		}
+		ms = append(ms, metadata.Metasend{
+			Metric: k.Metric,
+			Tags:   k.Tags,
+			Name:   k.Name,
+			Value:  val,
+		})
+	}
+	s.Unlock()
+	return ms
 }
 
 type States map[AlertKey]*State
@@ -250,6 +309,7 @@ func (s *Schedule) Init(c *conf.Conf) {
 	s.RunHistory = make(map[AlertKey]*Event)
 	s.Silence = make(map[string]*Silence)
 	s.Group = make(map[time.Time]AlertKeys)
+	s.Metadata = make(map[metadata.Metakey]Metavalues)
 	s.status = make(States)
 	s.cache = opentsdb.NewCache(s.Conf.TsdbHost, s.Conf.ResponseLimit)
 }
@@ -328,6 +388,10 @@ func (s *Schedule) RestoreState() {
 			s.AddNotification(ak, n, t)
 		}
 	}
+	if err := dec.Decode(&s.Metadata); err != nil {
+		log.Println(err)
+		return
+	}
 }
 
 var savePending bool
@@ -379,6 +443,10 @@ func (s *Schedule) save() {
 		return
 	}
 	if err := enc.Encode(s.status); err != nil {
+		log.Println(err)
+		return
+	}
+	if err := enc.Encode(s.Metadata); err != nil {
 		log.Println(err)
 		return
 	}
