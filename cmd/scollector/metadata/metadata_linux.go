@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/StackExchange/scollector/opentsdb"
+	"github.com/StackExchange/scollector/util"
 )
 
 func init() {
@@ -11,10 +12,10 @@ func init() {
 }
 
 func metaLinuxVersion() {
-	readCommand(func(line string) {
+	util.ReadCommand(func(line string) {
 		AddMeta("", nil, "uname", line)
 	}, "uname", "-a")
-	readCommand(func(line string) {
+	util.ReadCommand(func(line string) {
 		f := strings.Fields(line)
 		if len(f) < 1 || f[0] != "CentOS" {
 			return
@@ -25,7 +26,7 @@ func metaLinuxVersion() {
 
 func metaLinuxIfaces() {
 	var iface string
-	readCommand(func(line string) {
+	util.ReadCommand(func(line string) {
 		sp := strings.Fields(line)
 		if len(sp) == 0 {
 			iface = ""
