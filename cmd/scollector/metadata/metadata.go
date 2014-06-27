@@ -27,8 +27,13 @@ const (
 type Unit int
 
 const (
-	None Unit = iota
-	Byte
+	None  Unit = iota
+	Event      // Unitless.
+	Bytes
+	Pct // Range of 0-100.
+	Second
+	PerSecond // Events per second.
+	BytesPerSecond
 )
 
 type Metakey struct {
