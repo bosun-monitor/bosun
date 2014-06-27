@@ -4,6 +4,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/StackExchange/scollector/metadata"
 	"github.com/StackExchange/scollector/opentsdb"
 )
 
@@ -22,7 +23,7 @@ func c_conntrack_linux() opentsdb.MultiDataPoint {
 			if err != nil {
 				return
 			}
-			Add(&md, "linux.net.conntrack.count", count, nil)
+			Add(&md, "linux.net.conntrack.count", count, nil, metadata.Unknown, metadata.None, "")
 		}
 	}); err != nil {
 		return nil
@@ -35,13 +36,13 @@ func c_conntrack_linux() opentsdb.MultiDataPoint {
 			if err != nil {
 				return
 			}
-			Add(&md, "linux.net.conntrack.max", max, nil)
+			Add(&md, "linux.net.conntrack.max", max, nil, metadata.Unknown, metadata.None, "")
 		}
 	}); err != nil {
 		return nil
 	}
 	if max != 0 {
-		Add(&md, "linux.net.conntrack.percent_used", count/max*100, nil)
+		Add(&md, "linux.net.conntrack.percent_used", count/max*100, nil, metadata.Unknown, metadata.None, "")
 	}
 	return md
 }

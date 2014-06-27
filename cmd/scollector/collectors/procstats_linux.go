@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/StackExchange/scollector/metadata"
 	"github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/slog"
 )
@@ -40,8 +41,8 @@ func c_procstats_linux() opentsdb.MultiDataPoint {
 		if m == nil {
 			return
 		}
-		Add(&md, "linux.uptime_total", m[1], nil)
-		Add(&md, "linux.uptime_now", m[2], nil)
+		Add(&md, "linux.uptime_total", m[1], nil, metadata.Unknown, metadata.None, "")
+		Add(&md, "linux.uptime_now", m[2], nil, metadata.Unknown, metadata.None, "")
 	})
 	mem := make(map[string]float64)
 	readLine("/proc/meminfo", func(s string) {
@@ -54,13 +55,13 @@ func c_procstats_linux() opentsdb.MultiDataPoint {
 			slog.Errorln(err)
 		}
 		mem[m[1]] = i
-		Add(&md, "linux.mem."+strings.ToLower(m[1]), m[2], nil)
+		Add(&md, "linux.mem."+strings.ToLower(m[1]), m[2], nil, metadata.Unknown, metadata.None, "")
 	})
-	Add(&md, osMemTotal, int(mem["MemTotal"])*1024, nil)
-	Add(&md, osMemFree, int(mem["MemFree"])*1024, nil)
-	Add(&md, osMemUsed, (int(mem["MemTotal"])-(int(mem["MemFree"])+int(mem["Buffers"])+int(mem["Cached"])))*1024, nil)
+	Add(&md, osMemTotal, int(mem["MemTotal"])*1024, nil, metadata.Unknown, metadata.None, "")
+	Add(&md, osMemFree, int(mem["MemFree"])*1024, nil, metadata.Unknown, metadata.None, "")
+	Add(&md, osMemUsed, (int(mem["MemTotal"])-(int(mem["MemFree"])+int(mem["Buffers"])+int(mem["Cached"])))*1024, nil, metadata.Unknown, metadata.None, "")
 	if mem["MemTotal"] != 0 {
-		Add(&md, osMemPctFree, (mem["MemFree"]+mem["Buffers"]+mem["Cached"])/mem["MemTotal"]*100, nil)
+		Add(&md, osMemPctFree, (mem["MemFree"]+mem["Buffers"]+mem["Cached"])/mem["MemTotal"]*100, nil, metadata.Unknown, metadata.None, "")
 	}
 
 	readLine("/proc/vmstat", func(s string) {
@@ -73,9 +74,9 @@ func c_procstats_linux() opentsdb.MultiDataPoint {
 		case "pgpgin", "pgpgout", "pswpin", "pswpout", "pgfault", "pgmajfault":
 			mio := inoutRE.FindStringSubmatch(m[1])
 			if mio != nil {
-				Add(&md, "linux.mem."+mio[1], m[2], opentsdb.TagSet{"direction": mio[2]})
+				Add(&md, "linux.mem."+mio[1], m[2], opentsdb.TagSet{"direction": mio[2]}, metadata.Unknown, metadata.None, "")
 			} else {
-				Add(&md, "linux.mem."+m[1], m[2], nil)
+				Add(&md, "linux.mem."+m[1], m[2], nil, metadata.Unknown, metadata.None, "")
 			}
 		}
 	})
@@ -106,7 +107,7 @@ func c_procstats_linux() opentsdb.MultiDataPoint {
 				if tag_cpu != "" {
 					tags["cpu"] = tag_cpu
 				}
-				Add(&md, "linux.cpu"+metric_percpu, value, tags)
+				Add(&md, "linux.cpu"+metric_percpu, value, tags, metadata.Unknown, metadata.None, "")
 			}
 			if metric_percpu == "" {
 				if len(fields) != len(CPU_FIELDS) {
@@ -127,31 +128,31 @@ func c_procstats_linux() opentsdb.MultiDataPoint {
 				t_util = user + nice + system
 			}
 		} else if m[1] == "intr" {
-			Add(&md, "linux.intr", strings.Fields(m[2])[0], nil)
+			Add(&md, "linux.intr", strings.Fields(m[2])[0], nil, metadata.Unknown, metadata.None, "")
 		} else if m[1] == "ctxt" {
-			Add(&md, "linux.ctxt", m[2], nil)
+			Add(&md, "linux.ctxt", m[2], nil, metadata.Unknown, metadata.None, "")
 		} else if m[1] == "processes" {
-			Add(&md, "linux.processes", m[2], nil)
+			Add(&md, "linux.processes", m[2], nil, metadata.Unknown, metadata.None, "")
 		} else if m[1] == "procs_blocked" {
-			Add(&md, "linux.procs_blocked", m[2], nil)
+			Add(&md, "linux.procs_blocked", m[2], nil, metadata.Unknown, metadata.None, "")
 		}
 	})
 	if num_cores != 0 && t_util != 0 {
-		Add(&md, osCPU, t_util/float64(num_cores), nil)
+		Add(&md, osCPU, t_util/float64(num_cores), nil, metadata.Unknown, metadata.None, "")
 	}
 	readLine("/proc/loadavg", func(s string) {
 		m := loadavgRE.FindStringSubmatch(s)
 		if m == nil {
 			return
 		}
-		Add(&md, "linux.loadavg_1_min", m[1], nil)
-		Add(&md, "linux.loadavg_5_min", m[2], nil)
-		Add(&md, "linux.loadavg_15_min", m[3], nil)
-		Add(&md, "linux.loadavg_runnable", m[4], nil)
-		Add(&md, "linux.loadavg_total_threads", m[5], nil)
+		Add(&md, "linux.loadavg_1_min", m[1], nil, metadata.Unknown, metadata.None, "")
+		Add(&md, "linux.loadavg_5_min", m[2], nil, metadata.Unknown, metadata.None, "")
+		Add(&md, "linux.loadavg_15_min", m[3], nil, metadata.Unknown, metadata.None, "")
+		Add(&md, "linux.loadavg_runnable", m[4], nil, metadata.Unknown, metadata.None, "")
+		Add(&md, "linux.loadavg_total_threads", m[5], nil, metadata.Unknown, metadata.None, "")
 	})
 	readLine("/proc/sys/kernel/random/entropy_avail", func(s string) {
-		Add(&md, "linux.entropy_avail", strings.TrimSpace(s), nil)
+		Add(&md, "linux.entropy_avail", strings.TrimSpace(s), nil, metadata.Unknown, metadata.None, "")
 	})
 	num_cpus := 0
 	readLine("/proc/interrupts", func(s string) {
@@ -184,7 +185,7 @@ func c_procstats_linux() opentsdb.MultiDataPoint {
 				slog.Infoln("interrupts: unexpected value", val)
 				break
 			}
-			Add(&md, "linux.interrupts", val, opentsdb.TagSet{"type": irq_type, "cpu": strconv.Itoa(i)})
+			Add(&md, "linux.interrupts", val, opentsdb.TagSet{"type": irq_type, "cpu": strconv.Itoa(i)}, metadata.Unknown, metadata.None, "")
 		}
 	})
 	readLine("/proc/net/sockstat", func(s string) {
@@ -195,43 +196,43 @@ func c_procstats_linux() opentsdb.MultiDataPoint {
 				slog.Infoln("sockstat: error parsing sockets line")
 				break
 			}
-			Add(&md, "linux.net.sockets.used", cols[2], nil)
+			Add(&md, "linux.net.sockets.used", cols[2], nil, metadata.Unknown, metadata.None, "")
 		case "TCP:":
 			if len(cols) < 11 {
 				slog.Infoln("sockstat: error parsing tcp line")
 				break
 			}
-			Add(&md, "linux.net.sockets.tcp_in_use", cols[2], nil)
-			Add(&md, "linux.net.sockets.tcp_orphaned", cols[4], nil)
-			Add(&md, "linux.net.sockets.tcp_time_wait", cols[6], nil)
-			Add(&md, "linux.net.sockets.tcp_allocated", cols[8], nil)
-			Add(&md, "linux.net.sockets.tcp_mem", cols[10], nil)
+			Add(&md, "linux.net.sockets.tcp_in_use", cols[2], nil, metadata.Unknown, metadata.None, "")
+			Add(&md, "linux.net.sockets.tcp_orphaned", cols[4], nil, metadata.Unknown, metadata.None, "")
+			Add(&md, "linux.net.sockets.tcp_time_wait", cols[6], nil, metadata.Unknown, metadata.None, "")
+			Add(&md, "linux.net.sockets.tcp_allocated", cols[8], nil, metadata.Unknown, metadata.None, "")
+			Add(&md, "linux.net.sockets.tcp_mem", cols[10], nil, metadata.Unknown, metadata.None, "")
 		case "UDP:":
 			if len(cols) < 5 {
 				slog.Infoln("sockstat: error parsing udp line")
 				break
 			}
-			Add(&md, "linux.net.sockets.udp_in_use", cols[2], nil)
-			Add(&md, "linux.net.sockets.udp_mem", cols[4], nil)
+			Add(&md, "linux.net.sockets.udp_in_use", cols[2], nil, metadata.Unknown, metadata.None, "")
+			Add(&md, "linux.net.sockets.udp_mem", cols[4], nil, metadata.Unknown, metadata.None, "")
 		case "UDPLITE:":
 			if len(cols) < 3 {
 				slog.Infoln("sockstat: error parsing udplite line")
 				break
 			}
-			Add(&md, "linux.net.sockets.udplite_in_use", cols[2], nil)
+			Add(&md, "linux.net.sockets.udplite_in_use", cols[2], nil, metadata.Unknown, metadata.None, "")
 		case "RAW:":
 			if len(cols) < 3 {
 				slog.Infoln("sockstat: error parsing raw line")
 				break
 			}
-			Add(&md, "linux.net.sockets.raw_in_use", cols[2], nil)
+			Add(&md, "linux.net.sockets.raw_in_use", cols[2], nil, metadata.Unknown, metadata.None, "")
 		case "FRAG:":
 			if len(cols) < 5 {
 				slog.Infoln("sockstat: error parsing frag line")
 				break
 			}
-			Add(&md, "linux.net.sockets.frag_in_use", cols[2], nil)
-			Add(&md, "linux.net.sockets.frag_mem", cols[4], nil)
+			Add(&md, "linux.net.sockets.frag_in_use", cols[2], nil, metadata.Unknown, metadata.None, "")
+			Add(&md, "linux.net.sockets.frag_mem", cols[4], nil, metadata.Unknown, metadata.None, "")
 		}
 	})
 	ln := 0
@@ -249,7 +250,7 @@ func c_procstats_linux() opentsdb.MultiDataPoint {
 			for i, v := range cols[1:] {
 				i += 1
 				m := "linux.net.stat." + root + "." + strings.TrimPrefix(strings.ToLower(headers[i]), "tcp")
-				Add(&md, m, v, nil)
+				Add(&md, m, v, nil, metadata.Unknown, metadata.None, "")
 			}
 		}
 		ln += 1

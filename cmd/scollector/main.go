@@ -13,6 +13,7 @@ import (
 
 	"github.com/StackExchange/scollector/collect"
 	"github.com/StackExchange/scollector/collectors"
+	"github.com/StackExchange/scollector/metadata"
 	"github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/slog"
 )
@@ -125,6 +126,7 @@ func main() {
 			slog.Fatal("invalid host:", *flagHost)
 		}
 	}
+	metadata.Init(u.Host)
 	if *flagPrint {
 		collectors.DefaultFreq = time.Second * 3
 		slog.Infoln("Set default frequency to", collectors.DefaultFreq)

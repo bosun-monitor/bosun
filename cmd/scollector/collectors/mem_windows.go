@@ -1,6 +1,7 @@
 package collectors
 
 import (
+	"github.com/StackExchange/scollector/metadata"
 	"github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/slog"
 	"github.com/StackExchange/wmi"
@@ -24,14 +25,14 @@ func c_simple_mem_windows() opentsdb.MultiDataPoint {
 	}
 	var md opentsdb.MultiDataPoint
 	for _, v := range dst {
-		Add(&md, "win.mem.vm.total", v.TotalVirtualMemorySize*1024, nil)
-		Add(&md, "win.mem.vm.free", v.FreeVirtualMemory*1024, nil)
-		Add(&md, "win.mem.total", v.TotalVisibleMemorySize*1024, nil)
-		Add(&md, "win.mem.free", v.FreePhysicalMemory*1024, nil)
-		Add(&md, osMemTotal, v.TotalVisibleMemorySize*1024, nil)
-		Add(&md, osMemFree, v.FreePhysicalMemory*1024, nil)
-		Add(&md, osMemUsed, v.TotalVisibleMemorySize*1024-v.FreePhysicalMemory*1024, nil)
-		Add(&md, osMemPctFree, float64(v.FreePhysicalMemory)/float64(v.TotalVisibleMemorySize)*100, nil)
+		Add(&md, "win.mem.vm.total", v.TotalVirtualMemorySize*1024, nil, metadata.Unknown, metadata.None, "")
+		Add(&md, "win.mem.vm.free", v.FreeVirtualMemory*1024, nil, metadata.Unknown, metadata.None, "")
+		Add(&md, "win.mem.total", v.TotalVisibleMemorySize*1024, nil, metadata.Unknown, metadata.None, "")
+		Add(&md, "win.mem.free", v.FreePhysicalMemory*1024, nil, metadata.Unknown, metadata.None, "")
+		Add(&md, osMemTotal, v.TotalVisibleMemorySize*1024, nil, metadata.Unknown, metadata.None, "")
+		Add(&md, osMemFree, v.FreePhysicalMemory*1024, nil, metadata.Unknown, metadata.None, "")
+		Add(&md, osMemUsed, v.TotalVisibleMemorySize*1024-v.FreePhysicalMemory*1024, nil, metadata.Unknown, metadata.None, "")
+		Add(&md, osMemPctFree, float64(v.FreePhysicalMemory)/float64(v.TotalVisibleMemorySize)*100, nil, metadata.Unknown, metadata.None, "")
 	}
 	return md
 }

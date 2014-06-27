@@ -3,6 +3,7 @@ package collectors
 import (
 	"sync"
 
+	"github.com/StackExchange/scollector/metadata"
 	"github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/slog"
 )
@@ -39,29 +40,29 @@ func c_iis_webservice() opentsdb.MultiDataPoint {
 	}
 	var md opentsdb.MultiDataPoint
 	for _, v := range dst {
-		Add(&md, "iis.bytes", v.BytesReceivedPersec, opentsdb.TagSet{"site": v.Name, "direction": "received"})
-		Add(&md, "iis.bytes", v.BytesSentPersec, opentsdb.TagSet{"site": v.Name, "direction": "sent"})
-		Add(&md, "iis.requests", v.CGIRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "cgi"})
-		Add(&md, "iis.connection_attempts", v.ConnectionAttemptsPersec, opentsdb.TagSet{"site": v.Name})
-		Add(&md, "iis.requests", v.CopyRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "copy"})
-		Add(&md, "iis.connections", v.CurrentConnections, opentsdb.TagSet{"site": v.Name})
-		Add(&md, "iis.requests", v.DeleteRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "delete"})
-		Add(&md, "iis.requests", v.GetRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "get"})
-		Add(&md, "iis.requests", v.HeadRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "head"})
-		Add(&md, "iis.requests", v.ISAPIExtensionRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "isapi"})
-		Add(&md, "iis.errors", v.LockedErrorsPersec, opentsdb.TagSet{"site": v.Name, "type": "locked"})
-		Add(&md, "iis.requests", v.LockRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "lock"})
-		Add(&md, "iis.requests", v.MkcolRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "mkcol"})
-		Add(&md, "iis.requests", v.MoveRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "move"})
-		Add(&md, "iis.errors", v.NotFoundErrorsPersec, opentsdb.TagSet{"site": v.Name, "type": "notfound"})
-		Add(&md, "iis.requests", v.OptionsRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "options"})
-		Add(&md, "iis.requests", v.PostRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "post"})
-		Add(&md, "iis.requests", v.PropfindRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "propfind"})
-		Add(&md, "iis.requests", v.ProppatchRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "proppatch"})
-		Add(&md, "iis.requests", v.PutRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "put"})
-		Add(&md, "iis.requests", v.SearchRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "search"})
-		Add(&md, "iis.requests", v.TraceRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "trace"})
-		Add(&md, "iis.requests", v.UnlockRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "unlock"})
+		Add(&md, "iis.bytes", v.BytesReceivedPersec, opentsdb.TagSet{"site": v.Name, "direction": "received"}, metadata.Unknown, metadata.None, "")
+		Add(&md, "iis.bytes", v.BytesSentPersec, opentsdb.TagSet{"site": v.Name, "direction": "sent"}, metadata.Unknown, metadata.None, "")
+		Add(&md, "iis.requests", v.CGIRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "cgi"}, metadata.Unknown, metadata.None, "")
+		Add(&md, "iis.connection_attempts", v.ConnectionAttemptsPersec, opentsdb.TagSet{"site": v.Name}, metadata.Unknown, metadata.None, "")
+		Add(&md, "iis.requests", v.CopyRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "copy"}, metadata.Unknown, metadata.None, "")
+		Add(&md, "iis.connections", v.CurrentConnections, opentsdb.TagSet{"site": v.Name}, metadata.Unknown, metadata.None, "")
+		Add(&md, "iis.requests", v.DeleteRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "delete"}, metadata.Unknown, metadata.None, "")
+		Add(&md, "iis.requests", v.GetRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "get"}, metadata.Unknown, metadata.None, "")
+		Add(&md, "iis.requests", v.HeadRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "head"}, metadata.Unknown, metadata.None, "")
+		Add(&md, "iis.requests", v.ISAPIExtensionRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "isapi"}, metadata.Unknown, metadata.None, "")
+		Add(&md, "iis.errors", v.LockedErrorsPersec, opentsdb.TagSet{"site": v.Name, "type": "locked"}, metadata.Unknown, metadata.None, "")
+		Add(&md, "iis.requests", v.LockRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "lock"}, metadata.Unknown, metadata.None, "")
+		Add(&md, "iis.requests", v.MkcolRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "mkcol"}, metadata.Unknown, metadata.None, "")
+		Add(&md, "iis.requests", v.MoveRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "move"}, metadata.Unknown, metadata.None, "")
+		Add(&md, "iis.errors", v.NotFoundErrorsPersec, opentsdb.TagSet{"site": v.Name, "type": "notfound"}, metadata.Unknown, metadata.None, "")
+		Add(&md, "iis.requests", v.OptionsRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "options"}, metadata.Unknown, metadata.None, "")
+		Add(&md, "iis.requests", v.PostRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "post"}, metadata.Unknown, metadata.None, "")
+		Add(&md, "iis.requests", v.PropfindRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "propfind"}, metadata.Unknown, metadata.None, "")
+		Add(&md, "iis.requests", v.ProppatchRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "proppatch"}, metadata.Unknown, metadata.None, "")
+		Add(&md, "iis.requests", v.PutRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "put"}, metadata.Unknown, metadata.None, "")
+		Add(&md, "iis.requests", v.SearchRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "search"}, metadata.Unknown, metadata.None, "")
+		Add(&md, "iis.requests", v.TraceRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "trace"}, metadata.Unknown, metadata.None, "")
+		Add(&md, "iis.requests", v.UnlockRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "unlock"}, metadata.Unknown, metadata.None, "")
 	}
 	return md
 }

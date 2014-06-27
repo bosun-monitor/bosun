@@ -4,6 +4,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/StackExchange/scollector/metadata"
 	"github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/slog"
 	"github.com/StackExchange/wmi"
@@ -90,30 +91,30 @@ func c_windows_processes() opentsdb.MultiDataPoint {
 			continue
 		}
 
-		Add(&md, "win.proc.elapsed_time", v.ElapsedTime, opentsdb.TagSet{"name": name, "id": id})
-		Add(&md, "win.proc.handle_count", v.HandleCount, opentsdb.TagSet{"name": name, "id": id})
-		Add(&md, "win.proc.io_bytes", v.IOOtherBytesPersec, opentsdb.TagSet{"name": name, "id": id, "type": "other"})
-		Add(&md, "win.proc.io_operations", v.IOOtherOperationsPersec, opentsdb.TagSet{"name": name, "id": id, "type": "other"})
-		Add(&md, "win.proc.io_bytes", v.IOReadBytesPersec, opentsdb.TagSet{"name": name, "id": id, "type": "read"})
-		Add(&md, "win.proc.io_operations", v.IOReadOperationsPersec, opentsdb.TagSet{"name": name, "id": id, "type": "read"})
-		Add(&md, "win.proc.io_bytes", v.IOWriteBytesPersec, opentsdb.TagSet{"name": name, "id": id, "type": "write"})
-		Add(&md, "win.proc.io_operations", v.IOWriteOperationsPersec, opentsdb.TagSet{"name": name, "id": id, "type": "write"})
-		Add(&md, "win.proc.mem.page_faults", v.PageFaultsPersec, opentsdb.TagSet{"name": name, "id": id})
-		Add(&md, "win.proc.mem.pagefile_bytes", v.PageFileBytes, opentsdb.TagSet{"name": name, "id": id})
-		Add(&md, "win.proc.mem.pagefile_bytes_peak", v.PageFileBytesPeak, opentsdb.TagSet{"name": name, "id": id})
-		Add(&md, "win.proc.cpu", v.PercentPrivilegedTime, opentsdb.TagSet{"name": name, "id": id, "type": "privileged"})
-		Add(&md, "win.proc.cpu_total", v.PercentProcessorTime, opentsdb.TagSet{"name": name, "id": id})
-		Add(&md, "win.proc.cpu", v.PercentUserTime, opentsdb.TagSet{"name": name, "id": id, "type": "user"})
-		Add(&md, "win.proc.mem.pool_nonpaged_bytes", v.PoolNonpagedBytes, opentsdb.TagSet{"name": name, "id": id})
-		Add(&md, "win.proc.mem.pool_paged_bytes", v.PoolPagedBytes, opentsdb.TagSet{"name": name, "id": id})
-		Add(&md, "win.proc.priority_base", v.PriorityBase, opentsdb.TagSet{"name": name, "id": id})
-		Add(&md, "win.proc.private_bytes", v.PrivateBytes, opentsdb.TagSet{"name": name, "id": id})
-		Add(&md, "win.proc.thread_count", v.ThreadCount, opentsdb.TagSet{"name": name, "id": id})
-		Add(&md, "win.proc.mem.vm.bytes", v.VirtualBytes, opentsdb.TagSet{"name": name, "id": id})
-		Add(&md, "win.proc.mem.vm.bytes_peak", v.VirtualBytesPeak, opentsdb.TagSet{"name": name, "id": id})
-		Add(&md, "win.proc.mem.working_set", v.WorkingSet, opentsdb.TagSet{"name": name, "id": id})
-		Add(&md, "win.proc.mem.working_set_peak", v.WorkingSetPeak, opentsdb.TagSet{"name": name, "id": id})
-		Add(&md, "win.proc.mem.working_set_private", v.WorkingSetPrivate, opentsdb.TagSet{"name": name, "id": id})
+		Add(&md, "win.proc.elapsed_time", v.ElapsedTime, opentsdb.TagSet{"name": name, "id": id}, metadata.Unknown, metadata.None, "")
+		Add(&md, "win.proc.handle_count", v.HandleCount, opentsdb.TagSet{"name": name, "id": id}, metadata.Unknown, metadata.None, "")
+		Add(&md, "win.proc.io_bytes", v.IOOtherBytesPersec, opentsdb.TagSet{"name": name, "id": id, "type": "other"}, metadata.Unknown, metadata.None, "")
+		Add(&md, "win.proc.io_operations", v.IOOtherOperationsPersec, opentsdb.TagSet{"name": name, "id": id, "type": "other"}, metadata.Unknown, metadata.None, "")
+		Add(&md, "win.proc.io_bytes", v.IOReadBytesPersec, opentsdb.TagSet{"name": name, "id": id, "type": "read"}, metadata.Unknown, metadata.None, "")
+		Add(&md, "win.proc.io_operations", v.IOReadOperationsPersec, opentsdb.TagSet{"name": name, "id": id, "type": "read"}, metadata.Unknown, metadata.None, "")
+		Add(&md, "win.proc.io_bytes", v.IOWriteBytesPersec, opentsdb.TagSet{"name": name, "id": id, "type": "write"}, metadata.Unknown, metadata.None, "")
+		Add(&md, "win.proc.io_operations", v.IOWriteOperationsPersec, opentsdb.TagSet{"name": name, "id": id, "type": "write"}, metadata.Unknown, metadata.None, "")
+		Add(&md, "win.proc.mem.page_faults", v.PageFaultsPersec, opentsdb.TagSet{"name": name, "id": id}, metadata.Unknown, metadata.None, "")
+		Add(&md, "win.proc.mem.pagefile_bytes", v.PageFileBytes, opentsdb.TagSet{"name": name, "id": id}, metadata.Unknown, metadata.None, "")
+		Add(&md, "win.proc.mem.pagefile_bytes_peak", v.PageFileBytesPeak, opentsdb.TagSet{"name": name, "id": id}, metadata.Unknown, metadata.None, "")
+		Add(&md, "win.proc.cpu", v.PercentPrivilegedTime, opentsdb.TagSet{"name": name, "id": id, "type": "privileged"}, metadata.Unknown, metadata.None, "")
+		Add(&md, "win.proc.cpu_total", v.PercentProcessorTime, opentsdb.TagSet{"name": name, "id": id}, metadata.Unknown, metadata.None, "")
+		Add(&md, "win.proc.cpu", v.PercentUserTime, opentsdb.TagSet{"name": name, "id": id, "type": "user"}, metadata.Unknown, metadata.None, "")
+		Add(&md, "win.proc.mem.pool_nonpaged_bytes", v.PoolNonpagedBytes, opentsdb.TagSet{"name": name, "id": id}, metadata.Unknown, metadata.None, "")
+		Add(&md, "win.proc.mem.pool_paged_bytes", v.PoolPagedBytes, opentsdb.TagSet{"name": name, "id": id}, metadata.Unknown, metadata.None, "")
+		Add(&md, "win.proc.priority_base", v.PriorityBase, opentsdb.TagSet{"name": name, "id": id}, metadata.Unknown, metadata.None, "")
+		Add(&md, "win.proc.private_bytes", v.PrivateBytes, opentsdb.TagSet{"name": name, "id": id}, metadata.Unknown, metadata.None, "")
+		Add(&md, "win.proc.thread_count", v.ThreadCount, opentsdb.TagSet{"name": name, "id": id}, metadata.Unknown, metadata.None, "")
+		Add(&md, "win.proc.mem.vm.bytes", v.VirtualBytes, opentsdb.TagSet{"name": name, "id": id}, metadata.Unknown, metadata.None, "")
+		Add(&md, "win.proc.mem.vm.bytes_peak", v.VirtualBytesPeak, opentsdb.TagSet{"name": name, "id": id}, metadata.Unknown, metadata.None, "")
+		Add(&md, "win.proc.mem.working_set", v.WorkingSet, opentsdb.TagSet{"name": name, "id": id}, metadata.Unknown, metadata.None, "")
+		Add(&md, "win.proc.mem.working_set_peak", v.WorkingSetPeak, opentsdb.TagSet{"name": name, "id": id}, metadata.Unknown, metadata.None, "")
+		Add(&md, "win.proc.mem.working_set_private", v.WorkingSetPrivate, opentsdb.TagSet{"name": name, "id": id}, metadata.Unknown, metadata.None, "")
 
 	}
 	return md

@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/StackExchange/scollector/opentsdb"
+	"github.com/StackExchange/scollector/util"
 	"github.com/StackExchange/slog"
 )
 
@@ -125,7 +126,7 @@ func (c *ProgramCollector) runProgram(dpchan chan<- *opentsdb.DataPoint) (progEr
 			Metric:    sp[0],
 			Timestamp: ts,
 			Value:     sp[2],
-			Tags:      opentsdb.TagSet{"host": host},
+			Tags:      opentsdb.TagSet{"host": util.Hostname},
 		}
 		for _, tag := range sp[3:] {
 			tsp := strings.Split(tag, "=")

@@ -3,6 +3,7 @@ package collectors
 import (
 	"sync"
 
+	"github.com/StackExchange/scollector/metadata"
 	"github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/slog"
 	"github.com/StackExchange/wmi"
@@ -50,15 +51,15 @@ func c_mssql_general() opentsdb.MultiDataPoint {
 	}
 	var md opentsdb.MultiDataPoint
 	for _, v := range dst {
-		Add(&md, "mssql.user_connections", v.UserConnections, nil)
-		Add(&md, "mssql.connection_resets", v.ConnectionResetPersec, nil)
-		Add(&md, "mssql.logins", v.LoginsPersec, nil)
-		Add(&md, "mssql.logouts", v.LogoutsPersec, nil)
-		Add(&md, "mssql.mars_deadlocks", v.MarsDeadlocks, nil)
-		Add(&md, "mssql.proc_blocked", v.Processesblocked, nil)
-		Add(&md, "mssql.temptables_created", v.TempTablesCreationRate, nil)
-		Add(&md, "mssql.temptables_to_destroy", v.TempTablesForDestruction, nil)
-		Add(&md, "mssql.transactions", v.Transactions, nil)
+		Add(&md, "mssql.user_connections", v.UserConnections, nil, metadata.Unknown, metadata.None, "")
+		Add(&md, "mssql.connection_resets", v.ConnectionResetPersec, nil, metadata.Unknown, metadata.None, "")
+		Add(&md, "mssql.logins", v.LoginsPersec, nil, metadata.Unknown, metadata.None, "")
+		Add(&md, "mssql.logouts", v.LogoutsPersec, nil, metadata.Unknown, metadata.None, "")
+		Add(&md, "mssql.mars_deadlocks", v.MarsDeadlocks, nil, metadata.Unknown, metadata.None, "")
+		Add(&md, "mssql.proc_blocked", v.Processesblocked, nil, metadata.Unknown, metadata.None, "")
+		Add(&md, "mssql.temptables_created", v.TempTablesCreationRate, nil, metadata.Unknown, metadata.None, "")
+		Add(&md, "mssql.temptables_to_destroy", v.TempTablesForDestruction, nil, metadata.Unknown, metadata.None, "")
+		Add(&md, "mssql.transactions", v.Transactions, nil, metadata.Unknown, metadata.None, "")
 	}
 	return md
 }
@@ -85,16 +86,16 @@ func c_mssql_statistics() opentsdb.MultiDataPoint {
 	}
 	var md opentsdb.MultiDataPoint
 	for _, v := range dst {
-		Add(&md, "mssql.autoparam_attempts", v.AutoParamAttemptsPersec, nil)
-		Add(&md, "mssql.autoparam_failed", v.FailedAutoParamsPersec, nil)
-		Add(&md, "mssql.autoparam_forced", v.ForcedParameterizationsPersec, nil)
-		Add(&md, "mssql.autoparam_safe", v.SafeAutoParamsPersec, nil)
-		Add(&md, "mssql.autoparam_unsafe", v.UnsafeAutoParamsPersec, nil)
-		Add(&md, "mssql.batches", v.BatchRequestsPersec, nil)
-		Add(&md, "mssql.guided_plans", v.GuidedplanexecutionsPersec, nil)
-		Add(&md, "mssql.misguided_plans", v.MisguidedplanexecutionsPersec, nil)
-		Add(&md, "mssql.compilations", v.SQLCompilationsPersec, nil)
-		Add(&md, "mssql.recompilations", v.SQLReCompilationsPersec, nil)
+		Add(&md, "mssql.autoparam_attempts", v.AutoParamAttemptsPersec, nil, metadata.Unknown, metadata.None, "")
+		Add(&md, "mssql.autoparam_failed", v.FailedAutoParamsPersec, nil, metadata.Unknown, metadata.None, "")
+		Add(&md, "mssql.autoparam_forced", v.ForcedParameterizationsPersec, nil, metadata.Unknown, metadata.None, "")
+		Add(&md, "mssql.autoparam_safe", v.SafeAutoParamsPersec, nil, metadata.Unknown, metadata.None, "")
+		Add(&md, "mssql.autoparam_unsafe", v.UnsafeAutoParamsPersec, nil, metadata.Unknown, metadata.None, "")
+		Add(&md, "mssql.batches", v.BatchRequestsPersec, nil, metadata.Unknown, metadata.None, "")
+		Add(&md, "mssql.guided_plans", v.GuidedplanexecutionsPersec, nil, metadata.Unknown, metadata.None, "")
+		Add(&md, "mssql.misguided_plans", v.MisguidedplanexecutionsPersec, nil, metadata.Unknown, metadata.None, "")
+		Add(&md, "mssql.compilations", v.SQLCompilationsPersec, nil, metadata.Unknown, metadata.None, "")
+		Add(&md, "mssql.recompilations", v.SQLReCompilationsPersec, nil, metadata.Unknown, metadata.None, "")
 	}
 	return md
 }
@@ -122,12 +123,12 @@ func c_mssql_locks() opentsdb.MultiDataPoint {
 	}
 	var md opentsdb.MultiDataPoint
 	for _, v := range dst {
-		Add(&md, "mssql.lock_wait_time", v.AverageWaitTimems, opentsdb.TagSet{"type": v.Name})
-		Add(&md, "mssql.lock_requests", v.LockRequestsPersec, opentsdb.TagSet{"type": v.Name})
-		Add(&md, "mssql.lock_timeouts", v.LockTimeoutsPersec, opentsdb.TagSet{"type": v.Name})
-		Add(&md, "mssql.lock_timeouts0", v.LockTimeoutstimeout0Persec, opentsdb.TagSet{"type": v.Name})
-		Add(&md, "mssql.lock_waits", v.LockWaitsPersec, opentsdb.TagSet{"type": v.Name})
-		Add(&md, "mssql.deadlocks", v.NumberofDeadlocksPersec, opentsdb.TagSet{"type": v.Name})
+		Add(&md, "mssql.lock_wait_time", v.AverageWaitTimems, opentsdb.TagSet{"type": v.Name}, metadata.Unknown, metadata.None, "")
+		Add(&md, "mssql.lock_requests", v.LockRequestsPersec, opentsdb.TagSet{"type": v.Name}, metadata.Unknown, metadata.None, "")
+		Add(&md, "mssql.lock_timeouts", v.LockTimeoutsPersec, opentsdb.TagSet{"type": v.Name}, metadata.Unknown, metadata.None, "")
+		Add(&md, "mssql.lock_timeouts0", v.LockTimeoutstimeout0Persec, opentsdb.TagSet{"type": v.Name}, metadata.Unknown, metadata.None, "")
+		Add(&md, "mssql.lock_waits", v.LockWaitsPersec, opentsdb.TagSet{"type": v.Name}, metadata.Unknown, metadata.None, "")
+		Add(&md, "mssql.deadlocks", v.NumberofDeadlocksPersec, opentsdb.TagSet{"type": v.Name}, metadata.Unknown, metadata.None, "")
 	}
 	return md
 }
@@ -152,37 +153,37 @@ func c_mssql_databases() opentsdb.MultiDataPoint {
 	}
 	var md opentsdb.MultiDataPoint
 	for _, v := range dst {
-		Add(&md, "mssql.active_transactions", v.ActiveTransactions, opentsdb.TagSet{"db": v.Name})
-		Add(&md, "mssql.backup_restore_throughput", v.BackupPerRestoreThroughputPersec, opentsdb.TagSet{"db": v.Name})
-		Add(&md, "mssql.bulkcopy_rows", v.BulkCopyRowsPersec, opentsdb.TagSet{"db": v.Name})
-		Add(&md, "mssql.bulkcopy_throughput", v.BulkCopyThroughputPersec, opentsdb.TagSet{"db": v.Name})
-		Add(&md, "mssql.commit_table_entries", v.Committableentries, opentsdb.TagSet{"db": v.Name})
-		Add(&md, "mssql.data_files_size", v.DataFilesSizeKB*1024, opentsdb.TagSet{"db": v.Name})
-		Add(&md, "mssql.dbcc_logical_scan_bytes", v.DBCCLogicalScanBytesPersec, opentsdb.TagSet{"db": v.Name})
-		Add(&md, "mssql.group_commit_time", v.GroupCommitTimePersec, opentsdb.TagSet{"db": v.Name})
-		Add(&md, "mssql.log_bytes_flushed", v.LogBytesFlushedPersec, opentsdb.TagSet{"db": v.Name})
-		Add(&md, "mssql.log_cache_hit_ratio", v.LogCacheHitRatio, opentsdb.TagSet{"db": v.Name})
-		Add(&md, "mssql.log_cache_hit_ratio_base", v.LogCacheHitRatio_Base, opentsdb.TagSet{"db": v.Name})
-		Add(&md, "mssql.log_cache_reads", v.LogCacheReadsPersec, opentsdb.TagSet{"db": v.Name})
-		Add(&md, "mssql.log_files_size", v.LogFilesSizeKB*1024, opentsdb.TagSet{"db": v.Name})
-		Add(&md, "mssql.log_files_used_size", v.LogFilesUsedSizeKB*1024, opentsdb.TagSet{"db": v.Name})
-		Add(&md, "mssql.log_flushes", v.LogFlushesPersec, opentsdb.TagSet{"db": v.Name})
-		Add(&md, "mssql.log_flush_waits", v.LogFlushWaitsPersec, opentsdb.TagSet{"db": v.Name})
-		Add(&md, "mssql.log_flush_wait_time", v.LogFlushWaitTime, opentsdb.TagSet{"db": v.Name})
-		Add(&md, "mssql.log_flush_write_time_ms", v.LogFlushWriteTimems, opentsdb.TagSet{"db": v.Name})
-		Add(&md, "mssql.log_growths", v.LogGrowths, opentsdb.TagSet{"db": v.Name})
-		Add(&md, "mssql.log_pool_cache_misses", v.LogPoolCacheMissesPersec, opentsdb.TagSet{"db": v.Name})
-		Add(&md, "mssql.log_pool_disk_reads", v.LogPoolDiskReadsPersec, opentsdb.TagSet{"db": v.Name})
-		Add(&md, "mssql.log_pool_requests", v.LogPoolRequestsPersec, opentsdb.TagSet{"db": v.Name})
-		Add(&md, "mssql.log_shrinks", v.LogShrinks, opentsdb.TagSet{"db": v.Name})
-		Add(&md, "mssql.log_truncations", v.LogTruncations, opentsdb.TagSet{"db": v.Name})
-		Add(&md, "mssql.percent_log_used", v.PercentLogUsed, opentsdb.TagSet{"db": v.Name})
-		Add(&md, "mssql.repl_pending_xacts", v.ReplPendingXacts, opentsdb.TagSet{"db": v.Name})
-		Add(&md, "mssql.repl_trans_rate", v.ReplTransRate, opentsdb.TagSet{"db": v.Name})
-		Add(&md, "mssql.shrink_data_movement_bytes", v.ShrinkDataMovementBytesPersec, opentsdb.TagSet{"db": v.Name})
-		Add(&md, "mssql.tracked_transactions", v.TrackedtransactionsPersec, opentsdb.TagSet{"db": v.Name})
-		Add(&md, "mssql.transactions", v.TransactionsPersec, opentsdb.TagSet{"db": v.Name})
-		Add(&md, "mssql.write_transactions", v.WriteTransactionsPersec, opentsdb.TagSet{"db": v.Name})
+		Add(&md, "mssql.active_transactions", v.ActiveTransactions, opentsdb.TagSet{"db": v.Name}, metadata.Unknown, metadata.None, "")
+		Add(&md, "mssql.backup_restore_throughput", v.BackupPerRestoreThroughputPersec, opentsdb.TagSet{"db": v.Name}, metadata.Unknown, metadata.None, "")
+		Add(&md, "mssql.bulkcopy_rows", v.BulkCopyRowsPersec, opentsdb.TagSet{"db": v.Name}, metadata.Unknown, metadata.None, "")
+		Add(&md, "mssql.bulkcopy_throughput", v.BulkCopyThroughputPersec, opentsdb.TagSet{"db": v.Name}, metadata.Unknown, metadata.None, "")
+		Add(&md, "mssql.commit_table_entries", v.Committableentries, opentsdb.TagSet{"db": v.Name}, metadata.Unknown, metadata.None, "")
+		Add(&md, "mssql.data_files_size", v.DataFilesSizeKB*1024, opentsdb.TagSet{"db": v.Name}, metadata.Unknown, metadata.None, "")
+		Add(&md, "mssql.dbcc_logical_scan_bytes", v.DBCCLogicalScanBytesPersec, opentsdb.TagSet{"db": v.Name}, metadata.Unknown, metadata.None, "")
+		Add(&md, "mssql.group_commit_time", v.GroupCommitTimePersec, opentsdb.TagSet{"db": v.Name}, metadata.Unknown, metadata.None, "")
+		Add(&md, "mssql.log_bytes_flushed", v.LogBytesFlushedPersec, opentsdb.TagSet{"db": v.Name}, metadata.Unknown, metadata.None, "")
+		Add(&md, "mssql.log_cache_hit_ratio", v.LogCacheHitRatio, opentsdb.TagSet{"db": v.Name}, metadata.Unknown, metadata.None, "")
+		Add(&md, "mssql.log_cache_hit_ratio_base", v.LogCacheHitRatio_Base, opentsdb.TagSet{"db": v.Name}, metadata.Unknown, metadata.None, "")
+		Add(&md, "mssql.log_cache_reads", v.LogCacheReadsPersec, opentsdb.TagSet{"db": v.Name}, metadata.Unknown, metadata.None, "")
+		Add(&md, "mssql.log_files_size", v.LogFilesSizeKB*1024, opentsdb.TagSet{"db": v.Name}, metadata.Unknown, metadata.None, "")
+		Add(&md, "mssql.log_files_used_size", v.LogFilesUsedSizeKB*1024, opentsdb.TagSet{"db": v.Name}, metadata.Unknown, metadata.None, "")
+		Add(&md, "mssql.log_flushes", v.LogFlushesPersec, opentsdb.TagSet{"db": v.Name}, metadata.Unknown, metadata.None, "")
+		Add(&md, "mssql.log_flush_waits", v.LogFlushWaitsPersec, opentsdb.TagSet{"db": v.Name}, metadata.Unknown, metadata.None, "")
+		Add(&md, "mssql.log_flush_wait_time", v.LogFlushWaitTime, opentsdb.TagSet{"db": v.Name}, metadata.Unknown, metadata.None, "")
+		Add(&md, "mssql.log_flush_write_time_ms", v.LogFlushWriteTimems, opentsdb.TagSet{"db": v.Name}, metadata.Unknown, metadata.None, "")
+		Add(&md, "mssql.log_growths", v.LogGrowths, opentsdb.TagSet{"db": v.Name}, metadata.Unknown, metadata.None, "")
+		Add(&md, "mssql.log_pool_cache_misses", v.LogPoolCacheMissesPersec, opentsdb.TagSet{"db": v.Name}, metadata.Unknown, metadata.None, "")
+		Add(&md, "mssql.log_pool_disk_reads", v.LogPoolDiskReadsPersec, opentsdb.TagSet{"db": v.Name}, metadata.Unknown, metadata.None, "")
+		Add(&md, "mssql.log_pool_requests", v.LogPoolRequestsPersec, opentsdb.TagSet{"db": v.Name}, metadata.Unknown, metadata.None, "")
+		Add(&md, "mssql.log_shrinks", v.LogShrinks, opentsdb.TagSet{"db": v.Name}, metadata.Unknown, metadata.None, "")
+		Add(&md, "mssql.log_truncations", v.LogTruncations, opentsdb.TagSet{"db": v.Name}, metadata.Unknown, metadata.None, "")
+		Add(&md, "mssql.percent_log_used", v.PercentLogUsed, opentsdb.TagSet{"db": v.Name}, metadata.Unknown, metadata.None, "")
+		Add(&md, "mssql.repl_pending_xacts", v.ReplPendingXacts, opentsdb.TagSet{"db": v.Name}, metadata.Unknown, metadata.None, "")
+		Add(&md, "mssql.repl_trans_rate", v.ReplTransRate, opentsdb.TagSet{"db": v.Name}, metadata.Unknown, metadata.None, "")
+		Add(&md, "mssql.shrink_data_movement_bytes", v.ShrinkDataMovementBytesPersec, opentsdb.TagSet{"db": v.Name}, metadata.Unknown, metadata.None, "")
+		Add(&md, "mssql.tracked_transactions", v.TrackedtransactionsPersec, opentsdb.TagSet{"db": v.Name}, metadata.Unknown, metadata.None, "")
+		Add(&md, "mssql.transactions", v.TransactionsPersec, opentsdb.TagSet{"db": v.Name}, metadata.Unknown, metadata.None, "")
+		Add(&md, "mssql.write_transactions", v.WriteTransactionsPersec, opentsdb.TagSet{"db": v.Name}, metadata.Unknown, metadata.None, "")
 	}
 	return md
 }

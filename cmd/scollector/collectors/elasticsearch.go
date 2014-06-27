@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/StackExchange/scollector/metadata"
 	"github.com/StackExchange/scollector/opentsdb"
 )
 
@@ -79,7 +80,7 @@ func c_elasticsearch() opentsdb.MultiDataPoint {
 		for k, v := range ts {
 			tags[k] = v
 		}
-		Add(&md, "elastic."+name, val, tags)
+		Add(&md, "elastic."+name, val, tags, metadata.Unknown, metadata.None, "")
 	}
 	for nodeid, nstats := range stats.Nodes {
 		isMaster := nodeid == clusterState.MasterNode

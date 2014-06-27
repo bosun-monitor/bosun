@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/StackExchange/scollector/metadata"
 	"github.com/StackExchange/scollector/opentsdb"
 )
 
@@ -53,6 +54,6 @@ func puppet_disabled_linux() opentsdb.MultiDataPoint {
 	if _, err := os.Stat(puppetDisabled); !os.IsNotExist(err) {
 		disabled = 1
 	}
-	Add(&md, "puppet.disabled", disabled, nil)
+	Add(&md, "puppet.disabled", disabled, nil, metadata.Unknown, metadata.None, "")
 	return md
 }

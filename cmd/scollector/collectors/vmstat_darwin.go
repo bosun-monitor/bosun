@@ -3,7 +3,9 @@ package collectors
 import (
 	"strings"
 
+	"github.com/StackExchange/scollector/metadata"
 	"github.com/StackExchange/scollector/opentsdb"
+	"github.com/StackExchange/scollector/util"
 )
 
 func init() {
@@ -12,7 +14,7 @@ func init() {
 
 func c_vmstat_darwin() opentsdb.MultiDataPoint {
 	var md opentsdb.MultiDataPoint
-	readCommand(func(line string) {
+	util.ReadCommand(func(line string) {
 		if line == "" || strings.HasPrefix(line, "Object cache") || strings.HasPrefix(line, "Mach Virtual") {
 			return
 		}
@@ -26,11 +28,11 @@ func c_vmstat_darwin() opentsdb.MultiDataPoint {
 			name := strings.TrimSpace(fields[0])
 			name = strings.Replace(name, "Pages ", "", -1)
 			name = strings.Replace(name, " ", "", -1)
-			Add(&md, "darwin.mem.vm.4kpages."+name, value, nil)
+			Add(&md, "darwin.mem.vm.4kpages."+name, value, nil, metadata.Unknown, metadata.None, "")
 		} else if fields[0] == "Pageins" {
-			Add(&md, "darwin.mem.vm.pageins", value, nil)
+			Add(&md, "darwin.mem.vm.pageins", value, nil, metadata.Counter, metadata.None, "")
 		} else if fields[0] == "Pageouts" {
-			Add(&md, "darwin.mem.vm.pageouts", value, nil)
+			Add(&md, "darwin.mem.vm.pageouts", value, nil, metadata.Counter, metadata.None, "")
 		}
 	}, "vm_stat")
 	return md

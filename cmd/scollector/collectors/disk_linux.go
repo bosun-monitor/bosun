@@ -6,7 +6,9 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/StackExchange/scollector/metadata"
 	"github.com/StackExchange/scollector/opentsdb"
+	"github.com/StackExchange/scollector/util"
 	"github.com/StackExchange/slog"
 )
 
@@ -102,17 +104,17 @@ func c_iostat_linux() opentsdb.MultiDataPoint {
 				case "msec_write":
 					msec_write, _ = strconv.ParseFloat(v, 64)
 				}
-				Add(&md, metric+FIELDS_DISK[i], v, ts)
+				Add(&md, metric+FIELDS_DISK[i], v, ts, metadata.Unknown, metadata.None, "")
 			}
 			if read_sectors != 0 && msec_read != 0 {
-				Add(&md, metric+"time_per_read", read_sectors/msec_read, ts)
+				Add(&md, metric+"time_per_read", read_sectors/msec_read, ts, metadata.Unknown, metadata.None, "")
 			}
 			if write_sectors != 0 && msec_write != 0 {
-				Add(&md, metric+"time_per_write", write_sectors/msec_write, ts)
+				Add(&md, metric+"time_per_write", write_sectors/msec_write, ts, metadata.Unknown, metadata.None, "")
 			}
 		} else if len(values) == 7 {
 			for i, v := range values[3:] {
-				Add(&md, metric+FIELDS_PART[i], v, ts)
+				Add(&md, metric+FIELDS_PART[i], v, ts, metadata.Unknown, metadata.None, "")
 			}
 		} else {
 			slog.Infoln("iostat: cannot parse")
@@ -123,7 +125,7 @@ func c_iostat_linux() opentsdb.MultiDataPoint {
 
 func c_dfstat_blocks_linux() opentsdb.MultiDataPoint {
 	var md opentsdb.MultiDataPoint
-	readCommand(func(line string) {
+	util.ReadCommand(func(line string) {
 		fields := strings.Fields(line)
 		if line == "" || len(fields) < 6 || !IsDigit(fields[2]) {
 			return
@@ -139,16 +141,16 @@ func c_dfstat_blocks_linux() opentsdb.MultiDataPoint {
 			ometric += "rem."
 		}
 		// Meta Data will need to indicate that these are 1kblocks.
-		Add(&md, metric+"space_total", fields[1], tags)
-		Add(&md, metric+"space_used", fields[2], tags)
-		Add(&md, metric+"space_free", fields[3], tags)
-		Add(&md, ometric+"space_total", fields[1], os_tags)
-		Add(&md, ometric+"space_used", fields[2], os_tags)
-		Add(&md, ometric+"space_free", fields[3], os_tags)
+		Add(&md, metric+"space_total", fields[1], tags, metadata.Unknown, metadata.None, "")
+		Add(&md, metric+"space_used", fields[2], tags, metadata.Unknown, metadata.None, "")
+		Add(&md, metric+"space_free", fields[3], tags, metadata.Unknown, metadata.None, "")
+		Add(&md, ometric+"space_total", fields[1], os_tags, metadata.Unknown, metadata.None, "")
+		Add(&md, ometric+"space_used", fields[2], os_tags, metadata.Unknown, metadata.None, "")
+		Add(&md, ometric+"space_free", fields[3], os_tags, metadata.Unknown, metadata.None, "")
 		st, _ := strconv.ParseFloat(fields[1], 64)
 		sf, _ := strconv.ParseFloat(fields[3], 64)
 		if st != 0 {
-			Add(&md, osDiskPctFree, sf/st*100, os_tags)
+			Add(&md, osDiskPctFree, sf/st*100, os_tags, metadata.Unknown, metadata.None, "")
 		}
 	}, "df", "-lP", "--block-size", "1")
 	return md
@@ -156,7 +158,7 @@ func c_dfstat_blocks_linux() opentsdb.MultiDataPoint {
 
 func c_dfstat_inodes_linux() opentsdb.MultiDataPoint {
 	var md opentsdb.MultiDataPoint
-	readCommand(func(line string) {
+	util.ReadCommand(func(line string) {
 		fields := strings.Fields(line)
 		if len(fields) < 6 || !IsDigit(fields[2]) {
 			return
@@ -168,9 +170,9 @@ func c_dfstat_inodes_linux() opentsdb.MultiDataPoint {
 		if removable_fs(fs) {
 			metric += "rem."
 		}
-		Add(&md, metric+"inodes_total", fields[1], tags)
-		Add(&md, metric+"inodes_used", fields[2], tags)
-		Add(&md, metric+"inodes_free", fields[3], tags)
+		Add(&md, metric+"inodes_total", fields[1], tags, metadata.Unknown, metadata.None, "")
+		Add(&md, metric+"inodes_used", fields[2], tags, metadata.Unknown, metadata.None, "")
+		Add(&md, metric+"inodes_free", fields[3], tags, metadata.Unknown, metadata.None, "")
 	}, "df", "-liP")
 	return md
 }

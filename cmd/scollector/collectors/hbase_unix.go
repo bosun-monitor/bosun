@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/StackExchange/scollector/metadata"
 	"github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/slog"
 )
@@ -72,7 +73,7 @@ func c_hbase_region() opentsdb.MultiDataPoint {
 	if len(r.Beans) > 0 && len(r.Beans[0]) > 0 {
 		for k, v := range r.Beans[0] {
 			if _, ok := v.(float64); ok {
-				Add(&md, "hbase.region."+k, v, nil)
+				Add(&md, "hbase.region."+k, v, nil, metadata.Unknown, metadata.None, "")
 			}
 		}
 	}

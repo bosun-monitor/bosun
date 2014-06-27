@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/StackExchange/scollector/metadata"
 	"github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/slog"
 )
@@ -81,7 +82,8 @@ func c_snmp_ifaces(community, host string) opentsdb.MultiDataPoint {
 				"iface":     fmt.Sprintf("%d", k),
 				"iname":     names[k],
 				"alias":     aliases[k],
-			})
+			}, metadata.Unknown, metadata.None, "")
+
 		}
 		return nil
 	}
