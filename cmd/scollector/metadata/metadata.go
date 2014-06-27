@@ -80,7 +80,8 @@ func Init(host string) {
 }
 
 func collectMetadata() {
-	// Wait a bit to seed metric unit data.
+	// Wait a bit so hopefully our collectors have run once and populated the
+	// metadata.
 	time.Sleep(time.Second * 5)
 	for {
 		for _, f := range metafuncs {
