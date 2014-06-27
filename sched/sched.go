@@ -88,7 +88,7 @@ func (s *Schedule) GetMetadata(metric string, subset opentsdb.TagSet) []metadata
 		}
 		ms = append(ms, metadata.Metasend{
 			Metric: k.Metric,
-			Tags:   k.Tags,
+			Tags:   k.TagSet(),
 			Name:   k.Name,
 			Value:  val,
 		})

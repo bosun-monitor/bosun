@@ -112,9 +112,9 @@ func collectMetadataOmreport() {
 }
 
 type Metasend struct {
-	Metric string `json:",omitempty"`
-	Tags   string `json:",omitempty"`
-	Name   string `json:",omitempty"`
+	Metric string          `json:",omitempty"`
+	Tags   opentsdb.TagSet `json:",omitempty"`
+	Name   string          `json:",omitempty"`
 	Value  interface{}
 }
 
@@ -129,7 +129,7 @@ func sendMetadata() {
 	for k, v := range metadata {
 		ms[i] = Metasend{
 			Metric: k.Metric,
-			Tags:   k.Tags,
+			Tags:   k.TagSet(),
 			Name:   k.Name,
 			Value:  v,
 		}

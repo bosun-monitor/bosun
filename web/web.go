@@ -124,7 +124,7 @@ func PutMetadata(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (
 	for _, m := range ms {
 		schedule.PutMetadata(metadata.Metakey{
 			Metric: m.Metric,
-			Tags:   m.Tags,
+			Tags:   m.Tags.Tags(),
 			Name:   m.Name,
 		}, m.Value)
 	}
