@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/StackExchange/bosun/_third_party/github.com/MiniProfiler/go/miniprofiler"
+	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/metadata"
 	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/opentsdb"
 	svg "github.com/StackExchange/bosun/_third_party/github.com/ajstarks/svgo"
 	"github.com/StackExchange/bosun/_third_party/github.com/bradfitz/slice"
@@ -53,9 +54,34 @@ func Graph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 			return nil, err
 		}
 	}
-	for _, q := range oreq.Queries {
+	ar := make(map[int]bool)
+	for _, v := range r.Form["autorate"] {
+		if i, err := strconv.Atoi(v); err == nil {
+			ar[i] = true
+		}
+	}
+	for i, q := range oreq.Queries {
 		if err := expr.ExpandSearch(q); err != nil {
 			return nil, err
+		}
+		if ar[i] {
+			ms := schedule.GetMetadata(q.Metric, nil)
+			q.Rate = true
+			q.RateOptions = opentsdb.RateOptions{
+				Counter: true,
+			}
+			for _, m := range ms {
+				if m.Name == "rate" {
+					switch m.Value {
+					case metadata.Gauge:
+						q.Rate = false
+						q.RateOptions.Counter = false
+					case metadata.Rate:
+						q.RateOptions.Counter = false
+					}
+					break
+				}
+			}
 		}
 	}
 	if _, present := r.Form["png"]; present {
