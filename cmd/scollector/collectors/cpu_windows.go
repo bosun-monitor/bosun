@@ -1,8 +1,6 @@
 package collectors
 
 import (
-	"math"
-
 	"github.com/StackExchange/scollector/metadata"
 	"github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/slog"
@@ -13,8 +11,6 @@ func init() {
 	collectors = append(collectors, &IntervalCollector{F: c_cpu_windows})
 	collectors = append(collectors, &IntervalCollector{F: c_cpu_info_windows})
 }
-
-var cpuWindowsPrev uint64 = math.MaxUint64
 
 func c_cpu_windows() opentsdb.MultiDataPoint {
 	var dst []Win32_PerfRawData_PerfOS_Processor
@@ -41,12 +37,7 @@ func c_cpu_windows() opentsdb.MultiDataPoint {
 	}
 	if num > 0 {
 		cpu := used / 1e5 / num
-		a, b := float64(cpu), float64(cpuWindowsPrev)
-		a, b = math.Max(a, b), math.Min(a, b)
-		if d := a - b; d >= 0 && d <= 100 {
-			Add(&md, osCPU, cpu, nil, metadata.Unknown, metadata.None, "")
-		}
-		cpuWindowsPrev = cpu
+		Add(&md, osCPU, cpu, nil, metadata.Counter, metadata.Pct, "")
 	}
 	return md
 }
