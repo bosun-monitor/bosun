@@ -15,25 +15,26 @@ import (
 	"github.com/StackExchange/slog"
 )
 
-type RateType int
+type RateType string
 
 const (
-	Unknown RateType = iota
-	Gauge
-	Counter
-	Rate
+	Unknown RateType = ""
+	Gauge            = "gauge"
+	Counter          = "counter"
+	Rate             = "rate"
 )
 
-type Unit int
+type Unit string
 
 const (
-	None  Unit = iota
-	Event      // Unitless.
-	Bytes
-	Pct // Range of 0-100.
-	Second
-	PerSecond // Events per second.
-	BytesPerSecond
+	None  Unit = ""
+	Event      = ""
+	Bytes      = "bytes"
+	// Range of 0-100.
+	Pct            = "percent"
+	Second         = "seconds"
+	PerSecond      = "per second"
+	BytesPerSecond = "bytes per second"
 )
 
 type Metakey struct {
