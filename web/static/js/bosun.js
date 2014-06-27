@@ -915,7 +915,7 @@ var Query = (function () {
                 this.derivative = 'rate';
             }
         } else {
-            this.derivative = q && q.derivative || 'counter';
+            this.derivative = q && q.derivative || 'auto';
         }
         this.ds = q && q.ds || '';
         this.dstime = q && q.dstime || '';
@@ -932,6 +932,7 @@ var Query = (function () {
     };
     Query.prototype.setDerivative = function () {
         var max = this.rateOptions.counterMax;
+        this.rate = false;
         this.rateOptions = new RateOptions();
         switch (this.derivative) {
             case "rate":
@@ -990,7 +991,7 @@ bosunControllers.controller('GraphCtrl', [
     '$scope', '$http', '$location', '$route', '$timeout', function ($scope, $http, $location, $route, $timeout) {
         $scope.aggregators = ["sum", "min", "max", "avg", "dev", "zimsum", "mimmin", "minmax"];
         $scope.dsaggregators = ["", "sum", "min", "max", "avg", "dev", "zimsum", "mimmin", "minmax"];
-        $scope.rate_options = ["gauge", "counter", "rate"];
+        $scope.rate_options = ["auto", "gauge", "counter", "rate"];
         var search = $location.search();
         var j = search.json;
         if (search.b64) {
@@ -1131,14 +1132,20 @@ bosunControllers.controller('GraphCtrl', [
         if (!request.queries.length) {
             return;
         }
-        var autods = $scope.autods ? autods = '&autods=' + $('#chart').width() : '';
+        var autods = $scope.autods ? '&autods=' + $('#chart').width() : '';
         function get(noRunning) {
             $timeout.cancel(graphRefresh);
             if (!noRunning) {
                 $scope.running = 'Running';
             }
+            var autorate = '';
+            for (var i = 0; i < request.queries.length; i++) {
+                if (request.queries[i].derivative == 'auto') {
+                    autorate += '&autorate=' + i;
+                }
+            }
             $scope.animate();
-            $http.get('/api/graph?' + 'b64=' + btoa(JSON.stringify(request)) + autods).success(function (data) {
+            $http.get('/api/graph?' + 'b64=' + btoa(JSON.stringify(request)) + autods + autorate).success(function (data) {
                 $scope.result = data.Series;
                 if (!$scope.result) {
                     $scope.warning = 'No Results';
