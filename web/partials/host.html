@@ -45,12 +45,20 @@
 				<tr>
 					<th>Name</th>
 					<th>Value</th>
+					<th>Tags</th>
 				</tr>
 			</thead>
 			<tbody>
 				<tr ng-repeat="data in metadata | orderBy:'Name'">
 					<td ng-bind="data.Name"></td>
 					<td><pre ng-bind="data.Value"></pre></td>
+					<td>
+						<ul class="list-unstyled">
+							<li ng-repeat="(k, v) in data.Tags">
+								{{k}}: {{v}}
+							</li>
+						</ul>
+					</td>
 				</tr>
 			</tbody>
 		</table>
