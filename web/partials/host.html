@@ -2,6 +2,7 @@
 <ul class="nav nav-tabs">
 	<li ng-class="{active: tab == 'stats'}"><a href ng-click="setTab('stats')">Primary Stats</a></li>
 	<li ng-class="{active: tab == 'metrics'}"><a href ng-click="setTab('metrics')">Available Metrics</a></li>
+	<li ng-class="{active: tab == 'metadata'}"><a href ng-click="setTab('metadata')">Metadata</a></li>
 </ul>
 <div class="tab-content">
 	<div class="tab-pane" ng-class="{active: tab == 'stats'}">
@@ -36,5 +37,22 @@
 		<ul>
 			<li ng-repeat="metric in metrics | filter:filterMetrics"><a href="/graph?b64={{btoa(json(mlink(metric)))}}" ng-bind="metric"></a></li>
 		</ul>
+	</div>
+	<div class="tab-pane" ng-class="{active: tab == 'metadata'}">
+		<h1>Metadata</h1>
+		<table class="table">
+			<thead>
+				<tr>
+					<th>Name</th>
+					<th>Value</th>
+				</tr>
+			</thead>
+			<tbody>
+				<tr ng-repeat="data in metadata | orderBy:'Name'">
+					<td ng-bind="data.Name"></td>
+					<td><pre ng-bind="data.Value"></pre></td>
+				</tr>
+			</tbody>
+		</table>
 	</div>
 </div>
