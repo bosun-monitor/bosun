@@ -153,10 +153,15 @@ func (t TagSet) clean() error {
 	return nil
 }
 
-// Clean removes characters from s that are invalid for OpenTSDB metric and tag
-// values.
-// See: http://opentsdb.net/docs/build/html/user_guide/writing.html#metrics-and-tags
+// Clean is Replace with an empty replacement string.
 func Clean(s string) (string, error) {
+	return Replace(s, "")
+}
+
+// Replace removes characters from s that are invalid for OpenTSDB metric and
+// tag values and replaces them.
+// See: http://opentsdb.net/docs/build/html/user_guide/writing.html#metrics-and-tags
+func Replace(s, replacement string) (string, error) {
 	var c string
 	if len(s) == 0 {
 		// This one is perhaps better checked earlier in the pipeline, but since
@@ -165,10 +170,15 @@ func Clean(s string) (string, error) {
 		// effect of WMI turning to Garbage....
 		return s, errors.New("Metric/Tagk/Tagv Cleaning Passed a Zero Length String")
 	}
+	replaced := false
 	for len(s) > 0 {
 		r, size := utf8.DecodeRuneInString(s)
 		if unicode.IsLetter(r) || unicode.IsDigit(r) || r == '-' || r == '_' || r == '.' || r == '/' {
 			c += string(r)
+			replaced = false
+		} else if !replaced {
+			c += replacement
+			replaced = true
 		}
 		s = s[size:]
 	}

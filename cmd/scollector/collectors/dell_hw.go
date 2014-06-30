@@ -171,7 +171,7 @@ func c_omreport_processors() opentsdb.MultiDataPoint {
 		if _, err := strconv.Atoi(fields[0]); err != nil {
 			return
 		}
-		ts := opentsdb.TagSet{"name": fields[2]}
+		ts := opentsdb.TagSet{"name": replace(fields[2])}
 		Add(&md, "hw.chassis.processor", severity(fields[1]), ts, metadata.Gauge, metadata.Ok, "")
 		metadata.AddMeta("", ts, "processor", clean(fields[3], fields[4]), true)
 	}, "chassis", "processors")
@@ -187,7 +187,7 @@ func c_omreport_fans() opentsdb.MultiDataPoint {
 		if _, err := strconv.Atoi(fields[0]); err != nil {
 			return
 		}
-		ts := opentsdb.TagSet{"name": fields[2]}
+		ts := opentsdb.TagSet{"name": replace(fields[2])}
 		Add(&md, "hw.chassis.fan", severity(fields[1]), ts, metadata.Gauge, metadata.Ok, "")
 		fs := strings.Fields(fields[3])
 		if len(fs) == 2 && fs[1] == "RPM" {
@@ -209,7 +209,7 @@ func c_omreport_memory() opentsdb.MultiDataPoint {
 		if _, err := strconv.Atoi(fields[0]); err != nil {
 			return
 		}
-		ts := opentsdb.TagSet{"name": fields[2]}
+		ts := opentsdb.TagSet{"name": replace(fields[2])}
 		Add(&md, "hw.chassis.memory", severity(fields[1]), ts, metadata.Gauge, metadata.Ok, "")
 		metadata.AddMeta("", ts, "memory", clean(fields[4]), true)
 	}, "chassis", "memory")
@@ -225,7 +225,7 @@ func c_omreport_temps() opentsdb.MultiDataPoint {
 		if _, err := strconv.Atoi(fields[0]); err != nil {
 			return
 		}
-		ts := opentsdb.TagSet{"name": fields[2]}
+		ts := opentsdb.TagSet{"name": replace(fields[2])}
 		Add(&md, "hw.chassis.temps", severity(fields[1]), ts, metadata.Gauge, metadata.Ok, "")
 		fs := strings.Fields(fields[3])
 		if len(fs) == 2 && fs[1] == "C" {
@@ -247,7 +247,7 @@ func c_omreport_volts() opentsdb.MultiDataPoint {
 		if _, err := strconv.Atoi(fields[0]); err != nil {
 			return
 		}
-		ts := opentsdb.TagSet{"name": fields[2]}
+		ts := opentsdb.TagSet{"name": replace(fields[2])}
 		Add(&md, "hw.chassis.volts", severity(fields[1]), ts, metadata.Gauge, metadata.Ok, "")
 		if i, err := extract(fields[3], "V"); err == nil {
 			Add(&md, "hw.chassis.volts.reading", i, ts, metadata.Gauge, metadata.C, "")
@@ -290,4 +290,9 @@ func clean(ss ...string) string {
 	v := strings.Join(ss, " ")
 	fs := strings.Fields(v)
 	return strings.Join(fs, " ")
+}
+
+func replace(name string) string {
+	r, _ := opentsdb.Replace(name, "_")
+	return r
 }
