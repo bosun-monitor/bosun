@@ -221,7 +221,7 @@ bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', function(
 		.attr('stroke', 'white')
 		.attr('stroke-width', 25 * mult);
 	var stopped = true;
-	var transitionDuration = 500;
+	var transitionDuration = 750;
 	$scope.animate = () => {
 		if (!stopped) {
 			return;
@@ -237,7 +237,6 @@ bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', function(
 		svg.selectAll('circle')
 			.data(circles, (d: any, i: any) => { return i; })
 			.transition()
-			.ease('linear')
 			.duration(transitionDuration)
 			.attr('cx', (d: any) => { return d[0] * mult; })
 			.attr('cy', (d: any) => { return d[1] * mult; })
