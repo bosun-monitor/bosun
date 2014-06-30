@@ -52,6 +52,9 @@ bosunControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route
 	];
 	$http.get('/api/graph?' + 'json=' + encodeURIComponent(JSON.stringify(cpu_r)) + autods)
 		.success((data) => {
+			if (!data.Series) {
+				return;
+			}
 			data.Series[0].name = 'Percent Used';
 			$scope.cpu = data.Series;
 		});
@@ -67,6 +70,9 @@ bosunControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route
 	}));
 	$http.get('/api/graph?' + 'json=' + encodeURIComponent(JSON.stringify(mem_r)) + autods)
 		.success((data) => {
+			if (!data.Series) {
+				return;
+			}
 			data.Series[1].name = "Used";
 			$scope.mem_total = Math.max.apply(null, data.Series[0].data.map((d: any) => { return d.y; }));
 			$scope.mem = [data.Series[1]];
@@ -90,6 +96,9 @@ bosunControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route
 				];
 				$http.get('/api/graph?' + 'json=' + encodeURIComponent(JSON.stringify(net_bytes_r)) + autods)
 					.success((data) => {
+						if (!data.Series) {
+							return;
+						}
 						angular.forEach(data.Series, function(d) {
 							d.data = d.data.map((dp: any) => { return { x: dp.x, y: dp.y * 8 } });
 							if (d.name.indexOf("direction=out") != -1) {
@@ -124,6 +133,9 @@ bosunControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route
 				};
 				$http.get('/api/graph?' + 'json=' + encodeURIComponent(JSON.stringify(fs_r)) + autods)
 					.success((data) => {
+						if (!data.Series) {
+							return;
+						}
 						data.Series[1].name = 'Used';
 						var total = Math.max.apply(null, data.Series[0].data.map((d: any) => { return d.y; }));
 						var c_val = data.Series[1].data.slice(-1)[0].y;

@@ -438,6 +438,9 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWi
 			});
 			function resize() {
 				svgWidth = elem.width();
+				if (svgWidth <= 0) {
+					return;
+				}
 				width = svgWidth - margin.left - margin.right;
 				xScale.range([0, width]);
 				xAxis.scale(xScale);
