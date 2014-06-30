@@ -352,6 +352,7 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWi
 				.attr('y', 0)
 				.attr('height', height)
 				.attr('width', margin.left)
+				.style('cursor', 'pointer')
 				.on('click', yaxisToggle);
 			var legendTop = d3.select(elem[0]).append('div');
 			var xloc = legendTop.append('div');

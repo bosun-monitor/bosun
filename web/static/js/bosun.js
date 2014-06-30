@@ -608,7 +608,7 @@ bosunApp.directive('tsGraph', [
                 svg.append('g').attr('class', 'y axis');
                 var paths = chart.append('g');
                 chart.append('g').attr('class', 'x brush');
-                top.append('rect').style('opacity', 0).attr('x', 0).attr('y', 0).attr('height', height).attr('width', margin.left).on('click', yaxisToggle);
+                top.append('rect').style('opacity', 0).attr('x', 0).attr('y', 0).attr('height', height).attr('width', margin.left).style('cursor', 'pointer').on('click', yaxisToggle);
                 var legendTop = d3.select(elem[0]).append('div');
                 var xloc = legendTop.append('div');
                 xloc.style('float', 'left');
