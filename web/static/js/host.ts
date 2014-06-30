@@ -14,6 +14,7 @@ interface IHostScope extends ng.IScope {
 	error: string;
 	running: string;
 	filterMetrics: string;
+	metadata: any;
 }
 
 bosunControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route', function($scope: IHostScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService) {
@@ -39,6 +40,10 @@ bosunControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route
 	$http.get('/api/metric/host/' + $scope.host)
 		.success(function(data: string[]) {
 			$scope.metrics = data || [];
+		});
+	$http.get('/api/metadata/get?tagk=host&tagv=' + encodeURIComponent($scope.host))
+		.success((data) => {
+			$scope.metadata = data;
 		});
 	var autods = '&autods=100';
 	var cpu_r = new Request();

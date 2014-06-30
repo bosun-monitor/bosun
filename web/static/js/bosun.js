@@ -1202,6 +1202,9 @@ bosunControllers.controller('HostCtrl', [
         $http.get('/api/metric/host/' + $scope.host).success(function (data) {
             $scope.metrics = data || [];
         });
+        $http.get('/api/metadata/get?tagk=host&tagv=' + encodeURIComponent($scope.host)).success(function (data) {
+            $scope.metadata = data;
+        });
         var autods = '&autods=100';
         var cpu_r = new Request();
         cpu_r.start = $scope.time;
