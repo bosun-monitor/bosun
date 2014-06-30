@@ -686,6 +686,9 @@ bosunApp.directive('tsGraph', [
                 });
                 function resize() {
                     svgWidth = elem.width();
+                    if (svgWidth <= 0) {
+                        return;
+                    }
                     width = svgWidth - margin.left - margin.right;
                     xScale.range([0, width]);
                     xAxis.scale(xScale);
@@ -1210,6 +1213,9 @@ bosunControllers.controller('HostCtrl', [
             })
         ];
         $http.get('/api/graph?' + 'json=' + encodeURIComponent(JSON.stringify(cpu_r)) + autods).success(function (data) {
+            if (!data.Series) {
+                return;
+            }
             data.Series[0].name = 'Percent Used';
             $scope.cpu = data.Series;
         });
@@ -1224,6 +1230,9 @@ bosunControllers.controller('HostCtrl', [
             tags: { host: $scope.host }
         }));
         $http.get('/api/graph?' + 'json=' + encodeURIComponent(JSON.stringify(mem_r)) + autods).success(function (data) {
+            if (!data.Series) {
+                return;
+            }
             data.Series[1].name = "Used";
             $scope.mem_total = Math.max.apply(null, data.Series[0].data.map(function (d) {
                 return d.y;
@@ -1247,6 +1256,9 @@ bosunControllers.controller('HostCtrl', [
                     })
                 ];
                 $http.get('/api/graph?' + 'json=' + encodeURIComponent(JSON.stringify(net_bytes_r)) + autods).success(function (data) {
+                    if (!data.Series) {
+                        return;
+                    }
                     angular.forEach(data.Series, function (d) {
                         d.data = d.data.map(function (dp) {
                             return { x: dp.x, y: dp.y * 8 };
@@ -1283,6 +1295,9 @@ bosunControllers.controller('HostCtrl', [
                     name: i
                 };
                 $http.get('/api/graph?' + 'json=' + encodeURIComponent(JSON.stringify(fs_r)) + autods).success(function (data) {
+                    if (!data.Series) {
+                        return;
+                    }
                     data.Series[1].name = 'Used';
                     var total = Math.max.apply(null, data.Series[0].data.map(function (d) {
                         return d.y;
