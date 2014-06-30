@@ -126,7 +126,7 @@ func main() {
 			slog.Fatal("invalid host:", *flagHost)
 		}
 	}
-	metadata.Init(u.Host)
+	metadata.Init(u.Host, *flagDebug)
 	if *flagPrint {
 		collectors.DefaultFreq = time.Second * 3
 		slog.Infoln("Set default frequency to", collectors.DefaultFreq)

@@ -56,6 +56,7 @@ var (
 	metalock  sync.Mutex
 	metahost  string
 	metafuncs []func()
+	metadebug bool
 )
 
 func AddMeta(metric string, tags opentsdb.TagSet, name string, value interface{}, setHost bool) {
@@ -71,12 +72,15 @@ func AddMeta(metric string, tags opentsdb.TagSet, name string, value interface{}
 	prev, present := metadata[Metakey{metric, ts, name}]
 	if !reflect.DeepEqual(prev, value) && present {
 		slog.Infof("metadata changed for %s/%s/%s: %v to %v", metric, ts, name, prev, value)
+	} else if metadebug {
+		slog.Infof("AddMeta for %s/%s/%s: %v", metric, ts, name, value)
 	}
 	metadata[Metakey{metric, ts, name}] = value
 }
 
-func Init(host string) {
+func Init(host string, debug bool) {
 	metahost = host
+	metadebug = debug
 	go collectMetadata()
 }
 
