@@ -38,6 +38,7 @@ type Schedule struct {
 	RunHistory    map[AlertKey]*Event
 	CheckStart    time.Time
 	notifications map[*conf.Notification][]*State
+	metalock      sync.Mutex
 }
 
 type Metavalues []Metavalue
@@ -55,7 +56,7 @@ type Metavalue struct {
 }
 
 func (s *Schedule) PutMetadata(k metadata.Metakey, v interface{}) {
-	s.Lock()
+	s.metalock.Lock()
 	md := s.Metadata[k]
 	mv := Metavalue{time.Now(), v}
 	changed := false
@@ -69,11 +70,11 @@ func (s *Schedule) PutMetadata(k metadata.Metakey, v interface{}) {
 		s.Metadata[k] = append(md, mv)
 		s.Save()
 	}
-	s.Unlock()
+	s.metalock.Unlock()
 }
 
 func (s *Schedule) GetMetadata(metric string, subset opentsdb.TagSet) []metadata.Metasend {
-	s.Lock()
+	s.metalock.Lock()
 	ms := make([]metadata.Metasend, 0)
 	for k, v := range s.Metadata {
 		if metric != "" && k.Metric != metric {
@@ -93,7 +94,7 @@ func (s *Schedule) GetMetadata(metric string, subset opentsdb.TagSet) []metadata
 			Value:  val,
 		})
 	}
-	s.Unlock()
+	s.metalock.Unlock()
 	return ms
 }
 
