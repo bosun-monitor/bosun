@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/opentsdb"
-	"github.com/StackExchange/bosun/_third_party/github.com/mreiferson/go-httpclient"
 )
 
 func RelayHTTP(addr, dest string, metaHandler http.Handler) {
@@ -23,9 +22,7 @@ func RelayHTTP(addr, dest string, metaHandler http.Handler) {
 }
 
 var client = &http.Client{
-	Transport: &httpclient.Transport{
-		RequestTimeout: time.Minute,
-	},
+	Timeout: time.Minute,
 }
 
 func Handle(dest string, metaHandler http.Handler) func(http.ResponseWriter, *http.Request) {
