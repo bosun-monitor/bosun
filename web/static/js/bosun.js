@@ -172,7 +172,7 @@ bosunControllers.controller('BosunCtrl', [
             return d[2];
         }).attr('stroke', 'white').attr('stroke-width', 25 * mult);
         var stopped = true;
-        var transitionDuration = 500;
+        var transitionDuration = 750;
         $scope.animate = function () {
             if (!stopped) {
                 return;
@@ -187,7 +187,7 @@ bosunControllers.controller('BosunCtrl', [
             d3.shuffle(circles);
             svg.selectAll('circle').data(circles, function (d, i) {
                 return i;
-            }).transition().ease('linear').duration(transitionDuration).attr('cx', function (d) {
+            }).transition().duration(transitionDuration).attr('cx', function (d) {
                 return d[0] * mult;
             }).attr('cy', function (d) {
                 return d[1] * mult;
