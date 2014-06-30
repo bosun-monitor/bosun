@@ -26,93 +26,67 @@ func init() {
 
 func c_omreport_chassis() opentsdb.MultiDataPoint {
 	var md opentsdb.MultiDataPoint
-	util.ReadCommand(func(line string) {
-		fields := strings.Split(line, ";")
+	readOmreport(func(fields []string) {
 		if len(fields) != 2 || fields[0] == "SEVERITY" {
 			return
 		}
-		sev := 0
-		if fields[0] != "Ok" && fields[0] != "Non-Critical" {
-			sev = 1
-		}
 		component := strings.Replace(fields[1], " ", "_", -1)
-		Add(&md, "hw.chassis", sev, opentsdb.TagSet{"component": component}, metadata.Unknown, metadata.None, "")
-	}, "omreport", "chassis", "-fmt", "ssv")
+		Add(&md, "hw.chassis", severity(fields[0]), opentsdb.TagSet{"component": component}, metadata.Unknown, metadata.None, "")
+	}, "chassis")
 	return md
 }
 
 func c_omreport_system() opentsdb.MultiDataPoint {
 	var md opentsdb.MultiDataPoint
-	util.ReadCommand(func(line string) {
-		fields := strings.Split(line, ";")
+	readOmreport(func(fields []string) {
 		if len(fields) != 2 || fields[0] == "SEVERITY" {
 			return
 		}
-		sev := 0
-		if fields[0] != "Ok" && fields[0] != "Non-Critical" {
-			sev = 1
-		}
 		component := strings.Replace(fields[1], " ", "_", -1)
-		Add(&md, "hw.system", sev, opentsdb.TagSet{"component": component}, metadata.Unknown, metadata.None, "")
-	}, "omreport", "system", "-fmt", "ssv")
+		Add(&md, "hw.system", severity(fields[1]), opentsdb.TagSet{"component": component}, metadata.Unknown, metadata.None, "")
+	}, "system")
 	return md
 }
 
 func c_omreport_storage_enclosure() opentsdb.MultiDataPoint {
 	var md opentsdb.MultiDataPoint
-	util.ReadCommand(func(line string) {
-		fields := strings.Split(line, ";")
+	readOmreport(func(fields []string) {
 		if len(fields) < 3 || fields[0] == "ID" {
 			return
 		}
-		sev := 0
-		if fields[1] != "Ok" && fields[1] != "Non-Critical" {
-			sev = 1
-		}
 		id := strings.Replace(fields[0], ":", "_", -1)
-		Add(&md, "hw.storage.enclosure", sev, opentsdb.TagSet{"id": id}, metadata.Unknown, metadata.None, "")
-	}, "omreport", "storage", "enclosure", "-fmt", "ssv")
+		Add(&md, "hw.storage.enclosure", severity(fields[1]), opentsdb.TagSet{"id": id}, metadata.Unknown, metadata.None, "")
+	}, "storage", "enclosure")
 	return md
 }
 
 func c_omreport_storage_vdisk() opentsdb.MultiDataPoint {
 	var md opentsdb.MultiDataPoint
-	util.ReadCommand(func(line string) {
-		fields := strings.Split(line, ";")
+	readOmreport(func(fields []string) {
 		if len(fields) < 3 || fields[0] == "ID" {
 			return
 		}
-		sev := 0
-		if fields[1] != "Ok" && fields[1] != "Non-Critical" {
-			sev = 1
-		}
 		id := strings.Replace(fields[0], ":", "_", -1)
-		Add(&md, "hw.storage.vdisk", sev, opentsdb.TagSet{"id": id}, metadata.Unknown, metadata.None, "")
-	}, "omreport", "storage", "vdisk", "-fmt", "ssv")
+		Add(&md, "hw.storage.vdisk", severity(fields[1]), opentsdb.TagSet{"id": id}, metadata.Unknown, metadata.None, "")
+	}, "storage", "vdisk")
 	return md
 }
 
 func c_omreport_ps() opentsdb.MultiDataPoint {
 	var md opentsdb.MultiDataPoint
-	util.ReadCommand(func(line string) {
-		fields := strings.Split(line, ";")
+	readOmreport(func(fields []string) {
 		if len(fields) < 3 || fields[0] == "Index" {
 			return
 		}
-		sev := 0
-		if fields[1] != "Ok" {
-			sev = 1
-		}
 		id := strings.Replace(fields[0], ":", "_", -1)
-		Add(&md, "hw.ps", sev, opentsdb.TagSet{"id": id}, metadata.Unknown, metadata.None, "")
-	}, "omreport", "chassis", "pwrsupplies", "-fmt", "ssv")
+		Add(&md, "hw.ps", severity(fields[1]), opentsdb.TagSet{"id": id}, metadata.Unknown, metadata.None, "")
+	}, "chassis", "pwrsupplies")
 	return md
 }
 
 func c_omreport_ps_amps() opentsdb.MultiDataPoint {
 	var md opentsdb.MultiDataPoint
-	util.ReadCommand(func(line string) {
-		fields := strings.Split(line, ";")
+	readOmreport(func(fields []string) {
 		if len(fields) != 2 || !strings.Contains(fields[0], "Current") {
 			return
 		}
@@ -123,14 +97,13 @@ func c_omreport_ps_amps() opentsdb.MultiDataPoint {
 		}
 		id := strings.Replace(i_fields[0], " ", "", -1)
 		Add(&md, "hw.ps.current", v_fields[0], opentsdb.TagSet{"id": id}, metadata.Unknown, metadata.None, "")
-	}, "omreport", "chassis", "pwrmonitoring", "-fmt", "ssv")
+	}, "chassis", "pwrmonitoring")
 	return md
 }
 
 func c_omreport_ps_volts() opentsdb.MultiDataPoint {
 	var md opentsdb.MultiDataPoint
-	util.ReadCommand(func(line string) {
-		fields := strings.Split(line, ";")
+	readOmreport(func(fields []string) {
 		if len(fields) != 8 || !strings.Contains(fields[2], "Voltage") || fields[3] == "[N/A]" {
 			return
 		}
@@ -141,58 +114,59 @@ func c_omreport_ps_volts() opentsdb.MultiDataPoint {
 		}
 		id := strings.Replace(i_fields[0], " ", "", -1)
 		Add(&md, "hw.ps.volts", v_fields[0], opentsdb.TagSet{"id": id}, metadata.Unknown, metadata.None, "")
-	}, "omreport", "chassis", "volts", "-fmt", "ssv")
+	}, "chassis", "volts")
 	return md
 }
 
 func c_omreport_storage_battery() opentsdb.MultiDataPoint {
 	var md opentsdb.MultiDataPoint
-	util.ReadCommand(func(line string) {
-		fields := strings.Split(line, ";")
+	readOmreport(func(fields []string) {
 		if len(fields) < 3 || fields[0] == "ID" {
 			return
 		}
-		sev := 0
-		if fields[1] != "Ok" && fields[1] != "Non-Critical" {
-			sev = 1
-		}
 		id := strings.Replace(fields[0], ":", "_", -1)
-		Add(&md, "hw.storage.battery", sev, opentsdb.TagSet{"id": id}, metadata.Unknown, metadata.None, "")
-	}, "omreport", "storage", "battery", "-fmt", "ssv")
+		Add(&md, "hw.storage.battery", severity(fields[1]), opentsdb.TagSet{"id": id}, metadata.Unknown, metadata.None, "")
+	}, "storage", "battery")
 	return md
 }
 
 func c_omreport_storage_controller() opentsdb.MultiDataPoint {
 	var md opentsdb.MultiDataPoint
-	util.ReadCommand(func(line string) {
-		fields := strings.Split(line, ";")
+	readOmreport(func(fields []string) {
 		if len(fields) < 3 || fields[0] == "ID" {
 			return
 		}
-		sev := 0
-		if fields[1] != "Ok" && fields[1] != "Non-Critical" {
-			sev = 1
-		}
 		c_omreport_storage_pdisk(fields[0], &md)
 		id := strings.Replace(fields[0], ":", "_", -1)
-		Add(&md, "hw.storage.controller", sev, opentsdb.TagSet{"id": id}, metadata.Unknown, metadata.None, "")
-	}, "omreport", "storage", "controller", "-fmt", "ssv")
+		Add(&md, "hw.storage.controller", severity(fields[1]), opentsdb.TagSet{"id": id}, metadata.Unknown, metadata.None, "")
+	}, "storage", "controller")
 	return md
 }
 
 // c_omreport_storage_pdisk is called from the controller func, since it needs the encapsulating id.
 func c_omreport_storage_pdisk(id string, md *opentsdb.MultiDataPoint) {
-	util.ReadCommand(func(line string) {
-		fields := strings.Split(line, ";")
+	readOmreport(func(fields []string) {
 		if len(fields) < 3 || fields[0] == "ID" {
 			return
 		}
-		sev := 0
-		if fields[1] != "Ok" && fields[1] != "Non-Critical" {
-			sev = 1
-		}
 		//Need to find out what the various ID formats might be
 		id := strings.Replace(fields[0], ":", "_", -1)
-		Add(md, "hw.storage.pdisk", sev, opentsdb.TagSet{"id": id}, metadata.Unknown, metadata.None, "")
-	}, "omreport", "storage", "pdisk", "controller="+id, "-fmt", "ssv")
+		Add(md, "hw.storage.pdisk", severity(fields[1]), opentsdb.TagSet{"id": id}, metadata.Unknown, metadata.None, "")
+	}, "storage", "pdisk", "controller="+id)
+}
+
+
+// severity returns 0 if s is not "Ok" or "Non-Critical", else 1.
+func severity(s string) int {
+	if s != "Ok" && s != "Non-Critical" {
+		return 1
+	}
+	return 0
+}
+
+func readOmreport(f func([]string), args ...string) {
+	args = append(args, "-fmt", "ssv")
+	util.ReadCommand(func(line string) {
+		f(strings.Split(line, ";"))
+	}, "omreport", args...)
 }
