@@ -1,6 +1,8 @@
 package collectors
 
 import (
+	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -13,6 +15,9 @@ func init() {
 	const interval = time.Minute * 5
 	collectors = append(collectors,
 		&IntervalCollector{F: c_omreport_chassis, Interval: interval},
+		&IntervalCollector{F: c_omreport_fans, Interval: interval},
+		&IntervalCollector{F: c_omreport_memory, Interval: interval},
+		&IntervalCollector{F: c_omreport_processors, Interval: interval},
 		&IntervalCollector{F: c_omreport_ps, Interval: interval},
 		&IntervalCollector{F: c_omreport_ps_amps, Interval: interval},
 		&IntervalCollector{F: c_omreport_ps_volts, Interval: interval},
@@ -21,6 +26,8 @@ func init() {
 		&IntervalCollector{F: c_omreport_storage_enclosure, Interval: interval},
 		&IntervalCollector{F: c_omreport_storage_vdisk, Interval: interval},
 		&IntervalCollector{F: c_omreport_system, Interval: interval},
+		&IntervalCollector{F: c_omreport_temps, Interval: interval},
+		&IntervalCollector{F: c_omreport_volts, Interval: interval},
 	)
 }
 
@@ -155,6 +162,109 @@ func c_omreport_storage_pdisk(id string, md *opentsdb.MultiDataPoint) {
 	}, "storage", "pdisk", "controller="+id)
 }
 
+func c_omreport_processors() opentsdb.MultiDataPoint {
+	var md opentsdb.MultiDataPoint
+	readOmreport(func(fields []string) {
+		if len(fields) != 8 {
+			return
+		}
+		if _, err := strconv.Atoi(fields[0]); err != nil {
+			return
+		}
+		ts := opentsdb.TagSet{"name": fields[2]}
+		Add(&md, "hw.chassis.processor", severity(fields[1]), ts, metadata.Gauge, metadata.Ok, "")
+		metadata.AddMeta("", ts, "processor", clean(fields[3], fields[4]), true)
+	}, "chassis", "processors")
+	return md
+}
+
+func c_omreport_fans() opentsdb.MultiDataPoint {
+	var md opentsdb.MultiDataPoint
+	readOmreport(func(fields []string) {
+		if len(fields) != 8 {
+			return
+		}
+		if _, err := strconv.Atoi(fields[0]); err != nil {
+			return
+		}
+		ts := opentsdb.TagSet{"name": fields[2]}
+		Add(&md, "hw.chassis.fan", severity(fields[1]), ts, metadata.Gauge, metadata.Ok, "")
+		fs := strings.Fields(fields[3])
+		if len(fs) == 2 && fs[1] == "RPM" {
+			i, err := strconv.Atoi(fs[0])
+			if err == nil {
+				Add(&md, "hw.chassis.fan.reading", i, ts, metadata.Gauge, metadata.RPM, "")
+			}
+		}
+	}, "chassis", "fans")
+	return md
+}
+
+func c_omreport_memory() opentsdb.MultiDataPoint {
+	var md opentsdb.MultiDataPoint
+	readOmreport(func(fields []string) {
+		if len(fields) != 5 {
+			return
+		}
+		if _, err := strconv.Atoi(fields[0]); err != nil {
+			return
+		}
+		ts := opentsdb.TagSet{"name": fields[2]}
+		Add(&md, "hw.chassis.memory", severity(fields[1]), ts, metadata.Gauge, metadata.Ok, "")
+		metadata.AddMeta("", ts, "memory", clean(fields[4]), true)
+	}, "chassis", "memory")
+	return md
+}
+
+func c_omreport_temps() opentsdb.MultiDataPoint {
+	var md opentsdb.MultiDataPoint
+	readOmreport(func(fields []string) {
+		if len(fields) != 5 {
+			return
+		}
+		if _, err := strconv.Atoi(fields[0]); err != nil {
+			return
+		}
+		ts := opentsdb.TagSet{"name": fields[2]}
+		Add(&md, "hw.chassis.temps", severity(fields[1]), ts, metadata.Gauge, metadata.Ok, "")
+		fs := strings.Fields(fields[3])
+		if len(fs) == 2 && fs[1] == "C" {
+			i, err := strconv.Atoi(fs[0])
+			if err == nil {
+				Add(&md, "hw.chassis.temps.reading", i, ts, metadata.Gauge, metadata.C, "")
+			}
+		}
+	}, "chassis", "temps")
+	return md
+}
+
+func c_omreport_volts() opentsdb.MultiDataPoint {
+	var md opentsdb.MultiDataPoint
+	readOmreport(func(fields []string) {
+		if len(fields) != 8 {
+			return
+		}
+		if _, err := strconv.Atoi(fields[0]); err != nil {
+			return
+		}
+		ts := opentsdb.TagSet{"name": fields[2]}
+		Add(&md, "hw.chassis.volts", severity(fields[1]), ts, metadata.Gauge, metadata.Ok, "")
+		if i, err := extract(fields[3], "V"); err == nil {
+			Add(&md, "hw.chassis.volts.reading", i, ts, metadata.Gauge, metadata.C, "")
+		}
+	}, "chassis", "volts")
+	return md
+}
+
+// extract tries to return a parsed number from s with given suffix. A space may
+// be present between number ond suffix.
+func extract(s, suffix string) (float64, error) {
+	if !strings.HasSuffix(s, suffix) {
+		return 0, fmt.Errorf("extract: suffix not found")
+	}
+	s = s[:len(s)-len(suffix)]
+	return strconv.ParseFloat(strings.TrimSpace(s), 64)
+}
 
 // severity returns 0 if s is not "Ok" or "Non-Critical", else 1.
 func severity(s string) int {
@@ -169,4 +279,11 @@ func readOmreport(f func([]string), args ...string) {
 	util.ReadCommand(func(line string) {
 		f(strings.Split(line, ";"))
 	}, "omreport", args...)
+}
+
+// clean concatenates arguments with a space and removes extra whitespace.
+func clean(ss ...string) string {
+	v := strings.Join(ss, " ")
+	fs := strings.Fields(v)
+	return strings.Join(fs, " ")
 }

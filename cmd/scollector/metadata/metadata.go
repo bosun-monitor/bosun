@@ -26,14 +26,16 @@ const (
 type Unit string
 
 const (
-	None  Unit = ""
-	Event      = ""
-	Bytes      = "bytes"
-	// Range of 0-100.
-	Pct            = "percent"
-	Second         = "seconds"
-	PerSecond      = "per second"
-	BytesPerSecond = "bytes per second"
+	None           Unit = ""
+	Bytes               = "bytes"
+	BytesPerSecond      = "bytes per second"
+	Event               = ""
+	Ok                  = "ok"      // "OK" or not status, 0 = ok, 1 = not ok
+	Pct                 = "percent" // Range of 0-100.
+	PerSecond           = "per second"
+	RPM                 = "RPM" // Rotations per minute.
+	Second              = "seconds"
+	C                   = "C" // Celsius
 )
 
 type Metakey struct {
