@@ -277,7 +277,11 @@ func severity(s string) int {
 func readOmreport(f func([]string), args ...string) {
 	args = append(args, "-fmt", "ssv")
 	util.ReadCommand(func(line string) {
-		f(strings.Split(line, ";"))
+		sp := strings.Split(line, ";")
+		for i, s := range sp {
+			sp[i] = clean(s)
+		}
+		f(sp)
 	}, "omreport", args...)
 }
 
