@@ -17,19 +17,19 @@ import (
 )
 
 var (
-	confFile = flag.String("c", "dev.conf", "config file location")
-	test     = flag.Bool("t", false, "Only validate config then exit")
-	watch    = flag.Bool("w", false, "watch current directory and exit on changes; for use with an autorestarter")
+	flagConf  = flag.String("c", "dev.conf", "config file location")
+	flagTest  = flag.Bool("t", false, "Only validate config then exit")
+	flagWatch = flag.Bool("w", false, "watch current directory and exit on changes; for use with an autorestarter")
 )
 
 func main() {
 	flag.Parse()
 	runtime.GOMAXPROCS(runtime.NumCPU())
-	c, err := conf.ParseFile(*confFile)
+	c, err := conf.ParseFile(*flagConf)
 	if err != nil {
 		log.Fatal(err)
 	}
-	if *test {
+	if *flagTest {
 		log.Println("Valid Config")
 		os.Exit(0)
 	}
@@ -44,7 +44,7 @@ func main() {
 }
 
 func watcher() {
-	if !*watch {
+	if !*flagWatch {
 		return
 	}
 	time.Sleep(time.Second)
