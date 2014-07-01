@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/collect"
@@ -33,7 +34,11 @@ func main() {
 		log.Println("Valid Config")
 		os.Exit(0)
 	}
-	if err := collect.Init(c.RelayListen, "bosun"); err != nil {
+	listen := c.RelayListen
+	if strings.HasPrefix(listen, ":") {
+		listen = "localhost" + listen
+	}
+	if err := collect.Init(listen, "bosun"); err != nil {
 		log.Fatal(err)
 	}
 	sched.Load(c)
