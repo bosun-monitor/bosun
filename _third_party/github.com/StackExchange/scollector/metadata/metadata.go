@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
-	"strings"
 	"sync"
 	"time"
 
@@ -27,14 +26,16 @@ const (
 type Unit string
 
 const (
-	None  Unit = ""
-	Event      = ""
-	Bytes      = "bytes"
-	// Range of 0-100.
-	Pct            = "percent"
-	Second         = "seconds"
-	PerSecond      = "per second"
-	BytesPerSecond = "bytes per second"
+	None           Unit = ""
+	Bytes               = "bytes"
+	BytesPerSecond      = "bytes per second"
+	Event               = ""
+	Ok                  = "ok"      // "OK" or not status, 0 = ok, 1 = not ok
+	Pct                 = "percent" // Range of 0-100.
+	PerSecond           = "per second"
+	RPM                 = "RPM" // Rotations per minute.
+	Second              = "seconds"
+	C                   = "C" // Celsius
 )
 
 type Metakey struct {
@@ -56,6 +57,7 @@ var (
 	metalock  sync.Mutex
 	metahost  string
 	metafuncs []func()
+	metadebug bool
 )
 
 func AddMeta(metric string, tags opentsdb.TagSet, name string, value interface{}, setHost bool) {
@@ -71,12 +73,15 @@ func AddMeta(metric string, tags opentsdb.TagSet, name string, value interface{}
 	prev, present := metadata[Metakey{metric, ts, name}]
 	if !reflect.DeepEqual(prev, value) && present {
 		slog.Infof("metadata changed for %s/%s/%s: %v to %v", metric, ts, name, prev, value)
+	} else if metadebug {
+		slog.Infof("AddMeta for %s/%s/%s: %v", metric, ts, name, value)
 	}
 	metadata[Metakey{metric, ts, name}] = value
 }
 
-func Init(host string) {
+func Init(host string, debug bool) {
 	metahost = host
+	metadebug = debug
 	go collectMetadata()
 }
 
@@ -91,25 +96,6 @@ func collectMetadata() {
 		sendMetadata()
 		time.Sleep(time.Hour)
 	}
-}
-
-func init() {
-	metafuncs = append(metafuncs, collectMetadataOmreport)
-}
-
-func collectMetadataOmreport() {
-	util.ReadCommand(func(line string) {
-		fields := strings.Split(line, ";")
-		if len(fields) != 2 {
-			return
-		}
-		switch fields[0] {
-		case "Chassis Service Tag":
-			AddMeta("", nil, "svctag", fields[1], true)
-		case "Chassis Model":
-			AddMeta("", nil, "model", fields[1], true)
-		}
-	}, "omreport", "chassis", "info", "-fmt", "ssv")
 }
 
 type Metasend struct {
