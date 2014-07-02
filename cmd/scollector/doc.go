@@ -2,8 +2,6 @@
 
 Scollector is a metric collection agent for OpenTSDB 2.0.
 
-WARNING: scollector for windows/amd64 does not work with go1.3.
-
 tcollector (https://github.com/OpenTSDB/tcollector) is OpenTSDB's data collection framework built for OpenTSDB 1.0. scollector aims to be tcollector for OpenTSDB 2.0.
 
 Unlike tcollector, scollector is a single binary with all collectors are compiled into scollector itself. scollector supports external collectors, but your goal should be to use those temporarily until the go version is written. It has native collectors for Linux, Darwin, and Windows.
