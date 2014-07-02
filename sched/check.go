@@ -135,7 +135,7 @@ func (s *Schedule) CheckExpr(a *conf.Alert, e *expr.Expr, checkStatus Status, ig
 	}
 Loop:
 	for _, r := range results {
-		if a.Squelched(r.Group) {
+		if s.Conf.Squelched(a, r.Group) {
 			continue
 		}
 		ak := NewAlertKey(a.Name, r.Group)

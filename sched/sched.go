@@ -368,7 +368,7 @@ func (s *Schedule) RestoreState() {
 		if a, present := s.Conf.Alerts[ak.Name()]; !present {
 			log.Println("sched: alert no longer present, ignoring:", ak)
 			continue
-		} else if a.Squelched(st.Group) {
+		} else if s.Conf.Squelched(a, st.Group) {
 			log.Println("sched: alert now squelched:", ak)
 			continue
 		} else {
