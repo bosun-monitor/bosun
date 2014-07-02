@@ -40,12 +40,14 @@ type Conf struct {
 	Notifications   map[string]*Notification `json:"-"`
 	RawText         string
 	Macros          map[string]*Macro
+	Squelch         map[string]*regexp.Regexp `json:"-"`
 
 	tree            *parse.Tree
 	node            parse.Node
 	unknownTemplate string
 	bodies          *htemplate.Template
 	subjects        *ttemplate.Template
+	squelch         string
 }
 
 // at marks the state to be on node n, for error reporting.
@@ -140,11 +142,15 @@ func (n *Notification) MarshalJSON() ([]byte, error) {
 	return nil, fmt.Errorf("conf: cannot json marshal notifications")
 }
 
-func (a *Alert) Squelched(tags opentsdb.TagSet) bool {
-	if a.Squelch == nil {
+func (c *Conf) Squelched(a *Alert, tags opentsdb.TagSet) bool {
+	return squelched(tags, c.Squelch) || squelched(tags, a.Squelch)
+}
+
+func squelched(tags opentsdb.TagSet, squelches map[string]*regexp.Regexp) bool {
+	if len(squelches) == 0 {
 		return false
 	}
-	for k, v := range a.Squelch {
+	for k, v := range squelches {
 		tagv, ok := tags[k]
 		if !ok || !v.MatchString(tagv) {
 			return false
@@ -268,6 +274,20 @@ func (c *Conf) loadGlobal(p *parse.PairNode) {
 			c.errorf("template not found: %s", c.unknownTemplate)
 		}
 		c.UnknownTemplate = t
+	case "squelch":
+		c.squelch = v
+		squelch, err := opentsdb.ParseTags(c.squelch)
+		if err != nil {
+			c.error(err)
+		}
+		c.Squelch = make(map[string]*regexp.Regexp)
+		for k, v := range squelch {
+			re, err := regexp.Compile(v)
+			if err != nil {
+				c.error(err)
+			}
+			c.Squelch[k] = re
+		}
 	default:
 		if !strings.HasPrefix(k, "$") {
 			c.errorf("unknown key %s", k)
