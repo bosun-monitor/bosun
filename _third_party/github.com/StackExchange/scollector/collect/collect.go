@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/opentsdb"
-	"github.com/StackExchange/bosun/_third_party/github.com/mreiferson/go-httpclient"
 )
 
 var (
@@ -46,11 +45,7 @@ var (
 	qlock, mlock, slock sync.Mutex   // Locks for queues, maps, stats.
 	counters                         = make(map[string]*addMetric)
 	sets                             = make(map[string]*setMetric)
-	client              *http.Client = &http.Client{
-		Transport: &httpclient.Transport{
-			RequestTimeout: time.Minute,
-		},
-	}
+	client              *http.Client = &http.Client{Timeout: time.Minute}
 )
 
 // InitChan is similar to Init, but uses the given channel instead of creating a
