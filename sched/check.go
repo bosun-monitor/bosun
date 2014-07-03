@@ -94,7 +94,7 @@ func (s *Schedule) CheckUnknown() {
 		}
 		t := s.Conf.Alerts[ak.Name()].Unknown
 		if t == 0 {
-			t = s.Conf.Unknown
+			t = s.Conf.CheckFrequency
 		}
 		if t == 0 {
 			continue
