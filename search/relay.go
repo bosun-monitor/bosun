@@ -69,18 +69,24 @@ func Handle(dest string, metaHandler http.Handler) func(http.ResponseWriter, *ht
 		req.TransferEncoding = r.TransferEncoding
 		req.ContentLength = r.ContentLength
 		resp, err := client.Do(req)
+		tags := opentsdb.TagSet{"path": clean(r.URL.Path), "dest": clean(r.URL.Host)}
 		if err != nil {
 			log.Println("relay Do err:", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte(err.Error()))
+			collect.Add("relay.doErr", tags, 1)
 			return
 		}
 		b, _ := ioutil.ReadAll(resp.Body)
 		resp.Body.Close()
 		if resp.StatusCode >= 500 {
-			collect.Add("relay.err", opentsdb.TagSet{"path": r.URL.Path, "dest": r.URL.Host}, 1)
+			collect.Add("relay.err", tags, 1)
 		}
 		w.WriteHeader(resp.StatusCode)
 		w.Write(b)
 	}
+}
+
+func clean(s string) string {
+	return opentsdb.MustReplace(s, "_")
 }
