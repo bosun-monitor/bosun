@@ -374,7 +374,7 @@ func (s *Schedule) RestoreState() {
 		} else {
 			t := a.Unknown
 			if t == 0 {
-				t = s.Conf.Unknown
+				t = s.Conf.CheckFrequency
 			}
 			if t == 0 && st.Last().Status == StUnknown {
 				st.Append(&Event{Status: StNormal})

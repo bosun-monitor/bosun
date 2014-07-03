@@ -33,7 +33,6 @@ type Conf struct {
 	StateFile       string
 	TimeAndDate     []int // timeanddate.com cities list
 	ResponseLimit   int64
-	Unknown         time.Duration
 	UnknownTemplate *Template
 	Templates       map[string]*Template
 	Alerts          map[string]*Alert
@@ -258,15 +257,6 @@ func (c *Conf) loadGlobal(p *parse.PairNode) {
 			c.errorf("responseLimit must be > 0")
 		}
 		c.ResponseLimit = i
-	case "unknown":
-		d, err := time.ParseDuration(v)
-		if err != nil {
-			c.error(err)
-		}
-		if d < time.Second {
-			c.errorf("unknown duration must be at least 1s")
-		}
-		c.Unknown = d
 	case "unknownTemplate":
 		c.unknownTemplate = v
 		t, ok := c.Templates[c.unknownTemplate]
