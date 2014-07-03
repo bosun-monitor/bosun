@@ -194,13 +194,13 @@ func (states States) GroupSets() map[string]AlertKeys {
 
 func (s *Schedule) MarshalJSON() ([]byte, error) {
 	type Grouped struct {
-		Active   bool
+		Active   bool `json:",omitempty"`
 		Status   Status
-		Subject  string
-		Len      int
-		Alert    string
-		AlertKey AlertKey
-		Ago      string
+		Subject  string     `json:",omitempty"`
+		Len      int        `json:",omitempty"`
+		Alert    string     `json:",omitempty"`
+		AlertKey AlertKey   `json:",omitempty"`
+		Ago      string     `json:",omitempty"`
 		Children []*Grouped `json:",omitempty"`
 	}
 	t := struct {
