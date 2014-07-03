@@ -48,7 +48,7 @@ func Handle(dest string, metaHandler http.Handler) func(http.ResponseWriter, *ht
 				mdp = opentsdb.MultiDataPoint{&dp}
 			}
 			if len(mdp) > 0 {
-				HTTPExtract(mdp)
+				HTTPExtract(r.RemoteAddr, mdp)
 			}
 		}
 		durl := url.URL{
