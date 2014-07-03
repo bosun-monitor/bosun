@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/collect"
 	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/opentsdb"
 )
 
@@ -59,6 +60,7 @@ func Handle(dest string, metaHandler http.Handler) func(http.ResponseWriter, *ht
 		durl.Fragment = r.URL.Fragment
 		req, err := http.NewRequest(r.Method, durl.String(), bytes.NewReader(orig))
 		if err != nil {
+			log.Println("relay NewRequest err:", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte(err.Error()))
 			return
@@ -68,12 +70,16 @@ func Handle(dest string, metaHandler http.Handler) func(http.ResponseWriter, *ht
 		req.ContentLength = r.ContentLength
 		resp, err := client.Do(req)
 		if err != nil {
+			log.Println("relay Do err:", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte(err.Error()))
 			return
 		}
 		b, _ := ioutil.ReadAll(resp.Body)
 		resp.Body.Close()
+		if resp.StatusCode >= 500 {
+			collect.Add("relay.err", opentsdb.TagSet{"path": r.URL.Path, "dest": r.URL.Host}, 1)
+		}
 		w.WriteHeader(resp.StatusCode)
 		w.Write(b)
 	}
