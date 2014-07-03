@@ -67,8 +67,8 @@ func init() {
 // body. body is a JSON string of an OpenTSDB v2 /api/put request. body may be
 // gzipped.
 func HTTPExtract(remoteAddr string, mdp opentsdb.MultiDataPoint) {
-	remote, _ := opentsdb.Replace(remoteAddr, "_")
-	tags := opentsdb.TagSet{"remote": remote}
+	remoteAddr = strings.Split(remoteAddr, ":")[0]
+	tags := opentsdb.TagSet{"remote": clean(remoteAddr)}
 	collect.Add("search.puts_relayed", tags, 1)
 	collect.Add("search.datapoints_relayed", tags, float64(len(mdp)))
 	select {

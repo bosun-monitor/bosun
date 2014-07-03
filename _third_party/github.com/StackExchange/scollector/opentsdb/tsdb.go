@@ -189,6 +189,15 @@ func Replace(s, replacement string) (string, error) {
 	return c, nil
 }
 
+// MustReplace is like Replace, but returns an empty string on error.
+func MustReplace(s, replacement string) string {
+	r, err := Replace(s, replacement)
+	if err != nil {
+		return ""
+	}
+	return r
+}
+
 type Request struct {
 	Start             interface{} `json:"start"`
 	End               interface{} `json:"end,omitempty"`
