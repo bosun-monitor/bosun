@@ -30,12 +30,15 @@ const (
 	Bytes               = "bytes"
 	BytesPerSecond      = "bytes per second"
 	Event               = ""
+	Count               = ""
 	Ok                  = "ok"      // "OK" or not status, 0 = ok, 1 = not ok
 	Pct                 = "percent" // Range of 0-100.
 	PerSecond           = "per second"
 	RPM                 = "RPM" // Rotations per minute.
 	Second              = "seconds"
-	C                   = "C" // Celsius
+	C                   = "C"   // Celsius
+	MHz                 = "MHz" // MegaHertz
+	V_10                = "tenth-Volts"
 )
 
 type Metakey struct {
