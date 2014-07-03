@@ -548,9 +548,9 @@ func (r *Request) SetTime(t time.Time) error {
 }
 
 // Query performs a v2 OpenTSDB request to the given host. host should be of the
-// form hostname:port. Can return a RequestError.
+// form hostname:port. Uses DefaultClient. Can return a RequestError.
 func (r *Request) Query(host string) (ResponseSet, error) {
-	resp, err := r.QueryResponse(host)
+	resp, err := r.QueryResponse(host, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -563,7 +563,14 @@ func (r *Request) Query(host string) (ResponseSet, error) {
 	return tr, nil
 }
 
-func (r *Request) QueryResponse(host string) (*http.Response, error) {
+// DefaultClient is the default http client for requests.
+var DefaultClient = &http.Client{
+	Timeout: time.Minute,
+}
+
+// Query performs a v2 OpenTSDB request to the given host. host should be of the
+// form hostname:port. A nil client uses DefaultClient.
+func (r *Request) QueryResponse(host string, client *http.Client) (*http.Response, error) {
 	u := url.URL{
 		Scheme: "http",
 		Host:   host,
@@ -573,7 +580,10 @@ func (r *Request) QueryResponse(host string) (*http.Response, error) {
 	if err != nil {
 		return nil, err
 	}
-	resp, err := http.Post(u.String(), "application/json", bytes.NewReader(b))
+	if client == nil {
+		client = DefaultClient
+	}
+	resp, err := client.Post(u.String(), "application/json", bytes.NewReader(b))
 	if err != nil {
 		return nil, err
 	}
@@ -647,7 +657,7 @@ func (c *Cache) Query(r *Request) (tr ResponseSet, err error) {
 	defer func() {
 		c.cache[s] = &cacheResult{tr, err}
 	}()
-	resp, err := r.QueryResponse(c.Host)
+	resp, err := r.QueryResponse(c.Host, nil)
 	if err != nil {
 		return
 	}
