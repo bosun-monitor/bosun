@@ -66,9 +66,10 @@ func init() {
 // HTTPExtract populates the search indexes with OpenTSDB tags and metrics from
 // body. body is a JSON string of an OpenTSDB v2 /api/put request. body may be
 // gzipped.
-func HTTPExtract(mdp opentsdb.MultiDataPoint) {
-	collect.Add("search.puts_relayed", nil, 1)
-	collect.Add("search.datapoints_relayed", nil, float64(len(mdp)))
+func HTTPExtract(remoteAddr string, mdp opentsdb.MultiDataPoint) {
+	tags := opentsdb.TagSet{"remote": remoteAddr}
+	collect.Add("search.puts_relayed", tags, 1)
+	collect.Add("search.datapoints_relayed", tags, float64(len(mdp)))
 	select {
 	case dc <- mdp:
 	case <-time.After(time.Millisecond * 100):
