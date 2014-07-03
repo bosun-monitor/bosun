@@ -8,6 +8,8 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/collect"
@@ -69,19 +71,18 @@ func Handle(dest string, metaHandler http.Handler) func(http.ResponseWriter, *ht
 		req.TransferEncoding = r.TransferEncoding
 		req.ContentLength = r.ContentLength
 		resp, err := client.Do(req)
-		tags := opentsdb.TagSet{"path": clean(r.URL.Path), "dest": clean(r.URL.Host)}
+		tags := opentsdb.TagSet{"path": clean(r.URL.Path), "remote": clean(strings.Split(r.RemoteAddr, ":")[0])}
 		if err != nil {
 			log.Println("relay Do err:", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte(err.Error()))
-			collect.Add("relay.doErr", tags, 1)
+			collect.Add("relay.do_err", tags, 1)
 			return
 		}
 		b, _ := ioutil.ReadAll(resp.Body)
 		resp.Body.Close()
-		if resp.StatusCode >= 500 {
-			collect.Add("relay.err", tags, 1)
-		}
+		tags["status"] = strconv.Itoa(resp.StatusCode)
+		collect.Add("relay.response", tags, 1)
 		w.WriteHeader(resp.StatusCode)
 		w.Write(b)
 	}
