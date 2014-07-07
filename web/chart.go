@@ -69,6 +69,7 @@ func Graph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 			q.Rate = true
 			q.RateOptions = opentsdb.RateOptions{
 				Counter: true,
+				ResetValue: 1,
 			}
 			for _, m := range ms {
 				if m.Name == "rate" {
