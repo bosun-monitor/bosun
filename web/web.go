@@ -47,6 +47,7 @@ func Listen(addr, dir, host, relayListen string) error {
 	router.Handle("/api/egraph/{bs}.svg", JSON(ExprGraph))
 	router.Handle("/api/expr", JSON(Expr))
 	router.Handle("/api/graph", JSON(Graph))
+	router.Handle("/api/health", JSON(HealthCheck))
 	router.Handle("/api/metadata/get", JSON(GetMetadata))
 	router.Handle("/api/metadata/put", JSON(PutMetadata))
 	router.Handle("/api/metric", JSON(UniqueMetrics))
@@ -113,6 +114,17 @@ func JSON(h func(miniprofiler.Timer, http.ResponseWriter, *http.Request) (interf
 		}
 		w.Write(b)
 	})
+}
+
+type Health struct {
+	// RuleCheck is true if last check happened within the check frequency window.
+	RuleCheck bool
+}
+
+func HealthCheck(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	var h Health
+	h.RuleCheck = schedule.CheckStart.After(time.Now().Add(-schedule.Conf.CheckFrequency))
+	return h, nil
 }
 
 func PutMetadata(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
