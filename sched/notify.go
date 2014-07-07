@@ -51,7 +51,7 @@ func (s *Schedule) CheckNotifications() time.Duration {
 				s.AddNotification(ak, n, t)
 				continue
 			}
-			st := s.Status(ak)
+			st := s.status[ak]
 			if st == nil {
 				continue
 			}
