@@ -19,18 +19,27 @@ func (s *Schedule) Status(ak AlertKey) *State {
 	return st
 }
 
+type RunHistory map[AlertKey]*Event
+
+// Check evaluates all critical and warning alert rules.
 func (s *Schedule) Check() {
+	r := make(RunHistory)
 	s.CheckStart = time.Now().UTC()
-	s.RunHistory = make(map[AlertKey]*Event)
 	s.cache = opentsdb.NewCache(s.Conf.TsdbHost, s.Conf.ResponseLimit)
 	for _, a := range s.Conf.Alerts {
-		s.CheckAlert(a)
+		s.CheckAlert(r, a)
 	}
-	s.CheckUnknown()
+	s.RunHistory(r)
+}
+
+// RunHistory processes an event history and triggers notifications if needed.
+func (s *Schedule) RunHistory(r RunHistory) {
 	checkNotify := false
 	silenced := s.Silenced()
-	for ak, event := range s.RunHistory {
-		state := s.Status(ak)
+	s.Lock()
+	defer s.Unlock()
+	for ak, event := range r {
+		state := s.status[ak]
 		last := state.Append(event)
 		a := s.Conf.Alerts[ak.Name()]
 		if event.Status > StNormal {
@@ -67,9 +76,7 @@ func (s *Schedule) Check() {
 		}
 		clearOld := func() {
 			state.NeedAck = false
-			s.Lock()
 			delete(s.Notifications, ak)
-			s.Unlock()
 		}
 		if event.Status > last {
 			clearOld()
@@ -86,39 +93,45 @@ func (s *Schedule) Check() {
 	s.Save()
 }
 
+// CheckUnknown checks for unknown alerts.
 func (s *Schedule) CheckUnknown() {
-	s.Lock()
-	for ak, st := range s.status {
-		if st.Forgotten {
-			continue
+	for _ = range time.Tick(s.Conf.CheckFrequency) {
+		log.Println("checkUnknown")
+		r := make(RunHistory)
+		s.Lock()
+		for ak, st := range s.status {
+			if st.Forgotten {
+				continue
+			}
+			t := s.Conf.Alerts[ak.Name()].Unknown
+			if t == 0 {
+				t = s.Conf.CheckFrequency
+			}
+			if t == 0 {
+				continue
+			}
+			if time.Since(st.Touched) < t {
+				continue
+			}
+			r[ak] = &Event{Status: StUnknown}
 		}
-		t := s.Conf.Alerts[ak.Name()].Unknown
-		if t == 0 {
-			t = s.Conf.CheckFrequency
-		}
-		if t == 0 {
-			continue
-		}
-		if time.Since(st.Touched) < t {
-			continue
-		}
-		s.RunHistory[ak] = &Event{Status: StUnknown}
+		s.Unlock()
+		s.RunHistory(r)
 	}
-	s.Unlock()
 }
 
-func (s *Schedule) CheckAlert(a *conf.Alert) {
+func (s *Schedule) CheckAlert(r RunHistory, a *conf.Alert) {
 	log.Printf("checking alert %v", a.Name)
 	start := time.Now()
 	var warns AlertKeys
-	crits, err := s.CheckExpr(a, a.Crit, StCritical, nil)
+	crits, err := s.CheckExpr(r, a, a.Crit, StCritical, nil)
 	if err == nil {
-		warns, _ = s.CheckExpr(a, a.Warn, StWarning, crits)
+		warns, _ = s.CheckExpr(r, a, a.Warn, StWarning, crits)
 	}
 	log.Printf("done checking alert %v (%s): %v crits, %v warns", a.Name, time.Since(start), len(crits), len(warns))
 }
 
-func (s *Schedule) CheckExpr(a *conf.Alert, e *expr.Expr, checkStatus Status, ignore AlertKeys) (alerts AlertKeys, err error) {
+func (s *Schedule) CheckExpr(rh RunHistory, a *conf.Alert, e *expr.Expr, checkStatus Status, ignore AlertKeys) (alerts AlertKeys, err error) {
 	if e == nil {
 		return
 	}
@@ -167,10 +180,10 @@ Loop:
 			err = fmt.Errorf("expected number or scalar")
 			return
 		}
-		event := s.RunHistory[ak]
+		event := rh[ak]
 		if event == nil {
 			event = new(Event)
-			s.RunHistory[ak] = event
+			rh[ak] = event
 		}
 		result := Result{
 			Result: r,
@@ -187,7 +200,7 @@ Loop:
 		} else {
 			status = StNormal
 		}
-		if status > s.RunHistory[ak].Status {
+		if status > rh[ak].Status {
 			event.Status = status
 			state.Result = &result
 		}

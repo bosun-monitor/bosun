@@ -95,28 +95,29 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 	}
 	s.CheckStart = now
 	s.Init(c)
+	rh := make(sched.RunHistory)
 	var a *conf.Alert
 	for _, a = range c.Alerts {
 	}
-	if _, err := s.CheckExpr(a, a.Warn, sched.StWarning, nil); err != nil {
+	if _, err := s.CheckExpr(rh, a, a.Warn, sched.StWarning, nil); err != nil {
 		return nil, err
 	}
-	if _, err := s.CheckExpr(a, a.Crit, sched.StCritical, nil); err != nil {
+	if _, err := s.CheckExpr(rh, a, a.Crit, sched.StCritical, nil); err != nil {
 		return nil, err
 	}
 	i := 0
-	if len(s.RunHistory) < 1 {
+	if len(rh) < 1 {
 		return nil, fmt.Errorf("no results returned")
 	}
-	keys := make(sched.AlertKeys, len(s.RunHistory))
-	for k, v := range s.RunHistory {
+	keys := make(sched.AlertKeys, len(rh))
+	for k, v := range rh {
 		v.Time = now
 		keys[i] = k
 		i++
 	}
 	sort.Sort(keys)
 	instance := s.Status(keys[0])
-	instance.History = []sched.Event{*s.RunHistory[keys[0]]}
+	instance.History = []sched.Event{*rh[keys[0]]}
 	body := new(bytes.Buffer)
 	subject := new(bytes.Buffer)
 	var warning []string
@@ -132,14 +133,14 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 		Body    string
 		Subject string
 		Data    interface{}
-		Result  map[sched.AlertKey]*sched.Event
+		Result  sched.RunHistory
 		Warning []string
 		Time    int64
 	}{
 		string(b),
 		string(sub),
 		s.Data(instance, a),
-		s.RunHistory,
+		rh,
 		warning,
 		now.Unix(),
 	}, nil

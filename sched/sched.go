@@ -35,7 +35,6 @@ type Schedule struct {
 
 	nc            chan interface{}
 	cache         *opentsdb.Cache
-	RunHistory    map[AlertKey]*Event
 	CheckStart    time.Time
 	notifications map[*conf.Notification][]*State
 	metalock      sync.Mutex
@@ -308,7 +307,6 @@ func Run() error {
 
 func (s *Schedule) Init(c *conf.Conf) {
 	s.Conf = c
-	s.RunHistory = make(map[AlertKey]*Event)
 	s.Silence = make(map[string]*Silence)
 	s.Group = make(map[time.Time]AlertKeys)
 	s.Metadata = make(map[metadata.Metakey]Metavalues)
@@ -464,6 +462,7 @@ func (s *Schedule) save() {
 func (s *Schedule) Run() error {
 	s.nc = make(chan interface{}, 1)
 	go s.Poll()
+	go s.CheckUnknown()
 	for {
 		wait := time.After(s.Conf.CheckFrequency)
 		if s.Conf.CheckFrequency < time.Second {
