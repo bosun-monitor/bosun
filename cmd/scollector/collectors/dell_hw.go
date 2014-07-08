@@ -38,7 +38,7 @@ func c_omreport_chassis() opentsdb.MultiDataPoint {
 			return
 		}
 		component := strings.Replace(fields[1], " ", "_", -1)
-		Add(&md, "hw.chassis", severity(fields[0]), opentsdb.TagSet{"component": component}, metadata.Unknown, metadata.None, "")
+		Add(&md, "hw.chassis", severity(fields[0]), opentsdb.TagSet{"component": component}, metadata.Gauge, metadata.Ok, "")
 	}, "chassis")
 	return md
 }
@@ -50,7 +50,7 @@ func c_omreport_system() opentsdb.MultiDataPoint {
 			return
 		}
 		component := strings.Replace(fields[1], " ", "_", -1)
-		Add(&md, "hw.system", severity(fields[0]), opentsdb.TagSet{"component": component}, metadata.Unknown, metadata.None, "")
+		Add(&md, "hw.system", severity(fields[0]), opentsdb.TagSet{"component": component}, metadata.Gauge, metadata.Ok, "")
 	}, "system")
 	return md
 }
@@ -62,7 +62,7 @@ func c_omreport_storage_enclosure() opentsdb.MultiDataPoint {
 			return
 		}
 		id := strings.Replace(fields[0], ":", "_", -1)
-		Add(&md, "hw.storage.enclosure", severity(fields[1]), opentsdb.TagSet{"id": id}, metadata.Unknown, metadata.None, "")
+		Add(&md, "hw.storage.enclosure", severity(fields[1]), opentsdb.TagSet{"id": id}, metadata.Gauge, metadata.Ok, "")
 	}, "storage", "enclosure")
 	return md
 }
@@ -74,7 +74,7 @@ func c_omreport_storage_vdisk() opentsdb.MultiDataPoint {
 			return
 		}
 		id := strings.Replace(fields[0], ":", "_", -1)
-		Add(&md, "hw.storage.vdisk", severity(fields[1]), opentsdb.TagSet{"id": id}, metadata.Unknown, metadata.None, "")
+		Add(&md, "hw.storage.vdisk", severity(fields[1]), opentsdb.TagSet{"id": id}, metadata.Gauge, metadata.Ok, "")
 	}, "storage", "vdisk")
 	return md
 }
@@ -86,7 +86,7 @@ func c_omreport_ps() opentsdb.MultiDataPoint {
 			return
 		}
 		id := strings.Replace(fields[0], ":", "_", -1)
-		Add(&md, "hw.ps", severity(fields[1]), opentsdb.TagSet{"id": id}, metadata.Unknown, metadata.None, "")
+		Add(&md, "hw.ps", severity(fields[1]), opentsdb.TagSet{"id": id}, metadata.Gauge, metadata.Ok, "")
 	}, "chassis", "pwrsupplies")
 	return md
 }
@@ -132,7 +132,7 @@ func c_omreport_storage_battery() opentsdb.MultiDataPoint {
 			return
 		}
 		id := strings.Replace(fields[0], ":", "_", -1)
-		Add(&md, "hw.storage.battery", severity(fields[1]), opentsdb.TagSet{"id": id}, metadata.Unknown, metadata.None, "")
+		Add(&md, "hw.storage.battery", severity(fields[1]), opentsdb.TagSet{"id": id}, metadata.Gauge, metadata.Ok, "")
 	}, "storage", "battery")
 	return md
 }
@@ -145,7 +145,7 @@ func c_omreport_storage_controller() opentsdb.MultiDataPoint {
 		}
 		c_omreport_storage_pdisk(fields[0], &md)
 		id := strings.Replace(fields[0], ":", "_", -1)
-		Add(&md, "hw.storage.controller", severity(fields[1]), opentsdb.TagSet{"id": id}, metadata.Unknown, metadata.None, "")
+		Add(&md, "hw.storage.controller", severity(fields[1]), opentsdb.TagSet{"id": id}, metadata.Gauge, metadata.Ok, "")
 	}, "storage", "controller")
 	return md
 }
@@ -158,7 +158,7 @@ func c_omreport_storage_pdisk(id string, md *opentsdb.MultiDataPoint) {
 		}
 		//Need to find out what the various ID formats might be
 		id := strings.Replace(fields[0], ":", "_", -1)
-		Add(md, "hw.storage.pdisk", severity(fields[1]), opentsdb.TagSet{"id": id}, metadata.Unknown, metadata.None, "")
+		Add(md, "hw.storage.pdisk", severity(fields[1]), opentsdb.TagSet{"id": id}, metadata.Gauge, metadata.Ok, "")
 	}, "storage", "pdisk", "controller="+id)
 }
 
