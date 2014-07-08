@@ -39,14 +39,63 @@ type Conf struct {
 	Notifications   map[string]*Notification `json:"-"`
 	RawText         string
 	Macros          map[string]*Macro
-	Squelch         map[string]*regexp.Regexp `json:"-"`
+	Squelch         Squelches `json:"-"`
 
 	tree            *parse.Tree
 	node            parse.Node
 	unknownTemplate string
 	bodies          *htemplate.Template
 	subjects        *ttemplate.Template
-	squelch         string
+	squelch         []string
+}
+
+type Squelch map[string]*regexp.Regexp
+
+type Squelches struct {
+	s []Squelch
+}
+
+func (s *Squelches) Add(v string) error {
+	tags, err := opentsdb.ParseTags(v)
+	if err != nil {
+		return err
+	}
+	sq := make(Squelch)
+	for k, v := range tags {
+		re, err := regexp.Compile(v)
+		if err != nil {
+			return err
+		}
+		sq[k] = re
+	}
+	s.s = append(s.s, sq)
+	return nil
+}
+
+func (s *Squelches) Squelched(tags opentsdb.TagSet) bool {
+	for _, q := range s.s {
+		if q.Squelched(tags) {
+			return true
+		}
+	}
+	return false
+}
+
+func (s Squelch) Squelched(tags opentsdb.TagSet) bool {
+	if len(s) == 0 {
+		return false
+	}
+	for k, v := range s {
+		tagv, ok := tags[k]
+		if !ok || !v.MatchString(tagv) {
+			return false
+		}
+	}
+	return true
+}
+
+func (c *Conf) Squelched(a *Alert, tags opentsdb.TagSet) bool {
+	return c.Squelch.Squelched(tags) || a.Squelch.Squelched(tags)
 }
 
 // at marks the state to be on node n, for error reporting.
@@ -97,17 +146,17 @@ type Alert struct {
 	Vars
 	*Template        `json:"-"`
 	Name             string
-	Crit             *expr.Expr                `json:",omitempty"`
-	Warn             *expr.Expr                `json:",omitempty"`
-	Squelch          map[string]*regexp.Regexp `json:"-"`
-	CritNotification map[string]*Notification  `json:"-"`
-	WarnNotification map[string]*Notification  `json:"-"`
+	Crit             *expr.Expr               `json:",omitempty"`
+	Warn             *expr.Expr               `json:",omitempty"`
+	Squelch          Squelches                `json:"-"`
+	CritNotification map[string]*Notification `json:"-"`
+	WarnNotification map[string]*Notification `json:"-"`
 	Unknown          time.Duration
 	Macros           []string `json:"-"`
 
 	crit, warn       string
 	template         string
-	squelch          string
+	squelch          []string
 	critNotification string
 	warnNotification string
 }
@@ -139,23 +188,6 @@ type Notification struct {
 
 func (n *Notification) MarshalJSON() ([]byte, error) {
 	return nil, fmt.Errorf("conf: cannot json marshal notifications")
-}
-
-func (c *Conf) Squelched(a *Alert, tags opentsdb.TagSet) bool {
-	return squelched(tags, c.Squelch) || squelched(tags, a.Squelch)
-}
-
-func squelched(tags opentsdb.TagSet, squelches map[string]*regexp.Regexp) bool {
-	if len(squelches) == 0 {
-		return false
-	}
-	for k, v := range squelches {
-		tagv, ok := tags[k]
-		if !ok || !v.MatchString(tagv) {
-			return false
-		}
-	}
-	return true
 }
 
 type Vars map[string]string
@@ -265,18 +297,9 @@ func (c *Conf) loadGlobal(p *parse.PairNode) {
 		}
 		c.UnknownTemplate = t
 	case "squelch":
-		c.squelch = v
-		squelch, err := opentsdb.ParseTags(c.squelch)
-		if err != nil {
+		c.squelch = append(c.squelch, v)
+		if err := c.Squelch.Add(v); err != nil {
 			c.error(err)
-		}
-		c.Squelch = make(map[string]*regexp.Regexp)
-		for k, v := range squelch {
-			re, err := regexp.Compile(v)
-			if err != nil {
-				c.error(err)
-			}
-			c.Squelch[k] = re
 		}
 	default:
 		if !strings.HasPrefix(k, "$") {
@@ -486,18 +509,9 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 			}
 			a.Warn = warn
 		case "squelch":
-			a.squelch = v
-			squelch, err := opentsdb.ParseTags(a.squelch)
-			if err != nil {
+			a.squelch = append(a.squelch, v)
+			if err := a.Squelch.Add(v); err != nil {
 				c.error(err)
-			}
-			a.Squelch = make(map[string]*regexp.Regexp)
-			for k, v := range squelch {
-				re, err := regexp.Compile(v)
-				if err != nil {
-					c.error(err)
-				}
-				a.Squelch[k] = re
 			}
 		case "critNotification":
 			a.critNotification = v
@@ -630,7 +644,7 @@ func (c *Conf) Expand(v string, vars map[string]string, ignoreBadExpand bool) st
 }
 
 func (c *Conf) seen(v string, m map[string]bool) {
-	if m[v] {
+	if m[v] && v != "squelch" {
 		c.errorf("duplicate key: %s", v)
 	}
 	m[v] = true

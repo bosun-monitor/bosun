@@ -46,24 +46,63 @@ func TestInvalid(t *testing.T) {
 }
 
 func TestSquelch(t *testing.T) {
+	s := Squelches{
+		[]Squelch{
+			map[string]*regexp.Regexp{
+				"x": regexp.MustCompile("ab"),
+				"y": regexp.MustCompile("bc"),
+			},
+			map[string]*regexp.Regexp{
+				"x": regexp.MustCompile("ab"),
+				"z": regexp.MustCompile("de"),
+			},
+		},
+	}
 	type squelchTest struct {
-		tags      opentsdb.TagSet
-		squelches map[string]*regexp.Regexp
-		expect    bool
+		tags   opentsdb.TagSet
+		expect bool
 	}
 	tests := []squelchTest{
 		{
-			opentsdb.TagSet{"host": "test"},
-			map[string]*regexp.Regexp{
-				"host": regexp.MustCompile("es"),
+			opentsdb.TagSet{
+				"x": "ab",
+			},
+			false,
+		},
+		{
+			opentsdb.TagSet{
+				"x": "abe",
+				"y": "obcx",
 			},
 			true,
 		},
+		{
+			opentsdb.TagSet{
+				"x": "abe",
+				"z": "obcx",
+			},
+			false,
+		},
+		{
+			opentsdb.TagSet{
+				"x": "abe",
+				"z": "ouder",
+			},
+			true,
+		},
+		{
+			opentsdb.TagSet{
+				"x": "ae",
+				"y": "bc",
+				"z": "de",
+			},
+			false,
+		},
 	}
 	for _, test := range tests {
-		got := squelched(test.tags, test.squelches)
+		got := s.Squelched(test.tags)
 		if got != test.expect {
-			t.Errorf("for %v: %v, got %v, expected %v", test.tags, test.squelches, got, test.expect)
+			t.Errorf("for %v got %v, expected %v", test.tags, got, test.expect)
 		}
 	}
 }
