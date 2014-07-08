@@ -3,7 +3,10 @@ package conf
 import (
 	"io/ioutil"
 	"os"
+	"regexp"
 	"testing"
+
+	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/opentsdb"
 )
 
 func TestPrint(t *testing.T) {
@@ -39,5 +42,28 @@ func TestInvalid(t *testing.T) {
 	_, err = New(fname, string(b))
 	if err == nil {
 		t.Error("expected error")
+	}
+}
+
+func TestSquelch(t *testing.T) {
+	type squelchTest struct {
+		tags      opentsdb.TagSet
+		squelches map[string]*regexp.Regexp
+		expect    bool
+	}
+	tests := []squelchTest{
+		{
+			opentsdb.TagSet{"host": "test"},
+			map[string]*regexp.Regexp{
+				"host": regexp.MustCompile("es"),
+			},
+			true,
+		},
+	}
+	for _, test := range tests {
+		got := squelched(test.tags, test.squelches)
+		if got != test.expect {
+			t.Errorf("for %v: %v, got %v, expected %v", test.tags, test.squelches, got, test.expect)
+		}
 	}
 }
