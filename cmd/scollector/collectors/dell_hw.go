@@ -250,7 +250,7 @@ func c_omreport_volts() opentsdb.MultiDataPoint {
 		ts := opentsdb.TagSet{"name": replace(fields[2])}
 		Add(&md, "hw.chassis.volts", severity(fields[1]), ts, metadata.Gauge, metadata.Ok, "")
 		if i, err := extract(fields[3], "V"); err == nil {
-			Add(&md, "hw.chassis.volts.reading", i, ts, metadata.Gauge, metadata.C, "")
+			Add(&md, "hw.chassis.volts.reading", i, ts, metadata.Gauge, metadata.V, "")
 		}
 	}, "chassis", "volts")
 	return md
