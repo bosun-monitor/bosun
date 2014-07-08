@@ -68,7 +68,7 @@ func Graph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 			ms := schedule.GetMetadata(q.Metric, nil)
 			q.Rate = true
 			q.RateOptions = opentsdb.RateOptions{
-				Counter: true,
+				Counter:    true,
 				ResetValue: 1,
 			}
 			for _, m := range ms {
