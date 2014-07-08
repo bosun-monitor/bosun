@@ -20,7 +20,6 @@ func init() {
 		&IntervalCollector{F: c_omreport_processors, Interval: interval},
 		&IntervalCollector{F: c_omreport_ps, Interval: interval},
 		&IntervalCollector{F: c_omreport_ps_amps, Interval: interval},
-		&IntervalCollector{F: c_omreport_ps_volts, Interval: interval},
 		&IntervalCollector{F: c_omreport_storage_battery, Interval: interval},
 		&IntervalCollector{F: c_omreport_storage_controller, Interval: interval},
 		&IntervalCollector{F: c_omreport_storage_enclosure, Interval: interval},
@@ -105,23 +104,6 @@ func c_omreport_ps_amps() opentsdb.MultiDataPoint {
 		id := strings.Replace(i_fields[0], " ", "", -1)
 		Add(&md, "hw.ps.current", v_fields[0], opentsdb.TagSet{"id": id}, metadata.Unknown, metadata.None, "")
 	}, "chassis", "pwrmonitoring")
-	return md
-}
-
-func c_omreport_ps_volts() opentsdb.MultiDataPoint {
-	var md opentsdb.MultiDataPoint
-	readOmreport(func(fields []string) {
-		if len(fields) != 8 || !strings.Contains(fields[2], "Voltage") || fields[3] == "[N/A]" {
-			return
-		}
-		i_fields := strings.Split(fields[2], "Voltage")
-		v_fields := strings.Fields(fields[3])
-		if len(i_fields) < 2 && len(v_fields) < 2 {
-			return
-		}
-		id := strings.Replace(i_fields[0], " ", "", -1)
-		Add(&md, "hw.ps.volts", v_fields[0], opentsdb.TagSet{"id": id}, metadata.Unknown, metadata.None, "")
-	}, "chassis", "volts")
 	return md
 }
 
