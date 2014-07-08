@@ -102,7 +102,7 @@ func c_omreport_ps_amps() opentsdb.MultiDataPoint {
 			return
 		}
 		id := strings.Replace(i_fields[0], " ", "", -1)
-		Add(&md, "hw.ps.current", v_fields[0], opentsdb.TagSet{"id": id}, metadata.Unknown, metadata.None, "")
+		Add(&md, "hw.chassis.current.reading", v_fields[0], opentsdb.TagSet{"id": id}, metadata.Gauge, metadata.A, "")
 	}, "chassis", "pwrmonitoring")
 	return md
 }
