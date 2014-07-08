@@ -50,7 +50,7 @@ func c_omreport_system() opentsdb.MultiDataPoint {
 			return
 		}
 		component := strings.Replace(fields[1], " ", "_", -1)
-		Add(&md, "hw.system", severity(fields[1]), opentsdb.TagSet{"component": component}, metadata.Unknown, metadata.None, "")
+		Add(&md, "hw.system", severity(fields[0]), opentsdb.TagSet{"component": component}, metadata.Unknown, metadata.None, "")
 	}, "system")
 	return md
 }
