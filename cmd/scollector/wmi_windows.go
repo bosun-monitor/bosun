@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"runtime/debug"
 	"strings"
 
 	"github.com/StackExchange/wmi"
@@ -23,8 +22,6 @@ func wmi_main() {
 	if !*enableWmi {
 		return
 	}
-	// WMI has heap corruption issues with the GC.
-	debug.SetGCPercent(-1)
 	s := bufio.NewScanner(os.Stdin)
 	for s.Scan() {
 		t := s.Bytes()
