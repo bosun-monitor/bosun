@@ -66,7 +66,7 @@ func queryWmiNamespace(query string, dst interface{}, namespace string) (err err
 	}
 	wmiCount++
 	defer func() {
-		if wmiCount > 50 {
+		if wmiCount > 100 {
 			KillWMI()
 		}
 	}()
