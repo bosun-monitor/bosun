@@ -3,6 +3,7 @@ package collectors
 import (
 	"fmt"
 	"io"
+	"math/big"
 
 	"github.com/mjibson/snmp"
 )
@@ -16,16 +17,31 @@ func snmp_subtree(host, community, oid string) (map[int]interface{}, error) {
 	}
 	m := make(map[int]interface{})
 	for rows.Next() {
-		var a interface{}
-		id, err := rows.Scan(&a)
-		if err != nil {
-			return nil, err
-		}
-		switch t := id.(type) {
-		case int:
-			m[t] = a
+		switch oid {
+		case ifHCInBroadcastPkts:
+			a := new(big.Int)
+			id, err := rows.Scan(&a)
+			if err != nil {
+				return nil, err
+			}
+			switch t := id.(type) {
+			case int:
+				m[t] = a
+			default:
+				return nil, fmt.Errorf("snmp subtree: only one level allowed")
+			}
 		default:
-			return nil, fmt.Errorf("snmp subtree: only one level allowed")
+			var a interface{}
+			id, err := rows.Scan(&a)
+			if err != nil {
+				return nil, err
+			}
+			switch t := id.(type) {
+			case int:
+				m[t] = a
+			default:
+				return nil, fmt.Errorf("snmp subtree: only one level allowed")
+			}
 		}
 	}
 	if err := rows.Err(); err != nil && err != io.EOF {
