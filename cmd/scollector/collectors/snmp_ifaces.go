@@ -76,14 +76,14 @@ func c_snmp_ifaces(community, host string) opentsdb.MultiDataPoint {
 			return err
 		}
 		for k, v := range m {
-			Add(&md, switch_bond(metric, names[k]), v, opentsdb.TagSet{
+			tags := opentsdb.TagSet{
 				"host":      host,
 				"direction": dir,
 				"iface":     fmt.Sprintf("%d", k),
 				"iname":     names[k],
-				"alias":     aliases[k],
-			}, metadata.Unknown, metadata.None, "")
-
+			}
+			Add(&md, switch_bond(metric, names[k]), v, tags, metadata.Unknown, metadata.None, "")
+			metadata.AddMeta("", tags, "alias", aliases[k], false)
 		}
 		return nil
 	}
