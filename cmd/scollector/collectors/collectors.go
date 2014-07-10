@@ -112,7 +112,7 @@ func Add(md *opentsdb.MultiDataPoint, name string, value interface{}, tags opent
 		metadata.AddMeta(name, nil, "unit", unit, false)
 	}
 	if desc != "" {
-		metadata.AddMeta(name, nil, "desc", desc, false)
+		metadata.AddMeta(name, tags, "desc", desc, false)
 	}
 }
 
