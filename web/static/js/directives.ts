@@ -257,9 +257,12 @@ function nfmt(s: any, mult: number, suffix: string, opts: any) {
 			suffix = fmtUnits[number] + suffix;
 		}
 	}
-	if (n < 0) a = -a;
 	var r = a.toFixed(5);
-	return +r + suffix;
+	 if (a < 1e-5) {
+		r = a.toString();
+	}
+	var neg = n < 0 ? '-' : '';
+	return neg + (+r) + suffix;
 }
 
 bosunApp.filter('nfmt', function() {
