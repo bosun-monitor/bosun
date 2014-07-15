@@ -113,6 +113,8 @@ bosunControllers.controller('BosunCtrl', [
                     return "panel-warning";
                 case "normal":
                     return "panel-success";
+                case "error":
+                    return "panel-danger";
                 default:
                     return "panel-default";
             }

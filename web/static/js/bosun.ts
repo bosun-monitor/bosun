@@ -137,6 +137,7 @@ bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', function(
 			case "unknown": return "panel-info";
 			case "warning": return "panel-warning";
 			case "normal": return "panel-success";
+			case "error": return "panel-danger";
 			default: return "panel-default";
 		}
 	};

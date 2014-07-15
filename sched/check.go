@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"log"
+	"math"
 	"time"
 
 	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/collect"
@@ -14,9 +15,19 @@ import (
 
 func (s *Schedule) Status(ak AlertKey) *State {
 	s.Lock()
-	st := s.status[ak]
+	state := s.status[ak]
+	if state == nil {
+		g := ak.Group()
+		state = &State{
+			Alert: ak.Name(),
+			Tags:  g.Tags(),
+			Group: g,
+		}
+		s.status[ak] = state
+	}
+	state.Touch()
 	s.Unlock()
-	return st
+	return state
 }
 
 type RunHistory map[AlertKey]*Event
@@ -144,6 +155,21 @@ func (s *Schedule) CheckExpr(rh RunHistory, a *conf.Alert, e *expr.Expr, checkSt
 	}()
 	results, _, err := e.ExecuteOpts(s.cache, nil, s.CheckStart, 0)
 	if err != nil {
+		ak := NewAlertKey(a.Name, nil)
+		state := s.Status(ak)
+		state.Result = &Result{
+			Result: &expr.Result{
+				Computations: []expr.Computation{
+					{
+						Text:  e.String(),
+						Value: err.Error(),
+					},
+				},
+			},
+		}
+		rh[ak] = &Event{
+			Status: StError,
+		}
 		return
 	}
 Loop:
@@ -158,17 +184,6 @@ Loop:
 			}
 		}
 		state := s.Status(ak)
-		if state == nil {
-			state = &State{
-				Alert: ak.Name(),
-				Tags:  r.Group.Tags(),
-				Group: r.Group,
-			}
-			s.Lock()
-			s.status[ak] = state
-			s.Unlock()
-		}
-		state.Touch()
 		status := checkStatus
 		var n float64
 		switch v := r.Value.(type) {
@@ -195,10 +210,13 @@ Loop:
 		case StCritical:
 			event.Crit = &result
 		}
-		if n != 0 {
-			alerts = append(alerts, ak)
-		} else {
+		if math.IsNaN(n) {
+			status = StError
+		} else if n == 0 {
 			status = StNormal
+		}
+		if status != StNormal {
+			alerts = append(alerts, ak)
 		}
 		if status > rh[ak].Status {
 			event.Status = status
