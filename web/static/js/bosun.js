@@ -521,6 +521,9 @@ var fmtUnits = ['', 'k', 'M', 'G', 'T', 'P', 'E'];
 function nfmt(s, mult, suffix, opts) {
     opts = opts || {};
     var n = parseFloat(s);
+    if (isNaN(n) && typeof s === 'string') {
+        return s;
+    }
     if (opts.round)
         n = Math.round(n);
     if (!n)
