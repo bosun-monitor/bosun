@@ -21,6 +21,7 @@ import (
 
 func init() {
 	gob.Register(expr.Number(0))
+	gob.Register(expr.Scalar(0))
 }
 
 type Schedule struct {
@@ -227,7 +228,7 @@ func (s *Schedule) MarshalJSON() ([]byte, error) {
 	for tuple, states := range t.Status.GroupStates() {
 		var grouped []*Grouped
 		switch tuple.Status {
-		case StWarning, StCritical, StUnknown:
+		case StWarning, StCritical, StUnknown, StError:
 			for name, group := range states.GroupSets() {
 				g := Grouped{
 					Active:  tuple.Active,
@@ -489,6 +490,19 @@ func (a AlertKey) Name() string {
 	return strings.SplitN(string(a), "{", 2)[0]
 }
 
+func (a AlertKey) Group() opentsdb.TagSet {
+	s := strings.SplitN(string(a), "{", 2)[1]
+	s = s[:len(s)-1]
+	if s == "" {
+		return nil
+	}
+	g, err := opentsdb.ParseTags(s)
+	if err != nil {
+		panic(err)
+	}
+	return g
+}
+
 type AlertKeys []AlertKey
 
 func (a AlertKeys) Len() int           { return len(a) }
@@ -612,9 +626,9 @@ func (s *State) Last() Event {
 }
 
 type Event struct {
-	Warn, Crit *Result
-	Status     Status
-	Time       time.Time
+	Warn, Crit, Error *Result
+	Status            Status
+	Time              time.Time
 }
 
 type Result struct {
@@ -630,6 +644,7 @@ const (
 	StWarning
 	StCritical
 	StUnknown
+	StError
 )
 
 func (s Status) String() string {
@@ -642,6 +657,8 @@ func (s Status) String() string {
 		return "critical"
 	case StUnknown:
 		return "unknown"
+	case StError:
+		return "error"
 	default:
 		return "none"
 	}
@@ -655,6 +672,7 @@ func (s Status) IsNormal() bool   { return s == StNormal }
 func (s Status) IsWarning() bool  { return s == StWarning }
 func (s Status) IsCritical() bool { return s == StCritical }
 func (s Status) IsUnknown() bool  { return s == StUnknown }
+func (s Status) IsError() bool    { return s == StError }
 
 type Action struct {
 	User    string
