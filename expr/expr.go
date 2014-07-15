@@ -130,11 +130,11 @@ type Computations []Computation
 
 type Computation struct {
 	Text  string
-	Value Number
+	Value interface{}
 }
 
-func (r *Result) AddComputation(text string, result Number) {
-	r.Computations = append(r.Computations, Computation{opentsdb.ReplaceTags(text, r.Group), result})
+func (r *Result) AddComputation(text string, value interface{}) {
+	r.Computations = append(r.Computations, Computation{opentsdb.ReplaceTags(text, r.Group), value})
 }
 
 type Union struct {
@@ -157,10 +157,20 @@ func (u *Union) ExtendComputations(o *Result) {
 	u.Computations = append(u.Computations, o.Computations...)
 }
 
+const unjoinedGroup = "unjoined group"
+
 // union returns the combination of a and b where one is a strict subset of the
 // other.
-func union(a, b []*Result) []*Union {
+func union(a, b []*Result, expression string) []*Union {
 	var us []*Union
+	am := make(map[*Result]bool)
+	bm := make(map[*Result]bool)
+	for _, ra := range a {
+		am[ra] = true
+	}
+	for _, rb := range b {
+		bm[rb] = true
+	}
 	for _, ra := range a {
 		for _, rb := range b {
 			u := &Union{
@@ -180,10 +190,32 @@ func union(a, b []*Result) []*Union {
 			} else {
 				continue
 			}
+			delete(am, ra)
+			delete(bm, rb)
 			u.ExtendComputations(ra)
 			u.ExtendComputations(rb)
 			us = append(us, u)
 		}
+	}
+	for r := range am {
+		u := &Union{
+			A:     r.Value,
+			B:     Scalar(math.NaN()),
+			Group: r.Group,
+		}
+		r.AddComputation(expression, unjoinedGroup)
+		u.ExtendComputations(r)
+		us = append(us, u)
+	}
+	for r := range bm {
+		u := &Union{
+			A:     Scalar(math.NaN()),
+			B:     r.Value,
+			Group: r.Group,
+		}
+		r.AddComputation(expression, unjoinedGroup)
+		u.ExtendComputations(r)
+		us = append(us, u)
 	}
 	return us
 }
@@ -207,7 +239,7 @@ func (e *state) walkBinary(node *parse.BinaryNode, T miniprofiler.Timer) []*Resu
 	ar := e.walk(node.Args[0], T)
 	br := e.walk(node.Args[1], T)
 	var res []*Result
-	u := union(ar, br)
+	u := union(ar, br, node.String())
 	for _, v := range u {
 		var value Value
 		r := Result{
@@ -275,6 +307,9 @@ func (e *state) walkBinary(node *parse.BinaryNode, T miniprofiler.Timer) []*Resu
 }
 
 func operate(op string, a, b float64) (r float64) {
+	if math.IsNaN(a) || math.IsNaN(b) {
+		return math.NaN()
+	}
 	switch op {
 	case "+":
 		r = a + b
