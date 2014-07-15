@@ -9,7 +9,14 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
+	"runtime"
 	"strings"
+)
+
+var (
+	// LogLineNumber prints the file and line number of the caller.
+	LogLineNumber = true
 )
 
 type Logger interface {
@@ -19,22 +26,24 @@ type Logger interface {
 	Fatal(v string)
 }
 
-type stdLog struct{}
+type stdLog struct {
+	log *log.Logger
+}
 
 func (s *stdLog) Fatal(v string) {
-	log.Fatalln("fatal:", rmNl(v))
+	s.log.Fatalln("fatal:", rmNl(v))
 }
 
 func (s *stdLog) Error(v string) {
-	log.Println("error:", rmNl(v))
+	s.log.Println("error:", rmNl(v))
 }
 
 func (s *stdLog) Info(v string) {
-	log.Println("info:", rmNl(v))
+	s.log.Println("info:", rmNl(v))
 }
 
 func (s *stdLog) Warning(v string) {
-	log.Println("warning:", rmNl(v))
+	s.log.Println("warning:", rmNl(v))
 }
 
 func rmNl(v string) string {
@@ -44,7 +53,7 @@ func rmNl(v string) string {
 	return v
 }
 
-var logging Logger = new(stdLog)
+var logging Logger = &stdLog{log: log.New(os.Stderr, "", log.LstdFlags)}
 
 func Set(l Logger) {
 	logging = l
@@ -102,14 +111,23 @@ func Fatalln(v ...interface{}) {
 	os.Exit(1)
 }
 
+func out(f func(string), s string) {
+	if LogLineNumber {
+		if _, filename, line, ok := runtime.Caller(3); ok {
+			s = fmt.Sprintf("%s:%d: %v", filepath.Base(filename), line, s)
+		}
+	}
+	f(s)
+}
+
 func output(f func(string), v ...interface{}) {
-	f(fmt.Sprint(v...))
+	out(f, fmt.Sprint(v...))
 }
 
 func outputf(f func(string), format string, v ...interface{}) {
-	output(f, fmt.Sprintf(format, v...))
+	out(f, fmt.Sprintf(format, v...))
 }
 
 func outputln(f func(string), v ...interface{}) {
-	output(f, fmt.Sprintln(v...))
+	out(f, fmt.Sprintln(v...))
 }
