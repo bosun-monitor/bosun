@@ -42,7 +42,7 @@
 						</a>
 					</h4>
 				</div>
-				<div class="panel-body" ng-if="state && shown[idx]" ts-state></div>
+				<div class="panel-body" ng-if="shown[idx] || group.Children.length == 1" ts-state></div>
 			</div>
 		</div>
 	</div>
