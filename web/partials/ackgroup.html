@@ -26,12 +26,10 @@
 					<span class="glyphicon" ng-class="{'glyphicon-exclamation-sign': group.Active || (state.last.Status && state.last.Status != 'normal')}"></span>
 					<span ng-bind="group.Subject || group.AlertKey"></span>
 					<span class="pull-right" ng-show="group.Len">{{group.Len}} alerts</span>
-					<span class="pull-right" ng-show="group.Ago" ts-since="group.Ago"></span>
 				</a>
 			</h4>
 		</div>
-		<div class="panel-body" ng-if="state && shown[idx]" ts-state></div>
-		<div class="panel-body panel-group" ng-if="group.Children && shown[idx]">
+		<div class="panel-body panel-group" ng-if="shown[idx]">
 			<div class="panel" ng-class="panelClass(state.last.Status)" ng-repeat="child in group.Children" ng-init="idx = idx + '-' + $index; state = schedule.Status[child.AlertKey]; name = child.AlertKey">
 				<div class="panel-heading" ng-click="collapse(idx)">
 					<h4 class="panel-title">
