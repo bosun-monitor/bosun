@@ -157,12 +157,31 @@ func (u *Union) ExtendComputations(o *Result) {
 	u.Computations = append(u.Computations, o.Computations...)
 }
 
-const unjoinedGroup = "unjoined group"
+const (
+	unjoinedGroup = "unjoined group"
+	emptyResult   = "empty result"
+)
 
 // union returns the combination of a and b where one is a strict subset of the
 // other.
 func union(a, b []*Result, expression string) []*Union {
 	var us []*Union
+	if len(a) == 0 || len(b) == 0 {
+		if len(a) == 0 {
+			a, b = b, a
+		}
+		for _, r := range a {
+			u := &Union{
+				A:     r.Value,
+				B:     Scalar(math.NaN()),
+				Group: r.Group,
+			}
+			r.AddComputation(expression, emptyResult)
+			u.ExtendComputations(r)
+			us = append(us, u)
+		}
+		return us
+	}
 	am := make(map[*Result]bool)
 	bm := make(map[*Result]bool)
 	for _, ra := range a {
