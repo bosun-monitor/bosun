@@ -106,7 +106,7 @@ func (s *Schedule) RunHistory(r RunHistory) {
 
 // CheckUnknown checks for unknown alerts.
 func (s *Schedule) CheckUnknown() {
-	for _ = range time.Tick(s.Conf.CheckFrequency) {
+	for _ = range time.Tick(s.Conf.CheckFrequency / 4) {
 		log.Println("checkUnknown")
 		r := make(RunHistory)
 		s.Lock()
@@ -116,7 +116,7 @@ func (s *Schedule) CheckUnknown() {
 			}
 			t := s.Conf.Alerts[ak.Name()].Unknown
 			if t == 0 {
-				t = s.Conf.CheckFrequency
+				t = s.Conf.CheckFrequency * 2
 			}
 			if t == 0 {
 				continue
