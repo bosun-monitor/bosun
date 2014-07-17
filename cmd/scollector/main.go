@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -30,6 +31,7 @@ var (
 	flagICMP      = flag.String("i", "", "ICMP host to ping of the format: \"host[,host...]\".")
 	flagFake      = flag.Int("fake", 0, "Generates X fake data points on the test.fake metric per second.")
 	flagDebug     = flag.Bool("d", false, "Enables debug output.")
+	flagJSON      = flag.Bool("j", false, "With -p enabled, prints JSON.")
 
 	mains []func()
 )
@@ -226,6 +228,11 @@ func parseHost() *url.URL {
 
 func printPut(c chan *opentsdb.DataPoint) {
 	for dp := range c {
-		slog.Info(dp.Telnet())
+		if *flagJSON {
+			b, _ := json.Marshal(dp)
+			slog.Info(string(b))
+		} else {
+			slog.Info(dp.Telnet())
+		}
 	}
 }
