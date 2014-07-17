@@ -45,8 +45,24 @@ var (
 	qlock, mlock, slock sync.Mutex   // Locks for queues, maps, stats.
 	counters                         = make(map[string]*addMetric)
 	sets                             = make(map[string]*setMetric)
-	client              *http.Client = &http.Client{Timeout: time.Minute}
+	client              *http.Client = &http.Client{
+		Transport: new(timeoutTransport),
+		Timeout:   time.Minute,
+	}
 )
+
+type timeoutTransport struct {
+	Transport *http.Transport
+	Timeout   time.Time
+}
+
+func (t *timeoutTransport) RoundTrip(r *http.Request) (*http.Response, error) {
+	if time.Now().After(t.Timeout) {
+		t.Transport.CloseIdleConnections()
+		t.Timeout = time.Now().Add(time.Minute * 5)
+	}
+	return t.Transport.RoundTrip(r)
+}
 
 // InitChan is similar to Init, but uses the given channel instead of creating a
 // new one.
