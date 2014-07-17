@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -125,13 +126,18 @@ func (d *DataPoint) clean() error {
 	if err != nil {
 		return fmt.Errorf("%s. Orginal: [%s] Cleaned: [%s]", err.Error(), om, d.Metric)
 	}
-	if sv, ok := d.Value.(string); ok {
-		if i, err := strconv.ParseInt(sv, 10, 64); err == nil {
+	switch v := d.Value.(type) {
+	case string:
+		if i, err := strconv.ParseInt(v, 10, 64); err == nil {
 			d.Value = i
-		} else if f, err := strconv.ParseFloat(sv, 64); err == nil {
+		} else if f, err := strconv.ParseFloat(v, 64); err == nil {
 			d.Value = f
 		} else {
-			return fmt.Errorf("Unparseable number %v", sv)
+			return fmt.Errorf("Unparseable number %v", v)
+		}
+	case uint64:
+		if v > math.MaxInt64 {
+			d.Value = float64(v)
 		}
 	}
 	return nil
