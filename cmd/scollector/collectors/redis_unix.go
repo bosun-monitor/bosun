@@ -19,7 +19,7 @@ import (
 )
 
 func init() {
-	collectors = append(collectors, &IntervalCollector{F: c_redis_linux, init: redisInit})
+	collectors = append(collectors, &IntervalCollector{F: c_redis, init: redisInit})
 }
 
 var redisFields = map[string]bool{
@@ -152,7 +152,7 @@ func redisInit() {
 	}()
 }
 
-func c_redis_linux() opentsdb.MultiDataPoint {
+func c_redis() opentsdb.MultiDataPoint {
 	var md opentsdb.MultiDataPoint
 	redisLock.Lock()
 	for port, cluster := range redisInstances {
