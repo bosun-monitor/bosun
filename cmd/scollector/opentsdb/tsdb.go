@@ -17,8 +17,6 @@ import (
 	"time"
 	"unicode"
 	"unicode/utf8"
-
-	"github.com/StackExchange/slog"
 )
 
 type ResponseSet []*Response
@@ -39,6 +37,23 @@ type DataPoint struct {
 	Tags      TagSet      `json:"tags"`
 }
 
+func (d *DataPoint) MarshalJSON() ([]byte, error) {
+	if err := d.clean(); err != nil {
+		return nil, err
+	}
+	return json.Marshal(struct {
+		Metric    string      `json:"metric"`
+		Timestamp int64       `json:"timestamp"`
+		Value     interface{} `json:"value"`
+		Tags      TagSet      `json:"tags"`
+	}{
+		d.Metric,
+		d.Timestamp,
+		d.Value,
+		d.Tags,
+	})
+}
+
 func (d *DataPoint) Telnet() string {
 	m := ""
 	d.clean()
@@ -46,19 +61,6 @@ func (d *DataPoint) Telnet() string {
 		m += fmt.Sprintf(" %s=%s", k, v)
 	}
 	return fmt.Sprintf("put %s %d %v%s\n", d.Metric, d.Timestamp, d.Value, m)
-}
-
-func (m MultiDataPoint) Json() ([]byte, error) {
-	var md MultiDataPoint
-	for _, d := range m {
-		err := d.clean()
-		if err != nil {
-			slog.Infoln(err, "Removing Datapoint", d)
-			continue
-		}
-		md = append(md, d)
-	}
-	return json.Marshal(md)
 }
 
 type MultiDataPoint []*DataPoint
