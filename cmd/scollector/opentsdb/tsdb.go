@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"math/big"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -139,9 +140,17 @@ func (d *DataPoint) clean() error {
 		if v > math.MaxInt64 {
 			d.Value = float64(v)
 		}
+	case *big.Int:
+		if bigMaxInt64.Cmp(v) < 0 {
+			if f, err := strconv.ParseFloat(v.String(), 64); err == nil {
+				d.Value = f
+			}
+		}
 	}
 	return nil
 }
+
+var bigMaxInt64 = big.NewInt(math.MaxInt64)
 
 func (t TagSet) clean() error {
 	for k, v := range t {
