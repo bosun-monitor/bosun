@@ -4,7 +4,6 @@ package collectors
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strings"
 	"sync"
@@ -19,31 +18,31 @@ func init() {
 	collectors = append(collectors, &IntervalCollector{F: c_hbase_replication, init: hbrepInit})
 }
 
-type enabled struct {
+type hEnabled struct {
 	Enable bool
-	Lock   sync.Mutex
+	sync.Mutex
 }
 
 var (
-	hbrEnable   enabled
-	hbrepEnable enabled
+	hbrEnable   hEnabled
+	hbrepEnable hEnabled
 )
 
-func (e enabled) Enabled() (b bool) {
-	e.Lock.Lock()
+func (e hEnabled) Enabled() (b bool) {
+	e.Lock()
 	b = e.Enable
-	e.Lock.Unlock()
+	e.Unlock()
 	return
 }
 
 const hbrURL = "http://localhost:60030/jmx?qry=hadoop:service=RegionServer,name=RegionServerStatistics"
 const hbrepURL = "http://localhost:60030/jmx?qry=hadoop:service=Replication,name=*"
 
-func testUrl(url string, e *enabled) func() {
+func hTestUrl(url string, e *hEnabled) func() {
 	update := func() {
 		resp, err := http.Get(url)
-		e.Lock.Lock()
-		defer e.Lock.Unlock()
+		e.Lock()
+		defer e.Unlock()
 		if err != nil {
 			e.Enable = false
 			return
@@ -55,7 +54,7 @@ func testUrl(url string, e *enabled) func() {
 }
 
 func hbrInit() {
-	update := testUrl(hbrURL, &hbrEnable)
+	update := hTestUrl(hbrURL, &hbrEnable)
 	update()
 	go func() {
 		for _ = range time.Tick(time.Minute * 5) {
@@ -64,27 +63,35 @@ func hbrInit() {
 	}()
 }
 
+type jmx struct {
+	Beans []map[string]interface{} `json:"beans"`
+}
+
+func getBeans(url string, jmx *jmx) error {
+	res, err := http.Get(url)
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+	j := json.NewDecoder(res.Body)
+	if err := j.Decode(&jmx); err != nil {
+		return err
+	}
+	return nil
+}
+
 func c_hbase_region() opentsdb.MultiDataPoint {
 	if !hbrEnable.Enabled() {
 		return nil
 	}
+	var jmx jmx
+	if err := getBeans(hbrURL, &jmx); err != nil {
+		slog.Errorln(err)
+		return nil
+	}
 	var md opentsdb.MultiDataPoint
-	res, err := http.Get(hbrURL)
-	if err != nil {
-		slog.Errorln(err)
-		return nil
-	}
-	defer res.Body.Close()
-	var r struct {
-		Beans []map[string]interface{} `json:"beans"`
-	}
-	j := json.NewDecoder(res.Body)
-	if err := j.Decode(&r); err != nil {
-		slog.Errorln(err)
-		return nil
-	}
-	if len(r.Beans) > 0 && len(r.Beans[0]) > 0 {
-		for k, v := range r.Beans[0] {
+	if len(jmx.Beans) > 0 && len(jmx.Beans[0]) > 0 {
+		for k, v := range jmx.Beans[0] {
 			if _, ok := v.(float64); ok {
 				Add(&md, "hbase.region."+k, v, nil)
 			}
@@ -94,7 +101,7 @@ func c_hbase_region() opentsdb.MultiDataPoint {
 }
 
 func hbrepInit() {
-	update := testUrl(hbrepURL, &hbrepEnable)
+	update := hTestUrl(hbrepURL, &hbrepEnable)
 	update()
 	go func() {
 		for _ = range time.Tick(time.Minute * 5) {
@@ -107,41 +114,30 @@ func c_hbase_replication() opentsdb.MultiDataPoint {
 	if !hbrepEnable.Enabled() {
 		return nil
 	}
+	var jmx jmx
+	if err := getBeans(hbrepURL, &jmx); err != nil {
+		slog.Errorln(err)
+		return nil
+	}
 	var md opentsdb.MultiDataPoint
-	res, err := http.Get(hbrepURL)
-	if err != nil {
-		slog.Errorln(err)
-		return nil
-	}
-	defer res.Body.Close()
-	var r struct {
-		Beans []map[string]interface{} `json:"beans"`
-	}
-	j := json.NewDecoder(res.Body)
-	if err := j.Decode(&r); err != nil {
-		slog.Errorln(err)
-		return nil
-	}
-	for i, section := range r.Beans {
-		var instance string
+	for _, section := range jmx.Beans {
+		var tags opentsdb.TagSet
 		for k, v := range section {
-			if k == "name" && strings.HasPrefix(v.(string), "hadoop:service=Replication,name=ReplicationSource for") {
-				s := strings.Split(v.(string), " ")
-				fmt.Println(s[len(s)-1])
-				instance = s[len(s)-1]
-				continue
-			}
-		}
-		for k, v := range r.Beans[i] {
-			if _, ok := v.(float64); ok {
-				if instance == "" {
-					Add(&md, "hbase.replication."+k, v, nil)
-					continue
+			if s, ok := v.(string); ok && k == "name" {
+				if strings.HasPrefix(s, "hadoop:service=Replication,name=ReplicationSource for") {
+					sa := strings.Split(s, " ")
+					if len(sa) == 3 {
+						tags = opentsdb.TagSet{"instance": sa[2]}
+						break
+					}
 				}
-				Add(&md, "hbase.replication."+k, v, opentsdb.TagSet{"instance": instance})
 			}
 		}
-		instance = ""
+		for k, v := range section {
+			if _, ok := v.(float64); ok {
+				Add(&md, "hbase.replication."+k, v, tags)
+			}
+		}
 	}
 	return md
 }
