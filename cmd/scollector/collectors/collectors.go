@@ -116,6 +116,13 @@ func Add(md *opentsdb.MultiDataPoint, name string, value interface{}, tags opent
 	}
 }
 
+func AddTS(md *opentsdb.MultiDataPoint, name string, ts int64, value interface{}, tags opentsdb.TagSet, rate metadata.RateType, unit metadata.Unit, desc string) {
+	Add(md, name, value, tags, rate, unit, desc)
+	for _, m := range *md {
+		m.Timestamp = ts
+	}
+}
+
 func readLine(fname string, line func(string)) error {
 	f, err := os.Open(fname)
 	if err != nil {
