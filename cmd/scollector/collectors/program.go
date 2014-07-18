@@ -6,11 +6,13 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/StackExchange/scollector/opentsdb"
+	"github.com/StackExchange/scollector/util"
 	"github.com/StackExchange/slog"
 )
 
@@ -32,8 +34,8 @@ func InitPrograms(cpath string) {
 	}
 	for _, idir := range idirs {
 		i, err := strconv.Atoi(idir.Name())
-		if err != nil {
-			slog.Infoln(err)
+		if err != nil || i < 0 {
+			slog.Infoln("invalid collector folder name:", idir.Name())
 			continue
 		}
 		interval := time.Second * time.Duration(i)
@@ -48,11 +50,30 @@ func InitPrograms(cpath string) {
 			continue
 		}
 		for _, file := range files {
+			if !isExecutable(file) {
+				continue
+			}
 			collectors = append(collectors, &ProgramCollector{
 				Path:     filepath.Join(dir.Name(), file.Name()),
 				Interval: interval,
 			})
 		}
+	}
+}
+
+func isExecutable(f os.FileInfo) bool {
+	switch runtime.GOOS {
+	case "windows":
+		exts := strings.Split(os.Getenv("PATHEXT"), ";")
+		fileExt := filepath.Ext(strings.ToUpper(f.Name()))
+		for _, ext := range exts {
+			if filepath.Ext(strings.ToUpper(ext)) == fileExt {
+				return true
+			}
+		}
+		return false
+	default:
+		return f.Mode()&0111 != 0
 	}
 }
 
@@ -105,7 +126,7 @@ func (c *ProgramCollector) runProgram(dpchan chan<- *opentsdb.DataPoint) (progEr
 			Metric:    sp[0],
 			Timestamp: ts,
 			Value:     sp[2],
-			Tags:      opentsdb.TagSet{"host": host},
+			Tags:      opentsdb.TagSet{"host": util.Hostname},
 		}
 		for _, tag := range sp[3:] {
 			tsp := strings.Split(tag, "=")

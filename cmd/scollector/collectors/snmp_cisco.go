@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/StackExchange/scollector/metadata"
 	"github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/slog"
 )
@@ -31,7 +32,7 @@ func c_snmp_cisco(community, host string) opentsdb.MultiDataPoint {
 	if v, err := snmp_oid(host, community, ciscoCPU); err != nil {
 		slog.Infoln("snmp cisco cpu:", err)
 	} else {
-		Add(&md, "cisco.cpu", v, opentsdb.TagSet{"host": host})
+		Add(&md, "cisco.cpu", v, opentsdb.TagSet{"host": host}, metadata.Unknown, metadata.None, "")
 	}
 	names, err := snmp_subtree(host, community, ciscoMemName)
 	if err != nil {
@@ -55,8 +56,8 @@ func c_snmp_cisco(community, host string) opentsdb.MultiDataPoint {
 		if !present {
 			continue
 		}
-		Add(&md, "cisco.mem.used", u, opentsdb.TagSet{"host": host, "name": n})
-		Add(&md, "cisco.mem.free", f, opentsdb.TagSet{"host": host, "name": n})
+		Add(&md, "cisco.mem.used", u, opentsdb.TagSet{"host": host, "name": n}, metadata.Unknown, metadata.None, "")
+		Add(&md, "cisco.mem.free", f, opentsdb.TagSet{"host": host, "name": n}, metadata.Unknown, metadata.None, "")
 	}
 	return md
 }

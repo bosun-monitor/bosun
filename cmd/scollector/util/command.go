@@ -1,4 +1,4 @@
-package collectors
+package util
 
 import (
 	"bufio"
@@ -12,7 +12,7 @@ import (
 
 // command executes the named program with the given arguments.
 // If it does not exit within 10s, it is terminated.
-func command(name string, arg ...string) ([]byte, error) {
+func Command(name string, arg ...string) ([]byte, error) {
 	c := exec.Command(name, arg...)
 	var b bytes.Buffer
 	c.Stdout = &b
@@ -31,8 +31,8 @@ func command(name string, arg ...string) ([]byte, error) {
 	}
 }
 
-func readCommand(line func(string), name string, arg ...string) error {
-	b, err := command(name, arg...)
+func ReadCommand(line func(string), name string, arg ...string) error {
+	b, err := Command(name, arg...)
 	if err != nil {
 		return err
 	}

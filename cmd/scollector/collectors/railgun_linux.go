@@ -8,7 +8,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/StackExchange/scollector/metadata"
 	"github.com/StackExchange/scollector/opentsdb"
+	"github.com/StackExchange/scollector/util"
 	"github.com/StackExchange/slog"
 )
 
@@ -33,7 +35,7 @@ func rgEnabled() (b bool) {
 func parseRailUrl() string {
 	var config string
 	var url string
-	readCommand(func(line string) {
+	util.ReadCommand(func(line string) {
 		fields := strings.Fields(line)
 		if len(fields) == 0 || !strings.Contains(fields[0], "rg-listener") {
 			return
@@ -95,7 +97,7 @@ func c_railgun() opentsdb.MultiDataPoint {
 	}
 	for k, v := range r {
 		if _, ok := v.(float64); ok {
-			Add(&md, "railgun."+k, v, nil)
+			Add(&md, "railgun."+k, v, nil, metadata.Unknown, metadata.None, "")
 		}
 	}
 	return md

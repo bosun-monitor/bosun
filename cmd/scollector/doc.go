@@ -10,7 +10,7 @@ Usage:
 	scollector [flag]
 
 The flags are:
-	-h="tsaf"
+	-h="bosun"
 		OpenTSDB host; can optionally specify a port
 		("tsdb.example.com:4000"), but will default to 4242
 	-c=""
@@ -46,7 +46,7 @@ Additional flags on Windows:
 	-winsvc=""
 		Windows Service management; can be: install, remove, start, stop
 
-scollector will, by default, report to the host `tsaf`, which you should configure on your local nameserver to point to your TSDB server. This makes it possible to run scollector correctly with zero configuration or command line flags.
+scollector will, by default, report to the host `bosun`, which you should configure on your local nameserver to point to your TSDB server. This makes it possible to run scollector correctly with zero configuration or command line flags.
 
 Configuration File
 

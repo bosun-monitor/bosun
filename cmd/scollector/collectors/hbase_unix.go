@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/StackExchange/scollector/metadata"
 	"github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/slog"
 )
@@ -93,7 +94,7 @@ func c_hbase_region() opentsdb.MultiDataPoint {
 	if len(jmx.Beans) > 0 && len(jmx.Beans[0]) > 0 {
 		for k, v := range jmx.Beans[0] {
 			if _, ok := v.(float64); ok {
-				Add(&md, "hbase.region."+k, v, nil)
+				Add(&md, "hbase.region."+k, v, nil, metadata.Unknown, metadata.None, "")
 			}
 		}
 	}
@@ -135,7 +136,7 @@ func c_hbase_replication() opentsdb.MultiDataPoint {
 		}
 		for k, v := range section {
 			if _, ok := v.(float64); ok {
-				Add(&md, "hbase.replication."+k, v, tags)
+				Add(&md, "hbase.region."+k, v, tags, metadata.Unknown, metadata.None, "")
 			}
 		}
 	}

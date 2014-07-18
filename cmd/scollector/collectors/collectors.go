@@ -9,7 +9,9 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/StackExchange/scollector/metadata"
 	"github.com/StackExchange/scollector/opentsdb"
+	"github.com/StackExchange/scollector/util"
 	"github.com/StackExchange/slog"
 )
 
@@ -45,16 +47,11 @@ var (
 	// specified.
 	DefaultFreq = time.Second * 15
 
-	host      = "unknown"
 	timestamp = time.Now().Unix()
 	tlock     sync.Mutex
 )
 
 func init() {
-	if h, err := os.Hostname(); err == nil {
-		h = strings.SplitN(h, ".", 2)[0]
-		host = strings.ToLower(h)
-	}
 	go func() {
 		for t := range time.Tick(time.Second) {
 			tlock.Lock()
@@ -94,12 +91,12 @@ func Run(cs []Collector) chan *opentsdb.DataPoint {
 	return ch
 }
 
-func Add(md *opentsdb.MultiDataPoint, name string, value interface{}, tags opentsdb.TagSet) {
+func Add(md *opentsdb.MultiDataPoint, name string, value interface{}, tags opentsdb.TagSet, rate metadata.RateType, unit metadata.Unit, desc string) {
 	if tags == nil {
 		tags = make(opentsdb.TagSet)
 	}
 	if _, present := tags["host"]; !present {
-		tags["host"] = host
+		tags["host"] = util.Hostname
 	}
 	d := opentsdb.DataPoint{
 		Metric:    name,
@@ -108,6 +105,15 @@ func Add(md *opentsdb.MultiDataPoint, name string, value interface{}, tags opent
 		Tags:      tags,
 	}
 	*md = append(*md, &d)
+	if rate != metadata.Unknown {
+		metadata.AddMeta(name, nil, "rate", rate, false)
+	}
+	if unit != metadata.None {
+		metadata.AddMeta(name, nil, "unit", unit, false)
+	}
+	if desc != "" {
+		metadata.AddMeta(name, tags, "desc", desc, false)
+	}
 }
 
 func readLine(fname string, line func(string)) error {

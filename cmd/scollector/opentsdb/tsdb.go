@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
+	"math/big"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -15,8 +17,6 @@ import (
 	"time"
 	"unicode"
 	"unicode/utf8"
-
-	"github.com/StackExchange/slog"
 )
 
 type ResponseSet []*Response
@@ -37,6 +37,23 @@ type DataPoint struct {
 	Tags      TagSet      `json:"tags"`
 }
 
+func (d *DataPoint) MarshalJSON() ([]byte, error) {
+	if err := d.clean(); err != nil {
+		return nil, err
+	}
+	return json.Marshal(struct {
+		Metric    string      `json:"metric"`
+		Timestamp int64       `json:"timestamp"`
+		Value     interface{} `json:"value"`
+		Tags      TagSet      `json:"tags"`
+	}{
+		d.Metric,
+		d.Timestamp,
+		d.Value,
+		d.Tags,
+	})
+}
+
 func (d *DataPoint) Telnet() string {
 	m := ""
 	d.clean()
@@ -44,19 +61,6 @@ func (d *DataPoint) Telnet() string {
 		m += fmt.Sprintf(" %s=%s", k, v)
 	}
 	return fmt.Sprintf("put %s %d %v%s\n", d.Metric, d.Timestamp, d.Value, m)
-}
-
-func (m MultiDataPoint) Json() ([]byte, error) {
-	var md MultiDataPoint
-	for _, d := range m {
-		err := d.clean()
-		if err != nil {
-			slog.Infoln(err, "Removing Datapoint", d)
-			continue
-		}
-		md = append(md, d)
-	}
-	return json.Marshal(md)
 }
 
 type MultiDataPoint []*DataPoint
@@ -125,17 +129,30 @@ func (d *DataPoint) clean() error {
 	if err != nil {
 		return fmt.Errorf("%s. Orginal: [%s] Cleaned: [%s]", err.Error(), om, d.Metric)
 	}
-	if sv, ok := d.Value.(string); ok {
-		if i, err := strconv.ParseInt(sv, 10, 64); err == nil {
+	switch v := d.Value.(type) {
+	case string:
+		if i, err := strconv.ParseInt(v, 10, 64); err == nil {
 			d.Value = i
-		} else if f, err := strconv.ParseFloat(sv, 64); err == nil {
+		} else if f, err := strconv.ParseFloat(v, 64); err == nil {
 			d.Value = f
 		} else {
-			return fmt.Errorf("Unparseable number %v", sv)
+			return fmt.Errorf("Unparseable number %v", v)
+		}
+	case uint64:
+		if v > math.MaxInt64 {
+			d.Value = float64(v)
+		}
+	case *big.Int:
+		if bigMaxInt64.Cmp(v) < 0 {
+			if f, err := strconv.ParseFloat(v.String(), 64); err == nil {
+				d.Value = f
+			}
 		}
 	}
 	return nil
 }
+
+var bigMaxInt64 = big.NewInt(math.MaxInt64)
 
 func (t TagSet) clean() error {
 	for k, v := range t {
@@ -153,10 +170,15 @@ func (t TagSet) clean() error {
 	return nil
 }
 
-// Clean removes characters from s that are invalid for OpenTSDB metric and tag
-// values.
-// See: http://opentsdb.net/docs/build/html/user_guide/writing.html#metrics-and-tags
+// Clean is Replace with an empty replacement string.
 func Clean(s string) (string, error) {
+	return Replace(s, "")
+}
+
+// Replace removes characters from s that are invalid for OpenTSDB metric and
+// tag values and replaces them.
+// See: http://opentsdb.net/docs/build/html/user_guide/writing.html#metrics-and-tags
+func Replace(s, replacement string) (string, error) {
 	var c string
 	if len(s) == 0 {
 		// This one is perhaps better checked earlier in the pipeline, but since
@@ -165,10 +187,15 @@ func Clean(s string) (string, error) {
 		// effect of WMI turning to Garbage....
 		return s, errors.New("Metric/Tagk/Tagv Cleaning Passed a Zero Length String")
 	}
+	replaced := false
 	for len(s) > 0 {
 		r, size := utf8.DecodeRuneInString(s)
 		if unicode.IsLetter(r) || unicode.IsDigit(r) || r == '-' || r == '_' || r == '.' || r == '/' {
 			c += string(r)
+			replaced = false
+		} else if !replaced {
+			c += replacement
+			replaced = true
 		}
 		s = s[size:]
 	}
@@ -177,6 +204,15 @@ func Clean(s string) (string, error) {
 		return c, errors.New("Cleaning Metric/Tagk/Tagv resulted in a Zero Length String")
 	}
 	return c, nil
+}
+
+// MustReplace is like Replace, but returns an empty string on error.
+func MustReplace(s, replacement string) string {
+	r, err := Replace(s, replacement)
+	if err != nil {
+		return ""
+	}
+	return r
 }
 
 type Request struct {
@@ -505,10 +541,10 @@ func (r *Request) AutoDownsample(l int) error {
 		return err
 	}
 	d := cd / Duration(l)
-	if d < Duration(time.Second)*15 {
-		return nil
+	ds := ""
+	if d > Duration(time.Second)*15 {
+		ds = fmt.Sprintf("%ds-avg", int64(d.Seconds()))
 	}
-	ds := fmt.Sprintf("%ds-avg", int64(d.Seconds()))
 	for _, q := range r.Queries {
 		q.Downsample = ds
 	}
@@ -538,9 +574,9 @@ func (r *Request) SetTime(t time.Time) error {
 }
 
 // Query performs a v2 OpenTSDB request to the given host. host should be of the
-// form hostname:port. Can return a RequestError.
+// form hostname:port. Uses DefaultClient. Can return a RequestError.
 func (r *Request) Query(host string) (ResponseSet, error) {
-	resp, err := r.QueryResponse(host)
+	resp, err := r.QueryResponse(host, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -553,7 +589,14 @@ func (r *Request) Query(host string) (ResponseSet, error) {
 	return tr, nil
 }
 
-func (r *Request) QueryResponse(host string) (*http.Response, error) {
+// DefaultClient is the default http client for requests.
+var DefaultClient = &http.Client{
+	Timeout: time.Minute,
+}
+
+// Query performs a v2 OpenTSDB request to the given host. host should be of the
+// form hostname:port. A nil client uses DefaultClient.
+func (r *Request) QueryResponse(host string, client *http.Client) (*http.Response, error) {
 	u := url.URL{
 		Scheme: "http",
 		Host:   host,
@@ -563,7 +606,10 @@ func (r *Request) QueryResponse(host string) (*http.Response, error) {
 	if err != nil {
 		return nil, err
 	}
-	resp, err := http.Post(u.String(), "application/json", bytes.NewReader(b))
+	if client == nil {
+		client = DefaultClient
+	}
+	resp, err := client.Post(u.String(), "application/json", bytes.NewReader(b))
 	if err != nil {
 		return nil, err
 	}
@@ -603,9 +649,12 @@ func (h Host) Query(r *Request) (ResponseSet, error) {
 }
 
 type Cache struct {
-	host  string
-	limit int64
-	cache map[string]*cacheResult
+	Host string
+	// Limit limits response size in bytes
+	Limit int64
+	// FilterTags removes tagks from results if that tagk was not in the request
+	FilterTags bool
+	cache      map[string]*cacheResult
 }
 
 type cacheResult struct {
@@ -615,9 +664,10 @@ type cacheResult struct {
 
 func NewCache(host string, limit int64) *Cache {
 	return &Cache{
-		host:  host,
-		limit: limit,
-		cache: make(map[string]*cacheResult),
+		Host:       host,
+		Limit:      limit,
+		FilterTags: true,
+		cache:      make(map[string]*cacheResult),
 	}
 }
 
@@ -633,20 +683,38 @@ func (c *Cache) Query(r *Request) (tr ResponseSet, err error) {
 	defer func() {
 		c.cache[s] = &cacheResult{tr, err}
 	}()
-	resp, err := r.QueryResponse(c.host)
+	resp, err := r.QueryResponse(c.Host, nil)
 	if err != nil {
 		return
 	}
 	defer resp.Body.Close()
-	lr := &io.LimitedReader{R: resp.Body, N: c.limit}
+	lr := &io.LimitedReader{R: resp.Body, N: c.Limit}
 	j := json.NewDecoder(lr)
 	err = j.Decode(&tr)
 	if lr.N == 0 {
-		err = fmt.Errorf("TSDB response too large: limited to %E bytes", float64(c.limit))
+		err = fmt.Errorf("TSDB response too large: limited to %E bytes", float64(c.Limit))
 		return
 	}
 	if err != nil {
 		return
 	}
+	if c.FilterTags {
+		FilterTags(r, tr)
+	}
 	return
+}
+
+// FilterTags removes tagks in tr not present in r. Does nothing in the event of
+// multiple queries in the request.
+func FilterTags(r *Request, tr ResponseSet) {
+	if len(r.Queries) != 1 {
+		return
+	}
+	for _, resp := range tr {
+		for k := range resp.Tags {
+			if _, present := r.Queries[0].Tags[k]; !present {
+				delete(resp.Tags, k)
+			}
+		}
+	}
 }

@@ -3,7 +3,9 @@ package collectors
 import (
 	"strings"
 
+	"github.com/StackExchange/scollector/metadata"
 	"github.com/StackExchange/scollector/opentsdb"
+	"github.com/StackExchange/scollector/util"
 	"github.com/StackExchange/slog"
 )
 
@@ -16,7 +18,7 @@ func c_iostat_darwin() opentsdb.MultiDataPoint {
 	var md opentsdb.MultiDataPoint
 	ln := 0
 	i := 0
-	readCommand(func(line string) {
+	util.ReadCommand(func(line string) {
 		ln++
 		if ln == 1 {
 			categories = strings.Fields(line)
@@ -29,25 +31,25 @@ func c_iostat_darwin() opentsdb.MultiDataPoint {
 			if i+3 > len(values) {
 				break
 			} else if strings.HasPrefix(cat, "disk") {
-				Add(&md, "darwin.disk.kilobytes_transfer", values[i], opentsdb.TagSet{"disk": cat})
+				Add(&md, "darwin.disk.kilobytes_transfer", values[i], opentsdb.TagSet{"disk": cat}, metadata.Unknown, metadata.None, "")
 				i++
-				Add(&md, "darwin.disk.transactions", values[i], opentsdb.TagSet{"disk": cat})
+				Add(&md, "darwin.disk.transactions", values[i], opentsdb.TagSet{"disk": cat}, metadata.Unknown, metadata.None, "")
 				i++
-				Add(&md, "darwin.disk.megabytes", values[i], opentsdb.TagSet{"disk": cat})
+				Add(&md, "darwin.disk.megabytes", values[i], opentsdb.TagSet{"disk": cat}, metadata.Unknown, metadata.None, "")
 				i++
 			} else if cat == "cpu" {
-				Add(&md, "darwin.cpu.user", values[i], nil)
+				Add(&md, "darwin.cpu.user", values[i], nil, metadata.Unknown, metadata.None, "")
 				i++
-				Add(&md, "darwin.cpu.sys", values[i], nil)
+				Add(&md, "darwin.cpu.sys", values[i], nil, metadata.Unknown, metadata.None, "")
 				i++
-				Add(&md, "darwin.cpu.idle", values[i], nil)
+				Add(&md, "darwin.cpu.idle", values[i], nil, metadata.Unknown, metadata.None, "")
 				i++
 			} else if cat == "load" {
-				Add(&md, "darwin.loadavg_1_min", values[i], nil)
+				Add(&md, "darwin.loadavg_1_min", values[i], nil, metadata.Unknown, metadata.None, "")
 				i++
-				Add(&md, "darwin.loadavg_5_min", values[i], nil)
+				Add(&md, "darwin.loadavg_5_min", values[i], nil, metadata.Unknown, metadata.None, "")
 				i++
-				Add(&md, "darwin.loadavg_15_min", values[i], nil)
+				Add(&md, "darwin.loadavg_15_min", values[i], nil, metadata.Unknown, metadata.None, "")
 				i++
 			}
 		}

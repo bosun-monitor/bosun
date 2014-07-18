@@ -1,6 +1,7 @@
 package collectors
 
 import (
+	"github.com/StackExchange/scollector/metadata"
 	"github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/slog"
 	"github.com/StackExchange/wmi"
@@ -10,7 +11,7 @@ func init() {
 	collectors = append(collectors, &IntervalCollector{F: c_simple_mem_windows})
 }
 
-// Memory Needs to be expanded upon. Should be deeper in utilization (what is
+// Memory needs to be expanded upon. Should be deeper in utilization (what is
 // cache, etc.) as well as saturation (i.e., paging activity). Lot of that is in
 // Win32_PerfRawData_PerfOS_Memory. Win32_Operating_System's units are KBytes.
 
@@ -24,14 +25,14 @@ func c_simple_mem_windows() opentsdb.MultiDataPoint {
 	}
 	var md opentsdb.MultiDataPoint
 	for _, v := range dst {
-		Add(&md, "win.mem.vm.total", v.TotalVirtualMemorySize*1024, nil)
-		Add(&md, "win.mem.vm.free", v.FreeVirtualMemory*1024, nil)
-		Add(&md, "win.mem.total", v.TotalVisibleMemorySize*1024, nil)
-		Add(&md, "win.mem.free", v.FreePhysicalMemory*1024, nil)
-		Add(&md, osMemTotal, v.TotalVisibleMemorySize*1024, nil)
-		Add(&md, osMemFree, v.FreePhysicalMemory*1024, nil)
-		Add(&md, osMemUsed, v.TotalVisibleMemorySize*1024-v.FreePhysicalMemory*1024, nil)
-		Add(&md, osMemPctFree, float64(v.FreePhysicalMemory)/float64(v.TotalVisibleMemorySize)*100, nil)
+		Add(&md, "win.mem.vm.total", v.TotalVirtualMemorySize*1024, nil, metadata.Gauge, metadata.Bytes, "Number, in bytes, of virtual memory.")
+		Add(&md, "win.mem.vm.free", v.FreeVirtualMemory*1024, nil, metadata.Gauge, metadata.Bytes, "Number, in bytes, of virtual memory currently unused and available.")
+		Add(&md, "win.mem.total", v.TotalVisibleMemorySize*1024, nil, metadata.Gauge, metadata.Bytes, "Total amount, in bytes, of physical memory available to the operating system.")
+		Add(&md, "win.mem.free", v.FreePhysicalMemory*1024, nil, metadata.Gauge, metadata.Bytes, "Number, in bytes, of physical memory currently unused and available.")
+		Add(&md, osMemTotal, v.TotalVisibleMemorySize*1024, nil, metadata.Gauge, metadata.Bytes, "Total amount, in bytes, of physical memory available to the operating system.")
+		Add(&md, osMemFree, v.FreePhysicalMemory*1024, nil, metadata.Gauge, metadata.Bytes, "Number, in bytes, of physical memory currently unused and available.")
+		Add(&md, osMemUsed, v.TotalVisibleMemorySize*1024-v.FreePhysicalMemory*1024, nil, metadata.Gauge, metadata.Bytes, "")
+		Add(&md, osMemPctFree, float64(v.FreePhysicalMemory)/float64(v.TotalVisibleMemorySize)*100, nil, metadata.Gauge, metadata.Pct, "")
 	}
 	return md
 }

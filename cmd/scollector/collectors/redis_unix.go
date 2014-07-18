@@ -12,12 +12,14 @@ import (
 
 	"github.com/garyburd/redigo/redis"
 
+	"github.com/StackExchange/scollector/metadata"
 	"github.com/StackExchange/scollector/opentsdb"
+	"github.com/StackExchange/scollector/util"
 	"github.com/StackExchange/slog"
 )
 
 func init() {
-	collectors = append(collectors, &IntervalCollector{F: c_redis_linux, init: redisInit})
+	collectors = append(collectors, &IntervalCollector{F: c_redis, init: redisInit})
 }
 
 var redisFields = map[string]bool{
@@ -111,7 +113,7 @@ func redisInit() {
 				}
 			})
 		}
-		readCommand(func(line string) {
+		util.ReadCommand(func(line string) {
 			sp := strings.Fields(line)
 			if len(sp) != 3 || !strings.HasSuffix(sp[1], "redis-server") {
 				return
@@ -125,7 +127,7 @@ func redisInit() {
 			add(port, pid)
 		}, "ps", "-e", "-o", "pid,args")
 		if oldRedis {
-			readCommand(func(line string) {
+			util.ReadCommand(func(line string) {
 				if !strings.Contains(line, "redis-server") {
 					return
 				}
@@ -150,7 +152,7 @@ func redisInit() {
 	}()
 }
 
-func c_redis_linux() opentsdb.MultiDataPoint {
+func c_redis() opentsdb.MultiDataPoint {
 	var md opentsdb.MultiDataPoint
 	redisLock.Lock()
 	for port, cluster := range redisInstances {
@@ -177,14 +179,14 @@ func c_redis_linux() opentsdb.MultiDataPoint {
 				continue
 			}
 			if sp[0] == "master_link_status" {
-				Add(&md, "redis."+sp[0], redisMlsMap[sp[1]], tags)
+				Add(&md, "redis."+sp[0], redisMlsMap[sp[1]], tags, metadata.Unknown, metadata.None, "")
 				continue
 			}
 			if sp[0] == "aof_last_bgrewrite_status" || sp[0] == "rdb_last_bgsave_status" {
-				Add(&md, "redis."+sp[0], status(sp[1]), tags)
+				Add(&md, "redis."+sp[0], status(sp[1]), tags, metadata.Unknown, metadata.None, "")
 				continue
 			}
-			Add(&md, "redis."+sp[0], sp[1], tags)
+			Add(&md, "redis."+sp[0], sp[1], tags, metadata.Unknown, metadata.None, "")
 		}
 	}
 	redisLock.Unlock()

@@ -3,6 +3,7 @@ package collect
 import (
 	"bytes"
 	"compress/gzip"
+	"encoding/json"
 	"io/ioutil"
 	"net/http"
 	"time"
@@ -34,7 +35,7 @@ func send() {
 }
 
 func sendBatch(batch opentsdb.MultiDataPoint) {
-	b, err := batch.Json()
+	b, err := json.Marshal(batch)
 	if err != nil {
 		slog.Error(err)
 		// bad JSON encoding, just give up

@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/StackExchange/scollector/opentsdb"
-	"github.com/mreiferson/go-httpclient"
 )
 
 var (
@@ -47,11 +46,23 @@ var (
 	counters                         = make(map[string]*addMetric)
 	sets                             = make(map[string]*setMetric)
 	client              *http.Client = &http.Client{
-		Transport: &httpclient.Transport{
-			RequestTimeout: time.Minute,
-		},
+		Transport: new(timeoutTransport),
+		Timeout:   time.Minute,
 	}
 )
+
+type timeoutTransport struct {
+	Transport *http.Transport
+	Timeout   time.Time
+}
+
+func (t *timeoutTransport) RoundTrip(r *http.Request) (*http.Response, error) {
+	if time.Now().After(t.Timeout) {
+		t.Transport.CloseIdleConnections()
+		t.Timeout = time.Now().Add(time.Minute * 5)
+	}
+	return t.Transport.RoundTrip(r)
+}
 
 // InitChan is similar to Init, but uses the given channel instead of creating a
 // new one.

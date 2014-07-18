@@ -1,6 +1,7 @@
 package collectors
 
 import (
+	"github.com/StackExchange/scollector/metadata"
 	"github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/slog"
 	"github.com/StackExchange/wmi"
@@ -12,6 +13,7 @@ func init() {
 }
 
 func c_diskspace_windows() opentsdb.MultiDataPoint {
+	const megabyte = 1048576
 	var dst []Win32_PerfFormattedData_PerfDisk_LogicalDisk
 	var q = wmi.CreateQuery(&dst, `WHERE Name <> '_Total'`)
 	err := queryWmi(q, &dst)
@@ -21,19 +23,19 @@ func c_diskspace_windows() opentsdb.MultiDataPoint {
 	}
 	var md opentsdb.MultiDataPoint
 	for _, v := range dst {
-		Add(&md, "win.disk.fs.space_free", v.FreeMegabytes*1048576, opentsdb.TagSet{"partition": v.Name})
-		Add(&md, osDiskFree, v.FreeMegabytes*1048576, opentsdb.TagSet{"disk": v.Name})
+		Add(&md, "win.disk.fs.space_free", v.FreeMegabytes*megabyte, opentsdb.TagSet{"partition": v.Name}, metadata.Gauge, metadata.Bytes, "")
+		Add(&md, osDiskFree, v.FreeMegabytes*megabyte, opentsdb.TagSet{"disk": v.Name}, metadata.Gauge, metadata.Bytes, "")
 		if v.PercentFreeSpace != 0 {
-			space_total := v.FreeMegabytes * 1048576 * 100 / v.PercentFreeSpace
-			space_used := space_total - v.FreeMegabytes*1048576
-			Add(&md, "win.disk.fs.space_total", space_total, opentsdb.TagSet{"partition": v.Name})
-			Add(&md, "win.disk.fs.space_used", space_used, opentsdb.TagSet{"partition": v.Name})
-			Add(&md, osDiskTotal, space_total, opentsdb.TagSet{"disk": v.Name})
-			Add(&md, osDiskUsed, space_used, opentsdb.TagSet{"disk": v.Name})
+			space_total := v.FreeMegabytes * megabyte * 100 / v.PercentFreeSpace
+			space_used := space_total - v.FreeMegabytes*megabyte
+			Add(&md, "win.disk.fs.space_total", space_total, opentsdb.TagSet{"partition": v.Name}, metadata.Gauge, metadata.Bytes, "")
+			Add(&md, "win.disk.fs.space_used", space_used, opentsdb.TagSet{"partition": v.Name}, metadata.Gauge, metadata.Bytes, "")
+			Add(&md, osDiskTotal, space_total, opentsdb.TagSet{"disk": v.Name}, metadata.Gauge, metadata.Bytes, "")
+			Add(&md, osDiskUsed, space_used, opentsdb.TagSet{"disk": v.Name}, metadata.Gauge, metadata.Bytes, "")
 		}
 
-		Add(&md, "win.disk.fs.percent_free", v.PercentFreeSpace, opentsdb.TagSet{"partition": v.Name})
-		Add(&md, osDiskPctFree, v.PercentFreeSpace, opentsdb.TagSet{"disk": v.Name})
+		Add(&md, "win.disk.fs.percent_free", v.PercentFreeSpace, opentsdb.TagSet{"partition": v.Name}, metadata.Gauge, metadata.Pct, "")
+		Add(&md, osDiskPctFree, v.PercentFreeSpace, opentsdb.TagSet{"disk": v.Name}, metadata.Gauge, metadata.Pct, "")
 	}
 	return md
 }
@@ -54,17 +56,17 @@ func c_physical_disk_windows() opentsdb.MultiDataPoint {
 	}
 	var md opentsdb.MultiDataPoint
 	for _, v := range dst {
-		Add(&md, "win.disk.duration", v.AvgDiskSecPerRead, opentsdb.TagSet{"disk": v.Name, "type": "read"})
-		Add(&md, "win.disk.duration", v.AvgDiskSecPerWrite, opentsdb.TagSet{"disk": v.Name, "type": "write"})
-		Add(&md, "win.disk.queue", v.AvgDiskReadQueueLength, opentsdb.TagSet{"disk": v.Name, "type": "read"})
-		Add(&md, "win.disk.queue", v.AvgDiskWriteQueueLength, opentsdb.TagSet{"disk": v.Name, "type": "write"})
-		Add(&md, "win.disk.ops", v.DiskReadsPerSec, opentsdb.TagSet{"disk": v.Name, "type": "read"})
-		Add(&md, "win.disk.ops", v.DiskWritesPerSec, opentsdb.TagSet{"disk": v.Name, "type": "write"})
-		Add(&md, "win.disk.bytes", v.DiskReadBytesPerSec, opentsdb.TagSet{"disk": v.Name, "type": "read"})
-		Add(&md, "win.disk.bytes", v.DiskWriteBytesPerSec, opentsdb.TagSet{"disk": v.Name, "type": "write"})
-		Add(&md, "win.disk.percent_time", v.PercentDiskReadTime, opentsdb.TagSet{"disk": v.Name, "type": "read"})
-		Add(&md, "win.disk.percent_time", v.PercentDiskWriteTime, opentsdb.TagSet{"disk": v.Name, "type": "write"})
-		Add(&md, "win.disk.spltio", v.SplitIOPerSec, opentsdb.TagSet{"disk": v.Name})
+		Add(&md, "win.disk.duration", v.AvgDiskSecPerRead, opentsdb.TagSet{"disk": v.Name, "type": "read"}, metadata.Counter, metadata.Second, "")
+		Add(&md, "win.disk.duration", v.AvgDiskSecPerWrite, opentsdb.TagSet{"disk": v.Name, "type": "write"}, metadata.Counter, metadata.Second, "")
+		Add(&md, "win.disk.queue", v.AvgDiskReadQueueLength, opentsdb.TagSet{"disk": v.Name, "type": "read"}, metadata.Counter, metadata.Event, "")
+		Add(&md, "win.disk.queue", v.AvgDiskWriteQueueLength, opentsdb.TagSet{"disk": v.Name, "type": "write"}, metadata.Counter, metadata.Event, "")
+		Add(&md, "win.disk.ops", v.DiskReadsPerSec, opentsdb.TagSet{"disk": v.Name, "type": "read"}, metadata.Counter, metadata.PerSecond, "")
+		Add(&md, "win.disk.ops", v.DiskWritesPerSec, opentsdb.TagSet{"disk": v.Name, "type": "write"}, metadata.Counter, metadata.PerSecond, "")
+		Add(&md, "win.disk.bytes", v.DiskReadBytesPerSec, opentsdb.TagSet{"disk": v.Name, "type": "read"}, metadata.Counter, metadata.BytesPerSecond, "")
+		Add(&md, "win.disk.bytes", v.DiskWriteBytesPerSec, opentsdb.TagSet{"disk": v.Name, "type": "write"}, metadata.Counter, metadata.BytesPerSecond, "")
+		Add(&md, "win.disk.percent_time", v.PercentDiskReadTime, opentsdb.TagSet{"disk": v.Name, "type": "read"}, metadata.Counter, metadata.None, "")
+		Add(&md, "win.disk.percent_time", v.PercentDiskWriteTime, opentsdb.TagSet{"disk": v.Name, "type": "write"}, metadata.Counter, metadata.None, "")
+		Add(&md, "win.disk.spltio", v.SplitIOPerSec, opentsdb.TagSet{"disk": v.Name}, metadata.Counter, metadata.Event, "")
 	}
 	return md
 }

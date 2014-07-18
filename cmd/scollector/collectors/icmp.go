@@ -5,6 +5,7 @@ import (
 	"net"
 	"time"
 
+	"github.com/StackExchange/scollector/metadata"
 	"github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/slog"
 	"github.com/tatsushid/go-fastping"
@@ -37,13 +38,13 @@ func c_icmp(host string) opentsdb.MultiDataPoint {
 	p.MaxRTT = time.Second * 5
 	timeout := 1
 	p.AddHandler("receive", func(addr *net.IPAddr, t time.Duration) {
-		Add(&md, "ping.rtt", float64(t)/float64(time.Millisecond), opentsdb.TagSet{"dst_host": host})
+		Add(&md, "ping.rtt", float64(t)/float64(time.Millisecond), opentsdb.TagSet{"dst_host": host}, metadata.Unknown, metadata.None, "")
 		timeout = 0
 	})
 	if err := p.Run(); err != nil {
 		slog.Error(err)
 		return nil
 	}
-	Add(&md, "ping.timeout", timeout, opentsdb.TagSet{"dst_host": host})
+	Add(&md, "ping.timeout", timeout, opentsdb.TagSet{"dst_host": host}, metadata.Unknown, metadata.None, "")
 	return md
 }
