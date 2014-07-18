@@ -46,14 +46,14 @@ var (
 	counters                         = make(map[string]*addMetric)
 	sets                             = make(map[string]*setMetric)
 	client              *http.Client = &http.Client{
-		Transport: new(timeoutTransport),
+		Transport: &timeoutTransport{Transport: new(http.Transport)},
 		Timeout:   time.Minute,
 	}
 )
 
 type timeoutTransport struct {
-	Transport *http.Transport
-	Timeout   time.Time
+	*http.Transport
+	Timeout time.Time
 }
 
 func (t *timeoutTransport) RoundTrip(r *http.Request) (*http.Response, error) {
