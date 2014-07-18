@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -92,6 +93,9 @@ func main() {
 
 	if *flagColDir != "" {
 		collectors.InitPrograms(*flagColDir)
+	}
+	if *flagTest || *flagPrint {
+		slog.Set(&slog.StdLog{Log: log.New(os.Stdout, "", log.LstdFlags)})
 	}
 	if *flagSNMP != "" {
 		for _, s := range strings.Split(*flagSNMP, ",") {
