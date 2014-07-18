@@ -74,8 +74,7 @@ func getBeans(url string, jmx *jmx) error {
 		return err
 	}
 	defer res.Body.Close()
-	j := json.NewDecoder(res.Body)
-	if err := j.Decode(&jmx); err != nil {
+	if err := json.NewDecoder(res.Body).Decode(&jmx); err != nil {
 		return err
 	}
 	return nil
