@@ -194,6 +194,21 @@ func Add(metric string, ts opentsdb.TagSet, inc float64) error {
 	return nil
 }
 
+// Put puts a metric on directly on the datapoint channel. This is useful for capturing "events" that have a gauge value
+func Put(metric string, ts opentsdb.TagSet, timestamp int64, v float64) error {
+	if err := check(metric, &ts); err != nil {
+		return err
+	}
+	dp := &opentsdb.DataPoint{
+		Metric:    metricRoot + metric,
+		Timestamp: timestamp,
+		Value:     v,
+		Tags:      ts,
+	}
+	tchan <- dp
+	return nil
+}
+
 func check(metric string, ts *opentsdb.TagSet) error {
 	if err := checkClean(metric, "metric"); err != nil {
 		return err
