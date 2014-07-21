@@ -31,6 +31,7 @@ var (
 	flagBatchSize = flag.Int("b", 0, "OpenTSDB batch size. Used for debugging bad data.")
 	flagSNMP      = flag.String("s", "", "SNMP host to poll of the format: \"community@host[,community@host...]\".")
 	flagICMP      = flag.String("i", "", "ICMP host to ping of the format: \"host[,host...]\".")
+	flagVsphere   = flag.String("v", "", `vSphere host to poll of the format: "user:password@host[,user:password@host...]".`)
 	flagFake      = flag.Int("fake", 0, "Generates X fake data points on the test.fake metric per second.")
 	flagDebug     = flag.Bool("d", false, "Enables debug output.")
 	flagJSON      = flag.Bool("j", false, "With -p enabled, prints JSON.")
@@ -78,6 +79,8 @@ func readConf() {
 			f(flagSNMP)
 		case "icmp":
 			f(flagICMP)
+		case "vsphere":
+			f(flagVsphere)
 		default:
 			if *flagDebug {
 				slog.Errorf("unknown key in %v:%v", p, i+1)
@@ -114,6 +117,25 @@ func main() {
 	if *flagICMP != "" {
 		for _, s := range strings.Split(*flagICMP, ",") {
 			collectors.ICMP(s)
+		}
+	}
+	if *flagVsphere != "" {
+		for _, s := range strings.Split(*flagVsphere, ",") {
+			sp := strings.SplitN(s, ":", 2)
+			if len(sp) != 2 {
+				slog.Fatal("invalid vsphere string:", *flagVsphere)
+			}
+			user := sp[0]
+			idx := strings.LastIndex(sp[1], "@")
+			if idx == -1 {
+				slog.Fatal("invalid vsphere string:", *flagVsphere)
+			}
+			pwd := sp[1][:idx]
+			host := sp[1][idx+1:]
+			if len(user) == 0 || len(pwd) == 0 || len(host) == 0 {
+				slog.Fatal("invalid vsphere string:", *flagVsphere)
+			}
+			collectors.Vsphere(user, pwd, host)
 		}
 	}
 	if *flagFake > 0 {
