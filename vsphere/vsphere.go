@@ -61,7 +61,8 @@ func Connect(host, user, pwd string) (*Vsphere, error) {
 	return v, nil
 }
 
-type Machine struct {
+// Result contains requested data about vSphere objects.
+type Result struct {
 	ID    string `xml:"obj"`
 	Props []struct {
 		Name string `xml:"name"`
@@ -72,8 +73,8 @@ type Machine struct {
 	} `xml:"propSet"`
 }
 
-// Info queries the given values of all VMs.
-func (v *Vsphere) Info(values []string) ([]*Machine, error) {
+// Info queries listed properties of all objects of the specified Type.
+func (v *Vsphere) Info(Type string, properties []string) ([]*Result, error) {
 	var props struct {
 		Folder string `xml:"Body>RetrievePropertiesResponse>returnval>propSet>val>rootFolder"`
 	}
@@ -83,19 +84,19 @@ func (v *Vsphere) Info(values []string) ([]*Machine, error) {
 	var view struct {
 		Session string `xml:"Body>CreateContainerViewResponse>returnval"`
 	}
-	for i, v := range values {
-		values[i] = fmt.Sprintf("<pathSet>%s</pathSet>", v)
+	for i, v := range properties {
+		properties[i] = fmt.Sprintf("<pathSet>%s</pathSet>", v)
 	}
-	if err := v.call(fmt.Sprintf(soapCreateContainerView, props.Folder), &view); err != nil {
+	if err := v.call(fmt.Sprintf(soapCreateContainerView, props.Folder, Type), &view); err != nil {
 		return nil, err
 	}
 	var vms struct {
-		Machines []*Machine `xml:"Body>RetrievePropertiesResponse>returnval"`
+		Results []*Result `xml:"Body>RetrievePropertiesResponse>returnval"`
 	}
-	if err := v.call(fmt.Sprintf(soapRetrieveVirtualMachine, strings.Join(values, ""), view.Session), &vms); err != nil {
+	if err := v.call(fmt.Sprintf(soapRetrieve, Type, strings.Join(properties, ""), view.Session), &vms); err != nil {
 		return nil, err
 	}
-	return vms.Machines, nil
+	return vms.Results, nil
 }
 
 func (v *Vsphere) call(body string, dst interface{}) error {
@@ -157,6 +158,6 @@ const (
 	soapConnect                 = `<RetrieveServiceContent xmlns="urn:vim25"><_this type="ServiceInstance">ServiceInstance</_this></RetrieveServiceContent>`
 	soapLogin                   = `<Login xmlns="urn:vim25"><_this type="SessionManager">SessionManager</_this><userName>%s</userName><password>%s</password></Login>`
 	soapRetrieveServiceInstance = `<RetrieveProperties xmlns="urn:vim25"><_this type="PropertyCollector">propertyCollector</_this><specSet><propSet><type>ServiceInstance</type><all>false</all><pathSet>content</pathSet></propSet><objectSet><obj type="ServiceInstance">ServiceInstance</obj><skip>false</skip></objectSet></specSet></RetrieveProperties>`
-	soapCreateContainerView     = `<CreateContainerView xmlns="urn:vim25"><_this type="ViewManager">ViewManager</_this><container type="Folder">%s</container><type>VirtualMachine</type><recursive>true</recursive></CreateContainerView>`
-	soapRetrieveVirtualMachine  = `<RetrieveProperties xmlns="urn:vim25"><_this type="PropertyCollector">propertyCollector</_this><specSet><propSet><type>VirtualMachine</type>%s</propSet><objectSet><obj type="ContainerView">%s</obj><skip>true</skip><selectSet xsi:type="TraversalSpec"><name>traverseEntities</name><type>ContainerView</type><path>view</path><skip>false</skip></selectSet></objectSet></specSet></RetrieveProperties>`
+	soapCreateContainerView     = `<CreateContainerView xmlns="urn:vim25"><_this type="ViewManager">ViewManager</_this><container type="Folder">%s</container><type>%s</type><recursive>true</recursive></CreateContainerView>`
+	soapRetrieve                = `<RetrieveProperties xmlns="urn:vim25"><_this type="PropertyCollector">propertyCollector</_this><specSet><propSet><type>%s</type>%s</propSet><objectSet><obj type="ContainerView">%s</obj><skip>true</skip><selectSet xsi:type="TraversalSpec"><name>traverseEntities</name><type>ContainerView</type><path>view</path><skip>false</skip></selectSet></objectSet></specSet></RetrieveProperties>`
 )
