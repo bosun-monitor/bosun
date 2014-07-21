@@ -17,6 +17,7 @@ import (
 	"github.com/StackExchange/scollector/collectors"
 	"github.com/StackExchange/scollector/metadata"
 	"github.com/StackExchange/scollector/opentsdb"
+	"github.com/StackExchange/scollector/util"
 	"github.com/StackExchange/slog"
 )
 
@@ -33,6 +34,7 @@ var (
 	flagFake      = flag.Int("fake", 0, "Generates X fake data points on the test.fake metric per second.")
 	flagDebug     = flag.Bool("d", false, "Enables debug output.")
 	flagJSON      = flag.Bool("j", false, "With -p enabled, prints JSON.")
+	flagFullHost  = flag.Bool("u", false, `Enables full hostnames: doesn't truncate to first ".".`)
 
 	mains []func()
 )
@@ -91,6 +93,8 @@ func main() {
 	}
 	readConf()
 
+	util.FullHostname = *flagFullHost
+	util.Set()
 	if *flagColDir != "" {
 		collectors.InitPrograms(*flagColDir)
 	}
