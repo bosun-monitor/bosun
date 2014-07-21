@@ -12,7 +12,7 @@ import (
 func init() {
 	collectors = append(collectors, &IntervalCollector{
 		F:    c_mssql,
-		init: wmiInit(&sqlEnable, &sqlLock, []Win32_PerfRawData_MSSQLSERVER_SQLServerGeneralStatistics{}, `WHERE Name <> '_Total'`, &sqlQuery),
+		init: wmiInit(&sqlEnable, &sqlLock, func() interface{} { return &[]Win32_PerfRawData_MSSQLSERVER_SQLServerGeneralStatistics{} }, `WHERE Name <> '_Total'`, &sqlQuery),
 	})
 }
 
