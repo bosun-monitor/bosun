@@ -15,7 +15,7 @@ import (
 )
 
 func init() {
-	collectors = append(collectors, &IntervalCollector{F: c_railgun, init: rgInit})
+	collectors = append(collectors, &IntervalCollector{F: c_railgun, init: rgInit, Interval: time.Minute})
 }
 
 var (
