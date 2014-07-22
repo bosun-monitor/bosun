@@ -19,15 +19,7 @@ The flags are:
 		OpenTSDB host; can optionally specify a port
 		("tsdb.example.com:4000"), but will default to 4242
 	-c=""
-		passthrough collector directory; it should contain numbered
-		directories like OpenTSDB tcollector expects; any executable
-		file in those directories is run every N seconds, where N is the
-		name of the directory; use 0 for a program that should be run
-		continuously and simply pass data through to OpenTSDB (the
-		program will be restarted if it exits; data output format is:
-		"metric timestamp value tag1=val1 tag2=val2 ..."; timestamp is
-		in Unix format (seconds since epoch); tags are optional; a host
-		tag is automatically added if not present
+		external collectors directory
 	-s=""
 		SNMP host to poll of the format:
 		"community@host[,community@host...]"
@@ -55,6 +47,14 @@ scollector will, by default, report to the host `bosun`, which you should
 configure on your local nameserver to point to your TSDB server. This makes it
 possible to run scollector correctly with zero configuration or command line
 flags.
+
+External Collectors
+
+External collectors are executables that scollector invokes, collects output from, and uses that like other collector data. The -c option specfies the external collectors directory. It should contain numbered directories like OpenTSDB tcollector expects. Any executable file in those directories is run every N seconds, where N is the name of the directory. Use 0 for a program that should be run continuously and simply pass data through to OpenTSDB (the program will be restarted if it exits). Data output format is:
+
+	metric timestamp value tag1=val1 tag2=val2 ...
+
+Timestamp is in Unix format (seconds since epoch). Tags are optional. A host tag is automatically added, but overridden if specified. Stderr output is passed to scollector's log.
 
 Configuration File
 
