@@ -64,7 +64,9 @@ flags. The configuration file is of the form key = value, one per line.
 Supported keys are: host (-h), filter (-f), coldir (-c), snmp (-s), icmp (-i),
 vsphere (-v). Example:
 
-	host = other-tsdb:1234 filter = snmp snmp = com@theswitch
+	host = other-tsdb:1234
+	filter = snmp
+	snmp = com@theswitch
 
 Warning
 
