@@ -104,6 +104,8 @@ func (c *ProgramCollector) runProgram(dpchan chan<- *opentsdb.DataPoint) (progEr
 	pr, pw := io.Pipe()
 	s := bufio.NewScanner(pr)
 	cmd.Stdout = pw
+	er, ew := io.Pipe()
+	cmd.Stderr = ew
 	err := cmd.Start()
 	if err != nil {
 		return err
@@ -111,6 +113,14 @@ func (c *ProgramCollector) runProgram(dpchan chan<- *opentsdb.DataPoint) (progEr
 	go func() {
 		progError = cmd.Wait()
 		pw.Close()
+		ew.Close()
+	}()
+	go func() {
+		es := bufio.NewScanner(er)
+		for es.Scan() {
+			line := strings.TrimSpace(es.Text())
+			slog.Error(line)
+		}
 	}()
 	for s.Scan() {
 		line := strings.TrimSpace(s.Text())
