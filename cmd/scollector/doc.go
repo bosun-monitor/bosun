@@ -23,25 +23,32 @@ The flags are:
 	-s=""
 		SNMP host to poll of the format:
 		"community@host[,community@host...]"
+	-v=""
+		vSphere host to poll of the format:
+		"user:password@host[,user:password@host...]"
 	-i=""
 		ICMP host to ping of the format:
 		"host[,host...]"
 	-f=""
 		filter collectors matching this term (regex)
-	-t
-		test mode: run collectors once, print, and exit
 	-l
 		list enabled collectors
-	-p
-		print to screen instead of sending to a host
-	-fake=0
-		generates X fake data points per second on the test.fake metric
-	-b=0
-		OpenTSDB batch size; used for debugging bad data
 
 Additional flags on Windows:
 	-winsvc=""
 		Windows Service management; can be: install, remove, start, stop
+
+Debug flags:
+	-d
+		enables debug output
+	-p
+		print to screen instead of sending to a host
+	-j
+		with -p, prints JSON
+	-fake=0
+		generates X fake data points per second on the test.fake metric
+	-t
+		test mode: run collectors once, print, and exit
 
 scollector will, by default, report to the host `bosun`, which you should
 configure on your local nameserver to point to your TSDB server. This makes it
