@@ -6,8 +6,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"strings"
-	"sync"
-	"time"
 
 	"github.com/StackExchange/scollector/metadata"
 	"github.com/StackExchange/scollector/opentsdb"
@@ -15,54 +13,14 @@ import (
 )
 
 func init() {
-	collectors = append(collectors, &IntervalCollector{F: c_hbase_region, init: hbrInit})
-	collectors = append(collectors, &IntervalCollector{F: c_hbase_replication, init: hbrepInit})
+	collectors = append(collectors, &IntervalCollector{F: c_hbase_region, Enable: enableURL(hbURL)})
+	collectors = append(collectors, &IntervalCollector{F: c_hbase_replication, Enable: enableURL(hbRepURL)})
 }
 
-type hEnabled struct {
-	Enable bool
-	sync.Mutex
-}
-
-var (
-	hbrEnable   hEnabled
-	hbrepEnable hEnabled
+const (
+	hbURL    = "http://localhost:60030/jmx?qry=hadoop:service=RegionServer,name=RegionServerStatistics"
+	hbRepURL = "http://localhost:60030/jmx?qry=hadoop:service=Replication,name=*"
 )
-
-func (e hEnabled) Enabled() (b bool) {
-	e.Lock()
-	b = e.Enable
-	e.Unlock()
-	return
-}
-
-const hbrURL = "http://localhost:60030/jmx?qry=hadoop:service=RegionServer,name=RegionServerStatistics"
-const hbrepURL = "http://localhost:60030/jmx?qry=hadoop:service=Replication,name=*"
-
-func hTestUrl(url string, e *hEnabled) func() {
-	update := func() {
-		resp, err := http.Get(url)
-		e.Lock()
-		defer e.Unlock()
-		if err != nil {
-			e.Enable = false
-			return
-		}
-		resp.Body.Close()
-		e.Enable = resp.StatusCode == 200
-	}
-	return update
-}
-
-func hbrInit() {
-	update := hTestUrl(hbrURL, &hbrEnable)
-	update()
-	go func() {
-		for _ = range time.Tick(time.Minute * 5) {
-			update()
-		}
-	}()
-}
 
 type jmx struct {
 	Beans []map[string]interface{} `json:"beans"`
@@ -81,11 +39,8 @@ func getBeans(url string, jmx *jmx) error {
 }
 
 func c_hbase_region() opentsdb.MultiDataPoint {
-	if !hbrEnable.Enabled() {
-		return nil
-	}
 	var jmx jmx
-	if err := getBeans(hbrURL, &jmx); err != nil {
+	if err := getBeans(hbURL, &jmx); err != nil {
 		slog.Errorln(err)
 		return nil
 	}
@@ -100,22 +55,9 @@ func c_hbase_region() opentsdb.MultiDataPoint {
 	return md
 }
 
-func hbrepInit() {
-	update := hTestUrl(hbrepURL, &hbrepEnable)
-	update()
-	go func() {
-		for _ = range time.Tick(time.Minute * 5) {
-			update()
-		}
-	}()
-}
-
 func c_hbase_replication() opentsdb.MultiDataPoint {
-	if !hbrepEnable.Enabled() {
-		return nil
-	}
 	var jmx jmx
-	if err := getBeans(hbrepURL, &jmx); err != nil {
+	if err := getBeans(hbRepURL, &jmx); err != nil {
 		slog.Errorln(err)
 		return nil
 	}

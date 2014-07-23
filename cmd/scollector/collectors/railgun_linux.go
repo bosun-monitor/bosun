@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/StackExchange/scollector/metadata"
@@ -15,24 +14,15 @@ import (
 )
 
 func init() {
-	collectors = append(collectors, &IntervalCollector{F: c_railgun, init: rgInit, Interval: time.Minute})
+	collectors = append(collectors, &IntervalCollector{F: c_railgun, Enable: enableRailgun, Interval: time.Minute})
 }
 
 var (
-	rgEnable   bool
-	rgLock     sync.Mutex
 	rgListenRE = regexp.MustCompile(`^stats.listen\s+?=\s+?([0-9.:]+)`)
 	rgURL      string
 )
 
-func rgEnabled() (b bool) {
-	rgLock.Lock()
-	b = rgEnable
-	rgLock.Unlock()
-	return
-}
-
-func parseRailUrl() string {
+func parseRailURL() string {
 	var config string
 	var url string
 	util.ReadCommand(func(line string) {
@@ -57,31 +47,12 @@ func parseRailUrl() string {
 	return url
 }
 
-func rgInit() {
-	update := func() {
-		rgURL = parseRailUrl()
-		resp, err := http.Get(rgURL)
-		rgLock.Lock()
-		defer rgLock.Unlock()
-		if err != nil {
-			rgEnable = false
-			return
-		}
-		resp.Body.Close()
-		rgEnable = resp.StatusCode == 200
-	}
-	update()
-	go func() {
-		for _ = range time.Tick(time.Minute * 5) {
-			update()
-		}
-	}()
+func enableRailgun() bool {
+	rgURL = parseRailURL()
+	return enableURL(rgURL)()
 }
 
 func c_railgun() opentsdb.MultiDataPoint {
-	if !rgEnabled() {
-		return nil
-	}
 	var md opentsdb.MultiDataPoint
 	res, err := http.Get(rgURL)
 	if err != nil {

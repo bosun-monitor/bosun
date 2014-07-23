@@ -1,8 +1,6 @@
 package collectors
 
 import (
-	"sync"
-
 	"github.com/StackExchange/scollector/metadata"
 	"github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/slog"
@@ -10,29 +8,18 @@ import (
 )
 
 func init() {
-	collectors = append(collectors, &IntervalCollector{
-		F:    c_mssql,
-		init: wmiInit(&sqlEnable, &sqlLock, func() interface{} { return &[]Win32_PerfRawData_MSSQLSERVER_SQLServerGeneralStatistics{} }, `WHERE Name <> '_Total'`, &sqlQuery),
-	})
+	c := &IntervalCollector{
+		F: c_mssql,
+	}
+	c.init = wmiInit(c, func() interface{} { return &[]Win32_PerfRawData_MSSQLSERVER_SQLServerGeneralStatistics{} }, `WHERE Name <> '_Total'`, &sqlQuery)
+	collectors = append(collectors, c)
 }
 
 var (
-	sqlEnable bool
-	sqlLock   sync.Mutex
-	sqlQuery  string
+	sqlQuery string
 )
 
-func sqlEnabled() (b bool) {
-	sqlLock.Lock()
-	b = sqlEnable
-	sqlLock.Unlock()
-	return
-}
-
 func c_mssql() opentsdb.MultiDataPoint {
-	if !sqlEnabled() {
-		return nil
-	}
 	var md opentsdb.MultiDataPoint
 	md = append(md, c_mssql_general()...)
 	md = append(md, c_mssql_statistics()...)

@@ -3,8 +3,6 @@ package collectors
 import (
 	"io/ioutil"
 	"os"
-	"sync"
-	"time"
 
 	"github.com/StackExchange/scollector/metadata"
 	"github.com/StackExchange/scollector/opentsdb"
@@ -13,13 +11,8 @@ import (
 )
 
 func init() {
-	collectors = append(collectors, &IntervalCollector{F: puppet_linux, init: puppetInit})
+	collectors = append(collectors, &IntervalCollector{F: puppet_linux, Enable: puppetEnable})
 }
-
-var (
-	puppetEnable bool
-	puppetLock   sync.Mutex
-)
 
 const (
 	puppetPath       = "/var/lib/puppet/"
@@ -27,26 +20,9 @@ const (
 	puppetDisabled   = "/var/lib/puppet/state/agent_disabled.lock"
 )
 
-func puppetEnabled() (b bool) {
-	puppetLock.Lock()
-	b = puppetEnable
-	puppetLock.Unlock()
-	return
-}
-
-func puppetInit() {
-	update := func() {
-		_, err := os.Stat(puppetPath)
-		puppetLock.Lock()
-		puppetEnable = err == nil
-		puppetLock.Unlock()
-	}
-	update()
-	go func() {
-		for _ = range time.Tick(time.Minute * 5) {
-			update()
-		}
-	}()
+func puppetEnable() bool {
+	_, err := os.Stat(puppetPath)
+	return err == nil
 }
 
 type PRSummary struct {
@@ -93,9 +69,6 @@ type PRSummary struct {
 }
 
 func puppet_linux() opentsdb.MultiDataPoint {
-	if !puppetEnabled() {
-		return nil
-	}
 	var md opentsdb.MultiDataPoint
 	// See if puppet has been disabled (i.e. `puppet agent --disable 'Reason'`)
 	disabled := 0

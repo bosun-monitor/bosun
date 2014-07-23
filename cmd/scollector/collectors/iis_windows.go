@@ -1,37 +1,24 @@
 package collectors
 
 import (
-	"sync"
-
 	"github.com/StackExchange/scollector/metadata"
 	"github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/slog"
 )
 
 func init() {
-	collectors = append(collectors, &IntervalCollector{
-		F:    c_iis_webservice,
-		init: wmiInit(&iisEnable, &iisLock, func() interface{} { return &[]Win32_PerfRawData_W3SVC_WebService{} }, `WHERE Name <> '_Total'`, &iisQuery),
-	})
+	c := &IntervalCollector{
+		F: c_iis_webservice,
+	}
+	c.init = wmiInit(c, func() interface{} { return &[]Win32_PerfRawData_W3SVC_WebService{} }, `WHERE Name <> '_Total'`, &iisQuery)
+	collectors = append(collectors, c)
 }
 
 var (
-	iisEnable bool
-	iisLock   sync.Mutex
-	iisQuery  string
+	iisQuery string
 )
 
-func iisEnabled() (b bool) {
-	iisLock.Lock()
-	b = iisEnable
-	iisLock.Unlock()
-	return
-}
-
 func c_iis_webservice() opentsdb.MultiDataPoint {
-	if !iisEnabled() {
-		return nil
-	}
 	var dst []Win32_PerfRawData_W3SVC_WebService
 	err := queryWmi(iisQuery, &dst)
 	if err != nil {
