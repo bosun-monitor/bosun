@@ -10,11 +10,6 @@ import (
 	"github.com/StackExchange/scollector/opentsdb"
 )
 
-var (
-	intervalInits = make(map[uintptr]struct{})
-	intervalLock  sync.Mutex
-)
-
 type IntervalCollector struct {
 	F        func() opentsdb.MultiDataPoint
 	Interval time.Duration // defaults to DefaultFreq if unspecified
@@ -29,13 +24,7 @@ type IntervalCollector struct {
 
 func (c *IntervalCollector) Init() {
 	if c.init != nil {
-		intervalLock.Lock()
-		defer intervalLock.Unlock()
-		pt := reflect.ValueOf(c.init).Pointer()
-		if _, ok := intervalInits[pt]; !ok {
-			c.init()
-			intervalInits[pt] = struct{}{}
-		}
+		c.init()
 	}
 }
 
