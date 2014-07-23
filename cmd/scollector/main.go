@@ -17,6 +17,7 @@ import (
 	"github.com/StackExchange/scollector/collectors"
 	"github.com/StackExchange/scollector/metadata"
 	"github.com/StackExchange/scollector/opentsdb"
+	"github.com/StackExchange/scollector/util"
 	"github.com/StackExchange/slog"
 )
 
@@ -26,13 +27,15 @@ var (
 	flagList      = flag.Bool("l", false, "List")
 	flagPrint     = flag.Bool("p", false, "Print to screen instead of sending to a host")
 	flagHost      = flag.String("h", "bosun", `OpenTSDB host. Ex: "tsdb.example.com". Can optionally specify port: "tsdb.example.com:4000", but will default to 4242 otherwise`)
-	flagColDir    = flag.String("c", "", `Passthrough collector directory. It should contain numbered directories like the OpenTSDB scollector expects. Any executable file in those directories is run every N seconds, where N is the name of the directory. Use 0 for a program that should be run continuously and simply pass data through to OpenTSDB (the program will be restarted if it exits. Data output format is: "metric timestamp value tag1=val1 tag2=val2 ...". Timestamp is in Unix format (seconds since epoch). Tags are optional. A host tag is automatically added, but overridden if specified.`)
+	flagColDir    = flag.String("c", "", `External collectors directory.`)
 	flagBatchSize = flag.Int("b", 0, "OpenTSDB batch size. Used for debugging bad data.")
 	flagSNMP      = flag.String("s", "", "SNMP host to poll of the format: \"community@host[,community@host...]\".")
 	flagICMP      = flag.String("i", "", "ICMP host to ping of the format: \"host[,host...]\".")
+	flagVsphere   = flag.String("v", "", `vSphere host to poll of the format: "user:password@host[,user:password@host...]".`)
 	flagFake      = flag.Int("fake", 0, "Generates X fake data points on the test.fake metric per second.")
 	flagDebug     = flag.Bool("d", false, "Enables debug output.")
 	flagJSON      = flag.Bool("j", false, "With -p enabled, prints JSON.")
+	flagFullHost  = flag.Bool("u", false, `Enables full hostnames: doesn't truncate to first ".".`)
 
 	mains []func()
 )
@@ -76,6 +79,8 @@ func readConf() {
 			f(flagSNMP)
 		case "icmp":
 			f(flagICMP)
+		case "vsphere":
+			f(flagVsphere)
 		default:
 			if *flagDebug {
 				slog.Errorf("unknown key in %v:%v", p, i+1)
@@ -91,6 +96,8 @@ func main() {
 	}
 	readConf()
 
+	util.FullHostname = *flagFullHost
+	util.Set()
 	if *flagColDir != "" {
 		collectors.InitPrograms(*flagColDir)
 	}
@@ -110,6 +117,25 @@ func main() {
 	if *flagICMP != "" {
 		for _, s := range strings.Split(*flagICMP, ",") {
 			collectors.ICMP(s)
+		}
+	}
+	if *flagVsphere != "" {
+		for _, s := range strings.Split(*flagVsphere, ",") {
+			sp := strings.SplitN(s, ":", 2)
+			if len(sp) != 2 {
+				slog.Fatal("invalid vsphere string:", *flagVsphere)
+			}
+			user := sp[0]
+			idx := strings.LastIndex(sp[1], "@")
+			if idx == -1 {
+				slog.Fatal("invalid vsphere string:", *flagVsphere)
+			}
+			pwd := sp[1][:idx]
+			host := sp[1][idx+1:]
+			if len(user) == 0 || len(pwd) == 0 || len(host) == 0 {
+				slog.Fatal("invalid vsphere string:", *flagVsphere)
+			}
+			collectors.Vsphere(user, pwd, host)
 		}
 	}
 	if *flagFake > 0 {

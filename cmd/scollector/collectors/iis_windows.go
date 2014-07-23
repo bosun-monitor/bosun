@@ -11,7 +11,7 @@ import (
 func init() {
 	collectors = append(collectors, &IntervalCollector{
 		F:    c_iis_webservice,
-		init: wmiInit(&iisEnable, &iisLock, []Win32_PerfRawData_W3SVC_WebService{}, `WHERE Name <> '_Total'`, &iisQuery),
+		init: wmiInit(&iisEnable, &iisLock, func() interface{} { return &[]Win32_PerfRawData_W3SVC_WebService{} }, `WHERE Name <> '_Total'`, &iisQuery),
 	})
 }
 
