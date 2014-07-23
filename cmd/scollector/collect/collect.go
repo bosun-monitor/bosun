@@ -195,7 +195,8 @@ func Add(metric string, ts opentsdb.TagSet, inc float64) error {
 	return nil
 }
 
-// Put is useful for capturing "events" that have a gauge value. Subsequent calls between the sending interval will overwrite previous calls
+// Put is useful for capturing "events" that have a gauge value. Subsequent
+// calls between the sending interval will overwrite previous calls.
 func Put(metric string, ts opentsdb.TagSet, v float64) error {
 	if err := check(metric, &ts); err != nil {
 		return err
