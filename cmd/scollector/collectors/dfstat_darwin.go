@@ -13,7 +13,7 @@ func init() {
 	collectors = append(collectors, &IntervalCollector{F: c_dfstat_darwin})
 }
 
-func c_dfstat_darwin() opentsdb.MultiDataPoint {
+func c_dfstat_darwin() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	util.ReadCommand(func(line string) {
 		fields := strings.Fields(line)
@@ -34,5 +34,5 @@ func c_dfstat_darwin() opentsdb.MultiDataPoint {
 		Add(&md, "darwin.disk.fs.inodes.used", fields[5], tags, metadata.Unknown, metadata.None, "")
 		Add(&md, "darwin.disk.fs.inodes.free", fields[6], tags, metadata.Unknown, metadata.None, "")
 	}, "df", "-lki")
-	return md
+	return md, nil
 }

@@ -152,7 +152,7 @@ func redisInit() {
 	}()
 }
 
-func c_redis() opentsdb.MultiDataPoint {
+func c_redis() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	redisLock.Lock()
 	for port, cluster := range redisInstances {
@@ -190,5 +190,5 @@ func c_redis() opentsdb.MultiDataPoint {
 		}
 	}
 	redisLock.Unlock()
-	return md
+	return md, nil
 }

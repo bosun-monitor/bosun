@@ -3,7 +3,6 @@ package collectors
 import (
 	"github.com/StackExchange/scollector/metadata"
 	"github.com/StackExchange/scollector/opentsdb"
-	"github.com/StackExchange/slog"
 )
 
 func init() {
@@ -18,12 +17,11 @@ var (
 	iisQuery string
 )
 
-func c_iis_webservice() opentsdb.MultiDataPoint {
+func c_iis_webservice() (opentsdb.MultiDataPoint, error) {
 	var dst []Win32_PerfRawData_W3SVC_WebService
 	err := queryWmi(iisQuery, &dst)
 	if err != nil {
-		slog.Infoln("iis:", err)
-		return nil
+		return nil, err
 	}
 	var md opentsdb.MultiDataPoint
 	for _, v := range dst {
@@ -51,7 +49,7 @@ func c_iis_webservice() opentsdb.MultiDataPoint {
 		Add(&md, "iis.requests", v.TraceRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "trace"}, metadata.Unknown, metadata.None, "")
 		Add(&md, "iis.requests", v.UnlockRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "unlock"}, metadata.Unknown, metadata.None, "")
 	}
-	return md
+	return md, nil
 }
 
 type Win32_PerfRawData_W3SVC_WebService struct {

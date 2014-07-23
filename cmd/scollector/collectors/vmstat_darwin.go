@@ -12,7 +12,7 @@ func init() {
 	collectors = append(collectors, &IntervalCollector{F: c_vmstat_darwin})
 }
 
-func c_vmstat_darwin() opentsdb.MultiDataPoint {
+func c_vmstat_darwin() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	util.ReadCommand(func(line string) {
 		if line == "" || strings.HasPrefix(line, "Object cache") || strings.HasPrefix(line, "Mach Virtual") {
@@ -35,5 +35,5 @@ func c_vmstat_darwin() opentsdb.MultiDataPoint {
 			Add(&md, "darwin.mem.vm.pageouts", value, nil, metadata.Counter, metadata.None, "")
 		}
 	}, "vm_stat")
-	return md
+	return md, nil
 }

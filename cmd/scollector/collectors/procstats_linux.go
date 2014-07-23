@@ -34,7 +34,7 @@ var CPU_FIELDS = []string{
 	"guest_nice",
 }
 
-func c_procstats_linux() opentsdb.MultiDataPoint {
+func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	readLine("/proc/uptime", func(s string) {
 		m := uptimeRE.FindStringSubmatch(s)
@@ -255,5 +255,5 @@ func c_procstats_linux() opentsdb.MultiDataPoint {
 		}
 		ln += 1
 	})
-	return md
+	return md, nil
 }

@@ -6,7 +6,6 @@ import (
 
 	"github.com/StackExchange/scollector/metadata"
 	"github.com/StackExchange/scollector/opentsdb"
-	"github.com/StackExchange/slog"
 )
 
 func init() {
@@ -15,21 +14,19 @@ func init() {
 
 const tsdbURL = "http://localhost:4242/api/stats"
 
-func c_opentsdb() opentsdb.MultiDataPoint {
+func c_opentsdb() (opentsdb.MultiDataPoint, error) {
 	resp, err := http.Get(tsdbURL)
 	if err != nil {
-		slog.Error(err)
-		return nil
+		return nil, err
 	}
 	defer resp.Body.Close()
 	var md, tmp opentsdb.MultiDataPoint
 	if err := json.NewDecoder(resp.Body).Decode(&tmp); err != nil {
-		slog.Error(err)
-		return nil
+		return nil, err
 	}
 	for _, v := range tmp {
 		delete(v.Tags, "host")
 		AddTS(&md, v.Metric, v.Timestamp, v.Value, v.Tags, metadata.Unknown, metadata.None, "")
 	}
-	return md
+	return md, nil
 }

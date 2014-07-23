@@ -14,7 +14,7 @@ func init() {
 	collectors = append(collectors, &IntervalCollector{F: c_nodestats_cfstats_linux})
 }
 
-func c_nodestats_cfstats_linux() opentsdb.MultiDataPoint {
+func c_nodestats_cfstats_linux() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	var keyspace, table string
 	util.ReadCommand(func(line string) {
@@ -47,5 +47,5 @@ func c_nodestats_cfstats_linux() opentsdb.MultiDataPoint {
 			Add(&md, "cassandra.tables."+metric, value, opentsdb.TagSet{"keyspace": keyspace, "table": table}, metadata.Unknown, metadata.None, "")
 		}
 	}, "nodetool", "cfstats")
-	return md
+	return md, nil
 }

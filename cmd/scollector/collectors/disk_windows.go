@@ -3,7 +3,6 @@ package collectors
 import (
 	"github.com/StackExchange/scollector/metadata"
 	"github.com/StackExchange/scollector/opentsdb"
-	"github.com/StackExchange/slog"
 	"github.com/StackExchange/wmi"
 )
 
@@ -12,14 +11,13 @@ func init() {
 	collectors = append(collectors, &IntervalCollector{F: c_diskspace_windows})
 }
 
-func c_diskspace_windows() opentsdb.MultiDataPoint {
+func c_diskspace_windows() (opentsdb.MultiDataPoint, error) {
 	const megabyte = 1048576
 	var dst []Win32_PerfFormattedData_PerfDisk_LogicalDisk
 	var q = wmi.CreateQuery(&dst, `WHERE Name <> '_Total'`)
 	err := queryWmi(q, &dst)
 	if err != nil {
-		slog.Infoln("diskspace:", err)
-		return nil
+		return nil, err
 	}
 	var md opentsdb.MultiDataPoint
 	for _, v := range dst {
@@ -37,7 +35,7 @@ func c_diskspace_windows() opentsdb.MultiDataPoint {
 		Add(&md, "win.disk.fs.percent_free", v.PercentFreeSpace, opentsdb.TagSet{"partition": v.Name}, metadata.Gauge, metadata.Pct, "")
 		Add(&md, osDiskPctFree, v.PercentFreeSpace, opentsdb.TagSet{"disk": v.Name}, metadata.Gauge, metadata.Pct, "")
 	}
-	return md
+	return md, nil
 }
 
 type Win32_PerfFormattedData_PerfDisk_LogicalDisk struct {
@@ -46,13 +44,12 @@ type Win32_PerfFormattedData_PerfDisk_LogicalDisk struct {
 	PercentFreeSpace uint64
 }
 
-func c_physical_disk_windows() opentsdb.MultiDataPoint {
+func c_physical_disk_windows() (opentsdb.MultiDataPoint, error) {
 	var dst []Win32_PerfRawData_PerfDisk_PhysicalDisk
 	var q = wmi.CreateQuery(&dst, `WHERE Name <> '_Total'`)
 	err := queryWmi(q, &dst)
 	if err != nil {
-		slog.Infoln("disk_physical:", err)
-		return nil
+		return nil, err
 	}
 	var md opentsdb.MultiDataPoint
 	for _, v := range dst {
@@ -68,7 +65,7 @@ func c_physical_disk_windows() opentsdb.MultiDataPoint {
 		Add(&md, "win.disk.percent_time", v.PercentDiskWriteTime, opentsdb.TagSet{"disk": v.Name, "type": "write"}, metadata.Counter, metadata.None, "")
 		Add(&md, "win.disk.spltio", v.SplitIOPerSec, opentsdb.TagSet{"disk": v.Name}, metadata.Counter, metadata.Event, "")
 	}
-	return md
+	return md, nil
 }
 
 type Win32_PerfRawData_PerfDisk_PhysicalDisk struct {

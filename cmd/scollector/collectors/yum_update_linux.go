@@ -13,7 +13,7 @@ func init() {
 	collectors = append(collectors, &IntervalCollector{F: yum_update_stats_linux, Interval: time.Minute * 5})
 }
 
-func yum_update_stats_linux() opentsdb.MultiDataPoint {
+func yum_update_stats_linux() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	regular_c := 0
 	kernel_c := 0
@@ -29,9 +29,9 @@ func yum_update_stats_linux() opentsdb.MultiDataPoint {
 
 	}, "yum", "list", "updates", "-q")
 	if err != nil {
-		return nil
+		return nil, err
 	}
 	Add(&md, "linux.updates.count", regular_c, opentsdb.TagSet{"type": "non-kernel"}, metadata.Unknown, metadata.None, "")
 	Add(&md, "linux.updates.count", kernel_c, opentsdb.TagSet{"type": "kernel"}, metadata.Unknown, metadata.None, "")
-	return md
+	return md, nil
 }

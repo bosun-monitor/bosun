@@ -3,7 +3,6 @@ package collectors
 import (
 	"github.com/StackExchange/scollector/metadata"
 	"github.com/StackExchange/scollector/opentsdb"
-	"github.com/StackExchange/slog"
 	"github.com/StackExchange/wmi"
 )
 
@@ -12,13 +11,12 @@ func init() {
 	collectors = append(collectors, &IntervalCollector{F: c_cpu_info_windows})
 }
 
-func c_cpu_windows() opentsdb.MultiDataPoint {
+func c_cpu_windows() (opentsdb.MultiDataPoint, error) {
 	var dst []Win32_PerfRawData_PerfOS_Processor
 	var q = wmi.CreateQuery(&dst, `WHERE Name <> '_Total'`)
 	err := queryWmi(q, &dst)
 	if err != nil {
-		slog.Infoln("cpu:", err)
-		return nil
+		return nil, err
 	}
 	var md opentsdb.MultiDataPoint
 	var used, num uint64
@@ -39,7 +37,7 @@ func c_cpu_windows() opentsdb.MultiDataPoint {
 		cpu := used / 1e5 / num
 		Add(&md, osCPU, cpu, nil, metadata.Counter, metadata.Pct, "")
 	}
-	return md
+	return md, nil
 }
 
 type Win32_PerfRawData_PerfOS_Processor struct {
@@ -57,13 +55,12 @@ type Win32_PerfRawData_PerfOS_Processor struct {
 	PercentUserTime       uint64
 }
 
-func c_cpu_info_windows() opentsdb.MultiDataPoint {
+func c_cpu_info_windows() (opentsdb.MultiDataPoint, error) {
 	var dst []Win32_Processor
 	var q = wmi.CreateQuery(&dst, `WHERE Name <> '_Total'`)
 	err := queryWmi(q, &dst)
 	if err != nil {
-		slog.Infoln("cpu_info:", err)
-		return nil
+		return nil, err
 	}
 	var md opentsdb.MultiDataPoint
 	for _, v := range dst {
@@ -76,7 +73,7 @@ func c_cpu_info_windows() opentsdb.MultiDataPoint {
 			Add(&md, "win.cpu.load", *v.LoadPercentage, opentsdb.TagSet{"cpu": v.Name}, metadata.Gauge, metadata.Pct, "Load capacity of each processor, averaged to the last second.")
 		}
 	}
-	return md
+	return md, nil
 }
 
 type Win32_Processor struct {

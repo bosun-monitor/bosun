@@ -64,7 +64,7 @@ func removable_fs(name string) bool {
 	return false
 }
 
-func c_iostat_linux() opentsdb.MultiDataPoint {
+func c_iostat_linux() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	var removables []string
 	readLine("/proc/diskstats", func(s string) {
@@ -120,10 +120,10 @@ func c_iostat_linux() opentsdb.MultiDataPoint {
 			slog.Infoln("iostat: cannot parse")
 		}
 	})
-	return md
+	return md, nil
 }
 
-func c_dfstat_blocks_linux() opentsdb.MultiDataPoint {
+func c_dfstat_blocks_linux() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	util.ReadCommand(func(line string) {
 		fields := strings.Fields(line)
@@ -153,10 +153,10 @@ func c_dfstat_blocks_linux() opentsdb.MultiDataPoint {
 			Add(&md, osDiskPctFree, sf/st*100, os_tags, metadata.Unknown, metadata.None, "")
 		}
 	}, "df", "-lP", "--block-size", "1")
-	return md
+	return md, nil
 }
 
-func c_dfstat_inodes_linux() opentsdb.MultiDataPoint {
+func c_dfstat_inodes_linux() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	util.ReadCommand(func(line string) {
 		fields := strings.Fields(line)
@@ -174,5 +174,5 @@ func c_dfstat_inodes_linux() opentsdb.MultiDataPoint {
 		Add(&md, metric+"inodes_used", fields[2], tags, metadata.Unknown, metadata.None, "")
 		Add(&md, metric+"inodes_free", fields[3], tags, metadata.Unknown, metadata.None, "")
 	}, "df", "-liP")
-	return md
+	return md, nil
 }

@@ -6,7 +6,6 @@ import (
 
 	"github.com/StackExchange/scollector/metadata"
 	"github.com/StackExchange/scollector/opentsdb"
-	"github.com/StackExchange/slog"
 	"github.com/StackExchange/wmi"
 )
 
@@ -18,21 +17,19 @@ func init() {
 var processInclusions = regexp.MustCompile("chrome|powershell|scollector|SocketServer")
 var serviceInclusions = regexp.MustCompile("WinRM")
 
-func c_windows_processes() opentsdb.MultiDataPoint {
+func c_windows_processes() (opentsdb.MultiDataPoint, error) {
 	var dst []Win32_PerfRawData_PerfProc_Process
 	var q = wmi.CreateQuery(&dst, `WHERE Name <> '_Total'`)
 	err := queryWmi(q, &dst)
 	if err != nil {
-		slog.Infoln("processes:", err)
-		return nil
+		return nil, err
 	}
 
 	var svc_dst []Win32_Service
 	var svc_q = wmi.CreateQuery(&svc_dst, `WHERE Name <> '_Total'`)
 	err = queryWmi(svc_q, &svc_dst)
 	if err != nil {
-		slog.Infoln("services:", err)
-		return nil
+		return nil, err
 	}
 
 	var iis_dst []WorkerProcess
@@ -117,7 +114,7 @@ func c_windows_processes() opentsdb.MultiDataPoint {
 		Add(&md, "win.proc.mem.working_set_private", v.WorkingSetPrivate, opentsdb.TagSet{"name": name, "id": id}, metadata.Unknown, metadata.None, "")
 
 	}
-	return md
+	return md, nil
 }
 
 // Actually a CIM_StatisticalInformation Struct according to Reflection

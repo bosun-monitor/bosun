@@ -8,10 +8,11 @@ import (
 	"time"
 
 	"github.com/StackExchange/scollector/opentsdb"
+	"github.com/StackExchange/slog"
 )
 
 type IntervalCollector struct {
-	F        func() opentsdb.MultiDataPoint
+	F        func() (opentsdb.MultiDataPoint, error)
 	Interval time.Duration // defaults to DefaultFreq if unspecified
 	Enable   func() bool
 	name     string
@@ -47,7 +48,10 @@ func (c *IntervalCollector) Run(dpchan chan<- *opentsdb.DataPoint) {
 		}
 		next := time.After(interval)
 		if c.Enabled() {
-			md := c.F()
+			md, err := c.F()
+			if err != nil {
+				slog.Errorf("%v: %v", c.Name(), err)
+			}
 			for _, dp := range md {
 				dpchan <- dp
 			}

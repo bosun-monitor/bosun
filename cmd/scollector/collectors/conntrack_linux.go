@@ -12,7 +12,7 @@ func init() {
 	collectors = append(collectors, &IntervalCollector{F: c_conntrack_linux})
 }
 
-func c_conntrack_linux() opentsdb.MultiDataPoint {
+func c_conntrack_linux() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	var max, count float64
 	if err := readLine("/proc/sys/net/netfilter/nf_conntrack_count", func(s string) {
@@ -26,7 +26,7 @@ func c_conntrack_linux() opentsdb.MultiDataPoint {
 			Add(&md, "linux.net.conntrack.count", count, nil, metadata.Unknown, metadata.None, "")
 		}
 	}); err != nil {
-		return nil
+		return nil, err
 	}
 	if err := readLine("/proc/sys/net/netfilter/nf_conntrack_max", func(s string) {
 		values := strings.Fields(s)
@@ -39,10 +39,10 @@ func c_conntrack_linux() opentsdb.MultiDataPoint {
 			Add(&md, "linux.net.conntrack.max", max, nil, metadata.Unknown, metadata.None, "")
 		}
 	}); err != nil {
-		return nil
+		return nil, err
 	}
 	if max != 0 {
 		Add(&md, "linux.net.conntrack.percent_used", count/max*100, nil, metadata.Unknown, metadata.None, "")
 	}
-	return md
+	return md, nil
 }

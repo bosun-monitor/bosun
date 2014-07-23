@@ -9,7 +9,6 @@ import (
 
 	"github.com/StackExchange/scollector/metadata"
 	"github.com/StackExchange/scollector/opentsdb"
-	"github.com/StackExchange/slog"
 )
 
 func init() {
@@ -38,11 +37,10 @@ func getBeans(url string, jmx *jmx) error {
 	return nil
 }
 
-func c_hbase_region() opentsdb.MultiDataPoint {
+func c_hbase_region() (opentsdb.MultiDataPoint, error) {
 	var jmx jmx
 	if err := getBeans(hbURL, &jmx); err != nil {
-		slog.Errorln(err)
-		return nil
+		return nil, err
 	}
 	var md opentsdb.MultiDataPoint
 	if len(jmx.Beans) > 0 && len(jmx.Beans[0]) > 0 {
@@ -52,14 +50,13 @@ func c_hbase_region() opentsdb.MultiDataPoint {
 			}
 		}
 	}
-	return md
+	return md, nil
 }
 
-func c_hbase_replication() opentsdb.MultiDataPoint {
+func c_hbase_replication() (opentsdb.MultiDataPoint, error) {
 	var jmx jmx
 	if err := getBeans(hbRepURL, &jmx); err != nil {
-		slog.Errorln(err)
-		return nil
+		return nil, err
 	}
 	var md opentsdb.MultiDataPoint
 	for _, section := range jmx.Beans {
@@ -81,5 +78,5 @@ func c_hbase_replication() opentsdb.MultiDataPoint {
 			}
 		}
 	}
-	return md
+	return md, nil
 }

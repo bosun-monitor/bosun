@@ -13,7 +13,7 @@ func init() {
 	collectors = append(collectors, &IntervalCollector{F: c_iostat_darwin})
 }
 
-func c_iostat_darwin() opentsdb.MultiDataPoint {
+func c_iostat_darwin() (opentsdb.MultiDataPoint, error) {
 	var categories []string
 	var md opentsdb.MultiDataPoint
 	ln := 0
@@ -57,5 +57,5 @@ func c_iostat_darwin() opentsdb.MultiDataPoint {
 	if ln < 4 {
 		slog.Infoln("iostat: bad return value")
 	}
-	return md
+	return md, nil
 }

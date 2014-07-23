@@ -6,7 +6,6 @@ import (
 
 	"github.com/StackExchange/scollector/metadata"
 	"github.com/StackExchange/scollector/opentsdb"
-	"github.com/StackExchange/slog"
 	"gopkg.in/yaml.v1"
 )
 
@@ -68,7 +67,7 @@ type PRSummary struct {
 	} `yaml:"version"`
 }
 
-func puppet_linux() opentsdb.MultiDataPoint {
+func puppet_linux() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	// See if puppet has been disabled (i.e. `puppet agent --disable 'Reason'`)
 	disabled := 0
@@ -79,13 +78,11 @@ func puppet_linux() opentsdb.MultiDataPoint {
 	// Gather stats from the run summary
 	s, err := ioutil.ReadFile(puppetRunSummary)
 	if err != nil {
-		slog.Errorln(err)
-		return nil
+		return nil, err
 	}
 	var m PRSummary
 	if err = yaml.Unmarshal(s, &m); err != nil {
-		slog.Errorln(err)
-		return nil
+		return nil, err
 	}
 	//m.Version.Config appears to be the unix timestamp
 	AddTS(&md, "puppet.run.resources", m.Version.Config, m.Resources.Changed, opentsdb.TagSet{"resource": "changed"}, metadata.Unknown, metadata.None, "")
@@ -97,5 +94,5 @@ func puppet_linux() opentsdb.MultiDataPoint {
 	AddTS(&md, "puppet.run.resources", m.Version.Config, m.Resources.Changed, opentsdb.TagSet{"resource": "skipped"}, metadata.Unknown, metadata.None, "")
 	AddTS(&md, "puppet.run.resources_total", m.Version.Config, m.Resources.Total, nil, metadata.Unknown, metadata.None, "")
 	AddTS(&md, "puppet.run.changes", m.Version.Config, m.Changes.Total, nil, metadata.Unknown, metadata.None, "")
-	return md
+	return md, nil
 }

@@ -14,27 +14,26 @@ import (
 // Vsphere registers a vSphere collector.
 func Vsphere(user, pwd, host string) {
 	collectors = append(collectors, &IntervalCollector{
-		F: func() opentsdb.MultiDataPoint {
+		F: func() (opentsdb.MultiDataPoint, error) {
 			return c_vsphere(user, pwd, host)
 		},
 		name: fmt.Sprintf("vsphere-%s", host),
 	})
 }
 
-func c_vsphere(user, pwd, host string) opentsdb.MultiDataPoint {
+func c_vsphere(user, pwd, host string) (opentsdb.MultiDataPoint, error) {
 	v, err := vsphere.Connect(host, user, pwd)
 	if err != nil {
-		slog.Error(err)
-		return nil
+		return nil, err
 	}
 	var md opentsdb.MultiDataPoint
 	if err := vsphereHost(v, &md); err != nil {
-		slog.Error(err)
+		return nil, err
 	}
 	if err := vsphereDatastore(v, &md); err != nil {
-		slog.Error(err)
+		return nil, err
 	}
-	return md
+	return md, nil
 }
 
 func vsphereDatastore(v *vsphere.Vsphere, md *opentsdb.MultiDataPoint) error {

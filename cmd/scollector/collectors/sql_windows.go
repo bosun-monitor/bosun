@@ -3,7 +3,6 @@ package collectors
 import (
 	"github.com/StackExchange/scollector/metadata"
 	"github.com/StackExchange/scollector/opentsdb"
-	"github.com/StackExchange/slog"
 	"github.com/StackExchange/wmi"
 )
 
@@ -19,22 +18,28 @@ var (
 	sqlQuery string
 )
 
-func c_mssql() opentsdb.MultiDataPoint {
+func c_mssql() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
-	md = append(md, c_mssql_general()...)
-	md = append(md, c_mssql_statistics()...)
-	md = append(md, c_mssql_locks()...)
-	md = append(md, c_mssql_databases()...)
-	return md
+	var err error
+	add := func(f func() (opentsdb.MultiDataPoint, error)) {
+		dps, e := f()
+		if e != nil {
+			err = e
+		}
+		md = append(md, dps...)
+	}
+	add(c_mssql_general)
+	add(c_mssql_statistics)
+	add(c_mssql_locks)
+	add(c_mssql_databases)
+	return md, err
 }
 
-func c_mssql_general() opentsdb.MultiDataPoint {
+func c_mssql_general() (opentsdb.MultiDataPoint, error) {
 	var dst []Win32_PerfRawData_MSSQLSERVER_SQLServerGeneralStatistics
 	var q = wmi.CreateQuery(&dst, `WHERE Name <> '_Total'`)
-	err := queryWmi(q, &dst)
-	if err != nil {
-		slog.Infoln("sql_general:", err)
-		return nil
+	if err := queryWmi(q, &dst); err != nil {
+		return nil, err
 	}
 	var md opentsdb.MultiDataPoint
 	for _, v := range dst {
@@ -48,7 +53,7 @@ func c_mssql_general() opentsdb.MultiDataPoint {
 		Add(&md, "mssql.temptables_to_destroy", v.TempTablesForDestruction, nil, metadata.Unknown, metadata.None, "")
 		Add(&md, "mssql.transactions", v.Transactions, nil, metadata.Unknown, metadata.None, "")
 	}
-	return md
+	return md, nil
 }
 
 type Win32_PerfRawData_MSSQLSERVER_SQLServerGeneralStatistics struct {
@@ -63,13 +68,12 @@ type Win32_PerfRawData_MSSQLSERVER_SQLServerGeneralStatistics struct {
 	UserConnections          uint64
 }
 
-func c_mssql_statistics() opentsdb.MultiDataPoint {
+func c_mssql_statistics() (opentsdb.MultiDataPoint, error) {
 	var dst []Win32_PerfRawData_MSSQLSERVER_SQLServerSQLStatistics
 	var q = wmi.CreateQuery(&dst, `WHERE Name <> '_Total'`)
 	err := queryWmi(q, &dst)
 	if err != nil {
-		slog.Infoln("sql_stats:", err)
-		return nil
+		return nil, err
 	}
 	var md opentsdb.MultiDataPoint
 	for _, v := range dst {
@@ -84,7 +88,7 @@ func c_mssql_statistics() opentsdb.MultiDataPoint {
 		Add(&md, "mssql.compilations", v.SQLCompilationsPersec, nil, metadata.Unknown, metadata.None, "")
 		Add(&md, "mssql.recompilations", v.SQLReCompilationsPersec, nil, metadata.Unknown, metadata.None, "")
 	}
-	return md
+	return md, nil
 }
 
 type Win32_PerfRawData_MSSQLSERVER_SQLServerSQLStatistics struct {
@@ -100,13 +104,12 @@ type Win32_PerfRawData_MSSQLSERVER_SQLServerSQLStatistics struct {
 	UnsafeAutoParamsPersec        uint64
 }
 
-func c_mssql_locks() opentsdb.MultiDataPoint {
+func c_mssql_locks() (opentsdb.MultiDataPoint, error) {
 	var dst []Win32_PerfRawData_MSSQLSERVER_SQLServerLocks
 	var q = wmi.CreateQuery(&dst, `WHERE Name = 'Page' OR Name = 'Extent' OR Name = 'Object' or Name = 'Database'`)
 	err := queryWmi(q, &dst)
 	if err != nil {
-		slog.Infoln("sql_locks:", err)
-		return nil
+		return nil, err
 	}
 	var md opentsdb.MultiDataPoint
 	for _, v := range dst {
@@ -117,7 +120,7 @@ func c_mssql_locks() opentsdb.MultiDataPoint {
 		Add(&md, "mssql.lock_waits", v.LockWaitsPersec, opentsdb.TagSet{"type": v.Name}, metadata.Unknown, metadata.None, "")
 		Add(&md, "mssql.deadlocks", v.NumberofDeadlocksPersec, opentsdb.TagSet{"type": v.Name}, metadata.Unknown, metadata.None, "")
 	}
-	return md
+	return md, nil
 }
 
 type Win32_PerfRawData_MSSQLSERVER_SQLServerLocks struct {
@@ -130,13 +133,12 @@ type Win32_PerfRawData_MSSQLSERVER_SQLServerLocks struct {
 	NumberofDeadlocksPersec    uint64
 }
 
-func c_mssql_databases() opentsdb.MultiDataPoint {
+func c_mssql_databases() (opentsdb.MultiDataPoint, error) {
 	var dst []Win32_PerfRawData_MSSQLSERVER_SQLServerDatabases
 	var q = wmi.CreateQuery(&dst, "")
 	err := queryWmi(q, &dst)
 	if err != nil {
-		slog.Infoln("sql_database:", err)
-		return nil
+		return nil, err
 	}
 	var md opentsdb.MultiDataPoint
 	for _, v := range dst {
@@ -172,7 +174,7 @@ func c_mssql_databases() opentsdb.MultiDataPoint {
 		Add(&md, "mssql.transactions", v.TransactionsPersec, opentsdb.TagSet{"db": v.Name}, metadata.Unknown, metadata.None, "")
 		Add(&md, "mssql.write_transactions", v.WriteTransactionsPersec, opentsdb.TagSet{"db": v.Name}, metadata.Unknown, metadata.None, "")
 	}
-	return md
+	return md, nil
 }
 
 type Win32_PerfRawData_MSSQLSERVER_SQLServerDatabases struct {

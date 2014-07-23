@@ -6,7 +6,6 @@ import (
 
 	"github.com/StackExchange/scollector/metadata"
 	"github.com/StackExchange/scollector/opentsdb"
-	"github.com/StackExchange/slog"
 )
 
 const (
@@ -19,7 +18,7 @@ const (
 // SNMPCisco registers a SNMP CISCO collector for the given community and host.
 func SNMPCisco(community, host string) {
 	collectors = append(collectors, &IntervalCollector{
-		F: func() opentsdb.MultiDataPoint {
+		F: func() (opentsdb.MultiDataPoint, error) {
 			return c_snmp_cisco(community, host)
 		},
 		Interval: time.Second * 30,
@@ -27,24 +26,24 @@ func SNMPCisco(community, host string) {
 	})
 }
 
-func c_snmp_cisco(community, host string) opentsdb.MultiDataPoint {
+func c_snmp_cisco(community, host string) (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	if v, err := snmp_oid(host, community, ciscoCPU); err != nil {
-		slog.Infoln("snmp cisco cpu:", err)
+		return nil, err
 	} else {
 		Add(&md, "cisco.cpu", v, opentsdb.TagSet{"host": host}, metadata.Unknown, metadata.None, "")
 	}
 	names, err := snmp_subtree(host, community, ciscoMemName)
 	if err != nil {
-		slog.Infoln("snmp cisco mem:", err)
+		return nil, err
 	}
 	used, err := snmp_subtree(host, community, ciscoMemUsed)
 	if err != nil {
-		slog.Infoln("snmp cisco mem:", err)
+		return nil, err
 	}
 	free, err := snmp_subtree(host, community, ciscoMemFree)
 	if err != nil {
-		slog.Infoln("snmp cisco mem:", err)
+		return nil, err
 	}
 	for id, name := range names {
 		n := fmt.Sprintf("%s", name)
@@ -59,5 +58,5 @@ func c_snmp_cisco(community, host string) opentsdb.MultiDataPoint {
 		Add(&md, "cisco.mem.used", u, opentsdb.TagSet{"host": host, "name": n}, metadata.Unknown, metadata.None, "")
 		Add(&md, "cisco.mem.free", f, opentsdb.TagSet{"host": host, "name": n}, metadata.Unknown, metadata.None, "")
 	}
-	return md
+	return md, nil
 }
