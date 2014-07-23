@@ -45,8 +45,25 @@ var (
 	qlock, mlock, slock sync.Mutex   // Locks for queues, maps, stats.
 	counters                         = make(map[string]*addMetric)
 	sets                             = make(map[string]*setMetric)
-	client              *http.Client = &http.Client{Timeout: time.Minute}
+	puts                             = make(map[string]*addMetric)
+	client              *http.Client = &http.Client{
+		Transport: &timeoutTransport{Transport: new(http.Transport)},
+		Timeout:   time.Minute,
+	}
 )
+
+type timeoutTransport struct {
+	*http.Transport
+	Timeout time.Time
+}
+
+func (t *timeoutTransport) RoundTrip(r *http.Request) (*http.Response, error) {
+	if time.Now().After(t.Timeout) {
+		t.Transport.CloseIdleConnections()
+		t.Timeout = time.Now().Add(time.Minute * 5)
+	}
+	return t.Transport.RoundTrip(r)
+}
 
 // InitChan is similar to Init, but uses the given channel instead of creating a
 // new one.
@@ -178,6 +195,18 @@ func Add(metric string, ts opentsdb.TagSet, inc float64) error {
 	return nil
 }
 
+// Put is useful for capturing "events" that have a gauge value. Subsequent calls between the sending interval will overwrite previous calls
+func Put(metric string, ts opentsdb.TagSet, v float64) error {
+	if err := check(metric, &ts); err != nil {
+		return err
+	}
+	tss := metric + ts.String()
+	mlock.Lock()
+	puts[tss] = &addMetric{metric, ts.Copy(), v}
+	mlock.Unlock()
+	return nil
+}
+
 func check(metric string, ts *opentsdb.TagSet) error {
 	if err := checkClean(metric, "metric"); err != nil {
 		return err
@@ -236,6 +265,16 @@ func collect() {
 			}
 			tchan <- dp
 		}
+		for _, s := range puts {
+			dp := &opentsdb.DataPoint{
+				Metric:    metricRoot + s.metric,
+				Timestamp: now,
+				Value:     s.value,
+				Tags:      s.ts,
+			}
+			tchan <- dp
+		}
+		puts = make(map[string]*addMetric)
 		mlock.Unlock()
 		time.Sleep(Freq)
 	}
