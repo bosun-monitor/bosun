@@ -66,7 +66,7 @@ func c_opentsdb() opentsdb.MultiDataPoint {
 	}
 	for _, v := range tmp {
 		delete(v.Tags, "host")
-		Add(&md, v.Metric, v.Value, v.Tags, metadata.Unknown, metadata.None, "")
+		AddTS(&md, v.Metric, v.Timestamp, v.Value, v.Tags, metadata.Unknown, metadata.None, "")
 	}
 	return md
 }
