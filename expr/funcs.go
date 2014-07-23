@@ -73,6 +73,16 @@ var Builtins = map[string]parse.Func{
 		parse.TYPE_NUMBER,
 		Last,
 	},
+	"min": {
+		[]parse.FuncType{parse.TYPE_SERIES},
+		parse.TYPE_NUMBER,
+		Min,
+	},
+	"max": {
+		[]parse.FuncType{parse.TYPE_SERIES},
+		parse.TYPE_NUMBER,
+		Max,
+	},
 	"since": {
 		[]parse.FuncType{parse.TYPE_SERIES},
 		parse.TYPE_NUMBER,
@@ -478,6 +488,14 @@ func forecast_lr(dps Series, args ...float64) float64 {
 
 func Percentile(e *state, T miniprofiler.Timer, series []*Result, p float64) (r []*Result, err error) {
 	return reduce(e, T, series, percentile, p)
+}
+
+func Min(e *state, T miniprofiler.Timer, series []*Result) (r []*Result, err error) {
+	return reduce(e, T, series, percentile, 0)
+}
+
+func Max(e *state, T miniprofiler.Timer, series []*Result) (r []*Result, err error) {
+	return reduce(e, T, series, percentile, 1)
 }
 
 // percentile returns the value at the corresponding percentile between 0 and 1.
