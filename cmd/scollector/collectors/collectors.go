@@ -91,11 +91,8 @@ func Run(cs []Collector) chan *opentsdb.DataPoint {
 	return ch
 }
 
-// Add appends a new data point with given metric name, value, and tags. Tags
-// may be nil. If tags is nil or does not contain a host key, it will be
-// automatically added. If the value of the host key is the empty string, it
-// will be removed (use this to prevent the normal auto-adding of the host tag).
-func Add(md *opentsdb.MultiDataPoint, name string, value interface{}, t opentsdb.TagSet, rate metadata.RateType, unit metadata.Unit, desc string) {
+// AddTS is the same as Add but lets you specify the timestamp
+func AddTS(md *opentsdb.MultiDataPoint, name string, ts int64, value interface{}, t opentsdb.TagSet, rate metadata.RateType, unit metadata.Unit, desc string) {
 	tags := make(opentsdb.TagSet)
 	for k, v := range t {
 		tags[k] = v
@@ -107,7 +104,7 @@ func Add(md *opentsdb.MultiDataPoint, name string, value interface{}, t opentsdb
 	}
 	d := opentsdb.DataPoint{
 		Metric:    name,
-		Timestamp: now(),
+		Timestamp: ts,
 		Value:     value,
 		Tags:      tags,
 	}
@@ -121,6 +118,14 @@ func Add(md *opentsdb.MultiDataPoint, name string, value interface{}, t opentsdb
 	if desc != "" {
 		metadata.AddMeta(name, tags, "desc", desc, false)
 	}
+}
+
+// Add appends a new data point with given metric name, value, and tags. Tags
+// may be nil. If tags is nil or does not contain a host key, it will be
+// automatically added. If the value of the host key is the empty string, it
+// will be removed (use this to prevent the normal auto-adding of the host tag).
+func Add(md *opentsdb.MultiDataPoint, name string, value interface{}, t opentsdb.TagSet, rate metadata.RateType, unit metadata.Unit, desc string) {
+	AddTS(md, name, now(), value, t, rate, unit, desc)
 }
 
 func readLine(fname string, line func(string)) error {
