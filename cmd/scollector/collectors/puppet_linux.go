@@ -1,7 +1,6 @@
 package collectors
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"sync"
@@ -115,7 +114,6 @@ func puppet_linux() opentsdb.MultiDataPoint {
 		slog.Errorln(err)
 		return nil
 	}
-	fmt.Println(m.Resources.Changed)
 	//m.Version.Config appears to be the unix timestamp
 	AddTS(&md, "puppet.run.resources", m.Version.Config, m.Resources.Changed, opentsdb.TagSet{"resource": "changed"}, metadata.Unknown, metadata.None, "")
 	AddTS(&md, "puppet.run.resources", m.Version.Config, m.Resources.Failed, opentsdb.TagSet{"resource": "failed"}, metadata.Unknown, metadata.None, "")
