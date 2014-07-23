@@ -3,9 +3,15 @@ package collectors
 import (
 	"reflect"
 	"runtime"
+	"sync"
 	"time"
 
 	"github.com/StackExchange/scollector/opentsdb"
+)
+
+var (
+	intervalInits = make(map[uintptr]struct{})
+	intervalLock  sync.Mutex
 )
 
 type IntervalCollector struct {
@@ -17,7 +23,13 @@ type IntervalCollector struct {
 
 func (c *IntervalCollector) Init() {
 	if c.init != nil {
-		c.init()
+		intervalLock.Lock()
+		defer intervalLock.Unlock()
+		pt := reflect.ValueOf(c.init).Pointer()
+		if _, ok := intervalInits[pt]; !ok {
+			c.init()
+			intervalInits[pt] = struct{}{}
+		}
 	}
 }
 
