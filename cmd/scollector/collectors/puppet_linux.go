@@ -14,9 +14,7 @@ import (
 )
 
 func init() {
-	collectors = append(collectors, &IntervalCollector{F: puppet_disabled_linux, init: puppetInit})
-	//TODO Currently No Init
-	collectors = append(collectors, &IntervalCollector{F: puppet_run_summary_linux})
+	collectors = append(collectors, &IntervalCollector{F: puppet_linux, init: puppetInit})
 }
 
 var (
@@ -26,9 +24,8 @@ var (
 
 const (
 	puppetPath       = "/var/lib/puppet/"
-	puppetRunSummary = "./puppet.yaml"
-	//puppetRunSummary = "/var/lib/puppet/state/last_run_summary.yaml"
-	puppetDisabled = "/var/lib/puppet/state/agent_disabled.lock"
+	puppetRunSummary = "/var/lib/puppet/state/last_run_summary.yaml"
+	puppetDisabled   = "/var/lib/puppet/state/agent_disabled.lock"
 )
 
 func puppetEnabled() (b bool) {
@@ -51,19 +48,6 @@ func puppetInit() {
 			update()
 		}
 	}()
-}
-
-func puppet_disabled_linux() opentsdb.MultiDataPoint {
-	if !puppetEnabled() {
-		return nil
-	}
-	var md opentsdb.MultiDataPoint
-	disabled := 0
-	if _, err := os.Stat(puppetDisabled); !os.IsNotExist(err) {
-		disabled = 1
-	}
-	Add(&md, "puppet.disabled", disabled, nil, metadata.Unknown, metadata.None, "")
-	return md
 }
 
 type PRSummary struct {
@@ -109,20 +93,29 @@ type PRSummary struct {
 	} `yaml:"version"`
 }
 
-func puppet_run_summary_linux() opentsdb.MultiDataPoint {
+func puppet_linux() opentsdb.MultiDataPoint {
+	if !puppetEnabled() {
+		return nil
+	}
+	var md opentsdb.MultiDataPoint
+	// See if puppet has been disabled (i.e. `puppet agent --disable 'Reason'`)
+	disabled := 0
+	if _, err := os.Stat(puppetDisabled); !os.IsNotExist(err) {
+		disabled = 1
+	}
+	Add(&md, "puppet.disabled", disabled, nil, metadata.Unknown, metadata.None, "")
+	// Gather stats from the run summary
 	s, err := ioutil.ReadFile(puppetRunSummary)
 	if err != nil {
 		slog.Errorln(err)
 		return nil
 	}
 	var m PRSummary
-	err = yaml.Unmarshal(s, &m)
-	if err != nil {
+	if err = yaml.Unmarshal(s, &m); err != nil {
 		slog.Errorln(err)
 		return nil
 	}
 	fmt.Println(m.Resources.Changed)
-	var md opentsdb.MultiDataPoint
 	//m.Version.Config appears to be the unix timestamp
 	AddTS(&md, "puppet.run.resources", m.Version.Config, m.Resources.Changed, opentsdb.TagSet{"resource": "changed"}, metadata.Unknown, metadata.None, "")
 	AddTS(&md, "puppet.run.resources", m.Version.Config, m.Resources.Failed, opentsdb.TagSet{"resource": "failed"}, metadata.Unknown, metadata.None, "")
@@ -132,6 +125,6 @@ func puppet_run_summary_linux() opentsdb.MultiDataPoint {
 	AddTS(&md, "puppet.run.resources", m.Version.Config, m.Resources.Scheduled, opentsdb.TagSet{"resource": "scheduled"}, metadata.Unknown, metadata.None, "")
 	AddTS(&md, "puppet.run.resources", m.Version.Config, m.Resources.Changed, opentsdb.TagSet{"resource": "skipped"}, metadata.Unknown, metadata.None, "")
 	AddTS(&md, "puppet.run.resources_total", m.Version.Config, m.Resources.Total, nil, metadata.Unknown, metadata.None, "")
-	AddTS(&md, "puppet.run.changes", m.Version.Config, m.Changes, nil, metadata.Unknown, metadata.None, "")
+	AddTS(&md, "puppet.run.changes", m.Version.Config, m.Changes.Total, nil, metadata.Unknown, metadata.None, "")
 	return md
 }
