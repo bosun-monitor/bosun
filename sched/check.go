@@ -139,6 +139,7 @@ func (s *Schedule) CheckAlert(r RunHistory, a *conf.Alert) {
 	if err == nil {
 		warns, _ = s.CheckExpr(r, a, a.Warn, StWarning, crits)
 	}
+	collect.Put("check.duration", opentsdb.TagSet{"name": a.Name}, time.Since(start).Seconds())
 	log.Printf("done checking alert %v (%s): %v crits, %v warns", a.Name, time.Since(start), len(crits), len(warns))
 }
 
