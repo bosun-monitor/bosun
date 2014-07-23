@@ -21,6 +21,9 @@ import (
 	"github.com/StackExchange/slog"
 )
 
+// Version should be set at build time as a date: 20140721184001.
+const Version uint64 = 0
+
 var (
 	flagFilter    = flag.String("f", "", "Filters collectors matching this term. Works with all other arguments.")
 	flagTest      = flag.Bool("t", false, "Test - run collectors once, print, and exit.")
@@ -36,6 +39,7 @@ var (
 	flagDebug     = flag.Bool("d", false, "Enables debug output.")
 	flagJSON      = flag.Bool("j", false, "With -p enabled, prints JSON.")
 	flagFullHost  = flag.Bool("u", false, `Enables full hostnames: doesn't truncate to first ".".`)
+	flagVersion   = flag.Bool("version", false, `Prints the version and exits.`)
 
 	mains []func()
 )
@@ -93,6 +97,10 @@ func main() {
 	flag.Parse()
 	if *flagTest || *flagPrint {
 		slog.Set(&slog.StdLog{Log: log.New(os.Stdout, "", log.LstdFlags)})
+	}
+	if *flagVersion {
+		slog.Infoln("version:", Version)
+		os.Exit(0)
 	}
 	for _, m := range mains {
 		m()
@@ -168,6 +176,11 @@ func main() {
 		slog.Infoln("OpenTSDB host:", u)
 		if err := collect.InitChan(u.Host, "scollector", cdp); err != nil {
 			slog.Fatal(err)
+		}
+		if Version > 0 {
+			if err := collect.Put("version", nil, Version); err != nil {
+				slog.Error(err)
+			}
 		}
 		if *flagBatchSize > 0 {
 			collect.BatchSize = *flagBatchSize
