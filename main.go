@@ -12,13 +12,13 @@ import (
 
 	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/collect"
 	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/opentsdb"
+	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/slog"
 	"github.com/StackExchange/bosun/_third_party/github.com/howeyc/fsnotify"
+	"github.com/StackExchange/bosun/_third_party/github.com/tatsushid/go-fastping"
 	"github.com/StackExchange/bosun/conf"
 	"github.com/StackExchange/bosun/sched"
 	"github.com/StackExchange/bosun/search"
 	"github.com/StackExchange/bosun/web"
-	"github.com/StackExchange/slog"
-	"github.com/tatsushid/go-fastping"
 )
 
 var (
