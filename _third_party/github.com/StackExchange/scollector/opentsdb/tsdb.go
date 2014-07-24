@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
+	"math/big"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -15,8 +17,6 @@ import (
 	"time"
 	"unicode"
 	"unicode/utf8"
-
-	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/slog"
 )
 
 type ResponseSet []*Response
@@ -37,6 +37,23 @@ type DataPoint struct {
 	Tags      TagSet      `json:"tags"`
 }
 
+func (d *DataPoint) MarshalJSON() ([]byte, error) {
+	if err := d.clean(); err != nil {
+		return nil, err
+	}
+	return json.Marshal(struct {
+		Metric    string      `json:"metric"`
+		Timestamp int64       `json:"timestamp"`
+		Value     interface{} `json:"value"`
+		Tags      TagSet      `json:"tags"`
+	}{
+		d.Metric,
+		d.Timestamp,
+		d.Value,
+		d.Tags,
+	})
+}
+
 func (d *DataPoint) Telnet() string {
 	m := ""
 	d.clean()
@@ -44,19 +61,6 @@ func (d *DataPoint) Telnet() string {
 		m += fmt.Sprintf(" %s=%s", k, v)
 	}
 	return fmt.Sprintf("put %s %d %v%s\n", d.Metric, d.Timestamp, d.Value, m)
-}
-
-func (m MultiDataPoint) Json() ([]byte, error) {
-	var md MultiDataPoint
-	for _, d := range m {
-		err := d.clean()
-		if err != nil {
-			slog.Infoln(err, "Removing Datapoint", d)
-			continue
-		}
-		md = append(md, d)
-	}
-	return json.Marshal(md)
 }
 
 type MultiDataPoint []*DataPoint
@@ -125,17 +129,30 @@ func (d *DataPoint) clean() error {
 	if err != nil {
 		return fmt.Errorf("%s. Orginal: [%s] Cleaned: [%s]", err.Error(), om, d.Metric)
 	}
-	if sv, ok := d.Value.(string); ok {
-		if i, err := strconv.ParseInt(sv, 10, 64); err == nil {
+	switch v := d.Value.(type) {
+	case string:
+		if i, err := strconv.ParseInt(v, 10, 64); err == nil {
 			d.Value = i
-		} else if f, err := strconv.ParseFloat(sv, 64); err == nil {
+		} else if f, err := strconv.ParseFloat(v, 64); err == nil {
 			d.Value = f
 		} else {
-			return fmt.Errorf("Unparseable number %v", sv)
+			return fmt.Errorf("Unparseable number %v", v)
+		}
+	case uint64:
+		if v > math.MaxInt64 {
+			d.Value = float64(v)
+		}
+	case *big.Int:
+		if bigMaxInt64.Cmp(v) < 0 {
+			if f, err := strconv.ParseFloat(v.String(), 64); err == nil {
+				d.Value = f
+			}
 		}
 	}
 	return nil
 }
+
+var bigMaxInt64 = big.NewInt(math.MaxInt64)
 
 func (t TagSet) clean() error {
 	for k, v := range t {
