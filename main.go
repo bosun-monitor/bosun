@@ -23,7 +23,6 @@ import (
 var (
 	flagConf  = flag.String("c", "dev.conf", "config file location")
 	flagTest  = flag.Bool("t", false, "Only validate config then exit")
-	flagPing  = flag.Bool("p", true, "Pings known hosts")
 	flagWatch = flag.Bool("w", false, "watch current directory and exit on changes; for use with an autorestarter")
 )
 
@@ -38,7 +37,7 @@ func main() {
 		log.Println("Valid Config")
 		os.Exit(0)
 	}
-	if *flagPing {
+	if c.Ping {
 		go pingHosts()
 	}
 	if err := collect.Init(c.RelayListen, "bosun"); err != nil {
@@ -118,7 +117,7 @@ func pingHost(host string) {
 		if err := p.Run(); err != nil {
 			log.Print(err)
 		}
-		collect.Put("ping.timeout", opentsdb.TagSet{"dst_host": host}, float64(timeout))
+		collect.Put("ping.timeout", opentsdb.TagSet{"dst_host": host}, timeout)
 		time.Sleep(pingFreq)
 	}
 }
