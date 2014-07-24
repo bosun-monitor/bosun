@@ -70,7 +70,7 @@ func HTTPExtract(remoteAddr string, mdp opentsdb.MultiDataPoint) {
 	remoteAddr = strings.Split(remoteAddr, ":")[0]
 	tags := opentsdb.TagSet{"remote": clean(remoteAddr)}
 	collect.Add("search.puts_relayed", tags, 1)
-	collect.Add("search.datapoints_relayed", tags, float64(len(mdp)))
+	collect.Add("search.datapoints_relayed", tags, int64(len(mdp)))
 	select {
 	case dc <- mdp:
 	case <-time.After(time.Millisecond * 100):
