@@ -82,6 +82,8 @@ func watcher() {
 	})
 }
 
+const pingFreq = time.Second * 15
+
 func pingHosts() {
 	hostmap := make(map[string]bool)
 	for {
@@ -92,7 +94,7 @@ func pingHosts() {
 				go pingHost(host)
 			}
 		}
-		time.Sleep(time.Second * 15)
+		time.Sleep(pingFreq)
 	}
 }
 
@@ -102,7 +104,11 @@ func pingHost(host string) {
 		ra, err := net.ResolveIPAddr("ip4:icmp", host)
 		if err != nil {
 			slog.Error(err)
+			collect.Put("ping.resolved", opentsdb.TagSet{"dst_host": host}, 0)
+			time.Sleep(pingFreq)
+			continue
 		}
+		collect.Put("ping.resolved", opentsdb.TagSet{"dst_host": host}, 1)
 		p.AddIPAddr(ra)
 		p.MaxRTT = time.Second * 5
 		timeout := 1
@@ -114,6 +120,6 @@ func pingHost(host string) {
 			slog.Error(err)
 		}
 		collect.Put("ping.timeout", opentsdb.TagSet{"dst_host": host}, float64(timeout))
-		time.Sleep(time.Second * 15)
+		time.Sleep(pingFreq)
 	}
 }
