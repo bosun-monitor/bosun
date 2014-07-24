@@ -84,7 +84,7 @@ const pingFreq = time.Second * 15
 
 func pingHosts() {
 	hostmap := make(map[string]bool)
-	for {
+	for _ = range time.Tick(pingFreq) {
 		hosts := search.TagValuesByTagKey("host")
 		for _, host := range hosts {
 			if _, ok := hostmap[host]; !ok {
@@ -92,18 +92,16 @@ func pingHosts() {
 				go pingHost(host)
 			}
 		}
-		time.Sleep(pingFreq)
 	}
 }
 
 func pingHost(host string) {
-	for {
+	for _ = range time.Tick(pingFreq) {
 		p := fastping.NewPinger()
 		ra, err := net.ResolveIPAddr("ip4:icmp", host)
 		if err != nil {
 			log.Print(err)
 			collect.Put("ping.resolved", opentsdb.TagSet{"dst_host": host}, 0)
-			time.Sleep(pingFreq)
 			continue
 		}
 		collect.Put("ping.resolved", opentsdb.TagSet{"dst_host": host}, 1)
@@ -118,6 +116,5 @@ func pingHost(host string) {
 			log.Print(err)
 		}
 		collect.Put("ping.timeout", opentsdb.TagSet{"dst_host": host}, timeout)
-		time.Sleep(pingFreq)
 	}
 }
