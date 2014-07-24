@@ -29,6 +29,7 @@ type Conf struct {
 	RelayListen     string        // OpenTSDB relay listen address: :4242
 	HttpListen      string        // Web server listen address: :80
 	SmtpHost        string        // SMTP address: ny-mail:25
+	Ping            bool
 	EmailFrom       string
 	StateFile       string
 	TimeAndDate     []int // timeanddate.com cities list
@@ -269,6 +270,8 @@ func (c *Conf) loadGlobal(p *parse.PairNode) {
 		c.EmailFrom = v
 	case "stateFile":
 		c.StateFile = v
+	case "Ping":
+		c.Ping = true
 	case "timeAndDate":
 		sp := strings.Split(v, ",")
 		var t []int
