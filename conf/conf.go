@@ -270,7 +270,7 @@ func (c *Conf) loadGlobal(p *parse.PairNode) {
 		c.EmailFrom = v
 	case "stateFile":
 		c.StateFile = v
-	case "Ping":
+	case "ping":
 		c.Ping = true
 	case "timeAndDate":
 		sp := strings.Split(v, ",")
