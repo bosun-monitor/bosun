@@ -26,7 +26,6 @@ const Version uint64 = 0
 
 var (
 	flagFilter    = flag.String("f", "", "Filters collectors matching this term. Works with all other arguments.")
-	flagTest      = flag.Bool("t", false, "Test - run collectors once, print, and exit.")
 	flagList      = flag.Bool("l", false, "List")
 	flagPrint     = flag.Bool("p", false, "Print to screen instead of sending to a host")
 	flagHost      = flag.String("h", "bosun", `OpenTSDB host. Ex: "tsdb.example.com". Can optionally specify port: "tsdb.example.com:4000", but will default to 4242 otherwise`)
@@ -95,7 +94,7 @@ func readConf() {
 
 func main() {
 	flag.Parse()
-	if *flagTest || *flagPrint {
+	if *flagPrint {
 		slog.Set(&slog.StdLog{Log: log.New(os.Stdout, "", log.LstdFlags)})
 	}
 	if *flagVersion {
@@ -155,10 +154,7 @@ func main() {
 		col.Init()
 	}
 	u := parseHost()
-	if *flagTest {
-		test(c)
-		return
-	} else if *flagList {
+	if *flagList {
 		list(c)
 		return
 	} else if *flagHost != "" {
@@ -226,26 +222,6 @@ func exePath() (string, error) {
 		}
 	}
 	return "", err
-}
-
-func test(cs []collectors.Collector) {
-	dpchan := make(chan *opentsdb.DataPoint)
-	for _, c := range cs {
-		go c.Run(dpchan)
-		slog.Infoln("run", c.Name())
-	}
-	dur := time.Second * 10
-	slog.Infoln("running for", dur)
-	next := time.After(dur)
-Loop:
-	for {
-		select {
-		case dp := <-dpchan:
-			slog.Info(dp.Telnet())
-		case <-next:
-			break Loop
-		}
-	}
 }
 
 func list(cs []collectors.Collector) {

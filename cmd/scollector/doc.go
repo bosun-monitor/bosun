@@ -47,8 +47,6 @@ Debug flags:
 		with -p, prints JSON
 	-fake=0
 		generates X fake data points per second on the test.fake metric
-	-t
-		test mode: run collectors once, print, and exit
 
 scollector will, by default, report to the host `bosun`, which you should
 configure on your local nameserver to point to your TSDB server. This makes it
