@@ -15,10 +15,11 @@ import (
 
 type state struct {
 	*Expr
-	now     time.Time
-	autods  int
-	context opentsdb.Context
-	queries []opentsdb.Request
+	now        time.Time
+	autods     int
+	context    opentsdb.Context
+	queries    []opentsdb.Request
+	unjoinedOk bool
 }
 
 func (e *state) addRequest(r opentsdb.Request) {
@@ -49,17 +50,18 @@ func New(expr string) (*Expr, error) {
 // Execute applies a parse expression to the specified OpenTSDB context,
 // and returns one result per group. T may be nil to ignore timings.
 func (e *Expr) Execute(c opentsdb.Context, T miniprofiler.Timer) (r []*Result, queries []opentsdb.Request, err error) {
-	return e.ExecuteOpts(c, T, time.Now().UTC(), 0)
+	return e.ExecuteOpts(c, T, time.Now().UTC(), 0, false)
 }
 
 // ExecuteOpts is identical to Execute, supports time setting and auto downsampling.
-func (e *Expr) ExecuteOpts(c opentsdb.Context, T miniprofiler.Timer, now time.Time, autods int) (r []*Result, queries []opentsdb.Request, err error) {
+func (e *Expr) ExecuteOpts(c opentsdb.Context, T miniprofiler.Timer, now time.Time, autods int, unjoinedOk bool) (r []*Result, queries []opentsdb.Request, err error) {
 	defer errRecover(&err)
 	s := &state{
-		Expr:    e,
-		context: c,
-		now:     now,
-		autods:  autods,
+		Expr:       e,
+		context:    c,
+		now:        now,
+		autods:     autods,
+		unjoinedOk: unjoinedOk,
 	}
 	if T == nil {
 		T = new(miniprofiler.Profile)
@@ -159,7 +161,7 @@ func (u *Union) ExtendComputations(o *Result) {
 
 // union returns the combination of a and b where one is a strict subset of the
 // other.
-func union(a, b []*Result, expression string) []*Union {
+func (e *state) union(a, b []*Result, expression string) []*Union {
 	const unjoinedGroup = "unjoined group"
 	var us []*Union
 	if len(a) == 0 || len(b) == 0 {
@@ -199,25 +201,27 @@ func union(a, b []*Result, expression string) []*Union {
 			us = append(us, u)
 		}
 	}
-	for r := range am {
-		u := &Union{
-			A:     r.Value,
-			B:     Scalar(math.NaN()),
-			Group: r.Group,
+	if !e.unjoinedOk {
+		for r := range am {
+			u := &Union{
+				A:     r.Value,
+				B:     Scalar(math.NaN()),
+				Group: r.Group,
+			}
+			r.AddComputation(expression, unjoinedGroup)
+			u.ExtendComputations(r)
+			us = append(us, u)
 		}
-		r.AddComputation(expression, unjoinedGroup)
-		u.ExtendComputations(r)
-		us = append(us, u)
-	}
-	for r := range bm {
-		u := &Union{
-			A:     Scalar(math.NaN()),
-			B:     r.Value,
-			Group: r.Group,
+		for r := range bm {
+			u := &Union{
+				A:     Scalar(math.NaN()),
+				B:     r.Value,
+				Group: r.Group,
+			}
+			r.AddComputation(expression, unjoinedGroup)
+			u.ExtendComputations(r)
+			us = append(us, u)
 		}
-		r.AddComputation(expression, unjoinedGroup)
-		u.ExtendComputations(r)
-		us = append(us, u)
 	}
 	return us
 }
@@ -241,7 +245,7 @@ func (e *state) walkBinary(node *parse.BinaryNode, T miniprofiler.Timer) []*Resu
 	ar := e.walk(node.Args[0], T)
 	br := e.walk(node.Args[1], T)
 	var res []*Result
-	u := union(ar, br, node.String())
+	u := e.union(ar, br, node.String())
 	for _, v := range u {
 		var value Value
 		r := Result{

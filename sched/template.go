@@ -123,7 +123,7 @@ func (c *Context) E(v string) string {
 		log.Printf("%s: %v", v, err)
 		return ""
 	}
-	res, _, err := e.ExecuteOpts(c.schedule.cache, nil, c.schedule.CheckStart, 0)
+	res, _, err := e.ExecuteOpts(c.schedule.cache, nil, c.schedule.CheckStart, 0, c.Alert.UnjoinedOK)
 	if err != nil {
 		log.Printf("%s: %v", v, err)
 		return ""

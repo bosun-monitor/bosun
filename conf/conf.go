@@ -154,6 +154,7 @@ type Alert struct {
 	WarnNotification map[string]*Notification `json:"-"`
 	Unknown          time.Duration
 	Macros           []string `json:"-"`
+	UnjoinedOK       bool     `json:",omitempty"`
 
 	crit, warn       string
 	template         string
@@ -547,6 +548,8 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 				c.errorf("unknown duration must be at least 1s")
 			}
 			a.Unknown = d
+		case "unjoinedOk":
+			a.UnjoinedOK = true
 		default:
 			c.errorf("unknown key %s", p.key)
 		}
