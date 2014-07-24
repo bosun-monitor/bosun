@@ -54,6 +54,9 @@ const (
 	sys_IN_IGNORED    uint32 = syscall.IN_IGNORED
 	sys_IN_Q_OVERFLOW uint32 = syscall.IN_Q_OVERFLOW
 	sys_IN_UNMOUNT    uint32 = syscall.IN_UNMOUNT
+
+	// Block for 100ms on each call to Select
+	selectWaitTime = 100e6
 )
 
 type FileEvent struct {
@@ -82,7 +85,8 @@ func (e *FileEvent) IsRename() bool {
 	return ((e.mask&sys_IN_MOVE_SELF) == sys_IN_MOVE_SELF || (e.mask&sys_IN_MOVED_FROM) == sys_IN_MOVED_FROM)
 }
 
-// IsAttrib reports whether the FileEvent was triggered by a change in the file metadata.
+// IsAttrib reports whether the FileEvent was triggered by a change in the file metadata (eg.
+// atime, mtime etc.)
 func (e *FileEvent) IsAttrib() bool {
 	return (e.mask & sys_IN_ATTRIB) == sys_IN_ATTRIB
 }
@@ -216,7 +220,7 @@ func (w *Watcher) readEvents() {
 		default:
 		}
 
-		n, errno = syscall.Read(w.fd, buf[:])
+		n, errno = syscall.Read(w.fd, buf[0:])
 
 		// If EOF is received
 		if n == 0 {

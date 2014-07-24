@@ -14,10 +14,18 @@ import (
 )
 
 func TestFsnotifyFakeSymlink(t *testing.T) {
-	watcher := newWatcher(t)
+	// Create an fsnotify watcher instance and initialize it
+	watcher, err := NewWatcher()
+	if err != nil {
+		t.Fatalf("NewWatcher() failed: %s", err)
+	}
+
+	var testDir string = testTempDir()
 
 	// Create directory to watch
-	testDir := tempMkdir(t)
+	if err := os.Mkdir(testDir, 0777); err != nil {
+		t.Fatalf("Failed to create test directory: %s", err)
+	}
 	defer os.RemoveAll(testDir)
 
 	var errorsReceived counter
@@ -30,7 +38,8 @@ func TestFsnotifyFakeSymlink(t *testing.T) {
 	}()
 
 	// Count the CREATE events received
-	var createEventsReceived, otherEventsReceived counter
+	var createEventsReceived counter
+	var otherEventsReceived counter
 	go func() {
 		for ev := range watcher.Event {
 			t.Logf("event received: %s", ev)
@@ -42,9 +51,13 @@ func TestFsnotifyFakeSymlink(t *testing.T) {
 		}
 	}()
 
-	addWatch(t, watcher, testDir)
+	// Add a watch for testDir
+	err = watcher.Watch(testDir)
+	if err != nil {
+		t.Fatalf("Watcher.Watch() failed: %s", err)
+	}
 
-	if err := os.Symlink(filepath.Join(testDir, "zzz"), filepath.Join(testDir, "zzznew")); err != nil {
+	if os.Symlink(filepath.Join(testDir, "zzz"), filepath.Join(testDir, "zzznew")) != nil {
 		t.Fatalf("Failed to create bogus symlink: %s", err)
 	}
 	t.Logf("Created bogus symlink")

@@ -1,17 +1,5 @@
 # Contributing
 
-### Moving Notice
-
-We plan to include os/fsnotify in the Go standard library with a new [API](http://goo.gl/MrYxyA). 
-
-* Import `code.google.com/p/go.exp/fsnotify` ([GoDoc](http://godoc.org/code.google.com/p/go.exp/fsnotify)) for the latest API under development.
-* Continue importing `github.com/howeyc/fsnotify` ([GoDoc](http://godoc.org/github.com/howeyc/fsnotify)) for the stable API.
-* [Report Issues](https://code.google.com/p/go/issues/list?q=fsnotify) to go.exp/fsnotify after testing against `code.google.com/p/go.exp/fsnotify`
-* Join [golang-dev](https://groups.google.com/forum/#!forum/golang-dev) to discuss fsnotify.
-* See the [Contribution Guidelines](http://golang.org/doc/contribute.html) for Go and sign the CLA.
-
-### Pull Requests
-
 To hack on fsnotify:
 
 1. Install as usual (`go get -u github.com/howeyc/fsnotify`)
@@ -34,7 +22,7 @@ For other team members:
 
 Notice: Always use the original import path by installing with `go get`.
 
-### Testing
+# Testing
 
 fsnotify uses build tags to compile different code on Linux, BSD, OS X, and Windows. Our continuous integration server is only able to test on Linux at this time.
 

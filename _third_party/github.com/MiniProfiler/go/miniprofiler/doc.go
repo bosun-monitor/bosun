@@ -69,12 +69,9 @@ This is a small example using this package.
 
 	package main
 
-	import (
-		"fmt"
-		"net/http"
-
-		"github.com/MiniProfiler/go/miniprofiler"
-	)
+	import "fmt"
+	import "github.com/mjibson/MiniProfiler/go/miniprofiler"
+	import "net/http"
 
 	func Index(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 		t.Step("something", func(t miniprofiler.Timer) {
