@@ -21,8 +21,13 @@ import (
 	"github.com/StackExchange/slog"
 )
 
-// Version should be set at build time as a date: 20140721184001.
-const Version uint64 = 0
+// These constants should remain in source control as their zero values.
+const (
+	// VersionDate should be set at build time as a date: 20140721184001.
+	VersionDate uint64 = 0
+	// VersionID should be set at build time as the most recent commit hash.
+	VersionID string = ""
+)
 
 var (
 	flagFilter    = flag.String("f", "", "Filters collectors matching this term. Works with all other arguments.")
@@ -98,7 +103,7 @@ func main() {
 		slog.Set(&slog.StdLog{Log: log.New(os.Stdout, "", log.LstdFlags)})
 	}
 	if *flagVersion {
-		slog.Infoln("version:", Version)
+		fmt.Printf("scollector version %v (%v)\n", VersionDate, VersionID)
 		os.Exit(0)
 	}
 	for _, m := range mains {
@@ -173,8 +178,8 @@ func main() {
 		if err := collect.InitChan(u.Host, "scollector", cdp); err != nil {
 			slog.Fatal(err)
 		}
-		if Version > 0 {
-			if err := collect.Put("version", nil, Version); err != nil {
+		if VersionDate > 0 {
+			if err := collect.Put("version", nil, VersionDate); err != nil {
 				slog.Error(err)
 			}
 		}
