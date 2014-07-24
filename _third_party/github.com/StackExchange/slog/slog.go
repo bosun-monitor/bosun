@@ -26,24 +26,24 @@ type Logger interface {
 	Fatal(v string)
 }
 
-type stdLog struct {
-	log *log.Logger
+type StdLog struct {
+	Log *log.Logger
 }
 
-func (s *stdLog) Fatal(v string) {
-	s.log.Fatalln("fatal:", rmNl(v))
+func (s *StdLog) Fatal(v string) {
+	s.Log.Fatalln("fatal:", rmNl(v))
 }
 
-func (s *stdLog) Error(v string) {
-	s.log.Println("error:", rmNl(v))
+func (s *StdLog) Error(v string) {
+	s.Log.Println("error:", rmNl(v))
 }
 
-func (s *stdLog) Info(v string) {
-	s.log.Println("info:", rmNl(v))
+func (s *StdLog) Info(v string) {
+	s.Log.Println("info:", rmNl(v))
 }
 
-func (s *stdLog) Warning(v string) {
-	s.log.Println("warning:", rmNl(v))
+func (s *StdLog) Warning(v string) {
+	s.Log.Println("warning:", rmNl(v))
 }
 
 func rmNl(v string) string {
@@ -53,7 +53,7 @@ func rmNl(v string) string {
 	return v
 }
 
-var logging Logger = &stdLog{log: log.New(os.Stderr, "", log.LstdFlags)}
+var logging Logger = &StdLog{Log: log.New(os.Stderr, "", log.LstdFlags)}
 
 func Set(l Logger) {
 	logging = l
