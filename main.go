@@ -12,7 +12,6 @@ import (
 
 	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/collect"
 	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/opentsdb"
-	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/slog"
 	"github.com/StackExchange/bosun/_third_party/github.com/howeyc/fsnotify"
 	"github.com/StackExchange/bosun/_third_party/github.com/tatsushid/go-fastping"
 	"github.com/StackExchange/bosun/conf"
@@ -103,7 +102,7 @@ func pingHost(host string) {
 		p := fastping.NewPinger()
 		ra, err := net.ResolveIPAddr("ip4:icmp", host)
 		if err != nil {
-			slog.Error(err)
+			log.Print(err)
 			collect.Put("ping.resolved", opentsdb.TagSet{"dst_host": host}, 0)
 			time.Sleep(pingFreq)
 			continue
@@ -117,7 +116,7 @@ func pingHost(host string) {
 			timeout = 0
 		})
 		if err := p.Run(); err != nil {
-			slog.Error(err)
+			log.Print(err)
 		}
 		collect.Put("ping.timeout", opentsdb.TagSet{"dst_host": host}, float64(timeout))
 		time.Sleep(pingFreq)
