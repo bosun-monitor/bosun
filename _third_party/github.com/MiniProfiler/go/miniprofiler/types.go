@@ -19,6 +19,7 @@ package miniprofiler
 import (
 	"encoding/json"
 	"fmt"
+	"html"
 	"html/template"
 	"math/rand"
 	"net/http"
@@ -28,25 +29,7 @@ import (
 	"time"
 )
 
-var rnd = rand.New(&lockedSource{src: rand.NewSource(time.Now().UnixNano())})
-
-type lockedSource struct {
-	lk  sync.Mutex
-	src rand.Source
-}
-
-func (r *lockedSource) Int63() (n int64) {
-	r.lk.Lock()
-	n = r.src.Int63()
-	r.lk.Unlock()
-	return
-}
-
-func (r *lockedSource) Seed(seed int64) {
-	r.lk.Lock()
-	r.src.Seed(seed)
-	r.lk.Unlock()
-}
+var rnd = rand.NewSource(time.Now().UnixNano())
 
 func newGuid() string {
 	return fmt.Sprintf("%016x", rnd.Int63())
@@ -233,7 +216,7 @@ func (t *Timing) AddCustomTiming(callType, executeType string, start, end time.T
 		Id:                   newGuid(),
 		StartMilliseconds:    start.Sub(t.profile.start).Seconds() * 1000,
 		DurationMilliseconds: end.Sub(start).Seconds() * 1000,
-		CommandString:        command,
+		CommandString:        html.EscapeString(command),
 		StackTraceSnippet:    getStackSnippet(),
 		ExecuteType:          executeType,
 	}
@@ -270,10 +253,8 @@ func getStackSnippet() string {
 			snippet = append(snippet, snip)
 		}
 	}
-	if len(snippet) > 2 {
-		snippet = snippet[2:]
-	}
-	return strings.Join(snippet, " ")
+
+	return strings.Join(snippet[2:], " ")
 }
 
 type CustomTiming struct {

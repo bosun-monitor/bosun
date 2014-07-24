@@ -53,7 +53,7 @@ func CreateEvent(eventAttrs *syscall.SecurityAttributes, manualReset uint32, ini
 
 func SetEvent(event syscall.Handle) (err error) {
 	r1, _, e1 := syscall.Syscall(procSetEvent.Addr(), 1, uintptr(event), 0, 0)
-	if r1 == 0 {
+	if int(r1) == 0 {
 		if e1 != 0 {
 			err = error(e1)
 		} else {
@@ -78,7 +78,7 @@ func RegisterEventSource(uncServerName *uint16, sourceName *uint16) (handle sysc
 
 func DeregisterEventSource(handle syscall.Handle) (err error) {
 	r1, _, e1 := syscall.Syscall(procDeregisterEventSource.Addr(), 1, uintptr(handle), 0, 0)
-	if r1 == 0 {
+	if int(r1) == 0 {
 		if e1 != 0 {
 			err = error(e1)
 		} else {
@@ -90,7 +90,7 @@ func DeregisterEventSource(handle syscall.Handle) (err error) {
 
 func ReportEvent(log syscall.Handle, etype uint16, category uint16, eventId uint32, usrSId uintptr, numStrings uint16, dataSize uint32, strings **uint16, rawData *byte) (err error) {
 	r1, _, e1 := syscall.Syscall9(procReportEventW.Addr(), 9, uintptr(log), uintptr(etype), uintptr(category), uintptr(eventId), uintptr(usrSId), uintptr(numStrings), uintptr(dataSize), uintptr(unsafe.Pointer(strings)), uintptr(unsafe.Pointer(rawData)))
-	if r1 == 0 {
+	if int(r1) == 0 {
 		if e1 != 0 {
 			err = error(e1)
 		} else {
@@ -126,7 +126,7 @@ func RegSetValueEx(key syscall.Handle, valueName *uint16, reserved uint32, vtype
 
 func AllocateAndInitializeSid(identAuth *SidIdentifierAuthority, subAuth byte, subAuth0 uint32, subAuth1 uint32, subAuth2 uint32, subAuth3 uint32, subAuth4 uint32, subAuth5 uint32, subAuth6 uint32, subAuth7 uint32, sid **syscall.SID) (err error) {
 	r1, _, e1 := syscall.Syscall12(procAllocateAndInitializeSid.Addr(), 11, uintptr(unsafe.Pointer(identAuth)), uintptr(subAuth), uintptr(subAuth0), uintptr(subAuth1), uintptr(subAuth2), uintptr(subAuth3), uintptr(subAuth4), uintptr(subAuth5), uintptr(subAuth6), uintptr(subAuth7), uintptr(unsafe.Pointer(sid)), 0)
-	if r1 == 0 {
+	if int(r1) == 0 {
 		if e1 != 0 {
 			err = error(e1)
 		} else {
@@ -138,7 +138,7 @@ func AllocateAndInitializeSid(identAuth *SidIdentifierAuthority, subAuth byte, s
 
 func FreeSid(sid *syscall.SID) (err error) {
 	r1, _, e1 := syscall.Syscall(procFreeSid.Addr(), 1, uintptr(unsafe.Pointer(sid)), 0, 0)
-	if r1 != 0 {
+	if int(r1) != 0 {
 		if e1 != 0 {
 			err = error(e1)
 		} else {
@@ -169,7 +169,7 @@ func OpenSCManager(machineName *uint16, databaseName *uint16, access uint32) (ha
 
 func CloseServiceHandle(handle syscall.Handle) (err error) {
 	r1, _, e1 := syscall.Syscall(procCloseServiceHandle.Addr(), 1, uintptr(handle), 0, 0)
-	if r1 == 0 {
+	if int(r1) == 0 {
 		if e1 != 0 {
 			err = error(e1)
 		} else {
@@ -207,7 +207,7 @@ func OpenService(mgr syscall.Handle, serviceName *uint16, access uint32) (handle
 
 func DeleteService(service syscall.Handle) (err error) {
 	r1, _, e1 := syscall.Syscall(procDeleteService.Addr(), 1, uintptr(service), 0, 0)
-	if r1 == 0 {
+	if int(r1) == 0 {
 		if e1 != 0 {
 			err = error(e1)
 		} else {
@@ -219,7 +219,7 @@ func DeleteService(service syscall.Handle) (err error) {
 
 func StartService(service syscall.Handle, numArgs uint32, argVectors **uint16) (err error) {
 	r1, _, e1 := syscall.Syscall(procStartServiceW.Addr(), 3, uintptr(service), uintptr(numArgs), uintptr(unsafe.Pointer(argVectors)))
-	if r1 == 0 {
+	if int(r1) == 0 {
 		if e1 != 0 {
 			err = error(e1)
 		} else {
@@ -231,7 +231,7 @@ func StartService(service syscall.Handle, numArgs uint32, argVectors **uint16) (
 
 func QueryServiceStatus(service syscall.Handle, status *SERVICE_STATUS) (err error) {
 	r1, _, e1 := syscall.Syscall(procQueryServiceStatus.Addr(), 2, uintptr(service), uintptr(unsafe.Pointer(status)), 0)
-	if r1 == 0 {
+	if int(r1) == 0 {
 		if e1 != 0 {
 			err = error(e1)
 		} else {
@@ -243,7 +243,7 @@ func QueryServiceStatus(service syscall.Handle, status *SERVICE_STATUS) (err err
 
 func ControlService(service syscall.Handle, control uint32, status *SERVICE_STATUS) (err error) {
 	r1, _, e1 := syscall.Syscall(procControlService.Addr(), 3, uintptr(service), uintptr(control), uintptr(unsafe.Pointer(status)))
-	if r1 == 0 {
+	if int(r1) == 0 {
 		if e1 != 0 {
 			err = error(e1)
 		} else {
@@ -255,7 +255,7 @@ func ControlService(service syscall.Handle, control uint32, status *SERVICE_STAT
 
 func StartServiceCtrlDispatcher(serviceTable *SERVICE_TABLE_ENTRY) (err error) {
 	r1, _, e1 := syscall.Syscall(procStartServiceCtrlDispatcherW.Addr(), 1, uintptr(unsafe.Pointer(serviceTable)), 0, 0)
-	if r1 == 0 {
+	if int(r1) == 0 {
 		if e1 != 0 {
 			err = error(e1)
 		} else {
@@ -267,7 +267,7 @@ func StartServiceCtrlDispatcher(serviceTable *SERVICE_TABLE_ENTRY) (err error) {
 
 func SetServiceStatus(service syscall.Handle, serviceStatus *SERVICE_STATUS) (err error) {
 	r1, _, e1 := syscall.Syscall(procSetServiceStatus.Addr(), 2, uintptr(service), uintptr(unsafe.Pointer(serviceStatus)), 0)
-	if r1 == 0 {
+	if int(r1) == 0 {
 		if e1 != 0 {
 			err = error(e1)
 		} else {
@@ -279,7 +279,7 @@ func SetServiceStatus(service syscall.Handle, serviceStatus *SERVICE_STATUS) (er
 
 func ChangeServiceConfig(service syscall.Handle, serviceType uint32, startType uint32, errorControl uint32, binaryPathName *uint16, loadOrderGroup *uint16, tagId *uint32, dependencies *uint16, serviceStartName *uint16, password *uint16, displayName *uint16) (err error) {
 	r1, _, e1 := syscall.Syscall12(procChangeServiceConfigW.Addr(), 11, uintptr(service), uintptr(serviceType), uintptr(startType), uintptr(errorControl), uintptr(unsafe.Pointer(binaryPathName)), uintptr(unsafe.Pointer(loadOrderGroup)), uintptr(unsafe.Pointer(tagId)), uintptr(unsafe.Pointer(dependencies)), uintptr(unsafe.Pointer(serviceStartName)), uintptr(unsafe.Pointer(password)), uintptr(unsafe.Pointer(displayName)), 0)
-	if r1 == 0 {
+	if int(r1) == 0 {
 		if e1 != 0 {
 			err = error(e1)
 		} else {
@@ -291,7 +291,7 @@ func ChangeServiceConfig(service syscall.Handle, serviceType uint32, startType u
 
 func QueryServiceConfig(service syscall.Handle, serviceConfig *QUERY_SERVICE_CONFIG, bufSize uint32, bytesNeeded *uint32) (err error) {
 	r1, _, e1 := syscall.Syscall6(procQueryServiceConfigW.Addr(), 4, uintptr(service), uintptr(unsafe.Pointer(serviceConfig)), uintptr(bufSize), uintptr(unsafe.Pointer(bytesNeeded)), 0, 0)
-	if r1 == 0 {
+	if int(r1) == 0 {
 		if e1 != 0 {
 			err = error(e1)
 		} else {
@@ -303,7 +303,7 @@ func QueryServiceConfig(service syscall.Handle, serviceConfig *QUERY_SERVICE_CON
 
 func ChangeServiceConfig2(service syscall.Handle, infoLevel uint32, info *byte) (err error) {
 	r1, _, e1 := syscall.Syscall(procChangeServiceConfig2W.Addr(), 3, uintptr(service), uintptr(infoLevel), uintptr(unsafe.Pointer(info)))
-	if r1 == 0 {
+	if int(r1) == 0 {
 		if e1 != 0 {
 			err = error(e1)
 		} else {
@@ -315,7 +315,7 @@ func ChangeServiceConfig2(service syscall.Handle, infoLevel uint32, info *byte) 
 
 func QueryServiceConfig2(service syscall.Handle, infoLevel uint32, buff *byte, buffSize uint32, bytesNeeded *uint32) (err error) {
 	r1, _, e1 := syscall.Syscall6(procQueryServiceConfig2W.Addr(), 5, uintptr(service), uintptr(infoLevel), uintptr(unsafe.Pointer(buff)), uintptr(buffSize), uintptr(unsafe.Pointer(bytesNeeded)), 0)
-	if r1 == 0 {
+	if int(r1) == 0 {
 		if e1 != 0 {
 			err = error(e1)
 		} else {

@@ -39,21 +39,22 @@ type FileEvent struct {
 	create bool   // set by fsnotify package if found new file
 }
 
-// IsCreate reports whether the FileEvent was triggered by a creation
+// IsCreate reports whether the FileEvent was triggerd by a creation
 func (e *FileEvent) IsCreate() bool { return e.create }
 
-// IsDelete reports whether the FileEvent was triggered by a delete
+// IsDelete reports whether the FileEvent was triggerd by a delete
 func (e *FileEvent) IsDelete() bool { return (e.mask & sys_NOTE_DELETE) == sys_NOTE_DELETE }
 
-// IsModify reports whether the FileEvent was triggered by a file modification
+// IsModify reports whether the FileEvent was triggerd by a file modification
 func (e *FileEvent) IsModify() bool {
 	return ((e.mask&sys_NOTE_WRITE) == sys_NOTE_WRITE || (e.mask&sys_NOTE_ATTRIB) == sys_NOTE_ATTRIB)
 }
 
-// IsRename reports whether the FileEvent was triggered by a change name
+// IsRename reports whether the FileEvent was triggerd by a change name
 func (e *FileEvent) IsRename() bool { return (e.mask & sys_NOTE_RENAME) == sys_NOTE_RENAME }
 
-// IsAttrib reports whether the FileEvent was triggered by a change in the file metadata.
+// IsAttrib reports whether the FileEvent was triggered by a change in the file metadata (eg.
+// atime, mtime etc.)
 func (e *FileEvent) IsAttrib() bool {
 	return (e.mask & sys_NOTE_ATTRIB) == sys_NOTE_ATTRIB
 }
@@ -79,6 +80,8 @@ type Watcher struct {
 	Event           chan *FileEvent     // Events are returned on this channel
 	done            chan bool           // Channel for sending a "quit message" to the reader goroutine
 	isClosed        bool                // Set to true when Close() is first called
+	kbuf            [1]syscall.Kevent_t // An event buffer for Add/Remove watch
+	bufmut          sync.Mutex          // Protects access to kbuf.
 }
 
 // NewWatcher creates and returns a new kevent instance using kqueue(2)
@@ -205,13 +208,15 @@ func (w *Watcher) addWatch(path string, flags uint32) error {
 	w.enFlags[path] = flags
 	w.enmut.Unlock()
 
-	var kbuf [1]syscall.Kevent_t
-	watchEntry := &kbuf[0]
+	w.bufmut.Lock()
+	watchEntry := &w.kbuf[0]
 	watchEntry.Fflags = flags
 	syscall.SetKevent(watchEntry, watchfd, syscall.EVFILT_VNODE, syscall.EV_ADD|syscall.EV_CLEAR)
 	entryFlags := watchEntry.Flags
-	success, errno := syscall.Kevent(w.kq, kbuf[:], nil, nil)
-	if success == -1 {
+	w.bufmut.Unlock()
+
+	wd, errno := syscall.Kevent(w.kq, w.kbuf[:], nil, nil)
+	if wd == -1 {
 		return errno
 	} else if (entryFlags & syscall.EV_ERROR) == syscall.EV_ERROR {
 		return errors.New("kevent add error")
@@ -242,14 +247,14 @@ func (w *Watcher) removeWatch(path string) error {
 	if !ok {
 		return errors.New(fmt.Sprintf("can't remove non-existent kevent watch for: %s", path))
 	}
-	var kbuf [1]syscall.Kevent_t
-	watchEntry := &kbuf[0]
+	w.bufmut.Lock()
+	watchEntry := &w.kbuf[0]
 	syscall.SetKevent(watchEntry, watchfd, syscall.EVFILT_VNODE, syscall.EV_DELETE)
-	entryFlags := watchEntry.Flags
-	success, errno := syscall.Kevent(w.kq, kbuf[:], nil, nil)
+	success, errno := syscall.Kevent(w.kq, w.kbuf[:], nil, nil)
+	w.bufmut.Unlock()
 	if success == -1 {
 		return os.NewSyscallError("kevent_rm_watch", errno)
-	} else if (entryFlags & syscall.EV_ERROR) == syscall.EV_ERROR {
+	} else if (watchEntry.Flags & syscall.EV_ERROR) == syscall.EV_ERROR {
 		return errors.New("kevent rm error")
 	}
 	syscall.Close(watchfd)
@@ -267,24 +272,24 @@ func (w *Watcher) removeWatch(path string) error {
 
 	// Find all watched paths that are in this directory that are not external.
 	if fInfo.IsDir() {
-		var pathsToRemove []string
+		pathsToRemove := make([]string, 0)
 		w.pmut.Lock()
 		for _, wpath := range w.paths {
 			wdir, _ := filepath.Split(wpath)
 			if filepath.Clean(wdir) == filepath.Clean(path) {
 				w.ewmut.Lock()
-				if !w.externalWatches[wpath] {
+				if _, extern := w.externalWatches[wpath]; !extern {
 					pathsToRemove = append(pathsToRemove, wpath)
 				}
 				w.ewmut.Unlock()
 			}
 		}
 		w.pmut.Unlock()
-		for _, p := range pathsToRemove {
+		for idx := 0; idx < len(pathsToRemove); idx++ {
 			// Since these are internal, not much sense in propagating error
 			// to the user, as that will just confuse them with an error about
 			// a path they did not explicitly watch themselves.
-			w.removeWatch(p)
+			w.removeWatch(pathsToRemove[idx])
 		}
 	}
 

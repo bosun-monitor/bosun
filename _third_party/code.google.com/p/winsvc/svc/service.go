@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// +build windows
-
 // Package svc provides everything required to build Windows service.
 //
 package svc
@@ -203,23 +201,15 @@ func (s *service) run() {
 
 	status := Status{State: Stopped}
 	ec := exitCode{isSvcSpecific: true, errno: 0}
-	var outch chan ChangeRequest
-	inch := s.c
-	var cmd Cmd
 loop:
 	for {
 		select {
-		case r := <-inch:
+		case r := <-s.c:
 			if r.errno != 0 {
 				ec.errno = r.errno
 				break loop
 			}
-			inch = nil
-			outch = cmdsToHandler
-			cmd = r.cmd
-		case outch <- ChangeRequest{cmd, status}:
-			inch = s.c
-			outch = nil
+			cmdsToHandler <- ChangeRequest{r.cmd, status}
 		case c := <-changesFromHandler:
 			err := s.updateStatus(&c, &ec)
 			if err != nil {
