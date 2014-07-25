@@ -5,18 +5,20 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net"
 	"os"
 	"reflect"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/collect"
 	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/metadata"
 	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/bosun/_third_party/github.com/bradfitz/slice"
+	"github.com/StackExchange/bosun/_third_party/github.com/tatsushid/go-fastping"
 	"github.com/StackExchange/bosun/conf"
 	"github.com/StackExchange/bosun/expr"
-	"github.com/StackExchange/bosun/search"
 )
 
 func init() {
@@ -33,6 +35,7 @@ type Schedule struct {
 	Silence       map[string]*Silence
 	Group         map[time.Time]AlertKeys
 	Metadata      map[metadata.Metakey]Metavalues
+	Search        *Search
 
 	nc            chan interface{}
 	cache         *opentsdb.Cache
@@ -313,6 +316,12 @@ func (s *Schedule) Init(c *conf.Conf) {
 	s.Metadata = make(map[metadata.Metakey]Metavalues)
 	s.status = make(States)
 	s.cache = opentsdb.NewCache(s.Conf.TsdbHost, s.Conf.ResponseLimit)
+	s.Search = &Search{
+		metric:     make(qmap),
+		tagk:       make(smap),
+		tagv:       make(qmap),
+		metricTags: make(mtsmap),
+	}
 }
 
 func (s *Schedule) Load(c *conf.Conf) {
@@ -324,8 +333,8 @@ func (s *Schedule) Load(c *conf.Conf) {
 func (s *Schedule) RestoreState() {
 	s.Lock()
 	defer s.Unlock()
-	search.Lock.Lock()
-	defer search.Lock.Unlock()
+	s.Search.lock.Lock()
+	defer s.Search.lock.Unlock()
 	s.Notifications = nil
 	f, err := os.Open(s.Conf.StateFile)
 	if err != nil {
@@ -333,19 +342,19 @@ func (s *Schedule) RestoreState() {
 		return
 	}
 	dec := gob.NewDecoder(f)
-	if err := dec.Decode(&search.Metric); err != nil {
+	if err := dec.Decode(&s.Search.metric); err != nil {
 		log.Println(err)
 		return
 	}
-	if err := dec.Decode(&search.Tagk); err != nil {
+	if err := dec.Decode(&s.Search.tagk); err != nil {
 		log.Println(err)
 		return
 	}
-	if err := dec.Decode(&search.Tagv); err != nil {
+	if err := dec.Decode(&s.Search.tagv); err != nil {
 		log.Println(err)
 		return
 	}
-	if err := dec.Decode(&search.MetricTags); err != nil {
+	if err := dec.Decode(&s.Search.metricTags); err != nil {
 		log.Println(err)
 		return
 	}
@@ -411,8 +420,8 @@ func (s *Schedule) Save() {
 
 func (s *Schedule) save() {
 	s.Lock()
-	search.Lock.Lock()
-	defer search.Lock.Unlock()
+	s.Search.lock.Lock()
+	defer s.Search.lock.Unlock()
 	defer s.Unlock()
 	savePending = false
 	tmp := s.Conf.StateFile + ".tmp"
@@ -422,19 +431,19 @@ func (s *Schedule) save() {
 		return
 	}
 	enc := gob.NewEncoder(f)
-	if err := enc.Encode(search.Metric); err != nil {
+	if err := enc.Encode(s.Search.metric); err != nil {
 		log.Println(err)
 		return
 	}
-	if err := enc.Encode(search.Tagk); err != nil {
+	if err := enc.Encode(s.Search.tagk); err != nil {
 		log.Println(err)
 		return
 	}
-	if err := enc.Encode(search.Tagv); err != nil {
+	if err := enc.Encode(s.Search.tagv); err != nil {
 		log.Println(err)
 		return
 	}
-	if err := enc.Encode(search.MetricTags); err != nil {
+	if err := enc.Encode(s.Search.metricTags); err != nil {
 		log.Println(err)
 		return
 	}
@@ -467,6 +476,9 @@ func (s *Schedule) save() {
 
 func (s *Schedule) Run() error {
 	s.nc = make(chan interface{}, 1)
+	if s.Conf.Ping {
+		go s.PingHosts()
+	}
 	go s.Poll()
 	go s.CheckUnknown()
 	for {
@@ -482,6 +494,45 @@ func (s *Schedule) Run() error {
 		s.Check()
 		log.Printf("run at %v took %v\n", start, time.Since(start))
 		<-wait
+	}
+}
+
+const pingFreq = time.Second * 15
+
+func (s *Schedule) PingHosts() {
+	hostmap := make(map[string]bool)
+	for _ = range time.Tick(pingFreq) {
+		hosts := s.Search.TagValuesByTagKey("host")
+		for _, host := range hosts {
+			if _, ok := hostmap[host]; !ok {
+				hostmap[host] = true
+				go pingHost(host)
+			}
+		}
+	}
+}
+
+func pingHost(host string) {
+	for _ = range time.Tick(pingFreq) {
+		p := fastping.NewPinger()
+		ra, err := net.ResolveIPAddr("ip4:icmp", host)
+		if err != nil {
+			log.Print(err)
+			collect.Put("ping.resolved", opentsdb.TagSet{"dst_host": host}, 0)
+			continue
+		}
+		collect.Put("ping.resolved", opentsdb.TagSet{"dst_host": host}, 1)
+		p.AddIPAddr(ra)
+		p.MaxRTT = time.Second * 5
+		timeout := 1
+		p.AddHandler("receive", func(addr *net.IPAddr, t time.Duration) {
+			collect.Put("ping.rtt", opentsdb.TagSet{"dst_host": host}, float64(t)/float64(time.Millisecond))
+			timeout = 0
+		})
+		if err := p.Run(); err != nil {
+			log.Print(err)
+		}
+		collect.Put("ping.timeout", opentsdb.TagSet{"dst_host": host}, timeout)
 	}
 }
 

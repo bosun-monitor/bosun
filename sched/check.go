@@ -154,7 +154,7 @@ func (s *Schedule) CheckExpr(rh RunHistory, a *conf.Alert, e *expr.Expr, checkSt
 		collect.Add("check.errs", opentsdb.TagSet{"metric": a.Name}, 1)
 		log.Println(err)
 	}()
-	results, _, err := e.ExecuteOpts(s.cache, nil, s.CheckStart, 0, a.UnjoinedOK)
+	results, _, err := e.Execute(s.cache, nil, s.CheckStart, 0, a.UnjoinedOK, s.Search.Expand)
 	if err != nil {
 		ak := NewAlertKey(a.Name, nil)
 		state := s.Status(ak)

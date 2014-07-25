@@ -2,6 +2,7 @@ package expr
 
 import (
 	"testing"
+	"time"
 
 	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/opentsdb"
 )
@@ -42,7 +43,7 @@ func TestExprSimple(t *testing.T) {
 			t.Error(err)
 			break
 		}
-		r, _, err := e.Execute(opentsdb.Host(""), nil)
+		r, _, err := e.Execute(opentsdb.Host(""), nil, time.Now(), 0, false, nil)
 		if err != nil {
 			t.Error(err)
 			break

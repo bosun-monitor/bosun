@@ -61,7 +61,7 @@ func Graph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 		}
 	}
 	for i, q := range oreq.Queries {
-		if err := expr.ExpandSearch(q); err != nil {
+		if err := schedule.Search.Expand(q); err != nil {
 			return nil, err
 		}
 		if ar[i] {
@@ -172,7 +172,7 @@ func ExprGraph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (in
 		}
 		now = time.Unix(i, 0).UTC()
 	}
-	res, _, err := e.ExecuteOpts(opentsdb.NewCache(schedule.Conf.TsdbHost, schedule.Conf.ResponseLimit), t, now, autods, false)
+	res, _, err := e.Execute(opentsdb.NewCache(schedule.Conf.TsdbHost, schedule.Conf.ResponseLimit), t, now, autods, false, schedule.Search.Expand)
 	if err != nil {
 		return nil, err
 	}
