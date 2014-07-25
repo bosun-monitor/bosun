@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"log"
-	"net"
 	_ "net/http/pprof"
 	"os"
 	"path/filepath"
@@ -11,12 +10,9 @@ import (
 	"time"
 
 	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/collect"
-	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/bosun/_third_party/github.com/howeyc/fsnotify"
-	"github.com/StackExchange/bosun/_third_party/github.com/tatsushid/go-fastping"
 	"github.com/StackExchange/bosun/conf"
 	"github.com/StackExchange/bosun/sched"
-	"github.com/StackExchange/bosun/search"
 	"github.com/StackExchange/bosun/web"
 )
 
@@ -36,9 +32,6 @@ func main() {
 	if *flagTest {
 		log.Println("Valid Config")
 		os.Exit(0)
-	}
-	if c.Ping {
-		go pingHosts()
 	}
 	if err := collect.Init(c.RelayListen, "bosun"); err != nil {
 		log.Fatal(err)
@@ -78,43 +71,4 @@ func watcher() {
 		watcher.Watch(path)
 		return nil
 	})
-}
-
-const pingFreq = time.Second * 15
-
-func pingHosts() {
-	hostmap := make(map[string]bool)
-	for _ = range time.Tick(pingFreq) {
-		hosts := search.TagValuesByTagKey("host")
-		for _, host := range hosts {
-			if _, ok := hostmap[host]; !ok {
-				hostmap[host] = true
-				go pingHost(host)
-			}
-		}
-	}
-}
-
-func pingHost(host string) {
-	for _ = range time.Tick(pingFreq) {
-		p := fastping.NewPinger()
-		ra, err := net.ResolveIPAddr("ip4:icmp", host)
-		if err != nil {
-			log.Print(err)
-			collect.Put("ping.resolved", opentsdb.TagSet{"dst_host": host}, 0)
-			continue
-		}
-		collect.Put("ping.resolved", opentsdb.TagSet{"dst_host": host}, 1)
-		p.AddIPAddr(ra)
-		p.MaxRTT = time.Second * 5
-		timeout := 1
-		p.AddHandler("receive", func(addr *net.IPAddr, t time.Duration) {
-			collect.Put("ping.rtt", opentsdb.TagSet{"dst_host": host}, float64(t)/float64(time.Millisecond))
-			timeout = 0
-		})
-		if err := p.Run(); err != nil {
-			log.Print(err)
-		}
-		collect.Put("ping.timeout", opentsdb.TagSet{"dst_host": host}, timeout)
-	}
 }

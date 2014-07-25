@@ -15,11 +15,19 @@ import (
 
 type state struct {
 	*Expr
+	search     func(*opentsdb.Query) error
 	now        time.Time
 	autods     int
 	context    opentsdb.Context
 	queries    []opentsdb.Request
 	unjoinedOk bool
+}
+
+func (e *state) Search(q *opentsdb.Query) error {
+	if e.search == nil {
+		return fmt.Errorf("no search func")
+	}
+	return e.search(q)
 }
 
 func (e *state) addRequest(r opentsdb.Request) {
@@ -47,14 +55,9 @@ func New(expr string) (*Expr, error) {
 	return e, nil
 }
 
-// Execute applies a parse expression to the specified OpenTSDB context,
-// and returns one result per group. T may be nil to ignore timings.
-func (e *Expr) Execute(c opentsdb.Context, T miniprofiler.Timer) (r []*Result, queries []opentsdb.Request, err error) {
-	return e.ExecuteOpts(c, T, time.Now().UTC(), 0, false)
-}
-
-// ExecuteOpts is identical to Execute, supports time setting and auto downsampling.
-func (e *Expr) ExecuteOpts(c opentsdb.Context, T miniprofiler.Timer, now time.Time, autods int, unjoinedOk bool) (r []*Result, queries []opentsdb.Request, err error) {
+// Execute applies a parse expression to the specified OpenTSDB context, and
+// returns one result per group. T may be nil to ignore timings.
+func (e *Expr) Execute(c opentsdb.Context, T miniprofiler.Timer, now time.Time, autods int, unjoinedOk bool, search func(*opentsdb.Query) error) (r []*Result, queries []opentsdb.Request, err error) {
 	defer errRecover(&err)
 	s := &state{
 		Expr:       e,
@@ -62,6 +65,7 @@ func (e *Expr) ExecuteOpts(c opentsdb.Context, T miniprofiler.Timer, now time.Ti
 		now:        now,
 		autods:     autods,
 		unjoinedOk: unjoinedOk,
+		search:     search,
 	}
 	if T == nil {
 		T = new(miniprofiler.Profile)

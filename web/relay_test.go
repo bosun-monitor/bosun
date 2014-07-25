@@ -1,4 +1,4 @@
-package search
+package web
 
 import (
 	"bytes"
@@ -8,13 +8,16 @@ import (
 	"net/http"
 	"sort"
 	"testing"
+
+	"github.com/StackExchange/bosun/conf"
 )
 
 func TestRelay(t *testing.T) {
+	schedule.Init(new(conf.Conf))
 	relayAddr := ":52366"
 	addr := ":52367"
 	httpAddr := fmt.Sprintf("http://%s/api/put", addr)
-	http.HandleFunc("/", Handle(addr, nil))
+	http.HandleFunc("/", Relay(addr, nil))
 	go func() {
 		err := http.ListenAndServe(addr, nil)
 		log.Fatal(err)
@@ -56,16 +59,16 @@ func TestRelay(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	m := UniqueMetrics()
+	m := schedule.Search.UniqueMetrics()
 	sort.Strings(m)
 	if len(m) != 2 || m[0] != "gzip.test" || m[1] != "test.metric" {
 		t.Errorf("bad um: %v", m)
 	}
-	m = TagValuesByMetricTagKey("gzip.test", "gzipped")
+	m = schedule.Search.TagValuesByMetricTagKey("gzip.test", "gzipped")
 	if len(m) != 1 || m[0] != "yup" {
 		t.Errorf("bad tvbmtk: %v", m)
 	}
-	m = TagKeysByMetric("test.metric")
+	m = schedule.Search.TagKeysByMetric("test.metric")
 	sort.Strings(m)
 	if len(m) != 2 || m[0] != "host" || m[1] != "other" {
 		t.Errorf("bad tkbm: %v", m)

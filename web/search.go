@@ -6,19 +6,18 @@ import (
 
 	"github.com/StackExchange/bosun/_third_party/github.com/MiniProfiler/go/miniprofiler"
 	"github.com/StackExchange/bosun/_third_party/github.com/gorilla/mux"
-	"github.com/StackExchange/bosun/search"
 )
 
 // A Sorted List of Available Metrics
 func UniqueMetrics(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	values := search.UniqueMetrics()
+	values := schedule.Search.UniqueMetrics()
 	return values, nil
 }
 
 func TagKeysByMetric(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	metric := vars["metric"]
-	keys := search.TagKeysByMetric(metric)
+	keys := schedule.Search.TagKeysByMetric(metric)
 	return keys, nil
 }
 
@@ -33,9 +32,9 @@ func TagValuesByMetricTagKey(t miniprofiler.Timer, w http.ResponseWriter, r *htt
 		for k, v := range q {
 			tsf[k] = strings.Join(v, "")
 		}
-		values = search.FilteredTagValuesByMetricTagKey(metric, tagk, tsf)
+		values = schedule.Search.FilteredTagValuesByMetricTagKey(metric, tagk, tsf)
 	} else {
-		values = search.TagValuesByMetricTagKey(metric, tagk)
+		values = schedule.Search.TagValuesByMetricTagKey(metric, tagk)
 	}
 	return values, nil
 }
@@ -44,13 +43,13 @@ func MetricsByTagPair(t miniprofiler.Timer, w http.ResponseWriter, r *http.Reque
 	vars := mux.Vars(r)
 	tagk := vars["tagk"]
 	tagv := vars["tagv"]
-	values := search.MetricsByTagPair(tagk, tagv)
+	values := schedule.Search.MetricsByTagPair(tagk, tagv)
 	return values, nil
 }
 
 func TagValuesByTagKey(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	tagk := vars["tagk"]
-	values := search.TagValuesByTagKey(tagk)
+	values := schedule.Search.TagValuesByTagKey(tagk)
 	return values, nil
 }

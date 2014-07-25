@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
-	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -14,7 +13,6 @@ import (
 	"github.com/StackExchange/bosun/_third_party/github.com/MiniProfiler/go/miniprofiler"
 	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/bosun/expr/parse"
-	"github.com/StackExchange/bosun/search"
 )
 
 var Builtins = map[string]parse.Func{
@@ -140,7 +138,7 @@ func Band(e *state, T miniprofiler.Timer, query, duration, period string, num fl
 		if err != nil {
 			return
 		}
-		if err = ExpandSearch(q); err != nil {
+		if err = e.Search(q); err != nil {
 			return
 		}
 		req := opentsdb.Request{
@@ -193,7 +191,7 @@ func Query(e *state, T miniprofiler.Timer, query, sduration, eduration string) (
 	if err != nil {
 		return
 	}
-	if err = ExpandSearch(q); err != nil {
+	if err = e.Search(q); err != nil {
 		return
 	}
 	sd, err := opentsdb.ParseDuration(sduration)
@@ -296,31 +294,6 @@ func reduce(e *state, T miniprofiler.Timer, series []*Result, F func(Series, ...
 		}
 	}
 	return res, nil
-}
-
-func ExpandSearch(q *opentsdb.Query) error {
-	for k, ov := range q.Tags {
-		v := ov
-		if v == "*" || !strings.Contains(v, "*") || strings.Contains(v, "|") {
-			continue
-		}
-		v = strings.Replace(v, ".", `\.`, -1)
-		v = strings.Replace(v, "*", ".*", -1)
-		v = "^" + v + "$"
-		re := regexp.MustCompile(v)
-		var nvs []string
-		vs := search.TagValuesByMetricTagKey(q.Metric, k)
-		for _, nv := range vs {
-			if re.MatchString(nv) {
-				nvs = append(nvs, nv)
-			}
-		}
-		if len(nvs) == 0 {
-			return fmt.Errorf("expr: no tags matching %s=%s", k, ov)
-		}
-		q.Tags[k] = strings.Join(nvs, "|")
-	}
-	return nil
 }
 
 func Abs(e *state, T miniprofiler.Timer, series []*Result) []*Result {
