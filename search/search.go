@@ -63,9 +63,7 @@ func init() {
 	go Process()
 }
 
-// HTTPExtract populates the search indexes with OpenTSDB tags and metrics from
-// body. body is a JSON string of an OpenTSDB v2 /api/put request. body may be
-// gzipped.
+// HTTPExtract populates the search indexes with OpenTSDB tags and metrics.
 func HTTPExtract(remoteAddr string, mdp opentsdb.MultiDataPoint) {
 	remoteAddr = strings.Split(remoteAddr, ":")[0]
 	tags := opentsdb.TagSet{"remote": clean(remoteAddr)}
