@@ -121,7 +121,7 @@ func Relay(dest string, metaHandler http.Handler) func(http.ResponseWriter, *htt
 				tags := opentsdb.TagSet{"remote": clean(ra)}
 				collect.Add("search.puts_relayed", tags, 1)
 				collect.Add("search.datapoints_relayed", tags, int64(len(mdp)))
-				schedule.Search.Index(r.RemoteAddr, mdp)
+				schedule.Search.Index(mdp)
 			}
 		}
 		durl := url.URL{
