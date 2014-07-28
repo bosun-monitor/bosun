@@ -122,10 +122,11 @@ func (s *Search) UniqueMetrics() []string {
 }
 
 func (s *Search) TagValuesByTagKey(tagk string) []string {
+	um := s.UniqueMetrics()
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 	tagvset := make(map[string]bool)
-	for _, metric := range s.UniqueMetrics() {
+	for _, metric := range um {
 		for _, tagv := range s.tagValuesByMetricTagKey(metric, tagk) {
 			tagvset[tagv] = true
 		}
