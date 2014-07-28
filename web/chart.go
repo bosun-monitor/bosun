@@ -111,13 +111,13 @@ func Graph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 	if err != nil {
 		return nil, err
 	}
-	chart, err := rickchart(tr)
+	chart, err := makeChart(tr)
 	if err != nil {
 		return nil, err
 	}
 	return struct {
 		Queries []string
-		Series  []*RickSeries
+		Series  []*chartSeries
 	}{
 		QFromR(oreq),
 		chart,
@@ -212,16 +212,16 @@ func ExprGraph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (in
 	return nil, err
 }
 
-func rickchart(r opentsdb.ResponseSet) ([]*RickSeries, error) {
-	var series []*RickSeries
+func makeChart(r opentsdb.ResponseSet) ([]*chartSeries, error) {
+	var series []*chartSeries
 	for _, resp := range r {
-		dps := make([]RickDP, 0)
+		dps := make([]datapoint, 0)
 		for k, v := range resp.DPS {
 			ki, err := strconv.ParseInt(k, 10, 64)
 			if err != nil {
 				return nil, err
 			}
-			dps = append(dps, RickDP{
+			dps = append(dps, datapoint{
 				X: ki,
 				Y: v,
 			})
@@ -232,7 +232,7 @@ func rickchart(r opentsdb.ResponseSet) ([]*RickSeries, error) {
 			if len(resp.Tags) > 0 {
 				name += resp.Tags.String()
 			}
-			series = append(series, &RickSeries{
+			series = append(series, &chartSeries{
 				Name: name,
 				Data: dps,
 			})
@@ -241,17 +241,17 @@ func rickchart(r opentsdb.ResponseSet) ([]*RickSeries, error) {
 	return series, nil
 }
 
-type RickSeries struct {
-	Name string   `json:"name"`
-	Data []RickDP `json:"data"`
+type chartSeries struct {
+	Name string      `json:"name"`
+	Data []datapoint `json:"data"`
 }
 
-type RickDP struct {
+type datapoint struct {
 	X int64          `json:"x"`
 	Y opentsdb.Point `json:"y"`
 }
 
-type ByX []RickDP
+type ByX []datapoint
 
 func (a ByX) Len() int           { return len(a) }
 func (a ByX) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
