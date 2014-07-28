@@ -316,12 +316,7 @@ func (s *Schedule) Init(c *conf.Conf) {
 	s.Metadata = make(map[metadata.Metakey]Metavalues)
 	s.status = make(States)
 	s.cache = opentsdb.NewCache(s.Conf.TsdbHost, s.Conf.ResponseLimit)
-	s.Search = &Search{
-		metric:     make(qmap),
-		tagk:       make(smap),
-		tagv:       make(qmap),
-		metricTags: make(mtsmap),
-	}
+	s.Search = NewSearch()
 }
 
 func (s *Schedule) Load(c *conf.Conf) {

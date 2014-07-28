@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/opentsdb"
+	"github.com/StackExchange/scollector/collect"
 )
 
 // Search is a struct to hold indexed data about OpenTSDB metric and tag data.
@@ -25,6 +26,7 @@ type Search struct {
 	metricTags mtsmap
 
 	lock sync.RWMutex
+	ch   chan opentsdb.MultiDataPoint
 }
 
 type MetricTagSet struct {
@@ -53,33 +55,58 @@ type duple struct {
 	A, B string
 }
 
-func (s *Search) Index(remoteAddr string, mdp opentsdb.MultiDataPoint) {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-	for _, dp := range mdp {
-		var mts MetricTagSet
-		mts.Metric = dp.Metric
-		mts.Tags = dp.Tags
-		s.metricTags[mts.key()] = mts
-		var q duple
-		for k, v := range dp.Tags {
-			q.A, q.B = k, v
-			if _, ok := s.metric[q]; !ok {
-				s.metric[q] = make(present)
-			}
-			s.metric[q][dp.Metric] = struct{}{}
+func NewSearch() *Search {
+	s := Search{
+		metric:     make(qmap),
+		tagk:       make(smap),
+		tagv:       make(qmap),
+		metricTags: make(mtsmap),
+		ch:         make(chan opentsdb.MultiDataPoint, 1000),
+	}
+	go s.Process()
+	collect.Set("search.ch_len", nil, func() interface{} {
+		return len(s.ch)
+	})
+	return &s
+}
 
-			if _, ok := s.tagk[dp.Metric]; !ok {
-				s.tagk[dp.Metric] = make(present)
-			}
-			s.tagk[dp.Metric][k] = struct{}{}
+func (s *Search) Process() {
+	for mdp := range s.ch {
+		s.lock.Lock()
+		for _, dp := range mdp {
+			var mts MetricTagSet
+			mts.Metric = dp.Metric
+			mts.Tags = dp.Tags
+			s.metricTags[mts.key()] = mts
+			var q duple
+			for k, v := range dp.Tags {
+				q.A, q.B = k, v
+				if _, ok := s.metric[q]; !ok {
+					s.metric[q] = make(present)
+				}
+				s.metric[q][dp.Metric] = struct{}{}
 
-			q.A, q.B = dp.Metric, k
-			if _, ok := s.tagv[q]; !ok {
-				s.tagv[q] = make(present)
+				if _, ok := s.tagk[dp.Metric]; !ok {
+					s.tagk[dp.Metric] = make(present)
+				}
+				s.tagk[dp.Metric][k] = struct{}{}
+
+				q.A, q.B = dp.Metric, k
+				if _, ok := s.tagv[q]; !ok {
+					s.tagv[q] = make(present)
+				}
+				s.tagv[q][v] = struct{}{}
 			}
-			s.tagv[q][v] = struct{}{}
 		}
+		s.lock.Unlock()
+	}
+}
+
+func (s *Search) Index(mdp opentsdb.MultiDataPoint) {
+	select {
+	case s.ch <- mdp:
+	default:
+		collect.Add("search.batch_drop", nil, 1)
 	}
 }
 
