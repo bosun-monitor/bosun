@@ -7,8 +7,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/collect"
 	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/opentsdb"
-	"github.com/StackExchange/scollector/collect"
 )
 
 // Search is a struct to hold indexed data about OpenTSDB metric and tag data.
