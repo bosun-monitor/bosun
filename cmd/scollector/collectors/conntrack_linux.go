@@ -1,6 +1,7 @@
 package collectors
 
 import (
+	"os"
 	"strconv"
 	"strings"
 
@@ -9,13 +10,24 @@ import (
 )
 
 func init() {
-	collectors = append(collectors, &IntervalCollector{F: c_conntrack_linux})
+	collectors = append(collectors, &IntervalCollector{F: c_conntrack_linux, Enable: conntrackEnable})
+}
+
+const (
+	conntrackCount = "/proc/sys/net/netfilter/nf_conntrack_count"
+	conntrackMax   = "/proc/sys/net/netfilter/nf_conntrack_max"
+)
+
+func conntrackEnable() bool {
+	f, err := os.Open(conntrackCount)
+	defer f.Close()
+	return err == nil
 }
 
 func c_conntrack_linux() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	var max, count float64
-	if err := readLine("/proc/sys/net/netfilter/nf_conntrack_count", func(s string) {
+	if err := readLine(conntrackCount, func(s string) {
 		values := strings.Fields(s)
 		if len(values) > 0 {
 			var err error
@@ -28,7 +40,7 @@ func c_conntrack_linux() (opentsdb.MultiDataPoint, error) {
 	}); err != nil {
 		return nil, err
 	}
-	if err := readLine("/proc/sys/net/netfilter/nf_conntrack_max", func(s string) {
+	if err := readLine(conntrackMax, func(s string) {
 		values := strings.Fields(s)
 		if len(values) > 0 {
 			var err error
