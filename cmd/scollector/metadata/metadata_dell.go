@@ -11,10 +11,10 @@ func init() {
 }
 
 func collectMetadataOmreport() {
-	util.ReadCommand(func(line string) {
+	util.ReadCommand(func(line string) error {
 		fields := strings.Split(line, ";")
 		if len(fields) != 2 {
-			return
+			return nil
 		}
 		switch fields[0] {
 		case "Chassis Service Tag":
@@ -22,5 +22,6 @@ func collectMetadataOmreport() {
 		case "Chassis Model":
 			AddMeta("", nil, "model", fields[1], true)
 		}
+		return nil
 	}, "omreport", "chassis", "info", "-fmt", "ssv")
 }

@@ -113,31 +113,33 @@ func redisInit() {
 				}
 			})
 		}
-		util.ReadCommand(func(line string) {
+		util.ReadCommand(func(line string) error {
 			sp := strings.Fields(line)
 			if len(sp) != 3 || !strings.HasSuffix(sp[1], "redis-server") {
-				return
+				return nil
 			}
 			if !strings.Contains(sp[2], ":") {
 				oldRedis = true
-				return
+				return nil
 			}
 			pid := sp[0]
 			port := strings.Split(sp[2], ":")[1]
 			add(port, pid)
+			return nil
 		}, "ps", "-e", "-o", "pid,args")
 		if oldRedis {
-			util.ReadCommand(func(line string) {
+			util.ReadCommand(func(line string) error {
 				if !strings.Contains(line, "redis-server") {
-					return
+					return nil
 				}
 				sp := strings.Fields(line)
 				if len(sp) < 7 || !strings.Contains(sp[3], ":") {
-					return
+					return nil
 				}
 				pid := strings.Split(sp[6], "/")[0]
 				port := strings.Split(sp[3], ":")[1]
 				add(port, pid)
+				return nil
 			}, "netstat", "-tnlp")
 		}
 		redisLock.Lock()

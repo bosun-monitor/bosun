@@ -31,14 +31,16 @@ func Command(name string, arg ...string) ([]byte, error) {
 	}
 }
 
-func ReadCommand(line func(string), name string, arg ...string) error {
+func ReadCommand(line func(string) error, name string, arg ...string) error {
 	b, err := Command(name, arg...)
 	if err != nil {
 		return err
 	}
 	scanner := bufio.NewScanner(bytes.NewBuffer(b))
 	for scanner.Scan() {
-		line(scanner.Text())
+		if err := line(scanner.Text()); err != nil {
+			return err
+		}
 	}
 	if err := scanner.Err(); err != nil {
 		slog.Infof("%v: %v\n", name, err)
