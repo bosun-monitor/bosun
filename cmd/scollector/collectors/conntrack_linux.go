@@ -27,29 +27,31 @@ func conntrackEnable() bool {
 func c_conntrack_linux() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	var max, count float64
-	if err := readLine(conntrackCount, func(s string) {
+	if err := readLine(conntrackCount, func(s string) error {
 		values := strings.Fields(s)
 		if len(values) > 0 {
 			var err error
 			count, err = strconv.ParseFloat(values[0], 64)
 			if err != nil {
-				return
+				return nil
 			}
 			Add(&md, "linux.net.conntrack.count", count, nil, metadata.Unknown, metadata.None, "")
 		}
+		return nil
 	}); err != nil {
 		return nil, err
 	}
-	if err := readLine(conntrackMax, func(s string) {
+	if err := readLine(conntrackMax, func(s string) error {
 		values := strings.Fields(s)
 		if len(values) > 0 {
 			var err error
 			max, err = strconv.ParseFloat(values[0], 64)
 			if err != nil {
-				return
+				return nil
 			}
 			Add(&md, "linux.net.conntrack.max", max, nil, metadata.Unknown, metadata.None, "")
 		}
+		return nil
 	}); err != nil {
 		return nil, err
 	}

@@ -7,7 +7,6 @@ import (
 	"github.com/StackExchange/scollector/metadata"
 	"github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/scollector/util"
-	"github.com/StackExchange/slog"
 	"github.com/StackExchange/vsphere"
 )
 
@@ -45,6 +44,7 @@ func vsphereDatastore(v *vsphere.Vsphere, md *opentsdb.MultiDataPoint) error {
 	if err != nil {
 		return err
 	}
+	var Error error
 	for _, r := range res {
 		var name string
 		for _, p := range r.Props {
@@ -54,7 +54,7 @@ func vsphereDatastore(v *vsphere.Vsphere, md *opentsdb.MultiDataPoint) error {
 			}
 		}
 		if name == "" {
-			slog.Error("vsphere: empty name")
+			Error = fmt.Errorf("vsphere: empty name")
 			continue
 		}
 		tags := opentsdb.TagSet{
@@ -67,7 +67,7 @@ func vsphereDatastore(v *vsphere.Vsphere, md *opentsdb.MultiDataPoint) error {
 			case "xsd:long", "xsd:int", "xsd:short":
 				i, err := strconv.ParseInt(p.Val.Inner, 10, 64)
 				if err != nil {
-					slog.Infoln("vsphere bad integer:", p.Val.Inner)
+					Error = fmt.Errorf("vsphere bad integer:", p.Val.Inner)
 					continue
 				}
 				switch p.Name {
@@ -88,7 +88,7 @@ func vsphereDatastore(v *vsphere.Vsphere, md *opentsdb.MultiDataPoint) error {
 			Add(md, osDiskPctFree, float64(diskFree)/float64(diskTotal)*100, tags, metadata.Gauge, metadata.Pct, "")
 		}
 	}
-	return nil
+	return Error
 }
 
 func vsphereHost(v *vsphere.Vsphere, md *opentsdb.MultiDataPoint) error {
@@ -104,6 +104,7 @@ func vsphereHost(v *vsphere.Vsphere, md *opentsdb.MultiDataPoint) error {
 	if err != nil {
 		return err
 	}
+	var Error error
 	for _, r := range res {
 		var name string
 		for _, p := range r.Props {
@@ -113,7 +114,7 @@ func vsphereHost(v *vsphere.Vsphere, md *opentsdb.MultiDataPoint) error {
 			}
 		}
 		if name == "" {
-			slog.Error("vsphere: empty name")
+			Error = fmt.Errorf("vsphere: empty name")
 			continue
 		}
 		tags := opentsdb.TagSet{
@@ -126,7 +127,7 @@ func vsphereHost(v *vsphere.Vsphere, md *opentsdb.MultiDataPoint) error {
 			case "xsd:long", "xsd:int", "xsd:short":
 				i, err := strconv.ParseInt(p.Val.Inner, 10, 64)
 				if err != nil {
-					slog.Infoln("vsphere bad integer:", p.Val.Inner)
+					Error = fmt.Errorf("vsphere bad integer:", p.Val.Inner)
 					continue
 				}
 				switch p.Name {
@@ -157,5 +158,5 @@ func vsphereHost(v *vsphere.Vsphere, md *opentsdb.MultiDataPoint) error {
 			Add(md, "vsphere.cpu.pct", float64(cpuUse)/float64(cpuTotal)*100, tags, metadata.Gauge, metadata.Pct, "")
 		}
 	}
-	return nil
+	return Error
 }

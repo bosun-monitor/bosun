@@ -1,12 +1,12 @@
 package collectors
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/StackExchange/scollector/metadata"
 	"github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/scollector/util"
-	"github.com/StackExchange/slog"
 )
 
 func init() {
@@ -56,7 +56,7 @@ func c_iostat_darwin() (opentsdb.MultiDataPoint, error) {
 		return nil
 	}, "iostat", "-c2", "-w1")
 	if ln < 4 {
-		slog.Infoln("iostat: bad return value")
+		return nil, fmt.Errorf("bad return value")
 	}
 	return md, nil
 }

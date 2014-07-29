@@ -15,7 +15,6 @@ import (
 	"github.com/StackExchange/scollector/metadata"
 	"github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/scollector/util"
-	"github.com/StackExchange/slog"
 )
 
 func init() {
@@ -106,11 +105,12 @@ func redisInit() {
 			if len(cfg) == 0 {
 				return
 			}
-			readLine(cfg, func(cfgline string) {
+			readLine(cfg, func(cfgline string) error {
 				result := tcRE.FindStringSubmatch(cfgline)
 				if len(result) > 2 && strings.ToLower(result[0]) == "cluster" {
 					cluster = strings.ToLower(result[1])
 				}
+				return nil
 			})
 		}
 		util.ReadCommand(func(line string) error {
@@ -157,10 +157,11 @@ func redisInit() {
 func c_redis() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	redisLock.Lock()
+	var Error error
 	for port, cluster := range redisInstances {
 		c, err := redis.Dial("tcp", fmt.Sprintf(":%s", port))
 		if err != nil {
-			slog.Infoln(err)
+			Error = err
 			continue
 		}
 		defer c.Close()
@@ -170,7 +171,7 @@ func c_redis() (opentsdb.MultiDataPoint, error) {
 		}
 		lines, err := c.Do("INFO")
 		if err != nil {
-			slog.Infoln(err)
+			Error = err
 			continue
 		}
 		_ = tags
@@ -192,5 +193,5 @@ func c_redis() (opentsdb.MultiDataPoint, error) {
 		}
 	}
 	redisLock.Unlock()
-	return md, nil
+	return md, Error
 }
