@@ -22,6 +22,7 @@ const (
 	ifHCinOctets         = ".1.3.6.1.2.1.31.1.1.1.6"
 	ifInDiscards         = ".1.3.6.1.2.1.2.2.1.13"
 	ifInErrors           = ".1.3.6.1.2.1.2.2.1.14"
+	ifName               = ".1.3.6.1.2.1.31.1.1.1.1"
 	ifOutDiscards        = ".1.3.6.1.2.1.2.2.1.19"
 	ifOutErrors          = ".1.3.6.1.2.1.2.2.1.20"
 )
@@ -45,9 +46,12 @@ func switch_bond(metric, iname string) string {
 }
 
 func c_snmp_ifaces(community, host string) (opentsdb.MultiDataPoint, error) {
-	n, err := snmp_subtree(host, community, ifDescr)
-	if err != nil {
-		return nil, err
+	n, err := snmp_subtree(host, community, ifName)
+	if err != nil || len(n) == 0 {
+		n, err = snmp_subtree(host, community, ifDescr)
+		if err != nil {
+			return nil, err
+		}
 	}
 	a, err := snmp_subtree(host, community, ifAlias)
 	if err != nil {

@@ -1,12 +1,12 @@
 package collectors
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/StackExchange/scollector/metadata"
 	"github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/scollector/util"
-	"github.com/StackExchange/slog"
 )
 
 func init() {
@@ -18,13 +18,13 @@ func c_iostat_darwin() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	ln := 0
 	i := 0
-	util.ReadCommand(func(line string) {
+	util.ReadCommand(func(line string) error {
 		ln++
 		if ln == 1 {
 			categories = strings.Fields(line)
 		}
 		if ln < 4 {
-			return
+			return nil
 		}
 		values := strings.Fields(line)
 		for _, cat := range categories {
@@ -53,9 +53,10 @@ func c_iostat_darwin() (opentsdb.MultiDataPoint, error) {
 				i++
 			}
 		}
+		return nil
 	}, "iostat", "-c2", "-w1")
 	if ln < 4 {
-		slog.Infoln("iostat: bad return value")
+		return nil, fmt.Errorf("bad return value")
 	}
 	return md, nil
 }

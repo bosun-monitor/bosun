@@ -128,14 +128,17 @@ func Add(md *opentsdb.MultiDataPoint, name string, value interface{}, t opentsdb
 	AddTS(md, name, now(), value, t, rate, unit, desc)
 }
 
-func readLine(fname string, line func(string)) error {
+func readLine(fname string, line func(string) error) error {
 	f, err := os.Open(fname)
 	if err != nil {
 		return err
 	}
+	defer f.Close()
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
-		line(scanner.Text())
+		if err := line(scanner.Text()); err != nil {
+			return err
+		}
 	}
 	if err := scanner.Err(); err != nil {
 		slog.Infof("%v: %v\n", fname, err)

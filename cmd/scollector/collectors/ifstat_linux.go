@@ -43,10 +43,10 @@ func c_ifstat_linux() (opentsdb.MultiDataPoint, error) {
 			return "in"
 		}
 	}
-	readLine("/proc/net/dev", func(s string) {
+	err := readLine("/proc/net/dev", func(s string) error {
 		m := ifstatRE.FindStringSubmatch(s)
 		if m == nil {
-			return
+			return nil
 		}
 		intf := m[1]
 		stats := strings.Fields(m[2])
@@ -79,6 +79,7 @@ func c_ifstat_linux() (opentsdb.MultiDataPoint, error) {
 				}
 			}
 		}
+		return nil
 	})
-	return md, nil
+	return md, err
 }

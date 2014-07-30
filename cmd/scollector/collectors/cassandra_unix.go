@@ -17,19 +17,19 @@ func init() {
 func c_nodestats_cfstats_linux() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	var keyspace, table string
-	util.ReadCommand(func(line string) {
+	util.ReadCommand(func(line string) error {
 		fields := strings.Split(strings.TrimSpace(line), ": ")
 		if len(fields) != 2 {
-			return
+			return nil
 		}
 		if fields[0] == "Keyspace" {
 			keyspace = fields[1]
 			table = ""
-			return
+			return nil
 		}
 		if fields[0] == "Table" {
 			table = fields[1]
-			return
+			return nil
 		}
 		metric := strings.Replace(fields[0], " ", "_", -1)
 		metric = strings.Replace(metric, "(", "", -1)
@@ -38,7 +38,7 @@ func c_nodestats_cfstats_linux() (opentsdb.MultiDataPoint, error) {
 		metric = strings.ToLower(metric)
 		values := strings.Fields(fields[1])
 		if values[0] == "NaN" {
-			return
+			return nil
 		}
 		value := values[0]
 		if table == "" {
@@ -46,6 +46,7 @@ func c_nodestats_cfstats_linux() (opentsdb.MultiDataPoint, error) {
 		} else {
 			Add(&md, "cassandra.tables."+metric, value, opentsdb.TagSet{"keyspace": keyspace, "table": table}, metadata.Unknown, metadata.None, "")
 		}
+		return nil
 	}, "nodetool", "cfstats")
 	return md, nil
 }

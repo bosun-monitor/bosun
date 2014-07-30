@@ -231,7 +231,7 @@ func exePath() (string, error) {
 
 func list(cs []collectors.Collector) {
 	for _, c := range cs {
-		slog.Infoln(c.Name())
+		fmt.Println(c.Name())
 	}
 }
 

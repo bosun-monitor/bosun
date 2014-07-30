@@ -17,7 +17,7 @@ func yum_update_stats_linux() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	regular_c := 0
 	kernel_c := 0
-	err := util.ReadCommand(func(line string) {
+	err := util.ReadCommand(func(line string) error {
 		fields := strings.Fields(line)
 		if len(fields) > 1 && !strings.HasPrefix(fields[0], "Updated Packages") {
 			if strings.HasPrefix(fields[0], "kern") {
@@ -26,6 +26,7 @@ func yum_update_stats_linux() (opentsdb.MultiDataPoint, error) {
 				regular_c++
 			}
 		}
+		return nil
 
 	}, "yum", "list", "updates", "-q")
 	if err != nil {

@@ -24,24 +24,26 @@ var (
 func parseRailURL() string {
 	var config string
 	var url string
-	util.ReadCommand(func(line string) {
+	util.ReadCommand(func(line string) error {
 		fields := strings.Fields(line)
 		if len(fields) == 0 || !strings.Contains(fields[0], "rg-listener") {
-			return
+			return nil
 		}
 		for i, s := range fields {
 			if s == "-config" && len(fields) > i {
 				config = fields[i+1]
 			}
 		}
+		return nil
 	}, "ps", "-e", "-o", "args")
 	if config == "" {
 		return config
 	}
-	readLine(config, func(s string) {
+	readLine(config, func(s string) error {
 		if m := rgListenRE.FindStringSubmatch(s); len(m) > 0 {
 			url = "http://" + m[1]
 		}
+		return nil
 	})
 	return url
 }

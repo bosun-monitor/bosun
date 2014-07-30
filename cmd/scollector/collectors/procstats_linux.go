@@ -1,13 +1,13 @@
 package collectors
 
 import (
+	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
 
 	"github.com/StackExchange/scollector/metadata"
 	"github.com/StackExchange/scollector/opentsdb"
-	"github.com/StackExchange/slog"
 )
 
 func init() {
@@ -36,27 +36,34 @@ var CPU_FIELDS = []string{
 
 func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
-	readLine("/proc/uptime", func(s string) {
+	var Error error
+	if err := readLine("/proc/uptime", func(s string) error {
 		m := uptimeRE.FindStringSubmatch(s)
 		if m == nil {
-			return
+			return nil
 		}
 		Add(&md, "linux.uptime_total", m[1], nil, metadata.Unknown, metadata.None, "")
 		Add(&md, "linux.uptime_now", m[2], nil, metadata.Unknown, metadata.None, "")
-	})
+		return nil
+	}); err != nil {
+		Error = err
+	}
 	mem := make(map[string]float64)
-	readLine("/proc/meminfo", func(s string) {
+	if err := readLine("/proc/meminfo", func(s string) error {
 		m := meminfoRE.FindStringSubmatch(s)
 		if m == nil {
-			return
+			return nil
 		}
 		i, err := strconv.ParseFloat(m[2], 64)
 		if err != nil {
-			slog.Errorln(err)
+			return err
 		}
 		mem[m[1]] = i
 		Add(&md, "linux.mem."+strings.ToLower(m[1]), m[2], nil, metadata.Unknown, metadata.None, "")
-	})
+		return nil
+	}); err != nil {
+		Error = err
+	}
 	Add(&md, osMemTotal, int(mem["MemTotal"])*1024, nil, metadata.Unknown, metadata.None, "")
 	Add(&md, osMemFree, int(mem["MemFree"])*1024, nil, metadata.Unknown, metadata.None, "")
 	Add(&md, osMemUsed, (int(mem["MemTotal"])-(int(mem["MemFree"])+int(mem["Buffers"])+int(mem["Cached"])))*1024, nil, metadata.Unknown, metadata.None, "")
@@ -64,10 +71,10 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 		Add(&md, osMemPctFree, (mem["MemFree"]+mem["Buffers"]+mem["Cached"])/mem["MemTotal"]*100, nil, metadata.Unknown, metadata.None, "")
 	}
 
-	readLine("/proc/vmstat", func(s string) {
+	if err := readLine("/proc/vmstat", func(s string) error {
 		m := vmstatRE.FindStringSubmatch(s)
 		if m == nil {
-			return
+			return nil
 		}
 
 		switch m[1] {
@@ -79,13 +86,16 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 				Add(&md, "linux.mem."+m[1], m[2], nil, metadata.Unknown, metadata.None, "")
 			}
 		}
-	})
+		return nil
+	}); err != nil {
+		Error = err
+	}
 	num_cores := 0
 	var t_util float64
-	readLine("/proc/stat", func(s string) {
+	if err := readLine("/proc/stat", func(s string) error {
 		m := statRE.FindStringSubmatch(s)
 		if m == nil {
-			return
+			return nil
 		}
 		if strings.HasPrefix(m[1], "cpu") {
 			metric_percpu := ""
@@ -111,19 +121,19 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 			}
 			if metric_percpu == "" {
 				if len(fields) != len(CPU_FIELDS) {
-					return
+					return nil
 				}
 				user, err := strconv.ParseFloat(fields[0], 64)
 				if err != nil {
-					return
+					return nil
 				}
 				nice, err := strconv.ParseFloat(fields[1], 64)
 				if err != nil {
-					return
+					return nil
 				}
 				system, err := strconv.ParseFloat(fields[2], 64)
 				if err != nil {
-					return
+					return nil
 				}
 				t_util = user + nice + system
 			}
@@ -136,43 +146,52 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 		} else if m[1] == "procs_blocked" {
 			Add(&md, "linux.procs_blocked", m[2], nil, metadata.Unknown, metadata.None, "")
 		}
-	})
+		return nil
+	}); err != nil {
+		Error = err
+	}
 	if num_cores != 0 && t_util != 0 {
 		Add(&md, osCPU, t_util/float64(num_cores), nil, metadata.Unknown, metadata.None, "")
 	}
-	readLine("/proc/loadavg", func(s string) {
+	if err := readLine("/proc/loadavg", func(s string) error {
 		m := loadavgRE.FindStringSubmatch(s)
 		if m == nil {
-			return
+			return nil
 		}
 		Add(&md, "linux.loadavg_1_min", m[1], nil, metadata.Unknown, metadata.None, "")
 		Add(&md, "linux.loadavg_5_min", m[2], nil, metadata.Unknown, metadata.None, "")
 		Add(&md, "linux.loadavg_15_min", m[3], nil, metadata.Unknown, metadata.None, "")
 		Add(&md, "linux.loadavg_runnable", m[4], nil, metadata.Unknown, metadata.None, "")
 		Add(&md, "linux.loadavg_total_threads", m[5], nil, metadata.Unknown, metadata.None, "")
-	})
-	readLine("/proc/sys/kernel/random/entropy_avail", func(s string) {
+		return nil
+	}); err != nil {
+		Error = err
+	}
+	if err := readLine("/proc/sys/kernel/random/entropy_avail", func(s string) error {
 		Add(&md, "linux.entropy_avail", strings.TrimSpace(s), nil, metadata.Unknown, metadata.None, "")
-	})
+		return nil
+	}); err != nil {
+		Error = err
+	}
 	num_cpus := 0
-	readLine("/proc/interrupts", func(s string) {
+	if err := readLine("/proc/interrupts", func(s string) error {
 		cols := strings.Fields(s)
 		if num_cpus == 0 {
 			num_cpus = len(cols)
-			return
+			return nil
 		} else if len(cols) < 2 {
-			return
+			return nil
 		}
 		irq_type := strings.TrimRight(cols[0], ":")
 		if !IsAlNum(irq_type) {
-			return
+			return nil
 		}
 		if IsDigit(irq_type) {
 			if cols[len(cols)-2] == "PCI-MSI-edge" && strings.Contains(cols[len(cols)-1], "eth") {
 				irq_type = cols[len(cols)-1]
 			} else {
 				// Interrupt type is just a number, ignore.
-				return
+				return nil
 			}
 		}
 		for i, val := range cols[1:] {
@@ -182,25 +201,26 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 			}
 			if !IsDigit(val) {
 				// Something is weird, there should only be digit values.
-				slog.Infoln("interrupts: unexpected value", val)
+				return fmt.Errorf("interrupts: unexpected value: %v", val)
 				break
 			}
 			Add(&md, "linux.interrupts", val, opentsdb.TagSet{"type": irq_type, "cpu": strconv.Itoa(i)}, metadata.Unknown, metadata.None, "")
 		}
-	})
-	readLine("/proc/net/sockstat", func(s string) {
+		return nil
+	}); err != nil {
+		Error = err
+	}
+	if err := readLine("/proc/net/sockstat", func(s string) error {
 		cols := strings.Fields(s)
 		switch cols[0] {
 		case "sockets:":
 			if len(cols) < 3 {
-				slog.Infoln("sockstat: error parsing sockets line")
-				break
+				return fmt.Errorf("sockstat: error parsing sockets line")
 			}
 			Add(&md, "linux.net.sockets.used", cols[2], nil, metadata.Unknown, metadata.None, "")
 		case "TCP:":
 			if len(cols) < 11 {
-				slog.Infoln("sockstat: error parsing tcp line")
-				break
+				return fmt.Errorf("sockstat: error parsing tcp line")
 			}
 			Add(&md, "linux.net.sockets.tcp_in_use", cols[2], nil, metadata.Unknown, metadata.None, "")
 			Add(&md, "linux.net.sockets.tcp_orphaned", cols[4], nil, metadata.Unknown, metadata.None, "")
@@ -209,42 +229,40 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 			Add(&md, "linux.net.sockets.tcp_mem", cols[10], nil, metadata.Unknown, metadata.None, "")
 		case "UDP:":
 			if len(cols) < 5 {
-				slog.Infoln("sockstat: error parsing udp line")
-				break
+				return fmt.Errorf("sockstat: error parsing udp line")
 			}
 			Add(&md, "linux.net.sockets.udp_in_use", cols[2], nil, metadata.Unknown, metadata.None, "")
 			Add(&md, "linux.net.sockets.udp_mem", cols[4], nil, metadata.Unknown, metadata.None, "")
 		case "UDPLITE:":
 			if len(cols) < 3 {
-				slog.Infoln("sockstat: error parsing udplite line")
-				break
+				return fmt.Errorf("sockstat: error parsing udplite line")
 			}
 			Add(&md, "linux.net.sockets.udplite_in_use", cols[2], nil, metadata.Unknown, metadata.None, "")
 		case "RAW:":
 			if len(cols) < 3 {
-				slog.Infoln("sockstat: error parsing raw line")
-				break
+				return fmt.Errorf("sockstat: error parsing raw line")
 			}
 			Add(&md, "linux.net.sockets.raw_in_use", cols[2], nil, metadata.Unknown, metadata.None, "")
 		case "FRAG:":
 			if len(cols) < 5 {
-				slog.Infoln("sockstat: error parsing frag line")
-				break
+				return fmt.Errorf("sockstat: error parsing frag line")
 			}
 			Add(&md, "linux.net.sockets.frag_in_use", cols[2], nil, metadata.Unknown, metadata.None, "")
 			Add(&md, "linux.net.sockets.frag_mem", cols[4], nil, metadata.Unknown, metadata.None, "")
 		}
-	})
+		return nil
+	}); err != nil {
+		Error = err
+	}
 	ln := 0
 	var headers []string
-	readLine("/proc/net/netstat", func(s string) {
+	if err := readLine("/proc/net/netstat", func(s string) error {
 		cols := strings.Fields(s)
 		if ln%2 == 0 {
 			headers = cols
 		} else {
 			if len(cols) < 1 || len(cols) != len(headers) {
-				slog.Warningln("netstat: parsing failed")
-				return
+				return fmt.Errorf("netstat: parsing failed")
 			}
 			root := strings.ToLower(strings.TrimSuffix(headers[0], "Ext:"))
 			for i, v := range cols[1:] {
@@ -254,6 +272,9 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 			}
 		}
 		ln += 1
-	})
-	return md, nil
+		return nil
+	}); err != nil {
+		Error = err
+	}
+	return md, Error
 }
