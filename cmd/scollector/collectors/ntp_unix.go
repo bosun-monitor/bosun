@@ -8,7 +8,6 @@ import (
 	"github.com/StackExchange/scollector/metadata"
 	"github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/scollector/util"
-	"github.com/StackExchange/slog"
 )
 
 func init() {
@@ -52,10 +51,10 @@ func ntpUnPretty(s string) (int64, error) {
 func c_ntp_peers_unix() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	const metric = "ntp."
-	util.ReadCommand(func(line string) {
+	util.ReadCommand(func(line string) error {
 		fields := strings.Fields(line)
 		if len(fields) != len(ntpNtpqPeerFields) || fields[0] == "remote" {
-			return
+			return nil
 		}
 		tags := opentsdb.TagSet{"remote": fields[0], "refid": fields[1]}
 		var current_source int
@@ -64,20 +63,21 @@ func c_ntp_peers_unix() (opentsdb.MultiDataPoint, error) {
 		}
 		Add(&md, metric+"current_source", current_source, tags, metadata.Gauge, metadata.Bool, "")
 		Add(&md, metric+"stratum", fields[2], tags, metadata.Gauge, "Stratum", "")
-		if when, err := ntpUnPretty(fields[4]); err == nil {
+		if when, err := ntpUnPretty(fields[4]); err != nil {
+			return err
+		} else {
 			Add(&md, metric+"when", when, tags, metadata.Gauge, metadata.Second, "")
-		} else {
-			slog.Error(err)
 		}
-		if poll, err := ntpUnPretty(fields[5]); err == nil {
-			Add(&md, metric+"poll", poll, tags, metadata.Gauge, metadata.Second, "")
+		if poll, err := ntpUnPretty(fields[5]); err != nil {
+			return err
 		} else {
-			slog.Error(err)
+			Add(&md, metric+"poll", poll, tags, metadata.Gauge, metadata.Second, "")
 		}
 		Add(&md, metric+"reach", fields[6], tags, metadata.Gauge, "Code", "")
 		Add(&md, metric+"delay", fields[7], tags, metadata.Gauge, metadata.MilliSecond, "")
 		Add(&md, metric+"offset", fields[8], tags, metadata.Gauge, metadata.MilliSecond, "")
 		Add(&md, metric+"jitter", fields[9], tags, metadata.Gauge, metadata.MilliSecond, "")
+		return nil
 	}, "ntpq", "-pn")
 	return md, nil
 }
