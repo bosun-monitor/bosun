@@ -68,7 +68,7 @@ func c_sntp_windows() (opentsdb.MultiDataPoint, error) {
 		}
 		return nil
 	}, "w32tm", "/query", "/status"); err != nil {
-		return md, err
+		return nil, nil
 	}
 	tags := opentsdb.TagSet{"remote": source}
 	Add(&md, metric+"stratum", stratum, tags, metadata.Gauge, "Stratum", "")
