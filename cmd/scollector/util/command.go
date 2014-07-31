@@ -10,9 +10,9 @@ import (
 	"github.com/StackExchange/slog"
 )
 
-// command executes the named program with the given arguments.
-// If it does not exit within 10s, it is terminated.
-func Command(name string, arg ...string) ([]byte, error) {
+// Command executes the named program with the given arguments.
+// If it does not exit within timeout, it is terminated.
+func Command(timeout time.Duration, name string, arg ...string) ([]byte, error) {
 	c := exec.Command(name, arg...)
 	var b bytes.Buffer
 	c.Stdout = &b
@@ -20,19 +20,25 @@ func Command(name string, arg ...string) ([]byte, error) {
 	go func() {
 		done <- c.Run()
 	}()
-	const commandDuration = time.Second * 10
 	select {
 	case err := <-done:
 		return b.Bytes(), err
-	case <-time.After(commandDuration):
+	case <-time.After(timeout):
 		// todo: figure out if this can leave the done chan hanging open
 		c.Process.Kill()
-		return nil, fmt.Errorf("%v killed after %v", name, commandDuration)
+		return nil, fmt.Errorf("%v killed after %v", name, timeout)
 	}
 }
 
+// ReadCommand runs command name with args and calls line for each line from its
+// stdout. Command is killed after 10 seconds.
 func ReadCommand(line func(string) error, name string, arg ...string) error {
-	b, err := Command(name, arg...)
+	return ReadCommandTimeout(time.Second*10, line, name, arg...)
+}
+
+// ReadCommandTimeout is the same as ReadCommand with a specifiable timeout.
+func ReadCommandTimeout(timeout time.Duration, line func(string) error, name string, arg ...string) error {
+	b, err := Command(timeout, name, arg...)
 	if err != nil {
 		return err
 	}
