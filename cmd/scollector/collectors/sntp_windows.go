@@ -19,14 +19,14 @@ func c_sntp_windows() (opentsdb.MultiDataPoint, error) {
 	const metric = "sntp."
 	var (
 		stratum string
-		delay   string
+		delay   float64
 		when    float64
 		source  string
-		poll    string
+		poll    float64
 	)
 	if err := util.ReadCommand(func(line string) error {
-		f := strings.Split(line, ":")
-		if len(f) < 1 {
+		f := strings.SplitN(line, ":", 2)
+		if len(f) != 2 {
 			return nil
 		}
 		switch f[0] {
@@ -37,9 +37,13 @@ func c_sntp_windows() (opentsdb.MultiDataPoint, error) {
 			}
 			stratum = sf[0]
 		case "Root Delay":
-			delay = strings.Trim(f[1], "s")
+			if d, err := time.ParseDuration(strings.TrimSpace(f[1])); err != nil {
+				return err
+			} else {
+				delay = d.Seconds()
+			}
 		case "Last Successful Sync Time":
-			if t, err := time.Parse("1/2/2006 3:04:05 PM", strings.TrimSpace(strings.Join(f[1:len(f)], ":"))); err != nil {
+			if t, err := time.Parse("1/2/2006 3:04:05 PM", strings.TrimSpace(f[1])); err != nil {
 				return err
 			} else {
 				when = time.Since(t).Seconds()
@@ -51,7 +55,12 @@ func c_sntp_windows() (opentsdb.MultiDataPoint, error) {
 			if len(sf) != 2 {
 				return fmt.Errorf("Unexpected value for Poll Interval")
 			}
-			poll = strings.Trim(sf[1], "()s")
+			s := strings.Trim(sf[1], "()")
+			if d, err := time.ParseDuration(strings.TrimSpace(s)); err != nil {
+				return err
+			} else {
+				poll = d.Seconds()
+			}
 		}
 		return nil
 	}, "w32tm", "/query", "/status"); err != nil {
@@ -62,18 +71,17 @@ func c_sntp_windows() (opentsdb.MultiDataPoint, error) {
 	Add(&md, metric+"delay", delay, tags, metadata.Gauge, metadata.Second, "")
 	Add(&md, metric+"when", when, tags, metadata.Gauge, metadata.Second, "")
 	Add(&md, metric+"poll", poll, tags, metadata.Gauge, metadata.Second, "")
-	if err := util.ReadCommand(func(line string) error {
-		if !strings.Contains(line, ",") {
+	err := util.ReadCommand(func(line string) error {
+		f := strings.SplitN(line, ",", 2)
+		if len(f) != 2 {
 			return nil
 		}
-		f := strings.Split(line, ",")
-		if len(f) < 2 {
-			return fmt.Errorf("Unexpected output for ")
+		if d, err := time.ParseDuration(strings.TrimSpace(f[1])); err != nil {
+			return err
+		} else {
+			Add(&md, metric+"offset", d.Seconds(), tags, metadata.Gauge, metadata.Second, "")
 		}
-		Add(&md, metric+"offset", strings.Trim(f[1], "s"), tags, metadata.Gauge, metadata.Second, "")
 		return nil
-	}, "w32tm", "/stripchart", fmt.Sprintf("/computer:%v", source), "/samples:1", "/dataonly"); err != nil {
-		return md, err
-	}
-	return md, nil
+	}, "w32tm", "/stripchart", fmt.Sprintf("/computer:%v", source), "/samples:1", "/dataonly")
+	return md, err
 }
