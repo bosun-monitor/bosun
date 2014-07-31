@@ -37,12 +37,14 @@ func c_sntp_windows() (opentsdb.MultiDataPoint, error) {
 			}
 			stratum = sf[0]
 		case "Root Delay":
-			if d, err := time.ParseDuration(strings.TrimSpace(f[1])); err != nil {
+			d, err := time.ParseDuration(strings.TrimSpace(f[1]))
+			if err != nil {
 				return err
 			}
 			delay = d.Seconds()
 		case "Last Successful Sync Time":
-			if t, err := time.Parse("1/2/2006 3:04:05 PM", strings.TrimSpace(f[1])); err != nil {
+			t, err := time.Parse("1/2/2006 3:04:05 PM", strings.TrimSpace(f[1]))
+			if err != nil {
 				return err
 			}
 			when = time.Since(t).Seconds()
@@ -54,7 +56,8 @@ func c_sntp_windows() (opentsdb.MultiDataPoint, error) {
 				return fmt.Errorf("Unexpected value for Poll Interval")
 			}
 			s := strings.Trim(sf[1], "()")
-			if d, err := time.ParseDuration(strings.TrimSpace(s)); err != nil {
+			d, err := time.ParseDuration(strings.TrimSpace(s))
+			if err != nil {
 				return err
 			}
 			poll = d.Seconds()
@@ -73,7 +76,8 @@ func c_sntp_windows() (opentsdb.MultiDataPoint, error) {
 		if len(f) != 2 {
 			return nil
 		}
-		if d, err := time.ParseDuration(strings.TrimSpace(f[1])); err != nil {
+		d, err := time.ParseDuration(strings.TrimSpace(f[1]))
+		if err != nil {
 			return err
 		}
 		Add(&md, metric+"offset", d.Seconds(), tags, metadata.Gauge, metadata.Second, "")
