@@ -39,15 +39,13 @@ func c_sntp_windows() (opentsdb.MultiDataPoint, error) {
 		case "Root Delay":
 			if d, err := time.ParseDuration(strings.TrimSpace(f[1])); err != nil {
 				return err
-			} else {
-				delay = d.Seconds()
 			}
+			delay = d.Seconds()
 		case "Last Successful Sync Time":
 			if t, err := time.Parse("1/2/2006 3:04:05 PM", strings.TrimSpace(f[1])); err != nil {
 				return err
-			} else {
-				when = time.Since(t).Seconds()
 			}
+			when = time.Since(t).Seconds()
 		case "Source":
 			source = strings.TrimSpace(f[1])
 		case "Poll Interval":
@@ -58,9 +56,8 @@ func c_sntp_windows() (opentsdb.MultiDataPoint, error) {
 			s := strings.Trim(sf[1], "()")
 			if d, err := time.ParseDuration(strings.TrimSpace(s)); err != nil {
 				return err
-			} else {
-				poll = d.Seconds()
 			}
+			poll = d.Seconds()
 		}
 		return nil
 	}, "w32tm", "/query", "/status"); err != nil {
@@ -78,9 +75,8 @@ func c_sntp_windows() (opentsdb.MultiDataPoint, error) {
 		}
 		if d, err := time.ParseDuration(strings.TrimSpace(f[1])); err != nil {
 			return err
-		} else {
-			Add(&md, metric+"offset", d.Seconds(), tags, metadata.Gauge, metadata.Second, "")
 		}
+		Add(&md, metric+"offset", d.Seconds(), tags, metadata.Gauge, metadata.Second, "")
 		return nil
 	}, "w32tm", "/stripchart", fmt.Sprintf("/computer:%v", source), "/samples:1", "/dataonly")
 	return md, err
