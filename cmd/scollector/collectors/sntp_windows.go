@@ -29,6 +29,7 @@ func c_sntp_windows() (opentsdb.MultiDataPoint, error) {
 		if len(f) != 2 {
 			return nil
 		}
+		f[1] = strings.TrimSpace(f[1])
 		switch f[0] {
 		case "Stratum":
 			sf := strings.Fields(f[1])
@@ -37,13 +38,16 @@ func c_sntp_windows() (opentsdb.MultiDataPoint, error) {
 			}
 			stratum = sf[0]
 		case "Root Delay":
-			d, err := time.ParseDuration(strings.TrimSpace(f[1]))
+			d, err := time.ParseDuration(f[1])
 			if err != nil {
 				return err
 			}
 			delay = d.Seconds()
 		case "Last Successful Sync Time":
-			t, err := time.Parse("1/2/2006 3:04:05 PM", strings.TrimSpace(f[1]))
+			if f[1] == "unspecified" {
+				break
+			}
+			t, err := time.Parse("1/2/2006 3:04:05 PM", f[1])
 			if err != nil {
 				return err
 			}
