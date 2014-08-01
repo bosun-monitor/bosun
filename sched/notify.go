@@ -120,7 +120,6 @@ func (s *Schedule) unotify(name string, group AlertKeys, n *conf.Notification) {
 }
 
 func (s *Schedule) AddNotification(ak AlertKey, n *conf.Notification, started time.Time) {
-	s.Lock()
 	if s.Notifications == nil {
 		s.Notifications = make(map[AlertKey]map[string]time.Time)
 	}
@@ -128,5 +127,4 @@ func (s *Schedule) AddNotification(ak AlertKey, n *conf.Notification, started ti
 		s.Notifications[ak] = make(map[string]time.Time)
 	}
 	s.Notifications[ak][n.Name] = started
-	s.Unlock()
 }
