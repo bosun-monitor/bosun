@@ -22,13 +22,15 @@ func Command(timeout time.Duration, name string, arg ...string) ([]byte, error) 
 	go func() {
 		done <- c.Run()
 	}()
+	interrupt := time.After(timeout)
+	kill := time.After(timeout * 2)
 	for {
 		select {
 		case err := <-done:
 			return b.Bytes(), err
-		case <-time.After(timeout):
+		case <-interrupt:
 			c.Process.Signal(os.Interrupt)
-		case <-time.After(timeout * 2):
+		case <-kill:
 			// todo: figure out if this can leave the done chan hanging open
 			c.Process.Kill()
 			return nil, fmt.Errorf("%v killed after %v", name, timeout*2)
