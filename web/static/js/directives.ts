@@ -407,14 +407,16 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWi
 				xloc.text('Time: ' + fmtTime(xi));
 				var t = xi.getTime() / 1000;
 				names
-					.text((d: any) => {
+					.each(function(d: any) {
 						var idx = bisect(d.data, t);
 						if (idx >= d.data.length) {
 							idx = d.data.length - 1;
 						}
+						var e = d3.select(this);
 						var pt = d.data[idx];
 						if (pt) {
-							return d.name + ': ' + fmtfilter(pt.y);
+							e.attr('title', pt.y);
+							e.text(d.name + ': ' + fmtfilter(pt.y));
 						}
 					})
 					.style('color', (d: any) => { return color(d.name); });
