@@ -7,15 +7,13 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
-	"sync"
-	"time"
 
 	"github.com/StackExchange/scollector/metadata"
 	"github.com/StackExchange/scollector/opentsdb"
 )
 
 func init() {
-	collectors = append(collectors, &IntervalCollector{F: c_elasticsearch, init: esInit})
+	collectors = append(collectors, &IntervalCollector{F: c_elasticsearch, Enable: enableURL(esURL)})
 }
 
 const esURL = "http://localhost:9200/"
@@ -27,52 +25,20 @@ var (
 		"yellow": 1,
 		"red":    2,
 	}
-	esEnable bool
-	esLock   sync.Mutex
 )
 
-func esEnabled() (b bool) {
-	esLock.Lock()
-	b = esEnable
-	esLock.Unlock()
-	return
-}
-
-func esInit() {
-	update := func() {
-		resp, err := http.Get(esURL)
-		esLock.Lock()
-		defer esLock.Unlock()
-		if err != nil {
-			esEnable = false
-			return
-		}
-		resp.Body.Close()
-		esEnable = resp.StatusCode == 200
-	}
-	update()
-	go func() {
-		for _ = range time.Tick(time.Minute * 5) {
-			update()
-		}
-	}()
-}
-
-func c_elasticsearch() opentsdb.MultiDataPoint {
-	if !esEnabled() {
-		return nil
-	}
+func c_elasticsearch() (opentsdb.MultiDataPoint, error) {
 	var status esStatus
 	if err := esReq("/", "", &status); err != nil {
-		return nil
+		return nil, err
 	}
 	var stats esStats
 	if err := esReq(esStatsURL(status.Version.Number), "", &stats); err != nil {
-		return nil
+		return nil, err
 	}
 	var clusterState esClusterState
 	if err := esReq("/_cluster/state", "?filter_routing_table=true&filter_metadata=true&filter_blocks=true", &clusterState); err != nil {
-		return nil
+		return nil, err
 	}
 	var md opentsdb.MultiDataPoint
 	add := func(name string, val interface{}, ts opentsdb.TagSet) {
@@ -87,7 +53,7 @@ func c_elasticsearch() opentsdb.MultiDataPoint {
 		if isMaster {
 			cstats := make(map[string]interface{})
 			if err := esReq("/_cluster/health", "", &cstats); err != nil {
-				return nil
+				return nil, err
 			}
 			for k, v := range cstats {
 				switch t := v.(type) {
@@ -237,7 +203,7 @@ func c_elasticsearch() opentsdb.MultiDataPoint {
 			}
 		}
 	}
-	return md
+	return md, nil
 }
 
 func esReq(path, query string, v interface{}) error {

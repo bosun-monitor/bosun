@@ -34,7 +34,7 @@ var FIELDS_NET = []string{
 var ifstatRE = regexp.MustCompile(`\s+(eth\d+|em\d+_\d+/\d+|em\d+_\d+|em\d+|` +
 	`bond\d+|` + `p\d+p\d+_\d+/\d+|p\d+p\d+_\d+|p\d+p\d+):(.*)`)
 
-func c_ifstat_linux() opentsdb.MultiDataPoint {
+func c_ifstat_linux() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	direction := func(i int) string {
 		if i >= 8 {
@@ -43,10 +43,10 @@ func c_ifstat_linux() opentsdb.MultiDataPoint {
 			return "in"
 		}
 	}
-	readLine("/proc/net/dev", func(s string) {
+	err := readLine("/proc/net/dev", func(s string) error {
 		m := ifstatRE.FindStringSubmatch(s)
 		if m == nil {
-			return
+			return nil
 		}
 		intf := m[1]
 		stats := strings.Fields(m[2])
@@ -79,6 +79,7 @@ func c_ifstat_linux() opentsdb.MultiDataPoint {
 				}
 			}
 		}
+		return nil
 	})
-	return md
+	return md, err
 }

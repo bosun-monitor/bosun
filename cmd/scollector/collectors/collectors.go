@@ -91,16 +91,20 @@ func Run(cs []Collector) chan *opentsdb.DataPoint {
 	return ch
 }
 
-func Add(md *opentsdb.MultiDataPoint, name string, value interface{}, tags opentsdb.TagSet, rate metadata.RateType, unit metadata.Unit, desc string) {
-	if tags == nil {
-		tags = make(opentsdb.TagSet)
+// AddTS is the same as Add but lets you specify the timestamp
+func AddTS(md *opentsdb.MultiDataPoint, name string, ts int64, value interface{}, t opentsdb.TagSet, rate metadata.RateType, unit metadata.Unit, desc string) {
+	tags := make(opentsdb.TagSet)
+	for k, v := range t {
+		tags[k] = v
 	}
-	if _, present := tags["host"]; !present {
+	if host, present := tags["host"]; !present {
 		tags["host"] = util.Hostname
+	} else if host == "" {
+		delete(tags, "host")
 	}
 	d := opentsdb.DataPoint{
 		Metric:    name,
-		Timestamp: now(),
+		Timestamp: ts,
 		Value:     value,
 		Tags:      tags,
 	}
@@ -116,14 +120,25 @@ func Add(md *opentsdb.MultiDataPoint, name string, value interface{}, tags opent
 	}
 }
 
-func readLine(fname string, line func(string)) error {
+// Add appends a new data point with given metric name, value, and tags. Tags
+// may be nil. If tags is nil or does not contain a host key, it will be
+// automatically added. If the value of the host key is the empty string, it
+// will be removed (use this to prevent the normal auto-adding of the host tag).
+func Add(md *opentsdb.MultiDataPoint, name string, value interface{}, t opentsdb.TagSet, rate metadata.RateType, unit metadata.Unit, desc string) {
+	AddTS(md, name, now(), value, t, rate, unit, desc)
+}
+
+func readLine(fname string, line func(string) error) error {
 	f, err := os.Open(fname)
 	if err != nil {
 		return err
 	}
+	defer f.Close()
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
-		line(scanner.Text())
+		if err := line(scanner.Text()); err != nil {
+			return err
+		}
 	}
 	if err := scanner.Err(); err != nil {
 		slog.Infof("%v: %v\n", fname, err)

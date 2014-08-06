@@ -1,6 +1,7 @@
 package collectors
 
 import (
+	"fmt"
 	"io/ioutil"
 	"regexp"
 	"strconv"
@@ -9,7 +10,6 @@ import (
 	"github.com/StackExchange/scollector/metadata"
 	"github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/scollector/util"
-	"github.com/StackExchange/slog"
 )
 
 func init() {
@@ -64,16 +64,16 @@ func removable_fs(name string) bool {
 	return false
 }
 
-func c_iostat_linux() opentsdb.MultiDataPoint {
+func c_iostat_linux() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	var removables []string
-	readLine("/proc/diskstats", func(s string) {
+	err := readLine("/proc/diskstats", func(s string) error {
 		values := strings.Fields(s)
 		if len(values) < 4 {
-			return
+			return nil
 		} else if values[3] == "0" {
 			// Skip disks that haven't done a single read.
-			return
+			return nil
 		}
 		metric := "linux.disk.part."
 		i0, _ := strconv.Atoi(values[0])
@@ -117,18 +117,19 @@ func c_iostat_linux() opentsdb.MultiDataPoint {
 				Add(&md, metric+FIELDS_PART[i], v, ts, metadata.Unknown, metadata.None, "")
 			}
 		} else {
-			slog.Infoln("iostat: cannot parse")
+			return fmt.Errorf("cannot parse")
 		}
+		return nil
 	})
-	return md
+	return md, err
 }
 
-func c_dfstat_blocks_linux() opentsdb.MultiDataPoint {
+func c_dfstat_blocks_linux() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
-	util.ReadCommand(func(line string) {
+	err := util.ReadCommand(func(line string) error {
 		fields := strings.Fields(line)
 		if line == "" || len(fields) < 6 || !IsDigit(fields[2]) {
-			return
+			return nil
 		}
 		fs := fields[0]
 		mount := fields[5]
@@ -152,16 +153,17 @@ func c_dfstat_blocks_linux() opentsdb.MultiDataPoint {
 		if st != 0 {
 			Add(&md, osDiskPctFree, sf/st*100, os_tags, metadata.Unknown, metadata.None, "")
 		}
+		return nil
 	}, "df", "-lP", "--block-size", "1")
-	return md
+	return md, err
 }
 
-func c_dfstat_inodes_linux() opentsdb.MultiDataPoint {
+func c_dfstat_inodes_linux() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
-	util.ReadCommand(func(line string) {
+	err := util.ReadCommand(func(line string) error {
 		fields := strings.Fields(line)
 		if len(fields) < 6 || !IsDigit(fields[2]) {
-			return
+			return nil
 		}
 		mount := fields[5]
 		fs := fields[0]
@@ -173,6 +175,7 @@ func c_dfstat_inodes_linux() opentsdb.MultiDataPoint {
 		Add(&md, metric+"inodes_total", fields[1], tags, metadata.Unknown, metadata.None, "")
 		Add(&md, metric+"inodes_used", fields[2], tags, metadata.Unknown, metadata.None, "")
 		Add(&md, metric+"inodes_free", fields[3], tags, metadata.Unknown, metadata.None, "")
+		return nil
 	}, "df", "-liP")
-	return md
+	return md, err
 }

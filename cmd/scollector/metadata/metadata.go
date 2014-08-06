@@ -28,6 +28,7 @@ type Unit string
 const (
 	None           Unit = ""
 	A                   = "A" // Amps
+	Bool                = "bool"
 	Bytes               = "bytes"
 	BytesPerSecond      = "bytes per second"
 	C                   = "C" // Celsius
@@ -39,6 +40,7 @@ const (
 	PerSecond           = "per second"
 	RPM                 = "RPM" // Rotations per minute.
 	Second              = "seconds"
+	MilliSecond         = "milliseconds"
 	V                   = "V" // Volts
 	V_10                = "tenth-Volts"
 )

@@ -3,7 +3,6 @@ package collectors
 import (
 	"github.com/StackExchange/scollector/metadata"
 	"github.com/StackExchange/scollector/opentsdb"
-	"github.com/StackExchange/slog"
 	"github.com/StackExchange/wmi"
 )
 
@@ -15,13 +14,12 @@ func init() {
 // cache, etc.) as well as saturation (i.e., paging activity). Lot of that is in
 // Win32_PerfRawData_PerfOS_Memory. Win32_Operating_System's units are KBytes.
 
-func c_simple_mem_windows() opentsdb.MultiDataPoint {
+func c_simple_mem_windows() (opentsdb.MultiDataPoint, error) {
 	var dst []Win32_OperatingSystem
 	var q = wmi.CreateQuery(&dst, "")
 	err := queryWmi(q, &dst)
 	if err != nil {
-		slog.Infoln("simple_mem:", err)
-		return nil
+		return nil, err
 	}
 	var md opentsdb.MultiDataPoint
 	for _, v := range dst {
@@ -34,7 +32,7 @@ func c_simple_mem_windows() opentsdb.MultiDataPoint {
 		Add(&md, osMemUsed, v.TotalVisibleMemorySize*1024-v.FreePhysicalMemory*1024, nil, metadata.Gauge, metadata.Bytes, "")
 		Add(&md, osMemPctFree, float64(v.FreePhysicalMemory)/float64(v.TotalVisibleMemorySize)*100, nil, metadata.Gauge, metadata.Pct, "")
 	}
-	return md
+	return md, nil
 }
 
 type Win32_OperatingSystem struct {

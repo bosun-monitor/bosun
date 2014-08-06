@@ -45,15 +45,16 @@ var (
 	qlock, mlock, slock sync.Mutex   // Locks for queues, maps, stats.
 	counters                         = make(map[string]*addMetric)
 	sets                             = make(map[string]*setMetric)
+	puts                             = make(map[string]*putMetric)
 	client              *http.Client = &http.Client{
-		Transport: new(timeoutTransport),
+		Transport: &timeoutTransport{Transport: new(http.Transport)},
 		Timeout:   time.Minute,
 	}
 )
 
 type timeoutTransport struct {
-	Transport *http.Transport
-	Timeout   time.Time
+	*http.Transport
+	Timeout time.Time
 }
 
 func (t *timeoutTransport) RoundTrip(r *http.Request) (*http.Response, error) {
@@ -111,25 +112,25 @@ func InitChan(tsdbhost, metric_root string, ch chan *opentsdb.DataPoint) error {
 	go send()
 
 	go collect()
-	Set("collect.dropped", nil, func() (i float64) {
+	Set("collect.dropped", nil, func() (i interface{}) {
 		slock.Lock()
-		i = float64(dropped)
+		i = dropped
 		slock.Unlock()
 		return
 	})
-	Set("collect.sent", nil, func() (i float64) {
+	Set("collect.sent", nil, func() (i interface{}) {
 		slock.Lock()
-		i = float64(sent)
+		i = sent
 		slock.Unlock()
 		return
 	})
-	Set("collect.alloc", nil, func() float64 {
+	Set("collect.alloc", nil, func() interface{} {
 		var ms runtime.MemStats
 		runtime.ReadMemStats(&ms)
-		return float64(ms.Alloc)
+		return ms.Alloc
 	})
-	Set("collect.goroutines", nil, func() float64 {
-		return float64(runtime.NumGoroutine())
+	Set("collect.goroutines", nil, func() interface{} {
+		return runtime.NumGoroutine()
 	})
 	return nil
 }
@@ -155,10 +156,10 @@ func setHostName() error {
 type setMetric struct {
 	metric string
 	ts     opentsdb.TagSet
-	f      func() float64
+	f      func() interface{}
 }
 
-func Set(metric string, ts opentsdb.TagSet, f func() float64) error {
+func Set(metric string, ts opentsdb.TagSet, f func() interface{}) error {
 	if err := check(metric, &ts); err != nil {
 		return err
 	}
@@ -172,12 +173,12 @@ func Set(metric string, ts opentsdb.TagSet, f func() float64) error {
 type addMetric struct {
 	metric string
 	ts     opentsdb.TagSet
-	value  float64
+	value  int64
 }
 
 // Add takes a metric and increments a counter for that metric. The metric name
 // is appended to the basename specified in the Init function.
-func Add(metric string, ts opentsdb.TagSet, inc float64) error {
+func Add(metric string, ts opentsdb.TagSet, inc int64) error {
 	if err := check(metric, &ts); err != nil {
 		return err
 	}
@@ -190,6 +191,25 @@ func Add(metric string, ts opentsdb.TagSet, inc float64) error {
 		}
 	}
 	counters[tss].value += inc
+	mlock.Unlock()
+	return nil
+}
+
+type putMetric struct {
+	metric string
+	ts     opentsdb.TagSet
+	value  interface{}
+}
+
+// Put is useful for capturing "events" that have a gauge value. Subsequent
+// calls between the sending interval will overwrite previous calls.
+func Put(metric string, ts opentsdb.TagSet, v interface{}) error {
+	if err := check(metric, &ts); err != nil {
+		return err
+	}
+	tss := metric + ts.String()
+	mlock.Lock()
+	puts[tss] = &putMetric{metric, ts.Copy(), v}
 	mlock.Unlock()
 	return nil
 }
@@ -252,6 +272,16 @@ func collect() {
 			}
 			tchan <- dp
 		}
+		for _, s := range puts {
+			dp := &opentsdb.DataPoint{
+				Metric:    metricRoot + s.metric,
+				Timestamp: now,
+				Value:     s.value,
+				Tags:      s.ts,
+			}
+			tchan <- dp
+		}
+		puts = make(map[string]*putMetric)
 		mlock.Unlock()
 		time.Sleep(Freq)
 	}

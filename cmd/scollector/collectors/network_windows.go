@@ -5,7 +5,6 @@ import (
 
 	"github.com/StackExchange/scollector/metadata"
 	"github.com/StackExchange/scollector/opentsdb"
-	"github.com/StackExchange/slog"
 	"github.com/StackExchange/wmi"
 )
 
@@ -15,13 +14,12 @@ func init() {
 
 var interfaceExclusions = regexp.MustCompile("isatap|Teredo")
 
-func c_network_windows() opentsdb.MultiDataPoint {
+func c_network_windows() (opentsdb.MultiDataPoint, error) {
 	var dst []Win32_PerfRawData_Tcpip_NetworkInterface
 	var q = wmi.CreateQuery(&dst, "")
 	err := queryWmi(q, &dst)
 	if err != nil {
-		slog.Infoln("network:", err)
-		return nil
+		return nil, err
 	}
 	var md opentsdb.MultiDataPoint
 	for _, v := range dst {
@@ -47,7 +45,7 @@ func c_network_windows() opentsdb.MultiDataPoint {
 		Add(&md, osNetErrors, v.PacketsOutboundErrors, opentsdb.TagSet{"iface": v.Name, "type": "error", "direction": "out"}, metadata.Unknown, metadata.None, "")
 		Add(&md, osNetErrors, v.PacketsReceivedErrors, opentsdb.TagSet{"iface": v.Name, "type": "error", "direction": "in"}, metadata.Unknown, metadata.None, "")
 	}
-	return md
+	return md, nil
 }
 
 type Win32_PerfRawData_Tcpip_NetworkInterface struct {

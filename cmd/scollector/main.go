@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -16,22 +17,33 @@ import (
 	"github.com/StackExchange/scollector/collectors"
 	"github.com/StackExchange/scollector/metadata"
 	"github.com/StackExchange/scollector/opentsdb"
+	"github.com/StackExchange/scollector/util"
 	"github.com/StackExchange/slog"
+)
+
+// These constants should remain in source control as their zero values.
+const (
+	// VersionDate should be set at build time as a date: 20140721184001.
+	VersionDate uint64 = 0
+	// VersionID should be set at build time as the most recent commit hash.
+	VersionID string = ""
 )
 
 var (
 	flagFilter    = flag.String("f", "", "Filters collectors matching this term. Works with all other arguments.")
-	flagTest      = flag.Bool("t", false, "Test - run collectors once, print, and exit.")
 	flagList      = flag.Bool("l", false, "List")
 	flagPrint     = flag.Bool("p", false, "Print to screen instead of sending to a host")
 	flagHost      = flag.String("h", "bosun", `OpenTSDB host. Ex: "tsdb.example.com". Can optionally specify port: "tsdb.example.com:4000", but will default to 4242 otherwise`)
-	flagColDir    = flag.String("c", "", `Passthrough collector directory. It should contain numbered directories like the OpenTSDB scollector expects. Any executable file in those directories is run every N seconds, where N is the name of the directory. Use 0 for a program that should be run continuously and simply pass data through to OpenTSDB (the program will be restarted if it exits. Data output format is: "metric timestamp value tag1=val1 tag2=val2 ...". Timestamp is in Unix format (seconds since epoch). Tags are optional. A host tag is automatically added, but overridden if specified.`)
+	flagColDir    = flag.String("c", "", `External collectors directory.`)
 	flagBatchSize = flag.Int("b", 0, "OpenTSDB batch size. Used for debugging bad data.")
 	flagSNMP      = flag.String("s", "", "SNMP host to poll of the format: \"community@host[,community@host...]\".")
 	flagICMP      = flag.String("i", "", "ICMP host to ping of the format: \"host[,host...]\".")
+	flagVsphere   = flag.String("v", "", `vSphere host to poll of the format: "user:password@host[,user:password@host...]".`)
 	flagFake      = flag.Int("fake", 0, "Generates X fake data points on the test.fake metric per second.")
 	flagDebug     = flag.Bool("d", false, "Enables debug output.")
 	flagJSON      = flag.Bool("j", false, "With -p enabled, prints JSON.")
+	flagFullHost  = flag.Bool("u", false, `Enables full hostnames: doesn't truncate to first ".".`)
+	flagVersion   = flag.Bool("version", false, `Prints the version and exits.`)
 
 	mains []func()
 )
@@ -75,6 +87,8 @@ func readConf() {
 			f(flagSNMP)
 		case "icmp":
 			f(flagICMP)
+		case "vsphere":
+			f(flagVsphere)
 		default:
 			if *flagDebug {
 				slog.Errorf("unknown key in %v:%v", p, i+1)
@@ -85,11 +99,20 @@ func readConf() {
 
 func main() {
 	flag.Parse()
+	if *flagPrint {
+		slog.Set(&slog.StdLog{Log: log.New(os.Stdout, "", log.LstdFlags)})
+	}
+	if *flagVersion {
+		fmt.Printf("scollector version %v (%v)\n", VersionDate, VersionID)
+		os.Exit(0)
+	}
 	for _, m := range mains {
 		m()
 	}
 	readConf()
 
+	util.FullHostname = *flagFullHost
+	util.Set()
 	if *flagColDir != "" {
 		collectors.InitPrograms(*flagColDir)
 	}
@@ -108,6 +131,25 @@ func main() {
 			collectors.ICMP(s)
 		}
 	}
+	if *flagVsphere != "" {
+		for _, s := range strings.Split(*flagVsphere, ",") {
+			sp := strings.SplitN(s, ":", 2)
+			if len(sp) != 2 {
+				slog.Fatal("invalid vsphere string:", *flagVsphere)
+			}
+			user := sp[0]
+			idx := strings.LastIndex(sp[1], "@")
+			if idx == -1 {
+				slog.Fatal("invalid vsphere string:", *flagVsphere)
+			}
+			pwd := sp[1][:idx]
+			host := sp[1][idx+1:]
+			if len(user) == 0 || len(pwd) == 0 || len(host) == 0 {
+				slog.Fatal("invalid vsphere string:", *flagVsphere)
+			}
+			collectors.Vsphere(user, pwd, host)
+		}
+	}
 	if *flagFake > 0 {
 		collectors.InitFake(*flagFake)
 	}
@@ -117,10 +159,7 @@ func main() {
 		col.Init()
 	}
 	u := parseHost()
-	if *flagTest {
-		test(c)
-		return
-	} else if *flagList {
+	if *flagList {
 		list(c)
 		return
 	} else if *flagHost != "" {
@@ -138,6 +177,11 @@ func main() {
 		slog.Infoln("OpenTSDB host:", u)
 		if err := collect.InitChan(u.Host, "scollector", cdp); err != nil {
 			slog.Fatal(err)
+		}
+		if VersionDate > 0 {
+			if err := collect.Put("version", nil, VersionDate); err != nil {
+				slog.Error(err)
+			}
 		}
 		if *flagBatchSize > 0 {
 			collect.BatchSize = *flagBatchSize
@@ -185,29 +229,9 @@ func exePath() (string, error) {
 	return "", err
 }
 
-func test(cs []collectors.Collector) {
-	dpchan := make(chan *opentsdb.DataPoint)
-	for _, c := range cs {
-		go c.Run(dpchan)
-		slog.Infoln("run", c.Name())
-	}
-	dur := time.Second * 10
-	slog.Infoln("running for", dur)
-	next := time.After(dur)
-Loop:
-	for {
-		select {
-		case dp := <-dpchan:
-			slog.Info(dp.Telnet())
-		case <-next:
-			break Loop
-		}
-	}
-}
-
 func list(cs []collectors.Collector) {
 	for _, c := range cs {
-		slog.Infoln(c.Name())
+		fmt.Println(c.Name())
 	}
 }
 

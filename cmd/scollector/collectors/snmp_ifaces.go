@@ -7,7 +7,6 @@ import (
 
 	"github.com/StackExchange/scollector/metadata"
 	"github.com/StackExchange/scollector/opentsdb"
-	"github.com/StackExchange/slog"
 )
 
 const (
@@ -23,6 +22,7 @@ const (
 	ifHCinOctets         = ".1.3.6.1.2.1.31.1.1.1.6"
 	ifInDiscards         = ".1.3.6.1.2.1.2.2.1.13"
 	ifInErrors           = ".1.3.6.1.2.1.2.2.1.14"
+	ifName               = ".1.3.6.1.2.1.31.1.1.1.1"
 	ifOutDiscards        = ".1.3.6.1.2.1.2.2.1.19"
 	ifOutErrors          = ".1.3.6.1.2.1.2.2.1.20"
 )
@@ -30,7 +30,7 @@ const (
 // SNMPIfaces registers a SNMP Interfaces collector for the given community and host.
 func SNMPIfaces(community, host string) {
 	collectors = append(collectors, &IntervalCollector{
-		F: func() opentsdb.MultiDataPoint {
+		F: func() (opentsdb.MultiDataPoint, error) {
 			return c_snmp_ifaces(community, host)
 		},
 		Interval: time.Second * 30,
@@ -45,16 +45,17 @@ func switch_bond(metric, iname string) string {
 	return metric
 }
 
-func c_snmp_ifaces(community, host string) opentsdb.MultiDataPoint {
-	n, err := snmp_subtree(host, community, ifDescr)
-	if err != nil {
-		slog.Errorln("snmp ifaces:", err)
-		return nil
+func c_snmp_ifaces(community, host string) (opentsdb.MultiDataPoint, error) {
+	n, err := snmp_subtree(host, community, ifName)
+	if err != nil || len(n) == 0 {
+		n, err = snmp_subtree(host, community, ifDescr)
+		if err != nil {
+			return nil, err
+		}
 	}
 	a, err := snmp_subtree(host, community, ifAlias)
 	if err != nil {
-		slog.Errorln("snmp ifaces:", err)
-		return nil
+		return nil, err
 	}
 	names := make(map[interface{}]string, len(n))
 	aliases := make(map[interface{}]string, len(a))
@@ -103,11 +104,10 @@ func c_snmp_ifaces(community, host string) opentsdb.MultiDataPoint {
 	}
 	for _, o := range oids {
 		if err := add(o.oid, o.metric, o.dir); err != nil {
-			slog.Errorln("snmp ifaces:", err)
-			return nil
+			return nil, err
 		}
 	}
-	return md
+	return md, nil
 }
 
 type snmpAdd struct {

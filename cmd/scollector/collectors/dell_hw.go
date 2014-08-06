@@ -30,7 +30,7 @@ func init() {
 	)
 }
 
-func c_omreport_chassis() opentsdb.MultiDataPoint {
+func c_omreport_chassis() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	readOmreport(func(fields []string) {
 		if len(fields) != 2 || fields[0] == "SEVERITY" {
@@ -39,10 +39,10 @@ func c_omreport_chassis() opentsdb.MultiDataPoint {
 		component := strings.Replace(fields[1], " ", "_", -1)
 		Add(&md, "hw.chassis", severity(fields[0]), opentsdb.TagSet{"component": component}, metadata.Gauge, metadata.Ok, "")
 	}, "chassis")
-	return md
+	return md, nil
 }
 
-func c_omreport_system() opentsdb.MultiDataPoint {
+func c_omreport_system() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	readOmreport(func(fields []string) {
 		if len(fields) != 2 || fields[0] == "SEVERITY" {
@@ -51,10 +51,10 @@ func c_omreport_system() opentsdb.MultiDataPoint {
 		component := strings.Replace(fields[1], " ", "_", -1)
 		Add(&md, "hw.system", severity(fields[0]), opentsdb.TagSet{"component": component}, metadata.Gauge, metadata.Ok, "")
 	}, "system")
-	return md
+	return md, nil
 }
 
-func c_omreport_storage_enclosure() opentsdb.MultiDataPoint {
+func c_omreport_storage_enclosure() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	readOmreport(func(fields []string) {
 		if len(fields) < 3 || fields[0] == "ID" {
@@ -63,10 +63,10 @@ func c_omreport_storage_enclosure() opentsdb.MultiDataPoint {
 		id := strings.Replace(fields[0], ":", "_", -1)
 		Add(&md, "hw.storage.enclosure", severity(fields[1]), opentsdb.TagSet{"id": id}, metadata.Gauge, metadata.Ok, "")
 	}, "storage", "enclosure")
-	return md
+	return md, nil
 }
 
-func c_omreport_storage_vdisk() opentsdb.MultiDataPoint {
+func c_omreport_storage_vdisk() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	readOmreport(func(fields []string) {
 		if len(fields) < 3 || fields[0] == "ID" {
@@ -75,10 +75,10 @@ func c_omreport_storage_vdisk() opentsdb.MultiDataPoint {
 		id := strings.Replace(fields[0], ":", "_", -1)
 		Add(&md, "hw.storage.vdisk", severity(fields[1]), opentsdb.TagSet{"id": id}, metadata.Gauge, metadata.Ok, "")
 	}, "storage", "vdisk")
-	return md
+	return md, nil
 }
 
-func c_omreport_ps() opentsdb.MultiDataPoint {
+func c_omreport_ps() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	readOmreport(func(fields []string) {
 		if len(fields) < 3 || fields[0] == "Index" {
@@ -87,10 +87,10 @@ func c_omreport_ps() opentsdb.MultiDataPoint {
 		id := strings.Replace(fields[0], ":", "_", -1)
 		Add(&md, "hw.ps", severity(fields[1]), opentsdb.TagSet{"id": id}, metadata.Gauge, metadata.Ok, "")
 	}, "chassis", "pwrsupplies")
-	return md
+	return md, nil
 }
 
-func c_omreport_ps_amps() opentsdb.MultiDataPoint {
+func c_omreport_ps_amps() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	readOmreport(func(fields []string) {
 		if len(fields) != 2 || !strings.Contains(fields[0], "Current") {
@@ -104,10 +104,10 @@ func c_omreport_ps_amps() opentsdb.MultiDataPoint {
 		id := strings.Replace(i_fields[0], " ", "", -1)
 		Add(&md, "hw.chassis.current.reading", v_fields[0], opentsdb.TagSet{"id": id}, metadata.Gauge, metadata.A, "")
 	}, "chassis", "pwrmonitoring")
-	return md
+	return md, nil
 }
 
-func c_omreport_storage_battery() opentsdb.MultiDataPoint {
+func c_omreport_storage_battery() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	readOmreport(func(fields []string) {
 		if len(fields) < 3 || fields[0] == "ID" {
@@ -116,10 +116,10 @@ func c_omreport_storage_battery() opentsdb.MultiDataPoint {
 		id := strings.Replace(fields[0], ":", "_", -1)
 		Add(&md, "hw.storage.battery", severity(fields[1]), opentsdb.TagSet{"id": id}, metadata.Gauge, metadata.Ok, "")
 	}, "storage", "battery")
-	return md
+	return md, nil
 }
 
-func c_omreport_storage_controller() opentsdb.MultiDataPoint {
+func c_omreport_storage_controller() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	readOmreport(func(fields []string) {
 		if len(fields) < 3 || fields[0] == "ID" {
@@ -129,7 +129,7 @@ func c_omreport_storage_controller() opentsdb.MultiDataPoint {
 		id := strings.Replace(fields[0], ":", "_", -1)
 		Add(&md, "hw.storage.controller", severity(fields[1]), opentsdb.TagSet{"id": id}, metadata.Gauge, metadata.Ok, "")
 	}, "storage", "controller")
-	return md
+	return md, nil
 }
 
 // c_omreport_storage_pdisk is called from the controller func, since it needs the encapsulating id.
@@ -144,7 +144,7 @@ func c_omreport_storage_pdisk(id string, md *opentsdb.MultiDataPoint) {
 	}, "storage", "pdisk", "controller="+id)
 }
 
-func c_omreport_processors() opentsdb.MultiDataPoint {
+func c_omreport_processors() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	readOmreport(func(fields []string) {
 		if len(fields) != 8 {
@@ -157,10 +157,10 @@ func c_omreport_processors() opentsdb.MultiDataPoint {
 		Add(&md, "hw.chassis.processor", severity(fields[1]), ts, metadata.Gauge, metadata.Ok, "")
 		metadata.AddMeta("", ts, "processor", clean(fields[3], fields[4]), true)
 	}, "chassis", "processors")
-	return md
+	return md, nil
 }
 
-func c_omreport_fans() opentsdb.MultiDataPoint {
+func c_omreport_fans() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	readOmreport(func(fields []string) {
 		if len(fields) != 8 {
@@ -179,10 +179,10 @@ func c_omreport_fans() opentsdb.MultiDataPoint {
 			}
 		}
 	}, "chassis", "fans")
-	return md
+	return md, nil
 }
 
-func c_omreport_memory() opentsdb.MultiDataPoint {
+func c_omreport_memory() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	readOmreport(func(fields []string) {
 		if len(fields) != 5 {
@@ -195,10 +195,10 @@ func c_omreport_memory() opentsdb.MultiDataPoint {
 		Add(&md, "hw.chassis.memory", severity(fields[1]), ts, metadata.Gauge, metadata.Ok, "")
 		metadata.AddMeta("", ts, "memory", clean(fields[4]), true)
 	}, "chassis", "memory")
-	return md
+	return md, nil
 }
 
-func c_omreport_temps() opentsdb.MultiDataPoint {
+func c_omreport_temps() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	readOmreport(func(fields []string) {
 		if len(fields) != 5 {
@@ -217,10 +217,10 @@ func c_omreport_temps() opentsdb.MultiDataPoint {
 			}
 		}
 	}, "chassis", "temps")
-	return md
+	return md, nil
 }
 
-func c_omreport_volts() opentsdb.MultiDataPoint {
+func c_omreport_volts() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	readOmreport(func(fields []string) {
 		if len(fields) != 8 {
@@ -235,7 +235,7 @@ func c_omreport_volts() opentsdb.MultiDataPoint {
 			Add(&md, "hw.chassis.volts.reading", i, ts, metadata.Gauge, metadata.V, "")
 		}
 	}, "chassis", "volts")
-	return md
+	return md, nil
 }
 
 // extract tries to return a parsed number from s with given suffix. A space may
@@ -258,12 +258,13 @@ func severity(s string) int {
 
 func readOmreport(f func([]string), args ...string) {
 	args = append(args, "-fmt", "ssv")
-	util.ReadCommand(func(line string) {
+	util.ReadCommand(func(line string) error {
 		sp := strings.Split(line, ";")
 		for i, s := range sp {
 			sp[i] = clean(s)
 		}
 		f(sp)
+		return nil
 	}, "omreport", args...)
 }
 
