@@ -448,11 +448,14 @@ func CanonicalTime(v interface{}) (string, error) {
 }
 
 func TryParseAbsTime(v interface{}) interface{} {
-	if s, ok := v.(string); ok {
-		d, err := ParseAbsTime(s)
+	switch v := v.(type) {
+	case string:
+		d, err := ParseAbsTime(v)
 		if err == nil {
 			return d.Unix()
 		}
+	case float64:
+		return int64(v)
 	}
 	return v
 }
