@@ -30,6 +30,7 @@ const (
 	A                   = "A" // Amps
 	Bool                = "bool"
 	Bytes               = "bytes"
+	KBytes              = "kbytes"
 	BytesPerSecond      = "bytes per second"
 	C                   = "C" // Celsius
 	Count               = ""
