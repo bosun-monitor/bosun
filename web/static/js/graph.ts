@@ -336,3 +336,25 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 	};
 	get(false);
 }]);
+
+bosunApp.directive('tsPopup', () => {
+	return {
+		restrict: 'E',
+		scope: {
+			url: '=',
+		},
+		template: '<button class="btn btn-default" data-html="true" data-placement="bottom">embed</button>',
+		link: (scope: any, elem: any, attrs: any) => {
+			var button = $('button', elem);
+			scope.$watch(attrs.url, (url: any) => {
+				if (!url) {
+					return;
+				}
+				var text = '<input type="text" onClick="this.select();" readonly="readonly" value="&lt;a href=&quot;' + url + '&quot;&gt;&lt;img src=&quot;' + url + '&.png=png&quot;&gt;&lt;/a&gt;">';
+				button.popover({
+					content: text,
+				});
+			});
+		},
+	};
+});
