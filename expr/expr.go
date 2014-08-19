@@ -11,23 +11,18 @@ import (
 	"github.com/StackExchange/bosun/_third_party/github.com/MiniProfiler/go/miniprofiler"
 	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/bosun/expr/parse"
+	"github.com/StackExchange/bosun/search"
 )
 
 type state struct {
 	*Expr
-	search     func(*opentsdb.Query) error
+	search     *search.Search
+	lookups    map[string]*Lookup
 	now        time.Time
 	autods     int
 	context    opentsdb.Context
 	queries    []opentsdb.Request
 	unjoinedOk bool
-}
-
-func (e *state) Search(q *opentsdb.Query) error {
-	if e.search == nil {
-		return fmt.Errorf("no search func")
-	}
-	return e.search(q)
 }
 
 func (e *state) addRequest(r opentsdb.Request) {
@@ -57,7 +52,7 @@ func New(expr string) (*Expr, error) {
 
 // Execute applies a parse expression to the specified OpenTSDB context, and
 // returns one result per group. T may be nil to ignore timings.
-func (e *Expr) Execute(c opentsdb.Context, T miniprofiler.Timer, now time.Time, autods int, unjoinedOk bool, search func(*opentsdb.Query) error) (r []*Result, queries []opentsdb.Request, err error) {
+func (e *Expr) Execute(c opentsdb.Context, T miniprofiler.Timer, now time.Time, autods int, unjoinedOk bool, search *search.Search, lookups map[string]*Lookup) (r []*Result, queries []opentsdb.Request, err error) {
 	defer errRecover(&err)
 	s := &state{
 		Expr:       e,
@@ -66,6 +61,7 @@ func (e *Expr) Execute(c opentsdb.Context, T miniprofiler.Timer, now time.Time, 
 		autods:     autods,
 		unjoinedOk: unjoinedOk,
 		search:     search,
+		lookups:    lookups,
 	}
 	if T == nil {
 		T = new(miniprofiler.Profile)
@@ -163,8 +159,7 @@ func (u *Union) ExtendComputations(o *Result) {
 	u.Computations = append(u.Computations, o.Computations...)
 }
 
-// union returns the combination of a and b where one is a strict subset of the
-// other.
+// union returns the combination of a and b where one is a subset of the other.
 func (e *state) union(a, b []*Result, expression string) []*Union {
 	const unjoinedGroup = "unjoined group"
 	var us []*Union

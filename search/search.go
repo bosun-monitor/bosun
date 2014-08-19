@@ -1,4 +1,4 @@
-package sched
+package search
 
 import (
 	"fmt"
@@ -17,16 +17,16 @@ import (
 // tag key.
 type Search struct {
 	// tagk + tagv -> metrics
-	metric qmap
+	Metric qmap
 	// metric -> tag keys
-	tagk smap
+	Tagk smap
 	// metric + tagk -> tag values
-	tagv qmap
+	Tagv qmap
 	// Each Record
-	metricTags mtsmap
+	MetricTags mtsmap
 
-	lock sync.RWMutex
-	ch   chan opentsdb.MultiDataPoint
+	sync.RWMutex
+	ch chan opentsdb.MultiDataPoint
 }
 
 type MetricTagSet struct {
@@ -57,10 +57,10 @@ type duple struct {
 
 func NewSearch() *Search {
 	s := Search{
-		metric:     make(qmap),
-		tagk:       make(smap),
-		tagv:       make(qmap),
-		metricTags: make(mtsmap),
+		Metric:     make(qmap),
+		Tagk:       make(smap),
+		Tagv:       make(qmap),
+		MetricTags: make(mtsmap),
 		ch:         make(chan opentsdb.MultiDataPoint, 1000),
 	}
 	go s.Process()
@@ -72,33 +72,33 @@ func NewSearch() *Search {
 
 func (s *Search) Process() {
 	for mdp := range s.ch {
-		s.lock.Lock()
+		s.Lock()
 		for _, dp := range mdp {
 			var mts MetricTagSet
 			mts.Metric = dp.Metric
 			mts.Tags = dp.Tags
-			s.metricTags[mts.key()] = mts
+			s.MetricTags[mts.key()] = mts
 			var q duple
 			for k, v := range dp.Tags {
 				q.A, q.B = k, v
-				if _, ok := s.metric[q]; !ok {
-					s.metric[q] = make(present)
+				if _, ok := s.Metric[q]; !ok {
+					s.Metric[q] = make(present)
 				}
-				s.metric[q][dp.Metric] = struct{}{}
+				s.Metric[q][dp.Metric] = struct{}{}
 
-				if _, ok := s.tagk[dp.Metric]; !ok {
-					s.tagk[dp.Metric] = make(present)
+				if _, ok := s.Tagk[dp.Metric]; !ok {
+					s.Tagk[dp.Metric] = make(present)
 				}
-				s.tagk[dp.Metric][k] = struct{}{}
+				s.Tagk[dp.Metric][k] = struct{}{}
 
 				q.A, q.B = dp.Metric, k
-				if _, ok := s.tagv[q]; !ok {
-					s.tagv[q] = make(present)
+				if _, ok := s.Tagv[q]; !ok {
+					s.Tagv[q] = make(present)
 				}
-				s.tagv[q][v] = struct{}{}
+				s.Tagv[q][v] = struct{}{}
 			}
 		}
-		s.lock.Unlock()
+		s.Unlock()
 	}
 }
 
@@ -110,22 +110,36 @@ func (s *Search) Index(mdp opentsdb.MultiDataPoint) {
 	}
 }
 
+// Match returns all matching values against search. search is a regex, except
+// that `.` is literal, `*` can be used for `.*`, and the entire string is
+// searched (`^` and `&` added to ends of search).
+func Match(search string, values []string) ([]string, error) {
+	v := strings.Replace(search, ".", `\.`, -1)
+	v = strings.Replace(v, "*", ".*", -1)
+	v = "^" + v + "$"
+	re, err := regexp.Compile(v)
+	if err != nil {
+		return nil, err
+	}
+	var nvs []string
+	for _, nv := range values {
+		if re.MatchString(nv) {
+			nvs = append(nvs, nv)
+		}
+	}
+	return nvs, nil
+}
+
 func (s *Search) Expand(q *opentsdb.Query) error {
 	for k, ov := range q.Tags {
 		v := ov
 		if v == "*" || !strings.Contains(v, "*") || strings.Contains(v, "|") {
 			continue
 		}
-		v = strings.Replace(v, ".", `\.`, -1)
-		v = strings.Replace(v, "*", ".*", -1)
-		v = "^" + v + "$"
-		re := regexp.MustCompile(v)
-		var nvs []string
 		vs := s.TagValuesByMetricTagKey(q.Metric, k)
-		for _, nv := range vs {
-			if re.MatchString(nv) {
-				nvs = append(nvs, nv)
-			}
+		nvs, err := Match(v, vs)
+		if err != nil {
+			return err
 		}
 		if len(nvs) == 0 {
 			return fmt.Errorf("expr: no tags matching %s=%s", k, ov)
@@ -136,11 +150,11 @@ func (s *Search) Expand(q *opentsdb.Query) error {
 }
 
 func (s *Search) UniqueMetrics() []string {
-	s.lock.RLock()
-	defer s.lock.RUnlock()
-	metrics := make([]string, len(s.tagk))
+	s.RLock()
+	defer s.RUnlock()
+	metrics := make([]string, len(s.Tagk))
 	i := 0
-	for k := range s.tagk {
+	for k := range s.Tagk {
 		metrics[i] = k
 		i++
 	}
@@ -148,14 +162,14 @@ func (s *Search) UniqueMetrics() []string {
 	return metrics
 }
 
-func (s *Search) TagValuesByTagKey(tagk string) []string {
+func (s *Search) TagValuesByTagKey(Tagk string) []string {
 	um := s.UniqueMetrics()
-	s.lock.RLock()
-	defer s.lock.RUnlock()
+	s.RLock()
+	defer s.RUnlock()
 	tagvset := make(map[string]bool)
-	for _, metric := range um {
-		for _, tagv := range s.tagValuesByMetricTagKey(metric, tagk) {
-			tagvset[tagv] = true
+	for _, Metric := range um {
+		for _, Tagv := range s.tagValuesByMetricTagKey(Metric, Tagk) {
+			tagvset[Tagv] = true
 		}
 	}
 	tagvs := make([]string, len(tagvset))
@@ -168,51 +182,51 @@ func (s *Search) TagValuesByTagKey(tagk string) []string {
 	return tagvs
 }
 
-func (s *Search) MetricsByTagPair(tagk, tagv string) []string {
-	s.lock.RLock()
-	defer s.lock.RUnlock()
+func (s *Search) MetricsByTagPair(Tagk, Tagv string) []string {
+	s.RLock()
+	defer s.RUnlock()
 	r := make([]string, 0)
-	for k := range s.metric[duple{tagk, tagv}] {
+	for k := range s.Metric[duple{Tagk, Tagv}] {
 		r = append(r, k)
 	}
 	sort.Strings(r)
 	return r
 }
 
-func (s *Search) TagKeysByMetric(metric string) []string {
-	s.lock.RLock()
-	defer s.lock.RUnlock()
+func (s *Search) TagKeysByMetric(Metric string) []string {
+	s.RLock()
+	defer s.RUnlock()
 	r := make([]string, 0)
-	for k := range s.tagk[metric] {
+	for k := range s.Tagk[Metric] {
 		r = append(r, k)
 	}
 	sort.Strings(r)
 	return r
 }
 
-func (s *Search) tagValuesByMetricTagKey(metric, tagk string) []string {
+func (s *Search) tagValuesByMetricTagKey(Metric, Tagk string) []string {
 	r := make([]string, 0)
-	for k := range s.tagv[duple{metric, tagk}] {
+	for k := range s.Tagv[duple{Metric, Tagk}] {
 		r = append(r, k)
 	}
 	sort.Strings(r)
 	return r
 }
 
-func (s *Search) TagValuesByMetricTagKey(metric, tagk string) []string {
-	s.lock.RLock()
-	defer s.lock.RUnlock()
-	return s.tagValuesByMetricTagKey(metric, tagk)
+func (s *Search) TagValuesByMetricTagKey(Metric, Tagk string) []string {
+	s.RLock()
+	defer s.RUnlock()
+	return s.tagValuesByMetricTagKey(Metric, Tagk)
 }
 
-func (s *Search) FilteredTagValuesByMetricTagKey(metric, tagk string, tsf map[string]string) []string {
-	s.lock.RLock()
-	defer s.lock.RUnlock()
+func (s *Search) FilteredTagValuesByMetricTagKey(Metric, Tagk string, tsf map[string]string) []string {
+	s.RLock()
+	defer s.RUnlock()
 	tagvset := make(map[string]bool)
-	for _, mts := range s.metricTags {
-		if metric == mts.Metric {
+	for _, mts := range s.MetricTags {
+		if Metric == mts.Metric {
 			match := true
-			if tagv, ok := mts.Tags[tagk]; ok {
+			if Tagv, ok := mts.Tags[Tagk]; ok {
 				for tpk, tpv := range tsf {
 					if v, ok := mts.Tags[tpk]; ok {
 						if !(v == tpv) {
@@ -223,7 +237,7 @@ func (s *Search) FilteredTagValuesByMetricTagKey(metric, tagk string, tsf map[st
 					}
 				}
 				if match {
-					tagvset[tagv] = true
+					tagvset[Tagv] = true
 				}
 			}
 		}

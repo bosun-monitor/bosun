@@ -36,12 +36,13 @@ type itemType int
 const (
 	itemError itemType = iota // error occurred; value is text of error
 	itemEOF
-	itemEqual      // '='
-	itemLeftDelim  // '{'
-	itemRawString  // raw string (includes quotes)
-	itemIdentifier // identifier for section and value names
-	itemRightDelim // '}'
-	itemString     // string (excluding prefix whitespace and EOL or NL at EOL)
+	itemEqual                // '='
+	itemLeftDelim            // '{'
+	itemRawString            // raw string (includes quotes)
+	itemIdentifier           // identifier for section and value names
+	itemRightDelim           // '}'
+	itemString               // string (excluding prefix whitespace and EOL or NL at EOL)
+	itemSubsectionIdentifier // identifier for subsection names
 )
 
 const eof = -1
@@ -203,9 +204,44 @@ func lexValue(l *lexer) stateFn {
 		default:
 			l.backup()
 			l.emit(itemIdentifier)
-			return lexSpace
+			return lexValueNext
 		}
 	}
+}
+
+func lexValueNext(l *lexer) stateFn {
+	for {
+		switch r := l.next(); {
+		case isSpace(r) || isEndOfLine(r):
+			l.ignore()
+		case r == equal:
+			return lexEqual
+		case isSubsectionChar(r):
+			l.backup()
+			return lexSubsection
+		default:
+			return l.errorf("invalid character: %v", string(r))
+		}
+	}
+}
+
+func lexSubsection(l *lexer) stateFn {
+Loop:
+	for {
+		switch r := l.next(); {
+		case isSubsectionChar(r):
+			// absorb
+		default:
+			l.backup()
+			break Loop
+		}
+	}
+	l.emit(itemSubsectionIdentifier)
+	return lexSpace
+}
+
+func isSubsectionChar(r rune) bool {
+	return isVarchar(r) || r == '*' || r == ',' || r == '=' || r == '|'
 }
 
 func lexEqual(l *lexer) stateFn {

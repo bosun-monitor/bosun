@@ -13,6 +13,7 @@ import (
 	"github.com/StackExchange/bosun/_third_party/github.com/MiniProfiler/go/miniprofiler"
 	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/bosun/expr/parse"
+	"github.com/StackExchange/bosun/search"
 )
 
 var Builtins = map[string]parse.Func{
@@ -116,9 +117,70 @@ var Builtins = map[string]parse.Func{
 		parse.TYPE_SCALAR,
 		Ungroup,
 	},
+	"lookup": {
+		[]parse.FuncType{parse.TYPE_STRING, parse.TYPE_STRING},
+		parse.TYPE_NUMBER,
+		lookup,
+	},
 }
 
 const tsdbFmt = "2006/01/02 15:04:05"
+
+func lookup(e *state, T miniprofiler.Timer, lookup, key string) (results []*Result, err error) {
+	lookups := e.lookups[lookup]
+	if lookups == nil {
+		err = fmt.Errorf("lookup table not found: %v", lookup)
+		return
+	}
+	var tags []opentsdb.TagSet
+	for _, tag := range lookups.Tags {
+		var next []opentsdb.TagSet
+		for _, value := range e.search.TagValuesByTagKey(tag) {
+			for _, s := range tags {
+				t := s.Copy()
+				t[tag] = value
+				next = append(next, t)
+			}
+			if len(tags) == 0 {
+				next = append(next, opentsdb.TagSet{tag: value})
+			}
+		}
+		tags = next
+	}
+	for _, tag := range tags {
+		for _, entry := range lookups.Entries {
+			value, ok := entry.Values[key]
+			if !ok {
+				continue
+			}
+			match := true
+			for ak, av := range entry.AlertKey.Group() {
+				matches, err := search.Match(av, []string{tag[ak]})
+				if err != nil {
+					return nil, err
+				}
+				if len(matches) == 0 {
+					match = false
+					break
+				}
+			}
+			if !match {
+				continue
+			}
+			var num float64
+			num, err = strconv.ParseFloat(value, 64)
+			if err != nil {
+				return nil, err
+			}
+			results = append(results, &Result{
+				Value: Number(num),
+				Group: tag,
+			})
+			break
+		}
+	}
+	return results, nil
+}
 
 func Band(e *state, T miniprofiler.Timer, query, duration, period string, num float64) (r []*Result, err error) {
 	T.Step("band", func(T miniprofiler.Timer) {
@@ -138,7 +200,7 @@ func Band(e *state, T miniprofiler.Timer, query, duration, period string, num fl
 		if err != nil {
 			return
 		}
-		if err = e.Search(q); err != nil {
+		if err = e.search.Expand(q); err != nil {
 			return
 		}
 		req := opentsdb.Request{
@@ -191,7 +253,7 @@ func Query(e *state, T miniprofiler.Timer, query, sduration, eduration string) (
 	if err != nil {
 		return
 	}
-	if err = e.Search(q); err != nil {
+	if err = e.search.Expand(q); err != nil {
 		return
 	}
 	sd, err := opentsdb.ParseDuration(sduration)

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/opentsdb"
+	"github.com/StackExchange/bosun/expr"
 )
 
 type Silence struct {
@@ -48,8 +49,8 @@ func (s Silence) ID() string {
 
 // Silenced returns all currently silenced AlertKeys and the time they will be
 // unsilenced.
-func (s *Schedule) Silenced() map[AlertKey]time.Time {
-	aks := make(map[AlertKey]time.Time)
+func (s *Schedule) Silenced() map[expr.AlertKey]time.Time {
+	aks := make(map[expr.AlertKey]time.Time)
 	s.Lock()
 	for _, si := range s.Silence {
 		for ak, st := range s.status {
@@ -65,7 +66,7 @@ func (s *Schedule) Silenced() map[AlertKey]time.Time {
 	return aks
 }
 
-func (s *Schedule) AddSilence(start, end time.Time, alert, tagList string, confirm bool, edit string) (AlertKeys, error) {
+func (s *Schedule) AddSilence(start, end time.Time, alert, tagList string, confirm bool, edit string) (expr.AlertKeys, error) {
 	if start.IsZero() || end.IsZero() {
 		return nil, fmt.Errorf("both start and end must be specified")
 	}
@@ -108,7 +109,7 @@ func (s *Schedule) AddSilence(start, end time.Time, alert, tagList string, confi
 		s.Save()
 		return nil, nil
 	}
-	aks := make(AlertKeys, 0)
+	aks := make(expr.AlertKeys, 0)
 	for ak, st := range s.status {
 		if si.Matches(ak.Name(), st.Group) {
 			aks = append(aks, ak)

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/StackExchange/bosun/conf"
+	"github.com/StackExchange/bosun/expr"
 )
 
 // Poll dispatches notification checks when needed.
@@ -98,7 +99,7 @@ func (s *Schedule) notify(st *State, n *conf.Notification) {
 	n.Notify(subject.Bytes(), body.Bytes(), s.Conf.EmailFrom, s.Conf.SmtpHost)
 }
 
-func (s *Schedule) unotify(name string, group AlertKeys, n *conf.Notification) {
+func (s *Schedule) unotify(name string, group expr.AlertKeys, n *conf.Notification) {
 	subject := new(bytes.Buffer)
 	body := new(bytes.Buffer)
 	now := time.Now().UTC()
@@ -119,9 +120,9 @@ func (s *Schedule) unotify(name string, group AlertKeys, n *conf.Notification) {
 	n.Notify(subject.Bytes(), body.Bytes(), s.Conf.EmailFrom, s.Conf.SmtpHost)
 }
 
-func (s *Schedule) AddNotification(ak AlertKey, n *conf.Notification, started time.Time) {
+func (s *Schedule) AddNotification(ak expr.AlertKey, n *conf.Notification, started time.Time) {
 	if s.Notifications == nil {
-		s.Notifications = make(map[AlertKey]map[string]time.Time)
+		s.Notifications = make(map[expr.AlertKey]map[string]time.Time)
 	}
 	if s.Notifications[ak] == nil {
 		s.Notifications[ak] = make(map[string]time.Time)

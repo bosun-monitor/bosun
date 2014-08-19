@@ -100,15 +100,11 @@ type SectionNode struct {
 	RawText     string
 	SectionType *StringNode
 	Name        *StringNode
-	Nodes       []*PairNode
+	Nodes       *ListNode
 }
 
 func newSection(pos Pos) *SectionNode {
-	return &SectionNode{NodeType: NodeSection, Pos: pos}
-}
-
-func (s *SectionNode) append(p *PairNode) {
-	s.Nodes = append(s.Nodes, p)
+	return &SectionNode{NodeType: NodeSection, Pos: pos, Nodes: new(ListNode)}
 }
 
 func (s *SectionNode) String() string {

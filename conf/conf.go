@@ -40,6 +40,7 @@ type Conf struct {
 	Notifications   map[string]*Notification `json:"-"`
 	RawText         string
 	Macros          map[string]*Macro
+	Lookups         map[string]*Lookup
 	Squelch         Squelches `json:"-"`
 
 	tree            *parse.Tree
@@ -135,6 +136,34 @@ func errRecover(errp *error) {
 	}
 }
 
+type Lookup struct {
+	Def     string
+	Name    string
+	Tags    []string
+	Entries []*Entry
+}
+
+type Entry struct {
+	*expr.Entry
+	Def  string
+	Name string
+}
+
+// GetLookups converts all lookup tables to maps for use by the expr package.
+func (c *Conf) GetLookups() map[string]*expr.Lookup {
+	lookups := make(map[string]*expr.Lookup)
+	for name, lookup := range c.Lookups {
+		l := expr.Lookup{
+			Tags: lookup.Tags,
+		}
+		for _, entry := range lookup.Entries {
+			l.Entries = append(l.Entries, entry.Entry)
+		}
+		lookups[name] = &l
+	}
+	return lookups
+}
+
 type Macro struct {
 	Def string
 	Vars
@@ -219,6 +248,7 @@ func New(name, text string) (c *Conf, err error) {
 		RawText:        text,
 		bodies:         htemplate.New(name).Funcs(htemplate.FuncMap(defaultFuncs)),
 		subjects:       ttemplate.New(name).Funcs(defaultFuncs),
+		Lookups:        make(map[string]*Lookup),
 		Macros:         make(map[string]*Macro),
 	}
 	c.tree, err = parse.Parse(name, text)
@@ -324,6 +354,8 @@ func (c *Conf) loadSection(s *parse.SectionNode) {
 		c.loadNotification(s)
 	case "macro":
 		c.loadMacro(s)
+	case "lookup":
+		c.loadLookup(s)
 	default:
 		c.errorf("unknown section type: %s", s.SectionType.Text)
 	}
@@ -361,26 +393,98 @@ func (c *Conf) getPairs(s *parse.SectionNode, vars Vars, st sectionType, used *[
 			})
 		}
 	}
-	for _, n := range s.Nodes {
+	for _, n := range s.Nodes.Nodes {
 		c.at(n)
-		v := c.Expand(n.Val.Text, vars, ignoreBadExpand)
-		switch k := n.Key.Text; k {
-		case "macro":
-			m, ok := c.Macros[v]
-			if !ok {
-				c.errorf("macro not found: %s", v)
-			}
-			if used != nil {
-				*used = append(*used, v)
-			}
-			for k, v := range m.Vars {
-				add(n, k, c.Expand(v, vars, ignoreBadExpand))
+		switch n := n.(type) {
+		case *parse.PairNode:
+			v := c.Expand(n.Val.Text, vars, ignoreBadExpand)
+			switch k := n.Key.Text; k {
+			case "macro":
+				m, ok := c.Macros[v]
+				if !ok {
+					c.errorf("macro not found: %s", v)
+				}
+				if used != nil {
+					*used = append(*used, v)
+				}
+				for k, v := range m.Vars {
+					add(n, k, c.Expand(v, vars, ignoreBadExpand))
+				}
+			default:
+				add(n, k, v)
 			}
 		default:
-			add(n, k, v)
+			c.errorf("unexpected node")
 		}
 	}
 	return pairs
+}
+
+func (c *Conf) loadLookup(s *parse.SectionNode) {
+	name := s.Name.Text
+	if _, ok := c.Lookups[name]; ok {
+		c.errorf("duplicate lookup name: %s", name)
+	}
+	l := Lookup{
+		Def:  s.RawText,
+		Name: name,
+	}
+	var lookupTags opentsdb.TagSet
+	saw := make(map[string]bool)
+	for _, n := range s.Nodes.Nodes {
+		c.at(n)
+		switch n := n.(type) {
+		case *parse.SectionNode:
+			if n.SectionType.Text != "entry" {
+				c.errorf("unexpected subsection type")
+			}
+			tags, err := opentsdb.ParseTags(n.Name.Text)
+			if err != nil {
+				c.error(err)
+			}
+			if _, ok := saw[tags.String()]; ok {
+				c.errorf("duplicate entry")
+			}
+			saw[tags.String()] = true
+			if len(tags) == 0 {
+				c.errorf("lookup entries require tags")
+			}
+			empty := make(opentsdb.TagSet)
+			for k := range tags {
+				empty[k] = ""
+			}
+			if len(lookupTags) == 0 {
+				lookupTags = empty
+				for k := range empty {
+					l.Tags = append(l.Tags, k)
+				}
+			} else if !lookupTags.Equal(empty) {
+				c.errorf("lookup tags mismatch, expected %v", lookupTags)
+			}
+			e := Entry{
+				Def:      n.RawText,
+				Name:     n.Name.Text,
+				Entry: &expr.Entry{
+					AlertKey: expr.NewAlertKey("", tags),
+					Values:   make(map[string]string),
+				},
+			}
+			for _, en := range n.Nodes.Nodes {
+				c.at(en)
+				switch en := en.(type) {
+				case *parse.PairNode:
+					e.Values[en.Key.Text] = en.Val.Text
+				default:
+					c.errorf("unexpected node")
+				}
+			}
+			l.Entries = append(l.Entries, &e)
+		default:
+			c.errorf("unexpected node")
+		}
+	}
+	c.at(s)
+	c.Lookups[name] = &l
 }
 
 func (c *Conf) loadMacro(s *parse.SectionNode) {
@@ -428,33 +532,38 @@ func (c *Conf) loadTemplate(s *parse.SectionNode) {
 		},
 	}
 	saw := make(map[string]bool)
-	for _, p := range s.Nodes {
+	for _, p := range s.Nodes.Nodes {
 		c.at(p)
-		c.seen(p.Key.Text, saw)
-		v := p.Val.Text
-		switch k := p.Key.Text; k {
-		case "body":
-			t.body = v
-			tmpl := c.bodies.New(name).Funcs(htemplate.FuncMap(funcs))
-			_, err := tmpl.Parse(t.body)
-			if err != nil {
-				c.error(err)
+		switch p := p.(type) {
+		case *parse.PairNode:
+			c.seen(p.Key.Text, saw)
+			v := p.Val.Text
+			switch k := p.Key.Text; k {
+			case "body":
+				t.body = v
+				tmpl := c.bodies.New(name).Funcs(htemplate.FuncMap(funcs))
+				_, err := tmpl.Parse(t.body)
+				if err != nil {
+					c.error(err)
+				}
+				t.Body = tmpl
+			case "subject":
+				t.subject = v
+				tmpl := c.subjects.New(name).Funcs(funcs)
+				_, err := tmpl.Parse(t.subject)
+				if err != nil {
+					c.error(err)
+				}
+				t.Subject = tmpl
+			default:
+				if !strings.HasPrefix(k, "$") {
+					c.errorf("unknown key %s", k)
+				}
+				t.Vars[k] = v
+				t.Vars[k[1:]] = t.Vars[k]
 			}
-			t.Body = tmpl
-		case "subject":
-			t.subject = v
-			tmpl := c.subjects.New(name).Funcs(funcs)
-			_, err := tmpl.Parse(t.subject)
-			if err != nil {
-				c.error(err)
-			}
-			t.Subject = tmpl
 		default:
-			if !strings.HasPrefix(k, "$") {
-				c.errorf("unknown key %s", k)
-			}
-			t.Vars[k] = v
-			t.Vars[k[1:]] = t.Vars[k]
+			c.errorf("unexpected node")
 		}
 	}
 	c.at(s)

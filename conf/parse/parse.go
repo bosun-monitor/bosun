@@ -167,15 +167,15 @@ func (t *Tree) Parse(text string) (err error) {
 	defer t.recover(&err)
 	t.startParse(lex(t.Name, text))
 	t.text = text
-	t.parse()
+	t.Root = newList(t.peek().pos)
+	t.parse(t.Root)
 	t.stopParse()
 	return nil
 }
 
 // parse is the top-level parser for a conf.
 // It runs to EOF.
-func (t *Tree) parse() {
-	t.Root = newList(t.peek().pos)
+func (t *Tree) parse(root *ListNode) item {
 	var n Node
 	for {
 		switch token := t.next(); token.typ {
@@ -184,18 +184,26 @@ func (t *Tree) parse() {
 			case itemEqual:
 				t.backup2(token)
 				n = t.parsePair()
-			case itemIdentifier:
+			case itemIdentifier, itemSubsectionIdentifier:
 				t.backup2(token)
 				n = t.parseSection()
 			default:
 				t.unexpected(token, "input")
 			}
 		case itemEOF:
-			return
+			if root != t.Root {
+				t.unexpected(token, "input")
+			}
+			return token
+		case itemRightDelim:
+			if root == t.Root {
+				t.unexpected(token, "input")
+			}
+			return token
 		default:
 			t.unexpected(token, "input")
 		}
-		t.Root.append(n)
+		root.append(n)
 	}
 }
 
@@ -227,19 +235,10 @@ func (t *Tree) parseSection() *SectionNode {
 	s := newSection(token.pos)
 	start := token.pos
 	s.SectionType = newString(token.pos, token.val, token.val)
-	token = t.expect(itemIdentifier, context)
+	token = t.expectOneOf(itemIdentifier, itemSubsectionIdentifier, context)
 	s.Name = newString(token.pos, token.val, token.val)
 	t.expect(itemLeftDelim, context)
-	for {
-		switch token := t.next(); token.typ {
-		case itemIdentifier:
-			t.backup()
-			s.append(t.parsePair())
-		case itemRightDelim, itemEOF:
-			s.RawText = t.text[start : token.pos+1]
-			return s
-		default:
-			t.unexpected(token, context)
-		}
-	}
+	token = t.parse(s.Nodes)
+	s.RawText = t.text[start : token.pos+1]
+	return s
 }
