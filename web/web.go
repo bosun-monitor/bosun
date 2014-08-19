@@ -22,6 +22,7 @@ import (
 	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/bosun/_third_party/github.com/gorilla/mux"
 	"github.com/StackExchange/bosun/conf"
+	"github.com/StackExchange/bosun/expr"
 	"github.com/StackExchange/bosun/sched"
 )
 
@@ -251,7 +252,7 @@ func AlertDetails(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) 
 	r.ParseForm()
 	states := make(sched.States)
 	for _, v := range r.Form["key"] {
-		k := sched.AlertKey(v)
+		k := expr.AlertKey(v)
 		s := schedule.Status(k)
 		if s == nil {
 			return nil, fmt.Errorf("unknown key: %v", v)
@@ -284,7 +285,7 @@ func Action(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (inter
 	errs := make(MultiError)
 	r.ParseForm()
 	for _, key := range data.Keys {
-		err := schedule.Action(data.User, data.Message, at, sched.AlertKey(key))
+		err := schedule.Action(data.User, data.Message, at, expr.AlertKey(key))
 		if err != nil {
 			errs[key] = err
 		}

@@ -7,21 +7,21 @@ import (
 	"testing"
 )
 
-func isValid(fname string, t *testing.T) bool {
+func isValid(fname string, t *testing.T) (bool, error) {
 	b, err := ioutil.ReadFile(fname)
 	if err != nil {
-		return false
+		return false, nil
 	}
 	_, err = Parse(fname, string(b))
-	return err == nil
+	return err == nil, err
 }
 
 func testDir(dirname string, valid bool, t *testing.T) {
 	files, _ := ioutil.ReadDir(dirname)
 	for _, f := range files {
 		p := filepath.Join(dirname, f.Name())
-		if isValid(p, t) != valid {
-			t.Fatalf("%v: expected %v", p, valid)
+		if got, err := isValid(p, t); valid != got {
+			t.Fatalf("%v: expected %v: %v", p, valid, err)
 		}
 	}
 }

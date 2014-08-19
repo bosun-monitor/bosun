@@ -3,6 +3,7 @@ package conf
 import (
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"regexp"
 	"testing"
 
@@ -31,17 +32,31 @@ func TestPrint(t *testing.T) {
 	if w := c.Alerts["braceTest"].Crit.Text; w != `avg(q("o{t}", "", "")) > 1` {
 		t.Errorf("bad crit: %v", w)
 	}
+	if w := c.Lookups["l"]; len(w.Entries) != 2 {
+		t.Errorf("bad lookup: %v", w)
+	}
 }
 
 func TestInvalid(t *testing.T) {
-	fname := "broken.conf"
-	b, err := ioutil.ReadFile(fname)
-	if err != nil {
-		t.Fatal(err)
+	names := map[string]string{
+		"lookup-key-pairs":     "conf: lookup-key-pairs:3:1: at <entry a=3 { }>: lookup tags mismatch, expected {a=,b=}",
+		"number-func-args":     `conf: number-func-args:2:1: at <warn = q("", "") > 0>: expr: parse: not enough arguments for q`,
+		"lookup-key-pairs-dup": `conf: lookup-key-pairs-dup:3:1: at <entry b=2,a=1 { }>: duplicate entry`,
 	}
-	_, err = New(fname, string(b))
-	if err == nil {
-		t.Error("expected error")
+	for fname, reason := range names {
+		path := filepath.Join("invalid", fname)
+		b, err := ioutil.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = New(fname, string(b))
+		if err == nil {
+			t.Error("expected error in", path)
+			continue
+		}
+		if err.Error() != reason {
+			t.Errorf("expected error `%s` in %s, expected `%s`", err, path, reason)
+		}
 	}
 }
 

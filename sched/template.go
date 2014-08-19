@@ -32,12 +32,12 @@ func (s *Schedule) Data(st *State, a *conf.Alert) *Context {
 type unknownContext struct {
 	Time  time.Time
 	Name  string
-	Group AlertKeys
+	Group expr.AlertKeys
 
 	schedule *Schedule
 }
 
-func (s *Schedule) unknownData(t time.Time, name string, group AlertKeys) *unknownContext {
+func (s *Schedule) unknownData(t time.Time, name string, group expr.AlertKeys) *unknownContext {
 	return &unknownContext{
 		Time:     t,
 		Group:    group,
@@ -123,7 +123,7 @@ func (c *Context) E(v string) string {
 		log.Printf("%s: %v", v, err)
 		return ""
 	}
-	res, _, err := e.Execute(c.schedule.cache, nil, c.schedule.CheckStart, 0, c.Alert.UnjoinedOK, c.schedule.Search.Expand)
+	res, _, err := e.Execute(c.schedule.cache, nil, c.schedule.CheckStart, 0, c.Alert.UnjoinedOK, c.schedule.Search, c.schedule.Lookups)
 	if err != nil {
 		log.Printf("%s: %v", v, err)
 		return ""

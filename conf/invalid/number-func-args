@@ -1,0 +1,3 @@
+alert broken {
+	warn = q("", "") > 0
+}

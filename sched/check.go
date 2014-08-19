@@ -13,7 +13,7 @@ import (
 	"github.com/StackExchange/bosun/expr"
 )
 
-func (s *Schedule) Status(ak AlertKey) *State {
+func (s *Schedule) Status(ak expr.AlertKey) *State {
 	s.Lock()
 	state := s.status[ak]
 	if state == nil {
@@ -30,7 +30,7 @@ func (s *Schedule) Status(ak AlertKey) *State {
 	return state
 }
 
-type RunHistory map[AlertKey]*Event
+type RunHistory map[expr.AlertKey]*Event
 
 // Check evaluates all critical and warning alert rules.
 func (s *Schedule) Check() {
@@ -134,7 +134,7 @@ func (s *Schedule) CheckUnknown() {
 func (s *Schedule) CheckAlert(r RunHistory, a *conf.Alert) {
 	log.Printf("checking alert %v", a.Name)
 	start := time.Now()
-	var warns AlertKeys
+	var warns expr.AlertKeys
 	crits, err := s.CheckExpr(r, a, a.Crit, StCritical, nil)
 	if err == nil {
 		warns, _ = s.CheckExpr(r, a, a.Warn, StWarning, crits)
@@ -143,7 +143,7 @@ func (s *Schedule) CheckAlert(r RunHistory, a *conf.Alert) {
 	log.Printf("done checking alert %v (%s): %v crits, %v warns", a.Name, time.Since(start), len(crits), len(warns))
 }
 
-func (s *Schedule) CheckExpr(rh RunHistory, a *conf.Alert, e *expr.Expr, checkStatus Status, ignore AlertKeys) (alerts AlertKeys, err error) {
+func (s *Schedule) CheckExpr(rh RunHistory, a *conf.Alert, e *expr.Expr, checkStatus Status, ignore expr.AlertKeys) (alerts expr.AlertKeys, err error) {
 	if e == nil {
 		return
 	}
@@ -154,9 +154,9 @@ func (s *Schedule) CheckExpr(rh RunHistory, a *conf.Alert, e *expr.Expr, checkSt
 		collect.Add("check.errs", opentsdb.TagSet{"metric": a.Name}, 1)
 		log.Println(err)
 	}()
-	results, _, err := e.Execute(s.cache, nil, s.CheckStart, 0, a.UnjoinedOK, s.Search.Expand)
+	results, _, err := e.Execute(s.cache, nil, s.CheckStart, 0, a.UnjoinedOK, s.Search, s.Conf.GetLookups())
 	if err != nil {
-		ak := NewAlertKey(a.Name, nil)
+		ak := expr.NewAlertKey(a.Name, nil)
 		state := s.Status(ak)
 		state.Result = &Result{
 			Result: &expr.Result{
@@ -178,7 +178,7 @@ Loop:
 		if s.Conf.Squelched(a, r.Group) {
 			continue
 		}
-		ak := NewAlertKey(a.Name, r.Group)
+		ak := expr.NewAlertKey(a.Name, r.Group)
 		for _, v := range ignore {
 			if ak == v {
 				continue Loop

@@ -8,7 +8,6 @@ import (
 	"net"
 	"os"
 	"reflect"
-	"strings"
 	"sync"
 	"time"
 
@@ -19,6 +18,7 @@ import (
 	"github.com/StackExchange/bosun/_third_party/github.com/tatsushid/go-fastping"
 	"github.com/StackExchange/bosun/conf"
 	"github.com/StackExchange/bosun/expr"
+	"github.com/StackExchange/bosun/search"
 )
 
 func init() {
@@ -31,11 +31,12 @@ type Schedule struct {
 
 	Conf          *conf.Conf
 	status        States
-	Notifications map[AlertKey]map[string]time.Time
+	Notifications map[expr.AlertKey]map[string]time.Time
 	Silence       map[string]*Silence
-	Group         map[time.Time]AlertKeys
+	Group         map[time.Time]expr.AlertKeys
 	Metadata      map[metadata.Metakey]Metavalues
-	Search        *Search
+	Search        *search.Search
+	Lookups       map[string]*expr.Lookup
 
 	nc            chan interface{}
 	cache         *opentsdb.Cache
@@ -101,7 +102,7 @@ func (s *Schedule) GetMetadata(metric string, subset opentsdb.TagSet) []metadata
 	return ms
 }
 
-type States map[AlertKey]*State
+type States map[expr.AlertKey]*State
 
 type StateTuple struct {
 	NeedAck bool
@@ -128,11 +129,11 @@ func (s States) GroupStates() map[StateTuple]States {
 
 // GroupSets returns slices of TagSets, grouped by most common ancestor. Those
 // with no shared ancestor are grouped by alert name.
-func (states States) GroupSets() map[string]AlertKeys {
+func (states States) GroupSets() map[string]expr.AlertKeys {
 	type Pair struct {
 		k, v string
 	}
-	groups := make(map[string]AlertKeys)
+	groups := make(map[string]expr.AlertKeys)
 	seen := make(map[*State]bool)
 	for {
 		counts := make(map[Pair]int)
@@ -158,7 +159,7 @@ func (states States) GroupSets() map[string]AlertKeys {
 		if max == 1 {
 			break
 		}
-		var group AlertKeys
+		var group expr.AlertKeys
 		for _, s := range states {
 			if seen[s] {
 				continue
@@ -178,7 +179,7 @@ func (states States) GroupSets() map[string]AlertKeys {
 		if len(seen) == len(states) {
 			break
 		}
-		var group AlertKeys
+		var group expr.AlertKeys
 		for _, s := range states {
 			if seen[s] {
 				continue
@@ -199,12 +200,12 @@ func (s *Schedule) MarshalJSON() ([]byte, error) {
 	type Grouped struct {
 		Active   bool `json:",omitempty"`
 		Status   Status
-		Subject  string     `json:",omitempty"`
-		Len      int        `json:",omitempty"`
-		Alert    string     `json:",omitempty"`
-		AlertKey AlertKey   `json:",omitempty"`
-		Ago      string     `json:",omitempty"`
-		Children []*Grouped `json:",omitempty"`
+		Subject  string        `json:",omitempty"`
+		Len      int           `json:",omitempty"`
+		Alert    string        `json:",omitempty"`
+		AlertKey expr.AlertKey `json:",omitempty"`
+		Ago      string        `json:",omitempty"`
+		Children []*Grouped    `json:",omitempty"`
 	}
 	t := struct {
 		Alerts map[string]*conf.Alert
@@ -312,11 +313,12 @@ func Run() error {
 func (s *Schedule) Init(c *conf.Conf) {
 	s.Conf = c
 	s.Silence = make(map[string]*Silence)
-	s.Group = make(map[time.Time]AlertKeys)
+	s.Group = make(map[time.Time]expr.AlertKeys)
 	s.Metadata = make(map[metadata.Metakey]Metavalues)
+	s.Lookups = c.GetLookups()
 	s.status = make(States)
 	s.cache = opentsdb.NewCache(s.Conf.TsdbHost, s.Conf.ResponseLimit)
-	s.Search = NewSearch()
+	s.Search = search.NewSearch()
 }
 
 func (s *Schedule) Load(c *conf.Conf) {
@@ -328,8 +330,8 @@ func (s *Schedule) Load(c *conf.Conf) {
 func (s *Schedule) RestoreState() {
 	s.Lock()
 	defer s.Unlock()
-	s.Search.lock.Lock()
-	defer s.Search.lock.Unlock()
+	s.Search.Lock()
+	defer s.Search.Unlock()
 	s.Notifications = nil
 	f, err := os.Open(s.Conf.StateFile)
 	if err != nil {
@@ -337,23 +339,23 @@ func (s *Schedule) RestoreState() {
 		return
 	}
 	dec := gob.NewDecoder(f)
-	if err := dec.Decode(&s.Search.metric); err != nil {
+	if err := dec.Decode(&s.Search.Metric); err != nil {
 		log.Println(err)
 		return
 	}
-	if err := dec.Decode(&s.Search.tagk); err != nil {
+	if err := dec.Decode(&s.Search.Tagk); err != nil {
 		log.Println(err)
 		return
 	}
-	if err := dec.Decode(&s.Search.tagv); err != nil {
+	if err := dec.Decode(&s.Search.Tagv); err != nil {
 		log.Println(err)
 		return
 	}
-	if err := dec.Decode(&s.Search.metricTags); err != nil {
+	if err := dec.Decode(&s.Search.MetricTags); err != nil {
 		log.Println(err)
 		return
 	}
-	notifications := make(map[AlertKey]map[string]time.Time)
+	notifications := make(map[expr.AlertKey]map[string]time.Time)
 	if err := dec.Decode(&notifications); err != nil {
 		log.Println(err)
 		return
@@ -415,8 +417,8 @@ func (s *Schedule) Save() {
 
 func (s *Schedule) save() {
 	s.Lock()
-	s.Search.lock.Lock()
-	defer s.Search.lock.Unlock()
+	s.Search.Lock()
+	defer s.Search.Unlock()
 	defer s.Unlock()
 	savePending = false
 	tmp := s.Conf.StateFile + ".tmp"
@@ -426,19 +428,19 @@ func (s *Schedule) save() {
 		return
 	}
 	enc := gob.NewEncoder(f)
-	if err := enc.Encode(s.Search.metric); err != nil {
+	if err := enc.Encode(s.Search.Metric); err != nil {
 		log.Println(err)
 		return
 	}
-	if err := enc.Encode(s.Search.tagk); err != nil {
+	if err := enc.Encode(s.Search.Tagk); err != nil {
 		log.Println(err)
 		return
 	}
-	if err := enc.Encode(s.Search.tagv); err != nil {
+	if err := enc.Encode(s.Search.Tagv); err != nil {
 		log.Println(err)
 		return
 	}
-	if err := enc.Encode(s.Search.metricTags); err != nil {
+	if err := enc.Encode(s.Search.MetricTags); err != nil {
 		log.Println(err)
 		return
 	}
@@ -531,35 +533,6 @@ func pingHost(host string) {
 	}
 }
 
-type AlertKey string
-
-func NewAlertKey(name string, group opentsdb.TagSet) AlertKey {
-	return AlertKey(name + group.String())
-}
-
-func (a AlertKey) Name() string {
-	return strings.SplitN(string(a), "{", 2)[0]
-}
-
-func (a AlertKey) Group() opentsdb.TagSet {
-	s := strings.SplitN(string(a), "{", 2)[1]
-	s = s[:len(s)-1]
-	if s == "" {
-		return nil
-	}
-	g, err := opentsdb.ParseTags(s)
-	if err != nil {
-		panic(err)
-	}
-	return g
-}
-
-type AlertKeys []AlertKey
-
-func (a AlertKeys) Len() int           { return len(a) }
-func (a AlertKeys) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-func (a AlertKeys) Less(i, j int) bool { return a[i] < a[j] }
-
 type State struct {
 	*Result
 
@@ -576,8 +549,8 @@ type State struct {
 	Forgotten bool
 }
 
-func (s *State) AlertKey() AlertKey {
-	return NewAlertKey(s.Alert, s.Group)
+func (s *State) AlertKey() expr.AlertKey {
+	return expr.NewAlertKey(s.Alert, s.Group)
 }
 
 func (s *State) Status() Status {
@@ -599,7 +572,7 @@ func (s *State) IsActive() bool {
 	return s.Status() > StNormal
 }
 
-func (s *Schedule) Action(user, message string, t ActionType, ak AlertKey) error {
+func (s *Schedule) Action(user, message string, t ActionType, ak expr.AlertKey) error {
 	s.Lock()
 	defer func() {
 		s.Unlock()

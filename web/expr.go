@@ -26,7 +26,7 @@ func Expr(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 	if err != nil {
 		return nil, err
 	}
-	res, queries, err := e.Execute(opentsdb.NewCache(schedule.Conf.TsdbHost, schedule.Conf.ResponseLimit), t, now, 0, false, schedule.Search.Expand)
+	res, queries, err := e.Execute(opentsdb.NewCache(schedule.Conf.TsdbHost, schedule.Conf.ResponseLimit), t, now, 0, false, schedule.Search, schedule.Lookups)
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +62,7 @@ func getTime(r *http.Request) (now time.Time, err error) {
 
 type Res struct {
 	*sched.Event
-	Key sched.AlertKey
+	Key expr.AlertKey
 }
 
 func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
@@ -109,7 +109,7 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 	if len(rh) < 1 {
 		return nil, fmt.Errorf("no results returned")
 	}
-	keys := make(sched.AlertKeys, len(rh))
+	keys := make(expr.AlertKeys, len(rh))
 	for k, v := range rh {
 		v.Time = now
 		keys[i] = k
