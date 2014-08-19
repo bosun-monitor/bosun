@@ -92,7 +92,11 @@ func Graph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 			Path:     "/q",
 			RawQuery: oreq.String() + "&png",
 		}
-		resp, err := http.Get(u.String())
+		req, err := http.NewRequest("GET", u.String(), nil)
+		if err != nil {
+			return nil, err
+		}
+		resp, err := client.Do(req)
 		if err != nil {
 			return nil, err
 		}
