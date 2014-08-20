@@ -88,7 +88,7 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 	if len(c.Alerts) != 1 {
 		return nil, fmt.Errorf("exactly one alert must be defined")
 	}
-	s := &sched.Schedule{}
+	s := &sched.Schedule{Search: schedule.Search}
 	now, err := getTime(r)
 	if err != nil {
 		return nil, err
