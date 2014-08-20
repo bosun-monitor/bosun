@@ -66,7 +66,11 @@ func (s *Schedule) URL() *url.URL {
 // Ack returns the URL to acknowledge an alert.
 func (c *Context) Ack() string {
 	u := c.schedule.URL()
-	u.Path = fmt.Sprintf("/api/acknowledge/%s/%s", c.Alert.Name, c.State.Group.String())
+	u.Path = "/action"
+	u.RawQuery = url.Values{
+		"type": []string{"type"},
+		"key":  []string{c.Alert.Name + c.State.Group.String()},
+	}.Encode()
 	return u.String()
 }
 
