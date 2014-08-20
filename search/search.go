@@ -7,7 +7,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/collect"
 	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/opentsdb"
 )
 
@@ -26,7 +25,6 @@ type Search struct {
 	MetricTags mtsmap
 
 	sync.RWMutex
-	ch chan opentsdb.MultiDataPoint
 }
 
 type MetricTagSet struct {
@@ -61,53 +59,38 @@ func NewSearch() *Search {
 		Tagk:       make(smap),
 		Tagv:       make(qmap),
 		MetricTags: make(mtsmap),
-		ch:         make(chan opentsdb.MultiDataPoint, 1000),
 	}
-	go s.Process()
-	collect.Set("search.ch_len", nil, func() interface{} {
-		return len(s.ch)
-	})
 	return &s
 }
 
-func (s *Search) Process() {
-	for mdp := range s.ch {
-		s.Lock()
-		for _, dp := range mdp {
-			var mts MetricTagSet
-			mts.Metric = dp.Metric
-			mts.Tags = dp.Tags
-			s.MetricTags[mts.key()] = mts
-			var q duple
-			for k, v := range dp.Tags {
-				q.A, q.B = k, v
-				if _, ok := s.Metric[q]; !ok {
-					s.Metric[q] = make(present)
-				}
-				s.Metric[q][dp.Metric] = struct{}{}
-
-				if _, ok := s.Tagk[dp.Metric]; !ok {
-					s.Tagk[dp.Metric] = make(present)
-				}
-				s.Tagk[dp.Metric][k] = struct{}{}
-
-				q.A, q.B = dp.Metric, k
-				if _, ok := s.Tagv[q]; !ok {
-					s.Tagv[q] = make(present)
-				}
-				s.Tagv[q][v] = struct{}{}
-			}
-		}
-		s.Unlock()
-	}
-}
-
 func (s *Search) Index(mdp opentsdb.MultiDataPoint) {
-	select {
-	case s.ch <- mdp:
-	default:
-		collect.Add("search.batch_drop", nil, 1)
+	s.Lock()
+	for _, dp := range mdp {
+		var mts MetricTagSet
+		mts.Metric = dp.Metric
+		mts.Tags = dp.Tags
+		s.MetricTags[mts.key()] = mts
+		var q duple
+		for k, v := range dp.Tags {
+			q.A, q.B = k, v
+			if _, ok := s.Metric[q]; !ok {
+				s.Metric[q] = make(present)
+			}
+			s.Metric[q][dp.Metric] = struct{}{}
+
+			if _, ok := s.Tagk[dp.Metric]; !ok {
+				s.Tagk[dp.Metric] = make(present)
+			}
+			s.Tagk[dp.Metric][k] = struct{}{}
+
+			q.A, q.B = dp.Metric, k
+			if _, ok := s.Tagv[q]; !ok {
+				s.Tagv[q] = make(present)
+			}
+			s.Tagv[q][v] = struct{}{}
+		}
 	}
+	s.Unlock()
 }
 
 // Match returns all matching values against search. search is a regex, except
