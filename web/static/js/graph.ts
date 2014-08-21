@@ -320,7 +320,7 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 				$scope.error = '';
 				var u = $location.absUrl();
 				u = u.substr(0, u.indexOf('?')) + '?';
-				u += 'b64=' + search.b64 + autods;
+				u += 'b64=' + search.b64 + autods + autorate;
 				$scope.url = u;
 			})
 			.error((error) => {
