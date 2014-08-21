@@ -602,10 +602,10 @@ bosunApp.directive('tsGraph', [
                 }
                 var brush = d3.svg.brush().x(xScale).on('brush', brushed);
                 line.y(function (d) {
-                    return yScale(d.y);
+                    return yScale(d[1]);
                 });
                 line.x(function (d) {
-                    return xScale(d.x * 1000);
+                    return xScale(d[0] * 1000);
                 });
                 var top = d3.select(elem[0]).append('svg').attr('height', svgHeight).attr('width', '100%');
                 var svg = top.append('g').attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
@@ -651,7 +651,7 @@ bosunApp.directive('tsGraph', [
                 }
                 function drawLegend() {
                     var names = legend.selectAll('.series').data(scope.data, function (d) {
-                        return d.name;
+                        return d.Name;
                     });
                     names.enter().append('div').attr('class', 'series');
                     names.exit().remove();
@@ -659,18 +659,18 @@ bosunApp.directive('tsGraph', [
                     xloc.text('Time: ' + fmtTime(xi));
                     var t = xi.getTime() / 1000;
                     names.each(function (d) {
-                        var idx = bisect(d.data, t);
-                        if (idx >= d.data.length) {
-                            idx = d.data.length - 1;
+                        var idx = bisect(d.Data, t);
+                        if (idx >= d.Data.length) {
+                            idx = d.Data.length - 1;
                         }
                         var e = d3.select(this);
-                        var pt = d.data[idx];
+                        var pt = d.Data[idx];
                         if (pt) {
-                            e.attr('title', pt.y);
-                            e.text(d.name + ': ' + fmtfilter(pt.y));
+                            e.attr('title', pt[1]);
+                            e.text(d.Name + ': ' + fmtfilter(pt[1]));
                         }
                     }).style('color', function (d) {
-                        return color(d.name);
+                        return color(d.Name);
                     });
                     var x = mousex;
                     if (x > width) {
@@ -725,13 +725,13 @@ bosunApp.directive('tsGraph', [
                     }
                     var xdomain = [
                         d3.min(scope.data, function (d) {
-                            return d3.min(d.data, function (c) {
-                                return c.x;
+                            return d3.min(d.Data, function (c) {
+                                return c[0];
                             });
                         }) * 1000,
                         d3.max(scope.data, function (d) {
-                            return d3.max(d.data, function (c) {
-                                return c.x;
+                            return d3.max(d.Data, function (c) {
+                                return c[0];
                             });
                         }) * 1000
                     ];
@@ -740,13 +740,13 @@ bosunApp.directive('tsGraph', [
                     }
                     xScale.domain(xdomain);
                     var ymin = d3.min(scope.data, function (d) {
-                        return d3.min(d.data, function (c) {
-                            return c.y;
+                        return d3.min(d.Data, function (c) {
+                            return c[1];
                         });
                     });
                     var ymax = d3.max(scope.data, function (d) {
-                        return d3.max(d.data, function (c) {
-                            return c.y;
+                        return d3.max(d.Data, function (c) {
+                            return c[1];
                         });
                     });
                     var diff = (ymax - ymin) / 50;
@@ -770,24 +770,24 @@ bosunApp.directive('tsGraph', [
                     svg.select('.x.axis').transition().call(xAxis);
                     svg.select('.y.axis').transition().call(yAxis);
                     var queries = paths.selectAll('.line').data(scope.data, function (d) {
-                        return d.name;
+                        return d.Name;
                     });
                     switch (scope.generator) {
                         case 'area':
                             queries.enter().append('path').attr('stroke', function (d) {
-                                return color(d.name);
+                                return color(d.Name);
                             }).attr('class', 'line').style('fill', function (d) {
-                                return color(d.name);
+                                return color(d.Name);
                             });
                             break;
                         default:
                             queries.enter().append('path').attr('stroke', function (d) {
-                                return color(d.name);
+                                return color(d.Name);
                             }).attr('class', 'line');
                     }
                     queries.exit().remove();
                     queries.attr('d', function (d) {
-                        return line(d.data);
+                        return line(d.Data);
                     }).attr('transform', null).transition().ease('linear').attr('transform', 'translate(' + (xScale(oldx) - xScale(xdomain[1])) + ')');
                     chart.select('.x.brush').call(brush).selectAll('rect').attr('height', height).on('mousemove', mousemove);
                     chart.select('.x.brush .extent').style('stroke', '#fff').style('fill-opacity', '.125').style('shape-rendering', 'crispEdges');
