@@ -5,10 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"image/color"
-	"io"
 	"net/http"
-	"net/url"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -85,28 +82,6 @@ func Graph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 			}
 		}
 	}
-	if _, present := r.Form["png"]; present {
-		u := url.URL{
-			Scheme:   "http",
-			Host:     schedule.Conf.TsdbHost,
-			Path:     "/q",
-			RawQuery: oreq.String() + "&png",
-		}
-		req, err := http.NewRequest("GET", u.String(), nil)
-		if err != nil {
-			return nil, err
-		}
-		resp, err := client.Do(req)
-		if err != nil {
-			return nil, err
-		}
-		for k, v := range resp.Header {
-			w.Header()[k] = v
-		}
-		w.WriteHeader(resp.StatusCode)
-		_, err = io.Copy(w, resp.Body)
-		return nil, err
-	}
 	var tr opentsdb.ResponseSet
 	b, _ := json.MarshalIndent(oreq, "", "  ")
 	t.StepCustomTiming("tsdb", "query", string(b), func() {
@@ -115,17 +90,67 @@ func Graph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 	if err != nil {
 		return nil, err
 	}
-	chart, err := makeChart(tr)
+	cs, err := makeChart(tr)
 	if err != nil {
 		return nil, err
+	}
+	if _, present := r.Form["png"]; present {
+		c := chart.ScatterChart{
+			Title: fmt.Sprintf("%v - %v", oreq.Start, oreq.End),
+		}
+		c.XRange.Time = true
+		for ri, r := range cs {
+			pts := make([]chart.EPoint, len(r.Data))
+			for idx, v := range r.Data {
+				pts[idx].X = v[0]
+				pts[idx].Y = v[1]
+			}
+			slice.Sort(pts, func(i, j int) bool {
+				return pts[i].X < pts[j].X
+			})
+			c.AddData(r.Name, pts, chart.PlotStyleLinesPoints, autostyle(ri))
+		}
+		w.Header().Set("Content-Type", "image/svg+xml")
+		white := color.RGBA{0xff, 0xff, 0xff, 0xff}
+		const width = 800
+		const height = 600
+		s := svg.New(w)
+		s.Start(width, height)
+		s.Rect(0, 0, width, height, "fill: #ffffff")
+		sgr := svgg.AddTo(s, 0, 0, width, height, "", 12, white)
+		c.Plot(sgr)
+		s.End()
+		return nil, nil
 	}
 	return struct {
 		Queries []string
 		Series  []*chartSeries
 	}{
 		QFromR(oreq),
-		chart,
+		cs,
 	}, nil
+}
+
+var chartColors = []color.Color{
+	color.NRGBA{0xe4, 0x1a, 0x1c, 0xff},
+	color.NRGBA{0x37, 0x7e, 0xb8, 0xff},
+	color.NRGBA{0x4d, 0xaf, 0x4a, 0xff},
+	color.NRGBA{0x98, 0x4e, 0xa3, 0xff},
+	color.NRGBA{0xff, 0x7f, 0x00, 0xff},
+	color.NRGBA{0xa6, 0x56, 0x28, 0xff},
+	color.NRGBA{0xf7, 0x81, 0xbf, 0xff},
+	color.NRGBA{0x99, 0x99, 0x99, 0xff},
+}
+
+func autostyle(i int) chart.Style {
+	c := chartColors[i%len(chartColors)]
+	return chart.Style{
+		// 0 uses a default
+		SymbolSize: 0.00001,
+		LineStyle:  chart.SolidLine,
+		LineWidth:  1,
+		LineColor:  c,
+	}
 }
 
 func QFromR(req *opentsdb.Request) []string {
@@ -201,7 +226,7 @@ func ExprGraph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (in
 		slice.Sort(pts, func(i, j int) bool {
 			return pts[i].X < pts[j].X
 		})
-		c.AddData(r.Group.String(), pts, chart.PlotStyleLinesPoints, chart.AutoStyle(ri, false))
+		c.AddData(r.Group.String(), pts, chart.PlotStyleLinesPoints, autostyle(ri))
 	}
 	w.Header().Set("Content-Type", "image/svg+xml")
 	white := color.RGBA{0xff, 0xff, 0xff, 0xff}
@@ -219,19 +244,18 @@ func ExprGraph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (in
 func makeChart(r opentsdb.ResponseSet) ([]*chartSeries, error) {
 	var series []*chartSeries
 	for _, resp := range r {
-		dps := make([]datapoint, 0)
+		dps := make([][2]float64, 0)
 		for k, v := range resp.DPS {
 			ki, err := strconv.ParseInt(k, 10, 64)
 			if err != nil {
 				return nil, err
 			}
-			dps = append(dps, datapoint{
-				X: ki,
-				Y: v,
-			})
+			dps = append(dps, [2]float64{float64(ki), float64(v)})
 		}
 		if len(dps) > 0 {
-			sort.Sort(ByX(dps))
+			slice.Sort(dps, func(i, j int) bool {
+				return dps[i][0] < dps[j][0]
+			})
 			name := resp.Metric
 			if len(resp.Tags) > 0 {
 				name += resp.Tags.String()
@@ -246,17 +270,6 @@ func makeChart(r opentsdb.ResponseSet) ([]*chartSeries, error) {
 }
 
 type chartSeries struct {
-	Name string      `json:"name"`
-	Data []datapoint `json:"data"`
+	Name string
+	Data [][2]float64
 }
-
-type datapoint struct {
-	X int64          `json:"x"`
-	Y opentsdb.Point `json:"y"`
-}
-
-type ByX []datapoint
-
-func (a ByX) Len() int           { return len(a) }
-func (a ByX) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-func (a ByX) Less(i, j int) bool { return a[i].X < a[j].X }

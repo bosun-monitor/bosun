@@ -327,8 +327,8 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWi
 			var brush = d3.svg.brush()
 				.x(xScale)
 				.on('brush', brushed);
-			line.y((d: any) => { return yScale(d.y); });
-			line.x((d: any) => { return xScale(d.x * 1000); });
+			line.y((d: any) => { return yScale(d[1]); });
+			line.x((d: any) => { return xScale(d[0] * 1000); });
 			var top = d3.select(elem[0])
 				.append('svg')
 				.attr('height', svgHeight)
@@ -397,7 +397,7 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWi
 			}
 			function drawLegend() {
 				var names = legend.selectAll('.series')
-					.data(scope.data, (d) => { return d.name; });
+					.data(scope.data, (d) => { return d.Name; });
 				names.enter()
 					.append('div')
 					.attr('class', 'series');
@@ -408,18 +408,18 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWi
 				var t = xi.getTime() / 1000;
 				names
 					.each(function(d: any) {
-						var idx = bisect(d.data, t);
-						if (idx >= d.data.length) {
-							idx = d.data.length - 1;
+						var idx = bisect(d.Data, t);
+						if (idx >= d.Data.length) {
+							idx = d.Data.length - 1;
 						}
 						var e = d3.select(this);
-						var pt = d.data[idx];
+						var pt = d.Data[idx];
 						if (pt) {
-							e.attr('title', pt.y);
-							e.text(d.name + ': ' + fmtfilter(pt.y));
+							e.attr('title', pt[1]);
+							e.text(d.Name + ': ' + fmtfilter(pt[1]));
 						}
 					})
-					.style('color', (d: any) => { return color(d.name); });
+					.style('color', (d: any) => { return color(d.Name); });
 				var x = mousex;
 				if (x > width) {
 					x = 0;
@@ -474,15 +474,15 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWi
 					return;
 				}
 				var xdomain = [
-					d3.min(scope.data, (d: any) => { return d3.min(d.data, (c: any) => { return c.x; }); }) * 1000,
-					d3.max(scope.data, (d: any) => { return d3.max(d.data, (c: any) => { return c.x; }); }) * 1000,
+					d3.min(scope.data, (d: any) => { return d3.min(d.Data, (c: any) => { return c[0]; }); }) * 1000,
+					d3.max(scope.data, (d: any) => { return d3.max(d.Data, (c: any) => { return c[0]; }); }) * 1000,
 				];
 				if (!oldx) {
 					oldx = xdomain[1];
 				}
 				xScale.domain(xdomain);
-				var ymin = d3.min(scope.data, (d: any) => { return d3.min(d.data, (c: any) => { return c.y; }); });
-				var ymax = d3.max(scope.data, (d: any) => { return d3.max(d.data, (c: any) => { return c.y; }); });
+				var ymin = d3.min(scope.data, (d: any) => { return d3.min(d.Data, (c: any) => { return c[1]; }); });
+				var ymax = d3.max(scope.data, (d: any) => { return d3.max(d.Data, (c: any) => { return c[1]; }); });
 				var diff = (ymax - ymin) / 50;
 				if (!diff) {
 					diff = 1;
@@ -508,25 +508,25 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWi
 					.transition()
 					.call(yAxis);
 				var queries = paths.selectAll('.line')
-					.data(scope.data, (d) => { return d.name; });
+					.data(scope.data, (d) => { return d.Name; });
 				switch (scope.generator) {
 					case 'area':
 						queries.enter()
 							.append('path')
-							.attr('stroke', (d: any) => { return color(d.name); })
+							.attr('stroke', (d: any) => { return color(d.Name); })
 							.attr('class', 'line')
-							.style('fill', (d: any) => { return color(d.name); });
+							.style('fill', (d: any) => { return color(d.Name); });
 						break;
 					default:
 						queries.enter()
 							.append('path')
-							.attr('stroke', (d: any) => { return color(d.name); })
+							.attr('stroke', (d: any) => { return color(d.Name); })
 							.attr('class', 'line');
 				}
 				queries.exit()
 					.remove();
 				queries
-					.attr('d', (d: any) => { return line(d.data); })
+					.attr('d', (d: any) => { return line(d.Data); })
 					.attr('transform', null)
 					.transition()
 					.ease('linear')
