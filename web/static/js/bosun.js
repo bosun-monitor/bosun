@@ -840,7 +840,7 @@ bosunControllers.controller('ExprCtrl', [
             $scope.result_type = data.Type;
             if (data.Type == 'series') {
                 $scope.svg_url = '/api/egraph/' + btoa(current) + '.svg?now=' + Math.floor(Date.now() / 1000);
-                $scope.graph = toRickshaw(data.Results);
+                $scope.graph = toChart(data.Results);
             }
             $scope.running = '';
         }).error(function (error) {
@@ -858,15 +858,12 @@ bosunControllers.controller('ExprCtrl', [
             $location.search('time', $scope.time || null);
             $route.reload();
         };
-        function toRickshaw(res) {
+        function toChart(res) {
             var graph = [];
             angular.forEach(res, function (d, idx) {
                 var data = [];
                 angular.forEach(d.Value, function (val, ts) {
-                    data.push({
-                        x: +ts,
-                        y: val
-                    });
+                    data.push([+ts, val]);
                 });
                 if (data.length == 0) {
                     return;
@@ -880,8 +877,8 @@ bosunControllers.controller('ExprCtrl', [
                 });
                 name += '}';
                 var series = {
-                    data: data,
-                    name: name
+                    Data: data,
+                    Name: name
                 };
                 graph[idx] = series;
             });
