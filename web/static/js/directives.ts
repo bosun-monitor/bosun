@@ -462,7 +462,7 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWi
 				draw();
 			}
 			var oldx = 0;
-			var bisect = d3.bisector((d) => { return d.x; }).right;
+			var bisect = d3.bisector((d) => { return d[0]; }).right;
 			function update(v: any) {
 				if (!angular.isArray(v) || v.length == 0) {
 					return;
