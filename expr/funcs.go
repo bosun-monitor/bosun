@@ -124,8 +124,6 @@ var Builtins = map[string]parse.Func{
 	},
 }
 
-const tsdbFmt = "2006/01/02 15:04:05"
-
 func lookup(e *state, T miniprofiler.Timer, lookup, key string) (results []*Result, err error) {
 	lookups := e.lookups[lookup]
 	if lookups == nil {
