@@ -40,7 +40,7 @@ func (e *Expr) MarshalJSON() ([]byte, error) {
 }
 
 func New(expr string) (*Expr, error) {
-	t, err := parse.Parse(expr, Builtins)
+	t, err := parse.Parse(expr, builtins)
 	if err != nil {
 		return nil, err
 	}
