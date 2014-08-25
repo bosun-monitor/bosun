@@ -16,7 +16,7 @@ import (
 	"github.com/StackExchange/bosun/search"
 )
 
-var Builtins = map[string]parse.Func{
+var builtins = map[string]parse.Func{
 	"abs": {
 		[]parse.FuncType{parse.TYPE_NUMBER},
 		parse.TYPE_NUMBER,
