@@ -1,12 +1,11 @@
 package expr
 
 type Lookup struct {
-	Tags []string
+	Tags    []string
 	Entries []*Entry
 }
 
 type Entry struct {
 	AlertKey AlertKey
-	Values map[string]string
+	Values   map[string]string
 }
-
