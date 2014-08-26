@@ -50,7 +50,7 @@ func TestRun(t *testing.T) {
 
 	found1, found100 := false, false
 	called, idle := false, false
-	p.AddHandler("receive", func(ip *net.IPAddr, d time.Duration) {
+	err := p.AddHandler("receive", func(ip *net.IPAddr, d time.Duration) {
 		called = true
 		if ip.String() == "127.0.0.1" {
 			found1 = true
@@ -58,10 +58,18 @@ func TestRun(t *testing.T) {
 			found100 = true
 		}
 	})
-	p.AddHandler("idle", func() {
+	if err != nil {
+		t.Fatalf("Failed to add receive hander: %v", err)
+	}
+
+	err = p.AddHandler("idle", func() {
 		idle = true
 	})
-	err := p.Run()
+	if err != nil {
+		t.Fatalf("Failed to add idle handler: %v", err)
+	}
+
+	err = p.Run()
 	if err != nil {
 		t.Fatalf("Pinger returns error: %v", err)
 	}
@@ -88,23 +96,30 @@ func TestMultiRun(t *testing.T) {
 	}
 
 	if err := p2.AddIP("127.0.0.1"); err != nil {
-		t.Fatalf("AddIP 1 failed: %v", err)
+		t.Fatalf("AddIP 2 failed: %v", err)
 	}
 
 	var mu sync.Mutex
 	res1 := 0
-	p1.AddHandler("receive", func(*net.IPAddr, time.Duration) {
+	err := p1.AddHandler("receive", func(*net.IPAddr, time.Duration) {
 		mu.Lock()
 		res1++
 		mu.Unlock()
 	})
+	if err != nil {
+		t.Fatalf("Failed to add receive hander: %v", err)
+	}
 
 	res2 := 0
-	p2.AddHandler("receive", func(*net.IPAddr, time.Duration) {
+	err = p2.AddHandler("receive", func(*net.IPAddr, time.Duration) {
 		mu.Lock()
 		res2++
 		mu.Unlock()
 	})
+	if err != nil {
+		t.Fatalf("Failed to add idle handler: %v", err)
+	}
+
 	p1.MaxRTT, p2.MaxRTT = time.Millisecond*100, time.Millisecond*100
 
 	if err := p1.Run(); err != nil {
@@ -170,28 +185,32 @@ func TestRunLoop(t *testing.T) {
 	p.MaxRTT = time.Millisecond * 100
 
 	recvCount, idleCount := 0, 0
-	p.AddHandler("receive", func(*net.IPAddr, time.Duration) {
+	err := p.AddHandler("receive", func(*net.IPAddr, time.Duration) {
 		recvCount++
 	})
-	p.AddHandler("idle", func() {
+	if err != nil {
+		t.Fatalf("Failed to add receive handler: %v", err)
+	}
+
+	err = p.AddHandler("idle", func() {
 		idleCount++
 	})
-
-	wait := make(chan bool)
-	quit, errch := p.RunLoop()
-	ticker := time.NewTicker(time.Millisecond * 250)
-loop:
-	for {
-		select {
-		case err := <-errch:
-			t.Fatalf("Pinger returns error %v", err)
-		case <-ticker.C:
-			ticker.Stop()
-			quit <- wait
-		case <-wait:
-			break loop
-		}
+	if err != nil {
+		t.Fatalf("Failed to add idle handler: %v", err)
 	}
+
+	p.RunLoop()
+	ticker := time.NewTicker(time.Millisecond * 250)
+	select {
+	case <-p.Done():
+		if err = p.Err(); err != nil {
+			t.Fatalf("Pinger returns error %v", err)
+		}
+	case <-ticker.C:
+		break
+	}
+	ticker.Stop()
+	p.Stop()
 
 	if recvCount < 2 {
 		t.Fatalf("Pinger receive count less than 2")
