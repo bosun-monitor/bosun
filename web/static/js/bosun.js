@@ -1,26 +1,3 @@
-bosunControllers.controller('ActionCtrl', [
-    '$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
-        var search = $location.search();
-        $scope.type = search.type;
-        if (!angular.isArray(search.key)) {
-            $scope.keys = [search.key];
-        } else {
-            $scope.keys = search.key;
-        }
-        $scope.submit = function () {
-            var data = {
-                Type: $scope.type,
-                User: $scope.user,
-                Message: $scope.message,
-                Keys: $scope.keys
-            };
-            $http.post('/api/action', data).success(function (data) {
-                $location.url('/');
-            }).error(function (error) {
-                alert(error);
-            });
-        };
-    }]);
 /// <reference path="angular.d.ts" />
 /// <reference path="angular-route.d.ts" />
 /// <reference path="angular-sanitize.d.ts" />
@@ -245,6 +222,29 @@ moment.lang('en', {
         yy: "%dy"
     }
 });
+bosunControllers.controller('ActionCtrl', [
+    '$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
+        var search = $location.search();
+        $scope.type = search.type;
+        if (!angular.isArray(search.key)) {
+            $scope.keys = [search.key];
+        } else {
+            $scope.keys = search.key;
+        }
+        $scope.submit = function () {
+            var data = {
+                Type: $scope.type,
+                User: $scope.user,
+                Message: $scope.message,
+                Keys: $scope.keys
+            };
+            $http.post('/api/action', data).success(function (data) {
+                $location.url('/');
+            }).error(function (error) {
+                alert(error);
+            });
+        };
+    }]);
 bosunControllers.controller('ConfigCtrl', [
     '$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
         var search = $location.search();
