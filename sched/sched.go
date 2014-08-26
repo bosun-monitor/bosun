@@ -514,7 +514,6 @@ func pingHost(host string) {
 		p := fastping.NewPinger()
 		ra, err := net.ResolveIPAddr("ip4:icmp", host)
 		if err != nil {
-			log.Print(err)
 			collect.Put("ping.resolved", opentsdb.TagSet{"dst_host": host}, 0)
 			continue
 		}
@@ -526,9 +525,10 @@ func pingHost(host string) {
 			collect.Put("ping.rtt", opentsdb.TagSet{"dst_host": host}, float64(t)/float64(time.Millisecond))
 			timeout = 0
 		})
-		if err := p.Run(); err == nil {
-			collect.Put("ping.timeout", opentsdb.TagSet{"dst_host": host}, timeout)
+		if err := p.Run(); err != nil {
+			log.Print(err)
 		}
+		collect.Put("ping.timeout", opentsdb.TagSet{"dst_host": host}, timeout)
 	}
 }
 
