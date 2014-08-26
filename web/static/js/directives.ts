@@ -381,12 +381,12 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWi
 			var mousey = 0;
 			var oldx = 0;
 			var hover = svg.append('g')
-				.attr('class', 'hover');
+				.attr('class', 'hover')
+				.style('display', 'none');
 			var hoverPoint = hover.append('svg:circle')
 				.attr('r', 5);
 			var hoverText = hover.append('svg:text')
-				.style('font-size', '12px')
-				.text('test');
+				.style('font-size', '12px');
 			var focus = svg.append('g')
 				.attr('class', 'focus')
 				.style('pointer-events', 'none');
@@ -445,7 +445,9 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWi
 						}
 					})
 					.style('color', (d: any) => { return color(d.Name); });
-				hover.attr('transform', 'translate(' + minX + ',' + minY + ')');
+				hover
+					.attr('transform', 'translate(' + minX + ',' + minY + ')')
+					.style('display', 'block');
 				hoverPoint.style('fill', minColor);
 				hoverText
 					.text(minName)
