@@ -378,7 +378,15 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWi
 				'#999999',
 			]);
 			var mousex = 0;
+			var mousey = 0;
 			var oldx = 0;
+			var hover = svg.append('g')
+				.attr('class', 'hover');
+			var hoverPoint = hover.append('svg:circle')
+				.attr('r', 5);
+			var hoverText = hover.append('svg:text')
+				.style('font-size', '12px')
+				.text('test');
 			var focus = svg.append('g')
 				.attr('class', 'focus')
 				.style('pointer-events', 'none');
@@ -386,6 +394,7 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWi
 			function mousemove() {
 				var pt = d3.mouse(this);
 				mousex = pt[0];
+				mousey = pt[1];
 				if (scope.data) {
 					drawLegend();
 				}
@@ -406,6 +415,9 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWi
 				var xi = xScale.invert(mousex);
 				xloc.text('Time: ' + fmtTime(xi));
 				var t = xi.getTime() / 1000;
+				var minDist = width + height;
+				var minName: string, minColor: string;
+				var minX: number, minY: number;
 				names
 					.each(function(d: any) {
 						var idx = bisect(d.Data, t);
@@ -417,9 +429,33 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWi
 						if (pt) {
 							e.attr('title', pt[1]);
 							e.text(d.Name + ': ' + fmtfilter(pt[1]));
+							var ptx = xScale(pt[0] * 1000);
+							var pty = yScale(pt[1]);
+							var ptd = Math.sqrt(
+								Math.pow(ptx - mousex, 2) +
+								Math.pow(pty - mousey, 2)
+							);
+							if (ptd < minDist) {
+								minDist = ptd;
+								minX = ptx;
+								minY = pty;
+								minName = d.Name + ': ' + pt[1];
+								minColor = color(d.Name);
+							}
 						}
 					})
 					.style('color', (d: any) => { return color(d.Name); });
+				hover.attr('transform', 'translate(' + minX + ',' + minY + ')');
+				hoverPoint.style('fill', minColor);
+				hoverText
+					.text(minName)
+					.style('fill', minColor);
+				var isRight = minX > width / 2;
+				var isBottom = minY > height / 2;
+				hoverText
+					.attr('x', isRight ? -5 : 5)
+					.attr('y', isBottom ? -8 : 15)
+					.attr('text-anchor', isRight ? 'end' : 'start');
 				var x = mousex;
 				if (x > width) {
 					x = 0;
