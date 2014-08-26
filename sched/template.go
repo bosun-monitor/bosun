@@ -68,7 +68,7 @@ func (c *Context) Ack() string {
 	u := c.schedule.URL()
 	u.Path = "/action"
 	u.RawQuery = url.Values{
-		"type": []string{"type"},
+		"type": []string{"ack"},
 		"key":  []string{c.Alert.Name + c.State.Group.String()},
 	}.Encode()
 	return u.String()
