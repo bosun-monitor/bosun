@@ -1,5 +1,76 @@
 # Changelog
 
+## v1.0.3 / 2014-08-19
+
+* [Fix] Windows MOVED_TO now translates to Create like on BSD and Linux. [#36](https://github.com/go-fsnotify/fsnotify/issues/36)
+
+## v1.0.2 / 2014-08-17
+
+* [Fix] Missing create events on OS X. [#14](https://github.com/go-fsnotify/fsnotify/issues/14) (thanks @zhsso)
+* [Fix] Make ./path and path equivalent. (thanks @zhsso)
+
+## v1.0.0 / 2014-08-15
+
+* [API] Remove AddWatch on Windows, use Add.
+* Improve documentation for exported identifiers. [#30](https://github.com/go-fsnotify/fsnotify/issues/30)
+* Minor updates based on feedback from golint.
+
+## dev / 2014-07-09
+
+* Moved to [github.com/go-fsnotify/fsnotify](https://github.com/go-fsnotify/fsnotify).
+* Use os.NewSyscallError instead of returning errno (thanks @hariharan-uno)
+ 
+## dev / 2014-07-04
+
+* kqueue: fix incorrect mutex used in Close()
+* Update example to demonstrate usage of Op.
+
+## dev / 2014-06-28
+
+* [API] Don't set the Write Op for attribute notifications [#4](https://github.com/go-fsnotify/fsnotify/issues/4)
+* Fix for String() method on Event (thanks Alex Brainman)
+* Don't build on Plan 9 or Solaris (thanks @4ad)
+
+## dev / 2014-06-21
+
+* Events channel of type Event rather than *Event.
+* [internal] use syscall constants directly for inotify and kqueue.
+* [internal] kqueue: rename events to kevents and fileEvent to event.
+
+## dev / 2014-06-19
+
+* Go 1.3+ required on Windows (uses syscall.ERROR_MORE_DATA internally).
+* [internal] remove cookie from Event struct (unused).
+* [internal] Event struct has the same definition across every OS.
+* [internal] remove internal watch and removeWatch methods.
+
+## dev / 2014-06-12
+
+* [API] Renamed Watch() to Add() and RemoveWatch() to Remove().
+* [API] Pluralized channel names: Events and Errors.
+* [API] Renamed FileEvent struct to Event.
+* [API] Op constants replace methods like IsCreate().
+
+## dev / 2014-06-12
+
+* Fix data race on kevent buffer (thanks @tilaks) [#98](https://github.com/howeyc/fsnotify/pull/98)
+
+## dev / 2014-05-23
+
+* [API] Remove current implementation of WatchFlags.
+    * current implementation doesn't take advantage of OS for efficiency
+    * provides little benefit over filtering events as they are received, but has  extra bookkeeping and mutexes
+    * no tests for the current implementation
+    * not fully implemented on Windows [#93](https://github.com/howeyc/fsnotify/issues/93#issuecomment-39285195)
+
+## v0.9.2 / 2014-08-17
+
+* [Backport] Fix missing create events on OS X. [#14](https://github.com/go-fsnotify/fsnotify/issues/14) (thanks @zhsso)
+
+## v0.9.1 / 2014-06-12
+
+* Fix data race on kevent buffer (thanks @tilaks) [#98](https://github.com/howeyc/fsnotify/pull/98)
+
 ## v0.9.0 / 2014-01-17
 
 * IsAttrib() for events that only concern a file's metadata [#79][] (thanks @abustany)
@@ -157,4 +228,4 @@
 [#25]: https://github.com/howeyc/fsnotify/issues/25
 [#24]: https://github.com/howeyc/fsnotify/issues/24
 [#21]: https://github.com/howeyc/fsnotify/issues/21
-[#1]: https://github.com/howeyc/fsnotify/issues/1
+

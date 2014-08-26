@@ -2,24 +2,27 @@ package main
 
 import (
 	"flag"
+	"io"
 	"log"
 	_ "net/http/pprof"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"time"
 
 	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/collect"
-	"github.com/StackExchange/bosun/_third_party/github.com/howeyc/fsnotify"
 	"github.com/StackExchange/bosun/conf"
 	"github.com/StackExchange/bosun/sched"
 	"github.com/StackExchange/bosun/web"
+	"gopkg.in/fsnotify.v1"
 )
 
 var (
 	flagConf  = flag.String("c", "dev.conf", "config file location")
 	flagTest  = flag.Bool("t", false, "Only validate config then exit")
-	flagWatch = flag.Bool("w", false, "watch current directory and exit on changes; for use with an autorestarter")
+	flagWatch = flag.Bool("w", false, "watch .go files below current directory and exit; also build typescript files on change")
 )
 
 func main() {
@@ -39,36 +42,81 @@ func main() {
 	sched.Load(c)
 	go func() { log.Fatal(web.Listen(c.HttpListen, c.WebDir, c.TsdbHost, c.RelayListen)) }()
 	go func() { log.Fatal(sched.Run()) }()
-	go watcher()
+	if *flagWatch {
+		watch(".", "*.go", quit)
+		base := filepath.Join("web", "static", "js")
+		args := []string{
+			"-w",
+			"--noImplicitAny",
+			"--out", filepath.Join(base, "bosun.js"),
+		}
+		matches, _ := filepath.Glob(filepath.Join(base, "*.ts"))
+		sort.Strings(matches)
+		args = append(args, matches...)
+		tsc := run("tsc", args...)
+		watch(base, "*.ts", tsc)
+		tsc()
+	}
 	select {}
 }
 
-func watcher() {
-	if !*flagWatch {
-		return
+func quit() {
+	os.Exit(0)
+}
+
+func run(name string, arg ...string) func() {
+	return func() {
+		log.Println("running", name)
+		c := exec.Command(name, arg...)
+		stdout, err := c.StdoutPipe()
+		if err != nil {
+			log.Fatal(err)
+		}
+		stderr, err := c.StderrPipe()
+		if err != nil {
+			log.Fatal(err)
+		}
+		if err := c.Start(); err != nil {
+			log.Fatal(err)
+		}
+		go func() { io.Copy(os.Stdout, stdout) }()
+		go func() { io.Copy(os.Stderr, stderr) }()
 	}
-	time.Sleep(time.Second)
+}
+
+func watch(root, pattern string, f func()) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		log.Print(err)
-		return
+		log.Fatal(err)
 	}
+	filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+		if matched, err := filepath.Match(pattern, info.Name()); err != nil {
+			log.Fatal(err)
+		} else if !matched {
+			return nil
+		}
+		err = watcher.Add(path)
+		if err != nil {
+			log.Fatal(err)
+		}
+		return nil
+	})
+	log.Println("watching", pattern, "in", root)
+	wait := time.Now()
 	go func() {
 		for {
 			select {
-			case ev := <-watcher.Event:
-				log.Print("file changed, exiting:", ev)
-				os.Exit(0)
-			case err := <-watcher.Error:
-				log.Print(err)
+			case event := <-watcher.Events:
+				if wait.After(time.Now()) {
+					continue
+				}
+				if event.Op&fsnotify.Write == fsnotify.Write {
+					f()
+					wait = time.Now().Add(time.Second * 2)
+				}
+			case err := <-watcher.Errors:
+				log.Println("error:", err)
 			}
 		}
 	}()
-	filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
-		if !info.IsDir() || (len(path) > 1 && path[0] == '.') {
-			return nil
-		}
-		watcher.Watch(path)
-		return nil
-	})
 }
