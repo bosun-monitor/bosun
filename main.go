@@ -13,10 +13,10 @@ import (
 	"time"
 
 	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/collect"
+	"github.com/StackExchange/bosun/_third_party/gopkg.in/fsnotify.v1"
 	"github.com/StackExchange/bosun/conf"
 	"github.com/StackExchange/bosun/sched"
 	"github.com/StackExchange/bosun/web"
-	"gopkg.in/fsnotify.v1"
 )
 
 var (
