@@ -24,13 +24,24 @@ if err != nil {
 	os.Exit(1)
 }
 p.AddIPAddr(ra)
-p.AddHandler("receive", func(addr *net.IPAddr, rtt time.Duration) {
+err = p.AddHandler("receive", func(addr *net.IPAddr, rtt time.Duration) {
 	fmt.Printf("IP Addr: %s receive, RTT: %v\n", addr.String(), rtt)
 })
-p.AddHandler("idle", func() {
+if err != nil {
+	fmt.Println(err)
+	os.Exit(1)
+}
+err = p.AddHandler("idle", func() {
 	fmt.Println("finish")
 })
-p.Run()
+if err != nil {
+	fmt.Println(err)
+	os.Exit(1)
+}
+err = p.Run()
+if err != nil {
+	fmt.Println(err)
+}
 ```
 
 It sends an ICMP packet and wait a response. If it receives a response, it

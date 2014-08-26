@@ -15,13 +15,24 @@
 //		os.Exit(1)
 //	}
 //	p.AddIPAddr(ra)
-//	p.AddHandler("receive", func(addr *net.IPAddr, rtt time.Duration) {
+//	err = p.AddHandler("receive", func(addr *net.IPAddr, rtt time.Duration) {
 //		fmt.Printf("IP Addr: %s receive, RTT: %v\n", addr.String(), rtt)
 //	})
-//	p.AddHandler("idle", func() {
+//	if err != nil {
+//		fmt.Println(err)
+//		os.Exit(1)
+//	}
+//	err = p.AddHandler("idle", func() {
 //		fmt.Println("finish")
 //	})
-//	p.Run()
+//	if err != nil {
+//		fmt.Println(err)
+//		os.Exit(1)
+//	}
+//	err = p.Run()
+//	if err != nil {
+//		fmt.Println(err)
+//	}
 //
 // It sends an ICMP packet and wait a response. If it receives a response,
 // it calls "receive" callback. After that, MaxRTT time passed, it calls
@@ -40,14 +51,10 @@ import (
 	"log"
 	"math/rand"
 	"net"
+	"sync"
 	"syscall"
 	"time"
 )
-
-func init() {
-	log.SetFlags(log.Lmicroseconds)
-	log.SetPrefix("Debug: ")
-}
 
 func timeToBytes(t time.Time) []byte {
 	nsec := t.UnixNano()
@@ -71,12 +78,27 @@ type packet struct {
 	addr  *net.IPAddr
 }
 
+type context struct {
+	stop chan bool
+	done chan bool
+	err  error
+}
+
+func newContext() *context {
+	return &context{
+		stop: make(chan bool),
+		done: make(chan bool),
+	}
+}
+
 // Pinger represents ICMP packet sender/receiver
 type Pinger struct {
 	id  int
 	seq int
 	// key string is IPAddr.String()
 	addrs map[string]*net.IPAddr
+	ctx   *context
+	mu    sync.Mutex
 	// Number of (nano,milli)seconds of an idle timeout. Once it passed,
 	// the library calls an idle callback function. It is also used for an
 	// interval time of RunLoop() method
@@ -106,13 +128,17 @@ func (p *Pinger) AddIP(ipaddr string) error {
 	if addr == nil {
 		return errors.New(fmt.Sprintf("%s is not a valid textual representation of an IP address", ipaddr))
 	}
+	p.mu.Lock()
 	p.addrs[addr.String()] = &net.IPAddr{IP: addr}
+	p.mu.Unlock()
 	return nil
 }
 
 // Add an IP address to Pinger. ip arg should be a net.IPAddr pointer.
 func (p *Pinger) AddIPAddr(ip *net.IPAddr) {
+	p.mu.Lock()
 	p.addrs[ip.String()] = ip
+	p.mu.Unlock()
 }
 
 // Add event handler to Pinger. event arg should be "receive" or "idle" string.
@@ -134,15 +160,21 @@ func (p *Pinger) AddHandler(event string, handler interface{}) error {
 	switch event {
 	case "receive":
 		if hdl, ok := handler.(func(*net.IPAddr, time.Duration)); ok {
+			p.mu.Lock()
 			p.handlers[event] = hdl
+			p.mu.Unlock()
+			return nil
 		} else {
-			errors.New(fmt.Sprintf("Receive event handler should be `func(*net.IPAddr, time.Duration)`"))
+			return errors.New(fmt.Sprintf("Receive event handler should be `func(*net.IPAddr, time.Duration)`"))
 		}
 	case "idle":
 		if hdl, ok := handler.(func()); ok {
+			p.mu.Lock()
 			p.handlers[event] = hdl
+			p.mu.Unlock()
+			return nil
 		} else {
-			errors.New(fmt.Sprintf("Idle event handler should be `func()`"))
+			return errors.New(fmt.Sprintf("Idle event handler should be `func()`"))
 		}
 	}
 	return errors.New(fmt.Sprintf("No such event: %s", event))
@@ -155,61 +187,85 @@ func (p *Pinger) AddHandler(event string, handler interface{}) error {
 // an error value. It means it blocks until MaxRTT seconds passed. For the
 // purpose of sending/receiving packets over and over, use RunLoop().
 func (p *Pinger) Run() error {
-	return p.run(true, make(chan chan<- bool))
+	p.mu.Lock()
+	p.ctx = newContext()
+	p.mu.Unlock()
+	p.run(true)
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.ctx.err
 }
 
-// Invode send/receive procedure repeatedly. It sends packets to all hosts which
+// Invoke send/receive procedure repeatedly. It sends packets to all hosts which
 // have already been added by AddIP() etc. and wait those responses. When it
 // receives a response, it calls "receive" handler registered by AddHander().
 // After MaxRTT seconds, it calls "idle" handler, resend packets and wait those
 // response. MaxRTT works as an interval time.
 //
-// This is a non-blocking method so immediately returns with channel values.
-// If you want to stop sending packets, send a channel value of bool type to it
-// and wait for graceful shutdown. For example,
+// This is a non-blocking method so immediately returns. If you want to monitor
+// and stop sending packets, use Done() and Stop() methods. For example,
 //
-//	wait := make(chan bool)
-//	quit, errch := p.RunLoop()
+//	p.RunLoop()
 //	ticker := time.NewTicker(time.Millisecond * 250)
-//	loop:
-//	for {
-//		select {
-//		case err := <-errch:
+//	select {
+//	case <-p.Done():
+//		if err := p.Err(); err != nil {
 //			log.Fatalf("Ping failed: %v", err)
-//		case <-ticker.C:
-//			ticker.Stop()
-//			quit <- wait
-//		case <-wait:
-//			break loop
 //		}
+//	case <-ticker.C:
+//		break
 //	}
+//	ticker.Stop()
+//	p.Stop()
 //
-// For more detail, please see "cmd/ping/ping.go".
-func (p *Pinger) RunLoop() (chan<- chan<- bool, <-chan error) {
-	quit := make(chan chan<- bool)
-	errch := make(chan error)
-	go func(ch chan<- error) {
-		err := p.run(false, quit)
-		if err != nil {
-			ch <- err
-		}
-	}(errch)
-	return quit, errch
+// For more details, please see "cmd/ping/ping.go".
+func (p *Pinger) RunLoop() {
+	p.mu.Lock()
+	p.ctx = newContext()
+	p.mu.Unlock()
+	go p.run(false)
 }
 
-func (p *Pinger) run(once bool, quit <-chan chan<- bool) error {
+// Return a channel that is closed when RunLoop() is stopped by an error or
+// Stop(). It must be called after RunLoop() call. If not, it causes panic.
+func (p *Pinger) Done() <-chan bool {
+	return p.ctx.done
+}
+
+// Stop RunLoop(). It must be called after RunLoop(). If not, it causes panic.
+func (p *Pinger) Stop() {
+	p.debugln("Stop(): close(p.ctx.stop)")
+	close(p.ctx.stop)
+	p.debugln("Stop(): <-p.ctx.done")
+	<-p.ctx.done
+}
+
+// Return an error that is set by RunLoop(). It must be called after RunLoop().
+// If not, it causes panic.
+func (p *Pinger) Err() error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.ctx.err
+}
+
+func (p *Pinger) run(once bool) {
 	p.debugln("Run(): Start")
 	conn, err := net.ListenIP("ip4:icmp", &net.IPAddr{IP: net.IPv4zero})
 	if err != nil {
-		return err
+		p.mu.Lock()
+		p.ctx.err = err
+		p.mu.Unlock()
+		p.debugln("Run(): close(p.ctx.done)")
+		close(p.ctx.done)
+		return
 	}
 	defer conn.Close()
 
-	var join chan<- bool
-	recv, stoprecv, waitjoin := make(chan *packet), make(chan chan<- bool), make(chan bool)
+	recv := make(chan *packet)
+	recvCtx := newContext()
 
 	p.debugln("Run(): call recvICMP4()")
-	go p.recvICMP4(conn, recv, stoprecv)
+	go p.recvICMP4(conn, recv, recvCtx)
 
 	p.debugln("Run(): call sendICMP4()")
 	queue, err := p.sendICMP4(conn)
@@ -219,20 +275,25 @@ func (p *Pinger) run(once bool, quit <-chan chan<- bool) error {
 mainloop:
 	for {
 		select {
-		case join = <-quit:
-			p.debugln("Run(): <-quit")
-			p.debugln("Run(): stoprecv <- waitjoin")
-			stoprecv <- waitjoin
+		case <-p.ctx.stop:
+			p.debugln("Run(): <-p.ctx.stop")
+			break mainloop
+		case <-recvCtx.done:
+			p.debugln("Run(): <-recvCtx.done")
+			p.mu.Lock()
+			err = recvCtx.err
+			p.mu.Unlock()
 			break mainloop
 		case <-ticker.C:
-			if handler, ok := p.handlers["idle"]; ok && handler != nil {
+			p.mu.Lock()
+			handler, ok := p.handlers["idle"]
+			p.mu.Unlock()
+			if ok && handler != nil {
 				if hdl, ok := handler.(func()); ok {
 					hdl()
 				}
 			}
 			if once || err != nil {
-				p.debugln("Run(): stoprecv <- waitjoin")
-				stoprecv <- waitjoin
 				break mainloop
 			}
 			p.debugln("Run(): call sendICMP4()")
@@ -245,24 +306,30 @@ mainloop:
 
 	ticker.Stop()
 
-	p.debugln("Run(): <-waitjoin")
-	<-waitjoin
-	if !once {
-		p.debugln("Run(): join <- true")
-		join <- true
-	}
+	p.debugln("Run(): close(recvCtx.stop)")
+	close(recvCtx.stop)
+	p.debugln("Run(): <-recvCtx.done")
+	<-recvCtx.done
+
+	p.mu.Lock()
+	p.ctx.err = err
+	p.mu.Unlock()
+
+	p.debugln("Run(): close(p.ctx.done)")
+	close(p.ctx.done)
 	p.debugln("Run(): End")
-	return err
 }
 
 func (p *Pinger) sendICMP4(conn *net.IPConn) (map[string]*net.IPAddr, error) {
 	p.debugln("sendICMP4(): Start")
+	p.mu.Lock()
 	p.id = rand.Intn(0xffff)
 	p.seq = rand.Intn(0xffff)
+	p.mu.Unlock()
 	queue := make(map[string]*net.IPAddr)
-	qlen := 0
-	sent := make(chan bool)
+	var wg sync.WaitGroup
 	for k, v := range p.addrs {
+		p.mu.Lock()
 		bytes, err := (&icmpMessage{
 			Type: icmpv4EchoRequest, Code: 0,
 			Body: &icmpEcho{
@@ -270,19 +337,16 @@ func (p *Pinger) sendICMP4(conn *net.IPConn) (map[string]*net.IPAddr, error) {
 				Data: timeToBytes(time.Now()),
 			},
 		}).Marshal()
+		p.mu.Unlock()
 		if err != nil {
-			for i := 0; i < qlen; i++ {
-				p.debugln("sendICMP4(): wait goroutine")
-				<-sent
-				p.debugln("sendICMP4(): join goroutine")
-			}
+			wg.Wait()
 			return queue, err
 		}
 
 		queue[k] = v
-		qlen++
 
 		p.debugln("sendICMP4(): Invoke goroutine")
+		wg.Add(1)
 		go func(ra *net.IPAddr, b []byte) {
 			for {
 				if _, _, err := conn.WriteMsgIP(bytes, nil, ra); err != nil {
@@ -295,26 +359,22 @@ func (p *Pinger) sendICMP4(conn *net.IPConn) (map[string]*net.IPAddr, error) {
 				break
 			}
 			p.debugln("sendICMP4(): WriteMsgIP End")
-			sent <- true
+			wg.Done()
 		}(v, bytes)
 	}
-	for i := 0; i < qlen; i++ {
-		p.debugln("sendICMP4(): wait goroutine")
-		<-sent
-		p.debugln("sendICMP4(): join goroutine")
-	}
+	wg.Wait()
 	p.debugln("sendICMP4(): End")
 	return queue, nil
 }
 
-func (p *Pinger) recvICMP4(conn *net.IPConn, recv chan<- *packet, stoprecv <-chan chan<- bool) {
+func (p *Pinger) recvICMP4(conn *net.IPConn, recv chan<- *packet, ctx *context) {
 	p.debugln("recvICMP4(): Start")
 	for {
 		select {
-		case join := <-stoprecv:
-			p.debugln("recvICMP4(): <-stoprecv")
-			p.debugln("recvICMP4(): join <- true")
-			join <- true
+		case <-ctx.stop:
+			p.debugln("recvICMP4(): <-ctx.stop")
+			close(ctx.done)
+			p.debugln("recvICMP4(): close(ctx.done)")
 			return
 		default:
 		}
@@ -331,6 +391,10 @@ func (p *Pinger) recvICMP4(conn *net.IPConn, recv chan<- *packet, stoprecv <-cha
 					continue
 				} else {
 					p.debugln("recvICMP4(): OpError happen", err)
+					p.mu.Lock()
+					ctx.err = err
+					p.mu.Unlock()
+					close(ctx.done)
 					return
 				}
 			}
@@ -342,9 +406,12 @@ func (p *Pinger) recvICMP4(conn *net.IPConn, recv chan<- *packet, stoprecv <-cha
 
 func (p *Pinger) procRecv(recv *packet, queue map[string]*net.IPAddr) {
 	addr := recv.addr.String()
+	p.mu.Lock()
 	if _, ok := p.addrs[addr]; !ok {
+		p.mu.Unlock()
 		return
 	}
+	p.mu.Unlock()
 
 	bytes := ipv4Payload(recv.bytes)
 	var m *icmpMessage
@@ -360,16 +427,21 @@ func (p *Pinger) procRecv(recv *packet, queue map[string]*net.IPAddr) {
 	var rtt time.Duration
 	switch pkt := m.Body.(type) {
 	case *icmpEcho:
+		p.mu.Lock()
 		if pkt.ID == p.id && pkt.Seq == p.seq {
 			rtt = time.Since(bytesToTime(pkt.Data))
 		}
+		p.mu.Unlock()
 	default:
 		return
 	}
 
 	if _, ok := queue[addr]; ok {
 		delete(queue, addr)
-		if handler, ok := p.handlers["receive"]; ok {
+		p.mu.Lock()
+		handler, ok := p.handlers["receive"]
+		p.mu.Unlock()
+		if ok && handler != nil {
 			if hdl, ok := handler.(func(*net.IPAddr, time.Duration)); ok {
 				hdl(recv.addr, rtt)
 			}
@@ -378,12 +450,16 @@ func (p *Pinger) procRecv(recv *packet, queue map[string]*net.IPAddr) {
 }
 
 func (p *Pinger) debugln(args ...interface{}) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
 	if p.Debug {
 		log.Println(args...)
 	}
 }
 
 func (p *Pinger) debugf(format string, args ...interface{}) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
 	if p.Debug {
 		log.Printf(format, args...)
 	}

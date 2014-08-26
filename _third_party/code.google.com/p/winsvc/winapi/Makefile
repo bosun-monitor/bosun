@@ -2,10 +2,9 @@
 # Use of this source code is governed by a BSD-style
 # license that can be found in the LICENSE file.
 
-GOOS=windows
+TMP=/tmp/mksyscall_windows
 
-# TODO: use $(GOROOT)/src/pkg/syscall/mksyscall_windows.go here instead
 zwinapi_windows.go: event.go eventlog.go registry.go security.go service.go syscall.go
-	./mksyscall_windows.pl $^ \
-		| gofmt \
-		> $@
+	go build -o $(TMP) $(GOROOT)/src/pkg/syscall/mksyscall_windows.go
+	GOOS=windows $(TMP) $^ | gofmt > $@
+	rm $(TMP)
