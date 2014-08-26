@@ -636,9 +636,9 @@ bosunApp.directive('tsGraph', [
                 var mousex = 0;
                 var mousey = 0;
                 var oldx = 0;
-                var hover = svg.append('g').attr('class', 'hover');
+                var hover = svg.append('g').attr('class', 'hover').style('display', 'none');
                 var hoverPoint = hover.append('svg:circle').attr('r', 5);
-                var hoverText = hover.append('svg:text').style('font-size', '12px').text('test');
+                var hoverText = hover.append('svg:text').style('font-size', '12px');
                 var focus = svg.append('g').attr('class', 'focus').style('pointer-events', 'none');
                 focus.append('line');
                 function mousemove() {
@@ -690,7 +690,7 @@ bosunApp.directive('tsGraph', [
                     }).style('color', function (d) {
                         return color(d.Name);
                     });
-                    hover.attr('transform', 'translate(' + minX + ',' + minY + ')');
+                    hover.attr('transform', 'translate(' + minX + ',' + minY + ')').style('display', 'block');
                     hoverPoint.style('fill', minColor);
                     hoverText.text(minName).style('fill', minColor);
                     var isRight = minX > width / 2;
