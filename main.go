@@ -80,6 +80,10 @@ func run(name string, arg ...string) func() {
 		}
 		go func() { io.Copy(os.Stdout, stdout) }()
 		go func() { io.Copy(os.Stderr, stderr) }()
+		if err := c.Wait(); err != nil {
+			log.Fatal(err)
+		}
+		log.Println("run complete:", name)
 	}
 }
 
