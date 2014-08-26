@@ -1,3 +1,26 @@
+bosunControllers.controller('ActionCtrl', [
+    '$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
+        var search = $location.search();
+        $scope.type = search.type;
+        if (!angular.isArray(search.key)) {
+            $scope.keys = [search.key];
+        } else {
+            $scope.keys = search.key;
+        }
+        $scope.submit = function () {
+            var data = {
+                Type: $scope.type,
+                User: $scope.user,
+                Message: $scope.message,
+                Keys: $scope.keys
+            };
+            $http.post('/api/action', data).success(function (data) {
+                $location.url('/');
+            }).error(function (error) {
+                alert(error);
+            });
+        };
+    }]);
 /// <reference path="angular.d.ts" />
 /// <reference path="angular-route.d.ts" />
 /// <reference path="angular-sanitize.d.ts" />
@@ -222,29 +245,6 @@ moment.lang('en', {
         yy: "%dy"
     }
 });
-bosunControllers.controller('ActionCtrl', [
-    '$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
-        var search = $location.search();
-        $scope.type = search.type;
-        if (!angular.isArray(search.key)) {
-            $scope.keys = [search.key];
-        } else {
-            $scope.keys = search.key;
-        }
-        $scope.submit = function () {
-            var data = {
-                Type: $scope.type,
-                User: $scope.user,
-                Message: $scope.message,
-                Keys: $scope.keys
-            };
-            $http.post('/api/action', data).success(function (data) {
-                $location.url('/');
-            }).error(function (error) {
-                alert(error);
-            });
-        };
-    }]);
 bosunControllers.controller('ConfigCtrl', [
     '$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
         var search = $location.search();
@@ -1206,6 +1206,53 @@ bosunApp.directive('tsPopup', function () {
         }
     };
 });
+bosunControllers.controller('HistoryCtrl', [
+    '$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
+        var search = $location.search();
+        var keys = {};
+        if (angular.isArray(search.key)) {
+            angular.forEach(search.key, function (v) {
+                keys[v] = true;
+            });
+        } else {
+            keys[search.key] = true;
+        }
+        var status;
+        $scope.shown = {};
+        $scope.collapse = function (i) {
+            $scope.shown[i] = !$scope.shown[i];
+        };
+        var params = Object.keys(keys).map(function (v) {
+            return 'key=' + encodeURIComponent(v);
+        }).join('&');
+        $http.get('/api/alerts/details?' + params).success(function (data) {
+            var selected_alerts = [];
+            angular.forEach(data, function (v, ak) {
+                if (!keys[ak]) {
+                    return;
+                }
+                v.History.map(function (h) {
+                    h.Time = moment.utc(h.Time);
+                });
+                angular.forEach(v.History, function (h, i) {
+                    if (i + 1 < v.History.length) {
+                        h.EndTime = v.History[i + 1].Time;
+                    } else {
+                        h.EndTime = moment.utc();
+                    }
+                });
+                selected_alerts.push({
+                    Name: ak,
+                    History: v.History.reverse()
+                });
+            });
+            if (selected_alerts.length > 0) {
+                $scope.alert_history = selected_alerts;
+            } else {
+                $scope.error = 'No Matching Alerts Found';
+            }
+        });
+    }]);
 bosunControllers.controller('HostCtrl', [
     '$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
         var search = $location.search();
@@ -1355,6 +1402,89 @@ bosunControllers.controller('ItemsCtrl', [
         }).error(function (error) {
             $scope.status = 'Unable to fetch hosts: ' + error;
         });
+    }]);
+var Tag = (function () {
+    function Tag() {
+    }
+    return Tag;
+})();
+
+var DP = (function () {
+    function DP() {
+    }
+    return DP;
+})();
+
+bosunControllers.controller('PutCtrl', [
+    '$scope', '$http', '$route', function ($scope, $http, $route) {
+        $scope.tags = [new Tag];
+        var dp = new DP;
+        dp.k = moment().utc().format(timeFormat);
+        $scope.dps = [dp];
+        $http.get('/api/metric').success(function (data) {
+            $scope.metrics = data;
+        }).error(function (error) {
+            $scope.error = 'Unable to fetch metrics: ' + error;
+        });
+        $scope.Submit = function () {
+            var data = [];
+            var tags = {};
+            angular.forEach($scope.tags, function (v, k) {
+                if (v.k || v.v) {
+                    tags[v.k] = v.v;
+                }
+            });
+            angular.forEach($scope.dps, function (v, k) {
+                if (v.k && v.v) {
+                    var ts = parseInt(moment.utc(v.k, timeFormat).format('X'));
+                    data.push({
+                        metric: $scope.metric,
+                        timestamp: ts,
+                        value: parseFloat(v.v),
+                        tags: tags
+                    });
+                }
+            });
+            $scope.running = 'submitting data...';
+            $scope.success = '';
+            $scope.error = '';
+            $http.post('/api/put', data).success(function () {
+                $scope.running = '';
+                $scope.success = 'Data Submitted';
+            }).error(function (error) {
+                $scope.running = '';
+                $scope.error = error.error.message;
+            });
+        };
+        $scope.AddTag = function () {
+            var last = $scope.tags[$scope.tags.length - 1];
+            if (last.k && last.v) {
+                $scope.tags.push(new Tag);
+            }
+        };
+        $scope.AddDP = function () {
+            var last = $scope.dps[$scope.dps.length - 1];
+            if (last.k && last.v) {
+                var dp = new DP;
+                dp.k = moment.utc(last.k, timeFormat).add('seconds', 15).format(timeFormat);
+                $scope.dps.push(dp);
+            }
+        };
+        $scope.GetTagKByMetric = function () {
+            $http.get('/api/tagk/' + $scope.metric).success(function (data) {
+                if (!angular.isArray(data)) {
+                    return;
+                }
+                $scope.tags = [];
+                for (var i = 0; i < data.length; i++) {
+                    var t = new Tag;
+                    t.k = data[i];
+                    $scope.tags.push(t);
+                }
+            }).error(function (error) {
+                $scope.error = 'Unable to fetch metrics: ' + error;
+            });
+        };
     }]);
 bosunControllers.controller('RuleCtrl', [
     '$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
@@ -1656,133 +1786,3 @@ bosunApp.directive('tsForget', function () {
         templateUrl: '/partials/forget.html'
     };
 });
-bosunControllers.controller('HistoryCtrl', [
-    '$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
-        var search = $location.search();
-        var keys = {};
-        if (angular.isArray(search.key)) {
-            angular.forEach(search.key, function (v) {
-                keys[v] = true;
-            });
-        } else {
-            keys[search.key] = true;
-        }
-        var status;
-        $scope.shown = {};
-        $scope.collapse = function (i) {
-            $scope.shown[i] = !$scope.shown[i];
-        };
-        var params = Object.keys(keys).map(function (v) {
-            return 'key=' + encodeURIComponent(v);
-        }).join('&');
-        $http.get('/api/alerts/details?' + params).success(function (data) {
-            var selected_alerts = [];
-            angular.forEach(data, function (v, ak) {
-                if (!keys[ak]) {
-                    return;
-                }
-                v.History.map(function (h) {
-                    h.Time = moment.utc(h.Time);
-                });
-                angular.forEach(v.History, function (h, i) {
-                    if (i + 1 < v.History.length) {
-                        h.EndTime = v.History[i + 1].Time;
-                    } else {
-                        h.EndTime = moment.utc();
-                    }
-                });
-                selected_alerts.push({
-                    Name: ak,
-                    History: v.History.reverse()
-                });
-            });
-            if (selected_alerts.length > 0) {
-                $scope.alert_history = selected_alerts;
-            } else {
-                $scope.error = 'No Matching Alerts Found';
-            }
-        });
-    }]);
-var Tag = (function () {
-    function Tag() {
-    }
-    return Tag;
-})();
-
-var DP = (function () {
-    function DP() {
-    }
-    return DP;
-})();
-
-bosunControllers.controller('PutCtrl', [
-    '$scope', '$http', '$route', function ($scope, $http, $route) {
-        $scope.tags = [new Tag];
-        var dp = new DP;
-        dp.k = moment().utc().format(timeFormat);
-        $scope.dps = [dp];
-        $http.get('/api/metric').success(function (data) {
-            $scope.metrics = data;
-        }).error(function (error) {
-            $scope.error = 'Unable to fetch metrics: ' + error;
-        });
-        $scope.Submit = function () {
-            var data = [];
-            var tags = {};
-            angular.forEach($scope.tags, function (v, k) {
-                if (v.k || v.v) {
-                    tags[v.k] = v.v;
-                }
-            });
-            angular.forEach($scope.dps, function (v, k) {
-                if (v.k && v.v) {
-                    var ts = parseInt(moment.utc(v.k, timeFormat).format('X'));
-                    data.push({
-                        metric: $scope.metric,
-                        timestamp: ts,
-                        value: parseFloat(v.v),
-                        tags: tags
-                    });
-                }
-            });
-            $scope.running = 'submitting data...';
-            $scope.success = '';
-            $scope.error = '';
-            $http.post('/api/put', data).success(function () {
-                $scope.running = '';
-                $scope.success = 'Data Submitted';
-            }).error(function (error) {
-                $scope.running = '';
-                $scope.error = error.error.message;
-            });
-        };
-        $scope.AddTag = function () {
-            var last = $scope.tags[$scope.tags.length - 1];
-            if (last.k && last.v) {
-                $scope.tags.push(new Tag);
-            }
-        };
-        $scope.AddDP = function () {
-            var last = $scope.dps[$scope.dps.length - 1];
-            if (last.k && last.v) {
-                var dp = new DP;
-                dp.k = moment.utc(last.k, timeFormat).add('seconds', 15).format(timeFormat);
-                $scope.dps.push(dp);
-            }
-        };
-        $scope.GetTagKByMetric = function () {
-            $http.get('/api/tagk/' + $scope.metric).success(function (data) {
-                if (!angular.isArray(data)) {
-                    return;
-                }
-                $scope.tags = [];
-                for (var i = 0; i < data.length; i++) {
-                    var t = new Tag;
-                    t.k = data[i];
-                    $scope.tags.push(t);
-                }
-            }).error(function (error) {
-                $scope.error = 'Unable to fetch metrics: ' + error;
-            });
-        };
-    }]);
