@@ -462,8 +462,8 @@ func (c *Conf) loadLookup(s *parse.SectionNode) {
 				c.errorf("lookup tags mismatch, expected %v", lookupTags)
 			}
 			e := Entry{
-				Def:      n.RawText,
-				Name:     n.Name.Text,
+				Def:  n.RawText,
+				Name: n.Name.Text,
 				Entry: &expr.Entry{
 					AlertKey: expr.NewAlertKey("", tags),
 					Values:   make(map[string]string),
