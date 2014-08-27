@@ -638,6 +638,7 @@ bosunApp.directive('tsGraph', [
                 var oldx = 0;
                 var hover = svg.append('g').attr('class', 'hover').style('display', 'none');
                 var hoverPoint = hover.append('svg:circle').attr('r', 5);
+                var hoverRect = hover.append('svg:rect').attr('fill', 'white');
                 var hoverText = hover.append('svg:text').style('font-size', '12px');
                 var focus = svg.append('g').attr('class', 'focus').style('pointer-events', 'none');
                 focus.append('line');
@@ -696,6 +697,9 @@ bosunApp.directive('tsGraph', [
                     var isRight = minX > width / 2;
                     var isBottom = minY > height / 2;
                     hoverText.attr('x', isRight ? -5 : 5).attr('y', isBottom ? -8 : 15).attr('text-anchor', isRight ? 'end' : 'start');
+                    var node = hoverText.node();
+                    var bb = node.getBBox();
+                    hoverRect.attr('x', bb.x - 1).attr('y', bb.y - 1).attr('height', bb.height + 2).attr('width', bb.width + 2);
                     var x = mousex;
                     if (x > width) {
                         x = 0;

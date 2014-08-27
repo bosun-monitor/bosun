@@ -385,6 +385,8 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWi
 				.style('display', 'none');
 			var hoverPoint = hover.append('svg:circle')
 				.attr('r', 5);
+			var hoverRect = hover.append('svg:rect')
+				.attr('fill', 'white');
 			var hoverText = hover.append('svg:text')
 				.style('font-size', '12px');
 			var focus = svg.append('g')
@@ -458,6 +460,13 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWi
 					.attr('x', isRight ? -5 : 5)
 					.attr('y', isBottom ? -8 : 15)
 					.attr('text-anchor', isRight ? 'end' : 'start');
+				var node: any = hoverText.node();
+				var bb = node.getBBox();
+				hoverRect
+					.attr('x', bb.x - 1)
+					.attr('y', bb.y - 1)
+					.attr('height', bb.height + 2)
+					.attr('width', bb.width + 2);
 				var x = mousex;
 				if (x > width) {
 					x = 0;
