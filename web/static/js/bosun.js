@@ -636,7 +636,7 @@ bosunApp.directive('tsGraph', [
                 var mousex = 0;
                 var mousey = 0;
                 var oldx = 0;
-                var hover = svg.append('g').attr('class', 'hover').style('display', 'none');
+                var hover = svg.append('g').attr('class', 'hover').style('pointer-events', 'none').style('display', 'none');
                 var hoverPoint = hover.append('svg:circle').attr('r', 5);
                 var hoverRect = hover.append('svg:rect').attr('fill', 'white');
                 var hoverText = hover.append('svg:text').style('font-size', '12px');
