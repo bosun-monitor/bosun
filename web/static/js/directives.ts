@@ -382,6 +382,7 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWi
 			var oldx = 0;
 			var hover = svg.append('g')
 				.attr('class', 'hover')
+				.style('pointer-events', 'none')
 				.style('display', 'none');
 			var hoverPoint = hover.append('svg:circle')
 				.attr('r', 5);
