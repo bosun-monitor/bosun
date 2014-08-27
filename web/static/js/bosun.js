@@ -740,7 +740,7 @@ bosunApp.directive('tsGraph', [
                 var oldx = 0;
                 var bisect = d3.bisector(function (d) {
                     return d[0];
-                }).right;
+                }).left;
                 function update(v) {
                     if (!angular.isArray(v) || v.length == 0) {
                         return;
