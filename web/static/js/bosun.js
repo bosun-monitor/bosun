@@ -74,7 +74,7 @@ bosunApp.run([
 var bosunControllers = angular.module('bosunControllers', []);
 
 bosunControllers.controller('BosunCtrl', [
-    '$scope', '$route', '$http', function ($scope, $route, $http) {
+    '$scope', '$route', '$http', '$q', function ($scope, $route, $http, $q) {
         $scope.$on('$routeChangeSuccess', function (event, current, previous) {
             $scope.stop();
         });
@@ -120,21 +120,28 @@ bosunControllers.controller('BosunCtrl', [
             }
         };
         $scope.refresh = function () {
-            $scope.schedule = null;
-            $scope.animate();
-            var p = $http.get('/api/alerts').success(function (data) {
-                angular.forEach(data.Status, function (v, k) {
-                    v.Touched = moment(v.Touched).utc();
-                    angular.forEach(v.History, function (v, k) {
-                        v.Time = moment(v.Time).utc();
+            var d = $q.defer();
+            if ($scope.schedule) {
+                d.resolve();
+            } else {
+                $scope.animate();
+                var p = $http.get('/api/alerts').success(function (data) {
+                    angular.forEach(data.Status, function (v, k) {
+                        v.Touched = moment(v.Touched).utc();
+                        angular.forEach(v.History, function (v, k) {
+                            v.Time = moment(v.Time).utc();
+                        });
+                        v.last = v.History[v.History.length - 1];
                     });
-                    v.last = v.History[v.History.length - 1];
+                    $scope.schedule = data;
+                    $scope.timeanddate = data.TimeAndDate;
+                    d.resolve();
+                }).error(function (err) {
+                    d.reject(err);
                 });
-                $scope.schedule = data;
-                $scope.timeanddate = data.TimeAndDate;
-            });
-            p.finally($scope.stop);
-            return p;
+                p.finally($scope.stop);
+            }
+            return d.promise;
         };
         var sz = 30;
         var orig = 700;
@@ -287,9 +294,10 @@ bosunControllers.controller('DashboardCtrl', [
     '$scope', function ($scope) {
         $scope.loading = 'Loading';
         $scope.error = '';
-        $scope.refresh().success(function () {
+        $scope.refresh().then(function () {
             $scope.loading = '';
-        }).error(function (err) {
+        }, function (err) {
+            $scope.loading = '';
             $scope.error = 'Unable to fetch alerts: ' + err;
         });
     }]);
