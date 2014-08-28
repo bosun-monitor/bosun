@@ -221,17 +221,16 @@ bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', function(
 		.attr('fill', (d: any) => { return d[2]; })
 		.attr('stroke', 'white')
 		.attr('stroke-width', 25 * mult);
-	var stopped = true;
 	var transitionDuration = 750;
+	var animateCount = 0;
 	$scope.animate = () => {
-		if (!stopped) {
-			return;
+		animateCount++;
+		if (animateCount == 1) {
+			doAnimate();
 		}
-		stopped = false;
-		doAnimate();
 	};
 	function doAnimate() {
-		if (stopped) {
+		if (!animateCount) {
 			return;
 		}
 		d3.shuffle(circles);
@@ -245,7 +244,7 @@ bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', function(
 		setTimeout(doAnimate, transitionDuration);
 	}
 	$scope.stop = () => {
-		stopped = true;
+		animateCount--;
 	};
 }]);
 

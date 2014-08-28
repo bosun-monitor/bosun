@@ -173,17 +173,16 @@ bosunControllers.controller('BosunCtrl', [
         }).attr('r', 62.5 * mult).attr('fill', function (d) {
             return d[2];
         }).attr('stroke', 'white').attr('stroke-width', 25 * mult);
-        var stopped = true;
         var transitionDuration = 750;
+        var animateCount = 0;
         $scope.animate = function () {
-            if (!stopped) {
-                return;
+            animateCount++;
+            if (animateCount == 1) {
+                doAnimate();
             }
-            stopped = false;
-            doAnimate();
         };
         function doAnimate() {
-            if (stopped) {
+            if (!animateCount) {
                 return;
             }
             d3.shuffle(circles);
@@ -199,7 +198,7 @@ bosunControllers.controller('BosunCtrl', [
             setTimeout(doAnimate, transitionDuration);
         }
         $scope.stop = function () {
-            stopped = true;
+            animateCount--;
         };
     }]);
 
