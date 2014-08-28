@@ -218,6 +218,7 @@ func JSON(h func(miniprofiler.Timer, http.ResponseWriter, *http.Request) (interf
 			return
 		}
 		if cb := r.FormValue("callback"); cb != "" {
+			w.Header().Add("Content-Type", "application/javascript")
 			w.Write([]byte(cb + "("))
 			w.Write(b)
 			w.Write([]byte(")"))
