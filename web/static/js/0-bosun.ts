@@ -102,7 +102,7 @@ interface IBosunScope extends ng.IScope {
 	stop: () => any;
 }
 
-bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', function($scope: IBosunScope, $route: ng.route.IRouteService, $http: ng.IHttpService) {
+bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', '$q', function($scope: IBosunScope, $route: ng.route.IRouteService, $http: ng.IHttpService, $q: ng.IQService) {
 	$scope.$on('$routeChangeSuccess', function(event, current, previous) {
 		$scope.stop();
 	});
@@ -142,22 +142,30 @@ bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', function(
 		}
 	};
 	$scope.refresh = () => {
-		$scope.schedule = null;
-		$scope.animate();
-		var p = $http.get('/api/alerts')
-			.success(data => {
-				angular.forEach(data.Status, (v, k) => {
-					v.Touched = moment(v.Touched).utc();
-					angular.forEach(v.History, (v, k) => {
-						v.Time = moment(v.Time).utc();
+		var d = $q.defer();
+		if ($scope.schedule) {
+			d.resolve();
+		} else {
+			$scope.animate();
+			var p = $http.get('/api/alerts')
+				.success(data => {
+					angular.forEach(data.Status, (v, k) => {
+						v.Touched = moment(v.Touched).utc();
+						angular.forEach(v.History, (v, k) => {
+							v.Time = moment(v.Time).utc();
+						});
+						v.last = v.History[v.History.length - 1];
 					});
-					v.last = v.History[v.History.length - 1];
+					$scope.schedule = data;
+					$scope.timeanddate = data.TimeAndDate;
+					d.resolve();
+				})
+				.error(err => {
+					d.reject(err);
 				});
-				$scope.schedule = data;
-				$scope.timeanddate = data.TimeAndDate;
-			});
-		p.finally($scope.stop);
-		return p;
+			p.finally($scope.stop);
+		}
+		return d.promise;
 	};
 	var sz = 30;
 	var orig = 700;

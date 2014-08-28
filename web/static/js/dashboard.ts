@@ -6,11 +6,10 @@ interface IDashboardScope extends IBosunScope {
 bosunControllers.controller('DashboardCtrl', ['$scope', function($scope: IDashboardScope) {
 	$scope.loading = 'Loading';
 	$scope.error = '';
-	$scope.refresh()
-		.success(() => {
+	$scope.refresh().then(() => {
 			$scope.loading = '';
-		})
-		.error((err: any) => {
+		}, (err: any) => {
+			$scope.loading = '';
 			$scope.error = 'Unable to fetch alerts: ' + err;
 		});
 }]);
