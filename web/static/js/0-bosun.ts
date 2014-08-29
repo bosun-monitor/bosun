@@ -149,13 +149,6 @@ bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', '$q', fun
 			$scope.animate();
 			var p = $http.get('/api/alerts')
 				.success(data => {
-					angular.forEach(data.Status, (v, k) => {
-						v.Touched = moment(v.Touched).utc();
-						angular.forEach(v.History, (v, k) => {
-							v.Time = moment(v.Time).utc();
-						});
-						v.last = v.History[v.History.length - 1];
-					});
 					$scope.schedule = data;
 					$scope.timeanddate = data.TimeAndDate;
 					d.resolve();

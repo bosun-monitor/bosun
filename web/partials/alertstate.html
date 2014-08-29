@@ -1,45 +1,56 @@
-<div class="col-sm-5">
-	<div class="row">
-		<div class="col-sm-3 text-right"><strong>Name</strong></div>
-		<div class="col-sm-9" ng-bind="zws(name)"></div>
-	</div>
-	<div class="row">
-		<div class="col-sm-3 text-right"><strong>Status</strong></div>
-		<div class="col-sm-9" ng-bind="state.last.Status"></div>
-	</div>
-	<div class="row">
-		<div class="col-sm-3 text-right"><strong>Since</strong></div>
-		<div class="col-sm-9" ts-time="state.last.Time"></div>
-	</div>
-	<div class="row">
-		<div class="col-sm-3 text-right"><strong>Touched</strong></div>
-		<div class="col-sm-9" ts-time="state.Touched"></div>
-	</div>
-	<div class="row">
-		<div class="col-sm-3 text-right"><strong>History</strong></div>
-		<div class="col-sm-9">
-			<a ng-href="/history?key={{encode(name)}}" ng-bind="name"></a>
-		</div>
-	</div>
-	<div class="row">
-		<div class="col-sm-3 text-right"><strong>Expr</strong></div>
-		<div class="col-sm-9">
-			<a ng-href="/expr?expr={{btoa(state.Expr)}}" ng-bind="zws(state.Expr)"></a>
-		</div>
-	</div>
-	<div class="row">
-		<div class="col-sm-3 text-right"><strong>Silence</strong></div>
-		<div class="col-sm-9">
-			<a class="btn btn-default btn-xs" ng-href="/silence?duration=1h&alert={{state.Alert}}&tags={{encode(state.Tags)}}">1 hour</a>
-		</div>
-	</div>
-	<div class="row">
-		<div class="col-sm-3 text-right"><strong>Actions</strong></div>
-		<div class="col-sm-9">
-			<ts-ack></ts-ack>
-			<ts-close></ts-close>
-			<ts-forget ng-if="group.Status == 'unknown'"></ts-forget>
-		</div>
-	</div>
+<div class="panel-heading" ng-click="show = !show">
+	<h4 class="panel-title">
+		<a href>
+			<span class="glyphicon" ng-class="{'glyphicon-exclamation-sign': state.last.Status && state.last.Status != 'normal'}"></span>
+			<span ng-bind="child.Subject || child.AlertKey"></span>
+			<span class="pull-right" ng-show="child.Ago" ts-since="child.Ago"></span>
+		</a>
+	</h4>
 </div>
-<div class="col-sm-7" ts-computations="state.Computations"></div>
+<div class="panel-body" ng-if="show || group.Children.length == 1">
+	<div class="col-sm-5">
+		<div class="row">
+			<div class="col-sm-3 text-right"><strong>Name</strong></div>
+			<div class="col-sm-9" ng-bind="zws(name)"></div>
+		</div>
+		<div class="row">
+			<div class="col-sm-3 text-right"><strong>Status</strong></div>
+			<div class="col-sm-9" ng-bind="state.last.Status"></div>
+		</div>
+		<div class="row">
+			<div class="col-sm-3 text-right"><strong>Since</strong></div>
+			<div class="col-sm-9" ts-time="state.last.Time"></div>
+		</div>
+		<div class="row">
+			<div class="col-sm-3 text-right"><strong>Touched</strong></div>
+			<div class="col-sm-9" ts-time="state.Touched"></div>
+		</div>
+		<div class="row">
+			<div class="col-sm-3 text-right"><strong>History</strong></div>
+			<div class="col-sm-9">
+				<a ng-href="/history?key={{encode(name)}}" ng-bind="name"></a>
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-sm-3 text-right"><strong>Expr</strong></div>
+			<div class="col-sm-9">
+				<a ng-href="/expr?expr={{btoa(state.Expr)}}" ng-bind="zws(state.Expr)"></a>
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-sm-3 text-right"><strong>Silence</strong></div>
+			<div class="col-sm-9">
+				<a class="btn btn-default btn-xs" ng-href="/silence?duration=1h&alert={{state.Alert}}&tags={{encode(state.Tags)}}">1 hour</a>
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-sm-3 text-right"><strong>Actions</strong></div>
+			<div class="col-sm-9">
+				<ts-ack></ts-ack>
+				<ts-close></ts-close>
+				<ts-forget ng-if="group.Status == 'unknown'"></ts-forget>
+			</div>
+		</div>
+	</div>
+	<div class="col-sm-7" ts-computations="state.Computations"></div>
+</div>

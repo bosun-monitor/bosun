@@ -89,20 +89,54 @@ bosunApp.directive('tsAckGroup', function() {
 	};
 });
 
-bosunApp.directive('tsState', function() {
+bosunApp.factory('status', ['$http', '$q', function($http: ng.IHttpService, $q: ng.IQService) {
+	var cache: any = {};
+	return function(ak: string) {
+		var q = $q.defer();
+		if (cache[ak]) {
+			q.resolve(cache[ak]);
+		} else {
+			$http.get('/api/status?ak=' + encodeURIComponent(ak))
+				.success(data => {
+					angular.forEach(data, (v, k) => {
+						v.Touched = moment(v.Touched).utc();
+						angular.forEach(v.History, (v, k) => {
+							v.Time = moment(v.Time).utc();
+						});
+						v.last = v.History[v.History.length - 1];
+						cache[k] = v;
+					});
+					q.resolve(cache[ak]);
+				})
+				.error(q.reject);
+		}
+		return q.promise;
+	};
+}]);
+
+bosunApp.directive('tsState', ['status', function($status: any) {
 	return {
 		templateUrl: '/partials/alertstate.html',
 		link: function(scope: any, elem: any, attrs: any) {
+			scope.name = scope.child.AlertKey;
+			$status(scope.child.AlertKey).then(st => {
+					scope.state = st;
+				}, err => {
+					alert(err);
+				});
 			scope.action = (type: string) => {
 				var key = encodeURIComponent(scope.name);
 				return '/action?type=' + type + '&key=' + key;
 			};
 			scope.zws = (v: string) => {
+				if (!v) {
+					return '';
+				}
 				return v.replace(/([,{}()])/g, '$1\u200b');
 			};
 		},
 	};
-});
+}]);
 
 bosunApp.directive('tsAck', () => {
 	return {
