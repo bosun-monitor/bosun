@@ -209,7 +209,6 @@ func (s *Schedule) MarshalJSON() ([]byte, error) {
 	}
 	t := struct {
 		Alerts map[string]*conf.Alert
-		Status States
 		Groups struct {
 			NeedAck      []*Grouped `json:",omitempty"`
 			Acknowledged []*Grouped `json:",omitempty"`
@@ -217,19 +216,18 @@ func (s *Schedule) MarshalJSON() ([]byte, error) {
 		TimeAndDate []int
 	}{
 		Alerts:      s.Conf.Alerts,
-		Status:      make(States),
 		TimeAndDate: s.Conf.TimeAndDate,
 	}
 	s.Lock()
 	defer s.Unlock()
+	status := make(States)
 	for k, v := range s.status {
 		if !v.Open {
 			continue
 		}
-		d := *v
-		t.Status[k] = &d
+		status[k] = v
 	}
-	for tuple, states := range t.Status.GroupStates() {
+	for tuple, states := range status.GroupStates() {
 		var grouped []*Grouped
 		switch tuple.Status {
 		case StWarning, StCritical, StUnknown, StError:
@@ -260,14 +258,6 @@ func (s *Schedule) MarshalJSON() ([]byte, error) {
 			t.Groups.NeedAck = append(t.Groups.NeedAck, grouped...)
 		} else {
 			t.Groups.Acknowledged = append(t.Groups.Acknowledged, grouped...)
-		}
-	}
-	for _, v := range t.Status {
-		if len(v.History) > 1 {
-			v.History = v.History[len(v.History)-1:]
-		}
-		if len(v.Actions) > 1 {
-			v.Actions = v.Actions[len(v.Actions)-1:]
 		}
 	}
 	gsort := func(grp []*Grouped) func(i, j int) bool {

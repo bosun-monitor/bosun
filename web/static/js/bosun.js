@@ -126,13 +126,6 @@ bosunControllers.controller('BosunCtrl', [
             } else {
                 $scope.animate();
                 var p = $http.get('/api/alerts').success(function (data) {
-                    angular.forEach(data.Status, function (v, k) {
-                        v.Touched = moment(v.Touched).utc();
-                        angular.forEach(v.History, function (v, k) {
-                            v.Time = moment(v.Time).utc();
-                        });
-                        v.last = v.History[v.History.length - 1];
-                    });
                     $scope.schedule = data;
                     $scope.timeanddate = data.TimeAndDate;
                     d.resolve();
@@ -1786,20 +1779,54 @@ bosunApp.directive('tsAckGroup', function () {
     };
 });
 
-bosunApp.directive('tsState', function () {
-    return {
-        templateUrl: '/partials/alertstate.html',
-        link: function (scope, elem, attrs) {
-            scope.action = function (type) {
-                var key = encodeURIComponent(scope.name);
-                return '/action?type=' + type + '&key=' + key;
-            };
-            scope.zws = function (v) {
-                return v.replace(/([,{}()])/g, '$1\u200b');
-            };
-        }
-    };
-});
+bosunApp.factory('status', [
+    '$http', '$q', function ($http, $q) {
+        var cache = {};
+        return function (ak) {
+            var q = $q.defer();
+            if (cache[ak]) {
+                q.resolve(cache[ak]);
+            } else {
+                $http.get('/api/status?ak=' + encodeURIComponent(ak)).success(function (data) {
+                    angular.forEach(data, function (v, k) {
+                        v.Touched = moment(v.Touched).utc();
+                        angular.forEach(v.History, function (v, k) {
+                            v.Time = moment(v.Time).utc();
+                        });
+                        v.last = v.History[v.History.length - 1];
+                        cache[k] = v;
+                    });
+                    q.resolve(cache[ak]);
+                }).error(q.reject);
+            }
+            return q.promise;
+        };
+    }]);
+
+bosunApp.directive('tsState', [
+    'status', function ($status) {
+        return {
+            templateUrl: '/partials/alertstate.html',
+            link: function (scope, elem, attrs) {
+                scope.name = scope.child.AlertKey;
+                $status(scope.child.AlertKey).then(function (st) {
+                    scope.state = st;
+                }, function (err) {
+                    alert(err);
+                });
+                scope.action = function (type) {
+                    var key = encodeURIComponent(scope.name);
+                    return '/action?type=' + type + '&key=' + key;
+                };
+                scope.zws = function (v) {
+                    if (!v) {
+                        return '';
+                    }
+                    return v.replace(/([,{}()])/g, '$1\u200b');
+                };
+            }
+        };
+    }]);
 
 bosunApp.directive('tsAck', function () {
     return {

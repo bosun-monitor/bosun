@@ -63,6 +63,7 @@ func Listen(addr, dir, host, relayListen string) error {
 	router.Handle("/api/silence/clear", JSON(SilenceClear))
 	router.Handle("/api/silence/get", JSON(SilenceGet))
 	router.Handle("/api/silence/set", JSON(SilenceSet))
+	router.Handle("/api/status", JSON(Status))
 	router.Handle("/api/tagk/{metric}", JSON(TagKeysByMetric))
 	router.Handle("/api/tagv/{tagk}", JSON(TagValuesByTagKey))
 	router.Handle("/api/tagv/{tagk}/{metric}", JSON(TagValuesByMetricTagKey))
@@ -272,6 +273,19 @@ func GetMetadata(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (
 
 func Alerts(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	return schedule, nil
+}
+
+func Status(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	r.ParseForm()
+	m := make(map[string]interface{})
+	for _, k := range r.Form["ak"] {
+		st := schedule.Status(expr.AlertKey(k))
+		if st == nil {
+			return nil, fmt.Errorf("unknown alert key: %v", k)
+		}
+		m[k] = st
+	}
+	return m, nil
 }
 
 func AlertDetails(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
