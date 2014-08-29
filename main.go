@@ -46,7 +46,6 @@ func main() {
 		watch(".", "*.go", quit)
 		base := filepath.Join("web", "static", "js")
 		args := []string{
-			"--noImplicitAny",
 			"--out", filepath.Join(base, "bosun.js"),
 		}
 		matches, _ := filepath.Glob(filepath.Join(base, "*.ts"))
