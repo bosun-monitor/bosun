@@ -208,14 +208,12 @@ func (s *Schedule) MarshalJSON() ([]byte, error) {
 		Children []*Grouped    `json:",omitempty"`
 	}
 	t := struct {
-		Alerts map[string]*conf.Alert
 		Groups struct {
 			NeedAck      []*Grouped `json:",omitempty"`
 			Acknowledged []*Grouped `json:",omitempty"`
 		}
 		TimeAndDate []int
 	}{
-		Alerts:      s.Conf.Alerts,
 		TimeAndDate: s.Conf.TimeAndDate,
 	}
 	s.Lock()
