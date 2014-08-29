@@ -30,6 +30,11 @@ func Expr(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 	if err != nil {
 		return nil, err
 	}
+	for _, r := range res {
+		if r.Computations == nil {
+			r.Computations = make(expr.Computations, 0)
+		}
+	}
 	ret := struct {
 		Type    string
 		Results []*expr.Result
