@@ -196,7 +196,7 @@ func (states States) GroupSets() map[string]expr.AlertKeys {
 	return groups
 }
 
-func (s *Schedule) MarshalJSON() ([]byte, error) {
+func (s *Schedule) MarshalGroups() interface{} {
 	type Grouped struct {
 		Active   bool `json:",omitempty"`
 		Status   Status
@@ -275,7 +275,7 @@ func (s *Schedule) MarshalJSON() ([]byte, error) {
 	}
 	slice.Sort(t.Groups.NeedAck, gsort(t.Groups.NeedAck))
 	slice.Sort(t.Groups.Acknowledged, gsort(t.Groups.Acknowledged))
-	return json.Marshal(&t)
+	return &t
 }
 
 func marshalTime(t time.Time) string {

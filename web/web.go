@@ -272,7 +272,7 @@ func GetMetadata(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (
 }
 
 func Alerts(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	return schedule, nil
+	return schedule.MarshalGroups(), nil
 }
 
 func Status(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
