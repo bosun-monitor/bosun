@@ -389,7 +389,7 @@ func Count(e *state, T miniprofiler.Timer, query, sduration, eduration string) (
 	}
 	return &Results{
 		Results: []*Result{
-			&Result{Value: Scalar(len(r.Results))},
+			{Value: Scalar(len(r.Results))},
 		},
 	}, nil
 }
