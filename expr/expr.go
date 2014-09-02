@@ -52,7 +52,7 @@ func New(expr string) (*Expr, error) {
 
 // Execute applies a parse expression to the specified OpenTSDB context, and
 // returns one result per group. T may be nil to ignore timings.
-func (e *Expr) Execute(c opentsdb.Context, T miniprofiler.Timer, now time.Time, autods int, unjoinedOk bool, search *search.Search, lookups map[string]*Lookup) (r []*Result, queries []opentsdb.Request, err error) {
+func (e *Expr) Execute(c opentsdb.Context, T miniprofiler.Timer, now time.Time, autods int, unjoinedOk bool, search *search.Search, lookups map[string]*Lookup) (r *Results, queries []opentsdb.Request, err error) {
 	defer errRecover(&err)
 	s := &state{
 		Expr:       e,
@@ -128,6 +128,14 @@ type Result struct {
 	Group opentsdb.TagSet
 }
 
+type Results struct {
+	Results []*Result
+	// If true, ungrouped joins from this set will be ignored.
+	IgnoreUnjoined bool
+	// If true, ungrouped joins from the other set will be ignored.
+	IgnoreOtherUnjoined bool
+}
+
 type Computations []Computation
 
 type Computation struct {
@@ -146,11 +154,13 @@ type Union struct {
 }
 
 // wrap creates a new Result with a nil group and given value.
-func wrap(v float64) []*Result {
-	return []*Result{
-		{
-			Value: Scalar(v),
-			Group: nil,
+func wrap(v float64) *Results {
+	return &Results{
+		Results: []*Result{
+			{
+				Value: Scalar(v),
+				Group: nil,
+			},
 		},
 	}
 }
@@ -160,22 +170,22 @@ func (u *Union) ExtendComputations(o *Result) {
 }
 
 // union returns the combination of a and b where one is a subset of the other.
-func (e *state) union(a, b []*Result, expression string) []*Union {
+func (e *state) union(a, b *Results, expression string) []*Union {
 	const unjoinedGroup = "unjoined group"
 	var us []*Union
-	if len(a) == 0 || len(b) == 0 {
+	if len(a.Results) == 0 || len(b.Results) == 0 {
 		return us
 	}
 	am := make(map[*Result]bool)
 	bm := make(map[*Result]bool)
-	for _, ra := range a {
+	for _, ra := range a.Results {
 		am[ra] = true
 	}
-	for _, rb := range b {
+	for _, rb := range b.Results {
 		bm[rb] = true
 	}
-	for _, ra := range a {
-		for _, rb := range b {
+	for _, ra := range a.Results {
+		for _, rb := range b.Results {
 			u := &Union{
 				A: ra.Value,
 				B: rb.Value,
@@ -201,31 +211,35 @@ func (e *state) union(a, b []*Result, expression string) []*Union {
 		}
 	}
 	if !e.unjoinedOk {
-		for r := range am {
-			u := &Union{
-				A:     r.Value,
-				B:     Scalar(math.NaN()),
-				Group: r.Group,
+		if !a.IgnoreUnjoined && !b.IgnoreOtherUnjoined {
+			for r := range am {
+				u := &Union{
+					A:     r.Value,
+					B:     Scalar(math.NaN()),
+					Group: r.Group,
+				}
+				r.AddComputation(expression, unjoinedGroup)
+				u.ExtendComputations(r)
+				us = append(us, u)
 			}
-			r.AddComputation(expression, unjoinedGroup)
-			u.ExtendComputations(r)
-			us = append(us, u)
 		}
-		for r := range bm {
-			u := &Union{
-				A:     Scalar(math.NaN()),
-				B:     r.Value,
-				Group: r.Group,
+		if !b.IgnoreUnjoined && !a.IgnoreOtherUnjoined {
+			for r := range bm {
+				u := &Union{
+					A:     Scalar(math.NaN()),
+					B:     r.Value,
+					Group: r.Group,
+				}
+				r.AddComputation(expression, unjoinedGroup)
+				u.ExtendComputations(r)
+				us = append(us, u)
 			}
-			r.AddComputation(expression, unjoinedGroup)
-			u.ExtendComputations(r)
-			us = append(us, u)
 		}
 	}
 	return us
 }
 
-func (e *state) walk(node parse.Node, T miniprofiler.Timer) []*Result {
+func (e *state) walk(node parse.Node, T miniprofiler.Timer) *Results {
 	switch node := node.(type) {
 	case *parse.NumberNode:
 		return wrap(node.Float64)
@@ -240,10 +254,10 @@ func (e *state) walk(node parse.Node, T miniprofiler.Timer) []*Result {
 	}
 }
 
-func (e *state) walkBinary(node *parse.BinaryNode, T miniprofiler.Timer) []*Result {
+func (e *state) walkBinary(node *parse.BinaryNode, T miniprofiler.Timer) *Results {
 	ar := e.walk(node.Args[0], T)
 	br := e.walk(node.Args[1], T)
-	var res []*Result
+	var res Results
 	u := e.union(ar, br, node.String())
 	for _, v := range u {
 		var value Value
@@ -312,9 +326,9 @@ func (e *state) walkBinary(node *parse.BinaryNode, T miniprofiler.Timer) []*Resu
 			}
 		}
 		r.Value = value
-		res = append(res, &r)
+		res.Results = append(res.Results, &r)
 	}
-	return res
+	return &res
 }
 
 func operate(op string, a, b float64) (r float64) {
@@ -384,9 +398,9 @@ func operate(op string, a, b float64) (r float64) {
 	return
 }
 
-func (e *state) walkUnary(node *parse.UnaryNode, T miniprofiler.Timer) []*Result {
+func (e *state) walkUnary(node *parse.UnaryNode, T miniprofiler.Timer) *Results {
 	a := e.walk(node.Arg, T)
-	for _, r := range a {
+	for _, r := range a.Results {
 		if an, aok := r.Value.(Scalar); aok && math.IsNaN(float64(an)) {
 			r.Value = Scalar(math.NaN())
 			continue
@@ -425,7 +439,7 @@ func uoperate(op string, a float64) (r float64) {
 	return
 }
 
-func (e *state) walkFunc(node *parse.FuncNode, T miniprofiler.Timer) []*Result {
+func (e *state) walkFunc(node *parse.FuncNode, T miniprofiler.Timer) *Results {
 	f := reflect.ValueOf(node.F.F)
 	var in []reflect.Value
 	for _, a := range node.Args {
@@ -447,7 +461,7 @@ func (e *state) walkFunc(node *parse.FuncNode, T miniprofiler.Timer) []*Result {
 		in = append(in, reflect.ValueOf(v))
 	}
 	fr := f.Call(append([]reflect.Value{reflect.ValueOf(e), reflect.ValueOf(T)}, in...))
-	res := fr[0].Interface().([]*Result)
+	res := fr[0].Interface().(*Results)
 	if len(fr) > 1 && !fr[1].IsNil() {
 		err := fr[1].Interface().(error)
 		if err != nil {
@@ -455,7 +469,7 @@ func (e *state) walkFunc(node *parse.FuncNode, T miniprofiler.Timer) []*Result {
 		}
 	}
 	if node.Return() == parse.TYPE_NUMBER {
-		for _, r := range res {
+		for _, r := range res.Results {
 			r.AddComputation(node.String(), r.Value.(Number))
 		}
 	}
@@ -463,9 +477,9 @@ func (e *state) walkFunc(node *parse.FuncNode, T miniprofiler.Timer) []*Result {
 }
 
 // extractScalar will return a float64 if res contains exactly one scalar.
-func extractScalar(res []*Result) interface{} {
-	if len(res) == 1 && res[0].Type() == parse.TYPE_SCALAR {
-		return float64(res[0].Value.Value().(Scalar))
+func extractScalar(res *Results) interface{} {
+	if len(res.Results) == 1 && res.Results[0].Type() == parse.TYPE_SCALAR {
+		return float64(res.Results[0].Value.Value().(Scalar))
 	}
 	return res
 }

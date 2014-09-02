@@ -132,17 +132,17 @@ func (c *Context) E(v string) string {
 		log.Printf("%s: %v", v, err)
 		return ""
 	}
-	for _, r := range res {
+	for _, r := range res.Results {
 		if r.Group.Equal(c.State.Group) {
 			return truncate(r.Value)
 		}
 	}
-	for _, r := range res {
+	for _, r := range res.Results {
 		if c.State.Group.Subset(r.Group) {
 			return truncate(r.Value)
 		}
 	}
-	for _, r := range res {
+	for _, r := range res.Results {
 		if r.Group == nil {
 			return truncate(r.Value)
 		}

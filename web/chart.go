@@ -209,7 +209,7 @@ func ExprGraph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (in
 		Title: fmt.Sprintf("%s - %s", q, now.Format(time.RFC1123)),
 	}
 	c.XRange.Time = true
-	for ri, r := range res {
+	for ri, r := range res.Results {
 		rv := r.Value.(expr.Series)
 		pts := make([]chart.EPoint, len(rv))
 		idx := 0

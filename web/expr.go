@@ -30,7 +30,7 @@ func Expr(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 	if err != nil {
 		return nil, err
 	}
-	for _, r := range res {
+	for _, r := range res.Results {
 		if r.Computations == nil {
 			r.Computations = make(expr.Computations, 0)
 		}
@@ -41,7 +41,7 @@ func Expr(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 		Queries map[string]opentsdb.Request
 	}{
 		e.Tree.Root.Return().String(),
-		res,
+		res.Results,
 		make(map[string]opentsdb.Request),
 	}
 	for _, q := range queries {
