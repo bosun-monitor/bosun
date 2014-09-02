@@ -2,10 +2,11 @@ package svgg
 
 import (
 	"fmt"
-	"github.com/StackExchange/bosun/_third_party/github.com/ajstarks/svgo"
-	"github.com/StackExchange/bosun/_third_party/github.com/vdobler/chart"
 	"image/color"
 	"math"
+
+	"github.com/StackExchange/bosun/_third_party/github.com/ajstarks/svgo"
+	"github.com/StackExchange/bosun/_third_party/github.com/vdobler/chart"
 )
 
 // SvgGraphics implements BasicGraphics and uses the generic implementations
@@ -56,8 +57,8 @@ func (sg *SvgGraphics) Begin() {
 		sg.svg.Gtransform(fmt.Sprintf("translate(%d %d)", sg.tx, sg.ty))
 	}
 
-	bgc := fmt.Sprintf("#%02x%02x%02x", sg.bg.R>>8, sg.bg.G>>8, sg.bg.B>>8)
-	opa := fmt.Sprintf("%.4f", float64(sg.bg.A>>8)/255)
+	bgc := fmt.Sprintf("#%02x%02x%02x", sg.bg.R, sg.bg.G, sg.bg.B)
+	opa := fmt.Sprintf("%.4f", float64(sg.bg.A)/255)
 	bgs := fmt.Sprintf("stroke: %s; opacity: %s; fill: %s; fill-opacity: %s", bgc, opa, bgc, opa)
 	sg.svg.Rect(0, 0, sg.w, sg.h, bgs)
 }
@@ -70,7 +71,7 @@ func (sg *SvgGraphics) End() {
 }
 
 func (sg *SvgGraphics) Background() (r, g, b, a uint8) {
-	return uint8(sg.bg.R >> 8), uint8(sg.bg.G >> 8), uint8(sg.bg.B >> 8), uint8(sg.bg.A >> 8)
+	return sg.bg.R, sg.bg.G, sg.bg.B, sg.bg.A
 }
 
 func (sg *SvgGraphics) Dimensions() (int, int) {
