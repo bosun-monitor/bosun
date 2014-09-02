@@ -2,6 +2,7 @@ package chart
 
 import (
 	"fmt"
+	"image/color"
 	"testing"
 )
 
@@ -18,9 +19,15 @@ func TestRgb2Hsv(t *testing.T) {
 }
 
 func TestBrighten(t *testing.T) {
-	for _, col := range []string{"#ff0000", "#00ff00", "#0000ff"} {
+	c2t := func(c color.Color) string {
+		r, g, b, _ := c.RGBA()
+		return fmt.Sprintf("#%02x%02x%02x", r>>8, g>>8, b>>8)
+	}
+
+	for _, col := range []color.RGBA{{0xff, 0, 0, 0xff}, {0, 0xff, 0, 0xff}, {0, 0, 0xff, 0xff}} {
 		for _, f := range []float64{0.1, 0.3, 0.5, 0.7, 0.9} {
-			fmt.Printf("%s  --- %.2f -->  %s  %s\n", col, f, lighter(col, f), darker(col, f))
+			fmt.Printf("%s  --- %.2f -->  %s  %s\n",
+				c2t(col), f, c2t(lighter(col, f)), c2t(darker(col, f)))
 		}
 	}
 }
