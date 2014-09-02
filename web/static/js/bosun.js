@@ -1809,10 +1809,13 @@ bosunApp.directive('tsState', [
             templateUrl: '/partials/alertstate.html',
             link: function (scope, elem, attrs) {
                 scope.name = scope.child.AlertKey;
+                scope.loading = true;
                 $status(scope.child.AlertKey).then(function (st) {
                     scope.state = st;
+                    scope.loading = false;
                 }, function (err) {
                     alert(err);
+                    scope.loading = false;
                 });
                 scope.action = function (type) {
                     var key = encodeURIComponent(scope.name);

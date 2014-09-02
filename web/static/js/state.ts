@@ -119,10 +119,13 @@ bosunApp.directive('tsState', ['status', function($status: any) {
 		templateUrl: '/partials/alertstate.html',
 		link: function(scope: any, elem: any, attrs: any) {
 			scope.name = scope.child.AlertKey;
+			scope.loading = true;
 			$status(scope.child.AlertKey).then(st => {
 					scope.state = st;
+					scope.loading = false;
 				}, err => {
 					alert(err);
+					scope.loading = false;
 				});
 			scope.action = (type: string) => {
 				var key = encodeURIComponent(scope.name);
