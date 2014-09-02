@@ -124,7 +124,9 @@ var builtins = map[string]parse.Func{
 	},
 }
 
-func lookup(e *state, T miniprofiler.Timer, lookup, key string) (results []*Result, err error) {
+func lookup(e *state, T miniprofiler.Timer, lookup, key string) (results *Results, err error) {
+	results = new(Results)
+	results.IgnoreUnjoined = true
 	lookups := e.lookups[lookup]
 	if lookups == nil {
 		err = fmt.Errorf("lookup table not found: %v", lookup)
@@ -170,7 +172,7 @@ func lookup(e *state, T miniprofiler.Timer, lookup, key string) (results []*Resu
 			if err != nil {
 				return nil, err
 			}
-			results = append(results, &Result{
+			results.Results = append(results.Results, &Result{
 				Value: Number(num),
 				Group: tag,
 			})
@@ -180,7 +182,9 @@ func lookup(e *state, T miniprofiler.Timer, lookup, key string) (results []*Resu
 	return results, nil
 }
 
-func Band(e *state, T miniprofiler.Timer, query, duration, period string, num float64) (r []*Result, err error) {
+func Band(e *state, T miniprofiler.Timer, query, duration, period string, num float64) (r *Results, err error) {
+	r = new(Results)
+	r.IgnoreOtherUnjoined = true
 	T.Step("band", func(T miniprofiler.Timer) {
 		var d, p opentsdb.Duration
 		d, err = opentsdb.ParseDuration(duration)
@@ -221,7 +225,7 @@ func Band(e *state, T miniprofiler.Timer, query, duration, period string, num fl
 			}
 			for _, res := range s {
 				newarr := true
-				for _, a := range r {
+				for _, a := range r.Results {
 					if !a.Group.Equal(res.Tags) {
 						continue
 					}
@@ -238,7 +242,7 @@ func Band(e *state, T miniprofiler.Timer, query, duration, period string, num fl
 						values[k] = v
 					}
 					a.Value = values
-					r = append(r, a)
+					r.Results = append(r.Results, a)
 				}
 			}
 		}
@@ -246,7 +250,8 @@ func Band(e *state, T miniprofiler.Timer, query, duration, period string, num fl
 	return
 }
 
-func Query(e *state, T miniprofiler.Timer, query, sduration, eduration string) (r []*Result, err error) {
+func Query(e *state, T miniprofiler.Timer, query, sduration, eduration string) (r *Results, err error) {
+	r = new(Results)
 	q, err := opentsdb.ParseQuery(query)
 	if err != nil {
 		return
@@ -279,7 +284,7 @@ func Query(e *state, T miniprofiler.Timer, query, sduration, eduration string) (
 		return
 	}
 	for _, res := range s {
-		r = append(r, &Result{
+		r.Results = append(r.Results, &Result{
 			Value: Series(res.DPS),
 			Group: res.Tags,
 		})
@@ -302,7 +307,8 @@ func timeRequest(e *state, T miniprofiler.Timer, req *opentsdb.Request) (s opent
 	return
 }
 
-func Change(e *state, T miniprofiler.Timer, query, sduration, eduration string) (r []*Result, err error) {
+func Change(e *state, T miniprofiler.Timer, query, sduration, eduration string) (r *Results, err error) {
+	r = new(Results)
 	sd, err := opentsdb.ParseDuration(sduration)
 	if err != nil {
 		return
@@ -326,7 +332,7 @@ func change(dps Series, args ...float64) float64 {
 	return avg(dps) * args[0]
 }
 
-func Diff(e *state, T miniprofiler.Timer, query, sduration, eduration string) (r []*Result, err error) {
+func Diff(e *state, T miniprofiler.Timer, query, sduration, eduration string) (r *Results, err error) {
 	r, err = Query(e, T, query, sduration, eduration)
 	if err != nil {
 		return
@@ -339,16 +345,16 @@ func diff(dps Series, args ...float64) float64 {
 	return last(dps) - first(dps)
 }
 
-func reduce(e *state, T miniprofiler.Timer, series []*Result, F func(Series, ...float64) float64, args ...float64) ([]*Result, error) {
-	var res []*Result
-	for _, s := range series {
+func reduce(e *state, T miniprofiler.Timer, series *Results, F func(Series, ...float64) float64, args ...float64) (*Results, error) {
+	res := new(Results)
+	for _, s := range series.Results {
 		switch t := s.Value.(type) {
 		case Series:
 			if len(t) == 0 {
 				continue
 			}
 			s.Value = Number(F(t, args...))
-			res = append(res, s)
+			res.Results = append(res.Results, s)
 		default:
 			panic(fmt.Errorf("expr: expected a series"))
 		}
@@ -356,14 +362,14 @@ func reduce(e *state, T miniprofiler.Timer, series []*Result, F func(Series, ...
 	return res, nil
 }
 
-func Abs(e *state, T miniprofiler.Timer, series []*Result) []*Result {
-	for _, s := range series {
+func Abs(e *state, T miniprofiler.Timer, series *Results) *Results {
+	for _, s := range series.Results {
 		s.Value = Number(math.Abs(float64(s.Value.Value().(Number))))
 	}
 	return series
 }
 
-func Avg(e *state, T miniprofiler.Timer, series []*Result) ([]*Result, error) {
+func Avg(e *state, T miniprofiler.Timer, series *Results) (*Results, error) {
 	return reduce(e, T, series, avg)
 }
 
@@ -376,17 +382,19 @@ func avg(dps Series, args ...float64) (a float64) {
 	return
 }
 
-func Count(e *state, T miniprofiler.Timer, query, sduration, eduration string) (r []*Result, err error) {
+func Count(e *state, T miniprofiler.Timer, query, sduration, eduration string) (r *Results, err error) {
 	r, err = Query(e, T, query, sduration, eduration)
 	if err != nil {
 		return
 	}
-	return []*Result{{
-		Value: Scalar(len(r)),
-	}}, nil
+	return &Results{
+		Results: []*Result{
+			&Result{Value: Scalar(len(r.Results))},
+		},
+	}, nil
 }
 
-func Sum(e *state, T miniprofiler.Timer, series []*Result) ([]*Result, error) {
+func Sum(e *state, T miniprofiler.Timer, series *Results) (*Results, error) {
 	return reduce(e, T, series, sum)
 }
 
@@ -397,7 +405,7 @@ func sum(dps Series, args ...float64) (a float64) {
 	return
 }
 
-func Dev(e *state, T miniprofiler.Timer, series []*Result) ([]*Result, error) {
+func Dev(e *state, T miniprofiler.Timer, series *Results) (*Results, error) {
 	return reduce(e, T, series, dev)
 }
 
@@ -412,7 +420,7 @@ func dev(dps Series, args ...float64) (d float64) {
 	return math.Sqrt(d)
 }
 
-func Length(e *state, T miniprofiler.Timer, series []*Result) ([]*Result, error) {
+func Length(e *state, T miniprofiler.Timer, series *Results) (*Results, error) {
 	return reduce(e, T, series, length)
 }
 
@@ -420,7 +428,7 @@ func length(dps Series, args ...float64) (a float64) {
 	return float64(len(dps))
 }
 
-func Last(e *state, T miniprofiler.Timer, series []*Result) ([]*Result, error) {
+func Last(e *state, T miniprofiler.Timer, series *Results) (*Results, error) {
 	return reduce(e, T, series, last)
 }
 
@@ -439,7 +447,7 @@ func last(dps Series, args ...float64) (a float64) {
 	return
 }
 
-func First(e *state, T miniprofiler.Timer, series []*Result) ([]*Result, error) {
+func First(e *state, T miniprofiler.Timer, series *Results) (*Results, error) {
 	return reduce(e, T, series, first)
 }
 
@@ -458,7 +466,7 @@ func first(dps Series, args ...float64) (a float64) {
 	return
 }
 
-func Since(e *state, T miniprofiler.Timer, series []*Result) ([]*Result, error) {
+func Since(e *state, T miniprofiler.Timer, series *Results) (*Results, error) {
 	return reduce(e, T, series, since)
 }
 
@@ -478,7 +486,7 @@ func since(dps Series, args ...float64) (a float64) {
 	return s.Seconds()
 }
 
-func Forecast_lr(e *state, T miniprofiler.Timer, series []*Result, y float64) (r []*Result, err error) {
+func Forecast_lr(e *state, T miniprofiler.Timer, series *Results, y float64) (r *Results, err error) {
 	return reduce(e, T, series, forecast_lr, y)
 }
 
@@ -519,15 +527,15 @@ func forecast_lr(dps Series, args ...float64) float64 {
 	return s.Seconds()
 }
 
-func Percentile(e *state, T miniprofiler.Timer, series []*Result, p float64) (r []*Result, err error) {
+func Percentile(e *state, T miniprofiler.Timer, series *Results, p float64) (r *Results, err error) {
 	return reduce(e, T, series, percentile, p)
 }
 
-func Min(e *state, T miniprofiler.Timer, series []*Result) (r []*Result, err error) {
+func Min(e *state, T miniprofiler.Timer, series *Results) (r *Results, err error) {
 	return reduce(e, T, series, percentile, 0)
 }
 
-func Max(e *state, T miniprofiler.Timer, series []*Result) (r []*Result, err error) {
+func Max(e *state, T miniprofiler.Timer, series *Results) (r *Results, err error) {
 	return reduce(e, T, series, percentile, 1)
 }
 
@@ -551,20 +559,20 @@ func percentile(dps Series, args ...float64) (a float64) {
 	return x[int(i)]
 }
 
-func Ungroup(e *state, T miniprofiler.Timer, d []*Result) ([]*Result, error) {
-	if len(d) != 1 {
+func Ungroup(e *state, T miniprofiler.Timer, d *Results) (*Results, error) {
+	if len(d.Results) != 1 {
 		return nil, fmt.Errorf("ungroup: requires exactly one group")
 	}
-	d[0].Group = nil
+	d.Results[0].Group = nil
 	return d, nil
 }
 
-func Regroup(e *state, T miniprofiler.Timer, d []*Result, gp string) ([]*Result, error) {
+func Regroup(e *state, T miniprofiler.Timer, d *Results, gp string) (*Results, error) {
 	m := make(map[string]bool)
 	for _, g := range strings.Split(gp, ",") {
 		m[g] = true
 	}
-	for _, v := range d {
+	for _, v := range d.Results {
 		for k := range v.Group {
 			if !m[k] {
 				delete(v.Group, k)
@@ -574,10 +582,10 @@ func Regroup(e *state, T miniprofiler.Timer, d []*Result, gp string) ([]*Result,
 	return d, nil
 }
 
-func Transpose(e *state, T miniprofiler.Timer, d []*Result, gp string) ([]*Result, error) {
+func Transpose(e *state, T miniprofiler.Timer, d *Results, gp string) (*Results, error) {
 	gps := strings.Split(gp, ",")
 	m := make(map[string]*Result)
-	for _, v := range d {
+	for _, v := range d.Results {
 		ts := make(opentsdb.TagSet)
 		for k, v := range v.Group {
 			for _, b := range gps {
@@ -602,11 +610,9 @@ func Transpose(e *state, T miniprofiler.Timer, d []*Result, gp string) ([]*Resul
 			panic(fmt.Errorf("expr: expected a number"))
 		}
 	}
-	r := make([]*Result, len(m))
-	i := 0
+	var r Results
 	for _, res := range m {
-		r[i] = res
-		i++
+		r.Results = append(r.Results, res)
 	}
-	return r, nil
+	return &r, nil
 }

@@ -47,14 +47,14 @@ func TestExprSimple(t *testing.T) {
 		if err != nil {
 			t.Error(err)
 			break
-		} else if len(r) != 1 {
-			t.Error("bad r len", len(r))
+		} else if len(r.Results) != 1 {
+			t.Error("bad r len", len(r.Results))
 			break
-		} else if len(r[0].Group) != 0 {
-			t.Error("bad group len", r[0].Group)
+		} else if len(r.Results[0].Group) != 0 {
+			t.Error("bad group len", r.Results[0].Group)
 			break
-		} else if r[0].Value != et.output {
-			t.Errorf("expected %v, got %v: %v\nast: %v", et.output, r[0].Value, et.input, e)
+		} else if r.Results[0].Value != et.output {
+			t.Errorf("expected %v, got %v: %v\nast: %v", et.output, r.Results[0].Value, et.input, e)
 		}
 	}
 }

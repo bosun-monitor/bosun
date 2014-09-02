@@ -174,7 +174,7 @@ func (s *Schedule) CheckExpr(rh RunHistory, a *conf.Alert, e *expr.Expr, checkSt
 		return
 	}
 Loop:
-	for _, r := range results {
+	for _, r := range results.Results {
 		if s.Conf.Squelched(a, r.Group) {
 			continue
 		}
