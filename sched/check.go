@@ -124,7 +124,11 @@ func (s *Schedule) CheckUnknown() {
 			if time.Since(st.Touched) < t {
 				continue
 			}
-			r[ak] = &Event{Status: StUnknown}
+			event := Event{Status: StUnknown}
+			if st.Status() == StError {
+				event.Status = StNormal
+			}
+			r[ak] = &event
 		}
 		s.Unlock()
 		s.RunHistory(r)
