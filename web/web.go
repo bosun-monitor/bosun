@@ -23,6 +23,7 @@ import (
 	"github.com/StackExchange/bosun/_third_party/github.com/gorilla/mux"
 	"github.com/StackExchange/bosun/conf"
 	"github.com/StackExchange/bosun/expr"
+	eparse "github.com/StackExchange/bosun/expr/parse"
 	"github.com/StackExchange/bosun/sched"
 )
 
@@ -524,6 +525,35 @@ func Templates(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (in
 			}
 		}
 		add(alert.Macros)
+		lookups := make(map[string]bool)
+		walk := func(n eparse.Node) {
+			eparse.Walk(n, func(n eparse.Node) {
+				switch n := n.(type) {
+				case *eparse.FuncNode:
+					if n.Name != "lookup" || len(n.Args) == 0 {
+						return
+					}
+					switch n := n.Args[0].(type) {
+					case *eparse.StringNode:
+						if lookups[n.Text] {
+							return
+						}
+						lookups[n.Text] = true
+						l := schedule.Conf.Lookups[n.Text]
+						if l == nil {
+							return
+						}
+						alerts[name] += l.Def + "\n\n"
+					}
+				}
+			})
+		}
+		if alert.Crit != nil {
+			walk(alert.Crit.Tree.Root)
+		}
+		if alert.Warn != nil {
+			walk(alert.Warn.Tree.Root)
+		}
 		alerts[name] += alert.Def
 	}
 	return struct {

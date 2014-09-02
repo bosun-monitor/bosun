@@ -287,3 +287,23 @@ func (u *UnaryNode) Check() error {
 func (u *UnaryNode) Return() FuncType {
 	return u.Arg.Return()
 }
+
+// Walk invokes f on n and sub-nodes of n.
+func Walk(n Node, f func(Node)) {
+	f(n)
+	switch n := n.(type) {
+	case *BinaryNode:
+		Walk(n.Args[0], f)
+		Walk(n.Args[1], f)
+	case *FuncNode:
+		for _, a := range n.Args {
+			Walk(a, f)
+		}
+	case *NumberNode, *StringNode:
+		// Ignore.
+	case *UnaryNode:
+		Walk(n.Arg, f)
+	default:
+		panic(fmt.Errorf("other type: %T", n))
+	}
+}
