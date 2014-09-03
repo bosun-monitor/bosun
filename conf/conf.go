@@ -59,7 +59,7 @@ type Squelches struct {
 
 func (s *Squelches) Add(v string) error {
 	tags, err := opentsdb.ParseTags(v)
-	if err != nil {
+	if tags == nil && err != nil {
 		return err
 	}
 	sq := make(Squelch)
