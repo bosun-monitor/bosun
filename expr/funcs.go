@@ -346,7 +346,8 @@ func diff(dps Series, args ...float64) float64 {
 }
 
 func reduce(e *state, T miniprofiler.Timer, series *Results, F func(Series, ...float64) float64, args ...float64) (*Results, error) {
-	res := new(Results)
+	res := *series
+	res.Results = nil
 	for _, s := range series.Results {
 		switch t := s.Value.(type) {
 		case Series:
@@ -359,7 +360,7 @@ func reduce(e *state, T miniprofiler.Timer, series *Results, F func(Series, ...f
 			panic(fmt.Errorf("expr: expected a series"))
 		}
 	}
-	return res, nil
+	return &res, nil
 }
 
 func Abs(e *state, T miniprofiler.Timer, series *Results) *Results {
