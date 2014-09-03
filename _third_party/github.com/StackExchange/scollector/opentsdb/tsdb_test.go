@@ -32,6 +32,7 @@ func TestParseQuery(t *testing.T) {
 		{"", true},
 		{"sum:cpu+", true},
 		{"sum:cpu{}", true},
+		{"sum:stat{a=b=c}", true},
 	}
 	for _, q := range tests {
 		_, err := ParseQuery(q.query)
@@ -136,6 +137,39 @@ func TestQueryString(t *testing.T) {
 		s := q.in.String()
 		if s != q.out {
 			t.Errorf(`got "%s", expected "%s"`, s, q.out)
+		}
+	}
+}
+
+func TestValidTag(t *testing.T) {
+	tests := map[string]bool{
+		"abcXYZ012_./-": true,
+
+		"":    false,
+		"a|c": false,
+		"a=b": false,
+	}
+	for s, v := range tests {
+		r := ValidTag(s)
+		if v != r {
+			t.Errorf("%v: got %v, expected %v", s, r, v)
+		}
+	}
+}
+
+func TestValidTags(t *testing.T) {
+	tests := map[string]bool{
+		"a=b|c,d=*": true,
+
+		"":        false,
+		"a=b,a=c": false,
+		"a=b=c":   false,
+	}
+	for s, v := range tests {
+		_, err := ParseTags(s)
+		r := err == nil
+		if v != r {
+			t.Errorf("%v: got %v, expected %v", s, r, v)
 		}
 	}
 }

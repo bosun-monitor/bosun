@@ -439,7 +439,7 @@ func (c *Conf) loadLookup(s *parse.SectionNode) {
 				c.errorf("unexpected subsection type")
 			}
 			tags, err := opentsdb.ParseTags(n.Name.Text)
-			if err != nil {
+			if tags == nil && err != nil {
 				c.error(err)
 			}
 			if _, ok := saw[tags.String()]; ok {

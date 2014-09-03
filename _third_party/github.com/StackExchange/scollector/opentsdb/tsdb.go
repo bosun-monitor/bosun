@@ -320,22 +320,58 @@ func ParseQuery(query string) (q *Query, err error) {
 	return
 }
 
-// ParseTags parses OpenTSDB tagk=tagv pairs of the form: k=v,m=o.
+// ParseTags parses OpenTSDB tagk=tagv pairs of the form: k=v,m=o. Validation
+// errors do not stop processing, and will return a non-nil TagSet.
 func ParseTags(t string) (TagSet, error) {
 	ts := make(TagSet)
+	var err error
 	for _, v := range strings.Split(t, ",") {
 		sp := strings.SplitN(v, "=", 2)
 		if len(sp) != 2 {
 			return nil, fmt.Errorf("opentsdb: bad tag: %s", v)
 		}
-		sp[0] = strings.TrimSpace(sp[0])
-		sp[1] = strings.TrimSpace(sp[1])
+		for i, s := range sp {
+			sp[i] = strings.TrimSpace(s)
+			if i > 0 {
+				continue
+			}
+			if !ValidTag(sp[i]) {
+				err = fmt.Errorf("invalid character in %s", sp[i])
+			}
+		}
+		for _, s := range strings.Split(sp[1], "|") {
+			if s == "*" {
+				continue
+			}
+			if !ValidTag(s) {
+				err = fmt.Errorf("invalid character in %s", sp[1])
+			}
+		}
 		if _, present := ts[sp[0]]; present {
 			return nil, fmt.Errorf("opentsdb: duplicated tag: %s", v)
 		}
 		ts[sp[0]] = sp[1]
 	}
-	return ts, nil
+	return ts, err
+}
+
+// ValidTag returns true if s is a valid metric or tag.
+func ValidTag(s string) bool {
+	if s == "" {
+		return false
+	}
+	for _, c := range s {
+		switch {
+		case c >= 'a' && c <= 'z':
+		case c >= 'A' && c <= 'Z':
+		case c >= '0' && c <= '9':
+		case strings.ContainsAny(string(c), `-_./`):
+		case unicode.IsLetter(c):
+		default:
+			return false
+		}
+	}
+	return true
 }
 
 var groupRE = regexp.MustCompile("{[^}]+}")
