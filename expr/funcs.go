@@ -199,7 +199,7 @@ func Band(e *state, T miniprofiler.Timer, query, duration, period string, num fl
 			err = fmt.Errorf("expr: Band: num out of bounds")
 		}
 		q, err := opentsdb.ParseQuery(query)
-		if err != nil {
+		if q == nil && err != nil {
 			return
 		}
 		if err = e.search.Expand(q); err != nil {
@@ -253,7 +253,7 @@ func Band(e *state, T miniprofiler.Timer, query, duration, period string, num fl
 func Query(e *state, T miniprofiler.Timer, query, sduration, eduration string) (r *Results, err error) {
 	r = new(Results)
 	q, err := opentsdb.ParseQuery(query)
-	if err != nil {
+	if q == nil && err != nil {
 		return
 	}
 	if err = e.search.Expand(q); err != nil {
