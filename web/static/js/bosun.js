@@ -119,13 +119,15 @@ bosunControllers.controller('BosunCtrl', [
                     return "panel-default";
             }
         };
-        $scope.refresh = function () {
+        var scheduleFilter;
+        $scope.refresh = function (filter) {
             var d = $q.defer();
-            if ($scope.schedule) {
+            if ($scope.schedule && filter == scheduleFilter) {
                 d.resolve();
             } else {
+                scheduleFilter = filter;
                 $scope.animate();
-                var p = $http.get('/api/alerts').success(function (data) {
+                var p = $http.get('/api/alerts?filter=' + encodeURIComponent(filter || "")).success(function (data) {
                     $scope.schedule = data;
                     $scope.timeanddate = data.TimeAndDate;
                     d.resolve();
@@ -284,15 +286,22 @@ bosunControllers.controller('ConfigCtrl', [
         $scope.set();
     }]);
 bosunControllers.controller('DashboardCtrl', [
-    '$scope', function ($scope) {
+    '$scope', '$location', function ($scope, $location) {
+        var search = $location.search();
         $scope.loading = 'Loading';
         $scope.error = '';
-        $scope.refresh().then(function () {
+        $scope.filter = search.filter;
+        $scope.refresh($scope.filter).then(function () {
             $scope.loading = '';
         }, function (err) {
             $scope.loading = '';
             $scope.error = 'Unable to fetch alerts: ' + err;
         });
+        $scope.keydown = function ($event) {
+            if ($event.keyCode == 13) {
+                $location.search('filter', $scope.filter || null);
+            }
+        };
     }]);
 bosunApp.directive('tsResults', function () {
     return {

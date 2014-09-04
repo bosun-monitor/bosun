@@ -97,7 +97,7 @@ interface IBosunScope extends ng.IScope {
 	timeanddate: number[];
 	schedule: any;
 	req_from_m: (m: string) => Request;
-	refresh: () => any;
+	refresh: (filter: string) => any;
 	animate: () => any;
 	stop: () => any;
 }
@@ -141,13 +141,15 @@ bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', '$q', fun
 			default: return "panel-default";
 		}
 	};
-	$scope.refresh = () => {
+	var scheduleFilter: string;
+	$scope.refresh = (filter: string) => {
 		var d = $q.defer();
-		if ($scope.schedule) {
+		if ($scope.schedule && filter == scheduleFilter) {
 			d.resolve();
 		} else {
+			scheduleFilter = filter;
 			$scope.animate();
-			var p = $http.get('/api/alerts')
+			var p = $http.get('/api/alerts?filter=' + encodeURIComponent(filter || ""))
 				.success(data => {
 					$scope.schedule = data;
 					$scope.timeanddate = data.TimeAndDate;
