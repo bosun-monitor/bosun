@@ -276,7 +276,10 @@ func (s *Schedule) MarshalGroups(filter string) (interface{}, error) {
 			if a.Status != b.Status {
 				return a.Status > b.Status
 			}
-			return a.AlertKey < b.AlertKey
+			if a.AlertKey != b.AlertKey {
+				return a.AlertKey < b.AlertKey
+			}
+			return a.Subject < b.Subject
 		}
 	}
 	slice.Sort(t.Groups.NeedAck, gsort(t.Groups.NeedAck))
