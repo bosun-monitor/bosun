@@ -22,5 +22,20 @@
 		<div class="alert alert-danger" ng-bind="error"></div>
 	</div>
 </div>
+<div class="row">
+	<div class="col-sm-12">
+		<div class="form-group">
+			<input
+				class="form-control"
+				type="text"
+				ng-model="filter"
+				ng-keydown="keydown($event)"
+				placeholder="filter"
+				tooltip
+				title="Filter alert text by value. Various other state filters supported: status:<value> for alert status (ex: status:critical), ack:<false/true> for acknowledged (ex: ack:true)."
+			>
+		</div>
+	</div>
+</div>
 <div ts-ack-group="schedule.Groups.NeedAck" ack="'Needs Acknowledgement'" schedule="schedule"></div>
 <div ts-ack-group="schedule.Groups.Acknowledged" ack="'Acknowledged'" schedule="schedule"></div>

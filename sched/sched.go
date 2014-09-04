@@ -196,7 +196,7 @@ func (states States) GroupSets() map[string]expr.AlertKeys {
 	return groups
 }
 
-func (s *Schedule) MarshalGroups() interface{} {
+func (s *Schedule) MarshalGroups(filter string) (interface{}, error) {
 	type Grouped struct {
 		Active   bool `json:",omitempty"`
 		Status   Status
@@ -219,11 +219,17 @@ func (s *Schedule) MarshalGroups() interface{} {
 	s.Lock()
 	defer s.Unlock()
 	status := make(States)
+	matches, err := makeFilter(filter)
+	if err != nil {
+		return nil, err
+	}
 	for k, v := range s.status {
 		if !v.Open {
 			continue
 		}
-		status[k] = v
+		if matches(k, v) {
+			status[k] = v
+		}
 	}
 	for tuple, states := range status.GroupStates() {
 		var grouped []*Grouped
@@ -275,7 +281,7 @@ func (s *Schedule) MarshalGroups() interface{} {
 	}
 	slice.Sort(t.Groups.NeedAck, gsort(t.Groups.NeedAck))
 	slice.Sort(t.Groups.Acknowledged, gsort(t.Groups.Acknowledged))
-	return &t
+	return &t, nil
 }
 
 func marshalTime(t time.Time) string {
