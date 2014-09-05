@@ -280,7 +280,11 @@ func Status(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (inter
 	r.ParseForm()
 	m := make(map[string]interface{})
 	for _, k := range r.Form["ak"] {
-		st := schedule.Status(expr.AlertKey(k))
+		ak, err := expr.ParseAlertKey(k)
+		if err != nil {
+			return nil, err
+		}
+		st := schedule.Status(ak)
 		if st == nil {
 			return nil, fmt.Errorf("unknown alert key: %v", k)
 		}
@@ -293,7 +297,10 @@ func AlertDetails(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) 
 	r.ParseForm()
 	states := make(sched.States)
 	for _, v := range r.Form["key"] {
-		k := expr.AlertKey(v)
+		k, err := expr.ParseAlertKey(v)
+		if err != nil {
+			return nil, err
+		}
 		s := schedule.Status(k)
 		if s == nil {
 			return nil, fmt.Errorf("unknown key: %v", v)
@@ -326,7 +333,11 @@ func Action(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (inter
 	errs := make(MultiError)
 	r.ParseForm()
 	for _, key := range data.Keys {
-		err := schedule.Action(data.User, data.Message, at, expr.AlertKey(key))
+		ak, err := expr.ParseAlertKey(key)
+		if err != nil {
+			return nil, err
+		}
+		err = schedule.Action(data.User, data.Message, at, ak)
 		if err != nil {
 			errs[key] = err
 		}

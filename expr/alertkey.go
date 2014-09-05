@@ -9,6 +9,18 @@ import (
 
 type AlertKey string
 
+func ParseAlertKey(a string) (ak AlertKey, err error) {
+	ak = AlertKey(a)
+	defer func() {
+		e := recover()
+		if e != nil {
+			err = fmt.Errorf("%v", e)
+		}
+	}()
+	ak.Group()
+	return
+}
+
 func NewAlertKey(name string, group opentsdb.TagSet) AlertKey {
 	return AlertKey(name + group.String())
 }
@@ -17,6 +29,7 @@ func (a AlertKey) Name() string {
 	return strings.SplitN(string(a), "{", 2)[0]
 }
 
+// Group returns the tagset of this alert key. Will panic if a is not valid.
 func (a AlertKey) Group() opentsdb.TagSet {
 	sp := strings.SplitN(string(a), "{", 2)
 	if len(sp) < 2 {
