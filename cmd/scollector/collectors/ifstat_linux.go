@@ -6,10 +6,12 @@ import (
 
 	"github.com/StackExchange/scollector/metadata"
 	"github.com/StackExchange/scollector/opentsdb"
+	"github.com/StackExchange/scollector/util"
 )
 
 func init() {
 	collectors = append(collectors, &IntervalCollector{F: c_ifstat_linux})
+	collectors = append(collectors, &IntervalCollector{F: c_ipcount_linux})
 }
 
 var FIELDS_NET = []string{
@@ -33,6 +35,28 @@ var FIELDS_NET = []string{
 
 var ifstatRE = regexp.MustCompile(`\s+(eth\d+|em\d+_\d+/\d+|em\d+_\d+|em\d+|` +
 	`bond\d+|` + `p\d+p\d+_\d+/\d+|p\d+p\d+_\d+|p\d+p\d+):(.*)`)
+
+func c_ipcount_linux() (opentsdb.MultiDataPoint, error) {
+	var md opentsdb.MultiDataPoint
+	v4c := 0
+	v6c := 0
+	err := util.ReadCommand(func(line string) error {
+		tl := strings.TrimSpace(line)
+		if strings.HasPrefix(tl, "inet ") {
+			v4c++
+		}
+		if strings.HasPrefix(tl, "inet6 ") {
+			v6c++
+		}
+		return nil
+	}, "ip", "addr", "list")
+	if err != nil {
+		return md, err
+	}
+	Add(&md, "linux.net.ip_count", v4c, opentsdb.TagSet{"version": "4"}, metadata.Gauge, "IP_Addresses", "")
+	Add(&md, "linux.net.ip_count", v6c, opentsdb.TagSet{"version": "6"}, metadata.Gauge, "IP_Addresses", "")
+	return md, nil
+}
 
 func c_ifstat_linux() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
