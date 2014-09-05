@@ -57,7 +57,7 @@
 			</div>
 			<div class="pull-right">
 				<a class="btn btn-default" ng-href="/rule?expr={{btoa(expr)}}" ng-disabled="result_type != 'series'" target="_blank">Rule</a>
-				<a class="btn btn-default" ng-href="{{svg_url}}" ng-show="svg_url" target="_blank">Image</a>
+				<a class="btn btn-default" ng-href="{{svg_url}}" ng-disabled="!svg_url" target="_blank">Image</a>
 			</div>
 		</form>
 	</div>
