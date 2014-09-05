@@ -58,9 +58,6 @@ bosunControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route
 		});
 	$scope.set = () => {
 		$location.search('expr', btoa($scope.expr));
-		if (typeof $scope.date == 'object') {
-			$scope.date = moment($scope.date).utc().format('YYYY-MM-DD');
-		}
 		$location.search('date', $scope.date || null);
 		$location.search('time', $scope.time || null);
 		$route.reload();
