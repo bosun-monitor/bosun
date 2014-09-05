@@ -1288,6 +1288,8 @@ bosunControllers.controller('HistoryCtrl', [
             } else {
                 $scope.error = 'No Matching Alerts Found';
             }
+        }).error(function (err) {
+            $scope.error = err;
         });
     }]);
 bosunControllers.controller('HostCtrl', [
