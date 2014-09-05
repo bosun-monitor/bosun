@@ -734,13 +734,16 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 	}
 }
 
-var exRE = regexp.MustCompile(`\$(?:\w+|\{\w+\})`)
+var exRE = regexp.MustCompile(`\$(?:[\w.]+|\{[\w.]+\})`)
 
 func (c *Conf) Expand(v string, vars map[string]string, ignoreBadExpand bool) string {
-	return exRE.ReplaceAllStringFunc(v, func(s string) string {
+	ss := exRE.ReplaceAllStringFunc(v, func(s string) string {
 		var n string
 		if strings.HasPrefix(s, "${") && strings.HasSuffix(s, "}") {
-			n = os.Getenv(s[2 : len(s)-1])
+			s = "$" + s[2 : len(s)-1]
+		}
+		if strings.HasPrefix(s, "$env.") {
+			n = os.Getenv(s[5:])
 		}
 		if _n, ok := c.Vars[s]; ok {
 			n = _n
@@ -756,6 +759,7 @@ func (c *Conf) Expand(v string, vars map[string]string, ignoreBadExpand bool) st
 		}
 		return c.Expand(n, vars, ignoreBadExpand)
 	})
+	return ss
 }
 
 func (c *Conf) seen(v string, m map[string]bool) {
