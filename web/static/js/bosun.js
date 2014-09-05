@@ -888,9 +888,6 @@ bosunControllers.controller('ExprCtrl', [
         });
         $scope.set = function () {
             $location.search('expr', btoa($scope.expr));
-            if (typeof $scope.date == 'object') {
-                $scope.date = moment($scope.date).utc().format('YYYY-MM-DD');
-            }
             $location.search('date', $scope.date || null);
             $location.search('time', $scope.time || null);
             $route.reload();
@@ -1568,9 +1565,6 @@ bosunControllers.controller('RuleCtrl', [
             $scope.warning = [];
             $location.search('alert', btoa($scope.alert));
             $location.search('template', btoa($scope.template));
-            if (typeof $scope.date == 'object') {
-                $scope.date = moment($scope.date).utc().format('YYYY-MM-DD');
-            }
             $location.search('date', $scope.date || null);
             $location.search('time', $scope.time || null);
             $location.search('tab', $scope.tab || 'results');
