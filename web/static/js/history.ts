@@ -47,5 +47,8 @@ bosunControllers.controller('HistoryCtrl', ['$scope', '$http', '$location', '$ro
 			} else {
 				$scope.error = 'No Matching Alerts Found';
 			}
+		})
+		.error(err => {
+			$scope.error = err;
 		});
 }]);
