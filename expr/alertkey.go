@@ -1,6 +1,7 @@
 package expr
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/opentsdb"
@@ -17,7 +18,11 @@ func (a AlertKey) Name() string {
 }
 
 func (a AlertKey) Group() opentsdb.TagSet {
-	s := strings.SplitN(string(a), "{", 2)[1]
+	sp := strings.SplitN(string(a), "{", 2)
+	if len(sp) < 2 {
+		panic(fmt.Errorf("invalid alert key %s", a))
+	}
+	s := sp[1]
 	s = s[:len(s)-1]
 	if s == "" {
 		return nil
