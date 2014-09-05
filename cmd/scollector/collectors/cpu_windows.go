@@ -33,8 +33,7 @@ func c_cpu_windows() (opentsdb.MultiDataPoint, error) {
 		Add(&md, "win.cpu.time_cstate", v.PercentC2Time, opentsdb.TagSet{"cpu": v.Name, "type": "c2"}, metadata.Counter, metadata.Pct, "Percentage of time that the processor spends in the C-2 low-power idle state, which is a subset of the total processor idle time.")
 		Add(&md, "win.cpu.time_cstate", v.PercentC3Time, opentsdb.TagSet{"cpu": v.Name, "type": "c3"}, metadata.Counter, metadata.Pct, "Percentage of time that the processor spends in the C3 low-power idle state, which is a subset of the total processor idle time.")
 	}
-	//This sometimes spike to > 100 , so as a workaround we just pass when that happens
-	if num > 0 && num <= 100 {
+	if num > 0 {
 		cpu := used / 1e5 / num
 		Add(&md, osCPU, cpu, nil, metadata.Counter, metadata.Pct, "")
 	}
