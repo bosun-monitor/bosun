@@ -164,11 +164,15 @@ func Relay(dest string, metaHandler http.Handler) func(http.ResponseWriter, *htt
 		req.ContentLength = r.ContentLength
 		resp, err := client.Do(req)
 		tags := opentsdb.TagSet{"path": clean(r.URL.Path), "remote": clean(strings.Split(r.RemoteAddr, ":")[0])}
+		var do_err int64
+		defer func() {
+			collect.Add("relay.do_err", tags, do_err)
+		}()
 		if err != nil {
+			do_err = 1
 			log.Println("relay Do err:", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte(err.Error()))
-			collect.Add("relay.do_err", tags, 1)
 			return
 		}
 		b, _ := ioutil.ReadAll(resp.Body)
