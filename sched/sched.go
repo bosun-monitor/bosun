@@ -715,3 +715,20 @@ const (
 	ActionClose
 	ActionForget
 )
+
+func (a ActionType) String() string {
+	switch a {
+	case ActionAcknowledge:
+		return "Acknowledged"
+	case ActionClose:
+		return "Closed"
+	case ActionForget:
+		return "Forgotten"
+	default:
+		return "none"
+	}
+}
+
+func (a ActionType) MarshalJSON() ([]byte, error) {
+	return json.Marshal(a.String())
+}
