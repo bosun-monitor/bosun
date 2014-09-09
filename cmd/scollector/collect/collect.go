@@ -81,7 +81,9 @@ func InitChan(tsdbhost, metric_root string, ch chan *opentsdb.DataPoint) error {
 		Scheme: "http",
 		Path:   "/api/put",
 	}
-	if !strings.Contains(tsdbhost, ":") {
+	if strings.HasPrefix(tsdbhost, ":") {
+		tsdbhost = "localhost" + tsdbhost
+	} else if !strings.Contains(tsdbhost, ":") {
 		tsdbhost += ":4242"
 	}
 	u.Host = tsdbhost
