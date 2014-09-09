@@ -418,6 +418,9 @@ func (s *Schedule) save() {
 	defer s.Search.Unlock()
 	defer s.Unlock()
 	savePending = false
+	if s.Conf.StateFile == "" {
+		return
+	}
 	tmp := s.Conf.StateFile + ".tmp"
 	f, err := os.Create(tmp)
 	if err != nil {
