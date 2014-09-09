@@ -92,9 +92,7 @@ func RelayHTTP(addr, dest string, metaHandler http.Handler) {
 
 var client *http.Client = &http.Client{
 	Transport: &timeoutTransport{
-		Transport: &http.Transport{
-			DisableKeepAlives: true,
-		},
+		Transport: &http.Transport{},
 	},
 	Timeout: time.Minute,
 }
