@@ -740,7 +740,7 @@ func (c *Conf) Expand(v string, vars map[string]string, ignoreBadExpand bool) st
 	ss := exRE.ReplaceAllStringFunc(v, func(s string) string {
 		var n string
 		if strings.HasPrefix(s, "${") && strings.HasSuffix(s, "}") {
-			s = "$" + s[2 : len(s)-1]
+			s = "$" + s[2:len(s)-1]
 		}
 		if strings.HasPrefix(s, "$env.") {
 			n = os.Getenv(s[5:])
