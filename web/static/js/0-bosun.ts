@@ -119,7 +119,7 @@ bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', '$q', fun
 		return JSON.stringify(v, null, '  ');
 	};
 	$scope.btoa = (v: any) => {
-		return btoa(v);
+		return encodeURIComponent(btoa(v));
 	};
 	$scope.encode = (v: string) => {
 		return encodeURIComponent(v);
