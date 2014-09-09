@@ -41,10 +41,10 @@
 		<div class="row" ng-shoe="state.LastAction">
 			<div class="col-sm-3 text-right"><strong>Last Action</strong></div>
 			<div class="col-sm-9">
-				<span ng-bind=state.LastAction.Type></span> 
-				<span ng-show=state.LastAction.User>by {{state.LastAction.User}}</span>
+				{{state.LastAction.Type}} 
+				<span ng-show="state.LastAction.User">by {{state.LastAction.User}}</span>
 				at <span ts-time="state.LastAction.Time"></span>
-				<span ng-show=state.LastAction.Message>: {{state.LastAction.Message}}</span>
+				<span ng-show="state.LastAction.Message">: {{state.LastAction.Message}}</span>
 			</div>
 		</div>
 		<div class="row">
