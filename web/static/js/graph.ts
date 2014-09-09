@@ -307,7 +307,7 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 			}
 		}
 		$scope.animate();
-		$http.get('/api/graph?' + 'b64=' + btoa(JSON.stringify(request)) + autods + autorate)
+		$http.get('/api/graph?' + 'b64=' + encodeURIComponent(btoa(JSON.stringify(request))) + autods + autorate)
 			.success((data) => {
 				$scope.result = data.Series;
 				if (!$scope.result) {

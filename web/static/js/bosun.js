@@ -91,7 +91,7 @@ bosunControllers.controller('BosunCtrl', [
             return JSON.stringify(v, null, '  ');
         };
         $scope.btoa = function (v) {
-            return btoa(v);
+            return encodeURIComponent(btoa(v));
         };
         $scope.encode = function (v) {
             return encodeURIComponent(v);
@@ -1188,7 +1188,7 @@ bosunControllers.controller('GraphCtrl', [
                 }
             }
             $scope.animate();
-            $http.get('/api/graph?' + 'b64=' + btoa(JSON.stringify(request)) + autods + autorate).success(function (data) {
+            $http.get('/api/graph?' + 'b64=' + encodeURIComponent(btoa(JSON.stringify(request))) + autods + autorate).success(function (data) {
                 $scope.result = data.Series;
                 if (!$scope.result) {
                     $scope.warning = 'No Results';
