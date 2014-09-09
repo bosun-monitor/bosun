@@ -196,24 +196,27 @@ func (states States) GroupSets() map[string]expr.AlertKeys {
 	return groups
 }
 
-func (s *Schedule) MarshalGroups(filter string) (interface{}, error) {
-	type Grouped struct {
-		Active   bool `json:",omitempty"`
-		Status   Status
-		Subject  string        `json:",omitempty"`
-		Len      int           `json:",omitempty"`
-		Alert    string        `json:",omitempty"`
-		AlertKey expr.AlertKey `json:",omitempty"`
-		Ago      string        `json:",omitempty"`
-		Children []*Grouped    `json:",omitempty"`
+type StateGroup struct {
+	Active   bool `json:",omitempty"`
+	Status   Status
+	Subject  string        `json:",omitempty"`
+	Len      int           `json:",omitempty"`
+	Alert    string        `json:",omitempty"`
+	AlertKey expr.AlertKey `json:",omitempty"`
+	Ago      string        `json:",omitempty"`
+	Children []*StateGroup `json:",omitempty"`
+}
+
+type StateGroups struct {
+	Groups struct {
+		NeedAck      []*StateGroup `json:",omitempty"`
+		Acknowledged []*StateGroup `json:",omitempty"`
 	}
-	t := struct {
-		Groups struct {
-			NeedAck      []*Grouped `json:",omitempty"`
-			Acknowledged []*Grouped `json:",omitempty"`
-		}
-		TimeAndDate []int
-	}{
+	TimeAndDate []int
+}
+
+func (s *Schedule) MarshalGroups(filter string) (*StateGroups, error) {
+	t := StateGroups{
 		TimeAndDate: s.Conf.TimeAndDate,
 	}
 	s.Lock()
@@ -232,11 +235,11 @@ func (s *Schedule) MarshalGroups(filter string) (interface{}, error) {
 		}
 	}
 	for tuple, states := range status.GroupStates() {
-		var grouped []*Grouped
+		var grouped []*StateGroup
 		switch tuple.Status {
 		case StWarning, StCritical, StUnknown, StError:
 			for name, group := range states.GroupSets() {
-				g := Grouped{
+				g := StateGroup{
 					Active:  tuple.Active,
 					Status:  tuple.Status,
 					Subject: fmt.Sprintf("%s - %s", tuple.Status, name),
@@ -244,7 +247,7 @@ func (s *Schedule) MarshalGroups(filter string) (interface{}, error) {
 				}
 				for _, ak := range group {
 					st := s.status[ak]
-					g.Children = append(g.Children, &Grouped{
+					g.Children = append(g.Children, &StateGroup{
 						Active:   tuple.Active,
 						Status:   tuple.Status,
 						AlertKey: ak,
@@ -264,7 +267,7 @@ func (s *Schedule) MarshalGroups(filter string) (interface{}, error) {
 			t.Groups.Acknowledged = append(t.Groups.Acknowledged, grouped...)
 		}
 	}
-	gsort := func(grp []*Grouped) func(i, j int) bool {
+	gsort := func(grp []*StateGroup) func(i, j int) bool {
 		return func(i, j int) bool {
 			a := grp[i]
 			b := grp[j]
