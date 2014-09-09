@@ -1800,8 +1800,7 @@ bosunApp.factory('status', [
                         });
                         v.last = v.History[v.History.length - 1];
                         if (v.Actions.length > 0) {
-                            var a = v.Actions[0];
-                            v.LastActionString = a.Type + " by " + a.User + " at " + fmtTime(a.Time) + ": " + a.Message;
+                            v.LastAction = v.Actions[0];
                         }
                         cache[k] = v;
                     });
