@@ -144,22 +144,18 @@ bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', '$q', fun
 	var scheduleFilter: string;
 	$scope.refresh = (filter: string) => {
 		var d = $q.defer();
-		if ($scope.schedule && filter == scheduleFilter) {
-			d.resolve();
-		} else {
-			scheduleFilter = filter;
-			$scope.animate();
-			var p = $http.get('/api/alerts?filter=' + encodeURIComponent(filter || ""))
-				.success(data => {
-					$scope.schedule = data;
-					$scope.timeanddate = data.TimeAndDate;
-					d.resolve();
-				})
-				.error(err => {
-					d.reject(err);
-				});
-			p.finally($scope.stop);
-		}
+		scheduleFilter = filter;
+		$scope.animate();
+		var p = $http.get('/api/alerts?filter=' + encodeURIComponent(filter || ""))
+			.success(data => {
+				$scope.schedule = data;
+				$scope.timeanddate = data.TimeAndDate;
+				d.resolve();
+			})
+			.error(err => {
+				d.reject(err);
+			});
+		p.finally($scope.stop);
 		return d.promise;
 	};
 	var sz = 30;

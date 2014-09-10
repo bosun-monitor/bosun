@@ -122,20 +122,16 @@ bosunControllers.controller('BosunCtrl', [
         var scheduleFilter;
         $scope.refresh = function (filter) {
             var d = $q.defer();
-            if ($scope.schedule && filter == scheduleFilter) {
+            scheduleFilter = filter;
+            $scope.animate();
+            var p = $http.get('/api/alerts?filter=' + encodeURIComponent(filter || "")).success(function (data) {
+                $scope.schedule = data;
+                $scope.timeanddate = data.TimeAndDate;
                 d.resolve();
-            } else {
-                scheduleFilter = filter;
-                $scope.animate();
-                var p = $http.get('/api/alerts?filter=' + encodeURIComponent(filter || "")).success(function (data) {
-                    $scope.schedule = data;
-                    $scope.timeanddate = data.TimeAndDate;
-                    d.resolve();
-                }).error(function (err) {
-                    d.reject(err);
-                });
-                p.finally($scope.stop);
-            }
+            }).error(function (err) {
+                d.reject(err);
+            });
+            p.finally($scope.stop);
             return d.promise;
         };
         var sz = 30;
