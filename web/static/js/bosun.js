@@ -76,7 +76,7 @@ var bosunControllers = angular.module('bosunControllers', []);
 bosunControllers.controller('BosunCtrl', [
     '$scope', '$route', '$http', '$q', function ($scope, $route, $http, $q) {
         $scope.$on('$routeChangeSuccess', function (event, current, previous) {
-            $scope.stop();
+            $scope.stop(true);
         });
         $scope.active = function (v) {
             if (!$route.current) {
@@ -195,8 +195,13 @@ bosunControllers.controller('BosunCtrl', [
             });
             setTimeout(doAnimate, transitionDuration);
         }
-        $scope.stop = function () {
-            animateCount--;
+        $scope.stop = function (all) {
+            if (typeof all === "undefined") { all = false; }
+            if (all) {
+                animateCount = 0;
+            } else if (animateCount > 0) {
+                animateCount--;
+            }
         };
     }]);
 

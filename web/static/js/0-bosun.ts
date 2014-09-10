@@ -99,12 +99,12 @@ interface IBosunScope extends ng.IScope {
 	req_from_m: (m: string) => Request;
 	refresh: (filter: string) => any;
 	animate: () => any;
-	stop: () => any;
+	stop: (all?: boolean) => any;
 }
 
 bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', '$q', function($scope: IBosunScope, $route: ng.route.IRouteService, $http: ng.IHttpService, $q: ng.IQService) {
 	$scope.$on('$routeChangeSuccess', function(event, current, previous) {
-		$scope.stop();
+		$scope.stop(true);
 	});
 	$scope.active = (v: string) => {
 		if (!$route.current) {
@@ -242,8 +242,12 @@ bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', '$q', fun
 			.attr('fill', (d: any) => { return d[2]; });
 		setTimeout(doAnimate, transitionDuration);
 	}
-	$scope.stop = () => {
-		animateCount--;
+	$scope.stop = (all = false) => {
+		if (all) {
+			animateCount = 0;
+		} else if (animateCount > 0) {
+			animateCount--;
+		}
 	};
 }]);
 
