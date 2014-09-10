@@ -32,6 +32,14 @@ func (n *Notification) DoPrint(subject []byte) {
 }
 
 func (n *Notification) DoPost(subject []byte) {
+	if n.Body != nil {
+		buf := new(bytes.Buffer)
+		if err := n.Body.Execute(buf, subject); err != nil {
+			log.Println(err)
+			return
+		}
+		subject = buf.Bytes()
+	}
 	resp, err := http.Post(n.Post.String(), "application/x-www-form-urlencoded", bytes.NewBuffer(subject))
 	if resp != nil && resp.Body != nil {
 		defer resp.Body.Close()
