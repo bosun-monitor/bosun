@@ -10,6 +10,10 @@ bosunControllers.controller('DashboardCtrl', ['$scope', '$location', function($s
 	$scope.loading = 'Loading';
 	$scope.error = '';
 	$scope.filter = search.filter;
+	if (!$scope.filter) {
+		$scope.filter = readCookie("filter");
+	}
+	$location.search('filter', $scope.filter || null);
 	$scope.refresh($scope.filter).then(() => {
 			$scope.loading = '';
 		}, (err: any) => {
@@ -18,6 +22,7 @@ bosunControllers.controller('DashboardCtrl', ['$scope', '$location', function($s
 		});
 	$scope.keydown = function($event: any) {
 		if ($event.keyCode == 13) {
+			createCookie("filter", $scope.filter || "", 1000);
 			$location.search('filter', $scope.filter || null);
 		}
 	}
