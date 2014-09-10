@@ -115,14 +115,19 @@ func Match(search string, values []string) ([]string, error) {
 
 func (s *Search) Expand(q *opentsdb.Query) error {
 	for k, ov := range q.Tags {
-		v := ov
-		if v == "*" || !strings.Contains(v, "*") || strings.Contains(v, "|") {
-			continue
-		}
-		vs := s.TagValuesByMetricTagKey(q.Metric, k)
-		nvs, err := Match(v, vs)
-		if err != nil {
-			return err
+		var nvs []string
+		for _, v := range strings.Split(ov, "|") {
+			v = strings.TrimSpace(v)
+			if v == "*" || !strings.Contains(v, "*") {
+				nvs = append(nvs, v)
+			} else {
+				vs := s.TagValuesByMetricTagKey(q.Metric, k)
+				ns, err := Match(v, vs)
+				if err != nil {
+					return err
+				}
+				nvs = append(nvs, ns...)
+			}
 		}
 		if len(nvs) == 0 {
 			return fmt.Errorf("expr: no tags matching %s=%s", k, ov)
