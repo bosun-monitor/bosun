@@ -104,7 +104,7 @@ bosunApp.factory('status', ['$http', '$q', function($http: ng.IHttpService, $q: 
 							v.Time = moment(v.Time).utc();
 						});
 						v.last = v.History[v.History.length - 1];
-						if (v.Actions.length > 0) {
+						if (v.Actions && v.Actions.length > 0) {
 							v.LastAction = v.Actions[0];
 						}
 						cache[k] = v;
