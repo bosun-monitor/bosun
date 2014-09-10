@@ -56,9 +56,8 @@ func testSched(t *testing.T, st *schedTest) {
 			log.Fatal(err)
 		}
 	})
-	go func() {
-		log.Fatal(http.ListenAndServe(addr, mux))
-	}()
+	server := NewServer(addr, mux)
+	go server.ListenAndServe()
 	s := new(Schedule)
 	s.Init(c)
 	s.Check()
@@ -96,6 +95,9 @@ func testSched(t *testing.T, st *schedTest) {
 	}
 	for k := range st.state {
 		t.Errorf("unused state: %s", k)
+	}
+	if err := server.Close(); err != nil {
+		t.Fatal(err)
 	}
 }
 
