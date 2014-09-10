@@ -254,6 +254,7 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 	}); err != nil {
 		Error = err
 	}
+
 	ln := 0
 	var headers []string
 	if err := readLine("/proc/net/netstat", func(s string) error {
@@ -272,6 +273,38 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 			}
 		}
 		ln += 1
+		return nil
+	}); err != nil {
+		Error = err
+	}
+	ln = 0
+	metric := "linux.net.stat."
+	if err := readLine("/proc/net/snmp", func(s string) error {
+		ln++
+		if ln%2 != 0 {
+			f := strings.Fields(s)
+			if len(f) < 2 {
+				return fmt.Errorf("Failed to parse header line")
+			}
+			headers = f
+		} else {
+			values := strings.Fields(s)
+			if len(values) != len(headers) {
+				return fmt.Errorf("Mismatched header and value length")
+			}
+			proto := strings.ToLower(strings.TrimSuffix(values[0], ":"))
+			for i, v := range values {
+				if i == 0 {
+					continue
+				}
+				stat := strings.ToLower(headers[i])
+				if strings.HasPrefix(stat, "rto") {
+					Add(&md, metric+proto+"."+stat, v, nil, metadata.Gauge, metadata.None, "")
+					continue
+				}
+				Add(&md, metric+proto+"."+stat, v, nil, metadata.Counter, metadata.None, "")
+			}
+		}
 		return nil
 	}); err != nil {
 		Error = err
