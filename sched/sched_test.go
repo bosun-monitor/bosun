@@ -2,6 +2,7 @@ package sched
 
 import (
 	"encoding/json"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"testing"
@@ -9,6 +10,10 @@ import (
 	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/bosun/conf"
 )
+
+func init() {
+	log.SetOutput(ioutil.Discard)
+}
 
 type schedState struct {
 	key, status string
