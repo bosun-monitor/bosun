@@ -16,15 +16,31 @@ func makeFilter(filter string) (func(*conf.Alert, *State) bool, error) {
 	}
 	fs := make(map[string][]func(a *conf.Alert, s *State) bool)
 	for _, f := range fields {
+		negate := strings.HasPrefix(f, "!")
+		if negate {
+			f = f[1:]
+		}
+		if f == "" {
+			return nil, fmt.Errorf("filter required")
+		}
 		sp := strings.SplitN(f, ":", 2)
 		value := sp[len(sp)-1]
 		key := sp[0]
 		if len(sp) == 1 {
 			key = ""
 		}
+		add := func(fn func(a *conf.Alert, s *State) bool) {
+			fs[key] = append(fs[key], func(a *conf.Alert, s *State) bool {
+				v := fn(a, s)
+				if negate {
+					v = !v
+				}
+				return v
+			})
+		}
 		switch key {
 		case "":
-			fs[key] = append(fs[key], func(a *conf.Alert, s *State) bool {
+			add(func(a *conf.Alert, s *State) bool {
 				ak := s.AlertKey()
 				return strings.Contains(string(ak), value) || strings.Contains(s.Subject, value)
 			})
@@ -38,11 +54,11 @@ func makeFilter(filter string) (func(*conf.Alert, *State) bool, error) {
 			default:
 				return nil, fmt.Errorf("unknown %s value: %s", key, value)
 			}
-			fs[key] = append(fs[key], func(a *conf.Alert, s *State) bool {
+			add(func(a *conf.Alert, s *State) bool {
 				return s.NeedAck != v
 			})
 		case "notify":
-			fs[key] = append(fs[key], func(a *conf.Alert, s *State) bool {
+			add(func(a *conf.Alert, s *State) bool {
 				r := false
 				f := func(m map[string]*conf.Notification) {
 					for k := range m {
@@ -72,7 +88,7 @@ func makeFilter(filter string) (func(*conf.Alert, *State) bool, error) {
 			default:
 				return nil, fmt.Errorf("unknown %s value: %s", key, value)
 			}
-			fs[key] = append(fs[key], func(a *conf.Alert, s *State) bool {
+			add(func(a *conf.Alert, s *State) bool {
 				return s.AbnormalStatus() == v
 			})
 		default:
