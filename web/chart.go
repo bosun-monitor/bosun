@@ -57,6 +57,7 @@ func Graph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 			ar[i] = true
 		}
 	}
+	queries := QFromR(oreq)
 	for i, q := range oreq.Queries {
 		if err := schedule.Search.Expand(q); err != nil {
 			return nil, err
@@ -126,7 +127,7 @@ func Graph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 		Queries []string
 		Series  []*chartSeries
 	}{
-		QFromR(oreq),
+		queries,
 		cs,
 	}, nil
 }
