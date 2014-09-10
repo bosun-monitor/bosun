@@ -1,9 +1,11 @@
 package conf
 
 import (
+	"encoding/json"
 	"fmt"
 	htemplate "html/template"
 	"io/ioutil"
+	"log"
 	"net/mail"
 	"net/url"
 	"os"
@@ -208,6 +210,7 @@ type Notification struct {
 	Name      string
 	Email     []*mail.Address
 	Post, Get *url.URL
+	Body      *ttemplate.Template
 	Print     bool
 	Next      *Notification
 	Timeout   time.Duration
@@ -215,6 +218,7 @@ type Notification struct {
 	next      string
 	email     string
 	post, get string
+	body      string
 }
 
 func (n *Notification) MarshalJSON() ([]byte, error) {
@@ -680,6 +684,18 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 		Vars: make(map[string]string),
 		Name: name,
 	}
+	funcs := ttemplate.FuncMap{
+		"V": func(v string) string {
+			return c.Expand(v, n.Vars, false)
+		},
+		"json": func(v interface{}) string {
+			b, err := json.Marshal(v)
+			if err != nil {
+				log.Println(err)
+			}
+			return string(b)
+		},
+	}
 	c.Notifications[name] = &n
 	for _, p := range c.getPairs(s, n.Vars, sNormal, nil) {
 		c.at(p.node)
@@ -724,6 +740,14 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 				c.error(err)
 			}
 			n.Timeout = d
+		case "body":
+			n.body = v
+			tmpl := ttemplate.New(name).Funcs(funcs)
+			_, err := tmpl.Parse(n.body)
+			if err != nil {
+				c.error(err)
+			}
+			n.Body = tmpl
 		default:
 			c.errorf("unknown key %s", k)
 		}
