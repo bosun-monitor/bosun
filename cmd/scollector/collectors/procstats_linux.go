@@ -254,7 +254,6 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 	}); err != nil {
 		Error = err
 	}
-
 	ln := 0
 	var headers []string
 	if err := readLine("/proc/net/netstat", func(s string) error {
