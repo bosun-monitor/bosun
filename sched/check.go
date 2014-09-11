@@ -33,9 +33,9 @@ func (s *Schedule) Status(ak expr.AlertKey) *State {
 type RunHistory map[expr.AlertKey]*Event
 
 // Check evaluates all critical and warning alert rules.
-func (s *Schedule) Check() {
+func (s *Schedule) Check(start time.Time) {
 	r := make(RunHistory)
-	s.CheckStart = time.Now().UTC()
+	s.CheckStart = start
 	s.cache = opentsdb.NewCache(s.Conf.TsdbHost, s.Conf.ResponseLimit)
 	for _, a := range s.Conf.Alerts {
 		s.CheckAlert(r, a)

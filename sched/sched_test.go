@@ -2,10 +2,12 @@ package sched
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/bosun/conf"
@@ -29,6 +31,7 @@ type schedTest struct {
 func testSched(t *testing.T, st *schedTest) {
 	const addr = "localhost:18070"
 	confs := "tsdbHost = " + addr + "\n" + st.conf
+	start := time.Date(2000, time.January, 1, 12, 0, 0, 0, time.UTC)
 	c, err := conf.New("testconf", confs)
 	if err != nil {
 		t.Error(err)
@@ -44,13 +47,13 @@ func testSched(t *testing.T, st *schedTest) {
 		}
 		var resp opentsdb.ResponseSet
 		for _, rq := range req.Queries {
-			q := st.queries[rq.String()]
+			qs := fmt.Sprintf(`q("%s", "%v", "%v")`, rq, req.Start, req.End)
+			q := st.queries[qs]
 			if q == nil {
-				t.Errorf("unknown query: %s", rq)
+				t.Errorf("unknown query: %s", qs)
 				return
 			}
 			resp = append(resp, q)
-
 		}
 		if err := json.NewEncoder(w).Encode(&resp); err != nil {
 			log.Fatal(err)
@@ -60,7 +63,7 @@ func testSched(t *testing.T, st *schedTest) {
 	go server.ListenAndServe()
 	s := new(Schedule)
 	s.Init(c)
-	s.Check()
+	s.Check(start)
 	groups, err := s.MarshalGroups("")
 	if err != nil {
 		t.Error(err)
@@ -106,7 +109,7 @@ func TestCrit(t *testing.T) {
 			crit = avg(q("avg:m{a=b}", "5m", "")) > 0
 		}`,
 		queries: map[string]*opentsdb.Response{
-			"avg:m{a=b}": {
+			`q("avg:m{a=b}", "2000/01/01-11:55:00", "2000/01/01-12:00:00")`: {
 				Metric: "m",
 				Tags:   opentsdb.TagSet{"a": "b"},
 				DPS:    map[string]opentsdb.Point{"0": 1},
