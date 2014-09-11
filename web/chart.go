@@ -57,11 +57,15 @@ func Graph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 			ar[i] = true
 		}
 	}
-	queries := QFromR(oreq)
+	queries := make([]string, len(oreq.Queries))
+	var start, end string
+	if s, ok := oreq.Start.(string); ok && strings.Contains(s, "-ago") {
+		start = strings.TrimSuffix(s, "-ago")
+	}
+	if s, ok := oreq.End.(string); ok && strings.Contains(s, "-ago") {
+		end = strings.TrimSuffix(s, "-ago")
+	}
 	for i, q := range oreq.Queries {
-		if err := schedule.Search.Expand(q); err != nil {
-			return nil, err
-		}
 		if ar[i] {
 			ms := schedule.GetMetadata(q.Metric, nil)
 			q.Rate = true
@@ -81,6 +85,10 @@ func Graph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 					break
 				}
 			}
+		}
+		queries[i] = fmt.Sprintf(`q("%v", "%v", "%v")`, q, start, end)
+		if err := schedule.Search.Expand(q); err != nil {
+			return nil, err
 		}
 	}
 	var tr opentsdb.ResponseSet
@@ -152,21 +160,6 @@ func autostyle(i int) chart.Style {
 		LineWidth:  1,
 		LineColor:  c,
 	}
-}
-
-func QFromR(req *opentsdb.Request) []string {
-	queries := make([]string, len(req.Queries))
-	var start, end string
-	if s, ok := req.Start.(string); ok && strings.Contains(s, "-ago") {
-		start = strings.TrimSuffix(s, "-ago")
-	}
-	if s, ok := req.End.(string); ok && strings.Contains(s, "-ago") {
-		end = strings.TrimSuffix(s, "-ago")
-	}
-	for i, q := range req.Queries {
-		queries[i] = fmt.Sprintf(`q("%v", "%v", "%v")`, q, start, end)
-	}
-	return queries
 }
 
 func ExprGraph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
