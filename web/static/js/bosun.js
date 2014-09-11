@@ -442,6 +442,23 @@ bosunApp.directive('tsLine', function () {
     };
 });
 
+bosunApp.directive('tsTab', function () {
+    return {
+        link: function (scope, elem, attrs) {
+            var ta = elem[0];
+            elem.keydown(function (evt) {
+                if (evt.keyCode == 9) {
+                    evt.preventDefault();
+                    var v = ta.value;
+                    var start = ta.selectionStart;
+                    ta.value = v.substr(0, start) + "\t" + v.substr(start);
+                    ta.selectionStart = ta.selectionEnd = start + 1;
+                }
+            });
+        }
+    };
+});
+
 bosunApp.directive('tsTableSort', [
     '$timeout', function ($timeout) {
         return {
