@@ -120,3 +120,32 @@ func TestCrit(t *testing.T) {
 		},
 	})
 }
+
+func TestBandDisableUnjoined(t *testing.T) {
+	testSched(t, &schedTest{
+		conf: `alert a {
+			$sum = "sum:m{a=*}"
+			$band = band($sum, "1m", "1h", 1)
+			crit = avg(q($sum, "1m", "")) > avg($band) + dev($band)
+		}`,
+		queries: map[string]*opentsdb.Response{
+			`q("sum:m{a=*}", "2000/01/01-11:59:00", "2000/01/01-12:00:00")`: {
+				Metric: "m",
+				Tags:   opentsdb.TagSet{"a": "b"},
+				DPS:    map[string]opentsdb.Point{"0": 1},
+			},
+			`q("sum:m{a=*}", "9.4672434e+08", "9.467244e+08")`: {
+				Metric: "m",
+				Tags:   opentsdb.TagSet{"a": "c"},
+				DPS:    map[string]opentsdb.Point{"0": 1},
+			},
+		},
+		state: map[schedState]bool{
+			// Do not check that joins from the band func fail with unknown.
+			//schedState{"a{a=b}", "error"}: true,
+
+			// Check that joins to the band func fail with unknown.
+			schedState{"a{a=c}", "error"}: true,
+		},
+	})
+}
