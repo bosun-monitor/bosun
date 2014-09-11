@@ -34,7 +34,7 @@ func (n *Notification) DoPrint(subject []byte) {
 func (n *Notification) DoPost(subject []byte) {
 	if n.Body != nil {
 		buf := new(bytes.Buffer)
-		if err := n.Body.Execute(buf, subject); err != nil {
+		if err := n.Body.Execute(buf, string(subject)); err != nil {
 			log.Println(err)
 			return
 		}
