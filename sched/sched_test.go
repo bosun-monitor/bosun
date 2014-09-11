@@ -61,7 +61,7 @@ func testSched(t *testing.T, st *schedTest) {
 	s := new(Schedule)
 	s.Init(c)
 	s.Check()
-	groups, err := s.MarshalGroups("a")
+	groups, err := s.MarshalGroups("")
 	if err != nil {
 		t.Error(err)
 		return
