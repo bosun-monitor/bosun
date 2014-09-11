@@ -85,7 +85,6 @@ func testSched(t *testing.T, st *schedTest) {
 			return
 		}
 		delete(st.state, ss)
-
 	}
 	for _, v := range groups.Groups.NeedAck {
 		check(v)
