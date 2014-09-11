@@ -412,11 +412,13 @@ func Dev(e *state, T miniprofiler.Timer, series *Results) (*Results, error) {
 
 // dev returns the sample standard deviation of x.
 func dev(dps Series, args ...float64) (d float64) {
+	if len(dps) == 1 {
+		return 0
+	}
 	a := avg(dps)
 	for _, v := range dps {
 		d += math.Pow(float64(v)-a, 2)
 	}
-	// how should we handle len(x) == 1?
 	d /= float64(len(dps) - 1)
 	return math.Sqrt(d)
 }
