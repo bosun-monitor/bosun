@@ -104,6 +104,23 @@ bosunApp.directive('tsLine', () => {
 	};
 });
 
+bosunApp.directive('tsTab', () => {
+	return {
+		link: (scope: any, elem: any, attrs: any) => {
+			var ta = elem[0];
+			elem.keydown(evt => {
+				if (evt.keyCode == 9) {
+					evt.preventDefault();
+					var v = ta.value;
+					var start = ta.selectionStart;
+					ta.value = v.substr(0, start) + "\t" + v.substr(start);
+					ta.selectionStart = ta.selectionEnd = start + 1;
+				}
+			});
+		},
+	};
+});
+
 interface JQuery {
 	tablesorter(v: any): JQuery;
 }
