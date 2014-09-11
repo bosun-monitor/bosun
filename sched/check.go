@@ -98,7 +98,7 @@ func (s *Schedule) RunHistory(r RunHistory) {
 			}
 		}
 	}
-	if checkNotify {
+	if checkNotify && s.nc != nil {
 		s.nc <- true
 	}
 	s.Save()
