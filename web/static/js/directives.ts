@@ -18,7 +18,7 @@ bosunApp.directive('tsComputations', () => {
 				scope.timeParam = "&date=" + encodeURIComponent(m.format("YYYY-MM-DD")) + "&time=" + encodeURIComponent(m.format("HH:mm"));
 			}
 			scope.btoa = (v: any) => {
-				return btoa(v);
+				return encodeURIComponent(btoa(v));
 			};
 		},
 	};
