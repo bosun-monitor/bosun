@@ -77,7 +77,7 @@ func testSched(t *testing.T, st *schedTest) {
 		ss := schedState{string(g.AlertKey), g.Status.String()}
 		v, ok := st.state[ss]
 		if !ok {
-			t.Errorf("unfound state: %s, %s", g.AlertKey, g.Status)
+			t.Errorf("unexpected state: %s, %s", g.AlertKey, g.Status)
 			return
 		}
 		if v != g.Active {
