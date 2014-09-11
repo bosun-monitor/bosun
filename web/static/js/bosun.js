@@ -360,7 +360,7 @@ bosunApp.directive('tsComputations', function () {
                 scope.timeParam = "&date=" + encodeURIComponent(m.format("YYYY-MM-DD")) + "&time=" + encodeURIComponent(m.format("HH:mm"));
             }
             scope.btoa = function (v) {
-                return btoa(v);
+                return encodeURIComponent(btoa(v));
             };
         }
     };
