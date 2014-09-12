@@ -140,12 +140,5 @@ func TestBandDisableUnjoined(t *testing.T) {
 				DPS:    map[string]opentsdb.Point{"0": 1},
 			},
 		},
-		state: map[schedState]bool{
-			// Do not check that joins from the band func fail with unknown.
-			//schedState{"a{a=b}", "error"}: true,
-
-			// Check that joins to the band func fail with unknown.
-			schedState{"a{a=c}", "error"}: true,
-		},
 	})
 }
