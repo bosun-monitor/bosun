@@ -148,3 +148,25 @@ func TestBandDisableUnjoined(t *testing.T) {
 		},
 	})
 }
+
+func TestCount(t *testing.T) {
+	testSched(t, &schedTest{
+		conf: `alert a {
+			crit = count("sum:m{a=*}", "1m", "") != 2
+		}`,
+		queries: map[string]opentsdb.ResponseSet{
+			`q("sum:m{a=*}", "2000/01/01-11:59:00", "2000/01/01-12:00:00")`: {
+				{
+					Metric: "m",
+					Tags:   opentsdb.TagSet{"a": "b"},
+					DPS:    map[string]opentsdb.Point{"0": 1},
+				},
+				{
+					Metric: "m",
+					Tags:   opentsdb.TagSet{"a": "c"},
+					DPS:    map[string]opentsdb.Point{"0": 1},
+				},
+			},
+		},
+	})
+}
