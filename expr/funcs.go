@@ -185,6 +185,7 @@ func lookup(e *state, T miniprofiler.Timer, lookup, key string) (results *Result
 func Band(e *state, T miniprofiler.Timer, query, duration, period string, num float64) (r *Results, err error) {
 	r = new(Results)
 	r.IgnoreOtherUnjoined = true
+	r.IgnoreUnjoined = true
 	T.Step("band", func(T miniprofiler.Timer) {
 		var d, p opentsdb.Duration
 		d, err = opentsdb.ParseDuration(duration)
