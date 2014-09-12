@@ -30,6 +30,7 @@ var CPU_FIELDS = []string{
 	"iowait",
 	"irq",
 	"softirq",
+	"steal",
 	"guest",
 	"guest_nice",
 }
@@ -120,7 +121,7 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 				Add(&md, "linux.cpu"+metric_percpu, value, tags, metadata.Unknown, metadata.None, "")
 			}
 			if metric_percpu == "" {
-				if len(fields) != len(CPU_FIELDS) {
+				if len(fields) < 3 {
 					return nil
 				}
 				user, err := strconv.ParseFloat(fields[0], 64)
