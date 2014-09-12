@@ -60,7 +60,7 @@ bosunControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route
 			if (!data.Series) {
 				return;
 			}
-			data.Series[0].name = 'Percent Used';
+			data.Series[0].Name = 'Percent Used';
 			$scope.cpu = data.Series;
 		});
 	var mem_r = new Request();
@@ -78,8 +78,8 @@ bosunControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route
 			if (!data.Series) {
 				return;
 			}
-			data.Series[1].name = "Used";
-			$scope.mem_total = Math.max.apply(null, data.Series[0].data.map((d: any) => { return d.y; }));
+			data.Series[1].Name = "Used";
+			$scope.mem_total = Math.max.apply(null, data.Series[0].Data.map((d: any) => { return d[1]; }));
 			$scope.mem = [data.Series[1]];
 		});
 	$http.get('/api/tagv/iface/os.net.bytes?host=' + $scope.host)
@@ -87,8 +87,9 @@ bosunControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route
 			$scope.interfaces = data;
 			angular.forEach($scope.interfaces, function(i, idx) {
 				$scope.idata[idx] = {
-					name: i,
+					Name: i,
 				};
+
 				var net_bytes_r = new Request();
 				net_bytes_r.start = $scope.time;
 				net_bytes_r.queries = [
@@ -105,15 +106,15 @@ bosunControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route
 							return;
 						}
 						angular.forEach(data.Series, function(d) {
-							d.data = d.data.map((dp: any) => { return { x: dp.x, y: dp.y * 8 } });
-							if (d.name.indexOf("direction=out") != -1) {
-								d.data = d.data.map((dp: any) => { return { x: dp.x, y: dp.y * -1 } });
-								d.name = "out";
+							d.Data = d.Data.map((dp: any) => { return [dp[0], dp[1]*8]; });
+							if (d.Name.indexOf("direction=out") != -1) {
+								d.Data = d.Data.map((dp: any) => { return [dp[0],dp[1]* -1]; });
+								d.Name = "out";
 							} else {
-								d.name = "in";
+								d.Name = "in";
 							}
 						});
-						$scope.idata[idx].data = data.Series;
+						$scope.idata[idx].Data = data.Series;
 					});
 			});
 		});
@@ -134,21 +135,21 @@ bosunControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route
 					tags: { host: $scope.host, disk: i },
 				}));
 				$scope.fsdata[idx] = {
-					name: i,
+					Name: i,
 				};
 				$http.get('/api/graph?' + 'json=' + encodeURIComponent(JSON.stringify(fs_r)) + autods)
 					.success((data) => {
 						if (!data.Series) {
 							return;
 						}
-						data.Series[1].name = 'Used';
-						var total = Math.max.apply(null, data.Series[0].data.map((d: any) => { return d.y; }));
-						var c_val = data.Series[1].data.slice(-1)[0].y;
+						data.Series[1].Name = 'Used';
+						var total = Math.max.apply(null, data.Series[0].Data.map((d: any) => { return d[1]; }));
+						var c_val = data.Series[1].Data.slice(-1)[0][1];
 						var percent_used = c_val / total * 100;
 						$scope.fsdata[idx].total = total;
 						$scope.fsdata[idx].c_val = c_val;
 						$scope.fsdata[idx].percent_used = percent_used;
-						$scope.fsdata[idx].data = [data.Series[1]];
+						$scope.fsdata[idx].Data = [data.Series[1]];
 					});
 			});
 		});
