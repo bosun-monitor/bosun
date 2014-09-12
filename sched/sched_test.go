@@ -23,7 +23,7 @@ type schedState struct {
 
 type schedTest struct {
 	conf    string
-	queries map[string]*opentsdb.Response
+	queries map[string]opentsdb.ResponseSet
 	// state -> active
 	state map[schedState]bool
 }
@@ -53,7 +53,7 @@ func testSched(t *testing.T, st *schedTest) {
 				t.Errorf("unknown query: %s", qs)
 				return
 			}
-			resp = append(resp, q)
+			resp = append(resp, q...)
 		}
 		if err := json.NewEncoder(w).Encode(&resp); err != nil {
 			log.Fatal(err)
@@ -108,11 +108,13 @@ func TestCrit(t *testing.T) {
 		conf: `alert a {
 			crit = avg(q("avg:m{a=b}", "5m", "")) > 0
 		}`,
-		queries: map[string]*opentsdb.Response{
+		queries: map[string]opentsdb.ResponseSet{
 			`q("avg:m{a=b}", "2000/01/01-11:55:00", "2000/01/01-12:00:00")`: {
-				Metric: "m",
-				Tags:   opentsdb.TagSet{"a": "b"},
-				DPS:    map[string]opentsdb.Point{"0": 1},
+				{
+					Metric: "m",
+					Tags:   opentsdb.TagSet{"a": "b"},
+					DPS:    map[string]opentsdb.Point{"0": 1},
+				},
 			},
 		},
 		state: map[schedState]bool{
@@ -128,16 +130,20 @@ func TestBandDisableUnjoined(t *testing.T) {
 			$band = band($sum, "1m", "1h", 1)
 			crit = avg(q($sum, "1m", "")) > avg($band) + dev($band)
 		}`,
-		queries: map[string]*opentsdb.Response{
+		queries: map[string]opentsdb.ResponseSet{
 			`q("sum:m{a=*}", "2000/01/01-11:59:00", "2000/01/01-12:00:00")`: {
-				Metric: "m",
-				Tags:   opentsdb.TagSet{"a": "b"},
-				DPS:    map[string]opentsdb.Point{"0": 1},
+				{
+					Metric: "m",
+					Tags:   opentsdb.TagSet{"a": "b"},
+					DPS:    map[string]opentsdb.Point{"0": 1},
+				},
 			},
 			`q("sum:m{a=*}", "9.4672434e+08", "9.467244e+08")`: {
-				Metric: "m",
-				Tags:   opentsdb.TagSet{"a": "c"},
-				DPS:    map[string]opentsdb.Point{"0": 1},
+				{
+					Metric: "m",
+					Tags:   opentsdb.TagSet{"a": "c"},
+					DPS:    map[string]opentsdb.Point{"0": 1},
+				},
 			},
 		},
 	})
