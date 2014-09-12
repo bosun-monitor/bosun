@@ -297,12 +297,13 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 				if i == 0 {
 					continue
 				}
+				var stype metadata.RateType = metadata.Counter
 				stat := strings.ToLower(headers[i])
 				if strings.HasPrefix(stat, "rto") {
-					Add(&md, metric+proto+"."+stat, v, nil, metadata.Gauge, metadata.None, "")
+					stype = metadata.Gauge
 					continue
 				}
-				Add(&md, metric+proto+"."+stat, v, nil, metadata.Counter, metadata.None, "")
+				Add(&md, metric+proto+"."+stat, v, nil, stype, metadata.None, "")
 			}
 		}
 		return nil
