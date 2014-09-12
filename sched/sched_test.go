@@ -6,6 +6,8 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"testing"
 	"time"
 
@@ -29,18 +31,7 @@ type schedTest struct {
 }
 
 func testSched(t *testing.T, st *schedTest) {
-	const addr = "localhost:18070"
-	confs := "tsdbHost = " + addr + "\n" + st.conf
-	start := time.Date(2000, time.January, 1, 12, 0, 0, 0, time.UTC)
-	c, err := conf.New("testconf", confs)
-	if err != nil {
-		t.Error(err)
-		t.Logf("conf:\n%s", confs)
-		return
-	}
-	c.StateFile = ""
-	mux := http.NewServeMux()
-	mux.HandleFunc("/api/query", func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var req opentsdb.Request
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			log.Fatal(err)
@@ -58,9 +49,22 @@ func testSched(t *testing.T, st *schedTest) {
 		if err := json.NewEncoder(w).Encode(&resp); err != nil {
 			log.Fatal(err)
 		}
-	})
-	server := NewServer(addr, mux)
-	go server.ListenAndServe()
+	}))
+	defer ts.Close()
+	u, err := url.Parse(ts.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	confs := "tsdbHost = " + u.Host + "\n" + st.conf
+	start := time.Date(2000, time.January, 1, 12, 0, 0, 0, time.UTC)
+	c, err := conf.New("testconf", confs)
+	if err != nil {
+		t.Error(err)
+		t.Logf("conf:\n%s", confs)
+		return
+	}
+	c.StateFile = ""
+	time.Sleep(time.Millisecond * 250)
 	s := new(Schedule)
 	s.Init(c)
 	s.Check(start)
@@ -97,9 +101,6 @@ func testSched(t *testing.T, st *schedTest) {
 	}
 	for k := range st.state {
 		t.Errorf("unused state: %s", k)
-	}
-	if err := server.Close(); err != nil {
-		t.Fatal(err)
 	}
 }
 
