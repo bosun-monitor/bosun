@@ -30,20 +30,21 @@ const (
 )
 
 var (
-	flagFilter    = flag.String("f", "", "Filters collectors matching this term. Works with all other arguments.")
-	flagList      = flag.Bool("l", false, "List")
-	flagPrint     = flag.Bool("p", false, "Print to screen instead of sending to a host")
-	flagHost      = flag.String("h", "bosun", `OpenTSDB host. Ex: "tsdb.example.com". Can optionally specify port: "tsdb.example.com:4000", but will default to 4242 otherwise`)
-	flagColDir    = flag.String("c", "", `External collectors directory.`)
-	flagBatchSize = flag.Int("b", 0, "OpenTSDB batch size. Used for debugging bad data.")
-	flagSNMP      = flag.String("s", "", "SNMP host to poll of the format: \"community@host[,community@host...]\".")
-	flagICMP      = flag.String("i", "", "ICMP host to ping of the format: \"host[,host...]\".")
-	flagVsphere   = flag.String("v", "", `vSphere host to poll of the format: "user:password@host[,user:password@host...]".`)
-	flagFake      = flag.Int("fake", 0, "Generates X fake data points on the test.fake metric per second.")
-	flagDebug     = flag.Bool("d", false, "Enables debug output.")
-	flagJSON      = flag.Bool("j", false, "With -p enabled, prints JSON.")
-	flagFullHost  = flag.Bool("u", false, `Enables full hostnames: doesn't truncate to first ".".`)
-	flagVersion   = flag.Bool("version", false, `Prints the version and exits.`)
+	flagFilter          = flag.String("f", "", "Filters collectors matching this term. Works with all other arguments.")
+	flagList            = flag.Bool("l", false, "List")
+	flagPrint           = flag.Bool("p", false, "Print to screen instead of sending to a host")
+	flagHost            = flag.String("h", "bosun", `bosun or OpenTSDB host. Ex: "http://tsdb.example.com:4242".`)
+	flagColDir          = flag.String("c", "", `External collectors directory.`)
+	flagBatchSize       = flag.Int("b", 0, "OpenTSDB batch size. Used for debugging bad data.")
+	flagSNMP            = flag.String("s", "", "SNMP host to poll of the format: \"community@host[,community@host...]\".")
+	flagICMP            = flag.String("i", "", "ICMP host to ping of the format: \"host[,host...]\".")
+	flagVsphere         = flag.String("v", "", `vSphere host to poll of the format: "user:password@host[,user:password@host...]".`)
+	flagFake            = flag.Int("fake", 0, "Generates X fake data points on the test.fake metric per second.")
+	flagDebug           = flag.Bool("d", false, "Enables debug output.")
+	flagJSON            = flag.Bool("j", false, "With -p enabled, prints JSON.")
+	flagFullHost        = flag.Bool("u", false, `Enables full hostnames: doesn't truncate to first ".".`)
+	flagDisableMetadata = flag.Bool("m", false, "Disable sending of metadata.")
+	flagVersion         = flag.Bool("version", false, `Prints the version and exits.`)
 
 	mains []func()
 )
@@ -158,16 +159,18 @@ func main() {
 	for _, col := range c {
 		col.Init()
 	}
-	u := parseHost()
+	u, err := parseHost()
 	if *flagList {
 		list(c)
 		return
-	} else if *flagHost != "" {
-		if u == nil {
-			slog.Fatal("invalid host:", *flagHost)
+	} else if err != nil {
+		slog.Fatal("invalid host:", *flagHost)
+	}
+	if !*flagDisableMetadata {
+		if err := metadata.Init(u, *flagDebug); err != nil {
+			slog.Fatal(err)
 		}
 	}
-	metadata.Init(u.Host, *flagDebug)
 	if *flagPrint {
 		collectors.DefaultFreq = time.Second * 3
 		slog.Infoln("Set default frequency to", collectors.DefaultFreq)
@@ -175,7 +178,7 @@ func main() {
 	cdp := collectors.Run(c)
 	if u != nil && !*flagPrint {
 		slog.Infoln("OpenTSDB host:", u)
-		if err := collect.InitChan(u.Host, "scollector", cdp); err != nil {
+		if err := collect.InitChan(u, "scollector", cdp); err != nil {
 			slog.Fatal(err)
 		}
 		if VersionDate > 0 {
@@ -235,19 +238,14 @@ func list(cs []collectors.Collector) {
 	}
 }
 
-func parseHost() *url.URL {
+func parseHost() (*url.URL, error) {
 	if *flagHost == "" {
-		return nil
+		return nil, fmt.Errorf("empty host")
 	}
-	u := url.URL{
-		Scheme: "http",
-		Path:   "/api/put",
+	if !strings.Contains(*flagHost, "//") {
+		*flagHost = "http://" + *flagHost
 	}
-	if !strings.Contains(*flagHost, ":") {
-		*flagHost += ":4242"
-	}
-	u.Host = *flagHost
-	return &u
+	return url.Parse(*flagHost)
 }
 
 func printPut(c chan *opentsdb.DataPoint) {
