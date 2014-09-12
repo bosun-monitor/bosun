@@ -109,7 +109,7 @@ bosunApp.directive('tsTab', () => {
 		link: (scope: any, elem: any, attrs: any) => {
 			var ta = elem[0];
 			elem.keydown(evt => {
-				if (evt.keyCode == 9) {
+				if (evt.keyCode == 9 && !evt.ctrlKey) {
 					evt.preventDefault();
 					var v = ta.value;
 					var start = ta.selectionStart;
