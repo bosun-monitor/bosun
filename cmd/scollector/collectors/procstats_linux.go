@@ -277,5 +277,36 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 	}); err != nil {
 		Error = err
 	}
+	ln = 0
+	if err := readLine("/proc/net/snmp", func(s string) error {
+		ln++
+		if ln%2 != 0 {
+			f := strings.Fields(s)
+			if len(f) < 2 {
+				return fmt.Errorf("Failed to parse header line")
+			}
+			headers = f
+		} else {
+			values := strings.Fields(s)
+			if len(values) != len(headers) {
+				return fmt.Errorf("Mismatched header and value length")
+			}
+			proto := strings.ToLower(strings.TrimSuffix(values[0], ":"))
+			for i, v := range values {
+				if i == 0 {
+					continue
+				}
+				var stype metadata.RateType = metadata.Counter
+				stat := strings.ToLower(headers[i])
+				if strings.HasPrefix(stat, "rto") {
+					stype = metadata.Gauge
+				}
+				Add(&md, "linux.net.stat."+proto+"."+stat, v, nil, stype, metadata.None, "")
+			}
+		}
+		return nil
+	}); err != nil {
+		Error = err
+	}
 	return md, Error
 }
