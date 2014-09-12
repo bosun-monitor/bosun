@@ -278,7 +278,6 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 		Error = err
 	}
 	ln = 0
-	metric := "linux.net.stat."
 	if err := readLine("/proc/net/snmp", func(s string) error {
 		ln++
 		if ln%2 != 0 {
@@ -301,9 +300,8 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 				stat := strings.ToLower(headers[i])
 				if strings.HasPrefix(stat, "rto") {
 					stype = metadata.Gauge
-					continue
 				}
-				Add(&md, metric+proto+"."+stat, v, nil, stype, metadata.None, "")
+				Add(&md, "linux.net.stat."+proto+"."+stat, v, nil, stype, metadata.None, "")
 			}
 		}
 		return nil
