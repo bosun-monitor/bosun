@@ -3,51 +3,48 @@ package web
 import (
 	"bytes"
 	"compress/gzip"
-	"fmt"
-	"log"
 	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"sort"
 	"testing"
+	"time"
 
 	"github.com/StackExchange/bosun/conf"
 )
 
 func TestRelay(t *testing.T) {
 	schedule.Init(new(conf.Conf))
-	relayAddr := ":52366"
-	addr := ":52367"
-	httpAddr := fmt.Sprintf("http://%s/api/put", addr)
-	http.HandleFunc("/", Relay(addr, nil))
-	go func() {
-		err := http.ListenAndServe(addr, nil)
-		log.Fatal(err)
-	}()
-	relayMux := http.NewServeMux()
-	relayMux.HandleFunc("/", relayHandle)
-	go func() {
-		err := http.ListenAndServe(relayAddr, relayMux)
-		log.Fatal(err)
-	}()
+	rs := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(204)
+	}))
+	defer rs.Close()
+	rurl, err := url.Parse(rs.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ts := httptest.NewServer(Relay(rurl))
+	defer ts.Close()
 
 	body := []byte(`[{
 		"timestamp": 1,
-		"metric": "test.metric",
+		"metric": "no-gzip-works",
 		"value": 123.45,
 		"tags": {
-			"host": "relay-test-host",
+			"host": "host.no.gzip",
 			"other": "something"
 		}
 	}]`)
-	if _, err := http.Post(httpAddr, "application/json", bytes.NewBuffer(body)); err != nil {
+	if _, err := http.Post(ts.URL, "application/json", bytes.NewBuffer(body)); err != nil {
 		t.Fatal(err)
 	}
 
 	bodygzip := []byte(`[{
 		"timestamp": 1,
-		"metric": "gzip.test",
+		"metric": "gzip-works",
 		"value": "345",
 		"tags": {
-			"host": "host-gzip-test",
+			"host": "host.gzip",
 			"gzipped": "yup"
 		}
 	}]`)
@@ -55,26 +52,23 @@ func TestRelay(t *testing.T) {
 	gw := gzip.NewWriter(buf)
 	gw.Write(bodygzip)
 	gw.Flush()
-	if _, err := http.Post(httpAddr, "application/json", bytes.NewReader(buf.Bytes())); err != nil {
+	if _, err := http.Post(ts.URL, "application/json", bytes.NewReader(buf.Bytes())); err != nil {
 		t.Fatal(err)
 	}
+	time.Sleep(time.Second)
 
 	m := schedule.Search.UniqueMetrics()
 	sort.Strings(m)
-	if len(m) != 2 || m[0] != "gzip.test" || m[1] != "test.metric" {
+	if len(m) != 2 || m[0] != "gzip-works" || m[1] != "no-gzip-works" {
 		t.Errorf("bad um: %v", m)
 	}
-	m = schedule.Search.TagValuesByMetricTagKey("gzip.test", "gzipped")
+	m = schedule.Search.TagValuesByMetricTagKey("gzip-works", "gzipped")
 	if len(m) != 1 || m[0] != "yup" {
 		t.Errorf("bad tvbmtk: %v", m)
 	}
-	m = schedule.Search.TagKeysByMetric("test.metric")
+	m = schedule.Search.TagKeysByMetric("no-gzip-works")
 	sort.Strings(m)
 	if len(m) != 2 || m[0] != "host" || m[1] != "other" {
 		t.Errorf("bad tkbm: %v", m)
 	}
-}
-
-func relayHandle(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(204)
 }
