@@ -115,7 +115,7 @@ type passthru struct {
 
 func (p *passthru) Read(b []byte) (int, error) {
 	n, err := p.ReadCloser.Read(b)
-	p.buf.Write(b)
+	p.buf.Write(b[:n])
 	return n, err
 }
 
