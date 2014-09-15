@@ -29,6 +29,7 @@ type Conf struct {
 	WebDir          string        // Static content web directory: web
 	TsdbHost        string        // OpenTSDB relay and query destination: ny-devtsdb04:4242
 	HttpListen      string        // Web server listen address: :80
+	RelayListen     string        // OpenTSDB relay listen address: :4242
 	SmtpHost        string        // SMTP address: ny-mail:25
 	Ping            bool
 	EmailFrom       string
@@ -293,6 +294,8 @@ func (c *Conf) loadGlobal(p *parse.PairNode) {
 		c.TsdbHost = v
 	case "httpListen":
 		c.HttpListen = v
+	case "relayListen":
+		c.RelayListen = v
 	case "webDir":
 		c.WebDir = v
 	case "smtpHost":
