@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	_ "net/http/pprof"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -36,11 +37,15 @@ func main() {
 		log.Println("Valid Config")
 		os.Exit(0)
 	}
-	if err := collect.Init(c.RelayListen, "bosun"); err != nil {
+	if err := collect.Init(c.HttpListen, "bosun"); err != nil {
 		log.Fatal(err)
 	}
 	sched.Load(c)
-	go func() { log.Fatal(web.Listen(c.HttpListen, c.WebDir, c.TsdbHost, c.RelayListen)) }()
+	tsdbHost := &url.URL{
+		Scheme: "http",
+		Host:   c.TsdbHost,
+	}
+	go func() { log.Fatal(web.Listen(c.HttpListen, c.WebDir, tsdbHost)) }()
 	go func() { log.Fatal(sched.Run()) }()
 	if *flagWatch {
 		watch(".", "*.go", quit)
