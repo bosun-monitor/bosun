@@ -6,9 +6,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/http/httputil"
 	"net/url"
 	"path/filepath"
 	"strconv"
@@ -38,15 +40,14 @@ func init() {
 	miniprofiler.StartHidden = true
 }
 
-func Listen(addr, dir, host, relayListen string) error {
+func Listen(listenAddr, webDirectory string, tsdbHost *url.URL) error {
 	var err error
 	templates, err = template.New("").ParseFiles(
-		dir + "/templates/index.html",
+		webDirectory + "/templates/index.html",
 	)
 	if err != nil {
 		log.Fatal(err)
 	}
-	RelayHTTP(relayListen, host, JSON(PutMetadata))
 	router.Handle("/api/action", JSON(Action))
 	router.Handle("/api/alerts", JSON(Alerts))
 	router.Handle("/api/alerts/details", JSON(AlertDetails))
@@ -69,25 +70,18 @@ func Listen(addr, dir, host, relayListen string) error {
 	router.Handle("/api/tagv/{tagk}", JSON(TagValuesByTagKey))
 	router.Handle("/api/tagv/{tagk}/{metric}", JSON(TagValuesByMetricTagKey))
 	router.Handle("/api/templates", JSON(Templates))
-	router.HandleFunc("/api/put", Relay(host, JSON(PutMetadata)))
+	router.Handle("/api/put", Relay(tsdbHost))
 	http.Handle("/", miniprofiler.NewHandler(Index))
 	http.Handle("/api/", router)
-	fs := http.FileServer(http.Dir(dir))
+	fs := http.FileServer(http.Dir(webDirectory))
 	http.Handle("/partials/", fs)
 	http.Handle("/static/", fs)
-	static := http.FileServer(http.Dir(filepath.Join(dir, "static")))
+	static := http.FileServer(http.Dir(filepath.Join(webDirectory, "static")))
 	http.Handle("/favicon.ico", static)
-	log.Println("bosun web listening on:", addr)
-	log.Println("bosun web directory:", dir)
-	return http.ListenAndServe(addr, nil)
-}
-
-func RelayHTTP(addr, dest string, metaHandler http.Handler) {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", Relay(dest, metaHandler))
-	log.Println("OpenTSDB relay listening on:", addr)
-	log.Println("OpenTSDB destination:", dest)
-	go func() { log.Fatal(http.ListenAndServe(addr, mux)) }()
+	log.Println("bosun web listening on:", listenAddr)
+	log.Println("bosun web directory:", webDirectory)
+	log.Println("tsdb host:", tsdbHost)
+	return http.ListenAndServe(listenAddr, nil)
 }
 
 var client *http.Client = &http.Client{
@@ -110,76 +104,66 @@ func (t *timeoutTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 	return t.Transport.RoundTrip(r)
 }
 
-func Relay(dest string, metaHandler http.Handler) func(http.ResponseWriter, *http.Request) {
+type relayProxy struct {
+	*httputil.ReverseProxy
+}
+
+type passthru struct {
+	io.ReadCloser
+	buf bytes.Buffer
+}
+
+func (p *passthru) Read(b []byte) (int, error) {
+	n, err := p.ReadCloser.Read(b)
+	p.buf.Write(b)
+	return n, err
+}
+
+type relayWriter struct {
+	http.ResponseWriter
+	code int
+}
+
+func (rw *relayWriter) WriteHeader(code int) {
+	rw.code = code
+	rw.ResponseWriter.WriteHeader(code)
+}
+
+func (rp *relayProxy) ServeHTTP(responseWriter http.ResponseWriter, r *http.Request) {
 	clean := func(s string) string {
 		return opentsdb.MustReplace(s, "_")
 	}
 
-	return func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/api/metadata/put" {
-			metaHandler.ServeHTTP(w, r)
-			return
-		}
-		orig, _ := ioutil.ReadAll(r.Body)
-		if r.URL.Path == "/api/put" {
-			var body []byte
-			if r, err := gzip.NewReader(bytes.NewReader(orig)); err == nil {
-				body, _ = ioutil.ReadAll(r)
-				r.Close()
-			} else {
-				body = orig
-			}
-			var dp opentsdb.DataPoint
-			var mdp opentsdb.MultiDataPoint
-			if err := json.Unmarshal(body, &mdp); err == nil {
-			} else if err = json.Unmarshal(body, &dp); err == nil {
-				mdp = opentsdb.MultiDataPoint{&dp}
-			}
-			if len(mdp) > 0 {
-				ra := strings.Split(r.RemoteAddr, ":")[0]
-				tags := opentsdb.TagSet{"remote": clean(ra)}
-				collect.Add("search.puts_relayed", tags, 1)
-				collect.Add("search.datapoints_relayed", tags, int64(len(mdp)))
-				schedule.Search.Index(mdp)
-			}
-		}
-		durl := url.URL{
-			Scheme: "http",
-			Host:   dest,
-		}
-		durl.Path = r.URL.Path
-		durl.RawQuery = r.URL.RawQuery
-		durl.Fragment = r.URL.Fragment
-		req, err := http.NewRequest(r.Method, durl.String(), bytes.NewReader(orig))
-		if err != nil {
-			log.Println("relay NewRequest err:", err)
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(err.Error()))
-			return
-		}
-		req.Header = r.Header
-		req.TransferEncoding = r.TransferEncoding
-		req.ContentLength = r.ContentLength
-		resp, err := client.Do(req)
-		tags := opentsdb.TagSet{"path": clean(r.URL.Path), "remote": clean(strings.Split(r.RemoteAddr, ":")[0])}
-		var do_err int64
-		defer func() {
-			collect.Add("relay.do_err", tags, do_err)
-		}()
-		if err != nil {
-			do_err = 1
-			log.Println("relay Do err:", err)
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(err.Error()))
-			return
-		}
-		b, _ := ioutil.ReadAll(resp.Body)
-		resp.Body.Close()
-		tags["status"] = strconv.Itoa(resp.StatusCode)
-		collect.Add("relay.response", tags, 1)
-		w.WriteHeader(resp.StatusCode)
-		w.Write(b)
+	reader := &passthru{ReadCloser: r.Body}
+	r.Body = reader
+	w := &relayWriter{ResponseWriter: responseWriter}
+	rp.ReverseProxy.ServeHTTP(w, r)
+
+	body := reader.buf.Bytes()
+	if r, err := gzip.NewReader(bytes.NewReader(body)); err == nil {
+		body, _ = ioutil.ReadAll(r)
+		r.Close()
 	}
+	var dp opentsdb.DataPoint
+	var mdp opentsdb.MultiDataPoint
+	if err := json.Unmarshal(body, &mdp); err == nil {
+	} else if err = json.Unmarshal(body, &dp); err == nil {
+		mdp = opentsdb.MultiDataPoint{&dp}
+	}
+	if len(mdp) > 0 {
+		ra := strings.Split(r.RemoteAddr, ":")[0]
+		tags := opentsdb.TagSet{"remote": clean(ra)}
+		collect.Add("search.puts_relayed", tags, 1)
+		collect.Add("search.datapoints_relayed", tags, int64(len(mdp)))
+		schedule.Search.Index(mdp)
+	}
+	tags := opentsdb.TagSet{"path": clean(r.URL.Path), "remote": clean(strings.Split(r.RemoteAddr, ":")[0])}
+	tags["status"] = strconv.Itoa(w.code)
+	collect.Add("relay.response", tags, 1)
+}
+
+func Relay(dest *url.URL) http.Handler {
+	return &relayProxy{ReverseProxy: httputil.NewSingleHostReverseProxy(dest)}
 }
 
 func Index(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
