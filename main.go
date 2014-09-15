@@ -4,6 +4,8 @@ import (
 	"flag"
 	"io"
 	"log"
+	"net/http"
+	"net/http/httputil"
 	_ "net/http/pprof"
 	"net/url"
 	"os"
@@ -11,6 +13,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/collect"
@@ -44,6 +47,24 @@ func main() {
 	tsdbHost := &url.URL{
 		Scheme: "http",
 		Host:   c.TsdbHost,
+	}
+	if c.RelayListen != "" {
+		go func() {
+			mux := http.NewServeMux()
+			h := c.HttpListen
+			if strings.HasPrefix(h, ":") {
+				h = "localhost" + h
+			}
+			mux.Handle("/api/", httputil.NewSingleHostReverseProxy(&url.URL{
+				Scheme: "http",
+				Host:   h,
+			}))
+			s := &http.Server{
+				Addr:    c.RelayListen,
+				Handler: mux,
+			}
+			log.Fatal(s.ListenAndServe())
+		}()
 	}
 	go func() { log.Fatal(web.Listen(c.HttpListen, c.WebDir, tsdbHost)) }()
 	go func() { log.Fatal(sched.Run()) }()
