@@ -4,6 +4,7 @@
 /// <reference path="bootstrap.d.ts" />
 /// <reference path="moment.d.ts" />
 /// <reference path="d3.d.ts" />
+/// <reference path="underscore.d.ts" />
 var bosunApp = angular.module('bosunApp', [
     'ngRoute',
     'bosunControllers',
@@ -732,7 +733,7 @@ bosunApp.directive('tsGraph', [
                     yaxisZero = !yaxisZero;
                     draw();
                 }
-                function drawLegend() {
+                var drawLegend = _.throttle(function () {
                     var names = legend.selectAll('.series').data(scope.data, function (d) {
                         return d.Name;
                     });
@@ -789,7 +790,7 @@ bosunApp.directive('tsGraph', [
                         }
                         brushText.text(s);
                     }
-                }
+                }, 50);
                 scope.$watch('data', update);
                 var w = angular.element($window);
                 scope.$watch(function () {

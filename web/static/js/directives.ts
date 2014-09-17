@@ -429,7 +429,7 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWi
 				yaxisZero = !yaxisZero;
 				draw();
 			}
-			function drawLegend() {
+			var drawLegend = _.throttle(() => {
 				var names = legend.selectAll('.series')
 					.data(scope.data, (d) => { return d.Name; });
 				names.enter()
@@ -506,7 +506,7 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWi
 					}
 					brushText.text(s);
 				}
-			}
+			}, 50);
 			scope.$watch('data', update);
 			var w = angular.element($window);
 			scope.$watch(() => {
