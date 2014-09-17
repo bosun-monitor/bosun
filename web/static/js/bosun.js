@@ -344,7 +344,12 @@ bosunControllers.controller('DashboardCtrl', [
     }]);
 bosunApp.directive('tsResults', function () {
     return {
-        templateUrl: '/partials/results.html'
+        templateUrl: '/partials/results.html',
+        link: function (scope, elem, attrs) {
+            scope.isSeries = function (v) {
+                return typeof (v) === 'object';
+            };
+        }
     };
 });
 

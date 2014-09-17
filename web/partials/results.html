@@ -36,7 +36,8 @@
 						}
 					</td>
 					<td>
-						<pre ng-bind="json(r.Value)"></pre>
+						<button class="btn btn-default btn-xs" ng-hide="show || !isSeries(r.Value)" ng-click="show = true">show</button>
+						<pre ng-if="show || !isSeries(r.Value)" ng-bind="json(r.Value)"></pre>
 					</td>
 					<td ts-computations="r.Computations"></td>
 				</tr>
