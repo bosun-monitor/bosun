@@ -257,7 +257,7 @@ function eraseCookie(name) {
     createCookie(name, "", -1);
 }
 
-//
+// from: http://stackoverflow.com/a/15267754/864236
 bosunApp.filter('reverse', function () {
     return function (items) {
         return items.slice().reverse();
