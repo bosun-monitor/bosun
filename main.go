@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/http/httptest"
 	"net/http/httputil"
 	_ "net/http/pprof"
 	"net/url"
@@ -24,9 +25,10 @@ import (
 )
 
 var (
-	flagConf  = flag.String("c", "dev.conf", "config file location")
-	flagTest  = flag.Bool("t", false, "test for valid config; exits with 0 on success, else 1")
-	flagWatch = flag.Bool("w", false, "watch .go files below current directory and exit; also build typescript files on change")
+	flagConf     = flag.String("c", "dev.conf", "config file location")
+	flagTest     = flag.Bool("t", false, "test for valid config; exits with 0 on success, else 1")
+	flagWatch    = flag.Bool("w", false, "watch .go files below current directory and exit; also build typescript files on change")
+	flagReadonly = flag.Bool("r", false, "readonly-mode: don't write or relay any OpenTSDB metrics")
 )
 
 func main() {
@@ -43,10 +45,6 @@ func main() {
 		log.Fatal(err)
 	}
 	sched.Load(c)
-	tsdbHost := &url.URL{
-		Scheme: "http",
-		Host:   c.TsdbHost,
-	}
 	if c.RelayListen != "" {
 		go func() {
 			mux := http.NewServeMux()
@@ -64,6 +62,23 @@ func main() {
 			}
 			log.Fatal(s.ListenAndServe())
 		}()
+	}
+	tsdbHost := &url.URL{
+		Scheme: "http",
+		Host:   c.TsdbHost,
+	}
+	if *flagReadonly {
+		rp := httputil.NewSingleHostReverseProxy(tsdbHost)
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path == "/api/put" {
+				w.WriteHeader(204)
+				return
+			}
+			rp.ServeHTTP(w, r)
+		}))
+		log.Println("readonly relay at", ts.URL, "to", tsdbHost)
+		tsdbHost, _ = url.Parse(ts.URL)
+		c.TsdbHost = tsdbHost.Host
 	}
 	go func() { log.Fatal(web.Listen(c.HttpListen, c.WebDir, tsdbHost)) }()
 	go func() { log.Fatal(sched.Run()) }()
