@@ -258,6 +258,7 @@ function eraseCookie(name) {
 bosunControllers.controller('ActionCtrl', [
     '$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
         var search = $location.search();
+        $scope.user = readCookie("action-user");
         $scope.type = search.type;
         if (!angular.isArray(search.key)) {
             $scope.keys = [search.key];
@@ -271,6 +272,7 @@ bosunControllers.controller('ActionCtrl', [
                 Message: $scope.message,
                 Keys: $scope.keys
             };
+            createCookie("action-user", $scope.user, 1000);
             $http.post('/api/action', data).success(function (data) {
                 $location.url('/');
             }).error(function (error) {
