@@ -25,7 +25,7 @@ import (
 
 var (
 	flagConf  = flag.String("c", "dev.conf", "config file location")
-	flagTest  = flag.Bool("t", false, "Only validate config then exit")
+	flagTest  = flag.Bool("t", false, "test for valid config; exits with 0 on success, else 1")
 	flagWatch = flag.Bool("w", false, "watch .go files below current directory and exit; also build typescript files on change")
 )
 
@@ -37,7 +37,6 @@ func main() {
 		log.Fatal(err)
 	}
 	if *flagTest {
-		log.Println("Valid Config")
 		os.Exit(0)
 	}
 	if err := collect.Init(c.HttpListen, "bosun"); err != nil {
