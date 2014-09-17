@@ -260,6 +260,9 @@ function eraseCookie(name) {
 // from: http://stackoverflow.com/a/15267754/864236
 bosunApp.filter('reverse', function () {
     return function (items) {
+        if (!angular.isArray(items)) {
+            return [];
+        }
         return items.slice().reverse();
     };
 });

@@ -314,6 +314,9 @@ function eraseCookie(name) {
 
 bosunApp.filter('reverse', function() {
 	return function(items) {
+		if (!angular.isArray(items)) {
+			return [];
+		}
 		return items.slice().reverse();
 	};
 });
