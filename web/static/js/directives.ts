@@ -1,6 +1,11 @@
 bosunApp.directive('tsResults', function() {
 	return {
 		templateUrl: '/partials/results.html',
+		link: (scope, elem, attrs) => {
+			scope.isSeries = v => {
+				return typeof(v) === 'object';
+			};
+		},
 	};
 });
 
