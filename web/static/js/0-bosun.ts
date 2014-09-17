@@ -4,6 +4,7 @@
 /// <reference path="bootstrap.d.ts" />
 /// <reference path="moment.d.ts" />
 /// <reference path="d3.d.ts" />
+/// <reference path="underscore.d.ts" />
 
 var bosunApp = angular.module('bosunApp', [
 	'ngRoute',
