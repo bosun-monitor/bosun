@@ -6,11 +6,14 @@
 		</tr>
 	</thead>
 	<tbody>
-		<tr ng-repeat="c in computations">
+		<tr ng-repeat="c in computations | reverse" ng-if="$index < 3 || show">
 			<td style="word-break: break-all;">
 				<a ng-href="/expr?expr={{btoa(c.Text) + timeParam}}" ng-bind="c.Text"></a>
 			</td>
 			<td ng-bind="c.Value | nfmt"></td>
+		</tr>
+		<tr ng-show="computations.length > 3 && !show">
+			<td><button class="btn btn-default btn-xs" ng-click="show = true">{{computations.length - 3}} more ...</button></td>
 		</tr>
 	</tbody>
 </table>

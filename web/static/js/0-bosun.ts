@@ -308,3 +308,11 @@ function readCookie(name) {
 function eraseCookie(name) {
 	createCookie(name, "", -1);
 }
+
+//
+
+bosunApp.filter('reverse', function() {
+	return function(items) {
+		return items.slice().reverse();
+	};
+});
