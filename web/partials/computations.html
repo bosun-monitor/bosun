@@ -13,7 +13,7 @@
 			<td ng-bind="c.Value | nfmt"></td>
 		</tr>
 		<tr ng-show="computations.length > 3 && !show">
-			<td><button class="btn btn-default btn-xs" ng-click="show = true">{{computations.length - 3}} more ...</button></td>
+			<td colspan="2"><button class="btn btn-default btn-xs" ng-click="show = true">{{computations.length - 3}} more ...</button></td>
 		</tr>
 	</tbody>
 </table>
