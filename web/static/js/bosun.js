@@ -1596,7 +1596,7 @@ bosunControllers.controller('PutCtrl', [
         };
     }]);
 bosunControllers.controller('RuleCtrl', [
-    '$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
+    '$scope', '$http', '$location', '$route', '$sce', function ($scope, $http, $location, $route, $sce) {
         var search = $location.search();
         var current_alert = atob(search.alert || '');
         var current_template = search.template;
@@ -1644,7 +1644,7 @@ bosunControllers.controller('RuleCtrl', [
             $scope.animate();
             $http.get('/api/rule?' + 'alert=' + encodeURIComponent($scope.alert) + '&template=' + encodeURIComponent($scope.template) + '&date=' + encodeURIComponent($scope.date) + '&time=' + encodeURIComponent($scope.time)).success(function (data) {
                 $scope.subject = data.Subject;
-                $scope.body = data.Body;
+                $scope.body = $sce.trustAsHtml(data.Body);
                 $scope.data = JSON.stringify(data.Data, null, '  ');
                 $scope.resultTime = moment.unix(data.Time).utc().format('YYYY-MM-DD HH:mm:ss');
                 $scope.results = [];
