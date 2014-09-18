@@ -204,6 +204,24 @@ bosunControllers.controller('BosunCtrl', [
                 animateCount--;
             }
         };
+        var surl;
+        var shortlink = $('#shortlink');
+        $scope.shorten = function () {
+            if (document.URL == surl) {
+                shortlink.popover('toggle');
+                return;
+            }
+            surl = document.URL;
+            $http.post('https://www.googleapis.com/urlshortener/v1/url', {
+                longUrl: document.URL
+            }).success(function (data) {
+                if (data.id) {
+                    $('#shortlink').popover({
+                        content: '<a href="' + data.id + '" target="_blank">' + data.id + '</a>'
+                    }).popover('show');
+                }
+            });
+        };
     }]);
 
 moment.defaultFormat = 'YYYY/MM/DD-HH:mm:ss';

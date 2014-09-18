@@ -101,6 +101,7 @@ interface IBosunScope extends ng.IScope {
 	refresh: (filter: string) => any;
 	animate: () => any;
 	stop: (all?: boolean) => any;
+	shorten: () => any;
 }
 
 bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', '$q', function($scope: IBosunScope, $route: ng.route.IRouteService, $http: ng.IHttpService, $q: ng.IQService) {
@@ -249,6 +250,24 @@ bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', '$q', fun
 		} else if (animateCount > 0) {
 			animateCount--;
 		}
+	};
+	var surl: string;
+	var shortlink = $('#shortlink');
+	$scope.shorten = () => {
+		if (document.URL == surl) {
+			shortlink.popover('toggle');
+			return;
+		}
+		surl = document.URL;
+		$http.post('https://www.googleapis.com/urlshortener/v1/url', {
+			longUrl: document.URL,
+		}).success(data => {
+			if (data.id) {
+				$('#shortlink').popover({
+					content: '<a href="' + data.id + '" target="_blank">' + data.id + '</a>',
+				}).popover('show');
+			}
+		});
 	};
 }]);
 
