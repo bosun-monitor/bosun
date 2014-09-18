@@ -1,7 +1,9 @@
 package sched
 
 import (
+	"bytes"
 	"fmt"
+	"html/template"
 	"io"
 	"log"
 	"net/url"
@@ -148,6 +150,14 @@ func (c *Context) E(v string) string {
 		}
 	}
 	return ""
+}
+
+func (c *Context) Graph(v string) interface{} {
+	var buf bytes.Buffer
+	if err := c.schedule.ExprGraph(nil, &buf, v, time.Now().UTC(), 1000); err != nil {
+		return err.Error()
+	}
+	return template.HTML(buf.String())
 }
 
 // truncate displays needed decimals for a Number.

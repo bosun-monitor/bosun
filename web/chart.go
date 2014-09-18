@@ -18,8 +18,7 @@ import (
 	"github.com/StackExchange/bosun/_third_party/github.com/gorilla/mux"
 	"github.com/StackExchange/bosun/_third_party/github.com/vdobler/chart"
 	"github.com/StackExchange/bosun/_third_party/github.com/vdobler/chart/svgg"
-	"github.com/StackExchange/bosun/expr"
-	"github.com/StackExchange/bosun/expr/parse"
+	"github.com/StackExchange/bosun/sched"
 )
 
 // Graph takes an OpenTSDB request data structure and queries OpenTSDB. Use the
@@ -117,7 +116,7 @@ func Graph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 			slice.Sort(pts, func(i, j int) bool {
 				return pts[i].X < pts[j].X
 			})
-			c.AddData(r.Name, pts, chart.PlotStyleLinesPoints, autostyle(ri))
+			c.AddData(r.Name, pts, chart.PlotStyleLinesPoints, sched.Autostyle(ri))
 		}
 		w.Header().Set("Content-Type", "image/svg+xml")
 		white := color.RGBA{0xff, 0xff, 0xff, 0xff}
@@ -140,28 +139,6 @@ func Graph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 	}, nil
 }
 
-var chartColors = []color.Color{
-	color.NRGBA{0xe4, 0x1a, 0x1c, 0xff},
-	color.NRGBA{0x37, 0x7e, 0xb8, 0xff},
-	color.NRGBA{0x4d, 0xaf, 0x4a, 0xff},
-	color.NRGBA{0x98, 0x4e, 0xa3, 0xff},
-	color.NRGBA{0xff, 0x7f, 0x00, 0xff},
-	color.NRGBA{0xa6, 0x56, 0x28, 0xff},
-	color.NRGBA{0xf7, 0x81, 0xbf, 0xff},
-	color.NRGBA{0x99, 0x99, 0x99, 0xff},
-}
-
-func autostyle(i int) chart.Style {
-	c := chartColors[i%len(chartColors)]
-	return chart.Style{
-		// 0 uses a default
-		SymbolSize: 0.00001,
-		LineStyle:  chart.SolidLine,
-		LineWidth:  1,
-		LineColor:  c,
-	}
-}
-
 func ExprGraph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	bs := vars["bs"]
@@ -172,12 +149,6 @@ func ExprGraph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (in
 	q := string(b)
 	if len(q) == 0 {
 		return nil, fmt.Errorf("missing expression")
-	}
-	e, err := expr.New(q)
-	if err != nil {
-		return nil, err
-	} else if e.Root.Return() != parse.TYPE_SERIES {
-		return nil, fmt.Errorf("egraph: requires an expression that returns a series")
 	}
 	autods := 1000
 	if a := r.FormValue("autods"); a != "" {
@@ -195,44 +166,10 @@ func ExprGraph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (in
 		}
 		now = time.Unix(i, 0).UTC()
 	}
-	res, _, err := e.Execute(opentsdb.NewCache(schedule.Conf.TsdbHost, schedule.Conf.ResponseLimit), t, now, autods, false, schedule.Search, schedule.Lookups)
-	if err != nil {
+	if err := schedule.ExprGraph(t, w, q, now, autods); err != nil {
 		return nil, err
 	}
-	c := chart.ScatterChart{
-		Title: fmt.Sprintf("%s - %s", q, now.Format(time.RFC1123)),
-	}
-	c.XRange.Time = true
-	for ri, r := range res.Results {
-		rv := r.Value.(expr.Series)
-		pts := make([]chart.EPoint, len(rv))
-		idx := 0
-		for k, v := range rv {
-			i, err := strconv.ParseInt(k, 10, 64)
-			if err != nil {
-				return nil, err
-			}
-			//names[idx] = time.Unix(i, 0).Format("02 Jan 15:04")
-			pts[idx].X = float64(i)
-			pts[idx].Y = float64(v)
-			idx++
-		}
-		slice.Sort(pts, func(i, j int) bool {
-			return pts[i].X < pts[j].X
-		})
-		c.AddData(r.Group.String(), pts, chart.PlotStyleLinesPoints, autostyle(ri))
-	}
-	w.Header().Set("Content-Type", "image/svg+xml")
-	white := color.RGBA{0xff, 0xff, 0xff, 0xff}
-	const width = 800
-	const height = 600
-	s := svg.New(w)
-	s.Start(width, height)
-	s.Rect(0, 0, width, height, "fill: #ffffff")
-	sgr := svgg.AddTo(s, 0, 0, width, height, "", 12, white)
-	c.Plot(sgr)
-	s.End()
-	return nil, err
+	return nil, nil
 }
 
 func makeChart(r opentsdb.ResponseSet) ([]*chartSeries, error) {
