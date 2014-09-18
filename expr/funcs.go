@@ -77,6 +77,11 @@ var builtins = map[string]parse.Func{
 		parse.TYPE_NUMBER,
 		Min,
 	},
+	"median": {
+		[]parse.FuncType{parse.TYPE_SERIES},
+		parse.TYPE_NUMBER,
+		Median,
+	},
 	"max": {
 		[]parse.FuncType{parse.TYPE_SERIES},
 		parse.TYPE_NUMBER,
@@ -537,6 +542,10 @@ func Percentile(e *state, T miniprofiler.Timer, series *Results, p float64) (r *
 
 func Min(e *state, T miniprofiler.Timer, series *Results) (r *Results, err error) {
 	return reduce(e, T, series, percentile, 0)
+}
+
+func Median(e *state, T miniprofiler.Timer, series *Results) (r *Results, err error) {
+	return reduce(e, T, series, percentile, .5)
 }
 
 func Max(e *state, T miniprofiler.Timer, series *Results) (r *Results, err error) {
