@@ -18,7 +18,7 @@ interface IRuleScope extends IExprScope {
 	zws: (v: string) => string;
 }
 
-bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route', function($scope: IRuleScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService) {
+bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route', '$sce', function($scope: IRuleScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService, $sce: ng.ISCEService) {
 	var search = $location.search();
 	var current_alert = atob(search.alert || '');
 	var current_template = search.template;
@@ -86,7 +86,7 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
 			'&time=' + encodeURIComponent($scope.time))
 			.success((data) => {
 				$scope.subject = data.Subject;
-				$scope.body = data.Body;
+				$scope.body = $sce.trustAsHtml(data.Body);
 				$scope.data = JSON.stringify(data.Data, null, '  ');
 				$scope.resultTime = moment.unix(data.Time).utc().format('YYYY-MM-DD HH:mm:ss');
 				$scope.results = [];
