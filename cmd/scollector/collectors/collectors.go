@@ -12,7 +12,6 @@ import (
 	"github.com/StackExchange/scollector/metadata"
 	"github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/scollector/util"
-	"github.com/StackExchange/slog"
 )
 
 var collectors []Collector
@@ -140,10 +139,7 @@ func readLine(fname string, line func(string) error) error {
 			return err
 		}
 	}
-	if err := scanner.Err(); err != nil {
-		slog.Infof("%v: %v\n", fname, err)
-	}
-	return nil
+	return scanner.Err()
 }
 
 // IsDigit returns true if s consists of decimal digits.
