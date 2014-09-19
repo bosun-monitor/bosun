@@ -43,6 +43,7 @@ const (
 	MilliSecond         = "milliseconds"
 	V                   = "V" // Volts
 	V_10                = "tenth-Volts"
+	Megabit             = "Mbit"
 )
 
 type Metakey struct {
