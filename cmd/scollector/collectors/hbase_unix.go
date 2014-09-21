@@ -40,13 +40,13 @@ func getBeans(url string, jmx *jmx) error {
 }
 
 func c_hbase_region() (opentsdb.MultiDataPoint, error) {
-	var jmx jmx
-	if err := getBeans(hbURL, &jmx); err != nil {
+	var j jmx
+	if err := getBeans(hbURL, &j); err != nil {
 		return nil, err
 	}
 	var md opentsdb.MultiDataPoint
-	if len(jmx.Beans) > 0 && len(jmx.Beans[0]) > 0 {
-		for k, v := range jmx.Beans[0] {
+	if len(j.Beans) > 0 && len(j.Beans[0]) > 0 {
+		for k, v := range j.Beans[0] {
 			if _, ok := v.(float64); ok {
 				Add(&md, "hbase.region."+k, v, nil, metadata.Unknown, metadata.None, "")
 			}
@@ -56,16 +56,16 @@ func c_hbase_region() (opentsdb.MultiDataPoint, error) {
 }
 
 func c_hbase_gc() (opentsdb.MultiDataPoint, error) {
-	var jmx jmx
-	if err := getBeans(hbGCURL, &jmx); err != nil {
+	var j jmx
+	if err := getBeans(hbGCURL, &j); err != nil {
 		return nil, err
 	}
 	var md opentsdb.MultiDataPoint
-	metric := "hbase.region.gc."
-	for i, _ := range jmx.Beans {
-		if name, ok := jmx.Beans[i]["Name"].(string); ok && name != "" {
+	const metric = "hbase.region.gc."
+	for _, bean := range j.Beans {
+		if name, ok := bean["Name"].(string); ok && name != "" {
 			ts := opentsdb.TagSet{"name": name}
-			for k, v := range jmx.Beans[i] {
+			for k, v := range bean {
 				if _, ok := v.(float64); ok {
 					switch k {
 					case "CollectionCount":
@@ -81,12 +81,12 @@ func c_hbase_gc() (opentsdb.MultiDataPoint, error) {
 }
 
 func c_hbase_replication() (opentsdb.MultiDataPoint, error) {
-	var jmx jmx
-	if err := getBeans(hbRepURL, &jmx); err != nil {
+	var j jmx
+	if err := getBeans(hbRepURL, &j); err != nil {
 		return nil, err
 	}
 	var md opentsdb.MultiDataPoint
-	for _, section := range jmx.Beans {
+	for _, section := range j.Beans {
 		var tags opentsdb.TagSet
 		for k, v := range section {
 			if s, ok := v.(string); ok && k == "name" {
