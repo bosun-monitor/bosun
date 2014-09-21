@@ -14,11 +14,13 @@ import (
 func init() {
 	collectors = append(collectors, &IntervalCollector{F: c_hbase_region, Enable: enableURL(hbURL)})
 	collectors = append(collectors, &IntervalCollector{F: c_hbase_replication, Enable: enableURL(hbRepURL)})
+	collectors = append(collectors, &IntervalCollector{F: c_hbase_gc, Enable: enableURL(hbGCURL)})
 }
 
 const (
 	hbURL    = "http://localhost:60030/jmx?qry=hadoop:service=RegionServer,name=RegionServerStatistics"
 	hbRepURL = "http://localhost:60030/jmx?qry=hadoop:service=Replication,name=*"
+	hbGCURL  = "http://localhost:60030/jmx?qry=java.lang:type=GarbageCollector,name=*"
 )
 
 type jmx struct {
@@ -47,6 +49,31 @@ func c_hbase_region() (opentsdb.MultiDataPoint, error) {
 		for k, v := range jmx.Beans[0] {
 			if _, ok := v.(float64); ok {
 				Add(&md, "hbase.region."+k, v, nil, metadata.Unknown, metadata.None, "")
+			}
+		}
+	}
+	return md, nil
+}
+
+func c_hbase_gc() (opentsdb.MultiDataPoint, error) {
+	var jmx jmx
+	if err := getBeans(hbGCURL, &jmx); err != nil {
+		return nil, err
+	}
+	var md opentsdb.MultiDataPoint
+	metric := "hbase.region.gc."
+	for i, _ := range jmx.Beans {
+		if name, ok := jmx.Beans[i]["Name"].(string); ok && name != "" {
+			ts := opentsdb.TagSet{"name": name}
+			for k, v := range jmx.Beans[i] {
+				if _, ok := v.(float64); ok {
+					switch k {
+					case "CollectionCount":
+						Add(&md, metric+k, v, ts, metadata.Counter, metadata.Count, "A counter for the number of times that garbage collection has been called.")
+					case "CollectionTime":
+						Add(&md, metric+k, v, ts, metadata.Counter, metadata.None, "The total amount of time spent in garbage collection.")
+					}
+				}
 			}
 		}
 	}
