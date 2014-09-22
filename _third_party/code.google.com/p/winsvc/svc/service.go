@@ -240,8 +240,24 @@ loop:
 	s.cWaits.Set()
 }
 
-// from sys.c
-func getServiceMain(r *uintptr)
+func newCallback(fn interface{}) (cb uintptr, err error) {
+	defer func() {
+		r := recover()
+		if r == nil {
+			return
+		}
+		cb = 0
+		switch v := r.(type) {
+		case string:
+			err = errors.New(v)
+		case error:
+			err = v
+		default:
+			err = errors.New("unexpected panic in syscall.NewCallback")
+		}
+	}()
+	return syscall.NewCallback(fn), nil
+}
 
 // BUG(brainman): There is no mechanism to run multiple services
 // inside one single executable. Perhaps, it can be overcome by
@@ -283,7 +299,10 @@ func Run(name string, handler Handler) error {
 	goWaitsH = uintptr(s.goWaits.h)
 	cWaitsH = uintptr(s.cWaits.h)
 	sName = t[0].ServiceName
-	ctlHandlerProc = syscall.NewCallback(ctlHandler)
+	ctlHandlerProc, err = newCallback(ctlHandler)
+	if err != nil {
+		return err
+	}
 
 	go s.run()
 
