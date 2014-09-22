@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.0.4 / 2014-09-07
+
+* kqueue: add dragonfly to the build tags.
+* Rename source code files, rearrange code so exported APIs are at the top.
+* Add done channel to example code. [#37](https://github.com/go-fsnotify/fsnotify/pull/37) (thanks @chenyukang)
+
 ## v1.0.3 / 2014-08-19
 
 * [Fix] Windows MOVED_TO now translates to Create like on BSD and Linux. [#36](https://github.com/go-fsnotify/fsnotify/issues/36)

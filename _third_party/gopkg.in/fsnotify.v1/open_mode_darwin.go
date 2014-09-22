@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// +build freebsd openbsd netbsd
+// +build darwin
 
 package fsnotify
 
 import "syscall"
 
-const openMode = syscall.O_NONBLOCK | syscall.O_RDONLY
+// note: this constant is not defined on BSD
+const openMode = syscall.O_EVTONLY

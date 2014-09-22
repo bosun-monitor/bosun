@@ -3,6 +3,7 @@
 // license that can be found in the LICENSE file.
 
 // +build windows
+// +build !go1.3
 
 // copied from pkg/runtime
 typedef	unsigned int	uint32;
