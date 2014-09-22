@@ -216,6 +216,22 @@ is used to specify inputs and results for filter effects
 	Startview(w, h, minx, miny, vw, vh int)
   begin the SVG document with the width w, height h, with a viewBox at minx, miny, vw, vh.
   <http://www.w3.org/TR/SVG11/struct.html#SVGElement>
+  
+	Startunit(w int, h int, unit string, ns ...string)
+  begin the SVG document, with width and height in the specified units. Optionally add additional elememts
+  (such as additional namespaces or scripting events)
+  <http://www.w3.org/TR/SVG11/struct.html#SVGElement>
+
+  
+	Startpercent(w int, h int, ns ...string)
+  begin the SVG document, with width and height in percent. Optionally add additional elememts
+  (such as additional namespaces or scripting events)
+  <http://www.w3.org/TR/SVG11/struct.html#SVGElement>
+
+  
+	StartviewUnit(w, h int, unit string, minx, miny, vw, vh int)
+   begin the SVG document with the width w, height h, in the specified unit, with a viewBox at minx, miny, vw, vh.
+  <http://www.w3.org/TR/SVG11/struct.html#SVGElement>
 
 	End()
   end the SVG document

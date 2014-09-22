@@ -81,7 +81,7 @@ func (s *Schedule) ExprGraph(t miniprofiler.Timer, w io.Writer, q string, now ti
 	const width = 800
 	const height = 600
 	g := svg.New(w)
-	g.Startraw("100%", "100%", fmt.Sprintf(`viewBox="0 0 %v %v"`, width, height))
+	g.StartviewUnit(100, 100, "%", 0, 0, width, height)
 	g.Rect(0, 0, width, height, "fill: #ffffff")
 	sgr := svgg.AddTo(g, 0, 0, width, height, "", 12, white)
 	c.Plot(sgr)
