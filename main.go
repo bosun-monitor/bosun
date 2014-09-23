@@ -41,21 +41,21 @@ func main() {
 	if *flagTest {
 		os.Exit(0)
 	}
-	if err := collect.Init(c.HttpListen, "bosun"); err != nil {
+	httpListen := &url.URL{
+		Scheme: "http",
+		Host:   c.HttpListen,
+	}
+	if strings.HasPrefix(httpListen.Host, ":") {
+		httpListen.Host = "localhost" + httpListen.Host
+	}
+	if err := collect.Init(httpListen, "bosun"); err != nil {
 		log.Fatal(err)
 	}
 	sched.Load(c)
 	if c.RelayListen != "" {
 		go func() {
 			mux := http.NewServeMux()
-			h := c.HttpListen
-			if strings.HasPrefix(h, ":") {
-				h = "localhost" + h
-			}
-			mux.Handle("/api/", httputil.NewSingleHostReverseProxy(&url.URL{
-				Scheme: "http",
-				Host:   h,
-			}))
+			mux.Handle("/api/", httputil.NewSingleHostReverseProxy(httpListen))
 			s := &http.Server{
 				Addr:    c.RelayListen,
 				Handler: mux,
