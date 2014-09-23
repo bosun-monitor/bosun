@@ -8,13 +8,11 @@ import (
 	"time"
 
 	"github.com/StackExchange/bosun/_third_party/github.com/MiniProfiler/go/miniprofiler"
-	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/opentsdb"
 	svg "github.com/StackExchange/bosun/_third_party/github.com/ajstarks/svgo"
 	"github.com/StackExchange/bosun/_third_party/github.com/bradfitz/slice"
 	"github.com/StackExchange/bosun/_third_party/github.com/vdobler/chart"
 	"github.com/StackExchange/bosun/_third_party/github.com/vdobler/chart/svgg"
 	"github.com/StackExchange/bosun/expr"
-	"github.com/StackExchange/bosun/expr/parse"
 )
 
 var chartColors = []color.Color{
@@ -40,25 +38,12 @@ func Autostyle(i int) chart.Style {
 	}
 }
 
-func (s *Schedule) ExprGraph(t miniprofiler.Timer, w io.Writer, q string, now time.Time, autods int) error {
-	if len(q) == 0 {
-		return fmt.Errorf("missing expression")
-	}
-	e, err := expr.New(q)
-	if err != nil {
-		return err
-	} else if e.Root.Return() != parse.TYPE_SERIES {
-		return fmt.Errorf("egraph: requires an expression that returns a series")
-	}
-	res, _, err := e.Execute(opentsdb.NewCache(s.Conf.TsdbHost, s.Conf.ResponseLimit), t, now, autods, false, s.Search, s.Lookups)
-	if err != nil {
-		return err
-	}
+func (s *Schedule) ExprGraph(t miniprofiler.Timer, w io.Writer, res []*expr.Result, q string, now time.Time) error {
 	c := chart.ScatterChart{
 		Title: fmt.Sprintf("%s - %s", q, now.Format(time.RFC1123)),
 	}
 	c.XRange.Time = true
-	for ri, r := range res.Results {
+	for ri, r := range res {
 		rv := r.Value.(expr.Series)
 		pts := make([]chart.EPoint, len(rv))
 		idx := 0

@@ -18,6 +18,8 @@ import (
 	"github.com/StackExchange/bosun/_third_party/github.com/gorilla/mux"
 	"github.com/StackExchange/bosun/_third_party/github.com/vdobler/chart"
 	"github.com/StackExchange/bosun/_third_party/github.com/vdobler/chart/svgg"
+	"github.com/StackExchange/bosun/expr"
+	"github.com/StackExchange/bosun/expr/parse"
 	"github.com/StackExchange/bosun/sched"
 )
 
@@ -166,7 +168,17 @@ func ExprGraph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (in
 		}
 		now = time.Unix(i, 0).UTC()
 	}
-	if err := schedule.ExprGraph(t, w, q, now, autods); err != nil {
+	e, err := expr.New(q)
+	if err != nil {
+		return nil, err
+	} else if e.Root.Return() != parse.TYPE_SERIES {
+		return nil, fmt.Errorf("egraph: requires an expression that returns a series")
+	}
+	res, _, err := e.Execute(opentsdb.NewCache(schedule.Conf.TsdbHost, schedule.Conf.ResponseLimit), t, now, autods, false, schedule.Search, schedule.Lookups)
+	if err != nil {
+		return nil, err
+	}
+	if err := schedule.ExprGraph(t, w, res.Results, q, now); err != nil {
 		return nil, err
 	}
 	return nil, nil
