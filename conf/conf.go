@@ -145,6 +145,16 @@ type Lookup struct {
 	Entries []*Entry
 }
 
+func (lookup *Lookup) ToExpr() *expr.Lookup {
+	l := expr.Lookup{
+		Tags: lookup.Tags,
+	}
+	for _, entry := range lookup.Entries {
+		l.Entries = append(l.Entries, entry.Entry)
+	}
+	return &l
+}
+
 type Entry struct {
 	*expr.Entry
 	Def  string
@@ -155,13 +165,7 @@ type Entry struct {
 func (c *Conf) GetLookups() map[string]*expr.Lookup {
 	lookups := make(map[string]*expr.Lookup)
 	for name, lookup := range c.Lookups {
-		l := expr.Lookup{
-			Tags: lookup.Tags,
-		}
-		for _, entry := range lookup.Entries {
-			l.Entries = append(l.Entries, entry.Entry)
-		}
-		lookups[name] = &l
+		lookups[name] = lookup.ToExpr()
 	}
 	return lookups
 }
@@ -178,20 +182,63 @@ type Alert struct {
 	Vars
 	*Template        `json:"-"`
 	Name             string
-	Crit             *expr.Expr               `json:",omitempty"`
-	Warn             *expr.Expr               `json:",omitempty"`
-	Squelch          Squelches                `json:"-"`
-	CritNotification map[string]*Notification `json:"-"`
-	WarnNotification map[string]*Notification `json:"-"`
+	Crit             *expr.Expr `json:",omitempty"`
+	Warn             *expr.Expr `json:",omitempty"`
+	Squelch          Squelches  `json:"-"`
+	CritNotification *Notifications
+	WarnNotification *Notifications
 	Unknown          time.Duration
 	Macros           []string `json:"-"`
 	UnjoinedOK       bool     `json:",omitempty"`
 
-	crit, warn       string
-	template         string
-	squelch          []string
-	critNotification string
-	warnNotification string
+	crit, warn string
+	template   string
+	squelch    []string
+}
+
+type Notifications struct {
+	Notifications map[string]*Notification `json:"-"`
+	// Table key -> table
+	Lookups map[string]*Lookup
+}
+
+// Get returns the set of notifications based on given tags.
+func (ns *Notifications) Get(c *Conf, tags opentsdb.TagSet) map[string]*Notification {
+	nots := make(map[string]*Notification)
+	for name, n := range ns.Notifications {
+		nots[name] = n
+	}
+	for key, lookup := range ns.Lookups {
+		l := lookup.ToExpr()
+		val, ok := l.Get(key, tags)
+		if !ok {
+			continue
+		}
+		ns, err := c.parseNotifications(val)
+		if err != nil {
+			// Should already be checked by conf parser.
+			panic(err)
+		}
+		for name, n := range ns {
+			nots[name] = n
+		}
+	}
+	return nots
+}
+
+// parseNotifications parses the comma-separated string v for notifications and
+// returns them.
+func (c *Conf) parseNotifications(v string) (map[string]*Notification, error) {
+	ns := make(map[string]*Notification)
+	for _, s := range strings.Split(v, ",") {
+		s = strings.TrimSpace(s)
+		n := c.Notifications[s]
+		if n == nil {
+			return nil, fmt.Errorf("unknown notification %s", s)
+		}
+		ns[s] = n
+	}
+	return ns, nil
 }
 
 type Template struct {
@@ -576,16 +623,48 @@ func (c *Conf) loadTemplate(s *parse.SectionNode) {
 	c.Templates[name] = &t
 }
 
+var lookupNotificationRE = regexp.MustCompile(`^lookup\("(.*)", "(.*)"\)$`)
+
 func (c *Conf) loadAlert(s *parse.SectionNode) {
 	name := s.Name.Text
 	if _, ok := c.Alerts[name]; ok {
 		c.errorf("duplicate alert name: %s", name)
 	}
 	a := Alert{
-		Def:    s.RawText,
-		Vars:   make(map[string]string),
-		Name:   name,
-		Macros: make([]string, 0),
+		Def:              s.RawText,
+		Vars:             make(map[string]string),
+		Name:             name,
+		Macros:           make([]string, 0),
+		CritNotification: new(Notifications),
+		WarnNotification: new(Notifications),
+	}
+	procNotification := func(v string, ns *Notifications) {
+		if lookup := lookupNotificationRE.FindStringSubmatch(v); lookup != nil {
+			if ns.Lookups == nil {
+				ns.Lookups = make(map[string]*Lookup)
+			}
+			l := c.Lookups[lookup[1]]
+			if l == nil {
+				c.errorf("unknown lookup table %s", lookup[1])
+			}
+			for _, e := range l.Entries {
+				for k, v := range e.Values {
+					if k != lookup[2] {
+						continue
+					}
+					if _, err := c.parseNotifications(v); err != nil {
+						c.errorf("lookup %s: %v", err)
+					}
+				}
+			}
+			ns.Lookups[lookup[2]] = l
+			return
+		}
+		n, err := c.parseNotifications(v)
+		if err != nil {
+			c.error(err)
+		}
+		ns.Notifications = n
 	}
 	for _, p := range c.getPairs(s, a.Vars, sNormal, &a.Macros) {
 		c.at(p.node)
@@ -630,27 +709,9 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 				c.error(err)
 			}
 		case "critNotification":
-			a.critNotification = v
-			a.CritNotification = make(map[string]*Notification)
-			for _, s := range strings.Split(a.critNotification, ",") {
-				s = strings.TrimSpace(s)
-				n, ok := c.Notifications[s]
-				if !ok {
-					c.errorf("unknown notification %s", s)
-				}
-				a.CritNotification[s] = n
-			}
+			procNotification(v, a.CritNotification)
 		case "warnNotification":
-			a.warnNotification = v
-			a.WarnNotification = make(map[string]*Notification)
-			for _, s := range strings.Split(a.warnNotification, ",") {
-				s = strings.TrimSpace(s)
-				n, ok := c.Notifications[s]
-				if !ok {
-					c.errorf("unknown notification %s", s)
-				}
-				a.WarnNotification[s] = n
-			}
+			procNotification(v, a.WarnNotification)
 		case "unknown":
 			d, err := time.ParseDuration(v)
 			if err != nil {
@@ -786,8 +847,13 @@ func (c *Conf) Expand(v string, vars map[string]string, ignoreBadExpand bool) st
 }
 
 func (c *Conf) seen(v string, m map[string]bool) {
-	if m[v] && v != "squelch" {
-		c.errorf("duplicate key: %s", v)
+	if m[v] {
+		switch v {
+		case "squelch", "critNotification", "warnNotification":
+			// ignore
+		default:
+			c.errorf("duplicate key: %s", v)
+		}
 	}
 	m[v] = true
 }
