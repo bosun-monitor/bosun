@@ -60,8 +60,8 @@ func makeFilter(filter string) (func(*conf.Alert, *State) bool, error) {
 		case "notify":
 			add(func(a *conf.Alert, s *State) bool {
 				r := false
-				f := func(m map[string]*conf.Notification) {
-					for k := range m {
+				f := func(ns *conf.Notifications) {
+					for k := range ns.Notifications {
 						if strings.Contains(k, value) {
 							r = true
 							break

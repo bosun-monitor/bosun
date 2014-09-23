@@ -67,8 +67,9 @@ func (s *Schedule) RunHistory(r RunHistory) {
 		// On state decrease, and if the old alert was already acknowledged, notify current.
 		// If the old alert was not acknowledged, do nothing.
 		// Do nothing if state did not change.
-		notify := func(notifications map[string]*conf.Notification) {
-			for _, n := range notifications {
+		notify := func(ns *conf.Notifications) {
+			nots := ns.Get(s.Conf, state.Group)
+			for _, n := range nots {
 				s.Notify(state, n)
 				checkNotify = true
 			}

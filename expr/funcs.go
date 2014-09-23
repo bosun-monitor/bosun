@@ -13,7 +13,6 @@ import (
 	"github.com/StackExchange/bosun/_third_party/github.com/MiniProfiler/go/miniprofiler"
 	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/bosun/expr/parse"
-	"github.com/StackExchange/bosun/search"
 )
 
 var builtins = map[string]parse.Func{
@@ -153,36 +152,19 @@ func lookup(e *state, T miniprofiler.Timer, lookup, key string) (results *Result
 		tags = next
 	}
 	for _, tag := range tags {
-		for _, entry := range lookups.Entries {
-			value, ok := entry.Values[key]
-			if !ok {
-				continue
-			}
-			match := true
-			for ak, av := range entry.AlertKey.Group() {
-				matches, err := search.Match(av, []string{tag[ak]})
-				if err != nil {
-					return nil, err
-				}
-				if len(matches) == 0 {
-					match = false
-					break
-				}
-			}
-			if !match {
-				continue
-			}
-			var num float64
-			num, err = strconv.ParseFloat(value, 64)
-			if err != nil {
-				return nil, err
-			}
-			results.Results = append(results.Results, &Result{
-				Value: Number(num),
-				Group: tag,
-			})
-			break
+		value, ok := lookups.Get(key, tag)
+		if !ok {
+			continue
 		}
+		var num float64
+		num, err = strconv.ParseFloat(value, 64)
+		if err != nil {
+			return nil, err
+		}
+		results.Results = append(results.Results, &Result{
+			Value: Number(num),
+			Group: tag,
+		})
 	}
 	return results, nil
 }
