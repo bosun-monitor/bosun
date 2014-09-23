@@ -152,6 +152,23 @@ func (c *Context) E(v string) string {
 	return ""
 }
 
+// ENC executes the given epression and returns the full set of values outside
+// of the context of the instance. It is useful for when you want to provide
+// more detailed information in the notification that the scope of the alert trigger
+func (c *Context) ENC(v string) interface{} {
+	e, err := expr.New(v)
+	if err != nil {
+		log.Printf("%s: %v", v, err)
+		return ""
+	}
+	res, _, err := e.Execute(c.schedule.cache, nil, c.schedule.CheckStart, 0, c.Alert.UnjoinedOK, c.schedule.Search, c.schedule.Lookups)
+	if err != nil {
+		log.Printf("%s: %v", v, err)
+		return ""
+	}
+	return res.Results
+}
+
 func (c *Context) Graph(v string) interface{} {
 	var buf bytes.Buffer
 	if err := c.schedule.ExprGraph(nil, &buf, v, time.Now().UTC(), 1000); err != nil {
