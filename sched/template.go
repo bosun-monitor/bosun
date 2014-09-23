@@ -14,6 +14,7 @@ import (
 	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/bosun/conf"
 	"github.com/StackExchange/bosun/expr"
+	"github.com/StackExchange/bosun/expr/parse"
 )
 
 type Context struct {
@@ -118,77 +119,85 @@ func (s *Schedule) ExecuteSubject(w io.Writer, a *conf.Alert, st *State) error {
 	return t.Subject.Execute(w, s.Data(st, a))
 }
 
-// E executes the given expression and returns a value with corresponding tags
+func (c *Context) eval(v string, filter bool, series bool, autods int) ([]*expr.Result, error) {
+	e, err := expr.New(v)
+	var results []*expr.Result
+	if err != nil {
+		return results, fmt.Errorf("%s: %v", v, err)
+	}
+	if series && e.Root.Return() != parse.TYPE_SERIES {
+		return results, fmt.Errorf("egraph: requires an expression that returns a series")
+	}
+	res, _, err := e.Execute(c.schedule.cache, nil, c.schedule.CheckStart, autods, c.Alert.UnjoinedOK, c.schedule.Search, c.schedule.Lookups)
+	if err != nil {
+		return results, fmt.Errorf("%s: %v", v, err)
+	}
+	if filter {
+		for _, r := range res.Results {
+			if r.Group.Equal(c.State.Group) {
+				results = append(results, r)
+				return results, nil
+			}
+		}
+		for _, r := range res.Results {
+			if c.State.Group.Subset(r.Group) {
+				results = append(results, r)
+				return results, nil
+			}
+		}
+	}
+	return res.Results, nil
+}
+
+// Eval executes the given expression and returns a value with corresponding tags
 // to the context's tags. If no such result is found, the first result with nil
-// tags is returned. If no such result is found, "" is returned. The precision
-// of numbers is truncated for convienent display. Series expressions are not
-// supported.
-func (c *Context) E(v string) string {
-	e, err := expr.New(v)
+// tags is returned. If no such result is found, "" is returned.
+func (c *Context) Eval(v string) interface{} {
+	res, err := c.eval(v, true, false, 0)
 	if err != nil {
-		log.Printf("%s: %v", v, err)
+		log.Print(err)
 		return ""
 	}
-	res, _, err := e.Execute(c.schedule.cache, nil, c.schedule.CheckStart, 0, c.Alert.UnjoinedOK, c.schedule.Search, c.schedule.Lookups)
-	if err != nil {
-		log.Printf("%s: %v", v, err)
+	if len(res) != 1 {
+		log.Printf("Expected 1 results, got %v", len(res))
 		return ""
 	}
-	for _, r := range res.Results {
-		if r.Group.Equal(c.State.Group) {
-			return truncate(r.Value)
-		}
-	}
-	for _, r := range res.Results {
-		if c.State.Group.Subset(r.Group) {
-			return truncate(r.Value)
-		}
-	}
-	for _, r := range res.Results {
-		if r.Group == nil {
-			return truncate(r.Value)
-		}
-	}
-	return ""
+	return res[0].Value
 }
 
-// ENC executes the given epression and returns the full set of values outside
-// of the context of the instance. It is useful for when you want to provide
-// more detailed information in the notification that the scope of the alert trigger
-func (c *Context) ENC(v string) interface{} {
-	e, err := expr.New(v)
+// EvalAll executes the expression and returns the result set. It is not filtered
+// to the context's tags.
+func (c *Context) EvalAll(v string) interface{} {
+	res, err := c.eval(v, false, false, 0)
 	if err != nil {
-		log.Printf("%s: %v", v, err)
+		log.Print(err)
 		return ""
 	}
-	res, _, err := e.Execute(c.schedule.cache, nil, c.schedule.CheckStart, 0, c.Alert.UnjoinedOK, c.schedule.Search, c.schedule.Lookups)
-	if err != nil {
-		log.Printf("%s: %v", v, err)
-		return ""
-	}
-	return res.Results
+	return res
 }
 
-func (c *Context) Graph(v string) interface{} {
+func (c *Context) graph(v string, res []*expr.Result) interface{} {
 	var buf bytes.Buffer
-	if err := c.schedule.ExprGraph(nil, &buf, v, time.Now().UTC(), 1000); err != nil {
+	if err := c.schedule.ExprGraph(nil, &buf, res, v, time.Now().UTC()); err != nil {
 		return err.Error()
 	}
 	return template.HTML(buf.String())
 }
 
-// truncate displays needed decimals for a Number.
-func truncate(v expr.Value) string {
-	switch t := v.(type) {
-	case expr.Number:
-		if t < 1 {
-			return fmt.Sprintf("%.4f", t)
-		} else if t < 100 {
-			return fmt.Sprintf("%.1f", t)
-		} else {
-			return fmt.Sprintf("%.0f", t)
-		}
-	default:
+func (c *Context) Graph(v string) interface{} {
+	res, err := c.eval(v, false, true, 1000)
+	if err != nil {
+		log.Print(err)
 		return ""
 	}
+	return c.graph(v, res)
+}
+
+func (c *Context) GraphAll(v string) interface{} {
+	res, err := c.eval(v, true, true, 1000)
+	if err != nil {
+		log.Print(err)
+		return ""
+	}
+	return c.graph(v, res)
 }
