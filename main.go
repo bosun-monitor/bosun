@@ -41,7 +41,11 @@ func main() {
 	if *flagTest {
 		os.Exit(0)
 	}
-	if err := collect.Init(c.HttpListen, "bosun"); err != nil {
+	listenHost := &url.URL{
+		Scheme: "http",
+		Host:   c.HttpListen,
+	}
+	if err := collect.Init(listenHost, "bosun"); err != nil {
 		log.Fatal(err)
 	}
 	sched.Load(c)
