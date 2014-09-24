@@ -132,21 +132,22 @@ func (c *Context) eval(v string, filter bool, series bool, autods int) ([]*expr.
 	if err != nil {
 		return results, fmt.Errorf("%s: %v", v, err)
 	}
-	if filter {
-		for _, r := range res.Results {
-			if r.Group.Equal(c.State.Group) {
-				results = append(results, r)
-				return results, nil
-			}
-		}
-		for _, r := range res.Results {
-			if c.State.Group.Subset(r.Group) {
-				results = append(results, r)
-				return results, nil
-			}
+	if !filter {
+		return res.Results, nil
+	}
+	for _, r := range res.Results {
+		if r.Group.Equal(c.State.Group) {
+			results = append(results, r)
+			return results, nil
 		}
 	}
-	return res.Results, nil
+	for _, r := range res.Results {
+		if c.State.Group.Subset(r.Group) {
+			results = append(results, r)
+			return results, nil
+		}
+	}
+	return nil, nil
 }
 
 // Eval executes the given expression and returns a value with corresponding tags
@@ -156,11 +157,11 @@ func (c *Context) Eval(v string) interface{} {
 	res, err := c.eval(v, true, false, 0)
 	if err != nil {
 		log.Print(err)
-		return ""
+		return 0
 	}
 	if len(res) != 1 {
 		log.Printf("Expected 1 results, got %v", len(res))
-		return ""
+		return 0
 	}
 	return res[0].Value
 }
@@ -171,7 +172,7 @@ func (c *Context) EvalAll(v string) interface{} {
 	res, err := c.eval(v, false, false, 0)
 	if err != nil {
 		log.Print(err)
-		return ""
+		return nil
 	}
 	return res
 }
