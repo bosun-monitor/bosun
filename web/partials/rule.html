@@ -36,23 +36,35 @@
 	</div>
 </div>
 <div class="row">
-	<div class="col-lg-6">
+	<div class="col-lg-12">
 		<form class="form-inline">
 			<div class="form-group">
-				<label class="control-label">Date</label>
-				<input type="text" class="form-control" ng-model="date" placeholder="yyyy-mm-dd" bs-datepicker data-date-format="yyyy-MM-dd" data-date-type="string">
+				<label class="control-label">From</label>
+				<input type="text" class="form-control" ng-model="fromDate" placeholder="yyyy-mm-dd" bs-datepicker data-date-format="yyyy-MM-dd" data-date-type="string">
 			</div>
 			<div class="form-group">
-				<label class="control-label">Time</label>
-				<input type="text" class="form-control" ng-model="time" placeholder="HH:MM">
+				<input type="text" class="form-control" ng-model="fromTime" placeholder="HH:MM">
 			</div>
 			<div class="form-group">
-				<button class="btn btn-default" ng-click="set()">Test</button>
+				<label class="control-label">To</label>
+				<input type="text" class="form-control" ng-model="toDate" placeholder="yyyy-mm-dd" bs-datepicker data-date-format="yyyy-MM-dd" data-date-type="string">
 			</div>
 			<div class="form-group">
-				<span class="help-block">shift-enter to submit<span>
+				<input type="text" class="form-control" ng-model="toTime" placeholder="HH:MM">
+			</div>
+			<div class="form-group">
+				<label class="control-label">Intervals</label>
+				<input type="number" min="2" step="1" style="width:4em" class="form-control" ng-model="intervals" ng-disabled="!fromDate || !toDate" tooltip title="Number of evaluations between timespan.">
+			</div>
+			<div class="form-group">
+				<button class="btn btn-default" ng-click="test()">Test</button>
 			</div>
 		</form>
+	</div>
+</div>
+<div class="row>
+	<div class="col-lg-12">
+		Shift-enter to test. If neither From nor To are present, will run for now. If one present, at that timestamp. If both present, that timespan. Times default to midnight if not set.
 	</div>
 </div>
 <div class="row" ng-show="running">
@@ -92,9 +104,31 @@
 		<pre ng-bind="data"></pre>
 	</div>
 	<div class="tab-pane" ng-class="{active: tab == 'results'}">
-		<div class="row" ng-show="results">
+		<div class="row">
+			<div class="col-sm-6">
+				<table class="table">
+					<thead>
+						<tr>
+							<th>Time</th>
+							<th>Criticals</th>
+							<th>Warnings</th>
+							<th>Normals</th>
+						</tr>
+					</thead>
+					<tbody>
+						<tr ng-repeat="set in sets">
+							<td><a href="#" ng-bind="set.time" ng-click="scroll($index)"></a></td>
+							<td ng-bind="set.critical || ''" ng-class="set.critical ? 'danger' : ''"></td>
+							<td ng-bind="set.warning || ''" ng-class="set.warning ? 'warning' : ''"></td>
+							<td ng-bind="set.normal || ''" ng-class="set.normal ? 'success' : ''"></td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+		</div>
+		<div class="row" ng-repeat="set in sets">
 			<div class="col-sm-12">
-				<h4>Time: {{resultTime}}</h4>
+				<h4 id="time-{{$index}}">Time: {{set.time}}</h4>
 				<table class="table">
 					<thead>
 						<tr>
@@ -105,7 +139,7 @@
 							<th>Computations</th>
 						</tr>
 					</thead>
-					<tbody ng-repeat="result in results" ng-init="r = result.result; group = result.group">
+					<tbody ng-repeat="result in set.results" ng-init="r = result.result; group = result.group">
 						<tr>
 							<td rowspan="2" ng-bind="zws(group)"></td>
 							<td rowspan="2" ng-bind="r.Status" ng-class="panelClass(r.Status, '')"></td>
