@@ -3,7 +3,6 @@ package web
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"sort"
@@ -126,26 +125,28 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 	instance.History = []sched.Event{*rh[keys[0]]}
 	body := new(bytes.Buffer)
 	subject := new(bytes.Buffer)
-	var warning []string
-	if err := s.ExecuteBody(body, a, instance); err != nil {
-		warning = append(warning, err.Error())
+	var data interface{}
+	warning := make([]string, 0)
+	if r.FormValue("notemplate") != "" {
+		if err := s.ExecuteBody(body, a, instance); err != nil {
+			warning = append(warning, err.Error())
+		}
+		if err := s.ExecuteSubject(subject, a, instance); err != nil {
+			warning = append(warning, err.Error())
+		}
+		data = s.Data(instance, a)
 	}
-	if err := s.ExecuteSubject(subject, a, instance); err != nil {
-		warning = append(warning, err.Error())
-	}
-	b, _ := ioutil.ReadAll(body)
-	sub, _ := ioutil.ReadAll(subject)
 	return struct {
-		Body    string
-		Subject string
-		Data    interface{}
+		Body    string      `json:",omitempty"`
+		Subject string      `json:",omitempty"`
+		Data    interface{} `json:",omitempty"`
 		Result  sched.RunHistory
-		Warning []string
+		Warning []string `json:",omitempty"`
 		Time    int64
 	}{
-		string(b),
-		string(sub),
-		s.Data(instance, a),
+		body.String(),
+		subject.String(),
+		data,
 		rh,
 		warning,
 		now.Unix(),
