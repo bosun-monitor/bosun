@@ -271,6 +271,10 @@ bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', '$q', fun
 	};
 }]);
 
+interface MomentStatic {
+	defaultFormat: string;
+}
+
 moment.defaultFormat = 'YYYY/MM/DD-HH:mm:ss';
 
 moment.lang('en', {
