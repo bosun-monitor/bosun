@@ -133,14 +133,14 @@ bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', '$q', fun
 		r.queries.push(q);
 		return r;
 	};
-	$scope.panelClass = (status: string) => {
+	$scope.panelClass = (status: string, prefix = "panel-") => {
 		switch (status) {
-			case "critical": return "panel-danger";
-			case "unknown": return "panel-info";
-			case "warning": return "panel-warning";
-			case "normal": return "panel-success";
-			case "error": return "panel-danger";
-			default: return "panel-default";
+			case "critical": return prefix + "danger";
+			case "unknown": return prefix + "info";
+			case "warning": return prefix + "warning";
+			case "normal": return prefix + "success";
+			case "error": return prefix + "danger";
+			default: return prefix + "default";
 		}
 	};
 	var scheduleFilter: string;
