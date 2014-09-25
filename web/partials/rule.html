@@ -108,7 +108,7 @@
 					<tbody ng-repeat="result in results" ng-init="r = result.result; group = result.group">
 						<tr>
 							<td rowspan="2" ng-bind="zws(group)"></td>
-							<td rowspan="2" ng-bind="r.Status"></td>
+							<td rowspan="2" ng-bind="r.Status" ng-class="panelClass(r.Status, '')"></td>
 							<td>critical</td>
 							<td>
 								<pre ng-bind="json(r.Crit.Value)" ng-show="r.Crit"></pre>

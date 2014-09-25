@@ -104,20 +104,21 @@ bosunControllers.controller('BosunCtrl', [
             r.queries.push(q);
             return r;
         };
-        $scope.panelClass = function (status) {
+        $scope.panelClass = function (status, prefix) {
+            if (typeof prefix === "undefined") { prefix = "panel-"; }
             switch (status) {
                 case "critical":
-                    return "panel-danger";
+                    return prefix + "danger";
                 case "unknown":
-                    return "panel-info";
+                    return prefix + "info";
                 case "warning":
-                    return "panel-warning";
+                    return prefix + "warning";
                 case "normal":
-                    return "panel-success";
+                    return prefix + "success";
                 case "error":
-                    return "panel-danger";
+                    return prefix + "danger";
                 default:
-                    return "panel-default";
+                    return prefix + "default";
             }
         };
         var scheduleFilter;
