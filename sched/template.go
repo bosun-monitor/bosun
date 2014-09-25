@@ -150,6 +150,19 @@ func (c *Context) eval(v string, filter bool, series bool, autods int) ([]*expr.
 	return nil, nil
 }
 
+// Lookup returns the value for a key in the lookup table for the context's tagset.
+func (c *Context) Lookup(table, key string) string {
+	l, ok := c.schedule.Lookups[table]
+	if !ok {
+		return fmt.Sprintf("unknown lookup table %v", table)
+	}
+	if v, ok := l.Get(key, c.Group); ok {
+		return v
+	} else {
+		return fmt.Sprintf("no entry for key %v in table %v for tagset %v", key, table, c.Group)
+	}
+}
+
 // Eval executes the given expression and returns a value with corresponding tags
 // to the context's tags. If no such result is found, the first result with nil
 // tags is returned. If no such result is found, "" is returned.
