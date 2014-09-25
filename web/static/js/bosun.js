@@ -1625,9 +1625,12 @@ bosunControllers.controller('RuleCtrl', [
             "warning": 1,
             "critical": 2
         };
-        $scope.date = search.date || '';
-        $scope.time = search.time || '';
+        $scope.fromDate = search.fromDate || '';
+        $scope.fromTime = search.fromTime || '';
+        $scope.toDate = search.toDate || '';
+        $scope.toTime = search.toTime || '';
         $scope.tab = search.tab || 'results';
+        $scope.intervals = +search.intervals || 5;
         if (!current_alert) {
             var alert_def = 'alert test {\n' + '	template = test\n' + '	crit = ' + expr + '\n' + '}';
             $location.search('alert', btoa(alert_def));
@@ -1648,54 +1651,105 @@ bosunControllers.controller('RuleCtrl', [
         $scope.template = current_template;
         $scope.shiftEnter = function ($event) {
             if ($event.keyCode == 13 && $event.shiftKey) {
-                $scope.set();
+                $scope.test();
             }
         };
-        $scope.set = function () {
+        $scope.test = function () {
             $scope.running = "Running";
             $scope.error = '';
             $scope.warning = [];
             $location.search('alert', btoa($scope.alert));
             $location.search('template', btoa($scope.template));
-            $location.search('date', $scope.date || null);
-            $location.search('time', $scope.time || null);
+            $location.search('fromDate', $scope.fromDate || null);
+            $location.search('fromTime', $scope.fromTime || null);
+            $location.search('toDate', $scope.toDate || null);
+            $location.search('toTime', $scope.toTime || null);
             $location.search('tab', $scope.tab || 'results');
+            $location.search('intervals', $scope.intervals || null);
             $scope.animate();
-            $http.get('/api/rule?' + 'alert=' + encodeURIComponent($scope.alert) + '&template=' + encodeURIComponent($scope.template) + '&date=' + encodeURIComponent($scope.date) + '&time=' + encodeURIComponent($scope.time)).success(function (data) {
-                $scope.subject = data.Subject;
-                $scope.body = $sce.trustAsHtml(data.Body);
-                $scope.data = JSON.stringify(data.Data, null, '  ');
-                $scope.resultTime = moment.unix(data.Time).utc().format('YYYY-MM-DD HH:mm:ss');
-                $scope.results = [];
-                angular.forEach(data.Result, function (v, k) {
-                    $scope.results.push({
-                        group: k,
-                        result: v
+            var from = moment.utc($scope.fromDate + ' ' + $scope.fromTime);
+            var to = moment.utc($scope.toDate + ' ' + $scope.toTime);
+            if (!from.isValid()) {
+                from = to;
+            }
+            if (!to.isValid()) {
+                to = from;
+            }
+            if (!from.isValid() && !to.isValid()) {
+                from = to = moment.utc();
+            }
+            var diff = from.diff(to);
+            var intervals;
+            if (diff == 0) {
+                intervals = 1;
+            } else if (Math.abs(diff) < 60 * 1000) {
+                intervals = 2;
+            } else {
+                intervals = +($scope.intervals);
+            }
+            $scope.sets = [];
+            function next(interval, first) {
+                if (typeof first === "undefined") { first = false; }
+                if (interval == 0) {
+                    $scope.stop();
+                    return;
+                }
+                var date = from.format('YYYY-MM-DD');
+                var time = from.format('HH:mm');
+                var url = '/api/rule?' + 'alert=' + encodeURIComponent($scope.alert) + '&template=' + encodeURIComponent($scope.template) + '&date=' + encodeURIComponent(date) + '&time=' + encodeURIComponent(time);
+                if (first) {
+                    url += '&notemplate=true';
+                }
+                $http.get(url).success(function (data) {
+                    if (first) {
+                        $scope.subject = data.Subject;
+                        $scope.body = $sce.trustAsHtml(data.Body);
+                        $scope.data = JSON.stringify(data.Data, null, '  ');
+                        angular.forEach(data.Warning, function (v) {
+                            $scope.warning.push(v);
+                        });
+                    }
+                    var results = [];
+                    var set = {
+                        time: moment.unix(data.Time).utc().format('YYYY-MM-DD HH:mm:ss'),
+                        critical: 0,
+                        warning: 0,
+                        normal: 0
+                    };
+                    angular.forEach(data.Result, function (v, k) {
+                        results.push({
+                            group: k,
+                            result: v
+                        });
+                        set[v.Status]++;
                     });
+                    results.sort(function (a, b) {
+                        return status_map[b.result.Status] - status_map[a.result.Status];
+                    });
+                    set.results = results;
+                    $scope.sets.push(set);
+                    $scope.running = '';
+                    $scope.error = '';
+                    from.subtract(diff / (intervals - 1));
+                    next(interval - 1);
+                }).error(function (error) {
+                    $scope.error = error;
+                    $scope.running = '';
                 });
-                $scope.results.sort(function (a, b) {
-                    return status_map[b.result.Status] - status_map[a.result.Status];
-                });
-                angular.forEach(data.Warning, function (v) {
-                    $scope.warning.push(v);
-                });
-                $scope.running = '';
-                $scope.error = '';
-            }).error(function (error) {
-                $scope.error = error;
-                $scope.running = '';
-            }).finally(function () {
-                $scope.stop();
-            });
+            }
+            next(intervals, true);
         };
         $scope.zws = function (v) {
             return v.replace(/([,{}()])/g, '$1\u200b');
+        };
+        $scope.scroll = function (id) {
+            document.getElementById('time-' + id).scrollIntoView();
         };
         $http.get('/api/templates').success(function (data) {
             $scope.alerts = data.Alerts;
             $scope.templates = data.Templates;
         });
-        $scope.set();
+        $scope.test();
     }]);
 bosunControllers.controller('SilenceCtrl', [
     '$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
