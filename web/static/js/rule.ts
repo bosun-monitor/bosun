@@ -10,6 +10,7 @@ interface IRuleScope extends IExprScope {
 	fromTime: string;
 	toTime: string;
 	subject: string;
+	email: string;
 	body: string;
 	warning: string[];
 	sets: any;
@@ -32,6 +33,7 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
 		"warning": 1,
 		"critical": 2,
 	};
+	$scope.email = search.email || '';
 	$scope.fromDate = search.fromDate || '';
 	$scope.fromTime = search.fromTime || '';
 	$scope.toDate = search.toDate || '';
@@ -88,6 +90,7 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
 		$location.search('toTime', $scope.toTime || null);
 		$location.search('tab', $scope.tab || 'results');
 		$location.search('intervals', $scope.intervals || null);
+		$location.search('email', $scope.email || null);
 		$scope.animate();
 		var from = moment.utc($scope.fromDate + ' ' + $scope.fromTime);
 		var to = moment.utc($scope.toDate + ' ' + $scope.toTime);
@@ -121,7 +124,8 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
 				'alert=' + encodeURIComponent($scope.alert) +
 				'&template=' + encodeURIComponent($scope.template) +
 				'&date=' + encodeURIComponent(date) +
-				'&time=' + encodeURIComponent(time);
+				'&time=' + encodeURIComponent(time) +
+				'&email=' + encodeURIComponent($scope.email);
 			if (first) {
 				url += '&notemplate=true';
 			}
