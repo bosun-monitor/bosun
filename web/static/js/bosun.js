@@ -1625,6 +1625,7 @@ bosunControllers.controller('RuleCtrl', [
             "warning": 1,
             "critical": 2
         };
+        $scope.email = search.email || '';
         $scope.fromDate = search.fromDate || '';
         $scope.fromTime = search.fromTime || '';
         $scope.toDate = search.toDate || '';
@@ -1666,6 +1667,7 @@ bosunControllers.controller('RuleCtrl', [
             $location.search('toTime', $scope.toTime || null);
             $location.search('tab', $scope.tab || 'results');
             $location.search('intervals', $scope.intervals || null);
+            $location.search('email', $scope.email || null);
             $scope.animate();
             var from = moment.utc($scope.fromDate + ' ' + $scope.fromTime);
             var to = moment.utc($scope.toDate + ' ' + $scope.toTime);
@@ -1696,7 +1698,7 @@ bosunControllers.controller('RuleCtrl', [
                 }
                 var date = from.format('YYYY-MM-DD');
                 var time = from.format('HH:mm');
-                var url = '/api/rule?' + 'alert=' + encodeURIComponent($scope.alert) + '&template=' + encodeURIComponent($scope.template) + '&date=' + encodeURIComponent(date) + '&time=' + encodeURIComponent(time);
+                var url = '/api/rule?' + 'alert=' + encodeURIComponent($scope.alert) + '&template=' + encodeURIComponent($scope.template) + '&date=' + encodeURIComponent(date) + '&time=' + encodeURIComponent(time) + '&email=' + encodeURIComponent($scope.email);
                 if (first) {
                     url += '&notemplate=true';
                 }

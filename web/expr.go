@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"net/http"
+	"net/mail"
 	"net/url"
 	"sort"
 	"strings"
@@ -135,6 +136,15 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 			warning = append(warning, err.Error())
 		}
 		data = s.Data(instance, a)
+		if e := r.FormValue("email"); e != "" {
+			n := conf.Notification{
+				Email: []*mail.Address{&mail.Address{
+					Name:    "Bosun Test",
+					Address: e,
+				}},
+			}
+			n.DoEmail(subject.Bytes(), body.Bytes(), schedule.Conf.EmailFrom, schedule.Conf.SmtpHost)
+		}
 	}
 	return struct {
 		Body    string      `json:",omitempty"`
