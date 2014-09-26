@@ -137,13 +137,14 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 		}
 		data = s.Data(instance, a)
 		if e := r.FormValue("email"); e != "" {
-			n := conf.Notification{
-				Email: []*mail.Address{&mail.Address{
-					Name:    "Bosun Test",
-					Address: e,
-				}},
+			if m, err := mail.ParseAddress(e); err != nil {
+				warning = append(warning, err.Error())
+			} else {
+				n := conf.Notification{
+					Email: []*mail.Address{m},
+				}
+				n.DoEmail(subject.Bytes(), body.Bytes(), schedule.Conf.EmailFrom, schedule.Conf.SmtpHost)
 			}
-			n.DoEmail(subject.Bytes(), body.Bytes(), schedule.Conf.EmailFrom, schedule.Conf.SmtpHost)
 		}
 	}
 	return struct {
