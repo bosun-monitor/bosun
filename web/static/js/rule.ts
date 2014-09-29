@@ -166,6 +166,7 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
 				.error((error) => {
 					$scope.error = error;
 					$scope.running = '';
+					$scope.stop();
 				});
 		}
 		next(intervals, true);
