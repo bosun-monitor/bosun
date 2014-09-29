@@ -484,12 +484,31 @@ bosunApp.directive('tsTab', function () {
         link: function (scope, elem, attrs) {
             var ta = elem[0];
             elem.keydown(function (evt) {
-                if (evt.keyCode == 9 && !evt.ctrlKey) {
-                    evt.preventDefault();
-                    var v = ta.value;
-                    var start = ta.selectionStart;
-                    ta.value = v.substr(0, start) + "\t" + v.substr(start);
-                    ta.selectionStart = ta.selectionEnd = start + 1;
+                if (evt.ctrlKey) {
+                    return;
+                }
+                switch (evt.keyCode) {
+                    case 9:
+                        evt.preventDefault();
+                        var v = ta.value;
+                        var start = ta.selectionStart;
+                        ta.value = v.substr(0, start) + "\t" + v.substr(start);
+                        ta.selectionStart = ta.selectionEnd = start + 1;
+                        return;
+                    case 13:
+                        if (ta.selectionStart != ta.selectionEnd) {
+                            return;
+                        }
+                        evt.preventDefault();
+                        var v = ta.value;
+                        var start = ta.selectionStart;
+                        var sub = v.substr(0, start);
+                        var last = sub.lastIndexOf("\n") + 1;
+                        for (var i = last; i < sub.length && /[ \t]/.test(sub[i]); i++)
+                            ;
+                        var ws = sub.substr(last, i - last);
+                        ta.value = v.substr(0, start) + "\n" + ws + v.substr(start);
+                        ta.selectionStart = ta.selectionEnd = start + 1 + ws.length;
                 }
             });
         }
