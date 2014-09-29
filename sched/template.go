@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"html/template"
 	"io"
-	"log"
 	"net/url"
 	"os"
 	"strings"
@@ -119,12 +118,19 @@ func (s *Schedule) ExecuteSubject(w io.Writer, a *conf.Alert, st *State) error {
 	return t.Subject.Execute(w, s.Data(st, a))
 }
 
-func (c *Context) eval(v string, filter bool, series bool, autods int) ([]*expr.Result, error) {
-	e, err := expr.New(v)
-	var results []*expr.Result
-	if err != nil {
-		return results, fmt.Errorf("%s: %v", v, err)
+func (c *Context) eval(v interface{}, filter bool, series bool, autods int) ([]*expr.Result, error) {
+	var e *expr.Expr
+	var err error
+	switch v := v.(type) {
+	case string:
+		e, err = expr.New(v)
+	case *expr.Expr:
+		e = v
 	}
+	if err != nil {
+		return nil, fmt.Errorf("%v: %v", v, err)
+	}
+	var results []*expr.Result
 	if series && e.Root.Return() != parse.TYPE_SERIES {
 		return results, fmt.Errorf("egraph: requires an expression that returns a series")
 	}
@@ -163,55 +169,41 @@ func (c *Context) Lookup(table, key string) string {
 	}
 }
 
-// Eval executes the given expression and returns a value with corresponding tags
-// to the context's tags. If no such result is found, the first result with nil
-// tags is returned. If no such result is found, "" is returned.
-func (c *Context) Eval(v string) interface{} {
+// Eval executes the given expression and returns a value with corresponding
+// tags to the context's tags. If no such result is found, the first result with
+// nil tags is returned. If no such result is found, nil is returned.
+func (c *Context) Eval(v interface{}) (interface{}, error) {
 	res, err := c.eval(v, true, false, 0)
 	if err != nil {
-		log.Print(err)
-		return 0
+		return nil, err
 	}
 	if len(res) != 1 {
-		log.Printf("Expected 1 results, got %v", len(res))
-		return 0
+		return nil, fmt.Errorf("expected 1 result, got %v", len(res))
 	}
-	return res[0].Value
+	return res[0].Value, nil
 }
 
-// EvalAll executes the expression and returns the result set. It is not filtered
-// to the context's tags.
-func (c *Context) EvalAll(v string) interface{} {
-	res, err := c.eval(v, false, false, 0)
+// EvalAll returns the executed expression.
+func (c *Context) EvalAll(v interface{}) (interface{}, error) {
+	return c.eval(v, false, false, 0)
+}
+
+func (c *Context) graph(v interface{}, filter bool) (interface{}, error) {
+	res, err := c.eval(v, filter, true, 1000)
 	if err != nil {
-		log.Print(err)
-		return nil
+		return nil, err
 	}
-	return res
-}
-
-func (c *Context) graph(v string, res []*expr.Result) interface{} {
 	var buf bytes.Buffer
-	if err := c.schedule.ExprGraph(nil, &buf, res, v, time.Now().UTC()); err != nil {
-		return err.Error()
+	if err := c.schedule.ExprGraph(nil, &buf, res, fmt.Sprint(v), time.Now().UTC()); err != nil {
+		return nil, err
 	}
-	return template.HTML(buf.String())
+	return template.HTML(buf.String()), nil
 }
 
-func (c *Context) Graph(v string) interface{} {
-	res, err := c.eval(v, false, true, 1000)
-	if err != nil {
-		log.Print(err)
-		return ""
-	}
-	return c.graph(v, res)
+func (c *Context) Graph(v interface{}) (interface{}, error) {
+	return c.graph(v, true)
 }
 
-func (c *Context) GraphAll(v string) interface{} {
-	res, err := c.eval(v, true, true, 1000)
-	if err != nil {
-		log.Print(err)
-		return ""
-	}
-	return c.graph(v, res)
+func (c *Context) GraphAll(v interface{}) (interface{}, error) {
+	return c.graph(v, false)
 }
