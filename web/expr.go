@@ -129,13 +129,13 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 	var data interface{}
 	warning := make([]string, 0)
 	if r.FormValue("notemplate") != "" {
-		if err := s.ExecuteBody(body, a, instance); err != nil {
+		if _, err := s.ExecuteBody(body, a, instance, false); err != nil {
 			warning = append(warning, err.Error())
 		}
 		if err := s.ExecuteSubject(subject, a, instance); err != nil {
 			warning = append(warning, err.Error())
 		}
-		data = s.Data(instance, a)
+		data = s.Data(instance, a, false)
 		if e := r.FormValue("email"); e != "" {
 			m, err := mail.ParseAddress(e)
 			if err != nil {
@@ -144,7 +144,12 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 			n := conf.Notification{
 				Email: []*mail.Address{m},
 			}
-			n.DoEmail(subject.Bytes(), body.Bytes(), schedule.Conf.EmailFrom, schedule.Conf.SmtpHost)
+			email := new(bytes.Buffer)
+			c, err := s.ExecuteBody(email, a, instance, true)
+			if err != nil {
+				warning = append(warning, err.Error())
+			}
+			n.DoEmail(subject.Bytes(), email.Bytes(), schedule.Conf.EmailFrom, schedule.Conf.SmtpHost, c.Attachments...)
 		}
 	}
 	return struct {

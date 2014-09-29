@@ -64,6 +64,7 @@ func (e *Email) Attach(r io.Reader, filename string, c string) (a *Attachment, e
 		at.Header.Set("Content-Type", "application/octet-stream")
 	}
 	at.Header.Set("Content-Disposition", fmt.Sprintf("attachment;\r\n filename=\"%s\"", filename))
+	at.Header.Set("Content-ID", fmt.Sprintf("<%s>", filename))
 	at.Header.Set("Content-Transfer-Encoding", "base64")
 	e.Attachments = append(e.Attachments, at)
 	return at, nil
