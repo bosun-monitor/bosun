@@ -1737,6 +1737,7 @@ bosunControllers.controller('RuleCtrl', [
                 }).error(function (error) {
                     $scope.error = error;
                     $scope.running = '';
+                    $scope.stop();
                 });
             }
             next(intervals, true);
