@@ -91,12 +91,13 @@ func (s *Schedule) notify(st *State, n *conf.Notification) {
 	subject := new(bytes.Buffer)
 	if err := s.ExecuteSubject(subject, a, st); err != nil {
 		log.Println(err)
+		subject = bytes.NewBufferString(err.Error())
 	}
 	body := new(bytes.Buffer)
 	c, err := s.ExecuteBody(body, a, st, true)
 	if err != nil {
 		log.Println(err)
-		return
+		body = bytes.NewBufferString(err.Error())
 	}
 	n.Notify(subject.Bytes(), body.Bytes(), s.Conf.EmailFrom, s.Conf.SmtpHost, c.Attachments...)
 }
