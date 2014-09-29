@@ -29,7 +29,8 @@ func (a AlertKey) Name() string {
 	return strings.SplitN(string(a), "{", 2)[0]
 }
 
-// Group returns the tagset of this alert key. Will panic if a is not valid.
+// Group returns the tagset of this alert key. Will panic if a is not a valid
+// AlertKey. OpenTSDB tag validation errors are ignored.
 func (a AlertKey) Group() opentsdb.TagSet {
 	sp := strings.SplitN(string(a), "{", 2)
 	if len(sp) < 2 {
@@ -41,7 +42,7 @@ func (a AlertKey) Group() opentsdb.TagSet {
 		return nil
 	}
 	g, err := opentsdb.ParseTags(s)
-	if err != nil {
+	if g == nil && err != nil {
 		panic(err)
 	}
 	return g
