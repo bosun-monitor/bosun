@@ -556,9 +556,21 @@ func (c *Conf) loadMacro(s *parse.SectionNode) {
 }
 
 var defaultFuncs = ttemplate.FuncMap{
-	"bytes": func(v string) ByteSize {
-		f, _ := strconv.ParseFloat(v, 64)
-		return ByteSize(f)
+	"bytes": func(v interface{}) (ByteSize, error) {
+		switch v := v.(type) {
+		case string:
+			f, err := strconv.ParseFloat(v, 64)
+			return ByteSize(f), err
+		case int:
+			return ByteSize(v), nil
+		case float64:
+			return ByteSize(v), nil
+		case expr.Number:
+			return ByteSize(v), nil
+		case expr.Scalar:
+			return ByteSize(v), nil
+		}
+		return ByteSize(0), fmt.Errorf("unexpected type: %T (%v)", v, v)
 	},
 	"short": func(v string) string {
 		return strings.SplitN(v, ".", 2)[0]
