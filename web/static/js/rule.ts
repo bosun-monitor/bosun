@@ -21,6 +21,9 @@ interface IRuleScope extends IExprScope {
 	test: () => any;
 	scroll: (v: string) => void;
 	intervals: number;
+	duration: number;
+	setInterval: () => void;
+	setDuration: () => void;
 }
 
 bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route', '$sce', function($scope: IRuleScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService, $sce: ng.ISCEService) {
@@ -40,6 +43,7 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
 	$scope.toTime = search.toTime || '';
 	$scope.tab = search.tab || 'results';
 	$scope.intervals = +search.intervals || 5;
+	$scope.duration = +search.duration || null;
 	if (!current_alert) {
 		var alert_def =
 			'alert test {\n' +
@@ -90,6 +94,7 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
 		$location.search('toTime', $scope.toTime || null);
 		$location.search('tab', $scope.tab || 'results');
 		$location.search('intervals', $scope.intervals || null);
+		$location.search('duration', $scope.duration || null);
 		$location.search('email', $scope.email || null);
 		$scope.animate();
 		var from = moment.utc($scope.fromDate + ' ' + $scope.fromTime);
@@ -177,6 +182,44 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
 	$scope.scroll = (id: string) => {
 		document.getElementById('time-' + id).scrollIntoView();
 	};
+	$scope.setInterval = () => {
+		var from = moment.utc($scope.fromDate + ' ' + $scope.fromTime);
+		var to = moment.utc($scope.toDate + ' ' + $scope.toTime);
+		if (!from.isValid() || !to.isValid()) {
+			return;
+		}
+		var diff = from.diff(to);
+		if (!diff) {
+			return;
+		}
+		var intervals = +$scope.intervals;
+		if (intervals < 2) {
+			return;
+		}
+		diff /= 1000 * 60;
+		var d = Math.abs(Math.round(diff / intervals));
+		if (d < 1) {
+			d = 1;
+		}
+		$scope.duration = d;
+	};
+	$scope.setDuration = () => {
+		var from = moment.utc($scope.fromDate + ' ' + $scope.fromTime);
+		var to = moment.utc($scope.toDate + ' ' + $scope.toTime);
+		if (!from.isValid() || !to.isValid()) {
+			return;
+		}
+		var diff = from.diff(to);
+		if (!diff) {
+			return;
+		}
+		var duration = +$scope.duration;
+		if (duration < 1) {
+			return;
+		}
+		$scope.intervals = Math.abs(Math.round(diff / duration / 1000 / 60));
+	};
+	$scope.setInterval();
 	$http.get('/api/templates')
 		.success((data) => {
 			$scope.alerts = data.Alerts;
