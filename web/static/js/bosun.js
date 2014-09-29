@@ -1651,6 +1651,7 @@ bosunControllers.controller('RuleCtrl', [
         $scope.toTime = search.toTime || '';
         $scope.tab = search.tab || 'results';
         $scope.intervals = +search.intervals || 5;
+        $scope.duration = +search.duration || null;
         if (!current_alert) {
             var alert_def = 'alert test {\n' + '	template = test\n' + '	crit = ' + expr + '\n' + '}';
             $location.search('alert', btoa(alert_def));
@@ -1686,6 +1687,7 @@ bosunControllers.controller('RuleCtrl', [
             $location.search('toTime', $scope.toTime || null);
             $location.search('tab', $scope.tab || 'results');
             $location.search('intervals', $scope.intervals || null);
+            $location.search('duration', $scope.duration || null);
             $location.search('email', $scope.email || null);
             $scope.animate();
             var from = moment.utc($scope.fromDate + ' ' + $scope.fromTime);
@@ -1767,6 +1769,44 @@ bosunControllers.controller('RuleCtrl', [
         $scope.scroll = function (id) {
             document.getElementById('time-' + id).scrollIntoView();
         };
+        $scope.setInterval = function () {
+            var from = moment.utc($scope.fromDate + ' ' + $scope.fromTime);
+            var to = moment.utc($scope.toDate + ' ' + $scope.toTime);
+            if (!from.isValid() || !to.isValid()) {
+                return;
+            }
+            var diff = from.diff(to);
+            if (!diff) {
+                return;
+            }
+            var intervals = +$scope.intervals;
+            if (intervals < 2) {
+                return;
+            }
+            diff /= 1000 * 60;
+            var d = Math.abs(Math.round(diff / intervals));
+            if (d < 1) {
+                d = 1;
+            }
+            $scope.duration = d;
+        };
+        $scope.setDuration = function () {
+            var from = moment.utc($scope.fromDate + ' ' + $scope.fromTime);
+            var to = moment.utc($scope.toDate + ' ' + $scope.toTime);
+            if (!from.isValid() || !to.isValid()) {
+                return;
+            }
+            var diff = from.diff(to);
+            if (!diff) {
+                return;
+            }
+            var duration = +$scope.duration;
+            if (duration < 1) {
+                return;
+            }
+            $scope.intervals = Math.abs(Math.round(diff / duration / 1000 / 60));
+        };
+        $scope.setInterval();
         $http.get('/api/templates').success(function (data) {
             $scope.alerts = data.Alerts;
             $scope.templates = data.Templates;

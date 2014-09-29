@@ -40,21 +40,25 @@
 		<form class="form-inline">
 			<div class="form-group">
 				<label class="control-label">From</label>
-				<input type="text" class="form-control" style="width:10em" ng-model="fromDate" placeholder="yyyy-mm-dd" bs-datepicker data-date-format="yyyy-MM-dd" data-date-type="string">
+				<input type="text" class="form-control" style="width:10em" ng-model="fromDate" ng-change="setInterval()" placeholder="yyyy-mm-dd" bs-datepicker data-date-format="yyyy-MM-dd" data-date-type="string">
 			</div>
 			<div class="form-group">
-				<input type="text" class="form-control" style="width:10em" ng-model="fromTime" placeholder="HH:MM">
+				<input type="text" class="form-control" style="width:10em" ng-model="fromTime" ng-change="setInterval()" placeholder="HH:MM">
 			</div>
 			<div class="form-group">
 				<label class="control-label">To</label>
-				<input type="text" class="form-control" style="width:10em" ng-model="toDate" placeholder="yyyy-mm-dd" bs-datepicker data-date-format="yyyy-MM-dd" data-date-type="string">
+				<input type="text" class="form-control" style="width:10em" ng-model="toDate" ng-change="setInterval()" placeholder="yyyy-mm-dd" bs-datepicker data-date-format="yyyy-MM-dd" data-date-type="string">
 			</div>
 			<div class="form-group">
-				<input type="text" class="form-control" style="width:10em" ng-model="toTime" placeholder="HH:MM">
+				<input type="text" class="form-control" style="width:10em" ng-model="toTime" ng-change="setInterval()" placeholder="HH:MM">
 			</div>
 			<div class="form-group">
 				<label class="control-label">Intervals</label>
-				<input type="number" min="2" step="1" style="width:4em" class="form-control" ng-model="intervals" ng-disabled="!fromDate || !toDate" tooltip title="Number of evaluations between timespan.">
+				<input type="number" min="2" step="1" style="width:7em" class="form-control" ng-model="intervals" ng-change="setInterval()" ng-disabled="!fromDate || !toDate" tooltip title="Number of evaluations between timespan.">
+			</div>
+			<div class="form-group">
+				<label class="control-label">Step Duration (m)</label>
+				<input type="number" min="1" step="1" style="width:7em" class="form-control" ng-model="duration" ng-change="setDuration()" ng-disabled="!fromDate || !toDate" tooltip title="Step duration in minutes between intervals.">
 			</div>
 			<div class="form-group">
 				<button class="btn btn-default" ng-click="test()">Test</button>
