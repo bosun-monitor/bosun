@@ -149,7 +149,7 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 			if err != nil {
 				warning = append(warning, err.Error())
 			}
-			n.DoEmail(subject.Bytes(), email.Bytes(), schedule.Conf.EmailFrom, schedule.Conf.SmtpHost, c.Attachments...)
+			n.DoEmail(subject.Bytes(), email.Bytes(), schedule.Conf.EmailFrom, schedule.Conf.SmtpHost, a.Name+instance.Group.String(), c.Attachments...)
 		}
 	}
 	return struct {
