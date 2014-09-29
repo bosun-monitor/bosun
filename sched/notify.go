@@ -98,7 +98,7 @@ func (s *Schedule) notify(st *State, n *conf.Notification) {
 		log.Println(err)
 		return
 	}
-	n.Notify(subject.Bytes(), body.Bytes(), s.Conf.EmailFrom, s.Conf.SmtpHost, st.Alert+st.Group.String(), c.Attachments...)
+	n.Notify(subject.Bytes(), body.Bytes(), s.Conf.EmailFrom, s.Conf.SmtpHost, string(st.AlertKey()), c.Attachments...)
 }
 
 func (s *Schedule) unotify(name string, group expr.AlertKeys, n *conf.Notification) {
