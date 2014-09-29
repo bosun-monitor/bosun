@@ -146,9 +146,6 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 			}
 			email := new(bytes.Buffer)
 			c, err := s.ExecuteBody(email, a, instance, true)
-			if err != nil {
-				warning = append(warning, err.Error())
-			}
 			n.DoEmail(subject.Bytes(), email.Bytes(), schedule.Conf.EmailFrom, schedule.Conf.SmtpHost, c.Attachments...)
 		}
 	}
