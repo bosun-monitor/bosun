@@ -214,7 +214,7 @@ func (c *Context) graph(v interface{}, filter bool) (interface{}, error) {
 			Filename:    name,
 			ContentType: "image/svg+xml",
 		})
-		return template.HTML(fmt.Sprintf(`<img alt="%s" width="500" height="300" src="cid:%s" />`,
+		return template.HTML(fmt.Sprintf(`<img alt="%s" src="cid:%s" />`,
 			template.HTMLEscapeString(fmt.Sprint(v)),
 			name,
 		)), nil
