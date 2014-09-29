@@ -13,6 +13,6 @@ docker kill ${ID}
 docker rm ${ID}
 rm -rf $TMP/hbase/hbase-*/docs $TMP/tsdb/build/gwt-unitCache
 cp -R ../web $TMP/bosun
-docker build -t bosun run
+docker build -t stackexchange/bosun run
 rm -rf build/bosun $TMP
 echo bosun docker image built
