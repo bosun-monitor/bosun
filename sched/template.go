@@ -84,7 +84,7 @@ func (c *Context) HostView(host string) string {
 	return u.String()
 }
 
-func (c *Context) Expr(v string) string {
+func (c *Context) Expr(v string) (string, error) {
 	q := url.QueryEscape("q=" + opentsdb.ReplaceTags(v, c.Group))
 	u := url.URL{
 		Scheme:   "http",
@@ -95,11 +95,11 @@ func (c *Context) Expr(v string) string {
 	if strings.HasPrefix(c.schedule.Conf.HttpListen, ":") {
 		h, err := os.Hostname()
 		if err != nil {
-			return ""
+			return "", err
 		}
 		u.Host = h + u.Host
 	}
-	return u.String()
+	return u.String(), nil
 }
 
 func (s *Schedule) ExecuteBody(w io.Writer, a *conf.Alert, st *State) error {
@@ -157,15 +157,15 @@ func (c *Context) eval(v interface{}, filter bool, series bool, autods int) ([]*
 }
 
 // Lookup returns the value for a key in the lookup table for the context's tagset.
-func (c *Context) Lookup(table, key string) string {
+func (c *Context) Lookup(table, key string) (string, error) {
 	l, ok := c.schedule.Lookups[table]
 	if !ok {
-		return fmt.Sprintf("unknown lookup table %v", table)
+		return "", fmt.Errorf("unknown lookup table %v", table)
 	}
 	if v, ok := l.Get(key, c.Group); ok {
-		return v
+		return v, nil
 	} else {
-		return fmt.Sprintf("no entry for key %v in table %v for tagset %v", key, table, c.Group)
+		return "", fmt.Errorf("no entry for key %v in table %v for tagset %v", key, table, c.Group)
 	}
 }
 
