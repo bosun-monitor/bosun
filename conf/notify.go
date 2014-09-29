@@ -9,12 +9,12 @@ import (
 	"net/mail"
 	"net/smtp"
 
-	"github.com/StackExchange/bosun/_third_party/github.com/jordan-wright/email"
+	"github.com/StackExchange/bosun/_third_party/github.com/mjibson/email"
 )
 
-func (n *Notification) Notify(subject, body []byte, from, smtpHost string) {
+func (n *Notification) Notify(subject, body []byte, from, smtpHost string, attachments ...*Attachment) {
 	if len(n.Email) > 0 {
-		go n.DoEmail(subject, body, from, smtpHost)
+		go n.DoEmail(subject, body, from, smtpHost, attachments...)
 	}
 	if n.Post != nil {
 		go n.DoPost(subject)
@@ -64,7 +64,13 @@ func (n *Notification) DoGet() {
 	}
 }
 
-func (n *Notification) DoEmail(subject, body []byte, from, smtpHost string) {
+type Attachment struct {
+	Data        []byte
+	Filename    string
+	ContentType string
+}
+
+func (n *Notification) DoEmail(subject, body []byte, from, smtpHost string, attachments ...*Attachment) {
 	e := email.NewEmail()
 	e.From = from
 	for _, a := range n.Email {
@@ -72,6 +78,9 @@ func (n *Notification) DoEmail(subject, body []byte, from, smtpHost string) {
 	}
 	e.Subject = string(subject)
 	e.HTML = body
+	for _, a := range attachments {
+		e.Attach(bytes.NewBuffer(a.Data), a.Filename, a.ContentType)
+	}
 	if err := Send(e, smtpHost); err != nil {
 		log.Println(err)
 		return

@@ -20,15 +20,20 @@ type Context struct {
 	*State
 	Alert *conf.Alert
 
-	schedule *Schedule
+	schedule    *Schedule
+	Attachments []*conf.Attachment
 }
 
-func (s *Schedule) Data(st *State, a *conf.Alert) *Context {
-	return &Context{
+func (s *Schedule) Data(st *State, a *conf.Alert, isEmail bool) *Context {
+	c := Context{
 		State:    st,
 		Alert:    a,
 		schedule: s,
 	}
+	if isEmail {
+		c.Attachments = make([]*conf.Attachment, 0)
+	}
+	return &c
 }
 
 type unknownContext struct {
@@ -102,12 +107,13 @@ func (c *Context) Expr(v string) (string, error) {
 	return u.String(), nil
 }
 
-func (s *Schedule) ExecuteBody(w io.Writer, a *conf.Alert, st *State) error {
+func (s *Schedule) ExecuteBody(w io.Writer, a *conf.Alert, st *State, isEmail bool) (*Context, error) {
 	t := a.Template
 	if t == nil || t.Body == nil {
-		return nil
+		return nil, nil
 	}
-	return t.Body.Execute(w, s.Data(st, a))
+	c := s.Data(st, a, isEmail)
+	return c, t.Body.Execute(w, c)
 }
 
 func (s *Schedule) ExecuteSubject(w io.Writer, a *conf.Alert, st *State) error {
@@ -115,7 +121,7 @@ func (s *Schedule) ExecuteSubject(w io.Writer, a *conf.Alert, st *State) error {
 	if t == nil || t.Subject == nil {
 		return nil
 	}
-	return t.Subject.Execute(w, s.Data(st, a))
+	return t.Subject.Execute(w, s.Data(st, a, false))
 }
 
 func (c *Context) eval(v interface{}, filter bool, series bool, autods int) ([]*expr.Result, error) {
@@ -188,6 +194,10 @@ func (c *Context) EvalAll(v interface{}) (interface{}, error) {
 	return c.eval(v, false, false, 0)
 }
 
+func (c *Context) IsEmail() bool {
+	return c.Attachments != nil
+}
+
 func (c *Context) graph(v interface{}, filter bool) (interface{}, error) {
 	res, err := c.eval(v, filter, true, 1000)
 	if err != nil {
@@ -196,6 +206,18 @@ func (c *Context) graph(v interface{}, filter bool) (interface{}, error) {
 	var buf bytes.Buffer
 	if err := c.schedule.ExprGraph(nil, &buf, res, fmt.Sprint(v), time.Now().UTC()); err != nil {
 		return nil, err
+	}
+	if c.IsEmail() {
+		name := fmt.Sprintf("%d.svg", len(c.Attachments)+1)
+		c.Attachments = append(c.Attachments, &conf.Attachment{
+			Data:        buf.Bytes(),
+			Filename:    name,
+			ContentType: "image/svg+xml",
+		})
+		return template.HTML(fmt.Sprintf(`<img alt="%s" width="500" height="300" src="cid:%s" />`,
+			template.HTMLEscapeString(fmt.Sprint(v)),
+			name,
+		)), nil
 	}
 	return template.HTML(buf.String()), nil
 }
