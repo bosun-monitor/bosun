@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/metadata"
 	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/bosun/conf"
 	"github.com/StackExchange/bosun/expr"
@@ -228,4 +229,29 @@ func (c *Context) Graph(v interface{}) (interface{}, error) {
 
 func (c *Context) GraphAll(v interface{}) (interface{}, error) {
 	return c.graph(v, false)
+}
+
+func (c *Context) GetMeta(metric, name string, v interface{}) (interface{}, error) {
+	var t opentsdb.TagSet
+	switch v := v.(type) {
+	case string:
+		var err error
+		t, err = opentsdb.ParseTags(v)
+		if err != nil {
+			return t, err
+		}
+	case opentsdb.TagSet:
+		t = v
+	}
+	meta := c.schedule.GetMetadata(metric, t)
+	if name == "" {
+		return meta, nil
+	}
+	fm := make([]metadata.Metasend, 0)
+	for _, m := range meta {
+		if m.Name == name {
+			fm = append(fm, m)
+		}
+	}
+	return fm, nil
 }

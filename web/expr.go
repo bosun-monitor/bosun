@@ -100,6 +100,7 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 	}
 	s.CheckStart = now
 	s.Init(c)
+	s.Metadata = schedule.Metadata
 	s.Search = schedule.Search
 	rh := make(sched.RunHistory)
 	var a *conf.Alert
