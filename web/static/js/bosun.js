@@ -69,13 +69,14 @@ bosunApp.run([
     '$location', '$rootScope', function ($location, $rootScope) {
         $rootScope.$on('$routeChangeSuccess', function (event, current, previous) {
             $rootScope.title = current.$$route.title;
+            $rootScope.shortlink = false;
         });
     }]);
 
 var bosunControllers = angular.module('bosunControllers', []);
 
 bosunControllers.controller('BosunCtrl', [
-    '$scope', '$route', '$http', '$q', function ($scope, $route, $http, $q) {
+    '$scope', '$route', '$http', '$q', '$rootScope', function ($scope, $route, $http, $q, $rootScope) {
         $scope.$on('$routeChangeSuccess', function (event, current, previous) {
             $scope.stop(true);
         });
@@ -205,21 +206,17 @@ bosunControllers.controller('BosunCtrl', [
                 animateCount--;
             }
         };
-        var surl;
-        var shortlink = $('#shortlink');
+        var short = $('#shortlink')[0];
         $scope.shorten = function () {
-            if (document.URL == surl) {
-                shortlink.popover('toggle');
-                return;
-            }
-            surl = document.URL;
             $http.post('https://www.googleapis.com/urlshortener/v1/url', {
                 longUrl: document.URL
             }).success(function (data) {
                 if (data.id) {
-                    $('#shortlink').popover({
-                        content: '<a href="' + data.id + '" target="_blank">' + data.id + '</a>'
-                    }).popover('show');
+                    short.value = data.id;
+                    $rootScope.shortlink = true;
+                    setTimeout(function () {
+                        short.setSelectionRange(0, data.id.length);
+                    });
                 }
             });
         };
