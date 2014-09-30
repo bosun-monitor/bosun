@@ -82,9 +82,12 @@
 		Shift-enter to test. If neither From nor To are present, will run for now. If one present, at that timestamp. If both present, that timespan. Times default to midnight if not set.
 	</div>
 </div>
-<div class="row" ng-show="running">
+<div class="row" ng-show="remaining">
 	<div class="col-lg-12">
-		<div class="alert alert-info">Executing: {{running}}</div>
+		<div class="alert alert-info">
+			Running. {{remaining}} iterations remaining.
+			<button ng-click="halt()" class="btn btn-default">stop</button>
+		</div>
 	</div>
 </div>
 <div class="row" ng-show="error">

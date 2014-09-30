@@ -1676,7 +1676,6 @@ bosunControllers.controller('RuleCtrl', [
             }
         };
         $scope.test = function () {
-            $scope.running = "Running";
             $scope.error = '';
             $scope.warning = [];
             $location.search('alert', btoa($scope.alert));
@@ -1713,10 +1712,12 @@ bosunControllers.controller('RuleCtrl', [
             $scope.sets = [];
             function next(interval, first) {
                 if (typeof first === "undefined") { first = false; }
-                if (interval == 0) {
+                if (interval == 0 || $scope.stopped) {
                     $scope.stop();
+                    $scope.remaining = 0;
                     return;
                 }
+                $scope.remaining = interval;
                 var date = from.format('YYYY-MM-DD');
                 var time = from.format('HH:mm');
                 var url = '/api/rule?' + 'alert=' + encodeURIComponent($scope.alert) + '&template=' + encodeURIComponent($scope.template) + '&date=' + encodeURIComponent(date) + '&time=' + encodeURIComponent(time) + '&email=' + encodeURIComponent($scope.email);
@@ -1751,13 +1752,11 @@ bosunControllers.controller('RuleCtrl', [
                     });
                     set.results = results;
                     $scope.sets.push(set);
-                    $scope.running = '';
-                    $scope.error = '';
                     from.subtract(diff / (intervals - 1));
                     next(interval - 1);
                 }).error(function (error) {
                     $scope.error = error;
-                    $scope.running = '';
+                    $scope.remaining = 0;
                     $scope.stop();
                 });
             }
@@ -1805,6 +1804,9 @@ bosunControllers.controller('RuleCtrl', [
                 return;
             }
             $scope.intervals = Math.abs(Math.round(diff / duration / 1000 / 60));
+        };
+        $scope.halt = function () {
+            $scope.stopped = true;
         };
         $scope.setInterval();
         $http.get('/api/templates').success(function (data) {
