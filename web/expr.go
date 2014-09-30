@@ -101,6 +101,7 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 	}
 	s.CheckStart = now
 	s.Init(c)
+	s.Metadata = schedule.Metadata
 	s.Search = schedule.Search
 	rh := make(sched.RunHistory)
 	var a *conf.Alert
@@ -158,7 +159,7 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 			}
 			email := new(bytes.Buffer)
 			c, err := s.ExecuteBody(email, a, instance, true)
-			n.DoEmail(subject.Bytes(), email.Bytes(), schedule.Conf.EmailFrom, schedule.Conf.SmtpHost, c.Attachments...)
+			n.DoEmail(subject.Bytes(), email.Bytes(), schedule.Conf.EmailFrom, schedule.Conf.SmtpHost, string(instance.AlertKey()), c.Attachments...)
 		}
 	}
 	return struct {

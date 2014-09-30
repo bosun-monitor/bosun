@@ -12,9 +12,9 @@ import (
 	"github.com/StackExchange/bosun/_third_party/github.com/mjibson/email"
 )
 
-func (n *Notification) Notify(subject, body []byte, from, smtpHost string, attachments ...*Attachment) {
+func (n *Notification) Notify(subject, body []byte, from, smtpHost string, ak string, attachments ...*Attachment) {
 	if len(n.Email) > 0 {
-		go n.DoEmail(subject, body, from, smtpHost, attachments...)
+		go n.DoEmail(subject, body, from, smtpHost, ak, attachments...)
 	}
 	if n.Post != nil {
 		go n.DoPost(subject)
@@ -70,7 +70,7 @@ type Attachment struct {
 	ContentType string
 }
 
-func (n *Notification) DoEmail(subject, body []byte, from, smtpHost string, attachments ...*Attachment) {
+func (n *Notification) DoEmail(subject, body []byte, from, smtpHost string, ak string, attachments ...*Attachment) {
 	e := email.NewEmail()
 	e.From = from
 	for _, a := range n.Email {
@@ -82,9 +82,10 @@ func (n *Notification) DoEmail(subject, body []byte, from, smtpHost string, atta
 		e.Attach(bytes.NewBuffer(a.Data), a.Filename, a.ContentType)
 	}
 	if err := Send(e, smtpHost); err != nil {
-		log.Println(err)
+		log.Printf("failed to send alert %v to %v %v\n", ak, e.To, err)
 		return
 	}
+	log.Printf("relayed alert %v to %v sucessfully\n", ak, e.To)
 }
 
 // Send an email using the given host and SMTP auth (optional), returns any
