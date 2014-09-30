@@ -72,6 +72,7 @@ type Res struct {
 
 func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	var buf bytes.Buffer
+	summary := r.FormValue("summary") == "true"
 	fmt.Fprintf(&buf, "tsdbHost = %s\n", schedule.Conf.TsdbHost)
 	fmt.Fprintf(&buf, "smtpHost = %s\n", schedule.Conf.SmtpHost)
 	fmt.Fprintf(&buf, "emailFrom = %s\n", schedule.Conf.EmailFrom)
@@ -111,15 +112,26 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 	if _, err := s.CheckExpr(rh, a, a.Crit, sched.StCritical, nil); err != nil {
 		return nil, err
 	}
-	i := 0
 	if len(rh) < 1 {
 		return nil, fmt.Errorf("no results returned")
 	}
 	keys := make(expr.AlertKeys, len(rh))
+	var criticals, warnings, normals int
+	i := 0
 	for k, v := range rh {
 		v.Time = now
 		keys[i] = k
 		i++
+		switch v.Status {
+		case sched.StNormal:
+			normals++
+		case sched.StWarning:
+			warnings++
+		case sched.StCritical:
+			criticals++
+		default:
+			return nil, fmt.Errorf("unknown state type %v", v.Status)
+		}
 	}
 	sort.Sort(keys)
 	instance := s.Status(keys[0])
@@ -128,7 +140,7 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 	subject := new(bytes.Buffer)
 	var data interface{}
 	warning := make([]string, 0)
-	if r.FormValue("notemplate") != "" {
+	if !summary {
 		if _, err := s.ExecuteBody(body, a, instance, false); err != nil {
 			warning = append(warning, err.Error())
 		}
@@ -150,18 +162,21 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 		}
 	}
 	return struct {
+		Time                         int64
+		Criticals, Warnings, Normals int
+
 		Body    string      `json:",omitempty"`
 		Subject string      `json:",omitempty"`
 		Data    interface{} `json:",omitempty"`
 		Result  sched.RunHistory
 		Warning []string `json:",omitempty"`
-		Time    int64
 	}{
+		now.Unix(),
+		criticals, warnings, normals,
 		body.String(),
 		subject.String(),
 		data,
 		rh,
 		warning,
-		now.Unix(),
 	}, nil
 }

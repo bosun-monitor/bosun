@@ -28,6 +28,7 @@ interface IRuleScope extends IBosunScope {
 	stopped: boolean;
 	remaining: number;
 	error: string;
+	show: (v: any) => void;
 }
 
 bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route', '$sce', function($scope: IRuleScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService, $sce: ng.ISCEService) {
@@ -136,37 +137,19 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
 				'&date=' + encodeURIComponent(date) +
 				'&time=' + encodeURIComponent(time) +
 				'&email=' + encodeURIComponent($scope.email);
-			if (first) {
-				url += '&notemplate=true';
-			}
-			$http.get(url)
+			var f = first ? '' : '&summary=true';
+			$http.get(url + f)
 				.success((data) => {
-					if (first) {
-						$scope.subject = data.Subject;
-						$scope.body = $sce.trustAsHtml(data.Body);
-						$scope.data = JSON.stringify(data.Data, null, '  ');
-						angular.forEach(data.Warning, function(v) {
-							$scope.warning.push(v)
-						});
-					}
-					var results = [];
 					var set: any = {
+						url: url,
 						time: moment.unix(data.Time).utc().format('YYYY-MM-DD HH:mm:ss'),
-						critical: 0,
-						warning: 0,
-						normal: 0,
+						critical: data.Criticals,
+						warning: data.Warnings,
+						normal: data.Normals,
 					};
-					angular.forEach(data.Result, function(v, k) {
-						results.push({
-							group: k,
-							result: v,
-						})
-						set[v.Status]++;
-					});
-					results.sort((a: any, b: any) => {
-						return status_map[b.result.Status] - status_map[a.result.Status];
-					});
-					set.results = results;
+					if (first) {
+						set.results = procResults(data);
+					}
 					$scope.sets.push(set);
 					from.subtract(diff / (intervals - 1));
 					next(interval - 1);
@@ -179,11 +162,46 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
 		}
 		next(intervals, true);
 	};
+	function procResults(data: any) {
+		$scope.subject = data.Subject;
+		$scope.body = $sce.trustAsHtml(data.Body);
+		$scope.data = JSON.stringify(data.Data, null, '  ');
+		angular.forEach(data.Warning, function(v) {
+			$scope.warning.push(v)
+		});
+		var results = [];
+		angular.forEach(data.Result, function(v, k) {
+			results.push({
+				group: k,
+				result: v,
+			})
+		});
+		results.sort((a: any, b: any) => {
+			return status_map[b.result.Status] - status_map[a.result.Status];
+		});
+		return results;
+	}
+	$scope.show = (set: any) => {
+		set.show = 'loading...';
+		$scope.animate();
+		$http.get(set.url)
+			.success((data) => {
+				set.results = procResults(data);
+			})
+			.error((error) => {
+				$scope.error = error;
+			})
+			.finally(() => {
+				$scope.stop();
+				delete(set.show);
+			});
+	};
 	$scope.zws = (v: string) => {
 		return v.replace(/([,{}()])/g, '$1\u200b');
 	};
 	$scope.scroll = (id: string) => {
 		document.getElementById('time-' + id).scrollIntoView();
+		$scope.show($scope.sets[id]);
 	};
 	$scope.setInterval = () => {
 		var from = moment.utc($scope.fromDate + ' ' + $scope.fromTime);
