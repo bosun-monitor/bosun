@@ -4,6 +4,7 @@ RUN apt-get update && apt-get install -y \
 	gnuplot \
 	make \
 	openjdk-6-jre-headless \
+	openssh-server \
 	supervisor \
 	--no-install-recommends \
 	&& rm -rf /var/lib/apt/lists/*
@@ -25,5 +26,9 @@ COPY start_opentsdb.sh /tsdb/
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY create_tsdb_tables.sh /tsdb/
 
-EXPOSE 8070 4242
+RUN sed -i 's/PermitRootLogin without-password/PermitRootLogin yes/' /etc/ssh/sshd_config \
+	&& mkdir -p /var/run/sshd \
+	&& echo 'root:bosun' | chpasswd
+
+EXPOSE 8070 4242 22
 CMD ["/usr/bin/supervisord"]
