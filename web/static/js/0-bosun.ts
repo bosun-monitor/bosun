@@ -79,11 +79,13 @@ bosunApp.config(['$routeProvider', '$locationProvider', function($routeProvider:
 
 interface IRootScope extends ng.IScope {
 	title: string;
+	shortlink: boolean;
 }
 
 bosunApp.run(['$location', '$rootScope', function($location: ng.ILocationService, $rootScope: IRootScope) {
 	$rootScope.$on('$routeChangeSuccess', function(event, current, previous) {
 		$rootScope.title = current.$$route.title;
+		$rootScope.shortlink = false;
 	});
 }]);
 
@@ -102,9 +104,10 @@ interface IBosunScope extends ng.IScope {
 	animate: () => any;
 	stop: (all?: boolean) => any;
 	shorten: () => any;
+	shortlink: any;
 }
 
-bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', '$q', function($scope: IBosunScope, $route: ng.route.IRouteService, $http: ng.IHttpService, $q: ng.IQService) {
+bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', '$q', '$rootScope', function($scope: IBosunScope, $route: ng.route.IRouteService, $http: ng.IHttpService, $q: ng.IQService, $rootScope: IRootScope) {
 	$scope.$on('$routeChangeSuccess', function(event, current, previous) {
 		$scope.stop(true);
 	});
@@ -251,21 +254,17 @@ bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', '$q', fun
 			animateCount--;
 		}
 	};
-	var surl: string;
-	var shortlink = $('#shortlink');
+	var short: any= $('#shortlink')[0];
 	$scope.shorten = () => {
-		if (document.URL == surl) {
-			shortlink.popover('toggle');
-			return;
-		}
-		surl = document.URL;
 		$http.post('https://www.googleapis.com/urlshortener/v1/url', {
 			longUrl: document.URL,
 		}).success(data => {
 			if (data.id) {
-				$('#shortlink').popover({
-					content: '<a href="' + data.id + '" target="_blank">' + data.id + '</a>',
-				}).popover('show');
+				short.value = data.id;
+				$rootScope.shortlink = true;
+				setTimeout(() => {
+					short.setSelectionRange(0, data.id.length);
+				});
 			}
 		});
 	};
