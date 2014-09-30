@@ -146,8 +146,12 @@
 		</div>
 		<div class="row" ng-repeat="set in sets">
 			<div class="col-sm-12">
-				<h4 id="time-{{$index}}">Time: {{set.time}}</h4>
-				<table class="table">
+				<h4 id="time-{{$index}}">
+					Time: {{set.time}}
+					<small>criticals: {{set.critical}}, warnings: {{set.warning}}, normals: {{set.normal}}</small>
+					<button class="btn btn-default btn-sm" ng-hide="set.results" ng-click="show(set)" ng-bind="set.show || 'show'" ng-disabled="set.show"></button>
+				</h4>
+				<table class="table" ng-show="set.results">
 					<thead>
 						<tr>
 							<th>Group</th>

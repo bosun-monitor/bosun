@@ -1721,36 +1721,18 @@ bosunControllers.controller('RuleCtrl', [
                 var date = from.format('YYYY-MM-DD');
                 var time = from.format('HH:mm');
                 var url = '/api/rule?' + 'alert=' + encodeURIComponent($scope.alert) + '&template=' + encodeURIComponent($scope.template) + '&date=' + encodeURIComponent(date) + '&time=' + encodeURIComponent(time) + '&email=' + encodeURIComponent($scope.email);
-                if (first) {
-                    url += '&notemplate=true';
-                }
-                $http.get(url).success(function (data) {
-                    if (first) {
-                        $scope.subject = data.Subject;
-                        $scope.body = $sce.trustAsHtml(data.Body);
-                        $scope.data = JSON.stringify(data.Data, null, '  ');
-                        angular.forEach(data.Warning, function (v) {
-                            $scope.warning.push(v);
-                        });
-                    }
-                    var results = [];
+                var f = first ? '' : '&summary=true';
+                $http.get(url + f).success(function (data) {
                     var set = {
+                        url: url,
                         time: moment.unix(data.Time).utc().format('YYYY-MM-DD HH:mm:ss'),
-                        critical: 0,
-                        warning: 0,
-                        normal: 0
+                        critical: data.Criticals,
+                        warning: data.Warnings,
+                        normal: data.Normals
                     };
-                    angular.forEach(data.Result, function (v, k) {
-                        results.push({
-                            group: k,
-                            result: v
-                        });
-                        set[v.Status]++;
-                    });
-                    results.sort(function (a, b) {
-                        return status_map[b.result.Status] - status_map[a.result.Status];
-                    });
-                    set.results = results;
+                    if (first) {
+                        set.results = procResults(data);
+                    }
                     $scope.sets.push(set);
                     from.subtract(diff / (intervals - 1));
                     next(interval - 1);
@@ -1762,11 +1744,43 @@ bosunControllers.controller('RuleCtrl', [
             }
             next(intervals, true);
         };
+        function procResults(data) {
+            $scope.subject = data.Subject;
+            $scope.body = $sce.trustAsHtml(data.Body);
+            $scope.data = JSON.stringify(data.Data, null, '  ');
+            angular.forEach(data.Warning, function (v) {
+                $scope.warning.push(v);
+            });
+            var results = [];
+            angular.forEach(data.Result, function (v, k) {
+                results.push({
+                    group: k,
+                    result: v
+                });
+            });
+            results.sort(function (a, b) {
+                return status_map[b.result.Status] - status_map[a.result.Status];
+            });
+            return results;
+        }
+        $scope.show = function (set) {
+            set.show = 'loading...';
+            $scope.animate();
+            $http.get(set.url).success(function (data) {
+                set.results = procResults(data);
+            }).error(function (error) {
+                $scope.error = error;
+            }).finally(function () {
+                $scope.stop();
+                delete (set.show);
+            });
+        };
         $scope.zws = function (v) {
             return v.replace(/([,{}()])/g, '$1\u200b');
         };
         $scope.scroll = function (id) {
             document.getElementById('time-' + id).scrollIntoView();
+            $scope.show($scope.sets[id]);
         };
         $scope.setInterval = function () {
             var from = moment.utc($scope.fromDate + ' ' + $scope.fromTime);
