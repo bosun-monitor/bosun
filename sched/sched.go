@@ -504,39 +504,33 @@ func (s *Schedule) Run() error {
 const pingFreq = time.Second * 15
 
 func (s *Schedule) PingHosts() {
-	hostmap := make(map[string]bool)
 	for _ = range time.Tick(pingFreq) {
 		hosts := s.Search.TagValuesByTagKey("host")
 		for _, host := range hosts {
-			if _, ok := hostmap[host]; !ok {
-				hostmap[host] = true
-				go pingHost(host)
-			}
+			go pingHost(host)
 		}
 	}
 }
 
 func pingHost(host string) {
-	for _ = range time.Tick(pingFreq) {
-		p := fastping.NewPinger()
-		ra, err := net.ResolveIPAddr("ip4:icmp", host)
-		if err != nil {
-			collect.Put("ping.resolved", opentsdb.TagSet{"dst_host": host}, 0)
-			continue
-		}
-		collect.Put("ping.resolved", opentsdb.TagSet{"dst_host": host}, 1)
-		p.AddIPAddr(ra)
-		p.MaxRTT = time.Second * 5
-		timeout := 1
-		p.AddHandler("receive", func(addr *net.IPAddr, t time.Duration) {
-			collect.Put("ping.rtt", opentsdb.TagSet{"dst_host": host}, float64(t)/float64(time.Millisecond))
-			timeout = 0
-		})
-		if err := p.Run(); err != nil {
-			log.Print(err)
-		}
-		collect.Put("ping.timeout", opentsdb.TagSet{"dst_host": host}, timeout)
+	p := fastping.NewPinger()
+	ra, err := net.ResolveIPAddr("ip4:icmp", host)
+	if err != nil {
+		collect.Put("ping.resolved", opentsdb.TagSet{"dst_host": host}, 0)
+		return
 	}
+	collect.Put("ping.resolved", opentsdb.TagSet{"dst_host": host}, 1)
+	p.AddIPAddr(ra)
+	p.MaxRTT = time.Second * 5
+	timeout := 1
+	p.AddHandler("receive", func(addr *net.IPAddr, t time.Duration) {
+		collect.Put("ping.rtt", opentsdb.TagSet{"dst_host": host}, float64(t)/float64(time.Millisecond))
+		timeout = 0
+	})
+	if err := p.Run(); err != nil {
+		log.Print(err)
+	}
+	collect.Put("ping.timeout", opentsdb.TagSet{"dst_host": host}, timeout)
 }
 
 type State struct {
