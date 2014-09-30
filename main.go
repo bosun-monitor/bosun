@@ -84,6 +84,7 @@ func main() {
 	go func() { log.Fatal(sched.Run()) }()
 	if *flagWatch {
 		watch(".", "*.go", quit)
+		watch(filepath.Join("web", "templates"), "*.html", quit)
 		base := filepath.Join("web", "static", "js")
 		args := []string{
 			"--out", filepath.Join(base, "bosun.js"),
