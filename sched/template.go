@@ -235,7 +235,8 @@ func (c *Context) GetMeta(metric, name string, v interface{}) (interface{}, erro
 	var t opentsdb.TagSet
 	switch v := v.(type) {
 	case string:
-		t, err := opentsdb.ParseTags(v)
+		var err error
+		t, err = opentsdb.ParseTags(v)
 		if err != nil {
 			return t, err
 		}
