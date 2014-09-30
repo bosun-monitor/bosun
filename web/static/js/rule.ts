@@ -1,4 +1,4 @@
-interface IRuleScope extends IExprScope {
+interface IRuleScope extends IBosunScope {
 	shiftEnter: ($event: any) => void;
 	alerts: any;
 	templates: any;
@@ -24,6 +24,10 @@ interface IRuleScope extends IExprScope {
 	duration: number;
 	setInterval: () => void;
 	setDuration: () => void;
+	halt: () => void;
+	stopped: boolean;
+	remaining: number;
+	error: string;
 }
 
 bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route', '$sce', function($scope: IRuleScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService, $sce: ng.ISCEService) {
@@ -83,7 +87,6 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
 		}
 	}
 	$scope.test = () => {
-		$scope.running = "Running";
 		$scope.error = '';
 		$scope.warning = [];
 		$location.search('alert', btoa($scope.alert));
@@ -119,10 +122,12 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
 		}
 		$scope.sets = [];
 		function next(interval, first = false) {
-			if (interval == 0) {
+			if (interval == 0 || $scope.stopped) {
 				$scope.stop();
+				$scope.remaining = 0;
 				return;
 			}
+			$scope.remaining = interval;
 			var date = from.format('YYYY-MM-DD');
 			var time = from.format('HH:mm');
 			var url = '/api/rule?' +
@@ -163,14 +168,12 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
 					});
 					set.results = results;
 					$scope.sets.push(set);
-					$scope.running = '';
-					$scope.error = '';
 					from.subtract(diff / (intervals - 1));
 					next(interval - 1);
 				})
 				.error((error) => {
 					$scope.error = error;
-					$scope.running = '';
+					$scope.remaining = 0;
 					$scope.stop();
 				});
 		}
@@ -218,6 +221,9 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
 			return;
 		}
 		$scope.intervals = Math.abs(Math.round(diff / duration / 1000 / 60));
+	};
+	$scope.halt = () => {
+		$scope.stopped = true;
 	};
 	$scope.setInterval();
 	$http.get('/api/templates')
