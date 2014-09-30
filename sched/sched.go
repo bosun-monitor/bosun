@@ -513,7 +513,6 @@ func (s *Schedule) PingHosts() {
 }
 
 func pingHost(host string) {
-	log.Println("ping", host)
 	p := fastping.NewPinger()
 	ra, err := net.ResolveIPAddr("ip4:icmp", host)
 	if err != nil {
