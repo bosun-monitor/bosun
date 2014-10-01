@@ -52,7 +52,7 @@ type PRSummary struct {
 		Filebucket       float64 `yaml:"filebucket"`
 		Group            float64 `yaml:"group"`
 		IniSetting       float64 `yaml:"ini_setting"`
-		LastRun          float64 `yaml:"last_run"`
+		LastRun          int64   `yaml:"last_run"`
 		Package          float64 `yaml:"package"`
 		Schedule         float64 `yaml:"schedule"`
 		Service          float64 `yaml:"service"`
@@ -62,7 +62,7 @@ type PRSummary struct {
 		Yumrepo          float64 `yaml:"yumrepo"`
 	} `yaml:"time"`
 	Version struct {
-		Config int64  `yaml:"config"`
+		Config string `yaml:"config"`
 		Puppet string `yaml:"puppet"`
 	} `yaml:"version"`
 }
@@ -85,14 +85,14 @@ func puppet_linux() (opentsdb.MultiDataPoint, error) {
 		return nil, err
 	}
 	//m.Version.Config appears to be the unix timestamp
-	AddTS(&md, "puppet.run.resources", m.Version.Config, m.Resources.Changed, opentsdb.TagSet{"resource": "changed"}, metadata.Unknown, metadata.None, "")
-	AddTS(&md, "puppet.run.resources", m.Version.Config, m.Resources.Failed, opentsdb.TagSet{"resource": "failed"}, metadata.Unknown, metadata.None, "")
-	AddTS(&md, "puppet.run.resources", m.Version.Config, m.Resources.FailedToRestart, opentsdb.TagSet{"resource": "failed_to_restart"}, metadata.Unknown, metadata.None, "")
-	AddTS(&md, "puppet.run.resources", m.Version.Config, m.Resources.OutOfSync, opentsdb.TagSet{"resource": "out_of_sync"}, metadata.Unknown, metadata.None, "")
-	AddTS(&md, "puppet.run.resources", m.Version.Config, m.Resources.Restarted, opentsdb.TagSet{"resource": "restarted"}, metadata.Unknown, metadata.None, "")
-	AddTS(&md, "puppet.run.resources", m.Version.Config, m.Resources.Scheduled, opentsdb.TagSet{"resource": "scheduled"}, metadata.Unknown, metadata.None, "")
-	AddTS(&md, "puppet.run.resources", m.Version.Config, m.Resources.Changed, opentsdb.TagSet{"resource": "skipped"}, metadata.Unknown, metadata.None, "")
-	AddTS(&md, "puppet.run.resources_total", m.Version.Config, m.Resources.Total, nil, metadata.Unknown, metadata.None, "")
-	AddTS(&md, "puppet.run.changes", m.Version.Config, m.Changes.Total, nil, metadata.Unknown, metadata.None, "")
+	AddTS(&md, "puppet.run.resources", m.Time.LastRun, m.Resources.Changed, opentsdb.TagSet{"resource": "changed"}, metadata.Unknown, metadata.None, "")
+	AddTS(&md, "puppet.run.resources", m.Time.LastRun, m.Resources.Failed, opentsdb.TagSet{"resource": "failed"}, metadata.Unknown, metadata.None, "")
+	AddTS(&md, "puppet.run.resources", m.Time.LastRun, m.Resources.FailedToRestart, opentsdb.TagSet{"resource": "failed_to_restart"}, metadata.Unknown, metadata.None, "")
+	AddTS(&md, "puppet.run.resources", m.Time.LastRun, m.Resources.OutOfSync, opentsdb.TagSet{"resource": "out_of_sync"}, metadata.Unknown, metadata.None, "")
+	AddTS(&md, "puppet.run.resources", m.Time.LastRun, m.Resources.Restarted, opentsdb.TagSet{"resource": "restarted"}, metadata.Unknown, metadata.None, "")
+	AddTS(&md, "puppet.run.resources", m.Time.LastRun, m.Resources.Scheduled, opentsdb.TagSet{"resource": "scheduled"}, metadata.Unknown, metadata.None, "")
+	AddTS(&md, "puppet.run.resources", m.Time.LastRun, m.Resources.Changed, opentsdb.TagSet{"resource": "skipped"}, metadata.Unknown, metadata.None, "")
+	AddTS(&md, "puppet.run.resources_total", m.Time.LastRun, m.Resources.Total, nil, metadata.Unknown, metadata.None, "")
+	AddTS(&md, "puppet.run.changes", m.Time.LastRun, m.Changes.Total, nil, metadata.Unknown, metadata.None, "")
 	return md, nil
 }
