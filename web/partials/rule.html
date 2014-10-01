@@ -98,8 +98,12 @@
 <ul class="nav nav-tabs">
 	<li ng-class="{active: tab == 'results'}"><a href ng-click="tab = 'results'">Results</a></li>
 	<li ng-class="{active: tab == 'template'}"><a href ng-click="tab = 'template'">Template</a></li>
+	<li ng-class="{active: tab == 'timeline'}"><a href ng-click="tab = 'timeline'">Timeline</a></li>
 </ul>
 <div class="tab-content">
+	<div class="tab-pane" ng-class="{active: tab == 'timeline'}">
+		<div ts-alert-history></div>
+	</div>
 	<div class="tab-pane" ng-class="{active: tab == 'template'}">
 		<div class="row" ng-show="warning.length > 0">
 			<div class="col-lg-12" ng-repeat="w in warning track by $index">

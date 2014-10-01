@@ -29,6 +29,7 @@ interface IRuleScope extends IBosunScope {
 	remaining: number;
 	error: string;
 	show: (v: any) => void;
+	alert_history: any;
 }
 
 bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route', '$sce', function($scope: IRuleScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService, $sce: ng.ISCEService) {
@@ -122,6 +123,7 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
 			intervals = +($scope.intervals);
 		}
 		$scope.sets = [];
+		$scope.alert_history = {};
 		function next(interval, first = false) {
 			if (interval == 0 || $scope.stopped) {
 				$scope.stop();
@@ -143,10 +145,11 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
 					var set: any = {
 						url: url,
 						time: moment.unix(data.Time).utc().format('YYYY-MM-DD HH:mm:ss'),
-						critical: data.Criticals,
-						warning: data.Warnings,
-						normal: data.Normals,
+						critical: data.Criticals.length,
+						warning: data.Warnings.length,
+						normal: data.Normals.length,
 					};
+					procHistory(data);
 					if (first) {
 						set.results = procResults(data);
 					}
@@ -162,6 +165,30 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
 		}
 		next(intervals, true);
 	};
+	function procHistory(data: any) {
+		function procStatus(st: string, d: any) {
+			angular.forEach(d, function(v) {
+				if (!$scope.alert_history[v]) {
+					$scope.alert_history[v] = {History: []};
+				}
+				var h = $scope.alert_history[v];
+				h.History.push({
+					Time: moment.unix(data.Time).utc(),
+					Status: st,
+				});
+				angular.forEach(h.History, function(d: any, i: number) {
+					if (i + 1 < h.History.length) {
+						d.EndTime = h.History[i + 1].Time;
+					} else {
+						d.EndTime = h.History[i].Time;
+					}
+				});
+			});
+		}
+		procStatus('critical', data.Criticals);
+		procStatus('warning', data.Warnings);
+		procStatus('normal', data.Normals);
+	}
 	function procResults(data: any) {
 		$scope.subject = data.Subject;
 		$scope.body = $sce.trustAsHtml(data.Body);
