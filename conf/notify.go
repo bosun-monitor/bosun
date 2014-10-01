@@ -10,6 +10,7 @@ import (
 	"net/smtp"
 
 	"github.com/StackExchange/bosun/_third_party/github.com/mjibson/email"
+	"github.com/StackExchange/scollector/collect"
 )
 
 func (n *Notification) Notify(subject, body []byte, from, smtpHost string, ak string, attachments ...*Attachment) {
@@ -82,9 +83,11 @@ func (n *Notification) DoEmail(subject, body []byte, from, smtpHost string, ak s
 		e.Attach(bytes.NewBuffer(a.Data), a.Filename, a.ContentType)
 	}
 	if err := Send(e, smtpHost); err != nil {
+		collect.Add("email.sent_failed", nil, 1)
 		log.Printf("failed to send alert %v to %v %v\n", ak, e.To, err)
 		return
 	}
+	collect.Add("email.sent", nil, 1)
 	log.Printf("relayed alert %v to %v sucessfully\n", ak, e.To)
 }
 

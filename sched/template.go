@@ -108,13 +108,13 @@ func (c *Context) Expr(v string) (string, error) {
 	return u.String(), nil
 }
 
-func (s *Schedule) ExecuteBody(w io.Writer, a *conf.Alert, st *State, isEmail bool) (*Context, error) {
+func (s *Schedule) ExecuteBody(w io.Writer, a *conf.Alert, st *State, isEmail bool) ([]*conf.Attachment, error) {
 	t := a.Template
 	if t == nil || t.Body == nil {
 		return nil, nil
 	}
 	c := s.Data(st, a, isEmail)
-	return c, t.Body.Execute(w, c)
+	return c.Attachments, t.Body.Execute(w, c)
 }
 
 func (s *Schedule) ExecuteSubject(w io.Writer, a *conf.Alert, st *State) error {
