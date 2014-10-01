@@ -25,6 +25,20 @@
 			.tablesorter-headerDesc .tablesorter-header-inner::before {
 				content: '▼';
 			}
+
+			.panel-heading {
+				cursor: pointer; cursor: hand;
+			}
+			label.select {
+				margin-left: 12px;
+				margin-top: -2px;
+			}
+			.with-selected {
+				margin-right: 5px;
+				border-right: 1px solid #ccc;
+				padding-right: 5px;
+			}
+
 			svg {
 				font: 10px sans-serif;
 			}
@@ -37,6 +51,28 @@
 				fill: none;
 				stroke-width: 1.5px;
 				shape-rendering: auto;
+			}
+
+			.tl-axis path, .tl-axis line {
+				stroke-width: 1;
+			}
+			.tl-normal {
+				fill: #3c763d;
+			}
+			.tl-critical, .tl-error {
+				fill: #A94442;
+			}
+			.tl-warning {
+				fill: #faebcc;
+			}
+			.tl-unknown {
+				fill: #d9edf7;
+			}
+			.tl-legend {
+				font-weight: bold;
+				margin-bottom: 10px;
+				border-color: black;
+				border-width: 2px;
 			}
 		</style>
 	</head>

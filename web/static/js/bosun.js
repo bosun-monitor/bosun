@@ -525,8 +525,27 @@ bosunApp.directive('tsTableSort', [
         };
     }]);
 
-bosunApp.directive('ahTimeLine', function () {
-    //2014-05-26T21:46:37.435056942Z
+bosunApp.directive('tsHistory', function () {
+    return {
+        scope: {
+            computations: '=tsComputations',
+            time: '=',
+            header: '='
+        },
+        templateUrl: '/partials/history.html',
+        link: function (scope, elem, attrs) {
+            if (scope.time) {
+                var m = moment.utc(scope.time, timeFormat);
+                scope.timeParam = "&date=" + encodeURIComponent(m.format("YYYY-MM-DD")) + "&time=" + encodeURIComponent(m.format("HH:mm"));
+            }
+            scope.btoa = function (v) {
+                return encodeURIComponent(btoa(v));
+            };
+        }
+    };
+});
+
+bosunApp.directive('tsTimeLine', function () {
     var format = d3.time.format.utc("%Y-%m-%dT%X");
     var tsdbFormat = d3.time.format.utc("%Y/%m/%d-%X");
     function parseDate(s) {
@@ -538,90 +557,90 @@ bosunApp.directive('ahTimeLine', function () {
         bottom: 30,
         left: 250
     };
-    var customTimeFormat = d3.time.format.utc.multi([
-        [".%L", function (d) {
-                return d.getMilliseconds();
-            }],
-        [":%S", function (d) {
-                return d.getSeconds();
-            }],
-        ["%H:%M", function (d) {
-                return d.getMinutes();
-            }],
-        ["%H", function (d) {
-                return d.getHours();
-            }],
-        ["%a %d", function (d) {
-                return d.getDay() && d.getDate() != 1;
-            }],
-        ["%b %d", function (d) {
-                return d.getDate() != 1;
-            }],
-        ["%B", function (d) {
-                return d.getMonth();
-            }],
-        ["%Y", function () {
-                return true;
-            }]
-    ]);
     return {
         link: function (scope, elem, attrs) {
-            scope.$watch(attrs.data, update);
-            function update(v) {
-                if (!angular.isArray(v) || v.length == 0) {
+            scope.shown = {};
+            scope.collapse = function (i) {
+                scope.shown[i] = !scope.shown[i];
+            };
+            scope.$watch('alert_history', update, true);
+            function update(history) {
+                if (!history) {
                     return;
                 }
-                var barheight = 500 / v.length;
+                var entries = d3.entries(history);
+                if (!entries.length) {
+                    return;
+                }
+                entries.sort(function (a, b) {
+                    return a.key.localeCompare(b.key);
+                });
+                scope.entries = entries;
+                var values = entries.map(function (v) {
+                    return v.value;
+                });
+                var keys = entries.map(function (v) {
+                    return v.key;
+                });
+                var barheight = 500 / values.length;
                 barheight = Math.min(barheight, 45);
                 barheight = Math.max(barheight, 15);
-                var svgHeight = v.length * barheight + margin.top + margin.bottom;
+                var svgHeight = values.length * barheight + margin.top + margin.bottom;
                 var height = svgHeight - margin.top - margin.bottom;
                 var svgWidth = elem.width();
                 var width = svgWidth - margin.left - margin.right;
                 var xScale = d3.time.scale.utc().range([0, width]);
-                var xAxis = d3.svg.axis().scale(xScale).tickFormat(customTimeFormat).orient('bottom');
+                var xAxis = d3.svg.axis().scale(xScale).orient('bottom');
+                elem.empty();
                 var svg = d3.select(elem[0]).append('svg').attr('width', svgWidth).attr('height', svgHeight).append('g').attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
-                svg.append('g').attr('class', 'x axis').attr('transform', 'translate(0,' + height + ')');
+                svg.append('g').attr('class', 'x axis tl-axis').attr('transform', 'translate(0,' + height + ')');
                 xScale.domain([
-                    d3.min(v, function (d) {
+                    d3.min(values, function (d) {
                         return d3.min(d.History, function (c) {
                             return c.Time;
                         });
                     }),
-                    d3.max(v, function (d) {
+                    d3.max(values, function (d) {
                         return d3.max(d.History, function (c) {
                             return c.EndTime;
                         });
                     })
                 ]);
-                var legend = d3.select(elem[0]).append('div').attr('class', 'legend');
+                var legend = d3.select(elem[0]).append('div').attr('class', 'tl-legend');
                 var time_legend = legend.append('div').text(tsdbFormat(new Date()));
                 var alert_legend = legend.append('div').text('Alert');
                 svg.select('.x.axis').transition().call(xAxis);
                 var chart = svg.append('g');
-                v.forEach(function (a, i) {
-                    chart.selectAll('.bars').data(a.History).enter().append('rect').attr('class', function (d) {
-                        return d.Status;
+                angular.forEach(entries, function (entry, i) {
+                    chart.selectAll('.bars').data(entry.value.History).enter().append('rect').attr('class', function (d) {
+                        return 'tl-' + d.Status;
                     }).attr('x', function (d) {
                         return xScale(parseDate(d.Time));
                     }).attr('y', i * barheight).attr('height', barheight).attr('width', function (d) {
                         return xScale(parseDate(d.EndTime)) - xScale(parseDate(d.Time));
                     }).on('mousemove.x', mousemove_x).on('mousemove.y', function (d) {
-                        alert_legend.text(a.Name);
+                        alert_legend.text(entry.key);
                     }).on('click', function (d, j) {
                         var id = 'panel' + i + '-' + j;
                         scope.shown['group' + i] = true;
                         scope.shown[id] = true;
                         scope.$apply();
-                        $('html, body').scrollTop($("#" + id).offset().top);
+                        setTimeout(function () {
+                            var e = $("#" + id);
+                            if (!e) {
+                                console.log('no', id, e);
+                                return;
+                            }
+                            $('html, body').scrollTop(e.offset().top);
+                        });
                     });
                 });
-                chart.selectAll('.labels').data(v).enter().append('text').attr('text-anchor', 'end').attr('x', 0).attr('dx', '-.5em').attr('dy', '.25em').attr('y', function (d, i) {
+                chart.selectAll('.labels').data(keys).enter().append('text').attr('text-anchor', 'end').attr('x', 0).attr('dx', '-.5em').attr('dy', '.25em').attr('y', function (d, i) {
                     return (i + .5) * barheight;
                 }).text(function (d) {
-                    return d.Name;
+                    return d;
                 });
-                chart.selectAll('.sep').data(v).enter().append('rect').attr('y', function (d, i) {
+                chart.selectAll('.sep').data(values).enter().append('rect').attr('y', function (d, i) {
                     return (i + 1) * barheight;
                 }).attr('height', 1).attr('x', 0).attr('width', width).on('mousemove.x', mousemove_x);
                 function mousemove_x() {
@@ -1347,6 +1366,12 @@ bosunApp.directive('tsPopup', function () {
         }
     };
 });
+bosunApp.directive('tsAlertHistory', function () {
+    return {
+        templateUrl: '/partials/alerthistory.html'
+    };
+});
+
 bosunControllers.controller('HistoryCtrl', [
     '$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
         var search = $location.search();
@@ -1358,16 +1383,11 @@ bosunControllers.controller('HistoryCtrl', [
         } else {
             keys[search.key] = true;
         }
-        var status;
-        $scope.shown = {};
-        $scope.collapse = function (i) {
-            $scope.shown[i] = !$scope.shown[i];
-        };
         var params = Object.keys(keys).map(function (v) {
             return 'key=' + encodeURIComponent(v);
         }).join('&');
         $http.get('/api/alerts/details?' + params).success(function (data) {
-            var selected_alerts = [];
+            var selected_alerts = {};
             angular.forEach(data, function (v, ak) {
                 if (!keys[ak]) {
                     return;
@@ -1382,12 +1402,11 @@ bosunControllers.controller('HistoryCtrl', [
                         h.EndTime = moment.utc();
                     }
                 });
-                selected_alerts.push({
-                    Name: ak,
+                selected_alerts[ak] = {
                     History: v.History.reverse()
-                });
+                };
             });
-            if (selected_alerts.length > 0) {
+            if (Object.keys(selected_alerts).length > 0) {
                 $scope.alert_history = selected_alerts;
             } else {
                 $scope.error = 'No Matching Alerts Found';
@@ -1707,6 +1726,7 @@ bosunControllers.controller('RuleCtrl', [
                 intervals = +($scope.intervals);
             }
             $scope.sets = [];
+            $scope.alert_history = {};
             function next(interval, first) {
                 if (typeof first === "undefined") { first = false; }
                 if (interval == 0 || $scope.stopped) {
@@ -1723,10 +1743,11 @@ bosunControllers.controller('RuleCtrl', [
                     var set = {
                         url: url,
                         time: moment.unix(data.Time).utc().format('YYYY-MM-DD HH:mm:ss'),
-                        critical: data.Criticals,
-                        warning: data.Warnings,
-                        normal: data.Normals
+                        critical: data.Criticals.length,
+                        warning: data.Warnings.length,
+                        normal: data.Normals.length
                     };
+                    procHistory(data);
                     if (first) {
                         set.results = procResults(data);
                     }
@@ -1741,6 +1762,30 @@ bosunControllers.controller('RuleCtrl', [
             }
             next(intervals, true);
         };
+        function procHistory(data) {
+            function procStatus(st, d) {
+                angular.forEach(d, function (v) {
+                    if (!$scope.alert_history[v]) {
+                        $scope.alert_history[v] = { History: [] };
+                    }
+                    var h = $scope.alert_history[v];
+                    h.History.push({
+                        Time: moment.unix(data.Time).utc(),
+                        Status: st
+                    });
+                    angular.forEach(h.History, function (d, i) {
+                        if (i + 1 < h.History.length) {
+                            d.EndTime = h.History[i + 1].Time;
+                        } else {
+                            d.EndTime = h.History[i].Time;
+                        }
+                    });
+                });
+            }
+            procStatus('critical', data.Criticals);
+            procStatus('warning', data.Warnings);
+            procStatus('normal', data.Normals);
+        }
         function procResults(data) {
             $scope.subject = data.Subject;
             $scope.body = $sce.trustAsHtml(data.Body);

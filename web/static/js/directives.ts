@@ -161,8 +161,27 @@ bosunApp.directive('tsTableSort', ['$timeout', ($timeout: ng.ITimeoutService) =>
 	};
 }]);
 
-bosunApp.directive('ahTimeLine', () => {
-	//2014-05-26T21:46:37.435056942Z
+bosunApp.directive('tsHistory', () => {
+	return {
+		scope: {
+			computations: '=tsComputations',
+			time: '=',
+			header: '=',
+		},
+		templateUrl: '/partials/history.html',
+		link: (scope: any, elem: any, attrs: any) => {
+			if (scope.time) {
+				var m = moment.utc(scope.time, timeFormat);
+				scope.timeParam = "&date=" + encodeURIComponent(m.format("YYYY-MM-DD")) + "&time=" + encodeURIComponent(m.format("HH:mm"));
+			}
+			scope.btoa = (v: any) => {
+				return encodeURIComponent(btoa(v));
+			};
+		},
+	}
+});
+
+bosunApp.directive('tsTimeLine', () => {
 	var format = d3.time.format.utc("%Y-%m-%dT%X");
 	var tsdbFormat = d3.time.format.utc("%Y/%m/%d-%X");
 	function parseDate(s: Moment) {
@@ -174,35 +193,39 @@ bosunApp.directive('ahTimeLine', () => {
 		bottom: 30,
 		left: 250,
 	};
-	var customTimeFormat = d3.time.format.utc.multi([
-		[".%L", (d: any) => { return d.getMilliseconds(); }],
-		[":%S", (d: any) => { return d.getSeconds(); }],
-		["%H:%M", (d: any) => { return d.getMinutes(); }],
-		["%H", (d: any) => { return d.getHours(); }],
-		["%a %d", (d: any) => { return d.getDay() && d.getDate() != 1; }],
-		["%b %d", (d: any) => { return d.getDate() != 1; }],
-		["%B", (d: any) => { return d.getMonth(); }],
-		["%Y", () => { return true; }]
-	]);
 	return {
 		link: (scope: any, elem: any, attrs: any) => {
-			scope.$watch(attrs.data, update);
-			function update(v: any) {
-				if (!angular.isArray(v) || v.length == 0) {
+			scope.shown = {};
+			scope.collapse = (i: any) => {
+				scope.shown[i] = !scope.shown[i];
+			};
+			scope.$watch('alert_history', update, true);
+			function update(history: any) {
+				if (!history) {
 					return;
 				}
-				var barheight = 500 / v.length;
+				var entries = d3.entries(history);
+				if (!entries.length) {
+					return;
+				}
+				entries.sort((a, b) => {
+					return a.key.localeCompare(b.key);
+				});
+				scope.entries = entries;
+				var values = entries.map(v => { return v.value });
+				var keys = entries.map(v => { return v.key });
+				var barheight = 500 / values.length;
 				barheight = Math.min(barheight, 45);
 				barheight = Math.max(barheight, 15);
-				var svgHeight = v.length * barheight + margin.top + margin.bottom;
+				var svgHeight = values.length * barheight + margin.top + margin.bottom;
 				var height = svgHeight - margin.top - margin.bottom;
 				var svgWidth = elem.width();
 				var width = svgWidth - margin.left - margin.right;
 				var xScale = d3.time.scale.utc().range([0, width]);
 				var xAxis = d3.svg.axis()
 					.scale(xScale)
-					.tickFormat(customTimeFormat)
 					.orient('bottom');
+				elem.empty();
 				var svg = d3.select(elem[0])
 					.append('svg')
 					.attr('width', svgWidth)
@@ -210,15 +233,15 @@ bosunApp.directive('ahTimeLine', () => {
 					.append('g')
 					.attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
 				svg.append('g')
-					.attr('class', 'x axis')
+					.attr('class', 'x axis tl-axis')
 					.attr('transform', 'translate(0,' + height + ')');
 				xScale.domain([
-					d3.min(v, (d: any) => { return d3.min(d.History, (c: any) => { return c.Time; }); }),
-					d3.max(v, (d: any) => { return d3.max(d.History, (c: any) => { return c.EndTime; }); }),
+					d3.min(values, (d: any) => { return d3.min(d.History, (c: any) => { return c.Time; }); }),
+					d3.max(values, (d: any) => { return d3.max(d.History, (c: any) => { return c.EndTime; }); }),
 				]);
 				var legend = d3.select(elem[0])
 					.append('div')
-					.attr('class', 'legend');
+					.attr('class', 'tl-legend');
 				var time_legend = legend
 					.append('div')
 					.text(tsdbFormat(new Date()));
@@ -229,12 +252,12 @@ bosunApp.directive('ahTimeLine', () => {
 					.transition()
 					.call(xAxis);
 				var chart = svg.append('g');
-				v.forEach(function(a: any, i: number) {
+				angular.forEach(entries, function(entry: any, i: number) {
 					chart.selectAll('.bars')
-						.data(a.History)
+						.data(entry.value.History)
 						.enter()
 						.append('rect')
-						.attr('class', (d: any) => { return d.Status; })
+						.attr('class', (d: any) => { return 'tl-' + d.Status; })
 						.attr('x', (d: any) => { return xScale(parseDate(d.Time)); })
 						.attr('y', i * barheight)
 						.attr('height', barheight)
@@ -243,18 +266,25 @@ bosunApp.directive('ahTimeLine', () => {
 						})
 						.on('mousemove.x', mousemove_x)
 						.on('mousemove.y', function(d) {
-							alert_legend.text(a.Name);
+							alert_legend.text(entry.key);
 						})
 						.on('click', function(d, j) {
 							var id = 'panel' + i + '-' + j;
 							scope.shown['group' + i] = true;
 							scope.shown[id] = true;
 							scope.$apply();
-							$('html, body').scrollTop($("#" + id).offset().top);
+							setTimeout(() => {
+								var e = $("#" + id);
+								if (!e) {
+									console.log('no', id, e);
+									return;
+								}
+								$('html, body').scrollTop(e.offset().top);
+							});
 						});
 				});
 				chart.selectAll('.labels')
-					.data(v)
+					.data(keys)
 					.enter()
 					.append('text')
 					.attr('text-anchor', 'end')
@@ -262,9 +292,9 @@ bosunApp.directive('ahTimeLine', () => {
 					.attr('dx', '-.5em')
 					.attr('dy', '.25em')
 					.attr('y', function(d: any, i: number) { return (i + .5) * barheight; })
-					.text(function(d: any) { return d.Name; });
+					.text(function(d: any) { return d; });
 				chart.selectAll('.sep')
-					.data(v)
+					.data(values)
 					.enter()
 					.append('rect')
 					.attr('y', function(d: any, i: number) { return (i + 1) * barheight })

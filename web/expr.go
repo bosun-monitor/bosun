@@ -117,7 +117,7 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 		return nil, fmt.Errorf("no results returned")
 	}
 	keys := make(expr.AlertKeys, len(rh))
-	var criticals, warnings, normals int
+	criticals, warnings, normals := make([]expr.AlertKey, 0), make([]expr.AlertKey, 0), make([]expr.AlertKey, 0)
 	i := 0
 	for k, v := range rh {
 		v.Time = now
@@ -125,11 +125,11 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 		i++
 		switch v.Status {
 		case sched.StNormal:
-			normals++
+			normals = append(normals, k)
 		case sched.StWarning:
-			warnings++
+			warnings = append(warnings, k)
 		case sched.StCritical:
-			criticals++
+			criticals = append(criticals, k)
 		default:
 			return nil, fmt.Errorf("unknown state type %v", v.Status)
 		}
@@ -164,7 +164,7 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 	}
 	return struct {
 		Time                         int64
-		Criticals, Warnings, Normals int
+		Criticals, Warnings, Normals []expr.AlertKey
 
 		Body    string      `json:",omitempty"`
 		Subject string      `json:",omitempty"`
