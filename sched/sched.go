@@ -623,6 +623,11 @@ func (s *Schedule) Action(user, message string, t ActionType, ak expr.AlertKey) 
 		Type:    t,
 		Time:    time.Now().UTC(),
 	})
+	// Would like to also track the alert group, but I believe this is impossible because any character
+	// that could be used as a delimiter could also be a valid tag key or tag value character
+	if err := collect.Add("actions", opentsdb.TagSet{"user": user, "alert": ak.Name(), "type": t.String()}, 1); err != nil {
+		log.Println(err)
+	}
 	return nil
 }
 

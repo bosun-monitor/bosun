@@ -94,12 +94,12 @@ func (s *Schedule) notify(st *State, n *conf.Notification) {
 		subject = bytes.NewBufferString(err.Error())
 	}
 	body := new(bytes.Buffer)
-	c, err := s.ExecuteBody(body, a, st, true)
+	attachments, err := s.ExecuteBody(body, a, st, true)
 	if err != nil {
 		log.Println(err)
 		body = bytes.NewBufferString(err.Error())
 	}
-	n.Notify(subject.Bytes(), body.Bytes(), s.Conf.EmailFrom, s.Conf.SmtpHost, string(st.AlertKey()), c.Attachments...)
+	n.Notify(subject.Bytes(), body.Bytes(), s.Conf.EmailFrom, s.Conf.SmtpHost, string(st.AlertKey()), attachments...)
 }
 
 func (s *Schedule) unotify(name string, group expr.AlertKeys, n *conf.Notification) {
