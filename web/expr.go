@@ -158,8 +158,8 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 				Email: []*mail.Address{m},
 			}
 			email := new(bytes.Buffer)
-			c, err := s.ExecuteBody(email, a, instance, true)
-			n.DoEmail(subject.Bytes(), email.Bytes(), schedule.Conf.EmailFrom, schedule.Conf.SmtpHost, string(instance.AlertKey()), c.Attachments...)
+			attachments, err := s.ExecuteBody(email, a, instance, true)
+			n.DoEmail(subject.Bytes(), email.Bytes(), schedule.Conf.EmailFrom, schedule.Conf.SmtpHost, string(instance.AlertKey()), attachments...)
 		}
 	}
 	return struct {
