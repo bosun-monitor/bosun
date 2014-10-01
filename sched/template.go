@@ -133,6 +133,8 @@ func (c *Context) eval(v interface{}, filter bool, series bool, autods int) ([]*
 		e, err = expr.New(v)
 	case *expr.Expr:
 		e = v
+	default:
+		return nil, fmt.Errorf("expected string or expression, got %T (%v)", v, v)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("%v: %v", v, err)
