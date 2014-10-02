@@ -9,8 +9,8 @@ import (
 	"net/mail"
 	"net/smtp"
 
+	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/collect"
 	"github.com/StackExchange/bosun/_third_party/github.com/mjibson/email"
-	"github.com/StackExchange/scollector/collect"
 )
 
 func (n *Notification) Notify(subject, body []byte, from, smtpHost string, ak string, attachments ...*Attachment) {
