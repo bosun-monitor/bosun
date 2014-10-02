@@ -256,9 +256,9 @@ func (c *Context) GetMeta(metric, name string, v interface{}) (interface{}, erro
 	return fm, nil
 }
 
-func (c *Context) Union(q ...interface{}) (interface{}, error) {
+func (c *Context) LeftJoin(q ...interface{}) (interface{}, error) {
 	if len(q) < 2 {
-		return nil, fmt.Errorf("need at least expressions, got %v", len(q))
+		return nil, fmt.Errorf("need at least two expressions, got %v", len(q))
 	}
 	matrix := make([][]*expr.Result, 0)
 	results := make([][]*expr.Result, len(q))
@@ -273,10 +273,9 @@ func (c *Context) Union(q ...interface{}) (interface{}, error) {
 		matrix = append(matrix, make([]*expr.Result, len(q)))
 		matrix[row][0] = first
 		for col, res := range results[1:] {
-			col++
 			for _, r := range res {
 				if first.Group.Subset(r.Group) {
-					matrix[row][col] = r
+					matrix[row][col+1] = r
 				}
 			}
 		}
