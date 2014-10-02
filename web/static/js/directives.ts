@@ -199,7 +199,7 @@ bosunApp.directive('tsTimeLine', () => {
 			scope.collapse = (i: any) => {
 				scope.shown[i] = !scope.shown[i];
 			};
-			scope.$watch('alert_history', update, true);
+			scope.$watch('alert_history', update);
 			function update(history: any) {
 				if (!history) {
 					return;

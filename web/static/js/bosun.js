@@ -563,7 +563,7 @@ bosunApp.directive('tsTimeLine', function () {
             scope.collapse = function (i) {
                 scope.shown[i] = !scope.shown[i];
             };
-            scope.$watch('alert_history', update, true);
+            scope.$watch('alert_history', update);
             function update(history) {
                 if (!history) {
                     return;
@@ -1691,6 +1691,7 @@ bosunControllers.controller('RuleCtrl', [
                 $scope.test();
             }
         };
+        var alert_history = {};
         $scope.test = function () {
             $scope.error = '';
             $scope.warning = [];
@@ -1726,12 +1727,12 @@ bosunControllers.controller('RuleCtrl', [
                 intervals = +($scope.intervals);
             }
             $scope.sets = [];
-            $scope.alert_history = {};
             function next(interval, first) {
                 if (typeof first === "undefined") { first = false; }
                 if (interval == 0 || $scope.stopped) {
                     $scope.stop();
                     $scope.remaining = 0;
+                    $scope.alert_history = alert_history;
                     return;
                 }
                 $scope.remaining = interval;
@@ -1765,10 +1766,10 @@ bosunControllers.controller('RuleCtrl', [
         function procHistory(data) {
             function procStatus(st, d) {
                 angular.forEach(d, function (v) {
-                    if (!$scope.alert_history[v]) {
-                        $scope.alert_history[v] = { History: [] };
+                    if (!alert_history[v]) {
+                        alert_history[v] = { History: [] };
                     }
-                    var h = $scope.alert_history[v];
+                    var h = alert_history[v];
                     h.History.push({
                         Time: moment.unix(data.Time).utc(),
                         Status: st
