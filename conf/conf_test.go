@@ -35,6 +35,30 @@ func TestPrint(t *testing.T) {
 	if w := c.Lookups["l"]; len(w.Entries) != 2 {
 		t.Errorf("bad lookup: %v", w)
 	}
+	checkMacroVarAlert(t, c.Alerts["macroVarAlert"])
+}
+
+func checkMacroVarAlert(t *testing.T, a *Alert) {
+	if a.Crit.String() != "3" {
+		t.Errorf("expected 'crit = 3'")
+	}
+	nots := map[string]bool{
+		"default": true,
+		"nc1":     true,
+		"nc2":     true,
+		"nc3":     true,
+		"nc4":     true,
+	}
+	for _, n := range a.CritNotification.Notifications {
+		t.Log("found", n.Name)
+		delete(nots, n.Name)
+	}
+	if len(nots) > 0 {
+		t.Error("missing notifications", nots)
+	}
+	if a.Vars["a"] != "3" || a.Vars["$a"] != "3" {
+		t.Errorf("missing vars", a.Vars)
+	}
 }
 
 func TestInvalid(t *testing.T) {

@@ -171,8 +171,8 @@ func (c *Conf) GetLookups() map[string]*expr.Lookup {
 }
 
 type Macro struct {
-	Def string
-	Vars
+	Def    string
+	Pairs  []nodePair
 	Name   string
 	Macros []string
 }
@@ -430,7 +430,7 @@ func (c *Conf) getPairs(s *parse.SectionNode, vars Vars, st sectionType, used *[
 	ignoreBadExpand := st == sMacro
 	add := func(n parse.Node, k, v string) {
 		c.seen(k, saw)
-		if strings.HasPrefix(k, "$") {
+		if vars != nil && strings.HasPrefix(k, "$") {
 			vars[k] = v
 			if st != sMacro {
 				vars[k[1:]] = v
@@ -457,8 +457,8 @@ func (c *Conf) getPairs(s *parse.SectionNode, vars Vars, st sectionType, used *[
 				if used != nil {
 					*used = append(*used, v)
 				}
-				for k, v := range m.Vars {
-					add(n, k, c.Expand(v, vars, ignoreBadExpand))
+				for _, p := range m.Pairs {
+					add(p.node, p.key, c.Expand(p.val, vars, ignoreBadExpand))
 				}
 			default:
 				add(n, k, v)
@@ -544,12 +544,11 @@ func (c *Conf) loadMacro(s *parse.SectionNode) {
 	}
 	m := Macro{
 		Def:    s.RawText,
-		Vars:   make(map[string]string),
 		Name:   name,
 		Macros: make([]string, 0),
 	}
-	for _, p := range c.getPairs(s, m.Vars, sMacro, &m.Macros) {
-		m.Vars[p.key] = p.val
+	for _, p := range c.getPairs(s, nil, sMacro, &m.Macros) {
+		m.Pairs = append(m.Pairs, p)
 	}
 	c.at(s)
 	c.Macros[name] = &m
@@ -676,7 +675,12 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 		if err != nil {
 			c.error(err)
 		}
-		ns.Notifications = n
+		if ns.Notifications == nil {
+			ns.Notifications = make(map[string]*Notification)
+		}
+		for k, v := range n {
+			ns.Notifications[k] = v
+		}
 	}
 	for _, p := range c.getPairs(s, a.Vars, sNormal, &a.Macros) {
 		c.at(p.node)
