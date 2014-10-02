@@ -255,3 +255,31 @@ func (c *Context) GetMeta(metric, name string, v interface{}) (interface{}, erro
 	}
 	return fm, nil
 }
+
+func (c *Context) Union(q ...interface{}) (interface{}, error) {
+	if len(q) < 2 {
+		return nil, fmt.Errorf("need at least expressions, got %v", len(q))
+	}
+	matrix := make([][]*expr.Result, 0)
+	results := make([][]*expr.Result, len(q))
+	for col, v := range q {
+		res, err := c.eval(v, false, false, 0)
+		if err != nil {
+			return nil, err
+		}
+		results[col] = res
+	}
+	for row, first := range results[0] {
+		matrix = append(matrix, make([]*expr.Result, len(q)))
+		matrix[row][0] = first
+		for col, res := range results[1:] {
+			col++
+			for _, r := range res {
+				if first.Group.Subset(r.Group) {
+					matrix[row][col] = r
+				}
+			}
+		}
+	}
+	return matrix, nil
+}
