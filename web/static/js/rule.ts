@@ -128,15 +128,25 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
 			if (interval == 0 || $scope.stopped) {
 				$scope.stop();
 				$scope.remaining = 0;
-				angular.forEach(alert_history, function(v) => {
+				angular.forEach(alert_history, (v) => {
 					var h = v.History;
+					h.sort((a, b) => {
+						return a.Time > b.Time;
+					});
 					angular.forEach(h, function(d: any, i: number) {
 						if (i + 1 < h.length) {
 							d.EndTime = h[i + 1].Time;
 						} else {
-							d.EndTime = h[i].Time;
+							d.EndTime = d.Time;
 						}
 					});
+					for (var i = 1; i < h.length; i++) {
+						if (h[i].Status == h[i - 1].Status) {
+							var r = h.splice(i, 1);
+							h[i - 1].EndTime = r[0].EndTime;
+							i--;
+						}
+					}
 				});
 				$scope.alert_history = alert_history;
 				return;
@@ -177,17 +187,13 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
 		next(intervals, true);
 	};
 	function procHistory(data: any) {
+		var t = moment.unix(data.Time).utc();
 		function procStatus(st: string, d: any) {
 			angular.forEach(d, function(v) {
 				if (!alert_history[v]) {
 					alert_history[v] = {History: []};
 				}
-				var h = alert_history[v].History;
-				var t = moment.unix(data.Time).utc();
-				if (h.length && h[h.length - 2].Status == st) {
-					continue;
-				}
-				h.push({
+				alert_history[v].History.push({
 					Time: t,
 					Status: st,
 				});
