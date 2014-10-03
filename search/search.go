@@ -95,10 +95,16 @@ func (s *Search) Index(mdp opentsdb.MultiDataPoint) {
 
 // Match returns all matching values against search. search is a regex, except
 // that `.` is literal, `*` can be used for `.*`, and the entire string is
-// searched (`^` and `&` added to ends of search).
+// searched (`^` and `&` added to ends of search). Also the match can start
+// with ! to negate the match
 func Match(search string, values []string) ([]string, error) {
 	v := strings.Replace(search, ".", `\.`, -1)
 	v = strings.Replace(v, "*", ".*", -1)
+	var not bool
+	if strings.HasPrefix(v, "!") {
+		not = true
+		v = v[1:]
+	}
 	v = "^" + v + "$"
 	re, err := regexp.Compile(v)
 	if err != nil {
@@ -106,6 +112,10 @@ func Match(search string, values []string) ([]string, error) {
 	}
 	var nvs []string
 	for _, nv := range values {
+		if re.MatchString(nv) != not {
+			nvs = append(nvs, nv)
+		}
+		continue
 		if re.MatchString(nv) {
 			nvs = append(nvs, nv)
 		}
