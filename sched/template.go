@@ -2,6 +2,7 @@ package sched
 
 import (
 	"bytes"
+	"encoding/base64"
 	"fmt"
 	"html/template"
 	"io"
@@ -91,7 +92,7 @@ func (c *Context) HostView(host string) string {
 }
 
 func (c *Context) Expr(v string) (string, error) {
-	q := url.QueryEscape("q=" + opentsdb.ReplaceTags(v, c.Group))
+	q := "expr=" + base64.URLEncoding.EncodeToString([]byte(opentsdb.ReplaceTags(v, c.Group)))
 	u := url.URL{
 		Scheme:   "http",
 		Host:     c.schedule.Conf.HttpListen,
