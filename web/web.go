@@ -521,7 +521,6 @@ func Templates(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (in
 				alerts[name] += m.Def + "\n\n"
 			}
 		}
-		add(alert.Macros)
 		lookups := make(map[string]bool)
 		walk := func(n eparse.Node) {
 			eparse.Walk(n, func(n eparse.Node) {
@@ -545,6 +544,22 @@ func Templates(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (in
 				}
 			})
 		}
+		walkNotifications := func(n *conf.Notifications) {
+			for _, v := range n.Lookups {
+				if lookups[v.Name] {
+					return
+				}
+				lookups[v.Name] = true
+				alerts[name] += v.Def + "\n\n"
+			}
+		}
+		if alert.CritNotification != nil {
+			walkNotifications(alert.CritNotification)
+		}
+		if alert.WarnNotification != nil {
+			walkNotifications(alert.WarnNotification)
+		}
+		add(alert.Macros)
 		if alert.Crit != nil {
 			walk(alert.Crit.Tree.Root)
 		}
