@@ -143,7 +143,7 @@ func (c *Context) eval(v interface{}, filter bool, series bool, autods int) ([]*
 	if series && e.Root.Return() != parse.TYPE_SERIES {
 		return results, fmt.Errorf("egraph: requires an expression that returns a series")
 	}
-	res, _, err := e.Execute(c.schedule.cache, nil, c.schedule.CheckStart, autods, c.Alert.UnjoinedOK, c.schedule.Search, c.schedule.Lookups)
+	res, _, err := e.Execute(c.schedule.cache, nil, c.schedule.CheckStart, autods, c.Alert.UnjoinedOK, c.schedule.Search, c.schedule.Lookups, c.schedule.Conf.AlertSquelched(c.Alert))
 	if err != nil {
 		return results, fmt.Errorf("%s: %v", v, err)
 	}

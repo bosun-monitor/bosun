@@ -212,6 +212,9 @@ func Band(e *state, T miniprofiler.Timer, query, duration, period string, num fl
 				return
 			}
 			for _, res := range s {
+				if e.squelched(res.Tags) {
+					continue
+				}
 				newarr := true
 				for _, a := range r.Results {
 					if !a.Group.Equal(res.Tags) {
@@ -272,6 +275,9 @@ func Query(e *state, T miniprofiler.Timer, query, sduration, eduration string) (
 		return
 	}
 	for _, res := range s {
+		if e.squelched(res.Tags) {
+			continue
+		}
 		r.Results = append(r.Results, &Result{
 			Value: Series(res.DPS),
 			Group: res.Tags,
