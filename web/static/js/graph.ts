@@ -18,6 +18,7 @@ class Query {
 	rate: boolean;
 	rateOptions: RateOptions;
 	tags: TagSet;
+	metric_tags: any;
 	downsample: string;
 	ds: string;
 	dstime: string;
@@ -207,39 +208,45 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 	};
 	$scope.GetTagKByMetric = function(index: number) {
 		$scope.tagvs[index] = new TagV;
-		if ($scope.query_p[index].metric) {
-			$http.get('/api/tagk/' + $scope.query_p[index].metric)
-				.success(function(data: string[]) {
-					if (!angular.isArray(data)) {
-						return;
-					}
-					var tags = $scope.query_p[index].tags || {};
-					for (var i = 0; i < data.length; i++) {
-						var d = data[i];
-						if ($scope.query_p[index].tags) {
-							tags[d] = $scope.query_p[index].tags[d];
-						}
-						if (!tags[d]) {
-							tags[d] = '';
-						}
-						GetTagVs(d, index);
-					}
-					$scope.query_p[index].tags = tags;
-					// Make sure host is always the first tag.
-					$scope.sorted_tagks[index] = Object.keys(tags);
-					$scope.sorted_tagks[index].sort((a, b) => {
-						if (a == 'host') {
-							return 1;
-						} else if (b == 'host') {
-							return -1;
-						}
-						return a.localeCompare(b);
-					}).reverse();
-				})
-				.error(function(error) {
-					$scope.error = 'Unable to fetch metrics: ' + error;
-				});
+		if (!$scope.query_p[index].metric) {
+			return;
 		}
+		$http.get('/api/tagk/' + $scope.query_p[index].metric)
+			.success(function(data: string[]) {
+				var q = $scope.query_p[index];
+				var tags = new TagSet;
+				q.metric_tags = {};
+				for (var i = 0; i < data.length; i++) {
+					var d = data[i];
+					q.metric_tags[d] = true;
+					if (q.tags) {
+						tags[d] = q.tags[d];
+					}
+					if (!tags[d]) {
+						tags[d] = '';
+					}
+					GetTagVs(d, index);
+				}
+				angular.forEach(q.tags, (val, key) => {
+					if (val) {
+						tags[key] = val;
+					}
+				});
+				q.tags = tags;
+				// Make sure host is always the first tag.
+				$scope.sorted_tagks[index] = Object.keys(tags);
+				$scope.sorted_tagks[index].sort((a, b) => {
+					if (a == 'host') {
+						return -1;
+					} else if (b == 'host') {
+						return 1;
+					}
+					return a.localeCompare(b);
+				});
+			})
+			.error(function(error) {
+				$scope.error = 'Unable to fetch metrics: ' + error;
+			});
 	};
 	if ($scope.query_p.length == 0) {
 		$scope.AddTab();
@@ -284,6 +291,18 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 	}
 	$scope.Query = function() {
 		var r = getRequest();
+		angular.forEach($scope.query_p, (q, index) => {
+			var m = q.metric_tags;
+			if (!m) {
+				return;
+			}
+			angular.forEach(q.tags, (key, tag) => {
+				if (m[tag]) {
+					return;
+				}
+				delete r.queries[index].tags[tag];
+			});
+		});
 		r.prune();
 		$location.search('b64', btoa(JSON.stringify(r)));
 		$location.search('autods', $scope.autods ? undefined : 'false');
