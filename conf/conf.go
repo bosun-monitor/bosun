@@ -418,6 +418,10 @@ type nodePair struct {
 	val  string
 }
 
+func (n *nodePair) GetNode() parse.Node {
+	return n.node
+}
+
 type sectionType int
 
 const (
@@ -635,7 +639,7 @@ func (c *Conf) loadTemplate(s *parse.SectionNode) {
 	c.Templates[name] = &t
 }
 
-var lookupNotificationRE = regexp.MustCompile(`^lookup\("(.*)", "(.*)"\)$`)
+var LookupNotificationRE = regexp.MustCompile(`^lookup\("(.*)", "(.*)"\)$`)
 
 func (c *Conf) loadAlert(s *parse.SectionNode) {
 	name := s.Name.Text
@@ -651,7 +655,7 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 		WarnNotification: new(Notifications),
 	}
 	procNotification := func(v string, ns *Notifications) {
-		if lookup := lookupNotificationRE.FindStringSubmatch(v); lookup != nil {
+		if lookup := LookupNotificationRE.FindStringSubmatch(v); lookup != nil {
 			if ns.Lookups == nil {
 				ns.Lookups = make(map[string]*Lookup)
 			}

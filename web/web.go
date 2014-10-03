@@ -24,6 +24,7 @@ import (
 	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/bosun/_third_party/github.com/gorilla/mux"
 	"github.com/StackExchange/bosun/conf"
+	cparse "github.com/StackExchange/bosun/conf/parse"
 	"github.com/StackExchange/bosun/expr"
 	eparse "github.com/StackExchange/bosun/expr/parse"
 	"github.com/StackExchange/bosun/sched"
@@ -513,16 +514,31 @@ func Templates(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (in
 	}
 	alerts := make(map[string]string)
 	for name, alert := range schedule.Conf.Alerts {
+		lookups := make(map[string]bool)
 		var add func([]string)
 		add = func(macros []string) {
 			for _, macro := range macros {
 				m := schedule.Conf.Macros[macro]
+				for _, pair := range m.Pairs {
+					n := pair.GetNode()
+					if pn, ok := n.(*cparse.PairNode); ok {
+						if lookup := conf.LookupNotificationRE.FindStringSubmatch(pn.Val.Text); lookup != nil {
+							table := lookup[1]
+							if !lookups[table] {
+								lookups[table] = true
+								l := schedule.Conf.Lookups[table]
+								if l != nil {
+									alerts[name] += l.Def + "\n\n"
+								}
+							}
+						}
+					}
+				}
 				add(m.Macros)
 				alerts[name] += m.Def + "\n\n"
 			}
 		}
 		add(alert.Macros)
-		lookups := make(map[string]bool)
 		walk := func(n eparse.Node) {
 			eparse.Walk(n, func(n eparse.Node) {
 				switch n := n.(type) {
