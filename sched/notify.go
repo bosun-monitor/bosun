@@ -68,6 +68,9 @@ func (s *Schedule) CheckNotifications() time.Duration {
 }
 
 func (s *Schedule) sendNotifications() {
+	if s.Conf.Quiet {
+		return
+	}
 	for n, states := range s.notifications {
 		ustates := make(States)
 		for _, st := range states {
