@@ -29,6 +29,7 @@ var (
 	flagTest     = flag.Bool("t", false, "test for valid config; exits with 0 on success, else 1")
 	flagWatch    = flag.Bool("w", false, "watch .go files below current directory and exit; also build typescript files on change")
 	flagReadonly = flag.Bool("r", false, "readonly-mode: don't write or relay any OpenTSDB metrics")
+	flagQuiet    = flag.Bool("q", false, "quiet-mode: don't send any notifications except from the rule test page")
 )
 
 func main() {
@@ -79,6 +80,9 @@ func main() {
 		log.Println("readonly relay at", ts.URL, "to", tsdbHost)
 		tsdbHost, _ = url.Parse(ts.URL)
 		c.TsdbHost = tsdbHost.Host
+	}
+	if *flagQuiet {
+		c.Quiet = true
 	}
 	go func() { log.Fatal(web.Listen(c.HttpListen, c.WebDir, tsdbHost)) }()
 	go func() { log.Fatal(sched.Run()) }()

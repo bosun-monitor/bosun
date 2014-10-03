@@ -44,6 +44,7 @@ type Conf struct {
 	Macros          map[string]*Macro
 	Lookups         map[string]*Lookup
 	Squelch         Squelches `json:"-"`
+	Quiet           bool
 
 	tree            *parse.Tree
 	node            parse.Node
