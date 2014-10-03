@@ -88,6 +88,7 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
 			$scope.test();
 		}
 	}
+	var alert_history = {};
 	$scope.test = () => {
 		$scope.error = '';
 		$scope.warning = [];
@@ -123,11 +124,21 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
 			intervals = +($scope.intervals);
 		}
 		$scope.sets = [];
-		$scope.alert_history = {};
 		function next(interval, first = false) {
 			if (interval == 0 || $scope.stopped) {
 				$scope.stop();
 				$scope.remaining = 0;
+				angular.forEach(alert_history, function(v) => {
+					var h = v.History;
+					angular.forEach(h, function(d: any, i: number) {
+						if (i + 1 < h.length) {
+							d.EndTime = h[i + 1].Time;
+						} else {
+							d.EndTime = h[i].Time;
+						}
+					});
+				});
+				$scope.alert_history = alert_history;
 				return;
 			}
 			$scope.remaining = interval;
@@ -168,20 +179,17 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
 	function procHistory(data: any) {
 		function procStatus(st: string, d: any) {
 			angular.forEach(d, function(v) {
-				if (!$scope.alert_history[v]) {
-					$scope.alert_history[v] = {History: []};
+				if (!alert_history[v]) {
+					alert_history[v] = {History: []};
 				}
-				var h = $scope.alert_history[v];
-				h.History.push({
-					Time: moment.unix(data.Time).utc(),
+				var h = alert_history[v].History;
+				var t = moment.unix(data.Time).utc();
+				if (h.length && h[h.length - 2].Status == st) {
+					continue;
+				}
+				h.push({
+					Time: t,
 					Status: st,
-				});
-				angular.forEach(h.History, function(d: any, i: number) {
-					if (i + 1 < h.History.length) {
-						d.EndTime = h.History[i + 1].Time;
-					} else {
-						d.EndTime = h.History[i].Time;
-					}
 				});
 			});
 		}
