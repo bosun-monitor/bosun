@@ -575,6 +575,16 @@ bosunApp.directive('tsTimeLine', function () {
                 entries.sort(function (a, b) {
                     return a.key.localeCompare(b.key);
                 });
+                angular.forEach(entries, function (entry) {
+                    var h = entry.value.History;
+                    for (var i = 1; i < h.length; i++) {
+                        if (h[i].Status == h[i - 1].Status) {
+                            var r = h.splice(i, 1);
+                            h[i - 1].EndTime = r[0].EndTime;
+                            i--;
+                        }
+                    }
+                });
                 scope.entries = entries;
                 var values = entries.map(function (v) {
                     return v.value;
