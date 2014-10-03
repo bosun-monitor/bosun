@@ -563,7 +563,7 @@ bosunApp.directive('tsTimeLine', function () {
             scope.collapse = function (i) {
                 scope.shown[i] = !scope.shown[i];
             };
-            scope.$watch('alert_history', update, true);
+            scope.$watch('alert_history', update);
             function update(history) {
                 if (!history) {
                     return;
@@ -574,6 +574,16 @@ bosunApp.directive('tsTimeLine', function () {
                 }
                 entries.sort(function (a, b) {
                     return a.key.localeCompare(b.key);
+                });
+                angular.forEach(entries, function (entry) {
+                    var h = entry.value.History;
+                    for (var i = 1; i < h.length; i++) {
+                        if (h[i].Status == h[i - 1].Status) {
+                            var r = h.splice(i, 1);
+                            h[i - 1].EndTime = r[0].EndTime;
+                            i--;
+                        }
+                    }
                 });
                 scope.entries = entries;
                 var values = entries.map(function (v) {
@@ -1691,6 +1701,7 @@ bosunControllers.controller('RuleCtrl', [
                 $scope.test();
             }
         };
+        var alert_history = {};
         $scope.test = function () {
             $scope.error = '';
             $scope.warning = [];
@@ -1726,12 +1737,12 @@ bosunControllers.controller('RuleCtrl', [
                 intervals = +($scope.intervals);
             }
             $scope.sets = [];
-            $scope.alert_history = {};
             function next(interval, first) {
                 if (typeof first === "undefined") { first = false; }
                 if (interval == 0 || $scope.stopped) {
                     $scope.stop();
                     $scope.remaining = 0;
+                    $scope.alert_history = alert_history;
                     return;
                 }
                 $scope.remaining = interval;
@@ -1765,10 +1776,10 @@ bosunControllers.controller('RuleCtrl', [
         function procHistory(data) {
             function procStatus(st, d) {
                 angular.forEach(d, function (v) {
-                    if (!$scope.alert_history[v]) {
-                        $scope.alert_history[v] = { History: [] };
+                    if (!alert_history[v]) {
+                        alert_history[v] = { History: [] };
                     }
-                    var h = $scope.alert_history[v];
+                    var h = alert_history[v];
                     h.History.push({
                         Time: moment.unix(data.Time).utc(),
                         Status: st
