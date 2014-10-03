@@ -98,7 +98,7 @@
 					<div class="form-group" ng-repeat="k in sorted_tagks[$index]">
 						<label class="col-sm-4 control-label" tooltip title="Tag values for the tag. Can have multiple seperate by | which will return a time series for each one. Can also be * which returns a time series for each possible value." ng-bind="k"></label>
 						<div class="col-sm-8">
-							<input type="text" class="form-control" ng-model="t.tags[k]" ng-options="tv for tv in tagvs[$parent.$index][k]" bs-typeahead>
+							<input type="text" class="form-control" ng-model="t.tags[k]" ng-options="tv for tv in tagvs[$parent.$index][k]" bs-typeahead ng-disabled="!t.metric_tags[k]">
 						</div>
 					</div>
 				</form>
