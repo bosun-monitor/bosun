@@ -23,6 +23,7 @@ type state struct {
 	context    opentsdb.Context
 	queries    []opentsdb.Request
 	unjoinedOk bool
+	squelched  func(tags opentsdb.TagSet) bool
 }
 
 func (e *state) addRequest(r opentsdb.Request) {
@@ -52,8 +53,13 @@ func New(expr string) (*Expr, error) {
 
 // Execute applies a parse expression to the specified OpenTSDB context, and
 // returns one result per group. T may be nil to ignore timings.
-func (e *Expr) Execute(c opentsdb.Context, T miniprofiler.Timer, now time.Time, autods int, unjoinedOk bool, search *search.Search, lookups map[string]*Lookup) (r *Results, queries []opentsdb.Request, err error) {
+func (e *Expr) Execute(c opentsdb.Context, T miniprofiler.Timer, now time.Time, autods int, unjoinedOk bool, search *search.Search, lookups map[string]*Lookup, squelched func(tags opentsdb.TagSet) bool) (r *Results, queries []opentsdb.Request, err error) {
 	defer errRecover(&err)
+	if squelched == nil {
+		squelched = func(tags opentsdb.TagSet) bool {
+			return false
+		}
+	}
 	s := &state{
 		Expr:       e,
 		context:    c,
@@ -62,6 +68,7 @@ func (e *Expr) Execute(c opentsdb.Context, T miniprofiler.Timer, now time.Time, 
 		unjoinedOk: unjoinedOk,
 		search:     search,
 		lookups:    lookups,
+		squelched:  squelched,
 	}
 	if T == nil {
 		T = new(miniprofiler.Profile)

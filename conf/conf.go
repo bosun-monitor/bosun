@@ -98,6 +98,12 @@ func (s Squelch) Squelched(tags opentsdb.TagSet) bool {
 	return true
 }
 
+func (c *Conf) AlertSquelched(a *Alert) func(opentsdb.TagSet) bool {
+	return func(tags opentsdb.TagSet) bool {
+		return c.Squelched(a, tags)
+	}
+}
+
 func (c *Conf) Squelched(a *Alert, tags opentsdb.TagSet) bool {
 	return c.Squelch.Squelched(tags) || a.Squelch.Squelched(tags)
 }
