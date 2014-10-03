@@ -102,7 +102,7 @@
 </ul>
 <div class="tab-content">
 	<div class="tab-pane" ng-class="{active: tab == 'timeline'}">
-		<div ts-alert-history ng-if="tab == 'timeline'"></div>
+		<div ts-alert-history ng-if="tab == 'timeline' && fromDate && toDate"></div>
 	</div>
 	<div class="tab-pane" ng-class="{active: tab == 'template'}">
 		<div class="row" ng-show="warning.length > 0">
