@@ -575,16 +575,6 @@ bosunApp.directive('tsTimeLine', function () {
                 entries.sort(function (a, b) {
                     return a.key.localeCompare(b.key);
                 });
-                angular.forEach(entries, function (entry) {
-                    var h = entry.value.History;
-                    for (var i = 1; i < h.length; i++) {
-                        if (h[i].Status == h[i - 1].Status) {
-                            var r = h.splice(i, 1);
-                            h[i - 1].EndTime = r[0].EndTime;
-                            i--;
-                        }
-                    }
-                });
                 scope.entries = entries;
                 var values = entries.map(function (v) {
                     return v.value;
@@ -1742,6 +1732,26 @@ bosunControllers.controller('RuleCtrl', [
                 if (interval == 0 || $scope.stopped) {
                     $scope.stop();
                     $scope.remaining = 0;
+                    angular.forEach(alert_history, function (v) {
+                        var h = v.History;
+                        h.sort(function (a, b) {
+                            return a.Time > b.Time;
+                        });
+                        angular.forEach(h, function (d, i) {
+                            if (i + 1 < h.length) {
+                                d.EndTime = h[i + 1].Time;
+                            } else {
+                                d.EndTime = d.Time;
+                            }
+                        });
+                        for (var i = 1; i < h.length; i++) {
+                            if (h[i].Status == h[i - 1].Status) {
+                                var r = h.splice(i, 1);
+                                h[i - 1].EndTime = r[0].EndTime;
+                                i--;
+                            }
+                        }
+                    });
                     $scope.alert_history = alert_history;
                     return;
                 }
@@ -1774,22 +1784,15 @@ bosunControllers.controller('RuleCtrl', [
             next(intervals, true);
         };
         function procHistory(data) {
+            var t = moment.unix(data.Time).utc();
             function procStatus(st, d) {
                 angular.forEach(d, function (v) {
                     if (!alert_history[v]) {
                         alert_history[v] = { History: [] };
                     }
-                    var h = alert_history[v];
-                    h.History.push({
-                        Time: moment.unix(data.Time).utc(),
+                    alert_history[v].History.push({
+                        Time: t,
                         Status: st
-                    });
-                    angular.forEach(h.History, function (d, i) {
-                        if (i + 1 < h.History.length) {
-                            d.EndTime = h.History[i + 1].Time;
-                        } else {
-                            d.EndTime = h.History[i].Time;
-                        }
                     });
                 });
             }
