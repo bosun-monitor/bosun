@@ -39,6 +39,7 @@ const (
 	osNetPackets   = "os.net.packets"
 	osNetUnicast   = "os.net.packets_unicast"
 	osNetMulticast = "os.net.packets_multicast"
+	osSystemUptime = "os.system.uptime"
 )
 
 var (

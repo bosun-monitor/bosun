@@ -43,8 +43,9 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 		if m == nil {
 			return nil
 		}
-		Add(&md, "linux.uptime_total", m[1], nil, metadata.Unknown, metadata.None, "")
-		Add(&md, "linux.uptime_now", m[2], nil, metadata.Unknown, metadata.None, "")
+		Add(&md, "linux.uptime_total", m[1], nil, metadata.Gauge, metadata.None, "Seconds since last reboot.")
+		Add(&md, "linux.uptime_now", m[2], nil, metadata.Gauge, metadata.None, "")
+		Add(&md, osSystemUptime, m[1], nil, metadata.Gauge, metadata.None, "Seconds since last reboot.")
 		return nil
 	}); err != nil {
 		Error = err
