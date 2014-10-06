@@ -495,7 +495,7 @@ func (s *Schedule) Run() error {
 		}
 		start := time.Now()
 		log.Printf("starting run at %v\n", start)
-		s.Check(start.UTC())
+		s.Check(nil, start.UTC())
 		log.Printf("run at %v took %v\n", start, time.Since(start))
 		<-wait
 	}
