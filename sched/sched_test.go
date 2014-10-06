@@ -67,7 +67,7 @@ func testSched(t *testing.T, st *schedTest) {
 	time.Sleep(time.Millisecond * 250)
 	s := new(Schedule)
 	s.Init(c)
-	s.Check(start)
+	s.Check(nil, start)
 	groups, err := s.MarshalGroups("")
 	if err != nil {
 		t.Error(err)
