@@ -7,6 +7,7 @@ import (
 	"math"
 	"time"
 
+	"github.com/StackExchange/bosun/_third_party/github.com/MiniProfiler/go/miniprofiler"
 	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/collect"
 	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/bosun/conf"
@@ -33,12 +34,12 @@ func (s *Schedule) Status(ak expr.AlertKey) *State {
 type RunHistory map[expr.AlertKey]*Event
 
 // Check evaluates all critical and warning alert rules.
-func (s *Schedule) Check(start time.Time) {
+func (s *Schedule) Check(T miniprofiler.Timer, start time.Time) {
 	r := make(RunHistory)
 	s.CheckStart = start
 	s.cache = opentsdb.NewCache(s.Conf.TsdbHost, s.Conf.ResponseLimit)
 	for _, a := range s.Conf.Alerts {
-		s.CheckAlert(r, a)
+		s.CheckAlert(T, r, a)
 	}
 	s.RunHistory(r)
 }
@@ -132,19 +133,19 @@ func (s *Schedule) CheckUnknown() {
 	}
 }
 
-func (s *Schedule) CheckAlert(r RunHistory, a *conf.Alert) {
+func (s *Schedule) CheckAlert(T miniprofiler.Timer, r RunHistory, a *conf.Alert) {
 	log.Printf("checking alert %v", a.Name)
 	start := time.Now()
 	var warns expr.AlertKeys
-	crits, err := s.CheckExpr(r, a, a.Crit, StCritical, nil)
+	crits, err := s.CheckExpr(T, r, a, a.Crit, StCritical, nil)
 	if err == nil {
-		warns, _ = s.CheckExpr(r, a, a.Warn, StWarning, crits)
+		warns, _ = s.CheckExpr(T, r, a, a.Warn, StWarning, crits)
 	}
 	collect.Put("check.duration", opentsdb.TagSet{"name": a.Name}, time.Since(start).Seconds())
 	log.Printf("done checking alert %v (%s): %v crits, %v warns", a.Name, time.Since(start), len(crits), len(warns))
 }
 
-func (s *Schedule) CheckExpr(rh RunHistory, a *conf.Alert, e *expr.Expr, checkStatus Status, ignore expr.AlertKeys) (alerts expr.AlertKeys, err error) {
+func (s *Schedule) CheckExpr(T miniprofiler.Timer, rh RunHistory, a *conf.Alert, e *expr.Expr, checkStatus Status, ignore expr.AlertKeys) (alerts expr.AlertKeys, err error) {
 	if e == nil {
 		return
 	}
@@ -155,7 +156,7 @@ func (s *Schedule) CheckExpr(rh RunHistory, a *conf.Alert, e *expr.Expr, checkSt
 		collect.Add("check.errs", opentsdb.TagSet{"metric": a.Name}, 1)
 		log.Println(err)
 	}()
-	results, _, err := e.Execute(s.cache, nil, s.CheckStart, 0, a.UnjoinedOK, s.Search, s.Conf.GetLookups(), s.Conf.AlertSquelched(a))
+	results, _, err := e.Execute(s.cache, T, s.CheckStart, 0, a.UnjoinedOK, s.Search, s.Conf.GetLookups(), s.Conf.AlertSquelched(a))
 	if err != nil {
 		ak := expr.NewAlertKey(a.Name, nil)
 		state := s.Status(ak)

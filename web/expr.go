@@ -107,10 +107,10 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 	var a *conf.Alert
 	for _, a = range c.Alerts {
 	}
-	if _, err := s.CheckExpr(rh, a, a.Warn, sched.StWarning, nil); err != nil {
+	if _, err := s.CheckExpr(t, rh, a, a.Warn, sched.StWarning, nil); err != nil {
 		return nil, err
 	}
-	if _, err := s.CheckExpr(rh, a, a.Crit, sched.StCritical, nil); err != nil {
+	if _, err := s.CheckExpr(t, rh, a, a.Crit, sched.StCritical, nil); err != nil {
 		return nil, err
 	}
 	if len(rh) < 1 {
