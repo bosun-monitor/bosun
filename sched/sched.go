@@ -47,11 +47,11 @@ type Schedule struct {
 
 type Metavalues []Metavalue
 
-func (m Metavalues) Last() (v interface{}, present bool) {
+func (m Metavalues) Last() *Metavalue {
 	if len(m) > 0 {
-		return m[len(m)-1].Value, true
+		return &m[len(m)-1]
 	}
-	return
+	return nil
 }
 
 type Metavalue struct {
@@ -62,7 +62,7 @@ type Metavalue struct {
 func (s *Schedule) PutMetadata(k metadata.Metakey, v interface{}) {
 	s.metalock.Lock()
 	md := s.Metadata[k]
-	mv := Metavalue{time.Now(), v}
+	mv := Metavalue{time.Now().UTC(), v}
 	changed := false
 	if md == nil {
 		changed = true
@@ -72,8 +72,10 @@ func (s *Schedule) PutMetadata(k metadata.Metakey, v interface{}) {
 	}
 	if changed {
 		s.Metadata[k] = append(md, mv)
-		s.Save()
+	} else {
+		s.Metadata[k][len(md)-1].Time = mv.Time
 	}
+	s.Save()
 	s.metalock.Unlock()
 }
 
@@ -87,15 +89,16 @@ func (s *Schedule) GetMetadata(metric string, subset opentsdb.TagSet) []metadata
 		if !k.TagSet().Subset(subset) {
 			continue
 		}
-		val, ok := v.Last()
-		if !ok {
+		mv := v.Last()
+		if mv == nil {
 			continue
 		}
 		ms = append(ms, metadata.Metasend{
 			Metric: k.Metric,
 			Tags:   k.TagSet(),
 			Name:   k.Name,
-			Value:  val,
+			Value:  mv.Value,
+			Time:   mv.Time,
 		})
 	}
 	s.metalock.Unlock()
