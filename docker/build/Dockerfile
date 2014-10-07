@@ -23,7 +23,7 @@ RUN mkdir -p /hbase \
     && curl -SL http://apache.org/dist/hbase/stable/hbase-$HBASEVER-bin.tar.gz \
     | tar -xzC /hbase
 
-RUN curl -SL https://storage.googleapis.com/golang/go1.3.2.linux-amd64.tar.gz \
+RUN curl -SL https://storage.googleapis.com/golang/go1.3.3.linux-amd64.tar.gz \
     | tar -xzC /usr/local
 
 COPY bosun $GOPATH/src/github.com/StackExchange/bosun
