@@ -58,9 +58,16 @@ func c_ntp_peers_unix() (opentsdb.MultiDataPoint, error) {
 		if len(fields) != len(ntpNtpqPeerFields) || fields[0] == "remote" {
 			return nil
 		}
-		tags := opentsdb.TagSet{"remote": fields[0], "refid": fields[1]}
+		r := []rune(line)
+		if len(r) < 2 {
+			return nil, fmt.Errorf("unexpected length of line ")
+		}
+		fl := string(r[0])
+		rest := string(r[1:])
+		remote := strings.Fields(rest)[0]
+		tags := opentsdb.TagSet{"remote": remote, "refid": fields[1]}
 		var current_source int
-		if strings.HasPrefix(fields[0], "*") {
+		if fl == "*" {
 			current_source = 1
 		}
 		Add(&md, metric+"current_source", current_source, tags, metadata.Gauge, metadata.Bool, "")
