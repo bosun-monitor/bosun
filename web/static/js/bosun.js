@@ -795,7 +795,7 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function ($window, fmtfi
                 }).style('color', function (d) {
                     return color(d.Name);
                 });
-                hover.attr('transform', 'translate(' + minX + ',' + minY + ')').style('display', 'block');
+                hover.attr('transform', 'translate(' + minX + ',' + minY + ')');
                 hoverPoint.style('fill', minColor);
                 hoverText.text(minName).style('fill', minColor);
                 var isRight = minX > width / 2;
@@ -922,7 +922,11 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function ($window, fmtfi
                 queries.attr('d', function (d) {
                     return line(d.Data);
                 }).attr('transform', null).transition().ease('linear').attr('transform', 'translate(' + (xScale(oldx) - xScale(xdomain[1])) + ')');
-                chart.select('.x.brush').call(brush).selectAll('rect').attr('height', height).on('mousemove', mousemove);
+                chart.select('.x.brush').call(brush).selectAll('rect').attr('height', height).on('mouseover', function () {
+                    hover.style('display', 'block');
+                }).on('mouseout', function () {
+                    hover.style('display', 'none');
+                }).on('mousemove', mousemove);
                 chart.select('.x.brush .extent').style('stroke', '#fff').style('fill-opacity', '.125').style('shape-rendering', 'crispEdges');
                 oldx = xdomain[1];
                 drawLegend();

@@ -520,8 +520,7 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWi
 					})
 					.style('color', (d: any) => { return color(d.Name); });
 				hover
-					.attr('transform', 'translate(' + minX + ',' + minY + ')')
-					.style('display', 'block');
+					.attr('transform', 'translate(' + minX + ',' + minY + ')');
 				hoverPoint.style('fill', minColor);
 				hoverText
 					.text(minName)
@@ -654,6 +653,12 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWi
 					.call(brush)
 					.selectAll('rect')
 					.attr('height', height)
+					.on('mouseover', () => {
+						hover.style('display', 'block');
+					})
+					.on('mouseout', () => {
+						hover.style('display', 'none');
+					})
 					.on('mousemove', mousemove);
 				chart.select('.x.brush .extent')
 					.style('stroke', '#fff')
