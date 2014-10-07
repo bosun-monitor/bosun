@@ -53,21 +53,22 @@ func c_physical_disk_windows() (opentsdb.MultiDataPoint, error) {
 	}
 	var md opentsdb.MultiDataPoint
 	for _, v := range dst {
-		Add(&md, "win.disk.duration", v.AvgDiskSecPerRead, opentsdb.TagSet{"disk": v.Name, "type": "read"}, metadata.Counter, metadata.Second, "")
-		Add(&md, "win.disk.duration", v.AvgDiskSecPerWrite, opentsdb.TagSet{"disk": v.Name, "type": "write"}, metadata.Counter, metadata.Second, "")
-		Add(&md, "win.disk.queue", v.AvgDiskReadQueueLength, opentsdb.TagSet{"disk": v.Name, "type": "read"}, metadata.Counter, metadata.Event, "")
-		Add(&md, "win.disk.queue", v.AvgDiskWriteQueueLength, opentsdb.TagSet{"disk": v.Name, "type": "write"}, metadata.Counter, metadata.Event, "")
-		Add(&md, "win.disk.ops", v.DiskReadsPerSec, opentsdb.TagSet{"disk": v.Name, "type": "read"}, metadata.Counter, metadata.PerSecond, "")
-		Add(&md, "win.disk.ops", v.DiskWritesPerSec, opentsdb.TagSet{"disk": v.Name, "type": "write"}, metadata.Counter, metadata.PerSecond, "")
-		Add(&md, "win.disk.bytes", v.DiskReadBytesPerSec, opentsdb.TagSet{"disk": v.Name, "type": "read"}, metadata.Counter, metadata.BytesPerSecond, "")
-		Add(&md, "win.disk.bytes", v.DiskWriteBytesPerSec, opentsdb.TagSet{"disk": v.Name, "type": "write"}, metadata.Counter, metadata.BytesPerSecond, "")
-		Add(&md, "win.disk.percent_time", v.PercentDiskReadTime, opentsdb.TagSet{"disk": v.Name, "type": "read"}, metadata.Counter, metadata.None, "")
-		Add(&md, "win.disk.percent_time", v.PercentDiskWriteTime, opentsdb.TagSet{"disk": v.Name, "type": "write"}, metadata.Counter, metadata.None, "")
-		Add(&md, "win.disk.spltio", v.SplitIOPerSec, opentsdb.TagSet{"disk": v.Name}, metadata.Counter, metadata.Event, "")
+		Add(&md, "win.disk.duration", v.AvgDiskSecPerRead/1000000, opentsdb.TagSet{"disk": v.Name, "type": "read"}, metadata.Counter, metadata.MilliSecond, "Time, in milliseconds, of a read from the disk")
+		Add(&md, "win.disk.duration", v.AvgDiskSecPerWrite/1000000, opentsdb.TagSet{"disk": v.Name, "type": "write"}, metadata.Counter, metadata.MilliSecond, "Time, in milliseconds, of a write to the disk")
+		Add(&md, "win.disk.queue", v.AvgDiskReadQueueLength/10000000, opentsdb.TagSet{"disk": v.Name, "type": "read"}, metadata.Counter, metadata.Operation, "Number of read requests that were queued for the disk")
+		Add(&md, "win.disk.queue", v.AvgDiskWriteQueueLength/10000000, opentsdb.TagSet{"disk": v.Name, "type": "write"}, metadata.Counter, metadata.Operation, "Number of write requests that were queued for the disk")
+		Add(&md, "win.disk.ops", v.DiskReadsPerSec, opentsdb.TagSet{"disk": v.Name, "type": "read"}, metadata.Counter, metadata.PerSecond, "Number of read operations on the disk")
+		Add(&md, "win.disk.ops", v.DiskWritesPerSec, opentsdb.TagSet{"disk": v.Name, "type": "write"}, metadata.Counter, metadata.PerSecond, "Number of write operations on the disk")
+		Add(&md, "win.disk.bytes", v.DiskReadBytesPerSec, opentsdb.TagSet{"disk": v.Name, "type": "read"}, metadata.Counter, metadata.BytesPerSecond, "Number of bytes read from the disk")
+		Add(&md, "win.disk.bytes", v.DiskWriteBytesPerSec, opentsdb.TagSet{"disk": v.Name, "type": "write"}, metadata.Counter, metadata.BytesPerSecond, "Number of bytes written to the disk")
+		Add(&md, "win.disk.percent_time", v.PercentDiskReadTime/100000, opentsdb.TagSet{"disk": v.Name, "type": "read"}, metadata.Counter, metadata.Pct, "Percentage of time that the disk was busy servicing read requests")
+		Add(&md, "win.disk.percent_time", v.PercentDiskWriteTime/100000, opentsdb.TagSet{"disk": v.Name, "type": "write"}, metadata.Counter, metadata.Pct, "Percentage of time that the disk was busy servicing write requests")
+		Add(&md, "win.disk.spltio", v.SplitIOPerSec, opentsdb.TagSet{"disk": v.Name}, metadata.Counter, metadata.PerSecond, "Number of requests to the disk that were split into multiple requests due to size or fragmentation")
 	}
 	return md, nil
 }
 
+//See msdn for counter types http://msdn.microsoft.com/en-us/library/ms804035.aspx
 type Win32_PerfRawData_PerfDisk_PhysicalDisk struct {
 	AvgDiskReadQueueLength  uint64
 	AvgDiskSecPerRead       uint32
