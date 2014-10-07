@@ -1733,7 +1733,8 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
                 angular.forEach(alert_history, function (v) {
                     var h = v.History;
                     h.sort(function (a, b) {
-                        return a.Time > b.Time;
+                        var r = a.Time.isAfter(b.Time);
+                        return r ? 1 : -1;
                     });
                     angular.forEach(h, function (d, i) {
                         if (i + 1 < h.length) {
