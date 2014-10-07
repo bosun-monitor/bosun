@@ -113,9 +113,6 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 	if _, err := s.CheckExpr(t, rh, a, a.Crit, sched.StCritical, nil); err != nil {
 		return nil, err
 	}
-	if len(rh) < 1 {
-		return nil, fmt.Errorf("no results returned")
-	}
 	keys := make(expr.AlertKeys, len(rh))
 	criticals, warnings, normals := make([]expr.AlertKey, 0), make([]expr.AlertKey, 0), make([]expr.AlertKey, 0)
 	i := 0
@@ -135,13 +132,13 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 		}
 	}
 	sort.Sort(keys)
-	instance := s.Status(keys[0])
-	instance.History = []sched.Event{*rh[keys[0]]}
 	body := new(bytes.Buffer)
 	subject := new(bytes.Buffer)
 	var data interface{}
 	warning := make([]string, 0)
-	if !summary {
+	if !summary && len(keys) > 0 {
+		instance := s.Status(keys[0])
+		instance.History = []sched.Event{*rh[keys[0]]}
 		if _, err := s.ExecuteBody(body, a, instance, false); err != nil {
 			warning = append(warning, err.Error())
 		}
