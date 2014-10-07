@@ -138,7 +138,7 @@
 						</tr>
 					</thead>
 					<tbody>
-						<tr ng-repeat="set in sets">
+						<tr ng-repeat="set in sets | orderBy:'time'">
 							<td><a href="#" ng-bind="set.time" ng-click="scroll($index)"></a></td>
 							<td ng-bind="set.critical || ''" ng-class="set.critical ? 'danger' : ''"></td>
 							<td ng-bind="set.warning || ''" ng-class="set.warning ? 'warning' : ''"></td>
@@ -148,7 +148,7 @@
 				</table>
 			</div>
 		</div>
-		<div class="row" ng-repeat="set in sets">
+		<div class="row" ng-repeat="set in sets | orderBy:'time'">
 			<div class="col-sm-12">
 				<h4 id="time-{{$index}}">
 					Time: {{set.time}}
