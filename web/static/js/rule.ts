@@ -124,8 +124,20 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
 			intervals = +($scope.intervals);
 		}
 		$scope.sets = [];
-		function next(interval, first = false) {
-			if (interval == 0 || $scope.stopped) {
+		var remaining = [];
+		for (var i = 0; i < intervals; i++) {
+			remaining.push(i);
+		}
+		var threads = 10;
+		for (var i = 0; i < threads; i++) {
+			next();
+		}
+		function next() {
+			if (remaining.length == 0 || $scope.stopped) {
+				threads--;
+				if (threads) {
+					return;
+				}
 				$scope.stop();
 				$scope.remaining = 0;
 				angular.forEach(alert_history, (v) => {
@@ -151,9 +163,13 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
 				$scope.alert_history = alert_history;
 				return;
 			}
-			$scope.remaining = interval;
-			var date = from.format('YYYY-MM-DD');
-			var time = from.format('HH:mm');
+			$scope.remaining = remaining.length;
+			var first = remaining.length == intervals;
+			var interval = remaining.shift();
+			var fromDate = from.clone();
+			fromDate.subtract(diff / (intervals - 1) * interval);
+			var date = fromDate.format('YYYY-MM-DD');
+			var time = fromDate.format('HH:mm');
 			var url = '/api/rule?' +
 				'alert=' + encodeURIComponent($scope.alert) +
 				'&template=' + encodeURIComponent($scope.template) +
@@ -175,16 +191,17 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
 						set.results = procResults(data);
 					}
 					$scope.sets.push(set);
-					from.subtract(diff / (intervals - 1));
-					next(interval - 1);
+					next();
 				})
 				.error((error) => {
 					$scope.error = error;
 					$scope.remaining = 0;
+					$scope.stopped = true;
+					threads = 0;
+					remaining = [];
 					$scope.stop();
 				});
 		}
-		next(intervals, true);
 	};
 	function procHistory(data: any) {
 		var t = moment.unix(data.Time).utc();
