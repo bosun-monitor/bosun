@@ -126,6 +126,16 @@ var builtins = map[string]parse.Func{
 		parse.TYPE_NUMBER,
 		lookup,
 	},
+	"nv": {
+		[]parse.FuncType{parse.TYPE_NUMBER, parse.TYPE_SCALAR},
+		parse.TYPE_NUMBER,
+		NV,
+	},
+}
+
+func NV(e *state, T miniprofiler.Timer, series *Results, v float64) (results *Results, err error) {
+	series.NaNValue = &v
+	return series, nil
 }
 
 func lookup(e *state, T miniprofiler.Timer, lookup, key string) (results *Results, err error) {

@@ -141,6 +141,15 @@ type Results struct {
 	IgnoreUnjoined bool
 	// If true, ungrouped joins from the other set will be ignored.
 	IgnoreOtherUnjoined bool
+	// If non nil, will set any NaN value to it.
+	NaNValue *float64
+}
+
+func (r *Results) NaN() Scalar {
+	if r.NaNValue != nil {
+		return Scalar(*r.NaNValue)
+	}
+	return Scalar(math.NaN())
 }
 
 type Computations []Computation
@@ -178,7 +187,7 @@ func (u *Union) ExtendComputations(o *Result) {
 
 // union returns the combination of a and b where one is a subset of the other.
 func (e *state) union(a, b *Results, expression string) []*Union {
-	const unjoinedGroup = "unjoined group"
+	const unjoinedGroup = "unjoined group (%v)"
 	var us []*Union
 	if len(a.Results) == 0 || len(b.Results) == 0 {
 		return us
@@ -222,10 +231,10 @@ func (e *state) union(a, b *Results, expression string) []*Union {
 			for r := range am {
 				u := &Union{
 					A:     r.Value,
-					B:     Scalar(math.NaN()),
+					B:     b.NaN(),
 					Group: r.Group,
 				}
-				r.AddComputation(expression, unjoinedGroup)
+				r.AddComputation(expression, fmt.Sprintf(unjoinedGroup, u.B))
 				u.ExtendComputations(r)
 				us = append(us, u)
 			}
@@ -233,11 +242,11 @@ func (e *state) union(a, b *Results, expression string) []*Union {
 		if !b.IgnoreUnjoined && !a.IgnoreOtherUnjoined {
 			for r := range bm {
 				u := &Union{
-					A:     Scalar(math.NaN()),
+					A:     a.NaN(),
 					B:     r.Value,
 					Group: r.Group,
 				}
-				r.AddComputation(expression, unjoinedGroup)
+				r.AddComputation(expression, fmt.Sprintf(unjoinedGroup, u.A))
 				u.ExtendComputations(r)
 				us = append(us, u)
 			}
