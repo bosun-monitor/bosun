@@ -144,7 +144,8 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
 				angular.forEach(alert_history, (v) => {
 					var h = v.History;
 					h.sort((a, b) => {
-						return a.Time > b.Time;
+						var r = a.Time.isAfter(b.Time);
+						return r ? 1 : -1;
 					});
 					angular.forEach(h, function(d: any, i: number) {
 						if (i + 1 < h.length) {
