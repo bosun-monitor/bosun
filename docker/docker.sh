@@ -2,7 +2,7 @@
 
 TMP=run/tmp
 rm -rf build/bosun $TMP
-git clone -b master --single-branch --depth 1 .. build/bosun
+git clone -b master --single-branch .. build/bosun
 docker build -t bosun-build build
 ID=$(docker run -d bosun-build)
 mkdir -p $TMP/hbase $TMP/bosun $TMP/tsdb
