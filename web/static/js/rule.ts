@@ -128,7 +128,7 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
 		for (var i = 0; i < intervals; i++) {
 			remaining.push(i);
 		}
-		var threads = 10;
+		var threads = Math.min(10, intervals);
 		for (var i = 0; i < threads; i++) {
 			next();
 		}
