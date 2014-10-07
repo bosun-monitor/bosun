@@ -91,6 +91,7 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
 	var alert_history = {};
 	$scope.test = () => {
 		$scope.error = '';
+		$scope.stopped = false;
 		$scope.warning = [];
 		$location.search('alert', btoa($scope.alert));
 		$location.search('template', btoa($scope.template));
