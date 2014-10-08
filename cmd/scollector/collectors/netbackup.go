@@ -124,8 +124,7 @@ func c_netbackup_jobs() (opentsdb.MultiDataPoint, error) {
 			}
 		}
 		return nil
-		// todo Get this in path and make this both a linux and windows collector
-	}, `C:\Program Files\Veritas\NetBackup\bin\admincmd\bpdbjobs.exe`, "-report", "-all_columns")
+	}, `bpdbjobs`, "-report", "-all_columns")
 	if err != nil {
 		return md, err
 	}
