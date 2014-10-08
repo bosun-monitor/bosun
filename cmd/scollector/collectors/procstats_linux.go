@@ -30,6 +30,7 @@ var CPU_FIELDS = []string{
 	"iowait",
 	"irq",
 	"softirq",
+	"steal",
 	"guest",
 	"guest_nice",
 }
@@ -42,8 +43,9 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 		if m == nil {
 			return nil
 		}
-		Add(&md, "linux.uptime_total", m[1], nil, metadata.Unknown, metadata.None, "")
-		Add(&md, "linux.uptime_now", m[2], nil, metadata.Unknown, metadata.None, "")
+		Add(&md, "linux.uptime_total", m[1], nil, metadata.Gauge, metadata.Second, osSystemUptimeDesc)
+		Add(&md, "linux.uptime_now", m[2], nil, metadata.Gauge, metadata.Second, "")
+		Add(&md, osSystemUptime, m[1], nil, metadata.Gauge, metadata.Second, osSystemUptimeDesc)
 		return nil
 	}); err != nil {
 		Error = err
@@ -120,7 +122,7 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 				Add(&md, "linux.cpu"+metric_percpu, value, tags, metadata.Unknown, metadata.None, "")
 			}
 			if metric_percpu == "" {
-				if len(fields) != len(CPU_FIELDS) {
+				if len(fields) < 3 {
 					return nil
 				}
 				user, err := strconv.ParseFloat(fields[0], 64)
@@ -272,6 +274,37 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 			}
 		}
 		ln += 1
+		return nil
+	}); err != nil {
+		Error = err
+	}
+	ln = 0
+	if err := readLine("/proc/net/snmp", func(s string) error {
+		ln++
+		if ln%2 != 0 {
+			f := strings.Fields(s)
+			if len(f) < 2 {
+				return fmt.Errorf("Failed to parse header line")
+			}
+			headers = f
+		} else {
+			values := strings.Fields(s)
+			if len(values) != len(headers) {
+				return fmt.Errorf("Mismatched header and value length")
+			}
+			proto := strings.ToLower(strings.TrimSuffix(values[0], ":"))
+			for i, v := range values {
+				if i == 0 {
+					continue
+				}
+				var stype metadata.RateType = metadata.Counter
+				stat := strings.ToLower(headers[i])
+				if strings.HasPrefix(stat, "rto") {
+					stype = metadata.Gauge
+				}
+				Add(&md, "linux.net.stat."+proto+"."+stat, v, nil, stype, metadata.None, "")
+			}
+		}
 		return nil
 	}); err != nil {
 		Error = err

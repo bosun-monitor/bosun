@@ -141,7 +141,7 @@ func (c *ProgramCollector) runProgram(dpchan chan<- *opentsdb.DataPoint) (progEr
 		for _, tag := range sp[3:] {
 			tsp := strings.Split(tag, "=")
 			if len(tsp) != 2 {
-				slog.Fatal("bad tag", tsp)
+				slog.Errorf("bad tag in program %s, metric %s: %v", c.Path, sp[0], tsp)
 				continue
 			}
 			dp.Tags[tsp[0]] = tsp[1]

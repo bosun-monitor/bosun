@@ -67,24 +67,20 @@ func (t *timeoutTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 
 // InitChan is similar to Init, but uses the given channel instead of creating a
 // new one.
-func InitChan(tsdbhost, metric_root string, ch chan *opentsdb.DataPoint) error {
+func InitChan(tsdbhost *url.URL, metric_root string, ch chan *opentsdb.DataPoint) error {
 	if tchan != nil {
 		return fmt.Errorf("cannot init twice")
 	}
 	if err := checkClean(metric_root, "metric root"); err != nil {
 		return err
 	}
-	if tsdbhost == "" {
-		return fmt.Errorf("must specify non-empty tsdb host")
+	u, err := tsdbhost.Parse("/api/put")
+	if err != nil {
+		return err
 	}
-	u := url.URL{
-		Scheme: "http",
-		Path:   "/api/put",
+	if strings.HasPrefix(u.Host, ":") {
+		u.Host = "localhost" + u.Host
 	}
-	if !strings.Contains(tsdbhost, ":") {
-		tsdbhost += ":4242"
-	}
-	u.Host = tsdbhost
 	tsdbURL = u.String()
 	metricRoot = metric_root + "."
 	tchan = ch
@@ -137,7 +133,7 @@ func InitChan(tsdbhost, metric_root string, ch chan *opentsdb.DataPoint) error {
 
 // Init sets up the channels and the queue for sending data to OpenTSDB. It also
 // sets up the basename for all metrics.
-func Init(tsdbhost, metric_root string) error {
+func Init(tsdbhost *url.URL, metric_root string) error {
 	return InitChan(tsdbhost, metric_root, make(chan *opentsdb.DataPoint))
 }
 

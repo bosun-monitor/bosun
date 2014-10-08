@@ -54,6 +54,7 @@ func sendBatch(batch opentsdb.MultiDataPoint) {
 	req, err := http.NewRequest("POST", tsdbURL, &buf)
 	if err != nil {
 		slog.Error(err)
+		return
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Content-Encoding", "gzip")

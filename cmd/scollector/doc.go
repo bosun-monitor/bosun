@@ -16,8 +16,9 @@ Usage:
 
 The flags are:
 	-h="bosun"
-		OpenTSDB host; can optionally specify a port
-		("tsdb.example.com:4000"), but will default to 4242
+		OpenTSDB host; can optionally specify a port and scheme
+		("https://tsdb.example.com:4242"), but will default to
+		http://bosun/
 	-c=""
 		external collectors directory
 	-s=""
@@ -33,6 +34,8 @@ The flags are:
 		filter collectors matching this term (regex)
 	-l
 		list enabled collectors
+	-m
+		disable sending of metadata
 
 Additional flags on Windows:
 	-winsvc=""

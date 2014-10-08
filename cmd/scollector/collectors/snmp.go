@@ -50,8 +50,8 @@ func snmp_subtree(host, community, oid string) (map[int]interface{}, error) {
 	return m, nil
 }
 
-func snmp_oid(host, community, oid string) (float64, error) {
-	var v float64
+func snmp_oid(host, community, oid string) (*big.Int, error) {
+	v := new(big.Int)
 	err := snmp.Get(host, community, oid, &v)
 	return v, err
 }

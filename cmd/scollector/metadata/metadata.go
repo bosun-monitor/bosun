@@ -3,8 +3,8 @@ package metadata
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"net/http"
+	"net/url"
 	"reflect"
 	"sync"
 	"time"
@@ -44,6 +44,8 @@ const (
 	MilliSecond         = "milliseconds"
 	V                   = "V" // Volts
 	V_10                = "tenth-Volts"
+	Megabit             = "Mbit"
+	Operation           = "Operations"
 )
 
 type Metakey struct {
@@ -87,10 +89,15 @@ func AddMeta(metric string, tags opentsdb.TagSet, name string, value interface{}
 	metadata[Metakey{metric, ts, name}] = value
 }
 
-func Init(host string, debug bool) {
-	metahost = host
+func Init(u *url.URL, debug bool) error {
+	mh, err := u.Parse("/api/metadata/put")
+	if err != nil {
+		return err
+	}
+	metahost = mh.String()
 	metadebug = debug
 	go collectMetadata()
+	return nil
 }
 
 func collectMetadata() {
@@ -111,6 +118,7 @@ type Metasend struct {
 	Tags   opentsdb.TagSet `json:",omitempty"`
 	Name   string          `json:",omitempty"`
 	Value  interface{}
+	Time   time.Time `json:",omitempty"`
 }
 
 func sendMetadata() {
@@ -136,7 +144,7 @@ func sendMetadata() {
 		slog.Error(err)
 		return
 	}
-	resp, err := http.Post(fmt.Sprintf("http://%s/api/metadata/put", metahost), "application/json", bytes.NewBuffer(b))
+	resp, err := http.Post(metahost, "application/json", bytes.NewBuffer(b))
 	if err != nil {
 		slog.Error(err)
 		return
