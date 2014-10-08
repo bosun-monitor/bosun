@@ -237,7 +237,7 @@ func (s *Schedule) MarshalGroups(filter string) (*StateGroups, error) {
 		if a == nil {
 			return nil, fmt.Errorf("unknown alert %s", k.Name())
 		}
-		if matches(a, v) {
+		if matches(s.Conf, a, v) {
 			status[k] = v
 		}
 	}
