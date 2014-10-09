@@ -41,6 +41,7 @@ const (
 	PerSecond           = "per second"
 	RPM                 = "RPM" // Rotations per minute.
 	Second              = "seconds"
+	StatusCode          = "status code"
 	MilliSecond         = "milliseconds"
 	V                   = "V" // Volts
 	V_10                = "tenth-Volts"

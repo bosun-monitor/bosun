@@ -25,7 +25,7 @@ func init() {
 //state
 // 0=queued, 1=active, 2=wait for retry, 3=done, 4=suspended, 5=incomplete
 
-type NBJob struct {
+type nbJob struct {
 	Jobid             string
 	Jobtype           int
 	State             int
@@ -59,7 +59,7 @@ type NBJob struct {
 	Fileslastwritten  string
 }
 
-func NBUnmarshal(reader *csv.Reader, v interface{}) error {
+func nbUnmarhsall(reader *csv.Reader, v interface{}) error {
 	record, err := reader.Read()
 	if err != nil {
 		return err
@@ -83,14 +83,14 @@ func NBUnmarshal(reader *csv.Reader, v interface{}) error {
 			}
 			f.SetInt(ival)
 		case "time.Time":
-			ival, err := strconv.ParseInt(record[i], 10, 0)
+			ival, err := strconv.ParseInt(record[i], 10, 64)
 			if err != nil {
 				return err
 			}
 			t := time.Unix(ival, 0)
 			f.Set(reflect.ValueOf(t))
 		default:
-			return fmt.Errorf("Unsupported type: %v, ", f.Type().String())
+			return fmt.Errorf("unsupported type: %s", f.Type().String())
 		}
 	}
 	return nil
@@ -98,15 +98,14 @@ func NBUnmarshal(reader *csv.Reader, v interface{}) error {
 
 func c_netbackup_jobs() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
-	latest := make(map[string]NBJob)
-	err := util.ReadCommand(func(line string) error {
+	latest := make(map[string]nbJob)
+	if err := util.ReadCommand(func(line string) error {
 		if len(line) < 32 {
 			return nil
 		}
-		var r NBJob
+		var r nbJob
 		reader := csv.NewReader(strings.NewReader(line))
-		err := NBUnmarshal(reader, &r)
-		if err != nil {
+		if err := nbUnmarhsall(reader, &r); err != nil {
 			return err
 		}
 		if r.Jobtype != 0 {
@@ -124,20 +123,18 @@ func c_netbackup_jobs() (opentsdb.MultiDataPoint, error) {
 			}
 		}
 		return nil
-	}, `bpdbjobs`, "-report", "-all_columns")
-	if err != nil {
-		return md, err
+	}, "bpdbjobs", "-report", "-all_columns"); err != nil {
+		return nil, err
 	}
 	now := time.Now()
 	for _, r := range latest {
 		tags := opentsdb.TagSet{"class": r.Class, "client": r.Client, "schedule": r.Schedule}
-		Add(&md, "netbackup.backup.status", r.Status, tags, metadata.Gauge, "code", "")
+		Add(&md, "netbackup.backup.status", r.Status, tags, metadata.Gauge, metadata.StatusCode, "")
 		Add(&md, "netbackup.backup.duration", r.Elapsed, tags, metadata.Gauge, metadata.Second, "")
 		Add(&md, "netbackup.backup.attempt_age", now.Sub(r.Ended).Seconds(), tags, metadata.Gauge, metadata.Second, "")
 		Add(&md, "netbackup.backup.duration", r.Elapsed, tags, metadata.Gauge, metadata.Second, "")
 		Add(&md, "netbackup.backup.no_files", r.Files, tags, metadata.Gauge, metadata.Count, "")
 		Add(&md, "netbackup.backup.kbytes", r.Kbytes, tags, metadata.Gauge, metadata.KBytes, "")
-
 	}
-	return md, err
+	return md, nil
 }
