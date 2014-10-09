@@ -7,11 +7,14 @@ import (
 	"net/mail"
 	"net/url"
 	"sort"
+	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/StackExchange/bosun/_third_party/github.com/MiniProfiler/go/miniprofiler"
 	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/opentsdb"
+	"github.com/StackExchange/bosun/_third_party/github.com/bradfitz/slice"
 	"github.com/StackExchange/bosun/conf"
 	"github.com/StackExchange/bosun/expr"
 	"github.com/StackExchange/bosun/sched"
@@ -70,9 +73,130 @@ type Res struct {
 	Key expr.AlertKey
 }
 
+func procRule(t miniprofiler.Timer, c *conf.Conf, a *conf.Alert, now time.Time, summary bool, email string) (*ruleResult, error) {
+	s := &sched.Schedule{
+		CheckStart: now,
+	}
+	s.Init(c)
+	s.Metadata = schedule.Metadata
+	s.Search = schedule.Search
+	rh := make(sched.RunHistory)
+	if _, err := s.CheckExpr(t, rh, a, a.Warn, sched.StWarning, nil); err != nil {
+		return nil, err
+	}
+	if _, err := s.CheckExpr(t, rh, a, a.Crit, sched.StCritical, nil); err != nil {
+		return nil, err
+	}
+	keys := make(expr.AlertKeys, len(rh))
+	errors, criticals, warnings, normals := make([]expr.AlertKey, 0), make([]expr.AlertKey, 0), make([]expr.AlertKey, 0), make([]expr.AlertKey, 0)
+	i := 0
+	for k, v := range rh {
+		v.Time = now
+		keys[i] = k
+		i++
+		switch v.Status {
+		case sched.StNormal:
+			normals = append(normals, k)
+		case sched.StWarning:
+			warnings = append(warnings, k)
+		case sched.StCritical:
+			criticals = append(criticals, k)
+		case sched.StError:
+			errors = append(errors, k)
+		default:
+			return nil, fmt.Errorf("unknown state type %v", v.Status)
+		}
+	}
+	sort.Sort(keys)
+	body := new(bytes.Buffer)
+	subject := new(bytes.Buffer)
+	var data interface{}
+	warning := make([]string, 0)
+	if !summary && len(keys) > 0 {
+		instance := s.Status(keys[0])
+		instance.History = []sched.Event{*rh[keys[0]]}
+		if _, err := s.ExecuteBody(body, a, instance, false); err != nil {
+			warning = append(warning, err.Error())
+		}
+		if err := s.ExecuteSubject(subject, a, instance); err != nil {
+			warning = append(warning, err.Error())
+		}
+		data = s.Data(instance, a, false)
+		if email != "" {
+			m, err := mail.ParseAddress(email)
+			if err != nil {
+				return nil, err
+			}
+			n := conf.Notification{
+				Email: []*mail.Address{m},
+			}
+			email := new(bytes.Buffer)
+			attachments, err := s.ExecuteBody(email, a, instance, true)
+			n.DoEmail(subject.Bytes(), email.Bytes(), schedule.Conf.EmailFrom, schedule.Conf.SmtpHost, string(instance.AlertKey()), attachments...)
+		}
+	}
+	return &ruleResult{
+		errors,
+		criticals,
+		warnings,
+		normals,
+		now,
+		body.String(),
+		subject.String(),
+		data,
+		rh,
+		warning,
+	}, nil
+}
+
+type ruleResult struct {
+	Errors    []expr.AlertKey
+	Criticals []expr.AlertKey
+	Warnings  []expr.AlertKey
+	Normals   []expr.AlertKey
+	Time      time.Time
+
+	Body    string
+	Subject string
+	Data    interface{}
+	Result  sched.RunHistory
+	Warning []string
+}
+
 func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	const tsdbFormat = "2006/01/02-15:04"
+	var from, to time.Time
+	var err error
+	if f := r.FormValue("from"); len(f) > 0 {
+		from, err = time.Parse(tsdbFormat, f)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if f := r.FormValue("to"); len(f) > 0 {
+		to, err = time.Parse(tsdbFormat, f)
+		if err != nil {
+			return nil, err
+		}
+	}
+	intervals := 1
+	if i := r.FormValue("intervals"); len(i) > 0 {
+		intervals, err = strconv.Atoi(r.FormValue("intervals"))
+		if err != nil {
+			return nil, err
+		}
+		if intervals < 1 {
+			return nil, fmt.Errorf("must be > 0 intervals")
+		}
+	}
+	if fz, tz := from.IsZero(), to.IsZero(); fz && tz {
+		from = time.Now()
+	} else if fz && !tz {
+		return nil, fmt.Errorf("cannot specify to without from")
+	} else if !fz && tz && intervals > 1 {
+		return nil, fmt.Errorf("cannot specify intervals without from and to")
+	}
 	var buf bytes.Buffer
-	summary := r.FormValue("summary") == "true"
 	fmt.Fprintf(&buf, "tsdbHost = %s\n", schedule.Conf.TsdbHost)
 	fmt.Fprintf(&buf, "smtpHost = %s\n", schedule.Conf.SmtpHost)
 	fmt.Fprintf(&buf, "emailFrom = %s\n", schedule.Conf.EmailFrom)
@@ -94,87 +218,135 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 	if len(c.Alerts) != 1 {
 		return nil, fmt.Errorf("exactly one alert must be defined")
 	}
-	s := &sched.Schedule{}
-	now, err := getTime(r)
-	if err != nil {
-		return nil, err
-	}
-	s.CheckStart = now
-	s.Init(c)
-	s.Metadata = schedule.Metadata
-	s.Search = schedule.Search
-	rh := make(sched.RunHistory)
 	var a *conf.Alert
+	// Set a to the first alert.
 	for _, a = range c.Alerts {
 	}
-	if _, err := s.CheckExpr(t, rh, a, a.Warn, sched.StWarning, nil); err != nil {
-		return nil, err
+	ch := make(chan int)
+	errch := make(chan error, intervals)
+	resch := make(chan *ruleResult, intervals)
+	var wg sync.WaitGroup
+	diff := -from.Sub(to)
+	if intervals > 1 {
+		diff /= time.Duration(intervals - 1)
 	}
-	if _, err := s.CheckExpr(t, rh, a, a.Crit, sched.StCritical, nil); err != nil {
-		return nil, err
+	worker := func() {
+		wg.Add(1)
+		for interval := range ch {
+			t.Step(fmt.Sprintf("interval %v", interval), func(t miniprofiler.Timer) {
+				now := from.Add(diff * time.Duration(interval))
+				res, err := procRule(t, c, a, now, interval != 0, r.FormValue("email"))
+				resch <- res
+				errch <- err
+			})
+		}
+		defer wg.Done()
 	}
-	keys := make(expr.AlertKeys, len(rh))
-	criticals, warnings, normals := make([]expr.AlertKey, 0), make([]expr.AlertKey, 0), make([]expr.AlertKey, 0)
-	i := 0
-	for k, v := range rh {
-		v.Time = now
-		keys[i] = k
-		i++
-		switch v.Status {
-		case sched.StNormal:
-			normals = append(normals, k)
-		case sched.StWarning:
-			warnings = append(warnings, k)
-		case sched.StCritical:
-			criticals = append(criticals, k)
-		default:
-			return nil, fmt.Errorf("unknown state type %v", v.Status)
-		}
+	for i := 0; i < 20; i++ {
+		go worker()
 	}
-	sort.Sort(keys)
-	body := new(bytes.Buffer)
-	subject := new(bytes.Buffer)
-	var data interface{}
-	warning := make([]string, 0)
-	if !summary && len(keys) > 0 {
-		instance := s.Status(keys[0])
-		instance.History = []sched.Event{*rh[keys[0]]}
-		if _, err := s.ExecuteBody(body, a, instance, false); err != nil {
-			warning = append(warning, err.Error())
-		}
-		if err := s.ExecuteSubject(subject, a, instance); err != nil {
-			warning = append(warning, err.Error())
-		}
-		data = s.Data(instance, a, false)
-		if e := r.FormValue("email"); e != "" {
-			m, err := mail.ParseAddress(e)
-			if err != nil {
-				return nil, err
-			}
-			n := conf.Notification{
-				Email: []*mail.Address{m},
-			}
-			email := new(bytes.Buffer)
-			attachments, err := s.ExecuteBody(email, a, instance, true)
-			n.DoEmail(subject.Bytes(), email.Bytes(), schedule.Conf.EmailFrom, schedule.Conf.SmtpHost, string(instance.AlertKey()), attachments...)
-		}
+	for i := 0; i < intervals; i++ {
+		ch <- i
 	}
-	return struct {
-		Time                         int64
-		Criticals, Warnings, Normals []expr.AlertKey
-
-		Body    string      `json:",omitempty"`
-		Subject string      `json:",omitempty"`
-		Data    interface{} `json:",omitempty"`
-		Result  sched.RunHistory
-		Warning []string `json:",omitempty"`
+	close(ch)
+	wg.Wait()
+	close(errch)
+	close(resch)
+	type Result struct {
+		Group  expr.AlertKey
+		Result *sched.Event
+	}
+	type Set struct {
+		Error, Critical, Warning, Normal int
+		Time                             string
+		Results                          []*Result `json:",omitempty"`
+	}
+	type History struct {
+		Time, EndTime string
+		Status        string
+	}
+	type Histories struct {
+		History []*History
+	}
+	ret := struct {
+		Errors       []string `json:",omitempty"`
+		Warnings     []string `json:",omitempty"`
+		Sets         []*Set
+		AlertHistory map[expr.AlertKey]*Histories
+		Body         string      `json:",omitempty"`
+		Subject      string      `json:",omitempty"`
+		Data         interface{} `json:",omitempty"`
 	}{
-		now.Unix(),
-		criticals, warnings, normals,
-		body.String(),
-		subject.String(),
-		data,
-		rh,
-		warning,
-	}, nil
+		AlertHistory: make(map[expr.AlertKey]*Histories),
+	}
+	for err := range errch {
+		if err == nil {
+			continue
+		}
+		fmt.Println("ERR", err)
+		ret.Errors = append(ret.Errors, err.Error())
+	}
+	for res := range resch {
+		if res == nil {
+			continue
+		}
+		set := Set{
+			Error:    len(res.Errors),
+			Critical: len(res.Criticals),
+			Warning:  len(res.Warnings),
+			Normal:   len(res.Normals),
+			Time:     res.Time.Format(tsdbFormat),
+		}
+		if res.Data != nil {
+			ret.Body = res.Body
+			ret.Subject = res.Subject
+			ret.Data = res.Data
+			for k, v := range res.Result {
+				set.Results = append(set.Results, &Result{
+					Group:  k,
+					Result: v,
+				})
+			}
+			slice.Sort(set.Results, func(i, j int) bool {
+				a := set.Results[i]
+				b := set.Results[j]
+				if a.Result.Status != b.Result.Status {
+					return a.Result.Status > b.Result.Status
+				}
+				return a.Group < b.Group
+			})
+		}
+		for k, v := range res.Result {
+			if ret.AlertHistory[k] == nil {
+				ret.AlertHistory[k] = new(Histories)
+			}
+			h := ret.AlertHistory[k]
+			h.History = append(h.History, &History{
+				Time:   v.Time.Format(tsdbFormat),
+				Status: v.Status.String(),
+			})
+		}
+		ret.Sets = append(ret.Sets, &set)
+		ret.Warnings = append(ret.Warnings, res.Warning...)
+	}
+	slice.Sort(ret.Sets, func(i, j int) bool {
+		return ret.Sets[i].Time < ret.Sets[j].Time
+	})
+	for _, histories := range ret.AlertHistory {
+		hist := histories.History
+		slice.Sort(hist, func(i, j int) bool {
+			return hist[i].Time < hist[j].Time
+		})
+		for i := 1; i < len(hist); i++ {
+			if i < len(hist)-1 && hist[i].Status == hist[i-1].Status {
+				hist = append(hist[:i], hist[i+1:]...)
+				i--
+			}
+		}
+		for i, h := range hist[:len(hist)-1] {
+			h.EndTime = hist[i+1].Time
+		}
+		histories.History = hist[:len(hist)-1]
+	}
+	return &ret, nil
 }

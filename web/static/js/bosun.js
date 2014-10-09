@@ -525,7 +525,7 @@ bosunApp.directive('tsTimeLine', function () {
     var format = d3.time.format.utc("%Y-%m-%dT%X");
     var tsdbFormat = d3.time.format.utc("%Y/%m/%d-%X");
     function parseDate(s) {
-        return s.toDate();
+        return moment.utc(s).toDate();
     }
     var margin = {
         top: 10,
@@ -573,12 +573,12 @@ bosunApp.directive('tsTimeLine', function () {
                 xScale.domain([
                     d3.min(values, function (d) {
                         return d3.min(d.History, function (c) {
-                            return c.Time;
+                            return parseDate(c.Time);
                         });
                     }),
                     d3.max(values, function (d) {
                         return d3.max(d.History, function (c) {
-                            return c.EndTime;
+                            return parseDate(c.EndTime);
                         });
                     }),
                 ]);
@@ -1633,6 +1633,7 @@ bosunControllers.controller('PutCtrl', ['$scope', '$http', '$route', function ($
         });
     };
 }]);
+var tsdbFormat = 'YYYY/MM/DD-HH:mm';
 bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route', '$sce', function ($scope, $http, $location, $route, $sce) {
     var search = $location.search();
     var current_alert = atob(search.alert || '');
@@ -1675,10 +1676,9 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
             $scope.test();
         }
     };
-    var alert_history = {};
     $scope.test = function () {
         $scope.error = '';
-        $scope.stopped = false;
+        $scope.running = true;
         $scope.warning = [];
         $location.search('alert', btoa($scope.alert));
         $location.search('template', btoa($scope.template));
@@ -1713,122 +1713,32 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
         else {
             intervals = +($scope.intervals);
         }
-        $scope.sets = [];
-        var remaining = [];
-        for (var i = 0; i < intervals; i++) {
-            remaining.push(i);
-        }
-        var threads = Math.min(2, intervals);
-        for (var i = 0; i < threads; i++) {
-            next();
-        }
-        function next() {
-            if (remaining.length == 0 || $scope.stopped) {
-                threads--;
-                if (threads) {
-                    return;
-                }
-                $scope.stop();
-                $scope.remaining = 0;
-                angular.forEach(alert_history, function (v) {
-                    var h = v.History;
-                    h.sort(function (a, b) {
-                        var r = a.Time.isAfter(b.Time);
-                        return r ? 1 : -1;
-                    });
-                    angular.forEach(h, function (d, i) {
-                        if (i + 1 < h.length) {
-                            d.EndTime = h[i + 1].Time;
-                        }
-                        else {
-                            d.EndTime = d.Time;
-                        }
-                    });
-                    for (var i = 1; i < h.length; i++) {
-                        if (h[i].Status == h[i - 1].Status) {
-                            var r = h.splice(i, 1);
-                            h[i - 1].EndTime = r[0].EndTime;
-                            i--;
-                        }
-                    }
-                });
-                $scope.alert_history = alert_history;
-                return;
-            }
-            $scope.remaining = remaining.length;
-            var first = remaining.length == intervals;
-            var interval = remaining.shift();
-            var fromDate = from.clone();
-            fromDate.subtract(diff / (intervals - 1) * interval);
-            var date = fromDate.format('YYYY-MM-DD');
-            var time = fromDate.format('HH:mm');
-            var url = '/api/rule?' + 'alert=' + encodeURIComponent($scope.alert) + '&template=' + encodeURIComponent($scope.template) + '&date=' + encodeURIComponent(date) + '&time=' + encodeURIComponent(time) + '&email=' + encodeURIComponent($scope.email);
-            var f = first ? '' : '&summary=true';
-            $http.get(url + f).success(function (data) {
-                var set = {
-                    url: url,
-                    time: moment.unix(data.Time).utc().format('YYYY-MM-DD HH:mm:ss'),
-                    critical: data.Criticals.length,
-                    warning: data.Warnings.length,
-                    normal: data.Normals.length
-                };
-                procHistory(data);
-                if (first) {
-                    set.results = procResults(data);
-                }
-                $scope.sets.push(set);
-                next();
-            }).error(function (error) {
-                $scope.error = error;
-                $scope.remaining = 0;
-                $scope.stopped = true;
-                threads = 0;
-                remaining = [];
-                $scope.stop();
-            });
-        }
+        var url = '/api/rule?' + 'alert=' + encodeURIComponent($scope.alert) + '&template=' + encodeURIComponent($scope.template) + '&from=' + encodeURIComponent(from.format(tsdbFormat)) + '&to=' + encodeURIComponent(to.format(tsdbFormat)) + '&intervals=' + encodeURIComponent(intervals) + '&email=' + encodeURIComponent($scope.email);
+        $http.get(url).success(function (data) {
+            $scope.sets = data.Sets;
+            $scope.alert_history = data.AlertHistory;
+            procResults(data);
+        }).error(function (error) {
+            $scope.error = error;
+        }).finally(function () {
+            $scope.running = false;
+            $scope.stop();
+        });
     };
-    function procHistory(data) {
-        var t = moment.unix(data.Time).utc();
-        function procStatus(st, d) {
-            angular.forEach(d, function (v) {
-                if (!alert_history[v]) {
-                    alert_history[v] = { History: [] };
-                }
-                alert_history[v].History.push({
-                    Time: t,
-                    Status: st
-                });
-            });
-        }
-        procStatus('critical', data.Criticals);
-        procStatus('warning', data.Warnings);
-        procStatus('normal', data.Normals);
-    }
     function procResults(data) {
         $scope.subject = data.Subject;
         $scope.body = $sce.trustAsHtml(data.Body);
         $scope.data = JSON.stringify(data.Data, null, '  ');
-        angular.forEach(data.Warning, function (v) {
-            $scope.warning.push(v);
-        });
-        var results = [];
-        angular.forEach(data.Result, function (v, k) {
-            results.push({
-                group: k,
-                result: v
-            });
-        });
-        results.sort(function (a, b) {
-            return status_map[b.result.Status] - status_map[a.result.Status];
-        });
-        return results;
+        $scope.error = data.Errors;
+        $scope.warning = data.Warnings;
     }
     $scope.show = function (set) {
         set.show = 'loading...';
         $scope.animate();
-        $http.get(set.url).success(function (data) {
-            set.results = procResults(data);
+        var url = '/api/rule?' + 'alert=' + encodeURIComponent($scope.alert) + '&template=' + encodeURIComponent($scope.template) + '&from=' + encodeURIComponent(set.Time);
+        $http.get(url).success(function (data) {
+            procResults(data);
+            set.Results = data.Sets[0].Results;
         }).error(function (error) {
             $scope.error = error;
         }).finally(function () {
@@ -1879,9 +1789,6 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
             return;
         }
         $scope.intervals = Math.abs(Math.round(diff / duration / 1000 / 60));
-    };
-    $scope.halt = function () {
-        $scope.stopped = true;
     };
     $scope.setInterval();
     $http.get('/api/templates').success(function (data) {
