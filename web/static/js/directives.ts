@@ -184,8 +184,8 @@ bosunApp.directive('tsHistory', () => {
 bosunApp.directive('tsTimeLine', () => {
 	var format = d3.time.format.utc("%Y-%m-%dT%X");
 	var tsdbFormat = d3.time.format.utc("%Y/%m/%d-%X");
-	function parseDate(s: Moment) {
-		return s.toDate();
+	function parseDate(s: any) {
+		return moment.utc(s).toDate();
 	}
 	var margin = {
 		top: 10,
@@ -236,8 +236,8 @@ bosunApp.directive('tsTimeLine', () => {
 					.attr('class', 'x axis tl-axis')
 					.attr('transform', 'translate(0,' + height + ')');
 				xScale.domain([
-					d3.min(values, (d: any) => { return d3.min(d.History, (c: any) => { return c.Time; }); }),
-					d3.max(values, (d: any) => { return d3.max(d.History, (c: any) => { return c.EndTime; }); }),
+					d3.min(values, (d: any) => { return d3.min(d.History, (c: any) => { return parseDate(c.Time); }); }),
+					d3.max(values, (d: any) => { return d3.max(d.History, (c: any) => { return parseDate(c.EndTime); }); }),
 				]);
 				var legend = d3.select(elem[0])
 					.append('div')
