@@ -17,6 +17,7 @@ import (
 
 var builtins = map[string]parse.Func{
 	// Query functions
+
 	"band": {
 		[]parse.FuncType{parse.TYPE_STRING, parse.TYPE_STRING, parse.TYPE_STRING, parse.TYPE_SCALAR},
 		parse.TYPE_SERIES,
@@ -108,11 +109,6 @@ var builtins = map[string]parse.Func{
 
 	// Group functions
 
-	"regroup": {
-		[]parse.FuncType{parse.TYPE_NUMBER, parse.TYPE_STRING},
-		parse.TYPE_NUMBER,
-		Regroup,
-	},
 	"t": {
 		[]parse.FuncType{parse.TYPE_NUMBER, parse.TYPE_STRING},
 		parse.TYPE_SERIES,
@@ -585,21 +581,6 @@ func Ungroup(e *state, T miniprofiler.Timer, d *Results) (*Results, error) {
 		return nil, fmt.Errorf("ungroup: requires exactly one group")
 	}
 	d.Results[0].Group = nil
-	return d, nil
-}
-
-func Regroup(e *state, T miniprofiler.Timer, d *Results, gp string) (*Results, error) {
-	m := make(map[string]bool)
-	for _, g := range strings.Split(gp, ",") {
-		m[g] = true
-	}
-	for _, v := range d.Results {
-		for k := range v.Group {
-			if !m[k] {
-				delete(v.Group, k)
-			}
-		}
-	}
 	return d, nil
 }
 
