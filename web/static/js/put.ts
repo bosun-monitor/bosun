@@ -86,7 +86,7 @@ bosunControllers.controller('PutCtrl', ['$scope', '$http', '$route', function($s
 				if (!angular.isArray(data)) {
 					return;
 				}
-				$scope.tags = [];
+				$scope.tags = [new Tag];
 				for (var i = 0; i < data.length; i++) {
 					var t = new Tag;
 					t.k = data[i];
