@@ -16,40 +16,39 @@ import (
 )
 
 var builtins = map[string]parse.Func{
-	"abs": {
-		[]parse.FuncType{parse.TYPE_NUMBER},
-		parse.TYPE_NUMBER,
-		Abs,
-	},
-	"avg": {
-		[]parse.FuncType{parse.TYPE_SERIES},
-		parse.TYPE_NUMBER,
-		Avg,
-	},
-	"sum": {
-		[]parse.FuncType{parse.TYPE_SERIES},
-		parse.TYPE_NUMBER,
-		Sum,
-	},
+	// Query functions
 	"band": {
 		[]parse.FuncType{parse.TYPE_STRING, parse.TYPE_STRING, parse.TYPE_STRING, parse.TYPE_SCALAR},
 		parse.TYPE_SERIES,
 		Band,
-	},
-	"count": {
-		[]parse.FuncType{parse.TYPE_STRING, parse.TYPE_STRING, parse.TYPE_STRING},
-		parse.TYPE_SCALAR,
-		Count,
 	},
 	"change": {
 		[]parse.FuncType{parse.TYPE_STRING, parse.TYPE_STRING, parse.TYPE_STRING},
 		parse.TYPE_NUMBER,
 		Change,
 	},
+	"count": {
+		[]parse.FuncType{parse.TYPE_STRING, parse.TYPE_STRING, parse.TYPE_STRING},
+		parse.TYPE_SCALAR,
+		Count,
+	},
 	"diff": {
 		[]parse.FuncType{parse.TYPE_STRING, parse.TYPE_STRING, parse.TYPE_STRING},
 		parse.TYPE_NUMBER,
 		Diff,
+	},
+	"q": {
+		[]parse.FuncType{parse.TYPE_STRING, parse.TYPE_STRING, parse.TYPE_STRING},
+		parse.TYPE_SERIES,
+		Query,
+	},
+
+	// Reduction functions
+
+	"avg": {
+		[]parse.FuncType{parse.TYPE_SERIES},
+		parse.TYPE_NUMBER,
+		Avg,
 	},
 	"dev": {
 		[]parse.FuncType{parse.TYPE_SERIES},
@@ -61,51 +60,54 @@ var builtins = map[string]parse.Func{
 		parse.TYPE_NUMBER,
 		First,
 	},
-	"len": {
-		[]parse.FuncType{parse.TYPE_SERIES},
+	"forecastlr": {
+		[]parse.FuncType{parse.TYPE_SERIES, parse.TYPE_SCALAR},
 		parse.TYPE_NUMBER,
-		Length,
+		Forecast_lr,
 	},
 	"last": {
 		[]parse.FuncType{parse.TYPE_SERIES},
 		parse.TYPE_NUMBER,
 		Last,
 	},
-	"min": {
+	"len": {
 		[]parse.FuncType{parse.TYPE_SERIES},
 		parse.TYPE_NUMBER,
-		Min,
-	},
-	"median": {
-		[]parse.FuncType{parse.TYPE_SERIES},
-		parse.TYPE_NUMBER,
-		Median,
+		Length,
 	},
 	"max": {
 		[]parse.FuncType{parse.TYPE_SERIES},
 		parse.TYPE_NUMBER,
 		Max,
 	},
-	"since": {
+	"median": {
 		[]parse.FuncType{parse.TYPE_SERIES},
 		parse.TYPE_NUMBER,
-		Since,
+		Median,
 	},
-	"forecastlr": {
-		[]parse.FuncType{parse.TYPE_SERIES, parse.TYPE_SCALAR},
+	"min": {
+		[]parse.FuncType{parse.TYPE_SERIES},
 		parse.TYPE_NUMBER,
-		Forecast_lr,
+		Min,
 	},
 	"percentile": {
 		[]parse.FuncType{parse.TYPE_SERIES, parse.TYPE_SCALAR},
 		parse.TYPE_NUMBER,
 		Percentile,
 	},
-	"q": {
-		[]parse.FuncType{parse.TYPE_STRING, parse.TYPE_STRING, parse.TYPE_STRING},
-		parse.TYPE_SERIES,
-		Query,
+	"since": {
+		[]parse.FuncType{parse.TYPE_SERIES},
+		parse.TYPE_NUMBER,
+		Since,
 	},
+	"sum": {
+		[]parse.FuncType{parse.TYPE_SERIES},
+		parse.TYPE_NUMBER,
+		Sum,
+	},
+
+	// Group functions
+
 	"regroup": {
 		[]parse.FuncType{parse.TYPE_NUMBER, parse.TYPE_STRING},
 		parse.TYPE_NUMBER,
@@ -120,6 +122,14 @@ var builtins = map[string]parse.Func{
 		[]parse.FuncType{parse.TYPE_NUMBER},
 		parse.TYPE_SCALAR,
 		Ungroup,
+	},
+
+	// Other functions
+
+	"abs": {
+		[]parse.FuncType{parse.TYPE_NUMBER},
+		parse.TYPE_NUMBER,
+		Abs,
 	},
 	"lookup": {
 		[]parse.FuncType{parse.TYPE_STRING, parse.TYPE_STRING},
