@@ -115,14 +115,9 @@ func (c *Context) Rule() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	adef := base64.URLEncoding.EncodeToString([]byte(t.Alerts[c.Alert.Name]))
-	for i, rune := range t.Alerts[c.Alert.Name] {
-		if int(rune) > 127 {
-			fmt.Printf("%d: %c %i\n", i, rune, int(rune))
-		}
-	}
-	tdef := base64.URLEncoding.EncodeToString([]byte(t.Templates[c.Alert.Template.Name]))
-	q := "alert=" + adef + "&template=" + tdef
+	adef := base64.StdEncoding.EncodeToString([]byte(t.Alerts[c.Alert.Name]))
+	tdef := base64.StdEncoding.EncodeToString([]byte(t.Templates[c.Alert.Template.Name]))
+	q := "alert=" + url.QueryEscape(adef) + "&template=" + url.QueryEscape(tdef)
 	u := url.URL{
 		Scheme:   "http",
 		Host:     c.schedule.Conf.HttpListen,
@@ -136,7 +131,7 @@ func (c *Context) Rule() (string, error) {
 		}
 		u.Host = h + u.Host
 	}
-	return u.RequestURI(), nil
+	return u.String(), nil
 }
 
 func (s *Schedule) ExecuteBody(w io.Writer, a *conf.Alert, st *State, isEmail bool) ([]*conf.Attachment, error) {
