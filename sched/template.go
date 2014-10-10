@@ -9,13 +9,14 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"text/template/parse"
 	"time"
 
 	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/metadata"
 	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/bosun/conf"
 	"github.com/StackExchange/bosun/expr"
-	"github.com/StackExchange/bosun/expr/parse"
+	eparse "github.com/StackExchange/bosun/expr/parse"
 )
 
 type Context struct {
@@ -109,6 +110,35 @@ func (c *Context) Expr(v string) (string, error) {
 	return u.String(), nil
 }
 
+func (c *Context) Rule() (string, error) {
+	t, err := c.schedule.MakeTemplates()
+	if err != nil {
+		return "", err
+	}
+	adef := base64.URLEncoding.EncodeToString([]byte(t.Alerts[c.Alert.Name]))
+	for i, rune := range t.Alerts[c.Alert.Name] {
+		if int(rune) > 127 {
+			fmt.Printf("%d: %c %i\n", i, rune, int(rune))
+		}
+	}
+	tdef := base64.URLEncoding.EncodeToString([]byte(t.Templates[c.Alert.Template.Name]))
+	q := "alert=" + adef + "&template=" + tdef
+	u := url.URL{
+		Scheme:   "http",
+		Host:     c.schedule.Conf.HttpListen,
+		Path:     "/rule",
+		RawQuery: q,
+	}
+	if strings.HasPrefix(c.schedule.Conf.HttpListen, ":") {
+		h, err := os.Hostname()
+		if err != nil {
+			return "", err
+		}
+		u.Host = h + u.Host
+	}
+	return u.RequestURI(), nil
+}
+
 func (s *Schedule) ExecuteBody(w io.Writer, a *conf.Alert, st *State, isEmail bool) ([]*conf.Attachment, error) {
 	t := a.Template
 	if t == nil || t.Body == nil {
@@ -141,7 +171,7 @@ func (c *Context) eval(v interface{}, filter bool, series bool, autods int) ([]*
 		return nil, fmt.Errorf("%v: %v", v, err)
 	}
 	var results []*expr.Result
-	if series && e.Root.Return() != parse.TYPE_SERIES {
+	if series && e.Root.Return() != eparse.TYPE_SERIES {
 		return results, fmt.Errorf("egraph: requires an expression that returns a series")
 	}
 	res, _, err := e.Execute(c.schedule.cache, nil, c.schedule.CheckStart, autods, c.Alert.UnjoinedOK, c.schedule.Search, c.schedule.Lookups, c.schedule.Conf.AlertSquelched(c.Alert))
@@ -284,4 +314,167 @@ func (c *Context) LeftJoin(q ...interface{}) (interface{}, error) {
 		}
 	}
 	return matrix, nil
+}
+
+var builtins = template.FuncMap{
+	"and":      nilFunc,
+	"call":     nilFunc,
+	"html":     nilFunc,
+	"index":    nilFunc,
+	"js":       nilFunc,
+	"len":      nilFunc,
+	"not":      nilFunc,
+	"or":       nilFunc,
+	"print":    nilFunc,
+	"printf":   nilFunc,
+	"println":  nilFunc,
+	"urlquery": nilFunc,
+	"eq":       nilFunc,
+	"ge":       nilFunc,
+	"gt":       nilFunc,
+	"le":       nilFunc,
+	"lt":       nilFunc,
+	"ne":       nilFunc,
+
+	// HTML-specific funcs
+	"html_template_attrescaper":     nilFunc,
+	"html_template_commentescaper":  nilFunc,
+	"html_template_cssescaper":      nilFunc,
+	"html_template_cssvaluefilter":  nilFunc,
+	"html_template_htmlnamefilter":  nilFunc,
+	"html_template_htmlescaper":     nilFunc,
+	"html_template_jsregexpescaper": nilFunc,
+	"html_template_jsstrescaper":    nilFunc,
+	"html_template_jsvalescaper":    nilFunc,
+	"html_template_nospaceescaper":  nilFunc,
+	"html_template_rcdataescaper":   nilFunc,
+	"html_template_urlescaper":      nilFunc,
+	"html_template_urlfilter":       nilFunc,
+	"html_template_urlnormalizer":   nilFunc,
+
+	// bosun-specific funcs
+	"V":       nilFunc,
+	"bytes":   nilFunc,
+	"replace": nilFunc,
+	"short":   nilFunc,
+}
+
+func nilFunc() {}
+
+type TA struct {
+	Templates map[string]string
+	Alerts    map[string]string
+}
+
+func (schedule *Schedule) MakeTemplates() (*TA, error) {
+	templates := make(map[string]string)
+	for name, template := range schedule.Conf.Templates {
+		incl := map[string]bool{name: true}
+		var parseSection func(*conf.Template) error
+		parseTemplate := func(s string) error {
+			trees, err := parse.Parse("", s, "", "", builtins)
+			if err != nil {
+				return err
+			}
+			for _, node := range trees[""].Root.Nodes {
+				switch node := node.(type) {
+				case *parse.TemplateNode:
+					if incl[node.Name] {
+						continue
+					}
+					incl[node.Name] = true
+					if err := parseSection(schedule.Conf.Templates[node.Name]); err != nil {
+						return err
+					}
+				}
+			}
+			return nil
+		}
+		parseSection = func(s *conf.Template) error {
+			if s.Body != nil {
+				if err := parseTemplate(s.Body.Tree.Root.String()); err != nil {
+					return err
+				}
+			}
+			if s.Subject != nil {
+				if err := parseTemplate(s.Subject.Tree.Root.String()); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+		if err := parseSection(template); err != nil {
+			return nil, err
+		}
+		delete(incl, name)
+		templates[name] = template.Def
+		for n := range incl {
+			t := schedule.Conf.Templates[n]
+			if t == nil {
+				continue
+			}
+			templates[name] += "\n\n" + t.Def
+		}
+	}
+	alerts := make(map[string]string)
+	for name, alert := range schedule.Conf.Alerts {
+		var add func([]string)
+		add = func(macros []string) {
+			for _, macro := range macros {
+				m := schedule.Conf.Macros[macro]
+				add(m.Macros)
+				alerts[name] += m.Def + "\n\n"
+			}
+		}
+		lookups := make(map[string]bool)
+		walk := func(n eparse.Node) {
+			eparse.Walk(n, func(n eparse.Node) {
+				switch n := n.(type) {
+				case *eparse.FuncNode:
+					if n.Name != "lookup" || len(n.Args) == 0 {
+						return
+					}
+					switch n := n.Args[0].(type) {
+					case *eparse.StringNode:
+						if lookups[n.Text] {
+							return
+						}
+						lookups[n.Text] = true
+						l := schedule.Conf.Lookups[n.Text]
+						if l == nil {
+							return
+						}
+						alerts[name] += l.Def + "\n\n"
+					}
+				}
+			})
+		}
+		walkNotifications := func(n *conf.Notifications) {
+			for _, v := range n.Lookups {
+				if lookups[v.Name] {
+					return
+				}
+				lookups[v.Name] = true
+				alerts[name] += v.Def + "\n\n"
+			}
+		}
+		if alert.CritNotification != nil {
+			walkNotifications(alert.CritNotification)
+		}
+		if alert.WarnNotification != nil {
+			walkNotifications(alert.WarnNotification)
+		}
+		add(alert.Macros)
+		if alert.Crit != nil {
+			walk(alert.Crit.Tree.Root)
+		}
+		if alert.Warn != nil {
+			walk(alert.Warn.Tree.Root)
+		}
+		alerts[name] += alert.Def
+	}
+	return &TA{
+		templates,
+		alerts,
+	}, nil
 }
