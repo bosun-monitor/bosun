@@ -10,8 +10,11 @@ package svc
 import "unsafe"
 
 // from sys_386.s and sys_amd64.s
-var servicemain byte // type isn't really byte, it's a funcion to be called by service manager
+func servicectlhandler(ctl uint32) uintptr
+func servicemain(argc uint32, argv **uint16)
+
+var servicemainptr = servicemain
 
 func getServiceMain(r *uintptr) {
-	*r = uintptr(unsafe.Pointer(&servicemain))
+	*r = uintptr(**(**unsafe.Pointer)(unsafe.Pointer(&servicemainptr)))
 }
