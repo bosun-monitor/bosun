@@ -939,7 +939,7 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function ($window, fmtfi
                 extentStart = datefmt(extent[0]);
                 extentEnd = datefmt(extent[1]);
                 drawLegend();
-                if (scope.enableBrush) {
+                if (scope.enableBrush && extentEnd != extentStart) {
                     scope.brushStart = extentStart;
                     scope.brushEnd = extentEnd;
                     scope.$apply();
