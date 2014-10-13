@@ -159,6 +159,10 @@ func (c *Context) eval(v interface{}, filter bool, series bool, autods int) ([]*
 		if c.State.Group.Subset(r.Group) {
 			return []*expr.Result{r}, nil
 		}
+	}
+	for _, r := range res.Results {
+		if r.Group == nil {
+			return []*expr.Result{r}, nil
 		}
 	}
 	return nil, nil
