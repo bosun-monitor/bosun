@@ -1,9 +1,18 @@
 # scollector
 
-scollector is a replacement for OpenTSDB's tcollector that uses the v2 HTTP API
-and integrates better with Bosun.
+scollector is a replacement for OpenTSDB's tcollector.
 
-[tcollector](https://github.com/OpenTSDB/tcollector) is OpenTSDB's data collection framework built for OpenTSDB 1.0. This project aims to make scollector the preferred collector for OpenTSDB 2.0.
+Benefits of scollector over tcollector:
+
+- scollector uses the v2 API, not the older v1 API
+- scollector is more resource efficient
+- scollector integrates with Bosun
+
+OpenTSDB 1.0 uses the
+[tcollector](https://github.com/OpenTSDB/tcollector)
+data collection framework.
+This project aims to make scollector the
+preferred collector for OpenTSDB 2.0.
 
 ## installation
 
