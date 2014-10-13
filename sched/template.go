@@ -15,7 +15,7 @@ import (
 	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/bosun/conf"
 	"github.com/StackExchange/bosun/expr"
-	eparse "github.com/StackExchange/bosun/expr/parse"
+	"github.com/StackExchange/bosun/expr/parse"
 )
 
 type Context struct {
@@ -158,7 +158,7 @@ func (c *Context) eval(v interface{}, filter bool, series bool, autods int) ([]*
 	if err != nil {
 		return nil, fmt.Errorf("%v: %v", v, err)
 	}
-	if series && e.Root.Return() != eparse.TYPE_SERIES {
+	if series && e.Root.Return() != parse.TYPE_SERIES {
 		return nil, fmt.Errorf("egraph: requires an expression that returns a series")
 	}
 	res, _, err := e.Execute(c.schedule.cache, nil, c.schedule.CheckStart, autods, c.Alert.UnjoinedOK, c.schedule.Search, c.schedule.Lookups, c.schedule.Conf.AlertSquelched(c.Alert))
