@@ -144,6 +144,7 @@ interface IGraphScope extends ng.IScope {
 	duration_map: any;
 	animate: () => any;
 	stop: () => any;
+	canAuto: boolean;
 }
 
 bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route', '$timeout', function($scope: IGraphScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService, $timeout: ng.ITimeoutService) {
@@ -208,10 +209,12 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 	};
 	$scope.GetTagKByMetric = function(index: number) {
 		$scope.tagvs[index] = new TagV;
-		if (!$scope.query_p[index].metric) {
+		var metric = $scope.query_p[index].metric;
+		if (!metric) {
+			$scope.canAuto = true;
 			return;
 		}
-		$http.get('/api/tagk/' + $scope.query_p[index].metric)
+		$http.get('/api/tagk/' + metric)
 			.success(function(data: string[]) {
 				var q = $scope.query_p[index];
 				var tags = new TagSet;
@@ -246,6 +249,19 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 			})
 			.error(function(error) {
 				$scope.error = 'Unable to fetch metrics: ' + error;
+			});
+		$http.get('/api/metadata/get?metric=' + metric)
+			.success(data => {
+				var canAuto = false;
+				angular.forEach(data, val => {
+					if (val.Metric == metric && val.Name == 'rate') {
+						canAuto = true;
+					}
+				});
+				$scope.canAuto = canAuto;
+			})
+			.error(err => {
+				$scope.error = err;
 			});
 	};
 	if ($scope.query_p.length == 0) {
