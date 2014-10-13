@@ -91,13 +91,12 @@ func (c *Context) HostView(host string) string {
 	return u.String()
 }
 
-func (c *Context) Expr(v string) (string, error) {
-	q := "expr=" + base64.URLEncoding.EncodeToString([]byte(opentsdb.ReplaceTags(v, c.Group)))
+func (c *Context) makeLink(path string, v *url.Values) (string, error) {
 	u := url.URL{
 		Scheme:   "http",
 		Host:     c.schedule.Conf.HttpListen,
-		Path:     "/expr",
-		RawQuery: q,
+		Path:     path,
+		RawQuery: v.Encode(),
 	}
 	if strings.HasPrefix(c.schedule.Conf.HttpListen, ":") {
 		h, err := os.Hostname()
@@ -107,6 +106,25 @@ func (c *Context) Expr(v string) (string, error) {
 		u.Host = h + u.Host
 	}
 	return u.String(), nil
+}
+
+func (c *Context) Expr(v string) (string, error) {
+	p := url.Values{}
+	p.Add("expr", base64.URLEncoding.EncodeToString([]byte(opentsdb.ReplaceTags(v, c.Group))))
+	return c.makeLink("/expr", &p)
+}
+
+func (c *Context) Rule() (string, error) {
+	t, err := c.schedule.Conf.AlertTemplateStrings()
+	if err != nil {
+		return "", err
+	}
+	p := url.Values{}
+	adef := base64.StdEncoding.EncodeToString([]byte(t.Alerts[c.Alert.Name]))
+	tdef := base64.StdEncoding.EncodeToString([]byte(t.Templates[c.Alert.Template.Name]))
+	p.Add("alert", adef)
+	p.Add("template", tdef)
+	return c.makeLink("/rule", &p)
 }
 
 func (s *Schedule) ExecuteBody(w io.Writer, a *conf.Alert, st *State, isEmail bool) ([]*conf.Attachment, error) {
