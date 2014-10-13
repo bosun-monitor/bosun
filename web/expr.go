@@ -132,7 +132,7 @@ func procRule(t miniprofiler.Timer, c *conf.Conf, a *conf.Alert, now time.Time, 
 			}
 			email := new(bytes.Buffer)
 			attachments, err := s.ExecuteBody(email, a, instance, true)
-			n.DoEmail(subject.Bytes(), email.Bytes(), schedule.Conf.EmailFrom, schedule.Conf.SmtpHost, string(instance.AlertKey()), attachments...)
+			n.DoEmail(subject.Bytes(), email.Bytes(), schedule.Conf, string(instance.AlertKey()), attachments...)
 		}
 	}
 	return &ruleResult{
