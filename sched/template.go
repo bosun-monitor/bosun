@@ -9,7 +9,6 @@ import (
 	"net/url"
 	"os"
 	"strings"
-	"text/template/parse"
 	"time"
 
 	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/metadata"
@@ -92,13 +91,12 @@ func (c *Context) HostView(host string) string {
 	return u.String()
 }
 
-func (c *Context) Expr(v string) (string, error) {
-	q := "expr=" + base64.URLEncoding.EncodeToString([]byte(opentsdb.ReplaceTags(v, c.Group)))
+func (c *Context) makeLink(path string, v *url.Values) (string, error) {
 	u := url.URL{
 		Scheme:   "http",
 		Host:     c.schedule.Conf.HttpListen,
-		Path:     "/expr",
-		RawQuery: q,
+		Path:     path,
+		RawQuery: v.Encode(),
 	}
 	if strings.HasPrefix(c.schedule.Conf.HttpListen, ":") {
 		h, err := os.Hostname()
@@ -110,28 +108,23 @@ func (c *Context) Expr(v string) (string, error) {
 	return u.String(), nil
 }
 
+func (c *Context) Expr(v string) (string, error) {
+	p := url.Values{}
+	p.Add("expr", base64.URLEncoding.EncodeToString([]byte(opentsdb.ReplaceTags(v, c.Group))))
+	return c.makeLink("/expr", &p)
+}
+
 func (c *Context) Rule() (string, error) {
-	t, err := c.schedule.MakeTemplates()
+	t, err := c.schedule.Conf.AlertTemplateStrings()
 	if err != nil {
 		return "", err
 	}
+	p := url.Values{}
 	adef := base64.StdEncoding.EncodeToString([]byte(t.Alerts[c.Alert.Name]))
 	tdef := base64.StdEncoding.EncodeToString([]byte(t.Templates[c.Alert.Template.Name]))
-	q := "alert=" + url.QueryEscape(adef) + "&template=" + url.QueryEscape(tdef)
-	u := url.URL{
-		Scheme:   "http",
-		Host:     c.schedule.Conf.HttpListen,
-		Path:     "/rule",
-		RawQuery: q,
-	}
-	if strings.HasPrefix(c.schedule.Conf.HttpListen, ":") {
-		h, err := os.Hostname()
-		if err != nil {
-			return "", err
-		}
-		u.Host = h + u.Host
-	}
-	return u.String(), nil
+	p.Add("alert", adef)
+	p.Add("template", tdef)
+	return c.makeLink("/rule", &p)
 }
 
 func (s *Schedule) ExecuteBody(w io.Writer, a *conf.Alert, st *State, isEmail bool) ([]*conf.Attachment, error) {
@@ -311,167 +304,4 @@ func (c *Context) LeftJoin(q ...interface{}) (interface{}, error) {
 		}
 	}
 	return matrix, nil
-}
-
-var builtins = template.FuncMap{
-	"and":      nilFunc,
-	"call":     nilFunc,
-	"html":     nilFunc,
-	"index":    nilFunc,
-	"js":       nilFunc,
-	"len":      nilFunc,
-	"not":      nilFunc,
-	"or":       nilFunc,
-	"print":    nilFunc,
-	"printf":   nilFunc,
-	"println":  nilFunc,
-	"urlquery": nilFunc,
-	"eq":       nilFunc,
-	"ge":       nilFunc,
-	"gt":       nilFunc,
-	"le":       nilFunc,
-	"lt":       nilFunc,
-	"ne":       nilFunc,
-
-	// HTML-specific funcs
-	"html_template_attrescaper":     nilFunc,
-	"html_template_commentescaper":  nilFunc,
-	"html_template_cssescaper":      nilFunc,
-	"html_template_cssvaluefilter":  nilFunc,
-	"html_template_htmlnamefilter":  nilFunc,
-	"html_template_htmlescaper":     nilFunc,
-	"html_template_jsregexpescaper": nilFunc,
-	"html_template_jsstrescaper":    nilFunc,
-	"html_template_jsvalescaper":    nilFunc,
-	"html_template_nospaceescaper":  nilFunc,
-	"html_template_rcdataescaper":   nilFunc,
-	"html_template_urlescaper":      nilFunc,
-	"html_template_urlfilter":       nilFunc,
-	"html_template_urlnormalizer":   nilFunc,
-
-	// bosun-specific funcs
-	"V":       nilFunc,
-	"bytes":   nilFunc,
-	"replace": nilFunc,
-	"short":   nilFunc,
-}
-
-func nilFunc() {}
-
-type TA struct {
-	Templates map[string]string
-	Alerts    map[string]string
-}
-
-func (schedule *Schedule) MakeTemplates() (*TA, error) {
-	templates := make(map[string]string)
-	for name, template := range schedule.Conf.Templates {
-		incl := map[string]bool{name: true}
-		var parseSection func(*conf.Template) error
-		parseTemplate := func(s string) error {
-			trees, err := parse.Parse("", s, "", "", builtins)
-			if err != nil {
-				return err
-			}
-			for _, node := range trees[""].Root.Nodes {
-				switch node := node.(type) {
-				case *parse.TemplateNode:
-					if incl[node.Name] {
-						continue
-					}
-					incl[node.Name] = true
-					if err := parseSection(schedule.Conf.Templates[node.Name]); err != nil {
-						return err
-					}
-				}
-			}
-			return nil
-		}
-		parseSection = func(s *conf.Template) error {
-			if s.Body != nil {
-				if err := parseTemplate(s.Body.Tree.Root.String()); err != nil {
-					return err
-				}
-			}
-			if s.Subject != nil {
-				if err := parseTemplate(s.Subject.Tree.Root.String()); err != nil {
-					return err
-				}
-			}
-			return nil
-		}
-		if err := parseSection(template); err != nil {
-			return nil, err
-		}
-		delete(incl, name)
-		templates[name] = template.Def
-		for n := range incl {
-			t := schedule.Conf.Templates[n]
-			if t == nil {
-				continue
-			}
-			templates[name] += "\n\n" + t.Def
-		}
-	}
-	alerts := make(map[string]string)
-	for name, alert := range schedule.Conf.Alerts {
-		var add func([]string)
-		add = func(macros []string) {
-			for _, macro := range macros {
-				m := schedule.Conf.Macros[macro]
-				add(m.Macros)
-				alerts[name] += m.Def + "\n\n"
-			}
-		}
-		lookups := make(map[string]bool)
-		walk := func(n eparse.Node) {
-			eparse.Walk(n, func(n eparse.Node) {
-				switch n := n.(type) {
-				case *eparse.FuncNode:
-					if n.Name != "lookup" || len(n.Args) == 0 {
-						return
-					}
-					switch n := n.Args[0].(type) {
-					case *eparse.StringNode:
-						if lookups[n.Text] {
-							return
-						}
-						lookups[n.Text] = true
-						l := schedule.Conf.Lookups[n.Text]
-						if l == nil {
-							return
-						}
-						alerts[name] += l.Def + "\n\n"
-					}
-				}
-			})
-		}
-		walkNotifications := func(n *conf.Notifications) {
-			for _, v := range n.Lookups {
-				if lookups[v.Name] {
-					return
-				}
-				lookups[v.Name] = true
-				alerts[name] += v.Def + "\n\n"
-			}
-		}
-		if alert.CritNotification != nil {
-			walkNotifications(alert.CritNotification)
-		}
-		if alert.WarnNotification != nil {
-			walkNotifications(alert.WarnNotification)
-		}
-		add(alert.Macros)
-		if alert.Crit != nil {
-			walk(alert.Crit.Tree.Root)
-		}
-		if alert.Warn != nil {
-			walk(alert.Warn.Tree.Root)
-		}
-		alerts[name] += alert.Def
-	}
-	return &TA{
-		templates,
-		alerts,
-	}, nil
 }

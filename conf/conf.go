@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 	ttemplate "text/template"
+	tparse "text/template/parse"
 	"time"
 
 	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/opentsdb"
@@ -879,4 +880,167 @@ func (c *Conf) seen(v string, m map[string]bool) {
 		}
 	}
 	m[v] = true
+}
+
+var builtins = htemplate.FuncMap{
+	"and":      nilFunc,
+	"call":     nilFunc,
+	"html":     nilFunc,
+	"index":    nilFunc,
+	"js":       nilFunc,
+	"len":      nilFunc,
+	"not":      nilFunc,
+	"or":       nilFunc,
+	"print":    nilFunc,
+	"printf":   nilFunc,
+	"println":  nilFunc,
+	"urlquery": nilFunc,
+	"eq":       nilFunc,
+	"ge":       nilFunc,
+	"gt":       nilFunc,
+	"le":       nilFunc,
+	"lt":       nilFunc,
+	"ne":       nilFunc,
+
+	// HTML-specific funcs
+	"html_template_attrescaper":     nilFunc,
+	"html_template_commentescaper":  nilFunc,
+	"html_template_cssescaper":      nilFunc,
+	"html_template_cssvaluefilter":  nilFunc,
+	"html_template_htmlnamefilter":  nilFunc,
+	"html_template_htmlescaper":     nilFunc,
+	"html_template_jsregexpescaper": nilFunc,
+	"html_template_jsstrescaper":    nilFunc,
+	"html_template_jsvalescaper":    nilFunc,
+	"html_template_nospaceescaper":  nilFunc,
+	"html_template_rcdataescaper":   nilFunc,
+	"html_template_urlescaper":      nilFunc,
+	"html_template_urlfilter":       nilFunc,
+	"html_template_urlnormalizer":   nilFunc,
+
+	// bosun-specific funcs
+	"V":       nilFunc,
+	"bytes":   nilFunc,
+	"replace": nilFunc,
+	"short":   nilFunc,
+}
+
+func nilFunc() {}
+
+type AlertTemplateStrings struct {
+	Templates map[string]string
+	Alerts    map[string]string
+}
+
+func (c *Conf) AlertTemplateStrings() (*AlertTemplateStrings, error) {
+	templates := make(map[string]string)
+	for name, template := range c.Templates {
+		incl := map[string]bool{name: true}
+		var parseSection func(*Template) error
+		parseTemplate := func(s string) error {
+			trees, err := tparse.Parse("", s, "", "", builtins)
+			if err != nil {
+				return err
+			}
+			for _, node := range trees[""].Root.Nodes {
+				switch node := node.(type) {
+				case *tparse.TemplateNode:
+					if incl[node.Name] {
+						continue
+					}
+					incl[node.Name] = true
+					if err := parseSection(c.Templates[node.Name]); err != nil {
+						return err
+					}
+				}
+			}
+			return nil
+		}
+		parseSection = func(s *Template) error {
+			if s.Body != nil {
+				if err := parseTemplate(s.Body.Tree.Root.String()); err != nil {
+					return err
+				}
+			}
+			if s.Subject != nil {
+				if err := parseTemplate(s.Subject.Tree.Root.String()); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+		if err := parseSection(template); err != nil {
+			return nil, err
+		}
+		delete(incl, name)
+		templates[name] = template.Def
+		for n := range incl {
+			t := c.Templates[n]
+			if t == nil {
+				continue
+			}
+			templates[name] += "\n\n" + t.Def
+		}
+	}
+	alerts := make(map[string]string)
+	for name, alert := range c.Alerts {
+		var add func([]string)
+		add = func(macros []string) {
+			for _, macro := range macros {
+				m := c.Macros[macro]
+				add(m.Macros)
+				alerts[name] += m.Def + "\n\n"
+			}
+		}
+		lookups := make(map[string]bool)
+		walk := func(n eparse.Node) {
+			eparse.Walk(n, func(n eparse.Node) {
+				switch n := n.(type) {
+				case *eparse.FuncNode:
+					if n.Name != "lookup" || len(n.Args) == 0 {
+						return
+					}
+					switch n := n.Args[0].(type) {
+					case *eparse.StringNode:
+						if lookups[n.Text] {
+							return
+						}
+						lookups[n.Text] = true
+						l := c.Lookups[n.Text]
+						if l == nil {
+							return
+						}
+						alerts[name] += l.Def + "\n\n"
+					}
+				}
+			})
+		}
+		walkNotifications := func(n *Notifications) {
+			for _, v := range n.Lookups {
+				if lookups[v.Name] {
+					return
+				}
+				lookups[v.Name] = true
+				alerts[name] += v.Def + "\n\n"
+			}
+		}
+		if alert.CritNotification != nil {
+			walkNotifications(alert.CritNotification)
+		}
+		if alert.WarnNotification != nil {
+			walkNotifications(alert.WarnNotification)
+		}
+		add(alert.Macros)
+		if alert.Crit != nil {
+			walk(alert.Crit.Tree.Root)
+		}
+		if alert.Warn != nil {
+			walk(alert.Warn.Tree.Root)
+		}
+		alerts[name] += alert.Def
+	}
+	return &AlertTemplateStrings{
+		templates,
+		alerts,
+	}, nil
 }
