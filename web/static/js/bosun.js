@@ -1190,10 +1190,12 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
     };
     $scope.GetTagKByMetric = function (index) {
         $scope.tagvs[index] = new TagV;
-        if (!$scope.query_p[index].metric) {
+        var metric = $scope.query_p[index].metric;
+        if (!metric) {
+            $scope.canAuto = true;
             return;
         }
-        $http.get('/api/tagk/' + $scope.query_p[index].metric).success(function (data) {
+        $http.get('/api/tagk/' + metric).success(function (data) {
             var q = $scope.query_p[index];
             var tags = new TagSet;
             q.metric_tags = {};
@@ -1227,6 +1229,17 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
             });
         }).error(function (error) {
             $scope.error = 'Unable to fetch metrics: ' + error;
+        });
+        $http.get('/api/metadata/get?metric=' + metric).success(function (data) {
+            var canAuto = false;
+            angular.forEach(data, function (val) {
+                if (val.Metric == metric && val.Name == 'rate') {
+                    canAuto = true;
+                }
+            });
+            $scope.canAuto = canAuto;
+        }).error(function (err) {
+            $scope.error = err;
         });
     };
     if ($scope.query_p.length == 0) {

@@ -1,12 +1,14 @@
 go-fastping
 ===========
 
-go-fastping is a Go language port of Marc Lehmann's AnyEvent::FastPing Perl
-module to send ICMP ECHO REQUEST packets quickly. Original Perl module is
+go-fastping is a Go language's ICMP ping library inspired by AnyEvent::FastPing
+Perl module to send ICMP ECHO REQUEST packets quickly. Original Perl module is
 available at
 http://search.cpan.org/~mlehmann/AnyEvent-FastPing-2.01/
 
 It hasn't been fully implemented original functions yet and only for IPv4 now.
+
+[![GoDoc](https://godoc.org/github.com/tatsushid/go-fastping?status.svg)](https://godoc.org/github.com/tatsushid/go-fastping)
 
 ## Installation
 

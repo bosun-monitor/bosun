@@ -1,4 +1,4 @@
-// go-fastping is a Go language port of Marc Lehmann's AnyEvent::FastPing Perl
+// Package fastping is an ICMP ping library inspired by AnyEvent::FastPing Perl
 // module to send ICMP ECHO REQUEST packets quickly. Original Perl module is
 // available at
 // http://search.cpan.org/~mlehmann/AnyEvent-FastPing-2.01/
@@ -108,7 +108,7 @@ type Pinger struct {
 	Debug bool
 }
 
-// It returns a new Pinger
+// NewPinger returns a new Pinger
 func NewPinger() *Pinger {
 	rand.Seed(time.Now().UnixNano())
 	p := &Pinger{
@@ -122,11 +122,12 @@ func NewPinger() *Pinger {
 	return p
 }
 
-// Add an IP address to Pinger. ipaddr arg should be a string like "192.0.2.1".
+// AddIP adds an IP address to Pinger. ipaddr arg should be a string like
+// "192.0.2.1".
 func (p *Pinger) AddIP(ipaddr string) error {
 	addr := net.ParseIP(ipaddr)
 	if addr == nil {
-		return errors.New(fmt.Sprintf("%s is not a valid textual representation of an IP address", ipaddr))
+		return fmt.Errorf("%s is not a valid textual representation of an IP address", ipaddr)
 	}
 	p.mu.Lock()
 	p.addrs[addr.String()] = &net.IPAddr{IP: addr}
@@ -134,14 +135,16 @@ func (p *Pinger) AddIP(ipaddr string) error {
 	return nil
 }
 
-// Add an IP address to Pinger. ip arg should be a net.IPAddr pointer.
+// AddIPAddr adds an IP address to Pinger. ip arg should be a net.IPAddr
+// pointer.
 func (p *Pinger) AddIPAddr(ip *net.IPAddr) {
 	p.mu.Lock()
 	p.addrs[ip.String()] = ip
 	p.mu.Unlock()
 }
 
-// Add event handler to Pinger. event arg should be "receive" or "idle" string.
+// AddHandler adds event handler to Pinger. event arg should be "receive" or
+// "idle" string.
 //
 // "receive" handler should be
 //
@@ -164,25 +167,23 @@ func (p *Pinger) AddHandler(event string, handler interface{}) error {
 			p.handlers[event] = hdl
 			p.mu.Unlock()
 			return nil
-		} else {
-			return errors.New(fmt.Sprintf("Receive event handler should be `func(*net.IPAddr, time.Duration)`"))
 		}
+		return errors.New("Receive event handler should be `func(*net.IPAddr, time.Duration)`")
 	case "idle":
 		if hdl, ok := handler.(func()); ok {
 			p.mu.Lock()
 			p.handlers[event] = hdl
 			p.mu.Unlock()
 			return nil
-		} else {
-			return errors.New(fmt.Sprintf("Idle event handler should be `func()`"))
 		}
+		return errors.New("Idle event handler should be `func()`")
 	}
-	return errors.New(fmt.Sprintf("No such event: %s", event))
+	return errors.New("No such event: " + event)
 }
 
-// Invoke a single send/receive procedure. It sends packets to all hosts which
-// have already been added by AddIP() etc. and wait those responses. When it
-// receives a response, it calls "receive" handler registered by AddHander().
+// Run invokes a single send/receive procedure. It sends packets to all hosts
+// which have already been added by AddIP() etc. and wait those responses. When
+// it receives a response, it calls "receive" handler registered by AddHander().
 // After MaxRTT seconds, it calls "idle" handler and returns to caller with
 // an error value. It means it blocks until MaxRTT seconds passed. For the
 // purpose of sending/receiving packets over and over, use RunLoop().
@@ -196,11 +197,11 @@ func (p *Pinger) Run() error {
 	return p.ctx.err
 }
 
-// Invoke send/receive procedure repeatedly. It sends packets to all hosts which
-// have already been added by AddIP() etc. and wait those responses. When it
-// receives a response, it calls "receive" handler registered by AddHander().
-// After MaxRTT seconds, it calls "idle" handler, resend packets and wait those
-// response. MaxRTT works as an interval time.
+// RunLoop invokes send/receive procedure repeatedly. It sends packets to all
+// hosts which have already been added by AddIP() etc. and wait those responses.
+// When it receives a response, it calls "receive" handler registered by
+// AddHander(). After MaxRTT seconds, it calls "idle" handler, resend packets
+// and wait those response. MaxRTT works as an interval time.
 //
 // This is a non-blocking method so immediately returns. If you want to monitor
 // and stop sending packets, use Done() and Stop() methods. For example,
@@ -226,13 +227,14 @@ func (p *Pinger) RunLoop() {
 	go p.run(false)
 }
 
-// Return a channel that is closed when RunLoop() is stopped by an error or
-// Stop(). It must be called after RunLoop() call. If not, it causes panic.
+// Done returns a channel that is closed when RunLoop() is stopped by an error
+// or Stop(). It must be called after RunLoop() call. If not, it causes panic.
 func (p *Pinger) Done() <-chan bool {
 	return p.ctx.done
 }
 
-// Stop RunLoop(). It must be called after RunLoop(). If not, it causes panic.
+// Stop stops RunLoop(). It must be called after RunLoop(). If not, it causes
+// panic.
 func (p *Pinger) Stop() {
 	p.debugln("Stop(): close(p.ctx.stop)")
 	close(p.ctx.stop)
@@ -240,8 +242,8 @@ func (p *Pinger) Stop() {
 	<-p.ctx.done
 }
 
-// Return an error that is set by RunLoop(). It must be called after RunLoop().
-// If not, it causes panic.
+// Err returns an error that is set by RunLoop(). It must be called after
+// RunLoop(). If not, it causes panic.
 func (p *Pinger) Err() error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
