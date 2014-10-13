@@ -145,11 +145,11 @@ type Results struct {
 	NaNValue *float64
 }
 
-func (r *Results) NaN() Scalar {
+func (r *Results) NaN() Number {
 	if r.NaNValue != nil {
-		return Scalar(*r.NaNValue)
+		return Number(*r.NaNValue)
 	}
-	return Scalar(math.NaN())
+	return Number(math.NaN())
 }
 
 type Computations []Computation
