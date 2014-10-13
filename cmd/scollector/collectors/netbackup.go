@@ -15,6 +15,7 @@ import (
 
 func init() {
 	collectors = append(collectors, &IntervalCollector{F: c_netbackup_jobs})
+	collectors = append(collectors, &IntervalCollector{F: c_netbackup_frequency})
 }
 
 //jobtype
@@ -24,6 +25,13 @@ func init() {
 
 //state
 // 0=queued, 1=active, 2=wait for retry, 3=done, 4=suspended, 5=incomplete
+
+//NOTE!!
+//This depends on the retention of the job log being greater than the jobs, else things are going to go unkonwn
+//See http://www.symantec.com/connect/forums/netbackup-75-activity-monitor-job-logs
+//In my case I created the two registry entries mentioned in that link (KEEP_JOB_HOURS) and (KEEP_JOBS_SUCCESSFUL_HOURS)
+//I also changed the rentention under "Clean-up" under the master server properties via the Java Admin Console. One of those
+//seems to have worked. This *is* netbackup, so I wish you the best of luck ;-)
 
 type nbJob struct {
 	Jobid             string
@@ -117,10 +125,8 @@ func c_netbackup_jobs() (opentsdb.MultiDataPoint, error) {
 		key := r.Class + r.Schedule + r.Client
 		if existing, ok := latest[key]; !ok {
 			latest[key] = r
-		} else {
-			if r.Started.After(existing.Started) {
-				latest[key] = r
-			}
+		} else if r.Started.After(existing.Started) {
+			latest[key] = r
 		}
 		return nil
 	}, "bpdbjobs", "-report", "-all_columns"); err != nil {
@@ -135,6 +141,51 @@ func c_netbackup_jobs() (opentsdb.MultiDataPoint, error) {
 		Add(&md, "netbackup.backup.duration", r.Elapsed, tags, metadata.Gauge, metadata.Second, "")
 		Add(&md, "netbackup.backup.no_files", r.Files, tags, metadata.Gauge, metadata.Count, "")
 		Add(&md, "netbackup.backup.kbytes", r.Kbytes, tags, metadata.Gauge, metadata.KBytes, "")
+	}
+	return md, nil
+}
+
+func c_netbackup_frequency() (opentsdb.MultiDataPoint, error) {
+	var md opentsdb.MultiDataPoint
+	var class, client, schedule string
+	if err := util.ReadCommand(func(line string) error {
+		if strings.HasPrefix(line, "Policy Name:") {
+			f := strings.Fields(line)
+			if len(f) == 3 {
+				class = f[2]
+				return nil
+			}
+			return fmt.Errorf("error parsing policy: %v", line)
+		}
+		if strings.HasPrefix(line, "Client/HW/OS/Pri/DMI/CIT:") {
+			f := strings.Fields(line)
+			if len(f) == 9 {
+				client = f[1]
+				return nil
+			}
+			return fmt.Errorf("error parsing client")
+		}
+		if strings.HasPrefix(line, "Schedule:") {
+			f := strings.Fields(line)
+			if len(f) > 1 {
+				schedule = f[1]
+				return nil
+			}
+			return fmt.Errorf("error parsing client: %v", line)
+		}
+		if strings.HasPrefix(strings.TrimSpace(line), "Frequency:") {
+			f := strings.Fields(line)
+			if len(f) == 5 {
+				freq := strings.TrimLeft(f[3], "(")
+				tags := opentsdb.TagSet{"class": class, "client": client, "schedule": schedule}
+				Add(&md, "netbackup.backup.frequency", freq, tags, metadata.Gauge, metadata.Second, "")
+				return nil
+			}
+			return fmt.Errorf("error parsing frequency: %v", line)
+		}
+		return nil
+	}, "bppllist", "-L", "-allpolicies"); err != nil {
+		return nil, err
 	}
 	return md, nil
 }
