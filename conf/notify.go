@@ -13,9 +13,9 @@ import (
 	"github.com/StackExchange/bosun/_third_party/github.com/mjibson/email"
 )
 
-func (n *Notification) Notify(subject, body []byte, from, smtpHost string, ak string, attachments ...*Attachment) {
+func (n *Notification) Notify(subject, body []byte, c *Conf, ak string, attachments ...*Attachment) {
 	if len(n.Email) > 0 {
-		go n.DoEmail(subject, body, from, smtpHost, ak, attachments...)
+		go n.DoEmail(subject, body, c, ak, attachments...)
 	}
 	if n.Post != nil {
 		go n.DoPost(subject)
@@ -71,9 +71,9 @@ type Attachment struct {
 	ContentType string
 }
 
-func (n *Notification) DoEmail(subject, body []byte, from, smtpHost string, ak string, attachments ...*Attachment) {
+func (n *Notification) DoEmail(subject, body []byte, c *Conf, ak string, attachments ...*Attachment) {
 	e := email.NewEmail()
-	e.From = from
+	e.From = c.EmailFrom
 	for _, a := range n.Email {
 		e.To = append(e.To, a.Address)
 	}
@@ -82,7 +82,7 @@ func (n *Notification) DoEmail(subject, body []byte, from, smtpHost string, ak s
 	for _, a := range attachments {
 		e.Attach(bytes.NewBuffer(a.Data), a.Filename, a.ContentType)
 	}
-	if err := Send(e, smtpHost); err != nil {
+	if err := Send(e, c.SmtpHost); err != nil {
 		collect.Add("email.sent_failed", nil, 1)
 		log.Printf("failed to send alert %v to %v %v\n", ak, e.To, err)
 		return
