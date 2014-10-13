@@ -147,9 +147,11 @@ func c_netbackup_jobs() (opentsdb.MultiDataPoint, error) {
 
 func c_netbackup_frequency() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
-	var class, client, schedule string
+	var class, schedule string
+	var clients []string
 	if err := util.ReadCommand(func(line string) error {
 		if strings.HasPrefix(line, "Policy Name:") {
+			clients = nil
 			f := strings.Fields(line)
 			if len(f) == 3 {
 				class = f[2]
@@ -160,7 +162,7 @@ func c_netbackup_frequency() (opentsdb.MultiDataPoint, error) {
 		if strings.HasPrefix(line, "Client/HW/OS/Pri/DMI/CIT:") {
 			f := strings.Fields(line)
 			if len(f) == 9 {
-				client = f[1]
+				clients = append(clients, f[1])
 				return nil
 			}
 			return fmt.Errorf("error parsing client")
@@ -177,8 +179,10 @@ func c_netbackup_frequency() (opentsdb.MultiDataPoint, error) {
 			f := strings.Fields(line)
 			if len(f) == 5 {
 				freq := strings.TrimLeft(f[3], "(")
-				tags := opentsdb.TagSet{"class": class, "client": client, "schedule": schedule}
-				Add(&md, "netbackup.backup.frequency", freq, tags, metadata.Gauge, metadata.Second, "")
+				for _, client := range clients {
+					tags := opentsdb.TagSet{"class": class, "client": client, "schedule": schedule}
+					Add(&md, "netbackup.backup.frequency", freq, tags, metadata.Gauge, metadata.Second, "")
+				}
 				return nil
 			}
 			return fmt.Errorf("error parsing frequency: %v", line)
