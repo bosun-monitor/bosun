@@ -415,5 +415,5 @@ func Config(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 }
 
 func Templates(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	return schedule.MakeTemplates()
+	return schedule.Conf.AlertTemplateStrings()
 }
