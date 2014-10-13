@@ -140,27 +140,25 @@ func (c *Context) eval(v interface{}, filter bool, series bool, autods int) ([]*
 	if err != nil {
 		return nil, fmt.Errorf("%v: %v", v, err)
 	}
-	var results []*expr.Result
 	if series && e.Root.Return() != parse.TYPE_SERIES {
-		return results, fmt.Errorf("egraph: requires an expression that returns a series")
+		return nil, fmt.Errorf("egraph: requires an expression that returns a series")
 	}
 	res, _, err := e.Execute(c.schedule.cache, nil, c.schedule.CheckStart, autods, c.Alert.UnjoinedOK, c.schedule.Search, c.schedule.Lookups, c.schedule.Conf.AlertSquelched(c.Alert))
 	if err != nil {
-		return results, fmt.Errorf("%s: %v", v, err)
+		return nil, fmt.Errorf("%s: %v", v, err)
 	}
 	if !filter {
 		return res.Results, nil
 	}
 	for _, r := range res.Results {
 		if r.Group.Equal(c.State.Group) {
-			results = append(results, r)
-			return results, nil
+			return []*expr.Result{r}, nil
 		}
 	}
 	for _, r := range res.Results {
 		if c.State.Group.Subset(r.Group) {
-			results = append(results, r)
-			return results, nil
+			return []*expr.Result{r}, nil
+		}
 		}
 	}
 	return nil, nil
