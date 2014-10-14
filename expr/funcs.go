@@ -140,7 +140,11 @@ var builtins = map[string]parse.Func{
 }
 
 func NV(e *state, T miniprofiler.Timer, series *Results, v float64) (results *Results, err error) {
-	series.NaNValue = &v
+	for _, res := range series.Results {
+		if _, ok := res.Value.(Scalar); ok {
+			res.Value = Number(v)
+		}
+	}
 	return series, nil
 }
 
