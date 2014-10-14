@@ -57,7 +57,6 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
 			'}';
 		$location.search('alert', btoa(alert_def));
 		$location.search('expr', null);
-		return;
 	}
 	$scope.alert = current_alert;
 	try {
@@ -79,7 +78,6 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
 			'	</table>`\n' +
 			'}';
 		$location.search('template', btoa(template_def));
-		return;
 	}
 	$scope.template = current_template;
 	$scope.shiftEnter = function($event: any) {
@@ -91,7 +89,6 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
 		$scope.error = '';
 		$scope.running = true;
 		$scope.warning = [];
-		var search = _.clone($location.search());
 		$location.search('alert', btoa($scope.alert));
 		$location.search('template', btoa($scope.template));
 		$location.search('fromDate', $scope.fromDate || null);
@@ -102,10 +99,6 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
 		$location.search('intervals', String($scope.intervals) || null);
 		$location.search('duration', String($scope.duration) || null);
 		$location.search('email', $scope.email || null);
-		var search2 = $location.search();
-		if (!_.isEqual(search, search2)) {
-			return;
-		}
 		$scope.animate();
 		var from = moment.utc($scope.fromDate + ' ' + $scope.fromTime);
 		var to = moment.utc($scope.toDate + ' ' + $scope.toTime);
@@ -127,6 +120,7 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
 		} else {
 			intervals = +$scope.intervals;
 		}
+		console.log('GET URL');
 		var url = '/api/rule?' +
 			'alert=' + encodeURIComponent($scope.alert) +
 			'&template=' + encodeURIComponent($scope.template) +
