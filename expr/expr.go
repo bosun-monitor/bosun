@@ -141,15 +141,6 @@ type Results struct {
 	IgnoreUnjoined bool
 	// If true, ungrouped joins from the other set will be ignored.
 	IgnoreOtherUnjoined bool
-	// If non nil, will set any NaN value to it.
-	NaNValue *float64
-}
-
-func (r *Results) NaN() Number {
-	if r.NaNValue != nil {
-		return Number(*r.NaNValue)
-	}
-	return Number(math.NaN())
 }
 
 type Computations []Computation
@@ -231,7 +222,7 @@ func (e *state) union(a, b *Results, expression string) []*Union {
 			for r := range am {
 				u := &Union{
 					A:     r.Value,
-					B:     b.NaN(),
+					B:     Scalar(math.NaN()),
 					Group: r.Group,
 				}
 				r.AddComputation(expression, fmt.Sprintf(unjoinedGroup, u.B))
@@ -242,7 +233,7 @@ func (e *state) union(a, b *Results, expression string) []*Union {
 		if !b.IgnoreUnjoined && !a.IgnoreOtherUnjoined {
 			for r := range bm {
 				u := &Union{
-					A:     a.NaN(),
+					A:     Scalar(math.NaN()),
 					B:     r.Value,
 					Group: r.Group,
 				}

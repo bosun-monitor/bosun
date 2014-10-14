@@ -1,13 +1,14 @@
 package expr
 
 import (
+	"math"
 	"testing"
 	"time"
 
 	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/opentsdb"
 )
 
-func TestExprSimple(t *testing.T) {
+func TestExprScalar(t *testing.T) {
 	var exprTests = []struct {
 		input  string
 		output Scalar
@@ -35,6 +36,7 @@ func TestExprSimple(t *testing.T) {
 		{"1>=2", 0},
 		{"-1 > 0", 0},
 		{"-1 < 0", 1},
+		{"0 / 0", Scalar(math.NaN())},
 	}
 
 	for _, et := range exprTests {
@@ -53,6 +55,8 @@ func TestExprSimple(t *testing.T) {
 		} else if len(r.Results[0].Group) != 0 {
 			t.Error("bad group len", r.Results[0].Group)
 			break
+		} else if math.IsNaN(float64(r.Results[0].Value.(Scalar))) && math.IsNaN(float64(et.output)) {
+			// pass
 		} else if r.Results[0].Value != et.output {
 			t.Errorf("expected %v, got %v: %v\nast: %v", et.output, r.Results[0].Value, et.input, e)
 		}
