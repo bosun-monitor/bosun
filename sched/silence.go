@@ -16,8 +16,7 @@ type Silence struct {
 	match       map[string]string
 }
 
-func (s *Silence) Silenced(alert string, tags opentsdb.TagSet) bool {
-	now := time.Now()
+func (s *Silence) Silenced(now time.Time, alert string, tags opentsdb.TagSet) bool {
 	if now.Before(s.Start) || now.After(s.End) {
 		return false
 	}
@@ -51,10 +50,11 @@ func (s Silence) ID() string {
 // unsilenced.
 func (s *Schedule) Silenced() map[expr.AlertKey]time.Time {
 	aks := make(map[expr.AlertKey]time.Time)
+	now := time.Now()
 	s.Lock()
 	for _, si := range s.Silence {
 		for ak, st := range s.status {
-			if si.Silenced(ak.Name(), st.Group) {
+			if si.Silenced(now, ak.Name(), st.Group) {
 				if aks[ak].Before(si.End) {
 					aks[ak] = si.End
 				}
