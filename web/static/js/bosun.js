@@ -1663,8 +1663,8 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
     $scope.toDate = search.toDate || '';
     $scope.toTime = search.toTime || '';
     $scope.tab = search.tab || 'results';
-    $scope.intervals = +search.intervals || 5;
-    $scope.duration = +search.duration || null;
+    $scope.intervals = search.intervals || String(5);
+    $scope.duration = search.duration || null;
     if (!current_alert) {
         var alert_def = 'alert test {\n' + '	template = test\n' + '	crit = ' + expr + '\n' + '}';
         $location.search('alert', btoa(alert_def));
@@ -1693,6 +1693,7 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
         $scope.error = '';
         $scope.running = true;
         $scope.warning = [];
+        var search = _.clone($location.search());
         $location.search('alert', btoa($scope.alert));
         $location.search('template', btoa($scope.template));
         $location.search('fromDate', $scope.fromDate || null);
@@ -1703,6 +1704,10 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
         $location.search('intervals', $scope.intervals || null);
         $location.search('duration', $scope.duration || null);
         $location.search('email', $scope.email || null);
+        var search2 = $location.search();
+        if (!_.isEqual(search, search2)) {
+            return;
+        }
         $scope.animate();
         var from = moment.utc($scope.fromDate + ' ' + $scope.fromTime);
         var to = moment.utc($scope.toDate + ' ' + $scope.toTime);
@@ -1785,7 +1790,7 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
         if (d < 1) {
             d = 1;
         }
-        $scope.duration = d;
+        $scope.duration = String(d);
     };
     $scope.setDuration = function () {
         var from = moment.utc($scope.fromDate + ' ' + $scope.fromTime);
@@ -1801,7 +1806,7 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
         if (duration < 1) {
             return;
         }
-        $scope.intervals = Math.abs(Math.round(diff / duration / 1000 / 60));
+        $scope.intervals = String(Math.abs(Math.round(diff / duration / 1000 / 60)));
     };
     $scope.setInterval();
     $http.get('/api/templates').success(function (data) {
