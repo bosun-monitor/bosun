@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"math"
 	"net/url"
 	"os"
 	"strings"
@@ -299,7 +300,10 @@ func (c *Context) LeftJoin(q ...interface{}) (interface{}, error) {
 			for _, r := range res {
 				if first.Group.Subset(r.Group) {
 					matrix[row][col+1] = r
+					break
 				}
+				// Fill emtpy cells with NaN Value, so calling .Valie is not a nil pointer dereference
+				matrix[row][col+1] = &expr.Result{Value: expr.Number(math.NaN())}
 			}
 		}
 	}
