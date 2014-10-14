@@ -388,13 +388,23 @@ bosunApp.directive('tsComputations', function () {
 var timeFormat = 'YYYY/MM/DD-HH:mm:ss';
 function fmtTime(v) {
     var m = moment(v).utc();
-    return m.format(timeFormat) + ' (' + m.fromNow() + ')';
+    var now = moment().utc();
+    var msdiff = now.diff(m);
+    var diff = moment.duration(msdiff, "milliseconds").format("d[d] h:mm:ss");
+    return m.format(timeFormat) + ' (' + diff + ' ago)';
 }
 bosunApp.directive("tsTime", function () {
     return {
         link: function (scope, elem, attrs) {
             scope.$watch(attrs.tsTime, function (v) {
                 var text = fmtTime(v);
+                var duration = "";
+                if (attrs.tsDuration) {
+                    duration = moment.duration(scope.$eval(attrs.tsDuration), "milliseconds").format("d[d] hh:mm:ss");
+                }
+                if (duration) {
+                    text += " for " + duration;
+                }
                 if (attrs.noLink) {
                     elem.text(text);
                 }
@@ -1402,6 +1412,7 @@ bosunControllers.controller('HistoryCtrl', ['$scope', '$http', '$location', '$ro
                 else {
                     h.EndTime = moment.utc();
                 }
+                h.Duration = h.EndTime.diff(h.Time);
             });
             selected_alerts[ak] = {
                 History: v.History.reverse()

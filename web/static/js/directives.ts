@@ -33,7 +33,10 @@ var timeFormat = 'YYYY/MM/DD-HH:mm:ss';
 
 function fmtTime(v: any) {
 	var m = moment(v).utc();
-	return m.format(timeFormat) + ' (' + m.fromNow() + ')';
+	var now = moment().utc();
+	var msdiff = now.diff(m);
+	var diff = moment.duration(msdiff, "milliseconds").format("d[d] h:mm:ss");
+	return m.format(timeFormat) + ' (' + diff + ' ago)';
 }
 
 interface ITimeScope extends IBosunScope {
@@ -45,6 +48,13 @@ bosunApp.directive("tsTime", function() {
 		link: function(scope: ITimeScope, elem: any, attrs: any) {
 			scope.$watch(attrs.tsTime, (v: any) => {
 				var text = fmtTime(v);
+				var duration = "";
+				if (attrs.tsDuration) {
+					duration = moment.duration(scope.$eval(attrs.tsDuration), "milliseconds").format("d[d] hh:mm:ss");
+				}
+				if (duration) {
+					text += " for " + duration;
+				}
 				if (attrs.noLink) {
 					elem.text(text);
 				} else {
