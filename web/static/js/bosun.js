@@ -37,7 +37,8 @@ bosunApp.config(['$routeProvider', '$locationProvider', function ($routeProvider
     }).when('/rule', {
         title: 'Rule',
         templateUrl: 'partials/rule.html',
-        controller: 'RuleCtrl'
+        controller: 'RuleCtrl',
+        reloadOnSearch: false
     }).when('/silence', {
         title: 'Silence',
         templateUrl: 'partials/silence.html',
@@ -1669,7 +1670,6 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
         var alert_def = 'alert test {\n' + '	template = test\n' + '	crit = ' + expr + '\n' + '}';
         $location.search('alert', btoa(alert_def));
         $location.search('expr', null);
-        return;
     }
     $scope.alert = current_alert;
     try {
@@ -1681,7 +1681,6 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
     if (!current_template) {
         var template_def = 'template test {\n' + '	subject = {{.Last.Status}}: {{.Alert.Name}} on {{.Group.host}}\n' + '	body = `<p>Name: {{.Alert.Name}}\n' + '	<p>Tags:\n' + '	<table>\n' + '		{{range $k, $v := .Group}}\n' + '			<tr><td>{{$k}}</td><td>{{$v}}</td></tr>\n' + '		{{end}}\n' + '	</table>`\n' + '}';
         $location.search('template', btoa(template_def));
-        return;
     }
     $scope.template = current_template;
     $scope.shiftEnter = function ($event) {
@@ -1693,7 +1692,6 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
         $scope.error = '';
         $scope.running = true;
         $scope.warning = [];
-        var search = _.clone($location.search());
         $location.search('alert', btoa($scope.alert));
         $location.search('template', btoa($scope.template));
         $location.search('fromDate', $scope.fromDate || null);
@@ -1704,10 +1702,6 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
         $location.search('intervals', String($scope.intervals) || null);
         $location.search('duration', String($scope.duration) || null);
         $location.search('email', $scope.email || null);
-        var search2 = $location.search();
-        if (!_.isEqual(search, search2)) {
-            return;
-        }
         $scope.animate();
         var from = moment.utc($scope.fromDate + ' ' + $scope.fromTime);
         var to = moment.utc($scope.toDate + ' ' + $scope.toTime);
@@ -1731,6 +1725,7 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
         else {
             intervals = +$scope.intervals;
         }
+        console.log('GET URL');
         var url = '/api/rule?' + 'alert=' + encodeURIComponent($scope.alert) + '&template=' + encodeURIComponent($scope.template) + '&from=' + encodeURIComponent(from.format(tsdbFormat)) + '&to=' + encodeURIComponent(to.format(tsdbFormat)) + '&intervals=' + encodeURIComponent(intervals) + '&email=' + encodeURIComponent($scope.email);
         $http.get(url).success(function (data) {
             $scope.sets = data.Sets;

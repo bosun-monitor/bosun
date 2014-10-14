@@ -46,6 +46,7 @@ bosunApp.config(['$routeProvider', '$locationProvider', function($routeProvider:
 			title: 'Rule',
 			templateUrl: 'partials/rule.html',
 			controller: 'RuleCtrl',
+			reloadOnSearch: false,
 		}).
 		when('/silence', {
 			title: 'Silence',
