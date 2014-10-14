@@ -50,13 +50,11 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
 	$scope.intervals = +search.intervals || 5;
 	$scope.duration = +search.duration || null;
 	if (!current_alert) {
-		var alert_def =
+		current_alert =
 			'alert test {\n' +
 			'	template = test\n' +
 			'	crit = ' + expr + '\n' +
 			'}';
-		$location.search('alert', btoa(alert_def));
-		$location.search('expr', null);
 	}
 	$scope.alert = current_alert;
 	try {
@@ -66,7 +64,7 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
 		current_template = '';
 	}
 	if (!current_template) {
-		var template_def =
+		current_template =
 			'template test {\n' +
 			'	subject = {{.Last.Status}}: {{.Alert.Name}} on {{.Group.host}}\n' +
 			'	body = `<p>Name: {{.Alert.Name}}\n' +
@@ -77,7 +75,6 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
 			'		{{end}}\n' +
 			'	</table>`\n' +
 			'}';
-		$location.search('template', btoa(template_def));
 	}
 	$scope.template = current_template;
 	$scope.shiftEnter = function($event: any) {
