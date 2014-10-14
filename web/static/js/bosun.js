@@ -216,7 +216,7 @@ bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', '$q', '$r
     };
 }]);
 moment.defaultFormat = 'YYYY/MM/DD-HH:mm:ss';
-moment.lang('en', {
+moment.locale('en', {
     relativeTime: {
         future: "in %s",
         past: "%s-ago",
