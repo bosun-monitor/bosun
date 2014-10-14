@@ -110,7 +110,7 @@ func (c *Context) makeLink(path string, v *url.Values) (string, error) {
 
 func (c *Context) Expr(v string) (string, error) {
 	p := url.Values{}
-	p.Add("expr", base64.URLEncoding.EncodeToString([]byte(opentsdb.ReplaceTags(v, c.Group))))
+	p.Add("expr", base64.StdEncoding.EncodeToString([]byte(opentsdb.ReplaceTags(v, c.Group))))
 	return c.makeLink("/expr", &p)
 }
 

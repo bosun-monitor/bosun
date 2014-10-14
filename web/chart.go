@@ -29,7 +29,7 @@ import (
 func Graph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	j := []byte(r.FormValue("json"))
 	if bs := r.FormValue("b64"); bs != "" {
-		b, err := base64.URLEncoding.DecodeString(bs)
+		b, err := base64.StdEncoding.DecodeString(bs)
 		if err != nil {
 			return nil, err
 		}
@@ -144,7 +144,7 @@ func Graph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 func ExprGraph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	bs := vars["bs"]
-	b, err := base64.URLEncoding.DecodeString(bs)
+	b, err := base64.StdEncoding.DecodeString(bs)
 	if err != nil {
 		return nil, err
 	}
