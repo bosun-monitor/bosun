@@ -44,7 +44,7 @@ func (s *Schedule) Check(T miniprofiler.Timer, start time.Time) {
 	s.RunHistory(r)
 }
 
-// RunHistory processes an event history and triggers notifications if needed.
+// RunHistory processes an event history and trisggers notifications if needed.
 func (s *Schedule) RunHistory(r RunHistory) {
 	checkNotify := false
 	silenced := s.Silenced()
@@ -117,7 +117,7 @@ func (s *Schedule) CheckUnknown() {
 				continue
 			}
 			a := s.Conf.Alerts[ak.Name()]
-			if a.NoUnknown {
+			if a.IgnoreUnknown {
 				continue
 			}
 			t := a.Unknown
