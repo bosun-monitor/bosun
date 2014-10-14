@@ -116,7 +116,11 @@ func (s *Schedule) CheckUnknown() {
 			if st.Forgotten {
 				continue
 			}
-			t := s.Conf.Alerts[ak.Name()].Unknown
+			a := s.Conf.Alerts[ak.Name()]
+			if a.NoUnknown {
+				continue
+			}
+			t := a.Unknown
 			if t == 0 {
 				t = s.Conf.CheckFrequency * 2
 			}
