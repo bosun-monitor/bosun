@@ -365,11 +365,11 @@ func SilenceSet(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (i
 		start = time.Now().UTC()
 	}
 	if end.IsZero() {
-		d, err := time.ParseDuration(data["duration"])
+		d, err := opentsdb.ParseDuration(data["duration"])
 		if err != nil {
 			return nil, err
 		}
-		end = start.Add(d)
+		end = start.Add(time.Duration(d))
 	}
 	return schedule.AddSilence(start, end, data["alert"], data["tags"], len(data["confirm"]) > 0, data["edit"])
 }
