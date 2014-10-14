@@ -196,6 +196,7 @@ type Alert struct {
 	CritNotification *Notifications
 	WarnNotification *Notifications
 	Unknown          time.Duration
+	NoUnknown        bool
 	Macros           []string `json:"-"`
 	UnjoinedOK       bool     `json:",omitempty"`
 
@@ -747,6 +748,8 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 			a.Unknown = d
 		case "unjoinedOk":
 			a.UnjoinedOK = true
+		case "noUnknown":
+			a.NoUnknown = true
 		default:
 			c.errorf("unknown key %s", p.key)
 		}
