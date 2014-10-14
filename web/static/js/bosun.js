@@ -1667,9 +1667,7 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
     $scope.intervals = +search.intervals || 5;
     $scope.duration = +search.duration || null;
     if (!current_alert) {
-        var alert_def = 'alert test {\n' + '	template = test\n' + '	crit = ' + expr + '\n' + '}';
-        $location.search('alert', btoa(alert_def));
-        $location.search('expr', null);
+        current_alert = 'alert test {\n' + '	template = test\n' + '	crit = ' + expr + '\n' + '}';
     }
     $scope.alert = current_alert;
     try {
@@ -1679,8 +1677,7 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
         current_template = '';
     }
     if (!current_template) {
-        var template_def = 'template test {\n' + '	subject = {{.Last.Status}}: {{.Alert.Name}} on {{.Group.host}}\n' + '	body = `<p>Name: {{.Alert.Name}}\n' + '	<p>Tags:\n' + '	<table>\n' + '		{{range $k, $v := .Group}}\n' + '			<tr><td>{{$k}}</td><td>{{$v}}</td></tr>\n' + '		{{end}}\n' + '	</table>`\n' + '}';
-        $location.search('template', btoa(template_def));
+        current_template = 'template test {\n' + '	subject = {{.Last.Status}}: {{.Alert.Name}} on {{.Group.host}}\n' + '	body = `<p>Name: {{.Alert.Name}}\n' + '	<p>Tags:\n' + '	<table>\n' + '		{{range $k, $v := .Group}}\n' + '			<tr><td>{{$k}}</td><td>{{$v}}</td></tr>\n' + '		{{end}}\n' + '	</table>`\n' + '}';
     }
     $scope.template = current_template;
     $scope.shiftEnter = function ($event) {
