@@ -82,26 +82,6 @@ func Listen(listenAddr, webDirectory string, tsdbHost *url.URL) error {
 	return http.ListenAndServe(listenAddr, nil)
 }
 
-var client *http.Client = &http.Client{
-	Transport: &timeoutTransport{
-		Transport: &http.Transport{},
-	},
-	Timeout: time.Minute,
-}
-
-type timeoutTransport struct {
-	*http.Transport
-	Timeout time.Time
-}
-
-func (t *timeoutTransport) RoundTrip(r *http.Request) (*http.Response, error) {
-	if time.Now().After(t.Timeout) {
-		t.Transport.CloseIdleConnections()
-		t.Timeout = time.Now().Add(time.Minute * 5)
-	}
-	return t.Transport.RoundTrip(r)
-}
-
 type relayProxy struct {
 	*httputil.ReverseProxy
 }
