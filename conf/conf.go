@@ -337,10 +337,11 @@ func (c *Conf) loadGlobal(p *parse.PairNode) {
 	v := c.Expand(p.Val.Text, nil, false)
 	switch k := p.Key.Text; k {
 	case "checkFrequency":
-		d, err := time.ParseDuration(v)
+		od, err := opentsdb.ParseDuration(v)
 		if err != nil {
 			c.error(err)
 		}
+		d := time.Duration(od)
 		if d < time.Second {
 			c.errorf("checkFrequency duration must be at least 1s")
 		}
@@ -737,10 +738,11 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 		case "warnNotification":
 			procNotification(v, a.WarnNotification)
 		case "unknown":
-			d, err := time.ParseDuration(v)
+			od, err := opentsdb.ParseDuration(v)
 			if err != nil {
 				c.error(err)
 			}
+			d := time.Duration(od)
 			if d < time.Second {
 				c.errorf("unknown duration must be at least 1s")
 			}
@@ -819,11 +821,11 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 			}
 			n.Next = next
 		case "timeout":
-			d, err := time.ParseDuration(v)
+			d, err := opentsdb.ParseDuration(v)
 			if err != nil {
 				c.error(err)
 			}
-			n.Timeout = d
+			n.Timeout = time.Duration(d)
 		case "body":
 			n.body = v
 			tmpl := ttemplate.New(name).Funcs(funcs)
