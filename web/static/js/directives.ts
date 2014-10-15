@@ -35,7 +35,7 @@ function fmtTime(v: any) {
 	var m = moment(v).utc();
 	var now = moment().utc();
 	var msdiff = now.diff(m);
-	var diff = moment.duration(msdiff, "milliseconds").format("d[d] h:mm:ss");
+	var diff = moment.duration(msdiff, "milliseconds").format("d[d] hh:mm:ss");
 	return m.format(timeFormat) + ' (' + diff + ' ago)';
 }
 
@@ -47,10 +47,12 @@ bosunApp.directive("tsTime", function() {
 	return {
 		link: function(scope: ITimeScope, elem: any, attrs: any) {
 			scope.$watch(attrs.tsTime, (v: any) => {
+				var m = moment(v).utc();
 				var text = fmtTime(v);
-				var duration = "";
-				if (attrs.tsDuration) {
-					duration = moment.duration(scope.$eval(attrs.tsDuration), "milliseconds").format("d[d] hh:mm:ss");
+				var duration;
+				if (attrs.tsEndTime) {
+					var diff = scope.$eval(attrs.tsEndTime).diff(m);
+					duration = moment.duration(diff, "milliseconds").format("d[d] hh:mm:ss");
 				}
 				if (duration) {
 					text += " for " + duration;
@@ -59,7 +61,6 @@ bosunApp.directive("tsTime", function() {
 					elem.text(text);
 				} else {
 					var el = document.createElement('a');
-					var m = moment(v).utc();
 					el.innerText = text;
 					el.href = 'http://www.timeanddate.com/worldclock/converted.html?iso=';
 					el.href += m.format('YYYYMMDDTHHmm');

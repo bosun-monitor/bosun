@@ -3,6 +3,7 @@
 /// <reference path="angular-sanitize.d.ts" />
 /// <reference path="bootstrap.d.ts" />
 /// <reference path="moment.d.ts" />
+/// <reference path="moment-duration-format.d.ts" />
 /// <reference path="d3.d.ts" />
 /// <reference path="underscore.d.ts" />
 var bosunApp = angular.module('bosunApp', [
@@ -390,17 +391,19 @@ function fmtTime(v) {
     var m = moment(v).utc();
     var now = moment().utc();
     var msdiff = now.diff(m);
-    var diff = moment.duration(msdiff, "milliseconds").format("d[d] h:mm:ss");
+    var diff = moment.duration(msdiff, "milliseconds").format("d[d] hh:mm:ss");
     return m.format(timeFormat) + ' (' + diff + ' ago)';
 }
 bosunApp.directive("tsTime", function () {
     return {
         link: function (scope, elem, attrs) {
             scope.$watch(attrs.tsTime, function (v) {
+                var m = moment(v).utc();
                 var text = fmtTime(v);
-                var duration = "";
-                if (attrs.tsDuration) {
-                    duration = moment.duration(scope.$eval(attrs.tsDuration), "milliseconds").format("d[d] hh:mm:ss");
+                var duration;
+                if (attrs.tsEndTime) {
+                    var diff = scope.$eval(attrs.tsEndTime).diff(m);
+                    duration = moment.duration(diff, "milliseconds").format("d[d] hh:mm:ss");
                 }
                 if (duration) {
                     text += " for " + duration;
@@ -410,7 +413,6 @@ bosunApp.directive("tsTime", function () {
                 }
                 else {
                     var el = document.createElement('a');
-                    var m = moment(v).utc();
                     el.innerText = text;
                     el.href = 'http://www.timeanddate.com/worldclock/converted.html?iso=';
                     el.href += m.format('YYYYMMDDTHHmm');
@@ -1412,7 +1414,6 @@ bosunControllers.controller('HistoryCtrl', ['$scope', '$http', '$location', '$ro
                 else {
                     h.EndTime = moment.utc();
                 }
-                h.Duration = h.EndTime.diff(h.Time);
             });
             selected_alerts[ak] = {
                 History: v.History.reverse()

@@ -62,8 +62,6 @@ interface Duration {
 
     toISOString(): string;
 
-    format(template?: any, precision?: any, settings?: any): any;
-
 }
 
 interface Moment {
