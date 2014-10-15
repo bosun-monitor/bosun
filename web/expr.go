@@ -164,7 +164,6 @@ type ruleResult struct {
 }
 
 func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	const tsdbFormat = "2006/01/02-15:04"
 	var from, to time.Time
 	var err error
 	if f := r.FormValue("from"); len(f) > 0 {
