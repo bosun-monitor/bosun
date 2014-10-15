@@ -74,13 +74,14 @@ func (s *Schedule) sendNotifications() {
 	for n, states := range s.notifications {
 		ustates := make(States)
 		for _, st := range states {
+			ak := st.AlertKey()
 			if st.Last().Status == StUnknown {
-				ustates[st.AlertKey()] = st
+				ustates[ak] = st
 			} else {
 				s.notify(st, n)
 			}
 			if n.Next != nil {
-				s.AddNotification(st.AlertKey(), n, time.Now().UTC())
+				s.AddNotification(ak, n, time.Now().UTC())
 			}
 		}
 		for name, group := range ustates.GroupSets() {
