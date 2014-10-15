@@ -80,6 +80,7 @@ func (s *Schedule) CheckNotifications() time.Duration {
 
 func (s *Schedule) sendNotifications() {
 	if s.Conf.Quiet {
+		log.Println("quiet mode prevented", len(s.notifications), "notifications")
 		return
 	}
 	for n, states := range s.notifications {
