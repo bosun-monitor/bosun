@@ -3,6 +3,7 @@
 /// <reference path="angular-sanitize.d.ts" />
 /// <reference path="bootstrap.d.ts" />
 /// <reference path="moment.d.ts" />
+/// <reference path="moment-duration-format.d.ts" />
 /// <reference path="d3.d.ts" />
 /// <reference path="underscore.d.ts" />
 var bosunApp = angular.module('bosunApp', [
@@ -389,19 +390,30 @@ bosunApp.directive('tsComputations', function () {
 var timeFormat = 'YYYY/MM/DD-HH:mm:ss';
 function fmtTime(v) {
     var m = moment(v).utc();
-    return m.format(timeFormat) + ' (' + m.fromNow() + ')';
+    var now = moment().utc();
+    var msdiff = now.diff(m);
+    var diff = moment.duration(msdiff, "milliseconds").format("d[d] hh:mm:ss");
+    return m.format(timeFormat) + ' (' + diff + ' ago)';
 }
 bosunApp.directive("tsTime", function () {
     return {
         link: function (scope, elem, attrs) {
             scope.$watch(attrs.tsTime, function (v) {
+                var m = moment(v).utc();
                 var text = fmtTime(v);
+                var duration;
+                if (attrs.tsEndTime) {
+                    var diff = scope.$eval(attrs.tsEndTime).diff(m);
+                    duration = moment.duration(diff, "milliseconds").format("d[d] hh:mm:ss");
+                }
+                if (duration) {
+                    text += " for " + duration;
+                }
                 if (attrs.noLink) {
                     elem.text(text);
                 }
                 else {
                     var el = document.createElement('a');
-                    var m = moment(v).utc();
                     el.innerText = text;
                     el.href = 'http://www.timeanddate.com/worldclock/converted.html?iso=';
                     el.href += m.format('YYYYMMDDTHHmm');
