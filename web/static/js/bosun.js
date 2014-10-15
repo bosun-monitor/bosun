@@ -1734,7 +1734,6 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
         else {
             intervals = +$scope.intervals;
         }
-        console.log('GET URL');
         var url = '/api/rule?' + 'alert=' + encodeURIComponent($scope.alert) + '&template=' + encodeURIComponent($scope.template) + '&from=' + encodeURIComponent(from.format(tsdbFormat)) + '&to=' + encodeURIComponent(to.format(tsdbFormat)) + '&intervals=' + encodeURIComponent(intervals) + '&email=' + encodeURIComponent($scope.email);
         $http.get(url).success(function (data) {
             $scope.sets = data.Sets;

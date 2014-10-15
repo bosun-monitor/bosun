@@ -117,7 +117,6 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
 		} else {
 			intervals = +$scope.intervals;
 		}
-		console.log('GET URL');
 		var url = '/api/rule?' +
 			'alert=' + encodeURIComponent($scope.alert) +
 			'&template=' + encodeURIComponent($scope.template) +
