@@ -11,15 +11,14 @@ import (
 
 // Poll dispatches notification checks when needed.
 func (s *Schedule) Poll() {
-	var timeout time.Duration = time.Hour
 	for {
+		timeout := s.CheckNotifications()
+		s.Save()
 		// Wait for one of these two.
 		select {
 		case <-time.After(timeout):
 		case <-s.nc:
 		}
-		timeout = s.CheckNotifications()
-		s.Save()
 	}
 }
 
@@ -35,7 +34,6 @@ func (s *Schedule) Notify(st *State, n *conf.Notification) {
 func (s *Schedule) CheckNotifications() time.Duration {
 	s.Lock()
 	defer s.Unlock()
-	timeout := time.Hour
 	notifications := s.Notifications
 	s.Notifications = nil
 	for ak, ns := range notifications {
@@ -46,9 +44,6 @@ func (s *Schedule) CheckNotifications() time.Duration {
 			}
 			remaining := t.Add(n.Timeout).Sub(time.Now())
 			if remaining > 0 {
-				if remaining < timeout {
-					timeout = remaining
-				}
 				s.AddNotification(ak, n, t)
 				continue
 			}
@@ -57,13 +52,24 @@ func (s *Schedule) CheckNotifications() time.Duration {
 				continue
 			}
 			s.Notify(st, n)
-			if n.Timeout < timeout {
-				timeout = n.Timeout
-			}
 		}
 	}
 	s.sendNotifications()
 	s.notifications = nil
+	timeout := time.Hour
+	now := time.Now()
+	for _, ns := range s.Notifications {
+		for name, t := range ns {
+			n, present := s.Conf.Notifications[name]
+			if !present {
+				continue
+			}
+			remaining := t.Add(n.Timeout).Sub(now)
+			if remaining < timeout {
+				timeout = remaining
+			}
+		}
+	}
 	return timeout
 }
 
