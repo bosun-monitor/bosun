@@ -35,7 +35,6 @@ bosunControllers.controller('HistoryCtrl', ['$scope', '$http', '$location', '$ro
 					} else {
 						h.EndTime = moment.utc();
 					}
-					h.Duration = h.EndTime.diff(h.Time);
 				});
 				selected_alerts[ak] = {
 					History: v.History.reverse(),

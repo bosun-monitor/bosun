@@ -3,6 +3,7 @@
 /// <reference path="angular-sanitize.d.ts" />
 /// <reference path="bootstrap.d.ts" />
 /// <reference path="moment.d.ts" />
+/// <reference path="moment-duration-format.d.ts" />
 /// <reference path="d3.d.ts" />
 /// <reference path="underscore.d.ts" />
 
