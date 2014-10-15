@@ -32,11 +32,16 @@ func (s *Schedule) Notify(st *State, n *conf.Notification) {
 // CheckNotifications processes past notification events. It returns the
 // duration until the soonest notification triggers.
 func (s *Schedule) CheckNotifications() time.Duration {
+	silenced := s.Silenced()
 	s.Lock()
 	defer s.Unlock()
 	notifications := s.Notifications
 	s.Notifications = nil
 	for ak, ns := range notifications {
+		if _, present := silenced[ak]; present {
+			log.Println("silencing", ak)
+			continue
+		}
 		for name, t := range ns {
 			n, present := s.Conf.Notifications[name]
 			if !present {

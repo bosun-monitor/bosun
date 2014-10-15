@@ -47,7 +47,6 @@ func (s *Schedule) Check(T miniprofiler.Timer, start time.Time) {
 // RunHistory processes an event history and trisggers notifications if needed.
 func (s *Schedule) RunHistory(r RunHistory) {
 	checkNotify := false
-	silenced := s.Silenced()
 	s.Lock()
 	defer s.Unlock()
 	for ak, event := range r {
@@ -77,9 +76,6 @@ func (s *Schedule) RunHistory(r RunHistory) {
 		}
 		notifyCurrent := func() {
 			state.NeedAck = true
-			if _, present := silenced[ak]; present {
-				return
-			}
 			switch event.Status {
 			case StCritical, StUnknown:
 				notify(a.CritNotification)
