@@ -3,7 +3,6 @@ package sched
 import (
 	"crypto/sha1"
 	"fmt"
-	"sort"
 	"time"
 
 	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/opentsdb"
@@ -66,7 +65,7 @@ func (s *Schedule) Silenced() map[expr.AlertKey]time.Time {
 	return aks
 }
 
-func (s *Schedule) AddSilence(start, end time.Time, alert, tagList string, confirm bool, edit string) (expr.AlertKeys, error) {
+func (s *Schedule) AddSilence(start, end time.Time, alert, tagList string, confirm bool, edit string) (map[expr.AlertKey]bool, error) {
 	if start.IsZero() || end.IsZero() {
 		return nil, fmt.Errorf("both start and end must be specified")
 	}
@@ -109,13 +108,12 @@ func (s *Schedule) AddSilence(start, end time.Time, alert, tagList string, confi
 		s.Save()
 		return nil, nil
 	}
-	aks := make(expr.AlertKeys, 0)
+	aks := make(map[expr.AlertKey]bool)
 	for ak, st := range s.status {
 		if si.Matches(ak.Name(), st.Group) {
-			aks = append(aks, ak)
+			aks[ak] = s.status[ak].IsActive()
 		}
 	}
-	sort.Sort(aks)
 	return aks, nil
 }
 
