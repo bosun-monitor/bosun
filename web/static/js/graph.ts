@@ -145,6 +145,7 @@ interface IGraphScope extends ng.IScope {
 	animate: () => any;
 	stop: () => any;
 	canAuto: boolean;
+	y_labels: string[];
 }
 
 bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route', '$timeout', function($scope: IGraphScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService, $timeout: ng.ITimeoutService) {
@@ -351,6 +352,7 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 					$scope.warning = '';
 				}
 				$scope.queries = data.Queries;
+				$scope.y_labels = data.YLabels;
 				$scope.running = '';
 				$scope.error = '';
 				var u = $location.absUrl();

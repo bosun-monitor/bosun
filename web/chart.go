@@ -66,9 +66,11 @@ func Graph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 	if s, ok := oreq.End.(string); ok && strings.Contains(s, "-ago") {
 		end = strings.TrimSuffix(s, "-ago")
 	}
+	var metrics []string
 	for i, q := range oreq.Queries {
 		if ar[i] {
 			ms := schedule.GetMetadata(q.Metric, nil)
+			metrics = append(metrics, q.Metric)
 			q.Rate = true
 			q.RateOptions = opentsdb.RateOptions{
 				Counter:    true,
@@ -132,12 +134,25 @@ func Graph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 		s.End()
 		return nil, nil
 	}
+	var y_labels []string
+	for _, m := range metrics {
+		ms := schedule.GetMetadata(m, nil)
+		for _, md := range ms {
+			if md.Name == "unit" {
+				if v, ok := md.Value.(string); ok {
+					y_labels = append(y_labels, v)
+				}
+			}
+		}
+	}
 	return struct {
 		Queries []string
 		Series  []*chartSeries
+		YLabels []string
 	}{
 		queries,
 		cs,
+		y_labels,
 	}, nil
 }
 
