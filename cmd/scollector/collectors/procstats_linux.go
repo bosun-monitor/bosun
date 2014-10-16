@@ -66,27 +66,28 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 	}); err != nil {
 		Error = err
 	}
-	Add(&md, osMemTotal, int(mem["MemTotal"])*1024, nil, metadata.Unknown, metadata.None, "")
-	Add(&md, osMemFree, int(mem["MemFree"])*1024, nil, metadata.Unknown, metadata.None, "")
-	Add(&md, osMemUsed, (int(mem["MemTotal"])-(int(mem["MemFree"])+int(mem["Buffers"])+int(mem["Cached"])))*1024, nil, metadata.Unknown, metadata.None, "")
+	Add(&md, osMemTotal, int(mem["MemTotal"])*1024, nil, metadata.Gauge, metadata.Bytes, "")
+	Add(&md, osMemFree, int(mem["MemFree"])*1024, nil, metadata.Gauge, metadata.Bytes, "")
+	Add(&md, osMemUsed, (int(mem["MemTotal"])-(int(mem["MemFree"])+int(mem["Buffers"])+int(mem["Cached"])))*1024, nil, metadata.Gauge, metadata.Bytes, osMemUsedDesc)
 	if mem["MemTotal"] != 0 {
-		Add(&md, osMemPctFree, (mem["MemFree"]+mem["Buffers"]+mem["Cached"])/mem["MemTotal"]*100, nil, metadata.Unknown, metadata.None, "")
+		Add(&md, osMemPctFree, (mem["MemFree"]+mem["Buffers"]+mem["Cached"])/mem["MemTotal"]*100, nil, metadata.Gauge, metadata.Pct,
+			osMemFreeDesc)
 	}
-
 	if err := readLine("/proc/vmstat", func(s string) error {
 		m := vmstatRE.FindStringSubmatch(s)
 		if m == nil {
 			return nil
 		}
-
 		switch m[1] {
 		case "pgpgin", "pgpgout", "pswpin", "pswpout", "pgfault", "pgmajfault":
 			mio := inoutRE.FindStringSubmatch(m[1])
 			if mio != nil {
-				Add(&md, "linux.mem."+mio[1], m[2], opentsdb.TagSet{"direction": mio[2]}, metadata.Unknown, metadata.None, "")
+				Add(&md, "linux.mem."+mio[1], m[2], opentsdb.TagSet{"direction": mio[2]}, metadata.Counter, metadata.None, "")
 			} else {
-				Add(&md, "linux.mem."+m[1], m[2], nil, metadata.Unknown, metadata.None, "")
+				Add(&md, "linux.mem."+m[1], m[2], nil, metadata.Counter, metadata.None, "")
 			}
+		default:
+			Add(&md, "linux.mem."+m[1], m[2], nil, metadata.Counter, metadata.None, "")
 		}
 		return nil
 	}); err != nil {
@@ -94,6 +95,18 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 	}
 	num_cores := 0
 	var t_util float64
+	cpu_stat_desc := map[string]string{
+		"user":       "Normal processes executing in user mode.",
+		"nice":       "Niced processes executing in user mode.",
+		"system":     "Processes executing in kernel mode.",
+		"idle":       "Twiddling thumbs.",
+		"iowait":     "Waiting for I/O to complete.",
+		"irq":        "Servicing interrupts.",
+		"softirq":    "Servicing soft irqs.",
+		"steal":      "Involuntary wait.",
+		"guest":      "Running a guest vm.",
+		"guest_nice": "Running a niced guest vm.",
+	}
 	if err := readLine("/proc/stat", func(s string) error {
 		m := statRE.FindStringSubmatch(s)
 		if m == nil {
@@ -119,7 +132,7 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 				if tag_cpu != "" {
 					tags["cpu"] = tag_cpu
 				}
-				Add(&md, "linux.cpu"+metric_percpu, value, tags, metadata.Unknown, metadata.None, "")
+				Add(&md, "linux.cpu"+metric_percpu, value, tags, metadata.Counter, metadata.CHz, cpu_stat_desc[CPU_FIELDS[i]])
 			}
 			if metric_percpu == "" {
 				if len(fields) < 3 {
@@ -140,13 +153,14 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 				t_util = user + nice + system
 			}
 		} else if m[1] == "intr" {
-			Add(&md, "linux.intr", strings.Fields(m[2])[0], nil, metadata.Unknown, metadata.None, "")
+			Add(&md, "linux.intr", strings.Fields(m[2])[0], nil, metadata.Counter, metadata.Interupt, "")
 		} else if m[1] == "ctxt" {
-			Add(&md, "linux.ctxt", m[2], nil, metadata.Unknown, metadata.None, "")
+			Add(&md, "linux.ctxt", m[2], nil, metadata.Counter, metadata.ContextSwitch, "")
 		} else if m[1] == "processes" {
-			Add(&md, "linux.processes", m[2], nil, metadata.Unknown, metadata.None, "")
+			Add(&md, "linux.processes", m[2], nil, metadata.Counter, metadata.Process,
+				"The number  of processes and threads created, which includes (but  is not limited  to) those  created by  calls to the  fork() and clone() system calls.")
 		} else if m[1] == "procs_blocked" {
-			Add(&md, "linux.procs_blocked", m[2], nil, metadata.Unknown, metadata.None, "")
+			Add(&md, "linux.procs_blocked", m[2], nil, metadata.Gauge, metadata.Process, "The  number of  processes currently blocked, waiting for I/O to complete.")
 		}
 		return nil
 	}); err != nil {
@@ -160,20 +174,34 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 		if m == nil {
 			return nil
 		}
-		Add(&md, "linux.loadavg_1_min", m[1], nil, metadata.Unknown, metadata.None, "")
-		Add(&md, "linux.loadavg_5_min", m[2], nil, metadata.Unknown, metadata.None, "")
-		Add(&md, "linux.loadavg_15_min", m[3], nil, metadata.Unknown, metadata.None, "")
-		Add(&md, "linux.loadavg_runnable", m[4], nil, metadata.Unknown, metadata.None, "")
-		Add(&md, "linux.loadavg_total_threads", m[5], nil, metadata.Unknown, metadata.None, "")
+		Add(&md, "linux.loadavg_1_min", m[1], nil, metadata.Gauge, metadata.Load, "")
+		Add(&md, "linux.loadavg_5_min", m[2], nil, metadata.Gauge, metadata.Load, "")
+		Add(&md, "linux.loadavg_15_min", m[3], nil, metadata.Gauge, metadata.Load, "")
+		Add(&md, "linux.loadavg_runnable", m[4], nil, metadata.Gauge, metadata.Process, "")
+		Add(&md, "linux.loadavg_total_threads", m[5], nil, metadata.Gauge, metadata.Process, "")
 		return nil
 	}); err != nil {
 		Error = err
 	}
 	if err := readLine("/proc/sys/kernel/random/entropy_avail", func(s string) error {
-		Add(&md, "linux.entropy_avail", strings.TrimSpace(s), nil, metadata.Unknown, metadata.None, "")
+		Add(&md, "linux.entropy_avail", strings.TrimSpace(s), nil, metadata.Gauge, metadata.Entropy, "The remaing amount of entropy available to the system. If it is low or hitting zero processes might be blocked waiting for extropy")
 		return nil
 	}); err != nil {
 		Error = err
+	}
+	irq_type_desc := map[string]string{
+		"NMI": "Non-maskable interrupts.",
+		"LOC": "Local timer interrupts.",
+		"SPU": "Spurious interrupts.",
+		"PMI": "Performance monitoring interrupts.",
+		"IWI": "IRQ work interrupts.",
+		"RES": "Rescheduling interrupts.",
+		"CAL": "Funcation call interupts.",
+		"TLB": "TLB (translation lookaside buffer) shootdowns.",
+		"TRM": "Thermal event interrupts.",
+		"THR": "Threshold APIC interrupts.",
+		"MCE": "Machine check exceptions.",
+		"MCP": "Machine Check polls.",
 	}
 	num_cpus := 0
 	if err := readLine("/proc/interrupts", func(s string) error {
@@ -206,7 +234,7 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 				return fmt.Errorf("interrupts: unexpected value: %v", val)
 				break
 			}
-			Add(&md, "linux.interrupts", val, opentsdb.TagSet{"type": irq_type, "cpu": strconv.Itoa(i)}, metadata.Unknown, metadata.None, "")
+			Add(&md, "linux.interrupts", val, opentsdb.TagSet{"type": irq_type, "cpu": strconv.Itoa(i)}, metadata.Gauge, metadata.Interupt, irq_type_desc[irq_type])
 		}
 		return nil
 	}); err != nil {
@@ -219,38 +247,38 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 			if len(cols) < 3 {
 				return fmt.Errorf("sockstat: error parsing sockets line")
 			}
-			Add(&md, "linux.net.sockets.used", cols[2], nil, metadata.Unknown, metadata.None, "")
+			Add(&md, "linux.net.sockets.used", cols[2], nil, metadata.Gauge, metadata.Socket, "")
 		case "TCP:":
 			if len(cols) < 11 {
 				return fmt.Errorf("sockstat: error parsing tcp line")
 			}
-			Add(&md, "linux.net.sockets.tcp_in_use", cols[2], nil, metadata.Unknown, metadata.None, "")
-			Add(&md, "linux.net.sockets.tcp_orphaned", cols[4], nil, metadata.Unknown, metadata.None, "")
-			Add(&md, "linux.net.sockets.tcp_time_wait", cols[6], nil, metadata.Unknown, metadata.None, "")
-			Add(&md, "linux.net.sockets.tcp_allocated", cols[8], nil, metadata.Unknown, metadata.None, "")
-			Add(&md, "linux.net.sockets.tcp_mem", cols[10], nil, metadata.Unknown, metadata.None, "")
+			Add(&md, "linux.net.sockets.tcp_in_use", cols[2], nil, metadata.Gauge, metadata.Socket, "")
+			Add(&md, "linux.net.sockets.tcp_orphaned", cols[4], nil, metadata.Gauge, metadata.Socket, "")
+			Add(&md, "linux.net.sockets.tcp_time_wait", cols[6], nil, metadata.Gauge, metadata.Socket, "")
+			Add(&md, "linux.net.sockets.tcp_allocated", cols[8], nil, metadata.Gauge, metadata.None, "")
+			Add(&md, "linux.net.sockets.tcp_mem", cols[10], nil, metadata.Gauge, metadata.None, "")
 		case "UDP:":
 			if len(cols) < 5 {
 				return fmt.Errorf("sockstat: error parsing udp line")
 			}
-			Add(&md, "linux.net.sockets.udp_in_use", cols[2], nil, metadata.Unknown, metadata.None, "")
-			Add(&md, "linux.net.sockets.udp_mem", cols[4], nil, metadata.Unknown, metadata.None, "")
+			Add(&md, "linux.net.sockets.udp_in_use", cols[2], nil, metadata.Gauge, metadata.Socket, "")
+			Add(&md, "linux.net.sockets.udp_mem", cols[4], nil, metadata.Gauge, metadata.Page, "")
 		case "UDPLITE:":
 			if len(cols) < 3 {
 				return fmt.Errorf("sockstat: error parsing udplite line")
 			}
-			Add(&md, "linux.net.sockets.udplite_in_use", cols[2], nil, metadata.Unknown, metadata.None, "")
+			Add(&md, "linux.net.sockets.udplite_in_use", cols[2], nil, metadata.Gauge, metadata.Socket, "")
 		case "RAW:":
 			if len(cols) < 3 {
 				return fmt.Errorf("sockstat: error parsing raw line")
 			}
-			Add(&md, "linux.net.sockets.raw_in_use", cols[2], nil, metadata.Unknown, metadata.None, "")
+			Add(&md, "linux.net.sockets.raw_in_use", cols[2], nil, metadata.Gauge, metadata.Socket, "")
 		case "FRAG:":
 			if len(cols) < 5 {
 				return fmt.Errorf("sockstat: error parsing frag line")
 			}
-			Add(&md, "linux.net.sockets.frag_in_use", cols[2], nil, metadata.Unknown, metadata.None, "")
-			Add(&md, "linux.net.sockets.frag_mem", cols[4], nil, metadata.Unknown, metadata.None, "")
+			Add(&md, "linux.net.sockets.frag_in_use", cols[2], nil, metadata.Gauge, metadata.Socket, "")
+			Add(&md, "linux.net.sockets.frag_mem", cols[4], nil, metadata.Gauge, metadata.Bytes, "")
 		}
 		return nil
 	}); err != nil {
@@ -268,9 +296,9 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 			}
 			root := strings.ToLower(strings.TrimSuffix(headers[0], "Ext:"))
 			for i, v := range cols[1:] {
-				i += 1
+				i++
 				m := "linux.net.stat." + root + "." + strings.TrimPrefix(strings.ToLower(headers[i]), "tcp")
-				Add(&md, m, v, nil, metadata.Unknown, metadata.None, "")
+				Add(&md, m, v, nil, metadata.Gauge, metadata.None, "")
 			}
 		}
 		ln += 1

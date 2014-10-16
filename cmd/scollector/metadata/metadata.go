@@ -35,12 +35,20 @@ const (
 	C                   = "C" // Celsius
 	Count               = ""
 	Event               = ""
-	MHz                 = "MHz"     // MegaHertz
-	Ok                  = "ok"      // "OK" or not status, 0 = ok, 1 = not ok
+	Entropy             = "entropy"
+	CHz                 = "CentiHertz"
+	ContextSwitch       = "context switches"
+	Interupt            = "interupts"
+	Load                = "load"
+	MHz                 = "MHz" // MegaHertz
+	Ok                  = "ok"  // "OK" or not status, 0 = ok, 1 = not ok
+	Page                = "pages"
 	Pct                 = "percent" // Range of 0-100.
 	PerSecond           = "per second"
+	Process             = "processes"
 	RPM                 = "RPM" // Rotations per minute.
 	Second              = "seconds"
+	Socket              = "sockets"
 	StatusCode          = "status code"
 	MilliSecond         = "milliseconds"
 	V                   = "V" // Volts
