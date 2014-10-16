@@ -326,6 +326,13 @@ func (s *Schedule) Init(c *conf.Conf) {
 	s.status = make(States)
 	s.cache = opentsdb.NewCache(s.Conf.TsdbHost, s.Conf.ResponseLimit)
 	s.Search = search.NewSearch()
+	for k, v := range s.Conf.Alerts {
+		expr.Alerts[k] = expr.Alert{
+			Warn:       v.Warn,
+			Crit:       v.Crit,
+			UnjoinedOK: v.UnjoinedOK,
+		}
+	}
 }
 
 func (s *Schedule) Load(c *conf.Conf) {
