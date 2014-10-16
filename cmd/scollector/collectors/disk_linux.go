@@ -128,7 +128,9 @@ func c_dfstat_blocks_linux() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	err := util.ReadCommand(func(line string) error {
 		fields := strings.Fields(line)
-		if line == "" || len(fields) < 6 || !IsDigit(fields[2]) {
+		// TODO: support mount points with spaces in them. They mess up the field order
+		// currently due to df's columnar output.
+		if len(fields) != 6 || !IsDigit(fields[2]) {
 			return nil
 		}
 		fs := fields[0]
@@ -162,7 +164,7 @@ func c_dfstat_inodes_linux() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	err := util.ReadCommand(func(line string) error {
 		fields := strings.Fields(line)
-		if len(fields) < 6 || !IsDigit(fields[2]) {
+		if len(fields) != 6 || !IsDigit(fields[2]) {
 			return nil
 		}
 		mount := fields[5]
