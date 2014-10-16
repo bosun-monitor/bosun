@@ -67,6 +67,8 @@ type nbJob struct {
 	Fileslastwritten  string
 }
 
+var timeType = reflect.TypeOf(time.Time{})
+
 func nbUnmarhsall(reader *csv.Reader, v interface{}) error {
 	record, err := reader.Read()
 	if err != nil {
@@ -78,10 +80,10 @@ func nbUnmarhsall(reader *csv.Reader, v interface{}) error {
 	s := reflect.ValueOf(v).Elem()
 	for i := 0; i < s.NumField(); i++ {
 		f := s.Field(i)
-		switch f.Type().String() {
-		case "string":
+		switch f.Kind() {
+		case reflect.String:
 			f.SetString(record[i])
-		case "int":
+		case reflect.Int:
 			var ival int64
 			if record[i] == "" {
 				continue
@@ -91,15 +93,20 @@ func nbUnmarhsall(reader *csv.Reader, v interface{}) error {
 				return err
 			}
 			f.SetInt(ival)
-		case "time.Time":
-			ival, err := strconv.ParseInt(record[i], 10, 64)
-			if err != nil {
-				return err
+		case reflect.Struct:
+			switch f.Type() {
+			case timeType:
+				ival, err := strconv.ParseInt(record[i], 10, 64)
+				if err != nil {
+					return err
+				}
+				t := time.Unix(ival, 0)
+				f.Set(reflect.ValueOf(t))
+			default:
+				return fmt.Errorf("unsupported type: %s", f.Type())
 			}
-			t := time.Unix(ival, 0)
-			f.Set(reflect.ValueOf(t))
 		default:
-			return fmt.Errorf("unsupported type: %s", f.Type().String())
+			return fmt.Errorf("unsupported type: %s", f.Type())
 		}
 	}
 	return nil
