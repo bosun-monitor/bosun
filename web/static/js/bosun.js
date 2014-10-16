@@ -915,6 +915,9 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function ($window, fmtfi
                 }
                 svg.select('.x.axis').transition().call(xAxis);
                 svg.select('.y.axis').transition().call(yAxis);
+                svg.append('text').attr("class", "ylabel").attr("transform", "rotate(-90)").attr("y", -margin.left).attr("x", -(height / 2)).attr("dy", "1em").text(scope.data.map(function (v) {
+                    return v.Unit;
+                }).join("; "));
                 var queries = paths.selectAll('.line').data(scope.data, function (d) {
                     return d.Name;
                 });
