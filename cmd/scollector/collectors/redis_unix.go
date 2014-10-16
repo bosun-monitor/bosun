@@ -55,13 +55,14 @@ var redisFields = map[string]bool{
 	"rdb_last_bgsave_status":       true,
 	"rdb_last_bgsave_time_sec":     true,
 	"rdb_current_bgsave_time_sec":  true,
-	"total_commands_processed":     true,
-	"total_connections_received":   true,
-	"uptime_in_seconds":            true,
-	"used_cpu_sys":                 true,
-	"used_cpu_user":                true,
-	"used_memory":                  true,
-	"used_memory_rss":              true,
+	"role": true,
+	"total_commands_processed":   true,
+	"total_connections_received": true,
+	"uptime_in_seconds":          true,
+	"used_cpu_sys":               true,
+	"used_cpu_user":              true,
+	"used_memory":                true,
+	"used_memory_rss":            true,
 }
 
 // For master_link_status.
@@ -73,6 +74,14 @@ var redisMlsMap = map[string]string{
 // For aof_last_bgrewrite_status, rdb_last_bgsave_status.
 func status(s string) string {
 	if s == "ok" {
+		return "1"
+	}
+	return "0"
+}
+
+// For role which translates to is_slave
+func slave(s string) string {
+	if s == "slave" {
 		return "1"
 	}
 	return "0"
@@ -183,6 +192,10 @@ func c_redis() (opentsdb.MultiDataPoint, error) {
 			}
 			if sp[0] == "master_link_status" {
 				Add(&md, "redis."+sp[0], redisMlsMap[sp[1]], tags, metadata.Unknown, metadata.None, "")
+				continue
+			}
+			if sp[0] == "role" {
+				Add(&md, "redis.is_slave", slave(sp[1]), tags, metadata.Gauge, metadata.Bool, "")
 				continue
 			}
 			if sp[0] == "aof_last_bgrewrite_status" || sp[0] == "rdb_last_bgsave_status" {

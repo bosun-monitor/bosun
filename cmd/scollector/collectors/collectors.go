@@ -12,7 +12,6 @@ import (
 	"github.com/StackExchange/scollector/metadata"
 	"github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/scollector/util"
-	"github.com/StackExchange/slog"
 )
 
 var collectors []Collector
@@ -24,22 +23,24 @@ type Collector interface {
 }
 
 const (
-	osCPU          = "os.cpu"
-	osDiskFree     = "os.disk.fs.space_free"
-	osDiskPctFree  = "os.disk.fs.percent_free"
-	osDiskTotal    = "os.disk.fs.space_total"
-	osDiskUsed     = "os.disk.fs.space_used"
-	osMemFree      = "os.mem.free"
-	osMemPctFree   = "os.mem.percent_free"
-	osMemTotal     = "os.mem.total"
-	osMemUsed      = "os.mem.used"
-	osNetBroadcast = "os.net.packets_broadcast"
-	osNetBytes     = "os.net.bytes"
-	osNetDropped   = "os.net.dropped"
-	osNetErrors    = "os.net.errs"
-	osNetPackets   = "os.net.packets"
-	osNetUnicast   = "os.net.packets_unicast"
-	osNetMulticast = "os.net.packets_multicast"
+	osCPU              = "os.cpu"
+	osDiskFree         = "os.disk.fs.space_free"
+	osDiskPctFree      = "os.disk.fs.percent_free"
+	osDiskTotal        = "os.disk.fs.space_total"
+	osDiskUsed         = "os.disk.fs.space_used"
+	osMemFree          = "os.mem.free"
+	osMemPctFree       = "os.mem.percent_free"
+	osMemTotal         = "os.mem.total"
+	osMemUsed          = "os.mem.used"
+	osNetBroadcast     = "os.net.packets_broadcast"
+	osNetBytes         = "os.net.bytes"
+	osNetDropped       = "os.net.dropped"
+	osNetErrors        = "os.net.errs"
+	osNetPackets       = "os.net.packets"
+	osNetUnicast       = "os.net.packets_unicast"
+	osNetMulticast     = "os.net.packets_multicast"
+	osSystemUptime     = "os.system.uptime"
+	osSystemUptimeDesc = "Seconds since last reboot."
 )
 
 var (
@@ -140,10 +141,7 @@ func readLine(fname string, line func(string) error) error {
 			return err
 		}
 	}
-	if err := scanner.Err(); err != nil {
-		slog.Infof("%v: %v\n", fname, err)
-	}
-	return nil
+	return scanner.Err()
 }
 
 // IsDigit returns true if s consists of decimal digits.

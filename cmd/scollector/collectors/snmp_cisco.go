@@ -2,6 +2,7 @@ package collectors
 
 import (
 	"fmt"
+	"math/big"
 	"time"
 
 	"github.com/StackExchange/scollector/metadata"
@@ -28,11 +29,14 @@ func SNMPCisco(community, host string) {
 
 func c_snmp_cisco(community, host string) (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
-	if v, err := snmp_oid(host, community, ciscoCPU); err != nil {
-		return nil, err
+	var v *big.Int
+	var err error
+	if v, err = snmp_oid(host, community, ciscoCPU); err == nil {
+	} else if v, err = snmp_oid(host, community, ciscoCPU+".1"); err == nil {
 	} else {
-		Add(&md, "cisco.cpu", v, opentsdb.TagSet{"host": host}, metadata.Unknown, metadata.None, "")
+		return nil, err
 	}
+	Add(&md, "cisco.cpu", v.String(), opentsdb.TagSet{"host": host}, metadata.Gauge, metadata.Pct, "The overall CPU busy percentage in the last five-second period.")
 	names, err := snmp_subtree(host, community, ciscoMemName)
 	if err != nil {
 		return nil, err
