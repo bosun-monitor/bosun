@@ -73,7 +73,7 @@ func nbUnmarhsall(reader *csv.Reader, v interface{}) error {
 		return err
 	}
 	if len(record) < 32 {
-		return fmt.Errorf("Record to short, expected at least 32 fields, got %v", len(record))
+		return fmt.Errorf("record too short, expected at least 32 fields, got %v", len(record))
 	}
 	s := reflect.ValueOf(v).Elem()
 	for i := 0; i < s.NumField(); i++ {
@@ -83,11 +83,12 @@ func nbUnmarhsall(reader *csv.Reader, v interface{}) error {
 			f.SetString(record[i])
 		case "int":
 			var ival int64
-			if record[i] != "" {
-				ival, err = strconv.ParseInt(record[i], 10, 64)
-				if err != nil {
-					return err
-				}
+			if record[i] == "" {
+				continue
+			}
+			ival, err = strconv.ParseInt(record[i], 10, 64)
+			if err != nil {
+				return err
 			}
 			f.SetInt(ival)
 		case "time.Time":
