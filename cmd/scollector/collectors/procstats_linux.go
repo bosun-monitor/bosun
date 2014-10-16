@@ -68,15 +68,11 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 	}
 	Add(&md, osMemTotal, int(mem["MemTotal"])*1024, nil, metadata.Gauge, metadata.Bytes, "")
 	Add(&md, osMemFree, int(mem["MemFree"])*1024, nil, metadata.Gauge, metadata.Bytes, "")
-	Add(&md, osMemUsed, (int(mem["MemTotal"])-(int(mem["MemFree"])+int(mem["Buffers"])+int(mem["Cached"])))*1024, nil, metadata.Gauge, metadata.Bytes,
-		"Total Memory - Free Memory+Cached+Buffers")
+	Add(&md, osMemUsed, (int(mem["MemTotal"])-(int(mem["MemFree"])+int(mem["Buffers"])+int(mem["Cached"])))*1024, nil, metadata.Gauge, metadata.Bytes, osMemUsedDesc)
 	if mem["MemTotal"] != 0 {
 		Add(&md, osMemPctFree, (mem["MemFree"]+mem["Buffers"]+mem["Cached"])/mem["MemTotal"]*100, nil, metadata.Gauge, metadata.Pct,
-			"Percent of Memory Free + Cached _ Buffers")
+			osMemFreeDesc)
 	}
-	// vmstat_desc := map[string]string{
-	// 	"pgpgin": "test",
-	// }
 	if err := readLine("/proc/vmstat", func(s string) error {
 		m := vmstatRE.FindStringSubmatch(s)
 		if m == nil {
@@ -100,16 +96,16 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 	num_cores := 0
 	var t_util float64
 	cpu_stat_desc := map[string]string{
-		"user":       "normal processes executing in user mode",
-		"nice":       "niced processes executing in user mode",
-		"system":     "processes executing in kernel mode",
-		"idle":       "twiddling thumbs",
-		"iowait":     "waiting for I/O to complete",
-		"irq":        "servicing interrupts",
-		"softirq":    "servicing soft irqs",
-		"steal":      "involuntary wait",
-		"guest":      "running a guest vm",
-		"guest_nice": "running a niced guest vm",
+		"user":       "Normal processes executing in user mode.",
+		"nice":       "Niced processes executing in user mode.",
+		"system":     "Processes executing in kernel mode.",
+		"idle":       "Twiddling thumbs.",
+		"iowait":     "Waiting for I/O to complete.",
+		"irq":        "Servicing interrupts.",
+		"softirq":    "Servicing soft irqs.",
+		"steal":      "Involuntary wait.",
+		"guest":      "Running a guest vm.",
+		"guest_nice": "Running a niced guest vm.",
 	}
 	if err := readLine("/proc/stat", func(s string) error {
 		m := statRE.FindStringSubmatch(s)
@@ -136,9 +132,7 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 				if tag_cpu != "" {
 					tags["cpu"] = tag_cpu
 				}
-				var desc string
-				desc, _ = cpu_stat_desc[CPU_FIELDS[i]]
-				Add(&md, "linux.cpu"+metric_percpu, value, tags, metadata.Counter, metadata.CHz, desc)
+				Add(&md, "linux.cpu"+metric_percpu, value, tags, metadata.Counter, metadata.CHz, cpu_stat_desc[CPU_FIELDS[i]])
 			}
 			if metric_percpu == "" {
 				if len(fields) < 3 {
@@ -196,18 +190,18 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 		Error = err
 	}
 	irq_type_desc := map[string]string{
-		"NMI": "Non-maskable interrupts",
-		"LOC": "Local timer interrupts",
-		"SPU": "Spurious interrupts",
-		"PMI": "Performance monitoring interrupts",
-		"IWI": "IRQ work interrupts",
-		"RES": "Rescheduling interrupts",
-		"CAL": "Funcation call interupts",
-		"TLB": "TLB (translation lookaside buffer) shootdowns",
-		"TRM": "Thermal event interrupts",
-		"THR": "hreshold APIC interrupts",
-		"MCE": "Machine check exceptions",
-		"MCP": "Machine Check polls",
+		"NMI": "Non-maskable interrupts.",
+		"LOC": "Local timer interrupts.",
+		"SPU": "Spurious interrupts.",
+		"PMI": "Performance monitoring interrupts.",
+		"IWI": "IRQ work interrupts.",
+		"RES": "Rescheduling interrupts.",
+		"CAL": "Funcation call interupts.",
+		"TLB": "TLB (translation lookaside buffer) shootdowns.",
+		"TRM": "Thermal event interrupts.",
+		"THR": "Threshold APIC interrupts.",
+		"MCE": "Machine check exceptions.",
+		"MCP": "Machine Check polls.",
 	}
 	num_cpus := 0
 	if err := readLine("/proc/interrupts", func(s string) error {
@@ -240,9 +234,7 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 				return fmt.Errorf("interrupts: unexpected value: %v", val)
 				break
 			}
-			var desc string
-			desc, _ = irq_type_desc[irq_type]
-			Add(&md, "linux.interrupts", val, opentsdb.TagSet{"type": irq_type, "cpu": strconv.Itoa(i)}, metadata.Gauge, metadata.Interupt, desc)
+			Add(&md, "linux.interrupts", val, opentsdb.TagSet{"type": irq_type, "cpu": strconv.Itoa(i)}, metadata.Gauge, metadata.Interupt, irq_type_desc[irq_type])
 		}
 		return nil
 	}); err != nil {
