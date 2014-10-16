@@ -137,6 +137,48 @@ var builtins = map[string]parse.Func{
 		parse.TYPE_NUMBER,
 		NV,
 	},
+	"eval": {
+		[]parse.FuncType{parse.TYPE_STRING, parse.TYPE_STRING},
+		parse.TYPE_NUMBER,
+		Eval,
+	},
+}
+
+var Alerts = make(map[string]Alert, 0)
+
+type Alert struct {
+	Warn       *Expr
+	Crit       *Expr
+	UnjoinedOK bool
+}
+
+//Which is Crit of Warn, need to think of something better
+func Eval(e *state, T miniprofiler.Timer, name, which string) (results *Results, err error) {
+	now := time.Now()
+	var alert Alert
+	var ok bool
+	alert, ok = Alerts[name]
+	if !ok {
+		return results, fmt.Errorf("no such alert %s", name)
+	}
+	fmt.Println(alert)
+	switch which {
+	case "warn":
+		if alert.Warn == nil {
+			return results, fmt.Errorf("no warn expression for alert %s", name)
+		}
+		e.Expr = alert.Warn
+	case "crit":
+		if alert.Crit == nil {
+			return results, fmt.Errorf("no crit expression for alert %s", name)
+		}
+		e.Expr = alert.Crit
+	default:
+		return results, fmt.Errorf("must be crit or warn")
+	}
+	fmt.Println(fmt.Sprint("Executing Expression %v", e.Expr))
+	results, _, err = e.Execute(e.context, nil, now, 0, alert.UnjoinedOK, e.search, e.lookups, e.squelched)
+	return
 }
 
 func NV(e *state, T miniprofiler.Timer, series *Results, v float64) (results *Results, err error) {
