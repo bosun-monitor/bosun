@@ -352,7 +352,6 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 					$scope.warning = '';
 				}
 				$scope.queries = data.Queries;
-				$scope.y_labels = data.YLabels;
 				$scope.running = '';
 				$scope.error = '';
 				var u = $location.absUrl();
