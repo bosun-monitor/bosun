@@ -61,8 +61,8 @@ bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$ro
 		$scope.error = null;
 		$http.post('/api/silence/set', state)
 			.success((data) => {
-				if (data.length == 0) {
-					data = [{ Name: '(none)' }];
+				if (!data) {
+					data = {'(none)': false};
 				}
 				$scope.testSilences = data;
 			})
@@ -82,15 +82,12 @@ bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$ro
 	$scope.confirm = () => {
 		$scope.error = null;
 		$scope.testSilences = null;
-		state.confirm = "true";
+		state.confirm = 'true';
 		$http.post('/api/silence/set', state)
 			.error((error) => {
 				$scope.error = error;
 			})
-			.finally(() => {
-				$scope.testSilences = null;
-				get();
-			});
+			.finally(get);
 	};
 	$scope.clear = (id: string) => {
 		if (!window.confirm('Clear this silence?')) {
@@ -101,9 +98,7 @@ bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$ro
 			.error((error) => {
 				$scope.error = error;
 			})
-			.finally(() => {
-				get();
-			});
+			.finally(get);
 	};
 	$scope.time = (v: any) => {
 		var m = moment(v).utc();
