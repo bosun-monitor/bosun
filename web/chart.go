@@ -66,17 +66,21 @@ func Graph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 	if s, ok := oreq.End.(string); ok && strings.Contains(s, "-ago") {
 		end = strings.TrimSuffix(s, "-ago")
 	}
-	var metrics []string
+	m_units := make(map[string]string)
 	for i, q := range oreq.Queries {
 		if ar[i] {
 			ms := schedule.GetMetadata(q.Metric, nil)
-			metrics = append(metrics, q.Metric)
 			q.Rate = true
 			q.RateOptions = opentsdb.RateOptions{
 				Counter:    true,
 				ResetValue: 1,
 			}
 			for _, m := range ms {
+				if m.Name == "unit" {
+					if v, ok := m.Value.(string); ok {
+						m_units[q.Metric] = v
+					}
+				}
 				if m.Name == "rate" {
 					switch m.Value {
 					case metadata.Gauge:
@@ -102,7 +106,7 @@ func Graph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 	if err != nil {
 		return nil, err
 	}
-	cs, err := makeChart(tr)
+	cs, err := makeChart(tr, m_units)
 	if err != nil {
 		return nil, err
 	}
@@ -134,25 +138,12 @@ func Graph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 		s.End()
 		return nil, nil
 	}
-	var y_labels []string
-	for _, m := range metrics {
-		ms := schedule.GetMetadata(m, nil)
-		for _, md := range ms {
-			if md.Name == "unit" {
-				if v, ok := md.Value.(string); ok {
-					y_labels = append(y_labels, v)
-				}
-			}
-		}
-	}
 	return struct {
 		Queries []string
 		Series  []*chartSeries
-		YLabels []string
 	}{
 		queries,
 		cs,
-		y_labels,
 	}, nil
 }
 
@@ -199,7 +190,7 @@ func ExprGraph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (in
 	return nil, nil
 }
 
-func makeChart(r opentsdb.ResponseSet) ([]*chartSeries, error) {
+func makeChart(r opentsdb.ResponseSet, m_units map[string]string) ([]*chartSeries, error) {
 	var series []*chartSeries
 	for _, resp := range r {
 		dps := make([][2]float64, 0)
@@ -221,6 +212,7 @@ func makeChart(r opentsdb.ResponseSet) ([]*chartSeries, error) {
 			series = append(series, &chartSeries{
 				Name: name,
 				Data: dps,
+				Unit: m_units[resp.Metric],
 			})
 		}
 	}
@@ -230,4 +222,5 @@ func makeChart(r opentsdb.ResponseSet) ([]*chartSeries, error) {
 type chartSeries struct {
 	Name string
 	Data [][2]float64
+	Unit string
 }

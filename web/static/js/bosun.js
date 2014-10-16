@@ -696,7 +696,6 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function ($window, fmtfi
             data: '=',
             height: '=',
             generator: '=',
-            yLabels: '=',
             brushStart: '=bstart',
             brushEnd: '=bend',
             enableBrush: '@'
@@ -916,7 +915,9 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function ($window, fmtfi
                 }
                 svg.select('.x.axis').transition().call(xAxis);
                 svg.select('.y.axis').transition().call(yAxis);
-                svg.append("text").attr("class", "ylabel").attr("transform", "rotate(-90)").attr("y", 0 - margin.left).attr("x", 0 - (height / 2)).attr("dy", "1em").text(scope.yLabels.join(" :: "));
+                svg.append('text').attr("class", "ylabel").attr("transform", "rotate(-90)").attr("y", -margin.left).attr("x", -(height / 2)).attr("dy", "1em").text(scope.data.map(function (v) {
+                    return v.Unit;
+                }).join(" ; "));
                 var queries = paths.selectAll('.line').data(scope.data, function (d) {
                     return d.Name;
                 });
@@ -1339,7 +1340,6 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
                 $scope.warning = '';
             }
             $scope.queries = data.Queries;
-            $scope.y_labels = data.YLabels;
             $scope.running = '';
             $scope.error = '';
             var u = $location.absUrl();

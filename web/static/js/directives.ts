@@ -380,7 +380,6 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWi
 			data: '=',
 			height: '=',
 			generator: '=',
-			yLabels: '=',
 			brushStart: '=bstart',
 			brushEnd: '=bend',
 			enableBrush: '@',
@@ -637,13 +636,13 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWi
 				svg.select('.y.axis')
 					.transition()
 					.call(yAxis);
-				svg.append("text")
+				svg.append('text')
 					.attr("class", "ylabel")
 					.attr("transform", "rotate(-90)")
-					.attr("y", 0 - margin.left)
-					.attr("x", 0 - (height / 2))
+					.attr("y", -margin.left)
+					.attr("x", - (height / 2))
 					.attr("dy", "1em")
-					.text(scope.yLabels.join(" :: "));
+					.text(scope.data.map(v => { return v.Unit }).join(" ; "));
 				var queries = paths.selectAll('.line')
 					.data(scope.data, (d) => { return d.Name; });
 				switch (scope.generator) {
