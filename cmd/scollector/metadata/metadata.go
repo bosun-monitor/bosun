@@ -30,6 +30,7 @@ const (
 	A                   = "A" // Amps
 	Bool                = "bool"
 	Bytes               = "bytes"
+	KBytes              = "kbytes"
 	BytesPerSecond      = "bytes per second"
 	C                   = "C" // Celsius
 	Count               = ""
@@ -48,6 +49,7 @@ const (
 	RPM                 = "RPM" // Rotations per minute.
 	Second              = "seconds"
 	Socket              = "sockets"
+	StatusCode          = "status code"
 	MilliSecond         = "milliseconds"
 	V                   = "V" // Volts
 	V_10                = "tenth-Volts"
