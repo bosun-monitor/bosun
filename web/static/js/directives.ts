@@ -642,7 +642,7 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWi
 					.attr("y", -margin.left)
 					.attr("x", - (height / 2))
 					.attr("dy", "1em")
-					.text(scope.data.map(v => { return v.Unit }).join(" ; "));
+					.text(scope.data.map(v => { return v.Unit }).join("; "));
 				var queries = paths.selectAll('.line')
 					.data(scope.data, (d) => { return d.Name; });
 				switch (scope.generator) {
