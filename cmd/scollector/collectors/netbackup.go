@@ -27,11 +27,14 @@ func init() {
 // 0=queued, 1=active, 2=wait for retry, 3=done, 4=suspended, 5=incomplete
 
 //NOTE!!
-//This depends on the retention of the job log being greater than the jobs, else things are going to go unkonwn
-//See http://www.symantec.com/connect/forums/netbackup-75-activity-monitor-job-logs
-//In my case I created the two registry entries mentioned in that link (KEEP_JOB_HOURS) and (KEEP_JOBS_SUCCESSFUL_HOURS)
-//I also changed the rentention under "Clean-up" under the master server properties via the Java Admin Console. One of those
-//seems to have worked. This *is* netbackup, so I wish you the best of luck ;-)
+// This depends on the retention of the job log being greater than the jobs,
+// else things are going to go unknown. See
+// http://www.symantec.com/connect/forums/netbackup-75-activity-monitor-job-logs
+// In my case I created the two registry entries mentioned in that link
+// (KEEP_JOB_HOURS) and (KEEP_JOBS_SUCCESSFUL_HOURS). I also changed the
+// rentention under "Clean-up" under the master server properties via the Java
+// Admin Console. One of those seems to have worked. This *is* netbackup, so I
+// wish you the best of luck ;-).
 
 type nbJob struct {
 	Jobid             string
