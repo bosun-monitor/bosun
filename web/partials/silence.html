@@ -21,7 +21,7 @@
 		<label class="col-sm-2 control-label">duration</label>
 		<div class="col-sm-6">
 			<input type="text" class="form-control" placeholder="1h" ng-model="duration" ng-change="change()">
-			<p class="help-block">Specify either end date or <a href="http://golang.org/pkg/time/#ParseDuration">duration</a>.</p>
+			<p class="help-block">Specify either end date or <a href="http://opentsdb.net/docs/build/html/user_guide/query/dates.html#relative">duration</a>.</p>
 		</div>
 	</div>
 	<div class="form-group">
@@ -57,9 +57,9 @@
 	</div>
 	<div class="col-sm-12">
 		<ul class="list-unstyled">
-			<li ng-repeat="silence in testSilences">
-				<span ng-bind="silence.Name + silence.Group"></span>
-				<span class="label label-primary" ng-show="alertActive(silence)">active</span>
+			<li ng-repeat="(silence, active) in testSilences">
+				<span ng-bind="silence"></span>
+				<span class="label label-primary" ng-show="active">active</span>
 			</li>
 		<ul>
 	</div>
