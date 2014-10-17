@@ -177,3 +177,9 @@ func IsAlNum(s string) bool {
 	}
 	return true
 }
+
+func TSys100NStoEpoch(nsec uint64) int64 {
+	nsec -= 116444736000000000
+	seconds := nsec / 1e7
+	return int64(seconds)
+}
