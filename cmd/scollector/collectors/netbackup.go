@@ -140,7 +140,9 @@ func c_netbackup_jobs() (opentsdb.MultiDataPoint, error) {
 			latest[key] = r
 		}
 		return nil
-	}, "bpdbjobs", "-report", "-all_columns"); err != nil {
+	}, "bpdbjobs", "-report", "-all_columns"); err == util.ErrPath {
+		return nil, nil
+	} else if err != nil {
 		return nil, err
 	}
 	now := time.Now()
@@ -199,7 +201,9 @@ func c_netbackup_frequency() (opentsdb.MultiDataPoint, error) {
 			return fmt.Errorf("error parsing frequency: %v", line)
 		}
 		return nil
-	}, "bppllist", "-L", "-allpolicies"); err != nil {
+	}, "bppllist", "-L", "-allpolicies"); err == util.ErrPath {
+		return nil, nil
+	} else if err != nil {
 		return nil, err
 	}
 	return md, nil
