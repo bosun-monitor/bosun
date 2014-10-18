@@ -74,6 +74,10 @@
 				<label class="control-label">Email</label>
 				<input type="email" class="form-control" style="width:20em" ng-model="email">
 			</div>
+			<div class="form-group">
+				<label class="control-label">Template Group</label>
+				<input type="text" class="form-control" style="width:20em" ng-model="template_group" tooltip title="Set an opentsdb group (aka tagset) for the displayed template in the format of k=v,m=o. The first group that is a subset of a result's group is returned. If no results are a subset, then the first alert instance is chosen.">
+			</div>
 		</form>
 	</div>
 </div>

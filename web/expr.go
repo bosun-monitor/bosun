@@ -73,7 +73,7 @@ type Res struct {
 	Key expr.AlertKey
 }
 
-func procRule(t miniprofiler.Timer, c *conf.Conf, a *conf.Alert, now time.Time, summary bool, email string) (*ruleResult, error) {
+func procRule(t miniprofiler.Timer, c *conf.Conf, a *conf.Alert, now time.Time, summary bool, email string, template_group string) (*ruleResult, error) {
 	s := &sched.Schedule{
 		CheckStart: now,
 	}
@@ -115,6 +115,20 @@ func procRule(t miniprofiler.Timer, c *conf.Conf, a *conf.Alert, now time.Time, 
 	if !summary && len(keys) > 0 {
 		instance := s.Status(keys[0])
 		instance.History = []sched.Event{*rh[keys[0]]}
+		if template_group != "" {
+			ts, err := opentsdb.ParseTags(template_group)
+			if err != nil {
+				warning = append(warning, fmt.Sprint("failed to parse group %s", template_group))
+			} else {
+				for _, ak := range keys {
+					if ak.Group().Subset(ts) {
+						instance = s.Status(ak)
+						instance.History = []sched.Event{*rh[ak]}
+						break
+					}
+				}
+			}
+		}
 		if _, err := s.ExecuteBody(body, a, instance, false); err != nil {
 			warning = append(warning, err.Error())
 		}
@@ -234,7 +248,7 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 		for interval := range ch {
 			t.Step(fmt.Sprintf("interval %v", interval), func(t miniprofiler.Timer) {
 				now := from.Add(diff * time.Duration(interval))
-				res, err := procRule(t, c, a, now, interval != 0, r.FormValue("email"))
+				res, err := procRule(t, c, a, now, interval != 0, r.FormValue("email"), r.FormValue("template_group"))
 				resch <- res
 				errch <- err
 			})
