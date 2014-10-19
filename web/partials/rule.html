@@ -15,7 +15,7 @@
 	<div class="col-lg-6">
 		<div class="form-group">
 			<label class="control-label">Alert</label>
-			<select ng-model="selected_alert" ng-change="alert = selected_alert" ng-options="k for (k, v) in alerts" class="form-control">
+			<select ng-model="selected_alert" ng-change="loadAlert(selected_alert)" ng-options="k as k for (k, v) in alerts" class="form-control">
 				<option value="">Load Alert Definition</option>
 			</select>
 		</div>
