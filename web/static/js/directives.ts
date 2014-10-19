@@ -128,11 +128,6 @@ bosunApp.directive('tsTab', () => {
 				if (evt.ctrlKey) {
 					return;
 				}
-				// This is so shift-enter can be caught to run a rule when tsTab is called from
-				// the rule page
-				if (evt.keyCode == 13 && evt.shiftKey) {
-					return;
-				}
 				switch (evt.keyCode) {
 				case 9: // tab
 					evt.preventDefault();

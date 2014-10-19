@@ -79,7 +79,6 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
 	$scope.template = current_template;
 	$scope.shiftEnter = function($event: any) {
 		if ($event.keyCode == 13 && $event.shiftKey) {
-			$event.preventDefault();
 			$scope.test();
 		}
 	}
