@@ -113,20 +113,25 @@ func procRule(t miniprofiler.Timer, c *conf.Conf, a *conf.Alert, now time.Time, 
 	var data interface{}
 	warning := make([]string, 0)
 	if !summary && len(keys) > 0 {
-		instance := s.Status(keys[0])
-		instance.History = []sched.Event{*rh[keys[0]]}
+		var instance *sched.State
 		if template_group != "" {
 			ts, err := opentsdb.ParseTags(template_group)
 			if err != nil {
-				warning = append(warning, fmt.Sprint("failed to parse group %s", template_group))
-			} else {
-				for _, ak := range keys {
-					if ak.Group().Subset(ts) {
-						instance = s.Status(ak)
-						instance.History = []sched.Event{*rh[ak]}
-						break
-					}
+				return nil, fmt.Errorf("failed to parse group %s", template_group)
+			}
+			for _, ak := range keys {
+				if ak.Group().Subset(ts) {
+					instance = s.Status(ak)
+					instance.History = []sched.Event{*rh[ak]}
+					break
 				}
+			}
+		}
+		if instance == nil {
+			instance = s.Status(keys[0])
+			instance.History = []sched.Event{*rh[keys[0]]}
+			if template_group != "" {
+				warning = append(warning, fmt.Sprintf("template group %s was not a subset of any result", template_group))
 			}
 		}
 		if _, err := s.ExecuteBody(body, a, instance, false); err != nil {
