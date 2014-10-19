@@ -398,6 +398,22 @@ func Config(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, schedule.Conf.RawText)
 }
 
+type AlertTemplates struct {
+	*conf.AlertTemplateStrings
+	Assocations map[string]string
+}
+
 func Templates(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	return schedule.Conf.AlertTemplateStrings()
+	m := make(map[string]string)
+	at_strings, err := schedule.Conf.AlertTemplateStrings()
+	if err != nil {
+		return nil, err
+	}
+	for _, a := range schedule.Conf.Alerts {
+		m[a.Name] = a.Template.Name
+	}
+	return &AlertTemplates{
+		at_strings,
+		m,
+	}, nil
 }
