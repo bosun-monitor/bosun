@@ -21,20 +21,22 @@ func c_cpu_windows() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	var used, num uint64
 	for _, v := range dst {
-		used += v.Timestamp_Sys100NS - v.PercentIdleTime
+		ts := TSys100NStoEpoch(v.Timestamp_Sys100NS)
 		num++
-		Add(&md, "win.cpu", v.PercentPrivilegedTime, opentsdb.TagSet{"cpu": v.Name, "type": "privileged"}, metadata.Counter, metadata.Pct, "Percentage of non-idle processor time spent in privileged mode.")
-		Add(&md, "win.cpu", v.PercentInterruptTime, opentsdb.TagSet{"cpu": v.Name, "type": "interrupt"}, metadata.Counter, metadata.Pct, "Percentage of time that the processor spent receiving and servicing hardware interrupts during the sample interval.")
-		Add(&md, "win.cpu", v.PercentUserTime, opentsdb.TagSet{"cpu": v.Name, "type": "user"}, metadata.Counter, metadata.Pct, "Percentage of non-idle processor time spent in user mode.")
-		Add(&md, "win.cpu", v.PercentIdleTime, opentsdb.TagSet{"cpu": v.Name, "type": "idle"}, metadata.Counter, metadata.Pct, "Percentage of time during the sample interval that the processor was idle.")
-		Add(&md, "win.cpu.interrupts", v.InterruptsPersec, opentsdb.TagSet{"cpu": v.Name}, metadata.Counter, metadata.Event, "Average number of hardware interrupts that the processor is receiving and servicing in each second.")
+		//Divide by 1e5 because: 1 seconds / 100 Nanoseconds = 1e7. This is the percent time as a decimal, so divide by two less zeros to make it the same as the result * 100.
+		used += (v.PercentUserTime + v.PercentPrivilegedTime + v.PercentInterruptTime) / 1e5
+		AddTS(&md, "win.cpu", ts, v.PercentPrivilegedTime/1e5, opentsdb.TagSet{"cpu": v.Name, "type": "privileged"}, metadata.Counter, metadata.Pct, "Percentage of non-idle processor time spent in privileged mode.")
+		AddTS(&md, "win.cpu", ts, v.PercentInterruptTime/1e5, opentsdb.TagSet{"cpu": v.Name, "type": "interrupt"}, metadata.Counter, metadata.Pct, "Percentage of time that the processor spent receiving and servicing hardware interrupts during the sample interval.")
+		AddTS(&md, "win.cpu", ts, v.PercentUserTime/1e5, opentsdb.TagSet{"cpu": v.Name, "type": "user"}, metadata.Counter, metadata.Pct, "Percentage of non-idle processor time spent in user mode.")
+		AddTS(&md, "win.cpu", ts, v.PercentIdleTime/1e5, opentsdb.TagSet{"cpu": v.Name, "type": "idle"}, metadata.Counter, metadata.Pct, "Percentage of time during the sample interval that the processor was idle.")
+		AddTS(&md, "win.cpu.interrupts", ts, v.InterruptsPersec/1e5, opentsdb.TagSet{"cpu": v.Name}, metadata.Counter, metadata.Event, "Average number of hardware interrupts that the processor is receiving and servicing in each second.")
 		Add(&md, "win.cpu.dpcs", v.DPCRate, opentsdb.TagSet{"cpu": v.Name}, metadata.Counter, metadata.Event, "Rate at which deferred procedure calls (DPCs) are added to the processor DPC queue between the timer tics of the processor clock.")
-		Add(&md, "win.cpu.time_cstate", v.PercentC1Time, opentsdb.TagSet{"cpu": v.Name, "type": "c1"}, metadata.Counter, metadata.Pct, "Percentage of time that the processor spends in the C1 low-power idle state, which is a subset of the total processor idle time.")
-		Add(&md, "win.cpu.time_cstate", v.PercentC2Time, opentsdb.TagSet{"cpu": v.Name, "type": "c2"}, metadata.Counter, metadata.Pct, "Percentage of time that the processor spends in the C-2 low-power idle state, which is a subset of the total processor idle time.")
-		Add(&md, "win.cpu.time_cstate", v.PercentC3Time, opentsdb.TagSet{"cpu": v.Name, "type": "c3"}, metadata.Counter, metadata.Pct, "Percentage of time that the processor spends in the C3 low-power idle state, which is a subset of the total processor idle time.")
+		AddTS(&md, "win.cpu.time_cstate", ts, v.PercentC1Time/1e5, opentsdb.TagSet{"cpu": v.Name, "type": "c1"}, metadata.Counter, metadata.Pct, "Percentage of time that the processor spends in the C1 low-power idle state, which is a subset of the total processor idle time.")
+		AddTS(&md, "win.cpu.time_cstate", ts, v.PercentC2Time/1e5, opentsdb.TagSet{"cpu": v.Name, "type": "c2"}, metadata.Counter, metadata.Pct, "Percentage of time that the processor spends in the C-2 low-power idle state, which is a subset of the total processor idle time.")
+		AddTS(&md, "win.cpu.time_cstate", ts, v.PercentC3Time/1e5, opentsdb.TagSet{"cpu": v.Name, "type": "c3"}, metadata.Counter, metadata.Pct, "Percentage of time that the processor spends in the C3 low-power idle state, which is a subset of the total processor idle time.")
 	}
 	if num > 0 {
-		cpu := used / 1e5 / num
+		cpu := used / num
 		Add(&md, osCPU, cpu, nil, metadata.Counter, metadata.Pct, "")
 	}
 	return md, nil
