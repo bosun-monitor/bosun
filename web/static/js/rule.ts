@@ -28,6 +28,8 @@ interface IRuleScope extends IBosunScope {
 	show: (v: any) => void;
 	alert_history: any;
 	running: boolean;
+	loadAlert: (k: string) => void;
+	assocations: any;
 }
 
 var tsdbFormat = 'YYYY/MM/DD-HH:mm';
@@ -82,6 +84,12 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
 	$scope.shiftEnter = function($event: any) {
 		if ($event.keyCode == 13 && $event.shiftKey) {
 			$scope.test();
+		}
+	}
+	$scope.loadAlert = function($selected: string) {
+		$scope.alert = $scope.alerts[$selected];
+		if (confirm('Load the associated notification template (will overwrite the current notification tempalte) ?')) {
+			$scope.template = $scope.templates[$scope.assocations[$selected]];
 		}
 	}
 	$scope.test = () => {
@@ -218,6 +226,7 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
 		.success((data) => {
 			$scope.alerts = data.Alerts;
 			$scope.templates = data.Templates;
+			$scope.assocations = data.Assocations;
 		});
 	$scope.test();
 }]);

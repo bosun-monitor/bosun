@@ -1701,6 +1701,12 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
             $scope.test();
         }
     };
+    $scope.loadAlert = function ($selected) {
+        $scope.alert = $scope.alerts[$selected];
+        if (confirm('Load the associated notification template (will overwrite the current notification tempalte) ?')) {
+            $scope.template = $scope.templates[$scope.assocations[$selected]];
+        }
+    };
     $scope.test = function () {
         $scope.error = '';
         $scope.running = true;
@@ -1820,6 +1826,7 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
     $http.get('/api/templates').success(function (data) {
         $scope.alerts = data.Alerts;
         $scope.templates = data.Templates;
+        $scope.assocations = data.Assocations;
     });
     $scope.test();
 }]);
