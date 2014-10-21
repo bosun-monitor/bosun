@@ -933,8 +933,9 @@ var builtins = htemplate.FuncMap{
 func nilFunc() {}
 
 type AlertTemplateStrings struct {
-	Templates map[string]string
-	Alerts    map[string]string
+	Templates   map[string]string
+	Alerts      map[string]string
+	Assocations map[string]string
 }
 
 func (c *Conf) AlertTemplateStrings() (*AlertTemplateStrings, error) {
@@ -988,6 +989,7 @@ func (c *Conf) AlertTemplateStrings() (*AlertTemplateStrings, error) {
 		}
 	}
 	alerts := make(map[string]string)
+	t_associations := make(map[string]string)
 	for name, alert := range c.Alerts {
 		var add func([]string)
 		add = func(macros []string) {
@@ -1043,9 +1045,11 @@ func (c *Conf) AlertTemplateStrings() (*AlertTemplateStrings, error) {
 			walk(alert.Warn.Tree.Root)
 		}
 		alerts[name] += alert.Def
+		t_associations[alert.Name] = alert.Template.Name
 	}
 	return &AlertTemplateStrings{
 		templates,
 		alerts,
+		t_associations,
 	}, nil
 }
