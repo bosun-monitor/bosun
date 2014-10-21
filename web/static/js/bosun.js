@@ -477,6 +477,11 @@ bosunApp.directive('tsTab', function () {
                 if (evt.ctrlKey) {
                     return;
                 }
+                // This is so shift-enter can be caught to run a rule when tsTab is called from
+                // the rule page
+                if (evt.keyCode == 13 && evt.shiftKey) {
+                    return;
+                }
                 switch (evt.keyCode) {
                     case 9:
                         evt.preventDefault();
@@ -1698,6 +1703,7 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
     $scope.template = current_template;
     $scope.shiftEnter = function ($event) {
         if ($event.keyCode == 13 && $event.shiftKey) {
+            $event.preventDefault();
             $scope.test();
         }
     };
