@@ -15,6 +15,7 @@ interface IRuleScope extends IBosunScope {
 	warning: string[];
 	sets: any;
 	data: any;
+	template_group: string;
 	animate: () => any;
 	zws: (v: string) => string;
 	test: () => any;
@@ -42,6 +43,7 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
 		"critical": 2,
 	};
 	$scope.email = search.email || '';
+	$scope.template_group = search.template_group || '';
 	$scope.fromDate = search.fromDate || '';
 	$scope.fromTime = search.fromTime || '';
 	$scope.toDate = search.toDate || '';
@@ -97,6 +99,7 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
 		$location.search('intervals', String($scope.intervals) || null);
 		$location.search('duration', String($scope.duration) || null);
 		$location.search('email', $scope.email || null);
+		$location.search('template_group', $scope.template_group || null);
 		$scope.animate();
 		var from = moment.utc($scope.fromDate + ' ' + $scope.fromTime);
 		var to = moment.utc($scope.toDate + ' ' + $scope.toTime);
@@ -124,7 +127,8 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
 			'&from=' + encodeURIComponent(from.format(tsdbFormat)) +
 			'&to=' + encodeURIComponent(to.format(tsdbFormat)) +
 			'&intervals=' + encodeURIComponent(intervals) +
-			'&email=' + encodeURIComponent($scope.email);
+			'&email=' + encodeURIComponent($scope.email) +
+			'&template_group=' + encodeURIComponent($scope.template_group);
 		$http.get(url)
 			.success((data) => {
 				$scope.sets = data.Sets;
