@@ -117,7 +117,7 @@ func procRule(t miniprofiler.Timer, c *conf.Conf, a *conf.Alert, now time.Time, 
 		if template_group != "" {
 			ts, err := opentsdb.ParseTags(template_group)
 			if err != nil {
-				return nil, fmt.Errorf("failed to parse group %s", template_group)
+				return nil, err
 			}
 			for _, ak := range keys {
 				if ak.Group().Subset(ts) {
