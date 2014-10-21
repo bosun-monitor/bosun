@@ -20,6 +20,7 @@ import (
 
 func main() {
 	const path = "main.go"
+	var hash, id string
 	fset := token.NewFileSet()
 	f, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
 	if err != nil {
@@ -41,8 +42,8 @@ func main() {
 					case "VersionDate":
 						switch value := spec.Values[0].(type) {
 						case *ast.BasicLit:
-							now := time.Now().UTC().Format("20060102150405")
-							value.Value = now
+							id = time.Now().UTC().Format("20060102150405")
+							value.Value = id
 						}
 					case "VersionID":
 						switch value := spec.Values[0].(type) {
@@ -51,7 +52,8 @@ func main() {
 							if err != nil {
 								log.Fatal(err)
 							}
-							value.Value = fmt.Sprintf(`"%s"`, strings.TrimSpace(string(rev)))
+							hash = fmt.Sprintf(`"%s"`, strings.TrimSpace(string(rev)))
+							value.Value = hash
 						}
 					}
 				}
@@ -77,4 +79,5 @@ func main() {
 	if err := ioutil.WriteFile(path, fb, info.Mode()); err != nil {
 		log.Fatal(err)
 	}
+	fmt.Printf("version:\n  hash: %s\n  id: %s\n", hash, id)
 }
