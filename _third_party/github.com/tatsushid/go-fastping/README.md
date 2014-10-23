@@ -6,7 +6,7 @@ Perl module to send ICMP ECHO REQUEST packets quickly. Original Perl module is
 available at
 http://search.cpan.org/~mlehmann/AnyEvent-FastPing-2.01/
 
-It hasn't been fully implemented original functions yet and only for IPv4 now.
+It hasn't been fully implemented original functions yet.
 
 [![GoDoc](https://godoc.org/github.com/tatsushid/go-fastping?status.svg)](https://godoc.org/github.com/tatsushid/go-fastping)
 
@@ -26,19 +26,11 @@ if err != nil {
 	os.Exit(1)
 }
 p.AddIPAddr(ra)
-err = p.AddHandler("receive", func(addr *net.IPAddr, rtt time.Duration) {
+p.OnRecv = func(addr *net.IPAddr, rtt time.Duration) {
 	fmt.Printf("IP Addr: %s receive, RTT: %v\n", addr.String(), rtt)
-})
-if err != nil {
-	fmt.Println(err)
-	os.Exit(1)
 }
-err = p.AddHandler("idle", func() {
+p.OnIdle = func() {
 	fmt.Println("finish")
-})
-if err != nil {
-	fmt.Println(err)
-	os.Exit(1)
 }
 err = p.Run()
 if err != nil {

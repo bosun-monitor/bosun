@@ -3,7 +3,7 @@ package util
 import (
 	"bufio"
 	"bytes"
-	"fmt"
+	"errors"
 	"os"
 	"os/exec"
 	"time"
@@ -11,10 +11,18 @@ import (
 	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/slog"
 )
 
+var (
+	ErrPath    = errors.New("program not in PATH")
+	ErrTimeout = errors.New("program killed after timeout")
+)
+
 // Command executes the named program with the given arguments. If it does not
 // exit within timeout, it is sent SIGINT (if supported by Go). After
 // another timeout, it is killed.
 func Command(timeout time.Duration, name string, arg ...string) ([]byte, error) {
+	if _, err := exec.LookPath(name); err != nil {
+		return nil, ErrPath
+	}
 	c := exec.Command(name, arg...)
 	var b bytes.Buffer
 	c.Stdout = &b
@@ -33,7 +41,7 @@ func Command(timeout time.Duration, name string, arg ...string) ([]byte, error) 
 		case <-kill:
 			// todo: figure out if this can leave the done chan hanging open
 			c.Process.Kill()
-			return nil, fmt.Errorf("%v killed after %v", name, timeout*2)
+			return nil, ErrTimeout
 		}
 	}
 }
