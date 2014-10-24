@@ -1045,7 +1045,9 @@ func (c *Conf) AlertTemplateStrings() (*AlertTemplateStrings, error) {
 			walk(alert.Warn.Tree.Root)
 		}
 		alerts[name] += alert.Def
-		t_associations[alert.Name] = alert.Template.Name
+		if alert.Template != nil {
+			t_associations[alert.Name] = alert.Template.Name
+		}
 	}
 	return &AlertTemplateStrings{
 		templates,
