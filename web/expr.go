@@ -301,7 +301,6 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 		if err == nil {
 			continue
 		}
-		fmt.Println("ERR", err)
 		ret.Errors = append(ret.Errors, err.Error())
 	}
 	for res := range resch {
