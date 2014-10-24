@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"html/template"
+
 	"io"
 	"math"
 	"net/url"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/metadata"
 	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/opentsdb"
+
 	"github.com/StackExchange/bosun/conf"
 	"github.com/StackExchange/bosun/expr"
 	"github.com/StackExchange/bosun/expr/parse"
@@ -229,20 +231,26 @@ func (c *Context) graph(v interface{}, filter bool) (interface{}, error) {
 		return nil, err
 	}
 	var buf bytes.Buffer
-	if err := c.schedule.ExprGraph(nil, &buf, res, fmt.Sprint(v), time.Now().UTC()); err != nil {
-		return nil, err
-	}
+	const width = 800
+	const height = 600
 	if c.IsEmail() {
-		name := fmt.Sprintf("%d.svg", len(c.Attachments)+1)
+		err := c.schedule.ExprPNG(nil, &buf, width, height, res, fmt.Sprint(v), time.Now().UTC())
+		if err != nil {
+			return nil, err
+		}
+		name := fmt.Sprintf("%d.png", len(c.Attachments)+1)
 		c.Attachments = append(c.Attachments, &conf.Attachment{
 			Data:        buf.Bytes(),
 			Filename:    name,
-			ContentType: "image/svg+xml",
+			ContentType: "image/png",
 		})
 		return template.HTML(fmt.Sprintf(`<img alt="%s" src="cid:%s" />`,
 			template.HTMLEscapeString(fmt.Sprint(v)),
 			name,
 		)), nil
+	}
+	if err := c.schedule.ExprSVG(nil, &buf, width, height, res, fmt.Sprint(v), time.Now().UTC()); err != nil {
+		return nil, err
 	}
 	return template.HTML(buf.String()), nil
 }

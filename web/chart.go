@@ -184,7 +184,7 @@ func ExprGraph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (in
 	if err != nil {
 		return nil, err
 	}
-	if err := schedule.ExprGraph(t, w, res.Results, q, now); err != nil {
+	if err := schedule.ExprSVG(t, w, 800, 600, res.Results, q, now); err != nil {
 		return nil, err
 	}
 	return nil, nil
