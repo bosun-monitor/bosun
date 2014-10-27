@@ -94,7 +94,7 @@ Loop:
 					continue Loop
 				}
 			}
-			return nil, fmt.Errorf("no metadata for %s: cannot use auto rate", q.Metric)
+			return nil, fmt.Errorf("no metadata for %s: cannot use auto rate", q)
 		}
 		queries[i] = fmt.Sprintf(`q("%v", "%v", "%v")`, q, start, end)
 		if err := schedule.Search.Expand(q); err != nil {
