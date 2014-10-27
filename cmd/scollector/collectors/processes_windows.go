@@ -36,7 +36,7 @@ func c_windows_processes() (opentsdb.MultiDataPoint, error) {
 	iis_q := wmi.CreateQuery(&iis_dst, "")
 	err = queryWmiNamespace(iis_q, &iis_dst, "root\\WebAdministration")
 	if err != nil {
-		//Don't Return from this error since the name space might exist
+		// Don't return from this error since the name space might exist.
 		iis_dst = nil
 	}
 
@@ -118,7 +118,7 @@ func c_windows_processes() (opentsdb.MultiDataPoint, error) {
 	return md, nil
 }
 
-// Actually a CIM_StatisticalInformation Struct according to Reflection
+// Actually a CIM_StatisticalInformation.
 type Win32_PerfRawData_PerfProc_Process struct {
 	ElapsedTime             uint64
 	Frequency_Object        uint64
@@ -150,7 +150,7 @@ type Win32_PerfRawData_PerfProc_Process struct {
 	WorkingSetPrivate       uint64
 }
 
-//Actually a Win32_BaseServce
+// Actually a Win32_BaseServce.
 type Win32_Service struct {
 	Name      string
 	ProcessId uint32
