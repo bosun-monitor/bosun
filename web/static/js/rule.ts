@@ -30,6 +30,7 @@ interface IRuleScope extends IBosunScope {
 	running: boolean;
 	loadAlert: (k: string) => void;
 	assocations: any;
+	status_summary: any;
 }
 
 var tsdbFormat = 'YYYY/MM/DD-HH:mm';
@@ -140,6 +141,7 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
 		$http.get(url)
 			.success((data) => {
 				$scope.sets = data.Sets;
+				$scope.status_summary = data.HistoryStatusCounts;
 				$scope.alert_history = data.AlertHistory;
 				procResults(data);
 			})

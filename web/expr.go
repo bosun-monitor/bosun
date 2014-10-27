@@ -286,16 +286,19 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 	type Histories struct {
 		History []*History
 	}
+
 	ret := struct {
-		Errors       []string `json:",omitempty"`
-		Warnings     []string `json:",omitempty"`
-		Sets         []*Set
-		AlertHistory map[expr.AlertKey]*Histories
-		Body         string      `json:",omitempty"`
-		Subject      string      `json:",omitempty"`
-		Data         interface{} `json:",omitempty"`
+		Errors              []string `json:",omitempty"`
+		Warnings            []string `json:",omitempty"`
+		Sets                []*Set
+		AlertHistory        map[expr.AlertKey]*Histories
+		Body                string      `json:",omitempty"`
+		Subject             string      `json:",omitempty"`
+		Data                interface{} `json:",omitempty"`
+		HistoryStatusCounts map[string]int64
 	}{
-		AlertHistory: make(map[expr.AlertKey]*Histories),
+		AlertHistory:        make(map[expr.AlertKey]*Histories),
+		HistoryStatusCounts: make(map[string]int64),
 	}
 	for err := range errch {
 		if err == nil {
@@ -365,6 +368,13 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 			h.EndTime = hist[i+1].Time
 		}
 		histories.History = hist[:len(hist)-1]
+		for _, h := range histories.History {
+			if _, ok := ret.HistoryStatusCounts[h.Status]; !ok {
+				ret.HistoryStatusCounts[h.Status] = 1
+			} else {
+				ret.HistoryStatusCounts[h.Status]++
+			}
+		}
 	}
 	return &ret, nil
 }
