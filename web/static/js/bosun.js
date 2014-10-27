@@ -1153,6 +1153,7 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
     $scope.aggregators = ["sum", "min", "max", "avg", "dev", "zimsum", "mimmin", "minmax"];
     $scope.dsaggregators = ["", "sum", "min", "max", "avg", "dev", "zimsum", "mimmin", "minmax"];
     $scope.rate_options = ["auto", "gauge", "counter", "rate"];
+    $scope.canAuto = {};
     var search = $location.search();
     var j = search.json;
     if (search.b64) {
@@ -1213,7 +1214,7 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
         $scope.tagvs[index] = new TagV;
         var metric = $scope.query_p[index].metric;
         if (!metric) {
-            $scope.canAuto = true;
+            $scope.canAuto[metric] = true;
             return;
         }
         $http.get('/api/tagk/' + metric).success(function (data) {
@@ -1258,7 +1259,7 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
                     canAuto = true;
                 }
             });
-            $scope.canAuto = canAuto;
+            $scope.canAuto[metric] = canAuto;
         }).error(function (err) {
             $scope.error = err;
         });
