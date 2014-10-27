@@ -88,7 +88,7 @@ func c_windows_processes() (opentsdb.MultiDataPoint, error) {
 			continue
 		}
 
-		Add(&md, "win.proc.elapsed_time", v.ElapsedTime, opentsdb.TagSet{"name": name, "id": id}, metadata.Counter, metadata.Second, "Elapsed time in seconds this process has been running.")
+		Add(&md, "win.proc.elapsed_time", (v.Timestamp_Object-v.ElapsedTime)/v.Frequency_Object, opentsdb.TagSet{"name": name, "id": id}, metadata.Gauge, metadata.Second, "Elapsed time in seconds this process has been running.")
 		Add(&md, "win.proc.handle_count", v.HandleCount, opentsdb.TagSet{"name": name, "id": id}, metadata.Gauge, metadata.Count, "Total number of handles the process has open across all threads.")
 		Add(&md, "win.proc.io_bytes", v.IOOtherBytesPersec, opentsdb.TagSet{"name": name, "id": id, "type": "other"}, metadata.Counter, metadata.BytesPerSecond, "Rate at which the process is issuing bytes to I/O operations that don not involve data such as control operations.")
 		Add(&md, "win.proc.io_operations", v.IOOtherOperationsPersec, opentsdb.TagSet{"name": name, "id": id, "type": "other"}, metadata.Counter, metadata.Operation, "Rate at which the process is issuing I/O operations that are neither a read or a write request.")
@@ -96,12 +96,13 @@ func c_windows_processes() (opentsdb.MultiDataPoint, error) {
 		Add(&md, "win.proc.io_operations", v.IOReadOperationsPersec, opentsdb.TagSet{"name": name, "id": id, "type": "read"}, metadata.Counter, metadata.Operation, "Rate at which the process is issuing read I/O operations.")
 		Add(&md, "win.proc.io_bytes", v.IOWriteBytesPersec, opentsdb.TagSet{"name": name, "id": id, "type": "write"}, metadata.Counter, metadata.BytesPerSecond, "Rate at which the process is writing bytes to I/O operations.")
 		Add(&md, "win.proc.io_operations", v.IOWriteOperationsPersec, opentsdb.TagSet{"name": name, "id": id, "type": "write"}, metadata.Counter, metadata.Operation, "Rate at which the process is issuing write I/O operations.")
-		Add(&md, "win.proc.mem.page_faults", v.PageFaultsPersec, opentsdb.TagSet{"name": name, "id": id}, metadata.Gauge, metadata.PerSecond, "Rate of page faults by the threads executing in this process.")
+		Add(&md, "win.proc.mem.page_faults", v.PageFaultsPersec, opentsdb.TagSet{"name": name, "id": id}, metadata.Counter, metadata.PerSecond, "Rate of page faults by the threads executing in this process.")
 		Add(&md, "win.proc.mem.pagefile_bytes", v.PageFileBytes, opentsdb.TagSet{"name": name, "id": id}, metadata.Gauge, metadata.Bytes, "Current number of bytes this process has used in the paging file(s).")
 		Add(&md, "win.proc.mem.pagefile_bytes_peak", v.PageFileBytesPeak, opentsdb.TagSet{"name": name, "id": id}, metadata.Gauge, metadata.Bytes, "Maximum number of bytes this process has used in the paging file(s).")
-		Add(&md, "win.proc.cpu", v.PercentPrivilegedTime, opentsdb.TagSet{"name": name, "id": id, "type": "privileged"}, metadata.Counter, metadata.Pct, "Percentage of elapsed time that this thread has spent executing code in privileged mode.")
-		Add(&md, "win.proc.cpu_total", v.PercentProcessorTime, opentsdb.TagSet{"name": name, "id": id}, metadata.Counter, metadata.Pct, "Percentage of elapsed time that this process's threads have spent executing code in user or privileged mode.")
-		Add(&md, "win.proc.cpu", v.PercentUserTime, opentsdb.TagSet{"name": name, "id": id, "type": "user"}, metadata.Counter, metadata.Pct, "Percentage of elapsed time that this process's threads have spent executing code in user mode.")
+		//Divide CPU by 1e5 because: 1 seconds / 100 Nanoseconds = 1e7. This is the percent time as a decimal, so divide by two less zeros to make it the same as the result * 100.
+		Add(&md, "win.proc.cpu", v.PercentPrivilegedTime/1e5, opentsdb.TagSet{"name": name, "id": id, "type": "privileged"}, metadata.Counter, metadata.Pct, "Percentage of elapsed time that this thread has spent executing code in privileged mode.")
+		Add(&md, "win.proc.cpu_total", v.PercentProcessorTime/1e5, opentsdb.TagSet{"name": name, "id": id}, metadata.Counter, metadata.Pct, "Percentage of elapsed time that this process's threads have spent executing code in user or privileged mode.")
+		Add(&md, "win.proc.cpu", v.PercentUserTime/1e5, opentsdb.TagSet{"name": name, "id": id, "type": "user"}, metadata.Counter, metadata.Pct, "Percentage of elapsed time that this process's threads have spent executing code in user mode.")
 		Add(&md, "win.proc.mem.pool_nonpaged_bytes", v.PoolNonpagedBytes, opentsdb.TagSet{"name": name, "id": id}, metadata.Gauge, metadata.Bytes, "Total number of bytes for objects that cannot be written to disk when they are not being used.")
 		Add(&md, "win.proc.mem.pool_paged_bytes", v.PoolPagedBytes, opentsdb.TagSet{"name": name, "id": id}, metadata.Gauge, metadata.Bytes, "Total number of bytes for objects that can be written to disk when they are not being used.")
 		Add(&md, "win.proc.priority_base", v.PriorityBase, opentsdb.TagSet{"name": name, "id": id}, metadata.Gauge, metadata.None, "Current base priority of this process. Threads within a process can raise and lower their own base priority relative to the process base priority of the process.")
@@ -120,6 +121,7 @@ func c_windows_processes() (opentsdb.MultiDataPoint, error) {
 // Actually a CIM_StatisticalInformation Struct according to Reflection
 type Win32_PerfRawData_PerfProc_Process struct {
 	ElapsedTime             uint64
+	Frequency_Object        uint64
 	HandleCount             uint32
 	IDProcess               uint32
 	IOOtherBytesPersec      uint64
@@ -140,6 +142,7 @@ type Win32_PerfRawData_PerfProc_Process struct {
 	PriorityBase            uint32
 	PrivateBytes            uint64
 	ThreadCount             uint32
+	Timestamp_Object        uint64
 	VirtualBytes            uint64
 	VirtualBytesPeak        uint64
 	WorkingSet              uint64
