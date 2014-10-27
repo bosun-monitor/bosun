@@ -88,35 +88,65 @@ func c_windows_processes() (opentsdb.MultiDataPoint, error) {
 			continue
 		}
 
-		Add(&md, "win.proc.elapsed_time", (v.Timestamp_Object-v.ElapsedTime)/v.Frequency_Object, opentsdb.TagSet{"name": name, "id": id}, metadata.Gauge, metadata.Second, "Elapsed time in seconds this process has been running.")
-		Add(&md, "win.proc.handle_count", v.HandleCount, opentsdb.TagSet{"name": name, "id": id}, metadata.Gauge, metadata.Count, "Total number of handles the process has open across all threads.")
-		Add(&md, "win.proc.io_bytes", v.IOOtherBytesPersec, opentsdb.TagSet{"name": name, "id": id, "type": "other"}, metadata.Counter, metadata.BytesPerSecond, "Rate at which the process is issuing bytes to I/O operations that don not involve data such as control operations.")
-		Add(&md, "win.proc.io_operations", v.IOOtherOperationsPersec, opentsdb.TagSet{"name": name, "id": id, "type": "other"}, metadata.Counter, metadata.Operation, "Rate at which the process is issuing I/O operations that are neither a read or a write request.")
-		Add(&md, "win.proc.io_bytes", v.IOReadBytesPersec, opentsdb.TagSet{"name": name, "id": id, "type": "read"}, metadata.Counter, metadata.BytesPerSecond, "Rate at which the process is reading bytes from I/O operations.")
-		Add(&md, "win.proc.io_operations", v.IOReadOperationsPersec, opentsdb.TagSet{"name": name, "id": id, "type": "read"}, metadata.Counter, metadata.Operation, "Rate at which the process is issuing read I/O operations.")
-		Add(&md, "win.proc.io_bytes", v.IOWriteBytesPersec, opentsdb.TagSet{"name": name, "id": id, "type": "write"}, metadata.Counter, metadata.BytesPerSecond, "Rate at which the process is writing bytes to I/O operations.")
-		Add(&md, "win.proc.io_operations", v.IOWriteOperationsPersec, opentsdb.TagSet{"name": name, "id": id, "type": "write"}, metadata.Counter, metadata.Operation, "Rate at which the process is issuing write I/O operations.")
-		Add(&md, "win.proc.mem.page_faults", v.PageFaultsPersec, opentsdb.TagSet{"name": name, "id": id}, metadata.Counter, metadata.PerSecond, "Rate of page faults by the threads executing in this process.")
-		Add(&md, "win.proc.mem.pagefile_bytes", v.PageFileBytes, opentsdb.TagSet{"name": name, "id": id}, metadata.Gauge, metadata.Bytes, "Current number of bytes this process has used in the paging file(s).")
-		Add(&md, "win.proc.mem.pagefile_bytes_peak", v.PageFileBytesPeak, opentsdb.TagSet{"name": name, "id": id}, metadata.Gauge, metadata.Bytes, "Maximum number of bytes this process has used in the paging file(s).")
-		//Divide CPU by 1e5 because: 1 seconds / 100 Nanoseconds = 1e7. This is the percent time as a decimal, so divide by two less zeros to make it the same as the result * 100.
-		Add(&md, "win.proc.cpu", v.PercentPrivilegedTime/1e5, opentsdb.TagSet{"name": name, "id": id, "type": "privileged"}, metadata.Counter, metadata.Pct, "Percentage of elapsed time that this thread has spent executing code in privileged mode.")
-		Add(&md, "win.proc.cpu_total", v.PercentProcessorTime/1e5, opentsdb.TagSet{"name": name, "id": id}, metadata.Counter, metadata.Pct, "Percentage of elapsed time that this process's threads have spent executing code in user or privileged mode.")
-		Add(&md, "win.proc.cpu", v.PercentUserTime/1e5, opentsdb.TagSet{"name": name, "id": id, "type": "user"}, metadata.Counter, metadata.Pct, "Percentage of elapsed time that this process's threads have spent executing code in user mode.")
-		Add(&md, "win.proc.mem.pool_nonpaged_bytes", v.PoolNonpagedBytes, opentsdb.TagSet{"name": name, "id": id}, metadata.Gauge, metadata.Bytes, "Total number of bytes for objects that cannot be written to disk when they are not being used.")
-		Add(&md, "win.proc.mem.pool_paged_bytes", v.PoolPagedBytes, opentsdb.TagSet{"name": name, "id": id}, metadata.Gauge, metadata.Bytes, "Total number of bytes for objects that can be written to disk when they are not being used.")
-		Add(&md, "win.proc.priority_base", v.PriorityBase, opentsdb.TagSet{"name": name, "id": id}, metadata.Gauge, metadata.None, "Current base priority of this process. Threads within a process can raise and lower their own base priority relative to the process base priority of the process.")
-		Add(&md, "win.proc.private_bytes", v.PrivateBytes, opentsdb.TagSet{"name": name, "id": id}, metadata.Gauge, metadata.Bytes, "Current number of bytes this process has allocated that cannot be shared with other processes.")
-		Add(&md, "win.proc.thread_count", v.ThreadCount, opentsdb.TagSet{"name": name, "id": id}, metadata.Gauge, metadata.Count, "Number of threads currently active in this process.")
-		Add(&md, "win.proc.mem.vm.bytes", v.VirtualBytes, opentsdb.TagSet{"name": name, "id": id}, metadata.Gauge, metadata.Bytes, "Current size, in bytes, of the virtual address space that the process is using.")
-		Add(&md, "win.proc.mem.vm.bytes_peak", v.VirtualBytesPeak, opentsdb.TagSet{"name": name, "id": id}, metadata.Gauge, metadata.Bytes, "Maximum number of bytes of virtual address space that the process has used at any one time.")
-		Add(&md, "win.proc.mem.working_set", v.WorkingSet, opentsdb.TagSet{"name": name, "id": id}, metadata.Gauge, metadata.Bytes, "Current number of bytes in the working set of this process at any point in time.")
-		Add(&md, "win.proc.mem.working_set_peak", v.WorkingSetPeak, opentsdb.TagSet{"name": name, "id": id}, metadata.Gauge, metadata.Bytes, "Maximum number of bytes in the working set of this process at any point in time.")
-		Add(&md, "win.proc.mem.working_set_private", v.WorkingSetPrivate, opentsdb.TagSet{"name": name, "id": id}, metadata.Gauge, metadata.Bytes, "Current number of bytes in the working set that are not shared with other processes.")
-
+		Add(&md, "win.proc.elapsed_time", (v.Timestamp_Object-v.ElapsedTime)/v.Frequency_Object, opentsdb.TagSet{"name": name, "id": id}, metadata.Gauge, metadata.Second, descWinProcElapsed_time)
+		Add(&md, "win.proc.handle_count", v.HandleCount, opentsdb.TagSet{"name": name, "id": id}, metadata.Gauge, metadata.Count, descWinProcHandle_count)
+		Add(&md, "win.proc.io_bytes", v.IOOtherBytesPersec, opentsdb.TagSet{"name": name, "id": id, "type": "other"}, metadata.Counter, metadata.BytesPerSecond, descWinProcIo_bytes)
+		Add(&md, "win.proc.io_operations", v.IOOtherOperationsPersec, opentsdb.TagSet{"name": name, "id": id, "type": "other"}, metadata.Counter, metadata.Operation, descWinProcIo_operations)
+		Add(&md, "win.proc.io_bytes", v.IOReadBytesPersec, opentsdb.TagSet{"name": name, "id": id, "type": "read"}, metadata.Counter, metadata.BytesPerSecond, descWinProcIo_bytes)
+		Add(&md, "win.proc.io_operations", v.IOReadOperationsPersec, opentsdb.TagSet{"name": name, "id": id, "type": "read"}, metadata.Counter, metadata.Operation, descWinProcIo_operations)
+		Add(&md, "win.proc.io_bytes", v.IOWriteBytesPersec, opentsdb.TagSet{"name": name, "id": id, "type": "write"}, metadata.Counter, metadata.BytesPerSecond, descWinProcIo_bytes)
+		Add(&md, "win.proc.io_operations", v.IOWriteOperationsPersec, opentsdb.TagSet{"name": name, "id": id, "type": "write"}, metadata.Counter, metadata.Operation, descWinProcIo_operations)
+		Add(&md, "win.proc.mem.page_faults", v.PageFaultsPersec, opentsdb.TagSet{"name": name, "id": id}, metadata.Counter, metadata.PerSecond, descWinProcMemPage_faults)
+		Add(&md, "win.proc.mem.pagefile_bytes", v.PageFileBytes, opentsdb.TagSet{"name": name, "id": id}, metadata.Gauge, metadata.Bytes, descWinProcMemPagefile_bytes)
+		Add(&md, "win.proc.mem.pagefile_bytes_peak", v.PageFileBytesPeak, opentsdb.TagSet{"name": name, "id": id}, metadata.Gauge, metadata.Bytes, descWinProcMemPagefile_bytes_peak)
+		Add(&md, "win.proc.cpu", v.PercentPrivilegedTime/NS100_Seconds, opentsdb.TagSet{"name": name, "id": id, "type": "privileged"}, metadata.Counter, metadata.Pct, descWinProcCpu)
+		Add(&md, "win.proc.cpu_total", v.PercentProcEssorTime/NS100_Seconds, opentsdb.TagSet{"name": name, "id": id}, metadata.Counter, metadata.Pct, descWinProcCpu_total)
+		Add(&md, "win.proc.cpu", v.PercentUserTime/NS100_Seconds, opentsdb.TagSet{"name": name, "id": id, "type": "user"}, metadata.Counter, metadata.Pct, descWinProcCpu)
+		Add(&md, "win.proc.mem.pool_nonpaged_bytes", v.PoolNonpagedBytes, opentsdb.TagSet{"name": name, "id": id}, metadata.Gauge, metadata.Bytes, descWinProcMemPool_nonpaged_bytes)
+		Add(&md, "win.proc.mem.pool_paged_bytes", v.PoolPagedBytes, opentsdb.TagSet{"name": name, "id": id}, metadata.Gauge, metadata.Bytes, descWinProcMemPool_paged_bytes)
+		Add(&md, "win.proc.priority_base", v.PriorityBase, opentsdb.TagSet{"name": name, "id": id}, metadata.Gauge, metadata.None, descWinProcPriority_base)
+		Add(&md, "win.proc.private_bytes", v.PrivateBytes, opentsdb.TagSet{"name": name, "id": id}, metadata.Gauge, metadata.Bytes, descWinProcPrivate_bytes)
+		Add(&md, "win.proc.thread_count", v.ThreadCount, opentsdb.TagSet{"name": name, "id": id}, metadata.Gauge, metadata.Count, descWinProcthread_count)
+		Add(&md, "win.proc.mem.vm.bytes", v.VirtualBytes, opentsdb.TagSet{"name": name, "id": id}, metadata.Gauge, metadata.Bytes, descWinProcMemVmBytes)
+		Add(&md, "win.proc.mem.vm.bytes_peak", v.VirtualBytesPeak, opentsdb.TagSet{"name": name, "id": id}, metadata.Gauge, metadata.Bytes, descWinProcMemVmBytes_peak)
+		Add(&md, "win.proc.mem.working_set", v.WorkingSet, opentsdb.TagSet{"name": name, "id": id}, metadata.Gauge, metadata.Bytes, descWinProcMemWorking_set)
+		Add(&md, "win.proc.mem.working_set_peak", v.WorkingSetPeak, opentsdb.TagSet{"name": name, "id": id}, metadata.Gauge, metadata.Bytes, descWinProcMemWorking_set_peak)
+		Add(&md, "win.proc.mem.working_set_private", v.WorkingSetPrivate, opentsdb.TagSet{"name": name, "id": id}, metadata.Gauge, metadata.Bytes, descWinProcMemWorking_set_private)
 	}
 	return md, nil
 }
+
+// Divide CPU by 1e5 because: 1 seconds / 100 Nanoseconds = 1e7. This is the
+// percent time as a decimal, so divide by two less zeros to make it the same as
+// the result * 100.
+const NS100_Seconds = 1e5
+
+const (
+	descWinProcElapsed_time           = "Elapsed time in seconds this process has been running."
+	descWinProcHandle_count           = "Total number of handles the process has open across all threads."
+	descWinProcIo_bytes               = "Rate at which the process is issuing bytes to I/O operations that don not involve data such as control operations."
+	descWinProcIo_operations          = "Rate at which the process is issuing I/O operations that are neither a read or a write request."
+	descWinProcIo_bytes               = "Rate at which the process is reading bytes from I/O operations."
+	descWinProcIo_operations          = "Rate at which the process is issuing read I/O operations."
+	descWinProcIo_bytes               = "Rate at which the process is writing bytes to I/O operations."
+	descWinProcIo_operations          = "Rate at which the process is issuing write I/O operations."
+	descWinProcMemPage_faults         = "Rate of page faults by the threads executing in this process."
+	descWinProcMemPagefile_bytes      = "Current number of bytes this process has used in the paging file(s)."
+	descWinProcMemPagefile_bytes_peak = "Maximum number of bytes this process has used in the paging file(s)."
+	descWinProcCpu                    = "Percentage of elapsed time that this thread has spent executing code in privileged mode."
+	descWinProcCpu_total              = "Percentage of elapsed time that this process's threads have spent executing code in user or privileged mode."
+	descWinProcCpu                    = "Percentage of elapsed time that this process's threads have spent executing code in user mode."
+	descWinProcMemPool_nonpaged_bytes = "Total number of bytes for objects that cannot be written to disk when they are not being used."
+	descWinProcMemPool_paged_bytes    = "Total number of bytes for objects that can be written to disk when they are not being used."
+	descWinProcPriority_base          = "Current base priority of this process. Threads within a process can raise and lower their own base priority relative to the process base priority of the process."
+	descWinProcPrivate_bytes          = "Current number of bytes this process has allocated that cannot be shared with other processes."
+	descWinProcthread_count           = "Number of threads currently active in this process."
+	descWinProcMemVmBytes             = "Current size, in bytes, of the virtual address space that the process is using."
+	descWinProcMemVmBytes_peak        = "Maximum number of bytes of virtual address space that the process has used at any one time."
+	descWinProcMemWorking_set         = "Current number of bytes in the working set of this process at any point in time."
+	descWinProcMemWorking_set_peak    = "Maximum number of bytes in the working set of this process at any point in time."
+	descWinProcMemWorking_set_private = "Current number of bytes in the working set that are not shared with other processes."
+)
 
 // Actually a CIM_StatisticalInformation.
 type Win32_PerfRawData_PerfProc_Process struct {
