@@ -94,9 +94,9 @@ func vsphereDatastore(v *vsphere.Vsphere, md *opentsdb.MultiDataPoint) error {
 func vsphereHost(v *vsphere.Vsphere, md *opentsdb.MultiDataPoint) error {
 	res, err := v.Info("HostSystem", []string{
 		"name",
-		"summary.hardware.numCpuCores",
 		"summary.hardware.cpuMhz",
 		"summary.hardware.memorySize", // bytes
+		"summary.hardware.numCpuCores",
 		"summary.hardware.numCpuCores",
 		"summary.quickStats.overallCpuUsage",    // MHz
 		"summary.quickStats.overallMemoryUsage", // MB
