@@ -146,6 +146,8 @@ interface IGraphScope extends ng.IScope {
 	stop: () => any;
 	canAuto: {};
 	y_labels: string[];
+	min: number;
+	max: number;
 }
 
 bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route', '$timeout', function($scope: IGraphScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService, $timeout: ng.ITimeoutService) {
@@ -170,6 +172,12 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 	$scope.end = request.end;
 	$scope.autods = search.autods != 'false';
 	$scope.refresh = search.refresh == 'true';
+	if (search.min) {
+		$scope.min = +search.min;
+	}
+	if (search.max) {
+		$scope.max = +search.max;
+	}
 	var duration_map: any = {
 		"s": "s",
 		"m": "m",
@@ -325,6 +333,10 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 		$location.search('b64', btoa(JSON.stringify(r)));
 		$location.search('autods', $scope.autods ? undefined : 'false');
 		$location.search('refresh', $scope.refresh ? 'true' : undefined);
+		var min = angular.isNumber($scope.min) ? $scope.min.toString() : null;
+		var max = angular.isNumber($scope.max) ? $scope.max.toString() : null;
+		$location.search('min', min);
+		$location.search('max', max);
 		$route.reload();
 	}
 	request = getRequest();
@@ -343,8 +355,10 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 				autorate += '&autorate=' + i;
 			}
 		}
+		var min = angular.isNumber($scope.min) ? '&min=' + encodeURIComponent($scope.min.toString()) : '';
+		var max = angular.isNumber($scope.max) ? '&max=' + encodeURIComponent($scope.max.toString()) : '';
 		$scope.animate();
-		$http.get('/api/graph?' + 'b64=' + encodeURIComponent(btoa(JSON.stringify(request))) + autods + autorate)
+		$http.get('/api/graph?' + 'b64=' + encodeURIComponent(btoa(JSON.stringify(request))) + autods + autorate + min + max)
 			.success((data) => {
 				$scope.result = data.Series;
 				if (!$scope.result) {
@@ -357,7 +371,7 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 				$scope.error = '';
 				var u = $location.absUrl();
 				u = u.substr(0, u.indexOf('?')) + '?';
-				u += 'b64=' + search.b64 + autods + autorate;
+				u += 'b64=' + search.b64 + autods + autorate + min + max;
 				$scope.url = u;
 			})
 			.error((error) => {

@@ -118,6 +118,14 @@ Loop:
 			Title: fmt.Sprintf("%v - %v", oreq.Start, oreq.End),
 		}
 		c.XRange.Time = true
+		if min, err := strconv.ParseFloat(r.FormValue("min"), 64); err == nil {
+			c.YRange.MinMode.Fixed = true
+			c.YRange.MinMode.Value = min
+		}
+		if max, err := strconv.ParseFloat(r.FormValue("max"), 64); err == nil {
+			c.YRange.MaxMode.Fixed = true
+			c.YRange.MaxMode.Value = max
+		}
 		for ri, r := range cs {
 			pts := make([]chart.EPoint, len(r.Data))
 			for idx, v := range r.Data {
