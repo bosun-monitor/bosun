@@ -166,14 +166,15 @@ func main() {
 	} else if err != nil {
 		slog.Fatal("invalid host:", *flagHost)
 	}
+	if *flagPrint {
+		collectors.DefaultFreq = time.Second * 3
+		slog.Infoln("Set default frequency to", collectors.DefaultFreq)
+		*flagDisableMetadata = true
+	}
 	if !*flagDisableMetadata {
 		if err := metadata.Init(u, *flagDebug); err != nil {
 			slog.Fatal(err)
 		}
-	}
-	if *flagPrint {
-		collectors.DefaultFreq = time.Second * 3
-		slog.Infoln("Set default frequency to", collectors.DefaultFreq)
 	}
 	cdp := collectors.Run(c)
 	if u != nil && !*flagPrint {
