@@ -42,8 +42,7 @@ func Graph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 	if err != nil {
 		return nil, err
 	}
-	ads_v := r.FormValue("autods")
-	if ads_v != "" {
+	if ads_v := r.FormValue("autods"); ads_v != "" {
 		ads_i, err := strconv.Atoi(ads_v)
 		if err != nil {
 			return nil, err
