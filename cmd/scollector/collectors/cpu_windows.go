@@ -80,7 +80,7 @@ func c_cpu_info_windows() (opentsdb.MultiDataPoint, error) {
 
 type Win32_Processor struct {
 	CurrentClockSpeed         uint32
-	CurrentVoltage            uint16
+	CurrentVoltage            *uint16
 	LoadPercentage            *uint16
 	MaxClockSpeed             uint32
 	Name                      string
