@@ -5,21 +5,45 @@ import (
 
 	"github.com/StackExchange/scollector/opentsdb"
 	"github.com/StackExchange/scollector/util"
+	"github.com/StackExchange/slog"
+	"github.com/StackExchange/wmi"
 )
 
 func init() {
 	metafuncs = append(metafuncs, metaWindowsVersion, metaWindowsIfaces)
 }
 
+func queryWmi(query string, dst interface{}) error {
+	return queryWmiNamespace(query, dst, "")
+}
+
+func queryWmiNamespace(query string, dst interface{}, namespace string) error {
+	return wmi.QueryNamespace(query, dst, namespace)
+}
+
 func metaWindowsVersion() {
-	util.ReadCommand(func(line string) error {
-		fields := strings.Fields(line)
-		if len(fields) == 0 {
-			return nil
+	var dst []Win32_OperatingSystem
+	var q = wmi.CreateQuery(&dst, "")
+	err := queryWmi(q, &dst)
+	if err != nil {
+		slog.Error(err)
+		return
+	} else {
+		for _, v := range dst {
+			AddMeta("", nil, "version", v.Version, true)
+			AddMeta("", nil, "versionCaption", v.Caption, true)
 		}
-		AddMeta("", nil, "version", strings.Join(fields, " "), true)
-		return nil
-	}, "cmd", "/c", "ver")
+	}
+}
+
+type Win32_OperatingSystem struct {
+	Caption         string
+	CurrentTimeZone int16
+	InstallDate     string
+	Organization    string
+	OSArchitecture  string
+	OSLanguage      int32
+	Version         string
 }
 
 func metaWindowsIfaces() {
