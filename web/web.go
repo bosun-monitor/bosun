@@ -48,6 +48,7 @@ func Listen(listenAddr, webDirectory string, tsdbHost *url.URL) error {
 	if err != nil {
 		log.Fatal(err)
 	}
+	router.HandleFunc("/api/", APIRedirect)
 	router.Handle("/api/action", JSON(Action))
 	router.Handle("/api/alerts", JSON(Alerts))
 	router.Handle("/api/alerts/details", JSON(AlertDetails))
@@ -400,4 +401,8 @@ func Config(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 
 func Templates(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	return schedule.Conf.AlertTemplateStrings()
+}
+
+func APIRedirect(w http.ResponseWriter, req *http.Request) {
+	http.Redirect(w, req, "http://stackexchange.github.io/bosun/api.html", 302)
 }
