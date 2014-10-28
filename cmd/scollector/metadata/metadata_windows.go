@@ -13,37 +13,23 @@ func init() {
 	metafuncs = append(metafuncs, metaWindowsVersion, metaWindowsIfaces)
 }
 
-func queryWmi(query string, dst interface{}) error {
-	return queryWmiNamespace(query, dst, "")
-}
-
-func queryWmiNamespace(query string, dst interface{}, namespace string) error {
-	return wmi.QueryNamespace(query, dst, namespace)
-}
-
 func metaWindowsVersion() {
 	var dst []Win32_OperatingSystem
-	var q = wmi.CreateQuery(&dst, "")
-	err := queryWmi(q, &dst)
+	q := wmi.CreateQuery(&dst, "")
+	err := wmi.Query(q, &dst)
 	if err != nil {
 		slog.Error(err)
 		return
-	} else {
-		for _, v := range dst {
-			AddMeta("", nil, "version", v.Version, true)
-			AddMeta("", nil, "versionCaption", v.Caption, true)
-		}
+	}
+	for _, v := range dst {
+		AddMeta("", nil, "version", v.Version, true)
+		AddMeta("", nil, "versionCaption", v.Caption, true)
 	}
 }
 
 type Win32_OperatingSystem struct {
-	Caption         string
-	CurrentTimeZone int16
-	InstallDate     string
-	Organization    string
-	OSArchitecture  string
-	OSLanguage      int32
-	Version         string
+	Caption string
+	Version string
 }
 
 func metaWindowsIfaces() {
