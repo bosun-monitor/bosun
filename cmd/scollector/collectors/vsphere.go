@@ -32,6 +32,9 @@ func c_vsphere(user, pwd, host string) (opentsdb.MultiDataPoint, error) {
 	if err := vsphereDatastore(v, &md); err != nil {
 		return nil, err
 	}
+	if err := vsphereGuest(util.Clean(host), v, &md); err != nil {
+		return nil, err
+	}
 	return md, nil
 }
 
@@ -160,3 +163,75 @@ func vsphereHost(v *vsphere.Vsphere, md *opentsdb.MultiDataPoint) error {
 	}
 	return Error
 }
+
+func vsphereGuest(vsphereHost string, v *vsphere.Vsphere, md *opentsdb.MultiDataPoint) error {
+	res, err := v.Info("VirtualMachine", []string{
+		"name",
+		"config.hardware.memoryMB",
+		"config.hardware.numCPU",
+		"summary.quickStats.balloonedMemory",
+		"summary.quickStats.guestMemoryUsage",
+		"summary.quickStats.hostMemoryUsage",
+		"summary.quickStats.overallCpuUsage",
+	})
+	if err != nil {
+		return err
+	}
+	var Error error
+	for _, r := range res {
+		var name string
+		for _, p := range r.Props {
+			if p.Name == "name" {
+				name = util.Clean(p.Val.Inner)
+				break
+			}
+		}
+		if name == "" {
+			Error = fmt.Errorf("vsphere: empty name")
+			continue
+		}
+		tags := opentsdb.TagSet{
+			"host": vsphereHost, "guest": name,
+		}
+		var memTotal, memUsed int64
+		for _, p := range r.Props {
+			switch p.Val.Type {
+			case "xsd:long", "xsd:int", "xsd:short":
+				i, err := strconv.ParseInt(p.Val.Inner, 10, 64)
+				if err != nil {
+					Error = fmt.Errorf("vsphere bad integer:", p.Val.Inner)
+					continue
+				}
+				switch p.Name {
+				case "config.hardware.memoryMB":
+					memTotal = i * 1024 * 1024
+					Add(md, "vsphere.guest.mem.total", memTotal, tags, metadata.Gauge, metadata.Bytes, "")
+				case "summary.quickStats.hostMemoryUsage":
+					Add(md, "vsphere.guest.mem.host", i*1024*1024, tags, metadata.Gauge, metadata.Bytes, descVsphereGuestMemHost)
+				case "summary.quickStats.guestMemoryUsage":
+					memUsed = i * 1024 * 1024
+					Add(md, "vsphere.guest.mem.used", memUsed, tags, metadata.Gauge, metadata.Bytes, descVsphereGuestMemUsed)
+				case "summary.quickStats.overallCpuUsage":
+					Add(md, "vsphere.guest.cpu", i, tags, metadata.Gauge, metadata.MHz, "")
+				case "summary.quickStats.balloonedMemory":
+					Add(md, "vsphere.guest.mem.ballooned", i*1024*1024, tags, metadata.Gauge, metadata.Bytes, descVsphereGuestMemBallooned)
+				case "config.hardware.numCPU":
+					Add(md, "vsphere.guest.num_cpu", i, tags, metadata.Gauge, metadata.Gauge, "")
+				}
+			}
+		}
+		if memTotal > 0 && memUsed > 0 {
+			memFree := memTotal - memUsed
+			Add(md, "vsphere.guest.mem.free", memFree, tags, metadata.Gauge, metadata.Bytes, "")
+			Add(md, "vsphere.guest.mem.percent_free", float64(memFree)/float64(memTotal)*100, tags, metadata.Gauge, metadata.Pct, "")
+		}
+		break
+	}
+	return Error
+}
+
+const (
+	descVsphereGuestMemHost      = "Host memory utilization, also known as consumed host memory. Includes the overhead memory of the VM."
+	descVsphereGuestMemUsed      = "Guest memory utilization statistics, also known as active guest memory."
+	descVsphereGuestMemBallooned = "The size of the balloon driver in the VM. The host will inflate the balloon driver to reclaim physical memory from the VM. This is a sign that there is memory pressure on the host."
+)
