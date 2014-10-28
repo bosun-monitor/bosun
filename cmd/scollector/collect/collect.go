@@ -120,6 +120,12 @@ func InitChan(tsdbhost *url.URL, metric_root string, ch chan *opentsdb.DataPoint
 		slock.Unlock()
 		return
 	})
+	Set("collect.queued", nil, func() (i interface{}) {
+		qlock.Lock()
+		i = len(queue)
+		qlock.Unlock()
+		return
+	})
 	Set("collect.alloc", nil, func() interface{} {
 		var ms runtime.MemStats
 		runtime.ReadMemStats(&ms)
