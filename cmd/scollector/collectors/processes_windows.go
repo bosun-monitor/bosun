@@ -88,9 +88,11 @@ func c_windows_processes() (opentsdb.MultiDataPoint, error) {
 			continue
 		}
 
-		Add(&md, "win.proc.cpu", v.PercentPrivilegedTime/NS100_Seconds, opentsdb.TagSet{"name": name, "id": id, "type": "privileged"}, metadata.Counter, metadata.Pct, descWinProcCpu_priv)
-		Add(&md, "win.proc.cpu", v.PercentUserTime/NS100_Seconds, opentsdb.TagSet{"name": name, "id": id, "type": "user"}, metadata.Counter, metadata.Pct, descWinProcCpu_user)
-		Add(&md, "win.proc.cpu_total", v.PercentProcessorTime/NS100_Seconds, opentsdb.TagSet{"name": name, "id": id}, metadata.Counter, metadata.Pct, descWinProcCpu_total)
+		//Use timestamp from WMI to fix issues with CPU metrics
+		ts := TSys100NStoEpoch(v.Timestamp_Sys100NS)
+		AddTS(&md, "win.proc.cpu", ts, v.PercentPrivilegedTime/NS100_Seconds, opentsdb.TagSet{"name": name, "id": id, "type": "privileged"}, metadata.Counter, metadata.Pct, descWinProcCpu_priv)
+		AddTS(&md, "win.proc.cpu", ts, v.PercentUserTime/NS100_Seconds, opentsdb.TagSet{"name": name, "id": id, "type": "user"}, metadata.Counter, metadata.Pct, descWinProcCpu_user)
+		AddTS(&md, "win.proc.cpu_total", ts, v.PercentProcessorTime/NS100_Seconds, opentsdb.TagSet{"name": name, "id": id}, metadata.Counter, metadata.Pct, descWinProcCpu_total)
 		Add(&md, "win.proc.elapsed_time", (v.Timestamp_Object-v.ElapsedTime)/v.Frequency_Object, opentsdb.TagSet{"name": name, "id": id}, metadata.Gauge, metadata.Second, descWinProcElapsed_time)
 		Add(&md, "win.proc.handle_count", v.HandleCount, opentsdb.TagSet{"name": name, "id": id}, metadata.Gauge, metadata.Count, descWinProcHandle_count)
 		Add(&md, "win.proc.io_bytes", v.IOOtherBytesPersec, opentsdb.TagSet{"name": name, "id": id, "type": "other"}, metadata.Counter, metadata.BytesPerSecond, descWinProcIo_bytes_other)
@@ -173,6 +175,7 @@ type Win32_PerfRawData_PerfProc_Process struct {
 	PrivateBytes            uint64
 	ThreadCount             uint32
 	Timestamp_Object        uint64
+	Timestamp_Sys100NS      uint64
 	VirtualBytes            uint64
 	VirtualBytesPeak        uint64
 	WorkingSet              uint64
