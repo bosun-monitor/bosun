@@ -1944,7 +1944,8 @@ bosunApp.directive('tsAckGroup', function () {
         scope: {
             ack: '=',
             groups: '=tsAckGroup',
-            schedule: '='
+            schedule: '=',
+            timeanddate: '='
         },
         templateUrl: '/partials/ackgroup.html',
         link: function (scope, elem, attrs) {
