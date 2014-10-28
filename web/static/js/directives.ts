@@ -388,6 +388,8 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWi
 			brushStart: '=bstart',
 			brushEnd: '=bend',
 			enableBrush: '@',
+			max: '=',
+			min: '=',
 		},
 		link: (scope: any, elem: any, attrs: any) => {
 			var svgHeight = +scope.height || 150;
@@ -631,6 +633,12 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWi
 					}
 				}
 				var ydomain = [ymin, ymax];
+				if (angular.isNumber(scope.min)) {
+					ydomain[0] = +scope.min;
+				}
+				if (angular.isNumber(scope.max)) {
+					ydomain[1] = +scope.max;
+				}
 				yScale.domain(ydomain);
 				if (scope.generator == 'area') {
 					line.y0(yScale(0));
