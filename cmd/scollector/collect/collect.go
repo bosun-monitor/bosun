@@ -28,6 +28,9 @@ var (
 	// BatchSize is the maximum length of data points sent at once to OpenTSDB.
 	BatchSize = 50
 
+	// Workers is the number of send workers to start when Init/InitChan is called.
+	Workers = 3
+
 	// Debug enables debug logging.
 	Debug = false
 
