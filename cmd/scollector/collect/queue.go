@@ -35,19 +35,13 @@ func send() {
 }
 
 func sendBatch(batch opentsdb.MultiDataPoint) {
-	b, err := json.Marshal(batch)
-	if err != nil {
-		slog.Error(err)
-		// bad JSON encoding, just give up
-		return
-	}
 	var buf bytes.Buffer
 	g := gzip.NewWriter(&buf)
-	if _, err = g.Write(b); err != nil {
+	if err := json.NewEncoder(g).Encode(batch); err != nil {
 		slog.Error(err)
 		return
 	}
-	if err = g.Close(); err != nil {
+	if err := g.Close(); err != nil {
 		slog.Error(err)
 		return
 	}
