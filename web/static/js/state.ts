@@ -4,6 +4,7 @@ bosunApp.directive('tsAckGroup', function() {
 			ack: '=',
 			groups: '=tsAckGroup',
 			schedule: '=',
+			timeanddate: '=',
 		},
 		templateUrl: '/partials/ackgroup.html',
 		link: (scope: any, elem: any, attrs: any) => {
