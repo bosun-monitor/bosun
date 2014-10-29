@@ -139,6 +139,7 @@ func (rp *relayProxy) ServeHTTP(responseWriter http.ResponseWriter, r *http.Requ
 		schedule.Search.Index(mdp)
 	}
 	tags := opentsdb.TagSet{"path": clean(r.URL.Path), "remote": clean(strings.Split(r.RemoteAddr, ":")[0])}
+	collect.Add("relay.bytes", tags, int64(reader.buf.Len()))
 	tags["status"] = strconv.Itoa(w.code)
 	collect.Add("relay.response", tags, 1)
 }
