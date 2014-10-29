@@ -388,12 +388,19 @@ bosunApp.directive('tsComputations', function () {
     };
 });
 var timeFormat = 'YYYY/MM/DD-HH:mm:ss';
+function fmtDuration(v) {
+    var diff = moment.duration(v, 'milliseconds');
+    var f;
+    if (Math.abs(v) < 60000) {
+        return diff.format('ss[s]');
+    }
+    return diff.format('d[d] hh:mm:ss');
+}
 function fmtTime(v) {
     var m = moment(v).utc();
     var now = moment().utc();
     var msdiff = now.diff(m);
-    var diff = moment.duration(msdiff, "milliseconds").format("d[d] hh:mm:ss");
-    return m.format(timeFormat) + ' (' + diff + ' ago)';
+    return m.format(timeFormat) + ' (' + fmtDuration(msdiff) + ' ago)';
 }
 bosunApp.directive("tsTime", function () {
     return {
@@ -401,12 +408,9 @@ bosunApp.directive("tsTime", function () {
             scope.$watch(attrs.tsTime, function (v) {
                 var m = moment(v).utc();
                 var text = fmtTime(v);
-                var duration;
                 if (attrs.tsEndTime) {
-                    var diff = scope.$eval(attrs.tsEndTime).diff(m);
-                    duration = moment.duration(diff, "milliseconds").format("d[d] hh:mm:ss");
-                }
-                if (duration) {
+                    var diff = moment(scope.$eval(attrs.tsEndTime)).diff(m);
+                    var duration = fmtDuration(diff);
                     text += " for " + duration;
                 }
                 if (attrs.noLink) {
