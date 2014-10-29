@@ -29,7 +29,7 @@ var (
 	BatchSize = 50
 
 	// Workers is the number of send workers to start when Init/InitChan is called.
-	Workers = 3
+	Workers = 4
 
 	// Debug enables debug logging.
 	Debug = false
