@@ -158,7 +158,7 @@ func DropNA(e *state, T miniprofiler.Timer, series *Results) (*Results, error) {
 			}
 		}
 		if len(nv) == 0 {
-			return nil, fmt.Errorf("Removal of NaNs from from group %s resulted in a zero lengh series which is not supported", res.Group)
+			return nil, fmt.Errorf("dropna: series %s is empty", res.Group)
 		}
 		res.Value = nv
 	}
