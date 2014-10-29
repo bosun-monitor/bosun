@@ -66,10 +66,10 @@ func Graph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 		end = strings.TrimSuffix(s, "-ago")
 	}
 	m_units := make(map[string]string)
-Loop:
 	for i, q := range oreq.Queries {
 		if ar[i] {
 			ms := schedule.GetMetadata(q.Metric, nil)
+			found := false
 			for _, m := range ms {
 				if m.Name == "unit" {
 					if v, ok := m.Value.(string); ok {
@@ -77,6 +77,7 @@ Loop:
 					}
 				}
 				if m.Name == "rate" {
+					found = true
 					switch m.Value {
 					case metadata.Gauge:
 						// ignore
@@ -91,10 +92,11 @@ Loop:
 					default:
 						return nil, fmt.Errorf("unknown metadata rate: %s", m.Value)
 					}
-					continue Loop
 				}
 			}
-			return nil, fmt.Errorf("no metadata for %s: cannot use auto rate", q)
+			if !found {
+				return nil, fmt.Errorf("no metadata for %s: cannot use auto rate", q)
+			}
 		}
 		queries[i] = fmt.Sprintf(`q("%v", "%v", "%v")`, q, start, end)
 		if err := schedule.Search.Expand(q); err != nil {
