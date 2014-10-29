@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 TMP=run/tmp
 rm -rf build/bosun $TMP
 git clone -b master --single-branch .. build/bosun
