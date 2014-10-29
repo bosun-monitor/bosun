@@ -22,15 +22,14 @@ func send() {
 	}
 	for {
 		qlock.Lock()
-		if len(queue) > 0 {
-			i := len(queue)
+		if i := len(queue); i > 0 {
 			if i > BatchSize {
 				i = BatchSize
 			}
 			sending := queue[:i]
 			queue = queue[i:]
 			if Debug {
-				slog.Infof("sending: %d, remaining: %d", len(sending), len(queue))
+				slog.Infof("sending: %d, remaining: %d", i, len(queue))
 			}
 			qlock.Unlock()
 			<-workers
