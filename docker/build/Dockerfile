@@ -15,7 +15,7 @@ RUN git clone -b next --single-branch --depth 1 git://github.com/OpenTSDB/opents
 	cd $TSDB && bash ./build.sh
 
 ENV GOPATH /go
-ENV HBASEVER 0.98.6.1-hadoop2
+ENV HBASEVER 0.98.7-hadoop2
 ENV HBASE /hbase/hbase-$HBASEVER
 ENV JAVA_HOME /usr/lib/jvm/java-6-openjdk-amd64
 
