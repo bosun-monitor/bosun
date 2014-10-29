@@ -26,7 +26,6 @@ func (s *Schedule) Status(ak expr.AlertKey) *State {
 		}
 		s.status[ak] = state
 	}
-	state.Touch()
 	s.Unlock()
 	return state
 }
@@ -160,6 +159,7 @@ func (s *Schedule) CheckExpr(T miniprofiler.Timer, rh RunHistory, a *conf.Alert,
 	if err != nil {
 		ak := expr.NewAlertKey(a.Name, nil)
 		state := s.Status(ak)
+		state.Touch()
 		state.Result = &Result{
 			Result: &expr.Result{
 				Computations: []expr.Computation{
