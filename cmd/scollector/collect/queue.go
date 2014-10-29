@@ -33,6 +33,7 @@ func send() {
 				slog.Infof("sending: %d, remaining: %d", len(sending), len(queue))
 			}
 			qlock.Unlock()
+			<-workers
 			go sendBatch(sending)
 		} else {
 			qlock.Unlock()
@@ -42,7 +43,6 @@ func send() {
 }
 
 func sendBatch(batch opentsdb.MultiDataPoint) {
-	<-workers
 	defer func() {
 		workers <- true
 	}()
