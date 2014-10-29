@@ -137,10 +137,32 @@ var builtins = map[string]parse.Func{
 		parse.TYPE_NUMBER,
 		NV,
 	},
+	"dropna": {
+		[]parse.FuncType{parse.TYPE_SERIES},
+		parse.TYPE_SERIES,
+		DropNA,
+	},
 }
 
 func NV(e *state, T miniprofiler.Timer, series *Results, v float64) (results *Results, err error) {
 	series.NaNValue = &v
+	return series, nil
+}
+
+func DropNA(e *state, T miniprofiler.Timer, series *Results) (*Results, error) {
+	time.Sleep(time.Second * 10)
+	for _, res := range series.Results {
+		nv := make(Series)
+		for k, v := range res.Value.Value().(Series) {
+			if !math.IsNaN(float64(v)) && !math.IsInf(float64(v), 0) {
+				nv[k] = v
+			}
+		}
+		if len(nv) == 0 {
+			return nil, fmt.Errorf("Removal of NaNs from from group %s resulted in a zero lengh series which is not supported", res.Group)
+		}
+		res.Value = nv
+	}
 	return series, nil
 }
 
