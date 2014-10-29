@@ -12,14 +12,7 @@ import (
 	"github.com/StackExchange/slog"
 )
 
-var workers chan bool
-
 func send() {
-	w := Workers
-	workers = make(chan bool, w)
-	for i := 0; i < w; i++ {
-		workers <- true
-	}
 	for {
 		qlock.Lock()
 		if i := len(queue); i > 0 {
@@ -32,8 +25,7 @@ func send() {
 				slog.Infof("sending: %d, remaining: %d", i, len(queue))
 			}
 			qlock.Unlock()
-			<-workers
-			go sendBatch(sending)
+			sendBatch(sending)
 		} else {
 			qlock.Unlock()
 			time.Sleep(time.Second)
@@ -42,9 +34,6 @@ func send() {
 }
 
 func sendBatch(batch opentsdb.MultiDataPoint) {
-	defer func() {
-		workers <- true
-	}()
 	var buf bytes.Buffer
 	g := gzip.NewWriter(&buf)
 	if err := json.NewEncoder(g).Encode(batch); err != nil {

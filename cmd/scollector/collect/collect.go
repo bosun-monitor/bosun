@@ -26,10 +26,7 @@ var (
 	MaxQueueLen = 200000
 
 	// BatchSize is the maximum length of data points sent at once to OpenTSDB.
-	BatchSize = 50
-
-	// Workers is the number of send workers to start when Init/InitChan is called.
-	Workers = 4
+	BatchSize = 250
 
 	// Debug enables debug logging.
 	Debug = false
