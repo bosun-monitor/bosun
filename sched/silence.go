@@ -2,6 +2,7 @@ package sched
 
 import (
 	"crypto/sha1"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -10,9 +11,22 @@ import (
 )
 
 type Silence struct {
-	Start, End  time.Time
-	Alert, Tags string
-	match       map[string]string
+	Start, End time.Time
+	Alert      string
+	Tags       opentsdb.TagSet
+}
+
+func (s *Silence) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		Start, End time.Time
+		Alert      string
+		Tags       string
+	}{
+		Start: s.Start,
+		End:   s.End,
+		Alert: s.Alert,
+		Tags:  s.Tags.Tags(),
+	})
 }
 
 func (s *Silence) Silenced(now time.Time, alert string, tags opentsdb.TagSet) bool {
@@ -26,7 +40,7 @@ func (s *Silence) Matches(alert string, tags opentsdb.TagSet) bool {
 	if s.Alert != "" && s.Alert != alert {
 		return false
 	}
-	for k, pattern := range s.match {
+	for k, pattern := range s.Tags {
 		tagv, ok := tags[k]
 		if !ok {
 			return false
@@ -41,7 +55,7 @@ func (s *Silence) Matches(alert string, tags opentsdb.TagSet) bool {
 
 func (s Silence) ID() string {
 	h := sha1.New()
-	fmt.Fprintf(h, "%s%s%s{%s}", s.Start, s.End, s.Alert, s.Tags)
+	fmt.Fprintf(h, "%s|%s|%s%s", s.Start, s.End, s.Alert, s.Tags)
 	return fmt.Sprintf("%x", h.Sum(nil))
 }
 
@@ -52,8 +66,8 @@ func (s *Schedule) Silenced() map[expr.AlertKey]time.Time {
 	now := time.Now()
 	s.Lock()
 	for _, si := range s.Silence {
-		for ak, st := range s.status {
-			if si.Silenced(now, ak.Name(), st.Group) {
+		for ak := range s.status {
+			if si.Silenced(now, ak.Name(), ak.Group()) {
 				if aks[ak].Before(si.End) {
 					aks[ak] = si.End
 				}
@@ -81,23 +95,14 @@ func (s *Schedule) AddSilence(start, end time.Time, alert, tagList string, confi
 		Start: start,
 		End:   end,
 		Alert: alert,
-		match: make(map[string]string),
+		Tags:  make(opentsdb.TagSet),
 	}
 	if tagList != "" {
 		tags, err := opentsdb.ParseTags(tagList)
-		if err != nil {
+		if err != nil && tags == nil {
 			return nil, err
-		} else if len(tags) == 0 {
-			return nil, fmt.Errorf("empty text")
 		}
-		si.Tags = tagList
-		for k, v := range tags {
-			_, err := Match(v, "")
-			if err != nil {
-				return nil, err
-			}
-			si.match[k] = v
-		}
+		si.Tags = tags
 	}
 	s.Lock()
 	defer s.Unlock()
@@ -108,8 +113,8 @@ func (s *Schedule) AddSilence(start, end time.Time, alert, tagList string, confi
 		return nil, nil
 	}
 	aks := make(map[expr.AlertKey]bool)
-	for ak, st := range s.status {
-		if si.Matches(ak.Name(), st.Group) {
+	for ak := range s.status {
+		if si.Matches(ak.Name(), ak.Group()) {
 			aks[ak] = s.status[ak].IsActive()
 		}
 	}
