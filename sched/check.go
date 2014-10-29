@@ -187,6 +187,7 @@ Loop:
 			}
 		}
 		state := s.Status(ak)
+		state.Touch()
 		status := checkStatus
 		var n float64
 		switch v := r.Value.(type) {
