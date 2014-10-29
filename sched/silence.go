@@ -57,7 +57,6 @@ func (s *Schedule) Silenced() map[expr.AlertKey]time.Time {
 				if aks[ak].Before(si.End) {
 					aks[ak] = si.End
 				}
-				break
 			}
 		}
 	}
