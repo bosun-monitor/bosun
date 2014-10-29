@@ -150,7 +150,6 @@ func NV(e *state, T miniprofiler.Timer, series *Results, v float64) (results *Re
 }
 
 func DropNA(e *state, T miniprofiler.Timer, series *Results) (*Results, error) {
-	time.Sleep(time.Second * 10)
 	for _, res := range series.Results {
 		nv := make(Series)
 		for k, v := range res.Value.Value().(Series) {
