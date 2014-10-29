@@ -246,7 +246,7 @@ func Alerts(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (inter
 
 func Status(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	r.ParseForm()
-	m := make(map[string]interface{})
+	m := make(map[string]*sched.State)
 	for _, k := range r.Form["ak"] {
 		ak, err := expr.ParseAlertKey(k)
 		if err != nil {
