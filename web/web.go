@@ -206,7 +206,7 @@ type Health struct {
 
 func HealthCheck(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	var h Health
-	h.RuleCheck = schedule.CheckStart.After(time.Now().Add(-schedule.Conf.CheckFrequency))
+	h.RuleCheck = schedule.LastCheck.After(time.Now().Add(-schedule.Conf.CheckFrequency))
 	return h, nil
 }
 
