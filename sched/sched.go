@@ -43,6 +43,7 @@ type Schedule struct {
 	CheckStart    time.Time
 	notifications map[*conf.Notification][]*State
 	metalock      sync.Mutex
+	CheckLock     chan bool
 }
 
 type Metavalues []Metavalue
@@ -319,6 +320,7 @@ func Run() error {
 
 func (s *Schedule) Init(c *conf.Conf) {
 	s.Conf = c
+	s.CheckLock = make(chan bool, 1)
 	s.Silence = make(map[string]*Silence)
 	s.Group = make(map[time.Time]expr.AlertKeys)
 	s.Metadata = make(map[metadata.Metakey]Metavalues)
@@ -500,9 +502,9 @@ func (s *Schedule) Run() error {
 			return fmt.Errorf("sched: nil configuration")
 		}
 		start := time.Now()
-		log.Printf("starting run at %v\n", start)
+		s.CheckLock <- true
 		s.Check(nil, start.UTC())
-		log.Printf("run at %v took %v\n", start, time.Since(start))
+		<-s.CheckLock
 		<-wait
 	}
 }
