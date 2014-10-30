@@ -72,6 +72,7 @@ func Listen(listenAddr, webDirectory string, tsdbHost *url.URL) error {
 	router.Handle("/api/tagv/{tagk}/{metric}", JSON(TagValuesByMetricTagKey))
 	router.Handle("/api/templates", JSON(Templates))
 	router.Handle("/api/put", Relay(tsdbHost))
+	router.Handle("/api/run", JSON(Run))
 	http.Handle("/", miniprofiler.NewHandler(Index))
 	http.Handle("/api/", router)
 	fs := http.FileServer(http.Dir(webDirectory))
@@ -406,4 +407,16 @@ func Templates(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (in
 
 func APIRedirect(w http.ResponseWriter, req *http.Request) {
 	http.Redirect(w, req, "http://stackexchange.github.io/bosun/api.html", 302)
+}
+
+func Run(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	select {
+	case schedule.CheckLock <- true:
+		start := time.Now()
+		schedule.Check(nil, start.UTC())
+		<-schedule.CheckLock
+		return time.Now().UTC(), nil
+	case <-time.After(time.Second * 1):
+		return "Already Running...", nil
+	}
 }

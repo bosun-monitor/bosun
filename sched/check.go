@@ -34,6 +34,7 @@ type RunHistory map[expr.AlertKey]*Event
 
 // Check evaluates all critical and warning alert rules.
 func (s *Schedule) Check(T miniprofiler.Timer, start time.Time) {
+	log.Printf("starting run at %v\n", start)
 	r := make(RunHistory)
 	s.CheckStart = start
 	s.cache = opentsdb.NewCache(s.Conf.TsdbHost, s.Conf.ResponseLimit)
@@ -41,6 +42,7 @@ func (s *Schedule) Check(T miniprofiler.Timer, start time.Time) {
 		s.CheckAlert(T, r, a)
 	}
 	s.RunHistory(r)
+	log.Printf("run at %v took %v\n", start, time.Since(start))
 }
 
 // RunHistory processes an event history and trisggers notifications if needed.
