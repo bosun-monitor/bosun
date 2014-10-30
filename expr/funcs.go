@@ -127,6 +127,11 @@ var builtins = map[string]parse.Func{
 		parse.TYPE_NUMBER,
 		Abs,
 	},
+	"dropna": {
+		[]parse.FuncType{parse.TYPE_SERIES},
+		parse.TYPE_SERIES,
+		DropNA,
+	},
 	"lookup": {
 		[]parse.FuncType{parse.TYPE_STRING, parse.TYPE_STRING},
 		parse.TYPE_NUMBER,
@@ -136,11 +141,6 @@ var builtins = map[string]parse.Func{
 		[]parse.FuncType{parse.TYPE_NUMBER, parse.TYPE_SCALAR},
 		parse.TYPE_NUMBER,
 		NV,
-	},
-	"dropna": {
-		[]parse.FuncType{parse.TYPE_SERIES},
-		parse.TYPE_SERIES,
-		DropNA,
 	},
 }
 
