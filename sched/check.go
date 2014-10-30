@@ -67,6 +67,7 @@ func (s *Schedule) Check(T miniprofiler.Timer, now time.Time) (time.Duration, er
 // RunHistory processes an event history and trisggers notifications if needed.
 func (s *Schedule) RunHistory(r *RunHistory) {
 	checkNotify := false
+	silenced := s.Silenced()
 	s.Lock()
 	defer s.Unlock()
 	for ak, event := range r.Events {
@@ -113,6 +114,16 @@ func (s *Schedule) RunHistory(r *RunHistory) {
 		} else if event.Status < last {
 			if _, hasOld := s.Notifications[ak]; hasOld {
 				notifyCurrent()
+			}
+			// Auto close silenced alerts.
+			if _, ok := silenced[ak]; ok && event.Status == StNormal {
+				go func(ak expr.AlertKey) {
+					log.Printf("auto close %s because was silenced", ak)
+					err := s.Action("bosun", "Auto close because was silenced.", ActionClose, ak)
+					if err != nil {
+						log.Println(err)
+					}
+				}(ak)
 			}
 		}
 	}
