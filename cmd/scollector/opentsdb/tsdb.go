@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"math"
 	"math/big"
 	"net/http"
@@ -658,11 +659,12 @@ func (r *Request) QueryResponse(host string, client *http.Client) (*http.Respons
 	if resp.StatusCode != http.StatusOK {
 		e := RequestError{Request: string(b)}
 		defer resp.Body.Close()
-		j := json.NewDecoder(resp.Body)
+		body, _ := ioutil.ReadAll(resp.Body)
+		j := json.NewDecoder(bytes.NewBuffer(body))
 		if err := j.Decode(&e); err == nil {
 			return nil, &e
 		}
-		return nil, fmt.Errorf("opentsdb: %s", b)
+		return nil, fmt.Errorf("opentsdb: %s", string(body))
 	}
 	return resp, nil
 }
