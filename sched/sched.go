@@ -42,6 +42,7 @@ type Schedule struct {
 	nc            chan interface{}
 	notifications map[*conf.Notification][]*State
 	metalock      sync.Mutex
+	checkRunning  chan bool
 }
 
 type Metavalues []Metavalue
@@ -326,6 +327,7 @@ func (s *Schedule) Init(c *conf.Conf) {
 	s.Lookups = c.GetLookups()
 	s.status = make(States)
 	s.Search = search.NewSearch()
+	s.checkRunning = make(chan bool, 1)
 }
 
 func (s *Schedule) Load(c *conf.Conf) {
@@ -499,11 +501,14 @@ func (s *Schedule) Run() error {
 		if s.Conf == nil {
 			return fmt.Errorf("sched: nil configuration")
 		}
-		start := time.Now()
-		log.Printf("starting run at %v\n", start)
-		s.Check(nil, start.UTC())
-		log.Printf("run at %v took %v\n", start, time.Since(start))
-		s.LastCheck = start
+		log.Println("starting check")
+		now := time.Now()
+		dur, err := s.Check(nil, now)
+		if err != nil {
+			log.Println(err)
+		}
+		log.Printf("check took %v\n", dur)
+		s.LastCheck = now
 		<-wait
 	}
 }

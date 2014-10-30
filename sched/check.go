@@ -44,13 +44,24 @@ func (s *Schedule) NewRunHistory(start time.Time) *RunHistory {
 	}
 }
 
-// Check evaluates all critical and warning alert rules.
-func (s *Schedule) Check(T miniprofiler.Timer, start time.Time) {
-	r := s.NewRunHistory(start)
+// Check evaluates all critical and warning alert rules. An error is returned if
+// the check could not be performed.
+func (s *Schedule) Check(T miniprofiler.Timer, now time.Time) (time.Duration, error) {
+	select {
+	case s.checkRunning <- true:
+		// Good, we've got the lock.
+	default:
+		return 0, fmt.Errorf("check already running")
+	}
+	r := s.NewRunHistory(now)
+	start := time.Now()
 	for _, a := range s.Conf.Alerts {
 		s.CheckAlert(T, r, a)
 	}
+	d := time.Since(start)
 	s.RunHistory(r)
+	<-s.checkRunning
+	return d, nil
 }
 
 // RunHistory processes an event history and trisggers notifications if needed.
