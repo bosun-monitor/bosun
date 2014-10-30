@@ -837,6 +837,7 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function ($window, fmtfi
                     var s = extentStart;
                     if (extentEnd != extentStart) {
                         s += ' - ' + extentEnd;
+                        s += ' (' + extentDiff + ')';
                     }
                     brushText.text(s);
                 }
@@ -967,10 +968,12 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function ($window, fmtfi
             ;
             var extentStart;
             var extentEnd;
+            var extentDiff;
             function brushed() {
                 var extent = brush.extent();
                 extentStart = datefmt(extent[0]);
                 extentEnd = datefmt(extent[1]);
+                extentDiff = fmtDuration(moment(extent[1]).diff(moment(extent[0])));
                 drawLegend();
                 if (scope.enableBrush && extentEnd != extentStart) {
                     scope.brushStart = extentStart;
