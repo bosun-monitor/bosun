@@ -11,6 +11,16 @@ compiled into scollector itself. scollector supports external collectors, but
 your goal should be to use those temporarily until the go version is written. It
 has native collectors for Linux, Darwin, and Windows.
 
+Warning
+
+scollector has not been tested outside of the Stack Exchange environment, and
+thus may act incorrectly elsewhere.
+
+scollector requires the new HTTP API of OpenTSDB 2.1 with gzip support, which is
+currently only present in the "next" branch
+(https://github.com/opentsdb/opentsdb/tree/next). Ensure that is in use if not
+using the docker image.
+
 Usage:
 	scollector [flag]
 
@@ -58,11 +68,19 @@ flags.
 
 External Collectors
 
-External collectors are executables that scollector invokes, collects output from, and uses that like other collector data. The -c option specfies the external collectors directory. It should contain numbered directories like OpenTSDB tcollector expects. Any executable file in those directories is run every N seconds, where N is the name of the directory. Use 0 for a program that should be run continuously and simply pass data through to OpenTSDB (the program will be restarted if it exits). Data output format is:
+External collectors are executables that scollector invokes, collects output
+from, and uses that like other collector data. The -c option specfies the
+external collectors directory. It should contain numbered directories like
+OpenTSDB tcollector expects. Any executable file in those directories is run
+every N seconds, where N is the name of the directory. Use 0 for a program that
+should be run continuously and simply pass data through to OpenTSDB (the program
+will be restarted if it exits). Data output format is:
 
 	metric timestamp value tag1=val1 tag2=val2 ...
 
-Timestamp is in Unix format (seconds since epoch). Tags are optional. A host tag is automatically added, but overridden if specified. Stderr output is passed to scollector's log.
+Timestamp is in Unix format (seconds since epoch). Tags are optional. A host tag
+is automatically added, but overridden if specified. Stderr output is passed to
+scollector's log.
 
 Configuration File
 
@@ -75,23 +93,6 @@ vsphere (-v). Example:
 	host = other-tsdb:1234
 	filter = snmp
 	snmp = com@theswitch
-
-Warning
-
-scollector is in testing, and you should not depend on it for production use
-yet. We are using it internally at Stack Exchange, but we are still fixing bugs.
-It is designed to be used with an upcoming and unreleased project we are working
-on, and so may not work in your environment. Some collector details may be
-specific to our environment, and so may act weirdly in yours. These will
-eventually be moved out into config options so the defaults works well for
-everyone.
-
-An OpenTSDB 2.0 server is required, since it uses the HTTP API. You may have to
-enable chunked requests on your server (not sure about this). scollector sends
-gzipped data to OpenTSDB. This feature will be available by default with
-OpenTSDB 2.1, but is not yet in the next branch. A patch is available to enable
-this manually
-(https://groups.google.com/d/msg/opentsdb/JQ7azVR5x_g/37yLYukU5R4J).
 
 Windows
 
