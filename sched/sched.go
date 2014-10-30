@@ -216,11 +216,13 @@ type StateGroups struct {
 		Acknowledged []*StateGroup `json:",omitempty"`
 	}
 	TimeAndDate []int
+	Silenced map[expr.AlertKey]time.Time
 }
 
 func (s *Schedule) MarshalGroups(filter string) (*StateGroups, error) {
 	t := StateGroups{
 		TimeAndDate: s.Conf.TimeAndDate,
+		Silenced: s.Silenced(),
 	}
 	s.Lock()
 	defer s.Unlock()
