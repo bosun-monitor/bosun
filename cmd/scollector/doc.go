@@ -11,16 +11,6 @@ compiled into scollector itself. scollector supports external collectors, but
 your goal should be to use those temporarily until the go version is written. It
 has native collectors for Linux, Darwin, and Windows.
 
-Warning
-
-scollector has not been tested outside of the Stack Exchange environment, and
-thus may act incorrectly elsewhere.
-
-scollector requires the new HTTP API of OpenTSDB 2.1 with gzip support, which is
-currently only present in the "next" branch
-(https://github.com/opentsdb/opentsdb/tree/next). Ensure that is in use if not
-using the docker image.
-
 Usage:
 	scollector [flag]
 
@@ -65,6 +55,16 @@ scollector will, by default, report to the host `bosun`, which you should
 configure on your local nameserver to point to your TSDB server. This makes it
 possible to run scollector correctly with zero configuration or command line
 flags.
+
+Warning
+
+scollector has not been tested outside of the Stack Exchange environment, and
+thus may act incorrectly elsewhere.
+
+scollector requires the new HTTP API of OpenTSDB 2.1 with gzip support, which is
+currently only present in the "next" branch
+(https://github.com/opentsdb/opentsdb/tree/next). Ensure that is in use if not
+using the docker image.
 
 External Collectors
 
