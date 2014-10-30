@@ -74,23 +74,21 @@ type Res struct {
 }
 
 func procRule(t miniprofiler.Timer, c *conf.Conf, a *conf.Alert, now time.Time, summary bool, email string, template_group string) (*ruleResult, error) {
-	s := &sched.Schedule{
-		CheckStart: now,
-	}
+	s := &sched.Schedule{}
 	s.Init(c)
 	s.Metadata = schedule.Metadata
 	s.Search = schedule.Search
-	rh := make(sched.RunHistory)
+	rh := s.NewRunHistory(now)
 	if _, err := s.CheckExpr(t, rh, a, a.Warn, sched.StWarning, nil); err != nil {
 		return nil, err
 	}
 	if _, err := s.CheckExpr(t, rh, a, a.Crit, sched.StCritical, nil); err != nil {
 		return nil, err
 	}
-	keys := make(expr.AlertKeys, len(rh))
+	keys := make(expr.AlertKeys, len(rh.Events))
 	errors, criticals, warnings, normals := make([]expr.AlertKey, 0), make([]expr.AlertKey, 0), make([]expr.AlertKey, 0), make([]expr.AlertKey, 0)
 	i := 0
-	for k, v := range rh {
+	for k, v := range rh.Events {
 		v.Time = now
 		keys[i] = k
 		i++
@@ -122,25 +120,25 @@ func procRule(t miniprofiler.Timer, c *conf.Conf, a *conf.Alert, now time.Time, 
 			for _, ak := range keys {
 				if ak.Group().Subset(ts) {
 					instance = s.Status(ak)
-					instance.History = []sched.Event{*rh[ak]}
+					instance.History = []sched.Event{*rh.Events[ak]}
 					break
 				}
 			}
 		}
 		if instance == nil {
 			instance = s.Status(keys[0])
-			instance.History = []sched.Event{*rh[keys[0]]}
+			instance.History = []sched.Event{*rh.Events[keys[0]]}
 			if template_group != "" {
 				warning = append(warning, fmt.Sprintf("template group %s was not a subset of any result", template_group))
 			}
 		}
-		if _, err := s.ExecuteBody(body, a, instance, false); err != nil {
+		if _, err := s.ExecuteBody(body, rh, a, instance, false); err != nil {
 			warning = append(warning, err.Error())
 		}
-		if err := s.ExecuteSubject(subject, a, instance); err != nil {
+		if err := s.ExecuteSubject(subject, rh, a, instance); err != nil {
 			warning = append(warning, err.Error())
 		}
-		data = s.Data(instance, a, false)
+		data = s.Data(rh, instance, a, false)
 		if email != "" {
 			m, err := mail.ParseAddress(email)
 			if err != nil {
@@ -150,7 +148,7 @@ func procRule(t miniprofiler.Timer, c *conf.Conf, a *conf.Alert, now time.Time, 
 				Email: []*mail.Address{m},
 			}
 			email := new(bytes.Buffer)
-			attachments, err := s.ExecuteBody(email, a, instance, true)
+			attachments, err := s.ExecuteBody(email, rh, a, instance, true)
 			n.DoEmail(subject.Bytes(), email.Bytes(), schedule.Conf, string(instance.AlertKey()), attachments...)
 		}
 	}
@@ -163,7 +161,7 @@ func procRule(t miniprofiler.Timer, c *conf.Conf, a *conf.Alert, now time.Time, 
 		body.String(),
 		subject.String(),
 		data,
-		rh,
+		rh.Events,
 		warning,
 	}, nil
 }
@@ -178,7 +176,7 @@ type ruleResult struct {
 	Body    string
 	Subject string
 	Data    interface{}
-	Result  sched.RunHistory
+	Result map[expr.AlertKey]*sched.Event
 	Warning []string
 }
 

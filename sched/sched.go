@@ -38,9 +38,8 @@ type Schedule struct {
 	Search        *search.Search
 	Lookups       map[string]*expr.Lookup
 
+	LastCheck     time.Time
 	nc            chan interface{}
-	cache         *opentsdb.Cache
-	CheckStart    time.Time
 	notifications map[*conf.Notification][]*State
 	metalock      sync.Mutex
 }
@@ -326,7 +325,6 @@ func (s *Schedule) Init(c *conf.Conf) {
 	s.Metadata = make(map[metadata.Metakey]Metavalues)
 	s.Lookups = c.GetLookups()
 	s.status = make(States)
-	s.cache = opentsdb.NewCache(s.Conf.TsdbHost, s.Conf.ResponseLimit)
 	s.Search = search.NewSearch()
 }
 
@@ -505,6 +503,7 @@ func (s *Schedule) Run() error {
 		log.Printf("starting run at %v\n", start)
 		s.Check(nil, start.UTC())
 		log.Printf("run at %v took %v\n", start, time.Since(start))
+		s.LastCheck = start
 		<-wait
 	}
 }

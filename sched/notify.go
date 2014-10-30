@@ -12,7 +12,8 @@ import (
 // Poll dispatches notification checks when needed.
 func (s *Schedule) Poll() {
 	for {
-		timeout := s.CheckNotifications()
+		rh := s.NewRunHistory(time.Now())
+		timeout := s.CheckNotifications(rh)
 		s.Save()
 		// Wait for one of these two.
 		select {
@@ -31,7 +32,7 @@ func (s *Schedule) Notify(st *State, n *conf.Notification) {
 
 // CheckNotifications processes past notification events. It returns the
 // duration until the soonest notification triggers.
-func (s *Schedule) CheckNotifications() time.Duration {
+func (s *Schedule) CheckNotifications(rh *RunHistory) time.Duration {
 	silenced := s.Silenced()
 	s.Lock()
 	defer s.Unlock()
@@ -59,7 +60,7 @@ func (s *Schedule) CheckNotifications() time.Duration {
 			s.Notify(st, n)
 		}
 	}
-	s.sendNotifications()
+	s.sendNotifications(rh)
 	s.notifications = nil
 	timeout := time.Hour
 	now := time.Now()
@@ -78,7 +79,7 @@ func (s *Schedule) CheckNotifications() time.Duration {
 	return timeout
 }
 
-func (s *Schedule) sendNotifications() {
+func (s *Schedule) sendNotifications(rh *RunHistory) {
 	if s.Conf.Quiet {
 		log.Println("quiet mode prevented", len(s.notifications), "notifications")
 		return
@@ -90,7 +91,7 @@ func (s *Schedule) sendNotifications() {
 			if st.Last().Status == StUnknown {
 				ustates[ak] = st
 			} else {
-				s.notify(st, n)
+				s.notify(rh, st, n)
 			}
 			if n.Next != nil {
 				s.AddNotification(ak, n, time.Now().UTC())
@@ -102,15 +103,15 @@ func (s *Schedule) sendNotifications() {
 	}
 }
 
-func (s *Schedule) notify(st *State, n *conf.Notification) {
+func (s *Schedule) notify(rh *RunHistory, st *State, n *conf.Notification) {
 	a := s.Conf.Alerts[st.Alert]
 	subject := new(bytes.Buffer)
-	if err := s.ExecuteSubject(subject, a, st); err != nil {
+	if err := s.ExecuteSubject(subject, rh, a, st); err != nil {
 		log.Println(err)
 		subject = bytes.NewBufferString(err.Error())
 	}
 	body := new(bytes.Buffer)
-	attachments, err := s.ExecuteBody(body, a, st, true)
+	attachments, err := s.ExecuteBody(body, rh, a, st, true)
 	if err != nil {
 		log.Println(err)
 		body = bytes.NewBufferString(err.Error())

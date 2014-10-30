@@ -26,14 +26,16 @@ type Context struct {
 	Alert *conf.Alert
 
 	schedule    *Schedule
+	runHistory *RunHistory
 	Attachments []*conf.Attachment
 }
 
-func (s *Schedule) Data(st *State, a *conf.Alert, isEmail bool) *Context {
+func (s *Schedule) Data(rh *RunHistory, st *State, a *conf.Alert, isEmail bool) *Context {
 	c := Context{
 		State:    st,
 		Alert:    a,
 		schedule: s,
+		runHistory: rh,
 	}
 	if isEmail {
 		c.Attachments = make([]*conf.Attachment, 0)
@@ -130,21 +132,21 @@ func (c *Context) Rule() (string, error) {
 	return c.makeLink("/rule", &p)
 }
 
-func (s *Schedule) ExecuteBody(w io.Writer, a *conf.Alert, st *State, isEmail bool) ([]*conf.Attachment, error) {
+func (s *Schedule) ExecuteBody(w io.Writer, rh *RunHistory, a *conf.Alert, st *State, isEmail bool) ([]*conf.Attachment, error) {
 	t := a.Template
 	if t == nil || t.Body == nil {
 		return nil, nil
 	}
-	c := s.Data(st, a, isEmail)
+	c := s.Data(rh, st, a, isEmail)
 	return c.Attachments, t.Body.Execute(w, c)
 }
 
-func (s *Schedule) ExecuteSubject(w io.Writer, a *conf.Alert, st *State) error {
+func (s *Schedule) ExecuteSubject(w io.Writer, rh *RunHistory, a *conf.Alert, st *State) error {
 	t := a.Template
 	if t == nil || t.Subject == nil {
 		return nil
 	}
-	return t.Subject.Execute(w, s.Data(st, a, false))
+	return t.Subject.Execute(w, s.Data(rh, st, a, false))
 }
 
 func (c *Context) eval(v interface{}, filter bool, series bool, autods int) ([]*expr.Result, error) {
@@ -164,7 +166,7 @@ func (c *Context) eval(v interface{}, filter bool, series bool, autods int) ([]*
 	if series && e.Root.Return() != parse.TYPE_SERIES {
 		return nil, fmt.Errorf("egraph: requires an expression that returns a series")
 	}
-	res, _, err := e.Execute(c.schedule.cache, nil, c.schedule.CheckStart, autods, c.Alert.UnjoinedOK, c.schedule.Search, c.schedule.Lookups, c.schedule.Conf.AlertSquelched(c.Alert))
+	res, _, err := e.Execute(c.runHistory.Context, nil, c.runHistory.Start, autods, c.Alert.UnjoinedOK, c.schedule.Search, c.schedule.Lookups, c.schedule.Conf.AlertSquelched(c.Alert))
 	if err != nil {
 		return nil, fmt.Errorf("%s: %v", v, err)
 	}

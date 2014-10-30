@@ -30,13 +30,23 @@ func (s *Schedule) Status(ak expr.AlertKey) *State {
 	return state
 }
 
-type RunHistory map[expr.AlertKey]*Event
+type RunHistory struct {
+	Start   time.Time
+	Context opentsdb.Context
+	Events  map[expr.AlertKey]*Event
+}
+
+func (s *Schedule) NewRunHistory(start time.Time) *RunHistory {
+	return &RunHistory{
+		Start:   start,
+		Context: opentsdb.NewCache(s.Conf.TsdbHost, s.Conf.ResponseLimit),
+		Events:  make(map[expr.AlertKey]*Event),
+	}
+}
 
 // Check evaluates all critical and warning alert rules.
 func (s *Schedule) Check(T miniprofiler.Timer, start time.Time) {
-	r := make(RunHistory)
-	s.CheckStart = start
-	s.cache = opentsdb.NewCache(s.Conf.TsdbHost, s.Conf.ResponseLimit)
+	r := s.NewRunHistory(start)
 	for _, a := range s.Conf.Alerts {
 		s.CheckAlert(T, r, a)
 	}
@@ -44,18 +54,18 @@ func (s *Schedule) Check(T miniprofiler.Timer, start time.Time) {
 }
 
 // RunHistory processes an event history and trisggers notifications if needed.
-func (s *Schedule) RunHistory(r RunHistory) {
+func (s *Schedule) RunHistory(r *RunHistory) {
 	checkNotify := false
 	s.Lock()
 	defer s.Unlock()
-	for ak, event := range r {
+	for ak, event := range r.Events {
 		state := s.status[ak]
 		last := state.Append(event)
 		a := s.Conf.Alerts[ak.Name()]
 		if event.Status > StNormal {
 			var subject = new(bytes.Buffer)
 			if event.Status != StUnknown {
-				if err := s.ExecuteSubject(subject, a, state); err != nil {
+				if err := s.ExecuteSubject(subject, r, a, state); err != nil {
 					log.Println(err)
 				}
 			}
@@ -105,7 +115,7 @@ func (s *Schedule) RunHistory(r RunHistory) {
 func (s *Schedule) CheckUnknown() {
 	for _ = range time.Tick(s.Conf.CheckFrequency / 4) {
 		log.Println("checkUnknown")
-		r := make(RunHistory)
+		r := s.NewRunHistory(time.Now())
 		s.Lock()
 		for ak, st := range s.status {
 			if st.Forgotten {
@@ -125,14 +135,14 @@ func (s *Schedule) CheckUnknown() {
 			if time.Since(st.Touched) < t {
 				continue
 			}
-			r[ak] = &Event{Status: StUnknown}
+			r.Events[ak] = &Event{Status: StUnknown}
 		}
 		s.Unlock()
 		s.RunHistory(r)
 	}
 }
 
-func (s *Schedule) CheckAlert(T miniprofiler.Timer, r RunHistory, a *conf.Alert) {
+func (s *Schedule) CheckAlert(T miniprofiler.Timer, r *RunHistory, a *conf.Alert) {
 	log.Printf("checking alert %v", a.Name)
 	start := time.Now()
 	var warns expr.AlertKeys
@@ -144,7 +154,7 @@ func (s *Schedule) CheckAlert(T miniprofiler.Timer, r RunHistory, a *conf.Alert)
 	log.Printf("done checking alert %v (%s): %v crits, %v warns", a.Name, time.Since(start), len(crits), len(warns))
 }
 
-func (s *Schedule) CheckExpr(T miniprofiler.Timer, rh RunHistory, a *conf.Alert, e *expr.Expr, checkStatus Status, ignore expr.AlertKeys) (alerts expr.AlertKeys, err error) {
+func (s *Schedule) CheckExpr(T miniprofiler.Timer, rh *RunHistory, a *conf.Alert, e *expr.Expr, checkStatus Status, ignore expr.AlertKeys) (alerts expr.AlertKeys, err error) {
 	if e == nil {
 		return
 	}
@@ -155,7 +165,7 @@ func (s *Schedule) CheckExpr(T miniprofiler.Timer, rh RunHistory, a *conf.Alert,
 		collect.Add("check.errs", opentsdb.TagSet{"metric": a.Name}, 1)
 		log.Println(err)
 	}()
-	results, _, err := e.Execute(s.cache, T, s.CheckStart, 0, a.UnjoinedOK, s.Search, s.Conf.GetLookups(), s.Conf.AlertSquelched(a))
+	results, _, err := e.Execute(rh.Context, T, rh.Start, 0, a.UnjoinedOK, s.Search, s.Conf.GetLookups(), s.Conf.AlertSquelched(a))
 	if err != nil {
 		ak := expr.NewAlertKey(a.Name, nil)
 		state := s.Status(ak)
@@ -170,7 +180,7 @@ func (s *Schedule) CheckExpr(T miniprofiler.Timer, rh RunHistory, a *conf.Alert,
 				},
 			},
 		}
-		rh[ak] = &Event{
+		rh.Events[ak] = &Event{
 			Status: StError,
 		}
 		return
@@ -199,10 +209,10 @@ Loop:
 			err = fmt.Errorf("expected number or scalar")
 			return
 		}
-		event := rh[ak]
+		event := rh.Events[ak]
 		if event == nil {
 			event = new(Event)
-			rh[ak] = event
+			rh.Events[ak] = event
 		}
 		result := Result{
 			Result: r,
@@ -222,7 +232,7 @@ Loop:
 		if status != StNormal {
 			alerts = append(alerts, ak)
 		}
-		if status > rh[ak].Status {
+		if status > rh.Events[ak].Status {
 			event.Status = status
 			state.Result = &result
 		}
