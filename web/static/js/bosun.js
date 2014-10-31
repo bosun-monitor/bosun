@@ -336,7 +336,7 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
     };
     $scope.set();
 }]);
-bosunControllers.controller('DashboardCtrl', ['$scope', '$location', function ($scope, $location) {
+bosunControllers.controller('DashboardCtrl', ['$scope', '$http', '$location', function ($scope, $http, $location) {
     var search = $location.search();
     $scope.loading = 'Loading';
     $scope.error = '';
@@ -345,17 +345,38 @@ bosunControllers.controller('DashboardCtrl', ['$scope', '$location', function ($
         $scope.filter = readCookie("filter");
     }
     $location.search('filter', $scope.filter || null);
-    $scope.refresh($scope.filter).then(function () {
-        $scope.loading = '';
-    }, function (err) {
-        $scope.loading = '';
-        $scope.error = 'Unable to fetch alerts: ' + err;
-    });
+    reload();
+    function reload() {
+        $scope.refresh($scope.filter).then(function () {
+            $scope.loading = '';
+            $scope.error = '';
+        }, function (err) {
+            $scope.loading = '';
+            $scope.error = 'Unable to fetch alerts: ' + err;
+        });
+    }
     $scope.keydown = function ($event) {
         if ($event.keyCode == 13) {
             createCookie("filter", $scope.filter || "", 1000);
             $location.search('filter', $scope.filter || null);
         }
+    };
+    var check_clicked = false;
+    $scope.check = function () {
+        if (check_clicked) {
+            return;
+        }
+        check_clicked = true;
+        $scope.loading = 'Running Rule Check...';
+        $scope.error = '';
+        $scope.animate();
+        $http.get('/api/run').success(reload).error(function (err) {
+            $scope.error = err;
+        }).finally(function () {
+            $scope.loading = '';
+            check_clicked = false;
+            $scope.stop(); // stop animation
+        });
     };
 }]);
 bosunApp.directive('tsResults', function () {
