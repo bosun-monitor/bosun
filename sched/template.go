@@ -13,7 +13,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/metadata"
 	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/opentsdb"
 
 	"github.com/StackExchange/bosun/conf"
@@ -281,13 +280,12 @@ func (c *Context) GetMeta(metric, name string, v interface{}) (interface{}, erro
 	if name == "" {
 		return meta, nil
 	}
-	fm := make([]metadata.Metasend, 0)
 	for _, m := range meta {
 		if m.Name == name {
-			fm = append(fm, m)
+			return m.Value, nil
 		}
 	}
-	return fm, nil
+	return nil, nil
 }
 
 func (c *Context) LeftJoin(q ...interface{}) (interface{}, error) {
