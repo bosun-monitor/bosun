@@ -26,15 +26,15 @@ type Context struct {
 	Alert *conf.Alert
 
 	schedule    *Schedule
-	runHistory *RunHistory
+	runHistory  *RunHistory
 	Attachments []*conf.Attachment
 }
 
 func (s *Schedule) Data(rh *RunHistory, st *State, a *conf.Alert, isEmail bool) *Context {
 	c := Context{
-		State:    st,
-		Alert:    a,
-		schedule: s,
+		State:      st,
+		Alert:      a,
+		schedule:   s,
 		runHistory: rh,
 	}
 	if isEmail {
