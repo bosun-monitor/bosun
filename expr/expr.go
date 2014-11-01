@@ -189,9 +189,6 @@ func (u *Union) ExtendComputations(o *Result) {
 func (e *state) union(a, b *Results, expression string) []*Union {
 	const unjoinedGroup = "unjoined group (%v)"
 	var us []*Union
-	if len(a.Results) == 0 || len(b.Results) == 0 {
-		return us
-	}
 	am := make(map[*Result]bool)
 	bm := make(map[*Result]bool)
 	for _, ra := range a.Results {
@@ -227,7 +224,7 @@ func (e *state) union(a, b *Results, expression string) []*Union {
 		}
 	}
 	if !e.unjoinedOk {
-		if !a.IgnoreUnjoined && !b.IgnoreOtherUnjoined {
+		if b.NaNValue != nil || !a.IgnoreUnjoined && !b.IgnoreOtherUnjoined {
 			for r := range am {
 				u := &Union{
 					A:     r.Value,
@@ -239,7 +236,7 @@ func (e *state) union(a, b *Results, expression string) []*Union {
 				us = append(us, u)
 			}
 		}
-		if !b.IgnoreUnjoined && !a.IgnoreOtherUnjoined {
+		if a.NaNValue != nil || !b.IgnoreUnjoined && !a.IgnoreOtherUnjoined {
 			for r := range bm {
 				u := &Union{
 					A:     a.NaN(),
