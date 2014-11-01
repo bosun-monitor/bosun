@@ -31,7 +31,7 @@ const (
 
 var (
 	flagFilter          = flag.String("f", "", "Filters collectors matching this term. Works with all other arguments.")
-	flagList            = flag.Bool("l", false, "List available collectors")
+	flagList            = flag.Bool("l", false, "List available collectors.")
 	flagPrint           = flag.Bool("p", false, "Print to screen instead of sending to a host")
 	flagHost            = flag.String("h", "bosun", `bosun or OpenTSDB host. Ex: "http://tsdb.example.com:4242".`)
 	flagColDir          = flag.String("c", "", `External collectors directory.`)
