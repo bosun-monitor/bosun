@@ -51,7 +51,6 @@ func Listen(listenAddr, webDirectory string, tsdbHost *url.URL) error {
 	router.HandleFunc("/api/", APIRedirect)
 	router.Handle("/api/action", JSON(Action))
 	router.Handle("/api/alerts", JSON(Alerts))
-	router.Handle("/api/alerts/details", JSON(AlertDetails))
 	router.Handle("/api/config", miniprofiler.NewHandler(Config))
 	router.Handle("/api/config_test", miniprofiler.NewHandler(ConfigTest))
 	router.Handle("/api/egraph/{bs}.svg", JSON(ExprGraph))
@@ -260,23 +259,6 @@ func Status(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (inter
 		m[k] = st
 	}
 	return m, nil
-}
-
-func AlertDetails(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	r.ParseForm()
-	states := make(sched.States)
-	for _, v := range r.Form["key"] {
-		k, err := expr.ParseAlertKey(v)
-		if err != nil {
-			return nil, err
-		}
-		s := schedule.Status(k)
-		if s == nil {
-			return nil, fmt.Errorf("unknown key: %v", v)
-		}
-		states[k] = s
-	}
-	return states, nil
 }
 
 func Action(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {

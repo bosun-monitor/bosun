@@ -20,8 +20,8 @@ bosunControllers.controller('HistoryCtrl', ['$scope', '$http', '$location', '$ro
 	} else {
 		keys[search.key] = true;
 	}
-	var params = Object.keys(keys).map((v: any) => { return 'key=' + encodeURIComponent(v); }).join('&');
-	$http.get('/api/alerts/details?' + params)
+	var params = Object.keys(keys).map((v: any) => { return 'ak=' + encodeURIComponent(v); }).join('&');
+	$http.get('/api/status?' + params)
 		.success((data) => {
 			var selected_alerts: any = {};
 			angular.forEach(data, function(v, ak) {
