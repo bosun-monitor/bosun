@@ -11,7 +11,7 @@ RUN apt-get update && apt-get install -y \
 RUN mkdir -p /tsdb /hbase /bosun
 
 ENV TSDB /tsdb
-ENV HBASEVER 0.98.6.1-hadoop2
+ENV HBASEVER 0.98.7-hadoop2
 ENV HBASE /hbase/hbase-$HBASEVER
 ENV HBASE_HOME $HBASE
 ENV JAVA_HOME /usr/lib/jvm/java-6-openjdk-amd64
