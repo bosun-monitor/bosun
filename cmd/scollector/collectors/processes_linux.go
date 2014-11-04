@@ -23,7 +23,6 @@ func WatchProcesses(procs []*WatchedProc) error {
 func linuxProcMonitor(w *WatchedProc, md *opentsdb.MultiDataPoint) error {
 	var err error
 	for pid, id := range w.Processes {
-		id := strconv.Itoa(id)
 		stats_file, err := ioutil.ReadFile("/proc/" + pid + "/stat")
 		if err != nil {
 			w.Remove(pid)
@@ -50,7 +49,7 @@ func linuxProcMonitor(w *WatchedProc, md *opentsdb.MultiDataPoint) error {
 			err = fmt.Errorf("io too short")
 			continue
 		}
-		tags := opentsdb.TagSet{"name": w.Name, "id": id}
+		tags := opentsdb.TagSet{"name": w.Name, "id": strconv.Itoa(id)}
 		Add(md, "linux.proc.cpu", stats[13], opentsdb.TagSet{"type": "user"}.Merge(tags), metadata.Counter, metadata.Pct, descLinuxProcCpuUser)
 		Add(md, "linux.proc.cpu", stats[14], opentsdb.TagSet{"type": "system"}.Merge(tags), metadata.Counter, metadata.Pct, descLinuxProcCpuSystem)
 		Add(md, "linux.proc.mem.fault", stats[9], opentsdb.TagSet{"type": "minflt"}.Merge(tags), metadata.Counter, metadata.Fault, descLinuxProcMemFaultMin)
