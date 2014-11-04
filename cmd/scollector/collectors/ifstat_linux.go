@@ -87,26 +87,26 @@ func c_ifstat_linux() (opentsdb.MultiDataPoint, error) {
 				Add(&md, "linux.net.bond."+strings.Replace(FIELDS_NET[i], ".", "_", -1), v, opentsdb.TagSet{
 					"iface":     intf,
 					"direction": direction(i),
-				}, metadata.Unknown, metadata.None, "")  //TODO: different units
+				}, metadata.Unknown, metadata.None, "") //TODO: different units
 
 				if i < 4 || (i >= 8 && i < 12) {
 					Add(&md, "os.net.bond."+strings.Replace(FIELDS_NET[i], ".", "_", -1), v, opentsdb.TagSet{
 						"iface":     intf,
 						"direction": direction(i),
-					}, metadata.Unknown, metadata.None, "")  //TODO: different units
+					}, metadata.Unknown, metadata.None, "") //TODO: different units
 
 				}
 			} else {
 				Add(&md, "linux.net."+strings.Replace(FIELDS_NET[i], ".", "_", -1), v, opentsdb.TagSet{
 					"iface":     intf,
 					"direction": direction(i),
-				}, metadata.Unknown, metadata.None, "")  //TODO: different units
+				}, metadata.Unknown, metadata.None, "") //TODO: different units
 
 				if i < 4 || (i >= 8 && i < 12) {
 					Add(&md, "os.net."+strings.Replace(FIELDS_NET[i], ".", "_", -1), v, opentsdb.TagSet{
 						"iface":     intf,
 						"direction": direction(i),
-					}, metadata.Unknown, metadata.None, "")  //TODO: different units
+					}, metadata.Unknown, metadata.None, "") //TODO: different units
 
 				}
 			}
