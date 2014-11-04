@@ -3,7 +3,7 @@ package metadata
 import (
 	"strings"
 
-	"github.com/bosun-monitor/bosun/_third_party/github.com/StackExchange/scollector/util"
+	"github.com/bosun-monitor/bosun/_third_party/github.com/bosun-monitor/scollector/util"
 )
 
 func init() {
