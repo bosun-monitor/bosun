@@ -3,4 +3,5 @@
 set -e
 
 $(boot2docker shellinit)
-docker run --rm -v "$(pwd)":/usr/src/myapp -w /usr/src/myapp golang:cross sh build.sh
+DIR=/go/src/github.com/bosun-monitor/scollector
+docker run --rm -v "$(pwd)":$DIR -w $DIR golang:cross sh build.sh
