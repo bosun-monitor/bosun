@@ -14,7 +14,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/StackExchange/scollector/opentsdb"
+	"github.com/bosun-monitor/scollector/opentsdb"
 )
 
 var (

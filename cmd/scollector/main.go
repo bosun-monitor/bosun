@@ -13,11 +13,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/StackExchange/scollector/collect"
-	"github.com/StackExchange/scollector/collectors"
-	"github.com/StackExchange/scollector/metadata"
-	"github.com/StackExchange/scollector/opentsdb"
-	"github.com/StackExchange/scollector/util"
+	"github.com/bosun-monitor/scollector/collect"
+	"github.com/bosun-monitor/scollector/collectors"
+	"github.com/bosun-monitor/scollector/metadata"
+	"github.com/bosun-monitor/scollector/opentsdb"
+	"github.com/bosun-monitor/scollector/util"
 	"github.com/StackExchange/slog"
 )
 

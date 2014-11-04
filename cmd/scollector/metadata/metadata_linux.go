@@ -4,8 +4,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/StackExchange/scollector/opentsdb"
-	"github.com/StackExchange/scollector/util"
+	"github.com/bosun-monitor/scollector/opentsdb"
+	"github.com/bosun-monitor/scollector/util"
 )
 
 func init() {

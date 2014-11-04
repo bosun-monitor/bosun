@@ -5,8 +5,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/StackExchange/scollector/metadata"
-	"github.com/StackExchange/scollector/opentsdb"
+	"github.com/bosun-monitor/scollector/metadata"
+	"github.com/bosun-monitor/scollector/opentsdb"
 )
 
 const (

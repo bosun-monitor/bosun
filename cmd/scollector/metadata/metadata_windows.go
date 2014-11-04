@@ -3,8 +3,8 @@ package metadata
 import (
 	"strings"
 
-	"github.com/StackExchange/scollector/opentsdb"
-	"github.com/StackExchange/scollector/util"
+	"github.com/bosun-monitor/scollector/opentsdb"
+	"github.com/bosun-monitor/scollector/util"
 	"github.com/StackExchange/slog"
 	"github.com/StackExchange/wmi"
 )
