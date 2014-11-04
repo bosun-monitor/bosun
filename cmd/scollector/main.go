@@ -13,12 +13,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/StackExchange/slog"
 	"github.com/bosun-monitor/scollector/collect"
 	"github.com/bosun-monitor/scollector/collectors"
 	"github.com/bosun-monitor/scollector/metadata"
 	"github.com/bosun-monitor/scollector/opentsdb"
 	"github.com/bosun-monitor/scollector/util"
-	"github.com/StackExchange/slog"
 )
 
 // These constants should remain in source control as their zero values.
@@ -45,6 +45,8 @@ var (
 	flagFullHost        = flag.Bool("u", false, `Enables full hostnames: doesn't truncate to first ".".`)
 	flagDisableMetadata = flag.Bool("m", false, "Disable sending of metadata.")
 	flagVersion         = flag.Bool("version", false, `Prints the version and exits.`)
+
+	procs []*collectors.WatchedProc
 
 	mains []func()
 )
@@ -90,6 +92,12 @@ func readConf() {
 			f(flagICMP)
 		case "vsphere":
 			f(flagVsphere)
+		case "process":
+			p, err := collectors.NewWatchedProc(v)
+			if err != nil {
+				slog.Fatal(err)
+			}
+			procs = append(procs, p)
 		default:
 			if *flagDebug {
 				slog.Errorf("unknown key in %v:%v", p, i+1)
@@ -149,6 +157,11 @@ func main() {
 				slog.Fatal("invalid vsphere string:", *flagVsphere)
 			}
 			collectors.Vsphere(user, pwd, host)
+		}
+	}
+	if len(procs) > 0 {
+		if err := collectors.WatchProcesses(procs); err != nil {
+			log.Fatal(err)
 		}
 	}
 	if *flagFake > 0 {
