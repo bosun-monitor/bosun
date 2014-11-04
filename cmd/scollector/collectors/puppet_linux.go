@@ -85,14 +85,14 @@ func puppet_linux() (opentsdb.MultiDataPoint, error) {
 		return nil, err
 	}
 	//m.Version.Config appears to be the unix timestamp
-	AddTS(&md, "puppet.run.resources", m.Time.LastRun, m.Resources.Changed, opentsdb.TagSet{"resource": "changed"}, metadata.Unknown, metadata.None, "")
-	AddTS(&md, "puppet.run.resources", m.Time.LastRun, m.Resources.Failed, opentsdb.TagSet{"resource": "failed"}, metadata.Unknown, metadata.None, "")
-	AddTS(&md, "puppet.run.resources", m.Time.LastRun, m.Resources.FailedToRestart, opentsdb.TagSet{"resource": "failed_to_restart"}, metadata.Unknown, metadata.None, "")
-	AddTS(&md, "puppet.run.resources", m.Time.LastRun, m.Resources.OutOfSync, opentsdb.TagSet{"resource": "out_of_sync"}, metadata.Unknown, metadata.None, "")
-	AddTS(&md, "puppet.run.resources", m.Time.LastRun, m.Resources.Restarted, opentsdb.TagSet{"resource": "restarted"}, metadata.Unknown, metadata.None, "")
-	AddTS(&md, "puppet.run.resources", m.Time.LastRun, m.Resources.Scheduled, opentsdb.TagSet{"resource": "scheduled"}, metadata.Unknown, metadata.None, "")
-	AddTS(&md, "puppet.run.resources", m.Time.LastRun, m.Resources.Changed, opentsdb.TagSet{"resource": "skipped"}, metadata.Unknown, metadata.None, "")
-	AddTS(&md, "puppet.run.resources_total", m.Time.LastRun, m.Resources.Total, nil, metadata.Unknown, metadata.None, "")
-	AddTS(&md, "puppet.run.changes", m.Time.LastRun, m.Changes.Total, nil, metadata.Unknown, metadata.None, "")
+	AddTS(&md, "puppet.run.resources", m.Time.LastRun, m.Resources.Changed, opentsdb.TagSet{"resource": "changed"}, metadata.Gauge, metadata.Count, "")
+	AddTS(&md, "puppet.run.resources", m.Time.LastRun, m.Resources.Failed, opentsdb.TagSet{"resource": "failed"}, metadata.Gauge, metadata.Count, "")
+	AddTS(&md, "puppet.run.resources", m.Time.LastRun, m.Resources.FailedToRestart, opentsdb.TagSet{"resource": "failed_to_restart"}, metadata.Gauge, metadata.Count, "")
+	AddTS(&md, "puppet.run.resources", m.Time.LastRun, m.Resources.OutOfSync, opentsdb.TagSet{"resource": "out_of_sync"}, metadata.Gauge, metadata.Count, "")
+	AddTS(&md, "puppet.run.resources", m.Time.LastRun, m.Resources.Restarted, opentsdb.TagSet{"resource": "restarted"}, metadata.Gauge, metadata.Count, "")
+	AddTS(&md, "puppet.run.resources", m.Time.LastRun, m.Resources.Scheduled, opentsdb.TagSet{"resource": "scheduled"}, metadata.Gauge, metadata.Count, "")
+	AddTS(&md, "puppet.run.resources", m.Time.LastRun, m.Resources.Changed, opentsdb.TagSet{"resource": "skipped"}, metadata.Gauge, metadata.Count, "")
+	AddTS(&md, "puppet.run.resources_total", m.Time.LastRun, m.Resources.Total, nil, metadata.Gauge, metadata.Count, "")
+	AddTS(&md, "puppet.run.changes", m.Time.LastRun, m.Changes.Total, nil, metadata.Gauge, metadata.Count, "")
 	return md, nil
 }

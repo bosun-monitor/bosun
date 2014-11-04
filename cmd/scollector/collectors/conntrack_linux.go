@@ -35,7 +35,7 @@ func c_conntrack_linux() (opentsdb.MultiDataPoint, error) {
 			if err != nil {
 				return nil
 			}
-			Add(&md, "linux.net.conntrack.count", count, nil, metadata.Unknown, metadata.None, "")
+			Add(&md, "linux.net.conntrack.count", count, nil, metadata.Gauge, metadata.Count, "")
 		}
 		return nil
 	}); err != nil {
@@ -49,14 +49,14 @@ func c_conntrack_linux() (opentsdb.MultiDataPoint, error) {
 			if err != nil {
 				return nil
 			}
-			Add(&md, "linux.net.conntrack.max", max, nil, metadata.Unknown, metadata.None, "")
+			Add(&md, "linux.net.conntrack.max", max, nil, metadata.Gauge, metadata.Count, "")
 		}
 		return nil
 	}); err != nil {
 		return nil, err
 	}
 	if max != 0 {
-		Add(&md, "linux.net.conntrack.percent_used", count/max*100, nil, metadata.Unknown, metadata.None, "")
+		Add(&md, "linux.net.conntrack.percent_used", count/max*100, nil, metadata.Gauge, metadata.Pct, "")
 	}
 	return md, nil
 }
