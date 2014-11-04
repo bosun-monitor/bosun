@@ -6,7 +6,7 @@ package graphics
 
 import (
 	"bytes"
-	"github.com/StackExchange/bosun/_third_party/code.google.com/p/graphics-go/graphics/graphicstest"
+	"github.com/bosun-monitor/bosun/_third_party/code.google.com/p/graphics-go/graphics/graphicstest"
 	"image"
 	"image/color"
 	"testing"

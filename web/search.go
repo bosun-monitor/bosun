@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/StackExchange/bosun/_third_party/github.com/MiniProfiler/go/miniprofiler"
-	"github.com/StackExchange/bosun/_third_party/github.com/gorilla/mux"
+	"github.com/bosun-monitor/bosun/_third_party/github.com/MiniProfiler/go/miniprofiler"
+	"github.com/bosun-monitor/bosun/_third_party/github.com/gorilla/mux"
 )
 
 // A Sorted List of Available Metrics

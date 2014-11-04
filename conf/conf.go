@@ -17,10 +17,10 @@ import (
 	tparse "text/template/parse"
 	"time"
 
-	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/opentsdb"
-	"github.com/StackExchange/bosun/conf/parse"
-	"github.com/StackExchange/bosun/expr"
-	eparse "github.com/StackExchange/bosun/expr/parse"
+	"github.com/bosun-monitor/bosun/_third_party/github.com/StackExchange/scollector/opentsdb"
+	"github.com/bosun-monitor/bosun/conf/parse"
+	"github.com/bosun-monitor/bosun/expr"
+	eparse "github.com/bosun-monitor/bosun/expr/parse"
 )
 
 type Conf struct {

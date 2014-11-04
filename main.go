@@ -17,11 +17,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/collect"
-	"github.com/StackExchange/bosun/_third_party/gopkg.in/fsnotify.v1"
-	"github.com/StackExchange/bosun/conf"
-	"github.com/StackExchange/bosun/sched"
-	"github.com/StackExchange/bosun/web"
+	"github.com/bosun-monitor/bosun/_third_party/github.com/StackExchange/scollector/collect"
+	"github.com/bosun-monitor/bosun/_third_party/gopkg.in/fsnotify.v1"
+	"github.com/bosun-monitor/bosun/conf"
+	"github.com/bosun-monitor/bosun/sched"
+	"github.com/bosun-monitor/bosun/web"
 )
 
 var (

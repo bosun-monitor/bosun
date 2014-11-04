@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/StackExchange/bosun/_third_party/github.com/gorilla/context"
+	"github.com/bosun-monitor/bosun/_third_party/github.com/gorilla/context"
 )
 
 type routeTest struct {

@@ -4,7 +4,7 @@
 package draw2d
 
 import (
-	"github.com/StackExchange/bosun/_third_party/code.google.com/p/freetype-go/freetype/truetype"
+	"github.com/bosun-monitor/bosun/_third_party/code.google.com/p/freetype-go/freetype/truetype"
 	"image"
 	"image/color"
 )

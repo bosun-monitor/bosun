@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/opentsdb"
-	"github.com/StackExchange/bosun/conf"
+	"github.com/bosun-monitor/bosun/_third_party/github.com/StackExchange/scollector/opentsdb"
+	"github.com/bosun-monitor/bosun/conf"
 )
 
 func init() {

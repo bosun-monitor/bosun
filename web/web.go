@@ -17,14 +17,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/StackExchange/bosun/_third_party/github.com/MiniProfiler/go/miniprofiler"
-	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/collect"
-	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/metadata"
-	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/opentsdb"
-	"github.com/StackExchange/bosun/_third_party/github.com/gorilla/mux"
-	"github.com/StackExchange/bosun/conf"
-	"github.com/StackExchange/bosun/expr"
-	"github.com/StackExchange/bosun/sched"
+	"github.com/bosun-monitor/bosun/_third_party/github.com/MiniProfiler/go/miniprofiler"
+	"github.com/bosun-monitor/bosun/_third_party/github.com/StackExchange/scollector/collect"
+	"github.com/bosun-monitor/bosun/_third_party/github.com/StackExchange/scollector/metadata"
+	"github.com/bosun-monitor/bosun/_third_party/github.com/StackExchange/scollector/opentsdb"
+	"github.com/bosun-monitor/bosun/_third_party/github.com/gorilla/mux"
+	"github.com/bosun-monitor/bosun/conf"
+	"github.com/bosun-monitor/bosun/expr"
+	"github.com/bosun-monitor/bosun/sched"
 )
 
 var (

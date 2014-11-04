@@ -6,7 +6,7 @@ package graphics
 
 import (
 	"errors"
-	"github.com/StackExchange/bosun/_third_party/code.google.com/p/graphics-go/graphics/interp"
+	"github.com/bosun-monitor/bosun/_third_party/code.google.com/p/graphics-go/graphics/interp"
 	"image"
 	"image/draw"
 )

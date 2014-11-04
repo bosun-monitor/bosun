@@ -5,8 +5,8 @@ import (
 	"image/color"
 	"math"
 
-	"github.com/StackExchange/bosun/_third_party/github.com/ajstarks/svgo"
-	"github.com/StackExchange/bosun/_third_party/github.com/vdobler/chart"
+	"github.com/bosun-monitor/bosun/_third_party/github.com/ajstarks/svgo"
+	"github.com/bosun-monitor/bosun/_third_party/github.com/vdobler/chart"
 )
 
 // SvgGraphics implements BasicGraphics and uses the generic implementations

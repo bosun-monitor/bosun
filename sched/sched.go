@@ -11,14 +11,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/collect"
-	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/metadata"
-	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/opentsdb"
-	"github.com/StackExchange/bosun/_third_party/github.com/bradfitz/slice"
-	"github.com/StackExchange/bosun/_third_party/github.com/tatsushid/go-fastping"
-	"github.com/StackExchange/bosun/conf"
-	"github.com/StackExchange/bosun/expr"
-	"github.com/StackExchange/bosun/search"
+	"github.com/bosun-monitor/bosun/_third_party/github.com/StackExchange/scollector/collect"
+	"github.com/bosun-monitor/bosun/_third_party/github.com/StackExchange/scollector/metadata"
+	"github.com/bosun-monitor/bosun/_third_party/github.com/StackExchange/scollector/opentsdb"
+	"github.com/bosun-monitor/bosun/_third_party/github.com/bradfitz/slice"
+	"github.com/bosun-monitor/bosun/_third_party/github.com/tatsushid/go-fastping"
+	"github.com/bosun-monitor/bosun/conf"
+	"github.com/bosun-monitor/bosun/expr"
+	"github.com/bosun-monitor/bosun/search"
 )
 
 func init() {

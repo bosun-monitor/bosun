@@ -6,8 +6,8 @@ import (
 	"math"
 	"testing"
 
-	"github.com/StackExchange/bosun/_third_party/github.com/vdobler/chart"
-	"github.com/StackExchange/bosun/_third_party/github.com/vdobler/chart/txtg"
+	"github.com/bosun-monitor/bosun/_third_party/github.com/vdobler/chart"
+	"github.com/bosun-monitor/bosun/_third_party/github.com/vdobler/chart/txtg"
 )
 
 const r = 18

@@ -8,7 +8,7 @@ package svc
 
 import (
 	"errors"
-	"github.com/StackExchange/bosun/_third_party/code.google.com/p/winsvc/winapi"
+	"github.com/bosun-monitor/bosun/_third_party/code.google.com/p/winsvc/winapi"
 	"syscall"
 )
 

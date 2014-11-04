@@ -13,11 +13,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/opentsdb"
+	"github.com/bosun-monitor/bosun/_third_party/github.com/StackExchange/scollector/opentsdb"
 
-	"github.com/StackExchange/bosun/conf"
-	"github.com/StackExchange/bosun/expr"
-	"github.com/StackExchange/bosun/expr/parse"
+	"github.com/bosun-monitor/bosun/conf"
+	"github.com/bosun-monitor/bosun/expr"
+	"github.com/bosun-monitor/bosun/expr/parse"
 )
 
 type Context struct {

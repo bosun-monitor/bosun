@@ -8,7 +8,7 @@ import (
 	"os/exec"
 	"time"
 
-	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/slog"
+	"github.com/bosun-monitor/bosun/_third_party/github.com/StackExchange/slog"
 )
 
 var (

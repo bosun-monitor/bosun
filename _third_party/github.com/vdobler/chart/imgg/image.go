@@ -1,12 +1,12 @@
 package imgg
 
 import (
-	"github.com/StackExchange/bosun/_third_party/code.google.com/p/draw2d/draw2d"
-	"github.com/StackExchange/bosun/_third_party/code.google.com/p/freetype-go/freetype"
-	"github.com/StackExchange/bosun/_third_party/code.google.com/p/freetype-go/freetype/raster"
-	"github.com/StackExchange/bosun/_third_party/code.google.com/p/freetype-go/freetype/truetype"
-	"github.com/StackExchange/bosun/_third_party/code.google.com/p/graphics-go/graphics"
-	"github.com/StackExchange/bosun/_third_party/github.com/vdobler/chart"
+	"github.com/bosun-monitor/bosun/_third_party/code.google.com/p/draw2d/draw2d"
+	"github.com/bosun-monitor/bosun/_third_party/code.google.com/p/freetype-go/freetype"
+	"github.com/bosun-monitor/bosun/_third_party/code.google.com/p/freetype-go/freetype/raster"
+	"github.com/bosun-monitor/bosun/_third_party/code.google.com/p/freetype-go/freetype/truetype"
+	"github.com/bosun-monitor/bosun/_third_party/code.google.com/p/graphics-go/graphics"
+	"github.com/bosun-monitor/bosun/_third_party/github.com/vdobler/chart"
 	"image"
 	"image/color"
 	"image/draw"
