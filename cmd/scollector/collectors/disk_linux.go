@@ -104,13 +104,14 @@ func c_iostat_linux() (opentsdb.MultiDataPoint, error) {
 				case "msec_write":
 					msec_write, _ = strconv.ParseFloat(v, 64)
 				}
+				// TODO: different units per item, needs quick refactor before setting units
 				Add(&md, metric+FIELDS_DISK[i], v, ts, metadata.Unknown, metadata.None, "")
 			}
 			if read_sectors != 0 && msec_read != 0 {
-				Add(&md, metric+"time_per_read", read_sectors/msec_read, ts, metadata.Unknown, metadata.None, "")
+				Add(&md, metric+"time_per_read", read_sectors/msec_read, ts, metadata.Rate, metadata.MilliSecond, "")
 			}
 			if write_sectors != 0 && msec_write != 0 {
-				Add(&md, metric+"time_per_write", write_sectors/msec_write, ts, metadata.Unknown, metadata.None, "")
+				Add(&md, metric+"time_per_write", write_sectors/msec_write, ts, metadata.Rate, metadata.MilliSecond, "")
 			}
 		} else if len(values) == 7 {
 			for i, v := range values[3:] {
@@ -143,17 +144,16 @@ func c_dfstat_blocks_linux() (opentsdb.MultiDataPoint, error) {
 			metric += "rem."
 			ometric += "rem."
 		}
-		// Meta Data will need to indicate that these are 1kblocks.
-		Add(&md, metric+"space_total", fields[1], tags, metadata.Unknown, metadata.None, "")
-		Add(&md, metric+"space_used", fields[2], tags, metadata.Unknown, metadata.None, "")
-		Add(&md, metric+"space_free", fields[3], tags, metadata.Unknown, metadata.None, "")
-		Add(&md, ometric+"space_total", fields[1], os_tags, metadata.Unknown, metadata.None, "")
-		Add(&md, ometric+"space_used", fields[2], os_tags, metadata.Unknown, metadata.None, "")
-		Add(&md, ometric+"space_free", fields[3], os_tags, metadata.Unknown, metadata.None, "")
+		Add(&md, metric+"space_total", fields[1], tags, metadata.Gauge, metadata.KBytes, "")
+		Add(&md, metric+"space_used", fields[2], tags, metadata.Gauge, metadata.KBytes, "")
+		Add(&md, metric+"space_free", fields[3], tags, metadata.Gauge, metadata.KBytes, "")
+		Add(&md, ometric+"space_total", fields[1], os_tags, metadata.Gauge, metadata.KBytes, "")
+		Add(&md, ometric+"space_used", fields[2], os_tags, metadata.Gauge, metadata.KBytes, "")
+		Add(&md, ometric+"space_free", fields[3], os_tags, metadata.Gauge, metadata.KBytes, "")
 		st, _ := strconv.ParseFloat(fields[1], 64)
 		sf, _ := strconv.ParseFloat(fields[3], 64)
 		if st != 0 {
-			Add(&md, osDiskPctFree, sf/st*100, os_tags, metadata.Unknown, metadata.None, "")
+			Add(&md, osDiskPctFree, sf/st*100, os_tags, metadata.Gauge, metadata.Pct, "")
 		}
 		return nil
 	}, "df", "-lP", "--block-size", "1")
@@ -174,9 +174,9 @@ func c_dfstat_inodes_linux() (opentsdb.MultiDataPoint, error) {
 		if removable_fs(fs) {
 			metric += "rem."
 		}
-		Add(&md, metric+"inodes_total", fields[1], tags, metadata.Unknown, metadata.None, "")
-		Add(&md, metric+"inodes_used", fields[2], tags, metadata.Unknown, metadata.None, "")
-		Add(&md, metric+"inodes_free", fields[3], tags, metadata.Unknown, metadata.None, "")
+		Add(&md, metric+"inodes_total", fields[1], tags, metadata.Gauge, metadata.Count, "")
+		Add(&md, metric+"inodes_used", fields[2], tags, metadata.Gauge, metadata.Count, "")
+		Add(&md, metric+"inodes_free", fields[3], tags, metadata.Gauge, metadata.Count, "")
 		return nil
 	}, "df", "-liP")
 	return md, err

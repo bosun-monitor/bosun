@@ -82,9 +82,9 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 		case "pgpgin", "pgpgout", "pswpin", "pswpout", "pgfault", "pgmajfault":
 			mio := inoutRE.FindStringSubmatch(m[1])
 			if mio != nil {
-				Add(&md, "linux.mem."+mio[1], m[2], opentsdb.TagSet{"direction": mio[2]}, metadata.Counter, metadata.None, "")
+				Add(&md, "linux.mem."+mio[1], m[2], opentsdb.TagSet{"direction": mio[2]}, metadata.Counter, metadata.Page, "")
 			} else {
-				Add(&md, "linux.mem."+m[1], m[2], nil, metadata.Counter, metadata.None, "")
+				Add(&md, "linux.mem."+m[1], m[2], nil, metadata.Counter, metadata.Page, "")
 			}
 		default:
 			Add(&md, "linux.mem."+m[1], m[2], nil, metadata.Counter, metadata.None, "")
@@ -167,7 +167,7 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 		Error = err
 	}
 	if num_cores != 0 && t_util != 0 {
-		Add(&md, osCPU, t_util/float64(num_cores), nil, metadata.Unknown, metadata.None, "")
+		Add(&md, osCPU, t_util/float64(num_cores), nil, metadata.Gauge, metadata.Count, "")
 	}
 	if err := readLine("/proc/loadavg", func(s string) error {
 		m := loadavgRE.FindStringSubmatch(s)
