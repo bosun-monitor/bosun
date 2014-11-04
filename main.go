@@ -17,7 +17,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bosun-monitor/bosun/_third_party/github.com/StackExchange/scollector/collect"
+	"github.com/bosun-monitor/bosun/_third_party/github.com/bosun-monitor/scollector/collect"
 	"github.com/bosun-monitor/bosun/_third_party/gopkg.in/fsnotify.v1"
 	"github.com/bosun-monitor/bosun/conf"
 	"github.com/bosun-monitor/bosun/sched"

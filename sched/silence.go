@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/bosun-monitor/bosun/_third_party/github.com/StackExchange/scollector/opentsdb"
+	"github.com/bosun-monitor/bosun/_third_party/github.com/bosun-monitor/scollector/opentsdb"
 	"github.com/bosun-monitor/bosun/expr"
 )
 
