@@ -4,7 +4,7 @@
 package draw2d
 
 import (
-	"github.com/StackExchange/bosun/_third_party/code.google.com/p/freetype-go/freetype/raster"
+	"github.com/bosun-monitor/bosun/_third_party/code.google.com/p/freetype-go/freetype/raster"
 	"math"
 )
 

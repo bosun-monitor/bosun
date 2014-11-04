@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/StackExchange/bosun/conf"
+	"github.com/bosun-monitor/bosun/conf"
 )
 
 func TestRelay(t *testing.T) {

@@ -6,7 +6,7 @@ package graphics
 
 import (
 	"errors"
-	"github.com/StackExchange/bosun/_third_party/code.google.com/p/graphics-go/graphics/convolve"
+	"github.com/bosun-monitor/bosun/_third_party/code.google.com/p/graphics-go/graphics/convolve"
 	"image"
 	"image/draw"
 	"math"

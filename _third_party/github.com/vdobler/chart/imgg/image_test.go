@@ -1,7 +1,7 @@
 package imgg
 
 import (
-	"github.com/StackExchange/bosun/_third_party/github.com/vdobler/chart"
+	"github.com/bosun-monitor/bosun/_third_party/github.com/vdobler/chart"
 	"image"
 	"image/color"
 	"image/png"

@@ -3,8 +3,8 @@ package metadata
 import (
 	"strings"
 
-	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/opentsdb"
-	"github.com/StackExchange/bosun/_third_party/github.com/StackExchange/scollector/util"
+	"github.com/bosun-monitor/bosun/_third_party/github.com/StackExchange/scollector/opentsdb"
+	"github.com/bosun-monitor/bosun/_third_party/github.com/StackExchange/scollector/util"
 )
 
 func init() {

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/StackExchange/bosun/conf"
+	"github.com/bosun-monitor/bosun/conf"
 )
 
 func makeFilter(filter string) (func(*conf.Conf, *conf.Alert, *State) bool, error) {
