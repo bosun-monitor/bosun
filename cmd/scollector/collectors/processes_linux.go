@@ -16,6 +16,7 @@ func WatchProcesses(procs []*WatchedProc) error {
 		F: func() (opentsdb.MultiDataPoint, error) {
 			return c_linux_processes(procs)
 		},
+		name: "c_linux_processes",
 	})
 	return nil
 }
