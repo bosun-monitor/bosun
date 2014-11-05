@@ -25,32 +25,58 @@ func c_iis_webservice() (opentsdb.MultiDataPoint, error) {
 	}
 	var md opentsdb.MultiDataPoint
 	for _, v := range dst {
-		Add(&md, "iis.bytes", v.BytesReceivedPersec, opentsdb.TagSet{"site": v.Name, "direction": "received"}, metadata.Unknown, metadata.None, "")
-		Add(&md, "iis.bytes", v.BytesSentPersec, opentsdb.TagSet{"site": v.Name, "direction": "sent"}, metadata.Unknown, metadata.None, "")
-		Add(&md, "iis.requests", v.CGIRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "cgi"}, metadata.Unknown, metadata.None, "")
-		Add(&md, "iis.connection_attempts", v.ConnectionAttemptsPersec, opentsdb.TagSet{"site": v.Name}, metadata.Unknown, metadata.None, "")
-		Add(&md, "iis.requests", v.CopyRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "copy"}, metadata.Unknown, metadata.None, "")
-		Add(&md, "iis.connections", v.CurrentConnections, opentsdb.TagSet{"site": v.Name}, metadata.Unknown, metadata.None, "")
-		Add(&md, "iis.requests", v.DeleteRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "delete"}, metadata.Unknown, metadata.None, "")
-		Add(&md, "iis.requests", v.GetRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "get"}, metadata.Unknown, metadata.None, "")
-		Add(&md, "iis.requests", v.HeadRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "head"}, metadata.Unknown, metadata.None, "")
-		Add(&md, "iis.requests", v.ISAPIExtensionRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "isapi"}, metadata.Unknown, metadata.None, "")
-		Add(&md, "iis.errors", v.LockedErrorsPersec, opentsdb.TagSet{"site": v.Name, "type": "locked"}, metadata.Unknown, metadata.None, "")
-		Add(&md, "iis.requests", v.LockRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "lock"}, metadata.Unknown, metadata.None, "")
-		Add(&md, "iis.requests", v.MkcolRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "mkcol"}, metadata.Unknown, metadata.None, "")
-		Add(&md, "iis.requests", v.MoveRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "move"}, metadata.Unknown, metadata.None, "")
-		Add(&md, "iis.errors", v.NotFoundErrorsPersec, opentsdb.TagSet{"site": v.Name, "type": "notfound"}, metadata.Unknown, metadata.None, "")
-		Add(&md, "iis.requests", v.OptionsRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "options"}, metadata.Unknown, metadata.None, "")
-		Add(&md, "iis.requests", v.PostRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "post"}, metadata.Unknown, metadata.None, "")
-		Add(&md, "iis.requests", v.PropfindRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "propfind"}, metadata.Unknown, metadata.None, "")
-		Add(&md, "iis.requests", v.ProppatchRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "proppatch"}, metadata.Unknown, metadata.None, "")
-		Add(&md, "iis.requests", v.PutRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "put"}, metadata.Unknown, metadata.None, "")
-		Add(&md, "iis.requests", v.SearchRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "search"}, metadata.Unknown, metadata.None, "")
-		Add(&md, "iis.requests", v.TraceRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "trace"}, metadata.Unknown, metadata.None, "")
-		Add(&md, "iis.requests", v.UnlockRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "unlock"}, metadata.Unknown, metadata.None, "")
+		Add(&md, "iis.bytes", v.BytesReceivedPersec, opentsdb.TagSet{"site": v.Name, "direction": "received"}, metadata.Counter, metadata.BytesPerSecond, descIISBytesReceivedPersec)
+		Add(&md, "iis.bytes", v.BytesSentPersec, opentsdb.TagSet{"site": v.Name, "direction": "sent"}, metadata.Counter, metadata.BytesPerSecond, descIISBytesSentPersec)
+		Add(&md, "iis.requests", v.CGIRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "cgi"}, metadata.Counter, metadata.PerSecond, descIISCGIRequestsPersec)
+		Add(&md, "iis.connection_attempts", v.ConnectionAttemptsPersec, opentsdb.TagSet{"site": v.Name}, metadata.Counter, metadata.PerSecond, descIISConnectionAttemptsPersec)
+		Add(&md, "iis.requests", v.CopyRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "copy"}, metadata.Counter, metadata.PerSecond, descIISCopyRequestsPersec)
+		Add(&md, "iis.connections", v.CurrentConnections, opentsdb.TagSet{"site": v.Name}, metadata.Gauge, metadata.Count, descIISCurrentConnections)
+		Add(&md, "iis.requests", v.DeleteRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "delete"}, metadata.Counter, metadata.PerSecond, descIISDeleteRequestsPersec)
+		Add(&md, "iis.requests", v.GetRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "get"}, metadata.Counter, metadata.PerSecond, descIISGetRequestsPersec)
+		Add(&md, "iis.requests", v.HeadRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "head"}, metadata.Counter, metadata.PerSecond, descIISHeadRequestsPersec)
+		Add(&md, "iis.requests", v.ISAPIExtensionRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "isapi"}, metadata.Counter, metadata.PerSecond, descIISISAPIExtensionRequestsPersec)
+		Add(&md, "iis.errors", v.LockedErrorsPersec, opentsdb.TagSet{"site": v.Name, "type": "locked"}, metadata.Counter, metadata.PerSecond, descIISLockedErrorsPersec)
+		Add(&md, "iis.requests", v.LockRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "lock"}, metadata.Counter, metadata.PerSecond, descIISLockRequestsPersec)
+		Add(&md, "iis.requests", v.MkcolRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "mkcol"}, metadata.Counter, metadata.PerSecond, descIISMkcolRequestsPersec)
+		Add(&md, "iis.requests", v.MoveRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "move"}, metadata.Counter, metadata.PerSecond, descIISMoveRequestsPersec)
+		Add(&md, "iis.errors", v.NotFoundErrorsPersec, opentsdb.TagSet{"site": v.Name, "type": "notfound"}, metadata.Counter, metadata.PerSecond, descIISNotFoundErrorsPersec)
+		Add(&md, "iis.requests", v.OptionsRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "options"}, metadata.Counter, metadata.PerSecond, descIISOptionsRequestsPersec)
+		Add(&md, "iis.requests", v.PostRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "post"}, metadata.Counter, metadata.PerSecond, descIISPostRequestsPersec)
+		Add(&md, "iis.requests", v.PropfindRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "propfind"}, metadata.Counter, metadata.PerSecond, descIISPropfindRequestsPersec)
+		Add(&md, "iis.requests", v.ProppatchRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "proppatch"}, metadata.Counter, metadata.PerSecond, descIISProppatchRequestsPersec)
+		Add(&md, "iis.requests", v.PutRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "put"}, metadata.Counter, metadata.PerSecond, descIISPutRequestsPersec)
+		Add(&md, "iis.requests", v.SearchRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "search"}, metadata.Counter, metadata.PerSecond, descIISSearchRequestsPersec)
+		Add(&md, "iis.requests", v.TraceRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "trace"}, metadata.Counter, metadata.PerSecond, descIISTraceRequestsPersec)
+		Add(&md, "iis.requests", v.UnlockRequestsPersec, opentsdb.TagSet{"site": v.Name, "method": "unlock"}, metadata.Counter, metadata.PerSecond, descIISUnlockRequestsPersec)
 	}
 	return md, nil
 }
+
+const (
+	descIISBytesReceivedPersec          = "The rate that data bytes are received by the Web service."
+	descIISBytesSentPersec              = "The rate data bytes are being sent by the Web service."
+	descIISCGIRequestsPersec            = "The rate CGI requests are received by the Web service."
+	descIISConnectionAttemptsPersec     = "The rate that connections to the Web service are being attempted."
+	descIISCopyRequestsPersec           = "The rate HTTP requests using the COPY method are made.  Copy requests are used for copying files and directories."
+	descIISCurrentConnections           = "The current number of connections established with the Web service."
+	descIISDeleteRequestsPersec         = "The rate HTTP requests using the DELETE method are made.  Delete requests are generally used for file removals."
+	descIISGetRequestsPersec            = "The rate HTTP requests using the GET method are made.  Get requests are the most common HTTP request."
+	descIISHeadRequestsPersec           = "The rate HTTP requests using the HEAD method are made.  Head requests generally indicate a client is querying the state of a document they already have to see if it needs to be refreshed."
+	descIISISAPIExtensionRequestsPersec = "The rate that ISAPI Extension requests are received by the Web service."
+	descIISLockedErrorsPersec           = "The rate of errors due to requests that couldn't be satisfied by the server because the requested document was locked.  These are generally reported as an HTTP 423 error code to the client."
+	descIISLockRequestsPersec           = "The rate HTTP requests using the LOCK method are made.  Lock requests are used to lock a file for one user so that only that user can modify the file."
+	descIISMkcolRequestsPersec          = "The rate HTTP requests using the MKCOL method are made.  Mkcol requests are used to create directories on the server."
+	descIISMoveRequestsPersec           = "The rate HTTP requests using the MOVE method are made.  Move requests are used for moving files and directories."
+	descIISNotFoundErrorsPersec         = "The rate of errors due to requests that couldn't be satisfied by the server because the requested document could not be found.  These are generally reported as an HTTP 404 error code to the client."
+	descIISOptionsRequestsPersec        = "The rate HTTP requests using the OPTIONS method are made."
+	descIISPostRequestsPersec           = "The rate HTTP requests using the POST method are made."
+	descIISPropfindRequestsPersec       = "The rate HTTP requests using the PROPFIND method are made.  Propfind requests retrieve property values on files and directories."
+	descIISProppatchRequestsPersec      = "The rate HTTP requests using the PROPPATCH method are made.  Proppatch requests set property values on files and directories."
+	descIISPutRequestsPersec            = "The rate HTTP requests using the PUT method are made."
+	descIISSearchRequestsPersec         = "The rate HTTP requests using the SEARCH method are made.  Search requests are used to query the server to find resources that match a set of conditions provided by the client."
+	descIISTraceRequestsPersec          = "The rate HTTP requests using the TRACE method are made.  Trace requests allow the client to see what is being received at the end of the request chain and use the information for diagnostic purposes."
+	descIISUnlockRequestsPersec         = "The rate HTTP requests using the UNLOCK method are made.  Unlock requests are used to remove locks from files."
+)
 
 type Win32_PerfRawData_W3SVC_WebService struct {
 	BytesReceivedPersec          uint64
