@@ -39,6 +39,7 @@ func sendBatch(batch opentsdb.MultiDataPoint) {
 			slog.Info(d.Telnet())
 		}
 		recordSent(len(batch))
+		return
 	}
 	var buf bytes.Buffer
 	g := gzip.NewWriter(&buf)
