@@ -2,7 +2,6 @@ package collectors
 
 import (
 	"bufio"
-	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -122,20 +121,28 @@ func (c *ProgramCollector) runProgram(dpchan chan<- *opentsdb.DataPoint) (progEr
 			slog.Error(line)
 		}
 	}()
+Loop:
 	for s.Scan() {
 		line := strings.TrimSpace(s.Text())
 		sp := strings.Fields(line)
 		if len(sp) < 3 {
+			slog.Errorf("bad line in program %s: %s", c.Path, line)
 			continue
 		}
 		ts, err := strconv.ParseInt(sp[1], 10, 64)
 		if err != nil {
+			slog.Errorf("bad timestamp in program %s: %s", c.Path, sp[1])
+			continue
+		}
+		val, err := strconv.ParseInt(sp[2], 10, 64)
+		if err != nil {
+			slog.Errorf("bad value in program %s: %s", c.Path, sp[2])
 			continue
 		}
 		dp := opentsdb.DataPoint{
 			Metric:    sp[0],
 			Timestamp: ts,
-			Value:     sp[2],
+			Value:     val,
 			Tags:      opentsdb.TagSet{"host": util.Hostname},
 		}
 		for _, tag := range sp[3:] {
@@ -143,7 +150,8 @@ func (c *ProgramCollector) runProgram(dpchan chan<- *opentsdb.DataPoint) (progEr
 			if v, ok := tags["host"]; ok && v == "" {
 				delete(dp.Tags, "host")
 			} else if err != nil {
-				return fmt.Errorf("bad tag in program %s, metric %s: %v", c.Path, sp[0], tag)
+				slog.Errorf("bad tag in program %s, metric %s: %v", c.Path, sp[0], tag)
+				continue Loop
 			} else {
 				dp.Tags.Merge(tags)
 			}
