@@ -183,6 +183,7 @@ func main() {
 		collectors.DefaultFreq = time.Second * 3
 		slog.Infoln("Set default frequency to", collectors.DefaultFreq)
 		*flagDisableMetadata = true
+		collect.Print = true
 	}
 	if !*flagDisableMetadata {
 		if err := metadata.Init(u, *flagDebug); err != nil {
@@ -190,33 +191,30 @@ func main() {
 		}
 	}
 	cdp := collectors.Run(c)
-	if u != nil && !*flagPrint {
+	if u != nil {
 		slog.Infoln("OpenTSDB host:", u)
-		if err := collect.InitChan(u, "scollector", cdp); err != nil {
-			slog.Fatal(err)
-		}
-		if VersionDate > 0 {
-			if err := collect.Put("version", nil, VersionDate); err != nil {
-				slog.Error(err)
-			}
-		}
-		if *flagBatchSize > 0 {
-			collect.BatchSize = *flagBatchSize
-		}
-		go func() {
-			const maxMem = 500 * 1024 * 1024 // 500MB
-			var m runtime.MemStats
-			for _ = range time.Tick(time.Minute) {
-				runtime.ReadMemStats(&m)
-				if m.Alloc > maxMem {
-					panic("memory max reached")
-				}
-			}
-		}()
-	} else {
-		slog.Infoln("Outputting to screen")
-		printPut(cdp)
 	}
+	if err := collect.InitChan(u, "scollector", cdp); err != nil {
+		slog.Fatal(err)
+	}
+	if VersionDate > 0 {
+		if err := collect.Put("version", nil, VersionDate); err != nil {
+			slog.Error(err)
+		}
+	}
+	if *flagBatchSize > 0 {
+		collect.BatchSize = *flagBatchSize
+	}
+	go func() {
+		const maxMem = 500 * 1024 * 1024 // 500MB
+		var m runtime.MemStats
+		for _ = range time.Tick(time.Minute) {
+			runtime.ReadMemStats(&m)
+			if m.Alloc > maxMem {
+				panic("memory max reached")
+			}
+		}
+	}()
 	select {}
 }
 

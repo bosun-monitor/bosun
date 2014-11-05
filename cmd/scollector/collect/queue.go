@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/bosun-monitor/scollector/opentsdb"
 	"github.com/StackExchange/slog"
+	"github.com/bosun-monitor/scollector/opentsdb"
 )
 
 func send() {
@@ -34,6 +34,12 @@ func send() {
 }
 
 func sendBatch(batch opentsdb.MultiDataPoint) {
+	if Print {
+		for _, d := range batch {
+			slog.Info(d.Telnet())
+		}
+		recordSent(len(batch))
+	}
 	var buf bytes.Buffer
 	g := gzip.NewWriter(&buf)
 	if err := json.NewEncoder(g).Encode(batch); err != nil {
@@ -87,12 +93,15 @@ func sendBatch(batch opentsdb.MultiDataPoint) {
 		slog.Infof("restored %d, sleeping %s", restored, d)
 		time.Sleep(d)
 		return
-	} else {
-		if Debug {
-			slog.Infoln("sent", len(batch))
-		}
-		slock.Lock()
-		sent += int64(len(batch))
-		slock.Unlock()
 	}
+	recordSent(len(batch))
+}
+
+func recordSent(num int) {
+	if Debug {
+		slog.Infoln("sent", num)
+	}
+	slock.Lock()
+	sent += int64(num)
+	slock.Unlock()
 }

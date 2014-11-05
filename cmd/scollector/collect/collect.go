@@ -31,6 +31,9 @@ var (
 	// Debug enables debug logging.
 	Debug = false
 
+	// Print prints all datapoints to stdout instead of sending them.
+	Print = false
+
 	// Dropped is the number of dropped data points due to a full queue.
 	dropped int64
 
