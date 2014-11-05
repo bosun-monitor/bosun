@@ -107,8 +107,7 @@ func (c *ProgramCollector) runProgram(dpchan chan<- *opentsdb.DataPoint) (progEr
 	cmd.Stdout = pw
 	er, ew := io.Pipe()
 	cmd.Stderr = ew
-	err := cmd.Start()
-	if err != nil {
+	if err := cmd.Start(); err != nil {
 		return err
 	}
 	go func() {
