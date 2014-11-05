@@ -67,6 +67,9 @@ func readConf() {
 		return
 	}
 	for i, line := range strings.Split(string(b), "\n") {
+		if strings.TrimSpace(line) == "" {
+			continue
+		}
 		sp := strings.SplitN(line, "=", 2)
 		if len(sp) != 2 {
 			if *flagDebug {
