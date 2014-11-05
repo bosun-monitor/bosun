@@ -46,14 +46,17 @@ func c_windows_processes() (opentsdb.MultiDataPoint, error) {
 	}
 
 	var numberOfLogicalProcessors uint64
-	var core_dst []Win32_Processor
-	var core_q = wmi.CreateQuery(&core_dst, `WHERE Name <> '_Total'`)
+	var core_dst []Win32_ComputerSystem
+	var core_q = wmi.CreateQuery(&core_dst, "")
 	err = queryWmi(core_q, &core_dst)
 	if err != nil {
 		return nil, err
 	}
 	for _, y := range core_dst {
 		numberOfLogicalProcessors = uint64(y.NumberOfLogicalProcessors)
+	}
+	if numberOfLogicalProcessors == 0 {
+		return nil, fmt.Errorf("invalid result: numberOfLogicalProcessors=%g", numberOfLogicalProcessors)
 	}
 
 	var md opentsdb.MultiDataPoint
@@ -208,4 +211,8 @@ type Win32_Service struct {
 type WorkerProcess struct {
 	AppPoolName string
 	ProcessId   uint32
+}
+
+type Win32_ComputerSystem struct {
+	NumberOfLogicalProcessors uint32
 }
