@@ -40,13 +40,13 @@ type WatchedProc struct {
 func (w *WatchedProc) Check(procs []*Process) {
 	for _, l := range procs {
 		if _, ok := w.Processes[l.Pid]; ok {
-			return
+			continue
 		}
 		if !strings.Contains(l.Command, w.Command) {
-			return
+			continue
 		}
 		if !w.ArgMatch.MatchString(l.Arguments) {
-			return
+			continue
 		}
 		w.Processes[l.Pid] = w.get()
 	}
