@@ -236,8 +236,10 @@ func check(metric string, ts *opentsdb.TagSet) error {
 	if *ts == nil {
 		*ts = make(opentsdb.TagSet)
 	}
-	if (*ts)["host"] == "" {
+	if host, present := (*ts)["host"]; !present {
 		(*ts)["host"] = osHostname
+	} else if host == "" {
+		delete(*ts, "host")
 	}
 	return nil
 }
