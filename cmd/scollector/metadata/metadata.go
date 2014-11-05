@@ -9,9 +9,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/StackExchange/slog"
 	"github.com/bosun-monitor/scollector/opentsdb"
 	"github.com/bosun-monitor/scollector/util"
-	"github.com/StackExchange/slog"
 )
 
 type RateType string
@@ -30,19 +30,22 @@ const (
 	A                   = "A" // Amps
 	Bool                = "bool"
 	Bytes               = "bytes"
-	KBytes              = "kbytes"
 	BytesPerSecond      = "bytes per second"
 	C                   = "C" // Celsius
-	Count               = ""
-	Event               = ""
-	Entropy             = "entropy"
 	CHz                 = "CentiHertz"
 	ContextSwitch       = "context switches"
+	Count               = ""
+	Entropy             = "entropy"
+	Event               = ""
 	Fault               = "faults"
 	Interupt            = "interupts"
+	KBytes              = "kbytes"
 	Load                = "load"
 	MHz                 = "MHz" // MegaHertz
-	Ok                  = "ok"  // "OK" or not status, 0 = ok, 1 = not ok
+	Megabit             = "Mbit"
+	MilliSecond         = "milliseconds"
+	Ok                  = "ok" // "OK" or not status, 0 = ok, 1 = not ok
+	Operation           = "Operations"
 	Page                = "pages"
 	Pct                 = "percent" // Range of 0-100.
 	PerSecond           = "per second"
@@ -52,11 +55,8 @@ const (
 	Socket              = "sockets"
 	StatusCode          = "status code"
 	Syscall             = "system calls"
-	MilliSecond         = "milliseconds"
 	V                   = "V" // Volts
 	V_10                = "tenth-Volts"
-	Megabit             = "Mbit"
-	Operation           = "Operations"
 )
 
 type Metakey struct {
