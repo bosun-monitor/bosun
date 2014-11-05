@@ -23,15 +23,15 @@ func WatchProcesses(procs []*WatchedProc) error {
 func linuxProcMonitor(w *WatchedProc, md *opentsdb.MultiDataPoint) error {
 	var err error
 	for pid, id := range w.Processes {
-		stats_file, err := ioutil.ReadFile("/proc/" + pid + "/stat")
-		if err != nil {
+		stats_file, e := ioutil.ReadFile("/proc/" + pid + "/stat")
+		if e != nil {
 			w.Remove(pid)
-			return
+			continue
 		}
-		io_file, err := ioutil.ReadFile("/proc/" + pid + "/io")
-		if err != nil {
+		io_file, e := ioutil.ReadFile("/proc/" + pid + "/io")
+		if e != nil {
 			w.Remove(pid)
-			return
+			continue
 		}
 		stats := strings.Fields(string(stats_file))
 		if len(stats) < 24 {
@@ -63,7 +63,7 @@ func linuxProcMonitor(w *WatchedProc, md *opentsdb.MultiDataPoint) error {
 		Add(md, "linux.proc.io_bytes", io[4], opentsdb.TagSet{"type": "read"}.Merge(tags), metadata.Counter, metadata.Bytes, descLinuxProcIoBytesRead)
 		Add(md, "linux.proc.io_bytes", io[5], opentsdb.TagSet{"type": "write"}.Merge(tags), metadata.Counter, metadata.Bytes, descLinuxProcIoBytesWrite)
 	}
-	return error
+	return err
 }
 
 const (
@@ -122,7 +122,7 @@ func c_linux_processes(procs []*WatchedProc) (opentsdb.MultiDataPoint, error) {
 		return nil, nil
 	}
 	for _, w := range procs {
-		w.Check(lp)
+		w.Check(lps)
 		if e := linuxProcMonitor(w, &md); e != nil {
 			err = e
 		}

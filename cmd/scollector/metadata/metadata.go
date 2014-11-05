@@ -38,6 +38,7 @@ const (
 	Entropy             = "entropy"
 	CHz                 = "CentiHertz"
 	ContextSwitch       = "context switches"
+	Fault               = "faults"
 	Interupt            = "interupts"
 	Load                = "load"
 	MHz                 = "MHz" // MegaHertz
@@ -50,6 +51,7 @@ const (
 	Second              = "seconds"
 	Socket              = "sockets"
 	StatusCode          = "status code"
+	Syscall             = "system calls"
 	MilliSecond         = "milliseconds"
 	V                   = "V" // Volts
 	V_10                = "tenth-Volts"
