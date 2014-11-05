@@ -1,16 +1,21 @@
 package collectors
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
 
+	"github.com/StackExchange/wmi"
 	"github.com/bosun-monitor/scollector/metadata"
 	"github.com/bosun-monitor/scollector/opentsdb"
-	"github.com/StackExchange/wmi"
 )
 
 func init() {
 	collectors = append(collectors, &IntervalCollector{F: c_windows_processes})
+}
+
+func WatchProcesses(procs []*WatchedProc) error {
+	return fmt.Errorf("process watching not implemented on Darwin")
 }
 
 // These are silly processes but exist on my machine, will need to update KMB
