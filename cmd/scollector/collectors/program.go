@@ -2,6 +2,7 @@ package collectors
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -11,9 +12,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/StackExchange/slog"
 	"github.com/bosun-monitor/scollector/opentsdb"
 	"github.com/bosun-monitor/scollector/util"
-	"github.com/StackExchange/slog"
 )
 
 type ProgramCollector struct {
@@ -139,12 +140,14 @@ func (c *ProgramCollector) runProgram(dpchan chan<- *opentsdb.DataPoint) (progEr
 			Tags:      opentsdb.TagSet{"host": util.Hostname},
 		}
 		for _, tag := range sp[3:] {
-			tsp := strings.Split(tag, "=")
-			if len(tsp) != 2 {
-				slog.Errorf("bad tag in program %s, metric %s: %v", c.Path, sp[0], tsp)
-				continue
+			tags, err := opentsdb.ParseTags(tag)
+			if v, ok := tags["host"]; ok && v == "" {
+				delete(dp.Tags, "host")
+			} else if err != nil {
+				return fmt.Errorf("bad tag in program %s, metric %s: %v", c.Path, sp[0], tag)
+			} else {
+				dp.Tags.Merge(tags)
 			}
-			dp.Tags[tsp[0]] = tsp[1]
 		}
 		dpchan <- &dp
 	}
