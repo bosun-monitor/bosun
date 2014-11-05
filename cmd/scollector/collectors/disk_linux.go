@@ -18,25 +18,34 @@ func init() {
 	collectors = append(collectors, &IntervalCollector{F: c_dfstat_inodes_linux})
 }
 
-var FIELDS_DISK = []string{
-	"read_requests",       // Total number of reads completed successfully.
-	"read_merged",         // Adjacent read requests merged in a single req.
-	"read_sectors",        // Total number of sectors read successfully.
-	"msec_read",           // Total number of ms spent by all reads.
-	"write_requests",      // Total number of writes completed successfully.
-	"write_merged",        // Adjacent write requests merged in a single req.
-	"write_sectors",       // Total number of sectors written successfully.
-	"msec_write",          // Total number of ms spent by all writes.
-	"ios_in_progress",     // Number of actual I/O requests currently in flight.
-	"msec_total",          // Amount of time during which ios_in_progress >= 1.
-	"msec_weighted_total", // Measure of recent I/O completion time and backlog.
+var diskLinuxFields = []struct {
+	key  string
+	rate metadata.RateType
+	unit metadata.Unit
+	desc string
+}{
+	{"read_requests", metadata.Counter, metadata.Count, "Total number of reads completed successfully."},
+	{"read_merged", metadata.Counter, metadata.Count, "Adjacent read requests merged in a single req."},
+	{"read_sectors", metadata.Counter, metadata.Count, "Total number of sectors read successfully."},
+	{"msec_read", metadata.Counter, metadata.MilliSecond, "Total number of ms spent by all reads."},
+	{"write_requests", metadata.Counter, metadata.Count, "Total number of writes completed successfully."},
+	{"write_merged", metadata.Counter, metadata.Count, " Adjacent write requests merged in a single req."},
+	{"write_sectors", metadata.Counter, metadata.Count, "Total number of sectors written successfully."},
+	{"msec_write", metadata.Counter, metadata.MilliSecond, "Total number of ms spent by all writes."},
+	{"ios_in_progress", metadata.Counter, metadata.Count, "Number of actual I/O requests currently in flight."},
+	{"msec_total", metadata.Counter, metadata.MilliSecond, "Amount of time during which ios_in_progress >= 1."},
+	{"msec_weighted_total", metadata.Gauge, metadata.MilliSecond, "Measure of recent I/O completion time and backlog."},
 }
 
-var FIELDS_PART = []string{
-	"read_issued",
-	"read_sectors",
-	"write_issued",
-	"write_sectors",
+var diskLinuxFieldsPart = []struct {
+	key  string
+	rate metadata.RateType
+	unit metadata.Unit
+}{
+	{"read_issued", metadata.Counter, metadata.Count},
+	{"read_sectors", metadata.Counter, metadata.Count},
+	{"write_issued", metadata.Counter, metadata.Count},
+	{"write_sectors", metadata.Counter, metadata.Count},
 }
 
 func removable(major, minor string) bool {
@@ -94,7 +103,7 @@ func c_iostat_linux() (opentsdb.MultiDataPoint, error) {
 		if len(values) == 14 {
 			var read_sectors, msec_read, write_sectors, msec_write float64
 			for i, v := range values[3:] {
-				switch FIELDS_DISK[i] {
+				switch diskLinuxFields[i].key {
 				case "read_sectors":
 					read_sectors, _ = strconv.ParseFloat(v, 64)
 				case "msec_read":
@@ -104,8 +113,7 @@ func c_iostat_linux() (opentsdb.MultiDataPoint, error) {
 				case "msec_write":
 					msec_write, _ = strconv.ParseFloat(v, 64)
 				}
-				// TODO: different units per item, needs quick refactor before setting units
-				Add(&md, metric+FIELDS_DISK[i], v, ts, metadata.Unknown, metadata.None, "")
+				Add(&md, metric+diskLinuxFields[i].key, v, ts, diskLinuxFields[i].rate, diskLinuxFields[i].unit, diskLinuxFields[i].desc)
 			}
 			if read_sectors != 0 && msec_read != 0 {
 				Add(&md, metric+"time_per_read", read_sectors/msec_read, ts, metadata.Rate, metadata.MilliSecond, "")
@@ -115,7 +123,7 @@ func c_iostat_linux() (opentsdb.MultiDataPoint, error) {
 			}
 		} else if len(values) == 7 {
 			for i, v := range values[3:] {
-				Add(&md, metric+FIELDS_PART[i], v, ts, metadata.Unknown, metadata.None, "")
+				Add(&md, metric+diskLinuxFieldsPart[i].key, v, ts, diskLinuxFieldsPart[i].rate, diskLinuxFieldsPart[i].unit, "")
 			}
 		} else {
 			return fmt.Errorf("cannot parse")
