@@ -58,8 +58,13 @@ func (d *DataPoint) MarshalJSON() ([]byte, error) {
 func (d *DataPoint) Telnet() string {
 	m := ""
 	d.clean()
-	for k, v := range d.Tags {
-		m += fmt.Sprintf(" %s=%s", k, v)
+	var keys []string
+	for k := range d.Tags {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, k := range keys {
+		m += fmt.Sprintf(" %s=%s", k, d.Tags[k])
 	}
 	return fmt.Sprintf("put %s %d %v%s\n", d.Metric, d.Timestamp, d.Value, m)
 }
@@ -74,6 +79,14 @@ func (t TagSet) Copy() TagSet {
 		n[k] = v
 	}
 	return n
+}
+
+// Merge adds or overwrites everything from o into t and returns t.
+func (t TagSet) Merge(o TagSet) TagSet {
+	for k, v := range o {
+		t[k] = v
+	}
+	return t
 }
 
 func (t TagSet) Equal(o TagSet) bool {

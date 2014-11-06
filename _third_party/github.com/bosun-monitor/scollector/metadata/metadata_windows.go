@@ -3,6 +3,8 @@ package metadata
 import (
 	"strings"
 
+	"github.com/bosun-monitor/bosun/_third_party/github.com/StackExchange/slog"
+	"github.com/bosun-monitor/bosun/_third_party/github.com/StackExchange/wmi"
 	"github.com/bosun-monitor/bosun/_third_party/github.com/bosun-monitor/scollector/opentsdb"
 	"github.com/bosun-monitor/bosun/_third_party/github.com/bosun-monitor/scollector/util"
 )
@@ -12,14 +14,22 @@ func init() {
 }
 
 func metaWindowsVersion() {
-	util.ReadCommand(func(line string) error {
-		fields := strings.Fields(line)
-		if len(fields) == 0 {
-			return nil
-		}
-		AddMeta("", nil, "version", strings.Join(fields, " "), true)
-		return nil
-	}, "cmd", "/c", "ver")
+	var dst []Win32_OperatingSystem
+	q := wmi.CreateQuery(&dst, "")
+	err := wmi.Query(q, &dst)
+	if err != nil {
+		slog.Error(err)
+		return
+	}
+	for _, v := range dst {
+		AddMeta("", nil, "version", v.Version, true)
+		AddMeta("", nil, "versionCaption", v.Caption, true)
+	}
+}
+
+type Win32_OperatingSystem struct {
+	Caption string
+	Version string
 }
 
 func metaWindowsIfaces() {
