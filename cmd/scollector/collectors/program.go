@@ -150,7 +150,7 @@ Loop:
 			if v, ok := tags["host"]; ok && v == "" {
 				delete(dp.Tags, "host")
 			} else if err != nil {
-				slog.Errorf("bad tag in program %s, metric %s: %v", c.Path, sp[0], tag)
+				slog.Errorf("bad tag in program %s, metric %s: %v: %v", c.Path, sp[0], tag, err)
 				continue Loop
 			} else {
 				dp.Tags.Merge(tags)
