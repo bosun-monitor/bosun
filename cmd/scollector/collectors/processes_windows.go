@@ -45,6 +45,20 @@ func c_windows_processes() (opentsdb.MultiDataPoint, error) {
 		iis_dst = nil
 	}
 
+	var numberOfLogicalProcessors uint64
+	var core_dst []Win32_ComputerSystem
+	var core_q = wmi.CreateQuery(&core_dst, "")
+	err = queryWmi(core_q, &core_dst)
+	if err != nil {
+		return nil, err
+	}
+	for _, y := range core_dst {
+		numberOfLogicalProcessors = uint64(y.NumberOfLogicalProcessors)
+	}
+	if numberOfLogicalProcessors == 0 {
+		return nil, fmt.Errorf("invalid result: numberOfLogicalProcessors=%g", numberOfLogicalProcessors)
+	}
+
 	var md opentsdb.MultiDataPoint
 	for _, v := range dst {
 		var name string
@@ -95,9 +109,9 @@ func c_windows_processes() (opentsdb.MultiDataPoint, error) {
 
 		//Use timestamp from WMI to fix issues with CPU metrics
 		ts := TSys100NStoEpoch(v.Timestamp_Sys100NS)
-		AddTS(&md, "win.proc.cpu", ts, v.PercentPrivilegedTime/NS100_Seconds, opentsdb.TagSet{"name": name, "id": id, "type": "privileged"}, metadata.Counter, metadata.Pct, descWinProcCpu_priv)
-		AddTS(&md, "win.proc.cpu", ts, v.PercentUserTime/NS100_Seconds, opentsdb.TagSet{"name": name, "id": id, "type": "user"}, metadata.Counter, metadata.Pct, descWinProcCpu_user)
-		AddTS(&md, "win.proc.cpu_total", ts, v.PercentProcessorTime/NS100_Seconds, opentsdb.TagSet{"name": name, "id": id}, metadata.Counter, metadata.Pct, descWinProcCpu_total)
+		AddTS(&md, "win.proc.cpu", ts, v.PercentPrivilegedTime/NS100_Seconds/numberOfLogicalProcessors, opentsdb.TagSet{"name": name, "id": id, "type": "privileged"}, metadata.Counter, metadata.Pct, descWinProcCpu_priv)
+		AddTS(&md, "win.proc.cpu", ts, v.PercentUserTime/NS100_Seconds/numberOfLogicalProcessors, opentsdb.TagSet{"name": name, "id": id, "type": "user"}, metadata.Counter, metadata.Pct, descWinProcCpu_user)
+		AddTS(&md, "win.proc.cpu_total", ts, v.PercentProcessorTime/NS100_Seconds/numberOfLogicalProcessors, opentsdb.TagSet{"name": name, "id": id}, metadata.Counter, metadata.Pct, descWinProcCpu_total)
 		Add(&md, "win.proc.elapsed_time", (v.Timestamp_Object-v.ElapsedTime)/v.Frequency_Object, opentsdb.TagSet{"name": name, "id": id}, metadata.Gauge, metadata.Second, descWinProcElapsed_time)
 		Add(&md, "win.proc.handle_count", v.HandleCount, opentsdb.TagSet{"name": name, "id": id}, metadata.Gauge, metadata.Count, descWinProcHandle_count)
 		Add(&md, "win.proc.io_bytes", v.IOOtherBytesPersec, opentsdb.TagSet{"name": name, "id": id, "type": "other"}, metadata.Counter, metadata.BytesPerSecond, descWinProcIo_bytes_other)
@@ -197,4 +211,8 @@ type Win32_Service struct {
 type WorkerProcess struct {
 	AppPoolName string
 	ProcessId   uint32
+}
+
+type Win32_ComputerSystem struct {
+	NumberOfLogicalProcessors uint32
 }
