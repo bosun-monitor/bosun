@@ -12,6 +12,33 @@ import (
 	"github.com/bosun-monitor/bosun/_third_party/github.com/bosun-monitor/scollector/opentsdb"
 )
 
+func queuer() {
+	for dp := range tchan {
+		qlock.Lock()
+		for {
+			if len(queue) > MaxQueueLen {
+				slock.Lock()
+				dropped++
+				slock.Unlock()
+				break
+			}
+			m, err := json.Marshal(dp)
+			if err != nil {
+				slog.Error(err)
+			} else {
+				queue = append(queue, m)
+			}
+			select {
+			case dp = <-tchan:
+				continue
+			default:
+			}
+			break
+		}
+		qlock.Unlock()
+	}
+}
+
 func send() {
 	for {
 		qlock.Lock()
@@ -33,10 +60,10 @@ func send() {
 	}
 }
 
-func sendBatch(batch opentsdb.MultiDataPoint) {
+func sendBatch(batch []json.RawMessage) {
 	if Print {
 		for _, d := range batch {
-			slog.Info(d.Telnet())
+			slog.Info(string(d))
 		}
 		recordSent(len(batch))
 		return
@@ -76,19 +103,15 @@ func sendBatch(batch opentsdb.MultiDataPoint) {
 				slog.Error(string(body))
 			}
 		}
-		t := time.Now().Add(-time.Minute * 30).Unix()
-		old := 0
 		restored := 0
-		for _, dp := range batch {
-			if dp.Timestamp < t {
-				old++
+		for _, msg := range batch {
+			var dp opentsdb.DataPoint
+			if err := json.Unmarshal(msg, &dp); err != nil {
+				slog.Error(err)
 				continue
 			}
 			restored++
-			tchan <- dp
-		}
-		if old > 0 {
-			slog.Infof("removed %d old records", old)
+			tchan <- &dp
 		}
 		d := time.Second * 5
 		slog.Infof("restored %d, sleeping %s", restored, d)
