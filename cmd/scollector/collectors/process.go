@@ -5,6 +5,8 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/bosun-monitor/scollector/opentsdb"
 )
 
 type Process struct {
@@ -18,6 +20,12 @@ func NewWatchedProc(watch string) (*WatchedProc, error) {
 	sp := strings.SplitN(watch, ",", 3)
 	if len(sp) != 3 {
 		return nil, fmt.Errorf("watched proc requires three fields")
+	}
+	if sp[1] == "" {
+		sp[1] = sp[0]
+	}
+	if !opentsdb.ValidTag(sp[1]) {
+		return nil, fmt.Errorf("bad process name: %v", sp[1])
 	}
 	return &WatchedProc{
 		Command:   sp[0],
