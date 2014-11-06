@@ -8,24 +8,23 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/bosun-monitor/bosun/_third_party/github.com/bosun-monitor/scollector/opentsdb"
 	"github.com/bosun-monitor/bosun/_third_party/github.com/StackExchange/slog"
+	"github.com/bosun-monitor/bosun/_third_party/github.com/bosun-monitor/scollector/opentsdb"
 )
 
 func send() {
 	for {
 		qlock.Lock()
-		if len(queue) > 0 {
-			i := len(queue)
+		if i := len(queue); i > 0 {
 			if i > BatchSize {
 				i = BatchSize
 			}
 			sending := queue[:i]
 			queue = queue[i:]
-			qlock.Unlock()
 			if Debug {
-				slog.Infof("sending: %d, remaining: %d", len(sending), len(queue))
+				slog.Infof("sending: %d, remaining: %d", i, len(queue))
 			}
+			qlock.Unlock()
 			sendBatch(sending)
 		} else {
 			qlock.Unlock()
@@ -35,19 +34,20 @@ func send() {
 }
 
 func sendBatch(batch opentsdb.MultiDataPoint) {
-	b, err := json.Marshal(batch)
-	if err != nil {
-		slog.Error(err)
-		// bad JSON encoding, just give up
+	if Print {
+		for _, d := range batch {
+			slog.Info(d.Telnet())
+		}
+		recordSent(len(batch))
 		return
 	}
 	var buf bytes.Buffer
 	g := gzip.NewWriter(&buf)
-	if _, err = g.Write(b); err != nil {
+	if err := json.NewEncoder(g).Encode(batch); err != nil {
 		slog.Error(err)
 		return
 	}
-	if err = g.Close(); err != nil {
+	if err := g.Close(); err != nil {
 		slog.Error(err)
 		return
 	}
@@ -94,12 +94,15 @@ func sendBatch(batch opentsdb.MultiDataPoint) {
 		slog.Infof("restored %d, sleeping %s", restored, d)
 		time.Sleep(d)
 		return
-	} else {
-		if Debug {
-			slog.Infoln("sent", len(batch))
-		}
-		slock.Lock()
-		sent += int64(len(batch))
-		slock.Unlock()
 	}
+	recordSent(len(batch))
+}
+
+func recordSent(num int) {
+	if Debug {
+		slog.Infoln("sent", num)
+	}
+	slock.Lock()
+	sent += int64(num)
+	slock.Unlock()
 }

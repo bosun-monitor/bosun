@@ -26,10 +26,13 @@ var (
 	MaxQueueLen = 200000
 
 	// BatchSize is the maximum length of data points sent at once to OpenTSDB.
-	BatchSize = 50
+	BatchSize = 250
 
 	// Debug enables debug logging.
 	Debug = false
+
+	// Print prints all datapoints to stdout instead of sending them.
+	Print = false
 
 	// Dropped is the number of dropped data points due to a full queue.
 	dropped int64
@@ -118,6 +121,12 @@ func InitChan(tsdbhost *url.URL, metric_root string, ch chan *opentsdb.DataPoint
 		slock.Lock()
 		i = sent
 		slock.Unlock()
+		return
+	})
+	Set("collect.queued", nil, func() (i interface{}) {
+		qlock.Lock()
+		i = len(queue)
+		qlock.Unlock()
 		return
 	})
 	Set("collect.alloc", nil, func() interface{} {
@@ -230,8 +239,10 @@ func check(metric string, ts *opentsdb.TagSet) error {
 	if *ts == nil {
 		*ts = make(opentsdb.TagSet)
 	}
-	if (*ts)["host"] == "" {
+	if host, present := (*ts)["host"]; !present {
 		(*ts)["host"] = osHostname
+	} else if host == "" {
+		delete(*ts, "host")
 	}
 	return nil
 }
