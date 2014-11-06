@@ -176,7 +176,7 @@ type ruleResult struct {
 	Body    string
 	Subject string
 	Data    interface{}
-	Result map[expr.AlertKey]*sched.Event
+	Result  map[expr.AlertKey]*sched.Event
 	Warning []string
 }
 

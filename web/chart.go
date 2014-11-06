@@ -11,9 +11,9 @@ import (
 	"time"
 
 	"github.com/bosun-monitor/bosun/_third_party/github.com/MiniProfiler/go/miniprofiler"
+	svg "github.com/bosun-monitor/bosun/_third_party/github.com/ajstarks/svgo"
 	"github.com/bosun-monitor/bosun/_third_party/github.com/bosun-monitor/scollector/metadata"
 	"github.com/bosun-monitor/bosun/_third_party/github.com/bosun-monitor/scollector/opentsdb"
-	svg "github.com/bosun-monitor/bosun/_third_party/github.com/ajstarks/svgo"
 	"github.com/bosun-monitor/bosun/_third_party/github.com/bradfitz/slice"
 	"github.com/bosun-monitor/bosun/_third_party/github.com/gorilla/mux"
 	"github.com/bosun-monitor/bosun/_third_party/github.com/vdobler/chart"
