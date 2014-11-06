@@ -55,20 +55,6 @@ func (d *DataPoint) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (d *DataPoint) Telnet() string {
-	m := ""
-	d.clean()
-	var keys []string
-	for k := range d.Tags {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	for _, k := range keys {
-		m += fmt.Sprintf(" %s=%s", k, d.Tags[k])
-	}
-	return fmt.Sprintf("put %s %d %v%s\n", d.Metric, d.Timestamp, d.Value, m)
-}
-
 type MultiDataPoint []*DataPoint
 
 type TagSet map[string]string
