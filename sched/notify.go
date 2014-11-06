@@ -60,7 +60,7 @@ func (s *Schedule) CheckNotifications(rh *RunHistory) time.Duration {
 			s.Notify(st, n)
 		}
 	}
-	s.sendNotifications(rh)
+	s.sendNotifications(rh, silenced)
 	s.notifications = nil
 	timeout := time.Hour
 	now := time.Now()
@@ -79,7 +79,7 @@ func (s *Schedule) CheckNotifications(rh *RunHistory) time.Duration {
 	return timeout
 }
 
-func (s *Schedule) sendNotifications(rh *RunHistory) {
+func (s *Schedule) sendNotifications(rh *RunHistory, silenced map[expr.AlertKey]time.Time) {
 	if s.Conf.Quiet {
 		log.Println("quiet mode prevented", len(s.notifications), "notifications")
 		return
@@ -89,6 +89,10 @@ func (s *Schedule) sendNotifications(rh *RunHistory) {
 		for _, st := range states {
 			ak := st.AlertKey()
 			if st.Last().Status == StUnknown {
+				if _, ok := silenced[ak]; ok {
+					log.Println("silencing unknown", ak)
+					continue
+				}
 				ustates[ak] = st
 			} else {
 				s.notify(rh, st, n)
