@@ -41,7 +41,6 @@ var (
 	flagVsphere         = flag.String("v", "", `vSphere host to poll of the format: "user:password@host[,user:password@host...]".`)
 	flagFake            = flag.Int("fake", 0, "Generates X fake data points on the test.fake metric per second.")
 	flagDebug           = flag.Bool("d", false, "Enables debug output.")
-	flagJSON            = flag.Bool("j", false, "With -p enabled, prints JSON.")
 	flagFullHost        = flag.Bool("u", false, `Enables full hostnames: doesn't truncate to first ".".`)
 	flagDisableMetadata = flag.Bool("m", false, "Disable sending of metadata.")
 	flagVersion         = flag.Bool("version", false, `Prints the version and exits.`)
@@ -265,11 +264,7 @@ func parseHost() (*url.URL, error) {
 
 func printPut(c chan *opentsdb.DataPoint) {
 	for dp := range c {
-		if *flagJSON {
-			b, _ := json.Marshal(dp)
-			slog.Info(string(b))
-		} else {
-			slog.Info(dp.Telnet())
-		}
+		b, _ := json.Marshal(dp)
+		slog.Info(string(b))
 	}
 }
