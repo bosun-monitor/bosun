@@ -139,6 +139,9 @@ Loop:
 			slog.Errorf("bad value in program %s: %s", c.Path, sp[2])
 			continue
 		}
+		if !opentsdb.ValidTag(sp[0]) {
+			slog.Errorf("bad metric in program %s: %s", c.Path, sp[0])
+		}
 		dp := opentsdb.DataPoint{
 			Metric:    sp[0],
 			Timestamp: ts,
