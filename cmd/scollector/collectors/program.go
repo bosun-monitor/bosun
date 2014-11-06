@@ -134,7 +134,7 @@ Loop:
 			slog.Errorf("bad timestamp in program %s: %s", c.Path, sp[1])
 			continue
 		}
-		val, err := strconv.ParseInt(sp[2], 10, 64)
+		val, err := strconv.ParseFloat(sp[2], 64)
 		if err != nil {
 			slog.Errorf("bad value in program %s: %s", c.Path, sp[2])
 			continue
