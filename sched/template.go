@@ -148,7 +148,7 @@ func (s *Schedule) ExecuteSubject(w io.Writer, rh *RunHistory, a *conf.Alert, st
 	return t.Subject.Execute(w, s.Data(rh, st, a, false))
 }
 
-func (c *Context) eval(v interface{}, filter bool, series bool, autods int) ([]*expr.Result, error) {
+func (c *Context) eval(v interface{}, filter bool, series bool, autods int) ([]*expr.Result, string, error) {
 	var e *expr.Expr
 	var err error
 	switch v := v.(type) {
@@ -157,37 +157,25 @@ func (c *Context) eval(v interface{}, filter bool, series bool, autods int) ([]*
 	case *expr.Expr:
 		e = v
 	default:
-		return nil, fmt.Errorf("expected string or expression, got %T (%v)", v, v)
+		return nil, "", fmt.Errorf("expected string or expression, got %T (%v)", v, v)
 	}
 	if err != nil {
-		return nil, fmt.Errorf("%v: %v", v, err)
+		return nil, "", fmt.Errorf("%v: %v", v, err)
+	}
+	if filter {
+		e, err = expr.New(opentsdb.ReplaceTags(e.String(), c.State.Group))
+		if err != nil {
+			return nil, "", err
+		}
 	}
 	if series && e.Root.Return() != parse.TYPE_SERIES {
-		return nil, fmt.Errorf("egraph: requires an expression that returns a series")
+		return nil, "", fmt.Errorf("egraph: requires an expression that returns a series")
 	}
 	res, _, err := e.Execute(c.runHistory.Context, nil, c.runHistory.Start, autods, c.Alert.UnjoinedOK, c.schedule.Search, c.schedule.Lookups, c.schedule.Conf.AlertSquelched(c.Alert))
 	if err != nil {
-		return nil, fmt.Errorf("%s: %v", v, err)
+		return nil, "", fmt.Errorf("%s: %v", v, err)
 	}
-	if !filter {
-		return res.Results, nil
-	}
-	for _, r := range res.Results {
-		if r.Group.Equal(c.State.Group) {
-			return []*expr.Result{r}, nil
-		}
-	}
-	for _, r := range res.Results {
-		if c.State.Group.Subset(r.Group) {
-			return []*expr.Result{r}, nil
-		}
-	}
-	for _, r := range res.Results {
-		if r.Group == nil {
-			return []*expr.Result{r}, nil
-		}
-	}
-	return nil, nil
+	return res.Results, e.String(), nil
 }
 
 // Lookup returns the value for a key in the lookup table for the context's tagset.
@@ -207,7 +195,7 @@ func (c *Context) Lookup(table, key string) (string, error) {
 // tags to the context's tags. If no such result is found, the first result with
 // nil tags is returned. If no such result is found, nil is returned.
 func (c *Context) Eval(v interface{}) (interface{}, error) {
-	res, err := c.eval(v, true, false, 0)
+	res, _, err := c.eval(v, true, false, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -219,7 +207,8 @@ func (c *Context) Eval(v interface{}) (interface{}, error) {
 
 // EvalAll returns the executed expression.
 func (c *Context) EvalAll(v interface{}) (interface{}, error) {
-	return c.eval(v, false, false, 0)
+	res, _, err := c.eval(v, false, false, 0)
+	return res, err
 }
 
 func (c *Context) IsEmail() bool {
@@ -227,7 +216,7 @@ func (c *Context) IsEmail() bool {
 }
 
 func (c *Context) graph(v interface{}, filter bool) (interface{}, error) {
-	res, err := c.eval(v, filter, true, 1000)
+	res, title, err := c.eval(v, filter, true, 1000)
 	if err != nil {
 		return nil, err
 	}
@@ -235,7 +224,7 @@ func (c *Context) graph(v interface{}, filter bool) (interface{}, error) {
 	const width = 800
 	const height = 600
 	if c.IsEmail() {
-		err := c.schedule.ExprPNG(nil, &buf, width, height, res, fmt.Sprint(v), time.Now().UTC())
+		err := c.schedule.ExprPNG(nil, &buf, width, height, res, title, time.Now().UTC())
 		if err != nil {
 			return nil, err
 		}
@@ -250,7 +239,7 @@ func (c *Context) graph(v interface{}, filter bool) (interface{}, error) {
 			name,
 		)), nil
 	}
-	if err := c.schedule.ExprSVG(nil, &buf, width, height, res, fmt.Sprint(v), time.Now().UTC()); err != nil {
+	if err := c.schedule.ExprSVG(nil, &buf, width, height, res, title, time.Now().UTC()); err != nil {
 		return nil, err
 	}
 	return template.HTML(buf.String()), nil
@@ -295,7 +284,7 @@ func (c *Context) LeftJoin(q ...interface{}) (interface{}, error) {
 	matrix := make([][]*expr.Result, 0)
 	results := make([][]*expr.Result, len(q))
 	for col, v := range q {
-		res, err := c.eval(v, false, false, 0)
+		res, _, err := c.eval(v, false, false, 0)
 		if err != nil {
 			return nil, err
 		}
