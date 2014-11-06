@@ -1,5 +1,4 @@
-bosun
-====
+# bosun
 
 Time Series Alerting Framework
 
@@ -11,10 +10,8 @@ Time Series Alerting Framework
 
 # installation
 
-1. `export GOPATH=$HOME/go`
-1. `mkdir -p $GOPATH/src/github.com/StackExchange/bosun`
-1. `cd $GOPATH/src/github.com/StackExchange/bosun`
-1. `git clone git@github.com:StackExchange/bosun.git .`
-1. `go build .`
+	go get github.com/bosun-monitor-bosun
 
-Now you have a `bosun` executable in that directory.
+# docker
+
+[https://registry.hub.docker.com/u/stackexchange/bosun/](https://registry.hub.docker.com/u/stackexchange/bosun/)
