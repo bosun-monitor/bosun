@@ -51,7 +51,7 @@ func c_mssql_general() (opentsdb.MultiDataPoint, error) {
 		Add(&md, "mssql.proc_blocked", v.Processesblocked, nil, metadata.Gauge, metadata.Count, descMSSQLProcessesblocked)
 		Add(&md, "mssql.temptables_created", v.TempTablesCreationRate, nil, metadata.Counter, metadata.PerSecond, descMSSQLTempTablesCreationRate)
 		Add(&md, "mssql.temptables_to_destroy", v.TempTablesForDestruction, nil, metadata.Gauge, metadata.Count, descMSSQLTempTablesForDestruction)
-		Add(&md, "mssql.transactions", v.Transactions, nil, metadata.Gauge, metadata.Count, descMSSQLTransactions)
+		Add(&md, "mssql.transactions_total", v.Transactions, nil, metadata.Gauge, metadata.Count, descMSSQLTransactions)
 
 	}
 	return md, nil
@@ -139,12 +139,13 @@ func c_mssql_locks() (opentsdb.MultiDataPoint, error) {
 	}
 	var md opentsdb.MultiDataPoint
 	for _, v := range dst {
-		Add(&md, "mssql.lock_wait_time", v.AverageWaitTimems, opentsdb.TagSet{"type": v.Name}, metadata.Counter, metadata.MilliSecond, descMSSQLAverageWaitTimems)
-		Add(&md, "mssql.lock_requests", v.LockRequestsPersec, opentsdb.TagSet{"type": v.Name}, metadata.Counter, metadata.PerSecond, descMSSQLLockRequestsPersec)
-		Add(&md, "mssql.lock_timeouts", v.LockTimeoutsPersec, opentsdb.TagSet{"type": v.Name}, metadata.Counter, metadata.PerSecond, descMSSQLLockTimeoutsPersec)
-		Add(&md, "mssql.lock_timeouts0", v.LockTimeoutstimeout0Persec, opentsdb.TagSet{"type": v.Name}, metadata.Counter, metadata.PerSecond, descMSSQLLockTimeoutstimeout0Persec)
-		Add(&md, "mssql.lock_waits", v.LockWaitsPersec, opentsdb.TagSet{"type": v.Name}, metadata.Counter, metadata.PerSecond, descMSSQLLockWaitsPersec)
-		Add(&md, "mssql.deadlocks", v.NumberofDeadlocksPersec, opentsdb.TagSet{"type": v.Name}, metadata.Counter, metadata.PerSecond, descMSSQLNumberofDeadlocksPersec)
+		tags := opentsdb.TagSet{"type": v.Name}
+		Add(&md, "mssql.lock_wait_time", v.AverageWaitTimems, tags, metadata.Counter, metadata.MilliSecond, descMSSQLAverageWaitTimems)
+		Add(&md, "mssql.lock_requests", v.LockRequestsPersec, tags, metadata.Counter, metadata.PerSecond, descMSSQLLockRequestsPersec)
+		Add(&md, "mssql.lock_timeouts", v.LockTimeoutsPersec, tags, metadata.Counter, metadata.PerSecond, descMSSQLLockTimeoutsPersec)
+		Add(&md, "mssql.lock_timeouts0", v.LockTimeoutstimeout0Persec, tags, metadata.Counter, metadata.PerSecond, descMSSQLLockTimeoutstimeout0Persec)
+		Add(&md, "mssql.lock_waits", v.LockWaitsPersec, tags, metadata.Counter, metadata.PerSecond, descMSSQLLockWaitsPersec)
+		Add(&md, "mssql.deadlocks", v.NumberofDeadlocksPersec, tags, metadata.Counter, metadata.PerSecond, descMSSQLNumberofDeadlocksPersec)
 
 	}
 	return md, nil
@@ -178,37 +179,38 @@ func c_mssql_databases() (opentsdb.MultiDataPoint, error) {
 	}
 	var md opentsdb.MultiDataPoint
 	for _, v := range dst {
-		Add(&md, "mssql.active_transactions", v.ActiveTransactions, opentsdb.TagSet{"db": v.Name}, metadata.Gauge, metadata.Count, descMSSQLActiveTransactions)
-		Add(&md, "mssql.backup_restore_throughput", v.BackupPerRestoreThroughputPersec, opentsdb.TagSet{"db": v.Name}, metadata.Counter, metadata.PerSecond, descMSSQLBackupPerRestoreThroughputPersec)
-		Add(&md, "mssql.bulkcopy_rows", v.BulkCopyRowsPersec, opentsdb.TagSet{"db": v.Name}, metadata.Counter, metadata.PerSecond, descMSSQLBulkCopyRowsPersec)
-		Add(&md, "mssql.bulkcopy_throughput", v.BulkCopyThroughputPersec, opentsdb.TagSet{"db": v.Name}, metadata.Counter, metadata.KBytes, descMSSQLBulkCopyThroughputPersec)
-		Add(&md, "mssql.commit_table_entries", v.Committableentries, opentsdb.TagSet{"db": v.Name}, metadata.Gauge, metadata.Count, descMSSQLCommittableentries)
-		Add(&md, "mssql.data_files_size", v.DataFilesSizeKB*1024, opentsdb.TagSet{"db": v.Name}, metadata.Gauge, metadata.KBytes, descMSSQLDataFilesSizeKB)
-		Add(&md, "mssql.dbcc_logical_scan_bytes", v.DBCCLogicalScanBytesPersec, opentsdb.TagSet{"db": v.Name}, metadata.Counter, metadata.BytesPerSecond, descMSSQLDBCCLogicalScanBytesPersec)
-		Add(&md, "mssql.group_commit_time", v.GroupCommitTimePersec, opentsdb.TagSet{"db": v.Name}, metadata.Counter, metadata.PerSecond, descMSSQLGroupCommitTimePersec)
-		Add(&md, "mssql.log_bytes_flushed", v.LogBytesFlushedPersec, opentsdb.TagSet{"db": v.Name}, metadata.Counter, metadata.PerSecond, descMSSQLLogBytesFlushedPersec)
-		Add(&md, "mssql.log_cache_hit_ratio", v.LogCacheHitRatio, opentsdb.TagSet{"db": v.Name}, metadata.Counter, metadata.Pct, descMSSQLLogCacheHitRatio)
-		Add(&md, "mssql.log_cache_hit_ratio_base", v.LogCacheHitRatio_Base, opentsdb.TagSet{"db": v.Name}, metadata.Counter, metadata.None, descMSSQLLogCacheHitRatio_Base)
-		Add(&md, "mssql.log_cache_reads", v.LogCacheReadsPersec, opentsdb.TagSet{"db": v.Name}, metadata.Counter, metadata.PerSecond, descMSSQLLogCacheReadsPersec)
-		Add(&md, "mssql.log_files_size", v.LogFilesSizeKB*1024, opentsdb.TagSet{"db": v.Name}, metadata.Gauge, metadata.KBytes, descMSSQLLogFilesSizeKB)
-		Add(&md, "mssql.log_files_used_size", v.LogFilesUsedSizeKB*1024, opentsdb.TagSet{"db": v.Name}, metadata.Gauge, metadata.KBytes, descMSSQLLogFilesUsedSizeKB)
-		Add(&md, "mssql.log_flushes", v.LogFlushesPersec, opentsdb.TagSet{"db": v.Name}, metadata.Counter, metadata.PerSecond, descMSSQLLogFlushesPersec)
-		Add(&md, "mssql.log_flush_waits", v.LogFlushWaitsPersec, opentsdb.TagSet{"db": v.Name}, metadata.Counter, metadata.PerSecond, descMSSQLLogFlushWaitsPersec)
-		Add(&md, "mssql.log_flush_wait_time", v.LogFlushWaitTime, opentsdb.TagSet{"db": v.Name}, metadata.Counter, metadata.MilliSecond, descMSSQLLogFlushWaitTime)
-		Add(&md, "mssql.log_flush_write_time_ms", v.LogFlushWriteTimems, opentsdb.TagSet{"db": v.Name}, metadata.Counter, metadata.MilliSecond, descMSSQLLogFlushWriteTimems)
-		Add(&md, "mssql.log_growths", v.LogGrowths, opentsdb.TagSet{"db": v.Name}, metadata.Gauge, metadata.Count, descMSSQLLogGrowths)
-		Add(&md, "mssql.log_pool_cache_misses", v.LogPoolCacheMissesPersec, opentsdb.TagSet{"db": v.Name}, metadata.Counter, metadata.PerSecond, descMSSQLLogPoolCacheMissesPersec)
-		Add(&md, "mssql.log_pool_disk_reads", v.LogPoolDiskReadsPersec, opentsdb.TagSet{"db": v.Name}, metadata.Counter, metadata.PerSecond, descMSSQLLogPoolDiskReadsPersec)
-		Add(&md, "mssql.log_pool_requests", v.LogPoolRequestsPersec, opentsdb.TagSet{"db": v.Name}, metadata.Counter, metadata.PerSecond, descMSSQLLogPoolRequestsPersec)
-		Add(&md, "mssql.log_shrinks", v.LogShrinks, opentsdb.TagSet{"db": v.Name}, metadata.Gauge, metadata.Count, descMSSQLLogShrinks)
-		Add(&md, "mssql.log_truncations", v.LogTruncations, opentsdb.TagSet{"db": v.Name}, metadata.Gauge, metadata.Count, descMSSQLLogTruncations)
-		Add(&md, "mssql.percent_log_used", v.PercentLogUsed, opentsdb.TagSet{"db": v.Name}, metadata.Gauge, metadata.Pct, descMSSQLPercentLogUsed)
-		Add(&md, "mssql.repl_pending_xacts", v.ReplPendingXacts, opentsdb.TagSet{"db": v.Name}, metadata.Gauge, metadata.Count, descMSSQLReplPendingXacts)
-		Add(&md, "mssql.repl_trans_rate", v.ReplTransRate, opentsdb.TagSet{"db": v.Name}, metadata.Counter, metadata.PerSecond, descMSSQLReplTransRate)
-		Add(&md, "mssql.shrink_data_movement_bytes", v.ShrinkDataMovementBytesPersec, opentsdb.TagSet{"db": v.Name}, metadata.Counter, metadata.BytesPerSecond, descMSSQLShrinkDataMovementBytesPersec)
-		Add(&md, "mssql.tracked_transactions", v.TrackedtransactionsPersec, opentsdb.TagSet{"db": v.Name}, metadata.Counter, metadata.PerSecond, descMSSQLTrackedtransactionsPersec)
-		Add(&md, "mssql.transactions", v.TransactionsPersec, opentsdb.TagSet{"db": v.Name}, metadata.Counter, metadata.PerSecond, descMSSQLTransactionsPersec)
-		Add(&md, "mssql.write_transactions", v.WriteTransactionsPersec, opentsdb.TagSet{"db": v.Name}, metadata.Counter, metadata.PerSecond, descMSSQLWriteTransactionsPersec)
+		tags := opentsdb.TagSet{"db": v.Name}
+		Add(&md, "mssql.active_transactions", v.ActiveTransactions, tags, metadata.Gauge, metadata.Count, descMSSQLActiveTransactions)
+		Add(&md, "mssql.backup_restore_throughput", v.BackupPerRestoreThroughputPersec, tags, metadata.Counter, metadata.PerSecond, descMSSQLBackupPerRestoreThroughputPersec)
+		Add(&md, "mssql.bulkcopy_rows", v.BulkCopyRowsPersec, tags, metadata.Counter, metadata.PerSecond, descMSSQLBulkCopyRowsPersec)
+		Add(&md, "mssql.bulkcopy_throughput", v.BulkCopyThroughputPersec, tags, metadata.Counter, metadata.KBytes, descMSSQLBulkCopyThroughputPersec)
+		Add(&md, "mssql.commit_table_entries", v.Committableentries, tags, metadata.Gauge, metadata.Count, descMSSQLCommittableentries)
+		Add(&md, "mssql.data_files_size", v.DataFilesSizeKB*1024, tags, metadata.Gauge, metadata.KBytes, descMSSQLDataFilesSizeKB)
+		Add(&md, "mssql.dbcc_logical_scan_bytes", v.DBCCLogicalScanBytesPersec, tags, metadata.Counter, metadata.BytesPerSecond, descMSSQLDBCCLogicalScanBytesPersec)
+		//Add(&md, "mssql.group_commit_time", v.GroupCommitTimePersec, tags, metadata.Counter, metadata.PerSecond, descMSSQLGroupCommitTimePersec)
+		Add(&md, "mssql.log_bytes_flushed", v.LogBytesFlushedPersec, tags, metadata.Counter, metadata.PerSecond, descMSSQLLogBytesFlushedPersec)
+		Add(&md, "mssql.log_cache_hit_ratio", v.LogCacheHitRatio, tags, metadata.Counter, metadata.Pct, descMSSQLLogCacheHitRatio)
+		Add(&md, "mssql.log_cache_hit_ratio_base", v.LogCacheHitRatio_Base, tags, metadata.Counter, metadata.None, descMSSQLLogCacheHitRatio_Base)
+		Add(&md, "mssql.log_cache_reads", v.LogCacheReadsPersec, tags, metadata.Counter, metadata.PerSecond, descMSSQLLogCacheReadsPersec)
+		Add(&md, "mssql.log_files_size", v.LogFilesSizeKB*1024, tags, metadata.Gauge, metadata.KBytes, descMSSQLLogFilesSizeKB)
+		Add(&md, "mssql.log_files_used_size", v.LogFilesUsedSizeKB*1024, tags, metadata.Gauge, metadata.KBytes, descMSSQLLogFilesUsedSizeKB)
+		Add(&md, "mssql.log_flushes", v.LogFlushesPersec, tags, metadata.Counter, metadata.PerSecond, descMSSQLLogFlushesPersec)
+		Add(&md, "mssql.log_flush_waits", v.LogFlushWaitsPersec, tags, metadata.Counter, metadata.PerSecond, descMSSQLLogFlushWaitsPersec)
+		Add(&md, "mssql.log_flush_wait_time", v.LogFlushWaitTime, tags, metadata.Counter, metadata.MilliSecond, descMSSQLLogFlushWaitTime)
+		//Add(&md, "mssql.log_flush_write_time_ms", v.LogFlushWriteTimems, tags, metadata.Counter, metadata.MilliSecond, descMSSQLLogFlushWriteTimems)
+		Add(&md, "mssql.log_growths", v.LogGrowths, tags, metadata.Gauge, metadata.Count, descMSSQLLogGrowths)
+		//Add(&md, "mssql.log_pool_cache_misses", v.LogPoolCacheMissesPersec, tags, metadata.Counter, metadata.PerSecond, descMSSQLLogPoolCacheMissesPersec)
+		//Add(&md, "mssql.log_pool_disk_reads", v.LogPoolDiskReadsPersec, tags, metadata.Counter, metadata.PerSecond, descMSSQLLogPoolDiskReadsPersec)
+		//Add(&md, "mssql.log_pool_requests", v.LogPoolRequestsPersec, tags, metadata.Counter, metadata.PerSecond, descMSSQLLogPoolRequestsPersec)
+		Add(&md, "mssql.log_shrinks", v.LogShrinks, tags, metadata.Gauge, metadata.Count, descMSSQLLogShrinks)
+		Add(&md, "mssql.log_truncations", v.LogTruncations, tags, metadata.Gauge, metadata.Count, descMSSQLLogTruncations)
+		Add(&md, "mssql.percent_log_used", v.PercentLogUsed, tags, metadata.Gauge, metadata.Pct, descMSSQLPercentLogUsed)
+		Add(&md, "mssql.repl_pending_xacts", v.ReplPendingXacts, tags, metadata.Gauge, metadata.Count, descMSSQLReplPendingXacts)
+		Add(&md, "mssql.repl_trans_rate", v.ReplTransRate, tags, metadata.Counter, metadata.PerSecond, descMSSQLReplTransRate)
+		Add(&md, "mssql.shrink_data_movement_bytes", v.ShrinkDataMovementBytesPersec, tags, metadata.Counter, metadata.BytesPerSecond, descMSSQLShrinkDataMovementBytesPersec)
+		Add(&md, "mssql.tracked_transactions", v.TrackedtransactionsPersec, tags, metadata.Counter, metadata.PerSecond, descMSSQLTrackedtransactionsPersec)
+		Add(&md, "mssql.transactions", v.TransactionsPersec, tags, metadata.Counter, metadata.PerSecond, descMSSQLTransactionsPersec)
+		Add(&md, "mssql.write_transactions", v.WriteTransactionsPersec, tags, metadata.Counter, metadata.PerSecond, descMSSQLWriteTransactionsPersec)
 
 	}
 	return md, nil
@@ -256,29 +258,29 @@ type Win32_PerfRawData_MSSQLSERVER_SQLServerDatabases struct {
 	Committableentries               uint64
 	DataFilesSizeKB                  uint64
 	DBCCLogicalScanBytesPersec       uint64
-	GroupCommitTimePersec            uint64
-	LogBytesFlushedPersec            uint64
-	LogCacheHitRatio                 uint64
-	LogCacheHitRatio_Base            uint64
-	LogCacheReadsPersec              uint64
-	LogFilesSizeKB                   uint64
-	LogFilesUsedSizeKB               uint64
-	LogFlushesPersec                 uint64
-	LogFlushWaitsPersec              uint64
-	LogFlushWaitTime                 uint64
-	LogFlushWriteTimems              uint64
-	LogGrowths                       uint64
-	LogPoolCacheMissesPersec         uint64
-	LogPoolDiskReadsPersec           uint64
-	LogPoolRequestsPersec            uint64
-	LogShrinks                       uint64
-	LogTruncations                   uint64
-	Name                             string
-	PercentLogUsed                   uint64
-	ReplPendingXacts                 uint64
-	ReplTransRate                    uint64
-	ShrinkDataMovementBytesPersec    uint64
-	TrackedtransactionsPersec        uint64
-	TransactionsPersec               uint64
-	WriteTransactionsPersec          uint64
+	//GroupCommitTimePersec            uint64
+	LogBytesFlushedPersec uint64
+	LogCacheHitRatio      uint64
+	LogCacheHitRatio_Base uint64
+	LogCacheReadsPersec   uint64
+	LogFilesSizeKB        uint64
+	LogFilesUsedSizeKB    uint64
+	LogFlushesPersec      uint64
+	LogFlushWaitsPersec   uint64
+	LogFlushWaitTime      uint64
+	//LogFlushWriteTimems              uint64
+	LogGrowths uint64
+	//LogPoolCacheMissesPersec         uint64
+	//LogPoolDiskReadsPersec uint64
+	//LogPoolRequestsPersec            uint64
+	LogShrinks                    uint64
+	LogTruncations                uint64
+	Name                          string
+	PercentLogUsed                uint64
+	ReplPendingXacts              uint64
+	ReplTransRate                 uint64
+	ShrinkDataMovementBytesPersec uint64
+	TrackedtransactionsPersec     uint64
+	TransactionsPersec            uint64
+	WriteTransactionsPersec       uint64
 }
