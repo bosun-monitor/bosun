@@ -43,15 +43,15 @@ func c_mssql_general() (opentsdb.MultiDataPoint, error) {
 	}
 	var md opentsdb.MultiDataPoint
 	for _, v := range dst {
-		Add(&md, "mssql.user_connections", v.UserConnections, nil, metadata.Counter, metadata.Count, descMSSQLUserConnections)
+		Add(&md, "mssql.user_connections", v.UserConnections, nil, metadata.Gauge, metadata.Count, descMSSQLUserConnections)
 		Add(&md, "mssql.connection_resets", v.ConnectionResetPersec, nil, metadata.Counter, metadata.PerSecond, descMSSQLConnectionResetPersec)
 		Add(&md, "mssql.logins", v.LoginsPersec, nil, metadata.Counter, metadata.PerSecond, descMSSQLLoginsPersec)
 		Add(&md, "mssql.logouts", v.LogoutsPersec, nil, metadata.Counter, metadata.PerSecond, descMSSQLLogoutsPersec)
 		Add(&md, "mssql.mars_deadlocks", v.MarsDeadlocks, nil, metadata.Counter, metadata.Count, descMSSQLMarsDeadlocks)
-		Add(&md, "mssql.proc_blocked", v.Processesblocked, nil, metadata.Counter, metadata.Count, descMSSQLProcessesblocked)
+		Add(&md, "mssql.proc_blocked", v.Processesblocked, nil, metadata.Gauge, metadata.Count, descMSSQLProcessesblocked)
 		Add(&md, "mssql.temptables_created", v.TempTablesCreationRate, nil, metadata.Counter, metadata.PerSecond, descMSSQLTempTablesCreationRate)
-		Add(&md, "mssql.temptables_to_destroy", v.TempTablesForDestruction, nil, metadata.Counter, metadata.Count, descMSSQLTempTablesForDestruction)
-		Add(&md, "mssql.transactions", v.Transactions, nil, metadata.Counter, metadata.Count, descMSSQLTransactions)
+		Add(&md, "mssql.temptables_to_destroy", v.TempTablesForDestruction, nil, metadata.Gauge, metadata.Count, descMSSQLTempTablesForDestruction)
+		Add(&md, "mssql.transactions", v.Transactions, nil, metadata.Gauge, metadata.Count, descMSSQLTransactions)
 
 	}
 	return md, nil
