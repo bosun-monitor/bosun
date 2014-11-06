@@ -26,6 +26,6 @@ RUN mkdir -p /hbase \
 RUN curl -SL https://storage.googleapis.com/golang/go1.3.3.linux-amd64.tar.gz \
     | tar -xzC /usr/local
 
-COPY bosun $GOPATH/src/github.com/StackExchange/bosun
+COPY bosun $GOPATH/src/github.com/bosun-monitor/bosun
 
-RUN /usr/local/go/bin/go install github.com/StackExchange/bosun
+RUN /usr/local/go/bin/go install github.com/bosun-monitor/bosun
