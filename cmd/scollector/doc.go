@@ -66,6 +66,12 @@ currently only present in the "next" branch
 (https://github.com/opentsdb/opentsdb/tree/next). Ensure that is in use if not
 using the docker image.
 
+Logs
+
+If started with -p or -d, scollector logs to Stdout. Otherwise, on Unixes,
+scollector logs to syslog. On Windows when started as a service, the Event Log
+is used.
+
 External Collectors
 
 External collectors are executables that scollector invokes, collects output
