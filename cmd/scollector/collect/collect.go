@@ -5,6 +5,7 @@
 package collect
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -44,7 +45,7 @@ var (
 	tsdbURL             string
 	osHostname          string
 	metricRoot          string
-	queue               opentsdb.MultiDataPoint
+	queue               []json.RawMessage
 	qlock, mlock, slock sync.Mutex   // Locks for queues, maps, stats.
 	counters                         = make(map[string]*addMetric)
 	sets                             = make(map[string]*setMetric)
@@ -87,27 +88,7 @@ func InitChan(tsdbhost *url.URL, metric_root string, ch chan *opentsdb.DataPoint
 	tsdbURL = u.String()
 	metricRoot = metric_root + "."
 	tchan = ch
-	go func() {
-		for dp := range tchan {
-			qlock.Lock()
-			for {
-				if len(queue) > MaxQueueLen {
-					slock.Lock()
-					dropped++
-					slock.Unlock()
-					break
-				}
-				queue = append(queue, dp)
-				select {
-				case dp = <-tchan:
-					continue
-				default:
-				}
-				break
-			}
-			qlock.Unlock()
-		}
-	}()
+	go queuer()
 	go send()
 
 	go collect()
