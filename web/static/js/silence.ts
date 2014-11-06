@@ -26,6 +26,9 @@ bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$ro
 	$scope.hosts = search.hosts;
 	$scope.tags = search.tags;
 	$scope.edit = search.edit;
+	if (!$scope.end && !$scope.duration) {
+		$scope.duration = '1h';
+	}
 	function get() {
 		$http.get('/api/silence/get')
 			.success((data) => {
