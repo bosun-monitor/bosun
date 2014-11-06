@@ -55,20 +55,6 @@ func (d *DataPoint) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (d *DataPoint) Telnet() string {
-	m := ""
-	d.clean()
-	var keys []string
-	for k := range d.Tags {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	for _, k := range keys {
-		m += fmt.Sprintf(" %s=%s", k, d.Tags[k])
-	}
-	return fmt.Sprintf("put %s %d %v%s\n", d.Metric, d.Timestamp, d.Value, m)
-}
-
 type MultiDataPoint []*DataPoint
 
 type TagSet map[string]string
@@ -138,10 +124,12 @@ func (d *DataPoint) clean() error {
 	if err != nil {
 		return err
 	}
-	om := d.Metric
-	d.Metric, err = Clean(d.Metric)
+	m, err := Clean(d.Metric)
 	if err != nil {
-		return fmt.Errorf("%s. Orginal: [%s] Cleaned: [%s]", err.Error(), om, d.Metric)
+		return fmt.Errorf("cleaning metric %s: %s", d.Metric, err)
+	}
+	if d.Metric != m {
+		d.Metric = m
 	}
 	switch v := d.Value.(type) {
 	case string:
@@ -172,14 +160,16 @@ func (t TagSet) clean() error {
 	for k, v := range t {
 		kc, err := Clean(k)
 		if err != nil {
-			return fmt.Errorf("%s. Orginal: [%s] Cleaned: [%s]", err.Error(), k, kc)
+			return fmt.Errorf("cleaning tag %s: %s", k, err)
 		}
 		vc, err := Clean(v)
 		if err != nil {
-			return fmt.Errorf("%s. Orginal: [%s] Cleaned: [%s]", err.Error(), v, vc)
+			return fmt.Errorf("cleaning key %s: %s", v, err)
 		}
-		delete(t, k)
-		t[kc] = vc
+		if kc != k || vc != v {
+			delete(t, k)
+			t[kc] = vc
+		}
 	}
 	return nil
 }
@@ -194,13 +184,6 @@ func Clean(s string) (string, error) {
 // See: http://opentsdb.net/docs/build/html/user_guide/writing.html#metrics-and-tags
 func Replace(s, replacement string) (string, error) {
 	var c string
-	if len(s) == 0 {
-		// This one is perhaps better checked earlier in the pipeline, but since
-		// it makes sense to check that the resulting cleaned tag is not Zero length here I'm including it
-		// It also might be the case that this just shouldn't be happening and this is yet another side
-		// effect of WMI turning to Garbage....
-		return s, errors.New("Metric/Tagk/Tagv Cleaning Passed a Zero Length String")
-	}
 	replaced := false
 	for len(s) > 0 {
 		r, size := utf8.DecodeRuneInString(s)
@@ -213,9 +196,8 @@ func Replace(s, replacement string) (string, error) {
 		}
 		s = s[size:]
 	}
-
 	if len(c) == 0 {
-		return c, errors.New("Cleaning Metric/Tagk/Tagv resulted in a Zero Length String")
+		return "", fmt.Errorf("clean result is empty")
 	}
 	return c, nil
 }
