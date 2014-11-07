@@ -62,7 +62,7 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 			return err
 		}
 		mem[m[1]] = i
-		Add(&md, "linux.mem."+strings.ToLower(m[1]), m[2], nil, metadata.Unknown, metadata.None, "")
+		Add(&md, "linux.mem."+strings.ToLower(m[1]), m[2], nil, metadata.Gauge, metadata.KBytes, "")
 		return nil
 	}); err != nil {
 		Error = err
