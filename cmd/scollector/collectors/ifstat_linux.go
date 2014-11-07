@@ -14,23 +14,27 @@ func init() {
 	collectors = append(collectors, &IntervalCollector{F: c_ipcount_linux})
 }
 
-var FIELDS_NET = []string{
-	"bytes",
-	"packets",
-	"errs",
-	"dropped",
-	"fifo.errs",
-	"frame.errs",
-	"compressed",
-	"multicast",
-	"bytes",
-	"packets",
-	"errs",
-	"dropped",
-	"fifo.errs",
-	"collisions",
-	"carrier.errs",
-	"compressed",
+var netFields = []struct {
+	key  string
+	rate metadata.RateType
+	unit metadata.Unit
+}{
+	{"bytes", metadata.Counter, metadata.Bytes},
+	{"packets", metadata.Counter, metadata.Count},
+	{"errs", metadata.Counter, metadata.Count},
+	{"dropped", metadata.Counter, metadata.Count},
+	{"fifo.errs", metadata.Counter, metadata.Count},
+	{"frame.errs", metadata.Counter, metadata.Count},
+	{"compressed", metadata.Counter, metadata.Count},
+	{"multicast", metadata.Counter, metadata.Count},
+	{"bytes", metadata.Counter, metadata.Bytes},
+	{"packets", metadata.Counter, metadata.Count},
+	{"errs", metadata.Counter, metadata.Count},
+	{"dropped", metadata.Counter, metadata.Count},
+	{"fifo.errs", metadata.Counter, metadata.Count},
+	{"collisions", metadata.Counter, metadata.Count},
+	{"carrier.errs", metadata.Counter, metadata.Count},
+	{"compressed", metadata.Counter, metadata.Count},
 }
 
 var ifstatRE = regexp.MustCompile(`\s+(eth\d+|em\d+_\d+/\d+|em\d+_\d+|em\d+|` +
@@ -84,29 +88,29 @@ func c_ifstat_linux() (opentsdb.MultiDataPoint, error) {
 		})
 		for i, v := range stats {
 			if strings.HasPrefix(intf, "bond") {
-				Add(&md, "linux.net.bond."+strings.Replace(FIELDS_NET[i], ".", "_", -1), v, opentsdb.TagSet{
+				Add(&md, "linux.net.bond."+strings.Replace(netFields[i].key, ".", "_", -1), v, opentsdb.TagSet{
 					"iface":     intf,
 					"direction": direction(i),
-				}, metadata.Unknown, metadata.None, "") //TODO: different units
+				}, netFields[i].rate, netFields[i].unit, "")
 
 				if i < 4 || (i >= 8 && i < 12) {
-					Add(&md, "os.net.bond."+strings.Replace(FIELDS_NET[i], ".", "_", -1), v, opentsdb.TagSet{
+					Add(&md, "os.net.bond."+strings.Replace(netFields[i].key, ".", "_", -1), v, opentsdb.TagSet{
 						"iface":     intf,
 						"direction": direction(i),
-					}, metadata.Unknown, metadata.None, "") //TODO: different units
+					}, netFields[i].rate, netFields[i].unit, "")
 
 				}
 			} else {
-				Add(&md, "linux.net."+strings.Replace(FIELDS_NET[i], ".", "_", -1), v, opentsdb.TagSet{
+				Add(&md, "linux.net."+strings.Replace(netFields[i].key, ".", "_", -1), v, opentsdb.TagSet{
 					"iface":     intf,
 					"direction": direction(i),
-				}, metadata.Unknown, metadata.None, "") //TODO: different units
+				}, netFields[i].rate, netFields[i].unit, "")
 
 				if i < 4 || (i >= 8 && i < 12) {
-					Add(&md, "os.net."+strings.Replace(FIELDS_NET[i], ".", "_", -1), v, opentsdb.TagSet{
+					Add(&md, "os.net."+strings.Replace(netFields[i].key, ".", "_", -1), v, opentsdb.TagSet{
 						"iface":     intf,
 						"direction": direction(i),
-					}, metadata.Unknown, metadata.None, "") //TODO: different units
+					}, netFields[i].rate, netFields[i].unit, "")
 
 				}
 			}
