@@ -8,7 +8,7 @@ RUN apt-get update && apt-get install -y \
 	--no-install-recommends \
 	&& rm -rf /var/lib/apt/lists/*
 
-RUN mkdir -p /tsdb /hbase /bosun
+RUN mkdir -p /tsdb /hbase /bosun /scollector
 
 ENV TSDB /tsdb
 ENV HBASEVER 0.98.7-hadoop2
