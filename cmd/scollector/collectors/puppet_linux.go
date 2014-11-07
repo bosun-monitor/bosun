@@ -74,7 +74,7 @@ func puppet_linux() (opentsdb.MultiDataPoint, error) {
 	if _, err := os.Stat(puppetDisabled); !os.IsNotExist(err) {
 		disabled = 1
 	}
-	Add(&md, "puppet.disabled", disabled, nil, metadata.Unknown, metadata.None, "")
+	Add(&md, "puppet.disabled", disabled, nil, metadata.Gauge, metadata.Count, "")
 	// Gather stats from the run summary
 	s, err := ioutil.ReadFile(puppetRunSummary)
 	if err != nil {

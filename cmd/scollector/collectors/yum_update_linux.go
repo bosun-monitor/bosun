@@ -36,7 +36,7 @@ func yum_update_stats_linux() (opentsdb.MultiDataPoint, error) {
 	} else if err != nil {
 		return nil, err
 	}
-	Add(&md, "linux.updates.count", regular_c, opentsdb.TagSet{"type": "non-kernel"}, metadata.Unknown, metadata.None, "")
-	Add(&md, "linux.updates.count", kernel_c, opentsdb.TagSet{"type": "kernel"}, metadata.Unknown, metadata.None, "")
+	Add(&md, "linux.updates.count", regular_c, opentsdb.TagSet{"type": "non-kernel"}, metadata.Gauge, metadata.Count, "")
+	Add(&md, "linux.updates.count", kernel_c, opentsdb.TagSet{"type": "kernel"}, metadata.Gauge, metadata.Count, "")
 	return md, nil
 }
