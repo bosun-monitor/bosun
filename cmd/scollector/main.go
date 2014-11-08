@@ -43,7 +43,8 @@ var (
 	flagDebug           = flag.Bool("d", false, "Enables debug output.")
 	flagFullHost        = flag.Bool("u", false, `Enables full hostnames: doesn't truncate to first ".".`)
 	flagDisableMetadata = flag.Bool("m", false, "Disable sending of metadata.")
-	flagVersion         = flag.Bool("version", false, `Prints the version and exits.`)
+	flagVersion         = flag.Bool("version", false, "Prints the version and exits.")
+	flagDisableDefault  = flag.Bool("n", false, "Disable sending of scollector self metrics.")
 
 	procs []*collectors.WatchedProc
 
@@ -170,6 +171,9 @@ func main() {
 		collectors.InitFake(*flagFake)
 	}
 	collect.Debug = *flagDebug
+	if *flagDisableDefault {
+		collect.DisableDefaultCollectors = true
+	}
 	c := collectors.Search(*flagFilter)
 	for _, col := range c {
 		col.Init()
