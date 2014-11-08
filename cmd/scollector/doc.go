@@ -36,6 +36,8 @@ The flags are:
 		list enabled collectors
 	-m
 		disable sending of metadata
+	-n
+		disable sending of scollector self metrics
 
 Additional flags on Windows:
 	-winsvc=""
