@@ -71,6 +71,7 @@ func (s *Schedule) ExprPNG(t miniprofiler.Timer, w io.Writer, width, height int,
 func (s *Schedule) ExprGraph(t miniprofiler.Timer, res []*expr.Result, q string, now time.Time) (chart.Chart, error) {
 	c := chart.ScatterChart{
 		Title: fmt.Sprintf("%s - %s", q, now.Format(time.RFC1123)),
+		Key:   chart.Key{Pos: "itl"},
 	}
 	c.XRange.Time = true
 	for ri, r := range res {
