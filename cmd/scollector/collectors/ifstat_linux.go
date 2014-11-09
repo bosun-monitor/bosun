@@ -38,7 +38,7 @@ var netFields = []struct {
 }
 
 var ifstatRE = regexp.MustCompile(`\s+(eth\d+|em\d+_\d+/\d+|em\d+_\d+|em\d+|` +
-	`bond\d+|` + `p\d+p\d+_\d+/\d+|p\d+p\d+_\d+|p\d+p\d+):(.*)`)
+	`bond\d+|team\d+|` + `p\d+p\d+_\d+/\d+|p\d+p\d+_\d+|p\d+p\d+):(.*)`)
 
 func c_ipcount_linux() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
@@ -80,7 +80,7 @@ func c_ifstat_linux() (opentsdb.MultiDataPoint, error) {
 		stats := strings.Fields(m[2])
 		tags := opentsdb.TagSet{"iface": intf}
 		var bond_string string
-		if strings.HasPrefix(intf, "bond") {
+		if strings.HasPrefix(intf, "bond") || strings.HasPrefix(intf, "team") {
 			bond_string = "bond."
 		}
 		// Detect speed of the interface in question
@@ -90,32 +90,16 @@ func c_ifstat_linux() (opentsdb.MultiDataPoint, error) {
 			return nil
 		})
 		for i, v := range stats {
-			if strings.HasPrefix(intf, "bond") {
-				Add(&md, "linux.net.bond."+strings.Replace(netFields[i].key, ".", "_", -1), v, opentsdb.TagSet{
+			Add(&md, "linux.net."+bond_string+strings.Replace(netFields[i].key, ".", "_", -1), v, opentsdb.TagSet{
+				"iface":     intf,
+				"direction": direction(i),
+			}, netFields[i].rate, netFields[i].unit, "")
+			if i < 4 || (i >= 8 && i < 12) {
+				Add(&md, "os.net."+bond_string+strings.Replace(netFields[i].key, ".", "_", -1), v, opentsdb.TagSet{
 					"iface":     intf,
 					"direction": direction(i),
 				}, netFields[i].rate, netFields[i].unit, "")
 
-				if i < 4 || (i >= 8 && i < 12) {
-					Add(&md, "os.net.bond."+strings.Replace(netFields[i].key, ".", "_", -1), v, opentsdb.TagSet{
-						"iface":     intf,
-						"direction": direction(i),
-					}, netFields[i].rate, netFields[i].unit, "")
-
-				}
-			} else {
-				Add(&md, "linux.net."+strings.Replace(netFields[i].key, ".", "_", -1), v, opentsdb.TagSet{
-					"iface":     intf,
-					"direction": direction(i),
-				}, netFields[i].rate, netFields[i].unit, "")
-
-				if i < 4 || (i >= 8 && i < 12) {
-					Add(&md, "os.net."+strings.Replace(netFields[i].key, ".", "_", -1), v, opentsdb.TagSet{
-						"iface":     intf,
-						"direction": direction(i),
-					}, netFields[i].rate, netFields[i].unit, "")
-
-				}
 			}
 		}
 		return nil
