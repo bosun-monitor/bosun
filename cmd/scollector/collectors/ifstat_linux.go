@@ -79,11 +79,14 @@ func c_ifstat_linux() (opentsdb.MultiDataPoint, error) {
 		intf := m[1]
 		stats := strings.Fields(m[2])
 		tags := opentsdb.TagSet{"iface": intf}
-
+		var bond_string string
+		if strings.HasPrefix(intf, "bond") {
+			bond_string = "bond."
+		}
 		// Detect speed of the interface in question
 		readLine("/sys/class/net/"+intf+"/speed", func(speed string) error {
-			Add(&md, "linux.net.ifspeed", speed, tags, metadata.Gauge, metadata.Megabit, "")
-			Add(&md, "os.net.ifspeed", speed, tags, metadata.Gauge, metadata.Megabit, "")
+			Add(&md, "linux.net."+bond_string+"ifspeed", speed, tags, metadata.Gauge, metadata.Megabit, "")
+			Add(&md, "os.net."+bond_string+"ifspeed", speed, tags, metadata.Gauge, metadata.Megabit, "")
 			return nil
 		})
 		for i, v := range stats {
