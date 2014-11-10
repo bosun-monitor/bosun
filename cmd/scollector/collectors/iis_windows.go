@@ -1,7 +1,6 @@
 package collectors
 
 import (
-	"github.com/StackExchange/wmi"
 	"github.com/bosun-monitor/scollector/metadata"
 	"github.com/bosun-monitor/scollector/opentsdb"
 )
@@ -12,11 +11,17 @@ func init() {
 	}
 	c.init = wmiInit(c, func() interface{} { return &[]Win32_PerfRawData_W3SVC_WebService{} }, `WHERE Name <> '_Total'`, &iisQuery)
 	collectors = append(collectors, c)
-	collectors = append(collectors, &IntervalCollector{F: c_iis_apppool})
+
+	c = &IntervalCollector{
+		F: c_iis_apppool,
+	}
+	c.init = wmiInit(c, func() interface{} { return &[]Win32_PerfRawData_APPPOOLCountersProvider_APPPOOLWAS{} }, `WHERE Name <> '_Total'`, &iisQueryAppPool)
+	collectors = append(collectors, c)
 }
 
 var (
-	iisQuery string
+	iisQuery        string
+	iisQueryAppPool string
 )
 
 func c_iis_webservice() (opentsdb.MultiDataPoint, error) {
@@ -109,19 +114,18 @@ type Win32_PerfRawData_W3SVC_WebService struct {
 
 func c_iis_apppool() (opentsdb.MultiDataPoint, error) {
 	var dst []Win32_PerfRawData_APPPOOLCountersProvider_APPPOOLWAS
-	var q = wmi.CreateQuery(&dst, `WHERE Name <> '_Total'`)
-	err := queryWmi(q, &dst)
+	err := queryWmi(iisQueryAppPool, &dst)
 	if err != nil {
 		return nil, err
 	}
 	var md opentsdb.MultiDataPoint
 	for _, v := range dst {
-		tagsName := opentsdb.TagSet{"name": v.Name}
+		tags := opentsdb.TagSet{"name": v.Name}
 		uptime := (v.Timestamp_Object - v.CurrentApplicationPoolUptime) / v.Frequency_Object
 		failtime := (v.Timestamp_Object - v.TimeSinceLastWorkerProcessFailure) / v.Frequency_Object
-		Add(&md, "iis.apppool.state", v.CurrentApplicationPoolState, tagsName, metadata.Gauge, metadata.StatusCode, descIISAppPoolCurrentApplicationPoolState)
-		Add(&md, "iis.apppool.uptime", uptime, tagsName, metadata.Gauge, metadata.Second, descIISAppPoolCurrentApplicationPoolUptime)
-		Add(&md, "iis.apppool.time_since_failure", failtime, tagsName, metadata.Gauge, metadata.Second, descIISAppPoolTimeSinceLastWorkerProcessFailure)
+		Add(&md, "iis.apppool.state", v.CurrentApplicationPoolState, tags, metadata.Gauge, metadata.StatusCode, descIISAppPoolCurrentApplicationPoolState)
+		Add(&md, "iis.apppool.uptime", uptime, tags, metadata.Gauge, metadata.Second, descIISAppPoolCurrentApplicationPoolUptime)
+		Add(&md, "iis.apppool.time_since_failure", failtime, tags, metadata.Gauge, metadata.Second, descIISAppPoolTimeSinceLastWorkerProcessFailure)
 		Add(&md, "iis.apppool.processes", v.CurrentWorkerProcesses, opentsdb.TagSet{"name": v.Name, "type": "current"}, metadata.Gauge, metadata.Count, descIISAppPoolCurrentWorkerProcesses)
 		Add(&md, "iis.apppool.processes", v.MaximumWorkerProcesses, opentsdb.TagSet{"name": v.Name, "type": "maximum"}, metadata.Gauge, metadata.Count, descIISAppPoolMaximumWorkerProcesses)
 		Add(&md, "iis.apppool.processes", v.RecentWorkerProcessFailures, opentsdb.TagSet{"name": v.Name, "type": "failed"}, metadata.Gauge, metadata.Count, descIISAppPoolRecentWorkerProcessFailures)
