@@ -11,10 +11,17 @@ func init() {
 	}
 	c.init = wmiInit(c, func() interface{} { return &[]Win32_PerfRawData_W3SVC_WebService{} }, `WHERE Name <> '_Total'`, &iisQuery)
 	collectors = append(collectors, c)
+
+	c = &IntervalCollector{
+		F: c_iis_apppool,
+	}
+	c.init = wmiInit(c, func() interface{} { return &[]Win32_PerfRawData_APPPOOLCountersProvider_APPPOOLWAS{} }, `WHERE Name <> '_Total'`, &iisQueryAppPool)
+	collectors = append(collectors, c)
 }
 
 var (
-	iisQuery string
+	iisQuery        string
+	iisQueryAppPool string
 )
 
 func c_iis_webservice() (opentsdb.MultiDataPoint, error) {
@@ -103,4 +110,64 @@ type Win32_PerfRawData_W3SVC_WebService struct {
 	SearchRequestsPersec         uint32
 	TraceRequestsPersec          uint32
 	UnlockRequestsPersec         uint32
+}
+
+func c_iis_apppool() (opentsdb.MultiDataPoint, error) {
+	var dst []Win32_PerfRawData_APPPOOLCountersProvider_APPPOOLWAS
+	err := queryWmi(iisQueryAppPool, &dst)
+	if err != nil {
+		return nil, err
+	}
+	var md opentsdb.MultiDataPoint
+	for _, v := range dst {
+		tags := opentsdb.TagSet{"name": v.Name}
+		uptime := (v.Timestamp_Object - v.CurrentApplicationPoolUptime) / v.Frequency_Object
+		failtime := (v.Timestamp_Object - v.TimeSinceLastWorkerProcessFailure) / v.Frequency_Object
+		Add(&md, "iis.apppool.state", v.CurrentApplicationPoolState, tags, metadata.Gauge, metadata.StatusCode, descIISAppPoolCurrentApplicationPoolState)
+		Add(&md, "iis.apppool.uptime", uptime, tags, metadata.Gauge, metadata.Second, descIISAppPoolCurrentApplicationPoolUptime)
+		Add(&md, "iis.apppool.time_since_failure", failtime, tags, metadata.Gauge, metadata.Second, descIISAppPoolTimeSinceLastWorkerProcessFailure)
+		Add(&md, "iis.apppool.processes", v.CurrentWorkerProcesses, opentsdb.TagSet{"name": v.Name, "type": "current"}, metadata.Gauge, metadata.Count, descIISAppPoolCurrentWorkerProcesses)
+		Add(&md, "iis.apppool.processes", v.MaximumWorkerProcesses, opentsdb.TagSet{"name": v.Name, "type": "maximum"}, metadata.Gauge, metadata.Count, descIISAppPoolMaximumWorkerProcesses)
+		Add(&md, "iis.apppool.processes", v.RecentWorkerProcessFailures, opentsdb.TagSet{"name": v.Name, "type": "failed"}, metadata.Gauge, metadata.Count, descIISAppPoolRecentWorkerProcessFailures)
+		Add(&md, "iis.apppool.events", v.TotalApplicationPoolRecycles, opentsdb.TagSet{"name": v.Name, "type": "recycled"}, metadata.Counter, metadata.Event, descIISAppPoolTotalApplicationPoolRecycles)
+		Add(&md, "iis.apppool.events", v.TotalWorkerProcessesCreated, opentsdb.TagSet{"name": v.Name, "type": "created"}, metadata.Counter, metadata.Event, descIISAppPoolTotalWorkerProcessesCreated)
+		Add(&md, "iis.apppool.events", v.TotalWorkerProcessFailures, opentsdb.TagSet{"name": v.Name, "type": "failed_crash"}, metadata.Counter, metadata.Event, descIISAppPoolTotalWorkerProcessFailures)
+		Add(&md, "iis.apppool.events", v.TotalWorkerProcessPingFailures, opentsdb.TagSet{"name": v.Name, "type": "failed_ping"}, metadata.Counter, metadata.Event, descIISAppPoolTotalWorkerProcessPingFailures)
+		Add(&md, "iis.apppool.events", v.TotalWorkerProcessShutdownFailures, opentsdb.TagSet{"name": v.Name, "type": "failed_shutdown"}, metadata.Counter, metadata.Event, descIISAppPoolTotalWorkerProcessShutdownFailures)
+		Add(&md, "iis.apppool.events", v.TotalWorkerProcessStartupFailures, opentsdb.TagSet{"name": v.Name, "type": "failed_startup"}, metadata.Counter, metadata.Event, descIISAppPoolTotalWorkerProcessStartupFailures)
+	}
+	return md, nil
+}
+
+const (
+	descIISAppPoolCurrentApplicationPoolState        = "The current status of the application pool (1 - Uninitialized, 2 - Initialized, 3 - Running, 4 - Disabling, 5 - Disabled, 6 - Shutdown Pending, 7 - Delete Pending)."
+	descIISAppPoolCurrentApplicationPoolUptime       = "The length of time, in seconds, that the application pool has been running since it was started."
+	descIISAppPoolCurrentWorkerProcesses             = "The current number of worker processes that are running in the application pool."
+	descIISAppPoolMaximumWorkerProcesses             = "The maximum number of worker processes that have been created for the application pool since Windows Process Activation Service (WAS) started."
+	descIISAppPoolRecentWorkerProcessFailures        = "The number of times that worker processes for the application pool failed during the rapid-fail protection interval."
+	descIISAppPoolTimeSinceLastWorkerProcessFailure  = "The length of time, in seconds, since the last worker process failure occurred for the application pool."
+	descIISAppPoolTotalApplicationPoolRecycles       = "The number of times that the application pool has been recycled since Windows Process Activation Service (WAS) started."
+	descIISAppPoolTotalWorkerProcessesCreated        = "The number of worker processes created for the application pool since Windows Process Activation Service (WAS) started."
+	descIISAppPoolTotalWorkerProcessFailures         = "The number of times that worker processes have crashed since the application pool was started."
+	descIISAppPoolTotalWorkerProcessPingFailures     = "The number of times that Windows Process Activation Service (WAS) did not receive a response to ping messages sent to a worker process."
+	descIISAppPoolTotalWorkerProcessShutdownFailures = "The number of times that Windows Process Activation Service (WAS) failed to shut down a worker process."
+	descIISAppPoolTotalWorkerProcessStartupFailures  = "The number of times that Windows Process Activation Service (WAS) failed to start a worker process."
+)
+
+type Win32_PerfRawData_APPPOOLCountersProvider_APPPOOLWAS struct {
+	CurrentApplicationPoolState        uint32
+	CurrentApplicationPoolUptime       uint64
+	CurrentWorkerProcesses             uint32
+	Frequency_Object                   uint64
+	MaximumWorkerProcesses             uint32
+	Name                               string
+	RecentWorkerProcessFailures        uint32
+	TimeSinceLastWorkerProcessFailure  uint64
+	Timestamp_Object                   uint64
+	TotalApplicationPoolRecycles       uint32
+	TotalWorkerProcessesCreated        uint32
+	TotalWorkerProcessFailures         uint32
+	TotalWorkerProcessPingFailures     uint32
+	TotalWorkerProcessShutdownFailures uint32
+	TotalWorkerProcessStartupFailures  uint32
 }
