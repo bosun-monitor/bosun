@@ -815,6 +815,7 @@ func (s *Schedule) Host(filter string) map[string]*HostData {
 			e = &HostData{
 				Name: tags["host"],
 			}
+			e.CPU.Processors = make(map[string]string)
 			e.Memory.Modules = make(map[string]string)
 			res[tags["host"]] = e
 		}
@@ -828,7 +829,9 @@ func (s *Schedule) Host(filter string) map[string]*HostData {
 			case "model":
 				e.Model = val
 			case "processor":
-				e.CPU.Processors = append(e.CPU.Processors, val)
+				if name := tags["name"]; name != "" {
+					e.CPU.Processors[name] = val
+				}
 			case "svctag":
 				e.ServiceTag = val
 			case "version":
@@ -844,9 +847,9 @@ func (s *Schedule) Host(filter string) map[string]*HostData {
 
 type HostData struct {
 	CPU struct {
-		Logical    int64    `json:",omitempty"`
-		Physical   int64    `json:",omitempty"`
-		Processors []string `json:",omitempty"`
+		Logical    int64             `json:",omitempty"`
+		Physical   int64             `json:",omitempty"`
+		Processors map[string]string `json:",omitempty"`
 	} `json:",omitempty"`
 	Interaces []struct {
 		Description string `json:",omitempty"`
