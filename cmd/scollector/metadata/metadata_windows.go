@@ -1,7 +1,6 @@
 package metadata
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/StackExchange/slog"
@@ -101,8 +100,7 @@ func metaWindowsIfaces() {
 		if nicConfig != nil {
 			AddMeta("", tag, "mac", strings.Replace(nicConfig.MACAddress, ":", "", -1), true)
 			for _, ip := range *nicConfig.IPAddress {
-				fmt.Println("%v", ip)
-				AddMeta("", tag, "addr", ip, true) // Should be ip. See https://github.com/StackExchange/wmi/issues/5
+				AddMeta("", tag, "addr", ip, true) // blocked by array support in WMI See https://github.com/StackExchange/wmi/issues/5
 			}
 		}
 	}
@@ -120,5 +118,4 @@ type Win32_NetworkAdapterConfiguration struct {
 	IPAddress  *[]string //Both IPv4 and IPv6
 	MACAddress string    //00:1B:21:93:00:00
 	SettingID  string    //Matches InterfaceGuid
-	Caption    string
 }
