@@ -831,6 +831,13 @@ func (s *Schedule) Host(filter string) map[string]*HostData {
 		switch val := mv.Value.(type) {
 		case string:
 			switch k.Name {
+			case "addr":
+				if iface := tags["iface"]; iface != "" {
+					e.Interfaces = append(e.Interfaces, &HostInterface{
+						Alias:       iface,
+						IPAddresses: []string{val},
+					})
+				}
 			case "memory":
 				if name := tags["name"]; name != "" {
 					e.Memory.Modules[name] = val
@@ -855,10 +862,12 @@ func (s *Schedule) Host(filter string) map[string]*HostData {
 }
 
 type HostInterface struct {
-	Description string `json:",omitempty"`
-	LinkSpeed   int64  `json:",omitempty"`
-	Mac         string `json:",omitempty"`
-	Name        string `json:",omitempty"`
+	Alias       string   `json:",omitempty"`
+	Inbps       float64  `json:",omitempty"`
+	IPAddresses []string `json:",omitempty"`
+	LinkSpeed   float64  `json:",omitempty"`
+	Name        string   `json:",omitempty"`
+	Outbps      float64  `json:",omitempty"`
 }
 
 type HostData struct {
@@ -867,7 +876,7 @@ type HostData struct {
 		Physical   int64             `json:",omitempty"`
 		Processors map[string]string `json:",omitempty"`
 	}
-	Interfaces    []*HostInterface
+	Interfaces   []*HostInterface
 	LastBoot     int64  `json:",omitempty"`
 	LastUpdate   int64  `json:",omitempty"`
 	Manufacturer string `json:",omitempty"`
