@@ -79,6 +79,44 @@ func (s *Schedule) PutMetadata(k metadata.Metakey, v interface{}) {
 	s.metalock.Unlock()
 }
 
+type MetadataMetric struct {
+	Unit        string `json:",omitempty"`
+	Type        string `json:",omitempty"`
+	Description string `json:",omitempty"`
+}
+
+func (s *Schedule) MetadataMetrics() map[string]*MetadataMetric {
+	s.metalock.Lock()
+	m := make(map[string]*MetadataMetric)
+	for k, v := range s.Metadata {
+		if k.Metric == "" || len(k.TagSet()) != 0 {
+			continue
+		}
+		mv := v.Last()
+		if mv == nil {
+			continue
+		}
+		val, _ := mv.Value.(string)
+		if val == "" {
+			continue
+		}
+		if m[k.Metric] == nil {
+			m[k.Metric] = new(MetadataMetric)
+		}
+		e := m[k.Metric]
+		switch k.Name {
+		case "unit":
+			e.Unit = val
+		case "rate":
+			e.Type = val
+		case "desc":
+			e.Description = val
+		}
+	}
+	s.metalock.Unlock()
+	return m
+}
+
 func (s *Schedule) GetMetadata(metric string, subset opentsdb.TagSet) []metadata.Metasend {
 	s.metalock.Lock()
 	ms := make([]metadata.Metasend, 0)

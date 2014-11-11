@@ -58,6 +58,7 @@ func Listen(listenAddr, webDirectory string, tsdbHost *url.URL) error {
 	router.Handle("/api/graph", JSON(Graph))
 	router.Handle("/api/health", JSON(HealthCheck))
 	router.Handle("/api/metadata/get", JSON(GetMetadata))
+	router.Handle("/api/metadata/metrics", JSON(MetadataMetrics))
 	router.Handle("/api/metadata/put", JSON(PutMetadata))
 	router.Handle("/api/metric", JSON(UniqueMetrics))
 	router.Handle("/api/metric/{tagk}/{tagv}", JSON(MetricsByTagPair))
@@ -238,6 +239,10 @@ func GetMetadata(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (
 		tags[k] = vals[i]
 	}
 	return schedule.GetMetadata(r.FormValue("metric"), tags), nil
+}
+
+func MetadataMetrics(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	return schedule.MetadataMetrics(), nil
 }
 
 func Alerts(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
