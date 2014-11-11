@@ -197,7 +197,14 @@ func JSON(h func(miniprofiler.Timer, http.ResponseWriter, *http.Request) (interf
 			return
 		}
 		w.Header().Add("Content-Type", "application/json")
-		w.Write(b)
+		if strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+			w.Header().Set("Content-Encoding", "gzip")
+			gz := gzip.NewWriter(w)
+			gz.Write(b)
+			gz.Close()
+		} else {
+			w.Write(b)
+		}
 	})
 }
 
