@@ -820,7 +820,9 @@ func (s *Schedule) Host(filter string) map[string]*HostData {
 		e := res[tags["host"]]
 		if e == nil {
 			e = &HostData{
-				Name: tags["host"],
+				Name:       tags["host"],
+				Metrics:    s.Search.MetricsByTagPair("host", tags["host"]),
+				Interfaces: make([]*HostInterface, 0),
 			}
 			e.CPU.Processors = make(map[string]string)
 			e.Memory.Modules = make(map[string]string)
@@ -852,18 +854,20 @@ func (s *Schedule) Host(filter string) map[string]*HostData {
 	return res
 }
 
+type HostInterface struct {
+	Description string `json:",omitempty"`
+	LinkSpeed   int64  `json:",omitempty"`
+	Mac         string `json:",omitempty"`
+	Name        string `json:",omitempty"`
+}
+
 type HostData struct {
 	CPU struct {
 		Logical    int64             `json:",omitempty"`
 		Physical   int64             `json:",omitempty"`
 		Processors map[string]string `json:",omitempty"`
 	}
-	Interaces []struct {
-		Description string `json:",omitempty"`
-		LinkSpeed   int64  `json:",omitempty"`
-		Mac         string `json:",omitempty"`
-		Name        string `json:",omitempty"`
-	}
+	Interfaces    []*HostInterface
 	LastBoot     int64  `json:",omitempty"`
 	LastUpdate   int64  `json:",omitempty"`
 	Manufacturer string `json:",omitempty"`
