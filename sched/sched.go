@@ -108,7 +108,9 @@ func (s *Schedule) MetadataMetrics() map[string]*MetadataMetric {
 			continue
 		}
 		if m[k.Metric] == nil {
-			m[k.Metric] = new(MetadataMetric)
+			m[k.Metric] = &MetadataMetric{
+				Description: make([]*MetadataDescription, 0),
+			}
 		}
 		e := m[k.Metric]
 	Switch:
