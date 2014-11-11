@@ -850,26 +850,26 @@ type HostData struct {
 		Logical    int64             `json:",omitempty"`
 		Physical   int64             `json:",omitempty"`
 		Processors map[string]string `json:",omitempty"`
-	} `json:",omitempty"`
+	}
 	Interaces []struct {
 		Description string `json:",omitempty"`
 		LinkSpeed   int64  `json:",omitempty"`
 		Mac         string `json:",omitempty"`
 		Name        string `json:",omitempty"`
-	} `json:",omitempty"`
+	}
 	LastBoot     int64  `json:",omitempty"`
 	LastUpdate   int64  `json:",omitempty"`
 	Manufacturer string `json:",omitempty"`
 	Memory       struct {
 		Modules map[string]string `json:",omitempty"`
 		Total   int64             `json:",omitempty"`
-	} `json:",omitempty"`
-	Metrics []string `json:",omitempty"`
-	Model   string   `json:",omitempty"`
-	Name    string   `json:",omitempty"`
+	}
+	Metrics []string
+	Model   string `json:",omitempty"`
+	Name    string `json:",omitempty"`
 	OS      struct {
 		Caption string `json:",omitempty"`
 		Version string `json:",omitempty"`
-	} `json:",omitempty"`
+	}
 	ServiceTag string `json:",omitempty"`
 }
