@@ -82,11 +82,11 @@ func (s *Schedule) PutMetadata(k metadata.Metakey, v interface{}) {
 type MetadataMetric struct {
 	Unit        string `json:",omitempty"`
 	Type        string `json:",omitempty"`
-	Description map[string]*MetadataDescription
+	Description []*MetadataDescription
 }
 
 type MetadataDescription struct {
-	Tags opentsdb.TagSet
+	Tags opentsdb.TagSet `json:",omitempty"`
 	Text string
 }
 
@@ -108,21 +108,25 @@ func (s *Schedule) MetadataMetrics() map[string]*MetadataMetric {
 			continue
 		}
 		if m[k.Metric] == nil {
-			m[k.Metric] = &MetadataMetric{
-				Description: make(map[string]*MetadataDescription),
-			}
+			m[k.Metric] = new(MetadataMetric)
 		}
 		e := m[k.Metric]
+	Switch:
 		switch k.Name {
 		case "unit":
 			e.Unit = val
 		case "rate":
 			e.Type = val
 		case "desc":
-			e.Description[tags.Tags()] = &MetadataDescription{
+			for _, v := range e.Description {
+				if v.Tags.Equal(tags) {
+					break Switch
+				}
+			}
+			e.Description = append(e.Description, &MetadataDescription{
 				Text: val,
 				Tags: tags,
-			}
+			})
 		}
 	}
 	s.metalock.Unlock()
