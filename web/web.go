@@ -184,26 +184,25 @@ func JSON(h func(miniprofiler.Timer, http.ResponseWriter, *http.Request) (interf
 		if d == nil {
 			return
 		}
-		b, err := json.Marshal(d)
-		if err != nil {
-			serveError(w, err)
-			return
-		}
-		if cb := r.FormValue("callback"); cb != "" {
-			w.Header().Add("Content-Type", "application/javascript")
-			w.Write([]byte(cb + "("))
-			w.Write(b)
-			w.Write([]byte(")"))
-			return
-		}
-		w.Header().Add("Content-Type", "application/json")
+		var tw io.Writer = w
 		if strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
 			w.Header().Set("Content-Encoding", "gzip")
 			gz := gzip.NewWriter(w)
-			gz.Write(b)
-			gz.Close()
-		} else {
-			w.Write(b)
+			defer gz.Close()
+			tw = gz
+		}
+		if cb := r.FormValue("callback"); cb != "" {
+			w.Header().Add("Content-Type", "application/javascript")
+			tw.Write([]byte(cb + "("))
+			if err := json.NewEncoder(tw).Encode(d); err != nil {
+				log.Println(err)
+			}
+			tw.Write([]byte(")"))
+			return
+		}
+		w.Header().Add("Content-Type", "application/json")
+		if err := json.NewEncoder(tw).Encode(d); err != nil {
+			log.Println(err)
 		}
 	})
 }
