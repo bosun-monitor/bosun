@@ -121,7 +121,8 @@ func (s *Schedule) MetadataMetrics() map[string]*MetadataMetric {
 			e.Type = val
 		case "desc":
 			for _, v := range e.Description {
-				if v.Tags.Equal(tags) {
+				if v.Text == val {
+					v.Tags = v.Tags.Intersection(tags)
 					break Switch
 				}
 			}
