@@ -57,6 +57,7 @@ func Listen(listenAddr, webDirectory string, tsdbHost *url.URL) error {
 	router.Handle("/api/expr", JSON(Expr))
 	router.Handle("/api/graph", JSON(Graph))
 	router.Handle("/api/health", JSON(HealthCheck))
+	router.Handle("/api/host", JSON(Host))
 	router.Handle("/api/metadata/get", JSON(GetMetadata))
 	router.Handle("/api/metadata/metrics", JSON(MetadataMetrics))
 	router.Handle("/api/metadata/put", JSON(PutMetadata))
@@ -398,4 +399,8 @@ func APIRedirect(w http.ResponseWriter, req *http.Request) {
 
 func Run(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	return schedule.Check(t, time.Now())
+}
+
+func Host(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	return schedule.Host(r.FormValue("filter")), nil
 }

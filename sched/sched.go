@@ -89,7 +89,7 @@ func (s *Schedule) MetadataMetrics() map[string]*MetadataMetric {
 	s.metalock.Lock()
 	m := make(map[string]*MetadataMetric)
 	for k, v := range s.Metadata {
-		if k.Metric == "" || len(k.TagSet()) != 0 {
+		if k.Metric == "" || k.Tags != "" {
 			continue
 		}
 		mv := v.Last()
@@ -784,4 +784,77 @@ func (a ActionType) String() string {
 
 func (a ActionType) MarshalJSON() ([]byte, error) {
 	return json.Marshal(a.String())
+}
+
+func (s *Schedule) Host(filter string) map[string]*HostData {
+	s.metalock.Lock()
+	res := make(map[string]*HostData)
+	for k, v := range s.Metadata {
+		tags := k.TagSet()
+		if k.Metric != "" || tags["host"] == "" {
+			continue
+		}
+		mv := v.Last()
+		if mv == nil {
+			continue
+		}
+		e := res[tags["host"]]
+		if e == nil {
+			e = &HostData{
+				Name: tags["host"],
+			}
+			e.Memory.Modules = make(map[string]string)
+			res[tags["host"]] = e
+		}
+		switch val := mv.Value.(type) {
+		case string:
+			switch k.Name {
+			case "memory":
+				if name := tags["name"]; name != "" {
+					e.Memory.Modules[name] = val
+				}
+			case "model":
+				e.Model = val
+			case "processor":
+				e.CPU.Processors = append(e.CPU.Processors, val)
+			case "svctag":
+				e.ServiceTag = val
+			case "version":
+				e.OS.Version = val
+			case "versionCaption", "uname":
+				e.OS.Caption = val
+			}
+		}
+	}
+	s.metalock.Unlock()
+	return res
+}
+
+type HostData struct {
+	CPU struct {
+		Logical    int64    `json:",omitempty"`
+		Physical   int64    `json:",omitempty"`
+		Processors []string `json:",omitempty"`
+	} `json:",omitempty"`
+	Interaces []struct {
+		Description string `json:",omitempty"`
+		LinkSpeed   int64  `json:",omitempty"`
+		Mac         string `json:",omitempty"`
+		Name        string `json:",omitempty"`
+	} `json:",omitempty"`
+	LastBoot     int64  `json:",omitempty"`
+	LastUpdate   int64  `json:",omitempty"`
+	Manufacturer string `json:",omitempty"`
+	Memory       struct {
+		Modules map[string]string `json:",omitempty"`
+		Total   int64             `json:",omitempty"`
+	} `json:",omitempty"`
+	Metrics []string `json:",omitempty"`
+	Model   string   `json:",omitempty"`
+	Name    string   `json:",omitempty"`
+	OS      struct {
+		Caption string `json:",omitempty"`
+		Version string `json:",omitempty"`
+	} `json:",omitempty"`
+	ServiceTag string `json:",omitempty"`
 }
