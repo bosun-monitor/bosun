@@ -97,6 +97,17 @@ func (t TagSet) Subset(o TagSet) bool {
 	return true
 }
 
+// Intersection returns the intersection of t and o.
+func (t TagSet) Intersection(o TagSet) TagSet {
+	r := make(TagSet)
+	for k, v := range t {
+		if o[k] == v {
+			r[k] = v
+		}
+	}
+	return r
+}
+
 // String converts t to an OpenTSDB-style {a=b,c=b} string, alphabetized by key.
 func (t TagSet) String() string {
 	return fmt.Sprintf("{%s}", t.Tags())
