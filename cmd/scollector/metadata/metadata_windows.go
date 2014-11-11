@@ -1,6 +1,7 @@
 package metadata
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/StackExchange/slog"
@@ -20,15 +21,52 @@ func metaWindowsVersion() {
 		slog.Error(err)
 		return
 	}
+
+	var dstComputer []Win32_ComputerSystem
+	q = wmi.CreateQuery(&dstComputer, "")
+	err = wmi.Query(q, &dstComputer)
+	if err != nil {
+		slog.Error(err)
+		return
+	}
+
+	var dstBIOS []Win32_BIOS
+	q = wmi.CreateQuery(&dstBIOS, "")
+	err = wmi.Query(q, &dstBIOS)
+	if err != nil {
+		slog.Error(err)
+		return
+	}
+
 	for _, v := range dst {
 		AddMeta("", nil, "version", v.Version, true)
 		AddMeta("", nil, "versionCaption", v.Caption, true)
+	}
+
+	for _, v := range dstComputer {
+		AddMeta("", nil, "manufacturer", v.Manufacturer, true)
+		AddMeta("", nil, "model", v.Model, true)
+		AddMeta("", nil, "memoryTotal", v.TotalPhysicalMemory, true)
+	}
+
+	for _, v := range dstBIOS {
+		AddMeta("", nil, "serialNumber", v.SerialNumber, true)
 	}
 }
 
 type Win32_OperatingSystem struct {
 	Caption string
 	Version string
+}
+
+type Win32_ComputerSystem struct {
+	Manufacturer        string
+	Model               string
+	TotalPhysicalMemory uint64
+}
+
+type Win32_BIOS struct {
+	SerialNumber string
 }
 
 func metaWindowsIfaces() {
@@ -62,9 +100,10 @@ func metaWindowsIfaces() {
 		nicConfig := mNicConfigs[v.InterfaceGuid]
 		if nicConfig != nil {
 			AddMeta("", tag, "mac", strings.Replace(nicConfig.MACAddress, ":", "", -1), true)
-			//for _, ip := range nic.IPAddress {
-			AddMeta("", tag, "addr", nicConfig.SettingID, true) // Should be ip. See https://github.com/StackExchange/wmi/issues/5
-			//}
+			for _, ip := range *nicConfig.IPAddress {
+				fmt.Println("%v", ip)
+				AddMeta("", tag, "addr", ip, true) // Should be ip. See https://github.com/StackExchange/wmi/issues/5
+			}
 		}
 	}
 }
@@ -78,8 +117,8 @@ type MSFT_NetAdapter struct {
 }
 
 type Win32_NetworkAdapterConfiguration struct {
-	//IPAddress  []string //Both IPv4 and IPv6
-	MACAddress string //00:1B:21:93:00:00
-	SettingID  string //Matches InterfaceGuid
+	IPAddress  *[]string //Both IPv4 and IPv6
+	MACAddress string    //00:1B:21:93:00:00
+	SettingID  string    //Matches InterfaceGuid
 	Caption    string
 }
