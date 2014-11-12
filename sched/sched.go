@@ -822,38 +822,65 @@ func (s *Schedule) Host(filter string) map[string]*HostData {
 			e = &HostData{
 				Name:       tags["host"],
 				Metrics:    s.Search.MetricsByTagPair("host", tags["host"]),
-				Interfaces: make([]*HostInterface, 0),
+				Interfaces: make(map[string]*HostInterface),
 			}
 			e.CPU.Processors = make(map[string]string)
 			e.Memory.Modules = make(map[string]string)
 			res[tags["host"]] = e
 		}
+		var iface *HostInterface
+		if name := tags["iface"]; name != "" {
+			if e.Interfaces[name] == nil {
+				e.Interfaces[name] = new(HostInterface)
+			}
+			iface = e.Interfaces[name]
+		}
 		switch val := mv.Value.(type) {
 		case string:
 			switch k.Name {
 			case "addr":
-				if iface := tags["iface"]; iface != "" {
-					e.Interfaces = append(e.Interfaces, &HostInterface{
-						Alias:       iface,
-						IPAddresses: []string{val},
-					})
+				if iface != nil {
+					iface.IPAddresses = append(iface.IPAddresses, val)
 				}
+			case "description":
+				if iface != nil {
+					iface.Description = val
+				}
+			case "mac":
+				if iface != nil {
+					iface.Mac = val
+				}
+			case "manufacturer":
+				e.Manufacturer = val
 			case "memory":
 				if name := tags["name"]; name != "" {
 					e.Memory.Modules[name] = val
 				}
 			case "model":
 				e.Model = val
+			case "name":
+				if iface != nil {
+					iface.Name = val
+				}
 			case "processor":
 				if name := tags["name"]; name != "" {
 					e.CPU.Processors[name] = val
 				}
-			case "svctag":
-				e.ServiceTag = val
+			case "serialNumber":
+				e.SerialNumber = val
 			case "version":
 				e.OS.Version = val
 			case "versionCaption", "uname":
 				e.OS.Caption = val
+			}
+		case float64:
+			switch k.Name {
+			case "memoryTotal":
+				e.Memory.Total = int64(val)
+			case "speed":
+				if iface != nil {
+					iface.LinkSpeed = int64(val)
+				}
 			}
 		}
 	}
@@ -862,12 +889,13 @@ func (s *Schedule) Host(filter string) map[string]*HostData {
 }
 
 type HostInterface struct {
-	Alias       string   `json:",omitempty"`
-	Inbps       float64  `json:",omitempty"`
+	Description string   `json:",omitempty"`
 	IPAddresses []string `json:",omitempty"`
-	LinkSpeed   float64  `json:",omitempty"`
+	Inbps       int64    `json:",omitempty"`
+	LinkSpeed   int64    `json:",omitempty"`
+	Mac         string   `json:",omitempty"`
 	Name        string   `json:",omitempty"`
-	Outbps      float64  `json:",omitempty"`
+	Outbps      int64    `json:",omitempty"`
 }
 
 type HostData struct {
@@ -876,7 +904,7 @@ type HostData struct {
 		Physical   int64             `json:",omitempty"`
 		Processors map[string]string `json:",omitempty"`
 	}
-	Interfaces   []*HostInterface
+	Interfaces   map[string]*HostInterface
 	LastBoot     int64  `json:",omitempty"`
 	LastUpdate   int64  `json:",omitempty"`
 	Manufacturer string `json:",omitempty"`
@@ -891,5 +919,5 @@ type HostData struct {
 		Caption string `json:",omitempty"`
 		Version string `json:",omitempty"`
 	}
-	ServiceTag string `json:",omitempty"`
+	SerialNumber string `json:",omitempty"`
 }
