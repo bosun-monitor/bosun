@@ -100,9 +100,15 @@ func Run(cs []Collector) chan *opentsdb.DataPoint {
 
 // AddTS is the same as Add but lets you specify the timestamp
 func AddTS(md *opentsdb.MultiDataPoint, name string, ts int64, value interface{}, t opentsdb.TagSet, rate metadata.RateType, unit metadata.Unit, desc string) {
-	tags := make(opentsdb.TagSet)
-	for k, v := range t {
-		tags[k] = v
+	tags := t.Copy()
+	if rate != metadata.Unknown {
+		metadata.AddMeta(name, nil, "rate", rate, false)
+	}
+	if unit != metadata.None {
+		metadata.AddMeta(name, nil, "unit", unit, false)
+	}
+	if desc != "" {
+		metadata.AddMeta(name, tags, "desc", desc, false)
 	}
 	if host, present := tags["host"]; !present {
 		tags["host"] = util.Hostname
@@ -116,15 +122,6 @@ func AddTS(md *opentsdb.MultiDataPoint, name string, ts int64, value interface{}
 		Tags:      tags,
 	}
 	*md = append(*md, &d)
-	if rate != metadata.Unknown {
-		metadata.AddMeta(name, nil, "rate", rate, false)
-	}
-	if unit != metadata.None {
-		metadata.AddMeta(name, nil, "unit", unit, false)
-	}
-	if desc != "" {
-		metadata.AddMeta(name, tags, "desc", desc, false)
-	}
 }
 
 // Add appends a new data point with given metric name, value, and tags. Tags
