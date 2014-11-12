@@ -180,11 +180,26 @@ func (c *Context) eval(v interface{}, filter bool, series bool, autods int) ([]*
 
 // Lookup returns the value for a key in the lookup table for the context's tagset.
 func (c *Context) Lookup(table, key string) (string, error) {
+	return c.LookupAll(table, key, c.Group)
+}
+
+func (c *Context) LookupAll(table, key string, group interface{}) (string, error) {
+	var t opentsdb.TagSet
+	switch v := group.(type) {
+	case string:
+		var err error
+		t, err = opentsdb.ParseTags(v)
+		if err != nil {
+			return "", err
+		}
+	case opentsdb.TagSet:
+		t = v
+	}
 	l, ok := c.schedule.Lookups[table]
 	if !ok {
 		return "", fmt.Errorf("unknown lookup table %v", table)
 	}
-	if v, ok := l.Get(key, c.Group); ok {
+	if v, ok := l.Get(key, t); ok {
 		return v, nil
 	} else {
 		return "", fmt.Errorf("no entry for key %v in table %v for tagset %v", key, table, c.Group)
