@@ -1,6 +1,7 @@
 package metadata
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/StackExchange/slog"
@@ -91,7 +92,7 @@ func metaWindowsIfaces() {
 	}
 
 	for _, v := range dstAdapters {
-		tag := opentsdb.TagSet{"iface": v.InterfaceName} //Should be v.Name. See https://github.com/bosun-monitor/scollector/issues/119
+		tag := opentsdb.TagSet{"iface": fmt.Sprint("Interface", v.InterfaceIndex)}
 		AddMeta("", tag, "description", v.InterfaceDescription, true)
 		AddMeta("", tag, "name", v.Name, true)
 		AddMeta("", tag, "speed", v.Speed, true)
@@ -112,6 +113,7 @@ type MSFT_NetAdapter struct {
 	InterfaceDescription string //Intel(R) Gigabit ET Quad Port Server Adapter #2
 	InterfaceName        string //Ethernet_10
 	InterfaceGuid        string //unique id
+	InterfaceIndex       uint32
 }
 
 type Win32_NetworkAdapterConfiguration struct {
