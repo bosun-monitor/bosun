@@ -88,6 +88,10 @@ func AddMeta(metric string, tags opentsdb.TagSet, name string, value interface{}
 	if _, present := tags["host"]; setHost && !present {
 		tags["host"] = util.Hostname
 	}
+	if err := tags.Clean(); err != nil {
+		slog.Error(err)
+		return
+	}
 	ts := tags.Tags()
 	metalock.Lock()
 	defer metalock.Unlock()
