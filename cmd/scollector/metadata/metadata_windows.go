@@ -95,7 +95,11 @@ func metaWindowsIfaces() {
 		tag := opentsdb.TagSet{"iface": fmt.Sprint("Interface", v.InterfaceIndex)}
 		AddMeta("", tag, "description", v.InterfaceDescription, true)
 		AddMeta("", tag, "name", v.Name, true)
-		AddMeta("", tag, "speed", v.Speed, true)
+		if v.Speed != nil {
+			AddMeta("", tag, "speed", v.Speed, true)
+		} else {
+			AddMeta("", tag, "speed", 0, true)
+		}
 
 		nicConfig := mNicConfigs[v.InterfaceGuid]
 		if nicConfig != nil {
@@ -108,11 +112,11 @@ func metaWindowsIfaces() {
 }
 
 type MSFT_NetAdapter struct {
-	Name                 string //NY-WEB09-PRI-NIC-A
-	Speed                uint64 //Bits per Second
-	InterfaceDescription string //Intel(R) Gigabit ET Quad Port Server Adapter #2
-	InterfaceName        string //Ethernet_10
-	InterfaceGuid        string //unique id
+	Name                 string  //NY-WEB09-PRI-NIC-A
+	Speed                *uint64 //Bits per Second
+	InterfaceDescription string  //Intel(R) Gigabit ET Quad Port Server Adapter #2
+	InterfaceName        string  //Ethernet_10
+	InterfaceGuid        string  //unique id
 	InterfaceIndex       uint32
 }
 
