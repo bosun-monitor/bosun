@@ -1803,6 +1803,7 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
         var url = '/api/rule?' + 'alert=' + encodeURIComponent($scope.alert) + '&template=' + encodeURIComponent($scope.template) + '&from=' + encodeURIComponent(from.format(tsdbFormat)) + '&to=' + encodeURIComponent(to.format(tsdbFormat)) + '&intervals=' + encodeURIComponent(intervals) + '&email=' + encodeURIComponent($scope.email) + '&template_group=' + encodeURIComponent($scope.template_group);
         $http.get(url).success(function (data) {
             $scope.sets = data.Sets;
+            $scope.status_summary = data.HistoryStatusCounts;
             $scope.alert_history = data.AlertHistory;
             procResults(data);
         }).error(function (error) {

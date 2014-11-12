@@ -110,6 +110,28 @@
 </ul>
 <div class="tab-content">
 	<div class="tab-pane" ng-class="{active: tab == 'timeline'}">
+		<div class="row">
+			<div class="col-sm-6">
+				<table class="table">
+					<thead>
+						<tr>
+							<th>Criticals</th>
+							<th>Warnings</th>
+							<th>Normals</th>
+							<th>Errors</th>
+						</tr>
+					</thead>
+					<tbody>
+						<tr>
+							<td ng-bind="status_summary.critical || ''" ng-class="status_summary.critical ? 'danger' : ''"></td>
+							<td ng-bind="status_summary.warning || ''" ng-class="status_summary.warning ? 'warning' : ''"></td>
+							<td ng-bind="status_summary.normal || ''" ng-class="status_summary.normal ? 'success' : ''"></td>
+							<td ng-bind="status_summary.error || ''" ng-class="status_summary.error ? 'danger' : ''"></td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+		</div>
 		<div ts-alert-history ng-if="tab == 'timeline' && fromDate && toDate"></div>
 	</div>
 	<div class="tab-pane" ng-class="{active: tab == 'template'}">
