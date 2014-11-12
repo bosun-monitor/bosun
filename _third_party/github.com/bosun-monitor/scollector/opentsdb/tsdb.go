@@ -131,8 +131,7 @@ func (t TagSet) Tags() string {
 }
 
 func (d *DataPoint) clean() error {
-	err := d.Tags.clean()
-	if err != nil {
+	if err := d.Tags.Clean(); err != nil {
 		return err
 	}
 	m, err := Clean(d.Metric)
@@ -167,7 +166,9 @@ func (d *DataPoint) clean() error {
 
 var bigMaxInt64 = big.NewInt(math.MaxInt64)
 
-func (t TagSet) clean() error {
+// Clean removes characters from t that are invalid for OpenTSDB metric and tag
+// values. An error is returned if a resulting tag is empty.
+func (t TagSet) Clean() error {
 	for k, v := range t {
 		kc, err := Clean(k)
 		if err != nil {

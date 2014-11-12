@@ -35,6 +35,10 @@ var (
 	// Print prints all datapoints to stdout instead of sending them.
 	Print = false
 
+	// DisableDefaultCollectors prevents the scollector self metrics from being
+	// generated.
+	DisableDefaultCollectors = false
+
 	// Dropped is the number of dropped data points due to a full queue.
 	dropped int64
 
@@ -90,8 +94,10 @@ func InitChan(tsdbhost *url.URL, metric_root string, ch chan *opentsdb.DataPoint
 	tchan = ch
 	go queuer()
 	go send()
-
 	go collect()
+	if DisableDefaultCollectors {
+		return nil
+	}
 	Set("collect.dropped", nil, func() (i interface{}) {
 		slock.Lock()
 		i = dropped
