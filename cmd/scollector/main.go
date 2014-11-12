@@ -188,7 +188,6 @@ func main() {
 	if *flagPrint {
 		collectors.DefaultFreq = time.Second * 3
 		slog.Infoln("Set default frequency to", collectors.DefaultFreq)
-		*flagDisableMetadata = true
 		collect.Print = true
 	}
 	if !*flagDisableMetadata {
