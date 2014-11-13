@@ -674,7 +674,7 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 						continue
 					}
 					if _, err := c.parseNotifications(v); err != nil {
-						c.errorf("lookup %s: %v", err)
+						c.errorf("lookup %s: %v", v, err)
 					}
 				}
 			}
