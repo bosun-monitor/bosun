@@ -223,9 +223,11 @@ func makeChart(r opentsdb.ResponseSet, m_units map[string]string) ([]*chartSerie
 				name += resp.Tags.String()
 			}
 			series = append(series, &chartSeries{
-				Name: name,
-				Data: dps,
-				Unit: m_units[resp.Metric],
+				Name:   name,
+				Metric: resp.Metric,
+				Tags:   resp.Tags,
+				Data:   dps,
+				Unit:   m_units[resp.Metric],
 			})
 		}
 	}
@@ -233,7 +235,9 @@ func makeChart(r opentsdb.ResponseSet, m_units map[string]string) ([]*chartSerie
 }
 
 type chartSeries struct {
-	Name string
-	Data [][2]float64
-	Unit string
+	Name   string
+	Metric string
+	Tags   opentsdb.TagSet
+	Data   [][2]float64
+	Unit   string
 }
