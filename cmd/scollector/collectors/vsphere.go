@@ -70,7 +70,7 @@ func vsphereDatastore(v *vsphere.Vsphere, md *opentsdb.MultiDataPoint) error {
 			case "xsd:long", "xsd:int", "xsd:short":
 				i, err := strconv.ParseInt(p.Val.Inner, 10, 64)
 				if err != nil {
-					Error = fmt.Errorf("vsphere bad integer:", p.Val.Inner)
+					Error = fmt.Errorf("vsphere bad integer: %s", p.Val.Inner)
 					continue
 				}
 				switch p.Name {
@@ -130,7 +130,7 @@ func vsphereHost(v *vsphere.Vsphere, md *opentsdb.MultiDataPoint) error {
 			case "xsd:long", "xsd:int", "xsd:short":
 				i, err := strconv.ParseInt(p.Val.Inner, 10, 64)
 				if err != nil {
-					Error = fmt.Errorf("vsphere bad integer:", p.Val.Inner)
+					Error = fmt.Errorf("vsphere bad integer: %s", p.Val.Inner)
 					continue
 				}
 				switch p.Name {
@@ -199,7 +199,7 @@ func vsphereGuest(vsphereHost string, v *vsphere.Vsphere, md *opentsdb.MultiData
 			case "xsd:long", "xsd:int", "xsd:short":
 				i, err := strconv.ParseInt(p.Val.Inner, 10, 64)
 				if err != nil {
-					Error = fmt.Errorf("vsphere bad integer:", p.Val.Inner)
+					Error = fmt.Errorf("vsphere bad integer: %s", p.Val.Inner)
 					continue
 				}
 				switch p.Name {
