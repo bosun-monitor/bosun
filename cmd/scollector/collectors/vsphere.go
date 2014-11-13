@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/StackExchange/vsphere"
 	"github.com/bosun-monitor/scollector/metadata"
 	"github.com/bosun-monitor/scollector/opentsdb"
 	"github.com/bosun-monitor/scollector/util"
-	"github.com/StackExchange/vsphere"
 )
 
 // Vsphere registers a vSphere collector.
@@ -152,8 +152,8 @@ func vsphereHost(v *vsphere.Vsphere, md *opentsdb.MultiDataPoint) error {
 		}
 		if memTotal > 0 && memUsed > 0 {
 			memFree := memTotal - memUsed
-			Add(md, osMemFree, memFree, tags, metadata.Gauge, metadata.Bytes, "")
-			Add(md, osMemPctFree, float64(memFree)/float64(memTotal)*100, tags, metadata.Gauge, metadata.Pct, "")
+			Add(md, osMemFree, memFree, tags, metadata.Gauge, metadata.Bytes, osMemFreeDesc)
+			Add(md, osMemPctFree, float64(memFree)/float64(memTotal)*100, tags, metadata.Gauge, metadata.Pct, osMemPctFreeDesc)
 		}
 		if cpuMhz > 0 && cpuUse > 0 && cpuCores > 0 {
 			cpuTotal := cpuMhz * cpuCores
