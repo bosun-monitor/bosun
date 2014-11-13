@@ -84,7 +84,7 @@ func metaWindowsIfaces() {
 	}
 
 	var dstAdapters []MSFT_NetAdapter
-	q = wmi.CreateQuery(&dstAdapters, "WHERE HardwareInterface = True") //Exclude virtual adapters
+	q = wmi.CreateQuery(&dstAdapters, "WHERE HardwareInterface = True or InterfaceDescription = 'Microsoft Network Adapter Multiplexor Driver'") //Exclude virtual adapters except Microsoft Multiplexor
 	err = wmi.QueryNamespace(q, &dstAdapters, "root\\StandardCimv2")
 	if err != nil {
 		slog.Error(err)
