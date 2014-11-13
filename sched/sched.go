@@ -894,7 +894,7 @@ func (s *Schedule) Host(filter string) map[string]*HostData {
 				}
 			case "mac":
 				if iface != nil {
-					iface.Mac = val
+					iface.MAC = val
 				}
 			case "manufacturer":
 				e.Manufacturer = val
@@ -939,7 +939,7 @@ type HostInterface struct {
 	IPAddresses []string `json:",omitempty"`
 	Inbps       int64    `json:",omitempty"`
 	LinkSpeed   int64    `json:",omitempty"`
-	Mac         string   `json:",omitempty"`
+	MAC         string   `json:",omitempty"`
 	Name        string   `json:",omitempty"`
 	Outbps      int64    `json:",omitempty"`
 }
