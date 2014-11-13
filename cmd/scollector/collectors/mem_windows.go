@@ -1,9 +1,9 @@
 package collectors
 
 import (
+	"github.com/StackExchange/wmi"
 	"github.com/bosun-monitor/scollector/metadata"
 	"github.com/bosun-monitor/scollector/opentsdb"
-	"github.com/StackExchange/wmi"
 )
 
 func init() {
@@ -28,9 +28,9 @@ func c_simple_mem_windows() (opentsdb.MultiDataPoint, error) {
 		Add(&md, "win.mem.total", v.TotalVisibleMemorySize*1024, nil, metadata.Gauge, metadata.Bytes, "Total amount, in bytes, of physical memory available to the operating system.")
 		Add(&md, "win.mem.free", v.FreePhysicalMemory*1024, nil, metadata.Gauge, metadata.Bytes, "Number, in bytes, of physical memory currently unused and available.")
 		Add(&md, osMemTotal, v.TotalVisibleMemorySize*1024, nil, metadata.Gauge, metadata.Bytes, "Total amount, in bytes, of physical memory available to the operating system.")
-		Add(&md, osMemFree, v.FreePhysicalMemory*1024, nil, metadata.Gauge, metadata.Bytes, "Number, in bytes, of physical memory currently unused and available.")
+		Add(&md, osMemFree, v.FreePhysicalMemory*1024, nil, metadata.Gauge, metadata.Bytes, osMemFreeDesc)
 		Add(&md, osMemUsed, v.TotalVisibleMemorySize*1024-v.FreePhysicalMemory*1024, nil, metadata.Gauge, metadata.Bytes, "")
-		Add(&md, osMemPctFree, float64(v.FreePhysicalMemory)/float64(v.TotalVisibleMemorySize)*100, nil, metadata.Gauge, metadata.Pct, "")
+		Add(&md, osMemPctFree, float64(v.FreePhysicalMemory)/float64(v.TotalVisibleMemorySize)*100, nil, metadata.Gauge, metadata.Pct, osMemPctFreeDesc)
 	}
 	return md, nil
 }
