@@ -483,7 +483,6 @@ func (s *Schedule) RestoreState() {
 var savePending bool
 
 func (s *Schedule) Save() {
-	return
 	go func() {
 		s.Lock()
 		defer s.Unlock()
