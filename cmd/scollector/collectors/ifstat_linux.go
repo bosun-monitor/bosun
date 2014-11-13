@@ -84,7 +84,7 @@ func c_ifstat_linux() (opentsdb.MultiDataPoint, error) {
 			bond_string = "bond."
 		}
 		// Detect speed of the interface in question
-		readLine("/sys/class/net/"+intf+"/speed", func(speed string) error {
+		_ = readLine("/sys/class/net/"+intf+"/speed", func(speed string) error {
 			Add(&md, "linux.net."+bond_string+"ifspeed", speed, tags, metadata.Gauge, metadata.Megabit, "")
 			Add(&md, "os.net."+bond_string+"ifspeed", speed, tags, metadata.Gauge, metadata.Megabit, "")
 			return nil
