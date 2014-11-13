@@ -864,19 +864,42 @@ func (s *Schedule) Host(filter string) map[string]*HostData {
 		}
 		e := res[tags["host"]]
 		if e == nil {
+			host := fmt.Sprintf("{host=%s}", tags["host"])
 			e = &HostData{
 				Name:       tags["host"],
 				Metrics:    s.Search.MetricsByTagPair("host", tags["host"]),
 				Interfaces: make(map[string]*HostInterface),
 			}
 			e.CPU.Processors = make(map[string]string)
+			if v, err := s.Search.GetLast("os.cpu", host, true); err != nil {
+				e.CPU.Used = v
+			}
 			e.Memory.Modules = make(map[string]string)
+			if v, err := s.Search.GetLast("os.mem.total", host, false); err != nil {
+				e.Memory.Total = int64(v)
+			}
+			if v, err := s.Search.GetLast("os.mem.used", host, false); err != nil {
+				e.Memory.Used = int64(v)
+			}
 			res[tags["host"]] = e
 		}
 		var iface *HostInterface
 		if name := tags["iface"]; name != "" {
 			if e.Interfaces[name] == nil {
-				e.Interfaces[name] = new(HostInterface)
+				h := new(HostInterface)
+				itag := opentsdb.TagSet{
+					"host":  tags["host"],
+					"iface": name,
+				}
+				intag := opentsdb.TagSet{"direction": "in"}.Merge(itag).String()
+				if v, err := s.Search.GetLast("os.net.bytes", intag, true); err != nil {
+					h.Inbps = int64(v) * 8
+				}
+				outtag := opentsdb.TagSet{"direction": "out"}.Merge(itag).String()
+				if v, err := s.Search.GetLast("os.net.bytes", outtag, true); err != nil {
+					h.Outbps = int64(v) * 8
+				}
+				e.Interfaces[name] = h
 			}
 			iface = e.Interfaces[name]
 		}
@@ -947,6 +970,7 @@ type HostData struct {
 	CPU struct {
 		Logical    int64             `json:",omitempty"`
 		Physical   int64             `json:",omitempty"`
+		Used       float64           `json:",omitempty"`
 		Processors map[string]string `json:",omitempty"`
 	}
 	Interfaces   map[string]*HostInterface
@@ -956,6 +980,7 @@ type HostData struct {
 	Memory       struct {
 		Modules map[string]string `json:",omitempty"`
 		Total   int64             `json:",omitempty"`
+		Used    int64             `json:",omitempty"`
 	}
 	Metrics []string
 	Model   string `json:",omitempty"`

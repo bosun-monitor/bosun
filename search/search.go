@@ -24,7 +24,14 @@ type Search struct {
 	// Each Record
 	MetricTags mtsmap
 
+	Last map[string]*pair
+
 	sync.RWMutex
+}
+
+type pair struct {
+	points [2]opentsdb.DataPoint
+	index  int
 }
 
 type MetricTagSet struct {
@@ -33,15 +40,7 @@ type MetricTagSet struct {
 }
 
 func (mts *MetricTagSet) key() string {
-	s := make([]string, len(mts.Tags))
-	i := 0
-	for k, v := range mts.Tags {
-		s[i] = fmt.Sprintf("%v=%v,", k, v)
-		i++
-	}
-	sort.Strings(s)
-	s = append(s, fmt.Sprintf("metric=%v", mts.Metric))
-	return strings.Join(s, "")
+	return mts.Metric + mts.Tags.String()
 }
 
 type qmap map[duple]present
@@ -59,6 +58,7 @@ func NewSearch() *Search {
 		Tagk:       make(smap),
 		Tagv:       make(qmap),
 		MetricTags: make(mtsmap),
+		Last:       make(map[string]*pair),
 	}
 	return &s
 }
@@ -69,7 +69,8 @@ func (s *Search) Index(mdp opentsdb.MultiDataPoint) {
 		var mts MetricTagSet
 		mts.Metric = dp.Metric
 		mts.Tags = dp.Tags
-		s.MetricTags[mts.key()] = mts
+		key := mts.key()
+		s.MetricTags[key] = mts
 		var q duple
 		for k, v := range dp.Tags {
 			q.A, q.B = k, v
@@ -88,6 +89,15 @@ func (s *Search) Index(mdp opentsdb.MultiDataPoint) {
 				s.Tagv[q] = make(present)
 			}
 			s.Tagv[q][v] = struct{}{}
+		}
+		p := s.Last[key]
+		if p == nil {
+			p = new(pair)
+			s.Last[key] = p
+		}
+		if p.points[p.index%2].Timestamp < dp.Timestamp {
+			p.points[p.index%2] = *dp
+			p.index++
 		}
 	}
 	s.Unlock()
@@ -111,6 +121,37 @@ func Match(search string, values []string) ([]string, error) {
 		}
 	}
 	return nvs, nil
+}
+
+var errNotFloat = fmt.Errorf("last: expected float64")
+
+// Last returns the value of the most recent data point for the given metric and
+// tag. tags should be of the form "{key=val,key2=val2}". If diff is true, the
+// value is treated as a counter. err is non nil if there is no match.
+func (s *Search) GetLast(metric, tags string, diff bool) (v float64, err error) {
+	s.RLock()
+	p := s.Last[metric+tags]
+	if p != nil {
+		var ok bool
+		e := p.points[(p.index+1)%2]
+		v, ok = e.Value.(float64)
+		if !ok {
+			err = errNotFloat
+		}
+		if diff {
+			o := p.points[p.index%2]
+			ov, ok := o.Value.(float64)
+			if !ok {
+				err = errNotFloat
+			}
+			if o.Timestamp == 0 || e.Timestamp == 0 {
+				err = fmt.Errorf("last: need two data points")
+			}
+			v = (v - ov) / float64(e.Timestamp-o.Timestamp)
+		}
+	}
+	s.RUnlock()
+	return
 }
 
 func (s *Search) Expand(q *opentsdb.Query) error {
