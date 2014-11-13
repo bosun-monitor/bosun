@@ -33,7 +33,7 @@ var (
 	flagFilter          = flag.String("f", "", "Filters collectors matching this term. Works with all other arguments.")
 	flagList            = flag.Bool("l", false, "List available collectors.")
 	flagPrint           = flag.Bool("p", false, "Print to screen instead of sending to a host")
-	flagHost            = flag.String("h", "bosun", `bosun or OpenTSDB host. Ex: "http://tsdb.example.com:4242".`)
+	flagHost            = flag.String("h", "", `bosun or OpenTSDB host. Ex: "http://tsdb.example.com:4242".`)
 	flagColDir          = flag.String("c", "", `External collectors directory.`)
 	flagBatchSize       = flag.Int("b", 0, "OpenTSDB batch size. Used for debugging bad data.")
 	flagSNMP            = flag.String("s", "", "SNMP host to poll of the format: \"community@host[,community@host...]\".")
@@ -80,7 +80,9 @@ func readConf() {
 		k := strings.TrimSpace(sp[0])
 		v := strings.TrimSpace(sp[1])
 		f := func(s *string) {
-			*s = v
+			if *s == "" {
+				*s = v
+			}
 		}
 		switch k {
 		case "host":
@@ -257,7 +259,7 @@ func list(cs []collectors.Collector) {
 
 func parseHost() (*url.URL, error) {
 	if *flagHost == "" {
-		return nil, fmt.Errorf("empty host")
+		*flagHost = "bosun"
 	}
 	if !strings.Contains(*flagHost, "//") {
 		*flagHost = "http://" + *flagHost
