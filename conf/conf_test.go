@@ -57,7 +57,7 @@ func checkMacroVarAlert(t *testing.T, a *Alert) {
 		t.Error("missing notifications", nots)
 	}
 	if a.Vars["a"] != "3" || a.Vars["$a"] != "3" {
-		t.Errorf("missing vars", a.Vars)
+		t.Errorf("missing vars: %v", a.Vars)
 	}
 }
 
