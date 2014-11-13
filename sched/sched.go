@@ -1,9 +1,11 @@
 package sched
 
 import (
+	"compress/gzip"
 	"encoding/gob"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"os"
@@ -404,9 +406,17 @@ func (s *Schedule) RestoreState() {
 		log.Println(err)
 		return
 	}
-	dec := gob.NewDecoder(f)
+	var r io.Reader = f
+	gr, err := gzip.NewReader(f)
+	if err != nil {
+		f.Seek(0, 0)
+	} else {
+		defer gr.Close()
+		r = gr
+	}
+	dec := gob.NewDecoder(r)
 	if err := dec.Decode(&s.Search.Metric); err != nil {
-		log.Println(err)
+		log.Println(1, err)
 		return
 	}
 	if err := dec.Decode(&s.Search.Tagk); err != nil {
@@ -473,6 +483,7 @@ func (s *Schedule) RestoreState() {
 var savePending bool
 
 func (s *Schedule) Save() {
+	return
 	go func() {
 		s.Lock()
 		defer s.Unlock()
@@ -482,6 +493,17 @@ func (s *Schedule) Save() {
 		savePending = true
 		time.AfterFunc(time.Second*5, s.save)
 	}()
+}
+
+type counterWriter struct {
+	written int
+	w       io.Writer
+}
+
+func (c *counterWriter) Write(p []byte) (n int, err error) {
+	n, err = c.w.Write(p)
+	c.written += n
+	return n, err
 }
 
 func (s *Schedule) save() {
@@ -495,40 +517,64 @@ func (s *Schedule) save() {
 	}
 	tmp := s.Conf.StateFile + ".tmp"
 	f, err := os.Create(tmp)
+	defer f.Close()
 	if err != nil {
 		log.Println(err)
 		return
 	}
-	enc := gob.NewEncoder(f)
+	gz := gzip.NewWriter(f)
+	defer gz.Close()
+	cw := &counterWriter{w: gz}
+	enc := gob.NewEncoder(cw)
 	if err := enc.Encode(s.Search.Metric); err != nil {
 		log.Println(err)
 		return
 	}
+	log.Println("search.metric wrote", conf.ByteSize(cw.written))
+	cw.written = 0
 	if err := enc.Encode(s.Search.Tagk); err != nil {
 		log.Println(err)
 		return
 	}
+	log.Println("search.tagk wrote", conf.ByteSize(cw.written))
+	cw.written = 0
 	if err := enc.Encode(s.Search.Tagv); err != nil {
 		log.Println(err)
 		return
 	}
+	log.Println("search.tagv wrote", conf.ByteSize(cw.written))
+	cw.written = 0
 	if err := enc.Encode(s.Search.MetricTags); err != nil {
 		log.Println(err)
 		return
 	}
+	log.Println("search.metrictags wrote", conf.ByteSize(cw.written))
+	cw.written = 0
 	if err := enc.Encode(s.Notifications); err != nil {
 		log.Println(err)
 		return
 	}
+	log.Println("notifications wrote", conf.ByteSize(cw.written))
+	cw.written = 0
 	if err := enc.Encode(s.Silence); err != nil {
 		log.Println(err)
 		return
 	}
+	log.Println("silence wrote", conf.ByteSize(cw.written))
+	cw.written = 0
 	if err := enc.Encode(s.status); err != nil {
 		log.Println(err)
 		return
 	}
+	log.Println("status wrote", conf.ByteSize(cw.written))
+	cw.written = 0
 	if err := enc.Encode(s.Metadata); err != nil {
+		log.Println(err)
+		return
+	}
+	log.Println("metadata wrote", conf.ByteSize(cw.written))
+	cw.written = 0
+	if err := gz.Close(); err != nil {
 		log.Println(err)
 		return
 	}
