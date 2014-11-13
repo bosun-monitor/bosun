@@ -56,7 +56,6 @@ func removable(major, minor string) bool {
 		return false
 	}
 	return strings.Trim(string(b), "\n") == "1"
-	return false
 }
 
 var sdiskRE = regexp.MustCompile(`/dev/(sd[a-z])[0-9]?`)
