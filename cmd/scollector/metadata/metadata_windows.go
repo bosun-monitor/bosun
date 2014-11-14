@@ -78,14 +78,14 @@ func metaWindowsIfaces() {
 		return
 	}
 
-	mNicConfigs := make(map[string]*Win32_NetworkAdapterConfiguration)
+	mNicConfigs := make(map[uint32]*Win32_NetworkAdapterConfiguration)
 	for i, nic := range dstConfigs {
-		mNicConfigs[nic.SettingID] = &dstConfigs[i]
+		mNicConfigs[nic.InterfaceIndex] = &dstConfigs[i]
 	}
 
-	var dstAdapters []MSFT_NetAdapter
-	q = wmi.CreateQuery(&dstAdapters, "WHERE HardwareInterface = True or InterfaceDescription = 'Microsoft Network Adapter Multiplexor Driver'") //Exclude virtual adapters except Microsoft Multiplexor
-	err = wmi.QueryNamespace(q, &dstAdapters, "root\\StandardCimv2")
+	var dstAdapters []Win32_NetworkAdapter
+	q = wmi.CreateQuery(&dstAdapters, "WHERE PhysicalAdapter=True and MACAddress <> null and NetConnectionStatus = 2") //Only adapters with MAC addresses and status="Connected"
+	err = wmi.Query(q, &dstAdapters)
 	if err != nil {
 		slog.Error(err)
 		return
@@ -93,17 +93,19 @@ func metaWindowsIfaces() {
 
 	for _, v := range dstAdapters {
 		tag := opentsdb.TagSet{"iface": fmt.Sprint("Interface", v.InterfaceIndex)}
-		AddMeta("", tag, "description", v.InterfaceDescription, true)
-		AddMeta("", tag, "name", v.Name, true)
+		AddMeta("", tag, "description", v.Description, true)
+		AddMeta("", tag, "name", v.NetConnectionID, true)
+		AddMeta("", tag, "mac", strings.Replace(v.MACAddress, ":", "", -1), true)
 		if v.Speed != nil {
 			AddMeta("", tag, "speed", v.Speed, true)
 		} else {
 			AddMeta("", tag, "speed", 0, true)
+			//Todo: get speed of Team nic members (from MSFT_NetAdapter?).
 		}
+		//Todo: list team members using MSFT_NetImPlatAdapter or MSFT_NetLbfoTeam*
 
-		nicConfig := mNicConfigs[v.InterfaceGuid]
+		nicConfig := mNicConfigs[v.InterfaceIndex]
 		if nicConfig != nil {
-			AddMeta("", tag, "mac", strings.Replace(nicConfig.MACAddress, ":", "", -1), true)
 			for _, ip := range *nicConfig.IPAddress {
 				AddMeta("", tag, "addr", ip, true) // blocked by array support in WMI See https://github.com/StackExchange/wmi/issues/5
 			}
@@ -111,17 +113,15 @@ func metaWindowsIfaces() {
 	}
 }
 
-type MSFT_NetAdapter struct {
-	Name                 string  //NY-WEB09-PRI-NIC-A
-	Speed                *uint64 //Bits per Second
-	InterfaceDescription string  //Intel(R) Gigabit ET Quad Port Server Adapter #2
-	InterfaceName        string  //Ethernet_10
-	InterfaceGuid        string  //unique id
-	InterfaceIndex       uint32
+type Win32_NetworkAdapter struct {
+	NetConnectionID string  //NY-WEB09-PRI-NIC-A
+	Speed           *uint64 //Bits per Second
+	Description     string  //Intel(R) Gigabit ET Quad Port Server Adapter #2
+	InterfaceIndex  uint32
+	MACAddress      string //00:1B:21:93:00:00
 }
 
 type Win32_NetworkAdapterConfiguration struct {
-	IPAddress  *[]string //Both IPv4 and IPv6
-	MACAddress string    //00:1B:21:93:00:00
-	SettingID  string    //Matches InterfaceGuid
+	IPAddress      *[]string //Both IPv4 and IPv6
+	InterfaceIndex uint32
 }
