@@ -14,6 +14,9 @@ import (
 var (
 	ErrPath    = errors.New("program not in PATH")
 	ErrTimeout = errors.New("program killed after timeout")
+
+	// Debug enables debug logging.
+	Debug = false
 )
 
 // Command executes the named program with the given arguments. If it does not
@@ -22,6 +25,9 @@ var (
 func Command(timeout time.Duration, name string, arg ...string) ([]byte, error) {
 	if _, err := exec.LookPath(name); err != nil {
 		return nil, ErrPath
+	}
+	if Debug {
+		slog.Infof("executing command: %v %v", name, arg)
 	}
 	c := exec.Command(name, arg...)
 	var b bytes.Buffer
