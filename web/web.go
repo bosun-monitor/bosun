@@ -25,6 +25,8 @@ import (
 	"github.com/bosun-monitor/bosun/conf"
 	"github.com/bosun-monitor/bosun/expr"
 	"github.com/bosun-monitor/bosun/sched"
+	_ "github.com/bosun-monitor/bosun/web/statik"
+	"github.com/rakyll/statik/fs"
 )
 
 var (
@@ -40,11 +42,26 @@ func init() {
 	miniprofiler.StartHidden = true
 }
 
-func Listen(listenAddr, webDirectory string, tsdbHost *url.URL) error {
+func Listen(listenAddr string, useStatik bool, tsdbHost *url.URL) error {
 	var err error
-	templates, err = template.New("").ParseFiles(
-		webDirectory + "/templates/index.html",
-	)
+	var webFS http.FileSystem
+	if useStatik {
+		webFS, err = fs.New()
+		if err != nil {
+			log.Fatal(err)
+		}
+	} else {
+		webFS = http.Dir(filepath.Join("web", "static"))
+	}
+	index, err := webFS.Open("/templates/index.html")
+	if err != nil {
+		log.Fatal(err)
+	}
+	b, err := ioutil.ReadAll(index)
+	if err != nil {
+		log.Fatal(err)
+	}
+	templates, err = template.New("").Parse(string(b))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -76,13 +93,11 @@ func Listen(listenAddr, webDirectory string, tsdbHost *url.URL) error {
 	router.Handle("/api/run", JSON(Run))
 	http.Handle("/", miniprofiler.NewHandler(Index))
 	http.Handle("/api/", router)
-	fs := http.FileServer(http.Dir(webDirectory))
+	fs := http.FileServer(webFS)
 	http.Handle("/partials/", fs)
-	http.Handle("/static/", fs)
-	static := http.FileServer(http.Dir(filepath.Join(webDirectory, "static")))
-	http.Handle("/favicon.ico", static)
+	http.Handle("/static/", http.StripPrefix("/static/", fs))
+	http.Handle("/favicon.ico", fs)
 	log.Println("bosun web listening on:", listenAddr)
-	log.Println("bosun web directory:", webDirectory)
 	log.Println("tsdb host:", tsdbHost)
 	return http.ListenAndServe(listenAddr, nil)
 }
@@ -160,7 +175,7 @@ func Index(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	err := templates.ExecuteTemplate(w, "index.html", struct {
+	err := templates.Execute(w, struct {
 		Includes template.HTML
 	}{
 		t.Includes(),

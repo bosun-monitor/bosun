@@ -27,7 +27,6 @@ type Conf struct {
 	Vars
 	Name            string        // Config file name
 	CheckFrequency  time.Duration // Time between alert checks: 5m
-	WebDir          string        // Static content web directory: web
 	TsdbHost        string        // OpenTSDB relay and query destination: ny-devtsdb04:4242
 	HttpListen      string        // Web server listen address: :80
 	RelayListen     string        // OpenTSDB relay listen address: :4242
@@ -297,7 +296,6 @@ func New(name, text string) (c *Conf, err error) {
 		Name:           name,
 		CheckFrequency: time.Minute * 5,
 		HttpListen:     ":8070",
-		WebDir:         "web",
 		StateFile:      "bosun.state",
 		ResponseLimit:  1 << 20, // 1MB
 		Vars:           make(map[string]string),
@@ -353,8 +351,6 @@ func (c *Conf) loadGlobal(p *parse.PairNode) {
 		c.HttpListen = v
 	case "relayListen":
 		c.RelayListen = v
-	case "webDir":
-		c.WebDir = v
 	case "smtpHost":
 		c.SmtpHost = v
 	case "emailFrom":

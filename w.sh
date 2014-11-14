@@ -1,7 +1,8 @@
 #!/bin/sh
 
 while true; do
-	go run main.go -w -r
+	statik -src=web/static -dest=web
+	go run main.go -w -dev -r -q
 	if [ $? != 0 ] ; then
 		exit
 	fi

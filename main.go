@@ -30,6 +30,7 @@ var (
 	flagWatch    = flag.Bool("w", false, "watch .go files below current directory and exit; also build typescript files on change")
 	flagReadonly = flag.Bool("r", false, "readonly-mode: don't write or relay any OpenTSDB metrics")
 	flagQuiet    = flag.Bool("q", false, "quiet-mode: don't send any notifications except from the rule test page")
+	flagDev      = flag.Bool("dev", false, "enable dev mode: use local resources")
 )
 
 func main() {
@@ -84,11 +85,11 @@ func main() {
 	if *flagQuiet {
 		c.Quiet = true
 	}
-	go func() { log.Fatal(web.Listen(c.HttpListen, c.WebDir, tsdbHost)) }()
+	go func() { log.Fatal(web.Listen(c.HttpListen, !*flagDev, tsdbHost)) }()
 	go func() { log.Fatal(sched.Run()) }()
 	if *flagWatch {
 		watch(".", "*.go", quit)
-		watch(filepath.Join("web", "templates"), "*.html", quit)
+		watch(filepath.Join("web", "static", "templates"), "*.html", quit)
 		base := filepath.Join("web", "static", "js")
 		args := []string{
 			"--out", filepath.Join(base, "bosun.js"),
