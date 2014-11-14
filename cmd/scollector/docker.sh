@@ -2,5 +2,10 @@
 
 set -e
 
+boot2docker=$(which boot2docker)
+if [ -x "$boot2docker" ]; then
+	boot2docker ssh sudo ntpclient -s -h pool.ntp.org
+fi
+
 DIR=/go/src/github.com/bosun-monitor/scollector
 docker run --rm -v "$(pwd)":$DIR -w $DIR golang:cross sh build.sh
