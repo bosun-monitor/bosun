@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -24,6 +25,14 @@ import (
 	"github.com/bosun-monitor/bosun/web"
 )
 
+// These constants should remain in source control as their zero values.
+const (
+	// VersionDate should be set at build time as a date: 20140721184001.
+	VersionDate uint64 = 0
+	// VersionID should be set at build time as the most recent commit hash.
+	VersionID string = ""
+)
+
 var (
 	flagConf     = flag.String("c", "dev.conf", "config file location")
 	flagTest     = flag.Bool("t", false, "test for valid config; exits with 0 on success, else 1")
@@ -31,10 +40,15 @@ var (
 	flagReadonly = flag.Bool("r", false, "readonly-mode: don't write or relay any OpenTSDB metrics")
 	flagQuiet    = flag.Bool("q", false, "quiet-mode: don't send any notifications except from the rule test page")
 	flagDev      = flag.Bool("dev", false, "enable dev mode: use local resources")
+	flagVersion  = flag.Bool("version", false, "Prints the version and exits.")
 )
 
 func main() {
 	flag.Parse()
+	if *flagVersion {
+		fmt.Printf("bosun version %v (%v)\n", VersionDate, VersionID)
+		os.Exit(0)
+	}
 	runtime.GOMAXPROCS(runtime.NumCPU())
 	c, err := conf.ParseFile(*flagConf)
 	if err != nil {
