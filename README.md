@@ -12,6 +12,10 @@ Time Series Alerting Framework
 
 `-c` specifies the config file to use, defaults to `dev.conf`. `-t` parses the config file, validates it, and exits.
 
+# installation/binaries
+
+[http://bosun.org/#installation](http://bosun.org/#installation)
+
 # docker
 
 [https://registry.hub.docker.com/u/stackexchange/bosun/](https://registry.hub.docker.com/u/stackexchange/bosun/)
