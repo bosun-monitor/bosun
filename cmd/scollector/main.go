@@ -173,6 +173,7 @@ func main() {
 		collectors.InitFake(*flagFake)
 	}
 	collect.Debug = *flagDebug
+	util.Debug = *flagDebug
 	if *flagDisableDefault {
 		collect.DisableDefaultCollectors = true
 	}
