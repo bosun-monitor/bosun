@@ -1,0 +1,27 @@
+FROM debian:wheezy
+
+RUN apt-get update && apt-get install -y \
+	automake \
+	curl \
+	git \
+	make \
+	openjdk-6-jdk \
+	python \
+	--no-install-recommends \
+	&& rm -rf /var/lib/apt/lists/*
+
+ENV TSDB /tsdb
+RUN git clone -b next --single-branch --depth 1 git://github.com/OpenTSDB/opentsdb.git $TSDB && \
+	cd $TSDB && bash ./build.sh
+
+ENV GOPATH /go
+ENV HBASEVER 0.98.7-hadoop2
+ENV HBASE /hbase/hbase-$HBASEVER
+ENV JAVA_HOME /usr/lib/jvm/java-6-openjdk-amd64
+
+RUN mkdir -p /hbase \
+    && curl -SL http://apache.org/dist/hbase/stable/hbase-$HBASEVER-bin.tar.gz \
+    | tar -xzC /hbase
+
+RUN curl -SL https://storage.googleapis.com/golang/go1.3.3.linux-amd64.tar.gz \
+    | tar -xzC /usr/local
