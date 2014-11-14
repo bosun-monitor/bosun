@@ -2,6 +2,11 @@
 
 set -e
 
+boot2docker=$(which boot2docker)
+if [ -x "$boot2docker" ]; then
+	boot2docker ssh sudo ntpclient -s -h pool.ntp.org
+fi
+
 TMP=run/tmp
 rm -rf build/bosun $TMP
 git clone -b master --single-branch .. build/bosun
