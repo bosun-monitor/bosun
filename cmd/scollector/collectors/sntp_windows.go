@@ -75,17 +75,17 @@ func c_sntp_windows() (opentsdb.MultiDataPoint, error) {
 	Add(&md, metric+"delay", delay, tags, metadata.Gauge, metadata.Second, "")
 	Add(&md, metric+"when", when, tags, metadata.Gauge, metadata.Second, "")
 	Add(&md, metric+"poll", poll, tags, metadata.Gauge, metadata.Second, "")
-	err := util.ReadCommand(func(line string) error {
+	_ = util.ReadCommand(func(line string) error {
 		f := strings.SplitN(line, ",", 2)
 		if len(f) != 2 {
 			return nil
 		}
 		d, err := time.ParseDuration(strings.TrimSpace(f[1]))
 		if err != nil {
-			return err
+			return nil
 		}
 		Add(&md, metric+"offset", d.Seconds(), tags, metadata.Gauge, metadata.Second, "")
 		return nil
 	}, "w32tm", "/stripchart", fmt.Sprintf("/computer:%v", source), "/samples:1", "/dataonly")
-	return md, err
+	return md, nil
 }
