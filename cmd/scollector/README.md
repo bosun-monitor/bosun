@@ -7,6 +7,7 @@ Benefits of scollector over tcollector:
 - scollector uses the v2 API, not the older v1 API
 - scollector is more resource efficient
 - scollector integrates with [Bosun](http://bosun.org)
+- scollector comes with many collectors for Windows as well as Linux and darwin
 
 OpenTSDB 1.0 uses the
 [tcollector](https://github.com/OpenTSDB/tcollector)
