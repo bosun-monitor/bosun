@@ -637,10 +637,10 @@ func pingHost(host string) {
 	p.AddIPAddr(ra)
 	p.MaxRTT = time.Second * 5
 	timeout := 1
-	p.AddHandler("receive", func(addr *net.IPAddr, t time.Duration) {
+	p.OnRecv = func(addr *net.IPAddr, t time.Duration) {
 		collect.Put("ping.rtt", opentsdb.TagSet{"dst_host": host}, float64(t)/float64(time.Millisecond))
 		timeout = 0
-	})
+	}
 	if err := p.Run(); err != nil {
 		log.Print(err)
 	}
