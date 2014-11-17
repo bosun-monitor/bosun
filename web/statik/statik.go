@@ -1,7 +1,7 @@
 package statik
 
 import (
-		"github.com/rakyll/statik/fs"
+	"github.com/bosun-monitor/bosun/_third_party/github.com/rakyll/statik/fs"
 )
 
 func init() {

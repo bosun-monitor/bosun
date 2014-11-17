@@ -22,11 +22,11 @@ import (
 	"github.com/bosun-monitor/bosun/_third_party/github.com/bosun-monitor/scollector/metadata"
 	"github.com/bosun-monitor/bosun/_third_party/github.com/bosun-monitor/scollector/opentsdb"
 	"github.com/bosun-monitor/bosun/_third_party/github.com/gorilla/mux"
+	"github.com/bosun-monitor/bosun/_third_party/github.com/rakyll/statik/fs"
 	"github.com/bosun-monitor/bosun/conf"
 	"github.com/bosun-monitor/bosun/expr"
 	"github.com/bosun-monitor/bosun/sched"
 	_ "github.com/bosun-monitor/bosun/web/statik"
-	"github.com/rakyll/statik/fs"
 )
 
 var (
