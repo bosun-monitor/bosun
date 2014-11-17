@@ -13,11 +13,11 @@ func init() {
 }
 
 func metaLinuxVersion() {
-	util.ReadCommand(func(line string) error {
+	_ = util.ReadCommand(func(line string) error {
 		AddMeta("", nil, "uname", line, true)
 		return nil
 	}, "uname", "-a")
-	util.ReadCommand(func(line string) error {
+	_ = util.ReadCommand(func(line string) error {
 		fields := strings.Fields(line)
 		hasNum := false
 		for i := 0; i < len(fields); {
@@ -39,8 +39,8 @@ func metaLinuxVersion() {
 }
 
 func metaLinuxIfaces() {
-	var iface string
-	util.ReadCommand(func(line string) error {
+	_ = util.ReadCommand(func(line string) error {
+		var iface string
 		sp := strings.Fields(line)
 		if len(sp) == 0 {
 			iface = ""
