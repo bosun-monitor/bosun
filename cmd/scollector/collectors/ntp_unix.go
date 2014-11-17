@@ -53,7 +53,7 @@ func ntpUnPretty(s string) (int64, error) {
 func c_ntp_peers_unix() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	const metric = "ntp."
-	util.ReadCommand(func(line string) error {
+	_ = util.ReadCommand(func(line string) error {
 		fields := strings.Fields(line)
 		if len(fields) != len(ntpNtpqPeerFields) || fields[0] == "remote" {
 			return nil

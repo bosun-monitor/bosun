@@ -11,7 +11,7 @@ func init() {
 }
 
 func collectMetadataOmreport() {
-	util.ReadCommand(func(line string) error {
+	_ = util.ReadCommand(func(line string) error {
 		fields := strings.Split(line, ";")
 		if len(fields) != 2 {
 			return nil
