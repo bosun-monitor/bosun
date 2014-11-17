@@ -29,6 +29,8 @@ import (
 	_ "github.com/bosun-monitor/bosun/web/statik"
 )
 
+//go:generate statik -src=static -pkg=github.com/bosun-monitor/bosun/_third_party/github.com/rakyll/statik/fs
+
 var (
 	templates *template.Template
 	router    = mux.NewRouter()
