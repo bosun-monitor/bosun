@@ -11,7 +11,7 @@ import (
 
 	"github.com/bosun-monitor/bosun/_third_party/github.com/GaryBoone/GoStats/stats"
 	"github.com/bosun-monitor/bosun/_third_party/github.com/MiniProfiler/go/miniprofiler"
-	"github.com/bosun-monitor/bosun/_third_party/github.com/bosun-monitor/scollector/opentsdb"
+	"github.com/bosun-monitor/bosun/_third_party/github.com/bosun-monitor/opentsdb"
 	"github.com/bosun-monitor/bosun/expr/parse"
 )
 

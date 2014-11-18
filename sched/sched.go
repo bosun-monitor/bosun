@@ -13,9 +13,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bosun-monitor/bosun/_third_party/github.com/bosun-monitor/scollector/collect"
-	"github.com/bosun-monitor/bosun/_third_party/github.com/bosun-monitor/scollector/metadata"
-	"github.com/bosun-monitor/bosun/_third_party/github.com/bosun-monitor/scollector/opentsdb"
+	"github.com/bosun-monitor/bosun/_third_party/github.com/bosun-monitor/collect"
+	"github.com/bosun-monitor/bosun/_third_party/github.com/bosun-monitor/metadata"
+	"github.com/bosun-monitor/bosun/_third_party/github.com/bosun-monitor/opentsdb"
 	"github.com/bosun-monitor/bosun/_third_party/github.com/bradfitz/slice"
 	"github.com/bosun-monitor/bosun/_third_party/github.com/tatsushid/go-fastping"
 	"github.com/bosun-monitor/bosun/conf"

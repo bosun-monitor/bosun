@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bosun-monitor/bosun/_third_party/github.com/bosun-monitor/scollector/opentsdb"
+	"github.com/bosun-monitor/bosun/_third_party/github.com/bosun-monitor/opentsdb"
 )
 
 func TestExprSimple(t *testing.T) {

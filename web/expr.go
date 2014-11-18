@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/bosun-monitor/bosun/_third_party/github.com/MiniProfiler/go/miniprofiler"
-	"github.com/bosun-monitor/bosun/_third_party/github.com/bosun-monitor/scollector/opentsdb"
+	"github.com/bosun-monitor/bosun/_third_party/github.com/bosun-monitor/opentsdb"
 	"github.com/bosun-monitor/bosun/_third_party/github.com/bradfitz/slice"
 	"github.com/bosun-monitor/bosun/conf"
 	"github.com/bosun-monitor/bosun/expr"
