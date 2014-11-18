@@ -44,7 +44,14 @@ function fmtTime(v: any) {
 	var m = moment(v).utc();
 	var now = moment().utc();
 	var msdiff = now.diff(m);
-	return m.format(timeFormat) + ' (' + fmtDuration(msdiff) + ' ago)';
+	var ago = '';
+	var inn = '';
+	if (msdiff >= 0) {
+		ago = ' ago';
+	} else {
+		inn = 'in ';
+	}
+	return m.format(timeFormat) + ' (' + inn + fmtDuration(msdiff) + ago + ')';
 }
 
 interface ITimeScope extends IBosunScope {
