@@ -13,12 +13,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/StackExchange/slog"
-	"github.com/bosun-monitor/scollector/collect"
+	"github.com/bosun-monitor/scollector/_third_party/github.com/StackExchange/slog"
+	"github.com/bosun-monitor/scollector/_third_party/github.com/bosun-monitor/collect"
+	"github.com/bosun-monitor/scollector/_third_party/github.com/bosun-monitor/metadata"
+	"github.com/bosun-monitor/scollector/_third_party/github.com/bosun-monitor/opentsdb"
+	"github.com/bosun-monitor/scollector/_third_party/github.com/bosun-monitor/util"
 	"github.com/bosun-monitor/scollector/collectors"
-	"github.com/bosun-monitor/scollector/metadata"
-	"github.com/bosun-monitor/scollector/opentsdb"
-	"github.com/bosun-monitor/scollector/util"
 )
 
 // These constants should remain in source control as their zero values.

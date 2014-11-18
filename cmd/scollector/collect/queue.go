@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/StackExchange/slog"
+	"github.com/bosun-monitor/scollector/_third_party/github.com/StackExchange/slog"
 	"github.com/bosun-monitor/scollector/opentsdb"
 )
 

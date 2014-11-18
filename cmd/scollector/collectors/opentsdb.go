@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/bosun-monitor/scollector/metadata"
-	"github.com/bosun-monitor/scollector/opentsdb"
+	"github.com/bosun-monitor/scollector/_third_party/github.com/bosun-monitor/metadata"
+	"github.com/bosun-monitor/scollector/_third_party/github.com/bosun-monitor/opentsdb"
 )
 
 func init() {
