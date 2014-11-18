@@ -47,6 +47,17 @@ import (
 	"time"
 )
 
+const TimeSliceLength = 8
+
+func byteSliceOfSize(n int) []byte {
+	b := make([]byte, n)
+	for i := 0; i < len(b); i++ {
+		b[i] = 1
+	}
+
+	return b
+}
+
 func timeToBytes(t time.Time) []byte {
 	nsec := t.UnixNano()
 	b := make([]byte, 8)
@@ -100,6 +111,9 @@ type Pinger struct {
 	hasIPv6 bool
 	ctx     *context
 	mu      sync.Mutex
+
+	// Size in bytes of the payload to send
+	Size int
 	// Number of (nano,milli)seconds of an idle timeout. Once it passed,
 	// the library calls an idle callback function. It is also used for an
 	// interval time of RunLoop() method
@@ -122,6 +136,7 @@ func NewPinger() *Pinger {
 		addrs:   make(map[string]*net.IPAddr),
 		hasIPv4: false,
 		hasIPv6: false,
+		Size:    TimeSliceLength,
 		MaxRTT:  time.Second,
 		OnRecv:  nil,
 		OnIdle:  nil,
@@ -300,7 +315,7 @@ func (p *Pinger) run(once bool) {
 		defer conn6.Close()
 	}
 
-	recv := make(chan *packet)
+	recv := make(chan *packet, 1)
 	recvCtx := newContext()
 	wg := new(sync.WaitGroup)
 
@@ -389,12 +404,18 @@ func (p *Pinger) sendICMP(conn, conn6 *net.IPConn) (map[string]*net.IPAddr, erro
 			continue
 		}
 
+		t := timeToBytes(time.Now())
+
+		if p.Size-TimeSliceLength != 0 {
+			t = append(t, byteSliceOfSize(p.Size-TimeSliceLength)...)
+		}
+
 		p.mu.Lock()
 		bytes, err := (&icmpMessage{
 			Type: typ, Code: 0,
 			Body: &icmpEcho{
 				ID: p.id, Seq: p.seq,
-				Data: timeToBytes(time.Now()),
+				Data: t,
 			},
 		}).Marshal()
 		p.mu.Unlock()
@@ -500,7 +521,7 @@ func (p *Pinger) procRecv(recv *packet, queue map[string]*net.IPAddr) {
 	case *icmpEcho:
 		p.mu.Lock()
 		if pkt.ID == p.id && pkt.Seq == p.seq {
-			rtt = time.Since(bytesToTime(pkt.Data))
+			rtt = time.Since(bytesToTime(pkt.Data[:TimeSliceLength]))
 		}
 		p.mu.Unlock()
 	default:
