@@ -3,7 +3,7 @@ package metadata
 import (
 	"strings"
 
-	"github.com/bosun-monitor/bosun/_third_party/github.com/bosun-monitor/scollector/util"
+	"github.com/bosun-monitor/bosun/_third_party/github.com/bosun-monitor/util"
 )
 
 func init() {
@@ -11,7 +11,7 @@ func init() {
 }
 
 func collectMetadataOmreport() {
-	util.ReadCommand(func(line string) error {
+	_ = util.ReadCommand(func(line string) error {
 		fields := strings.Split(line, ";")
 		if len(fields) != 2 {
 			return nil

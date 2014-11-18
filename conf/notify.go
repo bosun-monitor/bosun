@@ -9,7 +9,7 @@ import (
 	"net/mail"
 	"net/smtp"
 
-	"github.com/bosun-monitor/bosun/_third_party/github.com/bosun-monitor/scollector/collect"
+	"github.com/bosun-monitor/bosun/_third_party/github.com/bosun-monitor/collect"
 	"github.com/bosun-monitor/bosun/_third_party/github.com/jordan-wright/email"
 )
 

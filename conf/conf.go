@@ -17,7 +17,7 @@ import (
 	tparse "text/template/parse"
 	"time"
 
-	"github.com/bosun-monitor/bosun/_third_party/github.com/bosun-monitor/scollector/opentsdb"
+	"github.com/bosun-monitor/bosun/_third_party/github.com/bosun-monitor/opentsdb"
 	"github.com/bosun-monitor/bosun/conf/parse"
 	"github.com/bosun-monitor/bosun/expr"
 	eparse "github.com/bosun-monitor/bosun/expr/parse"

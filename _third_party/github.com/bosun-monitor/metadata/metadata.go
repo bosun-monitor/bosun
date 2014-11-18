@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/bosun-monitor/bosun/_third_party/github.com/StackExchange/slog"
-	"github.com/bosun-monitor/bosun/_third_party/github.com/bosun-monitor/scollector/opentsdb"
-	"github.com/bosun-monitor/bosun/_third_party/github.com/bosun-monitor/scollector/util"
+	"github.com/bosun-monitor/bosun/_third_party/github.com/bosun-monitor/opentsdb"
+	"github.com/bosun-monitor/bosun/_third_party/github.com/bosun-monitor/util"
 )
 
 type RateType string
