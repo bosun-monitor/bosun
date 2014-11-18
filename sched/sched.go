@@ -628,23 +628,27 @@ func (s *Schedule) PingHosts() {
 
 func pingHost(host string) {
 	p := fastping.NewPinger()
+	tags := opentsdb.TagSet{"dst_host": host}
+	resolved := 0
+	defer func() {
+		collect.Put("ping.resolved", tags, resolved)
+	}()
 	ra, err := net.ResolveIPAddr("ip4:icmp", host)
 	if err != nil {
-		collect.Put("ping.resolved", opentsdb.TagSet{"dst_host": host}, 0)
 		return
 	}
-	collect.Put("ping.resolved", opentsdb.TagSet{"dst_host": host}, 1)
+	resolved = 1
 	p.AddIPAddr(ra)
 	p.MaxRTT = time.Second * 5
 	timeout := 1
 	p.OnRecv = func(addr *net.IPAddr, t time.Duration) {
-		collect.Put("ping.rtt", opentsdb.TagSet{"dst_host": host}, float64(t)/float64(time.Millisecond))
+		collect.Put("ping.rtt", tags, float64(t)/float64(time.Millisecond))
 		timeout = 0
 	}
 	if err := p.Run(); err != nil {
 		log.Print(err)
 	}
-	collect.Put("ping.timeout", opentsdb.TagSet{"dst_host": host}, timeout)
+	collect.Put("ping.timeout", tags, timeout)
 }
 
 type State struct {
