@@ -37,7 +37,7 @@ function fmtDuration(v: any) {
 	if (Math.abs(v) < 60000) {
 		return diff.format('ss[s]');
 	}
-	return diff.format('d[d] hh:mm:ss');
+	return diff.format('d[d]hh[h]mm[m]ss[s]');
 }
 
 function fmtTime(v: any) {
