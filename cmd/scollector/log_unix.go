@@ -2,7 +2,7 @@
 
 package main
 
-import "github.com/StackExchange/slog"
+import "github.com/bosun-monitor/scollector/_third_party/github.com/StackExchange/slog"
 
 func init() {
 	err := slog.SetSyslog()

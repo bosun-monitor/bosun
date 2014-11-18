@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/StackExchange/slog"
-	"github.com/StackExchange/wmi"
+	"github.com/bosun-monitor/scollector/_third_party/github.com/StackExchange/slog"
+	"github.com/bosun-monitor/scollector/_third_party/github.com/StackExchange/wmi"
 	"github.com/bosun-monitor/scollector/opentsdb"
 )
 

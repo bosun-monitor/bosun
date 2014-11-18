@@ -6,11 +6,11 @@ import (
 	"os"
 	"time"
 
-	"code.google.com/p/winsvc/debug"
-	"code.google.com/p/winsvc/eventlog"
-	"code.google.com/p/winsvc/mgr"
-	"code.google.com/p/winsvc/svc"
-	"github.com/StackExchange/slog"
+	"github.com/bosun-monitor/scollector/_third_party/code.google.com/p/winsvc/debug"
+	"github.com/bosun-monitor/scollector/_third_party/code.google.com/p/winsvc/eventlog"
+	"github.com/bosun-monitor/scollector/_third_party/code.google.com/p/winsvc/mgr"
+	"github.com/bosun-monitor/scollector/_third_party/code.google.com/p/winsvc/svc"
+	"github.com/bosun-monitor/scollector/_third_party/github.com/StackExchange/slog"
 )
 
 var win_service_command = flag.String("winsvc", "", "For Windows Service, can be install, remove, start, stop")

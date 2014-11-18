@@ -4,9 +4,9 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/bosun-monitor/scollector/metadata"
-	"github.com/bosun-monitor/scollector/opentsdb"
-	"github.com/bosun-monitor/scollector/util"
+	"github.com/bosun-monitor/scollector/_third_party/github.com/bosun-monitor/metadata"
+	"github.com/bosun-monitor/scollector/_third_party/github.com/bosun-monitor/opentsdb"
+	"github.com/bosun-monitor/scollector/_third_party/github.com/bosun-monitor/util"
 )
 
 func init() {

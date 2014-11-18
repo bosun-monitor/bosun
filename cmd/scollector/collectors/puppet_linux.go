@@ -4,9 +4,9 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/bosun-monitor/scollector/metadata"
-	"github.com/bosun-monitor/scollector/opentsdb"
-	"gopkg.in/yaml.v1"
+	"github.com/bosun-monitor/scollector/_third_party/github.com/bosun-monitor/metadata"
+	"github.com/bosun-monitor/scollector/_third_party/github.com/bosun-monitor/opentsdb"
+	"github.com/bosun-monitor/scollector/_third_party/gopkg.in/yaml.v1"
 )
 
 func init() {
