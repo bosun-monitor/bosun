@@ -252,3 +252,21 @@ func TestTimeToBytesToTime(t *testing.T) {
 		t.Errorf("bytesToTime failed: got %v, expected: %v", tm2.UTC(), tm.UTC())
 	}
 }
+
+func TestPayloadSizeDefault(t *testing.T) {
+	s := timeToBytes(time.Now())
+	d := append(s, byteSliceOfSize(8-TimeSliceLength)...)
+
+	if len(d) != 8 {
+		t.Errorf("Payload size incorrect: got %d, expected: %d", len(d), 8)
+	}
+}
+
+func TestPayloadSizeCustom(t *testing.T) {
+	s := timeToBytes(time.Now())
+	d := append(s, byteSliceOfSize(64-TimeSliceLength)...)
+
+	if len(d) != 64 {
+		t.Errorf("Payload size incorrect: got %d, expected: %d", len(d), 64)
+	}
+}
