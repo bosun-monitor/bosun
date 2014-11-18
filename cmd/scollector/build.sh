@@ -16,7 +16,6 @@ for GOOS in windows linux darwin; do
 		export GOOS=$GOOS
 		export GOARCH=$GOARCH
 		echo $GOOS $GOARCH $EXT
-		go get -d .
 		go build -o tmp/scollector-$GOOS-$GOARCH$EXT
 	done
 done
