@@ -29,6 +29,7 @@ const (
 	None           Unit = ""
 	A                   = "A" // Amps
 	Bool                = "bool"
+	BitsPerSecond       = "bits per second"
 	Bytes               = "bytes"
 	BytesPerSecond      = "bytes per second"
 	C                   = "C" // Celsius
