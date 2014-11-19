@@ -32,7 +32,7 @@ var diskLinuxFields = []struct {
 	{"write_merged", metadata.Counter, metadata.Count, " Adjacent write requests merged in a single req."},
 	{"write_sectors", metadata.Counter, metadata.Count, "Total number of sectors written successfully."},
 	{"msec_write", metadata.Counter, metadata.MilliSecond, "Total number of ms spent by all writes."},
-	{"ios_in_progress", metadata.Counter, metadata.Count, "Number of actual I/O requests currently in flight."},
+	{"ios_in_progress", metadata.Gauge, metadata.Operation, "Number of actual I/O requests currently in flight."},
 	{"msec_total", metadata.Counter, metadata.MilliSecond, "Amount of time during which ios_in_progress >= 1."},
 	{"msec_weighted_total", metadata.Gauge, metadata.MilliSecond, "Measure of recent I/O completion time and backlog."},
 }
