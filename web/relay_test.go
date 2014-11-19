@@ -57,6 +57,7 @@ func TestRelay(t *testing.T) {
 	}
 	time.Sleep(time.Second)
 
+	schedule.Search.Copy()
 	m := schedule.Search.UniqueMetrics()
 	sort.Strings(m)
 	if len(m) != 2 || m[0] != "gzip-works" || m[1] != "no-gzip-works" {
