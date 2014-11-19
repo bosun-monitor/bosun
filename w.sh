@@ -1,7 +1,7 @@
 #!/bin/sh
 
 while true; do
-	statik -src=web/static -dest=web -pkg=github.com/bosun-monitor/bosun/_third_party/github.com/rakyll/statik/fs
+	esc -o web/static.go -pkg web -prefix web/static web/static/
 	go run main.go -w -dev -r -q
 	if [ $? != 0 ] ; then
 		exit

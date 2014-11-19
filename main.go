@@ -99,7 +99,7 @@ func main() {
 	if *flagQuiet {
 		c.Quiet = true
 	}
-	go func() { log.Fatal(web.Listen(c.HttpListen, !*flagDev, tsdbHost)) }()
+	go func() { log.Fatal(web.Listen(c.HttpListen, *flagDev, tsdbHost)) }()
 	go func() { log.Fatal(sched.Run()) }()
 	if *flagWatch {
 		watch(".", "*.go", quit)
