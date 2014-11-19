@@ -83,6 +83,18 @@ func metaWindowsIfaces() {
 		mNicConfigs[nic.InterfaceIndex] = &dstConfigs[i]
 	}
 
+	mNicTeamIDtoSpeed := make(map[string]uint64)
+	mNicTeamIDtoMaster := make(map[string]string)
+	var dstTeamMembers []MSFT_NetLbfoTeamMember
+	q = wmi.CreateQuery(&dstTeamMembers, "")
+	err = wmi.QueryNamespace(q, &dstTeamMembers, "root\\StandardCimv2")
+	if err == nil {
+		for _, teamMember := range dstTeamMembers {
+			mNicTeamIDtoSpeed[teamMember.InstanceID] = teamMember.ReceiveLinkSpeed
+			mNicTeamIDtoMaster[teamMember.InstanceID] = teamMember.Team
+		}
+	}
+
 	var dstAdapters []Win32_NetworkAdapter
 	q = wmi.CreateQuery(&dstAdapters, "WHERE PhysicalAdapter=True and MACAddress <> null and NetConnectionStatus = 2") //Only adapters with MAC addresses and status="Connected"
 	err = wmi.Query(q, &dstAdapters)
@@ -96,13 +108,17 @@ func metaWindowsIfaces() {
 		AddMeta("", tag, "description", v.Description, true)
 		AddMeta("", tag, "name", v.NetConnectionID, true)
 		AddMeta("", tag, "mac", strings.Replace(v.MACAddress, ":", "", -1), true)
-		if v.Speed != nil {
+		if v.Speed != nil && *v.Speed != 0 {
 			AddMeta("", tag, "speed", v.Speed, true)
 		} else {
-			AddMeta("", tag, "speed", 0, true)
-			//Todo: get speed of Team nic members (from MSFT_NetAdapter?).
+			nicSpeed := mNicTeamIDtoSpeed[v.GUID]
+			AddMeta("", tag, "speed", nicSpeed, true)
 		}
-		//Todo: list team members using MSFT_NetImPlatAdapter or MSFT_NetLbfoTeam*
+
+		nicMaster := mNicTeamIDtoMaster[v.GUID]
+		if nicMaster != "" {
+			AddMeta("", tag, "master", nicMaster, true)
+		}
 
 		nicConfig := mNicConfigs[v.InterfaceIndex]
 		if nicConfig != nil {
@@ -119,9 +135,16 @@ type Win32_NetworkAdapter struct {
 	Description     string  //Intel(R) Gigabit ET Quad Port Server Adapter #2
 	InterfaceIndex  uint32
 	MACAddress      string //00:1B:21:93:00:00
+	GUID            string
 }
 
 type Win32_NetworkAdapterConfiguration struct {
 	IPAddress      *[]string //Both IPv4 and IPv6
 	InterfaceIndex uint32
+}
+type MSFT_NetLbfoTeamMember struct {
+	Name             string
+	ReceiveLinkSpeed uint64
+	Team             string
+	InstanceID       string
 }
