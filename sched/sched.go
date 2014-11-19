@@ -470,6 +470,7 @@ func (s *Schedule) RestoreState() {
 	if err := dec.Decode(&s.Metadata); err != nil {
 		log.Println(err)
 	}
+	s.Search.Copy()
 }
 
 var savePending bool

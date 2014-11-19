@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/bosun-monitor/bosun/_third_party/github.com/bosun-monitor/opentsdb"
 )
@@ -27,6 +28,8 @@ type Search struct {
 	Last map[string]*pair
 
 	sync.RWMutex
+	read *Search
+	copy bool
 }
 
 type pair struct {
@@ -52,6 +55,35 @@ type duple struct {
 	A, B string
 }
 
+func (q qmap) Copy() qmap {
+	m := make(qmap)
+	for k, v := range q {
+		m[k] = v.Copy()
+	}
+	return m
+}
+func (s smap) Copy() smap {
+	m := make(smap)
+	for k, v := range s {
+		m[k] = v.Copy()
+	}
+	return m
+}
+func (t mtsmap) Copy() mtsmap {
+	m := make(mtsmap)
+	for k, v := range t {
+		m[k] = v
+	}
+	return m
+}
+func (p present) Copy() present {
+	m := make(present)
+	for k, v := range p {
+		m[k] = v
+	}
+	return m
+}
+
 func NewSearch() *Search {
 	s := Search{
 		Metric:     make(qmap),
@@ -59,12 +91,33 @@ func NewSearch() *Search {
 		Tagv:       make(qmap),
 		MetricTags: make(mtsmap),
 		Last:       make(map[string]*pair),
+		read:       new(Search),
 	}
 	return &s
 }
 
+// Copies current data to the read replica.
+func (s *Search) Copy() {
+	r := new(Search)
+	r.Metric = s.Metric.Copy()
+	r.Tagk = s.Tagk.Copy()
+	r.Tagv = s.Tagv.Copy()
+	r.MetricTags = s.MetricTags.Copy()
+	s.read = r
+}
+
 func (s *Search) Index(mdp opentsdb.MultiDataPoint) {
 	s.Lock()
+	if !s.copy {
+		s.copy = true
+		go func() {
+			time.Sleep(time.Minute)
+			s.Lock()
+			s.Copy()
+			s.copy = false
+			s.Unlock()
+		}()
+	}
 	for _, dp := range mdp {
 		var mts MetricTagSet
 		mts.Metric = dp.Metric
@@ -179,11 +232,9 @@ func (s *Search) Expand(q *opentsdb.Query) error {
 }
 
 func (s *Search) UniqueMetrics() []string {
-	s.RLock()
-	defer s.RUnlock()
 	metrics := make([]string, len(s.Tagk))
 	i := 0
-	for k := range s.Tagk {
+	for k := range s.read.Tagk {
 		metrics[i] = k
 		i++
 	}
@@ -193,8 +244,6 @@ func (s *Search) UniqueMetrics() []string {
 
 func (s *Search) TagValuesByTagKey(Tagk string) []string {
 	um := s.UniqueMetrics()
-	s.RLock()
-	defer s.RUnlock()
 	tagvset := make(map[string]bool)
 	for _, Metric := range um {
 		for _, Tagv := range s.tagValuesByMetricTagKey(Metric, Tagk) {
@@ -212,10 +261,8 @@ func (s *Search) TagValuesByTagKey(Tagk string) []string {
 }
 
 func (s *Search) MetricsByTagPair(Tagk, Tagv string) []string {
-	s.RLock()
-	defer s.RUnlock()
 	r := make([]string, 0)
-	for k := range s.Metric[duple{Tagk, Tagv}] {
+	for k := range s.read.Metric[duple{Tagk, Tagv}] {
 		r = append(r, k)
 	}
 	sort.Strings(r)
@@ -223,10 +270,8 @@ func (s *Search) MetricsByTagPair(Tagk, Tagv string) []string {
 }
 
 func (s *Search) TagKeysByMetric(Metric string) []string {
-	s.RLock()
-	defer s.RUnlock()
 	r := make([]string, 0)
-	for k := range s.Tagk[Metric] {
+	for k := range s.read.Tagk[Metric] {
 		r = append(r, k)
 	}
 	sort.Strings(r)
@@ -235,7 +280,7 @@ func (s *Search) TagKeysByMetric(Metric string) []string {
 
 func (s *Search) tagValuesByMetricTagKey(Metric, Tagk string) []string {
 	r := make([]string, 0)
-	for k := range s.Tagv[duple{Metric, Tagk}] {
+	for k := range s.read.Tagv[duple{Metric, Tagk}] {
 		r = append(r, k)
 	}
 	sort.Strings(r)
@@ -243,16 +288,12 @@ func (s *Search) tagValuesByMetricTagKey(Metric, Tagk string) []string {
 }
 
 func (s *Search) TagValuesByMetricTagKey(Metric, Tagk string) []string {
-	s.RLock()
-	defer s.RUnlock()
 	return s.tagValuesByMetricTagKey(Metric, Tagk)
 }
 
 func (s *Search) FilteredTagValuesByMetricTagKey(Metric, Tagk string, tsf map[string]string) []string {
-	s.RLock()
-	defer s.RUnlock()
 	tagvset := make(map[string]bool)
-	for _, mts := range s.MetricTags {
+	for _, mts := range s.read.MetricTags {
 		if Metric == mts.Metric {
 			match := true
 			if Tagv, ok := mts.Tags[Tagk]; ok {
