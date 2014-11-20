@@ -1503,6 +1503,7 @@ bosunControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route
     $scope.idata = [];
     $scope.fsdata = [];
     $scope.metrics = [];
+    var currentURL = $location.url();
     $scope.mlink = function (m) {
         var r = new Request();
         var q = new Query();
@@ -1559,11 +1560,16 @@ bosunControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route
         $scope.mem = [data.Series[1]];
     });
     $http.get('/api/tagv/iface/os.net.bytes?host=' + $scope.host).success(function (data) {
-        $scope.interfaces = data;
-        angular.forEach($scope.interfaces, function (i, idx) {
+        angular.forEach(data, function (i, idx) {
             $scope.idata[idx] = {
                 Name: i
             };
+        });
+        function next(idx) {
+            var idata = $scope.idata[idx];
+            if (!idata || currentURL != $location.url()) {
+                return;
+            }
             var net_bytes_r = new Request();
             net_bytes_r.start = $scope.time;
             net_bytes_r.queries = [
@@ -1571,7 +1577,7 @@ bosunControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route
                     metric: "os.net.bytes",
                     rate: true,
                     rateOptions: { counter: true, resetValue: 1 },
-                    tags: { host: $scope.host, iface: i, direction: "*" }
+                    tags: { host: $scope.host, iface: idata.Name, direction: "*" }
                 })
             ];
             $http.get('/api/graph?' + 'json=' + encodeURIComponent(JSON.stringify(net_bytes_r)) + autods).success(function (data) {
@@ -1593,8 +1599,11 @@ bosunControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route
                     }
                 });
                 $scope.idata[idx].Data = data.Series;
+            }).finally(function () {
+                next(idx + 1);
             });
-        });
+        }
+        next(0);
     });
     $http.get('/api/tagv/disk/os.disk.fs.space_total?host=' + $scope.host).success(function (data) {
         angular.forEach(data, function (i, idx) {
