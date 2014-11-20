@@ -416,34 +416,27 @@ func (s *Schedule) RestoreState() {
 	}
 	dec := gob.NewDecoder(r)
 	if err := dec.Decode(&s.Search.Metric); err != nil {
-		log.Println(1, err)
-		return
+		log.Println(err)
 	}
 	if err := dec.Decode(&s.Search.Tagk); err != nil {
 		log.Println(err)
-		return
 	}
 	if err := dec.Decode(&s.Search.Tagv); err != nil {
 		log.Println(err)
-		return
 	}
 	if err := dec.Decode(&s.Search.MetricTags); err != nil {
 		log.Println(err)
-		return
 	}
 	notifications := make(map[expr.AlertKey]map[string]time.Time)
 	if err := dec.Decode(&notifications); err != nil {
 		log.Println(err)
-		return
 	}
 	if err := dec.Decode(&s.Silence); err != nil {
 		log.Println(err)
-		return
 	}
 	status := make(States)
 	if err := dec.Decode(&status); err != nil {
 		log.Println(err)
-		return
 	}
 	for ak, st := range status {
 		if a, present := s.Conf.Alerts[ak.Name()]; !present {
@@ -476,8 +469,8 @@ func (s *Schedule) RestoreState() {
 	}
 	if err := dec.Decode(&s.Metadata); err != nil {
 		log.Println(err)
-		return
 	}
+	s.Search.Copy()
 }
 
 var savePending bool
@@ -628,23 +621,27 @@ func (s *Schedule) PingHosts() {
 
 func pingHost(host string) {
 	p := fastping.NewPinger()
+	tags := opentsdb.TagSet{"dst_host": host}
+	resolved := 0
+	defer func() {
+		collect.Put("ping.resolved", tags, resolved)
+	}()
 	ra, err := net.ResolveIPAddr("ip4:icmp", host)
 	if err != nil {
-		collect.Put("ping.resolved", opentsdb.TagSet{"dst_host": host}, 0)
 		return
 	}
-	collect.Put("ping.resolved", opentsdb.TagSet{"dst_host": host}, 1)
+	resolved = 1
 	p.AddIPAddr(ra)
 	p.MaxRTT = time.Second * 5
 	timeout := 1
 	p.OnRecv = func(addr *net.IPAddr, t time.Duration) {
-		collect.Put("ping.rtt", opentsdb.TagSet{"dst_host": host}, float64(t)/float64(time.Millisecond))
+		collect.Put("ping.rtt", tags, float64(t)/float64(time.Millisecond))
 		timeout = 0
 	}
 	if err := p.Run(); err != nil {
 		log.Print(err)
 	}
-	collect.Put("ping.timeout", opentsdb.TagSet{"dst_host": host}, timeout)
+	collect.Put("ping.timeout", tags, timeout)
 }
 
 type State struct {

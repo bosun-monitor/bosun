@@ -12,7 +12,6 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -22,14 +21,12 @@ import (
 	"github.com/bosun-monitor/bosun/_third_party/github.com/bosun-monitor/metadata"
 	"github.com/bosun-monitor/bosun/_third_party/github.com/bosun-monitor/opentsdb"
 	"github.com/bosun-monitor/bosun/_third_party/github.com/gorilla/mux"
-	"github.com/bosun-monitor/bosun/_third_party/github.com/rakyll/statik/fs"
 	"github.com/bosun-monitor/bosun/conf"
 	"github.com/bosun-monitor/bosun/expr"
 	"github.com/bosun-monitor/bosun/sched"
-	_ "github.com/bosun-monitor/bosun/web/statik"
 )
 
-//go:generate statik -src=static -pkg=github.com/bosun-monitor/bosun/_third_party/github.com/rakyll/statik/fs
+//go:generate esc -o web/static.go -pkg web -prefix web/static web/static/
 
 var (
 	templates *template.Template
@@ -44,16 +41,11 @@ func init() {
 	miniprofiler.StartHidden = true
 }
 
-func Listen(listenAddr string, useStatik bool, tsdbHost *url.URL) error {
+func Listen(listenAddr string, devMode bool, tsdbHost *url.URL) error {
 	var err error
-	var webFS http.FileSystem
-	if useStatik {
-		webFS, err = fs.New()
-		if err != nil {
-			log.Fatal(err)
-		}
-	} else {
-		webFS = http.Dir(filepath.Join("web", "static"))
+	webFS := FS(devMode)
+	if devMode {
+		log.Println("using local web assets")
 	}
 	index, err := webFS.Open("/templates/index.html")
 	if err != nil {

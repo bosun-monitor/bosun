@@ -415,13 +415,21 @@ function fmtDuration(v) {
     if (Math.abs(v) < 60000) {
         return diff.format('ss[s]');
     }
-    return diff.format('d[d] hh:mm:ss');
+    return diff.format('d[d]hh[h]mm[m]ss[s]');
 }
 function fmtTime(v) {
     var m = moment(v).utc();
     var now = moment().utc();
     var msdiff = now.diff(m);
-    return m.format(timeFormat) + ' (' + fmtDuration(msdiff) + ' ago)';
+    var ago = '';
+    var inn = '';
+    if (msdiff >= 0) {
+        ago = ' ago';
+    }
+    else {
+        inn = 'in ';
+    }
+    return m.format(timeFormat) + ' (' + inn + fmtDuration(msdiff) + ago + ')';
 }
 bosunApp.directive("tsTime", function () {
     return {
