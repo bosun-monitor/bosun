@@ -27,8 +27,13 @@ type Search struct {
 
 	Last map[string]*pair
 
+	// Read replica. Should never be mutated. Can at any time be assigned to a new
+	// value.
+	Read *Search
+
 	sync.RWMutex
-	read *Search
+
+	// copy is true when there is a Copy() event pending.
 	copy bool
 }
 
@@ -91,19 +96,19 @@ func NewSearch() *Search {
 		Tagv:       make(qmap),
 		MetricTags: make(mtsmap),
 		Last:       make(map[string]*pair),
-		read:       new(Search),
+		Read:       new(Search),
 	}
 	return &s
 }
 
-// Copies current data to the read replica.
+// Copies current data to the Read replica.
 func (s *Search) Copy() {
 	r := new(Search)
 	r.Metric = s.Metric.Copy()
 	r.Tagk = s.Tagk.Copy()
 	r.Tagv = s.Tagv.Copy()
 	r.MetricTags = s.MetricTags.Copy()
-	s.read = r
+	s.Read = r
 }
 
 func (s *Search) Index(mdp opentsdb.MultiDataPoint) {
@@ -234,7 +239,7 @@ func (s *Search) Expand(q *opentsdb.Query) error {
 func (s *Search) UniqueMetrics() []string {
 	metrics := make([]string, len(s.Tagk))
 	i := 0
-	for k := range s.read.Tagk {
+	for k := range s.Read.Tagk {
 		metrics[i] = k
 		i++
 	}
@@ -262,7 +267,7 @@ func (s *Search) TagValuesByTagKey(Tagk string) []string {
 
 func (s *Search) MetricsByTagPair(Tagk, Tagv string) []string {
 	r := make([]string, 0)
-	for k := range s.read.Metric[duple{Tagk, Tagv}] {
+	for k := range s.Read.Metric[duple{Tagk, Tagv}] {
 		r = append(r, k)
 	}
 	sort.Strings(r)
@@ -271,7 +276,7 @@ func (s *Search) MetricsByTagPair(Tagk, Tagv string) []string {
 
 func (s *Search) TagKeysByMetric(Metric string) []string {
 	r := make([]string, 0)
-	for k := range s.read.Tagk[Metric] {
+	for k := range s.Read.Tagk[Metric] {
 		r = append(r, k)
 	}
 	sort.Strings(r)
@@ -280,7 +285,7 @@ func (s *Search) TagKeysByMetric(Metric string) []string {
 
 func (s *Search) tagValuesByMetricTagKey(Metric, Tagk string) []string {
 	r := make([]string, 0)
-	for k := range s.read.Tagv[duple{Metric, Tagk}] {
+	for k := range s.Read.Tagv[duple{Metric, Tagk}] {
 		r = append(r, k)
 	}
 	sort.Strings(r)
@@ -293,7 +298,7 @@ func (s *Search) TagValuesByMetricTagKey(Metric, Tagk string) []string {
 
 func (s *Search) FilteredTagValuesByMetricTagKey(Metric, Tagk string, tsf map[string]string) []string {
 	tagvset := make(map[string]bool)
-	for _, mts := range s.read.MetricTags {
+	for _, mts := range s.Read.MetricTags {
 		if Metric == mts.Metric {
 			match := true
 			if Tagv, ok := mts.Tags[Tagk]; ok {
