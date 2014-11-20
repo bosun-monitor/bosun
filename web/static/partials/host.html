@@ -18,13 +18,13 @@
 		</div>
 		<div class="row">
 			<div class="col-lg-6" ng-repeat="i in idata">
-				<h4>Network Bit/s: {{i.name}}</h4>
+				<h4>Network Bit/s: {{i.Name}}</h4>
 				<div class="chart" bytes="true" ts-graph data="i.Data" generator="'area'"></div>
 			</div>
 		</div>
 		<div class="row">
 			<div class="col-lg-6" ng-repeat="fs in fsdata">
-				<h4>Disk Space: {{fs.name}} <small ng-show="fs.c_val">({{fs.c_val | bytes}} / {{fs.total | bytes}}) {{fs.percent_used | number:0}}% Used</small></h4>
+				<h4>Disk Space: {{fs.Name}} <small ng-show="fs.c_val">({{fs.c_val | bytes}} / {{fs.total | bytes}}) {{fs.percent_used | number:0}}% Used</small></h4>
 				<div class="chart" bytes="true" ts-graph data="fs.Data"></div>
 			</div>
 		</div>
