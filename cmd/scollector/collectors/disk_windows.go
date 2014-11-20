@@ -40,7 +40,7 @@ func c_diskspace_windows() (opentsdb.MultiDataPoint, error) {
 		Add(&md, osDiskTotal, v.Size, tags, metadata.Gauge, metadata.Bytes, osDiskTotalDesc)
 		Add(&md, osDiskUsed, space_used, tags, metadata.Gauge, metadata.Bytes, osDiskUsedDesc)
 		if v.Size != 0 {
-			percent_free := float64(v.FreeSpace / v.Size * 100)
+			percent_free := float64(v.FreeSpace) / float64(v.Size) * 100
 			Add(&md, "win.disk.fs.percent_free", percent_free, tags, metadata.Gauge, metadata.Pct, osDiskPctFreeDesc)
 			Add(&md, osDiskPctFree, percent_free, tags, metadata.Gauge, metadata.Pct, osDiskPctFreeDesc)
 		}
