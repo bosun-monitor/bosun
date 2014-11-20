@@ -392,16 +392,6 @@ func (s *Schedule) Init(c *conf.Conf) {
 func (s *Schedule) Load(c *conf.Conf) {
 	s.Init(c)
 	s.RestoreState()
-	if len(s.Search.Metric) == 0 {
-		go func() {
-			for i := 0; i < 5; i++ {
-				time.Sleep(time.Second * 3)
-				s.Search.Lock()
-				s.Search.Copy()
-				s.Search.Unlock()
-			}
-		}()
-	}
 }
 
 // Restores notification and alert state from the file on disk.
