@@ -499,10 +499,6 @@ func (c *counterWriter) Write(p []byte) (n int, err error) {
 }
 
 func (s *Schedule) save() {
-	s.Lock()
-	s.Search.Lock()
-	defer s.Search.Unlock()
-	defer s.Unlock()
 	savePending = false
 	if s.Conf.StateFile == "" {
 		return
@@ -518,28 +514,30 @@ func (s *Schedule) save() {
 	defer gz.Close()
 	cw := &counterWriter{w: gz}
 	enc := gob.NewEncoder(cw)
-	if err := enc.Encode(s.Search.Metric); err != nil {
+	if err := enc.Encode(s.Search.Read.Metric); err != nil {
 		log.Println(err)
 		return
 	}
 	log.Println("search.metric wrote", conf.ByteSize(cw.written))
 	cw.written = 0
-	if err := enc.Encode(s.Search.Tagk); err != nil {
+	if err := enc.Encode(s.Search.Read.Tagk); err != nil {
 		log.Println(err)
 		return
 	}
 	log.Println("search.tagk wrote", conf.ByteSize(cw.written))
 	cw.written = 0
-	if err := enc.Encode(s.Search.Tagv); err != nil {
+	if err := enc.Encode(s.Search.Read.Tagv); err != nil {
 		log.Println(err)
 		return
 	}
 	log.Println("search.tagv wrote", conf.ByteSize(cw.written))
 	cw.written = 0
-	if err := enc.Encode(s.Search.MetricTags); err != nil {
+	if err := enc.Encode(s.Search.Read.MetricTags); err != nil {
 		log.Println(err)
 		return
 	}
+	s.Lock()
+	defer s.Unlock()
 	log.Println("search.metrictags wrote", conf.ByteSize(cw.written))
 	cw.written = 0
 	if err := enc.Encode(s.Notifications); err != nil {
