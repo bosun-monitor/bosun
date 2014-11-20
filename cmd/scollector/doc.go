@@ -16,9 +16,9 @@ Usage:
 
 The flags are:
 	-h="bosun"
-		OpenTSDB host; can optionally specify a port and scheme
-		("https://tsdb.example.com:4242"), but will default to
-		http://bosun/
+		Bosun or OpenTSDB host; can optionally specify a port and scheme
+		("http://bosun.example.com:8070"), but will default to
+		http://bosun:80/
 	-c=""
 		external collectors directory
 	-s=""
