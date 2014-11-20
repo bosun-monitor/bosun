@@ -111,7 +111,7 @@ func (s *Search) Index(mdp opentsdb.MultiDataPoint) {
 	if !s.copy {
 		s.copy = true
 		go func() {
-			time.Sleep(time.Minute)
+			time.Sleep(time.Second * 20)
 			s.Lock()
 			s.Copy()
 			s.copy = false
