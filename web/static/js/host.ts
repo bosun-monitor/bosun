@@ -10,7 +10,6 @@ interface IHostScope extends ng.IScope {
 	fsdata: any;
 	mem: any;
 	mem_total: number;
-	interfaces: string[];
 	error: string;
 	running: string;
 	filterMetrics: string;
@@ -25,6 +24,7 @@ bosunControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route
 	$scope.idata = [];
 	$scope.fsdata = [];
 	$scope.metrics = [];
+	var currentURL = $location.url();
 	$scope.mlink = (m: string) => {
 		var r = new Request();
 		var q = new Query();
@@ -84,12 +84,16 @@ bosunControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route
 		});
 	$http.get('/api/tagv/iface/os.net.bytes?host=' + $scope.host)
 		.success((data) => {
-			$scope.interfaces = data;
-			angular.forEach($scope.interfaces, function(i, idx) {
+			angular.forEach(data, function(i, idx) {
 				$scope.idata[idx] = {
 					Name: i,
 				};
-
+			});
+			function next(idx: number) {
+				var idata = $scope.idata[idx];
+				if (!idata || currentURL != $location.url()) {
+					return;
+				}
 				var net_bytes_r = new Request();
 				net_bytes_r.start = $scope.time;
 				net_bytes_r.queries = [
@@ -97,7 +101,7 @@ bosunControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route
 						metric: "os.net.bytes",
 						rate: true,
 						rateOptions: { counter: true, resetValue: 1 },
-						tags: { host: $scope.host, iface: i, direction: "*" },
+						tags: { host: $scope.host, iface: idata.Name, direction: "*" },
 					})
 				];
 				$http.get('/api/graph?' + 'json=' + encodeURIComponent(JSON.stringify(net_bytes_r)) + autods)
@@ -115,8 +119,12 @@ bosunControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route
 							}
 						});
 						$scope.idata[idx].Data = data.Series;
+					})
+					.finally(() => {
+						next(idx + 1);
 					});
-			});
+			}
+			next(0);
 		});
 	$http.get('/api/tagv/disk/os.disk.fs.space_total?host=' + $scope.host)
 		.success((data) => {
