@@ -2,11 +2,7 @@
 <configuration>
 
   <property>
-    <name>hbase.rootdir</name>
-    <value>file:///hbase/data</value>
-  </property>
-  <property>
-    <name>hbase.zookeeper.dns.dataDir</name>
-    <value>/hbase/zookeeper</value>
+    <name>hbase.tmp.dir</name>
+    <value>file:///data/hbase</value>
   </property>
 </configuration>
