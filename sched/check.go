@@ -96,6 +96,14 @@ func (s *Schedule) RunHistory(r *RunHistory) {
 			}
 		}
 		notifyCurrent := func() {
+			// Auto close ignoreUnknowns.
+			if a.IgnoreUnknown && event.Status == StUnknown {
+				state.Open = false
+				state.NeedAck = false
+				state.Action("bosun", "Auto close because alert has ignoreUnknown.", ActionClose)
+				log.Printf("auto close %s because alert has ignoreUnknown", ak)
+				return
+			}
 			state.NeedAck = true
 			switch event.Status {
 			case StCritical, StUnknown:
@@ -144,9 +152,6 @@ func (s *Schedule) CheckUnknown() {
 				continue
 			}
 			a := s.Conf.Alerts[ak.Name()]
-			if a.IgnoreUnknown {
-				continue
-			}
 			t := a.Unknown
 			if t == 0 {
 				t = s.Conf.CheckFrequency * 2

@@ -681,6 +681,15 @@ func (s *State) IsActive() bool {
 	return s.Status() > StNormal
 }
 
+func (st *State) Action(user, message string, t ActionType) {
+	st.Actions = append(st.Actions, Action{
+		User:    user,
+		Message: message,
+		Type:    t,
+		Time:    time.Now().UTC(),
+	})
+}
+
 func (s *Schedule) Action(user, message string, t ActionType, ak expr.AlertKey) error {
 	s.Lock()
 	defer func() {
@@ -726,12 +735,7 @@ func (s *Schedule) Action(user, message string, t ActionType, ak expr.AlertKey) 
 	default:
 		return fmt.Errorf("unknown action type: %v", t)
 	}
-	st.Actions = append(st.Actions, Action{
-		User:    user,
-		Message: message,
-		Type:    t,
-		Time:    time.Now().UTC(),
-	})
+	st.Action(user, message, t)
 	// Would like to also track the alert group, but I believe this is impossible because any character
 	// that could be used as a delimiter could also be a valid tag key or tag value character
 	if err := collect.Add("actions", opentsdb.TagSet{"user": user, "alert": ak.Name(), "type": t.String()}, 1); err != nil {
