@@ -21,7 +21,8 @@ ENV JAVA_HOME /usr/lib/jvm/java-6-openjdk-amd64
 
 RUN mkdir -p /hbase \
     && curl -SL http://apache.org/dist/hbase/stable/hbase-$HBASEVER-bin.tar.gz \
-    | tar -xzC /hbase
+    | tar -xzC /hbase \
+    && mv /hbase/hbase-$HBASEVER /hbase/hbase
 
 RUN curl -SL https://storage.googleapis.com/golang/go1.3.3.linux-amd64.tar.gz \
     | tar -xzC /usr/local
