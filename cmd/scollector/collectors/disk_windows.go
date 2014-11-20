@@ -23,36 +23,35 @@ const (
 )
 
 func c_diskspace_windows() (opentsdb.MultiDataPoint, error) {
-	const megabyte = 1048576
-	var dst []Win32_PerfFormattedData_PerfDisk_LogicalDisk
-	var q = wmi.CreateQuery(&dst, `WHERE Name <> '_Total'`)
+	var dst []Win32_LogicalDisk
+	var q = wmi.CreateQuery(&dst, "WHERE DriveType = 3")
 	err := queryWmi(q, &dst)
 	if err != nil {
 		return nil, err
 	}
 	var md opentsdb.MultiDataPoint
 	for _, v := range dst {
-		Add(&md, "win.disk.fs.space_free", v.FreeMegabytes*megabyte, opentsdb.TagSet{"partition": v.Name}, metadata.Gauge, metadata.Bytes, "")
-		Add(&md, osDiskFree, v.FreeMegabytes*megabyte, opentsdb.TagSet{"disk": v.Name}, metadata.Gauge, metadata.Bytes, "")
-		if v.PercentFreeSpace != 0 {
-			space_total := v.FreeMegabytes * megabyte * 100 / v.PercentFreeSpace
-			space_used := space_total - v.FreeMegabytes*megabyte
-			Add(&md, "win.disk.fs.space_total", space_total, opentsdb.TagSet{"partition": v.Name}, metadata.Gauge, metadata.Bytes, "")
-			Add(&md, "win.disk.fs.space_used", space_used, opentsdb.TagSet{"partition": v.Name}, metadata.Gauge, metadata.Bytes, "")
-			Add(&md, osDiskTotal, space_total, opentsdb.TagSet{"disk": v.Name}, metadata.Gauge, metadata.Bytes, "")
-			Add(&md, osDiskUsed, space_used, opentsdb.TagSet{"disk": v.Name}, metadata.Gauge, metadata.Bytes, "")
+		tags := opentsdb.TagSet{"disk": v.Name}
+		space_used := v.Size - v.FreeSpace
+		Add(&md, "win.disk.fs.space_free", v.FreeSpace, tags, metadata.Gauge, metadata.Bytes, osDiskFreeDesc)
+		Add(&md, "win.disk.fs.space_total", v.Size, tags, metadata.Gauge, metadata.Bytes, osDiskTotalDesc)
+		Add(&md, "win.disk.fs.space_used", space_used, tags, metadata.Gauge, metadata.Bytes, osDiskUsedDesc)
+		Add(&md, osDiskFree, v.FreeSpace, tags, metadata.Gauge, metadata.Bytes, osDiskFreeDesc)
+		Add(&md, osDiskTotal, v.Size, tags, metadata.Gauge, metadata.Bytes, osDiskTotalDesc)
+		Add(&md, osDiskUsed, space_used, tags, metadata.Gauge, metadata.Bytes, osDiskUsedDesc)
+		if v.Size != 0 {
+			percent_free := float64(v.FreeSpace) / float64(v.Size) * 100
+			Add(&md, "win.disk.fs.percent_free", percent_free, tags, metadata.Gauge, metadata.Pct, osDiskPctFreeDesc)
+			Add(&md, osDiskPctFree, percent_free, tags, metadata.Gauge, metadata.Pct, osDiskPctFreeDesc)
 		}
-
-		Add(&md, "win.disk.fs.percent_free", v.PercentFreeSpace, opentsdb.TagSet{"partition": v.Name}, metadata.Gauge, metadata.Pct, "")
-		Add(&md, osDiskPctFree, v.PercentFreeSpace, opentsdb.TagSet{"disk": v.Name}, metadata.Gauge, metadata.Pct, "")
 	}
 	return md, nil
 }
 
-type Win32_PerfFormattedData_PerfDisk_LogicalDisk struct {
-	FreeMegabytes    uint64
-	Name             string
-	PercentFreeSpace uint64
+type Win32_LogicalDisk struct {
+	FreeSpace uint64
+	Name      string
+	Size      uint64
 }
 
 func c_physical_disk_windows() (opentsdb.MultiDataPoint, error) {
