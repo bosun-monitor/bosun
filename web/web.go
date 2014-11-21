@@ -210,9 +210,11 @@ func JSON(h func(miniprofiler.Timer, http.ResponseWriter, *http.Request) (interf
 			return
 		}
 		w.Header().Add("Content-Type", "application/json")
-		if err := json.NewEncoder(tw).Encode(d); err != nil {
-			log.Println(err)
-		}
+		t.Step("JSON+gzip", func(t miniprofiler.Timer) {
+			if err := json.NewEncoder(tw).Encode(d); err != nil {
+				log.Println(err)
+			}
+		})
 	})
 }
 
