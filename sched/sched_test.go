@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/bosun-monitor/bosun/_third_party/github.com/MiniProfiler/go/miniprofiler"
 	"github.com/bosun-monitor/bosun/_third_party/github.com/bosun-monitor/opentsdb"
 	"github.com/bosun-monitor/bosun/conf"
 )
@@ -68,7 +69,7 @@ func testSched(t *testing.T, st *schedTest) {
 	s := new(Schedule)
 	s.Init(c)
 	s.Check(nil, start)
-	groups, err := s.MarshalGroups("")
+	groups, err := s.MarshalGroups(new(miniprofiler.Profile), "")
 	if err != nil {
 		t.Error(err)
 		return
