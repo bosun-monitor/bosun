@@ -9,7 +9,6 @@ import (
 	"log"
 	"net"
 	"os"
-	"reflect"
 	"sync"
 	"time"
 
@@ -37,7 +36,7 @@ type Schedule struct {
 	Notifications map[expr.AlertKey]map[string]time.Time
 	Silence       map[string]*Silence
 	Group         map[time.Time]expr.AlertKeys
-	Metadata      map[metadata.Metakey]Metavalues
+	Metadata      map[metadata.Metakey]*Metavalue
 	Search        *search.Search
 	Lookups       map[string]*expr.Lookup
 
@@ -54,15 +53,6 @@ func (s *Schedule) TimeLock(t miniprofiler.Timer) {
 	})
 }
 
-type Metavalues []Metavalue
-
-func (m Metavalues) Last() *Metavalue {
-	if len(m) > 0 {
-		return &m[len(m)-1]
-	}
-	return nil
-}
-
 type Metavalue struct {
 	Time  time.Time
 	Value interface{}
@@ -70,20 +60,7 @@ type Metavalue struct {
 
 func (s *Schedule) PutMetadata(k metadata.Metakey, v interface{}) {
 	s.metalock.Lock()
-	md := s.Metadata[k]
-	mv := Metavalue{time.Now().UTC(), v}
-	changed := false
-	if md == nil {
-		changed = true
-	} else {
-		last := md[len(md)-1]
-		changed = !reflect.DeepEqual(last.Value, v)
-	}
-	if changed {
-		s.Metadata[k] = append(md, mv)
-	} else {
-		s.Metadata[k][len(md)-1].Time = mv.Time
-	}
+	s.Metadata[k] = &Metavalue{time.Now().UTC(), v}
 	s.Save()
 	s.metalock.Unlock()
 }
@@ -102,14 +79,10 @@ type MetadataDescription struct {
 func (s *Schedule) MetadataMetrics() map[string]*MetadataMetric {
 	s.metalock.Lock()
 	m := make(map[string]*MetadataMetric)
-	for k, v := range s.Metadata {
+	for k, mv := range s.Metadata {
 		tags := k.TagSet()
 		delete(tags, "host")
 		if k.Metric == "" {
-			continue
-		}
-		mv := v.Last()
-		if mv == nil {
 			continue
 		}
 		val, _ := mv.Value.(string)
@@ -148,15 +121,11 @@ func (s *Schedule) MetadataMetrics() map[string]*MetadataMetric {
 func (s *Schedule) GetMetadata(metric string, subset opentsdb.TagSet) []metadata.Metasend {
 	s.metalock.Lock()
 	ms := make([]metadata.Metasend, 0)
-	for k, v := range s.Metadata {
+	for k, mv := range s.Metadata {
 		if metric != "" && k.Metric != metric {
 			continue
 		}
 		if !k.TagSet().Subset(subset) {
-			continue
-		}
-		mv := v.Last()
-		if mv == nil {
 			continue
 		}
 		ms = append(ms, metadata.Metasend{
@@ -399,7 +368,7 @@ func (s *Schedule) Init(c *conf.Conf) {
 	s.Conf = c
 	s.Silence = make(map[string]*Silence)
 	s.Group = make(map[time.Time]expr.AlertKeys)
-	s.Metadata = make(map[metadata.Metakey]Metavalues)
+	s.Metadata = make(map[metadata.Metakey]*Metavalue)
 	s.Lookups = c.GetLookups()
 	s.status = make(States)
 	s.Search = search.NewSearch()
@@ -869,13 +838,9 @@ func (a ActionType) MarshalJSON() ([]byte, error) {
 func (s *Schedule) Host(filter string) map[string]*HostData {
 	s.metalock.Lock()
 	res := make(map[string]*HostData)
-	for k, v := range s.Metadata {
+	for k, mv := range s.Metadata {
 		tags := k.TagSet()
 		if k.Metric != "" || tags["host"] == "" {
-			continue
-		}
-		mv := v.Last()
-		if mv == nil {
 			continue
 		}
 		e := res[tags["host"]]
