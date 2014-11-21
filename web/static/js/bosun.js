@@ -2080,26 +2080,42 @@ bosunApp.directive('tsAckGroup', function () {
 });
 bosunApp.factory('status', ['$http', '$q', function ($http, $q) {
     var cache = {};
+    var fetches = [];
+    function fetch() {
+        if (fetches.length == 0) {
+            return;
+        }
+        var o = fetches[0];
+        var ak = o.ak;
+        var q = o.q;
+        $http.get('/api/status?ak=' + encodeURIComponent(ak)).success(function (data) {
+            angular.forEach(data, function (v, k) {
+                v.Touched = moment(v.Touched).utc();
+                angular.forEach(v.History, function (v, k) {
+                    v.Time = moment(v.Time).utc();
+                });
+                v.last = v.History[v.History.length - 1];
+                if (v.Actions && v.Actions.length > 0) {
+                    v.LastAction = v.Actions[0];
+                }
+                cache[k] = v;
+            });
+            q.resolve(cache[ak]);
+        }).error(q.reject).finally(function () {
+            fetches.shift();
+            fetch();
+        });
+    }
     return function (ak) {
         var q = $q.defer();
         if (cache[ak]) {
             q.resolve(cache[ak]);
         }
         else {
-            $http.get('/api/status?ak=' + encodeURIComponent(ak)).success(function (data) {
-                angular.forEach(data, function (v, k) {
-                    v.Touched = moment(v.Touched).utc();
-                    angular.forEach(v.History, function (v, k) {
-                        v.Time = moment(v.Time).utc();
-                    });
-                    v.last = v.History[v.History.length - 1];
-                    if (v.Actions && v.Actions.length > 0) {
-                        v.LastAction = v.Actions[0];
-                    }
-                    cache[k] = v;
-                });
-                q.resolve(cache[ak]);
-            }).error(q.reject);
+            fetches.push({ 'ak': ak, 'q': q });
+            if (fetches.length == 1) {
+                fetch();
+            }
         }
         return q.promise;
     };

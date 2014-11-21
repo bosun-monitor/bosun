@@ -92,27 +92,44 @@ bosunApp.directive('tsAckGroup', function() {
 
 bosunApp.factory('status', ['$http', '$q', function($http: ng.IHttpService, $q: ng.IQService) {
 	var cache: any = {};
+	var fetches = [];
+	function fetch() {
+		if (fetches.length == 0) {
+			return;
+		}
+		var o = fetches[0];
+		var ak = o.ak;
+		var q = o.q;
+		$http.get('/api/status?ak=' + encodeURIComponent(ak))
+			.success(data => {
+				angular.forEach(data, (v, k) => {
+					v.Touched = moment(v.Touched).utc();
+					angular.forEach(v.History, (v, k) => {
+						v.Time = moment(v.Time).utc();
+					});
+					v.last = v.History[v.History.length - 1];
+					if (v.Actions && v.Actions.length > 0) {
+						v.LastAction = v.Actions[0];
+					}
+					cache[k] = v;
+				});
+				q.resolve(cache[ak]);
+			})
+			.error(q.reject)
+			.finally(() => {
+				fetches.shift();
+				fetch();
+			});
+	}
 	return function(ak: string) {
 		var q = $q.defer();
 		if (cache[ak]) {
 			q.resolve(cache[ak]);
 		} else {
-			$http.get('/api/status?ak=' + encodeURIComponent(ak))
-				.success(data => {
-					angular.forEach(data, (v, k) => {
-						v.Touched = moment(v.Touched).utc();
-						angular.forEach(v.History, (v, k) => {
-							v.Time = moment(v.Time).utc();
-						});
-						v.last = v.History[v.History.length - 1];
-						if (v.Actions && v.Actions.length > 0) {
-							v.LastAction = v.Actions[0];
-						}
-						cache[k] = v;
-					});
-					q.resolve(cache[ak]);
-				})
-				.error(q.reject);
+			fetches.push({'ak': ak, 'q': q});
+			if (fetches.length == 1) {
+				fetch();
+			}
 		}
 		return q.promise;
 	};
