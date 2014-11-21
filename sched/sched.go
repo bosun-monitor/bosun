@@ -445,9 +445,6 @@ func (s *Schedule) RestoreState() {
 		} else if s.Conf.Squelched(a, st.Group) {
 			log.Println("sched: alert now squelched:", ak)
 			continue
-		} else if st.Status().IsUnknown() && a.IgnoreUnknown {
-			log.Println("sched: alert now disregards unknown:", ak)
-			continue
 		} else {
 			t := a.Unknown
 			if t == 0 {
