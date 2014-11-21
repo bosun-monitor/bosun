@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/bosun-monitor/bosun/_third_party/github.com/MiniProfiler/go/miniprofiler"
 	"github.com/bosun-monitor/bosun/_third_party/github.com/bosun-monitor/collect"
 	"github.com/bosun-monitor/bosun/_third_party/github.com/bosun-monitor/metadata"
 	"github.com/bosun-monitor/bosun/_third_party/github.com/bosun-monitor/opentsdb"
@@ -45,6 +46,12 @@ type Schedule struct {
 	notifications map[*conf.Notification][]*State
 	metalock      sync.Mutex
 	checkRunning  chan bool
+}
+
+func (s *Schedule) TimeLock(t miniprofiler.Timer) {
+	t.Step("lock", func(t miniprofiler.Timer) {
+		s.Lock()
+	})
 }
 
 type Metavalues []Metavalue
@@ -278,12 +285,12 @@ type StateGroups struct {
 	Silenced    map[expr.AlertKey]time.Time
 }
 
-func (s *Schedule) MarshalGroups(filter string) (*StateGroups, error) {
+func (s *Schedule) MarshalGroups(T miniprofiler.Timer, filter string) (*StateGroups, error) {
 	t := StateGroups{
 		TimeAndDate: s.Conf.TimeAndDate,
 		Silenced:    s.Silenced(),
 	}
-	s.Lock()
+	s.TimeLock(T)
 	defer s.Unlock()
 	status := make(States)
 	matches, err := makeFilter(filter)
@@ -302,39 +309,49 @@ func (s *Schedule) MarshalGroups(filter string) (*StateGroups, error) {
 			status[k] = v
 		}
 	}
-	for tuple, states := range status.GroupStates() {
-		var grouped []*StateGroup
-		switch tuple.Status {
-		case StWarning, StCritical, StUnknown, StError:
-			for name, group := range states.GroupSets() {
-				g := StateGroup{
-					Active:  tuple.Active,
-					Status:  tuple.Status,
-					Subject: fmt.Sprintf("%s - %s", tuple.Status, name),
-					Len:     len(group),
+	var groups map[StateTuple]States
+	T.Step("GroupStates", func(T miniprofiler.Timer) {
+		groups = status.GroupStates()
+	})
+	T.Step("groups", func(T miniprofiler.Timer) {
+		for tuple, states := range groups {
+			var grouped []*StateGroup
+			switch tuple.Status {
+			case StWarning, StCritical, StUnknown, StError:
+				var sets map[string]expr.AlertKeys
+				T.Step(fmt.Sprintf("GroupSets (%d): %v", len(states), tuple), func(T miniprofiler.Timer) {
+					sets = states.GroupSets()
+				})
+				for name, group := range sets {
+					g := StateGroup{
+						Active:  tuple.Active,
+						Status:  tuple.Status,
+						Subject: fmt.Sprintf("%s - %s", tuple.Status, name),
+						Len:     len(group),
+					}
+					for _, ak := range group {
+						st := s.status[ak]
+						g.Children = append(g.Children, &StateGroup{
+							Active:   tuple.Active,
+							Status:   tuple.Status,
+							AlertKey: ak,
+							Alert:    ak.Name(),
+							Subject:  st.Subject,
+							Ago:      marshalTime(st.Last().Time),
+						})
+					}
+					grouped = append(grouped, &g)
 				}
-				for _, ak := range group {
-					st := s.status[ak]
-					g.Children = append(g.Children, &StateGroup{
-						Active:   tuple.Active,
-						Status:   tuple.Status,
-						AlertKey: ak,
-						Alert:    ak.Name(),
-						Subject:  st.Subject,
-						Ago:      marshalTime(st.Last().Time),
-					})
-				}
-				grouped = append(grouped, &g)
+			default:
+				continue
 			}
-		default:
-			continue
+			if tuple.NeedAck {
+				t.Groups.NeedAck = append(t.Groups.NeedAck, grouped...)
+			} else {
+				t.Groups.Acknowledged = append(t.Groups.Acknowledged, grouped...)
+			}
 		}
-		if tuple.NeedAck {
-			t.Groups.NeedAck = append(t.Groups.NeedAck, grouped...)
-		} else {
-			t.Groups.Acknowledged = append(t.Groups.Acknowledged, grouped...)
-		}
-	}
+	})
 	gsort := func(grp []*StateGroup) func(i, j int) bool {
 		return func(i, j int) bool {
 			a := grp[i]

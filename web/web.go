@@ -264,7 +264,7 @@ func MetadataMetrics(t miniprofiler.Timer, w http.ResponseWriter, r *http.Reques
 }
 
 func Alerts(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	return schedule.MarshalGroups(r.FormValue("filter"))
+	return schedule.MarshalGroups(t, r.FormValue("filter"))
 }
 
 func Status(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
