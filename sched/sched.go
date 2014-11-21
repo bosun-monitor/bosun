@@ -396,6 +396,8 @@ func (s *Schedule) Load(c *conf.Conf) {
 
 // Restores notification and alert state from the file on disk.
 func (s *Schedule) RestoreState() {
+	log.Println("RestoreState")
+	start := time.Now()
 	s.Lock()
 	defer s.Unlock()
 	s.Search.Lock()
@@ -468,6 +470,7 @@ func (s *Schedule) RestoreState() {
 		log.Println(err)
 	}
 	s.Search.Copy()
+	log.Println("RestoreState done in", time.Since(start))
 }
 
 var savePending bool
