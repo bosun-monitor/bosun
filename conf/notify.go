@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/mail"
 	"net/smtp"
+	"strings"
 
 	"github.com/bosun-monitor/bosun/_third_party/github.com/bosun-monitor/collect"
 	"github.com/bosun-monitor/bosun/_third_party/github.com/jordan-wright/email"
@@ -82,7 +83,7 @@ func (n *Notification) DoEmail(subject, body []byte, c *Conf, ak string, attachm
 	for _, a := range attachments {
 		e.Attach(bytes.NewBuffer(a.Data), a.Filename, a.ContentType)
 	}
-	if err := Send(e, c.SmtpHost); err != nil {
+	if err := Send(e, c.SmtpHost, c.SmtpUsername, c.SmtpPassword); err != nil {
 		collect.Add("email.sent_failed", nil, 1)
 		log.Printf("failed to send alert %v to %v %v\n", ak, e.To, err)
 		return
@@ -95,7 +96,7 @@ func (n *Notification) DoEmail(subject, body []byte, c *Conf, ak string, attachm
 // error thrown by smtp.SendMail. This function merges the To, Cc, and Bcc
 // fields and calls the smtp.SendMail function using the Email.Bytes() output as
 // the message.
-func Send(e *email.Email, addr string) error {
+func Send(e *email.Email, addr, username, password string) error {
 	// Merge the To, Cc, and Bcc fields
 	to := make([]string, 0, len(e.To)+len(e.Cc)+len(e.Bcc))
 	to = append(append(append(to, e.To...), e.Cc...), e.Bcc...)
@@ -111,14 +112,14 @@ func Send(e *email.Email, addr string) error {
 	if err != nil {
 		return err
 	}
-	return SendMail(addr, from.Address, to, raw)
+	return SendMail(addr, username, password, from.Address, to, raw)
 }
 
 // SendMail connects to the server at addr, switches to TLS if
 // possible, authenticates with the optional mechanism a if possible,
 // and then sends an email from address from, to addresses to, with
 // message msg.
-func SendMail(addr string, from string, to []string, msg []byte) error {
+func SendMail(addr, username, password string, from string, to []string, msg []byte) error {
 	c, err := smtp.Dial(addr)
 	if err != nil {
 		return err
@@ -130,6 +131,11 @@ func SendMail(addr string, from string, to []string, msg []byte) error {
 	if ok, _ := c.Extension("STARTTLS"); ok {
 		if err = c.StartTLS(&tls.Config{InsecureSkipVerify: true}); err != nil {
 			return err
+		}
+		if len(username) > 0 || len(password) > 0 {
+			hostWithoutPort := strings.Split(addr, ":")[0]
+			auth := smtp.PlainAuth("", username, password, hostWithoutPort)
+			c.Auth(auth)
 		}
 	}
 	if err = c.Mail(from); err != nil {
