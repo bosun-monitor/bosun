@@ -31,6 +31,8 @@ type Conf struct {
 	HttpListen      string        // Web server listen address: :80
 	RelayListen     string        // OpenTSDB relay listen address: :4242
 	SmtpHost        string        // SMTP address: ny-mail:25
+	SmtpUsername    string        // SMTP username
+	SmtpPassword    string        // SMTP password
 	Ping            bool
 	EmailFrom       string
 	StateFile       string
@@ -356,6 +358,10 @@ func (c *Conf) loadGlobal(p *parse.PairNode) {
 		c.RelayListen = v
 	case "smtpHost":
 		c.SmtpHost = v
+	case "smtpUsername":
+		c.SmtpUsername = v
+	case "smtpPassword":
+		c.SmtpPassword = v
 	case "emailFrom":
 		c.EmailFrom = v
 	case "stateFile":
