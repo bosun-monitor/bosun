@@ -652,13 +652,22 @@ func (s *State) Status() Status {
 	return s.Last().Status
 }
 
+// AbnormalEvent returns the most recent non-normal event, or nil if none found.
+func (s *State) AbnormalEvent() *Event {
+	for i := len(s.History) - 1; i >= 0; i-- {
+		if ev := s.History[i]; ev.Status > StNormal {
+			return &ev
+		}
+	}
+	return nil
+}
+
 // AbnormalStatus returns the most recent non-normal status, or StNone if none
 // found.
 func (s *State) AbnormalStatus() Status {
-	for i := len(s.History) - 1; i >= 0; i-- {
-		if st := s.History[i].Status; st > StNormal {
-			return st
-		}
+	ev := s.AbnormalEvent()
+	if ev != nil {
+		return ev.Status
 	}
 	return StNone
 }
