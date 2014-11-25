@@ -17,7 +17,7 @@ ENV JAVA_HOME /usr/lib/jvm/java-6-openjdk-amd64
 
 COPY tmp /
 
-COPY bosun.conf /bosun/
+COPY bosun.conf /data/
 COPY hbase-site.xml $HBASE/conf/
 COPY start_hbase.sh /hbase/
 COPY start_opentsdb.sh /tsdb/
