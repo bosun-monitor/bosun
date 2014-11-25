@@ -690,7 +690,7 @@ func (s *Schedule) Action(user, message string, t ActionType, ak expr.AlertKey) 
 		delete(s.Notifications, ak)
 		st.NeedAck = false
 	}
-	isUnknown := st.Last().Status == StUnknown
+	isUnknown := st.AbnormalStatus() == StUnknown
 	switch t {
 	case ActionAcknowledge:
 		if !st.NeedAck {
