@@ -484,7 +484,15 @@ func (p *Pinger) recvICMP(conn *net.IPConn, recv chan<- *packet, ctx *context, w
 			}
 		}
 		p.debugln("recvICMP(): p.recv <- packet")
-		recv <- &packet{bytes: bytes, addr: ra}
+
+		select {
+		case recv <- &packet{bytes: bytes, addr: ra}:
+		case <-ctx.stop:
+			p.debugln("recvICMP(): <-ctx.stop")
+			wg.Done()
+			p.debugln("recvICMP(): wg.Done()")
+			return
+		}
 	}
 }
 
