@@ -142,7 +142,6 @@ type Win32_NetworkAdapterConfiguration struct {
 	IPAddress      *[]string //Both IPv4 and IPv6
 	InterfaceIndex uint32
 }
-
 type MSFT_NetLbfoTeamMember struct {
 	Name             string
 	ReceiveLinkSpeed uint64
