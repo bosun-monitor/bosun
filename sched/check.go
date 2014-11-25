@@ -14,16 +14,20 @@ import (
 	"github.com/bosun-monitor/bosun/expr"
 )
 
+func NewStatus(ak expr.AlertKey) *State {
+	g := ak.Group()
+	return &State{
+		Alert: ak.Name(),
+		Tags:  g.Tags(),
+		Group: g,
+	}
+}
+
 func (s *Schedule) Status(ak expr.AlertKey) *State {
 	s.Lock()
 	state := s.status[ak]
 	if state == nil {
-		g := ak.Group()
-		state = &State{
-			Alert: ak.Name(),
-			Tags:  g.Tags(),
-			Group: g,
-		}
+		state = NewStatus(ak)
 		s.status[ak] = state
 	}
 	s.Unlock()
@@ -72,6 +76,10 @@ func (s *Schedule) RunHistory(r *RunHistory) {
 	defer s.Unlock()
 	for ak, event := range r.Events {
 		state := s.status[ak]
+		if state == nil {
+			state = NewStatus(ak)
+			s.status[ak] = state
+		}
 		last := state.Append(event)
 		a := s.Conf.Alerts[ak.Name()]
 		if event.Status > StNormal {
