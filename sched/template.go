@@ -95,8 +95,13 @@ func (c *Context) Rule() (string, error) {
 	p := url.Values{}
 	adef := base64.StdEncoding.EncodeToString([]byte(t.Alerts[c.Alert.Name]))
 	tdef := base64.StdEncoding.EncodeToString([]byte(t.Templates[c.Alert.Template.Name]))
+	//There might be something better when we tie the notifications to evaluation time issue #395
+	time := time.Now().UTC()
 	p.Add("alert", adef)
 	p.Add("template", tdef)
+	p.Add("fromDate", time.Format("2006-01-02"))
+	p.Add("fromTime", time.Format("15:04"))
+	p.Add("template_group", c.Group.Tags())
 	return c.makeLink("/rule", &p), nil
 }
 
