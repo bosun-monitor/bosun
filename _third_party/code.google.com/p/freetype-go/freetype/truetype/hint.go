@@ -668,7 +668,7 @@ func (h *hinter) run(program []byte, pCurrent, pUnhinted, pInFontUnits []Point, 
 			if ref == nil || p == nil {
 				return errors.New("truetype: hinting: point out of range")
 			}
-			curDist := dotProduct(f26dot6(p.X-ref.X), f26dot6(p.Y-ref.Y), h.gs.pv)
+			curDist := dotProduct(f26dot6(p.X-ref.X), f26dot6(p.Y-ref.Y), h.gs.dv)
 
 			// Set-RP0 bit.
 			if opcode == opMSIRP1 {
@@ -1343,8 +1343,8 @@ func (h *hinter) run(program []byte, pCurrent, pUnhinted, pInFontUnits []Point, 
 				h.initializeScaledCVT()
 			}
 			top--
-			n := h.stack[top]
-			if int32(top) < 2*n {
+			n := f26dot6(h.stack[top])
+			if top < 2*int(h.gs.loop) {
 				return errors.New("truetype: hinting: stack underflow")
 			}
 			for ; n > 0; n-- {
