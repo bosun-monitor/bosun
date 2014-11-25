@@ -29,10 +29,11 @@ type Conf struct {
 	CheckFrequency  time.Duration // Time between alert checks: 5m
 	TsdbHost        string        // OpenTSDB relay and query destination: ny-devtsdb04:4242
 	HttpListen      string        // Web server listen address: :80
-	RelayListen     string        // OpenTSDB relay listen address: :4242
-	SmtpHost        string        // SMTP address: ny-mail:25
-	SmtpUsername    string        // SMTP username
-	SmtpPassword    string        // SMTP password
+	Hostname        string
+	RelayListen     string // OpenTSDB relay listen address: :4242
+	SmtpHost        string // SMTP address: ny-mail:25
+	SmtpUsername    string // SMTP username
+	SmtpPassword    string // SMTP password
 	Ping            bool
 	EmailFrom       string
 	StateFile       string
@@ -331,6 +332,17 @@ func New(name, text string) (c *Conf, err error) {
 		c.at(nil)
 		c.errorf("tsdbHost required")
 	}
+	if c.Hostname == "" {
+		c.Hostname = c.HttpListen
+		if strings.HasPrefix(c.Hostname, ":") {
+			h, err := os.Hostname()
+			if err != nil {
+				c.at(nil)
+				c.error(err)
+			}
+			c.Hostname = h + c.Hostname
+		}
+	}
 	return
 }
 
@@ -354,6 +366,8 @@ func (c *Conf) loadGlobal(p *parse.PairNode) {
 		c.TsdbHost = v
 	case "httpListen":
 		c.HttpListen = v
+	case "hostname":
+		c.Hostname = v
 	case "relayListen":
 		c.RelayListen = v
 	case "smtpHost":
