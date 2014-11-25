@@ -167,7 +167,7 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 		Error = err
 	}
 	if num_cores != 0 && t_util != 0 {
-		Add(&md, osCPU, t_util/float64(num_cores), nil, metadata.Counter, metadata.Count, "")
+		Add(&md, osCPU, t_util/float64(num_cores), nil, metadata.Counter, metadata.Pct, "")
 	}
 	if err := readLine("/proc/loadavg", func(s string) error {
 		m := loadavgRE.FindStringSubmatch(s)
