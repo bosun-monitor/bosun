@@ -5,16 +5,12 @@ import (
 	"encoding/base64"
 	"fmt"
 	"html/template"
-
 	"io"
 	"math"
 	"net/url"
-	"os"
-	"strings"
 	"time"
 
 	"github.com/bosun-monitor/bosun/_third_party/github.com/bosun-monitor/opentsdb"
-
 	"github.com/bosun-monitor/bosun/conf"
 	"github.com/bosun-monitor/bosun/expr"
 	"github.com/bosun-monitor/bosun/expr/parse"
@@ -59,60 +55,33 @@ func (s *Schedule) unknownData(t time.Time, name string, group expr.AlertKeys) *
 	}
 }
 
-// URL returns a prepopulated URL for external access, with path and query empty.
-func (s *Schedule) URL() *url.URL {
-	u := url.URL{
-		Scheme: "http",
-		Host:   s.Conf.HttpListen,
-	}
-	if strings.HasPrefix(s.Conf.HttpListen, ":") {
-		h, err := os.Hostname()
-		if err != nil {
-			u.Host = "localhost" + u.Host
-		} else {
-			u.Host = h + u.Host
-		}
-	}
-	return &u
-}
-
 // Ack returns the URL to acknowledge an alert.
 func (c *Context) Ack() string {
-	u := c.schedule.URL()
-	u.Path = "/action"
-	u.RawQuery = url.Values{
+	return c.makeLink("/action", &url.Values{
 		"type": []string{"ack"},
 		"key":  []string{c.Alert.Name + c.State.Group.String()},
-	}.Encode()
-	return u.String()
+	})
 }
 
 // HostView returns the URL to the host view page.
 func (c *Context) HostView(host string) string {
-	u := c.schedule.URL()
-	u.Path = "/host"
-	u.RawQuery = fmt.Sprintf("time=1d-ago&host=%s", host)
-	return u.String()
+	return c.makeLink("/host", &url.Values{
+		"time": []string{"1d-ago"},
+		"host": []string{host},
+	})
 }
 
-func (c *Context) makeLink(path string, v *url.Values) (string, error) {
+func (c *Context) makeLink(path string, v *url.Values) string {
 	u := url.URL{
 		Scheme:   "http",
-		Host:     c.schedule.Conf.HttpListen,
+		Host:     c.schedule.Conf.Hostname,
 		Path:     path,
 		RawQuery: v.Encode(),
 	}
-	if strings.HasPrefix(c.schedule.Conf.HttpListen, ":") {
-		h, err := os.Hostname()
-		if err != nil {
-			return "", err
-		}
-		u.Host = h + u.Host
-	}
-	return u.String(), nil
+	return u.String()
 }
 
-func (c *Context) Expr(v string) (string, error) {
+func (c *Context) Expr(v string) string {
 	p := url.Values{}
 	p.Add("expr", base64.StdEncoding.EncodeToString([]byte(opentsdb.ReplaceTags(v, c.Group))))
 	return c.makeLink("/expr", &p)
@@ -128,7 +97,7 @@ func (c *Context) Rule() (string, error) {
 	tdef := base64.StdEncoding.EncodeToString([]byte(t.Templates[c.Alert.Template.Name]))
 	p.Add("alert", adef)
 	p.Add("template", tdef)
-	return c.makeLink("/rule", &p)
+	return c.makeLink("/rule", &p), nil
 }
 
 func (s *Schedule) ExecuteBody(w io.Writer, rh *RunHistory, a *conf.Alert, st *State, isEmail bool) ([]*conf.Attachment, error) {
