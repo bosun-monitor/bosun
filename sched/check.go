@@ -99,6 +99,7 @@ func (s *Schedule) RunHistory(r *RunHistory) {
 			// Auto close ignoreUnknowns.
 			if a.IgnoreUnknown && event.Status == StUnknown {
 				state.Open = false
+				state.Forgotten = true
 				state.NeedAck = false
 				state.Action("bosun", "Auto close because alert has ignoreUnknown.", ActionClose)
 				log.Printf("auto close %s because alert has ignoreUnknown", ak)
