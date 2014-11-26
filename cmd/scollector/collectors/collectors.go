@@ -64,6 +64,7 @@ var (
 
 	timestamp = time.Now().Unix()
 	tlock     sync.Mutex
+	AddTags   opentsdb.TagSet
 )
 
 func init() {
@@ -123,6 +124,7 @@ func AddTS(md *opentsdb.MultiDataPoint, name string, ts int64, value interface{}
 	} else if host == "" {
 		delete(tags, "host")
 	}
+	tags = AddTags.Copy().Merge(tags)
 	d := opentsdb.DataPoint{
 		Metric:    name,
 		Timestamp: ts,
