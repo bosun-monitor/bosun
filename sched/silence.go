@@ -61,15 +61,15 @@ func (s Silence) ID() string {
 
 // Silenced returns all currently silenced AlertKeys and the time they will be
 // unsilenced.
-func (s *Schedule) Silenced() map[expr.AlertKey]time.Time {
-	aks := make(map[expr.AlertKey]time.Time)
+func (s *Schedule) Silenced() map[expr.AlertKey]Silence {
+	aks := make(map[expr.AlertKey]Silence)
 	now := time.Now()
 	s.Lock()
 	for _, si := range s.Silence {
 		for ak := range s.status {
 			if si.Silenced(now, ak.Name(), ak.Group()) {
-				if aks[ak].Before(si.End) {
-					aks[ak] = si.End
+				if aks[ak].End.Before(si.End) {
+					aks[ak] = *si
 				}
 			}
 		}

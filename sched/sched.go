@@ -251,7 +251,7 @@ type StateGroups struct {
 		Acknowledged []*StateGroup `json:",omitempty"`
 	}
 	TimeAndDate []int
-	Silenced    map[expr.AlertKey]time.Time
+	Silenced    map[expr.AlertKey]Silence
 }
 
 func (s *Schedule) MarshalGroups(T miniprofiler.Timer, filter string) (*StateGroups, error) {
