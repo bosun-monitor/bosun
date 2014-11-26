@@ -14,6 +14,7 @@ type Silence struct {
 	Start, End time.Time
 	Alert      string
 	Tags       opentsdb.TagSet
+	Forget     bool
 }
 
 func (s *Silence) MarshalJSON() ([]byte, error) {
@@ -21,11 +22,13 @@ func (s *Silence) MarshalJSON() ([]byte, error) {
 		Start, End time.Time
 		Alert      string
 		Tags       string
+		Forget     bool
 	}{
-		Start: s.Start,
-		End:   s.End,
-		Alert: s.Alert,
-		Tags:  s.Tags.Tags(),
+		Start:  s.Start,
+		End:    s.End,
+		Alert:  s.Alert,
+		Tags:   s.Tags.Tags(),
+		Forget: s.Forget,
 	})
 }
 
@@ -78,7 +81,7 @@ func (s *Schedule) Silenced() map[expr.AlertKey]Silence {
 	return aks
 }
 
-func (s *Schedule) AddSilence(start, end time.Time, alert, tagList string, confirm bool, edit string) (map[expr.AlertKey]bool, error) {
+func (s *Schedule) AddSilence(start, end time.Time, alert, tagList string, forget, confirm bool, edit string) (map[expr.AlertKey]bool, error) {
 	if start.IsZero() || end.IsZero() {
 		return nil, fmt.Errorf("both start and end must be specified")
 	}
@@ -92,10 +95,11 @@ func (s *Schedule) AddSilence(start, end time.Time, alert, tagList string, confi
 		return nil, fmt.Errorf("must specify either alert or tags")
 	}
 	si := &Silence{
-		Start: start,
-		End:   end,
-		Alert: alert,
-		Tags:  make(opentsdb.TagSet),
+		Start:  start,
+		End:    end,
+		Alert:  alert,
+		Tags:   make(opentsdb.TagSet),
+		Forget: forget,
 	}
 	if tagList != "" {
 		tags, err := opentsdb.ParseTags(tagList)

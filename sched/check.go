@@ -112,6 +112,13 @@ func (s *Schedule) RunHistory(r *RunHistory) {
 				state.Action("bosun", "Auto close because alert has ignoreUnknown.", ActionClose)
 				log.Printf("auto close %s because alert has ignoreUnknown", ak)
 				return
+			} else if silenced[ak].Forget && event.Status == StUnknown {
+				state.Open = false
+				state.Forgotten = true
+				state.NeedAck = false
+				state.Action("bosun", "Auto close because alert is silenced and marked auto forget.", ActionClose)
+				log.Printf("auto close %s because alert is silenced and marked auto forget", ak)
+				return
 			}
 			state.NeedAck = true
 			switch event.Status {

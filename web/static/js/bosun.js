@@ -1911,6 +1911,7 @@ bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$ro
     $scope.hosts = search.hosts;
     $scope.tags = search.tags;
     $scope.edit = search.edit;
+    $scope.forget = search.forget;
     if (!$scope.end && !$scope.duration) {
         $scope.duration = '1h';
     }
@@ -1936,11 +1937,12 @@ bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$ro
             duration: $scope.duration,
             alert: $scope.alert,
             tags: tags.join(','),
-            edit: $scope.edit
+            edit: $scope.edit,
+            forget: $scope.forget ? 'true' : null
         };
         return data;
     }
-    var any = search.start || search.end || search.duration || search.alert || search.hosts || search.tags;
+    var any = search.start || search.end || search.duration || search.alert || search.hosts || search.tags || search.forget;
     var state = getData();
     $scope.change = function () {
         $scope.disableConfirm = true;
@@ -1963,6 +1965,7 @@ bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$ro
         $location.search('alert', $scope.alert || null);
         $location.search('hosts', $scope.hosts || null);
         $location.search('tags', $scope.tags || null);
+        $location.search('forget', $scope.forget || null);
         $route.reload();
     };
     $scope.confirm = function () {

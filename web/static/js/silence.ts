@@ -15,6 +15,7 @@ interface ISilenceScope extends ng.IScope {
 	change: () => void;
 	disableConfirm: boolean;
 	time: (v: any) => string;
+	forget: string;
 }
 
 bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$route', function($scope: ISilenceScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService) {
@@ -26,6 +27,7 @@ bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$ro
 	$scope.hosts = search.hosts;
 	$scope.tags = search.tags;
 	$scope.edit = search.edit;
+	$scope.forget = search.forget;
 	if (!$scope.end && !$scope.duration) {
 		$scope.duration = '1h';
 	}
@@ -52,10 +54,11 @@ bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$ro
 			alert: $scope.alert,
 			tags: tags.join(','),
 			edit: $scope.edit,
+			forget: $scope.forget ? 'true' : null,
 		};
 		return data;
 	}
-	var any = search.start || search.end || search.duration || search.alert || search.hosts || search.tags;
+	var any = search.start || search.end || search.duration || search.alert || search.hosts || search.tags || search.forget;
 	var state = getData();
 	$scope.change = () => {
 		$scope.disableConfirm = true;
@@ -80,6 +83,7 @@ bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$ro
 		$location.search('alert', $scope.alert || null);
 		$location.search('hosts', $scope.hosts || null);
 		$location.search('tags', $scope.tags || null);
+		$location.search('forget', $scope.forget || null);
 		$route.reload();
 	};
 	$scope.confirm = () => {
