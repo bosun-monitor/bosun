@@ -42,6 +42,7 @@ var (
 	flagFake            = flag.Int("fake", 0, "Generates X fake data points on the test.fake metric per second.")
 	flagDebug           = flag.Bool("d", false, "Enables debug output.")
 	flagFullHost        = flag.Bool("u", false, `Enables full hostnames: doesn't truncate to first ".".`)
+	flagTags            = flag.String("t", "", `Tags to add to every datapoint in the format dc=ny,rack=3. If a collector specifies the same tag key, this one will be overwritten.`)
 	flagDisableMetadata = flag.Bool("m", false, "Disable sending of metadata.")
 	flagVersion         = flag.Bool("version", false, "Prints the version and exits.")
 	flagDisableDefault  = flag.Bool("n", false, "Disable sending of scollector self metrics.")
@@ -95,6 +96,8 @@ func readConf() {
 			f(flagSNMP)
 		case "icmp":
 			f(flagICMP)
+		case "tags":
+			f(flagTags)
 		case "vsphere":
 			f(flagVsphere)
 		case "process":
@@ -120,11 +123,17 @@ func main() {
 		fmt.Printf("scollector version %v (%v)\n", VersionDate, VersionID)
 		os.Exit(0)
 	}
+	if *flagTags != "" {
+		var err error
+		collectors.AddTags, err = opentsdb.ParseTags(*flagTags)
+		if err != nil {
+			slog.Fatalf("failed to parse additional tags %v: %v", *flagTags, err)
+		}
+	}
 	for _, m := range mains {
 		m()
 	}
 	readConf()
-
 	util.FullHostname = *flagFullHost
 	util.Set()
 	if *flagColDir != "" {

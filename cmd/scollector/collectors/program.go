@@ -159,6 +159,7 @@ Loop:
 				dp.Tags.Merge(tags)
 			}
 		}
+		dp.Tags = AddTags.Copy().Merge(dp.Tags)
 		dpchan <- &dp
 	}
 	if err := s.Err(); err != nil {
