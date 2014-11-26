@@ -79,7 +79,7 @@ func (s *Schedule) CheckNotifications(rh *RunHistory) time.Duration {
 	return timeout
 }
 
-func (s *Schedule) sendNotifications(rh *RunHistory, silenced map[expr.AlertKey]time.Time) {
+func (s *Schedule) sendNotifications(rh *RunHistory, silenced map[expr.AlertKey]Silence) {
 	if s.Conf.Quiet {
 		log.Println("quiet mode prevented", len(s.notifications), "notifications")
 		return
