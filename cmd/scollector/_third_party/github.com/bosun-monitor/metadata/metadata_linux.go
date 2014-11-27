@@ -1,6 +1,8 @@
 package metadata
 
 import (
+	"io/ioutil"
+	"net"
 	"strconv"
 	"strings"
 
@@ -39,25 +41,15 @@ func metaLinuxVersion() {
 }
 
 func metaLinuxIfaces() {
-	_ = util.ReadCommand(func(line string) error {
-		var iface string
-		sp := strings.Fields(line)
-		if len(sp) == 0 {
-			iface = ""
-			return nil
+	metaIfaces(func(iface net.Interface, tags opentsdb.TagSet) {
+		speed, err := ioutil.ReadFile("/sys/class/net/" + iface.Name + "/speed")
+		if err != nil {
+			return
 		}
-		if iface == "" {
-			iface = sp[0]
+		v, _ := strconv.Atoi(strings.TrimSpace(string(speed)))
+		if v > 0 {
+			const MbitToBit = 1e6
+			AddMeta("", tags, "speed", v*MbitToBit, true)
 		}
-		if iface == "lo" {
-			return nil
-		}
-		if len(sp) > 1 && sp[0] == "inet" {
-			asp := strings.Split(sp[1], ":")
-			if len(asp) == 2 && asp[0] == "addr" {
-				AddMeta("", opentsdb.TagSet{"iface": iface}, "addr", asp[1], true)
-			}
-		}
-		return nil
-	}, "ifconfig")
+	})
 }
