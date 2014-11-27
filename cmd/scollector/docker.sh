@@ -6,4 +6,5 @@ if  type boot2docker >/dev/null 2>&1; then
 fi
 
 DIR=/go/src/github.com/bosun-monitor/scollector
+#docker run --rm -v "$(pwd)":$DIR -w $DIR golang:cross sh test.sh
 docker run --rm -v "$(pwd)":$DIR -w $DIR golang:cross sh build.sh
