@@ -132,6 +132,11 @@ var builtins = map[string]parse.Func{
 		parse.TYPE_SERIES,
 		DropNA,
 	},
+	"hist": {
+		[]parse.FuncType{parse.TYPE_SERIES, parse.TYPE_SCALAR},
+		parse.TYPE_SERIES,
+		Histogram,
+	},
 	"lookup": {
 		[]parse.FuncType{parse.TYPE_STRING, parse.TYPE_STRING},
 		parse.TYPE_NUMBER,
@@ -161,6 +166,40 @@ func DropNA(e *state, T miniprofiler.Timer, series *Results) (*Results, error) {
 			return nil, fmt.Errorf("dropna: series %s is empty", res.Group)
 		}
 		res.Value = nv
+	}
+	return series, nil
+}
+
+func Histogram(e *state, T miniprofiler.Timer, series *Results, bin_count float64) (*Results, error) {
+	for _, res := range series.Results {
+		min := percentile(res.Value.Value().(Series), 0)
+		max := percentile(res.Value.Value().(Series), 1)
+		bins := make([]float64, int(bin_count)+1)
+		bin_size := (max - min) / math.Floor(bin_count)
+		var i int64
+		//Build the bins based on binsize
+		for b := min; b < max; b += bin_size {
+			bins[i] = b
+			i++
+		}
+		bm := make(map[float64]float64)
+		for _, v := range res.Value.Value().(Series) {
+			for i, _ := range bins {
+				if i == len(bins)-1 {
+					bm[bins[len(bins)-2]] += 1
+					break
+				}
+				if float64(v) <= bins[i] && float64(v) < bins[i+1] {
+					bm[bins[i]]++
+					break
+				}
+			}
+		}
+		ns := make(Series)
+		for k, v := range bm {
+			ns[fmt.Sprintf("%v", k)] = opentsdb.Point(v)
+		}
+		res.Value = ns
 	}
 	return series, nil
 }
