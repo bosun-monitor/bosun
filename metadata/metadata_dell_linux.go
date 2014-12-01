@@ -1,5 +1,8 @@
 package metadata
 
+// Restrict to Linux because, although omreport runs fine on Windows, the
+// Windows metadata uses WMI to fetch this information.
+
 import (
 	"strings"
 
