@@ -488,7 +488,7 @@ func First(e *state, T miniprofiler.Timer, series *Results) (*Results, error) {
 func first(dps Series, args ...float64) (a float64) {
 	first := int64(math.MaxInt64)
 	for k, v := range dps {
-		d, err := strconv.Atoi(k)
+		d, err := strconv.ParseInt(k, 10, 64)
 		if err != nil {
 			panic(err)
 		}
