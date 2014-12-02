@@ -113,7 +113,7 @@ func main() {
 		args = append(args, matches...)
 		tsc := run("tsc", args...)
 		watch(base, "*.ts", tsc)
-		tsc()
+		go tsc()
 	}
 	select {}
 }
