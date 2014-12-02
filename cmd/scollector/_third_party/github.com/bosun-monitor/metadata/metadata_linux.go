@@ -1,6 +1,7 @@
 package metadata
 
 import (
+	"errors"
 	"io/ioutil"
 	"net"
 	"strconv"
@@ -40,16 +41,26 @@ func metaLinuxVersion() {
 	}, "cat", "/etc/issue")
 }
 
+var doneErr = errors.New("")
+
 func metaLinuxIfaces() {
 	metaIfaces(func(iface net.Interface, tags opentsdb.TagSet) {
-		speed, err := ioutil.ReadFile("/sys/class/net/" + iface.Name + "/speed")
-		if err != nil {
-			return
+		if speed, err := ioutil.ReadFile("/sys/class/net/" + iface.Name + "/speed"); err == nil {
+			v, _ := strconv.Atoi(strings.TrimSpace(string(speed)))
+			if v > 0 {
+				const MbitToBit = 1e6
+				AddMeta("", tags, "speed", v*MbitToBit, true)
+			}
 		}
-		v, _ := strconv.Atoi(strings.TrimSpace(string(speed)))
-		if v > 0 {
-			const MbitToBit = 1e6
-			AddMeta("", tags, "speed", v*MbitToBit, true)
-		}
+		_ = util.ReadCommand(func(line string) error {
+			sp := strings.Fields(line)
+			for i := 4; i < len(sp); i += 2 {
+				if sp[i-1] == "master" {
+					AddMeta("", tags, "master", sp[i], true)
+					return doneErr
+				}
+			}
+			return nil
+		}, "ip", "-o", "addr", "show", iface.Name)
 	})
 }
