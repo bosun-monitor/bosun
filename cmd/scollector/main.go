@@ -123,6 +123,10 @@ func main() {
 		fmt.Printf("scollector version %v (%v)\n", VersionDate, VersionID)
 		os.Exit(0)
 	}
+	for _, m := range mains {
+		m()
+	}
+	readConf()
 	if *flagTags != "" {
 		var err error
 		collectors.AddTags, err = opentsdb.ParseTags(*flagTags)
@@ -130,10 +134,6 @@ func main() {
 			slog.Fatalf("failed to parse additional tags %v: %v", *flagTags, err)
 		}
 	}
-	for _, m := range mains {
-		m()
-	}
-	readConf()
 	util.FullHostname = *flagFullHost
 	util.Set()
 	if *flagColDir != "" {
