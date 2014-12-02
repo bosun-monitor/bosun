@@ -2,6 +2,7 @@ package sched
 
 import (
 	"bytes"
+	"fmt"
 	"log"
 	"time"
 
@@ -110,15 +111,21 @@ func (s *Schedule) sendNotifications(rh *RunHistory, silenced map[expr.AlertKey]
 func (s *Schedule) notify(rh *RunHistory, st *State, n *conf.Notification) {
 	a := s.Conf.Alerts[st.Alert]
 	subject := new(bytes.Buffer)
-	if err := s.ExecuteSubject(subject, rh, a, st); err != nil {
-		log.Println(err)
-		subject = bytes.NewBufferString(err.Error())
+	var s_err, b_err error
+	if s_err = s.ExecuteSubject(subject, rh, a, st); s_err != nil {
+		log.Printf("%s: %v", st.AlertKey(), s_err)
 	}
 	body := new(bytes.Buffer)
-	attachments, err := s.ExecuteBody(body, rh, a, st, true)
-	if err != nil {
-		log.Println(err)
-		body = bytes.NewBufferString(err.Error())
+	attachments, b_err := s.ExecuteBody(body, rh, a, st, true)
+	if b_err != nil {
+		log.Printf("%s: %v", st.AlertKey(), b_err)
+	}
+	if s_err != nil || b_err != nil {
+		var err error
+		subject, body, err = s.ExecuteBadTemplate(s_err, b_err, rh, a, st)
+		if err != nil {
+			subject = bytes.NewBufferString(fmt.Sprintf("unable to create tempalate error notification: %v", err))
+		}
 	}
 	n.Notify(subject.Bytes(), body.Bytes(), s.Conf, string(st.AlertKey()), attachments...)
 }

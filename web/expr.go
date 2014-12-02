@@ -132,11 +132,12 @@ func procRule(t miniprofiler.Timer, c *conf.Conf, a *conf.Alert, now time.Time, 
 				warning = append(warning, fmt.Sprintf("template group %s was not a subset of any result", template_group))
 			}
 		}
+		var s_err error
 		if _, err := s.ExecuteBody(body, rh, a, instance, false); err != nil {
 			warning = append(warning, err.Error())
 		}
-		if err := s.ExecuteSubject(subject, rh, a, instance); err != nil {
-			warning = append(warning, err.Error())
+		if s_err = s.ExecuteSubject(subject, rh, a, instance); s_err != nil {
+			warning = append(warning, s_err.Error())
 		}
 		data = s.Data(rh, instance, a, false)
 		if email != "" {
@@ -148,8 +149,16 @@ func procRule(t miniprofiler.Timer, c *conf.Conf, a *conf.Alert, now time.Time, 
 				Email: []*mail.Address{m},
 			}
 			email := new(bytes.Buffer)
-			attachments, err := s.ExecuteBody(email, rh, a, instance, true)
-			n.DoEmail(subject.Bytes(), email.Bytes(), schedule.Conf, string(instance.AlertKey()), attachments...)
+			email_subject := subject
+			attachments, b_err := s.ExecuteBody(email, rh, a, instance, true)
+			if s_err != nil || b_err != nil {
+				var err error
+				email_subject, email, err = s.ExecuteBadTemplate(s_err, b_err, rh, a, instance)
+				if err != nil {
+					subject = bytes.NewBufferString(fmt.Sprintf("unable to create tempalate error notification: %v", err))
+				}
+			}
+			n.DoEmail(email_subject.Bytes(), email.Bytes(), schedule.Conf, string(instance.AlertKey()), attachments...)
 		}
 	}
 	return &ruleResult{
