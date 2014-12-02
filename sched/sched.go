@@ -910,6 +910,10 @@ func (s *Schedule) Host(filter string) map[string]*HostData {
 				}
 			case "manufacturer":
 				e.Manufacturer = val
+			case "master":
+				if iface != nil {
+					iface.Master = val
+				}
 			case "memory":
 				if name := tags["name"]; name != "" {
 					e.Memory.Modules[name] = val
@@ -952,6 +956,7 @@ type HostInterface struct {
 	Inbps       int64    `json:",omitempty"`
 	LinkSpeed   int64    `json:",omitempty"`
 	MAC         string   `json:",omitempty"`
+	Master      string   `json:",omitempty"`
 	Name        string   `json:",omitempty"`
 	Outbps      int64    `json:",omitempty"`
 }
