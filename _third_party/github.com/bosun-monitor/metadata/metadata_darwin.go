@@ -8,7 +8,7 @@ import (
 )
 
 func init() {
-	metafuncs = append(metafuncs, metaDarwinVersion)
+	metafuncs = append(metafuncs, metaDarwinVersion, metaDarwinInterfaces)
 }
 
 func metaDarwinVersion() {
@@ -37,4 +37,8 @@ func metaDarwinVersion() {
 		AddMeta("", nil, "version", fmt.Sprintf("%s.%s", vers, build), true)
 		AddMeta("", nil, "versionCaption", fmt.Sprintf("%s %s", name, vers), true)
 	}
+}
+
+func metaDarwinInterfaces() {
+	metaIfaces(nil)
 }

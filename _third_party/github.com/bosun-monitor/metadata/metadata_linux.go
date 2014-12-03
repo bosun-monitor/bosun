@@ -1,6 +1,9 @@
 package metadata
 
 import (
+	"errors"
+	"io/ioutil"
+	"net"
 	"strconv"
 	"strings"
 
@@ -38,26 +41,34 @@ func metaLinuxVersion() {
 	}, "cat", "/etc/issue")
 }
 
+var doneErr = errors.New("")
+
+// metaLinuxIfacesMaster returns the bond master from s or "" if none exists.
+func metaLinuxIfacesMaster(line string) string {
+	sp := strings.Fields(line)
+	for i := 4; i < len(sp); i += 2 {
+		if sp[i-1] == "master" {
+			return sp[i]
+		}
+	}
+	return ""
+}
+
 func metaLinuxIfaces() {
-	_ = util.ReadCommand(func(line string) error {
-		var iface string
-		sp := strings.Fields(line)
-		if len(sp) == 0 {
-			iface = ""
-			return nil
-		}
-		if iface == "" {
-			iface = sp[0]
-		}
-		if iface == "lo" {
-			return nil
-		}
-		if len(sp) > 1 && sp[0] == "inet" {
-			asp := strings.Split(sp[1], ":")
-			if len(asp) == 2 && asp[0] == "addr" {
-				AddMeta("", opentsdb.TagSet{"iface": iface}, "addr", asp[1], true)
+	metaIfaces(func(iface net.Interface, tags opentsdb.TagSet) {
+		if speed, err := ioutil.ReadFile("/sys/class/net/" + iface.Name + "/speed"); err == nil {
+			v, _ := strconv.Atoi(strings.TrimSpace(string(speed)))
+			if v > 0 {
+				const MbitToBit = 1e6
+				AddMeta("", tags, "speed", v*MbitToBit, true)
 			}
 		}
-		return nil
-	}, "ifconfig")
+		_ = util.ReadCommand(func(line string) error {
+			if v := metaLinuxIfacesMaster(line); v != "" {
+				AddMeta("", tags, "master", v, true)
+				return doneErr
+			}
+			return nil
+		}, "ip", "-o", "addr", "show", iface.Name)
+	})
 }
