@@ -55,10 +55,8 @@ var (
 	sets                             = make(map[string]*setMetric)
 	puts                             = make(map[string]*putMetric)
 	client              *http.Client = &http.Client{
-		// Disable the Transport until
-		// https://github.com/bosun-monitor/bosun-monitor.github.io is fixed.
-		//Transport: &timeoutTransport{Transport: new(http.Transport)},
-		Timeout: time.Minute,
+		Transport: &timeoutTransport{Transport: new(http.Transport)},
+		Timeout:   time.Minute,
 	}
 )
 
