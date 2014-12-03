@@ -43,6 +43,17 @@ func metaLinuxVersion() {
 
 var doneErr = errors.New("")
 
+// metaLinuxIfacesMaster returns the bond master from s or "" if none exists.
+func metaLinuxIfacesMaster(line string) string {
+	sp := strings.Fields(line)
+	for i := 4; i < len(sp); i += 2 {
+		if sp[i-1] == "master" {
+			return sp[i]
+		}
+	}
+	return ""
+}
+
 func metaLinuxIfaces() {
 	metaIfaces(func(iface net.Interface, tags opentsdb.TagSet) {
 		if speed, err := ioutil.ReadFile("/sys/class/net/" + iface.Name + "/speed"); err == nil {
@@ -53,12 +64,9 @@ func metaLinuxIfaces() {
 			}
 		}
 		_ = util.ReadCommand(func(line string) error {
-			sp := strings.Fields(line)
-			for i := 4; i < len(sp); i += 2 {
-				if sp[i-1] == "master" {
-					AddMeta("", tags, "master", sp[i], true)
-					return doneErr
-				}
+			if v := metaLinuxIfacesMaster(line); v != "" {
+				AddMeta("", tags, "master", v, true)
+				return doneErr
 			}
 			return nil
 		}, "ip", "-o", "addr", "show", iface.Name)
