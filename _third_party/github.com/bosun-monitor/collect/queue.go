@@ -85,10 +85,14 @@ func sendBatch(batch []json.RawMessage) {
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Content-Encoding", "gzip")
+	now := time.Now()
 	resp, err := client.Do(req)
+	d := time.Since(now).Nanoseconds() / 1e6
 	if err == nil {
 		defer resp.Body.Close()
 	}
+	Add("collect.post.total_duration", nil, d)
+	Add("collect.post.count", nil, 1)
 	// Some problem with connecting to the server; retry later.
 	if err != nil || resp.StatusCode != http.StatusNoContent {
 		if err != nil {
