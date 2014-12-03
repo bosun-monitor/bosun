@@ -367,5 +367,19 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 		Add(&md, "linux.net.bond.slave.count", slave_count, opentsdb.TagSet{"bond": fi.Name()}, metadata.Gauge, metadata.Bool, "The number of slaves on the bonded interface.")
 	}
 	// TODO: Bonding monitoring for CentOS 7 using /var/run/teamd/* and teamdctl <team0> state
+	if err := readLine("/proc/sys/fs/file-nr", func(s string) error {
+		f := strings.Fields(s)
+		if len(f) != 3 {
+			return fmt.Errorf("unexpected number of fields")
+		}
+		v, err := strconv.ParseInt(f[0], 10, 64)
+		if err != nil {
+			return err
+		}
+		Add(&md, "linux.fs.open", v, nil, metadata.Gauge, metadata.Count, "The number of files presently open.")
+		return nil
+	}); err != nil {
+		Error = err
+	}
 	return md, Error
 }
