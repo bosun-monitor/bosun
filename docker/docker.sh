@@ -2,9 +2,8 @@
 
 set -e
 
-boot2docker=$(which boot2docker)
-if [ -x "$boot2docker" ]; then
-	boot2docker ssh sudo ntpclient -s -h pool.ntp.org
+if  type boot2docker >/dev/null 2>&1; then
+        boot2docker ssh sudo ntpclient -s -h pool.ntp.org
 fi
 
 docker build -t bosun-builder builder
