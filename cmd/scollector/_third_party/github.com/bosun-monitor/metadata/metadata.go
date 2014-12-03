@@ -39,6 +39,7 @@ const (
 	Entropy             = "entropy"
 	Event               = ""
 	Fault               = "faults"
+	Files               = "files"
 	Interupt            = "interupts"
 	KBytes              = "kbytes"
 	Load                = "load"

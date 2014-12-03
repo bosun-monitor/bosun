@@ -34,6 +34,16 @@ func linuxProcMonitor(w *WatchedProc, md *opentsdb.MultiDataPoint) error {
 			w.Remove(pid)
 			continue
 		}
+		limits, e := ioutil.ReadFile("/proc/" + pid + "/limits")
+		if e != nil {
+			w.Remove(pid)
+			continue
+		}
+		fds, e := ioutil.ReadDir("/proc/" + pid + "/fd")
+		if e != nil {
+			w.Remove(pid)
+			continue
+		}
 		stats := strings.Fields(string(stats_file))
 		if len(stats) < 24 {
 			err = fmt.Errorf("stats too short")
@@ -51,6 +61,15 @@ func linuxProcMonitor(w *WatchedProc, md *opentsdb.MultiDataPoint) error {
 			continue
 		}
 		tags := opentsdb.TagSet{"name": w.Name, "id": strconv.Itoa(id)}
+		for _, line := range strings.Split(string(limits), "\n") {
+			f := strings.Fields(line)
+			if len(f) == 6 && strings.Join(f[0:3], " ") == "Max open files" {
+				if f[3] != "unlimited" {
+					Add(md, "linux.proc.num_fds_slim", f[3], tags, metadata.Gauge, metadata.Files, descLinuxSoftFileLimit)
+					Add(md, "linux.proc.num_fds_hlim", f[4], tags, metadata.Gauge, metadata.Files, descLinuxHardFileLimit)
+				}
+			}
+		}
 		Add(md, "linux.proc.cpu", stats[13], opentsdb.TagSet{"type": "user"}.Merge(tags), metadata.Counter, metadata.Pct, descLinuxProcCpuUser)
 		Add(md, "linux.proc.cpu", stats[14], opentsdb.TagSet{"type": "system"}.Merge(tags), metadata.Counter, metadata.Pct, descLinuxProcCpuSystem)
 		Add(md, "linux.proc.mem.fault", stats[9], opentsdb.TagSet{"type": "minflt"}.Merge(tags), metadata.Counter, metadata.Fault, descLinuxProcMemFaultMin)
@@ -63,6 +82,7 @@ func linuxProcMonitor(w *WatchedProc, md *opentsdb.MultiDataPoint) error {
 		Add(md, "linux.proc.syscall", io[3], opentsdb.TagSet{"type": "write"}.Merge(tags), metadata.Counter, metadata.Syscall, descLinuxProcSyscallWrite)
 		Add(md, "linux.proc.io_bytes", io[4], opentsdb.TagSet{"type": "read"}.Merge(tags), metadata.Counter, metadata.Bytes, descLinuxProcIoBytesRead)
 		Add(md, "linux.proc.io_bytes", io[5], opentsdb.TagSet{"type": "write"}.Merge(tags), metadata.Counter, metadata.Bytes, descLinuxProcIoBytesWrite)
+		Add(md, "linux.proc.num_fds", len(fds), tags, metadata.Gauge, metadata.Files, descLinuxProcFd)
 	}
 	return err
 }
@@ -80,6 +100,9 @@ const (
 	descLinuxProcSyscallWrite = "Attempt to count the number of write I/O operations—that is, system calls such as write(2) and pwrite(2)."
 	descLinuxProcIoBytesRead  = "An attempt to count the number of bytes which this process really did cause to be fetched from the storage layer. This is accurate for block-backed filesystems."
 	descLinuxProcIoBytesWrite = "An Attempt to count the number of bytes which this process caused to be sent to the storage layer."
+	descLinuxProcFd           = "The number of open file descriptors."
+	descLinuxSoftFileLimit    = "The soft limit on the number of open file descriptors."
+	descLinuxHardFileLimit    = "The hard limit on the number of open file descriptors."
 )
 
 func getLinuxProccesses() ([]*Process, error) {
