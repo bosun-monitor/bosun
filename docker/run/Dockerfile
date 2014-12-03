@@ -20,6 +20,7 @@ COPY tmp /
 COPY bosun.conf /data/
 COPY hbase-site.xml $HBASE/conf/
 COPY start_hbase.sh /hbase/
+COPY opentsdb.conf /tsdb/
 COPY start_opentsdb.sh /tsdb/
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY create_tsdb_tables.sh /tsdb/
