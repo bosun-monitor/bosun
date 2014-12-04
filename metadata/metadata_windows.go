@@ -6,7 +6,7 @@ import (
 
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
-	"bosun.org/wmi"
+	"github.com/StackExchange/wmi"
 )
 
 func init() {
