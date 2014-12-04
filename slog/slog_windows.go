@@ -1,6 +1,6 @@
 package slog
 
-import "code.google.com/p/winsvc/debug"
+import "bosun.org/_third_party/code.google.com/p/winsvc/debug"
 
 type eventLog struct {
 	l  debug.Log
