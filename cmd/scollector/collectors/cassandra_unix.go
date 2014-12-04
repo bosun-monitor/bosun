@@ -5,9 +5,9 @@ package collectors
 import (
 	"strings"
 
-	"github.com/bosun-monitor/scollector/_third_party/github.com/bosun-monitor/metadata"
-	"github.com/bosun-monitor/scollector/_third_party/github.com/bosun-monitor/opentsdb"
-	"github.com/bosun-monitor/scollector/_third_party/github.com/bosun-monitor/util"
+	"bosun.org/metadata"
+	"bosun.org/opentsdb"
+	"bosun.org/util"
 )
 
 func init() {

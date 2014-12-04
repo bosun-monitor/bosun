@@ -5,7 +5,7 @@ import (
 	"net"
 	"strings"
 
-	"github.com/bosun-monitor/opentsdb"
+	"bosun.org/opentsdb"
 )
 
 func metaIfaces(f func(iface net.Interface, tags opentsdb.TagSet)) {

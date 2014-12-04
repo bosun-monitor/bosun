@@ -10,10 +10,10 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/bosun-monitor/bosun/_third_party/github.com/bosun-monitor/opentsdb"
-	"github.com/bosun-monitor/bosun/conf"
-	"github.com/bosun-monitor/bosun/expr"
-	"github.com/bosun-monitor/bosun/expr/parse"
+	"bosun.org/cmd/bosun/conf"
+	"bosun.org/cmd/bosun/expr"
+	"bosun.org/cmd/bosun/expr/parse"
+	"bosun.org/opentsdb"
 )
 
 type Context struct {

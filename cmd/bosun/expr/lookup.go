@@ -1,8 +1,8 @@
 package expr
 
 import (
-	"github.com/bosun-monitor/bosun/_third_party/github.com/bosun-monitor/opentsdb"
-	"github.com/bosun-monitor/bosun/search"
+	"bosun.org/cmd/bosun/search"
+	"bosun.org/opentsdb"
 )
 
 type Lookup struct {

@@ -10,17 +10,17 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bosun-monitor/bosun/_third_party/github.com/MiniProfiler/go/miniprofiler"
-	svg "github.com/bosun-monitor/bosun/_third_party/github.com/ajstarks/svgo"
-	"github.com/bosun-monitor/bosun/_third_party/github.com/bosun-monitor/metadata"
-	"github.com/bosun-monitor/bosun/_third_party/github.com/bosun-monitor/opentsdb"
-	"github.com/bosun-monitor/bosun/_third_party/github.com/bradfitz/slice"
-	"github.com/bosun-monitor/bosun/_third_party/github.com/gorilla/mux"
-	"github.com/bosun-monitor/bosun/_third_party/github.com/vdobler/chart"
-	"github.com/bosun-monitor/bosun/_third_party/github.com/vdobler/chart/svgg"
-	"github.com/bosun-monitor/bosun/expr"
-	"github.com/bosun-monitor/bosun/expr/parse"
-	"github.com/bosun-monitor/bosun/sched"
+	"bosun.org/_third_party/github.com/MiniProfiler/go/miniprofiler"
+	svg "bosun.org/_third_party/github.com/ajstarks/svgo"
+	"bosun.org/_third_party/github.com/bradfitz/slice"
+	"bosun.org/_third_party/github.com/gorilla/mux"
+	"bosun.org/_third_party/github.com/vdobler/chart"
+	"bosun.org/_third_party/github.com/vdobler/chart/svgg"
+	"bosun.org/cmd/bosun/expr"
+	"bosun.org/cmd/bosun/expr/parse"
+	"bosun.org/cmd/bosun/sched"
+	"bosun.org/metadata"
+	"bosun.org/opentsdb"
 )
 
 // Graph takes an OpenTSDB request data structure and queries OpenTSDB. Use the

@@ -7,10 +7,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bosun-monitor/scollector/_third_party/github.com/StackExchange/slog"
-	"github.com/bosun-monitor/scollector/_third_party/github.com/StackExchange/wmi"
-	"github.com/bosun-monitor/scollector/_third_party/github.com/bosun-monitor/metadata"
-	"github.com/bosun-monitor/scollector/_third_party/github.com/bosun-monitor/opentsdb"
+	"bosun.org/_third_party/github.com/StackExchange/wmi"
+	"bosun.org/metadata"
+	"bosun.org/opentsdb"
+	"bosun.org/slog"
 )
 
 func init() {

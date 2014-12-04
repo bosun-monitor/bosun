@@ -18,11 +18,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bosun-monitor/bosun/_third_party/github.com/bosun-monitor/collect"
-	"github.com/bosun-monitor/bosun/_third_party/gopkg.in/fsnotify.v1"
-	"github.com/bosun-monitor/bosun/conf"
-	"github.com/bosun-monitor/bosun/sched"
-	"github.com/bosun-monitor/bosun/web"
+	"bosun.org/_third_party/gopkg.in/fsnotify.v1"
+	"bosun.org/cmd/bosun/conf"
+	"bosun.org/cmd/bosun/sched"
+	"bosun.org/cmd/bosun/web"
+	"bosun.org/collect"
 )
 
 // These constants should remain in source control as their zero values.

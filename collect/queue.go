@@ -8,8 +8,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/StackExchange/slog"
-	"github.com/bosun-monitor/opentsdb"
+	"bosun.org/opentsdb"
+	"bosun.org/slog"
 )
 
 func queuer() {

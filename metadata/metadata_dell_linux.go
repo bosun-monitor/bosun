@@ -6,7 +6,7 @@ package metadata
 import (
 	"strings"
 
-	"github.com/bosun-monitor/util"
+	"bosun.org/util"
 )
 
 func init() {

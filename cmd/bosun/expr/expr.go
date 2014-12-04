@@ -8,10 +8,10 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/bosun-monitor/bosun/_third_party/github.com/MiniProfiler/go/miniprofiler"
-	"github.com/bosun-monitor/bosun/_third_party/github.com/bosun-monitor/opentsdb"
-	"github.com/bosun-monitor/bosun/expr/parse"
-	"github.com/bosun-monitor/bosun/search"
+	"bosun.org/_third_party/github.com/MiniProfiler/go/miniprofiler"
+	"bosun.org/cmd/bosun/expr/parse"
+	"bosun.org/cmd/bosun/search"
+	"bosun.org/opentsdb"
 )
 
 type state struct {

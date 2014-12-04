@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bosun-monitor/bosun/_third_party/github.com/bosun-monitor/opentsdb"
+	"bosun.org/opentsdb"
 )
 
 // Search is a struct to hold indexed data about OpenTSDB metric and tag data.

@@ -10,8 +10,8 @@ import (
 	"net/smtp"
 	"strings"
 
-	"github.com/bosun-monitor/bosun/_third_party/github.com/bosun-monitor/collect"
-	"github.com/bosun-monitor/bosun/_third_party/github.com/jordan-wright/email"
+	"bosun.org/_third_party/github.com/jordan-wright/email"
+	"bosun.org/collect"
 )
 
 func (n *Notification) Notify(subject, body []byte, c *Conf, ak string, attachments ...*Attachment) {

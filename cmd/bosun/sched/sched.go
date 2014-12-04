@@ -12,15 +12,15 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bosun-monitor/bosun/_third_party/github.com/MiniProfiler/go/miniprofiler"
-	"github.com/bosun-monitor/bosun/_third_party/github.com/bosun-monitor/collect"
-	"github.com/bosun-monitor/bosun/_third_party/github.com/bosun-monitor/metadata"
-	"github.com/bosun-monitor/bosun/_third_party/github.com/bosun-monitor/opentsdb"
-	"github.com/bosun-monitor/bosun/_third_party/github.com/bradfitz/slice"
-	"github.com/bosun-monitor/bosun/_third_party/github.com/tatsushid/go-fastping"
-	"github.com/bosun-monitor/bosun/conf"
-	"github.com/bosun-monitor/bosun/expr"
-	"github.com/bosun-monitor/bosun/search"
+	"bosun.org/_third_party/github.com/MiniProfiler/go/miniprofiler"
+	"bosun.org/_third_party/github.com/bradfitz/slice"
+	"bosun.org/_third_party/github.com/tatsushid/go-fastping"
+	"bosun.org/cmd/bosun/conf"
+	"bosun.org/cmd/bosun/expr"
+	"bosun.org/cmd/bosun/search"
+	"bosun.org/collect"
+	"bosun.org/metadata"
+	"bosun.org/opentsdb"
 )
 
 func init() {

@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/bosun-monitor/opentsdb"
-	"github.com/bosun-monitor/util"
+	"bosun.org/opentsdb"
+	"bosun.org/util"
 )
 
 func init() {
