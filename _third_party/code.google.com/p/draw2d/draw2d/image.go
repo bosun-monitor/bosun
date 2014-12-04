@@ -4,9 +4,9 @@
 package draw2d
 
 import (
-	"errors"
 	"bosun.org/_third_party/code.google.com/p/freetype-go/freetype/raster"
 	"bosun.org/_third_party/code.google.com/p/freetype-go/freetype/truetype"
+	"errors"
 	"image"
 	"image/color"
 	"image/draw"

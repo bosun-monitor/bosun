@@ -9,8 +9,8 @@
 package eventlog
 
 import (
-	"errors"
 	"bosun.org/_third_party/code.google.com/p/winsvc/winapi"
+	"errors"
 	"syscall"
 )
 

@@ -13,8 +13,8 @@
 package check_test
 
 import (
-	"fmt"
 	"bosun.org/_third_party/gopkg.in/check.v1"
+	"fmt"
 	"strings"
 )
 

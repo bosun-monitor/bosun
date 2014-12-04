@@ -15,8 +15,8 @@
 package redis_test
 
 import (
-	"fmt"
 	"bosun.org/_third_party/github.com/garyburd/redigo/redis"
+	"fmt"
 )
 
 // zpop pops a value from the ZSET key using WATCH/MULTI/EXEC commands.

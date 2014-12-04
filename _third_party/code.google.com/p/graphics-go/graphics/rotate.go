@@ -5,8 +5,8 @@
 package graphics
 
 import (
-	"errors"
 	"bosun.org/_third_party/code.google.com/p/graphics-go/graphics/interp"
+	"errors"
 	"image"
 	"image/draw"
 )
