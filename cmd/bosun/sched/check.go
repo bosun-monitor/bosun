@@ -7,11 +7,11 @@ import (
 	"math"
 	"time"
 
-	"github.com/bosun-monitor/bosun/_third_party/github.com/MiniProfiler/go/miniprofiler"
-	"github.com/bosun-monitor/bosun/_third_party/github.com/bosun-monitor/collect"
-	"github.com/bosun-monitor/bosun/_third_party/github.com/bosun-monitor/opentsdb"
-	"github.com/bosun-monitor/bosun/conf"
-	"github.com/bosun-monitor/bosun/expr"
+	"bosun.org/_third_party/github.com/MiniProfiler/go/miniprofiler"
+	"bosun.org/cmd/bosun/conf"
+	"bosun.org/cmd/bosun/expr"
+	"bosun.org/collect"
+	"bosun.org/opentsdb"
 )
 
 func NewStatus(ak expr.AlertKey) *State {

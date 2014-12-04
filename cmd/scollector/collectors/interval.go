@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bosun-monitor/scollector/_third_party/github.com/StackExchange/slog"
-	"github.com/bosun-monitor/scollector/_third_party/github.com/bosun-monitor/opentsdb"
+	"bosun.org/opentsdb"
+	"bosun.org/slog"
 )
 
 type IntervalCollector struct {

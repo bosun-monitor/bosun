@@ -1,6 +1,6 @@
 package collectors
 
-import "github.com/bosun-monitor/scollector/_third_party/github.com/StackExchange/wmi"
+import "bosun.org/_third_party/github.com/StackExchange/wmi"
 
 func queryWmi(query string, dst interface{}) error {
 	return queryWmiNamespace(query, dst, "")

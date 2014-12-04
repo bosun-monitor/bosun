@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/bosun-monitor/scollector/_third_party/github.com/bosun-monitor/opentsdb"
+	"bosun.org/opentsdb"
 )
 
 type Process struct {

@@ -9,9 +9,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/StackExchange/slog"
-	"github.com/bosun-monitor/opentsdb"
-	"github.com/bosun-monitor/util"
+	"bosun.org/opentsdb"
+	"bosun.org/slog"
+	"bosun.org/util"
 )
 
 type RateType string

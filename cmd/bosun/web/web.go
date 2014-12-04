@@ -16,14 +16,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bosun-monitor/bosun/_third_party/github.com/MiniProfiler/go/miniprofiler"
-	"github.com/bosun-monitor/bosun/_third_party/github.com/bosun-monitor/collect"
-	"github.com/bosun-monitor/bosun/_third_party/github.com/bosun-monitor/metadata"
-	"github.com/bosun-monitor/bosun/_third_party/github.com/bosun-monitor/opentsdb"
-	"github.com/bosun-monitor/bosun/_third_party/github.com/gorilla/mux"
-	"github.com/bosun-monitor/bosun/conf"
-	"github.com/bosun-monitor/bosun/expr"
-	"github.com/bosun-monitor/bosun/sched"
+	"bosun.org/_third_party/github.com/MiniProfiler/go/miniprofiler"
+	"bosun.org/_third_party/github.com/gorilla/mux"
+	"bosun.org/cmd/bosun/conf"
+	"bosun.org/cmd/bosun/expr"
+	"bosun.org/cmd/bosun/sched"
+	"bosun.org/collect"
+	"bosun.org/metadata"
+	"bosun.org/opentsdb"
 )
 
 //go:generate esc -o web/static.go -pkg web -prefix web/static web/static/

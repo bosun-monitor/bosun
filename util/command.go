@@ -8,7 +8,7 @@ import (
 	"os/exec"
 	"time"
 
-	"github.com/StackExchange/slog"
+	"bosun.org/slog"
 )
 
 var (

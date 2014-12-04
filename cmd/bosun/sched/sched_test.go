@@ -11,9 +11,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bosun-monitor/bosun/_third_party/github.com/MiniProfiler/go/miniprofiler"
-	"github.com/bosun-monitor/bosun/_third_party/github.com/bosun-monitor/opentsdb"
-	"github.com/bosun-monitor/bosun/conf"
+	"bosun.org/_third_party/github.com/MiniProfiler/go/miniprofiler"
+	"bosun.org/cmd/bosun/conf"
+	"bosun.org/opentsdb"
 )
 
 func init() {

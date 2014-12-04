@@ -9,10 +9,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bosun-monitor/bosun/_third_party/github.com/GaryBoone/GoStats/stats"
-	"github.com/bosun-monitor/bosun/_third_party/github.com/MiniProfiler/go/miniprofiler"
-	"github.com/bosun-monitor/bosun/_third_party/github.com/bosun-monitor/opentsdb"
-	"github.com/bosun-monitor/bosun/expr/parse"
+	"bosun.org/_third_party/github.com/GaryBoone/GoStats/stats"
+	"bosun.org/_third_party/github.com/MiniProfiler/go/miniprofiler"
+	"bosun.org/cmd/bosun/expr/parse"
+	"bosun.org/opentsdb"
 )
 
 var builtins = map[string]parse.Func{

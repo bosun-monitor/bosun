@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/bosun-monitor/util"
+	"bosun.org/util"
 )
 
 func init() {

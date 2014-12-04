@@ -9,13 +9,13 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/bosun-monitor/bosun/_third_party/github.com/MiniProfiler/go/miniprofiler"
-	"github.com/bosun-monitor/bosun/_third_party/github.com/ajstarks/svgo"
-	"github.com/bosun-monitor/bosun/_third_party/github.com/bradfitz/slice"
-	"github.com/bosun-monitor/bosun/_third_party/github.com/vdobler/chart"
-	"github.com/bosun-monitor/bosun/_third_party/github.com/vdobler/chart/imgg"
-	"github.com/bosun-monitor/bosun/_third_party/github.com/vdobler/chart/svgg"
-	"github.com/bosun-monitor/bosun/expr"
+	"bosun.org/_third_party/github.com/MiniProfiler/go/miniprofiler"
+	"bosun.org/_third_party/github.com/ajstarks/svgo"
+	"bosun.org/_third_party/github.com/bradfitz/slice"
+	"bosun.org/_third_party/github.com/vdobler/chart"
+	"bosun.org/_third_party/github.com/vdobler/chart/imgg"
+	"bosun.org/_third_party/github.com/vdobler/chart/svgg"
+	"bosun.org/cmd/bosun/expr"
 )
 
 var chartColors = []color.Color{

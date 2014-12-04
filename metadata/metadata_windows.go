@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/StackExchange/slog"
-	"github.com/StackExchange/wmi"
-	"github.com/bosun-monitor/opentsdb"
+	"bosun.org/opentsdb"
+	"bosun.org/slog"
+	"bosun.org/wmi"
 )
 
 func init() {

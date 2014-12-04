@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/bosun-monitor/scollector/_third_party/github.com/StackExchange/vsphere"
-	"github.com/bosun-monitor/scollector/_third_party/github.com/bosun-monitor/metadata"
-	"github.com/bosun-monitor/scollector/_third_party/github.com/bosun-monitor/opentsdb"
-	"github.com/bosun-monitor/scollector/_third_party/github.com/bosun-monitor/util"
+	"bosun.org/metadata"
+	"bosun.org/opentsdb"
+	"bosun.org/util"
+	"bosun.org/vsphere"
 )
 
 // Vsphere registers a vSphere collector.

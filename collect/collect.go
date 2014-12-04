@@ -15,7 +15,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/bosun-monitor/opentsdb"
+	"bosun.org/opentsdb"
 )
 
 var (

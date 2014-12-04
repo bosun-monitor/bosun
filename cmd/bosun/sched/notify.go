@@ -6,8 +6,8 @@ import (
 	"log"
 	"time"
 
-	"github.com/bosun-monitor/bosun/conf"
-	"github.com/bosun-monitor/bosun/expr"
+	"bosun.org/cmd/bosun/conf"
+	"bosun.org/cmd/bosun/expr"
 )
 
 // Poll dispatches notification checks when needed.

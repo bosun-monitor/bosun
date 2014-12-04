@@ -4,8 +4,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/bosun-monitor/scollector/_third_party/github.com/bosun-monitor/metadata"
-	"github.com/bosun-monitor/scollector/_third_party/github.com/bosun-monitor/opentsdb"
+	"bosun.org/metadata"
+	"bosun.org/opentsdb"
 )
 
 func InitFake(fake int) {
