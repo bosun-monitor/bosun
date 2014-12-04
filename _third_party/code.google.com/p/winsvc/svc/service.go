@@ -9,8 +9,8 @@
 package svc
 
 import (
-	"errors"
 	"bosun.org/_third_party/code.google.com/p/winsvc/winapi"
+	"errors"
 	"runtime"
 	"syscall"
 	"unsafe"

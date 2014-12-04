@@ -1,8 +1,8 @@
 package txtg
 
 import (
-	"fmt"
 	"bosun.org/_third_party/github.com/vdobler/chart"
+	"fmt"
 	"math"
 )
 

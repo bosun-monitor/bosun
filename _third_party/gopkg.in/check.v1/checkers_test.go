@@ -1,8 +1,8 @@
 package check_test
 
 import (
-	"errors"
 	"bosun.org/_third_party/gopkg.in/check.v1"
+	"errors"
 	"reflect"
 	"runtime"
 )

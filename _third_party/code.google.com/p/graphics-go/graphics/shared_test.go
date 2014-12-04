@@ -5,8 +5,8 @@
 package graphics
 
 import (
-	"bytes"
 	"bosun.org/_third_party/code.google.com/p/graphics-go/graphics/graphicstest"
+	"bytes"
 	"image"
 	"image/color"
 	"testing"
