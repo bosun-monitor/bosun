@@ -633,8 +633,8 @@ bosunApp.directive('tsTimeLine', function () {
                     }),
                 ]);
                 var legend = d3.select(elem[0]).append('div').attr('class', 'tl-legend');
-                var time_legend = legend.append('div').text(tsdbFormat(new Date()));
-                var alert_legend = legend.append('div').text('Alert');
+                var time_legend = legend.append('div').text(values[0].History[0].Time);
+                var alert_legend = legend.append('div').text(keys[0]);
                 svg.select('.x.axis').transition().call(xAxis);
                 var chart = svg.append('g');
                 angular.forEach(entries, function (entry, i) {
