@@ -1,6 +1,8 @@
 package collectors
 
 import (
+	"strings"
+
 	"github.com/bosun-monitor/scollector/_third_party/github.com/StackExchange/wmi"
 	"github.com/bosun-monitor/scollector/_third_party/github.com/bosun-monitor/metadata"
 	"github.com/bosun-monitor/scollector/_third_party/github.com/bosun-monitor/opentsdb"
@@ -66,13 +68,14 @@ func c_cpu_info_windows() (opentsdb.MultiDataPoint, error) {
 	}
 	var md opentsdb.MultiDataPoint
 	for _, v := range dst {
-		Add(&md, "win.cpu.clock", v.CurrentClockSpeed, opentsdb.TagSet{"cpu": v.Name}, metadata.Gauge, metadata.MHz, "Current speed of the processor, in MHz.")
-		Add(&md, "win.cpu.clock_max", v.MaxClockSpeed, opentsdb.TagSet{"cpu": v.Name}, metadata.Gauge, metadata.MHz, "Maximum speed of the processor, in MHz.")
-		Add(&md, "win.cpu.voltage", v.CurrentVoltage, opentsdb.TagSet{"cpu": v.Name}, metadata.Gauge, metadata.V_10, "Voltage of the processor.")
-		Add(&md, "win.cpu.cores_physical", v.NumberOfCores, opentsdb.TagSet{"cpu": v.Name}, metadata.Gauge, metadata.Count, "Number of cores for the current instance of the processor.")
-		Add(&md, "win.cpu.cores_logical", v.NumberOfLogicalProcessors, opentsdb.TagSet{"cpu": v.Name}, metadata.Gauge, metadata.Count, "Number of logical processors for the current instance of the processor.")
+		tags := opentsdb.TagSet{"cpu": strings.Replace(v.DeviceID, "CPU", "", 1)}
+		Add(&md, "win.cpu.clock", v.CurrentClockSpeed, tags, metadata.Gauge, metadata.MHz, "Current speed of the processor, in MHz.")
+		Add(&md, "win.cpu.clock_max", v.MaxClockSpeed, tags, metadata.Gauge, metadata.MHz, "Maximum speed of the processor, in MHz.")
+		Add(&md, "win.cpu.voltage", v.CurrentVoltage, tags, metadata.Gauge, metadata.V_10, "Voltage of the processor.")
+		Add(&md, "win.cpu.cores_physical", v.NumberOfCores, tags, metadata.Gauge, metadata.Count, "Number of cores for the current instance of the processor.")
+		Add(&md, "win.cpu.cores_logical", v.NumberOfLogicalProcessors, tags, metadata.Gauge, metadata.Count, "Number of logical processors for the current instance of the processor.")
 		if v.LoadPercentage != nil {
-			Add(&md, "win.cpu.load", *v.LoadPercentage, opentsdb.TagSet{"cpu": v.Name}, metadata.Gauge, metadata.Pct, "Load capacity of each processor, averaged to the last second.")
+			Add(&md, "win.cpu.load", *v.LoadPercentage, tags, metadata.Gauge, metadata.Pct, "Load capacity of each processor, averaged to the last second.")
 		}
 	}
 	return md, nil
@@ -83,7 +86,7 @@ type Win32_Processor struct {
 	CurrentVoltage            *uint16
 	LoadPercentage            *uint16
 	MaxClockSpeed             uint32
-	Name                      string
+	DeviceID                  string
 	NumberOfCores             uint32
 	NumberOfLogicalProcessors uint32
 }
