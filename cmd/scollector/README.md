@@ -15,4 +15,4 @@ OpenTSDB 2.0.
 
 ## documentation
 
-[http://godoc.org/github.com/bosun-monitor/scollector](http://godoc.org/github.com/bosun-monitor/scollector)
+[http://godoc.org/bosun.org/cmd/scollector](http://godoc.org/bosun.org/cmd/scollector)
