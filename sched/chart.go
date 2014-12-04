@@ -79,7 +79,7 @@ func (s *Schedule) ExprGraph(t miniprofiler.Timer, res []*expr.Result, q string,
 		pts := make([]chart.EPoint, len(rv))
 		idx := 0
 		for k, v := range rv {
-			i, err := strconv.ParseInt(k, 10, 64)
+			i, err := strconv.ParseFloat(k, 64)
 			if err != nil {
 				return nil, err
 			}

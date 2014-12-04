@@ -208,16 +208,17 @@ func makeChart(r opentsdb.ResponseSet, m_units map[string]string) ([]*chartSerie
 	for _, resp := range r {
 		dps := make([][2]float64, 0)
 		for k, v := range resp.DPS {
-			ki, err := strconv.ParseInt(k, 10, 64)
+			kf, err := strconv.ParseFloat(k, 64)
 			if err != nil {
 				return nil, err
 			}
-			dps = append(dps, [2]float64{float64(ki), float64(v)})
+			dps = append(dps, [2]float64{kf, float64(v)})
 		}
 		if len(dps) > 0 {
 			slice.Sort(dps, func(i, j int) bool {
 				return dps[i][0] < dps[j][0]
 			})
+			fmt.Println(dps)
 			name := resp.Metric
 			if len(resp.Tags) > 0 {
 				name += resp.Tags.String()
