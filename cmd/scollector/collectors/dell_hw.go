@@ -201,7 +201,7 @@ func c_omreport_memory() (opentsdb.MultiDataPoint, error) {
 func c_omreport_temps() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	readOmreport(func(fields []string) {
-		if len(fields) != 5 {
+		if len(fields) != 8 {
 			return
 		}
 		if _, err := strconv.Atoi(fields[0]); err != nil {
@@ -211,7 +211,7 @@ func c_omreport_temps() (opentsdb.MultiDataPoint, error) {
 		Add(&md, "hw.chassis.temps", severity(fields[1]), ts, metadata.Gauge, metadata.Ok, "")
 		fs := strings.Fields(fields[3])
 		if len(fs) == 2 && fs[1] == "C" {
-			i, err := strconv.Atoi(fs[0])
+			i, err := strconv.ParseFloat(fs[0], 64)
 			if err == nil {
 				Add(&md, "hw.chassis.temps.reading", i, ts, metadata.Gauge, metadata.C, "")
 			}
