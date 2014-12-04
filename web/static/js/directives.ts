@@ -271,10 +271,10 @@ bosunApp.directive('tsTimeLine', () => {
 					.attr('class', 'tl-legend');
 				var time_legend = legend
 					.append('div')
-					.text(tsdbFormat(new Date()));
+					.text(values[0].History[0].Time);
 				var alert_legend = legend
 					.append('div')
-					.text('Alert');
+					.text(keys[0]);
 				svg.select('.x.axis')
 					.transition()
 					.call(xAxis);
