@@ -210,7 +210,6 @@ bosunApp.directive('tsHistory', () => {
 });
 
 bosunApp.directive('tsTimeLine', () => {
-	var format = d3.time.format.utc("%Y-%m-%dT%X");
 	var tsdbFormat = d3.time.format.utc("%Y/%m/%d-%X");
 	function parseDate(s: any) {
 		return moment.utc(s).toDate();
