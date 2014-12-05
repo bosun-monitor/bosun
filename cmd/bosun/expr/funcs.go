@@ -127,6 +127,11 @@ var builtins = map[string]parse.Func{
 		parse.TYPE_NUMBER,
 		Abs,
 	},
+	"d": {
+		[]parse.FuncType{parse.TYPE_STRING},
+		parse.TYPE_SCALAR,
+		Duration,
+	},
 	"dropna": {
 		[]parse.FuncType{parse.TYPE_SERIES},
 		parse.TYPE_SERIES,
@@ -147,6 +152,18 @@ var builtins = map[string]parse.Func{
 func NV(e *state, T miniprofiler.Timer, series *Results, v float64) (results *Results, err error) {
 	series.NaNValue = &v
 	return series, nil
+}
+
+func Duration(e *state, T miniprofiler.Timer, d string) (*Results, error) {
+	duration, err := opentsdb.ParseDuration(d)
+	if err != nil {
+		return nil, err
+	}
+	return &Results{
+		Results: []*Result{
+			{Value: Scalar(duration.Seconds())},
+		},
+	}, nil
 }
 
 func DropNA(e *state, T miniprofiler.Timer, series *Results) (*Results, error) {
