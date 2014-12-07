@@ -86,11 +86,15 @@ func c_iostat_linux() (opentsdb.MultiDataPoint, error) {
 		metric := "linux.disk.part."
 		i0, _ := strconv.Atoi(values[0])
 		i1, _ := strconv.Atoi(values[1])
-		if i1%16 == 0 && i0 > 1 {
-			metric = "linux.disk."
-		}
+		var block_size int64
 		device := values[2]
 		ts := opentsdb.TagSet{"dev": device}
+		if i1%16 == 0 && i0 > 1 {
+			metric = "linux.disk."
+			if b, err := ioutil.ReadFile("/sys/block/" + device + "/queue/hw_sector_size"); err == nil {
+				block_size, _ = strconv.ParseInt(strings.TrimSpace(string(b)), 10, 64)
+			}
+		}
 		if removable(values[0], values[1]) {
 			removables = append(removables, device)
 		}
@@ -119,6 +123,11 @@ func c_iostat_linux() (opentsdb.MultiDataPoint, error) {
 			}
 			if write_sectors != 0 && msec_write != 0 {
 				Add(&md, metric+"time_per_write", write_sectors/msec_write, ts, metadata.Rate, metadata.MilliSecond, "")
+			}
+			if block_size != 0 {
+				Add(&md, metric+"bytes", int64(write_sectors)*block_size, opentsdb.TagSet{"type": "write"}.Merge(ts), metadata.Counter, metadata.Bytes, "Total number of bytes written to disk.")
+				Add(&md, metric+"bytes", int64(read_sectors)*block_size, opentsdb.TagSet{"type": "read"}.Merge(ts), metadata.Counter, metadata.Bytes, "Total number of bytes read to disk.")
+				Add(&md, metric+"block_size", block_size, ts, metadata.Gauge, metadata.Bytes, "Sector size of the block device.")
 			}
 		} else if len(values) == 7 {
 			for i, v := range values[3:] {
