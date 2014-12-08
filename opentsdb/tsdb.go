@@ -1,3 +1,4 @@
+// Package opentsdb defines structures for interacting with an OpenTSDB server.
 package opentsdb
 
 import (
