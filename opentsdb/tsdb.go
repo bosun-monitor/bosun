@@ -20,10 +20,15 @@ import (
 	"unicode/utf8"
 )
 
+// ResponseSet is a Multi-Set Response:
+// http://opentsdb.net/docs/build/html/api_http/query/index.html#example-multi-set-response.
 type ResponseSet []*Response
 
+// Point is the Response data point type.
 type Point float64
 
+// Response is a query response:
+// http://opentsdb.net/docs/build/html/api_http/query/index.html#response.
 type Response struct {
 	Metric        string           `json:"metric"`
 	Tags          TagSet           `json:"tags"`
@@ -31,6 +36,8 @@ type Response struct {
 	DPS           map[string]Point `json:"dps"`
 }
 
+// DataPoint is a data point for the /api/put route:
+// http://opentsdb.net/docs/build/html/api_http/put.html#example-single-data-point-put.
 type DataPoint struct {
 	Metric    string      `json:"metric"`
 	Timestamp int64       `json:"timestamp"`
@@ -38,6 +45,7 @@ type DataPoint struct {
 	Tags      TagSet      `json:"tags"`
 }
 
+// MarshalJSON verifies d is valid and converts it to JSON.
 func (d *DataPoint) MarshalJSON() ([]byte, error) {
 	if err := d.clean(); err != nil {
 		return nil, err
@@ -55,10 +63,14 @@ func (d *DataPoint) MarshalJSON() ([]byte, error) {
 	})
 }
 
+// MultiDataPoint holds multiple DataPoints:
+// http://opentsdb.net/docs/build/html/api_http/put.html#example-multiple-data-point-put.
 type MultiDataPoint []*DataPoint
 
+// TagSet is a helper class for tags.
 type TagSet map[string]string
 
+// Copy creates a new TagSet from t.
 func (t TagSet) Copy() TagSet {
 	n := make(TagSet)
 	for k, v := range t {
@@ -75,6 +87,7 @@ func (t TagSet) Merge(o TagSet) TagSet {
 	return t
 }
 
+// Equal returns true if t and o contain only the same k=v pairs.
 func (t TagSet) Equal(o TagSet) bool {
 	if len(t) != len(o) {
 		return false
@@ -223,6 +236,8 @@ func MustReplace(s, replacement string) string {
 	return r
 }
 
+// Request holds query objects:
+// http://opentsdb.net/docs/build/html/api_http/query/index.html#requests.
 type Request struct {
 	Start             interface{} `json:"start"`
 	End               interface{} `json:"end,omitempty"`
@@ -233,6 +248,7 @@ type Request struct {
 	ShowTSUIDs        bool        `json:"showTSUIDs,omitempty"`
 }
 
+// RequestFromJSON creates a new request from JSON.
 func RequestFromJSON(b []byte) (*Request, error) {
 	var r Request
 	if err := json.Unmarshal(b, &r); err != nil {
@@ -243,6 +259,8 @@ func RequestFromJSON(b []byte) (*Request, error) {
 	return &r, nil
 }
 
+// Query is a query for a request:
+// http://opentsdb.net/docs/build/html/api_http/query/index.html#sub-queries.
 type Query struct {
 	Aggregator  string      `json:"aggregator"`
 	Metric      string      `json:"metric"`
@@ -252,24 +270,25 @@ type Query struct {
 	Tags        TagSet      `json:"tags,omitempty"`
 }
 
+// RateOptions are rate options for a query.
 type RateOptions struct {
 	Counter    bool  `json:"counter,omitempty"`
 	CounterMax int64 `json:"counterMax,omitempty"`
 	ResetValue int64 `json:"resetValue,omitempty"`
 }
 
-// ParsesRequest parses OpenTSDB requests of the form: start=1h-ago&m=avg:cpu.
+// ParseRequest parses OpenTSDB requests of the form: start=1h-ago&m=avg:cpu.
 func ParseRequest(req string) (*Request, error) {
 	v, err := url.ParseQuery(req)
 	if err != nil {
 		return nil, err
 	}
 	r := Request{}
-	if s := v.Get("start"); s == "" {
+	s := v.Get("start")
+	if s == "" {
 		return nil, fmt.Errorf("opentsdb: missing start: %s", req)
-	} else {
-		r.Start = s
 	}
+	r.Start = s
 	for _, m := range v["m"] {
 		q, err := ParseQuery(m)
 		if err != nil {
@@ -478,6 +497,7 @@ func (r *Request) Search() string {
 	return buf.String()
 }
 
+// TSDBTimeFormat is the OpenTSDB-required time format for the time package.
 const TSDBTimeFormat = "2006/01/02-15:04:05"
 
 // CanonicalTime converts v to a string for use with OpenTSDB's `/` route.
@@ -494,6 +514,9 @@ func CanonicalTime(v interface{}) (string, error) {
 	return t.Format(TSDBTimeFormat), nil
 }
 
+// TryParseAbsTime attempts to parse v as an absolute time. It may be a string
+// in the format of TSDBTimeFormat or a float64 of seconds since epoch. If so,
+// the epoch as an int64 is returned. Otherwise, v is returned.
 func TryParseAbsTime(v interface{}) interface{} {
 	switch v := v.(type) {
 	case string:
@@ -511,13 +534,13 @@ func TryParseAbsTime(v interface{}) interface{} {
 // "X-ago") format supported by OpenTSDB.
 func ParseAbsTime(s string) (time.Time, error) {
 	var t time.Time
-	t_formats := [4]string{
+	tFormats := [4]string{
 		"2006/01/02-15:04:05",
 		"2006/01/02-15:04",
 		"2006/01/02-15",
 		"2006/01/02",
 	}
-	for _, f := range t_formats {
+	for _, f := range tFormats {
 		if t, err := time.Parse(f, s); err == nil {
 			return t, nil
 		}
@@ -543,12 +566,10 @@ func ParseTime(v interface{}) (time.Time, error) {
 					return now, err
 				}
 				return now.Add(time.Duration(-d)), nil
-			} else {
-				return ParseAbsTime(i)
 			}
-		} else {
-			return now, nil
+			return ParseAbsTime(i)
 		}
+		return now, nil
 	case int64:
 		return time.Unix(i, 0).UTC(), nil
 	case float64:
@@ -644,8 +665,8 @@ var DefaultClient = &http.Client{
 	Timeout: time.Minute,
 }
 
-// Query performs a v2 OpenTSDB request to the given host. host should be of the
-// form hostname:port. A nil client uses DefaultClient.
+// QueryResponse performs a v2 OpenTSDB request to the given host. host should
+// be of the form hostname:port. A nil client uses DefaultClient.
 func (r *Request) QueryResponse(host string, client *http.Client) (*http.Response, error) {
 	u := url.URL{
 		Scheme: "http",
@@ -676,6 +697,7 @@ func (r *Request) QueryResponse(host string, client *http.Client) (*http.Respons
 	return resp, nil
 }
 
+// RequestError is the error structure for request errors.
 type RequestError struct {
 	Request string
 	Err     struct {
@@ -689,16 +711,20 @@ func (r *RequestError) Error() string {
 	return fmt.Sprintf("opentsdb: %s: %s", r.Request, r.Err.Message)
 }
 
+// Context is the interface for querying an OpenTSDB server.
 type Context interface {
 	Query(*Request) (ResponseSet, error)
 }
 
+// Host is a simple OpenTSDB Context with no additional features.
 type Host string
 
+// Query performs the request to the OpenTSDB server.
 func (h Host) Query(r *Request) (ResponseSet, error) {
 	return r.Query(string(h))
 }
 
+// Cache is a caching, filtering, and limiting OpenTSDB Context.
 type Cache struct {
 	Host string
 	// Limit limits response size in bytes
@@ -713,6 +739,8 @@ type cacheResult struct {
 	Err error
 }
 
+// NewCache returns a new cache for the given host with response sizes limited
+// to limit bytes.
 func NewCache(host string, limit int64) *Cache {
 	return &Cache{
 		Host:       host,
@@ -722,6 +750,8 @@ func NewCache(host string, limit int64) *Cache {
 	}
 }
 
+// Query returns the result of the request. r may be cached. The request is
+// byte-limited and filtered by c's properties.
 func (c *Cache) Query(r *Request) (tr ResponseSet, err error) {
 	b, err := json.Marshal(&r)
 	if err != nil {
