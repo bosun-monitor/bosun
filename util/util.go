@@ -6,8 +6,9 @@ import (
 )
 
 var (
+	// Hostname is the machine's hostname.
 	Hostname string
-	// FullHostname, if false, uses the hostname upto the first ".". Run Set()
+	// FullHostname will, if false, uses the hostname upto the first ".". Run Set()
 	// manually after changing.
 	FullHostname bool
 )
@@ -20,6 +21,7 @@ func Clean(s string) string {
 	return strings.ToLower(s)
 }
 
+// Set sets Hostntame based on the current preferences.
 func Set() {
 	h, err := os.Hostname()
 	if err == nil {
