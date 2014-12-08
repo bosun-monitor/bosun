@@ -3,11 +3,15 @@ package expr
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"math"
+	"net/http"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/olivere/elastic"
 
 	"bosun.org/_third_party/github.com/GaryBoone/GoStats/stats"
 	"bosun.org/_third_party/github.com/MiniProfiler/go/miniprofiler"
@@ -42,6 +46,11 @@ var builtins = map[string]parse.Func{
 		[]parse.FuncType{parse.TYPE_STRING, parse.TYPE_STRING, parse.TYPE_STRING},
 		parse.TYPE_SERIES,
 		Query,
+	},
+	"lscount": {
+		[]parse.FuncType{parse.TYPE_STRING, parse.TYPE_STRING, parse.TYPE_STRING, parse.TYPE_STRING, parse.TYPE_STRING},
+		parse.TYPE_SERIES,
+		LSCount,
 	},
 
 	// Reduction functions
@@ -655,4 +664,131 @@ func Transpose(e *state, T miniprofiler.Timer, d *Results, gp string) (*Results,
 		r.Results = append(r.Results, res)
 	}
 	return &r, nil
+}
+
+type ElasticCount struct {
+	Buckets []struct {
+		DocCount float64 `json:"doc_count"`
+		Key      string  `json:"key"`
+		Ts       struct {
+			Buckets []struct {
+				DocCount    float64 `json:"doc_count"`
+				Key         float64 `json:"key"`
+				KeyAsString string  `json:"key_as_string"`
+			} `json:"buckets"`
+		} `json:"ts"`
+	} `json:"buckets"`
+}
+
+func (g *ElasticCount) OpenTSDBResultSet(key string) opentsdb.ResponseSet {
+	var rs opentsdb.ResponseSet
+	for _, b := range g.Buckets {
+		var n opentsdb.Response
+		n.Tags = opentsdb.TagSet{key: b.Key}
+		n.DPS = make(map[string]opentsdb.Point)
+		for _, t := range b.Ts.Buckets {
+			n.DPS[fmt.Sprintf("%v", int64(t.Key/1000))] = opentsdb.Point(t.DocCount)
+		}
+		rs = append(rs, &n)
+	}
+	return rs
+}
+
+const ls_host = "http://10.166.2.100:9200"
+
+//Currently on support 0 or 1 groups //http://stackoverflow.com/questions/27350067/how-to-perform-a-multiterms-aggregation-using-script
+func LSCount(e *state, T miniprofiler.Timer, key, filter, interval, sduration, eduration string) (r *Results, err error) {
+	r = new(Results)
+	//TODO Read from config
+	client, err := elastic.NewClient(http.DefaultClient, ls_host)
+	if err != nil {
+		return nil, err
+	}
+	start, err := opentsdb.ParseDuration(sduration)
+	if err != nil {
+		return nil, err
+	}
+	var end opentsdb.Duration
+	if eduration != "" {
+		end, err = opentsdb.ParseDuration(eduration)
+		if err != nil {
+			return nil, err
+		}
+	}
+	st := e.now.Add(time.Duration(-start))
+	en := e.now.Add(time.Duration(-end))
+	s := client.Search()
+	if filter != "" {
+		s = s.Query(elastic.NewMatchQuery("message", filter))
+	}
+	indicies, err := GenLSIndexes(st, en)
+	if err != nil {
+		return nil, err
+	}
+	s = s.Index(indicies)
+	//TODO Add another type like Elastic count for when 0 groups (no key)
+	if key == "" {
+		return nil, fmt.Errorf("at least one key must be supplied")
+	}
+	ds, err := opentsdb.ParseDuration(interval)
+	if err != nil {
+		return nil, err
+	}
+	ts := elastic.NewDateHistogramAggregation().Field("@timestamp").Interval(strings.Replace(interval, "M", "n", -1))
+	groups := elastic.NewTermsAggregation().Field(key).SubAggregation("ts", ts)
+	s = s.Aggregation("groups", groups)
+	result, err := s.Do()
+	if err != nil {
+		return nil, err
+	}
+	var a ElasticCount
+	err = json.Unmarshal(result.Aggregations["groups"], &a)
+	if err != nil {
+		return nil, err
+	}
+	for _, res := range a.OpenTSDBResultSet(key) {
+		if e.squelched(res.Tags) {
+			continue
+		}
+		series := make(Series)
+		for k, v := range res.DPS {
+			series[k] = v / opentsdb.Point(ds.Seconds())
+		}
+		r.Results = append(r.Results, &Result{
+			Value: series,
+			Group: res.Tags,
+		})
+	}
+	return r, nil
+}
+
+func GenLSIndexes(start, end time.Time) (string, error) {
+	resp, err := http.Get(ls_host + "/_cat/indices")
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+	lines := strings.Split(string(body), "\n")
+	existing_indicies := make(map[string]bool)
+	for _, line := range lines {
+		f := strings.Fields(line)
+		if len(f) > 1 {
+			existing_indicies[f[1]] = true
+		}
+	}
+	var indicies []string
+	for d := start; d.Before(end); d = d.AddDate(0, 0, 1) {
+		i := fmt.Sprintf("logstash-%s", d.Format("2006.01.02"))
+		if _, ok := existing_indicies[i]; ok {
+			indicies = append(indicies, i)
+		}
+	}
+	if len(indicies) == 0 {
+		return "", fmt.Errorf("no elastic indicies available during this time range")
+	}
+	return strings.Join(indicies, ","), nil
 }
