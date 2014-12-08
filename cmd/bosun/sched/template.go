@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"io/ioutil"
 	"math"
+	"net/http"
 	"net/url"
 	"time"
 
@@ -349,4 +351,20 @@ func (c *Context) LeftJoin(q ...interface{}) (interface{}, error) {
 		}
 	}
 	return matrix, nil
+}
+
+func (c *Context) HTTPGet(u string) string {
+	resp, err := http.Get(u)
+	if err != nil {
+		return err.Error()
+	}
+	if resp.StatusCode >= 300 {
+		return fmt.Printf("%v: returned %v", u, resp.Status)
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err.Error()
+	}
+	return string(body)
 }
