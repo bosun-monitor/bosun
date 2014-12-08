@@ -76,16 +76,16 @@ func c_ntp_peers_unix() (opentsdb.MultiDataPoint, error) {
 		}
 		Add(&md, metric+"current_source", current_source, tags, metadata.Gauge, metadata.Bool, "")
 		Add(&md, metric+"stratum", fields[2], tags, metadata.Gauge, "Stratum", "")
-		if when, err := ntpUnPretty(fields[4]); err != nil {
+		when, err := ntpUnPretty(fields[4])
+		if err != nil {
 			return err
-		} else {
-			Add(&md, metric+"when", when, tags, metadata.Gauge, metadata.Second, "")
 		}
-		if poll, err := ntpUnPretty(fields[5]); err != nil {
+		Add(&md, metric+"when", when, tags, metadata.Gauge, metadata.Second, "")
+		poll, err := ntpUnPretty(fields[5])
+		if err != nil {
 			return err
-		} else {
-			Add(&md, metric+"poll", poll, tags, metadata.Gauge, metadata.Second, "")
 		}
+		Add(&md, metric+"poll", poll, tags, metadata.Gauge, metadata.Second, "")
 		Add(&md, metric+"reach", fields[6], tags, metadata.Gauge, "Code", "")
 		Add(&md, metric+"delay", fields[7], tags, metadata.Gauge, metadata.MilliSecond, "")
 		Add(&md, metric+"offset", fields[8], tags, metadata.Gauge, metadata.MilliSecond, "")

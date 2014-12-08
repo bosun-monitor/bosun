@@ -95,7 +95,7 @@ func Search(s string) []Collector {
 	return r
 }
 
-// Runs specified collectors. Use nil for all collectors.
+// Run runs specified collectors. Use nil for all collectors.
 func Run(cs []Collector) chan *opentsdb.DataPoint {
 	if cs == nil {
 		cs = collectors

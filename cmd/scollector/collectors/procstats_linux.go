@@ -19,7 +19,7 @@ var uptimeRE = regexp.MustCompile(`(\S+)\s+(\S+)`)
 var meminfoRE = regexp.MustCompile(`(\w+):\s+(\d+)\s+(\w+)`)
 var vmstatRE = regexp.MustCompile(`(\w+)\s+(\d+)`)
 var statRE = regexp.MustCompile(`(\w+)\s+(.*)`)
-var statCpuRE = regexp.MustCompile(`cpu(\d+)`)
+var statCPURE = regexp.MustCompile(`cpu(\d+)`)
 var loadavgRE = regexp.MustCompile(`(\S+)\s+(\S+)\s+(\S+)\s+(\d+)/(\d+)\s+`)
 var inoutRE = regexp.MustCompile(`(.*)(in|out)`)
 
@@ -115,7 +115,7 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 		if strings.HasPrefix(m[1], "cpu") {
 			metric_percpu := ""
 			tag_cpu := ""
-			cpu_m := statCpuRE.FindStringSubmatch(m[1])
+			cpu_m := statCPURE.FindStringSubmatch(m[1])
 			if cpu_m != nil {
 				num_cores += 1
 				metric_percpu = ".percpu"
