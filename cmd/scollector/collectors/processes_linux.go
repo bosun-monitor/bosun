@@ -70,8 +70,8 @@ func linuxProcMonitor(w *WatchedProc, md *opentsdb.MultiDataPoint) error {
 				}
 			}
 		}
-		Add(md, "linux.proc.cpu", stats[13], opentsdb.TagSet{"type": "user"}.Merge(tags), metadata.Counter, metadata.Pct, descLinuxProcCpuUser)
-		Add(md, "linux.proc.cpu", stats[14], opentsdb.TagSet{"type": "system"}.Merge(tags), metadata.Counter, metadata.Pct, descLinuxProcCpuSystem)
+		Add(md, "linux.proc.cpu", stats[13], opentsdb.TagSet{"type": "user"}.Merge(tags), metadata.Counter, metadata.Pct, descLinuxProcCPUUser)
+		Add(md, "linux.proc.cpu", stats[14], opentsdb.TagSet{"type": "system"}.Merge(tags), metadata.Counter, metadata.Pct, descLinuxProcCPUSystem)
 		Add(md, "linux.proc.mem.fault", stats[9], opentsdb.TagSet{"type": "minflt"}.Merge(tags), metadata.Counter, metadata.Fault, descLinuxProcMemFaultMin)
 		Add(md, "linux.proc.mem.fault", stats[11], opentsdb.TagSet{"type": "majflt"}.Merge(tags), metadata.Counter, metadata.Fault, descLinuxProcMemFaultMax)
 		Add(md, "linux.proc.mem.virtual", stats[22], tags, metadata.Gauge, metadata.Bytes, descLinuxProcMemVirtual)
@@ -88,8 +88,8 @@ func linuxProcMonitor(w *WatchedProc, md *opentsdb.MultiDataPoint) error {
 }
 
 const (
-	descLinuxProcCpuUser      = "The amount of time that this process has been scheduled in user mode."
-	descLinuxProcCpuSystem    = "The amount of time that this process has been scheduled in kernel mode"
+	descLinuxProcCPUUser      = "The amount of time that this process has been scheduled in user mode."
+	descLinuxProcCPUSystem    = "The amount of time that this process has been scheduled in kernel mode"
 	descLinuxProcMemFaultMin  = "The number of minor faults the process has made which have not required loading a memory page from disk."
 	descLinuxProcMemFaultMax  = "The number of major faults the process has made which have required loading a memory page from disk."
 	descLinuxProcMemVirtual   = "The virtual memory size."

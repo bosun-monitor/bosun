@@ -38,11 +38,11 @@ func c_iostat_darwin() (opentsdb.MultiDataPoint, error) {
 				Add(&md, "darwin.disk.megabytes", values[i], opentsdb.TagSet{"disk": cat}, metadata.Unknown, metadata.None, "")
 				i++
 			} else if cat == "cpu" {
-				Add(&md, "darwin.cpu.user", values[i], nil, metadata.Gauge, metadata.Pct, descDarwinCpuUser)
+				Add(&md, "darwin.cpu.user", values[i], nil, metadata.Gauge, metadata.Pct, descDarwinCPUUser)
 				i++
-				Add(&md, "darwin.cpu.sys", values[i], nil, metadata.Gauge, metadata.Pct, descDarwinCpuSys)
+				Add(&md, "darwin.cpu.sys", values[i], nil, metadata.Gauge, metadata.Pct, descDarwinCPUSys)
 				i++
-				Add(&md, "darwin.cpu.idle", values[i], nil, metadata.Gauge, metadata.Pct, descDarwinCpuIdle)
+				Add(&md, "darwin.cpu.idle", values[i], nil, metadata.Gauge, metadata.Pct, descDarwinCPUIdle)
 				i++
 			} else if cat == "load" {
 				Add(&md, "darwin.loadavg_1_min", values[i], nil, metadata.Unknown, metadata.None, "")
@@ -62,7 +62,7 @@ func c_iostat_darwin() (opentsdb.MultiDataPoint, error) {
 }
 
 const (
-	descDarwinCpuUser = "Percent of time in user mode."
-	descDarwinCpuSys  = "Percent of time in system mode."
-	descDarwinCpuIdle = "Percent of time in idle mode."
+	descDarwinCPUUser = "Percent of time in user mode."
+	descDarwinCPUSys  = "Percent of time in system mode."
+	descDarwinCPUIdle = "Percent of time in idle mode."
 )
