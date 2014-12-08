@@ -359,7 +359,7 @@ func (c *Context) HTTPGet(u string) string {
 		return err.Error()
 	}
 	if resp.StatusCode >= 300 {
-		return fmt.Printf("%v: returned %v", u, resp.Status)
+		return fmt.Sprintf("%v: returned %v", u, resp.Status)
 	}
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
