@@ -1,6 +1,6 @@
 // Package collect provides functions for sending data to OpenTSDB.
 //
-// The "collect" namespace is used (i.e., <metric_root>.collect) to collect
+// The "collect" namespace is used (i.e., <root>.collect) to collect
 // program and queue metrics.
 package collect
 
@@ -54,7 +54,7 @@ var (
 	counters                         = make(map[string]*addMetric)
 	sets                             = make(map[string]*setMetric)
 	puts                             = make(map[string]*putMetric)
-	client              *http.Client = &http.Client{
+	client               = &http.Client{
 		Transport: &timeoutTransport{Transport: new(http.Transport)},
 		Timeout:   time.Minute,
 	}
@@ -75,11 +75,11 @@ func (t *timeoutTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 
 // InitChan is similar to Init, but uses the given channel instead of creating a
 // new one.
-func InitChan(tsdbhost *url.URL, metric_root string, ch chan *opentsdb.DataPoint) error {
+func InitChan(tsdbhost *url.URL, root string, ch chan *opentsdb.DataPoint) error {
 	if tchan != nil {
 		return fmt.Errorf("cannot init twice")
 	}
-	if err := checkClean(metric_root, "metric root"); err != nil {
+	if err := checkClean(root, "metric root"); err != nil {
 		return err
 	}
 	u, err := tsdbhost.Parse("/api/put")
@@ -90,7 +90,7 @@ func InitChan(tsdbhost *url.URL, metric_root string, ch chan *opentsdb.DataPoint
 		u.Host = "localhost" + u.Host
 	}
 	tsdbURL = u.String()
-	metricRoot = metric_root + "."
+	metricRoot = root + "."
 	tchan = ch
 	go queuer()
 	go send()
@@ -129,8 +129,8 @@ func InitChan(tsdbhost *url.URL, metric_root string, ch chan *opentsdb.DataPoint
 
 // Init sets up the channels and the queue for sending data to OpenTSDB. It also
 // sets up the basename for all metrics.
-func Init(tsdbhost *url.URL, metric_root string) error {
-	return InitChan(tsdbhost, metric_root, make(chan *opentsdb.DataPoint))
+func Init(tsdbhost *url.URL, root string) error {
+	return InitChan(tsdbhost, root, make(chan *opentsdb.DataPoint))
 }
 
 func setHostName() error {
@@ -151,6 +151,8 @@ type setMetric struct {
 	f      func() interface{}
 }
 
+// Set registers a callback for the given metric and tags, calling f immediately
+// before queueing data for send.
 func Set(metric string, ts opentsdb.TagSet, f func() interface{}) error {
 	if err := check(metric, &ts); err != nil {
 		return err
