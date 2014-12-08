@@ -1,3 +1,4 @@
+// Package metadata provides metadata information between bosun and OpenTSDB.
 package metadata
 
 import (
@@ -14,18 +15,25 @@ import (
 	"bosun.org/util"
 )
 
+// RateType is the type of rate for a metric: gauge, counter, or rate.
 type RateType string
 
 const (
+	// Unknown is a not-yet documented rate type.
 	Unknown RateType = ""
-	Gauge            = "gauge"
-	Counter          = "counter"
-	Rate             = "rate"
+	// Gauge rate type.
+	Gauge = "gauge"
+	// Counter rate type.
+	Counter = "counter"
+	// Rate rate type.
+	Rate = "rate"
 )
 
+// Unit is the unit for a metric.
 type Unit string
 
 const (
+	// None is a not-yet documented unit.
 	None           Unit = ""
 	A                   = "A" // Amps
 	Bool                = "bool"
@@ -58,15 +66,17 @@ const (
 	StatusCode          = "status code"
 	Syscall             = "system calls"
 	V                   = "V" // Volts
-	V_10                = "tenth-Volts"
+	V10                 = "tenth-Volts"
 )
 
+// Metakey uniquely identifies a metadata entry.
 type Metakey struct {
 	Metric string
 	Tags   string
 	Name   string
 }
 
+// TagSet returns m's tags.
 func (m Metakey) TagSet() opentsdb.TagSet {
 	tags, err := opentsdb.ParseTags(m.Tags)
 	if err != nil {
@@ -83,6 +93,7 @@ var (
 	metadebug bool
 )
 
+// AddMeta adds a metadata entry to memory, which is queued for later sending.
 func AddMeta(metric string, tags opentsdb.TagSet, name string, value interface{}, setHost bool) {
 	if tags == nil {
 		tags = make(opentsdb.TagSet)
@@ -106,6 +117,7 @@ func AddMeta(metric string, tags opentsdb.TagSet, name string, value interface{}
 	metadata[Metakey{metric, ts, name}] = value
 }
 
+// Init initializes the metadata send queue.
 func Init(u *url.URL, debug bool) error {
 	mh, err := u.Parse("/api/metadata/put")
 	if err != nil {
@@ -130,6 +142,7 @@ func collectMetadata() {
 	}
 }
 
+// Metasend is the struct for sending metadata to bosun.
 type Metasend struct {
 	Metric string          `json:",omitempty"`
 	Tags   opentsdb.TagSet `json:",omitempty"`

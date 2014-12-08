@@ -71,7 +71,7 @@ func c_cpu_info_windows() (opentsdb.MultiDataPoint, error) {
 		tags := opentsdb.TagSet{"cpu": strings.Replace(v.DeviceID, "CPU", "", 1)}
 		Add(&md, "win.cpu.clock", v.CurrentClockSpeed, tags, metadata.Gauge, metadata.MHz, "Current speed of the processor, in MHz.")
 		Add(&md, "win.cpu.clock_max", v.MaxClockSpeed, tags, metadata.Gauge, metadata.MHz, "Maximum speed of the processor, in MHz.")
-		Add(&md, "win.cpu.voltage", v.CurrentVoltage, tags, metadata.Gauge, metadata.V_10, "Voltage of the processor.")
+		Add(&md, "win.cpu.voltage", v.CurrentVoltage, tags, metadata.Gauge, metadata.V10, "Voltage of the processor.")
 		Add(&md, "win.cpu.cores_physical", v.NumberOfCores, tags, metadata.Gauge, metadata.Count, "Number of cores for the current instance of the processor.")
 		Add(&md, "win.cpu.cores_logical", v.NumberOfLogicalProcessors, tags, metadata.Gauge, metadata.Count, "Number of logical processors for the current instance of the processor.")
 		if v.LoadPercentage != nil {
