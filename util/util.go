@@ -1,3 +1,4 @@
+// Package util defines utilities for bosun.
 package util
 
 import (
