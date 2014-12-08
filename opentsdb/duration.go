@@ -10,6 +10,8 @@ import (
 	"time"
 )
 
+// Duration extends time.Duration to support OpenTSDB time-format specifiers:
+// http://opentsdb.net/docs/build/html/user_guide/query/dates.html#relative.
 type Duration time.Duration
 
 var unitMap = map[string]float64{
@@ -135,6 +137,7 @@ func (d Duration) String() string {
 	return fmt.Sprintf("%dms", time.Duration(d).Nanoseconds()/1e6)
 }
 
+// Seconds returns the duration as a floating point number of seconds.
 func (d Duration) Seconds() float64 {
 	return time.Duration(d).Seconds()
 }
