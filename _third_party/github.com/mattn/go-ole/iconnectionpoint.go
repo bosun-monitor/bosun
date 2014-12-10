@@ -52,7 +52,7 @@ func (v *IConnectionPoint) Advise(unknown *IUnknown) (cookie uint32, err error) 
 
 func (v *IConnectionPoint) Unadvise(cookie uint32) (err error) {
 	hr, _, _ := syscall.Syscall(
-		uintptr(v.lpVtbl.pAdvise),
+		uintptr(v.lpVtbl.pUnadvise),
 		2,
 		uintptr(unsafe.Pointer(v)),
 		uintptr(cookie),

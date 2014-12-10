@@ -209,14 +209,22 @@ func loadEntity(dst interface{}, src *ole.IDispatch) (errFieldMismatch error) {
 		}
 		defer prop.Clear()
 
-		switch val := prop.Value(); reflect.ValueOf(val).Kind() {
-		case reflect.Int64:
-			iv := val.(int64)
+		switch val := prop.Value().(type) {
+		case int, int64:
+			var v int64
+			switch val := val.(type) {
+			case int:
+				v = int64(val)
+			case int64:
+				v = val
+			default:
+				panic("unexpected type")
+			}
 			switch f.Kind() {
 			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-				f.SetInt(iv)
+				f.SetInt(v)
 			case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-				f.SetUint(uint64(iv))
+				f.SetUint(uint64(v))
 			default:
 				return &ErrFieldMismatch{
 					StructType: f.Type(),
@@ -224,12 +232,11 @@ func loadEntity(dst interface{}, src *ole.IDispatch) (errFieldMismatch error) {
 					Reason:     "not an integer class",
 				}
 			}
-		case reflect.String:
-			sv := val.(string)
-			iv, err := strconv.ParseInt(sv, 10, 64)
+		case string:
+			iv, err := strconv.ParseInt(val, 10, 64)
 			switch f.Kind() {
 			case reflect.String:
-				f.SetString(sv)
+				f.SetString(val)
 			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 				if err != nil {
 					return err
@@ -243,21 +250,20 @@ func loadEntity(dst interface{}, src *ole.IDispatch) (errFieldMismatch error) {
 			case reflect.Struct:
 				switch f.Type() {
 				case timeType:
-					if len(sv) == 25 {
-						sv = sv[:22] + "0" + sv[22:]
+					if len(val) == 25 {
+						val = val[:22] + "0" + val[22:]
 					}
-					t, err := time.Parse("20060102150405.000000-0700", sv)
+					t, err := time.Parse("20060102150405.000000-0700", val)
 					if err != nil {
 						return err
 					}
 					f.Set(reflect.ValueOf(t))
 				}
 			}
-		case reflect.Bool:
-			bv := val.(bool)
+		case bool:
 			switch f.Kind() {
 			case reflect.Bool:
-				f.SetBool(bv)
+				f.SetBool(val)
 			default:
 				return &ErrFieldMismatch{
 					StructType: f.Type(),
@@ -273,7 +279,7 @@ func loadEntity(dst interface{}, src *ole.IDispatch) (errFieldMismatch error) {
 			return &ErrFieldMismatch{
 				StructType: f.Type(),
 				FieldName:  n,
-				Reason:     "unsupported type",
+				Reason:     fmt.Sprintf("unsupported type (%T)", val),
 			}
 		}
 	}

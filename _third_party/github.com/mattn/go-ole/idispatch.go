@@ -138,7 +138,7 @@ func invoke(disp *IDispatch, dispid int32, dispatch int16, params ...interface{}
 			case *int16:
 				vargs[n] = VARIANT{VT_I2 | VT_BYREF, 0, 0, 0, int64(uintptr(unsafe.Pointer(v.(*int16)))), 0}
 			case uint16:
-				vargs[n] = VARIANT{VT_UI2, 0, 0, 0, int64(v.(int16)), 0}
+				vargs[n] = VARIANT{VT_UI2, 0, 0, 0, int64(v.(uint16)), 0}
 			case *uint16:
 				vargs[n] = VARIANT{VT_UI2 | VT_BYREF, 0, 0, 0, int64(uintptr(unsafe.Pointer(v.(*uint16)))), 0}
 			case int, int32:
@@ -166,7 +166,7 @@ func invoke(disp *IDispatch, dispid int32, dispatch int16, params ...interface{}
 			case *float64:
 				vargs[n] = VARIANT{VT_R8 | VT_BYREF, 0, 0, 0, int64(uintptr(unsafe.Pointer(v.(*float64)))), 0}
 			case string:
-				vargs[n] = VARIANT{VT_BSTR, 0, 0, 0, int64(uintptr(unsafe.Pointer(SysAllocString(v.(string))))), 0}
+				vargs[n] = VARIANT{VT_BSTR, 0, 0, 0, int64(uintptr(unsafe.Pointer(SysAllocStringLen(v.(string))))), 0}
 			case *string:
 				vargs[n] = VARIANT{VT_BSTR | VT_BYREF, 0, 0, 0, int64(uintptr(unsafe.Pointer(v.(*string)))), 0}
 			case *IDispatch:
@@ -177,6 +177,10 @@ func invoke(disp *IDispatch, dispid int32, dispatch int16, params ...interface{}
 				vargs[n] = VARIANT{VT_NULL, 0, 0, 0, 0, 0}
 			case *VARIANT:
 				vargs[n] = VARIANT{VT_VARIANT | VT_BYREF, 0, 0, 0, int64(uintptr(unsafe.Pointer(v.(*VARIANT)))), 0}
+			case []byte:
+				safeByteArray := safeArrayFromByteSlice(v.([]byte))
+				vargs[n] = VARIANT{VT_ARRAY | VT_UI1, 0, 0, 0, int64(uintptr(unsafe.Pointer(safeByteArray))), 0}
+				defer VariantClear(&vargs[n])
 			default:
 				panic("unknown type")
 			}
@@ -204,7 +208,7 @@ func invoke(disp *IDispatch, dispid int32, dispatch int16, params ...interface{}
 		if excepInfo.bstrDescription == nil {
 			err = NewError(hr)
 		} else {
-			bs := UTF16PtrToString(excepInfo.bstrDescription)
+			bs := BstrToString(excepInfo.bstrDescription)
 			err = NewErrorWithDescription(hr, bs)
 		}
 	}
@@ -214,7 +218,7 @@ func invoke(disp *IDispatch, dispid int32, dispatch int16, params ...interface{}
 		}
 		/*
 			if varg.VT == (VT_BSTR|VT_BYREF) && varg.Val != 0 {
-				*(params[n].(*string)) = UTF16PtrToString((*uint16)(unsafe.Pointer(uintptr(varg.Val))))
+				*(params[n].(*string)) = LpOleStrToString((*uint16)(unsafe.Pointer(uintptr(varg.Val))))
 				println(*(params[n].(*string)))
 				fmt.Fprintln(os.Stderr, *(params[n].(*string)))
 			}
