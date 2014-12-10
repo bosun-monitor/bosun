@@ -147,7 +147,7 @@ func dispGetIDsOfNames(this *ole.IUnknown, iid *ole.GUID, wnames []*uint16, name
 	pthis := (*stdDispatch)(unsafe.Pointer(this))
 	names := make([]string, len(wnames))
 	for i := 0; i < len(names); i++ {
-		names[i] = ole.UTF16PtrToString(wnames[i])
+		names[i] = ole.LpOleStrToString(wnames[i])
 	}
 	for n := 0; n < namelen; n++ {
 		if id, ok := pthis.funcMap[names[n]]; ok {

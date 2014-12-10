@@ -155,11 +155,11 @@ func _TestMany(t *testing.T) {
 type Win32_Process struct {
 	CSCreationClassName        string
 	CSName                     string
-	Caption                    string
+	Caption                    *string
 	CommandLine                *string
 	CreationClassName          string
 	CreationDate               *time.Time
-	Description                string
+	Description                *string
 	ExecutablePath             *string
 	ExecutionState             *uint16
 	Handle                     string
@@ -216,9 +216,9 @@ type Win32_PerfRawData_PerfDisk_LogicalDisk struct {
 	AvgDiskSecPerWrite           uint32
 	AvgDiskSecPerWrite_Base      uint32
 	AvgDiskWriteQueueLength      uint64
-	Caption                      string
+	Caption                      *string
 	CurrentDiskQueueLength       uint32
-	Description                  string
+	Description                  *string
 	DiskBytesPerSec              uint64
 	DiskReadBytesPerSec          uint64
 	DiskReadsPerSec              uint32
@@ -250,37 +250,37 @@ type Win32_OperatingSystem struct {
 	BootDevice                                string
 	BuildNumber                               string
 	BuildType                                 string
-	Caption                                   string
+	Caption                                   *string
 	CodeSet                                   string
 	CountryCode                               string
 	CreationClassName                         string
 	CSCreationClassName                       string
-	CSDVersion                                string
+	CSDVersion                                *string
 	CSName                                    string
 	CurrentTimeZone                           int16
 	DataExecutionPrevention_Available         bool
 	DataExecutionPrevention_32BitApplications bool
 	DataExecutionPrevention_Drivers           bool
-	DataExecutionPrevention_SupportPolicy     uint8
+	DataExecutionPrevention_SupportPolicy     *uint8
 	Debug                                     bool
-	Description                               string
+	Description                               *string
 	Distributed                               bool
 	EncryptionLevel                           uint32
-	ForegroundApplicationBoost                uint8
+	ForegroundApplicationBoost                *uint8
 	FreePhysicalMemory                        uint64
 	FreeSpaceInPagingFiles                    uint64
 	FreeVirtualMemory                         uint64
 	InstallDate                               time.Time
-	LargeSystemCache                          uint32
+	LargeSystemCache                          *uint32
 	LastBootUpTime                            time.Time
 	LocalDateTime                             time.Time
 	Locale                                    string
 	Manufacturer                              string
 	MaxNumberOfProcesses                      uint32
 	MaxProcessMemorySize                      uint64
-	MUILanguages                              []string
+	MUILanguages                              *[]string
 	Name                                      string
-	NumberOfLicensedUsers                     uint32
+	NumberOfLicensedUsers                     *uint32
 	NumberOfProcesses                         uint32
 	NumberOfUsers                             uint32
 	OperatingSystemSKU                        uint32
@@ -289,10 +289,10 @@ type Win32_OperatingSystem struct {
 	OSLanguage                                uint32
 	OSProductSuite                            uint32
 	OSType                                    uint16
-	OtherTypeDescription                      string
-	PAEEnabled                                bool
-	PlusProductID                             string
-	PlusVersionNumber                         string
+	OtherTypeDescription                      *string
+	PAEEnabled                                *bool
+	PlusProductID                             *string
+	PlusVersionNumber                         *string
 	PortableOperatingSystem                   bool
 	Primary                                   bool
 	ProductType                               uint32
@@ -306,7 +306,7 @@ type Win32_OperatingSystem struct {
 	SystemDevice                              string
 	SystemDirectory                           string
 	SystemDrive                               string
-	TotalSwapSpaceSize                        uint64
+	TotalSwapSpaceSize                        *uint64
 	TotalVirtualMemorySize                    uint64
 	TotalVisibleMemorySize                    uint64
 	Version                                   string
