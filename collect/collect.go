@@ -50,11 +50,11 @@ var (
 	osHostname          string
 	metricRoot          string
 	queue               []json.RawMessage
-	qlock, mlock, slock sync.Mutex   // Locks for queues, maps, stats.
-	counters                         = make(map[string]*addMetric)
-	sets                             = make(map[string]*setMetric)
-	puts                             = make(map[string]*putMetric)
-	client               = &http.Client{
+	qlock, mlock, slock sync.Mutex // Locks for queues, maps, stats.
+	counters            = make(map[string]*addMetric)
+	sets                = make(map[string]*setMetric)
+	puts                = make(map[string]*putMetric)
+	client              = &http.Client{
 		Transport: &timeoutTransport{Transport: new(http.Transport)},
 		Timeout:   time.Minute,
 	}
