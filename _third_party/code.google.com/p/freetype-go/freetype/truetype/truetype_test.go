@@ -104,6 +104,10 @@ func TestIndex(t *testing.T) {
 			'\u22c5': 385,
 			'中':      0,
 		},
+
+		// The x-etc test cases use those versions of the .ttf files provided
+		// by Ubuntu 14.04. See testdata/make-other-hinting-txts.sh for details.
+
 		"x-arial-bold": {
 			' ':      3,
 			'+':      14,
@@ -126,10 +130,10 @@ func TestIndex(t *testing.T) {
 			'Œ':      276,
 			'ω':      861,
 			'‡':      2571,
-			'⊕':      3109,
-			'ﬂ':      4560,
-			'\ufb03': 4561,
-			'\ufffd': 4645,
+			'⊕':      3110,
+			'ﬂ':      4728,
+			'\ufb03': 4729,
+			'\ufffd': 4813,
 			// TODO: '\U0001f640': ???,
 			'中': 0,
 		},
