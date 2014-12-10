@@ -13,7 +13,7 @@ import (
 
 var (
 	// ErrPath is returned by Command if the program is not in the PATH.
-	ErrPath    = errors.New("program not in PATH")
+	ErrPath = errors.New("program not in PATH")
 	// ErrTimeout is returned by Command if the program timed out.
 	ErrTimeout = errors.New("program killed after timeout")
 
