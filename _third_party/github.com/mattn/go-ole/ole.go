@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"syscall"
 	"unicode/utf16"
-	"unsafe"
 )
 
 type OleError struct {
@@ -58,55 +57,6 @@ type DISPPARAMS struct {
 	rgdispidNamedArgs uintptr
 	cArgs             uint32
 	cNamedArgs        uint32
-}
-
-type VARIANT struct {
-	VT         uint16 //  2
-	wReserved1 uint16 //  4
-	wReserved2 uint16 //  6
-	wReserved3 uint16 //  8
-	// On 32-bit windows, sizeof(VARIANT) is 16. 64-bit is 24. Although an int would
-	// be that size, stick with int64 due to conversions in invoke. 32-bit machines
-	// will thus have 8-bytes of unused space.
-	Val  int64
-	Val2 int64
-}
-
-func (v *VARIANT) ToIUnknown() *IUnknown {
-	return (*IUnknown)(unsafe.Pointer(uintptr(v.Val)))
-}
-
-func (v *VARIANT) ToIDispatch() *IDispatch {
-	return (*IDispatch)(unsafe.Pointer(uintptr(v.Val)))
-}
-
-func (v *VARIANT) ToArray() *SafeArrayConversion {
-	var safeArray *SafeArray = (*SafeArray)(unsafe.Pointer(uintptr(v.Val)))
-	return &SafeArrayConversion{safeArray}
-}
-
-func (v *VARIANT) ToString() string {
-	return BstrToString(*(**uint16)(unsafe.Pointer(&v.Val)))
-}
-
-func (v *VARIANT) Clear() error {
-	return VariantClear(v)
-}
-
-// Returns v's value based on its VALTYPE.
-// Currently supported types: 2- and 4-byte integers, strings, bools.
-// Note that 64-bit integers, datetimes, and other types are stored as strings
-// and will be returned as strings.
-func (v *VARIANT) Value() interface{} {
-	switch v.VT {
-	case VT_I2, VT_I4:
-		return v.Val
-	case VT_BSTR:
-		return v.ToString()
-	case VT_BOOL:
-		return v.Val != 0
-	}
-	return nil
 }
 
 type EXCEPINFO struct {

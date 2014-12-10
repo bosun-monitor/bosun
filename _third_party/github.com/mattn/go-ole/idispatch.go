@@ -123,63 +123,63 @@ func invoke(disp *IDispatch, dispid int32, dispatch int16, params ...interface{}
 			switch v.(type) {
 			case bool:
 				if v.(bool) {
-					vargs[n] = VARIANT{VT_BOOL, 0, 0, 0, 0xffff, 0}
+					vargs[n] = NewVariant(VT_BOOL, 0xffff)
 				} else {
-					vargs[n] = VARIANT{VT_BOOL, 0, 0, 0, 0, 0}
+					vargs[n] = NewVariant(VT_BOOL, 0)
 				}
 			case *bool:
-				vargs[n] = VARIANT{VT_BOOL | VT_BYREF, 0, 0, 0, int64(uintptr(unsafe.Pointer(v.(*bool)))), 0}
+				vargs[n] = NewVariant(VT_BOOL|VT_BYREF, int64(uintptr(unsafe.Pointer(v.(*bool)))))
 			case byte:
-				vargs[n] = VARIANT{VT_I1, 0, 0, 0, int64(v.(byte)), 0}
+				vargs[n] = NewVariant(VT_I1, int64(v.(byte)))
 			case *byte:
-				vargs[n] = VARIANT{VT_I1 | VT_BYREF, 0, 0, 0, int64(uintptr(unsafe.Pointer(v.(*byte)))), 0}
+				vargs[n] = NewVariant(VT_I1|VT_BYREF, int64(uintptr(unsafe.Pointer(v.(*byte)))))
 			case int16:
-				vargs[n] = VARIANT{VT_I2, 0, 0, 0, int64(v.(int16)), 0}
+				vargs[n] = NewVariant(VT_I2, int64(v.(int16)))
 			case *int16:
-				vargs[n] = VARIANT{VT_I2 | VT_BYREF, 0, 0, 0, int64(uintptr(unsafe.Pointer(v.(*int16)))), 0}
+				vargs[n] = NewVariant(VT_I2|VT_BYREF, int64(uintptr(unsafe.Pointer(v.(*int16)))))
 			case uint16:
-				vargs[n] = VARIANT{VT_UI2, 0, 0, 0, int64(v.(uint16)), 0}
+				vargs[n] = NewVariant(VT_UI2, int64(v.(uint16)))
 			case *uint16:
-				vargs[n] = VARIANT{VT_UI2 | VT_BYREF, 0, 0, 0, int64(uintptr(unsafe.Pointer(v.(*uint16)))), 0}
+				vargs[n] = NewVariant(VT_UI2|VT_BYREF, int64(uintptr(unsafe.Pointer(v.(*uint16)))))
 			case int, int32:
-				vargs[n] = VARIANT{VT_I4, 0, 0, 0, int64(v.(int)), 0}
+				vargs[n] = NewVariant(VT_I4, int64(v.(int)))
 			case *int, *int32:
-				vargs[n] = VARIANT{VT_I4 | VT_BYREF, 0, 0, 0, int64(uintptr(unsafe.Pointer(v.(*int)))), 0}
+				vargs[n] = NewVariant(VT_I4|VT_BYREF, int64(uintptr(unsafe.Pointer(v.(*int)))))
 			case uint, uint32:
-				vargs[n] = VARIANT{VT_UI4, 0, 0, 0, int64(v.(uint)), 0}
+				vargs[n] = NewVariant(VT_UI4, int64(v.(uint)))
 			case *uint, *uint32:
-				vargs[n] = VARIANT{VT_UI4 | VT_BYREF, 0, 0, 0, int64(uintptr(unsafe.Pointer(v.(*uint)))), 0}
+				vargs[n] = NewVariant(VT_UI4|VT_BYREF, int64(uintptr(unsafe.Pointer(v.(*uint)))))
 			case int64:
-				vargs[n] = VARIANT{VT_I8, 0, 0, 0, int64(v.(int64)), 0}
+				vargs[n] = NewVariant(VT_I8, int64(v.(int64)))
 			case *int64:
-				vargs[n] = VARIANT{VT_I8 | VT_BYREF, 0, 0, 0, int64(uintptr(unsafe.Pointer(v.(*int64)))), 0}
+				vargs[n] = NewVariant(VT_I8|VT_BYREF, int64(uintptr(unsafe.Pointer(v.(*int64)))))
 			case uint64:
-				vargs[n] = VARIANT{VT_UI8, 0, 0, 0, v.(int64), 0}
+				vargs[n] = NewVariant(VT_UI8, v.(int64))
 			case *uint64:
-				vargs[n] = VARIANT{VT_UI8 | VT_BYREF, 0, 0, 0, int64(uintptr(unsafe.Pointer(v.(*uint64)))), 0}
+				vargs[n] = NewVariant(VT_UI8|VT_BYREF, int64(uintptr(unsafe.Pointer(v.(*uint64)))))
 			case float32:
-				vargs[n] = VARIANT{VT_R4, 0, 0, 0, int64(v.(float32)), 0}
+				vargs[n] = NewVariant(VT_R4, int64(v.(float32)))
 			case *float32:
-				vargs[n] = VARIANT{VT_R4 | VT_BYREF, 0, 0, 0, int64(uintptr(unsafe.Pointer(v.(*float32)))), 0}
+				vargs[n] = NewVariant(VT_R4|VT_BYREF, int64(uintptr(unsafe.Pointer(v.(*float32)))))
 			case float64:
-				vargs[n] = VARIANT{VT_R8, 0, 0, 0, int64(v.(float64)), 0}
+				vargs[n] = NewVariant(VT_R8, int64(v.(float64)))
 			case *float64:
-				vargs[n] = VARIANT{VT_R8 | VT_BYREF, 0, 0, 0, int64(uintptr(unsafe.Pointer(v.(*float64)))), 0}
+				vargs[n] = NewVariant(VT_R8|VT_BYREF, int64(uintptr(unsafe.Pointer(v.(*float64)))))
 			case string:
-				vargs[n] = VARIANT{VT_BSTR, 0, 0, 0, int64(uintptr(unsafe.Pointer(SysAllocStringLen(v.(string))))), 0}
+				vargs[n] = NewVariant(VT_BSTR, int64(uintptr(unsafe.Pointer(SysAllocStringLen(v.(string))))))
 			case *string:
-				vargs[n] = VARIANT{VT_BSTR | VT_BYREF, 0, 0, 0, int64(uintptr(unsafe.Pointer(v.(*string)))), 0}
+				vargs[n] = NewVariant(VT_BSTR|VT_BYREF, int64(uintptr(unsafe.Pointer(v.(*string)))))
 			case *IDispatch:
-				vargs[n] = VARIANT{VT_DISPATCH, 0, 0, 0, int64(uintptr(unsafe.Pointer(v.(*IDispatch)))), 0}
+				vargs[n] = NewVariant(VT_DISPATCH, int64(uintptr(unsafe.Pointer(v.(*IDispatch)))))
 			case **IDispatch:
-				vargs[n] = VARIANT{VT_DISPATCH | VT_BYREF, 0, 0, 0, int64(uintptr(unsafe.Pointer(v.(**IDispatch)))), 0}
+				vargs[n] = NewVariant(VT_DISPATCH|VT_BYREF, int64(uintptr(unsafe.Pointer(v.(**IDispatch)))))
 			case nil:
-				vargs[n] = VARIANT{VT_NULL, 0, 0, 0, 0, 0}
+				vargs[n] = NewVariant(VT_NULL, 0)
 			case *VARIANT:
-				vargs[n] = VARIANT{VT_VARIANT | VT_BYREF, 0, 0, 0, int64(uintptr(unsafe.Pointer(v.(*VARIANT)))), 0}
+				vargs[n] = NewVariant(VT_VARIANT|VT_BYREF, int64(uintptr(unsafe.Pointer(v.(*VARIANT)))))
 			case []byte:
 				safeByteArray := safeArrayFromByteSlice(v.([]byte))
-				vargs[n] = VARIANT{VT_ARRAY | VT_UI1, 0, 0, 0, int64(uintptr(unsafe.Pointer(safeByteArray))), 0}
+				vargs[n] = NewVariant(VT_ARRAY|VT_UI1, int64(uintptr(unsafe.Pointer(safeByteArray))))
 				defer VariantClear(&vargs[n])
 			default:
 				panic("unknown type")
