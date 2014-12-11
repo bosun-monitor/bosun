@@ -3,10 +3,12 @@ package collectors
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math"
 	"net/http"
 	"net/url"
 	"regexp"
+	"time"
 
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
