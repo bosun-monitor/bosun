@@ -15,138 +15,143 @@ import (
 	"bosun.org/opentsdb"
 )
 
-var builtins = map[string]parse.Func{
-	// Query functions
+var builtins map[string]parse.Func
 
-	"band": {
-		[]parse.FuncType{parse.TYPE_STRING, parse.TYPE_STRING, parse.TYPE_STRING, parse.TYPE_SCALAR},
-		parse.TYPE_SERIES,
-		Band,
-	},
-	"change": {
-		[]parse.FuncType{parse.TYPE_STRING, parse.TYPE_STRING, parse.TYPE_STRING},
-		parse.TYPE_NUMBER,
-		Change,
-	},
-	"count": {
-		[]parse.FuncType{parse.TYPE_STRING, parse.TYPE_STRING, parse.TYPE_STRING},
-		parse.TYPE_SCALAR,
-		Count,
-	},
-	"diff": {
-		[]parse.FuncType{parse.TYPE_STRING, parse.TYPE_STRING, parse.TYPE_STRING},
-		parse.TYPE_NUMBER,
-		Diff,
-	},
-	"q": {
-		[]parse.FuncType{parse.TYPE_STRING, parse.TYPE_STRING, parse.TYPE_STRING},
-		parse.TYPE_SERIES,
-		Query,
-	},
+//builtings needs to be set in init because lookup will cause a circular reference
+func init() {
+	builtins = map[string]parse.Func{
+		// Query functions
 
-	// Reduction functions
+		"band": {
+			[]parse.FuncType{parse.TYPE_STRING, parse.TYPE_STRING, parse.TYPE_STRING, parse.TYPE_SCALAR},
+			parse.TYPE_SERIES,
+			Band,
+		},
+		"change": {
+			[]parse.FuncType{parse.TYPE_STRING, parse.TYPE_STRING, parse.TYPE_STRING},
+			parse.TYPE_NUMBER,
+			Change,
+		},
+		"count": {
+			[]parse.FuncType{parse.TYPE_STRING, parse.TYPE_STRING, parse.TYPE_STRING},
+			parse.TYPE_SCALAR,
+			Count,
+		},
+		"diff": {
+			[]parse.FuncType{parse.TYPE_STRING, parse.TYPE_STRING, parse.TYPE_STRING},
+			parse.TYPE_NUMBER,
+			Diff,
+		},
+		"q": {
+			[]parse.FuncType{parse.TYPE_STRING, parse.TYPE_STRING, parse.TYPE_STRING},
+			parse.TYPE_SERIES,
+			Query,
+		},
 
-	"avg": {
-		[]parse.FuncType{parse.TYPE_SERIES},
-		parse.TYPE_NUMBER,
-		Avg,
-	},
-	"dev": {
-		[]parse.FuncType{parse.TYPE_SERIES},
-		parse.TYPE_NUMBER,
-		Dev,
-	},
-	"first": {
-		[]parse.FuncType{parse.TYPE_SERIES},
-		parse.TYPE_NUMBER,
-		First,
-	},
-	"forecastlr": {
-		[]parse.FuncType{parse.TYPE_SERIES, parse.TYPE_SCALAR},
-		parse.TYPE_NUMBER,
-		Forecast_lr,
-	},
-	"last": {
-		[]parse.FuncType{parse.TYPE_SERIES},
-		parse.TYPE_NUMBER,
-		Last,
-	},
-	"len": {
-		[]parse.FuncType{parse.TYPE_SERIES},
-		parse.TYPE_NUMBER,
-		Length,
-	},
-	"max": {
-		[]parse.FuncType{parse.TYPE_SERIES},
-		parse.TYPE_NUMBER,
-		Max,
-	},
-	"median": {
-		[]parse.FuncType{parse.TYPE_SERIES},
-		parse.TYPE_NUMBER,
-		Median,
-	},
-	"min": {
-		[]parse.FuncType{parse.TYPE_SERIES},
-		parse.TYPE_NUMBER,
-		Min,
-	},
-	"percentile": {
-		[]parse.FuncType{parse.TYPE_SERIES, parse.TYPE_SCALAR},
-		parse.TYPE_NUMBER,
-		Percentile,
-	},
-	"since": {
-		[]parse.FuncType{parse.TYPE_SERIES},
-		parse.TYPE_NUMBER,
-		Since,
-	},
-	"sum": {
-		[]parse.FuncType{parse.TYPE_SERIES},
-		parse.TYPE_NUMBER,
-		Sum,
-	},
+		// Reduction functions
 
-	// Group functions
+		"avg": {
+			[]parse.FuncType{parse.TYPE_SERIES},
+			parse.TYPE_NUMBER,
+			Avg,
+		},
+		"dev": {
+			[]parse.FuncType{parse.TYPE_SERIES},
+			parse.TYPE_NUMBER,
+			Dev,
+		},
+		"first": {
+			[]parse.FuncType{parse.TYPE_SERIES},
+			parse.TYPE_NUMBER,
+			First,
+		},
+		"forecastlr": {
+			[]parse.FuncType{parse.TYPE_SERIES, parse.TYPE_SCALAR},
+			parse.TYPE_NUMBER,
+			Forecast_lr,
+		},
+		"last": {
+			[]parse.FuncType{parse.TYPE_SERIES},
+			parse.TYPE_NUMBER,
+			Last,
+		},
+		"len": {
+			[]parse.FuncType{parse.TYPE_SERIES},
+			parse.TYPE_NUMBER,
+			Length,
+		},
+		"max": {
+			[]parse.FuncType{parse.TYPE_SERIES},
+			parse.TYPE_NUMBER,
+			Max,
+		},
+		"median": {
+			[]parse.FuncType{parse.TYPE_SERIES},
+			parse.TYPE_NUMBER,
+			Median,
+		},
+		"min": {
+			[]parse.FuncType{parse.TYPE_SERIES},
+			parse.TYPE_NUMBER,
+			Min,
+		},
+		"percentile": {
+			[]parse.FuncType{parse.TYPE_SERIES, parse.TYPE_SCALAR},
+			parse.TYPE_NUMBER,
+			Percentile,
+		},
+		"since": {
+			[]parse.FuncType{parse.TYPE_SERIES},
+			parse.TYPE_NUMBER,
+			Since,
+		},
+		"sum": {
+			[]parse.FuncType{parse.TYPE_SERIES},
+			parse.TYPE_NUMBER,
+			Sum,
+		},
 
-	"t": {
-		[]parse.FuncType{parse.TYPE_NUMBER, parse.TYPE_STRING},
-		parse.TYPE_SERIES,
-		Transpose,
-	},
-	"ungroup": {
-		[]parse.FuncType{parse.TYPE_NUMBER},
-		parse.TYPE_SCALAR,
-		Ungroup,
-	},
+		// Group functions
 
-	// Other functions
+		"t": {
+			[]parse.FuncType{parse.TYPE_NUMBER, parse.TYPE_STRING},
+			parse.TYPE_SERIES,
+			Transpose,
+		},
+		"ungroup": {
+			[]parse.FuncType{parse.TYPE_NUMBER},
+			parse.TYPE_SCALAR,
+			Ungroup,
+		},
 
-	"abs": {
-		[]parse.FuncType{parse.TYPE_NUMBER},
-		parse.TYPE_NUMBER,
-		Abs,
-	},
-	"d": {
-		[]parse.FuncType{parse.TYPE_STRING},
-		parse.TYPE_SCALAR,
-		Duration,
-	},
-	"dropna": {
-		[]parse.FuncType{parse.TYPE_SERIES},
-		parse.TYPE_SERIES,
-		DropNA,
-	},
-	"lookup": {
-		[]parse.FuncType{parse.TYPE_STRING, parse.TYPE_STRING},
-		parse.TYPE_NUMBER,
-		lookup,
-	},
-	"nv": {
-		[]parse.FuncType{parse.TYPE_NUMBER, parse.TYPE_SCALAR},
-		parse.TYPE_NUMBER,
-		NV,
-	},
+		// Other functions
+
+		"abs": {
+			[]parse.FuncType{parse.TYPE_NUMBER},
+			parse.TYPE_NUMBER,
+			Abs,
+		},
+		"d": {
+			[]parse.FuncType{parse.TYPE_STRING},
+			parse.TYPE_SCALAR,
+			Duration,
+		},
+		"dropna": {
+			[]parse.FuncType{parse.TYPE_SERIES},
+			parse.TYPE_SERIES,
+			DropNA,
+		},
+		"lookup": {
+			[]parse.FuncType{parse.TYPE_STRING, parse.TYPE_STRING},
+			parse.TYPE_NUMBER,
+			lookup,
+		},
+		"nv": {
+			[]parse.FuncType{parse.TYPE_NUMBER, parse.TYPE_SCALAR},
+			parse.TYPE_NUMBER,
+			NV,
+		},
+	}
 }
 
 func NV(e *state, T miniprofiler.Timer, series *Results, v float64) (results *Results, err error) {
@@ -210,15 +215,46 @@ func lookup(e *state, T miniprofiler.Timer, lookup, key string) (results *Result
 		if !ok {
 			continue
 		}
-		var num float64
-		num, err = strconv.ParseFloat(value, 64)
+		var err error
+		ns := &state{
+			search:     e.search,
+			lookups:    e.lookups,
+			now:        e.now,
+			autods:     e.autods,
+			context:    e.context,
+			queries:    e.queries,
+			unjoinedOk: e.unjoinedOk,
+			squelched:  e.squelched,
+		}
+		ns.Expr, err = New(value)
 		if err != nil {
 			return nil, err
 		}
-		results.Results = append(results.Results, &Result{
-			Value: Number(num),
-			Group: tag,
-		})
+		res, _, err := ns.Execute(ns.context, nil, time.Now(), 0, ns.unjoinedOk, ns.search, ns.lookups, ns.squelched)
+		if err != nil {
+			return nil, err
+		}
+		for _, r := range res.Results {
+			if !tag.Subset(r.Group) {
+				continue
+			}
+			var rt *Result
+			switch i := r.Value.Value().(type) {
+			case Scalar:
+				rt = &Result{
+					Value: Number(i),
+				}
+			case Number:
+				rt = &Result{
+					Value: i,
+				}
+			default:
+				return nil, fmt.Errorf("lookup expressions must return a number or a scalar.")
+			}
+			rt.Group = tag
+			rt.AddComputation(value, rt.Value)
+			results.Results = append(results.Results, rt)
+		}
 	}
 	return results, nil
 }
