@@ -15,61 +15,32 @@ import (
 	"bosun.org/opentsdb"
 )
 
-func tagQuery(args []parse.Node) (parse.Tags, error) {
-	n, ok := args[0].(*parse.StringNode)
-	if !ok {
-		return nil, fmt.Errorf("expected StringNode, got %T", args[0])
-	}
-	q, err := opentsdb.ParseQuery(n.Text)
-	if err != nil {
-		return nil, err
-	}
-	t := make(parse.Tags)
-	for k := range q.Tags {
-		t[k] = struct{}{}
-	}
-	return t, nil
-}
-
-func tagFirst(args []parse.Node) (parse.Tags, error) {
-	return args[0].Tags()
-}
-
-func tagTODO(args []parse.Node) (parse.Tags, error) {
-	panic("not implemented")
-}
-
 var builtins = map[string]parse.Func{
 	// Query functions
 
 	"band": {
 		[]parse.FuncType{parse.TYPE_STRING, parse.TYPE_STRING, parse.TYPE_STRING, parse.TYPE_SCALAR},
 		parse.TYPE_SERIES,
-		tagQuery,
 		Band,
 	},
 	"change": {
 		[]parse.FuncType{parse.TYPE_STRING, parse.TYPE_STRING, parse.TYPE_STRING},
 		parse.TYPE_NUMBER,
-		tagQuery,
 		Change,
 	},
 	"count": {
 		[]parse.FuncType{parse.TYPE_STRING, parse.TYPE_STRING, parse.TYPE_STRING},
 		parse.TYPE_SCALAR,
-		nil,
 		Count,
 	},
 	"diff": {
 		[]parse.FuncType{parse.TYPE_STRING, parse.TYPE_STRING, parse.TYPE_STRING},
 		parse.TYPE_NUMBER,
-		tagQuery,
 		Diff,
 	},
 	"q": {
 		[]parse.FuncType{parse.TYPE_STRING, parse.TYPE_STRING, parse.TYPE_STRING},
 		parse.TYPE_SERIES,
-		tagQuery,
 		Query,
 	},
 
@@ -78,73 +49,61 @@ var builtins = map[string]parse.Func{
 	"avg": {
 		[]parse.FuncType{parse.TYPE_SERIES},
 		parse.TYPE_NUMBER,
-		tagFirst,
 		Avg,
 	},
 	"dev": {
 		[]parse.FuncType{parse.TYPE_SERIES},
 		parse.TYPE_NUMBER,
-		tagFirst,
 		Dev,
 	},
 	"first": {
 		[]parse.FuncType{parse.TYPE_SERIES},
 		parse.TYPE_NUMBER,
-		tagFirst,
 		First,
 	},
 	"forecastlr": {
 		[]parse.FuncType{parse.TYPE_SERIES, parse.TYPE_SCALAR},
 		parse.TYPE_NUMBER,
-		tagFirst,
 		Forecast_lr,
 	},
 	"last": {
 		[]parse.FuncType{parse.TYPE_SERIES},
 		parse.TYPE_NUMBER,
-		tagFirst,
 		Last,
 	},
 	"len": {
 		[]parse.FuncType{parse.TYPE_SERIES},
 		parse.TYPE_NUMBER,
-		tagFirst,
 		Length,
 	},
 	"max": {
 		[]parse.FuncType{parse.TYPE_SERIES},
 		parse.TYPE_NUMBER,
-		tagFirst,
 		Max,
 	},
 	"median": {
 		[]parse.FuncType{parse.TYPE_SERIES},
 		parse.TYPE_NUMBER,
-		tagFirst,
 		Median,
 	},
 	"min": {
 		[]parse.FuncType{parse.TYPE_SERIES},
 		parse.TYPE_NUMBER,
-		tagFirst,
 		Min,
 	},
 	"percentile": {
 		[]parse.FuncType{parse.TYPE_SERIES, parse.TYPE_SCALAR},
 		parse.TYPE_NUMBER,
-		tagFirst,
 		Percentile,
 	},
 	"since": {
 		[]parse.FuncType{parse.TYPE_SERIES},
 		parse.TYPE_NUMBER,
-		tagFirst,
 		Since,
 	},
 	"sum": {
 		[]parse.FuncType{parse.TYPE_SERIES},
 		parse.TYPE_NUMBER,
-		tagFirst,
 		Sum,
 	},
 
@@ -153,13 +112,11 @@ var builtins = map[string]parse.Func{
 	"t": {
 		[]parse.FuncType{parse.TYPE_NUMBER, parse.TYPE_STRING},
 		parse.TYPE_SERIES,
-		tagTODO,
 		Transpose,
 	},
 	"ungroup": {
 		[]parse.FuncType{parse.TYPE_NUMBER},
 		parse.TYPE_SCALAR,
-		nil,
 		Ungroup,
 	},
 
@@ -168,31 +125,26 @@ var builtins = map[string]parse.Func{
 	"abs": {
 		[]parse.FuncType{parse.TYPE_NUMBER},
 		parse.TYPE_NUMBER,
-		tagFirst,
 		Abs,
 	},
 	"d": {
 		[]parse.FuncType{parse.TYPE_STRING},
 		parse.TYPE_SCALAR,
-		nil,
 		Duration,
 	},
 	"dropna": {
 		[]parse.FuncType{parse.TYPE_SERIES},
 		parse.TYPE_SERIES,
-		tagFirst,
 		DropNA,
 	},
 	"lookup": {
 		[]parse.FuncType{parse.TYPE_STRING, parse.TYPE_STRING},
 		parse.TYPE_NUMBER,
-		tagTODO,
 		lookup,
 	},
 	"nv": {
 		[]parse.FuncType{parse.TYPE_NUMBER, parse.TYPE_SCALAR},
 		parse.TYPE_NUMBER,
-		tagFirst,
 		NV,
 	},
 }

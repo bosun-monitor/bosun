@@ -779,25 +779,6 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 	if a.Crit == nil && a.Warn == nil {
 		c.errorf("neither crit or warn specified")
 	}
-	var tags eparse.Tags
-	if a.Crit != nil {
-		ctags, err := a.Crit.Root.Tags()
-		if err != nil {
-			c.error(err)
-		}
-		tags = ctags
-	}
-	if a.Warn != nil {
-		wtags, err := a.Warn.Root.Tags()
-		if err != nil {
-			c.error(err)
-		}
-		if a.Crit == nil {
-			tags = wtags
-		} else if !tags.Equal(wtags) {
-			c.errorf("crit tags (%v) and warn tags (%v) must be equal", tags, wtags)
-		}
-	}
 	c.Alerts[name] = &a
 }
 
