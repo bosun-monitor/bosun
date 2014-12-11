@@ -14,6 +14,7 @@ import (
 
 func init() {
 	collectors = append(collectors, &IntervalCollector{F: c_elasticsearch, Enable: enableURL(esURL)})
+	collectors = append(collectors, &IntervalCollector{F: c_elasticsearch_indicies, Interval: time.Minute * 2, Enable: enableURL(esURL)})
 }
 
 const esURL = "http://localhost:9200/"
@@ -202,6 +203,250 @@ func c_elasticsearch() (opentsdb.MultiDataPoint, error) {
 				add("http."+k, v, nil)
 			}
 		}
+	}
+	return md, nil
+}
+
+type ElasticIndexStats struct {
+	All    ElasticIndex `json:"_all"`
+	Shards struct {
+		Failed     float64 `json:"failed"`
+		Successful float64 `json:"successful"`
+		Total      float64 `json:"total"`
+	} `json:"_shards"`
+	Indicies map[string]ElasticIndex `json:"indices"`
+}
+
+type ElasticIndex struct {
+	Primaries ElasticIndexDetails `json:"primaries"`
+	Total     ElasticIndexDetails `json:"total"`
+}
+
+type ElasticIndexDetails struct {
+	Completion struct {
+		SizeInBytes float64 `json:"size_in_bytes"`
+	} `json:"completion"`
+	Docs struct {
+		Count   float64 `json:"count"`
+		Deleted float64 `json:"deleted"`
+	} `json:"docs"`
+	Fielddata struct {
+		Evictions         float64 `json:"evictions"`
+		MemorySizeInBytes float64 `json:"memory_size_in_bytes"`
+	} `json:"fielddata"`
+	FilterCache struct {
+		Evictions         float64 `json:"evictions"`
+		MemorySizeInBytes float64 `json:"memory_size_in_bytes"`
+	} `json:"filter_cache"`
+	Flush struct {
+		Total             float64 `json:"total"`
+		TotalTimeInMillis float64 `json:"total_time_in_millis"`
+	} `json:"flush"`
+	Get struct {
+		Current             float64 `json:"current"`
+		ExistsTimeInMillis  float64 `json:"exists_time_in_millis"`
+		ExistsTotal         float64 `json:"exists_total"`
+		MissingTimeInMillis float64 `json:"missing_time_in_millis"`
+		MissingTotal        float64 `json:"missing_total"`
+		TimeInMillis        float64 `json:"time_in_millis"`
+		Total               float64 `json:"total"`
+	} `json:"get"`
+	IdCache struct {
+		MemorySizeInBytes float64 `json:"memory_size_in_bytes"`
+	} `json:"id_cache"`
+	Indexing struct {
+		DeleteCurrent      float64 `json:"delete_current"`
+		DeleteTimeInMillis float64 `json:"delete_time_in_millis"`
+		DeleteTotal        float64 `json:"delete_total"`
+		IndexCurrent       float64 `json:"index_current"`
+		IndexTimeInMillis  float64 `json:"index_time_in_millis"`
+		IndexTotal         float64 `json:"index_total"`
+	} `json:"indexing"`
+	Merges struct {
+		Current            float64 `json:"current"`
+		CurrentDocs        float64 `json:"current_docs"`
+		CurrentSizeInBytes float64 `json:"current_size_in_bytes"`
+		Total              float64 `json:"total"`
+		TotalDocs          float64 `json:"total_docs"`
+		TotalSizeInBytes   float64 `json:"total_size_in_bytes"`
+		TotalTimeInMillis  float64 `json:"total_time_in_millis"`
+	} `json:"merges"`
+	Percolate struct {
+		Current           float64 `json:"current"`
+		MemorySize        string  `json:"memory_size"`
+		MemorySizeInBytes float64 `json:"memory_size_in_bytes"`
+		Queries           float64 `json:"queries"`
+		TimeInMillis      float64 `json:"time_in_millis"`
+		Total             float64 `json:"total"`
+	} `json:"percolate"`
+	Refresh struct {
+		Total             float64 `json:"total"`
+		TotalTimeInMillis float64 `json:"total_time_in_millis"`
+	} `json:"refresh"`
+	Search struct {
+		FetchCurrent      float64 `json:"fetch_current"`
+		FetchTimeInMillis float64 `json:"fetch_time_in_millis"`
+		FetchTotal        float64 `json:"fetch_total"`
+		OpenContexts      float64 `json:"open_contexts"`
+		QueryCurrent      float64 `json:"query_current"`
+		QueryTimeInMillis float64 `json:"query_time_in_millis"`
+		QueryTotal        float64 `json:"query_total"`
+	} `json:"search"`
+	Segments struct {
+		Count         float64 `json:"count"`
+		MemoryInBytes float64 `json:"memory_in_bytes"`
+	} `json:"segments"`
+	Store struct {
+		SizeInBytes          float64 `json:"size_in_bytes"`
+		ThrottleTimeInMillis float64 `json:"throttle_time_in_millis"`
+	} `json:"store"`
+	Suggest struct {
+		Current      float64 `json:"current"`
+		TimeInMillis float64 `json:"time_in_millis"`
+		Total        float64 `json:"total"`
+	} `json:"suggest"`
+	Translog struct {
+		Operations  float64 `json:"operations"`
+		SizeInBytes float64 `json:"size_in_bytes"`
+	} `json:"translog"`
+	Warmer struct {
+		Current           float64 `json:"current"`
+		Total             float64 `json:"total"`
+		TotalTimeInMillis float64 `json:"total_time_in_millis"`
+	} `json:"warmer"`
+}
+
+const (
+	descCompletionSizeInBytes        = "Size of the completion index (used for auto-complete functionallity)."
+	descDocsCount                    = "The number of documents in the index."
+	descDocsDeleted                  = "The number of deleted documents in the index."
+	descFielddataEvictions           = "The number of cache evictions for field data."
+	descFielddataMemorySizeInBytes   = "The amount of memory used for field data."
+	descFilterCacheEvictions         = "The number of cache evictions for filter data."
+	descFilterCacheMemorySizeInBytes = "The amount of memory used for filter data."
+	descFlushTotal                   = "The number of flush operations. The flush process of an index basically frees memory from the index by flushing data to the index storage and clearing the internal transaction log."
+	descFlushTotalTimeInMillis       = "The total amount of time spent on flush operations. The flush process of an index basically frees memory from the index by flushing data to the index storage and clearing the internal transaction log."
+	descGetCurrent                   = "The current number of get operations. Gets get a typed JSON document from the index based on its id."
+	descGetTimeInMillis              = "The total amount of time spent on get operations. Gets get a typed JSON document from the index based on its id."
+	descGetTotal                     = "The total number of get operations. Gets get a typed JSON document from the index based on its id."
+	descGetMissingTimeInMillis       = "The total amount of time spent trying to get documents that turned out to be missing."
+	descGetMissingTotal              = "The total number of operations that tried to get a document that turned out to be missing."
+	descGetExistsTimeInMillis        = "The total amount of time spent on get exists operations. Gets exists sees if a document exists."
+	descGetExistsTotal               = "The total number of get exists operations. Gets exists sees if a document exists."
+	descIdCacheMemorySizeInBytes     = "The size of the id cache."
+	descIndexingDeleteCurrent        = "The current number of documents being deleted via indexing commands (such as a delete query)."
+	descIndexingDeleteTimeInMillis   = "The time spent deleting documents."
+	descIndexingDeleteTotal          = "The total number of documents deleted."
+	descIndexingIndexCurrent         = "The current number of documents being indexed."
+	descIndexingIndexTimeInMillis    = "The total amount of time spent indexing documents."
+	descIndexingIndexTotal           = "The total number of documents indexed."
+	descMergesCurrent                = "The current number of merge operations. In elastic Lucene segments are merged behind the scenes. It is possible these can impact search performance."
+	descMergesCurrentDocs            = "The current number of documents that have an underlying merge operation going on. In elastic Lucene segments are merged behind the scenes. It is possible these can impact search performance."
+	descMergesCurrentSizeInBytes     = "The current number of bytes being merged. In elastic Lucene segments are merged behind the scenes. It is possible these can impact search performance."
+	descMergesTotal                  = "The total number of merges. In elastic Lucene segments are merged behind the scenes. It is possible these can impact search performance."
+	descMergesTotalDocs              = "The total number of documents that have had an underlying merge operation. In elastic Lucene segments are merged behind the scenes. It is possible these can impact search performance."
+	descMergesTotalSizeInBytes       = "The total number of bytes merged. In elastic Lucene segments are merged behind the scenes. It is possible these can impact search performance."
+	descMergesTotalTimeInMillis      = "The total amount of time spent on merge operations. In elastic Lucene segments are merged behind the scenes. It is possible these can impact search performance."
+	descPercolateCurrent             = "The current number of percolate operations."
+	descPercolateMemorySizeInBytes   = "The amount of memory used for the percolate index. Percolate is a reverse query to document operation."
+	descPercolateQueries             = "The total number of percolate queries. Percolate is a reverse query to document operation."
+	descPercolateTimeInMillis        = "The total amount of time spent on percolating. Percolate is a reverse query to document operation."
+	descPercolateTotal               = "The total number of percolate operations. Percolate is a reverse query to document operation."
+	descRefreshTotal                 = "The total number of refreshes. Refreshing makes all operations performed since the last search available."
+	descRefreshTotalTimeInMillis     = "The total amount of time spent on refreshes. Refreshing makes all operations performed since the last search available."
+	descSearchFetchCurrent           = "The current number of documents being fetched. Fetching is a phase of querying in a distributed search."
+	descSearchFetchTimeInMillis      = "The total time spent fetching documents. Fetching is a phase of querying in a distributed search."
+	descSearchFetchTotal             = "The total number of documents fetched. Fetching is a phase of querying in a distributed search."
+	descSearchOpenContexts           = "The current number of open contexts. A search is left open when srolling (i.e. pagination)."
+	descSearchQueryCurrent           = "The current number of queries."
+	descSearchQueryTimeInMillis      = "The total amount of time spent querying."
+	descSearchQueryTotal             = "The total number of queries."
+	descSegmentsMemoryInBytes        = "The total amount of memory used for Lucene segments."
+	descSegmentsCount                = "The number of segments that make up the index."
+	descStoreSizeInBytes             = "The current size of the store."
+	descStoreThrottleTimeInMillis    = "The amount of time that merges where throttled."
+	descSuggestCurrent               = "The current number of suggest operations."
+	descSuggestTimeInMillis          = "The total amount of time spent on suggest operations."
+	descSuggestTotal                 = "The total number of suggest operations."
+	descTranslogOperations           = "The total number of translog operations. The transaction logs (or write ahead logs) ensure atomicity of operations."
+	descTranslogSizeInBytes          = "The current size of transaction log. The transaction log (or write ahead log) ensure atomicity of operations."
+	descWarmerCurrent                = "The current number of warmer operations. Warming registers search requests in the background to speed up actual search requests."
+	descWarmerTotal                  = "The total number of warmer operations. Warming registers search requests in the background to speed up actual search requests."
+	descWarmerTotalTimeInMillis      = "The total time spent on warmer operations. Warming registers search requests in the background to speed up actual search requests."
+)
+
+func c_elasticsearch_indicies() (opentsdb.MultiDataPoint, error) {
+	var stats ElasticIndexStats
+	cstats := make(map[string]interface{})
+	if err := esReq("/_cluster/health", "", &cstats); err != nil {
+		return nil, err
+	}
+	cluster, ok := cstats["cluster_name"].(string)
+	if !ok {
+		return nil, fmt.Errorf("unable to determine the cluster name for individual index stats.")
+	}
+	if err := esReq("/_stats", "", &stats); err != nil {
+		return nil, err
+	}
+	var md opentsdb.MultiDataPoint
+	for k, v := range stats.Indicies {
+		ts := opentsdb.TagSet{"index_name": k, "cluster": cluster}
+		Add(&md, "elastic.indicies.completion.size", v.Primaries.Completion.SizeInBytes, ts, metadata.Gauge, metadata.Bytes, descCompletionSizeInBytes)
+		Add(&md, "elastic.indicies.docs.count", v.Primaries.Docs.Count, ts, metadata.Gauge, metadata.Document, descDocsCount)
+		Add(&md, "elastic.indicies.docs.deleted", v.Primaries.Docs.Deleted, ts, metadata.Gauge, metadata.Document, descDocsDeleted)
+		Add(&md, "elastic.indicies.fielddata.evictions", v.Primaries.Fielddata.Evictions, ts, metadata.Counter, metadata.Eviction, descFielddataEvictions)
+		Add(&md, "elastic.indicies.fielddata.memory_size", v.Primaries.Fielddata.MemorySizeInBytes, ts, metadata.Gauge, metadata.Bytes, descFielddataMemorySizeInBytes)
+		Add(&md, "elastic.indicies.filter_cache.evictions", v.Primaries.FilterCache.Evictions, ts, metadata.Counter, metadata.Eviction, descFilterCacheEvictions)
+		Add(&md, "elastic.indicies.filter_cache.memory_size", v.Primaries.FilterCache.MemorySizeInBytes, ts, metadata.Counter, metadata.Bytes, descFilterCacheMemorySizeInBytes)
+		Add(&md, "elastic.indicies.flush.total", v.Primaries.Flush.Total, ts, metadata.Counter, metadata.Flush, descFlushTotal)
+		Add(&md, "elastic.indicies.flush.total_time", v.Primaries.Flush.TotalTimeInMillis, ts, metadata.Counter, metadata.MilliSecond, descFlushTotalTimeInMillis)
+		Add(&md, "elastic.indicies.get.current", v.Primaries.Get.Current, ts, metadata.Gauge, metadata.Get, descGetCurrent)
+		Add(&md, "elastic.indicies.get.exists_time", v.Primaries.Get.ExistsTimeInMillis, ts, metadata.Counter, metadata.GetExists, descGetExistsTimeInMillis)
+		Add(&md, "elastic.indicies.get.exists_total", v.Primaries.Get.ExistsTotal, ts, metadata.Counter, metadata.GetExists, descGetExistsTotal)
+		Add(&md, "elastic.indicies.get.missing_time", v.Primaries.Get.MissingTimeInMillis, ts, metadata.Counter, metadata.MilliSecond, descGetMissingTimeInMillis)
+		Add(&md, "elastic.indicies.get.missing_total", v.Primaries.Get.MissingTotal, ts, metadata.Counter, metadata.Operation, descGetMissingTotal)
+		Add(&md, "elastic.indicies.get.time", v.Primaries.Get.TimeInMillis, ts, metadata.Counter, metadata.MilliSecond, descGetTimeInMillis)
+		Add(&md, "elastic.indicies.get.total", v.Primaries.Get.Total, ts, metadata.Counter, metadata.Get, descGetTotal)
+		Add(&md, "elastic.indicies.id_cache.memory_size", v.Primaries.IdCache.MemorySizeInBytes, ts, metadata.Gauge, metadata.Bytes, descIdCacheMemorySizeInBytes)
+		Add(&md, "elastic.indicies.indexing.delete_current", v.Primaries.Indexing.DeleteCurrent, ts, metadata.Gauge, metadata.Document, descIndexingDeleteCurrent)
+		Add(&md, "elastic.indicies.indexing.delete_time", v.Primaries.Indexing.DeleteTimeInMillis, ts, metadata.Counter, metadata.MilliSecond, descIndexingDeleteTimeInMillis)
+		Add(&md, "elastic.indicies.indexing.delete_total", v.Primaries.Indexing.DeleteTotal, ts, metadata.Counter, metadata.Document, descIndexingDeleteTotal)
+		Add(&md, "elastic.indicies.indexing.index_current", v.Primaries.Indexing.IndexCurrent, ts, metadata.Gauge, metadata.Document, descIndexingIndexCurrent)
+		Add(&md, "elastic.indicies.indexing.index_time", v.Primaries.Indexing.IndexTimeInMillis, ts, metadata.Counter, metadata.MilliSecond, descIndexingIndexTimeInMillis)
+		Add(&md, "elastic.indicies.indexing.index_total", v.Primaries.Indexing.IndexTotal, ts, metadata.Counter, metadata.Document, descIndexingIndexTotal)
+		Add(&md, "elastic.indicies.merges.current", v.Primaries.Merges.Current, ts, metadata.Gauge, metadata.Merge, descMergesCurrent)
+		Add(&md, "elastic.indicies.merges.current_docs", v.Primaries.Merges.CurrentDocs, ts, metadata.Gauge, metadata.Document, descMergesCurrentDocs)
+		Add(&md, "elastic.indicies.merges.current_size", v.Primaries.Merges.CurrentSizeInBytes, ts, metadata.Gauge, metadata.Document, descMergesCurrentSizeInBytes)
+		Add(&md, "elastic.indicies.merges.total", v.Primaries.Merges.Total, ts, metadata.Counter, metadata.Merge, descMergesTotal)
+		Add(&md, "elastic.indicies.merges.total_docs", v.Primaries.Merges.TotalDocs, ts, metadata.Counter, metadata.Document, descMergesTotalDocs)
+		Add(&md, "elastic.indicies.merges.total_size", v.Primaries.Merges.TotalSizeInBytes, ts, metadata.Counter, metadata.Bytes, descMergesTotalSizeInBytes)
+		Add(&md, "elastic.indicies.merges.total_time", v.Primaries.Merges.TotalTimeInMillis, ts, metadata.Counter, metadata.MilliSecond, descMergesTotalTimeInMillis)
+		Add(&md, "elastic.indicies.percolate.current", v.Primaries.Percolate.Current, ts, metadata.Gauge, "", descPercolateCurrent)
+		Add(&md, "elastic.indicies.percolate.memory_size", v.Primaries.Percolate.MemorySizeInBytes, ts, metadata.Gauge, metadata.Bytes, descPercolateMemorySizeInBytes)
+		Add(&md, "elastic.indicies.percolate.queries", v.Primaries.Percolate.Queries, ts, metadata.Counter, metadata.Query, descPercolateQueries)
+		Add(&md, "elastic.indicies.percolate.time", v.Primaries.Percolate.TimeInMillis, ts, metadata.Counter, metadata.MilliSecond, descPercolateTimeInMillis)
+		Add(&md, "elastic.indicies.percolate.total", v.Primaries.Percolate.Total, ts, metadata.Gauge, metadata.Operation, descPercolateTotal)
+		Add(&md, "elastic.indicies.refresh.total", v.Primaries.Refresh.Total, ts, metadata.Counter, metadata.Refresh, descRefreshTotal)
+		Add(&md, "elastic.indicies.refresh.total_time", v.Primaries.Refresh.TotalTimeInMillis, ts, metadata.Counter, metadata.MilliSecond, descRefreshTotalTimeInMillis)
+		Add(&md, "elastic.indicies.search.fetch_current", v.Primaries.Search.FetchCurrent, ts, metadata.Gauge, metadata.Document, descSearchFetchCurrent)
+		Add(&md, "elastic.indicies.search.fetch_time", v.Primaries.Search.FetchTimeInMillis, ts, metadata.Counter, metadata.MilliSecond, descSearchFetchTimeInMillis)
+		Add(&md, "elastic.indicies.search.fetch_total", v.Primaries.Search.FetchTotal, ts, metadata.Counter, metadata.Document, descSearchFetchTotal)
+		Add(&md, "elastic.indicies.search.open_contexts", v.Primaries.Search.OpenContexts, ts, metadata.Gauge, metadata.Context, descSearchOpenContexts)
+		Add(&md, "elastic.indicies.search.query_current", v.Primaries.Search.QueryCurrent, ts, metadata.Gauge, metadata.Query, descSearchQueryCurrent)
+		Add(&md, "elastic.indicies.search.query_time", v.Primaries.Search.QueryTimeInMillis, ts, metadata.Counter, metadata.MilliSecond, descSearchQueryTimeInMillis)
+		Add(&md, "elastic.indicies.search.query_total", v.Primaries.Search.QueryTotal, ts, metadata.Counter, metadata.Query, descSearchQueryTotal)
+		Add(&md, "elastic.indicies.segments.count", v.Primaries.Segments.Count, ts, metadata.Counter, metadata.Segment, descSegmentsCount)
+		Add(&md, "elastic.indicies.segments.memory", v.Primaries.Segments.MemoryInBytes, ts, metadata.Gauge, metadata.Bytes, descSegmentsMemoryInBytes)
+		Add(&md, "elastic.indicies.store.size_in_bytes", v.Primaries.Store.SizeInBytes, ts, metadata.Gauge, metadata.Bytes, descStoreSizeInBytes)
+		Add(&md, "elastic.indicies.store.throttle_time", v.Primaries.Store.ThrottleTimeInMillis, ts, metadata.Gauge, metadata.MilliSecond, descStoreThrottleTimeInMillis)
+		Add(&md, "elastic.indicies.suggest.current", v.Primaries.Suggest.Current, ts, metadata.Gauge, metadata.Suggest, descSuggestCurrent)
+		Add(&md, "elastic.indicies.suggest.time", v.Primaries.Suggest.TimeInMillis, ts, metadata.Counter, metadata.MilliSecond, descSuggestTimeInMillis)
+		Add(&md, "elastic.indicies.suggest.total", v.Primaries.Suggest.Total, ts, metadata.Counter, metadata.Suggest, descSuggestTotal)
+		Add(&md, "elastic.indicies.translog.operations", v.Primaries.Translog.Operations, ts, metadata.Counter, metadata.Operation, descTranslogOperations)
+		Add(&md, "elastic.indicies.translog.size_in_bytes", v.Primaries.Translog.SizeInBytes, ts, metadata.Gauge, metadata.Bytes, descTranslogSizeInBytes)
+		Add(&md, "elastic.indicies.warmer.current", v.Primaries.Warmer.Current, ts, metadata.Gauge, metadata.Operation, descWarmerCurrent)
+		Add(&md, "elastic.indicies.warmer.total", v.Primaries.Warmer.Total, ts, metadata.Counter, metadata.Operation, descWarmerTotal)
+		Add(&md, "elastic.indicies.warmer.total_time", v.Primaries.Warmer.TotalTimeInMillis, ts, metadata.Counter, metadata.MilliSecond, descWarmerTotalTimeInMillis)
 	}
 	return md, nil
 }
