@@ -435,7 +435,6 @@ func c_elasticsearch_indices() (opentsdb.MultiDataPoint, error) {
 	if err := esReq("/_stats", "", &stats); err != nil {
 		return nil, err
 	}
-	return md, nil
 	for k, v := range stats.Indices {
 		ts := opentsdb.TagSet{"index_name": k, "cluster": cluster}
 		Add(&md, "elastic.indices.completion.size", v.Primaries.Completion.SizeInBytes, ts, metadata.Gauge, metadata.Bytes, descCompletionSizeInBytes)
