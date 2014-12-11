@@ -69,9 +69,11 @@ const (
 	Process             = "processes"
 	Query               = "queries"
 	Refresh             = "refreshes"
+	Replica             = "replicas"
 	RPM                 = "RPM" // Rotations per minute.
 	Second              = "seconds"
 	Segment             = "segments"
+	Shard               = "shards"
 	Socket              = "sockets"
 	Suggest             = "suggests"
 	StatusCode          = "status code"
