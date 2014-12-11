@@ -63,16 +63,30 @@ func TestExprParse(t *testing.T) {
 	var exprTests = []struct {
 		input string
 		valid bool
+		tags  string
 	}{
-		{`avg(q("test", "1m", 1))`, false},
+		{`avg(q("test", "1m", 1))`, false, ""},
+		{`avg(q("avg:m", "1m", ""))`, true, ""},
+		{`avg(q("avg:m{a=*}", "1m", ""))`, true, "a"},
+		{`avg(q("avg:m{a=*,b=1}", "1m", ""))`, true, "a,b"},
+		{`avg(q("avg:m{a=*,b=1}", "1m", "")) + 1`, true, "a,b"},
 	}
 
 	for _, et := range exprTests {
-		_, err := New(et.input)
+		e, err := New(et.input)
 		if et.valid && err != nil {
 			t.Error(err)
 		} else if !et.valid && err == nil {
 			t.Errorf("expected invalid, but no error: %v", et.input)
+		} else if et.valid {
+			tags, err := e.Root.Tags()
+			if err != nil {
+				t.Error(err)
+				continue
+			}
+			if et.tags != tags.String() {
+				t.Errorf("%v: unexpected tags: got %v, expected %v", et.input, tags, et.tags)
+			}
 		}
 	}
 }
