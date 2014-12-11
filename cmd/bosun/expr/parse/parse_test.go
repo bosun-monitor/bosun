@@ -144,33 +144,25 @@ func TestParse(t *testing.T) {
 	}
 }
 
-func tagNil(args []Node) (Tags, error) {
-	return nil, nil
-}
-
 var builtins = map[string]Func{
 	"avg": {
 		[]FuncType{TYPE_SERIES},
 		TYPE_NUMBER,
-		tagNil,
 		nil,
 	},
 	"band": {
 		[]FuncType{TYPE_STRING, TYPE_STRING, TYPE_STRING, TYPE_SCALAR},
 		TYPE_SERIES,
-		tagNil,
 		nil,
 	},
 	"q": {
 		[]FuncType{TYPE_STRING, TYPE_STRING},
 		TYPE_SERIES,
-		tagNil,
 		nil,
 	},
 	"forecastlr": {
 		[]FuncType{TYPE_SERIES, TYPE_SCALAR},
 		TYPE_NUMBER,
-		tagNil,
 		nil,
 	},
 }

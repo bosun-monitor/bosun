@@ -23,7 +23,6 @@ type Node interface {
 	Position() Pos // byte position of start of node in full original input string
 	Check() error  // performs type checking for itself and sub-nodes
 	Return() FuncType
-	Tags() (Tags, error)
 	// Make sure only functions in this package can create Nodes.
 	unexported()
 }
@@ -121,16 +120,7 @@ func (c *FuncNode) Check() error {
 	return nil
 }
 
-func (f *FuncNode) Return() FuncType {
-	return f.F.Return
-}
-
-func (f *FuncNode) Tags() (Tags, error) {
-	if f.F.Tags == nil {
-		return nil, nil
-	}
-	return f.F.Tags(f.Args)
-}
+func (f *FuncNode) Return() FuncType { return f.F.Return }
 
 // NumberNode holds a number: signed or unsigned integer or float.
 // The value is parsed and stored under all the types that can represent the value.
@@ -187,13 +177,7 @@ func (n *NumberNode) Check() error {
 	return nil
 }
 
-func (n *NumberNode) Return() FuncType {
-	return TYPE_SCALAR
-}
-
-func (n *NumberNode) Tags() (Tags, error) {
-	return nil, nil
-}
+func (n *NumberNode) Return() FuncType { return TYPE_SCALAR }
 
 // StringNode holds a string constant. The value has been "unquoted".
 type StringNode struct {
@@ -219,13 +203,7 @@ func (s *StringNode) Check() error {
 	return nil
 }
 
-func (s *StringNode) Return() FuncType {
-	return TYPE_STRING
-}
-
-func (s *StringNode) Tags() (Tags, error) {
-	return nil, nil
-}
+func (s *StringNode) Return() FuncType { return TYPE_STRING }
 
 // BinaryNode holds two arguments and an operator.
 type BinaryNode struct {
@@ -249,17 +227,6 @@ func (b *BinaryNode) StringAST() string {
 }
 
 func (b *BinaryNode) Check() error {
-	g1, err := b.Args[0].Tags()
-	if err != nil {
-		return err
-	}
-	g2, err := b.Args[1].Tags()
-	if err != nil {
-		return err
-	}
-	if g1 != nil && g2 != nil && !g1.Equal(g2) {
-		return fmt.Errorf("parse: incompatible tags in %s", b)
-	}
 	t1 := b.Args[0].Return()
 	t2 := b.Args[1].Return()
 	if t1 == TYPE_SERIES && t2 == TYPE_SERIES {
@@ -285,17 +252,6 @@ func (b *BinaryNode) Return() FuncType {
 		return t1
 	}
 	return t0
-}
-
-func (b *BinaryNode) Tags() (Tags, error) {
-	t, err := b.Args[0].Tags()
-	if err != nil {
-		return nil, err
-	}
-	if t == nil {
-		return b.Args[1].Tags()
-	}
-	return t, nil
 }
 
 // UnaryNode holds one argument and an operator.
@@ -330,10 +286,6 @@ func (u *UnaryNode) Check() error {
 
 func (u *UnaryNode) Return() FuncType {
 	return u.Arg.Return()
-}
-
-func (u *UnaryNode) Tags() (Tags, error) {
-	return u.Arg.Tags()
 }
 
 // Walk invokes f on n and sub-nodes of n.
