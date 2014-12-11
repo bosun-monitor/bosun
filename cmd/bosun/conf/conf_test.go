@@ -26,10 +26,10 @@ func TestPrint(t *testing.T) {
 	if w := c.Alerts["os.high_cpu"].Warn.Text; w != `avg(q("avg:rate:os.cpu{host=ny-nexpose01}", "2m", "")) > 80` {
 		t.Error("bad warn:", w)
 	}
-	if w := c.Alerts["m"].Crit.Text; w != `avg(q("", "", "")) > 1` {
+	if w := c.Alerts["m"].Crit.Text; w != `avg(q("avg:a", "", "")) > 1` {
 		t.Errorf("bad crit: %v", w)
 	}
-	if w := c.Alerts["braceTest"].Crit.Text; w != `avg(q("o{t}", "", "")) > 1` {
+	if w := c.Alerts["braceTest"].Crit.Text; w != `avg(q("avg:o{t=m}", "", "")) > 1` {
 		t.Errorf("bad crit: %v", w)
 	}
 	if w := c.Lookups["l"]; len(w.Entries) != 2 {
@@ -64,8 +64,9 @@ func checkMacroVarAlert(t *testing.T, a *Alert) {
 func TestInvalid(t *testing.T) {
 	names := map[string]string{
 		"lookup-key-pairs":     "conf: lookup-key-pairs:3:1: at <entry a=3 { }>: lookup tags mismatch, expected {a=,b=}",
-		"number-func-args":     `conf: number-func-args:2:1: at <warn = q("", "") > 0>: expr: parse: not enough arguments for q`,
+		"number-func-args":     `conf: number-func-args:2:1: at <warn = q("avg:o", ""...>: expr: parse: not enough arguments for q`,
 		"lookup-key-pairs-dup": `conf: lookup-key-pairs-dup:3:1: at <entry b=2,a=1 { }>: duplicate entry`,
+		"crit-warn-unmatching-tags": `conf: crit-warn-unmatching-tags:1:0: at <alert broken {\n	cri...>: crit tags (a,c) and warn tags (c) must be equal`,
 	}
 	for fname, reason := range names {
 		path := filepath.Join("invalid", fname)
@@ -79,7 +80,7 @@ func TestInvalid(t *testing.T) {
 			continue
 		}
 		if err.Error() != reason {
-			t.Errorf("expected error `%s` in %s, expected `%s`", err, path, reason)
+			t.Errorf("got error `%s` in %s, expected `%s`", err, path, reason)
 		}
 	}
 }

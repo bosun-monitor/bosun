@@ -10,7 +10,9 @@ package parse
 import (
 	"fmt"
 	"runtime"
+	"sort"
 	"strconv"
+	"strings"
 )
 
 // Tree is the representation of a single parsed expression.
@@ -27,6 +29,7 @@ type Tree struct {
 type Func struct {
 	Args   []FuncType
 	Return FuncType
+	Tags   func([]Node) (Tags, error)
 	F      interface{}
 }
 
@@ -53,6 +56,29 @@ const (
 	TYPE_NUMBER
 	TYPE_SERIES
 )
+
+type Tags map[string]struct{}
+
+func (t Tags) String() string {
+	var keys []string
+	for k := range t {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return strings.Join(keys, ",")
+}
+
+func (t Tags) Equal(o Tags) bool {
+	if len(t) != len(o) {
+		return false
+	}
+	for k := range t {
+		if _, present := o[k]; !present {
+			return false
+		}
+	}
+	return true
+}
 
 // Parse returns a Tree, created by parsing the expression described in the
 // argument string. If an error is encountered, parsing stops and an empty Tree
@@ -153,6 +179,20 @@ func (t *Tree) startParse(funcs []map[string]Func, lex *lexer) {
 	t.Root = nil
 	t.lex = lex
 	t.funcs = funcs
+	for _, funcMap := range funcs {
+		for name, f := range funcMap {
+			switch f.Return {
+			case TYPE_SERIES, TYPE_NUMBER:
+				if f.Tags == nil {
+					panic(fmt.Errorf("%v: expected Tags definition: got nil", name))
+				}
+			default:
+				if f.Tags != nil {
+					panic(fmt.Errorf("%v: unexpected Tags definition: expected nil", name))
+				}
+			}
+		}
+	}
 }
 
 // stopParse terminates parsing.
@@ -322,7 +362,6 @@ func (t *Tree) Func() (f *FuncNode) {
 	}
 }
 
-// hasFunction reports if a function name exists in the Tree's maps.
 func (t *Tree) getFunction(name string) (v Func, ok bool) {
 	for _, funcMap := range t.funcs {
 		if funcMap == nil {
