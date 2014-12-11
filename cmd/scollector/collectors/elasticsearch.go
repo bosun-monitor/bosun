@@ -3,7 +3,6 @@ package collectors
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"math"
 	"net/http"
 	"net/url"
@@ -16,7 +15,7 @@ import (
 
 func init() {
 	collectors = append(collectors, &IntervalCollector{F: c_elasticsearch, Enable: enableURL(esURL)})
-	collectors = append(collectors, &IntervalCollector{F: c_elasticsearch_indicies, Interval: time.Minute * 2, Enable: enableURL(esURL)})
+	collectors = append(collectors, &IntervalCollector{F: c_elasticsearch_indices, Interval: time.Minute * 2, Enable: enableURL(esURL)})
 }
 
 const esURL = "http://localhost:9200/"
@@ -216,7 +215,7 @@ type ElasticIndexStats struct {
 		Successful float64 `json:"successful"`
 		Total      float64 `json:"total"`
 	} `json:"_shards"`
-	Indicies map[string]ElasticIndex `json:"indices"`
+	Indices map[string]ElasticIndex `json:"indices"`
 }
 
 type ElasticIndex struct {
@@ -377,78 +376,124 @@ const (
 	descWarmerTotalTimeInMillis      = "The total time spent on warmer operations. Warming registers search requests in the background to speed up actual search requests."
 )
 
-func c_elasticsearch_indicies() (opentsdb.MultiDataPoint, error) {
+type ElasticIndicesHealth struct {
+	ActivePrimaryShards float64                       `json:"active_primary_shards"`
+	ActiveShards        float64                       `json:"active_shards"`
+	ClusterName         string                        `json:"cluster_name"`
+	Indices             map[string]ElasticIndexHealth `json:"indices"`
+	InitializingShards  float64                       `json:"initializing_shards"`
+	NumberOfDataNodes   float64                       `json:"number_of_data_nodes"`
+	NumberOfNodes       float64                       `json:"number_of_nodes"`
+	RelocatingShards    float64                       `json:"relocating_shards"`
+	Status              string                        `json:"status"`
+	TimedOut            bool                          `json:"timed_out"`
+	UnassignedShards    float64                       `json:"unassigned_shards`
+}
+
+type ElasticIndexHealth struct {
+	ActivePrimaryShards float64 `json:"active_primary_shards"`
+	ActiveShards        float64 `json:"active_shards"`
+	InitializingShards  float64 `json:"initializing_shards"`
+	NumberOfReplicas    float64 `json:"number_of_replicas"`
+	NumberOfShards      float64 `json:"number_of_shards"`
+	RelocatingShards    float64 `json:"relocating_shards"`
+	Status              string  `json:"status"`
+	UnassignedShards    float64 `json:"unassigned_shards"`
+}
+
+const (
+	descStatus              = "The current status of the index. Zero for green, one for yellow, two for red."
+	descActivePrimaryShards = "The number of active primary shards. Each document is stored in a single primary shard and then when it is indexed it is copied the replicas of that shard."
+	descActiveShards        = "The number of active shards."
+	descInitializingShards  = "The number of initalizing shards."
+	descNumberOfShards      = "The number of shards."
+	descRelocatingShards    = "The number of shards relocating."
+	descNumberOfReplicas    = "The number of replicas."
+)
+
+func c_elasticsearch_indices() (opentsdb.MultiDataPoint, error) {
 	var stats ElasticIndexStats
-	cstats := make(map[string]interface{})
-	if err := esReq("/_cluster/health", "", &cstats); err != nil {
+	var health ElasticIndicesHealth
+	if err := esReq("/_cluster/health", "level=indices", &health); err != nil {
 		return nil, err
 	}
-	cluster, ok := cstats["cluster_name"].(string)
-	if !ok {
-		return nil, fmt.Errorf("unable to determine the cluster name for individual index stats.")
+	cluster := health.ClusterName
+	var md opentsdb.MultiDataPoint
+	for k, v := range health.Indices {
+		ts := opentsdb.TagSet{"index_name": k, "cluster": cluster}
+		if status, ok := esStatusMap[v.Status]; ok {
+			Add(&md, "elastic.indices.status", status, ts, metadata.Gauge, metadata.StatusCode, descStatus)
+		}
+		Add(&md, "elastic.indices.shards.active_primary", v.ActivePrimaryShards, ts, metadata.Gauge, metadata.Shard, descActivePrimaryShards)
+		Add(&md, "elastic.indices.shards.active", v.ActiveShards, ts, metadata.Gauge, metadata.Shard, descActiveShards)
+		Add(&md, "elastic.indices.shards.initalizing", v.InitializingShards, ts, metadata.Gauge, metadata.Shard, descInitializingShards)
+		Add(&md, "elastic.indices.shards.number", v.NumberOfShards, ts, metadata.Gauge, metadata.Shard, descNumberOfShards)
+		Add(&md, "elastic.indices.shards.relocating", v.RelocatingShards, ts, metadata.Gauge, metadata.Shard, descRelocatingShards)
+		Add(&md, "elastic.indices.replicas", v.NumberOfReplicas, ts, metadata.Gauge, metadata.Replica, descNumberOfReplicas)
+
 	}
 	if err := esReq("/_stats", "", &stats); err != nil {
 		return nil, err
 	}
-	var md opentsdb.MultiDataPoint
-	for k, v := range stats.Indicies {
+	return md, nil
+	for k, v := range stats.Indices {
 		ts := opentsdb.TagSet{"index_name": k, "cluster": cluster}
-		Add(&md, "elastic.indicies.completion.size", v.Primaries.Completion.SizeInBytes, ts, metadata.Gauge, metadata.Bytes, descCompletionSizeInBytes)
-		Add(&md, "elastic.indicies.docs.count", v.Primaries.Docs.Count, ts, metadata.Gauge, metadata.Document, descDocsCount)
-		Add(&md, "elastic.indicies.docs.deleted", v.Primaries.Docs.Deleted, ts, metadata.Gauge, metadata.Document, descDocsDeleted)
-		Add(&md, "elastic.indicies.fielddata.evictions", v.Primaries.Fielddata.Evictions, ts, metadata.Counter, metadata.Eviction, descFielddataEvictions)
-		Add(&md, "elastic.indicies.fielddata.memory_size", v.Primaries.Fielddata.MemorySizeInBytes, ts, metadata.Gauge, metadata.Bytes, descFielddataMemorySizeInBytes)
-		Add(&md, "elastic.indicies.filter_cache.evictions", v.Primaries.FilterCache.Evictions, ts, metadata.Counter, metadata.Eviction, descFilterCacheEvictions)
-		Add(&md, "elastic.indicies.filter_cache.memory_size", v.Primaries.FilterCache.MemorySizeInBytes, ts, metadata.Counter, metadata.Bytes, descFilterCacheMemorySizeInBytes)
-		Add(&md, "elastic.indicies.flush.total", v.Primaries.Flush.Total, ts, metadata.Counter, metadata.Flush, descFlushTotal)
-		Add(&md, "elastic.indicies.flush.total_time", v.Primaries.Flush.TotalTimeInMillis, ts, metadata.Counter, metadata.MilliSecond, descFlushTotalTimeInMillis)
-		Add(&md, "elastic.indicies.get.current", v.Primaries.Get.Current, ts, metadata.Gauge, metadata.Get, descGetCurrent)
-		Add(&md, "elastic.indicies.get.exists_time", v.Primaries.Get.ExistsTimeInMillis, ts, metadata.Counter, metadata.GetExists, descGetExistsTimeInMillis)
-		Add(&md, "elastic.indicies.get.exists_total", v.Primaries.Get.ExistsTotal, ts, metadata.Counter, metadata.GetExists, descGetExistsTotal)
-		Add(&md, "elastic.indicies.get.missing_time", v.Primaries.Get.MissingTimeInMillis, ts, metadata.Counter, metadata.MilliSecond, descGetMissingTimeInMillis)
-		Add(&md, "elastic.indicies.get.missing_total", v.Primaries.Get.MissingTotal, ts, metadata.Counter, metadata.Operation, descGetMissingTotal)
-		Add(&md, "elastic.indicies.get.time", v.Primaries.Get.TimeInMillis, ts, metadata.Counter, metadata.MilliSecond, descGetTimeInMillis)
-		Add(&md, "elastic.indicies.get.total", v.Primaries.Get.Total, ts, metadata.Counter, metadata.Get, descGetTotal)
-		Add(&md, "elastic.indicies.id_cache.memory_size", v.Primaries.IdCache.MemorySizeInBytes, ts, metadata.Gauge, metadata.Bytes, descIdCacheMemorySizeInBytes)
-		Add(&md, "elastic.indicies.indexing.delete_current", v.Primaries.Indexing.DeleteCurrent, ts, metadata.Gauge, metadata.Document, descIndexingDeleteCurrent)
-		Add(&md, "elastic.indicies.indexing.delete_time", v.Primaries.Indexing.DeleteTimeInMillis, ts, metadata.Counter, metadata.MilliSecond, descIndexingDeleteTimeInMillis)
-		Add(&md, "elastic.indicies.indexing.delete_total", v.Primaries.Indexing.DeleteTotal, ts, metadata.Counter, metadata.Document, descIndexingDeleteTotal)
-		Add(&md, "elastic.indicies.indexing.index_current", v.Primaries.Indexing.IndexCurrent, ts, metadata.Gauge, metadata.Document, descIndexingIndexCurrent)
-		Add(&md, "elastic.indicies.indexing.index_time", v.Primaries.Indexing.IndexTimeInMillis, ts, metadata.Counter, metadata.MilliSecond, descIndexingIndexTimeInMillis)
-		Add(&md, "elastic.indicies.indexing.index_total", v.Primaries.Indexing.IndexTotal, ts, metadata.Counter, metadata.Document, descIndexingIndexTotal)
-		Add(&md, "elastic.indicies.merges.current", v.Primaries.Merges.Current, ts, metadata.Gauge, metadata.Merge, descMergesCurrent)
-		Add(&md, "elastic.indicies.merges.current_docs", v.Primaries.Merges.CurrentDocs, ts, metadata.Gauge, metadata.Document, descMergesCurrentDocs)
-		Add(&md, "elastic.indicies.merges.current_size", v.Primaries.Merges.CurrentSizeInBytes, ts, metadata.Gauge, metadata.Document, descMergesCurrentSizeInBytes)
-		Add(&md, "elastic.indicies.merges.total", v.Primaries.Merges.Total, ts, metadata.Counter, metadata.Merge, descMergesTotal)
-		Add(&md, "elastic.indicies.merges.total_docs", v.Primaries.Merges.TotalDocs, ts, metadata.Counter, metadata.Document, descMergesTotalDocs)
-		Add(&md, "elastic.indicies.merges.total_size", v.Primaries.Merges.TotalSizeInBytes, ts, metadata.Counter, metadata.Bytes, descMergesTotalSizeInBytes)
-		Add(&md, "elastic.indicies.merges.total_time", v.Primaries.Merges.TotalTimeInMillis, ts, metadata.Counter, metadata.MilliSecond, descMergesTotalTimeInMillis)
-		Add(&md, "elastic.indicies.percolate.current", v.Primaries.Percolate.Current, ts, metadata.Gauge, "", descPercolateCurrent)
-		Add(&md, "elastic.indicies.percolate.memory_size", v.Primaries.Percolate.MemorySizeInBytes, ts, metadata.Gauge, metadata.Bytes, descPercolateMemorySizeInBytes)
-		Add(&md, "elastic.indicies.percolate.queries", v.Primaries.Percolate.Queries, ts, metadata.Counter, metadata.Query, descPercolateQueries)
-		Add(&md, "elastic.indicies.percolate.time", v.Primaries.Percolate.TimeInMillis, ts, metadata.Counter, metadata.MilliSecond, descPercolateTimeInMillis)
-		Add(&md, "elastic.indicies.percolate.total", v.Primaries.Percolate.Total, ts, metadata.Gauge, metadata.Operation, descPercolateTotal)
-		Add(&md, "elastic.indicies.refresh.total", v.Primaries.Refresh.Total, ts, metadata.Counter, metadata.Refresh, descRefreshTotal)
-		Add(&md, "elastic.indicies.refresh.total_time", v.Primaries.Refresh.TotalTimeInMillis, ts, metadata.Counter, metadata.MilliSecond, descRefreshTotalTimeInMillis)
-		Add(&md, "elastic.indicies.search.fetch_current", v.Primaries.Search.FetchCurrent, ts, metadata.Gauge, metadata.Document, descSearchFetchCurrent)
-		Add(&md, "elastic.indicies.search.fetch_time", v.Primaries.Search.FetchTimeInMillis, ts, metadata.Counter, metadata.MilliSecond, descSearchFetchTimeInMillis)
-		Add(&md, "elastic.indicies.search.fetch_total", v.Primaries.Search.FetchTotal, ts, metadata.Counter, metadata.Document, descSearchFetchTotal)
-		Add(&md, "elastic.indicies.search.open_contexts", v.Primaries.Search.OpenContexts, ts, metadata.Gauge, metadata.Context, descSearchOpenContexts)
-		Add(&md, "elastic.indicies.search.query_current", v.Primaries.Search.QueryCurrent, ts, metadata.Gauge, metadata.Query, descSearchQueryCurrent)
-		Add(&md, "elastic.indicies.search.query_time", v.Primaries.Search.QueryTimeInMillis, ts, metadata.Counter, metadata.MilliSecond, descSearchQueryTimeInMillis)
-		Add(&md, "elastic.indicies.search.query_total", v.Primaries.Search.QueryTotal, ts, metadata.Counter, metadata.Query, descSearchQueryTotal)
-		Add(&md, "elastic.indicies.segments.count", v.Primaries.Segments.Count, ts, metadata.Counter, metadata.Segment, descSegmentsCount)
-		Add(&md, "elastic.indicies.segments.memory", v.Primaries.Segments.MemoryInBytes, ts, metadata.Gauge, metadata.Bytes, descSegmentsMemoryInBytes)
-		Add(&md, "elastic.indicies.store.size_in_bytes", v.Primaries.Store.SizeInBytes, ts, metadata.Gauge, metadata.Bytes, descStoreSizeInBytes)
-		Add(&md, "elastic.indicies.store.throttle_time", v.Primaries.Store.ThrottleTimeInMillis, ts, metadata.Gauge, metadata.MilliSecond, descStoreThrottleTimeInMillis)
-		Add(&md, "elastic.indicies.suggest.current", v.Primaries.Suggest.Current, ts, metadata.Gauge, metadata.Suggest, descSuggestCurrent)
-		Add(&md, "elastic.indicies.suggest.time", v.Primaries.Suggest.TimeInMillis, ts, metadata.Counter, metadata.MilliSecond, descSuggestTimeInMillis)
-		Add(&md, "elastic.indicies.suggest.total", v.Primaries.Suggest.Total, ts, metadata.Counter, metadata.Suggest, descSuggestTotal)
-		Add(&md, "elastic.indicies.translog.operations", v.Primaries.Translog.Operations, ts, metadata.Counter, metadata.Operation, descTranslogOperations)
-		Add(&md, "elastic.indicies.translog.size_in_bytes", v.Primaries.Translog.SizeInBytes, ts, metadata.Gauge, metadata.Bytes, descTranslogSizeInBytes)
-		Add(&md, "elastic.indicies.warmer.current", v.Primaries.Warmer.Current, ts, metadata.Gauge, metadata.Operation, descWarmerCurrent)
-		Add(&md, "elastic.indicies.warmer.total", v.Primaries.Warmer.Total, ts, metadata.Counter, metadata.Operation, descWarmerTotal)
-		Add(&md, "elastic.indicies.warmer.total_time", v.Primaries.Warmer.TotalTimeInMillis, ts, metadata.Counter, metadata.MilliSecond, descWarmerTotalTimeInMillis)
+		Add(&md, "elastic.indices.completion.size", v.Primaries.Completion.SizeInBytes, ts, metadata.Gauge, metadata.Bytes, descCompletionSizeInBytes)
+		Add(&md, "elastic.indices.docs.count", v.Primaries.Docs.Count, ts, metadata.Gauge, metadata.Document, descDocsCount)
+		Add(&md, "elastic.indices.docs.deleted", v.Primaries.Docs.Deleted, ts, metadata.Gauge, metadata.Document, descDocsDeleted)
+		Add(&md, "elastic.indices.fielddata.evictions", v.Primaries.Fielddata.Evictions, ts, metadata.Counter, metadata.Eviction, descFielddataEvictions)
+		Add(&md, "elastic.indices.fielddata.memory_size", v.Primaries.Fielddata.MemorySizeInBytes, ts, metadata.Gauge, metadata.Bytes, descFielddataMemorySizeInBytes)
+		Add(&md, "elastic.indices.filter_cache.evictions", v.Primaries.FilterCache.Evictions, ts, metadata.Counter, metadata.Eviction, descFilterCacheEvictions)
+		Add(&md, "elastic.indices.filter_cache.memory_size", v.Primaries.FilterCache.MemorySizeInBytes, ts, metadata.Counter, metadata.Bytes, descFilterCacheMemorySizeInBytes)
+		Add(&md, "elastic.indices.flush.total", v.Primaries.Flush.Total, ts, metadata.Counter, metadata.Flush, descFlushTotal)
+		Add(&md, "elastic.indices.flush.total_time", v.Primaries.Flush.TotalTimeInMillis, ts, metadata.Counter, metadata.MilliSecond, descFlushTotalTimeInMillis)
+		Add(&md, "elastic.indices.get.current", v.Primaries.Get.Current, ts, metadata.Gauge, metadata.Get, descGetCurrent)
+		Add(&md, "elastic.indices.get.exists_time", v.Primaries.Get.ExistsTimeInMillis, ts, metadata.Counter, metadata.GetExists, descGetExistsTimeInMillis)
+		Add(&md, "elastic.indices.get.exists_total", v.Primaries.Get.ExistsTotal, ts, metadata.Counter, metadata.GetExists, descGetExistsTotal)
+		Add(&md, "elastic.indices.get.missing_time", v.Primaries.Get.MissingTimeInMillis, ts, metadata.Counter, metadata.MilliSecond, descGetMissingTimeInMillis)
+		Add(&md, "elastic.indices.get.missing_total", v.Primaries.Get.MissingTotal, ts, metadata.Counter, metadata.Operation, descGetMissingTotal)
+		Add(&md, "elastic.indices.get.time", v.Primaries.Get.TimeInMillis, ts, metadata.Counter, metadata.MilliSecond, descGetTimeInMillis)
+		Add(&md, "elastic.indices.get.total", v.Primaries.Get.Total, ts, metadata.Counter, metadata.Get, descGetTotal)
+		Add(&md, "elastic.indices.id_cache.memory_size", v.Primaries.IdCache.MemorySizeInBytes, ts, metadata.Gauge, metadata.Bytes, descIdCacheMemorySizeInBytes)
+		Add(&md, "elastic.indices.indexing.delete_current", v.Primaries.Indexing.DeleteCurrent, ts, metadata.Gauge, metadata.Document, descIndexingDeleteCurrent)
+		Add(&md, "elastic.indices.indexing.delete_time", v.Primaries.Indexing.DeleteTimeInMillis, ts, metadata.Counter, metadata.MilliSecond, descIndexingDeleteTimeInMillis)
+		Add(&md, "elastic.indices.indexing.delete_total", v.Primaries.Indexing.DeleteTotal, ts, metadata.Counter, metadata.Document, descIndexingDeleteTotal)
+		Add(&md, "elastic.indices.indexing.index_current", v.Primaries.Indexing.IndexCurrent, ts, metadata.Gauge, metadata.Document, descIndexingIndexCurrent)
+		Add(&md, "elastic.indices.indexing.index_time", v.Primaries.Indexing.IndexTimeInMillis, ts, metadata.Counter, metadata.MilliSecond, descIndexingIndexTimeInMillis)
+		Add(&md, "elastic.indices.indexing.index_total", v.Primaries.Indexing.IndexTotal, ts, metadata.Counter, metadata.Document, descIndexingIndexTotal)
+		Add(&md, "elastic.indices.merges.current", v.Primaries.Merges.Current, ts, metadata.Gauge, metadata.Merge, descMergesCurrent)
+		Add(&md, "elastic.indices.merges.current_docs", v.Primaries.Merges.CurrentDocs, ts, metadata.Gauge, metadata.Document, descMergesCurrentDocs)
+		Add(&md, "elastic.indices.merges.current_size", v.Primaries.Merges.CurrentSizeInBytes, ts, metadata.Gauge, metadata.Document, descMergesCurrentSizeInBytes)
+		Add(&md, "elastic.indices.merges.total", v.Primaries.Merges.Total, ts, metadata.Counter, metadata.Merge, descMergesTotal)
+		Add(&md, "elastic.indices.merges.total_docs", v.Primaries.Merges.TotalDocs, ts, metadata.Counter, metadata.Document, descMergesTotalDocs)
+		Add(&md, "elastic.indices.merges.total_size", v.Primaries.Merges.TotalSizeInBytes, ts, metadata.Counter, metadata.Bytes, descMergesTotalSizeInBytes)
+		Add(&md, "elastic.indices.merges.total_time", v.Primaries.Merges.TotalTimeInMillis, ts, metadata.Counter, metadata.MilliSecond, descMergesTotalTimeInMillis)
+		Add(&md, "elastic.indices.percolate.current", v.Primaries.Percolate.Current, ts, metadata.Gauge, "", descPercolateCurrent)
+		Add(&md, "elastic.indices.percolate.memory_size", v.Primaries.Percolate.MemorySizeInBytes, ts, metadata.Gauge, metadata.Bytes, descPercolateMemorySizeInBytes)
+		Add(&md, "elastic.indices.percolate.queries", v.Primaries.Percolate.Queries, ts, metadata.Counter, metadata.Query, descPercolateQueries)
+		Add(&md, "elastic.indices.percolate.time", v.Primaries.Percolate.TimeInMillis, ts, metadata.Counter, metadata.MilliSecond, descPercolateTimeInMillis)
+		Add(&md, "elastic.indices.percolate.total", v.Primaries.Percolate.Total, ts, metadata.Gauge, metadata.Operation, descPercolateTotal)
+		Add(&md, "elastic.indices.refresh.total", v.Primaries.Refresh.Total, ts, metadata.Counter, metadata.Refresh, descRefreshTotal)
+		Add(&md, "elastic.indices.refresh.total_time", v.Primaries.Refresh.TotalTimeInMillis, ts, metadata.Counter, metadata.MilliSecond, descRefreshTotalTimeInMillis)
+		Add(&md, "elastic.indices.search.fetch_current", v.Primaries.Search.FetchCurrent, ts, metadata.Gauge, metadata.Document, descSearchFetchCurrent)
+		Add(&md, "elastic.indices.search.fetch_time", v.Primaries.Search.FetchTimeInMillis, ts, metadata.Counter, metadata.MilliSecond, descSearchFetchTimeInMillis)
+		Add(&md, "elastic.indices.search.fetch_total", v.Primaries.Search.FetchTotal, ts, metadata.Counter, metadata.Document, descSearchFetchTotal)
+		Add(&md, "elastic.indices.search.open_contexts", v.Primaries.Search.OpenContexts, ts, metadata.Gauge, metadata.Context, descSearchOpenContexts)
+		Add(&md, "elastic.indices.search.query_current", v.Primaries.Search.QueryCurrent, ts, metadata.Gauge, metadata.Query, descSearchQueryCurrent)
+		Add(&md, "elastic.indices.search.query_time", v.Primaries.Search.QueryTimeInMillis, ts, metadata.Counter, metadata.MilliSecond, descSearchQueryTimeInMillis)
+		Add(&md, "elastic.indices.search.query_total", v.Primaries.Search.QueryTotal, ts, metadata.Counter, metadata.Query, descSearchQueryTotal)
+		Add(&md, "elastic.indices.segments.count", v.Primaries.Segments.Count, ts, metadata.Counter, metadata.Segment, descSegmentsCount)
+		Add(&md, "elastic.indices.segments.memory", v.Primaries.Segments.MemoryInBytes, ts, metadata.Gauge, metadata.Bytes, descSegmentsMemoryInBytes)
+		Add(&md, "elastic.indices.store.size_in_bytes", v.Primaries.Store.SizeInBytes, ts, metadata.Gauge, metadata.Bytes, descStoreSizeInBytes)
+		Add(&md, "elastic.indices.store.throttle_time", v.Primaries.Store.ThrottleTimeInMillis, ts, metadata.Gauge, metadata.MilliSecond, descStoreThrottleTimeInMillis)
+		Add(&md, "elastic.indices.suggest.current", v.Primaries.Suggest.Current, ts, metadata.Gauge, metadata.Suggest, descSuggestCurrent)
+		Add(&md, "elastic.indices.suggest.time", v.Primaries.Suggest.TimeInMillis, ts, metadata.Counter, metadata.MilliSecond, descSuggestTimeInMillis)
+		Add(&md, "elastic.indices.suggest.total", v.Primaries.Suggest.Total, ts, metadata.Counter, metadata.Suggest, descSuggestTotal)
+		Add(&md, "elastic.indices.translog.operations", v.Primaries.Translog.Operations, ts, metadata.Counter, metadata.Operation, descTranslogOperations)
+		Add(&md, "elastic.indices.translog.size_in_bytes", v.Primaries.Translog.SizeInBytes, ts, metadata.Gauge, metadata.Bytes, descTranslogSizeInBytes)
+		Add(&md, "elastic.indices.warmer.current", v.Primaries.Warmer.Current, ts, metadata.Gauge, metadata.Operation, descWarmerCurrent)
+		Add(&md, "elastic.indices.warmer.total", v.Primaries.Warmer.Total, ts, metadata.Counter, metadata.Operation, descWarmerTotal)
+		Add(&md, "elastic.indices.warmer.total_time", v.Primaries.Warmer.TotalTimeInMillis, ts, metadata.Counter, metadata.MilliSecond, descWarmerTotalTimeInMillis)
 	}
 	return md, nil
 }
