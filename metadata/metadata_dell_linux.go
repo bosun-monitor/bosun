@@ -21,7 +21,7 @@ func collectMetadataOmreport() {
 		}
 		switch fields[0] {
 		case "Chassis Service Tag":
-			AddMeta("", nil, "svctag", fields[1], true)
+			AddMeta("", nil, "serialNumber", fields[1], true)
 		case "Chassis Model":
 			AddMeta("", nil, "model", fields[1], true)
 		}
