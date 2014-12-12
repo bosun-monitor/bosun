@@ -43,7 +43,7 @@ func TestExprSimple(t *testing.T) {
 			t.Error(err)
 			break
 		}
-		r, _, err := e.Execute(opentsdb.Host(""), nil, time.Now(), 0, false, nil, nil, nil)
+		r, _, err := e.Execute(opentsdb.Host(""), nil, time.Now(), 0, false, nil, nil)
 		if err != nil {
 			t.Error(err)
 			break

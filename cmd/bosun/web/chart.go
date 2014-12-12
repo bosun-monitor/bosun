@@ -193,7 +193,7 @@ func ExprGraph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (in
 	} else if e.Root.Return() != parse.TYPE_SERIES {
 		return nil, fmt.Errorf("egraph: requires an expression that returns a series")
 	}
-	res, _, err := e.Execute(opentsdb.NewCache(schedule.Conf.TsdbHost, schedule.Conf.ResponseLimit), t, now, autods, false, schedule.Search, schedule.Lookups, nil)
+	res, _, err := e.Execute(opentsdb.NewCache(schedule.Conf.TsdbHost, schedule.Conf.ResponseLimit), t, now, autods, false, schedule.Search, nil)
 	if err != nil {
 		return nil, err
 	}

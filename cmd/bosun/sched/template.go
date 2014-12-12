@@ -201,7 +201,7 @@ func (c *Context) eval(v interface{}, filter bool, series bool, autods int) ([]*
 	if c.AbnormalEvent() != nil {
 		t = c.AbnormalEvent().Time
 	}
-	res, _, err := e.Execute(c.runHistory.Context, nil, t, autods, c.Alert.UnjoinedOK, c.schedule.Search, c.schedule.Lookups, c.schedule.Conf.AlertSquelched(c.Alert))
+	res, _, err := e.Execute(c.runHistory.Context, nil, t, autods, c.Alert.UnjoinedOK, c.schedule.Search, c.schedule.Conf.AlertSquelched(c.Alert))
 	if err != nil {
 		return nil, "", fmt.Errorf("%s: %v", v, err)
 	}
@@ -225,11 +225,11 @@ func (c *Context) LookupAll(table, key string, group interface{}) (string, error
 	case opentsdb.TagSet:
 		t = v
 	}
-	l, ok := c.schedule.Lookups[table]
+	l, ok := c.schedule.Conf.Lookups[table]
 	if !ok {
 		return "", fmt.Errorf("unknown lookup table %v", table)
 	}
-	if v, ok := l.Get(key, t); ok {
+	if v, ok := l.ToExpr().Get(key, t); ok {
 		return v, nil
 	} else {
 		return "", fmt.Errorf("no entry for key %v in table %v for tagset %v", key, table, c.Group)

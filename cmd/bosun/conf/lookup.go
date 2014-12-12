@@ -1,21 +1,23 @@
-package expr
+package conf
 
 import (
+	"bosun.org/cmd/bosun/expr"
 	"bosun.org/cmd/bosun/search"
 	"bosun.org/opentsdb"
 )
 
-type Lookup struct {
+// TODO: remove this and merge it with Lookup
+type ExprLookup struct {
 	Tags    []string
-	Entries []*Entry
+	Entries []*ExprEntry
 }
 
-type Entry struct {
-	AlertKey AlertKey
+type ExprEntry struct {
+	AlertKey expr.AlertKey
 	Values   map[string]string
 }
 
-func (lookup *Lookup) Get(key string, tag opentsdb.TagSet) (value string, ok bool) {
+func (lookup *ExprLookup) Get(key string, tag opentsdb.TagSet) (value string, ok bool) {
 	for _, entry := range lookup.Entries {
 		value, ok = entry.Values[key]
 		if !ok {
