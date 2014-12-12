@@ -17,6 +17,8 @@ import (
 	tparse "text/template/parse"
 	"time"
 
+	"bosun.org/_third_party/github.com/MiniProfiler/go/miniprofiler"
+
 	"bosun.org/cmd/bosun/conf/parse"
 	"bosun.org/cmd/bosun/expr"
 	eparse "bosun.org/cmd/bosun/expr/parse"
@@ -155,29 +157,20 @@ type Lookup struct {
 	Entries []*Entry
 }
 
-func (lookup *Lookup) ToExpr() *expr.Lookup {
-	l := expr.Lookup{
+func (lookup *Lookup) ToExpr() *ExprLookup {
+	l := ExprLookup{
 		Tags: lookup.Tags,
 	}
 	for _, entry := range lookup.Entries {
-		l.Entries = append(l.Entries, entry.Entry)
+		l.Entries = append(l.Entries, entry.ExprEntry)
 	}
 	return &l
 }
 
 type Entry struct {
-	*expr.Entry
+	*ExprEntry
 	Def  string
 	Name string
-}
-
-// GetLookups converts all lookup tables to maps for use by the expr package.
-func (c *Conf) GetLookups() map[string]*expr.Lookup {
-	lookups := make(map[string]*expr.Lookup)
-	for name, lookup := range c.Lookups {
-		lookups[name] = lookup.ToExpr()
-	}
-	return lookups
 }
 
 type Macro struct {
@@ -543,7 +536,7 @@ func (c *Conf) loadLookup(s *parse.SectionNode) {
 			e := Entry{
 				Def:  n.RawText,
 				Name: n.Name.Text,
-				Entry: &expr.Entry{
+				ExprEntry: &ExprEntry{
 					AlertKey: expr.NewAlertKey("", tags),
 					Values:   make(map[string]string),
 				},
@@ -724,7 +717,7 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 			a.Template = t
 		case "crit":
 			a.crit = v
-			crit, err := expr.New(a.crit)
+			crit, err := c.NewExpr(a.crit)
 			if err != nil {
 				c.error(err)
 			}
@@ -737,7 +730,7 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 			a.Crit = crit
 		case "warn":
 			a.warn = v
-			warn, err := expr.New(a.warn)
+			warn, err := c.NewExpr(a.warn)
 			if err != nil {
 				c.error(err)
 			}
@@ -1092,4 +1085,75 @@ func (c *Conf) AlertTemplateStrings() (*AlertTemplateStrings, error) {
 		alerts,
 		t_associations,
 	}, nil
+}
+
+func (c *Conf) NewExpr(s string) (*expr.Expr, error) {
+	return expr.New(s, c.Funcs())
+}
+
+func (c *Conf) Funcs() map[string]eparse.Func {
+	lookup := func(e *expr.State, T miniprofiler.Timer, lookup, key string) (results *expr.Results, err error) {
+		results = new(expr.Results)
+		results.IgnoreUnjoined = true
+		l := c.Lookups[lookup]
+		if l == nil {
+			return nil, fmt.Errorf("lookup table not found: %v", lookup)
+		}
+		lookups := l.ToExpr()
+		if lookups == nil {
+			err = fmt.Errorf("lookup table not found: %v", lookup)
+			return
+		}
+		var tags []opentsdb.TagSet
+		for _, tag := range lookups.Tags {
+			var next []opentsdb.TagSet
+			for _, value := range e.Search.TagValuesByTagKey(tag) {
+				for _, s := range tags {
+					t := s.Copy()
+					t[tag] = value
+					next = append(next, t)
+				}
+				if len(tags) == 0 {
+					next = append(next, opentsdb.TagSet{tag: value})
+				}
+			}
+			tags = next
+		}
+		for _, tag := range tags {
+			value, ok := lookups.Get(key, tag)
+			if !ok {
+				continue
+			}
+			var num float64
+			num, err = strconv.ParseFloat(value, 64)
+			if err != nil {
+				return nil, err
+			}
+			results.Results = append(results.Results, &expr.Result{
+				Value: expr.Number(num),
+				Group: tag,
+			})
+		}
+		return results, nil
+	}
+	tagLookup := func(args []eparse.Node) (eparse.Tags, error) {
+		name := args[0].(*eparse.StringNode).Text
+		lookup := c.Lookups[name]
+		if lookup == nil {
+			return nil, fmt.Errorf("bad lookup table %v", name)
+		}
+		t := make(eparse.Tags)
+		for _, v := range lookup.Tags {
+			t[v] = struct{}{}
+		}
+		return t, nil
+	}
+	return map[string]eparse.Func{
+		"lookup": {
+			Args:   []eparse.FuncType{eparse.TYPE_STRING, eparse.TYPE_STRING},
+			Return: eparse.TYPE_NUMBER,
+			Tags:   tagLookup,
+			F:      lookup,
+		},
+	}
 }
