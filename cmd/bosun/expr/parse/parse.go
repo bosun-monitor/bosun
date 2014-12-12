@@ -310,6 +310,8 @@ func (t *Tree) Func() (f *FuncNode) {
 				t.error(err)
 			}
 			f.append(newString(token.pos, token.val, s))
+		case itemRightParen:
+			return
 		}
 		switch token = t.next(); token.typ {
 		case itemComma:
