@@ -148,9 +148,9 @@ type StateTuple struct {
 }
 
 // GroupStates groups by NeedAck, Active, and Status.
-func (s States) GroupStates() map[StateTuple]States {
+func (states States) GroupStates() map[StateTuple]States {
 	r := make(map[StateTuple]States)
-	for ak, st := range s {
+	for ak, st := range states {
 		t := StateTuple{
 			st.NeedAck,
 			st.IsActive(),
@@ -353,12 +353,12 @@ func marshalTime(t time.Time) string {
 
 var DefaultSched = &Schedule{}
 
-// Loads a configuration into the default schedule
+// Load loads a configuration into the default schedule.
 func Load(c *conf.Conf) {
 	DefaultSched.Load(c)
 }
 
-// Runs the default schedule.
+// Run runs the default schedule.
 func Run() error {
 	return DefaultSched.Run()
 }
@@ -378,7 +378,7 @@ func (s *Schedule) Load(c *conf.Conf) {
 	s.RestoreState()
 }
 
-// Restores notification and alert state from the file on disk.
+// RestoreState restores notification and alert state from the file on disk.
 func (s *Schedule) RestoreState() {
 	log.Println("RestoreState")
 	start := time.Now()
@@ -674,8 +674,8 @@ func (s *State) IsActive() bool {
 	return s.Status() > StNormal
 }
 
-func (st *State) Action(user, message string, t ActionType) {
-	st.Actions = append(st.Actions, Action{
+func (s *State) Action(user, message string, t ActionType) {
+	s.Actions = append(s.Actions, Action{
 		User:    user,
 		Message: message,
 		Type:    t,
@@ -742,8 +742,8 @@ func (s *State) Touch() {
 	s.Forgotten = false
 }
 
-// Appends status to the history if the status is different than the latest
-// status. Returns the previous status.
+// Append appends status to the history if the status is different than the
+// latest status. Returns the previous status.
 func (s *State) Append(event *Event) Status {
 	last := s.Last()
 	if len(s.History) == 0 || s.Last().Status != event.Status {
