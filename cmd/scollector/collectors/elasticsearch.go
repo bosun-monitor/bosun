@@ -252,7 +252,7 @@ type ElasticIndexDetails struct {
 		TimeInMillis        float64 `json:"time_in_millis"`
 		Total               float64 `json:"total"`
 	} `json:"get"`
-	IdCache struct {
+	IDCache struct {
 		MemorySizeInBytes float64 `json:"memory_size_in_bytes"`
 	} `json:"id_cache"`
 	Indexing struct {
@@ -334,7 +334,7 @@ const (
 	descGetMissingTotal              = "The total number of operations that tried to get a document that turned out to be missing."
 	descGetExistsTimeInMillis        = "The total amount of time spent on get exists operations. Gets exists sees if a document exists."
 	descGetExistsTotal               = "The total number of get exists operations. Gets exists sees if a document exists."
-	descIdCacheMemorySizeInBytes     = "The size of the id cache."
+	descIDCacheMemorySizeInBytes     = "The size of the id cache."
 	descIndexingDeleteCurrent        = "The current number of documents being deleted via indexing commands (such as a delete query)."
 	descIndexingDeleteTimeInMillis   = "The time spent deleting documents."
 	descIndexingDeleteTotal          = "The total number of documents deleted."
@@ -453,7 +453,7 @@ func c_elasticsearch_indices() (opentsdb.MultiDataPoint, error) {
 		Add(&md, "elastic.indices.get.missing_total", v.Primaries.Get.MissingTotal, ts, metadata.Counter, metadata.Operation, descGetMissingTotal)
 		Add(&md, "elastic.indices.get.time", v.Primaries.Get.TimeInMillis, ts, metadata.Counter, metadata.MilliSecond, descGetTimeInMillis)
 		Add(&md, "elastic.indices.get.total", v.Primaries.Get.Total, ts, metadata.Counter, metadata.Get, descGetTotal)
-		Add(&md, "elastic.indices.id_cache.memory_size", v.Primaries.IdCache.MemorySizeInBytes, ts, metadata.Gauge, metadata.Bytes, descIdCacheMemorySizeInBytes)
+		Add(&md, "elastic.indices.id_cache.memory_size", v.Primaries.IDCache.MemorySizeInBytes, ts, metadata.Gauge, metadata.Bytes, descIDCacheMemorySizeInBytes)
 		Add(&md, "elastic.indices.indexing.delete_current", v.Primaries.Indexing.DeleteCurrent, ts, metadata.Gauge, metadata.Document, descIndexingDeleteCurrent)
 		Add(&md, "elastic.indices.indexing.delete_time", v.Primaries.Indexing.DeleteTimeInMillis, ts, metadata.Counter, metadata.MilliSecond, descIndexingDeleteTimeInMillis)
 		Add(&md, "elastic.indices.indexing.delete_total", v.Primaries.Indexing.DeleteTotal, ts, metadata.Counter, metadata.Document, descIndexingDeleteTotal)
