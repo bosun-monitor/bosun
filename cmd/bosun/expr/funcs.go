@@ -132,6 +132,11 @@ var builtins = map[string]parse.Func{
 		parse.TYPE_SCALAR,
 		Duration,
 	},
+	"epoch": {
+		[]parse.FuncType{},
+		parse.TYPE_SCALAR,
+		Epoch,
+	},
 	"dropna": {
 		[]parse.FuncType{parse.TYPE_SERIES},
 		parse.TYPE_SERIES,
@@ -147,6 +152,14 @@ var builtins = map[string]parse.Func{
 		parse.TYPE_NUMBER,
 		NV,
 	},
+}
+
+func Epoch(e *state, T miniprofiler.Timer) (*Results, error) {
+	return &Results{
+		Results: []*Result{
+			{Value: Scalar(float64(time.Now().Unix()))},
+		},
+	}, nil
 }
 
 func NV(e *state, T miniprofiler.Timer, series *Results, v float64) (results *Results, err error) {
