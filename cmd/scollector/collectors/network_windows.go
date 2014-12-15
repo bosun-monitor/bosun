@@ -94,7 +94,7 @@ func winNetworkInit() {
 	}
 	update()
 	go func() {
-		for _ = range time.Tick(time.Minute * 5) {
+		for range time.Tick(time.Minute * 5) {
 			update()
 		}
 	}()

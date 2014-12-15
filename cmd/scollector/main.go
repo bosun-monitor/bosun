@@ -225,7 +225,7 @@ func main() {
 	go func() {
 		const maxMem = 500 * 1024 * 1024 // 500MB
 		var m runtime.MemStats
-		for _ = range time.Tick(time.Minute) {
+		for range time.Tick(time.Minute) {
 			runtime.ReadMemStats(&m)
 			if m.Alloc > maxMem {
 				panic("memory max reached")
