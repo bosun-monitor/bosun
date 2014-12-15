@@ -593,7 +593,7 @@ func (s *Schedule) Run() error {
 const pingFreq = time.Second * 15
 
 func (s *Schedule) PingHosts() {
-	for _ = range time.Tick(pingFreq) {
+	for range time.Tick(pingFreq) {
 		hosts := s.Search.TagValuesByTagKey("host")
 		for _, host := range hosts {
 			go pingHost(host)
