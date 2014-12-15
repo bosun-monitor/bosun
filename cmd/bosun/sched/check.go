@@ -208,7 +208,7 @@ func (s *Schedule) CheckExpr(T miniprofiler.Timer, rh *RunHistory, a *conf.Alert
 		collect.Add("check.errs", opentsdb.TagSet{"metric": a.Name}, 1)
 		log.Println(err)
 	}()
-	results, _, err := e.Execute(rh.Context, T, rh.Start, 0, a.UnjoinedOK, s.Search, s.Conf.GetLookups(), s.Conf.AlertSquelched(a))
+	results, _, err := e.Execute(rh.Context, T, rh.Start, 0, a.UnjoinedOK, s.Search, s.Conf.AlertSquelched(a))
 	if err != nil {
 		ak := expr.NewAlertKey(a.Name, nil)
 		state := s.Status(ak)

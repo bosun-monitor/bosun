@@ -10,7 +10,9 @@ package parse
 import (
 	"fmt"
 	"runtime"
+	"sort"
 	"strconv"
+	"strings"
 )
 
 // Tree is the representation of a single parsed expression.
@@ -27,6 +29,7 @@ type Tree struct {
 type Func struct {
 	Args   []FuncType
 	Return FuncType
+	Tags   func([]Node) (Tags, error)
 	F      interface{}
 }
 
@@ -53,6 +56,39 @@ const (
 	TYPE_NUMBER
 	TYPE_SERIES
 )
+
+type Tags map[string]struct{}
+
+func (t Tags) String() string {
+	var keys []string
+	for k := range t {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return strings.Join(keys, ",")
+}
+
+func (t Tags) Equal(o Tags) bool {
+	if len(t) != len(o) {
+		return false
+	}
+	for k := range t {
+		if _, present := o[k]; !present {
+			return false
+		}
+	}
+	return true
+}
+
+// Subset returns true if o is a subset of t.
+func (t Tags) Subset(o Tags) bool {
+	for k := range t {
+		if _, ok := o[k]; !ok {
+			return false
+		}
+	}
+	return true
+}
 
 // Parse returns a Tree, created by parsing the expression described in the
 // argument string. If an error is encountered, parsing stops and an empty Tree
@@ -153,6 +189,20 @@ func (t *Tree) startParse(funcs []map[string]Func, lex *lexer) {
 	t.Root = nil
 	t.lex = lex
 	t.funcs = funcs
+	for _, funcMap := range funcs {
+		for name, f := range funcMap {
+			switch f.Return {
+			case TYPE_SERIES, TYPE_NUMBER:
+				if f.Tags == nil {
+					panic(fmt.Errorf("%v: expected Tags definition: got nil", name))
+				}
+			default:
+				if f.Tags != nil {
+					panic(fmt.Errorf("%v: unexpected Tags definition: expected nil", name))
+				}
+			}
+		}
+	}
 }
 
 // stopParse terminates parsing.
@@ -161,10 +211,8 @@ func (t *Tree) stopParse() {
 	t.funcs = nil
 }
 
-// Parse parses the template definition string to construct a representation of
-// the template for execution. If either action delimiter string is empty, the
-// default ("{{" or "}}") is used. Embedded template definitions are added to
-// the treeSet map.
+// Parse parses the expression definition string to construct a representation
+// of the expression for execution.
 func (t *Tree) Parse(text string, funcs ...map[string]Func) (err error) {
 	defer t.recover(&err)
 	t.startParse(funcs, lex(text))
@@ -174,7 +222,7 @@ func (t *Tree) Parse(text string, funcs ...map[string]Func) (err error) {
 	return nil
 }
 
-// parse is the top-level parser for a template.
+// parse is the top-level parser for an expression.
 // It runs to EOF.
 func (t *Tree) parse() {
 	t.Root = t.O()
@@ -324,7 +372,6 @@ func (t *Tree) Func() (f *FuncNode) {
 	}
 }
 
-// hasFunction reports if a function name exists in the Tree's maps.
 func (t *Tree) getFunction(name string) (v Func, ok bool) {
 	for _, funcMap := range t.funcs {
 		if funcMap == nil {

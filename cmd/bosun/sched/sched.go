@@ -38,7 +38,6 @@ type Schedule struct {
 	Group         map[time.Time]expr.AlertKeys
 	Metadata      map[metadata.Metakey]*Metavalue
 	Search        *search.Search
-	Lookups       map[string]*expr.Lookup
 
 	LastCheck     time.Time
 	nc            chan interface{}
@@ -369,7 +368,6 @@ func (s *Schedule) Init(c *conf.Conf) {
 	s.Silence = make(map[string]*Silence)
 	s.Group = make(map[time.Time]expr.AlertKeys)
 	s.Metadata = make(map[metadata.Metakey]*Metavalue)
-	s.Lookups = c.GetLookups()
 	s.status = make(States)
 	s.Search = search.NewSearch()
 	s.checkRunning = make(chan bool, 1)

@@ -14,10 +14,9 @@ import (
 	"bosun.org/opentsdb"
 )
 
-type state struct {
+type State struct {
 	*Expr
-	search     *search.Search
-	lookups    map[string]*Lookup
+	Search     *search.Search
 	now        time.Time
 	autods     int
 	context    opentsdb.Context
@@ -26,7 +25,7 @@ type state struct {
 	squelched  func(tags opentsdb.TagSet) bool
 }
 
-func (e *state) addRequest(r opentsdb.Request) {
+func (e *State) addRequest(r opentsdb.Request) {
 	e.queries = append(e.queries, r)
 }
 
@@ -40,8 +39,9 @@ func (e *Expr) MarshalJSON() ([]byte, error) {
 	return json.Marshal(e.String())
 }
 
-func New(expr string) (*Expr, error) {
-	t, err := parse.Parse(expr, builtins)
+func New(expr string, funcs ...map[string]parse.Func) (*Expr, error) {
+	funcs = append(funcs, builtins)
+	t, err := parse.Parse(expr, funcs...)
 	if err != nil {
 		return nil, err
 	}
@@ -53,21 +53,20 @@ func New(expr string) (*Expr, error) {
 
 // Execute applies a parse expression to the specified OpenTSDB context, and
 // returns one result per group. T may be nil to ignore timings.
-func (e *Expr) Execute(c opentsdb.Context, T miniprofiler.Timer, now time.Time, autods int, unjoinedOk bool, search *search.Search, lookups map[string]*Lookup, squelched func(tags opentsdb.TagSet) bool) (r *Results, queries []opentsdb.Request, err error) {
+func (e *Expr) Execute(c opentsdb.Context, T miniprofiler.Timer, now time.Time, autods int, unjoinedOk bool, search *search.Search, squelched func(tags opentsdb.TagSet) bool) (r *Results, queries []opentsdb.Request, err error) {
 	defer errRecover(&err)
 	if squelched == nil {
 		squelched = func(tags opentsdb.TagSet) bool {
 			return false
 		}
 	}
-	s := &state{
+	s := &State{
 		Expr:       e,
 		context:    c,
 		now:        now,
 		autods:     autods,
 		unjoinedOk: unjoinedOk,
-		search:     search,
-		lookups:    lookups,
+		Search:     search,
 		squelched:  squelched,
 	}
 	if T == nil {
@@ -186,7 +185,7 @@ func (u *Union) ExtendComputations(o *Result) {
 }
 
 // union returns the combination of a and b where one is a subset of the other.
-func (e *state) union(a, b *Results, expression string) []*Union {
+func (e *State) union(a, b *Results, expression string) []*Union {
 	const unjoinedGroup = "unjoined group (%v)"
 	var us []*Union
 	if len(a.Results) == 0 || len(b.Results) == 0 {
@@ -255,7 +254,7 @@ func (e *state) union(a, b *Results, expression string) []*Union {
 	return us
 }
 
-func (e *state) walk(node parse.Node, T miniprofiler.Timer) *Results {
+func (e *State) walk(node parse.Node, T miniprofiler.Timer) *Results {
 	switch node := node.(type) {
 	case *parse.NumberNode:
 		return wrap(node.Float64)
@@ -270,7 +269,7 @@ func (e *state) walk(node parse.Node, T miniprofiler.Timer) *Results {
 	}
 }
 
-func (e *state) walkBinary(node *parse.BinaryNode, T miniprofiler.Timer) *Results {
+func (e *State) walkBinary(node *parse.BinaryNode, T miniprofiler.Timer) *Results {
 	ar := e.walk(node.Args[0], T)
 	br := e.walk(node.Args[1], T)
 	res := Results{
@@ -417,7 +416,7 @@ func operate(op string, a, b float64) (r float64) {
 	return
 }
 
-func (e *state) walkUnary(node *parse.UnaryNode, T miniprofiler.Timer) *Results {
+func (e *State) walkUnary(node *parse.UnaryNode, T miniprofiler.Timer) *Results {
 	a := e.walk(node.Arg, T)
 	for _, r := range a.Results {
 		if an, aok := r.Value.(Scalar); aok && math.IsNaN(float64(an)) {
@@ -458,7 +457,7 @@ func uoperate(op string, a float64) (r float64) {
 	return
 }
 
-func (e *state) walkFunc(node *parse.FuncNode, T miniprofiler.Timer) *Results {
+func (e *State) walkFunc(node *parse.FuncNode, T miniprofiler.Timer) *Results {
 	f := reflect.ValueOf(node.F.F)
 	var in []reflect.Value
 	for _, a := range node.Args {
