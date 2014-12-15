@@ -73,13 +73,13 @@ func newFunc(pos Pos, name string, f Func) *FuncNode {
 	return &FuncNode{NodeType: NodeFunc, Pos: pos, Name: name, F: f}
 }
 
-func (c *FuncNode) append(arg Node) {
-	c.Args = append(c.Args, arg)
+func (f *FuncNode) append(arg Node) {
+	f.Args = append(f.Args, arg)
 }
 
-func (c *FuncNode) String() string {
-	s := c.Name + "("
-	for i, arg := range c.Args {
+func (f *FuncNode) String() string {
+	s := f.Name + "("
+	for i, arg := range f.Args {
 		if i > 0 {
 			s += ", "
 		}
@@ -89,9 +89,9 @@ func (c *FuncNode) String() string {
 	return s
 }
 
-func (c *FuncNode) StringAST() string {
-	s := c.Name + "("
-	for i, arg := range c.Args {
+func (f *FuncNode) StringAST() string {
+	s := f.Name + "("
+	for i, arg := range f.Args {
 		if i > 0 {
 			s += ", "
 		}
@@ -101,15 +101,15 @@ func (c *FuncNode) StringAST() string {
 	return s
 }
 
-func (c *FuncNode) Check() error {
+func (f *FuncNode) Check() error {
 	const errFuncType = "parse: bad argument type in %s, expected %s, got %s"
-	if len(c.Args) < len(c.F.Args) {
-		return fmt.Errorf("parse: not enough arguments for %s", c.Name)
-	} else if len(c.Args) > len(c.F.Args) {
-		return fmt.Errorf("parse: too many arguments for %s", c.Name)
+	if len(f.Args) < len(f.F.Args) {
+		return fmt.Errorf("parse: not enough arguments for %s", f.Name)
+	} else if len(f.Args) > len(f.F.Args) {
+		return fmt.Errorf("parse: too many arguments for %s", f.Name)
 	}
-	for i, a := range c.Args {
-		t := c.F.Args[i]
+	for i, a := range f.Args {
+		t := f.F.Args[i]
 		at := a.Return()
 		if t != at {
 			return fmt.Errorf("parse: expected %v, got %v", t, at)
