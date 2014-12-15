@@ -1158,7 +1158,52 @@ func (c *Conf) Funcs() map[string]eparse.Func {
 		}
 		return t, nil
 	}
+	getAlertExpr := func(name, key string) (*Alert, *expr.Expr, error) {
+		a := c.Alerts[name]
+		if a == nil {
+			return nil, nil, fmt.Errorf("bad alert name %v", name)
+		}
+		var e *expr.Expr
+		switch key {
+		case "crit":
+			e = a.Crit
+		case "warn":
+			e = a.Warn
+		default:
+			return nil, nil, fmt.Errorf("alert: unsupported key %v", key)
+		}
+		if e == nil {
+			return nil, nil, fmt.Errorf("alert: nil expression")
+		}
+		return a, e, nil
+	}
+	alert := func(s *expr.State, T miniprofiler.Timer, name, key string) (results *expr.Results, err error) {
+		_, e, err := getAlertExpr(name, key)
+		if err != nil {
+			return nil, err
+		}
+		results, _, err = e.ExecuteState(s, T)
+		return
+	}
+	tagAlert := func(args []eparse.Node) (eparse.Tags, error) {
+		name := args[0].(*eparse.StringNode).Text
+		key := args[1].(*eparse.StringNode).Text
+		a, e, err := getAlertExpr(name, key)
+		if err != nil {
+			return nil, err
+		}
+		if a.returnType != eparse.TYPE_NUMBER {
+			return nil, fmt.Errorf("alert requires a number-returning expression (got %v)", a.returnType)
+		}
+		return e.Root.Tags()
+	}
 	return map[string]eparse.Func{
+		"alert": {
+			Args:   []eparse.FuncType{eparse.TYPE_STRING, eparse.TYPE_STRING},
+			Return: eparse.TYPE_NUMBER,
+			Tags:   tagAlert,
+			F:      alert,
+		},
 		"lookup": {
 			Args:   []eparse.FuncType{eparse.TYPE_STRING, eparse.TYPE_STRING},
 			Return: eparse.TYPE_NUMBER,

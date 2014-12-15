@@ -54,7 +54,6 @@ func New(expr string, funcs ...map[string]parse.Func) (*Expr, error) {
 // Execute applies a parse expression to the specified OpenTSDB context, and
 // returns one result per group. T may be nil to ignore timings.
 func (e *Expr) Execute(c opentsdb.Context, T miniprofiler.Timer, now time.Time, autods int, unjoinedOk bool, search *search.Search, squelched func(tags opentsdb.TagSet) bool) (r *Results, queries []opentsdb.Request, err error) {
-	defer errRecover(&err)
 	if squelched == nil {
 		squelched = func(tags opentsdb.TagSet) bool {
 			return false
@@ -69,6 +68,11 @@ func (e *Expr) Execute(c opentsdb.Context, T miniprofiler.Timer, now time.Time, 
 		Search:     search,
 		squelched:  squelched,
 	}
+	return e.ExecuteState(s, T)
+}
+
+func (e *Expr) ExecuteState(s *State, T miniprofiler.Timer) (r *Results, queries []opentsdb.Request, err error) {
+	defer errRecover(&err)
 	if T == nil {
 		T = new(miniprofiler.Profile)
 	}
