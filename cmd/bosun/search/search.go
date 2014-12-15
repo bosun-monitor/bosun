@@ -101,7 +101,7 @@ func NewSearch() *Search {
 	return &s
 }
 
-// Copies current data to the Read replica.
+// Copy copies current data to the Read replica.
 func (s *Search) Copy() {
 	r := new(Search)
 	r.Metric = s.Metric.Copy()
@@ -183,9 +183,9 @@ func Match(search string, values []string) ([]string, error) {
 
 var errNotFloat = fmt.Errorf("last: expected float64")
 
-// Last returns the value of the most recent data point for the given metric and
-// tag. tags should be of the form "{key=val,key2=val2}". If diff is true, the
-// value is treated as a counter. err is non nil if there is no match.
+// GetLast returns the value of the most recent data point for the given metric
+// and tag. tags should be of the form "{key=val,key2=val2}". If diff is true,
+// the value is treated as a counter. err is non nil if there is no match.
 func (s *Search) GetLast(metric, tags string, diff bool) (v float64, err error) {
 	s.RLock()
 	p := s.Last[metric+tags]

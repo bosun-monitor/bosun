@@ -8,7 +8,7 @@ import (
 	"bosun.org/_third_party/github.com/gorilla/mux"
 )
 
-// A Sorted List of Available Metrics
+// UniqueMetrics returns a sorted list of available metrics.
 func UniqueMetrics(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	values := schedule.Search.UniqueMetrics()
 	return values, nil
