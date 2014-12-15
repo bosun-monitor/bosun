@@ -231,9 +231,8 @@ func (c *Context) LookupAll(table, key string, group interface{}) (string, error
 	}
 	if v, ok := l.ToExpr().Get(key, t); ok {
 		return v, nil
-	} else {
-		return "", fmt.Errorf("no entry for key %v in table %v for tagset %v", key, table, c.Group)
 	}
+	return "", fmt.Errorf("no entry for key %v in table %v for tagset %v", key, table, c.Group)
 }
 
 // Eval executes the given expression and returns a value with corresponding
