@@ -194,10 +194,12 @@ type Alert struct {
 	IgnoreUnknown    bool
 	Macros           []string `json:"-"`
 	UnjoinedOK       bool     `json:",omitempty"`
+	returnType       eparse.FuncType
 
 	crit, warn string
 	template   string
 	squelch    []string
+	tags       eparse.Tags
 }
 
 type Notifications struct {
@@ -773,24 +775,32 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 		c.errorf("neither crit or warn specified")
 	}
 	var tags eparse.Tags
+	var ret eparse.FuncType
 	if a.Crit != nil {
 		ctags, err := a.Crit.Root.Tags()
 		if err != nil {
 			c.error(err)
 		}
 		tags = ctags
+		ret = a.Crit.Root.Return()
 	}
 	if a.Warn != nil {
 		wtags, err := a.Warn.Root.Tags()
 		if err != nil {
 			c.error(err)
 		}
+		wret := a.Warn.Root.Return()
 		if a.Crit == nil {
 			tags = wtags
+			ret = wret
+		} else if ret != wret {
+			c.errorf("crit and warn expressions must return same type (%v != %v)", ret, wret)
 		} else if !tags.Equal(wtags) {
 			c.errorf("crit tags (%v) and warn tags (%v) must be equal", tags, wtags)
 		}
 	}
+	a.tags = tags
+	a.returnType = ret
 	c.Alerts[name] = &a
 }
 
