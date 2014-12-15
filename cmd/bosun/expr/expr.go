@@ -117,19 +117,19 @@ func marshalFloat(n float64) ([]byte, error) {
 
 type Number float64
 
-func (n Number) Type() parse.FuncType         { return parse.TYPE_NUMBER }
+func (n Number) Type() parse.FuncType         { return parse.TypeNumber }
 func (n Number) Value() interface{}           { return n }
 func (n Number) MarshalJSON() ([]byte, error) { return marshalFloat(float64(n)) }
 
 type Scalar float64
 
-func (s Scalar) Type() parse.FuncType         { return parse.TYPE_SCALAR }
+func (s Scalar) Type() parse.FuncType         { return parse.TypeScalar }
 func (s Scalar) Value() interface{}           { return s }
 func (s Scalar) MarshalJSON() ([]byte, error) { return marshalFloat(float64(s)) }
 
 type Series map[string]opentsdb.Point
 
-func (s Series) Type() parse.FuncType { return parse.TYPE_SERIES }
+func (s Series) Type() parse.FuncType { return parse.TypeSeries }
 func (s Series) Value() interface{}   { return s }
 
 type Result struct {
@@ -490,7 +490,7 @@ func (e *State) walkFunc(node *parse.FuncNode, T miniprofiler.Timer) *Results {
 			panic(err)
 		}
 	}
-	if node.Return() == parse.TYPE_NUMBER {
+	if node.Return() == parse.TypeNumber {
 		for _, r := range res.Results {
 			r.AddComputation(node.String(), r.Value.(Number))
 		}
@@ -500,7 +500,7 @@ func (e *State) walkFunc(node *parse.FuncNode, T miniprofiler.Timer) *Results {
 
 // extractScalar will return a float64 if res contains exactly one scalar.
 func extractScalar(res *Results) interface{} {
-	if len(res.Results) == 1 && res.Results[0].Type() == parse.TYPE_SCALAR {
+	if len(res.Results) == 1 && res.Results[0].Type() == parse.TypeScalar {
 		return float64(res.Results[0].Value.Value().(Scalar))
 	}
 	return res

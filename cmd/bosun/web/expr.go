@@ -29,7 +29,7 @@ func Expr(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 	if err != nil {
 		return nil, err
 	}
-	res, queries, err := e.Execute(opentsdb.NewCache(schedule.Conf.TsdbHost, schedule.Conf.ResponseLimit), t, now, 0, false, schedule.Search, nil)
+	res, queries, err := e.Execute(opentsdb.NewCache(schedule.Conf.TSDBHost, schedule.Conf.ResponseLimit), t, now, 0, false, schedule.Search, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -222,8 +222,8 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 		return nil, fmt.Errorf("cannot specify intervals without from and to")
 	}
 	var buf bytes.Buffer
-	fmt.Fprintf(&buf, "tsdbHost = %s\n", schedule.Conf.TsdbHost)
-	fmt.Fprintf(&buf, "smtpHost = %s\n", schedule.Conf.SmtpHost)
+	fmt.Fprintf(&buf, "tsdbHost = %s\n", schedule.Conf.TSDBHost)
+	fmt.Fprintf(&buf, "smtpHost = %s\n", schedule.Conf.SMTPHost)
 	fmt.Fprintf(&buf, "emailFrom = %s\n", schedule.Conf.EmailFrom)
 	fmt.Fprintf(&buf, "responseLimit = %d\n", schedule.Conf.ResponseLimit)
 	fmt.Fprintf(&buf, "hostname = %s\n", schedule.Conf.Hostname)

@@ -43,7 +43,7 @@ type RunHistory struct {
 func (s *Schedule) NewRunHistory(start time.Time) *RunHistory {
 	return &RunHistory{
 		Start:   start,
-		Context: opentsdb.NewCache(s.Conf.TsdbHost, s.Conf.ResponseLimit),
+		Context: opentsdb.NewCache(s.Conf.TSDBHost, s.Conf.ResponseLimit),
 		Events:  make(map[expr.AlertKey]*Event),
 	}
 }

@@ -188,7 +188,7 @@ func (n *NumberNode) Check() error {
 }
 
 func (n *NumberNode) Return() FuncType {
-	return TYPE_SCALAR
+	return TypeScalar
 }
 
 func (n *NumberNode) Tags() (Tags, error) {
@@ -220,7 +220,7 @@ func (s *StringNode) Check() error {
 }
 
 func (s *StringNode) Return() FuncType {
-	return TYPE_STRING
+	return TypeString
 }
 
 func (s *StringNode) Tags() (Tags, error) {
@@ -262,14 +262,14 @@ func (b *BinaryNode) Check() error {
 	}
 	t1 := b.Args[0].Return()
 	t2 := b.Args[1].Return()
-	if t1 == TYPE_SERIES && t2 == TYPE_SERIES {
+	if t1 == TypeSeries && t2 == TypeSeries {
 		return fmt.Errorf("parse: type error in %s: at least one side must be a number", b)
 	}
 	check := t1
-	if t1 == TYPE_SERIES {
+	if t1 == TypeSeries {
 		check = t2
 	}
-	if check != TYPE_NUMBER && check != TYPE_SCALAR {
+	if check != TypeNumber && check != TypeScalar {
 		return fmt.Errorf("parse: type error in %s: expected a number", b)
 	}
 	if err := b.Args[0].Check(); err != nil {
@@ -321,7 +321,7 @@ func (u *UnaryNode) StringAST() string {
 
 func (u *UnaryNode) Check() error {
 	switch t := u.Arg.Return(); t {
-	case TYPE_NUMBER, TYPE_SERIES, TYPE_SCALAR:
+	case TypeNumber, TypeSeries, TypeScalar:
 		return u.Arg.Check()
 	default:
 		return fmt.Errorf("parse: type error in %s, expected %s, got %s", u, "number", t)

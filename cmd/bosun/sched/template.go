@@ -194,7 +194,7 @@ func (c *Context) eval(v interface{}, filter bool, series bool, autods int) ([]*
 			return nil, "", err
 		}
 	}
-	if series && e.Root.Return() != parse.TYPE_SERIES {
+	if series && e.Root.Return() != parse.TypeSeries {
 		return nil, "", fmt.Errorf("egraph: requires an expression that returns a series")
 	}
 	t := time.Now().UTC()

@@ -29,13 +29,13 @@ type Conf struct {
 	Vars
 	Name            string        // Config file name
 	CheckFrequency  time.Duration // Time between alert checks: 5m
-	TsdbHost        string        // OpenTSDB relay and query destination: ny-devtsdb04:4242
-	HttpListen      string        // Web server listen address: :80
+	TSDBHost        string        // OpenTSDB relay and query destination: ny-devtsdb04:4242
+	HTTPListen      string        // Web server listen address: :80
 	Hostname        string
 	RelayListen     string // OpenTSDB relay listen address: :4242
-	SmtpHost        string // SMTP address: ny-mail:25
-	SmtpUsername    string // SMTP username
-	SmtpPassword    string // SMTP password
+	SMTPHost        string // SMTP address: ny-mail:25
+	SMTPUsername    string // SMTP username
+	SMTPPassword    string // SMTP password
 	Ping            bool
 	EmailFrom       string
 	StateFile       string
@@ -293,7 +293,7 @@ func New(name, text string) (c *Conf, err error) {
 	c = &Conf{
 		Name:           name,
 		CheckFrequency: time.Minute * 5,
-		HttpListen:     ":8070",
+		HTTPListen:     ":8070",
 		StateFile:      "bosun.state",
 		ResponseLimit:  1 << 20, // 1MB
 		Vars:           make(map[string]string),
@@ -323,12 +323,12 @@ func New(name, text string) (c *Conf, err error) {
 			c.errorf("unexpected parse node %s", n)
 		}
 	}
-	if c.TsdbHost == "" {
+	if c.TSDBHost == "" {
 		c.at(nil)
 		c.errorf("tsdbHost required")
 	}
 	if c.Hostname == "" {
-		c.Hostname = c.HttpListen
+		c.Hostname = c.HTTPListen
 		if strings.HasPrefix(c.Hostname, ":") {
 			h, err := os.Hostname()
 			if err != nil {
@@ -358,19 +358,19 @@ func (c *Conf) loadGlobal(p *parse.PairNode) {
 		if !strings.Contains(v, ":") {
 			v += ":4242"
 		}
-		c.TsdbHost = v
+		c.TSDBHost = v
 	case "httpListen":
-		c.HttpListen = v
+		c.HTTPListen = v
 	case "hostname":
 		c.Hostname = v
 	case "relayListen":
 		c.RelayListen = v
 	case "smtpHost":
-		c.SmtpHost = v
+		c.SMTPHost = v
 	case "smtpUsername":
-		c.SmtpUsername = v
+		c.SMTPUsername = v
 	case "smtpPassword":
-		c.SmtpPassword = v
+		c.SMTPPassword = v
 	case "emailFrom":
 		c.EmailFrom = v
 	case "stateFile":
@@ -724,7 +724,7 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 				c.error(err)
 			}
 			switch crit.Root.Return() {
-			case eparse.TYPE_NUMBER, eparse.TYPE_SCALAR:
+			case eparse.TypeNumber, eparse.TypeScalar:
 				// break
 			default:
 				c.errorf("crit must return a number")
@@ -737,7 +737,7 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 				c.error(err)
 			}
 			switch warn.Root.Return() {
-			case eparse.TYPE_NUMBER, eparse.TYPE_SCALAR:
+			case eparse.TypeNumber, eparse.TypeScalar:
 				// break
 			default:
 				c.errorf("warn must return a number")
@@ -832,7 +832,7 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 		v := p.val
 		switch k := p.key; k {
 		case "email":
-			if c.SmtpHost == "" || c.EmailFrom == "" {
+			if c.SMTPHost == "" || c.EmailFrom == "" {
 				c.errorf("email notifications require both smtpHost and emailFrom to be set")
 			}
 			n.email = v
@@ -1192,21 +1192,21 @@ func (c *Conf) Funcs() map[string]eparse.Func {
 		if err != nil {
 			return nil, err
 		}
-		if a.returnType != eparse.TYPE_NUMBER {
+		if a.returnType != eparse.TypeNumber {
 			return nil, fmt.Errorf("alert requires a number-returning expression (got %v)", a.returnType)
 		}
 		return e.Root.Tags()
 	}
 	return map[string]eparse.Func{
 		"alert": {
-			Args:   []eparse.FuncType{eparse.TYPE_STRING, eparse.TYPE_STRING},
-			Return: eparse.TYPE_NUMBER,
+			Args:   []eparse.FuncType{eparse.TypeString, eparse.TypeString},
+			Return: eparse.TypeNumber,
 			Tags:   tagAlert,
 			F:      alert,
 		},
 		"lookup": {
-			Args:   []eparse.FuncType{eparse.TYPE_STRING, eparse.TYPE_STRING},
-			Return: eparse.TYPE_NUMBER,
+			Args:   []eparse.FuncType{eparse.TypeString, eparse.TypeString},
+			Return: eparse.TypeNumber,
 			Tags:   tagLookup,
 			F:      lookup,
 		},
