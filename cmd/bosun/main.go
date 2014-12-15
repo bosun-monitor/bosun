@@ -59,7 +59,7 @@ func main() {
 	}
 	httpListen := &url.URL{
 		Scheme: "http",
-		Host:   c.HttpListen,
+		Host:   c.HTTPListen,
 	}
 	if strings.HasPrefix(httpListen.Host, ":") {
 		httpListen.Host = "localhost" + httpListen.Host
@@ -81,7 +81,7 @@ func main() {
 	}
 	tsdbHost := &url.URL{
 		Scheme: "http",
-		Host:   c.TsdbHost,
+		Host:   c.TSDBHost,
 	}
 	if *flagReadonly {
 		rp := httputil.NewSingleHostReverseProxy(tsdbHost)
@@ -94,12 +94,12 @@ func main() {
 		}))
 		log.Println("readonly relay at", ts.URL, "to", tsdbHost)
 		tsdbHost, _ = url.Parse(ts.URL)
-		c.TsdbHost = tsdbHost.Host
+		c.TSDBHost = tsdbHost.Host
 	}
 	if *flagQuiet {
 		c.Quiet = true
 	}
-	go func() { log.Fatal(web.Listen(c.HttpListen, *flagDev, tsdbHost)) }()
+	go func() { log.Fatal(web.Listen(c.HTTPListen, *flagDev, tsdbHost)) }()
 	go func() { log.Fatal(sched.Run()) }()
 	if *flagWatch {
 		watch(".", "*.go", quit)

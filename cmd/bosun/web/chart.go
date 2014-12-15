@@ -106,7 +106,7 @@ func Graph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 	var tr opentsdb.ResponseSet
 	b, _ := json.MarshalIndent(oreq, "", "  ")
 	t.StepCustomTiming("tsdb", "query", string(b), func() {
-		tr, err = oreq.Query(schedule.Conf.TsdbHost)
+		tr, err = oreq.Query(schedule.Conf.TSDBHost)
 	})
 	if err != nil {
 		return nil, err
@@ -190,10 +190,10 @@ func ExprGraph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (in
 	e, err := expr.New(q)
 	if err != nil {
 		return nil, err
-	} else if e.Root.Return() != parse.TYPE_SERIES {
+	} else if e.Root.Return() != parse.TypeSeries {
 		return nil, fmt.Errorf("egraph: requires an expression that returns a series")
 	}
-	res, _, err := e.Execute(opentsdb.NewCache(schedule.Conf.TsdbHost, schedule.Conf.ResponseLimit), t, now, autods, false, schedule.Search, nil)
+	res, _, err := e.Execute(opentsdb.NewCache(schedule.Conf.TSDBHost, schedule.Conf.ResponseLimit), t, now, autods, false, schedule.Search, nil)
 	if err != nil {
 		return nil, err
 	}
