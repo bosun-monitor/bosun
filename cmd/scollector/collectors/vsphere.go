@@ -165,8 +165,25 @@ func vsphereHost(v *vsphere.Vsphere, md *opentsdb.MultiDataPoint) error {
 }
 
 func vsphereGuest(vsphereHost string, v *vsphere.Vsphere, md *opentsdb.MultiDataPoint) error {
+	hres, err := v.Info("HostSystem", []string{
+		"name",
+	})
+	if err != nil {
+		return err
+	}
+	//Fetch host ids so we can set the hypervisor as metadata
+	hosts := make(map[string]string)
+	for _, r := range hres {
+		for _, p := range r.Props {
+			if p.Name == "name" {
+				hosts[r.ID] = util.Clean(p.Val.Inner)
+				break
+			}
+		}
+	}
 	res, err := v.Info("VirtualMachine", []string{
 		"name",
+		"runtime.host",
 		"config.hardware.memoryMB",
 		"config.hardware.numCPU",
 		"summary.quickStats.balloonedMemory",
@@ -217,6 +234,14 @@ func vsphereGuest(vsphereHost string, v *vsphere.Vsphere, md *opentsdb.MultiData
 					Add(md, "vsphere.guest.mem.ballooned", i*1024*1024, tags, metadata.Gauge, metadata.Bytes, descVsphereGuestMemBallooned)
 				case "config.hardware.numCPU":
 					Add(md, "vsphere.guest.num_cpu", i, tags, metadata.Gauge, metadata.Gauge, "")
+				}
+			case "HostSystem":
+				s := p.Val.Inner
+				switch p.Name {
+				case "runtime.host":
+					if v, ok := hosts[s]; ok {
+						metadata.AddMeta("", opentsdb.TagSet{"host": name}, "hypervisor", v, false)
+					}
 				}
 			}
 		}
