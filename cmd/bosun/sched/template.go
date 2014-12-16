@@ -174,7 +174,7 @@ func (s *Schedule) ExecuteBadTemplate(s_err, b_err error, rh *RunHistory, a *con
 	return bytes.NewBufferString(sub), body, nil
 }
 
-func (c *Context) eval(v interface{}, filter bool, series bool, autods int) ([]*expr.Result, string, error) {
+func (c *Context) eval(v interface{}, filter bool, series bool, autods int) (expr.ResultSlice, string, error) {
 	var e *expr.Expr
 	var err error
 	switch v := v.(type) {
