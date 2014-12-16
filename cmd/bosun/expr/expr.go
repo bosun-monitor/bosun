@@ -6,6 +6,7 @@ import (
 	"math"
 	"reflect"
 	"runtime"
+	"sort"
 	"time"
 
 	"bosun.org/_third_party/github.com/MiniProfiler/go/miniprofiler"
@@ -139,7 +140,7 @@ type Result struct {
 }
 
 type Results struct {
-	Results []*Result
+	Results ResultSlice
 	// If true, ungrouped joins from this set will be ignored.
 	IgnoreUnjoined bool
 	// If true, ungrouped joins from the other set will be ignored.
@@ -148,12 +149,29 @@ type Results struct {
 	NaNValue *float64
 }
 
+type ResultSlice []*Result
+
 func (r *Results) NaN() Number {
 	if r.NaNValue != nil {
 		return Number(*r.NaNValue)
 	}
 	return Number(math.NaN())
 }
+
+func (r ResultSlice) DescByValue() ResultSlice {
+	for _, v := range r {
+		if _, ok := v.Value.(Number); !ok {
+			return r
+		}
+	}
+	c := r[:]
+	sort.Sort(c)
+	return c
+}
+
+func (r ResultSlice) Len() int           { return len(r) }
+func (r ResultSlice) Swap(i, j int)      { r[i], r[j] = r[j], r[i] }
+func (r ResultSlice) Less(i, j int) bool { return r[i].Value.(Number) > r[j].Value.(Number) }
 
 type Computations []Computation
 
