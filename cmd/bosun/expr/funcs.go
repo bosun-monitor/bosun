@@ -304,14 +304,24 @@ func Band(e *State, T miniprofiler.Timer, query, duration, period string, num fl
 					newarr = false
 					values := a.Value.(Series)
 					for k, v := range res.DPS {
-						values[k] = v
+						i, e := strconv.ParseInt(k, 10, 64)
+						if e != nil {
+							err = e
+							return
+						}
+						values[time.Unix(i, 0)] = float64(v)
 					}
 				}
 				if newarr {
 					values := make(Series)
 					a := &Result{Group: res.Tags}
 					for k, v := range res.DPS {
-						values[k] = v
+						i, e := strconv.ParseInt(k, 10, 64)
+						if e != nil {
+							err = e
+							return
+						}
+						values[time.Unix(i, 0)] = float64(v)
 					}
 					a.Value = values
 					r.Results = append(r.Results, a)
@@ -359,8 +369,16 @@ func Query(e *State, T miniprofiler.Timer, query, sduration, eduration string) (
 		if e.squelched(res.Tags) {
 			continue
 		}
+		values := make(Series)
+		for k, v := range res.DPS {
+			i, err := strconv.ParseInt(k, 10, 64)
+			if err != nil {
+				return nil, err
+			}
+			values[time.Unix(i, 0)] = float64(v)
+		}
 		r.Results = append(r.Results, &Result{
-			Value: Series(res.DPS),
+			Value: values,
 			Group: res.Tags,
 		})
 	}
@@ -511,15 +529,11 @@ func Last(e *State, T miniprofiler.Timer, series *Results) (*Results, error) {
 }
 
 func last(dps Series, args ...float64) (a float64) {
-	last := -1
+	var last time.Time
 	for k, v := range dps {
-		d, err := strconv.Atoi(k)
-		if err != nil {
-			panic(err)
-		}
-		if d > last {
-			a = float64(v)
-			last = d
+		if k.After(last) {
+			a = v
+			last = k
 		}
 	}
 	return
@@ -530,15 +544,11 @@ func First(e *State, T miniprofiler.Timer, series *Results) (*Results, error) {
 }
 
 func first(dps Series, args ...float64) (a float64) {
-	first := int64(math.MaxInt64)
+	var first time.Time
 	for k, v := range dps {
-		d, err := strconv.ParseInt(k, 10, 64)
-		if err != nil {
-			panic(err)
-		}
-		if d < first {
-			a = float64(v)
-			first = d
+		if k.Before(first) || first.IsZero() {
+			a = v
+			first = k
 		}
 	}
 	return
@@ -550,14 +560,10 @@ func Since(e *State, T miniprofiler.Timer, series *Results) (*Results, error) {
 
 func since(dps Series, args ...float64) (a float64) {
 	var last time.Time
-	for k := range dps {
-		d, err := strconv.ParseInt(k, 10, 64)
-		if err != nil {
-			panic(err)
-		}
-		t := time.Unix(d, 0)
-		if t.After(last) {
-			last = t
+	for k, v := range dps {
+		if k.After(last) {
+			a = v
+			last = k
 		}
 	}
 	s := time.Since(last)
@@ -576,12 +582,8 @@ func forecast_lr(dps Series, args ...float64) float64 {
 	var x []float64
 	var y []float64
 	for k, v := range dps {
-		d, err := strconv.ParseInt(k, 10, 64)
-		if err != nil {
-			panic(err)
-		}
-		x = append(x, float64(d))
-		y = append(y, float64(v))
+		x = append(x, float64(k.Unix()))
+		y = append(y, v)
 	}
 	var slope, intercept, _, _, _, _ = stats.LinearRegression(x, y)
 	it := (yVal - intercept) / slope
@@ -670,8 +672,8 @@ func Transpose(e *State, T miniprofiler.Timer, d *Results, gp string) (*Results,
 		switch t := v.Value.(type) {
 		case Number:
 			r := m[ts.String()]
-			i := strconv.Itoa((len(r.Value.(Series))))
-			r.Value.(Series)[i] = opentsdb.Point(t)
+			i := int64(len(r.Value.(Series)))
+			r.Value.(Series)[time.Unix(i, 0)] = float64(t)
 			r.Computations = append(r.Computations, v.Computations...)
 		default:
 			panic(fmt.Errorf("expr: expected a number"))
