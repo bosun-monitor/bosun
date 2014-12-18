@@ -1,4 +1,4 @@
-package conf
+package conf // import "bosun.org/cmd/bosun/conf"
 
 import (
 	"encoding/json"

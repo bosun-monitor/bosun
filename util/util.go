@@ -1,5 +1,5 @@
 // Package util defines utilities for bosun.
-package util
+package util // import "bosun.org/util"
 
 import (
 	"os"

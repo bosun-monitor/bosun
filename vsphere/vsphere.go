@@ -1,5 +1,5 @@
 // Package vsphere provides a small set of the vSphere Web Services API.
-package vsphere
+package vsphere // import "bosun.org/vsphere"
 
 import (
 	"bytes"
