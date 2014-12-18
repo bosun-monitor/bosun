@@ -128,7 +128,7 @@ func (s Scalar) Type() parse.FuncType         { return parse.TypeScalar }
 func (s Scalar) Value() interface{}           { return s }
 //func (s Scalar) MarshalJSON() ([]byte, error) { return marshalFloat(float64(s)) }
 
-type Series map[string]opentsdb.Point
+type Series map[time.Time]float64
 
 func (s Series) Type() parse.FuncType { return parse.TypeSeries }
 func (s Series) Value() interface{}   { return s }
@@ -324,7 +324,7 @@ func (e *State) walkBinary(node *parse.BinaryNode, T miniprofiler.Timer) *Result
 				case Series:
 					s := make(Series)
 					for k, v := range bt {
-						s[k] = opentsdb.Point(operate(node.OpStr, float64(at), float64(v)))
+						s[k] = operate(node.OpStr, float64(at), float64(v))
 					}
 					value = s
 				default:
@@ -343,7 +343,7 @@ func (e *State) walkBinary(node *parse.BinaryNode, T miniprofiler.Timer) *Result
 				case Series:
 					s := make(Series)
 					for k, v := range bt {
-						s[k] = opentsdb.Point(operate(node.OpStr, float64(at), float64(v)))
+						s[k] = operate(node.OpStr, float64(at), float64(v))
 					}
 					value = s
 				default:
@@ -355,7 +355,7 @@ func (e *State) walkBinary(node *parse.BinaryNode, T miniprofiler.Timer) *Result
 					bv := reflect.ValueOf(bt).Float()
 					s := make(Series)
 					for k, v := range at {
-						s[k] = opentsdb.Point(operate(node.OpStr, float64(v), bv))
+						s[k] = operate(node.OpStr, float64(v), bv)
 					}
 					value = s
 				default:
@@ -453,7 +453,7 @@ func (e *State) walkUnary(node *parse.UnaryNode, T miniprofiler.Timer) *Results 
 		case Series:
 			s := make(Series)
 			for k, v := range rt {
-				s[k] = opentsdb.Point(uoperate(node.OpStr, float64(v)))
+				s[k] = uoperate(node.OpStr, float64(v))
 			}
 			r.Value = s
 		default:

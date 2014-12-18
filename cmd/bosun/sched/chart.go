@@ -6,7 +6,6 @@ import (
 	"image/color"
 	"image/png"
 	"io"
-	"strconv"
 	"time"
 
 	"bosun.org/_third_party/github.com/MiniProfiler/go/miniprofiler"
@@ -79,13 +78,8 @@ func (s *Schedule) ExprGraph(t miniprofiler.Timer, res []*expr.Result, q string,
 		pts := make([]chart.EPoint, len(rv))
 		idx := 0
 		for k, v := range rv {
-			i, err := strconv.ParseInt(k, 10, 64)
-			if err != nil {
-				return nil, err
-			}
-			//names[idx] = time.Unix(i, 0).Format("02 Jan 15:04")
-			pts[idx].X = float64(i)
-			pts[idx].Y = float64(v)
+			pts[idx].X = float64(k.Unix())
+			pts[idx].Y = v
 			idx++
 		}
 		slice.Sort(pts, func(i, j int) bool {
