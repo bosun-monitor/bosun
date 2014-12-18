@@ -1,7 +1,10 @@
 package collectors
 
 import (
+	"bytes"
+	"encoding/xml"
 	"fmt"
+	"io"
 	"strconv"
 
 	"bosun.org/metadata"
@@ -94,6 +97,15 @@ func vsphereDatastore(v *vsphere.Vsphere, md *opentsdb.MultiDataPoint) error {
 	return Error
 }
 
+type HostSystemIdentificationInfo struct {
+	IdentiferValue string `xml:"identifierValue"`
+	IdentiferType  struct {
+		Label   string `xml:"label"`
+		Summary string `xml:"summary"`
+		Key     string `xml:"key"`
+	} `xml:"identifierType"`
+}
+
 func vsphereHost(v *vsphere.Vsphere, md *opentsdb.MultiDataPoint) error {
 	res, err := v.Info("HostSystem", []string{
 		"name",
@@ -103,6 +115,8 @@ func vsphereHost(v *vsphere.Vsphere, md *opentsdb.MultiDataPoint) error {
 		"summary.hardware.numCpuCores",
 		"summary.quickStats.overallCpuUsage",    // MHz
 		"summary.quickStats.overallMemoryUsage", // MB
+		"summary.hardware.otherIdentifyingInfo",
+		"summary.hardware.model",
 	})
 	if err != nil {
 		return err
@@ -147,6 +161,29 @@ func vsphereHost(v *vsphere.Vsphere, md *opentsdb.MultiDataPoint) error {
 					Add(md, "vsphere.cpu", cpuUse, opentsdb.TagSet{"host": name, "type": "usage"}, metadata.Gauge, metadata.MHz, "")
 				case "summary.hardware.numCpuCores":
 					cpuCores = i
+				}
+			case "xsd:string":
+				switch p.Name {
+				case "summary.hardware.model":
+					metadata.AddMeta("", tags, "model", p.Val.Inner, false)
+				}
+			case "ArrayOfHostSystemIdentificationInfo":
+				switch p.Name {
+				case "summary.hardware.otherIdentifyingInfo":
+					d := xml.NewDecoder(bytes.NewBufferString(p.Val.Inner))
+					for {
+						var t HostSystemIdentificationInfo
+						err := d.Decode(&t)
+						if err == io.EOF {
+							break
+						}
+						if err != nil {
+							return err
+						}
+						if t.IdentiferType.Key == "ServiceTag" {
+							metadata.AddMeta("", tags, "serialNumber", t.IdentiferValue, false)
+						}
+					}
 				}
 			}
 		}
