@@ -1,5 +1,5 @@
 // Package metadata provides metadata information between bosun and OpenTSDB.
-package metadata
+package metadata // import "bosun.org/metadata"
 
 import (
 	"bytes"

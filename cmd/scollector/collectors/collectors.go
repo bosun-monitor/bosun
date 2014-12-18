@@ -1,4 +1,4 @@
-package collectors
+package collectors // import "bosun.org/cmd/scollector/collectors"
 
 import (
 	"bufio"

@@ -5,7 +5,7 @@
 // Package parse builds parse trees for expressions as defined by expr. Clients
 // should use that package to construct expressions rather than this one, which
 // provides shared internal data structures not intended for general use.
-package parse
+package parse // import "bosun.org/cmd/bosun/expr/parse"
 
 import (
 	"fmt"

@@ -1,4 +1,4 @@
-package web
+package web // import "bosun.org/cmd/bosun/web"
 
 import (
 	"bytes"

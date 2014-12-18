@@ -2,7 +2,7 @@
 //
 // The "collect" namespace is used (i.e., <root>.collect) to collect
 // program and queue metrics.
-package collect
+package collect // import "bosun.org/collect"
 
 import (
 	"encoding/json"

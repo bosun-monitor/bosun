@@ -1,4 +1,4 @@
-package sched
+package sched // import "bosun.org/cmd/bosun/sched"
 
 import (
 	"compress/gzip"
