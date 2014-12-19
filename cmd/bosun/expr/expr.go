@@ -135,6 +135,14 @@ type Series map[time.Time]float64
 func (s Series) Type() parse.FuncType { return parse.TypeSeries }
 func (s Series) Value() interface{}   { return s }
 
+func (s Series) MarshalJSON() ([]byte, error) {
+	r := make(map[string]float64, len(s))
+	for k, v := range s {
+		r[fmt.Sprint(k.Unix())] = v
+	}
+	return json.Marshal(r)
+}
+
 type Result struct {
 	Computations
 	Value
