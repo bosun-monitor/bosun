@@ -30,6 +30,7 @@ type Conf struct {
 	Name            string        // Config file name
 	CheckFrequency  time.Duration // Time between alert checks: 5m
 	TSDBHost        string        // OpenTSDB relay and query destination: ny-devtsdb04:4242
+	GraphiteHost    string        // host for graphite, like http://foo.bar.baz
 	HTTPListen      string        // Web server listen address: :80
 	Hostname        string
 	RelayListen     string // OpenTSDB relay listen address: :4242
@@ -359,6 +360,8 @@ func (c *Conf) loadGlobal(p *parse.PairNode) {
 			v += ":4242"
 		}
 		c.TSDBHost = v
+	case "graphiteHost":
+		c.GraphiteHost = v
 	case "httpListen":
 		c.HTTPListen = v
 	case "hostname":

@@ -12,22 +12,35 @@ import (
 	"bosun.org/_third_party/github.com/MiniProfiler/go/miniprofiler"
 	"bosun.org/cmd/bosun/expr/parse"
 	"bosun.org/cmd/bosun/search"
+	"bosun.org/graphite"
 	"bosun.org/opentsdb"
 )
 
 type State struct {
 	*Expr
+	now time.Time
+
+	// openTSDB specific
 	Search     *search.Search
-	now        time.Time
 	autods     int
 	context    opentsdb.Context
 	queries    []opentsdb.Request
 	unjoinedOk bool
 	squelched  func(tags opentsdb.TagSet) bool
+
+	// graphite specific
+	graphiteQueries []graphite.Request
+	graphiteContext graphite.Context
 }
 
-func (e *State) addRequest(r opentsdb.Request) {
-	e.queries = append(e.queries, r)
+func (e *State) addRequest(r interface{}) {
+	switch r.(type) {
+	case opentsdb.Request:
+		e.queries = append(e.queries, r.(opentsdb.Request))
+	case graphite.Request:
+		e.graphiteQueries = append(e.graphiteQueries, r.(graphite.Request))
+	}
+
 }
 
 var ErrUnknownOp = fmt.Errorf("expr: unknown op type")
@@ -54,20 +67,21 @@ func New(expr string, funcs ...map[string]parse.Func) (*Expr, error) {
 
 // Execute applies a parse expression to the specified OpenTSDB context, and
 // returns one result per group. T may be nil to ignore timings.
-func (e *Expr) Execute(c opentsdb.Context, T miniprofiler.Timer, now time.Time, autods int, unjoinedOk bool, search *search.Search, squelched func(tags opentsdb.TagSet) bool) (r *Results, queries []opentsdb.Request, err error) {
+func (e *Expr) Execute(c opentsdb.Context, g graphite.Context, T miniprofiler.Timer, now time.Time, autods int, unjoinedOk bool, search *search.Search, squelched func(tags opentsdb.TagSet) bool) (r *Results, queries []opentsdb.Request, err error) {
 	if squelched == nil {
 		squelched = func(tags opentsdb.TagSet) bool {
 			return false
 		}
 	}
 	s := &State{
-		Expr:       e,
-		context:    c,
-		now:        now,
-		autods:     autods,
-		unjoinedOk: unjoinedOk,
-		Search:     search,
-		squelched:  squelched,
+		Expr:            e,
+		context:         c,
+		graphiteContext: g,
+		now:             now,
+		autods:          autods,
+		unjoinedOk:      unjoinedOk,
+		Search:          search,
+		squelched:       squelched,
 	}
 	return e.ExecuteState(s, T)
 }
