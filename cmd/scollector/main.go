@@ -30,7 +30,7 @@ const (
 )
 
 var (
-	flagFilter          = flag.String("f", "", "Filters collectors matching this term. Works with all other arguments.")
+	flagFilter          = flag.String("f", "", "Filters collectors matching this term, multiple terms separated by comma. Works with all other arguments.")
 	flagList            = flag.Bool("l", false, "List available collectors.")
 	flagPrint           = flag.Bool("p", false, "Print to screen instead of sending to a host")
 	flagHost            = flag.String("h", "", `Bosun or OpenTSDB host. Ex: "http://bosun.example.com:8070".`)
