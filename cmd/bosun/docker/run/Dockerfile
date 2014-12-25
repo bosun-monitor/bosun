@@ -3,7 +3,7 @@ FROM debian:wheezy
 RUN apt-get update && apt-get install -y \
 	gnuplot \
 	make \
-	openjdk-6-jre-headless \
+	openjdk-7-jre-headless \
 	supervisor \
 	--no-install-recommends \
 	&& rm -rf /var/lib/apt/lists/*
@@ -13,7 +13,7 @@ RUN mkdir -p /tsdb /hbase /bosun /scollector /data
 ENV TSDB /tsdb
 ENV HBASE /hbase/hbase
 ENV HBASE_HOME $HBASE
-ENV JAVA_HOME /usr/lib/jvm/java-6-openjdk-amd64
+ENV JAVA_HOME /usr/lib/jvm/java-7-openjdk-amd64
 
 COPY bosun.conf /data/
 COPY hbase-site.xml $HBASE/conf/
