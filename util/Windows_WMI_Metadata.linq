@@ -30,6 +30,13 @@ void Main()
 		htWMIDetails.Add(property.Name, d);
 	}
 	//htWMIDetails.Values.Dump("WMI Details");
+	if(string.IsNullOrWhiteSpace(text)){
+		StringBuilder sbText = new StringBuilder();
+		foreach(var key in htWMIDetails.Keys){
+			sbText.AppendFormat("{0};\r\n",key);
+		}
+		text = sbText.ToString();
+	}
 	
 	//text.Dump("Input lines pre transform");
 	var PropertiesUsed = new List<string>();
@@ -76,7 +83,7 @@ void Main()
 		foreach(var m in matches){
 			WMIDetail details;
 			if(htWMIDetails.TryGetValue(m.Groups["wmiName"].Value, out details)) {
-				Console.WriteLine("Add(&md, \"win.system.{0}\", v.{0}, nil, metadata.Counter, metadata.PerSecond, {1}{0})", details.Name,strPrefix);
+				Console.WriteLine("Add(&md, \"win.system.{0}\", v.{0}, tags, metadata.Counter, metadata.PerSecond, {1}{0})", details.Name,strPrefix);
 			}
 		}
 	}
@@ -174,34 +181,12 @@ class WMIDetail {
 //Step 1: Paste MSDN class here. Remove any lines you don't want in your go struct.
 //Step 1: Paste current block of GO "Add()" lines here. Then replace " with "" to fix escapping.
 string text = @"
-class Win32_PerfRawData_PerfOS_System : Win32_PerfRawData
-{
-  uint32 AlignmentFixupsPerSec;
-  string Caption;
-  uint32 ContextSwitchesPerSec;
-  string Description;
   uint32 ExceptionDispatchesPerSec;
   uint64 FileControlBytesPerSec;
   uint32 FileControlOperationsPerSec;
   uint32 FileDataOperationsPerSec;
   uint64 FileReadBytesPerSec;
   uint32 FileReadOperationsPerSec;
-  uint64 FileWriteBytesPerSec;
-  uint32 FileWriteOperationsPerSec;
-  uint32 FloatingEmulationsPerSec;
-  uint64 Frequency_Object;
-  uint64 Frequency_PerfTime;
-  uint64 Frequency_Sys100NS;
-  string Name;
-  uint32 PercentRegistryQuotaInUse;
-  uint32 PercentRegistryQuotaInUse_Base;
-  uint32 Processes;
-  uint32 ProcessorQueueLength;
-  uint32 SystemCallsPerSec;
-  uint64 SystemUpTime;
-  uint32 Threads;
-  uint64 Timestamp_Object;
-  uint64 Timestamp_PerfTime;
-  uint64 Timestamp_Sys100NS;
-};
 ";
+//Step 1: Or use empty string for all properties
+//string text = "";
