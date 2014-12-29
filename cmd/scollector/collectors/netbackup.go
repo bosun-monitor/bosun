@@ -127,7 +127,7 @@ func c_netbackup_jobs() (opentsdb.MultiDataPoint, error) {
 		if err := nbUnmarhsall(reader, &r); err != nil {
 			return err
 		}
-		if r.Jobtype != 0 {
+		if !(r.Jobtype == 0 || r.Jobtype == 6) {
 			return nil
 		}
 		if r.State != 3 && r.State != 5 {
