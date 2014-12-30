@@ -133,7 +133,9 @@ func redisInit() {
 			}
 			pid := sp[0]
 			port := strings.Split(sp[2], ":")[1]
-			add(port, pid)
+			if port != "0" {
+				add(port, pid)
+			}
 			return nil
 		}, "ps", "-e", "-o", "pid,args")
 		if oldRedis {
