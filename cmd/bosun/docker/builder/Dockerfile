@@ -5,7 +5,7 @@ RUN apt-get update && apt-get install -y \
 	curl \
 	git \
 	make \
-	openjdk-6-jdk \
+	openjdk-7-jdk \
 	python \
 	--no-install-recommends \
 	&& rm -rf /var/lib/apt/lists/*
@@ -17,7 +17,7 @@ RUN git clone -b next --single-branch --depth 1 git://github.com/OpenTSDB/opents
 ENV GOPATH /go
 ENV HBASEVER 0.98.8-hadoop2
 ENV HBASE /hbase/hbase-$HBASEVER
-ENV JAVA_HOME /usr/lib/jvm/java-6-openjdk-amd64
+ENV JAVA_HOME /usr/lib/jvm/java-7-openjdk-amd64
 
 RUN mkdir -p /hbase \
     && curl -SL http://apache.org/dist/hbase/stable/hbase-$HBASEVER-bin.tar.gz \
