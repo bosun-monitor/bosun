@@ -182,3 +182,5 @@ func watch(root, pattern string, f func()) {
 		}
 	}()
 }
+
+//go:generate esc -o web/static.go -pkg web -prefix web/static web/static/

@@ -26,8 +26,6 @@ import (
 	"bosun.org/opentsdb"
 )
 
-//go:generate esc -o web/static.go -pkg web -prefix web/static web/static/
-
 var (
 	templates *template.Template
 	router    = mux.NewRouter()
