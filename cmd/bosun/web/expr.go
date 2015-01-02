@@ -22,7 +22,7 @@ import (
 )
 
 func Expr(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	e, err := expr.New(r.FormValue("q"))
+	e, err := expr.New(r.FormValue("q"), schedule.Conf.Funcs())
 	if err != nil {
 		return nil, err
 	}

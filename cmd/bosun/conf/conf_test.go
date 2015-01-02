@@ -64,9 +64,9 @@ func checkMacroVarAlert(t *testing.T, a *Alert) {
 func TestInvalid(t *testing.T) {
 	names := map[string]string{
 		"lookup-key-pairs":     "conf: lookup-key-pairs:3:1: at <entry a=3 { }>: lookup tags mismatch, expected {a=,b=}",
-		"number-func-args":     `conf: number-func-args:2:1: at <warn = q("avg:o", ""...>: expr: parse: not enough arguments for q`,
+		"number-func-args":     `conf: number-func-args:4:1: at <warn = q("avg:o", ""...>: expr: parse: not enough arguments for q`,
 		"lookup-key-pairs-dup": `conf: lookup-key-pairs-dup:3:1: at <entry b=2,a=1 { }>: duplicate entry`,
-		"crit-warn-unmatching-tags": `conf: crit-warn-unmatching-tags:1:0: at <alert broken {\n	cri...>: crit tags (a,c) and warn tags (c) must be equal`,
+		"crit-warn-unmatching-tags": `conf: crit-warn-unmatching-tags:3:0: at <alert broken {\n	cri...>: crit tags (a,c) and warn tags (c) must be equal`,
 	}
 	for fname, reason := range names {
 		path := filepath.Join("invalid", fname)

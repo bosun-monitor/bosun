@@ -20,27 +20,17 @@ type State struct {
 	*Expr
 	now time.Time
 
-	// openTSDB specific
-	Search     *search.Search
-	autods     int
-	context    opentsdb.Context
-	queries    []opentsdb.Request
-	unjoinedOk bool
-	squelched  func(tags opentsdb.TagSet) bool
+	// OpenTSDB
+	Search      *search.Search
+	autods      int
+	tsdbContext opentsdb.Context
+	tsdbQueries []opentsdb.Request
+	unjoinedOk  bool
+	squelched   func(tags opentsdb.TagSet) bool
 
-	// graphite specific
+	// Graphite
 	graphiteQueries []graphite.Request
 	graphiteContext graphite.Context
-}
-
-func (e *State) addRequest(r interface{}) {
-	switch r.(type) {
-	case opentsdb.Request:
-		e.queries = append(e.queries, r.(opentsdb.Request))
-	case graphite.Request:
-		e.graphiteQueries = append(e.graphiteQueries, r.(graphite.Request))
-	}
-
 }
 
 var ErrUnknownOp = fmt.Errorf("expr: unknown op type")
@@ -75,7 +65,7 @@ func (e *Expr) Execute(c opentsdb.Context, g graphite.Context, T miniprofiler.Ti
 	}
 	s := &State{
 		Expr:            e,
-		context:         c,
+		tsdbContext:     c,
 		graphiteContext: g,
 		now:             now,
 		autods:          autods,
@@ -94,7 +84,7 @@ func (e *Expr) ExecuteState(s *State, T miniprofiler.Timer) (r *Results, queries
 	T.Step("expr execute", func(T miniprofiler.Timer) {
 		r = s.walk(e.Tree.Root, T)
 	})
-	queries = s.queries
+	queries = s.tsdbQueries
 	return
 }
 

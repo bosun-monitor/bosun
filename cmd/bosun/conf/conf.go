@@ -30,7 +30,7 @@ type Conf struct {
 	Name            string        // Config file name
 	CheckFrequency  time.Duration // Time between alert checks: 5m
 	TSDBHost        string        // OpenTSDB relay and query destination: ny-devtsdb04:4242
-	GraphiteHost    string        // host for graphite, like http://foo.bar.baz
+	GraphiteHost    string        // Graphite query host: foo.bar.baz
 	HTTPListen      string        // Web server listen address: :80
 	Hostname        string
 	RelayListen     string // OpenTSDB relay listen address: :4242
@@ -323,10 +323,6 @@ func New(name, text string) (c *Conf, err error) {
 		default:
 			c.errorf("unexpected parse node %s", n)
 		}
-	}
-	if c.TSDBHost == "" {
-		c.at(nil)
-		c.errorf("tsdbHost required")
 	}
 	if c.Hostname == "" {
 		c.Hostname = c.HTTPListen
@@ -1200,7 +1196,7 @@ func (c *Conf) Funcs() map[string]eparse.Func {
 		}
 		return e.Root.Tags()
 	}
-	return map[string]eparse.Func{
+	funcs := map[string]eparse.Func{
 		"alert": {
 			Args:   []eparse.FuncType{eparse.TypeString, eparse.TypeString},
 			Return: eparse.TypeNumber,
@@ -1214,4 +1210,16 @@ func (c *Conf) Funcs() map[string]eparse.Func {
 			F:      lookup,
 		},
 	}
+	merge := func(fs map[string]eparse.Func) {
+		for k, v := range fs {
+			funcs[k] = v
+		}
+	}
+	if c.TSDBHost != "" {
+		merge(expr.TSDB)
+	}
+	if c.GraphiteHost != "" {
+		merge(expr.Graphite)
+	}
+	return funcs
 }

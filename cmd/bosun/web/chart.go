@@ -188,7 +188,7 @@ func ExprGraph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (in
 		}
 		now = time.Unix(i, 0).UTC()
 	}
-	e, err := expr.New(q)
+	e, err := expr.New(q, schedule.Conf.Funcs())
 	if err != nil {
 		return nil, err
 	} else if e.Root.Return() != parse.TypeSeries {
