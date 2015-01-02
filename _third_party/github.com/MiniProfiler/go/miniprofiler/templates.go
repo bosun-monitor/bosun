@@ -2,13 +2,23 @@ package miniprofiler
 
 import (
 	"html/template"
+	"io/ioutil"
 	"strings"
 )
 
-var includePartialHtmlTmpl = parseInclude("include", include_partial_html)
-var shareHtmlTmpl = parseInclude("share", share_html)
+var includePartialHtmlTmpl = parseInclude("include", "/include.partial.html")
+var shareHtmlTmpl = parseInclude("share", "/share.html")
 
-func parseInclude(name string, t []byte) *template.Template {
+func parseInclude(name string, fname string) *template.Template {
+	f, err := webFS.Open(fname)
+	if err != nil {
+		panic(err)
+	}
+	t, err := ioutil.ReadAll(f)
+	if err != nil {
+		panic(err)
+	}
+	f.Close()
 	s := string(t)
 	s = strings.Replace(s, "{", "{{.", -1)
 	s = strings.Replace(s, "}", "}}", -1)

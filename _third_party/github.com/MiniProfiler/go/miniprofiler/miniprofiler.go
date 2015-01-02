@@ -58,38 +58,33 @@ var (
 	StartHidden         = false
 	TrivialMilliseconds = 12.0
 
-	Version = "3.0.10"
+	Version = "3.0.11"
 
 	staticFiles map[string][]byte
 )
 
 const (
-	PATH         = "/mini-profiler-resources/"
-	path_results = PATH + "results"
+	PATH = "/mini-profiler-resources/"
 
 	clientTimingsPrefix = "clientPerformance[timing]["
 )
 
-func init() {
-	http.HandleFunc(PATH, MiniProfilerHandler)
+var (
+	webFS     = FS(false)
+	fsHandler = http.FileServer(webFS)
+)
 
-	staticFiles = map[string][]byte{
-		"includes.css":  includes_css,
-		"includes.js":   includes_js,
-		"includes.tmpl": includes_tmpl,
-	}
+func init() {
+	http.Handle(PATH, http.StripPrefix(PATH, http.HandlerFunc(miniProfilerHandler)))
 }
 
-// MiniProfilerHandler serves requests to the /mini-profiler-resources/
+// miniProfilerHandler serves requests to the /mini-profiler-resources/
 // path. For use only by miniprofiler helper libraries.
-func MiniProfilerHandler(w http.ResponseWriter, r *http.Request) {
-	path := r.URL.Path[strings.LastIndex(r.URL.Path, "/")+1:]
-	if staticFiles[path] != nil {
-		static(w, r)
-	} else if path_results == r.URL.Path {
+func miniProfilerHandler(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path == "results" {
 		results(w, r)
 	} else {
-		http.Error(w, "", http.StatusNotFound)
+		fsHandler.ServeHTTP(w, r)
 	}
 }
 
@@ -349,3 +344,5 @@ func GetMemory(r *http.Request, id string) *Profile {
 	defer profileLock.Unlock()
 	return profiles[id]
 }
+
+//go:generate esc -o static.go -pkg miniprofiler -prefix ../ui ../ui/include.partial.html ../ui/includes.css ../ui/includes.js ../ui/includes.tmpl ../ui/share.html

@@ -1,5 +1,17 @@
 # Changelog
 
+## v1.1.0 / 2014-12-12
+
+* kqueue: rework internals [#43](https://github.com/go-fsnotify/fsnotify/pull/43)
+    * add low-level functions
+    * only need to store flags on directories
+    * less mutexes [#13](https://github.com/go-fsnotify/fsnotify/issues/13)
+    * done can be an unbuffered channel
+    * remove calls to os.NewSyscallError
+* More efficient string concatenation for Event.String() [#52](https://github.com/go-fsnotify/fsnotify/pull/52) (thanks @mdlayher)
+* kqueue: fix regression in  rework causing subdirectories to be watched [#48](https://github.com/go-fsnotify/fsnotify/issues/48)
+* kqueue: cleanup internal watch before sending remove event [#51](https://github.com/go-fsnotify/fsnotify/issues/48)
+
 ## v1.0.4 / 2014-09-07
 
 * kqueue: add dragonfly to the build tags.

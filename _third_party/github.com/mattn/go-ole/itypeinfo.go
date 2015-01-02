@@ -6,50 +6,39 @@ import (
 )
 
 type ITypeInfo struct {
-	lpVtbl *pITypeInfoVtbl
+	IUnknown
 }
 
-type pITypeInfoVtbl struct {
-	pQueryInterface       uintptr
-	pAddRef               uintptr
-	pRelease              uintptr
-	pGetTypeAttr          uintptr
-	pGetTypeComp          uintptr
-	pGetFuncDesc          uintptr
-	pGetVarDesc           uintptr
-	pGetNames             uintptr
-	pGetRefTypeOfImplType uintptr
-	pGetImplTypeFlags     uintptr
-	pGetIDsOfNames        uintptr
-	pInvoke               uintptr
-	pGetDocumentation     uintptr
-	pGetDllEntry          uintptr
-	pGetRefTypeInfo       uintptr
-	pAddressOfMember      uintptr
-	pCreateInstance       uintptr
-	pGetMops              uintptr
-	pGetContainingTypeLib uintptr
-	pReleaseTypeAttr      uintptr
-	pReleaseFuncDesc      uintptr
-	pReleaseVarDesc       uintptr
+type ITypeInfoVtbl struct {
+	IUnknownVtbl
+	GetTypeAttr          uintptr
+	GetTypeComp          uintptr
+	GetFuncDesc          uintptr
+	GetVarDesc           uintptr
+	GetNames             uintptr
+	GetRefTypeOfImplType uintptr
+	GetImplTypeFlags     uintptr
+	GetIDsOfNames        uintptr
+	Invoke               uintptr
+	GetDocumentation     uintptr
+	GetDllEntry          uintptr
+	GetRefTypeInfo       uintptr
+	AddressOfMember      uintptr
+	CreateInstance       uintptr
+	GetMops              uintptr
+	GetContainingTypeLib uintptr
+	ReleaseTypeAttr      uintptr
+	ReleaseFuncDesc      uintptr
+	ReleaseVarDesc       uintptr
 }
 
-func (v *ITypeInfo) QueryInterface(iid *GUID) (disp *IDispatch, err error) {
-	disp, err = queryInterface((*IUnknown)(unsafe.Pointer(v)), iid)
-	return
-}
-
-func (v *ITypeInfo) AddRef() int32 {
-	return addRef((*IUnknown)(unsafe.Pointer(v)))
-}
-
-func (v *ITypeInfo) Release() int32 {
-	return release((*IUnknown)(unsafe.Pointer(v)))
+func (v *ITypeInfo) VTable() *ITypeInfoVtbl {
+	return (*ITypeInfoVtbl)(unsafe.Pointer(v.RawVTable))
 }
 
 func (v *ITypeInfo) GetTypeAttr() (tattr *TYPEATTR, err error) {
 	hr, _, _ := syscall.Syscall(
-		uintptr(v.lpVtbl.pGetTypeAttr),
+		uintptr(v.VTable().GetTypeAttr),
 		2,
 		uintptr(unsafe.Pointer(v)),
 		uintptr(unsafe.Pointer(&tattr)),

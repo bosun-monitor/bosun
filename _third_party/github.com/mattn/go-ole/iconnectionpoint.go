@@ -6,40 +6,30 @@ import (
 )
 
 type IConnectionPoint struct {
-	lpVtbl *pIConnectionPointVtbl
+	IUnknown
 }
 
-type pIConnectionPointVtbl struct {
-	pQueryInterface              uintptr
-	pAddRef                      uintptr
-	pRelease                     uintptr
-	pGetConnectionInterface      uintptr
-	pGetConnectionPointContainer uintptr
-	pAdvise                      uintptr
-	pUnadvise                    uintptr
-	pEnumConnections             uintptr
+type IConnectionPointVtbl struct {
+	IUnknownVtbl
+	GetConnectionInterface      uintptr
+	GetConnectionPointContainer uintptr
+	Advise                      uintptr
+	Unadvise                    uintptr
+	EnumConnections             uintptr
 }
 
-func (v *IConnectionPoint) QueryInterface(iid *GUID) (disp *IDispatch, err error) {
-	disp, err = queryInterface((*IUnknown)(unsafe.Pointer(v)), iid)
-	return
-}
-
-func (v *IConnectionPoint) AddRef() int32 {
-	return addRef((*IUnknown)(unsafe.Pointer(v)))
-}
-
-func (v *IConnectionPoint) Release() int32 {
-	return release((*IUnknown)(unsafe.Pointer(v)))
+func (v *IConnectionPoint) VTable() *IConnectionPointVtbl {
+	return (*IConnectionPointVtbl)(unsafe.Pointer(v.RawVTable))
 }
 
 func (v *IConnectionPoint) GetConnectionInterface(piid **GUID) int32 {
+	// XXX: This doesn't look like it does what it's supposed to
 	return release((*IUnknown)(unsafe.Pointer(v)))
 }
 
 func (v *IConnectionPoint) Advise(unknown *IUnknown) (cookie uint32, err error) {
 	hr, _, _ := syscall.Syscall(
-		uintptr(v.lpVtbl.pAdvise),
+		v.VTable().Advise,
 		3,
 		uintptr(unsafe.Pointer(v)),
 		uintptr(unsafe.Pointer(unknown)),
@@ -52,7 +42,7 @@ func (v *IConnectionPoint) Advise(unknown *IUnknown) (cookie uint32, err error) 
 
 func (v *IConnectionPoint) Unadvise(cookie uint32) (err error) {
 	hr, _, _ := syscall.Syscall(
-		uintptr(v.lpVtbl.pUnadvise),
+		v.VTable().Unadvise,
 		2,
 		uintptr(unsafe.Pointer(v)),
 		uintptr(cookie),

@@ -6,27 +6,16 @@ import (
 )
 
 type IProvideClassInfo struct {
-	lpVtbl *pIProvideClassInfoVtbl
+	IUnknown
 }
 
-type pIProvideClassInfoVtbl struct {
-	pQueryInterface uintptr
-	pAddRef         uintptr
-	pRelease        uintptr
-	pGetClassInfo   uintptr
+type IProvideClassInfoVtbl struct {
+	IUnknownVtbl
+	GetClassInfo uintptr
 }
 
-func (v *IProvideClassInfo) QueryInterface(iid *GUID) (disp *IDispatch, err error) {
-	disp, err = queryInterface((*IUnknown)(unsafe.Pointer(v)), iid)
-	return
-}
-
-func (v *IProvideClassInfo) AddRef() int32 {
-	return addRef((*IUnknown)(unsafe.Pointer(v)))
-}
-
-func (v *IProvideClassInfo) Release() int32 {
-	return release((*IUnknown)(unsafe.Pointer(v)))
+func (v *IProvideClassInfo) VTable() *IProvideClassInfoVtbl {
+	return (*IProvideClassInfoVtbl)(unsafe.Pointer(v.RawVTable))
 }
 
 func (v *IProvideClassInfo) GetClassInfo() (cinfo *ITypeInfo, err error) {
@@ -36,7 +25,7 @@ func (v *IProvideClassInfo) GetClassInfo() (cinfo *ITypeInfo, err error) {
 
 func getClassInfo(disp *IProvideClassInfo) (tinfo *ITypeInfo, err error) {
 	hr, _, _ := syscall.Syscall(
-		disp.lpVtbl.pGetClassInfo,
+		disp.VTable().GetClassInfo,
 		2,
 		uintptr(unsafe.Pointer(disp)),
 		uintptr(unsafe.Pointer(&tinfo)),

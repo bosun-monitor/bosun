@@ -6,28 +6,17 @@ import (
 )
 
 type IConnectionPointContainer struct {
-	lpVtbl *pIConnectionPointContainerVtbl
+	IUnknown
 }
 
-type pIConnectionPointContainerVtbl struct {
-	pQueryInterface       uintptr
-	pAddRef               uintptr
-	pRelease              uintptr
-	pEnumConnectionPoints uintptr
-	pFindConnectionPoint  uintptr
+type IConnectionPointContainerVtbl struct {
+	IUnknownVtbl
+	EnumConnectionPoints uintptr
+	FindConnectionPoint  uintptr
 }
 
-func (v *IConnectionPointContainer) QueryInterface(iid *GUID) (disp *IDispatch, err error) {
-	disp, err = queryInterface((*IUnknown)(unsafe.Pointer(v)), iid)
-	return
-}
-
-func (v *IConnectionPointContainer) AddRef() int32 {
-	return addRef((*IUnknown)(unsafe.Pointer(v)))
-}
-
-func (v *IConnectionPointContainer) Release() int32 {
-	return release((*IUnknown)(unsafe.Pointer(v)))
+func (v *IConnectionPointContainer) VTable() *IConnectionPointContainerVtbl {
+	return (*IConnectionPointContainerVtbl)(unsafe.Pointer(v.RawVTable))
 }
 
 func (v *IConnectionPointContainer) EnumConnectionPoints(points interface{}) (err error) {
@@ -37,7 +26,7 @@ func (v *IConnectionPointContainer) EnumConnectionPoints(points interface{}) (er
 
 func (v *IConnectionPointContainer) FindConnectionPoint(iid *GUID, point **IConnectionPoint) (err error) {
 	hr, _, _ := syscall.Syscall(
-		uintptr(v.lpVtbl.pFindConnectionPoint),
+		v.VTable().FindConnectionPoint,
 		3,
 		uintptr(unsafe.Pointer(v)),
 		uintptr(unsafe.Pointer(iid)),

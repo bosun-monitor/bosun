@@ -423,7 +423,7 @@ func (c *HistChart) Plot(g Graphics) {
 
 	if !c.Stacked && c.Kernel != nil {
 		for d := numSets - 1; d >= 0; d-- {
-			style := Style{Symbol:/*c.Data[d].Style.Symbol*/ 'X', LineColor: c.Data[d].Style.LineColor,
+			style := Style{Symbol: /*c.Data[d].Style.Symbol*/ 'X', LineColor: c.Data[d].Style.LineColor,
 				LineWidth: 1, LineStyle: SolidLine}
 			for j := range smoothed[d] {
 				// now YRange is set up: transform to screen coordinates

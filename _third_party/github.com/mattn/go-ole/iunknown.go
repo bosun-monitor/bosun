@@ -6,19 +6,23 @@ import (
 )
 
 type IUnknown struct {
-	lpVtbl *pIUnknownVtbl
+	RawVTable *interface{}
 }
 
-type pIUnknownVtbl struct {
-	pQueryInterface uintptr
-	pAddRef         uintptr
-	pRelease        uintptr
+type IUnknownVtbl struct {
+	QueryInterface uintptr
+	AddRef         uintptr
+	Release        uintptr
 }
 
 type UnknownLike interface {
 	QueryInterface(iid *GUID) (disp *IDispatch, err error)
 	AddRef() int32
 	Release() int32
+}
+
+func (v *IUnknown) VTable() *IUnknownVtbl {
+	return (*IUnknownVtbl)(unsafe.Pointer(v.RawVTable))
 }
 
 func (v *IUnknown) QueryInterface(iid *GUID) (disp *IDispatch, err error) {
@@ -41,7 +45,7 @@ func (v *IUnknown) Release() int32 {
 
 func queryInterface(unk *IUnknown, iid *GUID) (disp *IDispatch, err error) {
 	hr, _, _ := syscall.Syscall(
-		unk.lpVtbl.pQueryInterface,
+		unk.VTable().QueryInterface,
 		3,
 		uintptr(unsafe.Pointer(unk)),
 		uintptr(unsafe.Pointer(iid)),
@@ -54,7 +58,7 @@ func queryInterface(unk *IUnknown, iid *GUID) (disp *IDispatch, err error) {
 
 func addRef(unk *IUnknown) int32 {
 	ret, _, _ := syscall.Syscall(
-		unk.lpVtbl.pAddRef,
+		unk.VTable().AddRef,
 		1,
 		uintptr(unsafe.Pointer(unk)),
 		0,
@@ -64,7 +68,7 @@ func addRef(unk *IUnknown) int32 {
 
 func release(unk *IUnknown) int32 {
 	ret, _, _ := syscall.Syscall(
-		unk.lpVtbl.pRelease,
+		unk.VTable().Release,
 		1,
 		uintptr(unsafe.Pointer(unk)),
 		0,
