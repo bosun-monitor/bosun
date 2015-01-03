@@ -17,7 +17,6 @@ import (
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/expr"
 	"bosun.org/cmd/bosun/sched"
-	"bosun.org/graphite"
 	"bosun.org/opentsdb"
 )
 
@@ -30,7 +29,7 @@ func Expr(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 	if err != nil {
 		return nil, err
 	}
-	res, queries, err := e.Execute(opentsdb.NewCache(schedule.Conf.TSDBHost, schedule.Conf.ResponseLimit), graphite.Host(schedule.Conf.GraphiteHost), t, now, 0, false, schedule.Search, nil)
+	res, queries, err := e.Execute(schedule.Conf.TSDBCacheContext(), schedule.Conf.GraphiteContext(), t, now, 0, false, schedule.Search, nil)
 	if err != nil {
 		return nil, err
 	}

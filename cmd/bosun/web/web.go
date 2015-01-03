@@ -39,7 +39,7 @@ func init() {
 	miniprofiler.StartHidden = true
 }
 
-func Listen(listenAddr string, devMode bool, tsdbHost *url.URL) error {
+func Listen(listenAddr string, devMode bool, tsdbHost string) error {
 	var err error
 	webFS := FS(devMode)
 	if devMode {
@@ -56,6 +56,9 @@ func Listen(listenAddr string, devMode bool, tsdbHost *url.URL) error {
 	templates, err = template.New("").Parse(string(b))
 	if err != nil {
 		log.Fatal(err)
+	}
+	if tsdbHost != "" {
+		router.Handle("/api/put", Relay(tsdbHost))
 	}
 	router.HandleFunc("/api/", APIRedirect)
 	router.Handle("/api/action", JSON(Action))
@@ -81,7 +84,6 @@ func Listen(listenAddr string, devMode bool, tsdbHost *url.URL) error {
 	router.Handle("/api/tagv/{tagk}", JSON(TagValuesByTagKey))
 	router.Handle("/api/tagv/{tagk}/{metric}", JSON(TagValuesByMetricTagKey))
 	router.Handle("/api/templates", JSON(Templates))
-	router.Handle("/api/put", Relay(tsdbHost))
 	router.Handle("/api/run", JSON(Run))
 	http.Handle("/", miniprofiler.NewHandler(Index))
 	http.Handle("/api/", router)
@@ -153,8 +155,11 @@ func (rp *relayProxy) ServeHTTP(responseWriter http.ResponseWriter, r *http.Requ
 	collect.Add("relay.response", tags, 1)
 }
 
-func Relay(dest *url.URL) http.Handler {
-	return &relayProxy{ReverseProxy: httputil.NewSingleHostReverseProxy(dest)}
+func Relay(dest string) http.Handler {
+	return &relayProxy{ReverseProxy: httputil.NewSingleHostReverseProxy(&url.URL{
+		Scheme: "http",
+		Host:   dest,
+	})}
 }
 
 func Index(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {

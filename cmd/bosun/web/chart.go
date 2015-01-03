@@ -19,7 +19,6 @@ import (
 	"bosun.org/cmd/bosun/expr"
 	"bosun.org/cmd/bosun/expr/parse"
 	"bosun.org/cmd/bosun/sched"
-	"bosun.org/graphite"
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
 )
@@ -107,7 +106,12 @@ func Graph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 	var tr opentsdb.ResponseSet
 	b, _ := json.MarshalIndent(oreq, "", "  ")
 	t.StepCustomTiming("tsdb", "query", string(b), func() {
-		tr, err = oreq.Query(schedule.Conf.TSDBHost)
+		h := schedule.Conf.TSDBHost
+		if h == "" {
+			err = fmt.Errorf("tsdbHost not set")
+			return
+		}
+		tr, err = oreq.Query(h)
 	})
 	if err != nil {
 		return nil, err
@@ -194,7 +198,7 @@ func ExprGraph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (in
 	} else if e.Root.Return() != parse.TypeSeries {
 		return nil, fmt.Errorf("egraph: requires an expression that returns a series")
 	}
-	res, _, err := e.Execute(opentsdb.NewCache(schedule.Conf.TSDBHost, schedule.Conf.ResponseLimit), graphite.Host(schedule.Conf.GraphiteHost), t, now, autods, false, schedule.Search, nil)
+	res, _, err := e.Execute(schedule.Conf.TSDBCacheContext(), schedule.Conf.GraphiteContext(), t, now, autods, false, schedule.Search, nil)
 	if err != nil {
 		return nil, err
 	}

@@ -45,9 +45,9 @@ type RunHistory struct {
 func (s *Schedule) NewRunHistory(start time.Time) *RunHistory {
 	return &RunHistory{
 		Start:           start,
-		Context:         opentsdb.NewCache(s.Conf.TSDBHost, s.Conf.ResponseLimit),
-		GraphiteContext: graphite.Host(s.Conf.GraphiteHost),
 		Events:          make(map[expr.AlertKey]*Event),
+		Context: s.Conf.TSDBCacheContext(),
+		GraphiteContext: s.Conf.GraphiteContext(),
 	}
 }
 

@@ -18,10 +18,10 @@ import (
 	"time"
 
 	"bosun.org/_third_party/github.com/MiniProfiler/go/miniprofiler"
-
 	"bosun.org/cmd/bosun/conf/parse"
 	"bosun.org/cmd/bosun/expr"
 	eparse "bosun.org/cmd/bosun/expr/parse"
+	"bosun.org/graphite"
 	"bosun.org/opentsdb"
 )
 
@@ -58,6 +58,24 @@ type Conf struct {
 	bodies          *htemplate.Template
 	subjects        *ttemplate.Template
 	squelch         []string
+}
+
+// TSDBCacheContext returns an OpenTSDB context with caching and limited to
+// c.ResponseLimit. A nil context is returned if TSDBHost is not set.
+func (c *Conf) TSDBCacheContext() opentsdb.Context {
+	if c.TSDBHost == "" {
+		return nil
+	}
+	return opentsdb.NewCache(c.TSDBHost, c.ResponseLimit)
+}
+
+// GraphiteContext returns a Graphite context. A nil context is returned if
+// GraphiteHost is not set.
+func (c *Conf) GraphiteContext() graphite.Context {
+	if c.GraphiteHost == "" {
+		return nil
+	}
+	return graphite.Host(c.GraphiteHost)
 }
 
 type Squelch map[string]*regexp.Regexp
