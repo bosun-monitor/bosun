@@ -124,6 +124,12 @@ func AddMeta(metric string, tags opentsdb.TagSet, name string, value interface{}
 	prev, present := metadata[Metakey{metric, ts, name}]
 	if present && !reflect.DeepEqual(prev, value) {
 		slog.Infof("metadata changed for %s/%s/%s: %v to %v", metric, ts, name, prev, value)
+		go sendMetadata([]Metasend{{
+			Metric: metric,
+			Tags:   tags,
+			Name:   name,
+			Value:  value,
+		}})
 	} else if metadebug {
 		slog.Infof("AddMeta for %s/%s/%s: %v", metric, ts, name, value)
 	}
@@ -150,7 +156,24 @@ func collectMetadata() {
 		for _, f := range metafuncs {
 			f()
 		}
-		sendMetadata()
+		metalock.Lock()
+		if len(metadata) == 0 {
+			metalock.Unlock()
+			continue
+		}
+		ms := make([]Metasend, len(metadata))
+		i := 0
+		for k, v := range metadata {
+			ms[i] = Metasend{
+				Metric: k.Metric,
+				Tags:   k.TagSet(),
+				Name:   k.Name,
+				Value:  v,
+			}
+			i++
+		}
+		metalock.Unlock()
+		sendMetadata(ms)
 		time.Sleep(time.Hour)
 	}
 }
@@ -164,25 +187,8 @@ type Metasend struct {
 	Time   time.Time `json:",omitempty"`
 }
 
-func sendMetadata() {
-	metalock.Lock()
-	if len(metadata) == 0 {
-		metalock.Unlock()
-		return
-	}
-	ms := make([]Metasend, len(metadata))
-	i := 0
-	for k, v := range metadata {
-		ms[i] = Metasend{
-			Metric: k.Metric,
-			Tags:   k.TagSet(),
-			Name:   k.Name,
-			Value:  v,
-		}
-		i++
-	}
-	metalock.Unlock()
-	b, err := json.MarshalIndent(&ms, "", "  ")
+func sendMetadata(ms []Metasend) {
+	b, err := json.Marshal(&ms)
 	if err != nil {
 		slog.Error(err)
 		return
