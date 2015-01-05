@@ -193,7 +193,7 @@ func sendMetadata() {
 		return
 	}
 	if resp.StatusCode != 204 {
-		slog.Error("bad metadata return:", resp.Status)
+		slog.Errorln("bad metadata return:", resp.Status)
 		return
 	}
 }
