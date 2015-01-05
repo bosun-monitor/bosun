@@ -201,7 +201,7 @@ func (c *Context) eval(v interface{}, filter bool, series bool, autods int) (exp
 	if c.AbnormalEvent() != nil {
 		t = c.AbnormalEvent().Time
 	}
-	res, _, err := e.Execute(c.runHistory.Context, nil, t, autods, c.Alert.UnjoinedOK, c.schedule.Search, c.schedule.Conf.AlertSquelched(c.Alert))
+	res, _, err := e.Execute(c.runHistory.Context, c.runHistory.GraphiteContext, nil, t, autods, c.Alert.UnjoinedOK, c.schedule.Search, c.schedule.Conf.AlertSquelched(c.Alert))
 	if err != nil {
 		return nil, "", fmt.Errorf("%s: %v", v, err)
 	}

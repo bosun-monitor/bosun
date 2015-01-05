@@ -19,6 +19,7 @@ import (
 	"bosun.org/cmd/bosun/expr"
 	"bosun.org/cmd/bosun/expr/parse"
 	"bosun.org/cmd/bosun/sched"
+	"bosun.org/graphite"
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
 )
@@ -193,7 +194,7 @@ func ExprGraph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (in
 	} else if e.Root.Return() != parse.TypeSeries {
 		return nil, fmt.Errorf("egraph: requires an expression that returns a series")
 	}
-	res, _, err := e.Execute(opentsdb.NewCache(schedule.Conf.TSDBHost, schedule.Conf.ResponseLimit), t, now, autods, false, schedule.Search, nil)
+	res, _, err := e.Execute(opentsdb.NewCache(schedule.Conf.TSDBHost, schedule.Conf.ResponseLimit), graphite.Host(schedule.Conf.GraphiteHost), t, now, autods, false, schedule.Search, nil)
 	if err != nil {
 		return nil, err
 	}

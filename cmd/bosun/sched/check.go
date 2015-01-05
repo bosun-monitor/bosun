@@ -11,6 +11,7 @@ import (
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/expr"
 	"bosun.org/collect"
+	"bosun.org/graphite"
 	"bosun.org/opentsdb"
 )
 
@@ -35,16 +36,18 @@ func (s *Schedule) Status(ak expr.AlertKey) *State {
 }
 
 type RunHistory struct {
-	Start   time.Time
-	Context opentsdb.Context
-	Events  map[expr.AlertKey]*Event
+	Start           time.Time
+	Context         opentsdb.Context
+	GraphiteContext graphite.Context
+	Events          map[expr.AlertKey]*Event
 }
 
 func (s *Schedule) NewRunHistory(start time.Time) *RunHistory {
 	return &RunHistory{
-		Start:   start,
-		Context: opentsdb.NewCache(s.Conf.TSDBHost, s.Conf.ResponseLimit),
-		Events:  make(map[expr.AlertKey]*Event),
+		Start:           start,
+		Context:         opentsdb.NewCache(s.Conf.TSDBHost, s.Conf.ResponseLimit),
+		GraphiteContext: graphite.Host(s.Conf.GraphiteHost),
+		Events:          make(map[expr.AlertKey]*Event),
 	}
 }
 
@@ -208,7 +211,7 @@ func (s *Schedule) CheckExpr(T miniprofiler.Timer, rh *RunHistory, a *conf.Alert
 		collect.Add("check.errs", opentsdb.TagSet{"metric": a.Name}, 1)
 		log.Println(err)
 	}()
-	results, _, err := e.Execute(rh.Context, T, rh.Start, 0, a.UnjoinedOK, s.Search, s.Conf.AlertSquelched(a))
+	results, _, err := e.Execute(rh.Context, rh.GraphiteContext, T, rh.Start, 0, a.UnjoinedOK, s.Search, s.Conf.AlertSquelched(a))
 	if err != nil {
 		ak := expr.NewAlertKey(a.Name, nil)
 		state := s.Status(ak)
