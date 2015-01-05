@@ -73,7 +73,7 @@ bosunApp.directive("tsTime", function() {
 					elem.text(text);
 				} else {
 					var el = document.createElement('a');
-					el.innerText = text;
+					el.text = text;
 					el.href = 'http://www.timeanddate.com/worldclock/converted.html?iso=';
 					el.href += m.format('YYYYMMDDTHHmm');
 					el.href += '&p1=0';
