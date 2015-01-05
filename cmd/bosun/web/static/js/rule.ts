@@ -32,8 +32,6 @@ interface IRuleScope extends IBosunScope {
 	assocations: any;
 }
 
-var tsdbFormat = 'YYYY/MM/DD-HH:mm';
-
 bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route', '$sce', function($scope: IRuleScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService, $sce: ng.ISCEService) {
 	var search = $location.search();
 	var current_alert = atob(search.alert || '');
@@ -132,8 +130,8 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
 		var url = '/api/rule?' +
 			'alert=' + encodeURIComponent($scope.alert) +
 			'&template=' + encodeURIComponent($scope.template) +
-			'&from=' + encodeURIComponent(from.format(tsdbFormat)) +
-			'&to=' + encodeURIComponent(to.format(tsdbFormat)) +
+			'&from=' + encodeURIComponent(from.format()) +
+			'&to=' + encodeURIComponent(to.format()) +
 			'&intervals=' + encodeURIComponent(intervals) +
 			'&email=' + encodeURIComponent($scope.email) +
 			'&template_group=' + encodeURIComponent($scope.template_group);

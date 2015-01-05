@@ -1732,7 +1732,6 @@ bosunControllers.controller('PutCtrl', ['$scope', '$http', '$route', function ($
         });
     };
 }]);
-var tsdbFormat = 'YYYY/MM/DD-HH:mm';
 bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route', '$sce', function ($scope, $http, $location, $route, $sce) {
     var search = $location.search();
     var current_alert = atob(search.alert || '');
@@ -1816,7 +1815,7 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
         else {
             intervals = +$scope.intervals;
         }
-        var url = '/api/rule?' + 'alert=' + encodeURIComponent($scope.alert) + '&template=' + encodeURIComponent($scope.template) + '&from=' + encodeURIComponent(from.format(tsdbFormat)) + '&to=' + encodeURIComponent(to.format(tsdbFormat)) + '&intervals=' + encodeURIComponent(intervals) + '&email=' + encodeURIComponent($scope.email) + '&template_group=' + encodeURIComponent($scope.template_group);
+        var url = '/api/rule?' + 'alert=' + encodeURIComponent($scope.alert) + '&template=' + encodeURIComponent($scope.template) + '&from=' + encodeURIComponent(from.format()) + '&to=' + encodeURIComponent(to.format()) + '&intervals=' + encodeURIComponent(intervals) + '&email=' + encodeURIComponent($scope.email) + '&template_group=' + encodeURIComponent($scope.template_group);
         $http.get(url).success(function (data) {
             $scope.sets = data.Sets;
             $scope.alert_history = data.AlertHistory;

@@ -193,13 +193,13 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 	var from, to time.Time
 	var err error
 	if f := r.FormValue("from"); len(f) > 0 {
-		from, err = time.Parse(tsdbFormat, f)
+		from, err = time.Parse(tsdbFormatSecs, f)
 		if err != nil {
 			return nil, err
 		}
 	}
 	if f := r.FormValue("to"); len(f) > 0 {
-		to, err = time.Parse(tsdbFormat, f)
+		to, err = time.Parse(tsdbFormatSecs, f)
 		if err != nil {
 			return nil, err
 		}
@@ -285,7 +285,7 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 	}
 	type Set struct {
 		Error, Critical, Warning, Normal int
-		Time                             time.Time
+		Time                             string
 		Results                          []*Result `json:",omitempty"`
 	}
 	type History struct {
@@ -321,7 +321,7 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 			Critical: len(res.Criticals),
 			Warning:  len(res.Warnings),
 			Normal:   len(res.Normals),
-			Time:     res.Time,
+			Time:     res.Time.Format(tsdbFormatSecs),
 		}
 		if res.Data != nil {
 			ret.Body = res.Body
@@ -356,7 +356,7 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 		ret.Warnings = append(ret.Warnings, res.Warning...)
 	}
 	slice.Sort(ret.Sets, func(i, j int) bool {
-		return ret.Sets[i].Time.Before(ret.Sets[j].Time)
+		return ret.Sets[i].Time < ret.Sets[j].Time
 	})
 	for _, histories := range ret.AlertHistory {
 		hist := histories.History

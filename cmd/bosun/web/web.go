@@ -32,7 +32,10 @@ var (
 	schedule  = sched.DefaultSched
 )
 
-const tsdbFormat = "2006/01/02-15:04"
+const (
+	tsdbFormat     = "2006/01/02-15:04"
+	tsdbFormatSecs = tsdbFormat + ":05"
+)
 
 func init() {
 	miniprofiler.Position = "bottomleft"
@@ -337,7 +340,7 @@ func SilenceGet(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (i
 
 var silenceLayouts = []string{
 	tsdbFormat,
-	tsdbFormat + ":05",
+	tsdbFormatSecs,
 	"2006-01-02 15:04:05 MST",
 	"2006-01-02 15:04:05 -0700",
 	"2006-01-02 15:04 MST",
