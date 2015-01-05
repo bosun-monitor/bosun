@@ -179,7 +179,7 @@ func (c *Context) eval(v interface{}, filter bool, series bool, autods int) (exp
 	var err error
 	switch v := v.(type) {
 	case string:
-		e, err = expr.New(v)
+		e, err = expr.New(v, c.schedule.Conf.Funcs())
 	case *expr.Expr:
 		e = v
 	default:
@@ -189,7 +189,7 @@ func (c *Context) eval(v interface{}, filter bool, series bool, autods int) (exp
 		return nil, "", fmt.Errorf("%v: %v", v, err)
 	}
 	if filter {
-		e, err = expr.New(opentsdb.ReplaceTags(e.String(), c.State.Group))
+		e, err = expr.New(opentsdb.ReplaceTags(e.String(), c.State.Group), c.schedule.Conf.Funcs())
 		if err != nil {
 			return nil, "", err
 		}
@@ -201,7 +201,7 @@ func (c *Context) eval(v interface{}, filter bool, series bool, autods int) (exp
 	if c.AbnormalEvent() != nil {
 		t = c.AbnormalEvent().Time
 	}
-	res, _, err := e.Execute(c.runHistory.Context, nil, t, autods, c.Alert.UnjoinedOK, c.schedule.Search, c.schedule.Conf.AlertSquelched(c.Alert))
+	res, _, err := e.Execute(c.runHistory.Context, c.runHistory.GraphiteContext, nil, t, autods, c.Alert.UnjoinedOK, c.schedule.Search, c.schedule.Conf.AlertSquelched(c.Alert))
 	if err != nil {
 		return nil, "", fmt.Errorf("%s: %v", v, err)
 	}

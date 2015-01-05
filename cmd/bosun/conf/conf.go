@@ -18,10 +18,10 @@ import (
 	"time"
 
 	"bosun.org/_third_party/github.com/MiniProfiler/go/miniprofiler"
-
 	"bosun.org/cmd/bosun/conf/parse"
 	"bosun.org/cmd/bosun/expr"
 	eparse "bosun.org/cmd/bosun/expr/parse"
+	"bosun.org/graphite"
 	"bosun.org/opentsdb"
 )
 
@@ -30,6 +30,7 @@ type Conf struct {
 	Name            string        // Config file name
 	CheckFrequency  time.Duration // Time between alert checks: 5m
 	TSDBHost        string        // OpenTSDB relay and query destination: ny-devtsdb04:4242
+	GraphiteHost    string        // Graphite query host: foo.bar.baz
 	HTTPListen      string        // Web server listen address: :80
 	Hostname        string
 	RelayListen     string // OpenTSDB relay listen address: :4242
@@ -57,6 +58,24 @@ type Conf struct {
 	bodies          *htemplate.Template
 	subjects        *ttemplate.Template
 	squelch         []string
+}
+
+// TSDBCacheContext returns an OpenTSDB context with caching and limited to
+// c.ResponseLimit. A nil context is returned if TSDBHost is not set.
+func (c *Conf) TSDBCacheContext() opentsdb.Context {
+	if c.TSDBHost == "" {
+		return nil
+	}
+	return opentsdb.NewCache(c.TSDBHost, c.ResponseLimit)
+}
+
+// GraphiteContext returns a Graphite context. A nil context is returned if
+// GraphiteHost is not set.
+func (c *Conf) GraphiteContext() graphite.Context {
+	if c.GraphiteHost == "" {
+		return nil
+	}
+	return graphite.Host(c.GraphiteHost)
 }
 
 type Squelch map[string]*regexp.Regexp
@@ -323,10 +342,6 @@ func New(name, text string) (c *Conf, err error) {
 			c.errorf("unexpected parse node %s", n)
 		}
 	}
-	if c.TSDBHost == "" {
-		c.at(nil)
-		c.errorf("tsdbHost required")
-	}
 	if c.Hostname == "" {
 		c.Hostname = c.HTTPListen
 		if strings.HasPrefix(c.Hostname, ":") {
@@ -359,6 +374,8 @@ func (c *Conf) loadGlobal(p *parse.PairNode) {
 			v += ":4242"
 		}
 		c.TSDBHost = v
+	case "graphiteHost":
+		c.GraphiteHost = v
 	case "httpListen":
 		c.HTTPListen = v
 	case "hostname":
@@ -1197,7 +1214,7 @@ func (c *Conf) Funcs() map[string]eparse.Func {
 		}
 		return e.Root.Tags()
 	}
-	return map[string]eparse.Func{
+	funcs := map[string]eparse.Func{
 		"alert": {
 			Args:   []eparse.FuncType{eparse.TypeString, eparse.TypeString},
 			Return: eparse.TypeNumber,
@@ -1211,4 +1228,16 @@ func (c *Conf) Funcs() map[string]eparse.Func {
 			F:      lookup,
 		},
 	}
+	merge := func(fs map[string]eparse.Func) {
+		for k, v := range fs {
+			funcs[k] = v
+		}
+	}
+	if c.TSDBHost != "" {
+		merge(expr.TSDB)
+	}
+	if c.GraphiteHost != "" {
+		merge(expr.Graphite)
+	}
+	return funcs
 }

@@ -3,8 +3,6 @@ package expr
 import (
 	"testing"
 	"time"
-
-	"bosun.org/opentsdb"
 )
 
 func TestExprSimple(t *testing.T) {
@@ -43,7 +41,7 @@ func TestExprSimple(t *testing.T) {
 			t.Error(err)
 			break
 		}
-		r, _, err := e.Execute(opentsdb.Host(""), nil, time.Now(), 0, false, nil, nil)
+		r, _, err := e.Execute(nil, nil, nil, time.Now(), 0, false, nil, nil)
 		if err != nil {
 			t.Error(err)
 			break
@@ -73,7 +71,7 @@ func TestExprParse(t *testing.T) {
 	}
 
 	for _, et := range exprTests {
-		e, err := New(et.input)
+		e, err := New(et.input, TSDB)
 		if et.valid && err != nil {
 			t.Error(err)
 		} else if !et.valid && err == nil {

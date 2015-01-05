@@ -64,9 +64,6 @@ func main() {
 	if strings.HasPrefix(httpListen.Host, ":") {
 		httpListen.Host = "localhost" + httpListen.Host
 	}
-	if err := collect.Init(httpListen, "bosun"); err != nil {
-		log.Fatal(err)
-	}
 	sched.Load(c)
 	if c.RelayListen != "" {
 		go func() {
@@ -79,27 +76,32 @@ func main() {
 			log.Fatal(s.ListenAndServe())
 		}()
 	}
-	tsdbHost := &url.URL{
-		Scheme: "http",
-		Host:   c.TSDBHost,
-	}
-	if *flagReadonly {
-		rp := httputil.NewSingleHostReverseProxy(tsdbHost)
-		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.URL.Path == "/api/put" {
-				w.WriteHeader(204)
-				return
-			}
-			rp.ServeHTTP(w, r)
-		}))
-		log.Println("readonly relay at", ts.URL, "to", tsdbHost)
-		tsdbHost, _ = url.Parse(ts.URL)
-		c.TSDBHost = tsdbHost.Host
+	if c.TSDBHost != "" {
+		if err := collect.Init(httpListen, "bosun"); err != nil {
+			log.Fatal(err)
+		}
+		tsdbHost := &url.URL{
+			Scheme: "http",
+			Host:   c.TSDBHost,
+		}
+		if *flagReadonly {
+			rp := httputil.NewSingleHostReverseProxy(tsdbHost)
+			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path == "/api/put" {
+					w.WriteHeader(204)
+					return
+				}
+				rp.ServeHTTP(w, r)
+			}))
+			log.Println("readonly relay at", ts.URL, "to", tsdbHost)
+			tsdbHost, _ = url.Parse(ts.URL)
+			c.TSDBHost = tsdbHost.Host
+		}
 	}
 	if *flagQuiet {
 		c.Quiet = true
 	}
-	go func() { log.Fatal(web.Listen(c.HTTPListen, *flagDev, tsdbHost)) }()
+	go func() { log.Fatal(web.Listen(c.HTTPListen, *flagDev, c.TSDBHost)) }()
 	go func() { log.Fatal(sched.Run()) }()
 	if *flagWatch {
 		watch(".", "*.go", quit)

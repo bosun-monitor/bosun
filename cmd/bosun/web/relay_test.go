@@ -23,7 +23,7 @@ func TestRelay(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ts := httptest.NewServer(Relay(rurl))
+	ts := httptest.NewServer(Relay(rurl.Host))
 	defer ts.Close()
 
 	body := []byte(`[{

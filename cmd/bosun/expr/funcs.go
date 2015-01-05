@@ -2,6 +2,7 @@ package expr
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"sort"
@@ -12,8 +13,14 @@ import (
 	"bosun.org/_third_party/github.com/GaryBoone/GoStats/stats"
 	"bosun.org/_third_party/github.com/MiniProfiler/go/miniprofiler"
 	"bosun.org/cmd/bosun/expr/parse"
+	"bosun.org/graphite"
 	"bosun.org/opentsdb"
 )
+
+func graphiteTagQuery(args []parse.Node) (parse.Tags, error) {
+	t := make(parse.Tags)
+	return t, nil
+}
 
 func tagQuery(args []parse.Node) (parse.Tags, error) {
 	n, ok := args[0].(*parse.StringNode)
@@ -51,9 +58,18 @@ func tagTranspose(args []parse.Node) (parse.Tags, error) {
 	return tags, nil
 }
 
-var builtins = map[string]parse.Func{
-	// Query functions
+// Graphite defines functions for use with a Graphite backend.
+var Graphite = map[string]parse.Func{
+	"graphite": {
+		[]parse.FuncType{parse.TypeString, parse.TypeString, parse.TypeString, parse.TypeString},
+		parse.TypeSeries,
+		graphiteTagQuery,
+		GraphiteQuery,
+	},
+}
 
+// TSDB defines functions for use with an OpenTSDB backend.
+var TSDB = map[string]parse.Func{
 	"band": {
 		[]parse.FuncType{parse.TypeString, parse.TypeString, parse.TypeString, parse.TypeScalar},
 		parse.TypeSeries,
@@ -84,7 +100,9 @@ var builtins = map[string]parse.Func{
 		tagQuery,
 		Query,
 	},
+}
 
+var builtins = map[string]parse.Func{
 	// Reduction functions
 
 	"avg": {
@@ -288,7 +306,7 @@ func Band(e *State, T miniprofiler.Timer, query, duration, period string, num fl
 			req.End = now.Unix()
 			req.Start = now.Add(time.Duration(-d)).Unix()
 			var s opentsdb.ResponseSet
-			s, err = timeRequest(e, T, &req)
+			s, err = timeTSDBRequest(e, T, &req)
 			if err != nil {
 				return
 			}
@@ -332,6 +350,82 @@ func Band(e *State, T miniprofiler.Timer, query, duration, period string, num fl
 	return
 }
 
+func GraphiteQuery(e *State, T miniprofiler.Timer, query string, sduration, eduration, format string) (r *Results, err error) {
+	sd, err := opentsdb.ParseDuration(sduration)
+	if err != nil {
+		return
+	}
+	st := e.now.Add(-time.Duration(sd))
+	req := &graphite.Request{
+		Targets: []string{query},
+		Start:   &st,
+	}
+	if eduration != "" {
+		var ed opentsdb.Duration
+		ed, err = opentsdb.ParseDuration(eduration)
+		if err != nil {
+			return
+		}
+		et := e.now.Add(-time.Duration(ed))
+		req.End = &et
+	}
+	var s graphite.Response
+	s, err = timeGraphiteRequest(e, T, req)
+	if err != nil {
+		return nil, fmt.Errorf("graphite: %v", err)
+	}
+	if len(s) == 0 {
+		return nil, errors.New("empty response")
+	}
+	r = new(Results)
+	formatTags := strings.Split(format, ".")
+	seen := make(map[string]bool)
+	for _, res := range s {
+		// build tag set
+		nodes := strings.Split(res.Target, ".")
+		if len(nodes) < len(formatTags) {
+			return nil, fmt.Errorf(`returned target "%s" does not match format "%s"`, res.Target, formatTags)
+		}
+		tags := make(opentsdb.TagSet)
+		for i, key := range formatTags {
+			if len(key) > 0 {
+				tags[key] = nodes[i]
+			}
+		}
+		if ts := tags.String(); !seen[ts] {
+			seen[ts] = true
+		} else {
+			return nil, fmt.Errorf("target contains duplicates: %v", ts)
+		}
+		// build data
+		dps := make(Series)
+		for _, dp := range res.Datapoints {
+			if len(dp) != 2 {
+				return nil, fmt.Errorf("bad graphite datapoint: %v", dp)
+			}
+			if len(dp[0].String()) == 0 {
+				// none value. skip this record
+				continue
+			}
+			val, err := dp[0].Float64()
+			if err != nil {
+				return nil, fmt.Errorf("graphite: %v", err)
+			}
+			unixTS, err := dp[1].Int64()
+			if err != nil {
+				return nil, fmt.Errorf("graphite: %v", err)
+			}
+			t := time.Unix(unixTS, 0)
+			dps[t] = val
+		}
+		r.Results = append(r.Results, &Result{
+			Value: dps,
+			Group: tags,
+		})
+	}
+	return
+}
+
 func Query(e *State, T miniprofiler.Timer, query, sduration, eduration string) (r *Results, err error) {
 	r = new(Results)
 	q, err := opentsdb.ParseQuery(query)
@@ -361,7 +455,7 @@ func Query(e *State, T miniprofiler.Timer, query, sduration, eduration string) (
 	if err = req.SetTime(e.now); err != nil {
 		return
 	}
-	s, err = timeRequest(e, T, &req)
+	s, err = timeTSDBRequest(e, T, &req)
 	if err != nil {
 		return
 	}
@@ -385,17 +479,25 @@ func Query(e *State, T miniprofiler.Timer, query, sduration, eduration string) (
 	return
 }
 
-func timeRequest(e *State, T miniprofiler.Timer, req *opentsdb.Request) (s opentsdb.ResponseSet, err error) {
-	r := *req
+func timeGraphiteRequest(e *State, T miniprofiler.Timer, req *graphite.Request) (resp graphite.Response, err error) {
+	e.graphiteQueries = append(e.graphiteQueries, *req)
+	b, _ := json.MarshalIndent(req, "", "  ")
+	T.StepCustomTiming("graphite", "query", string(b), func() {
+		resp, err = e.graphiteContext.Query(req)
+	})
+	return
+}
+
+func timeTSDBRequest(e *State, T miniprofiler.Timer, req *opentsdb.Request) (s opentsdb.ResponseSet, err error) {
+	e.tsdbQueries = append(e.tsdbQueries, *req)
 	if e.autods > 0 {
-		if err := r.AutoDownsample(e.autods); err != nil {
+		if err := req.AutoDownsample(e.autods); err != nil {
 			return nil, err
 		}
 	}
-	e.addRequest(r)
-	b, _ := json.MarshalIndent(&r, "", "  ")
+	b, _ := json.MarshalIndent(req, "", "  ")
 	T.StepCustomTiming("tsdb", "query", string(b), func() {
-		s, err = e.context.Query(&r)
+		s, err = e.tsdbContext.Query(req)
 	})
 	return
 }

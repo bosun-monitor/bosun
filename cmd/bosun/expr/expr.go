@@ -12,22 +12,25 @@ import (
 	"bosun.org/_third_party/github.com/MiniProfiler/go/miniprofiler"
 	"bosun.org/cmd/bosun/expr/parse"
 	"bosun.org/cmd/bosun/search"
+	"bosun.org/graphite"
 	"bosun.org/opentsdb"
 )
 
 type State struct {
 	*Expr
-	Search     *search.Search
-	now        time.Time
-	autods     int
-	context    opentsdb.Context
-	queries    []opentsdb.Request
-	unjoinedOk bool
-	squelched  func(tags opentsdb.TagSet) bool
-}
+	now time.Time
 
-func (e *State) addRequest(r opentsdb.Request) {
-	e.queries = append(e.queries, r)
+	// OpenTSDB
+	Search      *search.Search
+	autods      int
+	tsdbContext opentsdb.Context
+	tsdbQueries []opentsdb.Request
+	unjoinedOk  bool
+	squelched   func(tags opentsdb.TagSet) bool
+
+	// Graphite
+	graphiteQueries []graphite.Request
+	graphiteContext graphite.Context
 }
 
 var ErrUnknownOp = fmt.Errorf("expr: unknown op type")
@@ -54,20 +57,21 @@ func New(expr string, funcs ...map[string]parse.Func) (*Expr, error) {
 
 // Execute applies a parse expression to the specified OpenTSDB context, and
 // returns one result per group. T may be nil to ignore timings.
-func (e *Expr) Execute(c opentsdb.Context, T miniprofiler.Timer, now time.Time, autods int, unjoinedOk bool, search *search.Search, squelched func(tags opentsdb.TagSet) bool) (r *Results, queries []opentsdb.Request, err error) {
+func (e *Expr) Execute(c opentsdb.Context, g graphite.Context, T miniprofiler.Timer, now time.Time, autods int, unjoinedOk bool, search *search.Search, squelched func(tags opentsdb.TagSet) bool) (r *Results, queries []opentsdb.Request, err error) {
 	if squelched == nil {
 		squelched = func(tags opentsdb.TagSet) bool {
 			return false
 		}
 	}
 	s := &State{
-		Expr:       e,
-		context:    c,
-		now:        now,
-		autods:     autods,
-		unjoinedOk: unjoinedOk,
-		Search:     search,
-		squelched:  squelched,
+		Expr:            e,
+		tsdbContext:     c,
+		graphiteContext: g,
+		now:             now,
+		autods:          autods,
+		unjoinedOk:      unjoinedOk,
+		Search:          search,
+		squelched:       squelched,
 	}
 	return e.ExecuteState(s, T)
 }
@@ -80,7 +84,7 @@ func (e *Expr) ExecuteState(s *State, T miniprofiler.Timer) (r *Results, queries
 	T.Step("expr execute", func(T miniprofiler.Timer) {
 		r = s.walk(e.Tree.Root, T)
 	})
-	queries = s.queries
+	queries = s.tsdbQueries
 	return
 }
 
