@@ -46,6 +46,7 @@ func linuxProcMonitor(w *WatchedProc, md *opentsdb.MultiDataPoint) error {
 			continue
 		}
 		fds, e := fd_dir.Readdirnames(0)
+		fd_dir.Close()
 		if e != nil {
 			w.Remove(pid)
 			continue
