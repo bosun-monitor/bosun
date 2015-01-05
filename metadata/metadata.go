@@ -122,7 +122,7 @@ func AddMeta(metric string, tags opentsdb.TagSet, name string, value interface{}
 	metalock.Lock()
 	defer metalock.Unlock()
 	prev, present := metadata[Metakey{metric, ts, name}]
-	if !reflect.DeepEqual(prev, value) && present {
+	if present && !reflect.DeepEqual(prev, value) {
 		slog.Infof("metadata changed for %s/%s/%s: %v to %v", metric, ts, name, prev, value)
 	} else if metadebug {
 		slog.Infof("AddMeta for %s/%s/%s: %v", metric, ts, name, value)
