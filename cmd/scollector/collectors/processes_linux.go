@@ -3,6 +3,7 @@ package collectors
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
 
 	"strconv"
 	"strings"
@@ -39,7 +40,12 @@ func linuxProcMonitor(w *WatchedProc, md *opentsdb.MultiDataPoint) error {
 			w.Remove(pid)
 			continue
 		}
-		fds, e := ioutil.ReadDir("/proc/" + pid + "/fd")
+		fd_dir, e := os.Open("/proc/" + pid + "/fd")
+		if e != nil {
+			w.Remove(pid)
+			continue
+		}
+		fds, e := fd_dir.Readdirnames(0)
 		if e != nil {
 			w.Remove(pid)
 			continue
