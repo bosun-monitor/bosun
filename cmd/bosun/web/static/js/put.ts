@@ -25,7 +25,7 @@ interface IPutScope extends ng.IScope {
 bosunControllers.controller('PutCtrl', ['$scope', '$http', '$route', function($scope: IPutScope, $http: ng.IHttpService, $route: ng.route.IRouteService) {
 	$scope.tags = [new Tag];
 	var dp = new DP;
-	dp.k = moment().utc().format(timeFormat);
+	dp.k = moment().utc().format();
 	$scope.dps = [dp];
 	$http.get('/api/metric')
 		.success(function(data: string[]) {
@@ -44,7 +44,7 @@ bosunControllers.controller('PutCtrl', ['$scope', '$http', '$route', function($s
 		});
 		angular.forEach($scope.dps, (v, k) => {
 			if (v.k && v.v) {
-				var ts = parseInt(moment.utc(v.k, timeFormat).format('X'));
+				var ts = parseInt(moment.utc(v.k, tsdbDateFormat).format('X'));
 				data.push({
 					metric: $scope.metric,
 					timestamp: ts,
@@ -76,7 +76,7 @@ bosunControllers.controller('PutCtrl', ['$scope', '$http', '$route', function($s
 		var last = $scope.dps[$scope.dps.length - 1];
 		if (last.k && last.v) {
 			var dp = new DP;
-			dp.k = moment.utc(last.k, timeFormat).add('seconds', 15).format(timeFormat);
+			dp.k = moment.utc(last.k, tsdbDateFormat).add(15, 'seconds').format();
 			$scope.dps.push(dp);
 		}
 	}

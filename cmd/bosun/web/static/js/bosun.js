@@ -217,7 +217,8 @@ bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', '$q', '$r
         });
     };
 }]);
-moment.defaultFormat = 'YYYY/MM/DD-HH:mm:ss';
+var tsdbDateFormat = 'YYYY/MM/DD-HH:mm:ss';
+moment.defaultFormat = tsdbDateFormat;
 moment.locale('en', {
     relativeTime: {
         future: "in %s",
@@ -399,7 +400,7 @@ bosunApp.directive('tsComputations', function () {
         templateUrl: '/partials/computations.html',
         link: function (scope, elem, attrs) {
             if (scope.time) {
-                var m = moment.utc(scope.time, timeFormat);
+                var m = moment.utc(scope.time);
                 scope.timeParam = "&date=" + encodeURIComponent(m.format("YYYY-MM-DD")) + "&time=" + encodeURIComponent(m.format("HH:mm"));
             }
             scope.btoa = function (v) {
@@ -408,7 +409,6 @@ bosunApp.directive('tsComputations', function () {
         }
     };
 });
-var timeFormat = 'YYYY/MM/DD-HH:mm:ss';
 function fmtDuration(v) {
     var diff = moment.duration(v, 'milliseconds');
     var f;
@@ -429,7 +429,7 @@ function fmtTime(v) {
     else {
         inn = 'in ';
     }
-    return m.format(timeFormat) + ' (' + inn + fmtDuration(msdiff) + ago + ')';
+    return m.format() + ' (' + inn + fmtDuration(msdiff) + ago + ')';
 }
 bosunApp.directive("tsTime", function () {
     return {
@@ -563,7 +563,7 @@ bosunApp.directive('tsHistory', function () {
         templateUrl: '/partials/history.html',
         link: function (scope, elem, attrs) {
             if (scope.time) {
-                var m = moment.utc(scope.time, timeFormat);
+                var m = moment.utc(scope.time);
                 scope.timeParam = "&date=" + encodeURIComponent(m.format("YYYY-MM-DD")) + "&time=" + encodeURIComponent(m.format("HH:mm"));
             }
             scope.btoa = function (v) {
@@ -1665,7 +1665,7 @@ var DP = (function () {
 bosunControllers.controller('PutCtrl', ['$scope', '$http', '$route', function ($scope, $http, $route) {
     $scope.tags = [new Tag];
     var dp = new DP;
-    dp.k = moment().utc().format(timeFormat);
+    dp.k = moment().utc().format();
     $scope.dps = [dp];
     $http.get('/api/metric').success(function (data) {
         $scope.metrics = data;
@@ -1682,7 +1682,7 @@ bosunControllers.controller('PutCtrl', ['$scope', '$http', '$route', function ($
         });
         angular.forEach($scope.dps, function (v, k) {
             if (v.k && v.v) {
-                var ts = parseInt(moment.utc(v.k, timeFormat).format('X'));
+                var ts = parseInt(moment.utc(v.k, tsdbDateFormat).format('X'));
                 data.push({
                     metric: $scope.metric,
                     timestamp: ts,
@@ -1712,7 +1712,7 @@ bosunControllers.controller('PutCtrl', ['$scope', '$http', '$route', function ($
         var last = $scope.dps[$scope.dps.length - 1];
         if (last.k && last.v) {
             var dp = new DP;
-            dp.k = moment.utc(last.k, timeFormat).add('seconds', 15).format(timeFormat);
+            dp.k = moment.utc(last.k, tsdbDateFormat).add(15, 'seconds').format();
             $scope.dps.push(dp);
         }
     };
@@ -1986,7 +1986,7 @@ bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$ro
     };
     $scope.time = function (v) {
         var m = moment(v).utc();
-        return m.format(timeFormat);
+        return m.format();
     };
 }]);
 bosunApp.directive('tsAckGroup', function () {

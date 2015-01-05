@@ -272,11 +272,13 @@ bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', '$q', '$r
 	};
 }]);
 
+var tsdbDateFormat = 'YYYY/MM/DD-HH:mm:ss';
+
 interface MomentStatic {
 	defaultFormat: string;
 }
 
-moment.defaultFormat = 'YYYY/MM/DD-HH:mm:ss';
+moment.defaultFormat = tsdbDateFormat;
 
 moment.locale('en', {
 	relativeTime: {

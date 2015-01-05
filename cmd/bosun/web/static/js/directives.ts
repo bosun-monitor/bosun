@@ -19,7 +19,7 @@ bosunApp.directive('tsComputations', () => {
 		templateUrl: '/partials/computations.html',
 		link: (scope: any, elem: any, attrs: any) => {
 			if (scope.time) {
-				var m = moment.utc(scope.time, timeFormat);
+				var m = moment.utc(scope.time);
 				scope.timeParam = "&date=" + encodeURIComponent(m.format("YYYY-MM-DD")) + "&time=" + encodeURIComponent(m.format("HH:mm"));
 			}
 			scope.btoa = (v: any) => {
@@ -28,8 +28,6 @@ bosunApp.directive('tsComputations', () => {
 		},
 	};
 });
-
-var timeFormat = 'YYYY/MM/DD-HH:mm:ss';
 
 function fmtDuration(v: any) {
 	var diff = moment.duration(v, 'milliseconds');
@@ -51,7 +49,7 @@ function fmtTime(v: any) {
 	} else {
 		inn = 'in ';
 	}
-	return m.format(timeFormat) + ' (' + inn + fmtDuration(msdiff) + ago + ')';
+	return m.format() + ' (' + inn + fmtDuration(msdiff) + ago + ')';
 }
 
 interface ITimeScope extends IBosunScope {
@@ -199,7 +197,7 @@ bosunApp.directive('tsHistory', () => {
 		templateUrl: '/partials/history.html',
 		link: (scope: any, elem: any, attrs: any) => {
 			if (scope.time) {
-				var m = moment.utc(scope.time, timeFormat);
+				var m = moment.utc(scope.time);
 				scope.timeParam = "&date=" + encodeURIComponent(m.format("YYYY-MM-DD")) + "&time=" + encodeURIComponent(m.format("HH:mm"));
 			}
 			scope.btoa = (v: any) => {

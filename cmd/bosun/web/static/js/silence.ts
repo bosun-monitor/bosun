@@ -109,6 +109,6 @@ bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$ro
 	};
 	$scope.time = (v: any) => {
 		var m = moment(v).utc();
-		return m.format(timeFormat);
+		return m.format();
 	};
 }]);
