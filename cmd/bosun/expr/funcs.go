@@ -17,16 +17,8 @@ import (
 	"bosun.org/opentsdb"
 )
 
-func graphiteTagQuery(args []parse.Node) (parse.Tags, error) {
-	t := make(parse.Tags)
-	return t, nil
-}
-
 func tagQuery(args []parse.Node) (parse.Tags, error) {
-	n, ok := args[0].(*parse.StringNode)
-	if !ok {
-		return nil, fmt.Errorf("expected StringNode, got %T", args[0])
-	}
+	n := args[0].(*parse.StringNode)
 	q, err := opentsdb.ParseQuery(n.Text)
 	if q == nil && err != nil {
 		return nil, err
@@ -424,6 +416,17 @@ func GraphiteQuery(e *State, T miniprofiler.Timer, query string, sduration, edur
 		})
 	}
 	return
+}
+
+func graphiteTagQuery(args []parse.Node) (parse.Tags, error) {
+	t := make(parse.Tags)
+	n := args[3].(*parse.StringNode)
+	for _, s := range strings.Split(n.Text, ".") {
+		if s != "" {
+			t[s] = struct{}{}
+		}
+	}
+	return t, nil
 }
 
 func Query(e *State, T miniprofiler.Timer, query, sduration, eduration string) (r *Results, err error) {
