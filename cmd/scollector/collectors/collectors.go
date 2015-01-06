@@ -88,8 +88,11 @@ func now() (t int64) {
 func Search(s string) []Collector {
 	var r []Collector
 	for _, c := range collectors {
-		if strings.Contains(c.Name(), s) {
-			r = append(r, c)
+		for _, p := range strings.Split(s, ",") {
+			if strings.Contains(c.Name(), p) {
+				r = append(r, c)
+				break
+			}
 		}
 	}
 	return r
