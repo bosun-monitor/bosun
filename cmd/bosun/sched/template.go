@@ -352,15 +352,31 @@ func (c *Context) LeftJoin(q ...interface{}) (interface{}, error) {
 	return matrix, nil
 }
 
-func (c *Context) HTTPGet(u string) string {
-	resp, err := http.Get(u)
+func (c *Context) HTTPGet(url string) string {
+	resp, err := http.Get(url)
 	if err != nil {
 		return err.Error()
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode >= 300 {
-		return fmt.Sprintf("%v: returned %v", u, resp.Status)
+		return fmt.Sprintf("%v: returned %v", url, resp.Status)
+	}
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err.Error()
+	}
+	return string(body)
+}
+
+func (c *Context) HTTPPost(url, bodyType, data string) string {
+	resp, err := http.Post(url, bodyType, bytes.NewBufferString(data))
+	if err != nil {
+		return err.Error()
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode >= 300 {
+		return fmt.Sprintf("%v: returned %v", url, resp.Status)
+	}
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return err.Error()
