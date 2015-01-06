@@ -370,7 +370,7 @@ func (c *Conf) loadGlobal(p *parse.PairNode) {
 		}
 		c.CheckFrequency = d
 	case "tsdbHost":
-		if !strings.Contains(v, ":") {
+		if !strings.Contains(v, ":") && v != "" {
 			v += ":4242"
 		}
 		c.TSDBHost = v
