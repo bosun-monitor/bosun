@@ -45,6 +45,11 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	"bosun.org/_third_party/golang.org/x/net/icmp"
+	"bosun.org/_third_party/golang.org/x/net/internal/iana"
+	"bosun.org/_third_party/golang.org/x/net/ipv4"
+	"bosun.org/_third_party/golang.org/x/net/ipv6"
 )
 
 const TimeSliceLength = 8
@@ -81,6 +86,14 @@ func isIPv4(ip net.IP) bool {
 
 func isIPv6(ip net.IP) bool {
 	return len(ip) == net.IPv6len
+}
+
+func ipv4Payload(b []byte) []byte {
+	if len(b) < ipv4.HeaderLen {
+		return b
+	}
+	hdrlen := int(b[0]&0x0f) << 2
+	return b[hdrlen:]
 }
 
 type packet struct {
@@ -389,13 +402,13 @@ func (p *Pinger) sendICMP(conn, conn6 *net.IPConn) (map[string]*net.IPAddr, erro
 	queue := make(map[string]*net.IPAddr)
 	wg := new(sync.WaitGroup)
 	for key, addr := range p.addrs {
-		var typ int
+		var typ icmp.Type
 		var cn *net.IPConn
 		if isIPv4(addr.IP) {
-			typ = icmpv4EchoRequest
+			typ = ipv4.ICMPTypeEcho
 			cn = conn
 		} else if isIPv6(addr.IP) {
-			typ = icmpv6EchoRequest
+			typ = ipv6.ICMPTypeEchoRequest
 			cn = conn6
 		} else {
 			continue
@@ -411,13 +424,13 @@ func (p *Pinger) sendICMP(conn, conn6 *net.IPConn) (map[string]*net.IPAddr, erro
 		}
 
 		p.mu.Lock()
-		bytes, err := (&icmpMessage{
+		bytes, err := (&icmp.Message{
 			Type: typ, Code: 0,
-			Body: &icmpEcho{
+			Body: &icmp.Echo{
 				ID: p.id, Seq: p.seq,
 				Data: t,
 			},
-		}).Marshal()
+		}).Marshal(nil)
 		p.mu.Unlock()
 		if err != nil {
 			wg.Wait()
@@ -506,27 +519,30 @@ func (p *Pinger) procRecv(recv *packet, queue map[string]*net.IPAddr) {
 	p.mu.Unlock()
 
 	var bytes []byte
+	var proto int
 	if isIPv4(recv.addr.IP) {
 		bytes = ipv4Payload(recv.bytes)
+		proto = iana.ProtocolICMP
 	} else if isIPv6(recv.addr.IP) {
 		bytes = recv.bytes
+		proto = iana.ProtocolIPv6ICMP
 	} else {
 		return
 	}
 
-	var m *icmpMessage
+	var m *icmp.Message
 	var err error
-	if m, err = parseICMPMessage(bytes); err != nil {
+	if m, err = icmp.ParseMessage(proto, bytes); err != nil {
 		return
 	}
 
-	if m.Type != icmpv4EchoReply && m.Type != icmpv6EchoReply {
+	if m.Type != ipv4.ICMPTypeEchoReply && m.Type != ipv6.ICMPTypeEchoReply {
 		return
 	}
 
 	var rtt time.Duration
 	switch pkt := m.Body.(type) {
-	case *icmpEcho:
+	case *icmp.Echo:
 		p.mu.Lock()
 		if pkt.ID == p.id && pkt.Seq == p.seq {
 			rtt = time.Since(bytesToTime(pkt.Data[:TimeSliceLength]))
