@@ -249,17 +249,6 @@ func (b *BinaryNode) StringAST() string {
 }
 
 func (b *BinaryNode) Check() error {
-	g1, err := b.Args[0].Tags()
-	if err != nil {
-		return err
-	}
-	g2, err := b.Args[1].Tags()
-	if err != nil {
-		return err
-	}
-	if g1 != nil && g2 != nil && !g1.Subset(g2) && !g2.Subset(g1) {
-		return fmt.Errorf("parse: incompatible tags (%v and %v) in %s", g1, g2, b)
-	}
 	t1 := b.Args[0].Return()
 	t2 := b.Args[1].Return()
 	if t1 == TypeSeries && t2 == TypeSeries {
@@ -275,7 +264,21 @@ func (b *BinaryNode) Check() error {
 	if err := b.Args[0].Check(); err != nil {
 		return err
 	}
-	return b.Args[1].Check()
+	if err := b.Args[1].Check(); err != nil {
+		return err
+	}
+	g1, err := b.Args[0].Tags()
+	if err != nil {
+		return err
+	}
+	g2, err := b.Args[1].Tags()
+	if err != nil {
+		return err
+	}
+	if g1 != nil && g2 != nil && !g1.Subset(g2) && !g2.Subset(g1) {
+		return fmt.Errorf("parse: incompatible tags (%v and %v) in %s", g1, g2, b)
+	}
+	return nil
 }
 
 func (b *BinaryNode) Return() FuncType {
