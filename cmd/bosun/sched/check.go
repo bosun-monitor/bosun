@@ -46,7 +46,7 @@ func (s *Schedule) NewRunHistory(start time.Time) *RunHistory {
 	return &RunHistory{
 		Start:           start,
 		Events:          make(map[expr.AlertKey]*Event),
-		Context: s.Conf.TSDBCacheContext(),
+		Context:         s.Conf.TSDBCacheContext(),
 		GraphiteContext: s.Conf.GraphiteContext(),
 	}
 }
