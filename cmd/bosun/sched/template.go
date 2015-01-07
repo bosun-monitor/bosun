@@ -189,7 +189,7 @@ func (c *Context) eval(v interface{}, filter bool, series bool, autods int) (exp
 		return nil, "", fmt.Errorf("%v: %v", v, err)
 	}
 	if filter {
-		e, err = expr.New(opentsdb.ReplaceTags(e.String(), c.State.Group), c.schedule.Conf.Funcs())
+		e, err = expr.New(opentsdb.ReplaceTags(e.Text, c.State.Group), c.schedule.Conf.Funcs())
 		if err != nil {
 			return nil, "", err
 		}
