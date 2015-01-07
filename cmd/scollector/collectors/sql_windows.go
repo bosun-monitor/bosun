@@ -2,7 +2,9 @@ package collectors
 
 import (
 	"fmt"
+	"os"
 	"strings"
+	"time"
 
 	"bosun.org/_third_party/github.com/StackExchange/wmi"
 	"bosun.org/metadata"
@@ -27,12 +29,21 @@ func init() {
 	}
 	c_replica_server.init = wmiInit(c_replica_server, func() interface{} { return &[]Win32_PerfRawData_MSSQLSERVER_SQLServerAvailabilityReplica{} }, `WHERE Name <> '_Total'`, &sqlAGQuery)
 	collectors = append(collectors, c_replica_server)
+
+	var hostname, _ = os.Hostname()
+	c_replica_votes := &IntervalCollector{
+		F:        c_mssql_replica_votes,
+		Interval: time.Minute * 5,
+	}
+	c_replica_votes.init = wmiInitNamespace(c_replica_votes, func() interface{} { return &[]MSCluster_Node{} }, fmt.Sprintf("WHERE Name = '%s'", hostname), &sqlAGVotes, "Root\\MSCluster")
+	collectors = append(collectors, c_replica_votes)
 }
 
 var (
 	sqlQuery     string
 	sqlAGDBQuery string
 	sqlAGQuery   string
+	sqlAGVotes   string
 )
 
 func c_mssql() (opentsdb.MultiDataPoint, error) {
@@ -367,17 +378,18 @@ func c_mssql_replica_server() (opentsdb.MultiDataPoint, error) {
 		if len(s) != 2 {
 			return nil, fmt.Errorf("Invalid Availibility Group Name: '%s'", v.Name)
 		}
+		destination := strings.ToLower(s[1])
 		//see http://technet.microsoft.com/en-us/library/ff878472(v=sql.110).aspx
 		//also https://livedemo.customers.na.apm.ibmserviceengage.com/help/index.jsp?topic=%2Fcom.ibm.koq.doc%2Fattr_koqadbst.htm
-		Add(&md, "mssql.replica.bytes_ag", v.BytesReceivedfromReplicaPersec, opentsdb.TagSet{"group": s[0], "destination": s[1], "type": "received"}, metadata.Counter, metadata.BytesPerSecond, descMSSQLReplicaBytesReceivedfromReplicaPersec)
-		Add(&md, "mssql.replica.bytes_ag", v.BytesSenttoReplicaPersec, opentsdb.TagSet{"group": s[0], "destination": s[1], "type": "sent_replica"}, metadata.Counter, metadata.BytesPerSecond, descMSSQLReplicaBytesSenttoReplicaPersec)
-		Add(&md, "mssql.replica.bytes_ag", v.BytesSenttoTransportPersec, opentsdb.TagSet{"group": s[0], "destination": s[1], "type": "sent_transport"}, metadata.Counter, metadata.BytesPerSecond, descMSSQLReplicaBytesSenttoTransportPersec)
-		Add(&md, "mssql.replica.delay", v.FlowControlTimemsPersec, opentsdb.TagSet{"group": s[0], "destination": s[1], "type": "flow_control"}, metadata.Counter, metadata.MilliSecond, descMSSQLReplicaFlowControlTimemsPersec)
-		Add(&md, "mssql.replica.messages", v.FlowControlPersec, opentsdb.TagSet{"group": s[0], "destination": s[1], "type": "flow_control"}, metadata.Counter, metadata.PerSecond, descMSSQLReplicaFlowControlPersec)
-		Add(&md, "mssql.replica.messages", v.ReceivesfromReplicaPersec, opentsdb.TagSet{"group": s[0], "destination": s[1], "type": "received"}, metadata.Counter, metadata.PerSecond, descMSSQLReplicaReceivesfromReplicaPersec)
-		Add(&md, "mssql.replica.messages", v.ResentMessagesPersec, opentsdb.TagSet{"group": s[0], "destination": s[1], "type": "resent"}, metadata.Counter, metadata.PerSecond, descMSSQLReplicaResentMessagesPersec)
-		Add(&md, "mssql.replica.messages", v.SendstoReplicaPersec, opentsdb.TagSet{"group": s[0], "destination": s[1], "type": "sent_replica"}, metadata.Counter, metadata.PerSecond, descMSSQLReplicaSendstoReplicaPersec)
-		Add(&md, "mssql.replica.messages", v.SendstoTransportPersec, opentsdb.TagSet{"group": s[0], "destination": s[1], "type": "sent_transport"}, metadata.Counter, metadata.PerSecond, descMSSQLReplicaSendstoTransportPersec)
+		Add(&md, "mssql.replica.bytes_ag", v.BytesReceivedfromReplicaPersec, opentsdb.TagSet{"group": s[0], "destination": destination, "type": "received"}, metadata.Counter, metadata.BytesPerSecond, descMSSQLReplicaBytesReceivedfromReplicaPersec)
+		Add(&md, "mssql.replica.bytes_ag", v.BytesSenttoReplicaPersec, opentsdb.TagSet{"group": s[0], "destination": destination, "type": "sent_replica"}, metadata.Counter, metadata.BytesPerSecond, descMSSQLReplicaBytesSenttoReplicaPersec)
+		Add(&md, "mssql.replica.bytes_ag", v.BytesSenttoTransportPersec, opentsdb.TagSet{"group": s[0], "destination": destination, "type": "sent_transport"}, metadata.Counter, metadata.BytesPerSecond, descMSSQLReplicaBytesSenttoTransportPersec)
+		Add(&md, "mssql.replica.delay", v.FlowControlTimemsPersec, opentsdb.TagSet{"group": s[0], "destination": destination, "type": "flow_control"}, metadata.Counter, metadata.MilliSecond, descMSSQLReplicaFlowControlTimemsPersec)
+		Add(&md, "mssql.replica.messages", v.FlowControlPersec, opentsdb.TagSet{"group": s[0], "destination": destination, "type": "flow_control"}, metadata.Counter, metadata.PerSecond, descMSSQLReplicaFlowControlPersec)
+		Add(&md, "mssql.replica.messages", v.ReceivesfromReplicaPersec, opentsdb.TagSet{"group": s[0], "destination": destination, "type": "received"}, metadata.Counter, metadata.PerSecond, descMSSQLReplicaReceivesfromReplicaPersec)
+		Add(&md, "mssql.replica.messages", v.ResentMessagesPersec, opentsdb.TagSet{"group": s[0], "destination": destination, "type": "resent"}, metadata.Counter, metadata.PerSecond, descMSSQLReplicaResentMessagesPersec)
+		Add(&md, "mssql.replica.messages", v.SendstoReplicaPersec, opentsdb.TagSet{"group": s[0], "destination": destination, "type": "sent_replica"}, metadata.Counter, metadata.PerSecond, descMSSQLReplicaSendstoReplicaPersec)
+		Add(&md, "mssql.replica.messages", v.SendstoTransportPersec, opentsdb.TagSet{"group": s[0], "destination": destination, "type": "sent_transport"}, metadata.Counter, metadata.PerSecond, descMSSQLReplicaSendstoTransportPersec)
 
 	}
 	return md, nil
@@ -406,4 +418,31 @@ type Win32_PerfRawData_MSSQLSERVER_SQLServerAvailabilityReplica struct {
 	ResentMessagesPersec           uint64
 	SendstoReplicaPersec           uint64
 	SendstoTransportPersec         uint64
+}
+
+func c_mssql_replica_votes() (opentsdb.MultiDataPoint, error) {
+	var dst []MSCluster_Node
+	if err := queryWmiNamespace(sqlAGVotes, &dst, "root\\MSCluster"); err != nil {
+		return nil, err
+	}
+	var md opentsdb.MultiDataPoint
+	for _, v := range dst {
+		Add(&md, "mssql.replica.votes", v.NodeWeight, opentsdb.TagSet{"type": "standard"}, metadata.Gauge, metadata.Count, descMSSQLReplicaNodeWeight)
+		Add(&md, "mssql.replica.votes", v.DynamicWeight, opentsdb.TagSet{"type": "dynamic"}, metadata.Gauge, metadata.Count, descMSSQLReplicaDynamicWeight)
+		Add(&md, "mssql.replica.cluster_state", v.State, nil, metadata.Gauge, metadata.StatusCode, descMSSQLReplicaState)
+	}
+	return md, nil
+}
+
+const (
+	descMSSQLReplicaNodeWeight    = "The current vote weight of the node."
+	descMSSQLReplicaDynamicWeight = "The vote weight of the node when adjusted by the dynamic quorum feature."
+	descMSSQLReplicaState         = "StateUnknown (-1), Up (0), Down (1), Paused (2), Joining (3)."
+)
+
+type MSCluster_Node struct {
+	Name          string
+	NodeWeight    uint32
+	DynamicWeight uint32
+	State         uint32
 }

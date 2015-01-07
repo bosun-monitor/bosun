@@ -18,3 +18,12 @@ func wmiInit(c *IntervalCollector, dst func() interface{}, where string, query *
 		}
 	}
 }
+
+func wmiInitNamespace(c *IntervalCollector, dst func() interface{}, where string, query *string, namespace string) func() {
+	return func() {
+		*query = wmi.CreateQuery(dst(), where)
+		c.Enable = func() bool {
+			return queryWmiNamespace(*query, dst(), namespace) == nil
+		}
+	}
+}
