@@ -2,13 +2,13 @@ package collectors
 
 import (
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
 	"bosun.org/_third_party/github.com/StackExchange/wmi"
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
+	"bosun.org/util"
 )
 
 func init() {
@@ -30,20 +30,31 @@ func init() {
 	c_replica_server.init = wmiInit(c_replica_server, func() interface{} { return &[]Win32_PerfRawData_MSSQLSERVER_SQLServerAvailabilityReplica{} }, `WHERE Name <> '_Total'`, &sqlAGQuery)
 	collectors = append(collectors, c_replica_server)
 
-	var hostname, _ = os.Hostname()
 	c_replica_votes := &IntervalCollector{
 		F:        c_mssql_replica_votes,
 		Interval: time.Minute * 5,
 	}
-	c_replica_votes.init = wmiInitNamespace(c_replica_votes, func() interface{} { return &[]MSCluster_Node{} }, fmt.Sprintf("WHERE Name = '%s'", hostname), &sqlAGVotes, "Root\\MSCluster")
+	c_replica_votes.init = wmiInitNamespace(c_replica_votes, func() interface{} { return &[]MSCluster_Node{} }, fmt.Sprintf("WHERE Name = '%s'", util.Hostname), &sqlAGVotes, rootMSCluster)
 	collectors = append(collectors, c_replica_votes)
+
+	c_replica_resources := &IntervalCollector{
+		F:        c_mssql_replica_resources,
+		Interval: time.Minute,
+	}
+	c_replica_resources.init = wmiInitNamespace(c_replica_resources, func() interface{} { return &[]MSCluster_Resource{} }, ``, &sqlAGResources, rootMSCluster)
+	collectors = append(collectors, c_replica_resources)
 }
 
+const (
+	rootMSCluster string = "root\\MSCluster"
+)
+
 var (
-	sqlQuery     string
-	sqlAGDBQuery string
-	sqlAGQuery   string
-	sqlAGVotes   string
+	sqlQuery       string
+	sqlAGDBQuery   string
+	sqlAGQuery     string
+	sqlAGVotes     string
+	sqlAGResources string
 )
 
 func c_mssql() (opentsdb.MultiDataPoint, error) {
@@ -422,14 +433,14 @@ type Win32_PerfRawData_MSSQLSERVER_SQLServerAvailabilityReplica struct {
 
 func c_mssql_replica_votes() (opentsdb.MultiDataPoint, error) {
 	var dst []MSCluster_Node
-	if err := queryWmiNamespace(sqlAGVotes, &dst, "root\\MSCluster"); err != nil {
+	if err := queryWmiNamespace(sqlAGVotes, &dst, rootMSCluster); err != nil {
 		return nil, err
 	}
 	var md opentsdb.MultiDataPoint
 	for _, v := range dst {
 		Add(&md, "mssql.replica.votes", v.NodeWeight, opentsdb.TagSet{"type": "standard"}, metadata.Gauge, metadata.Count, descMSSQLReplicaNodeWeight)
 		Add(&md, "mssql.replica.votes", v.DynamicWeight, opentsdb.TagSet{"type": "dynamic"}, metadata.Gauge, metadata.Count, descMSSQLReplicaDynamicWeight)
-		Add(&md, "mssql.replica.cluster_state", v.State, nil, metadata.Gauge, metadata.StatusCode, descMSSQLReplicaState)
+		Add(&md, "mssql.replica.cluster_state", v.State, nil, metadata.Gauge, metadata.StatusCode, descMSSQLReplicaClusterState)
 	}
 	return md, nil
 }
@@ -437,7 +448,7 @@ func c_mssql_replica_votes() (opentsdb.MultiDataPoint, error) {
 const (
 	descMSSQLReplicaNodeWeight    = "The current vote weight of the node."
 	descMSSQLReplicaDynamicWeight = "The vote weight of the node when adjusted by the dynamic quorum feature."
-	descMSSQLReplicaState         = "StateUnknown (-1), Up (0), Down (1), Paused (2), Joining (3)."
+	descMSSQLReplicaClusterState  = "StateUnknown (-1), Up (0), Down (1), Paused (2), Joining (3)."
 )
 
 type MSCluster_Node struct {
@@ -445,4 +456,30 @@ type MSCluster_Node struct {
 	NodeWeight    uint32
 	DynamicWeight uint32
 	State         uint32
+}
+
+func c_mssql_replica_resources() (opentsdb.MultiDataPoint, error) {
+	var dst []MSCluster_Resource
+	//Only report metrics for resources owned by this node
+	var q = wmi.CreateQuery(&dst, fmt.Sprintf("WHERE OwnerNode = '%s'", util.Hostname))
+	if err := queryWmiNamespace(q, &dst, rootMSCluster); err != nil {
+		return nil, err
+	}
+	var md opentsdb.MultiDataPoint
+	for _, v := range dst {
+		Add(&md, "mssql.replica.resource_state", v.State, opentsdb.TagSet{"group": v.OwnerGroup, "type": v.Type, "name": v.Name}, metadata.Gauge, metadata.StatusCode, descMSSQLReplicaResourceState)
+	}
+	return md, nil
+}
+
+const (
+	descMSSQLReplicaResourceState = "StateUnknown (-1), TBD (0), Initializing (1), Online (2), Offline (3), Failed(4), Pending(128), Online Pending (129), Offline Pending (130)."
+)
+
+type MSCluster_Resource struct {
+	Name       string
+	OwnerGroup string
+	OwnerNode  string
+	Type       string
+	State      uint32
 }
