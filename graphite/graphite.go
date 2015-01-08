@@ -12,9 +12,10 @@ import (
 
 // Request holds query objects. Currently only absolute times are supported.
 type Request struct {
-	Start   *time.Time
-	End     *time.Time
-	Targets []string
+	Start     *time.Time
+	End       *time.Time
+	Targets   []string
+	MaxPoints int
 }
 
 type Response []Series
@@ -30,6 +31,9 @@ func (r *Request) Query(host string) (Response, error) {
 	v := url.Values{
 		"format": []string{"json"},
 		"target": r.Targets,
+	}
+	if r.MaxPoints > 0 {
+		v.Set("maxDataPoints", fmt.Sprintf("%d", r.MaxPoints))
 	}
 	if r.Start != nil {
 		v.Add("from", fmt.Sprint(r.Start.Unix()))
