@@ -18,6 +18,16 @@ func init() {
 	c.init = wmiInit(c, func() interface{} { return &[]Win32_PerfRawData_MSSQLSERVER_SQLServerGeneralStatistics{} }, `WHERE Name <> '_Total'`, &sqlQuery)
 	collectors = append(collectors, c)
 
+	var dstCluster []MSCluster_Cluster
+	var q = wmi.CreateQuery(&dstCluster, ``)
+	if err := queryWmiNamespace(q, &dstCluster, rootMSCluster); err != nil {
+		sqlClusterName = "None"
+	} else if len(dstCluster) != 1 {
+		sqlClusterName = "Unknown"
+	} else {
+		sqlClusterName = dstCluster[0].Name
+	}
+
 	c_replica_db := &IntervalCollector{
 		F: c_mssql_replica_db,
 	}
@@ -50,6 +60,7 @@ const (
 )
 
 var (
+	sqlClusterName string
 	sqlQuery       string
 	sqlAGDBQuery   string
 	sqlAGQuery     string
@@ -338,7 +349,7 @@ func c_mssql_replica_db() (opentsdb.MultiDataPoint, error) {
 		Add(&md, "mssql.replica.bytes_db", v.RedoneBytesPersec, opentsdb.TagSet{"db": v.Name, "type": "log_redone"}, metadata.Counter, metadata.BytesPerSecond, descMSSQLReplicaRedoneBytesPersec)
 		Add(&md, "mssql.replica.mirrored_transactions", v.MirroredWriteTransactionsPersec, tags, metadata.Counter, metadata.PerSecond, descMSSQLReplicaMirroredWriteTransactionsPersec)
 		Add(&md, "mssql.replica.redo_blocked", v.RedoblockedPersec, tags, metadata.Counter, metadata.PerSecond, descMSSQLReplicaRedoblockedPersec)
-		Add(&md, "mssql.replica.delay", v.TransactionDelay, opentsdb.TagSet{"db": v.Name, "type": "transaction"}, metadata.Counter, metadata.MilliSecond, descMSSQLReplicaTransactionDelay)
+		Add(&md, "mssql.replica.delay_ack", v.TransactionDelay, opentsdb.TagSet{"db": v.Name}, metadata.Counter, metadata.MilliSecond, descMSSQLReplicaTransactionDelay)
 		Add(&md, "mssql.replica.recovery", v.LogSendQueue*1024, opentsdb.TagSet{"db": v.Name, "type": "sending"}, metadata.Gauge, metadata.Bytes, descMSSQLReplicaLogSendQueue)
 		Add(&md, "mssql.replica.recovery", v.RecoveryQueue*1024, opentsdb.TagSet{"db": v.Name, "type": "received"}, metadata.Gauge, metadata.Bytes, descMSSQLReplicaRecoveryQueue)
 		Add(&md, "mssql.replica.recovery", v.RedoBytesRemaining*1024, opentsdb.TagSet{"db": v.Name, "type": "redo"}, metadata.Gauge, metadata.Bytes, descMSSQLReplicaRedoBytesRemaining)
@@ -352,7 +363,7 @@ const (
 	descMSSQLReplicaFileBytesReceivedPersec         = "Amount of filestream data received by the availability replica for the database."
 	descMSSQLReplicaLogBytesReceivedPersec          = "Amount of logs received by the availability replica for the database."
 	descMSSQLReplicaLogremainingforundo             = "The amount of log in bytes remaining to finish the undo phase."
-	descMSSQLReplicaLogSendQueue                    = "Amount of logs in bytes that is waiting to be send to the database replica."
+	descMSSQLReplicaLogSendQueue                    = "Amount of logs in bytes that is waiting to be sent to the database replica."
 	descMSSQLReplicaMirroredWriteTransactionsPersec = "Number of transactions which wrote to the mirrored database in the last second, that waited for log to be sent to the mirror."
 	descMSSQLReplicaRecoveryQueue                   = "Total number of hardened log in bytes that is waiting to be redone on the secondary."
 	descMSSQLReplicaRedoblockedPersec               = "Number of times redo gets blocked in the last second."
@@ -395,7 +406,7 @@ func c_mssql_replica_server() (opentsdb.MultiDataPoint, error) {
 		Add(&md, "mssql.replica.bytes_ag", v.BytesReceivedfromReplicaPersec, opentsdb.TagSet{"group": s[0], "destination": destination, "type": "received"}, metadata.Counter, metadata.BytesPerSecond, descMSSQLReplicaBytesReceivedfromReplicaPersec)
 		Add(&md, "mssql.replica.bytes_ag", v.BytesSenttoReplicaPersec, opentsdb.TagSet{"group": s[0], "destination": destination, "type": "sent_replica"}, metadata.Counter, metadata.BytesPerSecond, descMSSQLReplicaBytesSenttoReplicaPersec)
 		Add(&md, "mssql.replica.bytes_ag", v.BytesSenttoTransportPersec, opentsdb.TagSet{"group": s[0], "destination": destination, "type": "sent_transport"}, metadata.Counter, metadata.BytesPerSecond, descMSSQLReplicaBytesSenttoTransportPersec)
-		Add(&md, "mssql.replica.delay", v.FlowControlTimemsPersec, opentsdb.TagSet{"group": s[0], "destination": destination, "type": "flow_control"}, metadata.Counter, metadata.MilliSecond, descMSSQLReplicaFlowControlTimemsPersec)
+		Add(&md, "mssql.replica.delay_flow", v.FlowControlTimemsPersec, opentsdb.TagSet{"group": s[0], "destination": destination}, metadata.Counter, metadata.MilliSecond, descMSSQLReplicaFlowControlTimemsPersec)
 		Add(&md, "mssql.replica.messages", v.FlowControlPersec, opentsdb.TagSet{"group": s[0], "destination": destination, "type": "flow_control"}, metadata.Counter, metadata.PerSecond, descMSSQLReplicaFlowControlPersec)
 		Add(&md, "mssql.replica.messages", v.ReceivesfromReplicaPersec, opentsdb.TagSet{"group": s[0], "destination": destination, "type": "received"}, metadata.Counter, metadata.PerSecond, descMSSQLReplicaReceivesfromReplicaPersec)
 		Add(&md, "mssql.replica.messages", v.ResentMessagesPersec, opentsdb.TagSet{"group": s[0], "destination": destination, "type": "resent"}, metadata.Counter, metadata.PerSecond, descMSSQLReplicaResentMessagesPersec)
@@ -436,11 +447,12 @@ func c_mssql_replica_votes() (opentsdb.MultiDataPoint, error) {
 	if err := queryWmiNamespace(sqlAGVotes, &dst, rootMSCluster); err != nil {
 		return nil, err
 	}
+
 	var md opentsdb.MultiDataPoint
 	for _, v := range dst {
-		Add(&md, "mssql.replica.votes", v.NodeWeight, opentsdb.TagSet{"type": "standard"}, metadata.Gauge, metadata.Count, descMSSQLReplicaNodeWeight)
-		Add(&md, "mssql.replica.votes", v.DynamicWeight, opentsdb.TagSet{"type": "dynamic"}, metadata.Gauge, metadata.Count, descMSSQLReplicaDynamicWeight)
-		Add(&md, "mssql.replica.cluster_state", v.State, nil, metadata.Gauge, metadata.StatusCode, descMSSQLReplicaClusterState)
+		Add(&md, "mssql.replica.votes", v.NodeWeight, opentsdb.TagSet{"cluster": sqlClusterName, "type": "standard"}, metadata.Gauge, metadata.Count, descMSSQLReplicaNodeWeight)
+		Add(&md, "mssql.replica.votes", v.DynamicWeight, opentsdb.TagSet{"cluster": sqlClusterName, "type": "dynamic"}, metadata.Gauge, metadata.Count, descMSSQLReplicaDynamicWeight)
+		Add(&md, "mssql.replica.cluster_state", v.State, opentsdb.TagSet{"cluster": sqlClusterName}, metadata.Gauge, metadata.StatusCode, descMSSQLReplicaClusterState)
 	}
 	return md, nil
 }
@@ -456,6 +468,10 @@ type MSCluster_Node struct {
 	NodeWeight    uint32
 	DynamicWeight uint32
 	State         uint32
+}
+
+type MSCluster_Cluster struct {
+	Name string
 }
 
 func c_mssql_replica_resources() (opentsdb.MultiDataPoint, error) {
