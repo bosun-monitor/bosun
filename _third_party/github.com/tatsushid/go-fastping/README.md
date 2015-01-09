@@ -40,8 +40,12 @@ if err != nil {
 
 It sends an ICMP packet and wait a response. If it receives a response, it
 calls "receive" callback. After that, MaxRTT time passed, it calls "idle"
-callback. For more detail, refer [godoc][godoc] and If you need more example,
+callback. For more detail, refer [godoc][godoc] and if you need more example,
 please see "cmd/ping/ping.go".
+
+## Caution
+This package now only implements ICMP ping using raw socket so the program
+using this package needs to be run as root user.
 
 ## License
 go-fastping is under MIT License. See the [LICENSE][license] file for details.

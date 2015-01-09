@@ -149,3 +149,7 @@ func TestCreateInstance_WindowsMediaNSSManager(t *testing.T) {
 		unknown.Release()
 	}
 }
+
+func TestSysAllocStringLen(t *testing.T) {
+	SysAllocStringLen("")
+}

@@ -231,7 +231,7 @@
 // when an application which runs on IGMPv3 unsupported platform uses
 // JoinSourceSpecificGroup and LeaveSourceSpecificGroup.
 // In general the platform tries to fall back to conversations using
-// IGMPv1 or IGMP2 and starts to listen to multicast traffic.
+// IGMPv1 or IGMPv2 and starts to listen to multicast traffic.
 // In the fallback case, ExcludeSourceSpecificGroup and
 // IncludeSourceSpecificGroup may return an error.
 package ipv4 // import "bosun.org/_third_party/golang.org/x/net/ipv4"

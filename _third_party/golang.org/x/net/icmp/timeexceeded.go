@@ -6,7 +6,8 @@ package icmp
 
 // A TimeExceeded represents an ICMP time exceeded message body.
 type TimeExceeded struct {
-	Data []byte // data
+	Data       []byte      // data, known as original datagram field
+	Extensions []Extension // extensions
 }
 
 // Len implements the Len method of MessageBody interface.

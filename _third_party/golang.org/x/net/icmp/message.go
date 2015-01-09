@@ -7,6 +7,7 @@
 // ICMPv4 and ICMPv6.
 //
 // ICMPv4 and ICMPv6 are defined in RFC 792 and RFC 4443.
+// Multi-part message support for ICMP is defined in RFC 4884.
 package icmp // import "bosun.org/_third_party/golang.org/x/net/icmp"
 
 import (

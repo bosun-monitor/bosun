@@ -8,8 +8,9 @@ import "bosun.org/_third_party/golang.org/x/net/internal/iana"
 
 // A ParamProb represents an ICMP parameter problem message body.
 type ParamProb struct {
-	Pointer uintptr // offset within the data where the error was detected
-	Data    []byte  // data
+	Pointer    uintptr     // offset within the data where the error was detected
+	Data       []byte      // data, known as original datagram field
+	Extensions []Extension // extensions
 }
 
 // Len implements the Len method of MessageBody interface.

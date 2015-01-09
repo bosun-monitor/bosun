@@ -7,7 +7,8 @@ package icmp
 // A DstUnreach represents an ICMP destination unreachable message
 // body.
 type DstUnreach struct {
-	Data []byte // data
+	Data       []byte      // data, known as original datagram field
+	Extensions []Extension // extensions
 }
 
 // Len implements the Len method of MessageBody interface.
