@@ -222,7 +222,7 @@ type Win32_PerfRawData_MSSQLSERVER_SQLServerLocks struct {
 
 func c_mssql_databases() (opentsdb.MultiDataPoint, error) {
 	var dst []Win32_PerfRawData_MSSQLSERVER_SQLServerDatabases
-	var q = wmi.CreateQuery(&dst, "")
+	var q = wmi.CreateQuery(&dst, `WHERE Name <> '_Total'`)
 	err := queryWmi(q, &dst)
 	if err != nil {
 		return nil, err

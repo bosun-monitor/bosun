@@ -31,7 +31,7 @@ func c_windows_processes() (opentsdb.MultiDataPoint, error) {
 	}
 
 	var svc_dst []Win32_Service
-	var svc_q = wmi.CreateQuery(&svc_dst, `WHERE Name <> '_Total'`)
+	var svc_q = wmi.CreateQuery(&svc_dst, `WHERE Started=true`)
 	err = queryWmi(svc_q, &svc_dst)
 	if err != nil {
 		return nil, err
@@ -56,7 +56,7 @@ func c_windows_processes() (opentsdb.MultiDataPoint, error) {
 		numberOfLogicalProcessors = uint64(y.NumberOfLogicalProcessors)
 	}
 	if numberOfLogicalProcessors == 0 {
-		return nil, fmt.Errorf("invalid result: numberOfLogicalProcessors=%g", numberOfLogicalProcessors)
+		return nil, fmt.Errorf("invalid result: numberOfLogicalProcessors=%v", numberOfLogicalProcessors)
 	}
 
 	var md opentsdb.MultiDataPoint
@@ -85,7 +85,7 @@ func c_windows_processes() (opentsdb.MultiDataPoint, error) {
 			if serviceInclusions.MatchString(svc.Name) {
 				// It is possible the pid has gone and been reused, but I think this unlikely
 				// And I'm not aware of an atomic join we could do anyways
-				if svc.ProcessId == v.IDProcess {
+				if svc.ProcessId != 0 && svc.ProcessId == v.IDProcess {
 					id = "0"
 					service_match = true
 					name = svc.Name
