@@ -52,6 +52,12 @@ func tagTranspose(args []parse.Node) (parse.Tags, error) {
 
 // Graphite defines functions for use with a Graphite backend.
 var Graphite = map[string]parse.Func{
+	"graphiteBand": {
+		[]parse.FuncType{parse.TypeString, parse.TypeString, parse.TypeString, parse.TypeString, parse.TypeScalar},
+		parse.TypeSeries,
+		graphiteTagQuery,
+		GraphiteBand,
+	},
 	"graphite": {
 		[]parse.FuncType{parse.TypeString, parse.TypeString, parse.TypeString, parse.TypeString},
 		parse.TypeSeries,
@@ -260,6 +266,117 @@ func DropNA(e *State, T miniprofiler.Timer, series *Results) (*Results, error) {
 	return series, nil
 }
 
+func parseGraphiteResponse(s *graphite.Response, formatTags []string) ([]*Result, error) {
+	if len(*s) == 0 {
+		return nil, errors.New("empty response")
+	}
+	seen := make(map[string]bool)
+	results := make([]*Result, 0)
+	for _, res := range *s {
+		// build tag set
+		nodes := strings.Split(res.Target, ".")
+		if len(nodes) < len(formatTags) {
+			return nil, fmt.Errorf(`returned target "%s" does not match format "%s"`, res.Target, formatTags)
+		}
+		tags := make(opentsdb.TagSet)
+		for i, key := range formatTags {
+			if len(key) > 0 {
+				tags[key] = nodes[i]
+			}
+		}
+		if ts := tags.String(); !seen[ts] {
+			seen[ts] = true
+		} else {
+			return nil, fmt.Errorf("target contains duplicates: %v", ts)
+		}
+		// build data
+		dps := make(Series)
+		for _, dp := range res.Datapoints {
+			if len(dp) != 2 {
+				return nil, fmt.Errorf("bad datapoint: %v", dp)
+			}
+			if len(dp[0].String()) == 0 {
+				// none value. skip this record
+				continue
+			}
+			val, err := dp[0].Float64()
+			if err != nil {
+				return nil, err
+			}
+			unixTS, err := dp[1].Int64()
+			if err != nil {
+				return nil, err
+			}
+			t := time.Unix(unixTS, 0)
+			dps[t] = val
+		}
+		results = append(results, &Result{
+			Value: dps,
+			Group: tags,
+		})
+	}
+	return results, nil
+}
+
+func GraphiteBand(e *State, T miniprofiler.Timer, query, duration, period, format string, num float64) (r *Results, err error) {
+	r = new(Results)
+	r.IgnoreOtherUnjoined = true
+	r.IgnoreUnjoined = true
+	T.Step("graphiteBand", func(T miniprofiler.Timer) {
+		var d, p opentsdb.Duration
+		d, err = opentsdb.ParseDuration(duration)
+		if err != nil {
+			return
+		}
+		p, err = opentsdb.ParseDuration(period)
+		if err != nil {
+			return
+		}
+		if num < 1 || num > 100 {
+			err = fmt.Errorf("expr: Band: num out of bounds")
+		}
+		req := &graphite.Request{
+			Targets: []string{query},
+		}
+		now := e.now
+		req.End = &now
+		st := e.now.Add(-time.Duration(d))
+		req.Start = &st
+		for i := 0; i < int(num); i++ {
+			now = now.Add(time.Duration(-p))
+			req.End = &now
+			st := now.Add(time.Duration(-d))
+			req.Start = &st
+			var s graphite.Response
+			s, err = timeGraphiteRequest(e, T, req)
+			if err != nil {
+				return
+			}
+			if len(s) == 0 {
+				err = errors.New("empty response")
+				return
+			}
+			formatTags := strings.Split(format, ".")
+			results, err := parseGraphiteResponse(&s, formatTags)
+			if err != nil {
+				return
+			}
+			if i == 0 {
+				r.Results = results
+			} else {
+				for i, result := range results {
+					for k, v := range result.Value.(Series) {
+						r.Results[i].Value.(Series)[k] = v
+					}
+				}
+			}
+		}
+	})
+	if err != nil {
+		return nil, fmt.Errorf("graphite: %v", err)
+	}
+	return
+}
 func Band(e *State, T miniprofiler.Timer, query, duration, period string, num float64) (r *Results, err error) {
 	r = new(Results)
 	r.IgnoreOtherUnjoined = true
@@ -361,60 +478,18 @@ func GraphiteQuery(e *State, T miniprofiler.Timer, query string, sduration, edur
 		et := e.now.Add(-time.Duration(ed))
 		req.End = &et
 	}
-	var s graphite.Response
-	s, err = timeGraphiteRequest(e, T, req)
+	s, err := timeGraphiteRequest(e, T, req)
 	if err != nil {
 		return nil, fmt.Errorf("graphite: %v", err)
 	}
-	if len(s) == 0 {
-		return nil, errors.New("empty response")
-	}
-	r = new(Results)
 	formatTags := strings.Split(format, ".")
-	seen := make(map[string]bool)
-	for _, res := range s {
-		// build tag set
-		nodes := strings.Split(res.Target, ".")
-		if len(nodes) < len(formatTags) {
-			return nil, fmt.Errorf(`returned target "%s" does not match format "%s"`, res.Target, formatTags)
-		}
-		tags := make(opentsdb.TagSet)
-		for i, key := range formatTags {
-			if len(key) > 0 {
-				tags[key] = nodes[i]
-			}
-		}
-		if ts := tags.String(); !seen[ts] {
-			seen[ts] = true
-		} else {
-			return nil, fmt.Errorf("target contains duplicates: %v", ts)
-		}
-		// build data
-		dps := make(Series)
-		for _, dp := range res.Datapoints {
-			if len(dp) != 2 {
-				return nil, fmt.Errorf("bad graphite datapoint: %v", dp)
-			}
-			if len(dp[0].String()) == 0 {
-				// none value. skip this record
-				continue
-			}
-			val, err := dp[0].Float64()
-			if err != nil {
-				return nil, fmt.Errorf("graphite: %v", err)
-			}
-			unixTS, err := dp[1].Int64()
-			if err != nil {
-				return nil, fmt.Errorf("graphite: %v", err)
-			}
-			t := time.Unix(unixTS, 0)
-			dps[t] = val
-		}
-		r.Results = append(r.Results, &Result{
-			Value: dps,
-			Group: tags,
-		})
+	r = new(Results)
+	results, err := parseGraphiteResponse(&s, formatTags)
+	if err != nil {
+		return nil, fmt.Errorf("graphite: %v", err)
 	}
+	r.Results = results
+
 	return
 }
 
