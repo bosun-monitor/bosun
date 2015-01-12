@@ -215,9 +215,14 @@ func main() {
 		slog.Fatal(err)
 	}
 	if VersionDate > 0 {
-		if err := collect.Put("version", nil, VersionDate); err != nil {
-			slog.Error(err)
-		}
+		go func() {
+			for {
+				if err := collect.Put("version", nil, VersionDate); err != nil {
+					slog.Error(err)
+				}
+				time.Sleep(time.Hour)
+			}
+		}()
 	}
 	if *flagBatchSize > 0 {
 		collect.BatchSize = *flagBatchSize
