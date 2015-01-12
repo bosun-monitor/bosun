@@ -80,6 +80,7 @@ const (
 	Syscall             = "system calls"
 	V                   = "V" // Volts
 	V10                 = "tenth-Volts"
+	Watt                = "Watts"
 )
 
 // Metakey uniquely identifies a metadata entry.
