@@ -225,13 +225,9 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 			}
 		}
 		for i, val := range cols[1:] {
-			if i >= num_cpus {
+			if i >= num_cpus || !IsDigit(val) {
 				// All values read, remaining cols contain textual description.
 				break
-			}
-			if !IsDigit(val) {
-				// Something is weird, there should only be digit values.
-				return fmt.Errorf("interrupts: unexpected value: %v", val)
 			}
 			Add(&md, "linux.interrupts", val, opentsdb.TagSet{"type": irq_type, "cpu": strconv.Itoa(i)}, metadata.Gauge, metadata.Interupt, irq_type_desc[irq_type])
 		}
