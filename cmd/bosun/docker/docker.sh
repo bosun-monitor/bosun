@@ -12,13 +12,12 @@ TMP=run/tmp
 rm -rf build/bosun $TMP
 git clone -b $branch --single-branch ../../.. build/bosun
 docker build -t bosun-build build
-ID=$(docker run -d bosun-build)
+ID=$(docker create bosun-build)
 mkdir -p $TMP/hbase $TMP/bosun $TMP/tsdb $TMP/scollector
 docker cp ${ID}:/go/bin/bosun $TMP/bosun/.
 docker cp ${ID}:/go/bin/scollector $TMP/scollector/.
 docker cp ${ID}:/hbase $TMP
 docker cp ${ID}:/tsdb $TMP
-docker kill ${ID}
 docker rm ${ID}
 rm -rf $TMP/hbase/hbase/docs $TMP/tsdb/build/gwt-unitCache
 docker build -t stackexchange/bosun run
