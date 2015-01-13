@@ -18,6 +18,7 @@ bosun and scollector are found under the cmd/ directory. Run `go build` in the c
 Install:
 
 * typescript to be able to compile the ts files to js files.
+* go get github.com/mjibson/esc to embed the static files into Go (via go generate)
 
 The `w.sh` script will automatically build and run bosun in a loop.
 It will update itself when go/js/ts files change, and it runs in read-only mode, not sending any alerts.
