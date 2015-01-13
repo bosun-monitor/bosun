@@ -20,7 +20,7 @@ func WatchProcesses(procs []*WatchedProc) error {
 
 // These are silly processes but exist on my machine, will need to update KMB
 var processInclusions = regexp.MustCompile("chrome|powershell|scollector|SocketServer")
-var serviceInclusions = regexp.MustCompile("WinRM")
+var serviceInclusions = regexp.MustCompile("WinRM|MSSQLSERVER|StackServerProd|StackServerDev|LogStasher")
 
 func c_windows_processes() (opentsdb.MultiDataPoint, error) {
 	var dst []Win32_PerfRawData_PerfProc_Process
