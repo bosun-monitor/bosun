@@ -4,25 +4,23 @@ Bosun is a time series alerting framework developed by Stack Exchange. Scollecto
 
 ## building
 
-To build bosun and scollector, clone it to `$GOPATH/src/bosun.org`:
+To build bosun and scollector, clone to `$GOPATH/src/bosun.org`:
 
 ```
-  $ go get bosun.org/cmd/bosun
+$ go get bosun.org/cmd/bosun
 ```
 
-bosun and scollector are found under the cmd/ directory. Run `go build` in the corresponding directories to build each project.
-
+bosun and scollector are found under the `cmd` directory. Run `go build` in the corresponding directories to build each project.
 
 ## developing
 
 Install:
 
-* typescript to be able to compile the ts files to js files.
-* go get github.com/mjibson/esc to embed the static files into Go (via go generate)
+* `npm install typescript -g` to be able to compile the ts files to js files.
+* `go get github.com/mjibson/esc` to embed the static files. Run `go generate` in `cmd/bosun` when new static assets (like JS and CSS files) are added or changed.
 
 The `w.sh` script will automatically build and run bosun in a loop.
 It will update itself when go/js/ts files change, and it runs in read-only mode, not sending any alerts.
-
 
 ```
 $ cd cmd/bosun
