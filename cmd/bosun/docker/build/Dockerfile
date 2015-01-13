@@ -29,5 +29,12 @@ RUN curl -SL https://storage.googleapis.com/golang/go1.4.linux-amd64.tar.gz \
 
 COPY bosun $GOPATH/src/bosun.org/
 
-RUN /usr/local/go/bin/go install bosun.org/cmd/bosun \
-    && /usr/local/go/bin/go install bosun.org/cmd/scollector
+ENV PATH $PATH:/usr/local/go/bin:$GOPATH/bin
+
+RUN go get -d bosun.org/cmd/bosun \
+	&& go get github.com/bosun-monitor/bosun-monitor.github.io \
+	&& bosun-monitor.github.io \
+	&& go install bosun.org/cmd/bosun \
+	&& go install bosun.org/cmd/scollector \
+	&& bosun -version \
+	&& scollector -version
