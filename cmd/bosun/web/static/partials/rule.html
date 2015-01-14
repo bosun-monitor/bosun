@@ -78,6 +78,10 @@
 				<label class="control-label">Template Group</label>
 				<input type="text" class="form-control" style="width:20em" ng-model="template_group" tooltip title="Set which result to use for the template by setting an opentsdb group (aka tagset) in the format of k=v,m=o. The first result for which the specified group is a subset of a result is used. If no results are a subset of the specified group, then the first result is chosen.">
 			</div>
+			<div class="form-group">
+				<label class="control-label">Timeline Extras</label>
+				<input type="text" class="form-control" style="width:20em" ng-model="timeline_extras" tooltip title="Set which extra series to render alongside with the status on the timeline. Comma separated">
+			</div>
 		</form>
 	</div>
 </div>
