@@ -211,6 +211,12 @@ var builtins = map[string]parse.Func{
 		nil,
 		Epoch,
 	},
+	"drople": {
+		[]parse.FuncType{parse.TypeSeries, parse.TypeScalar},
+		parse.TypeSeries,
+		tagFirst,
+		DropLe,
+	},
 	"dropna": {
 		[]parse.FuncType{parse.TypeSeries},
 		parse.TypeSeries,
@@ -248,6 +254,22 @@ func Duration(e *State, T miniprofiler.Timer, d string) (*Results, error) {
 			{Value: Scalar(duration.Seconds())},
 		},
 	}, nil
+}
+
+func DropLe(e *State, T miniprofiler.Timer, series *Results, threshold float64) (*Results, error) {
+	for _, res := range series.Results {
+		nv := make(Series)
+		for k, v := range res.Value.Value().(Series) {
+			if float64(v) > threshold {
+				nv[k] = v
+			}
+		}
+		if len(nv) == 0 {
+			return nil, fmt.Errorf("drople: series %s is empty", res.Group)
+		}
+		res.Value = nv
+	}
+	return series, nil
 }
 
 func DropNA(e *State, T miniprofiler.Timer, series *Results) (*Results, error) {
