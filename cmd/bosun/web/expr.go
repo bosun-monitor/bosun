@@ -73,17 +73,19 @@ type Res struct {
 	Key expr.AlertKey
 }
 
-func procRule(t miniprofiler.Timer, c *conf.Conf, a *conf.Alert, now time.Time, summary bool, email string, template_group string) (*ruleResult, error) {
+func procRule(t miniprofiler.Timer, c *conf.Conf, a *conf.Alert, now time.Time, summary bool, email string, template_group string) (*ruleResult, *expr.Result, error) {
 	s := &sched.Schedule{}
 	s.Init(c)
 	s.Metadata = schedule.Metadata
 	s.Search = schedule.Search
 	rh := s.NewRunHistory(now)
-	if _, err := s.CheckExpr(t, rh, a, a.Warn, sched.StWarning, nil); err != nil {
-		return nil, err
+	var res *expr.Result
+	var err error
+	if _, res, err = s.CheckExpr(t, rh, a, a.Warn, sched.StWarning, nil); err != nil {
+		return nil, nil, err
 	}
-	if _, err := s.CheckExpr(t, rh, a, a.Crit, sched.StCritical, nil); err != nil {
-		return nil, err
+	if _, res, err = s.CheckExpr(t, rh, a, a.Crit, sched.StCritical, nil); err != nil {
+		return nil, nil, err
 	}
 	keys := make(expr.AlertKeys, len(rh.Events))
 	errors, criticals, warnings, normals := make([]expr.AlertKey, 0), make([]expr.AlertKey, 0), make([]expr.AlertKey, 0), make([]expr.AlertKey, 0)
@@ -102,7 +104,7 @@ func procRule(t miniprofiler.Timer, c *conf.Conf, a *conf.Alert, now time.Time, 
 		case sched.StError:
 			errors = append(errors, k)
 		default:
-			return nil, fmt.Errorf("unknown state type %v", v.Status)
+			return nil, nil, fmt.Errorf("unknown state type %v", v.Status)
 		}
 	}
 	sort.Sort(keys)
@@ -115,7 +117,7 @@ func procRule(t miniprofiler.Timer, c *conf.Conf, a *conf.Alert, now time.Time, 
 		if template_group != "" {
 			ts, err := opentsdb.ParseTags(template_group)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 			for _, ak := range keys {
 				if ak.Group().Subset(ts) {
@@ -143,7 +145,7 @@ func procRule(t miniprofiler.Timer, c *conf.Conf, a *conf.Alert, now time.Time, 
 		if email != "" {
 			m, err := mail.ParseAddress(email)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 			n := conf.Notification{
 				Email: []*mail.Address{m},
@@ -161,7 +163,7 @@ func procRule(t miniprofiler.Timer, c *conf.Conf, a *conf.Alert, now time.Time, 
 			n.DoEmail(email_subject.Bytes(), email.Bytes(), schedule.Conf, string(instance.AlertKey()), attachments...)
 		}
 	}
-	return &ruleResult{
+	f := ruleResult{
 		errors,
 		criticals,
 		warnings,
@@ -172,7 +174,8 @@ func procRule(t miniprofiler.Timer, c *conf.Conf, a *conf.Alert, now time.Time, 
 		data,
 		rh.Events,
 		warning,
-	}, nil
+	}
+	return &f, res, nil
 }
 
 type ruleResult struct {
@@ -250,8 +253,13 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 	for _, a = range c.Alerts {
 	}
 	ch := make(chan int)
+	type res struct {
+		ruleRes *ruleResult
+		exprRes *expr.Result
+	}
+
 	errch := make(chan error, intervals)
-	resch := make(chan *ruleResult, intervals)
+	resch := make(chan res, intervals)
 	var wg sync.WaitGroup
 	diff := -from.Sub(to)
 	if intervals > 1 {
@@ -262,8 +270,8 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 		for interval := range ch {
 			t.Step(fmt.Sprintf("interval %v", interval), func(t miniprofiler.Timer) {
 				now := from.Add(diff * time.Duration(interval))
-				res, err := procRule(t, c, a, now, interval != 0, r.FormValue("email"), r.FormValue("template_group"))
-				resch <- res
+				ruleRes, exprRes, err := procRule(t, c, a, now, interval != 0, r.FormValue("email"), r.FormValue("template_group"))
+				resch <- res{ruleRes, exprRes}
 				errch <- err
 			})
 		}
@@ -291,6 +299,7 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 	type History struct {
 		Time, EndTime time.Time
 		Status        string
+		exprRes       *expr.Result
 	}
 	type Histories struct {
 		History []*History
@@ -313,21 +322,21 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 		ret.Errors = append(ret.Errors, err.Error())
 	}
 	for res := range resch {
-		if res == nil {
+		if res.ruleRes == nil {
 			continue
 		}
 		set := Set{
-			Error:    len(res.Errors),
-			Critical: len(res.Criticals),
-			Warning:  len(res.Warnings),
-			Normal:   len(res.Normals),
-			Time:     res.Time.Format(tsdbFormatSecs),
+			Error:    len(res.ruleRes.Errors),
+			Critical: len(res.ruleRes.Criticals),
+			Warning:  len(res.ruleRes.Warnings),
+			Normal:   len(res.ruleRes.Normals),
+			Time:     res.ruleRes.Time.Format(tsdbFormatSecs),
 		}
-		if res.Data != nil {
-			ret.Body = res.Body
-			ret.Subject = res.Subject
-			ret.Data = res.Data
-			for k, v := range res.Result {
+		if res.ruleRes.Data != nil {
+			ret.Body = res.ruleRes.Body
+			ret.Subject = res.ruleRes.Subject
+			ret.Data = res.ruleRes.Data
+			for k, v := range res.ruleRes.Result {
 				set.Results = append(set.Results, &Result{
 					Group:  k,
 					Result: v,
@@ -342,18 +351,23 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 				return a.Group < b.Group
 			})
 		}
-		for k, v := range res.Result {
+		for _, comp := range res.exprRes.Computations {
+			fmt.Println(comp.Text, comp.Value)
+		}
+
+		for k, v := range res.ruleRes.Result {
 			if ret.AlertHistory[k] == nil {
 				ret.AlertHistory[k] = new(Histories)
 			}
 			h := ret.AlertHistory[k]
 			h.History = append(h.History, &History{
-				Time:   v.Time,
-				Status: v.Status.String(),
+				Time:    v.Time,
+				Status:  v.Status.String(),
+				exprRes: res.exprRes,
 			})
 		}
 		ret.Sets = append(ret.Sets, &set)
-		ret.Warnings = append(ret.Warnings, res.Warning...)
+		ret.Warnings = append(ret.Warnings, res.ruleRes.Warning...)
 	}
 	slice.Sort(ret.Sets, func(i, j int) bool {
 		return ret.Sets[i].Time < ret.Sets[j].Time
