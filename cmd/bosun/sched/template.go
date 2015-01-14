@@ -271,7 +271,7 @@ func (c *Context) graph(v interface{}, filter bool) (interface{}, error) {
 	const width = 800
 	const height = 600
 	if c.IsEmail() {
-		err := c.schedule.ExprPNG(nil, &buf, width, height, res, title, time.Now().UTC())
+		err := c.schedule.ExprPNG(nil, &buf, width, height, res, title, c.runHistory.Start)
 		if err != nil {
 			return nil, err
 		}

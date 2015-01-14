@@ -109,6 +109,7 @@ func (s *Schedule) sendNotifications(rh *RunHistory, silenced map[expr.AlertKey]
 }
 
 func (s *Schedule) notify(rh *RunHistory, st *State, n *conf.Notification) {
+	rh = rh.AtTime(st.AbnormalEvent().Time)
 	a := s.Conf.Alerts[st.Alert]
 	subject := new(bytes.Buffer)
 	var s_err, b_err error

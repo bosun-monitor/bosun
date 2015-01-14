@@ -42,6 +42,14 @@ type RunHistory struct {
 	Events          map[expr.AlertKey]*Event
 }
 
+// AtTime creates a new RunHistory starting at t with the same context and
+// events as rh.
+func (rh *RunHistory) AtTime(t time.Time) *RunHistory {
+	n := *rh
+	n.Start = t
+	return &n
+}
+
 func (s *Schedule) NewRunHistory(start time.Time) *RunHistory {
 	return &RunHistory{
 		Start:           start,
