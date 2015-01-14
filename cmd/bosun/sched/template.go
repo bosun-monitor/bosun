@@ -3,6 +3,7 @@ package sched
 import (
 	"bytes"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"io"
@@ -10,6 +11,7 @@ import (
 	"math"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"bosun.org/cmd/bosun/conf"
@@ -201,7 +203,7 @@ func (c *Context) eval(v interface{}, filter bool, series bool, autods int) (exp
 	if c.AbnormalEvent() != nil {
 		t = c.AbnormalEvent().Time
 	}
-	res, _, err := e.Execute(c.runHistory.Context, c.runHistory.GraphiteContext, nil, t, autods, c.Alert.UnjoinedOK, c.schedule.Search, c.schedule.Conf.AlertSquelched(c.Alert))
+	res, _, err := e.Execute(c.runHistory.Context, c.runHistory.GraphiteContext, c.schedule.Conf.LogstashElasticHost, nil, t, autods, c.Alert.UnjoinedOK, c.schedule.Search, c.schedule.Conf.AlertSquelched(c.Alert))
 	if err != nil {
 		return nil, "", fmt.Errorf("%s: %v", v, err)
 	}
@@ -382,4 +384,32 @@ func (c *Context) HTTPPost(url, bodyType, data string) string {
 		return err.Error()
 	}
 	return string(body)
+}
+
+func (c *Context) LSQuery(index_root, filter, sduration, eduration string, size int) (interface{}, error) {
+	var ks []string
+	for k, v := range c.Group {
+		ks = append(ks, k+":"+v)
+	}
+	return c.LSQueryAll(index_root, strings.Join(ks, ","), filter, sduration, eduration, size)
+}
+
+func (c *Context) LSQueryAll(index_root, keystring, filter, sduration, eduration string, size int) (interface{}, error) {
+	service, s, _, err := expr.LSBaseQuery(time.Now(), c.schedule.Conf.LogstashElasticHost, index_root, keystring, filter, sduration, eduration, size)
+	if err != nil {
+		return nil, err
+	}
+	results, err := service.SearchSource(s).Do()
+	if err != nil {
+		return nil, err
+	}
+	r := make([]interface{}, len(results.Hits.Hits))
+	for i, h := range results.Hits.Hits {
+		var err error
+		err = json.Unmarshal(*h.Source, &r[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return r, nil
 }

@@ -29,8 +29,6 @@ type Conf struct {
 	Vars
 	Name            string        // Config file name
 	CheckFrequency  time.Duration // Time between alert checks: 5m
-	TSDBHost        string        // OpenTSDB relay and query destination: ny-devtsdb04:4242
-	GraphiteHost    string        // Graphite query host: foo.bar.baz
 	HTTPListen      string        // Web server listen address: :80
 	Hostname        string
 	RelayListen     string // OpenTSDB relay listen address: :4242
@@ -51,6 +49,10 @@ type Conf struct {
 	Lookups         map[string]*Lookup
 	Squelch         Squelches `json:"-"`
 	Quiet           bool
+
+	TSDBHost            string // OpenTSDB relay and query destination: ny-devtsdb04:4242
+	GraphiteHost        string // Graphite query host: foo.bar.baz
+	LogstashElasticHost string // Elastic Host that stores logstash documents: ny-elastic01:9200
 
 	tree            *parse.Tree
 	node            parse.Node
@@ -376,6 +378,8 @@ func (c *Conf) loadGlobal(p *parse.PairNode) {
 		c.TSDBHost = v
 	case "graphiteHost":
 		c.GraphiteHost = v
+	case "logstashElasticHost":
+		c.LogstashElasticHost = v
 	case "httpListen":
 		c.HTTPListen = v
 	case "hostname":
@@ -1238,6 +1242,9 @@ func (c *Conf) Funcs() map[string]eparse.Func {
 	}
 	if c.GraphiteHost != "" {
 		merge(expr.Graphite)
+	}
+	if c.LogstashElasticHost != "" {
+		merge(expr.LogstashElastic)
 	}
 	return funcs
 }

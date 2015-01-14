@@ -9,6 +9,8 @@ import (
 	"sort"
 	"time"
 
+	"bosun.org/_third_party/github.com/olivere/elastic"
+
 	"bosun.org/_third_party/github.com/MiniProfiler/go/miniprofiler"
 	"bosun.org/cmd/bosun/expr/parse"
 	"bosun.org/cmd/bosun/search"
@@ -31,6 +33,10 @@ type State struct {
 	// Graphite
 	graphiteQueries []graphite.Request
 	graphiteContext graphite.Context
+
+	// LogstashElastic
+	logstashQueries     []elastic.SearchService
+	logstashElasticHost string
 }
 
 var ErrUnknownOp = fmt.Errorf("expr: unknown op type")
@@ -57,21 +63,22 @@ func New(expr string, funcs ...map[string]parse.Func) (*Expr, error) {
 
 // Execute applies a parse expression to the specified OpenTSDB context, and
 // returns one result per group. T may be nil to ignore timings.
-func (e *Expr) Execute(c opentsdb.Context, g graphite.Context, T miniprofiler.Timer, now time.Time, autods int, unjoinedOk bool, search *search.Search, squelched func(tags opentsdb.TagSet) bool) (r *Results, queries []opentsdb.Request, err error) {
+func (e *Expr) Execute(c opentsdb.Context, g graphite.Context, logstashElasticHost string, T miniprofiler.Timer, now time.Time, autods int, unjoinedOk bool, search *search.Search, squelched func(tags opentsdb.TagSet) bool) (r *Results, queries []opentsdb.Request, err error) {
 	if squelched == nil {
 		squelched = func(tags opentsdb.TagSet) bool {
 			return false
 		}
 	}
 	s := &State{
-		Expr:            e,
-		tsdbContext:     c,
-		graphiteContext: g,
-		now:             now,
-		autods:          autods,
-		unjoinedOk:      unjoinedOk,
-		Search:          search,
-		squelched:       squelched,
+		Expr:                e,
+		tsdbContext:         c,
+		graphiteContext:     g,
+		logstashElasticHost: logstashElasticHost,
+		now:                 now,
+		autods:              autods,
+		unjoinedOk:          unjoinedOk,
+		Search:              search,
+		squelched:           squelched,
 	}
 	return e.ExecuteState(s, T)
 }

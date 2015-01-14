@@ -29,7 +29,7 @@ func Expr(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 	if err != nil {
 		return nil, err
 	}
-	res, queries, err := e.Execute(schedule.Conf.TSDBCacheContext(), schedule.Conf.GraphiteContext(), t, now, 0, false, schedule.Search, nil)
+	res, queries, err := e.Execute(schedule.Conf.TSDBCacheContext(), schedule.Conf.GraphiteContext(), schedule.Conf.LogstashElasticHost, t, now, 0, false, schedule.Search, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -224,6 +224,7 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 	var buf bytes.Buffer
 	fmt.Fprintf(&buf, "tsdbHost = %s\n", schedule.Conf.TSDBHost)
 	fmt.Fprintf(&buf, "graphiteHost = %s\n", schedule.Conf.GraphiteHost)
+	fmt.Fprintf(&buf, "logstashElasticHost = %s\n", schedule.Conf.LogstashElasticHost)
 	fmt.Fprintf(&buf, "smtpHost = %s\n", schedule.Conf.SMTPHost)
 	fmt.Fprintf(&buf, "emailFrom = %s\n", schedule.Conf.EmailFrom)
 	fmt.Fprintf(&buf, "responseLimit = %d\n", schedule.Conf.ResponseLimit)

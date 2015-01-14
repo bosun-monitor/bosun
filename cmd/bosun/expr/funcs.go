@@ -4,11 +4,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"math"
+	"net/http"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
+
+	"bosun.org/_third_party/github.com/olivere/elastic"
 
 	"bosun.org/_third_party/github.com/GaryBoone/GoStats/stats"
 	"bosun.org/_third_party/github.com/MiniProfiler/go/miniprofiler"
@@ -16,6 +21,15 @@ import (
 	"bosun.org/graphite"
 	"bosun.org/opentsdb"
 )
+
+func logstashTagQuery(args []parse.Node) (parse.Tags, error) {
+	n := args[0].(*parse.StringNode)
+	t := make(parse.Tags)
+	for _, s := range strings.Split(n.Text, ",") {
+		t[strings.Split(s, ":")[0]] = struct{}{}
+	}
+	return t, nil
+}
 
 func tagQuery(args []parse.Node) (parse.Tags, error) {
 	n := args[0].(*parse.StringNode)
@@ -63,6 +77,21 @@ var Graphite = map[string]parse.Func{
 		parse.TypeSeries,
 		graphiteTagQuery,
 		GraphiteQuery,
+	},
+}
+
+var LogstashElastic = map[string]parse.Func{
+	"lscount": {
+		[]parse.FuncType{parse.TypeString, parse.TypeString, parse.TypeString, parse.TypeString, parse.TypeString, parse.TypeString},
+		parse.TypeSeries,
+		logstashTagQuery,
+		LSCount,
+	},
+	"lsstat": {
+		[]parse.FuncType{parse.TypeString, parse.TypeString, parse.TypeString, parse.TypeString, parse.TypeString, parse.TypeString, parse.TypeString, parse.TypeString},
+		parse.TypeSeries,
+		logstashTagQuery,
+		LSStat,
 	},
 }
 
@@ -602,6 +631,15 @@ func timeTSDBRequest(e *State, T miniprofiler.Timer, req *opentsdb.Request) (s o
 	return
 }
 
+func timeLSRequest(e *State, T miniprofiler.Timer, service *elastic.SearchService, source *elastic.SearchSource) (resp *elastic.SearchResult, err error) {
+	e.logstashQueries = append(e.logstashQueries, *service.SearchSource(source))
+	b, _ := json.MarshalIndent(source.Source(), "", "  ")
+	T.StepCustomTiming("logstash", "query", string(b), func() {
+		resp, err = service.SearchSource(source).Do()
+	})
+	return
+}
+
 func Change(e *State, T miniprofiler.Timer, query, sduration, eduration string) (r *Results, err error) {
 	r = new(Results)
 	sd, err := opentsdb.ParseDuration(sduration)
@@ -886,4 +924,295 @@ func Transpose(e *State, T miniprofiler.Timer, d *Results, gp string) (*Results,
 		r.Results = append(r.Results, res)
 	}
 	return &r, nil
+}
+
+type lsKeyMatch struct {
+	Key        string
+	RawPattern string
+	Pattern    *regexp.Regexp
+}
+
+func LSBaseQuery(now time.Time, lshost, index_root, keystring, filter, sduration, eduration string, size int) (*elastic.SearchService, *elastic.SearchSource, []lsKeyMatch, error) {
+	client, err := elastic.NewClient(http.DefaultClient, "http://"+lshost)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	start, err := opentsdb.ParseDuration(sduration)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	var end opentsdb.Duration
+	if eduration != "" {
+		end, err = opentsdb.ParseDuration(eduration)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+	}
+	st := now.Add(time.Duration(-start))
+	en := now.Add(time.Duration(-end))
+	indicies, err := GenLSIndices(lshost, index_root, st, en)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	service := client.Search().Indices(indicies)
+	source := elastic.NewSearchSource()
+	source = source.Size(size)
+	tf := elastic.NewRangeFilter("@timestamp").Gte(st).Lte(en)
+	filtered := elastic.NewFilteredQuery(tf)
+	keys, err := ProcessLSKeys(keystring, filter, &filtered)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	return service, source.Query(filtered), keys, nil
+}
+
+func ProcessLSKeys(keystring, filter string, filtered *elastic.FilteredQuery) ([]lsKeyMatch, error) {
+	var keys []lsKeyMatch
+	var filters []elastic.Filter
+	for _, section := range strings.Split(keystring, ",") {
+		sp := strings.SplitN(section, ":", 2)
+		k := lsKeyMatch{Key: sp[0]}
+		if len(sp) == 2 {
+			k.RawPattern = sp[1]
+			var err error
+			k.Pattern, err = regexp.Compile(k.RawPattern)
+			if err != nil {
+				return nil, err
+			}
+			re := elastic.NewRegexpFilter(k.Key, k.RawPattern)
+			filters = append(filters, re)
+		}
+		keys = append(keys, k)
+	}
+	if filter != "" {
+		for _, section := range strings.Split(filter, ",") {
+			sp := strings.SplitN(section, ":", 2)
+			if len(sp) != 2 {
+				return nil, fmt.Errorf("error parsing filter string")
+			}
+			re := elastic.NewRegexpFilter(sp[0], sp[1])
+			filters = append(filters, re)
+		}
+	}
+	if len(filters) > 0 {
+		and := elastic.NewAndFilter(filters...)
+		*filtered = filtered.Filter(and)
+	}
+	return keys, nil
+}
+
+// LScount takes 6 arguments and returns the per second for matching documents.
+// index_root is the root name of the index to hit, the format is expected to be
+// fmt.Sprintf("%s-%s", index_root, d.Format("2006.01.02")).
+// keystring creates groups (like tagsets) and can also filter those groups. It
+// is the format of "field:regex,field:regex..." The :regex can be ommited.
+// filter is an Elastic regexp query that can be applied to any field. It is in
+// the same format as the keystring argument.
+// interval is in the format of an opentsdb time duration, and tells elastic
+// what the bucket size should be. The result will be normalized to a per second
+// rate regardless of what this is set to.
+// sduration and end duration are the time bounds for the query and are in
+// opentsdb's relative time format:
+// http://opentsdb.net/docs/build/html/user_guide/query/dates.html
+// Caveats:
+// 1) There is currently no escaping in the keystring, so if you regex needs to
+// have a comma or double quote you are out of luck.
+// 2) The regexs in keystring are applied twice. First as a regexp filter to
+// elastic, and then as a go regexp to the keys of the result. This is because
+// the value could be an array and you will get groups that should be filtered.
+// 3) If the type of the field value in Elastic (aka the mapping) is a number
+// then the regexes won't act as a regex. The only thing you can do is an exact
+// match on the number, ie "eventlogid:1234". It is recommended that anything
+// that is a identifer should be stored as a string since they are not numbers
+// even if they are made up entirely of numerals.
+func LSCount(e *State, T miniprofiler.Timer, index_root, keystring, filter, interval, sduration, eduration string) (r *Results, err error) {
+	return LSDateHistogram(e, T, index_root, keystring, filter, interval, sduration, eduration, "", "", 0)
+}
+
+// LSStat returns a bucketed statistical reduction for the specified field.
+// The arguments are the same LSCount with the addition of the following:
+// The field is the field to generate stats for - this must be a number type in
+// elastic.
+// rstat is the reduction function to use per bucket and can be one of the
+// following: avg, min, max, sum, sum_of_squares, variance, std_deviation
+func LSStat(e *State, T miniprofiler.Timer, index_root, keystring, filter, field, rstat, interval, sduration, eduration string) (r *Results, err error) {
+	return LSDateHistogram(e, T, index_root, keystring, filter, interval, sduration, eduration, field, rstat, 0)
+}
+
+func LSDateHistogram(e *State, T miniprofiler.Timer, index_root, keystring, filter, interval, sduration, eduration, stat_field, rstat string, size int) (r *Results, err error) {
+	r = new(Results)
+	service, s, keys, err := LSBaseQuery(e.now, e.logstashElasticHost, index_root, keystring, filter, sduration, eduration, size)
+	if err != nil {
+		return nil, err
+	}
+	ts := elastic.NewDateHistogramAggregation().Field("@timestamp").Interval(strings.Replace(interval, "M", "n", -1))
+	ds, err := opentsdb.ParseDuration(interval)
+	if err != nil {
+		return nil, err
+	}
+	if stat_field != "" {
+		ts = ts.SubAggregation("stats", elastic.NewExtendedStatsAggregation().Field(stat_field))
+		switch rstat {
+		case "avg", "min", "max", "sum", "sum_of_squares", "variance", "std_deviation":
+		default:
+			return r, fmt.Errorf("stat function %v not a valid option", rstat)
+		}
+	}
+	if keystring == "" {
+		s = s.Aggregation("ts", ts)
+		result, err := timeLSRequest(e, T, service, s)
+		if err != nil {
+			return nil, err
+		}
+		ts, found := result.Aggregations.DateHistogram("ts")
+		if !found {
+			return nil, fmt.Errorf("expected time series not found in elastic reply")
+		}
+		series := make(Series)
+		for _, v := range ts.Buckets {
+			val := processBucketItem(v, rstat, ds)
+			if val != nil {
+				series[time.Unix(v.Key/1000, 0).UTC()] = *val
+			}
+		}
+		if len(series) == 0 {
+			return r, nil
+		}
+		r.Results = append(r.Results, &Result{
+			Value: series,
+			Group: make(opentsdb.TagSet),
+		})
+		return r, nil
+	}
+	aggregation := elastic.NewTermsAggregation().Field(keys[len(keys)-1].Key)
+	aggregation = aggregation.SubAggregation("ts", ts)
+	for i := len(keys) - 2; i > -1; i-- {
+		aggregation = elastic.NewTermsAggregation().Field(keys[i].Key).SubAggregation("g_"+keys[i+1].Key, aggregation)
+	}
+	s = s.Aggregation("g_"+keys[0].Key, aggregation)
+	result, err := timeLSRequest(e, T, service, s)
+	if err != nil {
+		return nil, err
+	}
+	top, ok := result.Aggregations.Terms("g_" + keys[0].Key)
+	if !ok {
+		return nil, fmt.Errorf("top key g_%v not found in result", keys[0].Key)
+	}
+	var desc func(*elastic.AggregationBucketKeyItem, opentsdb.TagSet, []lsKeyMatch) error
+	desc = func(b *elastic.AggregationBucketKeyItem, tags opentsdb.TagSet, keys []lsKeyMatch) error {
+		if ts, found := b.DateHistogram("ts"); found {
+			if e.squelched(tags) {
+				return nil
+			}
+			series := make(Series)
+			for _, v := range ts.Buckets {
+				val := processBucketItem(v, rstat, ds)
+				if val != nil {
+					series[time.Unix(v.Key/1000, 0).UTC()] = *val
+				}
+			}
+			if len(series) == 0 {
+				return nil
+			}
+			r.Results = append(r.Results, &Result{
+				Value: series,
+				Group: tags.Copy(),
+			})
+			return nil
+		}
+		if len(keys) < 1 {
+			return nil
+		}
+		n, _ := b.Aggregations.Terms("g_" + keys[0].Key)
+		for _, item := range n.Buckets {
+			key := fmt.Sprint(item.Key)
+			if keys[0].Pattern != nil && !keys[0].Pattern.MatchString(key) {
+				continue
+			}
+			tags[keys[0].Key] = key
+			if err := desc(item, tags.Copy(), keys[1:]); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	for _, b := range top.Buckets {
+		tags := make(opentsdb.TagSet)
+		key := fmt.Sprint(b.Key)
+		if keys[0].Pattern != nil && !keys[0].Pattern.MatchString(key) {
+			continue
+		}
+		tags[keys[0].Key] = key
+		if err := desc(b, tags, keys[1:]); err != nil {
+			return nil, err
+		}
+	}
+	return r, nil
+}
+
+func processBucketItem(b *elastic.AggregationBucketHistogramItem, rstat string, ds opentsdb.Duration) *float64 {
+	if stats, found := b.ExtendedStats("stats"); found {
+		var val *float64
+		switch rstat {
+		case "avg":
+			val = stats.Avg
+		case "min":
+			val = stats.Min
+		case "max":
+			val = stats.Max
+		case "sum":
+			val = stats.Sum
+		case "sum_of_squares":
+			val = stats.SumOfSquares
+		case "variance":
+			val = stats.Variance
+		case "std_deviation":
+			val = stats.StdDeviation
+		}
+		return val
+	}
+	v := float64(b.DocCount) / ds.Seconds()
+	return &v
+}
+
+func GenLSIndices(host, index_root string, start, end time.Time) (string, error) {
+	resp, err := http.Get("http://" + host + "/_cat/indices")
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+	var indices []string
+	lines := strings.Split(string(body), "\n")
+	start = start.Truncate(time.Hour * 24)
+	end = end.Truncate(time.Hour*24).AddDate(0, 0, 1)
+	for _, line := range lines {
+		f := strings.Fields(line)
+		if len(f) < 2 {
+			continue
+		}
+		index := f[2]
+		var root, date string
+		if i := strings.LastIndex(index, "-"); i >= 0 {
+			root = index[:i]
+			date = index[i+1:]
+		}
+		if root != index_root {
+			continue
+		}
+		d, err := time.Parse("2006.01.02", date)
+		if err != nil {
+			continue
+		}
+		if !d.Before(start) && !d.After(end) {
+			indices = append(indices, index)
+		}
+	}
+	if len(indices) == 0 {
+		return "", fmt.Errorf("no elastic indicies available during this time range")
+	}
+	return strings.Join(indices, ","), nil
 }
