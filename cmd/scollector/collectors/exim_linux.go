@@ -25,9 +25,10 @@ func c_exim_mailq() (opentsdb.MultiDataPoint, error) {
 		f := strings.Fields(line)
 		if len(f) == 5 && f[4] == "TOTAL" {
 			Add(&md, "exim.mailq_count", f[0], nil, metadata.Gauge, metadata.EMail, "The number of emails in exim's mail queue.")
-			if len(f[1]) > 3 {
+			var multi int64 = 1
+			size, err := strconv.ParseInt(f[1], 10, 64)
+			if err != nil && len(f[1]) > 3 {
 				unit := f[1][len(f[1])-2:]
-				var multi int64
 				switch unit {
 				case "KB":
 					multi = 1024
@@ -36,23 +37,22 @@ func c_exim_mailq() (opentsdb.MultiDataPoint, error) {
 				default:
 					return fmt.Errorf("error parsing size unit of exim's mail queue")
 				}
-				size, err := strconv.ParseInt(f[1][:len(f[1])-2], 10, 64)
+				size, err = strconv.ParseInt(f[1][:len(f[1])-2], 10, 64)
 				if err != nil {
-					return err
+					return fmt.Errorf("error parsing exim size field")
 				}
-				Add(&md, "exim.mailq_size", size*multi, nil, metadata.Gauge, metadata.Bytes, descEximMailQSize)
-				oldest, err := opentsdb.ParseDuration(f[2])
-				if err != nil {
-					return err
-				}
-				Add(&md, "exim.mailq_oldest", oldest.Seconds(), nil, metadata.Gauge, metadata.Second, descEximMailQOldest)
-				newest, err := opentsdb.ParseDuration(f[3])
-				if err != nil {
-					return err
-				}
-				Add(&md, "exim.mailq_newest", newest.Seconds(), nil, metadata.Gauge, metadata.Second, descEximMailQNewest)
-
 			}
+			Add(&md, "exim.mailq_size", size*multi, nil, metadata.Gauge, metadata.Bytes, descEximMailQSize)
+			oldest, err := opentsdb.ParseDuration(f[2])
+			if err != nil {
+				return err
+			}
+			Add(&md, "exim.mailq_oldest", oldest.Seconds(), nil, metadata.Gauge, metadata.Second, descEximMailQOldest)
+			newest, err := opentsdb.ParseDuration(f[3])
+			if err != nil {
+				return err
+			}
+			Add(&md, "exim.mailq_newest", newest.Seconds(), nil, metadata.Gauge, metadata.Second, descEximMailQNewest)
 		}
 		return nil
 	}, mailq, "/usr/sbin/exiqsumm"); err != nil {
