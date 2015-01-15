@@ -4,10 +4,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-<<<<<<< HEAD
 	"strconv"
-=======
->>>>>>> 445ec317c4874d1af6aa38ea6cc5d09ee6b7c66b
 	"strings"
 	"time"
 
@@ -26,11 +23,7 @@ func init() {
 // "Timeouts: connection: 60 keep-alive: 15"
 // Returns the two values contained therein.
 
-<<<<<<< HEAD
 func extract_timeouts(doc *html.Node) (int, int) {
-=======
-func extract_timeouts(doc *html.Node) (string, string) {
->>>>>>> 445ec317c4874d1af6aa38ea6cc5d09ee6b7c66b
 
 	// Walk the node tree.
 	// If the node is a "dt",
@@ -78,24 +71,16 @@ func extract_timeouts(doc *html.Node) (string, string) {
 	if (parts[0] != "connection:") || (parts[2] != "keep-alive:") {
 		log.Fatal("Format of connection: / keep-alive: line changed")
 	}
-<<<<<<< HEAD
 
 	c, _ := strconv.Atoi(parts[1])
 	k, _ := strconv.Atoi(parts[3])
 	return c, k
-=======
-	return parts[1], parts[3]
->>>>>>> 445ec317c4874d1af6aa38ea6cc5d09ee6b7c66b
 
 }
 
 func c_apache_mod_info() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 
-<<<<<<< HEAD
-=======
-	// body, err := ioutil.ReadFile("/Users/tal/Dropbox/work/apache/mi-server.html")
->>>>>>> 445ec317c4874d1af6aa38ea6cc5d09ee6b7c66b
 	resp, err := http.Get("http://127.0.0.1/server-info?server")
 	if err != nil {
 		log.Fatal(err)
