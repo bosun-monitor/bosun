@@ -57,6 +57,7 @@ const (
 	Interupt            = "interupts"
 	KBytes              = "kbytes"
 	Load                = "load"
+	EMail               = "emails"
 	MHz                 = "MHz" // MegaHertz
 	Megabit             = "Mbit"
 	Merge               = "merges"

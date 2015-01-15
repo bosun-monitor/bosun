@@ -30,7 +30,7 @@ func yum_update_stats_linux() (opentsdb.MultiDataPoint, error) {
 		}
 		return nil
 
-	}, "yum", "list", "updates", "-q")
+	}, nil, "yum", "list", "updates", "-q")
 	if err == util.ErrPath {
 		return nil, nil
 	} else if err != nil {
