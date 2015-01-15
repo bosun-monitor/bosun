@@ -72,14 +72,8 @@ func extract_timeouts(doc *html.Node) (int, int) {
 		log.Fatal("Format of connection: / keep-alive: line changed")
 	}
 
-	c, err := strconv.Atoi(parts[1])
-	if err != nil {
-		log.Fatal("Format of connection: / keep-alive: line changed")
-	}
-	k, err := strconv.Atoi(parts[3])
-	if err != nil {
-		log.Fatal("Format of connection: / keep-alive: line changed")
-	}
+	c, _ := strconv.Atoi(parts[1])
+	k, _ := strconv.Atoi(parts[3])
 	return c, k
 
 }
