@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"golang.org/x/net/html"
+	"bosun.org/_third_party/golang.org/x/net/html"
 
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
@@ -68,8 +68,11 @@ func extractTimeouts(doc *html.Node) (int, int, error) {
 
 	original := walk_subtree(doc)
 	parts := strings.Fields(original)
-	if (len(parts) < 4 || parts[0] != "connection:") || (parts[2] != "keep-alive:") {
-		return 0, 0, fmt.Errorf("Format of connection: / keep-alive: line changed")
+	if len(parts) < 4 {
+		return 0, 0, fmt.Errorf("more than 4 fields found on connection:/keep-alive line")
+	}
+	if (parts[0] != "connection:") || (parts[2] != "keep-alive:") {
+		return 0, 0, fmt.Errorf("format changed in connection:/keep-alive: line")
 	}
 
 	c, err := strconv.Atoi(parts[1])
@@ -86,27 +89,23 @@ func extractTimeouts(doc *html.Node) (int, int, error) {
 func c_apache_mod_info() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 
-	// fmt.Println("TEST START")
-	// fmt.Println(enableURL(apacheModInfoURL)())
-	// fmt.Println("TEST END")
-	// log.Fatal(nil)
-
 	resp, err := http.Get(apacheModInfoURL + "?server")
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
-	body, _ := ioutil.ReadAll(resp.Body)
+	body, err := ioutil.ReadAll(resp.Body)
 	n, err := html.Parse(strings.NewReader(string(body)))
 	if err != nil {
-		return nil, fmt.Errorf("Unable to parse ?server status page")
+		return nil, fmt.Errorf("unable to parse ?server status page")
 	}
 
 	connection_timeout, keepalive, err := extractTimeouts(n)
-	if err == nil {
-		Add(&md, "apache.server.timeout.connection", connection_timeout, nil, metadata.Gauge, metadata.Second, "")
-		Add(&md, "apache.server.timeout.keepalive", keepalive, nil, metadata.Gauge, metadata.Second, "")
+	if err != nil {
+		return nil, err
 	}
+	Add(&md, "apache.server.timeout.connection", connection_timeout, nil, metadata.Gauge, metadata.Second, "")
+	Add(&md, "apache.server.timeout.keepalive", keepalive, nil, metadata.Gauge, metadata.Second, "")
 
 	return md, nil
 }
