@@ -134,9 +134,6 @@ func procRule(t miniprofiler.Timer, c *conf.Conf, a *conf.Alert, now time.Time, 
 		}
 		var b_err, s_err error
 		func() {
-			if _, b_err = s.ExecuteBody(body, rh, a, instance, false); b_err != nil {
-				warning = append(warning, b_err.Error())
-			}
 			defer func() {
 				if err := recover(); err != nil {
 					s := fmt.Sprint(err)
@@ -144,11 +141,11 @@ func procRule(t miniprofiler.Timer, c *conf.Conf, a *conf.Alert, now time.Time, 
 					b_err = fmt.Errorf(s)
 				}
 			}()
+			if _, b_err = s.ExecuteBody(body, rh, a, instance, false); b_err != nil {
+				warning = append(warning, b_err.Error())
+			}
 		}()
 		func() {
-			if s_err = s.ExecuteSubject(subject, rh, a, instance); s_err != nil {
-				warning = append(warning, s_err.Error())
-			}
 			defer func() {
 				if err := recover(); err != nil {
 					s := fmt.Sprint(err)
@@ -156,6 +153,9 @@ func procRule(t miniprofiler.Timer, c *conf.Conf, a *conf.Alert, now time.Time, 
 					s_err = fmt.Errorf(s)
 				}
 			}()
+			if s_err = s.ExecuteSubject(subject, rh, a, instance); s_err != nil {
+				warning = append(warning, s_err.Error())
+			}
 		}()
 		if s_err != nil || b_err != nil {
 			var err error
