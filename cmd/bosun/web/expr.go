@@ -159,7 +159,7 @@ func procRule(t miniprofiler.Timer, c *conf.Conf, a *conf.Alert, now time.Time, 
 		}()
 		if s_err != nil || b_err != nil {
 			var err error
-			subject, _, err = s.ExecuteBadTemplate(s_err, b_err, rh, a, instance)
+			subject, body, err = s.ExecuteBadTemplate(s_err, b_err, rh, a, instance)
 			if err != nil {
 				subject = bytes.NewBufferString(fmt.Sprintf("unable to create tempalate error notification: %v", err))
 			}
