@@ -151,7 +151,7 @@ var error_body = template.Must(template.New("body_error_template").Parse(`
 		</tr>
 	{{end}}</table>`))
 
-func (s *Schedule) ExecuteBadTemplate(s_err, b_err error, rh *RunHistory, a *conf.Alert, st *State) (*bytes.Buffer, *bytes.Buffer, error) {
+func (s *Schedule) ExecuteBadTemplate(s_err, b_err error, rh *RunHistory, a *conf.Alert, st *State) (subject, body *bytes.Buffer, err error) {
 	sub := "error: template rendering error in the "
 	if s_err != nil {
 		sub += "subject"
@@ -171,7 +171,7 @@ func (s *Schedule) ExecuteBadTemplate(s_err, b_err error, rh *RunHistory, a *con
 		Berr:    b_err,
 		Context: s.Data(rh, st, a, true),
 	}
-	body := new(bytes.Buffer)
+	body = new(bytes.Buffer)
 	error_body.Execute(body, c)
 	return bytes.NewBufferString(sub), body, nil
 }
