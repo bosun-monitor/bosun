@@ -1,8 +1,8 @@
 package collectors
 
 import (
+	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -14,40 +14,40 @@ import (
 	"bosun.org/opentsdb"
 )
 
+const (
+	apacheModInfoURL = "http://127.0.0.1/server-info"
+)
+
 func init() {
-	collectors = append(collectors, &IntervalCollector{F: c_apache_mod_info, Interval: time.Minute * 30})
+	collectors = append(collectors, &IntervalCollector{F: c_apache_mod_info, Enable: enableURL(apacheModInfoURL), Interval: time.Minute * 30})
 }
 
-// Extract from HTML recieved from http://127.0.0.1/server-info?server
-// Find the line that looks like:
-// "Timeouts: connection: 60 keep-alive: 15"
-// Returns the two values contained therein.
-
-func extract_timeouts(doc *html.Node) (int, int) {
+/* extractTimeouts processes the "?server" output and extracts timeout settings.
+More specifically it finds the line that looks like:
+ "Timeouts: connection: 60 keep-alive: 15"
+and returns the two values contained therein.
+*/
+func extractTimeouts(doc *html.Node) (int, int, error) {
 
 	// Walk the node tree.
 	// If the node is a "dt",
-	//     walk its children until we find CONTENTS "Timeouts:"
-	//         At which point we walk those children to find "connection".
+	//   walk its children until we find contents "Timeouts:"
+	//   At which point we walk those children to find "connection".
 	// Else, keep walking.
-	//     Then continue walking Children to find CONTENTS startswith "connection":
+	//   Then continue walking Children to find contents starts with "connection":
 	//     Return contents
 
-	var value string
 	var search_children func(*html.Node) string
 	search_children = func(n *html.Node) string {
-		if n.Type == html.TextNode {
-			if strings.HasPrefix(n.Data, "connection:") {
-				value = n.Data
-				return value
-			}
+		if n.Type == html.TextNode && strings.HasPrefix(n.Data, "connection:") {
+			return n.Data
 		}
 		for c := n.FirstChild; c != nil; c = c.NextSibling {
-			if value = search_children(c); value != "" {
+			if value := search_children(c); value != "" {
 				return value
 			}
 		}
-		return value
+		return ""
 	}
 
 	var walk_subtree func(*html.Node) string
@@ -68,54 +68,45 @@ func extract_timeouts(doc *html.Node) (int, int) {
 
 	original := walk_subtree(doc)
 	parts := strings.Fields(original)
-	if (parts[0] != "connection:") || (parts[2] != "keep-alive:") {
-		log.Fatal("Format of connection: / keep-alive: line changed")
+	if (len(parts) < 4 || parts[0] != "connection:") || (parts[2] != "keep-alive:") {
+		return 0, 0, fmt.Errorf("Format of connection: / keep-alive: line changed")
 	}
 
-	c, _ := strconv.Atoi(parts[1])
-	k, _ := strconv.Atoi(parts[3])
-	return c, k
-
+	c, err := strconv.Atoi(parts[1])
+	if err != nil {
+		return 0, 0, fmt.Errorf("connection timeout is not an integer")
+	}
+	k, err := strconv.Atoi(parts[3])
+	if err != nil {
+		return 0, 0, fmt.Errorf("keep-alive value is not an integer")
+	}
+	return c, k, nil
 }
 
 func c_apache_mod_info() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 
-	resp, err := http.Get("http://127.0.0.1/server-info?server")
+	// fmt.Println("TEST START")
+	// fmt.Println(enableURL(apacheModInfoURL)())
+	// fmt.Println("TEST END")
+	// log.Fatal(nil)
+
+	resp, err := http.Get(apacheModInfoURL + "?server")
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	n, _ := html.Parse(strings.NewReader(string(body)))
+	body, _ := ioutil.ReadAll(resp.Body)
+	n, err := html.Parse(strings.NewReader(string(body)))
+	if err != nil {
+		return nil, fmt.Errorf("Unable to parse ?server status page")
+	}
 
-	connection_timeout, keepalive := extract_timeouts(n)
-	Add(&md, "apache.server.timeout.connection", connection_timeout, nil, metadata.Gauge, metadata.Gauge, "")
-	Add(&md, "apache.server.timeout.keepalive", keepalive, nil, metadata.Gauge, metadata.Gauge, "")
+	connection_timeout, keepalive, err := extractTimeouts(n)
+	if err == nil {
+		Add(&md, "apache.server.timeout.connection", connection_timeout, nil, metadata.Gauge, metadata.Second, "")
+		Add(&md, "apache.server.timeout.keepalive", keepalive, nil, metadata.Gauge, metadata.Second, "")
+	}
 
 	return md, nil
 }
-
-/*
-
-https://godoc.org/golang.org/x/net/html#example-Parse
-
-/Users/tal/Dropbox/work/apache/mi-server.html
-Timeouts: connection: 60    keep-alive: 15
-MPM Information: Max Daemons: 64 Threaded: no Forked: yes
-apache.server.connection_timeout
-apache.server.keepalive_timeout
-apache.server.max_daemons
-apache.server.threaded 0/1
-apache.server.forked 0/1
-
-/Users/tal/Dropbox/work/apache/mi-prefork.c.html
-ServerLimit 512
-MaxClients 64
-apache.prefork.serverlimit
-apache.prefork.maxclients
-
-/Users/tal/Dropbox/work/apache/mi-config.html
-Cound how many times "<VirtualHost " is seen.
-apache.config.virtualhost_count
-*/
