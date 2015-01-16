@@ -19,7 +19,13 @@ const (
 )
 
 func init() {
-	collectors = append(collectors, &IntervalCollector{F: c_apache_mod_info, Enable: enableURL(apacheModInfoURL), Interval: time.Minute * 30})
+	collectors = append(
+		collectors,
+		&IntervalCollector{
+			F:        c_apache_mod_info,
+			Enable:   enableURL(apacheModInfoURL),
+			Interval: time.Minute * 30,
+		})
 }
 
 /* extractTimeouts processes the "?server" output and extracts timeout settings.
@@ -37,28 +43,17 @@ func extractTimeouts(doc *html.Node) (int, int, error) {
 	//   Then continue walking Children to find contents starts with "connection":
 	//     Return contents
 
-	var search_children func(*html.Node) string
-	search_children = func(n *html.Node) string {
-		if n.Type == html.TextNode && strings.HasPrefix(n.Data, "connection:") {
-			return n.Data
-		}
-		for c := n.FirstChild; c != nil; c = c.NextSibling {
-			if value := search_children(c); value != "" {
-				return value
-			}
-		}
-		return ""
-	}
+	var walkSubtree func(*html.Node) string
+	var searchTimeouts func(*html.Node) string
 
-	var walk_subtree func(*html.Node) string
-	walk_subtree = func(n *html.Node) string {
+	walkSubtree = func(n *html.Node) string {
 		if n.Type == html.ElementNode && n.Data == "dt" {
-			if val := search_children(n); val != "" {
+			if val := searchTimeouts(n); val != "" {
 				return val
 			}
 		} else {
 			for c := n.FirstChild; c != nil; c = c.NextSibling {
-				if val := walk_subtree(c); val != "" {
+				if val := walkSubtree(c); val != "" {
 					return val
 				}
 			}
@@ -66,7 +61,19 @@ func extractTimeouts(doc *html.Node) (int, int, error) {
 		return ""
 	}
 
-	original := walk_subtree(doc)
+	searchTimeouts = func(n *html.Node) string {
+		if n.Type == html.TextNode && strings.HasPrefix(n.Data, "connection:") {
+			return n.Data
+		}
+		for c := n.FirstChild; c != nil; c = c.NextSibling {
+			if value := searchTimeouts(c); value != "" {
+				return value
+			}
+		}
+		return ""
+	}
+
+	original := walkSubtree(doc)
 	parts := strings.Fields(original)
 	if len(parts) < 4 {
 		return 0, 0, fmt.Errorf("more than 4 fields found on connection:/keep-alive line")
