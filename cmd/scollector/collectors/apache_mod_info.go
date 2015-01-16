@@ -2,7 +2,6 @@ package collectors
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"strconv"
 	"strings"
@@ -15,7 +14,7 @@ import (
 )
 
 const (
-	apacheModInfoURL = "http://127.0.0.1/server-info"
+	apacheModInfoBaseURL = "http://127.0.0.1/server-info"
 )
 
 func init() {
@@ -23,7 +22,7 @@ func init() {
 		collectors,
 		&IntervalCollector{
 			F:        c_apache_mod_info,
-			Enable:   enableURL(apacheModInfoURL),
+			Enable:   enableURL(apacheModInfoBaseURL),
 			Interval: time.Minute * 30,
 		})
 }
@@ -96,13 +95,12 @@ func extractTimeouts(doc *html.Node) (int, int, error) {
 func c_apache_mod_info() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 
-	resp, err := http.Get(apacheModInfoURL + "?server")
+	resp, err := http.Get(apacheModInfoBaseURL + "?server")
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	n, err := html.Parse(strings.NewReader(string(body)))
+	n, err := html.Parse(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("unable to parse ?server status page")
 	}

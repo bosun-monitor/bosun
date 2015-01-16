@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	serverHtml1 = `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+	apacheModInfoServerHTML = `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
@@ -49,20 +49,7 @@ const (
 `
 )
 
-func TestServerSimple(t *testing.T) {
-	n, err := html.Parse(strings.NewReader(string(serverHtml1)))
-	if err != nil {
-		t.Errorf("unable to parse ?server status page")
-	}
-
-	c, k, err := extractTimeouts(n)
-	if c != 60 || k != 15 || err != nil {
-		t.Logf("Expected 60,15,<nil> got %v,%v,%v", c, k, err)
-		t.Fail()
-	}
-}
-
-func TestServerEmpty(t *testing.T) {
+func TestApacheModInfoEmpty(t *testing.T) {
 
 	n, err := html.Parse(strings.NewReader(""))
 	if err != nil {
@@ -71,8 +58,19 @@ func TestServerEmpty(t *testing.T) {
 
 	c, k, err := extractTimeouts(n)
 	if c != 0 || k != 0 || err == nil {
-		t.Logf("Expected 0,0,ERROR got %v,%v,%v", c, k, err)
-		t.Fail()
+		t.Errorf("Expected 0,0,ERROR got %v,%v,%v", c, k, err)
 	}
 
+}
+
+func TestApacheModInfoServerSimple(t *testing.T) {
+	n, err := html.Parse(strings.NewReader(apacheModInfoServerHTML))
+	if err != nil {
+		t.Errorf("unable to parse ?server status page")
+	}
+
+	c, k, err := extractTimeouts(n)
+	if c != 60 || k != 15 || err != nil {
+		t.Errorf("Expected 60,15,<nil> got %v,%v,%v", c, k, err)
+	}
 }
