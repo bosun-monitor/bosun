@@ -1084,10 +1084,10 @@ func LSDateHistogram(e *State, T miniprofiler.Timer, index_root, keystring, filt
 		})
 		return r, nil
 	}
-	aggregation := elastic.NewTermsAggregation().Field(keys[len(keys)-1].Key)
+	aggregation := elastic.NewTermsAggregation().Field(keys[len(keys)-1].Key).Size(0)
 	aggregation = aggregation.SubAggregation("ts", ts)
 	for i := len(keys) - 2; i > -1; i-- {
-		aggregation = elastic.NewTermsAggregation().Field(keys[i].Key).SubAggregation("g_"+keys[i+1].Key, aggregation)
+		aggregation = elastic.NewTermsAggregation().Field(keys[i].Key).Size(0).SubAggregation("g_"+keys[i+1].Key, aggregation)
 	}
 	s = s.Aggregation("g_"+keys[0].Key, aggregation)
 	result, err := timeLSRequest(e, T, service, s)
