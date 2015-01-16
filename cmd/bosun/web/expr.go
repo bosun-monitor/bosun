@@ -132,15 +132,38 @@ func procRule(t miniprofiler.Timer, c *conf.Conf, a *conf.Alert, now time.Time, 
 				warning = append(warning, fmt.Sprintf("template group %s was not a subset of any result", template_group))
 			}
 		}
-		var s_err error
-		if _, err := s.ExecuteBody(body, rh, a, instance, false); err != nil {
-			warning = append(warning, err.Error())
-		}
-		if s_err = s.ExecuteSubject(subject, rh, a, instance); s_err != nil {
-			warning = append(warning, s_err.Error())
-		}
-		data = s.Data(rh, instance, a, false)
-		if email != "" {
+		var b_err, s_err error
+		func() {
+			if _, b_err = s.ExecuteBody(body, rh, a, instance, false); b_err != nil {
+				warning = append(warning, b_err.Error())
+			}
+			defer func() {
+				if err := recover(); err != nil {
+					s := fmt.Sprint(err)
+					warning = append(warning, s)
+					b_err = fmt.Errorf(s)
+				}
+			}()
+		}()
+		func() {
+			if s_err = s.ExecuteSubject(subject, rh, a, instance); s_err != nil {
+				warning = append(warning, s_err.Error())
+			}
+			defer func() {
+				if err := recover(); err != nil {
+					s := fmt.Sprint(err)
+					warning = append(warning, s)
+					s_err = fmt.Errorf(s)
+				}
+			}()
+		}()
+		if s_err != nil || b_err != nil {
+			var err error
+			subject, _, err = s.ExecuteBadTemplate(s_err, b_err, rh, a, instance)
+			if err != nil {
+				subject = bytes.NewBufferString(fmt.Sprintf("unable to create tempalate error notification: %v", err))
+			}
+		} else if email != "" {
 			m, err := mail.ParseAddress(email)
 			if err != nil {
 				return nil, err
@@ -149,17 +172,14 @@ func procRule(t miniprofiler.Timer, c *conf.Conf, a *conf.Alert, now time.Time, 
 				Email: []*mail.Address{m},
 			}
 			email := new(bytes.Buffer)
-			email_subject := subject
-			attachments, b_err := s.ExecuteBody(email, rh, a, instance, true)
-			if s_err != nil || b_err != nil {
-				var err error
-				email_subject, email, err = s.ExecuteBadTemplate(s_err, b_err, rh, a, instance)
-				if err != nil {
-					subject = bytes.NewBufferString(fmt.Sprintf("unable to create tempalate error notification: %v", err))
-				}
+			attachments, err := s.ExecuteBody(email, rh, a, instance, true)
+			if err != nil {
+				warning = append(warning, err.Error())
+			} else {
+				n.DoEmail(subject.Bytes(), email.Bytes(), schedule.Conf, string(instance.AlertKey()), attachments...)
 			}
-			n.DoEmail(email_subject.Bytes(), email.Bytes(), schedule.Conf, string(instance.AlertKey()), attachments...)
 		}
+		data = s.Data(rh, instance, a, false)
 	}
 	return &ruleResult{
 		errors,
