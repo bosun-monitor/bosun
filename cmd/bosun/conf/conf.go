@@ -1025,12 +1025,12 @@ func (c *Conf) AlertTemplateStrings() (*AlertTemplateStrings, error) {
 			return nil
 		}
 		parseSection = func(s *Template) error {
-			if s.Body != nil {
+			if s.Body != nil && s.Body.Tree != nil {
 				if err := parseTemplate(s.Body.Tree.Root.String()); err != nil {
 					return err
 				}
 			}
-			if s.Subject != nil {
+			if s.Subject != nil && s.Body.Tree != nil {
 				if err := parseTemplate(s.Subject.Tree.Root.String()); err != nil {
 					return err
 				}
