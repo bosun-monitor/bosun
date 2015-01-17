@@ -1045,7 +1045,7 @@ func LSDateHistogram(e *State, T miniprofiler.Timer, index_root, keystring, filt
 	if err != nil {
 		return nil, err
 	}
-	ts := elastic.NewDateHistogramAggregation().Field("@timestamp").Interval(strings.Replace(interval, "M", "n", -1))
+	ts := elastic.NewDateHistogramAggregation().Field("@timestamp").Interval(strings.Replace(interval, "M", "n", -1)).MinDocCount(0)
 	ds, err := opentsdb.ParseDuration(interval)
 	if err != nil {
 		return nil, err
