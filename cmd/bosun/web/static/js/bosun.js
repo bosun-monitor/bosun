@@ -1646,7 +1646,7 @@ bosunControllers.controller('ItemsCtrl', ['$scope', '$http', function ($scope, $
     }).error(function (error) {
         $scope.status = 'Unable to fetch metrics: ' + error;
     });
-    $http.get('/api/tagv/host').success(function (data) {
+    $http.get('/api/tagv/host?since=default').success(function (data) {
         $scope.hosts = data;
     }).error(function (error) {
         $scope.status = 'Unable to fetch hosts: ' + error;

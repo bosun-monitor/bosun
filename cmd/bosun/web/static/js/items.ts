@@ -14,7 +14,7 @@ bosunControllers.controller('ItemsCtrl', ['$scope', '$http', function($scope: II
 		.error(function(error) {
 			$scope.status = 'Unable to fetch metrics: ' + error;
 		});
-	$http.get('/api/tagv/host')
+	$http.get('/api/tagv/host?since=default')
 		.success(function(data: string[]) {
 			$scope.hosts = data;
 		})
