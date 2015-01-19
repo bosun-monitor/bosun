@@ -40,6 +40,7 @@ type Conf struct {
 	StateFile       string
 	TimeAndDate     []int // timeanddate.com cities list
 	ResponseLimit   int64
+	SearchSince     opentsdb.Duration
 	UnknownTemplate *Template
 	Templates       map[string]*Template
 	Alerts          map[string]*Alert
@@ -418,6 +419,12 @@ func (c *Conf) loadGlobal(p *parse.PairNode) {
 			c.errorf("responseLimit must be > 0")
 		}
 		c.ResponseLimit = i
+	case "searchSince":
+		s, err := opentsdb.ParseDuration(v)
+		if err != nil {
+			c.error(err)
+		}
+		c.SearchSince = s
 	case "unknownTemplate":
 		c.unknownTemplate = v
 		t, ok := c.Templates[c.unknownTemplate]
@@ -1138,7 +1145,7 @@ func (c *Conf) Funcs() map[string]eparse.Func {
 		var tags []opentsdb.TagSet
 		for _, tag := range lookups.Tags {
 			var next []opentsdb.TagSet
-			for _, value := range e.Search.TagValuesByTagKey(tag) {
+			for _, value := range e.Search.TagValuesByTagKey(tag, 0) {
 				for _, s := range tags {
 					t := s.Copy()
 					t[tag] = value

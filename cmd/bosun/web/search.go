@@ -3,9 +3,11 @@ package web
 import (
 	"net/http"
 	"strings"
+	"time"
 
 	"bosun.org/_third_party/github.com/MiniProfiler/go/miniprofiler"
 	"bosun.org/_third_party/github.com/gorilla/mux"
+	"bosun.org/opentsdb"
 )
 
 // UniqueMetrics returns a sorted list of available metrics.
@@ -34,7 +36,7 @@ func TagValuesByMetricTagKey(t miniprofiler.Timer, w http.ResponseWriter, r *htt
 		}
 		values = schedule.Search.FilteredTagValuesByMetricTagKey(metric, tagk, tsf)
 	} else {
-		values = schedule.Search.TagValuesByMetricTagKey(metric, tagk)
+		values = schedule.Search.TagValuesByMetricTagKey(metric, tagk, 0)
 	}
 	return values, nil
 }
@@ -50,6 +52,17 @@ func MetricsByTagPair(t miniprofiler.Timer, w http.ResponseWriter, r *http.Reque
 func TagValuesByTagKey(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	tagk := vars["tagk"]
-	values := schedule.Search.TagValuesByTagKey(tagk)
+	s := r.FormValue("since")
+	var since opentsdb.Duration
+	if s == "default" {
+		since = schedule.Conf.SearchSince
+	} else if s != "" {
+		var err error
+		since, err = opentsdb.ParseDuration(s)
+		if err != nil {
+			return nil, err
+		}
+	}
+	values := schedule.Search.TagValuesByTagKey(tagk, time.Duration(since))
 	return values, nil
 }

@@ -54,7 +54,7 @@ func (mts *MetricTagSet) key() string {
 type qmap map[duple]present
 type smap map[string]present
 type mtsmap map[string]MetricTagSet
-type present map[string]struct{}
+type present map[string]int64
 
 type duple struct {
 	A, B string
@@ -112,6 +112,7 @@ func (s *Search) Copy() {
 }
 
 func (s *Search) Index(mdp opentsdb.MultiDataPoint) {
+	now := time.Now().Unix()
 	s.Lock()
 	if !s.copy {
 		s.copy = true
@@ -135,18 +136,18 @@ func (s *Search) Index(mdp opentsdb.MultiDataPoint) {
 			if _, ok := s.Metric[q]; !ok {
 				s.Metric[q] = make(present)
 			}
-			s.Metric[q][dp.Metric] = struct{}{}
+			s.Metric[q][dp.Metric] = now
 
 			if _, ok := s.Tagk[dp.Metric]; !ok {
 				s.Tagk[dp.Metric] = make(present)
 			}
-			s.Tagk[dp.Metric][k] = struct{}{}
+			s.Tagk[dp.Metric][k] = now
 
 			q.A, q.B = dp.Metric, k
 			if _, ok := s.Tagv[q]; !ok {
 				s.Tagv[q] = make(present)
 			}
-			s.Tagv[q][v] = struct{}{}
+			s.Tagv[q][v] = now
 		}
 		p := s.Last[key]
 		if p == nil {
@@ -220,7 +221,7 @@ func (s *Search) Expand(q *opentsdb.Query) error {
 			if v == "*" || !strings.Contains(v, "*") {
 				nvs = append(nvs, v)
 			} else {
-				vs := s.TagValuesByMetricTagKey(q.Metric, k)
+				vs := s.TagValuesByMetricTagKey(q.Metric, k, 0)
 				ns, err := Match(v, vs)
 				if err != nil {
 					return err
@@ -247,11 +248,11 @@ func (s *Search) UniqueMetrics() []string {
 	return metrics
 }
 
-func (s *Search) TagValuesByTagKey(Tagk string) []string {
+func (s *Search) TagValuesByTagKey(Tagk string, since time.Duration) []string {
 	um := s.UniqueMetrics()
 	tagvset := make(map[string]bool)
 	for _, Metric := range um {
-		for _, Tagv := range s.tagValuesByMetricTagKey(Metric, Tagk) {
+		for _, Tagv := range s.tagValuesByMetricTagKey(Metric, Tagk, since) {
 			tagvset[Tagv] = true
 		}
 	}
@@ -283,17 +284,23 @@ func (s *Search) TagKeysByMetric(Metric string) []string {
 	return r
 }
 
-func (s *Search) tagValuesByMetricTagKey(Metric, Tagk string) []string {
+func (s *Search) tagValuesByMetricTagKey(Metric, Tagk string, since time.Duration) []string {
+	var t int64
+	if since > 0 {
+		t = time.Now().Add(-since).Unix()
+	}
 	r := make([]string, 0)
-	for k := range s.Read.Tagv[duple{Metric, Tagk}] {
-		r = append(r, k)
+	for k, ts := range s.Read.Tagv[duple{Metric, Tagk}] {
+		if t <= ts {
+			r = append(r, k)
+		}
 	}
 	sort.Strings(r)
 	return r
 }
 
-func (s *Search) TagValuesByMetricTagKey(Metric, Tagk string) []string {
-	return s.tagValuesByMetricTagKey(Metric, Tagk)
+func (s *Search) TagValuesByMetricTagKey(Metric, Tagk string, since time.Duration) []string {
+	return s.tagValuesByMetricTagKey(Metric, Tagk, since)
 }
 
 func (s *Search) FilteredTagValuesByMetricTagKey(Metric, Tagk string, tsf map[string]string) []string {
