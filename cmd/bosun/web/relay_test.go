@@ -63,7 +63,7 @@ func TestRelay(t *testing.T) {
 	if len(m) != 2 || m[0] != "gzip-works" || m[1] != "no-gzip-works" {
 		t.Errorf("bad um: %v", m)
 	}
-	m = schedule.Search.TagValuesByMetricTagKey("gzip-works", "gzipped")
+	m = schedule.Search.TagValuesByMetricTagKey("gzip-works", "gzipped", 0)
 	if len(m) != 1 || m[0] != "yup" {
 		t.Errorf("bad tvbmtk: %v", m)
 	}
