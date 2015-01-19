@@ -10,6 +10,17 @@ import (
 	"time"
 )
 
+const (
+	Millisecond Duration = Duration(time.Millisecond)
+	Second               = 1000 * Millisecond
+	Minute               = 60 * Second
+	Hour                 = 60 * Minute
+	Day                  = Hour * 24
+	Week                 = Day * 7
+	Month                = Day * 30
+	Year                 = Day * 365
+)
+
 // Duration extends time.Duration to support OpenTSDB time-format specifiers:
 // http://opentsdb.net/docs/build/html/user_guide/query/dates.html#relative.
 type Duration time.Duration

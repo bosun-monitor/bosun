@@ -318,6 +318,7 @@ func New(name, text string) (c *Conf, err error) {
 		HTTPListen:     ":8070",
 		StateFile:      "bosun.state",
 		ResponseLimit:  1 << 20, // 1MB
+		SearchSince:    opentsdb.Day * 3,
 		Vars:           make(map[string]string),
 		Templates:      make(map[string]*Template),
 		Alerts:         make(map[string]*Alert),
