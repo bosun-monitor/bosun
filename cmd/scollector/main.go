@@ -42,10 +42,12 @@ var (
 	flagFake            = flag.Int("fake", 0, "Generates X fake data points on the test.fake metric per second.")
 	flagDebug           = flag.Bool("d", false, "Enables debug output.")
 	flagFullHost        = flag.Bool("u", false, `Enables full hostnames: doesn't truncate to first ".".`)
-	flagTags            = flag.String("t", "", `Tags to add to every datapoint in the format dc=ny,rack=3. If a collector specifies the same tag key, this one will be overwritten.`)
+	flagTags            = flag.String("t", "", `Tags to add to every datapoint in the format dc=ny,rack=3. If a collector specifies the same tag key, this one will be overwritten. The host tag is not supported.`)
 	flagDisableMetadata = flag.Bool("m", false, "Disable sending of metadata.")
 	flagVersion         = flag.Bool("version", false, "Prints the version and exits.")
 	flagDisableDefault  = flag.Bool("n", false, "Disable sending of scollector self metrics.")
+	flagHostname        = flag.String("hostname", "", "If set, use as value of host tag instead of system hostname.")
+	flagConf            = flag.String("conf", "", "Location of configuration file. Defaults to scollector.conf in directory of the scollector executable.")
 
 	procs []*collectors.WatchedProc
 
@@ -53,15 +55,21 @@ var (
 )
 
 func readConf() {
-	p, err := exePath()
-	if err != nil {
-		slog.Error(err)
-		return
+	loc := *flagConf
+	if *flagConf == "" {
+		p, err := exePath()
+		if err != nil {
+			slog.Error(err)
+			return
+		}
+		dir := filepath.Dir(p)
+		loc = filepath.Join(dir, "scollector.conf")
 	}
-	dir := filepath.Dir(p)
-	p = filepath.Join(dir, "scollector.conf")
-	b, err := ioutil.ReadFile(p)
+	b, err := ioutil.ReadFile(loc)
 	if err != nil {
+		if *flagConf != "" {
+			slog.Fatal(err)
+		}
 		if *flagDebug {
 			slog.Error(err)
 		}
@@ -74,7 +82,7 @@ func readConf() {
 		sp := strings.SplitN(line, "=", 2)
 		if len(sp) != 2 {
 			if *flagDebug {
-				slog.Errorf("expected = in %v:%v", p, i+1)
+				slog.Errorf("expected = in %v:%v", loc, i+1)
 			}
 			continue
 		}
@@ -107,9 +115,7 @@ func readConf() {
 			}
 			procs = append(procs, p)
 		default:
-			if *flagDebug {
-				slog.Errorf("unknown key in %v:%v", p, i+1)
-			}
+			slog.Fatalf("unknown key in %v:%v", loc, i+1)
 		}
 	}
 }

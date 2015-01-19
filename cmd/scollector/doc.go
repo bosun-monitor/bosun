@@ -38,6 +38,8 @@ The flags are:
 		disable sending of metadata
 	-n
 		disable sending of scollector self metrics
+	-conf=""
+		location of configuration file
 
 Additional flags on Windows:
 	-winsvc=""
