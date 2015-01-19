@@ -42,6 +42,7 @@ const (
 	BytesPerSecond      = "bytes per second"
 	C                   = "C" // Celsius
 	CHz                 = "CentiHertz"
+	Connection          = "connections"
 	Context             = "contexts"
 	ContextSwitch       = "context switches"
 	Count               = ""
@@ -55,6 +56,7 @@ const (
 	Get                 = "gets"
 	GetExists           = "get exists"
 	Interupt            = "interupts"
+	Item                = "items"
 	KBytes              = "kbytes"
 	Load                = "load"
 	EMail               = "emails"
@@ -79,9 +81,11 @@ const (
 	Suggest             = "suggests"
 	StatusCode          = "status code"
 	Syscall             = "system calls"
+	Thread              = "threads"
 	V                   = "V" // Volts
 	V10                 = "tenth-Volts"
 	Watt                = "Watts"
+	Yield               = "yields"
 )
 
 // Metakey uniquely identifies a metadata entry.
