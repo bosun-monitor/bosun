@@ -110,6 +110,14 @@ func Run(cs []Collector) chan *opentsdb.DataPoint {
 	return ch
 }
 
+type MetricMeta struct {
+	Metric   string
+	TagSet   opentsdb.TagSet
+	RateType metadata.RateType
+	Unit     metadata.Unit
+	Desc     string
+}
+
 // AddTS is the same as Add but lets you specify the timestamp
 func AddTS(md *opentsdb.MultiDataPoint, name string, ts int64, value interface{}, t opentsdb.TagSet, rate metadata.RateType, unit metadata.Unit, desc string) {
 	tags := t.Copy()
