@@ -96,6 +96,8 @@ func readConf() {
 		switch k {
 		case "host":
 			f(flagHost)
+		case "hostname":
+			f(flagHostname)
 		case "filter":
 			f(flagFilter)
 		case "coldir":
@@ -139,9 +141,15 @@ func main() {
 		if err != nil {
 			slog.Fatalf("failed to parse additional tags %v: %v", *flagTags, err)
 		}
+		if collectors.AddTags["host"] != "" {
+			slog.Fatalf("host not supported in custom tags, use -hostname instead")
+		}
 	}
 	util.FullHostname = *flagFullHost
 	util.Set()
+	if *flagHostname != "" {
+		util.Hostname = *flagHostname
+	}
 	if *flagColDir != "" {
 		collectors.InitPrograms(*flagColDir)
 	}

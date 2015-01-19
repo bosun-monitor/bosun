@@ -40,6 +40,8 @@ The flags are:
 		disable sending of scollector self metrics
 	-conf=""
 		location of configuration file
+	-hostname=""
+		override for system hostname
 
 Additional flags on Windows:
 	-winsvc=""
@@ -97,8 +99,8 @@ Configuration File
 If scollector.conf exists in the same directory as the scollector executable, it
 will set configuration flags. Configuration file values overwrite command line
 flags. The configuration file is of the form key = value, one per line.
-Supported keys are: host (-h), filter (-f), coldir (-c), snmp (-s), icmp (-i),
-vsphere (-v). Example:
+Supported keys are: host (-h), hostname (-hostname), filter (-f), coldir (-c),
+snmp (-s), icmp (-i), vsphere (-v). Example:
 
 	host = other-tsdb:1234
 	filter = snmp
