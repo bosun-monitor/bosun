@@ -101,7 +101,7 @@ func c_omreport_ps_amps() (opentsdb.MultiDataPoint, error) {
 			}
 			id := strings.Replace(i_fields[0], " ", "", -1)
 			Add(&md, "hw.chassis.current.reading", v_fields[0], opentsdb.TagSet{"id": id}, metadata.Gauge, metadata.A, descDellHWCurrent)
-		} else if len(fields) == 6 && fields[2] == "System Board Pwr Consumption" {
+		} else if len(fields) == 6 && (fields[2] == "System Board Pwr Consumption" || fields[2] == "System Board System Level") {
 			v_fields := strings.Fields(fields[3])
 			if len(v_fields) < 2 {
 				return
