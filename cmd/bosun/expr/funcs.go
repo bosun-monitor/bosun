@@ -64,6 +64,29 @@ func tagTranspose(args []parse.Node) (parse.Tags, error) {
 	return tags, nil
 }
 
+func tagRename(args []parse.Node) (parse.Tags, error) {
+	tags, err := tagFirst(args)
+	if err != nil {
+		return nil, err
+	}
+	for _, section := range strings.Split(args[1].(*parse.StringNode).Text, ",") {
+		kv := strings.Split(section, "=")
+		if len(kv) != 2 {
+			return nil, fmt.Errorf("error passing groups")
+		}
+		for oldTagKey, _ := range tags {
+			if kv[0] == oldTagKey {
+				if _, ok := tags[kv[1]]; ok {
+					return nil, fmt.Errorf("%s already in group", kv[1])
+				}
+				delete(tags, kv[0])
+				tags[kv[1]] = struct{}{}
+			}
+		}
+	}
+	return tags, nil
+}
+
 // Graphite defines functions for use with a Graphite backend.
 var Graphite = map[string]parse.Func{
 	"graphiteBand": {
@@ -206,6 +229,12 @@ var builtins = map[string]parse.Func{
 	},
 
 	// Group functions
+	"rename": {
+		[]parse.FuncType{parse.TypeSeries, parse.TypeString},
+		parse.TypeSeries,
+		tagRename,
+		Rename,
+	},
 
 	"t": {
 		[]parse.FuncType{parse.TypeNumber, parse.TypeString},
@@ -881,6 +910,28 @@ func percentile(dps Series, args ...float64) (a float64) {
 	i := p * float64(len(x)-1)
 	i = math.Ceil(i)
 	return x[int(i)]
+}
+
+func Rename(e *State, T miniprofiler.Timer, series *Results, s string) (*Results, error) {
+	for _, section := range strings.Split(s, ",") {
+		kv := strings.Split(section, "=")
+		if len(kv) != 2 {
+			return nil, fmt.Errorf("error passing groups")
+		}
+		for _, res := range series.Results {
+			for oldk, v := range res.Group {
+				if kv[0] == oldk {
+					if _, ok := res.Group[kv[1]]; ok {
+						return nil, fmt.Errorf("%s already in group", kv[1])
+					}
+					delete(res.Group, oldk)
+					res.Group[kv[1]] = v
+				}
+
+			}
+		}
+	}
+	return series, nil
 }
 
 func Ungroup(e *State, T miniprofiler.Timer, d *Results) (*Results, error) {
