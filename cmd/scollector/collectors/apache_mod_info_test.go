@@ -61,6 +61,11 @@ func TestApacheModInfoEmpty(t *testing.T) {
 		t.Errorf("Expected 0,0,ERROR got %v,%v,%v", c, k, err)
 	}
 
+	mpm_d, mpm_t, mpm_f, err := extractMpmInfo(n)
+	if (mpm_d != 0) || (mpm_t != false) || (mpm_f != false) || (err == nil) {
+		t.Errorf("Expected 0,false,false,<nil> got %v,%v,%v,%v", mpm_d, mpm_t, mpm_f, err)
+	}
+
 }
 
 func TestApacheModInfoServerSimple(t *testing.T) {
@@ -73,4 +78,10 @@ func TestApacheModInfoServerSimple(t *testing.T) {
 	if c != 60 || k != 15 || err != nil {
 		t.Errorf("Expected 60,15,<nil> got %v,%v,%v", c, k, err)
 	}
+
+	mpm_d, mpm_t, mpm_f, err := extractMpmInfo(n)
+	if (mpm_d != 64) || (mpm_t != false) || (mpm_f != true) || (err != nil) {
+		t.Errorf("Expected 64,false,true,<nil> got %v,%v,%v,%v", mpm_d, mpm_t, mpm_f, err)
+	}
+
 }
