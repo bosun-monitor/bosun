@@ -200,15 +200,15 @@ func (s *Schedule) CheckAlert(T miniprofiler.Timer, r *RunHistory, a *conf.Alert
 	log.Printf("checking alert %v", a.Name)
 	start := time.Now()
 	var warns expr.AlertKeys
-	crits, err := s.CheckExpr(T, r, a, a.Crit, StCritical, nil)
+	crits, _, err := s.CheckExpr(T, r, a, a.Crit, StCritical, nil)
 	if err == nil {
-		warns, _ = s.CheckExpr(T, r, a, a.Warn, StWarning, crits)
+		warns, _, _ = s.CheckExpr(T, r, a, a.Warn, StWarning, crits)
 	}
 	collect.Put("check.duration", opentsdb.TagSet{"name": a.Name}, time.Since(start).Seconds())
 	log.Printf("done checking alert %v (%s): %v crits, %v warns", a.Name, time.Since(start), len(crits), len(warns))
 }
 
-func (s *Schedule) CheckExpr(T miniprofiler.Timer, rh *RunHistory, a *conf.Alert, e *expr.Expr, checkStatus Status, ignore expr.AlertKeys) (alerts expr.AlertKeys, err error) {
+func (s *Schedule) CheckExpr(T miniprofiler.Timer, rh *RunHistory, a *conf.Alert, e *expr.Expr, checkStatus Status, ignore expr.AlertKeys) (alerts expr.AlertKeys, res *expr.Result, err error) {
 	if e == nil {
 		return
 	}
@@ -240,11 +240,11 @@ func (s *Schedule) CheckExpr(T miniprofiler.Timer, rh *RunHistory, a *conf.Alert
 		return
 	}
 Loop:
-	for _, r := range results.Results {
-		if s.Conf.Squelched(a, r.Group) {
+	for _, res = range results.Results {
+		if s.Conf.Squelched(a, res.Group) {
 			continue
 		}
-		ak := expr.NewAlertKey(a.Name, r.Group)
+		ak := expr.NewAlertKey(a.Name, res.Group)
 		for _, v := range ignore {
 			if ak == v {
 				continue Loop
@@ -254,7 +254,7 @@ Loop:
 		state.Touch()
 		status := checkStatus
 		var n float64
-		switch v := r.Value.(type) {
+		switch v := res.Value.(type) {
 		case expr.Number:
 			n = float64(v)
 		case expr.Scalar:
@@ -269,7 +269,7 @@ Loop:
 			rh.Events[ak] = event
 		}
 		result := Result{
-			Result: r,
+			Result: res,
 			Expr:   e.String(),
 		}
 		switch checkStatus {

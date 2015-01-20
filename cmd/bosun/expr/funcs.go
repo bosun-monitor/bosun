@@ -287,6 +287,12 @@ var builtins = map[string]parse.Func{
 		tagFirst,
 		NV,
 	},
+	"timestamp": {
+		[]parse.FuncType{parse.TypeSeries},
+		parse.TypeSeries,
+		tagFirst,
+		Timestamp,
+	},
 }
 
 func Epoch(e *State, T miniprofiler.Timer) (*Results, error) {
@@ -340,6 +346,17 @@ func DropNA(e *State, T miniprofiler.Timer, series *Results) (*Results, error) {
 		}
 		if len(nv) == 0 {
 			return nil, fmt.Errorf("dropna: series %s is empty", res.Group)
+		}
+		res.Value = nv
+	}
+	return series, nil
+}
+
+func Timestamp(e *State, T miniprofiler.Timer, series *Results) (*Results, error) {
+	for _, res := range series.Results {
+		nv := make(Series)
+		for k := range res.Value.Value().(Series) {
+			nv[k] = float64(k.Unix())
 		}
 		res.Value = nv
 	}

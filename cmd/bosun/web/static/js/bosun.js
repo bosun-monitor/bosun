@@ -583,6 +583,36 @@ bosunApp.directive('tsTimeLine', function () {
         bottom: 30,
         left: 250
     };
+    var font = {
+        size: 10,
+        weight: "bold",
+        family: "sans-serif",
+        variant: "small-caps",
+        color: "black"
+    };
+    var plotOpts = {
+        grid: {
+            borderWidth: 0
+        },
+        xaxis: {
+            font: font,
+            mode: "time",
+            // a sufficiently big enough number, so that multiple graphs align.
+            // http://stackoverflow.com/questions/11149800/how-to-size-and-align-flot-graphs
+            labelWidth: 100
+        },
+        yaxis: {
+            font: font
+        }
+    };
+    var dataOpts = {
+        lines: { show: true, lineWidth: 1 },
+        points: { show: true, radius: 1 },
+        color: "black"
+    };
+    var tagsetToId = function (expr) {
+        return expr.replace(/([^a-z0-9]+)/gi, '-');
+    };
     return {
         link: function (scope, elem, attrs) {
             scope.shown = {};
@@ -609,70 +639,80 @@ bosunApp.directive('tsTimeLine', function () {
                     return v.key;
                 });
                 var barheight = 500 / values.length;
-                barheight = Math.min(barheight, 45);
-                barheight = Math.max(barheight, 15);
+                var barheight = Math.round(barheight);
+                barheight = Math.min(barheight, 60);
+                barheight = Math.max(barheight, 35);
                 var svgHeight = values.length * barheight + margin.top + margin.bottom;
                 var height = svgHeight - margin.top - margin.bottom;
                 var svgWidth = elem.width();
                 var width = svgWidth - margin.left - margin.right;
-                var xScale = d3.time.scale.utc().range([0, width]);
-                var xAxis = d3.svg.axis().scale(xScale).orient('bottom');
                 elem.empty();
-                var svg = d3.select(elem[0]).append('svg').attr('width', svgWidth).attr('height', svgHeight).append('g').attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
-                svg.append('g').attr('class', 'x axis tl-axis').attr('transform', 'translate(0,' + height + ')');
-                xScale.domain([
-                    d3.min(values, function (d) {
-                        return d3.min(d.History, function (c) {
-                            return parseDate(c.Time);
-                        });
-                    }),
-                    d3.max(values, function (d) {
-                        return d3.max(d.History, function (c) {
-                            return parseDate(c.EndTime);
-                        });
-                    }),
-                ]);
-                var legend = d3.select(elem[0]).append('div').attr('class', 'tl-legend');
-                var time_legend = legend.append('div').text(values[0].History[0].Time);
-                var alert_legend = legend.append('div').text(keys[0]);
-                svg.select('.x.axis').transition().call(xAxis);
-                var chart = svg.append('g');
+                var box = d3.select(elem[0]);
                 angular.forEach(entries, function (entry, i) {
-                    chart.selectAll('.bars').data(entry.value.History).enter().append('rect').attr('class', function (d) {
-                        return 'tl-' + d.Status;
-                    }).attr('x', function (d) {
-                        return xScale(parseDate(d.Time));
-                    }).attr('y', i * barheight).attr('height', barheight).attr('width', function (d) {
-                        return xScale(parseDate(d.EndTime)) - xScale(parseDate(d.Time));
-                    }).on('mousemove.x', mousemove_x).on('mousemove.y', function (d) {
-                        alert_legend.text(entry.key);
-                    }).on('click', function (d, j) {
-                        var id = 'panel' + i + '-' + j;
-                        scope.shown['group' + i] = true;
-                        scope.shown[id] = true;
-                        scope.$apply();
-                        setTimeout(function () {
-                            var e = $("#" + id);
-                            if (!e) {
-                                console.log('no', id, e);
-                                return;
-                            }
-                            $('html, body').scrollTop(e.offset().top);
-                        });
-                    });
+                    console.debug("entries entry:" + i);
+                    console.debug(entry.value.History);
+                    var statuses = {};
+                    var first = -1;
+                    var last = -1;
+                    for (var i = 0; i < entry.value.History.length; i++) {
+                        console.debug('iter ' + i);
+                        var h = entry.value.History[i];
+                        var start = moment.utc(h.Time).unix() * 1000;
+                        var end = moment.utc(h.EndTime).unix() * 1000;
+                        var status = statuses[h.Status] || []; // Status is normal/warning/critical
+                        status.push({ from: start, to: end - 1 }); // the -1 gives us a nice thin separator until the next block
+                        statuses[h.Status] = status;
+                        if (first == -1) {
+                            first = start;
+                        }
+                        if (end > last) {
+                            last = end;
+                        }
+                    }
+                    box.append('span').attr('style', 'width:' + width + 'px; height:' + barheight + 'px;').text(entry['key']);
+                    // create divs into which we'll plot.
+                    box.append('div').attr('style', 'width:' + width + 'px; height:' + barheight + 'px;').attr('id', tagsetToId(entry['key']) + "_series_1");
+                    box.append('div').attr('style', 'width:' + width + 'px; height:' + barheight + 'px;').attr('id', tagsetToId(entry['key']) + "_status").text(".");
+                    // test data
+                    var data = [[first, 200000], [(first + last) / 2, 600000], [last, 400000]];
+                    // plot series
+                    var plotSpec = $.extend(true, {}, plotOpts);
+                    plotSpec['xaxis']['timeformat'] = ""; // time will be shown in status graph, no need to show it on every graph
+                    var dataSpec = $.extend({
+                        data: data
+                    }, dataOpts);
+                    $.plot('#' + tagsetToId(entry['key']) + "_series_1", [dataSpec], plotSpec);
+                    // plot status
+                    var markOpts = {
+                        yaxis: {
+                            show: false
+                        },
+                        grid: {
+                            borderWidth: 0,
+                            markings: []
+                        }
+                    };
+                    var statusProps = {
+                        normal: "green",
+                        warning: "orange",
+                        critical: "red"
+                    };
+                    for (var status in statuses) {
+                        if (statuses.hasOwnProperty(status)) {
+                            markOpts['grid']['markings'].push({ xaxis: statuses[status], color: statusProps[status] });
+                        }
+                    }
+                    var plotSpec = $.extend({}, plotOpts, markOpts);
+                    var dataSpec2 = {
+                        lines: { show: false },
+                        // we must plot at least 1 point or otherwise flot doesn't plot the chart
+                        // and we must plot a point at the end or it doesn't look right.
+                        data: [[first, 0], [last, 0]]
+                    };
+                    console.debug('dataSpec', dataSpec2);
+                    console.debug('plotSpec', plotSpec);
+                    $.plot('#' + tagsetToId(entry['key']) + "_status", [dataSpec2], plotSpec);
                 });
-                chart.selectAll('.labels').data(keys).enter().append('text').attr('text-anchor', 'end').attr('x', 0).attr('dx', '-.5em').attr('dy', '.25em').attr('y', function (d, i) {
-                    return (i + .5) * barheight;
-                }).text(function (d) {
-                    return d;
-                });
-                chart.selectAll('.sep').data(values).enter().append('rect').attr('y', function (d, i) {
-                    return (i + 1) * barheight;
-                }).attr('height', 1).attr('x', 0).attr('width', width).on('mousemove.x', mousemove_x);
-                function mousemove_x() {
-                    var x = xScale.invert(d3.mouse(this)[0]);
-                    time_legend.text(tsdbFormat(x));
-                }
             }
             ;
         }
@@ -1744,6 +1784,7 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
     };
     $scope.email = search.email || '';
     $scope.template_group = search.template_group || '';
+    $scope.timeline_extras = search.timeline_extras || '';
     $scope.fromDate = search.fromDate || '';
     $scope.fromTime = search.fromTime || '';
     $scope.toDate = search.toDate || '';
@@ -1792,6 +1833,7 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
         $location.search('duration', String($scope.duration) || null);
         $location.search('email', $scope.email || null);
         $location.search('template_group', $scope.template_group || null);
+        $location.search('timeline_extras', $scope.timeline_extras || null);
         $scope.animate();
         var from = moment.utc($scope.fromDate + ' ' + $scope.fromTime);
         var to = moment.utc($scope.toDate + ' ' + $scope.toTime);
@@ -1815,7 +1857,7 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
         else {
             intervals = +$scope.intervals;
         }
-        var url = '/api/rule?' + 'alert=' + encodeURIComponent($scope.alert) + '&template=' + encodeURIComponent($scope.template) + '&from=' + encodeURIComponent(from.format()) + '&to=' + encodeURIComponent(to.format()) + '&intervals=' + encodeURIComponent(intervals) + '&email=' + encodeURIComponent($scope.email) + '&template_group=' + encodeURIComponent($scope.template_group);
+        var url = '/api/rule?' + 'alert=' + encodeURIComponent($scope.alert) + '&template=' + encodeURIComponent($scope.template) + '&from=' + encodeURIComponent(from.format()) + '&to=' + encodeURIComponent(to.format()) + '&intervals=' + encodeURIComponent(intervals) + '&email=' + encodeURIComponent($scope.email) + '&template_group=' + encodeURIComponent($scope.template_group) + '&timeline_extras=' + encodeURIComponent($scope.timeline_extras);
         $http.get(url).success(function (data) {
             $scope.sets = data.Sets;
             $scope.alert_history = data.AlertHistory;
