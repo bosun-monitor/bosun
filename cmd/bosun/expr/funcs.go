@@ -515,19 +515,19 @@ func GraphiteQuery(e *State, T miniprofiler.Timer, query string, sduration, edur
 	if err != nil {
 		return
 	}
-	st := e.now.Add(-time.Duration(sd))
-	req := &graphite.Request{
-		Targets: []string{query},
-		Start:   &st,
-	}
+	ed := opentsdb.Duration(0)
 	if eduration != "" {
-		var ed opentsdb.Duration
 		ed, err = opentsdb.ParseDuration(eduration)
 		if err != nil {
 			return
 		}
-		et := e.now.Add(-time.Duration(ed))
-		req.End = &et
+	}
+	st := e.now.Add(-time.Duration(sd))
+	et := e.now.Add(-time.Duration(ed))
+	req := &graphite.Request{
+		Targets: []string{query},
+		Start:   &st,
+		End:     &et,
 	}
 	s, err := timeGraphiteRequest(e, T, req)
 	if err != nil {
