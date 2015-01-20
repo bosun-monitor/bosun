@@ -78,6 +78,12 @@ var Graphite = map[string]parse.Func{
 		graphiteTagQuery,
 		GraphiteQuery,
 	},
+	"graphiteSampled": {
+		[]parse.FuncType{parse.TypeString, parse.TypeString, parse.TypeString, parse.TypeString, parse.TypeScalar},
+		parse.TypeSeries,
+		graphiteTagQuery,
+		GraphiteQuerySampled,
+	},
 }
 
 var LogstashElastic = map[string]parse.Func{
@@ -511,14 +517,18 @@ func Band(e *State, T miniprofiler.Timer, query, duration, period string, num fl
 }
 
 func GraphiteQuery(e *State, T miniprofiler.Timer, query string, sduration, eduration, format string) (r *Results, err error) {
+	return GraphiteQuerySampled(e, T, query, sduration, eduration, format, -1)
+}
+func GraphiteQuerySampled(e *State, T miniprofiler.Timer, query string, sduration, eduration, format string, maxPoints float64) (r *Results, err error) {
 	sd, err := opentsdb.ParseDuration(sduration)
 	if err != nil {
 		return
 	}
 	st := e.now.Add(-time.Duration(sd))
 	req := &graphite.Request{
-		Targets: []string{query},
-		Start:   &st,
+		Targets:   []string{query},
+		Start:     &st,
+		MaxPoints: int(maxPoints),
 	}
 	if eduration != "" {
 		var ed opentsdb.Duration
