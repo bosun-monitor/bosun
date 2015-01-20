@@ -229,7 +229,7 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 				// All values read, remaining cols contain textual description.
 				break
 			}
-			Add(&md, "linux.interrupts", val, opentsdb.TagSet{"type": irq_type, "cpu": strconv.Itoa(i)}, metadata.Gauge, metadata.Interupt, irq_type_desc[irq_type])
+			Add(&md, "linux.interrupts", val, opentsdb.TagSet{"type": irq_type, "cpu": strconv.Itoa(i)}, metadata.Counter, metadata.Interupt, irq_type_desc[irq_type])
 		}
 		return nil
 	}); err != nil {
