@@ -4,10 +4,8 @@ package collectors
 
 import (
 	"fmt"
-	"io/ioutil"
 	"regexp"
 	"strings"
-	"sync"
 	"time"
 
 	"bosun.org/_third_party/github.com/garyburd/redigo/redis"
@@ -89,38 +87,29 @@ func slave(s string) string {
 
 var (
 	tcRE           = regexp.MustCompile(`^\s*#\s*scollector.(\w+)\s*=\s*(.+)$`)
-	redisInstances map[string]string
-	redisLock      sync.Mutex
+	redisInstances []opentsdb.TagSet
 )
+
+func redisScollectorTags(cfg string) map[string]string {
+	m := make(opentsdb.TagSet)
+	readLine(cfg, func(cfgline string) error {
+		result := tcRE.FindStringSubmatch(cfgline)
+		if len(result) == 3 {
+			m[result[1]] = result[2]
+		}
+		return nil
+	})
+	return m
+}
 
 func redisInit() {
 	update := func() {
-		ri := make(map[string]string)
+		var instances []opentsdb.TagSet
 		oldRedis := false
-		add := func(port, pid string) {
-			cluster := fmt.Sprintf("port-%s", port)
-			defer func() {
-				ri[port] = cluster
-			}()
-			f, err := ioutil.ReadFile(fmt.Sprintf("/proc/%s/cmdline", pid))
-			if err != nil {
-				return
-			}
-			fsp := strings.Split(strings.Split(string(f), "\n")[0], "\u0000")
-			if len(fsp) < 2 {
-				return
-			}
-			cfg := fsp[len(fsp)-2]
-			if len(cfg) == 0 {
-				return
-			}
-			readLine(cfg, func(cfgline string) error {
-				result := tcRE.FindStringSubmatch(cfgline)
-				if len(result) > 2 && strings.ToLower(result[0]) == "cluster" {
-					cluster = strings.ToLower(result[1])
-				}
-				return nil
-			})
+		add := func(port string) {
+			ri := make(opentsdb.TagSet)
+			ri["port"] = port
+			instances = append(instances, ri)
 		}
 		util.ReadCommand(func(line string) error {
 			sp := strings.Fields(line)
@@ -131,10 +120,9 @@ func redisInit() {
 				oldRedis = true
 				return nil
 			}
-			pid := sp[0]
 			port := strings.Split(sp[2], ":")[1]
 			if port != "0" {
-				add(port, pid)
+				add(port)
 			}
 			return nil
 		}, "ps", "-e", "-o", "pid,args")
@@ -147,15 +135,12 @@ func redisInit() {
 				if len(sp) < 7 || !strings.Contains(sp[3], ":") {
 					return nil
 				}
-				pid := strings.Split(sp[6], "/")[0]
 				port := strings.Split(sp[3], ":")[1]
-				add(port, pid)
+				add(port)
 				return nil
 			}, "netstat", "-tnlp")
 		}
-		redisLock.Lock()
-		redisInstances = ri
-		redisLock.Unlock()
+		redisInstances = instances
 	}
 	update()
 	go func() {
@@ -167,26 +152,34 @@ func redisInit() {
 
 func c_redis() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
-	redisLock.Lock()
 	var Error error
-	for port, cluster := range redisInstances {
-		c, err := redis.Dial("tcp", fmt.Sprintf(":%s", port))
+	for _, instance := range redisInstances {
+		c, err := redis.Dial("tcp", fmt.Sprintf(":%s", instance["port"]))
 		if err != nil {
 			Error = err
 			continue
 		}
 		defer c.Close()
-		tags := opentsdb.TagSet{
-			"cluster": cluster,
-			"port":    port,
-		}
 		lines, err := c.Do("INFO")
 		if err != nil {
 			Error = err
 			continue
 		}
-		_ = tags
-		for _, line := range strings.Split(string(lines.([]uint8)), "\n") {
+		tags := instance.Copy()
+		infoSplit := strings.Split(string(lines.([]uint8)), "\n")
+		for _, line := range infoSplit {
+			line = strings.TrimSpace(line)
+			sp := strings.Split(line, ":")
+			if len(sp) < 2 || sp[0] != "config_file" {
+				continue
+			}
+			if sp[1] != "" {
+				m := redisScollectorTags(sp[1])
+				tags.Merge(m)
+				break
+			}
+		}
+		for _, line := range infoSplit {
 			line = strings.TrimSpace(line)
 			sp := strings.Split(line, ":")
 			if len(sp) < 2 || !redisFields[sp[0]] {
@@ -207,6 +200,5 @@ func c_redis() (opentsdb.MultiDataPoint, error) {
 			Add(&md, "redis."+sp[0], sp[1], tags, metadata.Unknown, metadata.None, "")
 		}
 	}
-	redisLock.Unlock()
 	return md, Error
 }
