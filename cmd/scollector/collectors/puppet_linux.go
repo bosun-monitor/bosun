@@ -1,6 +1,7 @@
 package collectors
 
 import (
+	"encoding/json"
 	"io/ioutil"
 	"os"
 
@@ -70,11 +71,21 @@ type PRSummary struct {
 func puppet_linux() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	// See if puppet has been disabled (i.e. `puppet agent --disable 'Reason'`)
-	disabled := 0
-	if _, err := os.Stat(puppetDisabled); !os.IsNotExist(err) {
+	var disabled, noReason int
+	if v, err := ioutil.ReadFile(puppetDisabled); err == nil {
 		disabled = 1
+		d := struct {
+			Disabled string `json:"disabled_message"`
+		}{}
+		if err := json.Unmarshal(v, &d); err == nil && d.Disabled != "" {
+			if d.Disabled == "reason not specified" {
+				noReason = 1
+			}
+			metadata.AddMeta("", nil, "puppet.disabled_reason", d.Disabled, true)
+		}
 	}
 	Add(&md, "puppet.disabled", disabled, nil, metadata.Gauge, metadata.Count, "")
+	Add(&md, "puppet.disabled_no_reason", noReason, nil, metadata.Gauge, metadata.Count, "")
 	// Gather stats from the run summary
 	s, err := ioutil.ReadFile(puppetRunSummary)
 	if err != nil {
