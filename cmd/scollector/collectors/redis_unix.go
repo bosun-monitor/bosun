@@ -5,6 +5,7 @@ package collectors
 import (
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -150,6 +151,27 @@ func redisInit() {
 	}()
 }
 
+func redisKeyCount(line string) (int64, error) {
+	err := fmt.Errorf("Error parsing keyspace line from redis info: %v", line)
+	colSplit := strings.Split(line, ":")
+	if len(colSplit) < 2 {
+		return 0, err
+	}
+	comSplit := strings.Split(colSplit[1], ",")
+	if len(comSplit) != 3 {
+		return 0, err
+	}
+	eqSplit := strings.Split(comSplit[0], "=")
+	if len(eqSplit) != 2 || eqSplit[0] != "keys" {
+		return 0, err
+	}
+	v, err := strconv.ParseInt(eqSplit[1], 10, 64)
+	if err != nil {
+		return 0, err
+	}
+	return v, nil
+}
+
 func c_redis() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	var Error error
@@ -179,8 +201,25 @@ func c_redis() (opentsdb.MultiDataPoint, error) {
 				break
 			}
 		}
+		var keyspace bool
+		var keys int64
 		for _, line := range infoSplit {
 			line = strings.TrimSpace(line)
+			if line == "" {
+				continue
+			}
+			if line == "# Keyspace" {
+				keyspace = true
+				continue
+			}
+			if keyspace {
+				k, err := redisKeyCount(line)
+				if err != nil {
+					return nil, err
+				}
+				keys += k
+				continue
+			}
 			sp := strings.Split(line, ":")
 			if len(sp) < 2 || !redisFields[sp[0]] {
 				continue
@@ -199,6 +238,11 @@ func c_redis() (opentsdb.MultiDataPoint, error) {
 			}
 			Add(&md, "redis."+sp[0], sp[1], tags, metadata.Unknown, metadata.None, "")
 		}
+		Add(&md, "redis.key_count", keys, tags, metadata.Gauge, metadata.Key, descRedisKeyCount)
 	}
 	return md, Error
 }
+
+const (
+	descRedisKeyCount = "The total number of keys in the instance."
+)

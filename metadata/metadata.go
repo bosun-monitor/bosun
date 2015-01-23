@@ -58,6 +58,7 @@ const (
 	Interupt            = "interupts"
 	Item                = "items"
 	KBytes              = "kbytes"
+	Key                 = "keys"
 	Load                = "load"
 	EMail               = "emails"
 	MHz                 = "MHz" // MegaHertz
