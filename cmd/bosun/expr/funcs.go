@@ -2,7 +2,6 @@ package expr
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"math"
@@ -346,9 +345,9 @@ func DropNA(e *State, T miniprofiler.Timer, series *Results) (*Results, error) {
 	return series, nil
 }
 
-func parseGraphiteResponse(s *graphite.Response, formatTags []string) ([]*Result, error) {
+func parseGraphiteResponse(req *graphite.Request, s *graphite.Response, formatTags []string) ([]*Result, error) {
 	if len(*s) == 0 {
-		return nil, errors.New("empty response")
+		return nil, fmt.Errorf("empty response for '%s' from %s to %s", req.Targets, req.Start, req.End)
 	}
 	seen := make(map[string]bool)
 	results := make([]*Result, 0)
@@ -367,7 +366,7 @@ func parseGraphiteResponse(s *graphite.Response, formatTags []string) ([]*Result
 		if ts := tags.String(); !seen[ts] {
 			seen[ts] = true
 		} else {
-			return nil, fmt.Errorf("target contains duplicates: %v", ts)
+			return nil, fmt.Errorf("resultset contains series with duplicate tagset identifiers. At least 2 series are identified by tagset '%v'", ts)
 		}
 		// build data
 		dps := make(Series)
@@ -432,21 +431,32 @@ func GraphiteBand(e *State, T miniprofiler.Timer, query, duration, period, forma
 			if err != nil {
 				return
 			}
-			if len(s) == 0 {
-				err = errors.New("empty response")
-				return
-			}
 			formatTags := strings.Split(format, ".")
-			results, err := parseGraphiteResponse(&s, formatTags)
+			var results []*Result
+			results, err = parseGraphiteResponse(req, &s, formatTags)
 			if err != nil {
 				return
 			}
 			if i == 0 {
 				r.Results = results
 			} else {
-				for i, result := range results {
+				// different graphite requests might return series with different id's.
+				// i.e. a different set of tagsets.  merge the data of corresponding tagsets
+				for _, result := range results {
+					updateKey := -1
+					for j, existing := range r.Results {
+						if result.Group.Equal(existing.Group) {
+							updateKey = j
+							break
+						}
+					}
+					if updateKey == -1 {
+						// result tagset is new
+						r.Results = append(r.Results, result)
+						updateKey = len(r.Results) - 1
+					}
 					for k, v := range result.Value.(Series) {
-						r.Results[i].Value.(Series)[k] = v
+						r.Results[updateKey].Value.(Series)[k] = v
 					}
 				}
 			}
@@ -564,7 +574,7 @@ func GraphiteQuery(e *State, T miniprofiler.Timer, query string, sduration, edur
 	}
 	formatTags := strings.Split(format, ".")
 	r = new(Results)
-	results, err := parseGraphiteResponse(&s, formatTags)
+	results, err := parseGraphiteResponse(req, &s, formatTags)
 	if err != nil {
 		return nil, fmt.Errorf("graphite: %v", err)
 	}
