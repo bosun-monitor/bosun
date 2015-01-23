@@ -1,6 +1,7 @@
 package sched // import "bosun.org/cmd/bosun/sched"
 
 import (
+	"bytes"
 	"compress/gzip"
 	"encoding/gob"
 	"encoding/json"
@@ -8,9 +9,10 @@ import (
 	"io"
 	"log"
 	"net"
-	"os"
 	"sync"
 	"time"
+
+	"bosun.org/_third_party/github.com/boltdb/bolt"
 
 	"bosun.org/_third_party/github.com/MiniProfiler/go/miniprofiler"
 	"bosun.org/_third_party/github.com/bradfitz/slice"
@@ -44,6 +46,7 @@ type Schedule struct {
 	notifications map[*conf.Notification][]*State
 	metalock      sync.Mutex
 	checkRunning  chan bool
+	db            *bolt.DB
 }
 
 func (s *Schedule) TimeLock(t miniprofiler.Timer) {
@@ -354,8 +357,8 @@ func marshalTime(t time.Time) string {
 var DefaultSched = &Schedule{}
 
 // Load loads a configuration into the default schedule.
-func Load(c *conf.Conf) {
-	DefaultSched.Load(c)
+func Load(c *conf.Conf) error {
+	return DefaultSched.Load(c)
 }
 
 // Run runs the default schedule.
@@ -363,7 +366,8 @@ func Run() error {
 	return DefaultSched.Run()
 }
 
-func (s *Schedule) Init(c *conf.Conf) {
+func (s *Schedule) Init(c *conf.Conf) error {
+	var err error
 	s.Conf = c
 	s.Silence = make(map[string]*Silence)
 	s.Group = make(map[time.Time]expr.AlertKeys)
@@ -371,15 +375,38 @@ func (s *Schedule) Init(c *conf.Conf) {
 	s.status = make(States)
 	s.Search = search.NewSearch()
 	s.checkRunning = make(chan bool, 1)
+	if c.StateFile != "" {
+		s.db, err = bolt.Open(c.StateFile, 0600, nil)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
-func (s *Schedule) Load(c *conf.Conf) {
-	s.Init(c)
-	s.RestoreState()
+func (s *Schedule) Load(c *conf.Conf) error {
+	if err := s.Init(c); err != nil {
+		return err
+	}
+	if s.db == nil {
+		return nil
+	}
+	return s.RestoreState()
+}
+
+func Close() {
+	DefaultSched.Close()
+}
+
+func (s *Schedule) Close() {
+	s.save()
+	if s.db != nil {
+		s.db.Close()
+	}
 }
 
 // RestoreState restores notification and alert state from the file on disk.
-func (s *Schedule) RestoreState() {
+func (s *Schedule) RestoreState() error {
 	log.Println("RestoreState")
 	start := time.Now()
 	s.Lock()
@@ -387,42 +414,48 @@ func (s *Schedule) RestoreState() {
 	s.Search.Lock()
 	defer s.Search.Unlock()
 	s.Notifications = nil
-	f, err := os.Open(s.Conf.StateFile)
-	if err != nil {
-		log.Println(err)
-		return
-	}
-	var r io.Reader = f
-	gr, err := gzip.NewReader(f)
-	if err != nil {
-		f.Seek(0, 0)
-	} else {
+	decode := func(name string, dst interface{}) error {
+		var data []byte
+		err := s.db.View(func(tx *bolt.Tx) error {
+			b := tx.Bucket([]byte(dbBucket))
+			if b == nil {
+				return fmt.Errorf("unknown bucket: %v", dbBucket)
+			}
+			data = b.Get([]byte(name))
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+		gr, err := gzip.NewReader(bytes.NewReader(data))
+		if err != nil {
+			return err
+		}
 		defer gr.Close()
-		r = gr
+		return gob.NewDecoder(gr).Decode(dst)
 	}
-	dec := gob.NewDecoder(r)
-	if err := dec.Decode(&s.Search.Metric); err != nil {
-		log.Println(err)
+	if err := decode(dbMetric, &s.Search.Metric); err != nil {
+		log.Println(dbMetric, err)
 	}
-	if err := dec.Decode(&s.Search.Tagk); err != nil {
-		log.Println(err)
+	if err := decode(dbTagk, &s.Search.Tagk); err != nil {
+		log.Println(dbTagk, err)
 	}
-	if err := dec.Decode(&s.Search.Tagv); err != nil {
-		log.Println(err)
+	if err := decode(dbTagv, &s.Search.Tagv); err != nil {
+		log.Println(dbTagv, err)
 	}
-	if err := dec.Decode(&s.Search.MetricTags); err != nil {
-		log.Println(err)
+	if err := decode(dbMetricTags, &s.Search.MetricTags); err != nil {
+		log.Println(dbMetricTags, err)
 	}
 	notifications := make(map[expr.AlertKey]map[string]time.Time)
-	if err := dec.Decode(&notifications); err != nil {
-		log.Println(err)
+	if err := decode(dbNotifications, &notifications); err != nil {
+		log.Println(dbNotifications, err)
 	}
-	if err := dec.Decode(&s.Silence); err != nil {
-		log.Println(err)
+	if err := decode(dbSilence, &s.Silence); err != nil {
+		log.Println(dbSilence, err)
 	}
 	status := make(States)
-	if err := dec.Decode(&status); err != nil {
-		log.Println(err)
+	if err := decode(dbStatus, &status); err != nil {
+		log.Println(dbStatus, err)
 	}
 	for ak, st := range status {
 		if a, present := s.Conf.Alerts[ak.Name()]; !present {
@@ -450,11 +483,12 @@ func (s *Schedule) RestoreState() {
 			s.AddNotification(ak, n, t)
 		}
 	}
-	if err := dec.Decode(&s.Metadata); err != nil {
-		log.Println(err)
+	if err := decode(dbMetadata, &s.Metadata); err != nil {
+		log.Println(dbMetadata, err)
 	}
 	s.Search.Copy()
 	log.Println("RestoreState done in", time.Since(start))
+	return nil
 }
 
 var savePending bool
@@ -482,85 +516,71 @@ func (c *counterWriter) Write(p []byte) (n int, err error) {
 	return n, err
 }
 
+const (
+	dbBucket        = "bindata"
+	dbMetric        = "metric"
+	dbTagk          = "tagk"
+	dbTagv          = "tagv"
+	dbMetricTags    = "metrictags"
+	dbNotifications = "notifications"
+	dbSilence       = "silence"
+	dbStatus        = "status"
+	dbMetadata      = "metadata"
+)
+
 func (s *Schedule) save() {
-	savePending = false
-	if s.Conf.StateFile == "" {
+	defer func() {
+		savePending = false
+	}()
+	if s.db == nil {
 		return
 	}
-	tmp := s.Conf.StateFile + ".tmp"
-	f, err := os.Create(tmp)
-	defer f.Close()
+	store := map[string]interface{}{
+		dbMetric:        s.Search.Read.Metric,
+		dbTagk:          s.Search.Read.Tagk,
+		dbTagv:          s.Search.Read.Tagv,
+		dbMetricTags:    s.Search.Read.MetricTags,
+		dbNotifications: s.Notifications,
+		dbSilence:       s.Silence,
+		dbStatus:        s.status,
+		dbMetadata:      s.Metadata,
+	}
+	tostore := make(map[string][]byte)
+	for name, data := range store {
+		f := new(bytes.Buffer)
+		gz := gzip.NewWriter(f)
+		cw := &counterWriter{w: gz}
+		enc := gob.NewEncoder(cw)
+		if err := enc.Encode(data); err != nil {
+			log.Printf("error saving %s: %v", name, err)
+			return
+		}
+		if err := gz.Flush(); err != nil {
+			log.Printf("gzip flush error saving %s: %v", name, err)
+		}
+		if err := gz.Close(); err != nil {
+			log.Printf("gzip close error saving %s: %v", name, err)
+		}
+		tostore[name] = f.Bytes()
+		log.Printf("wrote %s: %v", name, conf.ByteSize(cw.written))
+	}
+	err := s.db.Update(func(tx *bolt.Tx) error {
+		b, err := tx.CreateBucketIfNotExists([]byte(dbBucket))
+		if err != nil {
+			return err
+		}
+		for name, data := range tostore {
+			if err := b.Put([]byte(name), data); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 	if err != nil {
-		log.Println(err)
+		log.Printf("save db update error: %v", err)
 		return
 	}
-	gz := gzip.NewWriter(f)
-	defer gz.Close()
-	cw := &counterWriter{w: gz}
-	enc := gob.NewEncoder(cw)
-	if err := enc.Encode(s.Search.Read.Metric); err != nil {
-		log.Println(err)
-		return
-	}
-	log.Println("search.metric wrote", conf.ByteSize(cw.written))
-	cw.written = 0
-	if err := enc.Encode(s.Search.Read.Tagk); err != nil {
-		log.Println(err)
-		return
-	}
-	log.Println("search.tagk wrote", conf.ByteSize(cw.written))
-	cw.written = 0
-	if err := enc.Encode(s.Search.Read.Tagv); err != nil {
-		log.Println(err)
-		return
-	}
-	log.Println("search.tagv wrote", conf.ByteSize(cw.written))
-	cw.written = 0
-	if err := enc.Encode(s.Search.Read.MetricTags); err != nil {
-		log.Println(err)
-		return
-	}
-	s.Lock()
-	defer s.Unlock()
-	log.Println("search.metrictags wrote", conf.ByteSize(cw.written))
-	cw.written = 0
-	if err := enc.Encode(s.Notifications); err != nil {
-		log.Println(err)
-		return
-	}
-	log.Println("notifications wrote", conf.ByteSize(cw.written))
-	cw.written = 0
-	if err := enc.Encode(s.Silence); err != nil {
-		log.Println(err)
-		return
-	}
-	log.Println("silence wrote", conf.ByteSize(cw.written))
-	cw.written = 0
-	if err := enc.Encode(s.status); err != nil {
-		log.Println(err)
-		return
-	}
-	log.Println("status wrote", conf.ByteSize(cw.written))
-	cw.written = 0
-	if err := enc.Encode(s.Metadata); err != nil {
-		log.Println(err)
-		return
-	}
-	log.Println("metadata wrote", conf.ByteSize(cw.written))
-	cw.written = 0
-	if err := gz.Close(); err != nil {
-		log.Println(err)
-		return
-	}
-	if err := f.Close(); err != nil {
-		log.Println(err)
-		return
-	}
-	if err := os.Rename(tmp, s.Conf.StateFile); err != nil {
-		log.Println(err)
-		return
-	}
-	log.Println("sched: wrote state to", s.Conf.StateFile)
+	log.Println("save to db complete")
 }
 
 func (s *Schedule) Run() error {

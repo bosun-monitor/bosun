@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"runtime"
 	"sort"
@@ -64,7 +65,9 @@ func main() {
 	if strings.HasPrefix(httpListen.Host, ":") {
 		httpListen.Host = "localhost" + httpListen.Host
 	}
-	sched.Load(c)
+	if err := sched.Load(c); err != nil {
+		log.Fatal(err)
+	}
 	if c.RelayListen != "" {
 		go func() {
 			mux := http.NewServeMux()
@@ -103,6 +106,15 @@ func main() {
 	}
 	go func() { log.Fatal(web.Listen(c.HTTPListen, *flagDev, c.TSDBHost)) }()
 	go func() { log.Fatal(sched.Run()) }()
+	sc := make(chan os.Signal, 1)
+	signal.Notify(sc, os.Interrupt)
+	go func() {
+		<-sc
+		log.Println("Interrupt: closing down...")
+		sched.Close()
+		log.Println("done")
+		os.Exit(1)
+	}()
 	if *flagWatch {
 		watch(".", "*.go", quit)
 		watch(filepath.Join("web", "static", "templates"), "*.html", quit)
