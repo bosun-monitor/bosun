@@ -2,7 +2,6 @@ package expr
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"math"
@@ -338,7 +337,7 @@ func parseGraphiteResponse(req *graphite.Request, s *graphite.Response, formatTa
 		if ts := tags.String(); !seen[ts] {
 			seen[ts] = true
 		} else {
-			return nil, fmt.Errorf("target contains duplicates: %v", ts)
+			return nil, fmt.Errorf("resultset contains series with duplicate tagset identifiers. At least 2 series are identified by tagset '%v'", ts)
 		}
 		// build data
 		dps := make(Series)
