@@ -411,9 +411,23 @@ func GraphiteBand(e *State, T miniprofiler.Timer, query, duration, period, forma
 			if i == 0 {
 				r.Results = results
 			} else {
-				for i, result := range results {
+				// different graphite requests might return series with different id's.
+				// i.e. a different set of tagsets.  merge the data of corresponding tagsets
+				for _, result := range results {
+					updateKey := -1
+					for j, existing := range r.Results {
+						if result.Group.Equal(existing.Group) {
+							updateKey = j
+							break
+						}
+					}
+					if updateKey == -1 {
+						// result tagset is new
+						r.Results = append(r.Results, result)
+						updateKey = len(r.Results) - 1
+					}
 					for k, v := range result.Value.(Series) {
-						r.Results[i].Value.(Series)[k] = v
+						r.Results[updateKey].Value.(Series)[k] = v
 					}
 				}
 			}
