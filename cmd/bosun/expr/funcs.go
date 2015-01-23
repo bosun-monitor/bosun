@@ -317,9 +317,9 @@ func DropNA(e *State, T miniprofiler.Timer, series *Results) (*Results, error) {
 	return series, nil
 }
 
-func parseGraphiteResponse(s *graphite.Response, formatTags []string) ([]*Result, error) {
+func parseGraphiteResponse(req *graphite.Request, s *graphite.Response, formatTags []string) ([]*Result, error) {
 	if len(*s) == 0 {
-		return nil, errors.New("empty response")
+		return nil, fmt.Errorf("empty response for '%s' from %s to %s", req.Targets, req.Start, req.End)
 	}
 	seen := make(map[string]bool)
 	results := make([]*Result, 0)
@@ -403,12 +403,9 @@ func GraphiteBand(e *State, T miniprofiler.Timer, query, duration, period, forma
 			if err != nil {
 				return
 			}
-			if len(s) == 0 {
-				err = errors.New("empty response")
-				return
-			}
 			formatTags := strings.Split(format, ".")
-			results, err := parseGraphiteResponse(&s, formatTags)
+			var results []*Result
+			results, err = parseGraphiteResponse(req, &s, formatTags)
 			if err != nil {
 				return
 			}
@@ -535,7 +532,7 @@ func GraphiteQuery(e *State, T miniprofiler.Timer, query string, sduration, edur
 	}
 	formatTags := strings.Split(format, ".")
 	r = new(Results)
-	results, err := parseGraphiteResponse(&s, formatTags)
+	results, err := parseGraphiteResponse(req, &s, formatTags)
 	if err != nil {
 		return nil, fmt.Errorf("graphite: %v", err)
 	}
