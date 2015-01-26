@@ -463,7 +463,7 @@ func GraphiteBand(e *State, T miniprofiler.Timer, query, duration, period, forma
 		}
 	})
 	if err != nil {
-		return nil, fmt.Errorf("graphite: %v", err)
+		return nil, fmt.Errorf("graphiteBand: %v", err)
 	}
 	return
 }
