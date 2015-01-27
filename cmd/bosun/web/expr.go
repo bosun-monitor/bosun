@@ -244,6 +244,7 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 		return nil, fmt.Errorf("cannot specify intervals without from and to")
 	}
 	var buf bytes.Buffer
+	fmt.Fprintf(&buf, "stateFile =\n")
 	fmt.Fprintf(&buf, "tsdbHost = %s\n", schedule.Conf.TSDBHost)
 	fmt.Fprintf(&buf, "graphiteHost = %s\n", schedule.Conf.GraphiteHost)
 	fmt.Fprintf(&buf, "logstashElasticHost = %s\n", schedule.Conf.LogstashElasticHost)
