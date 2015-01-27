@@ -21,7 +21,7 @@ func c_exim_mailq() (opentsdb.MultiDataPoint, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := util.ReadCommandTimeout(time.Minute, func(line string) error {
+	util.ReadCommandTimeout(time.Minute, func(line string) error {
 		f := strings.Fields(line)
 		if len(f) == 5 && f[4] == "TOTAL" {
 			Add(&md, "exim.mailq_count", f[0], nil, metadata.Gauge, metadata.EMail, "The number of emails in exim's mail queue.")
@@ -55,9 +55,7 @@ func c_exim_mailq() (opentsdb.MultiDataPoint, error) {
 			Add(&md, "exim.mailq_newest", newest.Seconds(), nil, metadata.Gauge, metadata.Second, descEximMailQNewest)
 		}
 		return nil
-	}, mailq, "/usr/sbin/exiqsumm"); err != nil {
-		return nil, err
-	}
+	}, mailq, "/usr/sbin/exiqsumm")
 	return md, nil
 }
 
