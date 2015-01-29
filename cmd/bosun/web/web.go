@@ -199,6 +199,12 @@ func JSON(h func(miniprofiler.Timer, http.ResponseWriter, *http.Request) (interf
 		if d == nil {
 			return
 		}
+		buf := new(bytes.Buffer)
+		if err := json.NewEncoder(buf).Encode(d); err != nil {
+			log.Println(err)
+			serveError(w, err)
+			return
+		}
 		var tw io.Writer = w
 		if strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
 			w.Header().Set("Content-Encoding", "gzip")
@@ -209,18 +215,12 @@ func JSON(h func(miniprofiler.Timer, http.ResponseWriter, *http.Request) (interf
 		if cb := r.FormValue("callback"); cb != "" {
 			w.Header().Add("Content-Type", "application/javascript")
 			tw.Write([]byte(cb + "("))
-			if err := json.NewEncoder(tw).Encode(d); err != nil {
-				log.Println(err)
-			}
+			buf.WriteTo(tw)
 			tw.Write([]byte(")"))
 			return
 		}
 		w.Header().Add("Content-Type", "application/json")
-		t.Step("JSON+gzip", func(t miniprofiler.Timer) {
-			if err := json.NewEncoder(tw).Encode(d); err != nil {
-				log.Println(err)
-			}
-		})
+		buf.WriteTo(tw)
 	})
 }
 
