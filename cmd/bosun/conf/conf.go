@@ -925,19 +925,15 @@ func (c *Conf) Expand(v string, vars map[string]string, ignoreBadExpand bool) st
 		if strings.HasPrefix(s, "${") && strings.HasSuffix(s, "}") {
 			s = "$" + s[2:len(s)-1]
 		}
-		if strings.HasPrefix(s, "$env.") {
-			n = os.Getenv(s[5:])
-		}
-		if _n, ok := c.Vars[s]; ok {
-			n = _n
-		}
 		if _n, ok := vars[s]; ok {
 			n = _n
-		}
-		if n == "" {
-			if ignoreBadExpand {
-				return s
-			}
+		} else if _n, ok := c.Vars[s]; ok {
+			n = _n
+		} else if strings.HasPrefix(s, "$env.") {
+			n = os.Getenv(s[5:])
+		} else if ignoreBadExpand {
+			return s
+		} else {
 			c.errorf("unknown variable %s", s)
 		}
 		return c.Expand(n, vars, ignoreBadExpand)
