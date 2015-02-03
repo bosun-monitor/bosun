@@ -1,0 +1,2 @@
+# The binary
+exec /opt/scollector/scollector cmd/scollector/scollector 
