@@ -116,6 +116,8 @@ func readConf() {
 				slog.Fatal(err)
 			}
 			procs = append(procs, p)
+		case "keepalived_community":
+			collectors.KeepAliveCommunity = v
 		default:
 			slog.Fatalf("unknown key in %v:%v", loc, i+1)
 		}
