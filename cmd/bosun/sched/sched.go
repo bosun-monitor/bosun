@@ -62,7 +62,7 @@ type Metavalue struct {
 
 func (s *Schedule) PutMetadata(k metadata.Metakey, v interface{}) {
 	s.metalock.Lock()
-	s.Metadata[k] = &Metavalue{time.Now().UTC(), v}
+	s.Metadata[k] = &Metavalue{time.Now(), v}
 	s.Save()
 	s.metalock.Unlock()
 }
@@ -699,7 +699,7 @@ func (s *State) Action(user, message string, t ActionType) {
 		User:    user,
 		Message: message,
 		Type:    t,
-		Time:    time.Now().UTC(),
+		Time:    time.Now(),
 	})
 }
 
@@ -758,7 +758,7 @@ func (s *Schedule) Action(user, message string, t ActionType, ak expr.AlertKey) 
 }
 
 func (s *State) Touch() {
-	s.Touched = time.Now().UTC()
+	s.Touched = time.Now()
 	s.Forgotten = false
 }
 
@@ -767,7 +767,7 @@ func (s *State) Touch() {
 func (s *State) Append(event *Event) Status {
 	last := s.Last()
 	if len(s.History) == 0 || s.Last().Status != event.Status {
-		event.Time = time.Now().UTC()
+		event.Time = time.Now()
 		s.History = append(s.History, *event)
 	}
 	return last.Status

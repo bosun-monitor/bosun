@@ -100,7 +100,7 @@ func (c *Context) Rule() (string, error) {
 	adef := base64.StdEncoding.EncodeToString([]byte(t.Alerts[c.Alert.Name]))
 	tdef := base64.StdEncoding.EncodeToString([]byte(t.Templates[c.Alert.Template.Name]))
 	//There might be something better when we tie the notifications to evaluation time issue #395
-	time := time.Now().UTC()
+	time := time.Now()
 	p.Add("alert", adef)
 	p.Add("template", tdef)
 	p.Add("fromDate", time.Format("2006-01-02"))
@@ -199,7 +199,7 @@ func (c *Context) eval(v interface{}, filter bool, series bool, autods int) (exp
 	if series && e.Root.Return() != parse.TypeSeries {
 		return nil, "", fmt.Errorf("egraph: requires an expression that returns a series")
 	}
-	t := time.Now().UTC()
+	t := time.Now()
 	if c.AbnormalEvent() != nil {
 		t = c.AbnormalEvent().Time
 	}
@@ -286,7 +286,7 @@ func (c *Context) graph(v interface{}, filter bool) (interface{}, error) {
 			name,
 		)), nil
 	}
-	if err := c.schedule.ExprSVG(nil, &buf, width, height, res, title, time.Now().UTC()); err != nil {
+	if err := c.schedule.ExprSVG(nil, &buf, width, height, res, title, time.Now()); err != nil {
 		return nil, err
 	}
 	return template.HTML(buf.String()), nil

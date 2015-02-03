@@ -103,9 +103,9 @@ bosunApp.factory('status', ['$http', '$q', function($http: ng.IHttpService, $q: 
 		$http.get('/api/status?ak=' + encodeURIComponent(ak))
 			.success(data => {
 				angular.forEach(data, (v, k) => {
-					v.Touched = moment(v.Touched).utc();
+					v.Touched = moment(v.Touched);
 					angular.forEach(v.History, (v, k) => {
-						v.Time = moment(v.Time).utc();
+						v.Time = moment(v.Time);
 					});
 					v.last = v.History[v.History.length - 1];
 					if (v.Actions && v.Actions.length > 0) {

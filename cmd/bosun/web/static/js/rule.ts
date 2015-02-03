@@ -107,8 +107,8 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
 		$location.search('email', $scope.email || null);
 		$location.search('template_group', $scope.template_group || null);
 		$scope.animate();
-		var from = moment.utc($scope.fromDate + ' ' + $scope.fromTime);
-		var to = moment.utc($scope.toDate + ' ' + $scope.toTime);
+		var from = moment($scope.fromDate + ' ' + $scope.fromTime);
+		var to = moment($scope.toDate + ' ' + $scope.toTime);
 		if (!from.isValid()) {
 			from = to;
 		}
@@ -116,7 +116,7 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
 			to = from;
 		}
 		if (!from.isValid() && !to.isValid()) {
-			from = to = moment.utc();
+			from = to = moment();
 		}
 		var diff = from.diff(to);
 		var intervals;
@@ -184,8 +184,8 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
 		$scope.show($scope.sets[id]);
 	};
 	$scope.setInterval = () => {
-		var from = moment.utc($scope.fromDate + ' ' + $scope.fromTime);
-		var to = moment.utc($scope.toDate + ' ' + $scope.toTime);
+		var from = moment($scope.fromDate + ' ' + $scope.fromTime);
+		var to = moment($scope.toDate + ' ' + $scope.toTime);
 		if (!from.isValid() || !to.isValid()) {
 			return;
 		}
@@ -205,8 +205,8 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
 		$scope.duration = d;
 	};
 	$scope.setDuration = () => {
-		var from = moment.utc($scope.fromDate + ' ' + $scope.fromTime);
-		var to = moment.utc($scope.toDate + ' ' + $scope.toTime);
+		var from = moment($scope.fromDate + ' ' + $scope.fromTime);
+		var to = moment($scope.toDate + ' ' + $scope.toTime);
 		if (!from.isValid() || !to.isValid()) {
 			return;
 		}

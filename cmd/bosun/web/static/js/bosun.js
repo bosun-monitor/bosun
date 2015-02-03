@@ -103,18 +103,12 @@ bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', '$q', '$r
     $scope.panelClass = function (status, prefix) {
         if (prefix === void 0) { prefix = "panel-"; }
         switch (status) {
-            case "critical":
-                return prefix + "danger";
-            case "unknown":
-                return prefix + "info";
-            case "warning":
-                return prefix + "warning";
-            case "normal":
-                return prefix + "success";
-            case "error":
-                return prefix + "danger";
-            default:
-                return prefix + "default";
+            case "critical": return prefix + "danger";
+            case "unknown": return prefix + "info";
+            case "warning": return prefix + "warning";
+            case "normal": return prefix + "success";
+            case "error": return prefix + "danger";
+            default: return prefix + "default";
         }
     };
     var scheduleFilter;
@@ -400,7 +394,7 @@ bosunApp.directive('tsComputations', function () {
         templateUrl: '/partials/computations.html',
         link: function (scope, elem, attrs) {
             if (scope.time) {
-                var m = moment.utc(scope.time);
+                var m = moment(scope.time);
                 scope.timeParam = "&date=" + encodeURIComponent(m.format("YYYY-MM-DD")) + "&time=" + encodeURIComponent(m.format("HH:mm"));
             }
             scope.btoa = function (v) {
@@ -418,8 +412,8 @@ function fmtDuration(v) {
     return diff.format('d[d]hh[h]mm[m]ss[s]');
 }
 function fmtTime(v) {
-    var m = moment(v).utc();
-    var now = moment().utc();
+    var m = moment(v);
+    var now = moment();
     var msdiff = now.diff(m);
     var ago = '';
     var inn = '';
@@ -435,7 +429,7 @@ bosunApp.directive("tsTime", function () {
     return {
         link: function (scope, elem, attrs) {
             scope.$watch(attrs.tsTime, function (v) {
-                var m = moment(v).utc();
+                var m = moment(v);
                 var text = fmtTime(v);
                 if (attrs.tsEndTime) {
                     var diff = moment(scope.$eval(attrs.tsEndTime)).diff(m);
@@ -464,7 +458,7 @@ bosunApp.directive("tsSince", function () {
     return {
         link: function (scope, elem, attrs) {
             scope.$watch(attrs.tsSince, function (v) {
-                var m = moment(v).utc();
+                var m = moment(v);
                 elem.text(m.fromNow());
             });
         }
@@ -563,7 +557,7 @@ bosunApp.directive('tsHistory', function () {
         templateUrl: '/partials/history.html',
         link: function (scope, elem, attrs) {
             if (scope.time) {
-                var m = moment.utc(scope.time);
+                var m = moment(scope.time);
                 scope.timeParam = "&date=" + encodeURIComponent(m.format("YYYY-MM-DD")) + "&time=" + encodeURIComponent(m.format("HH:mm"));
             }
             scope.btoa = function (v) {
@@ -573,9 +567,9 @@ bosunApp.directive('tsHistory', function () {
     };
 });
 bosunApp.directive('tsTimeLine', function () {
-    var tsdbFormat = d3.time.format.utc("%Y/%m/%d-%X");
+    var tsdbFormat = d3.time.format("%Y/%m/%d-%X");
     function parseDate(s) {
-        return moment.utc(s).toDate();
+        return moment(s).toDate();
     }
     var margin = {
         top: 10,
@@ -615,7 +609,7 @@ bosunApp.directive('tsTimeLine', function () {
                 var height = svgHeight - margin.top - margin.bottom;
                 var svgWidth = elem.width();
                 var width = svgWidth - margin.left - margin.right;
-                var xScale = d3.time.scale.utc().range([0, width]);
+                var xScale = d3.time.scale().range([0, width]);
                 var xAxis = d3.svg.axis().scale(xScale).orient('bottom');
                 elem.empty();
                 var svg = d3.select(elem[0]).append('svg').attr('width', svgWidth).attr('height', svgHeight).append('g').attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
@@ -745,7 +739,7 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function ($window, fmtfi
             var svgWidth;
             var width;
             var yScale = d3.scale.linear().range([height, 0]);
-            var xScale = d3.time.scale.utc();
+            var xScale = d3.time.scale();
             var xAxis = d3.svg.axis().orient('bottom');
             var yAxis = d3.svg.axis().scale(yScale).orient('left').ticks(Math.min(10, height / 20)).tickFormat(fmtfilter);
             var line;
@@ -1011,7 +1005,7 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function ($window, fmtfi
             }
             var mfmt = 'YYYY/MM/DD-HH:mm:ss';
             function datefmt(d) {
-                return moment(d).utc().format(mfmt);
+                return moment(d).format(mfmt);
             }
         }
     };
@@ -1231,16 +1225,16 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
     };
     var isRel = /^(\d+)(\w)-ago$/;
     function RelToAbs(m) {
-        return moment().utc().subtract(parseFloat(m[1]), duration_map[m[2]]).format();
+        return moment().subtract(parseFloat(m[1]), duration_map[m[2]]).format();
     }
     function AbsToRel(s) {
         //Not strict parsing of the time format. For example, just "2014" will be valid
-        var t = moment.utc(s, moment.defaultFormat).fromNow();
+        var t = moment(s, moment.defaultFormat).fromNow();
         return t;
     }
     function SwapTime(s) {
         if (!s) {
-            return moment().utc().format();
+            return moment().format();
         }
         var m = isRel.exec(s);
         if (m) {
@@ -1470,14 +1464,14 @@ bosunControllers.controller('HistoryCtrl', ['$scope', '$http', '$location', '$ro
                 return;
             }
             v.History.map(function (h) {
-                h.Time = moment.utc(h.Time);
+                h.Time = moment(h.Time);
             });
             angular.forEach(v.History, function (h, i) {
                 if (i + 1 < v.History.length) {
                     h.EndTime = v.History[i + 1].Time;
                 }
                 else {
-                    h.EndTime = moment.utc();
+                    h.EndTime = moment();
                 }
             });
             selected_alerts[ak] = {
@@ -1665,7 +1659,7 @@ var DP = (function () {
 bosunControllers.controller('PutCtrl', ['$scope', '$http', '$route', function ($scope, $http, $route) {
     $scope.tags = [new Tag];
     var dp = new DP;
-    dp.k = moment().utc().format();
+    dp.k = moment().format();
     $scope.dps = [dp];
     $http.get('/api/metric').success(function (data) {
         $scope.metrics = data;
@@ -1682,7 +1676,7 @@ bosunControllers.controller('PutCtrl', ['$scope', '$http', '$route', function ($
         });
         angular.forEach($scope.dps, function (v, k) {
             if (v.k && v.v) {
-                var ts = parseInt(moment.utc(v.k, tsdbDateFormat).format('X'));
+                var ts = parseInt(moment(v.k, tsdbDateFormat).format('X'));
                 data.push({
                     metric: $scope.metric,
                     timestamp: ts,
@@ -1712,7 +1706,7 @@ bosunControllers.controller('PutCtrl', ['$scope', '$http', '$route', function ($
         var last = $scope.dps[$scope.dps.length - 1];
         if (last.k && last.v) {
             var dp = new DP;
-            dp.k = moment.utc(last.k, tsdbDateFormat).add(15, 'seconds').format();
+            dp.k = moment(last.k, tsdbDateFormat).add(15, 'seconds').format();
             $scope.dps.push(dp);
         }
     };
@@ -1793,8 +1787,8 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
         $location.search('email', $scope.email || null);
         $location.search('template_group', $scope.template_group || null);
         $scope.animate();
-        var from = moment.utc($scope.fromDate + ' ' + $scope.fromTime);
-        var to = moment.utc($scope.toDate + ' ' + $scope.toTime);
+        var from = moment($scope.fromDate + ' ' + $scope.fromTime);
+        var to = moment($scope.toDate + ' ' + $scope.toTime);
         if (!from.isValid()) {
             from = to;
         }
@@ -1802,7 +1796,7 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
             to = from;
         }
         if (!from.isValid() && !to.isValid()) {
-            from = to = moment.utc();
+            from = to = moment();
         }
         var diff = from.diff(to);
         var intervals;
@@ -1856,8 +1850,8 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
         $scope.show($scope.sets[id]);
     };
     $scope.setInterval = function () {
-        var from = moment.utc($scope.fromDate + ' ' + $scope.fromTime);
-        var to = moment.utc($scope.toDate + ' ' + $scope.toTime);
+        var from = moment($scope.fromDate + ' ' + $scope.fromTime);
+        var to = moment($scope.toDate + ' ' + $scope.toTime);
         if (!from.isValid() || !to.isValid()) {
             return;
         }
@@ -1877,8 +1871,8 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
         $scope.duration = d;
     };
     $scope.setDuration = function () {
-        var from = moment.utc($scope.fromDate + ' ' + $scope.fromTime);
-        var to = moment.utc($scope.toDate + ' ' + $scope.toTime);
+        var from = moment($scope.fromDate + ' ' + $scope.fromTime);
+        var to = moment($scope.toDate + ' ' + $scope.toTime);
         if (!from.isValid() || !to.isValid()) {
             return;
         }
@@ -1984,7 +1978,7 @@ bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$ro
         }).finally(get);
     };
     $scope.time = function (v) {
-        var m = moment(v).utc();
+        var m = moment(v);
         return m.format();
     };
 }]);
@@ -2091,9 +2085,9 @@ bosunApp.factory('status', ['$http', '$q', function ($http, $q) {
         var q = o.q;
         $http.get('/api/status?ak=' + encodeURIComponent(ak)).success(function (data) {
             angular.forEach(data, function (v, k) {
-                v.Touched = moment(v.Touched).utc();
+                v.Touched = moment(v.Touched);
                 angular.forEach(v.History, function (v, k) {
-                    v.Time = moment(v.Time).utc();
+                    v.Time = moment(v.Time);
                 });
                 v.last = v.History[v.History.length - 1];
                 if (v.Actions && v.Actions.length > 0) {

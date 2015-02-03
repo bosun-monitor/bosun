@@ -526,7 +526,7 @@ func Band(e *State, T miniprofiler.Timer, query, duration, period string, num fl
 							err = e
 							return
 						}
-						values[time.Unix(i, 0).UTC()] = float64(v)
+						values[time.Unix(i, 0)] = float64(v)
 					}
 				}
 				if newarr {
@@ -538,7 +538,7 @@ func Band(e *State, T miniprofiler.Timer, query, duration, period string, num fl
 							err = e
 							return
 						}
-						values[time.Unix(i, 0).UTC()] = float64(v)
+						values[time.Unix(i, 0)] = float64(v)
 					}
 					a.Value = values
 					r.Results = append(r.Results, a)
@@ -637,7 +637,7 @@ func Query(e *State, T miniprofiler.Timer, query, sduration, eduration string) (
 			if err != nil {
 				return nil, err
 			}
-			values[time.Unix(i, 0).UTC()] = float64(v)
+			values[time.Unix(i, 0)] = float64(v)
 		}
 		r.Results = append(r.Results, &Result{
 			Value: values,
@@ -974,7 +974,7 @@ func Transpose(e *State, T miniprofiler.Timer, d *Results, gp string) (*Results,
 		case Number:
 			r := m[ts.String()]
 			i := int64(len(r.Value.(Series)))
-			r.Value.(Series)[time.Unix(i, 0).UTC()] = float64(t)
+			r.Value.(Series)[time.Unix(i, 0)] = float64(t)
 			r.Computations = append(r.Computations, v.Computations...)
 		default:
 			panic(fmt.Errorf("expr: expected a number"))
@@ -1133,7 +1133,7 @@ func LSDateHistogram(e *State, T miniprofiler.Timer, index_root, keystring, filt
 		for _, v := range ts.Buckets {
 			val := processBucketItem(v, rstat, ds)
 			if val != nil {
-				series[time.Unix(v.Key/1000, 0).UTC()] = *val
+				series[time.Unix(v.Key/1000, 0)] = *val
 			}
 		}
 		if len(series) == 0 {
@@ -1169,7 +1169,7 @@ func LSDateHistogram(e *State, T miniprofiler.Timer, index_root, keystring, filt
 			for _, v := range ts.Buckets {
 				val := processBucketItem(v, rstat, ds)
 				if val != nil {
-					series[time.Unix(v.Key/1000, 0).UTC()] = *val
+					series[time.Unix(v.Key/1000, 0)] = *val
 				}
 			}
 			if len(series) == 0 {
@@ -1264,7 +1264,8 @@ func GenLSIndices(host, index_root string, start, end time.Time) (string, error)
 		if root != index_root {
 			continue
 		}
-		d, err := time.Parse("2006.01.02", date)
+                loc, _ := time.LoadLocation("Local")
+		d, err := time.ParseInLocation("2006.01.02", date, loc)
 		if err != nil {
 			continue
 		}

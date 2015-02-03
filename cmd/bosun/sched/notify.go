@@ -99,7 +99,7 @@ func (s *Schedule) sendNotifications(rh *RunHistory, silenced map[expr.AlertKey]
 				s.notify(rh, st, n)
 			}
 			if n.Next != nil {
-				s.AddNotification(ak, n, time.Now().UTC())
+				s.AddNotification(ak, n, time.Now())
 			}
 		}
 		for name, group := range ustates.GroupSets() {
@@ -134,7 +134,7 @@ func (s *Schedule) notify(rh *RunHistory, st *State, n *conf.Notification) {
 func (s *Schedule) unotify(name string, group expr.AlertKeys, n *conf.Notification) {
 	subject := new(bytes.Buffer)
 	body := new(bytes.Buffer)
-	now := time.Now().UTC()
+	now := time.Now()
 	s.Group[now] = group
 	if t := s.Conf.UnknownTemplate; t != nil {
 		data := s.unknownData(now, name, group)
