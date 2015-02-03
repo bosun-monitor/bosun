@@ -592,11 +592,11 @@ func (s *Schedule) Run() error {
 	go s.CheckUnknown()
 	for {
 		wait := time.After(s.Conf.CheckFrequency)
-		if s.Conf.CheckFrequency < time.Second {
-			return fmt.Errorf("sched: frequency must be > 1 second")
-		}
 		if s.Conf == nil {
 			return fmt.Errorf("sched: nil configuration")
+		}
+		if s.Conf.CheckFrequency < time.Second {
+			return fmt.Errorf("sched: frequency must be > 1 second")
 		}
 		log.Println("starting check")
 		now := time.Now()
