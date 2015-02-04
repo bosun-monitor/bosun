@@ -369,10 +369,8 @@ func (c *Conf) loadGlobal(p *parse.PairNode) {
 		tz, err := time.LoadLocation(v)
 		if err != nil {
 			c.error(err)
-			c.TimeZone = time.UTC
-		} else {
-			c.TimeZone = tz
 		}
+		c.TimeZone = tz
 	case "checkFrequency":
 		od, err := opentsdb.ParseDuration(v)
 		if err != nil {
