@@ -1182,8 +1182,49 @@ func (c *Conf) Funcs() map[string]eparse.Func {
 		}
 		return results, nil
 	}
-	tagLookup := func(args []eparse.Node) (eparse.Tags, error) {
+	lookupSeries := func(e *expr.State, T miniprofiler.Timer, series *expr.Results, lookup, key string) (results *expr.Results, err error) {
+		results = new(expr.Results)
+		results.IgnoreUnjoined = true
+		l := c.Lookups[lookup]
+		if l == nil {
+			return nil, fmt.Errorf("lookup table not found: %v", lookup)
+		}
+		lookups := l.ToExpr()
+		if lookups == nil {
+			err = fmt.Errorf("lookup table not found: %v", lookup)
+			return
+		}
+		for _, res := range series.Results {
+			value, ok := lookups.Get(key, res.Group)
+			if !ok {
+				continue
+			}
+			var num float64
+			num, err = strconv.ParseFloat(value, 64)
+			if err != nil {
+				return nil, err
+			}
+			results.Results = append(results.Results, &expr.Result{
+				Value: expr.Number(num),
+				Group: res.Group,
+			})
+		}
+		return results, nil
+	}
+	lookupTags := func(args []eparse.Node) (eparse.Tags, error) {
 		name := args[0].(*eparse.StringNode).Text
+		lookup := c.Lookups[name]
+		if lookup == nil {
+			return nil, fmt.Errorf("bad lookup table %v", name)
+		}
+		t := make(eparse.Tags)
+		for _, v := range lookup.Tags {
+			t[v] = struct{}{}
+		}
+		return t, nil
+	}
+	lookupSeriesTags := func(args []eparse.Node) (eparse.Tags, error) {
+		name := args[1].(*eparse.StringNode).Text
 		lookup := c.Lookups[name]
 		if lookup == nil {
 			return nil, fmt.Errorf("bad lookup table %v", name)
@@ -1243,8 +1284,14 @@ func (c *Conf) Funcs() map[string]eparse.Func {
 		"lookup": {
 			Args:   []eparse.FuncType{eparse.TypeString, eparse.TypeString},
 			Return: eparse.TypeNumber,
-			Tags:   tagLookup,
+			Tags:   lookupTags,
 			F:      lookup,
+		},
+		"lookupSeries": {
+			Args:   []eparse.FuncType{eparse.TypeSeries, eparse.TypeString, eparse.TypeString},
+			Return: eparse.TypeNumber,
+			Tags:   lookupSeriesTags,
+			F:      lookupSeries,
 		},
 	}
 	merge := func(fs map[string]eparse.Func) {
