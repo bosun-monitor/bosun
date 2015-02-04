@@ -58,8 +58,7 @@ func main() {
 	if *flagTest {
 		os.Exit(0)
 	}
-        log.Println("TimeZone:", c.TimeZone)
-        os.Setenv("TZ", c.TimeZone)
+	log.Println("TimeZone:", time.Now().Location().String())
 	httpListen := &url.URL{
 		Scheme: "http",
 		Host:   c.HTTPListen,

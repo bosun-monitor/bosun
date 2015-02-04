@@ -542,7 +542,7 @@ func ParseAbsTime(s string) (time.Time, error) {
 		"2006/01/02",
 	}
 	for _, f := range tFormats {
-                loc, _ := time.LoadLocation("Local")
+		loc, _ := time.LoadLocation("Local")
 		if t, err := time.ParseInLocation(f, s, loc); err == nil {
 			return t, nil
 		}

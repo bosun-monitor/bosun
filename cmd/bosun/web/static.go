@@ -1802,8 +1802,8 @@ var _esc_data = map[string]*_esc_file{
 	},
 
 	"/js/.editorconfig": {
-		local: "web/static/js/.editorconfig",
-		size:  55,
+		local:      "web/static/js/.editorconfig",
+		size:       55,
 		compressed: "\x1f\x8b\b\x00\x00\tn\x88\x00\xff\x8a֊\xe5\xca\xccKI\xcd+\x89/.\xa9\xccIU\xb0U(IL\xe2*)\xca̍/)J\xcc\xcc\xc9\xccK\x8f/\xcf\xc8,I-.HL\x06K\x17\x95\xa6r\x01\x02\x00\x00\xff\xff\x1d\v\xb3\xba7\x00\x00\x00",
 	},
 
@@ -5899,8 +5899,8 @@ var _esc_data = map[string]*_esc_file{
 	},
 
 	"/js/moment-duration-format.d.ts": {
-		local: "web/static/js/moment-duration-format.d.ts",
-		size:  85,
+		local:      "web/static/js/moment-duration-format.d.ts",
+		size:       85,
 		compressed: "\x1f\x8b\b\x00\x00\tn\x88\x00\xff\xca\xcc+I-JKLNUp)-J,\xc9\xcc\xcfS\xa8\xe6\xe2L\xcb/\xcaM,\xd1(I\xcd-\xc8I,I\xb5\xb7RH̫\xd4Q((JM\xce,\x06\xaa\x81\t\x14\xa7\x96\x94d\xe6\xa5\x17C\xf8\x9a`Қ\xab\x16\x10\x00\x00\xff\xffIG\xb8wU\x00\x00\x00",
 	},
 

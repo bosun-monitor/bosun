@@ -1264,7 +1264,7 @@ func GenLSIndices(host, index_root string, start, end time.Time) (string, error)
 		if root != index_root {
 			continue
 		}
-                loc, _ := time.LoadLocation("Local")
+		loc, _ := time.LoadLocation("Local")
 		d, err := time.ParseInLocation("2006.01.02", date, loc)
 		if err != nil {
 			continue

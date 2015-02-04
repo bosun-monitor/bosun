@@ -27,10 +27,10 @@ import (
 
 type Conf struct {
 	Vars
-	Name            string        // Config file name
-        TimeZone        string        // Config timezone, default UTC
-	CheckFrequency  time.Duration // Time between alert checks: 5m
-	HTTPListen      string        // Web server listen address: :80
+	Name            string         // Config file name
+	TimeZone        *time.Location // Config timezone, default UTC
+	CheckFrequency  time.Duration  // Time between alert checks: 5m
+	HTTPListen      string         // Web server listen address: :80
 	Hostname        string
 	RelayListen     string // OpenTSDB relay listen address: :4242
 	SMTPHost        string // SMTP address: ny-mail:25
@@ -314,8 +314,8 @@ func ParseFile(fname string) (*Conf, error) {
 func New(name, text string) (c *Conf, err error) {
 	defer errRecover(&err)
 	c = &Conf{
-		Name:           name,
-                TimeZone:       "UTC",
+		Name: name,
+		TimeZone:       time.UTC,
 		CheckFrequency: time.Minute * 5,
 		HTTPListen:     ":8070",
 		StateFile:      "bosun.state",
@@ -365,14 +365,14 @@ func New(name, text string) (c *Conf, err error) {
 func (c *Conf) loadGlobal(p *parse.PairNode) {
 	v := c.Expand(p.Val.Text, nil, false)
 	switch k := p.Key.Text; k {
-        case "timeZone":
-                _, err := time.LoadLocation(v)
-                if err != nil {
-                        c.error(err)
-                        c.TimeZone = "UTC"
-                } else {
-                        
-                }
+	case "timeZone":
+		tz, err := time.LoadLocation(v)
+		if err != nil {
+			c.error(err)
+			c.TimeZone = time.UTC
+		} else {
+			c.TimeZone = tz
+		}
 	case "checkFrequency":
 		od, err := opentsdb.ParseDuration(v)
 		if err != nil {

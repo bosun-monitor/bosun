@@ -359,7 +359,7 @@ func SilenceSet(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (i
 	}
 	if s := data["start"]; s != "" {
 		for _, layout := range silenceLayouts {
-                        loc, _ := time.LoadLocation("Local")
+			loc, _ := time.LoadLocation("Local")
 			start, err = time.ParseInLocation(layout, s, loc)
 			if err == nil {
 				break
@@ -371,7 +371,7 @@ func SilenceSet(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (i
 	}
 	if s := data["end"]; s != "" {
 		for _, layout := range silenceLayouts {
-                        loc, _ := time.LoadLocation("Local")
+			loc, _ := time.LoadLocation("Local")
 			end, err = time.ParseInLocation(layout, s, loc)
 			if err == nil {
 				break

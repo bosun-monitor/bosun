@@ -63,7 +63,7 @@ func getTime(r *http.Request) (now time.Time, err error) {
 		} else {
 			fd += " " + now.Format("15:04")
 		}
-                loc, _ := time.LoadLocation("Local")
+		loc, _ := time.LoadLocation("Local")
 		now, err = time.ParseInLocation("2006-01-02 15:04", fd, loc)
 	}
 	return
@@ -216,14 +216,14 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 	var from, to time.Time
 	var err error
 	if f := r.FormValue("from"); len(f) > 0 {
-                loc, _ := time.LoadLocation("Local")
+		loc, _ := time.LoadLocation("Local")
 		from, err = time.ParseInLocation(tsdbFormatSecs, f, loc)
 		if err != nil {
 			return nil, err
 		}
 	}
 	if f := r.FormValue("to"); len(f) > 0 {
-                loc, _ := time.LoadLocation("Local")
+		loc, _ := time.LoadLocation("Local")
 		to, err = time.ParseInLocation(tsdbFormatSecs, f, loc)
 		if err != nil {
 			return nil, err
