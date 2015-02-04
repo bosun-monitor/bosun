@@ -78,13 +78,13 @@ type MetadataDescription struct {
 	Text string
 }
 
-func (s *Schedule) MetadataMetrics() map[string]*MetadataMetric {
+func (s *Schedule) MetadataMetrics(metric string) map[string]*MetadataMetric {
 	s.metalock.Lock()
 	m := make(map[string]*MetadataMetric)
 	for k, mv := range s.Metadata {
 		tags := k.TagSet()
 		delete(tags, "host")
-		if k.Metric == "" {
+		if k.Metric == "" || (metric != "" && k.Metric != metric) {
 			continue
 		}
 		val, _ := mv.Value.(string)

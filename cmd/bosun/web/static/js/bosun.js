@@ -1378,16 +1378,27 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
         return;
     }
     var autods = $scope.autods ? '&autods=' + $('#chart').width() : '';
+    function getMetricMeta(metric) {
+        $http.get('/api/metadata/metrics?metric=' + encodeURIComponent(metric)).success(function (data) {
+            if (Object.keys(data).length == 1) {
+                $scope.meta[metric] = data[metric];
+            }
+        }).error(function (error) {
+            console.log("Error getting metadata for metric " + metric);
+        });
+    }
     function get(noRunning) {
         $timeout.cancel(graphRefresh);
         if (!noRunning) {
             $scope.running = 'Running';
         }
         var autorate = '';
+        $scope.meta = {};
         for (var i = 0; i < request.queries.length; i++) {
             if (request.queries[i].derivative == 'auto') {
                 autorate += '&autorate=' + i;
             }
+            getMetricMeta(request.queries[i].metric);
         }
         var min = angular.isNumber($scope.min) ? '&min=' + encodeURIComponent($scope.min.toString()) : '';
         var max = angular.isNumber($scope.max) ? '&max=' + encodeURIComponent($scope.max.toString()) : '';
