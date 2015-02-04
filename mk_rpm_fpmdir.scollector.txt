@@ -1,6 +1,6 @@
 # The binary itself:
 exec /opt/scollector/scollector cmd/scollector/scollector 
 # Common utility functions shared for Python collectors:
-exec /opt/scollector/collectors/lib/utils.py cmd/scollector/helpers/utils.py 
+exec /opt/scollector/collectors/lib/utils.py plugins/utils.py 
 # Needed by mysqlconf.py:
-exec /opt/scollector/collectors/etc/mysqlconf.py cmd/scollector/helpers/mysqlconf.py
+exec /opt/scollector/collectors/etc/mysqlconf.py plugins/mysqlconf.py
