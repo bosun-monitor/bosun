@@ -71,6 +71,7 @@ const (
 	Pct                 = "percent" // Range of 0-100.
 	PerSecond           = "per second"
 	Process             = "processes"
+	Priority            = "priority"
 	Query               = "queries"
 	Refresh             = "refreshes"
 	Replica             = "replicas"
