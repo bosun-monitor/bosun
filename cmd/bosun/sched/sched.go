@@ -718,6 +718,7 @@ func (s *Schedule) Action(user, message string, t ActionType, ak expr.AlertKey) 
 		st.NeedAck = false
 	}
 	isUnknown := st.AbnormalStatus() == StUnknown
+	isError := st.AbnormalStatus() == StError
 	switch t {
 	case ActionAcknowledge:
 		if !st.NeedAck {
@@ -731,7 +732,7 @@ func (s *Schedule) Action(user, message string, t ActionType, ak expr.AlertKey) 
 		if st.NeedAck {
 			ack()
 		}
-		if st.IsActive() {
+		if st.IsActive() && !isError {
 			return fmt.Errorf("cannot close active alert")
 		}
 		st.Open = false
