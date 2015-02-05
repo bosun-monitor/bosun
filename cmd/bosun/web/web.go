@@ -276,16 +276,28 @@ func Alerts(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (inter
 
 func Status(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	r.ParseForm()
-	m := make(map[string]*sched.State)
+	type ExtStatus struct {
+		AlertDef    string
+		TemplateDef string
+
+		*sched.State
+	}
+	m := make(map[string]ExtStatus)
 	for _, k := range r.Form["ak"] {
 		ak, err := expr.ParseAlertKey(k)
 		if err != nil {
 			return nil, err
 		}
-		st := schedule.Status(ak)
-		if st == nil {
+		st := ExtStatus{State: schedule.Status(ak)}
+		if st.State == nil {
 			return nil, fmt.Errorf("unknown alert key: %v", k)
 		}
+		ruleConfigs, err := schedule.Conf.AlertTemplateStrings()
+		if err != nil {
+			return nil, err
+		}
+		st.AlertDef = ruleConfigs.Alerts[ak.Name()]
+		st.TemplateDef = ruleConfigs.Templates[ruleConfigs.Assocations[ak.Name()]]
 		m[k] = st
 	}
 	return m, nil
