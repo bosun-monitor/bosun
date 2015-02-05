@@ -34,6 +34,12 @@
 			</div>
 		</div>
 		<div class="row">
+			<div class="col-sm-3 text-right"><strong>Rule</strong></div>
+			<div class="col-sm-9">
+				<a ng-href="{{state.RuleUrl}}" ng-bind="name"></a>
+			</div>
+		</div>
+		<div class="row">
 			<div class="col-sm-3 text-right"><strong>Expr</strong></div>
 			<div class="col-sm-9">
 				<a ng-href="/expr?expr={{btoa(state.Expr)}}" ng-bind="zws(state.Expr)"></a>
