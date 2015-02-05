@@ -78,13 +78,13 @@ type MetadataDescription struct {
 	Text string
 }
 
-func (s *Schedule) MetadataMetrics() map[string]*MetadataMetric {
+func (s *Schedule) MetadataMetrics(metric string) map[string]*MetadataMetric {
 	s.metalock.Lock()
 	m := make(map[string]*MetadataMetric)
 	for k, mv := range s.Metadata {
 		tags := k.TagSet()
 		delete(tags, "host")
-		if k.Metric == "" {
+		if k.Metric == "" || (metric != "" && k.Metric != metric) {
 			continue
 		}
 		val, _ := mv.Value.(string)
@@ -718,6 +718,7 @@ func (s *Schedule) Action(user, message string, t ActionType, ak expr.AlertKey) 
 		st.NeedAck = false
 	}
 	isUnknown := st.AbnormalStatus() == StUnknown
+	isError := st.AbnormalStatus() == StError
 	switch t {
 	case ActionAcknowledge:
 		if !st.NeedAck {
@@ -731,7 +732,7 @@ func (s *Schedule) Action(user, message string, t ActionType, ak expr.AlertKey) 
 		if st.NeedAck {
 			ack()
 		}
-		if st.IsActive() {
+		if st.IsActive() && !isError {
 			return fmt.Errorf("cannot close active alert")
 		}
 		st.Open = false
