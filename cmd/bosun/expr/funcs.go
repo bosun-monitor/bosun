@@ -226,6 +226,12 @@ var builtins = map[string]parse.Func{
 		tagFirst,
 		Sum,
 	},
+	"streak": {
+		[]parse.FuncType{parse.TypeSeries},
+		parse.TypeNumber,
+		tagFirst,
+		Streak,
+	},
 
 	// Group functions
 	"rename": {
@@ -776,6 +782,34 @@ func sum(dps Series, args ...float64) (a float64) {
 		a += float64(v)
 	}
 	return
+}
+
+func Streak(e *State, T miniprofiler.Timer, series *Results) (*Results, error) {
+	return reduce(e, T, series, streak)
+}
+
+func streak(dps Series, args ...float64) (a float64) {
+	max := func(a, b int) int {
+		if a > b {
+			return a
+		}
+		return b
+	}
+
+	series := NewSortedSeries(dps)
+
+	current := 0
+	longest := 0
+	for _, p := range series {
+		if p.V != 0 {
+			current++
+		} else {
+			longest = max(current, longest)
+			current = 0
+		}
+	}
+	longest = max(current, longest)
+	return float64(longest)
 }
 
 func Dev(e *State, T miniprofiler.Timer, series *Results) (*Results, error) {
