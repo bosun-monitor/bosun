@@ -40,8 +40,9 @@ var (
 	flagWatch    = flag.Bool("w", false, "watch .go files below current directory and exit; also build typescript files on change")
 	flagReadonly = flag.Bool("r", false, "readonly-mode: don't write or relay any OpenTSDB metrics")
 	flagQuiet    = flag.Bool("q", false, "quiet-mode: don't send any notifications except from the rule test page")
+	flagNoSleep  = flag.Bool("no-sleep", false, "don't sleep the length of check frequency before running the first run of checks after startup")
 	flagDev      = flag.Bool("dev", false, "enable dev mode: use local resources")
-	flagVersion  = flag.Bool("version", false, "Prints the version and exits.")
+	flagVersion  = flag.Bool("version", false, "Prints the version and exits")
 )
 
 func main() {
@@ -105,7 +106,12 @@ func main() {
 		c.Quiet = true
 	}
 	go func() { log.Fatal(web.Listen(c.HTTPListen, *flagDev, c.TSDBHost)) }()
-	go func() { log.Fatal(sched.Run()) }()
+	go func() {
+		if !*flagNoSleep && !c.NoSleep {
+			time.Sleep(c.CheckFrequency)
+		}
+		log.Fatal(sched.Run())
+	}()
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, os.Interrupt)
 	go func() {

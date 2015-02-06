@@ -50,6 +50,7 @@ type Conf struct {
 	Lookups         map[string]*Lookup
 	Squelch         Squelches `json:"-"`
 	Quiet           bool
+	NoSleep         bool
 
 	TSDBHost            string // OpenTSDB relay and query destination: ny-devtsdb04:4242
 	GraphiteHost        string // Graphite query host: foo.bar.baz
@@ -400,6 +401,8 @@ func (c *Conf) loadGlobal(p *parse.PairNode) {
 		c.StateFile = v
 	case "ping":
 		c.Ping = true
+	case "noSleep":
+		c.NoSleep = true
 	case "timeAndDate":
 		sp := strings.Split(v, ",")
 		var t []int
