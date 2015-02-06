@@ -2104,6 +2104,14 @@ bosunApp.factory('status', ['$http', '$q', function ($http, $q) {
                 if (v.Actions && v.Actions.length > 0) {
                     v.LastAction = v.Actions[0];
                 }
+                v.RuleUrl = '/rule?' + 'alert=' + encodeURIComponent(btoa(v.AlertDef)) + '&template=' + encodeURIComponent(btoa(v.TemplateDef)) + '&fromDate=' + encodeURIComponent(v.last.Time.format("YYYY-MM-DD")) + '&fromTime=' + encodeURIComponent(v.last.Time.format("HH:mm"));
+                var groups = [];
+                angular.forEach(v.Group, function (v, k) {
+                    groups.push(k + "=" + v);
+                });
+                if (groups.length > 0) {
+                    v.RuleUrl += '&template_group=' + encodeURIComponent(groups.join(','));
+                }
                 cache[k] = v;
             });
             q.resolve(cache[ak]);
