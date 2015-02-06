@@ -80,7 +80,7 @@ func (n *Notification) DoEmail(subject, body []byte, c *Conf, ak string, attachm
 	}
 
 	// remove various extraneous whitespace that can get accidentally introduced by templates.
-	e.Subject = strings.Join(strings.Fields(string(subject)), " ")
+	e.Subject = string(subject)
 
 	e.HTML = body
 	for _, a := range attachments {

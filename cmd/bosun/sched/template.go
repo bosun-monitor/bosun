@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
-	"io"
 	"io/ioutil"
 	"math"
 	"net/http"
@@ -109,21 +108,25 @@ func (c *Context) Rule() (string, error) {
 	return c.makeLink("/rule", &p), nil
 }
 
-func (s *Schedule) ExecuteBody(w io.Writer, rh *RunHistory, a *conf.Alert, st *State, isEmail bool) ([]*conf.Attachment, error) {
+func (s *Schedule) ExecuteBody(rh *RunHistory, a *conf.Alert, st *State, isEmail bool) ([]byte, []*conf.Attachment, error) {
 	t := a.Template
 	if t == nil || t.Body == nil {
-		return nil, nil
+		return nil, nil, nil
 	}
 	c := s.Data(rh, st, a, isEmail)
-	return c.Attachments, t.Body.Execute(w, c)
+	buf := new(bytes.Buffer)
+	err := t.Body.Execute(buf, c)
+	return buf.Bytes(), c.Attachments, err
 }
 
-func (s *Schedule) ExecuteSubject(w io.Writer, rh *RunHistory, a *conf.Alert, st *State) error {
+func (s *Schedule) ExecuteSubject(rh *RunHistory, a *conf.Alert, st *State) ([]byte, error) {
 	t := a.Template
 	if t == nil || t.Subject == nil {
-		return nil
+		return nil, nil
 	}
-	return t.Subject.Execute(w, s.Data(rh, st, a, false))
+	buf := new(bytes.Buffer)
+	err := t.Subject.Execute(buf, s.Data(rh, st, a, false))
+	return bytes.Join(bytes.Fields(buf.Bytes()), []byte(" ")), err
 }
 
 var error_body = template.Must(template.New("body_error_template").Parse(`
@@ -151,7 +154,7 @@ var error_body = template.Must(template.New("body_error_template").Parse(`
 		</tr>
 	{{end}}</table>`))
 
-func (s *Schedule) ExecuteBadTemplate(s_err, b_err error, rh *RunHistory, a *conf.Alert, st *State) (subject, body *bytes.Buffer, err error) {
+func (s *Schedule) ExecuteBadTemplate(s_err, b_err error, rh *RunHistory, a *conf.Alert, st *State) (subject, body []byte, err error) {
 	sub := "error: template rendering error in the "
 	if s_err != nil {
 		sub += "subject"
@@ -171,9 +174,9 @@ func (s *Schedule) ExecuteBadTemplate(s_err, b_err error, rh *RunHistory, a *con
 		Berr:    b_err,
 		Context: s.Data(rh, st, a, true),
 	}
-	body = new(bytes.Buffer)
-	error_body.Execute(body, c)
-	return bytes.NewBufferString(sub), body, nil
+	buf := new(bytes.Buffer)
+	error_body.Execute(buf, c)
+	return []byte(sub), buf.Bytes(), nil
 }
 
 func (c *Context) eval(v interface{}, filter bool, series bool, autods int) (expr.ResultSlice, string, error) {

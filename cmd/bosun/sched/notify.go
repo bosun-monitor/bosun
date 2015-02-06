@@ -111,13 +111,11 @@ func (s *Schedule) sendNotifications(rh *RunHistory, silenced map[expr.AlertKey]
 func (s *Schedule) notify(rh *RunHistory, st *State, n *conf.Notification) {
 	rh = rh.AtTime(st.AbnormalEvent().Time)
 	a := s.Conf.Alerts[st.Alert]
-	subject := new(bytes.Buffer)
-	var s_err, b_err error
-	if s_err = s.ExecuteSubject(subject, rh, a, st); s_err != nil {
+	subject, s_err := s.ExecuteSubject(rh, a, st)
+	if s_err != nil {
 		log.Printf("%s: %v", st.AlertKey(), s_err)
 	}
-	body := new(bytes.Buffer)
-	attachments, b_err := s.ExecuteBody(body, rh, a, st, true)
+	body, attachments, b_err := s.ExecuteBody(rh, a, st, true)
 	if b_err != nil {
 		log.Printf("%s: %v", st.AlertKey(), b_err)
 	}
@@ -125,10 +123,10 @@ func (s *Schedule) notify(rh *RunHistory, st *State, n *conf.Notification) {
 		var err error
 		subject, body, err = s.ExecuteBadTemplate(s_err, b_err, rh, a, st)
 		if err != nil {
-			subject = bytes.NewBufferString(fmt.Sprintf("unable to create tempalate error notification: %v", err))
+			subject = []byte(fmt.Sprintf("unable to create tempalate error notification: %v", err))
 		}
 	}
-	n.Notify(subject.Bytes(), body.Bytes(), s.Conf, string(st.AlertKey()), attachments...)
+	n.Notify(subject, body, s.Conf, string(st.AlertKey()), attachments...)
 }
 
 func (s *Schedule) unotify(name string, group expr.AlertKeys, n *conf.Notification) {
