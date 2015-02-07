@@ -28,12 +28,12 @@ bosunControllers.controller('HistoryCtrl', ['$scope', '$http', '$location', '$ro
 				if (!keys[ak]) {
 					return;
 				}
-				v.History.map((h: any) => { h.Time = moment.utc(h.Time); });
+				v.History.map((h: any) => { h.Time = moment(h.Time); });
 				angular.forEach(v.History, function(h: any, i: number) {
 					if (i + 1 < v.History.length) {
 						h.EndTime = v.History[i + 1].Time;
 					} else {
-						h.EndTime = moment.utc();
+						h.EndTime = moment();
 					}
 				});
 				selected_alerts[ak] = {

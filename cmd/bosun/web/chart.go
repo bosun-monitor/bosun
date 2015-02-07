@@ -184,13 +184,13 @@ func ExprGraph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (in
 		}
 		autods = i
 	}
-	now := time.Now().UTC()
+	now := time.Now()
 	if n := r.FormValue("now"); n != "" {
 		i, err := strconv.ParseInt(n, 10, 64)
 		if err != nil {
 			return nil, err
 		}
-		now = time.Unix(i, 0).UTC()
+		now = time.Unix(i, 0)
 	}
 	e, err := expr.New(q, schedule.Conf.Funcs())
 	if err != nil {
