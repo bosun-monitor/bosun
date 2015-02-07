@@ -1,7 +1,6 @@
 package sched
 
 import (
-	"bytes"
 	"fmt"
 	"log"
 	"math"
@@ -94,13 +93,13 @@ func (s *Schedule) RunHistory(r *RunHistory) {
 		last := state.Append(event)
 		a := s.Conf.Alerts[ak.Name()]
 		if event.Status > StNormal {
-			var subject = new(bytes.Buffer)
 			if event.Status != StUnknown {
-				if err := s.ExecuteSubject(subject, r, a, state); err != nil {
+				subject, err := s.ExecuteSubject(r, a, state)
+				if err != nil {
 					log.Println(err)
 				}
+				state.Subject = string(subject)
 			}
-			state.Subject = subject.String()
 			state.Open = true
 		}
 		// On state increase, clear old notifications and notify current.
