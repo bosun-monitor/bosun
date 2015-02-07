@@ -372,7 +372,8 @@ func SilenceSet(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (i
 	}
 	if s := data["start"]; s != "" {
 		for _, layout := range silenceLayouts {
-			start, err = time.Parse(layout, s)
+			loc, _ := time.LoadLocation("Local")
+			start, err = time.ParseInLocation(layout, s, loc)
 			if err == nil {
 				break
 			}
@@ -383,7 +384,8 @@ func SilenceSet(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (i
 	}
 	if s := data["end"]; s != "" {
 		for _, layout := range silenceLayouts {
-			end, err = time.Parse(layout, s)
+			loc, _ := time.LoadLocation("Local")
+			end, err = time.ParseInLocation(layout, s, loc)
 			if err == nil {
 				break
 			}
@@ -393,7 +395,7 @@ func SilenceSet(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (i
 		}
 	}
 	if start.IsZero() {
-		start = time.Now().UTC()
+		start = time.Now()
 	}
 	if end.IsZero() {
 		d, err := opentsdb.ParseDuration(data["duration"])

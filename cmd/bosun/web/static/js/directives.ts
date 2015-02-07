@@ -19,7 +19,7 @@ bosunApp.directive('tsComputations', () => {
 		templateUrl: '/partials/computations.html',
 		link: (scope: any, elem: any, attrs: any) => {
 			if (scope.time) {
-				var m = moment.utc(scope.time);
+				var m = moment(scope.time);
 				scope.timeParam = "&date=" + encodeURIComponent(m.format("YYYY-MM-DD")) + "&time=" + encodeURIComponent(m.format("HH:mm"));
 			}
 			scope.btoa = (v: any) => {
@@ -39,8 +39,8 @@ function fmtDuration(v: any) {
 }
 
 function fmtTime(v: any) {
-	var m = moment(v).utc();
-	var now = moment().utc();
+	var m = moment(v);
+	var now = moment();
 	var msdiff = now.diff(m);
 	var ago = '';
 	var inn = '';
@@ -60,7 +60,7 @@ bosunApp.directive("tsTime", function() {
 	return {
 		link: function(scope: ITimeScope, elem: any, attrs: any) {
 			scope.$watch(attrs.tsTime, (v: any) => {
-				var m = moment(v).utc();
+				var m = moment(v);
 				var text = fmtTime(v);
 				if (attrs.tsEndTime) {
 					var diff = moment(scope.$eval(attrs.tsEndTime)).diff(m);
@@ -89,7 +89,7 @@ bosunApp.directive("tsSince", function() {
 	return {
 		link: function(scope: IBosunScope, elem: any, attrs: any) {
 			scope.$watch(attrs.tsSince, (v: any) => {
-				var m = moment(v).utc();
+				var m = moment(v);
 				elem.text(m.fromNow());
 			});
 		},
@@ -197,7 +197,7 @@ bosunApp.directive('tsHistory', () => {
 		templateUrl: '/partials/history.html',
 		link: (scope: any, elem: any, attrs: any) => {
 			if (scope.time) {
-				var m = moment.utc(scope.time);
+				var m = moment(scope.time);
 				scope.timeParam = "&date=" + encodeURIComponent(m.format("YYYY-MM-DD")) + "&time=" + encodeURIComponent(m.format("HH:mm"));
 			}
 			scope.btoa = (v: any) => {
@@ -208,9 +208,9 @@ bosunApp.directive('tsHistory', () => {
 });
 
 bosunApp.directive('tsTimeLine', () => {
-	var tsdbFormat = d3.time.format.utc("%Y/%m/%d-%X");
+	var tsdbFormat = d3.time.format("%Y/%m/%d-%X");
 	function parseDate(s: any) {
-		return moment.utc(s).toDate();
+		return moment(s).toDate();
 	}
 	var margin = {
 		top: 10,
@@ -246,7 +246,7 @@ bosunApp.directive('tsTimeLine', () => {
 				var height = svgHeight - margin.top - margin.bottom;
 				var svgWidth = elem.width();
 				var width = svgWidth - margin.left - margin.right;
-				var xScale = d3.time.scale.utc().range([0, width]);
+				var xScale = d3.time.scale().range([0, width]);
 				var xAxis = d3.svg.axis()
 					.scale(xScale)
 					.orient('bottom');
@@ -406,7 +406,7 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWi
 			var svgWidth: number;
 			var width: number;
 			var yScale = d3.scale.linear().range([height, 0]);
-			var xScale = d3.time.scale.utc();
+			var xScale = d3.time.scale();
 			var xAxis = d3.svg.axis()
 				.orient('bottom');
 			var yAxis = d3.svg.axis()
@@ -725,7 +725,7 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWi
 			}
 			var mfmt = 'YYYY/MM/DD-HH:mm:ss';
 			function datefmt(d: any) {
-				return moment(d).utc().format(mfmt);
+				return moment(d).format(mfmt);
 			}
 		},
 	};

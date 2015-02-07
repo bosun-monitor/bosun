@@ -190,16 +190,16 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 	};
 	var isRel = /^(\d+)(\w)-ago$/;
 	function RelToAbs(m: RegExpExecArray) {
-		return moment().utc().subtract(parseFloat(m[1]), duration_map[m[2]]).format();
+		return moment().subtract(parseFloat(m[1]), duration_map[m[2]]).format();
 	}
 	function AbsToRel(s: string) {
 		//Not strict parsing of the time format. For example, just "2014" will be valid
-		var t = moment.utc(s, moment.defaultFormat).fromNow();
+		var t = moment(s, moment.defaultFormat).fromNow();
 		return t;
 	}
 	function SwapTime(s: string) {
 		if (!s) {
-			return moment().utc().format();
+			return moment().format();
 		}
 		var m = isRel.exec(s);
 		if (m) {

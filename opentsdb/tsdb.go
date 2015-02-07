@@ -542,7 +542,8 @@ func ParseAbsTime(s string) (time.Time, error) {
 		"2006/01/02",
 	}
 	for _, f := range tFormats {
-		if t, err := time.Parse(f, s); err == nil {
+		loc, _ := time.LoadLocation("Local")
+		if t, err := time.ParseInLocation(f, s, loc); err == nil {
 			return t, nil
 		}
 	}
@@ -556,7 +557,7 @@ func ParseAbsTime(s string) (time.Time, error) {
 // ParseTime returns the time of v, which can be of any format supported by
 // OpenTSDB.
 func ParseTime(v interface{}) (time.Time, error) {
-	now := time.Now().UTC()
+	now := time.Now()
 	switch i := v.(type) {
 	case string:
 		if i != "" {
@@ -572,9 +573,9 @@ func ParseTime(v interface{}) (time.Time, error) {
 		}
 		return now, nil
 	case int64:
-		return time.Unix(i, 0).UTC(), nil
+		return time.Unix(i, 0), nil
 	case float64:
-		return time.Unix(int64(i), 0).UTC(), nil
+		return time.Unix(int64(i), 0), nil
 	default:
 		return time.Time{}, fmt.Errorf("type must be string or int64, got: %v", v)
 	}
@@ -640,7 +641,7 @@ func (r *Request) SetTime(t time.Time) error {
 		}
 		r.End = end.Add(diff).Format(TSDBTimeFormat)
 	} else {
-		r.End = t.UTC().Format(TSDBTimeFormat)
+		r.End = t.Format(TSDBTimeFormat)
 	}
 	return nil
 }
