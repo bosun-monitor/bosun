@@ -109,8 +109,7 @@ func procRule(t miniprofiler.Timer, c *conf.Conf, a *conf.Alert, now time.Time, 
 		}
 	}
 	sort.Sort(keys)
-	body := new(bytes.Buffer)
-	subject := new(bytes.Buffer)
+	var subject, body []byte
 	var data interface{}
 	warning := make([]string, 0)
 	if !summary && len(keys) > 0 {
@@ -144,7 +143,7 @@ func procRule(t miniprofiler.Timer, c *conf.Conf, a *conf.Alert, now time.Time, 
 					b_err = fmt.Errorf(s)
 				}
 			}()
-			if _, b_err = s.ExecuteBody(body, rh, a, instance, false); b_err != nil {
+			if body, _, b_err = s.ExecuteBody(rh, a, instance, false); b_err != nil {
 				warning = append(warning, b_err.Error())
 			}
 		}()
@@ -156,7 +155,8 @@ func procRule(t miniprofiler.Timer, c *conf.Conf, a *conf.Alert, now time.Time, 
 					s_err = fmt.Errorf(s)
 				}
 			}()
-			if s_err = s.ExecuteSubject(subject, rh, a, instance); s_err != nil {
+			subject, s_err = s.ExecuteSubject(rh, a, instance)
+			if s_err != nil {
 				warning = append(warning, s_err.Error())
 			}
 		}()
@@ -164,7 +164,7 @@ func procRule(t miniprofiler.Timer, c *conf.Conf, a *conf.Alert, now time.Time, 
 			var err error
 			subject, body, err = s.ExecuteBadTemplate(s_err, b_err, rh, a, instance)
 			if err != nil {
-				subject = bytes.NewBufferString(fmt.Sprintf("unable to create tempalate error notification: %v", err))
+				subject = []byte(fmt.Sprintf("unable to create tempalate error notification: %v", err))
 			}
 		} else if email != "" {
 			m, err := mail.ParseAddress(email)
@@ -174,12 +174,11 @@ func procRule(t miniprofiler.Timer, c *conf.Conf, a *conf.Alert, now time.Time, 
 			n := conf.Notification{
 				Email: []*mail.Address{m},
 			}
-			email := new(bytes.Buffer)
-			attachments, err := s.ExecuteBody(email, rh, a, instance, true)
+			email, attachments, err := s.ExecuteBody(rh, a, instance, true)
 			if err != nil {
 				warning = append(warning, err.Error())
 			} else {
-				n.DoEmail(subject.Bytes(), email.Bytes(), schedule.Conf, string(instance.AlertKey()), attachments...)
+				n.DoEmail(subject, email, schedule.Conf, string(instance.AlertKey()), attachments...)
 			}
 		}
 		data = s.Data(rh, instance, a, false)
@@ -190,8 +189,8 @@ func procRule(t miniprofiler.Timer, c *conf.Conf, a *conf.Alert, now time.Time, 
 		warnings,
 		normals,
 		now,
-		body.String(),
-		subject.String(),
+		string(body),
+		string(subject),
 		data,
 		rh.Events,
 		warning,

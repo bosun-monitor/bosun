@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -47,6 +48,7 @@ var (
 	flagVersion         = flag.Bool("version", false, "Prints the version and exits.")
 	flagDisableDefault  = flag.Bool("n", false, "Disable sending of scollector self metrics.")
 	flagHostname        = flag.String("hostname", "", "If set, use as value of host tag instead of system hostname.")
+	flagFreq            = flag.String("freq", "15", "Set the default frequency in seconds for most collectors.")
 	flagConf            = flag.String("conf", "", "Location of configuration file. Defaults to scollector.conf in directory of the scollector executable.")
 
 	procs []*collectors.WatchedProc
@@ -110,6 +112,8 @@ func readConf() {
 			f(flagTags)
 		case "vsphere":
 			f(flagVsphere)
+		case "freq":
+			f(flagFreq)
 		case "process":
 			p, err := collectors.NewWatchedProc(v)
 			if err != nil {
@@ -213,9 +217,13 @@ func main() {
 	} else if err != nil {
 		slog.Fatal("invalid host:", *flagHost)
 	}
+	freq, err := strconv.ParseInt(*flagFreq, 10, 64)
+	if err != nil {
+		slog.Fatal(err)
+	}
+	collectors.DefaultFreq = time.Second * time.Duration(freq)
+	collect.Freq = time.Second * time.Duration(freq)
 	if *flagPrint {
-		collectors.DefaultFreq = time.Second * 3
-		slog.Infoln("Set default frequency to", collectors.DefaultFreq)
 		collect.Print = true
 	}
 	if !*flagDisableMetadata {
