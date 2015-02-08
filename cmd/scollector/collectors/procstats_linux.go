@@ -12,7 +12,18 @@ import (
 )
 
 func init() {
-	collectors = append(collectors, &IntervalCollector{F: c_procstats_linux})
+	collectors = append(collectors, &IntervalCollector{F: c_procstats_linux_uptime})
+	collectors = append(collectors, &IntervalCollector{F: c_procstats_linux_vmstat})
+	collectors = append(collectors, &IntervalCollector{F: c_procstats_linux_meminfo})
+	collectors = append(collectors, &IntervalCollector{F: c_procstats_linux_stat})
+	collectors = append(collectors, &IntervalCollector{F: c_procstats_linux_loadavg})
+	collectors = append(collectors, &IntervalCollector{F: c_procstats_linux_kernel})
+	collectors = append(collectors, &IntervalCollector{F: c_procstats_linux_interrupts})
+	collectors = append(collectors, &IntervalCollector{F: c_procstats_linux_sockstat})
+	collectors = append(collectors, &IntervalCollector{F: c_procstats_linux_netstat})
+	collectors = append(collectors, &IntervalCollector{F: c_procstats_linux_snmp})
+	collectors = append(collectors, &IntervalCollector{F: c_procstats_linux_bondstat})
+	collectors = append(collectors, &IntervalCollector{F: c_procstats_linux_fsopen})
 }
 
 var uptimeRE = regexp.MustCompile(`(\S+)\s+(\S+)`)
@@ -36,7 +47,7 @@ var CPU_FIELDS = []string{
 	"guest_nice",
 }
 
-func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
+func c_procstats_linux_uptime() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	var Error error
 	if err := readLine("/proc/uptime", func(s string) error {
@@ -51,6 +62,12 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 	}); err != nil {
 		Error = err
 	}
+	return md, Error
+}
+
+func c_procstats_linux_meminfo() (opentsdb.MultiDataPoint, error) {
+	var md opentsdb.MultiDataPoint
+	var Error error
 	mem := make(map[string]float64)
 	if err := readLine("/proc/meminfo", func(s string) error {
 		m := meminfoRE.FindStringSubmatch(s)
@@ -73,6 +90,12 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 	if mem["MemTotal"] != 0 {
 		Add(&md, osMemPctFree, (mem["MemFree"]+mem["Buffers"]+mem["Cached"])/mem["MemTotal"]*100, nil, metadata.Gauge, metadata.Pct, osMemFreeDesc)
 	}
+	return md, Error
+}
+
+func c_procstats_linux_vmstat() (opentsdb.MultiDataPoint, error) {
+	var md opentsdb.MultiDataPoint
+	var Error error
 	if err := readLine("/proc/vmstat", func(s string) error {
 		m := vmstatRE.FindStringSubmatch(s)
 		if m == nil {
@@ -93,6 +116,12 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 	}); err != nil {
 		Error = err
 	}
+	return md, Error
+}
+
+func c_procstats_linux_stat() (opentsdb.MultiDataPoint, error) {
+	var md opentsdb.MultiDataPoint
+	var Error error
 	num_cores := 0
 	var t_util float64
 	cpu_stat_desc := map[string]string{
@@ -169,6 +198,12 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 	if num_cores != 0 && t_util != 0 {
 		Add(&md, osCPU, t_util/float64(num_cores), nil, metadata.Counter, metadata.Pct, "")
 	}
+	return md, Error
+}
+
+func c_procstats_linux_loadavg() (opentsdb.MultiDataPoint, error) {
+	var md opentsdb.MultiDataPoint
+	var Error error
 	if err := readLine("/proc/loadavg", func(s string) error {
 		m := loadavgRE.FindStringSubmatch(s)
 		if m == nil {
@@ -183,12 +218,24 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 	}); err != nil {
 		Error = err
 	}
+	return md, Error
+}
+
+func c_procstats_linux_kernel() (opentsdb.MultiDataPoint, error) {
+	var md opentsdb.MultiDataPoint
+	var Error error
 	if err := readLine("/proc/sys/kernel/random/entropy_avail", func(s string) error {
 		Add(&md, "linux.entropy_avail", strings.TrimSpace(s), nil, metadata.Gauge, metadata.Entropy, "The remaing amount of entropy available to the system. If it is low or hitting zero processes might be blocked waiting for extropy")
 		return nil
 	}); err != nil {
 		Error = err
 	}
+	return md, Error
+}
+
+func c_procstats_linux_interrupts() (opentsdb.MultiDataPoint, error) {
+	var md opentsdb.MultiDataPoint
+	var Error error
 	irq_type_desc := map[string]string{
 		"NMI": "Non-maskable interrupts.",
 		"LOC": "Local timer interrupts.",
@@ -235,6 +282,12 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 	}); err != nil {
 		Error = err
 	}
+	return md, Error
+}
+
+func c_procstats_linux_sockstat() (opentsdb.MultiDataPoint, error) {
+	var md opentsdb.MultiDataPoint
+	var Error error
 	if err := readLine("/proc/net/sockstat", func(s string) error {
 		cols := strings.Fields(s)
 		switch cols[0] {
@@ -279,6 +332,12 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 	}); err != nil {
 		Error = err
 	}
+	return md, Error
+}
+
+func c_procstats_linux_netstat() (opentsdb.MultiDataPoint, error) {
+	var md opentsdb.MultiDataPoint
+	var Error error
 	ln := 0
 	var headers []string
 	if err := readLine("/proc/net/netstat", func(s string) error {
@@ -301,7 +360,14 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 	}); err != nil {
 		Error = err
 	}
-	ln = 0
+	return md, Error
+}
+
+func c_procstats_linux_snmp() (opentsdb.MultiDataPoint, error) {
+	var md opentsdb.MultiDataPoint
+	var Error error
+	ln := 0
+	var headers []string
 	if err := readLine("/proc/net/snmp", func(s string) error {
 		ln++
 		if ln%2 != 0 {
@@ -332,6 +398,12 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 	}); err != nil {
 		Error = err
 	}
+	return md, Error
+}
+
+func c_procstats_linux_bondstat() (opentsdb.MultiDataPoint, error) {
+	var md opentsdb.MultiDataPoint
+	var Error error
 	const bondingPath = "/proc/net/bonding"
 	bondDevices, _ := ioutil.ReadDir(bondingPath)
 	for _, fi := range bondDevices {
@@ -363,6 +435,12 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 		Add(&md, "linux.net.bond.slave.count", slave_count, opentsdb.TagSet{"bond": fi.Name()}, metadata.Gauge, metadata.Bool, "The number of slaves on the bonded interface.")
 	}
 	// TODO: Bonding monitoring for CentOS 7 using /var/run/teamd/* and teamdctl <team0> state
+	return md, Error
+}
+
+func c_procstats_linux_fsopen() (opentsdb.MultiDataPoint, error) {
+	var md opentsdb.MultiDataPoint
+	var Error error
 	if err := readLine("/proc/sys/fs/file-nr", func(s string) error {
 		f := strings.Fields(s)
 		if len(f) != 3 {
