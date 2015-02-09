@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"log"
+	"text/template"
 	"time"
 
 	"bosun.org/cmd/bosun/conf"
@@ -102,11 +103,46 @@ func (s *Schedule) sendNotifications(rh *RunHistory, silenced map[expr.AlertKey]
 				s.AddNotification(ak, n, time.Now().UTC())
 			}
 		}
-		for name, group := range ustates.GroupSets() {
-			s.unotify(name, group, n)
+		var c int
+		tHit := false
+		oTSets := make(map[string]expr.AlertKeys)
+		groupSets := ustates.GroupSets()
+		for name, group := range groupSets {
+			c++
+			if c >= s.Conf.UnknownThreshold && s.Conf.UnknownThreshold > 0 {
+				if !tHit && len(groupSets) == 0 {
+					// If the threshold is hit but only 1 email remains, just send the normal unknown
+					s.unotify(name, group, n)
+					break
+				}
+				tHit = true
+				oTSets[name] = group
+			} else {
+				s.unotify(name, group, n)
+			}
+		}
+		if len(oTSets) > 0 {
+			s.utnotify(oTSets, n)
 		}
 	}
 }
+
+var unknownMultiGroup = template.Must(template.New("unknownMultiGroup").Parse(`
+	<p>Threshold of {{ .Threshold }} reached for unknown notifications. The following unknown
+	group emails were not sent.
+	<ul>
+	{{ range $group, $alertKeys := .Groups }}
+		<li>
+			{{ $group }}
+			<ul>
+				{{ range $ak := $alertKeys }}
+				<li>{{ $ak }}</li>
+				{{ end }}
+			<ul>
+		</li>
+	{{ end }}
+	</ul>
+	`))
 
 func (s *Schedule) notify(rh *RunHistory, st *State, n *conf.Notification) {
 	rh = rh.AtTime(st.AbnormalEvent().Time)
@@ -127,6 +163,29 @@ func (s *Schedule) notify(rh *RunHistory, st *State, n *conf.Notification) {
 		}
 	}
 	n.Notify(subject, body, s.Conf, string(st.AlertKey()), attachments...)
+}
+
+// utnotify is single notification for N unknown groups into a single notification
+func (s *Schedule) utnotify(groups map[string]expr.AlertKeys, n *conf.Notification) {
+	var total int
+	now := time.Now().UTC()
+	for _, group := range groups {
+		// Don't know what the following line does, just copied from unotify
+		s.Group[now] = group
+		total += len(group)
+	}
+	subject := fmt.Sprintf("%v unknown alert instances suppressed", total)
+	body := new(bytes.Buffer)
+	if err := unknownMultiGroup.Execute(body, struct {
+		Groups    map[string]expr.AlertKeys
+		Threshold int
+	}{
+		groups,
+		s.Conf.UnknownThreshold,
+	}); err != nil {
+		log.Println(err)
+	}
+	n.Notify([]byte(subject), body.Bytes(), s.Conf, "unknown_treshold")
 }
 
 func (s *Schedule) unotify(name string, group expr.AlertKeys, n *conf.Notification) {

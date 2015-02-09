@@ -27,30 +27,31 @@ import (
 
 type Conf struct {
 	Vars
-	Name            string        // Config file name
-	CheckFrequency  time.Duration // Time between alert checks: 5m
-	HTTPListen      string        // Web server listen address: :80
-	Hostname        string
-	RelayListen     string // OpenTSDB relay listen address: :4242
-	SMTPHost        string // SMTP address: ny-mail:25
-	SMTPUsername    string // SMTP username
-	SMTPPassword    string // SMTP password
-	Ping            bool
-	EmailFrom       string
-	StateFile       string
-	TimeAndDate     []int // timeanddate.com cities list
-	ResponseLimit   int64
-	SearchSince     opentsdb.Duration
-	UnknownTemplate *Template
-	Templates       map[string]*Template
-	Alerts          map[string]*Alert
-	Notifications   map[string]*Notification `json:"-"`
-	RawText         string
-	Macros          map[string]*Macro
-	Lookups         map[string]*Lookup
-	Squelch         Squelches `json:"-"`
-	Quiet           bool
-	NoSleep         bool
+	Name             string        // Config file name
+	CheckFrequency   time.Duration // Time between alert checks: 5m
+	HTTPListen       string        // Web server listen address: :80
+	Hostname         string
+	RelayListen      string // OpenTSDB relay listen address: :4242
+	SMTPHost         string // SMTP address: ny-mail:25
+	SMTPUsername     string // SMTP username
+	SMTPPassword     string // SMTP password
+	Ping             bool
+	EmailFrom        string
+	StateFile        string
+	TimeAndDate      []int // timeanddate.com cities list
+	ResponseLimit    int64
+	SearchSince      opentsdb.Duration
+	UnknownTemplate  *Template
+	UnknownThreshold int
+	Templates        map[string]*Template
+	Alerts           map[string]*Alert
+	Notifications    map[string]*Notification `json:"-"`
+	RawText          string
+	Macros           map[string]*Macro
+	Lookups          map[string]*Lookup
+	Squelch          Squelches `json:"-"`
+	Quiet            bool
+	NoSleep          bool
 
 	TSDBHost            string // OpenTSDB relay and query destination: ny-devtsdb04:4242
 	GraphiteHost        string // Graphite query host: foo.bar.baz
@@ -314,21 +315,22 @@ func ParseFile(fname string) (*Conf, error) {
 func New(name, text string) (c *Conf, err error) {
 	defer errRecover(&err)
 	c = &Conf{
-		Name:           name,
-		CheckFrequency: time.Minute * 5,
-		HTTPListen:     ":8070",
-		StateFile:      "bosun.state",
-		ResponseLimit:  1 << 20, // 1MB
-		SearchSince:    opentsdb.Day * 3,
-		Vars:           make(map[string]string),
-		Templates:      make(map[string]*Template),
-		Alerts:         make(map[string]*Alert),
-		Notifications:  make(map[string]*Notification),
-		RawText:        text,
-		bodies:         htemplate.New(name).Funcs(htemplate.FuncMap(defaultFuncs)),
-		subjects:       ttemplate.New(name).Funcs(defaultFuncs),
-		Lookups:        make(map[string]*Lookup),
-		Macros:         make(map[string]*Macro),
+		Name:             name,
+		CheckFrequency:   time.Minute * 5,
+		HTTPListen:       ":8070",
+		StateFile:        "bosun.state",
+		ResponseLimit:    1 << 20, // 1MB
+		SearchSince:      opentsdb.Day * 3,
+		UnknownThreshold: 5,
+		Vars:             make(map[string]string),
+		Templates:        make(map[string]*Template),
+		Alerts:           make(map[string]*Alert),
+		Notifications:    make(map[string]*Notification),
+		RawText:          text,
+		bodies:           htemplate.New(name).Funcs(htemplate.FuncMap(defaultFuncs)),
+		subjects:         ttemplate.New(name).Funcs(defaultFuncs),
+		Lookups:          make(map[string]*Lookup),
+		Macros:           make(map[string]*Macro),
 	}
 	c.tree, err = parse.Parse(name, text)
 	if err != nil {
@@ -403,6 +405,12 @@ func (c *Conf) loadGlobal(p *parse.PairNode) {
 		c.Ping = true
 	case "noSleep":
 		c.NoSleep = true
+	case "unknownThreshold":
+		i, err := strconv.Atoi(v)
+		if err != nil {
+			c.error(err)
+		}
+		c.UnknownThreshold = i
 	case "timeAndDate":
 		sp := strings.Split(v, ",")
 		var t []int

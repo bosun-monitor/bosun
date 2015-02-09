@@ -129,14 +129,14 @@ func marshalFloat(n float64) ([]byte, error) {
 
 type Number float64
 
-func (n Number) Type() parse.FuncType { return parse.TypeNumber }
-func (n Number) Value() interface{}   { return n }
+func (n Number) Type() parse.FuncType         { return parse.TypeNumber }
+func (n Number) Value() interface{}           { return n }
 func (n Number) MarshalJSON() ([]byte, error) { return marshalFloat(float64(n)) }
 
 type Scalar float64
 
-func (s Scalar) Type() parse.FuncType { return parse.TypeScalar }
-func (s Scalar) Value() interface{}   { return s }
+func (s Scalar) Type() parse.FuncType         { return parse.TypeScalar }
+func (s Scalar) Value() interface{}           { return s }
 func (s Scalar) MarshalJSON() ([]byte, error) { return marshalFloat(float64(s)) }
 
 type Series map[time.Time]float64
