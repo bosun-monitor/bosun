@@ -12,6 +12,8 @@ Time Series Alerting Framework
 
 `-c` specifies the config file to use, defaults to `dev.conf`. `-t` parses the config file, validates it, and exits.
 
+You can use the included dev.sample.conf as a basis for your dev.conf
+
 # installation/binaries
 
 [http://bosun.org/#installation](http://bosun.org/#installation)
