@@ -70,4 +70,10 @@
 		</div>
 	</div>
 	<div class="col-sm-7" ts-computations="state.Computations"></div>
+	<div class="row" ng-if="state.Body">
+		<div class="col-sm-12">
+			<h2>Template</h2>
+		</div>
+		<div class="col-sm-12" ng-bind-html="state.Body"></div>
+	</div>
 </div>

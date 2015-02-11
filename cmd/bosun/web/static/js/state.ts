@@ -90,7 +90,7 @@ bosunApp.directive('tsAckGroup', function() {
 	};
 });
 
-bosunApp.factory('status', ['$http', '$q', function($http: ng.IHttpService, $q: ng.IQService) {
+bosunApp.factory('status', ['$http', '$q', '$sce', function($http: ng.IHttpService, $q: ng.IQService, $sce: ng.ISCEService) {
 	var cache: any = {};
 	var fetches = [];
 	function fetch() {
@@ -123,6 +123,7 @@ bosunApp.factory('status', ['$http', '$q', function($http: ng.IHttpService, $q: 
 					if (groups.length > 0) {
 						v.RuleUrl += '&template_group=' + encodeURIComponent(groups.join(','));
 					}
+					v.Body = $sce.trustAsHtml(v.Body);
 					cache[k] = v;
 				});
 				q.resolve(cache[ak]);

@@ -2103,7 +2103,7 @@ bosunApp.directive('tsAckGroup', function () {
         }
     };
 });
-bosunApp.factory('status', ['$http', '$q', function ($http, $q) {
+bosunApp.factory('status', ['$http', '$q', '$sce', function ($http, $q, $sce) {
     var cache = {};
     var fetches = [];
     function fetch() {
@@ -2131,6 +2131,7 @@ bosunApp.factory('status', ['$http', '$q', function ($http, $q) {
                 if (groups.length > 0) {
                     v.RuleUrl += '&template_group=' + encodeURIComponent(groups.join(','));
                 }
+                v.Body = $sce.trustAsHtml(v.Body);
                 cache[k] = v;
             });
             q.resolve(cache[ak]);

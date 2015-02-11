@@ -145,24 +145,7 @@ var unknownMultiGroup = template.Must(template.New("unknownMultiGroup").Parse(`
 	`))
 
 func (s *Schedule) notify(rh *RunHistory, st *State, n *conf.Notification) {
-	rh = rh.AtTime(st.AbnormalEvent().Time)
-	a := s.Conf.Alerts[st.Alert]
-	subject, s_err := s.ExecuteSubject(rh, a, st)
-	if s_err != nil {
-		log.Printf("%s: %v", st.AlertKey(), s_err)
-	}
-	body, attachments, b_err := s.ExecuteBody(rh, a, st, true)
-	if b_err != nil {
-		log.Printf("%s: %v", st.AlertKey(), b_err)
-	}
-	if s_err != nil || b_err != nil {
-		var err error
-		subject, body, err = s.ExecuteBadTemplate(s_err, b_err, rh, a, st)
-		if err != nil {
-			subject = []byte(fmt.Sprintf("unable to create tempalate error notification: %v", err))
-		}
-	}
-	n.Notify(subject, body, s.Conf, string(st.AlertKey()), attachments...)
+	n.Notify([]byte(st.Subject), st.EmailBody, s.Conf, string(st.AlertKey()), st.Attachments...)
 }
 
 // utnotify is single notification for N unknown groups into a single notification

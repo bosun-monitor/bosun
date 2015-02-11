@@ -94,11 +94,31 @@ func (s *Schedule) RunHistory(r *RunHistory) {
 		a := s.Conf.Alerts[ak.Name()]
 		if event.Status > StNormal {
 			if event.Status != StUnknown {
-				subject, err := s.ExecuteSubject(r, a, state)
-				if err != nil {
-					log.Println(err)
+				subject, serr := s.ExecuteSubject(r, a, state)
+				if serr != nil {
+					log.Printf("%s: %v", state.AlertKey(), serr)
+				}
+				body, _, berr := s.ExecuteBody(r, a, state, false)
+				if berr != nil {
+					log.Printf("%s: %v", state.AlertKey(), berr)
+				}
+				emailbody, attachments, merr := s.ExecuteBody(r, a, state, true)
+				if merr != nil {
+					log.Printf("%s: %v", state.AlertKey(), merr)
+				}
+				if serr != nil || berr != nil || merr != nil {
+					var err error
+					subject, body, err = s.ExecuteBadTemplate(serr, berr, r, a, state)
+					if err != nil {
+						subject = []byte(fmt.Sprintf("unable to create template error notification: %v", err))
+					}
+					emailbody = body
+					attachments = nil
 				}
 				state.Subject = string(subject)
+				state.Body = string(body)
+				state.EmailBody = emailbody
+				state.Attachments = attachments
 			}
 			state.Open = true
 		}

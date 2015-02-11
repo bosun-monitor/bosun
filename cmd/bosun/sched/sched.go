@@ -307,7 +307,7 @@ func (s *Schedule) MarshalGroups(T miniprofiler.Timer, filter string) (*StateGro
 							Status:   tuple.Status,
 							AlertKey: ak,
 							Alert:    ak.Name(),
-							Subject:  st.Subject,
+							Subject:  string(st.Subject),
 							Ago:      marshalTime(st.Last().Time),
 						})
 					}
@@ -650,16 +650,19 @@ type State struct {
 	*Result
 
 	// Most recent last.
-	History   []Event  `json:",omitempty"`
-	Actions   []Action `json:",omitempty"`
-	Touched   time.Time
-	Alert     string // helper data since AlertKeys don't serialize to JSON well
-	Tags      string // string representation of Group
-	Group     opentsdb.TagSet
-	Subject   string
-	NeedAck   bool
-	Open      bool
-	Forgotten bool
+	History     []Event  `json:",omitempty"`
+	Actions     []Action `json:",omitempty"`
+	Touched     time.Time
+	Alert       string // helper data since AlertKeys don't serialize to JSON well
+	Tags        string // string representation of Group
+	Group       opentsdb.TagSet
+	Subject     string
+	Body        string
+	EmailBody   []byte             `json:"-"`
+	Attachments []*conf.Attachment `json:"-"`
+	NeedAck     bool
+	Open        bool
+	Forgotten   bool
 }
 
 func (s *State) AlertKey() expr.AlertKey {

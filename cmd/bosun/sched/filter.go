@@ -42,7 +42,7 @@ func makeFilter(filter string) (func(*conf.Conf, *conf.Alert, *State) bool, erro
 		case "":
 			add(func(c *conf.Conf, a *conf.Alert, s *State) bool {
 				ak := s.AlertKey()
-				return strings.Contains(string(ak), value) || strings.Contains(s.Subject, value)
+				return strings.Contains(string(ak), value) || strings.Contains(string(s.Subject), value)
 			})
 		case "ack":
 			var v bool
