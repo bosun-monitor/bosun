@@ -653,9 +653,8 @@ func (r *Request) Query(host string) (ResponseSet, error) {
 		return nil, err
 	}
 	defer resp.Body.Close()
-	j := json.NewDecoder(resp.Body)
 	var tr ResponseSet
-	if err := j.Decode(&tr); err != nil {
+	if err := json.NewDecoder(resp.Body).Decode(&tr); err != nil {
 		return nil, err
 	}
 	return tr, nil
@@ -689,8 +688,8 @@ func (r *Request) QueryResponse(host string, client *http.Client) (*http.Respons
 		e := RequestError{Request: string(b)}
 		defer resp.Body.Close()
 		body, _ := ioutil.ReadAll(resp.Body)
-		j := json.NewDecoder(bytes.NewBuffer(body))
-		if err := j.Decode(&e); err == nil {
+		if err := json.NewDecoder(bytes.NewBuffer(body)).Decode(&e); err == nil {
+			panic(err)
 			return nil, &e
 		}
 		return nil, fmt.Errorf("opentsdb: %s", string(body))
@@ -756,7 +755,7 @@ func NewCache(host string, limit int64) *Cache {
 func (c *Cache) Query(r *Request) (tr ResponseSet, err error) {
 	b, err := json.Marshal(&r)
 	if err != nil {
-		return nil, err
+		return
 	}
 	s := string(b)
 	if v, ok := c.cache[s]; ok {
@@ -771,8 +770,7 @@ func (c *Cache) Query(r *Request) (tr ResponseSet, err error) {
 	}
 	defer resp.Body.Close()
 	lr := &io.LimitedReader{R: resp.Body, N: c.Limit}
-	j := json.NewDecoder(lr)
-	err = j.Decode(&tr)
+	err = json.NewDecoder(lr).Decode(&tr)
 	if lr.N == 0 {
 		err = fmt.Errorf("TSDB response too large: limited to %E bytes", float64(c.Limit))
 		return
