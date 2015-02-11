@@ -431,6 +431,11 @@ function fmtTime(v) {
     }
     return m.format() + ' (' + inn + fmtDuration(msdiff) + ago + ')';
 }
+function parseDuration(v) {
+    var pattern = /(\d+)(d|y|n|h|m|s)-ago/;
+    var m = pattern.exec(v);
+    return moment.duration(parseInt(m[1]), m[2].replace('n', 'M'));
+}
 bosunApp.directive("tsTime", function () {
     return {
         link: function (scope, elem, attrs) {
@@ -1529,8 +1534,16 @@ bosunControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route
     $http.get('/api/metric/host/' + $scope.host).success(function (data) {
         $scope.metrics = data || [];
     });
+    var start = moment().utc().subtract(parseDuration($scope.time));
+    function parseDuration(v) {
+        var pattern = /(\d+)(d|y|n|h|m|s)-ago/;
+        var m = pattern.exec(v);
+        return moment.duration(parseInt(m[1]), m[2].replace('n', 'M'));
+    }
     $http.get('/api/metadata/get?tagk=host&tagv=' + encodeURIComponent($scope.host)).success(function (data) {
-        $scope.metadata = data;
+        $scope.metadata = _.filter(data, function (i) {
+            return moment.utc(i.Time) > start;
+        });
     });
     var autods = '&autods=100';
     var cpu_r = new Request();

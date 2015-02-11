@@ -52,6 +52,12 @@ function fmtTime(v: any) {
 	return m.format() + ' (' + inn + fmtDuration(msdiff) + ago + ')';
 }
 
+function parseDuration(v: string) {
+	var pattern = /(\d+)(d|y|n|h|m|s)-ago/;
+	var m = pattern.exec(v);
+	return moment.duration(parseInt(m[1]), m[2].replace('n', 'M'))
+}
+
 interface ITimeScope extends IBosunScope {
 	noLink: string;
 }
