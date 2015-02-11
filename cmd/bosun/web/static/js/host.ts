@@ -41,9 +41,17 @@ bosunControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route
 		.success(function(data: string[]) {
 			$scope.metrics = data || [];
 		});
+	var start = moment().utc().subtract(parseDuration($scope.time));
+	function parseDuration(v: string) {
+		var pattern = /(\d+)(d|y|n|h|m|s)-ago/;
+		var m = pattern.exec(v);
+		return moment.duration(parseInt(m[1]), m[2].replace('n', 'M'))
+	}
 	$http.get('/api/metadata/get?tagk=host&tagv=' + encodeURIComponent($scope.host))
 		.success((data) => {
-			$scope.metadata = data;
+			$scope.metadata = _.filter(data, function(i: any) {
+				return moment.utc(i.Time) > start;
+			});
 		});
 	var autods = '&autods=100';
 	var cpu_r = new Request();
