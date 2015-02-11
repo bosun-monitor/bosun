@@ -692,7 +692,11 @@ func (r *Request) QueryResponse(host string, client *http.Client) (*http.Respons
 			panic(err)
 			return nil, &e
 		}
-		return nil, fmt.Errorf("opentsdb: %s", string(body))
+		s := fmt.Sprintf("opentsdb: %s", resp.Status)
+		if len(body) > 0 {
+			s = fmt.Sprintf("%s: %s", s, body)
+		}
+		return nil, errors.New(s)
 	}
 	return resp, nil
 }
