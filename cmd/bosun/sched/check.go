@@ -196,7 +196,7 @@ func (s *Schedule) CheckUnknown() {
 }
 
 func (s *Schedule) CheckAlert(T miniprofiler.Timer, r *RunHistory, a *conf.Alert) {
-	log.Printf("checking alert %v", a.Name)
+	log.Printf("check alert %v start", a.Name)
 	start := time.Now()
 	var warns expr.AlertKeys
 	crits, err := s.CheckExpr(T, r, a, a.Crit, StCritical, nil)
@@ -204,7 +204,7 @@ func (s *Schedule) CheckAlert(T miniprofiler.Timer, r *RunHistory, a *conf.Alert
 		warns, _ = s.CheckExpr(T, r, a, a.Warn, StWarning, crits)
 	}
 	collect.Put("check.duration", opentsdb.TagSet{"name": a.Name}, time.Since(start).Seconds())
-	log.Printf("done checking alert %v (%s): %v crits, %v warns", a.Name, time.Since(start), len(crits), len(warns))
+	log.Printf("check alert %v done (%s): %v crits, %v warns", a.Name, time.Since(start), len(crits), len(warns))
 }
 
 func (s *Schedule) CheckExpr(T miniprofiler.Timer, rh *RunHistory, a *conf.Alert, e *expr.Expr, checkStatus Status, ignore expr.AlertKeys) (alerts expr.AlertKeys, err error) {
