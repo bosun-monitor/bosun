@@ -689,7 +689,6 @@ func (r *Request) QueryResponse(host string, client *http.Client) (*http.Respons
 		defer resp.Body.Close()
 		body, _ := ioutil.ReadAll(resp.Body)
 		if err := json.NewDecoder(bytes.NewBuffer(body)).Decode(&e); err == nil {
-			panic(err)
 			return nil, &e
 		}
 		s := fmt.Sprintf("opentsdb: %s", resp.Status)
