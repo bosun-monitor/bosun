@@ -26,6 +26,11 @@ type Series struct {
 
 type DataPoint []json.Number
 
+func (r *Request) CacheKey() string {
+	targets, _ := json.Marshal(r.Targets)
+	return fmt.Sprintf("graphite-%d-%d-%s", r.Start.Unix(), r.End.Unix(), targets)
+}
+
 func (r *Request) Query(host string) (Response, error) {
 	v := url.Values{
 		"format": []string{"json"},

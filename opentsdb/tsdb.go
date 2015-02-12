@@ -727,46 +727,28 @@ func (h Host) Query(r *Request) (ResponseSet, error) {
 	return r.Query(string(h))
 }
 
-// Cache is a caching, filtering, and limiting OpenTSDB Context.
-type Cache struct {
+// LimitContext is a context that enables limiting response size and filtering tags
+type LimitContext struct {
 	Host string
 	// Limit limits response size in bytes
 	Limit int64
 	// FilterTags removes tagks from results if that tagk was not in the request
 	FilterTags bool
-	cache      map[string]*cacheResult
 }
 
-type cacheResult struct {
-	ResponseSet
-	Err error
-}
-
-// NewCache returns a new cache for the given host with response sizes limited
+// NewLimitContext returns a new context for the given host with response sizes limited
 // to limit bytes.
-func NewCache(host string, limit int64) *Cache {
-	return &Cache{
+func NewLimitContext(host string, limit int64) *LimitContext {
+	return &LimitContext{
 		Host:       host,
 		Limit:      limit,
 		FilterTags: true,
-		cache:      make(map[string]*cacheResult),
 	}
 }
 
 // Query returns the result of the request. r may be cached. The request is
 // byte-limited and filtered by c's properties.
-func (c *Cache) Query(r *Request) (tr ResponseSet, err error) {
-	b, err := json.Marshal(&r)
-	if err != nil {
-		return
-	}
-	s := string(b)
-	if v, ok := c.cache[s]; ok {
-		return v.ResponseSet, v.Err
-	}
-	defer func() {
-		c.cache[s] = &cacheResult{tr, err}
-	}()
+func (c *LimitContext) Query(r *Request) (tr ResponseSet, err error) {
 	resp, err := r.QueryResponse(c.Host, nil)
 	if err != nil {
 		return

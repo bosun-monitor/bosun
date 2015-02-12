@@ -657,7 +657,13 @@ func timeGraphiteRequest(e *State, T miniprofiler.Timer, req *graphite.Request) 
 	e.graphiteQueries = append(e.graphiteQueries, *req)
 	b, _ := json.MarshalIndent(req, "", "  ")
 	T.StepCustomTiming("graphite", "query", string(b), func() {
-		resp, err = e.graphiteContext.Query(req)
+		key := req.CacheKey()
+		getFn := func() (interface{}, error) {
+			return e.graphiteContext.Query(req)
+		}
+		var val interface{}
+		val, err = e.cache.Get(key, getFn)
+		resp = val.(graphite.Response)
 	})
 	return
 }
@@ -671,7 +677,12 @@ func timeTSDBRequest(e *State, T miniprofiler.Timer, req *opentsdb.Request) (s o
 	}
 	b, _ := json.MarshalIndent(req, "", "  ")
 	T.StepCustomTiming("tsdb", "query", string(b), func() {
-		s, err = e.tsdbContext.Query(req)
+		getFn := func() (interface{}, error) {
+			return e.tsdbContext.Query(req)
+		}
+		var val interface{}
+		val, err = e.cache.Get(string(b), getFn)
+		s = val.(opentsdb.ResponseSet)
 	})
 	return
 }

@@ -7,6 +7,7 @@ import (
 	"text/template"
 	"time"
 
+	"bosun.org/cmd/bosun/cache"
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/expr"
 )
@@ -14,7 +15,7 @@ import (
 // Poll dispatches notification checks when needed.
 func (s *Schedule) Poll() {
 	for {
-		rh := s.NewRunHistory(time.Now())
+		rh := s.NewRunHistory(time.Now(), cache.New(100))
 		timeout := s.CheckNotifications(rh)
 		s.Save()
 		// Wait for one of these two.
