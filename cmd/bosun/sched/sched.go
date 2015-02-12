@@ -589,7 +589,13 @@ func (s *Schedule) Run() error {
 		go s.PingHosts()
 	}
 	go s.Poll()
-	go s.CheckUnknown()
+	go func() {
+		// Sleep before starting unknown checks. If Bosun was down for a little
+		// while then all the state.Touched times will be old and a bunch of
+		// unknowns will go off because it hasn't run all the checks yet.
+		time.Sleep(s.Conf.CheckFrequency)
+		go s.CheckUnknown()
+	}()
 	for {
 		wait := time.After(s.Conf.CheckFrequency)
 		if s.Conf == nil {
