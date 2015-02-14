@@ -24,6 +24,7 @@ type Collector interface {
 
 const (
 	osCPU          = "os.cpu"
+	osCPUClock     = "os.cpu.clock"
 	osDiskFree     = "os.disk.fs.space_free"
 	osDiskPctFree  = "os.disk.fs.percent_free"
 	osDiskTotal    = "os.disk.fs.space_total"
@@ -43,6 +44,7 @@ const (
 )
 
 const (
+	osCPUClockDesc     = "The current speed of the processor in MHz."
 	osDiskFreeDesc     = "The space_free property indicates in bytes how much free space is available on the disk."
 	osDiskPctFreeDesc  = "The percent_free property indicates what percentage of the disk is available."
 	osDiskTotalDesc    = "The space_total property indicates in bytes how much total space is on the disk."
