@@ -39,6 +39,7 @@ var (
 	flagBatchSize       = flag.Int("b", 0, "OpenTSDB batch size. Used for debugging bad data.")
 	flagSNMP            = flag.String("s", "", "SNMP host to poll of the format: \"community@host[,community@host...]\".")
 	flagICMP            = flag.String("i", "", "ICMP host to ping of the format: \"host[,host...]\".")
+	flagHAProxy         = flag.String("haproxy", "", `haproxy host to poll of the format: "user:password@host[,user:password@host...]".`)
 	flagVsphere         = flag.String("v", "", `vSphere host to poll of the format: "user:password@host[,user:password@host...]".`)
 	flagFake            = flag.Int("fake", 0, "Generates X fake data points on the test.fake metric per second.")
 	flagDebug           = flag.Bool("d", false, "Enables debug output.")
@@ -107,6 +108,8 @@ func readConf() {
 			f(flagSNMP)
 		case "icmp":
 			f(flagICMP)
+		case "haproxy":
+			f(flagHAProxy)
 		case "tags":
 			f(flagTags)
 		case "aws":
@@ -197,6 +200,25 @@ func main() {
 				slog.Fatal("invalid AWS string:", *flagAWS)
 			}
 			collectors.AWS(accessKey, secretKey, region)
+		}
+	}
+	if *flagHAProxy != "" {
+		for _, s := range strings.Split(*flagHAProxy, ",") {
+			sp := strings.SplitN(s, ":", 2)
+			if len(sp) != 2 {
+				slog.Fatal("invalid haproxy string:", *flagHAProxy)
+			}
+			user := sp[0]
+			idx := strings.LastIndex(sp[1], "@")
+			if idx == -1 {
+				slog.Fatal("invalid haproxy string:", *flagHAProxy)
+			}
+			pwd := sp[1][:idx]
+			url := sp[1][idx+1:]
+			if len(url) == 0 {
+				slog.Fatal("invalid haproxy string:", *flagHAProxy)
+			}
+			collectors.HAProxy(user, pwd, url)
 		}
 	}
 	if *flagVsphere != "" {

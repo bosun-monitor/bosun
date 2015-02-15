@@ -37,11 +37,13 @@ const (
 	None           Unit = ""
 	A                   = "A" // Amps
 	Alert               = "alerts"
+	Abort               = "aborts"
 	Bool                = "bool"
 	BitsPerSecond       = "bits per second"
 	Bytes               = "bytes"
 	BytesPerSecond      = "bytes per second"
 	C                   = "C" // Celsius
+	Check               = "checks"
 	CHz                 = "CentiHertz"
 	Connection          = "connections"
 	Context             = "contexts"
@@ -74,20 +76,28 @@ const (
 	Process             = "processes"
 	Priority            = "priority"
 	Query               = "queries"
+	Redispatch          = "redispatches"
 	Refresh             = "refreshes"
 	Replica             = "replicas"
+	Retry               = "retries"
+	Response            = "responses"
+	Request             = "requests"
 	RPM                 = "RPM" // Rotations per minute.
 	Second              = "seconds"
 	Segment             = "segments"
+	Server              = "servers"
+	Session             = "sessions"
 	Shard               = "shards"
 	Socket              = "sockets"
 	Suggest             = "suggests"
 	StatusCode          = "status code"
 	Syscall             = "system calls"
 	Thread              = "threads"
+	Transition          = "transitions"
 	V                   = "V" // Volts
 	V10                 = "tenth-Volts"
 	Watt                = "Watts"
+	Weight              = "weight"
 	Yield               = "yields"
 )
 
