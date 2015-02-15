@@ -20,6 +20,7 @@ var meminfoRE = regexp.MustCompile(`(\w+):\s+(\d+)\s+(\w+)`)
 var vmstatRE = regexp.MustCompile(`(\w+)\s+(\d+)`)
 var statRE = regexp.MustCompile(`(\w+)\s+(.*)`)
 var statCPURE = regexp.MustCompile(`cpu(\d+)`)
+var cpuspeedRE = regexp.MustCompile(`cpu MHz\s+: ([\d.]+)`)
 var loadavgRE = regexp.MustCompile(`(\S+)\s+(\S+)\s+(\S+)\s+(\d+)/(\d+)\s+`)
 var inoutRE = regexp.MustCompile(`(.*)(in|out)`)
 
@@ -168,6 +169,20 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 	}
 	if num_cores != 0 && t_util != 0 {
 		Add(&md, osCPU, t_util/float64(num_cores), nil, metadata.Counter, metadata.Pct, "")
+	}
+	cpuinfo_index := 0
+	if err := readLine("/proc/cpuinfo", func(s string) error {
+		m := cpuspeedRE.FindStringSubmatch(s)
+		if m == nil {
+			return nil
+		}
+		tags := opentsdb.TagSet{"cpu": strconv.Itoa(cpuinfo_index)}
+		Add(&md, osCPUClock, m[1], tags, metadata.Gauge, metadata.MHz, osCPUClockDesc)
+		Add(&md, "linux.cpu.clock", m[1], tags, metadata.Gauge, metadata.MHz, osCPUClockDesc)
+		cpuinfo_index += 1
+		return nil
+	}); err != nil {
+		Error = err
 	}
 	if err := readLine("/proc/loadavg", func(s string) error {
 		m := loadavgRE.FindStringSubmatch(s)

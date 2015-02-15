@@ -69,6 +69,7 @@ func c_cpu_info_windows() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	for _, v := range dst {
 		tags := opentsdb.TagSet{"cpu": strings.Replace(v.DeviceID, "CPU", "", 1)}
+		Add(&md, osCPUClock, v.CurrentClockSpeed, tags, metadata.Gauge, metadata.MHz, osCPUClockDesc)
 		Add(&md, "win.cpu.clock", v.CurrentClockSpeed, tags, metadata.Gauge, metadata.MHz, "Current speed of the processor, in MHz.")
 		Add(&md, "win.cpu.clock_max", v.MaxClockSpeed, tags, metadata.Gauge, metadata.MHz, "Maximum speed of the processor, in MHz.")
 		Add(&md, "win.cpu.voltage", v.CurrentVoltage, tags, metadata.Gauge, metadata.V10, "Voltage of the processor.")
