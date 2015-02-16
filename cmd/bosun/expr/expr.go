@@ -139,6 +139,7 @@ func (s Scalar) Type() parse.FuncType         { return parse.TypeScalar }
 func (s Scalar) Value() interface{}           { return s }
 func (s Scalar) MarshalJSON() ([]byte, error) { return marshalFloat(float64(s)) }
 
+// Series is the standard form within bosun to represent timeseries data.
 type Series map[time.Time]float64
 
 func (s Series) Type() parse.FuncType { return parse.TypeSeries }
@@ -150,6 +151,29 @@ func (s Series) MarshalJSON() ([]byte, error) {
 		r[fmt.Sprint(k.Unix())] = Scalar(v)
 	}
 	return json.Marshal(r)
+}
+
+type SortablePoint struct {
+	T time.Time
+	V float64
+}
+
+// SortableSeries is an alternative datastructure for timeseries data,
+// which stores points in a time-ordered fashion instead of a map.
+// see discussion at https://github.com/bosun-monitor/bosun/pull/699
+type SortableSeries []SortablePoint
+
+func (s SortableSeries) Len() int           { return len(s) }
+func (s SortableSeries) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
+func (s SortableSeries) Less(i, j int) bool { return s[i].T.Before(s[j].T) }
+
+func NewSortedSeries(dps Series) SortableSeries {
+	series := make(SortableSeries, 0, len(dps))
+	for t, v := range dps {
+		series = append(series, SortablePoint{t, v})
+	}
+	sort.Sort(series)
+	return series
 }
 
 type Result struct {
