@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-// Reserved binding values.
+// reserved binding values.
 var (
 	null           = asn1.RawValue{Class: 0, Tag: 5}
 	noSuchObject   = asn1.RawValue{Class: 2, Tag: 0}
@@ -17,14 +17,14 @@ var (
 	endOfMibView   = asn1.RawValue{Class: 2, Tag: 2}
 )
 
-// Binding represents an assignment to a variable, a.k.a. managed object.
-type Binding struct {
+// binding represents an assignment to a variable, a.k.a. managed object.
+type binding struct {
 	Name  asn1.ObjectIdentifier
 	Value asn1.RawValue
 }
 
 // unmarshal stores in v the value part of binding b.
-func (b *Binding) unmarshal(v interface{}) error {
+func (b *binding) unmarshal(v interface{}) error {
 	convertClass(&b.Value)
 	_, err := asn1.Unmarshal(b.Value.FullBytes, v)
 	if err != nil {
@@ -80,7 +80,7 @@ func convertType(v interface{}) interface{} {
 }
 
 // less checks if a precedes b in the MIB tree.
-func (a Binding) less(b Binding) bool {
+func (a binding) less(b binding) bool {
 	switch {
 	case len(a.Name) < len(b.Name):
 		for i := 0; i < len(a.Name); i++ {
@@ -126,39 +126,33 @@ func (a Binding) less(b Binding) bool {
 	panic("unreached")
 }
 
-// A Request represents an SNMP request to be sent over a Transport.
-type Request struct {
+// request represents an SNMP request to be sent over a Transport.
+type request struct {
 	ID             int32
 	Type           string // "Get", "GetNext", "GetBulk"
-	Bindings       []Binding
+	Bindings       []binding
 	NonRepeaters   int
 	MaxRepetitions int
 }
 
-// Response represents the response from an SNMP request.
-type Response struct {
+// response represents the response from an SNMP request.
+type response struct {
 	ID          int32
 	ErrorStatus int
 	ErrorIndex  int
-	Bindings    []Binding
+	Bindings    []binding
 }
 
-// RoundTripper is an interface representing the ability to execute a
-// single SNMP transaction, obtaining the Response for a given Request.
-//
-// A RoundTripper must be safe for concurrent use by multiple goroutines.
-type RoundTripper interface {
-	RoundTrip(*Request) (*Response, error)
-}
-
-// Transport is an implementation of RoundTripper that supports SNMPv2
-// as defined by RFC 3416.
-type Transport struct {
-	Conn      net.Conn
+// SNMP performs SNMPv2 requests as defined by RFC 3416.
+type SNMP struct {
+	// Community is the SNMP community.
 	Community string
+	// Addr is the UDP address of the SNMP host.
+	Addr *net.UDPAddr
 }
 
-func newTransport(host, community string) (*Transport, error) {
+// New creates a new SNMP which connects to host with specified community.
+func New(host, community string) (*SNMP, error) {
 	hostport := host
 	if _, _, err := net.SplitHostPort(hostport); err != nil {
 		hostport = host + ":161"
@@ -167,15 +161,13 @@ func newTransport(host, community string) (*Transport, error) {
 	if err != nil {
 		return nil, err
 	}
-	conn, err := net.DialUDP("udp", nil, addr)
-	if err != nil {
-		return nil, err
-	}
-	return &Transport{conn, community}, nil
+	return &SNMP{
+		Community: community,
+		Addr:      addr,
+	}, nil
 }
 
-// RoundTrip implements the RoundTripper interface.
-func (tr *Transport) RoundTrip(req *Request) (*Response, error) {
+func (s *SNMP) do(req *request) (*response, error) {
 	for i := range req.Bindings {
 		req.Bindings[i].Value = null
 	}
@@ -190,11 +182,11 @@ func (tr *Transport) RoundTrip(req *Request) (*Response, error) {
 				RequestID   int32
 				ErrorStatus int
 				ErrorIndex  int
-				Bindings    []Binding
+				Bindings    []binding
 			} `asn1:"application,tag:0"`
 		}
 		p.Version = 1
-		p.Community = []byte(tr.Community)
+		p.Community = []byte(s.Community)
 		p.Data.RequestID = req.ID
 		p.Data.Bindings = req.Bindings
 		buf, err = asn1.Marshal(p)
@@ -206,11 +198,11 @@ func (tr *Transport) RoundTrip(req *Request) (*Response, error) {
 				RequestID   int32
 				ErrorStatus int
 				ErrorIndex  int
-				Bindings    []Binding
+				Bindings    []binding
 			} `asn1:"application,tag:1"`
 		}
 		p.Version = 1
-		p.Community = []byte(tr.Community)
+		p.Community = []byte(s.Community)
 		p.Data.RequestID = req.ID
 		p.Data.Bindings = req.Bindings
 		buf, err = asn1.Marshal(p)
@@ -222,11 +214,11 @@ func (tr *Transport) RoundTrip(req *Request) (*Response, error) {
 				RequestID      int32
 				NonRepeaters   int
 				MaxRepetitions int
-				Bindings       []Binding
+				Bindings       []binding
 			} `asn1:"application,tag:5"`
 		}
 		p.Version = 1
-		p.Community = []byte(tr.Community)
+		p.Community = []byte(s.Community)
 		p.Data.RequestID = req.ID
 		p.Data.NonRepeaters = 0
 		p.Data.MaxRepetitions = req.MaxRepetitions
@@ -238,14 +230,19 @@ func (tr *Transport) RoundTrip(req *Request) (*Response, error) {
 	if err != nil {
 		return nil, err
 	}
-	if _, err := tr.Conn.Write(buf); err != nil {
+	conn, err := net.DialUDP("udp", nil, s.Addr)
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+	if _, err := conn.Write(buf); err != nil {
 		return nil, err
 	}
 	buf = make([]byte, 10000, 10000)
-	if err := tr.Conn.SetReadDeadline(time.Now().Add(5 * time.Second)); err != nil {
+	if err := conn.SetReadDeadline(time.Now().Add(5 * time.Second)); err != nil {
 		return nil, err
 	}
-	n, err := tr.Conn.Read(buf)
+	n, err := conn.Read(buf)
 	if err != nil {
 		return nil, err
 	}
@@ -259,19 +256,19 @@ func (tr *Transport) RoundTrip(req *Request) (*Response, error) {
 			RequestID   int32
 			ErrorStatus int
 			ErrorIndex  int
-			Bindings    []Binding
+			Bindings    []binding
 		} `asn1:"tag:2"`
 	}
 	if _, err = asn1.Unmarshal(buf[:n], &p); err != nil {
 		return nil, err
 	}
-	resp := &Response{p.Data.RequestID, p.Data.ErrorStatus, p.Data.ErrorIndex, p.Data.Bindings}
+	resp := &response{p.Data.RequestID, p.Data.ErrorStatus, p.Data.ErrorIndex, p.Data.Bindings}
 	return resp, nil
 }
 
 // check checks the response PDU for basic correctness.
 // Valid with all PDU types.
-func check(resp *Response, req *Request) (err error) {
+func check(resp *response, req *request) (err error) {
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("invalid response: %v", err)

@@ -6,11 +6,20 @@ import (
 	"bosun.org/_third_party/github.com/mjibson/snmp/mib"
 )
 
-// Get retrieves an object by its name.  Nameval is a pair of: object
-// name (string), and the corresponding target value (pointer to int,
-// string, etc.). To retrieve multiple objects in a single transaction,
-// provide multiple name, value pairs.
+// Get is a wrapper for SNMP.Get.
 func Get(host, community string, nameval ...interface{}) error {
+	s, err := New(host, community)
+	if err != nil {
+		return err
+	}
+	return s.Get(nameval...)
+}
+
+// Get retrieves an object by its name. Nameval is a pair of: object name or OID
+// (string), and the corresponding target value (pointer to int, string, etc.).
+// To retrieve multiple objects in a single transaction, provide multiple name,
+// value pairs.
+func (s *SNMP) Get(nameval ...interface{}) error {
 	switch n := len(nameval); {
 	case n == 0:
 		return nil
@@ -21,16 +30,12 @@ func Get(host, community string, nameval ...interface{}) error {
 	if err != nil {
 		return err
 	}
-	tr, err := newTransport(host, community)
-	if err != nil {
-		return err
-	}
-	req := &Request{
+	req := &request{
 		Type:     "Get",
 		Bindings: bindings,
 		ID:       <-nextID,
 	}
-	resp, err := tr.RoundTrip(req)
+	resp, err := s.do(req)
 	if err != nil {
 		return err
 	}
@@ -39,8 +44,7 @@ func Get(host, community string, nameval ...interface{}) error {
 	}
 	for i, b := range resp.Bindings {
 		if have, want := b.Name, req.Bindings[i].Name; !have.Equal(want) {
-			return fmt.Errorf("snmp: %s: get %v: invalid response: name mismatch",
-				host, want)
+			return fmt.Errorf("snmp: get %v: invalid response: name mismatch", want)
 		}
 		v := nameval[2*i+1]
 		if err := b.unmarshal(v); err != nil {
@@ -51,8 +55,8 @@ func Get(host, community string, nameval ...interface{}) error {
 }
 
 // fromPairs creates bindings from the (name, value) pairs.
-func fromPairs(nameval []interface{}) ([]Binding, error) {
-	var bindings []Binding
+func fromPairs(nameval []interface{}) ([]binding, error) {
+	var bindings []binding
 	for i := 0; i < len(nameval); i += 2 {
 		s, ok := nameval[i].(string)
 		if !ok {
@@ -62,7 +66,7 @@ func fromPairs(nameval []interface{}) ([]Binding, error) {
 		if err != nil {
 			return nil, err
 		}
-		bindings = append(bindings, Binding{Name: oid})
+		bindings = append(bindings, binding{Name: oid})
 	}
 	return bindings, nil
 }

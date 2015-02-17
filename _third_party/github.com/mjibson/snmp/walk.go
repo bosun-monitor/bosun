@@ -8,6 +8,15 @@ import (
 	"bosun.org/_third_party/github.com/mjibson/snmp/mib"
 )
 
+// Walk is a wrapper for SNMP.Walk.
+func Walk(host, community string, oids ...string) (*Rows, error) {
+	s, err := New(host, community)
+	if err != nil {
+		return nil, err
+	}
+	return s.Walk(oids...)
+}
+
 // Rows is the result of a walk. Its cursor starts before the first
 // row of the result set. Use Next to advance through the rows:
 //
@@ -21,39 +30,33 @@ import (
 //     err = rows.Err() // get any error encountered during iteration
 //     ...
 type Rows struct {
-	avail     []row
-	last      row
-	walkFn    walkFunc
-	headText  []string
-	head      []asn1.ObjectIdentifier
-	Transport RoundTripper
-	host      string
-	err       error
+	avail    []row
+	last     row
+	walkFn   walkFunc
+	headText []string
+	head     []asn1.ObjectIdentifier
+	err      error
+	request  requestFunc
 }
 
 // row represents individual row.
 type row struct {
 	instance []int
-	bindings []Binding
+	bindings []binding
 }
 
 // Walk executes a query against host authenticated by the community string,
 // retrieving the MIB sub-tree defined by the the given root oids.
-func Walk(host, community string, oids ...string) (*Rows, error) {
-	tr, err := newTransport(host, community)
-	if err != nil {
-		return nil, err
-	}
+func (s *SNMP) Walk(oids ...string) (*Rows, error) {
 	rows := &Rows{
-		avail:     nil,
-		walkFn:    walkN,
-		headText:  oids,
-		head:      lookup(oids...),
-		Transport: tr,
-		host:      host,
+		avail:    nil,
+		walkFn:   walkN,
+		headText: oids,
+		head:     lookup(oids...),
+		request:  s.do,
 	}
 	for _, oid := range rows.head {
-		rows.last.bindings = append(rows.last.bindings, Binding{Name: oid})
+		rows.last.bindings = append(rows.last.bindings, binding{Name: oid})
 	}
 	return rows, nil
 }
@@ -74,12 +77,12 @@ func (rows *Rows) Next() bool {
 		return false
 	}
 
-	row, err := rows.walkFn(rows.last.bindings, rows.Transport)
+	row, err := rows.walkFn(rows.last.bindings, rows.request)
 	if err != nil {
 		if err == io.EOF {
 			rows.err = err
 		} else {
-			rows.err = fmt.Errorf("snmp.Walk: %s: %v", rows.host, err)
+			rows.err = fmt.Errorf("snmp.Walk: %v", err)
 		}
 		return false
 	}
@@ -173,17 +176,19 @@ func (rows *Rows) Err() error {
 	return rows.err
 }
 
+type requestFunc func(*request) (*response, error)
+
 // walkFunc is a function that can request one or more rows.
-type walkFunc func([]Binding, RoundTripper) ([]row, error)
+type walkFunc func([]binding, requestFunc) ([]row, error)
 
 // walk1 requests one row.
-func walk1(have []Binding, tr RoundTripper) ([]row, error) {
-	req := &Request{
+func walk1(have []binding, rf requestFunc) ([]row, error) {
+	req := &request{
 		Type:     "GetNext",
 		ID:       <-nextID,
 		Bindings: have,
 	}
-	resp, err := tr.RoundTrip(req)
+	resp, err := rf(req)
 	if err != nil {
 		return nil, err
 	}
@@ -195,15 +200,15 @@ func walk1(have []Binding, tr RoundTripper) ([]row, error) {
 }
 
 // walkN requests a range of rows.
-func walkN(have []Binding, tr RoundTripper) ([]row, error) {
-	req := &Request{
+func walkN(have []binding, rf requestFunc) ([]row, error) {
+	req := &request{
 		Type:           "GetBulk",
 		ID:             <-nextID,
 		Bindings:       have,
 		NonRepeaters:   0,
 		MaxRepetitions: 15,
 	}
-	resp, err := tr.RoundTrip(req)
+	resp, err := rf(req)
 	if err != nil {
 		return nil, err
 	}
