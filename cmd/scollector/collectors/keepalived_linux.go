@@ -40,10 +40,6 @@ type VRRPInstanceEntry struct {
 	VInstanceScript            string
 }
 
-var (
-	KeepAliveCommunity = "public"
-)
-
 const (
 	VRRPInstanceTable = ".1.3.6.1.4.1.9586.100.5.2.3.1"
 	VRRPAddressTable  = ".1.3.6.1.4.1.9586.100.5.2.6.1"

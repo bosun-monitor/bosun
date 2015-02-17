@@ -69,6 +69,10 @@ var (
 	AddTags   opentsdb.TagSet
 )
 
+var (
+	KeepAliveCommunity = "public"
+)
+
 func init() {
 	go func() {
 		for t := range time.Tick(time.Second) {
