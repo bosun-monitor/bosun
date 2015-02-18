@@ -171,6 +171,8 @@ func vsphereHost(v *vsphere.Vsphere, md *opentsdb.MultiDataPoint) error {
 				switch p.Name {
 				case "summary.hardware.otherIdentifyingInfo":
 					d := xml.NewDecoder(bytes.NewBufferString(p.Val.Inner))
+					// Blade servers may have multiple service tags. We want to use the last one.
+					var lastServiceTag string
 					for {
 						var t HostSystemIdentificationInfo
 						err := d.Decode(&t)
@@ -181,8 +183,11 @@ func vsphereHost(v *vsphere.Vsphere, md *opentsdb.MultiDataPoint) error {
 							return err
 						}
 						if t.IdentiferType.Key == "ServiceTag" {
-							metadata.AddMeta("", tags, "serialNumber", t.IdentiferValue, false)
+							lastServiceTag = t.IdentiferValue
 						}
+					}
+					if lastServiceTag != "" {
+						metadata.AddMeta("", tags, "serialNumber", lastServiceTag, false)
 					}
 				}
 			}
