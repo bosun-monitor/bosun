@@ -100,7 +100,7 @@ func (s *Schedule) sendNotifications(rh *RunHistory, silenced map[expr.AlertKey]
 				s.notify(rh, st, n)
 			}
 			if n.Next != nil {
-				s.AddNotification(ak, n, time.Now().UTC())
+				s.AddNotification(ak, n.Next, time.Now().UTC())
 			}
 		}
 		var c int
