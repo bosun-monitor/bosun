@@ -1045,7 +1045,7 @@ func (c *Conf) AlertTemplateStrings() (*AlertTemplateStrings, error) {
 					return err
 				}
 			}
-			if s.Subject != nil && s.Body.Tree != nil {
+			if s.Subject != nil && s.Subject.Tree != nil {
 				if err := parseTemplate(s.Subject.Tree.Root.String()); err != nil {
 					return err
 				}
