@@ -211,6 +211,7 @@ type Alert struct {
 	Name             string
 	Crit             *expr.Expr `json:",omitempty"`
 	Warn             *expr.Expr `json:",omitempty"`
+	Depends          *expr.Expr `json:",omitempty"`
 	Squelch          Squelches  `json:"-"`
 	CritNotification *Notifications
 	WarnNotification *Notifications
@@ -220,10 +221,8 @@ type Alert struct {
 	UnjoinedOK       bool     `json:",omitempty"`
 	returnType       eparse.FuncType
 
-	crit, warn string
-	template   string
-	squelch    []string
-	tags       eparse.Tags
+	template string
+	squelch  []string
 }
 
 type Notifications struct {
@@ -758,31 +757,11 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 			}
 			a.Template = t
 		case "crit":
-			a.crit = v
-			crit, err := c.NewExpr(a.crit)
-			if err != nil {
-				c.error(err)
-			}
-			switch crit.Root.Return() {
-			case eparse.TypeNumber, eparse.TypeScalar:
-				// break
-			default:
-				c.errorf("crit must return a number")
-			}
-			a.Crit = crit
+			a.Crit = c.NewExpr(v)
 		case "warn":
-			a.warn = v
-			warn, err := c.NewExpr(a.warn)
-			if err != nil {
-				c.error(err)
-			}
-			switch warn.Root.Return() {
-			case eparse.TypeNumber, eparse.TypeScalar:
-				// break
-			default:
-				c.errorf("warn must return a number")
-			}
-			a.Warn = warn
+			a.Warn = c.NewExpr(v)
+		case "depends":
+			a.Depends = c.NewExpr(v)
 		case "squelch":
 			a.squelch = append(a.squelch, v)
 			if err := a.Squelch.Add(v); err != nil {
@@ -814,34 +793,39 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 	if a.Crit == nil && a.Warn == nil {
 		c.errorf("neither crit or warn specified")
 	}
-	var tags eparse.Tags
 	var ret eparse.FuncType
+	c.ensureTagsMatch(a.Crit, a.Warn, a.Depends)
 	if a.Crit != nil {
-		ctags, err := a.Crit.Root.Tags()
-		if err != nil {
-			c.error(err)
-		}
-		tags = ctags
 		ret = a.Crit.Root.Return()
 	}
 	if a.Warn != nil {
-		wtags, err := a.Warn.Root.Tags()
-		if err != nil {
-			c.error(err)
-		}
 		wret := a.Warn.Root.Return()
 		if a.Crit == nil {
-			tags = wtags
 			ret = wret
 		} else if ret != wret {
 			c.errorf("crit and warn expressions must return same type (%v != %v)", ret, wret)
-		} else if !tags.Equal(wtags) {
-			c.errorf("crit tags (%v) and warn tags (%v) must be equal", tags, wtags)
 		}
 	}
-	a.tags = tags
 	a.returnType = ret
 	c.Alerts[name] = &a
+}
+
+func (c *Conf) ensureTagsMatch(exprs ...*expr.Expr) {
+	var tags eparse.Tags
+	for _, ex := range exprs {
+		if ex == nil {
+			continue
+		}
+		etags, err := ex.Root.Tags()
+		if err != nil {
+			c.error(err)
+		}
+		if tags == nil {
+			tags = etags
+		} else if !tags.Equal(etags) {
+			c.errorf("crit, warn, and depends tags must be equal (%v != %v)", tags, etags)
+		}
+	}
 }
 
 func (c *Conf) loadNotification(s *parse.SectionNode) {
@@ -1133,8 +1117,18 @@ func (c *Conf) AlertTemplateStrings() (*AlertTemplateStrings, error) {
 	}, nil
 }
 
-func (c *Conf) NewExpr(s string) (*expr.Expr, error) {
-	return expr.New(s, c.Funcs())
+func (c *Conf) NewExpr(s string) *expr.Expr {
+	ex, err := expr.New(s, c.Funcs())
+	if err != nil {
+		c.error(err)
+	}
+	switch ex.Root.Return() {
+	case eparse.TypeNumber, eparse.TypeScalar:
+		break
+	default:
+		c.errorf("expression must return a number")
+	}
+	return ex
 }
 
 func (c *Conf) Funcs() map[string]eparse.Func {
