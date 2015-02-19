@@ -589,13 +589,6 @@ func (s *Schedule) Run() error {
 		go s.PingHosts()
 	}
 	go s.Poll()
-	go func() {
-		// Sleep before starting unknown checks. If Bosun was down for a little
-		// while then all the state.Touched times will be old and a bunch of
-		// unknowns will go off because it hasn't run all the checks yet.
-		time.Sleep(s.Conf.CheckFrequency)
-		go s.CheckUnknown()
-	}()
 	for {
 		if s.Conf == nil {
 			return fmt.Errorf("sched: nil configuration")
@@ -669,6 +662,7 @@ type State struct {
 	NeedAck     bool
 	Open        bool
 	Forgotten   bool
+	Unevaluated bool
 }
 
 func (s *State) AlertKey() expr.AlertKey {
@@ -794,6 +788,7 @@ type Event struct {
 	Warn, Crit, Error *Result
 	Status            Status
 	Time              time.Time
+	Unevaluated       bool
 }
 
 type Result struct {

@@ -37,6 +37,14 @@ type State struct {
 	// LogstashElastic
 	logstashQueries     []elastic.SearchService
 	logstashElasticHost string
+
+	History AlertStatusProvider
+}
+
+// Alert History Provider is used to provide information about alert results.
+// This facilitates alerts to reference other alerts, even when they go unknown.
+type AlertStatusProvider interface {
+	GetUnknownTagSets(alertName string) (unknown []opentsdb.TagSet, unevaluated []opentsdb.TagSet)
 }
 
 var ErrUnknownOp = fmt.Errorf("expr: unknown op type")
@@ -63,7 +71,7 @@ func New(expr string, funcs ...map[string]parse.Func) (*Expr, error) {
 
 // Execute applies a parse expression to the specified OpenTSDB context, and
 // returns one result per group. T may be nil to ignore timings.
-func (e *Expr) Execute(c opentsdb.Context, g graphite.Context, logstashElasticHost string, T miniprofiler.Timer, now time.Time, autods int, unjoinedOk bool, search *search.Search, squelched func(tags opentsdb.TagSet) bool) (r *Results, queries []opentsdb.Request, err error) {
+func (e *Expr) Execute(c opentsdb.Context, g graphite.Context, logstashElasticHost string, T miniprofiler.Timer, now time.Time, autods int, unjoinedOk bool, search *search.Search, squelched func(tags opentsdb.TagSet) bool, rh AlertStatusProvider) (r *Results, queries []opentsdb.Request, err error) {
 	if squelched == nil {
 		squelched = func(tags opentsdb.TagSet) bool {
 			return false
@@ -79,6 +87,7 @@ func (e *Expr) Execute(c opentsdb.Context, g graphite.Context, logstashElasticHo
 		unjoinedOk:          unjoinedOk,
 		Search:              search,
 		squelched:           squelched,
+		History:             rh,
 	}
 	return e.ExecuteState(s, T)
 }

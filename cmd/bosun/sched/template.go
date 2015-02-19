@@ -202,7 +202,7 @@ func (c *Context) eval(v interface{}, filter bool, series bool, autods int) (exp
 	if series && e.Root.Return() != parse.TypeSeries {
 		return nil, "", fmt.Errorf("egraph: requires an expression that returns a series")
 	}
-	res, _, err := e.Execute(c.runHistory.Context, c.runHistory.GraphiteContext, c.schedule.Conf.LogstashElasticHost, nil, c.runHistory.Start, autods, c.Alert.UnjoinedOK, c.schedule.Search, c.schedule.Conf.AlertSquelched(c.Alert))
+	res, _, err := e.Execute(c.runHistory.Context, c.runHistory.GraphiteContext, c.schedule.Conf.LogstashElasticHost, nil, c.runHistory.Start, autods, c.Alert.UnjoinedOK, c.schedule.Search, c.schedule.Conf.AlertSquelched(c.Alert), nil)
 	if err != nil {
 		return nil, "", fmt.Errorf("%s: %v", v, err)
 	}

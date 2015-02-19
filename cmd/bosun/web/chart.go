@@ -200,7 +200,7 @@ func ExprGraph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (in
 	} else if e.Root.Return() != parse.TypeSeries {
 		return nil, fmt.Errorf("egraph: requires an expression that returns a series")
 	}
-	res, _, err := e.Execute(schedule.Conf.TSDBCacheContext(), schedule.Conf.GraphiteContext(), schedule.Conf.LogstashElasticHost, t, now, autods, false, schedule.Search, nil)
+	res, _, err := e.Execute(schedule.Conf.TSDBCacheContext(), schedule.Conf.GraphiteContext(), schedule.Conf.LogstashElasticHost, t, now, autods, false, schedule.Search, nil, nil)
 	if err != nil {
 		return nil, err
 	}

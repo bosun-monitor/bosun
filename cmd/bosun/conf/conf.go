@@ -231,6 +231,7 @@ type Alert struct {
 	Name             string
 	Crit             *expr.Expr `json:",omitempty"`
 	Warn             *expr.Expr `json:",omitempty"`
+	Depends          *expr.Expr `json:",omitempty"`
 	Squelch          Squelches  `json:"-"`
 	CritNotification *Notifications
 	WarnNotification *Notifications
@@ -240,10 +241,8 @@ type Alert struct {
 	UnjoinedOK       bool     `json:",omitempty"`
 	returnType       eparse.FuncType
 
-	crit, warn string
-	template   string
-	squelch    []string
-	tags       eparse.Tags
+	template string
+	squelch  []string
 }
 
 type Notifications struct {
@@ -794,31 +793,11 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 			}
 			a.Template = t
 		case "crit":
-			a.crit = v
-			crit, err := c.NewExpr(a.crit)
-			if err != nil {
-				c.error(err)
-			}
-			switch crit.Root.Return() {
-			case eparse.TypeNumber, eparse.TypeScalar:
-				// break
-			default:
-				c.errorf("crit must return a number")
-			}
-			a.Crit = crit
+			a.Crit = c.NewExpr(v)
 		case "warn":
-			a.warn = v
-			warn, err := c.NewExpr(a.warn)
-			if err != nil {
-				c.error(err)
-			}
-			switch warn.Root.Return() {
-			case eparse.TypeNumber, eparse.TypeScalar:
-				// break
-			default:
-				c.errorf("warn must return a number")
-			}
-			a.Warn = warn
+			a.Warn = c.NewExpr(v)
+		case "depends":
+			a.Depends = c.NewExpr(v)
 		case "squelch":
 			a.squelch = append(a.squelch, v)
 			if err := a.Squelch.Add(v); err != nil {
@@ -850,34 +829,54 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 	if a.Crit == nil && a.Warn == nil {
 		c.errorf("neither crit or warn specified")
 	}
-	var tags eparse.Tags
 	var ret eparse.FuncType
+	tags := c.ensureTagsMatch(a.Crit, a.Warn)
 	if a.Crit != nil {
-		ctags, err := a.Crit.Root.Tags()
-		if err != nil {
-			c.error(err)
-		}
-		tags = ctags
 		ret = a.Crit.Root.Return()
 	}
 	if a.Warn != nil {
-		wtags, err := a.Warn.Root.Tags()
-		if err != nil {
-			c.error(err)
-		}
 		wret := a.Warn.Root.Return()
 		if a.Crit == nil {
-			tags = wtags
 			ret = wret
 		} else if ret != wret {
 			c.errorf("crit and warn expressions must return same type (%v != %v)", ret, wret)
-		} else if !tags.Equal(wtags) {
-			c.errorf("crit tags (%v) and warn tags (%v) must be equal", tags, wtags)
 		}
 	}
-	a.tags = tags
+	if a.Depends != nil {
+		depTags, err := a.Depends.Root.Tags()
+		if err != nil {
+			c.error(err)
+		}
+		c.validateDependsTags(depTags, tags)
+	}
 	a.returnType = ret
 	c.Alerts[name] = &a
+}
+
+func (c *Conf) validateDependsTags(dep, expr eparse.Tags) {
+	common := len(dep.Intersection(expr))
+	if common < 1 {
+		c.errorf("Depends and crit/warn must share at least one tag.")
+	}
+}
+
+func (c *Conf) ensureTagsMatch(exprs ...*expr.Expr) eparse.Tags {
+	var tags eparse.Tags
+	for _, ex := range exprs {
+		if ex == nil {
+			continue
+		}
+		etags, err := ex.Root.Tags()
+		if err != nil {
+			c.error(err)
+		}
+		if tags == nil {
+			tags = etags
+		} else if !tags.Equal(etags) {
+			c.errorf("crit and warn tags must be equal (%v != %v)", tags, etags)
+		}
+	}
+	return tags
 }
 
 func (c *Conf) loadNotification(s *parse.SectionNode) {
@@ -1169,8 +1168,18 @@ func (c *Conf) AlertTemplateStrings() (*AlertTemplateStrings, error) {
 	}, nil
 }
 
-func (c *Conf) NewExpr(s string) (*expr.Expr, error) {
-	return expr.New(s, c.Funcs())
+func (c *Conf) NewExpr(s string) *expr.Expr {
+	ex, err := expr.New(s, c.Funcs())
+	if err != nil {
+		c.error(err)
+	}
+	switch ex.Root.Return() {
+	case eparse.TypeNumber, eparse.TypeScalar:
+		break
+	default:
+		c.errorf("expression must return a number")
+	}
+	return ex
 }
 
 func (c *Conf) Funcs() map[string]eparse.Func {
@@ -1271,51 +1280,13 @@ func (c *Conf) Funcs() map[string]eparse.Func {
 		}
 		return t, nil
 	}
-	getAlertExpr := func(name, key string) (*Alert, *expr.Expr, error) {
-		a := c.Alerts[name]
-		if a == nil {
-			return nil, nil, fmt.Errorf("bad alert name %v", name)
-		}
-		var e *expr.Expr
-		switch key {
-		case "crit":
-			e = a.Crit
-		case "warn":
-			e = a.Warn
-		default:
-			return nil, nil, fmt.Errorf("alert: unsupported key %v", key)
-		}
-		if e == nil {
-			return nil, nil, fmt.Errorf("alert: nil expression")
-		}
-		return a, e, nil
-	}
-	alert := func(s *expr.State, T miniprofiler.Timer, name, key string) (results *expr.Results, err error) {
-		_, e, err := getAlertExpr(name, key)
-		if err != nil {
-			return nil, err
-		}
-		results, _, err = e.ExecuteState(s, T)
-		return
-	}
-	tagAlert := func(args []eparse.Node) (eparse.Tags, error) {
-		name := args[0].(*eparse.StringNode).Text
-		key := args[1].(*eparse.StringNode).Text
-		a, e, err := getAlertExpr(name, key)
-		if err != nil {
-			return nil, err
-		}
-		if a.returnType != eparse.TypeNumber {
-			return nil, fmt.Errorf("alert requires a number-returning expression (got %v)", a.returnType)
-		}
-		return e.Root.Tags()
-	}
+
 	funcs := map[string]eparse.Func{
 		"alert": {
 			Args:   []eparse.FuncType{eparse.TypeString, eparse.TypeString},
 			Return: eparse.TypeNumber,
-			Tags:   tagAlert,
-			F:      alert,
+			Tags:   c.tagAlert,
+			F:      c.runAlert,
 		},
 		"lookup": {
 			Args:   []eparse.FuncType{eparse.TypeString, eparse.TypeString},
@@ -1345,4 +1316,79 @@ func (c *Conf) Funcs() map[string]eparse.Func {
 		merge(expr.LogstashElastic)
 	}
 	return funcs
+}
+
+func (c *Conf) runAlert(s *expr.State, T miniprofiler.Timer, name, key string) (results *expr.Results, err error) {
+	_, e, err := c.getAlertExpr(name, key)
+	if err != nil {
+		return nil, err
+	}
+	results, _, err = e.ExecuteState(s, T)
+
+	if s.History != nil {
+
+		unknownTags, unevalTags := s.History.GetUnknownTagSets(name)
+
+		// For currently unknown tags NOT in the result set, add an error result
+		for _, tags := range unknownTags {
+			found := false
+			for _, result := range results.Results {
+				if result.Group.Equal(tags) {
+					found = true
+					break
+				}
+			}
+			if found {
+				res := expr.Result{
+					Value: expr.Number(1),
+					Group: tags,
+				}
+				results.Results = append(results.Results, &res)
+			}
+		}
+		//For all unevaluated tags in run history, make sure we report a nonzero result.
+	Loop:
+		for _, result := range results.Results {
+			for _, tags := range unevalTags {
+				if result.Group.Equal(tags) {
+					result.Value = expr.Number(1)
+					break Loop
+				}
+			}
+		}
+	}
+	return results, nil
+}
+
+func (c *Conf) getAlertExpr(name, key string) (*Alert, *expr.Expr, error) {
+	a := c.Alerts[name]
+	if a == nil {
+		return nil, nil, fmt.Errorf("bad alert name %v", name)
+	}
+	var e *expr.Expr
+	switch key {
+	case "crit":
+		e = a.Crit
+	case "warn":
+		e = a.Warn
+	default:
+		return nil, nil, fmt.Errorf("alert: unsupported key %v", key)
+	}
+	if e == nil {
+		return nil, nil, fmt.Errorf("alert: nil expression")
+	}
+	return a, e, nil
+}
+
+func (c *Conf) tagAlert(args []eparse.Node) (eparse.Tags, error) {
+	name := args[0].(*eparse.StringNode).Text
+	key := args[1].(*eparse.StringNode).Text
+	a, e, err := c.getAlertExpr(name, key)
+	if err != nil {
+		return nil, err
+	}
+	if a.returnType != eparse.TypeNumber {
+		return nil, fmt.Errorf("alert requires a number-returning expression (got %v)", a.returnType)
+	}
+	return e.Root.Tags()
 }

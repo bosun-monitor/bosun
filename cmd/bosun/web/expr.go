@@ -29,7 +29,7 @@ func Expr(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 	if err != nil {
 		return nil, err
 	}
-	res, queries, err := e.Execute(schedule.Conf.TSDBCacheContext(), schedule.Conf.GraphiteContext(), schedule.Conf.LogstashElasticHost, t, now, 0, false, schedule.Search, nil)
+	res, queries, err := e.Execute(schedule.Conf.TSDBCacheContext(), schedule.Conf.GraphiteContext(), schedule.Conf.LogstashElasticHost, t, now, 0, false, schedule.Search, nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -81,10 +81,10 @@ func procRule(t miniprofiler.Timer, c *conf.Conf, a *conf.Alert, now time.Time, 
 	s.Metadata = schedule.Metadata
 	s.Search = schedule.Search
 	rh := s.NewRunHistory(now)
-	if _, err := s.CheckExpr(t, rh, a, a.Warn, sched.StWarning, nil); err != nil {
+	if _, err := s.CheckExpr(t, rh, a, a.Warn, sched.StWarning, nil, nil); err != nil {
 		return nil, err
 	}
-	if _, err := s.CheckExpr(t, rh, a, a.Crit, sched.StCritical, nil); err != nil {
+	if _, err := s.CheckExpr(t, rh, a, a.Crit, sched.StCritical, nil, nil); err != nil {
 		return nil, err
 	}
 	keys := make(expr.AlertKeys, len(rh.Events))
