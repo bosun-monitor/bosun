@@ -794,7 +794,7 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 		c.errorf("neither crit or warn specified")
 	}
 	var ret eparse.FuncType
-	c.ensureTagsMatch(a.Crit, a.Warn, a.Depends)
+	tags := c.ensureTagsMatch(a.Crit, a.Warn)
 	if a.Crit != nil {
 		ret = a.Crit.Root.Return()
 	}
@@ -806,11 +806,25 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 			c.errorf("crit and warn expressions must return same type (%v != %v)", ret, wret)
 		}
 	}
+	if a.Depends != nil {
+		depTags, err := a.Depends.Root.Tags()
+		if err != nil {
+			c.error(err)
+		}
+		c.validateDependsTags(depTags, tags)
+	}
 	a.returnType = ret
 	c.Alerts[name] = &a
 }
 
-func (c *Conf) ensureTagsMatch(exprs ...*expr.Expr) {
+func (c *Conf) validateDependsTags(dep, expr eparse.Tags) {
+	common := len(dep.Intersection(expr))
+	if common < 1 {
+		c.errorf("Depends and crit/warn must share at least one tag.")
+	}
+}
+
+func (c *Conf) ensureTagsMatch(exprs ...*expr.Expr) eparse.Tags {
 	var tags eparse.Tags
 	for _, ex := range exprs {
 		if ex == nil {
@@ -823,9 +837,10 @@ func (c *Conf) ensureTagsMatch(exprs ...*expr.Expr) {
 		if tags == nil {
 			tags = etags
 		} else if !tags.Equal(etags) {
-			c.errorf("crit, warn, and depends tags must be equal (%v != %v)", tags, etags)
+			c.errorf("crit and warn tags must be equal (%v != %v)", tags, etags)
 		}
 	}
+	return tags
 }
 
 func (c *Conf) loadNotification(s *parse.SectionNode) {

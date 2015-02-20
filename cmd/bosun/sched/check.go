@@ -231,18 +231,12 @@ func (s *Schedule) CheckAlert(T miniprofiler.Timer, r *RunHistory, a *conf.Alert
 		collect.Add("check.errs", opentsdb.TagSet{"metric": a.Name}, 1)
 		log.Println(err)
 	} else {
-		for _, dep := range dependencyResults {
-			ak := expr.NewAlertKey(a.Name, dep.Group)
-			r.Events[ak] = &Event{Unevaluated: true}
-			ignore[ak] = true
-		}
-
-		crits, err = s.CheckExpr(T, r, a, a.Crit, StCritical, ignore)
+		crits, err = s.CheckExpr(T, r, a, a.Crit, StCritical, ignore, dependencyResults)
 		for _, ak := range crits {
 			ignore[ak] = true
 		}
 		if err == nil {
-			warns, _ = s.CheckExpr(T, r, a, a.Warn, StWarning, ignore)
+			warns, _ = s.CheckExpr(T, r, a, a.Warn, StWarning, ignore, dependencyResults)
 		}
 	}
 	collect.Put("check.duration", opentsdb.TagSet{"name": a.Name}, time.Since(start).Seconds())
@@ -296,7 +290,7 @@ func (s *Schedule) executeExpr(T miniprofiler.Timer, rh *RunHistory, a *conf.Ale
 	return results, err
 }
 
-func (s *Schedule) CheckExpr(T miniprofiler.Timer, rh *RunHistory, a *conf.Alert, e *expr.Expr, checkStatus Status, ignore map[expr.AlertKey]bool) (alerts expr.AlertKeys, err error) {
+func (s *Schedule) CheckExpr(T miniprofiler.Timer, rh *RunHistory, a *conf.Alert, e *expr.Expr, checkStatus Status, ignore map[expr.AlertKey]bool, dependencies expr.ResultSlice) (alerts expr.AlertKeys, err error) {
 	if e == nil {
 		return
 	}
@@ -311,6 +305,7 @@ func (s *Schedule) CheckExpr(T miniprofiler.Timer, rh *RunHistory, a *conf.Alert
 	if err != nil {
 		return nil, err
 	}
+Loop:
 	for _, r := range results.Results {
 		if s.Conf.Squelched(a, r.Group) {
 			continue
@@ -332,10 +327,17 @@ func (s *Schedule) CheckExpr(T miniprofiler.Timer, rh *RunHistory, a *conf.Alert
 			err = fmt.Errorf("expected number or scalar")
 			return
 		}
+
 		event := rh.Events[ak]
 		if event == nil {
 			event = &Event{}
 			rh.Events[ak] = event
+		}
+		for _, dep := range dependencies {
+			if opentsdb.Overlap(ak.Group(), dep.Group) {
+				event.Unevaluated = true
+				continue Loop
+			}
 		}
 		result := Result{
 			Result: r,
