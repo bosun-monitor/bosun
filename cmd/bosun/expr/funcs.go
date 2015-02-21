@@ -286,6 +286,12 @@ var builtins = map[string]parse.Func{
 		tagFirst,
 		DropNA,
 	},
+	"des": {
+		[]parse.FuncType{parse.TypeSeries, parse.TypeScalar, parse.TypeScalar},
+		parse.TypeSeries,
+		tagFirst,
+		Des,
+	},
 	"nv": {
 		[]parse.FuncType{parse.TypeNumber, parse.TypeScalar},
 		parse.TypeNumber,
@@ -793,6 +799,26 @@ func sum(dps Series, args ...float64) (a float64) {
 		a += float64(v)
 	}
 	return
+}
+
+func Des(e *State, T miniprofiler.Timer, series *Results, alpha float64, beta float64) *Results {
+	for _, res := range series.Results {
+		sorted := NewSortedSeries(res.Value.Value().(Series))
+		if len(sorted) < 2 {
+			continue
+		}
+		des := make(Series)
+		s := make([]float64, len(sorted))
+		b := make([]float64, len(sorted))
+		s[0] = sorted[0].V
+		for i := 1; i < len(sorted); i++ {
+			s[i] = alpha*sorted[i].V + (1-alpha)*(s[i-1]+b[i-1])
+			b[i] = beta*(s[i]-s[i-1]) + (1-beta)*b[i-1]
+			des[sorted[i].T] = s[i]
+		}
+		res.Value = des
+	}
+	return series
 }
 
 func Streak(e *State, T miniprofiler.Timer, series *Results) (*Results, error) {
