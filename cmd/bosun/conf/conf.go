@@ -6,6 +6,7 @@ import (
 	htemplate "html/template"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/mail"
 	"net/url"
 	"os"
@@ -52,6 +53,7 @@ type Conf struct {
 	Squelch          Squelches `json:"-"`
 	Quiet            bool
 	NoSleep          bool
+	PutIPs           AuthorizedIPs
 
 	TSDBHost            string // OpenTSDB relay and query destination: ny-devtsdb04:4242
 	GraphiteHost        string // Graphite query host: foo.bar.baz
@@ -63,6 +65,23 @@ type Conf struct {
 	bodies          *htemplate.Template
 	subjects        *ttemplate.Template
 	squelch         []string
+}
+
+type AuthorizedIPs []*net.IPNet
+
+func (authorizedIPs AuthorizedIPs) Authorized(ip net.IP) (authorized bool) {
+	if len(authorizedIPs) == 0 {
+		return true
+	}
+	if ip.IsLoopback() {
+		return true
+	}
+	for _, ipnet := range authorizedIPs {
+		if ipnet.Contains(ip) {
+			return true
+		}
+	}
+	return
 }
 
 // TSDBCacheContext returns an OpenTSDB context with caching and limited to
@@ -405,6 +424,15 @@ func (c *Conf) loadGlobal(p *parse.PairNode) {
 		c.Ping = true
 	case "noSleep":
 		c.NoSleep = true
+	case "putIPs":
+		rawCIDRs := strings.Split(v, ",")
+		for _, rc := range rawCIDRs {
+			_, ipnet, err := net.ParseCIDR(rc)
+			if err != nil {
+				c.error(err)
+			}
+			c.PutIPs = append(c.PutIPs, ipnet)
+		}
 	case "unknownThreshold":
 		i, err := strconv.Atoi(v)
 		if err != nil {
