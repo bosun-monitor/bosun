@@ -144,10 +144,11 @@ func (t TagSet) Tags() string {
 	return b.String()
 }
 
+// Returns true if the two tagsets "overlap".
 // Two tagsets overlap if they:
 // 1. Have at least one key/value pair that matches
 // 2. Have no keys in common where the values do not match
-func Overlap(a TagSet, b TagSet) bool {
+func (a TagSet) Overlaps(b TagSet) bool {
 	anyMatch := false
 	for k, v := range a {
 		v2, ok := b[k]

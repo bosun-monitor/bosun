@@ -334,7 +334,7 @@ Loop:
 			rh.Events[ak] = event
 		}
 		for _, dep := range dependencies {
-			if opentsdb.Overlap(ak.Group(), dep.Group) {
+			if ak.Group().Overlaps(dep.Group) {
 				event.Unevaluated = true
 				continue Loop
 			}

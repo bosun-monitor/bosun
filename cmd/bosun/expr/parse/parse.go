@@ -90,7 +90,7 @@ func (t Tags) Subset(o Tags) bool {
 	return true
 }
 
-//Intersection returns Tags common to both tagsets
+// Intersection returns Tags common to both tagsets.
 func (t Tags) Intersection(o Tags) Tags {
 	result := Tags{}
 	for k := range t {
