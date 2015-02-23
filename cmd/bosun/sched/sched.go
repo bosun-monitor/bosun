@@ -620,7 +620,7 @@ const pingFreq = time.Second * 15
 
 func (s *Schedule) PingHosts() {
 	for range time.Tick(pingFreq) {
-		hosts := s.Search.TagValuesByTagKey("host", 0)
+		hosts := s.Search.TagValuesByTagKey("host", s.Conf.PingDuration)
 		for _, host := range hosts {
 			go pingHost(host)
 		}

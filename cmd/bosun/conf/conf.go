@@ -36,6 +36,7 @@ type Conf struct {
 	SMTPUsername     string // SMTP username
 	SMTPPassword     string // SMTP password
 	Ping             bool
+	PingDuration     time.Duration // Duration from now to stop pinging hosts based on time since the host tag was touched
 	EmailFrom        string
 	StateFile        string
 	TimeAndDate      []int // timeanddate.com cities list
@@ -319,6 +320,7 @@ func New(name, text string) (c *Conf, err error) {
 		CheckFrequency:   time.Minute * 5,
 		HTTPListen:       ":8070",
 		StateFile:        "bosun.state",
+		PingDuration:     time.Hour * 24,
 		ResponseLimit:    1 << 20, // 1MB
 		SearchSince:      opentsdb.Day * 3,
 		UnknownThreshold: 5,
@@ -403,6 +405,12 @@ func (c *Conf) loadGlobal(p *parse.PairNode) {
 		c.StateFile = v
 	case "ping":
 		c.Ping = true
+	case "pingDuration":
+		d, err := time.ParseDuration(v)
+		if err != nil {
+			c.errorf(err.Error())
+		}
+		c.PingDuration = d
 	case "noSleep":
 		c.NoSleep = true
 	case "unknownThreshold":
