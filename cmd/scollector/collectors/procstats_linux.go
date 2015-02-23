@@ -308,7 +308,7 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 			for i, v := range cols[1:] {
 				i++
 				m := "linux.net.stat." + root + "." + strings.TrimPrefix(strings.ToLower(headers[i]), "tcp")
-				Add(&md, m, v, nil, metadata.Gauge, metadata.None, "")
+				Add(&md, m, v, nil, metadata.Counter, metadata.None, "")
 			}
 		}
 		ln += 1
