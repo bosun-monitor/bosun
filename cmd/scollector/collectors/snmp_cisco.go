@@ -37,6 +37,7 @@ func c_snmp_cisco(community, host string) (opentsdb.MultiDataPoint, error) {
 		return nil, err
 	}
 	Add(&md, "cisco.cpu", v.String(), opentsdb.TagSet{"host": host}, metadata.Gauge, metadata.Pct, "The overall CPU busy percentage in the last five-second period.")
+	Add(&md, osCPU, v.String(), opentsdb.TagSet{"host": host}, metadata.Gauge, metadata.Pct, "")
 	names, err := snmp_subtree(host, community, ciscoMemName)
 	if err != nil {
 		return nil, err
