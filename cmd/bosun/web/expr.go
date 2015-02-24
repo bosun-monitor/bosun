@@ -81,10 +81,10 @@ func procRule(t miniprofiler.Timer, c *conf.Conf, a *conf.Alert, now time.Time, 
 	s.Metadata = schedule.Metadata
 	s.Search = schedule.Search
 	rh := s.NewRunHistory(now)
-	if _, err := s.CheckExpr(t, rh, a, a.Warn, sched.StWarning, nil); err != nil {
+	if _, err := s.CheckExpr(t, rh, a, a.Warn, sched.StWarning, nil, nil); err != nil {
 		return nil, err
 	}
-	if _, err := s.CheckExpr(t, rh, a, a.Crit, sched.StCritical, nil); err != nil {
+	if _, err := s.CheckExpr(t, rh, a, a.Crit, sched.StCritical, nil, nil); err != nil {
 		return nil, err
 	}
 	keys := make(expr.AlertKeys, len(rh.Events))
