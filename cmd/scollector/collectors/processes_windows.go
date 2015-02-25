@@ -10,31 +10,28 @@ import (
 	"bosun.org/opentsdb"
 )
 
-var regexes = []*regexp.Regexp{}
+var regexesProcesses = []*regexp.Regexp{}
 
 func AddProcessConfig(line string) error {
 	reg, err := regexp.Compile(line)
 	if err != nil {
 		return err
 	}
-	regexes = append(regexes, reg)
+	regexesProcesses = append(regexesProcesses, reg)
 	return nil
 }
 
 func WatchProcesses() {
-	if len(regexes) == 0 {
+	if len(regexesProcesses) == 0 {
 		// if no processes configured in config file, use this set instead.
-		regexes = append(regexes, regexp.MustCompile("chrome|powershell|scollector|SocketServer|WinRM|MSSQLSERVER|StackServerProd|StackServerDev|LogStasher"))
+		regexesProcesses = append(regexesProcesses, regexp.MustCompile("chrome|powershell|scollector|SocketServer|WinRM|MSSQLSERVER|StackServerProd|StackServerDev|LogStasher"))
 	}
 	collectors = append(collectors, &IntervalCollector{
-		F: func() (opentsdb.MultiDataPoint, error) {
-			return c_windows_processes(regexes)
-		},
-		name: "c_windows_processes",
+		F: c_windows_processes,
 	})
 }
 
-func c_windows_processes(procs []*regexp.Regexp) (opentsdb.MultiDataPoint, error) {
+func c_windows_processes() (opentsdb.MultiDataPoint, error) {
 	var dst []Win32_PerfRawData_PerfProc_Process
 	var q = wmi.CreateQuery(&dst, `WHERE Name <> '_Total'`)
 	err := queryWmi(q, &dst)
@@ -77,7 +74,7 @@ func c_windows_processes(procs []*regexp.Regexp) (opentsdb.MultiDataPoint, error
 		service_match := false
 		iis_match := false
 
-		process_match := nameMatches(v.Name, procs)
+		process_match := nameMatches(v.Name, regexesProcesses)
 
 		id := "0"
 
@@ -95,7 +92,7 @@ func c_windows_processes(procs []*regexp.Regexp) (opentsdb.MultiDataPoint, error
 
 		// A Service match could "overwrite" a process match, but that is probably what we would want
 		for _, svc := range svc_dst {
-			if nameMatches(svc.Name, procs) {
+			if nameMatches(svc.Name, regexesProcesses) {
 				// It is possible the pid has gone and been reused, but I think this unlikely
 				// And I'm not aware of an atomic join we could do anyways
 				if svc.ProcessId != 0 && svc.ProcessId == v.IDProcess {
