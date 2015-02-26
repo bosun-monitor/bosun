@@ -90,6 +90,10 @@ func (s *Schedule) RunHistory(r *RunHistory) {
 			state = NewStatus(ak)
 			s.status[ak] = state
 		}
+		if event.Unevaluated {
+			state.Unevaluated = true
+			continue
+		}
 		last := state.Append(event)
 		a := s.Conf.Alerts[ak.Name()]
 		if event.Status > StNormal {
@@ -218,26 +222,51 @@ func (s *Schedule) CheckUnknown() {
 func (s *Schedule) CheckAlert(T miniprofiler.Timer, r *RunHistory, a *conf.Alert) {
 	log.Printf("check alert %v start", a.Name)
 	start := time.Now()
-	var warns expr.AlertKeys
-	crits, err := s.CheckExpr(T, r, a, a.Crit, StCritical, nil)
-	if err == nil {
-		warns, _ = s.CheckExpr(T, r, a, a.Warn, StWarning, crits)
-	}
-	collect.Put("check.duration", opentsdb.TagSet{"name": a.Name}, time.Since(start).Seconds())
-	log.Printf("check alert %v done (%s): %v crits, %v warns", a.Name, time.Since(start), len(crits), len(warns))
-}
-
-func (s *Schedule) CheckExpr(T miniprofiler.Timer, rh *RunHistory, a *conf.Alert, e *expr.Expr, checkStatus Status, ignore expr.AlertKeys) (alerts expr.AlertKeys, err error) {
-	if e == nil {
-		return
-	}
-	defer func() {
-		if err == nil {
-			return
-		}
+	var warns, crits expr.AlertKeys
+	dependCount := 0
+	ignore := map[expr.AlertKey]bool{}
+	d, err := s.executeExpr(T, r, a, a.Depends)
+	dependencyResults := filterDependencyResults(d)
+	if err != nil {
 		collect.Add("check.errs", opentsdb.TagSet{"metric": a.Name}, 1)
 		log.Println(err)
-	}()
+	} else {
+		crits, err = s.CheckExpr(T, r, a, a.Crit, StCritical, ignore, dependencyResults)
+		for _, ak := range crits {
+			ignore[ak] = true
+		}
+		if err == nil {
+			warns, _ = s.CheckExpr(T, r, a, a.Warn, StWarning, ignore, dependencyResults)
+		}
+	}
+	collect.Put("check.duration", opentsdb.TagSet{"name": a.Name}, time.Since(start).Seconds())
+	log.Printf("check alert %v done (%s): %v crits, %v warns, %v ignored because of dependencies.", a.Name, time.Since(start), len(crits), len(warns), dependCount)
+}
+
+func filterDependencyResults(results *expr.Results) expr.ResultSlice {
+	filtered := expr.ResultSlice{}
+	if results == nil {
+		return filtered
+	}
+	for _, r := range results.Results {
+		var n float64
+		switch v := r.Value.(type) {
+		case expr.Number:
+			n = float64(v)
+		case expr.Scalar:
+			n = float64(v)
+		}
+		if !math.IsNaN(n) && n != 0 {
+			filtered = append(filtered, r)
+		}
+	}
+	return filtered
+}
+
+func (s *Schedule) executeExpr(T miniprofiler.Timer, rh *RunHistory, a *conf.Alert, e *expr.Expr) (*expr.Results, error) {
+	if e == nil {
+		return nil, nil
+	}
 	results, _, err := e.Execute(rh.Context, rh.GraphiteContext, s.Conf.LogstashElasticHost, T, rh.Start, 0, a.UnjoinedOK, s.Search, s.Conf.AlertSquelched(a))
 	if err != nil {
 		ak := expr.NewAlertKey(a.Name, nil)
@@ -256,7 +285,25 @@ func (s *Schedule) CheckExpr(T miniprofiler.Timer, rh *RunHistory, a *conf.Alert
 		rh.Events[ak] = &Event{
 			Status: StError,
 		}
+		return nil, err
+	}
+	return results, err
+}
+
+func (s *Schedule) CheckExpr(T miniprofiler.Timer, rh *RunHistory, a *conf.Alert, e *expr.Expr, checkStatus Status, ignore map[expr.AlertKey]bool, dependencies expr.ResultSlice) (alerts expr.AlertKeys, err error) {
+	if e == nil {
 		return
+	}
+	defer func() {
+		if err == nil {
+			return
+		}
+		collect.Add("check.errs", opentsdb.TagSet{"metric": a.Name}, 1)
+		log.Println(err)
+	}()
+	results, err := s.executeExpr(T, rh, a, e)
+	if err != nil {
+		return nil, err
 	}
 Loop:
 	for _, r := range results.Results {
@@ -264,10 +311,8 @@ Loop:
 			continue
 		}
 		ak := expr.NewAlertKey(a.Name, r.Group)
-		for _, v := range ignore {
-			if ak == v {
-				continue Loop
-			}
+		if ignore[ak] {
+			continue
 		}
 		state := s.Status(ak)
 		state.Touch()
@@ -282,10 +327,17 @@ Loop:
 			err = fmt.Errorf("expected number or scalar")
 			return
 		}
+
 		event := rh.Events[ak]
 		if event == nil {
-			event = new(Event)
+			event = &Event{}
 			rh.Events[ak] = event
+		}
+		for _, dep := range dependencies {
+			if ak.Group().Overlaps(dep.Group) {
+				event.Unevaluated = true
+				continue Loop
+			}
 		}
 		result := Result{
 			Result: r,

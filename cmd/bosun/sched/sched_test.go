@@ -172,3 +172,55 @@ func TestCount(t *testing.T) {
 		},
 	})
 }
+
+func TestDepends(t *testing.T) {
+	testSched(t, &schedTest{
+		conf: `alert a {
+			depends = avg(q("avg:n{a=*}", "5m", "")) > 5
+			crit = avg(q("avg:m{a=*}", "5m", "")) > 0
+		}`,
+		//b is crit and dependency bad
+		//c is crit and dependency good
+		//d is normal and dependency bad
+		// only c should be in result set
+		queries: map[string]opentsdb.ResponseSet{
+			`q("avg:m{a=*}", "2000/01/01-11:55:00", "2000/01/01-12:00:00")`: {
+				{
+					Metric: "m",
+					Tags:   opentsdb.TagSet{"a": "b"},
+					DPS:    map[string]opentsdb.Point{"0": 1},
+				},
+				{
+					Metric: "m",
+					Tags:   opentsdb.TagSet{"a": "c"},
+					DPS:    map[string]opentsdb.Point{"0": 1},
+				},
+				{
+					Metric: "m",
+					Tags:   opentsdb.TagSet{"a": "d"},
+					DPS:    map[string]opentsdb.Point{"0": 0},
+				},
+			},
+			`q("avg:n{a=*}", "2000/01/01-11:55:00", "2000/01/01-12:00:00")`: {
+				{
+					Metric: "n",
+					Tags:   opentsdb.TagSet{"a": "b"},
+					DPS:    map[string]opentsdb.Point{"0": 6},
+				},
+				{
+					Metric: "n",
+					Tags:   opentsdb.TagSet{"a": "c"},
+					DPS:    map[string]opentsdb.Point{"0": 4},
+				},
+				{
+					Metric: "n",
+					Tags:   opentsdb.TagSet{"a": "d"},
+					DPS:    map[string]opentsdb.Point{"0": 10},
+				},
+			},
+		},
+		state: map[schedState]bool{
+			schedState{"a{a=c}", "critical"}: true,
+		},
+	})
+}
