@@ -201,6 +201,9 @@ func main() {
 		collect.DisableDefaultCollectors = true
 	}
 	c := collectors.Search(*flagFilter)
+	if len(c) == 0 {
+		slog.Fatalf("Filter %s matches no collectors.", *flagFilter)
+	}
 	for _, col := range c {
 		col.Init()
 	}
