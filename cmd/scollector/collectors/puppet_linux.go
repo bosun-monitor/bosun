@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"os"
+	"strconv"
 
 	"bosun.org/_third_party/gopkg.in/yaml.v1"
 	"bosun.org/metadata"
@@ -44,24 +45,7 @@ type PRSummary struct {
 		Skipped         float64 `yaml:"skipped"`
 		Total           float64 `yaml:"total"`
 	} `yaml:"resources"`
-	Time struct {
-		Augeas           float64 `yaml:"augeas"`
-		ConfigRetrieval  float64 `yaml:"config_retrieval"`
-		Cron             float64 `yaml:"cron"`
-		Exec             float64 `yaml:"exec"`
-		File             float64 `yaml:"file"`
-		Filebucket       float64 `yaml:"filebucket"`
-		Group            float64 `yaml:"group"`
-		IniSetting       float64 `yaml:"ini_setting"`
-		LastRun          int64   `yaml:"last_run"`
-		Package          float64 `yaml:"package"`
-		Schedule         float64 `yaml:"schedule"`
-		Service          float64 `yaml:"service"`
-		SshAuthorizedKey float64 `yaml:"ssh_authorized_key"`
-		Total            float64 `yaml:"total"`
-		User             float64 `yaml:"user"`
-		Yumrepo          float64 `yaml:"yumrepo"`
-	} `yaml:"time"`
+	Time map[string]string `yaml:"time"`
 	Version struct {
 		Config string `yaml:"config"`
 		Puppet string `yaml:"puppet"`
@@ -95,15 +79,40 @@ func puppet_linux() (opentsdb.MultiDataPoint, error) {
 	if err = yaml.Unmarshal(s, &m); err != nil {
 		return nil, err
 	}
+	last_run, err := strconv.ParseInt(m.Time["last_run"], 10, 64)
 	//m.Version.Config appears to be the unix timestamp
-	AddTS(&md, "puppet.run.resources", m.Time.LastRun, m.Resources.Changed, opentsdb.TagSet{"resource": "changed"}, metadata.Gauge, metadata.Count, "")
-	AddTS(&md, "puppet.run.resources", m.Time.LastRun, m.Resources.Failed, opentsdb.TagSet{"resource": "failed"}, metadata.Gauge, metadata.Count, "")
-	AddTS(&md, "puppet.run.resources", m.Time.LastRun, m.Resources.FailedToRestart, opentsdb.TagSet{"resource": "failed_to_restart"}, metadata.Gauge, metadata.Count, "")
-	AddTS(&md, "puppet.run.resources", m.Time.LastRun, m.Resources.OutOfSync, opentsdb.TagSet{"resource": "out_of_sync"}, metadata.Gauge, metadata.Count, "")
-	AddTS(&md, "puppet.run.resources", m.Time.LastRun, m.Resources.Restarted, opentsdb.TagSet{"resource": "restarted"}, metadata.Gauge, metadata.Count, "")
-	AddTS(&md, "puppet.run.resources", m.Time.LastRun, m.Resources.Scheduled, opentsdb.TagSet{"resource": "scheduled"}, metadata.Gauge, metadata.Count, "")
-	AddTS(&md, "puppet.run.resources", m.Time.LastRun, m.Resources.Skipped, opentsdb.TagSet{"resource": "skipped"}, metadata.Gauge, metadata.Count, "")
-	AddTS(&md, "puppet.run.resources_total", m.Time.LastRun, m.Resources.Total, nil, metadata.Gauge, metadata.Count, "")
-	AddTS(&md, "puppet.run.changes", m.Time.LastRun, m.Changes.Total, nil, metadata.Gauge, metadata.Count, "")
+	AddTS(&md, "puppet.run.resources", last_run, m.Resources.Changed, opentsdb.TagSet{"resource": "changed"}, metadata.Gauge, metadata.Count, descPuppetChanged)
+	AddTS(&md, "puppet.run.resources", last_run, m.Resources.Failed, opentsdb.TagSet{"resource": "failed"}, metadata.Gauge, metadata.Count, descPuppetFailed)
+	AddTS(&md, "puppet.run.resources", last_run, m.Resources.FailedToRestart, opentsdb.TagSet{"resource": "failed_to_restart"}, metadata.Gauge, metadata.Count, descPuppetFailedToRestart)
+	AddTS(&md, "puppet.run.resources", last_run, m.Resources.OutOfSync, opentsdb.TagSet{"resource": "out_of_sync"}, metadata.Gauge, metadata.Count, descPuppetOutOfSync)
+	AddTS(&md, "puppet.run.resources", last_run, m.Resources.Restarted, opentsdb.TagSet{"resource": "restarted"}, metadata.Gauge, metadata.Count, descPuppetRestarted)
+	AddTS(&md, "puppet.run.resources", last_run, m.Resources.Scheduled, opentsdb.TagSet{"resource": "scheduled"}, metadata.Gauge, metadata.Count, descPuppetScheduled)
+	AddTS(&md, "puppet.run.resources", last_run, m.Resources.Skipped, opentsdb.TagSet{"resource": "skipped"}, metadata.Gauge, metadata.Count, descPuppetSkipped)
+	AddTS(&md, "puppet.run.resources_total", last_run, m.Resources.Total, nil, metadata.Gauge, metadata.Count, descPuppetTotalResources)
+	AddTS(&md, "puppet.run.changes", last_run, m.Changes.Total, nil, metadata.Gauge, metadata.Count, descPuppetTotalChanges)
+	for k, v := range m.Time {
+		metric, err := strconv.ParseFloat(v, 64)
+		if err != nil {
+			if k == "total" {
+				AddTS(&md, "puppet.run_duration_total", last_run, metric, nil, metadata.Gauge, metadata.Second, descPuppetTotalTime)
+			} else {
+				AddTS(&md, "puppet.run_duration", last_run, metric, opentsdb.TagSet{"time": k}, metadata.Gauge, metadata.Second, descPuppetModuleTime)
+			}
+		}
+	}
 	return md, nil
 }
+
+const (
+	descPuppetChanged         = "Number of resources for which changes were applied."
+	descPuppetFailed          = "Number of resources which caused an error during evaluation."
+	descPuppetFailedToRestart = "Number of service resources which failed to restart."
+	descPuppetOutOfSync       = "Number of resources which should have been changed if catalog was applied."
+	descPuppetRestarted       = "Number of service resources which were restarted."
+	descPuppetScheduled       = "Number of service resources which were scheduled for restart."
+	descPuppetSkipped         = "Number of resources which puppet opted to not apply changes to."
+	descPuppetTotalResources  = "Total number of resources."
+	descPuppetTotalChanges    = "Total number of changes."
+	descPuppetTotalTime       = "Total time which puppet took to run."
+	descPuppetModuleTime      = "Time which this tagged module took to run."
+)
