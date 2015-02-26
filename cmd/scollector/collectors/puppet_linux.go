@@ -102,7 +102,7 @@ func puppet_linux() (opentsdb.MultiDataPoint, error) {
 	AddTS(&md, "puppet.run.resources", m.Time.LastRun, m.Resources.OutOfSync, opentsdb.TagSet{"resource": "out_of_sync"}, metadata.Gauge, metadata.Count, "")
 	AddTS(&md, "puppet.run.resources", m.Time.LastRun, m.Resources.Restarted, opentsdb.TagSet{"resource": "restarted"}, metadata.Gauge, metadata.Count, "")
 	AddTS(&md, "puppet.run.resources", m.Time.LastRun, m.Resources.Scheduled, opentsdb.TagSet{"resource": "scheduled"}, metadata.Gauge, metadata.Count, "")
-	AddTS(&md, "puppet.run.resources", m.Time.LastRun, m.Resources.Changed, opentsdb.TagSet{"resource": "skipped"}, metadata.Gauge, metadata.Count, "")
+	AddTS(&md, "puppet.run.resources", m.Time.LastRun, m.Resources.Skipped, opentsdb.TagSet{"resource": "skipped"}, metadata.Gauge, metadata.Count, "")
 	AddTS(&md, "puppet.run.resources_total", m.Time.LastRun, m.Resources.Total, nil, metadata.Gauge, metadata.Count, "")
 	AddTS(&md, "puppet.run.changes", m.Time.LastRun, m.Changes.Total, nil, metadata.Gauge, metadata.Count, "")
 	return md, nil
