@@ -165,6 +165,8 @@ func Graph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 	}, nil
 }
 
+// ExprGraph returns an svg graph.
+// The basename of the requested svg file should be a base64 encoded expression.
 func ExprGraph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	bs := vars["bs"]
