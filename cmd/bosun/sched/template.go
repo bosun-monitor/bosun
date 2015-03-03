@@ -323,34 +323,42 @@ func (c *Context) GetMeta(metric, name string, v interface{}) (interface{}, erro
 	return nil, nil
 }
 
+// LeftJoin joins the results of the 2nd and higher expressions onto the results of the first expression.
+// Joining is performed by group: a group that includes all tags (with same values) of the first group is a match.
 func (c *Context) LeftJoin(q ...interface{}) (interface{}, error) {
 	if len(q) < 2 {
 		return nil, fmt.Errorf("need at least two expressions, got %v", len(q))
 	}
-	matrix := make([][]*expr.Result, 0)
+	// temporarily store the results in a results[M][Ni] Result matrix:
+	// for M queries, tracks Ni results per each i'th query
 	results := make([][]*expr.Result, len(q))
 	for col, v := range q {
-		res, _, err := c.eval(v, false, false, 0)
+		queryResults, _, err := c.eval(v, false, false, 0)
 		if err != nil {
 			return nil, err
 		}
-		results[col] = res
+		results[col] = queryResults
 	}
-	for row, first := range results[0] {
-		matrix = append(matrix, make([]*expr.Result, len(q)))
-		matrix[row][0] = first
-		for col, res := range results[1:] {
-			for _, r := range res {
-				if first.Group.Subset(r.Group) {
-					matrix[row][col+1] = r
+
+	// perform the joining by storing all results in a joined[N0][M] Result matrix:
+	// for N tagsets (based on first query results), tracks all M Results (results with matching group, from all other queries)
+	joined := make([][]*expr.Result, 0)
+	for row, firstQueryResult := range results[0] {
+		joined = append(joined, make([]*expr.Result, len(q)))
+		joined[row][0] = firstQueryResult
+		// join results of 2nd to M queries
+		for col, queryResults := range results[1:] {
+			for _, laterQueryResult := range queryResults {
+				if firstQueryResult.Group.Subset(laterQueryResult.Group) {
+					joined[row][col+1] = laterQueryResult
 					break
 				}
-				// Fill emtpy cells with NaN Value, so calling .Valie is not a nil pointer dereference
-				matrix[row][col+1] = &expr.Result{Value: expr.Number(math.NaN())}
+				// Fill emtpy cells with NaN Value, so calling .Value is not a nil pointer dereference
+				joined[row][col+1] = &expr.Result{Value: expr.Number(math.NaN())}
 			}
 		}
 	}
-	return matrix, nil
+	return joined, nil
 }
 
 func (c *Context) HTTPGet(url string) string {
