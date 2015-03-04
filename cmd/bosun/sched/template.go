@@ -179,20 +179,8 @@ func (s *Schedule) ExecuteBadTemplate(s_err, b_err error, rh *RunHistory, a *con
 	return []byte(sub), buf.Bytes(), nil
 }
 
-func (c *Context) eval(v interface{}, filter bool, series bool, autods int) (expr.ResultSlice, string, error) {
-	var e *expr.Expr
+func (c *Context) evalExpr(e *expr.Expr, filter bool, series bool, autods int) (expr.ResultSlice, string, error) {
 	var err error
-	switch v := v.(type) {
-	case string:
-		e, err = expr.New(v, c.schedule.Conf.Funcs())
-	case *expr.Expr:
-		e = v
-	default:
-		return nil, "", fmt.Errorf("expected string or expression, got %T (%v)", v, v)
-	}
-	if err != nil {
-		return nil, "", fmt.Errorf("%v: %v", v, err)
-	}
 	if filter {
 		e, err = expr.New(opentsdb.ReplaceTags(e.Text, c.State.Group), c.schedule.Conf.Funcs())
 		if err != nil {
@@ -200,13 +188,48 @@ func (c *Context) eval(v interface{}, filter bool, series bool, autods int) (exp
 		}
 	}
 	if series && e.Root.Return() != parse.TypeSeries {
-		return nil, "", fmt.Errorf("egraph: requires an expression that returns a series")
+		return nil, "", fmt.Errorf("need a series, got %T (%v)", e, e)
 	}
 	res, _, err := e.Execute(c.runHistory.Context, c.runHistory.GraphiteContext, c.schedule.Conf.LogstashElasticHost, nil, c.runHistory.Start, autods, c.Alert.UnjoinedOK, c.schedule.Search, c.schedule.Conf.AlertSquelched(c.Alert))
 	if err != nil {
-		return nil, "", fmt.Errorf("%s: %v", v, err)
+		return nil, "", fmt.Errorf("%s: %v", e, err)
 	}
 	return res.Results, e.String(), nil
+}
+
+func (c *Context) evalResult(r expr.ResultSlice, filter bool, series bool, autods int) (expr.ResultSlice, string, error) {
+	if filter {
+		r = r.Filter(c.State.Group)
+	}
+	if series {
+		for _, k := range r {
+			if k.Type() != parse.TypeSeries {
+				return nil, "", fmt.Errorf("need a series, got %v (%v)", k.Type(), k)
+			}
+		}
+	}
+	return r, "", nil
+}
+
+// eval takes an expression or string (which it turns into an expression), executes it and returns the result.
+// It can also takes a ResultSlice so callers can transparantly handle different inputs.
+// The filter argument constrains the result to matching tags in the current context.
+// The series argument asserts that the result is a time series.
+func (c *Context) eval(v interface{}, filter bool, series bool, autods int) (expr.ResultSlice, string, error) {
+	switch v := v.(type) {
+	case string:
+		e, err := expr.New(v, c.schedule.Conf.Funcs())
+		if err != nil {
+			return nil, "", fmt.Errorf("%s: %v", v, err)
+		}
+		return c.evalExpr(e, filter, series, autods)
+	case *expr.Expr:
+		return c.evalExpr(v, filter, series, autods)
+	case expr.ResultSlice:
+		return c.evalResult(v, filter, series, autods)
+	default:
+		return nil, "", fmt.Errorf("expected string, expression or resultslice, got %T (%v)", v, v)
+	}
 }
 
 // Lookup returns the value for a key in the lookup table for the context's tagset.
@@ -236,8 +259,9 @@ func (c *Context) LookupAll(table, key string, group interface{}) (string, error
 	return "", fmt.Errorf("no entry for key %v in table %v for tagset %v", key, table, c.Group)
 }
 
-// Eval executes the given expression and returns a value with corresponding
-// tags to the context's tags. If no such result is found, the first result with
+// Eval takes a result or an expression which it evaluates to a result.
+// It returns a value with tags corresponding to the context's tags.
+// If no such result is found, the first result with
 // nil tags is returned. If no such result is found, nil is returned.
 func (c *Context) Eval(v interface{}) (interface{}, error) {
 	res, _, err := c.eval(v, true, false, 0)
@@ -251,7 +275,7 @@ func (c *Context) Eval(v interface{}) (interface{}, error) {
 	return res[0].Value, nil
 }
 
-// EvalAll returns the executed expression.
+// EvalAll returns the executed expression (or the given result as is).
 func (c *Context) EvalAll(v interface{}) (interface{}, error) {
 	res, _, err := c.eval(v, false, false, 0)
 	return res, err
@@ -291,10 +315,13 @@ func (c *Context) graph(v interface{}, filter bool) (interface{}, error) {
 	return template.HTML(buf.String()), nil
 }
 
+// Graph returns an SVG for the given result (or expression, for which it gets the result)
+// with same tags as the context's tags.
 func (c *Context) Graph(v interface{}) (interface{}, error) {
 	return c.graph(v, true)
 }
 
+// GraphAll returns an SVG for the given result (or expression, for which it gets the result).
 func (c *Context) GraphAll(v interface{}) (interface{}, error) {
 	return c.graph(v, false)
 }
@@ -323,17 +350,18 @@ func (c *Context) GetMeta(metric, name string, v interface{}) (interface{}, erro
 	return nil, nil
 }
 
-// LeftJoin joins the results of the 2nd and higher expressions onto the results of the first expression.
+// LeftJoin takes slices of results and expressions for which it gets the slices of results.
+// Then it joins the 2nd and higher slice of results onto the first slice of results.
 // Joining is performed by group: a group that includes all tags (with same values) of the first group is a match.
-func (c *Context) LeftJoin(q ...interface{}) (interface{}, error) {
-	if len(q) < 2 {
-		return nil, fmt.Errorf("need at least two expressions, got %v", len(q))
+func (c *Context) LeftJoin(v ...interface{}) (interface{}, error) {
+	if len(v) < 2 {
+		return nil, fmt.Errorf("need at least two values (each can be an expression or result slice), got %v", len(v))
 	}
 	// temporarily store the results in a results[M][Ni] Result matrix:
 	// for M queries, tracks Ni results per each i'th query
-	results := make([][]*expr.Result, len(q))
-	for col, v := range q {
-		queryResults, _, err := c.eval(v, false, false, 0)
+	results := make([][]*expr.Result, len(v))
+	for col, val := range v {
+		queryResults, _, err := c.eval(val, false, false, 0)
 		if err != nil {
 			return nil, err
 		}
@@ -344,7 +372,7 @@ func (c *Context) LeftJoin(q ...interface{}) (interface{}, error) {
 	// for N tagsets (based on first query results), tracks all M Results (results with matching group, from all other queries)
 	joined := make([][]*expr.Result, 0)
 	for row, firstQueryResult := range results[0] {
-		joined = append(joined, make([]*expr.Result, len(q)))
+		joined = append(joined, make([]*expr.Result, len(v)))
 		joined[row][0] = firstQueryResult
 		// join results of 2nd to M queries
 		for col, queryResults := range results[1:] {
