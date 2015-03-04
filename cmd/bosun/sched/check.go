@@ -194,7 +194,7 @@ func (s *Schedule) RunHistory(r *RunHistory) {
 func (s *Schedule) CheckUnknown() {
 	for range time.Tick(s.Conf.CheckFrequency / 4) {
 		log.Println("checkUnknown")
-		r := s.NewRunHistory(time.Now(), cache.New(100))
+		r := s.NewRunHistory(time.Now(), nil)
 		s.Lock()
 		for ak, st := range s.status {
 			if st.Forgotten {
