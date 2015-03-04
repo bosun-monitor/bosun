@@ -9,9 +9,8 @@ import (
 	"sort"
 	"time"
 
-	"bosun.org/_third_party/github.com/olivere/elastic"
-
 	"bosun.org/_third_party/github.com/MiniProfiler/go/miniprofiler"
+	"bosun.org/_third_party/github.com/olivere/elastic"
 	"bosun.org/cmd/bosun/cache"
 	"bosun.org/cmd/bosun/expr/parse"
 	"bosun.org/cmd/bosun/search"
