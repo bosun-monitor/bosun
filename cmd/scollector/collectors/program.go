@@ -99,8 +99,11 @@ func (c *ProgramCollector) Run(dpchan chan<- *opentsdb.DataPoint) {
 func (c *ProgramCollector) Init() {
 }
 
+var setupExternalCommand = func(cmd *exec.Cmd) {}
+
 func (c *ProgramCollector) runProgram(dpchan chan<- *opentsdb.DataPoint) (progError error) {
 	cmd := exec.Command(c.Path)
+	setupExternalCommand(cmd)
 	pr, pw := io.Pipe()
 	s := bufio.NewScanner(pr)
 	cmd.Stdout = pw
