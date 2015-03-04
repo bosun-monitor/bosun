@@ -14,8 +14,7 @@ import (
 // Poll dispatches notification checks when needed.
 func (s *Schedule) Poll() {
 	for {
-		rh := s.NewRunHistory(time.Now())
-		timeout := s.CheckNotifications(rh)
+		timeout := s.CheckNotifications()
 		s.Save()
 		// Wait for one of these two.
 		select {
@@ -34,7 +33,7 @@ func (s *Schedule) Notify(st *State, n *conf.Notification) {
 
 // CheckNotifications processes past notification events. It returns the
 // duration until the soonest notification triggers.
-func (s *Schedule) CheckNotifications(rh *RunHistory) time.Duration {
+func (s *Schedule) CheckNotifications() time.Duration {
 	silenced := s.Silenced()
 	s.Lock()
 	defer s.Unlock()
@@ -62,7 +61,7 @@ func (s *Schedule) CheckNotifications(rh *RunHistory) time.Duration {
 			s.Notify(st, n)
 		}
 	}
-	s.sendNotifications(rh, silenced)
+	s.sendNotifications(silenced)
 	s.notifications = nil
 	timeout := time.Hour
 	now := time.Now()
@@ -81,7 +80,7 @@ func (s *Schedule) CheckNotifications(rh *RunHistory) time.Duration {
 	return timeout
 }
 
-func (s *Schedule) sendNotifications(rh *RunHistory, silenced map[expr.AlertKey]Silence) {
+func (s *Schedule) sendNotifications(silenced map[expr.AlertKey]Silence) {
 	if s.Conf.Quiet {
 		log.Println("quiet mode prevented", len(s.notifications), "notifications")
 		return
@@ -97,7 +96,7 @@ func (s *Schedule) sendNotifications(rh *RunHistory, silenced map[expr.AlertKey]
 				}
 				ustates[ak] = st
 			} else {
-				s.notify(rh, st, n)
+				s.notify(st, n)
 			}
 			if n.Next != nil {
 				s.AddNotification(ak, n.Next, time.Now().UTC())
@@ -144,7 +143,7 @@ var unknownMultiGroup = template.Must(template.New("unknownMultiGroup").Parse(`
 	</ul>
 	`))
 
-func (s *Schedule) notify(rh *RunHistory, st *State, n *conf.Notification) {
+func (s *Schedule) notify(st *State, n *conf.Notification) {
 	n.Notify([]byte(st.Subject), st.EmailBody, s.Conf, string(st.AlertKey()), st.Attachments...)
 }
 

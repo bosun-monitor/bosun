@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"bosun.org/_third_party/github.com/MiniProfiler/go/miniprofiler"
+	"bosun.org/cmd/bosun/cache"
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/expr"
 	"bosun.org/collect"
@@ -35,6 +36,7 @@ func (s *Schedule) Status(ak expr.AlertKey) *State {
 }
 
 type RunHistory struct {
+	Cache           *cache.Cache
 	Start           time.Time
 	Context         opentsdb.Context
 	GraphiteContext graphite.Context
@@ -49,11 +51,12 @@ func (rh *RunHistory) AtTime(t time.Time) *RunHistory {
 	return &n
 }
 
-func (s *Schedule) NewRunHistory(start time.Time) *RunHistory {
+func (s *Schedule) NewRunHistory(start time.Time, cache *cache.Cache) *RunHistory {
 	return &RunHistory{
+		Cache:           cache,
 		Start:           start,
 		Events:          make(map[expr.AlertKey]*Event),
-		Context:         s.Conf.TSDBCacheContext(),
+		Context:         s.Conf.TSDBContext(),
 		GraphiteContext: s.Conf.GraphiteContext(),
 	}
 }
@@ -67,7 +70,7 @@ func (s *Schedule) Check(T miniprofiler.Timer, now time.Time) (time.Duration, er
 	default:
 		return 0, fmt.Errorf("check already running")
 	}
-	r := s.NewRunHistory(now)
+	r := s.NewRunHistory(now, cache.New(0))
 	start := time.Now()
 	for _, a := range s.Conf.Alerts {
 		s.CheckAlert(T, r, a)
@@ -191,7 +194,7 @@ func (s *Schedule) RunHistory(r *RunHistory) {
 func (s *Schedule) CheckUnknown() {
 	for range time.Tick(s.Conf.CheckFrequency / 4) {
 		log.Println("checkUnknown")
-		r := s.NewRunHistory(time.Now())
+		r := s.NewRunHistory(time.Now(), nil)
 		s.Lock()
 		for ak, st := range s.status {
 			if st.Forgotten {
@@ -238,7 +241,7 @@ func (s *Schedule) CheckExpr(T miniprofiler.Timer, rh *RunHistory, a *conf.Alert
 		collect.Add("check.errs", opentsdb.TagSet{"metric": a.Name}, 1)
 		log.Println(err)
 	}()
-	results, _, err := e.Execute(rh.Context, rh.GraphiteContext, s.Conf.LogstashElasticHost, T, rh.Start, 0, a.UnjoinedOK, s.Search, s.Conf.AlertSquelched(a))
+	results, _, err := e.Execute(rh.Context, rh.GraphiteContext, s.Conf.LogstashElasticHost, rh.Cache, T, rh.Start, 0, a.UnjoinedOK, s.Search, s.Conf.AlertSquelched(a))
 	if err != nil {
 		ak := expr.NewAlertKey(a.Name, nil)
 		state := s.Status(ak)

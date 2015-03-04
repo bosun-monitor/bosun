@@ -14,11 +14,18 @@ import (
 
 	"bosun.org/_third_party/github.com/MiniProfiler/go/miniprofiler"
 	"bosun.org/_third_party/github.com/bradfitz/slice"
+	"bosun.org/cmd/bosun/cache"
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/expr"
 	"bosun.org/cmd/bosun/sched"
 	"bosun.org/opentsdb"
 )
+
+// for executing expressions/rules via the web UI, we use a cache that we retain during the lifetime of bosun
+// Matt and I decided not to expire the cache at given points (such as reloading rule page), but I forgot why. ?
+// the only risk is that if you query your store for data -5m to now and your store doesn't have the latest points up to date,
+// and then 5m from now you query -10min to -5m you'll get the same cached data, including the incomplete last points
+var cacheObj = cache.New(100)
 
 func Expr(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	e, err := expr.New(r.FormValue("q"), schedule.Conf.Funcs())
@@ -29,7 +36,11 @@ func Expr(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 	if err != nil {
 		return nil, err
 	}
-	res, queries, err := e.Execute(schedule.Conf.TSDBCacheContext(), schedule.Conf.GraphiteContext(), schedule.Conf.LogstashElasticHost, t, now, 0, false, schedule.Search, nil)
+	// it may not strictly be necessary to recreate the contexts each time, but we do to be safe
+	tsdbContext := schedule.Conf.TSDBContext()
+	graphiteContext := schedule.Conf.GraphiteContext()
+	lsContext := schedule.Conf.LogstashElasticHost
+	res, queries, err := e.Execute(tsdbContext, graphiteContext, lsContext, cacheObj, t, now, 0, false, schedule.Search, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +91,7 @@ func procRule(t miniprofiler.Timer, c *conf.Conf, a *conf.Alert, now time.Time, 
 	}
 	s.Metadata = schedule.Metadata
 	s.Search = schedule.Search
-	rh := s.NewRunHistory(now)
+	rh := s.NewRunHistory(now, cacheObj)
 	if _, err := s.CheckExpr(t, rh, a, a.Warn, sched.StWarning, nil); err != nil {
 		return nil, err
 	}

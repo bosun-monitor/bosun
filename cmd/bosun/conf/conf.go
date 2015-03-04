@@ -85,13 +85,13 @@ func (authorizedIPs AuthorizedIPs) Authorized(ip net.IP) (authorized bool) {
 	return
 }
 
-// TSDBCacheContext returns an OpenTSDB context with caching and limited to
+// TSDBContext returns an OpenTSDB context limited to
 // c.ResponseLimit. A nil context is returned if TSDBHost is not set.
-func (c *Conf) TSDBCacheContext() opentsdb.Context {
+func (c *Conf) TSDBContext() opentsdb.Context {
 	if c.TSDBHost == "" {
 		return nil
 	}
-	return opentsdb.NewCache(c.TSDBHost, c.ResponseLimit)
+	return opentsdb.NewLimitContext(c.TSDBHost, c.ResponseLimit)
 }
 
 // GraphiteContext returns a Graphite context. A nil context is returned if
