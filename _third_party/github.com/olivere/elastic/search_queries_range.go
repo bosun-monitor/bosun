@@ -1,4 +1,4 @@
-// Copyright 2012-2014 Oliver Eilhard. All rights reserved.
+// Copyright 2012-2015 Oliver Eilhard. All rights reserved.
 // Use of this source code is governed by a MIT-license.
 // See http://olivere.mit-license.org/license.txt for details.
 
@@ -12,6 +12,7 @@ type RangeQuery struct {
 	name         string
 	from         *interface{}
 	to           *interface{}
+	timeZone     string
 	includeLower bool
 	includeUpper bool
 	boost        *float64
@@ -21,6 +22,11 @@ type RangeQuery struct {
 func NewRangeQuery(name string) RangeQuery {
 	q := RangeQuery{name: name, includeLower: true, includeUpper: true}
 	return q
+}
+
+func (f RangeQuery) TimeZone(timeZone string) RangeQuery {
+	f.timeZone = timeZone
+	return f
 }
 
 func (q RangeQuery) From(from interface{}) RangeQuery {
@@ -96,6 +102,9 @@ func (q RangeQuery) Source() interface{} {
 
 	params["from"] = q.from
 	params["to"] = q.to
+	if q.timeZone != "" {
+		params["time_zone"] = q.timeZone
+	}
 	params["include_lower"] = q.includeLower
 	params["include_upper"] = q.includeUpper
 

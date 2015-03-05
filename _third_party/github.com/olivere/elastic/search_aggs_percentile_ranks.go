@@ -1,4 +1,4 @@
-// Copyright 2012-2014 Oliver Eilhard. All rights reserved.
+// Copyright 2012-2015 Oliver Eilhard. All rights reserved.
 // Use of this source code is governed by a MIT-license.
 // See http://olivere.mit-license.org/license.txt for details.
 
@@ -10,6 +10,7 @@ type PercentileRanksAggregation struct {
 	field           string
 	script          string
 	lang            string
+	format          string
 	params          map[string]interface{}
 	subAggregations map[string]Aggregation
 	values          []float64
@@ -38,6 +39,11 @@ func (a PercentileRanksAggregation) Script(script string) PercentileRanksAggrega
 
 func (a PercentileRanksAggregation) Lang(lang string) PercentileRanksAggregation {
 	a.lang = lang
+	return a
+}
+
+func (a PercentileRanksAggregation) Format(format string) PercentileRanksAggregation {
+	a.format = format
 	return a
 }
 
@@ -96,6 +102,9 @@ func (a PercentileRanksAggregation) Source() interface{} {
 	}
 	if a.lang != "" {
 		opts["lang"] = a.lang
+	}
+	if a.format != "" {
+		opts["format"] = a.format
 	}
 	if len(a.params) > 0 {
 		opts["params"] = a.params

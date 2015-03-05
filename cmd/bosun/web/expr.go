@@ -39,7 +39,7 @@ func Expr(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 	// it may not strictly be necessary to recreate the contexts each time, but we do to be safe
 	tsdbContext := schedule.Conf.TSDBContext()
 	graphiteContext := schedule.Conf.GraphiteContext()
-	lsContext := schedule.Conf.LogstashElasticHost
+	lsContext := schedule.Conf.LogstashElasticHosts
 	res, queries, err := e.Execute(tsdbContext, graphiteContext, lsContext, cacheObj, t, now, 0, false, schedule.Search, nil)
 	if err != nil {
 		return nil, err
@@ -257,7 +257,7 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 	fmt.Fprintf(&buf, "stateFile =\n")
 	fmt.Fprintf(&buf, "tsdbHost = %s\n", schedule.Conf.TSDBHost)
 	fmt.Fprintf(&buf, "graphiteHost = %s\n", schedule.Conf.GraphiteHost)
-	fmt.Fprintf(&buf, "logstashElasticHost = %s\n", schedule.Conf.LogstashElasticHost)
+	fmt.Fprintf(&buf, "logstashElasticHosts = %s\n", schedule.Conf.LogstashElasticHosts)
 	fmt.Fprintf(&buf, "smtpHost = %s\n", schedule.Conf.SMTPHost)
 	fmt.Fprintf(&buf, "emailFrom = %s\n", schedule.Conf.EmailFrom)
 	fmt.Fprintf(&buf, "responseLimit = %d\n", schedule.Conf.ResponseLimit)
