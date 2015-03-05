@@ -360,6 +360,9 @@ func (s *Schedule) CheckExpr(T miniprofiler.Timer, rh *RunHistory, a *conf.Alert
 		}
 		current := rh.Events[ak]
 		event := &Event{}
+		if current != nil {
+			event.Status = current.Status
+		}
 		unevaluated := false
 		for _, dep := range dependencies {
 			if ak.Group().Overlaps(dep.Group) {
@@ -392,7 +395,7 @@ func (s *Schedule) CheckExpr(T miniprofiler.Timer, rh *RunHistory, a *conf.Alert
 			if status != StNormal {
 				alerts = append(alerts, ak)
 			}
-			if status > rh.Events[ak].Status {
+			if current != nil && status > current.Status {
 				event.Status = status
 				state.Result = &result
 			}
