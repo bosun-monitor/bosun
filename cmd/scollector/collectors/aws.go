@@ -19,7 +19,7 @@ const (
 )
 
 func AWS(accessKey, secretKey, region string) {
-    slog.Info("warming up the AWS system")
+	slog.Info("warming up the AWS system")
 	collectors = append(collectors, &IntervalCollector{
 		F: func() (opentsdb.MultiDataPoint, error) {
 			return c_aws(accessKey, secretKey, region)
@@ -31,22 +31,22 @@ func AWS(accessKey, secretKey, region string) {
 func c_aws(accessKey, secretKey, region string) (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 
-    slog.Info("c_aws called")
+	slog.Info("c_aws called")
 
 	creds := aws.Creds(accessKey, secretKey, "")
-    if creds == nil {
-        slog.Warning("Unable to make creds")
-    }
+	if creds == nil {
+		slog.Warning("Unable to make creds")
+	}
 	ecc := ec2.New(creds, region, nil)
-    if ecc == nil {
-        slog.Warning("Unable to login to EC2")
-    }
+	if ecc == nil {
+		slog.Warning("Unable to login to EC2")
+	}
 	//elb := elb.New(creds, region, nil)
 
 	cw := cloudwatch.New(creds, region, nil)
-    if cw == nil {
-        slog.Warning("Unable to login to CloudWatch")
-    }
+	if cw == nil {
+		slog.Warning("Unable to login to CloudWatch")
+	}
 	instances, err := AWSGetInstances(*ecc)
 	if err != false {
 		// Do something useful in error
@@ -67,7 +67,7 @@ func AWSGetInstances(ecc ec2.EC2) ([]ec2.Instance, bool) {
 
 	for _, reservation := range resp.Reservations {
 		for _, instance := range reservation.Instances {
-			instancelist=append(instancelist, instance)
+			instancelist = append(instancelist, instance)
 		}
 	}
 	return instancelist, false

@@ -176,7 +176,7 @@ func main() {
 			collectors.ICMP(s)
 		}
 	}
-    if *flagaws != "" {
+	if *flagaws != "" {
 		for _, s := range strings.Split(*flagaws, ",") {
 			sp := strings.SplitN(s, ":", 2)
 			if len(sp) != 2 {
@@ -192,9 +192,9 @@ func main() {
 			if len(accessKey) == 0 || len(secretKey) == 0 || len(region) == 0 {
 				slog.Fatal("invalid aws string:", *flagaws)
 			}
-            collectors.AWS(accessKey,secretKey,region)
-        }
-    }
+			collectors.AWS(accessKey, secretKey, region)
+		}
+	}
 	if *flagVsphere != "" {
 		for _, s := range strings.Split(*flagVsphere, ",") {
 			sp := strings.SplitN(s, ":", 2)
