@@ -20,7 +20,9 @@ const (
 	awsEC2DiskBytes       string = "aws.ec2.disk.bytes"
 	awsEC2DiskOps         string = "aws.ec2.disk.ops"
 	awsStatusCheckFailed  string = "aws.ec2.status.failed"
-	awsELBLatency         string = "aws.elb.latency"
+	awsELBLatencyMin      string = "aws.elb.latency.minimum"
+	awsELBLatencyMax      string = "aws.elb.latency.maximum"
+	awsELBLatencyAvg      string = "aws.elb.latency.average"
 	awsELBHostsHealthy    string = "aws.elb.hosts.healthy"
 	awsELBHostsUnHealthy  string = "aws.elb.hosts.unhealthy"
 	awsEC2CPUDesc         string = "The average CPU Utilization, gathered at a 60 second interval and averaged over five minutes."
@@ -271,9 +273,9 @@ func AWSGetELBLatency(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, loa
 		return fmt.Errorf("Error getting Metric Statistics: %s", err)
 	}
 	for _, datapoint := range resp.Datapoints {
-		AddTS(md, awsELBLatency, datapoint.Timestamp.Unix(), *datapoint.Minimum, opentsdb.TagSet{"loadbalancer": *loadbalancer.LoadBalancerName, "calculation": "min"}, metadata.Gauge, metadata.Second, awsELBLatencyDesc)
-		AddTS(md, awsELBLatency, datapoint.Timestamp.Unix(), *datapoint.Maximum, opentsdb.TagSet{"loadbalancer": *loadbalancer.LoadBalancerName, "calculation": "max"}, metadata.Gauge, metadata.Second, awsELBLatencyDesc)
-		AddTS(md, awsELBLatency, datapoint.Timestamp.Unix(), *datapoint.Average, opentsdb.TagSet{"loadbalancer": *loadbalancer.LoadBalancerName, "calculation": "avg"}, metadata.Gauge, metadata.Second, awsELBLatencyDesc)
+		AddTS(md, awsELBLatencyMin, datapoint.Timestamp.Unix(), *datapoint.Minimum, opentsdb.TagSet{"loadbalancer": *loadbalancer.LoadBalancerName}, metadata.Gauge, metadata.Second, awsELBLatencyDesc)
+		AddTS(md, awsELBLatencyMax, datapoint.Timestamp.Unix(), *datapoint.Maximum, opentsdb.TagSet{"loadbalancer": *loadbalancer.LoadBalancerName}, metadata.Gauge, metadata.Second, awsELBLatencyDesc)
+		AddTS(md, awsELBLatencyAvg, datapoint.Timestamp.Unix(), *datapoint.Average, opentsdb.TagSet{"loadbalancer": *loadbalancer.LoadBalancerName}, metadata.Gauge, metadata.Second, awsELBLatencyDesc)
 	}
 	return nil
 }
