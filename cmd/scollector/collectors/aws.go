@@ -37,7 +37,6 @@ func AWS(accessKey, secretKey, region string) {
 
 func c_aws(accessKey, secretKey, region string) (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
-
 	creds := aws.Creds(accessKey, secretKey, "")
 	if creds == nil {
 		slog.Info("Unable to make creds")
@@ -50,7 +49,6 @@ func c_aws(accessKey, secretKey, region string) (opentsdb.MultiDataPoint, error)
 	if elb == nil {
 		slog.Info("Unable to login to ELB")
 	}
-
 	cw := cloudwatch.New(creds, region, nil)
 	if cw == nil {
 		slog.Info("Unable to login to CloudWatch")
@@ -59,7 +57,6 @@ func c_aws(accessKey, secretKey, region string) (opentsdb.MultiDataPoint, error)
 	if err != false {
 		slog.Info("Unable to get AWS Elastic Compute Cloud Instances.")
 	}
-
 	loadbalancers, err := AWSGetLoadBalancers(*elb)
 	if err != false {
 		slog.Info("Unable to get AWS Elastic Load Balancers.")
@@ -68,7 +65,6 @@ func c_aws(accessKey, secretKey, region string) (opentsdb.MultiDataPoint, error)
 		AWSGetELBLatency(*cw, &md, loadbalancer)
 		AWSGetELBHostCounts(*cw, &md, loadbalancer)
 	}
-
 	for _, instance := range instances {
 		AWSGetCPU(*cw, &md, instance)
 		AWSGetNetwork(*cw, &md, instance)
@@ -77,7 +73,6 @@ func c_aws(accessKey, secretKey, region string) (opentsdb.MultiDataPoint, error)
 		AWSGetStatusChecks(*cw, &md, instance)
 	}
 	return md, nil
-
 }
 
 func AWSGetInstances(ecc ec2.EC2) ([]ec2.Instance, bool) {
@@ -86,7 +81,6 @@ func AWSGetInstances(ecc ec2.EC2) ([]ec2.Instance, bool) {
 	if err != nil {
 		return nil, true
 	}
-
 	for _, reservation := range resp.Reservations {
 		for _, instance := range reservation.Instances {
 			instancelist = append(instancelist, instance)
@@ -101,7 +95,6 @@ func AWSGetLoadBalancers(lb elb.ELB) ([]elb.LoadBalancerDescription, bool) {
 	if err != nil {
 		return nil, true
 	}
-
 	for _, loadbalancer := range resp.LoadBalancerDescriptions {
 		lblist = append(lblist, loadbalancer)
 	}
@@ -126,7 +119,6 @@ func AWSGetCPU(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, instance e
 	tags := opentsdb.TagSet{
 		"instance": *instance.InstanceID,
 	}
-
 	for _, datapoint := range resp.Datapoints {
 		AddTS(md, awsCPU, datapoint.Timestamp.Unix(), *datapoint.Average, tags, metadata.Gauge, metadata.Pct, "")
 	}
@@ -149,7 +141,6 @@ func AWSGetNetwork(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, instan
 	for _, datapoint := range resp.Datapoints {
 		AddTS(md, awsNetwork, datapoint.Timestamp.Unix(), *datapoint.Average, opentsdb.TagSet{"instance": *instance.InstanceID, "direction": "in"}, metadata.Gauge, metadata.Bytes, "")
 	}
-
 	search.MetricName = aws.String("NetworkOut")
 	resp, err = cw.GetMetricStatistics(&search)
 	if err != nil {
@@ -178,7 +169,6 @@ func AWSGetDiskBytes(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, inst
 	for _, datapoint := range resp.Datapoints {
 		AddTS(md, awsDiskBytes, datapoint.Timestamp.Unix(), *datapoint.Average, opentsdb.TagSet{"instance": *instance.InstanceID, "operation": "read"}, metadata.Gauge, metadata.Bytes, "")
 	}
-
 	search.MetricName = aws.String("DiskWriteBytes")
 	resp, err = cw.GetMetricStatistics(&search)
 	if err != nil {
@@ -207,7 +197,6 @@ func AWSGetDiskOps(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, instan
 	for _, datapoint := range resp.Datapoints {
 		AddTS(md, awsDiskOps, datapoint.Timestamp.Unix(), *datapoint.Average, opentsdb.TagSet{"instance": *instance.InstanceID, "operation": "read"}, metadata.Gauge, metadata.Count, "")
 	}
-
 	search.MetricName = aws.String("DiskWriteOps")
 	resp, err = cw.GetMetricStatistics(&search)
 	if err != nil {
@@ -236,7 +225,6 @@ func AWSGetStatusChecks(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, i
 	for _, datapoint := range resp.Datapoints {
 		AddTS(md, awsStatusCheckFailed, datapoint.Timestamp.Unix(), *datapoint.Average, opentsdb.TagSet{"instance": *instance.InstanceID}, metadata.Gauge, metadata.Count, "")
 	}
-
 	search.MetricName = aws.String("StatusCheckFailed_Instance")
 	resp, err = cw.GetMetricStatistics(&search)
 	if err != nil {
@@ -245,7 +233,6 @@ func AWSGetStatusChecks(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, i
 	for _, datapoint := range resp.Datapoints {
 		AddTS(md, awsStatusCheckFailed, datapoint.Timestamp.Unix(), *datapoint.Average, opentsdb.TagSet{"instance": *instance.InstanceID, "category": "instance"}, metadata.Gauge, metadata.Count, "")
 	}
-
 	search.MetricName = aws.String("StatusCheckFailed_System")
 	resp, err = cw.GetMetricStatistics(&search)
 	if err != nil {
