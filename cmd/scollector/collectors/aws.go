@@ -101,7 +101,7 @@ func AWSGetLoadBalancers(lb elb.ELB) ([]elb.LoadBalancerDescription, error) {
 	return lblist, nil
 }
 
-func AWSGetCPU(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, instance ec2.Instance) {
+func AWSGetCPU(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, instance ec2.Instance) error {
 	search := cloudwatch.GetMetricStatisticsInput{
 		StartTime:  time.Now().UTC().Add(time.Second * -600),
 		EndTime:    time.Now().UTC(),
@@ -114,7 +114,7 @@ func AWSGetCPU(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, instance e
 	}
 	resp, err := cw.GetMetricStatistics(&search)
 	if err != nil {
-		return nil, fmt.Errorf("Error getting Metric Statistics: %s", err)
+		return fmt.Errorf("Error getting Metric Statistics: %s", err)
 	}
 	tags := opentsdb.TagSet{
 		"instance": *instance.InstanceID,
@@ -122,8 +122,9 @@ func AWSGetCPU(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, instance e
 	for _, datapoint := range resp.Datapoints {
 		AddTS(md, awsCPU, datapoint.Timestamp.Unix(), *datapoint.Average, tags, metadata.Gauge, metadata.Pct, "")
 	}
+	return nil
 }
-func AWSGetNetwork(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, instance ec2.Instance) {
+func AWSGetNetwork(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, instance ec2.Instance) error {
 	search := cloudwatch.GetMetricStatisticsInput{
 		StartTime:  time.Now().UTC().Add(time.Second * -600),
 		EndTime:    time.Now().UTC(),
@@ -136,7 +137,7 @@ func AWSGetNetwork(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, instan
 	}
 	resp, err := cw.GetMetricStatistics(&search)
 	if err != nil {
-		return nil, fmt.Errorf("Error getting Metric Statistics: %s", err)
+		return fmt.Errorf("Error getting Metric Statistics: %s", err)
 	}
 	for _, datapoint := range resp.Datapoints {
 		AddTS(md, awsNetwork, datapoint.Timestamp.Unix(), *datapoint.Average, opentsdb.TagSet{"instance": *instance.InstanceID, "direction": "in"}, metadata.Gauge, metadata.Bytes, "")
@@ -144,14 +145,15 @@ func AWSGetNetwork(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, instan
 	search.MetricName = aws.String("NetworkOut")
 	resp, err = cw.GetMetricStatistics(&search)
 	if err != nil {
-		return nil, fmt.Errorf("Error getting Metric Statistics: %s", err)
+		return fmt.Errorf("Error getting Metric Statistics: %s", err)
 	}
 	for _, datapoint := range resp.Datapoints {
 		AddTS(md, awsNetwork, datapoint.Timestamp.Unix(), *datapoint.Average, opentsdb.TagSet{"instance": *instance.InstanceID, "direction": "out"}, metadata.Gauge, metadata.Bytes, "")
 	}
+	return nil
 }
 
-func AWSGetDiskBytes(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, instance ec2.Instance) {
+func AWSGetDiskBytes(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, instance ec2.Instance) error {
 	search := cloudwatch.GetMetricStatisticsInput{
 		StartTime:  time.Now().UTC().Add(time.Second * -600),
 		EndTime:    time.Now().UTC(),
@@ -164,7 +166,7 @@ func AWSGetDiskBytes(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, inst
 	}
 	resp, err := cw.GetMetricStatistics(&search)
 	if err != nil {
-		return nil, fmt.Errorf("Error getting Metric Statistics: %s", err)
+		return fmt.Errorf("Error getting Metric Statistics: %s", err)
 	}
 	for _, datapoint := range resp.Datapoints {
 		AddTS(md, awsDiskBytes, datapoint.Timestamp.Unix(), *datapoint.Average, opentsdb.TagSet{"instance": *instance.InstanceID, "operation": "read"}, metadata.Gauge, metadata.Bytes, "")
@@ -172,14 +174,15 @@ func AWSGetDiskBytes(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, inst
 	search.MetricName = aws.String("DiskWriteBytes")
 	resp, err = cw.GetMetricStatistics(&search)
 	if err != nil {
-		return nil, fmt.Errorf("Error getting Metric Statistics: %s", err)
+		return fmt.Errorf("Error getting Metric Statistics: %s", err)
 	}
 	for _, datapoint := range resp.Datapoints {
 		AddTS(md, awsDiskBytes, datapoint.Timestamp.Unix(), *datapoint.Average, opentsdb.TagSet{"instance": *instance.InstanceID, "operation": "write"}, metadata.Gauge, metadata.Bytes, "")
 	}
+	return nil
 }
 
-func AWSGetDiskOps(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, instance ec2.Instance) {
+func AWSGetDiskOps(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, instance ec2.Instance) error {
 	search := cloudwatch.GetMetricStatisticsInput{
 		StartTime:  time.Now().UTC().Add(time.Second * -600),
 		EndTime:    time.Now().UTC(),
@@ -192,7 +195,7 @@ func AWSGetDiskOps(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, instan
 	}
 	resp, err := cw.GetMetricStatistics(&search)
 	if err != nil {
-		return nil, fmt.Errorf("Error getting Metric Statistics: %s", err)
+		return fmt.Errorf("Error getting Metric Statistics: %s", err)
 	}
 	for _, datapoint := range resp.Datapoints {
 		AddTS(md, awsDiskOps, datapoint.Timestamp.Unix(), *datapoint.Average, opentsdb.TagSet{"instance": *instance.InstanceID, "operation": "read"}, metadata.Gauge, metadata.Count, "")
@@ -200,14 +203,15 @@ func AWSGetDiskOps(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, instan
 	search.MetricName = aws.String("DiskWriteOps")
 	resp, err = cw.GetMetricStatistics(&search)
 	if err != nil {
-		return nil, fmt.Errorf("Error getting Metric Statistics: %s", err)
+		return fmt.Errorf("Error getting Metric Statistics: %s", err)
 	}
 	for _, datapoint := range resp.Datapoints {
 		AddTS(md, awsDiskOps, datapoint.Timestamp.Unix(), *datapoint.Average, opentsdb.TagSet{"instance": *instance.InstanceID, "operation": "write"}, metadata.Gauge, metadata.Count, "")
 	}
+	return nil
 }
 
-func AWSGetStatusChecks(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, instance ec2.Instance) {
+func AWSGetStatusChecks(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, instance ec2.Instance) error {
 	search := cloudwatch.GetMetricStatisticsInput{
 		StartTime:  time.Now().UTC().Add(time.Second * -60),
 		EndTime:    time.Now().UTC(),
@@ -220,7 +224,7 @@ func AWSGetStatusChecks(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, i
 	}
 	resp, err := cw.GetMetricStatistics(&search)
 	if err != nil {
-		return nil, fmt.Errorf("Error getting Metric Statistics: %s", err)
+		return fmt.Errorf("Error getting Metric Statistics: %s", err)
 	}
 	for _, datapoint := range resp.Datapoints {
 		AddTS(md, awsStatusCheckFailed, datapoint.Timestamp.Unix(), *datapoint.Average, opentsdb.TagSet{"instance": *instance.InstanceID}, metadata.Gauge, metadata.Count, "")
@@ -228,7 +232,7 @@ func AWSGetStatusChecks(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, i
 	search.MetricName = aws.String("StatusCheckFailed_Instance")
 	resp, err = cw.GetMetricStatistics(&search)
 	if err != nil {
-		return nil, fmt.Errorf("Error getting Metric Statistics: %s", err)
+		return fmt.Errorf("Error getting Metric Statistics: %s", err)
 	}
 	for _, datapoint := range resp.Datapoints {
 		AddTS(md, awsStatusCheckFailed, datapoint.Timestamp.Unix(), *datapoint.Average, opentsdb.TagSet{"instance": *instance.InstanceID, "category": "instance"}, metadata.Gauge, metadata.Count, "")
@@ -236,14 +240,15 @@ func AWSGetStatusChecks(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, i
 	search.MetricName = aws.String("StatusCheckFailed_System")
 	resp, err = cw.GetMetricStatistics(&search)
 	if err != nil {
-		return nil, fmt.Errorf("Error getting Metric Statistics: %s", err)
+		return fmt.Errorf("Error getting Metric Statistics: %s", err)
 	}
 	for _, datapoint := range resp.Datapoints {
 		AddTS(md, awsStatusCheckFailed, datapoint.Timestamp.Unix(), *datapoint.Average, opentsdb.TagSet{"instance": *instance.InstanceID, "category": "system"}, metadata.Gauge, metadata.Count, "")
 	}
+	return nil
 }
 
-func AWSGetELBLatency(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, loadbalancer elb.LoadBalancerDescription) {
+func AWSGetELBLatency(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, loadbalancer elb.LoadBalancerDescription) error {
 	search := cloudwatch.GetMetricStatisticsInput{
 		StartTime:  time.Now().UTC().Add(time.Second * -4000),
 		EndTime:    time.Now().UTC(),
@@ -256,15 +261,16 @@ func AWSGetELBLatency(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, loa
 	}
 	resp, err := cw.GetMetricStatistics(&search)
 	if err != nil {
-		return nil, fmt.Errorf("Error getting Metric Statistics: %s", err)
+		return fmt.Errorf("Error getting Metric Statistics: %s", err)
 	}
 	for _, datapoint := range resp.Datapoints {
 		AddTS(md, awsELBLatency, datapoint.Timestamp.Unix(), *datapoint.Minimum, opentsdb.TagSet{"loadbalancer": *loadbalancer.LoadBalancerName, "calculation": "min"}, metadata.Gauge, metadata.Second, "")
 		AddTS(md, awsELBLatency, datapoint.Timestamp.Unix(), *datapoint.Maximum, opentsdb.TagSet{"loadbalancer": *loadbalancer.LoadBalancerName, "calculation": "max"}, metadata.Gauge, metadata.Second, "")
 		AddTS(md, awsELBLatency, datapoint.Timestamp.Unix(), *datapoint.Average, opentsdb.TagSet{"loadbalancer": *loadbalancer.LoadBalancerName, "calculation": "avg"}, metadata.Gauge, metadata.Second, "")
 	}
+	return nil
 }
-func AWSGetELBHostCounts(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, loadbalancer elb.LoadBalancerDescription) {
+func AWSGetELBHostCounts(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, loadbalancer elb.LoadBalancerDescription) error {
 	search := cloudwatch.GetMetricStatisticsInput{
 		StartTime:  time.Now().UTC().Add(time.Second * -60),
 		EndTime:    time.Now().UTC(),
@@ -277,7 +283,7 @@ func AWSGetELBHostCounts(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, 
 	}
 	resp, err := cw.GetMetricStatistics(&search)
 	if err != nil {
-		return nil, fmt.Errorf("Error getting Metric Statistics: %s", err)
+		return fmt.Errorf("Error getting Metric Statistics: %s", err)
 	}
 	for _, datapoint := range resp.Datapoints {
 		AddTS(md, awsELBHostsHealthy, datapoint.Timestamp.Unix(), *datapoint.Average, opentsdb.TagSet{"loadbalancer": *loadbalancer.LoadBalancerName}, metadata.Gauge, metadata.Count, "")
@@ -285,7 +291,7 @@ func AWSGetELBHostCounts(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, 
 	search.MetricName = aws.String("UnhealthyHostCount")
 	resp, err = cw.GetMetricStatistics(&search)
 	if err != nil {
-		return nil, fmt.Errorf("Error getting Metric Statistics: %s", err)
+		return fmt.Errorf("Error getting Metric Statistics: %s", err)
 	}
 	if resp.Datapoints == nil {
 		AddTS(md, awsELBHostsUnHealthy, time.Now().UTC().Unix(), 0, opentsdb.TagSet{"loadbalancer": *loadbalancer.LoadBalancerName}, metadata.Gauge, metadata.Count, "")
@@ -295,4 +301,5 @@ func AWSGetELBHostCounts(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, 
 			AddTS(md, awsELBHostsUnHealthy, datapoint.Timestamp.Unix(), *datapoint.Average, opentsdb.TagSet{"loadbalancer": *loadbalancer.LoadBalancerName}, metadata.Gauge, metadata.Count, "")
 		}
 	}
+	return nil
 }
