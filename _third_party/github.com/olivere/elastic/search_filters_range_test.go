@@ -1,3 +1,7 @@
+// Copyright 2012-2015 Oliver Eilhard. All rights reserved.
+// Use of this source code is governed by a MIT-license.
+// See http://olivere.mit-license.org/license.txt for details.
+
 package elastic
 
 import (
@@ -36,3 +40,19 @@ func TestRangeFilterGte(t *testing.T) {
 	}
 }
 */
+
+func TestRangeFilterWithTimeZone(t *testing.T) {
+	f := NewRangeFilter("born").
+		Gte("2012-01-01").
+		Lte("now").
+		TimeZone("+1:00")
+	data, err := json.Marshal(f.Source())
+	if err != nil {
+		t.Fatalf("marshaling to JSON failed: %v", err)
+	}
+	got := string(data)
+	expected := `{"range":{"born":{"from":"2012-01-01","include_lower":true,"include_upper":true,"time_zone":"+1:00","to":"now"}}}`
+	if got != expected {
+		t.Errorf("expected\n%s\n,got:\n%s", expected, got)
+	}
+}

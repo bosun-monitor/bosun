@@ -3,9 +3,7 @@ package expr
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"math"
-	"net/http"
 	"regexp"
 	"sort"
 	"strconv"
@@ -1064,8 +1062,8 @@ type lsKeyMatch struct {
 	Pattern    *regexp.Regexp
 }
 
-func LSBaseQuery(now time.Time, lshost, index_root, keystring, filter, sduration, eduration string, size int) (*elastic.SearchService, *elastic.SearchSource, []lsKeyMatch, error) {
-	client, err := elastic.NewClient(http.DefaultClient, "http://"+lshost)
+func LSBaseQuery(now time.Time, index_root string, logstashElasticHosts []string, keystring string, filter, sduration, eduration string, size int) (*elastic.SearchService, *elastic.SearchSource, []lsKeyMatch, error) {
+	client, err := elastic.NewClient(elastic.SetURL(logstashElasticHosts...), elastic.SetMaxRetries(10))
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -1082,11 +1080,13 @@ func LSBaseQuery(now time.Time, lshost, index_root, keystring, filter, sduration
 	}
 	st := now.Add(time.Duration(-start))
 	en := now.Add(time.Duration(-end))
-	indicies, err := GenLSIndices(lshost, index_root, st, en)
+	indicies, err := GenLSIndices(client, index_root, st, en)
 	if err != nil {
 		return nil, nil, nil, err
 	}
+	fmt.Println("Indicies: ", indicies)
 	service := client.Search().Indices(indicies)
+	fmt.Println("Service: ", service)
 	source := elastic.NewSearchSource()
 	source = source.Size(size)
 	tf := elastic.NewRangeFilter("@timestamp").Gte(st).Lte(en)
@@ -1173,7 +1173,7 @@ func LSStat(e *State, T miniprofiler.Timer, index_root, keystring, filter, field
 
 func LSDateHistogram(e *State, T miniprofiler.Timer, index_root, keystring, filter, interval, sduration, eduration, stat_field, rstat string, size int) (r *Results, err error) {
 	r = new(Results)
-	service, s, keys, err := LSBaseQuery(e.now, e.logstashElasticHost, index_root, keystring, filter, sduration, eduration, size)
+	service, s, keys, err := LSBaseQuery(e.now, index_root, e.logstashElasticHosts, keystring, filter, sduration, eduration, size)
 	if err != nil {
 		return nil, err
 	}
@@ -1307,26 +1307,15 @@ func processBucketItem(b *elastic.AggregationBucketHistogramItem, rstat string, 
 	return &v
 }
 
-func GenLSIndices(host, index_root string, start, end time.Time) (string, error) {
-	resp, err := http.Get("http://" + host + "/_cat/indices")
+func GenLSIndices(client *elastic.Client, index_root string, start, end time.Time) (string, error) {
+	indices, err := client.IndexNames()
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return "", err
-	}
-	var indices []string
-	lines := strings.Split(string(body), "\n")
 	start = start.Truncate(time.Hour * 24)
 	end = end.Truncate(time.Hour*24).AddDate(0, 0, 1)
-	for _, line := range lines {
-		f := strings.Fields(line)
-		if len(f) < 2 {
-			continue
-		}
-		index := f[2]
+	var selectedIndices []string
+	for _, index := range indices {
 		var root, date string
 		if i := strings.LastIndex(index, "-"); i >= 0 {
 			root = index[:i]
@@ -1340,11 +1329,11 @@ func GenLSIndices(host, index_root string, start, end time.Time) (string, error)
 			continue
 		}
 		if !d.Before(start) && !d.After(end) {
-			indices = append(indices, index)
+			selectedIndices = append(selectedIndices, index)
 		}
 	}
-	if len(indices) == 0 {
-		return "", fmt.Errorf("no elastic indicies available during this time range")
+	if len(selectedIndices) == 0 {
+		return "", fmt.Errorf("no elastic indices available during this time range")
 	}
-	return strings.Join(indices, ","), nil
+	return strings.Join(selectedIndices, ","), nil
 }

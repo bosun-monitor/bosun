@@ -1,4 +1,4 @@
-// Copyright 2012-2014 Oliver Eilhard. All rights reserved.
+// Copyright 2012-2015 Oliver Eilhard. All rights reserved.
 // Use of this source code is governed by a MIT-license.
 // See http://olivere.mit-license.org/license.txt for details.
 
@@ -13,6 +13,7 @@ type CardinalityAggregation struct {
 	field              string
 	script             string
 	lang               string
+	format             string
 	params             map[string]interface{}
 	subAggregations    map[string]Aggregation
 	precisionThreshold *int64
@@ -39,6 +40,11 @@ func (a CardinalityAggregation) Script(script string) CardinalityAggregation {
 
 func (a CardinalityAggregation) Lang(lang string) CardinalityAggregation {
 	a.lang = lang
+	return a
+}
+
+func (a CardinalityAggregation) Format(format string) CardinalityAggregation {
+	a.format = format
 	return a
 }
 
@@ -86,6 +92,9 @@ func (a CardinalityAggregation) Source() interface{} {
 	}
 	if a.lang != "" {
 		opts["lang"] = a.lang
+	}
+	if a.format != "" {
+		opts["format"] = a.format
 	}
 	if len(a.params) > 0 {
 		opts["params"] = a.params

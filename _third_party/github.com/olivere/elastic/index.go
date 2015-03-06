@@ -1,4 +1,4 @@
-// Copyright 2012-2014 Oliver Eilhard. All rights reserved.
+// Copyright 2012-2015 Oliver Eilhard. All rights reserved.
 // Use of this source code is governed by a MIT-license.
 // See http://olivere.mit-license.org/license.txt for details.
 
@@ -7,12 +7,9 @@ package elastic
 import (
 	"encoding/json"
 	"fmt"
-	"log"
-	"net/http"
-	"net/http/httputil"
 	"net/url"
 
-	"bosun.org/_third_party/github.com/olivere/elastic/uritemplates"
+	"github.com/olivere/elastic/uritemplates"
 )
 
 // IndexResult is the result of indexing a document in Elasticsearch.
@@ -42,7 +39,6 @@ type IndexService struct {
 	bodyString  string
 	bodyJson    interface{}
 	pretty      bool
-	debug       bool
 }
 
 func NewIndexService(client *Client) *IndexService {
@@ -132,25 +128,20 @@ func (b *IndexService) Pretty(pretty bool) *IndexService {
 	return b
 }
 
-func (b *IndexService) Debug(debug bool) *IndexService {
-	b.debug = debug
-	return b
-}
-
 func (b *IndexService) Do() (*IndexResult, error) {
 	// Build url
-	var urls, method string
+	var path, method string
 	if b.id != "" {
 		// Create document with manual id
 		method = "PUT"
-		urls = "/{index}/{type}/{id}"
+		path = "/{index}/{type}/{id}"
 	} else {
 		// Automatic ID generation
 		// See: http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/docs-index_.html#index-creation
 		method = "POST"
-		urls = "/{index}/{type}/"
+		path = "/{index}/{type}/"
 	}
-	urls, err := uritemplates.Expand(urls, map[string]string{
+	path, err := uritemplates.Expand(path, map[string]string{
 		"index": b.index,
 		"type":  b._type,
 		"id":    b.id,
@@ -203,45 +194,23 @@ func (b *IndexService) Do() (*IndexResult, error) {
 		ttl string
 	*/
 
-	if len(params) > 0 {
-		urls += "?" + params.Encode()
-	}
-
-	// Set up a new request
-	req, err := b.client.NewRequest(method, urls)
-	if err != nil {
-		return nil, err
-	}
-
-	// Set body
+	// Body
+	var body interface{}
 	if b.bodyJson != nil {
-		req.SetBodyJson(b.bodyJson)
+		body = b.bodyJson
 	} else {
-		req.SetBodyString(b.bodyString)
-	}
-
-	if b.debug {
-		out, _ := httputil.DumpRequestOut((*http.Request)(req), true)
-		log.Printf("%s\n", string(out))
+		body = b.bodyString
 	}
 
 	// Get response
-	res, err := b.client.c.Do((*http.Request)(req))
+	res, err := b.client.PerformRequest(method, path, params, body)
 	if err != nil {
 		return nil, err
 	}
-	if err := checkResponse(res); err != nil {
-		return nil, err
-	}
-	defer res.Body.Close()
 
-	if b.debug {
-		out, _ := httputil.DumpResponse(res, true)
-		log.Printf("%s\n", string(out))
-	}
-
+	// Return result
 	ret := new(IndexResult)
-	if err := json.NewDecoder(res.Body).Decode(ret); err != nil {
+	if err := json.Unmarshal(res.Body, ret); err != nil {
 		return nil, err
 	}
 	return ret, nil

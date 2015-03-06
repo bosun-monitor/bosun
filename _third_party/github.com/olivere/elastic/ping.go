@@ -1,4 +1,4 @@
-// Copyright 2012-2014 Oliver Eilhard. All rights reserved.
+// Copyright 2012-2015 Oliver Eilhard. All rights reserved.
 // Use of this source code is governed by a MIT-license.
 // See http://olivere.mit-license.org/license.txt for details.
 
@@ -6,9 +6,7 @@ package elastic
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
-	"net/http/httputil"
 	"net/url"
 )
 
@@ -23,7 +21,6 @@ type PingService struct {
 	url          string
 	timeout      string
 	httpHeadOnly bool
-	debug        bool
 	pretty       bool
 }
 
@@ -45,9 +42,8 @@ type PingResult struct {
 func NewPingService(client *Client) *PingService {
 	return &PingService{
 		client:       client,
-		url:          defaultUrl,
+		url:          DefaultURL,
 		httpHeadOnly: false,
-		debug:        false,
 		pretty:       false,
 	}
 }
@@ -74,11 +70,6 @@ func (s *PingService) Pretty(pretty bool) *PingService {
 	return s
 }
 
-func (s *PingService) Debug(debug bool) *PingService {
-	s.debug = debug
-	return s
-}
-
 // Do returns the PingResult, the HTTP status code of the Elasticsearch
 // server, and an error.
 func (s *PingService) Do() (*PingResult, int, error) {
@@ -102,14 +93,10 @@ func (s *PingService) Do() (*PingResult, int, error) {
 		method = "GET"
 	}
 
+	// Notice: This service must NOT use PerformRequest!
 	req, err := NewRequest(method, url_)
 	if err != nil {
 		return nil, 0, err
-	}
-
-	if s.debug {
-		out, _ := httputil.DumpRequestOut((*http.Request)(req), true)
-		fmt.Printf("%s\n", string(out))
 	}
 
 	res, err := s.client.c.Do((*http.Request)(req))
@@ -117,11 +104,6 @@ func (s *PingService) Do() (*PingResult, int, error) {
 		return nil, 0, err
 	}
 	defer res.Body.Close()
-
-	if s.debug {
-		out, _ := httputil.DumpResponse(res, true)
-		fmt.Printf("%s\n", string(out))
-	}
 
 	var ret *PingResult
 	if !s.httpHeadOnly {

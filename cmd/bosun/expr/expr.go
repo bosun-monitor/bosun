@@ -36,8 +36,8 @@ type State struct {
 	graphiteContext graphite.Context
 
 	// LogstashElastic
-	logstashQueries     []elastic.SearchService
-	logstashElasticHost string
+	logstashQueries      []elastic.SearchService
+	logstashElasticHosts []string
 }
 
 var ErrUnknownOp = fmt.Errorf("expr: unknown op type")
@@ -64,23 +64,23 @@ func New(expr string, funcs ...map[string]parse.Func) (*Expr, error) {
 
 // Execute applies a parse expression to the specified OpenTSDB context, and
 // returns one result per group. T may be nil to ignore timings.
-func (e *Expr) Execute(c opentsdb.Context, g graphite.Context, logstashElasticHost string, cache *cache.Cache, T miniprofiler.Timer, now time.Time, autods int, unjoinedOk bool, search *search.Search, squelched func(tags opentsdb.TagSet) bool) (r *Results, queries []opentsdb.Request, err error) {
+func (e *Expr) Execute(c opentsdb.Context, g graphite.Context, logstashElasticHosts []string, cache *cache.Cache, T miniprofiler.Timer, now time.Time, autods int, unjoinedOk bool, search *search.Search, squelched func(tags opentsdb.TagSet) bool) (r *Results, queries []opentsdb.Request, err error) {
 	if squelched == nil {
 		squelched = func(tags opentsdb.TagSet) bool {
 			return false
 		}
 	}
 	s := &State{
-		Expr:                e,
-		cache:               cache,
-		tsdbContext:         c,
-		graphiteContext:     g,
-		logstashElasticHost: logstashElasticHost,
-		now:                 now,
-		autods:              autods,
-		unjoinedOk:          unjoinedOk,
-		Search:              search,
-		squelched:           squelched,
+		Expr:                 e,
+		cache:                cache,
+		tsdbContext:          c,
+		graphiteContext:      g,
+		logstashElasticHosts: logstashElasticHosts,
+		now:                  now,
+		autods:               autods,
+		unjoinedOk:           unjoinedOk,
+		Search:               search,
+		squelched:            squelched,
 	}
 	return e.ExecuteState(s, T)
 }

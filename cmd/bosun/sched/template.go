@@ -202,7 +202,7 @@ func (c *Context) eval(v interface{}, filter bool, series bool, autods int) (exp
 	if series && e.Root.Return() != parse.TypeSeries {
 		return nil, "", fmt.Errorf("egraph: requires an expression that returns a series")
 	}
-	res, _, err := e.Execute(c.runHistory.Context, c.runHistory.GraphiteContext, c.schedule.Conf.LogstashElasticHost, c.runHistory.Cache, nil, c.runHistory.Start, autods, c.Alert.UnjoinedOK, c.schedule.Search, c.schedule.Conf.AlertSquelched(c.Alert))
+	res, _, err := e.Execute(c.runHistory.Context, c.runHistory.GraphiteContext, c.schedule.Conf.LogstashElasticHosts, c.runHistory.Cache, nil, c.runHistory.Start, autods, c.Alert.UnjoinedOK, c.schedule.Search, c.schedule.Conf.AlertSquelched(c.Alert))
 	if err != nil {
 		return nil, "", fmt.Errorf("%s: %v", v, err)
 	}
@@ -402,7 +402,7 @@ func (c *Context) LSQuery(index_root, filter, sduration, eduration string, size 
 }
 
 func (c *Context) LSQueryAll(index_root, keystring, filter, sduration, eduration string, size int) (interface{}, error) {
-	service, s, _, err := expr.LSBaseQuery(time.Now(), c.schedule.Conf.LogstashElasticHost, index_root, keystring, filter, sduration, eduration, size)
+	service, s, _, err := expr.LSBaseQuery(time.Now(), index_root, c.schedule.Conf.LogstashElasticHosts, keystring, filter, sduration, eduration, size)
 	if err != nil {
 		return nil, err
 	}

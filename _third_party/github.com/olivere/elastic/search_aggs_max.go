@@ -1,4 +1,4 @@
-// Copyright 2012-2014 Oliver Eilhard. All rights reserved.
+// Copyright 2012-2015 Oliver Eilhard. All rights reserved.
 // Use of this source code is governed by a MIT-license.
 // See http://olivere.mit-license.org/license.txt for details.
 
@@ -14,6 +14,7 @@ type MaxAggregation struct {
 	field           string
 	script          string
 	lang            string
+	format          string
 	params          map[string]interface{}
 	subAggregations map[string]Aggregation
 }
@@ -38,6 +39,11 @@ func (a MaxAggregation) Script(script string) MaxAggregation {
 
 func (a MaxAggregation) Lang(lang string) MaxAggregation {
 	a.lang = lang
+	return a
+}
+
+func (a MaxAggregation) Format(format string) MaxAggregation {
+	a.format = format
 	return a
 }
 
@@ -73,6 +79,9 @@ func (a MaxAggregation) Source() interface{} {
 	}
 	if a.lang != "" {
 		opts["lang"] = a.lang
+	}
+	if a.format != "" {
+		opts["format"] = a.format
 	}
 	if len(a.params) > 0 {
 		opts["params"] = a.params
