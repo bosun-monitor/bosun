@@ -54,11 +54,11 @@ func c_aws(accessKey, secretKey, region string) (opentsdb.MultiDataPoint, error)
 		slog.Info("Unable to login to CloudWatch")
 	}
 	instances, err := AWSGetInstances(*ecc)
-	if err != false {
+	if err != nil {
 		slog.Info("Unable to get AWS Elastic Compute Cloud Instances.")
 	}
 	loadbalancers, err := AWSGetLoadBalancers(*elb)
-	if err != false {
+	if err != nil {
 		slog.Info("Unable to get AWS Elastic Load Balancers.")
 	}
 	for _, loadbalancer := range loadbalancers {
@@ -75,30 +75,34 @@ func c_aws(accessKey, secretKey, region string) (opentsdb.MultiDataPoint, error)
 	return md, nil
 }
 
-func AWSGetInstances(ecc ec2.EC2) ([]ec2.Instance, bool) {
+func AWSGetInstances(ecc ec2.EC2) ([]ec2.Instance, error) {
 	instancelist := []ec2.Instance{}
 	resp, err := ecc.DescribeInstances(nil)
 	if err != nil {
-		return nil, true
+		var Error error
+		Error = fmt.Errorf("Unable to describe EC2 Instances")
+		return nil, Error
 	}
 	for _, reservation := range resp.Reservations {
 		for _, instance := range reservation.Instances {
 			instancelist = append(instancelist, instance)
 		}
 	}
-	return instancelist, false
+	return instancelist, nil
 }
 
-func AWSGetLoadBalancers(lb elb.ELB) ([]elb.LoadBalancerDescription, bool) {
+func AWSGetLoadBalancers(lb elb.ELB) ([]elb.LoadBalancerDescription, error) {
 	lblist := []elb.LoadBalancerDescription{}
 	resp, err := lb.DescribeLoadBalancers(nil)
 	if err != nil {
-		return nil, true
+		var Error error
+		Error = fmt.Errorf("Unable to describe ELB Balancers")
+		return nil, Error
 	}
 	for _, loadbalancer := range resp.LoadBalancerDescriptions {
 		lblist = append(lblist, loadbalancer)
 	}
-	return lblist, false
+	return lblist, nil
 }
 
 func AWSGetCPU(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, instance ec2.Instance) {
