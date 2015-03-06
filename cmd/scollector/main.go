@@ -50,7 +50,7 @@ var (
 	flagHostname        = flag.String("hostname", "", "If set, use as value of host tag instead of system hostname.")
 	flagFreq            = flag.String("freq", "15", "Set the default frequency in seconds for most collectors.")
 	flagConf            = flag.String("conf", "", "Location of configuration file. Defaults to scollector.conf in directory of the scollector executable.")
-	flagaws             = flag.String("aws", "", `AWS keys and region, format: "access_key:secret_key@region".`)
+	flagAWS             = flag.String("aws", "", `AWS keys and region, format: "access_key:secret_key@region".`)
 
 	mains []func()
 )
@@ -110,7 +110,7 @@ func readConf() {
 		case "tags":
 			f(flagTags)
 		case "aws":
-			f(flagaws)
+			f(flagAWS)
 		case "vsphere":
 			f(flagVsphere)
 		case "freq":
@@ -176,21 +176,21 @@ func main() {
 			collectors.ICMP(s)
 		}
 	}
-	if *flagaws != "" {
-		for _, s := range strings.Split(*flagaws, ",") {
+	if *flagAWS != "" {
+		for _, s := range strings.Split(*flagAWS, ",") {
 			sp := strings.SplitN(s, ":", 2)
 			if len(sp) != 2 {
-				slog.Fatal("invalid aws string:", *flagaws)
+				slog.Fatal("invalid AWS string:", *flagAWS)
 			}
 			accessKey := sp[0]
 			idx := strings.LastIndex(sp[1], "@")
 			if idx == -1 {
-				slog.Fatal("invalid aws string:", *flagaws)
+				slog.Fatal("invalid AWS string:", *flagAWS)
 			}
 			secretKey := sp[1][:idx]
 			region := sp[1][idx+1:]
 			if len(accessKey) == 0 || len(secretKey) == 0 || len(region) == 0 {
-				slog.Fatal("invalid aws string:", *flagaws)
+				slog.Fatal("invalid AWS string:", *flagAWS)
 			}
 			collectors.AWS(accessKey, secretKey, region)
 		}
