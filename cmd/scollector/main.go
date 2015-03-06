@@ -192,7 +192,7 @@ func main() {
 			if len(accessKey) == 0 || len(secretKey) == 0 || len(region) == 0 {
 				slog.Fatal("invalid aws string:", *flagaws)
 			}
-            collectors.aws(accessKey,secretKey,region)
+            collectors.AWS(accessKey,secretKey,region)
         }
     }
 	if *flagVsphere != "" {

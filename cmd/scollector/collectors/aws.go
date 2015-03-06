@@ -6,7 +6,7 @@ import (
 
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
-	//"bosun.org/util"
+	"bosun.org/slog"
 
 	"github.com/awslabs/aws-sdk-go/aws"
 	"github.com/awslabs/aws-sdk-go/gen/ec2"
@@ -18,7 +18,7 @@ const (
 	awsCPU string = "aws.ec2.cpu"
 )
 
-func init(accessKey, secretKey, region string) {
+func AWS(accessKey, secretKey, region string) {
 	collectors = append(collectors, &IntervalCollector{
 		F: func() (opentsdb.MultiDataPoint, error) {
 			return c_aws(accessKey, secretKey, region)
@@ -74,7 +74,7 @@ func AWSGetCPU(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, instance e
 	}
 	resp, err := cw.GetMetricStatistics(&search)
 	if err != nil {
-		panic(err)
+		slog.Warning(err)
 	}
 	tags := opentsdb.TagSet{
 		"instance": *instance.InstanceID,
