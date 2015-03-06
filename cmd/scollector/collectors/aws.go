@@ -15,44 +15,50 @@ import (
 )
 
 const (
-	awsCPU string = "aws.ec2.cpu"
+	awsCPU               string = "aws.ec2.cpu"
+	awsNetwork           string = "aws.ec2.net.bytes"
+	awsDiskBytes         string = "aws.ec2.disk.bytes"
+	awsDiskOps           string = "aws.ec2.disk.ops"
+	awsStatusCheckFailed        = "aws.ec2.status.failed"
 )
 
 func AWS(accessKey, secretKey, region string) {
-	slog.Info("warming up the AWS system")
 	collectors = append(collectors, &IntervalCollector{
 		F: func() (opentsdb.MultiDataPoint, error) {
 			return c_aws(accessKey, secretKey, region)
 		},
-		name: fmt.Sprintf("aws-%s", region),
+		Interval: 60 * time.Second,
+		name:     fmt.Sprintf("aws-%s", region),
 	})
 }
 
 func c_aws(accessKey, secretKey, region string) (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 
-	slog.Info("c_aws called")
-
 	creds := aws.Creds(accessKey, secretKey, "")
 	if creds == nil {
-		slog.Warning("Unable to make creds")
+		slog.Info("Unable to make creds")
 	}
 	ecc := ec2.New(creds, region, nil)
 	if ecc == nil {
-		slog.Warning("Unable to login to EC2")
+		slog.Info("Unable to login to EC2")
 	}
 	//elb := elb.New(creds, region, nil)
 
 	cw := cloudwatch.New(creds, region, nil)
 	if cw == nil {
-		slog.Warning("Unable to login to CloudWatch")
+		slog.Info("Unable to login to CloudWatch")
 	}
 	instances, err := AWSGetInstances(*ecc)
 	if err != false {
-		// Do something useful in error
+		slog.Info("Unable to get AWS Instances.")
 	}
 	for _, instance := range instances {
 		AWSGetCPU(*cw, &md, instance)
+		AWSGetNetwork(*cw, &md, instance)
+		AWSGetDiskBytes(*cw, &md, instance)
+		AWSGetDiskOps(*cw, &md, instance)
+		AWSGetStatusChecks(*cw, &md, instance)
 	}
 	return md, nil
 
@@ -75,8 +81,8 @@ func AWSGetInstances(ecc ec2.EC2) ([]ec2.Instance, bool) {
 
 func AWSGetCPU(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, instance ec2.Instance) {
 	search := cloudwatch.GetMetricStatisticsInput{
-		StartTime:  time.Now().Add(time.Second * -60),
-		EndTime:    time.Now(),
+		StartTime:  time.Now().UTC().Add(time.Second * -600),
+		EndTime:    time.Now().UTC(),
 		MetricName: aws.String("CPUUtilization"),
 		Period:     aws.Integer(60),
 		Statistics: []string{"Average"},
@@ -86,13 +92,138 @@ func AWSGetCPU(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, instance e
 	}
 	resp, err := cw.GetMetricStatistics(&search)
 	if err != nil {
-		slog.Warning(err)
+		slog.Info("Error getting Metric Statistics: ", err)
 	}
 	tags := opentsdb.TagSet{
 		"instance": *instance.InstanceID,
 	}
 
 	for _, datapoint := range resp.Datapoints {
-		Add(md, awsCPU, *datapoint.Average, tags, metadata.Gauge, metadata.Pct, "")
+		AddTS(md, awsCPU, datapoint.Timestamp.Unix(), *datapoint.Average, tags, metadata.Gauge, metadata.Pct, "")
+	}
+}
+
+func AWSGetNetwork(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, instance ec2.Instance) {
+	search := cloudwatch.GetMetricStatisticsInput{
+		StartTime:  time.Now().UTC().Add(time.Second * -600),
+		EndTime:    time.Now().UTC(),
+		MetricName: aws.String("NetworkIn"),
+		Period:     aws.Integer(60),
+		Statistics: []string{"Average"},
+		Namespace:  aws.String("AWS/EC2"),
+		Unit:       aws.String("Bytes"),
+		Dimensions: []cloudwatch.Dimension{{Name: aws.String("InstanceId"), Value: instance.InstanceID}},
+	}
+	resp, err := cw.GetMetricStatistics(&search)
+	if err != nil {
+		slog.Info("Error getting Metric Statistics: ", err)
+	}
+	for _, datapoint := range resp.Datapoints {
+		AddTS(md, awsNetwork, datapoint.Timestamp.Unix(), *datapoint.Average, opentsdb.TagSet{"instance": *instance.InstanceID, "direction": "in"}, metadata.Gauge, metadata.Bytes, "")
+	}
+
+	search.MetricName = aws.String("NetworkOut")
+	resp, err = cw.GetMetricStatistics(&search)
+	if err != nil {
+		slog.Info("Error getting Metric Statistics: ", err)
+	}
+	for _, datapoint := range resp.Datapoints {
+		AddTS(md, awsNetwork, datapoint.Timestamp.Unix(), *datapoint.Average, opentsdb.TagSet{"instance": *instance.InstanceID, "direction": "out"}, metadata.Gauge, metadata.Bytes, "")
+	}
+}
+
+func AWSGetDiskBytes(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, instance ec2.Instance) {
+	search := cloudwatch.GetMetricStatisticsInput{
+		StartTime:  time.Now().UTC().Add(time.Second * -600),
+		EndTime:    time.Now().UTC(),
+		MetricName: aws.String("DiskReadBytes"),
+		Period:     aws.Integer(60),
+		Statistics: []string{"Average"},
+		Namespace:  aws.String("AWS/EC2"),
+		Unit:       aws.String("Bytes"),
+		Dimensions: []cloudwatch.Dimension{{Name: aws.String("InstanceId"), Value: instance.InstanceID}},
+	}
+	resp, err := cw.GetMetricStatistics(&search)
+	if err != nil {
+		slog.Info("Error getting Metric Statistics: ", err)
+	}
+	for _, datapoint := range resp.Datapoints {
+		AddTS(md, awsDiskBytes, datapoint.Timestamp.Unix(), *datapoint.Average, opentsdb.TagSet{"instance": *instance.InstanceID, "operation": "read"}, metadata.Gauge, metadata.Bytes, "")
+	}
+
+	search.MetricName = aws.String("DiskWriteBytes")
+	resp, err = cw.GetMetricStatistics(&search)
+	if err != nil {
+		slog.Info("Error getting Metric Statistics: ", err)
+	}
+	for _, datapoint := range resp.Datapoints {
+		AddTS(md, awsDiskBytes, datapoint.Timestamp.Unix(), *datapoint.Average, opentsdb.TagSet{"instance": *instance.InstanceID, "operation": "write"}, metadata.Gauge, metadata.Bytes, "")
+	}
+}
+
+func AWSGetDiskOps(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, instance ec2.Instance) {
+	search := cloudwatch.GetMetricStatisticsInput{
+		StartTime:  time.Now().UTC().Add(time.Second * -600),
+		EndTime:    time.Now().UTC(),
+		MetricName: aws.String("DiskReadOps"),
+		Period:     aws.Integer(60),
+		Statistics: []string{"Average"},
+		Namespace:  aws.String("AWS/EC2"),
+		Unit:       aws.String("Count"),
+		Dimensions: []cloudwatch.Dimension{{Name: aws.String("InstanceId"), Value: instance.InstanceID}},
+	}
+	resp, err := cw.GetMetricStatistics(&search)
+	if err != nil {
+		slog.Info("Error getting Metric Statistics: ", err)
+	}
+	for _, datapoint := range resp.Datapoints {
+		AddTS(md, awsDiskOps, datapoint.Timestamp.Unix(), *datapoint.Average, opentsdb.TagSet{"instance": *instance.InstanceID, "operation": "read"}, metadata.Gauge, metadata.Count, "")
+	}
+
+	search.MetricName = aws.String("DiskWriteOps")
+	resp, err = cw.GetMetricStatistics(&search)
+	if err != nil {
+		slog.Info("Error getting Metric Statistics: ", err)
+	}
+	for _, datapoint := range resp.Datapoints {
+		AddTS(md, awsDiskOps, datapoint.Timestamp.Unix(), *datapoint.Average, opentsdb.TagSet{"instance": *instance.InstanceID, "operation": "write"}, metadata.Gauge, metadata.Count, "")
+	}
+}
+
+func AWSGetStatusChecks(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, instance ec2.Instance) {
+	search := cloudwatch.GetMetricStatisticsInput{
+		StartTime:  time.Now().UTC().Add(time.Second * -60),
+		EndTime:    time.Now().UTC(),
+		MetricName: aws.String("StatusCheckFailed"),
+		Period:     aws.Integer(60),
+		Statistics: []string{"Average"},
+		Namespace:  aws.String("AWS/EC2"),
+		Unit:       aws.String("Count"),
+		Dimensions: []cloudwatch.Dimension{{Name: aws.String("InstanceId"), Value: instance.InstanceID}},
+	}
+	resp, err := cw.GetMetricStatistics(&search)
+	if err != nil {
+		slog.Info("Error getting Metric Statistics: ", err)
+	}
+	for _, datapoint := range resp.Datapoints {
+		AddTS(md, awsStatusCheckFailed, datapoint.Timestamp.Unix(), *datapoint.Average, opentsdb.TagSet{"instance": *instance.InstanceID}, metadata.Gauge, metadata.Count, "")
+	}
+
+	search.MetricName = aws.String("StatusCheckFailed_Instance")
+	resp, err = cw.GetMetricStatistics(&search)
+	if err != nil {
+		slog.Info("Error getting Metric Statistics: ", err)
+	}
+	for _, datapoint := range resp.Datapoints {
+		AddTS(md, awsStatusCheckFailed, datapoint.Timestamp.Unix(), *datapoint.Average, opentsdb.TagSet{"instance": *instance.InstanceID, "category": "instance"}, metadata.Gauge, metadata.Count, "")
+	}
+
+	search.MetricName = aws.String("StatusCheckFailed_System")
+	resp, err = cw.GetMetricStatistics(&search)
+	if err != nil {
+		slog.Info("Error getting Metric Statistics: ", err)
+	}
+	for _, datapoint := range resp.Datapoints {
+		AddTS(md, awsStatusCheckFailed, datapoint.Timestamp.Unix(), *datapoint.Average, opentsdb.TagSet{"instance": *instance.InstanceID, "category": "system"}, metadata.Gauge, metadata.Count, "")
 	}
 }
