@@ -1,27 +1,24 @@
 package collectors
 
 import (
-    "bytes"
-    "encoding/xml"
-    "fmt"
-    "io"
-    "strconv"
-
-    //"time"
+	"fmt"
+	"time"
 
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
-	"bosun.org/util"
+	//"bosun.org/util"
 
-    "github.com/awslabs/aws-sdk-go/aws"
-    "github.com/awslabs/aws-sdk-go/gen/ec2"
-    //"github.com/awslabs/aws-sdk-go/gen/elb"
-    "github.com/awslabs/aws-sdk-go/gen/cloudwatch"
-
+	"github.com/awslabs/aws-sdk-go/aws"
+	"github.com/awslabs/aws-sdk-go/gen/ec2"
+	//"github.com/awslabs/aws-sdk-go/gen/elb"
+	"github.com/awslabs/aws-sdk-go/gen/cloudwatch"
 )
 
-// Vsphere registers a vSphere collector.
-func AWS(accessKey, secretKey, region string) {
+const (
+	awsCPU string = "aws.ec2.cpu"
+)
+
+func init(accessKey, secretKey, region string) {
 	collectors = append(collectors, &IntervalCollector{
 		F: func() (opentsdb.MultiDataPoint, error) {
 			return c_aws(accessKey, secretKey, region)
@@ -31,30 +28,59 @@ func AWS(accessKey, secretKey, region string) {
 }
 
 func c_aws(accessKey, secretKey, region string) (opentsdb.MultiDataPoint, error) {
-    creds := aws.Creds(accessKey, secretKey, "")
-    ecc := ec2.New(creds, region, nil)
-    //elb := elb.New(creds, region, nil)
-    cw := cloudwatch.New(creds, region, nil)
+	var md opentsdb.MultiDataPoint
 
-    instances, err := AWSGetInstances(&ecc)
-    if err != nil {
-        // Do something useful in error
-    }
+	creds := aws.Creds(accessKey, secretKey, "")
+	ecc := ec2.New(creds, region, nil)
+	//elb := elb.New(creds, region, nil)
+	cw := cloudwatch.New(creds, region, nil)
+
+	instances, err := AWSGetInstances(*ecc)
+	if err != false {
+		// Do something useful in error
+	}
+	for _, instance := range instances {
+		AWSGetCPU(*cw, &md, instance)
+	}
 	return md, nil
-
-        //Add(md, osDiskTotal, i, tags, metadata.Gauge, metadata.Bytes, "")
 
 }
 
-func AWSGetInstances(ecc ec2.ec2) []Instance{
-    resp, err := ecc.DescribeInstances(nil)
-    if err != nil {
-        return nil, 1
-    }
-    instancelist := []Instance{}
+func AWSGetInstances(ecc ec2.EC2) ([]ec2.Instance, bool) {
+	instancelist := []ec2.Instance{}
+	resp, err := ecc.DescribeInstances(nil)
+	if err != nil {
+		return nil, true
+	}
 
-    for _, instance := range resp.Reservations {
-        append(instancelist, instance)
-    }
-    return instancelist, nil
+	for _, reservation := range resp.Reservations {
+		for _, instance := range reservation.Instances {
+			instancelist=append(instancelist, instance)
+		}
+	}
+	return instancelist, false
+}
+
+func AWSGetCPU(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, instance ec2.Instance) {
+	search := cloudwatch.GetMetricStatisticsInput{
+		StartTime:  time.Now().Add(time.Second * -60),
+		EndTime:    time.Now(),
+		MetricName: aws.String("CPUUtilization"),
+		Period:     aws.Integer(60),
+		Statistics: []string{"Average"},
+		Namespace:  aws.String("AWS/EC2"),
+		Unit:       aws.String("Percent"),
+		Dimensions: []cloudwatch.Dimension{{Name: aws.String("InstanceId"), Value: instance.InstanceID}},
+	}
+	resp, err := cw.GetMetricStatistics(&search)
+	if err != nil {
+		panic(err)
+	}
+	tags := opentsdb.TagSet{
+		"instance": *instance.InstanceID,
+	}
+
+	for _, datapoint := range resp.Datapoints {
+		Add(md, awsCPU, *datapoint.Average, tags, metadata.Gauge, metadata.Pct, "")
+	}
 }
