@@ -99,15 +99,15 @@ func AWSGetInstances(ecc ec2.EC2) ([]ec2.Instance, error) {
 }
 
 func AWSGetLoadBalancers(lb elb.ELB) ([]elb.LoadBalancerDescription, error) {
-	lblist := []elb.LoadBalancerDescription{}
+	lbList := []elb.LoadBalancerDescription{}
 	resp, err := lb.DescribeLoadBalancers(nil)
 	if err != nil {
 		return nil, fmt.Errorf("Unable to describe ELB Balancers")
 	}
 	for _, loadBalancer := range resp.LoadBalancerDescriptions {
-		lblist = append(lblist, loadBalancer)
+		lbList = append(lbList, loadBalancer)
 	}
-	return lblist, nil
+	return lbList, nil
 }
 
 func AWSGetCPU(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, instance ec2.Instance) error {
