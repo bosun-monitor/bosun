@@ -66,13 +66,13 @@ func c_aws(accessKey, secretKey, region string) (opentsdb.MultiDataPoint, error)
 	if err != nil {
 		slog.Info("No EC2 Instances found.")
 	}
-	loadbalancers, err := AWSGetLoadBalancers(*elb)
+	loadBalancers, err := AWSGetLoadBalancers(*elb)
 	if err != nil {
 		slog.Info("No ELB Load Balancecrs found.")
 	}
-	for _, loadbalancer := range loadbalancers {
-		AWSGetELBLatency(*cw, &md, loadbalancer)
-		AWSGetELBHostCounts(*cw, &md, loadbalancer)
+	for _, loadBalancer := range loadBalancers {
+		AWSGetELBLatency(*cw, &md, loadBalancer)
+		AWSGetELBHostCounts(*cw, &md, loadBalancer)
 	}
 	for _, instance := range instances {
 		AWSGetCPU(*cw, &md, instance)
@@ -104,8 +104,8 @@ func AWSGetLoadBalancers(lb elb.ELB) ([]elb.LoadBalancerDescription, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Unable to describe ELB Balancers")
 	}
-	for _, loadbalancer := range resp.LoadBalancerDescriptions {
-		lblist = append(lblist, loadbalancer)
+	for _, loadBalancer := range resp.LoadBalancerDescriptions {
+		lblist = append(lblist, loadBalancer)
 	}
 	return lblist, nil
 }
@@ -257,7 +257,7 @@ func AWSGetStatusChecks(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, i
 	return nil
 }
 
-func AWSGetELBLatency(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, loadbalancer elb.LoadBalancerDescription) error {
+func AWSGetELBLatency(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, loadBalancer elb.LoadBalancerDescription) error {
 	search := cloudwatch.GetMetricStatisticsInput{
 		StartTime:  time.Now().UTC().Add(time.Second * -4000),
 		EndTime:    time.Now().UTC(),
@@ -266,20 +266,20 @@ func AWSGetELBLatency(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, loa
 		Statistics: []string{"Average", "Minimum", "Maximum"},
 		Namespace:  aws.String("AWS/ELB"),
 		Unit:       aws.String("Seconds"),
-		Dimensions: []cloudwatch.Dimension{{Name: aws.String("LoadBalancerName"), Value: loadbalancer.LoadBalancerName}},
+		Dimensions: []cloudwatch.Dimension{{Name: aws.String("LoadBalancerName"), Value: loadBalancer.LoadBalancerName}},
 	}
 	resp, err := cw.GetMetricStatistics(&search)
 	if err != nil {
 		return fmt.Errorf("Error getting Metric Statistics: %s", err)
 	}
 	for _, datapoint := range resp.Datapoints {
-		AddTS(md, awsELBLatencyMin, datapoint.Timestamp.Unix(), *datapoint.Minimum, opentsdb.TagSet{"loadbalancer": *loadbalancer.LoadBalancerName}, metadata.Gauge, metadata.Second, descAWSELBLatency)
-		AddTS(md, awsELBLatencyMax, datapoint.Timestamp.Unix(), *datapoint.Maximum, opentsdb.TagSet{"loadbalancer": *loadbalancer.LoadBalancerName}, metadata.Gauge, metadata.Second, descAWSELBLatency)
-		AddTS(md, awsELBLatencyAvg, datapoint.Timestamp.Unix(), *datapoint.Average, opentsdb.TagSet{"loadbalancer": *loadbalancer.LoadBalancerName}, metadata.Gauge, metadata.Second, descAWSELBLatency)
+		AddTS(md, awsELBLatencyMin, datapoint.Timestamp.Unix(), *datapoint.Minimum, opentsdb.TagSet{"loadbalancer": *loadBalancer.LoadBalancerName}, metadata.Gauge, metadata.Second, descAWSELBLatency)
+		AddTS(md, awsELBLatencyMax, datapoint.Timestamp.Unix(), *datapoint.Maximum, opentsdb.TagSet{"loadbalancer": *loadBalancer.LoadBalancerName}, metadata.Gauge, metadata.Second, descAWSELBLatency)
+		AddTS(md, awsELBLatencyAvg, datapoint.Timestamp.Unix(), *datapoint.Average, opentsdb.TagSet{"loadbalancer": *loadBalancer.LoadBalancerName}, metadata.Gauge, metadata.Second, descAWSELBLatency)
 	}
 	return nil
 }
-func AWSGetELBHostCounts(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, loadbalancer elb.LoadBalancerDescription) error {
+func AWSGetELBHostCounts(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, loadBalancer elb.LoadBalancerDescription) error {
 	search := cloudwatch.GetMetricStatisticsInput{
 		StartTime:  time.Now().UTC().Add(time.Second * -60),
 		EndTime:    time.Now().UTC(),
@@ -288,14 +288,14 @@ func AWSGetELBHostCounts(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, 
 		Statistics: []string{"Average"},
 		Namespace:  aws.String("AWS/ELB"),
 		Unit:       aws.String("Count"),
-		Dimensions: []cloudwatch.Dimension{{Name: aws.String("LoadBalancerName"), Value: loadbalancer.LoadBalancerName}},
+		Dimensions: []cloudwatch.Dimension{{Name: aws.String("LoadBalancerName"), Value: loadBalancer.LoadBalancerName}},
 	}
 	resp, err := cw.GetMetricStatistics(&search)
 	if err != nil {
 		return fmt.Errorf("Error getting Metric Statistics: %s", err)
 	}
 	for _, datapoint := range resp.Datapoints {
-		AddTS(md, awsELBHostsHealthy, datapoint.Timestamp.Unix(), *datapoint.Average, opentsdb.TagSet{"loadbalancer": *loadbalancer.LoadBalancerName}, metadata.Gauge, metadata.Count, descAWSELBHostCount)
+		AddTS(md, awsELBHostsHealthy, datapoint.Timestamp.Unix(), *datapoint.Average, opentsdb.TagSet{"loadbalancer": *loadBalancer.LoadBalancerName}, metadata.Gauge, metadata.Count, descAWSELBHostCount)
 	}
 	search.MetricName = aws.String("UnhealthyHostCount")
 	resp, err = cw.GetMetricStatistics(&search)
@@ -303,11 +303,11 @@ func AWSGetELBHostCounts(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, 
 		return fmt.Errorf("Error getting Metric Statistics: %s", err)
 	}
 	if resp.Datapoints == nil {
-		AddTS(md, awsELBHostsUnHealthy, time.Now().UTC().Unix(), 0, opentsdb.TagSet{"loadbalancer": *loadbalancer.LoadBalancerName}, metadata.Gauge, metadata.Count, descAWSELBHostCount)
+		AddTS(md, awsELBHostsUnHealthy, time.Now().UTC().Unix(), 0, opentsdb.TagSet{"loadbalancer": *loadBalancer.LoadBalancerName}, metadata.Gauge, metadata.Count, descAWSELBHostCount)
 	} else {
 
 		for _, datapoint := range resp.Datapoints {
-			AddTS(md, awsELBHostsUnHealthy, datapoint.Timestamp.Unix(), *datapoint.Average, opentsdb.TagSet{"loadbalancer": *loadbalancer.LoadBalancerName}, metadata.Gauge, metadata.Count, descAWSELBHostCount)
+			AddTS(md, awsELBHostsUnHealthy, datapoint.Timestamp.Unix(), *datapoint.Average, opentsdb.TagSet{"loadbalancer": *loadBalancer.LoadBalancerName}, metadata.Gauge, metadata.Count, descAWSELBHostCount)
 		}
 	}
 	return nil
