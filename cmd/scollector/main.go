@@ -116,6 +116,10 @@ func readConf() {
 			if err := collectors.AddProcessConfig(v); err != nil {
 				slog.Fatal(err)
 			}
+		case "process_dotnet":
+			if err := collectors.AddProcessDotNetConfig(v); err != nil {
+				slog.Fatal(err)
+			}
 		case "keepalived_community":
 			collectors.KeepAliveCommunity = v
 		default:
@@ -194,6 +198,7 @@ func main() {
 	}
 	// Add all process collectors. This is platform specific.
 	collectors.WatchProcesses()
+	collectors.WatchProcessesDotNet()
 
 	if *flagFake > 0 {
 		collectors.InitFake(*flagFake)

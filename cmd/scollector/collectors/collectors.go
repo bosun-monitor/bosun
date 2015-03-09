@@ -2,6 +2,7 @@ package collectors // import "bosun.org/cmd/scollector/collectors"
 
 import (
 	"bufio"
+	"fmt"
 	"os"
 	"strings"
 	"sync"
@@ -67,6 +68,11 @@ var (
 	timestamp = time.Now().Unix()
 	tlock     sync.Mutex
 	AddTags   opentsdb.TagSet
+
+	AddProcessDotNetConfig = func(line string) error {
+		return fmt.Errorf("process_dotnet watching not implemented on this platform")
+	}
+	WatchProcessesDotNet = func() {}
 )
 
 var (
