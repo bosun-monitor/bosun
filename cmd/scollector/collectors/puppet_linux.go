@@ -45,7 +45,7 @@ type PRSummary struct {
 		Skipped         float64 `yaml:"skipped"`
 		Total           float64 `yaml:"total"`
 	} `yaml:"resources"`
-	Time map[string]string `yaml:"time"`
+	Time    map[string]string `yaml:"time"`
 	Version struct {
 		Config string `yaml:"config"`
 		Puppet string `yaml:"puppet"`

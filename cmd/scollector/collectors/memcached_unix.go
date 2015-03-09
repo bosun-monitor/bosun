@@ -16,175 +16,175 @@ func init() {
 }
 
 var memcachedMeta = map[string]MetricMeta{
-	"accepting_conns": MetricMeta{
+	"accepting_conns": {
 		RateType: metadata.Gauge,
 		Unit:     metadata.Bool,
 		Desc:     "Indicates if the memcache instance is currently accepting connections.",
 	},
-	"auth_cmds": MetricMeta{
+	"auth_cmds": {
 		RateType: metadata.Counter,
 		Unit:     metadata.Operation,
 		Desc:     "The number of authentication commands handled (includes both success or failure).",
 	},
-	"auth_errors": MetricMeta{
+	"auth_errors": {
 		RateType: metadata.Counter,
 		Unit:     metadata.Operation,
 		Desc:     "The number of of failed authentications.",
 	},
-	"bytes_read": MetricMeta{
+	"bytes_read": {
 		Metric:   "bytes",
 		TagSet:   opentsdb.TagSet{"type": "read"},
 		RateType: metadata.Counter,
 		Unit:     metadata.Bytes,
 		Desc:     "The total number of bytes read from the network.",
 	},
-	"bytes_written": MetricMeta{
+	"bytes_written": {
 		Metric:   "bytes",
 		TagSet:   opentsdb.TagSet{"type": "write"},
 		RateType: metadata.Counter,
 		Unit:     metadata.Bytes,
 		Desc:     "The total number of bytes written to the network.",
 	},
-	"cas_badval": MetricMeta{
+	"cas_badval": {
 		RateType: metadata.Counter,
 		Unit:     metadata.Operation,
 		Desc:     "The number of CAS requests for which a key was found, but the CAS value did not match.",
 	},
-	"cas_hits": MetricMeta{
+	"cas_hits": {
 		RateType: metadata.Counter,
 		Unit:     metadata.Operation,
 		Desc:     "The number of successful CAS requests.",
 	},
-	"cas_misses": MetricMeta{
+	"cas_misses": {
 		RateType: metadata.Counter,
 		Unit:     metadata.Operation,
 		Desc:     "The number of CAS requests against missing keys.",
 	},
-	"cmd_flush": MetricMeta{
+	"cmd_flush": {
 		RateType: metadata.Counter,
 		Unit:     metadata.Operation,
 		Desc:     "The cumulative number of flush requests.",
 	},
-	"cmd_set": MetricMeta{
+	"cmd_set": {
 		RateType: metadata.Counter,
 		Unit:     metadata.Operation,
 		Desc:     "The cumulative number of storage requests.",
 	},
-	"cmd_get": MetricMeta{
+	"cmd_get": {
 		RateType: metadata.Counter,
 		Unit:     metadata.Operation,
 		Desc:     "The cumulative number of retrieval requests.",
 	},
-	"conn_yields": MetricMeta{
+	"conn_yields": {
 		RateType: metadata.Counter,
 		Unit:     metadata.Yield,
 		Desc:     "The number of times any connection yielded to another due to hitting the memcached -R limit.",
 	},
-	"connection_structures": MetricMeta{
+	"connection_structures": {
 		RateType: metadata.Gauge,
 		Unit:     "Connection Structures",
 		Desc:     "The number of connection structures allocated by the server.",
 	},
-	"curr_connections": MetricMeta{
+	"curr_connections": {
 		RateType: metadata.Gauge,
 		Unit:     metadata.Connection,
 		Desc:     "The current number of open connections.",
 	},
-	"curr_items": MetricMeta{
+	"curr_items": {
 		RateType: metadata.Gauge,
 		Unit:     metadata.Item,
 		Desc:     "The current number of items in the cache.",
 	},
-	"decr_hits": MetricMeta{
+	"decr_hits": {
 		Metric:   "commands",
 		TagSet:   opentsdb.TagSet{"type": "decr", "cache": "hit"},
 		RateType: metadata.Counter,
 		Unit:     metadata.Operation,
 		Desc:     "The total number of decr command cache hits (decr decreases a stored value by 1).",
 	},
-	"decr_misses": MetricMeta{
+	"decr_misses": {
 		Metric:   "commands",
 		TagSet:   opentsdb.TagSet{"type": "decr", "cache": "miss"},
 		RateType: metadata.Counter,
 		Unit:     metadata.Operation,
 		Desc:     "The total number of decr command cache misses (decr decreases a stored value by 1).",
 	},
-	"incr_hits": MetricMeta{
+	"incr_hits": {
 		Metric:   "commands",
 		TagSet:   opentsdb.TagSet{"type": "incr", "cache": "hit"},
 		RateType: metadata.Counter,
 		Unit:     metadata.Operation,
 		Desc:     "The total number of incr command cache hits (incr increases a stored value by 1).",
 	},
-	"incr_misses": MetricMeta{
+	"incr_misses": {
 		Metric:   "commands",
 		TagSet:   opentsdb.TagSet{"type": "incr", "cache": "miss"},
 		RateType: metadata.Counter,
 		Unit:     metadata.Operation,
 		Desc:     "The total number of incr command cache misses (incr increases a stored value by 1).",
 	},
-	"get_hits": MetricMeta{
+	"get_hits": {
 		Metric:   "commands",
 		TagSet:   opentsdb.TagSet{"type": "get", "cache": "hit"},
 		RateType: metadata.Counter,
 		Unit:     metadata.Operation,
 		Desc:     "The total number of successful get commands (cache hits) since startup.",
 	},
-	"get_misses": MetricMeta{
+	"get_misses": {
 		Metric:   "commands",
 		TagSet:   opentsdb.TagSet{"type": "get", "cache": "miss"},
 		RateType: metadata.Counter,
 		Unit:     metadata.Operation,
 		Desc:     "The total number of failed get requests because nothing was cached for this key or the cached value was too old.",
 	},
-	"delete_hits": MetricMeta{
+	"delete_hits": {
 		Metric:   "commands",
 		TagSet:   opentsdb.TagSet{"type": "delete", "cache": "hit"},
 		RateType: metadata.Counter,
 		Unit:     metadata.Operation,
 		Desc:     "The total number of successful delete commands (cache hits) since startup.",
 	},
-	"delete_misses": MetricMeta{
+	"delete_misses": {
 		Metric:   "commands",
 		TagSet:   opentsdb.TagSet{"type": "delete", "cache": "miss"},
 		RateType: metadata.Counter,
 		Unit:     metadata.Operation,
 		Desc:     "The total number of delete commands for keys not existing within the cache.",
 	},
-	"evictions": MetricMeta{
+	"evictions": {
 		RateType: metadata.Counter,
 		Unit:     metadata.Eviction,
 		Desc:     "The Number of objects removed from the cache to free up memory for new items because Memcached reached it's maximum memory setting (limit_maxbytes).",
 	},
-	"limit_maxbytes": MetricMeta{
+	"limit_maxbytes": {
 		Metric:   "cache_limit",
 		RateType: metadata.Gauge,
 		Unit:     metadata.Bytes,
 		Desc:     "The max allowed size of the cache.",
 	},
-	"bytes": MetricMeta{
+	"bytes": {
 		Metric:   "cache_size",
 		RateType: metadata.Gauge,
 		Unit:     metadata.Bytes,
 		Desc:     "The current size of the cache.",
 	},
-	"listen_disabled_num": MetricMeta{
+	"listen_disabled_num": {
 		Metric:   "failed_connections",
 		RateType: metadata.Counter,
 		Unit:     metadata.Connection,
 		Desc:     "The number of denied connection attempts because memcached reached it's configured connection limit.",
 	},
-	"threads": MetricMeta{
+	"threads": {
 		RateType: metadata.Gauge,
 		Unit:     metadata.Thread,
 		Desc:     "The current number of threads.",
 	},
-	"total_connections": MetricMeta{
+	"total_connections": {
 		RateType: metadata.Counter,
 		Unit:     metadata.Connection,
 		Desc:     "The total number of successful connect attempts.",
 	},
-	"total_items": MetricMeta{
+	"total_items": {
 		RateType: metadata.Counter,
 		Unit:     metadata.Item,
 		Desc:     "The total number of items ever stored.",

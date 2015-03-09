@@ -26,7 +26,7 @@ func TestCheckFlapping(t *testing.T) {
 	ak := expr.NewAlertKey("a", nil)
 	r := &RunHistory{
 		Events: map[expr.AlertKey]*Event{
-			ak: &Event{Status: StWarning},
+			ak: {Status: StWarning},
 		},
 	}
 	hasNots := func() bool {

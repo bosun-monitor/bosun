@@ -71,7 +71,7 @@ func tagRename(args []parse.Node) (parse.Tags, error) {
 		if len(kv) != 2 {
 			return nil, fmt.Errorf("error passing groups")
 		}
-		for oldTagKey, _ := range tags {
+		for oldTagKey := range tags {
 			if kv[0] == oldTagKey {
 				if _, ok := tags[kv[1]]; ok {
 					return nil, fmt.Errorf("%s already in group", kv[1])
