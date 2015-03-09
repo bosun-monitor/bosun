@@ -8,10 +8,10 @@ import (
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
 
-	"github.com/awslabs/aws-sdk-go/aws"
-	"github.com/awslabs/aws-sdk-go/gen/cloudwatch"
-	"github.com/awslabs/aws-sdk-go/gen/ec2"
-	"github.com/awslabs/aws-sdk-go/gen/elb"
+	"bosun.org/_third_party/github.com/awslabs/aws-sdk-go/aws"
+	"bosun.org/_third_party/github.com/awslabs/aws-sdk-go/gen/cloudwatch"
+	"bosun.org/_third_party/github.com/awslabs/aws-sdk-go/gen/ec2"
+	"bosun.org/_third_party/github.com/awslabs/aws-sdk-go/gen/elb"
 )
 
 const (
