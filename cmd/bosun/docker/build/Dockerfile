@@ -15,7 +15,7 @@ RUN git clone -b next --single-branch --depth 1 git://github.com/OpenTSDB/opents
 	cd $TSDB && bash ./build.sh
 
 ENV GOPATH /go
-ENV HBASEVER 0.98.9-hadoop2
+ENV HBASEVER 1.0.0
 ENV HBASE /hbase/hbase-$HBASEVER
 ENV JAVA_HOME /usr/lib/jvm/java-7-openjdk-amd64
 
@@ -24,7 +24,7 @@ RUN mkdir -p /hbase \
     | tar -xzC /hbase \
     && mv /hbase/hbase-$HBASEVER /hbase/hbase
 
-RUN curl -SL https://storage.googleapis.com/golang/go1.4.linux-amd64.tar.gz \
+RUN curl -SL https://storage.googleapis.com/golang/go1.4.2.linux-amd64.tar.gz \
     | tar -xzC /usr/local
 
 COPY bosun $GOPATH/src/bosun.org/
