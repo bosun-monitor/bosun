@@ -24,7 +24,7 @@ const (
 
 func c_diskspace_windows() (opentsdb.MultiDataPoint, error) {
 	var dst []Win32_LogicalDisk
-	var q = wmi.CreateQuery(&dst, "WHERE DriveType = 3")
+	var q = wmi.CreateQuery(&dst, "WHERE DriveType = 3 AND FreeSpace <> null")
 	err := queryWmi(q, &dst)
 	if err != nil {
 		return nil, err
