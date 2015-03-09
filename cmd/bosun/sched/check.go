@@ -93,8 +93,8 @@ func (s *Schedule) RunHistory(r *RunHistory) {
 			state = NewStatus(ak)
 			s.status[ak] = state
 		}
-		last := state.Append(event)
 		a := s.Conf.Alerts[ak.Name()]
+		wasOpen := state.Open
 		if event.Status > StNormal {
 			if event.Status != StUnknown {
 				subject, serr := s.ExecuteSubject(r, a, state)
@@ -164,6 +164,14 @@ func (s *Schedule) RunHistory(r *RunHistory) {
 		clearOld := func() {
 			state.NeedAck = false
 			delete(s.Notifications, ak)
+		}
+		last := state.AbnormalStatus()
+		state.Append(event)
+		// last could be StNone if it is new. Set it to normal if so because StNormal >
+		// StNone. If the state is not open (closed), then the last state we care about
+		// isn't the last abnormal state, it's just normal.
+		if last < StNormal || !wasOpen {
+			last = StNormal
 		}
 		if event.Status > last {
 			clearOld()
