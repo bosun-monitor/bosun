@@ -6,9 +6,15 @@
 // Protocol version 4.
 //
 // The package provides IP-level socket options that allow
-// manipulation of IPv4 facilities.  The IPv4 and basic host
-// requirements for IPv4 are defined in RFC 791, RFC 1112, RFC 1122,
-// RFC 3678 and RFC 4607.
+// manipulation of IPv4 facilities.
+//
+// The IPv4 protocol and basic host requirements for IPv4 are defined
+// in RFC 791 and RFC 1122.
+// Host extensions for multicasting and socket interface extensions
+// for multicast source filters are defined in RFC 1112 and RFC 3678.
+// IGMPv1, IGMPv2 and IGMPv3 are defined in RFC 1112, RFC 2236 and RFC
+// 3376.
+// Source-specific multicast is defined in RFC 4607.
 //
 //
 // Unicasting
@@ -198,10 +204,9 @@
 // Source-specific multicasting
 //
 // An application that uses PacketConn or RawConn on IGMPv3 supported
-// platform is able to join source-specific multicast groups as
-// described in RFC 3678.  The application may use
-// JoinSourceSpecificGroup and LeaveSourceSpecificGroup for the
-// operation known as "include" mode,
+// platform is able to join source-specific multicast groups.
+// The application may use JoinSourceSpecificGroup and
+// LeaveSourceSpecificGroup for the operation known as "include" mode,
 //
 //	ssmgroup := net.UDPAddr{IP: net.IPv4(232, 7, 8, 9)}
 //	ssmsource := net.UDPAddr{IP: net.IPv4(192, 168, 0, 1)})

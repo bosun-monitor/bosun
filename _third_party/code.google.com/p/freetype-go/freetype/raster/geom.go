@@ -101,7 +101,7 @@ func (p Point) Len() Fix32 {
 func (p Point) Norm(length Fix32) Point {
 	d := p.Len()
 	if d == 0 {
-		return Point{0, 0}
+		return Point{}
 	}
 	s, t := int64(length), int64(d)
 	x := int64(p.X) * s / t
@@ -204,74 +204,34 @@ func (p Path) String() string {
 	return s
 }
 
-// grow adds n elements to p.
-func (p *Path) grow(n int) {
-	n += len(*p)
-	if n > cap(*p) {
-		old := *p
-		*p = make([]Fix32, n, 2*n+8)
-		copy(*p, old)
-		return
-	}
-	*p = (*p)[0:n]
-}
-
 // Clear cancels any previous calls to p.Start or p.AddXxx.
 func (p *Path) Clear() {
-	*p = (*p)[0:0]
+	*p = (*p)[:0]
 }
 
 // Start starts a new curve at the given point.
 func (p *Path) Start(a Point) {
-	n := len(*p)
-	p.grow(4)
-	(*p)[n] = 0
-	(*p)[n+1] = a.X
-	(*p)[n+2] = a.Y
-	(*p)[n+3] = 0
+	*p = append(*p, 0, a.X, a.Y, 0)
 }
 
 // Add1 adds a linear segment to the current curve.
 func (p *Path) Add1(b Point) {
-	n := len(*p)
-	p.grow(4)
-	(*p)[n] = 1
-	(*p)[n+1] = b.X
-	(*p)[n+2] = b.Y
-	(*p)[n+3] = 1
+	*p = append(*p, 1, b.X, b.Y, 1)
 }
 
 // Add2 adds a quadratic segment to the current curve.
 func (p *Path) Add2(b, c Point) {
-	n := len(*p)
-	p.grow(6)
-	(*p)[n] = 2
-	(*p)[n+1] = b.X
-	(*p)[n+2] = b.Y
-	(*p)[n+3] = c.X
-	(*p)[n+4] = c.Y
-	(*p)[n+5] = 2
+	*p = append(*p, 2, b.X, b.Y, c.X, c.Y, 2)
 }
 
 // Add3 adds a cubic segment to the current curve.
 func (p *Path) Add3(b, c, d Point) {
-	n := len(*p)
-	p.grow(8)
-	(*p)[n] = 3
-	(*p)[n+1] = b.X
-	(*p)[n+2] = b.Y
-	(*p)[n+3] = c.X
-	(*p)[n+4] = c.Y
-	(*p)[n+5] = d.X
-	(*p)[n+6] = d.Y
-	(*p)[n+7] = 3
+	*p = append(*p, 3, b.X, b.Y, c.X, c.Y, d.X, d.Y, 3)
 }
 
 // AddPath adds the Path q to p.
 func (p *Path) AddPath(q Path) {
-	n, m := len(*p), len(q)
-	p.grow(m)
-	copy((*p)[n:n+m], q)
+	*p = append(*p, q...)
 }
 
 // AddStroke adds a stroked Path.

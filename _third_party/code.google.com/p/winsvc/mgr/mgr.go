@@ -14,6 +14,7 @@ package mgr
 import (
 	"bosun.org/_third_party/code.google.com/p/winsvc/winapi"
 	"syscall"
+	"unicode/utf16"
 )
 
 // Mgr is used to manage Windows service.
@@ -52,6 +53,25 @@ func toPtr(s string) *uint16 {
 	return syscall.StringToUTF16Ptr(s)
 }
 
+// toStringBlock terminates strings in ss with 0, and then
+// concatenates them together. It also adds extra 0 at the end.
+func toStringBlock(ss []string) *uint16 {
+	if len(ss) == 0 {
+		return nil
+	}
+	t := ""
+	for _, s := range ss {
+		if s != "" {
+			t += s + "\x00"
+		}
+	}
+	if t == "" {
+		return nil
+	}
+	t += "\x00"
+	return &utf16.Encode([]rune(t))[0]
+}
+
 // CreateService installs new service name on the system.
 // The service will be executed by running exepath binary,
 // while service settings are specified in config c.
@@ -66,7 +86,7 @@ func (m *Mgr) CreateService(name, exepath string, c Config) (*Service, error) {
 	h, err := winapi.CreateService(m.Handle, toPtr(name), toPtr(c.DisplayName),
 		winapi.SERVICE_ALL_ACCESS, winapi.SERVICE_WIN32_OWN_PROCESS,
 		c.StartType, c.ErrorControl, toPtr(exepath), toPtr(c.LoadOrderGroup),
-		nil, toPtr(c.Dependencies), toPtr(c.ServiceStartName), toPtr(c.Password))
+		nil, toStringBlock(c.Dependencies), toPtr(c.ServiceStartName), toPtr(c.Password))
 	if err != nil {
 		return nil, err
 	}

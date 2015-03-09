@@ -29,8 +29,9 @@
 // it calls "receive" callback. After that, MaxRTT time passed, it calls
 // "idle" callback. If you need more example, please see "cmd/ping/ping.go".
 //
-// This library needs to run as a superuser for sending ICMP packets so when
-// you run go test, please run as a following
+// This library needs to run as a superuser for sending ICMP packets when
+// privileged raw ICMP endpoints is used so in such a case, to run go test
+// for the package, please run like a following
 //
 //	sudo go test
 //
@@ -53,6 +54,11 @@ import (
 )
 
 const TimeSliceLength = 8
+
+var (
+	ipv4Proto = map[string]string{"ip": "ip4:icmp", "udp": "udp4"}
+	ipv6Proto = map[string]string{"ip": "ip6:ipv6-icmp", "udp": "udp6"}
+)
 
 func byteSliceOfSize(n int) []byte {
 	b := make([]byte, n)
@@ -98,7 +104,7 @@ func ipv4Payload(b []byte) []byte {
 
 type packet struct {
 	bytes []byte
-	addr  *net.IPAddr
+	addr  net.Addr
 }
 
 type context struct {
@@ -120,6 +126,7 @@ type Pinger struct {
 	seq int
 	// key string is IPAddr.String()
 	addrs   map[string]*net.IPAddr
+	network string
 	hasIPv4 bool
 	hasIPv6 bool
 	ctx     *context
@@ -147,6 +154,7 @@ func NewPinger() *Pinger {
 		id:      rand.Intn(0xffff),
 		seq:     rand.Intn(0xffff),
 		addrs:   make(map[string]*net.IPAddr),
+		network: "ip",
 		hasIPv4: false,
 		hasIPv6: false,
 		Size:    TimeSliceLength,
@@ -155,6 +163,23 @@ func NewPinger() *Pinger {
 		OnIdle:  nil,
 		Debug:   false,
 	}
+}
+
+// Network sets a network endpoints for ICMP ping and returns the previous
+// setting. network arg should be "ip" or "udp" string or if others are
+// specified, it returns an error. If this function isn't called, Pinger
+// uses "ip" as default.
+func (p *Pinger) Network(network string) (string, error) {
+	origNet := p.network
+	switch network {
+	case "ip":
+		fallthrough
+	case "udp":
+		p.network = network
+	default:
+		return origNet, errors.New(network + " can't be used as ICMP endpoint")
+	}
+	return origNet, nil
 }
 
 // AddIP adds an IP address to Pinger. ipaddr arg should be a string like
@@ -298,8 +323,8 @@ func (p *Pinger) Err() error {
 	return p.ctx.err
 }
 
-func (p *Pinger) listen(netProto string) *net.IPConn {
-	conn, err := net.ListenIP(netProto, nil)
+func (p *Pinger) listen(netProto string) *icmp.PacketConn {
+	conn, err := icmp.ListenPacket(netProto, "")
 	if err != nil {
 		p.mu.Lock()
 		p.ctx.err = err
@@ -313,16 +338,16 @@ func (p *Pinger) listen(netProto string) *net.IPConn {
 
 func (p *Pinger) run(once bool) {
 	p.debugln("Run(): Start")
-	var conn, conn6 *net.IPConn
+	var conn, conn6 *icmp.PacketConn
 	if p.hasIPv4 {
-		if conn = p.listen("ip4:icmp"); conn == nil {
+		if conn = p.listen(ipv4Proto[p.network]); conn == nil {
 			return
 		}
 		defer conn.Close()
 	}
 
 	if p.hasIPv6 {
-		if conn6 = p.listen("ip6:ipv6-icmp"); conn6 == nil {
+		if conn6 = p.listen(ipv6Proto[p.network]); conn6 == nil {
 			return
 		}
 		defer conn6.Close()
@@ -393,7 +418,7 @@ mainloop:
 	p.debugln("Run(): End")
 }
 
-func (p *Pinger) sendICMP(conn, conn6 *net.IPConn) (map[string]*net.IPAddr, error) {
+func (p *Pinger) sendICMP(conn, conn6 *icmp.PacketConn) (map[string]*net.IPAddr, error) {
 	p.debugln("sendICMP(): Start")
 	p.mu.Lock()
 	p.id = rand.Intn(0xffff)
@@ -403,7 +428,7 @@ func (p *Pinger) sendICMP(conn, conn6 *net.IPConn) (map[string]*net.IPAddr, erro
 	wg := new(sync.WaitGroup)
 	for key, addr := range p.addrs {
 		var typ icmp.Type
-		var cn *net.IPConn
+		var cn *icmp.PacketConn
 		if isIPv4(addr.IP) {
 			typ = ipv4.ICMPTypeEcho
 			cn = conn
@@ -438,12 +463,16 @@ func (p *Pinger) sendICMP(conn, conn6 *net.IPConn) (map[string]*net.IPAddr, erro
 		}
 
 		queue[key] = addr
+		var dst net.Addr = addr
+		if p.network == "udp" {
+			dst = &net.UDPAddr{IP: addr.IP, Zone: addr.Zone}
+		}
 
 		p.debugln("sendICMP(): Invoke goroutine")
 		wg.Add(1)
-		go func(conn *net.IPConn, ra *net.IPAddr, b []byte) {
+		go func(conn *icmp.PacketConn, ra net.Addr, b []byte) {
 			for {
-				if _, _, err := conn.WriteMsgIP(bytes, nil, ra); err != nil {
+				if _, err := conn.WriteTo(bytes, ra); err != nil {
 					if neterr, ok := err.(*net.OpError); ok {
 						if neterr.Err == syscall.ENOBUFS {
 							continue
@@ -452,16 +481,16 @@ func (p *Pinger) sendICMP(conn, conn6 *net.IPConn) (map[string]*net.IPAddr, erro
 				}
 				break
 			}
-			p.debugln("sendICMP(): WriteMsgIP End")
+			p.debugln("sendICMP(): WriteTo End")
 			wg.Done()
-		}(cn, addr, bytes)
+		}(cn, dst, bytes)
 	}
 	wg.Wait()
 	p.debugln("sendICMP(): End")
 	return queue, nil
 }
 
-func (p *Pinger) recvICMP(conn *net.IPConn, recv chan<- *packet, ctx *context, wg *sync.WaitGroup) {
+func (p *Pinger) recvICMP(conn *icmp.PacketConn, recv chan<- *packet, ctx *context, wg *sync.WaitGroup) {
 	p.debugln("recvICMP(): Start")
 	for {
 		select {
@@ -475,9 +504,9 @@ func (p *Pinger) recvICMP(conn *net.IPConn, recv chan<- *packet, ctx *context, w
 
 		bytes := make([]byte, 512)
 		conn.SetReadDeadline(time.Now().Add(time.Millisecond * 100))
-		p.debugln("recvICMP(): ReadMsgIP Start")
-		_, _, _, ra, err := conn.ReadMsgIP(bytes, nil)
-		p.debugln("recvICMP(): ReadMsgIP End")
+		p.debugln("recvICMP(): ReadFrom Start")
+		_, ra, err := conn.ReadFrom(bytes)
+		p.debugln("recvICMP(): ReadFrom End")
 		if err != nil {
 			if neterr, ok := err.(*net.OpError); ok {
 				if neterr.Timeout() {
@@ -510,7 +539,17 @@ func (p *Pinger) recvICMP(conn *net.IPConn, recv chan<- *packet, ctx *context, w
 }
 
 func (p *Pinger) procRecv(recv *packet, queue map[string]*net.IPAddr) {
-	addr := recv.addr.String()
+	var ipaddr *net.IPAddr
+	switch adr := recv.addr.(type) {
+	case *net.IPAddr:
+		ipaddr = adr
+	case *net.UDPAddr:
+		ipaddr = &net.IPAddr{IP: adr.IP, Zone: adr.Zone}
+	default:
+		return
+	}
+
+	addr := ipaddr.String()
 	p.mu.Lock()
 	if _, ok := p.addrs[addr]; !ok {
 		p.mu.Unlock()
@@ -520,10 +559,14 @@ func (p *Pinger) procRecv(recv *packet, queue map[string]*net.IPAddr) {
 
 	var bytes []byte
 	var proto int
-	if isIPv4(recv.addr.IP) {
-		bytes = ipv4Payload(recv.bytes)
+	if isIPv4(ipaddr.IP) {
+		if p.network == "ip" {
+			bytes = ipv4Payload(recv.bytes)
+		} else {
+			bytes = recv.bytes
+		}
 		proto = iana.ProtocolICMP
-	} else if isIPv6(recv.addr.IP) {
+	} else if isIPv6(ipaddr.IP) {
 		bytes = recv.bytes
 		proto = iana.ProtocolIPv6ICMP
 	} else {
@@ -558,7 +601,7 @@ func (p *Pinger) procRecv(recv *packet, queue map[string]*net.IPAddr) {
 		handler := p.OnRecv
 		p.mu.Unlock()
 		if handler != nil {
-			handler(recv.addr, rtt)
+			handler(ipaddr, rtt)
 		}
 	}
 }

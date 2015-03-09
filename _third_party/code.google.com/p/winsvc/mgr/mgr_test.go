@@ -10,6 +10,8 @@ import (
 	"bosun.org/_third_party/code.google.com/p/winsvc/mgr"
 	"os"
 	"path/filepath"
+	"sort"
+	"strings"
 	"testing"
 )
 
@@ -19,7 +21,7 @@ func TestOpenLanManServer(t *testing.T) {
 		t.Fatalf("SCM connection failed: %s", err)
 	}
 	defer m.Disconnect()
-	s, err := m.OpenService("lanmanserver")
+	s, err := m.OpenService("LanmanServer")
 	if err != nil {
 		t.Fatalf("OpenService(lanmanserver) failed: %s", err)
 	}
@@ -44,6 +46,18 @@ func install(t *testing.T, m *mgr.Mgr, name, exepath string, c mgr.Config) {
 	defer s.Close()
 }
 
+func depString(d []string) string {
+	if len(d) == 0 {
+		return ""
+	}
+	for i := range d {
+		d[i] = strings.ToLower(d[i])
+	}
+	ss := sort.StringSlice(d)
+	ss.Sort()
+	return strings.Join([]string(ss), " ")
+}
+
 func testConfig(t *testing.T, s *mgr.Service, should mgr.Config) mgr.Config {
 	is, err := s.Config()
 	if err != nil {
@@ -57,6 +71,9 @@ func testConfig(t *testing.T, s *mgr.Service, should mgr.Config) mgr.Config {
 	}
 	if should.Description != is.Description {
 		t.Fatalf("config mismatch: Description is %q, but should have %q", is.Description, should.Description)
+	}
+	if depString(should.Dependencies) != depString(is.Dependencies) {
+		t.Fatalf("config mismatch: Dependencies is %v, but should have %v", is.Dependencies, should.Dependencies)
 	}
 	return is
 }
@@ -78,9 +95,10 @@ func TestMyService(t *testing.T) {
 	defer m.Disconnect()
 
 	c := mgr.Config{
-		StartType:   mgr.StartDisabled,
-		DisplayName: "my service",
-		Description: "my service is just a test",
+		StartType:    mgr.StartDisabled,
+		DisplayName:  "my service",
+		Description:  "my service is just a test",
+		Dependencies: []string{"LanmanServer", "W32Time"},
 	}
 
 	exename := os.Args[0]

@@ -94,16 +94,43 @@ func (c *Context) drawContour(ps []truetype.Point, dx, dy raster.Fix32) {
 	if len(ps) == 0 {
 		return
 	}
-	// ps[0] is a truetype.Point measured in FUnits and positive Y going upwards.
-	// start is the same thing measured in fixed point units and positive Y
-	// going downwards, and offset by (dx, dy)
+
+	// The low bit of each point's Flags value is whether the point is on the
+	// curve. Truetype fonts only have quadratic Bézier curves, not cubics.
+	// Thus, two consecutive off-curve points imply an on-curve point in the
+	// middle of those two.
+	//
+	// See http://chanae.walon.org/pub/ttf/ttf_glyphs.htm for more details.
+
+	// ps[0] is a truetype.Point measured in FUnits and positive Y going
+	// upwards. start is the same thing measured in fixed point units and
+	// positive Y going downwards, and offset by (dx, dy).
 	start := raster.Point{
 		X: dx + raster.Fix32(ps[0].X<<2),
 		Y: dy - raster.Fix32(ps[0].Y<<2),
 	}
+	others := []truetype.Point(nil)
+	if ps[0].Flags&0x01 != 0 {
+		others = ps[1:]
+	} else {
+		last := raster.Point{
+			X: dx + raster.Fix32(ps[len(ps)-1].X<<2),
+			Y: dy - raster.Fix32(ps[len(ps)-1].Y<<2),
+		}
+		if ps[len(ps)-1].Flags&0x01 != 0 {
+			start = last
+			others = ps[:len(ps)-1]
+		} else {
+			start = raster.Point{
+				X: (start.X + last.X) / 2,
+				Y: (start.Y + last.Y) / 2,
+			}
+			others = ps
+		}
+	}
 	c.r.Start(start)
 	q0, on0 := start, true
-	for _, p := range ps[1:] {
+	for _, p := range others {
 		q := raster.Point{
 			X: dx + raster.Fix32(p.X<<2),
 			Y: dy - raster.Fix32(p.Y<<2),

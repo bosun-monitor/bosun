@@ -9,6 +9,7 @@ package mgr
 import (
 	"bosun.org/_third_party/code.google.com/p/winsvc/winapi"
 	"syscall"
+	"unicode/utf16"
 	"unsafe"
 )
 
@@ -35,7 +36,7 @@ type Config struct {
 	BinaryPathName   string
 	LoadOrderGroup   string
 	TagId            uint32
-	Dependencies     string
+	Dependencies     []string
 	ServiceStartName string // name of the account under which the service should run
 	DisplayName      string
 	Password         string
@@ -47,6 +48,24 @@ func toString(p *uint16) string {
 		return ""
 	}
 	return syscall.UTF16ToString((*[4096]uint16)(unsafe.Pointer(p))[:])
+}
+
+func toStringSlice(ps *uint16) []string {
+	if ps == nil {
+		return nil
+	}
+	r := make([]string, 0)
+	for from, i, p := 0, 0, (*[1 << 24]uint16)(unsafe.Pointer(ps)); true; i++ {
+		if p[i] == 0 {
+			// empty string marks the end
+			if i <= from {
+				break
+			}
+			r = append(r, string(utf16.Decode(p[from:i])))
+			from = i + 1
+		}
+	}
+	return r
 }
 
 func (s *Service) Config() (Config, error) {
@@ -87,7 +106,7 @@ func (s *Service) Config() (Config, error) {
 		BinaryPathName:   toString(p.BinaryPathName),
 		LoadOrderGroup:   toString(p.LoadOrderGroup),
 		TagId:            p.TagId,
-		Dependencies:     toString(p.Dependencies),
+		Dependencies:     toStringSlice(p.Dependencies),
 		ServiceStartName: toString(p.ServiceStartName),
 		DisplayName:      toString(p.DisplayName),
 		Description:      toString(p2.Description),
@@ -107,7 +126,7 @@ func updateDescription(handle syscall.Handle, desc string) error {
 func (s *Service) UpdateConfig(c Config) error {
 	err := winapi.ChangeServiceConfig(s.Handle, c.ServiceType, c.StartType,
 		c.ErrorControl, toPtr(c.BinaryPathName), toPtr(c.LoadOrderGroup),
-		nil, toPtr(c.Dependencies), toPtr(c.ServiceStartName),
+		nil, toStringBlock(c.Dependencies), toPtr(c.ServiceStartName),
 		toPtr(c.Password), toPtr(c.DisplayName))
 	if err != nil {
 		return err

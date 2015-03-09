@@ -327,8 +327,8 @@ func (r *Rasterizer) Add2(b, c Point) {
 		s := sStack[i]
 		p := pStack[2*i:]
 		if s > 0 {
-			// Split the quadratic curve p[0:3] into an equivalent set of two shorter curves:
-			// p[0:3] and p[2:5]. The new p[4] is the old p[2], and p[0] is unchanged.
+			// Split the quadratic curve p[:3] into an equivalent set of two shorter curves:
+			// p[:3] and p[2:5]. The new p[4] is the old p[2], and p[0] is unchanged.
 			mx := p[1].X
 			p[4].X = p[2].X
 			p[3].X = (p[4].X + mx) / 2
@@ -385,8 +385,8 @@ func (r *Rasterizer) Add3(b, c, d Point) {
 		s := sStack[i]
 		p := pStack[3*i:]
 		if s > 0 {
-			// Split the cubic curve p[0:4] into an equivalent set of two shorter curves:
-			// p[0:4] and p[3:7]. The new p[6] is the old p[3], and p[0] is unchanged.
+			// Split the cubic curve p[:4] into an equivalent set of two shorter curves:
+			// p[:4] and p[3:7]. The new p[6] is the old p[3], and p[0] is unchanged.
 			m01x := (p[0].X + p[1].X) / 2
 			m12x := (p[1].X + p[2].X) / 2
 			m23x := (p[2].X + p[3].X) / 2
@@ -519,22 +519,22 @@ func (r *Rasterizer) Rasterize(p Painter) {
 				}
 			}
 			if s > len(r.spanBuf)-2 {
-				p.Paint(r.spanBuf[0:s], false)
+				p.Paint(r.spanBuf[:s], false)
 				s = 0
 			}
 		}
 	}
-	p.Paint(r.spanBuf[0:s], true)
+	p.Paint(r.spanBuf[:s], true)
 }
 
 // Clear cancels any previous calls to r.Start or r.AddXxx.
 func (r *Rasterizer) Clear() {
-	r.a = Point{0, 0}
+	r.a = Point{}
 	r.xi = 0
 	r.yi = 0
 	r.area = 0
 	r.cover = 0
-	r.cell = r.cell[0:0]
+	r.cell = r.cell[:0]
 	for i := 0; i < len(r.cellIndex); i++ {
 		r.cellIndex[i] = -1
 	}
@@ -562,11 +562,11 @@ func (r *Rasterizer) SetBounds(width, height int) {
 	r.width = width
 	r.splitScale2 = ss2
 	r.splitScale3 = ss3
-	r.cell = r.cellBuf[0:0]
+	r.cell = r.cellBuf[:0]
 	if height > len(r.cellIndexBuf) {
 		r.cellIndex = make([]int, height)
 	} else {
-		r.cellIndex = r.cellIndexBuf[0:height]
+		r.cellIndex = r.cellIndexBuf[:height]
 	}
 	r.Clear()
 }

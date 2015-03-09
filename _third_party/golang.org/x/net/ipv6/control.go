@@ -17,21 +17,6 @@ var (
 	errNoSuchInterface = errors.New("no such interface")
 )
 
-// References:
-//
-// RFC 2292  Advanced Sockets API for IPv6
-//	http://tools.ietf.org/html/rfc2292
-// RFC 2460  Internet Protocol, Version 6 (IPv6) Specification
-//	http://tools.ietf.org/html/rfc2460
-// RFC 3493  Basic Socket Interface Extensions for IPv6
-//	http://tools.ietf.org/html/rfc3493.html
-// RFC 3542  Advanced Sockets Application Program Interface (API) for IPv6
-//	http://tools.ietf.org/html/rfc3542
-// RFC 3678  Socket Interface Extensions for Multicast Source Filters
-//	http://tools.ietf.org/html/rfc3678
-// RFC 4607  Source-Specific Multicast for IP
-//	http://tools.ietf.org/html/rfc4607
-//
 // Note that RFC 3542 obsoletes RFC 2292 but OS X Snow Leopard and the
 // former still support RFC 2292 only.  Please be aware that almost
 // all protocol implementations prohibit using a combination of RFC

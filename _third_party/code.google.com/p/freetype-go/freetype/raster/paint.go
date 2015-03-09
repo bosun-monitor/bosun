@@ -208,11 +208,11 @@ func (m *MonochromePainter) Paint(ss []Span, done bool) {
 		if j < len(ss) {
 			ss[j] = finalSpan
 			j++
-			m.Painter.Paint(ss[0:j], true)
+			m.Painter.Paint(ss[:j], true)
 		} else if j == len(ss) {
 			m.Painter.Paint(ss, false)
 			if cap(ss) > 0 {
-				ss = ss[0:1]
+				ss = ss[:1]
 			} else {
 				ss = make([]Span, 1)
 			}
@@ -224,7 +224,7 @@ func (m *MonochromePainter) Paint(ss []Span, done bool) {
 		// Reset the accumulator, so that this Painter can be re-used.
 		m.y, m.x0, m.x1 = 0, 0, 0
 	} else {
-		m.Painter.Paint(ss[0:j], false)
+		m.Painter.Paint(ss[:j], false)
 	}
 }
 
@@ -253,11 +253,11 @@ func (g *GammaCorrectionPainter) Paint(ss []Span, done bool) {
 			M = 0x1010101 // 255*M == 1<<32-1
 			N = 0x8080    // N = M>>9, and N < 1<<16-1
 		)
-		for i, _ := range ss {
-			if ss[i].A == 0 || ss[i].A == 1<<32-1 {
+		for i, s := range ss {
+			if s.A == 0 || s.A == 1<<32-1 {
 				continue
 			}
-			p, q := ss[i].A/M, (ss[i].A%M)>>9
+			p, q := s.A/M, (s.A%M)>>9
 			// The resultant alpha is a linear interpolation of g.a[p] and g.a[p+1].
 			a := uint32(g.a[p])*(N-q) + uint32(g.a[p+1])*q
 			a = (a + N/2) / N

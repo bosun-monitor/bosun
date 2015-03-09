@@ -264,6 +264,10 @@ func (pn *protocolNumbers) escape() []canonProtocolRecord {
 		" ", "",
 	)
 	for i, pr := range pn.Records {
+		if strings.Contains(pr.Name, "Deprecated") ||
+			strings.Contains(pr.Name, "deprecated") {
+			continue
+		}
 		prs[i].OrigName = pr.Name
 		s := strings.TrimSpace(pr.Name)
 		switch pr.Name {

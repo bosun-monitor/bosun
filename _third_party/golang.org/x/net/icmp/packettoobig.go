@@ -7,11 +7,11 @@ package icmp
 // A PacketTooBig represents an ICMP packet too big message body.
 type PacketTooBig struct {
 	MTU  int    // maximum transmission unit of the nexthop link
-	Data []byte // data
+	Data []byte // data, known as original datagram field
 }
 
 // Len implements the Len method of MessageBody interface.
-func (p *PacketTooBig) Len() int {
+func (p *PacketTooBig) Len(proto int) int {
 	if p == nil {
 		return 0
 	}

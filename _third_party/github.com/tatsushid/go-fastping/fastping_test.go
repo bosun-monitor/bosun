@@ -38,177 +38,187 @@ func TestAddIP(t *testing.T) {
 }
 
 func TestRun(t *testing.T) {
-	p := NewPinger()
+	for _, network := range []string{"ip", "udp"} {
+		p := NewPinger()
+		p.Network(network)
 
-	if err := p.AddIP("127.0.0.1"); err != nil {
-		t.Fatalf("AddIP failed: %v", err)
-	}
-
-	if err := p.AddIP("127.0.0.100"); err != nil {
-		t.Fatalf("AddIP failed: %v", err)
-	}
-
-	if err := p.AddIP("::1"); err != nil {
-		t.Fatalf("AddIP failed: %v", err)
-	}
-
-	found1, found100, foundv6 := false, false, false
-	called, idle := false, false
-	p.OnRecv = func(ip *net.IPAddr, d time.Duration) {
-		called = true
-		if ip.String() == "127.0.0.1" {
-			found1 = true
-		} else if ip.String() == "127.0.0.100" {
-			found100 = true
-		} else if ip.String() == "::1" {
-			foundv6 = true
+		if err := p.AddIP("127.0.0.1"); err != nil {
+			t.Fatalf("AddIP failed: %v", err)
 		}
-	}
 
-	p.OnIdle = func() {
-		idle = true
-	}
+		if err := p.AddIP("127.0.0.100"); err != nil {
+			t.Fatalf("AddIP failed: %v", err)
+		}
 
-	err := p.Run()
-	if err != nil {
-		t.Fatalf("Pinger returns error: %v", err)
-	}
-	if !called {
-		t.Fatalf("Pinger didn't get any responses")
-	}
-	if !idle {
-		t.Fatalf("Pinger didn't call OnIdle function")
-	}
-	if !found1 {
-		t.Fatalf("Pinger `127.0.0.1` didn't respond")
-	}
-	if found100 {
-		t.Fatalf("Pinger `127.0.0.100` responded")
-	}
-	if !foundv6 {
-		t.Fatalf("Pinger `::1` didn't responded")
+		if err := p.AddIP("::1"); err != nil {
+			t.Fatalf("AddIP failed: %v", err)
+		}
+
+		found1, found100, foundv6 := false, false, false
+		called, idle := false, false
+		p.OnRecv = func(ip *net.IPAddr, d time.Duration) {
+			called = true
+			if ip.String() == "127.0.0.1" {
+				found1 = true
+			} else if ip.String() == "127.0.0.100" {
+				found100 = true
+			} else if ip.String() == "::1" {
+				foundv6 = true
+			}
+		}
+
+		p.OnIdle = func() {
+			idle = true
+		}
+
+		err := p.Run()
+		if err != nil {
+			t.Fatalf("Pinger returns error: %v", err)
+		}
+		if !called {
+			t.Fatalf("Pinger didn't get any responses")
+		}
+		if !idle {
+			t.Fatalf("Pinger didn't call OnIdle function")
+		}
+		if !found1 {
+			t.Fatalf("Pinger `127.0.0.1` didn't respond")
+		}
+		if found100 {
+			t.Fatalf("Pinger `127.0.0.100` responded")
+		}
+		if !foundv6 {
+			t.Fatalf("Pinger `::1` didn't responded")
+		}
 	}
 }
 
 func TestMultiRun(t *testing.T) {
-	p1 := NewPinger()
-	p2 := NewPinger()
+	for _, network := range []string{"ip", "udp"} {
+		p1 := NewPinger()
+		p1.Network(network)
+		p2 := NewPinger()
+		p2.Network(network)
 
-	if err := p1.AddIP("127.0.0.1"); err != nil {
-		t.Fatalf("AddIP 1 failed: %v", err)
-	}
-
-	if err := p2.AddIP("127.0.0.1"); err != nil {
-		t.Fatalf("AddIP 2 failed: %v", err)
-	}
-
-	var mu sync.Mutex
-	res1 := 0
-	p1.OnRecv = func(*net.IPAddr, time.Duration) {
-		mu.Lock()
-		res1++
-		mu.Unlock()
-	}
-
-	res2 := 0
-	p2.OnRecv = func(*net.IPAddr, time.Duration) {
-		mu.Lock()
-		res2++
-		mu.Unlock()
-	}
-
-	p1.MaxRTT, p2.MaxRTT = time.Millisecond*100, time.Millisecond*100
-
-	if err := p1.Run(); err != nil {
-		t.Fatalf("Pinger 1 returns error: %v", err)
-	}
-	if res1 == 0 {
-		t.Fatalf("Pinger 1 didn't get any responses")
-	}
-	if res2 > 0 {
-		t.Fatalf("Pinger 2 got response")
-	}
-
-	res1, res2 = 0, 0
-	if err := p2.Run(); err != nil {
-		t.Fatalf("Pinger 2 returns error: %v", err)
-	}
-	if res1 > 0 {
-		t.Fatalf("Pinger 1 got response")
-	}
-	if res2 == 0 {
-		t.Fatalf("Pinger 2 didn't get any responses")
-	}
-
-	res1, res2 = 0, 0
-	errch1, errch2 := make(chan error), make(chan error)
-	go func(ch chan error) {
-		err := p1.Run()
-		if err != nil {
-			ch <- err
+		if err := p1.AddIP("127.0.0.1"); err != nil {
+			t.Fatalf("AddIP 1 failed: %v", err)
 		}
-	}(errch1)
-	go func(ch chan error) {
-		err := p2.Run()
-		if err != nil {
-			ch <- err
+
+		if err := p2.AddIP("127.0.0.1"); err != nil {
+			t.Fatalf("AddIP 2 failed: %v", err)
 		}
-	}(errch2)
-	ticker := time.NewTicker(time.Millisecond * 200)
-	select {
-	case err := <-errch1:
-		t.Fatalf("Pinger 1 returns error: %v", err)
-	case err := <-errch2:
-		t.Fatalf("Pinger 2 returns error: %v", err)
-	case <-ticker.C:
-		break
-	}
-	mu.Lock()
-	defer mu.Unlock()
-	if res1 != 1 {
-		t.Fatalf("Pinger 1 didn't get correct response")
-	}
-	if res2 != 1 {
-		t.Fatalf("Pinger 2 didn't get correct response")
+
+		var mu sync.Mutex
+		res1 := 0
+		p1.OnRecv = func(*net.IPAddr, time.Duration) {
+			mu.Lock()
+			res1++
+			mu.Unlock()
+		}
+
+		res2 := 0
+		p2.OnRecv = func(*net.IPAddr, time.Duration) {
+			mu.Lock()
+			res2++
+			mu.Unlock()
+		}
+
+		p1.MaxRTT, p2.MaxRTT = time.Millisecond*100, time.Millisecond*100
+
+		if err := p1.Run(); err != nil {
+			t.Fatalf("Pinger 1 returns error: %v", err)
+		}
+		if res1 == 0 {
+			t.Fatalf("Pinger 1 didn't get any responses")
+		}
+		if res2 > 0 {
+			t.Fatalf("Pinger 2 got response")
+		}
+
+		res1, res2 = 0, 0
+		if err := p2.Run(); err != nil {
+			t.Fatalf("Pinger 2 returns error: %v", err)
+		}
+		if res1 > 0 {
+			t.Fatalf("Pinger 1 got response")
+		}
+		if res2 == 0 {
+			t.Fatalf("Pinger 2 didn't get any responses")
+		}
+
+		res1, res2 = 0, 0
+		errch1, errch2 := make(chan error), make(chan error)
+		go func(ch chan error) {
+			err := p1.Run()
+			if err != nil {
+				ch <- err
+			}
+		}(errch1)
+		go func(ch chan error) {
+			err := p2.Run()
+			if err != nil {
+				ch <- err
+			}
+		}(errch2)
+		ticker := time.NewTicker(time.Millisecond * 200)
+		select {
+		case err := <-errch1:
+			t.Fatalf("Pinger 1 returns error: %v", err)
+		case err := <-errch2:
+			t.Fatalf("Pinger 2 returns error: %v", err)
+		case <-ticker.C:
+			break
+		}
+		mu.Lock()
+		defer mu.Unlock()
+		if res1 != 1 {
+			t.Fatalf("Pinger 1 didn't get correct response")
+		}
+		if res2 != 1 {
+			t.Fatalf("Pinger 2 didn't get correct response")
+		}
 	}
 }
 
 func TestRunLoop(t *testing.T) {
-	p := NewPinger()
+	for _, network := range []string{"ip", "udp"} {
+		p := NewPinger()
+		p.Network(network)
 
-	if err := p.AddIP("127.0.0.1"); err != nil {
-		t.Fatalf("AddIP failed: %v", err)
-	}
-	p.MaxRTT = time.Millisecond * 100
-
-	recvCount, idleCount := 0, 0
-	p.OnRecv = func(*net.IPAddr, time.Duration) {
-		recvCount++
-	}
-
-	p.OnIdle = func() {
-		idleCount++
-	}
-
-	var err error
-	p.RunLoop()
-	ticker := time.NewTicker(time.Millisecond * 250)
-	select {
-	case <-p.Done():
-		if err = p.Err(); err != nil {
-			t.Fatalf("Pinger returns error %v", err)
+		if err := p.AddIP("127.0.0.1"); err != nil {
+			t.Fatalf("AddIP failed: %v", err)
 		}
-	case <-ticker.C:
-		break
-	}
-	ticker.Stop()
-	p.Stop()
+		p.MaxRTT = time.Millisecond * 100
 
-	if recvCount < 2 {
-		t.Fatalf("Pinger receive count less than 2")
-	}
-	if idleCount < 2 {
-		t.Fatalf("Pinger idle count less than 2")
+		recvCount, idleCount := 0, 0
+		p.OnRecv = func(*net.IPAddr, time.Duration) {
+			recvCount++
+		}
+
+		p.OnIdle = func() {
+			idleCount++
+		}
+
+		var err error
+		p.RunLoop()
+		ticker := time.NewTicker(time.Millisecond * 250)
+		select {
+		case <-p.Done():
+			if err = p.Err(); err != nil {
+				t.Fatalf("Pinger returns error %v", err)
+			}
+		case <-ticker.C:
+			break
+		}
+		ticker.Stop()
+		p.Stop()
+
+		if recvCount < 2 {
+			t.Fatalf("Pinger receive count less than 2")
+		}
+		if idleCount < 2 {
+			t.Fatalf("Pinger idle count less than 2")
+		}
 	}
 }
 

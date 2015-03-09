@@ -6,11 +6,11 @@ package ipv6_test
 
 import (
 	"net"
-	"os"
 	"reflect"
 	"runtime"
 	"testing"
 
+	"bosun.org/_third_party/golang.org/x/net/internal/nettest"
 	"bosun.org/_third_party/golang.org/x/net/ipv6"
 )
 
@@ -35,7 +35,7 @@ func TestICMPString(t *testing.T) {
 func TestICMPFilter(t *testing.T) {
 	switch runtime.GOOS {
 	case "nacl", "plan9", "solaris", "windows":
-		t.Skipf("not supported on %q", runtime.GOOS)
+		t.Skipf("not supported on %s", runtime.GOOS)
 	}
 
 	var f ipv6.ICMPFilter
@@ -62,13 +62,13 @@ func TestICMPFilter(t *testing.T) {
 func TestSetICMPFilter(t *testing.T) {
 	switch runtime.GOOS {
 	case "nacl", "plan9", "solaris", "windows":
-		t.Skipf("not supported on %q", runtime.GOOS)
+		t.Skipf("not supported on %s", runtime.GOOS)
 	}
 	if !supportsIPv6 {
 		t.Skip("ipv6 is not supported")
 	}
-	if os.Getuid() != 0 {
-		t.Skip("must be root")
+	if m, ok := nettest.SupportsRawIPSocket(); !ok {
+		t.Skip(m)
 	}
 
 	c, err := net.ListenPacket("ip6:ipv6-icmp", "::1")

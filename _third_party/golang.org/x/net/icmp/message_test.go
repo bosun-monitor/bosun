@@ -51,7 +51,7 @@ var marshalAndParseMessageForIPv4Tests = []icmp.Message{
 }
 
 func TestMarshalAndParseMessageForIPv4(t *testing.T) {
-	for _, tt := range marshalAndParseMessageForIPv4Tests {
+	for i, tt := range marshalAndParseMessageForIPv4Tests {
 		b, err := tt.Marshal(nil)
 		if err != nil {
 			t.Fatal(err)
@@ -61,10 +61,10 @@ func TestMarshalAndParseMessageForIPv4(t *testing.T) {
 			t.Fatal(err)
 		}
 		if m.Type != tt.Type || m.Code != tt.Code {
-			t.Errorf("got %v; want %v", m, &tt)
+			t.Errorf("#%v: got %v; want %v", i, m, &tt)
 		}
 		if !reflect.DeepEqual(m.Body, tt.Body) {
-			t.Errorf("got %v; want %v", m.Body, tt.Body)
+			t.Errorf("#%v: got %v; want %v", i, m.Body, tt.Body)
 		}
 	}
 }
@@ -113,7 +113,7 @@ var marshalAndParseMessageForIPv6Tests = []icmp.Message{
 
 func TestMarshalAndParseMessageForIPv6(t *testing.T) {
 	pshicmp := icmp.IPv6PseudoHeader(net.ParseIP("fe80::1"), net.ParseIP("ff02::1"))
-	for _, tt := range marshalAndParseMessageForIPv6Tests {
+	for i, tt := range marshalAndParseMessageForIPv6Tests {
 		for _, psh := range [][]byte{pshicmp, nil} {
 			b, err := tt.Marshal(psh)
 			if err != nil {
@@ -124,10 +124,10 @@ func TestMarshalAndParseMessageForIPv6(t *testing.T) {
 				t.Fatal(err)
 			}
 			if m.Type != tt.Type || m.Code != tt.Code {
-				t.Errorf("got %v; want %v", m, &tt)
+				t.Errorf("#%v: got %v; want %v", i, m, &tt)
 			}
 			if !reflect.DeepEqual(m.Body, tt.Body) {
-				t.Errorf("got %v; want %v", m.Body, tt.Body)
+				t.Errorf("#%v: got %v; want %v", i, m.Body, tt.Body)
 			}
 		}
 	}

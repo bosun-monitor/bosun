@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/olivere/elastic/uritemplates"
+	"bosun.org/_third_party/github.com/olivere/elastic/uritemplates"
 )
 
 // DeleteTemplateService deletes a search template. More information can

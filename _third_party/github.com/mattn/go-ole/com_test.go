@@ -1,3 +1,5 @@
+// +build windows
+
 package ole
 
 import (
@@ -150,6 +152,24 @@ func TestCreateInstance_WindowsMediaNSSManager(t *testing.T) {
 	}
 }
 
-func TestSysAllocStringLen(t *testing.T) {
-	SysAllocStringLen("")
+func TestError(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Log(r)
+			t.Fail()
+		}
+	}()
+
+	coInitialize()
+	defer CoUninitialize()
+	_, err := CLSIDFromProgID("INTERFACE-NOT-FOUND")
+	if err == nil {
+		t.Fatalf("should be fail", err)
+	}
+
+	switch vt := err.(type) {
+	case *OleError:
+	default:
+		t.Fatalf("should be *ole.OleError %t", vt)
+	}
 }

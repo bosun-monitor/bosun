@@ -38,7 +38,7 @@ const (
 	CongestionExperienced = 0x3 // CE (Congestion Experienced)
 )
 
-// Protocol Numbers, Updated: 2014-08-12
+// Protocol Numbers, Updated: 2015-01-06
 const (
 	ProtocolIP             = 0   // IPv4 encapsulation, pseudo protocol number
 	ProtocolHOPOPT         = 0   // IPv6 Hop-by-Hop Option
@@ -94,7 +94,6 @@ const (
 	ProtocolESP            = 50  // Encap Security Payload
 	ProtocolAH             = 51  // Authentication Header
 	ProtocolINLSP          = 52  // Integrated Net Layer Security  TUBA
-	ProtocolSWIPE          = 53  // IP with Encryption
 	ProtocolNARP           = 54  // NBMA Address Resolution Protocol
 	ProtocolMOBILE         = 55  // IP Mobility
 	ProtocolTLSP           = 56  // Transport Layer Security Protocol using Kryptonet key management
@@ -134,7 +133,6 @@ const (
 	ProtocolMTP            = 92  // Multicast Transport Protocol
 	ProtocolAX25           = 93  // AX.25 Frames
 	ProtocolIPIP           = 94  // IP-within-IP Encapsulation Protocol
-	ProtocolMICP           = 95  // Mobile Internetworking Control Pro.
 	ProtocolSCCSP          = 96  // Semaphore Communications Sec. Pro.
 	ProtocolETHERIP        = 97  // Ethernet-within-IP Encapsulation
 	ProtocolENCAP          = 98  // Encapsulation Header

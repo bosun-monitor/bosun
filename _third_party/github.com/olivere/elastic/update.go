@@ -10,7 +10,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/olivere/elastic/uritemplates"
+	"bosun.org/_third_party/github.com/olivere/elastic/uritemplates"
 )
 
 // UpdateResult is the result of updating a document in Elasticsearch.

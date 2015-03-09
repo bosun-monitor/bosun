@@ -44,8 +44,8 @@ callback. For more detail, refer [godoc][godoc] and if you need more example,
 please see "cmd/ping/ping.go".
 
 ## Caution
-This package now only implements ICMP ping using raw socket so the program
-using this package needs to be run as root user.
+This package implements ICMP ping using both raw socket and UDP. If your program
+uses this package in raw socket mode, it needs to be run as a root user.
 
 ## License
 go-fastping is under MIT License. See the [LICENSE][license] file for details.

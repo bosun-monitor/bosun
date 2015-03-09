@@ -11,7 +11,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/olivere/elastic"
+	"bosun.org/_third_party/github.com/olivere/elastic"
 )
 
 type Tweet struct {

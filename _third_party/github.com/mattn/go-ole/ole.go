@@ -1,7 +1,10 @@
+// +build windows
+
 package ole
 
 import (
 	"fmt"
+	"strings"
 	"syscall"
 	"unicode/utf16"
 )
@@ -9,6 +12,7 @@ import (
 type OleError struct {
 	hr          uintptr
 	description string
+	subError    error
 }
 
 func errstr(errno int) string {
@@ -26,11 +30,15 @@ func errstr(errno int) string {
 }
 
 func NewError(hr uintptr) *OleError {
-	return &OleError{hr, ""}
+	return &OleError{hr: hr}
 }
 
 func NewErrorWithDescription(hr uintptr, description string) *OleError {
-	return &OleError{hr, description}
+	return &OleError{hr: hr, description: description}
+}
+
+func NewErrorWithSubError(hr uintptr, description string, err error) *OleError {
+	return &OleError{hr: hr, description: description, subError: err}
 }
 
 func (v *OleError) Code() uintptr {
@@ -39,17 +47,21 @@ func (v *OleError) Code() uintptr {
 
 func (v *OleError) String() string {
 	if v.description != "" {
-		return errstr(int(v.hr)) + "(" + v.description + ")"
+		return errstr(int(v.hr)) + " (" + v.description + ")"
 	}
 	return errstr(int(v.hr))
 }
 
 func (v *OleError) Error() string {
-	return errstr(int(v.hr))
+	return v.String()
 }
 
 func (v *OleError) Description() string {
 	return v.description
+}
+
+func (v *OleError) SubError() error {
+	return v.subError
 }
 
 type DISPPARAMS struct {
@@ -68,7 +80,51 @@ type EXCEPINFO struct {
 	dwHelpContext     uint32
 	pvReserved        uintptr
 	pfnDeferredFillIn uintptr
-	scode             int32
+	scode             uint32
+}
+
+func (e EXCEPINFO) String() string {
+	var src, desc, hlp string
+	if e.bstrSource == nil {
+		src = "<nil>"
+	} else {
+		src = BstrToString(e.bstrSource)
+	}
+
+	if e.bstrDescription == nil {
+		desc = "<nil>"
+	} else {
+		desc = BstrToString(e.bstrDescription)
+	}
+
+	if e.bstrHelpFile == nil {
+		hlp = "<nil>"
+	} else {
+		hlp = BstrToString(e.bstrHelpFile)
+	}
+
+	return fmt.Sprintf(
+		"wCode: %#x, bstrSource: %v, bstrDescription: %v, bstrHelpFile: %v, dwHelpContext: %#x, scode: %#x",
+		e.wCode, src, desc, hlp, e.dwHelpContext, e.scode,
+	)
+}
+
+func (e EXCEPINFO) Error() string {
+	if e.bstrDescription != nil {
+		return strings.TrimSpace(BstrToString(e.bstrDescription))
+	}
+
+	src := "Unknown"
+	if e.bstrSource != nil {
+		src = BstrToString(e.bstrSource)
+	}
+
+	code := e.scode
+	if e.wCode != 0 {
+		code = uint32(e.wCode)
+	}
+
+	return fmt.Sprintf("%v: %#x", src, code)
 }
 
 type PARAMDATA struct {

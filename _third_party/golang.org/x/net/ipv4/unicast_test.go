@@ -21,11 +21,11 @@ import (
 func TestPacketConnReadWriteUnicastUDP(t *testing.T) {
 	switch runtime.GOOS {
 	case "nacl", "plan9", "solaris", "windows":
-		t.Skipf("not supported on %q", runtime.GOOS)
+		t.Skipf("not supported on %s", runtime.GOOS)
 	}
 	ifi := nettest.RoutedInterface("ip4", net.FlagUp|net.FlagLoopback)
 	if ifi == nil {
-		t.Skipf("not available on %q", runtime.GOOS)
+		t.Skipf("not available on %s", runtime.GOOS)
 	}
 
 	c, err := net.ListenPacket("udp4", "127.0.0.1:0")
@@ -46,7 +46,7 @@ func TestPacketConnReadWriteUnicastUDP(t *testing.T) {
 	for i, toggle := range []bool{true, false, true} {
 		if err := p.SetControlMessage(cf, toggle); err != nil {
 			if nettest.ProtocolNotSupported(err) {
-				t.Logf("not supported on %q", runtime.GOOS)
+				t.Logf("not supported on %s", runtime.GOOS)
 				continue
 			}
 			t.Fatal(err)
@@ -77,14 +77,14 @@ func TestPacketConnReadWriteUnicastUDP(t *testing.T) {
 func TestPacketConnReadWriteUnicastICMP(t *testing.T) {
 	switch runtime.GOOS {
 	case "nacl", "plan9", "solaris", "windows":
-		t.Skipf("not supported on %q", runtime.GOOS)
+		t.Skipf("not supported on %s", runtime.GOOS)
 	}
-	if os.Getuid() != 0 {
-		t.Skip("must be root")
+	if m, ok := nettest.SupportsRawIPSocket(); !ok {
+		t.Skip(m)
 	}
 	ifi := nettest.RoutedInterface("ip4", net.FlagUp|net.FlagLoopback)
 	if ifi == nil {
-		t.Skipf("not available on %q", runtime.GOOS)
+		t.Skipf("not available on %s", runtime.GOOS)
 	}
 
 	c, err := net.ListenPacket("ip4:icmp", "0.0.0.0")
@@ -114,7 +114,7 @@ func TestPacketConnReadWriteUnicastICMP(t *testing.T) {
 		}
 		if err := p.SetControlMessage(cf, toggle); err != nil {
 			if nettest.ProtocolNotSupported(err) {
-				t.Logf("not supported on %q", runtime.GOOS)
+				t.Logf("not supported on %s", runtime.GOOS)
 				continue
 			}
 			t.Fatal(err)
@@ -136,7 +136,7 @@ func TestPacketConnReadWriteUnicastICMP(t *testing.T) {
 		if n, cm, _, err := p.ReadFrom(rb); err != nil {
 			switch runtime.GOOS {
 			case "darwin": // older darwin kernels have some limitation on receiving icmp packet through raw socket
-				t.Logf("not supported on %q", runtime.GOOS)
+				t.Logf("not supported on %s", runtime.GOOS)
 				continue
 			}
 			t.Fatal(err)
@@ -160,14 +160,14 @@ func TestPacketConnReadWriteUnicastICMP(t *testing.T) {
 func TestRawConnReadWriteUnicastICMP(t *testing.T) {
 	switch runtime.GOOS {
 	case "nacl", "plan9", "solaris", "windows":
-		t.Skipf("not supported on %q", runtime.GOOS)
+		t.Skipf("not supported on %s", runtime.GOOS)
 	}
-	if os.Getuid() != 0 {
-		t.Skip("must be root")
+	if m, ok := nettest.SupportsRawIPSocket(); !ok {
+		t.Skip(m)
 	}
 	ifi := nettest.RoutedInterface("ip4", net.FlagUp|net.FlagLoopback)
 	if ifi == nil {
-		t.Skipf("not available on %q", runtime.GOOS)
+		t.Skipf("not available on %s", runtime.GOOS)
 	}
 
 	c, err := net.ListenPacket("ip4:icmp", "0.0.0.0")
@@ -209,7 +209,7 @@ func TestRawConnReadWriteUnicastICMP(t *testing.T) {
 		}
 		if err := r.SetControlMessage(cf, toggle); err != nil {
 			if nettest.ProtocolNotSupported(err) {
-				t.Logf("not supported on %q", runtime.GOOS)
+				t.Logf("not supported on %s", runtime.GOOS)
 				continue
 			}
 			t.Fatal(err)
@@ -228,7 +228,7 @@ func TestRawConnReadWriteUnicastICMP(t *testing.T) {
 		if _, b, cm, err := r.ReadFrom(rb); err != nil {
 			switch runtime.GOOS {
 			case "darwin": // older darwin kernels have some limitation on receiving icmp packet through raw socket
-				t.Logf("not supported on %q", runtime.GOOS)
+				t.Logf("not supported on %s", runtime.GOOS)
 				continue
 			}
 			t.Fatal(err)

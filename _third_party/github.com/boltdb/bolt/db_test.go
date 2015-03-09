@@ -1,6 +1,7 @@
 package bolt_test
 
 import (
+	"encoding/binary"
 	"errors"
 	"flag"
 	"fmt"
@@ -83,6 +84,96 @@ func TestOpen_Wait(t *testing.T) {
 	assert(t, db1 != nil, "")
 	ok(t, err)
 	assert(t, time.Since(start) > 100*time.Millisecond, "")
+}
+
+// Ensure that opening a database does not increase its size.
+// https://github.com/boltdb/bolt/issues/291
+func TestOpen_Size(t *testing.T) {
+	// Open a data file.
+	db := NewTestDB()
+	path := db.Path()
+	defer db.Close()
+
+	// Insert until we get above the minimum 4MB size.
+	ok(t, db.Update(func(tx *bolt.Tx) error {
+		b, _ := tx.CreateBucketIfNotExists([]byte("data"))
+		for i := 0; i < 10000; i++ {
+			ok(t, b.Put([]byte(fmt.Sprintf("%04d", i)), make([]byte, 1000)))
+		}
+		return nil
+	}))
+
+	// Close database and grab the size.
+	db.DB.Close()
+	sz := fileSize(path)
+	if sz == 0 {
+		t.Fatalf("unexpected new file size: %d", sz)
+	}
+
+	// Reopen database, update, and check size again.
+	db0, err := bolt.Open(path, 0666, nil)
+	ok(t, err)
+	ok(t, db0.Update(func(tx *bolt.Tx) error { return tx.Bucket([]byte("data")).Put([]byte{0}, []byte{0}) }))
+	ok(t, db0.Close())
+	newSz := fileSize(path)
+	if newSz == 0 {
+		t.Fatalf("unexpected new file size: %d", newSz)
+	}
+
+	// Compare the original size with the new size.
+	if sz != newSz {
+		t.Fatalf("unexpected file growth: %d => %d", sz, newSz)
+	}
+}
+
+// Ensure that opening a database beyond the max step size does not increase its size.
+// https://github.com/boltdb/bolt/issues/303
+func TestOpen_Size_Large(t *testing.T) {
+	if testing.Short() {
+		t.Skip("short mode")
+	}
+
+	// Open a data file.
+	db := NewTestDB()
+	path := db.Path()
+	defer db.Close()
+
+	// Insert until we get above the minimum 4MB size.
+	var index uint64
+	for i := 0; i < 10000; i++ {
+		ok(t, db.Update(func(tx *bolt.Tx) error {
+			b, _ := tx.CreateBucketIfNotExists([]byte("data"))
+			for j := 0; j < 1000; j++ {
+				ok(t, b.Put(u64tob(index), make([]byte, 50)))
+				index++
+			}
+			return nil
+		}))
+	}
+
+	// Close database and grab the size.
+	db.DB.Close()
+	sz := fileSize(path)
+	if sz == 0 {
+		t.Fatalf("unexpected new file size: %d", sz)
+	} else if sz < (1 << 30) {
+		t.Fatalf("expected larger initial size: %d", sz)
+	}
+
+	// Reopen database, update, and check size again.
+	db0, err := bolt.Open(path, 0666, nil)
+	ok(t, err)
+	ok(t, db0.Update(func(tx *bolt.Tx) error { return tx.Bucket([]byte("data")).Put([]byte{0}, []byte{0}) }))
+	ok(t, db0.Close())
+	newSz := fileSize(path)
+	if newSz == 0 {
+		t.Fatalf("unexpected new file size: %d", newSz)
+	}
+
+	// Compare the original size with the new size.
+	if sz != newSz {
+		t.Fatalf("unexpected file growth: %d => %d", sz, newSz)
+	}
 }
 
 // Ensure that a re-opened database is consistent.
@@ -648,3 +739,24 @@ func trunc(b []byte, length int) []byte {
 func truncDuration(d time.Duration) string {
 	return regexp.MustCompile(`^(\d+)(\.\d+)`).ReplaceAllString(d.String(), "$1")
 }
+
+func fileSize(path string) int64 {
+	fi, err := os.Stat(path)
+	if err != nil {
+		return 0
+	}
+	return fi.Size()
+}
+
+func warn(v ...interface{})              { fmt.Fprintln(os.Stderr, v...) }
+func warnf(msg string, v ...interface{}) { fmt.Fprintf(os.Stderr, msg+"\n", v...) }
+
+// u64tob converts a uint64 into an 8-byte slice.
+func u64tob(v uint64) []byte {
+	b := make([]byte, 8)
+	binary.BigEndian.PutUint64(b, v)
+	return b
+}
+
+// btou64 converts an 8-byte slice into an uint64.
+func btou64(b []byte) uint64 { return binary.BigEndian.Uint64(b) }

@@ -7,7 +7,8 @@ package icmp
 // A MessageBody represents an ICMP message body.
 type MessageBody interface {
 	// Len returns the length of ICMP message body.
-	Len() int
+	// Proto must be either the ICMPv4 or ICMPv6 protocol number.
+	Len(proto int) int
 
 	// Marshal returns the binary enconding of ICMP message body.
 	// Proto must be either the ICMPv4 or ICMPv6 protocol number.
@@ -20,7 +21,7 @@ type DefaultMessageBody struct {
 }
 
 // Len implements the Len method of MessageBody interface.
-func (p *DefaultMessageBody) Len() int {
+func (p *DefaultMessageBody) Len(proto int) int {
 	if p == nil {
 		return 0
 	}

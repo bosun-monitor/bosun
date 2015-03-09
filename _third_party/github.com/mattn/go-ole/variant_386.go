@@ -1,8 +1,10 @@
 // +build 386
+// +build windows
+
 package ole
 
 type VARIANT struct {
-	VT         uint16 //  2
+	VT         VT     //  2
 	wReserved1 uint16 //  4
 	wReserved2 uint16 //  6
 	wReserved3 uint16 //  8

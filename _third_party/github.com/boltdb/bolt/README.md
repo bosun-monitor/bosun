@@ -16,7 +16,7 @@ and setting values. That's it.
 
 ## Project Status
 
-Bolt is stable and the API is fixed. Full unit test coverage and randomized 
+Bolt is stable and the API is fixed. Full unit test coverage and randomized
 black box testing are used to ensure database consistency and thread safety.
 Bolt is currently in high-load production environments serving databases as
 large as 1TB. Many companies such as Shopify and Heroku use Bolt-backed
@@ -120,10 +120,44 @@ err := db.View(func(tx *bolt.Tx) error {
 })
 ```
 
-You also get a consistent view of the database within this closure, however, 
+You also get a consistent view of the database within this closure, however,
 no mutating operations are allowed within a read-only transaction. You can only
 retrieve buckets, retrieve values, and copy the database within a read-only
 transaction.
+
+#### Managing transactions manually
+
+The `DB.View()` and `DB.Update()` functions are wrappers around the `DB.Begin()`
+function. These helper functions will start the transaction, execute a function,
+and then safely close your transaction if an error is returned. This is the
+recommended way to use Bolt transactions.
+
+However, sometimes you may want to manually start and end your transactions.
+You can use the `Tx.Begin()` function directly but _please_ be sure to close the
+transaction.
+
+```go
+// Start a writable transaction.
+tx, err := db.Begin(true)
+if err != nil {
+    return err
+}
+defer tx.Rollback()
+
+// Use the transaction...
+_, err := tx.CreateBucket([]byte("MyBucket"))
+if err != nil {
+    return err
+}
+
+// Commit the transaction and check for error.
+if err := tx.Commit(); err != nil {
+    return err
+}
+```
+
+The first argument to `DB.Begin()` is a boolean stating if the transaction
+should be writable.
 
 
 ### Using buckets
@@ -254,7 +288,7 @@ db.View(func(tx *bolt.Tx) error {
 	max := []byte("2000-01-01T00:00:00Z")
 
 	// Iterate over the 90's.
-	for k, v := c.Seek(min); k != nil && bytes.Compare(k, max) != -1; k, v = c.Next() {
+	for k, v := c.Seek(min); k != nil && bytes.Compare(k, max) <= 0; k, v = c.Next() {
 		fmt.Printf("%s: %s\n", k, v)
 	}
 
@@ -351,14 +385,13 @@ go func() {
 		// Grab the current stats and diff them.
 		stats := db.Stats()
 		diff := stats.Sub(&prev)
-		
+
 		// Encode stats to JSON and print to STDERR.
 		json.NewEncoder(os.Stderr).Encode(diff)
 
 		// Save stats for the next loop.
 		prev = stats
 	}
-}
 }()
 ```
 
@@ -420,9 +453,9 @@ lock-free MVCC using a single writer and multiple readers.
 
 The two projects have somewhat diverged. LMDB heavily focuses on raw performance
 while Bolt has focused on simplicity and ease of use. For example, LMDB allows
-several unsafe actions such as direct writes and append writes for the sake of
-performance. Bolt opts to disallow actions which can leave the database in a 
-corrupted state. The only exception to this in Bolt is `DB.NoSync`.
+several unsafe actions such as direct writes for the sake of performance. Bolt
+opts to disallow actions which can leave the database in a corrupted state. The
+only exception to this in Bolt is `DB.NoSync`.
 
 There are also a few differences in API. LMDB requires a maximum mmap size when
 opening an `mdb_env` whereas Bolt will handle incremental mmap resizing
@@ -475,6 +508,7 @@ Here are a few things to note when evaluating and using Bolt:
 
 Below is a list of public, open source projects that use Bolt:
 
+* [Operation Go: A Routine Mission](http://gocode.io) - An online programming game for Golang using Bolt for user accounts and a leaderboard.
 * [Bazil](https://github.com/bazillion/bazil) - A file system that lets your data reside where it is most convenient for it to reside.
 * [DVID](https://github.com/janelia-flyem/dvid) - Added Bolt as optional storage engine and testing it against Basho-tuned leveldb.
 * [Skybox Analytics](https://github.com/skybox/skybox) - A standalone funnel analysis tool for web analytics.
@@ -495,4 +529,3 @@ Below is a list of public, open source projects that use Bolt:
 * [SkyDB](https://github.com/skydb/sky) - Behavioral analytics database.
 
 If you are using Bolt in a project please send a pull request to add it to the list.
-

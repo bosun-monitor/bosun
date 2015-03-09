@@ -12,9 +12,6 @@ import (
 	"unsafe"
 )
 
-// The smallest size that the mmap can be.
-const minMmapSize = 1 << 22 // 4MB
-
 // The largest step that can be taken when remapping the mmap.
 const maxMmapStep = 1 << 30 // 1GB
 
@@ -162,16 +159,6 @@ func (db *DB) mmap(minsz int) error {
 	db.mmaplock.Lock()
 	defer db.mmaplock.Unlock()
 
-	// Dereference all mmap references before unmapping.
-	if db.rwtx != nil {
-		db.rwtx.root.dereference()
-	}
-
-	// Unmap existing data before continuing.
-	if err := db.munmap(); err != nil {
-		return err
-	}
-
 	info, err := db.file.Stat()
 	if err != nil {
 		return fmt.Errorf("mmap stat error: %s", err)
@@ -184,7 +171,20 @@ func (db *DB) mmap(minsz int) error {
 	if size < minsz {
 		size = minsz
 	}
-	size = db.mmapSize(size)
+	size, err = db.mmapSize(size)
+	if err != nil {
+		return err
+	}
+
+	// Dereference all mmap references before unmapping.
+	if db.rwtx != nil {
+		db.rwtx.root.dereference()
+	}
+
+	// Unmap existing data before continuing.
+	if err := db.munmap(); err != nil {
+		return err
+	}
 
 	// Memory-map the data file as a byte slice.
 	if err := mmap(db, size); err != nil {
@@ -216,21 +216,39 @@ func (db *DB) munmap() error {
 
 // mmapSize determines the appropriate size for the mmap given the current size
 // of the database. The minimum size is 4MB and doubles until it reaches 1GB.
-func (db *DB) mmapSize(size int) int {
-	if size <= minMmapSize {
-		return minMmapSize
-	} else if size < maxMmapStep {
-		size *= 2
-	} else {
-		size += maxMmapStep
+// Returns an error if the new mmap size is greater than the max allowed.
+func (db *DB) mmapSize(size int) (int, error) {
+	// Double the size from 1MB until 1GB.
+	for i := uint(20); i <= 30; i++ {
+		if size <= 1<<i {
+			return 1 << i, nil
+		}
+	}
+
+	// Verify the requested size is not above the maximum allowed.
+	if size > maxMapSize {
+		return 0, fmt.Errorf("mmap too large")
+	}
+
+	// If larger than 1GB then grow by 1GB at a time.
+	sz := int64(size)
+	if remainder := sz % int64(maxMmapStep); remainder > 0 {
+		sz += int64(maxMmapStep) - remainder
 	}
 
 	// Ensure that the mmap size is a multiple of the page size.
-	if (size % db.pageSize) != 0 {
-		size = ((size / db.pageSize) + 1) * db.pageSize
+	// This should always be true since we're incrementing in MBs.
+	pageSize := int64(db.pageSize)
+	if (sz % pageSize) != 0 {
+		sz = ((sz / pageSize) + 1) * pageSize
 	}
 
-	return size
+	// If we've exceeded the max size then only grow up to the max size.
+	if sz > maxMapSize {
+		sz = maxMapSize
+	}
+
+	return int(sz), nil
 }
 
 // init creates a new database file and initializes its meta pages.
@@ -250,7 +268,6 @@ func (db *DB) init() error {
 		m.magic = magic
 		m.version = version
 		m.pageSize = uint32(db.pageSize)
-		m.version = version
 		m.freelist = 2
 		m.root = bucket{root: 3}
 		m.pgid = 4
@@ -647,9 +664,11 @@ func (m *meta) copy(dest *meta) {
 
 // write writes the meta onto a page.
 func (m *meta) write(p *page) {
-
-	_assert(m.root.root < m.pgid, "root bucket pgid (%d) above high water mark (%d)", m.root.root, m.pgid)
-	_assert(m.freelist < m.pgid, "freelist pgid (%d) above high water mark (%d)", m.freelist, m.pgid)
+	if m.root.root >= m.pgid {
+		panic(fmt.Sprintf("root bucket pgid (%d) above high water mark (%d)", m.root.root, m.pgid))
+	} else if m.freelist >= m.pgid {
+		panic(fmt.Sprintf("freelist pgid (%d) above high water mark (%d)", m.freelist, m.pgid))
+	}
 
 	// Page id is either going to be 0 or 1 which we can determine by the transaction ID.
 	p.id = pgid(m.txid % 2)
@@ -675,13 +694,8 @@ func _assert(condition bool, msg string, v ...interface{}) {
 	}
 }
 
-func warn(v ...interface{}) {
-	fmt.Fprintln(os.Stderr, v...)
-}
-
-func warnf(msg string, v ...interface{}) {
-	fmt.Fprintf(os.Stderr, msg+"\n", v...)
-}
+func warn(v ...interface{})              { fmt.Fprintln(os.Stderr, v...) }
+func warnf(msg string, v ...interface{}) { fmt.Fprintf(os.Stderr, msg+"\n", v...) }
 
 func printstack() {
 	stack := strings.Join(strings.Split(string(debug.Stack()), "\n")[2:], "\n")

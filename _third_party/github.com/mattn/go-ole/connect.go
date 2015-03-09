@@ -1,4 +1,7 @@
 // Helpers for COM
+//
+// +build windows
+
 package ole
 
 type Connection struct {

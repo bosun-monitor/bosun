@@ -6,7 +6,6 @@ package ipv4_test
 
 import (
 	"net"
-	"os"
 	"runtime"
 	"testing"
 
@@ -28,16 +27,17 @@ var packetConnMulticastSocketOptionTests = []struct {
 func TestPacketConnMulticastSocketOptions(t *testing.T) {
 	switch runtime.GOOS {
 	case "nacl", "plan9", "solaris":
-		t.Skipf("not supported on %q", runtime.GOOS)
+		t.Skipf("not supported on %s", runtime.GOOS)
 	}
 	ifi := nettest.RoutedInterface("ip4", net.FlagUp|net.FlagMulticast|net.FlagLoopback)
 	if ifi == nil {
-		t.Skipf("not available on %q", runtime.GOOS)
+		t.Skipf("not available on %s", runtime.GOOS)
 	}
 
+	m, ok := nettest.SupportsRawIPSocket()
 	for _, tt := range packetConnMulticastSocketOptionTests {
-		if tt.net == "ip4" && os.Getuid() != 0 {
-			t.Log("must be root")
+		if tt.net == "ip4" && !ok {
+			t.Log(m)
 			continue
 		}
 		c, err := net.ListenPacket(tt.net+tt.proto, tt.addr)
@@ -67,14 +67,14 @@ var rawConnMulticastSocketOptionTests = []struct {
 func TestRawConnMulticastSocketOptions(t *testing.T) {
 	switch runtime.GOOS {
 	case "nacl", "plan9", "solaris":
-		t.Skipf("not supported on %q", runtime.GOOS)
+		t.Skipf("not supported on %s", runtime.GOOS)
 	}
-	if os.Getuid() != 0 {
-		t.Skip("must be root")
+	if m, ok := nettest.SupportsRawIPSocket(); !ok {
+		t.Skip(m)
 	}
 	ifi := nettest.RoutedInterface("ip4", net.FlagUp|net.FlagMulticast|net.FlagLoopback)
 	if ifi == nil {
-		t.Skipf("not available on %q", runtime.GOOS)
+		t.Skipf("not available on %s", runtime.GOOS)
 	}
 
 	for _, tt := range rawConnMulticastSocketOptionTests {
@@ -158,7 +158,7 @@ func testSourceSpecificMulticastSocketOptions(t *testing.T, c testIPv4MulticastC
 		switch runtime.GOOS {
 		case "freebsd", "linux":
 		default: // platforms that don't support IGMPv2/3 fail here
-			t.Logf("not supported on %q", runtime.GOOS)
+			t.Logf("not supported on %s", runtime.GOOS)
 			return
 		}
 		t.Error(err)

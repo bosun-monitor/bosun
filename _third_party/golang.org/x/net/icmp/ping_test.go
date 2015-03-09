@@ -13,6 +13,7 @@ import (
 
 	"bosun.org/_third_party/golang.org/x/net/icmp"
 	"bosun.org/_third_party/golang.org/x/net/internal/iana"
+	"bosun.org/_third_party/golang.org/x/net/internal/nettest"
 	"bosun.org/_third_party/golang.org/x/net/ipv4"
 	"bosun.org/_third_party/golang.org/x/net/ipv6"
 )
@@ -69,11 +70,13 @@ func TestPingGoogle(t *testing.T) {
 	case "linux":
 		t.Log("you may need to adjust the net.ipv4.ping_group_range kernel state")
 	default:
-		t.Skipf("not supported on %q", runtime.GOOS)
+		t.Skipf("not supported on %s", runtime.GOOS)
 	}
 
+	m, ok := nettest.SupportsRawIPSocket()
 	for i, tt := range pingGoogleTests {
-		if tt.network[:2] == "ip" && os.Getuid() != 0 {
+		if tt.network[:2] == "ip" && !ok {
+			t.Log(m)
 			continue
 		}
 		c, err := icmp.ListenPacket(tt.network, tt.address)

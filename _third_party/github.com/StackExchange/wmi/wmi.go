@@ -1,3 +1,5 @@
+// +build windows
+
 /*
 Package wmi provides a WQL interface for WMI on Windows.
 
@@ -61,7 +63,52 @@ func QueryNamespace(query string, dst interface{}, namespace string) error {
 // By default, the local machine and default namespace are used. These can be
 // changed using connectServerArgs. See
 // http://msdn.microsoft.com/en-us/library/aa393720.aspx for details.
+//
+// Query is a wrapper around DefaultClient.Query.
 func Query(query string, dst interface{}, connectServerArgs ...interface{}) error {
+	return DefaultClient.Query(query, dst, connectServerArgs...)
+}
+
+// A Client is an WMI query client.
+//
+// Its zero value (DefaultClient) is a usable client.
+type Client struct {
+	// NonePtrZero specifies if nil values for fields which aren't pointers
+	// should be returned as the field types zero value.
+	//
+	// Setting this to true allows stucts without pointer fields to be used
+	// without the risk failure should a nil value returned from WMI.
+	NonePtrZero bool
+
+	// PtrNil specifies if nil values for pointer fields should be returned
+	// as nil.
+	//
+	// Setting this to true will set pointer fields to nil where WMI
+	// returned nil, otherwise the types zero value will be returned.
+	PtrNil bool
+
+	// AllowMissingFields specifies that struct fields not present in the
+	// query result should not result in an error.
+	//
+	// Setting this to true allows custom queries to be used with full
+	// struct definitions instead of having to define multiple structs.
+	AllowMissingFields bool
+}
+
+// DefaultClient is the default Client and is used by Query, QueryNamespace
+var DefaultClient = &Client{}
+
+// Query runs the WQL query and appends the values to dst.
+//
+// dst must have type *[]S or *[]*S, for some struct type S. Fields selected in
+// the query must have the same name in dst. Supported types are all signed and
+// unsigned integers, time.Time, string, bool, or a pointer to one of those.
+// Array types are not supported.
+//
+// By default, the local machine and default namespace are used. These can be
+// changed using connectServerArgs. See
+// http://msdn.microsoft.com/en-us/library/aa393720.aspx for details.
+func (c *Client) Query(query string, dst interface{}, connectServerArgs ...interface{}) error {
 	dv := reflect.ValueOf(dst)
 	if dv.Kind() != reflect.Ptr || dv.IsNil() {
 		return ErrInvalidEntityType
@@ -139,7 +186,7 @@ func Query(query string, dst interface{}, connectServerArgs ...interface{}) erro
 			defer itemRaw.Clear()
 
 			ev := reflect.New(elemType)
-			if err = loadEntity(ev.Interface(), item); err != nil {
+			if err = c.loadEntity(ev.Interface(), item); err != nil {
 				if _, ok := err.(*ErrFieldMismatch); ok {
 					// We continue loading entities even in the face of field mismatch errors.
 					// If we encounter any other error, that other error is returned. Otherwise,
@@ -180,10 +227,11 @@ func (e *ErrFieldMismatch) Error() string {
 var timeType = reflect.TypeOf(time.Time{})
 
 // loadEntity loads a SWbemObject into a struct pointer.
-func loadEntity(dst interface{}, src *ole.IDispatch) (errFieldMismatch error) {
+func (c *Client) loadEntity(dst interface{}, src *ole.IDispatch) (errFieldMismatch error) {
 	v := reflect.ValueOf(dst).Elem()
 	for i := 0; i < v.NumField(); i++ {
 		f := v.Field(i)
+		of := f
 		isPtr := f.Kind() == reflect.Ptr
 		if isPtr {
 			ptr := reflect.New(f.Type().Elem())
@@ -193,17 +241,19 @@ func loadEntity(dst interface{}, src *ole.IDispatch) (errFieldMismatch error) {
 		n := v.Type().Field(i).Name
 		if !f.CanSet() {
 			return &ErrFieldMismatch{
-				StructType: f.Type(),
+				StructType: of.Type(),
 				FieldName:  n,
 				Reason:     "CanSet() is false",
 			}
 		}
 		prop, err := oleutil.GetProperty(src, n)
 		if err != nil {
-			errFieldMismatch = &ErrFieldMismatch{
-				StructType: f.Type(),
-				FieldName:  n,
-				Reason:     "no such struct field",
+			if !c.AllowMissingFields {
+				errFieldMismatch = &ErrFieldMismatch{
+					StructType: of.Type(),
+					FieldName:  n,
+					Reason:     "no such struct field",
+				}
 			}
 			continue
 		}
@@ -227,7 +277,7 @@ func loadEntity(dst interface{}, src *ole.IDispatch) (errFieldMismatch error) {
 				f.SetUint(uint64(v))
 			default:
 				return &ErrFieldMismatch{
-					StructType: f.Type(),
+					StructType: of.Type(),
 					FieldName:  n,
 					Reason:     "not an integer class",
 				}
@@ -270,18 +320,21 @@ func loadEntity(dst interface{}, src *ole.IDispatch) (errFieldMismatch error) {
 				f.SetBool(val)
 			default:
 				return &ErrFieldMismatch{
-					StructType: f.Type(),
+					StructType: of.Type(),
 					FieldName:  n,
 					Reason:     "not a bool",
 				}
 			}
 		default:
 			typeof := reflect.TypeOf(val)
-			if isPtr && typeof == nil {
+			if typeof == nil && (isPtr || c.NonePtrZero) {
+				if (isPtr && c.PtrNil) || (!isPtr && c.NonePtrZero) {
+					of.Set(reflect.Zero(of.Type()))
+				}
 				break
 			}
 			return &ErrFieldMismatch{
-				StructType: f.Type(),
+				StructType: of.Type(),
 				FieldName:  n,
 				Reason:     fmt.Sprintf("unsupported type (%T)", val),
 			}

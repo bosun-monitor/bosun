@@ -21,19 +21,6 @@ var (
 	errInvalidConnType = errors.New("invalid conn type")
 )
 
-// References:
-//
-// RFC  791  Internet Protocol
-//	http://tools.ietf.org/html/rfc791
-// RFC 1112  Host Extensions for IP Multicasting
-//	http://tools.ietf.org/html/rfc1112
-// RFC 1122  Requirements for Internet Hosts
-//	http://tools.ietf.org/html/rfc1122
-// RFC 3678  Socket Interface Extensions for Multicast Source Filters
-//	http://tools.ietf.org/html/rfc3678
-// RFC 4607  Source-Specific Multicast for IP
-//	http://tools.ietf.org/html/rfc4607
-
 const (
 	Version      = 4  // protocol version
 	HeaderLen    = 20 // header length without extension headers

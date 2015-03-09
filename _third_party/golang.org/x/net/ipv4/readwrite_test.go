@@ -91,7 +91,7 @@ func benchmarkReadWriteIPv4UDP(b *testing.B, p *ipv4.PacketConn, wb, rb []byte, 
 func TestPacketConnConcurrentReadWriteUnicastUDP(t *testing.T) {
 	switch runtime.GOOS {
 	case "nacl", "plan9", "solaris", "windows":
-		t.Skipf("not supported on %q", runtime.GOOS)
+		t.Skipf("not supported on %s", runtime.GOOS)
 	}
 
 	c, err := net.ListenPacket("udp4", "127.0.0.1:0")
@@ -113,7 +113,7 @@ func TestPacketConnConcurrentReadWriteUnicastUDP(t *testing.T) {
 
 	if err := p.SetControlMessage(cf, true); err != nil { // probe before test
 		if nettest.ProtocolNotSupported(err) {
-			t.Skipf("not supported on %q", runtime.GOOS)
+			t.Skipf("not supported on %s", runtime.GOOS)
 		}
 		t.Fatal(err)
 	}

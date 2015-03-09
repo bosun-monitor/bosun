@@ -12,7 +12,7 @@ type Echo struct {
 }
 
 // Len implements the Len method of MessageBody interface.
-func (p *Echo) Len() int {
+func (p *Echo) Len(proto int) int {
 	if p == nil {
 		return 0
 	}

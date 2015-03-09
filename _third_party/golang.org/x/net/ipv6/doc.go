@@ -6,9 +6,15 @@
 // Protocol version 6.
 //
 // The package provides IP-level socket options that allow
-// manipulation of IPv6 facilities.  The IPv6 and socket options for
-// IPv6 are defined in RFC 2460, RFC 3493, RFC 3542, RFC 3678 and RFC
-// 4607.
+// manipulation of IPv6 facilities.
+//
+// The IPv6 protocol is defined in RFC 2460.
+// Basic and advanced socket interface extensions are defined in RFC
+// 3493 and RFC 3542.
+// Socket interface extensions for multicast source filters are
+// defined in RFC 3678.
+// MLDv1 and MLDv2 are defined in RFC 2710 and RFC 3810.
+// Source-specific multicast is defined in RFC 4607.
 //
 //
 // Unicasting
@@ -196,8 +202,8 @@
 // Source-specific multicasting
 //
 // An application that uses PacketConn on MLDv2 supported platform is
-// able to join source-specific multicast groups as described in RFC
-// 3678.  The application may use JoinSourceSpecificGroup and
+// able to join source-specific multicast groups.
+// The application may use JoinSourceSpecificGroup and
 // LeaveSourceSpecificGroup for the operation known as "include" mode,
 //
 //	ssmgroup := net.UDPAddr{IP: net.ParseIP("ff32::8000:9")}

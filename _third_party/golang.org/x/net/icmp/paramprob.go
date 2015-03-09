@@ -14,42 +14,47 @@ type ParamProb struct {
 }
 
 // Len implements the Len method of MessageBody interface.
-func (p *ParamProb) Len() int {
+func (p *ParamProb) Len(proto int) int {
 	if p == nil {
 		return 0
 	}
-	return 4 + len(p.Data)
+	l, _ := multipartMessageBodyDataLen(proto, p.Data, p.Extensions)
+	return l
 }
 
 // Marshal implements the Marshal method of MessageBody interface.
 func (p *ParamProb) Marshal(proto int) ([]byte, error) {
-	b := make([]byte, 4+len(p.Data))
-	switch proto {
-	case iana.ProtocolICMP:
-		b[0] = byte(p.Pointer)
-	case iana.ProtocolIPv6ICMP:
+	if proto == iana.ProtocolIPv6ICMP {
+		b := make([]byte, 4+p.Len(proto))
 		b[0], b[1], b[2], b[3] = byte(p.Pointer>>24), byte(p.Pointer>>16), byte(p.Pointer>>8), byte(p.Pointer)
+		copy(b[4:], p.Data)
+		return b, nil
 	}
-	copy(b[4:], p.Data)
+	b, err := marshalMultipartMessageBody(proto, p.Data, p.Extensions)
+	if err != nil {
+		return nil, err
+	}
+	b[0] = byte(p.Pointer)
 	return b, nil
 }
 
 // parseParamProb parses b as an ICMP parameter problem message body.
 func parseParamProb(proto int, b []byte) (MessageBody, error) {
-	bodyLen := len(b)
-	if bodyLen < 4 {
+	if len(b) < 4 {
 		return nil, errMessageTooShort
 	}
 	p := &ParamProb{}
-	switch proto {
-	case iana.ProtocolICMP:
-		p.Pointer = uintptr(b[0])
-	case iana.ProtocolIPv6ICMP:
+	if proto == iana.ProtocolIPv6ICMP {
 		p.Pointer = uintptr(b[0])<<24 | uintptr(b[1])<<16 | uintptr(b[2])<<8 | uintptr(b[3])
-	}
-	if bodyLen > 4 {
-		p.Data = make([]byte, bodyLen-4)
+		p.Data = make([]byte, len(b)-4)
 		copy(p.Data, b[4:])
+		return p, nil
+	}
+	p.Pointer = uintptr(b[0])
+	var err error
+	p.Data, p.Extensions, err = parseMultipartMessageBody(proto, b)
+	if err != nil {
+		return nil, err
 	}
 	return p, nil
 }

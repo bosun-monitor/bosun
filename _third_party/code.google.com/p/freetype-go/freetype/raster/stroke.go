@@ -401,7 +401,7 @@ func (k *stroker) stroke(q Path) {
 	// The left-hand-side path is added immediately to k.p; the right-hand-side
 	// path is accumulated in k.r. Once we've finished adding the LHS to k.p,
 	// we add the RHS in reverse order.
-	k.r = Path(make([]Fix32, 0, len(q)))
+	k.r = make(Path, 0, len(q))
 	k.a = Point{q[1], q[2]}
 	for i := 4; i < len(q); {
 		switch q[i] {
