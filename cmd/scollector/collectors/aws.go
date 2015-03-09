@@ -62,29 +62,29 @@ func c_aws(accessKey, secretKey, region string) (opentsdb.MultiDataPoint, error)
 	if cw == nil {
 		return nil, fmt.Errorf("unable to login to CloudWatch")
 	}
-	instances, err := AWSGetInstances(*ecc)
+	instances, err := awsGetInstances(*ecc)
 	if err != nil {
 		slog.Info("No EC2 Instances found.")
 	}
-	loadBalancers, err := AWSGetLoadBalancers(*elb)
+	loadBalancers, err := awsGetLoadBalancers(*elb)
 	if err != nil {
 		slog.Info("No ELB Load Balancecrs found.")
 	}
 	for _, loadBalancer := range loadBalancers {
-		AWSGetELBLatency(*cw, &md, loadBalancer)
-		AWSGetELBHostCounts(*cw, &md, loadBalancer)
+		awsGetELBLatency(*cw, &md, loadBalancer)
+		awsGetELBHostCounts(*cw, &md, loadBalancer)
 	}
 	for _, instance := range instances {
-		AWSGetCPU(*cw, &md, instance)
-		AWSGetNetwork(*cw, &md, instance)
-		AWSGetDiskBytes(*cw, &md, instance)
-		AWSGetDiskOps(*cw, &md, instance)
-		AWSGetStatusChecks(*cw, &md, instance)
+		awsGetCPU(*cw, &md, instance)
+		awsGetNetwork(*cw, &md, instance)
+		awsGetDiskBytes(*cw, &md, instance)
+		awsGetDiskOps(*cw, &md, instance)
+		awsGetStatusChecks(*cw, &md, instance)
 	}
 	return md, nil
 }
 
-func AWSGetInstances(ecc ec2.EC2) ([]ec2.Instance, error) {
+func awsGetInstances(ecc ec2.EC2) ([]ec2.Instance, error) {
 	instancelist := []ec2.Instance{}
 	resp, err := ecc.DescribeInstances(nil)
 	if err != nil {
@@ -98,7 +98,7 @@ func AWSGetInstances(ecc ec2.EC2) ([]ec2.Instance, error) {
 	return instancelist, nil
 }
 
-func AWSGetLoadBalancers(lb elb.ELB) ([]elb.LoadBalancerDescription, error) {
+func awsGetLoadBalancers(lb elb.ELB) ([]elb.LoadBalancerDescription, error) {
 	lbList := []elb.LoadBalancerDescription{}
 	resp, err := lb.DescribeLoadBalancers(nil)
 	if err != nil {
@@ -110,7 +110,7 @@ func AWSGetLoadBalancers(lb elb.ELB) ([]elb.LoadBalancerDescription, error) {
 	return lbList, nil
 }
 
-func AWSGetCPU(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, instance ec2.Instance) error {
+func awsGetCPU(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, instance ec2.Instance) error {
 	search := cloudwatch.GetMetricStatisticsInput{
 		StartTime:  time.Now().UTC().Add(time.Second * -600),
 		EndTime:    time.Now().UTC(),
@@ -133,7 +133,7 @@ func AWSGetCPU(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, instance e
 	}
 	return nil
 }
-func AWSGetNetwork(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, instance ec2.Instance) error {
+func awsGetNetwork(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, instance ec2.Instance) error {
 	search := cloudwatch.GetMetricStatisticsInput{
 		StartTime:  time.Now().UTC().Add(time.Second * -600),
 		EndTime:    time.Now().UTC(),
@@ -162,7 +162,7 @@ func AWSGetNetwork(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, instan
 	return nil
 }
 
-func AWSGetDiskBytes(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, instance ec2.Instance) error {
+func awsGetDiskBytes(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, instance ec2.Instance) error {
 	search := cloudwatch.GetMetricStatisticsInput{
 		StartTime:  time.Now().UTC().Add(time.Second * -600),
 		EndTime:    time.Now().UTC(),
@@ -191,7 +191,7 @@ func AWSGetDiskBytes(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, inst
 	return nil
 }
 
-func AWSGetDiskOps(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, instance ec2.Instance) error {
+func awsGetDiskOps(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, instance ec2.Instance) error {
 	search := cloudwatch.GetMetricStatisticsInput{
 		StartTime:  time.Now().UTC().Add(time.Second * -600),
 		EndTime:    time.Now().UTC(),
@@ -220,7 +220,7 @@ func AWSGetDiskOps(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, instan
 	return nil
 }
 
-func AWSGetStatusChecks(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, instance ec2.Instance) error {
+func awsGetStatusChecks(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, instance ec2.Instance) error {
 	search := cloudwatch.GetMetricStatisticsInput{
 		StartTime:  time.Now().UTC().Add(time.Second * -60),
 		EndTime:    time.Now().UTC(),
@@ -257,7 +257,7 @@ func AWSGetStatusChecks(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, i
 	return nil
 }
 
-func AWSGetELBLatency(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, loadBalancer elb.LoadBalancerDescription) error {
+func awsGetELBLatency(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, loadBalancer elb.LoadBalancerDescription) error {
 	search := cloudwatch.GetMetricStatisticsInput{
 		StartTime:  time.Now().UTC().Add(time.Second * -4000),
 		EndTime:    time.Now().UTC(),
@@ -279,7 +279,7 @@ func AWSGetELBLatency(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, loa
 	}
 	return nil
 }
-func AWSGetELBHostCounts(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, loadBalancer elb.LoadBalancerDescription) error {
+func awsGetELBHostCounts(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, loadBalancer elb.LoadBalancerDescription) error {
 	search := cloudwatch.GetMetricStatisticsInput{
 		StartTime:  time.Now().UTC().Add(time.Second * -60),
 		EndTime:    time.Now().UTC(),
