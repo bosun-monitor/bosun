@@ -89,12 +89,16 @@ func (s *Schedule) sendNotifications(silenced map[expr.AlertKey]Silence) {
 		ustates := make(States)
 		for _, st := range states {
 			ak := st.AlertKey()
+			_, silenced := silenced[ak]
 			if st.Last().Status == StUnknown {
-				if _, ok := silenced[ak]; ok {
+				if silenced {
 					log.Println("silencing unknown", ak)
 					continue
 				}
 				ustates[ak] = st
+			}
+			if silenced {
+				log.Println("silencing", ak)
 			} else {
 				s.notify(st, n)
 			}
