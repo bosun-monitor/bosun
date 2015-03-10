@@ -1,17 +1,15 @@
 package collectors
 
 import (
+    "bosun.org/metadata"
+    "bosun.org/opentsdb"
+    "bosun.org/slog"
+    "bosun.org/_third_party/github.com/awslabs/aws-sdk-go/aws"
+    "bosun.org/_third_party/github.com/awslabs/aws-sdk-go/gen/cloudwatch"
+    "bosun.org/_third_party/github.com/awslabs/aws-sdk-go/gen/ec2"
+    "bosun.org/_third_party/github.com/awslabs/aws-sdk-go/gen/elb"
 	"fmt"
 	"time"
-
-	"bosun.org/metadata"
-	"bosun.org/opentsdb"
-	"bosun.org/slog"
-
-	"bosun.org/_third_party/github.com/awslabs/aws-sdk-go/aws"
-	"bosun.org/_third_party/github.com/awslabs/aws-sdk-go/gen/cloudwatch"
-	"bosun.org/_third_party/github.com/awslabs/aws-sdk-go/gen/ec2"
-	"bosun.org/_third_party/github.com/awslabs/aws-sdk-go/gen/elb"
 )
 
 const (
