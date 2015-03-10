@@ -16,22 +16,22 @@ import (
 
 const (
 	awsCPU                = "aws.ec2.cpu"
-	awsNetwork            = "aws.ec2.net.bytes"
 	awsEC2DiskBytes       = "aws.ec2.disk.bytes"
 	awsEC2DiskOps         = "aws.ec2.disk.ops"
-	awsStatusCheckFailed  = "aws.ec2.status.failed"
-	awsELBLatencyMin      = "aws.elb.latency.minimum"
-	awsELBLatencyMax      = "aws.elb.latency.maximum"
-	awsELBLatencyAvg      = "aws.elb.latency.average"
 	awsELBHostsHealthy    = "aws.elb.hosts.healthy"
 	awsELBHostsUnHealthy  = "aws.elb.hosts.unhealthy"
+	awsELBLatencyAvg      = "aws.elb.latency.average"
+	awsELBLatencyMax      = "aws.elb.latency.maximum"
+	awsELBLatencyMin      = "aws.elb.latency.minimum"
+	awsNetwork            = "aws.ec2.net.bytes"
+	awsStatusCheckFailed  = "aws.ec2.status.failed"
 	descAWSEC2CPU         = "The average CPU Utilization, gathered at a 60 second interval and averaged over five minutes."
-	descAWSEC2NetBytes    = "The average bytes transmitted or received via network, gathered at a 60 second interval and averaged over five minutes."
 	descAWSEC2DiskBytes   = "The average bytes written or read via disk, gathered at a 60 second interval and averaged over five minutes."
 	descAWSEC2DiskOps     = "The average disk operations, either written or read, gathered at a 60 second interval and averaged over five minutes."
+	descAWSEC2NetBytes    = "The average bytes transmitted or received via network, gathered at a 60 second interval and averaged over five minutes."
 	descAWSEC2StatusCheck = "The EC2 Status Check, which includes both instance-level and system-level drill-down, gathered every 60 seconds."
-	descAWSELBLatency     = "The minimum, maximum and average latency as reported by the load balancer, gathered at a 60 second interval and averaged over five minutes."
 	descAWSELBHostCount   = "The number of instances in what the Elastic Load Balancer considers a healthy state, gathered every 60 seconds."
+	descAWSELBLatency     = "The minimum, maximum and average latency as reported by the load balancer, gathered at a 60 second interval and averaged over five minutes."
 )
 
 func AWS(accessKey, secretKey, region string) {
