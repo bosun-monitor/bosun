@@ -33,11 +33,17 @@ func init() {
 		}
 	}
 	collectors = append(collectors, c)
+	c = &IntervalCollector{
+		F: c_network_windows_tcp,
+	}
+	c.init = wmiInit(c, func() interface{} { return &[]Win32_PerfRawData_Tcpip_TCPv4{} }, "", &winNetTCPQuery)
+	collectors = append(collectors, c)
 }
 
 var (
 	queryTeamStats         string
 	queryTeamAdapter       string
+	winNetTCPQuery         string
 	namespaceStandardCimv2 = "root\\StandardCimv2"
 	interfaceExclusions    = regexp.MustCompile("isatap|Teredo")
 
@@ -68,7 +74,7 @@ func winNetworkInit() {
 		}
 		for _, nic := range dstNetworkAdapter {
 			var iface = fmt.Sprint("Interface", nic.InterfaceIndex)
-			//Get PnPName using Win32_PnPEntity class
+			// Get PnPName using Win32_PnPEntity class
 			var pnpname = ""
 			var escapeddeviceid = strings.Replace(nic.PNPDeviceID, "\\", "\\\\", -1)
 			var filter = fmt.Sprintf("WHERE DeviceID='%s'", escapeddeviceid)
@@ -79,7 +85,7 @@ func winNetworkInit() {
 				slog.Error(err)
 				return
 			}
-			for _, pnp := range dstPnPName { //Really should be a single item
+			for _, pnp := range dstPnPName { // Really should be a single item
 				pnpname = pnp.Name
 			}
 			if pnpname == "" {
@@ -87,7 +93,7 @@ func winNetworkInit() {
 				continue
 			}
 
-			//Convert to instance name (see http://goo.gl/jfq6pq )
+			// Convert to instance name (see http://goo.gl/jfq6pq )
 			instanceName := winNetworkToInstanceName(pnpname)
 			mNicInstanceNameToInterfaceIndex[instanceName] = iface
 		}
@@ -118,7 +124,7 @@ func c_network_windows() (opentsdb.MultiDataPoint, error) {
 		if iface == "" {
 			continue
 		}
-		//This does NOT include TEAM network adapters. Those will go to os.net.bond
+		// This does NOT include TEAM network adapters. Those will go to os.net.bond
 		tagsIn := opentsdb.TagSet{"iface": iface, "direction": "in"}
 		tagsOut := opentsdb.TagSet{"iface": iface, "direction": "out"}
 		Add(&md, "win.net.ifspeed", nicStats.CurrentBandwidth, opentsdb.TagSet{"iface": iface}, metadata.Gauge, metadata.BitsPerSecond, descWinNetCurrentBandwidth)
@@ -155,11 +161,11 @@ const (
 )
 
 type Win32_PnPEntity struct {
-	Name string //Intel(R) Gigabit ET Quad Port Server Adapter #3
+	Name string // Intel(R) Gigabit ET Quad Port Server Adapter #3
 }
 
 type Win32_NetworkAdapter struct {
-	Description    string //Intel(R) Gigabit ET Quad Port Server Adapter (no index)
+	Description    string // Intel(R) Gigabit ET Quad Port Server Adapter (no index)
 	InterfaceIndex uint32
 	PNPDeviceID    string
 }
@@ -232,7 +238,7 @@ func c_network_team_windows() (opentsdb.MultiDataPoint, error) {
 		Add(&md, "win.net.bond.packets_multicast", nicStats.SentMulticastPackets, tagsOut, metadata.Counter, metadata.PerSecond, descWinNetTeamSentMulticastPackets)
 		Add(&md, "win.net.bond.packets_broadcast", nicStats.ReceivedBroadcastPackets, tagsIn, metadata.Counter, metadata.PerSecond, descWinNetTeamReceivedBroadcastPackets)
 		Add(&md, "win.net.bond.packets_broadcast", nicStats.SentBroadcastPackets, tagsOut, metadata.Counter, metadata.PerSecond, descWinNetTeamSentBroadcastPackets)
-		//Todo: add os.net.bond metrics once we confirm they have the same metadata
+		// Todo: add os.net.bond metrics once we confirm they have the same metadata
 	}
 	return md, nil
 }
@@ -289,4 +295,46 @@ type MSFT_NetAdapterStatisticsSettingData struct {
 	SentBroadcastBytes       uint64
 	OutboundDiscardedPackets uint64
 	OutboundPacketErrors     uint64
+}
+
+func c_network_windows_tcp() (opentsdb.MultiDataPoint, error) {
+	var dst []Win32_PerfRawData_Tcpip_TCPv4
+	err := queryWmi(winNetTCPQuery, &dst)
+	if err != nil {
+		return nil, err
+	}
+	var md opentsdb.MultiDataPoint
+	for _, v := range dst {
+		Add(&md, "win.net.tcp.failures", v.ConnectionFailures, nil, metadata.Gauge, metadata.Connection, descWinNetTCPv4ConnectionFailures)
+		Add(&md, "win.net.tcp.active", v.ConnectionsActive, nil, metadata.Gauge, metadata.Connection, descWinNetTCPv4ConnectionsActive)
+		Add(&md, "win.net.tcp.established", v.ConnectionsEstablished, nil, metadata.Gauge, metadata.Connection, descWinNetTCPv4ConnectionsEstablished)
+		Add(&md, "win.net.tcp.passive", v.ConnectionsPassive, nil, metadata.Gauge, metadata.Connection, descWinNetTCPv4ConnectionsPassive)
+		Add(&md, "win.net.tcp.reset", v.ConnectionsReset, nil, metadata.Gauge, metadata.Connection, descWinNetTCPv4ConnectionsReset)
+		Add(&md, "win.net.tcp.segments", v.SegmentsReceivedPersec, opentsdb.TagSet{"type": "received"}, metadata.Counter, metadata.PerSecond, descWinNetTCPv4SegmentsReceivedPersec)
+		Add(&md, "win.net.tcp.segments", v.SegmentsRetransmittedPersec, opentsdb.TagSet{"type": "retransmitted"}, metadata.Counter, metadata.PerSecond, descWinNetTCPv4SegmentsRetransmittedPersec)
+		Add(&md, "win.net.tcp.segments", v.SegmentsSentPersec, opentsdb.TagSet{"type": "sent"}, metadata.Counter, metadata.PerSecond, descWinNetTCPv4SegmentsSentPersec)
+	}
+	return md, nil
+}
+
+const (
+	descWinNetTCPv4ConnectionFailures          = "Connection Failures is the number of times TCP connections have made a direct transition to the CLOSED state from the SYN-SENT state or the SYN-RCVD state, plus the number of times TCP connections have made a direct transition to the LISTEN state from the SYN-RCVD state."
+	descWinNetTCPv4ConnectionsActive           = "Connections Active is the number of times TCP connections have made a direct transition to the SYN-SENT state from the CLOSED state. In other words, it shows a number of connections which are initiated by the local computer. The value is a cumulative total."
+	descWinNetTCPv4ConnectionsEstablished      = "Connections Established is the number of TCP connections for which the current state is either ESTABLISHED or CLOSE-WAIT."
+	descWinNetTCPv4ConnectionsPassive          = "Connections Passive is the number of times TCP connections have made a direct transition to the SYN-RCVD state from the LISTEN state. In other words, it shows a number of connections to the local computer, which are initiated by remote computers. The value is a cumulative total."
+	descWinNetTCPv4ConnectionsReset            = "Connections Reset is the number of times TCP connections have made a direct transition to the CLOSED state from either the ESTABLISHED state or the CLOSE-WAIT state."
+	descWinNetTCPv4SegmentsReceivedPersec      = "Segments Received/sec is the rate at which segments are received, including those received in error.  This count includes segments received on currently established connections."
+	descWinNetTCPv4SegmentsRetransmittedPersec = "Segments Retransmitted/sec is the rate at which segments are retransmitted, that is, segments transmitted containing one or more previously transmitted bytes."
+	descWinNetTCPv4SegmentsSentPersec          = "Segments Sent/sec is the rate at which segments are sent, including those on current connections, but excluding those containing only retransmitted bytes."
+)
+
+type Win32_PerfRawData_Tcpip_TCPv4 struct {
+	ConnectionFailures          uint32
+	ConnectionsActive           uint32
+	ConnectionsEstablished      uint32
+	ConnectionsPassive          uint32
+	ConnectionsReset            uint32
+	SegmentsReceivedPersec      uint32
+	SegmentsRetransmittedPersec uint32
+	SegmentsSentPersec          uint32
 }
