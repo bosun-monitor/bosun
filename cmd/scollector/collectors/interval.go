@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"bosun.org/metadata"
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
 )
@@ -41,6 +42,7 @@ func (c *IntervalCollector) Run(dpchan chan<- *opentsdb.DataPoint) {
 			}
 		}()
 	}
+	tags := opentsdb.TagSet{"collector": c.Name()}
 	for {
 		interval := c.Interval
 		if interval == 0 {
@@ -48,10 +50,16 @@ func (c *IntervalCollector) Run(dpchan chan<- *opentsdb.DataPoint) {
 		}
 		next := time.After(interval)
 		if c.Enabled() {
+			timeStart := time.Now()
 			md, err := c.F()
+			timeFinish := time.Since(timeStart)
+			result := 0
 			if err != nil {
 				slog.Errorf("%v: %v", c.Name(), err)
+				result = 1
 			}
+			Add(&md, "scollector.collector.duration", timeFinish.Seconds(), tags, metadata.Gauge, metadata.Second, "Duration in seconds for each collector run.")
+			Add(&md, "scollector.collector.error", result, tags, metadata.Gauge, metadata.Ok, "Status of collector run. 1=Error, 0=Success.")
 			for _, dp := range md {
 				dpchan <- dp
 			}
