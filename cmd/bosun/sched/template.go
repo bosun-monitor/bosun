@@ -197,39 +197,36 @@ func (c *Context) evalExpr(e *expr.Expr, filter bool, series bool, autods int) (
 	return res.Results, e.String(), nil
 }
 
-func (c *Context) evalResult(r expr.ResultSlice, filter bool, series bool, autods int) (expr.ResultSlice, string, error) {
-	if filter {
-		r = r.Filter(c.State.Group)
-	}
-	if series {
-		for _, k := range r {
-			if k.Type() != parse.TypeSeries {
-				return nil, "", fmt.Errorf("need a series, got %v (%v)", k.Type(), k)
-			}
-		}
-	}
-	return r, "", nil
-}
-
 // eval takes an expression or string (which it turns into an expression), executes it and returns the result.
 // It can also takes a ResultSlice so callers can transparantly handle different inputs.
 // The filter argument constrains the result to matching tags in the current context.
 // The series argument asserts that the result is a time series.
-func (c *Context) eval(v interface{}, filter bool, series bool, autods int) (expr.ResultSlice, string, error) {
+func (c *Context) eval(v interface{}, filter bool, series bool, autods int) (res expr.ResultSlice, title string, err error) {
 	switch v := v.(type) {
 	case string:
 		e, err := expr.New(v, c.schedule.Conf.Funcs())
 		if err != nil {
 			return nil, "", fmt.Errorf("%s: %v", v, err)
 		}
-		return c.evalExpr(e, filter, series, autods)
+		res, title, err = c.evalExpr(e, filter, series, autods)
 	case *expr.Expr:
-		return c.evalExpr(v, filter, series, autods)
+		res, title, err = c.evalExpr(v, filter, series, autods)
 	case expr.ResultSlice:
-		return c.evalResult(v, filter, series, autods)
+		res = v
 	default:
 		return nil, "", fmt.Errorf("expected string, expression or resultslice, got %T (%v)", v, v)
 	}
+	if filter {
+		res = res.Filter(c.State.Group)
+	}
+	if series {
+		for _, k := range res {
+			if k.Type() != parse.TypeSeries {
+				return nil, "", fmt.Errorf("need a series, got %v (%v)", k.Type(), k)
+			}
+		}
+	}
+	return
 }
 
 // Lookup returns the value for a key in the lookup table for the context's tagset.
