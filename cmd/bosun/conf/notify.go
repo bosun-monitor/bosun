@@ -14,12 +14,12 @@ import (
 	"bosun.org/collect"
 )
 
-func (n *Notification) Notify(subject, body []byte, c *Conf, ak string, attachments ...*Attachment) {
+func (n *Notification) Notify(subject, body string, emailsubject, emailbody []byte, c *Conf, ak string, attachments ...*Attachment) {
 	if len(n.Email) > 0 {
-		go n.DoEmail(subject, body, c, ak, attachments...)
+		go n.DoEmail(emailsubject, emailbody, c, ak, attachments...)
 	}
 	if n.Post != nil {
-		go n.DoPost(subject)
+		go n.DoPost([]byte(subject))
 	}
 	if n.Get != nil {
 		go n.DoGet()
@@ -29,8 +29,8 @@ func (n *Notification) Notify(subject, body []byte, c *Conf, ak string, attachme
 	}
 }
 
-func (n *Notification) DoPrint(subject []byte) {
-	log.Println(string(subject))
+func (n *Notification) DoPrint(subject string) {
+	log.Println(subject)
 }
 
 func (n *Notification) DoPost(subject []byte) {
@@ -78,10 +78,7 @@ func (n *Notification) DoEmail(subject, body []byte, c *Conf, ak string, attachm
 	for _, a := range n.Email {
 		e.To = append(e.To, a.Address)
 	}
-
-	// remove various extraneous whitespace that can get accidentally introduced by templates.
 	e.Subject = string(subject)
-
 	e.HTML = body
 	for _, a := range attachments {
 		e.Attach(bytes.NewBuffer(a.Data), a.Filename, a.ContentType)
