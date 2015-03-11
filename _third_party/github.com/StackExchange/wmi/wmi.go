@@ -289,20 +289,21 @@ func (c *Client) loadEntity(dst interface{}, src *ole.IDispatch) (errFieldMismat
 				}
 			}
 		case string:
-			iv, err := strconv.ParseInt(val, 10, 64)
 			switch f.Kind() {
 			case reflect.String:
 				f.SetString(val)
 			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+				iv, err := strconv.ParseInt(val, 10, 64)
 				if err != nil {
 					return err
 				}
 				f.SetInt(iv)
 			case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+				uv, err := strconv.ParseUint(val, 10, 64)
 				if err != nil {
 					return err
 				}
-				f.SetUint(uint64(iv))
+				f.SetUint(uv)
 			case reflect.Struct:
 				switch f.Type() {
 				case timeType:
