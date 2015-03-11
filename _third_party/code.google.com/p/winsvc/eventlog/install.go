@@ -24,9 +24,10 @@ const addKeyName = `SYSTEM\CurrentControlSet\Services\EventLog\Application`
 
 // Install modifies PC registry to allow logging with event source src.
 // It adds all required keys/values to event log key. Install uses msgFile
-// as event message file. Use bitwise of log.Error, log.Warning and log.Info
-// to specify events supported.
-func Install(src, msgFile string, eventsSupported uint32) error {
+// as event message file, creating key as REG_EXPAND_SZ, if useExpandKey
+// is true, otherwise as REG_SZ. Use bitwise of log.Error, log.Warning
+// and log.Info to specify events supported.
+func Install(src, msgFile string, useExpandKey bool, eventsSupported uint32) error {
 	appkey, err := registry.OpenKey(syscall.HKEY_LOCAL_MACHINE, addKeyName)
 	if err != nil {
 		return err
@@ -44,7 +45,11 @@ func Install(src, msgFile string, eventsSupported uint32) error {
 	if err != nil {
 		return err
 	}
-	err = sk.SetString("EventMessageFile", msgFile)
+	if useExpandKey {
+		err = sk.SetStringExpand("EventMessageFile", msgFile)
+	} else {
+		err = sk.SetString("EventMessageFile", msgFile)
+	}
 	if err != nil {
 		return err
 	}
@@ -58,7 +63,7 @@ func Install(src, msgFile string, eventsSupported uint32) error {
 // InstallAsEventCreate is the same as Install, but uses
 // %SystemRoot%\System32\EventCreate.exe as event message file.
 func InstallAsEventCreate(src string, eventsSupported uint32) error {
-	return Install(src, "%SystemRoot%\\System32\\EventCreate.exe", eventsSupported)
+	return Install(src, "%SystemRoot%\\System32\\EventCreate.exe", true, eventsSupported)
 }
 
 // Remove deletes all registry elements installed by correspondent Install.

@@ -57,10 +57,18 @@ func (k *Key) SetUInt32(name string, value uint32) error {
 		(*byte)(unsafe.Pointer(&value)), uint32(unsafe.Sizeof(value)))
 }
 
-func (k *Key) SetString(name string, value string) error {
+func (k *Key) setString(name string, value string, valtype uint32) error {
 	buf := syscall.StringToUTF16(value)
 	return winapi.RegSetValueEx(
 		k.Handle, syscall.StringToUTF16Ptr(name),
-		0, syscall.REG_SZ,
+		0, valtype,
 		(*byte)(unsafe.Pointer(&buf[0])), uint32(len(buf)*2))
+}
+
+func (k *Key) SetString(name string, value string) error {
+	return k.setString(name, value, syscall.REG_SZ)
+}
+
+func (k *Key) SetStringExpand(name string, value string) error {
+	return k.setString(name, value, syscall.REG_EXPAND_SZ)
 }
