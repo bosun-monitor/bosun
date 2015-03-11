@@ -21,7 +21,8 @@ import (
 
 type Context struct {
 	*State
-	Alert *conf.Alert
+	Alert   *conf.Alert
+	IsEmail bool
 
 	schedule    *Schedule
 	runHistory  *RunHistory
@@ -32,11 +33,9 @@ func (s *Schedule) Data(rh *RunHistory, st *State, a *conf.Alert, isEmail bool) 
 	c := Context{
 		State:      st,
 		Alert:      a,
+		IsEmail:    isEmail,
 		schedule:   s,
 		runHistory: rh,
-	}
-	if isEmail {
-		c.Attachments = make([]*conf.Attachment, 0)
 	}
 	return &c
 }
@@ -119,13 +118,13 @@ func (s *Schedule) ExecuteBody(rh *RunHistory, a *conf.Alert, st *State, isEmail
 	return buf.Bytes(), c.Attachments, err
 }
 
-func (s *Schedule) ExecuteSubject(rh *RunHistory, a *conf.Alert, st *State) ([]byte, error) {
+func (s *Schedule) ExecuteSubject(rh *RunHistory, a *conf.Alert, st *State, isEmail bool) ([]byte, error) {
 	t := a.Template
 	if t == nil || t.Subject == nil {
 		return nil, nil
 	}
 	buf := new(bytes.Buffer)
-	err := t.Subject.Execute(buf, s.Data(rh, st, a, false))
+	err := t.Subject.Execute(buf, s.Data(rh, st, a, isEmail))
 	return bytes.Join(bytes.Fields(buf.Bytes()), []byte(" ")), err
 }
 
@@ -257,10 +256,6 @@ func (c *Context) EvalAll(v interface{}) (interface{}, error) {
 	return res, err
 }
 
-func (c *Context) IsEmail() bool {
-	return c.Attachments != nil
-}
-
 func (c *Context) graph(v interface{}, filter bool) (interface{}, error) {
 	res, title, err := c.eval(v, filter, true, 1000)
 	if err != nil {
@@ -269,7 +264,7 @@ func (c *Context) graph(v interface{}, filter bool) (interface{}, error) {
 	var buf bytes.Buffer
 	const width = 800
 	const height = 600
-	if c.IsEmail() {
+	if c.IsEmail {
 		err := c.schedule.ExprPNG(nil, &buf, width, height, res, title, c.runHistory.Start)
 		if err != nil {
 			return nil, err

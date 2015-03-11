@@ -165,7 +165,7 @@ func procRule(t miniprofiler.Timer, c *conf.Conf, a *conf.Alert, now time.Time, 
 					s_err = fmt.Errorf(s)
 				}
 			}()
-			subject, s_err = s.ExecuteSubject(rh, a, instance)
+			subject, s_err = s.ExecuteSubject(rh, a, instance, false)
 			if s_err != nil {
 				warning = append(warning, s_err.Error())
 			}
@@ -184,11 +184,14 @@ func procRule(t miniprofiler.Timer, c *conf.Conf, a *conf.Alert, now time.Time, 
 			n := conf.Notification{
 				Email: []*mail.Address{m},
 			}
-			email, attachments, err := s.ExecuteBody(rh, a, instance, true)
-			if err != nil {
-				warning = append(warning, err.Error())
+			email, attachments, b_err := s.ExecuteBody(rh, a, instance, true)
+			email_subject, s_err := s.ExecuteSubject(rh, a, instance, true)
+			if b_err != nil {
+				warning = append(warning, b_err.Error())
+			} else if s_err != nil {
+				warning = append(warning, s_err.Error())
 			} else {
-				n.DoEmail(subject, email, schedule.Conf, string(instance.AlertKey()), attachments...)
+				n.DoEmail(email_subject, email, schedule.Conf, string(instance.AlertKey()), attachments...)
 			}
 		}
 		data = s.Data(rh, instance, a, false)

@@ -148,7 +148,7 @@ var unknownMultiGroup = template.Must(template.New("unknownMultiGroup").Parse(`
 	`))
 
 func (s *Schedule) notify(st *State, n *conf.Notification) {
-	n.Notify([]byte(st.Subject), st.EmailBody, s.Conf, string(st.AlertKey()), st.Attachments...)
+	n.Notify(st.EmailSubject, st.EmailBody, s.Conf, string(st.AlertKey()), st.Attachments...)
 }
 
 // utnotify is single notification for N unknown groups into a single notification

@@ -97,7 +97,7 @@ func (s *Schedule) RunHistory(r *RunHistory) {
 		wasOpen := state.Open
 		if event.Status > StNormal {
 			if event.Status != StUnknown {
-				subject, serr := s.ExecuteSubject(r, a, state)
+				subject, serr := s.ExecuteSubject(r, a, state, false)
 				if serr != nil {
 					log.Printf("%s: %v", state.AlertKey(), serr)
 				}
@@ -109,7 +109,8 @@ func (s *Schedule) RunHistory(r *RunHistory) {
 				if merr != nil {
 					log.Printf("%s: %v", state.AlertKey(), merr)
 				}
-				if serr != nil || berr != nil || merr != nil {
+				emailsubject, eserr := s.ExecuteSubject(r, a, state, true)
+				if serr != nil || berr != nil || merr != nil || eserr != nil {
 					var err error
 					subject, body, err = s.ExecuteBadTemplate(serr, berr, r, a, state)
 					if err != nil {
@@ -121,6 +122,7 @@ func (s *Schedule) RunHistory(r *RunHistory) {
 				state.Subject = string(subject)
 				state.Body = string(body)
 				state.EmailBody = emailbody
+				state.EmailSubject = emailsubject
 				state.Attachments = attachments
 			}
 			state.Open = true
