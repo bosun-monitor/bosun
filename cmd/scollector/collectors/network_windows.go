@@ -16,24 +16,25 @@ import (
 func init() {
 	collectors = append(collectors, &IntervalCollector{F: c_network_windows, init: winNetworkInit})
 
-	c := &IntervalCollector{
+	c_winnetteam := &IntervalCollector{
 		F: c_network_team_windows,
 	}
 	// Make sure MSFT_NetImPlatAdapter and MSFT_NetAdapterStatisticsSettingData
 	// are valid WMI classes when initializing c_network_team_windows
-	c.init = func() {
+	c_winnetteam.init = func() {
 		var dstTeamNic []MSFT_NetLbfoTeamNic
 		var dstStats []MSFT_NetAdapterStatisticsSettingData
 		queryTeamAdapter = wmi.CreateQuery(&dstTeamNic, "")
 		queryTeamStats = wmi.CreateQuery(&dstStats, "")
-		c.Enable = func() bool {
+		c_winnetteam.Enable = func() bool {
 			errTeamNic := queryWmiNamespace(queryTeamAdapter, &dstTeamNic, namespaceStandardCimv2)
 			errStats := queryWmiNamespace(queryTeamStats, &dstStats, namespaceStandardCimv2)
-			return errTeamNic == nil && errStats == nil
+			result := errTeamNic == nil && errStats == nil
+			return result
 		}
 	}
-	collectors = append(collectors, c)
-	c = &IntervalCollector{
+	collectors = append(collectors, c_winnetteam)
+	c := &IntervalCollector{
 		F: c_network_windows_tcp,
 	}
 	c.init = wmiInit(c, func() interface{} { return &[]Win32_PerfRawData_Tcpip_TCPv4{} }, "", &winNetTCPQuery)
