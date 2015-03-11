@@ -209,6 +209,10 @@ func (s *Schedule) CheckUnknown() {
 				continue
 			}
 			a := s.Conf.Alerts[ak.Name()]
+			//alert doesn't exist anymore. Maybe status loaded from old db state.
+			if a == nil {
+				continue
+			}
 			t := a.Unknown
 			if t == 0 {
 				t = s.Conf.CheckFrequency * 2
