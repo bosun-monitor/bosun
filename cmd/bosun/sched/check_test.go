@@ -120,6 +120,7 @@ func TestCheckSilence(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	c.StateFile = ""
 	err = s.Init(c)
 	if err != nil {
 		t.Fatal(err)
@@ -169,6 +170,7 @@ func TestCheckNotify(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	c.StateFile = ""
 	err = s.Init(c)
 	if err != nil {
 		t.Fatal(err)
