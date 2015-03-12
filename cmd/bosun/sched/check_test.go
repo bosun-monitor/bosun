@@ -20,6 +20,7 @@ func TestCheckFlapping(t *testing.T) {
 		}
 		alert a {
 			warnNotification = n
+			critNotification = n
 			warn = 1
 		}
 	`)
@@ -68,6 +69,17 @@ func TestCheckFlapping(t *testing.T) {
 	if hasNots() {
 		t.Fatal("unexpected notification")
 	}
+	r.Events[ak].Status = StCritical
+	s.RunHistory(r)
+	if !hasNots() {
+		t.Fatal("expected notification")
+	}
+	r.Events[ak].Status = StNormal
+	s.RunHistory(r)
+	if hasNots() {
+		t.Fatal("unexpected notification")
+	}
+	s.RunHistory(r)
 	// Close the alert, so it should notify next time.
 	if err := s.Action("", "", ActionClose, ak); err != nil {
 		t.Fatal(err)
