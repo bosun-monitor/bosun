@@ -2,6 +2,7 @@ package sched
 
 import (
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -137,5 +138,50 @@ func TestCheckSilence(t *testing.T) {
 		t.Fatal("silenced notification was sent")
 	case <-time.After(time.Second * 2):
 		// Timeout *probably* means the silence worked
+	}
+}
+
+func TestCheckNotify(t *testing.T) {
+	s := new(Schedule)
+	nc := make(chan string)
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		b, _ := ioutil.ReadAll(r.Body)
+		nc <- string(b)
+	}))
+	defer ts.Close()
+	u, err := url.Parse(ts.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	c, err := conf.New("", fmt.Sprintf(`
+		template t {
+			subject = {{.Last.Status}}
+		}
+		notification n {
+			post = http://%s/
+		}
+		alert a {
+			template = t
+			warnNotification = n
+			warn = 1
+		}
+	`, u.Host))
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = s.Init(c)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = s.Check(nil, time.Now())
+	if err != nil {
+		t.Fatal(err)
+	}
+	s.CheckNotifications()
+	select {
+	case r := <-nc:
+		if r != "warning" {
+			t.Fatalf("expected warning, got %v", r)
+		}
 	}
 }
