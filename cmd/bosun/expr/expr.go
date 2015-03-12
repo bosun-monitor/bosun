@@ -214,6 +214,17 @@ func (r ResultSlice) DescByValue() ResultSlice {
 	return c
 }
 
+// Filter returns a slice with only the results that have a tagset that conforms to the given key/value pair restrictions
+func (r ResultSlice) Filter(filter opentsdb.TagSet) ResultSlice {
+	output := make(ResultSlice, 0, len(r))
+	for _, res := range r {
+		if res.Group.Compatible(filter) {
+			output = append(output, res)
+		}
+	}
+	return output
+}
+
 func (r ResultSlice) Len() int           { return len(r) }
 func (r ResultSlice) Swap(i, j int)      { r[i], r[j] = r[j], r[i] }
 func (r ResultSlice) Less(i, j int) bool { return r[i].Value.(Number) > r[j].Value.(Number) }
