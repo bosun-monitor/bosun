@@ -148,7 +148,7 @@ var unknownMultiGroup = template.Must(template.New("unknownMultiGroup").Parse(`
 	`))
 
 func (s *Schedule) notify(st *State, n *conf.Notification) {
-	n.Notify([]byte(st.Subject), st.EmailBody, s.Conf, string(st.AlertKey()), st.Attachments...)
+	n.Notify(st.Subject, st.Body, st.EmailSubject, st.EmailBody, s.Conf, string(st.AlertKey()), st.Attachments...)
 }
 
 // utnotify is single notification for N unknown groups into a single notification
@@ -171,7 +171,7 @@ func (s *Schedule) utnotify(groups map[string]expr.AlertKeys, n *conf.Notificati
 	}); err != nil {
 		log.Println(err)
 	}
-	n.Notify([]byte(subject), body.Bytes(), s.Conf, "unknown_treshold")
+	n.Notify(subject, body.String(), []byte(subject), body.Bytes(), s.Conf, "unknown_treshold")
 }
 
 func (s *Schedule) unotify(name string, group expr.AlertKeys, n *conf.Notification) {
@@ -192,7 +192,7 @@ func (s *Schedule) unotify(name string, group expr.AlertKeys, n *conf.Notificati
 			}
 		}
 	}
-	n.Notify(subject.Bytes(), body.Bytes(), s.Conf, name)
+	n.Notify(subject.String(), body.String(), subject.Bytes(), body.Bytes(), s.Conf, name)
 }
 
 func (s *Schedule) AddNotification(ak expr.AlertKey, n *conf.Notification, started time.Time) {
