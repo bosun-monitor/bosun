@@ -185,5 +185,7 @@ func TestCheckNotify(t *testing.T) {
 		if r != "warning" {
 			t.Fatalf("expected warning, got %v", r)
 		}
+	case <-time.After(time.Second):
+		t.Fatal("failed to receive notification before timeout")
 	}
 }
