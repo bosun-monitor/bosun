@@ -111,6 +111,16 @@ func (t TagSet) Subset(o TagSet) bool {
 	return true
 }
 
+// Compatible returns true if all keys that are in both o and t, have the same value.
+func (t TagSet) Compatible(o TagSet) bool {
+	for k, v := range o {
+		if tv, ok := t[k]; ok && tv != v {
+			return false
+		}
+	}
+	return true
+}
+
 // Intersection returns the intersection of t and o.
 func (t TagSet) Intersection(o TagSet) TagSet {
 	r := make(TagSet)
