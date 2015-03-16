@@ -40,8 +40,10 @@ var (
 	flagWatch    = flag.Bool("w", false, "watch .go files below current directory and exit; also build typescript files on change")
 	flagReadonly = flag.Bool("r", false, "readonly-mode: don't write or relay any OpenTSDB metrics")
 	flagQuiet    = flag.Bool("q", false, "quiet-mode: don't send any notifications except from the rule test page")
-	flagDev      = flag.Bool("dev", false, "enable dev mode: use local resources")
+	flagDev      = flag.Bool("dev", false, "enable dev mode: use local resources; no syslog")
 	flagVersion  = flag.Bool("version", false, "Prints the version and exits")
+
+	mains []func()
 )
 
 func main() {
@@ -49,6 +51,9 @@ func main() {
 	if *flagVersion {
 		fmt.Printf("bosun version %v (%v)\n", VersionDate, VersionID)
 		os.Exit(0)
+	}
+	for _, m := range mains {
+		m()
 	}
 	runtime.GOMAXPROCS(runtime.NumCPU())
 	c, err := conf.ParseFile(*flagConf)
