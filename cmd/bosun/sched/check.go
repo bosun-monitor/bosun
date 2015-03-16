@@ -61,26 +61,6 @@ func (s *Schedule) NewRunHistory(start time.Time, cache *cache.Cache) *RunHistor
 	}
 }
 
-// Check evaluates all critical and warning alert rules. An error is returned if
-// the check could not be performed.
-func (s *Schedule) Check(T miniprofiler.Timer, now time.Time) (time.Duration, error) {
-	select {
-	case s.checkRunning <- true:
-		// Good, we've got the lock.
-	default:
-		return 0, fmt.Errorf("check already running")
-	}
-	r := s.NewRunHistory(now, cache.New(0))
-	start := time.Now()
-	for _, a := range s.Conf.Alerts {
-		s.CheckAlert(T, r, a)
-	}
-	d := time.Since(start)
-	s.RunHistory(r)
-	<-s.checkRunning
-	return d, nil
-}
-
 // RunHistory processes an event history and trisggers notifications if needed.
 func (s *Schedule) RunHistory(r *RunHistory) {
 	checkNotify := false
@@ -93,9 +73,14 @@ func (s *Schedule) RunHistory(r *RunHistory) {
 			state = NewStatus(ak)
 			s.status[ak] = state
 		}
-		a := s.Conf.Alerts[ak.Name()]
 		last := state.AbnormalStatus()
+		state.Unevaluated = event.Unevaluated
+		if event.Unevaluated {
+			continue
+		}
 		state.Append(event)
+
+		a := s.Conf.Alerts[ak.Name()]
 		wasOpen := state.Open
 		if event.Status > StNormal {
 			if event.Status != StUnknown {
@@ -169,6 +154,7 @@ func (s *Schedule) RunHistory(r *RunHistory) {
 			state.NeedAck = false
 			delete(s.Notifications, ak)
 		}
+
 		// last could be StNone if it is new. Set it to normal if so because StNormal >
 		// StNone. If the state is not open (closed), then the last state we care about
 		// isn't the last abnormal state, it's just normal.
@@ -200,58 +186,138 @@ func (s *Schedule) RunHistory(r *RunHistory) {
 	s.Save()
 }
 
-// CheckUnknown checks for unknown alerts.
-func (s *Schedule) CheckUnknown() {
-	for range time.Tick(s.Conf.CheckFrequency / 4) {
-		log.Println("checkUnknown")
-		r := s.NewRunHistory(time.Now(), nil)
-		s.Lock()
-		for ak, st := range s.status {
-			if st.Forgotten {
-				continue
-			}
-			a := s.Conf.Alerts[ak.Name()]
-			t := a.Unknown
-			if t == 0 {
-				t = s.Conf.CheckFrequency * 2
-			}
-			if t == 0 {
-				continue
-			}
-			if time.Since(st.Touched) < t {
-				continue
-			}
-			r.Events[ak] = &Event{Status: StUnknown}
+func (r *RunHistory) GetUnknownAndUnevaluatedAlertKeys(alert string) (unknown, uneval []expr.AlertKey) {
+	unknown = []expr.AlertKey{}
+	uneval = []expr.AlertKey{}
+	for ak, ev := range r.Events {
+		if ak.Name() != alert {
+			continue
 		}
-		s.Unlock()
-		s.RunHistory(r)
+		if ev.Status == StUnknown {
+			unknown = append(unknown, ak)
+		} else if ev.Unevaluated {
+			uneval = append(uneval, ak)
+		}
 	}
+	return unknown, uneval
+}
+
+// Check evaluates all critical and warning alert rules. An error is returned if
+// the check could not be performed.
+func (s *Schedule) Check(T miniprofiler.Timer, now time.Time) (time.Duration, error) {
+	select {
+	case s.checkRunning <- true:
+		// Good, we've got the lock.
+	default:
+		return 0, fmt.Errorf("check already running")
+	}
+	r := s.NewRunHistory(now, cache.New(0))
+	start := time.Now()
+	for _, ak := range s.findUnknownAlerts(now) {
+		r.Events[ak] = &Event{Status: StUnknown}
+	}
+	for _, a := range s.Conf.OrderedAlerts {
+		s.CheckAlert(T, r, a)
+	}
+	d := time.Since(start)
+	s.RunHistory(r)
+	<-s.checkRunning
+	return d, nil
+}
+
+var bosunStartupTime = time.Now()
+
+func (s *Schedule) findUnknownAlerts(now time.Time) []expr.AlertKey {
+	keys := []expr.AlertKey{}
+	if time.Now().Sub(bosunStartupTime) < s.Conf.CheckFrequency {
+		return keys
+	}
+	s.Lock()
+	for ak, st := range s.status {
+		if st.Forgotten {
+			continue
+		}
+		a := s.Conf.Alerts[ak.Name()]
+		t := a.Unknown
+		if t == 0 {
+			t = s.Conf.CheckFrequency * 2
+		}
+		if now.Sub(st.Touched) < t {
+			continue
+		}
+		keys = append(keys, ak)
+	}
+	s.Unlock()
+	return keys
 }
 
 func (s *Schedule) CheckAlert(T miniprofiler.Timer, r *RunHistory, a *conf.Alert) {
 	log.Printf("check alert %v start", a.Name)
 	start := time.Now()
-	var warns expr.AlertKeys
-	crits, err := s.CheckExpr(T, r, a, a.Crit, StCritical, nil)
+	var warns, crits expr.AlertKeys
+	d, err := s.executeExpr(T, r, a, a.Depends)
+	var deps expr.ResultSlice
 	if err == nil {
-		warns, _ = s.CheckExpr(T, r, a, a.Warn, StWarning, crits)
+		deps = filterDependencyResults(d)
+		crits, err = s.CheckExpr(T, r, a, a.Crit, StCritical, nil)
+		if err == nil {
+			warns, _ = s.CheckExpr(T, r, a, a.Warn, StWarning, crits)
+		}
 	}
+	unevalCount, unknownCount := markDependenciesUnevaluated(r.Events, deps, a.Name)
+
 	collect.Put("check.duration", opentsdb.TagSet{"name": a.Name}, time.Since(start).Seconds())
-	log.Printf("check alert %v done (%s): %v crits, %v warns", a.Name, time.Since(start), len(crits), len(warns))
+	log.Printf("check alert %v done (%s): %v crits, %v warns, %v unevaluated, %v unknown", a.Name, time.Since(start), len(crits), len(warns), unevalCount, unknownCount)
 }
 
-func (s *Schedule) CheckExpr(T miniprofiler.Timer, rh *RunHistory, a *conf.Alert, e *expr.Expr, checkStatus Status, ignore expr.AlertKeys) (alerts expr.AlertKeys, err error) {
-	if e == nil {
-		return
+func filterDependencyResults(results *expr.Results) expr.ResultSlice {
+	// take the results of the dependency expression and filter it to
+	// non-zero tag sets.
+	filtered := expr.ResultSlice{}
+	if results == nil {
+		return filtered
 	}
-	defer func() {
-		if err == nil {
-			return
+	for _, r := range results.Results {
+		var n float64
+		switch v := r.Value.(type) {
+		case expr.Number:
+			n = float64(v)
+		case expr.Scalar:
+			n = float64(v)
 		}
-		collect.Add("check.errs", opentsdb.TagSet{"metric": a.Name}, 1)
-		log.Println(err)
-	}()
-	results, _, err := e.Execute(rh.Context, rh.GraphiteContext, s.Conf.LogstashElasticHosts, rh.Cache, T, rh.Start, 0, a.UnjoinedOK, s.Search, s.Conf.AlertSquelched(a))
+		if !math.IsNaN(n) && n != 0 {
+			filtered = append(filtered, r)
+		}
+	}
+	return filtered
+}
+
+func markDependenciesUnevaluated(events map[expr.AlertKey]*Event, deps expr.ResultSlice, alert string) (unevalCount, unknownCount int) {
+	unevalCount, unknownCount := 0, 0
+	for ak, ev := range events {
+		if ak.Name() != alert {
+			continue
+		}
+		for _, dep := range deps {
+
+			if dep.Group.Overlaps(ak.Group()) {
+				ev.Unevaluated = true
+				unevalCount++
+			}
+			if ev.Status == StUnknown {
+				unknownCount++
+			}
+		}
+
+	}
+	return unevalCount, unknownCount
+}
+
+func (s *Schedule) executeExpr(T miniprofiler.Timer, rh *RunHistory, a *conf.Alert, e *expr.Expr) (*expr.Results, error) {
+	if e == nil {
+		return nil, nil
+	}
+	results, _, err := e.Execute(rh.Context, rh.GraphiteContext, s.Conf.LogstashElasticHosts, rh.Cache, T, rh.Start, 0, a.UnjoinedOK, s.Search, s.Conf.AlertSquelched(a), rh)
 	if err != nil {
 		ak := expr.NewAlertKey(a.Name, nil)
 		state := s.Status(ak)
@@ -269,7 +335,25 @@ func (s *Schedule) CheckExpr(T miniprofiler.Timer, rh *RunHistory, a *conf.Alert
 		rh.Events[ak] = &Event{
 			Status: StError,
 		}
+		return nil, err
+	}
+	return results, err
+}
+
+func (s *Schedule) CheckExpr(T miniprofiler.Timer, rh *RunHistory, a *conf.Alert, e *expr.Expr, checkStatus Status, ignore expr.AlertKeys) (alerts expr.AlertKeys, err error) {
+	if e == nil {
 		return
+	}
+	defer func() {
+		if err == nil {
+			return
+		}
+		collect.Add("check.errs", opentsdb.TagSet{"metric": a.Name}, 1)
+		log.Println(err)
+	}()
+	results, err := s.executeExpr(T, rh, a, e)
+	if err != nil {
+		return nil, err
 	}
 Loop:
 	for _, r := range results.Results {

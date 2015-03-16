@@ -686,7 +686,7 @@ func timeTSDBRequest(e *State, T miniprofiler.Timer, req *opentsdb.Request) (s o
 		}
 		var val interface{}
 		val, err = e.cache.Get(string(b), getFn)
-		s = val.(opentsdb.ResponseSet)
+		s = val.(opentsdb.ResponseSet).Copy()
 	})
 	return
 }
@@ -997,14 +997,15 @@ func Rename(e *State, T miniprofiler.Timer, series *Results, s string) (*Results
 		if len(kv) != 2 {
 			return nil, fmt.Errorf("error passing groups")
 		}
+		oldKey, newKey := kv[0], kv[1]
 		for _, res := range series.Results {
-			for oldk, v := range res.Group {
-				if kv[0] == oldk {
-					if _, ok := res.Group[kv[1]]; ok {
-						return nil, fmt.Errorf("%s already in group", kv[1])
+			for tag, v := range res.Group {
+				if oldKey == tag {
+					if _, ok := res.Group[newKey]; ok {
+						return nil, fmt.Errorf("%s already in group", newKey)
 					}
-					delete(res.Group, oldk)
-					res.Group[kv[1]] = v
+					delete(res.Group, oldKey)
+					res.Group[newKey] = v
 				}
 
 			}

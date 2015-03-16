@@ -90,6 +90,17 @@ func (t Tags) Subset(o Tags) bool {
 	return true
 }
 
+// Intersection returns Tags common to both tagsets.
+func (t Tags) Intersection(o Tags) Tags {
+	result := Tags{}
+	for k := range t {
+		if _, ok := o[k]; ok {
+			result[k] = struct{}{}
+		}
+	}
+	return result
+}
+
 // Parse returns a Tree, created by parsing the expression described in the
 // argument string. If an error is encountered, parsing stops and an empty Tree
 // is returned with the error.

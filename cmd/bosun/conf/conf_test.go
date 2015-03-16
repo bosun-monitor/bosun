@@ -67,6 +67,7 @@ func TestInvalid(t *testing.T) {
 		"number-func-args":     `conf: number-func-args:4:1: at <warn = q("avg:o", ""...>: expr: parse: not enough arguments for q`,
 		"lookup-key-pairs-dup": `conf: lookup-key-pairs-dup:3:1: at <entry b=2,a=1 { }>: duplicate entry`,
 		"crit-warn-unmatching-tags": `conf: crit-warn-unmatching-tags:3:0: at <alert broken {\n	cri...>: crit tags (a,c) and warn tags (c) must be equal`,
+		"depends-no-overlap": `conf: depends-no-overlap:3:0: at <alert broken {\n	dep...>: Depends and crit/warn must share at least one tag.`,
 	}
 	for fname, reason := range names {
 		path := filepath.Join("invalid", fname)
