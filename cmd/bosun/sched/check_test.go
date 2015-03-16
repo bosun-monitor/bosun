@@ -11,6 +11,7 @@ import (
 
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/expr"
+	"bosun.org/opentsdb"
 )
 
 func TestCheckFlapping(t *testing.T) {
@@ -187,5 +188,73 @@ func TestCheckNotify(t *testing.T) {
 		}
 	case <-time.After(time.Second):
 		t.Fatal("failed to receive notification before timeout")
+	}
+}
+
+func TestCheckNotifyUnknown(t *testing.T) {
+	s := new(Schedule)
+	nc := make(chan string, 1)
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		b, _ := ioutil.ReadAll(r.Body)
+		nc <- string(b)
+	}))
+	defer ts.Close()
+	u, err := url.Parse(ts.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	c, err := conf.New("", fmt.Sprintf(`
+		template t {
+			subject = {{.Name}}: {{.Group | len}} unknown alerts
+			body = `+"`"+`
+			<p>Time: {{.Time}}
+			<p>Name: {{.Name}}
+			<p>Alerts:
+			{{range .Group}}
+				<br>{{.}}
+			{{end}}`+"`"+`
+		}
+		unknownTemplate = t
+		notification n {
+			post = http://%s/
+		}
+		alert a {
+			critNotification = n
+			crit = 1
+		}
+	`, u.Host))
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.StateFile = ""
+	err = s.Init(c)
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := &RunHistory{
+		Events: map[expr.AlertKey]*Event{
+			expr.NewAlertKey("a", opentsdb.TagSet{"h": "x"}): {Status: StUnknown},
+			expr.NewAlertKey("a", opentsdb.TagSet{"h": "y"}): {Status: StUnknown},
+		},
+	}
+	s.RunHistory(r)
+	s.CheckNotifications()
+	gotExpected := false
+Loop:
+	for {
+		select {
+		case r := <-nc:
+			if r == "a: 2 unknown alerts" {
+				gotExpected = true
+			} else {
+				t.Fatalf("unexpected: %v", r)
+			}
+		// TODO: remove this silly timeout-based test
+		case <-time.After(time.Second):
+			break Loop
+		}
+	}
+	if !gotExpected {
+		t.Errorf("didn't get expected result")
 	}
 }

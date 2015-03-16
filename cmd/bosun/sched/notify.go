@@ -96,8 +96,7 @@ func (s *Schedule) sendNotifications(silenced map[expr.AlertKey]Silence) {
 					continue
 				}
 				ustates[ak] = st
-			}
-			if silenced {
+			} else if silenced {
 				log.Println("silencing", ak)
 			} else {
 				s.notify(st, n)
