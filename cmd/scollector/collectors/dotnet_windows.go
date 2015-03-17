@@ -22,7 +22,7 @@ func init() {
 	}
 	WatchProcessesDotNet = func() {
 		if len(regexesDotNet) == 0 {
-			// If no processesDotNet configured in config file, use this set instead.
+			// If no process_dotnet settings configured in config file, use this set instead.
 			regexesDotNet = append(regexesDotNet, regexp.MustCompile("^w3wp"))
 		}
 		c := &IntervalCollector{

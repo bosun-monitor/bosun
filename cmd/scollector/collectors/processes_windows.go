@@ -23,8 +23,8 @@ func AddProcessConfig(line string) error {
 
 func WatchProcesses() {
 	if len(regexesProcesses) == 0 {
-		// if no processes configured in config file, use this set instead.
-		regexesProcesses = append(regexesProcesses, regexp.MustCompile("chrome|powershell|scollector|SocketServer|WinRM|MSSQLSERVER|StackServerProd|StackServerDev|LogStasher"))
+		// if no process settings configured in config file, use this set instead.
+		regexesProcesses = append(regexesProcesses, regexp.MustCompile("chrome|powershell|scollector|WinRM|MSSQLSERVER"))
 	}
 	collectors = append(collectors, &IntervalCollector{
 		F: c_windows_processes,
@@ -40,7 +40,7 @@ func c_windows_processes() (opentsdb.MultiDataPoint, error) {
 	}
 
 	var svc_dst []Win32_Service
-	var svc_q = wmi.CreateQuery(&svc_dst, `WHERE Started=true`)
+	var svc_q = wmi.CreateQuery(&svc_dst, "")
 	err = queryWmi(svc_q, &svc_dst)
 	if err != nil {
 		return nil, err
@@ -69,6 +69,20 @@ func c_windows_processes() (opentsdb.MultiDataPoint, error) {
 	}
 
 	var md opentsdb.MultiDataPoint
+	var svc_dst_started []Win32_Service
+	for _, svc := range svc_dst {
+		if nameMatches(svc.Name, regexesProcesses) {
+			if svc.Started {
+				svc_dst_started = append(svc_dst_started, svc)
+			}
+			tags := opentsdb.TagSet{"name": svc.Name}
+			Add(&md, "win.service.started", btoi(svc.Started), tags, metadata.Gauge, metadata.Bool, descWinServiceStatus)
+			Add(&md, "win.service.status", btoi(svc.Status != "OK"), tags, metadata.Gauge, metadata.Ok, descWinServiceStatus)
+			Add(&md, "win.service.checkpoint", svc.CheckPoint, tags, metadata.Gauge, metadata.None, descWinServiceCheckPoint)
+			Add(&md, "win.service.wait_hint", svc.WaitHint, tags, metadata.Gauge, metadata.MilliSecond, descWinServiceWaitHint)
+		}
+	}
+
 	for _, v := range dst {
 		var name string
 		service_match := false
@@ -91,16 +105,14 @@ func c_windows_processes() (opentsdb.MultiDataPoint, error) {
 		}
 
 		// A Service match could "overwrite" a process match, but that is probably what we would want
-		for _, svc := range svc_dst {
-			if nameMatches(svc.Name, regexesProcesses) {
-				// It is possible the pid has gone and been reused, but I think this unlikely
-				// And I'm not aware of an atomic join we could do anyways
-				if svc.ProcessId != 0 && svc.ProcessId == v.IDProcess {
-					id = "0"
-					service_match = true
-					name = svc.Name
-					break
-				}
+		for _, svc := range svc_dst_started {
+			// It is possible the pid has gone and been reused, but I think this unlikely
+			// And I'm not aware of an atomic join we could do anyways
+			if svc.ProcessId != 0 && svc.ProcessId == v.IDProcess {
+				id = "0"
+				service_match = true
+				name = svc.Name
+				break
 			}
 		}
 
@@ -154,6 +166,13 @@ func nameMatches(name string, regexes []*regexp.Regexp) bool {
 		}
 	}
 	return false
+}
+
+func btoi(b bool) int {
+	if b {
+		return 1
+	}
+	return 0
 }
 
 // Divide CPU by 1e5 because: 1 seconds / 100 Nanoseconds = 1e7. This is the
@@ -221,10 +240,21 @@ type Win32_PerfRawData_PerfProc_Process struct {
 	WorkingSetPrivate       uint64
 }
 
+const (
+	descWinServiceCheckPoint = "The CheckPoint property specifies a value that the service increments periodically to report its progress during a lengthy start, stop, pause, or continue operation. For example, the service should increment this value as it completes each step of its initialization when it is starting up. The user interface program that invoked the operation on the service uses this value to track the progress of the service during a lengthy operation. This value is not valid and should be zero when the service does not have a start, stop, pause, or continue operation pending."
+	descWinServiceStarted    = "Started is a boolean indicating whether the service has been started (TRUE), or stopped (FALSE)."
+	descWinServiceStatus     = "The Status property indicates the current status of the object. Right now 0=OK and 1=Not OK, but various operational and non-operational statuses can be defined such as OK, Degraded,  Pred Fail, Error, Starting, Stopping, and Service."
+	descWinServiceWaitHint   = "The WaitHint property specifies the estimated time required (in milliseconds) for a pending start, stop, pause, or continue operation. After the specified amount of time has elapsed, the service makes its next call to the SetServiceStatus function with either an incremented CheckPoint value or a change in Current State. If the amount of time specified by WaitHint passes, and CheckPoint has not been incremented, or the Current State has not changed, the service control manager or service control program assumes that an error has occurred."
+)
+
 // Actually a Win32_BaseServce.
 type Win32_Service struct {
-	Name      string
-	ProcessId uint32
+	CheckPoint uint32
+	Name       string
+	ProcessId  uint32
+	Started    bool
+	Status     string
+	WaitHint   uint32
 }
 
 type WorkerProcess struct {
