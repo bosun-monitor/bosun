@@ -5,8 +5,8 @@ package slog
 import "log/syslog"
 
 // SetSyslog configures slog to use the system syslog daemon.
-func SetSyslog() error {
-	w, err := syslog.New(syslog.LOG_LOCAL6, "")
+func SetSyslog(tag string) error {
+	w, err := syslog.New(syslog.LOG_LOCAL6, tag)
 	if err != nil {
 		return err
 	}
