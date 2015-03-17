@@ -18,7 +18,7 @@ func setSyslog() {
 	if *noSyslog || *flagDev {
 		return
 	}
-	w, err := syslog.New(syslog.LOG_LOCAL6, "bosun")
+	w, err := syslog.New(syslog.LOG_LOCAL6 | syslog.LOG_INFO, "bosun")
 	if err != nil {
 		log.Println("could not open syslog: %v", err)
 		return
