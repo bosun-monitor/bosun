@@ -26,3 +26,6 @@ It will update itself when go/js/ts files change, and it runs in read-only mode,
 $ cd cmd/bosun
 $ ./w.sh
 ```
+
+Go Version:
+  * We generally upgrade to the latest version Go within a day or two. So consider the correct version of Go always to be the latest stable release.
