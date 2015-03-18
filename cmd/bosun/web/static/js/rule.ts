@@ -128,8 +128,8 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
 			intervals = +$scope.intervals;
 		}
 		var url = '/api/rule?' +
-			'alert=' + encodeURIComponent($scope.alert) +
-			'&template=' + encodeURIComponent($scope.template) +
+			'alert=' + encodeURIComponent($scope.alert || '') +
+			'&template=' + encodeURIComponent($scope.template || '') +
 			'&from=' + encodeURIComponent(from.format()) +
 			'&to=' + encodeURIComponent(to.format()) +
 			'&intervals=' + encodeURIComponent(intervals) +
