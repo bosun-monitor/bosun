@@ -4,11 +4,13 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"syscall"
 	"time"
 
 	"bosun.org/_third_party/code.google.com/p/winsvc/debug"
 	"bosun.org/_third_party/code.google.com/p/winsvc/eventlog"
 	"bosun.org/_third_party/code.google.com/p/winsvc/mgr"
+	"bosun.org/_third_party/code.google.com/p/winsvc/registry"
 	"bosun.org/_third_party/code.google.com/p/winsvc/svc"
 	"bosun.org/slog"
 )
@@ -170,6 +172,11 @@ loop:
 }
 
 func runService(name string, isDebug bool) {
+	errFix := fixEventMessageFile(name) //Temp fix. Remove after a few weeks.
+	if errFix != nil {
+		slog.Errorf("%s fixEventMessageFile failed: %v", name, errFix)
+		return
+	}
 	if isDebug {
 		slog.SetEventLog(debug.New(name), 1)
 	} else {
@@ -193,4 +200,28 @@ func runService(name string, isDebug bool) {
 	}
 	slog.Infof("%s service stopped", name)
 	os.Exit(0)
+}
+
+// This is a temporary method to fix an issue with the EventMessageFile.
+// See http://stackoverflow.com/questions/29130586 for details.
+func fixEventMessageFile(src string) error {
+	const addKeyName = `SYSTEM\CurrentControlSet\Services\EventLog\Application`
+	appkey, err := registry.OpenKey(syscall.HKEY_LOCAL_MACHINE, addKeyName)
+	if err != nil {
+		return err
+	}
+	defer appkey.Close()
+	sk, alreadyExist, err := appkey.CreateSubKey(src)
+	if err != nil {
+		return err
+	}
+	defer sk.Close()
+	if alreadyExist {
+		// Update REG_SZ key with expanded value for %systemroot% variable.
+		err = sk.SetString("EventMessageFile", os.ExpandEnv("${systemroot}\\System32\\EventCreate.exe"))
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
