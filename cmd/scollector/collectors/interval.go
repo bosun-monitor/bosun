@@ -42,7 +42,7 @@ func (c *IntervalCollector) Run(dpchan chan<- *opentsdb.DataPoint) {
 			}
 		}()
 	}
-	tags := opentsdb.TagSet{"collector": c.Name()}
+	tags := opentsdb.TagSet{"collector": c.Name(), "os": runtime.GOOS}
 	for {
 		interval := c.Interval
 		if interval == 0 {

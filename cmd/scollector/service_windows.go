@@ -187,8 +187,7 @@ func runService(name string, isDebug bool) {
 		slog.SetEventLog(elog, 1)
 		defer elog.Close()
 	}
-
-	slog.Infof("starting %s service", name)
+	slog.Infof("starting %s service version %v (%v)", name, VersionDate, VersionID)
 	run := svc.Run
 	if isDebug {
 		run = debug.Run
