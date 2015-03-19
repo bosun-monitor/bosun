@@ -13,6 +13,7 @@ import (
 
 	"bosun.org/_third_party/github.com/MiniProfiler/go/miniprofiler"
 	"bosun.org/cmd/bosun/conf"
+	"bosun.org/cmd/bosun/expr"
 	"bosun.org/opentsdb"
 )
 
@@ -28,10 +29,12 @@ type schedTest struct {
 	conf    string
 	queries map[string]opentsdb.ResponseSet
 	// state -> active
-	state map[schedState]bool
+	state    map[schedState]bool
+	previous map[expr.AlertKey]*State
 }
 
-func testSched(t *testing.T, st *schedTest) {
+func testSched(t *testing.T, st *schedTest) (s *Schedule) {
+	bosunStartupTime = time.Date(1900, 0, 0, 0, 0, 0, 0, time.UTC) //pretend we've been running for a while.
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var req opentsdb.Request
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -57,7 +60,6 @@ func testSched(t *testing.T, st *schedTest) {
 		t.Fatal(err)
 	}
 	confs := "tsdbHost = " + u.Host + "\n" + st.conf
-	start := time.Date(2000, time.January, 1, 12, 0, 0, 0, time.UTC)
 	c, err := conf.New("testconf", confs)
 	if err != nil {
 		t.Error(err)
@@ -66,9 +68,12 @@ func testSched(t *testing.T, st *schedTest) {
 	}
 	c.StateFile = ""
 	time.Sleep(time.Millisecond * 250)
-	s := new(Schedule)
+	s = new(Schedule)
 	s.Init(c)
-	s.Check(nil, start)
+	if st.previous != nil {
+		s.status = st.previous
+	}
+	s.Check(nil, queryTime)
 	groups, err := s.MarshalGroups(new(miniprofiler.Profile), "")
 	if err != nil {
 		t.Error(err)
@@ -103,7 +108,11 @@ func testSched(t *testing.T, st *schedTest) {
 	for k := range st.state {
 		t.Errorf("unused state: %s", k)
 	}
+	return s
 }
+
+var queryTime = time.Date(2000, 1, 1, 12, 0, 0, 0, time.UTC)
+var window5Min = `"2000/01/01-11:55:00", "2000/01/01-12:00:00"`
 
 func TestCrit(t *testing.T) {
 	testSched(t, &schedTest{
@@ -111,7 +120,7 @@ func TestCrit(t *testing.T) {
 			crit = avg(q("avg:m{a=b}", "5m", "")) > 0
 		}`,
 		queries: map[string]opentsdb.ResponseSet{
-			`q("avg:m{a=b}", "2000/01/01-11:55:00", "2000/01/01-12:00:00")`: {
+			`q("avg:m{a=b}", ` + window5Min + `)`: {
 				{
 					Metric: "m",
 					Tags:   opentsdb.TagSet{"a": "b"},
@@ -154,10 +163,10 @@ func TestBandDisableUnjoined(t *testing.T) {
 func TestCount(t *testing.T) {
 	testSched(t, &schedTest{
 		conf: `alert a {
-			crit = count("sum:m{a=*}", "1m", "") != 2
+			crit = count("sum:m{a=*}", "5m", "") != 2
 		}`,
 		queries: map[string]opentsdb.ResponseSet{
-			`q("sum:m{a=*}", "2000/01/01-11:59:00", "2000/01/01-12:00:00")`: {
+			`q("sum:m{a=*}", ` + window5Min + `)`: {
 				{
 					Metric: "m",
 					Tags:   opentsdb.TagSet{"a": "b"},
@@ -169,6 +178,84 @@ func TestCount(t *testing.T) {
 					DPS:    map[string]opentsdb.Point{"0": 1},
 				},
 			},
+		},
+	})
+}
+
+func TestUnknown(t *testing.T) {
+	state := NewStatus("a{a=b}")
+	state.Touched = queryTime.Add(-10 * time.Minute)
+	state.Append(&Event{Status: StNormal, Time: state.Touched})
+	stillValid := NewStatus("a{a=c}")
+	stillValid.Touched = queryTime.Add(-9 * time.Minute)
+	stillValid.Append(&Event{Status: StNormal, Time: stillValid.Touched})
+
+	testSched(t, &schedTest{
+		conf: `alert a {
+			crit = avg(q("avg:m{a=b}", "5m", "")) > 0
+		}`,
+		queries: map[string]opentsdb.ResponseSet{
+			`q("avg:m{a=b}", ` + window5Min + `)`: {},
+		},
+		state: map[schedState]bool{
+			schedState{"a{a=b}", "unknown"}: true,
+		},
+		previous: map[expr.AlertKey]*State{
+			"a{a=b}": state,
+			"a{a=c}": stillValid,
+		},
+	})
+}
+
+func TestRename(t *testing.T) {
+	testSched(t, &schedTest{
+		conf: `
+		alert ping.host {
+  
+    $q = max(rename(q("sum:bosun.ping.timeout{dst_host=*,host=ny-kbrandt02}", "5m", ""), "host=source,dst_host=host"))
+    warn = $q
+}
+
+		alert os.cpu {
+    			depends = max(rename(q("sum:bosun.ping.timeout{dst_host=*,host=ny-kbrandt02}", "5m", ""), "host=source,dst_host=host"))
+    			$q = avg(q("avg:os.cpu{host=*}", "5m", ""))
+    			warn = $q < 99
+			}`,
+		queries: map[string]opentsdb.ResponseSet{
+			`q("sum:bosun.ping.timeout{dst_host=*,host=ny-kbrandt02}", ` + window5Min + `)`: {
+				{
+					Metric: "bosun.ping.timeout",
+					Tags:   opentsdb.TagSet{"host": "ny-kbrandt02", "dst_host": "ny-web01"},
+					DPS:    map[string]opentsdb.Point{"0": 1},
+				},
+				{
+					Metric: "bosun.ping.timeout",
+					Tags:   opentsdb.TagSet{"host": "ny-kbrandt02", "dst_host": "ny-web02"},
+					DPS:    map[string]opentsdb.Point{"0": 0},
+				},
+				{
+					Metric: "bosun.ping.timeout",
+					Tags:   opentsdb.TagSet{"host": "ny-kbrandt02", "dst_host": "ny-kbrandt02"},
+					DPS:    map[string]opentsdb.Point{"0": 1},
+				},
+			},
+			`q("avg:os.cpu{host=*}", ` + window5Min + `)`: {
+				{
+					Metric: "os.cpu",
+					Tags:   opentsdb.TagSet{"host": "ny-web01"},
+					DPS:    map[string]opentsdb.Point{"0": 1},
+				},
+				{
+					Metric: "os.cpu",
+					Tags:   opentsdb.TagSet{"host": "ny-web02"},
+					DPS:    map[string]opentsdb.Point{"0": 1},
+				},
+			},
+		},
+		state: map[schedState]bool{
+			schedState{"ping.host{host=ny-kbrandt02,source=ny-kbrandt02}", "warning"}: true,
+			schedState{"ping.host{host=ny-web01,source=ny-kbrandt02}", "warning"}:     true,
+			schedState{"os.cpu{host=ny-web02}", "warning"}:                            true,
 		},
 	})
 }

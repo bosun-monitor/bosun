@@ -25,6 +25,14 @@ import (
 // http://opentsdb.net/docs/build/html/api_http/query/index.html#example-multi-set-response.
 type ResponseSet []*Response
 
+func (r ResponseSet) Copy() ResponseSet {
+	newSet := make(ResponseSet, len(r))
+	for i, resp := range r {
+		newSet[i] = resp.Copy()
+	}
+	return newSet
+}
+
 // Point is the Response data point type.
 type Point float64
 
@@ -35,6 +43,18 @@ type Response struct {
 	Tags          TagSet           `json:"tags"`
 	AggregateTags []string         `json:"aggregateTags"`
 	DPS           map[string]Point `json:"dps"`
+}
+
+func (r *Response) Copy() *Response {
+	newR := Response{}
+	newR.Metric = r.Metric
+	newR.Tags = r.Tags.Copy()
+	copy(newR.AggregateTags, r.AggregateTags)
+	newR.DPS = map[string]Point{}
+	for k, v := range r.DPS {
+		newR.DPS[k] = v
+	}
+	return &newR
 }
 
 // DataPoint is a data point for the /api/put route:
@@ -152,6 +172,25 @@ func (t TagSet) Tags() string {
 		fmt.Fprintf(b, "%s=%s", k, t[k])
 	}
 	return b.String()
+}
+
+// Returns true if the two tagsets "overlap".
+// Two tagsets overlap if they:
+// 1. Have at least one key/value pair that matches
+// 2. Have no keys in common where the values do not match
+func (a TagSet) Overlaps(b TagSet) bool {
+	anyMatch := false
+	for k, v := range a {
+		v2, ok := b[k]
+		if !ok {
+			continue
+		}
+		if v2 != v {
+			return false
+		}
+		anyMatch = true
+	}
+	return anyMatch
 }
 
 func (d *DataPoint) clean() error {
@@ -461,17 +500,7 @@ func (q Query) String() string {
 	}
 	s += q.Metric
 	if len(q.Tags) > 0 {
-		s += "{"
-		first := true
-		for k, v := range q.Tags {
-			if first {
-				first = false
-			} else {
-				s += ","
-			}
-			s += k + "=" + v
-		}
-		s += "}"
+		s += q.Tags.String()
 	}
 	return s
 }
