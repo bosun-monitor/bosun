@@ -270,21 +270,15 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 			fmt.Fprintf(&buf, "%s=%s\n", k, v)
 		}
 	}
-	for _, v := range schedule.Conf.Notifications {
-		fmt.Fprintln(&buf, v.Def)
-	}
 	fmt.Fprintf(&buf, "%s\n", r.FormValue("template"))
 	fmt.Fprintf(&buf, "%s\n", r.FormValue("alert"))
 	c, err := conf.New("Test Config", buf.String())
 	if err != nil {
 		return nil, err
 	}
-	if len(c.Alerts) != 1 {
-		return nil, fmt.Errorf("exactly one alert must be defined")
-	}
 	var a *conf.Alert
-	// Set a to the first alert.
-	for _, a = range c.Alerts {
+	// Set a to the last alert.
+	for _, a = range c.OrderedAlerts {
 	}
 	ch := make(chan int)
 	errch := make(chan error, intervals)

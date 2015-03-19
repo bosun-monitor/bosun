@@ -103,18 +103,12 @@ bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', '$q', '$r
     $scope.panelClass = function (status, prefix) {
         if (prefix === void 0) { prefix = "panel-"; }
         switch (status) {
-            case "critical":
-                return prefix + "danger";
-            case "unknown":
-                return prefix + "info";
-            case "warning":
-                return prefix + "warning";
-            case "normal":
-                return prefix + "success";
-            case "error":
-                return prefix + "danger";
-            default:
-                return prefix + "default";
+            case "critical": return prefix + "danger";
+            case "unknown": return prefix + "info";
+            case "warning": return prefix + "warning";
+            case "normal": return prefix + "success";
+            case "error": return prefix + "danger";
+            default: return prefix + "default";
         }
     };
     var scheduleFilter;
@@ -1798,7 +1792,7 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
     $scope.loadAlert = function ($selected) {
         $scope.alert = $scope.alerts[$selected];
         if (confirm('Load the associated notification template (will overwrite the current notification tempalte) ?')) {
-            $scope.template = $scope.templates[$scope.assocations[$selected]];
+            $scope.template = $scope.templates[$scope.assocations[$selected]] || '';
         }
     };
     $scope.test = function () {

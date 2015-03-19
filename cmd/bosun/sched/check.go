@@ -293,7 +293,6 @@ func filterDependencyResults(results *expr.Results) expr.ResultSlice {
 }
 
 func markDependenciesUnevaluated(events map[expr.AlertKey]*Event, deps expr.ResultSlice, alert string) (unevalCount, unknownCount int) {
-	unevalCount, unknownCount = 0, 0
 	for ak, ev := range events {
 		if ak.Name() != alert {
 			continue
