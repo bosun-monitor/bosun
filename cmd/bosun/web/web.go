@@ -245,7 +245,7 @@ func IPAuthorized(w http.ResponseWriter, r *http.Request) bool {
 		http.Error(w, fmt.Sprintf("Could not parse client IP %v", ra), 500)
 		return false
 	}
-	if !schedule.Conf.PutIPs.Authorized(ip) {
+	if !schedule.Conf.PutAuthorized(ip) {
 		http.Error(w, fmt.Sprintf("IP %v not authorized", ip), 403)
 		return false
 	}
