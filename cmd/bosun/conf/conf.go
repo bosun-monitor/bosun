@@ -196,7 +196,7 @@ func errRecover(errp *error) {
 }
 
 type Lookup struct {
-	Def     string
+	ReplacableItem
 	Name    string
 	Tags    []string
 	Entries []*Entry
@@ -219,14 +219,14 @@ type Entry struct {
 }
 
 type Macro struct {
-	Def    string
+	ReplacableItem
 	Pairs  []nodePair
 	Name   string
 	Macros []string
 }
 
 type Alert struct {
-	Def string
+	ReplacableItem
 	Vars
 	*Template        `json:"-"`
 	Name             string
@@ -292,7 +292,7 @@ func (c *Conf) parseNotifications(v string) (map[string]*Notification, error) {
 }
 
 type Template struct {
-	Def string
+	ReplacableItem
 	Vars
 	Name    string
 	Body    *htemplate.Template `json:"-"`
@@ -302,7 +302,7 @@ type Template struct {
 }
 
 type Notification struct {
-	Def string
+	ReplacableItem
 	Vars
 	Name      string
 	Email     []*mail.Address
@@ -316,6 +316,11 @@ type Notification struct {
 	email     string
 	post, get string
 	body      string
+}
+
+type ReplacableItem struct {
+	Def string
+	Pos parse.Pos
 }
 
 func (n *Notification) MarshalJSON() ([]byte, error) {
@@ -576,9 +581,10 @@ func (c *Conf) loadLookup(s *parse.SectionNode) {
 		c.errorf("duplicate lookup name: %s", name)
 	}
 	l := Lookup{
-		Def:  s.RawText,
 		Name: name,
 	}
+	l.Def = s.RawText
+	l.Pos = s.Pos
 	var lookupTags opentsdb.TagSet
 	saw := make(map[string]bool)
 	for _, n := range s.Nodes.Nodes {
@@ -643,10 +649,11 @@ func (c *Conf) loadMacro(s *parse.SectionNode) {
 		c.errorf("duplicate macro name: %s", name)
 	}
 	m := Macro{
-		Def:    s.RawText,
 		Name:   name,
 		Macros: make([]string, 0),
 	}
+	m.Def = s.RawText
+	m.Pos = s.Pos
 	for _, p := range c.getPairs(s, nil, sMacro, &m.Macros) {
 		m.Pairs = append(m.Pairs, p)
 	}
@@ -683,10 +690,11 @@ func (c *Conf) loadTemplate(s *parse.SectionNode) {
 		c.errorf("duplicate template name: %s", name)
 	}
 	t := Template{
-		Def:  s.RawText,
 		Vars: make(map[string]string),
 		Name: name,
 	}
+	t.Def = s.RawText
+	t.Pos = s.Pos
 	funcs := ttemplate.FuncMap{
 		"V": func(v string) string {
 			return c.Expand(v, t.Vars, false)
@@ -742,13 +750,14 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 		c.errorf("duplicate alert name: %s", name)
 	}
 	a := Alert{
-		Def:              s.RawText,
 		Vars:             make(map[string]string),
 		Name:             name,
 		Macros:           make([]string, 0),
 		CritNotification: new(Notifications),
 		WarnNotification: new(Notifications),
 	}
+	a.Def = s.RawText
+	a.Pos = s.Pos
 	procNotification := func(v string, ns *Notifications) {
 		if lookup := lookupNotificationRE.FindStringSubmatch(v); lookup != nil {
 			if ns.Lookups == nil {
@@ -875,10 +884,11 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 		c.errorf("duplicate notification name: %s", name)
 	}
 	n := Notification{
-		Def:  s.RawText,
 		Vars: make(map[string]string),
 		Name: name,
 	}
+	n.Def = s.RawText
+	n.Pos = s.Pos
 	funcs := ttemplate.FuncMap{
 		"V": func(v string) string {
 			return c.Expand(v, n.Vars, false)
@@ -1040,7 +1050,112 @@ type AlertTemplateStrings struct {
 	Assocations map[string]string
 }
 
+//map of items to their direct dependencies only.
+type dependencyGraph map[string][]string
+
+func buildDepependencyGraph(c *Conf) dependencyGraph {
+	g := dependencyGraph{}
+
+	for name, m := range c.Macros {
+		key := "m" + name
+		g[key] = []string{}
+		for _, subMacro := range m.Macros {
+			g[key] = append(g[key], "m"+subMacro)
+		}
+	}
+
+	for name, a := range c.Alerts {
+		list := []string{}
+		for _, m := range a.Macros {
+			list = append(list, "m"+m)
+		}
+		var walkNotifications = func(n *Notifications) {
+			for l, _ := range n.Lookups {
+				list = append(list, "l"+l)
+			}
+			for not, _ := range n.Notifications {
+				list = append(list, "n"+not)
+			}
+		}
+		if a.CritNotification != nil {
+			walkNotifications(a.CritNotification)
+		}
+		if a.WarnNotification != nil {
+			walkNotifications(a.WarnNotification)
+		}
+		var addIfUnique = func(s string) {
+			for _, x := range list {
+				if x == s {
+					return
+				}
+			}
+			list = append(list, s)
+		}
+		var walkExpr = func(n eparse.Node) {
+			eparse.Walk(n, func(n eparse.Node) {
+				switch n := n.(type) {
+				case *eparse.FuncNode:
+					//two things to look for in walking a tree.
+					//1. Lookup function
+					//2. Alert function
+					if n.Name == "lookup" && len(n.Args) > 0 {
+						addIfUnique("l" + strings.Trim(n.Args[0].String(), "\""))
+					} else if n.Name == "alert" && len(n.Args) > 0 {
+						addIfUnique("a" + strings.Trim(n.Args[0].String(), "\""))
+					}
+				}
+
+			})
+		}
+		if a.Crit != nil {
+			walkExpr(a.Crit.Tree.Root)
+		}
+		if a.Warn != nil {
+			walkExpr(a.Warn.Tree.Root)
+		}
+		if a.Depends != nil {
+			walkExpr(a.Depends.Tree.Root)
+		}
+		g["a"+name] = list
+	}
+	fmt.Println(g)
+	return g
+}
+
+// Returns all dependencies of the given key.
+// items at the front of the list are dependencies of later items
+func (d dependencyGraph) recursiveDependencies(key string) []string {
+	allItems := []string{key}
+	toWalk := []string{}
+	for _, i := range d[key] {
+		allItems = append(allItems, i)
+		toWalk = append(toWalk, i)
+	}
+	for len(toWalk) > 0 {
+		newSet := []string{}
+		for _, dep := range toWalk {
+			for _, item := range d[dep] {
+				newSet = append(newSet, item)
+				allItems = append(allItems, item)
+			}
+		}
+		toWalk = newSet
+	}
+	unique := []string{}
+	included := map[string]struct{}{}
+	for i := len(allItems) - 1; i >= 0; i-- {
+		v := allItems[i]
+		if _, ok := included[v]; ok {
+			continue
+		}
+		unique = append(unique, v)
+		included[v] = struct{}{}
+	}
+	return unique
+}
+
 func (c *Conf) AlertTemplateStrings() (*AlertTemplateStrings, error) {
+	d := buildDepependencyGraph(c)
 	templates := make(map[string]string)
 	for name, template := range c.Templates {
 		incl := map[string]bool{name: true}
@@ -1093,60 +1208,23 @@ func (c *Conf) AlertTemplateStrings() (*AlertTemplateStrings, error) {
 	alerts := make(map[string]string)
 	t_associations := make(map[string]string)
 	for name, alert := range c.Alerts {
-		var add func([]string)
-		add = func(macros []string) {
-			for _, macro := range macros {
-				m := c.Macros[macro]
-				add(m.Macros)
-				alerts[name] += m.Def + "\n\n"
+		items := d.recursiveDependencies("a" + name)
+		text := ""
+		for _, item := range items {
+			itemType := item[0]
+			itemName := item[1:]
+			switch itemType {
+			case 'm':
+				text += c.Macros[itemName].Def + "\n\n"
+			case 'a':
+				text += c.Alerts[itemName].Def + "\n\n"
+			case 'l':
+				text += c.Lookups[itemName].Def + "\n\n"
+			case 'n':
+				text += c.Notifications[itemName].Def + "\n\n"
 			}
 		}
-		lookups := make(map[string]bool)
-		walk := func(n eparse.Node) {
-			eparse.Walk(n, func(n eparse.Node) {
-				switch n := n.(type) {
-				case *eparse.FuncNode:
-					if n.Name != "lookup" || len(n.Args) == 0 {
-						return
-					}
-					switch n := n.Args[0].(type) {
-					case *eparse.StringNode:
-						if lookups[n.Text] {
-							return
-						}
-						lookups[n.Text] = true
-						l := c.Lookups[n.Text]
-						if l == nil {
-							return
-						}
-						alerts[name] += l.Def + "\n\n"
-					}
-				}
-			})
-		}
-		walkNotifications := func(n *Notifications) {
-			for _, v := range n.Lookups {
-				if lookups[v.Name] {
-					return
-				}
-				lookups[v.Name] = true
-				alerts[name] += v.Def + "\n\n"
-			}
-		}
-		if alert.CritNotification != nil {
-			walkNotifications(alert.CritNotification)
-		}
-		if alert.WarnNotification != nil {
-			walkNotifications(alert.WarnNotification)
-		}
-		add(alert.Macros)
-		if alert.Crit != nil {
-			walk(alert.Crit.Tree.Root)
-		}
-		if alert.Warn != nil {
-			walk(alert.Warn.Tree.Root)
-		}
-		alerts[name] += alert.Def
+		alerts[name] = text
 		if alert.Template != nil {
 			t_associations[alert.Name] = alert.Template.Name
 		}
