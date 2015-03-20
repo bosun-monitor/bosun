@@ -55,7 +55,8 @@ type Conf struct {
 	Squelch          Squelches `json:"-"`
 	Quiet            bool
 	NoSleep          bool
-	PutIPs           AuthorizedIPs
+	AllowedPutIPs    []*net.IPNet
+	BlockedPutIPs    []*net.IPNet
 
 	TSDBHost             string   // OpenTSDB relay and query destination: ny-devtsdb04:4242
 	GraphiteHost         string   // Graphite query host: foo.bar.baz
@@ -69,21 +70,27 @@ type Conf struct {
 	squelch         []string
 }
 
-type AuthorizedIPs []*net.IPNet
-
-func (authorizedIPs AuthorizedIPs) Authorized(ip net.IP) (authorized bool) {
-	if len(authorizedIPs) == 0 {
+func (c *Conf) PutAuthorized(ip net.IP) bool {
+	// First process all blocked put ip ranges.
+	for _, ipnet := range c.BlockedPutIPs {
+		if ipnet.Contains(ip) {
+			return false
+		}
+	}
+	// If no allowed put IPs are specified, then allow all IPs.
+	if len(c.AllowedPutIPs) == 0 {
 		return true
 	}
 	if ip.IsLoopback() {
 		return true
 	}
-	for _, ipnet := range authorizedIPs {
+	// Finally process allowed IPs.
+	for _, ipnet := range c.AllowedPutIPs {
 		if ipnet.Contains(ip) {
 			return true
 		}
 	}
-	return
+	return false
 }
 
 // TSDBContext returns an OpenTSDB context limited to
@@ -432,15 +439,10 @@ func (c *Conf) loadGlobal(p *parse.PairNode) {
 		c.PingDuration = d
 	case "noSleep":
 		c.NoSleep = true
-	case "putIPs":
-		rawCIDRs := strings.Split(v, ",")
-		for _, rc := range rawCIDRs {
-			_, ipnet, err := net.ParseCIDR(rc)
-			if err != nil {
-				c.error(err)
-			}
-			c.PutIPs = append(c.PutIPs, ipnet)
-		}
+	case "blockedPutIPs":
+		c.BlockedPutIPs = c.parseIPs(v)
+	case "allowedPutIPs":
+		c.AllowedPutIPs = c.parseIPs(v)
 	case "unknownThreshold":
 		i, err := strconv.Atoi(v)
 		if err != nil {
@@ -509,6 +511,18 @@ func (c *Conf) loadSection(s *parse.SectionNode) {
 	default:
 		c.errorf("unknown section type: %s", s.SectionType.Text)
 	}
+}
+
+func (c *Conf) parseIPs(s string) (nets []*net.IPNet) {
+	rawCIDRs := strings.Split(s, ",")
+	for _, rc := range rawCIDRs {
+		_, ipnet, err := net.ParseCIDR(rc)
+		if err != nil {
+			c.error(err)
+		}
+		nets = append(nets, ipnet)
+	}
+	return nets
 }
 
 type nodePair struct {
