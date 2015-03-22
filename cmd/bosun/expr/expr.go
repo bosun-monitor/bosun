@@ -342,27 +342,34 @@ func (e *State) union(a, b *Results, expression string) []*Union {
 }
 
 func (e *State) walk(node parse.Node, T miniprofiler.Timer) *Results {
+	var res *Results
 	switch node := node.(type) {
 	case *parse.NumberNode:
-		return wrap(node.Float64)
+		T.Step("wrap", func(T miniprofiler.Timer) {
+			res = wrap(node.Float64)
+		})
 	case *parse.BinaryNode:
-		return e.walkBinary(node, T)
+		T.Step("walkBinary", func(T miniprofiler.Timer) {
+			res = e.walkBinary(node, T)
+		})
 	case *parse.UnaryNode:
-		return e.walkUnary(node, T)
+		T.Step("walkUary", func(T miniprofiler.Timer) {
+			res = e.walkUnary(node, T)
+		})
 	case *parse.FuncNode:
-		return e.walkFunc(node, T)
+		T.Step("walkFunc", func(T miniprofiler.Timer) {
+			res = e.walkFunc(node, T)
+		})
 	default:
 		panic(fmt.Errorf("expr: unknown node type"))
 	}
+	return res
 }
 
 func (e *State) walkBinary(node *parse.BinaryNode, T miniprofiler.Timer) *Results {
+	var res Results
 	ar := e.walk(node.Args[0], T)
 	br := e.walk(node.Args[1], T)
-	res := Results{
-		IgnoreUnjoined:      ar.IgnoreUnjoined || br.IgnoreUnjoined,
-		IgnoreOtherUnjoined: ar.IgnoreOtherUnjoined || br.IgnoreOtherUnjoined,
-	}
 	u := e.union(ar, br, node.String())
 	for _, v := range u {
 		var value Value
@@ -545,6 +552,7 @@ func uoperate(op string, a float64) (r float64) {
 }
 
 func (e *State) walkFunc(node *parse.FuncNode, T miniprofiler.Timer) *Results {
+	var res *Results
 	f := reflect.ValueOf(node.F.F)
 	var in []reflect.Value
 	for _, a := range node.Args {
@@ -565,8 +573,14 @@ func (e *State) walkFunc(node *parse.FuncNode, T miniprofiler.Timer) *Results {
 		}
 		in = append(in, reflect.ValueOf(v))
 	}
-	fr := f.Call(append([]reflect.Value{reflect.ValueOf(e), reflect.ValueOf(T)}, in...))
-	res := fr[0].Interface().(*Results)
+	var fr []reflect.Value
+	T.Step(
+		fmt.Sprintf("func: %v", runtime.FuncForPC(f.Pointer()).Name()),
+		func(T miniprofiler.Timer) {
+			fr = f.Call(append([]reflect.Value{reflect.ValueOf(e), reflect.ValueOf(T)}, in...))
+			res = fr[0].Interface().(*Results)
+		},
+	)
 	if len(fr) > 1 && !fr[1].IsNil() {
 		err := fr[1].Interface().(error)
 		if err != nil {
