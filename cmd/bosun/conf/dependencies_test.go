@@ -22,8 +22,27 @@ const dependencyTestConfig = `
 	}
 	alert os.cpu{
 		macro = host_based
+        warn = avg(q("avg:os.cpu{host=*}", "1m", "")) > 50
+	}
+	notification default {
+		print = true
+	}
+	notification foo {
+		print = true
+	}
+	lookup host_base_contact {
+		entry host=nyhq-|-int|den-*|lon-*|rpi-* {
+			main_contact = foo
+    	}
+		entry host=* {
+			main_contact = default
+    	}
+	}
+	alert notificationLookups{
+		warnNotification = lookup("host_base_contact", "main_contact")
 		warn = avg(q("avg:os.cpu{host=*}", "1m", "")) > 50
 	}
+	
 `
 
 func TestConfDependencies(t *testing.T) {
@@ -40,12 +59,15 @@ func TestConfDependencies(t *testing.T) {
 
 	expected = "ping.host"
 	assertTemplateSequenceEqual(t, templates, "ping.host", expected)
+
+	expected = "default,foo,host_base_contact"
+	assertTemplateSequenceEqual(t, templates, "notificationLookups", expected)
 }
 
 func assertTemplateSequenceEqual(t *testing.T, templates *AlertTemplateStrings, alert, expected string) {
 	result := templateToSequence(templates.Alerts[alert])
 	if result != expected {
-		t.Fatalf("Bad template sequence. Expected: %s. Got: %s.", expected, result)
+		t.Fatalf(`Bad template sequence. Expected: "%s". Got: "%s".`, expected, result)
 	}
 }
 
