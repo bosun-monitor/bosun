@@ -1,0 +1,13 @@
+language: go
+sudo: false
+go:
+  - tip
+
+notifications:
+  slack: bosun:2Z0edJEDfXMDnhg94uLNKzNj
+
+install:
+  - rsync -az ${TRAVIS_BUILD_DIR}/ $HOME/gopath/src/bosun.org/
+
+script:
+  - go test bosun.org/...
