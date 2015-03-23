@@ -345,21 +345,13 @@ func (e *State) walk(node parse.Node, T miniprofiler.Timer) *Results {
 	var res *Results
 	switch node := node.(type) {
 	case *parse.NumberNode:
-		T.Step("wrap", func(T miniprofiler.Timer) {
-			res = wrap(node.Float64)
-		})
+		res = wrap(node.Float64)
 	case *parse.BinaryNode:
-		T.Step("walkBinary", func(T miniprofiler.Timer) {
-			res = e.walkBinary(node, T)
-		})
+		res = e.walkBinary(node, T)
 	case *parse.UnaryNode:
-		T.Step("walkUary", func(T miniprofiler.Timer) {
-			res = e.walkUnary(node, T)
-		})
+		res = e.walkUnary(node, T)
 	case *parse.FuncNode:
-		T.Step("walkFunc", func(T miniprofiler.Timer) {
-			res = e.walkFunc(node, T)
-		})
+		res = e.walkFunc(node, T)
 	default:
 		panic(fmt.Errorf("expr: unknown node type"))
 	}
@@ -367,79 +359,84 @@ func (e *State) walk(node parse.Node, T miniprofiler.Timer) *Results {
 }
 
 func (e *State) walkBinary(node *parse.BinaryNode, T miniprofiler.Timer) *Results {
-	var res Results
 	ar := e.walk(node.Args[0], T)
 	br := e.walk(node.Args[1], T)
-	u := e.union(ar, br, node.String())
-	for _, v := range u {
-		var value Value
-		r := Result{
-			Group:        v.Group,
-			Computations: v.Computations,
-		}
-		an, aok := v.A.(Scalar)
-		bn, bok := v.B.(Scalar)
-		if (aok && math.IsNaN(float64(an))) || (bok && math.IsNaN(float64(bn))) {
-			value = Scalar(math.NaN())
-		} else {
-			switch at := v.A.(type) {
-			case Scalar:
-				switch bt := v.B.(type) {
-				case Scalar:
-					n := Scalar(operate(node.OpStr, float64(at), float64(bt)))
-					r.AddComputation(node.String(), Number(n))
-					value = n
-				case Number:
-					n := Number(operate(node.OpStr, float64(at), float64(bt)))
-					r.AddComputation(node.String(), n)
-					value = n
-				case Series:
-					s := make(Series)
-					for k, v := range bt {
-						s[k] = operate(node.OpStr, float64(at), float64(v))
-					}
-					value = s
-				default:
-					panic(ErrUnknownOp)
-				}
-			case Number:
-				switch bt := v.B.(type) {
-				case Scalar:
-					n := Number(operate(node.OpStr, float64(at), float64(bt)))
-					r.AddComputation(node.String(), Number(n))
-					value = n
-				case Number:
-					n := Number(operate(node.OpStr, float64(at), float64(bt)))
-					r.AddComputation(node.String(), n)
-					value = n
-				case Series:
-					s := make(Series)
-					for k, v := range bt {
-						s[k] = operate(node.OpStr, float64(at), float64(v))
-					}
-					value = s
-				default:
-					panic(ErrUnknownOp)
-				}
-			case Series:
-				switch bt := v.B.(type) {
-				case Number, Scalar:
-					bv := reflect.ValueOf(bt).Float()
-					s := make(Series)
-					for k, v := range at {
-						s[k] = operate(node.OpStr, float64(v), bv)
-					}
-					value = s
-				default:
-					panic(ErrUnknownOp)
-				}
-			default:
-				panic(ErrUnknownOp)
-			}
-		}
-		r.Value = value
-		res.Results = append(res.Results, &r)
+	res := Results{
+		IgnoreUnjoined:      ar.IgnoreUnjoined || br.IgnoreUnjoined,
+		IgnoreOtherUnjoined: ar.IgnoreOtherUnjoined || br.IgnoreOtherUnjoined,
 	}
+	T.Step("walkBinary: "+node.OpStr, func(T miniprofiler.Timer) {
+		u := e.union(ar, br, node.String())
+		for _, v := range u {
+			var value Value
+			r := Result{
+				Group:        v.Group,
+				Computations: v.Computations,
+			}
+			an, aok := v.A.(Scalar)
+			bn, bok := v.B.(Scalar)
+			if (aok && math.IsNaN(float64(an))) || (bok && math.IsNaN(float64(bn))) {
+				value = Scalar(math.NaN())
+			} else {
+				switch at := v.A.(type) {
+				case Scalar:
+					switch bt := v.B.(type) {
+					case Scalar:
+						n := Scalar(operate(node.OpStr, float64(at), float64(bt)))
+						r.AddComputation(node.String(), Number(n))
+						value = n
+					case Number:
+						n := Number(operate(node.OpStr, float64(at), float64(bt)))
+						r.AddComputation(node.String(), n)
+						value = n
+					case Series:
+						s := make(Series)
+						for k, v := range bt {
+							s[k] = operate(node.OpStr, float64(at), float64(v))
+						}
+						value = s
+					default:
+						panic(ErrUnknownOp)
+					}
+				case Number:
+					switch bt := v.B.(type) {
+					case Scalar:
+						n := Number(operate(node.OpStr, float64(at), float64(bt)))
+						r.AddComputation(node.String(), Number(n))
+						value = n
+					case Number:
+						n := Number(operate(node.OpStr, float64(at), float64(bt)))
+						r.AddComputation(node.String(), n)
+						value = n
+					case Series:
+						s := make(Series)
+						for k, v := range bt {
+							s[k] = operate(node.OpStr, float64(at), float64(v))
+						}
+						value = s
+					default:
+						panic(ErrUnknownOp)
+					}
+				case Series:
+					switch bt := v.B.(type) {
+					case Number, Scalar:
+						bv := reflect.ValueOf(bt).Float()
+						s := make(Series)
+						for k, v := range at {
+							s[k] = operate(node.OpStr, float64(v), bv)
+						}
+						value = s
+					default:
+						panic(ErrUnknownOp)
+					}
+				default:
+					panic(ErrUnknownOp)
+				}
+			}
+			r.Value = value
+			res.Results = append(res.Results, &r)
+		}
+	})
 	return &res
 }
 
@@ -512,26 +509,28 @@ func operate(op string, a, b float64) (r float64) {
 
 func (e *State) walkUnary(node *parse.UnaryNode, T miniprofiler.Timer) *Results {
 	a := e.walk(node.Arg, T)
-	for _, r := range a.Results {
-		if an, aok := r.Value.(Scalar); aok && math.IsNaN(float64(an)) {
-			r.Value = Scalar(math.NaN())
-			continue
-		}
-		switch rt := r.Value.(type) {
-		case Scalar:
-			r.Value = Scalar(uoperate(node.OpStr, float64(rt)))
-		case Number:
-			r.Value = Number(uoperate(node.OpStr, float64(rt)))
-		case Series:
-			s := make(Series)
-			for k, v := range rt {
-				s[k] = uoperate(node.OpStr, float64(v))
+	T.Step("walkUnary: "+node.OpStr, func(T miniprofiler.Timer) {
+		for _, r := range a.Results {
+			if an, aok := r.Value.(Scalar); aok && math.IsNaN(float64(an)) {
+				r.Value = Scalar(math.NaN())
+				continue
 			}
-			r.Value = s
-		default:
-			panic(ErrUnknownOp)
+			switch rt := r.Value.(type) {
+			case Scalar:
+				r.Value = Scalar(uoperate(node.OpStr, float64(rt)))
+			case Number:
+				r.Value = Number(uoperate(node.OpStr, float64(rt)))
+			case Series:
+				s := make(Series)
+				for k, v := range rt {
+					s[k] = uoperate(node.OpStr, float64(v))
+				}
+				r.Value = s
+			default:
+				panic(ErrUnknownOp)
+			}
 		}
-	}
+	})
 	return a
 }
 
@@ -553,45 +552,41 @@ func uoperate(op string, a float64) (r float64) {
 
 func (e *State) walkFunc(node *parse.FuncNode, T miniprofiler.Timer) *Results {
 	var res *Results
-	f := reflect.ValueOf(node.F.F)
-	var in []reflect.Value
-	for _, a := range node.Args {
-		var v interface{}
-		switch t := a.(type) {
-		case *parse.StringNode:
-			v = t.Text
-		case *parse.NumberNode:
-			v = t.Float64
-		case *parse.FuncNode:
-			v = extractScalar(e.walkFunc(t, T))
-		case *parse.UnaryNode:
-			v = extractScalar(e.walkUnary(t, T))
-		case *parse.BinaryNode:
-			v = extractScalar(e.walkBinary(t, T))
-		default:
-			panic(fmt.Errorf("expr: unknown func arg type"))
+	T.Step("func: "+node.Name, func(T miniprofiler.Timer) {
+		var in []reflect.Value
+		for _, a := range node.Args {
+			var v interface{}
+			switch t := a.(type) {
+			case *parse.StringNode:
+				v = t.Text
+			case *parse.NumberNode:
+				v = t.Float64
+			case *parse.FuncNode:
+				v = extractScalar(e.walkFunc(t, T))
+			case *parse.UnaryNode:
+				v = extractScalar(e.walkUnary(t, T))
+			case *parse.BinaryNode:
+				v = extractScalar(e.walkBinary(t, T))
+			default:
+				panic(fmt.Errorf("expr: unknown func arg type"))
+			}
+			in = append(in, reflect.ValueOf(v))
 		}
-		in = append(in, reflect.ValueOf(v))
-	}
-	var fr []reflect.Value
-	T.Step(
-		fmt.Sprintf("func: %v", runtime.FuncForPC(f.Pointer()).Name()),
-		func(T miniprofiler.Timer) {
-			fr = f.Call(append([]reflect.Value{reflect.ValueOf(e), reflect.ValueOf(T)}, in...))
-			res = fr[0].Interface().(*Results)
-		},
-	)
-	if len(fr) > 1 && !fr[1].IsNil() {
-		err := fr[1].Interface().(error)
-		if err != nil {
-			panic(err)
+		f := reflect.ValueOf(node.F.F)
+		fr := f.Call(append([]reflect.Value{reflect.ValueOf(e), reflect.ValueOf(T)}, in...))
+		res = fr[0].Interface().(*Results)
+		if len(fr) > 1 && !fr[1].IsNil() {
+			err := fr[1].Interface().(error)
+			if err != nil {
+				panic(err)
+			}
 		}
-	}
-	if node.Return() == parse.TypeNumber {
-		for _, r := range res.Results {
-			r.AddComputation(node.String(), r.Value.(Number))
+		if node.Return() == parse.TypeNumber {
+			for _, r := range res.Results {
+				r.AddComputation(node.String(), r.Value.(Number))
+			}
 		}
-	}
+	})
 	return res
 }
 
