@@ -10,4 +10,5 @@ install:
   - rsync -az ${TRAVIS_BUILD_DIR}/ $HOME/gopath/src/bosun.org/
 
 script:
-  - go test bosun.org/...
+  - export GOPATH=$HOME/gopath #Fix gopath. Original has trailing :
+  - . $GOPATH/src/bosun.org/build/validate.sh
