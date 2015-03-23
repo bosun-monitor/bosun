@@ -88,7 +88,7 @@ bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route
 	$scope.loadAlert = function($selected: string) {
 		$scope.alert = $scope.alerts[$selected];
 		if (confirm('Load the associated notification template (will overwrite the current notification tempalte) ?')) {
-			$scope.template = $scope.templates[$scope.assocations[$selected]];
+			$scope.template = $scope.templates[$scope.assocations[$selected]] || '';
 		}
 	}
 	$scope.test = () => {
