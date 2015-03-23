@@ -671,15 +671,15 @@ func (r *Request) SetTime(t time.Time) error {
 	if err != nil {
 		return err
 	}
-	r.Start = start.Add(diff).Format(TSDBTimeFormat)
+	r.Start = start.Add(diff).Unix()
 	if r.End != nil {
 		end, err := ParseTime(r.End)
 		if err != nil {
 			return err
 		}
-		r.End = end.Add(diff).Format(TSDBTimeFormat)
+		r.End = end.Add(diff).Unix()
 	} else {
-		r.End = t.UTC().Format(TSDBTimeFormat)
+		r.End = t.UTC().Unix()
 	}
 	return nil
 }

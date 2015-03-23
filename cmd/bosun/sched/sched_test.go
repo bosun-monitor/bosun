@@ -112,7 +112,7 @@ func testSched(t *testing.T, st *schedTest) (s *Schedule) {
 }
 
 var queryTime = time.Date(2000, 1, 1, 12, 0, 0, 0, time.UTC)
-var window5Min = `"2000/01/01-11:55:00", "2000/01/01-12:00:00"`
+var window5Min = `"9.467277e+08", "9.46728e+08"`
 
 func TestCrit(t *testing.T) {
 	testSched(t, &schedTest{
@@ -142,7 +142,7 @@ func TestBandDisableUnjoined(t *testing.T) {
 			crit = avg(q($sum, "1m", "")) > avg($band) + dev($band)
 		}`,
 		queries: map[string]opentsdb.ResponseSet{
-			`q("sum:m{a=*}", "2000/01/01-11:59:00", "2000/01/01-12:00:00")`: {
+			`q("sum:m{a=*}", "9.4672794e+08", "9.46728e+08")`: {
 				{
 					Metric: "m",
 					Tags:   opentsdb.TagSet{"a": "b"},
