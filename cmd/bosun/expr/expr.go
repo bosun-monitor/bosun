@@ -367,9 +367,12 @@ func (e *State) walk(node parse.Node, T miniprofiler.Timer) *Results {
 }
 
 func (e *State) walkBinary(node *parse.BinaryNode, T miniprofiler.Timer) *Results {
-	var res Results
 	ar := e.walk(node.Args[0], T)
 	br := e.walk(node.Args[1], T)
+	res := Results{
+		IgnoreUnjoined:      ar.IgnoreUnjoined || br.IgnoreUnjoined,
+		IgnoreOtherUnjoined: ar.IgnoreOtherUnjoined || br.IgnoreOtherUnjoined,
+	}
 	u := e.union(ar, br, node.String())
 	for _, v := range u {
 		var value Value
