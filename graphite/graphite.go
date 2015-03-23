@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"time"
+	"strings"
 )
 
 // Request holds query objects. Currently only absolute times are supported.
@@ -43,8 +44,8 @@ func (r *Request) Query(host string) (Response, error) {
 		v.Add("until", fmt.Sprint(r.End.Unix()))
 	}
 	u := url.URL{
-		Scheme:   "http",
-		Host:     host,
+    Scheme:   strings.Split(host, ":")[0],
+    Host:     strings.Split(host,"//")[1],
 		Path:     "/render/",
 		RawQuery: v.Encode(),
 	}
