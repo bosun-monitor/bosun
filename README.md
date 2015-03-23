@@ -29,3 +29,7 @@ $ ./w.sh
 
 Go Version:
   * We generally upgrade to the latest version Go within a day or two. So consider the correct version of Go always to be the latest stable release.
+
+## further assistance
+
+Come find us in #bosun-monitor on freenode ([webchat link](http://webchat.freenode.net?randomnick=1&channels=%23bosun-monitor&prompt=1&uio=d4)).
