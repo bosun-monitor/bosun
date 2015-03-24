@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
 	"time"
-	"log"
 )
 
 // Request holds query objects. Currently only absolute times are supported.
@@ -44,22 +44,23 @@ func (r *Request) Query(host string) (Response, error) {
 		v.Add("until", fmt.Sprint(r.End.Unix()))
 	}
 
-  u1, err := url.Parse(host)
-  if err != nil {
-    log.Printf("There was a problem parsing dev.conf: graphiteHost=" + host)
-    return Response{}, err
-  }
-  if u1.Host == "" && u1.Scheme != ""{
-    u1.Host = u1.Scheme
-    u1.Scheme = "http"
-  } else if u1.Host == "" && u1.Scheme == ""{
-    u1.Host = host
-    u1.Scheme = "http"
-  }
+	u1, err := url.Parse(host)
+	if err != nil {
+		log.Printf("There was a problem parsing dev.conf: graphiteHost=" + host)
+		return Response{}, err
+	}
+	log.Printf("The scheme is : " + u1.Scheme + " and the host is : " + u1.Host)
+	if u1.Host == "" && u1.Scheme != "" {
+		u1.Host = u1.Scheme
+		u1.Scheme = "http"
+	} else if u1.Host == "" && u1.Scheme == "" {
+		u1.Host = host
+		u1.Scheme = "http"
+	}
 
 	u := url.URL{
-    Scheme:   u1.Scheme,
-    Host:     u1.Host,
+		Scheme:   u1.Scheme,
+		Host:     u1.Host,
 		Path:     "/render/",
 		RawQuery: v.Encode(),
 	}
