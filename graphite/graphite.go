@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"time"
-	"strings"
+	"log"
 )
 
 // Request holds query objects. Currently only absolute times are supported.
@@ -43,9 +43,23 @@ func (r *Request) Query(host string) (Response, error) {
 	if r.End != nil {
 		v.Add("until", fmt.Sprint(r.End.Unix()))
 	}
+
+  u1, err := url.Parse(host)
+  if err != nil {
+    log.Printf("There was a problem parsing dev.conf: graphiteHost=" + host)
+    return Response{}, err
+  }
+  if u1.Host == "" && u1.Scheme != ""{
+    u1.Host = u1.Scheme
+    u1.Scheme = "http"
+  } else if u1.Host == "" && u1.Scheme == ""{
+    u1.Host = host
+    u1.Scheme = "http"
+  }
+
 	u := url.URL{
-    Scheme:   strings.Split(host, ":")[0],
-    Host:     strings.Split(host,"//")[1],
+    Scheme:   u1.Scheme,
+    Host:     u1.Host,
 		Path:     "/render/",
 		RawQuery: v.Encode(),
 	}
