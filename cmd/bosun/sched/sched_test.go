@@ -43,10 +43,13 @@ func testSched(t *testing.T, st *schedTest) (s *Schedule) {
 		var resp opentsdb.ResponseSet
 		for _, rq := range req.Queries {
 			qs := fmt.Sprintf(`q("%s", "%v", "%v")`, rq, req.Start, req.End)
-			q := st.queries[qs]
-			if q == nil {
+			q, ok := st.queries[qs]
+			if !ok {
 				t.Errorf("unknown query: %s", qs)
 				return
+			}
+			if q == nil {
+				return // Put nil entry in map to simulate opentsdb error.
 			}
 			resp = append(resp, q...)
 		}
@@ -192,10 +195,10 @@ func TestUnknown(t *testing.T) {
 
 	testSched(t, &schedTest{
 		conf: `alert a {
-			crit = avg(q("avg:m{a=b}", "5m", "")) > 0
+			crit = avg(q("avg:m{a=*}", "5m", "")) > 0
 		}`,
 		queries: map[string]opentsdb.ResponseSet{
-			`q("avg:m{a=b}", ` + window5Min + `)`: {},
+			`q("avg:m{a=*}", ` + window5Min + `)`: {},
 		},
 		state: map[schedState]bool{
 			schedState{"a{a=b}", "unknown"}: true,
@@ -205,6 +208,53 @@ func TestUnknown(t *testing.T) {
 			"a{a=c}": stillValid,
 		},
 	})
+}
+
+func TestUnknown_WithError(t *testing.T) {
+	state := NewStatus("a{a=b}")
+	state.Touched = queryTime.Add(-10 * time.Minute)
+	state.Append(&Event{Status: StNormal, Time: state.Touched})
+
+	testSched(t, &schedTest{
+		conf: `alert a {
+			crit = avg(q("avg:m{a=*}", "5m", "")) > 0
+		}`,
+		queries: map[string]opentsdb.ResponseSet{
+			`q("avg:m{a=*}", ` + window5Min + `)`: nil,
+		},
+		state: map[schedState]bool{
+			schedState{"a{}", "error"}: true,
+		},
+		previous: map[expr.AlertKey]*State{
+			"a{a=b}": state,
+		},
+	})
+}
+
+func TestError_To_Unknown(t *testing.T) {
+	ak := expr.NewAlertKey("a", nil)
+	state := NewStatus(ak)
+	state.Touched = queryTime.Add(-10 * time.Minute)
+	state.Append(&Event{Status: StError, Time: state.Touched})
+
+	s := testSched(t, &schedTest{
+		conf: `alert a {
+			crit = avg(q("avg:m{a=*}", "5m", "")) > 0
+		}`,
+		queries: map[string]opentsdb.ResponseSet{
+			`q("avg:m{a=*}", ` + window5Min + `)`: {},
+		},
+		state: map[schedState]bool{
+		//No abnormal events
+		},
+		previous: map[expr.AlertKey]*State{
+			ak: state,
+		},
+	})
+	st := s.Status(expr.AlertKey(ak))
+	if st.Status() != StNormal {
+		t.Errorf("Expected status to be %s but was %s", StNormal, st.Status())
+	}
 }
 
 func TestRename(t *testing.T) {
