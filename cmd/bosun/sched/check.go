@@ -234,7 +234,7 @@ func (s *Schedule) findUnknownAlerts(now time.Time) []expr.AlertKey {
 	}
 	s.Lock()
 	for ak, st := range s.status {
-		if st.Forgotten {
+		if st.Forgotten || st.Status() == StError {
 			continue
 		}
 		a := s.Conf.Alerts[ak.Name()]
@@ -265,9 +265,29 @@ func (s *Schedule) CheckAlert(T miniprofiler.Timer, r *RunHistory, a *conf.Alert
 		}
 	}
 	unevalCount, unknownCount := markDependenciesUnevaluated(r.Events, deps, a.Name)
+	if err != nil {
+		removeUnknownEvents(r.Events, a.Name)
+	} else {
+		s.closeErrorEvent(r.Events, a.Name)
+	}
 
 	collect.Put("check.duration", opentsdb.TagSet{"name": a.Name}, time.Since(start).Seconds())
 	log.Printf("check alert %v done (%s): %v crits, %v warns, %v unevaluated, %v unknown", a.Name, time.Since(start), len(crits), len(warns), unevalCount, unknownCount)
+}
+
+func removeUnknownEvents(evs map[expr.AlertKey]*Event, alert string) {
+	for k, v := range evs {
+		if v.Status == StUnknown && k.Name() == alert {
+			delete(evs, k)
+		}
+	}
+}
+
+func (s *Schedule) closeErrorEvent(evs map[expr.AlertKey]*Event, alert string) {
+	ak := expr.NewAlertKey(alert, nil)
+	if s.Status(ak).Status() == StError && evs[ak] == nil { //if run history already has event for this key do nothing
+		evs[ak] = &Event{Status: StNormal}
+	}
 }
 
 func filterDependencyResults(results *expr.Results) expr.ResultSlice {
