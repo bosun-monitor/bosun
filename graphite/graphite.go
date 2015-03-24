@@ -43,11 +43,10 @@ func (r *Request) Query(host string) (Response, error) {
 	if r.End != nil {
 		v.Add("until", fmt.Sprint(r.End.Unix()))
 	}
-
 	u1, err := url.Parse(host)
 	if err != nil {
 		log.Printf("There was a problem parsing dev.conf: graphiteHost=" + host)
-		return Response{}, err
+		return nil, err
 	}
 	log.Printf("The scheme is : " + u1.Scheme + " and the host is : " + u1.Host)
 	if u1.Host == "" && u1.Scheme != "" {
@@ -57,7 +56,6 @@ func (r *Request) Query(host string) (Response, error) {
 		u1.Host = host
 		u1.Scheme = "http"
 	}
-
 	u := url.URL{
 		Scheme:   u1.Scheme,
 		Host:     u1.Host,
