@@ -12,6 +12,9 @@ Use GitHub pull requests to submit code. General submission guidelines:
 
 Unless otherwise noted, the source files are distributed under the MIT license found in the LICENSE file.
 
+### Style Guidelines
+We use the golang [Go Code Review Comments](https://github.com/golang/go/wiki/CodeReviewComments) document as the basis for our style. Take particular note of Error Strings, Mixed Caps, and Indent error flow secionts. Also we don't have blank lines within functions.
+
 ### bosun submission guidelines
 
 1. If changing HTML, JS, or other static content, install esc (`go get github.com/mjibson/esc`), then run `go generate` in `cmd/bosun`.
