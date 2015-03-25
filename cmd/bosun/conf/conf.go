@@ -58,9 +58,9 @@ type Conf struct {
 	AllowedPutIPs    []*net.IPNet
 	BlockedPutIPs    []*net.IPNet
 
-	TSDBHost             string   // OpenTSDB relay and query destination: ny-devtsdb04:4242
-	GraphiteHost         string   // Graphite query host: foo.bar.baz
-	LogstashElasticHosts []string // CSV Elastic Hosts (All part of the same cluster) that stores logstash documents, i.e http://ny-elastic01:9200
+	TSDBHost             string                    // OpenTSDB relay and query destination: ny-devtsdb04:4242
+	GraphiteHost         string                    // Graphite query host: foo.bar.baz
+	LogstashElasticHosts expr.LogstashElasticHosts // CSV Elastic Hosts (All part of the same cluster) that stores logstash documents, i.e http://ny-elastic01:9200
 
 	tree            *parse.Tree
 	node            parse.Node
