@@ -903,6 +903,14 @@ func (c *Conf) findAllDependencies(a *Alert) {
 	var walkNotifications = func(n *Notifications) {
 		for _, l := range n.Lookups {
 			addIfUnique(&l.ConfItem)
+			// if we see a lookup here, assume all leaf nodes are notifications
+			for _, entry := range l.Entries {
+				for _, lookupNot := range entry.Values {
+					if found, ok := c.Notifications[lookupNot]; ok {
+						addIfUnique(&found.ConfItem)
+					}
+				}
+			}
 		}
 		for _, not := range n.Notifications {
 			addIfUnique(&not.ConfItem)
