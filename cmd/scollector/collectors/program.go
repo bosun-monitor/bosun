@@ -2,6 +2,7 @@ package collectors
 
 import (
 	"bufio"
+	"errors"
 	"io"
 	"os"
 	"os/exec"
@@ -11,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"bosun.org/metadata"
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
 	"bosun.org/util"
@@ -75,6 +77,31 @@ func isExecutable(f os.FileInfo) bool {
 	default:
 		return f.Mode()&0111 != 0
 	}
+}
+
+func setMeta(m string, s string) error {
+	meta_field := strings.Split(s, "=")
+	if len(meta_field) == 2 {
+		switch meta_field[0] {
+		case "meta.Unit":
+			unit := meta_field[1]
+			metadata.AddMeta(m, nil, "unit", unit, false)
+			return nil
+		case "meta.Desc":
+			desc := meta_field[1]
+			metadata.AddMeta(m, nil, "desc", desc, false)
+			return nil
+		case "meta.Rate":
+			rate := meta_field[1]
+			metadata.AddMeta(m, nil, "rate", rate, false)
+			return nil
+		default:
+			err := "should be Unit, Desc or Rate"
+			return errors.New(err)
+		}
+	}
+	err := "meta is empty"
+	return errors.New(err)
 }
 
 func (c *ProgramCollector) Run(dpchan chan<- *opentsdb.DataPoint) {
@@ -151,12 +178,20 @@ Loop:
 			Value:     val,
 			Tags:      opentsdb.TagSet{"host": util.Hostname},
 		}
-		for _, tag := range sp[3:] {
-			tags, err := opentsdb.ParseTags(tag)
+		for _, field := range sp[3:] {
+			if strings.HasPrefix(field, "meta.") {
+				if err := setMeta(sp[0], field); err != nil {
+					slog.Errorf("bad meta in program %s, metric %s: %v: %v", c.Path, sp[0], field, err)
+					continue Loop
+				} else {
+					continue
+				}
+			}
+			tags, err := opentsdb.ParseTags(field)
 			if v, ok := tags["host"]; ok && v == "" {
 				delete(dp.Tags, "host")
 			} else if err != nil {
-				slog.Errorf("bad tag in program %s, metric %s: %v: %v", c.Path, sp[0], tag, err)
+				slog.Errorf("bad tag in program %s, metric %s: %v: %v", c.Path, sp[0], field, err)
 				continue Loop
 			} else {
 				dp.Tags.Merge(tags)
