@@ -84,6 +84,18 @@ func (d *DataPoint) MarshalJSON() ([]byte, error) {
 	})
 }
 
+// Valid returns whether d contains valid data (populated fields, valid tags)
+// for submission to OpenTSDB.
+func (d *DataPoint) Valid() bool {
+	if d.Metric == "" || d.Timestamp == 0 || d.Value == nil || !d.Tags.Valid() {
+		return false
+	}
+	if _, err := strconv.ParseFloat(fmt.Sprint(d.Value), 64); err != nil {
+		return false
+	}
+	return true
+}
+
 // MultiDataPoint holds multiple DataPoints:
 // http://opentsdb.net/docs/build/html/api_http/put.html#example-multiple-data-point-put.
 type MultiDataPoint []*DataPoint
@@ -191,6 +203,15 @@ func (a TagSet) Overlaps(b TagSet) bool {
 		anyMatch = true
 	}
 	return anyMatch
+}
+
+// Valid returns whether t contains OpenTSDB-submittable tags.
+func (t TagSet) Valid() bool {
+	if len(t) == 0 {
+		return true
+	}
+	_, err := ParseTags(t.Tags())
+	return err == nil
 }
 
 func (d *DataPoint) clean() error {
