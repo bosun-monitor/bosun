@@ -2,6 +2,8 @@
 
 Bosun is a time series alerting framework developed by Stack Exchange. Scollector is a metric collection agent.
 
+[![Build Status](https://travis-ci.org/bosun-monitor/bosun.svg?branch=master)](https://travis-ci.org/bosun-monitor/bosun)
+
 ## building
 
 To build bosun and scollector, clone to `$GOPATH/src/bosun.org`:
