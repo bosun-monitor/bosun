@@ -4,6 +4,7 @@ go:
   - tip
 
 notifications:
+  email: false
   slack: bosun:2Z0edJEDfXMDnhg94uLNKzNj
 
 install:
