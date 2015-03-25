@@ -123,6 +123,9 @@ func (t TagSet) Equal(o TagSet) bool {
 
 // Subset returns true if all k=v pairs in o are in t.
 func (t TagSet) Subset(o TagSet) bool {
+	if len(o) > len(t) {
+		return false
+	}
 	for k, v := range o {
 		if tv, ok := t[k]; !ok || tv != v {
 			return false
