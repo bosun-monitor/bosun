@@ -175,7 +175,7 @@ var riakMeta = map[string]MetricMeta{
 	},
 	"mem_total": {
 		Metric:   "memory",
-		TagSet:   opentsdb.TagSet{"type": "total"},
+		TagSet:   opentsdb.TagSet{"type": "available"},
 		RateType: metadata.Gauge,
 		Unit:     metadata.Bytes,
 		Desc:     "Total available system memory.",
