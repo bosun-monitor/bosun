@@ -80,6 +80,7 @@ func Listen(listenAddr string, devMode bool, tsdbHost string) error {
 	router.Handle("/api/metric", JSON(UniqueMetrics))
 	router.Handle("/api/metric/{tagk}/{tagv}", JSON(MetricsByTagPair))
 	router.Handle("/api/rule", JSON(Rule))
+	router.HandleFunc("/api/shorten", Shorten)
 	router.Handle("/api/silence/clear", JSON(SilenceClear))
 	router.Handle("/api/silence/get", JSON(SilenceGet))
 	router.Handle("/api/silence/set", JSON(SilenceSet))
@@ -225,6 +226,33 @@ func JSON(h func(miniprofiler.Timer, http.ResponseWriter, *http.Request) (interf
 		w.Header().Add("Content-Type", "application/json")
 		buf.WriteTo(tw)
 	})
+}
+
+func Shorten(w http.ResponseWriter, r *http.Request) {
+	u := url.URL{
+		Scheme: "https",
+		Host:   "www.googleapis.com",
+		Path:   "/urlshortener/v1/url",
+	}
+	if schedule.Conf.ShortURLKey != "" {
+		u.RawQuery = "key=" + schedule.Conf.ShortURLKey
+	}
+	j, err := json.Marshal(struct {
+		LongURL string `json:"longUrl"`
+	}{
+		r.Referer(),
+	})
+	if err != nil {
+		serveError(w, err)
+		return
+	}
+	req, err := http.Post(u.String(), "application/json", bytes.NewBuffer(j))
+	if err != nil {
+		serveError(w, err)
+		return
+	}
+	io.Copy(w, req.Body)
+	req.Body.Close()
 }
 
 type Health struct {

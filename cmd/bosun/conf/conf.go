@@ -57,6 +57,7 @@ type Conf struct {
 	NoSleep          bool
 	AllowedPutIPs    []*net.IPNet
 	BlockedPutIPs    []*net.IPNet
+	ShortURLKey      string
 
 	TSDBHost             string                    // OpenTSDB relay and query destination: ny-devtsdb04:4242
 	GraphiteHost         string                    // Graphite query host: foo.bar.baz
@@ -490,6 +491,8 @@ func (c *Conf) loadGlobal(p *parse.PairNode) {
 		if err := c.Squelch.Add(v); err != nil {
 			c.error(err)
 		}
+	case "shortURLKey":
+		c.ShortURLKey = v
 	default:
 		if !strings.HasPrefix(k, "$") {
 			c.errorf("unknown key %s", k)
