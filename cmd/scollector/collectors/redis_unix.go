@@ -182,13 +182,13 @@ func c_redis() (opentsdb.MultiDataPoint, error) {
 			continue
 		}
 		defer c.Close()
-		lines, err := c.Do("INFO")
+		info, err := c.Do("info", "all")
 		if err != nil {
 			Error = err
 			continue
 		}
 		tags := instance.Copy()
-		infoSplit := strings.Split(string(lines.([]uint8)), "\n")
+		infoSplit := strings.Split(string(info.([]uint8)), "\n")
 		for _, line := range infoSplit {
 			line = strings.TrimSpace(line)
 			sp := strings.Split(line, ":")
@@ -221,7 +221,7 @@ func c_redis() (opentsdb.MultiDataPoint, error) {
 				continue
 			}
 			sp := strings.Split(line, ":")
-			if len(sp) < 2 || !redisFields[sp[0]] {
+			if len(sp) < 2 || !(redisFields[sp[0]] || strings.HasPrefix(sp[0], "cmdstat_")) {
 				continue
 			}
 			if sp[0] == "master_link_status" {
@@ -236,6 +236,42 @@ func c_redis() (opentsdb.MultiDataPoint, error) {
 				Add(&md, "redis."+sp[0], status(sp[1]), tags, metadata.Unknown, metadata.None, "")
 				continue
 			}
+			if strings.HasPrefix(sp[0], "cmdstat_") {
+				cmdStats := strings.Split(sp[1], ",")
+				if len(cmdStats) < 3 {
+					continue
+				}
+				cmdStatsCalls := strings.Split(cmdStats[0], "=")
+				if len(cmdStatsCalls) < 2 {
+					continue
+				}
+				cmdStatsUsec := strings.Split(cmdStats[1], "=")
+				if len(cmdStatsUsec) < 2 {
+					continue
+				}
+				var cmdStatsMsec, cmdStatsMsecPc float64
+				microsec, err := strconv.ParseFloat(cmdStatsUsec[1], 64)
+				if err != nil {
+					continue
+				}
+				cmdStatsMsec = microsec / 1000
+				cmdStatsUsecPc := strings.Split(cmdStats[2], "=")
+				if len(cmdStatsUsecPc) < 2 {
+					continue
+				}
+				microsec, err = strconv.ParseFloat(cmdStatsUsecPc[1], 64)
+				if err != nil {
+					continue
+				}
+				cmdStatsMsecPc = microsec / 1000
+				if shortTag := strings.Split(sp[0], "_"); len(shortTag) == 2 {
+					tags["cmd"] = shortTag[1]
+				}
+				Add(&md, "redis.cmdstats_msec_pc", cmdStatsMsecPc, tags, metadata.Gauge, metadata.MilliSecond, descRedisCmdMsecPc)
+				Add(&md, "redis.cmdstats_msec", cmdStatsMsec, tags, metadata.Counter, metadata.MilliSecond, descRedisCmdMsec)
+				Add(&md, "redis.cmdstats_calls", cmdStatsCalls[1], tags, metadata.Counter, metadata.Operation, descRedisCmdCalls)
+				continue
+			}
 			Add(&md, "redis."+sp[0], sp[1], tags, metadata.Unknown, metadata.None, "")
 		}
 		Add(&md, "redis.key_count", keys, tags, metadata.Gauge, metadata.Key, descRedisKeyCount)
@@ -244,5 +280,8 @@ func c_redis() (opentsdb.MultiDataPoint, error) {
 }
 
 const (
-	descRedisKeyCount = "The total number of keys in the instance."
+	descRedisKeyCount  = "The total number of keys in the instance."
+	descRedisCmdMsecPc = "Average CPU consumed per command execution."
+	descRedisCmdMsec   = "Total CPU time consumed by commands."
+	descRedisCmdCalls  = "Number of calls."
 )
