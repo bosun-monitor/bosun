@@ -258,9 +258,7 @@ bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', '$q', '$r
 	};
 	var short: any= $('#shortlink')[0];
 	$scope.shorten = () => {
-		$http.post('https://www.googleapis.com/urlshortener/v1/url', {
-			longUrl: document.URL,
-		}).success(data => {
+		$http.get('/api/shorten').success(data => {
 			if (data.id) {
 				short.value = data.id;
 				$rootScope.shortlink = true;
