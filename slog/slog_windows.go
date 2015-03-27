@@ -1,6 +1,10 @@
 package slog
 
-import "bosun.org/_third_party/code.google.com/p/winsvc/debug"
+import (
+	"fmt"
+
+	"bosun.org/_third_party/code.google.com/p/winsvc/debug"
+)
 
 type eventLog struct {
 	l  debug.Log
@@ -15,16 +19,16 @@ func SetEventLog(l debug.Log, eid uint32) {
 }
 
 func (e *eventLog) Fatal(v string) {
-	e.Error(v)
+	e.l.Error(e.id, fmt.Sprintf("fatal: %s", v))
 }
 
 func (e *eventLog) Info(v string) {
-	e.l.Info(e.id, v)
+	e.l.Info(e.id, fmt.Sprintf("info: %s", v))
 }
 
 func (e *eventLog) Warning(v string) {
-	e.l.Warning(e.id, v)
+	e.l.Warning(e.id, fmt.Sprintf("warning: %s", v))
 }
 func (e *eventLog) Error(v string) {
-	e.l.Error(e.id, v)
+	e.l.Error(e.id, fmt.Sprintf("error: %s", v))
 }
