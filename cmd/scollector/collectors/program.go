@@ -2,6 +2,8 @@ package collectors
 
 import (
 	"bufio"
+	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -11,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"bosun.org/metadata"
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
 	"bosun.org/util"
@@ -124,51 +127,106 @@ func (c *ProgramCollector) runProgram(dpchan chan<- *opentsdb.DataPoint) (progEr
 			slog.Error(line)
 		}
 	}()
-Loop:
 	for s.Scan() {
-		line := strings.TrimSpace(s.Text())
-		sp := strings.Fields(line)
-		if len(sp) < 3 {
-			slog.Errorf("bad line in program %s: %s", c.Path, line)
+		var errs []error
+		t := strings.TrimSpace(s.Text())
+		if len(t) == 0 {
 			continue
 		}
-		ts, err := strconv.ParseInt(sp[1], 10, 64)
-		if err != nil {
-			slog.Errorf("bad timestamp in program %s: %s", c.Path, sp[1])
+		if dp, err := parseTcollectorValue(t); err == nil {
+			dpchan <- dp
 			continue
+		} else {
+			errs = append(errs, fmt.Errorf("tcollector: %v", err))
 		}
-		val, err := strconv.ParseFloat(sp[2], 64)
-		if err != nil {
-			slog.Errorf("bad value in program %s: %s", c.Path, sp[2])
+		var dp opentsdb.DataPoint
+		if err := json.Unmarshal([]byte(t), &dp); err != nil {
+			errs = append(errs, fmt.Errorf("opentsdb.DataPoint: %v", err))
+		} else if dp.Valid() {
+			if dp.Tags == nil {
+				dp.Tags = opentsdb.TagSet{}
+			}
+			setExternalTags(dp.Tags)
+			dpchan <- &dp
 			continue
+		} else {
+			errs = append(errs, fmt.Errorf("opentsdb.DataPoint: invalid data"))
 		}
-		if !opentsdb.ValidTag(sp[0]) {
-			slog.Errorf("bad metric in program %s: %s", c.Path, sp[0])
-		}
-		dp := opentsdb.DataPoint{
-			Metric:    sp[0],
-			Timestamp: ts,
-			Value:     val,
-			Tags:      opentsdb.TagSet{"host": util.Hostname},
-		}
-		for _, tag := range sp[3:] {
-			tags, err := opentsdb.ParseTags(tag)
-			if v, ok := tags["host"]; ok && v == "" {
-				delete(dp.Tags, "host")
-			} else if err != nil {
-				slog.Errorf("bad tag in program %s, metric %s: %v: %v", c.Path, sp[0], tag, err)
-				continue Loop
+		var m metadata.Metasend
+		if err := json.Unmarshal([]byte(t), &m); err != nil {
+			errs = append(errs, fmt.Errorf("metadata.Metasend: %v", err))
+		} else {
+			if m.Tags == nil {
+				m.Tags = opentsdb.TagSet{}
+			}
+			setExternalTags(m.Tags)
+			if m.Value == "" || m.Name == "" || (m.Metric == "" && len(m.Tags) == 0) {
+				errs = append(errs, fmt.Errorf("metadata.Metasend: invalid data"))
 			} else {
-				dp.Tags.Merge(tags)
+				metadata.AddMeta(m.Metric, m.Tags, m.Name, m.Value, false)
+				continue
 			}
 		}
-		dp.Tags = AddTags.Copy().Merge(dp.Tags)
-		dpchan <- &dp
+		slog.Errorf("%s: unparseable line: %s", c.Path, t)
+		for _, e := range errs {
+			slog.Error(e)
+		}
 	}
 	if err := s.Err(); err != nil {
 		return err
 	}
 	return
+}
+
+// setExternalTags adds and deletes system-level tags to tags. The host
+// tag is set to the hostname if unspecified, or removed if present and
+// empty. Command line tags (in AddTags) are then added.
+func setExternalTags(tags opentsdb.TagSet) {
+	if v, ok := tags["host"]; ok && v == "" {
+		delete(tags, "host")
+	} else if v == "" {
+		tags["host"] = util.Hostname
+	}
+	for k, v := range AddTags {
+		if _, ok := tags[k]; !ok {
+			tags[k] = v
+		}
+	}
+}
+
+// parseTcollectorValue parses a tcollector-style line into a data point.
+func parseTcollectorValue(line string) (*opentsdb.DataPoint, error) {
+	sp := strings.Fields(line)
+	if len(sp) < 3 {
+		return nil, fmt.Errorf("bad line: %s", line)
+	}
+	ts, err := strconv.ParseInt(sp[1], 10, 64)
+	if err != nil {
+		return nil, fmt.Errorf("bad timestamp: %s", sp[1])
+	}
+	val, err := strconv.ParseFloat(sp[2], 64)
+	if err != nil {
+		return nil, fmt.Errorf("bad value: %s", sp[2])
+	}
+	if !opentsdb.ValidTag(sp[0]) {
+		return nil, fmt.Errorf("bad metric: %s", sp[0])
+	}
+	dp := opentsdb.DataPoint{
+		Metric:    sp[0],
+		Timestamp: ts,
+		Value:     val,
+	}
+	tags := opentsdb.TagSet{}
+	for _, tag := range sp[3:] {
+		ts, err := opentsdb.ParseTags(tag)
+		if err != nil {
+			return nil, fmt.Errorf("bad tag, metric %s: %v: %v", sp[0], tag, err)
+		}
+		tags.Merge(ts)
+	}
+	setExternalTags(tags)
+	dp.Tags = tags
+	return &dp, nil
 }
 
 func (c *ProgramCollector) Name() string {
