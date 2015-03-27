@@ -45,10 +45,8 @@ func (r *Request) Query(host string) (Response, error) {
 	}
 	u1, err := url.Parse(host)
 	if err != nil {
-		log.Printf("There was a problem parsing dev.conf: graphiteHost=" + host)
 		return nil, err
 	}
-	log.Printf("The scheme is : " + u1.Scheme + " and the host is : " + u1.Host)
 	if u1.Host == "" && u1.Scheme != "" {
 		u1.Host = u1.Scheme
 		u1.Scheme = "http"
