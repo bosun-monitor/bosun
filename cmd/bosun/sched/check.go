@@ -115,6 +115,9 @@ func (s *Schedule) RunHistory(r *RunHistory) {
 				state.Attachments = attachments
 			}
 			state.Open = true
+			if a.Log {
+				state.Open = false
+			}
 		}
 		// On state increase, clear old notifications and notify current.
 		// On state decrease, and if the old alert was already acknowledged, notify current.

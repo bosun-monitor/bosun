@@ -251,6 +251,7 @@ type Alert struct {
 	Unknown          time.Duration
 	IgnoreUnknown    bool
 	UnjoinedOK       bool `json:",omitempty"`
+	Log              bool
 	returnType       eparse.FuncType
 
 	template string
@@ -845,6 +846,8 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 			a.UnjoinedOK = true
 		case "ignoreUnknown":
 			a.IgnoreUnknown = true
+		case "log":
+			a.Log = true
 		default:
 			c.errorf("unknown key %s", p.key)
 		}
@@ -885,6 +888,40 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 		}
 		if len(depTags.Intersection(tags)) < 1 {
 			c.errorf("Depends and crit/warn must share at least one tag.")
+		}
+	}
+	if a.Log {
+		for _, n := range a.CritNotification.Notifications {
+			if n.Next != nil {
+				c.errorf("cannot use log with a chained notification")
+			}
+		}
+		for _, n := range a.WarnNotification.Notifications {
+			if n.Next != nil {
+				c.errorf("cannot use log with a chained notification")
+			}
+		}
+		if a.Crit != nil && len(a.CritNotification.Notifications) == 0 {
+			c.errorf("log + crit specified, but no critNotification")
+		}
+		if a.Warn != nil && len(a.WarnNotification.Notifications) == 0 {
+			c.errorf("log + warn specified, but no warnNotification")
+		}
+	}
+	if len(a.WarnNotification.Notifications) != 0 {
+		if a.Warn == nil {
+			c.errorf("warnNotification specified, but no warn")
+		}
+		if a.Template == nil {
+			c.errorf("warnNotification specified, but no template")
+		}
+	}
+	if len(a.CritNotification.Notifications) != 0 {
+		if a.Crit == nil {
+			c.errorf("critNotification specified, but no crit")
+		}
+		if a.Template == nil {
+			c.errorf("critNotification specified, but no template")
 		}
 	}
 	a.returnType = ret
