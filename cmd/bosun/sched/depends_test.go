@@ -175,7 +175,7 @@ func TestDependency_OtherAlert_Unknown(t *testing.T) {
 	})
 }
 
-func TestDependency_OtherAlert_UnknownChainABC(t *testing.T) {
+func TestDependency_OtherAlert_UnknownChain(t *testing.T) {
 	ab := expr.AlertKey("a{host=b}")
 	bb := expr.AlertKey("b{host=b}")
 	cb := expr.AlertKey("c{host=b}")
