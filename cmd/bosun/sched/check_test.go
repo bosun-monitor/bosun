@@ -17,13 +17,18 @@ import (
 func TestCheckFlapping(t *testing.T) {
 	s := new(Schedule)
 	c, err := conf.New("", `
+		template t {
+			subject = 1
+		}
 		notification n {
 			print = true
 		}
 		alert a {
 			warnNotification = n
-			critNotification = n
 			warn = 1
+			critNotification = n
+			crit = 1
+			template = t
 		}
 	`)
 	if err != nil {
@@ -206,19 +211,13 @@ func TestCheckNotifyUnknown(t *testing.T) {
 	c, err := conf.New("", fmt.Sprintf(`
 		template t {
 			subject = {{.Name}}: {{.Group | len}} unknown alerts
-			body = `+"`"+`
-			<p>Time: {{.Time}}
-			<p>Name: {{.Name}}
-			<p>Alerts:
-			{{range .Group}}
-				<br>{{.}}
-			{{end}}`+"`"+`
 		}
 		unknownTemplate = t
 		notification n {
 			post = http://%s/
 		}
 		alert a {
+			template = t
 			critNotification = n
 			crit = 1
 		}
@@ -256,5 +255,89 @@ Loop:
 	}
 	if !gotExpected {
 		t.Errorf("didn't get expected result")
+	}
+}
+
+func TestCheckNotifyLog(t *testing.T) {
+	s := new(Schedule)
+	nc := make(chan string, 1)
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		b, _ := ioutil.ReadAll(r.Body)
+		nc <- string(b)
+	}))
+	defer ts.Close()
+	u, err := url.Parse(ts.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	c, err := conf.New("", fmt.Sprintf(`
+		template t {
+			subject = {{.Alert.Name}}
+		}
+		notification n {
+			post = http://%s/
+		}
+		alert a {
+			template = t
+			critNotification = n
+			crit = 1
+		}
+		alert b {
+			template = t
+			critNotification = n
+			crit = 1
+			log = true
+		}
+	`, u.Host))
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.StateFile = ""
+	err = s.Init(c)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = s.Check(nil, time.Now())
+	if err != nil {
+		t.Fatal(err)
+	}
+	s.CheckNotifications()
+	gotA := false
+	gotB := false
+Loop:
+	for {
+		select {
+		case r := <-nc:
+			if r == "a" && !gotA {
+				gotA = true
+			} else if r == "b" && !gotB {
+				gotB = true
+			} else {
+				t.Errorf("unexpected: %v", r)
+			}
+		// TODO: remove this silly timeout-based test
+		case <-time.After(time.Second):
+			break Loop
+		}
+	}
+	if !gotA {
+		t.Errorf("didn't get expected a")
+	}
+	if !gotB {
+		t.Errorf("didn't get expected b")
+	}
+	for ak, st := range s.status {
+		switch ak {
+		case "a{}":
+			if !st.Open {
+				t.Errorf("expected a to be open")
+			}
+		case "b{}":
+			if st.Open {
+				t.Errorf("expected b to be closed")
+			}
+		default:
+			t.Errorf("unexpected alert key %s", ak)
+		}
 	}
 }

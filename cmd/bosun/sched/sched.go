@@ -458,7 +458,8 @@ func (s *Schedule) RestoreState() error {
 		log.Println(dbStatus, err)
 	}
 	for ak, st := range status {
-		if a, present := s.Conf.Alerts[ak.Name()]; !present {
+		a, present := s.Conf.Alerts[ak.Name()]
+		if !present {
 			log.Println("sched: alert no longer present, ignoring:", ak)
 			continue
 		} else if s.Conf.Squelched(a, st.Group) {
@@ -474,10 +475,18 @@ func (s *Schedule) RestoreState() error {
 			}
 		}
 		s.status[ak] = st
+		if a.Log && st.Open {
+			st.Open = false
+			log.Printf("sched: alert %s is now log, closing, was %s", ak, st.Status())
+		}
 		for name, t := range notifications[ak] {
 			n, present := s.Conf.Notifications[name]
 			if !present {
 				log.Println("sched: notification not present during restore:", name)
+				continue
+			}
+			if a.Log {
+				log.Println("sched: alert is now log, removing notification:", ak)
 				continue
 			}
 			s.AddNotification(ak, n, t)
