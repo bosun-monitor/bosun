@@ -269,8 +269,6 @@ func (s *Schedule) CheckAlert(T miniprofiler.Timer, r *RunHistory, a *conf.Alert
 	unevalCount, unknownCount := markDependenciesUnevaluated(r.Events, deps, a.Name)
 	if err != nil {
 		removeUnknownEvents(r.Events, a.Name)
-	} else {
-		s.closeErrorEvent(r.Events, a.Name)
 	}
 
 	collect.Put("check.duration", opentsdb.TagSet{"name": a.Name}, time.Since(start).Seconds())
@@ -282,13 +280,6 @@ func removeUnknownEvents(evs map[expr.AlertKey]*Event, alert string) {
 		if v.Status == StUnknown && k.Name() == alert {
 			delete(evs, k)
 		}
-	}
-}
-
-func (s *Schedule) closeErrorEvent(evs map[expr.AlertKey]*Event, alert string) {
-	ak := expr.NewAlertKey(alert, nil)
-	if s.Status(ak).Status() == StError && evs[ak] == nil { //if run history already has event for this key do nothing
-		evs[ak] = &Event{Status: StNormal}
 	}
 }
 
