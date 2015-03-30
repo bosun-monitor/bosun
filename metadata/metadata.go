@@ -36,6 +36,7 @@ const (
 	// None is a not-yet documented unit.
 	None           Unit = ""
 	A                   = "A" // Amps
+	Alert               = "alerts"
 	Bool                = "bool"
 	BitsPerSecond       = "bits per second"
 	Bytes               = "bytes"
@@ -142,6 +143,15 @@ func AddMeta(metric string, tags opentsdb.TagSet, name string, value interface{}
 		slog.Infof("AddMeta for %s/%s/%s: %v", metric, ts, name, value)
 	}
 	metadata[Metakey{metric, ts, name}] = value
+}
+
+// AddMetricMeta is a convenience function to set the main metadata fields for a
+// metric. Those fields are rate, unit, and description. If you need to document
+// tag keys then use AddMeta.
+func AddMetricMeta(metric string, rate RateType, unit Unit, desc string) {
+	AddMeta(metric, nil, "rate", rate, false)
+	AddMeta(metric, nil, "unit", unit, false)
+	AddMeta(metric, nil, "desc", desc, false)
 }
 
 // Init initializes the metadata send queue.

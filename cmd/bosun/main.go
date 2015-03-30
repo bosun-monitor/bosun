@@ -24,6 +24,7 @@ import (
 	"bosun.org/cmd/bosun/sched"
 	"bosun.org/cmd/bosun/web"
 	"bosun.org/collect"
+	"bosun.org/metadata"
 )
 
 // These constants should remain in source control as their zero values.
@@ -70,6 +71,9 @@ func main() {
 	}
 	if strings.HasPrefix(httpListen.Host, ":") {
 		httpListen.Host = "localhost" + httpListen.Host
+	}
+	if err := metadata.Init(httpListen, false); err != nil {
+		log.Fatal(err)
 	}
 	if err := sched.Load(c); err != nil {
 		log.Fatal(err)
