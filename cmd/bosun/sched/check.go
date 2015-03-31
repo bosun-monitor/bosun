@@ -12,8 +12,24 @@ import (
 	"bosun.org/cmd/bosun/expr"
 	"bosun.org/collect"
 	"bosun.org/graphite"
+	"bosun.org/metadata"
 	"bosun.org/opentsdb"
 )
+
+func init() {
+	metadata.AddMetricMeta(
+		"bosun.alerts.current_severity", metadata.Gauge, metadata.Alert,
+		"The number of open alerts by current severity.")
+	metadata.AddMetricMeta(
+		"bosun.alerts.last_abnormal_severity", metadata.Gauge, metadata.Alert,
+		"The number of open alerts by last abnormal severity.")
+	metadata.AddMetricMeta(
+		"bosun.alerts.acknowledgement_status", metadata.Gauge, metadata.Alert,
+		"The number of open alerts by acknowledgement status.")
+	metadata.AddMetricMeta(
+		"bosun.alerts.active_status", metadata.Gauge, metadata.Alert,
+		"The number of open alerts by active status.")
+}
 
 func NewStatus(ak expr.AlertKey) *State {
 	g := ak.Group()
@@ -188,7 +204,86 @@ func (s *Schedule) RunHistory(r *RunHistory) {
 	if checkNotify && s.nc != nil {
 		s.nc <- true
 	}
+	s.CollectStates()
 	s.Save()
+}
+
+// CollectStates sends various state information to bosun with collect.
+func (s *Schedule) CollectStates() {
+	// [AlertName][Severity]Count
+	severityCounts := make(map[string]map[string]int64)
+	abnormalCounts := make(map[string]map[string]int64)
+	ackStatusCounts := make(map[string]map[bool]int64)
+	activeStatusCounts := make(map[string]map[bool]int64)
+	// Initalize the Counts
+	for _, alert := range s.Conf.Alerts {
+		severityCounts[alert.Name] = make(map[string]int64)
+		abnormalCounts[alert.Name] = make(map[string]int64)
+		var i Status
+		for i = 1; i.String() != "none"; i++ {
+			severityCounts[alert.Name][i.String()] = 0
+			abnormalCounts[alert.Name][i.String()] = 0
+		}
+		ackStatusCounts[alert.Name] = make(map[bool]int64)
+		activeStatusCounts[alert.Name] = make(map[bool]int64)
+		ackStatusCounts[alert.Name][false] = 0
+		activeStatusCounts[alert.Name][false] = 0
+		ackStatusCounts[alert.Name][true] = 0
+		activeStatusCounts[alert.Name][true] = 0
+	}
+	for _, state := range s.status {
+		if !state.Open {
+			continue
+		}
+		severity := state.Status().String()
+		lastAbnormal := state.AbnormalStatus().String()
+		severityCounts[state.Alert][severity]++
+		abnormalCounts[state.Alert][lastAbnormal]++
+		ackStatusCounts[state.Alert][state.NeedAck]++
+		activeStatusCounts[state.Alert][state.IsActive()]++
+	}
+	for alertName, _ := range severityCounts {
+		ts := opentsdb.TagSet{"alert": alertName}
+		// The tagset of the alert is not included because there is no way to
+		// store the string of a group in OpenTSBD in a parsable way. This is
+		// because any delimiter we chose could also be part of a tag key or tag
+		// value.
+		for severity, _ := range severityCounts[alertName] {
+			err := collect.Put("alerts.current_severity",
+				ts.Copy().Merge(opentsdb.TagSet{"severity": severity}),
+				severityCounts[alertName][severity])
+			if err != nil {
+				log.Println(err)
+			}
+			err = collect.Put("alerts.last_abnormal_severity",
+				ts.Copy().Merge(opentsdb.TagSet{"severity": severity}),
+				abnormalCounts[alertName][severity])
+			if err != nil {
+				log.Println(err)
+			}
+		}
+		err := collect.Put("alerts.acknowledgement_status",
+			ts.Copy().Merge(opentsdb.TagSet{"status": "unacknowledged"}),
+			ackStatusCounts[alertName][true])
+		err = collect.Put("alerts.acknowledgement_status",
+			ts.Copy().Merge(opentsdb.TagSet{"status": "acknowledged"}),
+			ackStatusCounts[alertName][false])
+		if err != nil {
+			log.Println(err)
+		}
+		err = collect.Put("alerts.active_status",
+			ts.Copy().Merge(opentsdb.TagSet{"status": "active"}),
+			activeStatusCounts[alertName][true])
+		if err != nil {
+			log.Println(err)
+		}
+		err = collect.Put("alerts.active_status",
+			ts.Copy().Merge(opentsdb.TagSet{"status": "inactive"}),
+			activeStatusCounts[alertName][false])
+		if err != nil {
+			log.Println(err)
+		}
+	}
 }
 
 func (r *RunHistory) GetUnknownAndUnevaluatedAlertKeys(alert string) (unknown, uneval []expr.AlertKey) {
