@@ -40,7 +40,14 @@ func NewStatus(ak expr.AlertKey) *State {
 	}
 }
 
-func (s *Schedule) Status(ak expr.AlertKey) *State {
+func (s *Schedule) GetStatus(ak expr.AlertKey) *State {
+	s.Lock()
+	state := s.status[ak]
+	s.Unlock()
+	return state
+}
+
+func (s *Schedule) GetOrCreateStatus(ak expr.AlertKey) *State {
 	s.Lock()
 	state := s.status[ak]
 	if state == nil {
@@ -91,13 +98,20 @@ func (s *Schedule) RunHistory(r *RunHistory) {
 			state = NewStatus(ak)
 			s.status[ak] = state
 		}
+		state.Touched = r.Start
+		if event.Error != nil {
+			state.Result = event.Error
+		} else if event.Crit != nil {
+			state.Result = event.Crit
+		} else if event.Warn != nil {
+			state.Result = event.Warn
+		}
 		last := state.AbnormalStatus()
 		state.Unevaluated = event.Unevaluated
 		if event.Unevaluated {
 			continue
 		}
 		state.Append(event)
-
 		a := s.Conf.Alerts[ak.Name()]
 		wasOpen := state.Open
 		if event.Status > StNormal {
@@ -430,20 +444,18 @@ func (s *Schedule) executeExpr(T miniprofiler.Timer, rh *RunHistory, a *conf.Ale
 	results, _, err := e.Execute(rh.Context, rh.GraphiteContext, rh.Logstash, rh.Cache, T, rh.Start, 0, a.UnjoinedOK, s.Search, s.Conf.AlertSquelched(a), rh)
 	if err != nil {
 		ak := expr.NewAlertKey(a.Name, nil)
-		state := s.Status(ak)
-		state.Touch()
-		state.Result = &Result{
-			Result: &expr.Result{
-				Computations: []expr.Computation{
-					{
-						Text:  e.String(),
-						Value: err.Error(),
+		rh.Events[ak] = &Event{
+			Status: StError,
+			Error: &Result{
+				Result: &expr.Result{
+					Computations: []expr.Computation{
+						{
+							Text:  e.String(),
+							Value: err.Error(),
+						},
 					},
 				},
 			},
-		}
-		rh.Events[ak] = &Event{
-			Status: StError,
 		}
 		return nil, err
 	}
@@ -476,9 +488,6 @@ Loop:
 				continue Loop
 			}
 		}
-		state := s.Status(ak)
-		state.Touch()
-		status := checkStatus
 		var n float64
 		switch v := r.Value.(type) {
 		case expr.Number:
@@ -494,16 +503,17 @@ Loop:
 			event = new(Event)
 			rh.Events[ak] = event
 		}
-		result := Result{
+		result := &Result{
 			Result: r,
 			Expr:   e.String(),
 		}
 		switch checkStatus {
 		case StWarning:
-			event.Warn = &result
+			event.Warn = result
 		case StCritical:
-			event.Crit = &result
+			event.Crit = result
 		}
+		status := checkStatus
 		if math.IsNaN(n) {
 			status = StError
 		} else if n == 0 {
@@ -514,7 +524,6 @@ Loop:
 		}
 		if status > rh.Events[ak].Status {
 			event.Status = status
-			state.Result = &result
 		}
 	}
 	return

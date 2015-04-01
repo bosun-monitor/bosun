@@ -336,7 +336,7 @@ func Status(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (inter
 		if err != nil {
 			return nil, err
 		}
-		st := ExtStatus{State: schedule.Status(ak)}
+		st := ExtStatus{State: schedule.GetStatus(ak)}
 		if st.State == nil {
 			return nil, fmt.Errorf("unknown alert key: %v", k)
 		}

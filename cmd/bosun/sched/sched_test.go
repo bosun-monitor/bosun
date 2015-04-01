@@ -251,7 +251,7 @@ func TestError_To_Unknown(t *testing.T) {
 			ak: state,
 		},
 	})
-	st := s.Status(expr.AlertKey(ak))
+	st := s.GetStatus(expr.AlertKey(ak))
 	if st.Status() != StError {
 		t.Errorf("Expected status to be %s but was %s", StError, st.Status())
 	}
