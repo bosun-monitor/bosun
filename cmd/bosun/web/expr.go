@@ -131,14 +131,14 @@ func procRule(t miniprofiler.Timer, c *conf.Conf, a *conf.Alert, now time.Time, 
 			}
 			for _, ak := range keys {
 				if ak.Group().Subset(ts) {
-					instance = s.Status(ak)
+					instance = s.GetOrCreateStatus(ak)
 					instance.History = []sched.Event{*rh.Events[ak]}
 					break
 				}
 			}
 		}
 		if instance == nil {
-			instance = s.Status(keys[0])
+			instance = s.GetOrCreateStatus(keys[0])
 			instance.History = []sched.Event{*rh.Events[keys[0]]}
 			if template_group != "" {
 				warning = append(warning, fmt.Sprintf("template group %s was not a subset of any result", template_group))
