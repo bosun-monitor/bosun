@@ -15,7 +15,7 @@ func init() {
 }
 
 func setSyslog() {
-	if *noSyslog || *flagDev {
+	if *noSyslog || *flagDev || *flagTest {
 		return
 	}
 	w, err := syslog.New(syslog.LOG_LOCAL6|syslog.LOG_INFO, "bosun")
