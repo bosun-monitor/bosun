@@ -256,13 +256,13 @@ func (s *Schedule) CollectStates() {
 		ackStatusCounts[state.Alert][state.NeedAck]++
 		activeStatusCounts[state.Alert][state.IsActive()]++
 	}
-	for alertName, _ := range severityCounts {
+	for alertName := range severityCounts {
 		ts := opentsdb.TagSet{"alert": alertName}
 		// The tagset of the alert is not included because there is no way to
 		// store the string of a group in OpenTSBD in a parsable way. This is
 		// because any delimiter we chose could also be part of a tag key or tag
 		// value.
-		for severity, _ := range severityCounts[alertName] {
+		for severity := range severityCounts[alertName] {
 			err := collect.Put("alerts.current_severity",
 				ts.Copy().Merge(opentsdb.TagSet{"severity": severity}),
 				severityCounts[alertName][severity])

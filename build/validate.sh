@@ -1,8 +1,8 @@
 #!/bin/bash
 echo -e "\nChecking go fmt bosun.org/..."
-GOFMTOUT=$(go fmt bosun.org/...);
+GOFMTOUT=$(go fmt -s bosun.org/...);
 if [ "$GOFMTOUT" != '' ]; then 
-    echo "The following files need go fmt:";
+    echo "The following files need gofmt -s:";
     echo "$GOFMTOUT";
     exit 1;
 fi
