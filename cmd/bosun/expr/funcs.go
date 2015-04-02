@@ -254,6 +254,12 @@ var builtins = map[string]parse.Func{
 		nil,
 		Epoch,
 	},
+	"dropge": {
+		[]parse.FuncType{parse.TypeSeries, parse.TypeScalar},
+		parse.TypeSeries,
+		tagFirst,
+		DropGe,
+	},
 	"drople": {
 		[]parse.FuncType{parse.TypeSeries, parse.TypeScalar},
 		parse.TypeSeries,
@@ -305,36 +311,38 @@ func Duration(e *State, T miniprofiler.Timer, d string) (*Results, error) {
 	}, nil
 }
 
-func DropLe(e *State, T miniprofiler.Timer, series *Results, threshold float64) (*Results, error) {
+func DropValues(e *State, T miniprofiler.Timer, series *Results, threshold float64, dropFunction func(float64, float64) bool) (*Results, error) {
 	for _, res := range series.Results {
 		nv := make(Series)
 		for k, v := range res.Value.Value().(Series) {
-			if float64(v) > threshold {
+			if !dropFunction(float64(v), threshold) {
+				//preserve values which should not be discarded
 				nv[k] = v
 			}
 		}
 		if len(nv) == 0 {
-			return nil, fmt.Errorf("drople: series %s is empty", res.Group)
+			return nil, fmt.Errorf("series %s is empty", res.Group)
 		}
 		res.Value = nv
 	}
 	return series, nil
 }
 
+func DropGe(e *State, T miniprofiler.Timer, series *Results, threshold float64) (*Results, error) {
+	dropFunction := func(value float64, threshold float64) bool { return value >= threshold }
+	return DropValues(e, T, series, threshold, dropFunction)
+}
+
+func DropLe(e *State, T miniprofiler.Timer, series *Results, threshold float64) (*Results, error) {
+	dropFunction := func(value float64, threshold float64) bool { return value <= threshold }
+	return DropValues(e, T, series, threshold, dropFunction)
+}
+
 func DropNA(e *State, T miniprofiler.Timer, series *Results) (*Results, error) {
-	for _, res := range series.Results {
-		nv := make(Series)
-		for k, v := range res.Value.Value().(Series) {
-			if !math.IsNaN(float64(v)) && !math.IsInf(float64(v), 0) {
-				nv[k] = v
-			}
-		}
-		if len(nv) == 0 {
-			return nil, fmt.Errorf("dropna: series %s is empty", res.Group)
-		}
-		res.Value = nv
+	dropFunction := func(value float64, threshold float64) bool {
+		return math.IsNaN(float64(value)) || math.IsInf(float64(value), 0)
 	}
-	return series, nil
+	return DropValues(e, T, series, 0, dropFunction)
 }
 
 func parseGraphiteResponse(req *graphite.Request, s *graphite.Response, formatTags []string) ([]*Result, error) {
