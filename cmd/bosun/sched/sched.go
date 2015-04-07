@@ -9,6 +9,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"os"
 	"sync"
 	"time"
 
@@ -537,6 +538,10 @@ const (
 	dbMetadata      = "metadata"
 )
 
+func init() {
+	metadata.AddMetricMeta("bosun.statefile.size", metadata.Gauge, metadata.Bytes, "The total size of the bosun state file.")
+}
+
 func (s *Schedule) save() {
 	defer func() {
 		savePending = false
@@ -572,6 +577,7 @@ func (s *Schedule) save() {
 		}
 		tostore[name] = f.Bytes()
 		log.Printf("wrote %s: %v", name, conf.ByteSize(cw.written))
+		collect.Put("statefile.size", opentsdb.TagSet{"object": name}, cw.written)
 	}
 	err := s.db.Update(func(tx *bolt.Tx) error {
 		b, err := tx.CreateBucketIfNotExists([]byte(dbBucket))
@@ -588,6 +594,10 @@ func (s *Schedule) save() {
 	if err != nil {
 		log.Printf("save db update error: %v", err)
 		return
+	}
+	fi, err := os.Stat(s.Conf.StateFile)
+	if err == nil {
+		collect.Put("statefile.size", opentsdb.TagSet{"object": "total"}, fi.Size())
 	}
 	log.Println("save to db complete")
 }
