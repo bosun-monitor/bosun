@@ -42,7 +42,7 @@ func (n *Notification) DoPost(subject []byte) {
 		}
 		subject = buf.Bytes()
 	}
-	resp, err := http.Post(n.Post.String(), "application/x-www-form-urlencoded", bytes.NewBuffer(subject))
+	resp, err := http.Post(n.Post.String(), n.ContentType, bytes.NewBuffer(subject))
 	if resp != nil && resp.Body != nil {
 		defer resp.Body.Close()
 	}
