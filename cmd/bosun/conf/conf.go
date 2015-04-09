@@ -1219,7 +1219,11 @@ func (c *Conf) AlertTemplateStrings() (*AlertTemplateStrings, error) {
 						continue
 					}
 					incl[node.Name] = true
-					if err := parseSection(c.Templates[node.Name]); err != nil {
+					t := c.Templates[node.Name]
+					if t == nil {
+						return fmt.Errorf("unknown template %v", node.Name)
+					}
+					if err := parseSection(t); err != nil {
 						return err
 					}
 				}
