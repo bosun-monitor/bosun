@@ -36,6 +36,9 @@ var (
 	// Print prints all datapoints to stdout instead of sending them.
 	Print = false
 
+	// Use HTTP instead of HTTP.
+	HTTP = false
+
 	// DisableDefaultCollectors prevents the scollector self metrics from being
 	// generated.
 	DisableDefaultCollectors = false
@@ -58,6 +61,7 @@ var (
 	counters            = make(map[string]*addMetric)
 	sets                = make(map[string]*setMetric)
 	puts                = make(map[string]*putMetric)
+	tsdbTCP             string
 	client              = &http.Client{
 		Transport: &timeoutTransport{Transport: new(http.Transport)},
 		Timeout:   time.Minute,
@@ -107,6 +111,7 @@ func InitChan(tsdbhost *url.URL, root string, ch chan *opentsdb.DataPoint) error
 		u.Host = "localhost" + u.Host
 	}
 	tsdbURL = u.String()
+	tsdbTCP = u.Host
 	metricRoot = root + "."
 	tchan = ch
 	go queuer()
