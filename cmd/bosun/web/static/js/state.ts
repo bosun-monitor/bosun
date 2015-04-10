@@ -48,7 +48,7 @@ bosunApp.directive('tsAckGroup', function() {
 						continue;
 					}
 					scope.anySelected = true;
-					if (g.Active && g.Status != 'unknown') {
+					if (g.Active && g.Status != 'unknown' && g.Status != 'error') {
 						scope.canCloseSelected = false;
 					}
 					if (g.Status != 'unknown') {
