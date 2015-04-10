@@ -1,14 +1,19 @@
 #!/bin/bash
-echo -e "\nChecking go fmt bosun.org/..."
-GOFMTOUT=$(go fmt -s bosun.org/...);
-if [ "$GOFMTOUT" != '' ]; then 
-    echo "The following files need gofmt -s:";
-    echo "$GOFMTOUT";
-    exit 1;
+cd $GOPATH/src/bosun.org
+DIRS=`find . -maxdepth 1 -type d -iregex './[^._].*'`
+
+echo -e "\nChecking gofmt -l -s -w for all folders that don't start with . or _"
+GOFMTRESULT=0
+GOFMTOUT=$(gofmt -l -s -w $DIRS);
+if [ "$GOFMTOUT" != '' ]; then
+    echo "The following files need 'gofmt -s -w':"
+    echo "$GOFMTOUT"
+    GOFMTRESULT=1
 fi
 
 echo -e "\nRunning go test bosun.org/..."
 go test bosun.org/...
 GOTESTRESULT=$?
 
-exit $GOTESTRESULT
+let "RESULT = $GOFMTRESULT | $GOTESTRESULT"
+exit $RESULT
