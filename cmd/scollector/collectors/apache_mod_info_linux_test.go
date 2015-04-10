@@ -56,9 +56,9 @@ func TestApacheModInfoEmpty(t *testing.T) {
 		t.Errorf("unable to parse ?server status page")
 	}
 
-	c, k, err := extractTimeouts(n)
-	if c != 0 || k != 0 || err == nil {
-		t.Errorf("Expected 0,0,ERROR got %v,%v,%v", c, k, err)
+	ok, c, k, err := extractTimeouts(n)
+	if ok || c != 0 || k != 0 || err == nil {
+		t.Errorf("Expected false,0,0,ERROR got %v,%v,%v,%v", ok, c, k, err)
 	}
 
 	mpm_d, mpm_t, mpm_f, err := extractMpmInfo(n)
@@ -74,9 +74,9 @@ func TestApacheModInfoServerSimple(t *testing.T) {
 		t.Errorf("unable to parse ?server status page")
 	}
 
-	c, k, err := extractTimeouts(n)
+	ok, c, k, err := extractTimeouts(n)
 	if c != 60 || k != 15 || err != nil {
-		t.Errorf("Expected 60,15,<nil> got %v,%v,%v", c, k, err)
+		t.Errorf("Expected true,60,15,<nil> got %v,%v,%v,%v", ok, c, k, err)
 	}
 
 	mpm_d, mpm_t, mpm_f, err := extractMpmInfo(n)
