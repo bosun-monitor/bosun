@@ -150,7 +150,7 @@ func readConf() {
 
 func main() {
 	flag.Parse()
-	if *flagPrint || *flagDebug  {
+	if *flagPrint || *flagDebug {
 		slog.Set(&slog.StdLog{Log: log.New(os.Stdout, "", log.LstdFlags)})
 	}
 	if *flagVersion {
