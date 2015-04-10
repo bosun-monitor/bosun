@@ -34,7 +34,7 @@ var (
 	flagFilter          = flag.String("f", "", "Filters collectors matching this term, multiple terms separated by comma. Works with all other arguments.")
 	flagList            = flag.Bool("l", false, "List available collectors.")
 	flagPrint           = flag.Bool("p", false, "Print to screen instead of sending to a host")
-	flagHTTP            = flag.Bool("http", false, "Use HTTP instead of TCP")
+	flagTCP             = flag.Bool("tcp", false, "Use TCP instead of HTTP")
 	flagHost            = flag.String("h", "", `Bosun or OpenTSDB host. Ex: "http://bosun.example.com:8070".`)
 	flagColDir          = flag.String("c", "", `External collectors directory.`)
 	flagBatchSize       = flag.Int("b", 0, "OpenTSDB batch size. Used for debugging bad data.")
@@ -49,7 +49,7 @@ var (
 	flagVersion         = flag.Bool("version", false, "Prints the version and exits.")
 	flagDisableDefault  = flag.Bool("n", false, "Disable sending of scollector self metrics.")
 	flagHostname        = flag.String("hostname", "", "If set, use as value of host tag instead of system hostname.")
-	flagFreq            = flag.String("freq", "", "Set the default frequency in seconds for most collectors.")
+	flagFreq            = flag.String("freq", "15", "Set the default frequency in seconds for most collectors.")
 	flagConf            = flag.String("conf", "", "Location of configuration file. Defaults to scollector.conf in directory of the scollector executable.")
 	flagAWS             = flag.String("aws", "", `AWS keys and region, format: "access_key:secret_key@region".`)
 
@@ -150,7 +150,7 @@ func readConf() {
 
 func main() {
 	flag.Parse()
-	if *flagPrint || *flagDebug || *flagHTTP {
+	if *flagPrint || *flagDebug  {
 		slog.Set(&slog.StdLog{Log: log.New(os.Stdout, "", log.LstdFlags)})
 	}
 	if *flagVersion {
@@ -271,8 +271,8 @@ func main() {
 	if *flagPrint {
 		collect.Print = true
 	}
-	if *flagHTTP {
-		collect.HTTP = true
+	if *flagTCP {
+		collect.TCP = true
 	}
 	if !*flagDisableMetadata {
 		if err := metadata.Init(u, *flagDebug); err != nil {
