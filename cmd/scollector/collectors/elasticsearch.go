@@ -387,7 +387,7 @@ type ElasticIndicesHealth struct {
 	RelocatingShards    float64                       `json:"relocating_shards"`
 	Status              string                        `json:"status"`
 	TimedOut            bool                          `json:"timed_out"`
-	UnassignedShards    float64                       `json:"unassigned_shards`
+	UnassignedShards    float64                       `json:"unassigned_shards"`
 }
 
 type ElasticIndexHealth struct {
