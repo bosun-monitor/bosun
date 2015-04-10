@@ -64,7 +64,6 @@ func send() {
 
 func sendBatch(batch []json.RawMessage) {
 	now := time.Now()
-	error_count := 0
 	if Print {
 		for _, d := range batch {
 			slog.Info(string(d))
@@ -72,7 +71,7 @@ func sendBatch(batch []json.RawMessage) {
 		recordSent(len(batch))
 		return
 	}
-	if !HTTP {
+	if TCP {
 		conn, err := net.Dial("tcp", tsdbTCP)
 		if err != nil {
 			slog.Error(err)
@@ -111,10 +110,6 @@ func sendBatch(batch []json.RawMessage) {
 		d := time.Since(now).Nanoseconds() / 1e6
 		Add("collect.post.total_duration", nil, d)
 		Add("collect.post.count", nil, 1)
-		// Some problem with connecting to the server; retry later.
-		if error_count > 0 {
-			Add("collect.post.error", nil, 1)
-		}
 		conn.Close()
 	} else {
 		var buf bytes.Buffer
