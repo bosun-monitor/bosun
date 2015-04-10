@@ -2,6 +2,7 @@ package collectors
 
 import (
 	"net/http"
+	"os/exec"
 	"reflect"
 	"runtime"
 	"sync"
@@ -93,5 +94,14 @@ func enableURL(url string) func() bool {
 		}
 		resp.Body.Close()
 		return resp.StatusCode == 200
+	}
+}
+
+// enableExecutable returns true if name is an executable file in the
+// environment's PATH.
+func enableExecutable(name string) func() bool {
+	return func() bool {
+		_, err := exec.LookPath(name)
+		return err == nil
 	}
 }
