@@ -22,8 +22,8 @@ func buildFakeResults() (ra, rb *Results) {
 	rb = &Results{}
 	for i := 0; i < 50000; i++ {
 		tags := opentsdb.TagSet{}
-		tags["disk"] = fmt.Sprint("a%d", i)
-		tags["host"] = fmt.Sprint("b%d", i)
+		tags["disk"] = fmt.Sprint("a", i)
+		tags["host"] = fmt.Sprint("b", i)
 		if i < 1000 {
 			ra.Results = append(ra.Results, &Result{Value: Number(0), Group: tags})
 		}

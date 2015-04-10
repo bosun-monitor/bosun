@@ -185,341 +185,341 @@ var haproxyStatus = map[string]int{
 // A slice of fields which are presented by haproxy's CSV data.
 // See "CSV format" in http://www.haproxy.org/download/1.5/doc/configuration.txt
 var haproxyCSVMeta = []MetricMetaHAProxy{
-	MetricMetaHAProxy{
+	{
 		Name:   "pxname",
 		Ignore: true,
 	},
-	MetricMetaHAProxy{
+	{
 		Name:   "svname",
 		Ignore: true,
 	},
-	MetricMetaHAProxy{
+	{
 		Name: "qcur",
 		MetricMeta: MetricMeta{RateType: metadata.Gauge,
 			Unit: metadata.Request,
 			Desc: "The current queued requests. For the backend this reports the number queued without a server assigned.",
 		}},
-	MetricMetaHAProxy{
+	{
 		Name: "qmax",
 		MetricMeta: MetricMeta{RateType: metadata.Gauge,
 			Unit: metadata.Request,
 			Desc: "The max value of qcur.",
 		}},
-	MetricMetaHAProxy{
+	{
 		Name: "scur",
 		MetricMeta: MetricMeta{RateType: metadata.Gauge,
 			Unit: metadata.Session,
 			Desc: "The current number of sessions.",
 		}},
-	MetricMetaHAProxy{
+	{
 		Name: "smax",
 		MetricMeta: MetricMeta{RateType: metadata.Gauge,
 			Unit: metadata.Session,
 			Desc: "The maximum number of concurrent sessions seen.",
 		}},
-	MetricMetaHAProxy{
+	{
 		Name: "slim",
 		MetricMeta: MetricMeta{RateType: metadata.Gauge,
 			Unit: metadata.Session,
 			Desc: "The configured session limit.",
 		}},
-	MetricMetaHAProxy{
+	{
 		Name: "stot",
 		MetricMeta: MetricMeta{RateType: metadata.Counter,
 			Unit: metadata.Session,
 			Desc: "The total number of sessions.",
 		}},
-	MetricMetaHAProxy{
+	{
 		Name: "bin",
 		MetricMeta: MetricMeta{RateType: metadata.Counter,
 			Unit: metadata.Bytes,
 			Desc: "The number of bytes in.",
 		}},
-	MetricMetaHAProxy{
+	{
 		Name: "bout",
 		MetricMeta: MetricMeta{RateType: metadata.Counter,
 			Unit: metadata.Bytes,
 			Desc: "The number of bytes out.",
 		}},
-	MetricMetaHAProxy{
+	{
 		Name: "dreq",
 		MetricMeta: MetricMeta{RateType: metadata.Counter,
 			Unit: metadata.Request,
 			Desc: "The number of requests denied because of security concerns. For tcp this is because of a matched tcp-request content rule. For http this is because of a matched http-request or tarpit rule.",
 		}},
-	MetricMetaHAProxy{
+	{
 		Name: "dresp",
 		MetricMeta: MetricMeta{RateType: metadata.Counter,
 			Unit: metadata.Response,
 			Desc: "The number of responses denied because of security concerns. For http this is because of a matched http-request rule, or 'option checkcache'.",
 		}},
-	MetricMetaHAProxy{
+	{
 		Name: "ereq",
 		MetricMeta: MetricMeta{RateType: metadata.Counter,
 			Unit: metadata.Request,
 			Desc: "The number of request errors. Some of the possible causes are: Early termination from the client before the request has been sent, a read error from the client, a client timeout, a client closed connection, various bad requests from the client or the request was tarpitted.",
 		}},
-	MetricMetaHAProxy{
+	{
 		Name: "econ",
 		MetricMeta: MetricMeta{RateType: metadata.Counter,
 			Unit: metadata.Request,
 			Desc: "The number of number of requests that encountered an error trying to connect to a backend server. The backend stat is the sum of the stat for all servers of that backend, plus any connection errors not associated with a particular server (such as the backend having no active servers).",
 		}},
-	MetricMetaHAProxy{
+	{
 		Name: "eresp",
 		MetricMeta: MetricMeta{RateType: metadata.Counter,
 			Unit: metadata.Response,
 			Desc: " The number of response errors. srv_abrt will be counted here also. Some errors are: write error on the client socket (won't be counted for the server stat) and failure applying filters to the response.",
 		}},
-	MetricMetaHAProxy{
+	{
 		Name: "wretr",
 		MetricMeta: MetricMeta{RateType: metadata.Counter,
 			Unit: metadata.Retry,
 			Desc: "The number of times a connection to a server was retried.",
 		}},
-	MetricMetaHAProxy{
+	{
 		Name: "wredis",
 		MetricMeta: MetricMeta{RateType: metadata.Counter,
 			Unit: metadata.Redispatch,
 			Desc: "number of times a request was redispatched to another server. The server value counts the number of times that server was switched away from.",
 		}},
-	MetricMetaHAProxy{
+	{
 		Name: "status",
 		MetricMeta: MetricMeta{RateType: metadata.Gauge,
 			Unit: metadata.Weight,
 			Desc: "The current status: 0->UP, 1->Down, 2->NOLB, 3->Maintenance.",
 		}},
-	MetricMetaHAProxy{
+	{
 		Name: "weight",
 		MetricMeta: MetricMeta{RateType: metadata.Gauge,
 			Unit: metadata.Weight,
 			Desc: "The server weight (server), total weight (backend).",
 		}},
-	MetricMetaHAProxy{
+	{
 		Name: "act",
 		MetricMeta: MetricMeta{RateType: metadata.Gauge,
 			Unit: metadata.Server,
 			Desc: "If the server is active in the case of servers, or number of active servers in the case of a backend.",
 		}},
-	MetricMetaHAProxy{
+	{
 		Name: "bck",
 		MetricMeta: MetricMeta{RateType: metadata.Gauge,
 			Unit: metadata.Server,
 			Desc: "If the server is a backup in the case of servers, or number of backup servers in the case of a backend.",
 		}},
-	MetricMetaHAProxy{
+	{
 		Name: "chkfail",
 		MetricMeta: MetricMeta{RateType: metadata.Counter,
 			Unit: metadata.Check,
 			Desc: "The number of failed checks. (Only counts checks failed when the server is up.",
 		}},
-	MetricMetaHAProxy{
+	{
 		Name: "chkdown",
 		MetricMeta: MetricMeta{RateType: metadata.Counter,
 			Unit: metadata.Transition,
 			Desc: "The number of UP->DOWN transitions. The backend counter counts transitions to the whole backend being down, rather than the sum of the counters for each server.",
 		}},
-	MetricMetaHAProxy{
+	{
 		Name: "lastchg",
 		MetricMeta: MetricMeta{RateType: metadata.Gauge,
 			Unit: metadata.Second,
 			Desc: "The number of seconds since the last UP<->DOWN transition.",
 		}},
-	MetricMetaHAProxy{
+	{
 		Name: "downtime",
 		MetricMeta: MetricMeta{RateType: metadata.Counter,
 			Unit: metadata.Second,
 			Desc: "The total downtime in seconds. The value for the backend is the downtime for the whole backend, not the sum of the server downtime.",
 		}},
-	MetricMetaHAProxy{
+	{
 		Name: "qlimit",
 		MetricMeta: MetricMeta{RateType: metadata.Gauge,
 			//Don't know the unit
 			Desc: "The configured maxqueue for the server, or nothing in the value is 0 (default, meaning no limit)",
 		}},
-	MetricMetaHAProxy{
+	{
 		Name:   "pid",
 		Ignore: true,
 		// Not a series or tag so skipping this.
 	},
-	MetricMetaHAProxy{
+	{
 		Name:   "iid",
 		Ignore: true,
 		// Not a series or tag so skipping this.
 	},
-	MetricMetaHAProxy{
+	{
 		Name:   "sid",
 		Ignore: true,
 		// Not a series or tag so skipping this.
 	},
-	MetricMetaHAProxy{
+	{
 		Name: "throttle",
 		MetricMeta: MetricMeta{RateType: metadata.Gauge,
 			Unit: metadata.Pct,
 			Desc: "The current throttle percentage for the server, when slowstart is active, or no value if not in slowstart.",
 		}},
-	MetricMetaHAProxy{
+	{
 		Name: "lbtot",
 		MetricMeta: MetricMeta{RateType: metadata.Counter,
 			//Don't know the unit
 			Desc: "The total number of times a server was selected, either for new sessions, or when re-dispatching. The server counter is the number of times that server was selected.",
 		}},
-	MetricMetaHAProxy{
+	{
 		Name:   "tracked",
 		Ignore: true,
 		// This could be a tag, but I am have no use for it.
 	},
-	MetricMetaHAProxy{
+	{
 		Name:   "type",
 		Ignore: true,
 		// This could be a tag, but I am have no use for it.
 	},
-	MetricMetaHAProxy{
+	{
 		Name:   "rate",
 		Ignore: true,
 		// This could be a tag, but I am have no use for it.
 	},
-	MetricMetaHAProxy{
+	{
 		Name: "rate_lim",
 		MetricMeta: MetricMeta{RateType: metadata.Gauge,
 			Unit: metadata.Session,
 			Desc: "The configured limit on new sessions per second.",
 		}},
-	MetricMetaHAProxy{
+	{
 		Name: "rate_max",
 		MetricMeta: MetricMeta{RateType: metadata.Counter,
 			Unit: metadata.Session,
 			Desc: "The max number of new sessions per second.",
 		}},
-	MetricMetaHAProxy{
+	{
 		Name: "check_status",
 		MetricMeta: MetricMeta{RateType: metadata.Gauge,
 			Unit: metadata.StatusCode,
 			Desc: "The status of last health check, one of: 0 -> unknown, 1 -> initializing, 2 -> socket error, 3 -> The check passed on layer 4, but no upper layers testing enabled, 4 -> layer 1-4 timeout, 5 -> layer 1-4 connection problem for example 'Connection refused' (tcp rst) or 'No route to host' (icmp), 6 -> check passed on layer 6, 7 -> layer 6 (SSL) timeout, 8 -> layer 6 invalid response - protocol error, 9 -> check passed on layer 7, 10 -> check conditionally passed on layer 7 for example 404 with disable-on-404, 11 -> layer 7 (HTTP/SMTP) timeout, 12 -> layer 7 invalid response - protocol error, 13 -> layer 7 response error, for example HTTP 5xx.",
 		}},
-	MetricMetaHAProxy{
+	{
 		Name: "check_code",
 		MetricMeta: MetricMeta{RateType: metadata.Gauge,
 			Unit: metadata.StatusCode,
 			Desc: "The layer5-7 code, if available.",
 		}},
-	MetricMetaHAProxy{
+	{
 		Name: "check_duration",
 		MetricMeta: MetricMeta{RateType: metadata.Gauge,
 			Unit: metadata.MilliSecond,
 			Desc: "The time in ms it took to finish last health check.",
 		}},
-	MetricMetaHAProxy{
+	{
 		Name: "hrsp_1xx",
 		//These are transformed and aggregated: 1xx, 2xx, etc will be a tag.
 	},
-	MetricMetaHAProxy{
+	{
 		Name: "hrsp_2xx",
 	},
-	MetricMetaHAProxy{
+	{
 		Name: "hrsp_3xx",
 	},
-	MetricMetaHAProxy{
+	{
 		Name: "hrsp_4xx",
 	},
-	MetricMetaHAProxy{
+	{
 		Name: "hrsp_5xx",
 	},
-	MetricMetaHAProxy{
+	{
 		Name: "hrsp_other",
 	},
-	MetricMetaHAProxy{
+	{
 		Name: "hanafail",
 		// The docs just say "failed health check details", so skipping this
 		// for now
 	},
-	MetricMetaHAProxy{
+	{
 		Name: "req_rate",
 		// Not needed since data store can derive the rate from req_tot
 	},
-	MetricMetaHAProxy{
+	{
 		Name: "req_rate_max",
 		MetricMeta: MetricMeta{RateType: metadata.Gauge,
 			Unit: metadata.Request,
 			Desc: "The max number of HTTP requests per second observed.",
 		}},
-	MetricMetaHAProxy{
+	{
 		Name: "req_tot",
 		MetricMeta: MetricMeta{RateType: metadata.Counter,
 			Unit: metadata.Request,
 			Desc: "The number of HTTP requests recieved.",
 		}},
-	MetricMetaHAProxy{
+	{
 		Name: "cli_abrt",
 		MetricMeta: MetricMeta{RateType: metadata.Counter,
 			Unit: metadata.Abort,
 			Desc: "The number of data transfers aborted by the client.",
 		}},
-	MetricMetaHAProxy{
+	{
 		Name: "srv_abrt",
 		MetricMeta: MetricMeta{RateType: metadata.Counter,
 			Unit: metadata.Abort,
 			Desc: "The number of data transfers aborted by the server.",
 		}},
-	MetricMetaHAProxy{
+	{
 		Name: "comp_in",
 		MetricMeta: MetricMeta{RateType: metadata.Counter,
 			Unit: metadata.Bytes,
 			Desc: "The number of HTTP response bytes fed to the compressor.",
 		}},
-	MetricMetaHAProxy{
+	{
 		Name: "comp_out",
 		MetricMeta: MetricMeta{RateType: metadata.Counter,
 			Unit: metadata.Bytes,
 			Desc: "The number of HTTP response bytes emitted by the compressor.",
 		}},
-	MetricMetaHAProxy{
+	{
 		Name: "comp_byp",
 		MetricMeta: MetricMeta{RateType: metadata.Counter,
 			Unit: metadata.Bytes,
 			Desc: "The number of bytes that bypassed the HTTP compressor (CPU/BW limit).",
 		}},
-	MetricMetaHAProxy{
+	{
 		Name: "comp_rsp",
 		MetricMeta: MetricMeta{RateType: metadata.Counter,
 			Unit: metadata.Response,
 			Desc: "The number of HTTP responses that were compressed.",
 		}},
-	MetricMetaHAProxy{
+	{
 		Name: "lastsess",
 		MetricMeta: MetricMeta{RateType: metadata.Gauge,
 			Unit: metadata.Second,
 			Desc: "The number of seconds since last session assigned to server/backend.",
 		}},
-	MetricMetaHAProxy{
+	{
 		Name:   "last_chk",
 		Ignore: true,
 		// Not a series or tag so skipping this.
 	},
-	MetricMetaHAProxy{
+	{
 		Name:   "last_agt",
 		Ignore: true,
 		// Not a series or tag so skipping this.
 	},
-	MetricMetaHAProxy{
+	{
 		Name: "qtime",
 		MetricMeta: MetricMeta{RateType: metadata.Gauge,
 			Unit: metadata.MilliSecond,
 			Desc: "The average queue time in ms over the 1024 last requests.",
 		}},
-	MetricMetaHAProxy{
+	{
 		Name: "ctime",
 		MetricMeta: MetricMeta{RateType: metadata.Gauge,
 			Unit: metadata.MilliSecond,
 			Desc: "The average connect time in ms over the 1024 last requests.",
 		}},
-	MetricMetaHAProxy{
+	{
 		Name: "rtime",
 		MetricMeta: MetricMeta{RateType: metadata.Gauge,
 			Unit: metadata.MilliSecond,
 			Desc: "The average response time in ms over the 1024 last requests (0 for TCP).",
 		}},
-	MetricMetaHAProxy{
+	{
 		Name: "ttime",
 		MetricMeta: MetricMeta{RateType: metadata.Gauge,
 			Unit: metadata.MilliSecond,
