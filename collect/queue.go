@@ -112,7 +112,11 @@ func sendBatch(batch []json.RawMessage) {
 			Add("collect.post.count", nil, 1)
 			conn.Close()
 		}
-		
+
+		d := time.Since(now).Nanoseconds() / 1e6
+		Add("collect.post.total_duration", nil, d)
+		Add("collect.post.count", nil, 1)
+		conn.Close()
 	} else {
 		var buf bytes.Buffer
 		g := gzip.NewWriter(&buf)
