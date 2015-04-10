@@ -144,6 +144,13 @@ func procRule(t miniprofiler.Timer, c *conf.Conf, a *conf.Alert, now time.Time, 
 				warning = append(warning, fmt.Sprintf("template group %s was not a subset of any result", template_group))
 			}
 		}
+		if e := instance.History[0]; e.Error != nil {
+			instance.Result = e.Error
+		} else if e.Crit != nil {
+			instance.Result = e.Crit
+		} else if e.Warn != nil {
+			instance.Result = e.Warn
+		}
 		var b_err, s_err error
 		func() {
 			defer func() {

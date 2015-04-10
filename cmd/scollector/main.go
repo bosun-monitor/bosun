@@ -108,6 +108,22 @@ func readConf() {
 			f(flagSNMP)
 		case "icmp":
 			f(flagICMP)
+		case "haproxy":
+			if v != "" {
+				for _, s := range strings.Split(v, ",") {
+					sp := strings.SplitN(s, ":", 2)
+					if len(sp) != 2 {
+						slog.Fatal("invalid haproxy string:", v)
+					}
+					user := sp[0]
+					pwd := sp[1]
+					collectors.HAProxy(user, pwd)
+				}
+			}
+		case "haproxy_instance":
+			if err := collectors.AddHAProxyInstance(v); err != nil {
+				slog.Fatal(err)
+			}
 		case "tags":
 			f(flagTags)
 		case "aws":

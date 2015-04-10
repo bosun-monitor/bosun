@@ -316,13 +316,14 @@ type Template struct {
 type Notification struct {
 	ConfItem
 	Vars
-	Name      string
-	Email     []*mail.Address
-	Post, Get *url.URL
-	Body      *ttemplate.Template
-	Print     bool
-	Next      *Notification
-	Timeout   time.Duration
+	Name        string
+	Email       []*mail.Address
+	Post, Get   *url.URL
+	Body        *ttemplate.Template
+	Print       bool
+	Next        *Notification
+	Timeout     time.Duration
+	ContentType string
 
 	next      string
 	email     string
@@ -1032,8 +1033,9 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 		c.errorf("duplicate notification name: %s", name)
 	}
 	n := Notification{
-		Vars: make(map[string]string),
-		Name: name,
+		Vars:        make(map[string]string),
+		ContentType: "application/x-www-form-urlencoded",
+		Name:        name,
 	}
 	n.Text = s.RawText
 	funcs := ttemplate.FuncMap{
@@ -1080,6 +1082,8 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 			n.Get = get
 		case "print":
 			n.Print = true
+		case "contentType":
+			n.ContentType = v
 		case "next":
 			n.next = v
 			next, ok := c.Notifications[n.next]
@@ -1215,7 +1219,11 @@ func (c *Conf) AlertTemplateStrings() (*AlertTemplateStrings, error) {
 						continue
 					}
 					incl[node.Name] = true
-					if err := parseSection(c.Templates[node.Name]); err != nil {
+					t := c.Templates[node.Name]
+					if t == nil {
+						return fmt.Errorf("unknown template %v", node.Name)
+					}
+					if err := parseSection(t); err != nil {
 						return err
 					}
 				}

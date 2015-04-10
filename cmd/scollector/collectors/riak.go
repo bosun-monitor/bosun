@@ -489,18 +489,28 @@ func c_riak() (opentsdb.MultiDataPoint, error) {
 				}
 			}
 			Add(&md, "riak."+m.Metric, v, m.TagSet, m.RateType, m.Unit, m.Desc)
-		} else if k == "ring_members" {
+		} else if k == "connected_nodes" {
 			nodes, ok := v.([]interface{})
-			if !ok || len(nodes) < 1 {
-				err := fmt.Errorf("riak: unexpected content or type for 'ring_members' metric array")
+			// 'connected_nodes' array can be empty
+			if !ok {
+				err := fmt.Errorf("riak: unexpected content or type for 'connected_nodes' metric array")
 				return nil, err
 			}
 			Add(&md, "riak.connected_nodes", len(nodes), nil, metadata.Gauge, metadata.Count, descConNodes)
+		} else if k == "ring_members" {
+			ringMembers, ok := v.([]interface{})
+			// at least one ring member must always exist
+			if !ok || len(ringMembers) < 1 {
+				err := fmt.Errorf("riak: unexpected content or type for 'ring_members' metric array")
+				return nil, err
+			}
+			Add(&md, "riak.ring_members", len(ringMembers), nil, metadata.Gauge, metadata.Count, descRingMembers)
 		}
 	}
 	return md, nil
 }
 
 const (
-	descConNodes = "The number of connected nodes, calculated as size of ring_members array."
+	descConNodes    = "Count of nodes that this node is aware of at this time."
+	descRingMembers = "Count of nodes that are members of the ring."
 )
