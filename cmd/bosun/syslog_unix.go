@@ -20,7 +20,7 @@ func setSyslog() {
 	}
 	w, err := syslog.New(syslog.LOG_LOCAL6|syslog.LOG_INFO, "bosun")
 	if err != nil {
-		log.Println("could not open syslog: %v", err)
+		log.Printf("could not open syslog: %v", err)
 		return
 	}
 	log.Println("enabling syslog")

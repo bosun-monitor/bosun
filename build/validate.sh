@@ -11,9 +11,13 @@ if [ "$GOFMTOUT" != '' ]; then
     GOFMTRESULT=1
 fi
 
+echo -e "\nRunning go vet bosun.org/..."
+go vet bosun.org/...
+GOVETRESULT=$?
+
 echo -e "\nRunning go test bosun.org/..."
 go test bosun.org/...
 GOTESTRESULT=$?
 
-let "RESULT = $GOFMTRESULT | $GOTESTRESULT"
+let "RESULT = $GOFMTRESULT | $GOVETRESULT$ | GOTESTRESULT"
 exit $RESULT
