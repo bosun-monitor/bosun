@@ -42,9 +42,20 @@ func (r *Request) Query(host string) (Response, error) {
 	if r.End != nil {
 		v.Add("until", fmt.Sprint(r.End.Unix()))
 	}
+	u1, err := url.Parse(host)
+	if err != nil {
+		return nil, err
+	}
+	if u1.Host == "" && u1.Scheme != "" {
+		u1.Host = u1.Scheme
+		u1.Scheme = "http"
+	} else if u1.Host == "" && u1.Scheme == "" {
+		u1.Host = host
+		u1.Scheme = "http"
+	}
 	u := url.URL{
-		Scheme:   "http",
-		Host:     host,
+		Scheme:   u1.Scheme,
+		Host:     u1.Host,
 		Path:     "/render/",
 		RawQuery: v.Encode(),
 	}
