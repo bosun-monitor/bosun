@@ -11,8 +11,14 @@ import (
 	"bosun.org/util"
 )
 
+const eximExiqsumm = "/usr/sbin/exiqsumm"
+
 func init() {
-	collectors = append(collectors, &IntervalCollector{F: c_exim_mailq, Interval: time.Minute})
+	collectors = append(collectors, &IntervalCollector{
+		F:        c_exim_mailq,
+		Interval: time.Minute,
+		Enable:   enableExecutable(eximExiqsumm),
+	})
 }
 
 func c_exim_mailq() (opentsdb.MultiDataPoint, error) {
@@ -55,7 +61,7 @@ func c_exim_mailq() (opentsdb.MultiDataPoint, error) {
 			Add(&md, "exim.mailq_newest", newest.Seconds(), nil, metadata.Gauge, metadata.Second, descEximMailQNewest)
 		}
 		return nil
-	}, mailq, "/usr/sbin/exiqsumm")
+	}, mailq, eximExiqsumm)
 	return md, nil
 }
 
