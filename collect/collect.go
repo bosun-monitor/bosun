@@ -35,8 +35,8 @@ var (
 	// Print prints all datapoints to stdout instead of sending them.
 	Print = false
 
-	// Use HTTP instead of HTTP.
-	HTTP = false
+	// Use TCP instead of HTTP.
+	TCP = false
 
 	// DisableDefaultCollectors prevents the scollector self metrics from being
 	// generated.
