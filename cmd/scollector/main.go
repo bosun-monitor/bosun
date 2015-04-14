@@ -266,6 +266,7 @@ func main() {
 	}
 	collectors.DefaultFreq = time.Second * time.Duration(freq)
 	collect.Freq = time.Second * time.Duration(freq)
+	collect.Tags = opentsdb.TagSet{"os": runtime.GOOS}
 	if *flagPrint {
 		collect.Print = true
 	}
