@@ -1,14 +1,13 @@
 package web
 
 import (
-	"bytes"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/mail"
 	"net/url"
 	"sort"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -263,30 +262,12 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 	} else if !fz && tz && intervals > 1 {
 		return nil, fmt.Errorf("cannot specify intervals without from and to")
 	}
-	var buf bytes.Buffer
-	fmt.Fprintf(&buf, "stateFile =\n")
-	fmt.Fprintf(&buf, "tsdbHost = %s\n", schedule.Conf.TSDBHost)
-	fmt.Fprintf(&buf, "graphiteHost = %s\n", schedule.Conf.GraphiteHost)
-	fmt.Fprintf(&buf, "logstashElasticHosts = %s\n", schedule.Conf.LogstashElasticHosts)
-	fmt.Fprintf(&buf, "smtpHost = %s\n", schedule.Conf.SMTPHost)
-	fmt.Fprintf(&buf, "emailFrom = %s\n", schedule.Conf.EmailFrom)
-	fmt.Fprintf(&buf, "responseLimit = %d\n", schedule.Conf.ResponseLimit)
-	fmt.Fprintf(&buf, "hostname = %s\n", schedule.Conf.Hostname)
-	for k, v := range schedule.Conf.Vars {
-		if strings.HasPrefix(k, "$") {
-			fmt.Fprintf(&buf, "%s=%s\n", k, v)
-		}
-	}
-	fmt.Fprintf(&buf, "%s\n", r.FormValue("template"))
-	fmt.Fprintf(&buf, "%s\n", r.FormValue("alert"))
-	c, err := conf.New("Test Config", buf.String())
+
+	c, a, err := buildConfig(r)
 	if err != nil {
 		return nil, err
 	}
-	var a *conf.Alert
-	// Set a to the last alert.
-	for _, a = range c.OrderedAlerts {
-	}
+
 	ch := make(chan int)
 	errch := make(chan error, intervals)
 	resch := make(chan *ruleResult, intervals)
@@ -413,4 +394,28 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 		histories.History = hist[:len(hist)-1]
 	}
 	return &ret, nil
+}
+
+func buildConfig(r *http.Request) (c *conf.Conf, a *conf.Alert, err error) {
+	config, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	c, err = conf.New("Test Config", string(config))
+	if err != nil {
+		return nil, nil, err
+	}
+	c.StateFile = ""
+
+	alertName := r.FormValue("alert")
+	if alertName == "" {
+		return nil, nil, fmt.Errorf("must supply alert to run")
+	}
+	a, ok := c.Alerts[alertName]
+	if !ok {
+		return nil, nil, fmt.Errorf("alert %s not found", alertName)
+	}
+	return c, a, nil
+
 }

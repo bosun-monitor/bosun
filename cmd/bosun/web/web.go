@@ -88,7 +88,6 @@ func Listen(listenAddr string, devMode bool, tsdbHost string) error {
 	router.Handle("/api/tagk/{metric}", JSON(TagKeysByMetric))
 	router.Handle("/api/tagv/{tagk}", JSON(TagValuesByTagKey))
 	router.Handle("/api/tagv/{tagk}/{metric}", JSON(TagValuesByMetricTagKey))
-	router.Handle("/api/templates", JSON(Templates))
 	router.Handle("/api/run", JSON(Run))
 	http.Handle("/", miniprofiler.NewHandler(Index))
 	http.Handle("/api/", router)
@@ -325,9 +324,7 @@ func Alerts(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (inter
 func Status(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	r.ParseForm()
 	type ExtStatus struct {
-		AlertDef    string
-		TemplateDef string
-
+		AlertName string
 		*sched.State
 	}
 	m := make(map[string]ExtStatus)
@@ -340,12 +337,7 @@ func Status(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (inter
 		if st.State == nil {
 			return nil, fmt.Errorf("unknown alert key: %v", k)
 		}
-		ruleConfigs, err := schedule.Conf.AlertTemplateStrings()
-		if err != nil {
-			return nil, err
-		}
-		st.AlertDef = ruleConfigs.Alerts[ak.Name()]
-		st.TemplateDef = ruleConfigs.Templates[ruleConfigs.Assocations[ak.Name()]]
+		st.AlertName = ak.Name()
 		m[k] = st
 	}
 	return m, nil
@@ -471,10 +463,6 @@ func ConfigTest(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 
 func Config(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, schedule.Conf.RawText)
-}
-
-func Templates(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	return schedule.Conf.AlertTemplateStrings()
 }
 
 func APIRedirect(w http.ResponseWriter, req *http.Request) {

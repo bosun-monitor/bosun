@@ -1,4 +1,5 @@
 <style type="text/css">
+
 #wrap {
 	height: 400px;
 	left: 0;
@@ -10,10 +11,8 @@
 	font-family: Menlo, Courier New, monospace;
 	font-size: 11pt;
 }
-
 .code {
 	background: inherit;
-
 	width: 100%;
 	height: 100%;
 	padding: 0; margin: 0;
@@ -33,18 +32,90 @@
 	color: lightgray;
 }
 .lines .lineerror {
-	color: #a94442;
-	background: #f2dede;
+	color: black;
+	font-weight: bold;
+	background-color: lightgray;
 }
+
 </style>
+<label style="float:left; margin-right:15px;">Jump to:</label>
+<div class='row'>
+<div class="dropdown" ng-repeat="(type,list) in items" style="float:left; margin-right:5px;margin-bottom:15px;">
+  <button class="btn btn-primary dropdown-toggle" type="button" id="itemSelector" data-toggle="dropdown" aria-expanded="true">
+ 	{{type}}
+    <span class="caret"></span>
+  </button>
+  <ul class="dropdown-menu" role="menu" aria-labelledby="itemSelector">
+    <li role="presentation" ng-repeat="item in list | orderBy:'toString()'"><a role="menuitem" tabindex="-1" ng-click="scrollTo(type,item);">{{item}}</a></li>
+  </ul>
+</div>
+<div class='btn btn-default' style="float:right;margin-left:5px;">Save</div>
+<div class='btn btn-default' style="float:right;margin-left:5px;" ng-click="validate()">Validate</div>
+</div>
+<div class="row" ng-show="validationResult">
+	<div class="col-lg-12">
+		<div class="alert alert-dismissible" ng-class="validationResult == 'Valid' ? 'alert-success' : 'alert-danger'">
+		<button type="button" class="close" aria-label="Close" ng-click="validationResult=''"><span aria-hidden="true">&times;</span></button>
+		{{validationResult}}</div>
+	</div>
+</div>
+
+<div class='row'>
 <div id="wrap">
-	<textarea class="code" ng-model="config_text"  autocorrect="off" autocomplete="off" autocapitalize="off" spellcheck="false" wrap="off" ts-line="line" ts-tab></textarea>
+	<textarea class="code" ng-model="config_text" id="configText" autocorrect="off" autocomplete="off" 
+		autocapitalize="off" spellcheck="false" wrap="off" ts-tab ng-blur="reparse()"></textarea>
+</div>
 </div>
 <div class="row">
 	<div class="col-lg-12">
-		<div class="form-group">
-			<button class="btn btn-primary" ng-click="set()">Test</button>
-			<a ng-href="?config_text={{btoa(config_text)}}">Link</a>
+		<form class="form-inline">
+			<div class="form-group">
+				<label class="control-label">From</label>
+				<input type="text" class="form-control" style="width:9em" ng-model="fromDate" ng-change="setInterval()" placeholder="yyyy-mm-dd" bs-datepicker data-date-format="yyyy-MM-dd" data-date-type="string">
+				<input type="text" class="form-control" style="width:9em" ng-model="fromTime" ng-change="setInterval()" placeholder="HH:MM">
+			</div>
+			<div class="form-group">
+				<label class="control-label">To</label>
+				<input type="text" class="form-control" style="width:9em" ng-model="toDate" ng-change="setInterval()" placeholder="yyyy-mm-dd" bs-datepicker data-date-format="yyyy-MM-dd" data-date-type="string">
+			</div>
+			<div class="form-group">
+				<input type="text" class="form-control" style="width:9em" ng-model="toTime" ng-change="setInterval()" placeholder="HH:MM">
+			</div>
+			<div class="form-group">
+				<label class="control-label">Intervals</label>
+				<input type="number" min="2" step="1" style="width:7em" class="form-control" ng-model="intervals" ng-change="setInterval()" ng-disabled="!fromDate || !toDate" tooltip title="Number of evaluations between timespan.">
+			</div>
+			<div class="form-group">
+				<label class="control-label">Step Duration (m)</label>
+				<input type="number" min="1" step="1" style="width:7em" class="form-control" ng-model="duration" ng-change="setDuration()" ng-disabled="!fromDate || !toDate" tooltip title="Step duration in minutes between intervals.">
+			</div>
+			
+		</form>
+	</div>
+</div>
+<div class="row" style="margin-bottom:15px;">
+	<div class="col-lg-12">
+		</p>
+		<form class="form-inline">
+			<div class="form-group">
+				<label class="control-label">Email</label>
+				<input type="email" class="form-control" style="width:20em" ng-model="email">
+			</div>
+			<div class="form-group">
+				<label class="control-label">Template Group</label>
+				<input type="text" class="form-control" style="width:20em" ng-model="template_group" tooltip title="Set which result to use for the template by setting an opentsdb group (aka tagset) in the format of k=v,m=o. The first result for which the specified group is a subset of a result is used. If no results are a subset of the specified group, then the first result is chosen.">
+			</div>
+			<div class="form-group">
+				<button class="btn btn-primary" ng-click="test()">Test {{selected_alert}}</button>
+			</div>
+		</form>
+	</div>
+</div>
+
+<div class="row" ng-show="running">
+	<div class="col-lg-12">
+		<div class="alert alert-info">
+			Running...
 		</div>
 	</div>
 </div>
@@ -53,8 +124,98 @@
 		<div class="alert alert-danger" ng-bind="error"></div>
 	</div>
 </div>
-<div class="row" ng-show="result">
-	<div class="col-lg-12">
-		<div class="alert" ng-class="result == 'Valid' ? 'alert-success' : 'alert-danger'" ng-bind="result"></div>
+<div class="row" ng-show="warning.length > 0">
+	<div class="col-lg-12" ng-repeat="w in warning track by $index">
+		<div class="alert alert-warning" ng-bind="w"></div>
+	</div>
+</div>
+<ul class="nav nav-tabs">
+	<li ng-class="{active: tab == 'results'}"><a href ng-click="tab = 'results'">Results</a></li>
+	<li ng-class="{active: tab == 'template'}"><a href ng-click="tab = 'template'">Template</a></li>
+	<li ng-class="{active: tab == 'timeline'}"><a href ng-click="tab = 'timeline'">Timeline</a></li>
+</ul>
+<div class="tab-content">
+	<div class="tab-pane" ng-class="{active: tab == 'timeline'}">
+		<div ts-alert-history ng-if="tab == 'timeline' && fromDate && toDate"></div>
+	</div>
+	<div class="tab-pane" ng-class="{active: tab == 'template'}">
+		<div class="panel panel-default">
+			<div class="panel-heading">
+				<h3 class="panel-title">Subject</h3>
+			</div>
+			<div class="panel-body template" ng-bind="subject"></div>
+		</div>
+		<div class="panel panel-default">
+			<div class="panel-heading">
+				<h3 class="panel-title">Body</h3>
+			</div>
+			<div class="panel-body template" ng-bind-html="body"></div>
+		</div>
+		<h4>Available Variables</h4>
+		<pre ng-bind="data"></pre>
+	</div>
+	<div class="tab-pane" ng-class="{active: tab == 'results'}">
+		<div class="row">
+			<div class="col-sm-6">
+				<table class="table">
+					<thead>
+						<tr>
+							<th>Time</th>
+							<th>Criticals</th>
+							<th>Warnings</th>
+							<th>Normals</th>
+							<th>Errors</th>
+						</tr>
+					</thead>
+					<tbody>
+						<tr ng-repeat="set in sets">
+							<td><a href="#" ng-bind="set.Time" ng-click="scroll($index)"></a></td>
+							<td ng-bind="set.Critical || ''" ng-class="set.Critical ? 'danger' : ''"></td>
+							<td ng-bind="set.Warning || ''" ng-class="set.Warning ? 'warning' : ''"></td>
+							<td ng-bind="set.Normal || ''" ng-class="set.Normal ? 'success' : ''"></td>
+							<td ng-bind="set.Error || ''" ng-class="set.Error ? 'danger' : ''"></td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+		</div>
+		<div class="row" ng-repeat="set in sets">
+			<div class="col-sm-12">
+				<h4 id="time-{{$index}}">
+					Time: {{set.Time}}
+					<small>criticals: {{set.Critical}}, warnings: {{set.Warning}}, normals: {{set.Normal}}, errors: {{set.Error}}</small>
+					<button class="btn btn-default btn-sm" ng-hide="set.Results" ng-click="show(set)" ng-bind="set.Show || 'show'" ng-disabled="set.Show"></button>
+				</h4>
+				<table class="table" ng-show="set.Results">
+					<thead>
+						<tr>
+							<th>Group</th>
+							<th>Status</th>
+							<th>Expression</th>
+							<th>Result</th>
+							<th>Computations</th>
+						</tr>
+					</thead>
+					<tbody ng-repeat="r in set.Results" ng-init="result = r.Result; group = r.Group">
+						<tr>
+							<td rowspan="2" ng-bind="zws(group)"></td>
+							<td rowspan="2" ng-bind="result.Status" ng-class="panelClass(result.Status, '')"></td>
+							<td ng-if="result.Crit">critical</td>
+							<td ng-if="result.Crit">
+								<pre ng-bind="json(result.Crit.Value)" ng-show="result.Crit"></pre>
+							</td>
+							<td ng-if="result.Crit" ts-computations="result.Crit.Computations"></td>
+						</tr>
+						<tr ng-if="result.Warn">
+							<td>warning</td>
+							<td>
+								<pre ng-bind="json(result.Warn.Value)" ng-show="result.Warn"></pre>
+							</td>
+							<td ts-computations="result.Warn.Computations"></td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+		</div>
 	</div>
 </div>

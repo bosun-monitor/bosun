@@ -110,31 +110,6 @@ bosunApp.directive("tooltip", function() {
 	};
 });
 
-bosunApp.directive('tsLine', () => {
-	return {
-		link: (scope: any, elem: any, attrs: any) => {
-			elem.linedtextarea();
-			var parent = elem.parent();
-			var linesDiv = parent
-			function lineHighlight(line: any) {
-				var lineHeight = elem[0].scrollHeight / (elem[0].value.match(/\n/g).length + 1);
-				var jump = (line - 1) * lineHeight;
-				elem.scrollTop(jump);
-				elem.scroll();
-				parent.find('.lines div').eq(line - 1).addClass('lineerror');
-			}
-			function lineClear() {
-				parent.find('.lineerror').removeClass('lineerror');
-			}
-			scope.$watch(attrs.tsLine, (v: any) => {
-				lineClear();
-				if (v) {
-					lineHighlight(v);
-				}
-			});
-		},
-	};
-});
 
 bosunApp.directive('tsTab', () => {
 	return {
@@ -179,6 +154,7 @@ bosunApp.directive('tsTab', () => {
 
 interface JQuery {
 	tablesorter(v: any): JQuery;
+	linedtextarea () : void;
 }
 
 bosunApp.directive('tsTableSort', ['$timeout', ($timeout: ng.ITimeoutService) => {
