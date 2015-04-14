@@ -169,7 +169,7 @@
 					</thead>
 					<tbody>
 						<tr ng-repeat="set in sets">
-							<td><a href="#" ng-bind="set.Time" ng-click="scroll($index)"></a></td>
+							<td><a href="#" ng-bind="set.Time" ng-click="scrollToInterval($index)"></a></td>
 							<td ng-bind="set.Critical || ''" ng-class="set.Critical ? 'danger' : ''"></td>
 							<td ng-bind="set.Warning || ''" ng-class="set.Warning ? 'warning' : ''"></td>
 							<td ng-bind="set.Normal || ''" ng-class="set.Normal ? 'success' : ''"></td>

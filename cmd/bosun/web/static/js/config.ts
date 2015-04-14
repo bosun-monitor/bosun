@@ -33,6 +33,10 @@ interface IConfigScope extends IBosunScope {
 	body: string;
 	data: any;
 	tab: string;
+	zws: (v: string) => string;
+	
+	scrollToInterval: (v: string) => void;
+	show: (v: any) => void;
 }
 
 
@@ -158,6 +162,31 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 		if (type == "alert"){$scope.selectAlert(name);}
 	}
 	
+	$scope.scrollToInterval = (id: string) => {
+		document.getElementById('time-' + id).scrollIntoView();
+		$scope.show($scope.sets[id]);
+	};
+	
+	$scope.show = (set: any) => {
+		set.show = 'loading...';
+		$scope.animate();
+		var url = '/api/rule?' +
+			'alert=' + encodeURIComponent($scope.selected_alert) +
+			'&from=' + encodeURIComponent(set.Time);
+		$http.post(url,$scope.config_text)
+			.success((data) => {
+				procResults(data);
+				set.Results = data.Sets[0].Results;
+			})
+			.error((error) => {
+				$scope.error = error;
+			})
+			.finally(() => {
+				$scope.stop();
+				delete(set.show);
+			});
+	};
+	
 	$scope.setInterval = () => {
 		var from = moment.utc($scope.fromDate + ' ' + $scope.fromTime);
 		var to = moment.utc($scope.toDate + ' ' + $scope.toTime);
@@ -261,6 +290,10 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 				$scope.stop();
 			});
 	}
+	$scope.zws = (v: string) => {
+		return v.replace(/([,{}()])/g, '$1\u200b');
+    };
+	
 	function procResults(data: any) {
 		$scope.subject = data.Subject;
 		$scope.body = $sce.trustAsHtml(data.Body);

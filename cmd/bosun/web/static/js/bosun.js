@@ -382,6 +382,24 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
             $scope.selectAlert(name);
         }
     };
+    $scope.scrollToInterval = function (id) {
+        document.getElementById('time-' + id).scrollIntoView();
+        $scope.show($scope.sets[id]);
+    };
+    $scope.show = function (set) {
+        set.show = 'loading...';
+        $scope.animate();
+        var url = '/api/rule?' + 'alert=' + encodeURIComponent($scope.selected_alert) + '&from=' + encodeURIComponent(set.Time);
+        $http.post(url, $scope.config_text).success(function (data) {
+            procResults(data);
+            set.Results = data.Sets[0].Results;
+        }).error(function (error) {
+            $scope.error = error;
+        }).finally(function () {
+            $scope.stop();
+            delete (set.show);
+        });
+    };
     $scope.setInterval = function () {
         var from = moment.utc($scope.fromDate + ' ' + $scope.fromTime);
         var to = moment.utc($scope.toDate + ' ' + $scope.toTime);
@@ -473,6 +491,9 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
             $scope.running = false;
             $scope.stop();
         });
+    };
+    $scope.zws = function (v) {
+        return v.replace(/([,{}()])/g, '$1\u200b');
     };
     function procResults(data) {
         $scope.subject = data.Subject;
