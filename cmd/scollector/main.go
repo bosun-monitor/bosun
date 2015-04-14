@@ -284,8 +284,10 @@ func main() {
 	}
 	if VersionDate > 0 {
 		go func() {
+			metadata.AddMetricMeta("scollector.version", metadata.Gauge, metadata.None,
+				"Scollector version number, which indicates when scollector was built.")
 			for {
-				if err := collect.Put("version", nil, VersionDate); err != nil {
+				if err := collect.Put("version", collect.Tags, VersionDate); err != nil {
 					slog.Error(err)
 				}
 				time.Sleep(time.Hour)

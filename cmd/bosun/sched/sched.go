@@ -539,7 +539,20 @@ const (
 )
 
 func init() {
-	metadata.AddMetricMeta("bosun.statefile.size", metadata.Gauge, metadata.Bytes, "The total size of the bosun state file.")
+	metadata.AddMetricMeta("bosun.statefile.size", metadata.Gauge, metadata.Bytes,
+		"The total size of the Bosun state file.")
+	metadata.AddMetricMeta("bosun.check.duration", metadata.Gauge, metadata.Second,
+		"The number of seconds it took Bosun to check each alert rule.")
+	metadata.AddMetricMeta("bosun.check.err", metadata.Gauge, metadata.Error,
+		"The running count of the number of errors Bosun has received while trying to evaluate an alert expression.")
+	metadata.AddMetricMeta("bosun.ping.resolved", metadata.Gauge, metadata.Bool,
+		"1=Ping resolved to an IP Address. 0=Ping failed to resolve to an IP Address.")
+	metadata.AddMetricMeta("bosun.ping.rtt", metadata.Gauge, metadata.MilliSecond,
+		"The number of milliseconds for the echo reply to be received. Also known as Round Trip Time.")
+	metadata.AddMetricMeta("bosun.ping.timeout", metadata.Gauge, metadata.Ok,
+		"0=Ping responded before timeout. 1=Ping did not respond before 5 second timeout.")
+	metadata.AddMetricMeta("bosun.actions", metadata.Gauge, metadata.Count,
+		"The running count of actions performed by individual users (Closed alert, Acknowledged alert, etc).")
 }
 
 func (s *Schedule) save() {

@@ -12,7 +12,17 @@ import (
 
 	"bosun.org/_third_party/github.com/jordan-wright/email"
 	"bosun.org/collect"
+	"bosun.org/metadata"
 )
+
+func init() {
+	metadata.AddMetricMeta(
+		"bosun.email.sent", metadata.Counter, metadata.PerSecond,
+		"The number of email notifications sent by Bosun.")
+	metadata.AddMetricMeta(
+		"bosun.email.sent_failed", metadata.Counter, metadata.PerSecond,
+		"The number of email notifications that Bosun failed to send.")
+}
 
 func (n *Notification) Notify(subject, body string, emailsubject, emailbody []byte, c *Conf, ak string, attachments ...*Attachment) {
 	if len(n.Email) > 0 {
