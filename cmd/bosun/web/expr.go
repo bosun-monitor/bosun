@@ -263,7 +263,7 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 		return nil, fmt.Errorf("cannot specify intervals without from and to")
 	}
 
-	c, a, err := buildConfig(r)
+	c, a, hash, err := buildConfig(r)
 	if err != nil {
 		return nil, err
 	}
@@ -314,6 +314,7 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 	type Histories struct {
 		History []*History
 	}
+
 	ret := struct {
 		Errors       []string `json:",omitempty"`
 		Warnings     []string `json:",omitempty"`
@@ -322,8 +323,10 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 		Body         string      `json:",omitempty"`
 		Subject      string      `json:",omitempty"`
 		Data         interface{} `json:",omitempty"`
+		Hash         string
 	}{
 		AlertHistory: make(map[expr.AlertKey]*Histories),
+		Hash:         hash,
 	}
 	for err := range errch {
 		if err == nil {
@@ -396,26 +399,31 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 	return &ret, nil
 }
 
-func buildConfig(r *http.Request) (c *conf.Conf, a *conf.Alert, err error) {
+func buildConfig(r *http.Request) (c *conf.Conf, a *conf.Alert, hash string, err error) {
 	config, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, "", err
 	}
 
 	c, err = conf.New("Test Config", string(config))
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, "", err
 	}
 	c.StateFile = ""
 
+	hash, err = sched.DefaultSched.SaveTempConfig(string(config))
+	if err != nil {
+		return nil, nil, "", err
+	}
+
 	alertName := r.FormValue("alert")
 	if alertName == "" {
-		return nil, nil, fmt.Errorf("must supply alert to run")
+		return nil, nil, "", fmt.Errorf("must supply alert to run")
 	}
 	a, ok := c.Alerts[alertName]
 	if !ok {
-		return nil, nil, fmt.Errorf("alert %s not found", alertName)
+		return nil, nil, "", fmt.Errorf("alert %s not found", alertName)
 	}
-	return c, a, nil
+	return c, a, hash, nil
 
 }

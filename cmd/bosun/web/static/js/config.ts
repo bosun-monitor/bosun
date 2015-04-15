@@ -277,6 +277,9 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 			.success((data) => {
 				$scope.sets = data.Sets;
 				$scope.alert_history = data.AlertHistory;
+				if (data.Hash){
+					$location.search('hash',data.Hash)
+				}
 				procResults(data);
 			})
 			.error((error) => {

@@ -484,6 +484,9 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
         $http.post(url, $scope.config_text).success(function (data) {
             $scope.sets = data.Sets;
             $scope.alert_history = data.AlertHistory;
+            if (data.Hash) {
+                $location.search('hash', data.Hash);
+            }
             procResults(data);
         }).error(function (error) {
             $scope.error = error;
