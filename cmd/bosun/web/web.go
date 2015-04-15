@@ -462,7 +462,18 @@ func ConfigTest(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 }
 
 func Config(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
-	fmt.Fprint(w, schedule.Conf.RawText)
+	var text string
+	var err error
+	if hash := r.FormValue("hash"); hash != "" {
+		text, err = schedule.LoadTempConfig(hash)
+		if err != nil {
+			w.WriteHeader(500)
+			fmt.Fprint(w, err.Error())
+		}
+	} else {
+		text = schedule.Conf.RawText
+	}
+	fmt.Fprint(w, text)
 }
 
 func APIRedirect(w http.ResponseWriter, req *http.Request) {

@@ -47,15 +47,16 @@ func (c *counterWriter) Write(p []byte) (n int, err error) {
 }
 
 const (
-	dbBucket        = "bindata"
-	dbMetric        = "metric"
-	dbTagk          = "tagk"
-	dbTagv          = "tagv"
-	dbMetricTags    = "metrictags"
-	dbNotifications = "notifications"
-	dbSilence       = "silence"
-	dbStatus        = "status"
-	dbMetadata      = "metadata"
+	dbBucket           = "bindata"
+	dbConfigTextBucket = "configText"
+	dbMetric           = "metric"
+	dbTagk             = "tagk"
+	dbTagv             = "tagv"
+	dbMetricTags       = "metrictags"
+	dbNotifications    = "notifications"
+	dbSilence          = "silence"
+	dbStatus           = "status"
+	dbMetadata         = "metadata"
 )
 
 func init() {
@@ -218,8 +219,8 @@ func (s *Schedule) RestoreState() error {
 }
 
 type storedConfig struct {
-	text     string
-	lastUsed time.Time
+	Text     string
+	LastUsed time.Time
 }
 
 // Saves the provided config text in state file for later access.
@@ -227,13 +228,13 @@ type storedConfig struct {
 func (s *Schedule) SaveTempConfig(text string) (hash string, err error) {
 	sig := md5.Sum([]byte(text))
 	b64 := base64.StdEncoding.EncodeToString(sig[0:5])
-	data := storedConfig{text: text, lastUsed: time.Now()}
+	data := storedConfig{Text: text, LastUsed: time.Now()}
 	bindata, err := json.Marshal(data)
 	if err != nil {
 		return "", err
 	}
 	err = s.db.Update(func(tx *bolt.Tx) error {
-		b, err := tx.CreateBucketIfNotExists([]byte(dbBucket))
+		b, err := tx.CreateBucketIfNotExists([]byte(dbConfigTextBucket))
 		if err != nil {
 			return err
 		}
@@ -245,6 +246,20 @@ func (s *Schedule) SaveTempConfig(text string) (hash string, err error) {
 	return b64, nil
 }
 
+// Retreive the specified config text from state file.
 func (s *Schedule) LoadTempConfig(hash string) (text string, err error) {
-	return "", nil
+	config := storedConfig{}
+	err = s.db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(dbConfigTextBucket))
+		data := b.Get([]byte(hash))
+		if data == nil || len(data) == 0 {
+			return fmt.Errorf("Config text '%s' not found", hash)
+		}
+		return json.Unmarshal(data, &config)
+	})
+	if err != nil {
+		return "", err
+	}
+	go s.SaveTempConfig(config.Text) //refresh timestamp.
+	return config.Text, nil
 }

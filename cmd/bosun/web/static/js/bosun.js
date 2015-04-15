@@ -344,7 +344,7 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
         }
         return items;
     }
-    $http.get('/api/config').success(function (data) {
+    $http.get('/api/config?hash=' + (search.hash || '')).success(function (data) {
         $scope.config_text = data;
         $scope.items = parseItems();
         buildAlertFromExpr();
