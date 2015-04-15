@@ -202,12 +202,8 @@ func errRecover(errp *error) {
 	}
 }
 
-type ConfItem struct {
-	Text string
-}
-
 type Lookup struct {
-	ConfItem
+	Text    string
 	Name    string
 	Tags    []string
 	Entries []*Entry
@@ -230,13 +226,13 @@ type Entry struct {
 }
 
 type Macro struct {
-	ConfItem
+	Text  string
 	Pairs []nodePair
 	Name  string
 }
 
 type Alert struct {
-	ConfItem
+	Text string
 	Vars
 	*Template        `json:"-"`
 	Name             string
@@ -302,7 +298,7 @@ func (c *Conf) parseNotifications(v string) (map[string]*Notification, error) {
 }
 
 type Template struct {
-	ConfItem
+	Text string
 	Vars
 	Name    string
 	Body    *htemplate.Template `json:"-"`
@@ -312,7 +308,7 @@ type Template struct {
 }
 
 type Notification struct {
-	ConfItem
+	Text string
 	Vars
 	Name        string
 	Email       []*mail.Address

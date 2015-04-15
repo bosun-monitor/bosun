@@ -39,8 +39,6 @@ interface IConfigScope extends IBosunScope {
 	show: (v: any) => void;
 }
 
-
-
 bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$route', '$timeout','$sce', function($scope: IConfigScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService, $timeout: ng.ITimeoutService, $sce: ng.ISCEService) {
 	var search = $location.search();
 	$scope.fromDate = search.fromDate || '';
@@ -60,7 +58,6 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 	$timeout(()=>{ 
 			textElem.linedtextarea();
 	})
-	
 	
 	var expr = search.expr
 	

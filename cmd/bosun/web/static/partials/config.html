@@ -39,31 +39,41 @@
 
 </style>
 <label style="float:left; margin-right:15px;">Jump to:</label>
-<div class='row'>
-<div class="dropdown" ng-repeat="(type,list) in items" style="float:left; margin-right:5px;margin-bottom:15px;">
-  <button class="btn btn-primary dropdown-toggle" type="button" id="itemSelector" data-toggle="dropdown" aria-expanded="true">
- 	{{type}}
-    <span class="caret"></span>
-  </button>
-  <ul class="dropdown-menu" role="menu" aria-labelledby="itemSelector">
-    <li role="presentation" ng-repeat="item in list | orderBy:'toString()'"><a role="menuitem" tabindex="-1" ng-click="scrollTo(type,item);">{{item}}</a></li>
-  </ul>
-</div>
-<div class='btn btn-default' style="float:right;margin-left:5px;">Save</div>
-<div class='btn btn-default' style="float:right;margin-left:5px;" ng-click="validate()">Validate</div>
+<div class="row">
+	<div class="dropdown" ng-repeat="(type,list) in items" style="float:left; margin-right:5px;margin-bottom:15px;">
+		<button class="btn btn-primary dropdown-toggle" type="button" id="itemSelector" data-toggle="dropdown" aria-expanded="true">
+			{{type}}
+			<span class="caret"></span>
+		</button>
+		<ul class="dropdown-menu" role="menu" aria-labelledby="itemSelector">
+			<li role="presentation" ng-repeat="item in list | orderBy:'toString()'"><a role="menuitem" tabindex="-1" ng-click="scrollTo(type,item);">{{item}}</a></li>
+		</ul>
+	</div>
+	<div class="btn btn-default" style="float:right;margin-left:5px;">Save</div>
+	<div class="btn btn-default" style="float:right;margin-left:5px;" ng-click="validate()">Validate</div>
 </div>
 <div class="row" ng-show="validationResult">
 	<div class="col-lg-12">
 		<div class="alert alert-dismissible" ng-class="validationResult == 'Valid' ? 'alert-success' : 'alert-danger'">
-		<button type="button" class="close" aria-label="Close" ng-click="validationResult=''"><span aria-hidden="true">&times;</span></button>
+			<button type="button" class="close" aria-label="Close" ng-click="validationResult=''"><span aria-hidden="true">&times;</span></button>
 		{{validationResult}}</div>
 	</div>
 </div>
 
-<div class='row'>
+<div class="row">
 <div id="wrap">
-	<textarea class="code" ng-model="config_text" id="configText" autocorrect="off" autocomplete="off" 
-		autocapitalize="off" spellcheck="false" wrap="off" ts-tab ng-blur="reparse()"></textarea>
+	<textarea 
+		class="code" 
+		ng-model="config_text" 
+		id="configText" 
+		autocorrect="off" 
+		autocomplete="off" 
+		autocapitalize="off" 
+		spellcheck="false" 
+		wrap="off" 
+		ts-tab 
+		ng-blur="reparse()">
+	</textarea>
 </div>
 </div>
 <div class="row">
@@ -111,7 +121,6 @@
 		</form>
 	</div>
 </div>
-
 <div class="row" ng-show="running">
 	<div class="col-lg-12">
 		<div class="alert alert-info">
