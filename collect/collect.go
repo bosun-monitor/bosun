@@ -15,6 +15,7 @@ import (
 	"sync"
 	"time"
 
+	"bosun.org/metadata"
 	"bosun.org/opentsdb"
 )
 
@@ -39,6 +40,9 @@ var (
 	// generated.
 	DisableDefaultCollectors = false
 
+	// Tags is an opentsdb.TagSet used when sending self metrics.
+	Tags opentsdb.TagSet
+
 	// Dropped is the number of dropped data points due to a full queue.
 	dropped int64
 
@@ -58,6 +62,19 @@ var (
 		Transport: &timeoutTransport{Transport: new(http.Transport)},
 		Timeout:   time.Minute,
 	}
+)
+
+const (
+	descCollectDropped      = "Counter of dropped data points due to the queue being full."
+	descCollectSent         = "Counter of data points sent to the server."
+	descCollectQueued       = "Total number of items currently queued and waiting to be sent to the server."
+	descCollectAlloc        = "Total number of bytes allocated and still in use by the runtime (via runtime.ReadMemStats)."
+	descCollectGoRoutines   = "Total number of goroutines that currently exist (via runtime.NumGoroutine)."
+	descCollectPostDuration = "Total number of milliseconds it took to send an HTTP POST request to the server."
+	descCollectPostCount    = "Counter of batches sent to the server."
+	descCollectPostError    = "Counter of errors received when sending a batch to the server."
+	descCollectPostBad      = "Counter of HTTP POST requests where resp.StatusCode != http.StatusNoContent."
+	descCollectPostRestore  = "Counter of data points restored from batches that could not be sent to the server."
 )
 
 type timeoutTransport struct {
@@ -98,32 +115,42 @@ func InitChan(tsdbhost *url.URL, root string, ch chan *opentsdb.DataPoint) error
 	if DisableDefaultCollectors {
 		return nil
 	}
-	Set("collect.dropped", nil, func() (i interface{}) {
+	Set("collect.dropped", Tags, func() (i interface{}) {
 		slock.Lock()
 		i = dropped
 		slock.Unlock()
 		return
 	})
-	Set("collect.sent", nil, func() (i interface{}) {
+	Set("collect.sent", Tags, func() (i interface{}) {
 		slock.Lock()
 		i = sent
 		slock.Unlock()
 		return
 	})
-	Set("collect.queued", nil, func() (i interface{}) {
+	Set("collect.queued", Tags, func() (i interface{}) {
 		qlock.Lock()
 		i = len(queue)
 		qlock.Unlock()
 		return
 	})
-	Set("collect.alloc", nil, func() interface{} {
+	Set("collect.alloc", Tags, func() interface{} {
 		var ms runtime.MemStats
 		runtime.ReadMemStats(&ms)
 		return ms.Alloc
 	})
-	Set("collect.goroutines", nil, func() interface{} {
+	Set("collect.goroutines", Tags, func() interface{} {
 		return runtime.NumGoroutine()
 	})
+	metadata.AddMetricMeta(metricRoot+"collect.dropped", metadata.Counter, metadata.PerSecond, descCollectDropped)
+	metadata.AddMetricMeta(metricRoot+"collect.sent", metadata.Counter, metadata.PerSecond, descCollectSent)
+	metadata.AddMetricMeta(metricRoot+"collect.queued", metadata.Gauge, metadata.Item, descCollectQueued)
+	metadata.AddMetricMeta(metricRoot+"collect.alloc", metadata.Gauge, metadata.Bytes, descCollectAlloc)
+	metadata.AddMetricMeta(metricRoot+"collect.goroutines", metadata.Gauge, metadata.Count, descCollectGoRoutines)
+	metadata.AddMetricMeta(metricRoot+"collect.post.total_duration", metadata.Counter, metadata.MilliSecond, descCollectPostDuration)
+	metadata.AddMetricMeta(metricRoot+"collect.post.count", metadata.Counter, metadata.PerSecond, descCollectPostCount)
+	metadata.AddMetricMeta(metricRoot+"collect.post.error", metadata.Counter, metadata.PerSecond, descCollectPostError)
+	metadata.AddMetricMeta(metricRoot+"collect.post.bad_status", metadata.Counter, metadata.PerSecond, descCollectPostBad)
+	metadata.AddMetricMeta(metricRoot+"collect.post.restore", metadata.Counter, metadata.PerSecond, descCollectPostRestore)
 	return nil
 }
 

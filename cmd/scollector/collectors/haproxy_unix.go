@@ -163,7 +163,7 @@ var haproxyCheckStatus = map[string]int{
 	"INI":     1,
 	"SOCKERR": 2,
 	"L4OK":    3,
-	"L4TMOUT": 4,
+	"L4TOUT":  4,
 	"L4CON":   5,
 	"L6OK":    6,
 	"L6TOUT":  7,
