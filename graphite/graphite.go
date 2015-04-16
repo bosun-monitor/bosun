@@ -3,18 +3,22 @@ package graphite // import "bosun.org/graphite"
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 )
+
+const requestErrFmt = "graphite RequestError (%s): %s"
 
 // Request holds query objects. Currently only absolute times are supported.
 type Request struct {
 	Start   *time.Time
 	End     *time.Time
 	Targets []string
+	URL     *url.URL
 }
 
 type Response []Series
@@ -42,23 +46,55 @@ func (r *Request) Query(host string) (Response, error) {
 	if r.End != nil {
 		v.Add("until", fmt.Sprint(r.End.Unix()))
 	}
-	u := url.URL{
+	r.URL = &url.URL{
 		Scheme:   "http",
 		Host:     host,
 		Path:     "/render/",
 		RawQuery: v.Encode(),
 	}
-	resp, err := DefaultClient.Get(u.String())
+	resp, err := DefaultClient.Get(r.URL.String())
 	if err != nil {
-		return Response{}, err
+		return nil, fmt.Errorf(requestErrFmt, r.URL, "Get failed: "+err.Error())
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return Response{}, errors.New(resp.Status)
+		tb, err := readTraceback(resp)
+		if err != nil {
+			tb = &[]string{"<Could not read traceback: " + err.Error() + ">"}
+		}
+		return nil, fmt.Errorf(requestErrFmt, r.URL, fmt.Sprintf("Get failed: %s\n%s", resp.Status, strings.Join(*tb, "\n")))
 	}
 	var series Response
 	err = json.NewDecoder(resp.Body).Decode(&series)
-	return series, err
+	if err != nil {
+		e := fmt.Errorf(requestErrFmt, r.URL, "Json decode failed: "+err.Error())
+		return series, e
+	}
+	return series, nil
+}
+
+func readTraceback(resp *http.Response) (*[]string, error) {
+	bodyBytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	bodyLines := strings.Split(strings.TrimSpace(string(bodyBytes)), "\n")
+	var tracebackLines []string
+	inTraceback := false
+	for _, line := range bodyLines {
+		if strings.HasPrefix(line, "Traceback") {
+			inTraceback = true
+		} else if inTraceback && line == "" {
+			break
+		}
+		if inTraceback {
+			tracebackLines = append(tracebackLines, line)
+		}
+	}
+	if len(tracebackLines) == 0 {
+		tracebackLines = []string{"<no traceback found in response>"}
+	}
+	return &tracebackLines, nil
 }
 
 // DefaultClient is the default HTTP client for requests.

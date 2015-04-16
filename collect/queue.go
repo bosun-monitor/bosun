@@ -91,15 +91,15 @@ func sendBatch(batch []json.RawMessage) {
 	if err == nil {
 		defer resp.Body.Close()
 	}
-	Add("collect.post.total_duration", nil, d)
-	Add("collect.post.count", nil, 1)
+	Add("collect.post.total_duration", Tags, d)
+	Add("collect.post.count", Tags, 1)
 	// Some problem with connecting to the server; retry later.
 	if err != nil || resp.StatusCode != http.StatusNoContent {
 		if err != nil {
-			Add("collect.post.error", nil, 1)
+			Add("collect.post.error", Tags, 1)
 			slog.Error(err)
 		} else if resp.StatusCode != http.StatusNoContent {
-			Add("collect.post.bad_status", nil, 1)
+			Add("collect.post.bad_status", Tags, 1)
 			slog.Errorln(resp.Status)
 			body, err := ioutil.ReadAll(resp.Body)
 			if err != nil {
@@ -120,7 +120,7 @@ func sendBatch(batch []json.RawMessage) {
 			tchan <- &dp
 		}
 		d := time.Second * 5
-		Add("collect.post.restore", nil, int64(restored))
+		Add("collect.post.restore", Tags, int64(restored))
 		slog.Infof("restored %d, sleeping %s", restored, d)
 		time.Sleep(d)
 		return
