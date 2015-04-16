@@ -12,6 +12,7 @@ var bosunApp = angular.module('bosunApp', [
 	'bosunControllers',
 	'mgcrea.ngStrap',
 	'ngSanitize',
+	'ui.ace',
 ]);
 
 bosunApp.config(['$routeProvider', '$locationProvider', function($routeProvider: ng.route.IRouteProvider, $locationProvider: ng.ILocationProvider) {

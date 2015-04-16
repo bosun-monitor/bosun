@@ -146,7 +146,17 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 		elem.scroll();
 		$("#wrap").find('.lines div').eq(line - 1).addClass('lineerror');
 	}
-	
+	var editor;
+	$scope.aceLoaded = function(_editor){
+		editor = _editor;
+		editor.getSession().setUseWrapMode(true);
+		editor.on("blur", function(){
+			$scope.$apply(function () {
+            		$scope.items = parseItems();
+        		});
+		});
+	};
+
 	$scope.scrollTo = (type:string, name:string) => {
 		var searchRegex = new RegExp("^\\s*"+type+"\\s+"+name+"\\s*\\{", "g");
 		var lines = $scope.config_text.split("\n");
@@ -156,6 +166,14 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 				break;
 			}
 		}
+		editor.find(searchRegex,{
+    			backwards: false,
+    			wrap: true,
+    			caseSensitive: false,
+    			wholeWord: false,
+    			regExp: true,
+		});
+
 		if (type == "alert"){$scope.selectAlert(name);}
 	}
 	
@@ -225,6 +243,7 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 					var m = data.match(line_re);
 					if (angular.isArray(m) && (m.length > 1)) {
 						scrollToLine(m[1], textElem);
+						editor.gotoLine(m[1])
 					}
 				}
 			})

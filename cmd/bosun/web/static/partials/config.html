@@ -7,6 +7,13 @@
 	border: 1px solid #ccc;
 	margin-bottom: 15px;
 }
+.ace_editor  {
+ 	height : 500px;
+	width: 130%
+	font-family: Menlo, Courier New, monospace;
+	font-size: 11pt;
+	margin-bottom: 15px;
+}
 .code, .lines {
 	font-family: Menlo, Courier New, monospace;
 	font-size: 11pt;
@@ -61,8 +68,8 @@
 </div>
 
 <div class="row">
-<div id="wrap">
-	<textarea 
+	<div id="wrap">
+		<textarea 
 		class="code" 
 		ng-model="config_text" 
 		id="configText" 
@@ -74,7 +81,10 @@
 		ts-tab 
 		ng-blur="reparse()">
 	</textarea>
+	</div>
 </div>
+<div class="row">
+	<div ui-ace="{ onLoad : aceLoaded}" ng-model="config_text" ></div>
 </div>
 <div class="row">
 	<div class="col-lg-12">
