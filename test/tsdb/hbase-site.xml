@@ -1,0 +1,8 @@
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<configuration>
+
+  <property>
+    <name>hbase.tmp.dir</name>
+    <value>file:///data/hbase</value>
+  </property>
+</configuration>
