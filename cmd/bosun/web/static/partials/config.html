@@ -66,23 +66,6 @@
 		{{validationResult}}</div>
 	</div>
 </div>
-
-<div class="row">
-	<div id="wrap">
-		<textarea 
-		class="code" 
-		ng-model="config_text" 
-		id="configText" 
-		autocorrect="off" 
-		autocomplete="off" 
-		autocapitalize="off" 
-		spellcheck="false" 
-		wrap="off" 
-		ts-tab 
-		ng-blur="reparse()">
-	</textarea>
-	</div>
-</div>
 <div class="row">
 	<div ui-ace="{ onLoad : aceLoaded}" ng-model="config_text" ></div>
 </div>

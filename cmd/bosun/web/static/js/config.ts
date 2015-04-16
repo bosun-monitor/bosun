@@ -54,12 +54,7 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 	$scope.items = parseItems();
 	$scope.tab = search.tab || 'results';
 	
-	var textElem = $("#configText");
-	$timeout(()=>{ 
-			textElem.linedtextarea();
-	})
 	var expr = search.expr
-	
 	function buildAlertFromExpr(){
 		if (!expr) return
 		var newAlertName = "test";
@@ -136,15 +131,6 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 	$scope.reparse = function(){
 		$scope.items = parseItems();
 	}
-	
-	function scrollToLine(line:number, elem:any){
-		$("#wrap").find('.lineerror').removeClass('lineerror');
-		var lineHeight = textElem[0].scrollHeight / (elem[0].value.match(/\n/g).length + 1);
-		var jump = (line - 5) * lineHeight;
-		elem.scrollTop(jump);
-		elem.scroll();
-		$("#wrap").find('.lines div').eq(line - 1).addClass('lineerror');
-	}
 	var editor;
 	$scope.aceLoaded = function(_editor){
 		editor = _editor;
@@ -158,13 +144,6 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 
 	$scope.scrollTo = (type:string, name:string) => {
 		var searchRegex = new RegExp("^\\s*"+type+"\\s+"+name+"\\s*\\{", "g");
-		var lines = $scope.config_text.split("\n");
-		for(var i = 0; i< lines.length; i++){
-			if (lines[i].match(searchRegex)){
-				scrollToLine(i+1, textElem);
-				break;
-			}
-		}
 		editor.find(searchRegex,{
     			backwards: false,
     			wrap: true,
@@ -247,7 +226,6 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 					$scope.validationResult = data;
 					var m = data.match(line_re);
 					if (angular.isArray(m) && (m.length > 1)) {
-						scrollToLine(m[1], textElem);
 						editor.gotoLine(m[1])
 					}
 				}
