@@ -467,8 +467,8 @@ func Config(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 	if hash := r.FormValue("hash"); hash != "" {
 		text, err = schedule.LoadTempConfig(hash)
 		if err != nil {
-			w.WriteHeader(500)
-			fmt.Fprint(w, err.Error())
+			serveError(w, err)
+			return
 		}
 	} else {
 		text = schedule.Conf.RawText
