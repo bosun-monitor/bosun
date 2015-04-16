@@ -443,6 +443,12 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
         $scope.selected_alert = alert;
         $location.search("alert", alert);
     };
+    $scope.setTemplateGroup = function (group) {
+        var match = group.match(/{(.*)}/);
+        if (match) {
+            $scope.template_group = match[1];
+        }
+    };
     var line_re = /test:(\d+)/;
     $scope.validate = function () {
         $http.get('/api/config_test?config_text=' + encodeURIComponent($scope.config_text)).success(function (data) {

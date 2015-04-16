@@ -217,7 +217,7 @@
 					</thead>
 					<tbody ng-repeat="r in set.Results" ng-init="result = r.Result; group = r.Group">
 						<tr>
-							<td rowspan="2" ng-bind="zws(group)"></td>
+							<td rowspan="2" ng-bind="zws(group)" ng-click="setTemplateGroup(group)"></td>
 							<td rowspan="2" ng-bind="result.Status" ng-class="panelClass(result.Status, '')"></td>
 							<td ng-if="result.Crit">critical</td>
 							<td ng-if="result.Crit">

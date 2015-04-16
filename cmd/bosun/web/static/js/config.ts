@@ -34,7 +34,7 @@ interface IConfigScope extends IBosunScope {
 	data: any;
 	tab: string;
 	zws: (v: string) => string;
-	
+	setTemplateGroup: (group:any) => void;
 	scrollToInterval: (v: string) => void;
 	show: (v: any) => void;
 }
@@ -58,7 +58,6 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 	$timeout(()=>{ 
 			textElem.linedtextarea();
 	})
-	
 	var expr = search.expr
 	
 	function buildAlertFromExpr(){
@@ -229,6 +228,12 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 		$location.search("alert",alert);
 	}
 	
+	$scope.setTemplateGroup= (group) =>{
+		var match = group.match(/{(.*)}/);
+		if (match){
+			$scope.template_group = match[1];
+		}
+	}
 	var line_re = /test:(\d+)/;
 	$scope.validate = () => {
 		$http.get('/api/config_test?config_text=' + encodeURIComponent($scope.config_text))
