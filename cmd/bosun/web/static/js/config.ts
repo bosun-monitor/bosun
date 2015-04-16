@@ -5,6 +5,7 @@ interface IConfigScope extends IBosunScope {
 	items: { [type: string]: string[]; };
 	scrollTo: (type:string,name:string) => void;
 	aceLoaded: (editor:any) => void;
+	editor: any;
 	validate: () => void;
 	validationResult: string;
 	selectAlert: (alert:string) => void;
@@ -134,6 +135,7 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 	var editor;
 	$scope.aceLoaded = function(_editor){
 		editor = _editor;
+		$scope.editor = editor;
 		editor.getSession().setUseWrapMode(true);
 		editor.on("blur", function(){
 			$scope.$apply(function () {

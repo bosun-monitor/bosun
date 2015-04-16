@@ -361,6 +361,7 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
     var editor;
     $scope.aceLoaded = function (_editor) {
         editor = _editor;
+        $scope.editor = editor;
         editor.getSession().setUseWrapMode(true);
         editor.on("blur", function () {
             $scope.$apply(function () {
@@ -692,6 +693,22 @@ bosunApp.directive('tsTab', function () {
                         var ws = sub.substr(last, i - last);
                         ta.value = v.substr(0, start) + "\n" + ws + v.substr(start);
                         ta.selectionStart = ta.selectionEnd = start + 1 + ws.length;
+                }
+            });
+        }
+    };
+});
+bosunApp.directive('tsresizable', function () {
+    return {
+        restrict: 'A',
+        scope: {
+            callback: '&onResize'
+        },
+        link: function postLink(scope, elem, attrs) {
+            elem.resizable();
+            elem.on('resizestop', function (evt, ui) {
+                if (scope.callback) {
+                    scope.callback();
                 }
             });
         }

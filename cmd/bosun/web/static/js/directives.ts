@@ -157,6 +157,21 @@ interface JQuery {
 	linedtextarea () : void;
 }
 
+bosunApp.directive('tsresizable', () => {
+    return {
+        restrict: 'A',
+        scope: {
+            callback: '&onResize'
+        },
+        link: function postLink(scope, elem, attrs) {
+            elem.resizable();
+            elem.on('resizestop', function (evt, ui) {
+                if (scope.callback) { scope.callback(); }
+            });
+        }
+    };
+});
+
 bosunApp.directive('tsTableSort', ['$timeout', ($timeout: ng.ITimeoutService) => {
 	return {
 		link: (scope: ng.IScope, elem: any, attrs: any) => {
