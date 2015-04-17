@@ -56,7 +56,7 @@
 				<button class="btn btn-primary" ng-click="set()">Test</button>
 			</div>
 			<div class="pull-right">
-				<a class="btn btn-default" ng-href="/rule?expr={{btoa(expr)}}" ng-disabled="result_type != 'scalar' && result_type != 'number'" target="_blank">Rule</a>
+				<a class="btn btn-default" ng-href="/config?expr={{btoa(expr)}}" ng-disabled="result_type != 'scalar' && result_type != 'number'" target="_blank">Rule</a>
 				<a class="btn btn-default" ng-href="{{svg_url}}" ng-disabled="!svg_url" target="_blank">Image</a>
 			</div>
 		</form>
