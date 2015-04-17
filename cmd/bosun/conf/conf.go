@@ -15,7 +15,6 @@ import (
 	"strconv"
 	"strings"
 	ttemplate "text/template"
-	tparse "text/template/parse"
 	"time"
 
 	"bosun.org/_third_party/github.com/MiniProfiler/go/miniprofiler"
@@ -203,13 +202,8 @@ func errRecover(errp *error) {
 	}
 }
 
-type ConfItem struct {
-	Text         string
-	Dependencies []*ConfItem
-}
-
 type Lookup struct {
-	ConfItem
+	Text    string
 	Name    string
 	Tags    []string
 	Entries []*Entry
@@ -232,13 +226,13 @@ type Entry struct {
 }
 
 type Macro struct {
-	ConfItem
+	Text  string
 	Pairs []nodePair
 	Name  string
 }
 
 type Alert struct {
-	ConfItem
+	Text string
 	Vars
 	*Template        `json:"-"`
 	Name             string
@@ -304,7 +298,7 @@ func (c *Conf) parseNotifications(v string) (map[string]*Notification, error) {
 }
 
 type Template struct {
-	ConfItem
+	Text string
 	Vars
 	Name    string
 	Body    *htemplate.Template `json:"-"`
@@ -314,7 +308,7 @@ type Template struct {
 }
 
 type Notification struct {
-	ConfItem
+	Text string
 	Vars
 	Name        string
 	Email       []*mail.Address
@@ -546,7 +540,7 @@ const (
 	sMacro
 )
 
-func (c *Conf) getPairs(s *parse.SectionNode, vars Vars, st sectionType) (pairs []nodePair, macrosUsed []*ConfItem) {
+func (c *Conf) getPairs(s *parse.SectionNode, vars Vars, st sectionType) (pairs []nodePair) {
 	saw := make(map[string]bool)
 	ignoreBadExpand := st == sMacro
 	add := func(n parse.Node, k, v string) {
@@ -575,9 +569,6 @@ func (c *Conf) getPairs(s *parse.SectionNode, vars Vars, st sectionType) (pairs 
 				if !ok {
 					c.errorf("macro not found: %s", v)
 				}
-
-				macrosUsed = append(macrosUsed, &m.ConfItem)
-
 				for _, p := range m.Pairs {
 					add(p.node, p.key, c.Expand(p.val, vars, ignoreBadExpand))
 				}
@@ -667,8 +658,7 @@ func (c *Conf) loadMacro(s *parse.SectionNode) {
 		Name: name,
 	}
 	m.Text = s.RawText
-	pairs, macros := c.getPairs(s, nil, sMacro)
-	m.Dependencies = macros
+	pairs := c.getPairs(s, nil, sMacro)
 	for _, p := range pairs {
 		m.Pairs = append(m.Pairs, p)
 	}
@@ -803,10 +793,7 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 			ns.Notifications[k] = v
 		}
 	}
-	pairs, macros := c.getPairs(s, a.Vars, sNormal)
-	for _, m := range macros {
-		a.Dependencies = append(a.Dependencies, m)
-	}
+	pairs := c.getPairs(s, a.Vars, sNormal)
 	for _, p := range pairs {
 		c.at(p.node)
 		v := p.val
@@ -926,105 +913,8 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 		}
 	}
 	a.returnType = ret
-	c.findAllDependencies(&a)
 	c.Alerts[name] = &a
 	c.OrderedAlerts = append(c.OrderedAlerts, &a)
-}
-
-func (c *Conf) findAllDependencies(a *Alert) {
-	var addIfUnique = func(ci *ConfItem) {
-		for _, x := range a.Dependencies {
-			if x == ci {
-				return
-			}
-		}
-		a.Dependencies = append(a.Dependencies, ci)
-	}
-	// Notifications and lookups are dependencies
-	var walkNotifications = func(n *Notifications) {
-		for _, l := range n.Lookups {
-			addIfUnique(&l.ConfItem)
-			// if we see a lookup here, assume all leaf nodes are notifications
-			for _, entry := range l.Entries {
-				for _, lookupNot := range entry.Values {
-					if found, ok := c.Notifications[lookupNot]; ok {
-						addIfUnique(&found.ConfItem)
-					}
-				}
-			}
-		}
-		for _, not := range n.Notifications {
-			addIfUnique(&not.ConfItem)
-		}
-	}
-	if a.CritNotification != nil {
-		walkNotifications(a.CritNotification)
-	}
-	if a.WarnNotification != nil {
-		walkNotifications(a.WarnNotification)
-	}
-	// Expressions may contain lookups or alerts
-
-	var walkExpr = func(n eparse.Node) {
-		eparse.Walk(n, func(n eparse.Node) {
-			switch n := n.(type) {
-			case *eparse.FuncNode:
-				// Two things to look for in walking a tree.
-				// 1. Lookup function
-				// 2. Alert function
-				if n.Name == "lookup" && len(n.Args) > 0 {
-					name := n.Args[0].(*eparse.StringNode).Text
-					lookup := c.Lookups[name]
-					addIfUnique(&lookup.ConfItem)
-				} else if n.Name == "alert" && len(n.Args) > 0 {
-					name := n.Args[0].(*eparse.StringNode).Text
-					alert := c.Alerts[name]
-					addIfUnique(&alert.ConfItem)
-				}
-			}
-
-		})
-	}
-	if a.Crit != nil {
-		walkExpr(a.Crit.Tree.Root)
-	}
-	if a.Warn != nil {
-		walkExpr(a.Warn.Tree.Root)
-	}
-	if a.Depends != nil {
-		walkExpr(a.Depends.Tree.Root)
-	}
-
-}
-
-func (c *ConfItem) textWithDependencies() string {
-	deps := make([]*ConfItem, len(c.Dependencies))
-	toCheck := make([]*ConfItem, len(c.Dependencies))
-	copy(toCheck, c.Dependencies)
-	copy(deps, c.Dependencies)
-
-	// Recursively walk the tree, appending all other dependencies.
-	for len(toCheck) > 0 {
-		newSet := []*ConfItem{}
-		for _, dep := range toCheck {
-			for _, nextDep := range dep.Dependencies {
-				newSet = append(newSet, nextDep)
-				deps = append(deps, nextDep)
-			}
-		}
-		toCheck = newSet
-	}
-	text := ""
-	printed := map[*ConfItem]bool{}
-	// Print dependencies right to left.
-	for i := len(deps) - 1; i >= 0; i-- {
-		item := deps[i]
-		if !printed[item] {
-			printed[item] = true
-			text += item.Text + "\n\n"
-		}
-	}
-	return text + c.Text + "\n"
 }
 
 func (c *Conf) loadNotification(s *parse.SectionNode) {
@@ -1051,7 +941,7 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 		},
 	}
 	c.Notifications[name] = &n
-	pairs, _ := c.getPairs(s, n.Vars, sNormal)
+	pairs := c.getPairs(s, n.Vars, sNormal)
 	for _, p := range pairs {
 		c.at(p.node)
 		v := p.val
@@ -1195,82 +1085,6 @@ var builtins = htemplate.FuncMap{
 }
 
 func nilFunc() {}
-
-type AlertTemplateStrings struct {
-	Templates   map[string]string
-	Alerts      map[string]string
-	Assocations map[string]string
-}
-
-func (c *Conf) AlertTemplateStrings() (*AlertTemplateStrings, error) {
-	templates := make(map[string]string)
-	for name, template := range c.Templates {
-		incl := map[string]bool{name: true}
-		var parseSection func(*Template) error
-		parseTemplate := func(s string) error {
-			trees, err := tparse.Parse("", s, "", "", builtins)
-			if err != nil {
-				return err
-			}
-			for _, node := range trees[""].Root.Nodes {
-				switch node := node.(type) {
-				case *tparse.TemplateNode:
-					if incl[node.Name] {
-						continue
-					}
-					incl[node.Name] = true
-					t := c.Templates[node.Name]
-					if t == nil {
-						return fmt.Errorf("unknown template %v", node.Name)
-					}
-					if err := parseSection(t); err != nil {
-						return err
-					}
-				}
-			}
-			return nil
-		}
-		parseSection = func(s *Template) error {
-			if s.Body != nil && s.Body.Tree != nil {
-				if err := parseTemplate(s.Body.Tree.Root.String()); err != nil {
-					return err
-				}
-			}
-			if s.Subject != nil && s.Subject.Tree != nil {
-				if err := parseTemplate(s.Subject.Tree.Root.String()); err != nil {
-					return err
-				}
-			}
-			return nil
-		}
-		if err := parseSection(template); err != nil {
-			return nil, err
-		}
-		delete(incl, name)
-		templates[name] = template.Text
-		for n := range incl {
-			t := c.Templates[n]
-			if t == nil {
-				continue
-			}
-			templates[name] += "\n\n" + t.Text
-		}
-	}
-	alerts := make(map[string]string)
-	t_associations := make(map[string]string)
-	for name, alert := range c.Alerts {
-
-		alerts[name] += alert.textWithDependencies()
-		if alert.Template != nil {
-			t_associations[alert.Name] = alert.Template.Name
-		}
-	}
-	return &AlertTemplateStrings{
-		templates,
-		alerts,
-		t_associations,
-	}, nil
-}
 
 func (c *Conf) NewExpr(s string) *expr.Expr {
 	exp, err := expr.New(s, c.Funcs())

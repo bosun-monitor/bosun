@@ -111,9 +111,8 @@ bosunApp.factory('status', ['$http', '$q', '$sce', function($http: ng.IHttpServi
 					if (v.Actions && v.Actions.length > 0) {
 						v.LastAction = v.Actions[0];
 					}
-					v.RuleUrl = '/rule?' +
-						'alert=' + encodeURIComponent(btoa(v.AlertDef)) +
-						'&template=' + encodeURIComponent(btoa(v.TemplateDef)) +
+					v.RuleUrl = '/config?' +
+						'alert=' + encodeURIComponent(v.AlertName) +
 						'&fromDate=' + encodeURIComponent(v.last.Time.format("YYYY-MM-DD")) +
 						'&fromTime=' + encodeURIComponent(v.last.Time.format("HH:mm"));
 					var groups: string[] = [];

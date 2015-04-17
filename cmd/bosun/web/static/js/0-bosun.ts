@@ -12,6 +12,7 @@ var bosunApp = angular.module('bosunApp', [
 	'bosunControllers',
 	'mgcrea.ngStrap',
 	'ngSanitize',
+	'ui.ace',
 ]);
 
 bosunApp.config(['$routeProvider', '$locationProvider', function($routeProvider: ng.route.IRouteProvider, $locationProvider: ng.ILocationProvider) {
@@ -43,12 +44,6 @@ bosunApp.config(['$routeProvider', '$locationProvider', function($routeProvider:
 			controller: 'HostCtrl',
 			reloadOnSearch: false,
 		}).
-		when('/rule', {
-			title: 'Rule',
-			templateUrl: 'partials/rule.html',
-			controller: 'RuleCtrl',
-			reloadOnSearch: false,
-		}).
 		when('/silence', {
 			title: 'Silence',
 			templateUrl: 'partials/silence.html',
@@ -58,6 +53,7 @@ bosunApp.config(['$routeProvider', '$locationProvider', function($routeProvider:
 			title: 'Configuration',
 			templateUrl: 'partials/config.html',
 			controller: 'ConfigCtrl',
+			reloadOnSearch: false,
 		}).
 		when('/action', {
 			title: 'Action',
