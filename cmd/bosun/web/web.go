@@ -41,6 +41,14 @@ const (
 func init() {
 	miniprofiler.Position = "bottomleft"
 	miniprofiler.StartHidden = true
+	metadata.AddMetricMeta("bosun.search.puts_relayed", metadata.Counter, metadata.Request,
+		"The count of api put requests sent to Bosun for relaying to the backend server.")
+	metadata.AddMetricMeta("bosun.search.datapoints_relayed", metadata.Counter, metadata.Item,
+		"The count of data points sent to Bosun for relaying to the backend server.")
+	metadata.AddMetricMeta("bosun.relay.bytes", metadata.Counter, metadata.BytesPerSecond,
+		"Bytes per second relayed from Bosun to the backend server.")
+	metadata.AddMetricMeta("bosun.relay.response", metadata.Counter, metadata.PerSecond,
+		"HTTP response codes from the backend server for request relayed through Bosun.")
 }
 
 func Listen(listenAddr string, devMode bool, tsdbHost string) error {
