@@ -61,7 +61,7 @@ var (
 	counters            = make(map[string]*addMetric)
 	sets                = make(map[string]*setMetric)
 	puts                = make(map[string]*putMetric)
-	tsdbTelnet             string
+	tsdbTelnet          string
 	client              = &http.Client{
 		Transport: &timeoutTransport{Transport: new(http.Transport)},
 		Timeout:   time.Minute,
