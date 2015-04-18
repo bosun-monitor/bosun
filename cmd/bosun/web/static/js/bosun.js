@@ -11,6 +11,7 @@ var bosunApp = angular.module('bosunApp', [
     'bosunControllers',
     'mgcrea.ngStrap',
     'ngSanitize',
+    'ui.ace',
 ]);
 bosunApp.config(['$routeProvider', '$locationProvider', function ($routeProvider, $locationProvider) {
     $locationProvider.html5Mode(true);
@@ -35,11 +36,6 @@ bosunApp.config(['$routeProvider', '$locationProvider', function ($routeProvider
         templateUrl: 'partials/host.html',
         controller: 'HostCtrl',
         reloadOnSearch: false
-    }).when('/rule', {
-        title: 'Rule',
-        templateUrl: 'partials/rule.html',
-        controller: 'RuleCtrl',
-        reloadOnSearch: false
     }).when('/silence', {
         title: 'Silence',
         templateUrl: 'partials/silence.html',
@@ -47,7 +43,8 @@ bosunApp.config(['$routeProvider', '$locationProvider', function ($routeProvider
     }).when('/config', {
         title: 'Configuration',
         templateUrl: 'partials/config.html',
-        controller: 'ConfigCtrl'
+        controller: 'ConfigCtrl',
+        reloadOnSearch: false
     }).when('/action', {
         title: 'Action',
         templateUrl: 'partials/action.html',
@@ -289,45 +286,232 @@ bosunControllers.controller('ActionCtrl', ['$scope', '$http', '$location', '$rou
         });
     };
 }]);
-bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
+bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$route', '$timeout', '$sce', function ($scope, $http, $location, $route, $timeout, $sce) {
     var search = $location.search();
-    var current = search.config_text;
-    var line_re = /test:(\d+)/;
-    try {
-        current = atob(current);
-    }
-    catch (e) {
-        current = '';
-    }
-    if (!current) {
-        var def = '';
-        $http.get('/api/config').success(function (data) {
-            def = data;
-        }).finally(function () {
-            $location.search('config_text', btoa(def));
+    $scope.fromDate = search.fromDate || '';
+    $scope.fromTime = search.fromTime || '';
+    $scope.toDate = search.toDate || '';
+    $scope.toTime = search.toTime || '';
+    $scope.intervals = +search.intervals || 5;
+    $scope.duration = +search.duration || null;
+    $scope.config_text = 'Loading config...';
+    $scope.selected_alert = search.alert || '';
+    $scope.email = search.email || '';
+    $scope.template_group = search.template_group || '';
+    $scope.items = parseItems();
+    $scope.tab = search.tab || 'results';
+    var expr = search.expr;
+    function buildAlertFromExpr() {
+        if (!expr)
+            return;
+        var newAlertName = "test";
+        var idx = 1;
+        while ($scope.items["alert"].indexOf(newAlertName) != -1 || $scope.items["template"].indexOf(newAlertName) != -1) {
+            newAlertName = "test" + idx;
+            idx++;
+        }
+        var text = '\n\ntemplate ' + newAlertName + ' {\n' + '	subject = {{.Last.Status}}: {{.Alert.Name}} on {{.Group.host}}\n' + '	body = `<p>Name: {{.Alert.Name}}\n' + '	<p>Tags:\n' + '	<table>\n' + '		{{range $k, $v := .Group}}\n' + '			<tr><td>{{$k}}</td><td>{{$v}}</td></tr>\n' + '		{{end}}\n' + '	</table>`\n' + '}\n\n';
+        text += 'alert ' + newAlertName + ' {\n' + '	template = ' + newAlertName + '\n' + '	crit = ' + atob(expr) + '\n' + '}\n';
+        $scope.config_text += text;
+        $scope.items = parseItems();
+        $timeout(function () {
+            //can't scroll editor until after control is updated. Defer it.
+            $scope.scrollTo("alert", newAlertName);
         });
-        return;
     }
-    $scope.config_text = current;
-    $scope.set = function () {
-        $scope.result = null;
-        $scope.line = null;
+    function parseItems() {
+        var configText = $scope.config_text;
+        var re = /^\s*(alert|template|notification|lookup|macro)\s+([\w\-\.\$]+)\s*\{/gm;
+        var match;
+        var items = {};
+        items["alert"] = [];
+        items["template"] = [];
+        items["lookup"] = [];
+        items["notification"] = [];
+        items["macro"] = [];
+        while (match = re.exec(configText)) {
+            var type = match[1];
+            var name = match[2];
+            var list = items[type];
+            if (!list) {
+                list = [];
+                items[type] = list;
+            }
+            list.push(name);
+        }
+        return items;
+    }
+    $http.get('/api/config?hash=' + (search.hash || '')).success(function (data) {
+        $scope.config_text = data;
+        $scope.items = parseItems();
+        buildAlertFromExpr();
+        if (!$scope.selected_alert && $scope.items["alert"].length) {
+            $scope.selected_alert = $scope.items["alert"][0];
+        }
+        $timeout(function () {
+            //can't scroll editor until after control is updated. Defer it.
+            $scope.scrollTo("alert", $scope.selected_alert);
+        });
+    }).error(function (data) {
+        $scope.validationResult = "Error fetching config: " + data;
+    });
+    $scope.reparse = function () {
+        $scope.items = parseItems();
+    };
+    var editor;
+    $scope.aceLoaded = function (_editor) {
+        editor = _editor;
+        $scope.editor = editor;
+        editor.getSession().setUseWrapMode(true);
+        editor.on("blur", function () {
+            $scope.$apply(function () {
+                $scope.items = parseItems();
+            });
+        });
+    };
+    $scope.scrollTo = function (type, name) {
+        var searchRegex = new RegExp("^\\s*" + type + "\\s+" + name + "\\s*\\{", "g");
+        editor.find(searchRegex, {
+            backwards: false,
+            wrap: true,
+            caseSensitive: false,
+            wholeWord: false,
+            regExp: true
+        });
+        if (type == "alert") {
+            $scope.selectAlert(name);
+        }
+    };
+    $scope.scrollToInterval = function (id) {
+        document.getElementById('time-' + id).scrollIntoView();
+        $scope.show($scope.sets[id]);
+    };
+    $scope.show = function (set) {
+        set.show = 'loading...';
+        $scope.animate();
+        var url = '/api/rule?' + 'alert=' + encodeURIComponent($scope.selected_alert) + '&from=' + encodeURIComponent(set.Time);
+        $http.post(url, $scope.config_text).success(function (data) {
+            procResults(data);
+            set.Results = data.Sets[0].Results;
+        }).error(function (error) {
+            $scope.error = error;
+        }).finally(function () {
+            $scope.stop();
+            delete (set.show);
+        });
+    };
+    $scope.setInterval = function () {
+        var from = moment.utc($scope.fromDate + ' ' + $scope.fromTime);
+        var to = moment.utc($scope.toDate + ' ' + $scope.toTime);
+        if (!from.isValid() || !to.isValid()) {
+            return;
+        }
+        var diff = from.diff(to);
+        if (!diff) {
+            return;
+        }
+        var intervals = +$scope.intervals;
+        if (intervals < 2) {
+            return;
+        }
+        diff /= 1000 * 60;
+        var d = Math.abs(Math.round(diff / intervals));
+        if (d < 1) {
+            d = 1;
+        }
+        $scope.duration = d;
+    };
+    $scope.selectAlert = function (alert) {
+        $scope.selected_alert = alert;
+        $location.search("alert", alert);
+    };
+    $scope.setTemplateGroup = function (group) {
+        var match = group.match(/{(.*)}/);
+        if (match) {
+            $scope.template_group = match[1];
+        }
+    };
+    var line_re = /test:(\d+)/;
+    $scope.validate = function () {
         $http.get('/api/config_test?config_text=' + encodeURIComponent($scope.config_text)).success(function (data) {
             if (data == "") {
-                $scope.result = "Valid";
+                $scope.validationResult = "Valid";
+                $timeout(function () {
+                    $scope.validationResult = "";
+                }, 2000);
             }
             else {
-                $scope.result = data;
+                $scope.validationResult = data;
                 var m = data.match(line_re);
                 if (angular.isArray(m) && (m.length > 1)) {
-                    $scope.line = m[1];
+                    editor.gotoLine(m[1]);
                 }
             }
         }).error(function (error) {
-            $scope.error = error || 'Error';
+            $scope.validationResult = 'Error validating: ' + error;
         });
     };
-    $scope.set();
+    $scope.test = function () {
+        $scope.error = '';
+        $scope.running = true;
+        $scope.warning = [];
+        $location.search('fromDate', $scope.fromDate || null);
+        $location.search('fromTime', $scope.fromTime || null);
+        $location.search('toDate', $scope.toDate || null);
+        $location.search('toTime', $scope.toTime || null);
+        $location.search('intervals', String($scope.intervals) || null);
+        $location.search('duration', String($scope.duration) || null);
+        $location.search('email', $scope.email || null);
+        $location.search('template_group', $scope.template_group || null);
+        $scope.animate();
+        var from = moment.utc($scope.fromDate + ' ' + $scope.fromTime);
+        var to = moment.utc($scope.toDate + ' ' + $scope.toTime);
+        if (!from.isValid()) {
+            from = to;
+        }
+        if (!to.isValid()) {
+            to = from;
+        }
+        if (!from.isValid() && !to.isValid()) {
+            from = to = moment.utc();
+        }
+        var diff = from.diff(to);
+        var intervals;
+        if (diff == 0) {
+            intervals = 1;
+        }
+        else if (Math.abs(diff) < 60 * 1000) {
+            intervals = 2;
+        }
+        else {
+            intervals = +$scope.intervals;
+        }
+        var url = '/api/rule?' + 'alert=' + encodeURIComponent($scope.selected_alert) + '&from=' + encodeURIComponent(from.format()) + '&to=' + encodeURIComponent(to.format()) + '&intervals=' + encodeURIComponent(intervals) + '&email=' + encodeURIComponent($scope.email) + '&template_group=' + encodeURIComponent($scope.template_group);
+        $http.post(url, $scope.config_text).success(function (data) {
+            $scope.sets = data.Sets;
+            $scope.alert_history = data.AlertHistory;
+            if (data.Hash) {
+                $location.search('hash', data.Hash);
+            }
+            procResults(data);
+        }).error(function (error) {
+            $scope.error = error;
+        }).finally(function () {
+            $scope.running = false;
+            $scope.stop();
+        });
+    };
+    $scope.zws = function (v) {
+        return v.replace(/([,{}()])/g, '$1\u200b');
+    };
+    function procResults(data) {
+        $scope.subject = data.Subject;
+        $scope.body = $sce.trustAsHtml(data.Body);
+        $scope.data = JSON.stringify(data.Data, null, '  ');
+        $scope.error = data.Errors;
+        $scope.warning = data.Warnings;
+    }
+    return $scope;
 }]);
 bosunControllers.controller('DashboardCtrl', ['$scope', '$http', '$location', function ($scope, $http, $location) {
     var search = $location.search();
@@ -474,31 +658,6 @@ bosunApp.directive("tooltip", function () {
         }
     };
 });
-bosunApp.directive('tsLine', function () {
-    return {
-        link: function (scope, elem, attrs) {
-            elem.linedtextarea();
-            var parent = elem.parent();
-            var linesDiv = parent;
-            function lineHighlight(line) {
-                var lineHeight = elem[0].scrollHeight / (elem[0].value.match(/\n/g).length + 1);
-                var jump = (line - 1) * lineHeight;
-                elem.scrollTop(jump);
-                elem.scroll();
-                parent.find('.lines div').eq(line - 1).addClass('lineerror');
-            }
-            function lineClear() {
-                parent.find('.lineerror').removeClass('lineerror');
-            }
-            scope.$watch(attrs.tsLine, function (v) {
-                lineClear();
-                if (v) {
-                    lineHighlight(v);
-                }
-            });
-        }
-    };
-});
 bosunApp.directive('tsTab', function () {
     return {
         link: function (scope, elem, attrs) {
@@ -534,6 +693,22 @@ bosunApp.directive('tsTab', function () {
                         var ws = sub.substr(last, i - last);
                         ta.value = v.substr(0, start) + "\n" + ws + v.substr(start);
                         ta.selectionStart = ta.selectionEnd = start + 1 + ws.length;
+                }
+            });
+        }
+    };
+});
+bosunApp.directive('tsresizable', function () {
+    return {
+        restrict: 'A',
+        scope: {
+            callback: '&onResize'
+        },
+        link: function postLink(scope, elem, attrs) {
+            elem.resizable();
+            elem.on('resizestop', function (evt, ui) {
+                if (scope.callback) {
+                    scope.callback();
                 }
             });
         }
@@ -1748,174 +1923,6 @@ bosunControllers.controller('PutCtrl', ['$scope', '$http', '$route', function ($
         });
     };
 }]);
-bosunControllers.controller('RuleCtrl', ['$scope', '$http', '$location', '$route', '$sce', function ($scope, $http, $location, $route, $sce) {
-    var search = $location.search();
-    var current_alert = atob(search.alert || '');
-    var current_template = search.template;
-    var expr = atob(search.expr || '') || 'avg(q("avg:rate{counter,,1}:os.cpu{host=*}", "5m", "")) > 10';
-    var status_map = {
-        "normal": 0,
-        "warning": 1,
-        "critical": 2
-    };
-    $scope.email = search.email || '';
-    $scope.template_group = search.template_group || '';
-    $scope.fromDate = search.fromDate || '';
-    $scope.fromTime = search.fromTime || '';
-    $scope.toDate = search.toDate || '';
-    $scope.toTime = search.toTime || '';
-    $scope.tab = search.tab || 'results';
-    $scope.intervals = +search.intervals || 5;
-    $scope.duration = +search.duration || null;
-    if (!current_alert) {
-        current_alert = 'alert test {\n' + '	template = test\n' + '	crit = ' + expr + '\n' + '}';
-    }
-    $scope.alert = current_alert;
-    try {
-        current_template = atob(current_template);
-    }
-    catch (e) {
-        current_template = '';
-    }
-    if (!current_template) {
-        current_template = 'template test {\n' + '	subject = {{.Last.Status}}: {{.Alert.Name}} on {{.Group.host}}\n' + '	body = `<p>Name: {{.Alert.Name}}\n' + '	<p>Tags:\n' + '	<table>\n' + '		{{range $k, $v := .Group}}\n' + '			<tr><td>{{$k}}</td><td>{{$v}}</td></tr>\n' + '		{{end}}\n' + '	</table>`\n' + '}';
-    }
-    $scope.template = current_template;
-    $scope.shiftEnter = function ($event) {
-        if ($event.keyCode == 13 && $event.shiftKey) {
-            $event.preventDefault();
-            $scope.test();
-        }
-    };
-    $scope.loadAlert = function ($selected) {
-        $scope.alert = $scope.alerts[$selected];
-        if (confirm('Load the associated notification template (will overwrite the current notification tempalte) ?')) {
-            $scope.template = $scope.templates[$scope.assocations[$selected]] || '';
-        }
-    };
-    $scope.test = function () {
-        $scope.error = '';
-        $scope.running = true;
-        $scope.warning = [];
-        $location.search('alert', btoa($scope.alert));
-        $location.search('template', btoa($scope.template));
-        $location.search('fromDate', $scope.fromDate || null);
-        $location.search('fromTime', $scope.fromTime || null);
-        $location.search('toDate', $scope.toDate || null);
-        $location.search('toTime', $scope.toTime || null);
-        $location.search('tab', $scope.tab || 'results');
-        $location.search('intervals', String($scope.intervals) || null);
-        $location.search('duration', String($scope.duration) || null);
-        $location.search('email', $scope.email || null);
-        $location.search('template_group', $scope.template_group || null);
-        $scope.animate();
-        var from = moment.utc($scope.fromDate + ' ' + $scope.fromTime);
-        var to = moment.utc($scope.toDate + ' ' + $scope.toTime);
-        if (!from.isValid()) {
-            from = to;
-        }
-        if (!to.isValid()) {
-            to = from;
-        }
-        if (!from.isValid() && !to.isValid()) {
-            from = to = moment.utc();
-        }
-        var diff = from.diff(to);
-        var intervals;
-        if (diff == 0) {
-            intervals = 1;
-        }
-        else if (Math.abs(diff) < 60 * 1000) {
-            intervals = 2;
-        }
-        else {
-            intervals = +$scope.intervals;
-        }
-        var url = '/api/rule?' + 'alert=' + encodeURIComponent($scope.alert) + '&template=' + encodeURIComponent($scope.template) + '&from=' + encodeURIComponent(from.format()) + '&to=' + encodeURIComponent(to.format()) + '&intervals=' + encodeURIComponent(intervals) + '&email=' + encodeURIComponent($scope.email) + '&template_group=' + encodeURIComponent($scope.template_group);
-        $http.get(url).success(function (data) {
-            $scope.sets = data.Sets;
-            $scope.alert_history = data.AlertHistory;
-            procResults(data);
-        }).error(function (error) {
-            $scope.error = error;
-        }).finally(function () {
-            $scope.running = false;
-            $scope.stop();
-        });
-    };
-    function procResults(data) {
-        $scope.subject = data.Subject;
-        $scope.body = $sce.trustAsHtml(data.Body);
-        $scope.data = JSON.stringify(data.Data, null, '  ');
-        $scope.error = data.Errors;
-        $scope.warning = data.Warnings;
-    }
-    $scope.show = function (set) {
-        set.show = 'loading...';
-        $scope.animate();
-        var url = '/api/rule?' + 'alert=' + encodeURIComponent($scope.alert) + '&template=' + encodeURIComponent($scope.template) + '&from=' + encodeURIComponent(set.Time);
-        $http.get(url).success(function (data) {
-            procResults(data);
-            set.Results = data.Sets[0].Results;
-        }).error(function (error) {
-            $scope.error = error;
-        }).finally(function () {
-            $scope.stop();
-            delete (set.show);
-        });
-    };
-    $scope.zws = function (v) {
-        return v.replace(/([,{}()])/g, '$1\u200b');
-    };
-    $scope.scroll = function (id) {
-        document.getElementById('time-' + id).scrollIntoView();
-        $scope.show($scope.sets[id]);
-    };
-    $scope.setInterval = function () {
-        var from = moment.utc($scope.fromDate + ' ' + $scope.fromTime);
-        var to = moment.utc($scope.toDate + ' ' + $scope.toTime);
-        if (!from.isValid() || !to.isValid()) {
-            return;
-        }
-        var diff = from.diff(to);
-        if (!diff) {
-            return;
-        }
-        var intervals = +$scope.intervals;
-        if (intervals < 2) {
-            return;
-        }
-        diff /= 1000 * 60;
-        var d = Math.abs(Math.round(diff / intervals));
-        if (d < 1) {
-            d = 1;
-        }
-        $scope.duration = d;
-    };
-    $scope.setDuration = function () {
-        var from = moment.utc($scope.fromDate + ' ' + $scope.fromTime);
-        var to = moment.utc($scope.toDate + ' ' + $scope.toTime);
-        if (!from.isValid() || !to.isValid()) {
-            return;
-        }
-        var diff = from.diff(to);
-        if (!diff) {
-            return;
-        }
-        var duration = +$scope.duration;
-        if (duration < 1) {
-            return;
-        }
-        $scope.intervals = Math.abs(Math.round(diff / duration / 1000 / 60));
-    };
-    $scope.setInterval();
-    $http.get('/api/templates').success(function (data) {
-        $scope.alerts = data.Alerts;
-        $scope.templates = data.Templates;
-        $scope.assocations = data.Assocations;
-    });
-    $scope.test();
-}]);
 bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
     var search = $location.search();
     $scope.start = search.start;
@@ -2054,7 +2061,7 @@ bosunApp.directive('tsAckGroup', function () {
                         continue;
                     }
                     scope.anySelected = true;
-                    if (g.Active && g.Status != 'unknown') {
+                    if (g.Active && g.Status != 'unknown' && g.Status != 'error') {
                         scope.canCloseSelected = false;
                     }
                     if (g.Status != 'unknown') {
@@ -2115,7 +2122,7 @@ bosunApp.factory('status', ['$http', '$q', '$sce', function ($http, $q, $sce) {
                 if (v.Actions && v.Actions.length > 0) {
                     v.LastAction = v.Actions[0];
                 }
-                v.RuleUrl = '/rule?' + 'alert=' + encodeURIComponent(btoa(v.AlertDef)) + '&template=' + encodeURIComponent(btoa(v.TemplateDef)) + '&fromDate=' + encodeURIComponent(v.last.Time.format("YYYY-MM-DD")) + '&fromTime=' + encodeURIComponent(v.last.Time.format("HH:mm"));
+                v.RuleUrl = '/config?' + 'alert=' + encodeURIComponent(v.AlertName) + '&fromDate=' + encodeURIComponent(v.last.Time.format("YYYY-MM-DD")) + '&fromTime=' + encodeURIComponent(v.last.Time.format("HH:mm"));
                 var groups = [];
                 angular.forEach(v.Group, function (v, k) {
                     groups.push(k + "=" + v);

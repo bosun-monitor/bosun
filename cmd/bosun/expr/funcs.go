@@ -346,8 +346,9 @@ func DropNA(e *State, T miniprofiler.Timer, series *Results) (*Results, error) {
 }
 
 func parseGraphiteResponse(req *graphite.Request, s *graphite.Response, formatTags []string) ([]*Result, error) {
+	const parseErrFmt = "graphite ParseError (%s): %s"
 	if len(*s) == 0 {
-		return nil, fmt.Errorf("empty response for '%s' from %s to %s", req.Targets, req.Start, req.End)
+		return nil, fmt.Errorf(parseErrFmt, req.URL, "empty response")
 	}
 	seen := make(map[string]bool)
 	results := make([]*Result, 0)
@@ -355,7 +356,8 @@ func parseGraphiteResponse(req *graphite.Request, s *graphite.Response, formatTa
 		// build tag set
 		nodes := strings.Split(res.Target, ".")
 		if len(nodes) < len(formatTags) {
-			return nil, fmt.Errorf(`returned target "%s" does not match format "%s"`, res.Target, formatTags)
+			msg := fmt.Sprintf("returned target '%s' does not match format '%s'", res.Target, strings.Join(formatTags, ","))
+			return nil, fmt.Errorf(parseErrFmt, req.URL, msg)
 		}
 		tags := make(opentsdb.TagSet)
 		for i, key := range formatTags {
@@ -366,13 +368,13 @@ func parseGraphiteResponse(req *graphite.Request, s *graphite.Response, formatTa
 		if ts := tags.String(); !seen[ts] {
 			seen[ts] = true
 		} else {
-			return nil, fmt.Errorf("resultset contains series with duplicate tagset identifiers. At least 2 series are identified by tagset '%v'", ts)
+			return nil, fmt.Errorf(parseErrFmt, req.URL, fmt.Sprintf("More than 1 series identified by tagset '%v'", ts))
 		}
 		// build data
 		dps := make(Series)
 		for _, dp := range res.Datapoints {
 			if len(dp) != 2 {
-				return nil, fmt.Errorf("bad datapoint: %v", dp)
+				return nil, fmt.Errorf(parseErrFmt, req.URL, fmt.Sprintf("Datapoint has != 2 fields: %v", dp))
 			}
 			if len(dp[0].String()) == 0 {
 				// none value. skip this record
@@ -380,11 +382,13 @@ func parseGraphiteResponse(req *graphite.Request, s *graphite.Response, formatTa
 			}
 			val, err := dp[0].Float64()
 			if err != nil {
-				return nil, err
+				msg := fmt.Sprintf("value '%s' cannot be decoded to Float64: %s", dp[0], err.Error())
+				return nil, fmt.Errorf(parseErrFmt, req.URL, msg)
 			}
 			unixTS, err := dp[1].Int64()
 			if err != nil {
-				return nil, err
+				msg := fmt.Sprintf("timestamp '%s' cannot be decoded to Int64: %s", dp[1], err.Error())
+				return nil, fmt.Errorf(parseErrFmt, req.URL, msg)
 			}
 			t := time.Unix(unixTS, 0)
 			dps[t] = val
@@ -570,13 +574,13 @@ func GraphiteQuery(e *State, T miniprofiler.Timer, query string, sduration, edur
 	}
 	s, err := timeGraphiteRequest(e, T, req)
 	if err != nil {
-		return nil, fmt.Errorf("graphite: %v", err)
+		return nil, err
 	}
 	formatTags := strings.Split(format, ".")
 	r = new(Results)
 	results, err := parseGraphiteResponse(req, &s, formatTags)
 	if err != nil {
-		return nil, fmt.Errorf("graphite: %v", err)
+		return nil, err
 	}
 	r.Results = results
 

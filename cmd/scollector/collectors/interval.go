@@ -1,8 +1,11 @@
 package collectors
 
 import (
+	"io/ioutil"
 	"net/http"
+	"os/exec"
 	"reflect"
+	"regexp"
 	"runtime"
 	"sync"
 	"time"
@@ -85,13 +88,41 @@ func (c *IntervalCollector) Name() string {
 	return v.Name()
 }
 
-func enableURL(url string) func() bool {
+func enableURL(url string, regexes ...string) func() bool {
+	res := make([]*regexp.Regexp, len(regexes))
+	for i, r := range regexes {
+		res[i] = regexp.MustCompile(r)
+	}
 	return func() bool {
 		resp, err := http.Get(url)
 		if err != nil {
 			return false
 		}
-		resp.Body.Close()
-		return resp.StatusCode == 200
+		defer resp.Body.Close()
+		if resp.StatusCode != 200 {
+			return false
+		}
+		if len(res) == 0 {
+			return true
+		}
+		b, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return false
+		}
+		for _, r := range res {
+			if !r.Match(b) {
+				return false
+			}
+		}
+		return true
+	}
+}
+
+// enableExecutable returns true if name is an executable file in the
+// environment's PATH.
+func enableExecutable(name string) func() bool {
+	return func() bool {
+		_, err := exec.LookPath(name)
+		return err == nil
 	}
 }

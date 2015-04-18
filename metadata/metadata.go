@@ -51,6 +51,7 @@ const (
 	Count               = ""
 	Document            = "documents"
 	Entropy             = "entropy"
+	Error               = "errors"
 	Event               = ""
 	Eviction            = "evictions"
 	Fault               = "faults"
