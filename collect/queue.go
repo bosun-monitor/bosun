@@ -75,7 +75,7 @@ func sendBatch(batch []json.RawMessage) {
 		conn, err := net.Dial("tcp", tsdbTelnet)
 		if err != nil {
 			slog.Error(err)
-		}else{
+		} else {
 			for _, d := range batch {
 				var dp opentsdb.DataPoint
 				json.Unmarshal(d, &dp)
@@ -106,12 +106,13 @@ func sendBatch(batch []json.RawMessage) {
 				buffer.WriteString(b.String())
 				buffer.WriteString("\n")
 				fmt.Fprintf(conn, buffer.String())
-			}	
+			}
 			d := time.Since(now).Nanoseconds() / 1e6
 			Add("collect.post.total_duration", nil, d)
 			Add("collect.post.count", nil, 1)
 			conn.Close()
 		}
+
 	} else {
 		var buf bytes.Buffer
 		g := gzip.NewWriter(&buf)
