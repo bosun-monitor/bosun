@@ -71,46 +71,48 @@ func sendBatch(batch []json.RawMessage) {
 		recordSent(len(batch))
 		return
 	}
-	if TCP {
-		conn, err := net.Dial("tcp", tsdbTCP)
+	if Telnet {
+		conn, err := net.Dial("tcp", tsdbTelnet)
 		if err != nil {
 			slog.Error(err)
-		}
-		for _, d := range batch {
-			var dp opentsdb.DataPoint
-			json.Unmarshal(d, &dp)
-			var buffer bytes.Buffer
-			buffer.WriteString("put ")
-			buffer.WriteString(dp.Metric)
-			buffer.WriteString(" ")
-			buffer.WriteString(strconv.FormatInt(dp.Timestamp, 10))
-			buffer.WriteString(" ")
-			str, ok := dp.Value.(float64)
-			if ok {
-				//slog.Debug("Valid Value")
-			}
-			var keys []string
-			for k := range dp.Tags {
-				keys = append(keys, k)
-			}
-
-			b := &bytes.Buffer{}
-			for i, k := range keys {
-				if i > 0 {
-					fmt.Fprint(b, " ")
+		}else{
+			for _, d := range batch {
+				var dp opentsdb.DataPoint
+				json.Unmarshal(d, &dp)
+				var buffer bytes.Buffer
+				buffer.WriteString("put ")
+				buffer.WriteString(dp.Metric)
+				buffer.WriteString(" ")
+				buffer.WriteString(strconv.FormatInt(dp.Timestamp, 10))
+				buffer.WriteString(" ")
+				str, ok := dp.Value.(float64)
+				if ok {
+					//slog.Debug("Valid Value")
 				}
-				fmt.Fprintf(b, "%s=%s", k, dp.Tags[k])
-			}
-			buffer.WriteString(strconv.FormatFloat(float64(str), 'f', 2, 32))
-			buffer.WriteString(" ")
-			buffer.WriteString(b.String())
-			buffer.WriteString("\n")
-			fmt.Fprintf(conn, buffer.String())
+				var keys []string
+				for k := range dp.Tags {
+					keys = append(keys, k)
+				}
+
+				b := &bytes.Buffer{}
+				for i, k := range keys {
+					if i > 0 {
+						fmt.Fprint(b, " ")
+					}
+					fmt.Fprintf(b, "%s=%s", k, dp.Tags[k])
+				}
+				buffer.WriteString(strconv.FormatFloat(float64(str), 'f', 2, 32))
+				buffer.WriteString(" ")
+				buffer.WriteString(b.String())
+				buffer.WriteString("\n")
+				fmt.Fprintf(conn, buffer.String())
+			}	
+			d := time.Since(now).Nanoseconds() / 1e6
+			Add("collect.post.total_duration", nil, d)
+			Add("collect.post.count", nil, 1)
+			conn.Close()
 		}
-		d := time.Since(now).Nanoseconds() / 1e6
-		Add("collect.post.total_duration", nil, d)
-		Add("collect.post.count", nil, 1)
-		conn.Close()
+		
 	} else {
 		var buf bytes.Buffer
 		g := gzip.NewWriter(&buf)
