@@ -66,7 +66,7 @@ func installService(name, desc string) error {
 		s.Close()
 		return fmt.Errorf("service %s already exists", name)
 	}
-	s, err = m.CreateService(name, exepath, mgr.Config{DisplayName: name,
+	s, err = m.CreateService(name, fmt.Sprintf(`"%s"`, exepath), mgr.Config{DisplayName: name,
 		StartType:   mgr.StartAutomatic,
 		Description: desc})
 	if err != nil {
