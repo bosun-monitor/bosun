@@ -15,6 +15,9 @@ echo -e "\nRunning go vet bosun.org/..."
 go vet bosun.org/...
 GOVETRESULT=$?
 
+echo -e "\nGetting esc"
+go get -u -v github.com/mjibson/esc
+
 echo -e "\nRunning go generate bosun.org/..."
 go generate bosun.org/...
 GOGENERATERESULT=$?

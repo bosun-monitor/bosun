@@ -38,7 +38,7 @@ func (_esc_localFS) Open(name string) (http.File, error) {
 	return os.Open(f.local)
 }
 
-func (_esc_staticFS) Open(name string) (http.File, error) {
+func (_esc_staticFS) prepare(name string) (*_esc_file, error) {
 	f, present := _esc_data[path.Clean(name)]
 	if !present {
 		return nil, os.ErrNotExist
@@ -56,6 +56,14 @@ func (_esc_staticFS) Open(name string) (http.File, error) {
 		}
 		f.data, err = ioutil.ReadAll(gr)
 	})
+	if err != nil {
+		return nil, err
+	}
+	return f, nil
+}
+
+func (fs _esc_staticFS) Open(name string) (http.File, error) {
+	f, err := fs.prepare(name)
 	if err != nil {
 		return nil, err
 	}
@@ -118,25 +126,45 @@ func FS(useLocal bool) http.FileSystem {
 	return _esc_static
 }
 
+
+// FSByte returns the named file from the embedded assets. If useLocal is
+// true, the filesystem's contents are instead used.
+func FSByte(useLocal bool, name string) ([]byte, error) {
+	if useLocal {
+		f, err := _esc_local.Open(name)
+		if err != nil {
+			return nil, err
+		}
+		return ioutil.ReadAll(f)
+	}
+	f, err := _esc_static.prepare(name)
+	if err != nil {
+		return nil, err
+	}
+	return f.data, nil
+}
+
+// FSMustByte is the same as FSByte, but panics if name is not present.
+func FSMustByte(useLocal bool, name string) []byte {
+	b, err := FSByte(useLocal, name)
+	if err != nil {
+		panic(err)
+	}
+	return b
+}
+
+// FSString is the string version of FSByte.
+func FSString(useLocal bool, name string) (string, error) {
+	b, err := FSByte(useLocal, name)
+	return string(b), err
+}
+
+// FSMustString is the string version of FSMustByte.
+func FSMustString(useLocal bool, name string) string {
+	return string(FSMustByte(useLocal, name))
+}
+
 var _esc_data = map[string]*_esc_file{
-
-	"/.DS_Store": {
-		local: "web/static/.DS_Store",
-		size:  6148,
-		compressed: "" +
-			"\x1f\x8b\b\x00\x00\tn\x88\x00\xff\xec\x98Mj\xc30\x10\x85gd/\x04\xddh٥\xae\xd0\x1b\b㞠\x17(\xb5W\xc5\xe0\x85\xe9^\xab\x9e+G\x8b\x85^\x12\x05Ǆ@\xc0!y\x1f\x88\xcfX3\xfe\xd9h4\x12\x11m\xfe\xfa\x0f\x117_Zɖ\u007f\xb9\x88\xc5X`\nkzF7\xfc\x8c\xe3\xa0\xc5\xd4UR`%\x9d" +
-			"L2\xf5S\x99\xff{~\x83\x10B\b!\xf7\x01uվm\xfb\x19\x84\x90\a$\xad\x0f\x1e\x0ep\xccV\xcc\x1b\xb8.r\x1c\xec\xe1\x00\xc7lE\x9c\x81k\xd8\xc2\x0e\xf6p\x80c6\x16-E\x87\xa1x\xb3\xa2CQ\a{8\xdc\xf8ӄ\xbc\bU\x96K\xf5\xffSV\xfb\u007fB\xc8\x13\xa3u\xfb\xd56rl\b\x16\xa4Z\xeb\xe7\xf1" +
-			"\x8d\x98\xdd!qe#`\xf2\x81Ờ\xe2<\x1c\xe0\x98\xcd\xcd\x00![\xb0\x0f\x00\x00\xff\xff=\v\"\"\x04\x18\x00\x00",
-	},
-
-	"/css/.DS_Store": {
-		local: "web/static/css/.DS_Store",
-		size:  6148,
-		compressed: "" +
-			"\x1f\x8b\b\x00\x00\tn\x88\x00\xff\xec\x98MJ\xc4@\x10\x85_\xb5A\x1a\xdc\xf4\xd2e_\xc1\x1b4\xc3x\x02/\xe0ψ\b#\xb3\b\xee{\xe5\xb9<\x9aiꩁ$`V\x11}\x1f4_ U\x95d\xd3\xd5\x15\x00\xb6{=\\\x01i\xb8\x8cp\xe3\r\xb3D\xae\t\x816_C\x8dG\xf4\x87\xfe\xe1x\u007f:\x1d\xe7kMh" +
-			"\xb9\xe7x\xc6\v\xee\xf04η\x1f\x16\x10B\b!\xc4*\xd8b\xe3Ŷ\xaf!\x84\xf8\x85\xb4\xfd!Ӆ\xaen\xe3\xfd@w\xa3\x9cDg\xba\xd0\xd5m\x8c\vtGG:љ.tus\xd32\x0e\x1f\xc6'\x1b'\x14Kt\xa6\xcbʏ\x16\xe2\x9fp\xe6J\xad\xff_cq\xfe\x17B\xfca\xac\xdb\xdf\xecw\xf8\x1a\b&\xb4" +
-			"^\x9b\x87u˘\xf7\xcfą\x83@\xf0\x1f\x86\x97\xf8\x8e\xcbt\xa1\xab[\x87\x01!\xb6\xe0#\x00\x00\xff\xff\xfeJU\x95\x04\x18\x00\x00",
-	},
 
 	"/css/bootstrap.min.css": {
 		local: "web/static/css/bootstrap.min.css",
