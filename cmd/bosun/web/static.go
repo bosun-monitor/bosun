@@ -126,7 +126,6 @@ func FS(useLocal bool) http.FileSystem {
 	return _esc_static
 }
 
-
 // FSByte returns the named file from the embedded assets. If useLocal is
 // true, the filesystem's contents are instead used.
 func FSByte(useLocal bool, name string) ([]byte, error) {
