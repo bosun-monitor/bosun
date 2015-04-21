@@ -73,6 +73,10 @@ func (instance *trackedInstance) fetchHAProxyData(md *opentsdb.MultiDataPoint, u
 	if err != nil {
 		return err
 	}
+	// Close connection after request. Default cached connections will get
+	// failures in the event of server closing idle connections.
+	// See https://github.com/golang/go/issues/8946
+	req.Close = true
 	req.SetBasicAuth(user, pwd)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
