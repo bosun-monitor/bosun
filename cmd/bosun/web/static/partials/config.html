@@ -23,6 +23,11 @@
 	float:right;margin-left:5px;
 }
 
+.section-button {
+	max-height: 500px;
+	overflow-y: auto;
+}
+
 </style>
 <label class="selectorDropdown" style="margin-right:15px;">Jump to:</label>
 <div class="row">
@@ -30,7 +35,7 @@
 		<button class="btn btn-primary dropdown-toggle" type="button" id="itemSelector" data-toggle="dropdown" ng-bind="type">
 			<span class="caret"></span>
 		</button>
-		<ul class="dropdown-menu" role="menu" >
+		<ul class="dropdown-menu section-button" role="menu">
 			<li role="presentation" ng-repeat="item in list | orderBy:'toString()'"><a role="menuitem" tabindex="-1" ng-click="scrollTo(type,item);">{{item}}</a></li>
 		</ul>
 	</div>
