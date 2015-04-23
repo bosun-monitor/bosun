@@ -100,12 +100,18 @@ bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', '$q', '$r
     $scope.panelClass = function (status, prefix) {
         if (prefix === void 0) { prefix = "panel-"; }
         switch (status) {
-            case "critical": return prefix + "danger";
-            case "unknown": return prefix + "info";
-            case "warning": return prefix + "warning";
-            case "normal": return prefix + "success";
-            case "error": return prefix + "danger";
-            default: return prefix + "default";
+            case "critical":
+                return prefix + "danger";
+            case "unknown":
+                return prefix + "info";
+            case "warning":
+                return prefix + "warning";
+            case "normal":
+                return prefix + "success";
+            case "error":
+                return prefix + "danger";
+            default:
+                return prefix + "default";
         }
     };
     var scheduleFilter;
@@ -300,6 +306,8 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
     $scope.template_group = search.template_group || '';
     $scope.items = parseItems();
     $scope.tab = search.tab || 'results';
+    $scope.aceTheme = 'chrome';
+    $scope.aceMode = 'bosun';
     var expr = search.expr;
     function buildAlertFromExpr() {
         if (!expr)
@@ -367,6 +375,19 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
             $scope.$apply(function () {
                 $scope.items = parseItems();
             });
+        });
+    };
+    var syntax = true;
+    $scope.aceToggleHighlight = function () {
+        if (syntax) {
+            editor.getSession().setMode();
+            syntax = false;
+            return;
+        }
+        syntax = true;
+        editor.getSession().setMode({
+            path: 'ace/mode/' + $scope.aceMode,
+            v: Date.now()
         });
     };
     $scope.scrollTo = function (type, name) {

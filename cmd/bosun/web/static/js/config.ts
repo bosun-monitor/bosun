@@ -10,6 +10,9 @@ interface IConfigScope extends IBosunScope {
 	validationResult: string;
 	selectAlert: (alert:string) => void;
 	reparse: () => void;
+	aceTheme: string;
+	aceMode: string;
+	aceToggleHighlight: () => void;
 	
 	//rule execution options
 	fromDate: string;
@@ -54,6 +57,8 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 	$scope.template_group = search.template_group || '';
 	$scope.items = parseItems();
 	$scope.tab = search.tab || 'results';
+	$scope.aceTheme = 'chrome';
+	$scope.aceMode = 'bosun';
 	
 	var expr = search.expr;
 	function buildAlertFromExpr(){
@@ -139,21 +144,32 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 		editor.getSession().setUseWrapMode(true);
 		editor.on("blur", function(){
 			$scope.$apply(function () {
-            		$scope.items = parseItems();
-        		});
+				$scope.items = parseItems();
+		});
 		});
 	};
-
+	var syntax = true;
+	$scope.aceToggleHighlight = function() {
+		if (syntax) {
+			editor.getSession().setMode();
+			syntax = false;
+			return;
+		}
+		syntax = true;
+		editor.getSession().setMode({
+			path: 'ace/mode/' + $scope.aceMode,
+			v: Date.now()
+		});
+	}
 	$scope.scrollTo = (type:string, name:string) => {
 		var searchRegex = new RegExp("^\\s*"+type+"\\s+"+name+"\\s*\\{", "g");
 		editor.find(searchRegex,{
-    			backwards: false,
-    			wrap: true,
-    			caseSensitive: false,
-    			wholeWord: false,
-    			regExp: true,
+				backwards: false,
+				wrap: true,
+				caseSensitive: false,
+				wholeWord: false,
+				regExp: true,
 		});
-
 		if (type == "alert"){$scope.selectAlert(name);}
 	}
 	
@@ -203,12 +219,12 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 		}
 		$scope.duration = d;
 	};
-	
+
 	$scope.selectAlert = (alert:string) =>{
 		$scope.selected_alert = alert;
 		$location.search("alert",alert);
 	}
-	
+
 	$scope.setTemplateGroup= (group) =>{
 		var match = group.match(/{(.*)}/);
 		if (match){
@@ -221,7 +237,7 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 			.success((data) => {
 				if (data == "") {
 					$scope.validationResult = "Valid";
-					$timeout(()=>{ 
+					$timeout(()=>{
 						$scope.validationResult = "";
 					},2000)
 				} else {
@@ -236,7 +252,7 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 				$scope.validationResult = 'Error validating: ' + error;
 			});
 	}
-	
+
 	$scope.test = () => {
 		$scope.error = '';
 		$scope.running = true;
@@ -294,11 +310,11 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 				$scope.stop();
 			});
 	}
-	
+
 	$scope.zws = (v: string) => {
 		return v.replace(/([,{}()])/g, '$1\u200b');
 	};
-	
+
 	function procResults(data: any) {
 		$scope.subject = data.Subject;
 		$scope.body = $sce.trustAsHtml(data.Body);
