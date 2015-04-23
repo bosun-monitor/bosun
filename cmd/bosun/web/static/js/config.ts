@@ -41,6 +41,7 @@ interface IConfigScope extends IBosunScope {
 	setTemplateGroup: (group:any) => void;
 	scrollToInterval: (v: string) => void;
 	show: (v: any) => void;
+	loadTimelinePanel: (entry:any, v: any) => void;
 }
 
 bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$route', '$timeout','$sce', function($scope: IConfigScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService, $timeout: ng.ITimeoutService, $sce: ng.ISCEService) {
@@ -92,7 +93,6 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 		})
 	}
 		
-	
 	function parseItems() : { [type: string]: string[]; }{
 		var configText = $scope.config_text;
 		var re = /^\s*(alert|template|notification|lookup|macro)\s+([\w\-\.\$]+)\s*\{/gm; 
@@ -162,7 +162,7 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 		});
 	}
 	$scope.scrollTo = (type:string, name:string) => {
-		var searchRegex = new RegExp("^\\s*"+type+"\\s+"+name+"\\s*\\{", "g");
+		var searchRegex = new RegExp("^\\s*"+type+"\\s+"+name, "g");
 		editor.find(searchRegex,{
 				backwards: false,
 				wrap: true,
@@ -314,7 +314,33 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 	$scope.zws = (v: string) => {
 		return v.replace(/([,{}()])/g, '$1\u200b');
 	};
-
+	
+	$scope.loadTimelinePanel = (entry:any, v:any) => {
+		if (v.doneLoading && !v.error){return;}
+		v.error = null;
+		v.doneLoading = false;
+		var ak = entry.key;
+		var openBrack = ak.indexOf("{");
+		var closeBrack = ak.indexOf("}");
+		var alertName = ak.substr(0, openBrack);
+		var template = ak.substring(openBrack+1, closeBrack);
+		var url = '/api/rule?' +
+			'alert=' + encodeURIComponent(alertName) +
+			'&from=' + encodeURIComponent(moment.utc(v.Time).format()) +
+			'&template_group=' + encodeURIComponent(template);
+		$http.post(url, $scope.config_text)
+			.success((data) => {
+				v.subject = data.Subject;
+				v.body = data.Body;
+			})
+			.error((error) => {
+				v.error = error;
+			})
+			.finally(()=>{
+				v.doneLoading = true;
+			});
+	};
+	
 	function procResults(data: any) {
 		$scope.subject = data.Subject;
 		$scope.body = $sce.trustAsHtml(data.Body);

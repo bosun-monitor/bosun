@@ -218,8 +218,11 @@ bosunApp.directive('tsTimeLine', () => {
 	return {
 		link: (scope: any, elem: any, attrs: any) => {
 			scope.shown = {};
-			scope.collapse = (i: any) => {
+			scope.collapse = (i: any, entry:any, v: any) => {
 				scope.shown[i] = !scope.shown[i];
+				if (scope.loadTimelinePanel && entry && scope.shown[i]){
+					scope.loadTimelinePanel(entry,v);
+				}
 			};
 			scope.$watch('alert_history', update);
 			function update(history: any) {
@@ -294,6 +297,9 @@ bosunApp.directive('tsTimeLine', () => {
 							var id = 'panel' + i + '-' + j;
 							scope.shown['group' + i] = true;
 							scope.shown[id] = true;
+							if (scope.loadTimelinePanel){
+								scope.loadTimelinePanel(entry,d);
+							}
 							scope.$apply();
 							setTimeout(() => {
 								var e = $("#" + id);

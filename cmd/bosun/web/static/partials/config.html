@@ -123,7 +123,55 @@
 </ul>
 <div class="tab-content">
 	<div class="tab-pane" ng-class="{active: tab == 'timeline'}">
-		<div ts-alert-history ng-if="tab == 'timeline' && fromDate && toDate"></div>
+		<div ng-if="tab == 'timeline' && fromDate && toDate">
+			<div class="row">
+				<div class="col-lg-12 timeline" ts-time-line></div>
+			</div>
+			<div class="row">
+				<div class="panel-group" ng-repeat="entry in entries" ng-init="name = entry.key; a = entry.value">
+					<div class="panel panel-default">
+						<div class="panel-heading panel-title" ng-click="collapse('group' + $index)">
+							<span ng-bind="name"></span>
+							<span class="pull-right" ng-bind="a.History.length + ' events'"></span>
+						</div>
+						<div class="panel-body" ng-if="shown['group' + $index]">
+							<div class="panel-group">
+								<div class="panel" ng-class="panelClass(v.Status)" ng-repeat="v in a.History">
+									<div class="panel-heading" ng-click="collapse('panel' + $parent.$index + '-' + $index,entry,v)" id="{{'panel' + $parent.$index + '-' + $index}}">
+										<h4 class="panel-title">
+											<a href>
+												<span ng-bind="name + ': ' + v.Status"></span>
+												<span class="pull-right" ng-show="v.Time" ts-time="v.Time" ts-end-time="v.EndTime" no-link="true"></span>
+											</a>
+										</h4>
+									</div>
+									<div class="panel-body" ng-if="shown['panel' + $parent.$index + '-' + $index]">
+										<div ng-show="!v.doneLoading">Loading...</div>
+										<div class="row" ng-show="v.error">
+											<div class="col-lg-12">
+												<pre class="alert alert-danger" ng-bind="v.error" style="white-space: pre-wrap;"></pre>
+											</div>
+										</div>
+										<div class="panel panel-default">
+											<div class="panel-heading">
+												<h3 class="panel-title">Subject</h3>
+											</div>
+											<div class="panel-body template" ng-bind="v.subject"></div>
+										</div>
+										<div class="panel panel-default">
+											<div class="panel-heading">
+												<h3 class="panel-title">Body</h3>
+											</div>
+											<div class="panel-body template" ng-bind-html="v.body"></div>
+										</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
 	</div>
 	<div class="tab-pane" ng-class="{active: tab == 'template'}">
 		<div class="panel panel-default">
