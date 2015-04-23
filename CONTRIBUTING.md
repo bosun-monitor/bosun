@@ -22,4 +22,4 @@ We use the golang [Go Code Review Comments](https://github.com/golang/go/wiki/Co
 
 ### scollector submission guidelines
 
-1. New scollector collectors must have units, types, and descriptions for all new metrics. Descriptions should not be in the Add line, but in another data structure or constant. See [keepalive collectors](https://github.com/bosun-monitor/bosun/blob/master/cmd/scollector/collectors/keepalived_linux.go) for the constants, and the [memcached](https://github.com/bosun-monitor/bosun/blob/master/cmd/scollector/collectors/memcached_unix.go) for good patterns.
+1. New scollector collectors must have units, types, and descriptions for all new metrics. Descriptions should not be in the `Add()` line, but in another data structure or constant. See [keepalive collectors](https://github.com/bosun-monitor/bosun/blob/master/cmd/scollector/collectors/keepalived_linux.go) for the constants, and the [memcached](https://github.com/bosun-monitor/bosun/blob/master/cmd/scollector/collectors/memcached_unix.go) for good patterns.
