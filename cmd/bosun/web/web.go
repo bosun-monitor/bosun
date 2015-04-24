@@ -70,6 +70,7 @@ func Listen(listenAddr string, devMode bool, tsdbHost string) error {
 		log.Fatal(err)
 	}
 	if tsdbHost != "" {
+		router.HandleFunc("/api/index", IndexTSDB)
 		router.Handle("/api/put", Relay(tsdbHost))
 	}
 	router.HandleFunc("/api/", APIRedirect)
@@ -144,8 +145,24 @@ func (rp *relayProxy) ServeHTTP(responseWriter http.ResponseWriter, r *http.Requ
 	r.Body = reader
 	w := &relayWriter{ResponseWriter: responseWriter}
 	rp.ReverseProxy.ServeHTTP(w, r)
+	indexTSDB(r, reader.buf.Bytes())
+	tags := opentsdb.TagSet{"path": clean(r.URL.Path), "remote": clean(strings.Split(r.RemoteAddr, ":")[0])}
+	collect.Add("relay.bytes", tags, int64(reader.buf.Len()))
+	tags["status"] = strconv.Itoa(w.code)
+	collect.Add("relay.response", tags, 1)
+}
 
-	body := reader.buf.Bytes()
+func Relay(dest string) http.Handler {
+	return &relayProxy{ReverseProxy: httputil.NewSingleHostReverseProxy(&url.URL{
+		Scheme: "http",
+		Host:   dest,
+	})}
+}
+
+func indexTSDB(r *http.Request, body []byte) {
+	clean := func(s string) string {
+		return opentsdb.MustReplace(s, "_")
+	}
 	if r, err := gzip.NewReader(bytes.NewReader(body)); err == nil {
 		body, _ = ioutil.ReadAll(r)
 		r.Close()
@@ -163,17 +180,17 @@ func (rp *relayProxy) ServeHTTP(responseWriter http.ResponseWriter, r *http.Requ
 		collect.Add("search.datapoints_relayed", tags, int64(len(mdp)))
 		schedule.Search.Index(mdp)
 	}
-	tags := opentsdb.TagSet{"path": clean(r.URL.Path), "remote": clean(strings.Split(r.RemoteAddr, ":")[0])}
-	collect.Add("relay.bytes", tags, int64(reader.buf.Len()))
-	tags["status"] = strconv.Itoa(w.code)
-	collect.Add("relay.response", tags, 1)
 }
 
-func Relay(dest string) http.Handler {
-	return &relayProxy{ReverseProxy: httputil.NewSingleHostReverseProxy(&url.URL{
-		Scheme: "http",
-		Host:   dest,
-	})}
+func IndexTSDB(w http.ResponseWriter, r *http.Request) {
+	if !IPAuthorized(w, r) {
+		return
+	}
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		log.Println(err)
+	}
+	indexTSDB(r, body)
 }
 
 func Index(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
