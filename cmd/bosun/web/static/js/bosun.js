@@ -100,18 +100,12 @@ bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', '$q', '$r
     $scope.panelClass = function (status, prefix) {
         if (prefix === void 0) { prefix = "panel-"; }
         switch (status) {
-            case "critical":
-                return prefix + "danger";
-            case "unknown":
-                return prefix + "info";
-            case "warning":
-                return prefix + "warning";
-            case "normal":
-                return prefix + "success";
-            case "error":
-                return prefix + "danger";
-            default:
-                return prefix + "default";
+            case "critical": return prefix + "danger";
+            case "unknown": return prefix + "info";
+            case "warning": return prefix + "warning";
+            case "normal": return prefix + "success";
+            case "error": return prefix + "danger";
+            default: return prefix + "default";
         }
     };
     var scheduleFilter;
@@ -391,7 +385,7 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
         });
     };
     $scope.scrollTo = function (type, name) {
-        var searchRegex = new RegExp("^\\s*" + type + "\\s+" + name + "\\s*\\{", "g");
+        var searchRegex = new RegExp("^\\s*" + type + "\\s+" + name, "g");
         editor.find(searchRegex, {
             backwards: false,
             wrap: true,
@@ -524,6 +518,27 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
     };
     $scope.zws = function (v) {
         return v.replace(/([,{}()])/g, '$1\u200b');
+    };
+    $scope.loadTimelinePanel = function (entry, v) {
+        if (v.doneLoading && !v.error) {
+            return;
+        }
+        v.error = null;
+        v.doneLoading = false;
+        var ak = entry.key;
+        var openBrack = ak.indexOf("{");
+        var closeBrack = ak.indexOf("}");
+        var alertName = ak.substr(0, openBrack);
+        var template = ak.substring(openBrack + 1, closeBrack);
+        var url = '/api/rule?' + 'alert=' + encodeURIComponent(alertName) + '&from=' + encodeURIComponent(moment.utc(v.Time).format()) + '&template_group=' + encodeURIComponent(template);
+        $http.post(url, $scope.config_text).success(function (data) {
+            v.subject = data.Subject;
+            v.body = data.Body;
+        }).error(function (error) {
+            v.error = error;
+        }).finally(function () {
+            v.doneLoading = true;
+        });
     };
     function procResults(data) {
         $scope.subject = data.Subject;
@@ -779,8 +794,11 @@ bosunApp.directive('tsTimeLine', function () {
     return {
         link: function (scope, elem, attrs) {
             scope.shown = {};
-            scope.collapse = function (i) {
+            scope.collapse = function (i, entry, v) {
                 scope.shown[i] = !scope.shown[i];
+                if (scope.loadTimelinePanel && entry && scope.shown[i]) {
+                    scope.loadTimelinePanel(entry, v);
+                }
             };
             scope.$watch('alert_history', update);
             function update(history) {
@@ -843,6 +861,9 @@ bosunApp.directive('tsTimeLine', function () {
                         var id = 'panel' + i + '-' + j;
                         scope.shown['group' + i] = true;
                         scope.shown[id] = true;
+                        if (scope.loadTimelinePanel) {
+                            scope.loadTimelinePanel(entry, d);
+                        }
                         scope.$apply();
                         setTimeout(function () {
                             var e = $("#" + id);
