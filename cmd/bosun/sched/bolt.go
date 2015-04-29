@@ -170,6 +170,12 @@ func (s *Schedule) RestoreState() error {
 	if err := decode(dbStatus, &status); err != nil {
 		log.Println(dbStatus, err)
 	}
+	clear := func(r *Result) {
+		if r == nil {
+			return
+		}
+		r.Computations = nil
+	}
 	for ak, st := range status {
 		a, present := s.Conf.Alerts[ak.Name()]
 		if !present {
@@ -186,6 +192,12 @@ func (s *Schedule) RestoreState() error {
 			if t == 0 && st.Last().Status == StUnknown {
 				st.Append(&Event{Status: StNormal})
 			}
+		}
+		clear(st.Result)
+		for _, e := range st.History {
+			clear(e.Warn)
+			clear(e.Crit)
+			clear(e.Error)
 		}
 		s.status[ak] = st
 		if a.Log && st.Open {

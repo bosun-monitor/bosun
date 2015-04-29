@@ -20,8 +20,9 @@ import (
 
 type State struct {
 	*Expr
-	now   time.Time
-	cache *cache.Cache
+	now                time.Time
+	cache              *cache.Cache
+	enableComputations bool
 
 	// OpenTSDB
 	Search      *search.Search
@@ -98,6 +99,8 @@ func (e *Expr) ExecuteState(s *State, T miniprofiler.Timer) (r *Results, queries
 	defer errRecover(&err)
 	if T == nil {
 		T = new(miniprofiler.Profile)
+	} else {
+		s.enableComputations = true
 	}
 	T.Step("expr execute", func(T miniprofiler.Timer) {
 		r = s.walk(e.Tree.Root, T)
@@ -245,7 +248,10 @@ type Computation struct {
 	Value interface{}
 }
 
-func (r *Result) AddComputation(text string, value interface{}) {
+func (e *State) AddComputation(r *Result, text string, value interface{}) {
+	if !e.enableComputations {
+		return
+	}
 	r.Computations = append(r.Computations, Computation{opentsdb.ReplaceTags(text, r.Group), value})
 }
 
@@ -325,7 +331,7 @@ func (e *State) union(a, b *Results, expression string) []*Union {
 					B:     b.NaN(),
 					Group: r.Group,
 				}
-				r.AddComputation(expression, fmt.Sprintf(unjoinedGroup, u.B))
+				e.AddComputation(r, expression, fmt.Sprintf(unjoinedGroup, u.B))
 				u.ExtendComputations(r)
 				us = append(us, u)
 			}
@@ -337,7 +343,7 @@ func (e *State) union(a, b *Results, expression string) []*Union {
 					B:     r.Value,
 					Group: r.Group,
 				}
-				r.AddComputation(expression, fmt.Sprintf(unjoinedGroup, u.A))
+				e.AddComputation(r, expression, fmt.Sprintf(unjoinedGroup, u.A))
 				u.ExtendComputations(r)
 				us = append(us, u)
 			}
@@ -374,7 +380,7 @@ func (e *State) walkBinary(node *parse.BinaryNode, T miniprofiler.Timer) *Result
 		u := e.union(ar, br, node.String())
 		for _, v := range u {
 			var value Value
-			r := Result{
+			r := &Result{
 				Group:        v.Group,
 				Computations: v.Computations,
 			}
@@ -388,11 +394,11 @@ func (e *State) walkBinary(node *parse.BinaryNode, T miniprofiler.Timer) *Result
 					switch bt := v.B.(type) {
 					case Scalar:
 						n := Scalar(operate(node.OpStr, float64(at), float64(bt)))
-						r.AddComputation(node.String(), Number(n))
+						e.AddComputation(r, node.String(), Number(n))
 						value = n
 					case Number:
 						n := Number(operate(node.OpStr, float64(at), float64(bt)))
-						r.AddComputation(node.String(), n)
+						e.AddComputation(r, node.String(), n)
 						value = n
 					case Series:
 						s := make(Series)
@@ -407,11 +413,11 @@ func (e *State) walkBinary(node *parse.BinaryNode, T miniprofiler.Timer) *Result
 					switch bt := v.B.(type) {
 					case Scalar:
 						n := Number(operate(node.OpStr, float64(at), float64(bt)))
-						r.AddComputation(node.String(), Number(n))
+						e.AddComputation(r, node.String(), Number(n))
 						value = n
 					case Number:
 						n := Number(operate(node.OpStr, float64(at), float64(bt)))
-						r.AddComputation(node.String(), n)
+						e.AddComputation(r, node.String(), n)
 						value = n
 					case Series:
 						s := make(Series)
@@ -439,7 +445,7 @@ func (e *State) walkBinary(node *parse.BinaryNode, T miniprofiler.Timer) *Result
 				}
 			}
 			r.Value = value
-			res.Results = append(res.Results, &r)
+			res.Results = append(res.Results, r)
 		}
 	})
 	return &res
@@ -588,7 +594,7 @@ func (e *State) walkFunc(node *parse.FuncNode, T miniprofiler.Timer) *Results {
 		}
 		if node.Return() == parse.TypeNumber {
 			for _, r := range res.Results {
-				r.AddComputation(node.String(), r.Value.(Number))
+				e.AddComputation(r, node.String(), r.Value.(Number))
 			}
 		}
 	})
