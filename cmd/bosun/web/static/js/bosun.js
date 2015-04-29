@@ -761,25 +761,6 @@ bosunApp.directive('tsTableSort', ['$timeout', function ($timeout) {
         }
     };
 }]);
-bosunApp.directive('tsHistory', function () {
-    return {
-        scope: {
-            computations: '=tsComputations',
-            time: '=',
-            header: '='
-        },
-        templateUrl: '/partials/history.html',
-        link: function (scope, elem, attrs) {
-            if (scope.time) {
-                var m = moment.utc(scope.time);
-                scope.timeParam = "&date=" + encodeURIComponent(m.format("YYYY-MM-DD")) + "&time=" + encodeURIComponent(m.format("HH:mm"));
-            }
-            scope.btoa = function (v) {
-                return encodeURIComponent(btoa(v));
-            };
-        }
-    };
-});
 bosunApp.directive('tsTimeLine', function () {
     var tsdbFormat = d3.time.format.utc("%Y/%m/%d-%X");
     function parseDate(s) {

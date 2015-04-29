@@ -184,26 +184,6 @@ bosunApp.directive('tsTableSort', ['$timeout', ($timeout: ng.ITimeoutService) =>
 	};
 }]);
 
-bosunApp.directive('tsHistory', () => {
-	return {
-		scope: {
-			computations: '=tsComputations',
-			time: '=',
-			header: '=',
-		},
-		templateUrl: '/partials/history.html',
-		link: (scope: any, elem: any, attrs: any) => {
-			if (scope.time) {
-				var m = moment.utc(scope.time);
-				scope.timeParam = "&date=" + encodeURIComponent(m.format("YYYY-MM-DD")) + "&time=" + encodeURIComponent(m.format("HH:mm"));
-			}
-			scope.btoa = (v: any) => {
-				return encodeURIComponent(btoa(v));
-			};
-		},
-	}
-});
-
 bosunApp.directive('tsTimeLine', () => {
 	var tsdbFormat = d3.time.format.utc("%Y/%m/%d-%X");
 	function parseDate(s: any) {
