@@ -284,6 +284,12 @@ var builtins = map[string]parse.Func{
 		tagFirst,
 		NV,
 	},
+	"top": {
+		[]parse.FuncType{parse.TypeNumber, parse.TypeScalar},
+		parse.TypeNumber,
+		tagFirst,
+		Top,
+	},
 }
 
 func Epoch(e *State, T miniprofiler.Timer) (*Results, error) {
@@ -296,6 +302,15 @@ func Epoch(e *State, T miniprofiler.Timer) (*Results, error) {
 
 func NV(e *State, T miniprofiler.Timer, series *Results, v float64) (results *Results, err error) {
 	series.NaNValue = &v
+	return series, nil
+}
+
+func Top(e *State, T miniprofiler.Timer, series *Results, v float64) (results *Results, err error) {
+	sort.Sort(series.Results)
+	if len(series.Results) > int(v) {
+		series.Results = series.Results[0:int(v)]
+		return series, nil
+	}
 	return series, nil
 }
 
