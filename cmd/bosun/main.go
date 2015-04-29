@@ -19,13 +19,28 @@ import (
 	"strings"
 	"time"
 
+	"bosun.org/_third_party/github.com/facebookgo/httpcontrol"
 	"bosun.org/_third_party/gopkg.in/fsnotify.v1"
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/sched"
 	"bosun.org/cmd/bosun/web"
 	"bosun.org/collect"
+	"bosun.org/graphite"
 	"bosun.org/metadata"
+	"bosun.org/opentsdb"
 )
+
+func init() {
+	client := &http.Client{
+		Transport: &httpcontrol.Transport{
+			RequestTimeout: time.Minute,
+			MaxTries:       3,
+		},
+	}
+	http.DefaultClient = client
+	opentsdb.DefaultClient = client
+	graphite.DefaultClient = client
+}
 
 // These constants should remain in source control as their zero values.
 const (
