@@ -120,14 +120,23 @@ func main() {
 			log.Fatal(sched.Run())
 		}
 	}()
-	sc := make(chan os.Signal, 1)
-	signal.Notify(sc, os.Interrupt)
 	go func() {
-		<-sc
-		log.Println("Interrupt: closing down...")
-		sched.Close()
-		log.Println("done")
-		os.Exit(1)
+		sc := make(chan os.Signal, 1)
+		signal.Notify(sc, os.Interrupt)
+		killing := false
+		for range sc {
+			if killing {
+				log.Println("Second interrupt: exiting")
+				os.Exit(1)
+			}
+			killing = true
+			go func() {
+				log.Println("Interrupt: closing down...")
+				sched.Close()
+				log.Println("done")
+				os.Exit(1)
+			}()
+		}
 	}()
 	if *flagWatch {
 		watch(".", "*.go", quit)
