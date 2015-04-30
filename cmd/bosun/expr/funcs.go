@@ -284,6 +284,24 @@ var builtins = map[string]parse.Func{
 		tagFirst,
 		NV,
 	},
+	"limit": {
+		[]parse.FuncType{parse.TypeNumber, parse.TypeScalar},
+		parse.TypeNumber,
+		tagFirst,
+		Limit,
+	},
+	"filter": {
+		[]parse.FuncType{parse.TypeSeries, parse.TypeNumber},
+		parse.TypeSeries,
+		tagFirst,
+		Filter,
+	},
+	"sort": {
+		[]parse.FuncType{parse.TypeNumber, parse.TypeString},
+		parse.TypeNumber,
+		tagFirst,
+		Sort,
+	},
 }
 
 func Epoch(e *State, T miniprofiler.Timer) (*Results, error) {
@@ -296,6 +314,41 @@ func Epoch(e *State, T miniprofiler.Timer) (*Results, error) {
 
 func NV(e *State, T miniprofiler.Timer, series *Results, v float64) (results *Results, err error) {
 	series.NaNValue = &v
+	return series, nil
+}
+
+func Sort(e *State, T miniprofiler.Timer, series *Results, order string) (*Results, error) {
+	// Sort by groupname first to make the search deterministic
+	sort.Sort(ResultSliceByGroup(series.Results))
+	switch order {
+	case "desc":
+		sort.Stable(sort.Reverse(ResultSliceByValue(series.Results)))
+	case "asc":
+		sort.Stable(ResultSliceByValue(series.Results))
+	default:
+		return nil, fmt.Errorf("second argument of order() must be asc or desc")
+	}
+	return series, nil
+}
+
+func Limit(e *State, T miniprofiler.Timer, series *Results, v float64) (*Results, error) {
+	i := int(v)
+	if len(series.Results) > i {
+		series.Results = series.Results[:i]
+	}
+	return series, nil
+}
+
+func Filter(e *State, T miniprofiler.Timer, series *Results, number *Results) (*Results, error) {
+	var ns ResultSlice
+	for _, sr := range series.Results {
+		for _, nr := range number.Results {
+			if sr.Group.Subset(nr.Group) || nr.Group.Subset(sr.Group) {
+				ns = append(ns, sr)
+			}
+		}
+	}
+	series.Results = ns
 	return series, nil
 }
 

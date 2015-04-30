@@ -208,6 +208,10 @@ type Results struct {
 
 type ResultSlice []*Result
 
+type ResultSliceByGroup ResultSlice
+
+type ResultSliceByValue ResultSlice
+
 func (r *Results) NaN() Number {
 	if r.NaNValue != nil {
 		return Number(*r.NaNValue)
@@ -222,7 +226,7 @@ func (r ResultSlice) DescByValue() ResultSlice {
 		}
 	}
 	c := r[:]
-	sort.Sort(c)
+	sort.Sort(sort.Reverse(ResultSliceByValue(c)))
 	return c
 }
 
@@ -237,9 +241,13 @@ func (r ResultSlice) Filter(filter opentsdb.TagSet) ResultSlice {
 	return output
 }
 
-func (r ResultSlice) Len() int           { return len(r) }
-func (r ResultSlice) Swap(i, j int)      { r[i], r[j] = r[j], r[i] }
-func (r ResultSlice) Less(i, j int) bool { return r[i].Value.(Number) > r[j].Value.(Number) }
+func (r ResultSliceByValue) Len() int           { return len(r) }
+func (r ResultSliceByValue) Swap(i, j int)      { r[i], r[j] = r[j], r[i] }
+func (r ResultSliceByValue) Less(i, j int) bool { return r[i].Value.(Number) < r[j].Value.(Number) }
+
+func (r ResultSliceByGroup) Len() int           { return len(r) }
+func (r ResultSliceByGroup) Swap(i, j int)      { r[i], r[j] = r[j], r[i] }
+func (r ResultSliceByGroup) Less(i, j int) bool { return r[i].Group.String() < r[j].Group.String() }
 
 type Computations []Computation
 
