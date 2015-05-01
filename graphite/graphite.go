@@ -46,12 +46,11 @@ func (r *Request) Query(host string) (Response, error) {
 	if err != nil {
 		return nil, err
 	}
-	if u1.Host == "" && u1.Scheme != "" {
-		u1.Host = u1.Scheme
-		u1.Scheme = "http"
-	} else if u1.Host == "" && u1.Scheme == "" {
+	if u1.Host == "" && u1.Scheme != "" && u1.Path != "" {
 		u1.Host = host
 		u1.Scheme = "http"
+	} else if u1.Scheme == "" || u1.Host = "" || u1.Path != "" {
+		return nil, fmt.Errorf("bad URL format: %v", host)
 	}
 	u := url.URL{
 		Scheme:   u1.Scheme,
