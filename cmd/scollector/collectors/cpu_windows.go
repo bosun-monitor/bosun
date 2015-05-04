@@ -37,8 +37,8 @@ func c_cpu_windows() (opentsdb.MultiDataPoint, error) {
 		AddTS(&md, winCPU, ts, v.PercentInterruptTime/1e5, opentsdb.TagSet{"type": "interrupt"}.Merge(tags), metadata.Counter, metadata.Pct, descWinCPUInterrupt)
 		AddTS(&md, winCPU, ts, v.PercentUserTime/1e5, opentsdb.TagSet{"type": "user"}.Merge(tags), metadata.Counter, metadata.Pct, descWinCPUUser)
 		AddTS(&md, winCPU, ts, v.PercentIdleTime/1e5, opentsdb.TagSet{"type": "idle"}.Merge(tags), metadata.Counter, metadata.Pct, descWinCPUIdle)
-		AddTS(&md, "win.cpu.interrupts", ts, v.InterruptsPersec/1e5, tags, metadata.Counter, metadata.Event, descWinCPUInterrupts)
-		Add(&md, "win.cpu.dpcs", v.DPCRate, tags, metadata.Counter, metadata.Event, descWinCPUDPC)
+		AddTS(&md, "win.cpu.interrupts", ts, v.InterruptsPersec, tags, metadata.Counter, metadata.Event, descWinCPUInterrupts)
+		Add(&md, "win.cpu.dpcs", v.DPCRate, tags, metadata.Gauge, metadata.Event, descWinCPUDPC)
 	}
 	if num > 0 {
 		cpu := used / num
@@ -51,8 +51,8 @@ func c_cpu_windows() (opentsdb.MultiDataPoint, error) {
 		AddTS(&md, winCPUTotal, ts, v.PercentInterruptTime/1e5, opentsdb.TagSet{"type": "interrupt"}, metadata.Counter, metadata.Pct, descWinCPUInterrupt)
 		AddTS(&md, winCPUTotal, ts, v.PercentUserTime/1e5, opentsdb.TagSet{"type": "user"}, metadata.Counter, metadata.Pct, descWinCPUUser)
 		AddTS(&md, winCPUTotal, ts, v.PercentIdleTime/1e5, opentsdb.TagSet{"type": "idle"}, metadata.Counter, metadata.Pct, descWinCPUIdle)
-		AddTS(&md, "win.cpu_total.interrupts", ts, v.InterruptsPersec/1e5, nil, metadata.Counter, metadata.Event, descWinCPUInterrupts)
-		Add(&md, "win.cpu_total.dpcs", v.DPCRate, nil, metadata.Counter, metadata.Event, descWinCPUDPC)
+		AddTS(&md, "win.cpu_total.interrupts", ts, v.InterruptsPersec, nil, metadata.Counter, metadata.Event, descWinCPUInterrupts)
+		Add(&md, "win.cpu_total.dpcs", v.DPCRate, nil, metadata.Gauge, metadata.Event, descWinCPUDPC)
 		AddTS(&md, winCPUCStates, ts, v.PercentC1Time/1e5, opentsdb.TagSet{"cpu": "total", "type": "c1"}, metadata.Counter, metadata.Pct, descWinCPUC1)
 		AddTS(&md, winCPUCStates, ts, v.PercentC2Time/1e5, opentsdb.TagSet{"cpu": "total", "type": "c2"}, metadata.Counter, metadata.Pct, descWinCPUC2)
 		AddTS(&md, winCPUCStates, ts, v.PercentC3Time/1e5, opentsdb.TagSet{"cpu": "total", "type": "c3"}, metadata.Counter, metadata.Pct, descWinCPUC3)

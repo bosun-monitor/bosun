@@ -49,7 +49,7 @@ func c_vmstat_darwin() (opentsdb.MultiDataPoint, error) {
 		if total == 0 {
 			return nil
 		}
-		Add(&md, osMemTotal, total, nil, metadata.Gauge, metadata.Bytes, "")
+		Add(&md, osMemTotal, total, nil, metadata.Gauge, metadata.Bytes, osMemTotalDesc)
 		if free == 0 {
 			return nil
 		}

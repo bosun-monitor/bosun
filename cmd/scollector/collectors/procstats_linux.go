@@ -68,7 +68,7 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 	}); err != nil {
 		Error = err
 	}
-	Add(&md, osMemTotal, int(mem["MemTotal"])*1024, nil, metadata.Gauge, metadata.Bytes, "")
+	Add(&md, osMemTotal, int(mem["MemTotal"])*1024, nil, metadata.Gauge, metadata.Bytes, osMemTotalDesc)
 	Add(&md, osMemFree, int(mem["MemFree"])*1024, nil, metadata.Gauge, metadata.Bytes, osMemFreeDesc)
 	Add(&md, osMemUsed, (int(mem["MemTotal"])-(int(mem["MemFree"])+int(mem["Buffers"])+int(mem["Cached"])))*1024, nil, metadata.Gauge, metadata.Bytes, osMemUsedDesc)
 	if mem["MemTotal"] != 0 {

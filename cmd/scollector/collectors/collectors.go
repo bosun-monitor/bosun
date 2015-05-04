@@ -50,6 +50,7 @@ const (
 	osDiskPctFreeDesc  = "The percent_free property indicates what percentage of the disk is available."
 	osDiskTotalDesc    = "The space_total property indicates in bytes how much total space is on the disk."
 	osDiskUsedDesc     = "The space_used property indicates in bytes how much space is used on the disk."
+	osMemTotalDesc     = "Total amount, in bytes, of physical memory available to the operating system."
 	osMemFreeDesc      = "Number, in bytes, of physical memory currently unused and available."
 	osMemPctFreeDesc   = "The percent of free memory. In Linux free memory includes memory used by buffers and cache."
 	osMemUsedDesc      = "The amount of used memory. In Linux this excludes memory used by buffers and cache."
