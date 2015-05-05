@@ -149,11 +149,11 @@ func vsphereHost(v *vsphere.Vsphere, md *opentsdb.MultiDataPoint) error {
 				}
 				switch p.Name {
 				case "summary.hardware.memorySize":
-					Add(md, osMemTotal, i, tags, metadata.Gauge, metadata.Bytes, "")
+					Add(md, osMemTotal, i, tags, metadata.Gauge, metadata.Bytes, osMemTotalDesc)
 					memTotal = i
 				case "summary.quickStats.overallMemoryUsage":
 					memUsed = i * 1024 * 1024
-					Add(md, osMemUsed, memUsed, tags, metadata.Gauge, metadata.Bytes, "")
+					Add(md, osMemUsed, memUsed, tags, metadata.Gauge, metadata.Bytes, osMemUsedDesc)
 				case "summary.hardware.cpuMhz":
 					cpuMhz = i
 				case "summary.quickStats.overallCpuUsage":
