@@ -1,10 +1,11 @@
 /*
 
-Scollector is a metric collection agent for OpenTSDB 2.0 and http://Bosun.org
+Scollector is a metric collection agent for OpenTSDB 2.0 and Bosun.
 
 tcollector (https://github.com/OpenTSDB/tcollector) is OpenTSDB's data
 collection framework built for OpenTSDB 1.0. scollector aims to be tcollector
-for OpenTSDB 2.0 and is one method of sending data to Bosun for monitoring.
+for OpenTSDB 2.0 and is one method of sending data to Bosun (http://bosun.org/)
+for monitoring.
 
 Unlike tcollector, scollector is a single binary where all collectors are
 compiled into scollector itself. scollector supports external collectors, but
@@ -148,13 +149,13 @@ service (see -winsvc). The Event Log is used when installed as a service.
 
 SNMP
 
-By default, scollector will collect data from the current host and report it to
-the TSDB server. scollector has an SNMP mode where it also polls a given host:
+scollector has an SNMP mode where (in addition to its normal operation)
+it also polls a given host:
 
 	scollector -s community@host[,community@host...]
 
 Poll frequency currently defaults to 5 minutes. Some common OIDs regarding
-interfaces are collected. Others can be added easily.
+interfaces are collected.
 
 */
 package main
