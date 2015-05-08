@@ -3,7 +3,7 @@ package slog
 import (
 	"fmt"
 
-	"bosun.org/_third_party/code.google.com/p/winsvc/debug"
+	"bosun.org/_third_party/golang.org/x/sys/windows/svc/debug"
 )
 
 type eventLog struct {

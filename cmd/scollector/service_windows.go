@@ -4,14 +4,13 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"syscall"
 	"time"
 
-	"bosun.org/_third_party/code.google.com/p/winsvc/debug"
-	"bosun.org/_third_party/code.google.com/p/winsvc/eventlog"
-	"bosun.org/_third_party/code.google.com/p/winsvc/mgr"
-	"bosun.org/_third_party/code.google.com/p/winsvc/registry"
-	"bosun.org/_third_party/code.google.com/p/winsvc/svc"
+	"bosun.org/_third_party/golang.org/x/sys/windows/registry"
+	"bosun.org/_third_party/golang.org/x/sys/windows/svc"
+	"bosun.org/_third_party/golang.org/x/sys/windows/svc/debug"
+	"bosun.org/_third_party/golang.org/x/sys/windows/svc/eventlog"
+	"bosun.org/_third_party/golang.org/x/sys/windows/svc/mgr"
 	"bosun.org/slog"
 )
 
@@ -66,7 +65,7 @@ func installService(name, desc string) error {
 		s.Close()
 		return fmt.Errorf("service %s already exists", name)
 	}
-	s, err = m.CreateService(name, fmt.Sprintf(`"%s"`, exepath), mgr.Config{DisplayName: name,
+	s, err = m.CreateService(name, exepath, mgr.Config{DisplayName: name,
 		StartType:   mgr.StartAutomatic,
 		Description: desc})
 	if err != nil {
@@ -114,7 +113,7 @@ func startService(name string) error {
 		return fmt.Errorf("could not access service: %v", err)
 	}
 	defer s.Close()
-	err = s.Start(nil)
+	err = s.Start()
 	if err != nil {
 		return fmt.Errorf("could not start service: %v", err)
 	}
@@ -205,19 +204,19 @@ func runService(name string, isDebug bool) {
 // See http://stackoverflow.com/questions/29130586 for details.
 func fixEventMessageFile(src string) error {
 	const addKeyName = `SYSTEM\CurrentControlSet\Services\EventLog\Application`
-	appkey, err := registry.OpenKey(syscall.HKEY_LOCAL_MACHINE, addKeyName)
+	appkey, err := registry.OpenKey(registry.LOCAL_MACHINE, addKeyName, registry.ALL_ACCESS)
 	if err != nil {
 		return err
 	}
 	defer appkey.Close()
-	sk, alreadyExist, err := appkey.CreateSubKey(src)
+	sk, alreadyExist, err := registry.CreateKey(appkey, src, registry.ALL_ACCESS)
 	if err != nil {
 		return err
 	}
 	defer sk.Close()
 	if alreadyExist {
 		// Update REG_SZ key with expanded value for %systemroot% variable.
-		err = sk.SetString("EventMessageFile", os.ExpandEnv("${systemroot}\\System32\\EventCreate.exe"))
+		err = sk.SetStringValue("EventMessageFile", os.ExpandEnv("${systemroot}\\System32\\EventCreate.exe"))
 		if err != nil {
 			return err
 		}
