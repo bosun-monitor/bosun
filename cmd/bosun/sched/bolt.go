@@ -56,6 +56,7 @@ const (
 	dbSilence          = "silence"
 	dbStatus           = "status"
 	dbMetadata         = "metadata"
+	dbIncidents        = "incidents"
 )
 
 func (s *Schedule) save() {
@@ -74,6 +75,7 @@ func (s *Schedule) save() {
 		dbSilence:       s.Silence,
 		dbStatus:        s.status,
 		dbMetadata:      s.Metadata,
+		dbIncidents:     s.Incidents,
 	}
 	tostore := make(map[string][]byte)
 	for name, data := range store {
@@ -159,12 +161,22 @@ func (s *Schedule) RestoreState() error {
 	if err := decode(dbMetricTags, &s.Search.MetricTags); err != nil {
 		log.Println(dbMetricTags, err)
 	}
+
 	notifications := make(map[expr.AlertKey]map[string]time.Time)
 	if err := decode(dbNotifications, &notifications); err != nil {
 		log.Println(dbNotifications, err)
 	}
 	if err := decode(dbSilence, &s.Silence); err != nil {
 		log.Println(dbSilence, err)
+	}
+	if err := decode(dbIncidents, &s.Incidents); err != nil {
+		log.Println(dbIncidents, err)
+	}
+	// Calculate next incident id.
+	for _, i := range s.Incidents {
+		if i.Id > s.maxIncidentId {
+			s.maxIncidentId = i.Id
+		}
 	}
 	status := make(States)
 	if err := decode(dbStatus, &status); err != nil {
@@ -190,7 +202,7 @@ func (s *Schedule) RestoreState() error {
 				t = s.Conf.CheckFrequency
 			}
 			if t == 0 && st.Last().Status == StUnknown {
-				st.Append(&Event{Status: StNormal})
+				st.Append(&Event{Status: StNormal, IncidentId: st.Last().IncidentId})
 			}
 		}
 		clear(st.Result)
@@ -219,6 +231,9 @@ func (s *Schedule) RestoreState() error {
 	}
 	if err := decode(dbMetadata, &s.Metadata); err != nil {
 		log.Println(dbMetadata, err)
+	}
+	if s.maxIncidentId == 0 {
+		s.createHistoricIncidents()
 	}
 	s.Search.Copy()
 	log.Println("RestoreState done in", time.Since(start))

@@ -83,6 +83,8 @@ func Listen(listenAddr string, devMode bool, tsdbHost string) error {
 	router.Handle("/api/graph", JSON(Graph))
 	router.Handle("/api/health", JSON(HealthCheck))
 	router.Handle("/api/host", JSON(Host))
+	router.Handle("/api/incidents", JSON(Incidents))
+	router.Handle("/api/incidents/events", JSON(IncidentEvents))
 	router.Handle("/api/metadata/get", JSON(GetMetadata))
 	router.Handle("/api/metadata/metrics", JSON(MetadataMetrics))
 	router.Handle("/api/metadata/put", JSON(PutMetadata))
@@ -344,6 +346,53 @@ func MetadataMetrics(t miniprofiler.Timer, w http.ResponseWriter, r *http.Reques
 
 func Alerts(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	return schedule.MarshalGroups(t, r.FormValue("filter"))
+}
+
+func IncidentEvents(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	id := r.FormValue("id")
+	if id == "" {
+		return nil, fmt.Errorf("id must be specified")
+	}
+	num, err := strconv.ParseUint(id, 10, 64)
+	if err != nil {
+		return nil, err
+	}
+	incident, events, actions, err := schedule.GetIncidentEvents(uint64(num))
+	if err != nil {
+		return nil, err
+	}
+	return struct {
+		Incident *sched.Incident
+		Events   []sched.Event
+		Actions  []sched.Action
+	}{incident, events, actions}, nil
+}
+
+func Incidents(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	alert := r.FormValue("alert")
+	toTime := time.Now().UTC()
+	fromTime := toTime.Add(-14 * 24 * time.Hour) // 2 weeks
+
+	if from := r.FormValue("from"); from != "" {
+		t, err := time.Parse(tsdbFormatSecs, from)
+		if err != nil {
+			return nil, err
+		}
+		fromTime = t
+	}
+	if to := r.FormValue("to"); to != "" {
+		t, err := time.Parse(tsdbFormatSecs, to)
+		if err != nil {
+			return nil, err
+		}
+		toTime = t
+	}
+	incidents := schedule.GetIncidents(alert, fromTime, toTime)
+	maxIncidents := 200
+	if len(incidents) > maxIncidents {
+		incidents = incidents[:maxIncidents]
+	}
+	return incidents, nil
 }
 
 func Status(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {

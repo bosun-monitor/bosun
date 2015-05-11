@@ -5,7 +5,9 @@
 			<span class="glyphicon" ng-class="{'glyphicon-exclamation-sign': state.last.Status && state.last.Status != 'normal'}"></span>
 			<span class="glyphicon" ng-class="{'glyphicon-volume-off': schedule.Silenced[child.AlertKey]}"></span>
 			<span class="glyphicon" ng-class="{'glyphicon-question-sign': state.Unevaluated}"></span>
+			<span ng-show="state.last.IncidentId">#{{state.last.IncidentId}}:</span>
 			<span ng-bind="child.Subject || child.AlertKey"></span>
+			
 			<span class="pull-right" ng-show="child.Ago" ts-since="child.Ago"></span>
 		</a>
 	</h4>
@@ -40,10 +42,17 @@
 				<a ng-href="{{state.RuleUrl}}" ng-bind="name"></a>
 			</div>
 		</div>
+		
 		<div class="row">
 			<div class="col-sm-3 text-right"><strong>Expr</strong></div>
 			<div class="col-sm-9">
 				<a ng-href="/expr?expr={{btoa(state.Expr)}}" ng-bind="zws(state.Expr)"></a>
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-sm-3 text-right"><strong>Incident</strong></div>
+			<div class="col-sm-9">
+				<a ng-href="/incident?id={{state.last.IncidentId}}" ng-bind="state.last.IncidentId"></a>
 			</div>
 		</div>
 		<div class="row" ng-show="state.LastAction">

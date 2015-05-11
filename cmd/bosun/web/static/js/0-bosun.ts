@@ -70,6 +70,11 @@ bosunApp.config(['$routeProvider', '$locationProvider', function($routeProvider:
 			templateUrl: 'partials/put.html',
 			controller: 'PutCtrl',
 		}).
+		when('/incident', {
+			title: 'Incident',
+			templateUrl: 'partials/incident.html',
+			controller: 'IncidentCtrl',
+		}).
 		otherwise({
 			redirectTo: '/',
 		});
