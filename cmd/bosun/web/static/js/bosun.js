@@ -68,6 +68,11 @@ bosunApp.config(['$routeProvider', '$locationProvider', function ($routeProvider
             templateUrl: 'partials/put.html',
             controller: 'PutCtrl'
         }).
+            when('/incident', {
+            title: 'Incident',
+            templateUrl: 'partials/incident.html',
+            controller: 'IncidentCtrl'
+        }).
             otherwise({
             redirectTo: '/'
         });
@@ -2023,6 +2028,23 @@ bosunControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route
                     $scope.fsdata[idx].Data = [data.Series[1]];
                 });
             });
+        });
+    }]);
+bosunControllers.controller('IncidentCtrl', ['$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
+        var search = $location.search();
+        var id = search.id;
+        if (!id) {
+            $scope.error = "must supply incident id as query parameter";
+            return;
+        }
+        $http.get('/api/incidents/events?id=' + id)
+            .success(function (data) {
+            $scope.incident = data.Incident;
+            $scope.events = data.Events;
+            $scope.actions = data.Actions;
+        })
+            .error(function (err) {
+            $scope.error = err;
         });
     }]);
 bosunControllers.controller('ItemsCtrl', ['$scope', '$http', function ($scope, $http) {

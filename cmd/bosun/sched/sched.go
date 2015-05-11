@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"sort"
 	"sync"
 	"time"
 
@@ -36,12 +37,15 @@ type Schedule struct {
 	Silence       map[string]*Silence
 	Group         map[time.Time]expr.AlertKeys
 	Metadata      map[metadata.Metakey]*Metavalue
+	Incidents     map[uint64]*Incident
 	Search        *search.Search
 
 	LastCheck     time.Time
 	nc            chan interface{}
 	notifications map[*conf.Notification][]*State
 	metalock      sync.Mutex
+	maxIncidentId uint64
+	incidentLock  sync.Mutex
 	checkRunning  chan bool
 	db            *bolt.DB
 }
@@ -369,6 +373,7 @@ func (s *Schedule) Init(c *conf.Conf) error {
 	s.Silence = make(map[string]*Silence)
 	s.Group = make(map[time.Time]expr.AlertKeys)
 	s.Metadata = make(map[metadata.Metakey]*Metavalue)
+	s.Incidents = make(map[uint64]*Incident)
 	s.status = make(States)
 	s.Search = search.NewSearch()
 	s.checkRunning = make(chan bool, 1)
@@ -534,12 +539,12 @@ func (s *State) IsActive() bool {
 	return s.Status() > StNormal
 }
 
-func (s *State) Action(user, message string, t ActionType) {
+func (s *State) Action(user, message string, t ActionType, timestamp time.Time) {
 	s.Actions = append(s.Actions, Action{
 		User:    user,
 		Message: message,
 		Type:    t,
-		Time:    time.Now().UTC(),
+		Time:    timestamp,
 	})
 }
 
@@ -559,6 +564,7 @@ func (s *Schedule) Action(user, message string, t ActionType, ak expr.AlertKey) 
 	}
 	isUnknown := st.AbnormalStatus() == StUnknown
 	isError := st.AbnormalStatus() == StError
+	timestamp := time.Now().UTC()
 	switch t {
 	case ActionAcknowledge:
 		if !st.NeedAck {
@@ -576,6 +582,14 @@ func (s *Schedule) Action(user, message string, t ActionType, ak expr.AlertKey) 
 			return fmt.Errorf("cannot close active alert")
 		}
 		st.Open = false
+		last := st.Last()
+		if last.IncidentId != 0 {
+			s.incidentLock.Lock()
+			if incident, ok := s.Incidents[last.IncidentId]; ok {
+				incident.End = &timestamp
+			}
+			s.incidentLock.Unlock()
+		}
 	case ActionForget:
 		if !isUnknown {
 			return fmt.Errorf("can only forget unknowns")
@@ -589,7 +603,7 @@ func (s *Schedule) Action(user, message string, t ActionType, ak expr.AlertKey) 
 	default:
 		return fmt.Errorf("unknown action type: %v", t)
 	}
-	st.Action(user, message, t)
+	st.Action(user, message, t, timestamp)
 	// Would like to also track the alert group, but I believe this is impossible because any character
 	// that could be used as a delimiter could also be a valid tag key or tag value character
 	if err := collect.Add("actions", opentsdb.TagSet{"user": user, "alert": ak.Name(), "type": t.String()}, 1); err != nil {
@@ -607,8 +621,7 @@ func (s *State) Touch() {
 // latest status. Returns the previous status.
 func (s *State) Append(event *Event) Status {
 	last := s.Last()
-	if len(s.History) == 0 || s.Last().Status != event.Status {
-		event.Time = time.Now().UTC()
+	if len(s.History) == 0 || last.Status != event.Status {
 		s.History = append(s.History, *event)
 	}
 	return last.Status
@@ -626,6 +639,7 @@ type Event struct {
 	Status            Status
 	Time              time.Time
 	Unevaluated       bool
+	IncidentId        uint64
 }
 
 type Result struct {
@@ -702,6 +716,139 @@ func (a ActionType) String() string {
 
 func (a ActionType) MarshalJSON() ([]byte, error) {
 	return json.Marshal(a.String())
+}
+
+type Incident struct {
+	Id       uint64
+	Start    time.Time
+	End      *time.Time
+	AlertKey expr.AlertKey
+}
+
+func (s *Schedule) createIncident(ak expr.AlertKey, start time.Time) *Incident {
+	s.incidentLock.Lock()
+	defer s.incidentLock.Unlock()
+	s.maxIncidentId++
+	id := s.maxIncidentId
+	incident := &Incident{
+		Id:       id,
+		Start:    start,
+		AlertKey: ak,
+	}
+
+	s.Incidents[id] = incident
+	return incident
+}
+
+type incidentList []*Incident
+
+func (i incidentList) Len() int { return len(i) }
+func (i incidentList) Less(a int, b int) bool {
+	if i[a].Start.Before(i[b].Start) {
+		return true
+	}
+	return i[a].AlertKey < i[b].AlertKey
+}
+func (i incidentList) Swap(a int, b int) { i[a], i[b] = i[b], i[a] }
+
+func (s *Schedule) createHistoricIncidents() {
+	incidents := make(incidentList, 0)
+	indexes := make(map[*Incident]int)
+	s.Incidents = make(map[uint64]*Incident)
+	// 1. Create all incidents, but don't assign ids or link events yet.
+	for ak, state := range s.status {
+		var currentIncident *Incident
+		for i, ev := range state.History {
+			if currentIncident != nil {
+				if currentIncident.End == nil || ev.Time.Before(*currentIncident.End) {
+					// Continue open incident
+					continue
+				} else {
+					// End incident after end time
+					currentIncident = nil
+				}
+			}
+			if ev.Status == StNormal {
+				continue
+			}
+			// New incident
+			currentIncident = &Incident{AlertKey: ak, Start: ev.Time}
+			indexes[currentIncident] = i
+			incidents = append(incidents, currentIncident)
+			// Find end time for incident
+			for _, action := range state.Actions {
+				if action.Type == ActionClose && action.Time.After(ev.Time) {
+					end := action.Time
+					currentIncident.End = &end
+					break
+				}
+			}
+		}
+	}
+	// 2. Sort incidents
+	sort.Sort(incidents)
+	// 3. Assign ids and link events to appropriate ids
+	for _, incident := range incidents {
+		s.maxIncidentId++
+		incident.Id = s.maxIncidentId
+		// Find events and mark them
+		state := s.status[incident.AlertKey]
+		for idx := indexes[incident]; idx < len(state.History); idx++ {
+			ev := state.History[idx]
+			if incident.End == nil || ev.Time.Before(*incident.End) {
+				ev.IncidentId = incident.Id
+				state.History[idx] = ev
+			} else {
+				break
+			}
+		}
+	}
+}
+
+func (s *Schedule) GetIncidents(alert string, from, to time.Time) []*Incident {
+	s.incidentLock.Lock()
+	defer s.incidentLock.Unlock()
+	list := []*Incident{}
+	for _, i := range s.Incidents {
+		if alert != "" && i.AlertKey.Name() != alert {
+			continue
+		}
+		if i.Start.Before(from) || i.Start.After(to) {
+			continue
+		}
+		list = append(list, i)
+	}
+	return list
+}
+
+func (s *Schedule) GetIncidentEvents(id uint64) (*Incident, []Event, []Action, error) {
+	s.incidentLock.Lock()
+	incident, ok := s.Incidents[id]
+	s.incidentLock.Unlock()
+	if !ok {
+		return nil, nil, nil, fmt.Errorf("incident %d not found", id)
+	}
+	list := []Event{}
+	state := s.GetStatus(incident.AlertKey)
+	if state == nil {
+		return incident, list, nil, nil
+	}
+	found := false
+	for _, e := range state.History {
+		if e.IncidentId == id {
+			found = true
+			list = append(list, e)
+		} else if found {
+			break
+		}
+	}
+	actions := []Action{}
+	for _, a := range state.Actions {
+		if a.Time.After(incident.Start) && (incident.End == nil || a.Time.Before(*incident.End) || a.Time.Equal(*incident.End)) {
+			actions = append(actions, a)
+		}
+	}
+	return incident, list, actions, nil
 }
 
 func (s *Schedule) Host(filter string) map[string]*HostData {

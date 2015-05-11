@@ -111,7 +111,21 @@ func (s *Schedule) RunHistory(r *RunHistory) {
 		if event.Unevaluated {
 			continue
 		}
+		prev := state.Last()
+		event.Time = time.Now().UTC()
+		if prev.IncidentId != 0 {
+			// If last event has incident id and is not closed, we continue it.
+			s.incidentLock.Lock()
+			if incident, ok := s.Incidents[prev.IncidentId]; ok && incident.End != nil {
+				event.IncidentId = prev.IncidentId
+			}
+			s.incidentLock.Unlock()
+		} else if event.Status != StNormal {
+			// Otherwise, create new incident on first non-normal event.
+			event.IncidentId = s.createIncident(ak, event.Time).Id
+		}
 		state.Append(event)
+
 		a := s.Conf.Alerts[ak.Name()]
 		wasOpen := state.Open
 		if event.Status > StNormal {
@@ -166,14 +180,14 @@ func (s *Schedule) RunHistory(r *RunHistory) {
 				state.Open = false
 				state.Forgotten = true
 				state.NeedAck = false
-				state.Action("bosun", "Auto close because alert has ignoreUnknown.", ActionClose)
+				state.Action("bosun", "Auto close because alert has ignoreUnknown.", ActionClose, event.Time)
 				log.Printf("auto close %s because alert has ignoreUnknown", ak)
 				return
 			} else if silenced[ak].Forget && event.Status == StUnknown {
 				state.Open = false
 				state.Forgotten = true
 				state.NeedAck = false
-				state.Action("bosun", "Auto close because alert is silenced and marked auto forget.", ActionClose)
+				state.Action("bosun", "Auto close because alert is silenced and marked auto forget.", ActionClose, event.Time)
 				log.Printf("auto close %s because alert is silenced and marked auto forget", ak)
 				return
 			}
@@ -189,7 +203,6 @@ func (s *Schedule) RunHistory(r *RunHistory) {
 			state.NeedAck = false
 			delete(s.Notifications, ak)
 		}
-
 		// last could be StNone if it is new. Set it to normal if so because StNormal >
 		// StNone. If the state is not open (closed), then the last state we care about
 		// isn't the last abnormal state, it's just normal.

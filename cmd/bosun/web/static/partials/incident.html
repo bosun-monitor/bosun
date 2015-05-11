@@ -1,0 +1,43 @@
+<div class="row" ng-show="error">
+	<div class="col-lg-12">
+		<div class="alert alert-danger" ng-bind="error"></div>
+	</div>
+</div>
+<div ng-show="incident">
+	<div class="row">
+		<h3> Incident {{incident.Id}}: {{incident.AlertKey}} </h3>
+	</div>
+	
+	<div class="row">
+		<h4 ng-show="incident.End"><span ts-time="incident.Start" ts-end-time="incident.End" no-link="true"></span></h4>
+		<h4 ng-hide="incident.End"><span ts-time="incident.Start" no-link="true" /> (Open)</h4>
+	</div>
+	<h3>Actions</h3>
+	<div class="row" ng-hide="actions.length">No actions</div>
+	<div class="row" ng-show="actions.length">
+		<table class="table table-striped" style="width:100%">
+			<thead>
+			<td>Type</td><td>User</td><td>Message</td><td>Time</td>
+			</thead>
+			<tbody>
+				<tr ng-repeat="a in actions">
+					<td ng-bind="a.Type"></td>
+					<td ng-bind="a.User"></td>
+					<td ng-bind="a.Message"></td>
+					<td style="text-align:right;" ng-show="a.Time" ts-time="a.Time"></td>
+				</tr>
+			</tbody>
+		</table>
+	</div>
+	<h3>Events</h3>
+	<div class="row">
+		<table class="table" style="width:100%">
+			<tbody>
+				<tr id="{{'panel' + $parent.$index + '-' + $index}}" ng-class="panelClass(v.Status, '')" ng-repeat="v in events">
+					<td ng-bind="incident.AlertKey + ': ' + v.Status"></td>
+					<td style="text-align:right;" ng-show="v.Time" ts-time="v.Time"></td>
+				</tr>
+			</tbody>
+		</table>
+	</div>
+</div>
