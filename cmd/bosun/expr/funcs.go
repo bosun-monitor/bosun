@@ -307,7 +307,7 @@ var builtins = map[string]parse.Func{
 func Epoch(e *State, T miniprofiler.Timer) (*Results, error) {
 	return &Results{
 		Results: []*Result{
-			{Value: Scalar(float64(time.Now().Unix()))},
+			{Value: Scalar(float64(e.now.Unix()))},
 		},
 	}, nil
 }
@@ -945,10 +945,10 @@ func first(dps Series, args ...float64) (a float64) {
 }
 
 func Since(e *State, T miniprofiler.Timer, series *Results) (*Results, error) {
-	return reduce(e, T, series, since)
+	return reduce(e, T, series, e.since)
 }
 
-func since(dps Series, args ...float64) (a float64) {
+func (e *State) since(dps Series, args ...float64) (a float64) {
 	var last time.Time
 	for k, v := range dps {
 		if k.After(last) {
@@ -956,17 +956,17 @@ func since(dps Series, args ...float64) (a float64) {
 			last = k
 		}
 	}
-	s := time.Since(last)
+	s := e.now.Sub(last)
 	return s.Seconds()
 }
 
 func Forecast_lr(e *State, T miniprofiler.Timer, series *Results, y float64) (r *Results, err error) {
-	return reduce(e, T, series, forecast_lr, y)
+	return reduce(e, T, series, e.forecast_lr, y)
 }
 
 // forecast_lr returns the number of seconds a linear regression predicts the
 // series will take to reach y_val.
-func forecast_lr(dps Series, args ...float64) float64 {
+func (e *State) forecast_lr(dps Series, args ...float64) float64 {
 	const tenYears = time.Hour * 24 * 365 * 10
 	yVal := args[0]
 	var x []float64
@@ -983,12 +983,12 @@ func forecast_lr(dps Series, args ...float64) float64 {
 	} else if it > math.MaxInt64 {
 		i64 = math.MaxInt64
 	} else if math.IsNaN(it) {
-		i64 = time.Now().Unix()
+		i64 = e.now.Unix()
 	} else {
 		i64 = int64(it)
 	}
 	t := time.Unix(i64, 0)
-	s := -time.Since(t)
+	s := -e.now.Sub(t)
 	if s < -tenYears {
 		s = -tenYears
 	} else if s > tenYears {
