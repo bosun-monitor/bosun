@@ -148,6 +148,55 @@ func TestCheckSilence(t *testing.T) {
 	}
 }
 
+func TestIncidentIds(t *testing.T) {
+	s := new(Schedule)
+	c, err := conf.New("", `
+		alert a {
+			crit = 1
+		}
+	`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.StateFile = ""
+	s.Init(c)
+	ak := expr.NewAlertKey("a", nil)
+	r := &RunHistory{
+		Events: map[expr.AlertKey]*Event{
+			ak: {Status: StWarning},
+		},
+	}
+	expect := func(id uint64) {
+		if s.status[ak].Last().IncidentId != id {
+			t.Fatalf("Expeted incident id %d. Got %d.", id, s.status[ak].Last().IncidentId)
+		}
+	}
+	s.RunHistory(r)
+	expect(1)
+
+	r.Events[ak].Status = StNormal
+	r.Events[ak].IncidentId = 0
+	s.RunHistory(r)
+	expect(1)
+
+	r.Events[ak].Status = StWarning
+	r.Events[ak].IncidentId = 0
+	s.RunHistory(r)
+	expect(1)
+
+	r.Events[ak].Status = StNormal
+	r.Events[ak].IncidentId = 0
+	s.RunHistory(r)
+	err = s.Action("", "", ActionClose, ak)
+	if err != nil {
+		t.Fatal(err)
+	}
+	r.Events[ak].Status = StWarning
+	r.Events[ak].IncidentId = 0
+	s.RunHistory(r)
+	expect(2)
+}
+
 func TestCheckNotify(t *testing.T) {
 	s := new(Schedule)
 	nc := make(chan string)
