@@ -129,6 +129,11 @@ func (s *Schedule) RunHistory(r *RunHistory) {
 		a := s.Conf.Alerts[ak.Name()]
 		wasOpen := state.Open
 		if event.Status > StNormal {
+			state.Subject = ""
+			state.Body = ""
+			state.EmailBody = nil
+			state.EmailSubject = nil
+			state.Attachments = nil
 			if event.Status != StUnknown {
 				subject, serr := s.ExecuteSubject(r, a, state, false)
 				if serr != nil {
