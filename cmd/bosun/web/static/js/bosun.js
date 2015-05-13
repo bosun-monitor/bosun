@@ -13,7 +13,7 @@ var bosunApp = angular.module('bosunApp', [
     'ngSanitize',
     'ui.ace',
 ]);
-bosunApp.config(['$routeProvider', '$locationProvider', function ($routeProvider, $locationProvider) {
+bosunApp.config(['$routeProvider', '$locationProvider', '$httpProvider', function ($routeProvider, $locationProvider, $httpProvider) {
         $locationProvider.html5Mode(true);
         $routeProvider.
             when('/', {
@@ -75,6 +75,22 @@ bosunApp.config(['$routeProvider', '$locationProvider', function ($routeProvider
         }).
             otherwise({
             redirectTo: '/'
+        });
+        $httpProvider.interceptors.push(function ($q) {
+            return {
+                'request': function (config) {
+                    var u = config.url;
+                    if (u.indexOf('?') == -1) {
+                        u += '?';
+                    }
+                    else {
+                        u += '&';
+                    }
+                    u += 'miniprofiler=true';
+                    config.url = u;
+                    return config;
+                }
+            };
         });
     }]);
 bosunApp.run(['$location', '$rootScope', function ($location, $rootScope) {

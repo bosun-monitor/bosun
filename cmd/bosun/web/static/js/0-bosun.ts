@@ -15,7 +15,7 @@ var bosunApp = angular.module('bosunApp', [
 	'ui.ace',
 ]);
 
-bosunApp.config(['$routeProvider', '$locationProvider', function($routeProvider: ng.route.IRouteProvider, $locationProvider: ng.ILocationProvider) {
+bosunApp.config(['$routeProvider', '$locationProvider', '$httpProvider', function($routeProvider: ng.route.IRouteProvider, $locationProvider: ng.ILocationProvider, $httpProvider: ng.IHttpProvider) {
 	$locationProvider.html5Mode(true);
 	$routeProvider.
 		when('/', {
@@ -78,6 +78,21 @@ bosunApp.config(['$routeProvider', '$locationProvider', function($routeProvider:
 		otherwise({
 			redirectTo: '/',
 		});
+	$httpProvider.interceptors.push(function($q) {
+		return {
+			'request': function(config) {
+				var u = config.url;
+				if (u.indexOf('?') == -1) {
+					u += '?';
+				} else {
+					u += '&';
+				}
+				u += 'miniprofiler=true';
+				config.url = u;
+				return config;
+			},
+		};
+	});
 }]);
 
 interface IRootScope extends ng.IScope {
