@@ -802,6 +802,7 @@ func (s *Schedule) createHistoricIncidents() {
 				break
 			}
 		}
+		s.Incidents[incident.Id] = incident
 	}
 }
 
