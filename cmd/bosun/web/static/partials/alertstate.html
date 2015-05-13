@@ -49,11 +49,11 @@
 					<p><strong>Silence:</strong></p>
 				</div>
 				<div class="col-sm-9">
-						<a class="btn btn-default btn-xs" ng-href="/silence?duration=1h&alert={{state.Alert}}&tags={{encode(state.Tags)}}">1 hour</a>
-						<a class="btn btn-default btn-xs" ng-href="/silence?duration=2h&alert={{state.Alert}}&tags={{encode(state.Tags)}}">2 hours</a>
-						<a class="btn btn-default btn-xs" ng-href="/silence?duration=6h&alert={{state.Alert}}&tags={{encode(state.Tags)}}">6 hours</a>
-						<a class="btn btn-default btn-xs" ng-href="/silence?duration=12h&alert={{state.Alert}}&tags={{encode(state.Tags)}}">12 hours</a>
-						<a class="btn btn-default btn-xs" ng-href="/silence?duration=24h&alert={{state.Alert}}&tags={{encode(state.Tags)}}">24 hours</a>
+					<a class="btn btn-default btn-xs" ng-href="/silence?duration=1h&alert={{state.Alert}}&tags={{encode(state.Tags)}}">1 hour</a>
+					<a class="btn btn-default btn-xs" ng-href="/silence?duration=2h&alert={{state.Alert}}&tags={{encode(state.Tags)}}">2 hours</a>
+					<a class="btn btn-default btn-xs" ng-href="/silence?duration=6h&alert={{state.Alert}}&tags={{encode(state.Tags)}}">6 hours</a>
+					<a class="btn btn-default btn-xs" ng-href="/silence?duration=12h&alert={{state.Alert}}&tags={{encode(state.Tags)}}">12 hours</a>
+					<a class="btn btn-default btn-xs" ng-href="/silence?duration=24h&alert={{state.Alert}}&tags={{encode(state.Tags)}}">24 hours</a>
 				</div>
 			</div>
 			<div class="row">
@@ -71,7 +71,7 @@
 					<p><strong class="text-right">Last Action:</strong></p>
 				</div>
 				<div class="col-sm-9">
-					{{state.LastAction.Type}}git 
+					{{state.LastAction.Type}}
 					<span ng-show="state.LastAction.User">by {{state.LastAction.User}}</span>
 					at <span ts-time="state.LastAction.Time"></span>
 					<span ng-show="state.LastAction.Message">: {{state.LastAction.Message}}</span>
