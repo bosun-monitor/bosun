@@ -232,11 +232,9 @@ func (s *Schedule) RestoreState() error {
 	if err := decode(dbMetadata, &s.Metadata); err != nil {
 		log.Println(dbMetadata, err)
 	}
-	//if s.maxIncidentId == 0 {
-	s.maxIncidentId = 0 //temporarily start over every time we start up.
-	s.Incidents = make(map[uint64]*Incident)
-	s.createHistoricIncidents()
-	//}
+	if s.maxIncidentId == 0 {
+		s.createHistoricIncidents()
+	}
 	s.Search.Copy()
 	log.Println("RestoreState done in", time.Since(start))
 	return nil
