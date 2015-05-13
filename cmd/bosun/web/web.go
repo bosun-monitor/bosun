@@ -41,6 +41,9 @@ const (
 func init() {
 	miniprofiler.Position = "bottomleft"
 	miniprofiler.StartHidden = true
+	miniprofiler.Enable = func(r *http.Request) bool {
+		return r.FormValue("miniprofiler") != "" || r.URL.Path == "/"
+	}
 	metadata.AddMetricMeta("bosun.search.puts_relayed", metadata.Counter, metadata.Request,
 		"The count of api put requests sent to Bosun for relaying to the backend server.")
 	metadata.AddMetricMeta("bosun.search.datapoints_relayed", metadata.Counter, metadata.Item,
