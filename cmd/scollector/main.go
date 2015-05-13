@@ -34,6 +34,7 @@ var (
 	flagFilter          = flag.String("f", "", "Filters collectors matching this term, multiple terms separated by comma. Works with all other arguments.")
 	flagList            = flag.Bool("l", false, "List available collectors.")
 	flagPrint           = flag.Bool("p", false, "Print to screen instead of sending to a host")
+	flagTelnet          = flag.Bool("telnet", false, "Use telnet instead of HTTP")
 	flagHost            = flag.String("h", "", `Bosun or OpenTSDB host. Ex: "http://bosun.example.com:8070".`)
 	flagColDir          = flag.String("c", "", `External collectors directory.`)
 	flagBatchSize       = flag.Int("b", 0, "OpenTSDB batch size. Used for debugging bad data.")
@@ -269,6 +270,9 @@ func main() {
 	collect.Tags = opentsdb.TagSet{"os": runtime.GOOS}
 	if *flagPrint {
 		collect.Print = true
+	}
+	if *flagTelnet {
+		collect.Telnet = true
 	}
 	if !*flagDisableMetadata {
 		if err := metadata.Init(u, *flagDebug); err != nil {
