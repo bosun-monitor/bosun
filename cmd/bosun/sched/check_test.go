@@ -390,3 +390,54 @@ Loop:
 		}
 	}
 }
+
+// TestCheckCritUnknownEmpty checks that if an alert goes normal -> crit ->
+// unknown, it's body and subject are empty. This is because we should not
+// keep around the crit template renders if we are unknown.
+func TestCheckCritUnknownEmpty(t *testing.T) {
+	s := new(Schedule)
+	c, err := conf.New("", `
+		template t {
+			subject = 1
+			body = 2
+		}
+		alert a {
+			crit = 1
+			template = t
+		}
+	`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.StateFile = ""
+	s.Init(c)
+	ak := expr.NewAlertKey("a", nil)
+	r := &RunHistory{
+		Events: map[expr.AlertKey]*Event{
+			ak: {Status: StNormal},
+		},
+	}
+	verify := func(empty bool) {
+		st := s.GetStatus(ak)
+		if empty {
+			if st.Body != "" || st.Subject != "" {
+				t.Fatalf("expected empty body and subject")
+			}
+		} else {
+			if st.Body != "2" || st.Subject != "1" {
+				t.Fatalf("expected body and subject")
+			}
+		}
+	}
+	s.RunHistory(r)
+	verify(true)
+	r.Events[ak].Status = StCritical
+	s.RunHistory(r)
+	verify(false)
+	r.Events[ak].Status = StUnknown
+	s.RunHistory(r)
+	verify(true)
+	r.Events[ak].Status = StNormal
+	s.RunHistory(r)
+	verify(true)
+}
