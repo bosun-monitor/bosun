@@ -13,6 +13,8 @@ interface IConfigScope extends IBosunScope {
 	aceTheme: string;
 	aceMode: string;
 	aceToggleHighlight: () => void;
+	quickJumpTarget: string;
+	quickJump: () => void;
 	
 	//rule execution options
 	fromDate: string;
@@ -223,6 +225,33 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 	$scope.selectAlert = (alert:string) =>{
 		$scope.selected_alert = alert;
 		$location.search("alert",alert);
+		// Attempt to find `template = foo` in order to set up quick jump between template and alert
+		var searchRegex = new RegExp("^\\s*alert\\s+"+alert, "g");
+		var lines = $scope.config_text.split("\n");
+		$scope.quickJumpTarget = null;
+		for (var i = 0; i < lines.length; i++ ){
+			if(searchRegex.test(lines[i])){
+				for (var j = i+1; j<lines.length; j++){
+					// Close bracket at start of line means end of alert.
+					if (/^\s*\}/m.test(lines[j])){ 
+						return;	
+					}
+					var found = /^\s*template\s*=\s*([\w\-\.\$]+)/m.exec(lines[j]);
+					if(found){
+						$scope.quickJumpTarget = "template " + found[1];
+					}
+				}
+			}
+		}
+	}
+	
+	$scope.quickJump = () =>{
+		var parts = $scope.quickJumpTarget.split(" ");
+		if (parts.length != 2){return;}
+		$scope.scrollTo(parts[0],parts[1]);
+		if(parts[0] == "template" && $scope.selected_alert){
+			$scope.quickJumpTarget = "alert " + $scope.selected_alert;
+		}
 	}
 
 	$scope.setTemplateGroup= (group) =>{

@@ -37,6 +37,7 @@
 			<li role="presentation" ng-repeat="item in list | orderBy:'toString()'"><a role="menuitem" tabindex="-1" ng-click="scrollTo(type,item);">{{item}}</a></li>
 		</ul>
 	</div>
+	<div class="btn btn-default" ng-show="quickJumpTarget" ng-bind="quickJumpTarget" ng-click="quickJump()"></div>
 	<div class="btn btn-default actionButtons" ng-click="validate()">Validate</div>
 	<div class="btn btn-default actionButtons" ng-click="aceToggleHighlight()">Toggle Syntax Highlighting</div>
 </div>
