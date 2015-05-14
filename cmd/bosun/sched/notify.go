@@ -3,8 +3,9 @@ package sched
 import (
 	"bytes"
 	"fmt"
+	htemplate "html/template"
 	"log"
-	"text/template"
+	ttemplate "text/template"
 	"time"
 
 	"bosun.org/cmd/bosun/conf"
@@ -135,7 +136,7 @@ func (s *Schedule) sendNotifications(silenced map[expr.AlertKey]Silence) {
 	}
 }
 
-var unknownMultiGroup = template.Must(template.New("unknownMultiGroup").Parse(`
+var unknownMultiGroup = ttemplate.Must(ttemplate.New("unknownMultiGroup").Parse(`
 	<p>Threshold of {{ .Threshold }} reached for unknown notifications. The following unknown
 	group emails were not sent.
 	<ul>
@@ -179,22 +180,36 @@ func (s *Schedule) utnotify(groups map[string]expr.AlertKeys, n *conf.Notificati
 	n.Notify(subject, body.String(), []byte(subject), body.Bytes(), s.Conf, "unknown_treshold")
 }
 
+var defaultUnknownTemplate = &conf.Template{
+	Body: htemplate.Must(htemplate.New("").Parse(`
+		<p>Time: {{.Time}}
+		<p>Name: {{.Name}}
+		<p>Alerts:
+		{{range .Group}}
+			<br>{{.}}
+		{{end}}
+	`)),
+	Subject: ttemplate.Must(ttemplate.New("").Parse(`{{.Name}}: {{.Group | len}} unknown alerts`)),
+}
+
 func (s *Schedule) unotify(name string, group expr.AlertKeys, n *conf.Notification) {
 	subject := new(bytes.Buffer)
 	body := new(bytes.Buffer)
 	now := time.Now().UTC()
 	s.Group[now] = group
-	if t := s.Conf.UnknownTemplate; t != nil {
-		data := s.unknownData(now, name, group)
-		if t.Body != nil {
-			if err := t.Body.Execute(body, &data); err != nil {
-				log.Println("unknown template error:", err)
-			}
+	t := s.Conf.UnknownTemplate
+	if t == nil {
+		t = defaultUnknownTemplate
+	}
+	data := s.unknownData(now, name, group)
+	if t.Body != nil {
+		if err := t.Body.Execute(body, &data); err != nil {
+			log.Println("unknown template error:", err)
 		}
-		if t.Subject != nil {
-			if err := t.Subject.Execute(subject, &data); err != nil {
-				log.Println("unknown template error:", err)
-			}
+	}
+	if t.Subject != nil {
+		if err := t.Subject.Execute(subject, &data); err != nil {
+			log.Println("unknown template error:", err)
 		}
 	}
 	n.Notify(subject.String(), body.String(), subject.Bytes(), body.Bytes(), s.Conf, name)
