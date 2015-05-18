@@ -460,7 +460,28 @@ func (e *State) walkBinary(node *parse.BinaryNode, T miniprofiler.Timer) *Result
 }
 
 func operate(op string, a, b float64) (r float64) {
-	if math.IsNaN(a) || math.IsNaN(b) {
+	if math.IsNaN(a) {
+		return math.NaN()
+	}
+	if op == "||" {
+		if a != 0 {
+			return 1
+		}
+		if math.IsNaN(b) {
+			return math.NaN()
+		}
+		return b != 0
+	}
+	if op == "&&" {
+		if a == 0 {
+			return 0
+		}
+		if math.IsNaN(b) {
+			return math.NaN()
+		}
+		return b != 0
+	}
+	if math.IsNaN(b) {
 		return math.NaN()
 	}
 	switch op {
@@ -504,18 +525,6 @@ func operate(op string, a, b float64) (r float64) {
 		}
 	case "<=":
 		if a <= b {
-			r = 1
-		} else {
-			r = 0
-		}
-	case "||":
-		if a != 0 || b != 0 {
-			r = 1
-		} else {
-			r = 0
-		}
-	case "&&":
-		if a != 0 && b != 0 {
 			r = 1
 		} else {
 			r = 0
