@@ -392,65 +392,59 @@ func (e *State) walkBinary(node *parse.BinaryNode, T miniprofiler.Timer) *Result
 				Group:        v.Group,
 				Computations: v.Computations,
 			}
-			an, aok := v.A.(Scalar)
-			bn, bok := v.B.(Scalar)
-			if (aok && math.IsNaN(float64(an))) || (bok && math.IsNaN(float64(bn))) {
-				value = Scalar(math.NaN())
-			} else {
-				switch at := v.A.(type) {
+			switch at := v.A.(type) {
+			case Scalar:
+				switch bt := v.B.(type) {
 				case Scalar:
-					switch bt := v.B.(type) {
-					case Scalar:
-						n := Scalar(operate(node.OpStr, float64(at), float64(bt)))
-						e.AddComputation(r, node.String(), Number(n))
-						value = n
-					case Number:
-						n := Number(operate(node.OpStr, float64(at), float64(bt)))
-						e.AddComputation(r, node.String(), n)
-						value = n
-					case Series:
-						s := make(Series)
-						for k, v := range bt {
-							s[k] = operate(node.OpStr, float64(at), float64(v))
-						}
-						value = s
-					default:
-						panic(ErrUnknownOp)
-					}
+					n := Scalar(operate(node.OpStr, float64(at), float64(bt)))
+					e.AddComputation(r, node.String(), Number(n))
+					value = n
 				case Number:
-					switch bt := v.B.(type) {
-					case Scalar:
-						n := Number(operate(node.OpStr, float64(at), float64(bt)))
-						e.AddComputation(r, node.String(), Number(n))
-						value = n
-					case Number:
-						n := Number(operate(node.OpStr, float64(at), float64(bt)))
-						e.AddComputation(r, node.String(), n)
-						value = n
-					case Series:
-						s := make(Series)
-						for k, v := range bt {
-							s[k] = operate(node.OpStr, float64(at), float64(v))
-						}
-						value = s
-					default:
-						panic(ErrUnknownOp)
-					}
+					n := Number(operate(node.OpStr, float64(at), float64(bt)))
+					e.AddComputation(r, node.String(), n)
+					value = n
 				case Series:
-					switch bt := v.B.(type) {
-					case Number, Scalar:
-						bv := reflect.ValueOf(bt).Float()
-						s := make(Series)
-						for k, v := range at {
-							s[k] = operate(node.OpStr, float64(v), bv)
-						}
-						value = s
-					default:
-						panic(ErrUnknownOp)
+					s := make(Series)
+					for k, v := range bt {
+						s[k] = operate(node.OpStr, float64(at), float64(v))
 					}
+					value = s
 				default:
 					panic(ErrUnknownOp)
 				}
+			case Number:
+				switch bt := v.B.(type) {
+				case Scalar:
+					n := Number(operate(node.OpStr, float64(at), float64(bt)))
+					e.AddComputation(r, node.String(), Number(n))
+					value = n
+				case Number:
+					n := Number(operate(node.OpStr, float64(at), float64(bt)))
+					e.AddComputation(r, node.String(), n)
+					value = n
+				case Series:
+					s := make(Series)
+					for k, v := range bt {
+						s[k] = operate(node.OpStr, float64(at), float64(v))
+					}
+					value = s
+				default:
+					panic(ErrUnknownOp)
+				}
+			case Series:
+				switch bt := v.B.(type) {
+				case Number, Scalar:
+					bv := reflect.ValueOf(bt).Float()
+					s := make(Series)
+					for k, v := range at {
+						s[k] = operate(node.OpStr, float64(v), bv)
+					}
+					value = s
+				default:
+					panic(ErrUnknownOp)
+				}
+			default:
+				panic(ErrUnknownOp)
 			}
 			r.Value = value
 			res.Results = append(res.Results, r)
@@ -460,6 +454,17 @@ func (e *State) walkBinary(node *parse.BinaryNode, T miniprofiler.Timer) *Result
 }
 
 func operate(op string, a, b float64) (r float64) {
+	// Test short circuit before NaN.
+	switch op {
+	case "||":
+		if a != 0 {
+			return 1
+		}
+	case "&&":
+		if a == 0 {
+			return 0
+		}
+	}
 	if math.IsNaN(a) || math.IsNaN(b) {
 		return math.NaN()
 	}

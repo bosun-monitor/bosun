@@ -76,7 +76,7 @@ func (f *_escFile) File() (http.File, error) {
 		*_escFile
 	}
 	return &httpFile{
-		Reader:    bytes.NewReader(f.data),
+		Reader:   bytes.NewReader(f.data),
 		_escFile: f,
 	}, nil
 }

@@ -1,6 +1,7 @@
 package expr
 
 import (
+	"math"
 	"testing"
 	"time"
 )
@@ -33,6 +34,16 @@ func TestExprSimple(t *testing.T) {
 		{"1>=2", 0},
 		{"-1 > 0", 0},
 		{"-1 < 0", 1},
+
+		// NaN
+		{"0 / 0", Scalar(math.NaN())},
+		{"1 / 0", Scalar(math.Inf(1))},
+
+		// short circuit
+		{"0 && 0 / 0", 0},
+		{"1 || 0 / 0", 1},
+		{"1 && 0 / 0", Scalar(math.NaN())},
+		{"0 || 0 / 0", Scalar(math.NaN())},
 	}
 
 	for _, et := range exprTests {
@@ -51,6 +62,8 @@ func TestExprSimple(t *testing.T) {
 		} else if len(r.Results[0].Group) != 0 {
 			t.Error("bad group len", r.Results[0].Group)
 			break
+		} else if math.IsNaN(float64(et.output)) && math.IsNaN(float64(r.Results[0].Value.(Scalar))) {
+			// ok
 		} else if r.Results[0].Value != et.output {
 			t.Errorf("expected %v, got %v: %v\nast: %v", et.output, r.Results[0].Value, et.input, e)
 		}
