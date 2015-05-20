@@ -7,11 +7,14 @@ import (
 	"fmt"
 	"html/template"
 	"io/ioutil"
+	"log"
 	"math"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
+
+	"bosun.org/_third_party/github.com/aymerick/douceur/inliner"
 
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/expr"
@@ -107,8 +110,15 @@ func (s *Schedule) ExecuteBody(rh *RunHistory, a *conf.Alert, st *State, isEmail
 	}
 	c := s.Data(rh, st, a, isEmail)
 	buf := new(bytes.Buffer)
-	err := t.Body.Execute(buf, c)
-	return buf.Bytes(), c.Attachments, err
+	if err := t.Body.Execute(buf, c); err != nil {
+		return nil, nil, err
+	}
+	if inline, err := inliner.Inline(buf.String()); err == nil {
+		buf = bytes.NewBufferString(inline)
+	} else {
+		log.Println(err)
+	}
+	return buf.Bytes(), c.Attachments, nil
 }
 
 func (s *Schedule) ExecuteSubject(rh *RunHistory, a *conf.Alert, st *State, isEmail bool) ([]byte, error) {
