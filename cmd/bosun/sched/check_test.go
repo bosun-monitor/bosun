@@ -486,7 +486,7 @@ func TestCheckCritUnknownEmpty(t *testing.T) {
 				t.Fatalf("expected empty body and subject")
 			}
 		} else {
-			if st.Body != "2" || st.Subject != "1" {
+			if st.Body != "<html><head></head><body>2</body></html>" || st.Subject != "1" {
 				t.Fatalf("expected body and subject")
 			}
 		}
