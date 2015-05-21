@@ -52,12 +52,14 @@ func genzsys() error {
 	if err != nil {
 		return err
 	}
-	switch runtime.GOOS {
-	case "dragonfly", "solaris":
-		// The ipv6 pacakge still supports go1.2, and so we
-		// need to take care of additional platforms in go1.3
-		// and above for working with go1.2.
+	// The ipv6 pacakge still supports go1.2, and so we need to
+	// take care of additional platforms in go1.3 and above for
+	// working with go1.2.
+	switch {
+	case runtime.GOOS == "dragonfly" || runtime.GOOS == "solaris":
 		b = bytes.Replace(b, []byte("package ipv6\n"), []byte("// +build "+runtime.GOOS+"\n\npackage ipv6\n"), 1)
+	case runtime.GOOS == "linux" && (runtime.GOARCH == "arm64" || runtime.GOARCH == "ppc64" || runtime.GOARCH == "ppc64le"):
+		b = bytes.Replace(b, []byte("package ipv6\n"), []byte("// +build "+runtime.GOOS+","+runtime.GOARCH+"\n\npackage ipv6\n"), 1)
 	}
 	b, err = format.Source(b)
 	if err != nil {
