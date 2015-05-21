@@ -3,6 +3,7 @@ package httpcontrol_test
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -14,7 +15,6 @@ import (
 
 	"bosun.org/_third_party/github.com/facebookgo/freeport"
 	"bosun.org/_third_party/github.com/facebookgo/httpcontrol"
-	"io"
 )
 
 var theAnswer = []byte("42")
@@ -250,6 +250,81 @@ func TestSafeRetry(t *testing.T) {
 	}
 	if !second {
 		t.Fatal("did not see second request")
+	}
+}
+
+func TestSafeRetryAfterTimeout(t *testing.T) {
+	t.Parallel()
+	port, err := freeport.Get()
+	if err != nil {
+		t.Fatal(err)
+	}
+	addr := fmt.Sprintf("127.0.0.1:%d", port)
+	server := httptest.NewUnstartedServer(sleepHandler(5 * time.Second))
+	transport := &httpcontrol.Transport{
+		MaxTries:          3,
+		RequestTimeout:    5 * time.Millisecond,
+		RetryAfterTimeout: true,
+	}
+	first := false
+	second := false
+	third := false
+	transport.Stats = func(stats *httpcontrol.Stats) {
+		if !first {
+			first = true
+			if stats.Error == nil {
+				t.Fatal("was expecting error")
+			}
+			if !stats.Retry.Pending {
+				t.Fatal("was expecting pending retry", stats.Error)
+			}
+			server.Listener, err = net.Listen("tcp", addr)
+			if err != nil {
+				t.Fatal(err)
+			}
+			server.Start()
+			return
+		}
+
+		if !second {
+			second = true
+			if stats.Error == nil {
+				t.Fatal("was expecting error")
+			}
+			if !stats.Retry.Pending {
+				t.Fatal("was expecting pending retry", stats.Error)
+			}
+			return
+		}
+
+		if !third {
+			third = true
+			if stats.Error == nil {
+				t.Fatal("was expecting error")
+			}
+			if !stats.Retry.Pending {
+				t.Fatal("was expecting pending retry", stats.Error)
+			}
+		}
+	}
+	defer call(transport.Close, t)
+	client := &http.Client{Transport: transport}
+	_, err = client.Get(fmt.Sprintf("http://%s/", addr))
+
+	// Expect this to fail
+	if err == nil {
+		t.Fatal(err)
+	}
+
+	if !first {
+		t.Fatal("did not see first request")
+	}
+	if !second {
+		t.Fatal("did not see second request")
+	}
+
+	if !third {
+		t.Fatal("did not see third request")
 	}
 }
 

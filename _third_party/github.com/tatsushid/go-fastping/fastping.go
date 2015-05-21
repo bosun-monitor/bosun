@@ -213,6 +213,27 @@ func (p *Pinger) AddIPAddr(ip *net.IPAddr) {
 	p.mu.Unlock()
 }
 
+// RemoveIP removes an IP address from Pinger. ipaddr arg should be a string
+// like "192.0.2.1".
+func (p *Pinger) RemoveIP(ipaddr string) error {
+	addr := net.ParseIP(ipaddr)
+	if addr == nil {
+		return fmt.Errorf("%s is not a valid textual representation of an IP address", ipaddr)
+	}
+	p.mu.Lock()
+	delete(p.addrs, addr.String())
+	p.mu.Unlock()
+	return nil
+}
+
+// RemoveIPAddr removes an IP address from Pinger. ip arg should be a net.IPAddr
+// pointer.
+func (p *Pinger) RemoveIPAddr(ip *net.IPAddr) {
+	p.mu.Lock()
+	delete(p.addrs, ip.String())
+	p.mu.Unlock()
+}
+
 // AddHandler adds event handler to Pinger. event arg should be "receive" or
 // "idle" string.
 //

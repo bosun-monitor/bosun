@@ -20,7 +20,7 @@ func Example() {
 		},
 	}
 
-	res, err := client.Get("http://graph.facebook.com/naitik?fields=name")
+	res, err := client.Get("http://graph.facebook.com/DoctorWho?fields=name")
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -33,5 +33,5 @@ func Example() {
 		os.Exit(1)
 	}
 
-	// Output: {"name":"Naitik Shah","id":"5526183"}
+	// Output: {"name":"Doctor Who","id":"127031120644257"}
 }

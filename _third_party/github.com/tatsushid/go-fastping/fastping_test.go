@@ -37,6 +37,44 @@ func TestAddIP(t *testing.T) {
 	}
 }
 
+func TestRemoveIP(t *testing.T) {
+	p := NewPinger()
+
+	if err := p.AddIP("127.0.0.1"); err != nil {
+		t.Fatalf("AddIP failed: %v", err)
+	}
+	if len(p.addrs) != 1 {
+		t.Fatalf("AddIP length check failed")
+	}
+
+	if err := p.RemoveIP("127.0"); err == nil {
+		t.Fatal("RemoveIP, invalid IP should fail")
+	}
+
+	if err := p.RemoveIP("127.0.0.1"); err != nil {
+		t.Fatalf("RemoveIP failed: %v", err)
+	}
+	if len(p.addrs) != 0 {
+		t.Fatalf("RemoveIP length check failed")
+	}
+}
+
+func TestRemoveIPAddr(t *testing.T) {
+	p := NewPinger()
+
+	if err := p.AddIP("127.0.0.1"); err != nil {
+		t.Fatalf("AddIP failed: %v", err)
+	}
+	if len(p.addrs) != 1 {
+		t.Fatalf("AddIP length check failed")
+	}
+
+	p.RemoveIPAddr(&net.IPAddr{IP: net.IPv4(127, 0, 0, 1)})
+	if len(p.addrs) != 0 {
+		t.Fatalf("RemoveIPAddr length check failed")
+	}
+}
+
 func TestRun(t *testing.T) {
 	for _, network := range []string{"ip", "udp"} {
 		p := NewPinger()
