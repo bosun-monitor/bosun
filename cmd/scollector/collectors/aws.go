@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"time"
 
+	"bosun.org/_third_party/github.com/awslabs/aws-sdk-go/aws"
+	"bosun.org/_third_party/github.com/awslabs/aws-sdk-go/aws/credentials"
+	"bosun.org/_third_party/github.com/awslabs/aws-sdk-go/service/cloudwatch"
+	"bosun.org/_third_party/github.com/awslabs/aws-sdk-go/service/ec2"
+	"bosun.org/_third_party/github.com/awslabs/aws-sdk-go/service/elb"
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
-
-	"bosun.org/_third_party/github.com/awslabs/aws-sdk-go/aws"
-	"bosun.org/_third_party/github.com/awslabs/aws-sdk-go/gen/cloudwatch"
-	"bosun.org/_third_party/github.com/awslabs/aws-sdk-go/gen/ec2"
-	"bosun.org/_third_party/github.com/awslabs/aws-sdk-go/gen/elb"
 )
 
 const (
@@ -46,19 +46,20 @@ func AWS(accessKey, secretKey, region string) {
 
 func c_aws(accessKey, secretKey, region string) (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
-	creds := aws.Creds(accessKey, secretKey, "")
-	if creds == nil {
-		return nil, fmt.Errorf("unable to make creds")
+	creds := credentials.NewStaticCredentials(accessKey, secretKey, "")
+	conf := &aws.Config{
+		Credentials: creds,
+		Region:      region,
 	}
-	ecc := ec2.New(creds, region, nil)
+	ecc := ec2.New(conf)
 	if ecc == nil {
 		return nil, fmt.Errorf("unable to login to EC2")
 	}
-	elb := elb.New(creds, region, nil)
+	elb := elb.New(conf)
 	if elb == nil {
 		return nil, fmt.Errorf("unable to login to ELB")
 	}
-	cw := cloudwatch.New(creds, region, nil)
+	cw := cloudwatch.New(conf)
 	if cw == nil {
 		return nil, fmt.Errorf("unable to login to CloudWatch")
 	}
@@ -84,8 +85,8 @@ func c_aws(accessKey, secretKey, region string) (opentsdb.MultiDataPoint, error)
 	return md, nil
 }
 
-func awsGetInstances(ecc ec2.EC2) ([]ec2.Instance, error) {
-	instancelist := []ec2.Instance{}
+func awsGetInstances(ecc ec2.EC2) ([]*ec2.Instance, error) {
+	instancelist := []*ec2.Instance{}
 	resp, err := ecc.DescribeInstances(nil)
 	if err != nil {
 		return nil, fmt.Errorf("unable to describe EC2 Instances")
@@ -98,8 +99,8 @@ func awsGetInstances(ecc ec2.EC2) ([]ec2.Instance, error) {
 	return instancelist, nil
 }
 
-func awsGetLoadBalancers(lb elb.ELB) ([]elb.LoadBalancerDescription, error) {
-	lbList := []elb.LoadBalancerDescription{}
+func awsGetLoadBalancers(lb elb.ELB) ([]*elb.LoadBalancerDescription, error) {
+	lbList := []*elb.LoadBalancerDescription{}
 	resp, err := lb.DescribeLoadBalancers(nil)
 	if err != nil {
 		return nil, fmt.Errorf("unable to describe ELB Balancers")
@@ -110,16 +111,16 @@ func awsGetLoadBalancers(lb elb.ELB) ([]elb.LoadBalancerDescription, error) {
 	return lbList, nil
 }
 
-func awsGetCPU(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, instance ec2.Instance) error {
+func awsGetCPU(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, instance *ec2.Instance) error {
 	search := cloudwatch.GetMetricStatisticsInput{
-		StartTime:  time.Now().UTC().Add(time.Second * -600),
-		EndTime:    time.Now().UTC(),
+		StartTime:  aws.Time(time.Now().UTC().Add(time.Second * -600)),
+		EndTime:    aws.Time(time.Now().UTC()),
 		MetricName: aws.String("CPUUtilization"),
-		Period:     aws.Integer(60),
-		Statistics: []string{"Average"},
+		Period:     aws.Long(60),
+		Statistics: []*string{aws.String("Average")},
 		Namespace:  aws.String("AWS/EC2"),
 		Unit:       aws.String("Percent"),
-		Dimensions: []cloudwatch.Dimension{{Name: aws.String("InstanceId"), Value: instance.InstanceID}},
+		Dimensions: []*cloudwatch.Dimension{{Name: aws.String("InstanceId"), Value: instance.InstanceID}},
 	}
 	resp, err := cw.GetMetricStatistics(&search)
 	if err != nil {
@@ -133,16 +134,16 @@ func awsGetCPU(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, instance e
 	}
 	return nil
 }
-func awsGetNetwork(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, instance ec2.Instance) error {
+func awsGetNetwork(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, instance *ec2.Instance) error {
 	search := cloudwatch.GetMetricStatisticsInput{
-		StartTime:  time.Now().UTC().Add(time.Second * -600),
-		EndTime:    time.Now().UTC(),
+		StartTime:  aws.Time(time.Now().UTC().Add(time.Second * -600)),
+		EndTime:    aws.Time(time.Now().UTC()),
 		MetricName: aws.String("NetworkIn"),
-		Period:     aws.Integer(60),
-		Statistics: []string{"Average"},
+		Period:     aws.Long(60),
+		Statistics: []*string{aws.String("Average")},
 		Namespace:  aws.String("AWS/EC2"),
 		Unit:       aws.String("Bytes"),
-		Dimensions: []cloudwatch.Dimension{{Name: aws.String("InstanceId"), Value: instance.InstanceID}},
+		Dimensions: []*cloudwatch.Dimension{{Name: aws.String("InstanceId"), Value: instance.InstanceID}},
 	}
 	resp, err := cw.GetMetricStatistics(&search)
 	if err != nil {
@@ -162,16 +163,16 @@ func awsGetNetwork(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, instan
 	return nil
 }
 
-func awsGetDiskBytes(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, instance ec2.Instance) error {
+func awsGetDiskBytes(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, instance *ec2.Instance) error {
 	search := cloudwatch.GetMetricStatisticsInput{
-		StartTime:  time.Now().UTC().Add(time.Second * -600),
-		EndTime:    time.Now().UTC(),
+		StartTime:  aws.Time(time.Now().UTC().Add(time.Second * -600)),
+		EndTime:    aws.Time(time.Now().UTC()),
 		MetricName: aws.String("DiskReadBytes"),
-		Period:     aws.Integer(60),
-		Statistics: []string{"Average"},
+		Period:     aws.Long(60),
+		Statistics: []*string{aws.String("Average")},
 		Namespace:  aws.String("AWS/EC2"),
 		Unit:       aws.String("Bytes"),
-		Dimensions: []cloudwatch.Dimension{{Name: aws.String("InstanceId"), Value: instance.InstanceID}},
+		Dimensions: []*cloudwatch.Dimension{{Name: aws.String("InstanceId"), Value: instance.InstanceID}},
 	}
 	resp, err := cw.GetMetricStatistics(&search)
 	if err != nil {
@@ -191,16 +192,16 @@ func awsGetDiskBytes(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, inst
 	return nil
 }
 
-func awsGetDiskOps(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, instance ec2.Instance) error {
+func awsGetDiskOps(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, instance *ec2.Instance) error {
 	search := cloudwatch.GetMetricStatisticsInput{
-		StartTime:  time.Now().UTC().Add(time.Second * -600),
-		EndTime:    time.Now().UTC(),
+		StartTime:  aws.Time(time.Now().UTC().Add(time.Second * -600)),
+		EndTime:    aws.Time(time.Now().UTC()),
 		MetricName: aws.String("DiskReadOps"),
-		Period:     aws.Integer(60),
-		Statistics: []string{"Average"},
+		Period:     aws.Long(60),
+		Statistics: []*string{aws.String("Average")},
 		Namespace:  aws.String("AWS/EC2"),
 		Unit:       aws.String("Count"),
-		Dimensions: []cloudwatch.Dimension{{Name: aws.String("InstanceId"), Value: instance.InstanceID}},
+		Dimensions: []*cloudwatch.Dimension{{Name: aws.String("InstanceId"), Value: instance.InstanceID}},
 	}
 	resp, err := cw.GetMetricStatistics(&search)
 	if err != nil {
@@ -220,16 +221,16 @@ func awsGetDiskOps(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, instan
 	return nil
 }
 
-func awsGetStatusChecks(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, instance ec2.Instance) error {
+func awsGetStatusChecks(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, instance *ec2.Instance) error {
 	search := cloudwatch.GetMetricStatisticsInput{
-		StartTime:  time.Now().UTC().Add(time.Second * -60),
-		EndTime:    time.Now().UTC(),
+		StartTime:  aws.Time(time.Now().UTC().Add(time.Second * -60)),
+		EndTime:    aws.Time(time.Now().UTC()),
 		MetricName: aws.String("StatusCheckFailed"),
-		Period:     aws.Integer(60),
-		Statistics: []string{"Average"},
+		Period:     aws.Long(60),
+		Statistics: []*string{aws.String("Average")},
 		Namespace:  aws.String("AWS/EC2"),
 		Unit:       aws.String("Count"),
-		Dimensions: []cloudwatch.Dimension{{Name: aws.String("InstanceId"), Value: instance.InstanceID}},
+		Dimensions: []*cloudwatch.Dimension{{Name: aws.String("InstanceId"), Value: instance.InstanceID}},
 	}
 	resp, err := cw.GetMetricStatistics(&search)
 	if err != nil {
@@ -257,16 +258,16 @@ func awsGetStatusChecks(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, i
 	return nil
 }
 
-func awsGetELBLatency(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, loadBalancer elb.LoadBalancerDescription) error {
+func awsGetELBLatency(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, loadBalancer *elb.LoadBalancerDescription) error {
 	search := cloudwatch.GetMetricStatisticsInput{
-		StartTime:  time.Now().UTC().Add(time.Second * -4000),
-		EndTime:    time.Now().UTC(),
+		StartTime:  aws.Time(time.Now().UTC().Add(time.Second * -4000)),
+		EndTime:    aws.Time(time.Now().UTC()),
 		MetricName: aws.String("Latency"),
-		Period:     aws.Integer(60),
-		Statistics: []string{"Average", "Minimum", "Maximum"},
+		Period:     aws.Long(60),
+		Statistics: []*string{aws.String("Average"), aws.String("Minimum"), aws.String("Maximum")},
 		Namespace:  aws.String("AWS/ELB"),
 		Unit:       aws.String("Seconds"),
-		Dimensions: []cloudwatch.Dimension{{Name: aws.String("LoadBalancerName"), Value: loadBalancer.LoadBalancerName}},
+		Dimensions: []*cloudwatch.Dimension{{Name: aws.String("LoadBalancerName"), Value: loadBalancer.LoadBalancerName}},
 	}
 	resp, err := cw.GetMetricStatistics(&search)
 	if err != nil {
@@ -279,16 +280,16 @@ func awsGetELBLatency(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, loa
 	}
 	return nil
 }
-func awsGetELBHostCounts(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, loadBalancer elb.LoadBalancerDescription) error {
+func awsGetELBHostCounts(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, loadBalancer *elb.LoadBalancerDescription) error {
 	search := cloudwatch.GetMetricStatisticsInput{
-		StartTime:  time.Now().UTC().Add(time.Second * -60),
-		EndTime:    time.Now().UTC(),
+		StartTime:  aws.Time(time.Now().UTC().Add(time.Second * -60)),
+		EndTime:    aws.Time(time.Now().UTC()),
 		MetricName: aws.String("HealthyHostCount"),
-		Period:     aws.Integer(60),
-		Statistics: []string{"Average"},
+		Period:     aws.Long(60),
+		Statistics: []*string{aws.String("Average")},
 		Namespace:  aws.String("AWS/ELB"),
 		Unit:       aws.String("Count"),
-		Dimensions: []cloudwatch.Dimension{{Name: aws.String("LoadBalancerName"), Value: loadBalancer.LoadBalancerName}},
+		Dimensions: []*cloudwatch.Dimension{{Name: aws.String("LoadBalancerName"), Value: loadBalancer.LoadBalancerName}},
 	}
 	resp, err := cw.GetMetricStatistics(&search)
 	if err != nil {

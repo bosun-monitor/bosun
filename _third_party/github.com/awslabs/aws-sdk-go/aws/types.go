@@ -1,94 +1,131 @@
 package aws
 
 import (
-	"math"
-	"strconv"
+	"fmt"
+	"io"
 	"time"
 )
 
-// A StringValue is a string which may or may not be present.
-type StringValue *string
-
-// String converts a Go string into a StringValue.
-func String(v string) StringValue {
+// String converts a Go string into a string pointer.
+func String(v string) *string {
 	return &v
 }
 
-// A BooleanValue is a boolean which may or may not be present.
-type BooleanValue *bool
-
-// Boolean converts a Go bool into a BooleanValue.
-func Boolean(v bool) BooleanValue {
+// Boolean converts a Go bool into a boolean pointer.
+func Boolean(v bool) *bool {
 	return &v
 }
 
-// True is the BooleanValue equivalent of the Go literal true.
-func True() BooleanValue {
-	return Boolean(true)
-}
-
-// False is the BooleanValue equivalent of the Go literal false.
-func False() BooleanValue {
-	return Boolean(false)
-}
-
-// An IntegerValue is an integer which may or may not be present.
-type IntegerValue *int
-
-// Integer converts a Go int into an IntegerValue.
-func Integer(v int) IntegerValue {
+// Long converts a Go int64 into a long pointer.
+func Long(v int64) *int64 {
 	return &v
 }
 
-// A LongValue is a 64-bit integer which may or may not be present.
-type LongValue *int64
-
-// Long converts a Go int64 into a LongValue.
-func Long(v int64) LongValue {
+// Double converts a Go float64 into a double pointer.
+func Double(v float64) *float64 {
 	return &v
 }
 
-// A FloatValue is a 32-bit floating point number which may or may not be
-// present.
-type FloatValue *float32
-
-// Float converts a Go float32 into a FloatValue.
-func Float(v float32) FloatValue {
-	return &v
+// Time converts a Go Time into a Time pointer
+func Time(t time.Time) *time.Time {
+	return &t
 }
 
-// A DoubleValue is a 64-bit floating point number which may or may not be
-// present.
-type DoubleValue *float64
-
-// Double converts a Go float64 into a DoubleValue.
-func Double(v float64) DoubleValue {
-	return &v
+// ReadSeekCloser wraps a io.Reader returning a ReaderSeakerCloser
+func ReadSeekCloser(r io.Reader) ReaderSeekerCloser {
+	return ReaderSeekerCloser{r}
 }
 
-// A UnixTimestamp is a Unix timestamp represented as fractional seconds since
-// the Unix epoch.
-type UnixTimestamp struct {
-	Time time.Time
+// ReaderSeekerCloser represents a reader that can also delegate io.Seeker and
+// io.Closer interfaces to the underlying object if they are available.
+type ReaderSeekerCloser struct {
+	r io.Reader
 }
 
-// MarshalJSON marshals the timestamp as a float.
-func (t UnixTimestamp) MarshalJSON() (text []byte, err error) {
-	n := float64(t.Time.UnixNano()) / 1e9
-	s := strconv.FormatFloat(n, 'f', -1, 64)
-	return []byte(s), nil
-}
-
-// UnmarshalJSON unmarshals the timestamp from a float.
-func (t *UnixTimestamp) UnmarshalJSON(text []byte) error {
-	f, err := strconv.ParseFloat(string(text), 64)
-	if err != nil {
-		return err
+// Read reads from the reader up to size of p. The number of bytes read, and
+// error if it occurred will be returned.
+//
+// If the reader is not an io.Reader zero bytes read, and nil error will be returned.
+//
+// Performs the same functionality as io.Reader Read
+func (r ReaderSeekerCloser) Read(p []byte) (int, error) {
+	switch t := r.r.(type) {
+	case io.Reader:
+		return t.Read(p)
 	}
+	return 0, nil
+}
 
-	sec := math.Floor(f)
-	nsec := (f - sec) * 1e9
+// Seek sets the offset for the next Read to offset, interpreted according to
+// whence: 0 means relative to the origin of the file, 1 means relative to the
+// current offset, and 2 means relative to the end. Seek returns the new offset
+// and an error, if any.
+//
+// If the ReaderSeekerCloser is not an io.Seeker nothing will be done.
+func (r ReaderSeekerCloser) Seek(offset int64, whence int) (int64, error) {
+	switch t := r.r.(type) {
+	case io.Seeker:
+		return t.Seek(offset, whence)
+	}
+	return int64(0), nil
+}
 
-	t.Time = time.Unix(int64(sec), int64(nsec)).UTC()
+// Close closes the ReaderSeekerCloser.
+//
+// If the ReaderSeekerCloser is not an io.Closer nothing will be done.
+func (r ReaderSeekerCloser) Close() error {
+	switch t := r.r.(type) {
+	case io.Closer:
+		return t.Close()
+	}
 	return nil
+}
+
+// A SettableBool provides a boolean value which includes the state if
+// the value was set or unset.  The set state is in addition to the value's
+// value(true|false)
+type SettableBool struct {
+	value bool
+	set   bool
+}
+
+// SetBool returns a SettableBool with a value set
+func SetBool(value bool) SettableBool {
+	return SettableBool{value: value, set: true}
+}
+
+// Get returns the value. Will always be false if the SettableBool was not set.
+func (b *SettableBool) Get() bool {
+	if !b.set {
+		return false
+	}
+	return b.value
+}
+
+// Set sets the value and updates the state that the value has been set.
+func (b *SettableBool) Set(value bool) {
+	b.value = value
+	b.set = true
+}
+
+// IsSet returns if the value has been set
+func (b *SettableBool) IsSet() bool {
+	return b.set
+}
+
+// Reset resets the state and value of the SettableBool to its initial default
+// state of not set and zero value.
+func (b *SettableBool) Reset() {
+	b.value = false
+	b.set = false
+}
+
+// String returns the string representation of the value if set. Zero if not set.
+func (b *SettableBool) String() string {
+	return fmt.Sprintf("%t", b.Get())
+}
+
+// GoString returns the string representation of the SettableBool value and state
+func (b *SettableBool) GoString() string {
+	return fmt.Sprintf("Bool{value:%t, set:%t}", b.value, b.set)
 }
