@@ -239,7 +239,21 @@ func c_network_team_windows() (opentsdb.MultiDataPoint, error) {
 		Add(&md, "win.net.bond.packets_multicast", nicStats.SentMulticastPackets, tagsOut, metadata.Counter, metadata.PerSecond, descWinNetTeamSentMulticastPackets)
 		Add(&md, "win.net.bond.packets_broadcast", nicStats.ReceivedBroadcastPackets, tagsIn, metadata.Counter, metadata.PerSecond, descWinNetTeamReceivedBroadcastPackets)
 		Add(&md, "win.net.bond.packets_broadcast", nicStats.SentBroadcastPackets, tagsOut, metadata.Counter, metadata.PerSecond, descWinNetTeamSentBroadcastPackets)
-		// Todo: add os.net.bond metrics once we confirm they have the same metadata
+		Add(&md, osNetBondifspeed, linkSpeed/1000000, opentsdb.TagSet{"iface": iface}, metadata.Gauge, metadata.Megabit, osNetBondifspeedDesc)
+		Add(&md, osNetBondBytes, nicStats.ReceivedBytes, tagsIn, metadata.Counter, metadata.Bytes, osNetBondBytesDesc)
+		Add(&md, osNetBondBytes, nicStats.SentBytes, tagsOut, metadata.Counter, metadata.Bytes, osNetBondBytesDesc)
+		Add(&md, osNetBondUnicast, nicStats.ReceivedUnicastPackets, tagsIn, metadata.Counter, metadata.Count, osNetBondUnicastDesc)
+		Add(&md, osNetBondUnicast, nicStats.SentUnicastPackets, tagsOut, metadata.Counter, metadata.Count, osNetBondUnicastDesc)
+		Add(&md, osNetBondMulticast, nicStats.ReceivedMulticastPackets, tagsIn, metadata.Counter, metadata.Count, osNetBondMulticastDesc)
+		Add(&md, osNetBondMulticast, nicStats.SentMulticastPackets, tagsOut, metadata.Counter, metadata.Count, osNetBondMulticastDesc)
+		Add(&md, osNetBondBroadcast, nicStats.ReceivedBroadcastPackets, tagsIn, metadata.Counter, metadata.Count, osNetBondBroadcastDesc)
+		Add(&md, osNetBondBroadcast, nicStats.SentBroadcastPackets, tagsOut, metadata.Counter, metadata.Count, osNetBondBroadcastDesc)
+		Add(&md, osNetBondPackets, float64(nicStats.ReceivedUnicastPackets)+float64(nicStats.ReceivedMulticastPackets)+float64(nicStats.ReceivedBroadcastPackets), tagsIn, metadata.Counter, metadata.Count, osNetBondPacketsDesc)
+		Add(&md, osNetBondPackets, float64(nicStats.SentUnicastPackets)+float64(nicStats.SentMulticastPackets)+float64(nicStats.SentBroadcastPackets), tagsOut, metadata.Counter, metadata.Count, osNetBondPacketsDesc)
+		Add(&md, osNetBondDropped, nicStats.ReceivedDiscardedPackets, tagsIn, metadata.Counter, metadata.Count, osNetBondDroppedDesc)
+		Add(&md, osNetBondDropped, nicStats.OutboundDiscardedPackets, tagsOut, metadata.Counter, metadata.Count, osNetBondDroppedDesc)
+		Add(&md, osNetBondErrors, nicStats.ReceivedPacketErrors, tagsIn, metadata.Counter, metadata.Count, osNetBondErrorsDesc)
+		Add(&md, osNetBondErrors, nicStats.OutboundPacketErrors, tagsOut, metadata.Counter, metadata.Count, osNetBondErrorsDesc)
 	}
 	return md, nil
 }
@@ -298,6 +312,11 @@ type MSFT_NetAdapterStatisticsSettingData struct {
 	OutboundPacketErrors     uint64
 }
 
+var (
+	winNetTCPSegmentsLastCount           uint32
+	winNetTCPSegmentsLastRetransmitCount uint32
+)
+
 func c_network_windows_tcp() (opentsdb.MultiDataPoint, error) {
 	var dst []Win32_PerfRawData_Tcpip_TCPv4
 	err := queryWmi(winNetTCPQuery, &dst)
@@ -314,6 +333,15 @@ func c_network_windows_tcp() (opentsdb.MultiDataPoint, error) {
 		Add(&md, "win.net.tcp.segments", v.SegmentsReceivedPersec, opentsdb.TagSet{"type": "received"}, metadata.Counter, metadata.PerSecond, descWinNetTCPv4SegmentsReceivedPersec)
 		Add(&md, "win.net.tcp.segments", v.SegmentsRetransmittedPersec, opentsdb.TagSet{"type": "retransmitted"}, metadata.Counter, metadata.PerSecond, descWinNetTCPv4SegmentsRetransmittedPersec)
 		Add(&md, "win.net.tcp.segments", v.SegmentsSentPersec, opentsdb.TagSet{"type": "sent"}, metadata.Counter, metadata.PerSecond, descWinNetTCPv4SegmentsSentPersec)
+		if winNetTCPSegmentsLastCount != 0 &&
+			(v.SegmentsPersec-winNetTCPSegmentsLastCount) != 0 &&
+			(v.SegmentsRetransmittedPersec > winNetTCPSegmentsLastRetransmitCount) &&
+			(v.SegmentsPersec > winNetTCPSegmentsLastCount) {
+			val := float64(v.SegmentsRetransmittedPersec-winNetTCPSegmentsLastRetransmitCount) / float64(v.SegmentsPersec-winNetTCPSegmentsLastCount) * 100
+			Add(&md, "win.net.tcp.retransmit_pct", val, nil, metadata.Gauge, metadata.Pct, descWinNetTCPv4SegmentsRetransmit)
+		}
+		winNetTCPSegmentsLastRetransmitCount = v.SegmentsRetransmittedPersec
+		winNetTCPSegmentsLastCount = v.SegmentsPersec
 	}
 	return md, nil
 }
@@ -327,6 +355,7 @@ const (
 	descWinNetTCPv4SegmentsReceivedPersec      = "Segments Received/sec is the rate at which segments are received, including those received in error.  This count includes segments received on currently established connections."
 	descWinNetTCPv4SegmentsRetransmittedPersec = "Segments Retransmitted/sec is the rate at which segments are retransmitted, that is, segments transmitted containing one or more previously transmitted bytes."
 	descWinNetTCPv4SegmentsSentPersec          = "Segments Sent/sec is the rate at which segments are sent, including those on current connections, but excluding those containing only retransmitted bytes."
+	descWinNetTCPv4SegmentsRetransmit          = "Segments Retransmitted / (Segments Sent + Segments Received). Usually expected to be less than 0.1 - 0.01 percent, and anything above 1 percent is an indicator of a poor connection."
 )
 
 type Win32_PerfRawData_Tcpip_TCPv4 struct {
@@ -335,6 +364,7 @@ type Win32_PerfRawData_Tcpip_TCPv4 struct {
 	ConnectionsEstablished      uint32
 	ConnectionsPassive          uint32
 	ConnectionsReset            uint32
+	SegmentsPersec              uint32
 	SegmentsReceivedPersec      uint32
 	SegmentsRetransmittedPersec uint32
 	SegmentsSentPersec          uint32
