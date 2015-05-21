@@ -285,3 +285,15 @@ func (s *Schedule) LoadTempConfig(hash string) (text string, err error) {
 	go s.SaveTempConfig(config.Text) //refresh timestamp.
 	return config.Text, nil
 }
+
+func (s *Schedule) GetStateFileBackup() ([]byte, error) {
+	buf := bytes.Buffer{}
+	err := s.db.View(func(tx *bolt.Tx) error {
+		_, err := tx.WriteTo(&buf)
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
