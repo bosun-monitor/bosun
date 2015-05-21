@@ -322,6 +322,7 @@ bosunControllers.controller('ActionCtrl', ['$scope', '$http', '$location', '$rou
         var search = $location.search();
         $scope.user = readCookie("action-user");
         $scope.type = search.type;
+        $scope.notify = true;
         if (!angular.isArray(search.key)) {
             $scope.keys = [search.key];
         }
@@ -333,7 +334,8 @@ bosunControllers.controller('ActionCtrl', ['$scope', '$http', '$location', '$rou
                 Type: $scope.type,
                 User: $scope.user,
                 Message: $scope.message,
-                Keys: $scope.keys
+                Keys: $scope.keys,
+                Notify: $scope.notify
             };
             createCookie("action-user", $scope.user, 1000);
             $http.post('/api/action', data)

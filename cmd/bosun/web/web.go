@@ -426,6 +426,7 @@ func Action(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (inter
 		User    string
 		Message string
 		Keys    []string
+		Notify  bool
 	}
 	j := json.NewDecoder(r.Body)
 	if err := j.Decode(&data); err != nil {
@@ -442,6 +443,7 @@ func Action(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (inter
 	}
 	errs := make(MultiError)
 	r.ParseForm()
+	successful := []expr.AlertKey{}
 	for _, key := range data.Keys {
 		ak, err := expr.ParseAlertKey(key)
 		if err != nil {
@@ -450,10 +452,15 @@ func Action(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (inter
 		err = schedule.Action(data.User, data.Message, at, ak)
 		if err != nil {
 			errs[key] = err
+		} else {
+			successful = append(successful, ak)
 		}
 	}
 	if len(errs) != 0 {
 		return nil, errs
+	}
+	if data.Notify && len(successful) != 0 {
+		schedule.ActionNotify(at, data.User, data.Message, successful)
 	}
 	return nil, nil
 }

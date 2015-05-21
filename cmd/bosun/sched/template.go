@@ -62,7 +62,7 @@ func (s *Schedule) unknownData(t time.Time, name string, group expr.AlertKeys) *
 
 // Ack returns the URL to acknowledge an alert.
 func (c *Context) Ack() string {
-	return c.makeLink("/action", &url.Values{
+	return c.schedule.Conf.MakeLink("/action", &url.Values{
 		"type": []string{"ack"},
 		"key":  []string{c.Alert.Name + c.State.Group.String()},
 	})
@@ -70,26 +70,16 @@ func (c *Context) Ack() string {
 
 // HostView returns the URL to the host view page.
 func (c *Context) HostView(host string) string {
-	return c.makeLink("/host", &url.Values{
+	return c.schedule.Conf.MakeLink("/host", &url.Values{
 		"time": []string{"1d-ago"},
 		"host": []string{host},
 	})
 }
 
-func (c *Context) makeLink(path string, v *url.Values) string {
-	u := url.URL{
-		Scheme:   "http",
-		Host:     c.schedule.Conf.Hostname,
-		Path:     path,
-		RawQuery: v.Encode(),
-	}
-	return u.String()
-}
-
 func (c *Context) Expr(v string) string {
 	p := url.Values{}
 	p.Add("expr", base64.StdEncoding.EncodeToString([]byte(opentsdb.ReplaceTags(v, c.Group))))
-	return c.makeLink("/expr", &p)
+	return c.schedule.Conf.MakeLink("/expr", &p)
 }
 
 func (c *Context) Rule() (string, error) {
@@ -100,7 +90,7 @@ func (c *Context) Rule() (string, error) {
 	p.Add("fromDate", time.Format("2006-01-02"))
 	p.Add("fromTime", time.Format("15:04"))
 	p.Add("template_group", c.Group.Tags())
-	return c.makeLink("/config", &p), nil
+	return c.schedule.Conf.MakeLink("/config", &p), nil
 }
 
 func (s *Schedule) ExecuteBody(rh *RunHistory, a *conf.Alert, st *State, isEmail bool) ([]byte, []*conf.Attachment, error) {
@@ -442,4 +432,19 @@ func (c *Context) LSQueryAll(index_root, keystring, filter, sduration, eduration
 		}
 	}
 	return r, nil
+}
+
+type actionNotificationContext struct {
+	States     []*State
+	User       string
+	Message    string
+	ActionType ActionType
+
+	schedule *Schedule
+}
+
+func (a actionNotificationContext) IncidentLink(i uint64) string {
+	return a.schedule.Conf.MakeLink("/incident", &url.Values{
+		"id": []string{fmt.Sprint(i)},
+	})
 }
