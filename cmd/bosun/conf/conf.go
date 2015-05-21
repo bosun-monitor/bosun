@@ -310,14 +310,15 @@ type Template struct {
 type Notification struct {
 	Text string
 	Vars
-	Name        string
-	Email       []*mail.Address
-	Post, Get   *url.URL
-	Body        *ttemplate.Template
-	Print       bool
-	Next        *Notification
-	Timeout     time.Duration
-	ContentType string
+	Name         string
+	Email        []*mail.Address
+	Post, Get    *url.URL
+	Body         *ttemplate.Template
+	Print        bool
+	Next         *Notification
+	Timeout      time.Duration
+	ContentType  string
+	RunOnActions bool
 
 	next      string
 	email     string
@@ -923,9 +924,10 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 		c.errorf("duplicate notification name: %s", name)
 	}
 	n := Notification{
-		Vars:        make(map[string]string),
-		ContentType: "application/x-www-form-urlencoded",
-		Name:        name,
+		Vars:         make(map[string]string),
+		ContentType:  "application/x-www-form-urlencoded",
+		Name:         name,
+		RunOnActions: true,
 	}
 	n.Text = s.RawText
 	funcs := ttemplate.FuncMap{
@@ -995,6 +997,8 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 				c.error(err)
 			}
 			n.Body = tmpl
+		case "runOnActions":
+			n.RunOnActions = v == "true"
 		default:
 			c.errorf("unknown key %s", k)
 		}
@@ -1311,4 +1315,14 @@ func (c *Conf) alert(s *expr.State, T miniprofiler.Timer, name, key string) (res
 		}
 	}
 	return results, nil
+}
+
+func (c *Conf) MakeLink(path string, v *url.Values) string {
+	u := url.URL{
+		Scheme:   "http",
+		Host:     c.Hostname,
+		Path:     path,
+		RawQuery: v.Encode(),
+	}
+	return u.String()
 }

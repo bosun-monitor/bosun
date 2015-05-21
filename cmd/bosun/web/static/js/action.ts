@@ -2,6 +2,7 @@ interface IActionScope extends IExprScope {
 	type: string;
 	user: string;
 	message: string;
+	notify: boolean;
 	keys: string[];
 	submit: () => void;
 }
@@ -10,6 +11,7 @@ bosunControllers.controller('ActionCtrl', ['$scope', '$http', '$location', '$rou
 	var search = $location.search();
 	$scope.user = readCookie("action-user");
 	$scope.type = search.type;
+	$scope.notify = true;
 	if (!angular.isArray(search.key)) {
 		$scope.keys = [search.key];
 	} else {
@@ -21,6 +23,7 @@ bosunControllers.controller('ActionCtrl', ['$scope', '$http', '$location', '$rou
 			User: $scope.user,
 			Message: $scope.message,
 			Keys: $scope.keys,
+			Notify: $scope.notify,
 		};
 		createCookie("action-user", $scope.user, 1000);
 		$http.post('/api/action', data)

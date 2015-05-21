@@ -5,11 +5,13 @@ import (
 	"fmt"
 	htemplate "html/template"
 	"log"
+	"strings"
 	ttemplate "text/template"
 	"time"
 
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/expr"
+	"bosun.org/slog"
 )
 
 // Poll dispatches notification checks when needed.
@@ -223,4 +225,83 @@ func (s *Schedule) AddNotification(ak expr.AlertKey, n *conf.Notification, start
 		s.Notifications[ak] = make(map[string]time.Time)
 	}
 	s.Notifications[ak][n.Name] = started
+}
+
+var actionNotificationSubjectTemplate *ttemplate.Template
+var actionNotificationBodyTemplate *htemplate.Template
+
+func init() {
+	subject := `{{$first := index .States 0}}{{$count := len .States}}
+{{.User}} {{.ActionType}}
+{{if gt $count 1}} {{$count}} Alerts. 
+{{else}} Incident #{{$first.Last.IncidentId}} ({{$first.Subject}}) 
+{{end}}`
+	body := `{{$count := len .States}}{{.User}} {{.ActionType}} {{$count}} alert{{if gt $count 1}}s{{end}}: <br/>
+<strong>Message:</strong> {{.Message}} <br/>
+<strong>Incidents:</strong> <br/>
+<ul>
+	{{range .States}}
+		<li>
+			<a href="{{$.IncidentLink .Last.IncidentId}}">#{{.Last.IncidentId}}:</a> 
+			{{.Subject}}
+		</li>
+	{{end}}
+</ul>`
+	actionNotificationSubjectTemplate = ttemplate.Must(ttemplate.New("").Parse(strings.Replace(subject, "\n", "", -1)))
+	actionNotificationBodyTemplate = htemplate.Must(htemplate.New("").Parse(body))
+}
+
+func (s *Schedule) ActionNotify(at ActionType, user, message string, aks []expr.AlertKey) {
+	groupings := s.groupActionNotifications(aks)
+
+	for notification, states := range groupings {
+		incidents := []*State{}
+		for _, state := range states {
+			incidents = append(incidents, state)
+		}
+		data := actionNotificationContext{incidents, user, message, at, s}
+
+		buf := &bytes.Buffer{}
+		err := actionNotificationSubjectTemplate.Execute(buf, data)
+		if err != nil {
+			slog.Error("Error rendering action notification subject", err)
+		}
+		subject := buf.String()
+
+		buf = &bytes.Buffer{}
+		err = actionNotificationBodyTemplate.Execute(buf, data)
+		if err != nil {
+			slog.Error("Error rendering action notification body", err)
+		}
+
+		notification.Notify(subject, buf.String(), []byte(subject), buf.Bytes(), s.Conf, "actionNotification")
+	}
+}
+
+func (s *Schedule) groupActionNotifications(aks []expr.AlertKey) map[*conf.Notification][]*State {
+	groupings := make(map[*conf.Notification][]*State)
+	for _, ak := range aks {
+		alert := s.Conf.Alerts[ak.Name()]
+		status := s.GetStatus(ak)
+		if alert == nil || status == nil {
+			continue
+		}
+		var n *conf.Notifications
+		if status.Status() == StWarning {
+			n = alert.WarnNotification
+		} else {
+			n = alert.CritNotification
+		}
+		if n == nil {
+			continue
+		}
+		nots := n.Get(s.Conf, ak.Group())
+		for _, not := range nots {
+			if !not.RunOnActions {
+				continue
+			}
+			groupings[not] = append(groupings[not], status)
+		}
+	}
+	return groupings
 }
