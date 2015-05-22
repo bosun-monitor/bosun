@@ -93,6 +93,12 @@ func (c *Context) Rule() (string, error) {
 	return c.schedule.Conf.MakeLink("/config", &p), nil
 }
 
+func (c *Context) Incident() string {
+	return c.schedule.Conf.MakeLink("/incident", &url.Values{
+		"id": []string{fmt.Sprint(c.State.Last().IncidentId)},
+	})
+}
+
 func (s *Schedule) ExecuteBody(rh *RunHistory, a *conf.Alert, st *State, isEmail bool) ([]byte, []*conf.Attachment, error) {
 	t := a.Template
 	if t == nil || t.Body == nil {
