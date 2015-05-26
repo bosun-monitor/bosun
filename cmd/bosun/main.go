@@ -1,9 +1,10 @@
 package main
 
+//go:generate go run ../../build/generate.go
+
 import (
 	"flag"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -11,11 +12,9 @@ import (
 	_ "net/http/pprof"
 	"net/url"
 	"os"
-	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"runtime"
-	"sort"
 	"strings"
 	"time"
 
@@ -155,47 +154,15 @@ func main() {
 	}()
 	if *flagWatch {
 		watch(".", "*.go", quit)
-		watch(filepath.Join("web", "static", "templates"), "*.html", quit)
+		watch(filepath.Join("web", "static", "templates"), "*.html", web.RunEsc)
 		base := filepath.Join("web", "static", "js")
-		args := []string{
-			"--out", filepath.Join(base, "bosun.js"),
-		}
-		matches, _ := filepath.Glob(filepath.Join(base, "*.ts"))
-		sort.Strings(matches)
-		args = append(args, matches...)
-		tsc := run("tsc", args...)
-		watch(base, "*.ts", tsc)
-		go tsc()
+		watch(base, "*.ts", web.RunTsc)
 	}
 	select {}
 }
 
 func quit() {
 	os.Exit(0)
-}
-
-func run(name string, arg ...string) func() {
-	return func() {
-		log.Println("running", name)
-		c := exec.Command(name, arg...)
-		stdout, err := c.StdoutPipe()
-		if err != nil {
-			log.Fatal(err)
-		}
-		stderr, err := c.StderrPipe()
-		if err != nil {
-			log.Fatal(err)
-		}
-		if err := c.Start(); err != nil {
-			log.Fatal(err)
-		}
-		go func() { io.Copy(os.Stdout, stdout) }()
-		go func() { io.Copy(os.Stderr, stderr) }()
-		if err := c.Wait(); err != nil {
-			log.Printf("run error: %v: %v", name, err)
-		}
-		log.Println("run complete:", name)
-	}
 }
 
 func watch(root, pattern string, f func()) {
@@ -234,5 +201,3 @@ func watch(root, pattern string, f func()) {
 		}
 	}()
 }
-
-//go:generate esc -o web/static.go -pkg web -prefix web/static web/static/

@@ -21,10 +21,10 @@ go get -u -v github.com/mjibson/esc
 echo -e "\nRunning go generate bosun.org/..."
 go generate bosun.org/...
 GOGENERATERESULT=$?
-GOGENERATEDIFF=$(git diff --exit-code --shortstat $GOPATH/src/bosun.org/cmd/bosun/web/static.go)
+GOGENERATEDIFF=$(git diff --exit-code --name-only)
 GOGENERATEDIFFRESULT=0
 if [ "$GOGENERATEDIFF" != '' ]; then
-    echo "The cmd/bosun/web/static.go file needs go generate:"
+    echo "Go generate needs to be run. The following files have changed:"
     echo "$GOGENERATEDIFF"
     GOGENERATEDIFFRESULT=1
 fi
