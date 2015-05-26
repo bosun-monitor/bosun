@@ -8,6 +8,18 @@ import (
 	"bosun.org/_third_party/github.com/mjibson/snmp"
 )
 
+func SNMP(community, host string) error {
+	if host == "" {
+		return fmt.Errorf("empty SNMP hostname")
+	}
+	if community == "" {
+		return fmt.Errorf("empty SNMP community")
+	}
+	SNMPIfaces(community, host)
+	SNMPCisco(community, host)
+	return nil
+}
+
 // snmp_subtree takes an oid and returns all data exactly one level below it. It
 // produces an error if there is more than one level below.
 func snmp_subtree(host, community, oid string) (map[int]interface{}, error) {

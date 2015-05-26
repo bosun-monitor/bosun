@@ -13,8 +13,8 @@ import (
 	"bosun.org/opentsdb"
 )
 
-func AddProcessConfig(line string) error {
-	p, err := NewWatchedProc(line)
+func AddProcessConfig(params ProcessParams) error {
+	p, err := NewWatchedProc(params)
 	if err != nil {
 		return err
 	}
@@ -175,6 +175,12 @@ func c_linux_processes(procs []*WatchedProc) (opentsdb.MultiDataPoint, error) {
 	return md, err
 }
 
+type ProcessParams struct {
+	Command string
+	Name    string
+	Args    string
+}
+
 type Process struct {
 	Pid       string
 	Command   string
@@ -182,22 +188,18 @@ type Process struct {
 }
 
 // NewWatchedProc takes a string of the form "command,name,regex".
-func NewWatchedProc(watch string) (*WatchedProc, error) {
-	sp := strings.SplitN(watch, ",", 3)
-	if len(sp) != 3 {
-		return nil, fmt.Errorf("watched proc requires three fields")
+func NewWatchedProc(params ProcessParams) (*WatchedProc, error) {
+	if params.Name == "" {
+		params.Name = params.Command
 	}
-	if sp[1] == "" {
-		sp[1] = sp[0]
-	}
-	if !opentsdb.ValidTag(sp[1]) {
-		return nil, fmt.Errorf("bad process name: %v", sp[1])
+	if !opentsdb.ValidTag(params.Name) {
+		return nil, fmt.Errorf("bad process name: %v", params.Name)
 	}
 	return &WatchedProc{
-		Command:   sp[0],
-		Name:      sp[1],
+		Command:   params.Command,
+		Name:      params.Name,
 		Processes: make(map[string]int),
-		ArgMatch:  regexp.MustCompile(sp[2]),
+		ArgMatch:  regexp.MustCompile(params.Args),
 		idPool:    new(idPool),
 	}, nil
 }

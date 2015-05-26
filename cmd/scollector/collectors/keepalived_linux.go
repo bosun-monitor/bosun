@@ -59,9 +59,12 @@ func init() {
 }
 
 func c_snmp_keepalived_vrrp_instances() (opentsdb.MultiDataPoint, error) {
+	if KeepalivedCommunity == "" {
+		return nil, nil
+	}
 	var md opentsdb.MultiDataPoint
 	entries := make(map[int]*VRRPInstanceEntry)
-	rows, err := snmp.Walk("localhost", KeepAliveCommunity, VRRPInstanceTable)
+	rows, err := snmp.Walk("localhost", KeepalivedCommunity, VRRPInstanceTable)
 	if err != nil {
 		return nil, nil
 	}
@@ -125,7 +128,7 @@ type VRRPAddressEntry struct {
 
 func keepalived_vrrp_addresses(md *opentsdb.MultiDataPoint, instances map[int]*VRRPInstanceEntry) error {
 	entries := make(map[int]map[int]*VRRPAddressEntry)
-	rows, err := snmp.Walk("localhost", KeepAliveCommunity, VRRPAddressTable)
+	rows, err := snmp.Walk("localhost", KeepalivedCommunity, VRRPAddressTable)
 	if err != nil {
 		return nil
 	}

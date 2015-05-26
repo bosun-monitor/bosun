@@ -34,7 +34,10 @@ const (
 	descAWSELBLatency     = "The minimum, maximum and average latency as reported by the load balancer, gathered at a 60 second interval and averaged over five minutes."
 )
 
-func AWS(accessKey, secretKey, region string) {
+func AWS(accessKey, secretKey, region string) error {
+	if accessKey == "" || secretKey == "" || region == "" {
+		return fmt.Errorf("empty AccessKey, SecretKey, or Region in AWS")
+	}
 	collectors = append(collectors, &IntervalCollector{
 		F: func() (opentsdb.MultiDataPoint, error) {
 			return c_aws(accessKey, secretKey, region)
@@ -42,6 +45,7 @@ func AWS(accessKey, secretKey, region string) {
 		Interval: 60 * time.Second,
 		name:     fmt.Sprintf("aws-%s", region),
 	})
+	return nil
 }
 
 func c_aws(accessKey, secretKey, region string) (opentsdb.MultiDataPoint, error) {
