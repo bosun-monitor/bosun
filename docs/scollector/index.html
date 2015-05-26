@@ -1,0 +1,131 @@
+---
+---
+
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>scollector</title>
+
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+    <div class="wrapper">
+      <header>
+        <h1>scollector</h1>
+        <p>OpenTSDB&#39;s tcollector for the v2 HTTP API</p>
+
+        <h2>Download Binaries</h2>
+
+	<p>Version <a href="https://github.com/bosun-monitor/bosun/releases/tag/{{ site.version.id }}">{{ site.version.id }}</a> ({{ site.time | date_to_string }})</p>
+
+        <ul>
+          <li><a href="https://github.com/bosun-monitor/bosun/releases/download/{{site.version.id}}/scollector-linux-amd64"><strong>Linux</strong> amd64</a></li>
+          <li><a href="https://github.com/bosun-monitor/bosun/releases/download/{{site.version.id}}/scollector-windows-amd64.exe"><strong>Windows</strong> amd64</a></li>
+          <li><a href="https://github.com/bosun-monitor/bosun/releases/download/{{site.version.id}}/scollector-darwin-amd64"><strong>Mac</strong> amd64</a></li>
+        </ul>
+
+        <ul>
+          <li><a href="https://github.com/bosun-monitor/bosun/releases/download/{{site.version.id}}/scollector-linux-386"><strong>Linux</strong> 386</a></li>
+          <li><a href="https://github.com/bosun-monitor/bosun/releases/download/{{site.version.id}}/scollector-windows-386.exe"><strong>Windows</strong> 386</a></li>
+          <li><a href="https://github.com/bosun-monitor/bosun/releases/download/{{site.version.id}}/scollector-darwin-386"><strong>Mac</strong> 386</a></li>
+        </ul>
+
+        <ul>
+          <li><a href="https://github.com/bosun-monitor/bosun/releases/download/{{site.version.id}}/scollector-linux-arm5"><strong>ARMv5</strong></a></li>
+          <li><a href="https://github.com/bosun-monitor/bosun/releases/download/{{site.version.id}}/scollector-linux-arm6"><strong>ARMv6</strong></a></li>
+          <li><a href="https://github.com/bosun-monitor/bosun/releases/download/{{site.version.id}}/scollector-linux-arm7"><strong>ARMv7</strong></a></li>
+        </ul>
+
+        <p class="view"><a href="https://github.com/bosun-monitor/bosun/tree/master/cmd/scollector">View the Project on GitHub</a></p>
+      </header>
+      <section>
+
+<p>scollector is a replacement for OpenTSDB's tcollector.</p>
+
+<p>Benefits of scollector over tcollector:</p>
+
+<ul>
+<li>scollector uses the v2 API, not the older v1 API</li>
+<li>scollector is more resource efficient</li>
+<li>scollector integrates with Bosun</li>
+</ul>
+
+<p>OpenTSDB 1.0 uses the
+<a href="https://github.com/OpenTSDB/tcollector">tcollector</a>
+data collection framework.
+This project aims to make scollector the
+preferred collector for OpenTSDB 2.0.</p>
+
+<h2>
+<a name="documentation" class="anchor" href="#documentation"><span class="octicon octicon-link"></span></a>documentation</h2>
+
+<p><a href="http://godoc.org/bosun.org/cmd/scollector">http://godoc.org/bosun.org/cmd/scollector</a></p>
+
+<h2>
+<a name="installation" class="anchor" href="#installation"><span class="octicon octicon-link"></span></a>installation from source</h2>
+
+<pre><code>$ go get bosun.org/cmd/scollector
+</code></pre>
+
+<h2>Collectors</h2>
+
+<p>scollector has the following built-in collectors.</p>
+
+<h3>Linux</h3>
+<ul>
+<li>conntrack</li>
+<li>disk</li>
+<li>ifstat</li>
+<li>procstats</li>
+<li>puppet</li>
+<li>railgun</li>
+<li>yum</li>
+</ul>
+<h3>Windows</h3>
+<ul>
+<li>cpu</li>
+<li>disk</li>
+<li>iis</li>
+<li>mem</li>
+<li>netbackup</li>
+<li>network</li>
+<li>processes</li>
+<li>sntp</li>
+<li>sql (MSSQL)</li>
+<li>system</li>
+</ul>
+<h3>Mac</h3>
+<ul>
+<li>dfstat</li>
+<li>iostat</li>
+<li>vmstat</li>
+</ul>
+<h3>Other</h3>
+<ul>
+<li>cassandra</li>
+<li>dell (Dell hardware)</li>
+<li>elasticsearch</li>
+<li>hbase</li>
+<li>ntp</li>
+<li>opentsdb</li>
+<li>redis</li>
+</ul>
+<h3>Remote Services</h3>
+<ul>
+<li>icmp (ping)</li>
+<li>snmp (Cisco, interfaces)</li>
+<li>vsphere (vmware)</li>
+</ul>
+
+      </section>
+    </div>
+    <script src="javascripts/scale.fix.js"></script>
+    
+  </body>
+</html>
