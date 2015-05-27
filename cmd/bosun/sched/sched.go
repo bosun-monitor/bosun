@@ -136,7 +136,7 @@ func (s *Schedule) GetMetadata(metric string, subset opentsdb.TagSet) []metadata
 			Tags:   k.TagSet(),
 			Name:   k.Name,
 			Value:  mv.Value,
-			Time:   mv.Time,
+			Time:   &mv.Time,
 		})
 	}
 	s.metalock.Unlock()
