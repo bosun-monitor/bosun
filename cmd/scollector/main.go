@@ -62,7 +62,7 @@ type Conf struct {
 	// DisableSelf disables sending of scollector self metrics.
 	DisableSelf bool
 	// Freq is the default frequency in seconds for most collectors.
-	Freq int
+	Freq *int
 	// Filter filters collectors matching this term, multiple terms separated
 	// by comma.
 	Filter string
@@ -230,11 +230,15 @@ func main() {
 	} else if err != nil {
 		slog.Fatal("invalid host:", conf.Host)
 	}
-	if conf.Freq <= 0 {
+	freq := time.Second * 15
+	if conf.Freq != nil {
+		freq = time.Duration(*conf.Freq) * time.Second
+	}
+	if freq <= 0 {
 		slog.Fatal("freq must be > 0")
 	}
-	collectors.DefaultFreq = time.Second * time.Duration(conf.Freq)
-	collect.Freq = time.Second * time.Duration(conf.Freq)
+	collectors.DefaultFreq = freq
+	collect.Freq = freq
 	collect.Tags = opentsdb.TagSet{"os": runtime.GOOS}
 	if *flagPrint {
 		collect.Print = true
@@ -447,7 +451,7 @@ func toToml(fname string) {
 			if err != nil {
 				slog.Fatal(err)
 			}
-			c.Freq = freq
+			c.Freq = &freq
 		case "process":
 			if runtime.GOOS == "linux" {
 				var p struct {
