@@ -14,13 +14,17 @@ import (
 )
 
 // Vsphere registers a vSphere collector.
-func Vsphere(user, pwd, host string) {
+func Vsphere(user, pwd, host string) error {
+	if host == "" || user == "" || pwd == "" {
+		return fmt.Errorf("empty Host, User, or Password in Vsphere")
+	}
 	collectors = append(collectors, &IntervalCollector{
 		F: func() (opentsdb.MultiDataPoint, error) {
 			return c_vsphere(user, pwd, host)
 		},
 		name: fmt.Sprintf("vsphere-%s", host),
 	})
+	return nil
 }
 
 func c_vsphere(user, pwd, host string) (opentsdb.MultiDataPoint, error) {

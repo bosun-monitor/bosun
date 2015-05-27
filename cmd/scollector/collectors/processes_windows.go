@@ -12,13 +12,17 @@ import (
 
 var regexesProcesses = []*regexp.Regexp{}
 
-func AddProcessConfig(line string) error {
-	reg, err := regexp.Compile(line)
+func AddProcessConfig(params ProcessParams) error {
+	reg, err := regexp.Compile(params.Name)
 	if err != nil {
 		return err
 	}
 	regexesProcesses = append(regexesProcesses, reg)
 	return nil
+}
+
+type ProcessParams struct {
+	Name string
 }
 
 func WatchProcesses() {

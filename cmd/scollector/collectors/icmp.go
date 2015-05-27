@@ -16,13 +16,17 @@ type response struct {
 }
 
 // ICMP registers an ICMP collector a given host.
-func ICMP(host string) {
+func ICMP(host string) error {
+	if host == "" {
+		return fmt.Errorf("empty ICMP hostname")
+	}
 	collectors = append(collectors, &IntervalCollector{
 		F: func() (opentsdb.MultiDataPoint, error) {
 			return c_icmp(host)
 		},
 		name: fmt.Sprintf("icmp-%s", host),
 	})
+	return nil
 }
 
 func c_icmp(host string) (opentsdb.MultiDataPoint, error) {

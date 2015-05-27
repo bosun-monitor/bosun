@@ -11,50 +11,18 @@ import (
 	"bosun.org/opentsdb"
 )
 
-var trackedInstances = []*trackedInstance{}
-
-type trackedInstance struct {
-	Tier string
-	URL  string
-}
-
 // HAProxy registers an HAProxy collector.
-func HAProxy(user, pwd string) {
+func HAProxy(user, password, tier, url string) {
 	collectors = append(collectors, &IntervalCollector{
 		F: func() (opentsdb.MultiDataPoint, error) {
-			return cHAProxyCSV(user, pwd)
+			return haproxyFetch(user, password, tier, url)
 		},
-		name: "haproxy",
+		name: fmt.Sprintf("haproxy-%s-%s", tier, url),
 	})
 }
 
-// AddHAProxyInstance adds haproxy instances to be tracked.
-func AddHAProxyInstance(conf string) error {
-	sp := strings.SplitN(conf, ":", 2)
-	if len(sp) < 2 {
-		return fmt.Errorf("haproxy_instance requires two fields")
-	}
-	var instance trackedInstance
-	instance.Tier = sp[0]
-	instance.URL = sp[1]
-	trackedInstances = append(trackedInstances, &instance)
-
-	return nil
-}
-
-func cHAProxyCSV(user, pwd string) (opentsdb.MultiDataPoint, error) {
+func haproxyFetch(user, pwd, tier, url string) (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
-	var err error
-
-	for _, instance := range trackedInstances {
-		if e := instance.fetchHAProxyData(&md, user, pwd); e != nil {
-			err = e
-		}
-	}
-	return md, err
-}
-
-func (instance *trackedInstance) fetchHAProxyData(md *opentsdb.MultiDataPoint, user string, pwd string) error {
 	var err error
 	const metric = "haproxy"
 	parse := func(v string) (int64, error) {
@@ -69,9 +37,9 @@ func (instance *trackedInstance) fetchHAProxyData(md *opentsdb.MultiDataPoint, u
 		return i, nil
 	}
 
-	req, err := http.NewRequest("GET", instance.URL, nil)
+	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	// Close connection after request. Default cached connections will get
 	// failures in the event of server closing idle connections.
@@ -80,27 +48,27 @@ func (instance *trackedInstance) fetchHAProxyData(md *opentsdb.MultiDataPoint, u
 	req.SetBasicAuth(user, pwd)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer resp.Body.Close()
 	reader := csv.NewReader(resp.Body)
 	records, err := reader.ReadAll()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if len(records) < 2 {
-		return nil
+		return nil, nil
 	}
 	for _, rec := range records[1:] {
 		// There is a trailing comma in haproxy's csv
 		if len(rec) != len(haproxyCSVMeta)+1 {
-			return fmt.Errorf("expected %v lines. got: %v",
+			return nil, fmt.Errorf("expected %v lines. got: %v",
 				len(haproxyCSVMeta)+1, len(rec))
 		}
 		hType := haproxyType[rec[32]]
 		pxname := rec[0]
 		svname := rec[1]
-		ts := opentsdb.TagSet{"pxname": pxname, "svname": svname, "tier": instance.Tier}
+		ts := opentsdb.TagSet{"pxname": pxname, "svname": svname, "tier": tier}
 		for i, field := range haproxyCSVMeta {
 			m := strings.Join([]string{metric, hType, field.Name}, ".")
 			value := rec[i]
@@ -109,15 +77,15 @@ func (instance *trackedInstance) fetchHAProxyData(md *opentsdb.MultiDataPoint, u
 			} else if strings.HasPrefix(field.Name, "hrsp") {
 				sp := strings.Split(field.Name, "_")
 				if len(sp) != 2 {
-					return fmt.Errorf("unexpected field name %v in hrsp", field.Name)
+					return nil, fmt.Errorf("unexpected field name %v in hrsp", field.Name)
 				}
 				ts := ts.Copy().Merge(opentsdb.TagSet{"status_code": sp[1]})
 				m = strings.Join([]string{metric, hType, sp[0]}, ".")
 				v, err := parse(value)
 				if err != nil {
-					return err
+					return nil, err
 				}
-				Add(md, m, v, ts, metadata.Counter, metadata.Response,
+				Add(&md, m, v, ts, metadata.Counter, metadata.Response,
 					fmt.Sprintf("The number of http responses with a %v status code.", sp[1]))
 			} else if field.Name == "status" {
 				v, ok := haproxyStatus[value]
@@ -125,26 +93,26 @@ func (instance *trackedInstance) fetchHAProxyData(md *opentsdb.MultiDataPoint, u
 				if !ok {
 					v = 3
 				}
-				Add(md, m, v, ts, field.RateType, field.Unit, field.Desc)
+				Add(&md, m, v, ts, field.RateType, field.Unit, field.Desc)
 			} else if field.Name == "check_status" {
 				if value == "" {
 					continue
 				}
 				v, ok := haproxyCheckStatus[value]
 				if !ok {
-					return fmt.Errorf("unknown check status %v", value)
+					return nil, fmt.Errorf("unknown check status %v", value)
 				}
-				Add(md, m, v, ts, field.RateType, field.Unit, field.Desc)
+				Add(&md, m, v, ts, field.RateType, field.Unit, field.Desc)
 			} else {
 				v, err := parse(value)
 				if err != nil {
-					return err
+					return nil, err
 				}
-				Add(md, m, v, ts, field.RateType, field.Unit, field.Desc)
+				Add(&md, m, v, ts, field.RateType, field.Unit, field.Desc)
 			}
 		}
 	}
-	return nil
+	return md, nil
 }
 
 // MetricMetaHAProxy is a super-structure which adds a friendly Name,
