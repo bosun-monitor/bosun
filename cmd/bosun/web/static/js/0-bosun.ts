@@ -81,14 +81,7 @@ bosunApp.config(['$routeProvider', '$locationProvider', '$httpProvider', functio
 	$httpProvider.interceptors.push(function($q) {
 		return {
 			'request': function(config) {
-				var u = config.url;
-				if (u.indexOf('?') == -1) {
-					u += '?';
-				} else {
-					u += '&';
-				}
-				u += 'miniprofiler=true';
-				config.url = u;
+				config.headers['X-Miniprofiler'] = 'true';
 				return config;
 			},
 		};

@@ -34,15 +34,16 @@ var (
 )
 
 const (
-	tsdbFormat     = "2006/01/02-15:04"
-	tsdbFormatSecs = tsdbFormat + ":05"
+	tsdbFormat         = "2006/01/02-15:04"
+	tsdbFormatSecs     = tsdbFormat + ":05"
+	miniprofilerHeader = "X-Miniprofiler"
 )
 
 func init() {
 	miniprofiler.Position = "bottomleft"
 	miniprofiler.StartHidden = true
 	miniprofiler.Enable = func(r *http.Request) bool {
-		return r.FormValue("miniprofiler") != "" || r.URL.Path == "/"
+		return r.Header.Get(miniprofilerHeader) != ""
 	}
 	metadata.AddMetricMeta("bosun.search.puts_relayed", metadata.Counter, metadata.Request,
 		"The count of api put requests sent to Bosun for relaying to the backend server.")
@@ -213,6 +214,7 @@ func Index(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	r.Header.Set(miniprofilerHeader, "true")
 	err := indexTemplate().Execute(w, struct {
 		Includes template.HTML
 	}{
