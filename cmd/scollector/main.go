@@ -33,6 +33,8 @@ const (
 )
 
 var (
+	flagHost            = flag.String("h", "", "OpenTSDB or Bosun host to send data. Overrides Host in conf file.")
+	flagFilter          = flag.String("f", "", "Filters collectors matching these terms, separated by comma. Overrides Filter in conf file.")
 	flagList            = flag.Bool("l", false, "List available collectors.")
 	flagPrint           = flag.Bool("p", false, "Print to screen instead of sending to a host")
 	flagBatchSize       = flag.Int("b", 0, "OpenTSDB batch size. Used for debugging bad data.")
@@ -115,7 +117,6 @@ type ProcessDotNet struct {
 
 func readConf() *Conf {
 	conf := &Conf{
-		Host: "bosun",
 	}
 	loc := *flagConf
 	if *flagConf == "" {
@@ -157,6 +158,12 @@ func main() {
 		m()
 	}
 	conf := readConf()
+	if *flagHost != "" {
+		conf.Host = *flagHost
+	}
+	if *flagFilter != "" {
+		conf.Filter = strings.Split(*flagFilter, ",")
+	}
 	if !conf.Tags.Valid() {
 		slog.Fatalf("invalid tags: %v", conf.Tags)
 	} else if conf.Tags["host"] != "" {
