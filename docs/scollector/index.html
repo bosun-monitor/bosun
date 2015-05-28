@@ -13,6 +13,22 @@
     <!--[if lt IE 9]>
     <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
     <![endif]-->
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+	<script>
+	$(function(){
+		 $.getJSON("https://api.github.com/repos/bosun-monitor/bosun/releases/latest").done(function (release) {
+            var downloadURLBase = "https://github.com/bosun-monitor/bosun/releases/download/" + release.tag_name + "/";
+			 $('.releaseLink').each(function() {
+				var id = this.id
+				$(this).attr("href",downloadURLBase+id)
+			});
+			$("#releaseLink").attr("href", release.html_url);
+			$("#releaseTag").text(release.tag_name)
+			$("#releaseDate").text(release.created_at.substring(0,10));
+			$("#releaseInfo").show();
+        });
+	})		
+	</script>
   </head>
   <body>
     <div class="wrapper">
@@ -22,24 +38,24 @@
 
         <h2>Download Binaries</h2>
 
-	<p>Version <a href="https://github.com/bosun-monitor/bosun/releases/tag/{{ site.version.id }}">{{ site.version.id }}</a> ({{ site.time | date_to_string }})</p>
+	<p id="releaseInfo" style="display:none;">Version <a id="releaseLink"><span id="releaseTag"></span></a> (<span id="releaseDate"></span>)</p>
 
         <ul>
-          <li><a href="https://github.com/bosun-monitor/bosun/releases/download/{{site.version.id}}/scollector-linux-amd64"><strong>Linux</strong> amd64</a></li>
-          <li><a href="https://github.com/bosun-monitor/bosun/releases/download/{{site.version.id}}/scollector-windows-amd64.exe"><strong>Windows</strong> amd64</a></li>
-          <li><a href="https://github.com/bosun-monitor/bosun/releases/download/{{site.version.id}}/scollector-darwin-amd64"><strong>Mac</strong> amd64</a></li>
+          <li><a class='releaseLink' href="https://github.com/bosun-monitor/bosun/releases/latest" id="scollector-linux-amd64"><strong>Linux</strong> amd64</a></li>
+          <li><a class='releaseLink' href="https://github.com/bosun-monitor/bosun/releases/latest" id="scollector-windows-amd64.exe"><strong>Windows</strong> amd64</a></li>
+          <li><a class='releaseLink' href="https://github.com/bosun-monitor/bosun/releases/latest" id="scollector-darwin-amd64"><strong>Mac</strong> amd64</a></li>
         </ul>
 
         <ul>
-          <li><a href="https://github.com/bosun-monitor/bosun/releases/download/{{site.version.id}}/scollector-linux-386"><strong>Linux</strong> 386</a></li>
-          <li><a href="https://github.com/bosun-monitor/bosun/releases/download/{{site.version.id}}/scollector-windows-386.exe"><strong>Windows</strong> 386</a></li>
-          <li><a href="https://github.com/bosun-monitor/bosun/releases/download/{{site.version.id}}/scollector-darwin-386"><strong>Mac</strong> 386</a></li>
+          <li><a class='releaseLink' href="https://github.com/bosun-monitor/bosun/releases/latest" id="scollector-linux-386"><strong>Linux</strong> 386</a></li>
+          <li><a class='releaseLink' href="https://github.com/bosun-monitor/bosun/releases/latest" id="scollector-windows-386.exe"><strong>Windows</strong> 386</a></li>
+          <li><a class='releaseLink' href="https://github.com/bosun-monitor/bosun/releases/latest" id="scollector-darwin-386"><strong>Mac</strong> 386</a></li>
         </ul>
 
         <ul>
-          <li><a href="https://github.com/bosun-monitor/bosun/releases/download/{{site.version.id}}/scollector-linux-arm5"><strong>ARMv5</strong></a></li>
-          <li><a href="https://github.com/bosun-monitor/bosun/releases/download/{{site.version.id}}/scollector-linux-arm6"><strong>ARMv6</strong></a></li>
-          <li><a href="https://github.com/bosun-monitor/bosun/releases/download/{{site.version.id}}/scollector-linux-arm7"><strong>ARMv7</strong></a></li>
+          <li><a class='releaseLink' href="https://github.com/bosun-monitor/bosun/releases/latest" id="scollector-linux-arm5"><strong>ARMv5</strong></a></li>
+          <li><a class='releaseLink' href="https://github.com/bosun-monitor/bosun/releases/latest" id="scollector-linux-arm6"><strong>ARMv6</strong></a></li>
+          <li><a class='releaseLink' href="https://github.com/bosun-monitor/bosun/releases/latest" id="scollector-linux-arm7"><strong>ARMv7</strong></a></li>
         </ul>
 
         <p class="view"><a href="https://github.com/bosun-monitor/bosun/tree/master/cmd/scollector">View the Project on GitHub</a></p>
