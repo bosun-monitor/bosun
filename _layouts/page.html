@@ -1,0 +1,12 @@
+---
+layout: default
+---
+
+<div class="row">
+	<div class="col-sm-12">
+		{% if page.title != "Home" %}
+			<h1 class="page-title">{{ page.title }}</h1>
+		{% endif %}
+		{{ content }}
+	</div>
+</div>

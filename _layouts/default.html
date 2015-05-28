@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="go-import" content="bosun.org git https://github.com/bosun-monitor/bosun.git">
+
+	<title>
+		{% if page.title != "Home" %}
+			{{ page.title }} &middot;
+		{% endif %}
+		Bosun
+	</title>
+
+	<link rel="stylesheet" href="/styles/bootstrap.min.css">
+	<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+	<link rel="shortcut icon" href="/public/favicon.ico">
+	
+	<!-- HTML5 shim and Respond.js IE8 support of HTML5 elements and media queries -->
+	<!--[if lt IE 9]>
+		<script src="//cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.2/html5shiv.min.js"></script>
+		<script src="//cdnjs.cloudflare.com/ajax/libs/respond.js/1.4.2/respond.min.js"></script>
+	<![endif]-->
+
+	<script>
+		$(document).ready( function() {
+			// In the generate index, remove arguments from functions and all bold
+			// anything that has the string Endpoints for the API Page
+			$('#markdown-toc').find('a').each( function() {
+				$(this).text($(this).text().replace(/\(.*\)/, "()"));
+				if ($(this).text().indexOf("Endpoints") > -1) {
+					$(this).addClass("endpoint");
+				}
+			});
+			// Make markdown tables have bootstrap CSS styling
+			$(document).find('table').each( function() {
+				$(this).addClass("table");
+			});
+			// Add anchor class headers so we can set a scrollto offset
+			// since the top bar is fixed
+			$('.doc-body').find(':header').each( function() {
+				var id = $(this).id
+				$(this).addClass("anchor");
+			});
+		});
+	</script>
+
+	<style>
+		body {
+			min-height: 2000px;
+			padding-top: 65px;
+		}
+
+		.navbar-fixed-top {
+			margin-bottom: 40px;
+		}
+
+		.navbar-nav>li>a {
+			padding-top: 18px;
+			padding-bottom: 9px;
+		}
+
+		#logo {
+			position: absolute;
+			top: 13px;
+			width: 30px;
+			height: 30px;
+		}
+
+		#logo-text {
+			margin-top: 2px;
+			margin-left: 38px;
+			font-size: 26px;
+			color: #1f5296;
+			letter-spacing: -1px;
+		}
+
+		.jumbotron {
+			margin-top: 40px;
+			padding: 20px 20px;
+		}
+
+		/* Affix keeps the sidebar documentation menus on screen while scrolling */
+		.affix {
+			width: 250px;
+		}
+
+		/* Affix detaches from the grid system, so we need this fix for smaller
+		screens (mobile) */
+		@media (max-width: 768px) {
+ 			.affix {
+				position: static;
+			}
+		}
+
+		/* Less indent */
+		#markdown-toc {
+			padding-left: 0em;
+			list-style-type: none;
+		}
+
+		/* Make sidebar scrollable if the index is too long */
+		.sidebar {
+			overflow-y: auto;
+			height: 100%;
+		}
+
+		.bluebullet ul {
+			list-style-type: none;
+			padding-left: 0em;
+		}
+
+		#markdown-toc a {
+			font-size: 14px;
+			color: grey;
+		}
+
+		#markdown-toc ul {
+			padding-left: .5em;
+			list-style-type: none;
+		}
+
+		#markdown-toc li {
+			font-weight: bold;
+		}
+
+		#markdown-toc li li {
+			font-weight: normal;
+		}
+
+		/* Larger size in general */
+		p, li, ul {
+			font-size: 16px;
+		}
+
+		.hometitle {
+			margin-bottom: -4px;
+			margin-left: -3px;
+		}
+
+		/* Compensate for fixed header */
+		.anchor {
+			padding-top: 55px; margin-top: -55px;
+		}
+
+		.endpoint {
+			font-weight: bold;
+		}
+
+		.feature-header {
+			padding-top: 20px;
+			font-weight: lighter;
+			margin-bottom: 0;
+		}
+
+		.feature {
+			margin: 10px 0px 30px 0;
+		}
+
+		.smaller {
+			font-size: 15px;
+		}
+
+		.left {
+			padding-left: 0;
+		}
+
+		.right {
+			padding-right: 0;
+		}
+
+		.carousel .item {
+			height: 1200px;
+		}
+
+		.carousel img {
+  			position: absolute;
+  			top: 0;
+  			left: 0;
+  			height: 500px;
+  			max-width: none;
+		}
+
+		.carousel-control.left, .carousel-control.right {
+			background-image: none
+		}
+
+		.carousel-indicators li {
+			background-color: grey;
+		}
+
+		.carousel-controls{
+			position:relative;
+			width:300px;
+		}
+
+		.carousel-indicators .active {
+			background-color: #FF7600;
+		}
+	</style>
+
+	</head>
+	<body data-spy="scroll">
+		<div class="navbar navbar-default navbar-fixed-top" role="navigation">
+			<div class="container">
+				<div class="navbar-header">
+					<button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target=".navbar-collapse">
+						<span class="sr-only">Toggle navigation</span>
+						<span class="icon-bar"></span>
+						<span class="icon-bar"></span>
+						<span class="icon-bar"></span>
+					</button>
+					<a class="navbar-brand" href="/">
+						<img id="logo" src="/public/bosun-logo-mark.svg" />
+						<div id="logo-text">Bosun</div>
+					</a>
+				</div>
+				<div class="navbar-collapse collapse">
+					<ul class="nav navbar-nav navbar-right">
+						<li class="dropdown">
+							<a href="#" class="dropdown-toggle" data-toggle="dropdown">Project <span class="caret"></span></a>
+							<ul class="dropdown-menu">
+								<li><a href="http://bosun.org/scollector">scollector</a></li>
+								<li><a href="https://github.com/bosun-monitor/bosun">GitHub</a></li>
+							</ul>
+						</li>
+					</ul>
+					<ul class="nav navbar-nav navbar-right">
+						<li>
+							<a href="/media.html">Media</a>
+						</li>
+					</ul>
+					<ul class="nav navbar-nav navbar-right">
+						<li>
+							<a href="/downloads.html">Download</a>
+						</li>
+					</ul>
+					<ul class="nav navbar-nav navbar-right">
+						<li class="dropdown">
+							<a href="#" class="dropdown-toggle" data-toggle="dropdown">Documentation <span class="caret"></span></a>
+							<ul class="dropdown-menu">
+								<li><a href="/quickstart.html">Quick Start</a></li>
+								<li><a href="/expressions.html">Expression Language</a></li>
+								<li><a href="/configuration.html">Configuration</a></li>
+								<li><a href="/usage.html">Usage</a></li>			
+								<li><a href="/examples.html">Examples</a></li>
+								<li><a href="/api.html">API</a></li>
+							</ul>
+						</li>
+					</ul>
+				</div>
+			</div>
+		</div>
+		<div class="container cont">
+			{{ content }}
+		</div>
+		<script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+		<script src="/scripts/bootstrap.min.js"></script>
+		<script>
+			(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+			(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+			m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+			})(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+			ga('create', 'UA-5620270-47', 'auto');
+			ga('send', 'pageview');
+		</script>
+	</body>
+</html>
