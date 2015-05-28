@@ -135,7 +135,7 @@ func TestCheckSilence(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = s.Check(nil, time.Now())
+	_, err = s.Check(nil, time.Now(), 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -230,7 +230,7 @@ func TestCheckNotify(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = s.Check(nil, time.Now())
+	_, err = s.Check(nil, time.Now(), 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -408,7 +408,7 @@ func TestCheckNotifyLog(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = s.Check(nil, time.Now())
+	_, err = s.Check(nil, time.Now(), 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -502,4 +502,42 @@ func TestCheckCritUnknownEmpty(t *testing.T) {
 	r.Events[ak].Status = StNormal
 	s.RunHistory(r)
 	verify(true)
+}
+
+func TestDifferentSchedules(t *testing.T) {
+	s := new(Schedule)
+	c, err := conf.New("", `
+		alert a {
+			crit = 1
+			runEvery = 3
+		}
+		alert b {
+			crit = 1
+			runEvery = 1
+		}
+	`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.StateFile = ""
+
+	check := func(interval uint64, alerts ...string) {
+		s.Init(c)
+		_, err = s.Check(nil, time.Now(), interval)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(alerts) != len(s.status) {
+			t.Errorf("Expected %d statuses, but have %d for interval %d.", len(alerts), len(s.status), interval)
+		}
+		for _, alert := range alerts {
+			if state, ok := s.status[expr.NewAlertKey(alert, nil)]; !ok || state.Status() != StCritical {
+				t.Fatalf("Expected results for alert %s in interval %d.", alert, interval)
+			}
+		}
+	}
+	check(0, "a", "b")
+	check(1, "b")
+	check(2, "b")
+	check(3, "a", "b")
 }

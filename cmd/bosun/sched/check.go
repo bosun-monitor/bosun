@@ -65,6 +65,7 @@ type RunHistory struct {
 	GraphiteContext graphite.Context
 	Logstash        expr.LogstashElasticHosts
 	Events          map[expr.AlertKey]*Event
+	schedule        *Schedule
 }
 
 // AtTime creates a new RunHistory starting at t with the same context and
@@ -83,6 +84,7 @@ func (s *Schedule) NewRunHistory(start time.Time, cache *cache.Cache) *RunHistor
 		Context:         s.Conf.TSDBContext(),
 		GraphiteContext: s.Conf.GraphiteContext(),
 		Logstash:        s.Conf.LogstashElasticHosts,
+		schedule:        s,
 	}
 }
 
@@ -322,39 +324,50 @@ func (s *Schedule) CollectStates() {
 func (r *RunHistory) GetUnknownAndUnevaluatedAlertKeys(alert string) (unknown, uneval []expr.AlertKey) {
 	unknown = []expr.AlertKey{}
 	uneval = []expr.AlertKey{}
+	anyFound := false
 	for ak, ev := range r.Events {
 		if ak.Name() != alert {
 			continue
 		}
+		anyFound = true
 		if ev.Status == StUnknown {
 			unknown = append(unknown, ak)
 		} else if ev.Unevaluated {
 			uneval = append(uneval, ak)
 		}
 	}
+	if !anyFound {
+		r.schedule.Lock()
+		for ak, st := range r.schedule.status {
+			if ak.Name() != alert {
+				continue
+			}
+			if st.Last().Status == StUnknown {
+				unknown = append(unknown, ak)
+			} else if st.Last().Unevaluated {
+				uneval = append(uneval, ak)
+			}
+		}
+		r.schedule.Unlock()
+	}
 	return unknown, uneval
 }
 
 // Check evaluates all critical and warning alert rules. An error is returned if
 // the check could not be performed.
-func (s *Schedule) Check(T miniprofiler.Timer, now time.Time) (time.Duration, error) {
-	select {
-	case s.checkRunning <- true:
-		// Good, we've got the lock.
-	default:
-		return 0, fmt.Errorf("check already running")
-	}
+func (s *Schedule) Check(T miniprofiler.Timer, now time.Time, interval uint64) (time.Duration, error) {
 	r := s.NewRunHistory(now, cache.New(0))
 	start := time.Now()
 	for _, ak := range s.findUnknownAlerts(now) {
 		r.Events[ak] = &Event{Status: StUnknown}
 	}
 	for _, a := range s.Conf.OrderedAlerts {
-		s.CheckAlert(T, r, a)
+		if interval%uint64(a.RunEvery) == 0 {
+			s.CheckAlert(T, r, a)
+		}
 	}
 	d := time.Since(start)
 	s.RunHistory(r)
-	<-s.checkRunning
 	return d, nil
 }
 
@@ -373,7 +386,7 @@ func (s *Schedule) findUnknownAlerts(now time.Time) []expr.AlertKey {
 		a := s.Conf.Alerts[ak.Name()]
 		t := a.Unknown
 		if t == 0 {
-			t = s.Conf.CheckFrequency * 2
+			t = s.Conf.CheckFrequency * 2 * time.Duration(a.RunEvery)
 		}
 		if now.Sub(st.Touched) < t {
 			continue
