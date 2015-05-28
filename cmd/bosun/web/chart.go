@@ -122,7 +122,7 @@ func Graph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 	}
 	if _, present := r.Form["png"]; present {
 		c := chart.ScatterChart{
-			Title: fmt.Sprintf("%v - %v", oreq.Start, oreq.End),
+			Title: fmt.Sprintf("%v - %v", oreq.Start, queries),
 		}
 		c.XRange.Time = true
 		if min, err := strconv.ParseFloat(r.FormValue("min"), 64); err == nil {
@@ -208,7 +208,7 @@ func ExprGraph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (in
 	if err != nil {
 		return nil, err
 	}
-	if err := schedule.ExprSVG(t, w, 800, 600, res.Results, q, now); err != nil {
+	if err := schedule.ExprSVG(t, w, 800, 600, "", res.Results); err != nil {
 		return nil, err
 	}
 	return nil, nil

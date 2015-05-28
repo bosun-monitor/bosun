@@ -276,16 +276,19 @@ func (c *Context) EvalAll(v interface{}) (interface{}, error) {
 	return res, err
 }
 
-func (c *Context) graph(v interface{}, filter bool) (interface{}, error) {
-	res, title, err := c.eval(v, filter, true, 1000)
+func (c *Context) graph(v interface{}, unit string, filter bool) (interface{}, error) {
+	res, exprText, err := c.eval(v, filter, true, 1000)
 	if err != nil {
 		return nil, err
 	}
 	var buf bytes.Buffer
 	const width = 800
 	const height = 600
+	footerHTML := fmt.Sprintf(`<small>Query: %s<br>Time: %s</small>`,
+		template.HTMLEscapeString(exprText),
+		c.runHistory.Start.Format(time.RFC3339))
 	if c.IsEmail {
-		err := c.schedule.ExprPNG(nil, &buf, width, height, res, title, c.runHistory.Start)
+		err := c.schedule.ExprPNG(nil, &buf, width, height, unit, res)
 		if err != nil {
 			return nil, err
 		}
@@ -295,26 +298,36 @@ func (c *Context) graph(v interface{}, filter bool) (interface{}, error) {
 			Filename:    name,
 			ContentType: "image/png",
 		})
-		return template.HTML(fmt.Sprintf(`<img alt="%s" src="cid:%s" />`,
+		return template.HTML(fmt.Sprintf(`<img alt="%s" src="cid:%s" />%s`,
 			template.HTMLEscapeString(fmt.Sprint(v)),
 			name,
+			footerHTML,
 		)), nil
 	}
-	if err := c.schedule.ExprSVG(nil, &buf, width, height, res, title, time.Now().UTC()); err != nil {
+	if err := c.schedule.ExprSVG(nil, &buf, width, height, unit, res); err != nil {
 		return nil, err
 	}
+	buf.WriteString(footerHTML)
 	return template.HTML(buf.String()), nil
 }
 
 // Graph returns an SVG for the given result (or expression, for which it gets the result)
 // with same tags as the context's tags.
-func (c *Context) Graph(v interface{}) (interface{}, error) {
-	return c.graph(v, true)
+func (c *Context) Graph(v interface{}, args ...string) (interface{}, error) {
+	var unit string
+	if len(args) > 0 {
+		unit = args[0]
+	}
+	return c.graph(v, unit, true)
 }
 
 // GraphAll returns an SVG for the given result (or expression, for which it gets the result).
-func (c *Context) GraphAll(v interface{}) (interface{}, error) {
-	return c.graph(v, false)
+func (c *Context) GraphAll(v interface{}, args ...string) (interface{}, error) {
+	var unit string
+	if len(args) > 0 {
+		unit = args[0]
+	}
+	return c.graph(v, unit, false)
 }
 
 func (c *Context) GetMeta(metric, name string, v interface{}) (interface{}, error) {
