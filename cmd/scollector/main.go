@@ -63,7 +63,7 @@ type Conf struct {
 	// DisableSelf disables sending of scollector self metrics.
 	DisableSelf bool
 	// Freq is the default frequency in seconds for most collectors.
-	Freq *int
+	Freq int
 	// Filter filters collectors matching these terms.
 	Filter []string
 
@@ -117,6 +117,7 @@ type ProcessDotNet struct {
 
 func readConf() *Conf {
 	conf := &Conf{
+		Freq: 15,
 	}
 	loc := *flagConf
 	if *flagConf == "" {
@@ -128,7 +129,7 @@ func readConf() *Conf {
 		dir := filepath.Dir(p)
 		loc = filepath.Join(dir, "scollector.conf")
 	}
-	_, err := toml.DecodeFile(loc, &conf)
+	_, err := toml.DecodeFile(loc, conf)
 	if err != nil {
 		if *flagConf != "" {
 			slog.Fatal(err)
@@ -235,10 +236,7 @@ func main() {
 	} else if err != nil {
 		slog.Fatal("invalid host:", conf.Host)
 	}
-	freq := time.Second * 15
-	if conf.Freq != nil {
-		freq = time.Duration(*conf.Freq) * time.Second
-	}
+	freq := time.Second * time.Duration(conf.Freq)
 	if freq <= 0 {
 		slog.Fatal("freq must be > 0")
 	}
@@ -456,7 +454,7 @@ func toToml(fname string) {
 			if err != nil {
 				slog.Fatal(err)
 			}
-			c.Freq = &freq
+			c.Freq = freq
 		case "process":
 			if runtime.GOOS == "linux" {
 				var p struct {
