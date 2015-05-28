@@ -113,6 +113,9 @@ func now() (t int64) {
 
 // Search returns all collectors matching the pattern s.
 func Search(s []string) []Collector {
+	if len(s) == 0 {
+		return collectors
+	}
 	var r []Collector
 	for _, c := range collectors {
 		for _, p := range s {
