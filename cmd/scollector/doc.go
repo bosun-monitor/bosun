@@ -25,16 +25,16 @@ The flags are:
 		Filters collectors matching these terms, separated by
 		comma. Overrides Filter in conf file.
 	-b=0
-	    OpenTSDB batch size. Used for debugging bad data.
+		OpenTSDB batch size. Used for debugging bad data.
 	-conf=""
-	    Location of configuration file. Defaults to scollector.conf in directory of
-	    the scollector executable.
+		Location of configuration file. Defaults to scollector.conf in directory of
+		the scollector executable.
 	-l
-	    List available collectors (after Filter is applied).
+		List available collectors (after Filter is applied).
 	-m
-	    Disable sending of metadata.
+		Disable sending of metadata.
 	-version
-	    Prints the version and exits.
+		Prints the version and exits.
 
 Additional flags on Windows:
 	-winsvc=""
