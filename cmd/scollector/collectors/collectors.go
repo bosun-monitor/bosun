@@ -112,10 +112,10 @@ func now() (t int64) {
 }
 
 // Search returns all collectors matching the pattern s.
-func Search(s string) []Collector {
+func Search(s []string) []Collector {
 	var r []Collector
 	for _, c := range collectors {
-		for _, p := range strings.Split(s, ",") {
+		for _, p := range s {
 			if strings.Contains(c.Name(), p) {
 				r = append(r, c)
 				break

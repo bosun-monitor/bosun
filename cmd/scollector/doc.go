@@ -18,45 +18,16 @@ Usage:
 	scollector [flag]
 
 The flags are:
-	-aws=""
-	    AWS keys and region, format: "access_key:secret_key@region".
+
 	-b=0
 	    OpenTSDB batch size. Used for debugging bad data.
-	-c=""
-	    External collectors directory.
 	-conf=""
 	    Location of configuration file. Defaults to scollector.conf in directory of
 	    the scollector executable.
-	-f=""
-	    Filters collectors matching this term, multiple terms separated by comma.
-	    Works with all other arguments.
-	-freq="15"
-	    Set the default frequency in seconds for most collectors.
-	-h=""
-	    Bosun or OpenTSDB host; can optionally specify a port and scheme
-	    ("http://bosun.example.com:8070"), but will default to
-	    http://bosun:80/
-	-hostname=""
-	    If set, use as value of host tag instead of system hostname.
-	-i=""
-	    ICMP host to ping of the format: "host[,host...]".
 	-l
-	    List available collectors.
+	    List available collectors (after Filter is applied).
 	-m
 	    Disable sending of metadata.
-	-n
-	    Disable sending of scollector self metrics.
-	-s=""
-	    SNMP host to poll of the format: "community@host[,community@host...]".
-	-t=""
-	    Tags to add to every datapoint in the format dc=ny,rack=3. If a collector
-	    specifies the same tag key, this one will be overwritten. The host tag is
-	    not supported.
-	-u
-	    Enables full hostnames: doesn't truncate to first ".".
-	-v=""
-	    vSphere host to poll of the format:
-	    "user:password@host[,user:password@host...]".
 	-version
 	    Prints the version and exits.
 
@@ -109,53 +80,115 @@ scollector's log.
 
 Configuration File
 
-If scollector.conf exists in the same directory as the scollector executable or
-is specified via the -conf="" flag, it's content will be used to set
-configuration flags. Configuration file values overwrite command line flags.
-The configuration file is of the form key = value, one per line. Supported keys
-are: host (-h), hostname (-hostname), filter (-f), coldir (-c),
-snmp (-s), icmp (-i), vsphere (-v). Example:
+If scollector.conf exists in the same directory as the scollector
+executable or is specified via the -conf="" flag, it's content
+will be used to set configuration flags. The format is toml
+(https://github.com/toml-lang/toml/blob/master/versions/en/toml-v0.2.0.md).
+Available keys are:
 
-	host = other-tsdb:1234
-	filter = snmp
-	snmp = com@theswitch
+Host (string): the OpenTSDB or Bosun host to send data.
 
-There also are additional values that are used to configure specific collectors.
+FullHost (string): enables full hostnames: doesn't truncate to first ".".
 
-	// Linux processes to monitor use the form "command,name,command line regex"
-	process = ruby,puppet-agent,puppet
-	process = java,opentsdb,opentsdb
-	process = java,elastic,elasticsearch
-	process = java,logstash,logstash
-	process = /opt/bosun/bosun,bosun,
-	process = /opt/scollector/scollector,scollector,
+ColDir (string): is the external collectors directory.
 
-	// Windows processes and service monitors use the form "name regex"
-	process = ^chrome
-	process = ^powershell
-	process = ^scollector
-	process = ^WinRM
-	process = (?i)^MSSQLServer //Matches are case sensitive unless specified
+Tags (table of strings): are added to every datapoint. If a collector specifies
+the same tag key, this one will be overwritten. The host tag is not supported.
 
-	// Dotnet processes to monitor use the form "process/service name regex"
-	process_dotnet=^w3wp //Optional, as IIS processes are always monitored
-	process_dotnet=^MyCustomService
-	process_dotnet=^powershell
+Hostname (string): overrides the system hostname.
+
+DisableSelf (boolean): disables sending of scollector self metrics.
+
+Freq (integer): is the default frequency in seconds for most collectors.
+
+Filter (array of string): filters collectors matching these terms.
+
+Collector configuration keys
+
+Following are configurations for collectors that do not autodetect.
+
+KeepalivedCommunity (string): if not empty, enables the Keepalived collector
+with the specified community.
+
+	KeepalivedCommunity = "keepalivedcom"
+
+HAProxy (array of table, keys are User, Password, Instances): HAProxy instances
+to poll. The Instances key is an array of table with keys Tier and URL.
+
+	[[HAProxy]]
+	  User = "hauser"
+	  Password = "hapass"
+	  [[HAProxy.Instances]]
+	    Tier = "1"
+	    URL = "http://ny-host01:17/haproxy\;csv"
+	  [[HAProxy.Instances]]
+	    Tier = "2"
+	    URL = "http://ny-host01:26/haproxy\;csv"
+	  [[HAProxy.Instances]]
+	    Tier = "3"
+	    URL = "http://ny-host01:40/haproxy\;csv"
+
+SNMP (array of table, keys are Community and Host): SNMP hosts to connect
+to at a 5 minute poll interval.
+
+	[[SNMP]]
+	  Community = com
+	  Host = host
+	[[SNMP]]
+	  Community = com2
+	  Host = host2
+
+ICMP (array of table, keys are Host): ICMP hosts to ping.
+
+	[[ICMP]]
+	  Host = "internal-router"
+	[[ICMP]]
+	  Host = "backup-router"
+
+Vsphere (array of table, keys are Host, User, Password): vSphere hosts to poll.
+
+	[[Vsphere]]
+	  Host = "vsphere01"
+	  User = "vuser"
+	  Password = "pass"
+
+AWS (array of table, keys are AccessKey, SecretKey, Region): AWS hosts to poll.
+
+	[[AWS]]
+	  AccessKey = "aoesnuth"
+	  SecretKey = "snch0d"
+	  Region = "somewhere"
+
+Process (array of table, keys are Command, Name, Args for Linux, and Name
+for Windows): processes to monitor. Name is optional, and defaults to Command.
+
+	# Linux
+	[[Process]]
+	  Command = "redis-server *:6379"
+	  Name = "redis-main"
+	[[Process]]
+	  Command = "redis-server *:6380"
+	  Name = "redis-slave"
+
+	# Windows
+	[[Process]]
+	  Command = "^java"
+	[[Process]]
+	  Command = "^powershell"
+
+
+ProcessDotNet (array of table, keys are Name): .NET processes to monitor
+on Windows.
+
+	[[ProcessDotNet]]
+	  Name = "^w3wp"
+	[[ProcessDotNet]]
+	  Name = "^Scheduler"
 
 Windows
 
 scollector has full Windows support. It can be run standalone, or installed as a
 service (see -winsvc). The Event Log is used when installed as a service.
-
-SNMP
-
-scollector has an SNMP mode where (in addition to its normal operation)
-it also polls a given host:
-
-	scollector -s community@host[,community@host...]
-
-Poll frequency currently defaults to 5 minutes. Some common OIDs regarding
-interfaces are collected.
 
 */
 package main

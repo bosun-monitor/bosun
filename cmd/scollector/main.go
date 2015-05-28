@@ -33,7 +33,6 @@ const (
 )
 
 var (
-	flagFilter          = flag.String("f", "", "Filters collectors matching this term, multiple terms separated by comma. Works with all other arguments.")
 	flagList            = flag.Bool("l", false, "List available collectors.")
 	flagPrint           = flag.Bool("p", false, "Print to screen instead of sending to a host")
 	flagBatchSize       = flag.Int("b", 0, "OpenTSDB batch size. Used for debugging bad data.")
@@ -62,10 +61,9 @@ type Conf struct {
 	// DisableSelf disables sending of scollector self metrics.
 	DisableSelf bool
 	// Freq is the default frequency in seconds for most collectors.
-	Freq int
-	// Filter filters collectors matching this term, multiple terms separated
-	// by comma.
-	Filter string
+	Freq *int
+	// Filter filters collectors matching these terms.
+	Filter []string
 
 	// KeepalivedCommunity, if not empty, enables the Keepalived collector with
 	// the specified community.
@@ -216,9 +214,9 @@ func main() {
 	collect.Debug = *flagDebug
 	util.Debug = *flagDebug
 	collect.DisableDefaultCollectors = conf.DisableSelf
-	c := collectors.Search(*flagFilter)
+	c := collectors.Search(conf.Filter)
 	if len(c) == 0 {
-		slog.Fatalf("Filter %s matches no collectors.", *flagFilter)
+		slog.Fatalf("Filter %v matches no collectors.", conf.Filter)
 	}
 	for _, col := range c {
 		col.Init()
@@ -230,11 +228,15 @@ func main() {
 	} else if err != nil {
 		slog.Fatal("invalid host:", conf.Host)
 	}
-	if conf.Freq <= 0 {
+	freq := time.Second * 15
+	if conf.Freq != nil {
+		freq = time.Duration(*conf.Freq) * time.Second
+	}
+	if freq <= 0 {
 		slog.Fatal("freq must be > 0")
 	}
-	collectors.DefaultFreq = time.Second * time.Duration(conf.Freq)
-	collect.Freq = time.Second * time.Duration(conf.Freq)
+	collectors.DefaultFreq = freq
+	collect.Freq = freq
 	collect.Tags = opentsdb.TagSet{"os": runtime.GOOS}
 	if *flagPrint {
 		collect.Print = true
@@ -352,7 +354,7 @@ func toToml(fname string) {
 		case "hostname":
 			c.Hostname = v
 		case "filter":
-			c.Filter = v
+			c.Filter = strings.Split(v, ",")
 		case "coldir":
 			c.ColDir = v
 		case "snmp":
@@ -447,7 +449,7 @@ func toToml(fname string) {
 			if err != nil {
 				slog.Fatal(err)
 			}
-			c.Freq = freq
+			c.Freq = &freq
 		case "process":
 			if runtime.GOOS == "linux" {
 				var p struct {
