@@ -76,9 +76,24 @@ func (c *Context) HostView(host string) string {
 	})
 }
 
+// Expr takes an expression in the form of a string, changes the tags to
+// match the context of the alert, and returns a link to the expression page.
 func (c *Context) Expr(v string) string {
 	p := url.Values{}
+	p.Add("date", c.runHistory.Start.Format(`2006-01-02`))
+	p.Add("time", c.runHistory.Start.Format(`15:04`))
 	p.Add("expr", base64.StdEncoding.EncodeToString([]byte(opentsdb.ReplaceTags(v, c.Group))))
+	return c.schedule.Conf.MakeLink("/expr", &p)
+}
+
+// GraphLink takes an expression in the form of a string, and returns a link to
+// the expression page's graph tab with the time set.
+func (c *Context) GraphLink(v string) string {
+	p := url.Values{}
+	p.Add("expr", base64.StdEncoding.EncodeToString([]byte(v)))
+	p.Add("tab", "graph")
+	p.Add("date", c.runHistory.Start.Format(`2006-01-02`))
+	p.Add("time", c.runHistory.Start.Format(`15:04`))
 	return c.schedule.Conf.MakeLink("/expr", &p)
 }
 
@@ -298,15 +313,18 @@ func (c *Context) graph(v interface{}, unit string, filter bool) (interface{}, e
 			Filename:    name,
 			ContentType: "image/png",
 		})
-		return template.HTML(fmt.Sprintf(`<img alt="%s" src="cid:%s" />%s`,
+		return template.HTML(fmt.Sprintf(`<a href="%s" style="text-decoration: none"><img alt="%s" src="cid:%s" /></a>%s`,
+			c.GraphLink(exprText),
 			template.HTMLEscapeString(fmt.Sprint(v)),
 			name,
 			footerHTML,
 		)), nil
 	}
+	buf.WriteString(fmt.Sprintf(`<a href="%s" style="text-decoration: none">`, c.GraphLink(exprText)))
 	if err := c.schedule.ExprSVG(nil, &buf, width, height, unit, res); err != nil {
 		return nil, err
 	}
+	buf.WriteString(`</a>`)
 	buf.WriteString(footerHTML)
 	return template.HTML(buf.String()), nil
 }

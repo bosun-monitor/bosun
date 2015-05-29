@@ -33,7 +33,7 @@ bosunControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route
 	$scope.time = search.time || '';
 	$scope.expr = current;
 	$scope.running = current;
-	$scope.tab = 'results';
+	$scope.tab = search.tab || 'results';
 	$scope.animate();
 	$http.get('/api/expr?q=' +
 		encodeURIComponent(current) +
