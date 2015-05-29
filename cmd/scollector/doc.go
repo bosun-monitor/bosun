@@ -27,7 +27,7 @@ The flags are:
 	-b=0
 		OpenTSDB batch size. Used for debugging bad data.
 	-conf=""
-		Location of configuration file. Defaults to scollector.conf in directory of
+		Location of configuration file. Defaults to scollector.toml in directory of
 		the scollector executable.
 	-l
 		List available collectors (after Filter is applied).

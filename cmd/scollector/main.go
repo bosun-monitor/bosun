@@ -42,7 +42,7 @@ var (
 	flagDebug           = flag.Bool("d", false, "Enables debug output.")
 	flagDisableMetadata = flag.Bool("m", false, "Disable sending of metadata.")
 	flagVersion         = flag.Bool("version", false, "Prints the version and exits.")
-	flagConf            = flag.String("conf", "", "Location of configuration file. Defaults to scollector.conf in directory of the scollector executable.")
+	flagConf            = flag.String("conf", "", "Location of configuration file. Defaults to scollector.toml in directory of the scollector executable.")
 	flagToToml          = flag.String("totoml", "", "Location of destination toml file to convert. Reads from value of -conf.")
 
 	mains []func()
@@ -127,7 +127,7 @@ func readConf() *Conf {
 			return conf
 		}
 		dir := filepath.Dir(p)
-		loc = filepath.Join(dir, "scollector.conf")
+		loc = filepath.Join(dir, "scollector.toml")
 	}
 	_, err := toml.DecodeFile(loc, conf)
 	if err != nil {
