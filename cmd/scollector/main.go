@@ -319,9 +319,6 @@ func list(cs []collectors.Collector) {
 }
 
 func parseHost(host string) (*url.URL, error) {
-	if host == "" {
-		host = "bosun"
-	}
 	if !strings.Contains(host, "//") {
 		host = "http://" + host
 	}
