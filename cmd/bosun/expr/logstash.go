@@ -122,6 +122,12 @@ func (e *LogstashElasticHosts) GenIndices(r *LogstashRequest) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	// Short-circut when using concrete ES index name
+	if len(r.IndexRoot) > 0 {
+		if r.IndexRoot[len(r.IndexRoot)-1] == '/' {
+			return r.IndexRoot[:len(r.IndexRoot)-1], nil
+		}
+	}
 	indices, err := lsClient.IndexNames()
 	if err != nil {
 		return "", err
@@ -147,7 +153,7 @@ func (e *LogstashElasticHosts) GenIndices(r *LogstashRequest) (string, error) {
 		}
 	}
 	if len(selectedIndices) == 0 {
-		return "", fmt.Errorf("no elastic indices available during this time range")
+		return "", fmt.Errorf("no elastic indices available during this time range, start/end: [%s|%s]", start, end)
 	}
 	return strings.Join(selectedIndices, ","), nil
 }
