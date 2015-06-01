@@ -3,13 +3,14 @@ layout: page
 title: Download Bosun
 ---
 
-{% assign release = site.github.releases[0] %}
+{% assign releases = site.github.releases | where:"draft",false %}
+{% assign release = releases[0] %}
 {% assign relname = release.tag_name %}
 
 <div class="row">
 	<div class="col-md-12">
 		<h2>Latest release: <a href="{{release.html_url}}">{{relname}}</a> Published {{release.created_at | date_to_string}}
-		<p>{{ release.body | newline_to_br }}</p>
+		<p>{{ release.body | markdownify  }}</p>
 		<h2 id="binaries">Binaries</h2>
 		
 		<p>Binaries are provided below. All web assets are already bundled. Source instructions provided for developers.</p>
