@@ -9,6 +9,7 @@ title: Download Bosun
 <div class="row">
 	<div class="col-md-12">
 		<h2>Latest release: <a href="{{release.html_url}}">{{relname}}</a> Published {{release.created_at | date_to_string}}
+		<p>{{ release.body | newline_to_br }}</p>
 		<h2 id="binaries">Binaries</h2>
 		
 		<p>Binaries are provided below. All web assets are already bundled. Source instructions provided for developers.</p>
