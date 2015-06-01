@@ -21,25 +21,26 @@
         <p>OpenTSDB&#39;s tcollector for the v2 HTTP API</p>
 
         <h2>Download Binaries</h2>
-
-	<p>Version <a href="https://github.com/bosun-monitor/bosun/releases/tag/{{ site.version.id }}">{{ site.version.id }}</a> ({{ site.time | date_to_string }})</p>
-
+		{% assign release = site.github.releases[0] %}
+		{% assign relname = release.tag_name %}
+	<p>Version <a href="https://github.com/bosun-monitor/bosun/releases/tag/{{relname}}">{{ site.version.id }}</a> ({{ release.created_at | date_to_string }})</p>
+		
         <ul>
-          <li><a href="https://github.com/bosun-monitor/bosun/releases/download/{{site.version.id}}/scollector-linux-amd64"><strong>Linux</strong> amd64</a></li>
-          <li><a href="https://github.com/bosun-monitor/bosun/releases/download/{{site.version.id}}/scollector-windows-amd64.exe"><strong>Windows</strong> amd64</a></li>
-          <li><a href="https://github.com/bosun-monitor/bosun/releases/download/{{site.version.id}}/scollector-darwin-amd64"><strong>Mac</strong> amd64</a></li>
+          <li><a href="https://github.com/bosun-monitor/bosun/releases/download/{{relname}}/scollector-linux-amd64"><strong>Linux</strong> amd64</a></li>
+          <li><a href="https://github.com/bosun-monitor/bosun/releases/download/{{relname}}/scollector-windows-amd64.exe"><strong>Windows</strong> amd64</a></li>
+          <li><a href="https://github.com/bosun-monitor/bosun/releases/download/{{relname}}/scollector-darwin-amd64"><strong>Mac</strong> amd64</a></li>
         </ul>
 
         <ul>
-          <li><a href="https://github.com/bosun-monitor/bosun/releases/download/{{site.version.id}}/scollector-linux-386"><strong>Linux</strong> 386</a></li>
-          <li><a href="https://github.com/bosun-monitor/bosun/releases/download/{{site.version.id}}/scollector-windows-386.exe"><strong>Windows</strong> 386</a></li>
-          <li><a href="https://github.com/bosun-monitor/bosun/releases/download/{{site.version.id}}/scollector-darwin-386"><strong>Mac</strong> 386</a></li>
+          <li><a href="https://github.com/bosun-monitor/bosun/releases/download/{{relname}}/scollector-linux-386"><strong>Linux</strong> 386</a></li>
+          <li><a href="https://github.com/bosun-monitor/bosun/releases/download/{{relname}}/scollector-windows-386.exe"><strong>Windows</strong> 386</a></li>
+          <li><a href="https://github.com/bosun-monitor/bosun/releases/download/{{relname}}/scollector-darwin-386"><strong>Mac</strong> 386</a></li>
         </ul>
 
         <ul>
-          <li><a href="https://github.com/bosun-monitor/bosun/releases/download/{{site.version.id}}/scollector-linux-arm5"><strong>ARMv5</strong></a></li>
-          <li><a href="https://github.com/bosun-monitor/bosun/releases/download/{{site.version.id}}/scollector-linux-arm6"><strong>ARMv6</strong></a></li>
-          <li><a href="https://github.com/bosun-monitor/bosun/releases/download/{{site.version.id}}/scollector-linux-arm7"><strong>ARMv7</strong></a></li>
+          <li><a href="https://github.com/bosun-monitor/bosun/releases/download/{{relname}}/scollector-linux-arm5"><strong>ARMv5</strong></a></li>
+          <li><a href="https://github.com/bosun-monitor/bosun/releases/download/{{relname}}/scollector-linux-arm6"><strong>ARMv6</strong></a></li>
+          <li><a href="https://github.com/bosun-monitor/bosun/releases/download/{{relname}}/scollector-linux-arm7"><strong>ARMv7</strong></a></li>
         </ul>
 
         <p class="view"><a href="https://github.com/bosun-monitor/bosun/tree/master/cmd/scollector">View the Project on GitHub</a></p>
