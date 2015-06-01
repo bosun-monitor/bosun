@@ -129,13 +129,19 @@ func readConf() *Conf {
 		dir := filepath.Dir(p)
 		loc = filepath.Join(dir, "scollector.toml")
 	}
-	_, err := toml.DecodeFile(loc, conf)
+	f, err := os.Open(loc)
 	if err != nil {
 		if *flagConf != "" {
 			slog.Fatal(err)
 		}
 		if *flagDebug {
 			slog.Error(err)
+		}
+	} else {
+		defer f.Close()
+		_, err := toml.DecodeReader(f, conf)
+		if err != nil {
+			slog.Fatal(err)
 		}
 	}
 	return conf
@@ -234,7 +240,7 @@ func main() {
 		list(c)
 		return
 	} else if err != nil {
-		slog.Fatal("invalid host:", conf.Host)
+		slog.Fatalf("invalid host %v: %v", conf.Host, err)
 	}
 	freq := time.Second * time.Duration(conf.Freq)
 	if freq <= 0 {
@@ -322,7 +328,14 @@ func parseHost(host string) (*url.URL, error) {
 	if !strings.Contains(host, "//") {
 		host = "http://" + host
 	}
-	return url.Parse(host)
+	u, err := url.Parse(host)
+	if err != nil {
+		return nil, err
+	}
+	if u.Host == "" {
+		return nil, fmt.Errorf("no host specified")
+	}
+	return u, nil
 }
 
 func printPut(c chan *opentsdb.DataPoint) {
