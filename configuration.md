@@ -131,8 +131,9 @@ Templates are the message body for emails that are sent when an alert is trigger
 * Eval(string): executes the given expression and returns the first result with identical tags, or `nil` tags if none exists, otherwise `nil`.
 * EvalAll(string): executes the given expression and returns all results.
 * GetMeta(metric, name, tags): Returns metadata data for the given combination of metric, metadata name, and tag. `metric` and `name` are strings. `tags` may be a tag string (`"tagk=tagv,tag2=val2"`) or a tag set (`.Group`). If If `name` is the empty string, a slice of metadata matching the metric and tag is returned. Otherwise, only the metadata value is returned for the given name, or `nil` for no match.
-* Graph(string): returns an SVG graph of the expression with identical tags
-* GraphAll(string): returns an SVG graph of the expression
+* Graph(expression, y_label): returns an SVG graph of the expression with tags identical to the alert instance. `expression` is a string or an expression and `y_label` is a string. `y_label` is an optional argument.
+* GraphLink(expression): returns a link to the graph tab for the expression page for the given expression. The time is set to the time of the alert. `expression` is a string.
+* GraphAll(expression, y_label): returns an SVG graph of the expression. `expression` is a string or an expression and `y_label` is a string. `y_label` is an optional argument.
 * LeftJoin(expr, expr[, expr...]): results of the first expression (which may be a string or an expression) are left joined to results from all following expressions.
 * Lookup("table", "key"): Looks up the value for the key based on the tagset of the alert in the specified lookup table
 * LookupAll("table", "key", "tag=val,tag2=val2"): Looks up the value for the key based on the tagset specified in the given lookup table
