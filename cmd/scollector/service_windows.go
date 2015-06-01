@@ -12,6 +12,7 @@ import (
 	"bosun.org/_third_party/golang.org/x/sys/windows/svc/eventlog"
 	"bosun.org/_third_party/golang.org/x/sys/windows/svc/mgr"
 	"bosun.org/slog"
+	"bosun.org/version"
 )
 
 var win_service_command = flag.String("winsvc", "", "For Windows Service, can be install, remove, start, stop")
@@ -186,7 +187,7 @@ func runService(name string, isDebug bool) {
 		slog.SetEventLog(elog, 1)
 		defer elog.Close()
 	}
-	slog.Infof("starting %s service version %v (%v)", name, VersionDate, VersionID)
+	slog.Infof("starting %s service version %v (%v)", name, version.Version, version.VersionSHA)
 	run := svc.Run
 	if isDebug {
 		run = debug.Run

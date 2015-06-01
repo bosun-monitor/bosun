@@ -22,14 +22,7 @@ import (
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
 	"bosun.org/util"
-)
-
-// These constants should remain in source control as their zero values.
-const (
-	// VersionDate should be set at build time as a date: 20140721184001.
-	VersionDate uint64 = 0
-	// VersionID should be set at build time as the most recent commit hash.
-	VersionID string = ""
+	"bosun.org/version"
 )
 
 var (
@@ -158,7 +151,7 @@ func main() {
 		slog.Set(&slog.StdLog{Log: log.New(os.Stdout, "", log.LstdFlags)})
 	}
 	if *flagVersion {
-		fmt.Printf("scollector version %v (%v)\n", VersionDate, VersionID)
+		fmt.Println(version.GetVersionInfo("scollector"))
 		os.Exit(0)
 	}
 	for _, m := range mains {
@@ -264,17 +257,21 @@ func main() {
 	if err := collect.InitChan(u, "scollector", cdp); err != nil {
 		slog.Fatal(err)
 	}
-	if VersionDate > 0 {
-		go func() {
-			metadata.AddMetricMeta("scollector.version", metadata.Gauge, metadata.None,
-				"Scollector version number, which indicates when scollector was built.")
-			for {
-				if err := collect.Put("version", collect.Tags, VersionDate); err != nil {
-					slog.Error(err)
+
+	if version.VersionDate != "" {
+		v, err := strconv.ParseInt(version.VersionDate, 10, 64)
+		if err == nil {
+			go func() {
+				metadata.AddMetricMeta("scollector.version", metadata.Gauge, metadata.None,
+					"Scollector version number, which indicates when scollector was built.")
+				for {
+					if err := collect.Put("version", collect.Tags, v); err != nil {
+						slog.Error(err)
+					}
+					time.Sleep(time.Hour)
 				}
-				time.Sleep(time.Hour)
-			}
-		}()
+			}()
+		}
 	}
 	if *flagBatchSize > 0 {
 		collect.BatchSize = *flagBatchSize

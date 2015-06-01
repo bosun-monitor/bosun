@@ -1,6 +1,6 @@
 package main
 
-//go:generate go run ../../build/generate.go
+//go:generate go run ../../build/generate/generate.go
 
 import (
 	"flag"
@@ -27,6 +27,7 @@ import (
 	"bosun.org/graphite"
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
+	"bosun.org/version"
 )
 
 func init() {
@@ -40,14 +41,6 @@ func init() {
 	opentsdb.DefaultClient = client
 	graphite.DefaultClient = client
 }
-
-// These constants should remain in source control as their zero values.
-const (
-	// VersionDate should be set at build time as a date: 20140721184001.
-	VersionDate uint64 = 0
-	// VersionID should be set at build time as the most recent commit hash.
-	VersionID string = ""
-)
 
 var (
 	flagConf     = flag.String("c", "dev.conf", "config file location")
@@ -65,7 +58,7 @@ var (
 func main() {
 	flag.Parse()
 	if *flagVersion {
-		fmt.Printf("bosun version %v (%v)\n", VersionDate, VersionID)
+		fmt.Println(version.GetVersionInfo("bosun"))
 		os.Exit(0)
 	}
 	for _, m := range mains {
