@@ -243,6 +243,7 @@ type Alert struct {
 	CritNotification *Notifications
 	WarnNotification *Notifications
 	Unknown          time.Duration
+	MaxLogFrequency  time.Duration
 	IgnoreUnknown    bool
 	UnjoinedOK       bool `json:",omitempty"`
 	Log              bool
@@ -831,6 +832,16 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 				c.errorf("unknown duration must be at least 1s")
 			}
 			a.Unknown = d
+		case "maxLogFrequancy":
+			od, err := opentsdb.ParseDuration(v)
+			if err != nil {
+				c.error(err)
+			}
+			d := time.Duration(od)
+			if d < time.Second {
+				c.errorf("max log frequency must be at least 1s")
+			}
+			a.MaxLogFrequency = d
 		case "unjoinedOk":
 			a.UnjoinedOK = true
 		case "ignoreUnknown":
@@ -840,6 +851,9 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 		default:
 			c.errorf("unknown key %s", p.key)
 		}
+	}
+	if a.MaxLogFrequency != 0 && !a.Log {
+		c.errorf("maxLogFrequency can only be used on alerts with `log = true`.")
 	}
 	c.at(s)
 	if a.Crit == nil && a.Warn == nil {
