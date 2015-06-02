@@ -27,7 +27,7 @@ order: 1
 	</div>
 	<div class="col-md-4">
 		<h3>Get Help</h3>
-		<p>Join us in our Slack room. It requires an invite but you can use that IRC bridge #bosun-monitor on freenode. You can <strong><a href="https://github.com/bosun-monitor/bosun/issues">open issues on GitHub</a></strong> to report bugs or discuss new features.</p>
+		<p>Join us in our Slack room. <a href="/slackinvite.html">Get an invite.</a> You can <strong><a href="https://github.com/bosun-monitor/bosun/issues">open issues on GitHub</a></strong> to report bugs or discuss new features.</p>
 	</div>
 </div>
 <div class="row" style="padding-top: 75px"><h2 class="text-center feature-header">Features</h2></div>
