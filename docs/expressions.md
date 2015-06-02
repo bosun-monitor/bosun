@@ -310,6 +310,15 @@ Returns the input with its group removed. Used to combine queries from two diffe
 
 # Other Functions
 
+## alert(name, key)
+
+Executes and returns the `key` expression from alert `name` (which must be
+`warn` or `crit`). Any alert of the same name that is unknown or unevaluated
+is also returned with a value of `1`. Primarily for use with `depends`.
+
+Example: `alert("host.down", "crit")` returns the crit
+expression from the host.down alert.
+
 ## abs(number)
 
 Returns the absolute value of the number.

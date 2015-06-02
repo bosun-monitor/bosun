@@ -199,6 +199,7 @@ An alert is an evaluated expression which can trigger actions like emailing or l
 
 * crit: expression of a critical alert (which will send an email)
 * critNotification: comma-separated list of notifications to trigger on critical. This line may appear multiple times and duplicate notifications, which will be merged so only one of each notification is triggered. Lookup tables may be used when `lookup("table", "key")` is an entire `critNotification` value. See example below.
+* depends: expression that this alert depends on. If the expression is non-zero, this alert is unevaluated. Unevaluated alerts do not change state or become unknown.
 * ignoreUnknown: if present, will prevent alert from becoming unknown
 * squelch: <a name="squelch"></a> comma-separated list of `tagk=tagv` pairs. `tagv` is a regex. If the current tag group matches all values, the alert is squelched, and will not trigger as crit or warn. For example, `squelch = host=ny-web.*,tier=prod` will match any group that has at least that host and tier. Note that the group may have other tags assigned to it, but since all elements of the squelch list were met, it is considered a match. Multiple squelch lines may appear; a tag group matches if any of the squelch lines match.
 * template: name of template
@@ -236,6 +237,8 @@ alert a {
 	# Other alerts are passed through the l lookup table and may add n or d.
 	# If the host tag does not match a or b*, no other notification is added.
 	critNotification = lookup("l", "v")
+	# Do not evaluate this alert if its host is down.
+	depends = alert("host.down", "crit")
 }
 ~~~
 
