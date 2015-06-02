@@ -33,6 +33,7 @@ import (
 func init() {
 	client := &http.Client{
 		Transport: &httpcontrol.Transport{
+			Proxy:          http.ProxyFromEnvironment,
 			RequestTimeout: time.Minute,
 			MaxTries:       3,
 		},
