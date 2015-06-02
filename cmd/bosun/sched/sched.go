@@ -46,7 +46,6 @@ type Schedule struct {
 	metalock      sync.Mutex
 	maxIncidentId uint64
 	incidentLock  sync.Mutex
-	checkRunning  chan bool
 	db            *bolt.DB
 }
 
@@ -376,7 +375,6 @@ func (s *Schedule) Init(c *conf.Conf) error {
 	s.Incidents = make(map[uint64]*Incident)
 	s.status = make(States)
 	s.Search = search.NewSearch()
-	s.checkRunning = make(chan bool, 1)
 	if c.StateFile != "" {
 		s.db, err = bolt.Open(c.StateFile, 0600, nil)
 		if err != nil {
@@ -408,28 +406,27 @@ func (s *Schedule) Close() {
 }
 
 func (s *Schedule) Run() error {
+	if s.Conf == nil {
+		return fmt.Errorf("sched: nil configuration")
+	}
 	s.nc = make(chan interface{}, 1)
 	if s.Conf.Ping {
 		go s.PingHosts()
 	}
 	go s.Poll()
+	interval := uint64(0)
 	for {
-		if s.Conf == nil {
-			return fmt.Errorf("sched: nil configuration")
-		}
-		if s.Conf.CheckFrequency < time.Second {
-			return fmt.Errorf("sched: frequency must be > 1 second")
-		}
 		wait := time.After(s.Conf.CheckFrequency)
 		log.Println("starting check")
 		now := time.Now()
-		dur, err := s.Check(nil, now)
+		dur, err := s.Check(nil, now, interval)
 		if err != nil {
 			log.Println(err)
 		}
 		log.Printf("check took %v\n", dur)
 		s.LastCheck = now
 		<-wait
+		interval++
 	}
 }
 

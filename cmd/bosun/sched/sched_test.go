@@ -76,7 +76,7 @@ func testSched(t *testing.T, st *schedTest) (s *Schedule) {
 	if st.previous != nil {
 		s.status = st.previous
 	}
-	s.Check(nil, queryTime)
+	s.Check(nil, queryTime, 0)
 	groups, err := s.MarshalGroups(new(miniprofiler.Profile), "")
 	if err != nil {
 		t.Error(err)
@@ -196,6 +196,32 @@ func TestUnknown(t *testing.T) {
 	testSched(t, &schedTest{
 		conf: `alert a {
 			crit = avg(q("avg:m{a=*}", "5m", "")) > 0
+		}`,
+		queries: map[string]opentsdb.ResponseSet{
+			`q("avg:m{a=*}", ` + window5Min + `)`: {},
+		},
+		state: map[schedState]bool{
+			schedState{"a{a=b}", "unknown"}: true,
+		},
+		previous: map[expr.AlertKey]*State{
+			"a{a=b}": state,
+			"a{a=c}": stillValid,
+		},
+	})
+}
+
+func TestUnknown_HalfFreq(t *testing.T) {
+	state := NewStatus("a{a=b}")
+	state.Touched = queryTime.Add(-20 * time.Minute)
+	state.Append(&Event{Status: StNormal, Time: state.Touched})
+	stillValid := NewStatus("a{a=c}")
+	stillValid.Touched = queryTime.Add(-19 * time.Minute)
+	stillValid.Append(&Event{Status: StNormal, Time: stillValid.Touched})
+
+	testSched(t, &schedTest{
+		conf: `alert a {
+			crit = avg(q("avg:m{a=*}", "5m", "")) > 0
+			runEvery = 2
 		}`,
 		queries: map[string]opentsdb.ResponseSet{
 			`q("avg:m{a=*}", ` + window5Min + `)`: {},

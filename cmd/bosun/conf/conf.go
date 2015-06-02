@@ -29,6 +29,7 @@ type Conf struct {
 	Vars
 	Name             string        // Config file name
 	CheckFrequency   time.Duration // Time between alert checks: 5m
+	DefaultRunEvery  int           // Default number of check intervals to run each alert: 1
 	HTTPListen       string        // Web server listen address: :80
 	Hostname         string
 	RelayListen      string // OpenTSDB relay listen address: :4242
@@ -246,6 +247,7 @@ type Alert struct {
 	IgnoreUnknown    bool
 	UnjoinedOK       bool `json:",omitempty"`
 	Log              bool
+	RunEvery         int
 	returnType       eparse.FuncType
 
 	template string
@@ -345,6 +347,7 @@ func New(name, text string) (c *Conf, err error) {
 	c = &Conf{
 		Name:             name,
 		CheckFrequency:   time.Minute * 5,
+		DefaultRunEvery:  1,
 		HTTPListen:       ":8070",
 		StateFile:        "bosun.state",
 		PingDuration:     time.Hour * 24,
@@ -470,6 +473,15 @@ func (c *Conf) loadGlobal(p *parse.PairNode) {
 			c.errorf("responseLimit must be > 0")
 		}
 		c.ResponseLimit = i
+	case "defaultRunEvery":
+		var err error
+		c.DefaultRunEvery, err = strconv.Atoi(v)
+		if err != nil {
+			c.error(err)
+		}
+		if c.DefaultRunEvery <= 0 {
+			c.errorf("defaultRunEvery must be > 0")
+		}
 	case "searchSince":
 		s, err := opentsdb.ParseDuration(v)
 		if err != nil {
@@ -837,6 +849,12 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 			a.IgnoreUnknown = true
 		case "log":
 			a.Log = true
+		case "runEvery":
+			var err error
+			a.RunEvery, err = strconv.Atoi(v)
+			if err != nil {
+				c.error(err)
+			}
 		default:
 			c.errorf("unknown key %s", p.key)
 		}
@@ -912,6 +930,9 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 		if a.Template == nil {
 			c.errorf("critNotification specified, but no template")
 		}
+	}
+	if a.RunEvery == 0 {
+		a.RunEvery = c.DefaultRunEvery
 	}
 	a.returnType = ret
 	c.Alerts[name] = &a

@@ -580,8 +580,18 @@ func APIRedirect(w http.ResponseWriter, req *http.Request) {
 	http.Redirect(w, req, "http://bosun.org/api.html", 302)
 }
 
+var checkRunning = make(chan bool, 1)
+
 func Run(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	return schedule.Check(t, time.Now())
+	select {
+	case checkRunning <- true:
+		// Good, we've got the lock.
+	default:
+		return 0, fmt.Errorf("check already running")
+	}
+	d, err := schedule.Check(t, time.Now(), 0)
+	<-checkRunning
+	return d, err
 }
 
 func Host(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
