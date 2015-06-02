@@ -4,8 +4,6 @@ title: Configuration
 order: 3
 ---
 
-
-
 <div class="row">
 <div class="col-sm-3" >
   <div class="sidebar" data-spy="affix" data-offset-top="0" data-offset-bottom="0" markdown="1">
@@ -129,7 +127,7 @@ Templates are the message body for emails that are sent when an alert is trigger
 #### Functions available to alert templates:
 
 * Eval(string): executes the given expression and returns the first result with identical tags, or `nil` tags if none exists, otherwise `nil`.
-* EvalAll(string): executes the given expression and returns all results.
+* EvalAll(string): executes the given expression and returns all results. The `DescByValue` function may be called on the result of this to sort descending by value: `{{(.EvalAll .Alert.Vars.expr).DescByValue}}`.
 * GetMeta(metric, name, tags): Returns metadata data for the given combination of metric, metadata name, and tag. `metric` and `name` are strings. `tags` may be a tag string (`"tagk=tagv,tag2=val2"`) or a tag set (`.Group`). If If `name` is the empty string, a slice of metadata matching the metric and tag is returned. Otherwise, only the metadata value is returned for the given name, or `nil` for no match.
 * Graph(expression, y_label): returns an SVG graph of the expression with tags identical to the alert instance. `expression` is a string or an expression and `y_label` is a string. `y_label` is an optional argument.
 * GraphLink(expression): returns a link to the graph tab for the expression page for the given expression. The time is set to the time of the alert. `expression` is a string.
@@ -372,4 +370,3 @@ alert cpu {
 
 </div>
 </div>
-
