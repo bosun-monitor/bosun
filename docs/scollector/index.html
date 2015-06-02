@@ -21,8 +21,12 @@
         <p>OpenTSDB&#39;s tcollector for the v2 HTTP API</p>
 
         <h2>Download Binaries</h2>
-		{% assign release = site.github.releases[0] %}
-		{% assign relname = release.tag_name %}
+		{% if site.github != null %}
+
+			{% assign releases = site.github.releases | where:"draft",false %}
+			{% assign release = releases[0] %}
+			{% assign relname = release.tag_name %}
+			
 	<p>Version <a href="https://github.com/bosun-monitor/bosun/releases/tag/{{relname}}">{{ site.version.id }}</a> ({{ release.created_at | date_to_string }})</p>
 		
         <ul>
@@ -42,7 +46,9 @@
           <li><a href="https://github.com/bosun-monitor/bosun/releases/download/{{relname}}/scollector-linux-arm6"><strong>ARMv6</strong></a></li>
           <li><a href="https://github.com/bosun-monitor/bosun/releases/download/{{relname}}/scollector-linux-arm7"><strong>ARMv7</strong></a></li>
         </ul>
-
+	{% else %}
+			<p>View latest release on <a href="https://github.com/bosun-monitor/bosun/releases/latest">Github</a></p>
+	{% endif %}
         <p class="view"><a href="https://github.com/bosun-monitor/bosun/tree/master/cmd/scollector">View the Project on GitHub</a></p>
       </header>
       <section>
