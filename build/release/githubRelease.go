@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"bosun.org/_third_party/github.com/google/go-github/github"
@@ -66,15 +67,33 @@ func main() {
 	opts.PerPage = 100
 	reqs, _, err := client.PullRequests.List("bosun-monitor", "bosun", opts)
 	checkError(err)
-	body := ""
+
+	// group pr titles if they are prefaced by `cmd/scollector:` or similar.
+	groups := make(map[string][]*github.PullRequest)
 	for _, pr := range reqs {
+		p := pr
 		if pr.ClosedAt.Before((*latest.CreatedAt).Time) {
 			break
 		}
 		if pr.MergedAt == nil {
 			continue
 		}
-		body += fmt.Sprintln(*pr.Title)
+		titleParts := strings.SplitN(*pr.Title, ":", 2)
+		if len(titleParts) == 1 {
+			titleParts = []string{"other", titleParts[0]}
+		}
+		group := titleParts[0]
+		*pr.Title = titleParts[1]
+		groups[group] = append(groups[group], &p)
+	}
+
+	body := ""
+	for key, prs := range groups {
+		key = strings.Replace(key, "cmd/", "", -1)
+		body += fmt.Sprintf("\n### %s: ###\n", key)
+		for _, pr := range prs {
+			body += fmt.Sprintf("  - %s [#%d](%s)\n", *pr.Title, *pr.Number, *pr.HTMLURL)
+		}
 	}
 
 	fmt.Println("Creating the release...")

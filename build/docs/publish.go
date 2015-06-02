@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -22,6 +23,7 @@ var (
 	client   *github.Client
 	msg      = "syncing to gh-pages"
 	gh_pages = "heads/gh-pages"
+	force    = flag.Bool("f", false, "Push a new commit, even if code is identical. Forces gh-pages rebuild.")
 )
 
 func init() {
@@ -46,6 +48,8 @@ func checkError(err error) {
 
 // Sync docs folder to gh-pages branch by creating a new commit with the appropriate tree.
 func main() {
+	flag.Parse()
+
 	// Fetch current master
 	branch, _, err := client.Repositories.GetBranch(o, r, "master")
 	checkError(err)
@@ -77,12 +81,12 @@ func main() {
 	ghTip, _, err := client.Git.GetCommit(o, r, *ghBranch.Commit.SHA)
 	checkError(err)
 	fmt.Println("gh-pages tree:", *ghTip.Tree.SHA)
-	if *ghTip.Tree.SHA == docsSha {
+	if *ghTip.Tree.SHA == docsSha && !*force {
 		fmt.Println("Nothing to do.")
 		return
 	}
 
-	// form new commit and push it∂
+	// form new commit and push it
 	newCommit := &github.Commit{}
 	newCommit.Message = &msg
 	newCommit.Tree = &github.Tree{SHA: &docsSha}
