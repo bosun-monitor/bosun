@@ -117,12 +117,6 @@ var TSDB = map[string]parse.Func{
 		nil,
 		Count,
 	},
-	"diff": {
-		[]parse.FuncType{parse.TypeString, parse.TypeString, parse.TypeString},
-		parse.TypeNumber,
-		tagQuery,
-		Diff,
-	},
 	"q": {
 		[]parse.FuncType{parse.TypeString, parse.TypeString, parse.TypeString},
 		parse.TypeSeries,
@@ -145,6 +139,12 @@ var builtins = map[string]parse.Func{
 		parse.TypeNumber,
 		tagFirst,
 		Dev,
+	},
+	"diff": {
+		[]parse.FuncType{parse.TypeSeries},
+		parse.TypeNumber,
+		tagFirst,
+		Diff,
 	},
 	"first": {
 		[]parse.FuncType{parse.TypeSeries},
@@ -767,19 +767,6 @@ func change(dps Series, args ...float64) float64 {
 	return avg(dps) * args[0]
 }
 
-func Diff(e *State, T miniprofiler.Timer, query, sduration, eduration string) (r *Results, err error) {
-	r, err = Query(e, T, query, sduration, eduration)
-	if err != nil {
-		return
-	}
-	r, err = reduce(e, T, r, diff)
-	return
-}
-
-func diff(dps Series, args ...float64) float64 {
-	return last(dps) - first(dps)
-}
-
 func reduce(e *State, T miniprofiler.Timer, series *Results, F func(Series, ...float64) float64, args ...float64) (*Results, error) {
 	res := *series
 	res.Results = nil
@@ -803,6 +790,14 @@ func Abs(e *State, T miniprofiler.Timer, series *Results) *Results {
 		s.Value = Number(math.Abs(float64(s.Value.Value().(Number))))
 	}
 	return series
+}
+
+func Diff(e *State, T miniprofiler.Timer, series *Results) (r *Results, err error) {
+	return reduce(e, T, series, diff)
+}
+
+func diff(dps Series, args ...float64) float64 {
+	return last(dps) - first(dps)
 }
 
 func Avg(e *State, T miniprofiler.Timer, series *Results) (*Results, error) {
