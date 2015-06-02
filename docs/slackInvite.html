@@ -1,0 +1,36 @@
+---
+layout: page
+title: Slack invite
+---
+
+<p>Many bosun devs and users are usually availible on our slack channel. If you have any questions or issues this is the best place to 
+get help. Please fill out this form to automatically receive an invitation to join us:</p>
+
+	<div class="form-group">
+		<label for="email">Email address</label>
+		<input type="email" class="form-control" id="email" placeholder="Enter email">
+	</div>
+  	<button id="submit" class="btn btn-default">Submit</button>
+	<div class="alert alert-success" role="alert" style="display:none">Success! Check your email!</div>
+	<div class="alert alert-danger" role="alert" style="display:none"></div>
+
+<script>
+$(function(){
+	$("#submit").click(function(){
+		$(".alert").hide();
+		$("#submit").prop('disabled', true);
+		var email = $("#email").val();
+		var fname = $("#fname").val();
+		var lname = $("#lname").val();
+		var url = "https://www.runhook.com/eaakslsvhhtcu3bvkcijmcvpju?email=" + email;
+		$.get(url, function(data){
+			$(".alert-success").show();
+			
+		}) .fail(function(jqXHR) {
+			$(".alert-danger").show();
+			$(".alert-danger").text(jqXHR.responseText);
+			$("#submit").prop('disabled', false);
+  		})
+	})
+})
+</script>
