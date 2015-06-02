@@ -248,11 +248,11 @@ var builtins = map[string]parse.Func{
 		nil,
 		Duration,
 	},
-	"epoch": {
-		[]parse.FuncType{},
-		parse.TypeScalar,
-		nil,
-		Epoch,
+	"des": {
+		[]parse.FuncType{parse.TypeSeries, parse.TypeScalar, parse.TypeScalar},
+		parse.TypeSeries,
+		tagFirst,
+		Des,
 	},
 	"dropge": {
 		[]parse.FuncType{parse.TypeSeries, parse.TypeScalar},
@@ -272,17 +272,17 @@ var builtins = map[string]parse.Func{
 		tagFirst,
 		DropNA,
 	},
-	"des": {
-		[]parse.FuncType{parse.TypeSeries, parse.TypeScalar, parse.TypeScalar},
+	"epoch": {
+		[]parse.FuncType{},
+		parse.TypeScalar,
+		nil,
+		Epoch,
+	},
+	"filter": {
+		[]parse.FuncType{parse.TypeSeries, parse.TypeNumber},
 		parse.TypeSeries,
 		tagFirst,
-		Des,
-	},
-	"nv": {
-		[]parse.FuncType{parse.TypeNumber, parse.TypeScalar},
-		parse.TypeNumber,
-		tagFirst,
-		NV,
+		Filter,
 	},
 	"limit": {
 		[]parse.FuncType{parse.TypeNumber, parse.TypeScalar},
@@ -290,11 +290,11 @@ var builtins = map[string]parse.Func{
 		tagFirst,
 		Limit,
 	},
-	"filter": {
-		[]parse.FuncType{parse.TypeSeries, parse.TypeNumber},
-		parse.TypeSeries,
+	"nv": {
+		[]parse.FuncType{parse.TypeNumber, parse.TypeScalar},
+		parse.TypeNumber,
 		tagFirst,
-		Filter,
+		NV,
 	},
 	"sort": {
 		[]parse.FuncType{parse.TypeNumber, parse.TypeString},

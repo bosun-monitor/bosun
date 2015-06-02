@@ -19,11 +19,27 @@ title: API Documentation
 
 # Sending Data
 
-Sending data to bosun is done by treating your bosun host exactly like an OpenTSDB host. That is, POST to `http://bosun:80/api/put` with formats described at [http://opentsdb.net/docs/build/html/api_http/put.html](http://opentsdb.net/docs/build/html/api_http/put.html).
+You can send your OpenTSDB data to Bosun. Bosun will index the data for
+its search feature, then relay the data to OpenTSDB. We recommend using
+[tsdbrelay](https://godoc.org/bosun.org/cmd/tsdbrelay) instead of directly
+sending to Bosun, as tsdbrelay will continue to send data if Bosun is
+restarting or down for any reason.
 
-Note that the host and port may be changed in your bosun configuration. Defaults shown above.
+### /api/put
 
-For metrics and tags to appear in bosun's search boxes, the data must be correctly typed. That is, timestamp should be a number. [Full JSON description.](http://godoc.org/bosun.org/opentsdb#DataPoint)
+Sending data to Bosun is done by treating your bosun host exactly
+like an OpenTSDB host. That is, POST to `/api/put` with formats described at
+[http://opentsdb.net/docs/build/html/api_http/put.html](http://opentsdb.net/docs/build/html/api_http/put.html).
+This data will be relayed to your OpenTSDB host.
+
+Data sent to this route will be indexed by Bosun for searching and autocomplete
+if it is typed correctly (for example, timestamp must be a number). [Full
+JSON description.](http://godoc.org/bosun.org/opentsdb#DataPoint)
+
+### /api/index
+
+Only perform search indexing; do not relay to OpenTSDB. Accepts in same
+format as `/api/put`.
 
 ## Metadata
 
