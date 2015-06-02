@@ -310,6 +310,15 @@ Returns the input with its group removed. Used to combine queries from two diffe
 
 # Other Functions
 
+## alert(name, key)
+
+Executes and returns the `key` expression from alert `name` (which must be
+`warn` or `crit`). Any alert of the same name that is unknown or unevaluated
+is also returned with a value of `1`. Primarily for use with `depends`.
+
+Example: `alert("host.down", "crit")` returns the crit
+expression from the host.down alert.
+
 ## abs(number)
 
 Returns the absolute value of the number.
@@ -317,6 +326,12 @@ Returns the absolute value of the number.
 ## d(string)
 
 Returns the number of seconds of the [OpenTSDB duration string](http://opentsdb.net/docs/build/html/user_guide/query/dates.html).
+
+## des(series, alpha, beta)
+
+Returns series smoothed using Holt-Winters double exponential smoothing. Alpha
+(scalar) is the data smoothing factor. Beta (scalar) is the trend smoothing
+factor.
 
 ## dropge(series, number)
 
@@ -330,6 +345,20 @@ Remove any values lower than or equal to number from a series. Will error if thi
 
 Remove any NaN or Inf values from a series. Will error if this operation results in an empty series.
 
+## epoch()
+
+Returns the Unix epoch in seconds of the expression start time (scalar).
+
+## filter(series, number)
+
+Returns all results in series that are a subset of anything in number, or
+that have number as a subset. Useful with the limit and sort functions to
+return the top X results of a query.
+
+## limit(number, count)
+
+Returns the first count (scalar) results of number.
+
 ## lookup(table, key)
 
 Returns the first key from the given lookup table with matching tags.
@@ -338,6 +367,10 @@ Returns the first key from the given lookup table with matching tags.
 
 Change the NaN value during binary operations (when joining two queries) of unknown groups to the scalar. This is useful to prevent unknown group and other errors from bubbling up.
 
+## sort(number, asc_desc)
+
+Returns the results sorted by value in ascending ("asc") or descending ("desc")
+order. Results are first sorted by groupname and then stably sorted so that
+results with identical values are always in the same order.
+
 </div>
-
-

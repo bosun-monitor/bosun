@@ -4,8 +4,6 @@ title: Configuration
 order: 3
 ---
 
-
-
 <div class="row">
 <div class="col-sm-3" >
   <div class="sidebar" data-spy="affix" data-offset-top="0" data-offset-bottom="0" markdown="1">
@@ -51,6 +49,7 @@ Every variable is optional, though you should enable at least 1 backend.
 #### settings
 
 * checkFrequency: time between alert checks, defaults to `5m`
+* defaultRunEvery: default multiplier of check frequency to run alerts. Defaults to `1`.
 * emailFrom: from address for notification emails, required for email notifications
 * httpListen: HTTP listen address, defaults to `:8070`
 * hostname: when generating links in templates, use this value as the hostname instead of using the system's hostname
@@ -129,7 +128,7 @@ Templates are the message body for emails that are sent when an alert is trigger
 #### Functions available to alert templates:
 
 * Eval(string): executes the given expression and returns the first result with identical tags, or `nil` tags if none exists, otherwise `nil`.
-* EvalAll(string): executes the given expression and returns all results.
+* EvalAll(string): executes the given expression and returns all results. The `DescByValue` function may be called on the result of this to sort descending by value: `{{(.EvalAll .Alert.Vars.expr).DescByValue}}`.
 * GetMeta(metric, name, tags): Returns metadata data for the given combination of metric, metadata name, and tag. `metric` and `name` are strings. `tags` may be a tag string (`"tagk=tagv,tag2=val2"`) or a tag set (`.Group`). If If `name` is the empty string, a slice of metadata matching the metric and tag is returned. Otherwise, only the metadata value is returned for the given name, or `nil` for no match.
 * Graph(expression, y_label): returns an SVG graph of the expression with tags identical to the alert instance. `expression` is a string or an expression and `y_label` is a string. `y_label` is an optional argument.
 * GraphLink(expression): returns a link to the graph tab for the expression page for the given expression. The time is set to the time of the alert. `expression` is a string.
@@ -201,7 +200,9 @@ An alert is an evaluated expression which can trigger actions like emailing or l
 
 * crit: expression of a critical alert (which will send an email)
 * critNotification: comma-separated list of notifications to trigger on critical. This line may appear multiple times and duplicate notifications, which will be merged so only one of each notification is triggered. Lookup tables may be used when `lookup("table", "key")` is an entire `critNotification` value. See example below.
+* depends: expression that this alert depends on. If the expression is non-zero, this alert is unevaluated. Unevaluated alerts do not change state or become unknown.
 * ignoreUnknown: if present, will prevent alert from becoming unknown
+* runEvery: multiple of global `checkFrequency` at which to run this alert. If unspecified, the global `defaultRunEvery` will be used.
 * squelch: <a name="squelch"></a> comma-separated list of `tagk=tagv` pairs. `tagv` is a regex. If the current tag group matches all values, the alert is squelched, and will not trigger as crit or warn. For example, `squelch = host=ny-web.*,tier=prod` will match any group that has at least that host and tier. Note that the group may have other tags assigned to it, but since all elements of the squelch list were met, it is considered a match. Multiple squelch lines may appear; a tag group matches if any of the squelch lines match.
 * template: name of template
 * unjoinedOk: if present, will ignore unjoined expression errors
@@ -238,6 +239,8 @@ alert a {
 	# Other alerts are passed through the l lookup table and may add n or d.
 	# If the host tag does not match a or b*, no other notification is added.
 	critNotification = lookup("l", "v")
+	# Do not evaluate this alert if its host is down.
+	depends = alert("host.down", "crit")
 }
 ~~~
 
@@ -372,4 +375,3 @@ alert cpu {
 
 </div>
 </div>
-
