@@ -27,7 +27,7 @@
 			{% assign release = releases[0] %}
 			{% assign relname = release.tag_name %}
 			
-	<p>Version <a href="https://github.com/bosun-monitor/bosun/releases/tag/{{relname}}">{{ site.version.id }}</a> ({{ release.created_at | date_to_string }})</p>
+	<p>Version <a href="https://github.com/bosun-monitor/bosun/releases/tag/{{relname}}">{relname}</a> ({{ release.created_at | date_to_string }})</p>
 		
         <ul>
           <li><a href="https://github.com/bosun-monitor/bosun/releases/download/{{relname}}/scollector-linux-amd64"><strong>Linux</strong> amd64</a></li>
