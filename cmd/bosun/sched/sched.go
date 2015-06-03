@@ -43,6 +43,7 @@ type Schedule struct {
 	LastCheck     time.Time
 	nc            chan interface{}
 	notifications map[*conf.Notification][]*State
+	lastLogTimes  map[expr.AlertKey]time.Time
 	metalock      sync.Mutex
 	maxIncidentId uint64
 	incidentLock  sync.Mutex
@@ -374,6 +375,7 @@ func (s *Schedule) Init(c *conf.Conf) error {
 	s.Group = make(map[time.Time]expr.AlertKeys)
 	s.Metadata = make(map[metadata.Metakey]*Metavalue)
 	s.Incidents = make(map[uint64]*Incident)
+	s.lastLogTimes = make(map[expr.AlertKey]time.Time)
 	s.status = make(States)
 	s.Search = search.NewSearch()
 	s.checkRunning = make(chan bool, 1)

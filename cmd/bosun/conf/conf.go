@@ -832,7 +832,7 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 				c.errorf("unknown duration must be at least 1s")
 			}
 			a.Unknown = d
-		case "maxLogFrequancy":
+		case "maxLogFrequency":
 			od, err := opentsdb.ParseDuration(v)
 			if err != nil {
 				c.error(err)
