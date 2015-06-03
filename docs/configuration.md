@@ -208,6 +208,8 @@ An alert is an evaluated expression which can trigger actions like emailing or l
 * unknown: time at which to mark an alert unknown if it cannot be evaluated; defaults to global checkFrequency
 * warn: expression of a warning alert (viewable on the web interface)
 * warnNotification: identical to critNotification, but for warnings
+* log: setting `log = true` will make the alert behave as a "log alert". It will never show up on the dashboard, but will execute notifications every check interval where the status is abnormal.
+* maxLogFrequency: will throttle log notifications to the specified duration. `maxLogFrequency = 5m` will ensure that notifications only fire once every 5 minutes for any given alert key. Only valid on log alerts.
 
 Example of notification lookups:
 
