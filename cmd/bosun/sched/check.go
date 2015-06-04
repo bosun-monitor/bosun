@@ -175,11 +175,12 @@ func (s *Schedule) RunHistory(r *RunHistory) {
 		// Do nothing if state did not change.
 		notify := func(ns *conf.Notifications) {
 			if a.Log {
-				lastLogTime, ok := s.lastLogTimes[ak]
-				if ok && lastLogTime.Add(a.MaxLogFrequency).After(time.Now()) {
+				lastLogTime := state.LastLogTime
+				now := time.Now()
+				if now.Before(lastLogTime.Add(a.MaxLogFrequency)) {
 					return
 				}
-				s.lastLogTimes[ak] = time.Now()
+				state.LastLogTime = now
 			}
 			nots := ns.Get(s.Conf, state.Group)
 			for _, n := range nots {
