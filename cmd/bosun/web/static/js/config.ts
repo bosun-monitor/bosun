@@ -262,7 +262,7 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 	}
 	var line_re = /test:(\d+)/;
 	$scope.validate = () => {
-		$http.get('/api/config_test?config_text=' + encodeURIComponent($scope.config_text))
+		$http.post('/api/config_test', $scope.config_text)
 			.success((data) => {
 				if (data == "") {
 					$scope.validationResult = "Valid";

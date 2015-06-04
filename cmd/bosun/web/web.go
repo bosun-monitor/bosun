@@ -555,9 +555,18 @@ func SilenceClear(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) 
 }
 
 func ConfigTest(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
-	_, err := conf.New("test", r.FormValue("config_text"))
+	b, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		fmt.Fprint(w, err.Error())
+		serveError(w, err)
+		return
+	}
+	if len(b) == 0 {
+		serveError(w, fmt.Errorf("empty config"))
+		return
+	}
+	_, err = conf.New("test", string(b))
+	if err != nil {
+		fmt.Fprintf(w, err.Error())
 	}
 }
 
