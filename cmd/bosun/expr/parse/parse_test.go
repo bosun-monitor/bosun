@@ -154,11 +154,13 @@ var builtins = map[string]Func{
 		TypeNumber,
 		tagNil,
 		nil,
+		nil,
 	},
 	"band": {
 		[]FuncType{TypeString, TypeString, TypeString, TypeScalar},
 		TypeSeries,
 		tagNil,
+		nil,
 		nil,
 	},
 	"q": {
@@ -166,11 +168,13 @@ var builtins = map[string]Func{
 		TypeSeries,
 		tagNil,
 		nil,
+		nil,
 	},
 	"forecastlr": {
 		[]FuncType{TypeSeries, TypeScalar},
 		TypeNumber,
 		tagNil,
+		nil,
 		nil,
 	},
 }

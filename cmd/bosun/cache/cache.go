@@ -27,6 +27,9 @@ func New(MaxEntries int) *Cache {
 }
 
 func (c *Cache) Get(key string, getFn func() (interface{}, error)) (interface{}, error) {
+	if c == nil {
+		return getFn()
+	}
 	c.Lock()
 	result, ok := c.lru.Get(key)
 	c.Unlock()
