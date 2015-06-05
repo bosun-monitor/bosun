@@ -1,6 +1,8 @@
 #!/bin/sh
+# Must be run from $GOPATH/src/bosun.org, not the build directory.
+set -e
 
-rm -rf buildoutput;
+rm -rf buildoutput
 mkdir buildoutput
 set -e
 docker run --rm \
@@ -9,5 +11,4 @@ docker run --rm \
    -w /go/src/bosun.org \
    -e OUTPUTDIR=/output/ \
    -e GITHUB_ACCESS_TOKEN=$GITHUB_ACCESS_TOKEN \
-   -e GITHUB_VERSION_SHA=$BUILD_VCS_NUMBER \
    golang:1.4.2-cross /go/src/bosun.org/build/release.sh
