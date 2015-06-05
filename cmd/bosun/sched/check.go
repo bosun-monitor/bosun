@@ -176,6 +176,14 @@ func (s *Schedule) RunHistory(r *RunHistory) {
 		// If the old alert was not acknowledged, do nothing.
 		// Do nothing if state did not change.
 		notify := func(ns *conf.Notifications) {
+			if a.Log {
+				lastLogTime := state.LastLogTime
+				now := time.Now()
+				if now.Before(lastLogTime.Add(a.MaxLogFrequency)) {
+					return
+				}
+				state.LastLogTime = now
+			}
 			nots := ns.Get(s.Conf, state.Group)
 			for _, n := range nots {
 				s.Notify(state, n)

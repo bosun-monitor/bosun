@@ -502,6 +502,7 @@ type State struct {
 	Open         bool
 	Forgotten    bool
 	Unevaluated  bool
+	LastLogTime  time.Time
 }
 
 func (s *State) AlertKey() expr.AlertKey {
