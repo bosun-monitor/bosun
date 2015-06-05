@@ -19,8 +19,10 @@ import (
 type Tree struct {
 	Text string // text parsed to create the expression.
 	Root Node   // top-level root of the tree, returns a number.
+
+	funcs []map[string]Func
+
 	// Parsing only; cleared after parse.
-	funcs     []map[string]Func
 	lex       *lexer
 	token     [1]item // one-token lookahead for parser.
 	peekCount int
@@ -31,6 +33,7 @@ type Func struct {
 	Return FuncType
 	Tags   func([]Node) (Tags, error)
 	F      interface{}
+	Check  func(*Tree, *FuncNode) error
 }
 
 type FuncType int
@@ -219,7 +222,6 @@ func (t *Tree) startParse(funcs []map[string]Func, lex *lexer) {
 // stopParse terminates parsing.
 func (t *Tree) stopParse() {
 	t.lex = nil
-	t.funcs = nil
 }
 
 // Parse parses the expression definition string to construct a representation
@@ -238,7 +240,7 @@ func (t *Tree) Parse(text string, funcs ...map[string]Func) (err error) {
 func (t *Tree) parse() {
 	t.Root = t.O()
 	t.expect(itemEOF, "input")
-	if err := t.Root.Check(); err != nil {
+	if err := t.Root.Check(t); err != nil {
 		t.error(err)
 	}
 }
@@ -352,7 +354,7 @@ func (t *Tree) v() Node {
 
 func (t *Tree) Func() (f *FuncNode) {
 	token := t.next()
-	funcv, ok := t.getFunction(token.val)
+	funcv, ok := t.GetFunction(token.val)
 	if !ok {
 		t.errorf("non existent function %s", token.val)
 	}
@@ -383,7 +385,7 @@ func (t *Tree) Func() (f *FuncNode) {
 	}
 }
 
-func (t *Tree) getFunction(name string) (v Func, ok bool) {
+func (t *Tree) GetFunction(name string) (v Func, ok bool) {
 	for _, funcMap := range t.funcs {
 		if funcMap == nil {
 			continue
