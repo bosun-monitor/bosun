@@ -2,6 +2,7 @@
 set -e
 
 TIME=`date +%Y%m%d%H%M%S`
+GIT_SHA=`cd $GOPATH/src/bosun.org; git rev-parse HEAD`
 
 build()
 {
@@ -16,25 +17,28 @@ build()
 		EXT="v${GOARM}"
 	fi
 	echo $GOOS $GOARCH $EXT
-	if [ $GOARCH != "arm" ]; then
-		go build -o ${OUTPUTDIR}bosun-$GOOS-$GOARCH$EXT -ldflags "-X bosun.org/version.VersionSHA $GITHUB_VERSION_SHA -X bosun.org/version.OfficialBuild true -X bosun.org/version.VersionDate $TIME" bosun.org/cmd/bosun
+	if $BOSUN; then
+		go build -o ${OUTPUTDIR}bosun-$GOOS-$GOARCH$EXT -ldflags "-X bosun.org/version.VersionSHA $GIT_SHA -X bosun.org/version.OfficialBuild true -X bosun.org/version.VersionDate $TIME" bosun.org/cmd/bosun
 	fi
-	go build -o ${OUTPUTDIR}scollector-$GOOS-$GOARCH$EXT -ldflags "-X bosun.org/version.VersionSHA $GITHUB_VERSION_SHA -X bosun.org/version.OfficialBuild true -X bosun.org/version.VersionDate $TIME" bosun.org/cmd/scollector
+	go build -o ${OUTPUTDIR}scollector-$GOOS-$GOARCH$EXT -ldflags "-X bosun.org/version.VersionSHA $GIT_SHA -X bosun.org/version.OfficialBuild true -X bosun.org/version.VersionDate $TIME" bosun.org/cmd/scollector
 }
 
-build linux arm 5
-build linux arm 6
-build linux arm 7
-
+BOSUN=true
 for GOOS in windows linux darwin; do
 	for GOARCH in amd64 386; do
 		build $GOOS $GOARCH
 	done
 done
+BOSUN=false
 
-GOOS=linux
-GOARCH=amd64
+build linux arm 5
+build linux arm 6
+build linux arm 7
+build solaris amd64
 
-export BUILD_NUMBER=`${OUTPUTDIR}bosun-linux-amd64 -version | awk '{print $3}'`
-go run build/release/githubRelease.go
-
+if [ "$GITHUB_ACCESS_TOKEN" = "" ]; then
+	echo GITHUB_ACCESS_TOKEN not set: not running githubRelease.go
+else
+	export BUILD_NUMBER=`${OUTPUTDIR}bosun-linux-amd64 -version | awk '{print $3}'`
+	go run build/release/githubRelease.go
+fi
