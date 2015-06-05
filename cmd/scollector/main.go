@@ -70,6 +70,7 @@ type Conf struct {
 	AWS                 []AWS
 	Process             []collectors.ProcessParams
 	ProcessDotNet       []ProcessDotNet
+	HTTPUnit            []HTTPUnit
 }
 
 type HAProxy struct {
@@ -106,6 +107,10 @@ type SNMP struct {
 
 type ProcessDotNet struct {
 	Name string
+}
+
+type HTTPUnit struct {
+	File string
 }
 
 func readConf() *Conf {
@@ -206,6 +211,9 @@ func main() {
 	}
 	for _, p := range conf.Process {
 		check(collectors.AddProcessConfig(p))
+	}
+	for _, h := range conf.HTTPUnit {
+		check(collectors.HTTPUnitFile(h.File))
 	}
 	if err != nil {
 		slog.Fatal(err)

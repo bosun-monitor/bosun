@@ -188,6 +188,13 @@ on Windows.
 	[[ProcessDotNet]]
 	  Name = "^Scheduler"
 
+HTTPUnit (array of table, key is File): httpunit toml files to read and
+monitor. See https://github.com/StackExchange/httpunit for documentation
+about the toml file.
+
+	[[HTTPUnit]]
+	  File = "/path/to/httpunit.toml"
+
 Windows
 
 scollector has full Windows support. It can be run standalone, or installed as a
