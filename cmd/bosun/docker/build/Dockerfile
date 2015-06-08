@@ -11,11 +11,11 @@ RUN apt-get update && apt-get install -y \
 	&& rm -rf /var/lib/apt/lists/*
 
 ENV TSDB /tsdb
-RUN git clone -b next --single-branch --depth 1 git://github.com/OpenTSDB/opentsdb.git $TSDB && \
+RUN git clone --single-branch --depth 1 git://github.com/OpenTSDB/opentsdb.git $TSDB && \
 	cd $TSDB && bash ./build.sh
 
 ENV GOPATH /go
-ENV HBASEVER 1.0.0
+ENV HBASEVER 1.0.1.1
 ENV HBASE /hbase/hbase-$HBASEVER
 ENV JAVA_HOME /usr/lib/jvm/java-7-openjdk-amd64
 
