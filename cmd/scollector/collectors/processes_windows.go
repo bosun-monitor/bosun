@@ -13,6 +13,9 @@ import (
 var regexesProcesses = []*regexp.Regexp{}
 
 func AddProcessConfig(params ProcessParams) error {
+	if params.Name == "" {
+		return fmt.Errorf("empty process Name")
+	}
 	reg, err := regexp.Compile(params.Name)
 	if err != nil {
 		return err
