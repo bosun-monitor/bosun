@@ -110,7 +110,8 @@ type ProcessDotNet struct {
 }
 
 type HTTPUnit struct {
-	File string
+	TOML  string
+	Hiera string
 }
 
 func readConf() *Conf {
@@ -213,7 +214,12 @@ func main() {
 		check(collectors.AddProcessConfig(p))
 	}
 	for _, h := range conf.HTTPUnit {
-		check(collectors.HTTPUnitFile(h.File))
+		if h.TOML != "" {
+			check(collectors.HTTPUnitTOML(h.TOML))
+		}
+		if h.Hiera != "" {
+			check(collectors.HTTPUnitHiera(h.Hiera))
+		}
 	}
 	if err != nil {
 		slog.Fatal(err)
