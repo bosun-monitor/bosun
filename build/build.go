@@ -19,9 +19,8 @@ func main() {
 	sha := *shaFlag
 	if sha == "" {
 		cmd := exec.Command("git", "rev-parse", "HEAD")
-		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
-		output, err := cmd.CombinedOutput()
+		output, err := cmd.Output()
 		if err != nil {
 			log.Fatal(err)
 		}
