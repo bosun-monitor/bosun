@@ -11,11 +11,11 @@ RUN apt-get update && apt-get install -y \
 	&& rm -rf /var/lib/apt/lists/*
 
 ENV TSDB /tsdb
-RUN git clone -b next --single-branch --depth 1 git://github.com/OpenTSDB/opentsdb.git $TSDB && \
+RUN git clone --single-branch --depth 1 git://github.com/OpenTSDB/opentsdb.git $TSDB && \
 	cd $TSDB && bash ./build.sh
 
 ENV GOPATH /go
-ENV HBASEVER 1.0.0
+ENV HBASEVER 1.0.1.1
 ENV HBASE /hbase/hbase-$HBASEVER
 ENV JAVA_HOME /usr/lib/jvm/java-7-openjdk-amd64
 
@@ -32,9 +32,6 @@ COPY bosun $GOPATH/src/bosun.org/
 ENV PATH $PATH:/usr/local/go/bin:$GOPATH/bin
 
 RUN go get -d bosun.org/cmd/bosun \
-	&& go get github.com/bosun-monitor/bosun-monitor.github.io \
-	&& bosun-monitor.github.io \
-	&& go install bosun.org/cmd/bosun \
-	&& go install bosun.org/cmd/scollector \
+	&& go run $GOPATH/src/bosun.org/build/build.go \
 	&& bosun -version \
 	&& scollector -version
