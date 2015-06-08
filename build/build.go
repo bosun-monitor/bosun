@@ -32,7 +32,7 @@ func main() {
 	ldFlags := fmt.Sprintf("-X bosun.org/version.VersionSHA %s -X bosun.org/version.VersionDate %s", sha, timeStr)
 
 	for _, app := range []string{"bosun", "scollector"} {
-		cmd := exec.Command("go", "build", "-v", "-ldflags", ldFlags, fmt.Sprintf("bosun.org/cmd/%s", app))
+		cmd := exec.Command("go", "install", "-v", "-ldflags", ldFlags, fmt.Sprintf("bosun.org/cmd/%s", app))
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		err := cmd.Run()

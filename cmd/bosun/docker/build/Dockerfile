@@ -32,9 +32,6 @@ COPY bosun $GOPATH/src/bosun.org/
 ENV PATH $PATH:/usr/local/go/bin:$GOPATH/bin
 
 RUN go get -d bosun.org/cmd/bosun \
-	&& go get github.com/bosun-monitor/bosun-monitor.github.io \
-	&& bosun-monitor.github.io \
-	&& go install bosun.org/cmd/bosun \
-	&& go install bosun.org/cmd/scollector \
+	&& go run $GOPATH/src/bosun.org/build/build.go \
 	&& bosun -version \
 	&& scollector -version
