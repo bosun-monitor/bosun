@@ -2,6 +2,7 @@ package collectors
 
 import (
 	"fmt"
+	"time"
 
 	"bosun.org/_third_party/github.com/BurntSushi/toml"
 	"bosun.org/_third_party/github.com/StackExchange/httpunit"
@@ -34,7 +35,8 @@ func HTTPUnitPlans(name string, plans *httpunit.Plans) {
 		F: func() (opentsdb.MultiDataPoint, error) {
 			return cHTTPUnit(plans)
 		},
-		name: fmt.Sprintf("c_httpunit_%s", name),
+		name:     fmt.Sprintf("c_httpunit_%s", name),
+		Interval: time.Minute * 15,
 	})
 }
 
