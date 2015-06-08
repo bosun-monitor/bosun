@@ -135,11 +135,11 @@ SNMP (array of table, keys are Community and Host): SNMP hosts to connect
 to at a 5 minute poll interval.
 
 	[[SNMP]]
-	  Community = com
-	  Host = host
+	  Community = "com"
+	  Host = "host"
 	[[SNMP]]
-	  Community = com2
-	  Host = host2
+	  Community = "com2"
+	  Host = "host2"
 
 ICMP (array of table, keys are Host): ICMP hosts to ping.
 
@@ -175,10 +175,9 @@ for Windows): processes to monitor. Name is optional, and defaults to Command.
 
 	# Windows
 	[[Process]]
-	  Command = "^java"
+	  Name = "^java"
 	[[Process]]
-	  Command = "^powershell"
-
+	  Name = "^powershell"
 
 ProcessDotNet (array of table, keys are Name): .NET processes to monitor
 on Windows.
