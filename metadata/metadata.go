@@ -94,6 +94,7 @@ const (
 	StatusCode          = "status code"
 	Syscall             = "system calls"
 	Thread              = "threads"
+	Timestamp           = "timestamp"
 	Transition          = "transitions"
 	V                   = "V" // Volts
 	V10                 = "tenth-Volts"
