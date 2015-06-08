@@ -61,7 +61,9 @@ func cHTTPUnit(plans *httpunit.Plans) (opentsdb.MultiDataPoint, error) {
 					cv = 0
 				}
 				Add(&md, "hu.cert.valid", cv, tags, metadata.Gauge, metadata.Bool, "")
-				Add(&md, "hu.cert.expires", r.Result.Resp.TLS.PeerCertificates[0].NotAfter.Unix(), tags, metadata.Gauge, metadata.Timestamp, "")
+				if resp := r.Result.Resp; resp != nil && resp.TLS != nil && len(resp.TLS.PeerCertificates) > 0 {
+					Add(&md, "hu.cert.expires", resp.TLS.PeerCertificates[0].NotAfter.Unix(), tags, metadata.Gauge, metadata.Timestamp, "")
+				}
 			}
 		}
 	}
