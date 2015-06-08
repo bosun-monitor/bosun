@@ -187,12 +187,16 @@ on Windows.
 	[[ProcessDotNet]]
 	  Name = "^Scheduler"
 
-HTTPUnit (array of table, key is File): httpunit toml files to read and
-monitor. See https://github.com/StackExchange/httpunit for documentation
-about the toml file.
+HTTPUnit (array of table, keys are TOML, Hiera): httpunit TOML and Hiera
+files to read and monitor. See https://github.com/StackExchange/httpunit
+for documentation about the toml file. TOML and Hiera may both be specified,
+or just one.
 
 	[[HTTPUnit]]
-	  File = "/path/to/httpunit.toml"
+	  TOML = "/path/to/httpunit.toml"
+	  Hiera = "/path/to/listeners.json"
+	[[HTTPUnit]]
+	  TOML = "/some/other.toml"
 
 Windows
 

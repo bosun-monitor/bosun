@@ -2,6 +2,7 @@
 package httpunit
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -19,6 +20,73 @@ import (
 type Plans struct {
 	Plans []*TestPlan `toml:"plan"`
 	IPs   IPMap
+}
+
+/*
+ExtractHiera returns listener members from a hiera sets.json file. For
+example, the following file would create three entries for the given IPs
+and ports. Other items present in the file are ignored.
+
+	{
+	  "iptables::sets::sets": {
+	    "listeners": {
+	      "members": {
+	        "10.0.1.2,tcp:80": {
+	          "comment": "first load balancer"
+	        },
+	        "10.0.3.4,tcp:80": {
+	          "comment": "second load balancer"
+	        },
+	        "10.0.7.8,tcp:25": {
+	          "comment": "mail servers"
+	        }
+	      }
+	    }
+	  }
+	}
+
+*/
+func ExtractHiera(fname string) ([]*TestPlan, error) {
+	b, err := ioutil.ReadFile(fname)
+	if err != nil {
+		return nil, err
+	}
+	var hs hieraSets
+	if err := json.Unmarshal(b, &hs); err != nil {
+		return nil, err
+	}
+	var plans []*TestPlan
+	for addr := range hs.Iptables.Listeners.Members {
+		sp := strings.Split(addr, ":")
+		if len(sp) != 2 {
+			return nil, fmt.Errorf("unrecognized hiera address: %s", addr)
+		}
+		port, err := strconv.Atoi(sp[1])
+		if err != nil {
+			return nil, fmt.Errorf("bad hiera port %s in %s", sp[1], addr)
+		}
+		sp = strings.Split(sp[0], ",")
+		if len(sp) != 2 {
+			return nil, fmt.Errorf("unrecognized hiera address: %s", addr)
+		}
+		ip, scheme := sp[0], sp[1]
+		plans = append(plans, &TestPlan{
+			Label: addr,
+			URL:   fmt.Sprintf("%s://%s:%d", scheme, ip, port),
+		})
+	}
+	return plans, nil
+}
+
+type hieraSets struct {
+	Iptables struct {
+		Listeners struct {
+			Config  string `json:"config"`
+			Members map[string]struct {
+				Comment string `json:"comment"`
+			} `json:"members"`
+		} `json:"listeners"`
+	} `json:"iptables::sets::sets"`
 }
 
 type PlanResult struct {

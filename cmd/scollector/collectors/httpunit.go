@@ -9,12 +9,23 @@ import (
 	"bosun.org/opentsdb"
 )
 
-func HTTPUnitFile(filename string) error {
+func HTTPUnitTOML(filename string) error {
 	var plans httpunit.Plans
 	if _, err := toml.DecodeFile(filename, &plans); err != nil {
 		return err
 	}
 	HTTPUnitPlans(filename, &plans)
+	return nil
+}
+
+func HTTPUnitHiera(filename string) error {
+	plans, err := httpunit.ExtractHiera(filename)
+	if err != nil {
+		return err
+	}
+	HTTPUnitPlans(filename, &httpunit.Plans{
+		Plans: plans,
+	})
 	return nil
 }
 
