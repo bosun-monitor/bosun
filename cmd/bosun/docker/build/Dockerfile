@@ -28,10 +28,10 @@ RUN curl -SL https://storage.googleapis.com/golang/go1.4.2.linux-amd64.tar.gz \
     | tar -xzC /usr/local
 
 COPY bosun $GOPATH/src/bosun.org/
+WORKDIR $GOPATH/src/bosun.org
 
 ENV PATH $PATH:/usr/local/go/bin:$GOPATH/bin
 
-RUN go get -d bosun.org/cmd/bosun \
-	&& go run $GOPATH/src/bosun.org/build/build.go \
+RUN go run build/build.go \
 	&& bosun -version \
 	&& scollector -version
