@@ -4,7 +4,7 @@ set -e
 
 rm -rf buildoutput
 mkdir buildoutput
-set -e
+
 docker run --rm \
    -v "$PWD":/go/src/bosun.org \
    -v "$PWD"/buildoutput:/output \

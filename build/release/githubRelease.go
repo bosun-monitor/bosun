@@ -37,8 +37,8 @@ func init() {
 	if number = os.Getenv("BUILD_NUMBER"); number == "" {
 		log.Fatal("BUILD_NUMBER env required")
 	}
-	if sha = os.Getenv("GITHUB_VERSION_SHA"); sha == "" {
-		log.Fatal("GITHUB_VERSION_SHA env required")
+	if sha = os.Getenv("GIT_SHA"); sha == "" {
+		log.Fatal("GIT_SHA env required")
 	}
 	binDir = os.Getenv("OUTPUTDIR")
 	hClient := &http.Client{Transport: myRoundTripper{accessToken}}
