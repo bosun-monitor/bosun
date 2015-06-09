@@ -27,7 +27,7 @@
 			{% assign release = releases[0] %}
 			{% assign relname = release.tag_name %}
 			
-	<p>Version <a href="https://github.com/bosun-monitor/bosun/releases/tag/{{relname}}">{relname}</a> ({{ release.created_at | date_to_string }})</p>
+	<p>Version <a href="https://github.com/bosun-monitor/bosun/releases/tag/{{relname}}">{{relname}}</a> ({{ release.created_at | date_to_string }})</p>
 		
         <ul>
           <li><a href="https://github.com/bosun-monitor/bosun/releases/download/{{relname}}/scollector-linux-amd64"><strong>Linux</strong> amd64</a></li>
@@ -45,6 +45,10 @@
           <li><a href="https://github.com/bosun-monitor/bosun/releases/download/{{relname}}/scollector-linux-arm5"><strong>ARMv5</strong></a></li>
           <li><a href="https://github.com/bosun-monitor/bosun/releases/download/{{relname}}/scollector-linux-arm6"><strong>ARMv6</strong></a></li>
           <li><a href="https://github.com/bosun-monitor/bosun/releases/download/{{relname}}/scollector-linux-arm7"><strong>ARMv7</strong></a></li>
+        </ul>
+
+        <ul>
+          <li><a href="https://github.com/bosun-monitor/bosun/releases/download/{{relname}}/scollector-solaris-amd64"><strong>Solaris</strong> amd64</a></li>
         </ul>
 	{% else %}
 			<p>View latest release on <a href="https://github.com/bosun-monitor/bosun/releases/latest">Github</a></p>

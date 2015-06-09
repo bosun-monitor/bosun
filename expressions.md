@@ -174,6 +174,18 @@ Count returns the number of groups in the query as an ungrouped scalar.
 
 Generic query from endDuration to startDuration ago. If endDuration is the empty string (`""`), now is used. Support d( units are listed in [the docs](http://opentsdb.net/docs/build/html/user_guide/query/dates.html). Refer to [the docs](http://opentsdb.net/docs/build/html/user_guide/query/index.html) for query syntax. The query argument is the value part of the `m=...` expressions. `*` and `|` are fully supported. In addition, queries like `sys.cpu.user{host=ny-*}` are supported. These are performed by an additional step which determines valid matches, and replaces `ny-*` with `ny-web01|ny-web02|...|ny-web10` to achieve the same result. This lookup is kept in memory by the system and does not incur any additional OpenTSDB API requests, but does require tcollector instances pointed to the bosun server.
 
+### window(query, duration, period, num, funcName)
+
+Window performs `num` queries of `duration` each, `period` apart, starting
+`period` ago. The results of the queries are run through `funcName` which
+must be a reduction function taking only one argument (that is, a function
+that takes a series and returns a number), then a series made from those. So
+`window("avg:os.cpu{host=*}", "1h", "1d", 7, "dev")` will return a series
+comprising of the average of given metric from 1d to 1d-1h-ago, 2d to
+2d-1h-ago, etc, until 8d. It is similar to the band function, except that
+instead of concatenating series together, each series is reduced to a number,
+and those numbers created into a series.
+
 # Reduction Functions
 
 All reduction functions take a series and return a number.
