@@ -2,7 +2,7 @@
 set -e
 
 TIME=`date +%Y%m%d%H%M%S`
-GIT_SHA=`cd $GOPATH/src/bosun.org; git rev-parse HEAD`
+export GIT_SHA=`cd $GOPATH/src/bosun.org; git rev-parse HEAD`
 
 build()
 {
