@@ -46,6 +46,12 @@ func cHTTPUnit(plans *httpunit.Plans) (opentsdb.MultiDataPoint, error) {
 		return nil, err
 	}
 	var md opentsdb.MultiDataPoint
+	isTrue := func(b bool) int {
+		if b {
+			return 1
+		}
+		return 0
+	}
 	for r := range ch {
 		tags := opentsdb.TagSet{
 			"protocol":     r.Case.URL.Scheme,
@@ -53,27 +59,15 @@ func cHTTPUnit(plans *httpunit.Plans) (opentsdb.MultiDataPoint, error) {
 			"url_host":     r.Case.URL.Host,
 			"hc_test_case": r.Plan.Label,
 		}
-		var er = 0
-		if r.Result.Result != nil {
-			er = 1
-		}
-		Add(&md, "hu.error", er, tags, metadata.Gauge, metadata.Bool, "")
-		var sc = 0
-		if r.Result.Connected {
-			sc = 1
-		}
-		Add(&md, "hu.socket_connected", sc, tags, metadata.Gauge, metadata.Bool, descHTTPUnitSocketConnected)
+		Add(&md, "hu.error", isTrue(r.Result.Result != nil), tags, metadata.Gauge, metadata.Bool, "")
+		Add(&md, "hu.socket_connected", isTrue(r.Result.Connected), tags, metadata.Gauge, metadata.Bool, descHTTPUnitSocketConnected)
 		switch r.Case.URL.Scheme {
 		case "http", "https":
-			Add(&md, "hu.http.got_expected_code", r.Result.GotCode, tags, metadata.Gauge, metadata.Bool, descHTTPUnitExpectedCode)
-			Add(&md, "hu.http.got_expected_text", r.Result.GotText, tags, metadata.Gauge, metadata.Bool, descHTTPUnitExpectedText)
-			Add(&md, "hu.http.got_expected_regex", r.Result.GotRegex, tags, metadata.Gauge, metadata.Bool, descHTTPUnitExpectedRegex)
+			Add(&md, "hu.http.got_expected_code", isTrue(r.Result.GotCode), tags, metadata.Gauge, metadata.Bool, descHTTPUnitExpectedCode)
+			Add(&md, "hu.http.got_expected_text", isTrue(r.Result.GotText), tags, metadata.Gauge, metadata.Bool, descHTTPUnitExpectedText)
+			Add(&md, "hu.http.got_expected_regex", isTrue(r.Result.GotRegex), tags, metadata.Gauge, metadata.Bool, descHTTPUnitExpectedRegex)
 			if r.Case.URL.Scheme == "https" {
-				cv := 1
-				if r.Result.InvalidCert {
-					cv = 0
-				}
-				Add(&md, "hu.cert.valid", cv, tags, metadata.Gauge, metadata.Bool, "")
+				Add(&md, "hu.cert.valid", isTrue(!r.Result.InvalidCert), tags, metadata.Gauge, metadata.Bool, "")
 				if resp := r.Result.Resp; resp != nil && resp.TLS != nil && len(resp.TLS.PeerCertificates) > 0 {
 					Add(&md, "hu.cert.expires", resp.TLS.PeerCertificates[0].NotAfter.Unix(), tags, metadata.Gauge, metadata.Timestamp, "")
 				}
