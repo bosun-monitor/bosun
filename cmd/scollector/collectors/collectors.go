@@ -150,6 +150,13 @@ type MetricMeta struct {
 
 // AddTS is the same as Add but lets you specify the timestamp
 func AddTS(md *opentsdb.MultiDataPoint, name string, ts int64, value interface{}, t opentsdb.TagSet, rate metadata.RateType, unit metadata.Unit, desc string) {
+	if b, ok := value.(bool); ok {
+		if b {
+			value = 1
+		} else {
+			value = 0
+		}
+	}
 	tags := t.Copy()
 	if rate != metadata.Unknown {
 		metadata.AddMeta(name, nil, "rate", rate, false)
