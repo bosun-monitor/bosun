@@ -23,6 +23,11 @@ var (
 	denormalize = flag.String("denormalize", "os.mem.used__host", "List of metrics to denormalize. Comma seperated list of `metric__tagname__tagname` rules. Will be translated to `___metric__tagvalue__tagvalue`")
 )
 
+var (
+	tsdbPutURL    *url.URL
+	bosunIndexURL *url.URL
+)
+
 func main() {
 	flag.Parse()
 	if *bosunServer == "" || *tsdbServer == "" {
@@ -36,9 +41,19 @@ func main() {
 		Scheme: "http",
 		Host:   *tsdbServer,
 	}
+	tsdbPutURL = &url.URL{
+		Scheme: "http",
+		Host:   *tsdbServer,
+		Path:   "/api/put",
+	}
 	bosunURL := &url.URL{
 		Scheme: "http",
 		Host:   *bosunServer,
+	}
+	bosunIndexURL = &url.URL{
+		Scheme: "http",
+		Host:   *bosunServer,
+		Path:   "/api/index",
 	}
 	tsdbProxy := httputil.NewSingleHostReverseProxy(tsdbURL)
 	http.Handle("/api/put", &relayProxy{
@@ -97,12 +112,7 @@ func (rp *relayProxy) relayRequest(responseWriter http.ResponseWriter, r *http.R
 	// Run in a separate go routine so we can end the source's request.
 	go func() {
 		body := bytes.NewBuffer(reader.buf.Bytes())
-		u := &url.URL{
-			Scheme: "http",
-			Host:   *bosunServer,
-			Path:   "/api/index",
-		}
-		req, err := http.NewRequest(r.Method, u.String(), body)
+		req, err := http.NewRequest(r.Method, bosunIndexURL.String(), body)
 		if err != nil {
 			verbose("%v", err)
 			return
@@ -116,7 +126,7 @@ func (rp *relayProxy) relayRequest(responseWriter http.ResponseWriter, r *http.R
 		verbose("bosun relay success")
 	}()
 	if parse && denormalizationRules != nil {
-		go rp.denormalize(&reader.buf)
+		go rp.denormalize(bytes.NewReader(reader.buf.Bytes()))
 	}
 }
 
@@ -159,12 +169,7 @@ func (rp *relayProxy) denormalize(body io.Reader) {
 		verbose("error zipping denormalized data points: %v", err)
 		return
 	}
-	u := &url.URL{
-		Scheme: "http",
-		Host:   *tsdbServer,
-		Path:   "/api/put",
-	}
-	req, err := http.NewRequest("POST", u.String(), buf)
+	req, err := http.NewRequest("POST", tsdbPutURL.String(), buf)
 	if err != nil {
 		verbose("%v", err)
 		return
