@@ -52,19 +52,18 @@ func parseDenormalizationRules() {
 
 func (d *DenormalizationRule) Translate(dp *opentsdb.DataPoint) (*opentsdb.DataPoint, error) {
 	newDp := &opentsdb.DataPoint{Timestamp: dp.Timestamp, Value: dp.Value}
-	mName := "." + dp.Metric
+	tagString := "__"
 	newDp.Tags = dp.Tags
 	for i, tagName := range d.TagNames {
 		val, ok := dp.Tags[tagName]
 		if !ok {
 			return nil, fmt.Errorf("tag %s not present in data point for %s.", tagName, dp.Metric)
 		}
-		sep := "__"
 		if i > 0 {
-			sep = "."
+			tagString += "."
 		}
-		mName = sep + val + mName
+		tagString += val
 	}
-	newDp.Metric = mName
+	newDp.Metric = tagString + "." + dp.Metric
 	return newDp, nil
 }
