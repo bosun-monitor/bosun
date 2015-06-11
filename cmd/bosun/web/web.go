@@ -9,7 +9,6 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
-	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -146,9 +145,6 @@ func (rw *relayWriter) WriteHeader(code int) {
 }
 
 func (rp *relayProxy) ServeHTTP(responseWriter http.ResponseWriter, r *http.Request) {
-	if !IPAuthorized(responseWriter, r) {
-		return
-	}
 	clean := func(s string) string {
 		return opentsdb.MustReplace(s, "_")
 	}
@@ -194,9 +190,6 @@ func indexTSDB(r *http.Request, body []byte) {
 }
 
 func IndexTSDB(w http.ResponseWriter, r *http.Request) {
-	if !IPAuthorized(w, r) {
-		return
-	}
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		log.Println(err)
@@ -302,24 +295,7 @@ func HealthCheck(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (
 	return h, nil
 }
 
-func IPAuthorized(w http.ResponseWriter, r *http.Request) bool {
-	ra := strings.Split(r.RemoteAddr, ":")[0]
-	ip := net.ParseIP(ra)
-	if ip == nil {
-		http.Error(w, fmt.Sprintf("Could not parse client IP %v", ra), 500)
-		return false
-	}
-	if !schedule.Conf.PutAuthorized(ip) {
-		http.Error(w, fmt.Sprintf("IP %v not authorized", ip), 403)
-		return false
-	}
-	return true
-}
-
 func PutMetadata(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	if !IPAuthorized(w, r) {
-		return nil, nil
-	}
 	d := json.NewDecoder(r.Body)
 	var ms []metadata.Metasend
 	if err := d.Decode(&ms); err != nil {
