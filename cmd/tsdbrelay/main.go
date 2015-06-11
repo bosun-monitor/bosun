@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/http/httptest"
 	"net/http/httputil"
 	"net/url"
 
@@ -80,6 +81,10 @@ func (rw *relayWriter) WriteHeader(code int) {
 }
 
 func (rp *relayProxy) ServeHTTP(responseWriter http.ResponseWriter, r *http.Request) {
+	rp.relayRequest(responseWriter, r, true)
+}
+
+func (rp *relayProxy) relayRequest(responseWriter http.ResponseWriter, r *http.Request, parse bool) {
 	reader := &passthru{ReadCloser: r.Body}
 	r.Body = reader
 	w := &relayWriter{ResponseWriter: responseWriter}
@@ -91,7 +96,6 @@ func (rp *relayProxy) ServeHTTP(responseWriter http.ResponseWriter, r *http.Requ
 	verbose("relayed to tsdb")
 	// Run in a separate go routine so we can end the source's request.
 	go func() {
-		return
 		body := bytes.NewBuffer(reader.buf.Bytes())
 		u := &url.URL{
 			Scheme: "http",
@@ -111,7 +115,7 @@ func (rp *relayProxy) ServeHTTP(responseWriter http.ResponseWriter, r *http.Requ
 		resp.Body.Close()
 		verbose("bosun relay success")
 	}()
-	if denormalizationRules != nil {
+	if parse && denormalizationRules != nil {
 		go rp.denormalize(&reader.buf)
 	}
 }
@@ -167,11 +171,9 @@ func (rp *relayProxy) denormalize(body io.Reader) {
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Content-Encoding", "gzip")
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		verbose("denormalized data point relay error: %v", err)
-		return
-	}
-	resp.Body.Close()
-	verbose("relayed %d denormalized data points", len(relayDps))
+
+	responseWriter := httptest.NewRecorder()
+	rp.relayRequest(responseWriter, req, false)
+
+	verbose("relayed %d denormalized data points. Tsdb response: %d", len(relayDps), responseWriter.Code)
 }
