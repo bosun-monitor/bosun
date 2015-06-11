@@ -2,12 +2,16 @@ package main
 
 import (
 	"bytes"
+	"compress/gzip"
+	"encoding/json"
 	"flag"
 	"io"
 	"log"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+
+	"bosun.org/opentsdb"
 )
 
 var (
@@ -15,6 +19,7 @@ var (
 	bosunServer = flag.String("b", "bosun", "Target Bosun server. Can specify port with host:port.")
 	tsdbServer  = flag.String("t", "", "Target OpenTSDB server. Can specify port with host:port.")
 	logVerbose  = flag.Bool("v", false, "enable verbose logging")
+	denormalize = flag.String("denormalize", "os.mem.used__host", "List of metrics to denormalize. Comma seperated list of `metric__tagname__tagname` rules. Will be translated to `___metric__tagvalue__tagvalue`")
 )
 
 func main() {
@@ -25,6 +30,7 @@ func main() {
 	log.Println("listen on", *listenAddr)
 	log.Println("relay to bosun at", *bosunServer)
 	log.Println("relay to tsdb at", *tsdbServer)
+	parseDenormalizationRules()
 	tsdbURL := &url.URL{
 		Scheme: "http",
 		Host:   *tsdbServer,
@@ -85,6 +91,7 @@ func (rp *relayProxy) ServeHTTP(responseWriter http.ResponseWriter, r *http.Requ
 	verbose("relayed to tsdb")
 	// Run in a separate go routine so we can end the source's request.
 	go func() {
+		return
 		body := bytes.NewBuffer(reader.buf.Bytes())
 		u := &url.URL{
 			Scheme: "http",
@@ -104,4 +111,67 @@ func (rp *relayProxy) ServeHTTP(responseWriter http.ResponseWriter, r *http.Requ
 		resp.Body.Close()
 		verbose("bosun relay success")
 	}()
+	if denormalizationRules != nil {
+		go rp.denormalize(&reader.buf)
+	}
+}
+
+func (rp *relayProxy) denormalize(body io.Reader) {
+	gReader, err := gzip.NewReader(body)
+	if err != nil {
+		verbose("error making gzip reader: %v", err)
+		return
+	}
+	decoder := json.NewDecoder(gReader)
+	dps := []*opentsdb.DataPoint{}
+	err = decoder.Decode(&dps)
+	if err != nil {
+		verbose("error decoding data points: %v", err)
+		return
+	}
+	relayDps := []*opentsdb.DataPoint{}
+	for _, dp := range dps {
+		if rule, ok := denormalizationRules[dp.Metric]; ok {
+			var newDp *opentsdb.DataPoint
+			if newDp, err = rule.Translate(dp); err == nil {
+				relayDps = append(relayDps, newDp)
+			} else {
+				verbose(err.Error())
+			}
+		}
+	}
+	if len(relayDps) == 0 {
+		return
+	}
+	buf := &bytes.Buffer{}
+	gWriter := gzip.NewWriter(buf)
+	encoder := json.NewEncoder(gWriter)
+	err = encoder.Encode(relayDps)
+	if err != nil {
+		verbose("error encoding denormalized data points: %v", err)
+		return
+	}
+	if err = gWriter.Close(); err != nil {
+		verbose("error zipping denormalized data points: %v", err)
+		return
+	}
+	u := &url.URL{
+		Scheme: "http",
+		Host:   *tsdbServer,
+		Path:   "/api/put",
+	}
+	req, err := http.NewRequest("POST", u.String(), buf)
+	if err != nil {
+		verbose("%v", err)
+		return
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Encoding", "gzip")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		verbose("denormalized data point relay error: %v", err)
+		return
+	}
+	resp.Body.Close()
+	verbose("relayed %d denormalized data points", len(relayDps))
 }
