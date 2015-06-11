@@ -36,7 +36,14 @@ func main() {
 	log.Println("listen on", *listenAddr)
 	log.Println("relay to bosun at", *bosunServer)
 	log.Println("relay to tsdb at", *tsdbServer)
-	parseDenormalizationRules()
+	if *denormalize != "" {
+		var err error
+		denormalizationRules, err = parseDenormalizationRules(*denormalize)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
 	tsdbURL := &url.URL{
 		Scheme: "http",
 		Host:   *tsdbServer,
