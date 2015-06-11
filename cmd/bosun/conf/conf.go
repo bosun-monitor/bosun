@@ -55,8 +55,6 @@ type Conf struct {
 	Squelch          Squelches `json:"-"`
 	Quiet            bool
 	NoSleep          bool
-	AllowedPutIPs    []*net.IPNet
-	BlockedPutIPs    []*net.IPNet
 	ShortURLKey      string
 
 	TSDBHost             string                    // OpenTSDB relay and query destination: ny-devtsdb04:4242
@@ -69,29 +67,6 @@ type Conf struct {
 	bodies          *htemplate.Template
 	subjects        *ttemplate.Template
 	squelch         []string
-}
-
-func (c *Conf) PutAuthorized(ip net.IP) bool {
-	// First process all blocked put ip ranges.
-	for _, ipnet := range c.BlockedPutIPs {
-		if ipnet.Contains(ip) {
-			return false
-		}
-	}
-	// If no allowed put IPs are specified, then allow all IPs.
-	if len(c.AllowedPutIPs) == 0 {
-		return true
-	}
-	if ip.IsLoopback() {
-		return true
-	}
-	// Finally process allowed IPs.
-	for _, ipnet := range c.AllowedPutIPs {
-		if ipnet.Contains(ip) {
-			return true
-		}
-	}
-	return false
 }
 
 // TSDBContext returns an OpenTSDB context limited to
@@ -444,10 +419,6 @@ func (c *Conf) loadGlobal(p *parse.PairNode) {
 		c.PingDuration = d
 	case "noSleep":
 		c.NoSleep = true
-	case "blockedPutIPs":
-		c.BlockedPutIPs = c.parseIPs(v)
-	case "allowedPutIPs":
-		c.AllowedPutIPs = c.parseIPs(v)
 	case "unknownThreshold":
 		i, err := strconv.Atoi(v)
 		if err != nil {
