@@ -2,12 +2,17 @@ package main
 
 import (
 	"bytes"
+	"compress/gzip"
+	"encoding/json"
 	"flag"
 	"io"
 	"log"
 	"net/http"
+	"net/http/httptest"
 	"net/http/httputil"
 	"net/url"
+
+	"bosun.org/opentsdb"
 )
 
 var (
@@ -15,6 +20,12 @@ var (
 	bosunServer = flag.String("b", "bosun", "Target Bosun server. Can specify port with host:port.")
 	tsdbServer  = flag.String("t", "", "Target OpenTSDB server. Can specify port with host:port.")
 	logVerbose  = flag.Bool("v", false, "enable verbose logging")
+	denormalize = flag.String("denormalize", "", "List of metrics to denormalize. Comma seperated list of `metric__tagname__tagname` rules. Will be translated to `___metric__tagvalue__tagvalue`")
+)
+
+var (
+	tsdbPutURL    string
+	bosunIndexURL string
 )
 
 func main() {
@@ -25,14 +36,35 @@ func main() {
 	log.Println("listen on", *listenAddr)
 	log.Println("relay to bosun at", *bosunServer)
 	log.Println("relay to tsdb at", *tsdbServer)
+	if *denormalize != "" {
+		var err error
+		denormalizationRules, err = parseDenormalizationRules(*denormalize)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
 	tsdbURL := &url.URL{
 		Scheme: "http",
 		Host:   *tsdbServer,
 	}
+
+	u := url.URL{
+		Scheme: "http",
+		Host:   *tsdbServer,
+		Path:   "/api/put",
+	}
+	tsdbPutURL = u.String()
 	bosunURL := &url.URL{
 		Scheme: "http",
 		Host:   *bosunServer,
 	}
+	u = url.URL{
+		Scheme: "http",
+		Host:   *bosunServer,
+		Path:   "/api/index",
+	}
+	bosunIndexURL = u.String()
 	tsdbProxy := httputil.NewSingleHostReverseProxy(tsdbURL)
 	http.Handle("/api/put", &relayProxy{
 		ReverseProxy: tsdbProxy,
@@ -74,6 +106,10 @@ func (rw *relayWriter) WriteHeader(code int) {
 }
 
 func (rp *relayProxy) ServeHTTP(responseWriter http.ResponseWriter, r *http.Request) {
+	rp.relayRequest(responseWriter, r, true)
+}
+
+func (rp *relayProxy) relayRequest(responseWriter http.ResponseWriter, r *http.Request, parse bool) {
 	reader := &passthru{ReadCloser: r.Body}
 	r.Body = reader
 	w := &relayWriter{ResponseWriter: responseWriter}
@@ -86,12 +122,7 @@ func (rp *relayProxy) ServeHTTP(responseWriter http.ResponseWriter, r *http.Requ
 	// Run in a separate go routine so we can end the source's request.
 	go func() {
 		body := bytes.NewBuffer(reader.buf.Bytes())
-		u := &url.URL{
-			Scheme: "http",
-			Host:   *bosunServer,
-			Path:   "/api/index",
-		}
-		req, err := http.NewRequest(r.Method, u.String(), body)
+		req, err := http.NewRequest(r.Method, bosunIndexURL, body)
 		if err != nil {
 			verbose("%v", err)
 			return
@@ -104,4 +135,59 @@ func (rp *relayProxy) ServeHTTP(responseWriter http.ResponseWriter, r *http.Requ
 		resp.Body.Close()
 		verbose("bosun relay success")
 	}()
+	if parse && denormalizationRules != nil {
+		go rp.denormalize(bytes.NewReader(reader.buf.Bytes()))
+	}
+}
+
+func (rp *relayProxy) denormalize(body io.Reader) {
+	gReader, err := gzip.NewReader(body)
+	if err != nil {
+		verbose("error making gzip reader: %v", err)
+		return
+	}
+	decoder := json.NewDecoder(gReader)
+	dps := []*opentsdb.DataPoint{}
+	err = decoder.Decode(&dps)
+	if err != nil {
+		verbose("error decoding data points: %v", err)
+		return
+	}
+	relayDps := []*opentsdb.DataPoint{}
+	for _, dp := range dps {
+		if rule, ok := denormalizationRules[dp.Metric]; ok {
+			if err = rule.Translate(dp); err == nil {
+				relayDps = append(relayDps, dp)
+			} else {
+				verbose(err.Error())
+			}
+		}
+	}
+	if len(relayDps) == 0 {
+		return
+	}
+	buf := &bytes.Buffer{}
+	gWriter := gzip.NewWriter(buf)
+	encoder := json.NewEncoder(gWriter)
+	err = encoder.Encode(relayDps)
+	if err != nil {
+		verbose("error encoding denormalized data points: %v", err)
+		return
+	}
+	if err = gWriter.Close(); err != nil {
+		verbose("error zipping denormalized data points: %v", err)
+		return
+	}
+	req, err := http.NewRequest("POST", tsdbPutURL, buf)
+	if err != nil {
+		verbose("%v", err)
+		return
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Encoding", "gzip")
+
+	responseWriter := httptest.NewRecorder()
+	rp.relayRequest(responseWriter, req, false)
+
+	verbose("relayed %d denormalized data points. Tsdb response: %d", len(relayDps), responseWriter.Code)
 }

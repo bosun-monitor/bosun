@@ -1719,7 +1719,7 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
         if ($scope.query_p.length == 0) {
             $scope.AddTab();
         }
-        $http.get('/api/metric')
+        $http.get('/api/metric?all=1')
             .success(function (data) {
             $scope.metrics = data;
         })
