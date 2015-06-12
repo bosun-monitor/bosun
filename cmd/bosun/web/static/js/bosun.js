@@ -649,7 +649,7 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
             $http.post(url, $scope.config_text)
                 .success(function (data) {
                 v.subject = data.Subject;
-                v.body = data.Body;
+                v.body = $sce.trustAsHtml(data.Body);
             })
                 .error(function (error) {
                 v.error = error;
