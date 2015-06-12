@@ -34,4 +34,5 @@ ENV PATH $PATH:/usr/local/go/bin:$GOPATH/bin
 
 RUN go run build/build.go \
 	&& bosun -version \
-	&& scollector -version
+	&& scollector -version \ 
+	&& tsdbrelay -version

@@ -5,14 +5,17 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"net/http/httptest"
 	"net/http/httputil"
 	"net/url"
+	"os"
 
 	"bosun.org/opentsdb"
+	"bosun.org/version"
 )
 
 var (
@@ -20,7 +23,8 @@ var (
 	bosunServer = flag.String("b", "bosun", "Target Bosun server. Can specify port with host:port.")
 	tsdbServer  = flag.String("t", "", "Target OpenTSDB server. Can specify port with host:port.")
 	logVerbose  = flag.Bool("v", false, "enable verbose logging")
-	denormalize = flag.String("denormalize", "", "List of metrics to denormalize. Comma seperated list of `metric__tagname__tagname` rules. Will be translated to `___metric__tagvalue__tagvalue`")
+	denormalize = flag.String("denormalize", "", "List of metrics to denormalize. Comma seperated list of `metric__tagname__tagname` rules. Will be translated to `__tagvalues.metric`")
+	flagVersion = flag.Bool("version", false, "Prints the version and exits")
 )
 
 var (
@@ -30,6 +34,10 @@ var (
 
 func main() {
 	flag.Parse()
+	if *flagVersion {
+		fmt.Println(version.GetVersionInfo("bosun"))
+		os.Exit(0)
+	}
 	if *bosunServer == "" || *tsdbServer == "" {
 		log.Fatal("must specify both bosun and tsdb server")
 	}
