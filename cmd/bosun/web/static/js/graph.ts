@@ -278,7 +278,7 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 	if ($scope.query_p.length == 0) {
 		$scope.AddTab();
 	}
-	$http.get('/api/metric?all=1')
+	$http.get('/api/metric')
 		.success(function(data: string[]) {
 			$scope.metrics = data;
 		})
