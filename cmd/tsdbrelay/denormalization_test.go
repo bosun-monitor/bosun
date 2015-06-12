@@ -11,28 +11,29 @@ func TestSimpleRewrite(t *testing.T) {
 		Metric:   "a.b.c",
 		TagNames: []string{"host"},
 	}
+	tags := opentsdb.TagSet{"host": "foo-bar", "baz": "qwerty"}
 	dp := &opentsdb.DataPoint{
 		Metric:    "a.b.c",
 		Timestamp: 42,
 		Value:     3,
-		Tags:      opentsdb.TagSet{"host": "foo-bar", "baz": "qwerty"},
+		Tags:      tags,
 	}
-	newDp, err := rule.Translate(dp)
+	err := rule.Translate(dp)
 	if err != nil {
 		t.Fatal(err)
 	}
 	expectedName := "__foo-bar.a.b.c"
-	if newDp.Metric != expectedName {
-		t.Errorf("metric name %s is not `%s`", newDp.Metric, expectedName)
+	if dp.Metric != expectedName {
+		t.Errorf("metric name %s is not `%s`", dp.Metric, expectedName)
 	}
-	if newDp.Timestamp != dp.Timestamp {
-		t.Errorf("new metric timestamp does not match. %d != %d", newDp.Timestamp, dp.Timestamp)
+	if dp.Timestamp != 42 {
+		t.Errorf("new metric timestamp does not match. %d != 42", dp.Timestamp)
 	}
-	if newDp.Value != dp.Value {
-		t.Errorf("new metric value does not match. %d != %d", newDp.Value, dp.Value)
+	if dp.Value != 3 {
+		t.Errorf("new metric value does not match. %d != 3", dp.Value)
 	}
-	if !dp.Tags.Equal(newDp.Tags) {
-		t.Errorf("new metric tags do not match. %v != %v", newDp.Tags, dp.Tags)
+	if !dp.Tags.Equal(tags) {
+		t.Errorf("new metric tags do not match. %v != %v", dp.Tags, tags)
 	}
 }
 
@@ -45,13 +46,13 @@ func TestMultipleTags(t *testing.T) {
 		Metric: "a.b.c",
 		Tags:   opentsdb.TagSet{"host": "foo-bar", "interface": "eth0"},
 	}
-	newDp, err := rule.Translate(dp)
+	err := rule.Translate(dp)
 	if err != nil {
 		t.Fatal(err)
 	}
 	expectedName := "__foo-bar.eth0.a.b.c"
-	if newDp.Metric != expectedName {
-		t.Errorf("metric name %s is not `%s`", newDp.Metric, expectedName)
+	if dp.Metric != expectedName {
+		t.Errorf("metric name %s is not `%s`", dp.Metric, expectedName)
 	}
 }
 
@@ -68,7 +69,7 @@ func TestRewrite_TagNotPresent(t *testing.T) {
 		Value:     3,
 		Tags:      opentsdb.TagSet{"baz": "qwerty"},
 	}
-	_, err := rule.Translate(dp)
+	err := rule.Translate(dp)
 	if err == nil {
 		t.Fatal("Expected error but got none.")
 	}

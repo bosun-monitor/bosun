@@ -39,8 +39,8 @@ func parseDenormalizationRules(config string) (map[string]*DenormalizationRule, 
 			return nil, fmt.Errorf("Denormalization rules must have at least one tag name specified.")
 		}
 		rule := &DenormalizationRule{Metric: parts[0]}
-		for i := 1; i < len(parts); i++ {
-			rule.TagNames = append(rule.TagNames, parts[i])
+		for _, part := range parts[1:] {
+			rule.TagNames = append(rule.TagNames, part)
 		}
 		log.Println("Denormalizing", rule)
 		m[rule.Metric] = rule
@@ -48,12 +48,12 @@ func parseDenormalizationRules(config string) (map[string]*DenormalizationRule, 
 	return m, nil
 }
 
-func (d *DenormalizationRule) Translate(dp *opentsdb.DataPoint) (*opentsdb.DataPoint, error) {
+func (d *DenormalizationRule) Translate(dp *opentsdb.DataPoint) error {
 	tagString := "__"
 	for i, tagName := range d.TagNames {
 		val, ok := dp.Tags[tagName]
 		if !ok {
-			return nil, fmt.Errorf("tag %s not present in data point for %s.", tagName, dp.Metric)
+			return fmt.Errorf("tag %s not present in data point for %s.", tagName, dp.Metric)
 		}
 		if i > 0 {
 			tagString += "."
@@ -61,5 +61,5 @@ func (d *DenormalizationRule) Translate(dp *opentsdb.DataPoint) (*opentsdb.DataP
 		tagString += val
 	}
 	dp.Metric = tagString + "." + dp.Metric
-	return dp, nil
+	return nil
 }

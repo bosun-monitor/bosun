@@ -20,12 +20,12 @@ var (
 	bosunServer = flag.String("b", "bosun", "Target Bosun server. Can specify port with host:port.")
 	tsdbServer  = flag.String("t", "", "Target OpenTSDB server. Can specify port with host:port.")
 	logVerbose  = flag.Bool("v", false, "enable verbose logging")
-	denormalize = flag.String("denormalize", "os.mem.used__host", "List of metrics to denormalize. Comma seperated list of `metric__tagname__tagname` rules. Will be translated to `___metric__tagvalue__tagvalue`")
+	denormalize = flag.String("denormalize", "", "List of metrics to denormalize. Comma seperated list of `metric__tagname__tagname` rules. Will be translated to `___metric__tagvalue__tagvalue`")
 )
 
 var (
-	tsdbPutURL    *url.URL
-	bosunIndexURL *url.URL
+	tsdbPutURL    string
+	bosunIndexURL string
 )
 
 func main() {
@@ -48,20 +48,23 @@ func main() {
 		Scheme: "http",
 		Host:   *tsdbServer,
 	}
-	tsdbPutURL = &url.URL{
+
+	u := url.URL{
 		Scheme: "http",
 		Host:   *tsdbServer,
 		Path:   "/api/put",
 	}
+	tsdbPutURL = u.String()
 	bosunURL := &url.URL{
 		Scheme: "http",
 		Host:   *bosunServer,
 	}
-	bosunIndexURL = &url.URL{
+	u = url.URL{
 		Scheme: "http",
 		Host:   *bosunServer,
 		Path:   "/api/index",
 	}
+	bosunIndexURL = u.String()
 	tsdbProxy := httputil.NewSingleHostReverseProxy(tsdbURL)
 	http.Handle("/api/put", &relayProxy{
 		ReverseProxy: tsdbProxy,
@@ -119,7 +122,7 @@ func (rp *relayProxy) relayRequest(responseWriter http.ResponseWriter, r *http.R
 	// Run in a separate go routine so we can end the source's request.
 	go func() {
 		body := bytes.NewBuffer(reader.buf.Bytes())
-		req, err := http.NewRequest(r.Method, bosunIndexURL.String(), body)
+		req, err := http.NewRequest(r.Method, bosunIndexURL, body)
 		if err != nil {
 			verbose("%v", err)
 			return
@@ -153,9 +156,8 @@ func (rp *relayProxy) denormalize(body io.Reader) {
 	relayDps := []*opentsdb.DataPoint{}
 	for _, dp := range dps {
 		if rule, ok := denormalizationRules[dp.Metric]; ok {
-			var newDp *opentsdb.DataPoint
-			if newDp, err = rule.Translate(dp); err == nil {
-				relayDps = append(relayDps, newDp)
+			if err = rule.Translate(dp); err == nil {
+				relayDps = append(relayDps, dp)
 			} else {
 				verbose(err.Error())
 			}
@@ -176,7 +178,7 @@ func (rp *relayProxy) denormalize(body io.Reader) {
 		verbose("error zipping denormalized data points: %v", err)
 		return
 	}
-	req, err := http.NewRequest("POST", tsdbPutURL.String(), buf)
+	req, err := http.NewRequest("POST", tsdbPutURL, buf)
 	if err != nil {
 		verbose("%v", err)
 		return
