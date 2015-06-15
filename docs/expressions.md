@@ -134,7 +134,7 @@ For example:
 
 queries the "logstash" named indexes (we autogenerate the date porition of the indexes based on the time frame) and returns a series with groups like `{logsrouce:ny-bosun01, program:bosun}, {logsrouce:ny-bosun02, program:bosun}`. The values of the series will be the count of log entries in 5 second buckets over the last 10 minutes.
 
-### lsstat(indexRoot string, keyString string, filterString string, field string, rStat string, bucketDuration string, startDuration string, endDuration string) series
+### lsstat(indexRoot string, keyString string, filterString string, field string, rStat(avg|min|max|sum|sum_of_squares|variance|std_deviation) string, bucketDuration string, startDuration string, endDuration string) series
 
 lstat returns various summary stats per bucket for the specified `field`. The field must be numeric in elastic. rStat can be one of `avg`, `min`, `max`, `sum`, `sum_of_squares`, `variance`, `std_deviation`. The rest of the fields behave the same as lscount except that there is no division based on `bucketDuration` since these are summary stats.
 
@@ -379,7 +379,7 @@ Returns the first key from the given lookup table with matching tags.
 
 Change the NaN value during binary operations (when joining two queries) of unknown groups to the scalar. This is useful to prevent unknown group and other errors from bubbling up.
 
-## sort(numberSet, asc_desc string) numberSet
+## sort(numberSet, (asc|desc) string) numberSet
 
 Returns the results sorted by value in ascending ("asc") or descending ("desc")
 order. Results are first sorted by groupname and then stably sorted so that
