@@ -1236,7 +1236,7 @@ func (c *Conf) Funcs() map[string]eparse.Func {
 			F:      lookup,
 		},
 		"lookupSeries": {
-			Args:   []eparse.FuncType{eparse.TypeSeries, eparse.TypeString, eparse.TypeString},
+			Args:   []eparse.FuncType{eparse.TypeSeriesSet, eparse.TypeString, eparse.TypeString},
 			Return: eparse.TypeNumberSet,
 			Tags:   lookupSeriesTags,
 			F:      lookupSeries,

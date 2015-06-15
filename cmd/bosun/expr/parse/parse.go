@@ -44,7 +44,7 @@ func (f FuncType) String() string {
 		return "number"
 	case TypeString:
 		return "string"
-	case TypeSeries:
+	case TypeSeriesSet:
 		return "series"
 	case TypeScalar:
 		return "scalar"
@@ -57,7 +57,7 @@ const (
 	TypeString FuncType = iota
 	TypeScalar
 	TypeNumberSet
-	TypeSeries
+	TypeSeriesSet
 )
 
 type Tags map[string]struct{}
@@ -206,7 +206,7 @@ func (t *Tree) startParse(funcs []map[string]Func, lex *lexer) {
 	for _, funcMap := range funcs {
 		for name, f := range funcMap {
 			switch f.Return {
-			case TypeSeries, TypeNumberSet:
+			case TypeSeriesSet, TypeNumberSet:
 				if f.Tags == nil {
 					panic(fmt.Errorf("%v: expected Tags definition: got nil", name))
 				}

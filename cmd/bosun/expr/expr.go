@@ -156,7 +156,7 @@ func (s Scalar) MarshalJSON() ([]byte, error) { return marshalFloat(float64(s)) 
 // Series is the standard form within bosun to represent timeseries data.
 type Series map[time.Time]float64
 
-func (s Series) Type() parse.FuncType { return parse.TypeSeries }
+func (s Series) Type() parse.FuncType { return parse.TypeSeriesSet }
 func (s Series) Value() interface{}   { return s }
 
 func (s Series) MarshalJSON() ([]byte, error) {
