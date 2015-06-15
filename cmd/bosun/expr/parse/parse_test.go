@@ -151,7 +151,7 @@ func tagNil(args []Node) (Tags, error) {
 var builtins = map[string]Func{
 	"avg": {
 		[]FuncType{TypeSeries},
-		TypeNumber,
+		TypeNumberSet,
 		tagNil,
 		nil,
 		nil,
@@ -172,7 +172,7 @@ var builtins = map[string]Func{
 	},
 	"forecastlr": {
 		[]FuncType{TypeSeries, TypeScalar},
-		TypeNumber,
+		TypeNumberSet,
 		tagNil,
 		nil,
 		nil,

@@ -1102,7 +1102,7 @@ func (c *Conf) NewExpr(s string) *expr.Expr {
 		c.error(err)
 	}
 	switch exp.Root.Return() {
-	case eparse.TypeNumber, eparse.TypeScalar:
+	case eparse.TypeNumberSet, eparse.TypeScalar:
 		break
 	default:
 		c.errorf("expression must return a number")
@@ -1216,7 +1216,7 @@ func (c *Conf) Funcs() map[string]eparse.Func {
 		if err != nil {
 			return nil, err
 		}
-		if a.returnType != eparse.TypeNumber {
+		if a.returnType != eparse.TypeNumberSet {
 			return nil, fmt.Errorf("alert requires a number-returning expression (got %v)", a.returnType)
 		}
 		return e.Root.Tags()
@@ -1225,19 +1225,19 @@ func (c *Conf) Funcs() map[string]eparse.Func {
 	funcs := map[string]eparse.Func{
 		"alert": {
 			Args:   []eparse.FuncType{eparse.TypeString, eparse.TypeString},
-			Return: eparse.TypeNumber,
+			Return: eparse.TypeNumberSet,
 			Tags:   tagAlert,
 			F:      c.alert,
 		},
 		"lookup": {
 			Args:   []eparse.FuncType{eparse.TypeString, eparse.TypeString},
-			Return: eparse.TypeNumber,
+			Return: eparse.TypeNumberSet,
 			Tags:   lookupTags,
 			F:      lookup,
 		},
 		"lookupSeries": {
 			Args:   []eparse.FuncType{eparse.TypeSeries, eparse.TypeString, eparse.TypeString},
-			Return: eparse.TypeNumber,
+			Return: eparse.TypeNumberSet,
 			Tags:   lookupSeriesTags,
 			F:      lookupSeries,
 		},

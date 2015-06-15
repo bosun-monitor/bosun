@@ -143,7 +143,7 @@ func marshalFloat(n float64) ([]byte, error) {
 
 type Number float64
 
-func (n Number) Type() parse.FuncType         { return parse.TypeNumber }
+func (n Number) Type() parse.FuncType         { return parse.TypeNumberSet }
 func (n Number) Value() interface{}           { return n }
 func (n Number) MarshalJSON() ([]byte, error) { return marshalFloat(float64(n)) }
 
@@ -605,7 +605,7 @@ func (e *State) walkFunc(node *parse.FuncNode, T miniprofiler.Timer) *Results {
 				panic(err)
 			}
 		}
-		if node.Return() == parse.TypeNumber {
+		if node.Return() == parse.TypeNumberSet {
 			for _, r := range res.Results {
 				e.AddComputation(r, node.String(), r.Value.(Number))
 			}
