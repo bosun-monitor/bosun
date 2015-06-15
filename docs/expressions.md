@@ -26,11 +26,11 @@ There are three data types in Bosun's expression language:
 
  1. **Scalar**: This is the simplest type, it is a single numeric value with no group associated with it. Keep in mind that an empty group, `{}` is still a group.
  2. **NumberSet**: A number set is a group of tagged numeric values with one value per unique grouping.
- 3. **Series**: A series is an array of timestamp-value pairs and an associated group.
+ 3. **SeriesSet**: A series is an array of timestamp-value pairs and an associated group.
 
-In the vast majority of your alerts you will getting ***series*** back from your time series database and ***reducing*** them into ***numberSets***.
+In the vast majority of your alerts you will getting ***seriesSets*** back from your time series database and ***reducing*** them into ***numberSets***.
 
-## Groups
+## Group keys
 Groups are generally provided by your time series database. We also sometimes refer to groups as "Tags". When you query your time series database and get multiple time series back, each time series needs an identifier. So for example if I make a query with some thing like `host=*` then I will get one time series per host. Host is the tag key, and the various various values returned, i.e. host1, host2, host3.... are the tag values. Therefor the group for a single time series is something like `{host=host1}`. A group have multiple tag keys.
 
 Each group can become its own alert instance. This is what we mean by ***scope*** or dimensionality. Thus, you can do things like `avg(q("sum:sys.cpu{host=ny-*}", "5m", "")) > 0.8` to check many hosts at once. The dimensions can be manipulated with our expression language.  
@@ -91,7 +91,7 @@ We don't need to understand everything in this alert, but it is worth highlighti
 
 ## Graphite Query Functions
 
-### GraphiteQuery(query string, startDuration string, endDuration string, format string) series
+### GraphiteQuery(query string, startDuration string, endDuration string, format string) seriesSet
 
 Performs a graphite query.  the duration format is the internal bosun format (which happens to be the same as OpenTSDB's format).
 Functions pretty much the same as q() (see that for more info) but for graphite.
@@ -103,22 +103,22 @@ For example:
 
 `groupByNode(collectd.*.cpu.*.cpu.idle,1,'avg')`
 
-returns series named like `host1`, `host2` etc, in which case the format string can simply be `host`.
+returns seriesSet named like `host1`, `host2` etc, in which case the format string can simply be `host`.
 
 `collectd.web15.cpu.*.cpu.*`
 
-returns series named like `collectd.web15.cpu.3.idle`, requiring a format like  `.host..core..cpu_type`.
+returns seriesSet named like `collectd.web15.cpu.3.idle`, requiring a format like  `.host..core..cpu_type`.
 
 For advanced cases, you can use graphite's alias(), aliasSub(), etc to compose the exact parseable output format you need.
 This happens when the outer graphite function is something like "avg()" or "sum()" in which case graphite's output series will be identified as "avg(some.string.here)".
 
-### GraphiteBand(query string, duration string, period string, format string, num string) series
+### GraphiteBand(query string, duration string, period string, format string, num string) seriesSet
 
 Like band() but for graphite queries.
 
 ## Logstash Query Functions
 
-### lscount(indexRoot string, keyString string, filterString string, bucketDuration string, startDuration string, endDuration string) series
+### lscount(indexRoot string, keyString string, filterString string, bucketDuration string, startDuration string, endDuration string) seriesSet
 
 lscount returns the per second rate of matching log documents.
 
@@ -148,13 +148,17 @@ lstat returns various summary stats per bucket for the specified `field`. The fi
 
 ## OpenTSDB Query Functions
 
-Query functions take a query string (like `sum:os.cpu{host=*}`) and return a series.
+Query functions take a query string (like `sum:os.cpu{host=*}`) and return a seriesSet.
 
-### band(query string, duration string, period string, num scalar) series 
+### q(query string, startDuration string, endDuration string) seriesSet
+
+Generic query from endDuration to startDuration ago. If endDuration is the empty string (`""`), now is used. Support d( units are listed in [the docs](http://opentsdb.net/docs/build/html/user_guide/query/dates.html). Refer to [the docs](http://opentsdb.net/docs/build/html/user_guide/query/index.html) for query syntax. The query argument is the value part of the `m=...` expressions. `*` and `|` are fully supported. In addition, queries like `sys.cpu.user{host=ny-*}` are supported. These are performed by an additional step which determines valid matches, and replaces `ny-*` with `ny-web01|ny-web02|...|ny-web10` to achieve the same result. This lookup is kept in memory by the system and does not incur any additional OpenTSDB API requests, but does require tcollector instances pointed to the bosun server.
+
+### band(query string, duration string, period string, num scalar) seriesSet
 
 Band performs `num` queries of `duration` each, `period` apart and concatenates them together, starting `period` ago. So `band("avg:os.cpu", "1h", "1d", 7)` will return a series comprising of the given metric from 1d to 1d-1h-ago, 2d to 2d-1h-ago, etc, until 8d. This is a good way to get a time block from a certain hour of a day or certain day of a week over a long time period.
 
-### change(query string, startDuration string, endDuration string) number
+### change(query string, startDuration string, endDuration string) numberSet
 
 Change is a way to determine the change of a query from startDuration to endDuration. If endDuration is the empty string (`""`), now is used. The query must either be a rate or a counter converted to a rate with the `agg:rate:metric` flag.
 
@@ -170,11 +174,7 @@ Note that this is implemented using the bosun's `avg` function. The following is
 
 Count returns the number of groups in the query as an ungrouped scalar.
 
-### q(query string, startDuration string, endDuration string) series
-
-Generic query from endDuration to startDuration ago. If endDuration is the empty string (`""`), now is used. Support d( units are listed in [the docs](http://opentsdb.net/docs/build/html/user_guide/query/dates.html). Refer to [the docs](http://opentsdb.net/docs/build/html/user_guide/query/index.html) for query syntax. The query argument is the value part of the `m=...` expressions. `*` and `|` are fully supported. In addition, queries like `sys.cpu.user{host=ny-*}` are supported. These are performed by an additional step which determines valid matches, and replaces `ny-*` with `ny-web01|ny-web02|...|ny-web10` to achieve the same result. This lookup is kept in memory by the system and does not incur any additional OpenTSDB API requests, but does require tcollector instances pointed to the bosun server.
-
-### window(query string, duration string, period string, num scalar, funcName string) series
+### window(query string, duration string, period string, num scalar, funcName string) seriesSet
 
 Window performs `num` queries of `duration` each, `period` apart, starting
 `period` ago. The results of the queries are run through `funcName` which
@@ -188,61 +188,61 @@ and those numbers created into a series.
 
 # Reduction Functions
 
-All reduction functions take a series and return a number.
+All reduction functions take a seriesSet and return a numberSet with one element per unique group.
 
-## avg(series) numberSet
+## avg(seriesSet) numberSet
 
 Average.
 
-## dev(series) numberSet
+## dev(seriesSet) numberSet
 
 Standard deviation.
 
-## diff(series) numberSet
+## diff(seriesSet) numberSet
 
-Diff returns the last point of the series minus the first point.
+Diff returns the last point of each series minus the first point.
 
-## first(series) numberSet
+## first(seriesSet) numberSet
 
-Returns the first (least recent) data point in the series.
+Returns the first (least recent) data point in each series.
 
-## forecastlr(series, y_val scalar) numberSet
+## forecastlr(seriesSet, y_val scalar) numberSet
 
-Returns the number of seconds until a linear regression of the series will reach y_val.
+Returns the number of seconds until a linear regression of each series will reach y_val.
 
-## last(series) numberSet
+## last(seriesSet) numberSet
 
-Returns the last (most recent) data point in the series.
+Returns the last (most recent) data point in each series.
 
-## len(series) numberSet
+## len(seriesSet) numberSet
 
-Returns the length of the series.
+Returns the length of each series.
 
-## max(series) numberSet
+## max(seriesSet) numberSet
 
-Returns the maximum value of the series, same as calling percentile(series, 1).
+Returns the maximum value of each series, same as calling percentile(series, 1).
 
-## median(series) numberSet
+## median(seriesSet) numberSet
 
-Returns the median value of the series, same as calling percentile(series, .5).
+Returns the median value of each series, same as calling percentile(series, .5).
 
-## min(series) numberSet
+## min(seriesSet) numberSet
 
-Returns the minimum value of the series, same as calling percentile(series, 0).
+Returns the minimum value of each series, same as calling percentile(series, 0).
 
-## percentile(series, p scalar) numberSet
+## percentile(seriesSet, p scalar) numberSet
 
-Returns the value from the series at the percentile p. Min and Max can be simulated using `p <= 0` and `p >= 1`, respectively.
+Returns the value from each series at the percentile p. Min and Max can be simulated using `p <= 0` and `p >= 1`, respectively.
 
-## since(series) numberSet
+## since(seriesSet) numberSet
 
-Returns the number of seconds since the most recent data point in the series.
+Returns the number of seconds since the most recent data point in each series.
 
-## streak(series) numberSet
+## streak(seriesSet) numberSet
 
 Returns the length of the longest streak of values that evaluate to true (i.e. max amount of contiguous non-zero values found).
 
-## sum(series) numberSet
+## sum(seriesSet) numberSet
 
 Sum.
 
@@ -250,7 +250,7 @@ Sum.
 
 Group functions modify the OpenTSDB groups.
 
-## t(numberSet, group string) series
+## t(numberSet, group string) seriesSet
 
 Transposes N series of length 1 to 1 series of length N. If the group parameter is not the empty string, the number of series returned is equal to the number of tagks passed. This is useful for performing scalar aggregation across multiple results from a query. For example, to get the total memory used on the web tier: `sum(t(avg(q("avg:os.mem.used{host=*-web*}", "5m", "")), ""))`.
 
@@ -266,7 +266,7 @@ Group       | Value  |
 {host=web02} | 7 |
 {host=web03} | 4 |
 
-After Transpose (Value Type is Series):  
+After Transpose (Value Type is SeriesSet):  
 
 Group        | Value  |
 ----------- | ----- |
@@ -282,7 +282,7 @@ Group        | Value  |
 {host=web01,disc=d} | 3 |
 {host=web02,disc=c} | 4 |
 
-After Transpose by "host" (Value type is Series)  
+After Transpose by "host" (Value type is SeriesSet)  
 
 Group        | Value  |
 ------------ | ------ |
@@ -345,15 +345,15 @@ Returns series smoothed using Holt-Winters double exponential smoothing. Alpha
 (scalar) is the data smoothing factor. Beta (scalar) is the trend smoothing
 factor.
 
-## dropge(series, scalar) series
+## dropge(seriesSet, scalar) seriesSet
 
 Remove any values greater than or equal to number from a series. Will error if this operation results in an empty series.
 
-## drople(series, scalar) series
+## drople(seriesSet, scalar) seriesSet
 
 Remove any values lower than or equal to number from a series. Will error if this operation results in an empty series.
 
-## dropna(series) series
+## dropna(seriesSet) seriesSet
 
 Remove any NaN or Inf values from a series. Will error if this operation results in an empty series.
 
@@ -361,7 +361,7 @@ Remove any NaN or Inf values from a series. Will error if this operation results
 
 Returns the Unix epoch in seconds of the expression start time (scalar).
 
-## filter(series, numberSet) series
+## filter(seriesSet, numberSet) seriesSet
 
 Returns all results in series that are a subset of anything in number, or
 that have number as a subset. Useful with the limit and sort functions to
