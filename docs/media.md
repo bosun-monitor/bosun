@@ -23,25 +23,25 @@ title: Media
 		</ol>
 		<div class="carousel-inner">
 			<div class="active item carousel-image">
-				<img src="/public/ss_dashboard.png">
+				<img src="./public/ss_dashboard.png">
 			</div>
 			<div class="item carousel-image">
-				<img src="/public/ss_graph.png">
+				<img src="./public/ss_graph.png">
 			</div>
 			<div class="item carousel-image">
-				<img src="/public/ss_expr.png">
+				<img src="./public/ss_expr.png">
 			</div>
 			<div class="item carousel-image">
-				<img src="/public/ss_rule_results.png">
+				<img src="./public/ss_rule_results.png">
 			</div>
 			<div class="item carousel-image">
-				<img src="/public/ss_rule_template.png">
+				<img src="./public/ss_rule_template.png">
 			</div>
 			<div class="item carousel-image">
-				<img src="/public/ss_rule_timeline.png">
+				<img src="./public/ss_rule_timeline.png">
 			</div>
 			<div class="item carousel-image">
-				<img src="/public/ss_host.png">
+				<img src="./public/ss_host.png">
 			</div>
 		</div>
 		<a class="carousel-control left" href="#myCarousel" data-slide="prev"><span class="glyphicon glyphicon-chevron-left text-muted"></span></a>

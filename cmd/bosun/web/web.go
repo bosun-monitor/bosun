@@ -21,6 +21,7 @@ import (
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/expr"
 	"bosun.org/cmd/bosun/sched"
+	"bosun.org/cmd/bosun/web/docs"
 	"bosun.org/collect"
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
@@ -114,6 +115,8 @@ func Listen(listenAddr string, devMode bool, tsdbHost string) error {
 	http.Handle("/partials/", fs)
 	http.Handle("/static/", http.StripPrefix("/static/", fs))
 	http.Handle("/favicon.ico", fs)
+	docFs := http.FileServer(docs.FS(false))
+	http.Handle("/docs/", http.StripPrefix("/docs/", docFs))
 	log.Println("bosun web listening on:", listenAddr)
 	log.Println("tsdb host:", tsdbHost)
 	return http.ListenAndServe(listenAddr, nil)
