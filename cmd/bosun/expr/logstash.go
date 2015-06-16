@@ -21,13 +21,13 @@ var lsClient *elastic.Client
 var LogstashElastic = map[string]parse.Func{
 	"lscount": {
 		Args:   []parse.FuncType{parse.TypeString, parse.TypeString, parse.TypeString, parse.TypeString, parse.TypeString, parse.TypeString},
-		Return: parse.TypeSeries,
+		Return: parse.TypeSeriesSet,
 		Tags:   logstashTagQuery,
 		F:      LSCount,
 	},
 	"lsstat": {
 		Args:   []parse.FuncType{parse.TypeString, parse.TypeString, parse.TypeString, parse.TypeString, parse.TypeString, parse.TypeString, parse.TypeString, parse.TypeString},
-		Return: parse.TypeSeries,
+		Return: parse.TypeSeriesSet,
 		Tags:   logstashTagQuery,
 		F:      LSStat,
 	},

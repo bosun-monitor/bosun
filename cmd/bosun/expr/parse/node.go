@@ -254,14 +254,14 @@ func (b *BinaryNode) StringAST() string {
 func (b *BinaryNode) Check(t *Tree) error {
 	t1 := b.Args[0].Return()
 	t2 := b.Args[1].Return()
-	if t1 == TypeSeries && t2 == TypeSeries {
+	if t1 == TypeSeriesSet && t2 == TypeSeriesSet {
 		return fmt.Errorf("parse: type error in %s: at least one side must be a number", b)
 	}
 	check := t1
-	if t1 == TypeSeries {
+	if t1 == TypeSeriesSet {
 		check = t2
 	}
-	if check != TypeNumber && check != TypeScalar {
+	if check != TypeNumberSet && check != TypeScalar {
 		return fmt.Errorf("parse: type error in %s: expected a number", b)
 	}
 	if err := b.Args[0].Check(t); err != nil {
@@ -327,7 +327,7 @@ func (u *UnaryNode) StringAST() string {
 
 func (u *UnaryNode) Check(t *Tree) error {
 	switch rt := u.Arg.Return(); rt {
-	case TypeNumber, TypeSeries, TypeScalar:
+	case TypeNumberSet, TypeSeriesSet, TypeScalar:
 		return u.Arg.Check(t)
 	default:
 		return fmt.Errorf("parse: type error in %s, expected %s, got %s", u, "number", rt)

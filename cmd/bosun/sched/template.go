@@ -200,7 +200,7 @@ func (c *Context) evalExpr(e *expr.Expr, filter bool, series bool, autods int) (
 			return nil, "", err
 		}
 	}
-	if series && e.Root.Return() != parse.TypeSeries {
+	if series && e.Root.Return() != parse.TypeSeriesSet {
 		return nil, "", fmt.Errorf("need a series, got %T (%v)", e, e)
 	}
 	res, _, err := e.Execute(c.runHistory.Context, c.runHistory.GraphiteContext, c.runHistory.Logstash, c.runHistory.Cache, nil, c.runHistory.Start, autods, c.Alert.UnjoinedOK, c.schedule.Search, c.schedule.Conf.AlertSquelched(c.Alert), c.runHistory)
@@ -234,7 +234,7 @@ func (c *Context) eval(v interface{}, filter bool, series bool, autods int) (res
 	}
 	if series {
 		for _, k := range res {
-			if k.Type() != parse.TypeSeries {
+			if k.Type() != parse.TypeSeriesSet {
 				return nil, "", fmt.Errorf("need a series, got %v (%v)", k.Type(), k)
 			}
 		}

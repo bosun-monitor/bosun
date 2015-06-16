@@ -86,13 +86,13 @@ func tagRename(args []parse.Node) (parse.Tags, error) {
 var Graphite = map[string]parse.Func{
 	"graphiteBand": {
 		Args:   []parse.FuncType{parse.TypeString, parse.TypeString, parse.TypeString, parse.TypeString, parse.TypeScalar},
-		Return: parse.TypeSeries,
+		Return: parse.TypeSeriesSet,
 		Tags:   graphiteTagQuery,
 		F:      GraphiteBand,
 	},
 	"graphite": {
 		Args:   []parse.FuncType{parse.TypeString, parse.TypeString, parse.TypeString, parse.TypeString},
-		Return: parse.TypeSeries,
+		Return: parse.TypeSeriesSet,
 		Tags:   graphiteTagQuery,
 		F:      GraphiteQuery,
 	},
@@ -102,13 +102,13 @@ var Graphite = map[string]parse.Func{
 var TSDB = map[string]parse.Func{
 	"band": {
 		Args:   []parse.FuncType{parse.TypeString, parse.TypeString, parse.TypeString, parse.TypeScalar},
-		Return: parse.TypeSeries,
+		Return: parse.TypeSeriesSet,
 		Tags:   tagQuery,
 		F:      Band,
 	},
 	"change": {
 		Args:   []parse.FuncType{parse.TypeString, parse.TypeString, parse.TypeString},
-		Return: parse.TypeNumber,
+		Return: parse.TypeNumberSet,
 		Tags:   tagQuery,
 		F:      Change,
 	},
@@ -119,13 +119,13 @@ var TSDB = map[string]parse.Func{
 	},
 	"q": {
 		Args:   []parse.FuncType{parse.TypeString, parse.TypeString, parse.TypeString},
-		Return: parse.TypeSeries,
+		Return: parse.TypeSeriesSet,
 		Tags:   tagQuery,
 		F:      Query,
 	},
 	"window": {
 		Args:   []parse.FuncType{parse.TypeString, parse.TypeString, parse.TypeString, parse.TypeScalar, parse.TypeString},
-		Return: parse.TypeSeries,
+		Return: parse.TypeSeriesSet,
 		Tags:   tagQuery,
 		F:      Window,
 		Check:  windowCheck,
@@ -136,106 +136,106 @@ var builtins = map[string]parse.Func{
 	// Reduction functions
 
 	"avg": {
-		Args:   []parse.FuncType{parse.TypeSeries},
-		Return: parse.TypeNumber,
+		Args:   []parse.FuncType{parse.TypeSeriesSet},
+		Return: parse.TypeNumberSet,
 		Tags:   tagFirst,
 		F:      Avg,
 	},
 	"dev": {
-		Args:   []parse.FuncType{parse.TypeSeries},
-		Return: parse.TypeNumber,
+		Args:   []parse.FuncType{parse.TypeSeriesSet},
+		Return: parse.TypeNumberSet,
 		Tags:   tagFirst,
 		F:      Dev,
 	},
 	"diff": {
-		Args:   []parse.FuncType{parse.TypeSeries},
-		Return: parse.TypeNumber,
+		Args:   []parse.FuncType{parse.TypeSeriesSet},
+		Return: parse.TypeNumberSet,
 		Tags:   tagFirst,
 		F:      Diff,
 	},
 	"first": {
-		Args:   []parse.FuncType{parse.TypeSeries},
-		Return: parse.TypeNumber,
+		Args:   []parse.FuncType{parse.TypeSeriesSet},
+		Return: parse.TypeNumberSet,
 		Tags:   tagFirst,
 		F:      First,
 	},
 	"forecastlr": {
-		Args:   []parse.FuncType{parse.TypeSeries, parse.TypeScalar},
-		Return: parse.TypeNumber,
+		Args:   []parse.FuncType{parse.TypeSeriesSet, parse.TypeScalar},
+		Return: parse.TypeNumberSet,
 		Tags:   tagFirst,
 		F:      Forecast_lr,
 	},
 	"last": {
-		Args:   []parse.FuncType{parse.TypeSeries},
-		Return: parse.TypeNumber,
+		Args:   []parse.FuncType{parse.TypeSeriesSet},
+		Return: parse.TypeNumberSet,
 		Tags:   tagFirst,
 		F:      Last,
 	},
 	"len": {
-		Args:   []parse.FuncType{parse.TypeSeries},
-		Return: parse.TypeNumber,
+		Args:   []parse.FuncType{parse.TypeSeriesSet},
+		Return: parse.TypeNumberSet,
 		Tags:   tagFirst,
 		F:      Length,
 	},
 	"max": {
-		Args:   []parse.FuncType{parse.TypeSeries},
-		Return: parse.TypeNumber,
+		Args:   []parse.FuncType{parse.TypeSeriesSet},
+		Return: parse.TypeNumberSet,
 		Tags:   tagFirst,
 		F:      Max,
 	},
 	"median": {
-		Args:   []parse.FuncType{parse.TypeSeries},
-		Return: parse.TypeNumber,
+		Args:   []parse.FuncType{parse.TypeSeriesSet},
+		Return: parse.TypeNumberSet,
 		Tags:   tagFirst,
 		F:      Median,
 	},
 	"min": {
-		Args:   []parse.FuncType{parse.TypeSeries},
-		Return: parse.TypeNumber,
+		Args:   []parse.FuncType{parse.TypeSeriesSet},
+		Return: parse.TypeNumberSet,
 		Tags:   tagFirst,
 		F:      Min,
 	},
 	"percentile": {
-		Args:   []parse.FuncType{parse.TypeSeries, parse.TypeScalar},
-		Return: parse.TypeNumber,
+		Args:   []parse.FuncType{parse.TypeSeriesSet, parse.TypeScalar},
+		Return: parse.TypeNumberSet,
 		Tags:   tagFirst,
 		F:      Percentile,
 	},
 	"since": {
-		Args:   []parse.FuncType{parse.TypeSeries},
-		Return: parse.TypeNumber,
+		Args:   []parse.FuncType{parse.TypeSeriesSet},
+		Return: parse.TypeNumberSet,
 		Tags:   tagFirst,
 		F:      Since,
 	},
 	"sum": {
-		Args:   []parse.FuncType{parse.TypeSeries},
-		Return: parse.TypeNumber,
+		Args:   []parse.FuncType{parse.TypeSeriesSet},
+		Return: parse.TypeNumberSet,
 		Tags:   tagFirst,
 		F:      Sum,
 	},
 	"streak": {
-		Args:   []parse.FuncType{parse.TypeSeries},
-		Return: parse.TypeNumber,
+		Args:   []parse.FuncType{parse.TypeSeriesSet},
+		Return: parse.TypeNumberSet,
 		Tags:   tagFirst,
 		F:      Streak,
 	},
 
 	// Group functions
 	"rename": {
-		Args:   []parse.FuncType{parse.TypeSeries, parse.TypeString},
-		Return: parse.TypeSeries,
+		Args:   []parse.FuncType{parse.TypeSeriesSet, parse.TypeString},
+		Return: parse.TypeSeriesSet,
 		Tags:   tagRename,
 		F:      Rename,
 	},
 
 	"t": {
-		Args:   []parse.FuncType{parse.TypeNumber, parse.TypeString},
-		Return: parse.TypeSeries,
+		Args:   []parse.FuncType{parse.TypeNumberSet, parse.TypeString},
+		Return: parse.TypeSeriesSet,
 		Tags:   tagTranspose,
 		F:      Transpose,
 	},
 	"ungroup": {
-		Args:   []parse.FuncType{parse.TypeNumber},
+		Args:   []parse.FuncType{parse.TypeNumberSet},
 		Return: parse.TypeScalar,
 		F:      Ungroup,
 	},
@@ -243,8 +243,8 @@ var builtins = map[string]parse.Func{
 	// Other functions
 
 	"abs": {
-		Args:   []parse.FuncType{parse.TypeNumber},
-		Return: parse.TypeNumber,
+		Args:   []parse.FuncType{parse.TypeNumberSet},
+		Return: parse.TypeNumberSet,
 		Tags:   tagFirst,
 		F:      Abs,
 	},
@@ -254,26 +254,26 @@ var builtins = map[string]parse.Func{
 		F:      Duration,
 	},
 	"des": {
-		Args:   []parse.FuncType{parse.TypeSeries, parse.TypeScalar, parse.TypeScalar},
-		Return: parse.TypeSeries,
+		Args:   []parse.FuncType{parse.TypeSeriesSet, parse.TypeScalar, parse.TypeScalar},
+		Return: parse.TypeSeriesSet,
 		Tags:   tagFirst,
 		F:      Des,
 	},
 	"dropge": {
-		Args:   []parse.FuncType{parse.TypeSeries, parse.TypeScalar},
-		Return: parse.TypeSeries,
+		Args:   []parse.FuncType{parse.TypeSeriesSet, parse.TypeScalar},
+		Return: parse.TypeSeriesSet,
 		Tags:   tagFirst,
 		F:      DropGe,
 	},
 	"drople": {
-		Args:   []parse.FuncType{parse.TypeSeries, parse.TypeScalar},
-		Return: parse.TypeSeries,
+		Args:   []parse.FuncType{parse.TypeSeriesSet, parse.TypeScalar},
+		Return: parse.TypeSeriesSet,
 		Tags:   tagFirst,
 		F:      DropLe,
 	},
 	"dropna": {
-		Args:   []parse.FuncType{parse.TypeSeries},
-		Return: parse.TypeSeries,
+		Args:   []parse.FuncType{parse.TypeSeriesSet},
+		Return: parse.TypeSeriesSet,
 		Tags:   tagFirst,
 		F:      DropNA,
 	},
@@ -283,26 +283,26 @@ var builtins = map[string]parse.Func{
 		F:      Epoch,
 	},
 	"filter": {
-		Args:   []parse.FuncType{parse.TypeSeries, parse.TypeNumber},
-		Return: parse.TypeSeries,
+		Args:   []parse.FuncType{parse.TypeSeriesSet, parse.TypeNumberSet},
+		Return: parse.TypeSeriesSet,
 		Tags:   tagFirst,
 		F:      Filter,
 	},
 	"limit": {
-		Args:   []parse.FuncType{parse.TypeNumber, parse.TypeScalar},
-		Return: parse.TypeNumber,
+		Args:   []parse.FuncType{parse.TypeNumberSet, parse.TypeScalar},
+		Return: parse.TypeNumberSet,
 		Tags:   tagFirst,
 		F:      Limit,
 	},
 	"nv": {
-		Args:   []parse.FuncType{parse.TypeNumber, parse.TypeScalar},
-		Return: parse.TypeNumber,
+		Args:   []parse.FuncType{parse.TypeNumberSet, parse.TypeScalar},
+		Return: parse.TypeNumberSet,
 		Tags:   tagFirst,
 		F:      NV,
 	},
 	"sort": {
-		Args:   []parse.FuncType{parse.TypeNumber, parse.TypeString},
-		Return: parse.TypeNumber,
+		Args:   []parse.FuncType{parse.TypeNumberSet, parse.TypeString},
+		Return: parse.TypeNumberSet,
 		Tags:   tagFirst,
 		F:      Sort,
 	},
@@ -659,7 +659,7 @@ func windowCheck(t *parse.Tree, f *parse.FuncNode) error {
 	if !ok {
 		return fmt.Errorf("expr: Window: unknown function %v", name)
 	}
-	if len(v.Args) != 1 || v.Args[0] != parse.TypeSeries || v.Return != parse.TypeNumber {
+	if len(v.Args) != 1 || v.Args[0] != parse.TypeSeriesSet || v.Return != parse.TypeNumberSet {
 		return fmt.Errorf("expr: Window: %v is not a reduction function", name)
 	}
 	return nil
