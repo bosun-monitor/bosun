@@ -197,7 +197,7 @@ func ExprGraph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (in
 	e, err := expr.New(q, schedule.Conf.Funcs())
 	if err != nil {
 		return nil, err
-	} else if e.Root.Return() != parse.TypeSeries {
+	} else if e.Root.Return() != parse.TypeSeriesSet {
 		return nil, fmt.Errorf("egraph: requires an expression that returns a series")
 	}
 	// it may not strictly be necessary to recreate the contexts each time, but we do to be safe
