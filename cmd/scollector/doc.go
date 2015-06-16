@@ -83,7 +83,7 @@ scollector's log.
 
 Configuration File
 
-If scollector.conf exists in the same directory as the scollector
+If scollector.toml exists in the same directory as the scollector
 executable or is specified via the -conf="" flag, it's content
 will be used to set configuration flags. The format is toml
 (https://github.com/toml-lang/toml/blob/master/versions/en/toml-v0.2.0.md).
