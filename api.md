@@ -187,14 +187,21 @@ Returns data about alerts, templates, and their relations.
 
 ## Configuration Endpoints
 
+### /api/backup
+
+Returns the state file for backup. The state file is guaranteed to be in a
+consistent state. This route is implemented by creating an in-memory copy
+of the state file, then streaming that to the response, so as to not block
+writes to the state file by other parts of bosun.
+
 ### /api/config
 
 Returns the current configuration that bosun is loaded with as text.
 
-### /api/config_test?config_text={text}
+### /api/config_test
 
-Validates an entire bosun configuration file for syntax errors. Returns an error
-if invalid.
+Reads a configuration file from the POST body then checks it for for syntax
+errors. Returns an error if invalid.
 
 </div>
 </div>
