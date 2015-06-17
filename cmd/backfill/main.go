@@ -1,3 +1,5 @@
+// A simple application to bulk denormalize historic data.
+// For ongoing denormalization use the functionality in tsdbrelay.
 package main
 
 import (
