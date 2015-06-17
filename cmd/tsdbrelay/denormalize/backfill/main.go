@@ -123,7 +123,6 @@ func main() {
 			curStart = startDate
 		}
 		backfill(curStart, curEnd)
-		break
 		curEnd = curEnd.Add(-1 * time.Hour)
 	}
 	for collect.QueueLength() > 0 {
