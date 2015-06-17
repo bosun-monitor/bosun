@@ -4,10 +4,12 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net/url"
 	"strconv"
 	"time"
 
 	"bosun.org/cmd/tsdbrelay/denormalize"
+	"bosun.org/collect"
 	"bosun.org/opentsdb"
 )
 
@@ -56,6 +58,23 @@ func main() {
 	}
 	fmt.Println(startDate, endDate, rule)
 
+	dpChan := make(chan *opentsdb.DataPoint)
+	collect.BatchSize = 1000
+	collect.MaxQueueLen = 10000000
+	collect.DisableDefaultCollectors = true
+	collect.Freq = time.Second
+	collect.Debug = true
+
+	u, err := url.Parse("http://devbosun:4242")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = collect.InitChan(u, "", dpChan)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	backfill := func(batchStart, batchEnd time.Time) (err error) {
 		startTimeString := batchStart.Format(opentsdb.TSDBTimeFormat)
 		endTimeString := batchEnd.Format(opentsdb.TSDBTimeFormat)
@@ -64,13 +83,12 @@ func main() {
 				log.Fatalf("Error on batch %s - %s. %v \n", startTimeString, endTimeString, err)
 			}
 		}()
-
 		req := opentsdb.Request{Start: startTimeString, End: endTimeString, Queries: []*opentsdb.Query{query}}
 		resp, err := req.Query("devbosun:4242")
 		if err != nil {
 			return err
 		}
-		fmt.Println(len(resp))
+		count := 0
 		for _, r := range resp {
 			for t, p := range r.DPS {
 
@@ -78,7 +96,6 @@ func main() {
 				if err != nil {
 					return err
 				}
-				fmt.Printf("%f %d\n", p, timeStamp)
 				dp := &opentsdb.DataPoint{
 					Timestamp: timeStamp,
 					Metric:    r.Metric,
@@ -89,20 +106,27 @@ func main() {
 				if err != nil {
 					return err
 				}
-				fmt.Println(dp.Metric, dp.Tags, dp.Value)
+				dpChan <- dp
+				count++
 			}
 		}
+		fmt.Printf("%s - %s: %d dps\n", startTimeString, endTimeString, count)
+
 		return nil
 	}
 
+	// walk backwards a day at a time
 	curEnd := endDate
 	for curEnd.After(startDate) {
-		curStart := curEnd.Add(-24 * time.Hour)
+		curStart := curEnd.Add(-1 * time.Hour)
 		if curStart.Before(startDate) {
 			curStart = startDate
 		}
 		backfill(curStart, curEnd)
 		break
-		curEnd = curEnd.Add(-24 * time.Hour)
+		curEnd = curEnd.Add(-1 * time.Hour)
+	}
+	for collect.QueueLength() > 0 {
+		time.Sleep(1 * time.Second)
 	}
 }

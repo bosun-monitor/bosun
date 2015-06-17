@@ -12,6 +12,12 @@ import (
 	"bosun.org/slog"
 )
 
+func QueueLength() int {
+	qlock.Lock()
+	l := len(queue)
+	qlock.Unlock()
+	return l
+}
 func queuer() {
 	for dp := range tchan {
 		qlock.Lock()
