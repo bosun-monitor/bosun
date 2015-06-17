@@ -105,16 +105,19 @@ func InitChan(tsdbhost *url.URL, root string, ch chan *opentsdb.DataPoint) error
 	tsdbURL = u.String()
 
 	tchan = ch
+
+	if err := checkClean(root, "metric root"); err != nil {
+		return err
+	}
+	metricRoot = root + "."
+
 	go queuer()
 	go send()
 	go collect()
 	if DisableDefaultCollectors {
 		return nil
 	}
-	if err := checkClean(root, "metric root"); err != nil {
-		return err
-	}
-	metricRoot = root + "."
+
 	Set("collect.dropped", Tags, func() (i interface{}) {
 		slock.Lock()
 		i = dropped
