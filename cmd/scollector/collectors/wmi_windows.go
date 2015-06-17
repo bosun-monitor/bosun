@@ -1,6 +1,12 @@
 package collectors
 
-import "bosun.org/_third_party/github.com/StackExchange/wmi"
+import (
+	"fmt"
+	"strings"
+	"time"
+
+	"bosun.org/_third_party/github.com/StackExchange/wmi"
+)
 
 func queryWmi(query string, dst interface{}) error {
 	return queryWmiNamespace(query, dst, "")
@@ -26,4 +32,22 @@ func wmiInitNamespace(c *IntervalCollector, dst func() interface{}, where string
 			return queryWmiNamespace(*query, dst(), namespace) == nil
 		}
 	}
+}
+
+// wmiParseDatetime converts a string from the CIM_DATETIME format into UTC time.
+// Example: "20150616101948.494497-360" = 2015-06-16 04:19:48.494497 +0000 UTC.
+func wmiParseCIMDatetime(cimdatetime string) (time.Time, error) {
+	i := strings.IndexAny(cimdatetime, "+-")
+	if i < 0 {
+		return time.Unix(0, 0).UTC(), fmt.Errorf("Invalid CIM_DATETIME format, cannot find UTC offset.")
+	}
+	t, err := time.Parse("20060102150405", cimdatetime[0:i])
+	if err != nil {
+		return time.Unix(0, 0).UTC(), err
+	}
+	offset, err := time.ParseDuration(fmt.Sprintf("%vm", cimdatetime[i:len(cimdatetime)]))
+	if err != nil {
+		return time.Unix(0, 0).UTC(), err
+	}
+	return t.Add(offset), nil
 }
