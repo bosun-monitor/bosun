@@ -12,12 +12,6 @@ import (
 	"bosun.org/slog"
 )
 
-func QueueLength() int {
-	qlock.Lock()
-	l := len(queue)
-	qlock.Unlock()
-	return l
-}
 func queuer() {
 	for dp := range tchan {
 		qlock.Lock()
@@ -28,12 +22,7 @@ func queuer() {
 				slock.Unlock()
 				break
 			}
-			m, err := json.Marshal(dp)
-			if err != nil {
-				slog.Error(err)
-			} else {
-				queue = append(queue, m)
-			}
+			queue = append(queue, dp)
 			select {
 			case dp = <-tchan:
 				continue
@@ -66,37 +55,22 @@ func send() {
 	}
 }
 
-func sendBatch(batch []json.RawMessage) {
+func sendBatch(batch []*opentsdb.DataPoint) {
 	if Print {
 		for _, d := range batch {
-			slog.Info(string(d))
+			j, err := d.MarshalJSON()
+			if err != nil {
+				slog.Error(err)
+			}
+			slog.Info(string(j))
 		}
 		recordSent(len(batch))
 		return
 	}
-	var buf bytes.Buffer
-	g := gzip.NewWriter(&buf)
-	if err := json.NewEncoder(g).Encode(batch); err != nil {
-		slog.Error(err)
-		return
-	}
-	if err := g.Close(); err != nil {
-		slog.Error(err)
-		return
-	}
-	req, err := http.NewRequest("POST", tsdbURL, &buf)
-	if err != nil {
-		slog.Error(err)
-		return
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Content-Encoding", "gzip")
 	now := time.Now()
-	resp, err := client.Do(req)
+	resp, err := SendDataPoints(batch, tsdbURL)
+
 	d := time.Since(now).Nanoseconds() / 1e6
-	if err == nil {
-		defer resp.Body.Close()
-	}
 	Add("collect.post.total_duration", Tags, d)
 	Add("collect.post.count", Tags, 1)
 	// Some problem with connecting to the server; retry later.
@@ -117,13 +91,8 @@ func sendBatch(batch []json.RawMessage) {
 		}
 		restored := 0
 		for _, msg := range batch {
-			var dp opentsdb.DataPoint
-			if err := json.Unmarshal(msg, &dp); err != nil {
-				slog.Error(err)
-				continue
-			}
 			restored++
-			tchan <- &dp
+			tchan <- msg
 		}
 		d := time.Second * 5
 		Add("collect.post.restore", Tags, int64(restored))
@@ -141,4 +110,27 @@ func recordSent(num int) {
 	slock.Lock()
 	sent += int64(num)
 	slock.Unlock()
+}
+
+func SendDataPoints(dps []*opentsdb.DataPoint, tsdb string) (*http.Response, error) {
+	var buf bytes.Buffer
+	g := gzip.NewWriter(&buf)
+	if err := json.NewEncoder(g).Encode(dps); err != nil {
+		return nil, err
+	}
+	if err := g.Close(); err != nil {
+		return nil, err
+	}
+	req, err := http.NewRequest("POST", tsdb, &buf)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Encoding", "gzip")
+
+	resp, err := client.Do(req)
+	if err == nil {
+		defer resp.Body.Close()
+	}
+	return resp, err
 }

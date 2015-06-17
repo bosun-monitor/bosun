@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"net/url"
 	"strconv"
 	"time"
 
@@ -14,22 +13,20 @@ import (
 )
 
 var (
-	q        = flag.String("q", "", "query to opentsdb. Include all tags. ex `avg:os.cpu{host=*}'")
-	start    = flag.String("start", "2013/01/01", "Start date to backfill.")
-	end      = flag.String("end", "", "End date to backfill. Will go to now if not specified.")
-	ruleFlag = flag.String("rule", "", "A denormalization rule. ex `os.cpu__host`")
+	start     = flag.String("start", "2013/01/01", "Start date to backfill.")
+	end       = flag.String("end", "", "End date to backfill. Will go to now if not specified.")
+	ruleFlag  = flag.String("rule", "", "A denormalization rule. ex `os.cpu__host`")
+	tsdbHost  = flag.String("host", "", "opentsdb host")
+	batchSize = flag.Int("batch", 500, "batch size to send points to openTsdb")
 )
 
 func main() {
 	flag.Parse()
-	if *q == "" {
+	if *tsdbHost == "" {
 		flag.PrintDefaults()
-		log.Fatal("q must be specified")
+		log.Fatal("host must be supplied")
 	}
-	query, err := opentsdb.ParseQuery(*q)
-	if err != nil {
-		log.Fatal(err)
-	}
+
 	if *ruleFlag == "" {
 		flag.PrintDefaults()
 		log.Fatal("rule must be supplied")
@@ -42,9 +39,16 @@ func main() {
 		log.Fatal("Please specify only one rule")
 	}
 	var rule *denormalize.DenormalizationRule
-	for _, v := range rules {
+	var metric string
+	for k, v := range rules {
+		metric = k
 		rule = v
 	}
+
+	query := &opentsdb.Query{Metric: metric, Aggregator: "avg"}
+	query.Tags = queryForAggregateTags(query)
+	fmt.Println(query)
+
 	startDate, err := opentsdb.ParseTime(*start)
 	if err != nil {
 		log.Fatal(err)
@@ -56,24 +60,6 @@ func main() {
 			log.Fatal(err)
 		}
 	}
-	fmt.Println(startDate, endDate, rule)
-
-	dpChan := make(chan *opentsdb.DataPoint)
-	collect.BatchSize = 1000
-	collect.MaxQueueLen = 10000000
-	collect.DisableDefaultCollectors = true
-	collect.Freq = time.Second
-	collect.Debug = true
-
-	u, err := url.Parse("http://devbosun:4242")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	err = collect.InitChan(u, "", dpChan)
-	if err != nil {
-		log.Fatal(err)
-	}
 
 	backfill := func(batchStart, batchEnd time.Time) (err error) {
 		startTimeString := batchStart.Format(opentsdb.TSDBTimeFormat)
@@ -84,11 +70,11 @@ func main() {
 			}
 		}()
 		req := opentsdb.Request{Start: startTimeString, End: endTimeString, Queries: []*opentsdb.Query{query}}
-		resp, err := req.Query("devbosun:4242")
+		resp, err := req.Query(*tsdbHost)
 		if err != nil {
 			return err
 		}
-		count := 0
+		dps := []*opentsdb.DataPoint{}
 		for _, r := range resp {
 			for t, p := range r.DPS {
 
@@ -106,27 +92,56 @@ func main() {
 				if err != nil {
 					return err
 				}
-				dpChan <- dp
-				count++
+				dps = append(dps, dp)
 			}
 		}
-		fmt.Printf("%s - %s: %d dps\n", startTimeString, endTimeString, count)
-
+		fmt.Printf("%s - %s: %d dps\n", startTimeString, endTimeString, len(dps))
+		total := 0
+		for len(dps) > 0 {
+			count := len(dps)
+			if len(dps) > *batchSize {
+				count = *batchSize
+			}
+			putResp, err := collect.SendDataPoints(dps[:count], "http://"+*tsdbHost)
+			if err != nil {
+				return err
+			}
+			if putResp.StatusCode != 200 {
+				return fmt.Errorf("Non 200 status code from opentsdb: %d", putResp.StatusCode)
+			}
+			dps = dps[count:]
+			total += count
+		}
+		fmt.Printf("Relayed %d data points.\n", total)
 		return nil
 	}
 
 	// walk backwards a day at a time
 	curEnd := endDate
 	for curEnd.After(startDate) {
-		curStart := curEnd.Add(-1 * time.Hour)
+		curStart := curEnd.Add(-24 * time.Hour)
 		if curStart.Before(startDate) {
 			curStart = startDate
 		}
 		backfill(curStart, curEnd)
-		break
-		curEnd = curEnd.Add(-1 * time.Hour)
+		curEnd = curEnd.Add(-24 * time.Hour)
 	}
-	for collect.QueueLength() > 0 {
-		time.Sleep(1 * time.Second)
+}
+
+func queryForAggregateTags(query *opentsdb.Query) opentsdb.TagSet {
+	req := opentsdb.Request{}
+	req.Queries = []*opentsdb.Query{query}
+	req.Start = "1h-ago"
+	resp, err := req.Query(*tsdbHost)
+	if err != nil {
+		log.Fatal(err)
 	}
+	if len(resp) < 1 {
+		log.Fatal("No points in last hour to learn aggregate tags")
+	}
+	tagset := make(opentsdb.TagSet)
+	for _, t := range resp[0].AggregateTags {
+		tagset[t] = "*"
+	}
+	return tagset
 }
