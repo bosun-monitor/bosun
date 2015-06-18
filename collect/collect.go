@@ -95,6 +95,9 @@ func InitChan(tsdbhost *url.URL, root string, ch chan *opentsdb.DataPoint) error
 	if tchan != nil {
 		return fmt.Errorf("cannot init twice")
 	}
+	if err := checkClean(root, "metric root"); err != nil {
+		return err
+	}
 	u, err := tsdbhost.Parse("/api/put")
 	if err != nil {
 		return err
@@ -103,14 +106,9 @@ func InitChan(tsdbhost *url.URL, root string, ch chan *opentsdb.DataPoint) error
 		u.Host = "localhost" + u.Host
 	}
 	tsdbURL = u.String()
-
-	tchan = ch
-
-	if err := checkClean(root, "metric root"); err != nil {
-		return err
-	}
 	metricRoot = root + "."
 
+	tchan = ch
 	go queuer()
 	go send()
 	go collect()

@@ -69,7 +69,9 @@ func sendBatch(batch []*opentsdb.DataPoint) {
 	}
 	now := time.Now()
 	resp, err := SendDataPoints(batch, tsdbURL)
-
+	if err == nil {
+		defer resp.Body.Close()
+	}
 	d := time.Since(now).Nanoseconds() / 1e6
 	Add("collect.post.total_duration", Tags, d)
 	Add("collect.post.count", Tags, 1)
@@ -129,8 +131,5 @@ func SendDataPoints(dps []*opentsdb.DataPoint, tsdb string) (*http.Response, err
 	req.Header.Set("Content-Encoding", "gzip")
 
 	resp, err := client.Do(req)
-	if err == nil {
-		defer resp.Body.Close()
-	}
 	return resp, err
 }

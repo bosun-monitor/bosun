@@ -1,4 +1,5 @@
-// A simple application to bulk denormalize historic data.
+// Backfill denormalizes historic OpenTSDB data.
+//
 // For ongoing denormalization use the functionality in tsdbrelay.
 package main
 
@@ -18,8 +19,8 @@ var (
 	start     = flag.String("start", "2013/01/01", "Start date to backfill.")
 	end       = flag.String("end", "", "End date to backfill. Will go to now if not specified.")
 	ruleFlag  = flag.String("rule", "", "A denormalization rule. ex `os.cpu__host`")
-	tsdbHost  = flag.String("host", "", "opentsdb host")
-	batchSize = flag.Int("batch", 500, "batch size to send points to openTsdb")
+	tsdbHost  = flag.String("host", "", "OpenTSDB host")
+	batchSize = flag.Int("batch", 500, "batch size to send points to OpenTSDB")
 )
 
 func main() {
@@ -48,8 +49,10 @@ func main() {
 	}
 
 	query := &opentsdb.Query{Metric: metric, Aggregator: "avg"}
-	query.Tags = queryForAggregateTags(query)
-	fmt.Println(query)
+	query.Tags, err = queryForAggregateTags(query)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	startDate, err := opentsdb.ParseTime(*start)
 	if err != nil {
@@ -107,7 +110,10 @@ func main() {
 			putResp, err := collect.SendDataPoints(dps[:count], "http://"+*tsdbHost)
 			if err != nil {
 				return err
+			} else {
+				defer putResp.Body.Close()
 			}
+			fmt.Println(putResp.StatusCode)
 			if putResp.StatusCode != 200 {
 				return fmt.Errorf("Non 200 status code from opentsdb: %d", putResp.StatusCode)
 			}
@@ -130,20 +136,20 @@ func main() {
 	}
 }
 
-func queryForAggregateTags(query *opentsdb.Query) opentsdb.TagSet {
+func queryForAggregateTags(query *opentsdb.Query) (opentsdb.TagSet, error) {
 	req := opentsdb.Request{}
 	req.Queries = []*opentsdb.Query{query}
 	req.Start = "1h-ago"
 	resp, err := req.Query(*tsdbHost)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	if len(resp) < 1 {
-		log.Fatal("No points in last hour to learn aggregate tags")
+		return nil, fmt.Errorf("No points in last hour to learn aggregate tags")
 	}
 	tagset := make(opentsdb.TagSet)
 	for _, t := range resp[0].AggregateTags {
 		tagset[t] = "*"
 	}
-	return tagset
+	return tagset, nil
 }
