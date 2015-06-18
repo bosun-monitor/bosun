@@ -668,10 +668,13 @@ var defaultFuncs = ttemplate.FuncMap{
 		}
 		return ByteSize(0), fmt.Errorf("unexpected type: %T (%v)", v, v)
 	},
+	"pct": func(i interface{}) string {
+		return fmt.Sprintf("%.2f%%", i)
+	},
+	"replace": strings.Replace,
 	"short": func(v string) string {
 		return strings.SplitN(v, ".", 2)[0]
 	},
-	"replace": strings.Replace,
 }
 
 func (c *Conf) loadTemplate(s *parse.SectionNode) {
