@@ -12,20 +12,23 @@ import (
 	"net/http/httputil"
 	"net/url"
 
+	"bosun.org/cmd/tsdbrelay/denormalize"
 	"bosun.org/opentsdb"
 )
 
 var (
-	listenAddr  = flag.String("l", ":4242", "Listen address.")
-	bosunServer = flag.String("b", "bosun", "Target Bosun server. Can specify port with host:port.")
-	tsdbServer  = flag.String("t", "", "Target OpenTSDB server. Can specify port with host:port.")
-	logVerbose  = flag.Bool("v", false, "enable verbose logging")
-	denormalize = flag.String("denormalize", "", "List of metrics to denormalize. Comma seperated list of `metric__tagname__tagname` rules. Will be translated to `___metric__tagvalue__tagvalue`")
+	listenAddr    = flag.String("l", ":4242", "Listen address.")
+	bosunServer   = flag.String("b", "bosun", "Target Bosun server. Can specify port with host:port.")
+	tsdbServer    = flag.String("t", "", "Target OpenTSDB server. Can specify port with host:port.")
+	logVerbose    = flag.Bool("v", false, "enable verbose logging")
+	toDenormalize = flag.String("denormalize", "", "List of metrics to denormalize. Comma seperated list of `metric__tagname__tagname` rules. Will be translated to `___metric__tagvalue__tagvalue`")
 )
 
 var (
 	tsdbPutURL    string
 	bosunIndexURL string
+
+	denormalizationRules map[string]*denormalize.DenormalizationRule
 )
 
 func main() {
@@ -36,9 +39,9 @@ func main() {
 	log.Println("listen on", *listenAddr)
 	log.Println("relay to bosun at", *bosunServer)
 	log.Println("relay to tsdb at", *tsdbServer)
-	if *denormalize != "" {
+	if *toDenormalize != "" {
 		var err error
-		denormalizationRules, err = parseDenormalizationRules(*denormalize)
+		denormalizationRules, err = denormalize.ParseDenormalizationRules(*toDenormalize)
 		if err != nil {
 			log.Fatal(err)
 		}
