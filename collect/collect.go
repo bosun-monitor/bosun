@@ -5,7 +5,6 @@
 package collect // import "bosun.org/collect"
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -53,7 +52,7 @@ var (
 	tsdbURL             string
 	osHostname          string
 	metricRoot          string
-	queue               []json.RawMessage
+	queue               []*opentsdb.DataPoint
 	qlock, mlock, slock sync.Mutex // Locks for queues, maps, stats.
 	counters            = make(map[string]*addMetric)
 	sets                = make(map[string]*setMetric)
@@ -108,6 +107,7 @@ func InitChan(tsdbhost *url.URL, root string, ch chan *opentsdb.DataPoint) error
 	}
 	tsdbURL = u.String()
 	metricRoot = root + "."
+
 	tchan = ch
 	go queuer()
 	go send()
@@ -115,6 +115,7 @@ func InitChan(tsdbhost *url.URL, root string, ch chan *opentsdb.DataPoint) error
 	if DisableDefaultCollectors {
 		return nil
 	}
+
 	Set("collect.dropped", Tags, func() (i interface{}) {
 		slock.Lock()
 		i = dropped
