@@ -144,6 +144,7 @@ Global template functions:
 
 * V: performs variable expansion on the argument and returns it. Needed since normal variable expansion is not done due to the `$` character being used by the Go template syntax.
 * bytes: converts the string input into a human-readable number of bytes with extension KB, MB, GB, etc.
+* pct: converts the argument to a percentage. For example: `{{5.1 | pct}}` -> `5.10%`.
 * replace: [strings.Replace](http://golang.org/pkg/strings/#Replace)
 * short: Trims the string to everything before the first period. Useful for turning a FQDN into a shortname. For example: `{{short "foo.baz.com"}}` -> `foo`.
 
