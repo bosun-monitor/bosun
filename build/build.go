@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -16,6 +17,7 @@ var (
 	shaFlag         = flag.String("sha", "", "SHA to embed.")
 	buildBosun      = flag.Bool("bosun", false, "Only build Bosun.")
 	buildScollector = flag.Bool("scollector", false, "Only build scollector.")
+	output          = flag.String("output", "", "Output directory; defaults to $GOPATH/bin.")
 
 	allProgs = []string{"bosun", "scollector"}
 )
@@ -46,7 +48,14 @@ func main() {
 	}
 	for _, app := range progs {
 		fmt.Println("building", app)
-		cmd := exec.Command("go", "install", "-v", "-ldflags", ldFlags, fmt.Sprintf("bosun.org/cmd/%s", app))
+		var args []string
+		if *output != "" {
+			args = append(args, "build", "-o", filepath.Join(*output, app))
+		} else {
+			args = append(args, "install")
+		}
+		args = append(args, "-ldflags", ldFlags, fmt.Sprintf("bosun.org/cmd/%s", app))
+		cmd := exec.Command("go", args...)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		err := cmd.Run()
