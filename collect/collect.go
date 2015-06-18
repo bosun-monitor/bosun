@@ -107,7 +107,6 @@ func InitChan(tsdbhost *url.URL, root string, ch chan *opentsdb.DataPoint) error
 	}
 	tsdbURL = u.String()
 	metricRoot = root + "."
-
 	tchan = ch
 	go queuer()
 	go send()
@@ -115,7 +114,6 @@ func InitChan(tsdbhost *url.URL, root string, ch chan *opentsdb.DataPoint) error
 	if DisableDefaultCollectors {
 		return nil
 	}
-
 	Set("collect.dropped", Tags, func() (i interface{}) {
 		slock.Lock()
 		i = dropped
