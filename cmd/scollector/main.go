@@ -138,9 +138,12 @@ func readConf() *Conf {
 		}
 	} else {
 		defer f.Close()
-		_, err := toml.DecodeReader(f, conf)
+		md, err := toml.DecodeReader(f, conf)
 		if err != nil {
 			slog.Fatal(err)
+		}
+		if u := md.Undecoded(); len(u) > 0 {
+			slog.Fatalf("extra keys in %s: %v", loc, u)
 		}
 	}
 	return conf
