@@ -8,10 +8,6 @@ import (
 	"bosun.org/_third_party/github.com/StackExchange/wmi"
 )
 
-var (
-	epochUTCTime = time.Unix(0, 0).UTC()
-)
-
 func queryWmi(query string, dst interface{}) error {
 	return queryWmiNamespace(query, dst, "")
 }
@@ -43,15 +39,15 @@ func wmiInitNamespace(c *IntervalCollector, dst func() interface{}, where string
 func wmiParseCIMDatetime(cimdatetime string) (time.Time, error) {
 	i := strings.IndexAny(cimdatetime, "+-")
 	if i < 0 {
-		return epochUTCTime, fmt.Errorf("Invalid CIM_DATETIME format, cannot find UTC offset.")
+		return time.Time{}, fmt.Errorf("Invalid CIM_DATETIME format, cannot find UTC offset.")
 	}
-	t, err := time.Parse("20060102150405", cimdatetime[0:i])
+	t, err := time.Parse("20060102150405", cimdatetime[:i])
 	if err != nil {
-		return epochUTCTime, err
+		return time.Time{}, err
 	}
 	offset, err := time.ParseDuration(fmt.Sprintf("%vm", cimdatetime[i:]))
 	if err != nil {
-		return epochUTCTime, err
+		return time.Time{}, err
 	}
 	return t.Add(offset), nil
 }
