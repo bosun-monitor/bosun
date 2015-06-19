@@ -398,8 +398,9 @@ func toToml(fname string) {
 				})
 			}
 		case "icmp":
-			c.ICMP = append(c.ICMP, ICMP{v})
-
+			for _, i := range strings.Split(v, ",") {
+				c.ICMP = append(c.ICMP, ICMP{i})
+			}
 		case "haproxy":
 			if v != "" {
 				for _, s := range strings.Split(v, ",") {
