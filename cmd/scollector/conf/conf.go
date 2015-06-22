@@ -68,6 +68,22 @@ type AWS struct {
 type SNMP struct {
 	Community string
 	Host      string
+	MIBs      []string
+}
+
+type MIB struct {
+	Keys []MIBKey
+}
+
+type MIBKey struct {
+	Name     string
+	Oid      string
+	Tree     bool
+	Silent   bool
+	LabelTag string
+	LabelKey string
+	Rate     string
+	Unit     string
 }
 
 type ProcessDotNet struct {

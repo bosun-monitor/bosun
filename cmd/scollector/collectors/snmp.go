@@ -6,17 +6,24 @@ import (
 	"math/big"
 
 	"bosun.org/_third_party/github.com/mjibson/snmp"
+	"bosun.org/cmd/scollector/conf"
 )
 
-func SNMP(community, host string) error {
-	if host == "" {
+func SNMP(cfg conf.SNMP) error {
+	if cfg.Host == "" {
 		return fmt.Errorf("empty SNMP hostname")
 	}
-	if community == "" {
+	if cfg.Community == "" {
 		return fmt.Errorf("empty SNMP community")
 	}
-	SNMPIfaces(community, host)
-	SNMPCisco(community, host)
+	if len(cfg.MIBs) == 0 {
+		cfg.MIBs = []string{"ifaces", "cisco"}
+	}
+	for _, mib := range cfg.MIBs {
+
+	}
+	//SNMPIfaces(community, host)
+	//SNMPCisco(community, host)
 	return nil
 }
 
