@@ -1,4 +1,4 @@
-package main
+package denormalize
 
 import (
 	"fmt"
@@ -28,9 +28,7 @@ func (d *DenormalizationRule) String() string {
 	return fmt.Sprintf("%s{%s} -> __%s.%s", d.Metric, inputTags, outputTags, d.Metric)
 }
 
-var denormalizationRules map[string]*DenormalizationRule
-
-func parseDenormalizationRules(config string) (map[string]*DenormalizationRule, error) {
+func ParseDenormalizationRules(config string) (map[string]*DenormalizationRule, error) {
 	m := make(map[string]*DenormalizationRule)
 	rules := strings.Split(config, ",")
 	for _, r := range rules {
