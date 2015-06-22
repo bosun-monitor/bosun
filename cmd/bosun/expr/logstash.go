@@ -151,7 +151,7 @@ func (e *LogstashElasticHosts) GenIndices(r *LogstashRequest) (string, error) {
 		}
 	}
 	if len(selectedIndices) == 0 {
-		return "", fmt.Errorf("no elastic indices available during this time range, index[%s]", r.IndexRoot)
+		return "", fmt.Errorf("no elastic indices available during this time range, index[%s], start/end [%s|%s]", r.IndexRoot, start.Format("2006.01.02"), end.Format("2006.01.02"))
 	}
 	return strings.Join(selectedIndices, ","), nil
 }
