@@ -45,6 +45,7 @@ Every variable is optional, though you should enable at least 1 backend.
   * The graph page's tag list.
 * graphiteHost: Graphite host. Same format as tsdbHost.
 * logstashElasticHost: Elasticsearch host populated by logstash. Same format as tsdbHost.
+* influxHost: InfluxDB host.
 
 #### settings
 

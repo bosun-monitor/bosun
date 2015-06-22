@@ -60,6 +60,7 @@ type Conf struct {
 	TSDBHost             string                    // OpenTSDB relay and query destination: ny-devtsdb04:4242
 	GraphiteHost         string                    // Graphite query host: foo.bar.baz
 	LogstashElasticHosts expr.LogstashElasticHosts // CSV Elastic Hosts (All part of the same cluster) that stores logstash documents, i.e http://ny-elastic01:9200
+	InfluxHost           string
 
 	tree            *parse.Tree
 	node            parse.Node
@@ -393,6 +394,8 @@ func (c *Conf) loadGlobal(p *parse.PairNode) {
 		c.GraphiteHost = v
 	case "logstashElasticHosts":
 		c.LogstashElasticHosts = strings.Split(v, ",")
+	case "influxHost":
+		c.InfluxHost = v
 	case "httpListen":
 		c.HTTPListen = v
 	case "hostname":
@@ -1258,6 +1261,9 @@ func (c *Conf) Funcs() map[string]eparse.Func {
 	}
 	if len(c.LogstashElasticHosts) != 0 {
 		merge(expr.LogstashElastic)
+	}
+	if c.InfluxHost != "" {
+		merge(expr.Influx)
 	}
 	return funcs
 }

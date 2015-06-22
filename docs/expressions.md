@@ -116,6 +116,16 @@ This happens when the outer graphite function is something like "avg()" or "sum(
 
 Like band() but for graphite queries.
 
+## InfluxDB Query Functions
+
+### influx(db string, query string, startDuration string, endDuration string, format string) seriesSet
+
+Queries with influxql query on database db from startDuration ago to
+endDuration ago. WHERE clases for `time` are inserted automatically, and
+it is thus an error to specify `time` conditions in query. `format` is a
+comma-separated list of tag values to extract from the query. Only results
+with non-empty tag values for all of the given tag keys will be returned.
+
 ## Logstash Query Functions
 
 ### lscount(indexRoot string, keyString string, filterString string, bucketDuration string, startDuration string, endDuration string) seriesSet

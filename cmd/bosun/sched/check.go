@@ -63,6 +63,7 @@ type RunHistory struct {
 	Start           time.Time
 	Context         opentsdb.Context
 	GraphiteContext graphite.Context
+	InfluxHost      string
 	Logstash        expr.LogstashElasticHosts
 	Events          map[expr.AlertKey]*Event
 	schedule        *Schedule
@@ -83,6 +84,7 @@ func (s *Schedule) NewRunHistory(start time.Time, cache *cache.Cache) *RunHistor
 		Events:          make(map[expr.AlertKey]*Event),
 		Context:         s.Conf.TSDBContext(),
 		GraphiteContext: s.Conf.GraphiteContext(),
+		InfluxHost:      s.Conf.InfluxHost,
 		Logstash:        s.Conf.LogstashElasticHosts,
 		schedule:        s,
 	}
@@ -481,7 +483,7 @@ func (s *Schedule) executeExpr(T miniprofiler.Timer, rh *RunHistory, a *conf.Ale
 	if e == nil {
 		return nil, nil
 	}
-	results, _, err := e.Execute(rh.Context, rh.GraphiteContext, rh.Logstash, rh.Cache, T, rh.Start, 0, a.UnjoinedOK, s.Search, s.Conf.AlertSquelched(a), rh)
+	results, _, err := e.Execute(rh.Context, rh.GraphiteContext, rh.Logstash, rh.InfluxHost, rh.Cache, T, rh.Start, 0, a.UnjoinedOK, s.Search, s.Conf.AlertSquelched(a), rh)
 	if err != nil {
 		ak := expr.NewAlertKey(a.Name, nil)
 		rh.Events[ak] = &Event{

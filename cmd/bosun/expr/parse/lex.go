@@ -181,6 +181,8 @@ Loop:
 			l.emit(itemRightParen)
 		case r == '"':
 			return lexString
+		case r == '\'':
+			return lexStringSingle
 		case r == ',':
 			l.emit(itemComma)
 		case isSpace(r):
@@ -279,6 +281,18 @@ func lexString(l *lexer) stateFn {
 	for {
 		switch l.next() {
 		case '"':
+			l.emit(itemString)
+			return lexItem
+		case eof:
+			return l.errorf("unterminated string")
+		}
+	}
+}
+
+func lexStringSingle(l *lexer) stateFn {
+	for {
+		switch l.next() {
+		case '\'':
 			l.emit(itemString)
 			return lexItem
 		case eof:
