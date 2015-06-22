@@ -4,14 +4,17 @@ import (
 	"fmt"
 	"io"
 	"math/big"
+	"time"
 
 	"bosun.org/_third_party/github.com/mjibson/snmp"
 	"bosun.org/cmd/scollector/conf"
+	"bosun.org/metadata"
+	"bosun.org/opentsdb"
 )
 
 var builtInSnmps = map[string]func(cfg conf.SNMP){"ifaces": SNMPIfaces, "cisco": SNMPCisco}
 
-func SNMP(cfg conf.SNMP, mibs []conf.MIB) error {
+func SNMP(cfg conf.SNMP, mibs map[string]conf.MIB) error {
 	if cfg.Host == "" {
 		return fmt.Errorf("empty SNMP hostname")
 	}
@@ -21,11 +24,21 @@ func SNMP(cfg conf.SNMP, mibs []conf.MIB) error {
 	if len(cfg.MIBs) == 0 {
 		cfg.MIBs = []string{"ifaces", "cisco"}
 	}
-	for _, mib := range cfg.MIBs {
-		if f, ok := builtInSnmps[mib]; ok {
+	for _, m := range cfg.MIBs {
+		if f, ok := builtInSnmps[m]; ok {
 			f(cfg)
 		} else {
-			//generic snmp
+			mib, ok := mibs[m]
+			if !ok {
+				return fmt.Errorf("unknown MIB \"%s\" specified", m)
+			}
+			collectors = append(collectors, &IntervalCollector{
+				F: func() (opentsdb.MultiDataPoint, error) {
+					return c_snmp_generic(cfg, mib, m)
+				},
+				Interval: time.Second * 30,
+				name:     fmt.Sprintf("snmp-generic-%s-%s", cfg.Host, m),
+			})
 		}
 	}
 	return nil
@@ -77,4 +90,55 @@ func snmp_oid(host, community, oid string) (*big.Int, error) {
 	v := new(big.Int)
 	err := snmp.Get(host, community, oid, &v)
 	return v, err
+}
+
+func c_snmp_generic(cfg conf.SNMP, mib conf.MIB, mibName string) (opentsdb.MultiDataPoint, error) {
+	md := opentsdb.MultiDataPoint{}
+	treeCache := make(map[string]map[int]interface{})
+	for _, key := range mib.Keys {
+		rate := metadata.RateType(key.Rate)
+		if rate == "" {
+			rate = metadata.Gauge
+		}
+		unit := metadata.Unit(key.Unit)
+		if unit == "" {
+			unit = metadata.None
+		}
+
+		tagset := opentsdb.TagSet{"host": cfg.Host}
+		if key.Tree {
+			nodes, err := snmp_subtree(cfg.Host, cfg.Community, key.Oid)
+			if err != nil {
+				return md, err
+			}
+			treeCache[key.Name] = nodes
+			if key.Silent {
+				continue
+			}
+			for i, v := range nodes {
+				if key.LabelTag != "" {
+					reference, ok := treeCache[key.LabelKey]
+					if !ok {
+						return md, fmt.Errorf("Referenced tree %s for tagging %s not queried.", key.LabelKey, key.Name)
+					}
+					tagVal, ok := reference[i]
+					if !ok {
+						return md, fmt.Errorf("Tag key tree %s for tagging %s has no value for index.", key.LabelKey, key.Name, i)
+					}
+					tagset[key.LabelTag] = fmt.Sprintf("%s", tagVal)
+					Add(&md, key.Name, v, tagset, rate, unit, "")
+				}
+			}
+
+		} else {
+			v, err := snmp_oid(cfg.Host, cfg.Community, key.Oid)
+			if err == nil {
+				Add(&md, key.Name, v, tagset, rate, unit, "")
+			} else {
+				return md, err
+			}
+		}
+	}
+
+	return md, nil
 }
