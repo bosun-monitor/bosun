@@ -94,51 +94,57 @@ func snmp_oid(host, community, oid string) (*big.Int, error) {
 
 func c_snmp_generic(cfg conf.SNMP, mib conf.MIB, mibName string) (opentsdb.MultiDataPoint, error) {
 	md := opentsdb.MultiDataPoint{}
-	treeCache := make(map[string]map[int]interface{})
-	for _, key := range mib.Keys {
-		rate := metadata.RateType(key.Rate)
+	baseOid := mib.BaseOid
+
+	for _, metric := range mib.Metrics {
+		rate := metadata.RateType(metric.RateType)
 		if rate == "" {
 			rate = metadata.Gauge
 		}
-		unit := metadata.Unit(key.Unit)
+		unit := metadata.Unit(metric.Unit)
 		if unit == "" {
 			unit = metadata.None
 		}
-
+		v, err := snmp_oid(cfg.Host, cfg.Community, baseOid+metric.Oid)
 		tagset := opentsdb.TagSet{"host": cfg.Host}
-		if key.Tree {
-			nodes, err := snmp_subtree(cfg.Host, cfg.Community, key.Oid)
+		if err == nil {
+			Add(&md, metric.Metric, v, tagset, rate, unit, metric.Description)
+		} else {
+			return md, err
+		}
+	}
+	for _, tree := range mib.Trees {
+		treeOid := baseOid + tree.BaseOid
+		names, err := snmp_subtree(cfg.Host, cfg.Community, treeOid+tree.LabelSourceOid)
+		if err != nil {
+			return md, err
+		}
+		tagset := opentsdb.TagSet{"host": cfg.Host}
+		for _, metric := range tree.Metrics {
+			rate := metadata.RateType(metric.RateType)
+			if rate == "" {
+				rate = metadata.Gauge
+			}
+			unit := metadata.Unit(metric.Unit)
+			if unit == "" {
+				unit = metadata.None
+			}
+			nodes, err := snmp_subtree(cfg.Host, cfg.Community, treeOid+metric.Oid)
 			if err != nil {
 				return md, err
 			}
-			treeCache[key.Name] = nodes
-			if key.Silent {
-				continue
+			if len(nodes) != len(names) {
+				return md, fmt.Errorf("snmp tree for %s, and names have different lengths.", metric.Metric)
 			}
 			for i, v := range nodes {
-				if key.LabelTag != "" {
-					reference, ok := treeCache[key.LabelKey]
-					if !ok {
-						return md, fmt.Errorf("Referenced tree %s for tagging %s not queried.", key.LabelKey, key.Name)
-					}
-					tagVal, ok := reference[i]
-					if !ok {
-						return md, fmt.Errorf("Tag key tree %s for tagging %s has no value for index.", key.LabelKey, key.Name, i)
-					}
-					tagset[key.LabelTag] = fmt.Sprintf("%s", tagVal)
-					Add(&md, key.Name, v, tagset, rate, unit, "")
+				tagVal, ok := names[i]
+				if !ok {
+					return md, fmt.Errorf("Tree for tag %s has no entry for metric %s index %d.", tree.TagKey, metric.Metric, i)
 				}
-			}
-
-		} else {
-			v, err := snmp_oid(cfg.Host, cfg.Community, key.Oid)
-			if err == nil {
-				Add(&md, key.Name, v, tagset, rate, unit, "")
-			} else {
-				return md, err
+				tagset[tree.TagKey] = fmt.Sprintf("%s", tagVal)
+				Add(&md, metric.Metric, v, tagset, rate, unit, metric.Description)
 			}
 		}
 	}
-
 	return md, nil
 }

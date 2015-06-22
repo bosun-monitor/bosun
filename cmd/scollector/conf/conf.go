@@ -72,19 +72,40 @@ type SNMP struct {
 	MIBs      []string
 }
 
+//type MIB struct {
+//	Keys []MIBKey
+//}
+
+//type MIBKey struct {
+//	Name     string
+//	Oid      string
+//	Tree     bool
+//	Silent   bool
+//	LabelTag string
+//	LabelKey string
+//	Rate     string
+//	Unit     string
+//}
+
 type MIB struct {
-	Keys []MIBKey
+	BaseOid string
+	Metrics []MIBMetric // single key metrics
+	Trees   []MIBTree   // tagged array metrics
 }
 
-type MIBKey struct {
-	Name     string
-	Oid      string
-	Tree     bool
-	Silent   bool
-	LabelTag string
-	LabelKey string
-	Rate     string
-	Unit     string
+type MIBMetric struct {
+	Metric      string
+	Oid         string
+	Unit        string // metadata unit
+	RateType    string // defaults to gauge
+	Description string
+}
+
+type MIBTree struct {
+	BaseOid        string
+	TagKey         string
+	LabelSourceOid string
+	Metrics        []MIBMetric
 }
 
 type ProcessDotNet struct {
