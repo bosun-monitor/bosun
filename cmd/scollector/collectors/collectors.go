@@ -48,6 +48,7 @@ const (
 	osNetErrors        = "os.net.errs"
 	osNetMulticast     = "os.net.packets_multicast"
 	osNetPackets       = "os.net.packets"
+	osNetPauseFrames   = "os.net.pause_frames"
 	osNetUnicast       = "os.net.packets_unicast"
 	osSystemUptime     = "os.system.uptime"
 )
