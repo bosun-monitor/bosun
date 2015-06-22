@@ -30,6 +30,7 @@ type Conf struct {
 
 	HAProxy       []HAProxy
 	SNMP          []SNMP
+	MIBS          []MIB
 	ICMP          []ICMP
 	Vsphere       []Vsphere
 	AWS           []AWS

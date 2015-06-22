@@ -5,6 +5,7 @@ import (
 	"math/big"
 	"time"
 
+	"bosun.org/cmd/scollector/conf"
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
 )
@@ -17,13 +18,13 @@ const (
 )
 
 // SNMPCisco registers a SNMP CISCO collector for the given community and host.
-func SNMPCisco(community, host string) {
+func SNMPCisco(cfg conf.SNMP) {
 	collectors = append(collectors, &IntervalCollector{
 		F: func() (opentsdb.MultiDataPoint, error) {
-			return c_snmp_cisco(community, host)
+			return c_snmp_cisco(cfg.Community, cfg.Host)
 		},
 		Interval: time.Second * 30,
-		name:     fmt.Sprintf("snmp-cisco-%s", host),
+		name:     fmt.Sprintf("snmp-cisco-%s", cfg.Host),
 	})
 }
 

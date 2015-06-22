@@ -9,7 +9,9 @@ import (
 	"bosun.org/cmd/scollector/conf"
 )
 
-func SNMP(cfg conf.SNMP) error {
+var builtInSnmps = map[string]func(cfg conf.SNMP){"ifaces": SNMPIfaces, "cisco": SNMPCisco}
+
+func SNMP(cfg conf.SNMP, mibs []conf.MIB) error {
 	if cfg.Host == "" {
 		return fmt.Errorf("empty SNMP hostname")
 	}
@@ -20,10 +22,12 @@ func SNMP(cfg conf.SNMP) error {
 		cfg.MIBs = []string{"ifaces", "cisco"}
 	}
 	for _, mib := range cfg.MIBs {
-
+		if f, ok := builtInSnmps[mib]; ok {
+			f(cfg)
+		} else {
+			//generic snmp
+		}
 	}
-	//SNMPIfaces(community, host)
-	//SNMPCisco(community, host)
 	return nil
 }
 

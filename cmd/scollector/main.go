@@ -94,8 +94,8 @@ func main() {
 			collectors.HAProxy(h.User, h.Password, i.Tier, i.URL)
 		}
 	}
-	for _, s := range conf.SNMP {
-		check(collectors.SNMP(s.Community, s.Host))
+	for _, cfg := range conf.SNMP {
+		check(collectors.SNMP(cfg, conf.MIBS))
 	}
 	for _, i := range conf.ICMP {
 		check(collectors.ICMP(i.Host))
