@@ -1595,6 +1595,12 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
         $scope.aggregators = ["sum", "min", "max", "avg", "dev", "zimsum", "mimmin", "minmax"];
         $scope.dsaggregators = ["", "sum", "min", "max", "avg", "dev", "zimsum", "mimmin", "minmax"];
         $scope.rate_options = ["auto", "gauge", "counter", "rate"];
+        $scope.bases = {
+            'decimal': { value: 1000 },
+            'binary': { value: 1024, letter: 'i' },
+            'bits -> binary': { value: 1024, letter: 'i', div: 8 }
+        };
+        $scope.base = 'binary';
         $scope.canAuto = {};
         var search = $location.search();
         var j = search.json;

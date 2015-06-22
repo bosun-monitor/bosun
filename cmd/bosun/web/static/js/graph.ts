@@ -149,12 +149,20 @@ interface IGraphScope extends ng.IScope {
 	y_labels: string[];
 	min: number;
 	max: number;
+	base: any;
+	bases: any;
 }
 
 bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route', '$timeout', function($scope: IGraphScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService, $timeout: ng.ITimeoutService) {
 	$scope.aggregators = ["sum", "min", "max", "avg", "dev", "zimsum", "mimmin", "minmax"];
 	$scope.dsaggregators = ["", "sum", "min", "max", "avg", "dev", "zimsum", "mimmin", "minmax"];
 	$scope.rate_options = ["auto", "gauge", "counter", "rate"];
+	$scope.bases = {
+		'decimal': {value: 1000},
+		'binary': {value: 1024, letter: 'i'},
+		'bits -> binary': {value: 1024, letter: 'i', div: 8},
+	};
+	$scope.base = 'binary';
 	$scope.canAuto = {};
 	var search = $location.search();
 	var j = search.json;
