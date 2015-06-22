@@ -22,9 +22,11 @@ const (
 	ifHCinOctets         = ".1.3.6.1.2.1.31.1.1.1.6"
 	ifInDiscards         = ".1.3.6.1.2.1.2.2.1.13"
 	ifInErrors           = ".1.3.6.1.2.1.2.2.1.14"
+	ifInPauseFrames      = ".1.3.6.1.2.1.10.7.10.1.3"
 	ifName               = ".1.3.6.1.2.1.31.1.1.1.1"
 	ifOutDiscards        = ".1.3.6.1.2.1.2.2.1.19"
 	ifOutErrors          = ".1.3.6.1.2.1.2.2.1.20"
+	ifOutPauseFrames     = ".1.3.6.1.2.1.10.7.10.1.4"
 )
 
 // SNMPIfaces registers a SNMP Interfaces collector for the given community and host.
@@ -101,6 +103,8 @@ func c_snmp_ifaces(community, host string) (opentsdb.MultiDataPoint, error) {
 		{ifInErrors, osNetErrors, "in"},
 		{ifOutDiscards, osNetDropped, "out"},
 		{ifOutErrors, osNetErrors, "out"},
+		{ifInPauseFrames, osNetPauseFrames, "in"},
+		{ifOutPauseFrames, osNetPauseFrames, "out"},
 	}
 	for _, o := range oids {
 		if err := add(o.oid, o.metric, o.dir); err != nil {
