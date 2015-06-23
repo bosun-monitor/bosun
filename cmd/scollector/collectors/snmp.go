@@ -34,7 +34,7 @@ func SNMP(cfg conf.SNMP, mibs map[string]conf.MIB) error {
 			}
 			collectors = append(collectors, &IntervalCollector{
 				F: func() (opentsdb.MultiDataPoint, error) {
-					return c_snmp_generic(cfg, mib, m)
+					return c_snmp_generic(cfg, mib)
 				},
 				Interval: time.Second * 30,
 				name:     fmt.Sprintf("snmp-generic-%s-%s", cfg.Host, m),
@@ -92,7 +92,7 @@ func snmp_oid(host, community, oid string) (*big.Int, error) {
 	return v, err
 }
 
-func c_snmp_generic(cfg conf.SNMP, mib conf.MIB, mibName string) (opentsdb.MultiDataPoint, error) {
+func c_snmp_generic(cfg conf.SNMP, mib conf.MIB) (opentsdb.MultiDataPoint, error) {
 	md := opentsdb.MultiDataPoint{}
 	baseOid := mib.BaseOid
 
@@ -105,13 +105,15 @@ func c_snmp_generic(cfg conf.SNMP, mib conf.MIB, mibName string) (opentsdb.Multi
 		if unit == "" {
 			unit = metadata.None
 		}
-		v, err := snmp_oid(cfg.Host, cfg.Community, baseOid+metric.Oid)
 		tagset := opentsdb.TagSet{"host": cfg.Host}
-		if err == nil {
-			Add(&md, metric.Metric, v, tagset, rate, unit, metric.Description)
-		} else {
+		v, err := snmp_oid(cfg.Host, cfg.Community, baseOid+metric.Oid)
+		if err != nil && metric.FallbackOid != "" {
+			v, err = snmp_oid(cfg.Host, cfg.Community, baseOid+metric.FallbackOid)
+		}
+		if err != nil {
 			return md, err
 		}
+		Add(&md, metric.Metric, v, tagset, rate, unit, metric.Description)
 	}
 	for _, tree := range mib.Trees {
 		treeOid := baseOid + tree.BaseOid

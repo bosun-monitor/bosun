@@ -99,6 +99,7 @@ type MIBMetric struct {
 	Unit        string // metadata unit
 	RateType    string // defaults to gauge
 	Description string
+	FallbackOid string // Oid to try if main one doesn't work. Used in cisco where different models use different oids
 }
 
 type MIBTree struct {
