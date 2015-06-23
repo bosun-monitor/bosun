@@ -240,7 +240,6 @@ type StateGroup struct {
 	Active   bool `json:",omitempty"`
 	Status   Status
 	Subject  string        `json:",omitempty"`
-	Len      int           `json:",omitempty"`
 	Alert    string        `json:",omitempty"`
 	AlertKey expr.AlertKey `json:",omitempty"`
 	Ago      string        `json:",omitempty"`
@@ -298,7 +297,6 @@ func (s *Schedule) MarshalGroups(T miniprofiler.Timer, filter string) (*StateGro
 						Active:  tuple.Active,
 						Status:  tuple.Status,
 						Subject: fmt.Sprintf("%s - %s", tuple.Status, name),
-						Len:     len(group),
 					}
 					for _, ak := range group {
 						st := s.status[ak]
