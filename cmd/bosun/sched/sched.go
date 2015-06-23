@@ -145,19 +145,22 @@ func (s *Schedule) GetMetadata(metric string, subset opentsdb.TagSet) []metadata
 type States map[expr.AlertKey]*State
 
 type StateTuple struct {
-	NeedAck bool
-	Active  bool
-	Status  Status
+	NeedAck  bool
+	Active   bool
+	Status   Status
+	Silenced bool
 }
 
-// GroupStates groups by NeedAck, Active, and Status.
-func (states States) GroupStates() map[StateTuple]States {
+// GroupStates groups by NeedAck, Active, Status, and Silenced.
+func (states States) GroupStates(silenced map[expr.AlertKey]Silence) map[StateTuple]States {
 	r := make(map[StateTuple]States)
 	for ak, st := range states {
+		_, sil := silenced[ak]
 		t := StateTuple{
 			st.NeedAck,
 			st.IsActive(),
 			st.AbnormalStatus(),
+			sil,
 		}
 		if _, present := r[t]; !present {
 			r[t] = make(States)
@@ -239,6 +242,7 @@ func (states States) GroupSets() map[string]expr.AlertKeys {
 type StateGroup struct {
 	Active   bool `json:",omitempty"`
 	Status   Status
+	Silenced bool
 	Subject  string        `json:",omitempty"`
 	Alert    string        `json:",omitempty"`
 	AlertKey expr.AlertKey `json:",omitempty"`
@@ -252,13 +256,12 @@ type StateGroups struct {
 		Acknowledged []*StateGroup `json:",omitempty"`
 	}
 	TimeAndDate []int
-	Silenced    map[expr.AlertKey]Silence
 }
 
 func (s *Schedule) MarshalGroups(T miniprofiler.Timer, filter string) (*StateGroups, error) {
+	silenced := s.Silenced()
 	t := StateGroups{
 		TimeAndDate: s.Conf.TimeAndDate,
-		Silenced:    s.Silenced(),
 	}
 	s.TimeLock(T)
 	defer s.Unlock()
@@ -281,7 +284,7 @@ func (s *Schedule) MarshalGroups(T miniprofiler.Timer, filter string) (*StateGro
 	}
 	var groups map[StateTuple]States
 	T.Step("GroupStates", func(T miniprofiler.Timer) {
-		groups = status.GroupStates()
+		groups = status.GroupStates(silenced)
 	})
 	T.Step("groups", func(T miniprofiler.Timer) {
 		for tuple, states := range groups {
@@ -294,15 +297,17 @@ func (s *Schedule) MarshalGroups(T miniprofiler.Timer, filter string) (*StateGro
 				})
 				for name, group := range sets {
 					g := StateGroup{
-						Active:  tuple.Active,
-						Status:  tuple.Status,
-						Subject: fmt.Sprintf("%s - %s", tuple.Status, name),
+						Active:   tuple.Active,
+						Status:   tuple.Status,
+						Silenced: tuple.Silenced,
+						Subject:  fmt.Sprintf("%s - %s", tuple.Status, name),
 					}
 					for _, ak := range group {
 						st := s.status[ak]
 						g.Children = append(g.Children, &StateGroup{
 							Active:   tuple.Active,
 							Status:   tuple.Status,
+							Silenced: tuple.Silenced,
 							AlertKey: ak,
 							Alert:    ak.Name(),
 							Subject:  string(st.Subject),
