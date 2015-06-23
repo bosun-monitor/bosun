@@ -14,7 +14,7 @@ func SNMPCisco(cfg conf.SNMP) {
 	mib := conf.MIB{}
 	mib.BaseOid = "1.3.6.1.4.1.9.9"
 	mib.Metrics = []conf.MIBMetric{
-		conf.MIBMetric{
+		{
 			Metric:      "cisco.cpu",
 			Oid:         ".109.1.1.1.1.6",
 			FallbackOid: ".109.1.1.1.1.6.1",
@@ -22,16 +22,16 @@ func SNMPCisco(cfg conf.SNMP) {
 		},
 	}
 	mib.Trees = []conf.MIBTree{
-		conf.MIBTree{
+		{
 			BaseOid:        ".48.1.1.1",
 			TagKey:         "name",
 			LabelSourceOid: ".2",
 			Metrics: []conf.MIBMetric{
-				conf.MIBMetric{
+				{
 					Metric: "cisco.mem.used",
 					Oid:    ".5",
 				},
-				conf.MIBMetric{
+				{
 					Metric: "cisco.mem.free",
 					Oid:    ".6",
 				},
