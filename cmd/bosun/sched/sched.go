@@ -311,6 +311,9 @@ func (s *Schedule) MarshalGroups(T miniprofiler.Timer, filter string) (*StateGro
 							Ago:      marshalTime(st.Last().Time),
 						})
 					}
+					if len(g.Children) == 1 && g.Children[0].Subject != "" {
+						g.Subject = g.Children[0].Subject
+					}
 					grouped = append(grouped, &g)
 				}
 			default:
