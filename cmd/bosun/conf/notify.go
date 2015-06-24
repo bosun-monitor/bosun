@@ -29,30 +29,42 @@ func (n *Notification) Notify(subject, body string, emailsubject, emailbody []by
 		go n.DoEmail(emailsubject, emailbody, c, ak, attachments...)
 	}
 	if n.Post != nil {
-		go n.DoPost([]byte(subject))
+		go n.DoPost([]byte(n.GetPayload(subject, body)))
 	}
 	if n.Get != nil {
 		go n.DoGet()
 	}
 	if n.Print {
-		go n.DoPrint(subject)
+		if n.UseBody {
+			go n.DoPrint("Subject: " + subject + ", Body: " + body)
+		} else {
+			go n.DoPrint(subject)
+		}
 	}
 }
 
-func (n *Notification) DoPrint(subject string) {
-	log.Println(subject)
+func (n *Notification) GetPayload(subject, body string) (payload string) {
+	if n.UseBody {
+		return body
+	} else {
+		return subject
+	}
 }
 
-func (n *Notification) DoPost(subject []byte) {
+func (n *Notification) DoPrint(payload string) {
+	log.Println(payload)
+}
+
+func (n *Notification) DoPost(payload []byte) {
 	if n.Body != nil {
 		buf := new(bytes.Buffer)
-		if err := n.Body.Execute(buf, string(subject)); err != nil {
+		if err := n.Body.Execute(buf, string(payload)); err != nil {
 			log.Println(err)
 			return
 		}
-		subject = buf.Bytes()
+		payload = buf.Bytes()
 	}
-	resp, err := http.Post(n.Post.String(), n.ContentType, bytes.NewBuffer(subject))
+	resp, err := http.Post(n.Post.String(), n.ContentType, bytes.NewBuffer(payload))
 	if resp != nil && resp.Body != nil {
 		defer resp.Body.Close()
 	}
