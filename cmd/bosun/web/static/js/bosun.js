@@ -1812,6 +1812,12 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
             var min = angular.isNumber($scope.min) ? '&min=' + encodeURIComponent($scope.min.toString()) : '';
             var max = angular.isNumber($scope.max) ? '&max=' + encodeURIComponent($scope.max.toString()) : '';
             $scope.animate();
+            $scope.queryTime = '';
+            if (!isRel.exec(request.end)) {
+                var t = moment.utc(request.end, moment.defaultFormat);
+                $scope.queryTime = '&date=' + t.format('YYYY-MM-DD');
+                $scope.queryTime += '&time=' + t.format('HH:mm');
+            }
             $http.get('/api/graph?' + 'b64=' + encodeURIComponent(btoa(JSON.stringify(request))) + autods + autorate + min + max)
                 .success(function (data) {
                 $scope.result = data.Series;
