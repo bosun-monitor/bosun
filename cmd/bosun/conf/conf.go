@@ -303,8 +303,6 @@ type Notification struct {
 	email     string
 	post, get string
 	body      string
-	// Maybe not used, need to learn more GO :(
-	useBody bool
 }
 
 func (n *Notification) MarshalJSON() ([]byte, error) {

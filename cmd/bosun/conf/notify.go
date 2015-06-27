@@ -29,7 +29,7 @@ func (n *Notification) Notify(subject, body string, emailsubject, emailbody []by
 		go n.DoEmail(emailsubject, emailbody, c, ak, attachments...)
 	}
 	if n.Post != nil {
-		go n.DoPost([]byte(n.GetPayload(subject, body)))
+		go n.DoPost(n.GetPayload(subject, body))
 	}
 	if n.Get != nil {
 		go n.DoGet()
@@ -43,11 +43,11 @@ func (n *Notification) Notify(subject, body string, emailsubject, emailbody []by
 	}
 }
 
-func (n *Notification) GetPayload(subject, body string) (payload string) {
+func (n *Notification) GetPayload(subject, body string) (payload []byte) {
 	if n.UseBody {
-		return body
+		return []byte(body)
 	} else {
-		return subject
+		return []byte(subject)
 	}
 }
 
