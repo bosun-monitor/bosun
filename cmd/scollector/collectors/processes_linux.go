@@ -136,11 +136,20 @@ const (
 	descLinuxProcStartTS      = "The timestamp of process start."
 )
 
+type byModTime []os.FileInfo
+
+func (bmt byModTime) Len() int      { return len(bmt) }
+func (bmt byModTime) Swap(i, j int) { bmt[i], bmt[j] = bmt[j], bmt[i] }
+func (bmt byModTime) Less(i, j int) bool {
+	return bmt[i].ModTime().Unix() < bmt[j].ModTime().Unix()
+}
+
 func getLinuxProccesses() ([]*Process, error) {
 	files, err := ioutil.ReadDir("/proc")
 	if err != nil {
 		return nil, err
 	}
+	sort.Sort(byModTime(files))
 	var pids []string
 	for _, f := range files {
 		if _, err := strconv.Atoi(f.Name()); err == nil && f.IsDir() {
