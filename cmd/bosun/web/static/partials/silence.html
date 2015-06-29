@@ -78,9 +78,10 @@
 		<span ng-show="edit" class="label label-warning">editing rule {{edit}}</span>
 	</div>
 </div>
-<div class="row">
+<div class="row" ng-repeat="silence in silences">
 	<div class="col-sm-12">
-		<table class="table" ts-table-sort="[[1,0]]">
+		<h3 ng-bind="silence.name"></h3>
+		<table class="table" ts-table-sort="[[1,1]]">
 			<thead>
 				<tr>
 					<th>start</th>
@@ -91,7 +92,7 @@
 				</tr>
 			</thead>
 			<tbody>
-				<tr ng-repeat="(id, s) in silences">
+				<tr ng-repeat="(id, s) in silence.silences">
 					<td ts-time="s.Start"></td>
 					<td ts-time="s.End"></td>
 					<td ng-bind="s.Alert"></td>

@@ -31,10 +31,44 @@ bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$ro
 	if (!$scope.end && !$scope.duration) {
 		$scope.duration = '1h';
 	}
+	function filter(data: any[], startBefore: any, startAfter: any, endAfter: any, endBefore: any) {
+		var ret = [];
+		_.each(data, function(v) {
+			var s = moment(v.Start).utc();
+			var e = moment(v.End).utc();
+			if (startBefore && s > startBefore) {
+				return;
+			}
+			if (startAfter && s< startAfter) {
+				return;
+			}
+			if (endAfter && e < endAfter) {
+				return;
+			}
+			if (endBefore && e > endBefore) {
+				return;
+			}
+			ret.push(v);
+		});
+		return ret;
+	}
 	function get() {
 		$http.get('/api/silence/get')
 			.success((data) => {
-				$scope.silences = data;
+				$scope.silences = [];
+				var now = moment.utc();
+				$scope.silences.push({
+					name: 'Active',
+					silences: filter(data, now, null, now, null)
+				});
+				$scope.silences.push({
+					name: 'Upcoming',
+					silences: filter(data, null, now, null, null)
+				});
+				$scope.silences.push({
+					name: 'Past',
+					silences: filter(data, null, null, null, now).slice(0, 25)
+				});
 			})
 			.error((error) => {
 				$scope.error = error;
