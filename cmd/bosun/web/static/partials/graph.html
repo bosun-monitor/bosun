@@ -153,7 +153,7 @@
 			<tbody>
 				<tr ng-repeat="q in queries">
 					<td ng-bind="q"></td>
-					<td><a href="/expr?expr={{btoa(q)}}" target="_blank">Expression</a></td>
+					<td><a href="/expr?expr={{btoa(q)}}{{queryTime}}" target="_blank">Expression</a></td>
 					<td><a href="/config?expr={{btoa('avg(' + q + ')')}}" target="_blank">Rule</a></td>
 				</tr>
 			</tbody>

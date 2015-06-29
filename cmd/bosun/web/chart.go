@@ -65,6 +65,13 @@ func Graph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 	if s, ok := oreq.End.(string); ok && strings.Contains(s, "-ago") {
 		end = strings.TrimSuffix(s, "-ago")
 	}
+	if start == "" && end == "" {
+		s, sok := oreq.Start.(int64)
+		e, eok := oreq.End.(int64)
+		if sok && eok {
+			start = fmt.Sprintf("%vs", e-s)
+		}
+	}
 	m_units := make(map[string]string)
 	for i, q := range oreq.Queries {
 		if ar[i] {
