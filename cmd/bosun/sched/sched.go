@@ -247,6 +247,7 @@ type StateGroup struct {
 	Alert    string        `json:",omitempty"`
 	AlertKey expr.AlertKey `json:",omitempty"`
 	Ago      string        `json:",omitempty"`
+	State    *State        `json:",omitempty"`
 	Children []*StateGroup `json:",omitempty"`
 }
 
@@ -312,6 +313,7 @@ func (s *Schedule) MarshalGroups(T miniprofiler.Timer, filter string) (*StateGro
 							Alert:    ak.Name(),
 							Subject:  string(st.Subject),
 							Ago:      marshalTime(st.Last().Time),
+							State:    st,
 						})
 					}
 					if len(g.Children) == 1 && g.Children[0].Subject != "" {
