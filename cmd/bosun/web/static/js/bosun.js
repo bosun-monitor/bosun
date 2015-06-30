@@ -2378,76 +2378,12 @@ bosunApp.directive('tsAckGroup', function () {
         }
     };
 });
-bosunApp.factory('status', ['$http', '$q', '$sce', function ($http, $q, $sce) {
-        var cache = {};
-        var fetches = [];
-        function fetch() {
-            if (fetches.length == 0) {
-                return;
-            }
-            var o = fetches[0];
-            var ak = o.ak;
-            var q = o.q;
-            $http.get('/api/status?ak=' + encodeURIComponent(ak))
-                .success(function (data) {
-                angular.forEach(data, function (v, k) {
-                    v.Touched = moment(v.Touched).utc();
-                    angular.forEach(v.History, function (v, k) {
-                        v.Time = moment(v.Time).utc();
-                    });
-                    v.last = v.History[v.History.length - 1];
-                    if (v.Actions && v.Actions.length > 0) {
-                        v.LastAction = v.Actions[0];
-                    }
-                    v.RuleUrl = '/config?' +
-                        'alert=' + encodeURIComponent(v.AlertName) +
-                        '&fromDate=' + encodeURIComponent(v.last.Time.format("YYYY-MM-DD")) +
-                        '&fromTime=' + encodeURIComponent(v.last.Time.format("HH:mm"));
-                    var groups = [];
-                    angular.forEach(v.Group, function (v, k) {
-                        groups.push(k + "=" + v);
-                    });
-                    if (groups.length > 0) {
-                        v.RuleUrl += '&template_group=' + encodeURIComponent(groups.join(','));
-                    }
-                    v.Body = $sce.trustAsHtml(v.Body);
-                    cache[k] = v;
-                });
-                q.resolve(cache[ak]);
-            })
-                .error(q.reject)
-                .finally(function () {
-                fetches.shift();
-                fetch();
-            });
-        }
-        return function (ak) {
-            var q = $q.defer();
-            if (cache[ak]) {
-                q.resolve(cache[ak]);
-            }
-            else {
-                fetches.push({ 'ak': ak, 'q': q });
-                if (fetches.length == 1) {
-                    fetch();
-                }
-            }
-            return q.promise;
-        };
-    }]);
-bosunApp.directive('tsState', ['status', function ($status) {
+bosunApp.directive('tsState', ['$sce', function ($sce) {
         return {
             templateUrl: '/partials/alertstate.html',
             link: function (scope, elem, attrs) {
                 scope.name = scope.child.AlertKey;
-                scope.loading = true;
-                $status(scope.child.AlertKey).then(function (st) {
-                    scope.state = st;
-                    scope.loading = false;
-                }, function (err) {
-                    alert(err);
-                    scope.loading = false;
-                });
+                scope.state = scope.child.State;
                 scope.action = function (type) {
                     var key = encodeURIComponent(scope.name);
                     return '/action?type=' + type + '&key=' + key;
@@ -2458,6 +2394,26 @@ bosunApp.directive('tsState', ['status', function ($status) {
                     }
                     return v.replace(/([,{}()])/g, '$1\u200b');
                 };
+                scope.state.Touched = moment(scope.state.Touched).utc();
+                angular.forEach(scope.state.History, function (v, k) {
+                    v.Time = moment(v.Time).utc();
+                });
+                scope.state.last = scope.state.History[scope.state.History.length - 1];
+                if (scope.state.Actions && scope.state.Actions.length > 0) {
+                    scope.state.LastAction = scope.state.Actions[0];
+                }
+                scope.state.RuleUrl = '/config?' +
+                    'alert=' + encodeURIComponent(scope.state.AlertName) +
+                    '&fromDate=' + encodeURIComponent(scope.state.last.Time.format("YYYY-MM-DD")) +
+                    '&fromTime=' + encodeURIComponent(scope.state.last.Time.format("HH:mm"));
+                var groups = [];
+                angular.forEach(scope.state.Group, function (v, k) {
+                    groups.push(k + "=" + v);
+                });
+                if (groups.length > 0) {
+                    scope.state.RuleUrl += '&template_group=' + encodeURIComponent(groups.join(','));
+                }
+                scope.state.Body = $sce.trustAsHtml(scope.state.Body);
             }
         };
     }]);
