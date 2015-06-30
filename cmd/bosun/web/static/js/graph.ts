@@ -374,7 +374,7 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 		var max = angular.isNumber($scope.max) ? '&max=' + encodeURIComponent($scope.max.toString()) : '';
 		$scope.animate();
 		$scope.queryTime = '';
-		if (!isRel.exec(request.end)) {
+		if (request.end && !isRel.exec(request.end)) {
 			var t = moment.utc(request.end, moment.defaultFormat);
 			$scope.queryTime = '&date=' + t.format('YYYY-MM-DD');
 			$scope.queryTime += '&time=' + t.format('HH:mm');
