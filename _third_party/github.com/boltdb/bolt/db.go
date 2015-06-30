@@ -351,8 +351,15 @@ func (db *DB) init() error {
 // Close releases all database resources.
 // All transactions must be closed before closing the database.
 func (db *DB) Close() error {
+	db.rwlock.Lock()
+	defer db.rwlock.Unlock()
+
 	db.metalock.Lock()
 	defer db.metalock.Unlock()
+
+	db.mmaplock.RLock()
+	defer db.mmaplock.RUnlock()
+
 	return db.close()
 }
 
@@ -393,6 +400,11 @@ func (db *DB) close() error {
 // write transaction can be used at a time. Starting multiple write transactions
 // will cause the calls to block and be serialized until the current write
 // transaction finishes.
+//
+// Transactions should not be depedent on one another. Opening a read
+// transaction and a write transaction in the same goroutine can cause the
+// writer to deadlock because the database periodically needs to re-mmap itself
+// as it grows and it cannot do that while a read transaction is open.
 //
 // IMPORTANT: You must close read-only transactions after you are finished or
 // else the database will not reclaim old pages.

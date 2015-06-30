@@ -67,7 +67,7 @@ cauchy = "cat 2"
 			{"cyan", "magenta", "yellow", "black"},
 		},
 		My: map[string]cats{
-			"Cats": {Plato: "cat 1", Cauchy: "cat 2"},
+			"Cats": cats{Plato: "cat 1", Cauchy: "cat 2"},
 		},
 	}
 	if !reflect.DeepEqual(val, answer) {
@@ -553,7 +553,7 @@ ip = "10.0.0.2"
 	}
 
 	type server struct {
-		IP     string       `toml:"ip,omitempty"`
+		IP     string       `toml:"ip"`
 		Config serverConfig `toml:"config"`
 	}
 

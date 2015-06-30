@@ -7,12 +7,10 @@ package httpcontrol
 
 import (
 	"bytes"
-	"container/heap"
 	"crypto/tls"
 	"flag"
 	"fmt"
 	"io"
-	"math"
 	"net"
 	"net/http"
 	"net/url"
@@ -20,8 +18,6 @@ import (
 	"sync"
 	"syscall"
 	"time"
-
-	"bosun.org/_third_party/github.com/facebookgo/pqueue"
 )
 
 // Stats for a RoundTrip.
@@ -151,11 +147,8 @@ type Transport struct {
 	// monitoring purposes.
 	Stats func(*Stats)
 
-	transport    *http.Transport
-	startOnce    sync.Once
-	closeMonitor chan bool
-	pqMutex      sync.Mutex
-	pq           pqueue.PriorityQueue
+	startOnce sync.Once
+	transport *http.Transport
 }
 
 var knownFailureSuffixes = []string{
@@ -225,75 +218,37 @@ func (t *Transport) start() {
 		MaxIdleConnsPerHost:   t.MaxIdleConnsPerHost,
 		ResponseHeaderTimeout: t.ResponseHeaderTimeout,
 	}
-	t.closeMonitor = make(chan bool)
-	t.pq = pqueue.New(16)
-	go t.monitor()
 }
 
-// Close the Transport.
-func (t *Transport) Close() error {
-	// This ensures we were actually started. The alternative is to
-	// have a mutex to check if we have started, which loses the benefit of the
-	// sync.Once.
+// CloseIdleConnections closes the idle connections.
+func (t *Transport) CloseIdleConnections() {
 	t.startOnce.Do(t.start)
-
 	t.transport.CloseIdleConnections()
-	t.closeMonitor <- true
-	<-t.closeMonitor
-	return nil
-}
-
-func (t *Transport) monitor() {
-	ticker := time.NewTicker(25 * time.Millisecond)
-	for {
-		select {
-		case <-t.closeMonitor:
-			ticker.Stop()
-			close(t.closeMonitor)
-			return
-		case n := <-ticker.C:
-			now := n.UnixNano()
-			for {
-				t.pqMutex.Lock()
-				item, _ := t.pq.PeekAndShift(now)
-				t.pqMutex.Unlock()
-
-				if item == nil {
-					break
-				}
-
-				req := item.Value.(*http.Request)
-				t.CancelRequest(req)
-			}
-		}
-	}
 }
 
 // CancelRequest cancels an in-flight request by closing its connection.
 func (t *Transport) CancelRequest(req *http.Request) {
+	t.startOnce.Do(t.start)
+	if bc, ok := req.Body.(*bodyCloser); ok {
+		bc.timer.Stop()
+	}
 	t.transport.CancelRequest(req)
 }
 
 func (t *Transport) tries(req *http.Request, try uint) (*http.Response, error) {
 	startTime := time.Now()
-
-	deadline := int64(math.MaxInt64)
+	var timer *time.Timer
 	if t.RequestTimeout != 0 {
-		deadline = startTime.Add(t.RequestTimeout).UnixNano()
+		timer = time.AfterFunc(t.RequestTimeout, func() {
+			t.CancelRequest(req)
+		})
 	}
-	item := &pqueue.Item{Value: req, Priority: deadline}
-	t.pqMutex.Lock()
-	heap.Push(&t.pq, item)
-	t.pqMutex.Unlock()
 	res, err := t.transport.RoundTrip(req)
 	headerTime := time.Now()
 	if err != nil {
-		t.pqMutex.Lock()
-		if item.Index != -1 {
-			heap.Remove(&t.pq, item.Index)
+		if timer != nil {
+			timer.Stop()
 		}
-		t.pqMutex.Unlock()
-
 		var stats *Stats
 		if t.Stats != nil {
 			stats = &Stats{
@@ -321,8 +276,8 @@ func (t *Transport) tries(req *http.Request, try uint) (*http.Response, error) {
 
 	res.Body = &bodyCloser{
 		ReadCloser: res.Body,
+		timer:      timer,
 		res:        res,
-		item:       item,
 		transport:  t,
 		startTime:  startTime,
 		headerTime: headerTime,
@@ -338,21 +293,19 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 
 type bodyCloser struct {
 	io.ReadCloser
+	timer      *time.Timer
 	res        *http.Response
-	item       *pqueue.Item
 	transport  *Transport
 	startTime  time.Time
 	headerTime time.Time
 }
 
 func (b *bodyCloser) Close() error {
+	if b.timer != nil {
+		b.timer.Stop()
+	}
 	err := b.ReadCloser.Close()
 	closeTime := time.Now()
-	b.transport.pqMutex.Lock()
-	if b.item.Index != -1 {
-		heap.Remove(&b.transport.pq, b.item.Index)
-	}
-	b.transport.pqMutex.Unlock()
 	if b.transport.Stats != nil {
 		stats := &Stats{
 			Request:  b.res.Request,

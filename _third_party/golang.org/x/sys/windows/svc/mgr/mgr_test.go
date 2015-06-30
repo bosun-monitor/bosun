@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 
@@ -20,6 +21,9 @@ import (
 func TestOpenLanManServer(t *testing.T) {
 	m, err := mgr.Connect()
 	if err != nil {
+		if errno, ok := err.(syscall.Errno); ok && errno == syscall.ERROR_ACCESS_DENIED {
+			t.Skip("Skipping test: we don't have rights to manage services.")
+		}
 		t.Fatalf("SCM connection failed: %s", err)
 	}
 	defer m.Disconnect()
@@ -107,6 +111,9 @@ func TestMyService(t *testing.T) {
 
 	m, err := mgr.Connect()
 	if err != nil {
+		if errno, ok := err.(syscall.Errno); ok && errno == syscall.ERROR_ACCESS_DENIED {
+			t.Skip("Skipping test: we don't have rights to manage services.")
+		}
 		t.Fatalf("SCM connection failed: %s", err)
 	}
 	defer m.Disconnect()

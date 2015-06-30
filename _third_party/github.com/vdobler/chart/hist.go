@@ -5,12 +5,6 @@ import (
 	"math"
 )
 
-type HistChartData struct {
-	Name    string
-	Style   Style
-	Samples []float64
-}
-
 // HistChart represents histogram charts.
 //
 // Histograms should not be mixed up with bar charts produced by BarChart:
@@ -33,6 +27,14 @@ type HistChart struct {
 	Data           []HistChartData
 }
 
+// HistChartData encapsulates one data set in a histogram chart.
+type HistChartData struct {
+	Name    string
+	Style   Style
+	Samples []float64
+}
+
+// Kernel is a smoothing kernel for histograms.
 type Kernel func(x float64) float64
 
 const sqrt2piinv = 0.39894228 // 1.0 / math.Sqrt(2.0*math.Pi)
@@ -275,15 +277,15 @@ func (c *HistChart) Plot(g Graphics) {
 		c.YRange.TicSetting.Hide || c.YRange.TicSetting.HideLabels,
 		&c.Key)
 	fw, fh, _ := g.FontMetrics(elementStyle(c.Options, MajorAxisElement).Font)
-	fw += 0
 
 	width, height := layout.Width, layout.Height
 	topm, leftm := layout.Top, layout.Left
 	numxtics, numytics := layout.NumXtics, layout.NumYtics
 
 	// Outside bound ranges for histograms are nicer
-	leftm, width = leftm+int(2*fw), width-int(2*fw)
-	topm, height = topm, height-int(1*fh)
+	leftm += int(2 * fw)
+	width -= int(2 * fw)
+	height -= int(fh)
 
 	c.XRange.Setup(numxtics, numxtics+4, width, leftm, false)
 

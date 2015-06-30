@@ -174,6 +174,9 @@ func (ifi *InterfaceInfo) parseName(b []byte) ([]byte, error) {
 		return nil, errMessageTooShort
 	}
 	l := int(b[0])
+	if l%4 != 0 || 4 > l || l > 64 {
+		return nil, errInvalidExtension
+	}
 	var name [63]byte
 	copy(name[:], b[1:l])
 	ifi.Interface.Name = strings.Trim(string(name[:]), "\000")
