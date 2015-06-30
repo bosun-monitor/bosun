@@ -41,14 +41,14 @@ func NewStatus(ak expr.AlertKey) *State {
 }
 
 func (s *Schedule) GetStatus(ak expr.AlertKey) *State {
-	s.Lock()
+	s.Lock("GetStatus")
 	state := s.status[ak]
 	s.Unlock()
 	return state
 }
 
 func (s *Schedule) GetOrCreateStatus(ak expr.AlertKey) *State {
-	s.Lock()
+	s.Lock("GetOrCreateStatus")
 	state := s.status[ak]
 	if state == nil {
 		state = NewStatus(ak)
@@ -92,7 +92,7 @@ func (s *Schedule) NewRunHistory(start time.Time, cache *cache.Cache) *RunHistor
 func (s *Schedule) RunHistory(r *RunHistory) {
 	checkNotify := false
 	silenced := s.Silenced()
-	s.Lock()
+	s.Lock("RunHistory")
 	defer s.Unlock()
 	for ak, event := range r.Events {
 		state := s.status[ak]
@@ -345,7 +345,7 @@ func (r *RunHistory) GetUnknownAndUnevaluatedAlertKeys(alert string) (unknown, u
 		}
 	}
 	if !anyFound {
-		r.schedule.Lock()
+		r.schedule.Lock("GetUnknownUneval")
 		for ak, st := range r.schedule.status {
 			if ak.Name() != alert {
 				continue
@@ -386,7 +386,7 @@ func (s *Schedule) findUnknownAlerts(now time.Time) []expr.AlertKey {
 	if time.Now().Sub(bosunStartupTime) < s.Conf.CheckFrequency {
 		return keys
 	}
-	s.Lock()
+	s.Lock("FindUnknown")
 	for ak, st := range s.status {
 		if st.Forgotten || st.Status() == StError {
 			continue
