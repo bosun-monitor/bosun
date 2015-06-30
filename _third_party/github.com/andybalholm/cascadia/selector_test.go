@@ -493,6 +493,28 @@ var selectorTests = []selectorTest{
 			`<a id="a3" href="https://www.google.com/news">`,
 		},
 	},
+	{
+		`<form>
+			<label>Username <input type="text" name="username" /></label>
+			<label>Password <input type="password" name="password" /></label>
+			<label>Country
+				<select name="country">
+					<option value="ca">Canada</option>
+					<option value="us">United States</option>
+				</select>
+			</label>
+			<label>Bio <textarea name="bio"></textarea></label>
+			<button>Sign up</button>
+		</form>`,
+		`:input`,
+		[]string{
+			`<input type="text" name="username">`,
+			`<input type="password" name="password">`,
+			`<select name="country">`,
+			`<textarea name="bio">`,
+			`<button>`,
+		},
+	},
 }
 
 func TestSelectors(t *testing.T) {

@@ -533,6 +533,8 @@ func (p *parser) parsePseudoclassSelector() (Selector, error) {
 		return onlyChildSelector(false), nil
 	case "only-of-type":
 		return onlyChildSelector(true), nil
+	case "input":
+		return inputSelector, nil
 	case "empty":
 		return emptyElementSelector, nil
 	}
