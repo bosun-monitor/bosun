@@ -21,6 +21,8 @@ type Conf struct {
 	DisableSelf bool
 	// Freq is the default frequency in seconds for most collectors.
 	Freq int
+	// BatchSize is the number of metrics that will be sent in each batch.
+	BatchSize int
 	// Filter filters collectors matching these terms.
 	Filter []string
 

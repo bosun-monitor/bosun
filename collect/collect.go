@@ -27,7 +27,7 @@ var (
 	MaxQueueLen = 200000
 
 	// BatchSize is the maximum length of data points sent at once to OpenTSDB.
-	BatchSize = 250
+	BatchSize = 500
 
 	// Debug enables debug logging.
 	Debug = false
