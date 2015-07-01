@@ -20,7 +20,7 @@ const influxTimeFmt = "2006-01-02 15:04:05"
 var Influx = map[string]parse.Func{
 	"influx": {
 		Args:   []parse.FuncType{parse.TypeString, parse.TypeString, parse.TypeString, parse.TypeString, parse.TypeString},
-		Return: parse.TypeSeries,
+		Return: parse.TypeSeriesSet,
 		Tags:   influxTag,
 		F:      InfluxQuery,
 	},

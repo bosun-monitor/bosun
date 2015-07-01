@@ -181,6 +181,8 @@ Loop:
 			l.emit(itemRightParen)
 		case r == '"':
 			return lexString
+		case r == '`':
+			return lexStringBacktick
 		case r == '\'':
 			return lexStringSingle
 		case r == ',':
@@ -281,6 +283,18 @@ func lexString(l *lexer) stateFn {
 	for {
 		switch l.next() {
 		case '"':
+			l.emit(itemString)
+			return lexItem
+		case eof:
+			return l.errorf("unterminated string")
+		}
+	}
+}
+
+func lexStringBacktick(l *lexer) stateFn {
+	for {
+		switch l.next() {
+		case '`':
 			l.emit(itemString)
 			return lexItem
 		case eof:
