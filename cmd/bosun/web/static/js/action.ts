@@ -12,10 +12,15 @@ bosunControllers.controller('ActionCtrl', ['$scope', '$http', '$location', '$rou
 	$scope.user = readCookie("action-user");
 	$scope.type = search.type;
 	$scope.notify = true;
-	if (!angular.isArray(search.key)) {
-		$scope.keys = [search.key];
+	if (search.key) {
+		var keys = search.key;
+		if (!angular.isArray(search.key)) {
+			keys = [search.key];
+		}
+		$location.search('key', null);
+		$scope.setKey('action-keys', keys);
 	} else {
-		$scope.keys = search.key;
+		$scope.keys = $scope.getKey('action-keys');
 	}
 	$scope.submit = () => {
 		var data = {
