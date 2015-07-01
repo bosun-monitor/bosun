@@ -43,7 +43,7 @@ Every variable is optional, though you should enable at least 1 backend.
   * Tag value glob matching, for example `avg:metric.name{tag=something-*}`. However single asterists like `tag=*` will stil work.
   * The items page.
   * The graph page's tag list.
-* graphiteHost: Graphite host. Same format as tsdbHost.
+* graphiteHost: an ip, hostname, ip:port, hostname:port or a URL, defaults to standard http/https ports, defaults to "/render" path.  Any non-zero path (even "/" overrides path)
 * logstashElasticHost: Elasticsearch host populated by logstash. Same format as tsdbHost.
 
 #### settings
@@ -144,6 +144,7 @@ Global template functions:
 
 * V: performs variable expansion on the argument and returns it. Needed since normal variable expansion is not done due to the `$` character being used by the Go template syntax.
 * bytes: converts the string input into a human-readable number of bytes with extension KB, MB, GB, etc.
+* pct: formats the float argument as a percentage. For example: `{{5.1 | pct}}` -> `5.10%`.
 * replace: [strings.Replace](http://golang.org/pkg/strings/#Replace)
 * short: Trims the string to everything before the first period. Useful for turning a FQDN into a shortname. For example: `{{short "foo.baz.com"}}` -> `foo`.
 
