@@ -31,7 +31,7 @@ var (
 	flagFilter          = flag.String("f", "", "Filters collectors matching these terms, separated by comma. Overrides Filter in conf file.")
 	flagList            = flag.Bool("l", false, "List available collectors.")
 	flagPrint           = flag.Bool("p", false, "Print to screen instead of sending to a host")
-	flagBatchSize       = flag.Int("b", 0, "OpenTSDB batch size. Used for debugging bad data.")
+	flagBatchSize       = flag.Int("b", 0, "OpenTSDB batch size. Default is 500.")
 	flagFake            = flag.Int("fake", 0, "Generates X fake data points on the test.fake metric per second.")
 	flagDebug           = flag.Bool("d", false, "Enables debug output.")
 	flagDisableMetadata = flag.Bool("m", false, "Disable sending of metadata.")
@@ -151,6 +151,12 @@ func main() {
 	}
 	collectors.DefaultFreq = freq
 	collect.Freq = freq
+	if conf.BatchSize < 0 {
+		slog.Fatal("BatchSize must be > 0")
+	}
+	if conf.BatchSize != 0 {
+		collect.BatchSize = conf.BatchSize
+	}
 	collect.Tags = opentsdb.TagSet{"os": runtime.GOOS}
 	if *flagPrint {
 		collect.Print = true

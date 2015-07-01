@@ -25,7 +25,7 @@ The flags are:
 		Filters collectors matching these terms, separated by
 		comma. Overrides Filter in conf file.
 	-b=0
-		OpenTSDB batch size. Used for debugging bad data.
+		OpenTSDB batch size. Default is 500.
 	-conf=""
 		Location of configuration file. Defaults to scollector.toml in directory of
 		the scollector executable.
@@ -103,6 +103,9 @@ Hostname (string): overrides the system hostname.
 DisableSelf (boolean): disables sending of scollector self metrics.
 
 Freq (integer): is the default frequency in seconds for most collectors.
+
+BatchSize (integer): is the number of metrics that will be sent in each batch.
+Default is 500.
 
 Filter (array of string): filters collectors matching these terms.
 

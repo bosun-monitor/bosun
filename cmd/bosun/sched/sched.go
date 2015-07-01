@@ -73,8 +73,8 @@ func (s *Schedule) Unlock() {
 	start := s.mutexAquired
 	waitTime := s.mutexWaitTime
 	s.mutex.Unlock()
-	collect.Add("bosun.schedule.lock_time", opentsdb.TagSet{"caller": holder, op: "wait"}, waitTime)
-	collect.Add("bosun.schedule.lock_time", opentsdb.TagSet{"caller": holder, op: "hold"}, int64(time.Since(start)/time.Millisecond))
+	collect.Add("bosun.schedule.lock_time", opentsdb.TagSet{"caller": holder, "op": "wait"}, waitTime)
+	collect.Add("bosun.schedule.lock_time", opentsdb.TagSet{"caller": holder, "op": "hold"}, int64(time.Since(start)/time.Millisecond))
 	collect.Add("bosun.schedule.lock_count", opentsdb.TagSet{"caller": holder}, 1)
 }
 
