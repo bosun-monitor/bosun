@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"bosun.org/cmd/scollector/conf"
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
 )
@@ -30,13 +31,13 @@ const (
 )
 
 // SNMPIfaces registers a SNMP Interfaces collector for the given community and host.
-func SNMPIfaces(community, host string) {
+func SNMPIfaces(cfg conf.SNMP) {
 	collectors = append(collectors, &IntervalCollector{
 		F: func() (opentsdb.MultiDataPoint, error) {
-			return c_snmp_ifaces(community, host)
+			return c_snmp_ifaces(cfg.Community, cfg.Host)
 		},
 		Interval: time.Second * 30,
-		name:     fmt.Sprintf("snmp-ifaces-%s", host),
+		name:     fmt.Sprintf("snmp-ifaces-%s", cfg.Host),
 	})
 }
 
