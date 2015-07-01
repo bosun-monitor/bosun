@@ -6,13 +6,14 @@ import (
 	"strings"
 
 	"bosun.org/_third_party/github.com/StackExchange/wmi"
+	"bosun.org/cmd/scollector/conf"
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
 )
 
 var regexesProcesses = []*regexp.Regexp{}
 
-func AddProcessConfig(params ProcessParams) error {
+func AddProcessConfig(params conf.ProcessParams) error {
 	if params.Name == "" {
 		return fmt.Errorf("empty process Name")
 	}
@@ -22,10 +23,6 @@ func AddProcessConfig(params ProcessParams) error {
 	}
 	regexesProcesses = append(regexesProcesses, reg)
 	return nil
-}
-
-type ProcessParams struct {
-	Name string
 }
 
 func WatchProcesses() {
