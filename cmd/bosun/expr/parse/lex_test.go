@@ -97,14 +97,14 @@ var lexTests = []lexTest{
 		{itemNumber, 0, "1.2e-4"},
 		tEOF,
 	}},
-	{"expression", `avg(q("sum:sys.cpu.user{host=*-web*}", "1m")) < 0.2 || avg(q("sum:sys.cpu.user{host=*-web*}", "1m")) > 0.4`, []item{
+	{"expression", "avg(q(\"sum:sys.cpu.user{host=*-web*}\", `1m`)) < 0.2 || avg(q(`sum:sys.cpu.user{host=*-web*}`, \"1m\")) > 0.4", []item{
 		{itemFunc, 0, "avg"},
 		tLpar,
 		{itemFunc, 0, "q"},
 		tLpar,
 		{itemString, 0, `"sum:sys.cpu.user{host=*-web*}"`},
 		tComma,
-		{itemString, 0, `"1m"`},
+		{itemString, 0, "`1m`"},
 		tRpar,
 		tRpar,
 		tLt,
@@ -114,7 +114,7 @@ var lexTests = []lexTest{
 		tLpar,
 		{itemFunc, 0, "q"},
 		tLpar,
-		{itemString, 0, `"sum:sys.cpu.user{host=*-web*}"`},
+		{itemString, 0, "`sum:sys.cpu.user{host=*-web*}`"},
 		tComma,
 		{itemString, 0, `"1m"`},
 		tRpar,
@@ -125,6 +125,9 @@ var lexTests = []lexTest{
 	}},
 	// errors
 	{"unclosed quote", "\"", []item{
+		{itemError, 0, "unterminated string"},
+	}},
+	{"unclosed backtick", "`", []item{
 		{itemError, 0, "unterminated string"},
 	}},
 }
