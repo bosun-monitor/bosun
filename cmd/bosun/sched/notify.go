@@ -38,7 +38,7 @@ func (s *Schedule) Notify(st *State, n *conf.Notification) {
 // duration until the soonest notification triggers.
 func (s *Schedule) CheckNotifications() time.Duration {
 	silenced := s.Silenced()
-	s.Lock()
+	s.Lock("CheckNotifications")
 	defer s.Unlock()
 	notifications := s.Notifications
 	s.Notifications = nil

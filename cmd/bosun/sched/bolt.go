@@ -24,7 +24,7 @@ var savePending bool
 
 func (s *Schedule) Save() {
 	go func() {
-		s.Lock()
+		s.Lock("Save")
 		defer s.Unlock()
 		if savePending {
 			return
@@ -124,7 +124,7 @@ func (s *Schedule) save() {
 func (s *Schedule) RestoreState() error {
 	log.Println("RestoreState")
 	start := time.Now()
-	s.Lock()
+	s.Lock("RestoreState")
 	defer s.Unlock()
 	s.Search.Lock()
 	defer s.Search.Unlock()

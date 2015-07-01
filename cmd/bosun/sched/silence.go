@@ -67,7 +67,7 @@ func (s Silence) ID() string {
 func (s *Schedule) Silenced() map[expr.AlertKey]Silence {
 	aks := make(map[expr.AlertKey]Silence)
 	now := time.Now()
-	s.Lock()
+	s.Lock("Silenced")
 	for _, si := range s.Silence {
 		for ak := range s.status {
 			if si.Silenced(now, ak.Name(), ak.Group()) {
@@ -108,7 +108,7 @@ func (s *Schedule) AddSilence(start, end time.Time, alert, tagList string, forge
 		}
 		si.Tags = tags
 	}
-	s.Lock()
+	s.Lock("AddSilence")
 	defer s.Unlock()
 	if confirm {
 		delete(s.Silence, edit)
@@ -126,7 +126,7 @@ func (s *Schedule) AddSilence(start, end time.Time, alert, tagList string, forge
 }
 
 func (s *Schedule) ClearSilence(id string) error {
-	s.Lock()
+	s.Lock("ClearSilence")
 	delete(s.Silence, id)
 	s.Unlock()
 	s.Save()
