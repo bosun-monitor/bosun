@@ -24,6 +24,7 @@ import (
 	"bosun.org/collect"
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
+	"bosun.org/version"
 )
 
 var (
@@ -108,6 +109,7 @@ func Listen(listenAddr string, devMode bool, tsdbHost string) error {
 	router.Handle("/api/tagv/{tagk}", JSON(TagValuesByTagKey))
 	router.Handle("/api/tagv/{tagk}/{metric}", JSON(TagValuesByMetricTagKey))
 	router.Handle("/api/run", JSON(Run))
+	router.HandleFunc("/api/version", Version)
 	http.Handle("/", miniprofiler.NewHandler(Index))
 	http.Handle("/api/", router)
 	fs := http.FileServer(webFS)
@@ -581,4 +583,8 @@ func Run(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfac
 
 func Host(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	return schedule.Host(r.FormValue("filter")), nil
+}
+
+func Version(w http.ResponseWriter, r *http.Request) {
+	io.WriteString(w, version.GetVersionInfo("bosun"))
 }
