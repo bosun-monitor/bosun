@@ -160,7 +160,7 @@ See the [scollector docs](http://godoc.org/bosun.org/cmd/scollector) for more in
 Next to OpenTSDB, Bosun also supports querying Graphite and Logstash-Elasticsearch.
 You can execute, view and graph expressions, develop and run Graphite/LS alerting rules, get notifications and use the dashboard.
 The OpenTSDB specific feature, such as data proxying and the built in general purpose graphing interface don't apply here.
-The alerting rules look the same, in fact the only difference is you will query data using [graphite specific functions](http://bosun.org/configuration.html#graphite-query-functions) such as graphiteQuery and graphiteBand.
+The alerting rules look the same, in fact the only difference is you will query data using [graphite specific functions](http://bosun.org/expressions.html#graphite-query-functions) such as graphiteQuery and graphiteBand.
 
 Start Graphite in docker:
 
