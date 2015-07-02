@@ -1,4 +1,4 @@
-interface IExprScope extends ng.IScope {
+interface IExprScope extends RootScope {
 	expr: string;
 	error: string;
 	running: string;

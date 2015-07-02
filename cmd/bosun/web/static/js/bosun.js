@@ -132,6 +132,18 @@ bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', '$q', '$r
                 default: return prefix + "default";
             }
         };
+        $scope.values = {};
+        $scope.setKey = function (key, value) {
+            if (value === undefined) {
+                delete $scope.values[key];
+            }
+            else {
+                $scope.values[key] = value;
+            }
+        };
+        $scope.getKey = function (key) {
+            return $scope.values[key];
+        };
         var scheduleFilter;
         $scope.refresh = function (filter) {
             var d = $q.defer();
@@ -315,11 +327,16 @@ bosunControllers.controller('ActionCtrl', ['$scope', '$http', '$location', '$rou
         $scope.user = readCookie("action-user");
         $scope.type = search.type;
         $scope.notify = true;
-        if (!angular.isArray(search.key)) {
-            $scope.keys = [search.key];
+        if (search.key) {
+            var keys = search.key;
+            if (!angular.isArray(search.key)) {
+                keys = [search.key];
+            }
+            $location.search('key', null);
+            $scope.setKey('action-keys', keys);
         }
         else {
-            $scope.keys = search.key;
+            $scope.keys = $scope.getKey('action-keys');
         }
         $scope.submit = function () {
             var data = {
