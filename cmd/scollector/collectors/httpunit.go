@@ -36,7 +36,7 @@ func HTTPUnitPlans(name string, plans *httpunit.Plans) {
 			return cHTTPUnit(plans)
 		},
 		name:     fmt.Sprintf("c_httpunit_%s", name),
-		Interval: time.Minute * 15,
+		Interval: time.Minute * 5,
 	})
 }
 
