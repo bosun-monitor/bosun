@@ -42,10 +42,14 @@ func SNMPIfaces(cfg conf.SNMP) {
 }
 
 func switch_bond(metric, iname string) string {
-	if strings.Contains(iname, "port-channel") {
+	if isBondInterface(iname) {
 		return "os.net.bond" + strings.TrimPrefix(metric, "os.net")
 	}
 	return metric
+}
+
+func isBondInterface(iname string) bool {
+	return strings.Contains(iname, "port-channel")
 }
 
 func c_snmp_ifaces(community, host string) (opentsdb.MultiDataPoint, error) {
@@ -79,6 +83,7 @@ func c_snmp_ifaces(community, host string) (opentsdb.MultiDataPoint, error) {
 		if err != nil {
 			return err
 		}
+		var sum int64
 		for k, v := range m {
 			tags := opentsdb.TagSet{
 				"host":      host,
@@ -86,8 +91,15 @@ func c_snmp_ifaces(community, host string) (opentsdb.MultiDataPoint, error) {
 				"iface":     fmt.Sprintf("%d", k),
 				"iname":     names[k],
 			}
+			if iVal, ok := v.(int64); ok && !isBondInterface(names[k]) {
+				sum += iVal
+			}
 			Add(&md, switch_bond(metric, names[k]), v, tags, metadata.Unknown, metadata.None, "")
 			metadata.AddMeta("", tags, "alias", aliases[k], false)
+		}
+		if metric == osNetBytes {
+			tags := opentsdb.TagSet{"host": host, "direction": dir}
+			Add(&md, osNetBytes+".total", sum, tags, metadata.Counter, metadata.Bytes, "")
 		}
 		return nil
 	}
