@@ -360,6 +360,14 @@ function eraseCookie(name) {
 	createCookie(name, "", -1);
 }
 
+function getUser() {
+	return readCookie('action-user');
+}
+
+function setUser(name) {
+	createCookie('action-user', name, 1000);
+}
+
 // from: http://stackoverflow.com/a/15267754/864236
 
 bosunApp.filter('reverse', function() {

@@ -313,6 +313,12 @@ function readCookie(name) {
 function eraseCookie(name) {
     createCookie(name, "", -1);
 }
+function getUser() {
+    return readCookie('action-user');
+}
+function setUser(name) {
+    createCookie('action-user', name, 1000);
+}
 // from: http://stackoverflow.com/a/15267754/864236
 bosunApp.filter('reverse', function () {
     return function (items) {
@@ -324,7 +330,7 @@ bosunApp.filter('reverse', function () {
 });
 bosunControllers.controller('ActionCtrl', ['$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
         var search = $location.search();
-        $scope.user = readCookie("action-user");
+        $scope.user = getUser();
         $scope.type = search.type;
         $scope.notify = true;
         if (search.key) {
@@ -346,7 +352,7 @@ bosunControllers.controller('ActionCtrl', ['$scope', '$http', '$location', '$rou
                 Keys: $scope.keys,
                 Notify: $scope.notify
             };
-            createCookie("action-user", $scope.user, 1000);
+            setUser($scope.user);
             $http.post('/api/action', data)
                 .success(function (data) {
                 $location.url('/');
@@ -2220,13 +2226,49 @@ bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$ro
         $scope.tags = search.tags;
         $scope.edit = search.edit;
         $scope.forget = search.forget;
+        $scope.user = getUser();
+        $scope.message = search.message;
         if (!$scope.end && !$scope.duration) {
             $scope.duration = '1h';
+        }
+        function filter(data, startBefore, startAfter, endAfter, endBefore) {
+            var ret = [];
+            _.each(data, function (v) {
+                var s = moment(v.Start).utc();
+                var e = moment(v.End).utc();
+                if (startBefore && s > startBefore) {
+                    return;
+                }
+                if (startAfter && s < startAfter) {
+                    return;
+                }
+                if (endAfter && e < endAfter) {
+                    return;
+                }
+                if (endBefore && e > endBefore) {
+                    return;
+                }
+                ret.push(v);
+            });
+            return ret;
         }
         function get() {
             $http.get('/api/silence/get')
                 .success(function (data) {
-                $scope.silences = data;
+                $scope.silences = [];
+                var now = moment.utc();
+                $scope.silences.push({
+                    name: 'Active',
+                    silences: filter(data, now, null, now, null)
+                });
+                $scope.silences.push({
+                    name: 'Upcoming',
+                    silences: filter(data, null, now, null, null)
+                });
+                $scope.silences.push({
+                    name: 'Past',
+                    silences: filter(data, null, null, null, now).slice(0, 25)
+                });
             })
                 .error(function (error) {
                 $scope.error = error;
@@ -2246,7 +2288,9 @@ bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$ro
                 alert: $scope.alert,
                 tags: tags.join(','),
                 edit: $scope.edit,
-                forget: $scope.forget ? 'true' : null
+                forget: $scope.forget ? 'true' : null,
+                user: $scope.user,
+                message: $scope.message
             };
             return data;
         }
@@ -2269,6 +2313,7 @@ bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$ro
             });
         }
         $scope.test = function () {
+            setUser($scope.user);
             $location.search('start', $scope.start || null);
             $location.search('end', $scope.end || null);
             $location.search('duration', $scope.duration || null);
@@ -2276,6 +2321,7 @@ bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$ro
             $location.search('hosts', $scope.hosts || null);
             $location.search('tags', $scope.tags || null);
             $location.search('forget', $scope.forget || null);
+            $location.search('message', $scope.message || null);
             $route.reload();
         };
         $scope.confirm = function () {
