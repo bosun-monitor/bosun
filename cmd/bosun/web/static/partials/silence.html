@@ -46,6 +46,18 @@
 		</div>
 	</div>
 	<div class="form-group">
+		<label class="col-sm-2 control-label">username</label>
+		<div class="col-sm-6">
+			<input type="text" class="form-control" ng-model="user">
+		</div>
+	</div>
+	<div class="form-group">
+		<label class="col-sm-2 control-label">message</label>
+		<div class="col-sm-10">
+			<input type="text" class="form-control" ng-model="message">
+		</div>
+	</div>
+	<div class="form-group">
 		<div class="col-sm-offset-2 col-sm-10">
 			<div class="checkbox">
 				<label>
@@ -88,6 +100,8 @@
 					<th>end</th>
 					<th>alert</th>
 					<th>tags</th>
+					<th>user</th>
+					<th>message</th>
 					<th>edit</th>
 				</tr>
 			</thead>
@@ -97,6 +111,8 @@
 					<td ts-time="s.End"></td>
 					<td ng-bind="s.Alert"></td>
 					<td ng-bind="s.Tags"></td>
+					<td ng-bind="s.User"></td>
+					<td ng-bind="s.Message"></td>
 					<td>
 						<a class="btn btn-primary btn-xs" ng-href="/silence?start={{time(s.Start)}}&end={{time(s.End)}}&alert={{s.Alert}}&tags={{encode(s.Tags)}}{{s.Forget ? '&forget': ''}}&edit={{id}}">edit</a>
 						<button class="btn btn-danger btn-xs" ng-click="clear(id)">clear</button>
