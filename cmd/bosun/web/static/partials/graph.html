@@ -3,6 +3,10 @@
 		margin-bottom: 15px;
 		margin-top: 15px;
 	}
+	.dropdown-menu {
+		overflow-y: auto;
+		max-height: 500px;
+	}
 </style>
 <div class="row">
 	<div class="col-sm-12">
@@ -78,7 +82,7 @@
 					<div class="form-group">
 						<label class="col-sm-4 control-label">Metric</label>
 						<div class="col-sm-8">
-							<input type="text" class="form-control" ng-model="t.metric" ng-options="m for m in metrics" ng-change="GetTagKByMetric($index)" ng-init="GetTagKByMetric($index)" limit="30" bs-typeahead>
+							<input type="text" class="form-control" ng-model="t.metric" ng-options="m for m in metrics" ng-change="GetTagKByMetric($index)" ng-init="GetTagKByMetric($index)" limit="100" bs-typeahead min-length="0" bs-typeahead>
 						</div>
 					</div>
 					<div class="form-group">
@@ -116,9 +120,9 @@
 				</form>
 				<form class="form-horizontal col-sm-4">
 					<div class="form-group" ng-repeat="k in sorted_tagks[$index]">
-						<label class="col-sm-4 control-label" tooltip title="Tag values for the tag. Can have multiple seperate by | which will return a time series for each one. Can also be * which returns a time series for each possible value." ng-bind="k"></label>
+						<label class="col-sm-4 control-label" tooltip title="Tag values for the tag. Can have multiple seperate by | which will return a time series for each one. Can also be * which returns a time series for each possible value.">{{k}} ({{tagvs[$parent.$index][k].length}})</label>
 						<div class="col-sm-8">
-							<input type="text" class="form-control" ng-model="t.tags[k]" ng-options="tv for tv in tagvs[$parent.$index][k]" bs-typeahead ng-disabled="!t.metric_tags[k]">
+							<input type="text" class="form-control" ng-model="t.tags[k]" ng-options="tv for tv in tagvs[$parent.$index][k]" bs-typeahead min-length="0" limit="100" ng-disabled="!t.metric_tags[k]">
 						</div>
 					</div>
 				</form>
