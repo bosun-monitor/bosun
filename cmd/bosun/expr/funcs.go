@@ -265,11 +265,23 @@ var builtins = map[string]parse.Func{
 		Tags:   tagFirst,
 		F:      DropGe,
 	},
+	"dropg": {
+		Args:   []parse.FuncType{parse.TypeSeriesSet, parse.TypeScalar},
+		Return: parse.TypeSeriesSet,
+		Tags:   tagFirst,
+		F:      DropG,
+	},
 	"drople": {
 		Args:   []parse.FuncType{parse.TypeSeriesSet, parse.TypeScalar},
 		Return: parse.TypeSeriesSet,
 		Tags:   tagFirst,
 		F:      DropLe,
+	},
+	"dropl": {
+		Args:   []parse.FuncType{parse.TypeSeriesSet, parse.TypeScalar},
+		Return: parse.TypeSeriesSet,
+		Tags:   tagFirst,
+		F:      DropL,
 	},
 	"dropna": {
 		Args:   []parse.FuncType{parse.TypeSeriesSet},
@@ -390,8 +402,18 @@ func DropGe(e *State, T miniprofiler.Timer, series *Results, threshold float64) 
 	return DropValues(e, T, series, threshold, dropFunction)
 }
 
+func DropG(e *State, T miniprofiler.Timer, series *Results, threshold float64) (*Results, error) {
+	dropFunction := func(value float64, threshold float64) bool { return value > threshold }
+	return DropValues(e, T, series, threshold, dropFunction)
+}
+
 func DropLe(e *State, T miniprofiler.Timer, series *Results, threshold float64) (*Results, error) {
 	dropFunction := func(value float64, threshold float64) bool { return value <= threshold }
+	return DropValues(e, T, series, threshold, dropFunction)
+}
+
+func DropL(e *State, T miniprofiler.Timer, series *Results, threshold float64) (*Results, error) {
+	dropFunction := func(value float64, threshold float64) bool { return value < threshold }
 	return DropValues(e, T, series, threshold, dropFunction)
 }
 
