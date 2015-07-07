@@ -344,13 +344,22 @@ Returns series smoothed using Holt-Winters double exponential smoothing. Alpha
 (scalar) is the data smoothing factor. Beta (scalar) is the trend smoothing
 factor.
 
+## dropg(seriesSet, scalar) seriesSet
+
+Remove any values greater than number from a series. Will error if this operation results in an empty series.
+
 ## dropge(seriesSet, scalar) seriesSet
 
 Remove any values greater than or equal to number from a series. Will error if this operation results in an empty series.
 
+## dropl(seriesSet, scalar) seriesSet
+
+Remove any values lower than number from a series. Will error if this operation results in an empty series.
+
 ## drople(seriesSet, scalar) seriesSet
 
 Remove any values lower than or equal to number from a series. Will error if this operation results in an empty series.
+
 
 ## dropna(seriesSet) seriesSet
 
