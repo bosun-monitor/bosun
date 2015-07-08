@@ -6,10 +6,12 @@ package collect // import "bosun.org/collect"
 
 import (
 	"fmt"
+	"math"
 	"net/http"
 	"net/url"
 	"os"
 	"runtime"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -57,6 +59,7 @@ var (
 	counters            = make(map[string]*addMetric)
 	sets                = make(map[string]*setMetric)
 	puts                = make(map[string]*putMetric)
+	aggs                = make(map[string]*agMetric)
 	client              = &http.Client{
 		Transport: &timeoutTransport{Transport: new(http.Transport)},
 		Timeout:   time.Minute,
@@ -176,6 +179,99 @@ func setHostName() error {
 	if err := checkClean(osHostname, "host tag"); err != nil {
 		return err
 	}
+	return nil
+}
+
+type agMetric struct {
+	metric string
+	ts     opentsdb.TagSet
+	values []float64
+}
+
+func AggregateMeta(metric string, desc string, rateType metadata.RateType, unit metadata.Unit) {
+	agStrings := []string{"avg", "count", "min", "median", "max", "95", "99"}
+	for _, ag := range agStrings {
+		metadata.AddMetricMeta(metric+"_"+ag, rateType, unit, desc)
+	}
+}
+
+func (am *agMetric) Process(now int64) {
+	var avg float64
+	for _, v := range am.values {
+		avg += v
+	}
+	avg /= float64(len(am.values))
+	extRoot := metricRoot + am.metric
+	tchan <- &opentsdb.DataPoint{
+		Metric:    extRoot + "_avg",
+		Timestamp: now,
+		Value:     avg,
+		Tags:      am.ts,
+	}
+	tchan <- &opentsdb.DataPoint{
+		Metric:    extRoot + "_count",
+		Timestamp: now,
+		Value:     len(am.values),
+		Tags:      am.ts,
+	}
+	sort.Float64s(am.values)
+	percentile := func(p float64) float64 {
+		if p <= 0 {
+			return am.values[0]
+		}
+		if p >= 1 {
+			return am.values[len(am.values)-1]
+		}
+		i := p * float64(len(am.values)-1)
+		i = math.Ceil(i)
+		return am.values[int(i)]
+	}
+	tchan <- &opentsdb.DataPoint{
+		Metric:    extRoot + "_min",
+		Timestamp: now,
+		Value:     percentile(0),
+		Tags:      am.ts,
+	}
+	tchan <- &opentsdb.DataPoint{
+		Metric:    extRoot + "_median",
+		Timestamp: now,
+		Value:     percentile(.5),
+		Tags:      am.ts,
+	}
+	tchan <- &opentsdb.DataPoint{
+		Metric:    extRoot + "_max",
+		Timestamp: now,
+		Value:     percentile(1),
+		Tags:      am.ts,
+	}
+	tchan <- &opentsdb.DataPoint{
+		Metric:    extRoot + "_95",
+		Timestamp: now,
+		Value:     percentile(.95),
+		Tags:      am.ts,
+	}
+	tchan <- &opentsdb.DataPoint{
+		Metric:    extRoot + "_99",
+		Timestamp: now,
+		Value:     percentile(.99),
+		Tags:      am.ts,
+	}
+}
+
+func Sample(metric string, ts opentsdb.TagSet, v float64) error {
+	if err := check(metric, &ts); err != nil {
+		return err
+	}
+	tss := metric + ts.String()
+	mlock.Lock()
+	if aggs[tss] == nil {
+		aggs[tss] = &agMetric{
+			metric: metric,
+			ts:     ts.Copy(),
+		}
+	}
+	aggs[tss].values = append(aggs[tss].values, v)
+	mlock.Unlock()
 	return nil
 }
 
@@ -311,7 +407,11 @@ func collect() {
 			}
 			tchan <- dp
 		}
+		for _, am := range aggs {
+			am.Process(now)
+		}
 		puts = make(map[string]*putMetric)
+		aggs = make(map[string]*agMetric)
 		mlock.Unlock()
 		time.Sleep(Freq)
 	}
