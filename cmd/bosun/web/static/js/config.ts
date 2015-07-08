@@ -221,6 +221,22 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 		}
 		$scope.duration = d;
 	};
+	$scope.setDuration = () => {
+		var from = moment.utc($scope.fromDate + ' ' + $scope.fromTime);
+		var to = moment.utc($scope.toDate + ' ' + $scope.toTime);
+		if (!from.isValid() || !to.isValid()) {
+			return;
+		}
+		var diff = from.diff(to);
+		if (!diff) {
+			return;
+		}
+		var duration = +$scope.duration;
+		if (duration < 1) {
+			return;
+		}
+		$scope.intervals = Math.abs(Math.round(diff / duration / 1000 / 60));
+	};
 
 	$scope.selectAlert = (alert:string) =>{
 		$scope.selected_alert = alert;
