@@ -67,16 +67,17 @@ var (
 )
 
 const (
-	descCollectDropped      = "Counter of dropped data points due to the queue being full."
-	descCollectSent         = "Counter of data points sent to the server."
-	descCollectQueued       = "Total number of items currently queued and waiting to be sent to the server."
-	descCollectAlloc        = "Total number of bytes allocated and still in use by the runtime (via runtime.ReadMemStats)."
-	descCollectGoRoutines   = "Total number of goroutines that currently exist (via runtime.NumGoroutine)."
-	descCollectPostDuration = "Total number of milliseconds it took to send an HTTP POST request to the server."
-	descCollectPostCount    = "Counter of batches sent to the server."
-	descCollectPostError    = "Counter of errors received when sending a batch to the server."
-	descCollectPostBad      = "Counter of HTTP POST requests where resp.StatusCode != http.StatusNoContent."
-	descCollectPostRestore  = "Counter of data points restored from batches that could not be sent to the server."
+	descCollectAlloc             = "Total number of bytes allocated and still in use by the runtime (via runtime.ReadMemStats)."
+	descCollectDropped           = "Counter of dropped data points due to the queue being full."
+	descCollectGoRoutines        = "Total number of goroutines that currently exist (via runtime.NumGoroutine)."
+	descCollectPostBad           = "Counter of HTTP POST requests where resp.StatusCode != http.StatusNoContent."
+	descCollectPostCount         = "Counter of batches sent to the server."
+	descCollectPostDuration      = "How many milliseconds it took to send HTTP POST requests to the server."
+	descCollectPostError         = "Counter of errors received when sending a batch to the server."
+	descCollectPostRestore       = "Counter of data points restored from batches that could not be sent to the server."
+	descCollectPostTotalDuration = "Total number of milliseconds it took to send an HTTP POST request to the server."
+	descCollectQueued            = "Total number of items currently queued and waiting to be sent to the server."
+	descCollectSent              = "Counter of data points sent to the server."
 )
 
 type timeoutTransport struct {
@@ -148,7 +149,8 @@ func InitChan(tsdbhost *url.URL, root string, ch chan *opentsdb.DataPoint) error
 	metadata.AddMetricMeta(metricRoot+"collect.queued", metadata.Gauge, metadata.Item, descCollectQueued)
 	metadata.AddMetricMeta(metricRoot+"collect.alloc", metadata.Gauge, metadata.Bytes, descCollectAlloc)
 	metadata.AddMetricMeta(metricRoot+"collect.goroutines", metadata.Gauge, metadata.Count, descCollectGoRoutines)
-	metadata.AddMetricMeta(metricRoot+"collect.post.total_duration", metadata.Counter, metadata.MilliSecond, descCollectPostDuration)
+	metadata.AddMetricMeta(metricRoot+"collect.post.total_duration", metadata.Counter, metadata.MilliSecond, descCollectPostTotalDuration)
+	AggregateMeta(metricRoot+"collect.post.duration", metadata.MilliSecond, descCollectPostDuration)
 	metadata.AddMetricMeta(metricRoot+"collect.post.count", metadata.Counter, metadata.PerSecond, descCollectPostCount)
 	metadata.AddMetricMeta(metricRoot+"collect.post.error", metadata.Counter, metadata.PerSecond, descCollectPostError)
 	metadata.AddMetricMeta(metricRoot+"collect.post.bad_status", metadata.Counter, metadata.PerSecond, descCollectPostBad)
@@ -188,10 +190,14 @@ type agMetric struct {
 	values []float64
 }
 
-func AggregateMeta(metric string, desc string, rateType metadata.RateType, unit metadata.Unit) {
+func AggregateMeta(metric string, unit metadata.Unit, desc string) {
 	agStrings := []string{"avg", "count", "min", "median", "max", "95", "99"}
 	for _, ag := range agStrings {
-		metadata.AddMetricMeta(metric+"_"+ag, rateType, unit, desc)
+		if ag == "count" {
+			metadata.AddMetricMeta(metric+"_"+ag, metadata.Gauge, metadata.Count, "The number of samples per aggregation.")
+			continue
+		}
+		metadata.AddMetricMeta(metric+"_"+ag, metadata.Gauge, unit, desc)
 	}
 }
 
