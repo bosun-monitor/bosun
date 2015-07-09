@@ -73,6 +73,7 @@ func sendBatch(batch []*opentsdb.DataPoint) {
 		defer resp.Body.Close()
 	}
 	d := time.Since(now).Nanoseconds() / 1e6
+	Sample("collect.post.duration", Tags, float64(d))
 	Add("collect.post.total_duration", Tags, d)
 	Add("collect.post.count", Tags, 1)
 	// Some problem with connecting to the server; retry later.
