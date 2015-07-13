@@ -143,31 +143,32 @@ func TestQueryExpr(t *testing.T) {
 		},
 	}
 	d := time.Date(1970, time.January, 1, 0, 0, 0, 0, time.UTC)
-	tests := map[string]map[string]map[time.Time]float64{
+	tests := map[string]map[string]Value{
 		`window("avg:m{a=*}", "5m", "1h", 2, "max")`: {
-			"a=b": {
+			"a=b": Series{
 				d: 2,
 				d.Add(time.Second * 2): 6,
 			},
-			"a=c": {
+			"a=c": Series{
 				d.Add(time.Second * 1): 8,
 			},
-			"a=d": {
+			"a=d": Series{
 				d.Add(time.Second * 8): 9,
 			},
 		},
 		`window("avg:m{a=*}", "5m", "1h", 2, "avg")`: {
-			"a=b": {
+			"a=b": Series{
 				d: 1.5,
 				d.Add(time.Second * 2): 5,
 			},
-			"a=c": {
+			"a=c": Series{
 				d.Add(time.Second * 1): 7.5,
 			},
-			"a=d": {
+			"a=d": Series{
 				d.Add(time.Second * 8): 8.5,
 			},
 		},
+		`abs(-1)`: {"": Number(1)},
 	}
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -214,15 +215,34 @@ func TestQueryExpr(t *testing.T) {
 				t.Errorf("missing tag %v", tag)
 				continue
 			}
-			val := r.Value.(Series)
-			if len(val) != len(ex) {
-				t.Errorf("unmatched values in %v", tag)
-			}
-			for k, v := range ex {
-				got := val[k]
-				if got != v {
-					t.Errorf("%v, %v: got %v, expected %v", tag, k, got, v)
+			switch val := r.Value.(type) {
+			case Series:
+				ex, ok := ex.(Series)
+				if !ok {
+					t.Errorf("%v: bad type %T", exprText, ex)
+					continue
 				}
+				if len(val) != len(ex) {
+					t.Errorf("unmatched values in %v", tag)
+					continue
+				}
+				for k, v := range ex {
+					got := val[k]
+					if got != v {
+						t.Errorf("%v, %v: got %v, expected %v", tag, k, got, v)
+					}
+				}
+			case Number:
+				ex, ok := ex.(Number)
+				if !ok {
+					t.Errorf("%v: bad type %T", exprText, ex)
+					continue
+				}
+				if ex != val {
+					t.Errorf("%v: got %v, expected %v", exprText, r.Value, ex)
+				}
+			default:
+				t.Errorf("%v: unknown type %T", exprText, r.Value)
 			}
 		}
 	}

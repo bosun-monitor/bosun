@@ -160,7 +160,7 @@ var builtins = map[string]parse.Func{
 		F:      First,
 	},
 	"forecastlr": {
-		Args:   []parse.FuncType{parse.TypeSeriesSet, parse.TypeScalar},
+		Args:   []parse.FuncType{parse.TypeSeriesSet, parse.TypeNumberSet},
 		Return: parse.TypeNumberSet,
 		Tags:   tagFirst,
 		F:      Forecast_lr,
@@ -196,7 +196,7 @@ var builtins = map[string]parse.Func{
 		F:      Min,
 	},
 	"percentile": {
-		Args:   []parse.FuncType{parse.TypeSeriesSet, parse.TypeScalar},
+		Args:   []parse.FuncType{parse.TypeSeriesSet, parse.TypeNumberSet},
 		Return: parse.TypeNumberSet,
 		Tags:   tagFirst,
 		F:      Percentile,
@@ -260,25 +260,25 @@ var builtins = map[string]parse.Func{
 		F:      Des,
 	},
 	"dropge": {
-		Args:   []parse.FuncType{parse.TypeSeriesSet, parse.TypeScalar},
+		Args:   []parse.FuncType{parse.TypeSeriesSet, parse.TypeNumberSet},
 		Return: parse.TypeSeriesSet,
 		Tags:   tagFirst,
 		F:      DropGe,
 	},
 	"dropg": {
-		Args:   []parse.FuncType{parse.TypeSeriesSet, parse.TypeScalar},
+		Args:   []parse.FuncType{parse.TypeSeriesSet, parse.TypeNumberSet},
 		Return: parse.TypeSeriesSet,
 		Tags:   tagFirst,
 		F:      DropG,
 	},
 	"drople": {
-		Args:   []parse.FuncType{parse.TypeSeriesSet, parse.TypeScalar},
+		Args:   []parse.FuncType{parse.TypeSeriesSet, parse.TypeNumberSet},
 		Return: parse.TypeSeriesSet,
 		Tags:   tagFirst,
 		F:      DropLe,
 	},
 	"dropl": {
-		Args:   []parse.FuncType{parse.TypeSeriesSet, parse.TypeScalar},
+		Args:   []parse.FuncType{parse.TypeSeriesSet, parse.TypeNumberSet},
 		Return: parse.TypeSeriesSet,
 		Tags:   tagFirst,
 		F:      DropL,
@@ -380,39 +380,41 @@ func Duration(e *State, T miniprofiler.Timer, d string) (*Results, error) {
 	}, nil
 }
 
-func DropValues(e *State, T miniprofiler.Timer, series *Results, threshold float64, dropFunction func(float64, float64) bool) (*Results, error) {
-	for _, res := range series.Results {
+func DropValues(e *State, T miniprofiler.Timer, series *Results, threshold *Results, dropFunction func(float64, float64) bool) (*Results, error) {
+	f := func(res *Results, s *Result, floats []float64) error {
 		nv := make(Series)
-		for k, v := range res.Value.Value().(Series) {
-			if !dropFunction(float64(v), threshold) {
+		for k, v := range s.Value.Value().(Series) {
+			if !dropFunction(float64(v), floats[0]) {
 				//preserve values which should not be discarded
 				nv[k] = v
 			}
 		}
 		if len(nv) == 0 {
-			return nil, fmt.Errorf("series %s is empty", res.Group)
+			return fmt.Errorf("series %s is empty", s.Group)
 		}
-		res.Value = nv
+		s.Value = nv
+		res.Results = append(res.Results, s)
+		return nil
 	}
-	return series, nil
+	return match(f, series, threshold)
 }
 
-func DropGe(e *State, T miniprofiler.Timer, series *Results, threshold float64) (*Results, error) {
+func DropGe(e *State, T miniprofiler.Timer, series *Results, threshold *Results) (*Results, error) {
 	dropFunction := func(value float64, threshold float64) bool { return value >= threshold }
 	return DropValues(e, T, series, threshold, dropFunction)
 }
 
-func DropG(e *State, T miniprofiler.Timer, series *Results, threshold float64) (*Results, error) {
+func DropG(e *State, T miniprofiler.Timer, series *Results, threshold *Results) (*Results, error) {
 	dropFunction := func(value float64, threshold float64) bool { return value > threshold }
 	return DropValues(e, T, series, threshold, dropFunction)
 }
 
-func DropLe(e *State, T miniprofiler.Timer, series *Results, threshold float64) (*Results, error) {
+func DropLe(e *State, T miniprofiler.Timer, series *Results, threshold *Results) (*Results, error) {
 	dropFunction := func(value float64, threshold float64) bool { return value <= threshold }
 	return DropValues(e, T, series, threshold, dropFunction)
 }
 
-func DropL(e *State, T miniprofiler.Timer, series *Results, threshold float64) (*Results, error) {
+func DropL(e *State, T miniprofiler.Timer, series *Results, threshold *Results) (*Results, error) {
 	dropFunction := func(value float64, threshold float64) bool { return value < threshold }
 	return DropValues(e, T, series, threshold, dropFunction)
 }
@@ -421,7 +423,7 @@ func DropNA(e *State, T miniprofiler.Timer, series *Results) (*Results, error) {
 	dropFunction := func(value float64, threshold float64) bool {
 		return math.IsNaN(float64(value)) || math.IsInf(float64(value), 0)
 	}
-	return DropValues(e, T, series, 0, dropFunction)
+	return DropValues(e, T, series, fromScalar(0), dropFunction)
 }
 
 func parseGraphiteResponse(req *graphite.Request, s *graphite.Response, formatTags []string) ([]*Result, error) {
@@ -874,7 +876,7 @@ func Change(e *State, T miniprofiler.Timer, query, sduration, eduration string) 
 	if err != nil {
 		return
 	}
-	r, err = reduce(e, T, r, change, (sd - ed).Seconds())
+	r, err = reduce(e, T, r, change, fromScalar((sd - ed).Seconds()))
 	return
 }
 
@@ -882,22 +884,53 @@ func change(dps Series, args ...float64) float64 {
 	return avg(dps) * args[0]
 }
 
-func reduce(e *State, T miniprofiler.Timer, series *Results, F func(Series, ...float64) float64, args ...float64) (*Results, error) {
+func fromScalar(f float64) *Results {
+	return &Results{
+		Results: ResultSlice{
+			&Result{
+				Value: Number(f),
+			},
+		},
+	}
+}
+
+func match(f func(res *Results, series *Result, floats []float64) error, series *Results, numberSets ...*Results) (*Results, error) {
 	res := *series
 	res.Results = nil
 	for _, s := range series.Results {
-		switch t := s.Value.(type) {
-		case Series:
-			if len(t) == 0 {
-				continue
+		var floats []float64
+		for _, num := range numberSets {
+			for _, n := range num.Results {
+				if len(n.Group) == 0 || s.Group.Overlaps(n.Group) {
+					floats = append(floats, float64(n.Value.(Number)))
+					break
+				}
 			}
-			s.Value = Number(F(t, args...))
-			res.Results = append(res.Results, s)
-		default:
-			panic(fmt.Errorf("expr: expected a series"))
+		}
+		if len(floats) != len(numberSets) {
+			if !series.IgnoreUnjoined {
+				return nil, fmt.Errorf("unjoined groups for %s", s.Group)
+			}
+			continue
+		}
+		if err := f(&res, s, floats); err != nil {
+			return nil, err
 		}
 	}
 	return &res, nil
+}
+
+func reduce(e *State, T miniprofiler.Timer, series *Results, F func(Series, ...float64) float64, args ...*Results) (*Results, error) {
+	f := func(res *Results, s *Result, floats []float64) error {
+		t := s.Value.(Series)
+		if len(t) == 0 {
+			return nil
+		}
+		s.Value = Number(F(t, floats...))
+		res.Results = append(res.Results, s)
+		return nil
+	}
+	return match(f, series, args...)
 }
 
 func Abs(e *State, T miniprofiler.Timer, series *Results) *Results {
@@ -1070,7 +1103,7 @@ func (e *State) since(dps Series, args ...float64) (a float64) {
 	return s.Seconds()
 }
 
-func Forecast_lr(e *State, T miniprofiler.Timer, series *Results, y float64) (r *Results, err error) {
+func Forecast_lr(e *State, T miniprofiler.Timer, series *Results, y *Results) (r *Results, err error) {
 	return reduce(e, T, series, e.forecast_lr, y)
 }
 
@@ -1107,20 +1140,20 @@ func (e *State) forecast_lr(dps Series, args ...float64) float64 {
 	return s.Seconds()
 }
 
-func Percentile(e *State, T miniprofiler.Timer, series *Results, p float64) (r *Results, err error) {
+func Percentile(e *State, T miniprofiler.Timer, series *Results, p *Results) (r *Results, err error) {
 	return reduce(e, T, series, percentile, p)
 }
 
 func Min(e *State, T miniprofiler.Timer, series *Results) (r *Results, err error) {
-	return reduce(e, T, series, percentile, 0)
+	return reduce(e, T, series, percentile, fromScalar(0))
 }
 
 func Median(e *State, T miniprofiler.Timer, series *Results) (r *Results, err error) {
-	return reduce(e, T, series, percentile, .5)
+	return reduce(e, T, series, percentile, fromScalar(.5))
 }
 
 func Max(e *State, T miniprofiler.Timer, series *Results) (r *Results, err error) {
-	return reduce(e, T, series, percentile, 1)
+	return reduce(e, T, series, percentile, fromScalar(1))
 }
 
 // percentile returns the value at the corresponding percentile between 0 and 1.
