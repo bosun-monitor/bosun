@@ -40,7 +40,7 @@ Various metrics can be combined by operators as long as one group is a subset of
 
 ## Operators
 
-The standard arithmetic (`+`, binary and unary `-`, `*`, `/`), relational (`<`, `>`, `==`, `!=`, `>=`, `<=`), and logical (`&&`, `||`, and unary `!`) operators are supported. The binary operators require the value on at least one side to be a scalar. Arrays will have the operator applied to each element. Examples:
+The standard arithmetic (`+`, binary and unary `-`, `*`, `/`, `%`), relational (`<`, `>`, `==`, `!=`, `>=`, `<=`), and logical (`&&`, `||`, and unary `!`) operators are supported. The binary operators require the value on at least one side to be a scalar. Arrays will have the operator applied to each element. Examples:
 
 * `q("q") + 1`, which adds one to every element of the result of the query `"q"`
 * `-q("q")`, the negation of the results of the query
@@ -52,7 +52,7 @@ The standard arithmetic (`+`, binary and unary `-`, `*`, `/`), relational (`<`, 
 From highest to lowest:
 
 1. `()` and the unary operators `!` and `-`
-1. `*`, `/`
+1. `*`, `/`, `%`
 1. `+`, `-`
 1. `==`, `!=`, `>`, `>=`, `<`, `<=`
 1. `&&`
@@ -344,13 +344,22 @@ Returns series smoothed using Holt-Winters double exponential smoothing. Alpha
 (scalar) is the data smoothing factor. Beta (scalar) is the trend smoothing
 factor.
 
+## dropg(seriesSet, scalar) seriesSet
+
+Remove any values greater than number from a series. Will error if this operation results in an empty series.
+
 ## dropge(seriesSet, scalar) seriesSet
 
 Remove any values greater than or equal to number from a series. Will error if this operation results in an empty series.
 
+## dropl(seriesSet, scalar) seriesSet
+
+Remove any values lower than number from a series. Will error if this operation results in an empty series.
+
 ## drople(seriesSet, scalar) seriesSet
 
 Remove any values lower than or equal to number from a series. Will error if this operation results in an empty series.
+
 
 ## dropna(seriesSet) seriesSet
 
