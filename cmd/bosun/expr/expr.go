@@ -477,6 +477,8 @@ func operate(op string, a, b float64) (r float64) {
 		r = a - b
 	case "/":
 		r = a / b
+	case "%":
+		r = math.Mod(a, b)
 	case "==":
 		if a == b {
 			r = 1
