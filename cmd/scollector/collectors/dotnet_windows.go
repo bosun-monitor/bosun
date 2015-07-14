@@ -1,10 +1,12 @@
 package collectors
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
 
 	"bosun.org/_third_party/github.com/StackExchange/wmi"
+	"bosun.org/cmd/scollector/conf"
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
 )
@@ -12,8 +14,11 @@ import (
 var regexesDotNet = []*regexp.Regexp{}
 
 func init() {
-	AddProcessDotNetConfig = func(line string) error {
-		reg, err := regexp.Compile(line)
+	AddProcessDotNetConfig = func(params conf.ProcessDotNet) error {
+		if params.Name == "" {
+			return fmt.Errorf("empty dotnet process name")
+		}
+		reg, err := regexp.Compile(params.Name)
 		if err != nil {
 			return err
 		}
