@@ -10,6 +10,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+	"bosun.org/cmd/scollector/conf"
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
 	"bosun.org/util"
@@ -87,7 +88,7 @@ var (
 	tlock     sync.Mutex
 	AddTags   opentsdb.TagSet
 
-	AddProcessDotNetConfig = func(line string) error {
+	AddProcessDotNetConfig = func(params conf.ProcessDotNet) error {
 		return fmt.Errorf("process_dotnet watching not implemented on this platform")
 	}
 	WatchProcessesDotNet = func() {}

@@ -109,6 +109,9 @@ func main() {
 	for _, p := range conf.Process {
 		check(collectors.AddProcessConfig(p))
 	}
+	for _, p := range conf.ProcessDotNet {
+		check(collectors.AddProcessDotNetConfig(p))
+	}
 	for _, h := range conf.HTTPUnit {
 		if h.TOML != "" {
 			check(collectors.HTTPUnitTOML(h.TOML))
