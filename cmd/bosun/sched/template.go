@@ -279,7 +279,7 @@ func (c *Context) Eval(v interface{}) (interface{}, error) {
 		return nil, err
 	}
 	if len(res) == 0 {
-		return nil, fmt.Errorf("no results returned")
+		return math.NaN(), nil
 	}
 	// TODO: don't choose a random result, make sure there's exactly 1
 	return res[0].Value, nil
