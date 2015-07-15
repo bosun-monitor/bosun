@@ -283,7 +283,7 @@ var haproxyCSVMeta = []MetricMetaHAProxy{
 		Name: "chkfail",
 		MetricMeta: MetricMeta{RateType: metadata.Counter,
 			Unit: metadata.Check,
-			Desc: "The number of failed checks. (Only counts checks failed when the server is up.",
+			Desc: "The number of failed checks. (Only counts checks failed when the server is up.)",
 		}},
 	{
 		Name: "chkdown",
