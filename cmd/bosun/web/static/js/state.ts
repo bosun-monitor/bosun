@@ -115,7 +115,7 @@ bosunApp.directive('tsState', ['$sce', function($sce: ng.ISCEService) {
 				scope.state.LastAction = scope.state.Actions[0];
 			}
 			scope.state.RuleUrl = '/config?' +
-				'alert=' + encodeURIComponent(scope.state.AlertName) +
+				'alert=' + encodeURIComponent(scope.state.Alert) +
 				'&fromDate=' + encodeURIComponent(scope.state.last.Time.format("YYYY-MM-DD")) +
 				'&fromTime=' + encodeURIComponent(scope.state.last.Time.format("HH:mm"));
 			var groups: string[] = [];
