@@ -5,13 +5,22 @@ interface IActionScope extends IExprScope {
 	notify: boolean;
 	keys: string[];
 	submit: () => void;
+	validateMsg: () => void;
+	msgValid: boolean;
 }
 
 bosunControllers.controller('ActionCtrl', ['$scope', '$http', '$location', '$route', function($scope: IActionScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService) {
 	var search = $location.search();
-	$scope.user = getUser();
+	$scope.user = readCookie("action-user");
 	$scope.type = search.type;
 	$scope.notify = true;
+	$scope.msgValid = true;
+	$scope.message = "";
+	
+	$scope.validateMsg = () => {
+		$scope.msgValid = (!$scope.notify) || ($scope.message != "");
+	}
+	
 	if (search.key) {
 		var keys = search.key;
 		if (!angular.isArray(search.key)) {
@@ -23,6 +32,10 @@ bosunControllers.controller('ActionCtrl', ['$scope', '$http', '$location', '$rou
 		$scope.keys = $scope.getKey('action-keys');
 	}
 	$scope.submit = () => {
+		$scope.validateMsg();
+		if (!$scope.msgValid || ($scope.user == "")){
+			return;
+		}
 		var data = {
 			Type: $scope.type,
 			User: $scope.user,
@@ -30,7 +43,7 @@ bosunControllers.controller('ActionCtrl', ['$scope', '$http', '$location', '$rou
 			Keys: $scope.keys,
 			Notify: $scope.notify,
 		};
-		setUser($scope.user);
+		createCookie("action-user", $scope.user, 1000);
 		$http.post('/api/action', data)
 			.success((data) => {
 				$location.url('/');
