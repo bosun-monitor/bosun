@@ -39,10 +39,17 @@ func (s *Silence) MarshalJSON() ([]byte, error) {
 }
 
 func (s *Silence) Silenced(now time.Time, alert string, tags opentsdb.TagSet) bool {
-	if now.Before(s.Start) || now.After(s.End) {
+	if !s.ActiveAt(now) {
 		return false
 	}
 	return s.Matches(alert, tags)
+}
+
+func (s *Silence) ActiveAt(now time.Time) bool {
+	if now.Before(s.Start) || now.After(s.End) {
+		return false
+	}
+	return true
 }
 
 func (s *Silence) Matches(alert string, tags opentsdb.TagSet) bool {
@@ -75,6 +82,9 @@ func (s *Schedule) Silenced() map[expr.AlertKey]Silence {
 	now := time.Now()
 	s.Lock("Silenced")
 	for _, si := range s.Silence {
+		if !si.ActiveAt(now) {
+			continue
+		}
 		for ak := range s.status {
 			if si.Silenced(now, ak.Name(), ak.Group()) {
 				if aks[ak].End.Before(si.End) {
