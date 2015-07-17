@@ -137,6 +137,7 @@ Templates are the message body for emails that are sent when an alert is trigger
 * Lookup("table", "key"): Looks up the value for the key based on the tagset of the alert in the specified lookup table
 * LookupAll("table", "key", "tag=val,tag2=val2"): Looks up the value for the key based on the tagset specified in the given lookup table
 * HTTPGet("url"): Performs an http get and returns the raw text of the url
+* HTTPGetJSON("url"): Performs an http get for the url and returns a [jsonq.JsonQuery object](https://godoc.org/github.com/jmoiron/jsonq)
 * LSQuery("indexRoot", "filterString", "startDuration", "endDuration", nResults). Returns an array of a length up to nResults of Marshaled Json documents (Go: marshaled to interface{}). This is like the lscount and lsstat functions. There is no `keyString` because the group (aka tags) if the alert is used.
 * LSQueryAll("indexRoot", "keyString" filterString", "startDuration", "endDuration", nResults). Like LSQuery but you have to specify the `keyString` since it is not scoped to the alert.
 
