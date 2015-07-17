@@ -80,7 +80,7 @@ func c_windows_processes() (opentsdb.MultiDataPoint, error) {
 				svc_dst_started = append(svc_dst_started, svc)
 			}
 			tags := opentsdb.TagSet{"name": svc.Name}
-			Add(&md, "win.service.started", btoi(svc.Started), tags, metadata.Gauge, metadata.Bool, descWinServiceStatus)
+			Add(&md, "win.service.started", btoi(svc.Started), tags, metadata.Gauge, metadata.Bool, descWinServiceStarted)
 			Add(&md, "win.service.status", btoi(svc.Status != "OK"), tags, metadata.Gauge, metadata.Ok, descWinServiceStatus)
 			Add(&md, "win.service.checkpoint", svc.CheckPoint, tags, metadata.Gauge, metadata.None, descWinServiceCheckPoint)
 			Add(&md, "win.service.wait_hint", svc.WaitHint, tags, metadata.Gauge, metadata.MilliSecond, descWinServiceWaitHint)
