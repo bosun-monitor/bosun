@@ -386,6 +386,10 @@ Returns the first key from the given lookup table with matching tags.
 
 Change the NaN value during binary operations (when joining two queries) of unknown groups to the scalar. This is useful to prevent unknown group and other errors from bubbling up.
 
+## rename(seriesSet, string) seriesSet
+
+Accepts a series and a set of tags to rename in `Key1=NewK1,Key2=NewK2` format. All data points will have the tag keys renamed according to the spec provided, in order. This can be useful for combining results from seperate queries that have similar tagsets with different tag keys.
+
 ## sort(numberSet, (asc|desc) string) numberSet
 
 Returns the results sorted by value in ascending ("asc") or descending ("desc")
