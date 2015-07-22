@@ -438,13 +438,13 @@ func Close() {
 }
 
 func (s *Schedule) Close() {
-	s.Lock("Close")
-	defer s.Unlock()
 	close(s.saveNeeded)
 	s.save()
+	s.Lock("Close")
 	if s.db != nil {
 		s.db.Close()
 	}
+	s.Unlock()
 }
 
 func (s *Schedule) Run() error {
