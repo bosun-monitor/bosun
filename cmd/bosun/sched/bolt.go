@@ -20,18 +20,27 @@ import (
 	"bosun.org/opentsdb"
 )
 
-var savePending bool
-
 func (s *Schedule) Save() {
-	go func() {
+	select {
+	case s.saveNeeded <- struct{}{}:
+	default:
+	}
+}
+
+func (s *Schedule) performSave() {
+	for range s.saveNeeded {
+		time.Sleep(5 * time.Second) // wait 5 seconds to throttle.
+
+		// if channel has an item on it, pull it off now to avoid re-saving later.
+		select {
+		case <-s.saveNeeded:
+		default:
+		}
+
 		s.Lock("Save")
 		defer s.Unlock()
-		if savePending {
-			return
-		}
-		savePending = true
-		time.AfterFunc(time.Second*5, s.save)
-	}()
+		s.save()
+	}
 }
 
 type counterWriter struct {
@@ -60,9 +69,6 @@ const (
 )
 
 func (s *Schedule) save() {
-	defer func() {
-		savePending = false
-	}()
 	if s.db == nil {
 		return
 	}

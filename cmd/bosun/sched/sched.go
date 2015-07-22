@@ -50,6 +50,7 @@ type Schedule struct {
 	maxIncidentId uint64
 	incidentLock  sync.Mutex
 	db            *bolt.DB
+	saveNeeded    chan struct{}
 }
 
 func init() {
@@ -412,6 +413,7 @@ func (s *Schedule) Init(c *conf.Conf) error {
 	s.Incidents = make(map[uint64]*Incident)
 	s.status = make(States)
 	s.Search = search.NewSearch()
+	s.saveNeeded = make(chan struct{}, 1)
 	if c.StateFile != "" {
 		s.db, err = bolt.Open(c.StateFile, 0600, nil)
 		if err != nil {
@@ -436,6 +438,9 @@ func Close() {
 }
 
 func (s *Schedule) Close() {
+	s.Lock("Close")
+	defer s.Unlock()
+	close(s.saveNeeded)
 	s.save()
 	if s.db != nil {
 		s.db.Close()
@@ -451,6 +456,7 @@ func (s *Schedule) Run() error {
 		go s.PingHosts()
 	}
 	go s.Poll()
+	go s.performSave()
 	interval := uint64(0)
 	for {
 		wait := time.After(s.Conf.CheckFrequency)

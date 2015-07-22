@@ -1,7 +1,7 @@
 language: go
 sudo: false
 go:
-  - tip
+  - 1.4.2
 
 notifications:
   email: false
