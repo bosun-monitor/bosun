@@ -83,6 +83,7 @@ func (s *Schedule) save() {
 		enc := gob.NewEncoder(cw)
 		if err := enc.Encode(data); err != nil {
 			log.Printf("error saving %s: %v", name, err)
+			s.Unlock()
 			return
 		}
 		if err := gz.Flush(); err != nil {
