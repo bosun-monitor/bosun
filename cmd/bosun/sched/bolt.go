@@ -30,6 +30,13 @@ func (s *Schedule) Save() {
 func (s *Schedule) performSave() {
 	for range s.saveNeeded {
 		time.Sleep(5 * time.Second) // wait 5 seconds to throttle.
+
+		// if channel has an item on it, pull it off now to avoid re-saving later.
+		select {
+		case <-s.saveNeeded:
+		default:
+		}
+
 		s.Lock("Save")
 		defer s.Unlock()
 		s.save()
