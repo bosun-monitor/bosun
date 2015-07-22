@@ -47,6 +47,7 @@ func send() {
 				slog.Infof("sending: %d, remaining: %d", i, len(queue))
 			}
 			qlock.Unlock()
+			Sample("collect.post.batchsize", Tags, float64(len(sending)))
 			sendBatch(sending)
 		} else {
 			qlock.Unlock()
@@ -130,7 +131,7 @@ func SendDataPoints(dps []*opentsdb.DataPoint, tsdb string) (*http.Response, err
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Content-Encoding", "gzip")
-
+	Add("collect.post.total_bytes", Tags, int64(buf.Len()))
 	resp, err := client.Do(req)
 	return resp, err
 }
