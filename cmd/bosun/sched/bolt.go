@@ -38,8 +38,8 @@ func (s *Schedule) performSave() {
 		}
 
 		s.Lock("Save")
-		defer s.Unlock()
 		s.save()
+		s.Unlock()
 	}
 }
 
