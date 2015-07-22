@@ -29,17 +29,8 @@ func (s *Schedule) Save() {
 
 func (s *Schedule) performSave() {
 	for range s.saveNeeded {
-		time.Sleep(5 * time.Second) // wait 5 seconds to throttle.
-
-		// if channel has an item on it, pull it off now to avoid re-saving later.
-		select {
-		case <-s.saveNeeded:
-		default:
-		}
-
-		s.Lock("Save")
 		s.save()
-		s.Unlock()
+		time.Sleep(10 * time.Second) // wait 10 seconds to throttle.
 	}
 }
 
@@ -72,6 +63,7 @@ func (s *Schedule) save() {
 	if s.db == nil {
 		return
 	}
+	s.Lock("Save")
 	store := map[string]interface{}{
 		dbMetric:        s.Search.Read.Metric,
 		dbTagk:          s.Search.Read.Tagk,
@@ -103,6 +95,7 @@ func (s *Schedule) save() {
 		log.Printf("wrote %s: %v", name, conf.ByteSize(cw.written))
 		collect.Put("statefile.size", opentsdb.TagSet{"object": name}, cw.written)
 	}
+	s.Unlock()
 	err := s.db.Update(func(tx *bolt.Tx) error {
 		b, err := tx.CreateBucketIfNotExists([]byte(dbBucket))
 		if err != nil {
