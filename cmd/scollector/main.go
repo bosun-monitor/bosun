@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net/http"
+	_ "net/http/pprof"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -70,6 +72,12 @@ func main() {
 		slog.Fatalf("invalid tags: %v", conf.Tags)
 	} else if conf.Tags["host"] != "" {
 		slog.Fatalf("host not supported in custom tags, use Hostname instead")
+	}
+	if conf.PProf != "" {
+		go func() {
+			slog.Infof("Starting pprof at http://%s/debug/pprof/", conf.PProf)
+			slog.Fatal(http.ListenAndServe(conf.PProf, nil))
+		}()
 	}
 	collectors.AddTags = conf.Tags
 	util.FullHostname = conf.FullHost

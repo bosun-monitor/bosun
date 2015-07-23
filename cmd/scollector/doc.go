@@ -109,6 +109,9 @@ Default is 500.
 
 Filter (array of string): filters collectors matching these terms.
 
+PProf (string): optional IP:Port binding to be used for debugging with pprof.
+Examples: localhost:6060 for loopback or :6060 for all IP addresses.
+
 Collector configuration keys
 
 Following are configurations for collectors that do not autodetect.

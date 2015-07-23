@@ -25,6 +25,9 @@ type Conf struct {
 	BatchSize int
 	// Filter filters collectors matching these terms.
 	Filter []string
+	// PProf is an IP:Port binding to be used for debugging with pprof package.
+	// Examples: localhost:6060 for loopback or :6060 for all IP addresses.
+	PProf string
 
 	// KeepalivedCommunity, if not empty, enables the Keepalived collector with
 	// the specified community.
