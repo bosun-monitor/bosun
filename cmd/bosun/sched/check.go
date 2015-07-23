@@ -248,7 +248,6 @@ func (s *Schedule) RunHistory(r *RunHistory) {
 		s.nc <- true
 	}
 	s.CollectStates()
-	s.Save()
 }
 
 // CollectStates sends various state information to bosun with collect.

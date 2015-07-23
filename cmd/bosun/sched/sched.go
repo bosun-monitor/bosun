@@ -50,7 +50,6 @@ type Schedule struct {
 	maxIncidentId uint64
 	incidentLock  sync.Mutex
 	db            *bolt.DB
-	saveNeeded    chan struct{}
 }
 
 func init() {
@@ -88,7 +87,6 @@ type Metavalue struct {
 func (s *Schedule) PutMetadata(k metadata.Metakey, v interface{}) {
 	s.metalock.Lock()
 	s.Metadata[k] = &Metavalue{time.Now().UTC(), v}
-	s.Save()
 	s.metalock.Unlock()
 }
 
@@ -413,7 +411,6 @@ func (s *Schedule) Init(c *conf.Conf) error {
 	s.Incidents = make(map[uint64]*Incident)
 	s.status = make(States)
 	s.Search = search.NewSearch()
-	s.saveNeeded = make(chan struct{}, 1)
 	if c.StateFile != "" {
 		s.db, err = bolt.Open(c.StateFile, 0600, nil)
 		if err != nil {
@@ -438,7 +435,6 @@ func Close() {
 }
 
 func (s *Schedule) Close() {
-	close(s.saveNeeded)
 	s.save()
 	s.Lock("Close")
 	if s.db != nil {
@@ -591,10 +587,7 @@ func (s *State) Action(user, message string, t ActionType, timestamp time.Time) 
 
 func (s *Schedule) Action(user, message string, t ActionType, ak expr.AlertKey) error {
 	s.Lock("Action")
-	defer func() {
-		s.Unlock()
-		s.Save()
-	}()
+	defer s.Unlock()
 	st := s.status[ak]
 	if st == nil {
 		return fmt.Errorf("no such alert key: %v", ak)

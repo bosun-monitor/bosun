@@ -18,7 +18,6 @@ import (
 func (s *Schedule) Poll() {
 	for {
 		timeout := s.CheckNotifications()
-		s.Save()
 		// Wait for one of these two.
 		select {
 		case <-time.After(timeout):
