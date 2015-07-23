@@ -20,17 +20,10 @@ import (
 	"bosun.org/opentsdb"
 )
 
-func (s *Schedule) Save() {
-	select {
-	case s.saveNeeded <- struct{}{}:
-	default:
-	}
-}
-
 func (s *Schedule) performSave() {
-	for range s.saveNeeded {
+	for {
+		time.Sleep(60 * time.Second) // wait 60 seconds to throttle.
 		s.save()
-		time.Sleep(10 * time.Second) // wait 10 seconds to throttle.
 	}
 }
 

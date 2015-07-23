@@ -131,7 +131,6 @@ func (s *Schedule) AddSilence(start, end time.Time, alert, tagList string, forge
 	if confirm {
 		delete(s.Silence, edit)
 		s.Silence[si.ID()] = si
-		s.Save()
 		return nil, nil
 	}
 	aks := make(map[expr.AlertKey]bool)
@@ -147,6 +146,5 @@ func (s *Schedule) ClearSilence(id string) error {
 	s.Lock("ClearSilence")
 	delete(s.Silence, id)
 	s.Unlock()
-	s.Save()
 	return nil
 }
