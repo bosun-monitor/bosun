@@ -4,6 +4,7 @@ import (
 	"crypto/sha1"
 	"encoding/json"
 	"fmt"
+	"sync"
 	"time"
 
 	"bosun.org/cmd/bosun/expr"
@@ -80,7 +81,8 @@ func (s Silence) ID() string {
 func (s *Schedule) Silenced() map[expr.AlertKey]Silence {
 	aks := make(map[expr.AlertKey]Silence)
 	now := time.Now()
-	s.Lock("Silenced")
+	silenceLock.RLock()
+	defer silenceLock.RUnlock()
 	for _, si := range s.Silence {
 		if !si.ActiveAt(now) {
 			continue
@@ -93,9 +95,10 @@ func (s *Schedule) Silenced() map[expr.AlertKey]Silence {
 			}
 		}
 	}
-	s.Unlock()
 	return aks
 }
+
+var silenceLock = sync.RWMutex{}
 
 func (s *Schedule) AddSilence(start, end time.Time, alert, tagList string, forget, confirm bool, edit, user, message string) (map[expr.AlertKey]bool, error) {
 	if start.IsZero() || end.IsZero() {
@@ -126,8 +129,8 @@ func (s *Schedule) AddSilence(start, end time.Time, alert, tagList string, forge
 		}
 		si.Tags = tags
 	}
-	s.Lock("AddSilence")
-	defer s.Unlock()
+	silenceLock.Lock()
+	defer silenceLock.Unlock()
 	if confirm {
 		delete(s.Silence, edit)
 		s.Silence[si.ID()] = si
@@ -143,8 +146,8 @@ func (s *Schedule) AddSilence(start, end time.Time, alert, tagList string, forge
 }
 
 func (s *Schedule) ClearSilence(id string) error {
-	s.Lock("ClearSilence")
+	silenceLock.Lock()
+	defer silenceLock.Unlock()
 	delete(s.Silence, id)
-	s.Unlock()
 	return nil
 }

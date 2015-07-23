@@ -216,6 +216,7 @@ func (s *Schedule) RunHistory(r *RunHistory) {
 		s.nc <- true
 	}
 	s.CollectStates()
+	s.readStatus = s.status.Copy()
 }
 
 func (s *Schedule) executeTemplates(state *State, event *Event, a *conf.Alert, r *RunHistory) {
