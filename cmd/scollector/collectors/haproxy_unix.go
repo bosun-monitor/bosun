@@ -495,6 +495,6 @@ var haproxyCSVMeta = []MetricMetaHAProxy{
 		Name: "ttime",
 		MetricMeta: MetricMeta{RateType: metadata.Gauge,
 			Unit: metadata.MilliSecond,
-			Desc: "The average response time in ms over the 1024 last requests (0 for TCP).",
+			Desc: "The average total session time in ms over the 1024 last requests.",
 		}},
 }
