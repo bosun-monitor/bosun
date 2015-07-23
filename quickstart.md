@@ -38,7 +38,7 @@ If you do not already have docker installed on your system, you can install it f
 
 Once Docker is installed, you will want to pull the latest version of Bosun from the Docker Registry. To do this, execute the following command:
 
-	$ docker run -d -p 8070:8070 stackexchange/bosun
+	$ docker run -d -p 4242:4242 -p 8070:8070 stackexchange/bosun
 
 The above command tells the Docker daemon that you would like to start a new daemonized instance of bosun and you wish to port-forward 8070 of your server into the docker container. After about 15 seconds, you should have a working Bosun instance on port 8070. You can navigate to the instance by opening a browser and heading to http://docker-server:8070 where docker-server is your server running the docker daemon.
 
