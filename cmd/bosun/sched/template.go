@@ -99,7 +99,6 @@ func (c *Context) GraphLink(v string) string {
 
 func (c *Context) Rule() (string, error) {
 	p := url.Values{}
-	//There might be something better when we tie the notifications to evaluation time issue #395
 	time := c.runHistory.Start
 	p.Add("alert", c.Alert.Name)
 	p.Add("fromDate", time.Format("2006-01-02"))
