@@ -43,6 +43,7 @@ const (
 	Bytes               = "bytes"
 	BytesPerSecond      = "bytes per second"
 	C                   = "C" // Celsius
+	Channel             = "channels"
 	Check               = "checks"
 	CHz                 = "CentiHertz"
 	Connection          = "connections"
@@ -54,6 +55,7 @@ const (
 	Error               = "errors"
 	Event               = ""
 	Eviction            = "evictions"
+	Exchange            = "exchanges"
 	Fault               = "faults"
 	Flush               = "flushes"
 	Files               = "files"
@@ -68,6 +70,7 @@ const (
 	MHz                 = "MHz" // MegaHertz
 	Megabit             = "Mbit"
 	Merge               = "merges"
+	Message             = "messages"
 	MilliSecond         = "milliseconds"
 	Ok                  = "ok" // "OK" or not status, 0 = ok, 1 = not ok
 	Operation           = "Operations"
@@ -77,6 +80,7 @@ const (
 	Process             = "processes"
 	Priority            = "priority"
 	Query               = "queries"
+	Queue               = "queues"
 	Redispatch          = "redispatches"
 	Refresh             = "refreshes"
 	Replica             = "replicas"

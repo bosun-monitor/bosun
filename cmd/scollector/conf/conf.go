@@ -39,6 +39,7 @@ type Conf struct {
 	Process       []ProcessParams
 	ProcessDotNet []ProcessDotNet
 	HTTPUnit      []HTTPUnit
+	RabbitMQ      []RabbitMQ
 }
 
 type HAProxy struct {
@@ -108,4 +109,8 @@ type ProcessDotNet struct {
 type HTTPUnit struct {
 	TOML  string
 	Hiera string
+}
+
+type RabbitMQ struct {
+	Url string
 }

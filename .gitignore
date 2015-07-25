@@ -1,1 +1,4 @@
 cmd/bosun/dev.conf
+*.test
+cmd/scollector/scollector
+cmd/bosun/bosun
