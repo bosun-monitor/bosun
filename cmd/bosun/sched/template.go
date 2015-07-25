@@ -298,7 +298,7 @@ func (c *Context) graph(v interface{}, unit string, filter bool) (interface{}, e
 	var buf bytes.Buffer
 	const width = 800
 	const height = 600
-	footerHTML := fmt.Sprintf(`<small>Query: %s<br>Time: %s</small>`,
+	footerHTML := fmt.Sprintf(`<p><small>Query: %s<br>Time: %s</small></p>`,
 		template.HTMLEscapeString(exprText),
 		c.runHistory.Start.Format(time.RFC3339))
 	if c.IsEmail {
