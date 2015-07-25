@@ -431,7 +431,7 @@ func (c *Context) HTTPGetJSON(url string) (*jsonq.JsonQuery, error) {
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
