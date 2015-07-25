@@ -427,7 +427,13 @@ func (c *Context) HTTPGet(url string) string {
 }
 
 func (c *Context) HTTPGetJSON(url string) (*jsonq.JsonQuery, error) {
-	resp, err := http.Get(url)
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	client := &http.Client{}
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, err
 	}
