@@ -370,9 +370,7 @@ Returns the Unix epoch in seconds of the expression start time (scalar).
 
 ## filter(seriesSet, numberSet) seriesSet
 
-Returns all results in series that are a subset of anything in number, or
-that have number as a subset. Useful with the limit and sort functions to
-return the top X results of a query.
+Returns all results in seriesSet that are a subset of numberSet and have a non-zero value. Useful with the limit and sort functions to return the top X results of a query.
 
 ## limit(numberSet, count scalar) numberSet
 

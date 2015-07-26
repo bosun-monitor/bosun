@@ -360,7 +360,9 @@ func Filter(e *State, T miniprofiler.Timer, series *Results, number *Results) (*
 	for _, sr := range series.Results {
 		for _, nr := range number.Results {
 			if sr.Group.Subset(nr.Group) || nr.Group.Subset(sr.Group) {
-				ns = append(ns, sr)
+				if nr.Value.Value().(Number) != 0 {
+					ns = append(ns, sr)
+				}
 			}
 		}
 	}
