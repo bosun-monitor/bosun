@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"bosun.org/metadata"
@@ -460,16 +461,35 @@ func init() {
 }
 
 const (
-	riakURL string = "http://localhost:8098/stats"
+	localRiakURL string = "http://localhost:8098/stats"
 )
 
+func Riak(s string) error {
+	u, err := url.Parse(s)
+	if err != nil {
+		return err
+	}
+	collectors = append(collectors,
+		&IntervalCollector{
+			F: func() (opentsdb.MultiDataPoint, error) {
+				return riak(s)
+			},
+			name: fmt.Sprintf("riak-%s", u.Host),
+		})
+	return nil
+}
+
 func enableRiak() bool {
-	return enableURL(riakURL)()
+	return enableURL(localRiakURL)()
 }
 
 func c_riak() (opentsdb.MultiDataPoint, error) {
+	return riak(localRiakURL)
+}
+
+func riak(s string) (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
-	res, err := http.Get(riakURL)
+	res, err := http.Get(s)
 	if err != nil {
 		return nil, err
 	}
