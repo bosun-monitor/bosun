@@ -675,6 +675,7 @@ var defaultFuncs = ttemplate.FuncMap{
 	"short": func(v string) string {
 		return strings.SplitN(v, ".", 2)[0]
 	},
+	"parseDuration": time.ParseDuration,
 }
 
 func (c *Conf) loadTemplate(s *parse.SectionNode) {

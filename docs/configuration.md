@@ -148,6 +148,7 @@ Global template functions:
 * pct: formats the float argument as a percentage. For example: `{{5.1 | pct}}` -> `5.10%`.
 * replace: [strings.Replace](http://golang.org/pkg/strings/#Replace)
 * short: Trims the string to everything before the first period. Useful for turning a FQDN into a shortname. For example: `{{short "foo.baz.com"}}` -> `foo`.
+* parseDuration: [time.ParseDuration](http://golang.org/pkg/time/#ParseDuration). Useful when working with an alert's .Last.Time.Add method to generate urls to other systems.
 
 All body templates are associated, and so may be executed from another. Use the name of the other template section for inclusion. Subject templates are similarly associated.
 
