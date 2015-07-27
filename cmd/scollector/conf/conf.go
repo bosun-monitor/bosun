@@ -42,6 +42,7 @@ type Conf struct {
 	Process       []ProcessParams
 	ProcessDotNet []ProcessDotNet
 	HTTPUnit      []HTTPUnit
+	Riak          []Riak
 }
 
 type HAProxy struct {
@@ -111,4 +112,8 @@ type ProcessDotNet struct {
 type HTTPUnit struct {
 	TOML  string
 	Hiera string
+}
+
+type Riak struct {
+	URL string
 }
