@@ -202,6 +202,7 @@ AWS (array of table, keys are AccessKey, SecretKey, Region): AWS hosts to poll.
 	  SecretKey = "snch0d"
 	  Region = "somewhere"
 
+
 Process (array of table, keys are Command, Name, Args for Linux, and Name
 for Windows): processes to monitor. Name is optional, and defaults to Command.
 
@@ -237,6 +238,11 @@ or just one.
 	  Hiera = "/path/to/listeners.json"
 	[[HTTPUnit]]
 	  TOML = "/some/other.toml"
+
+Riak (array of table, keys are URL): Riak hosts to poll.
+
+	[[Riak]]
+	  URL = "http://localhost:8098/stats"
 
 Windows
 
