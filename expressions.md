@@ -25,7 +25,7 @@ This section documents Bosun's expression language, which is used to define the 
 There are three data types in Bosun's expression language:
 
  1. **Scalar**: This is the simplest type, it is a single numeric value with no group associated with it. Keep in mind that an empty group, `{}` is still a group.
- 2. **NumberSet**: A number set is a group of tagged numeric values with one value per unique grouping.
+ 2. **NumberSet**: A number set is a group of tagged numeric values with one value per unique grouping. As a special case, a **scalar** may be used in place of a **numberSet** with a single member with an empty group.
  3. **SeriesSet**: A series is an array of timestamp-value pairs and an associated group.
 
 In the vast majority of your alerts you will getting ***seriesSets*** back from your time series database and ***reducing*** them into ***numberSets***.
@@ -205,7 +205,7 @@ Diff returns the last point of each series minus the first point.
 
 Returns the first (least recent) data point in each series.
 
-## forecastlr(seriesSet, y_val scalar) numberSet
+## forecastlr(seriesSet, y_val numberSet|scalar) numberSet
 
 Returns the number of seconds until a linear regression of each series will reach y_val.
 
@@ -229,7 +229,7 @@ Returns the median value of each series, same as calling percentile(series, .5).
 
 Returns the minimum value of each series, same as calling percentile(series, 0).
 
-## percentile(seriesSet, p scalar) numberSet
+## percentile(seriesSet, p numberSet|scalar) numberSet
 
 Returns the value from each series at the percentile p. Min and Max can be simulated using `p <= 0` and `p >= 1`, respectively.
 
@@ -344,22 +344,21 @@ Returns series smoothed using Holt-Winters double exponential smoothing. Alpha
 (scalar) is the data smoothing factor. Beta (scalar) is the trend smoothing
 factor.
 
-## dropg(seriesSet, scalar) seriesSet
+## dropg(seriesSet, threshold numberSet|scalar) seriesSet
 
 Remove any values greater than number from a series. Will error if this operation results in an empty series.
 
-## dropge(seriesSet, scalar) seriesSet
+## dropge(seriesSet, threshold numberSet|scalar) seriesSet
 
 Remove any values greater than or equal to number from a series. Will error if this operation results in an empty series.
 
-## dropl(seriesSet, scalar) seriesSet
+## dropl(seriesSet, threshold numberSet|scalar) seriesSet
 
 Remove any values lower than number from a series. Will error if this operation results in an empty series.
 
-## drople(seriesSet, scalar) seriesSet
+## drople(seriesSet, threshold numberSet|scalar) seriesSet
 
 Remove any values lower than or equal to number from a series. Will error if this operation results in an empty series.
-
 
 ## dropna(seriesSet) seriesSet
 
@@ -371,9 +370,7 @@ Returns the Unix epoch in seconds of the expression start time (scalar).
 
 ## filter(seriesSet, numberSet) seriesSet
 
-Returns all results in series that are a subset of anything in number, or
-that have number as a subset. Useful with the limit and sort functions to
-return the top X results of a query.
+Returns all results in seriesSet that are a subset of numberSet and have a non-zero value. Useful with the limit and sort functions to return the top X results of a query.
 
 ## limit(numberSet, count scalar) numberSet
 
@@ -386,6 +383,10 @@ Returns the first key from the given lookup table with matching tags.
 ## nv(numberSet, scalar) numberSet
 
 Change the NaN value during binary operations (when joining two queries) of unknown groups to the scalar. This is useful to prevent unknown group and other errors from bubbling up.
+
+## rename(seriesSet, string) seriesSet
+
+Accepts a series and a set of tags to rename in `Key1=NewK1,Key2=NewK2` format. All data points will have the tag keys renamed according to the spec provided, in order. This can be useful for combining results from seperate queries that have similar tagsets with different tag keys.
 
 ## sort(numberSet, (asc|desc) string) numberSet
 
