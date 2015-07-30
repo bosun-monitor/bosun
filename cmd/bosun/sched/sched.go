@@ -73,10 +73,15 @@ func (s *Schedule) Unlock() {
 	holder := s.mutexHolder
 	start := s.mutexAquired
 	waitTime := s.mutexWaitTime
+	s.mutexHolder = ""
 	s.mutex.Unlock()
 	collect.Add("schedule.lock_time", opentsdb.TagSet{"caller": holder, "op": "wait"}, waitTime)
 	collect.Add("schedule.lock_time", opentsdb.TagSet{"caller": holder, "op": "hold"}, int64(time.Since(start)/time.Millisecond))
 	collect.Add("schedule.lock_count", opentsdb.TagSet{"caller": holder}, 1)
+}
+
+func (s *Schedule) GetLockStatus() (holder string, since time.Time) {
+	return s.mutexHolder, s.mutexAquired
 }
 
 type Metavalue struct {

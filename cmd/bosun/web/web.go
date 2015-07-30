@@ -110,6 +110,7 @@ func Listen(listenAddr string, devMode bool, tsdbHost string) error {
 	router.Handle("/api/tagv/{tagk}/{metric}", JSON(TagValuesByMetricTagKey))
 	router.Handle("/api/run", JSON(Run))
 	router.HandleFunc("/api/version", Version)
+	router.Handle("/api/debug/schedlock", JSON(ScheduleLockStatus))
 	http.Handle("/", miniprofiler.NewHandler(Index))
 	http.Handle("/api/", router)
 	fs := http.FileServer(webFS)
@@ -587,4 +588,16 @@ func Host(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 
 func Version(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, version.GetVersionInfo("bosun"))
+}
+
+func ScheduleLockStatus(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	data := struct {
+		Process string
+		HeldFor string
+	}{}
+	if holder, since := schedule.GetLockStatus(); holder != "" {
+		data.Process = holder
+		data.HeldFor = time.Now().Sub(since).String()
+	}
+	return data, nil
 }
