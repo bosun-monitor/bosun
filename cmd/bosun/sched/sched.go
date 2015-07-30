@@ -36,6 +36,7 @@ type Schedule struct {
 
 	Conf          *conf.Conf
 	status        States
+	readStatus    States // READ-ONLY copy of status. Updated after each runHistory
 	Notifications map[expr.AlertKey]map[string]time.Time
 	Silence       map[string]*Silence
 	Group         map[time.Time]expr.AlertKeys
@@ -267,6 +268,14 @@ func (states States) GroupSets() map[string]expr.AlertKeys {
 	return groups
 }
 
+func (states States) Copy() States {
+	newStates := make(States, len(states))
+	for ak, st := range states {
+		newStates[ak] = st.Copy()
+	}
+	return newStates
+}
+
 type StateGroup struct {
 	Active   bool `json:",omitempty"`
 	Status   Status
@@ -295,16 +304,12 @@ func (s *Schedule) MarshalGroups(T miniprofiler.Timer, filter string) (*StateGro
 	t := StateGroups{
 		TimeAndDate: s.Conf.TimeAndDate,
 	}
-	T.Step("lock", func(t miniprofiler.Timer) {
-		s.Lock("MarshalGroups")
-	})
-	defer s.Unlock()
 	status := make(States)
 	matches, err := makeFilter(filter)
 	if err != nil {
 		return nil, err
 	}
-	for k, v := range s.status {
+	for k, v := range s.readStatus {
 		if !v.Open {
 			continue
 		}
@@ -422,6 +427,7 @@ func (s *Schedule) Init(c *conf.Conf) error {
 			return err
 		}
 	}
+	s.readStatus = s.status.Copy()
 	return nil
 }
 
@@ -547,6 +553,35 @@ type State struct {
 	Forgotten    bool
 	Unevaluated  bool
 	LastLogTime  time.Time
+}
+
+func (s *State) Copy() *State {
+	newState := &State{
+		History:      make([]Event, len(s.History)),
+		Actions:      make([]Action, len(s.Actions)),
+		Touched:      s.Touched,
+		Alert:        s.Alert,
+		Tags:         s.Tags,
+		Group:        s.Group.Copy(),
+		Subject:      s.Subject,
+		Body:         s.Body,
+		EmailBody:    s.EmailBody,
+		EmailSubject: s.EmailSubject,
+		Attachments:  s.Attachments,
+		NeedAck:      s.NeedAck,
+		Open:         s.Open,
+		Forgotten:    s.Forgotten,
+		Unevaluated:  s.Unevaluated,
+		LastLogTime:  s.LastLogTime,
+	}
+	newState.Result = s.Result
+	for i := range s.History {
+		newState.History[i] = s.History[i]
+	}
+	for i := range s.Actions {
+		newState.Actions[i] = s.Actions[i]
+	}
+	return newState
 }
 
 func (s *State) AlertKey() expr.AlertKey {
@@ -684,6 +719,10 @@ type Event struct {
 type Result struct {
 	*expr.Result
 	Expr string
+}
+
+func (r *Result) Copy() *Result {
+	return &Result{r.Result, r.Expr}
 }
 
 type Status int

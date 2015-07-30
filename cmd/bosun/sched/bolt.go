@@ -229,6 +229,7 @@ func (s *Schedule) RestoreState() error {
 		s.createHistoricIncidents()
 	}
 	s.Search.Copy()
+	s.readStatus = s.status.Copy()
 	log.Println("RestoreState done in", time.Since(start))
 	return nil
 }
