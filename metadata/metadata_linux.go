@@ -12,7 +12,7 @@ import (
 )
 
 func init() {
-	metafuncs = append(metafuncs, metaLinuxVersion, metaLinuxIfaces)
+	metafuncs = append(metafuncs, metaLinuxVersion, metaLinuxIfaces, metaLinuxSerial)
 }
 
 func metaLinuxVersion() {
@@ -39,6 +39,22 @@ func metaLinuxVersion() {
 		AddMeta("", nil, "version", strings.Join(fields, " "), true)
 		return nil
 	}, "cat", "/etc/issue")
+}
+
+func metaLinuxSerial() {
+	_ = util.ReadCommand(func(line string) error {
+		fields := strings.SplitN(line, ":", 2)
+		if len(fields) != 2 {
+			return nil
+		}
+		switch fields[0] {
+		case "\tSerial Number":
+			AddMeta("", nil, "serialNumber", strings.TrimSpace(fields[1]), true)
+		case "\tProduct Name":
+			AddMeta("", nil, "model", strings.TrimSpace(fields[1]), true)
+		}
+		return nil
+	}, "dmidecode", "-t", "system")
 }
 
 var doneErr = errors.New("")
