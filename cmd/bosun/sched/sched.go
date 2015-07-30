@@ -301,27 +301,37 @@ func (s *Schedule) MarshalGroups(T miniprofiler.Timer, filter string) (*StateGro
 	T.Step("Silenced", func(miniprofiler.Timer) {
 		silenced = s.Silenced()
 	})
+	var groups map[StateTuple]States
+	var err error
+	status := make(States)
 	t := StateGroups{
 		TimeAndDate: s.Conf.TimeAndDate,
 	}
-	status := make(States)
-	matches, err := makeFilter(filter)
+	T.Step("Setup", func(miniprofiler.Timer) {
+
+		matches, err2 := makeFilter(filter)
+		if err2 != nil {
+			err = err2
+			return
+		}
+		for k, v := range s.readStatus {
+			if !v.Open {
+				continue
+			}
+			a := s.Conf.Alerts[k.Name()]
+			if a == nil {
+				err = fmt.Errorf("unknown alert %s", k.Name())
+				return
+			}
+			if matches(s.Conf, a, v) {
+				status[k] = v
+			}
+		}
+
+	})
 	if err != nil {
 		return nil, err
 	}
-	for k, v := range s.readStatus {
-		if !v.Open {
-			continue
-		}
-		a := s.Conf.Alerts[k.Name()]
-		if a == nil {
-			return nil, fmt.Errorf("unknown alert %s", k.Name())
-		}
-		if matches(s.Conf, a, v) {
-			status[k] = v
-		}
-	}
-	var groups map[StateTuple]States
 	T.Step("GroupStates", func(T miniprofiler.Timer) {
 		groups = status.GroupStates(silenced)
 	})
@@ -369,26 +379,28 @@ func (s *Schedule) MarshalGroups(T miniprofiler.Timer, filter string) (*StateGro
 			}
 		}
 	})
-	gsort := func(grp []*StateGroup) func(i, j int) bool {
-		return func(i, j int) bool {
-			a := grp[i]
-			b := grp[j]
-			if a.Active && !b.Active {
-				return true
-			} else if !a.Active && b.Active {
-				return false
+	T.Step("sort", func(T miniprofiler.Timer) {
+		gsort := func(grp []*StateGroup) func(i, j int) bool {
+			return func(i, j int) bool {
+				a := grp[i]
+				b := grp[j]
+				if a.Active && !b.Active {
+					return true
+				} else if !a.Active && b.Active {
+					return false
+				}
+				if a.Status != b.Status {
+					return a.Status > b.Status
+				}
+				if a.AlertKey != b.AlertKey {
+					return a.AlertKey < b.AlertKey
+				}
+				return a.Subject < b.Subject
 			}
-			if a.Status != b.Status {
-				return a.Status > b.Status
-			}
-			if a.AlertKey != b.AlertKey {
-				return a.AlertKey < b.AlertKey
-			}
-			return a.Subject < b.Subject
 		}
-	}
-	slice.Sort(t.Groups.NeedAck, gsort(t.Groups.NeedAck))
-	slice.Sort(t.Groups.Acknowledged, gsort(t.Groups.Acknowledged))
+		slice.Sort(t.Groups.NeedAck, gsort(t.Groups.NeedAck))
+		slice.Sort(t.Groups.Acknowledged, gsort(t.Groups.Acknowledged))
+	})
 	return &t, nil
 }
 
