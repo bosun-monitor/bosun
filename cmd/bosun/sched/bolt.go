@@ -22,7 +22,7 @@ import (
 
 func (s *Schedule) performSave() {
 	for {
-		time.Sleep(60 * time.Second) // wait 60 seconds to throttle.
+		time.Sleep(60 * 10 * time.Second) // wait 10 minutes to throttle.
 		s.save()
 	}
 }
@@ -229,6 +229,7 @@ func (s *Schedule) RestoreState() error {
 		s.createHistoricIncidents()
 	}
 	s.Search.Copy()
+	s.readStatus = s.status.Copy()
 	log.Println("RestoreState done in", time.Since(start))
 	return nil
 }

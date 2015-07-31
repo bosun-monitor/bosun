@@ -11,6 +11,7 @@ import (
 	"net/http/httptest"
 	"net/http/httputil"
 	"net/url"
+	"runtime"
 
 	"bosun.org/cmd/tsdbrelay/denormalize"
 	"bosun.org/opentsdb"
@@ -46,6 +47,7 @@ func main() {
 			log.Fatal(err)
 		}
 	}
+	runtime.GOMAXPROCS(runtime.NumCPU())
 
 	tsdbURL := &url.URL{
 		Scheme: "http",

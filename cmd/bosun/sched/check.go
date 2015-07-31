@@ -29,6 +29,7 @@ func init() {
 	metadata.AddMetricMeta(
 		"bosun.alerts.active_status", metadata.Gauge, metadata.Alert,
 		"The number of open alerts by active status.")
+	collect.AggregateMeta("bosun.template.render", metadata.MilliSecond, "The amount of time it takes to render the specified alert template.")
 }
 
 func NewStatus(ak expr.AlertKey) *State {
@@ -128,44 +129,11 @@ func (s *Schedule) RunHistory(r *RunHistory) {
 			event.IncidentId = s.createIncident(ak, event.Time).Id
 		}
 		state.Append(event)
-
 		a := s.Conf.Alerts[ak.Name()]
 		wasOpen := state.Open
 		if event.Status > StNormal {
-			state.Subject = ""
-			state.Body = ""
-			state.EmailBody = nil
-			state.EmailSubject = nil
-			state.Attachments = nil
-			if event.Status != StUnknown {
-				subject, serr := s.ExecuteSubject(r, a, state, false)
-				if serr != nil {
-					log.Printf("%s: %v", state.AlertKey(), serr)
-				}
-				body, _, berr := s.ExecuteBody(r, a, state, false)
-				if berr != nil {
-					log.Printf("%s: %v", state.AlertKey(), berr)
-				}
-				emailbody, attachments, merr := s.ExecuteBody(r, a, state, true)
-				if merr != nil {
-					log.Printf("%s: %v", state.AlertKey(), merr)
-				}
-				emailsubject, eserr := s.ExecuteSubject(r, a, state, true)
-				if serr != nil || berr != nil || merr != nil || eserr != nil {
-					var err error
-					subject, body, err = s.ExecuteBadTemplate(serr, berr, r, a, state)
-					if err != nil {
-						subject = []byte(fmt.Sprintf("unable to create template error notification: %v", err))
-					}
-					emailbody = body
-					attachments = nil
-				}
-				state.Subject = string(subject)
-				state.Body = string(body)
-				state.EmailBody = emailbody
-				state.EmailSubject = emailsubject
-				state.Attachments = attachments
-			}
+
+			s.executeTemplates(state, event, a, r)
 			state.Open = true
 			if a.Log {
 				state.Open = false
@@ -248,6 +216,61 @@ func (s *Schedule) RunHistory(r *RunHistory) {
 		s.nc <- true
 	}
 	s.CollectStates()
+	s.readStatus = s.status.Copy()
+}
+
+func (s *Schedule) executeTemplates(state *State, event *Event, a *conf.Alert, r *RunHistory) {
+	state.Subject = ""
+	state.Body = ""
+	state.EmailBody = nil
+	state.EmailSubject = nil
+	state.Attachments = nil
+	if event.Status != StUnknown {
+		metric := "template.render"
+		//Render subject
+		endTiming := collect.StartTimer(metric, opentsdb.TagSet{"alert": a.Name, "type": "subject"})
+		subject, serr := s.ExecuteSubject(r, a, state, false)
+		if serr != nil {
+			log.Printf("%s: %v", state.AlertKey(), serr)
+		}
+		endTiming()
+		//Render body
+		endTiming = collect.StartTimer(metric, opentsdb.TagSet{"alert": a.Name, "type": "body"})
+		body, _, berr := s.ExecuteBody(r, a, state, false)
+		if berr != nil {
+			log.Printf("%s: %v", state.AlertKey(), berr)
+		}
+		endTiming()
+		//Render email body
+		endTiming = collect.StartTimer(metric, opentsdb.TagSet{"alert": a.Name, "type": "emailbody"})
+		emailbody, attachments, merr := s.ExecuteBody(r, a, state, true)
+		if merr != nil {
+			log.Printf("%s: %v", state.AlertKey(), merr)
+		}
+		endTiming()
+		//Render email subject
+		endTiming = collect.StartTimer(metric, opentsdb.TagSet{"alert": a.Name, "type": "emailsubject"})
+		emailsubject, eserr := s.ExecuteSubject(r, a, state, true)
+		endTiming()
+		if serr != nil || berr != nil || merr != nil || eserr != nil {
+			var err error
+
+			endTiming = collect.StartTimer(metric, opentsdb.TagSet{"alert": a.Name, "type": "bad"})
+			subject, body, err = s.ExecuteBadTemplate(serr, berr, r, a, state)
+			endTiming()
+
+			if err != nil {
+				subject = []byte(fmt.Sprintf("unable to create template error notification: %v", err))
+			}
+			emailbody = body
+			attachments = nil
+		}
+		state.Subject = string(subject)
+		state.Body = string(body)
+		state.EmailBody = emailbody
+		state.EmailSubject = emailsubject
+		state.Attachments = attachments
+	}
 }
 
 // CollectStates sends various state information to bosun with collect.
@@ -471,7 +494,6 @@ func markDependenciesUnevaluated(events map[expr.AlertKey]*Event, deps expr.Resu
 				unknownCount++
 			}
 		}
-
 	}
 	return unevalCount, unknownCount
 }

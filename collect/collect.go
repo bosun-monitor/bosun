@@ -289,6 +289,21 @@ func Sample(metric string, ts opentsdb.TagSet, v float64) error {
 	return nil
 }
 
+// StartTimer records the current time, and returns a function you can call to
+// record the end of your action.
+//
+// Typical usage would be:
+//    done := collect.StartTimer("myMetric", opentsdb.TagSet{})
+//    doMyThing()
+//    done()
+func StartTimer(metric string, ts opentsdb.TagSet) func() {
+	start := time.Now()
+	return func() {
+		d := time.Now().Sub(start) / time.Millisecond
+		Sample(metric, ts, float64(d))
+	}
+}
+
 type setMetric struct {
 	metric string
 	ts     opentsdb.TagSet

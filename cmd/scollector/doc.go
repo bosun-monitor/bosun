@@ -89,9 +89,12 @@ will be used to set configuration flags. The format is toml
 (https://github.com/toml-lang/toml/blob/master/versions/en/toml-v0.2.0.md).
 Available keys are:
 
-Host (string): the OpenTSDB or Bosun host to send data.
+Host (string): the OpenTSDB or Bosun host to send data, supports TLS and
+HTTP Basic Auth.
 
-FullHost (string): enables full hostnames: doesn't truncate to first ".".
+	Host = "https://user:password@example.com/"
+
+FullHost (boolean): enables full hostnames: doesn't truncate to first ".".
 
 ColDir (string): is the external collectors directory.
 

@@ -36,6 +36,7 @@ type Schedule struct {
 
 	Conf          *conf.Conf
 	status        States
+	readStatus    States // READ-ONLY copy of status. Updated after each runHistory
 	Notifications map[expr.AlertKey]map[string]time.Time
 	Silence       map[string]*Silence
 	Group         map[time.Time]expr.AlertKeys
@@ -73,10 +74,15 @@ func (s *Schedule) Unlock() {
 	holder := s.mutexHolder
 	start := s.mutexAquired
 	waitTime := s.mutexWaitTime
+	s.mutexHolder = ""
 	s.mutex.Unlock()
 	collect.Add("schedule.lock_time", opentsdb.TagSet{"caller": holder, "op": "wait"}, waitTime)
 	collect.Add("schedule.lock_time", opentsdb.TagSet{"caller": holder, "op": "hold"}, int64(time.Since(start)/time.Millisecond))
 	collect.Add("schedule.lock_count", opentsdb.TagSet{"caller": holder}, 1)
+}
+
+func (s *Schedule) GetLockStatus() (holder string, since time.Time) {
+	return s.mutexHolder, s.mutexAquired
 }
 
 type Metavalue struct {
@@ -262,6 +268,14 @@ func (states States) GroupSets() map[string]expr.AlertKeys {
 	return groups
 }
 
+func (states States) Copy() States {
+	newStates := make(States, len(states))
+	for ak, st := range states {
+		newStates[ak] = st.Copy()
+	}
+	return newStates
+}
+
 type StateGroup struct {
 	Active   bool `json:",omitempty"`
 	Status   Status
@@ -287,31 +301,37 @@ func (s *Schedule) MarshalGroups(T miniprofiler.Timer, filter string) (*StateGro
 	T.Step("Silenced", func(miniprofiler.Timer) {
 		silenced = s.Silenced()
 	})
+	var groups map[StateTuple]States
+	var err error
+	status := make(States)
 	t := StateGroups{
 		TimeAndDate: s.Conf.TimeAndDate,
 	}
-	T.Step("lock", func(t miniprofiler.Timer) {
-		s.Lock("MarshalGroups")
+	T.Step("Setup", func(miniprofiler.Timer) {
+
+		matches, err2 := makeFilter(filter)
+		if err2 != nil {
+			err = err2
+			return
+		}
+		for k, v := range s.readStatus {
+			if !v.Open {
+				continue
+			}
+			a := s.Conf.Alerts[k.Name()]
+			if a == nil {
+				err = fmt.Errorf("unknown alert %s", k.Name())
+				return
+			}
+			if matches(s.Conf, a, v) {
+				status[k] = v
+			}
+		}
+
 	})
-	defer s.Unlock()
-	status := make(States)
-	matches, err := makeFilter(filter)
 	if err != nil {
 		return nil, err
 	}
-	for k, v := range s.status {
-		if !v.Open {
-			continue
-		}
-		a := s.Conf.Alerts[k.Name()]
-		if a == nil {
-			return nil, fmt.Errorf("unknown alert %s", k.Name())
-		}
-		if matches(s.Conf, a, v) {
-			status[k] = v
-		}
-	}
-	var groups map[StateTuple]States
 	T.Step("GroupStates", func(T miniprofiler.Timer) {
 		groups = status.GroupStates(silenced)
 	})
@@ -359,26 +379,28 @@ func (s *Schedule) MarshalGroups(T miniprofiler.Timer, filter string) (*StateGro
 			}
 		}
 	})
-	gsort := func(grp []*StateGroup) func(i, j int) bool {
-		return func(i, j int) bool {
-			a := grp[i]
-			b := grp[j]
-			if a.Active && !b.Active {
-				return true
-			} else if !a.Active && b.Active {
-				return false
+	T.Step("sort", func(T miniprofiler.Timer) {
+		gsort := func(grp []*StateGroup) func(i, j int) bool {
+			return func(i, j int) bool {
+				a := grp[i]
+				b := grp[j]
+				if a.Active && !b.Active {
+					return true
+				} else if !a.Active && b.Active {
+					return false
+				}
+				if a.Status != b.Status {
+					return a.Status > b.Status
+				}
+				if a.AlertKey != b.AlertKey {
+					return a.AlertKey < b.AlertKey
+				}
+				return a.Subject < b.Subject
 			}
-			if a.Status != b.Status {
-				return a.Status > b.Status
-			}
-			if a.AlertKey != b.AlertKey {
-				return a.AlertKey < b.AlertKey
-			}
-			return a.Subject < b.Subject
 		}
-	}
-	slice.Sort(t.Groups.NeedAck, gsort(t.Groups.NeedAck))
-	slice.Sort(t.Groups.Acknowledged, gsort(t.Groups.Acknowledged))
+		slice.Sort(t.Groups.NeedAck, gsort(t.Groups.NeedAck))
+		slice.Sort(t.Groups.Acknowledged, gsort(t.Groups.Acknowledged))
+	})
 	return &t, nil
 }
 
@@ -417,6 +439,7 @@ func (s *Schedule) Init(c *conf.Conf) error {
 			return err
 		}
 	}
+	s.readStatus = s.status.Copy()
 	return nil
 }
 
@@ -542,6 +565,35 @@ type State struct {
 	Forgotten    bool
 	Unevaluated  bool
 	LastLogTime  time.Time
+}
+
+func (s *State) Copy() *State {
+	newState := &State{
+		History:      make([]Event, len(s.History)),
+		Actions:      make([]Action, len(s.Actions)),
+		Touched:      s.Touched,
+		Alert:        s.Alert,
+		Tags:         s.Tags,
+		Group:        s.Group.Copy(),
+		Subject:      s.Subject,
+		Body:         s.Body,
+		EmailBody:    s.EmailBody,
+		EmailSubject: s.EmailSubject,
+		Attachments:  s.Attachments,
+		NeedAck:      s.NeedAck,
+		Open:         s.Open,
+		Forgotten:    s.Forgotten,
+		Unevaluated:  s.Unevaluated,
+		LastLogTime:  s.LastLogTime,
+	}
+	newState.Result = s.Result
+	for i := range s.History {
+		newState.History[i] = s.History[i]
+	}
+	for i := range s.Actions {
+		newState.Actions[i] = s.Actions[i]
+	}
+	return newState
 }
 
 func (s *State) AlertKey() expr.AlertKey {
@@ -679,6 +731,10 @@ type Event struct {
 type Result struct {
 	*expr.Result
 	Expr string
+}
+
+func (r *Result) Copy() *Result {
+	return &Result{r.Result, r.Expr}
 }
 
 type Status int
