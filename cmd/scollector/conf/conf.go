@@ -33,16 +33,19 @@ type Conf struct {
 	// the specified community.
 	KeepalivedCommunity string
 
-	HAProxy       []HAProxy
-	SNMP          []SNMP
-	MIBS          map[string]MIB
-	ICMP          []ICMP
-	Vsphere       []Vsphere
-	AWS           []AWS
-	Process       []ProcessParams
-	ProcessDotNet []ProcessDotNet
-	HTTPUnit      []HTTPUnit
-	Riak          []Riak
+	HAProxy         []HAProxy
+	SNMP            []SNMP
+	MIBS            map[string]MIB
+	ICMP            []ICMP
+	Vsphere         []Vsphere
+	AWS             []AWS
+	Process         []ProcessParams
+	ProcessDotNet   []ProcessDotNet
+	HTTPUnit        []HTTPUnit
+	Riak            []Riak
+	RunitServices   []RunitServices
+	InitdServices   []InitdServices
+	SystemdServices []SystemdServices
 }
 
 type HAProxy struct {
@@ -116,4 +119,19 @@ type HTTPUnit struct {
 
 type Riak struct {
 	URL string
+}
+
+type RunitServices struct {
+	WhiteList string
+	BlackList string
+}
+
+type InitdServices struct {
+	WhiteList string
+	BlackList string
+}
+
+type SystemdServices struct {
+	WhiteList string
+	BlackList string
 }
