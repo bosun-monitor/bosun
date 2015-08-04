@@ -284,10 +284,10 @@ notification email {
 	timeout = 1d
 }
 
-# post to a slack.com chatroom 
+# post to a slack.com chatroom via Incoming Webhooks integration
 notification slack{
-	post = https://company.slack.com/services/hooks/incoming-webhook?token=TOKEN
-	body = payload={"username": "bosun", "text": {{.|json}}, "icon_url": "http://stackexchange.github.io/bosun/public/bosun-logo-mark.svg"} 
+	post = https://hooks.slack.com/services/abcdef
+	body = {"text": {{.|json}}}
 }
 
 #post json
