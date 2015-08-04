@@ -154,7 +154,6 @@ func (s *Schedule) RestoreState() error {
 	if err := decode(dbMetricTags, &s.Search.MetricTags); err != nil {
 		log.Println(dbMetricTags, err)
 	}
-
 	notifications := make(map[expr.AlertKey]map[string]time.Time)
 	if err := decode(dbNotifications, &notifications); err != nil {
 		log.Println(dbNotifications, err)
