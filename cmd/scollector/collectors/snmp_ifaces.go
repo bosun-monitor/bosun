@@ -28,6 +28,7 @@ const (
 	ifOutDiscards        = ".1.3.6.1.2.1.2.2.1.19"
 	ifOutErrors          = ".1.3.6.1.2.1.2.2.1.20"
 	ifOutPauseFrames     = ".1.3.6.1.2.1.10.7.10.1.4"
+	ifType               = "1.3.6.1.2.1.2.2.1.3"
 )
 
 // SNMPIfaces registers a SNMP Interfaces collector for the given community and host.
@@ -41,40 +42,62 @@ func SNMPIfaces(cfg conf.SNMP) {
 	})
 }
 
-func switch_bond(metric, iname string) string {
-	if isBondInterface(iname) {
-		return "os.net.bond" + strings.TrimPrefix(metric, "os.net")
-	}
-	return metric
-}
+const osNet = "os.net"
 
-func isBondInterface(iname string) bool {
-	return strings.Contains(iname, "port-channel")
+func switchInterfaceMetric(metric string, iname string, ifType int64) string {
+	switch ifType {
+	case 6:
+		return metric
+	case 53, 161:
+		return osNet + ".bond" + strings.TrimPrefix(metric, osNet)
+	case 135:
+		return osNet + ".virtual" + strings.TrimPrefix(metric, osNet)
+	case 131:
+		return osNet + ".tunnel" + strings.TrimPrefix(metric, osNet)
+	default:
+		//Cisco ASAs don't mark port channels correctly
+		if strings.Contains(iname, "port-channel") {
+			return osNet + ".bond" + strings.TrimPrefix(metric, osNet)
+		}
+		return osNet + ".other" + strings.TrimPrefix(metric, osNet)
+	}
 }
 
 func c_snmp_ifaces(community, host string) (opentsdb.MultiDataPoint, error) {
-	n, err := snmp_subtree(host, community, ifName)
-	if err != nil || len(n) == 0 {
-		n, err = snmp_subtree(host, community, ifDescr)
+	ifNamesRaw, err := snmp_subtree(host, community, ifName)
+	if err != nil || len(ifNamesRaw) == 0 {
+		ifNamesRaw, err = snmp_subtree(host, community, ifDescr)
 		if err != nil {
 			return nil, err
 		}
 	}
-	a, err := snmp_subtree(host, community, ifAlias)
+	ifAliasesRaw, err := snmp_subtree(host, community, ifAlias)
 	if err != nil {
 		return nil, err
 	}
-	names := make(map[interface{}]string, len(n))
-	aliases := make(map[interface{}]string, len(a))
-	for k, v := range n {
-		names[k] = fmt.Sprintf("%s", v)
+	ifTypesRaw, err := snmp_subtree(host, community, ifType)
+	if err != nil {
+		return nil, err
 	}
-	for k, v := range a {
+	ifNames := make(map[interface{}]string, len(ifNamesRaw))
+	ifAliases := make(map[interface{}]string, len(ifAliasesRaw))
+	ifTypes := make(map[interface{}]int64, len(ifTypesRaw))
+	for k, v := range ifNames {
+		ifNames[k] = fmt.Sprintf("%s", v)
+	}
+	for k, v := range ifTypesRaw {
+		val, ok := v.(int64)
+		if !ok {
+			return nil, fmt.Errorf("unexpected type from from MIB::ifType")
+		}
+		ifTypes[k] = val
+	}
+	for k, v := range ifAliasesRaw {
 		// In case clean would come up empty, prevent the point from being removed
 		// by setting our own empty case.
-		aliases[k], _ = opentsdb.Clean(fmt.Sprintf("%s", v))
-		if aliases[k] == "" {
-			aliases[k] = "NA"
+		ifAliases[k], _ = opentsdb.Clean(fmt.Sprintf("%s", v))
+		if ifAliases[k] == "" {
+			ifAliases[k] = "NA"
 		}
 	}
 	var md opentsdb.MultiDataPoint
@@ -89,13 +112,13 @@ func c_snmp_ifaces(community, host string) (opentsdb.MultiDataPoint, error) {
 				"host":      host,
 				"direction": dir,
 				"iface":     fmt.Sprintf("%d", k),
-				"iname":     names[k],
+				"iname":     ifNames[k],
 			}
-			if iVal, ok := v.(int64); ok && !isBondInterface(names[k]) {
+			if iVal, ok := v.(int64); ok && ifTypes[k] == 6 {
 				sum += iVal
 			}
-			Add(&md, switch_bond(metric, names[k]), v, tags, metadata.Unknown, metadata.None, "")
-			metadata.AddMeta("", tags, "alias", aliases[k], false)
+			Add(&md, switchInterfaceMetric(metric, ifNames[k], ifTypes[k]), v, tags, metadata.Unknown, metadata.None, "")
+			metadata.AddMeta("", tags, "alias", ifAliases[k], false)
 		}
 		if metric == osNetBytes {
 			tags := opentsdb.TagSet{"host": host, "direction": dir}
