@@ -16,6 +16,7 @@ import (
 
 	"bosun.org/_third_party/github.com/aymerick/douceur/inliner"
 	"bosun.org/_third_party/github.com/jmoiron/jsonq"
+	"bosun.org/_third_party/github.com/olivere/elastic"
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/expr"
 	"bosun.org/cmd/bosun/expr/parse"
@@ -202,11 +203,37 @@ func (c *Context) evalExpr(e *expr.Expr, filter bool, series bool, autods int) (
 	if series && e.Root.Return() != parse.TypeSeriesSet {
 		return nil, "", fmt.Errorf("need a series, got %T (%v)", e, e)
 	}
-	res, _, err := e.Execute(c.runHistory.Context, c.runHistory.GraphiteContext, c.runHistory.Logstash, c.runHistory.Cache, nil, c.runHistory.Start, autods, c.Alert.UnjoinedOK, c.schedule.Search, c.schedule.Conf.AlertSquelched(c.Alert), c.runHistory)
-	if err != nil {
-		return nil, "", fmt.Errorf("%s: %v", e, err)
+	resChan := make(chan struct {
+		*expr.Results
+		error
+	}, 1)
+	didTimeOut := make(chan bool)
+	go func() {
+		res, _, err := e.Execute(c.runHistory.Context, c.runHistory.GraphiteContext, c.runHistory.Logstash, c.runHistory.Cache, nil, c.runHistory.Start, autods, c.Alert.UnjoinedOK, c.schedule.Search, c.schedule.Conf.AlertSquelched(c.Alert), c.runHistory)
+		resChan <- struct {
+			*expr.Results
+			error
+		}{res, err}
+		timedOut := <-didTimeOut
+		if timedOut && err != nil {
+			log.Println("error after timeout of %s: %v", e, err)
+		}
+	}()
+	select {
+	case res := <-resChan:
+		didTimeOut <- false
+		if res.error != nil {
+			return nil, "", fmt.Errorf("%s: %v", e, res.error)
+		}
+		return res.Results.Results, e.String(), nil
+	case <-time.After(c.schedule.Conf.TemplateFunctionTimeout):
+		didTimeOut <- true
+		warning := fmt.Sprintf("timeout executing %s", e)
+		log.Println(warning)
+		c.State.TemplateWarnings = append(c.State.TemplateWarnings, warning)
+		var res expr.ResultSlice
+		return res, e.String(), nil
 	}
-	return res.Results, e.String(), nil
 }
 
 // eval takes an expression or string (which it turns into an expression), executes it and returns the result.
@@ -469,7 +496,7 @@ func (c *Context) HTTPPost(url, bodyType, data string) string {
 	return string(body)
 }
 
-func (c *Context) LSQuery(index_root, filter, sduration, eduration string, size int) (interface{}, error) {
+func (c *Context) LSQuery(index_root, filter, sduration, eduration string, size int) ([]string, error) {
 	var ks []string
 	for k, v := range c.Group {
 		ks = append(ks, k+":"+v)
@@ -477,24 +504,50 @@ func (c *Context) LSQuery(index_root, filter, sduration, eduration string, size 
 	return c.LSQueryAll(index_root, strings.Join(ks, ","), filter, sduration, eduration, size)
 }
 
-func (c *Context) LSQueryAll(index_root, keystring, filter, sduration, eduration string, size int) (interface{}, error) {
-	req, err := expr.LSBaseQuery(c.runHistory.Start, index_root, c.runHistory.Logstash, keystring, filter, sduration, eduration, size)
-	if err != nil {
-		return nil, err
-	}
-	results, err := c.runHistory.Logstash.Query(req)
-	if err != nil {
-		return nil, err
-	}
-	r := make([]interface{}, len(results.Hits.Hits))
-	for i, h := range results.Hits.Hits {
-		var err error
-		err = json.Unmarshal(*h.Source, &r[i])
-		if err != nil {
-			return nil, err
+func (c *Context) LSQueryAll(index_root, keystring, filter, sduration, eduration string, size int) ([]string, error) {
+	resChan := make(chan struct {
+		*elastic.SearchResult
+		error
+	}, 1)
+	didTimeOut := make(chan bool)
+	go func() {
+		req, err := expr.LSBaseQuery(c.runHistory.Start, index_root, c.runHistory.Logstash, keystring, filter, sduration, eduration, size)
+		resChan <- struct {
+			*elastic.SearchResult
+			error
+		}{nil, err}
+		res, err := c.runHistory.Logstash.Query(req)
+		resChan <- struct {
+			*elastic.SearchResult
+			error
+		}{res, err}
+		timedOut := <-didTimeOut
+		if timedOut && err != nil {
+			log.Println("error after timeout of template func LSQuery(All): %v", err)
 		}
+	}()
+	select {
+	case res := <-resChan:
+		didTimeOut <- false
+		if res.error != nil {
+			return nil, res.error
+		}
+		r := make([]string, len(res.Hits.Hits))
+		for i, h := range res.Hits.Hits {
+			var err error
+			err = json.Unmarshal(*h.Source, &r[i])
+			if err != nil {
+				return nil, err
+			}
+		}
+		return r, nil
+	case <-time.After(c.schedule.Conf.TemplateFunctionTimeout):
+		didTimeOut <- true
+		warning := fmt.Sprintf("timeout executing template func LSQuery(All)")
+		log.Println(warning)
+		c.State.TemplateWarnings = append(c.State.TemplateWarnings, warning)
+		return []string{"timeout executing lsquery"}, nil
 	}
-	return r, nil
 }
 
 type actionNotificationContext struct {

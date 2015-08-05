@@ -28,35 +28,36 @@ import (
 
 type Conf struct {
 	Vars
-	Name             string        // Config file name
-	CheckFrequency   time.Duration // Time between alert checks: 5m
-	DefaultRunEvery  int           // Default number of check intervals to run each alert: 1
-	HTTPListen       string        // Web server listen address: :80
-	Hostname         string
-	RelayListen      string // OpenTSDB relay listen address: :4242
-	SMTPHost         string // SMTP address: ny-mail:25
-	SMTPUsername     string // SMTP username
-	SMTPPassword     string // SMTP password
-	Ping             bool
-	PingDuration     time.Duration // Duration from now to stop pinging hosts based on time since the host tag was touched
-	EmailFrom        string
-	StateFile        string
-	TimeAndDate      []int // timeanddate.com cities list
-	ResponseLimit    int64
-	SearchSince      opentsdb.Duration
-	UnknownTemplate  *Template
-	UnknownThreshold int
-	Templates        map[string]*Template
-	Alerts           map[string]*Alert
-	OrderedAlerts    []*Alert                 `json:"-"` //alerts in order they appear.
-	Notifications    map[string]*Notification `json:"-"`
-	RawText          string
-	Macros           map[string]*Macro
-	Lookups          map[string]*Lookup
-	Squelch          Squelches `json:"-"`
-	Quiet            bool
-	NoSleep          bool
-	ShortURLKey      string
+	Name                    string        // Config file name
+	CheckFrequency          time.Duration // Time between alert checks: 5m
+	DefaultRunEvery         int           // Default number of check intervals to run each alert: 1
+	HTTPListen              string        // Web server listen address: :80
+	Hostname                string
+	RelayListen             string // OpenTSDB relay listen address: :4242
+	SMTPHost                string // SMTP address: ny-mail:25
+	SMTPUsername            string // SMTP username
+	SMTPPassword            string // SMTP password
+	Ping                    bool
+	PingDuration            time.Duration // Duration from now to stop pinging hosts based on time since the host tag was touched
+	EmailFrom               string
+	StateFile               string
+	TimeAndDate             []int // timeanddate.com cities list
+	ResponseLimit           int64
+	SearchSince             opentsdb.Duration
+	UnknownTemplate         *Template
+	UnknownThreshold        int
+	TemplateFunctionTimeout time.Duration // Duration to timeout on executing evaluation like functions in templates
+	Templates               map[string]*Template
+	Alerts                  map[string]*Alert
+	OrderedAlerts           []*Alert                 `json:"-"` //alerts in order they appear.
+	Notifications           map[string]*Notification `json:"-"`
+	RawText                 string
+	Macros                  map[string]*Macro
+	Lookups                 map[string]*Lookup
+	Squelch                 Squelches `json:"-"`
+	Quiet                   bool
+	NoSleep                 bool
+	ShortURLKey             string
 
 	TSDBHost             string                    // OpenTSDB relay and query destination: ny-devtsdb04:4242
 	GraphiteHost         string                    // Graphite query host: foo.bar.baz
@@ -334,24 +335,25 @@ func ParseFile(fname string) (*Conf, error) {
 func New(name, text string) (c *Conf, err error) {
 	defer errRecover(&err)
 	c = &Conf{
-		Name:             name,
-		CheckFrequency:   time.Minute * 5,
-		DefaultRunEvery:  1,
-		HTTPListen:       ":8070",
-		StateFile:        "bosun.state",
-		PingDuration:     time.Hour * 24,
-		ResponseLimit:    1 << 20, // 1MB
-		SearchSince:      opentsdb.Day * 3,
-		UnknownThreshold: 5,
-		Vars:             make(map[string]string),
-		Templates:        make(map[string]*Template),
-		Alerts:           make(map[string]*Alert),
-		Notifications:    make(map[string]*Notification),
-		RawText:          text,
-		bodies:           htemplate.New(name).Funcs(htemplate.FuncMap(defaultFuncs)),
-		subjects:         ttemplate.New(name).Funcs(defaultFuncs),
-		Lookups:          make(map[string]*Lookup),
-		Macros:           make(map[string]*Macro),
+		Name:                    name,
+		CheckFrequency:          time.Minute * 5,
+		DefaultRunEvery:         1,
+		HTTPListen:              ":8070",
+		StateFile:               "bosun.state",
+		PingDuration:            time.Hour * 24,
+		ResponseLimit:           1 << 20, // 1MB
+		SearchSince:             opentsdb.Day * 3,
+		TemplateFunctionTimeout: time.Second * 15,
+		UnknownThreshold:        5,
+		Vars:                    make(map[string]string),
+		Templates:               make(map[string]*Template),
+		Alerts:                  make(map[string]*Alert),
+		Notifications:           make(map[string]*Notification),
+		RawText:                 text,
+		bodies:                  htemplate.New(name).Funcs(htemplate.FuncMap(defaultFuncs)),
+		subjects:                ttemplate.New(name).Funcs(defaultFuncs),
+		Lookups:                 make(map[string]*Lookup),
+		Macros:                  make(map[string]*Macro),
 	}
 	c.tree, err = parse.Parse(name, text)
 	if err != nil {
@@ -427,6 +429,12 @@ func (c *Conf) loadGlobal(p *parse.PairNode) {
 		c.EmailFrom = v
 	case "stateFile":
 		c.StateFile = v
+	case "templateFunctionTimeout":
+		d, err := time.ParseDuration(v)
+		if err != nil {
+			c.errorf(err.Error())
+		}
+		c.TemplateFunctionTimeout = d
 	case "ping":
 		c.Ping = true
 	case "pingDuration":

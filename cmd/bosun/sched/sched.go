@@ -549,42 +549,44 @@ type State struct {
 	*Result
 
 	// Most recent last.
-	History      []Event  `json:",omitempty"`
-	Actions      []Action `json:",omitempty"`
-	Touched      time.Time
-	Alert        string // helper data since AlertKeys don't serialize to JSON well
-	Tags         string // string representation of Group
-	Group        opentsdb.TagSet
-	Subject      string
-	Body         string
-	EmailBody    []byte             `json:"-"`
-	EmailSubject []byte             `json:"-"`
-	Attachments  []*conf.Attachment `json:"-"`
-	NeedAck      bool
-	Open         bool
-	Forgotten    bool
-	Unevaluated  bool
-	LastLogTime  time.Time
+	History          []Event  `json:",omitempty"`
+	Actions          []Action `json:",omitempty"`
+	Touched          time.Time
+	Alert            string // helper data since AlertKeys don't serialize to JSON well
+	Tags             string // string representation of Group
+	Group            opentsdb.TagSet
+	Subject          string
+	Body             string
+	EmailBody        []byte             `json:"-"`
+	EmailSubject     []byte             `json:"-"`
+	Attachments      []*conf.Attachment `json:"-"`
+	NeedAck          bool
+	Open             bool
+	Forgotten        bool
+	Unevaluated      bool
+	LastLogTime      time.Time
+	TemplateWarnings []string
 }
 
 func (s *State) Copy() *State {
 	newState := &State{
-		History:      make([]Event, len(s.History)),
-		Actions:      make([]Action, len(s.Actions)),
-		Touched:      s.Touched,
-		Alert:        s.Alert,
-		Tags:         s.Tags,
-		Group:        s.Group.Copy(),
-		Subject:      s.Subject,
-		Body:         s.Body,
-		EmailBody:    s.EmailBody,
-		EmailSubject: s.EmailSubject,
-		Attachments:  s.Attachments,
-		NeedAck:      s.NeedAck,
-		Open:         s.Open,
-		Forgotten:    s.Forgotten,
-		Unevaluated:  s.Unevaluated,
-		LastLogTime:  s.LastLogTime,
+		History:          make([]Event, len(s.History)),
+		Actions:          make([]Action, len(s.Actions)),
+		Touched:          s.Touched,
+		Alert:            s.Alert,
+		Tags:             s.Tags,
+		Group:            s.Group.Copy(),
+		Subject:          s.Subject,
+		Body:             s.Body,
+		EmailBody:        s.EmailBody,
+		EmailSubject:     s.EmailSubject,
+		Attachments:      s.Attachments,
+		NeedAck:          s.NeedAck,
+		Open:             s.Open,
+		Forgotten:        s.Forgotten,
+		Unevaluated:      s.Unevaluated,
+		LastLogTime:      s.LastLogTime,
+		TemplateWarnings: s.TemplateWarnings,
 	}
 	newState.Result = s.Result
 	for i := range s.History {
