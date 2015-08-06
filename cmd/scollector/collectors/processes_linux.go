@@ -243,8 +243,10 @@ func (w *WatchedProc) Check(procs []*Process) {
 }
 
 func (w *WatchedProc) Remove(pid string) {
-	w.put(w.Processes[pid])
-	delete(w.Processes, pid)
+	if w.idPool != nil {
+		w.put(w.Processes[pid])
+		delete(w.Processes, pid)
+	}
 }
 
 type idPool struct {

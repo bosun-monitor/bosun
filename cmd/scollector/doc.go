@@ -247,6 +247,31 @@ Riak (array of table, keys are URL): Riak hosts to poll.
 	[[Riak]]
 	  URL = "http://localhost:8098/stats"
 
+InitdServices (array of table, keys are WhiteList): processes from SysV-style
+services to monitor. Collector searches for PIDs files in /var/run directory.
+WhiteList and BlackList are RE2 regexps, collector will monitor their intersection.
+
+	# Linux
+	[[InitdServices]]
+	  WhiteList = ".*"
+	  BlackList = "ssh|cron"
+
+RunitServices (array of table, keys are WhiteList): processes from runit
+services to monitor. Collector searches for PIDs files in /etc/service and
+
+	# Linux
+	[[RunitServices]]
+	  WhiteList = "redis"
+	  BlackList = ""
+
+SystemdServices (array of table, keys are WhiteList): processes from systemd
+services to monitor. Collector uses "systemctl list-units".
+
+	# Linux
+	[[SystemdServices]]
+	  WhiteList = "nginx|redis"
+	  BlackList = ""
+
 Windows
 
 scollector has full Windows support. It can be run standalone, or installed as a
