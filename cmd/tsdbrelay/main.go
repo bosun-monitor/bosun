@@ -179,6 +179,8 @@ func (rp *relayProxy) relayRequest(responseWriter http.ResponseWriter, r *http.R
 			for _, relayUrl := range relayPutUrls {
 				body := bytes.NewBuffer(reader.buf.Bytes())
 				req, err := http.NewRequest(r.Method, relayUrl, body)
+				req.Header.Set("Content-Type", "application/json")
+				req.Header.Set("Content-Encoding", "gzip")
 				if err != nil {
 					verbose("%v", err)
 					return
