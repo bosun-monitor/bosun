@@ -20,6 +20,7 @@ import (
 	"bosun.org/cmd/bosun/expr"
 	"bosun.org/cmd/bosun/expr/parse"
 	"bosun.org/opentsdb"
+	"bosun.org/slog"
 )
 
 type Context struct {
@@ -290,7 +291,13 @@ func (c *Context) EvalAll(v interface{}) (interface{}, error) {
 	return res, err
 }
 
-func (c *Context) graph(v interface{}, unit string, filter bool) (interface{}, error) {
+func (c *Context) graph(v interface{}, unit string, filter bool) (val interface{}, err error) {
+	defer func() {
+		if p := recover(); p != nil {
+			slog.Error("panic rendering graph", p)
+			val = "error rendering graph"
+		}
+	}()
 	res, exprText, err := c.eval(v, filter, true, 1000)
 	if err != nil {
 		return nil, err
