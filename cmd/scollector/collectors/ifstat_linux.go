@@ -1,8 +1,6 @@
 package collectors
 
 import (
-	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -39,7 +37,8 @@ var netFields = []struct {
 	{"compressed", metadata.Counter, metadata.Count},
 }
 
-var teamRegexp = regexp.MustCompile(`^team\d+`)
+var ifstatRE = regexp.MustCompile(`\s+(eth\d+|em\d+_\d+/\d+|em\d+_\d+|em\d+|` +
+	`bond\d+|team\d+|` + `p\d+p\d+_\d+/\d+|p\d+p\d+_\d+|p\d+p\d+):(.*)`)
 
 func c_ipcount_linux() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
@@ -73,56 +72,30 @@ func c_ifstat_linux() (opentsdb.MultiDataPoint, error) {
 		}
 	}
 	err := readLine("/proc/net/dev", func(s string) error {
-		// Skip headers
-		if strings.Contains(s, "|") {
+		m := ifstatRE.FindStringSubmatch(s)
+		if m == nil {
 			return nil
 		}
-		m := strings.Fields(s)
-		intf := strings.TrimRight(m[0], ":")
-		stats := m[1:]
+		intf := m[1]
+		stats := strings.Fields(m[2])
 		tags := opentsdb.TagSet{"iface": intf}
-
-		// Detect non-ethernet device types
-		var namespace_string string
-		_ = readLine("/sys/class/net/"+intf+"/type", func(devType string) error {
-			if devType != "1" {
-				namespace_string = "virtual."
-			}
-			return nil
-		})
-		// Detect virtual ethernet devices types
-		if namespace_string == "" {
-			if _, err := os.Stat("/sys/class/net/" + intf + "/bonding"); !os.IsNotExist(err) {
-				// Bond interface
-				namespace_string = "bond."
-			} else if teamRegexp.MatchString(intf) {
-				// Team interface matched via regex (unreliable)
-				namespace_string = "bond."
-			} else {
-				// Generic virtual device detection
-				devPath, err := filepath.EvalSymlinks("/sys/class/net/" + intf)
-				if err != nil {
-					return nil
-				}
-				if strings.Contains(devPath, "/virtual/") {
-					namespace_string = "virtual."
-				}
-			}
+		var bond_string string
+		if strings.HasPrefix(intf, "bond") || strings.HasPrefix(intf, "team") {
+			bond_string = "bond."
 		}
-
 		// Detect speed of the interface in question
 		_ = readLine("/sys/class/net/"+intf+"/speed", func(speed string) error {
-			Add(&md, "linux.net."+namespace_string+"ifspeed", speed, tags, metadata.Gauge, metadata.Megabit, "")
-			Add(&md, "os.net."+namespace_string+"ifspeed", speed, tags, metadata.Gauge, metadata.Megabit, "")
+			Add(&md, "linux.net."+bond_string+"ifspeed", speed, tags, metadata.Gauge, metadata.Megabit, "")
+			Add(&md, "os.net."+bond_string+"ifspeed", speed, tags, metadata.Gauge, metadata.Megabit, "")
 			return nil
 		})
 		for i, v := range stats {
-			Add(&md, "linux.net."+namespace_string+strings.Replace(netFields[i].key, ".", "_", -1), v, opentsdb.TagSet{
+			Add(&md, "linux.net."+bond_string+strings.Replace(netFields[i].key, ".", "_", -1), v, opentsdb.TagSet{
 				"iface":     intf,
 				"direction": direction(i),
 			}, netFields[i].rate, netFields[i].unit, "")
 			if i < 4 || (i >= 8 && i < 12) {
-				Add(&md, "os.net."+namespace_string+strings.Replace(netFields[i].key, ".", "_", -1), v, opentsdb.TagSet{
+				Add(&md, "os.net."+bond_string+strings.Replace(netFields[i].key, ".", "_", -1), v, opentsdb.TagSet{
 					"iface":     intf,
 					"direction": direction(i),
 				}, netFields[i].rate, netFields[i].unit, "")
