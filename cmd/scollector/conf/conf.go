@@ -43,6 +43,11 @@ type Conf struct {
 	ProcessDotNet []ProcessDotNet
 	HTTPUnit      []HTTPUnit
 	Riak          []Riak
+
+	// ElasticIndexFilters takes regular expressions and excludes indicies that
+	// match those filters from being monitored for metrics in the elastic.indices
+	// namespace
+	ElasticIndexFilters []string
 }
 
 type HAProxy struct {

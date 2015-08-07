@@ -128,6 +128,9 @@ func main() {
 			check(collectors.HTTPUnitHiera(h.Hiera))
 		}
 	}
+	for _, r := range conf.ElasticIndexFilters {
+		check(collectors.AddElasticIndexFilter(r))
+	}
 	for _, r := range conf.Riak {
 		check(collectors.Riak(r.URL))
 	}
