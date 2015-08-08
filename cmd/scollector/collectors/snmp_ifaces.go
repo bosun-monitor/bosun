@@ -82,7 +82,7 @@ func c_snmp_ifaces(community, host string) (opentsdb.MultiDataPoint, error) {
 	ifNames := make(map[interface{}]string, len(ifNamesRaw))
 	ifAliases := make(map[interface{}]string, len(ifAliasesRaw))
 	ifTypes := make(map[interface{}]int64, len(ifTypesRaw))
-	for k, v := range ifNames {
+	for k, v := range ifNamesRaw {
 		ifNames[k] = fmt.Sprintf("%s", v)
 	}
 	for k, v := range ifTypesRaw {
