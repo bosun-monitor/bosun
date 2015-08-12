@@ -56,6 +56,11 @@ func MetricsByTagPair(t miniprofiler.Timer, w http.ResponseWriter, r *http.Reque
 	return values, nil
 }
 
+func MetricsWithTagKeys(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	values := schedule.Search.MetricsWithTagKeys()
+	return values, nil
+}
+
 func TagValuesByTagKey(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	tagk := vars["tagk"]

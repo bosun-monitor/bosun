@@ -99,6 +99,7 @@ func Listen(listenAddr string, devMode bool, tsdbHost string) error {
 	router.Handle("/api/metadata/put", JSON(PutMetadata))
 	router.Handle("/api/metric", JSON(UniqueMetrics))
 	router.Handle("/api/metric/{tagk}/{tagv}", JSON(MetricsByTagPair))
+	router.Handle("/api/metric/tagkey", JSON(MetricsWithTagKeys))
 	router.Handle("/api/rule", JSON(Rule))
 	router.HandleFunc("/api/shorten", Shorten)
 	router.Handle("/api/silence/clear", JSON(SilenceClear))
