@@ -284,6 +284,21 @@ func (s *Search) TagKeysByMetric(Metric string) []string {
 	return r
 }
 
+func (s *Search) MetricsWithTagKeys() map[string][]string {
+	metricToKeys := make(map[string][]string)
+	searchResult := s.Read.Tagk.Copy()
+	for metric, v := range searchResult {
+		keys := make([]string, len(v))
+		i := 0
+		for tK := range v {
+			keys[i] = tK
+			i++
+		}
+		metricToKeys[metric] = keys
+	}
+	return metricToKeys
+}
+
 func (s *Search) tagValuesByMetricTagKey(Metric, Tagk string, since time.Duration) []string {
 	var t int64
 	if since > 0 {
