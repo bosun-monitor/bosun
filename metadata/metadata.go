@@ -57,6 +57,7 @@ const (
 	Fault               = "faults"
 	Flush               = "flushes"
 	Files               = "files"
+	Frame               = "frames"
 	Get                 = "gets"
 	GetExists           = "get exists"
 	Interupt            = "interupts"
@@ -71,6 +72,7 @@ const (
 	MilliSecond         = "milliseconds"
 	Ok                  = "ok" // "OK" or not status, 0 = ok, 1 = not ok
 	Operation           = "Operations"
+	Packet              = "packets"
 	Page                = "pages"
 	Pct                 = "percent" // Range of 0-100.
 	PerSecond           = "per second"
