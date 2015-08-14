@@ -247,6 +247,13 @@ Riak (array of table, keys are URL): Riak hosts to poll.
 	[[Riak]]
 	  URL = "http://localhost:8098/stats"
 
+RabbitMQ (array of table, keys are URL): RabbitMQ hosts to poll.
+Regardless of config the collector will automatically poll
+management plugin on http://guest:guest@127.0.0.1:15672/ .
+
+	[[RabbitMQ]]
+	  URL = "https://user:password@hostname:15671"
+
 Windows
 
 scollector has full Windows support. It can be run standalone, or installed as a
