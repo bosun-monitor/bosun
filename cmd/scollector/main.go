@@ -102,6 +102,9 @@ func main() {
 			collectors.HAProxy(h.User, h.Password, i.Tier, i.URL)
 		}
 	}
+	for _, rmq := range conf.RabbitMQ {
+		check(collectors.RabbitMQ(rmq.URL))
+	}
 	for _, cfg := range conf.SNMP {
 		check(collectors.SNMP(cfg, conf.MIBS))
 	}
