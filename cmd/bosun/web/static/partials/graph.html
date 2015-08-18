@@ -43,6 +43,11 @@
 					<input type="checkbox" ng-model="refresh"> Auto Refresh
 				</label>
 			</div>
+			<div class="checkbox" tooltip title="Normalize each series to 0-100% of the max value of the series. This is helpful for viewing correlation with multiple series of different metrics">
+				<label>
+					<input type="checkbox" ng-model="normalize"> Normalize
+				</label>
+			</div>
 			<div class="pull-right" ng-show="url">
 				<ts-popup url="url"></ts-popup>
 				<a class="btn btn-default" ng-href="{{url}}&png=.png" target="_blank">image</a>
@@ -147,7 +152,7 @@
 </div>
 <div class="row">
 	<div class="col-lg-12">
-		<div id="chart" ts-graph data="result" height="400" bstart="start" bend="end" enable-brush="true" min="min" max="max"></div>
+		<div id="chart" ts-graph data="result" height="400" bstart="start" bend="end" enable-brush="true" min="min" max="max" normalize="normalize"></div>
 	</div>
 </div>
 <div class="row" ng-show="queries">
