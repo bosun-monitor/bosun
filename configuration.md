@@ -44,7 +44,8 @@ Every variable is optional, though you should enable at least 1 backend.
   * The items page.
   * The graph page's tag list.
 * graphiteHost: an ip, hostname, ip:port, hostname:port or a URL, defaults to standard http/https ports, defaults to "/render" path.  Any non-zero path (even "/" overrides path)
-* logstashElasticHost: Elasticsearch host populated by logstash. Same format as tsdbHost.
+* graphiteHeader: a http header to be sent to graphite on each request in 'key:value' format. optional. can be specified multiple times.
+* logstashElasticHosts: Elasticsearch host populated by logstash. Must be a URL.
 
 #### settings
 
@@ -283,10 +284,10 @@ notification email {
 	timeout = 1d
 }
 
-# post to a slack.com chatroom 
+# post to a slack.com chatroom via Incoming Webhooks integration
 notification slack{
-	post = https://company.slack.com/services/hooks/incoming-webhook?token=TOKEN
-	body = payload={"username": "bosun", "text": {{.|json}}, "icon_url": "http://stackexchange.github.io/bosun/public/bosun-logo-mark.svg"} 
+	post = https://hooks.slack.com/services/abcdef
+	body = {"text": {{.|json}}}
 }
 
 #post json
