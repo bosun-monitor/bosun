@@ -29,7 +29,7 @@ func SNMP(cfg conf.SNMP, mibs map[string]conf.MIB) error {
 		if ok {
 			collectors = append(collectors, &IntervalCollector{
 				F: func() (opentsdb.MultiDataPoint, error) {
-					return c_snmp_generic(cfg, mib)
+					return GenericSnmp(cfg, mib)
 				},
 				name: fmt.Sprintf("snmp-generic-%s-%s", cfg.Host, m),
 			})
@@ -99,7 +99,7 @@ func combineOids(oid, base string) string {
 	return oid
 }
 
-func c_snmp_generic(cfg conf.SNMP, mib conf.MIB) (opentsdb.MultiDataPoint, error) {
+func GenericSnmp(cfg conf.SNMP, mib conf.MIB) (opentsdb.MultiDataPoint, error) {
 	md := opentsdb.MultiDataPoint{}
 	baseOid := mib.BaseOid
 
@@ -181,6 +181,9 @@ func c_snmp_generic(cfg conf.SNMP, mib conf.MIB) (opentsdb.MultiDataPoint, error
 						if !ok {
 							return md, fmt.Errorf("tree for tag %s has no entry for metric %s index %d", tag.Key, metric.Metric, i)
 						}
+					}
+					if byteSlice, ok := tagVal.([]byte); ok {
+						tagVal = string(byteSlice)
 					}
 					tagset[tag.Key] = fmt.Sprint(tagVal)
 				}
