@@ -43,7 +43,7 @@ func SNMPCisco(cfg conf.SNMP) {
 
 	collectors = append(collectors, &IntervalCollector{
 		F: func() (opentsdb.MultiDataPoint, error) {
-			return c_snmp_generic(cfg, mib)
+			return GenericSnmp(cfg, mib)
 		},
 		Interval: time.Second * 30,
 		name:     fmt.Sprintf("snmp-cisco-%s", cfg.Host),
