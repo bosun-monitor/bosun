@@ -1125,9 +1125,14 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function ($window, fmtfi
                 brushEnd: '=bend',
                 enableBrush: '@',
                 max: '=',
-                min: '='
+                min: '=',
+                normalize: '='
             },
             link: function (scope, elem, attrs) {
+                var valueIdx = 1;
+                if (scope.normalize) {
+                    valueIdx = 2;
+                }
                 var svgHeight = +scope.height || 150;
                 var height = svgHeight - margin.top - margin.bottom;
                 var svgWidth;
@@ -1152,8 +1157,6 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function ($window, fmtfi
                 var brush = d3.svg.brush()
                     .x(xScale)
                     .on('brush', brushed);
-                line.y(function (d) { return yScale(d[1]); });
-                line.x(function (d) { return xScale(d[0] * 1000); });
                 var top = d3.select(elem[0])
                     .append('svg')
                     .attr('height', svgHeight)
@@ -1219,20 +1222,12 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function ($window, fmtfi
                     .attr('class', 'focus')
                     .style('pointer-events', 'none');
                 focus.append('line');
-                function mousemove() {
-                    var pt = d3.mouse(this);
-                    mousex = pt[0];
-                    mousey = pt[1];
-                    if (scope.data) {
-                        drawLegend();
-                    }
-                }
                 var yaxisZero = false;
                 function yaxisToggle() {
                     yaxisZero = !yaxisZero;
                     draw();
                 }
-                var drawLegend = _.throttle(function () {
+                var drawLegend = _.throttle(function (normalizeIdx) {
                     var names = legend.selectAll('.series')
                         .data(scope.data, function (d) { return d.Name; });
                     names.enter()
@@ -1255,10 +1250,10 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function ($window, fmtfi
                         var e = d3.select(this);
                         var pt = d.Data[idx];
                         if (pt) {
-                            e.attr('title', pt[1]);
+                            e.attr('title', pt[normalizeIdx]);
                             e.text(d.Name + ': ' + fmtfilter(pt[1]));
                             var ptx = xScale(pt[0] * 1000);
-                            var pty = yScale(pt[1]);
+                            var pty = yScale(pt[normalizeIdx]);
                             var ptd = Math.sqrt(Math.pow(ptx - mousex, 2) +
                                 Math.pow(pty - mousey, 2));
                             if (ptd < minDist) {
@@ -1344,6 +1339,23 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function ($window, fmtfi
                     if (!scope.data) {
                         return;
                     }
+                    if (scope.normalize) {
+                        valueIdx = 2;
+                    }
+                    function mousemove() {
+                        var pt = d3.mouse(this);
+                        mousex = pt[0];
+                        mousey = pt[1];
+                        drawLegend(valueIdx);
+                    }
+                    scope.data.map(function (data, i) {
+                        var max = d3.max(data.Data, function (d) { return d[1]; });
+                        data.Data.map(function (d, j) {
+                            d.push(d[1] / max * 100 || 0);
+                        });
+                    });
+                    line.y(function (d) { return yScale(d[valueIdx]); });
+                    line.x(function (d) { return xScale(d[0] * 1000); });
                     var xdomain = [
                         d3.min(scope.data, function (d) { return d3.min(d.Data, function (c) { return c[0]; }); }) * 1000,
                         d3.max(scope.data, function (d) { return d3.max(d.Data, function (c) { return c[0]; }); }) * 1000,
@@ -1353,7 +1365,7 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function ($window, fmtfi
                     }
                     xScale.domain(xdomain);
                     var ymin = d3.min(scope.data, function (d) { return d3.min(d.Data, function (c) { return c[1]; }); });
-                    var ymax = d3.max(scope.data, function (d) { return d3.max(d.Data, function (c) { return c[1]; }); });
+                    var ymax = d3.max(scope.data, function (d) { return d3.max(d.Data, function (c) { return c[valueIdx]; }); });
                     var diff = (ymax - ymin) / 50;
                     if (!diff) {
                         diff = 1;
@@ -1373,7 +1385,7 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function ($window, fmtfi
                         ydomain[0] = +scope.min;
                     }
                     if (angular.isNumber(scope.max)) {
-                        ydomain[1] = +scope.max;
+                        ydomain[valueIdx] = +scope.max;
                     }
                     yScale.domain(ydomain);
                     if (scope.generator == 'area') {
@@ -1432,7 +1444,7 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function ($window, fmtfi
                         .style('fill-opacity', '.125')
                         .style('shape-rendering', 'crispEdges');
                     oldx = xdomain[1];
-                    drawLegend();
+                    drawLegend(valueIdx);
                 }
                 ;
                 var extentStart;
@@ -1443,7 +1455,7 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function ($window, fmtfi
                     extentStart = datefmt(extent[0]);
                     extentEnd = datefmt(extent[1]);
                     extentDiff = fmtDuration(moment(extent[1]).diff(moment(extent[0])));
-                    drawLegend();
+                    drawLegend(valueIdx);
                     if (scope.enableBrush && extentEnd != extentStart) {
                         scope.brushStart = extentStart;
                         scope.brushEnd = extentEnd;
@@ -1661,6 +1673,7 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
         $scope.end = request.end;
         $scope.autods = search.autods != 'false';
         $scope.refresh = search.refresh == 'true';
+        $scope.normalize = search.normalize == 'true';
         if (search.min) {
             $scope.min = +search.min;
         }
@@ -1822,6 +1835,7 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
             $location.search('b64', btoa(JSON.stringify(r)));
             $location.search('autods', $scope.autods ? undefined : 'false');
             $location.search('refresh', $scope.refresh ? 'true' : undefined);
+            $location.search('normalize', $scope.normalize ? 'true' : undefined);
             var min = angular.isNumber($scope.min) ? $scope.min.toString() : null;
             var max = angular.isNumber($scope.max) ? $scope.max.toString() : null;
             $location.search('min', min);
