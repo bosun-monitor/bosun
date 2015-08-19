@@ -740,26 +740,6 @@ bosunControllers.controller('DashboardCtrl', ['$scope', '$http', '$location', fu
                 $location.search('filter', $scope.filter || null);
             }
         };
-        var check_clicked = false;
-        $scope.check = function () {
-            if (check_clicked) {
-                return;
-            }
-            check_clicked = true;
-            $scope.loading = 'Running Rule Check...';
-            $scope.error = '';
-            $scope.animate();
-            $http.get('/api/run')
-                .success(reload)
-                .error(function (err) {
-                $scope.error = err;
-            })
-                .finally(function () {
-                $scope.loading = '';
-                check_clicked = false;
-                $scope.stop(); // stop animation
-            });
-        };
     }]);
 bosunApp.directive('tsResults', function () {
     return {

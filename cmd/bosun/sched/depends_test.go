@@ -262,31 +262,31 @@ func TestDependency_Blocks_Unknown(t *testing.T) {
 }
 
 func TestDependency_AlertFunctionHasNoResults(t *testing.T) {
-	pingState := NewStatus("ping.host{host=ny01,source=bosun01}")
+	pingState := NewStatus("a{host=ny01,source=bosun01}")
 	pingState.Touched = queryTime.Add(-5 * time.Minute)
 	pingState.Append(&Event{Status: StNormal, Time: pingState.Touched})
 
-	scollState := NewStatus("scollector.down{host=ny01}")
+	scollState := NewStatus("b{host=ny01}")
 	scollState.Touched = queryTime.Add(-10 * time.Minute)
 	scollState.Append(&Event{Status: StNormal, Time: scollState.Touched})
 
-	cpuState := NewStatus("os.cpu{host=ny01}")
+	cpuState := NewStatus("c{host=ny01}")
 	cpuState.Touched = queryTime.Add(-10 * time.Minute)
 	cpuState.Append(&Event{Status: StWarning, Time: cpuState.Touched})
 
 	testSched(t, &schedTest{
 		conf: `
-alert ping.host {
+alert a {
     warn = max(rename(q("sum:bosun.ping.timeout{dst_host=*,host=*}", "5m", ""), "host=source,dst_host=host"))
 }
 
-alert scollector.down {
-	depends = alert("ping.host", "warn")
+alert b {
+	depends = alert("a", "warn")
 	warn = avg(q("avg:os.cpu{host=*}", "5m", "")) < -100
 }
 
-alert os.cpu {
-    depends = alert("scollector.down", "warn")
+alert c {
+    depends = alert("b", "warn")
     warn = avg(q("avg:rate{counter,,1}:os.cpu{host=*}", "5m", ""))
 }
 `,
@@ -302,12 +302,12 @@ alert os.cpu {
 			`q("avg:rate{counter,,1}:os.cpu{host=*}", ` + window5Min + `)`: {},
 		},
 		state: map[schedState]bool{
-			schedState{"ping.host{host=ny01,source=bosun01}", "warning"}: true,
+			schedState{"a{host=ny01,source=bosun01}", "warning"}: true,
 		},
 		previous: map[expr.AlertKey]*State{
-			"ping.host{host=ny01,source=bosun01}": pingState,
-			"scollector.down{host=ny01}":          scollState,
-			"os.cpu{host=ny01}":                   cpuState,
+			"a{host=ny01,source=bosun01}": pingState,
+			"b{host=ny01}":                scollState,
+			"c{host=ny01}":                cpuState,
 		},
 	})
 }

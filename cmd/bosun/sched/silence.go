@@ -87,6 +87,7 @@ func (s *Schedule) Silenced() map[expr.AlertKey]Silence {
 		if !si.ActiveAt(now) {
 			continue
 		}
+		s.Lock("Silence")
 		for ak := range s.status {
 			if si.Silenced(now, ak.Name(), ak.Group()) {
 				if aks[ak].End.Before(si.End) {
@@ -94,6 +95,7 @@ func (s *Schedule) Silenced() map[expr.AlertKey]Silence {
 				}
 			}
 		}
+		s.Unlock()
 	}
 	return aks
 }
