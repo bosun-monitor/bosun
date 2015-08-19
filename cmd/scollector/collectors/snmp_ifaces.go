@@ -13,6 +13,11 @@ import (
 const (
 	ifAlias              = ".1.3.6.1.2.1.31.1.1.1.18"
 	ifDescr              = ".1.3.6.1.2.1.2.2.1.2"
+	ifType               = ".1.3.6.1.2.1.2.2.1.3"
+	ifMTU                = ".1.3.6.1.2.1.2.2.1.4"
+	ifHighSpeed          = ".1.3.6.1.2.1.31.1.1.1.15"
+	ifAdminStatus        = ".1.3.6.1.2.1.2.2.1.7"
+	ifOperStatus         = ".1.3.6.1.2.1.2.2.1.8"
 	ifHCInBroadcastPkts  = ".1.3.6.1.2.1.31.1.1.1.9"
 	ifHCInMulticastPkts  = ".1.3.6.1.2.1.31.1.1.1.8"
 	ifHCInUcastPkts      = ".1.3.6.1.2.1.31.1.1.1.7"
@@ -28,7 +33,6 @@ const (
 	ifOutDiscards        = ".1.3.6.1.2.1.2.2.1.19"
 	ifOutErrors          = ".1.3.6.1.2.1.2.2.1.20"
 	ifOutPauseFrames     = ".1.3.6.1.2.1.10.7.10.1.4"
-	ifType               = "1.3.6.1.2.1.2.2.1.3"
 )
 
 // SNMPIfaces registers a SNMP Interfaces collector for the given community and host.
@@ -109,10 +113,12 @@ func c_snmp_ifaces(community, host string) (opentsdb.MultiDataPoint, error) {
 		var sum int64
 		for k, v := range m {
 			tags := opentsdb.TagSet{
-				"host":      host,
-				"direction": sA.dir,
-				"iface":     fmt.Sprintf("%d", k),
-				"iname":     ifNames[k],
+				"host":  host,
+				"iface": fmt.Sprintf("%d", k),
+				"iname": ifNames[k],
+			}
+			if sA.dir != "" {
+				tags["direction"] = sA.dir
 			}
 			if iVal, ok := v.(int64); ok && ifTypes[k] == 6 {
 				sum += iVal
@@ -141,6 +147,10 @@ func c_snmp_ifaces(community, host string) (opentsdb.MultiDataPoint, error) {
 		{ifOutErrors, osNetErrors, "out", metadata.Counter, metadata.Error, osNetErrorsDesc},
 		{ifInPauseFrames, osNetPauseFrames, "in", metadata.Counter, metadata.Frame, osNetPauseFrameDesc},
 		{ifOutPauseFrames, osNetPauseFrames, "out", metadata.Counter, metadata.Frame, osNetPauseFrameDesc},
+		{ifMTU, osNetMTU, "", metadata.Gauge, metadata.Bytes, osNetMTUDesc},
+		{ifHighSpeed, osNetifspeed, "", metadata.Gauge, metadata.Megabit, osNetIfspeedDesc},
+		{ifAdminStatus, osNetAdminStatus, "", metadata.Gauge, metadata.StatusCode, osNetAdminStatusDesc},
+		{ifOperStatus, osNetOperStatus, "", metadata.Gauge, metadata.StatusCode, osNetOperStatusDesc},
 	}
 	for _, sA := range oids {
 		if err := add(sA); err != nil {
