@@ -150,6 +150,7 @@ type ProcessDotNet struct {
 type HTTPUnit struct {
 	TOML  string
 	Hiera string
+	Freq  int
 }
 
 type Riak struct {

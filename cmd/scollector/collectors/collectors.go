@@ -39,28 +39,28 @@ const (
 	osMemPctFree       = "os.mem.percent_free"
 	osMemTotal         = "os.mem.total"
 	osMemUsed          = "os.mem.used"
+	osNetAdminStatus   = "os.net.admin_status"
 	osNetBondBroadcast = "os.net.bond.packets_broadcast"
 	osNetBondBytes     = "os.net.bond.bytes"
 	osNetBondDropped   = "os.net.bond.dropped"
 	osNetBondErrors    = "os.net.bond.errs"
+	osNetBondIfSpeed   = "os.net.bond.ifspeed"
 	osNetBondMulticast = "os.net.bond.packets_multicast"
 	osNetBondPackets   = "os.net.bond.packets"
 	osNetBondUnicast   = "os.net.bond.packets_unicast"
-	osNetBondIfSpeed   = "os.net.bond.ifspeed"
-	osNetIfSpeed       = "os.net.ifspeed"
 	osNetBroadcast     = "os.net.packets_broadcast"
 	osNetBytes         = "os.net.bytes"
 	osNetDropped       = "os.net.dropped"
 	osNetErrors        = "os.net.errs"
+	osNetIfSpeed       = "os.net.ifspeed"
+	osNetMTU           = "os.net.mtu"
 	osNetMulticast     = "os.net.packets_multicast"
+	osNetOperStatus    = "os.net.oper_status"
 	osNetPackets       = "os.net.packets"
 	osNetPauseFrames   = "os.net.pause_frames"
 	osNetUnicast       = "os.net.packets_unicast"
-	osSystemUptime     = "os.system.uptime"
-	osNetMTU           = "os.net.mtu"
-	osNetAdminStatus   = "os.net.admin_status"
-	osNetOperStatus    = "os.net.oper_status"
 	osServiceRunning   = "os.service.running"
+	osSystemUptime     = "os.system.uptime"
 )
 
 const (
@@ -73,20 +73,20 @@ const (
 	osMemPctFreeDesc     = "The percent of free memory. In Linux free memory includes memory used by buffers and cache."
 	osMemTotalDesc       = "Total amount, in bytes, of physical memory available to the operating system."
 	osMemUsedDesc        = "The amount of used memory. In Linux this excludes memory used by buffers and cache."
+	osNetAdminStatusDesc = "The desired state of the interface. The testing(3) state indicates that no operational packets can be passed. When a managed system initializes, all interfaces start with ifAdminStatus in the down(2) state. As a result of either explicit management action or per configuration information retained by the managed system, ifAdminStatus is then changed to either the up(1) or testing(3) states (or remains in the down(2) state)."
 	osNetBroadcastDesc   = "The rate at which broadcast packets are sent or received on the network interface."
 	osNetBytesDesc       = "The rate at which bytes are sent or received over the network interface."
 	osNetDroppedDesc     = "The number of packets that were chosen to be discarded even though no errors had been detected to prevent transmission."
 	osNetErrorsDesc      = "The number of packets that could not be transmitted because of errors."
-	osNetMulticastDesc   = "The rate at which multicast packets are sent or received on the network interface."
-	osNetPacketsDesc     = "The rate at which packets are sent or received on the network interface."
-	osNetUnicastDesc     = "The rate at which unicast packets are sent or received on the network interface."
 	osNetIfSpeedDesc     = "The total link speed of the network interface in Megabits per second."
-	osNetPauseFrameDesc  = "The rate of pause frames sent or recieved on the network interface. An overwhelmed network element can send a pause frame, which halts the transmission of the sender for a specified period of time."
-	osSystemUptimeDesc   = "Seconds since last reboot."
 	osNetMTUDesc         = "The maximum transmission unit for the ethernet frame."
-	osNetAdminStatusDesc = "The desired state of the interface. The testing(3) state indicates that no operational packets can be passed. When a managed system initializes, all interfaces start with ifAdminStatus in the down(2) state. As a result of either explicit management action or per configuration information retained by the managed system, ifAdminStatus is then changed to either the up(1) or testing(3) states (or remains in the down(2) state)."
+	osNetMulticastDesc   = "The rate at which multicast packets are sent or received on the network interface."
 	osNetOperStatusDesc  = "The current operational state of the interface. The testing(3) state indicates that no operational packets can be passed. If ifAdminStatus is down(2) then ifOperStatus should be down(2). If ifAdminStatus is changed to up(1) then ifOperStatus should change to up(1) if the interface is ready to transmit and receive network traffic; it should change to dormant(5) if the interface is waiting for external actions (such as a serial line waiting for an incoming connection); it should remain in the down(2) state if and only if there is a fault that prevents it from going to the up(1) state; it should remain in the notPresent(6) state if the interface has missing (typically, hardware) components."
+	osNetPacketsDesc     = "The rate at which packets are sent or received on the network interface."
+	osNetPauseFrameDesc  = "The rate of pause frames sent or recieved on the network interface. An overwhelmed network element can send a pause frame, which halts the transmission of the sender for a specified period of time."
+	osNetUnicastDesc     = "The rate at which unicast packets are sent or received on the network interface."
 	osServiceRunningDesc = "1: active, 0: inactive"
+	osSystemUptimeDesc   = "Seconds since last reboot."
 )
 
 var (
@@ -125,6 +125,29 @@ func now() (t int64) {
 	return
 }
 
+func matchPattern(s string, patterns []string) bool {
+	for _, p := range patterns {
+		if !strings.HasPrefix(p, "-") {
+			if strings.Contains(s, p) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func matchInvertPattern(s string, patterns []string) bool {
+	for _, p := range patterns {
+		if strings.HasPrefix(p, "-") {
+			var np = p[1:]
+			if strings.Contains(s, np) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // Search returns all collectors matching the pattern s.
 func Search(s []string) []Collector {
 	if len(s) == 0 {
@@ -132,11 +155,11 @@ func Search(s []string) []Collector {
 	}
 	var r []Collector
 	for _, c := range collectors {
-		for _, p := range s {
-			if strings.Contains(c.Name(), p) {
-				r = append(r, c)
-				break
-			}
+		if matchInvertPattern(c.Name(), s) {
+			continue
+		}
+		if matchPattern(c.Name(), s) {
+			r = append(r, c)
 		}
 	}
 	return r

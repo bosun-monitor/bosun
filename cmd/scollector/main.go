@@ -124,11 +124,12 @@ func main() {
 		check(collectors.AddProcessDotNetConfig(p))
 	}
 	for _, h := range conf.HTTPUnit {
+		freq := time.Second * time.Duration(h.Freq)
 		if h.TOML != "" {
-			check(collectors.HTTPUnitTOML(h.TOML))
+			check(collectors.HTTPUnitTOML(h.TOML, freq))
 		}
 		if h.Hiera != "" {
-			check(collectors.HTTPUnitHiera(h.Hiera))
+			check(collectors.HTTPUnitHiera(h.Hiera, freq))
 		}
 	}
 	for _, r := range conf.ElasticIndexFilters {
