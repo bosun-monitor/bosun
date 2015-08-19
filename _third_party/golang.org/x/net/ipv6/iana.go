@@ -3,7 +3,7 @@
 
 package ipv6
 
-// Internet Control Message Protocol version 6 (ICMPv6) Parameters, Updated: 2014-09-22
+// Internet Control Message Protocol version 6 (ICMPv6) Parameters, Updated: 2015-07-07
 const (
 	ICMPTypeDestinationUnreachable                ICMPType = 1   // Destination Unreachable
 	ICMPTypePacketTooBig                          ICMPType = 2   // Packet Too Big
@@ -39,9 +39,10 @@ const (
 	ICMPTypeILNPv6LocatorUpdate                   ICMPType = 156 // ILNPv6 Locator Update Message
 	ICMPTypeDuplicateAddressRequest               ICMPType = 157 // Duplicate Address Request
 	ICMPTypeDuplicateAddressConfirmation          ICMPType = 158 // Duplicate Address Confirmation
+	ICMPTypeMPLControl                            ICMPType = 159 // MPL Control Message
 )
 
-// Internet Control Message Protocol version 6 (ICMPv6) Parameters, Updated: 2014-09-22
+// Internet Control Message Protocol version 6 (ICMPv6) Parameters, Updated: 2015-07-07
 var icmpTypes = map[ICMPType]string{
 	1:   "destination unreachable",
 	2:   "packet too big",
@@ -77,4 +78,5 @@ var icmpTypes = map[ICMPType]string{
 	156: "ilnpv6 locator update message",
 	157: "duplicate address request",
 	158: "duplicate address confirmation",
+	159: "mpl control message",
 }

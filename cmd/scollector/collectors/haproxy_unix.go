@@ -283,7 +283,7 @@ var haproxyCSVMeta = []MetricMetaHAProxy{
 		Name: "chkfail",
 		MetricMeta: MetricMeta{RateType: metadata.Counter,
 			Unit: metadata.Check,
-			Desc: "The number of failed checks. (Only counts checks failed when the server is up.",
+			Desc: "The number of failed checks. (Only counts checks failed when the server is up.)",
 		}},
 	{
 		Name: "chkdown",
@@ -495,6 +495,6 @@ var haproxyCSVMeta = []MetricMetaHAProxy{
 		Name: "ttime",
 		MetricMeta: MetricMeta{RateType: metadata.Gauge,
 			Unit: metadata.MilliSecond,
-			Desc: "The average response time in ms over the 1024 last requests (0 for TCP).",
+			Desc: "The average total session time in ms over the 1024 last requests.",
 		}},
 }

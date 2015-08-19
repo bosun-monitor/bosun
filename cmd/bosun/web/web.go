@@ -24,6 +24,7 @@ import (
 	"bosun.org/collect"
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
+	"bosun.org/version"
 )
 
 var (
@@ -98,6 +99,7 @@ func Listen(listenAddr string, devMode bool, tsdbHost string) error {
 	router.Handle("/api/metadata/put", JSON(PutMetadata))
 	router.Handle("/api/metric", JSON(UniqueMetrics))
 	router.Handle("/api/metric/{tagk}/{tagv}", JSON(MetricsByTagPair))
+	router.Handle("/api/metric/tagkey", JSON(MetricsWithTagKeys))
 	router.Handle("/api/rule", JSON(Rule))
 	router.HandleFunc("/api/shorten", Shorten)
 	router.Handle("/api/silence/clear", JSON(SilenceClear))
@@ -108,6 +110,8 @@ func Listen(listenAddr string, devMode bool, tsdbHost string) error {
 	router.Handle("/api/tagv/{tagk}", JSON(TagValuesByTagKey))
 	router.Handle("/api/tagv/{tagk}/{metric}", JSON(TagValuesByMetricTagKey))
 	router.Handle("/api/run", JSON(Run))
+	router.HandleFunc("/api/version", Version)
+	router.Handle("/api/debug/schedlock", JSON(ScheduleLockStatus))
 	http.Handle("/", miniprofiler.NewHandler(Index))
 	http.Handle("/api/", router)
 	fs := http.FileServer(webFS)
@@ -518,7 +522,7 @@ func SilenceSet(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (i
 		}
 		end = start.Add(time.Duration(d))
 	}
-	return schedule.AddSilence(start, end, data["alert"], data["tags"], data["forget"] == "true", len(data["confirm"]) > 0, data["edit"])
+	return schedule.AddSilence(start, end, data["alert"], data["tags"], data["forget"] == "true", len(data["confirm"]) > 0, data["edit"], data["user"], data["message"])
 }
 
 func SilenceClear(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
@@ -581,4 +585,20 @@ func Run(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfac
 
 func Host(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	return schedule.Host(r.FormValue("filter")), nil
+}
+
+func Version(w http.ResponseWriter, r *http.Request) {
+	io.WriteString(w, version.GetVersionInfo("bosun"))
+}
+
+func ScheduleLockStatus(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	data := struct {
+		Process string
+		HeldFor string
+	}{}
+	if holder, since := schedule.GetLockStatus(); holder != "" {
+		data.Process = holder
+		data.HeldFor = time.Now().Sub(since).String()
+	}
+	return data, nil
 }

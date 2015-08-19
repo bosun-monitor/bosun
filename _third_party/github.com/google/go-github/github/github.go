@@ -42,6 +42,10 @@ const (
 
 	// https://developer.github.com/changes/2014-12-09-new-attributes-for-stars-api/
 	mediaTypeStarringPreview = "application/vnd.github.v3.star+json"
+
+	// https://developer.github.com/changes/2015-06-24-api-enhancements-for-working-with-organization-permissions/
+	mediaTypeOrgPermissionPreview     = "application/vnd.github.ironman-preview+json"
+	mediaTypeOrgPermissionRepoPreview = "application/vnd.github.ironman-preview.repository+json"
 )
 
 // A Client manages communication with the GitHub API.
@@ -221,7 +225,7 @@ type Response struct {
 	Rate
 }
 
-// newResponse creats a new Response for the provided http.Response.
+// newResponse creates a new Response for the provided http.Response.
 func newResponse(r *http.Response) *Response {
 	response := &Response{Response: r}
 	response.populatePageValues()

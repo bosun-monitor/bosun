@@ -114,7 +114,7 @@
 //			// error handling
 //		}
 //		if rcm.Dst.IsMulticast() {
-//			if rcm.Dst.Equal(group)
+//			if rcm.Dst.Equal(group) {
 //				// joined group, do something
 //			} else {
 //				// unknown group, discard

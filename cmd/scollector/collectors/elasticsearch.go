@@ -27,7 +27,17 @@ var (
 		"yellow": 1,
 		"red":    2,
 	}
+	esIndexFilters = make([]*regexp.Regexp, 0)
 )
+
+func AddElasticIndexFilter(s string) error {
+	re, err := regexp.Compile(s)
+	if err != nil {
+		return err
+	}
+	esIndexFilters = append(esIndexFilters, re)
+	return nil
+}
 
 func c_elasticsearch() (opentsdb.MultiDataPoint, error) {
 	var status esStatus
@@ -411,6 +421,15 @@ const (
 	descNumberOfReplicas    = "The number of replicas."
 )
 
+func esSkipIndex(index string) bool {
+	for _, re := range esIndexFilters {
+		if re.MatchString(index) {
+			return true
+		}
+	}
+	return false
+}
+
 func c_elasticsearch_indices() (opentsdb.MultiDataPoint, error) {
 	var stats ElasticIndexStats
 	var health ElasticIndicesHealth
@@ -420,6 +439,9 @@ func c_elasticsearch_indices() (opentsdb.MultiDataPoint, error) {
 	cluster := health.ClusterName
 	var md opentsdb.MultiDataPoint
 	for k, v := range health.Indices {
+		if esSkipIndex(k) {
+			continue
+		}
 		ts := opentsdb.TagSet{"index_name": k, "cluster": cluster}
 		if status, ok := esStatusMap[v.Status]; ok {
 			Add(&md, "elastic.indices.status", status, ts, metadata.Gauge, metadata.StatusCode, descStatus)
@@ -436,6 +458,9 @@ func c_elasticsearch_indices() (opentsdb.MultiDataPoint, error) {
 		return nil, err
 	}
 	for k, v := range stats.Indices {
+		if esSkipIndex(k) {
+			continue
+		}
 		ts := opentsdb.TagSet{"index_name": k, "cluster": cluster}
 		Add(&md, "elastic.indices.completion.size", v.Primaries.Completion.SizeInBytes, ts, metadata.Gauge, metadata.Bytes, descCompletionSizeInBytes)
 		Add(&md, "elastic.indices.docs.count", v.Primaries.Docs.Count, ts, metadata.Gauge, metadata.Document, descDocsCount)

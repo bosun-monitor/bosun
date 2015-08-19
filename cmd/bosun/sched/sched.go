@@ -29,10 +29,14 @@ func init() {
 }
 
 type Schedule struct {
-	sync.Mutex
+	mutex         sync.Mutex
+	mutexHolder   string
+	mutexAquired  time.Time
+	mutexWaitTime int64
 
 	Conf          *conf.Conf
 	status        States
+	readStatus    States // READ-ONLY copy of status. Updated after each runHistory
 	Notifications map[expr.AlertKey]map[string]time.Time
 	Silence       map[string]*Silence
 	Group         map[time.Time]expr.AlertKeys
@@ -49,10 +53,36 @@ type Schedule struct {
 	db            *bolt.DB
 }
 
-func (s *Schedule) TimeLock(t miniprofiler.Timer) {
-	t.Step("lock", func(t miniprofiler.Timer) {
-		s.Lock()
-	})
+func init() {
+	metadata.AddMetricMeta(
+		"bosun.schedule.lock_time", metadata.Counter, metadata.MilliSecond,
+		"Length of time spent waiting for or holding the schedule lock.")
+	metadata.AddMetricMeta(
+		"bosun.schedule.lock_count", metadata.Counter, metadata.Count,
+		"Number of times the given caller acquired the lock.")
+}
+
+func (s *Schedule) Lock(method string) {
+	start := time.Now()
+	s.mutex.Lock()
+	s.mutexAquired = time.Now()
+	s.mutexHolder = method
+	s.mutexWaitTime = int64(s.mutexAquired.Sub(start) / time.Millisecond) // remember this so we don't have to call put until we leave the critical section.
+}
+
+func (s *Schedule) Unlock() {
+	holder := s.mutexHolder
+	start := s.mutexAquired
+	waitTime := s.mutexWaitTime
+	s.mutexHolder = ""
+	s.mutex.Unlock()
+	collect.Add("schedule.lock_time", opentsdb.TagSet{"caller": holder, "op": "wait"}, waitTime)
+	collect.Add("schedule.lock_time", opentsdb.TagSet{"caller": holder, "op": "hold"}, int64(time.Since(start)/time.Millisecond))
+	collect.Add("schedule.lock_count", opentsdb.TagSet{"caller": holder}, 1)
+}
+
+func (s *Schedule) GetLockStatus() (holder string, since time.Time) {
+	return s.mutexHolder, s.mutexAquired
 }
 
 type Metavalue struct {
@@ -63,7 +93,6 @@ type Metavalue struct {
 func (s *Schedule) PutMetadata(k metadata.Metakey, v interface{}) {
 	s.metalock.Lock()
 	s.Metadata[k] = &Metavalue{time.Now().UTC(), v}
-	s.Save()
 	s.metalock.Unlock()
 }
 
@@ -145,19 +174,22 @@ func (s *Schedule) GetMetadata(metric string, subset opentsdb.TagSet) []metadata
 type States map[expr.AlertKey]*State
 
 type StateTuple struct {
-	NeedAck bool
-	Active  bool
-	Status  Status
+	NeedAck  bool
+	Active   bool
+	Status   Status
+	Silenced bool
 }
 
-// GroupStates groups by NeedAck, Active, and Status.
-func (states States) GroupStates() map[StateTuple]States {
+// GroupStates groups by NeedAck, Active, Status, and Silenced.
+func (states States) GroupStates(silenced map[expr.AlertKey]Silence) map[StateTuple]States {
 	r := make(map[StateTuple]States)
 	for ak, st := range states {
+		_, sil := silenced[ak]
 		t := StateTuple{
 			st.NeedAck,
 			st.IsActive(),
 			st.AbnormalStatus(),
+			sil,
 		}
 		if _, present := r[t]; !present {
 			r[t] = make(States)
@@ -236,14 +268,23 @@ func (states States) GroupSets() map[string]expr.AlertKeys {
 	return groups
 }
 
+func (states States) Copy() States {
+	newStates := make(States, len(states))
+	for ak, st := range states {
+		newStates[ak] = st.Copy()
+	}
+	return newStates
+}
+
 type StateGroup struct {
 	Active   bool `json:",omitempty"`
 	Status   Status
+	Silenced bool
 	Subject  string        `json:",omitempty"`
-	Len      int           `json:",omitempty"`
 	Alert    string        `json:",omitempty"`
 	AlertKey expr.AlertKey `json:",omitempty"`
 	Ago      string        `json:",omitempty"`
+	State    *State        `json:",omitempty"`
 	Children []*StateGroup `json:",omitempty"`
 }
 
@@ -253,36 +294,46 @@ type StateGroups struct {
 		Acknowledged []*StateGroup `json:",omitempty"`
 	}
 	TimeAndDate []int
-	Silenced    map[expr.AlertKey]Silence
 }
 
 func (s *Schedule) MarshalGroups(T miniprofiler.Timer, filter string) (*StateGroups, error) {
+	var silenced map[expr.AlertKey]Silence
+	T.Step("Silenced", func(miniprofiler.Timer) {
+		silenced = s.Silenced()
+	})
+	var groups map[StateTuple]States
+	var err error
+	status := make(States)
 	t := StateGroups{
 		TimeAndDate: s.Conf.TimeAndDate,
-		Silenced:    s.Silenced(),
 	}
-	s.TimeLock(T)
-	defer s.Unlock()
-	status := make(States)
-	matches, err := makeFilter(filter)
+	T.Step("Setup", func(miniprofiler.Timer) {
+
+		matches, err2 := makeFilter(filter)
+		if err2 != nil {
+			err = err2
+			return
+		}
+		for k, v := range s.readStatus {
+			if !v.Open {
+				continue
+			}
+			a := s.Conf.Alerts[k.Name()]
+			if a == nil {
+				err = fmt.Errorf("unknown alert %s", k.Name())
+				return
+			}
+			if matches(s.Conf, a, v) {
+				status[k] = v
+			}
+		}
+
+	})
 	if err != nil {
 		return nil, err
 	}
-	for k, v := range s.status {
-		if !v.Open {
-			continue
-		}
-		a := s.Conf.Alerts[k.Name()]
-		if a == nil {
-			return nil, fmt.Errorf("unknown alert %s", k.Name())
-		}
-		if matches(s.Conf, a, v) {
-			status[k] = v
-		}
-	}
-	var groups map[StateTuple]States
 	T.Step("GroupStates", func(T miniprofiler.Timer) {
-		groups = status.GroupStates()
+		groups = status.GroupStates(silenced)
 	})
 	T.Step("groups", func(T miniprofiler.Timer) {
 		for tuple, states := range groups {
@@ -295,21 +346,26 @@ func (s *Schedule) MarshalGroups(T miniprofiler.Timer, filter string) (*StateGro
 				})
 				for name, group := range sets {
 					g := StateGroup{
-						Active:  tuple.Active,
-						Status:  tuple.Status,
-						Subject: fmt.Sprintf("%s - %s", tuple.Status, name),
-						Len:     len(group),
+						Active:   tuple.Active,
+						Status:   tuple.Status,
+						Silenced: tuple.Silenced,
+						Subject:  fmt.Sprintf("%s - %s", tuple.Status, name),
 					}
 					for _, ak := range group {
-						st := s.status[ak]
+						st := s.readStatus[ak]
 						g.Children = append(g.Children, &StateGroup{
 							Active:   tuple.Active,
 							Status:   tuple.Status,
+							Silenced: tuple.Silenced,
 							AlertKey: ak,
 							Alert:    ak.Name(),
 							Subject:  string(st.Subject),
 							Ago:      marshalTime(st.Last().Time),
+							State:    st,
 						})
+					}
+					if len(g.Children) == 1 && g.Children[0].Subject != "" {
+						g.Subject = g.Children[0].Subject
 					}
 					grouped = append(grouped, &g)
 				}
@@ -323,26 +379,28 @@ func (s *Schedule) MarshalGroups(T miniprofiler.Timer, filter string) (*StateGro
 			}
 		}
 	})
-	gsort := func(grp []*StateGroup) func(i, j int) bool {
-		return func(i, j int) bool {
-			a := grp[i]
-			b := grp[j]
-			if a.Active && !b.Active {
-				return true
-			} else if !a.Active && b.Active {
-				return false
+	T.Step("sort", func(T miniprofiler.Timer) {
+		gsort := func(grp []*StateGroup) func(i, j int) bool {
+			return func(i, j int) bool {
+				a := grp[i]
+				b := grp[j]
+				if a.Active && !b.Active {
+					return true
+				} else if !a.Active && b.Active {
+					return false
+				}
+				if a.Status != b.Status {
+					return a.Status > b.Status
+				}
+				if a.AlertKey != b.AlertKey {
+					return a.AlertKey < b.AlertKey
+				}
+				return a.Subject < b.Subject
 			}
-			if a.Status != b.Status {
-				return a.Status > b.Status
-			}
-			if a.AlertKey != b.AlertKey {
-				return a.AlertKey < b.AlertKey
-			}
-			return a.Subject < b.Subject
 		}
-	}
-	slice.Sort(t.Groups.NeedAck, gsort(t.Groups.NeedAck))
-	slice.Sort(t.Groups.Acknowledged, gsort(t.Groups.Acknowledged))
+		slice.Sort(t.Groups.NeedAck, gsort(t.Groups.NeedAck))
+		slice.Sort(t.Groups.Acknowledged, gsort(t.Groups.Acknowledged))
+	})
 	return &t, nil
 }
 
@@ -381,6 +439,7 @@ func (s *Schedule) Init(c *conf.Conf) error {
 			return err
 		}
 	}
+	s.readStatus = s.status.Copy()
 	return nil
 }
 
@@ -400,9 +459,11 @@ func Close() {
 
 func (s *Schedule) Close() {
 	s.save()
+	s.Lock("Close")
 	if s.db != nil {
 		s.db.Close()
 	}
+	s.Unlock()
 }
 
 func (s *Schedule) Run() error {
@@ -414,6 +475,7 @@ func (s *Schedule) Run() error {
 		go s.PingHosts()
 	}
 	go s.Poll()
+	go s.performSave()
 	interval := uint64(0)
 	for {
 		wait := time.After(s.Conf.CheckFrequency)
@@ -505,6 +567,35 @@ type State struct {
 	LastLogTime  time.Time
 }
 
+func (s *State) Copy() *State {
+	newState := &State{
+		History:      make([]Event, len(s.History)),
+		Actions:      make([]Action, len(s.Actions)),
+		Touched:      s.Touched,
+		Alert:        s.Alert,
+		Tags:         s.Tags,
+		Group:        s.Group.Copy(),
+		Subject:      s.Subject,
+		Body:         s.Body,
+		EmailBody:    s.EmailBody,
+		EmailSubject: s.EmailSubject,
+		Attachments:  s.Attachments,
+		NeedAck:      s.NeedAck,
+		Open:         s.Open,
+		Forgotten:    s.Forgotten,
+		Unevaluated:  s.Unevaluated,
+		LastLogTime:  s.LastLogTime,
+	}
+	newState.Result = s.Result
+	for i := range s.History {
+		newState.History[i] = s.History[i]
+	}
+	for i := range s.Actions {
+		newState.Actions[i] = s.Actions[i]
+	}
+	return newState
+}
+
 func (s *State) AlertKey() expr.AlertKey {
 	return expr.NewAlertKey(s.Alert, s.Group)
 }
@@ -547,11 +638,8 @@ func (s *State) Action(user, message string, t ActionType, timestamp time.Time) 
 }
 
 func (s *Schedule) Action(user, message string, t ActionType, ak expr.AlertKey) error {
-	s.Lock()
-	defer func() {
-		s.Unlock()
-		s.Save()
-	}()
+	s.Lock("Action")
+	defer s.Unlock()
 	st := s.status[ak]
 	if st == nil {
 		return fmt.Errorf("no such alert key: %v", ak)
@@ -643,6 +731,10 @@ type Event struct {
 type Result struct {
 	*expr.Result
 	Expr string
+}
+
+func (r *Result) Copy() *Result {
+	return &Result{r.Result, r.Expr}
 }
 
 type Status int

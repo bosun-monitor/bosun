@@ -132,6 +132,18 @@ bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', '$q', '$r
                 default: return prefix + "default";
             }
         };
+        $scope.values = {};
+        $scope.setKey = function (key, value) {
+            if (value === undefined) {
+                delete $scope.values[key];
+            }
+            else {
+                $scope.values[key] = value;
+            }
+        };
+        $scope.getKey = function (key) {
+            return $scope.values[key];
+        };
         var scheduleFilter;
         $scope.refresh = function (filter) {
             var d = $q.defer();
@@ -301,6 +313,12 @@ function readCookie(name) {
 function eraseCookie(name) {
     createCookie(name, "", -1);
 }
+function getUser() {
+    return readCookie('action-user');
+}
+function setUser(name) {
+    createCookie('action-user', name, 1000);
+}
 // from: http://stackoverflow.com/a/15267754/864236
 bosunApp.filter('reverse', function () {
     return function (items) {
@@ -315,13 +333,27 @@ bosunControllers.controller('ActionCtrl', ['$scope', '$http', '$location', '$rou
         $scope.user = readCookie("action-user");
         $scope.type = search.type;
         $scope.notify = true;
-        if (!angular.isArray(search.key)) {
-            $scope.keys = [search.key];
+        $scope.msgValid = true;
+        $scope.message = "";
+        $scope.validateMsg = function () {
+            $scope.msgValid = (!$scope.notify) || ($scope.message != "");
+        };
+        if (search.key) {
+            var keys = search.key;
+            if (!angular.isArray(search.key)) {
+                keys = [search.key];
+            }
+            $location.search('key', null);
+            $scope.setKey('action-keys', keys);
         }
         else {
-            $scope.keys = search.key;
+            $scope.keys = $scope.getKey('action-keys');
         }
         $scope.submit = function () {
+            $scope.validateMsg();
+            if (!$scope.msgValid || ($scope.user == "")) {
+                return;
+            }
             var data = {
                 Type: $scope.type,
                 User: $scope.user,
@@ -508,6 +540,22 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
                 d = 1;
             }
             $scope.duration = d;
+        };
+        $scope.setDuration = function () {
+            var from = moment.utc($scope.fromDate + ' ' + $scope.fromTime);
+            var to = moment.utc($scope.toDate + ' ' + $scope.toTime);
+            if (!from.isValid() || !to.isValid()) {
+                return;
+            }
+            var diff = from.diff(to);
+            if (!diff) {
+                return;
+            }
+            var duration = +$scope.duration;
+            if (duration < 1) {
+                return;
+            }
+            $scope.intervals = Math.abs(Math.round(diff / duration / 1000 / 60));
         };
         $scope.selectAlert = function (alert) {
             $scope.selected_alert = alert;
@@ -1077,9 +1125,14 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function ($window, fmtfi
                 brushEnd: '=bend',
                 enableBrush: '@',
                 max: '=',
-                min: '='
+                min: '=',
+                normalize: '='
             },
             link: function (scope, elem, attrs) {
+                var valueIdx = 1;
+                if (scope.normalize) {
+                    valueIdx = 2;
+                }
                 var svgHeight = +scope.height || 150;
                 var height = svgHeight - margin.top - margin.bottom;
                 var svgWidth;
@@ -1104,8 +1157,6 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function ($window, fmtfi
                 var brush = d3.svg.brush()
                     .x(xScale)
                     .on('brush', brushed);
-                line.y(function (d) { return yScale(d[1]); });
-                line.x(function (d) { return xScale(d[0] * 1000); });
                 var top = d3.select(elem[0])
                     .append('svg')
                     .attr('height', svgHeight)
@@ -1171,20 +1222,12 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function ($window, fmtfi
                     .attr('class', 'focus')
                     .style('pointer-events', 'none');
                 focus.append('line');
-                function mousemove() {
-                    var pt = d3.mouse(this);
-                    mousex = pt[0];
-                    mousey = pt[1];
-                    if (scope.data) {
-                        drawLegend();
-                    }
-                }
                 var yaxisZero = false;
                 function yaxisToggle() {
                     yaxisZero = !yaxisZero;
                     draw();
                 }
-                var drawLegend = _.throttle(function () {
+                var drawLegend = _.throttle(function (normalizeIdx) {
                     var names = legend.selectAll('.series')
                         .data(scope.data, function (d) { return d.Name; });
                     names.enter()
@@ -1207,10 +1250,10 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function ($window, fmtfi
                         var e = d3.select(this);
                         var pt = d.Data[idx];
                         if (pt) {
-                            e.attr('title', pt[1]);
+                            e.attr('title', pt[normalizeIdx]);
                             e.text(d.Name + ': ' + fmtfilter(pt[1]));
                             var ptx = xScale(pt[0] * 1000);
-                            var pty = yScale(pt[1]);
+                            var pty = yScale(pt[normalizeIdx]);
                             var ptd = Math.sqrt(Math.pow(ptx - mousex, 2) +
                                 Math.pow(pty - mousey, 2));
                             if (ptd < minDist) {
@@ -1296,6 +1339,23 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function ($window, fmtfi
                     if (!scope.data) {
                         return;
                     }
+                    if (scope.normalize) {
+                        valueIdx = 2;
+                    }
+                    function mousemove() {
+                        var pt = d3.mouse(this);
+                        mousex = pt[0];
+                        mousey = pt[1];
+                        drawLegend(valueIdx);
+                    }
+                    scope.data.map(function (data, i) {
+                        var max = d3.max(data.Data, function (d) { return d[1]; });
+                        data.Data.map(function (d, j) {
+                            d.push(d[1] / max * 100 || 0);
+                        });
+                    });
+                    line.y(function (d) { return yScale(d[valueIdx]); });
+                    line.x(function (d) { return xScale(d[0] * 1000); });
                     var xdomain = [
                         d3.min(scope.data, function (d) { return d3.min(d.Data, function (c) { return c[0]; }); }) * 1000,
                         d3.max(scope.data, function (d) { return d3.max(d.Data, function (c) { return c[0]; }); }) * 1000,
@@ -1305,7 +1365,7 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function ($window, fmtfi
                     }
                     xScale.domain(xdomain);
                     var ymin = d3.min(scope.data, function (d) { return d3.min(d.Data, function (c) { return c[1]; }); });
-                    var ymax = d3.max(scope.data, function (d) { return d3.max(d.Data, function (c) { return c[1]; }); });
+                    var ymax = d3.max(scope.data, function (d) { return d3.max(d.Data, function (c) { return c[valueIdx]; }); });
                     var diff = (ymax - ymin) / 50;
                     if (!diff) {
                         diff = 1;
@@ -1325,7 +1385,7 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function ($window, fmtfi
                         ydomain[0] = +scope.min;
                     }
                     if (angular.isNumber(scope.max)) {
-                        ydomain[1] = +scope.max;
+                        ydomain[valueIdx] = +scope.max;
                     }
                     yScale.domain(ydomain);
                     if (scope.generator == 'area') {
@@ -1384,7 +1444,7 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function ($window, fmtfi
                         .style('fill-opacity', '.125')
                         .style('shape-rendering', 'crispEdges');
                     oldx = xdomain[1];
-                    drawLegend();
+                    drawLegend(valueIdx);
                 }
                 ;
                 var extentStart;
@@ -1395,7 +1455,7 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function ($window, fmtfi
                     extentStart = datefmt(extent[0]);
                     extentEnd = datefmt(extent[1]);
                     extentDiff = fmtDuration(moment(extent[1]).diff(moment(extent[0])));
-                    drawLegend();
+                    drawLegend(valueIdx);
                     if (scope.enableBrush && extentEnd != extentStart) {
                         scope.brushStart = extentStart;
                         scope.brushEnd = extentEnd;
@@ -1613,6 +1673,7 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
         $scope.end = request.end;
         $scope.autods = search.autods != 'false';
         $scope.refresh = search.refresh == 'true';
+        $scope.normalize = search.normalize == 'true';
         if (search.min) {
             $scope.min = +search.min;
         }
@@ -1774,6 +1835,7 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
             $location.search('b64', btoa(JSON.stringify(r)));
             $location.search('autods', $scope.autods ? undefined : 'false');
             $location.search('refresh', $scope.refresh ? 'true' : undefined);
+            $location.search('normalize', $scope.normalize ? 'true' : undefined);
             var min = angular.isNumber($scope.min) ? $scope.min.toString() : null;
             var max = angular.isNumber($scope.max) ? $scope.max.toString() : null;
             $location.search('min', min);
@@ -1812,6 +1874,12 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
             var min = angular.isNumber($scope.min) ? '&min=' + encodeURIComponent($scope.min.toString()) : '';
             var max = angular.isNumber($scope.max) ? '&max=' + encodeURIComponent($scope.max.toString()) : '';
             $scope.animate();
+            $scope.queryTime = '';
+            if (request.end && !isRel.exec(request.end)) {
+                var t = moment.utc(request.end, moment.defaultFormat);
+                $scope.queryTime = '&date=' + t.format('YYYY-MM-DD');
+                $scope.queryTime += '&time=' + t.format('HH:mm');
+            }
             $http.get('/api/graph?' + 'b64=' + encodeURIComponent(btoa(JSON.stringify(request))) + autods + autorate + min + max)
                 .success(function (data) {
                 $scope.result = data.Series;
@@ -2197,13 +2265,49 @@ bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$ro
         $scope.tags = search.tags;
         $scope.edit = search.edit;
         $scope.forget = search.forget;
+        $scope.user = getUser();
+        $scope.message = search.message;
         if (!$scope.end && !$scope.duration) {
             $scope.duration = '1h';
+        }
+        function filter(data, startBefore, startAfter, endAfter, endBefore) {
+            var ret = [];
+            _.each(data, function (v) {
+                var s = moment(v.Start).utc();
+                var e = moment(v.End).utc();
+                if (startBefore && s > startBefore) {
+                    return;
+                }
+                if (startAfter && s < startAfter) {
+                    return;
+                }
+                if (endAfter && e < endAfter) {
+                    return;
+                }
+                if (endBefore && e > endBefore) {
+                    return;
+                }
+                ret.push(v);
+            });
+            return ret;
         }
         function get() {
             $http.get('/api/silence/get')
                 .success(function (data) {
-                $scope.silences = data;
+                $scope.silences = [];
+                var now = moment.utc();
+                $scope.silences.push({
+                    name: 'Active',
+                    silences: filter(data, now, null, now, null)
+                });
+                $scope.silences.push({
+                    name: 'Upcoming',
+                    silences: filter(data, null, now, null, null)
+                });
+                $scope.silences.push({
+                    name: 'Past',
+                    silences: filter(data, null, null, null, now).slice(0, 25)
+                });
             })
                 .error(function (error) {
                 $scope.error = error;
@@ -2223,7 +2327,9 @@ bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$ro
                 alert: $scope.alert,
                 tags: tags.join(','),
                 edit: $scope.edit,
-                forget: $scope.forget ? 'true' : null
+                forget: $scope.forget ? 'true' : null,
+                user: $scope.user,
+                message: $scope.message
             };
             return data;
         }
@@ -2246,6 +2352,7 @@ bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$ro
             });
         }
         $scope.test = function () {
+            setUser($scope.user);
             $location.search('start', $scope.start || null);
             $location.search('end', $scope.end || null);
             $location.search('duration', $scope.duration || null);
@@ -2253,6 +2360,7 @@ bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$ro
             $location.search('hosts', $scope.hosts || null);
             $location.search('tags', $scope.tags || null);
             $location.search('forget', $scope.forget || null);
+            $location.search('message', $scope.message || null);
             $route.reload();
         };
         $scope.confirm = function () {
@@ -2372,76 +2480,12 @@ bosunApp.directive('tsAckGroup', function () {
         }
     };
 });
-bosunApp.factory('status', ['$http', '$q', '$sce', function ($http, $q, $sce) {
-        var cache = {};
-        var fetches = [];
-        function fetch() {
-            if (fetches.length == 0) {
-                return;
-            }
-            var o = fetches[0];
-            var ak = o.ak;
-            var q = o.q;
-            $http.get('/api/status?ak=' + encodeURIComponent(ak))
-                .success(function (data) {
-                angular.forEach(data, function (v, k) {
-                    v.Touched = moment(v.Touched).utc();
-                    angular.forEach(v.History, function (v, k) {
-                        v.Time = moment(v.Time).utc();
-                    });
-                    v.last = v.History[v.History.length - 1];
-                    if (v.Actions && v.Actions.length > 0) {
-                        v.LastAction = v.Actions[0];
-                    }
-                    v.RuleUrl = '/config?' +
-                        'alert=' + encodeURIComponent(v.AlertName) +
-                        '&fromDate=' + encodeURIComponent(v.last.Time.format("YYYY-MM-DD")) +
-                        '&fromTime=' + encodeURIComponent(v.last.Time.format("HH:mm"));
-                    var groups = [];
-                    angular.forEach(v.Group, function (v, k) {
-                        groups.push(k + "=" + v);
-                    });
-                    if (groups.length > 0) {
-                        v.RuleUrl += '&template_group=' + encodeURIComponent(groups.join(','));
-                    }
-                    v.Body = $sce.trustAsHtml(v.Body);
-                    cache[k] = v;
-                });
-                q.resolve(cache[ak]);
-            })
-                .error(q.reject)
-                .finally(function () {
-                fetches.shift();
-                fetch();
-            });
-        }
-        return function (ak) {
-            var q = $q.defer();
-            if (cache[ak]) {
-                q.resolve(cache[ak]);
-            }
-            else {
-                fetches.push({ 'ak': ak, 'q': q });
-                if (fetches.length == 1) {
-                    fetch();
-                }
-            }
-            return q.promise;
-        };
-    }]);
-bosunApp.directive('tsState', ['status', function ($status) {
+bosunApp.directive('tsState', ['$sce', function ($sce) {
         return {
             templateUrl: '/partials/alertstate.html',
             link: function (scope, elem, attrs) {
                 scope.name = scope.child.AlertKey;
-                scope.loading = true;
-                $status(scope.child.AlertKey).then(function (st) {
-                    scope.state = st;
-                    scope.loading = false;
-                }, function (err) {
-                    alert(err);
-                    scope.loading = false;
-                });
+                scope.state = scope.child.State;
                 scope.action = function (type) {
                     var key = encodeURIComponent(scope.name);
                     return '/action?type=' + type + '&key=' + key;
@@ -2452,6 +2496,26 @@ bosunApp.directive('tsState', ['status', function ($status) {
                     }
                     return v.replace(/([,{}()])/g, '$1\u200b');
                 };
+                scope.state.Touched = moment(scope.state.Touched).utc();
+                angular.forEach(scope.state.History, function (v, k) {
+                    v.Time = moment(v.Time).utc();
+                });
+                scope.state.last = scope.state.History[scope.state.History.length - 1];
+                if (scope.state.Actions && scope.state.Actions.length > 0) {
+                    scope.state.LastAction = scope.state.Actions[0];
+                }
+                scope.state.RuleUrl = '/config?' +
+                    'alert=' + encodeURIComponent(scope.state.Alert) +
+                    '&fromDate=' + encodeURIComponent(scope.state.last.Time.format("YYYY-MM-DD")) +
+                    '&fromTime=' + encodeURIComponent(scope.state.last.Time.format("HH:mm"));
+                var groups = [];
+                angular.forEach(scope.state.Group, function (v, k) {
+                    groups.push(k + "=" + v);
+                });
+                if (groups.length > 0) {
+                    scope.state.RuleUrl += '&template_group=' + encodeURIComponent(groups.join(','));
+                }
+                scope.state.Body = $sce.trustAsHtml(scope.state.Body);
             }
         };
     }]);

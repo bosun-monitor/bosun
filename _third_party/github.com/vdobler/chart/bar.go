@@ -64,8 +64,16 @@ func (c *BarChart) rescaleStackedY() {
 	}
 
 	// rescale y-axis
-	high := make(map[float64]float64, 2*len(c.Data[0].Samples))
-	low := make(map[float64]float64, 2*len(c.Data[0].Samples))
+	highSize := 0
+	if len(c.Data) > 0 {
+		highSize = len(c.Data[0].Samples)
+	}
+	lowSize := 0
+	if len(c.Data) > 0 {
+		lowSize = len(c.Data[0].Samples)
+	}
+	high := make(map[float64]float64, 2*highSize)
+	low := make(map[float64]float64, 2*lowSize)
 	min, max := c.YRange.DataMin, c.YRange.DataMax
 	for _, d := range c.Data {
 		for _, p := range d.Samples {
@@ -131,12 +139,11 @@ func (c *BarChart) Plot(g Graphics) {
 	numxtics, numytics := layout.NumXtics, layout.NumYtics
 	font := elementStyle(c.Options, MajorAxisElement).Font
 	fw, fh, _ := g.FontMetrics(font)
-	fw += 0
-	fh += 0
 
 	// Outside bound ranges for bar plots are nicer
-	leftm, width = leftm+int(2*fw), width-int(2*fw)
-	topm, height = topm, height-fh
+	leftm += int(2 * fw)
+	width -= int(2 * fw)
+	height -= fh
 
 	c.rescaleStackedY()
 	c.XRange.Setup(numxtics, numxtics+3, width, leftm, false)
@@ -330,7 +337,7 @@ func (c *BarChart) addLabel(bar *Barinfo, y float64) {
 
 	var sval string
 	if math.Abs(y) >= 100 {
-		sval = fmt.Sprintf("%i", int(y+0.5))
+		sval = fmt.Sprintf("%d", int(y+0.5))
 	} else if math.Abs(y) >= 10 {
 		sval = fmt.Sprintf("%.1f", y)
 	} else if math.Abs(y) >= 1 {

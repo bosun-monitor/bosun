@@ -5,21 +5,21 @@
 			<p class="form-control-static" ng-bind="type"></p>
 		</div>
 	</div>
-	<div class="form-group">
+	<div class="form-group" ng-class="(user != '') ? '' : 'has-error' ">
 		<label class="col-sm-2 control-label">Username</label>
 		<div class="col-sm-6">
 			<input type="text"class="form-control" ng-model="user">
 		</div>
 	</div>
-	<div class="form-group">
+	<div class="form-group" ng-class="msgValid ? '' : 'has-error' ">
 		<label class="col-sm-2 control-label">Message</label>
 		<div class="col-sm-6">
-			<textarea rows="10" class="form-control" ng-model="message"></textarea>
+			<textarea rows="10" class="form-control" ng-model="message" ng-change="validateMsg()" ng-blur="validateMsg()"></textarea>
 		</div>
 	</div>
 	<div class="form-group">
 		<div class="col-sm-offset-2 col-sm-6"> 
-			<div class="checkbox"><label><input type="checkbox" ng-model="notify"> Send Notification</label></div>
+			<div class="checkbox"><label><input type="checkbox" ng-model="notify" ng-change="validateMsg()"> Send Notification</label></div>
 		</div>
 	</div>
 	<div class="form-group">

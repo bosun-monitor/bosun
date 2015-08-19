@@ -17,7 +17,7 @@ type MinimalGraphics interface {
 	Text(x, y int, t string, align string, rot int, f Font) // Put t at (x,y) rotated by rot aligned [[tcb]][lcr]
 }
 
-// BasicGrapic is an interface of the most basic graphic primitives.
+// BasicGraphics is an interface of the most basic graphic primitives.
 // Any type which implements BasicGraphics can use generic implementations
 // of the Graphics methods.
 type BasicGraphics interface {
@@ -51,6 +51,7 @@ type Graphics interface {
 	Key(x, y int, key Key, options PlotOptions) // place key at x,y
 }
 
+// Barinfo describes a rectangular bar (e.g. in a histogram or a bar plot).
 type Barinfo struct {
 	x, y  int    // (x,y) of top left corner;
 	w, h  int    // width and heigt
@@ -58,6 +59,7 @@ type Barinfo struct {
 	f     Font   // font of text
 }
 
+// Wedgeinfo describes a wedge in a pie chart.
 type Wedgeinfo struct {
 	Phi, Psi float64 // Start and ende of wedge. Fuill circle if |phi-psi| > 4pi
 	Text, Tp string  // label text and text position: [ico]
@@ -66,6 +68,7 @@ type Wedgeinfo struct {
 	Shift    int     // Highlighting of wedge
 }
 
+// GenericTextLen tries to determine the width in pixel of t if rendered into mg in using font.
 func GenericTextLen(mg MinimalGraphics, t string, font Font) (width int) {
 	// TODO: how handle newlines?  same way like Text does
 	fw, _, mono := mg.FontMetrics(font)
@@ -90,7 +93,8 @@ func GenericTextLen(mg MinimalGraphics, t string, font Font) (width int) {
 	return
 }
 
-// Normalize (= (x,y) is top-left and w and h>0) and hounour line width r.
+// SanitizeRect returns the top left corner and the positive width and height of the
+// given (possibly unsanitized) rectangle taking into account the line width r.
 func SanitizeRect(x, y, w, h, r int) (int, int, int, int) {
 	if w < 0 {
 		x += w
@@ -197,7 +201,8 @@ func drawXTics(bg BasicGraphics, rng Range, y, ym, ticLen int, options PlotOptio
 	}
 }
 
-// GenericAxis draws the axis r solely by graphic primitives of bg.
+// GenericXAxis draws the x-axis with range rng solely by graphic primitives of bg.
+// The x-axis is drawn at y on the screen and the mirrored x-axis is drawn at ym.
 func GenericXAxis(bg BasicGraphics, rng Range, y, ym int, options PlotOptions) {
 	_, fontheight, _ := bg.FontMetrics(elementStyle(options, MajorTicElement).Font)
 	var ticLen int = 0
@@ -310,7 +315,8 @@ func drawYTics(bg BasicGraphics, rng Range, x, xm, ticLen int, options PlotOptio
 
 }
 
-// GenericAxis draws the axis r solely by graphic primitives of bg.
+// GenericYAxis draws the y-axis with the range rng solely by graphic primitives of bg.
+// The y.axis and the mirrord y-axis are drawn at x and ym respectively.
 func GenericYAxis(bg BasicGraphics, rng Range, x, xm int, options PlotOptions) {
 	font := elementStyle(options, MajorAxisElement).Font
 	_, fontheight, _ := bg.FontMetrics(font)
@@ -407,7 +413,7 @@ func GenericScatter(bg BasicGraphics, points []EPoint, plotstyle PlotStyle, styl
 // The values for each box in boxes are in screen coordinates!
 func GenericBoxes(bg BasicGraphics, boxes []Box, width int, style Style) {
 	if width%2 == 0 {
-		width += 1
+		width++
 	}
 	hbw := (width - 1) / 2
 	for _, d := range boxes {
@@ -440,6 +446,7 @@ func GenericBoxes(bg BasicGraphics, boxes []Box, width int, style Style) {
 
 }
 
+// GenericBars draws the bars in the given style using bg.
 // TODO: Is Bars and Generic Bars useful at all? Replaceable by rect?
 func GenericBars(bg BasicGraphics, bars []Barinfo, style Style) {
 	for _, b := range bars {
@@ -614,7 +621,6 @@ func mapQ(w float64, q int) float64 {
 	default:
 		panic("No such quadrant")
 	}
-	return w
 }
 
 // Fill wedge with center (xi,yi), radius ri from alpha to beta with style.
@@ -661,6 +667,9 @@ func fillWedge(mg MinimalGraphics, xi, yi, ro, ri int, phi, psi, epsilon float64
 	}
 }
 
+// GeenricRings draws wedges for pie/ring charts charts. The pie's/ring's center is at (x,y)
+// with ri and ro the inner and outer diameter. Eccentricity allows to correct for non-square
+// pixels (e.g. in text mode).
 func GenericRings(bg BasicGraphics, wedges []Wedgeinfo, x, y, ro, ri int, eccentricity float64) {
 	// DebugLogger.Printf("GenericRings with %d wedges center %d,%d, radii %d/%d,  ecc=%.3f)", len(wedges), x, y, ro, ri, eccentricity)
 
@@ -709,6 +718,7 @@ func GenericRings(bg BasicGraphics, wedges []Wedgeinfo, x, y, ro, ri int, eccent
 
 }
 
+// GenericCircle approximates a circle of radius r around (x,y) with lines.
 func GenericCircle(bg BasicGraphics, x, y, r int, style Style) {
 	// TODO: fill
 	x0, y0 := x+r, y
@@ -728,6 +738,7 @@ func polygon(bg BasicGraphics, x, y []int, style Style) {
 	bg.Line(x[n], y[n], x[0], y[0], style)
 }
 
+// GenericSymbol draws the symbol defined by style at (x,y).
 func GenericSymbol(bg BasicGraphics, x, y int, style Style) {
 	f := style.SymbolSize
 	if f == 0 {

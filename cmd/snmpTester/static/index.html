@@ -1,0 +1,192 @@
+<!doctype html>
+<html ng-app="snmpApp">
+<head>
+<script src="http://underscorejs.org/underscore.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.3.16/angular.min.js"></script>
+<script>
+
+var mibs = JSON.parse(localStorage.getItem("mibs"));
+var lastMib = localStorage.getItem("lastMib")
+
+angular.module('snmpApp', [])
+
+  .controller('SnmpController', function($scope, $http, $location) {
+	
+	var mib = $location.search().mib
+	if (mib){
+		var m = JSON.parse(atob(mib));
+		$scope.mib = m;
+	}
+	
+	if(mibs){
+		$scope.allMibs = mibs
+		if(!$scope.mib && lastMib && mibs[lastMib]){
+			$scope.mib = _.clone(mibs[lastMib])
+		}
+		if(lastMib){
+			$scope.toLoad = lastMib
+		}
+	}
+	
+	if(!$scope.mib){
+		var mib = {Trees:[],Metrics:[]}
+		$scope.mib = mib
+  		
+	}
+	
+	$scope.removeMetric = function(m,a){
+		var index = a.indexOf(m);
+		if (index > -1) {
+    		a.splice(index, 1);
+		}
+	}
+	
+	$scope.addMetric = function(a){
+		a.push({Metric: "", Oid:"", Unit: "", RateType:"", Description: "",FallbackOid: "", Tags:""})
+	}
+	
+	$scope.addTag = function(t){
+		t.Tags.push({Key: "", Oid: ""})
+	}
+	
+	$scope.addTree = function(){
+		$scope.mib.Trees.push({BaseOid:"",Tags:[], Metrics:[]})
+	}
+	
+	$scope.removeTag = function(tag,t){
+		var index = t.Tags.indexOf(tag);
+		if (index > -1) {
+    		t.Tags.splice(index, 1);
+		}
+	}
+	
+	$scope.removeTree = function(t){
+		var index = $scope.mib.Trees.indexOf(t);
+		if (index > -1) {
+    		$scope.mib.Trees.splice(index, 1);
+		}
+	}
+	
+	$scope.test = function(){
+		$http.post('/test', $scope.mib).
+  		success(function(data, status, headers, config) {
+  			$scope.results = JSON.stringify(data, null, 2)
+  		}).
+  		error(function(data, status, headers, config) {
+    		$scope.results = data
+  		});
+	}
+	$scope.toml = function(){
+		$http.post('/toml', $scope.mib).
+  		success(function(data, status, headers, config) {
+  			$scope.results = data
+  		}).
+  		error(function(data, status, headers, config) {
+			console.log(data,status,headers, config)
+    		$scope.results = data
+  		});
+	}
+	$scope.save = function(){
+		var n = $scope.mib.Name;
+		if (!n){
+			alert("name required")
+			return
+		}
+		if (!$scope.allMibs){$scope.allMibs = {};}
+		if (!$scope.allMibs[n] || confirm("Overwrite " + n + "?")){
+			$scope.allMibs[n] = _.clone($scope.mib);
+			localStorage.setItem("mibs", JSON.stringify($scope.allMibs))
+			localStorage.setItem("lastMib", n)
+			$scope.toLoad = n;
+		}
+	}
+	$scope.new = function(){
+		$scope.mib = {Trees:[],Metrics:[]};
+		$location.search('mib', null);
+	}
+	
+	$scope.load = function(){
+		if (!$scope.allMibs[$scope.toLoad]){
+			console.log("MIB NOT FOUND", $scope.toLoad)
+		}else{
+			$scope.mib = _.clone($scope.allMibs[$scope.toLoad]);
+		}
+	}
+	
+	$scope.share = function(){
+		b64 = btoa(JSON.stringify($scope.mib))
+		$location.search('mib', b64);
+	}
+	
+  });
+</script>
+</head>
+<body ng-controller="SnmpController">
+<h3>MIB</h3>
+Name: <input type='text' ng-model="mib.Name"><br/>
+Host: <input type='text' ng-model="mib.Host"><br/>
+Community: <input type='text' ng-model="mib.Community"><br/>
+Base Oid: <input type='text' ng-model="mib.BaseOid"><br/>
+<hr/>
+<h3>Simple Metrics</h3>
+<ul style='clear:both'>
+<li ng-repeat="m in mib.Metrics" style='float:left;'><div>
+	Metric: <input type='text' ng-model="m.Metric"> <br/>
+	Oid: <input type='text' ng-model="m.Oid"> <br/>
+	Unit: <input type='text' ng-model="m.Unit"><br/>
+	Rate Type: <input type='text' ng-model="m.RateType"><br/>
+	Description: <input type='text' ng-model="m.Description"><br/>
+	FallbackOid: <input type='text' ng-model="m.FallbackOid"><br/>
+	Tags: <input type='text' ng-model="m.Tags"><br/>
+	<button ng-click="removeMetric(m,mib.Metrics)">Remove</button>
+</div></li>
+</ul>
+<div style='clear:both'></div>
+<button ng-click="addMetric(mib.Metrics)">Add</button>
+<hr/>
+<h3> Trees: </h3>
+<div ng-repeat="t in mib.Trees">
+	Base Oid: <input type='text' ng-model="t.BaseOid"><br/>
+	<h4>Tags:</h4>
+	<ul>
+		<li ng-repeat="tag in t.Tags">
+			Key: <input type='text' ng-model="tag.Key"> 
+			Oid: <input type='text' ng-model="tag.Oid">
+			<button ng-click='removeTag(tag,t)'>remove</button>
+		</li>
+	</ul>
+	<button ng-click="addTag(t)">Add tag</button>
+	<h4>Metrics:</h4>
+	<ul style='clear:both'>
+		<li ng-repeat="m in t.Metrics" style='float:left;'><div>
+			Metric: <input type='text' ng-model="m.Metric"> <br/>
+			Oid: <input type='text' ng-model="m.Oid"> <br/>
+			Unit: <input type='text' ng-model="m.Unit"><br/>
+			Rate Type: <input type='text' ng-model="m.RateType"><br/>
+			Description: <input type='text' ng-model="m.Description"><br/>
+			FallbackOid: <input type='text' ng-model="m.FallbackOid"><br/>
+			Tags: <input type='text' ng-model="m.Tags"><br/>
+			<button ng-click="removeMetric(m,t.Metrics)">Remove</button>
+		</div></li>
+	</ul>
+<div style='clear:both'></div>
+<button ng-click="addMetric(t.Metrics)">Add Metric</button><button ng-click="removeTree(t)">Remove Tree</button>
+</div>
+<button ng-click="addTree()">Add Tree</button>
+<hr/>
+<button ng-click='test()'>TEST!!</button>
+<button ng-click='toml()'>TOML</button>
+<button ng-click='share()' style="float:right">share</button>
+<button ng-click='save()' style="float:right">save</button>
+<button ng-click='new()' style="float:right">new</button>
+
+<select style="float:right; margin-right:15px;" ng-show="allMibs" ng-model="toLoad">
+	<option ng-repeat="(k,v) in allMibs">{{k}}</option>
+</select>
+<button ng-click='load()' style="float:right" ng-show="allMibs">load</button>
+<pre ng-bind="results">
+
+</pre>
+
+</body>
+</html>

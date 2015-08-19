@@ -1,11 +1,12 @@
 package pqueue
 
 import (
-	"bosun.org/_third_party/github.com/bmizerany/assert"
 	"container/heap"
 	"math/rand"
 	"sort"
 	"testing"
+
+	"bosun.org/_third_party/github.com/facebookgo/ensure"
 )
 
 func TestPriorityQueue(t *testing.T) {
@@ -15,14 +16,14 @@ func TestPriorityQueue(t *testing.T) {
 	for i := 0; i < c+1; i++ {
 		heap.Push(&pq, &Item{Value: i, Priority: int64(i)})
 	}
-	assert.Equal(t, pq.Len(), c+1)
-	assert.Equal(t, cap(pq), c*2)
+	ensure.DeepEqual(t, pq.Len(), c+1)
+	ensure.DeepEqual(t, cap(pq), c*2)
 
 	for i := 0; i < c+1; i++ {
 		item := heap.Pop(&pq)
-		assert.Equal(t, item.(*Item).Value.(int), i)
+		ensure.DeepEqual(t, item.(*Item).Value.(int), i)
 	}
-	assert.Equal(t, cap(pq), c/4)
+	ensure.DeepEqual(t, cap(pq), c/4)
 }
 
 func TestUnsortedInsert(t *testing.T) {
@@ -35,14 +36,14 @@ func TestUnsortedInsert(t *testing.T) {
 		ints = append(ints, v)
 		heap.Push(&pq, &Item{Value: i, Priority: int64(v)})
 	}
-	assert.Equal(t, pq.Len(), c)
-	assert.Equal(t, cap(pq), c)
+	ensure.DeepEqual(t, pq.Len(), c)
+	ensure.DeepEqual(t, cap(pq), c)
 
 	sort.Sort(sort.IntSlice(ints))
 
 	for i := 0; i < c; i++ {
 		item, _ := pq.PeekAndShift(int64(ints[len(ints)-1]))
-		assert.Equal(t, item.Priority, int64(ints[i]))
+		ensure.DeepEqual(t, item.Priority, int64(ints[i]))
 	}
 }
 
@@ -62,7 +63,12 @@ func TestRemove(t *testing.T) {
 	lastPriority := heap.Pop(&pq).(*Item).Priority
 	for i := 0; i < (c - 10 - 1); i++ {
 		item := heap.Pop(&pq)
-		assert.Equal(t, lastPriority < item.(*Item).Priority, true)
+		ensure.DeepEqual(t, lastPriority < item.(*Item).Priority, true)
 		lastPriority = item.(*Item).Priority
 	}
+}
+
+func TestPriorityQueueWithZeroCapacity(t *testing.T) {
+	pq := New(0)
+	ensure.DeepEqual(t, cap(pq), 1)
 }

@@ -38,9 +38,9 @@ If you do not already have docker installed on your system, you can install it f
 
 Once Docker is installed, you will want to pull the latest version of Bosun from the Docker Registry. To do this, execute the following command:
 
-	$ docker run -d -p 8070:8070 stackexchange/bosun
+	$ docker run -d -p 4242:4242 -p 8070:8070 stackexchange/bosun
 
-The above command tells the Docker daemon that you would like to start a new daemonized instance of bosun and you wish to port-forward 8070 of your server into the docker container. After about 15 seconds, you should have a working Bosun instance on port 8070. You can navigate to the instance by opening a browser and heading to http://docker-server:8070 where docker-server is your server running the docker daemon.
+The above command tells the Docker daemon that you would like to start a new daemonized instance of bosun and you wish to port-forward 8070 of your server into the docker container. After about 15 seconds, you should have a working Bosun instance on port 8070. You can navigate to the instance by opening a browser and heading to http://docker-server-ip:8070 where docker-server is your server running the docker daemon.
 
 ## Getting data into Bosun
 
@@ -135,7 +135,7 @@ When you hit “test” after putting the above template into the template field
 
 ## Persisting your alert
 
-All of the steps thus far have been geared towards getting your feet wet with Bosun. At this point, you have an alert for high cpu that produces a rather nice-looking alert, but at this point Bosun isn’t going to alert on it. In order for the alert to be incorporated into bosun, it must be added to the config file. We can test the syntax of our alert and config file by going to the “Test Config” pane of Bosun, or navigate directly at http://your-docker-server:8070/config. Paste in your alert and template fields as shown above to the end of the config file and hit the test button. If Bosun says the config is valid, you are free to copy the config from that window and overwrite the existing bosun.conf file with your new alert and template.  To accomplish this, you may wish to use `docker exec` and modify `/data/bosun.conf` then restart bosun.
+All of the steps thus far have been geared towards getting your feet wet with Bosun. At this point, you have an alert for high cpu that produces a rather nice-looking alert, but at this point Bosun isn’t going to alert on it. In order for the alert to be incorporated into bosun, it must be added to the config file. We can test the syntax of our alert and config file by going to the “Test Config” pane of Bosun, or navigate directly at http://docker-server-ip:8070/config. Paste in your alert and template fields as shown above to the end of the config file and hit the test button. If Bosun says the config is valid, you are free to copy the config from that window and overwrite the existing bosun.conf file with your new alert and template.  To accomplish this, you may wish to use `docker exec` and modify `/data/bosun.conf` then restart bosun.
 
 # scollector
 
@@ -160,7 +160,7 @@ See the [scollector docs](http://godoc.org/bosun.org/cmd/scollector) for more in
 Next to OpenTSDB, Bosun also supports querying Graphite and Logstash-Elasticsearch.
 You can execute, view and graph expressions, develop and run Graphite/LS alerting rules, get notifications and use the dashboard.
 The OpenTSDB specific feature, such as data proxying and the built in general purpose graphing interface don't apply here.
-The alerting rules look the same, in fact the only difference is you will query data using [graphite specific functions](http://bosun.org/configuration.html#graphite-query-functions) such as graphiteQuery and graphiteBand.
+The alerting rules look the same, in fact the only difference is you will query data using [graphite specific functions](http://bosun.org/expressions.html#graphite-query-functions) such as graphiteQuery and graphiteBand.
 
 Start Graphite in docker:
 

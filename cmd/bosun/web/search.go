@@ -12,18 +12,15 @@ import (
 
 // UniqueMetrics returns a sorted list of available metrics.
 func UniqueMetrics(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	includeAll := r.FormValue("all") != ""
 	values := schedule.Search.UniqueMetrics()
-	if !includeAll {
-		filtered := []string{}
-		for _, v := range values {
-			if len(v) < 2 || v[0:2] != "__" {
-				filtered = append(filtered, v)
-			}
+	// remove anything starting with double underscore.
+	filtered := []string{}
+	for _, v := range values {
+		if len(v) < 2 || v[0:2] != "__" {
+			filtered = append(filtered, v)
 		}
-		values = filtered
 	}
-	return values, nil
+	return filtered, nil
 }
 
 func TagKeysByMetric(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
@@ -56,6 +53,11 @@ func MetricsByTagPair(t miniprofiler.Timer, w http.ResponseWriter, r *http.Reque
 	tagk := vars["tagk"]
 	tagv := vars["tagv"]
 	values := schedule.Search.MetricsByTagPair(tagk, tagv)
+	return values, nil
+}
+
+func MetricsWithTagKeys(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	values := schedule.Search.MetricsWithTagKeys()
 	return values, nil
 }
 

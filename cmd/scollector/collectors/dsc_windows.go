@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"bosun.org/_third_party/github.com/stackexchange/mof"
+	"bosun.org/_third_party/github.com/StackExchange/mof"
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
 	"bosun.org/util"

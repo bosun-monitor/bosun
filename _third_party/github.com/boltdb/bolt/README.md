@@ -87,6 +87,11 @@ are not thread safe. To work with data in multiple goroutines you must start
 a transaction for each one or use locking to ensure only one goroutine accesses
 a transaction at a time. Creating transaction from the `DB` is thread safe.
 
+Read-only transactions and read-write transactions should not depend on one
+another and generally shouldn't be opened simultaneously in the same goroutine.
+This can cause a deadlock as the read-write transaction needs to periodically
+re-map the data file but it cannot do so while a read-only transaction is open.
+
 
 #### Read-write transactions
 
@@ -587,7 +592,7 @@ Here are a few things to note when evaluating and using Bolt:
 Below is a list of public, open source projects that use Bolt:
 
 * [Operation Go: A Routine Mission](http://gocode.io) - An online programming game for Golang using Bolt for user accounts and a leaderboard.
-* [Bazil](https://github.com/bazillion/bazil) - A file system that lets your data reside where it is most convenient for it to reside.
+* [Bazil](https://bazil.org/) - A file system that lets your data reside where it is most convenient for it to reside.
 * [DVID](https://github.com/janelia-flyem/dvid) - Added Bolt as optional storage engine and testing it against Basho-tuned leveldb.
 * [Skybox Analytics](https://github.com/skybox/skybox) - A standalone funnel analysis tool for web analytics.
 * [Scuttlebutt](https://github.com/benbjohnson/scuttlebutt) - Uses Bolt to store and process all Twitter mentions of GitHub projects.
@@ -610,5 +615,7 @@ Below is a list of public, open source projects that use Bolt:
 * [Freehold](http://tshannon.bitbucket.org/freehold/) - An open, secure, and lightweight platform for your files and data.
 * [Prometheus Annotation Server](https://github.com/oliver006/prom_annotation_server) - Annotation server for PromDash & Prometheus service monitoring system.
 * [Consul](https://github.com/hashicorp/consul) - Consul is service discovery and configuration made easy. Distributed, highly available, and datacenter-aware.
+* [Kala](https://github.com/ajvb/kala) - Kala is a modern job scheduler optimized to run on a single node. It is persistant, JSON over HTTP API, ISO 8601 duration notation, and dependent jobs.
+* [drive](https://github.com/odeke-em/drive) - drive is an unofficial Google Drive command line client for \*NIX operating systems.
 
 If you are using Bolt in a project please send a pull request to add it to the list.

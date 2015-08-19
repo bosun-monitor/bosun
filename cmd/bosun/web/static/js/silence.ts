@@ -16,6 +16,8 @@ interface ISilenceScope extends ng.IScope {
 	disableConfirm: boolean;
 	time: (v: any) => string;
 	forget: string;
+	user: string;
+	message: string;
 }
 
 bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$route', function($scope: ISilenceScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService) {
@@ -28,13 +30,49 @@ bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$ro
 	$scope.tags = search.tags;
 	$scope.edit = search.edit;
 	$scope.forget = search.forget;
+	$scope.user = getUser();
+	$scope.message = search.message;
 	if (!$scope.end && !$scope.duration) {
 		$scope.duration = '1h';
+	}
+	function filter(data: any[], startBefore: any, startAfter: any, endAfter: any, endBefore: any) {
+		var ret = [];
+		_.each(data, function(v) {
+			var s = moment(v.Start).utc();
+			var e = moment(v.End).utc();
+			if (startBefore && s > startBefore) {
+				return;
+			}
+			if (startAfter && s< startAfter) {
+				return;
+			}
+			if (endAfter && e < endAfter) {
+				return;
+			}
+			if (endBefore && e > endBefore) {
+				return;
+			}
+			ret.push(v);
+		});
+		return ret;
 	}
 	function get() {
 		$http.get('/api/silence/get')
 			.success((data) => {
-				$scope.silences = data;
+				$scope.silences = [];
+				var now = moment.utc();
+				$scope.silences.push({
+					name: 'Active',
+					silences: filter(data, now, null, now, null)
+				});
+				$scope.silences.push({
+					name: 'Upcoming',
+					silences: filter(data, null, now, null, null)
+				});
+				$scope.silences.push({
+					name: 'Past',
+					silences: filter(data, null, null, null, now).slice(0, 25)
+				});
 			})
 			.error((error) => {
 				$scope.error = error;
@@ -55,6 +93,8 @@ bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$ro
 			tags: tags.join(','),
 			edit: $scope.edit,
 			forget: $scope.forget ? 'true' : null,
+			user: $scope.user,
+			message: $scope.message,
 		};
 		return data;
 	}
@@ -77,6 +117,7 @@ bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$ro
 			});
 	}
 	$scope.test = () => {
+		setUser($scope.user);
 		$location.search('start', $scope.start || null);
 		$location.search('end', $scope.end || null);
 		$location.search('duration', $scope.duration || null);
@@ -84,6 +125,7 @@ bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$ro
 		$location.search('hosts', $scope.hosts || null);
 		$location.search('tags', $scope.tags || null);
 		$location.search('forget', $scope.forget || null);
+		$location.search('message', $scope.message || null);
 		$route.reload();
 	};
 	$scope.confirm = () => {

@@ -86,7 +86,7 @@ func (s *SearchService) Type(typ string) *SearchService {
 // Types allows to restrict the search to a list of types.
 func (s *SearchService) Types(types ...string) *SearchService {
 	if s.types == nil {
-		s.types = make([]string, len(types))
+		s.types = make([]string, 0)
 	}
 	s.types = append(s.types, types...)
 	return s
@@ -457,8 +457,8 @@ type SearchFacet struct {
 // searchFacetTerm is the result of a terms facet.
 // See http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/search-facets-terms-facet.html.
 type searchFacetTerm struct {
-	Term  string `json:"term"`
-	Count int    `json:"count"`
+	Term  interface{} `json:"term"`
+	Count int         `json:"count"`
 }
 
 // searchFacetRange is the result of a range facet.

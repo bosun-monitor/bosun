@@ -34,7 +34,6 @@ BOSUN=false
 build linux arm 5
 build linux arm 6
 build linux arm 7
-build solaris amd64
 
 if [ "$GITHUB_ACCESS_TOKEN" = "" ]; then
 	echo GITHUB_ACCESS_TOKEN not set: not running githubRelease.go
