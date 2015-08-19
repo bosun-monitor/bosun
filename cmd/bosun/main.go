@@ -36,7 +36,9 @@ type bosunHttpTransport struct {
 }
 
 func (t *bosunHttpTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	req.Header.Add("User-Agent", t.UserAgent)
+	if req.Header.Get("User-Agent") == "" {
+		req.Header.Add("User-Agent", t.UserAgent)
+	}
 	return t.RoundTripper.RoundTrip(req)
 }
 
