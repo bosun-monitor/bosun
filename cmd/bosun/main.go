@@ -30,12 +30,25 @@ import (
 	"bosun.org/version"
 )
 
+type bosunHttpTransport struct {
+	UserAgent string
+	http.RoundTripper
+}
+
+func (t *bosunHttpTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	req.Header.Add("User-Agent", t.UserAgent)
+	return t.RoundTripper.RoundTrip(req)
+}
+
 func init() {
 	client := &http.Client{
-		Transport: &httpcontrol.Transport{
-			Proxy:          http.ProxyFromEnvironment,
-			RequestTimeout: time.Minute,
-			MaxTries:       3,
+		Transport: &bosunHttpTransport{
+			"Bosun/" + version.ShortVersion(),
+			&httpcontrol.Transport{
+				Proxy:          http.ProxyFromEnvironment,
+				RequestTimeout: time.Minute,
+				MaxTries:       3,
+			},
 		},
 	}
 	http.DefaultClient = client
