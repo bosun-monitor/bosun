@@ -55,9 +55,11 @@ const (
 	osNetDropped       = "os.net.dropped"
 	osNetErrors        = "os.net.errs"
 	osNetMulticast     = "os.net.packets_multicast"
+	osNetOperStatus    = "os.net.oper_status"
 	osNetPackets       = "os.net.packets"
 	osNetPauseFrames   = "os.net.pause_frames"
 	osNetUnicast       = "os.net.packets_unicast"
+	osServiceRunning   = "os.service.running"
 	osSystemUptime     = "os.system.uptime"
 	osNetMTU           = "os.net.mtu"
 	osNetAdminStatus   = "os.net.admin_status"
@@ -135,6 +137,29 @@ func now() (t int64) {
 	return
 }
 
+func matchPattern(s string, patterns []string) bool {
+	for _, p := range patterns {
+		if !strings.HasPrefix(p, "-") {
+			if strings.Contains(s, p) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func matchInvertPattern(s string, patterns []string) bool {
+	for _, p := range patterns {
+		if strings.HasPrefix(p, "-") {
+			var np = p[1:]
+			if strings.Contains(s, np) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // Search returns all collectors matching the pattern s.
 func Search(s []string) []Collector {
 	if len(s) == 0 {
@@ -142,11 +167,11 @@ func Search(s []string) []Collector {
 	}
 	var r []Collector
 	for _, c := range collectors {
-		for _, p := range s {
-			if strings.Contains(c.Name(), p) {
-				r = append(r, c)
-				break
-			}
+		if matchInvertPattern(c.Name(), s) {
+			continue
+		}
+		if matchPattern(c.Name(), s) {
+			r = append(r, c)
 		}
 	}
 	return r

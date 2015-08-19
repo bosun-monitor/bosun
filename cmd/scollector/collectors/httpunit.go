@@ -10,33 +10,34 @@ import (
 	"github.com/StackExchange/httpunit"
 )
 
-func HTTPUnitTOML(filename string) error {
+func HTTPUnitTOML(filename string, freq time.Duration) error {
 	var plans httpunit.Plans
 	if _, err := toml.DecodeFile(filename, &plans); err != nil {
 		return err
 	}
-	HTTPUnitPlans(filename, &plans)
+	HTTPUnitPlans(filename, &plans, freq)
 	return nil
 }
 
-func HTTPUnitHiera(filename string) error {
+func HTTPUnitHiera(filename string, freq time.Duration) error {
 	plans, err := httpunit.ExtractHiera(filename)
 	if err != nil {
 		return err
 	}
-	HTTPUnitPlans(filename, &httpunit.Plans{
-		Plans: plans,
-	})
+	HTTPUnitPlans(filename, &httpunit.Plans{Plans: plans}, freq)
 	return nil
 }
 
-func HTTPUnitPlans(name string, plans *httpunit.Plans) {
+func HTTPUnitPlans(name string, plans *httpunit.Plans, freq time.Duration) {
+	if freq < time.Second {
+		freq = time.Minute * 5
+	}
 	collectors = append(collectors, &IntervalCollector{
 		F: func() (opentsdb.MultiDataPoint, error) {
 			return cHTTPUnit(plans)
 		},
 		name:     fmt.Sprintf("c_httpunit_%s", name),
-		Interval: time.Minute * 5,
+		Interval: freq,
 	})
 }
 
@@ -53,8 +54,10 @@ func cHTTPUnit(plans *httpunit.Plans) (opentsdb.MultiDataPoint, error) {
 			"url_host":     r.Case.URL.Host,
 			"hc_test_case": r.Plan.Label,
 		}
+		ms := r.Result.TimeTotal / time.Millisecond
 		Add(&md, "hu.error", r.Result.Result != nil, tags, metadata.Gauge, metadata.Bool, descHTTPUnitError)
 		Add(&md, "hu.socket_connected", r.Result.Connected, tags, metadata.Gauge, metadata.Bool, descHTTPUnitSocketConnected)
+		Add(&md, "hu.time_total", ms, tags, metadata.Gauge, metadata.MilliSecond, descHTTPUnitTotalTime)
 		switch r.Case.URL.Scheme {
 		case "http", "https":
 			Add(&md, "hu.http.got_expected_code", r.Result.GotCode, tags, metadata.Gauge, metadata.Bool, descHTTPUnitExpectedCode)
@@ -79,4 +82,5 @@ const (
 	descHTTPUnitExpectedRegex   = "1 if the response matched expected regex, else 0."
 	descHTTPUnitCertValid       = "1 if the SSL certificate is valid, else 0."
 	descHTTPUnitCertExpires     = "Unix epoch time of the certificate expiration."
+	descHTTPUnitTotalTime       = "Total time consumed by test case."
 )
