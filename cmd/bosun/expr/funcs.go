@@ -141,6 +141,12 @@ var builtins = map[string]parse.Func{
 		Tags:   tagFirst,
 		F:      Avg,
 	},
+	"cCount": {
+		Args:   []parse.FuncType{parse.TypeSeriesSet},
+		Return: parse.TypeNumberSet,
+		Tags:   tagFirst,
+		F:      CCount,
+	},
 	"dev": {
 		Args:   []parse.FuncType{parse.TypeSeriesSet},
 		Return: parse.TypeNumberSet,
@@ -965,6 +971,26 @@ func avg(dps Series, args ...float64) (a float64) {
 	}
 	a /= float64(len(dps))
 	return
+}
+
+func CCount(e *State, T miniprofiler.Timer, series *Results) (*Results, error) {
+	return reduce(e, T, series, cCount)
+}
+
+func cCount(dps Series, args ...float64) (a float64) {
+	if len(dps) < 2 {
+		return float64(0)
+	}
+	series := NewSortedSeries(dps)
+	count := 0
+	last := series[0].V
+	for _, p := range series[1:] {
+		if p.V != last {
+			count++
+		}
+		last = p.V
+	}
+	return float64(count)
 }
 
 func Count(e *State, T miniprofiler.Timer, query, sduration, eduration string) (r *Results, err error) {
