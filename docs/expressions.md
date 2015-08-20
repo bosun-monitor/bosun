@@ -193,6 +193,10 @@ All reduction functions take a seriesSet and return a numberSet with one element
 
 Average (arithmetic mean).
 
+## cCount(seriesSet) numberSet
+
+Returns the change count which is the number of times in the series a value was not equal to the immediate previous value. Useful for checking if things that should be at a steady value are "flapping". For example, a series with values [0, 1, 0, 1] would return 3.
+
 ## dev(seriesSet) numberSet
 
 Standard deviation.
