@@ -368,7 +368,14 @@ func (s *Schedule) MarshalGroups(T miniprofiler.Timer, filter string) (*StateGro
 						Subject:  fmt.Sprintf("%s - %s", tuple.Status, name),
 					}
 					for _, ak := range group {
-						st := s.status[ak]
+						st := s.status[ak].Copy()
+						// remove some of the larger bits of state to reduce wire size
+						st.Body = ""
+						st.EmailBody = []byte{}
+						if len(st.History) > 1 {
+							st.History = st.History[len(st.History)-1:]
+						}
+
 						g.Children = append(g.Children, &StateGroup{
 							Active:   tuple.Active,
 							Status:   tuple.Status,
