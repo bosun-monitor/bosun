@@ -2460,7 +2460,7 @@ bosunApp.directive('tsAckGroup', function () {
         }
     };
 });
-bosunApp.directive('tsState', ['$sce', function ($sce) {
+bosunApp.directive('tsState', ['$sce', '$http', function ($sce, $http) {
         return {
             templateUrl: '/partials/alertstate.html',
             link: function (scope, elem, attrs) {
@@ -2469,6 +2469,22 @@ bosunApp.directive('tsState', ['$sce', function ($sce) {
                 scope.action = function (type) {
                     var key = encodeURIComponent(scope.name);
                     return '/action?type=' + type + '&key=' + key;
+                };
+                var loadedBody = false;
+                scope.toggle = function () {
+                    scope.show = !scope.show;
+                    if (scope.show && !loadedBody) {
+                        scope.state.Body = "loading...";
+                        loadedBody = true;
+                        $http.get('/api/status?ak=' + scope.child.AlertKey)
+                            .success(function (data) {
+                            var body = data[scope.child.AlertKey].Body;
+                            scope.state.Body = $sce.trustAsHtml(body);
+                        })
+                            .error(function (err) {
+                            scope.state.Body = "Error loading template body: " + err;
+                        });
+                    }
                 };
                 scope.zws = function (v) {
                     if (!v) {
