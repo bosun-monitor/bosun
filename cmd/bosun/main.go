@@ -27,6 +27,7 @@ import (
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
+	"bosun.org/util"
 	"bosun.org/version"
 )
 
@@ -39,6 +40,7 @@ func (t *bosunHttpTransport) RoundTrip(req *http.Request) (*http.Response, error
 	if req.Header.Get("User-Agent") == "" {
 		req.Header.Add("User-Agent", t.UserAgent)
 	}
+	req.Header.Add("X-Bosun-Server", util.Hostname)
 	return t.RoundTripper.RoundTrip(req)
 }
 

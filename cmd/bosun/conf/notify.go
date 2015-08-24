@@ -13,6 +13,7 @@ import (
 	"bosun.org/_third_party/github.com/jordan-wright/email"
 	"bosun.org/collect"
 	"bosun.org/metadata"
+	"bosun.org/util"
 )
 
 func init() {
@@ -93,6 +94,7 @@ func (n *Notification) DoEmail(subject, body []byte, c *Conf, ak string, attachm
 	for _, a := range attachments {
 		e.Attach(bytes.NewBuffer(a.Data), a.Filename, a.ContentType)
 	}
+	e.Headers.Add("X-Bosun-Server", util.Hostname)
 	if err := Send(e, c.SMTPHost, c.SMTPUsername, c.SMTPPassword); err != nil {
 		collect.Add("email.sent_failed", nil, 1)
 		log.Printf("failed to send alert %v to %v %v\n", ak, e.To, err)
