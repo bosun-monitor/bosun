@@ -5,7 +5,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"net/http/httputil"
@@ -27,6 +26,7 @@ import (
 	"bosun.org/graphite"
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
+	"bosun.org/slog"
 	"bosun.org/util"
 	"bosun.org/version"
 )
@@ -85,7 +85,7 @@ func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 	c, err := conf.ParseFile(*flagConf)
 	if err != nil {
-		log.Fatal(err)
+		slog.Fatal(err)
 	}
 	if *flagTest {
 		os.Exit(0)
@@ -98,10 +98,10 @@ func main() {
 		httpListen.Host = "localhost" + httpListen.Host
 	}
 	if err := metadata.Init(httpListen, false); err != nil {
-		log.Fatal(err)
+		slog.Fatal(err)
 	}
 	if err := sched.Load(c); err != nil {
-		log.Fatal(err)
+		slog.Fatal(err)
 	}
 	if c.RelayListen != "" {
 		go func() {
@@ -111,12 +111,12 @@ func main() {
 				Addr:    c.RelayListen,
 				Handler: mux,
 			}
-			log.Fatal(s.ListenAndServe())
+			slog.Fatal(s.ListenAndServe())
 		}()
 	}
 	if c.TSDBHost != "" {
 		if err := collect.Init(httpListen, "bosun"); err != nil {
-			log.Fatal(err)
+			slog.Fatal(err)
 		}
 		tsdbHost := &url.URL{
 			Scheme: "http",
@@ -131,7 +131,7 @@ func main() {
 				}
 				rp.ServeHTTP(w, r)
 			}))
-			log.Println("readonly relay at", ts.URL, "to", tsdbHost)
+			slog.Infoln("readonly relay at", ts.URL, "to", tsdbHost)
 			tsdbHost, _ = url.Parse(ts.URL)
 			c.TSDBHost = tsdbHost.Host
 		}
@@ -139,10 +139,10 @@ func main() {
 	if *flagQuiet {
 		c.Quiet = true
 	}
-	go func() { log.Fatal(web.Listen(c.HTTPListen, *flagDev, c.TSDBHost)) }()
+	go func() { slog.Fatal(web.Listen(c.HTTPListen, *flagDev, c.TSDBHost)) }()
 	go func() {
 		if !*flagNoChecks {
-			log.Fatal(sched.Run())
+			sched.Run()
 		}
 	}()
 	go func() {
@@ -151,14 +151,14 @@ func main() {
 		killing := false
 		for range sc {
 			if killing {
-				log.Println("Second interrupt: exiting")
+				slog.Infoln("Second interrupt: exiting")
 				os.Exit(1)
 			}
 			killing = true
 			go func() {
-				log.Println("Interrupt: closing down...")
+				slog.Infoln("Interrupt: closing down...")
 				sched.Close()
-				log.Println("done")
+				slog.Infoln("done")
 				os.Exit(1)
 			}()
 		}
@@ -179,21 +179,21 @@ func quit() {
 func watch(root, pattern string, f func()) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		log.Fatal(err)
+		slog.Fatal(err)
 	}
 	filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if matched, err := filepath.Match(pattern, info.Name()); err != nil {
-			log.Fatal(err)
+			slog.Fatal(err)
 		} else if !matched {
 			return nil
 		}
 		err = watcher.Add(path)
 		if err != nil {
-			log.Fatal(err)
+			slog.Fatal(err)
 		}
 		return nil
 	})
-	log.Println("watching", pattern, "in", root)
+	slog.Infoln("watching", pattern, "in", root)
 	wait := time.Now()
 	go func() {
 		for {
@@ -207,7 +207,7 @@ func watch(root, pattern string, f func()) {
 					wait = time.Now().Add(time.Second * 2)
 				}
 			case err := <-watcher.Errors:
-				log.Println("error:", err)
+				slog.Errorln("error:", err)
 			}
 		}
 	}()

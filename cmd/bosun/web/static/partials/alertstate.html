@@ -1,4 +1,4 @@
-<div class="panel-heading" ng-click="show = !show">
+<div class="panel-heading" ng-click="toggle()">
 	<h4 class="panel-title">
 		<a href>
 			<span class="glyphicon" ng-class="{'glyphicon-exclamation-sign': state.last.Status && state.last.Status != 'normal'}"></span>
@@ -11,7 +11,7 @@
 		</a>
 	</h4>
 </div>
-<div class="panel-body" ng-if="show || group.Children.length == 1">
+<div class="panel-body" ng-if="show">
 	<div class="row">
 		<div class="col-sm-6">
 			<div class="row">

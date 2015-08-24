@@ -44,12 +44,12 @@ func TestCheckFlapping(t *testing.T) {
 	}
 	hasNots := func() bool {
 		defer func() {
-			s.notifications = nil
+			s.pendingNotifications = nil
 		}()
-		if len(s.notifications) != 1 {
+		if len(s.pendingNotifications) != 1 {
 			return false
 		}
-		for k, v := range s.notifications {
+		for k, v := range s.pendingNotifications {
 			if k.Name != "n" || len(v) != 1 || v[0].Alert != "a" {
 				return false
 			}
@@ -59,7 +59,7 @@ func TestCheckFlapping(t *testing.T) {
 	}
 	s.RunHistory(r)
 	if !hasNots() {
-		t.Fatalf("expected notification: %v", s.notifications)
+		t.Fatalf("expected notification: %v", s.pendingNotifications)
 	}
 	r.Events[ak].Status = StNormal
 	s.RunHistory(r)
@@ -135,10 +135,7 @@ func TestCheckSilence(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = s.Check(nil, time.Now(), 0)
-	if err != nil {
-		t.Fatal(err)
-	}
+	check(s, time.Now())
 	s.CheckNotifications()
 	select {
 	case <-done:
@@ -230,10 +227,7 @@ func TestCheckNotify(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = s.Check(nil, time.Now(), 0)
-	if err != nil {
-		t.Fatal(err)
-	}
+	check(s, time.Now())
 	s.CheckNotifications()
 	select {
 	case r := <-nc:
@@ -287,6 +281,7 @@ func TestCheckNotifyUnknown(t *testing.T) {
 	}
 	s.RunHistory(r)
 	s.CheckNotifications()
+	s.sendUnknownNotifications()
 	gotExpected := false
 Loop:
 	for {
@@ -349,6 +344,7 @@ func TestCheckNotifyUnknownDefault(t *testing.T) {
 	}
 	s.RunHistory(r)
 	s.CheckNotifications()
+	s.sendUnknownNotifications()
 	gotExpected := false
 Loop:
 	for {
@@ -408,10 +404,7 @@ func TestCheckNotifyLog(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = s.Check(nil, time.Now(), 0)
-	if err != nil {
-		t.Fatal(err)
-	}
+	check(s, time.Now())
 	s.CheckNotifications()
 	gotA := false
 	gotB := false
@@ -502,42 +495,4 @@ func TestCheckCritUnknownEmpty(t *testing.T) {
 	r.Events[ak].Status = StNormal
 	s.RunHistory(r)
 	verify(true)
-}
-
-func TestDifferentSchedules(t *testing.T) {
-	s := new(Schedule)
-	c, err := conf.New("", `
-		alert a {
-			crit = 1
-			runEvery = 3
-		}
-		alert b {
-			crit = 1
-			runEvery = 1
-		}
-	`)
-	if err != nil {
-		t.Fatal(err)
-	}
-	c.StateFile = ""
-
-	check := func(interval uint64, alerts ...string) {
-		s.Init(c)
-		_, err = s.Check(nil, time.Now(), interval)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if len(alerts) != len(s.status) {
-			t.Errorf("Expected %d statuses, but have %d for interval %d.", len(alerts), len(s.status), interval)
-		}
-		for _, alert := range alerts {
-			if state, ok := s.status[expr.NewAlertKey(alert, nil)]; !ok || state.Status() != StCritical {
-				t.Fatalf("Expected results for alert %s in interval %d.", alert, interval)
-			}
-		}
-	}
-	check(0, "a", "b")
-	check(1, "b")
-	check(2, "b")
-	check(3, "a", "b")
 }

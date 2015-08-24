@@ -15,6 +15,7 @@ import (
 	"bosun.org/_third_party/github.com/MiniProfiler/go/miniprofiler"
 	"bosun.org/_third_party/github.com/bradfitz/slice"
 	"bosun.org/_third_party/github.com/tatsushid/go-fastping"
+	"bosun.org/cmd/bosun/cache"
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/expr"
 	"bosun.org/cmd/bosun/search"
@@ -34,23 +35,36 @@ type Schedule struct {
 	mutexAquired  time.Time
 	mutexWaitTime int64
 
-	Conf          *conf.Conf
-	status        States
-	readStatus    States // READ-ONLY copy of status. Updated after each runHistory
-	Notifications map[expr.AlertKey]map[string]time.Time
-	Silence       map[string]*Silence
-	Group         map[time.Time]expr.AlertKeys
-	Metadata      map[metadata.Metakey]*Metavalue
-	Incidents     map[uint64]*Incident
-	Search        *search.Search
+	Conf      *conf.Conf
+	status    States
+	Silence   map[string]*Silence
+	Group     map[time.Time]expr.AlertKeys
+	Metadata  map[metadata.Metakey]*Metavalue
+	Incidents map[uint64]*Incident
+	Search    *search.Search
 
-	LastCheck     time.Time
-	nc            chan interface{}
-	notifications map[*conf.Notification][]*State
+	//channel signals an alert has added notifications, and notifications should be processed.
+	nc chan interface{}
+	//notifications to be sent immediately
+	pendingNotifications map[*conf.Notification][]*State
+	//notifications we are currently tracking, potentially with future or repeated actions.
+	Notifications map[expr.AlertKey]map[string]time.Time
+	//unknown states that need to be notified about. Collected and sent in batches.
+	pendingUnknowns map[*conf.Notification][]*State
+
 	metalock      sync.Mutex
 	maxIncidentId uint64
 	incidentLock  sync.Mutex
 	db            *bolt.DB
+
+	LastCheck time.Time
+
+	ctx *checkContext
+}
+
+type checkContext struct {
+	runTime    time.Time
+	checkCache *cache.Cache
 }
 
 func init() {
@@ -307,6 +321,8 @@ func (s *Schedule) MarshalGroups(T miniprofiler.Timer, filter string) (*StateGro
 	t := StateGroups{
 		TimeAndDate: s.Conf.TimeAndDate,
 	}
+	s.Lock("MarshallGroups")
+	defer s.Unlock()
 	T.Step("Setup", func(miniprofiler.Timer) {
 
 		matches, err2 := makeFilter(filter)
@@ -314,7 +330,7 @@ func (s *Schedule) MarshalGroups(T miniprofiler.Timer, filter string) (*StateGro
 			err = err2
 			return
 		}
-		for k, v := range s.readStatus {
+		for k, v := range s.status {
 			if !v.Open {
 				continue
 			}
@@ -352,7 +368,14 @@ func (s *Schedule) MarshalGroups(T miniprofiler.Timer, filter string) (*StateGro
 						Subject:  fmt.Sprintf("%s - %s", tuple.Status, name),
 					}
 					for _, ak := range group {
-						st := s.readStatus[ak]
+						st := s.status[ak].Copy()
+						// remove some of the larger bits of state to reduce wire size
+						st.Body = ""
+						st.EmailBody = []byte{}
+						if len(st.History) > 1 {
+							st.History = st.History[len(st.History)-1:]
+						}
+
 						g.Children = append(g.Children, &StateGroup{
 							Active:   tuple.Active,
 							Status:   tuple.Status,
@@ -431,15 +454,17 @@ func (s *Schedule) Init(c *conf.Conf) error {
 	s.Group = make(map[time.Time]expr.AlertKeys)
 	s.Metadata = make(map[metadata.Metakey]*Metavalue)
 	s.Incidents = make(map[uint64]*Incident)
+	s.pendingUnknowns = make(map[*conf.Notification][]*State)
 	s.status = make(States)
 	s.Search = search.NewSearch()
+	s.LastCheck = time.Now()
+	s.ctx = &checkContext{time.Now(), cache.New(0)}
 	if c.StateFile != "" {
 		s.db, err = bolt.Open(c.StateFile, 0600, nil)
 		if err != nil {
 			return err
 		}
 	}
-	s.readStatus = s.status.Copy()
 	return nil
 }
 
@@ -464,32 +489,6 @@ func (s *Schedule) Close() {
 		s.db.Close()
 	}
 	s.Unlock()
-}
-
-func (s *Schedule) Run() error {
-	if s.Conf == nil {
-		return fmt.Errorf("sched: nil configuration")
-	}
-	s.nc = make(chan interface{}, 1)
-	if s.Conf.Ping {
-		go s.PingHosts()
-	}
-	go s.Poll()
-	go s.performSave()
-	interval := uint64(0)
-	for {
-		wait := time.After(s.Conf.CheckFrequency)
-		log.Println("starting check")
-		now := time.Now()
-		dur, err := s.Check(nil, now, interval)
-		if err != nil {
-			log.Println(err)
-		}
-		log.Printf("check took %v\n", dur)
-		s.LastCheck = now
-		<-wait
-		interval++
-	}
 }
 
 const pingFreq = time.Second * 15
@@ -569,8 +568,8 @@ type State struct {
 
 func (s *State) Copy() *State {
 	newState := &State{
-		History:      make([]Event, len(s.History)),
-		Actions:      make([]Action, len(s.Actions)),
+		History:      s.History, //history and actions safe to copy as long as elements are not modified. Appending will not affect original state.
+		Actions:      s.Actions,
 		Touched:      s.Touched,
 		Alert:        s.Alert,
 		Tags:         s.Tags,
@@ -587,12 +586,6 @@ func (s *State) Copy() *State {
 		LastLogTime:  s.LastLogTime,
 	}
 	newState.Result = s.Result
-	for i := range s.History {
-		newState.History[i] = s.History[i]
-	}
-	for i := range s.Actions {
-		newState.Actions[i] = s.Actions[i]
-	}
 	return newState
 }
 

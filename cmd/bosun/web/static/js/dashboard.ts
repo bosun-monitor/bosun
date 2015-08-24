@@ -3,7 +3,6 @@ interface IDashboardScope extends IBosunScope {
 	loading: string;
 	filter: string;
 	keydown: any;
-	check: () => void;
 }
 
 bosunControllers.controller('DashboardCtrl', ['$scope', '$http', '$location', function($scope: IDashboardScope, $http: ng.IHttpService, $location: ng.ILocationService) {
@@ -30,25 +29,5 @@ bosunControllers.controller('DashboardCtrl', ['$scope', '$http', '$location', fu
 			createCookie("filter", $scope.filter || "", 1000);
 			$location.search('filter', $scope.filter || null);
 		}
-	}
-	var check_clicked= false;
-	$scope.check = function() {
-		if (check_clicked) {
-			return;
-		}
-		check_clicked = true;
-		$scope.loading = 'Running Rule Check...';
-		$scope.error = '';
-		$scope.animate();
-		$http.get('/api/run')
-			.success(reload)
-			.error(err => {
-				$scope.error = err;
-			})
-			.finally(() => {
-				$scope.loading = '';
-				check_clicked = false;
-				$scope.stop(); // stop animation
-			});
 	}
 }]);

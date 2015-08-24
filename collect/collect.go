@@ -70,6 +70,8 @@ const (
 	descCollectAlloc             = "Total number of bytes allocated and still in use by the runtime (via runtime.ReadMemStats)."
 	descCollectDropped           = "Counter of dropped data points due to the queue being full."
 	descCollectGoRoutines        = "Total number of goroutines that currently exist (via runtime.NumGoroutine)."
+	descCollectGcCpuFraction     = "fraction of CPU time used by GC"
+	descCollectTotalGCPause      = "Total GC Pause time in milliseconds"
 	descCollectPostBad           = "Counter of HTTP POST requests where resp.StatusCode != http.StatusNoContent."
 	descCollectPostBatchSize     = "Number of datapoints included in each batch."
 	descCollectPostCount         = "Counter of batches sent to the server."
@@ -143,6 +145,16 @@ func InitChan(tsdbhost *url.URL, root string, ch chan *opentsdb.DataPoint) error
 		runtime.ReadMemStats(&ms)
 		return ms.Alloc
 	})
+	Set("collect.gc.cpu_fraction", Tags, func() interface{} {
+		var ms runtime.MemStats
+		runtime.ReadMemStats(&ms)
+		return ms.GCCPUFraction
+	})
+	Set("collect.gc.total_pause", Tags, func() interface{} {
+		var ms runtime.MemStats
+		runtime.ReadMemStats(&ms)
+		return ms.PauseTotalNs / uint64(time.Millisecond)
+	})
 	Set("collect.goroutines", Tags, func() interface{} {
 		return runtime.NumGoroutine()
 	})
@@ -150,6 +162,8 @@ func InitChan(tsdbhost *url.URL, root string, ch chan *opentsdb.DataPoint) error
 	AggregateMeta(metricRoot+"collect.post.duration", metadata.MilliSecond, descCollectPostDuration)
 	metadata.AddMetricMeta(metricRoot+"collect.alloc", metadata.Gauge, metadata.Bytes, descCollectAlloc)
 	metadata.AddMetricMeta(metricRoot+"collect.goroutines", metadata.Gauge, metadata.Count, descCollectGoRoutines)
+	metadata.AddMetricMeta(metricRoot+"collect.gc.cpu_fraction", metadata.Gauge, metadata.Pct, descCollectGcCpuFraction)
+	metadata.AddMetricMeta(metricRoot+"collect.gc.total_pause", metadata.Counter, metadata.MilliSecond, descCollectTotalGCPause)
 	metadata.AddMetricMeta(metricRoot+"collect.post.bad_status", metadata.Counter, metadata.PerSecond, descCollectPostBad)
 	metadata.AddMetricMeta(metricRoot+"collect.post.count", metadata.Counter, metadata.PerSecond, descCollectPostCount)
 	metadata.AddMetricMeta(metricRoot+"collect.post.error", metadata.Counter, metadata.PerSecond, descCollectPostError)

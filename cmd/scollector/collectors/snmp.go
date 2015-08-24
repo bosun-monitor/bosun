@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"io"
 	"math/big"
+	"reflect"
+	"strings"
 
 	"bosun.org/_third_party/github.com/mjibson/snmp"
 	"bosun.org/cmd/scollector/conf"
@@ -46,44 +48,57 @@ func SNMP(cfg conf.SNMP, mibs map[string]conf.MIB) error {
 
 // snmp_subtree takes an oid and returns all data exactly one level below it. It
 // produces an error if there is more than one level below.
-func snmp_subtree(host, community, oid string) (map[int]interface{}, error) {
+func snmp_subtree(host, community, oid string) (map[string]interface{}, error) {
 	rows, err := snmp.Walk(host, community, oid)
 	if err != nil {
 		return nil, err
 	}
-	m := make(map[int]interface{})
+	m := make(map[string]interface{})
 	for rows.Next() {
+		key := ""
+		var a interface{}
 		switch oid {
 		case ifHCInBroadcastPkts:
-			a := new(big.Int)
+			a = new(big.Int)
 			id, err := rows.Scan(&a)
 			if err != nil {
 				return nil, err
 			}
 			switch t := id.(type) {
 			case int:
-				m[t] = a
+				key = fmt.Sprint(t)
 			default:
 				return nil, fmt.Errorf("snmp subtree: only one level allowed")
 			}
 		default:
-			var a interface{}
 			id, err := rows.Scan(&a)
 			if err != nil {
 				return nil, err
 			}
 			switch t := id.(type) {
 			case int:
-				m[t] = a
+				key = fmt.Sprint(t)
+			case []int:
+				key = snmpOidArrayToString(t)
 			default:
-				return nil, fmt.Errorf("snmp subtree: only one level allowed")
+				return nil, fmt.Errorf("Unknown key type: %s", reflect.TypeOf(id).String())
 			}
 		}
+		m[key] = a
 	}
 	if err := rows.Err(); err != nil && err != io.EOF {
 		return nil, err
 	}
 	return m, nil
+}
+
+// recombine an oid array to a dot-delimited string
+func snmpOidArrayToString(path []int) string {
+	s := make([]string, len(path))
+	for i := range path {
+		s[i] = fmt.Sprint(path[i])
+	}
+	return strings.Join(s, ".")
 }
 
 func snmp_oid(host, community, oid string) (*big.Int, error) {
@@ -140,7 +155,7 @@ func GenericSnmp(cfg conf.SNMP, mib conf.MIB) (opentsdb.MultiDataPoint, error) {
 
 	for _, tree := range mib.Trees {
 		treeOid := combineOids(tree.BaseOid, baseOid)
-		tagCache := make(map[string]map[int]interface{}) // tag key to map of values
+		tagCache := make(map[string]map[string]interface{}) // tag key to map of values
 		for _, tag := range tree.Tags {
 			if tag.Oid == "idx" {
 				continue
@@ -179,7 +194,7 @@ func GenericSnmp(cfg conf.SNMP, mib conf.MIB) (opentsdb.MultiDataPoint, error) {
 						var ok bool
 						tagVal, ok = tagCache[tag.Key][i]
 						if !ok {
-							return md, fmt.Errorf("tree for tag %s has no entry for metric %s index %d", tag.Key, metric.Metric, i)
+							return md, fmt.Errorf("tree for tag %s has no entry for metric %s index %s", tag.Key, metric.Metric, i)
 						}
 					}
 					if byteSlice, ok := tagVal.([]byte); ok {

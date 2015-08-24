@@ -90,7 +90,7 @@ bosunApp.directive('tsAckGroup', function() {
 	};
 });
 
-bosunApp.directive('tsState', ['$sce', function($sce: ng.ISCEService) {
+bosunApp.directive('tsState', ['$sce', '$http', function($sce: ng.ISCEService, $http: ng.IHttpService) {
 	return {
 		templateUrl: '/partials/alertstate.html',
 		link: function(scope: any, elem: any, attrs: any) {
@@ -99,6 +99,22 @@ bosunApp.directive('tsState', ['$sce', function($sce: ng.ISCEService) {
 			scope.action = (type: string) => {
 				var key = encodeURIComponent(scope.name);
 				return '/action?type=' + type + '&key=' + key;
+			};
+			var loadedBody = false;
+			scope.toggle = () =>{
+				scope.show = !scope.show;
+				if(scope.show && !loadedBody){
+					scope.state.Body = "loading...";
+					loadedBody = true;
+					$http.get('/api/status?ak='+scope.child.AlertKey)
+						.success(data => {
+							var body = data[scope.child.AlertKey].Body;
+							scope.state.Body = $sce.trustAsHtml(body);
+						})
+						.error(err => {
+							scope.state.Body = "Error loading template body: " + err;
+						});
+				}
 			};
 			scope.zws = (v: string) => {
 				if (!v) {
