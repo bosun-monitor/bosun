@@ -156,11 +156,11 @@ to at a 5 minute poll interval.
 MIBs (map of string to table): Allows user-specified, custom SNMP configurations.
 
     [[MIBs]]
-      [MIBS.cisco] #can name anything you want
+      [MIBs.cisco] #can name anything you want
         BaseOid = "1.3.6.1.4.1.9.9" # common base for all metrics in this mib
 
         # simple, single key metrics
-        [[MIBS.cisco.Metrics]]
+        [[MIBs.cisco.Metrics]]
           Metric = "cisco.cpu"
           Oid = ".109.1.1.1.1.6"
           Unit = "percent"
@@ -168,19 +168,19 @@ MIBs (map of string to table): Allows user-specified, custom SNMP configurations
           Description = "cpu percent used by this device"
 
         # can also iterate over snmp tables
-        [[MIBS.cisco.Trees]]
+        [[MIBSs.cisco.Trees]]
           BaseOid = ".48.1.1.1" #common base oid for this tree
 
           # tags to apply to metrics in this tree. Can come from another oid, or specify "idx" to use
           # the numeric index as the tag value. Can specify multiple tags, but must supply one.
           # all tags and metrics should have the same number of rows per query.
-          [[MIBS.cisco.Trees.Tags]]
+          [[MIBs.cisco.Trees.Tags]]
             Key = "name"
             Oid = ".2"
-          [[MIBS.cisco.Trees.Metrics]]
+          [[MIBs.cisco.Trees.Metrics]]
             Metric = "cisco.mem.used"
             Oid = ".5"
-          [[MIBS.cisco.Trees.Metrics]]
+          [[MIBs.cisco.Trees.Metrics]]
             Metric = "cisco.mem.free"
             Oid = ".6"
 
