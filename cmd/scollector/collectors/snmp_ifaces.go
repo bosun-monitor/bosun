@@ -114,7 +114,7 @@ func c_snmp_ifaces(community, host string) (opentsdb.MultiDataPoint, error) {
 		for k, v := range m {
 			tags := opentsdb.TagSet{
 				"host":  host,
-				"iface": fmt.Sprintf("%d", k),
+				"iface": fmt.Sprintf("%s", k),
 				"iname": ifNames[k],
 			}
 			if sA.dir != "" {
