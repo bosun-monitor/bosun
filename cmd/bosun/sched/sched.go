@@ -4,7 +4,6 @@ import (
 	"encoding/gob"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net"
 	"sort"
 	"sync"
@@ -22,6 +21,7 @@ import (
 	"bosun.org/collect"
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
+	"bosun.org/slog"
 )
 
 func init() {
@@ -522,7 +522,7 @@ func pingHost(host string) {
 		timeout = 0
 	}
 	if err := p.Run(); err != nil {
-		log.Print(err)
+		slog.Errorln(err)
 	}
 	collect.Put("ping.timeout", tags, timeout)
 }
@@ -686,7 +686,7 @@ func (s *Schedule) Action(user, message string, t ActionType, ak expr.AlertKey) 
 	// Would like to also track the alert group, but I believe this is impossible because any character
 	// that could be used as a delimiter could also be a valid tag key or tag value character
 	if err := collect.Add("actions", opentsdb.TagSet{"user": user, "alert": ak.Name(), "type": t.String()}, 1); err != nil {
-		log.Println(err)
+		slog.Errorln(err)
 	}
 	return nil
 }

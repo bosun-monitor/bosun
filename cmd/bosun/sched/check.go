@@ -440,6 +440,7 @@ func (s *Schedule) CheckAlert(T miniprofiler.Timer, r *RunHistory, a *conf.Alert
 	}
 	unevalCount, unknownCount := markDependenciesUnevaluated(r.Events, deps, a.Name)
 	if err != nil {
+		slog.Errorf("Error checking alert %s: %s", a.Name, err.Error())
 		removeUnknownEvents(r.Events, a.Name)
 	}
 	collect.Put("check.duration", opentsdb.TagSet{"name": a.Name}, time.Since(start).Seconds())

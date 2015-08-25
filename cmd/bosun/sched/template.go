@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"html/template"
 	"io/ioutil"
-	"log"
 	"math"
 	"net/http"
 	"net/url"
@@ -127,7 +126,7 @@ func (s *Schedule) ExecuteBody(rh *RunHistory, a *conf.Alert, st *State, isEmail
 	if inline, err := inliner.Inline(buf.String()); err == nil {
 		buf = bytes.NewBufferString(inline)
 	} else {
-		log.Println(err)
+		slog.Errorln(err)
 	}
 	return buf.Bytes(), c.Attachments, nil
 }
