@@ -476,13 +476,13 @@ func toToml(fname string) {
 
 	f, err := os.Create(fname)
 	if err != nil {
-		log.Fatal(err)
+		slog.Fatal(err)
 	}
 	if err := toml.NewEncoder(f).Encode(&c); err != nil {
-		log.Fatal(err)
+		slog.Fatal(err)
 	}
 	if _, err := extra.WriteTo(f); err != nil {
-		log.Fatal(err)
+		slog.Fatal(err)
 	}
 	f.Close()
 }

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	htemplate "html/template"
-	"log"
 	"strings"
 	ttemplate "text/template"
 	"time"
@@ -47,7 +46,7 @@ func (s *Schedule) CheckNotifications() time.Duration {
 	s.Notifications = nil
 	for ak, ns := range notifications {
 		if _, present := silenced[ak]; present {
-			log.Println("silencing", ak)
+			slog.Infoln("silencing", ak)
 			continue
 		}
 		for name, t := range ns {
@@ -94,7 +93,7 @@ func (s *Schedule) CheckNotifications() time.Duration {
 
 func (s *Schedule) sendNotifications(silenced map[expr.AlertKey]Silence) {
 	if s.Conf.Quiet {
-		log.Println("quiet mode prevented", len(s.pendingNotifications), "notifications")
+		slog.Infoln("quiet mode prevented", len(s.pendingNotifications), "notifications")
 		return
 	}
 	for n, states := range s.pendingNotifications {
@@ -103,12 +102,12 @@ func (s *Schedule) sendNotifications(silenced map[expr.AlertKey]Silence) {
 			_, silenced := silenced[ak]
 			if st.Last().Status == StUnknown {
 				if silenced {
-					log.Println("silencing unknown", ak)
+					slog.Infoln("silencing unknown", ak)
 					continue
 				}
 				s.pendingUnknowns[n] = append(s.pendingUnknowns[n], st)
 			} else if silenced {
-				log.Println("silencing", ak)
+				slog.Infoln("silencing", ak)
 			} else {
 				s.notify(st, n)
 			}
@@ -191,7 +190,7 @@ func (s *Schedule) utnotify(groups map[string]expr.AlertKeys, n *conf.Notificati
 		groups,
 		s.Conf.UnknownThreshold,
 	}); err != nil {
-		log.Println(err)
+		slog.Errorln(err)
 	}
 	n.Notify(subject, body.String(), []byte(subject), body.Bytes(), s.Conf, "unknown_treshold")
 }
@@ -220,12 +219,12 @@ func (s *Schedule) unotify(name string, group expr.AlertKeys, n *conf.Notificati
 	data := s.unknownData(now, name, group)
 	if t.Body != nil {
 		if err := t.Body.Execute(body, &data); err != nil {
-			log.Println("unknown template error:", err)
+			slog.Infoln("unknown template error:", err)
 		}
 	}
 	if t.Subject != nil {
 		if err := t.Subject.Execute(subject, &data); err != nil {
-			log.Println("unknown template error:", err)
+			slog.Infoln("unknown template error:", err)
 		}
 	}
 	n.Notify(subject.String(), body.String(), subject.Bytes(), body.Bytes(), s.Conf, name)

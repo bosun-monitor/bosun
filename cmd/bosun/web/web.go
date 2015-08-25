@@ -8,7 +8,6 @@ import (
 	"html/template"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -24,6 +23,7 @@ import (
 	"bosun.org/collect"
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
+	"bosun.org/slog"
 	"bosun.org/version"
 )
 
@@ -57,7 +57,7 @@ func init() {
 
 func Listen(listenAddr string, devMode bool, tsdbHost string) error {
 	if devMode {
-		log.Println("using local web assets")
+		slog.Infoln("using local web assets")
 	}
 	webFS := FS(devMode)
 
@@ -65,7 +65,7 @@ func Listen(listenAddr string, devMode bool, tsdbHost string) error {
 		str := FSMustString(devMode, "/templates/index.html")
 		templates, err := template.New("").Parse(str)
 		if err != nil {
-			log.Fatal(err)
+			slog.Fatal(err)
 		}
 		return templates
 	}
@@ -117,8 +117,8 @@ func Listen(listenAddr string, devMode bool, tsdbHost string) error {
 	http.Handle("/partials/", fs)
 	http.Handle("/static/", http.StripPrefix("/static/", fs))
 	http.Handle("/favicon.ico", fs)
-	log.Println("bosun web listening on:", listenAddr)
-	log.Println("tsdb host:", tsdbHost)
+	slog.Infoln("bosun web listening on:", listenAddr)
+	slog.Infoln("tsdb host:", tsdbHost)
 	return http.ListenAndServe(listenAddr, nil)
 }
 
@@ -195,7 +195,7 @@ func indexTSDB(r *http.Request, body []byte) {
 func IndexTSDB(w http.ResponseWriter, r *http.Request) {
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		log.Println(err)
+		slog.Error(err)
 	}
 	indexTSDB(r, body)
 }
@@ -237,7 +237,7 @@ func JSON(h func(miniprofiler.Timer, http.ResponseWriter, *http.Request) (interf
 		}
 		buf := new(bytes.Buffer)
 		if err := json.NewEncoder(buf).Encode(d); err != nil {
-			log.Println(err)
+			slog.Error(err)
 			serveError(w, err)
 			return
 		}

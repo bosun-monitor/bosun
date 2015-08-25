@@ -5,7 +5,6 @@ import (
 	"fmt"
 	htemplate "html/template"
 	"io/ioutil"
-	"log"
 	"net"
 	"net/http"
 	"net/mail"
@@ -24,6 +23,7 @@ import (
 	eparse "bosun.org/cmd/bosun/expr/parse"
 	"bosun.org/graphite"
 	"bosun.org/opentsdb"
+	"bosun.org/slog"
 )
 
 type Conf struct {
@@ -963,7 +963,7 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 		"json": func(v interface{}) string {
 			b, err := json.Marshal(v)
 			if err != nil {
-				log.Println(err)
+				slog.Errorln(err)
 			}
 			return string(b)
 		},
