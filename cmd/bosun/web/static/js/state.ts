@@ -1,4 +1,5 @@
-bosunApp.directive('tsAckGroup', function() {
+
+bosunApp.directive('tsAckGroup', ['$location', ($location: ng.ILocationService) => {
 	return {
 		scope: {
 			ack: '=',
@@ -57,19 +58,21 @@ bosunApp.directive('tsAckGroup', function() {
 				}
 			};
 			scope.multiaction = (type: string) => {
-				var url = '/action?type=' + type;
+				var keys = [];
 				angular.forEach(scope.groups, (group) => {
 					if (!group.checked) {
 						return;
 					}
 					if (group.AlertKey) {
-						url += '&key=' + encodeURIComponent(group.AlertKey);
+						keys.push(group.AlertKey);
 					}
 					angular.forEach(group.Children, (child) => {
-						url += '&key=' + encodeURIComponent(child.AlertKey);
+						keys.push(child.AlertKey);
 					});
 				});
-				return url;
+				scope.$parent.setKey("action-keys", keys);
+				$location.path("action");
+				$location.search("type", type);
 			};
 			scope.history = () => {
 				var url = '/history?';
@@ -88,7 +91,7 @@ bosunApp.directive('tsAckGroup', function() {
 			};
 		},
 	};
-});
+}]);
 
 bosunApp.directive('tsState', ['$sce', '$http', function($sce: ng.ISCEService, $http: ng.IHttpService) {
 	return {

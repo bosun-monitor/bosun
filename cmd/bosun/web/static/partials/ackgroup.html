@@ -10,9 +10,9 @@
 		<span class="pull-right with-selected" ng-show="anySelected">
 			with selected
 			<br>
-			<a class="btn btn-primary btn-sm" ng-href="{{multiaction('ack')}}" ng-disabled="!canAckSelected">acknowledge</a>
-			<a class="btn btn-warning btn-sm" ng-href="{{multiaction('close')}}" ng-disabled="!canCloseSelected">close</a>
-			<a class="btn btn-danger btn-sm" ng-href="{{multiaction('forget')}}" ng-disabled="!canForgetSelected">forget</a>
+			<a class="btn btn-primary btn-sm" ng-click="multiaction('ack')" ng-disabled="!canAckSelected">acknowledge</a>
+			<a class="btn btn-warning btn-sm" ng-click="multiaction('close')" ng-disabled="!canCloseSelected">close</a>
+			<a class="btn btn-danger btn-sm" ng-click="multiaction('forget')" ng-disabled="!canForgetSelected">forget</a>
 			<a class="btn btn-default btn-sm" ng-href="{{history()}}">History</a>
 		</span>
 	</div>

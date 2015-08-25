@@ -2369,97 +2369,99 @@ bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$ro
             return m.format();
         };
     }]);
-bosunApp.directive('tsAckGroup', function () {
-    return {
-        scope: {
-            ack: '=',
-            groups: '=tsAckGroup',
-            schedule: '=',
-            timeanddate: '='
-        },
-        templateUrl: '/partials/ackgroup.html',
-        link: function (scope, elem, attrs) {
-            scope.canAckSelected = scope.ack == 'Needs Acknowledgement';
-            scope.panelClass = scope.$parent.panelClass;
-            scope.btoa = scope.$parent.btoa;
-            scope.encode = scope.$parent.encode;
-            scope.shown = {};
-            scope.collapse = function (i) {
-                scope.shown[i] = !scope.shown[i];
-            };
-            scope.click = function ($event, idx) {
-                scope.collapse(idx);
-                if ($event.shiftKey && scope.schedule.checkIdx != undefined) {
-                    var checked = scope.groups[scope.schedule.checkIdx].checked;
-                    var start = Math.min(idx, scope.schedule.checkIdx);
-                    var end = Math.max(idx, scope.schedule.checkIdx);
-                    for (var i = start; i <= end; i++) {
-                        if (i == idx) {
-                            continue;
+bosunApp.directive('tsAckGroup', ['$location', function ($location) {
+        return {
+            scope: {
+                ack: '=',
+                groups: '=tsAckGroup',
+                schedule: '=',
+                timeanddate: '='
+            },
+            templateUrl: '/partials/ackgroup.html',
+            link: function (scope, elem, attrs) {
+                scope.canAckSelected = scope.ack == 'Needs Acknowledgement';
+                scope.panelClass = scope.$parent.panelClass;
+                scope.btoa = scope.$parent.btoa;
+                scope.encode = scope.$parent.encode;
+                scope.shown = {};
+                scope.collapse = function (i) {
+                    scope.shown[i] = !scope.shown[i];
+                };
+                scope.click = function ($event, idx) {
+                    scope.collapse(idx);
+                    if ($event.shiftKey && scope.schedule.checkIdx != undefined) {
+                        var checked = scope.groups[scope.schedule.checkIdx].checked;
+                        var start = Math.min(idx, scope.schedule.checkIdx);
+                        var end = Math.max(idx, scope.schedule.checkIdx);
+                        for (var i = start; i <= end; i++) {
+                            if (i == idx) {
+                                continue;
+                            }
+                            scope.groups[i].checked = checked;
                         }
+                    }
+                    scope.schedule.checkIdx = idx;
+                    scope.update();
+                };
+                scope.select = function (checked) {
+                    for (var i = 0; i < scope.groups.length; i++) {
                         scope.groups[i].checked = checked;
                     }
-                }
-                scope.schedule.checkIdx = idx;
-                scope.update();
-            };
-            scope.select = function (checked) {
-                for (var i = 0; i < scope.groups.length; i++) {
-                    scope.groups[i].checked = checked;
-                }
-                scope.update();
-            };
-            scope.update = function () {
-                scope.canCloseSelected = true;
-                scope.canForgetSelected = true;
-                scope.anySelected = false;
-                for (var i = 0; i < scope.groups.length; i++) {
-                    var g = scope.groups[i];
-                    if (!g.checked) {
-                        continue;
+                    scope.update();
+                };
+                scope.update = function () {
+                    scope.canCloseSelected = true;
+                    scope.canForgetSelected = true;
+                    scope.anySelected = false;
+                    for (var i = 0; i < scope.groups.length; i++) {
+                        var g = scope.groups[i];
+                        if (!g.checked) {
+                            continue;
+                        }
+                        scope.anySelected = true;
+                        if (g.Active && g.Status != 'unknown' && g.Status != 'error') {
+                            scope.canCloseSelected = false;
+                        }
+                        if (g.Status != 'unknown') {
+                            scope.canForgetSelected = false;
+                        }
                     }
-                    scope.anySelected = true;
-                    if (g.Active && g.Status != 'unknown' && g.Status != 'error') {
-                        scope.canCloseSelected = false;
-                    }
-                    if (g.Status != 'unknown') {
-                        scope.canForgetSelected = false;
-                    }
-                }
-            };
-            scope.multiaction = function (type) {
-                var url = '/action?type=' + type;
-                angular.forEach(scope.groups, function (group) {
-                    if (!group.checked) {
-                        return;
-                    }
-                    if (group.AlertKey) {
-                        url += '&key=' + encodeURIComponent(group.AlertKey);
-                    }
-                    angular.forEach(group.Children, function (child) {
-                        url += '&key=' + encodeURIComponent(child.AlertKey);
+                };
+                scope.multiaction = function (type) {
+                    var keys = [];
+                    angular.forEach(scope.groups, function (group) {
+                        if (!group.checked) {
+                            return;
+                        }
+                        if (group.AlertKey) {
+                            keys.push(group.AlertKey);
+                        }
+                        angular.forEach(group.Children, function (child) {
+                            keys.push(child.AlertKey);
+                        });
                     });
-                });
-                return url;
-            };
-            scope.history = function () {
-                var url = '/history?';
-                angular.forEach(scope.groups, function (group) {
-                    if (!group.checked) {
-                        return;
-                    }
-                    if (group.AlertKey) {
-                        url += '&key=' + encodeURIComponent(group.AlertKey);
-                    }
-                    angular.forEach(group.Children, function (child) {
-                        url += '&key=' + encodeURIComponent(child.AlertKey);
+                    scope.$parent.setKey("action-keys", keys);
+                    $location.path("action");
+                    $location.search("type", type);
+                };
+                scope.history = function () {
+                    var url = '/history?';
+                    angular.forEach(scope.groups, function (group) {
+                        if (!group.checked) {
+                            return;
+                        }
+                        if (group.AlertKey) {
+                            url += '&key=' + encodeURIComponent(group.AlertKey);
+                        }
+                        angular.forEach(group.Children, function (child) {
+                            url += '&key=' + encodeURIComponent(child.AlertKey);
+                        });
                     });
-                });
-                return url;
-            };
-        }
-    };
-});
+                    return url;
+                };
+            }
+        };
+    }]);
 bosunApp.directive('tsState', ['$sce', '$http', function ($sce, $http) {
         return {
             templateUrl: '/partials/alertstate.html',
