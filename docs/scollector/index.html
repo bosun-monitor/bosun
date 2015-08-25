@@ -18,7 +18,7 @@
     <div class="wrapper">
       <header>
         <h1>scollector</h1>
-        <p>OpenTSDB&#39;s tcollector for the v2 HTTP API</p>
+        <p>Bosun's metric agent and replacement for OpenTSDB&#39;s TCollector</p>
 
         <h2>Download Binaries</h2>
 		{% if site.github != null %}
@@ -26,9 +26,9 @@
 			{% assign releases = site.github.releases | where:"draft",false %}
 			{% assign release = releases[0] %}
 			{% assign relname = release.tag_name %}
-			
+
 	<p>Version <a href="https://github.com/bosun-monitor/bosun/releases/tag/{{relname}}">{{relname}}</a> ({{ release.created_at | date_to_string }})</p>
-		
+
         <ul>
           <li><a href="https://github.com/bosun-monitor/bosun/releases/download/{{relname}}/scollector-linux-amd64"><strong>Linux</strong> amd64</a></li>
           <li><a href="https://github.com/bosun-monitor/bosun/releases/download/{{relname}}/scollector-windows-amd64.exe"><strong>Windows</strong> amd64</a></li>
@@ -53,14 +53,16 @@
       </header>
       <section>
 
-<p>scollector is a replacement for OpenTSDB's tcollector.</p>
+<h2><a name="overview" class="anchor" href="#overview"><span class="octicon octicon-link"></span></a>Overview</h2>
 
-<p>Benefits of scollector over tcollector:</p>
+<p>scollector is a replacement for OpenTSDB's <a href="http://opentsdb.net/docs/build/html/user_guide/utilities/tcollector.html">TCollector</a> and can be used to send metrics to a <a href="http://bosun.org">Bosun</a> server.</p>
+
+<p>Benefits of scollector over TCollector:</p>
 
 <ul>
-<li>scollector uses the v2 API, not the older v1 API</li>
-<li>scollector is more resource efficient</li>
-<li>scollector integrates with Bosun</li>
+<li>scollector uses the HTTP based API, not the older Telnet based API</li>
+<li>scollector is written in Go and is more resource efficient</li>
+<li>scollector integrates with <a href="http://bosun.org/api#metadata">Bosun's metadata</a> (Units, Gauge/Counter, Description) and allows external collectors to also use metadata</li>
 </ul>
 
 <p>OpenTSDB 1.0 uses the
@@ -69,70 +71,85 @@ data collection framework.
 This project aims to make scollector the
 preferred collector for OpenTSDB 2.0.</p>
 
-<h2>
-<a name="documentation" class="anchor" href="#documentation"><span class="octicon octicon-link"></span></a>documentation</h2>
+<h2><a name="documentation" class="anchor" href="#documentation"><span class="octicon octicon-link"></span></a>Documentation</h2>
 
 <p><a href="http://godoc.org/bosun.org/cmd/scollector">http://godoc.org/bosun.org/cmd/scollector</a></p>
 
-<h2>
-<a name="installation" class="anchor" href="#installation"><span class="octicon octicon-link"></span></a>installation from source</h2>
+<h2><a name="installation" class="anchor" href="#installation"><span class="octicon octicon-link"></span></a>Installation from Source</h2>
 
 <pre><code>$ go get bosun.org/cmd/scollector
 </code></pre>
 
 <h2>Collectors</h2>
 
-<p>scollector has the following built-in collectors.</p>
+<p>scollector has the following built-in collectors. See documentation for configuration settings.</p>
 
-<h3>Linux</h3>
+<h3><a name="collectors-linux" class="anchor" href="#collectors-linux"><span class="octicon octicon-link"></span></a>Linux</h3>
 <ul>
 <li>conntrack</li>
+<li>cpu</li>
 <li>disk</li>
-<li>ifstat</li>
-<li>procstats</li>
-<li>puppet</li>
-<li>railgun</li>
-<li>yum</li>
+<li>loadavg</li>
+<li>memory</li>
+<li>network (ifstat)</li>
+<li>processes</li>
+<li>uptime</li>
+<li>Yum</li>
 </ul>
-<h3>Windows</h3>
+<h3>
+<a name="collectors-windows" class="anchor" href="#collectors-windows"><span class="octicon octicon-link"></span></a>Windows</h3>
+<ul>
+<li>.NET proccess memory and AppDomains</li>
+<li>Active Directory</li>
+<li>cpu</li>
+<li>disk</li>
+<li>DSC</li>
+<li>IIS</li>
+<li>memory</li>
+<li>network</li>
+<li>processes</li>
+<li>services</li>
+<li>sntp</li>
+<li>SQL Server (MSSQL)</li>
+</ul>
+<h3><a name="collectors-Mac" class="anchor" href="#collectors-Mac"><span class="octicon octicon-link"></span></a>Mac</h3>
 <ul>
 <li>cpu</li>
 <li>disk</li>
-<li>iis</li>
-<li>mem</li>
-<li>netbackup</li>
-<li>network</li>
-<li>processes</li>
-<li>sntp</li>
-<li>sql (MSSQL)</li>
-<li>system</li>
-</ul>
-<h3>Mac</h3>
-<ul>
-<li>dfstat</li>
 <li>iostat</li>
 <li>vmstat</li>
 </ul>
-<h3>Other</h3>
+<h3><a name="collectors-other" class="anchor" href="#collectors-other"><span class="octicon octicon-link"></span></a>Other</h3>
 <ul>
-<li>cassandra</li>
-<li>dell (Dell hardware)</li>
-<li>elasticsearch</li>
-<li>hbase</li>
-<li>ntp</li>
-<li>opentsdb</li>
-<li>redis</li>
+<li>Apache mod_info</li>
+<li>Cassandra</li>
+<li>Chef</li>
+<li>CloudFlare Railgun</li>
+<li>Dell hardware (omreport)</li>
+<li>Elasticsearch</li>
+<li>Exim</li>
+<li>HAProxy</li>
+<li>HBase</li>
+<li>httpUnit</li>
+<li>Keepalived</li>
+<li>Memcached</li>
+<li>NetBackup</li>
+<li>ntp/sntp</li>
+<li>OpenTSDB</li>
+<li>Puppet</li>
+<li>RabbitMQ</li>
+<li>Redis</li>
+<li>Riak</li>
 </ul>
-<h3>Remote Services</h3>
+<h3><a name="collectors-remote" class="anchor" href="#collectors-remote"><span class="octicon octicon-link"></span></a>Remote Services</h3>
 <ul>
+<li>Amazon Web Services (EC2, ELB)</li>
 <li>icmp (ping)</li>
-<li>snmp (Cisco, interfaces)</li>
-<li>vsphere (vmware)</li>
+<li>snmp (Cisco, MIBs/OIDs)</li>
+<li>VMware vSphere</li>
 </ul>
-
       </section>
     </div>
     <script src="javascripts/scale.fix.js"></script>
-    
   </body>
 </html>

@@ -19,15 +19,15 @@ order: 1
 <div class="row" style="padding-top: 75px;">
 	<div class="col-md-4">
 		<h3>Try It</h3>
-		<p>Want to jump right in? Follow our <strong><a href="/quickstart.html">quick start tutorial</a></strong> to get Bosun, OpenTSDB, and scollector up quickly using our published docker images.</p>
+		<p>Want to jump right in? Follow our <strong><a href="/quickstart">quick start tutorial</a></strong> to get Bosun, OpenTSDB, and scollector up quickly using our published docker images.</p>
 	</div>
 	<div class="col-md-4">
 		<h3>Download It</h3>
-		<p>Download the prebuilt binaries for <strong><a href="/downloads.html">Bosun</a></strong> and our optional but valuable monitoring agent (Currently works only with OpenTSDB) <strong><a href="/scollector">scollector</a></strong> for Windows, Linux, and Mac.</p>
+		<p>Download the prebuilt binaries for <strong><a href="/downloads">Bosun</a></strong> and our optional but valuable monitoring agent (Currently works only with OpenTSDB) <strong><a href="/scollector">scollector</a></strong> for Windows, Linux, and Mac.</p>
 	</div>
 	<div class="col-md-4">
 		<h3>Get Help</h3>
-		<p>Join us in our Slack room. <a href="/slackInvite.html">Get an invite.</a> You can <strong><a href="https://github.com/bosun-monitor/bosun/issues">open issues on GitHub</a></strong> to report bugs or discuss new features.</p>
+		<p>Join us in our Slack room. <a href="/slackInvite">Get an invite.</a> You can <strong><a href="https://github.com/bosun-monitor/bosun/issues">open issues on GitHub</a></strong> to report bugs or discuss new features.</p>
 	</div>
 </div>
 <div class="row" style="padding-top: 75px"><h2 class="text-center feature-header">Features</h2></div>
@@ -93,5 +93,3 @@ order: 1
 		</div>
 	</div>
 </div>
-
-

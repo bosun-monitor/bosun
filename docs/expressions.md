@@ -6,10 +6,10 @@ title: Expression Documentation
 <div class="row">
 <div class="col-sm-3" >
   <div class="sidebar" data-spy="affix" data-offset-top="0" data-offset-bottom="0" markdown="1">
- 
+
  * Some TOC
  {:toc}
- 
+
   </div>
 </div>
 
@@ -79,7 +79,7 @@ alert haproxy_session_limit {
 
 We don't need to understand everything in this alert, but it is worth highlighting a few things to get oriented:
 
- * `haproxy_session_limit` This is the name of the alert, an alert instance is uniquely identified by its alertname and group, i.e `haproxy_session_limit{host=lb,pxname=http-in,tier=2}` 
+ * `haproxy_session_limit` This is the name of the alert, an alert instance is uniquely identified by its alertname and group, i.e `haproxy_session_limit{host=lb,pxname=http-in,tier=2}`
  * `$notes` This is a variable. Variables are not smart, they are just text replacement. If you are familiar with macros in C, this is a similar concept. These variables can be referenced in notification templates which is why we have a generic one for notes
  * `q("sum:haproxy.frontend.scur{host=*,pxname=*,tier=*}", "5m", "")` is an OpenTSDB query function, it returns *N* series, we know each series will have the host, pxname, and tier tag keys in their group based on the query.
  * `max(...)` is a reduction function. It takes each **series** and **reduces** it to a **number** (See the Data types section above).
@@ -305,7 +305,7 @@ Alert if more than 50% of servers in a group have ping timeouts
     # so we need to *reduce* each series values of each group into a single number:
     $max_timeout = max($timeout)
     # Max timeout is now a group of results where the value of each group is a number. Since each
-    # group is an alert instance, we need to regroup this into a sigle alert. We can do that by 
+    # group is an alert instance, we need to regroup this into a sigle alert. We can do that by
     # transposing with t()
     $max_timeout_series = t("$max_timeout", "")
     # $max_timeout_series is now a single group with a value of type series. We need to reduce
@@ -380,7 +380,7 @@ Returns all results in seriesSet that are a subset of numberSet and have a non-z
 
 Returns the first count (scalar) results of number.
 
-## lookup(table string, key string) numberSet 
+## lookup(table string, key string) numberSet
 
 Returns the first key from the given lookup table with matching tags.
 
