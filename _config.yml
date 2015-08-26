@@ -1,0 +1,6 @@
+markdown: redcarpet
+exclude:
+    - build.sh
+    - build.go
+    - docker.sh
+    - .gitignore
