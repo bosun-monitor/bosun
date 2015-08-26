@@ -5,9 +5,10 @@ import (
 	"regexp"
 	"sort"
 	"strings"
-	"sync"
 	"time"
 
+	"bosun.org/collect"
+	"bosun.org/metadata"
 	"bosun.org/opentsdb"
 )
 
@@ -31,10 +32,7 @@ type Search struct {
 	// value.
 	Read *Search
 
-	sync.RWMutex
-
-	// copy is true when there is a Copy() event pending.
-	copy bool
+	dps chan opentsdb.MultiDataPoint
 }
 
 type pair struct {
@@ -97,7 +95,9 @@ func NewSearch() *Search {
 		MetricTags: make(mtsmap),
 		Last:       make(map[string]*pair),
 		Read:       new(Search),
+		dps:        make(chan opentsdb.MultiDataPoint, 10000),
 	}
+	go s.indexLoop()
 	return &s
 }
 
@@ -108,58 +108,72 @@ func (s *Search) Copy() {
 	r.Tagk = s.Tagk.Copy()
 	r.Tagv = s.Tagv.Copy()
 	r.MetricTags = s.MetricTags.Copy()
+	r.Read = r
 	s.Read = r
 }
 
+func init() {
+	metadata.AddMetricMeta("bosun.search.dropped", metadata.Counter, metadata.Count, "Number of datapoints dropped by search due to full indexing queue.")
+	metadata.AddMetricMeta("bosun.search.indexed", metadata.Counter, metadata.Count, "Number of datapoints indexed by search.")
+	collect.Add("search.dropped", opentsdb.TagSet{}, 0)
+}
+
 func (s *Search) Index(mdp opentsdb.MultiDataPoint) {
-	now := time.Now().Unix()
-	s.Lock()
-	if !s.copy {
-		s.copy = true
-		go func() {
-			time.Sleep(time.Second * 20)
-			s.Lock()
+	select {
+	case s.dps <- mdp:
+		return
+	default:
+		collect.Add("search.dropped", opentsdb.TagSet{}, int64(len(mdp)))
+		return
+	}
+}
+
+func (s *Search) indexLoop() {
+	ticker := time.NewTicker(20 * time.Second)
+	for {
+		select {
+		case <-ticker.C:
 			s.Copy()
-			s.copy = false
-			s.Unlock()
-		}()
-	}
-	for _, dp := range mdp {
-		var mts MetricTagSet
-		mts.Metric = dp.Metric
-		mts.Tags = dp.Tags
-		key := mts.key()
-		s.MetricTags[key] = mts
-		var q duple
-		for k, v := range dp.Tags {
-			q.A, q.B = k, v
-			if _, ok := s.Metric[q]; !ok {
-				s.Metric[q] = make(present)
-			}
-			s.Metric[q][dp.Metric] = now
+		case mdp := <-s.dps:
+			now := time.Now().Unix()
+			for _, dp := range mdp {
+				var mts MetricTagSet
+				mts.Metric = dp.Metric
+				mts.Tags = dp.Tags
+				key := mts.key()
+				s.MetricTags[key] = mts
+				var q duple
+				for k, v := range dp.Tags {
+					q.A, q.B = k, v
+					if _, ok := s.Metric[q]; !ok {
+						s.Metric[q] = make(present)
+					}
+					s.Metric[q][dp.Metric] = now
 
-			if _, ok := s.Tagk[dp.Metric]; !ok {
-				s.Tagk[dp.Metric] = make(present)
-			}
-			s.Tagk[dp.Metric][k] = now
+					if _, ok := s.Tagk[dp.Metric]; !ok {
+						s.Tagk[dp.Metric] = make(present)
+					}
+					s.Tagk[dp.Metric][k] = now
 
-			q.A, q.B = dp.Metric, k
-			if _, ok := s.Tagv[q]; !ok {
-				s.Tagv[q] = make(present)
+					q.A, q.B = dp.Metric, k
+					if _, ok := s.Tagv[q]; !ok {
+						s.Tagv[q] = make(present)
+					}
+					s.Tagv[q][v] = now
+				}
+				p := s.Last[key]
+				if p == nil {
+					p = new(pair)
+					s.Last[key] = p
+				}
+				if p.points[p.index%2].Timestamp < dp.Timestamp {
+					p.points[p.index%2] = *dp
+					p.index++
+				}
 			}
-			s.Tagv[q][v] = now
-		}
-		p := s.Last[key]
-		if p == nil {
-			p = new(pair)
-			s.Last[key] = p
-		}
-		if p.points[p.index%2].Timestamp < dp.Timestamp {
-			p.points[p.index%2] = *dp
-			p.index++
+			collect.Add("search.indexed", opentsdb.TagSet{}, int64(len(mdp)))
 		}
 	}
-	s.Unlock()
 }
 
 // Match returns all matching values against search. search is a regex, except
@@ -188,8 +202,7 @@ var errNotFloat = fmt.Errorf("last: expected float64")
 // and tag. tags should be of the form "{key=val,key2=val2}". If diff is true,
 // the value is treated as a counter. err is non nil if there is no match.
 func (s *Search) GetLast(metric, tags string, diff bool) (v float64, err error) {
-	s.RLock()
-	p := s.Last[metric+tags]
+	p := s.Read.Last[metric+tags]
 	if p != nil {
 		var ok bool
 		e := p.points[(p.index+1)%2]
@@ -209,7 +222,6 @@ func (s *Search) GetLast(metric, tags string, diff bool) (v float64, err error) 
 			v = (v - ov) / float64(e.Timestamp-o.Timestamp)
 		}
 	}
-	s.RUnlock()
 	return
 }
 
@@ -221,7 +233,7 @@ func (s *Search) Expand(q *opentsdb.Query) error {
 			if v == "*" || !strings.Contains(v, "*") {
 				nvs = append(nvs, v)
 			} else {
-				vs := s.TagValuesByMetricTagKey(q.Metric, k, 0)
+				vs := s.Read.TagValuesByMetricTagKey(q.Metric, k, 0)
 				ns, err := Match(v, vs)
 				if err != nil {
 					return err
@@ -249,10 +261,10 @@ func (s *Search) UniqueMetrics() []string {
 }
 
 func (s *Search) TagValuesByTagKey(Tagk string, since time.Duration) []string {
-	um := s.UniqueMetrics()
+	um := s.Read.UniqueMetrics()
 	tagvset := make(map[string]bool)
 	for _, Metric := range um {
-		for _, Tagv := range s.tagValuesByMetricTagKey(Metric, Tagk, since) {
+		for _, Tagv := range s.Read.tagValuesByMetricTagKey(Metric, Tagk, since) {
 			tagvset[Tagv] = true
 		}
 	}

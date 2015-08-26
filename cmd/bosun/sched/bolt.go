@@ -119,8 +119,6 @@ func (s *Schedule) RestoreState() error {
 	start := time.Now()
 	s.Lock("RestoreState")
 	defer s.Unlock()
-	s.Search.Lock()
-	defer s.Search.Unlock()
 	s.Notifications = nil
 	decode := func(name string, dst interface{}) error {
 		var data []byte
