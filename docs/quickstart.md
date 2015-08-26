@@ -7,10 +7,10 @@ redirect_from: /gettingstarted.html
 <div class="row">
 <div class="col-sm-3" >
   <div data-spy="affix" data-offset-top="0" data-offset-bottom="0" markdown="1">
- 
+
  * Some TOC
  {:toc}
- 
+
   </div>
 </div>
 
@@ -78,7 +78,7 @@ For the purpose of this demo, click on the Expression button.
 
 ### Expression
 
-The expression page allows us to tweak the data set for our query. The expression bar should currently have a line that begins with “q(“sum:rate…” This is the recipe that tells Bosun you’re looking for the os.cpu metric for the past 1 hour. If you click the “show” button under the result column in the Queries section, you will see all of the data points as they were graphed. Each data point is a timestamp and a value. 
+The expression page allows us to tweak the data set for our query. The expression bar should currently have a line that begins with “q(“sum:rate…” This is the recipe that tells Bosun you’re looking for the os.cpu metric for the past 1 hour. If you click the “show” button under the result column in the Queries section, you will see all of the data points as they were graphed. Each data point is a timestamp and a value.
 
 In the course of making an alert, however, we are probably not interested in a huge set of numbers. We might instead want something like the average.
 
@@ -160,7 +160,7 @@ See the [scollector docs](http://godoc.org/bosun.org/cmd/scollector) for more in
 Next to OpenTSDB, Bosun also supports querying Graphite and Logstash-Elasticsearch.
 You can execute, view and graph expressions, develop and run Graphite/LS alerting rules, get notifications and use the dashboard.
 The OpenTSDB specific feature, such as data proxying and the built in general purpose graphing interface don't apply here.
-The alerting rules look the same, in fact the only difference is you will query data using [graphite specific functions](http://bosun.org/expressions.html#graphite-query-functions) such as graphiteQuery and graphiteBand.
+The alerting rules look the same, in fact the only difference is you will query data using [graphite specific functions](http://bosun.org/expressions#graphite-query-functions) such as graphiteQuery and graphiteBand.
 
 Start Graphite in docker:
 
@@ -199,4 +199,3 @@ the 4th argument of the graphite function is the format of how to parse the seri
 {% endraw %}
   </div>
 </div>
-
