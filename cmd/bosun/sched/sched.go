@@ -375,6 +375,9 @@ func (s *Schedule) MarshalGroups(T miniprofiler.Timer, filter string) (*StateGro
 						if len(st.History) > 1 {
 							st.History = st.History[len(st.History)-1:]
 						}
+						if len(st.Actions) > 1 {
+							st.Actions = st.Actions[len(st.Actions)-1:]
+						}
 
 						g.Children = append(g.Children, &StateGroup{
 							Active:   tuple.Active,
