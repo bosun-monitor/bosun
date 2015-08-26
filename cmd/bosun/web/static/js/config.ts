@@ -15,6 +15,7 @@ interface IConfigScope extends IBosunScope {
 	aceToggleHighlight: () => void;
 	quickJumpTarget: string;
 	quickJump: () => void;
+	downloadConfig: () => void;
 	
 	//rule execution options
 	fromDate: string;
@@ -393,5 +394,13 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 		$scope.error = data.Errors;
 		$scope.warning = data.Warnings;
 	}
+	
+	$scope.downloadConfig = () => {
+		var blob = new Blob([$scope.config_text], {type: "text/plain;charset=utf-8"});
+		saveAs(blob, "bosun.conf");
+	}
 	return $scope;
 }]);
+
+// declared in FileSaver.js
+declare var saveAs: any;
