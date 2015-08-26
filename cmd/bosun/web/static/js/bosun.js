@@ -713,6 +713,10 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
             $scope.error = data.Errors;
             $scope.warning = data.Warnings;
         }
+        $scope.downloadConfig = function () {
+            var blob = new Blob([$scope.config_text], { type: "text/plain;charset=utf-8" });
+            saveAs(blob, "bosun.conf");
+        };
         return $scope;
     }]);
 bosunControllers.controller('DashboardCtrl', ['$scope', '$http', '$location', function ($scope, $http, $location) {
