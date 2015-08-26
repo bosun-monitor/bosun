@@ -7,7 +7,7 @@ title: Resources
 ## Getting Started
 
 ### [Installing Bosun for Production](https://medvedev.io/blog/posts/2015-06-21-bosun-install-1.html "Installing Bosun for production") by Dima Medvedev
-> A detailed walk-through of installing Bosun and OpenTSDB using Apache Ambari to setup HBase/Hadoop.
+> A detailed walk-through of installing Bosun and OpenTSDB using Apache Ambari to setup HBase/Hadoop. See also [these snippets](https://gist.github.com/gbrayut/3af4bcd0458d2aa57dd2) for using Cloudera CDH 5.4.4 on RHEL 6.
 
 ### [Bosun, Time Series, and OpenTSDB's Data Model](https://www.youtube.com/watch?v=DVavDN8tyIc) video by Kyle Brandt
 > An introduction to the data model of Bosun’s primary time series backend OpenTSDB. Time series, Metrics and Tags, Aggregation, Rate Calculation, and Downsampling.
@@ -17,6 +17,9 @@ title: Resources
 
 ### Chef Cookbooks by ptqa
 > There is a cookbook for using Chef to deploy [scollector](https://supermarket.chef.io/cookbooks/scollector) and another work in progress for deploying [Bosun](https://github.com/ptqa/chef-bosun).
+
+### Slack Chat Room and Questions on Stack Overflow and Server Fault
+> If you have questions you can get an invite to [https://bosun.slack.com/](http://bosun.org/slackInvite) or use the Bosun tag on [Stack Overflow](http://stackoverflow.com/questions/tagged/bosun) or [Server Fault](http://serverfault.com/questions/tagged/bosun)
 
   &nbsp;
 

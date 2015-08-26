@@ -206,30 +206,12 @@ AWS (array of table, keys are AccessKey, SecretKey, Region): AWS hosts to poll.
 	  Region = "somewhere"
 
 
-Process (array of table, keys are Command, Name, Args for Linux, and Name
-for Windows): processes to monitor. Name is optional, and defaults to Command.
+Process: processes to monitor.
 
-	# Linux
-	[[Process]]
-	  Command = "redis-server *:6379"
-	  Name = "redis-main"
-	[[Process]]
-	  Command = "redis-server *:6380"
-	  Name = "redis-slave"
+ProcessDotNet: .NET processes to monitor on Windows.
 
-	# Windows
-	[[Process]]
-	  Name = "^java"
-	[[Process]]
-	  Name = "^powershell"
-
-ProcessDotNet (array of table, keys are Name): .NET processes to monitor
-on Windows.
-
-	[[ProcessDotNet]]
-	  Name = "^w3wp"
-	[[ProcessDotNet]]
-	  Name = "^Scheduler"
+See http://bosun.org/scollector/process-monitoring for details about Process and
+ProcessDotNet.
 
 HTTPUnit (array of table, keys are TOML, Hiera): httpunit TOML and Hiera
 files to read and monitor. See https://github.com/StackExchange/httpunit
