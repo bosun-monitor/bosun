@@ -43,6 +43,7 @@ type Conf struct {
 	ProcessDotNet []ProcessDotNet
 	HTTPUnit      []HTTPUnit
 	Riak          []Riak
+	Github        []Github
 	// ElasticIndexFilters takes regular expressions and excludes indicies that
 	// match those filters from being monitored for metrics in the elastic.indices
 	// namespace
@@ -125,4 +126,9 @@ type Riak struct {
 
 type RabbitMQ struct {
 	URL string
+}
+
+type Github struct {
+	Repo  string
+	Token string
 }
