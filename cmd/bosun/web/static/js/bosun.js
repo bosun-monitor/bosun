@@ -2250,9 +2250,13 @@ bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$ro
         if (!$scope.end && !$scope.duration) {
             $scope.duration = '1h';
         }
-        function filter(data, startBefore, startAfter, endAfter, endBefore) {
-            var ret = [];
-            _.each(data, function (v) {
+        function filter(data, startBefore, startAfter, endAfter, endBefore, limit) {
+            var ret = {};
+            var count = 0;
+            _.each(data, function (v, name) {
+                if (limit && count >= limit) {
+                    return;
+                }
                 var s = moment(v.Start).utc();
                 var e = moment(v.End).utc();
                 if (startBefore && s > startBefore) {
@@ -2267,7 +2271,7 @@ bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$ro
                 if (endBefore && e > endBefore) {
                     return;
                 }
-                ret.push(v);
+                ret[name] = v;
             });
             return ret;
         }
@@ -2278,15 +2282,15 @@ bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$ro
                 var now = moment.utc();
                 $scope.silences.push({
                     name: 'Active',
-                    silences: filter(data, now, null, now, null)
+                    silences: filter(data, now, null, now, null, 0)
                 });
                 $scope.silences.push({
                     name: 'Upcoming',
-                    silences: filter(data, null, now, null, null)
+                    silences: filter(data, null, now, null, null, 0)
                 });
                 $scope.silences.push({
                     name: 'Past',
-                    silences: filter(data, null, null, null, now).slice(0, 25)
+                    silences: filter(data, null, null, null, now, 25)
                 });
             })
                 .error(function (error) {
@@ -2358,7 +2362,7 @@ bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$ro
                 return;
             }
             $scope.error = null;
-            $http.post('/api/silence/clear', { id: id })
+            $http.post('/api/silence/clear?id=' + id, {})
                 .error(function (error) {
                 $scope.error = error;
             })

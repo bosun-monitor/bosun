@@ -525,12 +525,8 @@ func SilenceSet(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (i
 }
 
 func SilenceClear(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	var data map[string]string
-	j := json.NewDecoder(r.Body)
-	if err := j.Decode(&data); err != nil {
-		return nil, err
-	}
-	return nil, schedule.ClearSilence(data["id"])
+	id := r.FormValue("id")
+	return nil, schedule.ClearSilence(id)
 }
 
 func ConfigTest(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
