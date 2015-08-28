@@ -2,7 +2,6 @@ package collectors
 
 import (
 	"fmt"
-	"io/ioutil"
 	"regexp"
 	"strconv"
 	"strings"
@@ -347,37 +346,6 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 	}); err != nil {
 		Error = err
 	}
-	const bondingPath = "/proc/net/bonding"
-	bondDevices, _ := ioutil.ReadDir(bondingPath)
-	for _, fi := range bondDevices {
-		var iface string
-		var slave_count int
-		if err := readLine(bondingPath+"/"+fi.Name(), func(s string) error {
-			f := strings.SplitN(s, ":", 2)
-			if len(f) != 2 {
-				return nil
-			}
-			f[0] = strings.TrimSpace(f[0])
-			f[1] = strings.TrimSpace(f[1])
-			if f[0] == "Slave Interface" {
-				iface = f[1]
-				slave_count++
-			}
-			// TODO: This will probably need to be updated for other types of bonding beside LACP, but I have no examples available to work with at the moment
-			if f[0] == "MII Status" && iface != "" {
-				var status int
-				if f[1] == "up" {
-					status = 1
-				}
-				Add(&md, "linux.net.bond.slave.is_up", status, opentsdb.TagSet{"slave": iface, "bond": fi.Name()}, metadata.Gauge, metadata.Bool, "The status of a bond interface.")
-			}
-			return nil
-		}); err != nil {
-			Error = err
-		}
-		Add(&md, "linux.net.bond.slave.count", slave_count, opentsdb.TagSet{"bond": fi.Name()}, metadata.Gauge, metadata.Bool, "The number of slaves on the bonded interface.")
-	}
-	// TODO: Bonding monitoring for CentOS 7 using /var/run/teamd/* and teamdctl <team0> state
 	if err := readLine("/proc/sys/fs/file-nr", func(s string) error {
 		f := strings.Fields(s)
 		if len(f) != 3 {
