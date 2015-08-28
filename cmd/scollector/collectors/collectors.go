@@ -146,6 +146,20 @@ func Run(cs []Collector) chan *opentsdb.DataPoint {
 	return ch
 }
 
+type initFunc func(*conf.Conf)
+
+var inits = []initFunc{}
+
+func registerInit(i initFunc) {
+	inits = append(inits, i)
+}
+
+func Init(c *conf.Conf) {
+	for _, f := range inits {
+		f(c)
+	}
+}
+
 type MetricMeta struct {
 	Metric   string
 	TagSet   opentsdb.TagSet
@@ -164,6 +178,11 @@ func AddTS(md *opentsdb.MultiDataPoint, name string, ts int64, value interface{}
 		}
 	}
 	tags := t.Copy()
+	if host, present := tags["host"]; !present {
+		tags["host"] = util.Hostname
+	} else if host == "" {
+		delete(tags, "host")
+	}
 	if rate != metadata.Unknown {
 		metadata.AddMeta(name, nil, "rate", rate, false)
 	}
@@ -173,11 +192,7 @@ func AddTS(md *opentsdb.MultiDataPoint, name string, ts int64, value interface{}
 	if desc != "" {
 		metadata.AddMeta(name, tags, "desc", desc, false)
 	}
-	if host, present := tags["host"]; !present {
-		tags["host"] = util.Hostname
-	} else if host == "" {
-		delete(tags, "host")
-	}
+
 	tags = AddTags.Copy().Merge(tags)
 	d := opentsdb.DataPoint{
 		Metric:    name,

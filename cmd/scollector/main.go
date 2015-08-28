@@ -97,11 +97,7 @@ func main() {
 			err = e
 		}
 	}
-	for _, h := range conf.HAProxy {
-		for _, i := range h.Instances {
-			collectors.HAProxy(h.User, h.Password, i.Tier, i.URL)
-		}
-	}
+	collectors.Init(conf)
 	for _, rmq := range conf.RabbitMQ {
 		check(collectors.RabbitMQ(rmq.URL))
 	}
