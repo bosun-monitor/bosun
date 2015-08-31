@@ -118,13 +118,12 @@ Like band() but for graphite queries.
 
 ## InfluxDB Query Functions
 
-### influx(db string, query string, startDuration string, endDuration string, format string) seriesSet
+### influx(db string, query string, startDuration string, endDuration string) seriesSet
 
 Queries with influxql query on database db from startDuration ago to
 endDuration ago. WHERE clases for `time` are inserted automatically, and
-it is thus an error to specify `time` conditions in query. `format` is a
-comma-separated list of tag values to extract from the query. Only results
-with non-empty tag values for all of the given tag keys will be returned.
+it is thus an error to specify `time` conditions in query. All tags returned
+by InfluxDB will be included in the results.
 
 ## Logstash Query Functions
 
