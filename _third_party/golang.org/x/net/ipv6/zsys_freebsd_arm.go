@@ -68,8 +68,8 @@ const (
 	sysSizeofIPv6Mtuinfo     = 0x20
 
 	sysSizeofIPv6Mreq       = 0x14
-	sysSizeofGroupReq       = 0x84
-	sysSizeofGroupSourceReq = 0x104
+	sysSizeofGroupReq       = 0x88
+	sysSizeofGroupSourceReq = 0x108
 
 	sysSizeofICMPv6Filter = 0x20
 )
@@ -108,11 +108,13 @@ type sysIPv6Mreq struct {
 
 type sysGroupReq struct {
 	Interface uint32
+	Pad_cgo_0 [4]byte
 	Group     sysSockaddrStorage
 }
 
 type sysGroupSourceReq struct {
 	Interface uint32
+	Pad_cgo_0 [4]byte
 	Group     sysSockaddrStorage
 	Source    sysSockaddrStorage
 }

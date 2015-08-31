@@ -138,6 +138,7 @@ Templates are the message body for emails that are sent when an alert is trigger
 * Lookup("table", "key"): Looks up the value for the key based on the tagset of the alert in the specified lookup table
 * LookupAll("table", "key", "tag=val,tag2=val2"): Looks up the value for the key based on the tagset specified in the given lookup table
 * HTTPGet("url"): Performs an http get and returns the raw text of the url
+* HTTPGetJSON("url"): Performs an http get for the url and returns a [jsonq.JsonQuery object](https://godoc.org/github.com/jmoiron/jsonq)
 * LSQuery("indexRoot", "filterString", "startDuration", "endDuration", nResults). Returns an array of a length up to nResults of Marshaled Json documents (Go: marshaled to interface{}). This is like the lscount and lsstat functions. There is no `keyString` because the group (aka tags) if the alert is used.
 * LSQueryAll("indexRoot", "keyString" filterString", "startDuration", "endDuration", nResults). Like LSQuery but you have to specify the `keyString` since it is not scoped to the alert.
 
@@ -148,6 +149,7 @@ Global template functions:
 * pct: formats the float argument as a percentage. For example: `{{5.1 | pct}}` -> `5.10%`.
 * replace: [strings.Replace](http://golang.org/pkg/strings/#Replace)
 * short: Trims the string to everything before the first period. Useful for turning a FQDN into a shortname. For example: `{{short "foo.baz.com"}}` -> `foo`.
+* parseDuration: [time.ParseDuration](http://golang.org/pkg/time/#ParseDuration). Useful when working with an alert's .Last.Time.Add method to generate urls to other systems.
 
 All body templates are associated, and so may be executed from another. Use the name of the other template section for inclusion. Subject templates are similarly associated.
 
@@ -250,12 +252,13 @@ alert a {
 
 ### notification
 
-A notification is a chained action to perform. The chaining continues until the chain ends or the alert is acknowledged. At least one action must be specified. `next` and `timeout` are optional. Notifications are independent of each other and executed in concurrently (if there are many notifications for an alert, one will not block another).
+A notification is a chained action to perform. The chaining continues until the chain ends or the alert is acknowledged. At least one action must be specified. `next` and `timeout` are optional. Notifications are independent of each other and executed concurrently (if there are many notifications for an alert, one will not block another).
 
 * body: overrides the default POST body. The alert subject is passed as the templates `.` variable. The `V` function is available as in other templates. Additionally, a `json` function will output JSON-encoded data.
 * next: name of next notification to execute after timeout. Can be itself.
 * timeout: duration to wait until next is executed. If not specified, will happen immediately.
 * contentType: If your body for a POST notification requires a different Content-Type header than the default of `application/x-www-form-urlencoded`, you may set the contentType variable. 
+* runOnActions: Exclude this notification from action notifications. Notifications will be sent on ack/close/forget actions using a built-in template to all root level notifications for an alert, *unless* the notification specifies `runOnActions = false`. 
 
 #### actions
 
@@ -281,10 +284,10 @@ notification email {
 	timeout = 1d
 }
 
-# post to a slack.com chatroom 
+# post to a slack.com chatroom via Incoming Webhooks integration
 notification slack{
-	post = https://company.slack.com/services/hooks/incoming-webhook?token=TOKEN
-	body = payload={"username": "bosun", "text": {{.|json}}, "icon_url": "http://stackexchange.github.io/bosun/public/bosun-logo-mark.svg"} 
+	post = https://hooks.slack.com/services/abcdef
+	body = {"text": {{.|json}}}
 }
 
 #post json

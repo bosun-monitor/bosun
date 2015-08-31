@@ -1,4 +1,5 @@
-bosunApp.directive('tsAckGroup', function() {
+
+bosunApp.directive('tsAckGroup', ['$location', ($location: ng.ILocationService) => {
 	return {
 		scope: {
 			ack: '=',
@@ -57,19 +58,21 @@ bosunApp.directive('tsAckGroup', function() {
 				}
 			};
 			scope.multiaction = (type: string) => {
-				var url = '/action?type=' + type;
+				var keys = [];
 				angular.forEach(scope.groups, (group) => {
 					if (!group.checked) {
 						return;
 					}
 					if (group.AlertKey) {
-						url += '&key=' + encodeURIComponent(group.AlertKey);
+						keys.push(group.AlertKey);
 					}
 					angular.forEach(group.Children, (child) => {
-						url += '&key=' + encodeURIComponent(child.AlertKey);
+						keys.push(child.AlertKey);
 					});
 				});
-				return url;
+				scope.$parent.setKey("action-keys", keys);
+				$location.path("action");
+				$location.search("type", type);
 			};
 			scope.history = () => {
 				var url = '/history?';
@@ -88,81 +91,33 @@ bosunApp.directive('tsAckGroup', function() {
 			};
 		},
 	};
-});
-
-bosunApp.factory('status', ['$http', '$q', '$sce', function($http: ng.IHttpService, $q: ng.IQService, $sce: ng.ISCEService) {
-	var cache: any = {};
-	var fetches = [];
-	function fetch() {
-		if (fetches.length == 0) {
-			return;
-		}
-		var o = fetches[0];
-		var ak = o.ak;
-		var q = o.q;
-		$http.get('/api/status?ak=' + encodeURIComponent(ak))
-			.success(data => {
-				angular.forEach(data, (v, k) => {
-					v.Touched = moment(v.Touched).utc();
-					angular.forEach(v.History, (v, k) => {
-						v.Time = moment(v.Time).utc();
-					});
-					v.last = v.History[v.History.length - 1];
-					if (v.Actions && v.Actions.length > 0) {
-						v.LastAction = v.Actions[0];
-					}
-					v.RuleUrl = '/config?' +
-						'alert=' + encodeURIComponent(v.AlertName) +
-						'&fromDate=' + encodeURIComponent(v.last.Time.format("YYYY-MM-DD")) +
-						'&fromTime=' + encodeURIComponent(v.last.Time.format("HH:mm"));
-					var groups: string[] = [];
-					angular.forEach(v.Group, (v, k) => {
-						groups.push(k + "=" + v);
-					});
-					if (groups.length > 0) {
-						v.RuleUrl += '&template_group=' + encodeURIComponent(groups.join(','));
-					}
-					v.Body = $sce.trustAsHtml(v.Body);
-					cache[k] = v;
-				});
-				q.resolve(cache[ak]);
-			})
-			.error(q.reject)
-			.finally(() => {
-				fetches.shift();
-				fetch();
-			});
-	}
-	return function(ak: string) {
-		var q = $q.defer();
-		if (cache[ak]) {
-			q.resolve(cache[ak]);
-		} else {
-			fetches.push({'ak': ak, 'q': q});
-			if (fetches.length == 1) {
-				fetch();
-			}
-		}
-		return q.promise;
-	};
 }]);
 
-bosunApp.directive('tsState', ['status', function($status: any) {
+bosunApp.directive('tsState', ['$sce', '$http', function($sce: ng.ISCEService, $http: ng.IHttpService) {
 	return {
 		templateUrl: '/partials/alertstate.html',
 		link: function(scope: any, elem: any, attrs: any) {
 			scope.name = scope.child.AlertKey;
-			scope.loading = true;
-			$status(scope.child.AlertKey).then(st => {
-					scope.state = st;
-					scope.loading = false;
-				}, err => {
-					alert(err);
-					scope.loading = false;
-				});
+			scope.state = scope.child.State;
 			scope.action = (type: string) => {
 				var key = encodeURIComponent(scope.name);
 				return '/action?type=' + type + '&key=' + key;
+			};
+			var loadedBody = false;
+			scope.toggle = () =>{
+				scope.show = !scope.show;
+				if(scope.show && !loadedBody){
+					scope.state.Body = "loading...";
+					loadedBody = true;
+					$http.get('/api/status?ak='+scope.child.AlertKey)
+						.success(data => {
+							var body = data[scope.child.AlertKey].Body;
+							scope.state.Body = $sce.trustAsHtml(body);
+						})
+						.error(err => {
+							scope.state.Body = "Error loading template body: " + err;
+						});
+				}
 			};
 			scope.zws = (v: string) => {
 				if (!v) {
@@ -170,6 +125,26 @@ bosunApp.directive('tsState', ['status', function($status: any) {
 				}
 				return v.replace(/([,{}()])/g, '$1\u200b');
 			};
+			scope.state.Touched = moment(scope.state.Touched).utc();
+			angular.forEach(scope.state.History, (v, k) => {
+				v.Time = moment(v.Time).utc();
+			});
+			scope.state.last = scope.state.History[scope.state.History.length - 1];
+			if (scope.state.Actions && scope.state.Actions.length > 0) {
+				scope.state.LastAction = scope.state.Actions[0];
+			}
+			scope.state.RuleUrl = '/config?' +
+				'alert=' + encodeURIComponent(scope.state.Alert) +
+				'&fromDate=' + encodeURIComponent(scope.state.last.Time.format("YYYY-MM-DD")) +
+				'&fromTime=' + encodeURIComponent(scope.state.last.Time.format("HH:mm"));
+			var groups: string[] = [];
+			angular.forEach(scope.state.Group, (v, k) => {
+				groups.push(k + "=" + v);
+			});
+			if (groups.length > 0) {
+				scope.state.RuleUrl += '&template_group=' + encodeURIComponent(groups.join(','));
+			}
+			scope.state.Body = $sce.trustAsHtml(scope.state.Body);
 		},
 	};
 }]);

@@ -522,8 +522,8 @@ No need for N Hardware alerts when hardware is bad, just send one notification w
 
 ![](public/hw_notification.png)
 
-<p class="h4">Rule
-    ~~~</p>
+<p class="h4">Rule</p>
+~~~
 alert hardware {
     macro = host_based
     template = hardware

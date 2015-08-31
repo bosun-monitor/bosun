@@ -87,6 +87,10 @@ Returns dashboard-ready data for all hosts.
 
 Returns the metrics that have been relayed through bosun.
 
+### /api/metric/tagkey
+
+Returns the metrics that have been relayed through bosun and their associated tag keys.
+
 ### /api/metric/{tagk}/{tagv}
 
 Returns the metrics that are available for the specified tagk/tagv pair. For

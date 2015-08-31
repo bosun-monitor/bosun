@@ -4,6 +4,7 @@ import (
 	"crypto/sha1"
 	"encoding/json"
 	"fmt"
+	"sync"
 	"time"
 
 	"bosun.org/cmd/bosun/expr"
@@ -15,6 +16,8 @@ type Silence struct {
 	Alert      string
 	Tags       opentsdb.TagSet
 	Forget     bool
+	User       string
+	Message    string
 }
 
 func (s *Silence) MarshalJSON() ([]byte, error) {
@@ -23,20 +26,31 @@ func (s *Silence) MarshalJSON() ([]byte, error) {
 		Alert      string
 		Tags       string
 		Forget     bool
+		User       string
+		Message    string
 	}{
-		Start:  s.Start,
-		End:    s.End,
-		Alert:  s.Alert,
-		Tags:   s.Tags.Tags(),
-		Forget: s.Forget,
+		Start:   s.Start,
+		End:     s.End,
+		Alert:   s.Alert,
+		Tags:    s.Tags.Tags(),
+		Forget:  s.Forget,
+		User:    s.User,
+		Message: s.Message,
 	})
 }
 
 func (s *Silence) Silenced(now time.Time, alert string, tags opentsdb.TagSet) bool {
-	if now.Before(s.Start) || now.After(s.End) {
+	if !s.ActiveAt(now) {
 		return false
 	}
 	return s.Matches(alert, tags)
+}
+
+func (s *Silence) ActiveAt(now time.Time) bool {
+	if now.Before(s.Start) || now.After(s.End) {
+		return false
+	}
+	return true
 }
 
 func (s *Silence) Matches(alert string, tags opentsdb.TagSet) bool {
@@ -67,8 +81,13 @@ func (s Silence) ID() string {
 func (s *Schedule) Silenced() map[expr.AlertKey]Silence {
 	aks := make(map[expr.AlertKey]Silence)
 	now := time.Now()
-	s.Lock()
+	silenceLock.RLock()
+	defer silenceLock.RUnlock()
 	for _, si := range s.Silence {
+		if !si.ActiveAt(now) {
+			continue
+		}
+		s.Lock("Silence")
 		for ak := range s.status {
 			if si.Silenced(now, ak.Name(), ak.Group()) {
 				if aks[ak].End.Before(si.End) {
@@ -76,12 +95,14 @@ func (s *Schedule) Silenced() map[expr.AlertKey]Silence {
 				}
 			}
 		}
+		s.Unlock()
 	}
-	s.Unlock()
 	return aks
 }
 
-func (s *Schedule) AddSilence(start, end time.Time, alert, tagList string, forget, confirm bool, edit string) (map[expr.AlertKey]bool, error) {
+var silenceLock = sync.RWMutex{}
+
+func (s *Schedule) AddSilence(start, end time.Time, alert, tagList string, forget, confirm bool, edit, user, message string) (map[expr.AlertKey]bool, error) {
 	if start.IsZero() || end.IsZero() {
 		return nil, fmt.Errorf("both start and end must be specified")
 	}
@@ -95,11 +116,13 @@ func (s *Schedule) AddSilence(start, end time.Time, alert, tagList string, forge
 		return nil, fmt.Errorf("must specify either alert or tags")
 	}
 	si := &Silence{
-		Start:  start,
-		End:    end,
-		Alert:  alert,
-		Tags:   make(opentsdb.TagSet),
-		Forget: forget,
+		Start:   start,
+		End:     end,
+		Alert:   alert,
+		Tags:    make(opentsdb.TagSet),
+		Forget:  forget,
+		User:    user,
+		Message: message,
 	}
 	if tagList != "" {
 		tags, err := opentsdb.ParseTags(tagList)
@@ -108,12 +131,11 @@ func (s *Schedule) AddSilence(start, end time.Time, alert, tagList string, forge
 		}
 		si.Tags = tags
 	}
-	s.Lock()
-	defer s.Unlock()
+	silenceLock.Lock()
+	defer silenceLock.Unlock()
 	if confirm {
 		delete(s.Silence, edit)
 		s.Silence[si.ID()] = si
-		s.Save()
 		return nil, nil
 	}
 	aks := make(map[expr.AlertKey]bool)
@@ -126,9 +148,8 @@ func (s *Schedule) AddSilence(start, end time.Time, alert, tagList string, forge
 }
 
 func (s *Schedule) ClearSilence(id string) error {
-	s.Lock()
+	silenceLock.Lock()
+	defer silenceLock.Unlock()
 	delete(s.Silence, id)
-	s.Unlock()
-	s.Save()
 	return nil
 }

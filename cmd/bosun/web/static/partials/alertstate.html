@@ -1,9 +1,8 @@
-<div class="panel-heading" ng-click="show = !show">
+<div class="panel-heading" ng-click="toggle()">
 	<h4 class="panel-title">
 		<a href>
-			<span ng-show="loading">(Loading)</span>
 			<span class="glyphicon" ng-class="{'glyphicon-exclamation-sign': state.last.Status && state.last.Status != 'normal'}"></span>
-			<span class="glyphicon" ng-class="{'glyphicon-volume-off': schedule.Silenced[child.AlertKey]}"></span>
+			<span class="glyphicon" ng-class="{'glyphicon-volume-off': child.Silenced}"></span>
 			<span class="glyphicon" ng-class="{'glyphicon-question-sign': state.Unevaluated}"></span>
 			<span ng-show="state.last.IncidentId">#{{state.last.IncidentId}}:</span>
 			<span ng-bind="child.Subject || child.AlertKey"></span>
@@ -12,7 +11,7 @@
 		</a>
 	</h4>
 </div>
-<div class="panel-body" ng-if="show || group.Children.length == 1">
+<div class="panel-body" ng-if="show">
 	<div class="row">
 		<div class="col-sm-6">
 			<div class="row">

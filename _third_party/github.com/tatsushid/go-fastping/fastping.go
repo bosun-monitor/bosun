@@ -48,12 +48,15 @@ import (
 	"time"
 
 	"bosun.org/_third_party/golang.org/x/net/icmp"
-	"bosun.org/_third_party/golang.org/x/net/internal/iana"
 	"bosun.org/_third_party/golang.org/x/net/ipv4"
 	"bosun.org/_third_party/golang.org/x/net/ipv6"
 )
 
-const TimeSliceLength = 8
+const (
+	TimeSliceLength  = 8
+	ProtocolICMP     = 1
+	ProtocolIPv6ICMP = 58
+)
 
 var (
 	ipv4Proto = map[string]string{"ip": "ip4:icmp", "udp": "udp4"}
@@ -586,10 +589,10 @@ func (p *Pinger) procRecv(recv *packet, queue map[string]*net.IPAddr) {
 		} else {
 			bytes = recv.bytes
 		}
-		proto = iana.ProtocolICMP
+		proto = ProtocolICMP
 	} else if isIPv6(ipaddr.IP) {
 		bytes = recv.bytes
-		proto = iana.ProtocolIPv6ICMP
+		proto = ProtocolIPv6ICMP
 	} else {
 		return
 	}

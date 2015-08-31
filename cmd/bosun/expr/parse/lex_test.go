@@ -26,6 +26,7 @@ var itemName = map[itemType]string{
 	itemMinus:      "-",
 	itemMult:       "*",
 	itemDiv:        "/",
+	itemMod:        "%",
 	itemNumber:     "number",
 	itemComma:      ",",
 	itemLeftParen:  "(",
@@ -66,13 +67,14 @@ var (
 	tMinus = item{itemMinus, 0, "-"}
 	tMult  = item{itemMult, 0, "*"}
 	tDiv   = item{itemDiv, 0, "/"}
+	tMod   = item{itemMod, 0, "%"}
 )
 
 var lexTests = []lexTest{
 	{"empty", "", []item{tEOF}},
 	{"spaces", " \t\n", []item{tEOF}},
 	{"text", `"now is the time"`, []item{{itemString, 0, `"now is the time"`}, tEOF}},
-	{"operators", "! && || < > <= >= == != + - * /", []item{
+	{"operators", "! && || < > <= >= == != + - * / %", []item{
 		tNot,
 		tAnd,
 		tOr,
@@ -86,6 +88,7 @@ var lexTests = []lexTest{
 		tMinus,
 		tMult,
 		tDiv,
+		tMod,
 		tEOF,
 	}},
 	{"numbers", "1 02 0x14 7.2 1e3 1.2e-4", []item{

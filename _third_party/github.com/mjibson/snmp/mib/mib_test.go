@@ -3,10 +3,11 @@
 package mib
 
 import (
-	"encoding/asn1"
 	"os"
 	"strings"
 	"testing"
+
+	"bosun.org/_third_party/github.com/mjibson/snmp/asn1"
 )
 
 type LookupTest struct {

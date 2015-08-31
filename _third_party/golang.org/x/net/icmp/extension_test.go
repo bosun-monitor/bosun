@@ -238,3 +238,22 @@ func TestMarshalAndParseExtension(t *testing.T) {
 		}
 	}
 }
+
+var parseInterfaceNameTests = []struct {
+	b []byte
+	error
+}{
+	{[]byte{0, 'e', 'n', '0'}, errInvalidExtension},
+	{[]byte{4, 'e', 'n', '0'}, nil},
+	{[]byte{7, 'e', 'n', '0', 0xff, 0xff, 0xff, 0xff}, errInvalidExtension},
+	{[]byte{8, 'e', 'n', '0', 0xff, 0xff, 0xff}, errMessageTooShort},
+}
+
+func TestParseInterfaceName(t *testing.T) {
+	ifi := InterfaceInfo{Interface: &net.Interface{}}
+	for i, tt := range parseInterfaceNameTests {
+		if _, err := ifi.parseName(tt.b); err != tt.error {
+			t.Errorf("#%d: got %v; want %v", i, err, tt.error)
+		}
+	}
+}

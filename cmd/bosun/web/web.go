@@ -8,7 +8,6 @@ import (
 	"html/template"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -24,6 +23,8 @@ import (
 	"bosun.org/collect"
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
+	"bosun.org/slog"
+	"bosun.org/version"
 )
 
 var (
@@ -56,7 +57,7 @@ func init() {
 
 func Listen(listenAddr string, devMode bool, tsdbHost string) error {
 	if devMode {
-		log.Println("using local web assets")
+		slog.Infoln("using local web assets")
 	}
 	webFS := FS(devMode)
 
@@ -64,7 +65,7 @@ func Listen(listenAddr string, devMode bool, tsdbHost string) error {
 		str := FSMustString(devMode, "/templates/index.html")
 		templates, err := template.New("").Parse(str)
 		if err != nil {
-			log.Fatal(err)
+			slog.Fatal(err)
 		}
 		return templates
 	}
@@ -98,6 +99,7 @@ func Listen(listenAddr string, devMode bool, tsdbHost string) error {
 	router.Handle("/api/metadata/put", JSON(PutMetadata))
 	router.Handle("/api/metric", JSON(UniqueMetrics))
 	router.Handle("/api/metric/{tagk}/{tagv}", JSON(MetricsByTagPair))
+	router.Handle("/api/metric/tagkey", JSON(MetricsWithTagKeys))
 	router.Handle("/api/rule", JSON(Rule))
 	router.HandleFunc("/api/shorten", Shorten)
 	router.Handle("/api/silence/clear", JSON(SilenceClear))
@@ -107,15 +109,16 @@ func Listen(listenAddr string, devMode bool, tsdbHost string) error {
 	router.Handle("/api/tagk/{metric}", JSON(TagKeysByMetric))
 	router.Handle("/api/tagv/{tagk}", JSON(TagValuesByTagKey))
 	router.Handle("/api/tagv/{tagk}/{metric}", JSON(TagValuesByMetricTagKey))
-	router.Handle("/api/run", JSON(Run))
+	router.HandleFunc("/api/version", Version)
+	router.Handle("/api/debug/schedlock", JSON(ScheduleLockStatus))
 	http.Handle("/", miniprofiler.NewHandler(Index))
 	http.Handle("/api/", router)
 	fs := http.FileServer(webFS)
 	http.Handle("/partials/", fs)
 	http.Handle("/static/", http.StripPrefix("/static/", fs))
 	http.Handle("/favicon.ico", fs)
-	log.Println("bosun web listening on:", listenAddr)
-	log.Println("tsdb host:", tsdbHost)
+	slog.Infoln("bosun web listening on:", listenAddr)
+	slog.Infoln("tsdb host:", tsdbHost)
 	return http.ListenAndServe(listenAddr, nil)
 }
 
@@ -192,7 +195,7 @@ func indexTSDB(r *http.Request, body []byte) {
 func IndexTSDB(w http.ResponseWriter, r *http.Request) {
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		log.Println(err)
+		slog.Error(err)
 	}
 	indexTSDB(r, body)
 }
@@ -234,7 +237,7 @@ func JSON(h func(miniprofiler.Timer, http.ResponseWriter, *http.Request) (interf
 		}
 		buf := new(bytes.Buffer)
 		if err := json.NewEncoder(buf).Encode(d); err != nil {
-			log.Println(err)
+			slog.Error(err)
 			serveError(w, err)
 			return
 		}
@@ -518,16 +521,12 @@ func SilenceSet(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (i
 		}
 		end = start.Add(time.Duration(d))
 	}
-	return schedule.AddSilence(start, end, data["alert"], data["tags"], data["forget"] == "true", len(data["confirm"]) > 0, data["edit"])
+	return schedule.AddSilence(start, end, data["alert"], data["tags"], data["forget"] == "true", len(data["confirm"]) > 0, data["edit"], data["user"], data["message"])
 }
 
 func SilenceClear(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	var data map[string]string
-	j := json.NewDecoder(r.Body)
-	if err := j.Decode(&data); err != nil {
-		return nil, err
-	}
-	return nil, schedule.ClearSilence(data["id"])
+	id := r.FormValue("id")
+	return nil, schedule.ClearSilence(id)
 }
 
 func ConfigTest(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
@@ -565,20 +564,22 @@ func APIRedirect(w http.ResponseWriter, req *http.Request) {
 	http.Redirect(w, req, "http://bosun.org/api.html", 302)
 }
 
-var checkRunning = make(chan bool, 1)
-
-func Run(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	select {
-	case checkRunning <- true:
-		// Good, we've got the lock.
-	default:
-		return 0, fmt.Errorf("check already running")
-	}
-	d, err := schedule.Check(t, time.Now(), 0)
-	<-checkRunning
-	return d, err
-}
-
 func Host(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	return schedule.Host(r.FormValue("filter")), nil
+}
+
+func Version(w http.ResponseWriter, r *http.Request) {
+	io.WriteString(w, version.GetVersionInfo("bosun"))
+}
+
+func ScheduleLockStatus(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	data := struct {
+		Process string
+		HeldFor string
+	}{}
+	if holder, since := schedule.GetLockStatus(); holder != "" {
+		data.Process = holder
+		data.HeldFor = time.Now().Sub(since).String()
+	}
+	return data, nil
 }

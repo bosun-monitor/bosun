@@ -36,7 +36,7 @@ func HTTPUnitPlans(name string, plans *httpunit.Plans) {
 			return cHTTPUnit(plans)
 		},
 		name:     fmt.Sprintf("c_httpunit_%s", name),
-		Interval: time.Minute * 15,
+		Interval: time.Minute * 5,
 	})
 }
 
@@ -53,7 +53,7 @@ func cHTTPUnit(plans *httpunit.Plans) (opentsdb.MultiDataPoint, error) {
 			"url_host":     r.Case.URL.Host,
 			"hc_test_case": r.Plan.Label,
 		}
-		Add(&md, "hu.error", r.Result.Result != nil, tags, metadata.Gauge, metadata.Bool, "")
+		Add(&md, "hu.error", r.Result.Result != nil, tags, metadata.Gauge, metadata.Bool, descHTTPUnitError)
 		Add(&md, "hu.socket_connected", r.Result.Connected, tags, metadata.Gauge, metadata.Bool, descHTTPUnitSocketConnected)
 		switch r.Case.URL.Scheme {
 		case "http", "https":
@@ -61,9 +61,9 @@ func cHTTPUnit(plans *httpunit.Plans) (opentsdb.MultiDataPoint, error) {
 			Add(&md, "hu.http.got_expected_text", r.Result.GotText, tags, metadata.Gauge, metadata.Bool, descHTTPUnitExpectedText)
 			Add(&md, "hu.http.got_expected_regex", r.Result.GotRegex, tags, metadata.Gauge, metadata.Bool, descHTTPUnitExpectedRegex)
 			if r.Case.URL.Scheme == "https" {
-				Add(&md, "hu.cert.valid", !r.Result.InvalidCert, tags, metadata.Gauge, metadata.Bool, "")
+				Add(&md, "hu.cert.valid", !r.Result.InvalidCert, tags, metadata.Gauge, metadata.Bool, descHTTPUnitCertValid)
 				if resp := r.Result.Resp; resp != nil && resp.TLS != nil && len(resp.TLS.PeerCertificates) > 0 {
-					Add(&md, "hu.cert.expires", resp.TLS.PeerCertificates[0].NotAfter.Unix(), tags, metadata.Gauge, metadata.Timestamp, "")
+					Add(&md, "hu.cert.expires", resp.TLS.PeerCertificates[0].NotAfter.Unix(), tags, metadata.Gauge, metadata.Timestamp, descHTTPUnitCertExpires)
 				}
 			}
 		}

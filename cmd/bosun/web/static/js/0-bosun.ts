@@ -102,7 +102,12 @@ bosunApp.run(['$location', '$rootScope', function($location: ng.ILocationService
 
 var bosunControllers = angular.module('bosunControllers', []);
 
-interface IBosunScope extends ng.IScope {
+interface RootScope extends ng.IScope {
+	setKey: (key: string, value: any) => void;
+	getKey: (key: string) => any;
+}
+
+interface IBosunScope extends RootScope {
 	active: (v: string) => any;
 	json: (v: any) => string;
 	btoa: (v: any) => string;
@@ -116,6 +121,7 @@ interface IBosunScope extends ng.IScope {
 	stop: (all?: boolean) => any;
 	shorten: () => any;
 	shortlink: any;
+	values: any;
 }
 
 bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', '$q', '$rootScope', function($scope: IBosunScope, $route: ng.route.IRouteService, $http: ng.IHttpService, $q: ng.IQService, $rootScope: IRootScope) {
@@ -156,6 +162,17 @@ bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', '$q', '$r
 			case "error": return prefix + "danger";
 			default: return prefix + "default";
 		}
+	};
+	$scope.values = {};
+	$scope.setKey = (key: string, value: any) => {
+		if (value === undefined) {
+			delete $scope.values[key];
+		} else {
+			$scope.values[key] = value;
+		}
+	};
+	$scope.getKey = (key: string) => {
+		return $scope.values[key];
 	};
 	var scheduleFilter: string;
 	$scope.refresh = (filter: string) => {
@@ -341,6 +358,14 @@ function readCookie(name) {
 
 function eraseCookie(name) {
 	createCookie(name, "", -1);
+}
+
+function getUser() {
+	return readCookie('action-user');
+}
+
+function setUser(name) {
+	createCookie('action-user', name, 1000);
 }
 
 // from: http://stackoverflow.com/a/15267754/864236

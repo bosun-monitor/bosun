@@ -11,17 +11,21 @@ import (
 	"net/http/httptest"
 	"net/http/httputil"
 	"net/url"
+	"os"
+	"runtime"
+	"strings"
 
 	"bosun.org/cmd/tsdbrelay/denormalize"
 	"bosun.org/opentsdb"
 )
 
 var (
-	listenAddr    = flag.String("l", ":4242", "Listen address.")
-	bosunServer   = flag.String("b", "bosun", "Target Bosun server. Can specify port with host:port.")
-	tsdbServer    = flag.String("t", "", "Target OpenTSDB server. Can specify port with host:port.")
-	logVerbose    = flag.Bool("v", false, "enable verbose logging")
-	toDenormalize = flag.String("denormalize", "", "List of metrics to denormalize. Comma seperated list of `metric__tagname__tagname` rules. Will be translated to `___metric__tagvalue__tagvalue`")
+	listenAddr      = flag.String("l", ":4242", "Listen address.")
+	bosunServer     = flag.String("b", "bosun", "Target Bosun server. Can specify port with host:port.")
+	secondaryRelays = flag.String("r", "", "Additional relays to send data to. Intended for secondary data center replication. Only response from primary tsdb server wil be relayed to clients.")
+	tsdbServer      = flag.String("t", "", "Target OpenTSDB server. Can specify port with host:port.")
+	logVerbose      = flag.Bool("v", false, "enable verbose logging")
+	toDenormalize   = flag.String("denormalize", "", "List of metrics to denormalize. Comma seperated list of `metric__tagname__tagname` rules. Will be translated to `__tagvalue.tagvalue.metric`")
 )
 
 var (
@@ -29,9 +33,18 @@ var (
 	bosunIndexURL string
 
 	denormalizationRules map[string]*denormalize.DenormalizationRule
+
+	relayPutUrls []string
 )
 
 func main() {
+	runtime.GOMAXPROCS(runtime.NumCPU())
+	var err error
+	myHost, err = os.Hostname()
+	if err != nil || myHost == "" {
+		myHost = "tsdbrelay"
+	}
+
 	flag.Parse()
 	if *bosunServer == "" || *tsdbServer == "" {
 		log.Fatal("must specify both bosun and tsdb server")
@@ -69,6 +82,18 @@ func main() {
 	}
 	bosunIndexURL = u.String()
 	tsdbProxy := httputil.NewSingleHostReverseProxy(tsdbURL)
+
+	if *secondaryRelays != "" {
+		for _, rUrl := range strings.Split(*secondaryRelays, ",") {
+			u = url.URL{
+				Scheme: "http",
+				Host:   rUrl,
+				Path:   "/api/put",
+			}
+			relayPutUrls = append(relayPutUrls, u.String())
+		}
+	}
+
 	http.Handle("/api/put", &relayProxy{
 		ReverseProxy: tsdbProxy,
 	})
@@ -112,7 +137,13 @@ func (rp *relayProxy) ServeHTTP(responseWriter http.ResponseWriter, r *http.Requ
 	rp.relayRequest(responseWriter, r, true)
 }
 
+var (
+	relayHeader = "X-Relayed-From"
+	myHost      string
+)
+
 func (rp *relayProxy) relayRequest(responseWriter http.ResponseWriter, r *http.Request, parse bool) {
+	isRelayed := r.Header.Get(relayHeader) != ""
 	reader := &passthru{ReadCloser: r.Body}
 	r.Body = reader
 	w := &relayWriter{ResponseWriter: responseWriter}
@@ -122,7 +153,7 @@ func (rp *relayProxy) relayRequest(responseWriter http.ResponseWriter, r *http.R
 		return
 	}
 	verbose("relayed to tsdb")
-	// Run in a separate go routine so we can end the source's request.
+	// Send to bosun in a separate go routine so we can end the source's request.
 	go func() {
 		body := bytes.NewBuffer(reader.buf.Bytes())
 		req, err := http.NewRequest(r.Method, bosunIndexURL, body)
@@ -138,8 +169,32 @@ func (rp *relayProxy) relayRequest(responseWriter http.ResponseWriter, r *http.R
 		resp.Body.Close()
 		verbose("bosun relay success")
 	}()
-	if parse && denormalizationRules != nil {
+	// Parse and denormalize datapoints
+	if !isRelayed && parse && denormalizationRules != nil {
 		go rp.denormalize(bytes.NewReader(reader.buf.Bytes()))
+	}
+
+	if !isRelayed && len(relayPutUrls) > 0 {
+		go func() {
+			for _, relayUrl := range relayPutUrls {
+				body := bytes.NewBuffer(reader.buf.Bytes())
+				req, err := http.NewRequest(r.Method, relayUrl, body)
+				req.Header.Set("Content-Type", "application/json")
+				req.Header.Set("Content-Encoding", "gzip")
+				if err != nil {
+					verbose("%v", err)
+					return
+				}
+				req.Header.Add(relayHeader, myHost)
+				resp, err := http.DefaultClient.Do(req)
+				if err != nil {
+					verbose("secondary relay error: %v", err)
+					return
+				}
+				resp.Body.Close()
+				verbose("secondary relay success")
+			}
+		}()
 	}
 }
 

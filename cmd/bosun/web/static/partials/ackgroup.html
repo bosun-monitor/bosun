@@ -10,9 +10,9 @@
 		<span class="pull-right with-selected" ng-show="anySelected">
 			with selected
 			<br>
-			<a class="btn btn-primary btn-sm" ng-href="{{multiaction('ack')}}" ng-disabled="!canAckSelected">acknowledge</a>
-			<a class="btn btn-warning btn-sm" ng-href="{{multiaction('close')}}" ng-disabled="!canCloseSelected">close</a>
-			<a class="btn btn-danger btn-sm" ng-href="{{multiaction('forget')}}" ng-disabled="!canForgetSelected">forget</a>
+			<a class="btn btn-primary btn-sm" ng-click="multiaction('ack')" ng-disabled="!canAckSelected">acknowledge</a>
+			<a class="btn btn-warning btn-sm" ng-click="multiaction('close')" ng-disabled="!canCloseSelected">close</a>
+			<a class="btn btn-danger btn-sm" ng-click="multiaction('forget')" ng-disabled="!canForgetSelected">forget</a>
 			<a class="btn btn-default btn-sm" ng-href="{{history()}}">History</a>
 		</span>
 	</div>
@@ -24,8 +24,9 @@
 				</label>
 				<a href>
 					<span class="glyphicon" ng-class="{'glyphicon-exclamation-sign': group.Active}"></span>
+					<span class="glyphicon" ng-class="{'glyphicon-volume-off': group.Silenced}"></span>
 					<span ng-bind="group.Subject"></span>
-					<span class="pull-right">{{group.Len}} alerts</span>
+					<span class="pull-right">{{group.Children.length}} alerts</span>
 				</a>
 			</h4>
 		</div>

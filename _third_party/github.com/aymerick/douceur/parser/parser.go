@@ -30,7 +30,7 @@ type Parser struct {
 }
 
 func init() {
-	importantRegexp, _ = regexp.Compile(IMPORTANT_SUFFIX_REGEXP)
+	importantRegexp = regexp.MustCompile(IMPORTANT_SUFFIX_REGEXP)
 }
 
 // Instanciate a new parser

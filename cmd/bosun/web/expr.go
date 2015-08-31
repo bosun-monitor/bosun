@@ -6,8 +6,10 @@ import (
 	"net/http"
 	"net/mail"
 	"net/url"
+	"regexp"
 	"sort"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -26,8 +28,41 @@ import (
 // and then 5m from now you query -10min to -5m you'll get the same cached data, including the incomplete last points
 var cacheObj = cache.New(100)
 
-func Expr(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	e, err := expr.New(r.FormValue("q"), schedule.Conf.Funcs())
+func Expr(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (v interface{}, err error) {
+	defer func() {
+		if pan := recover(); pan != nil {
+			v = nil
+			err = fmt.Errorf("%v", pan)
+		}
+	}()
+	text, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	lines := strings.Split(strings.TrimSpace(string(text)), "\n")
+	var expression string
+	vars := map[string]string{}
+	varRegex := regexp.MustCompile(`(\$\w+)\s*=(.*)`)
+	for i, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		// last line is expression we care about
+		if i == len(lines)-1 {
+			expression = schedule.Conf.Expand(line, vars, false)
+		} else { // must be a variable declatation
+			matches := varRegex.FindStringSubmatch(line)
+			if len(matches) == 0 {
+				return nil, fmt.Errorf("Expext all lines before final expression to be variable declarations of form `$foo = something`")
+			}
+			name := strings.TrimSpace(matches[1])
+			value := strings.TrimSpace(matches[2])
+			vars[name] = schedule.Conf.Expand(value, vars, false)
+		}
+	}
+	e, err := expr.New(expression, schedule.Conf.Funcs())
 	if err != nil {
 		return nil, err
 	}

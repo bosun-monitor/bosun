@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"html/template"
 	"io/ioutil"
-	"log"
 	"math"
 	"net/http"
 	"net/url"
@@ -15,11 +14,12 @@ import (
 	"time"
 
 	"bosun.org/_third_party/github.com/aymerick/douceur/inliner"
-
+	"bosun.org/_third_party/github.com/jmoiron/jsonq"
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/expr"
 	"bosun.org/cmd/bosun/expr/parse"
 	"bosun.org/opentsdb"
+	"bosun.org/slog"
 )
 
 type Context struct {
@@ -99,8 +99,7 @@ func (c *Context) GraphLink(v string) string {
 
 func (c *Context) Rule() (string, error) {
 	p := url.Values{}
-	//There might be something better when we tie the notifications to evaluation time issue #395
-	time := time.Now().UTC()
+	time := c.runHistory.Start
 	p.Add("alert", c.Alert.Name)
 	p.Add("fromDate", time.Format("2006-01-02"))
 	p.Add("fromTime", time.Format("15:04"))
@@ -127,7 +126,7 @@ func (s *Schedule) ExecuteBody(rh *RunHistory, a *conf.Alert, st *State, isEmail
 	if inline, err := inliner.Inline(buf.String()); err == nil {
 		buf = bytes.NewBufferString(inline)
 	} else {
-		log.Println(err)
+		slog.Errorln(err)
 	}
 	return buf.Bytes(), c.Attachments, nil
 }
@@ -279,7 +278,7 @@ func (c *Context) Eval(v interface{}) (interface{}, error) {
 		return nil, err
 	}
 	if len(res) == 0 {
-		return nil, fmt.Errorf("no results returned")
+		return math.NaN(), nil
 	}
 	// TODO: don't choose a random result, make sure there's exactly 1
 	return res[0].Value, nil
@@ -291,7 +290,13 @@ func (c *Context) EvalAll(v interface{}) (interface{}, error) {
 	return res, err
 }
 
-func (c *Context) graph(v interface{}, unit string, filter bool) (interface{}, error) {
+func (c *Context) graph(v interface{}, unit string, filter bool) (val interface{}, err error) {
+	defer func() {
+		if p := recover(); p != nil {
+			slog.Error("panic rendering graph", p)
+			val = "error rendering graph"
+		}
+	}()
 	res, exprText, err := c.eval(v, filter, true, 1000)
 	if err != nil {
 		return nil, err
@@ -299,7 +304,7 @@ func (c *Context) graph(v interface{}, unit string, filter bool) (interface{}, e
 	var buf bytes.Buffer
 	const width = 800
 	const height = 600
-	footerHTML := fmt.Sprintf(`<small>Query: %s<br>Time: %s</small>`,
+	footerHTML := fmt.Sprintf(`<p><small>Query: %s<br>Time: %s</small></p>`,
 		template.HTMLEscapeString(exprText),
 		c.runHistory.Start.Format(time.RFC3339))
 	if c.IsEmail {
@@ -427,6 +432,33 @@ func (c *Context) HTTPGet(url string) string {
 	return string(body)
 }
 
+func (c *Context) HTTPGetJSON(url string) (*jsonq.JsonQuery, error) {
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Accept", "application/json")
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode >= 300 {
+		return nil, fmt.Errorf("%v: returned %v", url, resp.Status)
+	}
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	data := make(map[string]interface{})
+	err = json.Unmarshal(body, &data)
+	if err != nil {
+		return nil, err
+	}
+	return jsonq.NewQuery(data), nil
+}
+
 func (c *Context) HTTPPost(url, bodyType, data string) string {
 	resp, err := http.Post(url, bodyType, bytes.NewBufferString(data))
 	if err != nil {
@@ -452,7 +484,7 @@ func (c *Context) LSQuery(index_root, filter, sduration, eduration string, size 
 }
 
 func (c *Context) LSQueryAll(index_root, keystring, filter, sduration, eduration string, size int) (interface{}, error) {
-	req, err := expr.LSBaseQuery(time.Now(), index_root, c.runHistory.Logstash, keystring, filter, sduration, eduration, size)
+	req, err := expr.LSBaseQuery(c.runHistory.Start, index_root, c.runHistory.Logstash, keystring, filter, sduration, eduration, size)
 	if err != nil {
 		return nil, err
 	}

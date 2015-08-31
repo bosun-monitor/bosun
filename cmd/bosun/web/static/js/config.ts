@@ -15,6 +15,7 @@ interface IConfigScope extends IBosunScope {
 	aceToggleHighlight: () => void;
 	quickJumpTarget: string;
 	quickJump: () => void;
+	downloadConfig: () => void;
 	
 	//rule execution options
 	fromDate: string;
@@ -83,9 +84,13 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 			'		{{end}}\n' +
 			'	</table>`\n' +
 			'}\n\n';
+		var expression = atob(expr);
+		var lines = expression.split("\n").map(function(l){return l.trim();});
+    	lines[lines.length-1] = "crit = " + lines[lines.length-1]
+    	expression = lines.join("\n    ");
 		text += 'alert '+newAlertName+' {\n' +
 			'	template = '+newAlertName+'\n' +
-			'	crit = ' + atob(expr) + '\n' +
+			'	' + expression + '\n' +
 			'}\n';
 		$scope.config_text += text;
 		$scope.items = parseItems();
@@ -220,6 +225,22 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 			d = 1;
 		}
 		$scope.duration = d;
+	};
+	$scope.setDuration = () => {
+		var from = moment.utc($scope.fromDate + ' ' + $scope.fromTime);
+		var to = moment.utc($scope.toDate + ' ' + $scope.toTime);
+		if (!from.isValid() || !to.isValid()) {
+			return;
+		}
+		var diff = from.diff(to);
+		if (!diff) {
+			return;
+		}
+		var duration = +$scope.duration;
+		if (duration < 1) {
+			return;
+		}
+		$scope.intervals = Math.abs(Math.round(diff / duration / 1000 / 60));
 	};
 
 	$scope.selectAlert = (alert:string) =>{
@@ -377,5 +398,13 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 		$scope.error = data.Errors;
 		$scope.warning = data.Warnings;
 	}
+	
+	$scope.downloadConfig = () => {
+		var blob = new Blob([$scope.config_text], {type: "text/plain;charset=utf-8"});
+		saveAs(blob, "bosun.conf");
+	}
 	return $scope;
 }]);
+
+// declared in FileSaver.js
+declare var saveAs: any;

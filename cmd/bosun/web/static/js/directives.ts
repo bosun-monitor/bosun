@@ -365,6 +365,24 @@ bosunApp.filter('bits', function() {
 	}
 });
 
+bosunApp.directive('elastic', [
+    '$timeout',
+    function($timeout) {
+        return {
+            restrict: 'A',
+            link: function($scope, element) {
+                $scope.initialHeight = $scope.initialHeight || element[0].style.height;
+                var resize = function() {
+                    element[0].style.height = $scope.initialHeight;
+                    element[0].style.height = "" + element[0].scrollHeight + "px";
+                };
+                element.on("input change", resize);
+                $timeout(resize, 0);
+            }
+        };
+    }
+]);
+
 bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWindowService, fmtfilter: any) {
 	var margin = {
 		top: 10,
@@ -382,8 +400,13 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWi
 			enableBrush: '@',
 			max: '=',
 			min: '=',
+			normalize: '=',
 		},
 		link: (scope: any, elem: any, attrs: any) => {
+			var valueIdx = 1;
+			if (scope.normalize) {
+				valueIdx = 2;
+			}
 			var svgHeight = +scope.height || 150;
 			var height = svgHeight - margin.top - margin.bottom;
 			var svgWidth: number;
@@ -408,8 +431,6 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWi
 			var brush = d3.svg.brush()
 				.x(xScale)
 				.on('brush', brushed);
-			line.y((d: any) => { return yScale(d[1]); });
-			line.x((d: any) => { return xScale(d[0] * 1000); });
 			var top = d3.select(elem[0])
 				.append('svg')
 				.attr('height', svgHeight)
@@ -475,20 +496,12 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWi
 				.attr('class', 'focus')
 				.style('pointer-events', 'none');
 			focus.append('line');
-			function mousemove() {
-				var pt = d3.mouse(this);
-				mousex = pt[0];
-				mousey = pt[1];
-				if (scope.data) {
-					drawLegend();
-				}
-			}
 			var yaxisZero = false;
 			function yaxisToggle() {
 				yaxisZero = !yaxisZero;
 				draw();
 			}
-			var drawLegend = _.throttle(() => {
+			var drawLegend = _.throttle((normalizeIdx: any) => {
 				var names = legend.selectAll('.series')
 					.data(scope.data, (d) => { return d.Name; });
 				names.enter()
@@ -511,10 +524,10 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWi
 						var e = d3.select(this);
 						var pt = d.Data[idx];
 						if (pt) {
-							e.attr('title', pt[1]);
+							e.attr('title', pt[normalizeIdx]);
 							e.text(d.Name + ': ' + fmtfilter(pt[1]));
 							var ptx = xScale(pt[0] * 1000);
-							var pty = yScale(pt[1]);
+							var pty = yScale(pt[normalizeIdx]);
 							var ptd = Math.sqrt(
 								Math.pow(ptx - mousex, 2) +
 								Math.pow(pty - mousey, 2)
@@ -602,6 +615,23 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWi
 				if (!scope.data) {
 					return;
 				}
+				if (scope.normalize) {
+					valueIdx = 2;
+				}
+				function mousemove() {
+					var pt = d3.mouse(this);
+					mousex = pt[0];
+					mousey = pt[1];
+					drawLegend(valueIdx);
+				}
+				scope.data.map((data: any, i: any) => {
+					var max = d3.max(data.Data, (d: any) => { return d[1]; });
+					data.Data.map((d: any, j: any) => {
+						d.push(d[1] / max * 100 || 0)
+					});
+				});
+				line.y((d: any) => { return yScale(d[valueIdx]); });
+				line.x((d: any) => { return xScale(d[0] * 1000); });
 				var xdomain = [
 					d3.min(scope.data, (d: any) => { return d3.min(d.Data, (c: any) => { return c[0]; }); }) * 1000,
 					d3.max(scope.data, (d: any) => { return d3.max(d.Data, (c: any) => { return c[0]; }); }) * 1000,
@@ -611,7 +641,7 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWi
 				}
 				xScale.domain(xdomain);
 				var ymin = d3.min(scope.data, (d: any) => { return d3.min(d.Data, (c: any) => { return c[1]; }); });
-				var ymax = d3.max(scope.data, (d: any) => { return d3.max(d.Data, (c: any) => { return c[1]; }); });
+				var ymax = d3.max(scope.data, (d: any) => { return d3.max(d.Data, (c: any) => { return c[valueIdx]; }); });
 				var diff = (ymax - ymin) / 50;
 				if (!diff) {
 					diff = 1;
@@ -630,7 +660,7 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWi
 					ydomain[0] = +scope.min;
 				}
 				if (angular.isNumber(scope.max)) {
-					ydomain[1] = +scope.max;
+					ydomain[valueIdx] = +scope.max;
 				}
 				yScale.domain(ydomain);
 				if (scope.generator == 'area') {
@@ -689,7 +719,7 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWi
 					.style('fill-opacity', '.125')
 					.style('shape-rendering', 'crispEdges');
 				oldx = xdomain[1];
-				drawLegend();
+				drawLegend(valueIdx);
 			};
 			var extentStart: string;
 			var extentEnd: string;
@@ -699,7 +729,7 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWi
 				extentStart = datefmt(extent[0]);
 				extentEnd = datefmt(extent[1]);
 				extentDiff = fmtDuration(moment(extent[1]).diff(moment(extent[0])));
-				drawLegend();
+				drawLegend(valueIdx);
 				if (scope.enableBrush && extentEnd != extentStart) {
 					scope.brushStart = extentStart;
 					scope.brushEnd = extentEnd;

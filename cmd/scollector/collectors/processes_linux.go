@@ -9,11 +9,12 @@ import (
 	"strconv"
 	"strings"
 
+	"bosun.org/cmd/scollector/conf"
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
 )
 
-func AddProcessConfig(params ProcessParams) error {
+func AddProcessConfig(params conf.ProcessParams) error {
 	p, err := NewWatchedProc(params)
 	if err != nil {
 		return err
@@ -39,6 +40,11 @@ func WatchProcesses() {
 func linuxProcMonitor(w *WatchedProc, md *opentsdb.MultiDataPoint) error {
 	var err error
 	for pid, id := range w.Processes {
+		file_status, e := os.Stat("/proc/" + pid)
+		if e != nil {
+			w.Remove(pid)
+			continue
+		}
 		stats_file, e := ioutil.ReadFile("/proc/" + pid + "/stat")
 		if e != nil {
 			w.Remove(pid)
@@ -91,6 +97,7 @@ func linuxProcMonitor(w *WatchedProc, md *opentsdb.MultiDataPoint) error {
 				}
 			}
 		}
+		start_ts := file_status.ModTime().Unix()
 		Add(md, "linux.proc.cpu", stats[13], opentsdb.TagSet{"type": "user"}.Merge(tags), metadata.Counter, metadata.Pct, descLinuxProcCPUUser)
 		Add(md, "linux.proc.cpu", stats[14], opentsdb.TagSet{"type": "system"}.Merge(tags), metadata.Counter, metadata.Pct, descLinuxProcCPUSystem)
 		Add(md, "linux.proc.mem.fault", stats[9], opentsdb.TagSet{"type": "minflt"}.Merge(tags), metadata.Counter, metadata.Fault, descLinuxProcMemFaultMin)
@@ -104,6 +111,8 @@ func linuxProcMonitor(w *WatchedProc, md *opentsdb.MultiDataPoint) error {
 		Add(md, "linux.proc.io_bytes", io[4], opentsdb.TagSet{"type": "read"}.Merge(tags), metadata.Counter, metadata.Bytes, descLinuxProcIoBytesRead)
 		Add(md, "linux.proc.io_bytes", io[5], opentsdb.TagSet{"type": "write"}.Merge(tags), metadata.Counter, metadata.Bytes, descLinuxProcIoBytesWrite)
 		Add(md, "linux.proc.num_fds", len(fds), tags, metadata.Gauge, metadata.Files, descLinuxProcFd)
+		Add(md, "linux.proc.start_time", start_ts, tags, metadata.Gauge, metadata.Timestamp, descLinuxProcStartTS)
+		Add(md, "linux.proc.uptime", now()-start_ts, tags, metadata.Gauge, metadata.Second, descLinuxProcUptime)
 	}
 	return err
 }
@@ -124,13 +133,24 @@ const (
 	descLinuxProcFd           = "The number of open file descriptors."
 	descLinuxSoftFileLimit    = "The soft limit on the number of open file descriptors."
 	descLinuxHardFileLimit    = "The hard limit on the number of open file descriptors."
+	descLinuxProcUptime       = "The length of time, in seconds, since the process was started."
+	descLinuxProcStartTS      = "The timestamp of process start."
 )
+
+type byModTime []os.FileInfo
+
+func (bmt byModTime) Len() int      { return len(bmt) }
+func (bmt byModTime) Swap(i, j int) { bmt[i], bmt[j] = bmt[j], bmt[i] }
+func (bmt byModTime) Less(i, j int) bool {
+	return bmt[i].ModTime().Unix() < bmt[j].ModTime().Unix()
+}
 
 func getLinuxProccesses() ([]*Process, error) {
 	files, err := ioutil.ReadDir("/proc")
 	if err != nil {
 		return nil, err
 	}
+	sort.Sort(byModTime(files))
 	var pids []string
 	for _, f := range files {
 		if _, err := strconv.Atoi(f.Name()); err == nil && f.IsDir() {
@@ -175,12 +195,6 @@ func c_linux_processes(procs []*WatchedProc) (opentsdb.MultiDataPoint, error) {
 	return md, err
 }
 
-type ProcessParams struct {
-	Command string
-	Name    string
-	Args    string
-}
-
 type Process struct {
 	Pid       string
 	Command   string
@@ -188,7 +202,7 @@ type Process struct {
 }
 
 // NewWatchedProc takes a string of the form "command,name,regex".
-func NewWatchedProc(params ProcessParams) (*WatchedProc, error) {
+func NewWatchedProc(params conf.ProcessParams) (*WatchedProc, error) {
 	if params.Name == "" {
 		params.Name = params.Command
 	}

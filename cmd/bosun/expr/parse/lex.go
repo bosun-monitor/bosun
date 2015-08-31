@@ -49,6 +49,7 @@ const (
 	itemMinus     // '-'
 	itemMult      // '*'
 	itemDiv       // '/'
+	itemMod       // '%'
 	itemNumber    // simple number
 	itemComma
 	itemLeftParen
@@ -226,7 +227,7 @@ func (l *lexer) scanNumber() bool {
 	return true
 }
 
-const symbols = "!<>=&|+-*/"
+const symbols = "!<>=&|+-*/%"
 
 func lexSymbol(l *lexer) stateFn {
 	l.acceptRun(symbols)
@@ -258,6 +259,8 @@ func lexSymbol(l *lexer) stateFn {
 		l.emit(itemMult)
 	case "/":
 		l.emit(itemDiv)
+	case "%":
+		l.emit(itemMod)
 	default:
 		l.emit(itemError)
 	}

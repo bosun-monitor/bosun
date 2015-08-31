@@ -25,7 +25,7 @@ The flags are:
 		Filters collectors matching these terms, separated by
 		comma. Overrides Filter in conf file.
 	-b=0
-		OpenTSDB batch size. Used for debugging bad data.
+		OpenTSDB batch size. Default is 500.
 	-conf=""
 		Location of configuration file. Defaults to scollector.toml in directory of
 		the scollector executable.
@@ -89,9 +89,12 @@ will be used to set configuration flags. The format is toml
 (https://github.com/toml-lang/toml/blob/master/versions/en/toml-v0.2.0.md).
 Available keys are:
 
-Host (string): the OpenTSDB or Bosun host to send data.
+Host (string): the OpenTSDB or Bosun host to send data, supports TLS and
+HTTP Basic Auth.
 
-FullHost (string): enables full hostnames: doesn't truncate to first ".".
+	Host = "https://user:password@example.com/"
+
+FullHost (boolean): enables full hostnames: doesn't truncate to first ".".
 
 ColDir (string): is the external collectors directory.
 
@@ -104,7 +107,13 @@ DisableSelf (boolean): disables sending of scollector self metrics.
 
 Freq (integer): is the default frequency in seconds for most collectors.
 
+BatchSize (integer): is the number of metrics that will be sent in each batch.
+Default is 500.
+
 Filter (array of string): filters collectors matching these terms.
+
+PProf (string): optional IP:Port binding to be used for debugging with pprof.
+Examples: localhost:6060 for loopback or :6060 for all IP addresses.
 
 Collector configuration keys
 
@@ -137,9 +146,43 @@ to at a 5 minute poll interval.
 	[[SNMP]]
 	  Community = "com"
 	  Host = "host"
+	  MIBs = ["cisco"]
 	[[SNMP]]
 	  Community = "com2"
 	  Host = "host2"
+	  # List of mibs to run for this host. Default is built-in set of ["ifaces","cisco"]
+	  MIBs = ["custom", "ifaces"]
+
+MIBs (map of string to table): Allows user-specified, custom SNMP configurations.
+
+    [[MIBs]]
+      [MIBs.cisco] #can name anything you want
+        BaseOid = "1.3.6.1.4.1.9.9" # common base for all metrics in this mib
+
+        # simple, single key metrics
+        [[MIBs.cisco.Metrics]]
+          Metric = "cisco.cpu"
+          Oid = ".109.1.1.1.1.6"
+          Unit = "percent"
+          RateType = "gauge"
+          Description = "cpu percent used by this device"
+
+        # can also iterate over snmp tables
+        [[MIBSs.cisco.Trees]]
+          BaseOid = ".48.1.1.1" #common base oid for this tree
+
+          # tags to apply to metrics in this tree. Can come from another oid, or specify "idx" to use
+          # the numeric index as the tag value. Can specify multiple tags, but must supply one.
+          # all tags and metrics should have the same number of rows per query.
+          [[MIBs.cisco.Trees.Tags]]
+            Key = "name"
+            Oid = ".2"
+          [[MIBs.cisco.Trees.Metrics]]
+            Metric = "cisco.mem.used"
+            Oid = ".5"
+          [[MIBs.cisco.Trees.Metrics]]
+            Metric = "cisco.mem.free"
+            Oid = ".6"
 
 ICMP (array of table, keys are Host): ICMP hosts to ping.
 
@@ -162,30 +205,13 @@ AWS (array of table, keys are AccessKey, SecretKey, Region): AWS hosts to poll.
 	  SecretKey = "snch0d"
 	  Region = "somewhere"
 
-Process (array of table, keys are Command, Name, Args for Linux, and Name
-for Windows): processes to monitor. Name is optional, and defaults to Command.
 
-	# Linux
-	[[Process]]
-	  Command = "redis-server *:6379"
-	  Name = "redis-main"
-	[[Process]]
-	  Command = "redis-server *:6380"
-	  Name = "redis-slave"
+Process: processes to monitor.
 
-	# Windows
-	[[Process]]
-	  Name = "^java"
-	[[Process]]
-	  Name = "^powershell"
+ProcessDotNet: .NET processes to monitor on Windows.
 
-ProcessDotNet (array of table, keys are Name): .NET processes to monitor
-on Windows.
-
-	[[ProcessDotNet]]
-	  Name = "^w3wp"
-	[[ProcessDotNet]]
-	  Name = "^Scheduler"
+See http://bosun.org/scollector/process-monitoring for details about Process and
+ProcessDotNet.
 
 HTTPUnit (array of table, keys are TOML, Hiera): httpunit TOML and Hiera
 files to read and monitor. See https://github.com/StackExchange/httpunit
@@ -197,6 +223,18 @@ or just one.
 	  Hiera = "/path/to/listeners.json"
 	[[HTTPUnit]]
 	  TOML = "/some/other.toml"
+
+Riak (array of table, keys are URL): Riak hosts to poll.
+
+	[[Riak]]
+	  URL = "http://localhost:8098/stats"
+
+RabbitMQ (array of table, keys are URL): RabbitMQ hosts to poll.
+Regardless of config the collector will automatically poll
+management plugin on http://guest:guest@127.0.0.1:15672/ .
+
+	[[RabbitMQ]]
+	  URL = "https://user:password@hostname:15671"
 
 Windows
 
