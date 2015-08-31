@@ -18,9 +18,9 @@ build()
 	fi
 	echo $GOOS $GOARCH $EXT
 	if $BOSUN; then
-		go build -o ${OUTPUTDIR}bosun-$GOOS-$GOARCH$EXT -ldflags "-X bosun.org/version.VersionSHA $GIT_SHA -X bosun.org/version.OfficialBuild true -X bosun.org/version.VersionDate $TIME" bosun.org/cmd/bosun
+		go build -o ${OUTPUTDIR}bosun-$GOOS-$GOARCH$EXT -ldflags "-X bosun.org/version.VersionSHA=$GIT_SHA -X bosun.org/version.OfficialBuild=true -X bosun.org/version.VersionDate=$TIME" bosun.org/cmd/bosun
 	fi
-	go build -o ${OUTPUTDIR}scollector-$GOOS-$GOARCH$EXT -ldflags "-X bosun.org/version.VersionSHA $GIT_SHA -X bosun.org/version.OfficialBuild true -X bosun.org/version.VersionDate $TIME" bosun.org/cmd/scollector
+	go build -o ${OUTPUTDIR}scollector-$GOOS-$GOARCH$EXT -ldflags "-X bosun.org/version.VersionSHA=$GIT_SHA -X bosun.org/version.OfficialBuild=true -X bosun.org/version.VersionDate=$TIME" bosun.org/cmd/scollector
 }
 
 BOSUN=true
