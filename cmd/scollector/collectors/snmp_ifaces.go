@@ -148,7 +148,7 @@ func c_snmp_ifaces(community, host string) (opentsdb.MultiDataPoint, error) {
 		{ifInPauseFrames, osNetPauseFrames, "in", metadata.Counter, metadata.Frame, osNetPauseFrameDesc},
 		{ifOutPauseFrames, osNetPauseFrames, "out", metadata.Counter, metadata.Frame, osNetPauseFrameDesc},
 		{ifMTU, osNetMTU, "", metadata.Gauge, metadata.Bytes, osNetMTUDesc},
-		{ifHighSpeed, osNetifspeed, "", metadata.Gauge, metadata.Megabit, osNetIfspeedDesc},
+		{ifHighSpeed, osNetIfSpeed, "", metadata.Gauge, metadata.Megabit, osNetIfSpeedDesc},
 		{ifAdminStatus, osNetAdminStatus, "", metadata.Gauge, metadata.StatusCode, osNetAdminStatusDesc},
 		{ifOperStatus, osNetOperStatus, "", metadata.Gauge, metadata.StatusCode, osNetOperStatusDesc},
 	}
