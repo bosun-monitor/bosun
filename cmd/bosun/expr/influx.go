@@ -14,12 +14,10 @@ import (
 	"github.com/influxdb/influxdb/influxql"
 )
 
-const influxTimeFmt = "2006-01-02 15:04:05"
-
 // Influx is a map of functions to query InfluxDB.
 var Influx = map[string]parse.Func{
 	"influx": {
-		Args:   []parse.FuncType{parse.TypeString, parse.TypeString, parse.TypeString, parse.TypeString, parse.TypeString},
+		Args:   []parse.FuncType{parse.TypeString, parse.TypeString, parse.TypeString, parse.TypeString},
 		Return: parse.TypeSeriesSet,
 		Tags:   influxTag,
 		F:      InfluxQuery,
@@ -35,29 +33,14 @@ func influxTag(args []parse.Node) (parse.Tags, error) {
 	return t, nil
 }
 
-func InfluxQuery(e *State, T miniprofiler.Timer, db, query, startDuration, endDuration, tagFormat string) (*Results, error) {
+func InfluxQuery(e *State, T miniprofiler.Timer, db, query, startDuration, endDuration string) (*Results, error) {
 	qres, err := timeInfluxRequest(e, T, db, query, startDuration, endDuration)
 	if err != nil {
 		return nil, err
 	}
 	r := new(Results)
-	expectTags := make(map[string]bool)
-	for _, t := range strings.Split(tagFormat, ",") {
-		expectTags[t] = true
-	}
-Loop:
 	for _, row := range qres {
 		tags := opentsdb.TagSet(row.Tags)
-		for k, v := range tags {
-			if v == "" {
-				delete(tags, k)
-			} else if !expectTags[k] {
-				continue Loop
-			}
-		}
-		if len(expectTags) != len(tags) {
-			continue
-		}
 		if e.squelched(tags) {
 			continue
 		}
@@ -136,16 +119,38 @@ func influxQueryDuration(now time.Time, query, start, end string) (string, error
 	if err != nil {
 		return "", err
 	}
-	var cond string
+
+	//Add New BinaryExpr for time clause
+	startExpr := &influxql.BinaryExpr{
+		Op:  influxql.GTE,
+		LHS: &influxql.VarRef{Val: "time"},
+		RHS: &influxql.TimeLiteral{Val: now.Add(time.Duration(-sd))},
+	}
+
+	stopExpr := &influxql.BinaryExpr{
+		Op:  influxql.LTE,
+		LHS: &influxql.VarRef{Val: "time"},
+		RHS: &influxql.TimeLiteral{Val: now.Add(time.Duration(-ed))},
+	}
+
 	if s.Condition != nil {
-		cond = s.Condition.String() + " and "
+		s.Condition = &influxql.BinaryExpr{
+			Op:  influxql.AND,
+			LHS: s.Condition,
+			RHS: &influxql.BinaryExpr{
+				Op:  influxql.AND,
+				LHS: startExpr,
+				RHS: stopExpr,
+			},
+		}
+	} else {
+		s.Condition = &influxql.BinaryExpr{
+			Op:  influxql.AND,
+			LHS: startExpr,
+			RHS: stopExpr,
+		}
 	}
-	cond += fmt.Sprintf("time >= '%v' and time <= '%v'", now.Add(time.Duration(-sd)).Format(influxTimeFmt), now.Add(time.Duration(-ed)).Format(influxTimeFmt))
-	e, err := influxql.ParseExpr(cond)
-	if err != nil {
-		return "", err
-	}
-	s.Condition = e
+
 	return s.String(), nil
 }
 

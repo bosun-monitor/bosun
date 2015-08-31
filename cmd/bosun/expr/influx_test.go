@@ -9,6 +9,8 @@ import (
 	"bosun.org/opentsdb"
 )
 
+const influxTimeFmt = time.RFC3339Nano
+
 func TestInfluxQueryDuration(t *testing.T) {
 	type influxTest struct {
 		query  string
@@ -50,7 +52,7 @@ func TestInfluxQuery(t *testing.T) {
 			return false
 		},
 	}
-	r, err := InfluxQuery(&e, new(miniprofiler.Profile), "db", "select * from alh limit 10", "1n", "", "")
+	r, err := InfluxQuery(&e, new(miniprofiler.Profile), "db", "select * from alh limit 10", "1n", "")
 	if err != nil {
 		t.Fatal(err)
 	}
