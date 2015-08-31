@@ -83,13 +83,13 @@ func main() {
 			titleParts = []string{"other", titleParts[0]}
 		}
 		group := titleParts[0]
+		group = strings.Replace(group, "cmd/", "", -1)
 		*pr.Title = titleParts[1]
 		groups[group] = append(groups[group], &p)
 	}
 
 	body := ""
 	for key, prs := range groups {
-		key = strings.Replace(key, "cmd/", "", -1)
 		body += fmt.Sprintf("\n### %s: ###\n", key)
 		for _, pr := range prs {
 			body += fmt.Sprintf("  - %s [#%d](%s)\n", *pr.Title, *pr.Number, *pr.HTMLURL)
