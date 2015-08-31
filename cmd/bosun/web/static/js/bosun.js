@@ -408,9 +408,13 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
                 '		{{end}}\n' +
                 '	</table>`\n' +
                 '}\n\n';
+            var expression = atob(expr);
+            var lines = expression.split("\n").map(function (l) { return l.trim(); });
+            lines[lines.length - 1] = "crit = " + lines[lines.length - 1];
+            expression = lines.join("\n    ");
             text += 'alert ' + newAlertName + ' {\n' +
                 '	template = ' + newAlertName + '\n' +
-                '	crit = ' + atob(expr) + '\n' +
+                '	' + expression + '\n' +
                 '}\n';
             $scope.config_text += text;
             $scope.items = parseItems();
@@ -1093,6 +1097,23 @@ bosunApp.filter('bits', function () {
         return nfmt(s, 1024, 'b', { round: true });
     };
 });
+bosunApp.directive('elastic', [
+    '$timeout',
+    function ($timeout) {
+        return {
+            restrict: 'A',
+            link: function ($scope, element) {
+                $scope.initialHeight = $scope.initialHeight || element[0].style.height;
+                var resize = function () {
+                    element[0].style.height = $scope.initialHeight;
+                    element[0].style.height = "" + element[0].scrollHeight + "px";
+                };
+                element.on("input change", resize);
+                $timeout(resize, 0);
+            }
+        };
+    }
+]);
 bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function ($window, fmtfilter) {
         var margin = {
             top: 10,
@@ -1472,10 +1493,9 @@ bosunControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route
         $scope.running = current;
         $scope.tab = search.tab || 'results';
         $scope.animate();
-        $http.get('/api/expr?q=' +
-            encodeURIComponent(current) +
-            '&date=' + encodeURIComponent($scope.date) +
-            '&time=' + encodeURIComponent($scope.time))
+        $http.post('/api/expr?' +
+            'date=' + encodeURIComponent($scope.date) +
+            '&time=' + encodeURIComponent($scope.time), current)
             .success(function (data) {
             $scope.result = data.Results;
             $scope.queries = data.Queries;
@@ -1526,7 +1546,7 @@ bosunControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route
             return graph;
         }
         $scope.keydown = function ($event) {
-            if ($event.keyCode == 13) {
+            if ($event.shiftKey && $event.keyCode == 13) {
                 $scope.set();
             }
         };
