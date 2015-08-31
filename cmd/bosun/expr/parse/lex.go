@@ -293,10 +293,34 @@ func lexStringSingle(l *lexer) stateFn {
 	for {
 		switch l.next() {
 		case '\'':
+			//Check for triple quoted string
+			if l.next() == '\'' {
+				return lexStringTriple
+			} else {
+				l.backup()
+			}
 			l.emit(itemString)
 			return lexItem
 		case eof:
 			return l.errorf("unterminated string")
+		}
+	}
+}
+
+func lexStringTriple(l *lexer) stateFn {
+	count := 0
+	for {
+		switch l.next() {
+		case '\'':
+			count++
+			if count == 3 {
+				l.emit(itemString)
+				return lexItem
+			}
+		case eof:
+			return l.errorf("unterminated string")
+		default:
+			count = 0
 		}
 	}
 }
