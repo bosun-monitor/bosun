@@ -15,6 +15,7 @@ import (
 	"bosun.org/cmd/bosun/expr/parse"
 	"bosun.org/graphite"
 	"bosun.org/opentsdb"
+	"bosun.org/slog"
 )
 
 func logstashTagQuery(args []parse.Node) (parse.Tags, error) {
@@ -876,6 +877,7 @@ func timeTSDBRequest(e *State, T miniprofiler.Timer, req *opentsdb.Request) (s o
 		if err == nil || tries == tsdbMaxTries {
 			break
 		}
+		slog.Errorf("Error on tsdb query %d: %s", tries, err.Error())
 		tries++
 	}
 	return
