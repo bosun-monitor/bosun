@@ -499,7 +499,7 @@ func (s *Schedule) executeExpr(T miniprofiler.Timer, rh *RunHistory, a *conf.Ale
 	if e == nil {
 		return nil, nil
 	}
-	results, _, err := e.Execute(rh.Context, rh.GraphiteContext, rh.Logstash, rh.Cache, T, rh.Start, 0, a.UnjoinedOK, s.Search, s.Conf.AlertSquelched(a), rh)
+	results, _, err := e.Execute(rh.Context, rh.GraphiteContext, rh.Logstash, rh.Cache, T, rh.Start, 0, a.UnjoinedOK, s.Search, s.Conf.AlertSquelched(a), rh, s)
 	if err != nil {
 		ak := expr.NewAlertKey(a.Name, nil)
 		rh.Events[ak] = &Event{

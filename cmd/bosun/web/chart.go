@@ -211,7 +211,7 @@ func ExprGraph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (in
 	tsdbContext := schedule.Conf.TSDBContext()
 	graphiteContext := schedule.Conf.GraphiteContext()
 	ls := schedule.Conf.LogstashElasticHosts
-	res, _, err := e.Execute(tsdbContext, graphiteContext, ls, cacheObj, t, now, autods, false, schedule.Search, nil, nil)
+	res, _, err := e.Execute(tsdbContext, graphiteContext, ls, cacheObj, t, now, autods, false, schedule.Search, nil, nil, schedule)
 	if err != nil {
 		return nil, err
 	}

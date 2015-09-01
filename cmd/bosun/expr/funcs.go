@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"math"
 	"reflect"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -324,6 +325,40 @@ var builtins = map[string]parse.Func{
 		Tags:   tagFirst,
 		F:      Sort,
 	},
+
+	// Str Functions
+
+	"metaMatch": {
+		Args:   []parse.FuncType{parse.TypeSeriesSet, parse.TypeString, parse.TypeString},
+		Return: parse.TypeNumberSet,
+		Tags:   tagFirst,
+		F:      MetaMatch,
+	},
+}
+
+func MetaMatch(e *State, T miniprofiler.Timer, referenceSeries *Results, Key, reString string) (*Results, error) {
+	re, err := regexp.Compile(reString)
+	if err != nil {
+		return nil, err
+	}
+outerLoop:
+	for _, r := range referenceSeries.Results {
+		md := e.meta.GetMetadata("", r.Group)
+		for _, ms := range md {
+			if ms.Name == Key {
+				if v, ok := ms.Value.(string); ok {
+					if re.MatchString(v) {
+						r.Value = Number(1)
+						r.Computations = append(r.Computations, Computation{fmt.Sprintf("Match of %v", v), 1})
+						continue outerLoop
+					}
+				}
+			}
+		}
+		r.Value = Number(0)
+		r.Computations = append(r.Computations, Computation{"No match found", 0})
+	}
+	return referenceSeries, nil
 }
 
 func Epoch(e *State, T miniprofiler.Timer) (*Results, error) {
