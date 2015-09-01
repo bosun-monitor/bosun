@@ -182,6 +182,8 @@ Loop:
 			l.emit(itemRightParen)
 		case r == '"':
 			return lexString
+		case r == '\'':
+			return lexStringTripleBegin
 		case r == ',':
 			l.emit(itemComma)
 		case isSpace(r):
@@ -286,6 +288,41 @@ func lexString(l *lexer) stateFn {
 			return lexItem
 		case eof:
 			return l.errorf("unterminated string")
+		}
+	}
+}
+
+func lexStringTripleBegin(l *lexer) stateFn {
+	for {
+		switch l.next() {
+		case '\'':
+			//Check for triple quoted string
+			if l.next() == '\'' {
+				return lexStringTripleEnd
+			} else {
+				l.backup()
+			}
+			return l.errorf("invalid start of string, must use double qutoes or triple single quotes")
+		case eof:
+			return l.errorf("unterminated string")
+		}
+	}
+}
+
+func lexStringTripleEnd(l *lexer) stateFn {
+	count := 0
+	for {
+		switch l.next() {
+		case '\'':
+			count++
+			if count == 3 {
+				l.emit(itemString)
+				return lexItem
+			}
+		case eof:
+			return l.errorf("unterminated string")
+		default:
+			count = 0
 		}
 	}
 }
