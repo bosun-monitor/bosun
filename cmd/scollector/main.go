@@ -30,6 +30,7 @@ import (
 
 var (
 	flagHost            = flag.String("h", "", "OpenTSDB or Bosun host to send data. Overrides Host in conf file.")
+	flagHostname        = flag.String("hostname", "", "Set the hostname that scollector will report itself as.")
 	flagFilter          = flag.String("f", "", "Filters collectors matching these terms, separated by comma. Overrides Filter in conf file.")
 	flagList            = flag.Bool("l", false, "List available collectors.")
 	flagPrint           = flag.Bool("p", false, "Print to screen instead of sending to a host")
@@ -85,6 +86,12 @@ func main() {
 	if conf.Hostname != "" {
 		util.Hostname = conf.Hostname
 		if err := collect.SetHostname(conf.Hostname); err != nil {
+			slog.Fatal(err)
+		}
+	}
+	if *flagHostname != "" {
+		util.Hostname = *flagHostname
+		if err := collect.SetHostname(*flagHostname); err != nil {
 			slog.Fatal(err)
 		}
 	}
