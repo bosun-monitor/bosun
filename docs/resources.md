@@ -9,8 +9,8 @@ title: Resources
 ### [Installing Bosun for Production](https://medvedev.io/blog/posts/2015-06-21-bosun-install-1.html "Installing Bosun for production") by Dima Medvedev
 > A detailed walk-through of installing Bosun and OpenTSDB using Apache Ambari to setup HBase/Hadoop. See also [these snippets](https://gist.github.com/gbrayut/3af4bcd0458d2aa57dd2) for using Cloudera CDH 5.4.4 on RHEL 6.
 
-### [Bosun, Time Series, and OpenTSDB's Data Model](https://www.youtube.com/watch?v=DVavDN8tyIc) video by Kyle Brandt
-> An introduction to the data model of Bosun’s primary time series backend OpenTSDB. Time series, Metrics and Tags, Aggregation, Rate Calculation, and Downsampling.
+### [Bosun Fundamentals](https://www.youtube.com/playlist?list=PLWetmRzVkFTdnjRmE-a-JRx2m8qgB6iu9) video playlist by Kyle Brandt
+> An introduction to the data model of Bosun’s primary time series backend OpenTSDB. The [first video](https://www.youtube.com/watch?v=DVavDN8tyIc&list=PLWetmRzVkFTdnjRmE-a-JRx2m8qgB6iu9&index=1) covers time series, metrics and tags, aggregation, rate calculation, and downsampling. The [second video](https://www.youtube.com/watch?v=7NYHOp3HlQc&list=PLWetmRzVkFTdnjRmE-a-JRx2m8qgB6iu9&index=2) covers data types, functions, operators, and set joins.
 
 ### Docker images
 > There is a [full Bosun](https://hub.docker.com/r/stackexchange/bosun/) image that can be used for testing (Not recommended for production use), and an [OpenTSDB only](https://hub.docker.com/r/petergrace/opentsdb-docker/) image if desired.
@@ -19,7 +19,7 @@ title: Resources
 > There is a cookbook for using Chef to deploy [scollector](https://supermarket.chef.io/cookbooks/scollector) and another work in progress for deploying [Bosun](https://github.com/ptqa/chef-bosun).
 
 ### Slack Chat Room and Questions on Stack Overflow and Server Fault
-> If you have questions you can get an invite to [https://bosun.slack.com/](http://bosun.org/slackInvite) or use the Bosun tag on [Stack Overflow](http://stackoverflow.com/questions/tagged/bosun) or [Server Fault](http://serverfault.com/questions/tagged/bosun)
+> If you have questions you can get an invite to [https://bosun.slack.com/](http://bosun.org/slackInvite) or use the Bosun tag on [Stack Overflow](http://stackoverflow.com/questions/tagged/bosun) or [Server Fault](http://serverfault.com/questions/tagged/bosun).
 
   &nbsp;
 
