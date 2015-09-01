@@ -8,10 +8,10 @@ import (
 	"time"
 
 	"bosun.org/_third_party/github.com/MiniProfiler/go/miniprofiler"
+	"bosun.org/_third_party/github.com/influxdb/influxdb/client"
+	"bosun.org/_third_party/github.com/influxdb/influxdb/influxql"
 	"bosun.org/cmd/bosun/expr/parse"
 	"bosun.org/opentsdb"
-	"github.com/influxdb/influxdb/client"
-	"github.com/influxdb/influxdb/influxql"
 )
 
 // Influx is a map of functions to query InfluxDB.
