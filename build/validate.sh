@@ -12,11 +12,20 @@ fi
 
 
 echo -e "\nBuilding/..."
-go build bosun.org/...
-GOBUILDRESULT=$?
-if [ "$GOBUILDRESULT" != 0 ]; then
-	BUILDMSG="${BUILDMSG}Does not build. "
-fi
+
+GOBUILDRESULT=0
+GBUILDRESULT=0
+for GOOS in darwin windows linux ; do
+	export GOOS=$GOOS
+	go build bosun.org/...
+	GBUILDRESULT=$?
+	if [ "$GBUILDRESULT" != 0 ]; then
+		BUILDMSG="${BUILDMSG}Does not build on ${GOOS}. "
+		GOBUILDRESULT=$GBUILDRESULT
+	fi
+done
+
+
 
 echo -e "\nChecking gofmt -s -w for all folders that don't start with . or _"
 GOFMTRESULT=0
