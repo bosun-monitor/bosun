@@ -126,8 +126,31 @@ var lexTests = []lexTest{
 		{itemNumber, 0, "0.4"},
 		tEOF,
 	}},
+	{"simple triple quote", `'''select'''`, []item{
+		{itemTripleQuotedString, 0, `'''select'''`},
+		tEOF,
+	}},
+	{"expression with triple quotes", `influx("db", '''select value from "mymetric.name.with.dots" where  "key" = 'single quoted value' and "other_key" = '' group by *''', "1h", "")`, []item{
+		{itemFunc, 0, "influx"},
+		tLpar,
+		{itemString, 0, `"db"`},
+		tComma,
+		{itemTripleQuotedString, 0, `'''select value from "mymetric.name.with.dots" where  "key" = 'single quoted value' and "other_key" = '' group by *'''`},
+		tComma,
+		{itemString, 0, `"1h"`},
+		tComma,
+		{itemString, 0, `""`},
+		tRpar,
+		tEOF,
+	}},
 	// errors
 	{"unclosed quote", "\"", []item{
+		{itemError, 0, "unterminated string"},
+	}},
+	{"single quote", "'single quote is invalid'", []item{
+		{itemError, 0, "invalid start of string, must use double qutoes or triple single quotes"},
+	}},
+	{"unclosed triple quote", "''' unclosed triple quote ''", []item{
 		{itemError, 0, "unterminated string"},
 	}},
 }

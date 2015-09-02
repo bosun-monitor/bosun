@@ -365,10 +365,12 @@ func (t *Tree) Func() (f *FuncNode) {
 		default:
 			t.backup()
 			f.append(t.O())
+		case itemTripleQuotedString:
+			f.append(newString(token.pos, token.val, token.val[3:len(token.val)-3]))
 		case itemString:
 			s, err := strconv.Unquote(token.val)
 			if err != nil {
-				t.error(err)
+				t.errorf("Unquoting error: %s", err)
 			}
 			f.append(newString(token.pos, token.val, s))
 		case itemRightParen:
