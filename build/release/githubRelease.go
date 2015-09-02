@@ -73,7 +73,7 @@ func main() {
 	for _, pr := range reqs {
 		p := pr
 		if pr.ClosedAt.Before((*latest.CreatedAt).Time) {
-			break
+			continue
 		}
 		if pr.MergedAt == nil {
 			continue
