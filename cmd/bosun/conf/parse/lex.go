@@ -293,5 +293,5 @@ func isEndOfLine(r rune) bool {
 }
 
 func isVarchar(r rune) bool {
-	return r == '_' || unicode.IsLetter(r) || unicode.IsDigit(r) || r == '-' || r == '.' || r == '$'
+	return r == '_' || unicode.IsLetter(r) || unicode.IsDigit(r) || r == '-' || r == '.' || r == '$' || r == '/'
 }
