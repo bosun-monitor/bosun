@@ -84,9 +84,9 @@ func main() {
 	util.Set()
 	if conf.Hostname != "" {
 		util.Hostname = conf.Hostname
-		if err := collect.SetHostname(conf.Hostname); err != nil {
-			slog.Fatal(err)
-		}
+	}
+	if err := collect.SetHostname(util.Hostname); err != nil {
+		slog.Fatal(err)
 	}
 	if conf.ColDir != "" {
 		collectors.InitPrograms(conf.ColDir)
