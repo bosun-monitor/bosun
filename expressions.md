@@ -40,7 +40,7 @@ Various metrics can be combined by operators as long as one group is a subset of
 
 ## Operators
 
-The standard arithmetic (`+`, binary and unary `-`, `*`, `/`, `%`), relational (`<`, `>`, `==`, `!=`, `>=`, `<=`), and logical (`&&`, `||`, and unary `!`) operators are supported. The binary operators require the value on at least one side to be a scalar. Arrays will have the operator applied to each element. Examples:
+The standard arithmetic (`+`, binary and unary `-`, `*`, `/`, `%`), relational (`<`, `>`, `==`, `!=`, `>=`, `<=`), and logical (`&&`, `||`, and unary `!`) operators are supported. The binary operators require the value on at least one side to be a scalar or NumberSet. Arrays will have the operator applied to each element. Examples:
 
 * `q("q") + 1`, which adds one to every element of the result of the query `"q"`
 * `-q("q")`, the negation of the results of the query
@@ -114,6 +114,15 @@ This happens when the outer graphite function is something like "avg()" or "sum(
 ### GraphiteBand(query string, duration string, period string, format string, num string) seriesSet
 
 Like band() but for graphite queries.
+
+## InfluxDB Query Functions
+
+### influx(db string, query string, startDuration string, endDuration string) seriesSet
+
+Queries with influxql query on database db from startDuration ago to
+endDuration ago. WHERE clases for `time` are inserted automatically, and
+it is thus an error to specify `time` conditions in query. All tags returned
+by InfluxDB will be included in the results.
 
 ## Logstash Query Functions
 
