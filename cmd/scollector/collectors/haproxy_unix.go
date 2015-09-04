@@ -16,11 +16,13 @@ func init() {
 	registerInit(func(c *conf.Conf) {
 		for _, h := range c.HAProxy {
 			for _, i := range h.Instances {
+				ii := i
 				collectors = append(collectors, &IntervalCollector{
 					F: func() (opentsdb.MultiDataPoint, error) {
-						return haproxyFetch(h.User, h.Password, i.Tier, i.URL)
+
+						return haproxyFetch(h.User, h.Password, ii.Tier, ii.URL)
 					},
-					name: fmt.Sprintf("haproxy-%s-%s", i.Tier, i.URL),
+					name: fmt.Sprintf("haproxy-%s-%s", ii.Tier, ii.URL),
 				})
 			}
 		}
