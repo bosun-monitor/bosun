@@ -15,6 +15,7 @@ import (
 	"bosun.org/cmd/bosun/expr/parse"
 	"bosun.org/graphite"
 	"bosun.org/opentsdb"
+	"bosun.org/slog"
 )
 
 func logstashTagQuery(args []parse.Node) (parse.Tags, error) {
@@ -848,6 +849,8 @@ func timeGraphiteRequest(e *State, T miniprofiler.Timer, req *graphite.Request) 
 	return
 }
 
+const tsdbMaxTries = 3
+
 func timeTSDBRequest(e *State, T miniprofiler.Timer, req *opentsdb.Request) (s opentsdb.ResponseSet, err error) {
 	e.tsdbQueries = append(e.tsdbQueries, *req)
 	if e.autods > 0 {
@@ -860,14 +863,23 @@ func timeTSDBRequest(e *State, T miniprofiler.Timer, req *opentsdb.Request) (s o
 		}
 	}
 	b, _ := json.MarshalIndent(req, "", "  ")
-	T.StepCustomTiming("tsdb", "query", string(b), func() {
-		getFn := func() (interface{}, error) {
-			return e.tsdbContext.Query(req)
+	tries := 1
+	for {
+		T.StepCustomTiming("tsdb", "query", string(b), func() {
+			getFn := func() (interface{}, error) {
+				return e.tsdbContext.Query(req)
+			}
+			var val interface{}
+			val, err = e.cache.Get(string(b), getFn)
+			s = val.(opentsdb.ResponseSet).Copy()
+
+		})
+		if err == nil || tries == tsdbMaxTries {
+			break
 		}
-		var val interface{}
-		val, err = e.cache.Get(string(b), getFn)
-		s = val.(opentsdb.ResponseSet).Copy()
-	})
+		slog.Errorf("Error on tsdb query %d: %s", tries, err.Error())
+		tries++
+	}
 	return
 }
 
