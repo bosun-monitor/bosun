@@ -218,7 +218,7 @@ func (s *Search) Expand(q *opentsdb.Query) error {
 		var nvs []string
 		for _, v := range strings.Split(ov, "|") {
 			v = strings.TrimSpace(v)
-			if v == "*" || !strings.Contains(v, "*") {
+			if v == "*" || strings.HasPrefix(v, "regexp") || !strings.Contains(v, "*") {
 				nvs = append(nvs, v)
 			} else {
 				vs := s.TagValuesByMetricTagKey(q.Metric, k, 0)
