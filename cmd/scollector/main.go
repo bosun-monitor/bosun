@@ -173,7 +173,7 @@ func main() {
 	if conf.BatchSize != 0 {
 		collect.BatchSize = conf.BatchSize
 	}
-	collect.Tags = opentsdb.TagSet{"os": runtime.GOOS}
+	collect.Tags = conf.Tags.Copy().Merge(opentsdb.TagSet{"os": runtime.GOOS})
 	if *flagPrint {
 		collect.Print = true
 	}
