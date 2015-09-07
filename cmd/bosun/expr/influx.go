@@ -17,7 +17,7 @@ import (
 // Influx is a map of functions to query InfluxDB.
 var Influx = map[string]parse.Func{
 	"influx": {
-		Args:   []parse.FuncType{parse.TypeString, parse.TypeString, parse.TypeString, parse.TypeString},
+		Args:   []parse.FuncType{parse.TypeString, parse.TypeString, parse.TypeString, parse.TypeString, parse.TypeString},
 		Return: parse.TypeSeriesSet,
 		Tags:   influxTag,
 		F:      InfluxQuery,
@@ -25,16 +25,27 @@ var Influx = map[string]parse.Func{
 }
 
 func influxTag(args []parse.Node) (parse.Tags, error) {
-	n := args[4].(*parse.StringNode)
-	t := make(parse.Tags)
-	for _, k := range strings.Split(n.Text, ",") {
-		t[k] = struct{}{}
+	st, err := influxql.ParseStatement(args[1].(*parse.StringNode).Text)
+	if err != nil {
+		return nil, err
+	}
+	s, ok := st.(*influxql.SelectStatement)
+	if !ok {
+		return nil, fmt.Errorf("influx: expected select statement")
+	}
+
+	t := make(parse.Tags, len(s.Dimensions))
+	for _, d := range s.Dimensions {
+		if _, ok := d.Expr.(*influxql.Call); ok {
+			continue
+		}
+		t[d.String()] = struct{}{}
 	}
 	return t, nil
 }
 
-func InfluxQuery(e *State, T miniprofiler.Timer, db, query, startDuration, endDuration string) (*Results, error) {
-	qres, err := timeInfluxRequest(e, T, db, query, startDuration, endDuration)
+func InfluxQuery(e *State, T miniprofiler.Timer, db, query, startDuration, endDuration, groupByInterval string) (*Results, error) {
+	qres, err := timeInfluxRequest(e, T, db, query, startDuration, endDuration, groupByInterval)
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +91,7 @@ func InfluxQuery(e *State, T miniprofiler.Timer, db, query, startDuration, endDu
 }
 
 // influxQueryDuration adds time WHERE clauses to query for the given start and end durations.
-func influxQueryDuration(now time.Time, query, start, end string) (string, error) {
+func influxQueryDuration(now time.Time, query, start, end, groupByInterval string) (string, error) {
 	sd, err := opentsdb.ParseDuration(start)
 	if err != nil {
 		return "", err
@@ -151,11 +162,32 @@ func influxQueryDuration(now time.Time, query, start, end string) (string, error
 		}
 	}
 
+	// parse last argument
+	if len(groupByInterval) > 0 {
+		gbi, err := time.ParseDuration(groupByInterval)
+		if err != nil {
+			return "", err
+		}
+		s.Dimensions = append(s.Dimensions,
+			&influxql.Dimension{Expr: &influxql.Call{
+				Name: "time",
+				Args: []influxql.Expr{&influxql.DurationLiteral{Val: gbi}},
+			},
+			})
+	}
+
+	// emtpy aggregate windows should be purged from the result
+	// this default resembles the opentsdb results.
+	if s.Fill == influxql.NullFill {
+		s.Fill = influxql.NoFill
+		s.FillValue = nil
+	}
+
 	return s.String(), nil
 }
 
-func timeInfluxRequest(e *State, T miniprofiler.Timer, db, query, startDuration, endDuration string) (s []influxql.Row, err error) {
-	q, err := influxQueryDuration(e.now, query, startDuration, endDuration)
+func timeInfluxRequest(e *State, T miniprofiler.Timer, db, query, startDuration, endDuration, groupByInterval string) (s []influxql.Row, err error) {
+	q, err := influxQueryDuration(e.now, query, startDuration, endDuration, groupByInterval)
 	if err != nil {
 		return nil, err
 	}
