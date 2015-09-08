@@ -13,6 +13,6 @@ install:
   - chmod +x $GOPATH/src/bosun.org/build/validate.sh
   - go get golang.org/x/tools/cmd/vet
   - go get github.com/captncraig/setStatus
-  - npm i -g typescript
+  - npm i -g typescript@1.5.3
 
 script: $GOPATH/src/bosun.org/build/validate.sh
