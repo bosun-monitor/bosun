@@ -1,6 +1,8 @@
 package web
 
 import (
+	"bufio"
+	"bytes"
 	"io"
 	"log"
 	"os"
@@ -14,19 +16,34 @@ import (
 
 // Run esc to embed entire static directory into static.go
 func RunEsc() {
-	run("esc", "-o", "web/static.go", "-pkg", "web", "-prefix", "web/static", "web/static")
+	run("esc", "-modtime", "0", "-o", "web/static.go", "-pkg", "web", "-prefix", "web/static", "web/static")
 }
 
 // Run tsc to compile all ts files into bosun.js
 func RunTsc() {
 	base := filepath.Join("web", "static", "js")
+	tmp := filepath.Join(base, "bosun-new.js")
+	dst := filepath.Join(base, "bosun.js")
 	args := []string{
-		"--out", filepath.Join(base, "bosun.js"),
+		"--out", tmp,
 	}
 	matches, _ := filepath.Glob(filepath.Join(base, "*.ts"))
 	sort.Strings(matches)
 	args = append(args, matches...)
 	run("tsc", args...)
+	if _, err := os.Stat(dst); os.IsNotExist(err) {
+		overwriteFile(tmp, dst)
+	} else {
+		if deepCompareDifferent(tmp, dst) {
+			overwriteFile(tmp, dst)
+		} else {
+			err := os.Remove(tmp)
+			if err != nil {
+				log.Println(err)
+				return
+			}
+		}
+	}
 }
 
 func run(name string, arg ...string) {
@@ -49,4 +66,34 @@ func run(name string, arg ...string) {
 		log.Printf("run error: %v: %v", name, err)
 	}
 	log.Println("run complete:", name)
+}
+
+func deepCompareDifferent(file1, file2 string) bool {
+	sf, err := os.Open(file1)
+	if err != nil {
+		log.Fatal(err)
+	}
+	df, err := os.Open(file2)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer sf.Close()
+	defer df.Close()
+	sscan := bufio.NewScanner(sf)
+	dscan := bufio.NewScanner(df)
+	for sscan.Scan() {
+		dscan.Scan()
+		if !bytes.Equal(sscan.Bytes(), dscan.Bytes()) {
+			return true
+		}
+	}
+	return false
+}
+
+func overwriteFile(filesrc, filedst string) {
+	err := os.Rename(filesrc, filedst)
+	if err != nil {
+		log.Println(err)
+		return
+	}
 }

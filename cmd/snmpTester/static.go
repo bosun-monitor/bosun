@@ -28,6 +28,7 @@ type _escDir struct {
 type _escFile struct {
 	compressed string
 	size       int64
+	modtime    int64
 	local      string
 	isDir      bool
 
@@ -117,7 +118,7 @@ func (f *_escFile) Mode() os.FileMode {
 }
 
 func (f *_escFile) ModTime() time.Time {
-	return time.Time{}
+	return time.Unix(f.modtime, 0)
 }
 
 func (f *_escFile) IsDir() bool {
@@ -186,8 +187,9 @@ func FSMustString(useLocal bool, name string) string {
 var _escData = map[string]*_escFile{
 
 	"/index.html": {
-		local: "static/index.html",
-		size:  5487,
+		local:   "static/index.html",
+		size:    5487,
+		modtime: 0,
 		compressed: `
 H4sIAAAJbogA/7RY3W7bOhK+lp+CEYpaQl0Z2XR74Tha9GeL7Z4mAZr0KggOaJmRlVA/h6TSBK7f/cyQ
 lCxZsuMmODexRH7fzHBmODPK9GCeR+qxYGShUh4OpvhDsvgtLYoTV2Zp8aEoXFxndA4/MhJJoYgU0Ym7
