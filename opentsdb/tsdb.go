@@ -19,6 +19,8 @@ import (
 	"time"
 	"unicode"
 	"unicode/utf8"
+
+	"bosun.org/slog"
 )
 
 // ResponseSet is a Multi-Set Response:
@@ -821,6 +823,7 @@ func (c *LimitContext) Query(r *Request) (tr ResponseSet, err error) {
 	err = json.NewDecoder(lr).Decode(&tr)
 	if lr.N == 0 {
 		err = fmt.Errorf("TSDB response too large: limited to %E bytes", float64(c.Limit))
+		slog.Error(err)
 		return
 	}
 	if err != nil {
