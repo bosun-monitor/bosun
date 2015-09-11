@@ -115,6 +115,9 @@ func (s *Schedule) save() {
 
 // RestoreState restores notification and alert state from the file on disk.
 func (s *Schedule) RestoreState() error {
+	defer func() {
+		bosunStartupTime = time.Now()
+	}()
 	slog.Infoln("RestoreState")
 	start := time.Now()
 	s.Lock("RestoreState")
