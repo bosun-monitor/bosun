@@ -266,7 +266,3 @@ type WorkerProcess struct {
 	AppPoolName string
 	ProcessId   uint32
 }
-
-type Win32_ComputerSystem struct {
-	NumberOfLogicalProcessors uint32
-}

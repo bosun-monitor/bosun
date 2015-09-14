@@ -1,4 +1,4 @@
-package metadata
+package collectors
 
 import (
 	"errors"
@@ -6,18 +6,23 @@ import (
 	"net"
 	"strconv"
 	"strings"
+	"time"
 
+	"bosun.org/metadata"
 	"bosun.org/opentsdb"
 	"bosun.org/util"
 )
 
 func init() {
-	metafuncs = append(metafuncs, metaLinuxVersion, metaLinuxIfaces, metaLinuxSerial)
+	collectors = append(collectors, &IntervalCollector{F: c_meta_linux_version, Interval: time.Minute * 30})
+	collectors = append(collectors, &IntervalCollector{F: c_meta_linux_serial, Interval: time.Minute * 30})
+	collectors = append(collectors, &IntervalCollector{F: c_meta_linux_ifaces, Interval: time.Minute * 30})
 }
 
-func metaLinuxVersion() {
+func c_meta_linux_version() (opentsdb.MultiDataPoint, error) {
+	var md opentsdb.MultiDataPoint
 	_ = util.ReadCommand(func(line string) error {
-		AddMeta("", nil, "uname", line, true)
+		metadata.AddMeta("", nil, "uname", line, true)
 		return nil
 	}, "uname", "-a")
 	_ = util.ReadCommand(func(line string) error {
@@ -36,12 +41,14 @@ func metaLinuxVersion() {
 		if !hasNum {
 			return nil
 		}
-		AddMeta("", nil, "version", strings.Join(fields, " "), true)
+		metadata.AddMeta("", nil, "version", strings.Join(fields, " "), true)
 		return nil
 	}, "cat", "/etc/issue")
+	return md, nil
 }
 
-func metaLinuxSerial() {
+func c_meta_linux_serial() (opentsdb.MultiDataPoint, error) {
+	var md opentsdb.MultiDataPoint
 	_ = util.ReadCommand(func(line string) error {
 		fields := strings.SplitN(line, ":", 2)
 		if len(fields) != 2 {
@@ -49,12 +56,13 @@ func metaLinuxSerial() {
 		}
 		switch fields[0] {
 		case "\tSerial Number":
-			AddMeta("", nil, "serialNumber", strings.TrimSpace(fields[1]), true)
+			metadata.AddMeta("", nil, "serialNumber", strings.TrimSpace(fields[1]), true)
 		case "\tProduct Name":
-			AddMeta("", nil, "model", strings.TrimSpace(fields[1]), true)
+			metadata.AddMeta("", nil, "model", strings.TrimSpace(fields[1]), true)
 		}
 		return nil
 	}, "dmidecode", "-t", "system")
+	return md, nil
 }
 
 var doneErr = errors.New("")
@@ -70,21 +78,23 @@ func metaLinuxIfacesMaster(line string) string {
 	return ""
 }
 
-func metaLinuxIfaces() {
+func c_meta_linux_ifaces() (opentsdb.MultiDataPoint, error) {
+	var md opentsdb.MultiDataPoint
 	metaIfaces(func(iface net.Interface, tags opentsdb.TagSet) {
 		if speed, err := ioutil.ReadFile("/sys/class/net/" + iface.Name + "/speed"); err == nil {
 			v, _ := strconv.Atoi(strings.TrimSpace(string(speed)))
 			if v > 0 {
 				const MbitToBit = 1e6
-				AddMeta("", tags, "speed", v*MbitToBit, true)
+				metadata.AddMeta("", tags, "speed", v*MbitToBit, true)
 			}
 		}
 		_ = util.ReadCommand(func(line string) error {
 			if v := metaLinuxIfacesMaster(line); v != "" {
-				AddMeta("", tags, "master", v, true)
+				metadata.AddMeta("", tags, "master", v, true)
 				return doneErr
 			}
 			return nil
 		}, "ip", "-o", "addr", "show", iface.Name)
 	})
+	return md, nil
 }

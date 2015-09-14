@@ -40,13 +40,6 @@ const (
 	descWinMemVisible_Free  = "Number, in bytes, of physical memory currently unused and available."
 )
 
-type Win32_OperatingSystem struct {
-	FreePhysicalMemory     uint64
-	FreeVirtualMemory      uint64
-	TotalVirtualMemorySize uint64
-	TotalVisibleMemorySize uint64
-}
-
 func c_windows_memory() (opentsdb.MultiDataPoint, error) {
 	var dst []Win32_PerfRawData_PerfOS_Memory
 	var q = wmi.CreateQuery(&dst, "")
