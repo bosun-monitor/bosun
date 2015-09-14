@@ -951,7 +951,6 @@ func (s *Schedule) Host(filter string) map[string]*HostData {
 			host := fmt.Sprintf("{host=%s}", tags["host"])
 			e = &HostData{
 				Name:       tags["host"],
-				Metrics:    s.Search.MetricsByTagPair("host", tags["host"]),
 				Interfaces: make(map[string]*HostInterface),
 			}
 			e.CPU.Processors = make(map[string]string)
@@ -1071,10 +1070,9 @@ type HostData struct {
 		Total   int64             `json:",omitempty"`
 		Used    int64             `json:",omitempty"`
 	}
-	Metrics []string
-	Model   string `json:",omitempty"`
-	Name    string `json:",omitempty"`
-	OS      struct {
+	Model string `json:",omitempty"`
+	Name  string `json:",omitempty"`
+	OS    struct {
 		Caption string `json:",omitempty"`
 		Version string `json:",omitempty"`
 	}
