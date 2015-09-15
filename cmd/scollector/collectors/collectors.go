@@ -3,6 +3,7 @@ package collectors // import "bosun.org/cmd/scollector/collectors"
 import (
 	"bufio"
 	"fmt"
+	"net"
 	"os"
 	"strings"
 	"sync"
@@ -262,4 +263,26 @@ func TSys100NStoEpoch(nsec uint64) int64 {
 	nsec -= 116444736000000000
 	seconds := nsec / 1e7
 	return int64(seconds)
+}
+
+func metaIfaces(f func(iface net.Interface, tags opentsdb.TagSet)) {
+	ifaces, _ := net.Interfaces()
+	for _, iface := range ifaces {
+		if strings.HasPrefix(iface.Name, "lo") {
+			continue
+		}
+		tags := opentsdb.TagSet{"iface": fmt.Sprint("Interface", iface.Index)}
+		metadata.AddMeta("", tags, "name", iface.Name, true)
+		if mac := iface.HardwareAddr.String(); mac != "" {
+			metadata.AddMeta("", tags, "mac", iface.HardwareAddr.String(), true)
+		}
+		ads, _ := iface.Addrs()
+		for i, ad := range ads {
+			addr := strings.Split(ad.String(), "/")[0]
+			metadata.AddMeta("", opentsdb.TagSet{"addr": fmt.Sprint("Addr", i)}.Merge(tags), "addr", addr, true)
+		}
+		if f != nil {
+			f(iface, tags)
+		}
+	}
 }

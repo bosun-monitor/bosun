@@ -166,9 +166,13 @@ type Win32_PnPEntity struct {
 }
 
 type Win32_NetworkAdapter struct {
-	Description    string // Intel(R) Gigabit ET Quad Port Server Adapter (no index)
-	InterfaceIndex uint32
-	PNPDeviceID    string
+	Description     string // Intel(R) Gigabit ET Quad Port Server Adapter (no index)
+	InterfaceIndex  uint32
+	PNPDeviceID     string
+	NetConnectionID string  //NY-WEB09-PRI-NIC-A
+	Speed           *uint64 //Bits per Second
+	MACAddress      string  //00:1B:21:93:00:00
+	GUID            string
 }
 
 type Win32_PerfRawData_Tcpip_NetworkInterface struct {
