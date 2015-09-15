@@ -939,11 +939,18 @@ func (s *Schedule) GetIncidentEvents(id uint64) (*Incident, []Event, []Action, e
 }
 
 func (s *Schedule) Host(filter string) map[string]*HostData {
+	hosts := make(map[string]struct{})
+	for _, h := range s.Search.TagValuesByTagKey("host", time.Hour*7*24) {
+		hosts[h] = struct{}{}
+	}
 	s.metalock.Lock()
 	res := make(map[string]*HostData)
 	for k, mv := range s.Metadata {
 		tags := k.TagSet()
 		if k.Metric != "" || tags["host"] == "" {
+			continue
+		}
+		if _, ok := hosts[tags["host"]]; !ok {
 			continue
 		}
 		e := res[tags["host"]]
