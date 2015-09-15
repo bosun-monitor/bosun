@@ -25,6 +25,29 @@ func c_meta_linux_version() (opentsdb.MultiDataPoint, error) {
 		metadata.AddMeta("", nil, "uname", line, true)
 		return nil
 	}, "uname", "-a")
+	if !readOSRelease() {
+		readIssue()
+	}
+	return md, nil
+}
+
+func readOSRelease() bool {
+	var found bool
+	_ = readLine("/etc/os-release", func(s string) error {
+		fields := strings.SplitN(s, "=", 2)
+		if len(fields) != 2 {
+			return nil
+		}
+		if fields[0] == "PRETTY_NAME" {
+			metadata.AddMeta("", nil, "version", strings.Trim(fields[1], `"`), true)
+			found = true
+		}
+		return nil
+	})
+	return found
+}
+
+func readIssue() {
 	_ = util.ReadCommand(func(line string) error {
 		fields := strings.Fields(line)
 		hasNum := false
@@ -44,7 +67,6 @@ func c_meta_linux_version() (opentsdb.MultiDataPoint, error) {
 		metadata.AddMeta("", nil, "version", strings.Join(fields, " "), true)
 		return nil
 	}, "cat", "/etc/issue")
-	return md, nil
 }
 
 func c_meta_linux_serial() (opentsdb.MultiDataPoint, error) {
