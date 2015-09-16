@@ -124,6 +124,7 @@ func Listen(listenAddr string, devMode bool, tsdbHost string) error {
 
 type relayProxy struct {
 	*httputil.ReverseProxy
+	host string
 }
 
 type passthru struct {
@@ -153,6 +154,7 @@ func (rp *relayProxy) ServeHTTP(responseWriter http.ResponseWriter, r *http.Requ
 	}
 	reader := &passthru{ReadCloser: r.Body}
 	r.Body = reader
+	r.Host = rp.host
 	w := &relayWriter{ResponseWriter: responseWriter}
 	rp.ReverseProxy.ServeHTTP(w, r)
 	indexTSDB(r, reader.buf.Bytes())
@@ -163,10 +165,13 @@ func (rp *relayProxy) ServeHTTP(responseWriter http.ResponseWriter, r *http.Requ
 }
 
 func Relay(dest string) http.Handler {
-	return &relayProxy{ReverseProxy: httputil.NewSingleHostReverseProxy(&url.URL{
-		Scheme: "http",
-		Host:   dest,
-	})}
+	return &relayProxy{
+		ReverseProxy: httputil.NewSingleHostReverseProxy(&url.URL{
+			Scheme: "http",
+			Host:   dest,
+		}),
+		host: dest,
+	}
 }
 
 func indexTSDB(r *http.Request, body []byte) {

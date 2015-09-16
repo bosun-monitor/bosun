@@ -129,6 +129,7 @@ func main() {
 					w.WriteHeader(204)
 					return
 				}
+				r.Host = c.TSDBHost
 				rp.ServeHTTP(w, r)
 			}))
 			slog.Infoln("readonly relay at", ts.URL, "to", tsdbHost)
