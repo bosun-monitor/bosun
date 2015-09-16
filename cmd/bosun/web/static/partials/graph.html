@@ -171,12 +171,10 @@
 </div>
 <div class="row">
 	<div class="col-lg-12">
-		<h4>Metric Descriptions</h4>
+		<h4>Metric Description</h4>
 		<div ng-repeat="(k, v) in meta">
 			<h5>{{k}}</h5>
-			<ul ng-repeat="d in v.Description">
-				<li><span ng-show="d.Tags">{{d.Tags}}: </span>{{d.Text}}</li>
-			</ul>
+			{{v.Description}}
 		</div>
 	</div>
 </div>

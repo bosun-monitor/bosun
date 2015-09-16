@@ -1767,14 +1767,9 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
                 .error(function (error) {
                 $scope.error = 'Unable to fetch metrics: ' + error;
             });
-            $http.get('/api/metadata/get?metric=' + metric)
+            $http.get('/api/metadata/metrics?metric=' + metric)
                 .success(function (data) {
-                var canAuto = false;
-                angular.forEach(data, function (val) {
-                    if (val.Metric == metric && val.Name == 'rate') {
-                        canAuto = true;
-                    }
-                });
+                var canAuto = data[metric] && data[metric].Type;
                 $scope.canAuto[metric] = canAuto;
             })
                 .error(function (err) {
