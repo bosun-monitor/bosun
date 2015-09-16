@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"reflect"
 	"sort"
 	"sync"
 	"time"
@@ -35,11 +36,16 @@ type Schedule struct {
 	mutexAquired  time.Time
 	mutexWaitTime int64
 
-	Conf      *conf.Conf
-	status    States
-	Silence   map[string]*Silence
-	Group     map[time.Time]expr.AlertKeys
-	Metadata  map[metadata.Metakey]*Metavalue
+	Conf    *conf.Conf
+	status  States
+	Silence map[string]*Silence
+	Group   map[time.Time]expr.AlertKeys
+
+	// Key/value data associated with a metric, tagset, and an additional name
+	Metadata map[metadata.Metakey]*Metavalue
+	// Core metric data, including desc, type, and unit
+	metricMetadata map[string]*MetadataMetric
+
 	Incidents map[uint64]*Incident
 	Search    *search.Search
 
@@ -52,14 +58,37 @@ type Schedule struct {
 	//unknown states that need to be notified about. Collected and sent in batches.
 	pendingUnknowns map[*conf.Notification][]*State
 
-	metalock      sync.Mutex
-	maxIncidentId uint64
-	incidentLock  sync.Mutex
-	db            *bolt.DB
+	metaLock       sync.Mutex
+	metricMetaLock sync.Mutex
+	maxIncidentId  uint64
+	incidentLock   sync.Mutex
+	db             *bolt.DB
 
 	LastCheck time.Time
 
 	ctx *checkContext
+}
+
+func (s *Schedule) Init(c *conf.Conf) error {
+	var err error
+	s.Conf = c
+	s.Silence = make(map[string]*Silence)
+	s.Group = make(map[time.Time]expr.AlertKeys)
+	s.Metadata = make(map[metadata.Metakey]*Metavalue)
+	s.metricMetadata = make(map[string]*MetadataMetric)
+	s.Incidents = make(map[uint64]*Incident)
+	s.pendingUnknowns = make(map[*conf.Notification][]*State)
+	s.status = make(States)
+	s.Search = search.NewSearch()
+	s.LastCheck = time.Now()
+	s.ctx = &checkContext{time.Now(), cache.New(0)}
+	if c.StateFile != "" {
+		s.db, err = bolt.Open(c.StateFile, 0600, nil)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 type checkContext struct {
@@ -105,83 +134,113 @@ type Metavalue struct {
 }
 
 func (s *Schedule) PutMetadata(k metadata.Metakey, v interface{}) {
-	s.metalock.Lock()
-	s.Metadata[k] = &Metavalue{time.Now().UTC(), v}
-	s.metalock.Unlock()
+
+	isCoreMeta := (k.Name == "desc" || k.Name == "unit" || k.Name == "rate")
+	if !isCoreMeta {
+		s.metaLock.Lock()
+		s.Metadata[k] = &Metavalue{time.Now().UTC(), v}
+		s.metaLock.Unlock()
+		return
+	}
+	if k.Metric == "" {
+		slog.Error("desc, rate, and unit require metric name")
+		return
+	}
+	strVal, ok := v.(string)
+	if !ok {
+		slog.Errorf("desc, rate, and unit require value to be string. Found: %s", reflect.TypeOf(v))
+		return
+	}
+	s.metricMetaLock.Lock()
+	metricData, ok := s.metricMetadata[k.Metric]
+	if !ok {
+		metricData = &MetadataMetric{}
+		s.metricMetadata[k.Metric] = metricData
+	}
+	switch k.Name {
+	case "desc":
+		metricData.Description = strVal
+	case "unit":
+		metricData.Unit = strVal
+	case "rate":
+		metricData.Type = strVal
+	}
+	s.metricMetaLock.Unlock()
 }
 
 type MetadataMetric struct {
 	Unit        string `json:",omitempty"`
 	Type        string `json:",omitempty"`
-	Description []*MetadataDescription
-}
-
-type MetadataDescription struct {
-	Tags opentsdb.TagSet `json:",omitempty"`
-	Text string
+	Description string
 }
 
 func (s *Schedule) MetadataMetrics(metric string) map[string]*MetadataMetric {
-	s.metalock.Lock()
+	s.metricMetaLock.Lock()
+	defer s.metricMetaLock.Unlock()
 	m := make(map[string]*MetadataMetric)
-	for k, mv := range s.Metadata {
-		tags := k.TagSet()
-		delete(tags, "host")
-		if k.Metric == "" || (metric != "" && k.Metric != metric) {
-			continue
-		}
-		val, _ := mv.Value.(string)
-		if val == "" {
-			continue
-		}
-		if m[k.Metric] == nil {
-			m[k.Metric] = &MetadataMetric{
-				Description: make([]*MetadataDescription, 0),
+	if metric != "" {
+		if v, ok := s.metricMetadata[metric]; ok {
+			m[metric] = &MetadataMetric{
+				Unit:        v.Unit,
+				Type:        v.Type,
+				Description: v.Description,
 			}
 		}
-		e := m[k.Metric]
-	Switch:
-		switch k.Name {
-		case "unit":
-			e.Unit = val
-		case "rate":
-			e.Type = val
-		case "desc":
-			for _, v := range e.Description {
-				if v.Text == val {
-					v.Tags = v.Tags.Intersection(tags)
-					break Switch
-				}
+	} else {
+		for k, v := range s.metricMetadata {
+			m[k] = &MetadataMetric{
+				Unit:        v.Unit,
+				Type:        v.Type,
+				Description: v.Description,
 			}
-			e.Description = append(e.Description, &MetadataDescription{
-				Text: val,
-				Tags: tags,
-			})
 		}
 	}
-	s.metalock.Unlock()
 	return m
 }
 
 func (s *Schedule) GetMetadata(metric string, subset opentsdb.TagSet) []metadata.Metasend {
-	s.metalock.Lock()
 	ms := make([]metadata.Metasend, 0)
-	for k, mv := range s.Metadata {
-		if metric != "" && k.Metric != metric {
-			continue
+	if metric != "" {
+		if meta, ok := s.MetadataMetrics(metric)[metric]; ok {
+			if meta.Description != "" {
+				ms = append(ms, metadata.Metasend{
+					Metric: metric,
+					Name:   "desc",
+					Value:  meta.Description,
+				})
+			}
+			if meta.Unit != "" {
+				ms = append(ms, metadata.Metasend{
+					Metric: metric,
+					Name:   "unit",
+					Value:  meta.Unit,
+				})
+			}
+			if meta.Type != "" {
+				ms = append(ms, metadata.Metasend{
+					Metric: metric,
+					Name:   "rate",
+					Value:  meta.Type,
+				})
+			}
 		}
-		if !k.TagSet().Subset(subset) {
-			continue
+	} else {
+		s.metaLock.Lock()
+
+		for k, mv := range s.Metadata {
+			if !k.TagSet().Subset(subset) {
+				continue
+			}
+			ms = append(ms, metadata.Metasend{
+				Metric: k.Metric,
+				Tags:   k.TagSet(),
+				Name:   k.Name,
+				Value:  mv.Value,
+				Time:   &mv.Time,
+			})
 		}
-		ms = append(ms, metadata.Metasend{
-			Metric: k.Metric,
-			Tags:   k.TagSet(),
-			Name:   k.Name,
-			Value:  mv.Value,
-			Time:   &mv.Time,
-		})
+		s.metaLock.Unlock()
 	}
-	s.metalock.Unlock()
 	return ms
 }
 
@@ -448,27 +507,6 @@ func Load(c *conf.Conf) error {
 // Run runs the default schedule.
 func Run() error {
 	return DefaultSched.Run()
-}
-
-func (s *Schedule) Init(c *conf.Conf) error {
-	var err error
-	s.Conf = c
-	s.Silence = make(map[string]*Silence)
-	s.Group = make(map[time.Time]expr.AlertKeys)
-	s.Metadata = make(map[metadata.Metakey]*Metavalue)
-	s.Incidents = make(map[uint64]*Incident)
-	s.pendingUnknowns = make(map[*conf.Notification][]*State)
-	s.status = make(States)
-	s.Search = search.NewSearch()
-	s.LastCheck = time.Now()
-	s.ctx = &checkContext{time.Now(), cache.New(0)}
-	if c.StateFile != "" {
-		s.db, err = bolt.Open(c.StateFile, 0600, nil)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 func (s *Schedule) Load(c *conf.Conf) error {
@@ -943,7 +981,7 @@ func (s *Schedule) Host(filter string) map[string]*HostData {
 	for _, h := range s.Search.TagValuesByTagKey("host", time.Hour*7*24) {
 		hosts[h] = struct{}{}
 	}
-	s.metalock.Lock()
+	s.metaLock.Lock()
 	res := make(map[string]*HostData)
 	for k, mv := range s.Metadata {
 		tags := k.TagSet()
@@ -1046,7 +1084,7 @@ func (s *Schedule) Host(filter string) map[string]*HostData {
 			}
 		}
 	}
-	s.metalock.Unlock()
+	s.metaLock.Unlock()
 	return res
 }
 

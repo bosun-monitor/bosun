@@ -75,34 +75,30 @@ func Graph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 	m_units := make(map[string]string)
 	for i, q := range oreq.Queries {
 		if ar[i] {
-			ms := schedule.GetMetadata(q.Metric, nil)
-			found := false
-			for _, m := range ms {
-				if m.Name == "unit" {
-					if v, ok := m.Value.(string); ok {
-						m_units[q.Metric] = v
-					}
-				}
-				if m.Name == "rate" {
-					found = true
-					switch m.Value {
-					case metadata.Gauge:
-						// ignore
-					case metadata.Rate:
-						q.Rate = true
-					case metadata.Counter:
-						q.Rate = true
-						q.RateOptions = opentsdb.RateOptions{
-							Counter:    true,
-							ResetValue: 1,
-						}
-					default:
-						return nil, fmt.Errorf("unknown metadata rate: %s", m.Value)
-					}
-				}
-			}
+
+			meta := schedule.MetadataMetrics(q.Metric)
+			data, found := meta[q.Metric]
 			if !found {
 				return nil, fmt.Errorf("no metadata for %s: cannot use auto rate", q)
+			}
+			if data.Unit != "" {
+				m_units[q.Metric] = data.Unit
+			}
+			if data.Type != "" {
+				switch data.Type {
+				case metadata.Gauge:
+					// ignore
+				case metadata.Rate:
+					q.Rate = true
+				case metadata.Counter:
+					q.Rate = true
+					q.RateOptions = opentsdb.RateOptions{
+						Counter:    true,
+						ResetValue: 1,
+					}
+				default:
+					return nil, fmt.Errorf("unknown metadata rate: %s", data.Type)
+				}
 			}
 		}
 		queries[i] = fmt.Sprintf(`q("%v", "%v", "%v")`, q, start, end)

@@ -49,6 +49,7 @@ const (
 	dbSilence          = "silence"
 	dbStatus           = "status"
 	dbMetadata         = "metadata"
+	dbMetricMetadata   = "metadata-metric"
 	dbIncidents        = "incidents"
 )
 
@@ -58,15 +59,16 @@ func (s *Schedule) save() {
 	}
 	s.Lock("Save")
 	store := map[string]interface{}{
-		dbMetric:        s.Search.Read.Metric,
-		dbTagk:          s.Search.Read.Tagk,
-		dbTagv:          s.Search.Read.Tagv,
-		dbMetricTags:    s.Search.Read.MetricTags,
-		dbNotifications: s.Notifications,
-		dbSilence:       s.Silence,
-		dbStatus:        s.status,
-		dbMetadata:      s.Metadata,
-		dbIncidents:     s.Incidents,
+		dbMetric:         s.Search.Read.Metric,
+		dbTagk:           s.Search.Read.Tagk,
+		dbTagv:           s.Search.Read.Tagv,
+		dbMetricTags:     s.Search.Read.MetricTags,
+		dbNotifications:  s.Notifications,
+		dbSilence:        s.Silence,
+		dbStatus:         s.status,
+		dbMetadata:       s.Metadata,
+		dbIncidents:      s.Incidents,
+		dbMetricMetadata: s.metricMetadata,
 	}
 	tostore := make(map[string][]byte)
 	for name, data := range store {
@@ -145,6 +147,18 @@ func (s *Schedule) RestoreState() error {
 		defer gr.Close()
 		return gob.NewDecoder(gr).Decode(dst)
 	}
+	if err := decode(dbMetadata, &s.Metadata); err != nil {
+		slog.Errorln(dbMetadata, err)
+	}
+	if err := decode(dbMetricMetadata, &s.metricMetadata); err != nil {
+		slog.Errorln(dbMetricMetadata, err)
+	}
+	for k, v := range s.Metadata {
+		if k.Name == "desc" || k.Name == "rate" || k.Name == "unit" {
+			s.PutMetadata(k, v.Value)
+			delete(s.Metadata, k)
+		}
+	}
 	if err := decode(dbMetric, &s.Search.Metric); err != nil {
 		slog.Errorln(dbMetric, err)
 	}
@@ -167,6 +181,7 @@ func (s *Schedule) RestoreState() error {
 	if err := decode(dbIncidents, &s.Incidents); err != nil {
 		slog.Errorln(dbIncidents, err)
 	}
+
 	// Calculate next incident id.
 	for _, i := range s.Incidents {
 		if i.Id > s.maxIncidentId {
@@ -224,12 +239,10 @@ func (s *Schedule) RestoreState() error {
 			s.AddNotification(ak, n, t)
 		}
 	}
-	if err := decode(dbMetadata, &s.Metadata); err != nil {
-		slog.Errorln(dbMetadata, err)
-	}
 	if s.maxIncidentId == 0 {
 		s.createHistoricIncidents()
 	}
+
 	s.Search.Copy()
 	slog.Infoln("RestoreState done in", time.Since(start))
 	return nil
