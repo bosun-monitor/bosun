@@ -52,6 +52,6 @@ func BenchmarkMetadataGet2M(b *testing.B) {
 
 func BenchmarkMetricMetadata(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-
+		bm_sched_50k.MetadataMetrics("m43")
 	}
 }
