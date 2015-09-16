@@ -9,6 +9,7 @@ import (
 
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
+	"bosun.org/slog"
 	"bosun.org/util"
 )
 
@@ -70,6 +71,20 @@ func removable_fs(name string) bool {
 		return strings.Trim(string(b), "\n") == "1"
 	}
 	return false
+}
+
+func isPseudoFS(name string) (res bool) {
+	err := readLine("/proc/filesystems", func(s string) error {
+		if strings.Contains(s, name) && strings.Contains(s, "nodev") {
+			res = true
+			return nil
+		}
+		return nil
+	})
+	if err != nil {
+		slog.Errorf("can not read '/proc/filesystems': %v", err)
+	}
+	return
 }
 
 func c_iostat_linux() (opentsdb.MultiDataPoint, error) {
@@ -147,11 +162,19 @@ func c_dfstat_blocks_linux() (opentsdb.MultiDataPoint, error) {
 		fields := strings.Fields(line)
 		// TODO: support mount points with spaces in them. They mess up the field order
 		// currently due to df's columnar output.
-		if len(fields) != 6 || !IsDigit(fields[2]) {
+		if len(fields) != 7 || !IsDigit(fields[2]) {
 			return nil
 		}
+		// /dev/mapper/vg0-usr ext4 13384816 9996920 2815784 79% /usr
 		fs := fields[0]
-		mount := fields[5]
+		fsType := fields[1]
+		spaceTotal := fields[2]
+		spaceUsed := fields[3]
+		spaceFree := fields[4]
+		mount := fields[6]
+		if isPseudoFS(fsType) {
+			return nil
+		}
 		tags := opentsdb.TagSet{"mount": mount}
 		os_tags := opentsdb.TagSet{"disk": mount}
 		metric := "linux.disk.fs."
@@ -160,19 +183,19 @@ func c_dfstat_blocks_linux() (opentsdb.MultiDataPoint, error) {
 			metric += "rem."
 			ometric += "rem."
 		}
-		Add(&md, metric+"space_total", fields[1], tags, metadata.Gauge, metadata.Bytes, osDiskTotalDesc)
-		Add(&md, metric+"space_used", fields[2], tags, metadata.Gauge, metadata.Bytes, osDiskUsedDesc)
-		Add(&md, metric+"space_free", fields[3], tags, metadata.Gauge, metadata.Bytes, osDiskFreeDesc)
-		Add(&md, ometric+"space_total", fields[1], os_tags, metadata.Gauge, metadata.Bytes, osDiskTotalDesc)
-		Add(&md, ometric+"space_used", fields[2], os_tags, metadata.Gauge, metadata.Bytes, osDiskUsedDesc)
-		Add(&md, ometric+"space_free", fields[3], os_tags, metadata.Gauge, metadata.Bytes, osDiskFreeDesc)
-		st, _ := strconv.ParseFloat(fields[1], 64)
-		sf, _ := strconv.ParseFloat(fields[3], 64)
+		Add(&md, metric+"space_total", spaceTotal, tags, metadata.Gauge, metadata.Bytes, osDiskTotalDesc)
+		Add(&md, metric+"space_used", spaceUsed, tags, metadata.Gauge, metadata.Bytes, osDiskUsedDesc)
+		Add(&md, metric+"space_free", spaceFree, tags, metadata.Gauge, metadata.Bytes, osDiskFreeDesc)
+		Add(&md, ometric+"space_total", spaceTotal, os_tags, metadata.Gauge, metadata.Bytes, osDiskTotalDesc)
+		Add(&md, ometric+"space_used", spaceUsed, os_tags, metadata.Gauge, metadata.Bytes, osDiskUsedDesc)
+		Add(&md, ometric+"space_free", spaceFree, os_tags, metadata.Gauge, metadata.Bytes, osDiskFreeDesc)
+		st, _ := strconv.ParseFloat(spaceTotal, 64)
+		sf, _ := strconv.ParseFloat(spaceFree, 64)
 		if st != 0 {
 			Add(&md, osDiskPctFree, sf/st*100, os_tags, metadata.Gauge, metadata.Pct, osDiskPctFreeDesc)
 		}
 		return nil
-	}, "df", "-lP", "--block-size", "1")
+	}, "df", "-lPT", "--block-size", "1")
 	return md, err
 }
 
@@ -180,20 +203,28 @@ func c_dfstat_inodes_linux() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	err := util.ReadCommand(func(line string) error {
 		fields := strings.Fields(line)
-		if len(fields) != 6 || !IsDigit(fields[2]) {
+		if len(fields) != 7 || !IsDigit(fields[2]) {
 			return nil
 		}
-		mount := fields[5]
+		// /dev/mapper/vg0-usr ext4 851968 468711 383257 56% /usr
 		fs := fields[0]
+		fsType := fields[1]
+		inodesTotal := fields[2]
+		inodesUsed := fields[3]
+		inodesFree := fields[4]
+		mount := fields[6]
+		if isPseudoFS(fsType) {
+			return nil
+		}
 		tags := opentsdb.TagSet{"mount": mount}
 		metric := "linux.disk.fs."
 		if removable_fs(fs) {
 			metric += "rem."
 		}
-		Add(&md, metric+"inodes_total", fields[1], tags, metadata.Gauge, metadata.Count, "")
-		Add(&md, metric+"inodes_used", fields[2], tags, metadata.Gauge, metadata.Count, "")
-		Add(&md, metric+"inodes_free", fields[3], tags, metadata.Gauge, metadata.Count, "")
+		Add(&md, metric+"inodes_total", inodesTotal, tags, metadata.Gauge, metadata.Count, "")
+		Add(&md, metric+"inodes_used", inodesUsed, tags, metadata.Gauge, metadata.Count, "")
+		Add(&md, metric+"inodes_free", inodesFree, tags, metadata.Gauge, metadata.Count, "")
 		return nil
-	}, "df", "-liP")
+	}, "df", "-liPT")
 	return md, err
 }
