@@ -81,8 +81,6 @@ func makeFilter(filter string) (func(*conf.Conf, *conf.Alert, *State) bool, erro
 				v = StWarning
 			case "critical":
 				v = StCritical
-			case "error":
-				v = StError
 			case "unknown":
 				v = StUnknown
 			default:

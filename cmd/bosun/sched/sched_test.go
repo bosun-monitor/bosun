@@ -135,7 +135,7 @@ var queryTime = time.Date(2000, 1, 1, 12, 0, 0, 0, time.UTC)
 var window5Min = `"9.467277e+08", "9.46728e+08"`
 
 func TestCrit(t *testing.T) {
-	testSched(t, &schedTest{
+	s := testSched(t, &schedTest{
 		conf: `alert a {
 			crit = avg(q("avg:m{a=b}", "5m", "")) > 0
 		}`,
@@ -152,6 +152,9 @@ func TestCrit(t *testing.T) {
 			schedState{"a{a=b}", "critical"}: true,
 		},
 	})
+	if !s.AlertSuccessful("a") {
+		t.Fatal("Expected alert a to be successful")
+	}
 }
 
 func TestBandDisableUnjoined(t *testing.T) {
@@ -258,45 +261,20 @@ func TestUnknown_WithError(t *testing.T) {
 	state.Touched = queryTime.Add(-10 * time.Minute)
 	state.Append(&Event{Status: StNormal, Time: state.Touched})
 
-	testSched(t, &schedTest{
+	s := testSched(t, &schedTest{
 		conf: `alert a {
 			crit = avg(q("avg:m{a=*}", "5m", "")) > 0
 		}`,
 		queries: map[string]opentsdb.ResponseSet{
 			`q("avg:m{a=*}", ` + window5Min + `)`: nil,
 		},
-		state: map[schedState]bool{
-			schedState{"a{}", "error"}: true,
-		},
+		state: map[schedState]bool{},
 		previous: map[expr.AlertKey]*State{
 			"a{a=b}": state,
 		},
 	})
-}
-
-func TestError_To_Unknown(t *testing.T) {
-	ak := expr.NewAlertKey("a", nil)
-	state := NewStatus(ak)
-	state.Touched = queryTime.Add(-10 * time.Minute)
-	state.Append(&Event{Status: StError, Time: state.Touched})
-
-	s := testSched(t, &schedTest{
-		conf: `alert a {
-			crit = avg(q("avg:m{a=*}", "5m", "")) > 0
-		}`,
-		queries: map[string]opentsdb.ResponseSet{
-			`q("avg:m{a=*}", ` + window5Min + `)`: {},
-		},
-		state: map[schedState]bool{
-		//No abnormal events
-		},
-		previous: map[expr.AlertKey]*State{
-			ak: state,
-		},
-	})
-	st := s.GetStatus(expr.AlertKey(ak))
-	if st.Status() != StError {
-		t.Errorf("Expected status to be %s but was %s", StError, st.Status())
+	if s.AlertSuccessful("a") {
+		t.Fatal("Expected alert a to be in a failed state")
 	}
 }
 

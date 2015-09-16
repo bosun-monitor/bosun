@@ -134,7 +134,7 @@ func procRule(t miniprofiler.Timer, c *conf.Conf, a *conf.Alert, now time.Time, 
 		return nil, err
 	}
 	keys := make(expr.AlertKeys, len(rh.Events))
-	errors, criticals, warnings, normals := make([]expr.AlertKey, 0), make([]expr.AlertKey, 0), make([]expr.AlertKey, 0), make([]expr.AlertKey, 0)
+	criticals, warnings, normals := make([]expr.AlertKey, 0), make([]expr.AlertKey, 0), make([]expr.AlertKey, 0)
 	i := 0
 	for k, v := range rh.Events {
 		v.Time = now
@@ -147,8 +147,6 @@ func procRule(t miniprofiler.Timer, c *conf.Conf, a *conf.Alert, now time.Time, 
 			warnings = append(warnings, k)
 		case sched.StCritical:
 			criticals = append(criticals, k)
-		case sched.StError:
-			errors = append(errors, k)
 		default:
 			return nil, fmt.Errorf("unknown state type %v", v.Status)
 		}
@@ -179,9 +177,7 @@ func procRule(t miniprofiler.Timer, c *conf.Conf, a *conf.Alert, now time.Time, 
 				warning = append(warning, fmt.Sprintf("template group %s was not a subset of any result", template_group))
 			}
 		}
-		if e := instance.History[0]; e.Error != nil {
-			instance.Result = e.Error
-		} else if e.Crit != nil {
+		if e := instance.History[0]; e.Crit != nil {
 			instance.Result = e.Crit
 		} else if e.Warn != nil {
 			instance.Result = e.Warn
@@ -239,7 +235,6 @@ func procRule(t miniprofiler.Timer, c *conf.Conf, a *conf.Alert, now time.Time, 
 		data = s.Data(rh, instance, a, false)
 	}
 	return &ruleResult{
-		errors,
 		criticals,
 		warnings,
 		normals,
@@ -253,7 +248,6 @@ func procRule(t miniprofiler.Timer, c *conf.Conf, a *conf.Alert, now time.Time, 
 }
 
 type ruleResult struct {
-	Errors    []expr.AlertKey
 	Criticals []expr.AlertKey
 	Warnings  []expr.AlertKey
 	Normals   []expr.AlertKey
@@ -339,9 +333,9 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 		Result *sched.Event
 	}
 	type Set struct {
-		Error, Critical, Warning, Normal int
-		Time                             string
-		Results                          []*Result `json:",omitempty"`
+		Critical, Warning, Normal int
+		Time                      string
+		Results                   []*Result `json:",omitempty"`
 	}
 	type History struct {
 		Time, EndTime time.Time
@@ -375,7 +369,6 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 			continue
 		}
 		set := Set{
-			Error:    len(res.Errors),
 			Critical: len(res.Criticals),
 			Warning:  len(res.Warnings),
 			Normal:   len(res.Normals),

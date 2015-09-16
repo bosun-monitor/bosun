@@ -129,9 +129,7 @@ func (s *Schedule) runHistory(r *RunHistory, ak expr.AlertKey, event *Event, sil
 	// make sure we always touch the state.
 	state.Touched = r.Start
 	// set state.Result according to event result
-	if event.Error != nil {
-		state.Result = event.Error
-	} else if event.Crit != nil {
+	if event.Crit != nil {
 		state.Result = event.Crit
 	} else if event.Warn != nil {
 		state.Result = event.Warn
@@ -407,7 +405,7 @@ func (s *Schedule) findUnknownAlerts(now time.Time, alert string) []expr.AlertKe
 	s.Lock("FindUnknown")
 	for ak, st := range s.status {
 		name := ak.Name()
-		if name != alert || st.Forgotten || st.Status() == StError {
+		if name != alert || st.Forgotten || !s.AlertSuccessful(ak.Name()) {
 			continue
 		}
 		a := s.Conf.Alerts[name]
@@ -437,13 +435,16 @@ func (s *Schedule) CheckAlert(T miniprofiler.Timer, r *RunHistory, a *conf.Alert
 		deps = filterDependencyResults(d)
 		crits, err = s.CheckExpr(T, r, a, a.Crit, StCritical, nil)
 		if err == nil {
-			warns, _ = s.CheckExpr(T, r, a, a.Warn, StWarning, crits)
+			warns, err = s.CheckExpr(T, r, a, a.Warn, StWarning, crits)
 		}
 	}
 	unevalCount, unknownCount := markDependenciesUnevaluated(r.Events, deps, a.Name)
 	if err != nil {
 		slog.Errorf("Error checking alert %s: %s", a.Name, err.Error())
 		removeUnknownEvents(r.Events, a.Name)
+		s.markAlertError(a.Name, err)
+	} else {
+		s.markAlertSuccessful(a.Name)
 	}
 	collect.Put("check.duration", opentsdb.TagSet{"name": a.Name}, time.Since(start).Seconds())
 	slog.Infof("check alert %v done (%s): %v crits, %v warns, %v unevaluated, %v unknown", a.Name, time.Since(start), len(crits), len(warns), unevalCount, unknownCount)
@@ -502,23 +503,6 @@ func (s *Schedule) executeExpr(T miniprofiler.Timer, rh *RunHistory, a *conf.Ale
 		return nil, nil
 	}
 	results, _, err := e.Execute(rh.Context, rh.GraphiteContext, rh.Logstash, rh.InfluxHost, rh.Cache, T, rh.Start, 0, a.UnjoinedOK, s.Search, s.Conf.AlertSquelched(a), rh)
-	if err != nil {
-		ak := expr.NewAlertKey(a.Name, nil)
-		rh.Events[ak] = &Event{
-			Status: StError,
-			Error: &Result{
-				Result: &expr.Result{
-					Computations: []expr.Computation{
-						{
-							Text:  e.String(),
-							Value: err.Error(),
-						},
-					},
-				},
-			},
-		}
-		return nil, err
-	}
 	return results, err
 }
 
@@ -575,7 +559,7 @@ Loop:
 		}
 		status := checkStatus
 		if math.IsNaN(n) {
-			status = StError
+			status = checkStatus
 		} else if n == 0 {
 			status = StNormal
 		}
