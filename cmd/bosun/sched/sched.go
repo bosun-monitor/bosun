@@ -49,6 +49,8 @@ type Schedule struct {
 	Incidents map[uint64]*Incident
 	Search    *search.Search
 
+	AlertStatuses map[string]*AlertStatus
+
 	//channel signals an alert has added notifications, and notifications should be processed.
 	nc chan interface{}
 	//notifications to be sent immediately
@@ -58,11 +60,12 @@ type Schedule struct {
 	//unknown states that need to be notified about. Collected and sent in batches.
 	pendingUnknowns map[*conf.Notification][]*State
 
-	metaLock       sync.Mutex
-	metricMetaLock sync.Mutex
-	maxIncidentId  uint64
-	incidentLock   sync.Mutex
-	db             *bolt.DB
+	metaLock        sync.Mutex
+	metricMetaLock  sync.Mutex
+	alertStatusLock sync.Mutex
+	maxIncidentId   uint64
+	incidentLock    sync.Mutex
+	db              *bolt.DB
 
 	LastCheck time.Time
 
@@ -72,6 +75,7 @@ type Schedule struct {
 func (s *Schedule) Init(c *conf.Conf) error {
 	var err error
 	s.Conf = c
+	s.AlertStatuses = make(map[string]*AlertStatus)
 	s.Silence = make(map[string]*Silence)
 	s.Group = make(map[time.Time]expr.AlertKeys)
 	s.Metadata = make(map[metadata.Metakey]*Metavalue)
@@ -353,6 +357,7 @@ type StateGroup struct {
 	Active   bool `json:",omitempty"`
 	Status   Status
 	Silenced bool
+	IsError  bool          `json:",omitempty"`
 	Subject  string        `json:",omitempty"`
 	Alert    string        `json:",omitempty"`
 	AlertKey expr.AlertKey `json:",omitempty"`
@@ -366,7 +371,8 @@ type StateGroups struct {
 		NeedAck      []*StateGroup `json:",omitempty"`
 		Acknowledged []*StateGroup `json:",omitempty"`
 	}
-	TimeAndDate []int
+	TimeAndDate                   []int
+	FailingAlerts, UnclosedErrors int
 }
 
 func (s *Schedule) MarshalGroups(T miniprofiler.Timer, filter string) (*StateGroups, error) {
@@ -380,6 +386,7 @@ func (s *Schedule) MarshalGroups(T miniprofiler.Timer, filter string) (*StateGro
 	t := StateGroups{
 		TimeAndDate: s.Conf.TimeAndDate,
 	}
+	t.FailingAlerts, t.UnclosedErrors = s.getErrorCounts()
 	s.Lock("MarshallGroups")
 	defer s.Unlock()
 	T.Step("Setup", func(miniprofiler.Timer) {
@@ -414,7 +421,7 @@ func (s *Schedule) MarshalGroups(T miniprofiler.Timer, filter string) (*StateGro
 		for tuple, states := range groups {
 			var grouped []*StateGroup
 			switch tuple.Status {
-			case StWarning, StCritical, StUnknown, StError:
+			case StWarning, StCritical, StUnknown:
 				var sets map[string]expr.AlertKeys
 				T.Step(fmt.Sprintf("GroupSets (%d): %v", len(states), tuple), func(T miniprofiler.Timer) {
 					sets = states.GroupSets()
@@ -447,6 +454,7 @@ func (s *Schedule) MarshalGroups(T miniprofiler.Timer, filter string) (*StateGro
 							Subject:  string(st.Subject),
 							Ago:      marshalTime(st.Last().Time),
 							State:    st,
+							IsError:  !s.AlertSuccessful(ak.Name()),
 						})
 					}
 					if len(g.Children) == 1 && g.Children[0].Subject != "" {
@@ -683,7 +691,6 @@ func (s *Schedule) Action(user, message string, t ActionType, ak expr.AlertKey) 
 		st.NeedAck = false
 	}
 	isUnknown := st.AbnormalStatus() == StUnknown
-	isError := st.AbnormalStatus() == StError
 	timestamp := time.Now().UTC()
 	switch t {
 	case ActionAcknowledge:
@@ -698,7 +705,7 @@ func (s *Schedule) Action(user, message string, t ActionType, ak expr.AlertKey) 
 		if st.NeedAck {
 			ack()
 		}
-		if st.IsActive() && !isError {
+		if st.IsActive() {
 			return fmt.Errorf("cannot close active alert")
 		}
 		st.Open = false
@@ -755,11 +762,11 @@ func (s *State) Last() Event {
 }
 
 type Event struct {
-	Warn, Crit, Error *Result
-	Status            Status
-	Time              time.Time
-	Unevaluated       bool
-	IncidentId        uint64
+	Warn, Crit  *Result
+	Status      Status
+	Time        time.Time
+	Unevaluated bool
+	IncidentId  uint64
 }
 
 type Result struct {
@@ -779,7 +786,6 @@ const (
 	StWarning
 	StCritical
 	StUnknown
-	StError
 )
 
 func (s Status) String() string {
@@ -792,8 +798,6 @@ func (s Status) String() string {
 		return "critical"
 	case StUnknown:
 		return "unknown"
-	case StError:
-		return "error"
 	default:
 		return "none"
 	}
@@ -807,7 +811,6 @@ func (s Status) IsNormal() bool   { return s == StNormal }
 func (s Status) IsWarning() bool  { return s == StWarning }
 func (s Status) IsCritical() bool { return s == StCritical }
 func (s Status) IsUnknown() bool  { return s == StUnknown }
-func (s Status) IsError() bool    { return s == StError }
 
 type Action struct {
 	User    string
@@ -1122,4 +1125,125 @@ type HostData struct {
 		Version string `json:",omitempty"`
 	}
 	SerialNumber string `json:",omitempty"`
+}
+
+//Alert Status is the current state of a single alert
+type AlertStatus struct {
+	Success bool
+	Errors  []*AlertError
+}
+
+type AlertError struct {
+	FirstTime, LastTime time.Time
+	Count               int
+	Message             string
+}
+
+func (s *Schedule) AlertSuccessful(name string) bool {
+	s.alertStatusLock.Lock()
+	defer s.alertStatusLock.Unlock()
+	if as, ok := s.AlertStatuses[name]; ok {
+		return as.Success
+	}
+	return true
+}
+
+func (s *Schedule) markAlertError(name string, err error) {
+	s.alertStatusLock.Lock()
+	defer s.alertStatusLock.Unlock()
+	as, ok := s.AlertStatuses[name]
+	if !ok {
+		as = &AlertStatus{}
+		s.AlertStatuses[name] = as
+	}
+	// if it succeeded prior to now, make a new error event.
+	// else if message is same as last, coalesce together.
+	// else append new event
+	now := time.Now().UTC().Truncate(time.Second)
+	newError := func() {
+		as.Errors = append(as.Errors, &AlertError{
+			FirstTime: now,
+			LastTime:  now,
+			Count:     1,
+			Message:   err.Error(),
+		})
+	}
+	if as.Success || len(as.Errors) == 0 {
+		newError()
+	} else {
+		last := as.Errors[len(as.Errors)-1]
+		if err.Error() == last.Message {
+			last.Count++
+			last.LastTime = now
+		} else {
+			newError()
+		}
+	}
+	as.Success = false
+}
+
+func (s *Schedule) markAlertSuccessful(name string) {
+	s.alertStatusLock.Lock()
+	defer s.alertStatusLock.Unlock()
+	as, ok := s.AlertStatuses[name]
+	if !ok {
+		as = &AlertStatus{}
+		s.AlertStatuses[name] = as
+	}
+	as.Success = true
+}
+
+func (s *Schedule) ClearErrorLine(alert string, startTime time.Time) {
+	s.alertStatusLock.Lock()
+	defer s.alertStatusLock.Unlock()
+	if as, ok := s.AlertStatuses[alert]; ok {
+		newErrors := make([]*AlertError, 0, len(as.Errors))
+		for _, err := range as.Errors {
+			if err.FirstTime != startTime {
+				newErrors = append(newErrors, err)
+			}
+		}
+		as.Errors = newErrors
+		if len(as.Errors) == 0 {
+			as.Success = true
+		}
+	}
+}
+
+func (s *Schedule) getErrorCounts() (failing, total int) {
+	failing = 0
+	total = 0
+	s.alertStatusLock.Lock()
+	defer s.alertStatusLock.Unlock()
+	for _, as := range s.AlertStatuses {
+		if !as.Success {
+			failing++
+		}
+		for _, err := range as.Errors {
+			total += err.Count
+		}
+	}
+	return
+}
+
+func (s *Schedule) GetErrorHistory() map[string]*AlertStatus {
+	s.alertStatusLock.Lock()
+	defer s.alertStatusLock.Unlock()
+	mapCopy := make(map[string]*AlertStatus, len(s.AlertStatuses))
+	for name, as := range s.AlertStatuses {
+		asCopy := &AlertStatus{
+			Success: as.Success,
+			Errors:  make([]*AlertError, len(as.Errors)),
+		}
+		for i, err := range as.Errors {
+			asCopy.Errors[i] = &AlertError{
+				Count:     err.Count,
+				FirstTime: err.FirstTime.UTC(),
+				LastTime:  err.LastTime.UTC(),
+				Message:   err.Message,
+			}
+		}
+		mapCopy[name] = asCopy
+	}
+	return mapCopy
 }

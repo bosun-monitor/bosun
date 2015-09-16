@@ -51,6 +51,7 @@ const (
 	dbMetadata         = "metadata"
 	dbMetricMetadata   = "metadata-metric"
 	dbIncidents        = "incidents"
+	dbErrors           = "errors"
 )
 
 func (s *Schedule) save() {
@@ -67,8 +68,9 @@ func (s *Schedule) save() {
 		dbSilence:        s.Silence,
 		dbStatus:         s.status,
 		dbMetadata:       s.Metadata,
-		dbIncidents:      s.Incidents,
 		dbMetricMetadata: s.metricMetadata,
+		dbIncidents:      s.Incidents,
+		dbErrors:         s.AlertStatuses,
 	}
 	tostore := make(map[string][]byte)
 	for name, data := range store {
@@ -181,6 +183,9 @@ func (s *Schedule) RestoreState() error {
 	if err := decode(dbIncidents, &s.Incidents); err != nil {
 		slog.Errorln(dbIncidents, err)
 	}
+	if err := decode(dbErrors, &s.AlertStatuses); err != nil {
+		slog.Errorln(dbErrors, err)
+	}
 
 	// Calculate next incident id.
 	for _, i := range s.Incidents {
@@ -216,11 +221,16 @@ func (s *Schedule) RestoreState() error {
 			}
 		}
 		clear(st.Result)
+		newHistory := []Event{}
 		for _, e := range st.History {
 			clear(e.Warn)
 			clear(e.Crit)
-			clear(e.Error)
+			// Remove error events which no longer are a thing.
+			if e.Status <= StUnknown {
+				newHistory = append(newHistory, e)
+			}
 		}
+		st.History = newHistory
 		s.status[ak] = st
 		if a.Log && st.Open {
 			st.Open = false

@@ -4,6 +4,7 @@
 			<span class="glyphicon" ng-class="{'glyphicon-exclamation-sign': state.last.Status && state.last.Status != 'normal'}"></span>
 			<span class="glyphicon" ng-class="{'glyphicon-volume-off': child.Silenced}"></span>
 			<span class="glyphicon" ng-class="{'glyphicon-question-sign': state.Unevaluated}"></span>
+			<a ng-href="errorHistory?alert={{encode(state.Alert)}}"><span class="glyphicon" ng-class="{'glyphicon-fire': child.IsError}"></span></a>
 			<span ng-show="state.last.IncidentId">#{{state.last.IncidentId}}:</span>
 			<span ng-bind="child.Subject || child.AlertKey"></span>
 			

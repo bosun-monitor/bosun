@@ -1,0 +1,47 @@
+<h2> Errors </h2>
+
+<div class="row" ng-show="error">
+	<div class="col-lg-12">
+		<pre class="alert alert-danger" ng-bind="error" style="white-space: pre-wrap;"></pre>
+	</div>
+</div>
+<div class="row" ng-show="loading">
+	<div class="col-lg-12">
+		<div class="alert alert-info">
+			Loading...
+		</div>
+	</div>
+</div>
+
+<div ng-show="totalLines() > 0">
+<div class="row" style="margin-bottom:15px;">
+	<button class='btn btn-default pull-right' ng-click="clearAll()" ng-disabled="totalLines() == 0">Clear All {{totalLines()}}</button>
+	<button class='btn btn-default pull-right' ng-click="clearSelected()" ng-disabled="selectedLines() == 0">Clear {{selectedLines()}} selected</button>
+</div>
+<div class="panel-group">
+	<div class="panel" ng-repeat="err in errors | orderBy: ['Success','-Sum']" ng-show="err.Sum" ng-class="{'panel-danger': !err.Success, 'panel-success':err.Success}" >
+		<div class="panel-heading" ng-click="err.Shown = !err.Shown">
+			<h4 class="panel-title">alert {{err.Name}} - ({{err.Sum}} events)
+			<label class="pull-right select">
+					<input type="checkbox" class="pull-right" ng-model="err.checked" ng-click="click(err, $event)" ng-change="check(err)">
+			</label>
+			</h4> 
+		</div>
+		<div class="panel-body" ng-if="err.Shown">
+			<div class="alert alert-danger" role="alert" ng-repeat="line in err.Errors | orderBy:['-LastTime']" style="margin:0px;">
+				{{line.Message}} - {{line.Count}} times From <span ts-time="line.FirstTime"></span> To <span ts-time="line.LastTime"></span> 
+				 - <a ng-href="{{ruleLink(line,err)}}">Rule Page</a>
+				<label class="pull-right select">
+					<input type="checkbox" class="pull-right" ng-model="line.checked">
+				</label>
+			</div>
+		</div>
+	</div>
+</div>
+</div>
+
+<div ng-show="totalLines() == 0">
+	<div class="alert alert-success">
+			No errors. This is a good thing.
+		</div>
+</div>

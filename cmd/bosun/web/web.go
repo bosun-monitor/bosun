@@ -88,6 +88,7 @@ func Listen(listenAddr string, devMode bool, tsdbHost string) error {
 	router.Handle("/api/config", miniprofiler.NewHandler(Config))
 	router.Handle("/api/config_test", miniprofiler.NewHandler(ConfigTest))
 	router.Handle("/api/egraph/{bs}.svg", JSON(ExprGraph))
+	router.Handle("/api/errors", JSON(ErrorHistory))
 	router.Handle("/api/expr", JSON(Expr))
 	router.Handle("/api/graph", JSON(Graph))
 	router.Handle("/api/health", JSON(HealthCheck))
@@ -582,4 +583,22 @@ func ScheduleLockStatus(t miniprofiler.Timer, w http.ResponseWriter, r *http.Req
 		data.HeldFor = time.Now().Sub(since).String()
 	}
 	return data, nil
+}
+
+func ErrorHistory(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	if r.Method == "GET" {
+		return schedule.GetErrorHistory(), nil
+	}
+	data := []struct {
+		Alert string    `json:"Alert"`
+		Start time.Time `json:"Start"`
+	}{}
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&data); err != nil {
+		return nil, err
+	}
+	for _, key := range data {
+		schedule.ClearErrorLine(key.Alert, key.Start)
+	}
+	return nil, nil
 }
