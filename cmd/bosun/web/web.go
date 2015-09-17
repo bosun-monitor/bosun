@@ -93,6 +93,7 @@ func Listen(listenAddr string, devMode bool, tsdbHost string) error {
 	router.Handle("/api/graph", JSON(Graph))
 	router.Handle("/api/health", JSON(HealthCheck))
 	router.Handle("/api/host", JSON(Host))
+	router.Handle("/api/last", JSON(Last))
 	router.Handle("/api/incidents", JSON(Incidents))
 	router.Handle("/api/incidents/events", JSON(IncidentEvents))
 	router.Handle("/api/metadata/get", JSON(GetMetadata))
@@ -567,6 +568,14 @@ func APIRedirect(w http.ResponseWriter, req *http.Request) {
 
 func Host(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	return schedule.Host(r.FormValue("filter")), nil
+}
+
+func Last(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	var counter bool
+	if r.FormValue("counter") != "" {
+		counter = true
+	}
+	return schedule.Search.GetLast(r.FormValue("metric"), r.FormValue("tagset"), counter)
 }
 
 func Version(w http.ResponseWriter, r *http.Request) {

@@ -980,6 +980,7 @@ func (s *Schedule) GetIncidentEvents(id uint64) (*Incident, []Event, []Action, e
 }
 
 func (s *Schedule) Host(filter string) map[string]*HostData {
+	slog.Infoln(s.Search.Last)
 	hosts := make(map[string]struct{})
 	for _, h := range s.Search.TagValuesByTagKey("host", time.Hour*7*24) {
 		hosts[h] = struct{}{}
@@ -1002,8 +1003,12 @@ func (s *Schedule) Host(filter string) map[string]*HostData {
 				Interfaces: make(map[string]*HostInterface),
 			}
 			e.CPU.Processors = make(map[string]string)
+			slog.Infoln("Going to get last CPU info for", host)
 			if v, err := s.Search.GetLast("os.cpu", host, true); err != nil {
+				slog.Infoln("CPU", host, v)
 				e.CPU.Used = v
+			} else {
+				slog.Errorln(err)
 			}
 			e.Memory.Modules = make(map[string]string)
 			if v, err := s.Search.GetLast("os.mem.total", host, false); err != nil {
