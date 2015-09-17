@@ -11,13 +11,6 @@ func metricMetaKey(metric string) string {
 	return fmt.Sprintf("mmeta:%s", metric)
 }
 
-func (d *dataAccess) hexpire() string {
-	if d.isRedis {
-		return "EXPIRE"
-	}
-	return "HEXPIRE"
-}
-
 const metricMetaTTL = int((time.Hour * 24 * 7) / time.Second)
 
 func (d *dataAccess) PutMetricMetadata(metric string, field string, value string) error {
@@ -27,10 +20,7 @@ func (d *dataAccess) PutMetricMetadata(metric string, field string, value string
 	conn := d.getConnection()
 	defer conn.Close()
 	_, err := conn.Do("HSET", metricMetaKey(metric), field, value)
-	if err != nil {
-		return err
-	}
-	_, err = conn.Do(d.hexpire(), metricMetaKey(metric), int32(metricMetaTTL))
+	_, err = conn.Do("HSET", metricMetaKey(metric), "lastTouched", time.Now().UTC().Unix())
 	return err
 }
 

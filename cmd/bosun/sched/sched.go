@@ -10,13 +10,13 @@ import (
 	"sync"
 	"time"
 
-	"bosun.org/_third_party/github.com/boltdb/bolt"
-
 	"bosun.org/_third_party/github.com/MiniProfiler/go/miniprofiler"
+	"bosun.org/_third_party/github.com/boltdb/bolt"
 	"bosun.org/_third_party/github.com/bradfitz/slice"
 	"bosun.org/_third_party/github.com/tatsushid/go-fastping"
 	"bosun.org/cmd/bosun/cache"
 	"bosun.org/cmd/bosun/conf"
+	"bosun.org/cmd/bosun/database"
 	"bosun.org/cmd/bosun/expr"
 	"bosun.org/cmd/bosun/search"
 	"bosun.org/collect"
@@ -43,8 +43,6 @@ type Schedule struct {
 
 	// Key/value data associated with a metric, tagset, and an additional name
 	Metadata map[metadata.Metakey]*Metavalue
-	// Core metric data, including desc, type, and unit
-	metricMetadata map[string]*MetadataMetric
 
 	Incidents map[uint64]*Incident
 	Search    *search.Search
@@ -61,7 +59,6 @@ type Schedule struct {
 	pendingUnknowns map[*conf.Notification][]*State
 
 	metaLock        sync.Mutex
-	metricMetaLock  sync.Mutex
 	alertStatusLock sync.Mutex
 	maxIncidentId   uint64
 	incidentLock    sync.Mutex
@@ -70,6 +67,8 @@ type Schedule struct {
 	LastCheck time.Time
 
 	ctx *checkContext
+
+	data database.DataAccess
 }
 
 func (s *Schedule) Init(c *conf.Conf) error {
@@ -79,13 +78,22 @@ func (s *Schedule) Init(c *conf.Conf) error {
 	s.Silence = make(map[string]*Silence)
 	s.Group = make(map[time.Time]expr.AlertKeys)
 	s.Metadata = make(map[metadata.Metakey]*Metavalue)
-	s.metricMetadata = make(map[string]*MetadataMetric)
 	s.Incidents = make(map[uint64]*Incident)
 	s.pendingUnknowns = make(map[*conf.Notification][]*State)
 	s.status = make(States)
 	s.Search = search.NewSearch()
 	s.LastCheck = time.Now()
 	s.ctx = &checkContext{time.Now(), cache.New(0)}
+	if c.RedisHost != "" {
+		s.data = database.NewDataAccess(c.RedisHost, true)
+	} else {
+		bind := "127.0.0.1:9565"
+		_, err := database.StartLedis(c.LedisDir, bind)
+		if err != nil {
+			return err
+		}
+		s.data = database.NewDataAccess(bind, false)
+	}
 	if c.StateFile != "" {
 		s.db, err = bolt.Open(c.StateFile, 0600, nil)
 		if err != nil {
@@ -137,96 +145,64 @@ type Metavalue struct {
 	Value interface{}
 }
 
-func (s *Schedule) PutMetadata(k metadata.Metakey, v interface{}) {
+func (s *Schedule) PutMetadata(k metadata.Metakey, v interface{}) error {
 
 	isCoreMeta := (k.Name == "desc" || k.Name == "unit" || k.Name == "rate")
 	if !isCoreMeta {
 		s.metaLock.Lock()
 		s.Metadata[k] = &Metavalue{time.Now().UTC(), v}
 		s.metaLock.Unlock()
-		return
+		return nil
 	}
 	if k.Metric == "" {
-		slog.Error("desc, rate, and unit require metric name")
-		return
+		err := fmt.Errorf("desc, rate, and unit require metric name")
+		slog.Error(err)
+		return err
 	}
 	strVal, ok := v.(string)
 	if !ok {
-		slog.Errorf("desc, rate, and unit require value to be string. Found: %s", reflect.TypeOf(v))
-		return
+		err := fmt.Errorf("desc, rate, and unit require value to be string. Found: %s", reflect.TypeOf(v))
+		slog.Error(err)
+		return err
 	}
-	s.metricMetaLock.Lock()
-	metricData, ok := s.metricMetadata[k.Metric]
-	if !ok {
-		metricData = &MetadataMetric{}
-		s.metricMetadata[k.Metric] = metricData
-	}
-	switch k.Name {
-	case "desc":
-		metricData.Description = strVal
-	case "unit":
-		metricData.Unit = strVal
-	case "rate":
-		metricData.Type = strVal
-	}
-	s.metricMetaLock.Unlock()
+	return s.data.PutMetricMetadata(k.Metric, k.Name, strVal)
 }
 
-type MetadataMetric struct {
-	Unit        string `json:",omitempty"`
-	Type        string `json:",omitempty"`
-	Description string
-}
-
-func (s *Schedule) MetadataMetrics(metric string) map[string]*MetadataMetric {
-	s.metricMetaLock.Lock()
-	defer s.metricMetaLock.Unlock()
-	m := make(map[string]*MetadataMetric)
-	if metric != "" {
-		if v, ok := s.metricMetadata[metric]; ok {
-			m[metric] = &MetadataMetric{
-				Unit:        v.Unit,
-				Type:        v.Type,
-				Description: v.Description,
-			}
-		}
-	} else {
-		for k, v := range s.metricMetadata {
-			m[k] = &MetadataMetric{
-				Unit:        v.Unit,
-				Type:        v.Type,
-				Description: v.Description,
-			}
-		}
+func (s *Schedule) MetadataMetrics(metric string) (*database.MetricMetadata, error) {
+	mm, err := s.data.GetMetricMetadata(metric)
+	if err != nil {
+		return nil, err
 	}
-	return m
+	return mm, nil
 }
 
-func (s *Schedule) GetMetadata(metric string, subset opentsdb.TagSet) []metadata.Metasend {
+func (s *Schedule) GetMetadata(metric string, subset opentsdb.TagSet) ([]metadata.Metasend, error) {
 	ms := make([]metadata.Metasend, 0)
 	if metric != "" {
-		if meta, ok := s.MetadataMetrics(metric)[metric]; ok {
-			if meta.Description != "" {
-				ms = append(ms, metadata.Metasend{
-					Metric: metric,
-					Name:   "desc",
-					Value:  meta.Description,
-				})
-			}
-			if meta.Unit != "" {
-				ms = append(ms, metadata.Metasend{
-					Metric: metric,
-					Name:   "unit",
-					Value:  meta.Unit,
-				})
-			}
-			if meta.Type != "" {
-				ms = append(ms, metadata.Metasend{
-					Metric: metric,
-					Name:   "rate",
-					Value:  meta.Type,
-				})
-			}
+		meta, err := s.MetadataMetrics(metric)
+		if err != nil {
+			return nil, err
+		}
+		if meta.Desc != "" {
+			ms = append(ms, metadata.Metasend{
+				Metric: metric,
+				Name:   "desc",
+				Value:  meta.Desc,
+			})
+		}
+		if meta.Unit != "" {
+			ms = append(ms, metadata.Metasend{
+				Metric: metric,
+				Name:   "unit",
+				Value:  meta.Unit,
+			})
+		}
+		if meta.Type != "" {
+			ms = append(ms, metadata.Metasend{
+				Metric: metric,
+				Name:   "rate",
+				Value:  meta.Type,
+			})
 		}
 	} else {
 		s.metaLock.Lock()
@@ -245,7 +221,7 @@ func (s *Schedule) GetMetadata(metric string, subset opentsdb.TagSet) []metadata
 		}
 		s.metaLock.Unlock()
 	}
-	return ms
+	return ms, nil
 }
 
 type States map[expr.AlertKey]*State

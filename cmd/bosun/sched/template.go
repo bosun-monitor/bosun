@@ -365,7 +365,10 @@ func (c *Context) GetMeta(metric, name string, v interface{}) (interface{}, erro
 	case opentsdb.TagSet:
 		t = v
 	}
-	meta := c.schedule.GetMetadata(metric, t)
+	meta, err := c.schedule.GetMetadata(metric, t)
+	if err != nil {
+		return nil, err
+	}
 	if name == "" {
 		return meta, nil
 	}

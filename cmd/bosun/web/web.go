@@ -326,12 +326,15 @@ func GetMetadata(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (
 		}
 		tags[k] = vals[i]
 	}
-	return schedule.GetMetadata(r.FormValue("metric"), tags), nil
+	return schedule.GetMetadata(r.FormValue("metric"), tags)
 }
 
 func MetadataMetrics(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	metric := r.FormValue("metric")
-	return schedule.MetadataMetrics(metric), nil
+	if metric == "" {
+		return nil, fmt.Errorf("metric required")
+	}
+	return schedule.MetadataMetrics(metric)
 }
 
 func Alerts(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {

@@ -41,6 +41,8 @@ type Conf struct {
 	PingDuration     time.Duration // Duration from now to stop pinging hosts based on time since the host tag was touched
 	EmailFrom        string
 	StateFile        string
+	LedisDir         string
+	RedisHost        string
 	TimeAndDate      []int // timeanddate.com cities list
 	ResponseLimit    int64
 	SearchSince      opentsdb.Duration
@@ -339,6 +341,7 @@ func New(name, text string) (c *Conf, err error) {
 		DefaultRunEvery:  1,
 		HTTPListen:       ":8070",
 		StateFile:        "bosun.state",
+		LedisDir:         "ledis_data",
 		PingDuration:     time.Hour * 24,
 		ResponseLimit:    1 << 20, // 1MB
 		SearchSince:      opentsdb.Day * 3,
@@ -494,6 +497,10 @@ func (c *Conf) loadGlobal(p *parse.PairNode) {
 		}
 	case "shortURLKey":
 		c.ShortURLKey = v
+	case "ledisDir":
+		c.LedisDir = v
+	case "redisHost":
+		c.RedisHost = v
 	default:
 		if !strings.HasPrefix(k, "$") {
 			c.errorf("unknown key %s", k)

@@ -266,7 +266,7 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 			});
 		$http.get('/api/metadata/metrics?metric=' + metric)
 			.success(data => {
-				var canAuto = data[metric] && data[metric].Type;
+				var canAuto = data && data.Type;
 				$scope.canAuto[metric] = canAuto;
 			})
 			.error(err => {
@@ -347,9 +347,7 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 	function getMetricMeta(metric: string) {
 		$http.get('/api/metadata/metrics?metric=' + encodeURIComponent(metric))
 			.success((data) => {
-				if (Object.keys(data).length == 1) {
-					$scope.meta[metric] = data[metric];
-				}
+				$scope.meta[metric] = data;
 			})
 			.error((error) => {
 				console.log("Error getting metadata for metric " + metric)
