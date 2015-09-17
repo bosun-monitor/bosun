@@ -21,6 +21,9 @@ func (d *dataAccess) hexpire() string {
 const metricMetaTTL = int((time.Hour * 24 * 7) / time.Second)
 
 func (d *dataAccess) PutMetricMetadata(metric string, field string, value string) error {
+	if field != "desc" && field != "unit" && field != "rate" {
+		return fmt.Errorf("Unknown metric metadata field: %s", field)
+	}
 	conn := d.getConnection()
 	defer conn.Close()
 	_, err := conn.Do("HSET", metricMetaKey(metric), field, value)

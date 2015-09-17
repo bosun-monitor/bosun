@@ -4,14 +4,15 @@ import (
 	"testing"
 )
 
-func TestMetricMetadataRoundTrip(t *testing.T) {
-	if err := testData.PutMetricMetadata("os.cpu", "desc", "cpu of a server"); err != nil {
+func TestMetricMetadata_RoundTrip(t *testing.T) {
+	metric := randString(5)
+	if err := testData.PutMetricMetadata(metric, "desc", "cpu of a server"); err != nil {
 		t.Fatal(err)
 	}
-	if err := testData.PutMetricMetadata("os.cpu", "unit", "pct"); err != nil {
+	if err := testData.PutMetricMetadata(metric, "unit", "pct"); err != nil {
 		t.Fatal(err)
 	}
-	meta, err := testData.GetMetricMetadata("os.cpu")
+	meta, err := testData.GetMetricMetadata(metric)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -23,5 +24,21 @@ func TestMetricMetadataRoundTrip(t *testing.T) {
 	}
 	if meta.Unit != "pct" {
 		t.Fatal("Wrong Unit.")
+	}
+}
+
+func TestMetricMetadata_NoneExists(t *testing.T) {
+	meta, err := testData.GetMetricMetadata("asfaklsfjlkasjf")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if meta == nil {
+		t.Fatal("Should make metadata no matter what")
+	}
+}
+
+func TestMetricMetadata_BadField(t *testing.T) {
+	if err := testData.PutMetricMetadata(randString(7), "desc1", "foo"); err == nil {
+		t.Fatal("Expected failure to set bad metric metadata field")
 	}
 }

@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"testing"
@@ -14,12 +15,21 @@ import (
 var testData *dataAccess
 
 var flagReddisHost = flag.String("redis", "", "redis server to test against")
+var flagFlushRedis = flag.Bool("flush", false, "flush database before tests. DANGER!")
 
 func TestMain(m *testing.M) {
 	flag.Parse()
-	stopF := func() {}
+	rand.Seed(time.Now().UnixNano())
 	if *flagReddisHost != "" {
 		testData = newDataAccess(*flagReddisHost, true)
+		if *flagFlushRedis {
+			log.Println("FLUSHING REDIS")
+			c := testData.getConnection()
+			_, err := c.Do("FLUSHDB")
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
 	} else {
 		addr := "127.0.0.1:9876"
 		testPath := filepath.Join(os.TempDir(), "bosun_ledis_test", fmt.Sprint(time.Now().Unix()))
@@ -29,12 +39,24 @@ func TestMain(m *testing.M) {
 			log.Fatal(err)
 		}
 		testData = newDataAccess(addr, false)
-		stopF = func() {
+		cleanups = append(cleanups, func() {
 			stop()
 			os.RemoveAll(testPath)
-		}
+		})
 	}
 	status := m.Run()
-	stopF()
+	for _, c := range cleanups {
+		c()
+	}
 	os.Exit(status)
+}
+
+var cleanups = []func(){}
+
+func randString(l int) string {
+	s := ""
+	for len(s) < l {
+		s += string("abcdefghijklmnopqrstuvwxyz"[rand.Intn(26)])
+	}
+	return s
 }
