@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"bosun.org/opentsdb"
+	"bosun.org/slog"
 )
 
 // Search is a struct to hold indexed data about OpenTSDB metric and tag data.
@@ -153,7 +154,9 @@ func (s *Search) Index(mdp opentsdb.MultiDataPoint) {
 		if p == nil {
 			p = new(pair)
 			s.Last[key] = p
+			slog.Infof("Index hit for '%v' %v\n", key, p)
 		}
+		//slog.Infoln(p.index, p.index%2, "if p.points[p.index%2].Timestamp (", p.points[p.index%2].Timestamp, ") is less than dp.Timestamp (", dp.Timestamp, ")")
 		if p.points[p.index%2].Timestamp < dp.Timestamp {
 			p.points[p.index%2] = *dp
 			p.index++
@@ -189,7 +192,16 @@ var errNotFloat = fmt.Errorf("last: expected float64")
 // the value is treated as a counter. err is non nil if there is no match.
 func (s *Search) GetLast(metric, tags string, diff bool) (v float64, err error) {
 	s.RLock()
+	//slog.Infoln(s.Last)
+	slog.Infof("Looking for %v%v", metric, tags)
+	for k, v := range s.Last {
+		slog.Infoln(k)
+		if k == fmt.Sprintf("%v%v", metric, tags) {
+			slog.Infoln("Key Found ", k, v)
+		}
+	}
 	p := s.Last[metric+tags]
+	slog.Infof("p for '%v' is '%v' and is diff=%v\n", metric+tags, p, diff)
 	if p != nil {
 		var ok bool
 		e := p.points[(p.index+1)%2]
