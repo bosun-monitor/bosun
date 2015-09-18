@@ -24,6 +24,7 @@ import (
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
+	"bosun.org/util"
 	"bosun.org/version"
 )
 
@@ -165,7 +166,7 @@ func (rp *relayProxy) ServeHTTP(responseWriter http.ResponseWriter, r *http.Requ
 }
 
 func Relay(dest string) http.Handler {
-	return &relayProxy{ReverseProxy: httputil.NewSingleHostReverseProxy(&url.URL{
+	return &relayProxy{ReverseProxy: util.NewSingleHostProxy(&url.URL{
 		Scheme: "http",
 		Host:   dest,
 	})}

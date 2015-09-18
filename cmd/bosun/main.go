@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"net/http/httputil"
 	_ "net/http/pprof"
 	"net/url"
 	"os"
@@ -106,7 +105,7 @@ func main() {
 	if c.RelayListen != "" {
 		go func() {
 			mux := http.NewServeMux()
-			mux.Handle("/api/", httputil.NewSingleHostReverseProxy(httpListen))
+			mux.Handle("/api/", util.NewSingleHostProxy(httpListen))
 			s := &http.Server{
 				Addr:    c.RelayListen,
 				Handler: mux,
@@ -123,7 +122,7 @@ func main() {
 			Host:   c.TSDBHost,
 		}
 		if *flagReadonly {
-			rp := httputil.NewSingleHostReverseProxy(tsdbHost)
+			rp := util.NewSingleHostProxy(tsdbHost)
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				if r.URL.Path == "/api/put" {
 					w.WriteHeader(204)
