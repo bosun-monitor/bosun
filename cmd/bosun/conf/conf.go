@@ -494,6 +494,8 @@ func (c *Conf) loadGlobal(p *parse.PairNode) {
 		}
 	case "shortURLKey":
 		c.ShortURLKey = v
+	case "ledisDir", "redisHost":
+		return //placeholders to allow easier migration in the future.
 	default:
 		if !strings.HasPrefix(k, "$") {
 			c.errorf("unknown key %s", k)
