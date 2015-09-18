@@ -7,6 +7,7 @@ import (
 	"log"
 	"time"
 
+	"bosun.org/opentsdb"
 	"github.com/garyburd/redigo/redis"
 	"github.com/siddontang/ledisdb/config"
 	"github.com/siddontang/ledisdb/server"
@@ -18,6 +19,8 @@ type DataAccess interface {
 	PutMetricMetadata(metric string, field string, value string) error
 	// Get Metric Metadata for given metric.
 	GetMetricMetadata(metric string) (*MetricMetadata, error)
+
+	PutTagMetadata(tags opentsdb.TagSet, name string, value string, updated time.Time) error
 }
 
 type dataAccess struct {
@@ -31,7 +34,7 @@ func NewDataAccess(addr string, isRedis bool) DataAccess {
 }
 
 func newDataAccess(addr string, isRedis bool) *dataAccess {
-	return &dataAccess{pool: newPool(addr, ""), isRedis: isRedis}
+	return &dataAccess{pool: newPool(addr, "", 0), isRedis: isRedis}
 }
 
 // Start in-process ledis server. Data will go in the specified directory and it will bind to the given port.
@@ -54,12 +57,12 @@ func (d *dataAccess) getConnection() redis.Conn {
 	return d.pool.Get()
 }
 
-func newPool(server, password string) *redis.Pool {
+func newPool(server, password string, database int) *redis.Pool {
 	return &redis.Pool{
 		MaxIdle:     3,
 		IdleTimeout: 240 * time.Second,
 		Dial: func() (redis.Conn, error) {
-			c, err := redis.Dial("tcp", server)
+			c, err := redis.Dial("tcp", server, redis.DialDatabase(database))
 			if err != nil {
 				return nil, err
 			}
