@@ -9,6 +9,7 @@ import (
 
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
+	"bosun.org/slog"
 	"bosun.org/util"
 	"bosun.org/vsphere"
 )
@@ -230,6 +231,8 @@ func vsphereGuest(vsphereHost string, v *vsphere.Vsphere, md *opentsdb.MultiData
 	res, err := v.Info("VirtualMachine", []string{
 		"name",
 		"runtime.host",
+		"runtime.powerState",
+		"runtime.connectionState",
 		"config.hardware.memoryMB",
 		"config.hardware.numCPU",
 		"summary.quickStats.balloonedMemory",
@@ -289,6 +292,46 @@ func vsphereGuest(vsphereHost string, v *vsphere.Vsphere, md *opentsdb.MultiData
 						metadata.AddMeta("", opentsdb.TagSet{"host": name}, "hypervisor", v, false)
 					}
 				}
+			case "VirtualMachinePowerState":
+				s := p.Val.Inner
+				var missing bool
+				var v int
+				switch s {
+				case "poweredOff":
+					v = 0
+				case "poweredOn":
+					v = 1
+				case "suspended":
+					v = 2
+				default:
+					missing = true
+					slog.Errorf("Did not recognize %s as a valid value for vsphere.guest.powered_state", s)
+				}
+				if !missing {
+					Add(md, "vsphere.guest.powered_state", v, tags, metadata.Gauge, metadata.StatusCode, descVsphereGuestPoweredState)
+				}
+			case "VirtualMachineConnectionState":
+				s := p.Val.Inner
+				var missing bool
+				var v int
+				switch s {
+				case "connected":
+					v = 0
+				case "disconnected":
+					v = 1
+				case "inaccessible":
+					v = 2
+				case "invalid":
+					v = 3
+				case "orphaned":
+					v = 4
+				default:
+					missing = true
+					slog.Errorf("Did not recognize %s as a valid value for vsphere.guest.connection_state", s)
+				}
+				if !missing {
+					Add(md, "vsphere.guest.connection_state", v, tags, metadata.Gauge, metadata.StatusCode, descVsphereGuestConnectionState)
+				}
 			}
 		}
 		if memTotal > 0 && memUsed > 0 {
@@ -301,7 +344,9 @@ func vsphereGuest(vsphereHost string, v *vsphere.Vsphere, md *opentsdb.MultiData
 }
 
 const (
-	descVsphereGuestMemHost      = "Host memory utilization, also known as consumed host memory. Includes the overhead memory of the VM."
-	descVsphereGuestMemUsed      = "Guest memory utilization statistics, also known as active guest memory."
-	descVsphereGuestMemBallooned = "The size of the balloon driver in the VM. The host will inflate the balloon driver to reclaim physical memory from the VM. This is a sign that there is memory pressure on the host."
+	descVsphereGuestMemHost         = "Host memory utilization, also known as consumed host memory. Includes the overhead memory of the VM."
+	descVsphereGuestMemUsed         = "Guest memory utilization statistics, also known as active guest memory."
+	descVsphereGuestMemBallooned    = "The size of the balloon driver in the VM. The host will inflate the balloon driver to reclaim physical memory from the VM. This is a sign that there is memory pressure on the host."
+	descVsphereGuestPoweredState    = "PowerState defines a simple set of states for a virtual machine: poweredOn (0), poweredOff (1), and suspended (2). If the virtual machine is in a state with a task in progress, this transitions to a new state when the task completes."
+	descVsphereGuestConnectionState = "The connectivity state of the virtual machine: Connected (0) means the server has access to the virtual machine, Disconnected (1) means the server is currently disconnected from the virtual machine, Inaccessible (2) means one or more of the virtual machine configuration files are inaccessible, Invalid (3) means the virtual machine configuration format is invalid, and Orphanded (4) means the virtual machine is no longer registered on the host it is associated with."
 )
