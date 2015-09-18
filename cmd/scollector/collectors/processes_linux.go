@@ -39,12 +39,14 @@ func WatchProcesses() {
 
 func linuxProcMonitor(w *WatchedProc, md *opentsdb.MultiDataPoint) error {
 	var err error
+	var processCount int
 	for pid, id := range w.Processes {
 		file_status, e := os.Stat("/proc/" + pid)
 		if e != nil {
 			w.Remove(pid)
 			continue
 		}
+		processCount++
 		stats_file, e := ioutil.ReadFile("/proc/" + pid + "/stat")
 		if e != nil {
 			w.Remove(pid)
@@ -114,6 +116,9 @@ func linuxProcMonitor(w *WatchedProc, md *opentsdb.MultiDataPoint) error {
 		Add(md, "linux.proc.start_time", start_ts, tags, metadata.Gauge, metadata.Timestamp, descLinuxProcStartTS)
 		Add(md, "linux.proc.uptime", now()-start_ts, tags, metadata.Gauge, metadata.Second, descLinuxProcUptime)
 	}
+	if w.IncludeCount {
+		Add(md, "linux.proc.count", processCount, opentsdb.TagSet{"name": w.Name}, metadata.Gauge, metadata.Process, descLinuxProcCount)
+	}
 	return err
 }
 
@@ -135,6 +140,7 @@ const (
 	descLinuxHardFileLimit    = "The hard limit on the number of open file descriptors."
 	descLinuxProcUptime       = "The length of time, in seconds, since the process was started."
 	descLinuxProcStartTS      = "The timestamp of process start."
+	descLinuxProcCount        = "The number of currently running processes."
 )
 
 type byModTime []os.FileInfo
@@ -201,7 +207,7 @@ type Process struct {
 	Arguments string
 }
 
-// NewWatchedProc takes a string of the form "command,name,regex".
+// NewWatchedProc takes a configuration block [[Process]] from conf
 func NewWatchedProc(params conf.ProcessParams) (*WatchedProc, error) {
 	if params.Name == "" {
 		params.Name = params.Command
@@ -210,19 +216,21 @@ func NewWatchedProc(params conf.ProcessParams) (*WatchedProc, error) {
 		return nil, fmt.Errorf("bad process name: %v", params.Name)
 	}
 	return &WatchedProc{
-		Command:   params.Command,
-		Name:      params.Name,
-		Processes: make(map[string]int),
-		ArgMatch:  regexp.MustCompile(params.Args),
-		idPool:    new(idPool),
+		Command:      params.Command,
+		Name:         params.Name,
+		IncludeCount: params.IncludeCount,
+		Processes:    make(map[string]int),
+		ArgMatch:     regexp.MustCompile(params.Args),
+		idPool:       new(idPool),
 	}, nil
 }
 
 type WatchedProc struct {
-	Command   string
-	Name      string
-	Processes map[string]int
-	ArgMatch  *regexp.Regexp
+	Command      string
+	Name         string
+	IncludeCount bool
+	Processes    map[string]int
+	ArgMatch     *regexp.Regexp
 	*idPool
 }
 
