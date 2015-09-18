@@ -12,8 +12,11 @@ import (
 	"github.com/siddontang/ledisdb/server"
 )
 
+// Core data access interface for everything sched needs
 type DataAccess interface {
+	// Insert Metric Metadata. Field must be one of "desc", "rate", or "unit".
 	PutMetricMetadata(metric string, field string, value string) error
+	// Get Metric Metadata for given metric.
 	GetMetricMetadata(metric string) (*MetricMetadata, error)
 }
 
@@ -22,6 +25,7 @@ type dataAccess struct {
 	isRedis bool
 }
 
+// Create a new data access object pointed at the specified address. isRedis parameter used to distinguish true redis from ledis in-proc.
 func NewDataAccess(addr string, isRedis bool) DataAccess {
 	return newDataAccess(addr, isRedis)
 }
@@ -30,6 +34,8 @@ func newDataAccess(addr string, isRedis bool) *dataAccess {
 	return &dataAccess{pool: newPool(addr, ""), isRedis: isRedis}
 }
 
+// Start in-process ledis server. Data will go in the specified directory and it will bind to the given port.
+// Return value is a function you can call to stop the server.
 func StartLedis(dataDir string, bind string) (stop func(), err error) {
 	cfg := config.NewConfigDefault()
 	cfg.DBName = "goleveldb"

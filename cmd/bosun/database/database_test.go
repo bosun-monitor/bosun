@@ -20,6 +20,7 @@ var flagFlushRedis = flag.Bool("flush", false, "flush database before tests. DAN
 func TestMain(m *testing.M) {
 	flag.Parse()
 	rand.Seed(time.Now().UnixNano())
+	// For redis tests we just point at an external server.
 	if *flagReddisHost != "" {
 		testData = newDataAccess(*flagReddisHost, true)
 		if *flagFlushRedis {
@@ -31,6 +32,7 @@ func TestMain(m *testing.M) {
 			}
 		}
 	} else {
+		// To test ledis, start a local instance in a new tmp dir. We will attempt to delete it when we're done.
 		addr := "127.0.0.1:9876"
 		testPath := filepath.Join(os.TempDir(), "bosun_ledis_test", fmt.Sprint(time.Now().Unix()))
 		log.Println(testPath)
@@ -53,6 +55,7 @@ func TestMain(m *testing.M) {
 
 var cleanups = []func(){}
 
+// use random keys in tests to avoid conflicting test data.
 func randString(l int) string {
 	s := ""
 	for len(s) < l {
