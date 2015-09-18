@@ -44,7 +44,6 @@ const (
 	dbMetric           = "metric"
 	dbTagk             = "tagk"
 	dbTagv             = "tagv"
-	dbMetricTags       = "metrictags"
 	dbNotifications    = "notifications"
 	dbSilence          = "silence"
 	dbStatus           = "status"
@@ -63,7 +62,6 @@ func (s *Schedule) save() {
 		dbMetric:         s.Search.Read.Metric,
 		dbTagk:           s.Search.Read.Tagk,
 		dbTagv:           s.Search.Read.Tagv,
-		dbMetricTags:     s.Search.Read.MetricTags,
 		dbNotifications:  s.Notifications,
 		dbSilence:        s.Silence,
 		dbStatus:         s.status,
@@ -170,9 +168,6 @@ func (s *Schedule) RestoreState() error {
 	if err := decode(dbTagv, &s.Search.Tagv); err != nil {
 		slog.Errorln(dbTagv, err)
 	}
-	if err := decode(dbMetricTags, &s.Search.MetricTags); err != nil {
-		slog.Errorln(dbMetricTags, err)
-	}
 	notifications := make(map[expr.AlertKey]map[string]time.Time)
 	if err := decode(dbNotifications, &notifications); err != nil {
 		slog.Errorln(dbNotifications, err)
@@ -252,7 +247,8 @@ func (s *Schedule) RestoreState() error {
 	if s.maxIncidentId == 0 {
 		s.createHistoricIncidents()
 	}
-
+	// delete metrictags if they exist.
+	deleteKey(s.db, "metrictags")
 	s.Search.Copy()
 	slog.Infoln("RestoreState done in", time.Since(start))
 	return nil
@@ -314,4 +310,11 @@ func (s *Schedule) GetStateFileBackup() ([]byte, error) {
 		return nil, err
 	}
 	return buf.Bytes(), nil
+}
+
+func deleteKey(db *bolt.DB, name string) error {
+	return db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(dbBucket))
+		return b.Delete([]byte(name))
+	})
 }
