@@ -8,14 +8,23 @@ import (
 )
 
 func TestTagMetadata_RoundTrip(t *testing.T) {
-	tagset := opentsdb.TagSet{"host": "ny-web01", "iface": "foo", "iname": "bar", "direction": "in"}
+	host := randString(4)
+	tagset := opentsdb.TagSet{"host": host, "iface": "foo", "iname": "bar", "direction": "in"}
 	if err := testData.PutTagMetadata(tagset, "alias", "foo", time.Now()); err != nil {
 		t.Fatal(err)
 	}
-	if err := testData.PutTagMetadata(tagset, "mac", "aaaa", time.Now()); err != nil {
+	metas, err := testData.GetTagMetadata(tagset, "alias")
+	if err != nil {
 		t.Fatal(err)
 	}
-	if err := testData.PutTagMetadata(opentsdb.TagSet{"host": "ny-web01", "iface": "foo"}, "aaaa", "bbbb", time.Now()); err != nil {
-		t.Fatal(err)
+	if len(metas) != 1 {
+		t.Fatal("expected 1 metadata result")
+	}
+	m := metas[0]
+	if m.Name != "alias" {
+		t.Fatalf("name %s != alias", m.Name)
+	}
+	if !m.Tags.Equal(tagset) {
+		t.Fatalf("tagset %s != %s", m.Tags.String(), tagset.String())
 	}
 }

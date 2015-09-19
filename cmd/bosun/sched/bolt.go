@@ -155,24 +155,14 @@ func (s *Schedule) RestoreState() error {
 	if err := decode(db, dbMetadata, &s.Metadata); err != nil {
 		slog.Errorln(dbMetadata, err)
 	}
-	allsets := map[string]int{}
-	max := 0
 	for k, v := range s.Metadata {
+		s.data.PutTagMetadata(k.TagSet(), k.Name, fmt.Sprint(v.Value), v.Time)
 		if k.Name == "desc" || k.Name == "rate" || k.Name == "unit" {
 			s.PutMetadata(k, v.Value)
 			delete(s.Metadata, k)
 		}
-		allsets[k.Tags] = allsets[k.Tags] + 1
-		if len(k.TagSet()) > max {
-			max = len(k.TagSet())
-		}
 	}
-	for k, v := range allsets {
-		fmt.Println(k, v)
-	}
-	fmt.Println(len(allsets), max)
-
-	slog.Fatal("Exiting")
+	slog.Fatal("aaa", len(s.Metadata))
 	if err := decode(db, dbMetric, &s.Search.Metric); err != nil {
 		slog.Errorln(dbMetric, err)
 	}
