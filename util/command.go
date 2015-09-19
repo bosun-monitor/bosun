@@ -47,10 +47,13 @@ func Command(timeout time.Duration, stdin io.Reader, name string, arg ...string)
 		case err := <-done:
 			return &b, err
 		case <-interrupt:
-			c.Process.Signal(os.Interrupt)
+			if c.Process != nil {
+				c.Process.Signal(os.Interrupt)
+			}
 		case <-kill:
-			// todo: figure out if this can leave the done chan hanging open
-			c.Process.Kill()
+			if c.Process != nil {
+				c.Process.Kill()
+			}
 			return nil, ErrTimeout
 		}
 	}
