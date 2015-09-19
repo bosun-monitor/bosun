@@ -2079,7 +2079,6 @@ bosunControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route
         $scope.host = search.host;
         $scope.time = search.time;
         $scope.tab = search.tab || "stats";
-        $scope.idata = [];
         $scope.fsdata = [];
         $scope.metrics = [];
         var currentURL = $location.url();
@@ -2148,85 +2147,77 @@ bosunControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route
             $scope.mem_total = Math.max.apply(null, data.Series[0].Data.map(function (d) { return d[1]; }));
             $scope.mem = [data.Series[1]];
         });
-        $http.get('/api/tagv/iface/os.net.bytes?host=' + $scope.host)
+        var net_bytes_r = new Request();
+        net_bytes_r.start = $scope.time;
+        net_bytes_r.queries = [
+            new Query({
+                metric: "os.net.bytes",
+                rate: true,
+                rateOptions: { counter: true, resetValue: 1 },
+                tags: { host: $scope.host, iface: "*", direction: "*" }
+            })
+        ];
+        $http.get('/api/graph?' + 'json=' + encodeURIComponent(JSON.stringify(net_bytes_r)) + autods)
             .success(function (data) {
-            angular.forEach(data, function (i, idx) {
-                $scope.idata[idx] = {
-                    Name: i
-                };
-            });
-            function next(idx) {
-                var idata = $scope.idata[idx];
-                if (!idata || currentURL != $location.url()) {
-                    return;
-                }
-                var net_bytes_r = new Request();
-                net_bytes_r.start = $scope.time;
-                net_bytes_r.queries = [
-                    new Query({
-                        metric: "os.net.bytes",
-                        rate: true,
-                        rateOptions: { counter: true, resetValue: 1 },
-                        tags: { host: $scope.host, iface: idata.Name, direction: "*" }
-                    })
-                ];
-                $http.get('/api/graph?' + 'json=' + encodeURIComponent(JSON.stringify(net_bytes_r)) + autods)
-                    .success(function (data) {
-                    if (!data.Series) {
-                        return;
-                    }
-                    angular.forEach(data.Series, function (d) {
-                        d.Data = d.Data.map(function (dp) { return [dp[0], dp[1] * 8]; });
-                        if (d.Name.indexOf("direction=out") != -1) {
-                            d.Data = d.Data.map(function (dp) { return [dp[0], dp[1] * -1]; });
-                            d.Name = "out";
-                        }
-                        else {
-                            d.Name = "in";
-                        }
-                    });
-                    $scope.idata[idx].Data = data.Series;
-                })
-                    .finally(function () {
-                    next(idx + 1);
-                });
+            if (!data.Series) {
+                return;
             }
-            next(0);
-        });
-        $http.get('/api/tagv/disk/os.disk.fs.space_total?host=' + $scope.host)
-            .success(function (data) {
-            angular.forEach(data, function (i, idx) {
-                if (i == '/dev/shm') {
-                    return;
+            var tmp = [];
+            var ifaceSeries = {};
+            angular.forEach(data.Series, function (series, idx) {
+                series.Data = series.Data.map(function (dp) { return [dp[0], dp[1] * 8]; });
+                if (series.Tags.direction == "out") {
+                    series.Data = series.Data.map(function (dp) { return [dp[0], dp[1] * -1]; });
                 }
-                var fs_r = new Request();
-                fs_r.start = $scope.time;
-                fs_r.queries.push(new Query({
-                    metric: "os.disk.fs.space_total",
-                    tags: { host: $scope.host, disk: i }
-                }));
-                fs_r.queries.push(new Query({
-                    metric: "os.disk.fs.space_used",
-                    tags: { host: $scope.host, disk: i }
-                }));
-                $scope.fsdata[idx] = {
-                    Name: i
-                };
-                $http.get('/api/graph?' + 'json=' + encodeURIComponent(JSON.stringify(fs_r)) + autods)
-                    .success(function (data) {
-                    if (!data.Series) {
-                        return;
-                    }
-                    data.Series[1].Name = 'Used';
-                    var total = Math.max.apply(null, data.Series[0].Data.map(function (d) { return d[1]; }));
-                    var c_val = data.Series[1].Data.slice(-1)[0][1];
-                    var percent_used = c_val / total * 100;
-                    $scope.fsdata[idx].total = total;
-                    $scope.fsdata[idx].c_val = c_val;
-                    $scope.fsdata[idx].percent_used = percent_used;
-                    $scope.fsdata[idx].Data = [data.Series[1]];
-                });
+                if (!ifaceSeries.hasOwnProperty(series.Tags.iface)) {
+                    ifaceSeries[series.Tags.iface] = [series];
+                }
+                else {
+                    ifaceSeries[series.Tags.iface].push(series);
+                    tmp.push(ifaceSeries[series.Tags.iface]);
+                }
             });
+            $scope.idata = tmp;
+        });
+        var fs_r = new Request();
+        fs_r.start = $scope.time;
+        fs_r.queries = [
+            new Query({
+                metric: "os.disk.fs.space_total",
+                tags: { host: $scope.host, disk: "*" }
+            }),
+            new Query({
+                metric: "os.disk.fs.space_used",
+                tags: { host: $scope.host, disk: "*" }
+            })
+        ];
+        $http.get('/api/graph?' + 'json=' + encodeURIComponent(JSON.stringify(fs_r)) + autods)
+            .success(function (data) {
+            if (!data.Series) {
+                return;
+            }
+            var tmp = [];
+            var fsSeries = {};
+            angular.forEach(data.Series, function (series, idx) {
+                var stat = series.Data[series.Data.length - 1][1];
+                var prop = "";
+                if (series.Metric == "os.disk.fs.space_total") {
+                    prop = "total";
+                }
+                else {
+                    prop = "used";
+                }
+                if (!fsSeries.hasOwnProperty(series.Tags.disk)) {
+                    fsSeries[series.Tags.disk] = [series];
+                    fsSeries[series.Tags.disk][prop] = stat;
+                }
+                else {
+                    fsSeries[series.Tags.disk].push(series);
+                    fsSeries[series.Tags.disk][prop] = stat;
+                    tmp.push(fsSeries[series.Tags.disk]);
+                }
+            });
+            $scope.fsdata = tmp;
         });
     }]);
 bosunControllers.controller('IncidentCtrl', ['$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {

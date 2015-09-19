@@ -2,7 +2,6 @@ package web
 
 import (
 	"net/http"
-	"strings"
 	"time"
 
 	"bosun.org/_third_party/github.com/MiniProfiler/go/miniprofiler"
@@ -14,6 +13,10 @@ import (
 func UniqueMetrics(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	values := schedule.Search.UniqueMetrics()
 	// remove anything starting with double underscore.
+	q := r.URL.Query()
+	if v := q.Get("unfiltered"); v != "" {
+		return values, nil
+	}
 	filtered := []string{}
 	for _, v := range values {
 		if len(v) < 2 || v[0:2] != "__" {
@@ -34,18 +37,7 @@ func TagValuesByMetricTagKey(t miniprofiler.Timer, w http.ResponseWriter, r *htt
 	vars := mux.Vars(r)
 	metric := vars["metric"]
 	tagk := vars["tagk"]
-	q := r.URL.Query()
-	var values []string
-	if len(q) > 0 {
-		tsf := make(map[string]string)
-		for k, v := range q {
-			tsf[k] = strings.Join(v, "")
-		}
-		values = schedule.Search.FilteredTagValuesByMetricTagKey(metric, tagk, tsf)
-	} else {
-		values = schedule.Search.TagValuesByMetricTagKey(metric, tagk, 0)
-	}
-	return values, nil
+	return schedule.Search.TagValuesByMetricTagKey(metric, tagk, 0), nil
 }
 
 func MetricsByTagPair(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
