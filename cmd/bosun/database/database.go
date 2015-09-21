@@ -7,6 +7,7 @@ import (
 	"log"
 	"time"
 
+	"bosun.org/collect"
 	"bosun.org/opentsdb"
 	"github.com/garyburd/redigo/redis"
 	"github.com/siddontang/ledisdb/config"
@@ -21,6 +22,7 @@ type DataAccess interface {
 	GetMetricMetadata(metric string) (*MetricMetadata, error)
 
 	PutTagMetadata(tags opentsdb.TagSet, name string, value string, updated time.Time) error
+	GetTagMetadata(tags opentsdb.TagSet, name string) ([]*TagMetadata, error)
 }
 
 type dataAccess struct {
@@ -75,6 +77,7 @@ func newPool(server, password string, database int) *redis.Pool {
 			return c, err
 		},
 		TestOnBorrow: func(c redis.Conn, t time.Time) error {
+			defer collect.StartTimer("redis", opentsdb.TagSet{"op": "Ping"})()
 			_, err := c.Do("PING")
 			return err
 		},

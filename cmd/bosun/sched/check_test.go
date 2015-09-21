@@ -35,7 +35,7 @@ func TestCheckFlapping(t *testing.T) {
 		t.Fatal(err)
 	}
 	c.StateFile = ""
-	s.Init(c)
+	s.Init(c, nil)
 	ak := expr.NewAlertKey("a", nil)
 	r := &RunHistory{
 		Events: map[expr.AlertKey]*Event{
@@ -127,7 +127,7 @@ func TestCheckSilence(t *testing.T) {
 		t.Fatal(err)
 	}
 	c.StateFile = ""
-	err = s.Init(c)
+	err = s.Init(c, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -156,7 +156,7 @@ func TestIncidentIds(t *testing.T) {
 		t.Fatal(err)
 	}
 	c.StateFile = ""
-	s.Init(c)
+	s.Init(c, nil)
 	ak := expr.NewAlertKey("a", nil)
 	r := &RunHistory{
 		Events: map[expr.AlertKey]*Event{
@@ -223,7 +223,7 @@ func TestCheckNotify(t *testing.T) {
 		t.Fatal(err)
 	}
 	c.StateFile = ""
-	err = s.Init(c)
+	err = s.Init(c, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -269,7 +269,7 @@ func TestCheckNotifyUnknown(t *testing.T) {
 		t.Fatal(err)
 	}
 	c.StateFile = ""
-	err = s.Init(c)
+	err = s.Init(c, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -332,7 +332,7 @@ func TestCheckNotifyUnknownDefault(t *testing.T) {
 		t.Fatal(err)
 	}
 	c.StateFile = ""
-	err = s.Init(c)
+	err = s.Init(c, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -400,7 +400,7 @@ func TestCheckNotifyLog(t *testing.T) {
 		t.Fatal(err)
 	}
 	c.StateFile = ""
-	err = s.Init(c)
+	err = s.Init(c, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -465,7 +465,7 @@ func TestCheckCritUnknownEmpty(t *testing.T) {
 		t.Fatal(err)
 	}
 	c.StateFile = ""
-	s.Init(c)
+	s.Init(c, nil)
 	ak := expr.NewAlertKey("a", nil)
 	r := &RunHistory{
 		Events: map[expr.AlertKey]*Event{

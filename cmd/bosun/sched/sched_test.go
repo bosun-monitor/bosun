@@ -89,7 +89,7 @@ func testSched(t *testing.T, st *schedTest) (s *Schedule) {
 	c.StateFile = ""
 	time.Sleep(time.Millisecond * 250)
 	s = new(Schedule)
-	s.Init(c)
+	s.Init(c, nil)
 	if st.previous != nil {
 		s.status = st.previous
 	}

@@ -49,7 +49,6 @@ const (
 	dbNotifications    = "notifications"
 	dbSilence          = "silence"
 	dbStatus           = "status"
-	dbMetadata         = "metadata"
 	dbIncidents        = "incidents"
 	dbErrors           = "errors"
 )
@@ -67,7 +66,6 @@ func (s *Schedule) save() {
 		dbNotifications: s.Notifications,
 		dbSilence:       s.Silence,
 		dbStatus:        s.status,
-		dbMetadata:      s.Metadata,
 		dbIncidents:     s.Incidents,
 		dbErrors:        s.AlertStatuses,
 	}
@@ -151,18 +149,18 @@ func (s *Schedule) RestoreState() error {
 
 	s.Notifications = nil
 	db := s.db
-
-	if err := decode(db, dbMetadata, &s.Metadata); err != nil {
-		slog.Errorln(dbMetadata, err)
-	}
-	for k, v := range s.Metadata {
-		s.data.PutTagMetadata(k.TagSet(), k.Name, fmt.Sprint(v.Value), v.Time)
-		if k.Name == "desc" || k.Name == "rate" || k.Name == "unit" {
-			s.PutMetadata(k, v.Value)
-			delete(s.Metadata, k)
-		}
-	}
-	slog.Fatal("aaa", len(s.Metadata))
+	// TODO: migrate metadata
+	//	if err := decode(db, dbMetadata, &s.Metadata); err != nil {
+	//		slog.Errorln(dbMetadata, err)
+	//	}
+	/*
+		for k, v := range s.Metadata {
+			s.data.PutTagMetadata(k.TagSet(), k.Name, fmt.Sprint(v.Value), v.Time)
+			if k.Name == "desc" || k.Name == "rate" || k.Name == "unit" {
+				s.PutMetadata(k, v.Value)
+				delete(s.Metadata, k)
+			}
+		}*/
 	if err := decode(db, dbMetric, &s.Search.Metric); err != nil {
 		slog.Errorln(dbMetric, err)
 	}

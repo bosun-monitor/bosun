@@ -4,8 +4,20 @@ import (
 	"fmt"
 	"time"
 
+	"bosun.org/collect"
+	"bosun.org/opentsdb"
 	"github.com/garyburd/redigo/redis"
 )
+
+/*
+Metric metadata is the fields associated with every metric: desc, rate and unit.
+They are stored as a simple hash structure:
+
+mmeta:{{metric}} -> {desc:"",unit:"",rate:"",lastTouched:123}
+
+lastTouched time is unix timestamp of last time this metric metadata was set.
+
+*/
 
 func metricMetaKey(metric string) string {
 	return fmt.Sprintf("mmeta:%s", metric)
@@ -14,17 +26,18 @@ func metricMetaKey(metric string) string {
 const metricMetaTTL = int((time.Hour * 24 * 7) / time.Second)
 
 func (d *dataAccess) PutMetricMetadata(metric string, field string, value string) error {
+	defer collect.StartTimer("redis", opentsdb.TagSet{"op": "PutMetricMeta"})()
 	if field != "desc" && field != "unit" && field != "rate" {
 		return fmt.Errorf("Unknown metric metadata field: %s", field)
 	}
 	conn := d.getConnection()
 	defer conn.Close()
-	_, err := conn.Do("HSET", metricMetaKey(metric), field, value)
-	_, err = conn.Do("HSET", metricMetaKey(metric), "lastTouched", time.Now().UTC().Unix())
+	_, err := conn.Do("HMSET", metricMetaKey(metric), field, value, "lastTouched", time.Now().UTC().Unix())
 	return err
 }
 
 func (d *dataAccess) GetMetricMetadata(metric string) (*MetricMetadata, error) {
+	defer collect.StartTimer("redis", opentsdb.TagSet{"op": "GetMetricMeta"})()
 	conn := d.getConnection()
 	defer conn.Close()
 	v, err := redis.Values(conn.Do("HGETALL", metricMetaKey(metric)))

@@ -41,9 +41,6 @@ type Schedule struct {
 	Silence map[string]*Silence
 	Group   map[time.Time]expr.AlertKeys
 
-	// Key/value data associated with a metric, tagset, and an additional name
-	Metadata map[metadata.Metakey]*Metavalue
-
 	Incidents map[uint64]*Incident
 	Search    *search.Search
 
@@ -58,7 +55,6 @@ type Schedule struct {
 	//unknown states that need to be notified about. Collected and sent in batches.
 	pendingUnknowns map[*conf.Notification][]*State
 
-	metaLock        sync.Mutex
 	alertStatusLock sync.Mutex
 	maxIncidentId   uint64
 	incidentLock    sync.Mutex
@@ -71,28 +67,32 @@ type Schedule struct {
 	data database.DataAccess
 }
 
-func (s *Schedule) Init(c *conf.Conf) error {
+func (s *Schedule) Init(c *conf.Conf, parent *Schedule) error {
 	var err error
 	s.Conf = c
 	s.AlertStatuses = make(map[string]*AlertStatus)
 	s.Silence = make(map[string]*Silence)
 	s.Group = make(map[time.Time]expr.AlertKeys)
-	s.Metadata = make(map[metadata.Metakey]*Metavalue)
 	s.Incidents = make(map[uint64]*Incident)
 	s.pendingUnknowns = make(map[*conf.Notification][]*State)
 	s.status = make(States)
 	s.Search = search.NewSearch()
 	s.LastCheck = time.Now()
 	s.ctx = &checkContext{time.Now(), cache.New(0)}
-	if c.RedisHost != "" {
-		s.data = database.NewDataAccess(c.RedisHost, true)
-	} else {
-		bind := "127.0.0.1:9565"
-		_, err := database.StartLedis(c.LedisDir, bind)
-		if err != nil {
-			return err
+	if parent == nil {
+		if c.RedisHost != "" {
+			s.data = database.NewDataAccess(c.RedisHost, true)
+		} else {
+			bind := "127.0.0.1:9565"
+			_, err := database.StartLedis(c.LedisDir, bind)
+			if err != nil {
+				return err
+			}
+			s.data = database.NewDataAccess(bind, false)
 		}
-		s.data = database.NewDataAccess(bind, false)
+	} else {
+		s.data = parent.data
+		s.Search = parent.Search
 	}
 	if c.StateFile != "" {
 		s.db, err = bolt.Open(c.StateFile, 0600, nil)
@@ -149,9 +149,7 @@ func (s *Schedule) PutMetadata(k metadata.Metakey, v interface{}) error {
 
 	isCoreMeta := (k.Name == "desc" || k.Name == "unit" || k.Name == "rate")
 	if !isCoreMeta {
-		s.metaLock.Lock()
-		s.Metadata[k] = &Metavalue{time.Now().UTC(), v}
-		s.metaLock.Unlock()
+		s.data.PutTagMetadata(k.TagSet(), k.Name, fmt.Sprint(v), time.Now().UTC())
 		return nil
 	}
 	if k.Metric == "" {
@@ -205,21 +203,19 @@ func (s *Schedule) GetMetadata(metric string, subset opentsdb.TagSet) ([]metadat
 			})
 		}
 	} else {
-		s.metaLock.Lock()
-
-		for k, mv := range s.Metadata {
-			if !k.TagSet().Subset(subset) {
-				continue
-			}
+		meta, err := s.data.GetTagMetadata(subset, "")
+		if err != nil {
+			return nil, err
+		}
+		for _, m := range meta {
+			tm := time.Unix(m.LastTouched, 0)
 			ms = append(ms, metadata.Metasend{
-				Metric: k.Metric,
-				Tags:   k.TagSet(),
-				Name:   k.Name,
-				Value:  mv.Value,
-				Time:   &mv.Time,
+				Tags:  m.Tags,
+				Name:  m.Name,
+				Value: m.Value,
+				Time:  &tm,
 			})
 		}
-		s.metaLock.Unlock()
 	}
 	return ms, nil
 }
@@ -494,7 +490,7 @@ func Run() error {
 }
 
 func (s *Schedule) Load(c *conf.Conf) error {
-	if err := s.Init(c); err != nil {
+	if err := s.Init(c, nil); err != nil {
 		return err
 	}
 	if s.db == nil {
@@ -960,110 +956,108 @@ func (s *Schedule) Host(filter string) map[string]*HostData {
 	for _, h := range s.Search.TagValuesByTagKey("host", time.Hour*7*24) {
 		hosts[h] = struct{}{}
 	}
-	s.metaLock.Lock()
 	res := make(map[string]*HostData)
-	for k, mv := range s.Metadata {
-		tags := k.TagSet()
-		if k.Metric != "" || tags["host"] == "" {
-			continue
-		}
-		if _, ok := hosts[tags["host"]]; !ok {
-			continue
-		}
-		e := res[tags["host"]]
-		if e == nil {
-			host := fmt.Sprintf("{host=%s}", tags["host"])
-			e = &HostData{
-				Name:       tags["host"],
-				Interfaces: make(map[string]*HostInterface),
-			}
-			e.CPU.Processors = make(map[string]string)
-			if v, err := s.Search.GetLast("os.cpu", host, true); err != nil {
-				e.CPU.Used = v
-			}
-			e.Memory.Modules = make(map[string]string)
-			if v, err := s.Search.GetLast("os.mem.total", host, false); err != nil {
-				e.Memory.Total = int64(v)
-			}
-			if v, err := s.Search.GetLast("os.mem.used", host, false); err != nil {
-				e.Memory.Used = int64(v)
-			}
-			res[tags["host"]] = e
-		}
-		var iface *HostInterface
-		if name := tags["iface"]; name != "" {
-			if e.Interfaces[name] == nil {
-				h := new(HostInterface)
-				itag := opentsdb.TagSet{
-					"host":  tags["host"],
-					"iface": name,
-				}
-				intag := opentsdb.TagSet{"direction": "in"}.Merge(itag).String()
-				if v, err := s.Search.GetLast("os.net.bytes", intag, true); err != nil {
-					h.Inbps = int64(v) * 8
-				}
-				outtag := opentsdb.TagSet{"direction": "out"}.Merge(itag).String()
-				if v, err := s.Search.GetLast("os.net.bytes", outtag, true); err != nil {
-					h.Outbps = int64(v) * 8
-				}
-				e.Interfaces[name] = h
-			}
-			iface = e.Interfaces[name]
-		}
-		switch val := mv.Value.(type) {
-		case string:
-			switch k.Name {
-			case "addr":
-				if iface != nil {
-					iface.IPAddresses = append(iface.IPAddresses, val)
-				}
-			case "description":
-				if iface != nil {
-					iface.Description = val
-				}
-			case "mac":
-				if iface != nil {
-					iface.MAC = val
-				}
-			case "manufacturer":
-				e.Manufacturer = val
-			case "master":
-				if iface != nil {
-					iface.Master = val
-				}
-			case "memory":
-				if name := tags["name"]; name != "" {
-					e.Memory.Modules[name] = val
-				}
-			case "model":
-				e.Model = val
-			case "name":
-				if iface != nil {
-					iface.Name = val
-				}
-			case "processor":
-				if name := tags["name"]; name != "" {
-					e.CPU.Processors[name] = val
-				}
-			case "serialNumber":
-				e.SerialNumber = val
-			case "version":
-				e.OS.Version = val
-			case "versionCaption", "uname":
-				e.OS.Caption = val
-			}
-		case float64:
-			switch k.Name {
-			case "memoryTotal":
-				e.Memory.Total = int64(val)
-			case "speed":
-				if iface != nil {
-					iface.LinkSpeed = int64(val)
-				}
-			}
-		}
-	}
-	s.metaLock.Unlock()
+	//	for k, mv := range s.Metadata {
+	//		tags := k.TagSet()
+	//		if k.Metric != "" || tags["host"] == "" {
+	//			continue
+	//		}
+	//		if _, ok := hosts[tags["host"]]; !ok {
+	//			continue
+	//		}
+	//		e := res[tags["host"]]
+	//		if e == nil {
+	//			host := fmt.Sprintf("{host=%s}", tags["host"])
+	//			e = &HostData{
+	//				Name:       tags["host"],
+	//				Interfaces: make(map[string]*HostInterface),
+	//			}
+	//			e.CPU.Processors = make(map[string]string)
+	//			if v, err := s.Search.GetLast("os.cpu", host, true); err != nil {
+	//				e.CPU.Used = v
+	//			}
+	//			e.Memory.Modules = make(map[string]string)
+	//			if v, err := s.Search.GetLast("os.mem.total", host, false); err != nil {
+	//				e.Memory.Total = int64(v)
+	//			}
+	//			if v, err := s.Search.GetLast("os.mem.used", host, false); err != nil {
+	//				e.Memory.Used = int64(v)
+	//			}
+	//			res[tags["host"]] = e
+	//		}
+	//		var iface *HostInterface
+	//		if name := tags["iface"]; name != "" {
+	//			if e.Interfaces[name] == nil {
+	//				h := new(HostInterface)
+	//				itag := opentsdb.TagSet{
+	//					"host":  tags["host"],
+	//					"iface": name,
+	//				}
+	//				intag := opentsdb.TagSet{"direction": "in"}.Merge(itag).String()
+	//				if v, err := s.Search.GetLast("os.net.bytes", intag, true); err != nil {
+	//					h.Inbps = int64(v) * 8
+	//				}
+	//				outtag := opentsdb.TagSet{"direction": "out"}.Merge(itag).String()
+	//				if v, err := s.Search.GetLast("os.net.bytes", outtag, true); err != nil {
+	//					h.Outbps = int64(v) * 8
+	//				}
+	//				e.Interfaces[name] = h
+	//			}
+	//			iface = e.Interfaces[name]
+	//		}
+	//		switch val := mv.Value.(type) {
+	//		case string:
+	//			switch k.Name {
+	//			case "addr":
+	//				if iface != nil {
+	//					iface.IPAddresses = append(iface.IPAddresses, val)
+	//				}
+	//			case "description":
+	//				if iface != nil {
+	//					iface.Description = val
+	//				}
+	//			case "mac":
+	//				if iface != nil {
+	//					iface.MAC = val
+	//				}
+	//			case "manufacturer":
+	//				e.Manufacturer = val
+	//			case "master":
+	//				if iface != nil {
+	//					iface.Master = val
+	//				}
+	//			case "memory":
+	//				if name := tags["name"]; name != "" {
+	//					e.Memory.Modules[name] = val
+	//				}
+	//			case "model":
+	//				e.Model = val
+	//			case "name":
+	//				if iface != nil {
+	//					iface.Name = val
+	//				}
+	//			case "processor":
+	//				if name := tags["name"]; name != "" {
+	//					e.CPU.Processors[name] = val
+	//				}
+	//			case "serialNumber":
+	//				e.SerialNumber = val
+	//			case "version":
+	//				e.OS.Version = val
+	//			case "versionCaption", "uname":
+	//				e.OS.Caption = val
+	//			}
+	//		case float64:
+	//			switch k.Name {
+	//			case "memoryTotal":
+	//				e.Memory.Total = int64(val)
+	//			case "speed":
+	//				if iface != nil {
+	//					iface.LinkSpeed = int64(val)
+	//				}
+	//			}
+	//		}
+	//	}
 	return res
 }
 

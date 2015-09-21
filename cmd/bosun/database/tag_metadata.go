@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"bosun.org/collect"
 	"bosun.org/opentsdb"
 	"github.com/garyburd/redigo/redis"
 )
@@ -13,9 +14,9 @@ import (
 /*
 	Tag metadata gets stored in various ways:
 
-	Metadata itself gets stored as a simple key (tmeta:tags:name) -> timestamp:value.
+	Metadata itself gets stored as a simple key (tmeta:tags:name) -> "timestamp:value".
 
-	To facilitate subset lookups, there will be index sets for each subset of inserted tags.
+	To facilitate subset lookups, there will be index sets for each possible subset of inserted tags.
 	tmeta:idx:{subset} -> set of tmeta keys
 */
 
@@ -28,7 +29,9 @@ func tagMetaIdxKey(sub string) string {
 }
 
 func (d *dataAccess) PutTagMetadata(tags opentsdb.TagSet, name string, value string, updated time.Time) error {
+	defer collect.StartTimer("redis", opentsdb.TagSet{"op": "PutTagMeta"})()
 	conn := d.getConnection()
+	defer conn.Close()
 	key := tagMetaKey(tags, name)
 	keyValue := fmt.Sprintf("%d:%s", updated.UTC().Unix(), value)
 	_, err := conn.Do("SET", key, keyValue)
@@ -45,7 +48,9 @@ func (d *dataAccess) PutTagMetadata(tags opentsdb.TagSet, name string, value str
 }
 
 func (d *dataAccess) GetTagMetadata(tags opentsdb.TagSet, name string) ([]*TagMetadata, error) {
+	defer collect.StartTimer("redis", opentsdb.TagSet{"op": "GetTagMeta"})()
 	conn := d.getConnection()
+	defer conn.Close()
 	key := tagMetaIdxKey(tags.Tags())
 	keys, err := redis.Strings(conn.Do("SMEMBERS", key))
 	if err != nil {
