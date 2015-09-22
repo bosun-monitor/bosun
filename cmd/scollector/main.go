@@ -226,7 +226,7 @@ func main() {
 	time.AfterFunc(5*time.Second, func() {
 		os.Exit(0)
 	})
-	collect.Stop()
+	collect.Flush()
 }
 
 func readConf() *conf.Conf {
