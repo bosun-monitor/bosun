@@ -80,7 +80,7 @@ func isExecutable(f os.FileInfo) bool {
 	}
 }
 
-func (c *ProgramCollector) Run(dpchan chan<- *opentsdb.DataPoint) {
+func (c *ProgramCollector) Run(dpchan chan<- *opentsdb.DataPoint, quit <-chan struct{}) {
 	if c.Interval == 0 {
 		for {
 			next := time.After(DefaultFreq)
@@ -94,7 +94,12 @@ func (c *ProgramCollector) Run(dpchan chan<- *opentsdb.DataPoint) {
 		for {
 			next := time.After(c.Interval)
 			c.runProgram(dpchan)
-			<-next
+			select {
+			case <-next:
+			case <-quit:
+				return
+			}
+
 		}
 	}
 }
