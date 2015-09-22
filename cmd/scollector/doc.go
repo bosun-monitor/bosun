@@ -144,7 +144,7 @@ to at a 5 minute poll interval.
 
 MIBs (map of string to table): Allows user-specified, custom SNMP configurations.
 
-    [[MIBs]]
+    [MIBs]
       [MIBs.cisco] #can name anything you want
         BaseOid = "1.3.6.1.4.1.9.9" # common base for all metrics in this mib
 
@@ -157,7 +157,7 @@ MIBs (map of string to table): Allows user-specified, custom SNMP configurations
           Description = "cpu percent used by this device"
 
         # can also iterate over snmp tables
-        [[MIBSs.cisco.Trees]]
+        [[MIBs.cisco.Trees]]
           BaseOid = ".48.1.1.1" #common base oid for this tree
 
           # tags to apply to metrics in this tree. Can come from another oid, or specify "idx" to use
