@@ -7,48 +7,48 @@ import (
 
 type Conf struct {
 	// Host is the OpenTSDB or Bosun host to send data.
-	Host string
+	Host string `json:",omitempty"`
 	// FullHost enables full hostnames: doesn't truncate to first ".".
-	FullHost bool
+	FullHost bool `json:",omitempty"`
 	// ColDir is the external collectors directory.
-	ColDir string
+	ColDir string `json:",omitempty"`
 	// Tags are added to every datapoint. If a collector specifies the same tag
 	// key, this one will be overwritten. The host tag is not supported.
-	Tags opentsdb.TagSet
+	Tags opentsdb.TagSet `json:",omitempty"`
 	// Hostname overrides the system hostname.
-	Hostname string
+	Hostname string `json:",omitempty"`
 	// DisableSelf disables sending of scollector self metrics.
-	DisableSelf bool
+	DisableSelf bool `json:",omitempty"`
 	// Freq is the default frequency in seconds for most collectors.
 	Freq int
 	// BatchSize is the number of metrics that will be sent in each batch.
 	BatchSize int
 	// Filter filters collectors matching these terms.
-	Filter []string
+	Filter []string `json:",omitempty"`
 	// PProf is an IP:Port binding to be used for debugging with pprof package.
 	// Examples: localhost:6060 for loopback or :6060 for all IP addresses.
-	PProf string
+	PProf string `json:",omitempty"`
 
 	// KeepalivedCommunity, if not empty, enables the Keepalived collector with
 	// the specified community.
-	KeepalivedCommunity string
+	KeepalivedCommunity string `json:",omitempty"`
 
-	HAProxy       []HAProxy
-	SNMP          []SNMP
-	MIBS          map[string]MIB
-	ICMP          []ICMP
-	Vsphere       []Vsphere
-	AWS           []AWS
-	Process       []ProcessParams
-	ProcessDotNet []ProcessDotNet
-	HTTPUnit      []HTTPUnit
-	Riak          []Riak
-	Github        []Github
+	HAProxy       []HAProxy       `json:",omitempty"`
+	SNMP          []SNMP          `json:",omitempty"`
+	MIBS          map[string]MIB  `json:",omitempty"`
+	ICMP          []ICMP          `json:",omitempty"`
+	Vsphere       []Vsphere       `json:",omitempty"`
+	AWS           []AWS           `json:",omitempty"`
+	Process       []ProcessParams `json:",omitempty"`
+	ProcessDotNet []ProcessDotNet `json:",omitempty"`
+	HTTPUnit      []HTTPUnit      `json:",omitempty"`
+	Riak          []Riak          `json:",omitempty"`
+	Github        []Github        `json:",omitempty"`
 	// ElasticIndexFilters takes regular expressions and excludes indicies that
 	// match those filters from being monitored for metrics in the elastic.indices
 	// namespace
-	ElasticIndexFilters []string
-	RabbitMQ            []RabbitMQ
+	ElasticIndexFilters []string   `json:",omitempty"`
+	RabbitMQ            []RabbitMQ `json:",omitempty"`
 }
 
 type HAProxy struct {
@@ -86,18 +86,18 @@ type SNMP struct {
 
 type MIB struct {
 	BaseOid string
-	Metrics []MIBMetric // single key metrics
-	Trees   []MIBTree   // tagged array metrics
+	Metrics []MIBMetric `json:",omitempty"` // single key metrics
+	Trees   []MIBTree   `json:",omitempty"` // tagged array metrics
 }
 
 type MIBMetric struct {
 	Metric      string
 	Oid         string
-	Unit        string // metadata unit
-	RateType    string // defaults to gauge
-	Description string
-	FallbackOid string // Oid to try if main one doesn't work. Used in cisco where different models use different oids
-	Tags        string // static tags to populate for this metric. "direction=in"
+	Unit        string `json:",omitempty"` // metadata unit
+	RateType    string `json:",omitempty"` // defaults to gauge
+	Description string `json:",omitempty"`
+	FallbackOid string `json:",omitempty"` // Oid to try if main one doesn't work. Used in cisco where different models use different oids
+	Tags        string `json:",omitempty"` // static tags to populate for this metric. "direction=in"
 }
 
 type MIBTag struct {
@@ -116,8 +116,8 @@ type ProcessDotNet struct {
 }
 
 type HTTPUnit struct {
-	TOML  string
 	Hiera string
+	TOML  string
 }
 
 type Riak struct {

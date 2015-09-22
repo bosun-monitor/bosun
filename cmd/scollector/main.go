@@ -37,6 +37,7 @@ var (
 	flagDisableMetadata = flag.Bool("m", false, "Disable sending of metadata.")
 	flagVersion         = flag.Bool("version", false, "Prints the version and exits.")
 	flagConf            = flag.String("conf", "", "Location of configuration file. Defaults to scollector.toml in directory of the scollector executable.")
+	flagToJson          = flag.Bool("toJson", false, "Convert toml config file from -conf into json. Will print to stdout and exit.")
 	mains               []func()
 )
 
@@ -237,13 +238,22 @@ func readConf() *conf.Conf {
 		}
 	} else {
 		defer f.Close()
-		if ext == "toml" {
+		if ext == ".toml" {
 			md, err := toml.DecodeReader(f, conf)
 			if err != nil {
 				slog.Fatal(err)
 			}
 			if u := md.Undecoded(); len(u) > 0 {
 				slog.Fatalf("extra keys in %s: %v", loc, u)
+			}
+			if *flagToJson {
+				out, err := json.MarshalIndent(conf, "", "   ")
+				json.Marshal(conf)
+				if err != nil {
+					slog.Fatal(err)
+				}
+				fmt.Print(string(out))
+				os.Exit(0)
 			}
 		} else {
 			decoder := json.NewDecoder(f)
