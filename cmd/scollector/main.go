@@ -1,11 +1,9 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 	_ "net/http/pprof"
@@ -39,18 +37,12 @@ var (
 	flagDisableMetadata = flag.Bool("m", false, "Disable sending of metadata.")
 	flagVersion         = flag.Bool("version", false, "Prints the version and exits.")
 	flagConf            = flag.String("conf", "", "Location of configuration file. Defaults to scollector.toml in directory of the scollector executable.")
-	flagToToml          = flag.String("totoml", "", "Location of destination toml file to convert. Reads from value of -conf.")
-
-	mains []func()
+	flagToJson          = flag.Bool("toJson", false, "Convert toml config file from -conf into json. Will print to stdout and exit.")
+	mains               []func()
 )
 
 func main() {
 	flag.Parse()
-	if *flagToToml != "" {
-		toToml(*flagToToml)
-		fmt.Println("toml conversion complete; remove all empty values by hand (empty strings, 0)")
-		return
-	}
 	if *flagPrint || *flagDebug {
 		slog.Set(&slog.StdLog{Log: log.New(os.Stdout, "", log.LstdFlags)})
 	}
@@ -235,6 +227,7 @@ func readConf() *conf.Conf {
 		dir := filepath.Dir(p)
 		loc = filepath.Join(dir, "scollector.toml")
 	}
+	ext := filepath.Ext(loc)
 	f, err := os.Open(loc)
 	if err != nil {
 		if *flagConf != "" {
@@ -245,12 +238,29 @@ func readConf() *conf.Conf {
 		}
 	} else {
 		defer f.Close()
-		md, err := toml.DecodeReader(f, conf)
-		if err != nil {
-			slog.Fatal(err)
-		}
-		if u := md.Undecoded(); len(u) > 0 {
-			slog.Fatalf("extra keys in %s: %v", loc, u)
+		if ext == ".toml" {
+			md, err := toml.DecodeReader(f, conf)
+			if err != nil {
+				slog.Fatal(err)
+			}
+			if u := md.Undecoded(); len(u) > 0 {
+				slog.Fatalf("extra keys in %s: %v", loc, u)
+			}
+			if *flagToJson {
+				out, err := json.MarshalIndent(conf, "", "   ")
+				json.Marshal(conf)
+				if err != nil {
+					slog.Fatal(err)
+				}
+				fmt.Print(string(out))
+				os.Exit(0)
+			}
+		} else {
+			decoder := json.NewDecoder(f)
+			err := decoder.Decode(conf)
+			if err != nil {
+				slog.Fatal(err)
+			}
 		}
 	}
 	return conf
@@ -307,178 +317,4 @@ func printPut(c chan *opentsdb.DataPoint) {
 		b, _ := json.Marshal(dp)
 		slog.Info(string(b))
 	}
-}
-
-func toToml(fname string) {
-	var c conf.Conf
-	b, err := ioutil.ReadFile(*flagConf)
-	if err != nil {
-		slog.Fatal(err)
-	}
-	extra := new(bytes.Buffer)
-	var hap conf.HAProxy
-	for i, line := range strings.Split(string(b), "\n") {
-		if strings.TrimSpace(line) == "" {
-			continue
-		}
-		sp := strings.SplitN(line, "=", 2)
-		if len(sp) != 2 {
-			slog.Fatalf("expected = in %v:%v", *flagConf, i+1)
-		}
-		k := strings.TrimSpace(sp[0])
-		v := strings.TrimSpace(sp[1])
-		switch k {
-		case "host":
-			c.Host = v
-		case "hostname":
-			c.Hostname = v
-		case "filter":
-			c.Filter = strings.Split(v, ",")
-		case "coldir":
-			c.ColDir = v
-		case "snmp":
-			for _, s := range strings.Split(v, ",") {
-				sp := strings.Split(s, "@")
-				if len(sp) != 2 {
-					slog.Fatal("invalid snmp string:", v)
-				}
-				c.SNMP = append(c.SNMP, conf.SNMP{
-					Community: sp[0],
-					Host:      sp[1],
-				})
-			}
-		case "icmp":
-			for _, i := range strings.Split(v, ",") {
-				c.ICMP = append(c.ICMP, conf.ICMP{Host: i})
-			}
-		case "haproxy":
-			if v != "" {
-				for _, s := range strings.Split(v, ",") {
-					sp := strings.SplitN(s, ":", 2)
-					if len(sp) != 2 {
-						slog.Fatal("invalid haproxy string:", v)
-					}
-					if hap.User != "" || hap.Password != "" {
-						slog.Fatal("only one haproxy line allowed")
-					}
-					hap.User = sp[0]
-					hap.Password = sp[1]
-				}
-			}
-		case "haproxy_instance":
-			sp := strings.SplitN(v, ":", 2)
-			if len(sp) != 2 {
-				slog.Fatal("invalid haproxy_instance string:", v)
-			}
-			hap.Instances = append(hap.Instances, conf.HAProxyInstance{
-				Tier: sp[0],
-				URL:  sp[1],
-			})
-		case "tags":
-			tags, err := opentsdb.ParseTags(v)
-			if err != nil {
-				slog.Fatal(err)
-			}
-			c.Tags = tags
-		case "aws":
-			for _, s := range strings.Split(v, ",") {
-				sp := strings.SplitN(s, ":", 2)
-				if len(sp) != 2 {
-					slog.Fatal("invalid AWS string:", v)
-				}
-				accessKey := sp[0]
-				idx := strings.LastIndex(sp[1], "@")
-				if idx == -1 {
-					slog.Fatal("invalid AWS string:", v)
-				}
-				secretKey := sp[1][:idx]
-				region := sp[1][idx+1:]
-				if len(accessKey) == 0 || len(secretKey) == 0 || len(region) == 0 {
-					slog.Fatal("invalid AWS string:", v)
-				}
-				c.AWS = append(c.AWS, conf.AWS{
-					AccessKey: accessKey,
-					SecretKey: secretKey,
-					Region:    region,
-				})
-			}
-		case "vsphere":
-			for _, s := range strings.Split(v, ",") {
-				sp := strings.SplitN(s, ":", 2)
-				if len(sp) != 2 {
-					slog.Fatal("invalid vsphere string:", v)
-				}
-				user := sp[0]
-				idx := strings.LastIndex(sp[1], "@")
-				if idx == -1 {
-					slog.Fatal("invalid vsphere string:", v)
-				}
-				pwd := sp[1][:idx]
-				host := sp[1][idx+1:]
-				if len(user) == 0 || len(pwd) == 0 || len(host) == 0 {
-					slog.Fatal("invalid vsphere string:", v)
-				}
-				c.Vsphere = append(c.Vsphere, conf.Vsphere{
-					User:     user,
-					Password: pwd,
-					Host:     host,
-				})
-			}
-		case "freq":
-			freq, err := strconv.Atoi(v)
-			if err != nil {
-				slog.Fatal(err)
-			}
-			c.Freq = freq
-		case "process":
-			if runtime.GOOS == "linux" {
-				var p struct {
-					Command string
-					Name    string
-					Args    string
-				}
-				sp := strings.Split(v, ",")
-				if len(sp) > 1 {
-					p.Name = sp[1]
-				}
-				if len(sp) > 2 {
-					p.Args = sp[2]
-				}
-				p.Command = sp[0]
-				extra.WriteString(fmt.Sprintf(`
-[[Process]]
-  Command = %q
-  Name = %q
-  Args = %q
-`, p.Command, p.Name, p.Args))
-			} else if runtime.GOOS == "windows" {
-
-				extra.WriteString(fmt.Sprintf(`
-[[Process]]
-  Name = %q
-`, v))
-			}
-		case "process_dotnet":
-			c.ProcessDotNet = append(c.ProcessDotNet, conf.ProcessDotNet{Name: v})
-		case "keepalived_community":
-			c.KeepalivedCommunity = v
-		default:
-			slog.Fatalf("unknown key in %v:%v", *flagConf, i+1)
-		}
-	}
-	if len(hap.Instances) > 0 {
-		c.HAProxy = append(c.HAProxy, hap)
-	}
-
-	f, err := os.Create(fname)
-	if err != nil {
-		slog.Fatal(err)
-	}
-	if err := toml.NewEncoder(f).Encode(&c); err != nil {
-		slog.Fatal(err)
-	}
-	if _, err := extra.WriteTo(f); err != nil {
-		slog.Fatal(err)
-	}
-	f.Close()
 }
