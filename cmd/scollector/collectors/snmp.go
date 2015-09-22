@@ -5,6 +5,7 @@ import (
 	"io"
 	"math/big"
 	"reflect"
+	"strconv"
 	"strings"
 
 	"bosun.org/_third_party/github.com/mjibson/snmp"
@@ -107,6 +108,25 @@ func snmp_oid(host, community, oid string) (*big.Int, error) {
 	return v, err
 }
 
+func snmp_convertToFloat(v interface{}) (float64, error) {
+	switch val := v.(type) {
+	case int:
+		return float64(val), nil
+	case int32:
+		return float64(val), nil
+	case int64:
+		return float64(val), nil
+	case float64:
+		return val, nil
+	case *big.Int:
+		return float64(val.Int64()), nil
+	case string:
+		return strconv.ParseFloat(val, 64)
+	default:
+		return 0, fmt.Errorf("Cannot convert type %s to float64", reflect.TypeOf(v))
+	}
+}
+
 func combineOids(oid, base string) string {
 	if oid != "" && oid[0] == '.' {
 		return base + oid
@@ -150,7 +170,14 @@ func GenericSnmp(cfg conf.SNMP, mib conf.MIB) (opentsdb.MultiDataPoint, error) {
 		if err != nil {
 			return md, err
 		}
-		Add(&md, metric.Metric, v, tagset, rate, unit, metric.Description)
+		val, err := snmp_convertToFloat(v)
+		if err != nil {
+			return md, err
+		}
+		if metric.Scale != 0 {
+			val = val * metric.Scale
+		}
+		Add(&md, metric.Metric, val, tagset, rate, unit, metric.Description)
 	}
 
 	for _, tree := range mib.Trees {
@@ -202,7 +229,14 @@ func GenericSnmp(cfg conf.SNMP, mib conf.MIB) (opentsdb.MultiDataPoint, error) {
 					}
 					tagset[tag.Key] = fmt.Sprint(tagVal)
 				}
-				Add(&md, metric.Metric, v, tagset, rate, unit, metric.Description)
+				val, err := snmp_convertToFloat(v)
+				if err != nil {
+					return md, err
+				}
+				if metric.Scale != 0 {
+					val = val * metric.Scale
+				}
+				Add(&md, metric.Metric, val, tagset, rate, unit, metric.Description)
 			}
 		}
 	}
