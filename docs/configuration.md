@@ -47,6 +47,10 @@ Every variable is optional, though you should enable at least 1 backend.
 * graphiteHeader: a http header to be sent to graphite on each request in 'key:value' format. optional. can be specified multiple times.
 * logstashElasticHosts: Elasticsearch host populated by logstash. Must be a URL.
 * influxHost: InfluxDB host address ip:port pair.
+* influxUsername: InfluxDB username. If empty will attempt to connect without authentication.
+* influxPassword: InfluxDB password. If empty will attempt to connect without authentication.
+* influxTLS: Whether to use TLS when connecting to InfluxDB. Default is false.
+* influxTimeout: Timeout duration for connections to InfluxDB.
 
 #### settings
 

@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"bosun.org/_third_party/github.com/influxdb/influxdb/client"
 	"bosun.org/opentsdb"
 )
 
@@ -63,7 +64,7 @@ func TestExprSimple(t *testing.T) {
 			t.Error(err)
 			break
 		}
-		r, _, err := e.Execute(nil, nil, nil, "", nil, nil, time.Now(), 0, false, nil, nil, nil)
+		r, _, err := e.Execute(nil, nil, nil, client.Config{}, nil, nil, time.Now(), 0, false, nil, nil, nil)
 		if err != nil {
 			t.Error(err)
 			break
@@ -204,7 +205,7 @@ func TestQueryExpr(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		results, _, err := e.Execute(opentsdb.Host(u.Host), nil, nil, "", nil, nil, queryTime, 0, false, nil, nil, nil)
+		results, _, err := e.Execute(opentsdb.Host(u.Host), nil, nil, client.Config{}, nil, nil, queryTime, 0, false, nil, nil, nil)
 		if err != nil {
 			t.Fatal(err)
 		}

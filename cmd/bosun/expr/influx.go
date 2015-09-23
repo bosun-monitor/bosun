@@ -3,7 +3,6 @@ package expr
 import (
 	"encoding/json"
 	"fmt"
-	"net/url"
 	"strings"
 	"time"
 
@@ -159,14 +158,7 @@ func timeInfluxRequest(e *State, T miniprofiler.Timer, db, query, startDuration,
 	if err != nil {
 		return nil, err
 	}
-	conf := client.Config{
-		URL: url.URL{
-			Scheme: "http",
-			Host:   e.InfluxHost,
-		},
-		Timeout: time.Minute,
-	}
-	conn, err := client.NewClient(conf)
+	conn, err := client.NewClient(e.InfluxConfig)
 	if err != nil {
 		return nil, err
 	}

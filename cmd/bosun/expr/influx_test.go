@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"bosun.org/_third_party/github.com/MiniProfiler/go/miniprofiler"
+	"bosun.org/_third_party/github.com/influxdb/influxdb/client"
 	"bosun.org/opentsdb"
 )
 
@@ -46,8 +47,8 @@ func TestInfluxQueryDuration(t *testing.T) {
 
 func TestInfluxQuery(t *testing.T) {
 	e := State{
-		now:        time.Date(2015, time.February, 25, 0, 0, 0, 0, time.UTC),
-		InfluxHost: "nonexistant:8086",
+		now:          time.Date(2015, time.February, 25, 0, 0, 0, 0, time.UTC),
+		InfluxConfig: client.Config{},
 		squelched: func(tags opentsdb.TagSet) bool {
 			return false
 		},
