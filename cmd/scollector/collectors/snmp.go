@@ -122,6 +122,8 @@ func snmp_convertToFloat(v interface{}) (float64, error) {
 		return float64(val.Int64()), nil
 	case string:
 		return strconv.ParseFloat(val, 64)
+	case []uint8:
+		return strconv.ParseFloat(string(val), 64)
 	default:
 		return 0, fmt.Errorf("Cannot convert type %s to float64", reflect.TypeOf(v))
 	}
