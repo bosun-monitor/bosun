@@ -137,11 +137,6 @@ func (s *Schedule) GetLockStatus() (holder string, since time.Time) {
 	return s.mutexHolder, s.mutexAquired
 }
 
-type Metavalue struct {
-	Time  time.Time
-	Value interface{}
-}
-
 func (s *Schedule) PutMetadata(k metadata.Metakey, v interface{}) error {
 
 	isCoreMeta := (k.Name == "desc" || k.Name == "unit" || k.Name == "rate")

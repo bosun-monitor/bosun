@@ -17,6 +17,7 @@ import (
 	"bosun.org/cmd/bosun/database"
 	"bosun.org/cmd/bosun/expr"
 	"bosun.org/collect"
+	"bosun.org/metadata"
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
 )
@@ -149,18 +150,7 @@ func (s *Schedule) RestoreState() error {
 
 	s.Notifications = nil
 	db := s.db
-	// TODO: migrate metadata
-	//	if err := decode(db, dbMetadata, &s.Metadata); err != nil {
-	//		slog.Errorln(dbMetadata, err)
-	//	}
-	/*
-		for k, v := range s.Metadata {
-			s.data.PutTagMetadata(k.TagSet(), k.Name, fmt.Sprint(v.Value), v.Time)
-			if k.Name == "desc" || k.Name == "rate" || k.Name == "unit" {
-				s.PutMetadata(k, v.Value)
-				delete(s.Metadata, k)
-			}
-		}*/
+
 	if err := decode(db, dbMetric, &s.Search.Metric); err != nil {
 		slog.Errorln(dbMetric, err)
 	}
@@ -343,6 +333,24 @@ func migrateOldDataToRedis(db *bolt.DB, data database.DataAccess) error {
 				if err != nil {
 					return err
 				}
+			}
+		}
+		err = deleteKey(db, "metadata-metric")
+		if err != nil {
+			return err
+		}
+	}
+	//metadata
+	type Metavalue struct {
+		Time  time.Time
+		Value interface{}
+	}
+	metadata := make(map[metadata.Metakey]*Metavalue)
+	if err := decode(db, "metadata", &metadata); err == nil {
+		for k, v := range metadata {
+			err = data.PutTagMetadata(k.TagSet(), k.Name, fmt.Sprint(v.Value), v.Time)
+			if err != nil {
+				return err
 			}
 		}
 		err = deleteKey(db, "metadata-metric")
