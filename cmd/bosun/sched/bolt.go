@@ -315,6 +315,7 @@ func migrateOldDataToRedis(db *bolt.DB, data database.DataAccess) error {
 	}
 	mms := map[string]*MetadataMetric{}
 	if err := decode(db, "metadata-metric", &mms); err == nil {
+		slog.Info("Migrating metric metadata to new database format")
 		for name, mm := range mms {
 			if mm.Description != "" {
 				err = data.PutMetricMetadata(name, "desc", mm.Description)
@@ -347,6 +348,7 @@ func migrateOldDataToRedis(db *bolt.DB, data database.DataAccess) error {
 	}
 	metadata := make(map[metadata.Metakey]*Metavalue)
 	if err := decode(db, "metadata", &metadata); err == nil {
+		slog.Info("Migrating metadata to new database format")
 		for k, v := range metadata {
 			err = data.PutTagMetadata(k.TagSet(), k.Name, fmt.Sprint(v.Value), v.Time)
 			if err != nil {

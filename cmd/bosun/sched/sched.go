@@ -67,7 +67,7 @@ type Schedule struct {
 	DataAccess database.DataAccess
 }
 
-func (s *Schedule) Init2(c *conf.Conf) error {
+func (s *Schedule) Init(c *conf.Conf) error {
 	var err error
 	s.Conf = c
 	s.AlertStatuses = make(map[string]*AlertStatus)
@@ -482,7 +482,7 @@ func Run() error {
 }
 
 func (s *Schedule) Load(c *conf.Conf) error {
-	if err := s.Init2(c); err != nil {
+	if err := s.Init(c); err != nil {
 		return err
 	}
 	if s.db == nil {
