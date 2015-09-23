@@ -64,10 +64,10 @@ type Schedule struct {
 
 	ctx *checkContext
 
-	data database.DataAccess
+	DataAccess database.DataAccess
 }
 
-func (s *Schedule) Init(c *conf.Conf, parent *Schedule) error {
+func (s *Schedule) Init2(c *conf.Conf) error {
 	var err error
 	s.Conf = c
 	s.AlertStatuses = make(map[string]*AlertStatus)
@@ -79,20 +79,17 @@ func (s *Schedule) Init(c *conf.Conf, parent *Schedule) error {
 	s.Search = search.NewSearch()
 	s.LastCheck = time.Now()
 	s.ctx = &checkContext{time.Now(), cache.New(0)}
-	if parent == nil {
+	if s.DataAccess == nil {
 		if c.RedisHost != "" {
-			s.data = database.NewDataAccess(c.RedisHost, true)
+			s.DataAccess = database.NewDataAccess(c.RedisHost, true)
 		} else {
 			bind := "127.0.0.1:9565"
 			_, err := database.StartLedis(c.LedisDir, bind)
 			if err != nil {
 				return err
 			}
-			s.data = database.NewDataAccess(bind, false)
+			s.DataAccess = database.NewDataAccess(bind, false)
 		}
-	} else {
-		s.data = parent.data
-		s.Search = parent.Search
 	}
 	if c.StateFile != "" {
 		s.db, err = bolt.Open(c.StateFile, 0600, nil)
@@ -149,7 +146,7 @@ func (s *Schedule) PutMetadata(k metadata.Metakey, v interface{}) error {
 
 	isCoreMeta := (k.Name == "desc" || k.Name == "unit" || k.Name == "rate")
 	if !isCoreMeta {
-		s.data.PutTagMetadata(k.TagSet(), k.Name, fmt.Sprint(v), time.Now().UTC())
+		s.DataAccess.PutTagMetadata(k.TagSet(), k.Name, fmt.Sprint(v), time.Now().UTC())
 		return nil
 	}
 	if k.Metric == "" {
@@ -163,11 +160,11 @@ func (s *Schedule) PutMetadata(k metadata.Metakey, v interface{}) error {
 		slog.Error(err)
 		return err
 	}
-	return s.data.PutMetricMetadata(k.Metric, k.Name, strVal)
+	return s.DataAccess.PutMetricMetadata(k.Metric, k.Name, strVal)
 }
 
 func (s *Schedule) MetadataMetrics(metric string) (*database.MetricMetadata, error) {
-	mm, err := s.data.GetMetricMetadata(metric)
+	mm, err := s.DataAccess.GetMetricMetadata(metric)
 	if err != nil {
 		return nil, err
 	}
@@ -203,7 +200,7 @@ func (s *Schedule) GetMetadata(metric string, subset opentsdb.TagSet) ([]metadat
 			})
 		}
 	} else {
-		meta, err := s.data.GetTagMetadata(subset, "")
+		meta, err := s.DataAccess.GetTagMetadata(subset, "")
 		if err != nil {
 			return nil, err
 		}
@@ -490,7 +487,7 @@ func Run() error {
 }
 
 func (s *Schedule) Load(c *conf.Conf) error {
-	if err := s.Init(c, nil); err != nil {
+	if err := s.Init2(c); err != nil {
 		return err
 	}
 	if s.db == nil {

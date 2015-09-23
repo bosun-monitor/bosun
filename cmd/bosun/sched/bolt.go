@@ -252,7 +252,7 @@ func (s *Schedule) RestoreState() error {
 	if s.maxIncidentId == 0 {
 		s.createHistoricIncidents()
 	}
-	migrateOldDataToRedis(db, s.data)
+	migrateOldDataToRedis(db, s.DataAccess)
 	s.Search.Copy()
 	slog.Infoln("RestoreState done in", time.Since(start))
 	return nil

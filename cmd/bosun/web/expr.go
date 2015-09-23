@@ -121,9 +121,11 @@ type Res struct {
 
 func procRule(t miniprofiler.Timer, c *conf.Conf, a *conf.Alert, now time.Time, summary bool, email string, template_group string) (*ruleResult, error) {
 	s := &sched.Schedule{}
-	if err := s.Init(c, schedule); err != nil {
+	s.DataAccess = schedule.DataAccess
+	if err := s.Init(c); err != nil {
 		return nil, err
 	}
+	s.Search = schedule.Search
 	rh := s.NewRunHistory(now, cacheObj)
 	if _, err := s.CheckExpr(t, rh, a, a.Warn, sched.StWarning, nil); err != nil {
 		return nil, err
