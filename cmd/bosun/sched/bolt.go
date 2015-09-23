@@ -355,7 +355,7 @@ func migrateOldDataToRedis(db *bolt.DB, data database.DataAccess) error {
 				return err
 			}
 		}
-		err = deleteKey(db, "metadata-metric")
+		err = deleteKey(db, "metadata")
 		if err != nil {
 			return err
 		}
