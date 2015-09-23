@@ -315,6 +315,9 @@ func (s *Schedule) GetStateFileBackup() ([]byte, error) {
 func deleteKey(db *bolt.DB, name string) error {
 	return db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(dbBucket))
+		if b == nil {
+			return fmt.Errorf("unknown bucket: %v", dbBucket)
+		}
 		return b.Delete([]byte(name))
 	})
 }
