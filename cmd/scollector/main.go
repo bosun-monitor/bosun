@@ -159,6 +159,8 @@ func main() {
 	if *flagList {
 		list(c)
 		return
+	} else if *flagPrint {
+		u = &url.URL{Scheme: "http", Host: "localhost:0"}
 	} else if err != nil {
 		slog.Fatalf("invalid host %v: %v", conf.Host, err)
 	}
