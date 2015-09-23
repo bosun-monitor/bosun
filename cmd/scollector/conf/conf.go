@@ -98,6 +98,7 @@ type MIBMetric struct {
 	Description string
 	FallbackOid string // Oid to try if main one doesn't work. Used in cisco where different models use different oids
 	Tags        string // static tags to populate for this metric. "direction=in"
+	Scale       float64
 }
 
 type MIBTag struct {
