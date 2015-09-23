@@ -28,3 +28,28 @@ func TestTagMetadata_RoundTrip(t *testing.T) {
 		t.Fatalf("tagset %s != %s", m.Tags.String(), tagset.String())
 	}
 }
+
+func TestTagMetadata_SingleOrEmptyKey(t *testing.T) {
+	host := randString(4)
+	tagset := opentsdb.TagSet{"host": host, "iface": "foo"}
+	if err := testData.PutTagMetadata(tagset, "a", "a", time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	if err := testData.PutTagMetadata(tagset, "b", "b", time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	metas, err := testData.GetTagMetadata(tagset, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(metas) != 2 {
+		t.Fatalf("Expected 2 metadata entries for empty key. Got %d", len(metas))
+	}
+	metas, err = testData.GetTagMetadata(tagset, "a")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(metas) != 1 {
+		t.Fatalf("Expected 1 metadata entry for provided key. Got %d", len(metas))
+	}
+}

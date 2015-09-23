@@ -56,17 +56,17 @@ func (d *dataAccess) GetTagMetadata(tags opentsdb.TagSet, name string) ([]*TagMe
 	if err != nil {
 		return nil, err
 	}
-	args := make([]interface{}, len(keys))
-	for i, key := range keys {
+	args := []interface{}{}
+	for _, key := range keys {
 		if name == "" || strings.HasSuffix(key, ":"+name) {
-			args[i] = key
+			args = append(args, key)
 		}
 	}
 	results, err := redis.Strings(conn.Do("MGET", args...)) //SHOULD WE BATCH?
 	data := []*TagMetadata{}
-	for i := range keys {
+	for i := range args {
 		// break up key to get tags and name
-		key := keys[i][len("tmeta:"):]
+		key := args[i].(string)[len("tmeta:"):]
 		sepIdx := strings.LastIndex(key, ":")
 		tags := key[:sepIdx]
 		name := key[sepIdx+1:]
