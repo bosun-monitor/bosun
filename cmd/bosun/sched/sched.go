@@ -944,113 +944,80 @@ func (s *Schedule) GetIncidentEvents(id uint64) (*Incident, []Event, []Action, e
 }
 
 func (s *Schedule) Host(filter string) map[string]*HostData {
-	hosts := make(map[string]struct{})
+	hosts := make(map[string]*HostData)
 	for _, h := range s.Search.TagValuesByTagKey("host", time.Hour*7*24) {
-		hosts[h] = struct{}{}
+		hosts[h] = newHostData()
 	}
-	res := make(map[string]*HostData)
-	//	for k, mv := range s.Metadata {
-	//		tags := k.TagSet()
-	//		if k.Metric != "" || tags["host"] == "" {
-	//			continue
-	//		}
-	//		if _, ok := hosts[tags["host"]]; !ok {
-	//			continue
-	//		}
-	//		e := res[tags["host"]]
-	//		if e == nil {
-	//			host := fmt.Sprintf("{host=%s}", tags["host"])
-	//			e = &HostData{
-	//				Name:       tags["host"],
-	//				Interfaces: make(map[string]*HostInterface),
-	//			}
-	//			e.CPU.Processors = make(map[string]string)
-	//			if v, err := s.Search.GetLast("os.cpu", host, true); err != nil {
-	//				e.CPU.Used = v
-	//			}
-	//			e.Memory.Modules = make(map[string]string)
-	//			if v, err := s.Search.GetLast("os.mem.total", host, false); err != nil {
-	//				e.Memory.Total = int64(v)
-	//			}
-	//			if v, err := s.Search.GetLast("os.mem.used", host, false); err != nil {
-	//				e.Memory.Used = int64(v)
-	//			}
-	//			res[tags["host"]] = e
-	//		}
-	//		var iface *HostInterface
-	//		if name := tags["iface"]; name != "" {
-	//			if e.Interfaces[name] == nil {
-	//				h := new(HostInterface)
-	//				itag := opentsdb.TagSet{
-	//					"host":  tags["host"],
-	//					"iface": name,
-	//				}
-	//				intag := opentsdb.TagSet{"direction": "in"}.Merge(itag).String()
-	//				if v, err := s.Search.GetLast("os.net.bytes", intag, true); err != nil {
-	//					h.Inbps = int64(v) * 8
-	//				}
-	//				outtag := opentsdb.TagSet{"direction": "out"}.Merge(itag).String()
-	//				if v, err := s.Search.GetLast("os.net.bytes", outtag, true); err != nil {
-	//					h.Outbps = int64(v) * 8
-	//				}
-	//				e.Interfaces[name] = h
-	//			}
-	//			iface = e.Interfaces[name]
-	//		}
-	//		switch val := mv.Value.(type) {
-	//		case string:
-	//			switch k.Name {
-	//			case "addr":
-	//				if iface != nil {
-	//					iface.IPAddresses = append(iface.IPAddresses, val)
-	//				}
-	//			case "description":
-	//				if iface != nil {
-	//					iface.Description = val
-	//				}
-	//			case "mac":
-	//				if iface != nil {
-	//					iface.MAC = val
-	//				}
-	//			case "manufacturer":
-	//				e.Manufacturer = val
-	//			case "master":
-	//				if iface != nil {
-	//					iface.Master = val
-	//				}
-	//			case "memory":
-	//				if name := tags["name"]; name != "" {
-	//					e.Memory.Modules[name] = val
-	//				}
-	//			case "model":
-	//				e.Model = val
-	//			case "name":
-	//				if iface != nil {
-	//					iface.Name = val
-	//				}
-	//			case "processor":
-	//				if name := tags["name"]; name != "" {
-	//					e.CPU.Processors[name] = val
-	//				}
-	//			case "serialNumber":
-	//				e.SerialNumber = val
-	//			case "version":
-	//				e.OS.Version = val
-	//			case "versionCaption", "uname":
-	//				e.OS.Caption = val
-	//			}
-	//		case float64:
-	//			switch k.Name {
-	//			case "memoryTotal":
-	//				e.Memory.Total = int64(val)
-	//			case "speed":
-	//				if iface != nil {
-	//					iface.LinkSpeed = int64(val)
-	//				}
-	//			}
-	//		}
-	//	}
-	return res
+	for name, host := range hosts {
+		host.Name = name
+		md, err := s.GetMetadata("", opentsdb.TagSet{"host": name})
+		if err != nil {
+			slog.Error(err)
+		}
+		for _, m := range md {
+			var iface *HostInterface
+			if name := m.Tags["iface"]; name != "" {
+				if host.Interfaces[name] == nil {
+					h := new(HostInterface)
+					host.Interfaces[name] = h
+				}
+				iface = host.Interfaces[name]
+			}
+			switch val := m.Value.(type) {
+			case string:
+				switch m.Name {
+				case "addr":
+					if iface != nil {
+						iface.IPAddresses = append(iface.IPAddresses, val)
+					}
+				case "description", "alias":
+					if iface != nil {
+						iface.Description = val
+					}
+				case "mac":
+					if iface != nil {
+						iface.MAC = val
+					}
+				case "manufacturer":
+					host.Manufacturer = val
+				case "master":
+					if iface != nil {
+						iface.Master = val
+					}
+				case "memory":
+					if name := m.Tags["name"]; name != "" {
+						host.Memory.Modules[name] = val
+					}
+				case "model":
+					host.Model = val
+				case "name":
+					if iface != nil {
+						iface.Name = val
+					}
+				case "processor":
+					if name := m.Tags["name"]; name != "" {
+						host.CPU.Processors[name] = val
+					}
+				case "serialNumber":
+					host.SerialNumber = val
+				case "version":
+					host.OS.Version = val
+				case "versionCaption", "uname":
+					host.OS.Caption = val
+				}
+			case float64:
+				switch m.Name {
+				case "memoryTotal":
+					host.Memory.Total = int64(val)
+				case "speed":
+					if iface != nil {
+						iface.LinkSpeed = int64(val)
+					}
+				}
+			}
+		}
+	}
+	return hosts
 }
 
 type HostInterface struct {
@@ -1062,6 +1029,14 @@ type HostInterface struct {
 	Master      string   `json:",omitempty"`
 	Name        string   `json:",omitempty"`
 	Outbps      int64    `json:",omitempty"`
+}
+
+func newHostData() *HostData {
+	hd := &HostData{}
+	hd.CPU.Processors = make(map[string]string)
+	hd.Interfaces = make(map[string]*HostInterface)
+	hd.Memory.Modules = make(map[string]string)
+	return hd
 }
 
 type HostData struct {
