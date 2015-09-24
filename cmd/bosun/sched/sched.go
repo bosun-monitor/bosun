@@ -191,11 +191,11 @@ func (s *Schedule) GetMetadata(metric string, subset opentsdb.TagSet) ([]metadat
 				Value:  meta.Unit,
 			})
 		}
-		if meta.Type != "" {
+		if meta.Rate != "" {
 			ms = append(ms, metadata.Metasend{
 				Metric: metric,
 				Name:   "rate",
-				Value:  meta.Type,
+				Value:  meta.Rate,
 			})
 		}
 	} else {
