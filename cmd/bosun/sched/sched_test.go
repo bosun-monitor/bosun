@@ -67,12 +67,15 @@ func (n *nopDataAccess) PutTagMetadata(tags opentsdb.TagSet, name string, value 
 func (n *nopDataAccess) GetTagMetadata(tags opentsdb.TagSet, name string) ([]*database.TagMetadata, error) {
 	panic("not implemented")
 }
+func (n *nopDataAccess) DeleteTagMetadata(tags opentsdb.TagSet, name string) error {
+	panic("not implemented")
+}
 
 func initSched(c *conf.Conf) (*Schedule, error) {
 	c.StateFile = ""
 	s := new(Schedule)
 	s.DataAccess = &nopDataAccess{}
-	err := s.Init2(c)
+	err := s.Init(c)
 	return s, err
 }
 

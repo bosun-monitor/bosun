@@ -158,6 +158,10 @@ func (s *Schedule) PutMetadata(k metadata.Metakey, v interface{}) error {
 	return s.DataAccess.PutMetricMetadata(k.Metric, k.Name, strVal)
 }
 
+func (s *Schedule) DeleteMetadata(tags opentsdb.TagSet, name string) error {
+	return s.DataAccess.DeleteTagMetadata(tags, name)
+}
+
 func (s *Schedule) MetadataMetrics(metric string) (*database.MetricMetadata, error) {
 	mm, err := s.DataAccess.GetMetricMetadata(metric)
 	if err != nil {

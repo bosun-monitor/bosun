@@ -23,6 +23,7 @@ type DataAccess interface {
 
 	PutTagMetadata(tags opentsdb.TagSet, name string, value string, updated time.Time) error
 	GetTagMetadata(tags opentsdb.TagSet, name string) ([]*TagMetadata, error)
+	DeleteTagMetadata(tags opentsdb.TagSet, name string) error
 }
 
 type dataAccess struct {

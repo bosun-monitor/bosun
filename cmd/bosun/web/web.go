@@ -100,6 +100,7 @@ func Listen(listenAddr string, devMode bool, tsdbHost string) error {
 	router.Handle("/api/metadata/get", JSON(GetMetadata))
 	router.Handle("/api/metadata/metrics", JSON(MetadataMetrics))
 	router.Handle("/api/metadata/put", JSON(PutMetadata))
+	router.Handle("/api/metadata/delete", JSON(DeleteMetadata)).Methods("DELETE")
 	router.Handle("/api/metric", JSON(UniqueMetrics))
 	router.Handle("/api/metric/{tagk}/{tagv}", JSON(MetricsByTagPair))
 	router.Handle("/api/metric/tagkey", JSON(MetricsWithTagKeys))
@@ -308,13 +309,34 @@ func PutMetadata(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (
 		return nil, err
 	}
 	for _, m := range ms {
-		schedule.PutMetadata(metadata.Metakey{
+		err := schedule.PutMetadata(metadata.Metakey{
 			Metric: m.Metric,
 			Tags:   m.Tags.Tags(),
 			Name:   m.Name,
 		}, m.Value)
+		if err != nil {
+			return nil, err
+		}
 	}
 	w.WriteHeader(204)
+	return nil, nil
+}
+
+func DeleteMetadata(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	d := json.NewDecoder(r.Body)
+	var ms []struct {
+		Tags opentsdb.TagSet
+		Name string
+	}
+	if err := d.Decode(&ms); err != nil {
+		return nil, err
+	}
+	for _, m := range ms {
+		err := schedule.DeleteMetadata(m.Tags, m.Name)
+		if err != nil {
+			return nil, err
+		}
+	}
 	return nil, nil
 }
 

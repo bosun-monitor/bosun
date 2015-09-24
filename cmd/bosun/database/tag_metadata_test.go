@@ -53,3 +53,24 @@ func TestTagMetadata_SingleOrEmptyKey(t *testing.T) {
 		t.Fatalf("Expected 1 metadata entry for provided key. Got %d", len(metas))
 	}
 }
+
+func TestTagMetadata_Delete(t *testing.T) {
+	host := randString(4)
+	tagset := opentsdb.TagSet{"host": host, "iface": "foo"}
+	if err := testData.PutTagMetadata(tagset, "a", "a", time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	if err := testData.PutTagMetadata(tagset, "b", "b", time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	if err := testData.DeleteTagMetadata(tagset, "b"); err != nil {
+		t.Fatal(err)
+	}
+	metas, err := testData.GetTagMetadata(tagset, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(metas) != 1 {
+		t.Fatalf("Expected 1 metadata entry for empty key. Got %d", len(metas))
+	}
+}

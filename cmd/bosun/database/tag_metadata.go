@@ -47,6 +47,24 @@ func (d *dataAccess) PutTagMetadata(tags opentsdb.TagSet, name string, value str
 	return nil
 }
 
+func (d *dataAccess) DeleteTagMetadata(tags opentsdb.TagSet, name string) error {
+	defer collect.StartTimer("redis", opentsdb.TagSet{"op": "DeleteTagMeta"})()
+	conn := d.getConnection()
+	defer conn.Close()
+	key := tagMetaKey(tags, name)
+	_, err := conn.Do("DEL", key)
+	if err != nil {
+		return err
+	}
+	for _, sub := range tags.AllSubsets() {
+		_, err := conn.Do("SREM", tagMetaIdxKey(sub), key)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (d *dataAccess) GetTagMetadata(tags opentsdb.TagSet, name string) ([]*TagMetadata, error) {
 	defer collect.StartTimer("redis", opentsdb.TagSet{"op": "GetTagMeta"})()
 	conn := d.getConnection()
