@@ -11,6 +11,7 @@ import (
 	_ "net/http/pprof"
 	"net/url"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -158,6 +159,8 @@ func main() {
 	if *flagList {
 		list(c)
 		return
+	} else if *flagPrint {
+		u = &url.URL{Scheme: "http", Host: "localhost:0"}
 	} else if err != nil {
 		slog.Fatalf("invalid host %v: %v", conf.Host, err)
 	}
@@ -182,14 +185,13 @@ func main() {
 			slog.Fatal(err)
 		}
 	}
-	cdp := collectors.Run(c)
+	cdp, cquit := collectors.Run(c)
 	if u != nil {
 		slog.Infoln("OpenTSDB host:", u)
 	}
 	if err := collect.InitChan(u, "scollector", cdp); err != nil {
 		slog.Fatal(err)
 	}
-
 	if version.VersionDate != "" {
 		v, err := strconv.ParseInt(version.VersionDate, 10, 64)
 		if err == nil {
@@ -218,7 +220,15 @@ func main() {
 			}
 		}
 	}()
-	select {}
+	sChan := make(chan os.Signal)
+	signal.Notify(sChan, os.Interrupt)
+	<-sChan
+	close(cquit)
+	// try to flush all datapoints on sigterm, but quit after 5 seconds no matter what.
+	time.AfterFunc(5*time.Second, func() {
+		os.Exit(0)
+	})
+	collect.Flush()
 }
 
 func readConf() *conf.Conf {

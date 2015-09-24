@@ -46,7 +46,6 @@ const (
 	dbMetric           = "metric"
 	dbTagk             = "tagk"
 	dbTagv             = "tagv"
-	dbMetricTags       = "metrictags"
 	dbNotifications    = "notifications"
 	dbSilence          = "silence"
 	dbStatus           = "status"
@@ -63,7 +62,6 @@ func (s *Schedule) save() {
 		dbMetric:        s.Search.Read.Metric,
 		dbTagk:          s.Search.Read.Tagk,
 		dbTagv:          s.Search.Read.Tagv,
-		dbMetricTags:    s.Search.Read.MetricTags,
 		dbNotifications: s.Notifications,
 		dbSilence:       s.Silence,
 		dbStatus:        s.status,
@@ -160,9 +158,6 @@ func (s *Schedule) RestoreState() error {
 	if err := decode(db, dbTagv, &s.Search.Tagv); err != nil {
 		slog.Errorln(dbTagv, err)
 	}
-	if err := decode(db, dbMetricTags, &s.Search.MetricTags); err != nil {
-		slog.Errorln(dbMetricTags, err)
-	}
 	notifications := make(map[expr.AlertKey]map[string]time.Time)
 	if err := decode(db, dbNotifications, &notifications); err != nil {
 		slog.Errorln(dbNotifications, err)
@@ -243,6 +238,8 @@ func (s *Schedule) RestoreState() error {
 		s.createHistoricIncidents()
 	}
 	migrateOldDataToRedis(db, s.DataAccess)
+	// delete metrictags if they exist.
+	deleteKey(s.db, "metrictags")
 	s.Search.Copy()
 	slog.Infoln("RestoreState done in", time.Since(start))
 	return nil
@@ -366,6 +363,9 @@ func migrateOldDataToRedis(db *bolt.DB, data database.DataAccess) error {
 func deleteKey(db *bolt.DB, name string) error {
 	return db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(dbBucket))
+		if b == nil {
+			return fmt.Errorf("unknown bucket: %v", dbBucket)
+		}
 		return b.Delete([]byte(name))
 	})
 }

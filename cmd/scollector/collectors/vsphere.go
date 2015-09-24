@@ -297,9 +297,9 @@ func vsphereGuest(vsphereHost string, v *vsphere.Vsphere, md *opentsdb.MultiData
 				var missing bool
 				var v int
 				switch s {
-				case "poweredOff":
-					v = 0
 				case "poweredOn":
+					v = 0
+				case "poweredOff":
 					v = 1
 				case "suspended":
 					v = 2

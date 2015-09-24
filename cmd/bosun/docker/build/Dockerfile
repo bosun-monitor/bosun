@@ -24,7 +24,7 @@ RUN mkdir -p /hbase \
     | tar -xzC /hbase \
     && mv /hbase/hbase-$HBASEVER /hbase/hbase
 
-RUN curl -SL https://storage.googleapis.com/golang/go1.4.2.linux-amd64.tar.gz \
+RUN curl -SL https://storage.googleapis.com/golang/go1.5.1.linux-amd64.tar.gz \
     | tar -xzC /usr/local
 
 COPY bosun $GOPATH/src/bosun.org/
