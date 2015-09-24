@@ -7,7 +7,7 @@ import (
 type MetricMetadata struct {
 	Desc        string `redis:"desc"`
 	Unit        string `redis:"unit"`
-	Type        string `redis:"type"`
+	Rate        string `redis:"rate"`
 	LastTouched int64  `redis:"lastTouched"`
 }
 

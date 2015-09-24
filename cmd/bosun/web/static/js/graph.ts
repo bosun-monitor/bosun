@@ -266,7 +266,7 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 			});
 		$http.get('/api/metadata/metrics?metric=' + metric)
 			.success(data => {
-				var canAuto = data && data.Type;
+				var canAuto = data && data.Rate;
 				$scope.canAuto[metric] = canAuto;
 			})
 			.error(err => {

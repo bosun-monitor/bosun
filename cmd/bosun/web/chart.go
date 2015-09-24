@@ -83,8 +83,8 @@ func Graph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 			if meta.Unit != "" {
 				m_units[q.Metric] = meta.Unit
 			}
-			if meta.Type != "" {
-				switch meta.Type {
+			if meta.Rate != "" {
+				switch meta.Rate {
 				case metadata.Gauge:
 					// ignore
 				case metadata.Rate:
@@ -96,7 +96,7 @@ func Graph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 						ResetValue: 1,
 					}
 				default:
-					return nil, fmt.Errorf("unknown metadata rate: %s", meta.Type)
+					return nil, fmt.Errorf("unknown metadata rate: %s", meta.Rate)
 				}
 			}
 		}
