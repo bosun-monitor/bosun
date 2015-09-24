@@ -3,9 +3,23 @@
 package ole
 
 import (
+	"reflect"
 	"syscall"
 	"unsafe"
 )
+
+func reflectQueryInterface(self interface{}, method uintptr, interfaceID *GUID, obj interface{}) (err error) {
+	hr, _, _ := syscall.Syscall(
+		method,
+		3,
+		reflect.ValueOf(self).UnsafeAddr(),
+		uintptr(unsafe.Pointer(interfaceID)),
+		reflect.ValueOf(obj).UnsafeAddr())
+	if hr != 0 {
+		err = NewError(hr)
+	}
+	return
+}
 
 func queryInterface(unk *IUnknown, iid *GUID) (disp *IDispatch, err error) {
 	hr, _, _ := syscall.Syscall(

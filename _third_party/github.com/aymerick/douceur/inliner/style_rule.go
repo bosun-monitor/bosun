@@ -9,12 +9,12 @@ import (
 )
 
 const (
-	INLINE_FAKE_SELECTOR = "*INLINE*"
+	inlineFakeSelector = "*INLINE*"
 
 	// Regular expressions borrowed from premailer:
 	//   https://github.com/premailer/css_parser/blob/master/lib/css_parser/regexps.rb
-	NON_ID_ATTRIBUTES_AND_PSEUDO_CLASSES_REGEXP = `(?i)(\.[\w]+)|\[(\w+)|(\:(link|visited|active|hover|focus|lang|target|enabled|disabled|checked|indeterminate|root|nth-child|nth-last-child|nth-of-type|nth-last-of-type|first-child|last-child|first-of-type|last-of-type|only-child|only-of-type|empty|contains))`
-	ELEMENTS_AND_PSEUDO_ELEMENTS_REGEXP         = `(?i)((^|[\s\+\>\~]+)[\w]+|\:{1,2}(after|before|first-letter|first-line|selection))`
+	nonIDAttributesAndPseudoClassesRegexpConst = `(?i)(\.[\w]+)|\[(\w+)|(\:(link|visited|active|hover|focus|lang|target|enabled|disabled|checked|indeterminate|root|nth-child|nth-last-child|nth-of-type|nth-last-of-type|first-child|last-child|first-of-type|last-of-type|only-child|only-of-type|empty|contains))`
+	elementsAndPseudoElementsRegexpConst       = `(?i)((^|[\s\+\>\~]+)[\w]+|\:{1,2}(after|before|first-letter|first-line|selection))`
 )
 
 var (
@@ -22,7 +22,7 @@ var (
 	elementsAndPseudoElementsRegexp *regexp.Regexp
 )
 
-// A Qualifier Rule for a uniq selector
+// StyleRule represents a Qualifier Rule for a uniq selector
 type StyleRule struct {
 	// The style rule selector
 	Selector string
@@ -35,11 +35,11 @@ type StyleRule struct {
 }
 
 func init() {
-	nonIDAttrAndPseudoClassesRegexp, _ = regexp.Compile(NON_ID_ATTRIBUTES_AND_PSEUDO_CLASSES_REGEXP)
-	elementsAndPseudoElementsRegexp, _ = regexp.Compile(ELEMENTS_AND_PSEUDO_ELEMENTS_REGEXP)
+	nonIDAttrAndPseudoClassesRegexp, _ = regexp.Compile(nonIDAttributesAndPseudoClassesRegexpConst)
+	elementsAndPseudoElementsRegexp, _ = regexp.Compile(elementsAndPseudoElementsRegexpConst)
 }
 
-// Instanciate a new StyleRule
+// NewStyleRule instanciates a new StyleRule
 func NewStyleRule(selector string, declarations []*css.Declaration) *StyleRule {
 	return &StyleRule{
 		Selector:     selector,
@@ -69,13 +69,13 @@ func (styleRule *StyleRule) String() string {
 	return result
 }
 
-// Computes style rule specificity
+// ComputeSpecificity computes style rule specificity
 //
 // cf. http://www.w3.org/TR/selectors/#specificity
 func ComputeSpecificity(selector string) int {
 	result := 0
 
-	if selector == INLINE_FAKE_SELECTOR {
+	if selector == inlineFakeSelector {
 		result += 1000
 	}
 

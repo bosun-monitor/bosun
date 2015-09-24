@@ -12,13 +12,14 @@ import (
 )
 
 const (
-	IMPORTANT_SUFFIX_REGEXP = `(?i)\s*!important\s*$`
+	importantSuffixRegexp = `(?i)\s*!important\s*$`
 )
 
 var (
 	importantRegexp *regexp.Regexp
 )
 
+// Parser represents a CSS parser
 type Parser struct {
 	scan *scanner.Scanner // Tokenizer
 
@@ -30,37 +31,37 @@ type Parser struct {
 }
 
 func init() {
-	importantRegexp = regexp.MustCompile(IMPORTANT_SUFFIX_REGEXP)
+	importantRegexp = regexp.MustCompile(importantSuffixRegexp)
 }
 
-// Instanciate a new parser
+// NewParser instanciates a new parser
 func NewParser(txt string) *Parser {
 	return &Parser{
 		scan: scanner.New(txt),
 	}
 }
 
-// Parse a whole stylesheet
+// Parse parses a whole stylesheet
 func Parse(text string) (*css.Stylesheet, error) {
 	result, err := NewParser(text).ParseStylesheet()
 	if err != nil {
 		return nil, err
-	} else {
-		return result, nil
 	}
+
+	return result, nil
 }
 
-// Parse CSS declarations
+// ParseDeclarations parses CSS declarations
 func ParseDeclarations(text string) ([]*css.Declaration, error) {
 	result, err := NewParser(text).ParseDeclarations()
 	if err != nil {
 		return nil, err
-	} else {
-		return result, nil
 	}
+
+	return result, nil
 }
 
-// Parse a stylesheet
+// ParseStylesheet parses a stylesheet
 func (parser *Parser) ParseStylesheet() (*css.Stylesheet, error) {
 	result := css.NewStylesheet()
 
@@ -80,7 +81,7 @@ func (parser *Parser) ParseStylesheet() (*css.Stylesheet, error) {
 	return result, nil
 }
 
-// Parse a list of rules
+// ParseRules parses a list of rules
 func (parser *Parser) ParseRules() ([]*css.Rule, error) {
 	result := []*css.Rule{}
 
@@ -88,7 +89,7 @@ func (parser *Parser) ParseRules() ([]*css.Rule, error) {
 	if parser.tokenChar("{") {
 		// parsing a block of rules
 		inBlock = true
-		parser.embedLevel += 1
+		parser.embedLevel++
 
 		parser.shiftToken()
 	}
@@ -103,7 +104,7 @@ func (parser *Parser) ParseRules() ([]*css.Rule, error) {
 			}
 
 			parser.shiftToken()
-			parser.embedLevel -= 1
+			parser.embedLevel--
 
 			// finished
 			break
@@ -121,16 +122,16 @@ func (parser *Parser) ParseRules() ([]*css.Rule, error) {
 	return result, parser.err()
 }
 
-// Parse a rule
+// ParseRule parses a rule
 func (parser *Parser) ParseRule() (*css.Rule, error) {
 	if parser.tokenAtKeyword() {
 		return parser.parseAtRule()
-	} else {
-		return parser.parseQualifiedRule()
 	}
+
+	return parser.parseQualifiedRule()
 }
 
-// Parse a list of declarations
+// ParseDeclarations parses a list of declarations
 func (parser *Parser) ParseDeclarations() ([]*css.Declaration, error) {
 	result := []*css.Declaration{}
 
@@ -158,7 +159,7 @@ func (parser *Parser) ParseDeclarations() ([]*css.Declaration, error) {
 	return result, parser.err()
 }
 
-// Parse a declaration
+// ParseDeclaration parses a declaration
 func (parser *Parser) ParseDeclaration() (*css.Declaration, error) {
 	result := css.NewDeclaration()
 	curValue := ""
@@ -204,7 +205,7 @@ func (parser *Parser) parseAtRule() (*css.Rule, error) {
 	// parse rule name (eg: "@import")
 	token := parser.shiftToken()
 
-	result := css.NewRule(css.AT_RULE)
+	result := css.NewRule(css.AtRule)
 	result.Name = token.Value
 
 	for parser.tokenParsable() {
@@ -252,7 +253,7 @@ func (parser *Parser) parseAtRule() (*css.Rule, error) {
 
 // Parse a Qualified Rule
 func (parser *Parser) parseQualifiedRule() (*css.Rule, error) {
-	result := css.NewRule(css.QUALIFIED_RULE)
+	result := css.NewRule(css.QualifiedRule)
 
 	for parser.tokenParsable() {
 		if parser.tokenChar("{") {
@@ -313,9 +314,9 @@ func (parser *Parser) parseBOM() (bool, error) {
 	if parser.nextToken().Type == scanner.TokenBOM {
 		parser.shiftToken()
 		return true, nil
-	} else {
-		return false, parser.err()
 	}
+
+	return false, parser.err()
 }
 
 // Returns next token without removing it from tokens buffer
@@ -345,10 +346,10 @@ func (parser *Parser) shiftToken() *scanner.Token {
 func (parser *Parser) err() error {
 	if parser.tokenError() {
 		token := parser.nextToken()
-		return errors.New(fmt.Sprintf("Tokenizer error: %s", token.String()))
-	} else {
-		return nil
+		return fmt.Errorf("Tokenizer error: %s", token.String())
 	}
+
+	return nil
 }
 
 // Returns true if next token is Error

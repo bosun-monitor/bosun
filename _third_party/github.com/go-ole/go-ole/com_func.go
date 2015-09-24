@@ -2,7 +2,10 @@
 
 package ole
 
-import "unsafe"
+import (
+	"time"
+	"unsafe"
+)
 
 // coInitialize initializes COM library on current thread.
 //
@@ -88,62 +91,84 @@ func StringFromIID(iid *GUID) (string, error) {
 	return "", NewError(E_NOTIMPL)
 }
 
+// CreateInstance of single uninitialized object with GUID.
 func CreateInstance(clsid *GUID, iid *GUID) (*IUnknown, error) {
 	return nil, NewError(E_NOTIMPL)
 }
 
+// GetActiveObject retrieves pointer to active object.
 func GetActiveObject(clsid *GUID, iid *GUID) (*IUnknown, error) {
 	return nil, NewError(E_NOTIMPL)
 }
 
+// VariantInit initializes variant.
 func VariantInit(v *VARIANT) error {
 	return NewError(E_NOTIMPL)
 }
 
+// VariantClear clears value in Variant settings to VT_EMPTY.
 func VariantClear(v *VARIANT) error {
 	return NewError(E_NOTIMPL)
 }
 
+// SysAllocString allocates memory for string and copies string into memory.
 func SysAllocString(v string) *int16 {
 	u := int16(0)
 	return &u
 }
 
+// SysAllocStringLen copies up to length of given string returning pointer.
 func SysAllocStringLen(v string) *int16 {
 	u := int16(0)
 	return &u
 }
 
+// SysFreeString frees string system memory. This must be called with SysAllocString.
 func SysFreeString(v *int16) error {
 	return NewError(E_NOTIMPL)
 }
 
+// SysStringLen is the length of the system allocated string.
 func SysStringLen(v *int16) uint32 {
 	return uint32(0)
 }
 
+// CreateStdDispatch provides default IDispatch implementation for IUnknown.
+//
+// This handles default IDispatch implementation for objects. It haves a few
+// limitations with only supporting one language. It will also only return
+// default exception codes.
 func CreateStdDispatch(unk *IUnknown, v uintptr, ptinfo *IUnknown) (*IDispatch, error) {
 	return nil, NewError(E_NOTIMPL)
 }
 
+// CreateDispTypeInfo provides default ITypeInfo implementation for IDispatch.
+//
+// This will not handle the full implementation of the interface.
 func CreateDispTypeInfo(idata *INTERFACEDATA) (*IUnknown, error) {
 	return nil, NewError(E_NOTIMPL)
 }
 
+// copyMemory moves location of a block of memory.
 func copyMemory(dest unsafe.Pointer, src unsafe.Pointer, length uint32) {}
 
-// GetUserDefaultLCID retrieves current user Locale ID for COM servers that are
-// localized.
+// GetUserDefaultLCID retrieves current user default locale.
 func GetUserDefaultLCID() uint32 {
 	return uint32(0)
 }
 
-// GetMessage from Runtime.
+// GetMessage in message queue from runtime.
+//
+// This function appears to block. PeekMessage does not block.
 func GetMessage(msg *Msg, hwnd uint32, MsgFilterMin uint32, MsgFilterMax uint32) (int32, error) {
 	return int32(0), NewError(E_NOTIMPL)
 }
 
-// DispatchMessage to Runtime.
+// DispatchMessage to window procedure.
 func DispatchMessage(msg *Msg) int32 {
 	return int32(0)
+}
+
+func GetVariantDate(value float64) (time.Time, error) {
+	return time.Now(), NewError(E_NOTIMPL)
 }

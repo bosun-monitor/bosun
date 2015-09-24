@@ -443,16 +443,23 @@ func (c *TestCase) testHTTP() (r *TestResult) {
 		r.Result = err
 		return
 	}
-	time.AfterFunc(Timeout, func() {
+	timedOut := false
+	timout := time.AfterFunc(Timeout, func() {
+		timedOut = true
 		r.Connected = false
 		tr.CancelRequest(req)
 	})
+	defer timout.Stop()
 	resp, err := tr.RoundTrip(req)
 	if err != nil {
 		if strings.HasPrefix(err.Error(), "x509") {
 			r.InvalidCert = true
 		}
-		r.Result = err
+		if timedOut {
+			r.Result = fmt.Errorf("i/o timeout")
+		} else {
+			r.Result = err
+		}
 		return
 	}
 	defer resp.Body.Close()
@@ -464,7 +471,11 @@ func (c *TestCase) testHTTP() (r *TestResult) {
 	}
 	text, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		r.Result = err
+		if timedOut {
+			r.Result = fmt.Errorf("i/o timeout")
+		} else {
+			r.Result = err
+		}
 		return
 	}
 	short := text

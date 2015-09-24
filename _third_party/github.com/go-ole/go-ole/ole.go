@@ -5,6 +5,7 @@ import (
 	"strings"
 )
 
+// DISPPARAMS are the arguments that passed to methods or property.
 type DISPPARAMS struct {
 	rgvarg            uintptr
 	rgdispidNamedArgs uintptr

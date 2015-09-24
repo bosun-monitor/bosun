@@ -43,15 +43,15 @@ p > a {
 }`
 
 	expectedRule := &css.Rule{
-		Kind:      css.QUALIFIED_RULE,
+		Kind:      css.QualifiedRule,
 		Prelude:   "p > a",
 		Selectors: []string{"p > a"},
 		Declarations: []*css.Declaration{
-			&css.Declaration{
+			{
 				Property: "color",
 				Value:    "blue",
 			},
-			&css.Declaration{
+			{
 				Property: "text-decoration",
 				Value:    "underline",
 			},
@@ -80,21 +80,21 @@ p > a {
 }`
 
 	expectedRule := &css.Rule{
-		Kind:      css.QUALIFIED_RULE,
+		Kind:      css.QualifiedRule,
 		Prelude:   "p > a",
 		Selectors: []string{"p > a"},
 		Declarations: []*css.Declaration{
-			&css.Declaration{
+			{
 				Property:  "color",
 				Value:     "blue",
 				Important: false,
 			},
-			&css.Declaration{
+			{
 				Property:  "text-decoration",
 				Value:     "underline",
 				Important: true,
 			},
-			&css.Declaration{
+			{
 				Property:  "font-weight",
 				Value:     "normal",
 				Important: true,
@@ -128,11 +128,11 @@ body,
 }`
 
 	expectedRule1 := &css.Rule{
-		Kind:      css.QUALIFIED_RULE,
+		Kind:      css.QualifiedRule,
 		Prelude:   "table, tr, td",
 		Selectors: []string{"table", "tr", "td"},
 		Declarations: []*css.Declaration{
-			&css.Declaration{
+			{
 				Property: "padding",
 				Value:    "0",
 			},
@@ -140,13 +140,13 @@ body,
 	}
 
 	expectedRule2 := &css.Rule{
-		Kind: css.QUALIFIED_RULE,
+		Kind: css.QualifiedRule,
 		Prelude: `body,
   h1,   h2,
     h3`,
 		Selectors: []string{"body", "h1", "h2", "h3"},
 		Declarations: []*css.Declaration{
-			&css.Declaration{
+			{
 				Property: "color",
 				Value:    "#fff",
 			},
@@ -172,7 +172,7 @@ func TestAtRuleCharset(t *testing.T) {
 	input := `@charset "UTF-8";`
 
 	expectedRule := &css.Rule{
-		Kind:    css.AT_RULE,
+		Kind:    css.AtRule,
 		Name:    "@charset",
 		Prelude: "\"UTF-8\"",
 	}
@@ -195,19 +195,19 @@ func TestAtRuleCounterStyle(t *testing.T) {
 }`
 
 	expectedRule := &css.Rule{
-		Kind:    css.AT_RULE,
+		Kind:    css.AtRule,
 		Name:    "@counter-style",
 		Prelude: "footnote",
 		Declarations: []*css.Declaration{
-			&css.Declaration{
+			{
 				Property: "system",
 				Value:    "symbolic",
 			},
-			&css.Declaration{
+			{
 				Property: "symbols",
 				Value:    "'*' ⁑ † ‡",
 			},
-			&css.Declaration{
+			{
 				Property: "suffix",
 				Value:    "''",
 			},
@@ -240,23 +240,23 @@ func TestAtRuleDocument(t *testing.T) {
 }`
 
 	expectedRule := &css.Rule{
-		Kind: css.AT_RULE,
+		Kind: css.AtRule,
 		Name: "@document",
 		Prelude: `url(http://www.w3.org/),
                url-prefix(http://www.w3.org/Style/),
                domain(mozilla.org),
                regexp("https:.*")`,
 		Rules: []*css.Rule{
-			&css.Rule{
-				Kind:      css.QUALIFIED_RULE,
+			{
+				Kind:      css.QualifiedRule,
 				Prelude:   "body",
 				Selectors: []string{"body"},
 				Declarations: []*css.Declaration{
-					&css.Declaration{
+					{
 						Property: "color",
 						Value:    "purple",
 					},
-					&css.Declaration{
+					{
 						Property: "background",
 						Value:    "yellow",
 					},
@@ -293,20 +293,20 @@ func TestAtRuleFontFace(t *testing.T) {
 }`
 
 	expectedRule := &css.Rule{
-		Kind: css.AT_RULE,
+		Kind: css.AtRule,
 		Name: "@font-face",
 		Declarations: []*css.Declaration{
-			&css.Declaration{
+			{
 				Property: "font-family",
 				Value:    "MyHelvetica",
 			},
-			&css.Declaration{
+			{
 				Property: "src",
 				Value: `local("Helvetica Neue Bold"),
        local("HelveticaNeue-Bold"),
        url(MgOpenModernaBold.ttf)`,
 			},
-			&css.Declaration{
+			{
 				Property: "font-weight",
 				Value:    "bold",
 			},
@@ -328,15 +328,15 @@ func TestAtRuleFontFeatureValues(t *testing.T) {
   }
 }`
 	expectedRule := &css.Rule{
-		Kind:    css.AT_RULE,
+		Kind:    css.AtRule,
 		Name:    "@font-feature-values",
 		Prelude: "Font Two",
 		Rules: []*css.Rule{
-			&css.Rule{
-				Kind: css.AT_RULE,
+			{
+				Kind: css.AtRule,
 				Name: "@styleset",
 				Declarations: []*css.Declaration{
-					&css.Declaration{
+					{
 						Property: "nice-style",
 						Value:    "4",
 					},
@@ -364,13 +364,13 @@ func TestAtRuleImport(t *testing.T) {
 @import url('landscape.css') screen and (orientation:landscape);`
 
 	expectedRule1 := &css.Rule{
-		Kind:    css.AT_RULE,
+		Kind:    css.AtRule,
 		Name:    "@import",
 		Prelude: "\"my-styles.css\"",
 	}
 
 	expectedRule2 := &css.Rule{
-		Kind:    css.AT_RULE,
+		Kind:    css.AtRule,
 		Name:    "@import",
 		Prelude: "url('landscape.css') screen and (orientation:landscape)",
 	}
@@ -389,35 +389,35 @@ func TestAtRuleKeyframes(t *testing.T) {
   100% { top: 100px; left: 100%; }
 }`
 	expectedRule := &css.Rule{
-		Kind:    css.AT_RULE,
+		Kind:    css.AtRule,
 		Name:    "@keyframes",
 		Prelude: "identifier",
 		Rules: []*css.Rule{
-			&css.Rule{
-				Kind:      css.QUALIFIED_RULE,
+			{
+				Kind:      css.QualifiedRule,
 				Prelude:   "0%",
 				Selectors: []string{"0%"},
 				Declarations: []*css.Declaration{
-					&css.Declaration{
+					{
 						Property: "top",
 						Value:    "0",
 					},
-					&css.Declaration{
+					{
 						Property: "left",
 						Value:    "0",
 					},
 				},
 			},
-			&css.Rule{
-				Kind:      css.QUALIFIED_RULE,
+			{
+				Kind:      css.QualifiedRule,
 				Prelude:   "100%",
 				Selectors: []string{"100%"},
 				Declarations: []*css.Declaration{
-					&css.Declaration{
+					{
 						Property: "top",
 						Value:    "100px",
 					},
-					&css.Declaration{
+					{
 						Property: "left",
 						Value:    "100%",
 					},
@@ -450,16 +450,16 @@ func TestAtRuleMedia(t *testing.T) {
   body { line-height: 1.2 }
 }`
 	expectedRule := &css.Rule{
-		Kind:    css.AT_RULE,
+		Kind:    css.AtRule,
 		Name:    "@media",
 		Prelude: "screen, print",
 		Rules: []*css.Rule{
-			&css.Rule{
-				Kind:      css.QUALIFIED_RULE,
+			{
+				Kind:      css.QualifiedRule,
 				Prelude:   "body",
 				Selectors: []string{"body"},
 				Declarations: []*css.Declaration{
-					&css.Declaration{
+					{
 						Property: "line-height",
 						Value:    "1.2",
 					},
@@ -485,7 +485,7 @@ func TestAtRuleMedia(t *testing.T) {
 func TestAtRuleNamespace(t *testing.T) {
 	input := `@namespace svg url(http://www.w3.org/2000/svg);`
 	expectedRule := &css.Rule{
-		Kind:    css.AT_RULE,
+		Kind:    css.AtRule,
 		Name:    "@namespace",
 		Prelude: "svg url(http://www.w3.org/2000/svg)",
 	}
@@ -504,15 +504,15 @@ func TestAtRulePage(t *testing.T) {
   margin-right: 3cm;
 }`
 	expectedRule := &css.Rule{
-		Kind:    css.AT_RULE,
+		Kind:    css.AtRule,
 		Name:    "@page",
 		Prelude: ":left",
 		Declarations: []*css.Declaration{
-			&css.Declaration{
+			{
 				Property: "margin-left",
 				Value:    "4cm",
 			},
-			&css.Declaration{
+			{
 				Property: "margin-right",
 				Value:    "3cm",
 			},
@@ -536,39 +536,39 @@ func TestAtRuleSupports(t *testing.T) {
     }
 }`
 	expectedRule := &css.Rule{
-		Kind:    css.AT_RULE,
+		Kind:    css.AtRule,
 		Name:    "@supports",
 		Prelude: "(animation-name: test)",
 		Rules: []*css.Rule{
-			&css.Rule{
-				Kind: css.AT_RULE,
+			{
+				Kind: css.AtRule,
 				Name: "@keyframes",
 				Rules: []*css.Rule{
-					&css.Rule{
-						Kind:      css.QUALIFIED_RULE,
+					{
+						Kind:      css.QualifiedRule,
 						Prelude:   "0%",
 						Selectors: []string{"0%"},
 						Declarations: []*css.Declaration{
-							&css.Declaration{
+							{
 								Property: "top",
 								Value:    "0",
 							},
-							&css.Declaration{
+							{
 								Property: "left",
 								Value:    "0",
 							},
 						},
 					},
-					&css.Rule{
-						Kind:      css.QUALIFIED_RULE,
+					{
+						Kind:      css.QualifiedRule,
 						Prelude:   "100%",
 						Selectors: []string{"100%"},
 						Declarations: []*css.Declaration{
-							&css.Declaration{
+							{
 								Property: "top",
 								Value:    "100px",
 							},
-							&css.Declaration{
+							{
 								Property: "left",
 								Value:    "100%",
 							},
@@ -609,11 +609,11 @@ func TestParseDeclarations(t *testing.T) {
 	}
 
 	expectedOutput := []*css.Declaration{
-		&css.Declaration{
+		{
 			Property: "color",
 			Value:    "blue",
 		},
-		&css.Declaration{
+		{
 			Property: "text-decoration",
 			Value:    "underline",
 		},

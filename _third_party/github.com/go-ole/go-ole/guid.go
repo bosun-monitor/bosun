@@ -65,15 +65,20 @@ var (
 	// {D530E7A6-4EE8-40D1-8931-3D63B8605001}
 	IID_ICOMTestBoolean = &GUID{0xd530e7a6, 0x4ee8, 0x40d1, [8]byte{0x89, 0x31, 0x3d, 0x63, 0xb8, 0x60, 0x50, 0x10}}
 
-	// IID_ICOMTestObject is for ICOMTestObject interfaces.
+	// IID_ICOMEchoTestObject is for ICOMEchoTestObject interfaces.
 	//
 	// {6485B1EF-D780-4834-A4FE-1EBB51746CA3}
-	IID_ICOMTestObject = &GUID{0x6485b1ef, 0xd780, 0x4834, [8]byte{0xa4, 0xfe, 0x1e, 0xbb, 0x51, 0x74, 0x6c, 0xa3}}
+	IID_ICOMEchoTestObject = &GUID{0x6485b1ef, 0xd780, 0x4834, [8]byte{0xa4, 0xfe, 0x1e, 0xbb, 0x51, 0x74, 0x6c, 0xa3}}
 
 	// IID_ICOMTestTypes is for ICOMTestTypes interfaces.
 	//
 	// {CCA8D7AE-91C0-4277-A8B3-FF4EDF28D3C0}
 	IID_ICOMTestTypes = &GUID{0xcca8d7ae, 0x91c0, 0x4277, [8]byte{0xa8, 0xb3, 0xff, 0x4e, 0xdf, 0x28, 0xd3, 0xc0}}
+
+	// CLSID_COMEchoTestObject is for COMEchoTestObject class.
+	//
+	// {3C24506A-AE9E-4D50-9157-EF317281F1B0}
+	CLSID_COMEchoTestObject = &GUID{0x3c24506a, 0xae9e, 0x4d50, [8]byte{0x91, 0x57, 0xef, 0x31, 0x72, 0x81, 0xf1, 0xb0}}
 
 	// CLSID_COMTestScalarClass is for COMTestScalarClass class.
 	//
