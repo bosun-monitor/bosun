@@ -181,6 +181,6 @@ func TestAllSubsets(t *testing.T) {
 	ts, _ := ParseTags("a=1,b=2,c=3,d=4")
 	subsets := ts.AllSubsets()
 	if len(subsets) != 15 {
-		t.Fatal("Expect 14 subsets")
+		t.Fatal("Expect 15 subsets")
 	}
 }
