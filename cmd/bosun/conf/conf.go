@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"bosun.org/_third_party/github.com/MiniProfiler/go/miniprofiler"
+	"bosun.org/_third_party/github.com/influxdb/influxdb/client"
 	"bosun.org/cmd/bosun/conf/parse"
 	"bosun.org/cmd/bosun/expr"
 	eparse "bosun.org/cmd/bosun/expr/parse"
@@ -63,7 +64,7 @@ type Conf struct {
 	GraphiteHost         string                    // Graphite query host: foo.bar.baz
 	GraphiteHeaders      []string                  // extra http headers when querying graphite.
 	LogstashElasticHosts expr.LogstashElasticHosts // CSV Elastic Hosts (All part of the same cluster) that stores logstash documents, i.e http://ny-elastic01:9200
-	InfluxHost           string
+	InfluxConfig         client.Config
 
 	tree            *parse.Tree
 	node            parse.Node
@@ -415,7 +416,31 @@ func (c *Conf) loadGlobal(p *parse.PairNode) {
 	case "logstashElasticHosts":
 		c.LogstashElasticHosts = strings.Split(v, ",")
 	case "influxHost":
-		c.InfluxHost = v
+		c.InfluxConfig.URL.Host = v
+		c.InfluxConfig.UserAgent = "bosun"
+		// Default scheme to non-TLS
+		c.InfluxConfig.URL.Scheme = "http"
+	case "influxUsername":
+		c.InfluxConfig.Username = v
+	case "influxPassword":
+		c.InfluxConfig.Password = v
+	case "influxTLS":
+		b, err := strconv.ParseBool(v)
+		if err != nil {
+			c.error(err)
+		}
+		if b {
+			c.InfluxConfig.URL.Scheme = "https"
+		} else {
+			c.InfluxConfig.URL.Scheme = "http"
+		}
+	case "influxTimeout":
+		od, err := opentsdb.ParseDuration(v)
+		if err != nil {
+			c.error(err)
+		}
+		d := time.Duration(od)
+		c.InfluxConfig.Timeout = d
 	case "httpListen":
 		c.HTTPListen = v
 	case "hostname":
@@ -1286,7 +1311,7 @@ func (c *Conf) Funcs() map[string]eparse.Func {
 	if len(c.LogstashElasticHosts) != 0 {
 		merge(expr.LogstashElastic)
 	}
-	if c.InfluxHost != "" {
+	if c.InfluxConfig.URL.Host != "" {
 		merge(expr.Influx)
 	}
 	return funcs

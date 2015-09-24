@@ -22,8 +22,6 @@ type Search struct {
 	Tagk smap
 	// metric + tagk -> tag values
 	Tagv qmap
-	// Each Record
-	MetricTags mtsmap
 
 	Last map[string]*pair
 
@@ -91,12 +89,11 @@ func (p present) Copy() present {
 
 func NewSearch() *Search {
 	s := Search{
-		Metric:     make(qmap),
-		Tagk:       make(smap),
-		Tagv:       make(qmap),
-		MetricTags: make(mtsmap),
-		Last:       make(map[string]*pair),
-		Read:       new(Search),
+		Metric: make(qmap),
+		Tagk:   make(smap),
+		Tagv:   make(qmap),
+		Last:   make(map[string]*pair),
+		Read:   new(Search),
 	}
 	return &s
 }
@@ -107,7 +104,6 @@ func (s *Search) Copy() {
 	r.Metric = s.Metric.Copy()
 	r.Tagk = s.Tagk.Copy()
 	r.Tagv = s.Tagv.Copy()
-	r.MetricTags = s.MetricTags.Copy()
 	s.Read = r
 }
 
@@ -129,7 +125,6 @@ func (s *Search) Index(mdp opentsdb.MultiDataPoint) {
 		mts.Metric = dp.Metric
 		mts.Tags = dp.Tags
 		key := mts.key()
-		s.MetricTags[key] = mts
 		var q duple
 		for k, v := range dp.Tags {
 			q.A, q.B = k, v
@@ -316,35 +311,4 @@ func (s *Search) tagValuesByMetricTagKey(Metric, Tagk string, since time.Duratio
 
 func (s *Search) TagValuesByMetricTagKey(Metric, Tagk string, since time.Duration) []string {
 	return s.tagValuesByMetricTagKey(Metric, Tagk, since)
-}
-
-func (s *Search) FilteredTagValuesByMetricTagKey(Metric, Tagk string, tsf map[string]string) []string {
-	tagvset := make(map[string]bool)
-	for _, mts := range s.Read.MetricTags {
-		if Metric == mts.Metric {
-			match := true
-			if Tagv, ok := mts.Tags[Tagk]; ok {
-				for tpk, tpv := range tsf {
-					if v, ok := mts.Tags[tpk]; ok {
-						if !(v == tpv) {
-							match = false
-						}
-					} else {
-						match = false
-					}
-				}
-				if match {
-					tagvset[Tagv] = true
-				}
-			}
-		}
-	}
-	tagvs := make([]string, len(tagvset))
-	i := 0
-	for k := range tagvset {
-		tagvs[i] = k
-		i++
-	}
-	sort.Strings(tagvs)
-	return tagvs
 }

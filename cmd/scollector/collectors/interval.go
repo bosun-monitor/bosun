@@ -34,7 +34,7 @@ func (c *IntervalCollector) Init() {
 	}
 }
 
-func (c *IntervalCollector) Run(dpchan chan<- *opentsdb.DataPoint) {
+func (c *IntervalCollector) Run(dpchan chan<- *opentsdb.DataPoint, quit <-chan struct{}) {
 	if c.Enable != nil {
 		go func() {
 			for {
@@ -71,7 +71,12 @@ func (c *IntervalCollector) Run(dpchan chan<- *opentsdb.DataPoint) {
 				dpchan <- dp
 			}
 		}
-		<-next
+		select {
+		case <-next:
+		case <-quit:
+			return
+		}
+
 	}
 }
 

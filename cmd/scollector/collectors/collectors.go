@@ -20,7 +20,7 @@ import (
 var collectors []Collector
 
 type Collector interface {
-	Run(chan<- *opentsdb.DataPoint)
+	Run(chan<- *opentsdb.DataPoint, <-chan struct{})
 	Name() string
 	Init()
 }
@@ -136,15 +136,16 @@ func Search(s []string) []Collector {
 }
 
 // Run runs specified collectors. Use nil for all collectors.
-func Run(cs []Collector) chan *opentsdb.DataPoint {
+func Run(cs []Collector) (chan *opentsdb.DataPoint, chan struct{}) {
 	if cs == nil {
 		cs = collectors
 	}
 	ch := make(chan *opentsdb.DataPoint)
+	quit := make(chan struct{})
 	for _, c := range cs {
-		go c.Run(ch)
+		go c.Run(ch, quit)
 	}
-	return ch
+	return ch, quit
 }
 
 type initFunc func(*conf.Conf)

@@ -1,7 +1,6 @@
 package opentsdb
 
 import (
-	"fmt"
 	"testing"
 )
 
