@@ -5,9 +5,9 @@ import (
 )
 
 type MetricMetadata struct {
-	Desc        string `redis:"desc"`
-	Unit        string `redis:"unit"`
-	Rate        string `redis:"rate"`
+	Desc        string `redis:"desc" json:",omitempty"`
+	Unit        string `redis:"unit" json:",omitempty"`
+	Rate        string `redis:"rate" json:",omitempty"`
 	LastTouched int64  `redis:"lastTouched"`
 }
 

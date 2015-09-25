@@ -44,6 +44,9 @@ func (d *dataAccess) GetMetricMetadata(metric string) (*MetricMetadata, error) {
 	if err != nil {
 		return nil, err
 	}
+	if len(v) == 0 {
+		return nil, nil
+	}
 	mm := &MetricMetadata{}
 	if err := redis.ScanStruct(v, mm); err != nil {
 		return nil, err
