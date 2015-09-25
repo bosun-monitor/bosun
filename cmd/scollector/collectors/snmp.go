@@ -13,7 +13,7 @@ import (
 	"bosun.org/opentsdb"
 )
 
-var builtInSNMPs = map[string]func(cfg conf.SNMP){"ifaces": SNMPIfaces, "cisco": SNMPCisco}
+var builtInSNMPs = map[string]func(cfg conf.SNMP){"ifaces": SNMPIfaces, "cisco": SNMPCisco, "bridge": SNMPBridge}
 
 func SNMP(cfg conf.SNMP, mibs map[string]conf.MIB) error {
 	if cfg.Host == "" {
@@ -23,10 +23,9 @@ func SNMP(cfg conf.SNMP, mibs map[string]conf.MIB) error {
 		return fmt.Errorf("empty SNMP community")
 	}
 	if len(cfg.MIBs) == 0 {
-		cfg.MIBs = []string{"ifaces", "cisco"}
+		cfg.MIBs = []string{"ifaces", "cisco", "bridge"}
 	}
 	for _, m := range cfg.MIBs {
-
 		mib, ok := mibs[m]
 		if ok {
 			collectors = append(collectors, &IntervalCollector{

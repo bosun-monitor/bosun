@@ -103,9 +103,6 @@ func main() {
 	}
 	for _, cfg := range conf.SNMP {
 		check(collectors.SNMP(cfg, conf.MIBS))
-		if cfg.Bridge {
-			check(collectors.SNMPBridge(cfg))
-		}
 	}
 	for _, i := range conf.ICMP {
 		check(collectors.ICMP(i.Host))

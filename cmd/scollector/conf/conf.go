@@ -82,7 +82,6 @@ type SNMP struct {
 	Community string
 	Host      string
 	MIBs      []string
-	Bridge    bool
 }
 
 type MIB struct {

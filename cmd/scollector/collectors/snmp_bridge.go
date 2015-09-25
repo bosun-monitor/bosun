@@ -21,7 +21,7 @@ const (
 )
 
 // SNMP Bridge registers
-func SNMPBridge(cfg conf.SNMP) error {
+func SNMPBridge(cfg conf.SNMP) {
 	collectors = append(collectors, &IntervalCollector{
 		F: func() (opentsdb.MultiDataPoint, error) {
 			return c_snmp_bridge(cfg.Community, cfg.Host)
@@ -36,7 +36,6 @@ func SNMPBridge(cfg conf.SNMP) error {
 		Interval: time.Minute * 5,
 		name:     fmt.Sprintf("snmp-cdp-%s", cfg.Host),
 	})
-	return nil
 }
 
 func c_snmp_bridge(community, host string) (opentsdb.MultiDataPoint, error) {
