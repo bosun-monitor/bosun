@@ -52,6 +52,7 @@ func (s *Schedule) ExprSVG(t miniprofiler.Timer, w io.Writer, width, height int,
 	g.Rect(0, 0, width, height, "fill: #ffffff")
 	sgr := svgg.AddTo(g, 0, 0, width, height, "", 12, white)
 	ch.Plot(sgr)
+	g.End()
 	return nil
 }
 
