@@ -15,7 +15,7 @@ import (
 )
 
 func TestCheckFlapping(t *testing.T) {
-	s := new(Schedule)
+
 	c, err := conf.New("", `
 		template t {
 			subject = 1
@@ -34,8 +34,7 @@ func TestCheckFlapping(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	c.StateFile = ""
-	s.Init(c)
+	s, _ := initSched(c)
 	ak := expr.NewAlertKey("a", nil)
 	r := &RunHistory{
 		Events: map[expr.AlertKey]*Event{
@@ -99,7 +98,7 @@ func TestCheckFlapping(t *testing.T) {
 }
 
 func TestCheckSilence(t *testing.T) {
-	s := new(Schedule)
+
 	done := make(chan bool, 1)
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		done <- true
@@ -126,8 +125,7 @@ func TestCheckSilence(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	c.StateFile = ""
-	err = s.Init(c)
+	s, err := initSched(c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -146,7 +144,6 @@ func TestCheckSilence(t *testing.T) {
 }
 
 func TestIncidentIds(t *testing.T) {
-	s := new(Schedule)
 	c, err := conf.New("", `
 		alert a {
 			crit = 1
@@ -155,8 +152,7 @@ func TestIncidentIds(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	c.StateFile = ""
-	s.Init(c)
+	s, _ := initSched(c)
 	ak := expr.NewAlertKey("a", nil)
 	r := &RunHistory{
 		Events: map[expr.AlertKey]*Event{
@@ -195,7 +191,6 @@ func TestIncidentIds(t *testing.T) {
 }
 
 func TestCheckNotify(t *testing.T) {
-	s := new(Schedule)
 	nc := make(chan string)
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		b, _ := ioutil.ReadAll(r.Body)
@@ -222,8 +217,7 @@ func TestCheckNotify(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	c.StateFile = ""
-	err = s.Init(c)
+	s, err := initSched(c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -240,7 +234,6 @@ func TestCheckNotify(t *testing.T) {
 }
 
 func TestCheckNotifyUnknown(t *testing.T) {
-	s := new(Schedule)
 	nc := make(chan string, 1)
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		b, _ := ioutil.ReadAll(r.Body)
@@ -268,8 +261,7 @@ func TestCheckNotifyUnknown(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	c.StateFile = ""
-	err = s.Init(c)
+	s, err := initSched(c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -304,7 +296,6 @@ Loop:
 
 // TestCheckNotifyUnknownDefault tests the default unknownTemplate.
 func TestCheckNotifyUnknownDefault(t *testing.T) {
-	s := new(Schedule)
 	nc := make(chan string, 1)
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		b, _ := ioutil.ReadAll(r.Body)
@@ -331,8 +322,7 @@ func TestCheckNotifyUnknownDefault(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	c.StateFile = ""
-	err = s.Init(c)
+	s, err := initSched(c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -366,7 +356,6 @@ Loop:
 }
 
 func TestCheckNotifyLog(t *testing.T) {
-	s := new(Schedule)
 	nc := make(chan string, 1)
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		b, _ := ioutil.ReadAll(r.Body)
@@ -399,8 +388,7 @@ func TestCheckNotifyLog(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	c.StateFile = ""
-	err = s.Init(c)
+	s, err := initSched(c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -450,7 +438,6 @@ Loop:
 // unknown, it's body and subject are empty. This is because we should not
 // keep around the crit template renders if we are unknown.
 func TestCheckCritUnknownEmpty(t *testing.T) {
-	s := new(Schedule)
 	c, err := conf.New("", `
 		template t {
 			subject = 1
@@ -464,8 +451,7 @@ func TestCheckCritUnknownEmpty(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	c.StateFile = ""
-	s.Init(c)
+	s, _ := initSched(c)
 	ak := expr.NewAlertKey("a", nil)
 	r := &RunHistory{
 		Events: map[expr.AlertKey]*Event{

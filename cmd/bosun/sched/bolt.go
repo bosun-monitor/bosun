@@ -14,8 +14,10 @@ import (
 
 	"bosun.org/_third_party/github.com/boltdb/bolt"
 	"bosun.org/cmd/bosun/conf"
+	"bosun.org/cmd/bosun/database"
 	"bosun.org/cmd/bosun/expr"
 	"bosun.org/collect"
+	"bosun.org/metadata"
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
 )
@@ -47,8 +49,6 @@ const (
 	dbNotifications    = "notifications"
 	dbSilence          = "silence"
 	dbStatus           = "status"
-	dbMetadata         = "metadata"
-	dbMetricMetadata   = "metadata-metric"
 	dbIncidents        = "incidents"
 	dbErrors           = "errors"
 )
@@ -59,16 +59,14 @@ func (s *Schedule) save() {
 	}
 	s.Lock("Save")
 	store := map[string]interface{}{
-		dbMetric:         s.Search.Read.Metric,
-		dbTagk:           s.Search.Read.Tagk,
-		dbTagv:           s.Search.Read.Tagv,
-		dbNotifications:  s.Notifications,
-		dbSilence:        s.Silence,
-		dbStatus:         s.status,
-		dbMetadata:       s.Metadata,
-		dbMetricMetadata: s.metricMetadata,
-		dbIncidents:      s.Incidents,
-		dbErrors:         s.AlertStatuses,
+		dbMetric:        s.Search.Read.Metric,
+		dbTagk:          s.Search.Read.Tagk,
+		dbTagv:          s.Search.Read.Tagv,
+		dbNotifications: s.Notifications,
+		dbSilence:       s.Silence,
+		dbStatus:        s.status,
+		dbIncidents:     s.Incidents,
+		dbErrors:        s.AlertStatuses,
 	}
 	tostore := make(map[string][]byte)
 	for name, data := range store {
@@ -115,6 +113,27 @@ func (s *Schedule) save() {
 	slog.Infoln("save to db complete")
 }
 
+func decode(db *bolt.DB, name string, dst interface{}) error {
+	var data []byte
+	err := db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(dbBucket))
+		if b == nil {
+			return fmt.Errorf("unknown bucket: %v", dbBucket)
+		}
+		data = b.Get([]byte(name))
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	gr, err := gzip.NewReader(bytes.NewReader(data))
+	if err != nil {
+		return err
+	}
+	defer gr.Close()
+	return gob.NewDecoder(gr).Decode(dst)
+}
+
 // RestoreState restores notification and alert state from the file on disk.
 func (s *Schedule) RestoreState() error {
 	defer func() {
@@ -126,59 +145,30 @@ func (s *Schedule) RestoreState() error {
 	defer s.Unlock()
 	s.Search.Lock()
 	defer s.Search.Unlock()
+
 	s.Notifications = nil
-	decode := func(name string, dst interface{}) error {
-		var data []byte
-		err := s.db.View(func(tx *bolt.Tx) error {
-			b := tx.Bucket([]byte(dbBucket))
-			if b == nil {
-				return fmt.Errorf("unknown bucket: %v", dbBucket)
-			}
-			data = b.Get([]byte(name))
-			return nil
-		})
-		if err != nil {
-			return err
-		}
-		gr, err := gzip.NewReader(bytes.NewReader(data))
-		if err != nil {
-			return err
-		}
-		defer gr.Close()
-		return gob.NewDecoder(gr).Decode(dst)
-	}
-	if err := decode(dbMetadata, &s.Metadata); err != nil {
-		slog.Errorln(dbMetadata, err)
-	}
-	if err := decode(dbMetricMetadata, &s.metricMetadata); err != nil {
-		slog.Errorln(dbMetricMetadata, err)
-	}
-	for k, v := range s.Metadata {
-		if k.Name == "desc" || k.Name == "rate" || k.Name == "unit" {
-			s.PutMetadata(k, v.Value)
-			delete(s.Metadata, k)
-		}
-	}
-	if err := decode(dbMetric, &s.Search.Metric); err != nil {
+	db := s.db
+
+	if err := decode(db, dbMetric, &s.Search.Metric); err != nil {
 		slog.Errorln(dbMetric, err)
 	}
-	if err := decode(dbTagk, &s.Search.Tagk); err != nil {
+	if err := decode(db, dbTagk, &s.Search.Tagk); err != nil {
 		slog.Errorln(dbTagk, err)
 	}
-	if err := decode(dbTagv, &s.Search.Tagv); err != nil {
+	if err := decode(db, dbTagv, &s.Search.Tagv); err != nil {
 		slog.Errorln(dbTagv, err)
 	}
 	notifications := make(map[expr.AlertKey]map[string]time.Time)
-	if err := decode(dbNotifications, &notifications); err != nil {
+	if err := decode(db, dbNotifications, &notifications); err != nil {
 		slog.Errorln(dbNotifications, err)
 	}
-	if err := decode(dbSilence, &s.Silence); err != nil {
+	if err := decode(db, dbSilence, &s.Silence); err != nil {
 		slog.Errorln(dbSilence, err)
 	}
-	if err := decode(dbIncidents, &s.Incidents); err != nil {
+	if err := decode(db, dbIncidents, &s.Incidents); err != nil {
 		slog.Errorln(dbIncidents, err)
 	}
-	if err := decode(dbErrors, &s.AlertStatuses); err != nil {
+	if err := decode(db, dbErrors, &s.AlertStatuses); err != nil {
 		slog.Errorln(dbErrors, err)
 	}
 
@@ -189,7 +179,7 @@ func (s *Schedule) RestoreState() error {
 		}
 	}
 	status := make(States)
-	if err := decode(dbStatus, &status); err != nil {
+	if err := decode(db, dbStatus, &status); err != nil {
 		slog.Errorln(dbStatus, err)
 	}
 	clear := func(r *Result) {
@@ -247,6 +237,7 @@ func (s *Schedule) RestoreState() error {
 	if s.maxIncidentId == 0 {
 		s.createHistoricIncidents()
 	}
+	migrateOldDataToRedis(db, s.DataAccess)
 	// delete metrictags if they exist.
 	deleteKey(s.db, "metrictags")
 	s.Search.Copy()
@@ -310,6 +301,63 @@ func (s *Schedule) GetStateFileBackup() ([]byte, error) {
 		return nil, err
 	}
 	return buf.Bytes(), nil
+}
+
+func migrateOldDataToRedis(db *bolt.DB, data database.DataAccess) error {
+	// metadata-metric
+	type MetadataMetric struct {
+		Unit        string `json:",omitempty"`
+		Type        string `json:",omitempty"`
+		Description string
+	}
+	mms := map[string]*MetadataMetric{}
+	if err := decode(db, "metadata-metric", &mms); err == nil {
+		slog.Info("Migrating metric metadata to new database format")
+		for name, mm := range mms {
+			if mm.Description != "" {
+				err = data.PutMetricMetadata(name, "desc", mm.Description)
+				if err != nil {
+					return err
+				}
+			}
+			if mm.Unit != "" {
+				err = data.PutMetricMetadata(name, "unit", mm.Unit)
+				if err != nil {
+					return err
+				}
+			}
+			if mm.Type != "" {
+				err = data.PutMetricMetadata(name, "rate", mm.Type)
+				if err != nil {
+					return err
+				}
+			}
+		}
+		err = deleteKey(db, "metadata-metric")
+		if err != nil {
+			return err
+		}
+	}
+	//metadata
+	type Metavalue struct {
+		Time  time.Time
+		Value interface{}
+	}
+	metadata := make(map[metadata.Metakey]*Metavalue)
+	if err := decode(db, "metadata", &metadata); err == nil {
+		slog.Info("Migrating metadata to new database format")
+		for k, v := range metadata {
+			err = data.PutTagMetadata(k.TagSet(), k.Name, fmt.Sprint(v.Value), v.Time)
+			if err != nil {
+				return err
+			}
+		}
+		err = deleteKey(db, "metadata")
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func deleteKey(db *bolt.DB, name string) error {

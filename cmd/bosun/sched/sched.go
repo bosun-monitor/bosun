@@ -10,13 +10,13 @@ import (
 	"sync"
 	"time"
 
-	"bosun.org/_third_party/github.com/boltdb/bolt"
-
 	"bosun.org/_third_party/github.com/MiniProfiler/go/miniprofiler"
+	"bosun.org/_third_party/github.com/boltdb/bolt"
 	"bosun.org/_third_party/github.com/bradfitz/slice"
 	"bosun.org/_third_party/github.com/tatsushid/go-fastping"
 	"bosun.org/cmd/bosun/cache"
 	"bosun.org/cmd/bosun/conf"
+	"bosun.org/cmd/bosun/database"
 	"bosun.org/cmd/bosun/expr"
 	"bosun.org/cmd/bosun/search"
 	"bosun.org/collect"
@@ -41,11 +41,6 @@ type Schedule struct {
 	Silence map[string]*Silence
 	Group   map[time.Time]expr.AlertKeys
 
-	// Key/value data associated with a metric, tagset, and an additional name
-	Metadata map[metadata.Metakey]*Metavalue
-	// Core metric data, including desc, type, and unit
-	metricMetadata map[string]*MetadataMetric
-
 	Incidents map[uint64]*Incident
 	Search    *search.Search
 
@@ -60,8 +55,6 @@ type Schedule struct {
 	//unknown states that need to be notified about. Collected and sent in batches.
 	pendingUnknowns map[*conf.Notification][]*State
 
-	metaLock        sync.Mutex
-	metricMetaLock  sync.Mutex
 	alertStatusLock sync.Mutex
 	maxIncidentId   uint64
 	incidentLock    sync.Mutex
@@ -70,6 +63,8 @@ type Schedule struct {
 	LastCheck time.Time
 
 	ctx *checkContext
+
+	DataAccess database.DataAccess
 }
 
 func (s *Schedule) Init(c *conf.Conf) error {
@@ -78,14 +73,24 @@ func (s *Schedule) Init(c *conf.Conf) error {
 	s.AlertStatuses = make(map[string]*AlertStatus)
 	s.Silence = make(map[string]*Silence)
 	s.Group = make(map[time.Time]expr.AlertKeys)
-	s.Metadata = make(map[metadata.Metakey]*Metavalue)
-	s.metricMetadata = make(map[string]*MetadataMetric)
 	s.Incidents = make(map[uint64]*Incident)
 	s.pendingUnknowns = make(map[*conf.Notification][]*State)
 	s.status = make(States)
 	s.Search = search.NewSearch()
 	s.LastCheck = time.Now()
 	s.ctx = &checkContext{time.Now(), cache.New(0)}
+	if s.DataAccess == nil {
+		if c.RedisHost != "" {
+			s.DataAccess = database.NewDataAccess(c.RedisHost, true)
+		} else {
+			bind := "127.0.0.1:9565"
+			_, err := database.StartLedis(c.LedisDir, bind)
+			if err != nil {
+				return err
+			}
+			s.DataAccess = database.NewDataAccess(bind, false)
+		}
+	}
 	if c.StateFile != "" {
 		s.db, err = bolt.Open(c.StateFile, 0600, nil)
 		if err != nil {
@@ -132,120 +137,83 @@ func (s *Schedule) GetLockStatus() (holder string, since time.Time) {
 	return s.mutexHolder, s.mutexAquired
 }
 
-type Metavalue struct {
-	Time  time.Time
-	Value interface{}
-}
-
-func (s *Schedule) PutMetadata(k metadata.Metakey, v interface{}) {
+func (s *Schedule) PutMetadata(k metadata.Metakey, v interface{}) error {
 
 	isCoreMeta := (k.Name == "desc" || k.Name == "unit" || k.Name == "rate")
 	if !isCoreMeta {
-		s.metaLock.Lock()
-		s.Metadata[k] = &Metavalue{time.Now().UTC(), v}
-		s.metaLock.Unlock()
-		return
+		s.DataAccess.PutTagMetadata(k.TagSet(), k.Name, fmt.Sprint(v), time.Now().UTC())
+		return nil
 	}
 	if k.Metric == "" {
-		slog.Error("desc, rate, and unit require metric name")
-		return
+		err := fmt.Errorf("desc, rate, and unit require metric name")
+		slog.Error(err)
+		return err
 	}
 	strVal, ok := v.(string)
 	if !ok {
-		slog.Errorf("desc, rate, and unit require value to be string. Found: %s", reflect.TypeOf(v))
-		return
+		err := fmt.Errorf("desc, rate, and unit require value to be string. Found: %s", reflect.TypeOf(v))
+		slog.Error(err)
+		return err
 	}
-	s.metricMetaLock.Lock()
-	metricData, ok := s.metricMetadata[k.Metric]
-	if !ok {
-		metricData = &MetadataMetric{}
-		s.metricMetadata[k.Metric] = metricData
-	}
-	switch k.Name {
-	case "desc":
-		metricData.Description = strVal
-	case "unit":
-		metricData.Unit = strVal
-	case "rate":
-		metricData.Type = strVal
-	}
-	s.metricMetaLock.Unlock()
+	return s.DataAccess.PutMetricMetadata(k.Metric, k.Name, strVal)
 }
 
-type MetadataMetric struct {
-	Unit        string `json:",omitempty"`
-	Type        string `json:",omitempty"`
-	Description string
+func (s *Schedule) DeleteMetadata(tags opentsdb.TagSet, name string) error {
+	return s.DataAccess.DeleteTagMetadata(tags, name)
 }
 
-func (s *Schedule) MetadataMetrics(metric string) map[string]*MetadataMetric {
-	s.metricMetaLock.Lock()
-	defer s.metricMetaLock.Unlock()
-	m := make(map[string]*MetadataMetric)
-	if metric != "" {
-		if v, ok := s.metricMetadata[metric]; ok {
-			m[metric] = &MetadataMetric{
-				Unit:        v.Unit,
-				Type:        v.Type,
-				Description: v.Description,
-			}
-		}
-	} else {
-		for k, v := range s.metricMetadata {
-			m[k] = &MetadataMetric{
-				Unit:        v.Unit,
-				Type:        v.Type,
-				Description: v.Description,
-			}
-		}
+func (s *Schedule) MetadataMetrics(metric string) (*database.MetricMetadata, error) {
+	mm, err := s.DataAccess.GetMetricMetadata(metric)
+	if err != nil {
+		return nil, err
 	}
-	return m
+	return mm, nil
 }
 
-func (s *Schedule) GetMetadata(metric string, subset opentsdb.TagSet) []metadata.Metasend {
+func (s *Schedule) GetMetadata(metric string, subset opentsdb.TagSet) ([]metadata.Metasend, error) {
 	ms := make([]metadata.Metasend, 0)
 	if metric != "" {
-		if meta, ok := s.MetadataMetrics(metric)[metric]; ok {
-			if meta.Description != "" {
-				ms = append(ms, metadata.Metasend{
-					Metric: metric,
-					Name:   "desc",
-					Value:  meta.Description,
-				})
-			}
-			if meta.Unit != "" {
-				ms = append(ms, metadata.Metasend{
-					Metric: metric,
-					Name:   "unit",
-					Value:  meta.Unit,
-				})
-			}
-			if meta.Type != "" {
-				ms = append(ms, metadata.Metasend{
-					Metric: metric,
-					Name:   "rate",
-					Value:  meta.Type,
-				})
-			}
+		meta, err := s.MetadataMetrics(metric)
+		if err != nil {
+			return nil, err
 		}
-	} else {
-		s.metaLock.Lock()
-
-		for k, mv := range s.Metadata {
-			if !k.TagSet().Subset(subset) {
-				continue
-			}
+		if meta.Desc != "" {
 			ms = append(ms, metadata.Metasend{
-				Metric: k.Metric,
-				Tags:   k.TagSet(),
-				Name:   k.Name,
-				Value:  mv.Value,
-				Time:   &mv.Time,
+				Metric: metric,
+				Name:   "desc",
+				Value:  meta.Desc,
 			})
 		}
-		s.metaLock.Unlock()
+		if meta.Unit != "" {
+			ms = append(ms, metadata.Metasend{
+				Metric: metric,
+				Name:   "unit",
+				Value:  meta.Unit,
+			})
+		}
+		if meta.Rate != "" {
+			ms = append(ms, metadata.Metasend{
+				Metric: metric,
+				Name:   "rate",
+				Value:  meta.Rate,
+			})
+		}
+	} else {
+		meta, err := s.DataAccess.GetTagMetadata(subset, "")
+		if err != nil {
+			return nil, err
+		}
+		for _, m := range meta {
+			tm := time.Unix(m.LastTouched, 0)
+			ms = append(ms, metadata.Metasend{
+				Tags:  m.Tags,
+				Name:  m.Name,
+				Value: m.Value,
+				Time:  &tm,
+			})
+		}
 	}
-	return ms
+	return ms, nil
 }
 
 type States map[expr.AlertKey]*State
@@ -980,115 +948,80 @@ func (s *Schedule) GetIncidentEvents(id uint64) (*Incident, []Event, []Action, e
 }
 
 func (s *Schedule) Host(filter string) map[string]*HostData {
-	hosts := make(map[string]struct{})
+	hosts := make(map[string]*HostData)
 	for _, h := range s.Search.TagValuesByTagKey("host", time.Hour*7*24) {
-		hosts[h] = struct{}{}
+		hosts[h] = newHostData()
 	}
-	s.metaLock.Lock()
-	res := make(map[string]*HostData)
-	for k, mv := range s.Metadata {
-		tags := k.TagSet()
-		if k.Metric != "" || tags["host"] == "" {
-			continue
+	for name, host := range hosts {
+		host.Name = name
+		md, err := s.GetMetadata("", opentsdb.TagSet{"host": name})
+		if err != nil {
+			slog.Error(err)
 		}
-		if _, ok := hosts[tags["host"]]; !ok {
-			continue
-		}
-		e := res[tags["host"]]
-		if e == nil {
-			host := fmt.Sprintf("{host=%s}", tags["host"])
-			e = &HostData{
-				Name:       tags["host"],
-				Interfaces: make(map[string]*HostInterface),
+		for _, m := range md {
+			var iface *HostInterface
+			if name := m.Tags["iface"]; name != "" {
+				if host.Interfaces[name] == nil {
+					h := new(HostInterface)
+					host.Interfaces[name] = h
+				}
+				iface = host.Interfaces[name]
 			}
-			e.CPU.Processors = make(map[string]string)
-			if v, err := s.Search.GetLast("os.cpu", host, true); err != nil {
-				e.CPU.Used = v
-			}
-			e.Memory.Modules = make(map[string]string)
-			if v, err := s.Search.GetLast("os.mem.total", host, false); err != nil {
-				e.Memory.Total = int64(v)
-			}
-			if v, err := s.Search.GetLast("os.mem.used", host, false); err != nil {
-				e.Memory.Used = int64(v)
-			}
-			res[tags["host"]] = e
-		}
-		var iface *HostInterface
-		if name := tags["iface"]; name != "" {
-			if e.Interfaces[name] == nil {
-				h := new(HostInterface)
-				itag := opentsdb.TagSet{
-					"host":  tags["host"],
-					"iface": name,
+			switch val := m.Value.(type) {
+			case string:
+				switch m.Name {
+				case "addr":
+					if iface != nil {
+						iface.IPAddresses = append(iface.IPAddresses, val)
+					}
+				case "description", "alias":
+					if iface != nil {
+						iface.Description = val
+					}
+				case "mac":
+					if iface != nil {
+						iface.MAC = val
+					}
+				case "manufacturer":
+					host.Manufacturer = val
+				case "master":
+					if iface != nil {
+						iface.Master = val
+					}
+				case "memory":
+					if name := m.Tags["name"]; name != "" {
+						host.Memory.Modules[name] = val
+					}
+				case "model":
+					host.Model = val
+				case "name":
+					if iface != nil {
+						iface.Name = val
+					}
+				case "processor":
+					if name := m.Tags["name"]; name != "" {
+						host.CPU.Processors[name] = val
+					}
+				case "serialNumber":
+					host.SerialNumber = val
+				case "version":
+					host.OS.Version = val
+				case "versionCaption", "uname":
+					host.OS.Caption = val
 				}
-				intag := opentsdb.TagSet{"direction": "in"}.Merge(itag).String()
-				if v, err := s.Search.GetLast("os.net.bytes", intag, true); err != nil {
-					h.Inbps = int64(v) * 8
-				}
-				outtag := opentsdb.TagSet{"direction": "out"}.Merge(itag).String()
-				if v, err := s.Search.GetLast("os.net.bytes", outtag, true); err != nil {
-					h.Outbps = int64(v) * 8
-				}
-				e.Interfaces[name] = h
-			}
-			iface = e.Interfaces[name]
-		}
-		switch val := mv.Value.(type) {
-		case string:
-			switch k.Name {
-			case "addr":
-				if iface != nil {
-					iface.IPAddresses = append(iface.IPAddresses, val)
-				}
-			case "description":
-				if iface != nil {
-					iface.Description = val
-				}
-			case "mac":
-				if iface != nil {
-					iface.MAC = val
-				}
-			case "manufacturer":
-				e.Manufacturer = val
-			case "master":
-				if iface != nil {
-					iface.Master = val
-				}
-			case "memory":
-				if name := tags["name"]; name != "" {
-					e.Memory.Modules[name] = val
-				}
-			case "model":
-				e.Model = val
-			case "name":
-				if iface != nil {
-					iface.Name = val
-				}
-			case "processor":
-				if name := tags["name"]; name != "" {
-					e.CPU.Processors[name] = val
-				}
-			case "serialNumber":
-				e.SerialNumber = val
-			case "version":
-				e.OS.Version = val
-			case "versionCaption", "uname":
-				e.OS.Caption = val
-			}
-		case float64:
-			switch k.Name {
-			case "memoryTotal":
-				e.Memory.Total = int64(val)
-			case "speed":
-				if iface != nil {
-					iface.LinkSpeed = int64(val)
+			case float64:
+				switch m.Name {
+				case "memoryTotal":
+					host.Memory.Total = int64(val)
+				case "speed":
+					if iface != nil {
+						iface.LinkSpeed = int64(val)
+					}
 				}
 			}
 		}
 	}
-	s.metaLock.Unlock()
-	return res
+	return hosts
 }
 
 type HostInterface struct {
@@ -1100,6 +1033,14 @@ type HostInterface struct {
 	Master      string   `json:",omitempty"`
 	Name        string   `json:",omitempty"`
 	Outbps      int64    `json:",omitempty"`
+}
+
+func newHostData() *HostData {
+	hd := &HostData{}
+	hd.CPU.Processors = make(map[string]string)
+	hd.Interfaces = make(map[string]*HostInterface)
+	hd.Memory.Modules = make(map[string]string)
+	return hd
 }
 
 type HostData struct {

@@ -14,6 +14,7 @@ import (
 
 	"bosun.org/_third_party/github.com/MiniProfiler/go/miniprofiler"
 	"bosun.org/cmd/bosun/conf"
+	"bosun.org/cmd/bosun/database"
 	"bosun.org/cmd/bosun/expr"
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
@@ -48,6 +49,34 @@ func check(s *Schedule, t time.Time) {
 		s.ctx.runTime = t
 		s.checkAlert(a)
 	}
+}
+
+//fake data access for tests. Perhaps a full mock would be more appropriate, once the interface contains more.
+// this implementation just panics
+type nopDataAccess struct{}
+
+func (n *nopDataAccess) PutMetricMetadata(metric string, field string, value string) error {
+	panic("not implemented")
+}
+func (n *nopDataAccess) GetMetricMetadata(metric string) (*database.MetricMetadata, error) {
+	panic("not implemented")
+}
+func (n *nopDataAccess) PutTagMetadata(tags opentsdb.TagSet, name string, value string, updated time.Time) error {
+	panic("not implemented")
+}
+func (n *nopDataAccess) GetTagMetadata(tags opentsdb.TagSet, name string) ([]*database.TagMetadata, error) {
+	panic("not implemented")
+}
+func (n *nopDataAccess) DeleteTagMetadata(tags opentsdb.TagSet, name string) error {
+	panic("not implemented")
+}
+
+func initSched(c *conf.Conf) (*Schedule, error) {
+	c.StateFile = ""
+	s := new(Schedule)
+	s.DataAccess = &nopDataAccess{}
+	err := s.Init(c)
+	return s, err
 }
 
 func testSched(t *testing.T, st *schedTest) (s *Schedule) {
@@ -86,10 +115,9 @@ func testSched(t *testing.T, st *schedTest) (s *Schedule) {
 		t.Logf("conf:\n%s", confs)
 		return
 	}
-	c.StateFile = ""
+
 	time.Sleep(time.Millisecond * 250)
-	s = new(Schedule)
-	s.Init(c)
+	s, _ = initSched(c)
 	if st.previous != nil {
 		s.status = st.previous
 	}

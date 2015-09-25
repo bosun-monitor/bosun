@@ -16,8 +16,7 @@ func TestActionNotificationTemplates(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	s := &Schedule{}
-	s.Init(c)
+	s, _ := initSched(c)
 	data := &actionNotificationContext{}
 	data.ActionType = ActionAcknowledge
 	data.Message = "Bad things happened"
@@ -102,12 +101,10 @@ func TestActionNotificationGrouping(t *testing.T) {
 			warn = 1
 		}
 	`)
-	c.StateFile = ""
 	if err != nil {
 		t.Fatal(err)
 	}
-	s := Schedule{}
-	err = s.Init(c)
+	s, err := initSched(c)
 	if err != nil {
 		t.Fatal(err)
 	}

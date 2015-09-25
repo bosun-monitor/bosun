@@ -1,6 +1,8 @@
 package opentsdb
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestClean(t *testing.T) {
 	clean := "aoeSNVT152-./_"
@@ -171,5 +173,13 @@ func TestValidTags(t *testing.T) {
 		if v != r {
 			t.Errorf("%v: got %v, expected %v", s, r, v)
 		}
+	}
+}
+
+func TestAllSubsets(t *testing.T) {
+	ts, _ := ParseTags("a=1,b=2,c=3,d=4")
+	subsets := ts.AllSubsets()
+	if len(subsets) != 15 {
+		t.Fatal("Expect 15 subsets")
 	}
 }
