@@ -24,8 +24,8 @@ func tagMetaKey(tags opentsdb.TagSet, name string) string {
 	return fmt.Sprintf("tmeta:%s:%s", tags.Tags(), name)
 }
 
-func tagMetaIdxKey(sub string) string {
-	return fmt.Sprintf("tmeta:idx:%s", sub)
+func tagMetaIdxKey(tagK, tagV string) string {
+	return fmt.Sprintf("tmeta:idx:%s=%s", tagK, tagV)
 }
 
 func (d *dataAccess) PutTagMetadata(tags opentsdb.TagSet, name string, value string, updated time.Time) error {
@@ -38,8 +38,8 @@ func (d *dataAccess) PutTagMetadata(tags opentsdb.TagSet, name string, value str
 	if err != nil {
 		return err
 	}
-	for _, sub := range tags.AllSubsets() {
-		_, err := conn.Do("SADD", tagMetaIdxKey(sub), key)
+	for tagK, tagV := range tags {
+		_, err := conn.Do("SADD", tagMetaIdxKey(tagK, tagV), key)
 		if err != nil {
 			return err
 		}
@@ -56,8 +56,8 @@ func (d *dataAccess) DeleteTagMetadata(tags opentsdb.TagSet, name string) error 
 	if err != nil {
 		return err
 	}
-	for _, sub := range tags.AllSubsets() {
-		_, err := conn.Do("SREM", tagMetaIdxKey(sub), key)
+	for tagK, tagV := range tags {
+		_, err := conn.Do("SREM", tagMetaIdxKey(tagK, tagV), key)
 		if err != nil {
 			return err
 		}
@@ -69,18 +69,21 @@ func (d *dataAccess) GetTagMetadata(tags opentsdb.TagSet, name string) ([]*TagMe
 	defer collect.StartTimer("redis", opentsdb.TagSet{"op": "GetTagMeta"})()
 	conn := d.getConnection()
 	defer conn.Close()
-	key := tagMetaIdxKey(tags.Tags())
-	keys, err := redis.Strings(conn.Do("SMEMBERS", key))
+	args := []interface{}{}
+	for tagK, tagV := range tags {
+		args = append(args, tagMetaIdxKey(tagK, tagV))
+	}
+	keys, err := redis.Strings(conn.Do("SINTER", args...))
 	if err != nil {
 		return nil, err
 	}
-	args := []interface{}{}
+	args = []interface{}{}
 	for _, key := range keys {
 		if name == "" || strings.HasSuffix(key, ":"+name) {
 			args = append(args, key)
 		}
 	}
-	results, err := redis.Strings(conn.Do("MGET", args...)) //SHOULD WE BATCH?
+	results, err := redis.Strings(conn.Do("MGET", args...))
 	data := []*TagMetadata{}
 	for i := range args {
 		// break up key to get tags and name
