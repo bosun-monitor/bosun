@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"time"
 
-	"bosun.org/_third_party/github.com/awslabs/aws-sdk-go/aws"
-	"bosun.org/_third_party/github.com/awslabs/aws-sdk-go/aws/credentials"
-	"bosun.org/_third_party/github.com/awslabs/aws-sdk-go/service/cloudwatch"
-	"bosun.org/_third_party/github.com/awslabs/aws-sdk-go/service/ec2"
-	"bosun.org/_third_party/github.com/awslabs/aws-sdk-go/service/elb"
+	"bosun.org/_third_party/github.com/aws/aws-sdk-go/aws"
+	"bosun.org/_third_party/github.com/aws/aws-sdk-go/aws/credentials"
+	"bosun.org/_third_party/github.com/aws/aws-sdk-go/service/cloudwatch"
+	"bosun.org/_third_party/github.com/aws/aws-sdk-go/service/ec2"
+	"bosun.org/_third_party/github.com/aws/aws-sdk-go/service/elb"
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
@@ -34,6 +34,8 @@ const (
 	descAWSELBLatency     = "The minimum, maximum and average latency as reported by the load balancer, gathered at a 60 second interval and averaged over five minutes."
 )
 
+var aws_period = int64(60)
+
 func AWS(accessKey, secretKey, region string) error {
 	if accessKey == "" || secretKey == "" || region == "" {
 		return fmt.Errorf("empty AccessKey, SecretKey, or Region in AWS")
@@ -53,7 +55,7 @@ func c_aws(accessKey, secretKey, region string) (opentsdb.MultiDataPoint, error)
 	creds := credentials.NewStaticCredentials(accessKey, secretKey, "")
 	conf := &aws.Config{
 		Credentials: creds,
-		Region:      region,
+		Region:      &region,
 	}
 	ecc := ec2.New(conf)
 	if ecc == nil {
@@ -120,18 +122,18 @@ func awsGetCPU(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, instance *
 		StartTime:  aws.Time(time.Now().UTC().Add(time.Second * -600)),
 		EndTime:    aws.Time(time.Now().UTC()),
 		MetricName: aws.String("CPUUtilization"),
-		Period:     aws.Long(60),
+		Period:     &aws_period,
 		Statistics: []*string{aws.String("Average")},
 		Namespace:  aws.String("AWS/EC2"),
 		Unit:       aws.String("Percent"),
-		Dimensions: []*cloudwatch.Dimension{{Name: aws.String("InstanceId"), Value: instance.InstanceID}},
+		Dimensions: []*cloudwatch.Dimension{{Name: aws.String("InstanceId"), Value: instance.InstanceId}},
 	}
 	resp, err := cw.GetMetricStatistics(&search)
 	if err != nil {
 		return err
 	}
 	tags := opentsdb.TagSet{
-		"instance": *instance.InstanceID,
+		"instance": *instance.InstanceId,
 	}
 	for _, datapoint := range resp.Datapoints {
 		AddTS(md, awsCPU, datapoint.Timestamp.Unix(), *datapoint.Average, tags, metadata.Gauge, metadata.Pct, descAWSEC2CPU)
@@ -143,18 +145,18 @@ func awsGetNetwork(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, instan
 		StartTime:  aws.Time(time.Now().UTC().Add(time.Second * -600)),
 		EndTime:    aws.Time(time.Now().UTC()),
 		MetricName: aws.String("NetworkIn"),
-		Period:     aws.Long(60),
+		Period:     &aws_period,
 		Statistics: []*string{aws.String("Average")},
 		Namespace:  aws.String("AWS/EC2"),
 		Unit:       aws.String("Bytes"),
-		Dimensions: []*cloudwatch.Dimension{{Name: aws.String("InstanceId"), Value: instance.InstanceID}},
+		Dimensions: []*cloudwatch.Dimension{{Name: aws.String("InstanceId"), Value: instance.InstanceId}},
 	}
 	resp, err := cw.GetMetricStatistics(&search)
 	if err != nil {
 		return err
 	}
 	for _, datapoint := range resp.Datapoints {
-		AddTS(md, awsNetwork, datapoint.Timestamp.Unix(), *datapoint.Average, opentsdb.TagSet{"instance": *instance.InstanceID, "direction": "in"}, metadata.Gauge, metadata.Bytes, descAWSEC2NetBytes)
+		AddTS(md, awsNetwork, datapoint.Timestamp.Unix(), *datapoint.Average, opentsdb.TagSet{"instance": *instance.InstanceId, "direction": "in"}, metadata.Gauge, metadata.Bytes, descAWSEC2NetBytes)
 	}
 	search.MetricName = aws.String("NetworkOut")
 	resp, err = cw.GetMetricStatistics(&search)
@@ -162,7 +164,7 @@ func awsGetNetwork(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, instan
 		return err
 	}
 	for _, datapoint := range resp.Datapoints {
-		AddTS(md, awsNetwork, datapoint.Timestamp.Unix(), *datapoint.Average, opentsdb.TagSet{"instance": *instance.InstanceID, "direction": "out"}, metadata.Gauge, metadata.Bytes, descAWSEC2NetBytes)
+		AddTS(md, awsNetwork, datapoint.Timestamp.Unix(), *datapoint.Average, opentsdb.TagSet{"instance": *instance.InstanceId, "direction": "out"}, metadata.Gauge, metadata.Bytes, descAWSEC2NetBytes)
 	}
 	return nil
 }
@@ -172,18 +174,18 @@ func awsGetDiskBytes(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, inst
 		StartTime:  aws.Time(time.Now().UTC().Add(time.Second * -600)),
 		EndTime:    aws.Time(time.Now().UTC()),
 		MetricName: aws.String("DiskReadBytes"),
-		Period:     aws.Long(60),
+		Period:     &aws_period,
 		Statistics: []*string{aws.String("Average")},
 		Namespace:  aws.String("AWS/EC2"),
 		Unit:       aws.String("Bytes"),
-		Dimensions: []*cloudwatch.Dimension{{Name: aws.String("InstanceId"), Value: instance.InstanceID}},
+		Dimensions: []*cloudwatch.Dimension{{Name: aws.String("InstanceId"), Value: instance.InstanceId}},
 	}
 	resp, err := cw.GetMetricStatistics(&search)
 	if err != nil {
 		return err
 	}
 	for _, datapoint := range resp.Datapoints {
-		AddTS(md, awsEC2DiskBytes, datapoint.Timestamp.Unix(), *datapoint.Average, opentsdb.TagSet{"instance": *instance.InstanceID, "operation": "read"}, metadata.Gauge, metadata.Bytes, descAWSEC2DiskBytes)
+		AddTS(md, awsEC2DiskBytes, datapoint.Timestamp.Unix(), *datapoint.Average, opentsdb.TagSet{"instance": *instance.InstanceId, "operation": "read"}, metadata.Gauge, metadata.Bytes, descAWSEC2DiskBytes)
 	}
 	search.MetricName = aws.String("DiskWriteBytes")
 	resp, err = cw.GetMetricStatistics(&search)
@@ -191,7 +193,7 @@ func awsGetDiskBytes(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, inst
 		return err
 	}
 	for _, datapoint := range resp.Datapoints {
-		AddTS(md, awsEC2DiskBytes, datapoint.Timestamp.Unix(), *datapoint.Average, opentsdb.TagSet{"instance": *instance.InstanceID, "operation": "write"}, metadata.Gauge, metadata.Bytes, descAWSEC2DiskBytes)
+		AddTS(md, awsEC2DiskBytes, datapoint.Timestamp.Unix(), *datapoint.Average, opentsdb.TagSet{"instance": *instance.InstanceId, "operation": "write"}, metadata.Gauge, metadata.Bytes, descAWSEC2DiskBytes)
 	}
 	return nil
 }
@@ -201,18 +203,18 @@ func awsGetDiskOps(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, instan
 		StartTime:  aws.Time(time.Now().UTC().Add(time.Second * -600)),
 		EndTime:    aws.Time(time.Now().UTC()),
 		MetricName: aws.String("DiskReadOps"),
-		Period:     aws.Long(60),
+		Period:     &aws_period,
 		Statistics: []*string{aws.String("Average")},
 		Namespace:  aws.String("AWS/EC2"),
 		Unit:       aws.String("Count"),
-		Dimensions: []*cloudwatch.Dimension{{Name: aws.String("InstanceId"), Value: instance.InstanceID}},
+		Dimensions: []*cloudwatch.Dimension{{Name: aws.String("InstanceId"), Value: instance.InstanceId}},
 	}
 	resp, err := cw.GetMetricStatistics(&search)
 	if err != nil {
 		return err
 	}
 	for _, datapoint := range resp.Datapoints {
-		AddTS(md, awsEC2DiskOps, datapoint.Timestamp.Unix(), *datapoint.Average, opentsdb.TagSet{"instance": *instance.InstanceID, "operation": "read"}, metadata.Gauge, metadata.Count, descAWSEC2DiskOps)
+		AddTS(md, awsEC2DiskOps, datapoint.Timestamp.Unix(), *datapoint.Average, opentsdb.TagSet{"instance": *instance.InstanceId, "operation": "read"}, metadata.Gauge, metadata.Count, descAWSEC2DiskOps)
 	}
 	search.MetricName = aws.String("DiskWriteOps")
 	resp, err = cw.GetMetricStatistics(&search)
@@ -220,28 +222,29 @@ func awsGetDiskOps(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, instan
 		return err
 	}
 	for _, datapoint := range resp.Datapoints {
-		AddTS(md, awsEC2DiskOps, datapoint.Timestamp.Unix(), *datapoint.Average, opentsdb.TagSet{"instance": *instance.InstanceID, "operation": "write"}, metadata.Gauge, metadata.Count, descAWSEC2DiskOps)
+		AddTS(md, awsEC2DiskOps, datapoint.Timestamp.Unix(), *datapoint.Average, opentsdb.TagSet{"instance": *instance.InstanceId, "operation": "write"}, metadata.Gauge, metadata.Count, descAWSEC2DiskOps)
 	}
 	return nil
 }
 
 func awsGetStatusChecks(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, instance *ec2.Instance) error {
+	period := int64(60)
 	search := cloudwatch.GetMetricStatisticsInput{
 		StartTime:  aws.Time(time.Now().UTC().Add(time.Second * -60)),
 		EndTime:    aws.Time(time.Now().UTC()),
 		MetricName: aws.String("StatusCheckFailed"),
-		Period:     aws.Long(60),
+		Period:     &period,
 		Statistics: []*string{aws.String("Average")},
 		Namespace:  aws.String("AWS/EC2"),
 		Unit:       aws.String("Count"),
-		Dimensions: []*cloudwatch.Dimension{{Name: aws.String("InstanceId"), Value: instance.InstanceID}},
+		Dimensions: []*cloudwatch.Dimension{{Name: aws.String("InstanceId"), Value: instance.InstanceId}},
 	}
 	resp, err := cw.GetMetricStatistics(&search)
 	if err != nil {
 		return err
 	}
 	for _, datapoint := range resp.Datapoints {
-		AddTS(md, awsStatusCheckFailed, datapoint.Timestamp.Unix(), *datapoint.Average, opentsdb.TagSet{"instance": *instance.InstanceID}, metadata.Gauge, metadata.Count, descAWSEC2StatusCheck)
+		AddTS(md, awsStatusCheckFailed, datapoint.Timestamp.Unix(), *datapoint.Average, opentsdb.TagSet{"instance": *instance.InstanceId}, metadata.Gauge, metadata.Count, descAWSEC2StatusCheck)
 	}
 	search.MetricName = aws.String("StatusCheckFailed_Instance")
 	resp, err = cw.GetMetricStatistics(&search)
@@ -249,7 +252,7 @@ func awsGetStatusChecks(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, i
 		return err
 	}
 	for _, datapoint := range resp.Datapoints {
-		AddTS(md, awsStatusCheckFailed, datapoint.Timestamp.Unix(), *datapoint.Average, opentsdb.TagSet{"instance": *instance.InstanceID, "category": "instance"}, metadata.Gauge, metadata.Count, descAWSEC2StatusCheck)
+		AddTS(md, awsStatusCheckFailed, datapoint.Timestamp.Unix(), *datapoint.Average, opentsdb.TagSet{"instance": *instance.InstanceId, "category": "instance"}, metadata.Gauge, metadata.Count, descAWSEC2StatusCheck)
 	}
 	search.MetricName = aws.String("StatusCheckFailed_System")
 	resp, err = cw.GetMetricStatistics(&search)
@@ -257,7 +260,7 @@ func awsGetStatusChecks(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, i
 		return err
 	}
 	for _, datapoint := range resp.Datapoints {
-		AddTS(md, awsStatusCheckFailed, datapoint.Timestamp.Unix(), *datapoint.Average, opentsdb.TagSet{"instance": *instance.InstanceID, "category": "system"}, metadata.Gauge, metadata.Count, descAWSEC2StatusCheck)
+		AddTS(md, awsStatusCheckFailed, datapoint.Timestamp.Unix(), *datapoint.Average, opentsdb.TagSet{"instance": *instance.InstanceId, "category": "system"}, metadata.Gauge, metadata.Count, descAWSEC2StatusCheck)
 	}
 	return nil
 }
@@ -267,7 +270,7 @@ func awsGetELBLatency(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, loa
 		StartTime:  aws.Time(time.Now().UTC().Add(time.Second * -4000)),
 		EndTime:    aws.Time(time.Now().UTC()),
 		MetricName: aws.String("Latency"),
-		Period:     aws.Long(60),
+		Period:     &aws_period,
 		Statistics: []*string{aws.String("Average"), aws.String("Minimum"), aws.String("Maximum")},
 		Namespace:  aws.String("AWS/ELB"),
 		Unit:       aws.String("Seconds"),
@@ -289,7 +292,7 @@ func awsGetELBHostCounts(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, 
 		StartTime:  aws.Time(time.Now().UTC().Add(time.Second * -60)),
 		EndTime:    aws.Time(time.Now().UTC()),
 		MetricName: aws.String("HealthyHostCount"),
-		Period:     aws.Long(60),
+		Period:     &aws_period,
 		Statistics: []*string{aws.String("Average")},
 		Namespace:  aws.String("AWS/ELB"),
 		Unit:       aws.String("Count"),
