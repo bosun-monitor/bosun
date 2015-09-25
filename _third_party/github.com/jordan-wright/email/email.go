@@ -3,6 +3,7 @@
 package email
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/base64"
 	"errors"
@@ -10,6 +11,7 @@ import (
 	"io"
 	"mime"
 	"mime/multipart"
+	"mime/quotedprintable"
 	"net/mail"
 	"net/smtp"
 	"net/textproto"
@@ -23,6 +25,12 @@ const (
 	// MaxLineLength is the maximum line length per RFC 2045
 	MaxLineLength = 76
 )
+
+// ErrMissingBoundary is returned when there is no boundary given for a multipart entity
+var ErrMissingBoundary = errors.New("No boundary found for multipart entity")
+
+// ErrMissingContentType is returned when there is no "Content-Type" header for a MIME entity
+var ErrMissingContentType = errors.New("No Content-Type found for MIME entity")
 
 // Email is the type used for email messages
 type Email struct {
@@ -38,9 +46,115 @@ type Email struct {
 	ReadReceipt []string
 }
 
+// part is a copyable representation of a multipart.Part
+type part struct {
+	header textproto.MIMEHeader
+	body   []byte
+}
+
 // NewEmail creates an Email, and returns the pointer to it.
 func NewEmail() *Email {
 	return &Email{Headers: textproto.MIMEHeader{}}
+}
+
+// NewEmailFromReader reads a stream of bytes from an io.Reader, r,
+// and returns an email struct containing the parsed data.
+// This function expects the data in RFC 5322 format.
+func NewEmailFromReader(r io.Reader) (*Email, error) {
+	e := NewEmail()
+	tp := textproto.NewReader(bufio.NewReader(r))
+	// Parse the main headers
+	hdrs, err := tp.ReadMIMEHeader()
+	if err != nil {
+		return e, err
+	}
+	// Set the subject, to, cc, bcc, and from
+	for h, v := range hdrs {
+		switch {
+		case h == "Subject":
+			e.Subject = v[0]
+			delete(hdrs, h)
+		case h == "To":
+			e.To = v
+			delete(hdrs, h)
+		case h == "Cc":
+			e.Cc = v
+			delete(hdrs, h)
+		case h == "Bcc":
+			e.Bcc = v
+			delete(hdrs, h)
+		case h == "From":
+			e.From = v[0]
+			delete(hdrs, h)
+		}
+	}
+	e.Headers = hdrs
+	body := tp.R
+	// Recursively parse the MIME parts
+	ps, err := parseMIMEParts(e.Headers, body)
+	if err != nil {
+		return e, err
+	}
+	for _, p := range ps {
+		if ct := p.header.Get("Content-Type"); ct == "" {
+			return e, ErrMissingContentType
+		}
+		ct, _, err := mime.ParseMediaType(p.header.Get("Content-Type"))
+		if err != nil {
+			return e, err
+		}
+		switch {
+		case ct == "text/plain":
+			e.Text = p.body
+		case ct == "text/html":
+			e.HTML = p.body
+		}
+	}
+	return e, nil
+}
+
+// parseMIMEParts will recursively walk a MIME entity and return a []mime.Part containing
+// each (flattened) mime.Part found.
+// It is important to note that there are no limits to the number of recursions, so be
+// careful when parsing unknown MIME structures!
+func parseMIMEParts(hs textproto.MIMEHeader, b io.Reader) ([]*part, error) {
+	var ps []*part
+	ct, params, err := mime.ParseMediaType(hs.Get("Content-Type"))
+	if err != nil {
+		return ps, err
+	}
+	if strings.HasPrefix(ct, "multipart/") {
+		if _, ok := params["boundary"]; !ok {
+			return ps, ErrMissingBoundary
+		}
+		mr := multipart.NewReader(b, params["boundary"])
+		for {
+			var buf bytes.Buffer
+			p, err := mr.NextPart()
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				return ps, err
+			}
+			subct, _, err := mime.ParseMediaType(p.Header.Get("Content-Type"))
+			if strings.HasPrefix(subct, "multipart/") {
+				sps, err := parseMIMEParts(p.Header, p)
+				if err != nil {
+					return ps, err
+				}
+				ps = append(ps, sps...)
+			} else {
+				// Otherwise, just append the part to the list
+				// Copy the part data into the buffer
+				if _, err := io.Copy(&buf, p); err != nil {
+					return ps, err
+				}
+				ps = append(ps, &part{body: buf.Bytes(), header: p.Header})
+			}
+		}
+	}
+	return ps, nil
 }
 
 // Attach is used to attach content from an io.Reader to the email.
@@ -156,8 +270,12 @@ func (e *Email) Bytes() ([]byte, error) {
 			if _, err := subWriter.CreatePart(header); err != nil {
 				return nil, err
 			}
+			qp := quotedprintable.NewWriter(buff)
 			// Write the text
-			if err := quotePrintEncode(buff, e.Text); err != nil {
+			if _, err := qp.Write(e.Text); err != nil {
+				return nil, err
+			}
+			if err := qp.Close(); err != nil {
 				return nil, err
 			}
 		}
@@ -167,8 +285,12 @@ func (e *Email) Bytes() ([]byte, error) {
 			if _, err := subWriter.CreatePart(header); err != nil {
 				return nil, err
 			}
-			// Write the text
-			if err := quotePrintEncode(buff, e.HTML); err != nil {
+			qp := quotedprintable.NewWriter(buff)
+			// Write the HTML
+			if _, err := qp.Write(e.HTML); err != nil {
+				return nil, err
+			}
+			if err := qp.Close(); err != nil {
 				return nil, err
 			}
 		}
@@ -227,74 +349,6 @@ type Attachment struct {
 	Content  []byte
 }
 
-// quotePrintEncode writes the quoted-printable text to the IO Writer (according to RFC 2045)
-func quotePrintEncode(w io.Writer, body []byte) error {
-	var buf [3]byte
-	mc := 0
-	for _, c := range body {
-		// We're assuming Unix style text formats as input (LF line break), and
-		// quoted-printable uses CRLF line breaks. (Literal CRs will become
-		// "=0D", but probably shouldn't be there to begin with!)
-		if c == '\n' {
-			io.WriteString(w, "\r\n")
-			mc = 0
-			continue
-		}
-
-		var nextOut []byte
-		if isPrintable[c] {
-			buf[0] = c
-			nextOut = buf[:1]
-		} else {
-			nextOut = buf[:]
-			qpEscape(nextOut, c)
-		}
-
-		// Add a soft line break if the next (encoded) byte would push this line
-		// to or past the limit.
-		if mc+len(nextOut) >= MaxLineLength {
-			if _, err := io.WriteString(w, "=\r\n"); err != nil {
-				return err
-			}
-			mc = 0
-		}
-
-		if _, err := w.Write(nextOut); err != nil {
-			return err
-		}
-		mc += len(nextOut)
-	}
-	// No trailing end-of-line?? Soft line break, then. TODO: is this sane?
-	if mc > 0 {
-		io.WriteString(w, "=\r\n")
-	}
-	return nil
-}
-
-// isPrintable holds true if the byte given is "printable" according to RFC 2045, false otherwise
-var isPrintable [256]bool
-
-func init() {
-	for c := '!'; c <= '<'; c++ {
-		isPrintable[c] = true
-	}
-	for c := '>'; c <= '~'; c++ {
-		isPrintable[c] = true
-	}
-	isPrintable[' '] = true
-	isPrintable['\n'] = true
-	isPrintable['\t'] = true
-}
-
-// qpEscape is a helper function for quotePrintEncode which escapes a
-// non-printable byte. Expects len(dest) == 3.
-func qpEscape(dest []byte, c byte) {
-	const nums = "0123456789ABCDEF"
-	dest[0] = '='
-	dest[1] = nums[(c&0xf0)>>4]
-	dest[2] = nums[(c & 0xf)]
-}
-
 // base64Wrap encodes the attachment content, and wraps it according to RFC 2045 standards (every 76 chars)
 // The output is then written to the specified io.Writer
 func base64Wrap(w io.Writer, b []byte) {
@@ -326,7 +380,13 @@ func headerToBytes(buff *bytes.Buffer, header textproto.MIMEHeader) {
 			// bytes.Buffer.Write() never returns an error.
 			io.WriteString(buff, field)
 			io.WriteString(buff, ": ")
-			io.WriteString(buff, subval)
+			// Write the encoded header if needed
+			switch {
+			case field == "Content-Type" || field == "Content-Disposition":
+				buff.Write([]byte(subval))
+			default:
+				buff.Write([]byte(mime.QEncoding.Encode("UTF-8", subval)))
+			}
 			io.WriteString(buff, "\r\n")
 		}
 	}

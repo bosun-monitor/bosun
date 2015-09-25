@@ -9,7 +9,7 @@ import (
 	"bosun.org/_third_party/github.com/aymerick/douceur/parser"
 )
 
-// An HTML element with matching CSS rules
+// Element represents a HTML element with matching CSS rules
 type Element struct {
 	// The goquery handler
 	elt *goquery.Selection
@@ -18,6 +18,7 @@ type Element struct {
 	styleRules []*StyleRule
 }
 
+// ElementAttr represents a HTML element attribute
 type ElementAttr struct {
 	attr     string
 	elements []string
@@ -30,23 +31,23 @@ func init() {
 	// Borrowed from premailer:
 	//   https://github.com/premailer/premailer/blob/master/lib/premailer/premailer.rb
 	styleToAttr = map[string]*ElementAttr{
-		"text-align": &ElementAttr{
+		"text-align": {
 			"align",
 			[]string{"h1", "h2", "h3", "h4", "h5", "h6", "p", "div", "blockquote", "tr", "th", "td"},
 		},
-		"background-color": &ElementAttr{
+		"background-color": {
 			"bgcolor",
 			[]string{"body", "table", "tr", "th", "td"},
 		},
-		"background-image": &ElementAttr{
+		"background-image": {
 			"background",
 			[]string{"table"},
 		},
-		"vertical-align": &ElementAttr{
+		"vertical-align": {
 			"valign",
 			[]string{"th", "td"},
 		},
-		"float": &ElementAttr{
+		"float": {
 			"align",
 			[]string{"img"},
 		},
@@ -54,7 +55,7 @@ func init() {
 	}
 }
 
-// Instanciate a new element
+// NewElement instanciates a new element
 func NewElement(elt *goquery.Selection) *Element {
 	return &Element{
 		elt: elt,
@@ -128,7 +129,7 @@ func (element *Element) parseInlineStyle() ([]*StyleRule, error) {
 		return result, err
 	}
 
-	result = append(result, NewStyleRule(INLINE_FAKE_SELECTOR, declarations))
+	result = append(result, NewStyleRule(inlineFakeSelector, declarations))
 
 	return result, nil
 }

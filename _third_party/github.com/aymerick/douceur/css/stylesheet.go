@@ -1,11 +1,11 @@
 package css
 
-// A Parsed stylesheet
+// Stylesheet represents a parsed stylesheet
 type Stylesheet struct {
 	Rules []*Rule
 }
 
-// Instanciate a new Stylesheet
+// NewStylesheet instanciate a new Stylesheet
 func NewStylesheet() *Stylesheet {
 	return &Stylesheet{}
 }

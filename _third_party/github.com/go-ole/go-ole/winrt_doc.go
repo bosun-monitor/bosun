@@ -2,14 +2,17 @@
 
 package ole
 
+// RoInitialize
 func RoInitialize(thread_type uint32) (err error) {
 	return NewError(E_NOTIMPL)
 }
 
+// RoActivateInstance
 func RoActivateInstance(clsid string) (ins *IInspectable, err error) {
 	return nil, NewError(E_NOTIMPL)
 }
 
+// RoGetActivationFactory
 func RoGetActivationFactory(clsid string, iid *GUID) (ins *IInspectable, err error) {
 	return nil, NewError(E_NOTIMPL)
 }
