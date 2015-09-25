@@ -32,8 +32,8 @@ func TestMetricMetadata_NoneExists(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if meta == nil {
-		t.Fatal("Should make metadata no matter what")
+	if meta != nil {
+		t.Fatal("Should return nil if not exist")
 	}
 }
 

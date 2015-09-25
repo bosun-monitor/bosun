@@ -80,6 +80,9 @@ func Graph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 			if err != nil {
 				return nil, err
 			}
+			if meta == nil {
+				return nil, fmt.Errorf("no metadata for %s: cannot use auto rate", q)
+			}
 			if meta.Unit != "" {
 				m_units[q.Metric] = meta.Unit
 			}
