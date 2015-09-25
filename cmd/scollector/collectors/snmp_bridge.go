@@ -2,6 +2,7 @@ package collectors
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -27,6 +28,13 @@ func SNMPBridge(cfg conf.SNMP) error {
 		},
 		Interval: time.Minute * 5,
 		name:     fmt.Sprintf("snmp-bridge-%s", cfg.Host),
+	})
+	collectors = append(collectors, &IntervalCollector{
+		F: func() (opentsdb.MultiDataPoint, error) {
+			return c_snmp_cdp(cfg.Community, cfg.Host)
+		},
+		Interval: time.Minute * 5,
+		name:     fmt.Sprintf("snmp-cdp-%s", cfg.Host),
 	})
 	return nil
 }
@@ -86,9 +94,71 @@ func c_snmp_bridge(community, host string) (opentsdb.MultiDataPoint, error) {
 		}
 	}
 	for iface, macs := range ifMacs {
-		for i, mac := range macs {
-			metadata.AddMeta("", opentsdb.TagSet{"host": host, "iface": iface}, "remoteMac"+fmt.Sprintf("%v", i), mac, false)
+		j, err := json.Marshal(macs)
+		if err != nil {
+			return md, nil
 		}
+		metadata.AddMeta("", opentsdb.TagSet{"host": host, "iface": iface}, "remoteMacs", string(j), false)
+	}
+	return md, nil
+}
+
+const (
+	cdpCacheDeviceId   = "1.3.6.1.4.1.9.9.23.1.2.1.1.6"
+	cdpCacheDevicePort = "1.3.6.1.4.1.9.9.23.1.2.1.1.7"
+)
+
+type cdpCacheEntry struct {
+	InterfaceId string `json:"-"`
+	DeviceId    string
+	DevicePort  string
+}
+
+func c_snmp_cdp(community, host string) (opentsdb.MultiDataPoint, error) {
+	var md opentsdb.MultiDataPoint
+	cdpEntries := make(map[string]*cdpCacheEntry)
+	deviceIdRaw, err := snmp_subtree(host, community, cdpCacheDeviceId)
+	if err != nil {
+		return md, err
+	}
+	for k, v := range deviceIdRaw {
+		ids := strings.Split(k, ".")
+		if len(ids) != 2 {
+			slog.Error("unexpected snmp cdpCacheEntry id")
+			continue
+		}
+		cdpEntries[ids[0]] = &cdpCacheEntry{}
+		cdpEntries[ids[0]].DeviceId = fmt.Sprintf("%s", v)
+		cdpEntries[ids[0]].InterfaceId = ids[1]
+	}
+	devicePortRaw, err := snmp_subtree(host, community, cdpCacheDevicePort)
+	for k, v := range devicePortRaw {
+		ids := strings.Split(k, ".")
+		if len(ids) != 2 {
+			slog.Error("unexpected snmp cdpCacheEntry id")
+			continue
+		}
+		if entry, ok := cdpEntries[ids[0]]; ok {
+			entry.DevicePort = fmt.Sprintf("%s", v)
+		}
+	}
+	byInterface := make(map[string][]*cdpCacheEntry)
+	for _, entry := range cdpEntries {
+		if _, ok := byInterface[entry.InterfaceId]; ok {
+			byInterface[entry.InterfaceId] = append(byInterface[entry.InterfaceId], entry)
+		} else {
+			byInterface[entry.InterfaceId] = []*cdpCacheEntry{entry}
+		}
+	}
+	for iface, entry := range byInterface {
+		j, err := json.Marshal(entry)
+		if err != nil {
+			return md, err
+		}
+		metadata.AddMeta("", opentsdb.TagSet{"host": host, "iface": iface}, "cdpCacheEntries", string(j), false)
+	}
+	if err != nil {
+		return md, nil
 	}
 	return md, nil
 }
