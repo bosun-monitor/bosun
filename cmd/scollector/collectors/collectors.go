@@ -274,8 +274,8 @@ func metaIfaces(f func(iface net.Interface, tags opentsdb.TagSet)) {
 		}
 		tags := opentsdb.TagSet{"iface": fmt.Sprint("Interface", iface.Index)}
 		metadata.AddMeta("", tags, "name", iface.Name, true)
-		if mac := iface.HardwareAddr.String(); mac != "" {
-			metadata.AddMeta("", tags, "mac", iface.HardwareAddr.String(), true)
+		if mac := strings.ToUpper(strings.Replace(iface.HardwareAddr.String(), ":", "", -1)); mac != "" {
+			metadata.AddMeta("", tags, "mac", mac, true)
 		}
 		ads, _ := iface.Addrs()
 		for i, ad := range ads {
