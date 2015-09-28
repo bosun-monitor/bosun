@@ -191,6 +191,29 @@ func (t TagSet) Tags() string {
 	return b.String()
 }
 
+func (t TagSet) AllSubsets() []string {
+	var keys []string
+	for k := range t {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return t.allSubsets("", 0, keys)
+}
+
+func (t TagSet) allSubsets(base string, start int, keys []string) []string {
+	subs := []string{}
+	for i := start; i < len(keys); i++ {
+		part := base
+		if part != "" {
+			part += ","
+		}
+		part += fmt.Sprintf("%s=%s", keys[i], t[keys[i]])
+		subs = append(subs, part)
+		subs = append(subs, t.allSubsets(part, i+1, keys)...)
+	}
+	return subs
+}
+
 // Returns true if the two tagsets "overlap".
 // Two tagsets overlap if they:
 // 1. Have at least one key/value pair that matches
