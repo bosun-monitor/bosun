@@ -305,61 +305,102 @@ func (s *Schedule) GetStateFileBackup() ([]byte, error) {
 
 func migrateOldDataToRedis(db *bolt.DB, data database.DataAccess) error {
 	// metadata-metric
-	type MetadataMetric struct {
-		Unit        string `json:",omitempty"`
-		Type        string `json:",omitempty"`
-		Description string
+
+	migrated, err := isMigrated(db, "metadata-metric")
+	if err != nil {
+		return err
 	}
-	mms := map[string]*MetadataMetric{}
-	if err := decode(db, "metadata-metric", &mms); err == nil {
+	if !migrated {
+		type MetadataMetric struct {
+			Unit        string `json:",omitempty"`
+			Type        string `json:",omitempty"`
+			Description string
+		}
 		slog.Info("Migrating metric metadata to new database format")
-		for name, mm := range mms {
-			if mm.Description != "" {
-				err = data.PutMetricMetadata(name, "desc", mm.Description)
-				if err != nil {
-					return err
+		mms := map[string]*MetadataMetric{}
+		if err := decode(db, "metadata-metric", &mms); err == nil {
+			for name, mm := range mms {
+				if mm.Description != "" {
+					err = data.PutMetricMetadata(name, "desc", mm.Description)
+					if err != nil {
+						return err
+					}
+				}
+				if mm.Unit != "" {
+					err = data.PutMetricMetadata(name, "unit", mm.Unit)
+					if err != nil {
+						return err
+					}
+				}
+				if mm.Type != "" {
+					err = data.PutMetricMetadata(name, "rate", mm.Type)
+					if err != nil {
+						return err
+					}
 				}
 			}
-			if mm.Unit != "" {
-				err = data.PutMetricMetadata(name, "unit", mm.Unit)
-				if err != nil {
-					return err
-				}
-			}
-			if mm.Type != "" {
-				err = data.PutMetricMetadata(name, "rate", mm.Type)
-				if err != nil {
-					return err
-				}
-			}
-		}
-		err = deleteKey(db, "metadata-metric")
-		if err != nil {
-			return err
-		}
-	}
-	//metadata
-	type Metavalue struct {
-		Time  time.Time
-		Value interface{}
-	}
-	metadata := make(map[metadata.Metakey]*Metavalue)
-	if err := decode(db, "metadata", &metadata); err == nil {
-		slog.Info("Migrating metadata to new database format")
-		for k, v := range metadata {
-			err = data.PutTagMetadata(k.TagSet(), k.Name, fmt.Sprint(v.Value), v.Time)
+			err = setMigrated(db, "metadata-metric")
 			if err != nil {
 				return err
 			}
 		}
-		err = deleteKey(db, "metadata")
+	}
+	//metadata
+	migrated, err = isMigrated(db, "metadata")
+	if err != nil {
+		return err
+	}
+	if !migrated {
+		slog.Info("Migrating metadata to new database format")
+		type Metavalue struct {
+			Time  time.Time
+			Value interface{}
+		}
+		metadata := make(map[metadata.Metakey]*Metavalue)
+		if err := decode(db, "metadata", &metadata); err == nil {
+
+			for k, v := range metadata {
+				err = data.PutTagMetadata(k.TagSet(), k.Name, fmt.Sprint(v.Value), v.Time)
+				if err != nil {
+					return err
+				}
+			}
+			err = deleteKey(db, "metadata")
+			if err != nil {
+				return err
+			}
+		}
+		err = setMigrated(db, "metadata")
 		if err != nil {
 			return err
 		}
 	}
 	return nil
 }
+func isMigrated(db *bolt.DB, name string) (bool, error) {
+	found := false
+	err := db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(dbBucket))
+		if b == nil {
+			return fmt.Errorf("unknown bucket: %v", dbBucket)
+		}
+		if dat := b.Get([]byte("isMigrated:" + name)); dat != nil {
+			found = true
+		}
+		return nil
+	})
+	return found, err
+}
 
+func setMigrated(db *bolt.DB, name string) error {
+	return db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(dbBucket))
+		if b == nil {
+			return fmt.Errorf("unknown bucket: %v", dbBucket)
+		}
+		return b.Put([]byte("isMigrated:"+name), []byte{1})
+	})
+}
 func deleteKey(db *bolt.DB, name string) error {
 	return db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(dbBucket))
