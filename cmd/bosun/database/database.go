@@ -37,7 +37,7 @@ func NewDataAccess(addr string, isRedis bool) DataAccess {
 }
 
 func newDataAccess(addr string, isRedis bool) *dataAccess {
-	return &dataAccess{pool: newPool(addr, "", 0), isRedis: isRedis}
+	return &dataAccess{pool: newPool(addr, "", 0, isRedis), isRedis: isRedis}
 }
 
 // Start in-process ledis server. Data will go in the specified directory and it will bind to the given port.
@@ -60,7 +60,7 @@ func (d *dataAccess) getConnection() redis.Conn {
 	return d.pool.Get()
 }
 
-func newPool(server, password string, database int) *redis.Pool {
+func newPool(server, password string, database int, isRedis bool) *redis.Pool {
 	return &redis.Pool{
 		MaxIdle:     3,
 		IdleTimeout: 240 * time.Second,
@@ -71,6 +71,12 @@ func newPool(server, password string, database int) *redis.Pool {
 			}
 			if password != "" {
 				if _, err := c.Do("AUTH", password); err != nil {
+					c.Close()
+					return nil, err
+				}
+			}
+			if isRedis {
+				if _, err := c.Do("CLIENT SETNAME", "bosun"); err != nil {
 					c.Close()
 					return nil, err
 				}
