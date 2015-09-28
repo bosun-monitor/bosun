@@ -76,7 +76,7 @@ func newPool(server, password string, database int, isRedis bool) *redis.Pool {
 				}
 			}
 			if isRedis {
-				if _, err := c.Do("CLIENT SETNAME", "bosun"); err != nil {
+				if _, err := c.Do("CLIENT", "SETNAME", "bosun"); err != nil {
 					c.Close()
 					return nil, err
 				}
