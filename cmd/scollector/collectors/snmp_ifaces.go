@@ -15,6 +15,7 @@ const (
 	ifDescr              = ".1.3.6.1.2.1.2.2.1.2"
 	ifType               = ".1.3.6.1.2.1.2.2.1.3"
 	ifMTU                = ".1.3.6.1.2.1.2.2.1.4"
+	ifPhysAddress        = ".1.3.6.1.2.1.2.2.1.6"
 	ifHighSpeed          = ".1.3.6.1.2.1.31.1.1.1.15"
 	ifAdminStatus        = ".1.3.6.1.2.1.2.2.1.7"
 	ifOperStatus         = ".1.3.6.1.2.1.2.2.1.8"
@@ -83,9 +84,14 @@ func c_snmp_ifaces(community, host string) (opentsdb.MultiDataPoint, error) {
 	if err != nil {
 		return nil, err
 	}
+	ifPhysAddressRaw, err := snmp_subtree(host, community, ifPhysAddress)
+	if err != nil {
+		return nil, err
+	}
 	ifNames := make(map[interface{}]string, len(ifNamesRaw))
 	ifAliases := make(map[interface{}]string, len(ifAliasesRaw))
 	ifTypes := make(map[interface{}]int64, len(ifTypesRaw))
+	ifPhysAddresses := make(map[interface{}]string, len(ifPhysAddressRaw))
 	for k, v := range ifNamesRaw {
 		ifNames[k] = fmt.Sprintf("%s", v)
 	}
@@ -103,6 +109,9 @@ func c_snmp_ifaces(community, host string) (opentsdb.MultiDataPoint, error) {
 		if ifAliases[k] == "" {
 			ifAliases[k] = "NA"
 		}
+	}
+	for k, v := range ifPhysAddressRaw {
+		ifPhysAddresses[k] = fmt.Sprintf("%X", v)
 	}
 	var md opentsdb.MultiDataPoint
 	add := func(sA snmpAdd) error {
@@ -125,6 +134,7 @@ func c_snmp_ifaces(community, host string) (opentsdb.MultiDataPoint, error) {
 			}
 			Add(&md, switchInterfaceMetric(sA.metric, ifNames[k], ifTypes[k]), v, tags, sA.rate, sA.unit, sA.desc)
 			metadata.AddMeta("", tags, "alias", ifAliases[k], false)
+			metadata.AddMeta("", tags, "mac", ifPhysAddresses[k], false)
 		}
 		if sA.metric == osNetBytes {
 			tags := opentsdb.TagSet{"host": host, "direction": sA.dir}
