@@ -19,7 +19,7 @@ func init() {
 		&IntervalCollector{F: c_omreport_memory, Interval: interval},
 		&IntervalCollector{F: c_omreport_processors, Interval: interval},
 		&IntervalCollector{F: c_omreport_ps, Interval: interval},
-		&IntervalCollector{F: c_omreport_ps_amps, Interval: interval},
+		&IntervalCollector{F: c_omreport_ps_amps_sysboard_pwr, Interval: interval},
 		&IntervalCollector{F: c_omreport_storage_battery, Interval: interval},
 		&IntervalCollector{F: c_omreport_storage_controller, Interval: interval},
 		&IntervalCollector{F: c_omreport_storage_enclosure, Interval: interval},
@@ -90,7 +90,7 @@ func c_omreport_ps() (opentsdb.MultiDataPoint, error) {
 	return md, nil
 }
 
-func c_omreport_ps_amps() (opentsdb.MultiDataPoint, error) {
+func c_omreport_ps_amps_sysboard_pwr() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	readOmreport(func(fields []string) {
 		if len(fields) == 2 && strings.Contains(fields[0], "Current") {
@@ -103,10 +103,14 @@ func c_omreport_ps_amps() (opentsdb.MultiDataPoint, error) {
 			Add(&md, "hw.chassis.current.reading", v_fields[0], opentsdb.TagSet{"id": id}, metadata.Gauge, metadata.A, descDellHWCurrent)
 		} else if len(fields) == 6 && (fields[2] == "System Board Pwr Consumption" || fields[2] == "System Board System Level") {
 			v_fields := strings.Fields(fields[3])
-			if len(v_fields) < 2 {
+			warn_fields := strings.Fields(fields[4])
+			fail_fields := strings.Fields(fields[5])
+			if len(v_fields) < 2 || len(warn_fields) < 2 || len(fail_fields) < 2 {
 				return
 			}
 			Add(&md, "hw.chassis.power.reading", v_fields[0], nil, metadata.Gauge, metadata.Watt, descDellHWPower)
+			Add(&md, "hw.chassis.power.warn_level", warn_fields[0], nil, metadata.Gauge, metadata.Watt, descDellHWPowerThreshold)
+			Add(&md, "hw.chassis.power.fail_level", fail_fields[0], nil, metadata.Gauge, metadata.Watt, descDellHWPowerThreshold)
 		}
 	}, "chassis", "pwrmonitoring")
 	return md, nil
@@ -292,7 +296,8 @@ const (
 	descDellHWVDisk          = "Overall status of virtual disks."
 	descDellHWPS             = "Overall status of power supplies."
 	descDellHWCurrent        = "Amps used per power supply."
-	descDellHWPower          = "Overall system power usage."
+	descDellHWPower          = "System board power usage."
+	descDellHWPowerThreshold = "The warning and failure levels set on the device for system board power usage."
 	descDellHWStorageBattery = "Status of storage controller backup batteries."
 	descDellHWStorageCtl     = "Overall status of storage controllers."
 	descDellHWPDisk          = "Overall status of physical disks."
