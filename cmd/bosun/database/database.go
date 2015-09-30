@@ -10,6 +10,8 @@ import (
 	"bosun.org/_third_party/github.com/garyburd/redigo/redis"
 	"bosun.org/_third_party/github.com/siddontang/ledisdb/config"
 	"bosun.org/_third_party/github.com/siddontang/ledisdb/server"
+	"bosun.org/collect"
+	"bosun.org/metadata"
 	"bosun.org/opentsdb"
 )
 
@@ -105,4 +107,8 @@ func newPool(server, password string, database int, isRedis bool, maxActive int,
 			return c, err
 		},
 	}
+}
+
+func init() {
+	collect.AggregateMeta("bosun.redis", metadata.MilliSecond, "time in milliseconds per redis call.")
 }

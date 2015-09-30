@@ -6,15 +6,28 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"sort"
 	"testing"
 	"time"
 
 	"bosun.org/cmd/bosun/conf"
+	"bosun.org/cmd/bosun/database"
+	"bosun.org/cmd/bosun/database/test"
 )
 
-func TestRelay(t *testing.T) {
+var testData database.DataAccess
 
+func TestMain(m *testing.M) {
+	var closeF func()
+	testData, closeF = dbtest.StartTestRedis()
+	status := m.Run()
+	closeF()
+	os.Exit(status)
+}
+
+func TestRelay(t *testing.T) {
+	schedule.DataAccess = testData
 	schedule.Init(new(conf.Conf))
 	rs := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(204)
