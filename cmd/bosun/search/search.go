@@ -204,7 +204,7 @@ func (s *Search) UniqueMetrics() ([]string, error) {
 	}
 	metrics := make([]string, len(m))
 	i := 0
-	for k, _ := range m {
+	for k := range m {
 		metrics[i] = k
 		i++
 	}
@@ -222,7 +222,7 @@ func (s *Search) MetricsByTagPair(tagk, tagv string) ([]string, error) {
 		return nil, err
 	}
 	r := []string{}
-	for k, _ := range metrics {
+	for k := range metrics {
 		r = append(r, k)
 	}
 	sort.Strings(r)
