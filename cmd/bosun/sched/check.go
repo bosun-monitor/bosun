@@ -30,6 +30,10 @@ func init() {
 	metadata.AddMetricMeta(
 		"bosun.alerts.active_status", metadata.Gauge, metadata.Alert,
 		"The number of open alerts by active status.")
+	metadata.AddMetricMeta("alerts.acknowledgement_status_by_notification", metadata.Gauge, metadata.Alert,
+		"The number of alerts by acknowledgement status and notification. Does not reflect escalation chains.")
+	metadata.AddMetricMeta("alerts.oldest_unacked_by_notification", metadata.Gauge, metadata.Second,
+		"How old the oldest unacknowledged notification is by notification.. Does not reflect escalation chains.")
 	collect.AggregateMeta("bosun.template.render", metadata.MilliSecond, "The amount of time it takes to render the specified alert template.")
 }
 
@@ -306,6 +310,8 @@ func (s *Schedule) CollectStates() {
 	severityCounts := make(map[string]map[string]int64)
 	abnormalCounts := make(map[string]map[string]int64)
 	ackStatusCounts := make(map[string]map[bool]int64)
+	ackByNotificationCounts := make(map[string]map[bool]int64)
+	unAckOldestByNotification := make(map[string]time.Time)
 	activeStatusCounts := make(map[string]map[bool]int64)
 	// Initalize the Counts
 	for _, alert := range s.Conf.Alerts {
@@ -323,9 +329,34 @@ func (s *Schedule) CollectStates() {
 		ackStatusCounts[alert.Name][true] = 0
 		activeStatusCounts[alert.Name][true] = 0
 	}
+	for notificationName := range s.Conf.Notifications {
+		unAckOldestByNotification[notificationName] = time.Unix(1<<63-62135596801, 999999999)
+		ackByNotificationCounts[notificationName] = make(map[bool]int64)
+		ackByNotificationCounts[notificationName][false] = 0
+		ackByNotificationCounts[notificationName][true] = 0
+	}
 	for _, state := range s.status {
 		if !state.Open {
 			continue
+		}
+		name := state.AlertKey().Name()
+		alertDef := s.Conf.Alerts[name]
+		nots := make(map[string]bool)
+		for name := range alertDef.WarnNotification.Get(s.Conf, state.Group) {
+			nots[name] = true
+		}
+		for name := range alertDef.CritNotification.Get(s.Conf, state.Group) {
+			nots[name] = true
+		}
+		incident, err := s.GetIncident(state.Last().IncidentId)
+		if err != nil {
+			slog.Errorln(err)
+		}
+		for notificationName := range nots {
+			ackByNotificationCounts[notificationName][state.NeedAck]++
+			if incident.Start.Before(unAckOldestByNotification[notificationName]) && state.NeedAck {
+				unAckOldestByNotification[notificationName] = incident.Start
+			}
 		}
 		severity := state.Status().String()
 		lastAbnormal := state.AbnormalStatus().String()
@@ -333,6 +364,34 @@ func (s *Schedule) CollectStates() {
 		abnormalCounts[state.Alert][lastAbnormal]++
 		ackStatusCounts[state.Alert][state.NeedAck]++
 		activeStatusCounts[state.Alert][state.IsActive()]++
+	}
+	for notification := range ackByNotificationCounts {
+		ts := opentsdb.TagSet{"notification": notification}
+		err := collect.Put("alerts.acknowledgement_status_by_notification",
+			ts.Copy().Merge(opentsdb.TagSet{"status": "unacknowledged"}),
+			ackByNotificationCounts[notification][true])
+		if err != nil {
+			slog.Errorln(err)
+		}
+		err = collect.Put("alerts.acknowledgement_status_by_notification",
+			ts.Copy().Merge(opentsdb.TagSet{"status": "acknowledged"}),
+			ackByNotificationCounts[notification][false])
+		if err != nil {
+			slog.Errorln(err)
+		}
+	}
+	for notification, timeStamp := range unAckOldestByNotification {
+		ts := opentsdb.TagSet{"notification": notification}
+		var ago time.Duration
+		if !timeStamp.Equal(time.Unix(1<<63-62135596801, 999999999)) {
+			ago = time.Now().UTC().Sub(timeStamp)
+		}
+		err := collect.Put("alerts.oldest_unacked_by_notification",
+			ts,
+			ago.Seconds())
+		if err != nil {
+			slog.Errorln(err)
+		}
 	}
 	for alertName := range severityCounts {
 		ts := opentsdb.TagSet{"alert": alertName}

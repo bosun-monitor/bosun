@@ -921,6 +921,16 @@ func (s *Schedule) GetIncidents(alert string, from, to time.Time) []*Incident {
 	return list
 }
 
+func (s *Schedule) GetIncident(id uint64) (*Incident, error) {
+	s.incidentLock.Lock()
+	incident, ok := s.Incidents[id]
+	s.incidentLock.Unlock()
+	if !ok {
+		return nil, fmt.Errorf("incident %d not found", id)
+	}
+	return incident, nil
+}
+
 func (s *Schedule) GetIncidentEvents(id uint64) (*Incident, []Event, []Action, error) {
 	s.incidentLock.Lock()
 	incident, ok := s.Incidents[id]
