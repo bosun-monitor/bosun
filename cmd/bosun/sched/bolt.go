@@ -43,9 +43,6 @@ func (c *counterWriter) Write(p []byte) (n int, err error) {
 const (
 	dbBucket           = "bindata"
 	dbConfigTextBucket = "configText"
-	dbMetric           = "metric"
-	dbTagk             = "tagk"
-	dbTagv             = "tagv"
 	dbNotifications    = "notifications"
 	dbSilence          = "silence"
 	dbStatus           = "status"
@@ -59,9 +56,6 @@ func (s *Schedule) save() {
 	}
 	s.Lock("Save")
 	store := map[string]interface{}{
-		dbMetric:        s.Search.Read.Metric,
-		dbTagk:          s.Search.Read.Tagk,
-		dbTagv:          s.Search.Read.Tagv,
 		dbNotifications: s.Notifications,
 		dbSilence:       s.Silence,
 		dbStatus:        s.status,
@@ -148,16 +142,6 @@ func (s *Schedule) RestoreState() error {
 
 	s.Notifications = nil
 	db := s.db
-
-	if err := decode(db, dbMetric, &s.Search.Metric); err != nil {
-		slog.Errorln(dbMetric, err)
-	}
-	if err := decode(db, dbTagk, &s.Search.Tagk); err != nil {
-		slog.Errorln(dbTagk, err)
-	}
-	if err := decode(db, dbTagv, &s.Search.Tagv); err != nil {
-		slog.Errorln(dbTagv, err)
-	}
 	notifications := make(map[expr.AlertKey]map[string]time.Time)
 	if err := decode(db, dbNotifications, &notifications); err != nil {
 		slog.Errorln(dbNotifications, err)
@@ -240,7 +224,6 @@ func (s *Schedule) RestoreState() error {
 	migrateOldDataToRedis(db, s.DataAccess)
 	// delete metrictags if they exist.
 	deleteKey(s.db, "metrictags")
-	s.Search.Copy()
 	slog.Infoln("RestoreState done in", time.Since(start))
 	return nil
 }
@@ -304,19 +287,30 @@ func (s *Schedule) GetStateFileBackup() ([]byte, error) {
 }
 
 func migrateOldDataToRedis(db *bolt.DB, data database.DataAccess) error {
-	// metadata-metric
+	if err := migrateMetricMetadata(db, data); err != nil {
+		return err
+	}
+	if err := migrateTagMetadata(db, data); err != nil {
+		return err
+	}
+	if err := migrateSearch(db, data); err != nil {
+		return err
+	}
+	return nil
+}
 
+func migrateMetricMetadata(db *bolt.DB, data database.DataAccess) error {
 	migrated, err := isMigrated(db, "metadata-metric")
 	if err != nil {
 		return err
 	}
 	if !migrated {
+		slog.Info("Migrating metric metadata to new database format")
 		type MetadataMetric struct {
 			Unit        string `json:",omitempty"`
 			Type        string `json:",omitempty"`
 			Description string
 		}
-		slog.Info("Migrating metric metadata to new database format")
 		mms := map[string]*MetadataMetric{}
 		if err := decode(db, "metadata-metric", &mms); err == nil {
 			for name, mm := range mms {
@@ -345,8 +339,11 @@ func migrateOldDataToRedis(db *bolt.DB, data database.DataAccess) error {
 			}
 		}
 	}
-	//metadata
-	migrated, err = isMigrated(db, "metadata")
+	return nil
+}
+
+func migrateTagMetadata(db *bolt.DB, data database.DataAccess) error {
+	migrated, err := isMigrated(db, "metadata")
 	if err != nil {
 		return err
 	}
@@ -358,7 +355,6 @@ func migrateOldDataToRedis(db *bolt.DB, data database.DataAccess) error {
 		}
 		metadata := make(map[metadata.Metakey]*Metavalue)
 		if err := decode(db, "metadata", &metadata); err == nil {
-
 			for k, v := range metadata {
 				err = data.PutTagMetadata(k.TagSet(), k.Name, fmt.Sprint(v.Value), v.Time)
 				if err != nil {
@@ -377,6 +373,60 @@ func migrateOldDataToRedis(db *bolt.DB, data database.DataAccess) error {
 	}
 	return nil
 }
+
+func migrateSearch(db *bolt.DB, data database.DataAccess) error {
+	migrated, err := isMigrated(db, "search")
+	if err != nil {
+		return err
+	}
+	if !migrated {
+		slog.Info("Migrating Search data to new database format")
+		type duple struct{ A, B string }
+		type present map[string]int64
+		type qmap map[duple]present
+		type smap map[string]present
+
+		metric := qmap{}
+		if err := decode(db, "metric", &metric); err == nil {
+			for k, v := range metric {
+				for metric, time := range v {
+					data.Search_AddMetricForTag(k.A, k.B, metric, time)
+				}
+			}
+		} else {
+			return err
+		}
+		tagk := smap{}
+		if err := decode(db, "tagk", &tagk); err == nil {
+			for metric, v := range tagk {
+				for tk, time := range v {
+					data.Search_AddTagKeyForMetric(metric, tk, time)
+				}
+				data.Search_AddMetric(metric, time.Now().Unix())
+			}
+		} else {
+			return err
+		}
+
+		tagv := qmap{}
+		if err := decode(db, "tagv", &tagv); err == nil {
+			for k, v := range tagv {
+				for val, time := range v {
+					data.Search_AddTagValue(k.A, k.B, val, time)
+					data.Search_AddTagValue(database.Search_All, k.B, val, time)
+				}
+			}
+		} else {
+			return err
+		}
+		err = setMigrated(db, "search")
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func isMigrated(db *bolt.DB, name string) (bool, error) {
 	found := false
 	err := db.View(func(tx *bolt.Tx) error {

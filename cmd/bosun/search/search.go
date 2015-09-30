@@ -2,13 +2,19 @@ package search // import "bosun.org/cmd/bosun/search"
 
 import (
 	"fmt"
+	"math/rand"
+	"reflect"
 	"regexp"
 	"sort"
 	"strings"
 	"sync"
 	"time"
 
+	"bosun.org/cmd/bosun/database"
+	"bosun.org/collect"
+	"bosun.org/metadata"
 	"bosun.org/opentsdb"
+	"bosun.org/slog"
 )
 
 // Search is a struct to hold indexed data about OpenTSDB metric and tag data.
@@ -16,145 +22,114 @@ import (
 // available tag keys for a metric, and available tag values for a metric and
 // tag key.
 type Search struct {
-	// tagk + tagv -> metrics
-	Metric qmap
-	// metric -> tag keys
-	Tagk smap
-	// metric + tagk -> tag values
-	Tagv qmap
+	DataAccess database.DataAccess
 
-	Last map[string]*pair
+	Last map[string]*lastInfo
 
-	// Read replica. Should never be mutated. Can at any time be assigned to a new
-	// value.
-	Read *Search
-
+	indexQueue chan *opentsdb.DataPoint
 	sync.RWMutex
-
-	// copy is true when there is a Copy() event pending.
-	copy bool
 }
 
-type pair struct {
-	points [2]opentsdb.DataPoint
-	index  int
+type lastInfo struct {
+	lastVal      float64
+	diffFromPrev float64
+	timestamp    int64
 }
 
-type MetricTagSet struct {
-	Metric string          `json:"metric"`
-	Tags   opentsdb.TagSet `json:"tags"`
+func init() {
+	metadata.AddMetricMeta("bosun.search.index_queue", metadata.Gauge, metadata.Count, "Number of datapoints queued for indexing to redis")
+	metadata.AddMetricMeta("bosun.search.dropped", metadata.Counter, metadata.Count, "Number of datapoints discarded without being saved to redis")
 }
-
-func (mts *MetricTagSet) key() string {
-	return mts.Metric + mts.Tags.String()
-}
-
-type qmap map[duple]present
-type smap map[string]present
-type mtsmap map[string]MetricTagSet
-type present map[string]int64
-
-type duple struct {
-	A, B string
-}
-
-func (q qmap) Copy() qmap {
-	m := make(qmap)
-	for k, v := range q {
-		m[k] = v.Copy()
-	}
-	return m
-}
-func (s smap) Copy() smap {
-	m := make(smap)
-	for k, v := range s {
-		m[k] = v.Copy()
-	}
-	return m
-}
-func (t mtsmap) Copy() mtsmap {
-	m := make(mtsmap)
-	for k, v := range t {
-		m[k] = v
-	}
-	return m
-}
-func (p present) Copy() present {
-	m := make(present)
-	for k, v := range p {
-		m[k] = v
-	}
-	return m
-}
-
-func NewSearch() *Search {
+func NewSearch(data database.DataAccess) *Search {
 	s := Search{
-		Metric: make(qmap),
-		Tagk:   make(smap),
-		Tagv:   make(qmap),
-		Last:   make(map[string]*pair),
-		Read:   new(Search),
+		DataAccess: data,
+		Last:       make(map[string]*lastInfo),
+		indexQueue: make(chan *opentsdb.DataPoint, 300000),
 	}
+	collect.Set("search.index_queue", opentsdb.TagSet{}, func() interface{} { return len(s.indexQueue) })
+	go s.redisIndex(s.indexQueue)
 	return &s
 }
 
-// Copy copies current data to the Read replica.
-func (s *Search) Copy() {
-	r := new(Search)
-	r.Metric = s.Metric.Copy()
-	r.Tagk = s.Tagk.Copy()
-	r.Tagv = s.Tagv.Copy()
-	s.Read = r
-}
-
 func (s *Search) Index(mdp opentsdb.MultiDataPoint) {
-	now := time.Now().Unix()
-	s.Lock()
-	if !s.copy {
-		s.copy = true
-		go func() {
-			time.Sleep(time.Second * 20)
-			s.Lock()
-			s.Copy()
-			s.copy = false
-			s.Unlock()
-		}()
-	}
 	for _, dp := range mdp {
-		var mts MetricTagSet
-		mts.Metric = dp.Metric
-		mts.Tags = dp.Tags
-		key := mts.key()
-		var q duple
-		for k, v := range dp.Tags {
-			q.A, q.B = k, v
-			if _, ok := s.Metric[q]; !ok {
-				s.Metric[q] = make(present)
-			}
-			s.Metric[q][dp.Metric] = now
-
-			if _, ok := s.Tagk[dp.Metric]; !ok {
-				s.Tagk[dp.Metric] = make(present)
-			}
-			s.Tagk[dp.Metric][k] = now
-
-			q.A, q.B = dp.Metric, k
-			if _, ok := s.Tagv[q]; !ok {
-				s.Tagv[q] = make(present)
-			}
-			s.Tagv[q][v] = now
-		}
+		s.Lock()
+		metric := dp.Metric
+		key := metric + dp.Tags.String()
 		p := s.Last[key]
 		if p == nil {
-			p = new(pair)
+			p = &lastInfo{}
 			s.Last[key] = p
 		}
-		if p.points[p.index%2].Timestamp < dp.Timestamp {
-			p.points[p.index%2] = *dp
-			p.index++
+		if p.timestamp < dp.Timestamp {
+			if fv, err := getFloat(dp.Value); err == nil {
+				p.diffFromPrev = (fv - p.lastVal) / float64(dp.Timestamp-p.timestamp)
+				p.lastVal = fv
+			} else {
+				slog.Error(err)
+			}
+			p.timestamp = dp.Timestamp
+		}
+		s.Unlock()
+		select {
+		case s.indexQueue <- dp:
+		default:
+			collect.Add("search.dropped", opentsdb.TagSet{}, 1)
 		}
 	}
-	s.Unlock()
+}
+
+func (s *Search) redisIndex(c <-chan *opentsdb.DataPoint) {
+	now := time.Now().Unix()
+	nextUpdateTimes := make(map[string]int64)
+	updateIfTime := func(key string, f func()) {
+		nextUpdate, ok := nextUpdateTimes[key]
+		if !ok || now > nextUpdate {
+			f()
+			nextUpdateTimes[key] = now + int64(30*60+rand.Intn(15*60)) //pick a random time between 30 and 45 minutes from now
+		}
+	}
+	for dp := range c {
+		now = time.Now().Unix()
+		metric := dp.Metric
+		for k, v := range dp.Tags {
+			updateIfTime(fmt.Sprintf("kvm:%s:%s:%s", k, v, metric), func() {
+				if err := s.DataAccess.Search_AddMetricForTag(k, v, metric, now); err != nil {
+					slog.Error(err)
+				}
+				if err := s.DataAccess.Search_AddTagValue(metric, k, v, now); err != nil {
+					slog.Error(err)
+				}
+			})
+			updateIfTime(fmt.Sprintf("mk:%s:%s", metric, k), func() {
+				if err := s.DataAccess.Search_AddTagKeyForMetric(metric, k, now); err != nil {
+					slog.Error(err)
+				}
+			})
+			updateIfTime(fmt.Sprintf("kv:%s:%s", k, v), func() {
+				if err := s.DataAccess.Search_AddTagValue(database.Search_All, k, v, now); err != nil {
+					slog.Error(err)
+				}
+			})
+			updateIfTime(fmt.Sprintf("m:%s", metric), func() {
+				if err := s.DataAccess.Search_AddMetric(metric, now); err != nil {
+					slog.Error(err)
+				}
+			})
+		}
+	}
+}
+
+var floatType = reflect.TypeOf(float64(0))
+
+func getFloat(unk interface{}) (float64, error) {
+	v := reflect.ValueOf(unk)
+	v = reflect.Indirect(v)
+	if !v.Type().ConvertibleTo(floatType) {
+		return 0, fmt.Errorf("cannot convert %v to float64", v.Type())
+	}
+	fv := v.Convert(floatType)
+	return fv.Float(), nil
 }
 
 // Match returns all matching values against search. search is a regex, except
@@ -186,26 +161,13 @@ func (s *Search) GetLast(metric, tags string, diff bool) (v float64, err error) 
 	s.RLock()
 	p := s.Last[metric+tags]
 	if p != nil {
-		var ok bool
-		e := p.points[(p.index+1)%2]
-		v, ok = e.Value.(float64)
-		if !ok {
-			err = errNotFloat
-		}
 		if diff {
-			o := p.points[p.index%2]
-			ov, ok := o.Value.(float64)
-			if !ok {
-				err = errNotFloat
-			}
-			if o.Timestamp == 0 || e.Timestamp == 0 {
-				err = fmt.Errorf("last: need two data points")
-			}
-			v = (v - ov) / float64(e.Timestamp-o.Timestamp)
+			return p.diffFromPrev, nil
 		}
+		return p.lastVal, nil
 	}
 	s.RUnlock()
-	return
+	return 0, nil
 }
 
 func (s *Search) Expand(q *opentsdb.Query) error {
@@ -216,7 +178,10 @@ func (s *Search) Expand(q *opentsdb.Query) error {
 			if v == "*" || !strings.Contains(v, "*") {
 				nvs = append(nvs, v)
 			} else {
-				vs := s.TagValuesByMetricTagKey(q.Metric, k, 0)
+				vs, err := s.TagValuesByMetricTagKey(q.Metric, k, 0)
+				if err != nil {
+					return err
+				}
 				ns, err := Match(v, vs)
 				if err != nil {
 					return err
@@ -232,83 +197,66 @@ func (s *Search) Expand(q *opentsdb.Query) error {
 	return nil
 }
 
-func (s *Search) UniqueMetrics() []string {
-	metrics := make([]string, len(s.Tagk))
+func (s *Search) UniqueMetrics() ([]string, error) {
+	m, err := s.DataAccess.Search_GetAllMetrics()
+	if err != nil {
+		return nil, err
+	}
+	metrics := make([]string, len(m))
 	i := 0
-	for k := range s.Read.Tagk {
+	for k := range m {
 		metrics[i] = k
 		i++
 	}
 	sort.Strings(metrics)
-	return metrics
+	return metrics, nil
 }
 
-func (s *Search) TagValuesByTagKey(Tagk string, since time.Duration) []string {
-	um := s.UniqueMetrics()
-	tagvset := make(map[string]bool)
-	for _, Metric := range um {
-		for _, Tagv := range s.tagValuesByMetricTagKey(Metric, Tagk, since) {
-			tagvset[Tagv] = true
-		}
-	}
-	tagvs := make([]string, len(tagvset))
-	i := 0
-	for k := range tagvset {
-		tagvs[i] = k
-		i++
-	}
-	sort.Strings(tagvs)
-	return tagvs
+func (s *Search) TagValuesByTagKey(Tagk string, since time.Duration) ([]string, error) {
+	return s.TagValuesByMetricTagKey(database.Search_All, Tagk, since)
 }
 
-func (s *Search) MetricsByTagPair(Tagk, Tagv string) []string {
-	r := make([]string, 0)
-	for k := range s.Read.Metric[duple{Tagk, Tagv}] {
+func (s *Search) MetricsByTagPair(tagk, tagv string) ([]string, error) {
+	metrics, err := s.DataAccess.Search_GetMetricsForTag(tagk, tagv)
+	if err != nil {
+		return nil, err
+	}
+	r := []string{}
+	for k := range metrics {
 		r = append(r, k)
 	}
 	sort.Strings(r)
-	return r
+	return r, nil
 }
 
-func (s *Search) TagKeysByMetric(Metric string) []string {
-	r := make([]string, 0)
-	for k := range s.Read.Tagk[Metric] {
+func (s *Search) TagKeysByMetric(metric string) ([]string, error) {
+	keys, err := s.DataAccess.Search_GetTagKeysForMetric(metric)
+	if err != nil {
+		return nil, err
+	}
+	r := []string{}
+	for k := range keys {
 		r = append(r, k)
 	}
 	sort.Strings(r)
-	return r
+	return r, nil
 }
 
-func (s *Search) MetricsWithTagKeys() map[string][]string {
-	metricToKeys := make(map[string][]string)
-	searchResult := s.Read.Tagk.Copy()
-	for metric, v := range searchResult {
-		keys := make([]string, len(v))
-		i := 0
-		for tK := range v {
-			keys[i] = tK
-			i++
-		}
-		metricToKeys[metric] = keys
-	}
-	return metricToKeys
-}
-
-func (s *Search) tagValuesByMetricTagKey(Metric, Tagk string, since time.Duration) []string {
+func (s *Search) TagValuesByMetricTagKey(metric, tagK string, since time.Duration) ([]string, error) {
 	var t int64
 	if since > 0 {
 		t = time.Now().Add(-since).Unix()
 	}
-	r := make([]string, 0)
-	for k, ts := range s.Read.Tagv[duple{Metric, Tagk}] {
+	vals, err := s.DataAccess.Search_GetTagValues(metric, tagK)
+	if err != nil {
+		return nil, err
+	}
+	r := []string{}
+	for k, ts := range vals {
 		if t <= ts {
 			r = append(r, k)
 		}
 	}
 	sort.Strings(r)
-	return r
-}
-
-func (s *Search) TagValuesByMetricTagKey(Metric, Tagk string, since time.Duration) []string {
-	return s.tagValuesByMetricTagKey(Metric, Tagk, since)
+	return r, nil
 }

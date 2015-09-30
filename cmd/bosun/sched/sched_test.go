@@ -70,6 +70,30 @@ func (n *nopDataAccess) GetTagMetadata(tags opentsdb.TagSet, name string) ([]*da
 func (n *nopDataAccess) DeleteTagMetadata(tags opentsdb.TagSet, name string) error {
 	panic("not implemented")
 }
+func (n *nopDataAccess) Search_AddMetricForTag(tagK, tagV, metric string, time int64) error {
+	panic("not implemented")
+}
+func (n *nopDataAccess) Search_GetMetricsForTag(tagK, tagV string) (map[string]int64, error) {
+	panic("not implemented")
+}
+func (n *nopDataAccess) Search_AddTagKeyForMetric(metric, tagK string, time int64) error {
+	panic("not implemented")
+}
+func (n *nopDataAccess) Search_GetTagKeysForMetric(metric string) (map[string]int64, error) {
+	panic("not implemented")
+}
+func (n *nopDataAccess) Search_AddMetric(metric string, time int64) error {
+	panic("not implemented")
+}
+func (n *nopDataAccess) Search_GetAllMetrics() (map[string]int64, error) {
+	panic("not implemented")
+}
+func (n *nopDataAccess) Search_AddTagValue(metric, tagK, tagV string, time int64) error {
+	panic("not implemented")
+}
+func (n *nopDataAccess) Search_GetTagValues(metric, tagK string) (map[string]int64, error) {
+	panic("not implemented")
+}
 
 func initSched(c *conf.Conf) (*Schedule, error) {
 	c.StateFile = ""

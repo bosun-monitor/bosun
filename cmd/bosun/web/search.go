@@ -11,7 +11,10 @@ import (
 
 // UniqueMetrics returns a sorted list of available metrics.
 func UniqueMetrics(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	values := schedule.Search.UniqueMetrics()
+	values, err := schedule.Search.UniqueMetrics()
+	if err != nil {
+		return nil, err
+	}
 	// remove anything starting with double underscore.
 	q := r.URL.Query()
 	if v := q.Get("unfiltered"); v != "" {
@@ -29,28 +32,21 @@ func UniqueMetrics(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request)
 func TagKeysByMetric(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	metric := vars["metric"]
-	keys := schedule.Search.TagKeysByMetric(metric)
-	return keys, nil
+	return schedule.Search.TagKeysByMetric(metric)
 }
 
 func TagValuesByMetricTagKey(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	metric := vars["metric"]
 	tagk := vars["tagk"]
-	return schedule.Search.TagValuesByMetricTagKey(metric, tagk, 0), nil
+	return schedule.Search.TagValuesByMetricTagKey(metric, tagk, 0)
 }
 
 func MetricsByTagPair(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	tagk := vars["tagk"]
 	tagv := vars["tagv"]
-	values := schedule.Search.MetricsByTagPair(tagk, tagv)
-	return values, nil
-}
-
-func MetricsWithTagKeys(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	values := schedule.Search.MetricsWithTagKeys()
-	return values, nil
+	return schedule.Search.MetricsByTagPair(tagk, tagv)
 }
 
 func TagValuesByTagKey(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
@@ -67,6 +63,5 @@ func TagValuesByTagKey(t miniprofiler.Timer, w http.ResponseWriter, r *http.Requ
 			return nil, err
 		}
 	}
-	values := schedule.Search.TagValuesByTagKey(tagk, time.Duration(since))
-	return values, nil
+	return schedule.Search.TagValuesByTagKey(tagk, time.Duration(since))
 }

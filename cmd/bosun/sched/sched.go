@@ -76,7 +76,6 @@ func (s *Schedule) Init(c *conf.Conf) error {
 	s.Incidents = make(map[uint64]*Incident)
 	s.pendingUnknowns = make(map[*conf.Notification][]*State)
 	s.status = make(States)
-	s.Search = search.NewSearch()
 	s.LastCheck = time.Now()
 	s.ctx = &checkContext{time.Now(), cache.New(0)}
 	if s.DataAccess == nil {
@@ -91,6 +90,7 @@ func (s *Schedule) Init(c *conf.Conf) error {
 			s.DataAccess = database.NewDataAccess(bind, false)
 		}
 	}
+	s.Search = search.NewSearch(s.DataAccess)
 	if c.StateFile != "" {
 		s.db, err = bolt.Open(c.StateFile, 0600, nil)
 		if err != nil {
@@ -512,7 +512,11 @@ const pingFreq = time.Second * 15
 
 func (s *Schedule) PingHosts() {
 	for range time.Tick(pingFreq) {
-		hosts := s.Search.TagValuesByTagKey("host", s.Conf.PingDuration)
+		hosts, err := s.Search.TagValuesByTagKey("host", s.Conf.PingDuration)
+		if err != nil {
+			slog.Error(err)
+			continue
+		}
 		for _, host := range hosts {
 			go pingHost(host)
 		}
@@ -947,9 +951,13 @@ func (s *Schedule) GetIncidentEvents(id uint64) (*Incident, []Event, []Action, e
 	return incident, list, actions, nil
 }
 
-func (s *Schedule) Host(filter string) map[string]*HostData {
+func (s *Schedule) Host(filter string) (map[string]*HostData, error) {
 	hosts := make(map[string]*HostData)
-	for _, h := range s.Search.TagValuesByTagKey("host", time.Hour*7*24) {
+	allHosts, err := s.Search.TagValuesByTagKey("host", time.Hour*7*24)
+	if err != nil {
+		return nil, err
+	}
+	for _, h := range allHosts {
 		hosts[h] = newHostData()
 	}
 	for name, host := range hosts {
@@ -1021,7 +1029,7 @@ func (s *Schedule) Host(filter string) map[string]*HostData {
 			}
 		}
 	}
-	return hosts
+	return hosts, nil
 }
 
 type HostInterface struct {

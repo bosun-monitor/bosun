@@ -30,7 +30,7 @@ func (d *dataAccess) PutMetricMetadata(metric string, field string, value string
 	if field != "desc" && field != "unit" && field != "rate" {
 		return fmt.Errorf("Unknown metric metadata field: %s", field)
 	}
-	conn := d.getConnection()
+	conn := d.GetConnection()
 	defer conn.Close()
 	_, err := conn.Do("HMSET", metricMetaKey(metric), field, value, "lastTouched", time.Now().UTC().Unix())
 	return err
@@ -38,7 +38,7 @@ func (d *dataAccess) PutMetricMetadata(metric string, field string, value string
 
 func (d *dataAccess) GetMetricMetadata(metric string) (*MetricMetadata, error) {
 	defer collect.StartTimer("redis", opentsdb.TagSet{"op": "GetMetricMeta"})()
-	conn := d.getConnection()
+	conn := d.GetConnection()
 	defer conn.Close()
 	v, err := redis.Values(conn.Do("HGETALL", metricMetaKey(metric)))
 	if err != nil {

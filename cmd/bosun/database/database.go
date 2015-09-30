@@ -11,6 +11,7 @@ import (
 	"bosun.org/_third_party/github.com/siddontang/ledisdb/config"
 	"bosun.org/_third_party/github.com/siddontang/ledisdb/server"
 	"bosun.org/collect"
+	"bosun.org/metadata"
 	"bosun.org/opentsdb"
 )
 
@@ -24,6 +25,18 @@ type DataAccess interface {
 	PutTagMetadata(tags opentsdb.TagSet, name string, value string, updated time.Time) error
 	GetTagMetadata(tags opentsdb.TagSet, name string) ([]*TagMetadata, error)
 	DeleteTagMetadata(tags opentsdb.TagSet, name string) error
+
+	Search_AddMetricForTag(tagK, tagV, metric string, time int64) error
+	Search_GetMetricsForTag(tagK, tagV string) (map[string]int64, error)
+
+	Search_AddTagKeyForMetric(metric, tagK string, time int64) error
+	Search_GetTagKeysForMetric(metric string) (map[string]int64, error)
+
+	Search_AddMetric(metric string, time int64) error
+	Search_GetAllMetrics() (map[string]int64, error)
+
+	Search_AddTagValue(metric, tagK, tagV string, time int64) error
+	Search_GetTagValues(metric, tagK string) (map[string]int64, error)
 }
 
 type dataAccess struct {
@@ -37,7 +50,10 @@ func NewDataAccess(addr string, isRedis bool) DataAccess {
 }
 
 func newDataAccess(addr string, isRedis bool) *dataAccess {
-	return &dataAccess{pool: newPool(addr, "", 0, isRedis), isRedis: isRedis}
+	return &dataAccess{
+		pool:    newPool(addr, "", 0, isRedis, 1000, true),
+		isRedis: isRedis,
+	}
 }
 
 // Start in-process ledis server. Data will go in the specified directory and it will bind to the given port.
@@ -56,13 +72,20 @@ func StartLedis(dataDir string, bind string) (stop func(), err error) {
 	return app.Close, nil
 }
 
-func (d *dataAccess) getConnection() redis.Conn {
+//interface so things can get a raw connection (mostly tests), but still discourage it.
+type Connector interface {
+	GetConnection() redis.Conn
+}
+
+func (d *dataAccess) GetConnection() redis.Conn {
 	return d.pool.Get()
 }
 
-func newPool(server, password string, database int, isRedis bool) *redis.Pool {
+func newPool(server, password string, database int, isRedis bool, maxActive int, wait bool) *redis.Pool {
 	return &redis.Pool{
-		MaxIdle:     3,
+		MaxIdle:     50,
+		MaxActive:   maxActive,
+		Wait:        wait,
 		IdleTimeout: 240 * time.Second,
 		Dial: func() (redis.Conn, error) {
 			c, err := redis.Dial("tcp", server, redis.DialDatabase(database))
@@ -83,10 +106,9 @@ func newPool(server, password string, database int, isRedis bool) *redis.Pool {
 			}
 			return c, err
 		},
-		TestOnBorrow: func(c redis.Conn, t time.Time) error {
-			defer collect.StartTimer("redis", opentsdb.TagSet{"op": "Ping"})()
-			_, err := c.Do("PING")
-			return err
-		},
 	}
+}
+
+func init() {
+	collect.AggregateMeta("bosun.redis", metadata.MilliSecond, "time in milliseconds per redis call.")
 }
