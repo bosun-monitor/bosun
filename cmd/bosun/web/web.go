@@ -103,7 +103,6 @@ func Listen(listenAddr string, devMode bool, tsdbHost string) error {
 	router.Handle("/api/metadata/delete", JSON(DeleteMetadata)).Methods("DELETE")
 	router.Handle("/api/metric", JSON(UniqueMetrics))
 	router.Handle("/api/metric/{tagk}/{tagv}", JSON(MetricsByTagPair))
-	router.Handle("/api/metric/tagkey", JSON(MetricsWithTagKeys))
 	router.Handle("/api/rule", JSON(Rule))
 	router.HandleFunc("/api/shorten", Shorten)
 	router.Handle("/api/silence/clear", JSON(SilenceClear))
@@ -593,7 +592,7 @@ func APIRedirect(w http.ResponseWriter, req *http.Request) {
 }
 
 func Host(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	return schedule.Host(r.FormValue("filter")), nil
+	return schedule.Host(r.FormValue("filter"))
 }
 
 // Last returns the most recent datapoint for a metric+tagset. The metric+tagset

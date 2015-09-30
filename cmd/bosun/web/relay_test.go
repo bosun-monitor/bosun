@@ -14,6 +14,7 @@ import (
 )
 
 func TestRelay(t *testing.T) {
+
 	schedule.Init(new(conf.Conf))
 	rs := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(204)
@@ -42,7 +43,7 @@ func TestRelay(t *testing.T) {
 	bodygzip := []byte(`[{
 		"timestamp": 1,
 		"metric": "gzip-works",
-		"value": "345",
+		"value": 345,
 		"tags": {
 			"host": "host.gzip",
 			"gzipped": "yup"
@@ -57,17 +58,16 @@ func TestRelay(t *testing.T) {
 	}
 	time.Sleep(time.Second)
 
-	schedule.Search.Copy()
-	m := schedule.Search.UniqueMetrics()
+	m, _ := schedule.Search.UniqueMetrics()
 	sort.Strings(m)
 	if len(m) != 2 || m[0] != "gzip-works" || m[1] != "no-gzip-works" {
 		t.Errorf("bad um: %v", m)
 	}
-	m = schedule.Search.TagValuesByMetricTagKey("gzip-works", "gzipped", 0)
+	m, _ = schedule.Search.TagValuesByMetricTagKey("gzip-works", "gzipped", 0)
 	if len(m) != 1 || m[0] != "yup" {
 		t.Errorf("bad tvbmtk: %v", m)
 	}
-	m = schedule.Search.TagKeysByMetric("no-gzip-works")
+	m, _ = schedule.Search.TagKeysByMetric("no-gzip-works")
 	sort.Strings(m)
 	if len(m) != 2 || m[0] != "host" || m[1] != "other" {
 		t.Errorf("bad tkbm: %v", m)

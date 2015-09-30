@@ -1181,7 +1181,11 @@ func (c *Conf) Funcs() map[string]eparse.Func {
 		var tags []opentsdb.TagSet
 		for _, tag := range lookups.Tags {
 			var next []opentsdb.TagSet
-			for _, value := range e.Search.TagValuesByTagKey(tag, 0) {
+			vals, err := e.Search.TagValuesByTagKey(tag, 0)
+			if err != nil {
+				return nil, err
+			}
+			for _, value := range vals {
 				for _, s := range tags {
 					t := s.Copy()
 					t[tag] = value
