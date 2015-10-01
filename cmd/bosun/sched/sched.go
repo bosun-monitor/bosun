@@ -321,6 +321,18 @@ func (states States) Copy() States {
 	return newStates
 }
 
+func (s *Schedule) GetOpenStates() States {
+	s.Lock("GetOpenStates")
+	defer s.Unlock()
+	states := s.status.Copy()
+	for k, state := range states {
+		if !state.Open {
+			delete(states, k)
+		}
+	}
+	return states
+}
+
 type StateGroup struct {
 	Active   bool `json:",omitempty"`
 	Status   Status
@@ -358,7 +370,6 @@ func (s *Schedule) MarshalGroups(T miniprofiler.Timer, filter string) (*StateGro
 	s.Lock("MarshallGroups")
 	defer s.Unlock()
 	T.Step("Setup", func(miniprofiler.Timer) {
-
 		matches, err2 := makeFilter(filter)
 		if err2 != nil {
 			err = err2
@@ -961,6 +972,14 @@ func (s *Schedule) GetIncidentEvents(id uint64) (*Incident, []Event, []Action, e
 	return incident, list, actions, nil
 }
 
+type IncidentStatus struct {
+	IncidentID uint64
+	AlertKey   expr.AlertKey
+	Status     Status
+	Subject    string
+	Silenced   bool
+}
+
 func (s *Schedule) Host(filter string) (map[string]*HostData, error) {
 	hosts := make(map[string]*HostData)
 	allHosts, err := s.Search.TagValuesByTagKey("host", time.Hour*7*24)
@@ -970,8 +989,26 @@ func (s *Schedule) Host(filter string) (map[string]*HostData, error) {
 	for _, h := range allHosts {
 		hosts[h] = newHostData()
 	}
+	states := s.GetOpenStates()
+	silences := s.Silenced()
 	for name, host := range hosts {
 		host.Name = name
+		for ak, state := range states {
+			if stateHost, ok := state.Group["host"]; !ok {
+				continue
+			} else if stateHost != host.Name {
+				continue
+			}
+			_, silenced := silences[ak]
+			is := IncidentStatus{
+				IncidentID: state.Last().IncidentId,
+				AlertKey:   state.AlertKey(),
+				Status:     state.Status(),
+				Subject:    state.Subject,
+				Silenced:   silenced,
+			}
+			host.OpenIncidentIDs = append(host.OpenIncidentIDs, is)
+		}
 		md, err := s.GetMetadata("", opentsdb.TagSet{"host": name})
 		if err != nil {
 			slog.Error(err)
@@ -1058,6 +1095,7 @@ func newHostData() *HostData {
 	hd.CPU.Processors = make(map[string]string)
 	hd.Interfaces = make(map[string]*HostInterface)
 	hd.Memory.Modules = make(map[string]string)
+	hd.OpenIncidentIDs = make([]IncidentStatus, 0)
 	return hd
 }
 
@@ -1068,11 +1106,12 @@ type HostData struct {
 		Used       float64           `json:",omitempty"`
 		Processors map[string]string `json:",omitempty"`
 	}
-	Interfaces   map[string]*HostInterface
-	LastBoot     int64  `json:",omitempty"`
-	LastUpdate   int64  `json:",omitempty"`
-	Manufacturer string `json:",omitempty"`
-	Memory       struct {
+	OpenIncidentIDs []IncidentStatus
+	Interfaces      map[string]*HostInterface
+	LastBoot        int64  `json:",omitempty"`
+	LastUpdate      int64  `json:",omitempty"`
+	Manufacturer    string `json:",omitempty"`
+	Memory          struct {
 		Modules map[string]string `json:",omitempty"`
 		Total   int64             `json:",omitempty"`
 		Used    int64             `json:",omitempty"`
