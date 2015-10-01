@@ -35,12 +35,13 @@ func checkEqual(t *testing.T, err error, desc string, expected, actual []string)
 func TestIndex(t *testing.T) {
 	mdp := opentsdb.MultiDataPoint{
 		&opentsdb.DataPoint{Metric: "os.cpu", Value: 12.0, Timestamp: 13, Tags: opentsdb.TagSet{"host": "abc", "proc": "7"}},
-		&opentsdb.DataPoint{Metric: "os.mem", Value: 4000, Timestamp: 13, Tags: opentsdb.TagSet{"host": "abc1"}},
-		&opentsdb.DataPoint{Metric: "os.mem", Value: 4050, Timestamp: 13, Tags: opentsdb.TagSet{"host": "def"}},
+		&opentsdb.DataPoint{Metric: "os.mem", Value: 4000, Timestamp: 13, Tags: opentsdb.TagSet{"host": "abc1", "foo": "q"}},
+		&opentsdb.DataPoint{Metric: "os.mem", Value: 4050, Timestamp: 13, Tags: opentsdb.TagSet{"host": "def", "foo": "q"}},
+		&opentsdb.DataPoint{Metric: "os.mem", Value: 4050, Timestamp: 13, Tags: opentsdb.TagSet{"host": "def", "foo": "r"}},
 		&opentsdb.DataPoint{Metric: "os.cpu2", Value: 12.0, Timestamp: 13, Tags: opentsdb.TagSet{"host": "abc"}},
 	}
 	testSearch.Index(mdp)
-	time.Sleep(4 * time.Second)
+	time.Sleep(1 * time.Second)
 	um, err := testSearch.UniqueMetrics()
 	checkEqual(t, err, "metrics", []string{"os.cpu", "os.cpu2", "os.mem"}, um)
 
@@ -55,4 +56,12 @@ func TestIndex(t *testing.T) {
 
 	metrics, err := testSearch.MetricsByTagPair("host", "abc")
 	checkEqual(t, err, "metricsByPair", []string{"os.cpu", "os.cpu2"}, metrics)
+
+	filtered, err := testSearch.FilteredTagSets("os.mem", opentsdb.TagSet{"foo": "q"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(filtered) != 2 {
+		t.Fatalf("Expected 2 filtered results. Found %d.", len(filtered))
+	}
 }

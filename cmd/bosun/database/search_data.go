@@ -38,6 +38,9 @@ func searchTagkKey(metric string) string {
 func searchTagvKey(metric, tagK string) string {
 	return fmt.Sprintf("search:tagv:%s:%s", metric, tagK)
 }
+func searchMetricTagSetKey(metric string) string {
+	return fmt.Sprintf("search:mts:%s", metric)
+}
 
 func (d *dataAccess) Search_AddMetricForTag(tagK, tagV, metric string, time int64) error {
 	defer collect.StartTimer("redis", opentsdb.TagSet{"op": "AddMetricForTag"})()
@@ -116,4 +119,33 @@ func (d *dataAccess) Search_GetTagValues(metric, tagK string) (map[string]int64,
 	defer conn.Close()
 
 	return stringInt64Map(conn.Do("HGETALL", searchTagvKey(metric, tagK)))
+}
+
+func (d *dataAccess) Search_AddMetricTagSet(metric, tagSet string, time int64) error {
+	defer collect.StartTimer("redis", opentsdb.TagSet{"op": "AddMetricTagSet"})()
+	conn := d.GetConnection()
+	defer conn.Close()
+
+	_, err := conn.Do("HSET", searchMetricTagSetKey(metric), tagSet, time)
+	return err
+}
+func (d *dataAccess) Search_GetMetricTagSets(metric string, tags opentsdb.TagSet) (map[string]int64, error) {
+	defer collect.StartTimer("redis", opentsdb.TagSet{"op": "GetMetricTagSets"})()
+	conn := d.GetConnection()
+	defer conn.Close()
+
+	mtss, err := stringInt64Map(conn.Do("HGETALL", searchMetricTagSetKey(metric)))
+	if err != nil {
+		return nil, err
+	}
+	for mts := range mtss {
+		ts, err := opentsdb.ParseTags(mts)
+		if err != nil {
+			return nil, err
+		}
+		if !ts.Subset(tags) {
+			delete(mtss, mts)
+		}
+	}
+	return mtss, nil
 }
