@@ -24,7 +24,7 @@ import (
 type Search struct {
 	DataAccess database.DataAccess
 
-	Last map[string]*lastInfo
+	last map[string]*lastInfo
 
 	indexQueue chan *opentsdb.DataPoint
 	sync.RWMutex
@@ -43,7 +43,7 @@ func init() {
 func NewSearch(data database.DataAccess) *Search {
 	s := Search{
 		DataAccess: data,
-		Last:       make(map[string]*lastInfo),
+		last:       make(map[string]*lastInfo),
 		indexQueue: make(chan *opentsdb.DataPoint, 300000),
 	}
 	collect.Set("search.index_queue", opentsdb.TagSet{}, func() interface{} { return len(s.indexQueue) })
@@ -56,10 +56,10 @@ func (s *Search) Index(mdp opentsdb.MultiDataPoint) {
 		s.Lock()
 		metric := dp.Metric
 		key := metric + dp.Tags.String()
-		p := s.Last[key]
+		p := s.last[key]
 		if p == nil {
 			p = &lastInfo{}
-			s.Last[key] = p
+			s.last[key] = p
 		}
 		if p.timestamp < dp.Timestamp {
 			if fv, err := getFloat(dp.Value); err == nil {
@@ -117,6 +117,11 @@ func (s *Search) redisIndex(c <-chan *opentsdb.DataPoint) {
 				}
 			})
 		}
+		updateIfTime(fmt.Sprintf("mts:%s:%s", metric, dp.Tags.Tags()), func() {
+			if err := s.DataAccess.Search_AddMetricTagSet(metric, dp.Tags.Tags(), now); err != nil {
+				slog.Error(err)
+			}
+		})
 	}
 }
 
@@ -159,7 +164,7 @@ var errNotFloat = fmt.Errorf("last: expected float64")
 // the value is treated as a counter. err is non nil if there is no match.
 func (s *Search) GetLast(metric, tags string, diff bool) (v float64, err error) {
 	s.RLock()
-	p := s.Last[metric+tags]
+	p := s.last[metric+tags]
 	if p != nil {
 		if diff {
 			return p.diffFromPrev, nil
@@ -258,5 +263,21 @@ func (s *Search) TagValuesByMetricTagKey(metric, tagK string, since time.Duratio
 		}
 	}
 	sort.Strings(r)
+	return r, nil
+}
+
+func (s *Search) FilteredTagSets(metric string, tags opentsdb.TagSet) ([]opentsdb.TagSet, error) {
+	sets, err := s.DataAccess.Search_GetMetricTagSets(metric, tags)
+	if err != nil {
+		return nil, err
+	}
+	r := []opentsdb.TagSet{}
+	for k := range sets {
+		ts, err := opentsdb.ParseTags(k)
+		if err != nil {
+			return nil, err
+		}
+		r = append(r, ts)
+	}
 	return r, nil
 }

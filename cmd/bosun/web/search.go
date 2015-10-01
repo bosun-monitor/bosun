@@ -42,6 +42,20 @@ func TagValuesByMetricTagKey(t miniprofiler.Timer, w http.ResponseWriter, r *htt
 	return schedule.Search.TagValuesByMetricTagKey(metric, tagk, 0)
 }
 
+func FilteredTagsetsByMetric(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	vars := mux.Vars(r)
+	metric := vars["metric"]
+	tagset := opentsdb.TagSet{}
+	var err error
+	ts := r.FormValue("tags")
+	if ts != "" {
+		if tagset, err = opentsdb.ParseTags(ts); err != nil {
+			return nil, err
+		}
+	}
+	return schedule.Search.FilteredTagSets(metric, tagset)
+}
+
 func MetricsByTagPair(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	tagk := vars["tagk"]

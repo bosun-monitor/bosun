@@ -37,6 +37,9 @@ type DataAccess interface {
 
 	Search_AddTagValue(metric, tagK, tagV string, time int64) error
 	Search_GetTagValues(metric, tagK string) (map[string]int64, error)
+
+	Search_AddMetricTagSet(metric, tagSet string, time int64) error
+	Search_GetMetricTagSets(metric string, tags opentsdb.TagSet) (map[string]int64, error)
 }
 
 type dataAccess struct {

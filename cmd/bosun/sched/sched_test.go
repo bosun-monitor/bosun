@@ -94,6 +94,12 @@ func (n *nopDataAccess) Search_AddTagValue(metric, tagK, tagV string, time int64
 func (n *nopDataAccess) Search_GetTagValues(metric, tagK string) (map[string]int64, error) {
 	panic("not implemented")
 }
+func (n *nopDataAccess) Search_AddMetricTagSet(metric, tagSet string, time int64) error {
+	panic("not implemented")
+}
+func (n *nopDataAccess) Search_GetMetricTagSets(metric string, tags opentsdb.TagSet) (map[string]int64, error) {
+	panic("not implemented")
+}
 
 func initSched(c *conf.Conf) (*Schedule, error) {
 	c.StateFile = ""
