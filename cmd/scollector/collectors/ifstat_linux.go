@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -114,6 +115,21 @@ func c_ifstat_linux() (opentsdb.MultiDataPoint, error) {
 					"direction": direction(i),
 				}, netFields[i].rate, netFields[i].unit, "")
 
+			}
+
+			// Add the network speed in bits
+			// 0 = bytes received
+			// 8 = bytes transmitted
+			if i == 0 || i == 8 {
+				bytes, err := strconv.Atoi(v)
+				if err != nil {
+					return err
+				}
+
+				Add(&md, "linux.net.bits", bytes*8, opentsdb.TagSet{
+					"iface":     intf,
+					"direction": direction(i),
+				}, netFields[i].rate, metadata.Bits, "")
 			}
 		}
 		return nil
