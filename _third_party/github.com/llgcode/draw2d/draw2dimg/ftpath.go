@@ -5,7 +5,7 @@ package draw2dimg
 
 import (
 	"bosun.org/_third_party/github.com/golang/freetype/raster"
-	"golang.org/x/image/math/fixed"
+	"bosun.org/_third_party/golang.org/x/image/math/fixed"
 )
 
 type FtLineBuilder struct {

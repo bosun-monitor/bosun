@@ -18,7 +18,7 @@ package raster // import "bosun.org/_third_party/github.com/golang/freetype/rast
 import (
 	"strconv"
 
-	"golang.org/x/image/math/fixed"
+	"bosun.org/_third_party/golang.org/x/image/math/fixed"
 )
 
 // A cell is part of a linked list (for a given yi co-ordinate) of accumulated

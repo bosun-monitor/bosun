@@ -11,7 +11,7 @@ import (
 	"syscall"
 	"unsafe"
 
-	"golang.org/x/net/internal/iana"
+	"bosun.org/_third_party/golang.org/x/net/internal/iana"
 )
 
 type sysSockoptLen int32

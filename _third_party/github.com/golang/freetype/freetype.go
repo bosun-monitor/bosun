@@ -15,8 +15,8 @@ import (
 
 	"bosun.org/_third_party/github.com/golang/freetype/raster"
 	"bosun.org/_third_party/github.com/golang/freetype/truetype"
-	"golang.org/x/image/font"
-	"golang.org/x/image/math/fixed"
+	"bosun.org/_third_party/golang.org/x/image/font"
+	"bosun.org/_third_party/golang.org/x/image/math/fixed"
 )
 
 // These constants determine the size of the glyph cache. The cache is keyed

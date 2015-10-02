@@ -12,8 +12,8 @@ import (
 	"runtime"
 	"time"
 
-	"golang.org/x/net/icmp"
-	"golang.org/x/net/ipv4"
+	"bosun.org/_third_party/golang.org/x/net/icmp"
+	"bosun.org/_third_party/golang.org/x/net/ipv4"
 )
 
 func ExampleConn_markingTCP() {

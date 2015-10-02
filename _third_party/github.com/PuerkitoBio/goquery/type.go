@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"golang.org/x/net/html"
+	"bosun.org/_third_party/golang.org/x/net/html"
 )
 
 // Document represents an HTML document to be manipulated. Unlike jQuery, which

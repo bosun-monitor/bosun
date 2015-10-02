@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	. "gopkg.in/check.v1"
-	"gopkg.in/yaml.v1"
+	. "bosun.org/_third_party/gopkg.in/check.v1"
+	"bosun.org/_third_party/gopkg.in/yaml.v1"
 )
 
 var marshalIntTest = 123

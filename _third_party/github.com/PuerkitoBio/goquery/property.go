@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"strings"
 
-	"golang.org/x/net/html"
+	"bosun.org/_third_party/golang.org/x/net/html"
 )
 
 var rxClassTrim = regexp.MustCompile("[\t\r\n]")

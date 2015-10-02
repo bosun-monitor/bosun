@@ -10,15 +10,13 @@ import (
 	"time"
 
 	"bosun.org/_third_party/github.com/boltdb/bolt"
+	"bosun.org/_third_party/github.com/influxdb/influxdb/models"
 )
 
 var (
 	// ErrFormatNotFound is returned when no format can be determined from a path.
 	ErrFormatNotFound = errors.New("format not found")
 )
-
-// DefaultEngine is the default engine used by the shard when initializing.
-const DefaultEngine = "bz1"
 
 // Engine represents a swappable storage engine for the shard.
 type Engine interface {
@@ -29,10 +27,12 @@ type Engine interface {
 	LoadMetadataIndex(index *DatabaseIndex, measurementFields map[string]*MeasurementFields) error
 
 	Begin(writable bool) (Tx, error)
-	WritePoints(points []Point, measurementFieldsToSave map[string]*MeasurementFields, seriesToCreate []*SeriesCreate) error
+	WritePoints(points []models.Point, measurementFieldsToSave map[string]*MeasurementFields, seriesToCreate []*SeriesCreate) error
 	DeleteSeries(keys []string) error
 	DeleteMeasurement(name string, seriesKeys []string) error
 	SeriesCount() (n int, err error)
+
+	io.WriterTo
 }
 
 // NewEngineFunc creates a new engine.
@@ -121,16 +121,11 @@ func NewEngineOptions() EngineOptions {
 type Tx interface {
 	io.WriterTo
 
-	Cursor(series string) Cursor
 	Size() int64
 	Commit() error
 	Rollback() error
-}
 
-// Cursor represents an iterator over a series.
-type Cursor interface {
-	Seek(seek []byte) (key, value []byte)
-	Next() (key, value []byte)
+	Cursor(series string, fields []string, dec *FieldCodec, ascending bool) Cursor
 }
 
 // DedupeEntries returns slices with unique keys (the first 8 bytes).

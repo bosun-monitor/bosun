@@ -9,7 +9,7 @@ package unix_test
 import (
 	"testing"
 
-	"golang.org/x/sys/unix"
+	"bosun.org/_third_party/golang.org/x/sys/unix"
 )
 
 const MNT_WAIT = 1

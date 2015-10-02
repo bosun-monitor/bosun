@@ -9,7 +9,7 @@ package svc
 import (
 	"unsafe"
 
-	"golang.org/x/sys/windows"
+	"bosun.org/_third_party/golang.org/x/sys/windows"
 )
 
 func allocSid(subAuth0 uint32) (*windows.SID, error) {

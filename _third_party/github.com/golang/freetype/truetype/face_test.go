@@ -12,8 +12,8 @@ import (
 	"strings"
 	"testing"
 
-	"golang.org/x/image/font"
-	"golang.org/x/image/math/fixed"
+	"bosun.org/_third_party/golang.org/x/image/font"
+	"bosun.org/_third_party/golang.org/x/image/math/fixed"
 )
 
 func BenchmarkDrawString(b *testing.B) {

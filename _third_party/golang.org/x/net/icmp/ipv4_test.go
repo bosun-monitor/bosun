@@ -10,7 +10,7 @@ import (
 	"runtime"
 	"testing"
 
-	"golang.org/x/net/ipv4"
+	"bosun.org/_third_party/golang.org/x/net/ipv4"
 )
 
 var (

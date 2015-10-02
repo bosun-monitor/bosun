@@ -8,7 +8,7 @@ import (
 	"bosun.org/_third_party/github.com/PuerkitoBio/goquery"
 	"bosun.org/_third_party/github.com/aymerick/douceur/css"
 	"bosun.org/_third_party/github.com/aymerick/douceur/parser"
-	"golang.org/x/net/html"
+	"bosun.org/_third_party/golang.org/x/net/html"
 )
 
 const (

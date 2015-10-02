@@ -1,7 +1,7 @@
 package yaml_test
 
 import (
-	. "gopkg.in/check.v1"
+	. "bosun.org/_third_party/gopkg.in/check.v1"
 	"testing"
 )
 

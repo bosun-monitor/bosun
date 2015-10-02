@@ -13,7 +13,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"golang.org/x/sys/windows/svc"
+	"bosun.org/_third_party/golang.org/x/sys/windows/svc"
 )
 
 // Run executes service name by calling appropriate handler function.

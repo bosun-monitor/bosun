@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"golang.org/x/net/html"
+	"bosun.org/_third_party/golang.org/x/net/html"
 )
 
 func MustParseHTML(doc string) *html.Node {

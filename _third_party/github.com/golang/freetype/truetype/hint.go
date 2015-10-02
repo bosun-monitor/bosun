@@ -12,7 +12,7 @@ import (
 	"errors"
 	"math"
 
-	"golang.org/x/image/math/fixed"
+	"bosun.org/_third_party/golang.org/x/image/math/fixed"
 )
 
 const (

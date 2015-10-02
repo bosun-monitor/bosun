@@ -18,9 +18,9 @@ import (
 	"net"
 	"syscall"
 
-	"golang.org/x/net/internal/iana"
-	"golang.org/x/net/ipv4"
-	"golang.org/x/net/ipv6"
+	"bosun.org/_third_party/golang.org/x/net/internal/iana"
+	"bosun.org/_third_party/golang.org/x/net/ipv4"
+	"bosun.org/_third_party/golang.org/x/net/ipv6"
 )
 
 var (

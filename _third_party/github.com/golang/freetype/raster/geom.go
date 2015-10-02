@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"math"
 
-	"golang.org/x/image/math/fixed"
+	"bosun.org/_third_party/golang.org/x/image/math/fixed"
 )
 
 // maxAbs returns the maximum of abs(a) and abs(b).

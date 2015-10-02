@@ -11,9 +11,9 @@ import (
 	"bosun.org/_third_party/github.com/llgcode/draw2d"
 	"bosun.org/_third_party/github.com/llgcode/draw2d/draw2dimg"
 	"bosun.org/_third_party/github.com/vdobler/chart"
-	"golang.org/x/image/draw"
-	"golang.org/x/image/math/f64"
-	"golang.org/x/image/math/fixed"
+	"bosun.org/_third_party/golang.org/x/image/draw"
+	"bosun.org/_third_party/golang.org/x/image/math/f64"
+	"bosun.org/_third_party/golang.org/x/image/math/fixed"
 )
 
 var (

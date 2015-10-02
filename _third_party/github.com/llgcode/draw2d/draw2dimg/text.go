@@ -4,7 +4,7 @@ import (
 	"bosun.org/_third_party/github.com/golang/freetype/truetype"
 	"bosun.org/_third_party/github.com/llgcode/draw2d"
 
-	"golang.org/x/image/math/fixed"
+	"bosun.org/_third_party/golang.org/x/image/math/fixed"
 )
 
 // DrawContour draws the given closed contour at the given sub-pixel offset.

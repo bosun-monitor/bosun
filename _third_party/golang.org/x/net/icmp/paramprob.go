@@ -4,7 +4,7 @@
 
 package icmp
 
-import "golang.org/x/net/internal/iana"
+import "bosun.org/_third_party/golang.org/x/net/internal/iana"
 
 // A ParamProb represents an ICMP parameter problem message body.
 type ParamProb struct {
