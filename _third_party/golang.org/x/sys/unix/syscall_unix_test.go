@@ -18,7 +18,7 @@ import (
 	"testing"
 	"time"
 
-	"bosun.org/_third_party/golang.org/x/sys/unix"
+	"golang.org/x/sys/unix"
 )
 
 // Tests that below functions, structures and constants are consistent

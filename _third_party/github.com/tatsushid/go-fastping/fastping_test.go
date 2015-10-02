@@ -7,32 +7,113 @@ import (
 	"time"
 )
 
-type addHostTest struct {
-	host   string
-	addr   *net.IPAddr
-	expect bool
-}
+func TestSource(t *testing.T) {
+	for i, tt := range []struct {
+		firstAddr  string
+		secondAddr string
+		invalid    bool
+	}{
+		{firstAddr: "192.0.2.10", secondAddr: "192.0.2.20", invalid: false},
+		{firstAddr: "2001:0DB8::10", secondAddr: "2001:0DB8::20", invalid: false},
+		{firstAddr: "192.0.2", invalid: true},
+	} {
+		p := NewPinger()
 
-var addHostTests = []addHostTest{
-	{host: "127.0.0.1", addr: &net.IPAddr{IP: net.IPv4(127, 0, 0, 1)}, expect: true},
-	{host: "localhost", addr: &net.IPAddr{IP: net.IPv4(127, 0, 0, 1)}, expect: false},
+		origSource, err := p.Source(tt.firstAddr)
+		if tt.invalid {
+			if err == nil {
+				t.Errorf("[%d] Source should return an error but nothing: %v", i)
+			}
+			continue
+		}
+		if err != nil {
+			t.Errorf("[%d] Source address failed: %v", i, err)
+		}
+		if origSource != "" {
+			t.Errorf("[%d] Source returned an unexpected value: got %q, expected %q", i, origSource, "")
+		}
+
+		origSource, err = p.Source(tt.secondAddr)
+		if err != nil {
+			t.Errorf("[%d] Source address failed: %v", i, err)
+		}
+		if origSource != tt.firstAddr {
+			t.Errorf("[%d] Source returned an unexpected value: got %q, expected %q", i, origSource, tt.firstAddr)
+		}
+	}
+
+	v4Addr := "192.0.2.10"
+	v6Addr := "2001:0DB8::10"
+
+	p := NewPinger()
+	_, err := p.Source(v4Addr)
+	if err != nil {
+		t.Errorf("Source address failed: %v", err)
+	}
+	_, err = p.Source(v6Addr)
+	if err != nil {
+		t.Errorf("Source address failed: %v", err)
+	}
+	origSource, err := p.Source("")
+	if err != nil {
+		t.Errorf("Source address failed: %v", err)
+	}
+	if origSource != v4Addr {
+		t.Errorf("Source returned an unexpected value: got %q, expected %q", origSource, v4Addr)
+	}
 }
 
 func TestAddIP(t *testing.T) {
+	addIPTests := []struct {
+		host   string
+		addr   *net.IPAddr
+		expect bool
+	}{
+		{host: "127.0.0.1", addr: &net.IPAddr{IP: net.IPv4(127, 0, 0, 1)}, expect: true},
+		{host: "localhost", addr: &net.IPAddr{IP: net.IPv4(127, 0, 0, 1)}, expect: false},
+	}
+
 	p := NewPinger()
 
-	for _, tt := range addHostTests {
+	for _, tt := range addIPTests {
 		if ok := p.AddIP(tt.host); ok != nil {
 			if tt.expect != false {
 				t.Errorf("AddIP failed: got %v, expected %v", ok, tt.expect)
 			}
 		}
 	}
-	for _, tt := range addHostTests {
+	for _, tt := range addIPTests {
 		if tt.expect {
 			if !p.addrs[tt.host].IP.Equal(tt.addr.IP) {
 				t.Errorf("AddIP didn't save IPAddr: %v", tt.host)
 			}
+		}
+	}
+}
+
+func TestAddIPAddr(t *testing.T) {
+	addIPAddrTests := []*net.IPAddr{
+		{IP: net.IPv4(192, 0, 2, 10)},
+		{IP: net.IP{0x20, 0x01, 0x0D, 0xB8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x10}},
+	}
+
+	p := NewPinger()
+
+	for i, tt := range addIPAddrTests {
+		p.AddIPAddr(tt)
+		if !p.addrs[tt.String()].IP.Equal(tt.IP) {
+			t.Errorf("[%d] AddIPAddr didn't save IPAddr: %v", i, tt.IP)
+		}
+		if len(tt.IP.To4()) == net.IPv4len {
+			if p.hasIPv4 != true {
+				t.Errorf("[%d] AddIPAddr didn't save IPAddr type: got %v, expected %v", i, p.hasIPv4, true)
+			}
+		} else if len(tt.IP) == net.IPv6len {
+			if p.hasIPv6 != true {
+				t.Errorf("[%d] AddIPAddr didn't save IPAddr type: got %v, expected %v", i, p.hasIPv6, true)
+			}
+		} else {
+			t.Errorf("[%d] AddIPAddr encounted an unexpected error", i)
 		}
 	}
 }
@@ -257,6 +338,39 @@ func TestRunLoop(t *testing.T) {
 		if idleCount < 2 {
 			t.Fatalf("Pinger idle count less than 2")
 		}
+	}
+}
+
+func TestErr(t *testing.T) {
+	invalidSource := "192.0.2"
+
+	p := NewPinger()
+	p.ctx = newContext()
+
+	_ = p.listen("ip4:icmp", invalidSource)
+	if p.Err() == nil {
+		t.Errorf("Err should return an error but nothing")
+	}
+}
+
+func TestListen(t *testing.T) {
+	noSource := ""
+	invalidSource := "192.0.2"
+
+	p := NewPinger()
+	p.ctx = newContext()
+
+	conn := p.listen("ip4:icmp", noSource)
+	if conn == nil {
+		t.Errorf("listen failed: %v", p.Err())
+	} else {
+		conn.Close()
+	}
+
+	conn = p.listen("ip4:icmp", invalidSource)
+	if conn != nil {
+		t.Errorf("listen should return nothing but something: %v", conn)
+		conn.Close()
 	}
 }
 

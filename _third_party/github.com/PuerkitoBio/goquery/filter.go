@@ -2,7 +2,7 @@ package goquery
 
 import (
 	"bosun.org/_third_party/github.com/andybalholm/cascadia"
-	"bosun.org/_third_party/golang.org/x/net/html"
+	"golang.org/x/net/html"
 )
 
 // Filter reduces the set of matched elements to those that match the selector string.

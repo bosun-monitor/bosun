@@ -1,8 +1,8 @@
 package bolt
 
 import (
-	"bosun.org/_third_party/golang.org/x/sys/unix"
 	"fmt"
+	"golang.org/x/sys/unix"
 	"os"
 	"syscall"
 	"time"

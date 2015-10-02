@@ -11,7 +11,7 @@ import (
 	"unicode/utf16"
 	"unsafe"
 
-	"bosun.org/_third_party/golang.org/x/sys/windows"
+	"golang.org/x/sys/windows"
 )
 
 const (

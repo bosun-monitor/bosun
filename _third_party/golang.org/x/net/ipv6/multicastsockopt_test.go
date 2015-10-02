@@ -9,8 +9,8 @@ import (
 	"runtime"
 	"testing"
 
-	"bosun.org/_third_party/golang.org/x/net/internal/nettest"
-	"bosun.org/_third_party/golang.org/x/net/ipv6"
+	"golang.org/x/net/internal/nettest"
+	"golang.org/x/net/ipv6"
 )
 
 var packetConnMulticastSocketOptionTests = []struct {

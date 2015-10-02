@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"testing"
 
-	"bosun.org/_third_party/golang.org/x/sys/unix"
+	"golang.org/x/sys/unix"
 )
 
 func testSetGetenv(t *testing.T, key, value string) {

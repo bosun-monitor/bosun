@@ -9,7 +9,7 @@ package windows_test
 import (
 	"testing"
 
-	"bosun.org/_third_party/golang.org/x/sys/windows"
+	"golang.org/x/sys/windows"
 )
 
 func testSetGetenv(t *testing.T, key, value string) {

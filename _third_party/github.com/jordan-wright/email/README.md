@@ -1,7 +1,7 @@
 email
 =====
 
-[![Build Status](https://travis-ci.org/jordan-wright/email.png?branch=master)](https://travis-ci.org/jordan-wright/email)
+[![Build Status](https://travis-ci.org/jordan-wright/email.png?branch=master)](https://travis-ci.org/jordan-wright/email) [![GoDoc](https://godoc.org/github.com/jordan-wright/email?status.svg)](https://godoc.org/github.com/jordan-wright/email)
 
 Robust and flexible email library for Go
 
@@ -20,7 +20,9 @@ The ```email``` package currently supports the following:
 ### Installation
 ```go get github.com/jordan-wright/email```
 
-*Note: Requires go version 1.1 and above*
+*Note: Version > 1 of this library requires Go v1.5 or above.*
+
+*If you need compatibility with previous Go versions, you can use the previous package at gopkg.in/jordan-wright/email.v1*
 
 ### Examples
 #### Sending email using Gmail
@@ -48,6 +50,9 @@ e := &email.Email {
 	Headers: textproto.MIMEHeader{},
 }
 ```
+
+#### Creating an Email From an io.Reader
+You can also create an email from any type that implements the ```io.Reader``` interface by using ```email.NewEmailFromReader```.
 
 #### Attaching a File
 ```

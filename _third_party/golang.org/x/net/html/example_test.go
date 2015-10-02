@@ -10,7 +10,7 @@ import (
 	"log"
 	"strings"
 
-	"bosun.org/_third_party/golang.org/x/net/html"
+	"golang.org/x/net/html"
 )
 
 func ExampleParse() {

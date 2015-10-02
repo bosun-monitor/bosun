@@ -4,6 +4,7 @@ package ole
 
 import "testing"
 
+// TestComSetupAndShutDown tests that API fails on Linux.
 func TestComSetupAndShutDown(t *testing.T) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -21,6 +22,7 @@ func TestComSetupAndShutDown(t *testing.T) {
 	CoUninitialize()
 }
 
+// TestComPublicSetupAndShutDown tests that API fails on Linux.
 func TestComPublicSetupAndShutDown(t *testing.T) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -38,6 +40,7 @@ func TestComPublicSetupAndShutDown(t *testing.T) {
 	CoUninitialize()
 }
 
+// TestComPublicSetupAndShutDown_WithValue tests that API fails on Linux.
 func TestComPublicSetupAndShutDown_WithValue(t *testing.T) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -55,6 +58,7 @@ func TestComPublicSetupAndShutDown_WithValue(t *testing.T) {
 	CoUninitialize()
 }
 
+// TestComExSetupAndShutDown tests that API fails on Linux.
 func TestComExSetupAndShutDown(t *testing.T) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -72,6 +76,7 @@ func TestComExSetupAndShutDown(t *testing.T) {
 	CoUninitialize()
 }
 
+// TestComPublicExSetupAndShutDown tests that API fails on Linux.
 func TestComPublicExSetupAndShutDown(t *testing.T) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -89,6 +94,7 @@ func TestComPublicExSetupAndShutDown(t *testing.T) {
 	CoUninitialize()
 }
 
+// TestComPublicExSetupAndShutDown_WithValue tests that API fails on Linux.
 func TestComPublicExSetupAndShutDown_WithValue(t *testing.T) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -106,6 +112,7 @@ func TestComPublicExSetupAndShutDown_WithValue(t *testing.T) {
 	CoUninitialize()
 }
 
+// TestClsidFromProgID_WindowsMediaNSSManager tests that API fails on Linux.
 func TestClsidFromProgID_WindowsMediaNSSManager(t *testing.T) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -123,6 +130,7 @@ func TestClsidFromProgID_WindowsMediaNSSManager(t *testing.T) {
 	}
 }
 
+// TestClsidFromString_WindowsMediaNSSManager tests that API fails on Linux.
 func TestClsidFromString_WindowsMediaNSSManager(t *testing.T) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -141,6 +149,7 @@ func TestClsidFromString_WindowsMediaNSSManager(t *testing.T) {
 	}
 }
 
+// TestCreateInstance_WindowsMediaNSSManager tests that API fails on Linux.
 func TestCreateInstance_WindowsMediaNSSManager(t *testing.T) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -159,6 +168,7 @@ func TestCreateInstance_WindowsMediaNSSManager(t *testing.T) {
 	}
 }
 
+// TestError tests that API fails on Linux.
 func TestError(t *testing.T) {
 	defer func() {
 		if r := recover(); r != nil {

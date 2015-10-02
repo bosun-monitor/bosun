@@ -22,6 +22,20 @@ func (v *IUnknown) VTable() *IUnknownVtbl {
 	return (*IUnknownVtbl)(unsafe.Pointer(v.RawVTable))
 }
 
+func (v *IUnknown) PutQueryInterface(interfaceID *GUID, obj interface{}) error {
+	return reflectQueryInterface(v, v.VTable().QueryInterface, interfaceID, &obj)
+}
+
+func (v *IUnknown) IDispatch(interfaceID *GUID) (dispatch *IDispatch, err error) {
+	err = v.PutQueryInterface(interfaceID, &dispatch)
+	return
+}
+
+func (v *IUnknown) IEnumVARIANT(interfaceID *GUID) (enum *IEnumVARIANT, err error) {
+	err = v.PutQueryInterface(interfaceID, &enum)
+	return
+}
+
 func (v *IUnknown) QueryInterface(iid *GUID) (*IDispatch, error) {
 	return queryInterface(v, iid)
 }

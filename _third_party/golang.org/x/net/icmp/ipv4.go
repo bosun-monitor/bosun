@@ -9,7 +9,7 @@ import (
 	"runtime"
 	"unsafe"
 
-	"bosun.org/_third_party/golang.org/x/net/ipv4"
+	"golang.org/x/net/ipv4"
 )
 
 // See http://www.freebsd.org/doc/en/books/porters-handbook/freebsd-versions.html.

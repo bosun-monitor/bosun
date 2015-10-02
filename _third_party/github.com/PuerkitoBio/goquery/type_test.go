@@ -6,7 +6,7 @@ import (
 	"os"
 	"testing"
 
-	"bosun.org/_third_party/golang.org/x/net/html"
+	"golang.org/x/net/html"
 )
 
 // Test helper functions and members

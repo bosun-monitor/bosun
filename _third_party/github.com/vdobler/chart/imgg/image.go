@@ -1,17 +1,19 @@
 package imgg
 
 import (
-	"bosun.org/_third_party/code.google.com/p/draw2d/draw2d"
-	"bosun.org/_third_party/code.google.com/p/freetype-go/freetype"
-	"bosun.org/_third_party/code.google.com/p/freetype-go/freetype/raster"
-	"bosun.org/_third_party/code.google.com/p/freetype-go/freetype/truetype"
-	"bosun.org/_third_party/code.google.com/p/graphics-go/graphics"
-	"bosun.org/_third_party/github.com/vdobler/chart"
 	"image"
 	"image/color"
-	"image/draw"
 	"log"
 	"math"
+
+	"bosun.org/_third_party/github.com/golang/freetype"
+	"bosun.org/_third_party/github.com/golang/freetype/truetype"
+	"bosun.org/_third_party/github.com/llgcode/draw2d"
+	"bosun.org/_third_party/github.com/llgcode/draw2d/draw2dimg"
+	"bosun.org/_third_party/github.com/vdobler/chart"
+	"golang.org/x/image/draw"
+	"golang.org/x/image/math/f64"
+	"golang.org/x/image/math/fixed"
 )
 
 var (
@@ -43,7 +45,7 @@ type ImageGraphics struct {
 // If fontsize is empty useful default are used.
 func New(width, height int, bgcol color.RGBA, font *truetype.Font, fontsize map[chart.FontSize]float64) *ImageGraphics {
 	img := image.NewRGBA(image.Rect(0, 0, width, height))
-	gc := draw2d.NewGraphicContext(img)
+	gc := draw2dimg.NewGraphicContext(img)
 	gc.SetLineJoin(draw2d.BevelJoin)
 	gc.SetLineCap(draw2d.SquareCap)
 	gc.SetStrokeColor(image.Black)
@@ -64,7 +66,7 @@ func New(width, height int, bgcol color.RGBA, font *truetype.Font, fontsize map[
 // area starting at (x,y) on the provided image img. The rest of the parameters
 // are the same as in New().
 func AddTo(img *image.RGBA, x, y, width, height int, bgcol color.RGBA, font *truetype.Font, fontsize map[chart.FontSize]float64) *ImageGraphics {
-	gc := draw2d.NewGraphicContext(img)
+	gc := draw2dimg.NewGraphicContext(img)
 	gc.SetLineJoin(draw2d.BevelJoin)
 	gc.SetLineCap(draw2d.SquareCap)
 	gc.SetStrokeColor(image.Black)
@@ -102,18 +104,13 @@ func (ig *ImageGraphics) TextLen(s string, font chart.Font) int {
 	c.SetFont(ig.font)
 	fontsize := ig.relFontsizeToPixel(font.Size)
 	c.SetFontSize(fontsize)
-	scale := int32(fontsize * dpi * (64.0 / 72.0))
-	var p raster.Point
-	prev, hasPrev := truetype.Index(0), false
-	for _, rune := range s {
-		index := ig.font.Index(rune)
-		if hasPrev {
-			p.X += raster.Fix32(ig.font.Kerning(scale, prev, index)) << 2
-		}
-		p.X += raster.Fix32(ig.font.HMetric(scale, index).AdvanceWidth) << 2
-		prev, hasPrev = index, true
+
+	// really draw it
+	width, err := c.DrawString(s, freetype.Pt(0, 0))
+	if err != nil {
+		return 10 * len(s) // BUG
 	}
-	return int((p.X + 127) / 256)
+	return int(width.X+32)>>6 + 1
 }
 
 func (ig *ImageGraphics) setStyle(style chart.Style) {
@@ -176,7 +173,14 @@ func (ig *ImageGraphics) Text(x, y int, t string, align string, rot int, f chart
 		align = "c" + align
 	}
 
-	textImage := ig.textBox(t, f)
+	var col color.Color
+	if f.Color != nil {
+		col = f.Color
+	} else {
+		col = color.RGBA{0, 0, 0, 0xff}
+	}
+
+	textImage := ig.textBox(t, f, col)
 	bounds := textImage.Bounds()
 	w, h := bounds.Dx(), bounds.Dy()
 	var centerX, centerY int
@@ -185,33 +189,31 @@ func (ig *ImageGraphics) Text(x, y int, t string, align string, rot int, f chart
 		alpha := float64(rot) / 180 * math.Pi
 		cos := math.Cos(alpha)
 		sin := math.Sin(alpha)
-		hs, hc := float64(h)*sin, float64(h)*cos
-		ws, wc := float64(w)*sin, float64(w)*cos
-		W := int(math.Ceil(hs + wc))
-		H := int(math.Ceil(hc + ws))
-		rotated := image.NewAlpha(image.Rect(0, 0, W, H))
-		graphics.Rotate(rotated, textImage, &graphics.RotateOptions{-alpha})
-		textImage = rotated
-		centerX, centerY = W/2, H/2
 
-		switch align {
-		case "bl":
-			centerX, centerY = int(hs), H
-		case "bc":
-			centerX, centerY = W-int(wc/2), int(ws/2)
-		case "br":
-			centerX, centerY = W, int(hc)
-		case "tl":
-			centerX, centerY = 0, H-int(hc)
-		case "tc":
-			centerX, centerY = int(ws/2), H-int(ws/2)
-		case "tr":
-			centerX, centerY = W-int(hs), 0
-		case "cl":
-			centerX, centerY = int(hs/2), H-int(hc/2)
-		case "cr":
-			centerX, centerY = W-int(hs/2), int(hc/2)
+		ax, ay := float64(w), float64(h) // anchor point
+		switch align[0] {
+		case 'b':
+		case 'c':
+			ay /= 2
+		case 't':
+			ay = 0
 		}
+		switch align[1] {
+		case 'l':
+			ax = 0
+		case 'c':
+			ax /= 2
+		case 'r':
+		}
+		dx := float64(ax)*cos + float64(ay)*sin
+		dy := -float64(ax)*sin + float64(ay)*cos
+		trans := f64.Aff3{
+			+cos, +sin, float64(x+ig.x0) - dx,
+			-sin, +cos, float64(y+ig.y0) - dy,
+		}
+		draw.BiLinear.Transform(ig.Image, trans,
+			textImage, textImage.Bounds(), draw.Over, nil)
+		return
 	} else {
 		centerX, centerY = w/2, h/2
 		switch align[0] {
@@ -235,61 +237,47 @@ func (ig *ImageGraphics) Text(x, y int, t string, align string, rot int, f chart
 	x += ig.x0
 	y += ig.y0
 
-	var col color.Color
-	if f.Color != nil {
-		col = f.Color
-	} else {
-		col = color.NRGBA{0, 0, 0, 0xff}
-	}
 	tcol := image.NewUniform(col)
-
 	draw.DrawMask(ig.Image, image.Rect(x, y, x+w, y+h), tcol, image.ZP,
 		textImage, textImage.Bounds().Min, draw.Over)
 }
 
 // textBox renders t into a tight fitting image
-func (ig *ImageGraphics) textBox(t string, font chart.Font) image.Image {
+func (ig *ImageGraphics) textBox(t string, font chart.Font, textCol color.Color) image.Image {
 	// Initialize the context.
-	fg := image.NewUniform(color.Alpha{0xff})
-	bg := image.NewUniform(color.Alpha{0x00})
+	bg := image.NewUniform(color.Alpha{0})
+	fg := image.NewUniform(textCol)
 	width := ig.TextLen(t, font)
 	size := ig.relFontsizeToPixel(font.Size)
-	bb := ig.font.Bounds(int32(size))
-	// TODO: Ugly, manual, heuristic hack to get "nicer" text for common latin characters
-	bb.YMin++
-	if size >= 15 {
-		bb.YMin++
-		bb.YMax--
-	}
-	if size >= 20 {
-		bb.YMax--
-	}
-	if size >= 25 {
-		bb.YMin++
-		bb.YMax--
-	}
-
-	dy := int(bb.YMax - bb.YMin)
-	canvas := image.NewAlpha(image.Rect(0, 0, width, dy))
-	draw.Draw(canvas, canvas.Bounds(), bg, image.ZP, draw.Src)
 
 	c := freetype.NewContext()
 	c.SetDPI(dpi)
 	c.SetFont(ig.font)
 	c.SetFontSize(size)
-	c.SetClip(canvas.Bounds())
+	bb := ig.font.Bounds(c.PointToFixed(float64(size)))
+	bbDelta := bb.Max.Sub(bb.Min)
+
+	height := int(bbDelta.Y+32) >> 6
+	canvas := image.NewRGBA(image.Rect(0, 0, width, height))
+	draw.Draw(canvas, canvas.Bounds(), bg, image.ZP, draw.Src)
 	c.SetDst(canvas)
 	c.SetSrc(fg)
-
+	c.SetClip(canvas.Bounds())
 	// Draw the text.
-	pt := freetype.Pt(0, dy+int(bb.YMin)-1)
-	extent, err := c.DrawString(t, pt)
+	extent, err := c.DrawString(t, fixed.Point26_6{X: 0, Y: bb.Max.Y})
 	if err != nil {
 		log.Println(err)
 		return nil
 	}
-	// log.Printf("text %q, extent: %v", t, extent)
-	return canvas.SubImage(image.Rect(0, 0, int((extent.X+127)/256), dy))
+
+	// Ugly heuristic hack: font bounds are pretty high resulting in white top border: Trim.
+	topskip := 1
+	if size > 15 {
+		topskip = 2
+	} else if size > 20 {
+		topskip = 3
+	}
+	return canvas.SubImage(image.Rect(0, topskip, int(extent.X)>>6, height))
 }
 
 func (ig *ImageGraphics) paint(x, y int, R, G, B uint32, alpha uint32) {

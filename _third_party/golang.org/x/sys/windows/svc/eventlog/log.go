@@ -12,7 +12,7 @@ import (
 	"errors"
 	"syscall"
 
-	"bosun.org/_third_party/golang.org/x/sys/windows"
+	"golang.org/x/sys/windows"
 )
 
 // Log provides access to the system log.

@@ -121,8 +121,8 @@ func (s *SearchService) SearchType(searchType string) *SearchService {
 }
 
 // Routing allows for (a comma-separated) list of specific routing values.
-func (s *SearchService) Routing(routing string) *SearchService {
-	s.routing = routing
+func (s *SearchService) Routing(routings ...string) *SearchService {
+	s.routing = strings.Join(routings, ",")
 	return s
 }
 
@@ -150,6 +150,19 @@ func (s *SearchService) Query(query Query) *SearchService {
 // for details.
 func (s *SearchService) PostFilter(postFilter Filter) *SearchService {
 	s.searchSource = s.searchSource.PostFilter(postFilter)
+	return s
+}
+
+// FetchSource indicates whether the response should contain the stored
+// _source for every hit.
+func (s *SearchService) FetchSource(fetchSource bool) *SearchService {
+	s.searchSource = s.searchSource.FetchSource(fetchSource)
+	return s
+}
+
+// FetchSourceContext indicates how the _source should be fetched.
+func (s *SearchService) FetchSourceContext(fetchSourceContext *FetchSourceContext) *SearchService {
+	s.searchSource = s.searchSource.FetchSourceContext(fetchSourceContext)
 	return s
 }
 
@@ -313,6 +326,9 @@ func (s *SearchService) Do() (*SearchResult, error) {
 	if s.searchType != "" {
 		params.Set("search_type", s.searchType)
 	}
+	if s.routing != "" {
+		params.Set("routing", s.routing)
+	}
 
 	// Perform request
 	var body interface{}
@@ -454,11 +470,21 @@ type SearchFacet struct {
 	Entries []searchFacetEntry `json:"entries"`
 }
 
-// searchFacetTerm is the result of a terms facet.
-// See http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/search-facets-terms-facet.html.
+// searchFacetTerm is the result of a terms/terms_stats facet.
+// See https://www.elastic.co/guide/en/elasticsearch/reference/1.7/search-facets-terms-facet.html
+// and https://www.elastic.co/guide/en/elasticsearch/reference/1.7/search-facets-terms-stats-facet.html.
 type searchFacetTerm struct {
 	Term  interface{} `json:"term"`
 	Count int         `json:"count"`
+
+	// The following fields are returned for terms_stats facets.
+	// See https://www.elastic.co/guide/en/elasticsearch/reference/1.7/search-facets-terms-stats-facet.html.
+
+	TotalCount int     `json:"total_count"`
+	Min        float64 `json:"min"`
+	Max        float64 `json:"max"`
+	Total      float64 `json:"total"`
+	Mean       float64 `json:"mean"`
 }
 
 // searchFacetRange is the result of a range facet.

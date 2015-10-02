@@ -13,11 +13,11 @@ import (
 	"testing"
 	"time"
 
-	"bosun.org/_third_party/golang.org/x/net/icmp"
-	"bosun.org/_third_party/golang.org/x/net/internal/iana"
-	"bosun.org/_third_party/golang.org/x/net/internal/nettest"
-	"bosun.org/_third_party/golang.org/x/net/ipv4"
-	"bosun.org/_third_party/golang.org/x/net/ipv6"
+	"golang.org/x/net/icmp"
+	"golang.org/x/net/internal/iana"
+	"golang.org/x/net/internal/nettest"
+	"golang.org/x/net/ipv4"
+	"golang.org/x/net/ipv6"
 )
 
 func googleAddr(c *icmp.PacketConn, protocol int) (net.Addr, error) {
@@ -115,7 +115,7 @@ func doPing(tt pingTest, seq int) error {
 		return err
 	}
 
-	if tt.protocol == iana.ProtocolIPv6ICMP {
+	if tt.network != "udp6" && tt.protocol == iana.ProtocolIPv6ICMP {
 		var f ipv6.ICMPFilter
 		f.SetAll(true)
 		f.Accept(ipv6.ICMPTypeDestinationUnreachable)

@@ -393,6 +393,7 @@ type TestResult struct {
 	GotText     bool
 	GotRegex    bool
 	InvalidCert bool
+	TimeTotal   time.Duration
 }
 
 func (c *TestCase) addr() string {
@@ -416,6 +417,10 @@ func (c *TestCase) Test() *TestResult {
 
 func (c *TestCase) testConnect() (r *TestResult) {
 	r = new(TestResult)
+	t := time.Now()
+	defer func() {
+		r.TimeTotal = time.Now().Sub(t)
+	}()
 	conn, err := net.DialTimeout(c.URL.Scheme, c.addr(), Timeout)
 	if err != nil {
 		r.Result = err
@@ -428,6 +433,10 @@ func (c *TestCase) testConnect() (r *TestResult) {
 
 func (c *TestCase) testHTTP() (r *TestResult) {
 	r = new(TestResult)
+	t := time.Now()
+	defer func() {
+		r.TimeTotal = time.Now().Sub(t)
+	}()
 	tr := &http.Transport{
 		Dial: func(network, a string) (net.Conn, error) {
 			conn, err := net.DialTimeout(network, c.addr(), Timeout)
@@ -443,16 +452,23 @@ func (c *TestCase) testHTTP() (r *TestResult) {
 		r.Result = err
 		return
 	}
-	time.AfterFunc(Timeout, func() {
+	timedOut := false
+	timout := time.AfterFunc(Timeout, func() {
+		timedOut = true
 		r.Connected = false
 		tr.CancelRequest(req)
 	})
+	defer timout.Stop()
 	resp, err := tr.RoundTrip(req)
 	if err != nil {
 		if strings.HasPrefix(err.Error(), "x509") {
 			r.InvalidCert = true
 		}
-		r.Result = err
+		if timedOut {
+			r.Result = fmt.Errorf("i/o timeout")
+		} else {
+			r.Result = err
+		}
 		return
 	}
 	defer resp.Body.Close()
@@ -464,7 +480,11 @@ func (c *TestCase) testHTTP() (r *TestResult) {
 	}
 	text, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		r.Result = err
+		if timedOut {
+			r.Result = fmt.Errorf("i/o timeout")
+		} else {
+			r.Result = err
+		}
 		return
 	}
 	short := text

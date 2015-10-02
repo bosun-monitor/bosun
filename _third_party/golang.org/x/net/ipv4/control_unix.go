@@ -11,7 +11,7 @@ import (
 	"syscall"
 	"unsafe"
 
-	"bosun.org/_third_party/golang.org/x/net/internal/iana"
+	"golang.org/x/net/internal/iana"
 )
 
 func setControlMessage(fd int, opt *rawOpt, cf ControlFlags, on bool) error {

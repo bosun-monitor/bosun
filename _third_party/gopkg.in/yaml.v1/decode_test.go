@@ -1,8 +1,8 @@
 package yaml_test
 
 import (
-	. "bosun.org/_third_party/gopkg.in/check.v1"
-	"bosun.org/_third_party/gopkg.in/yaml.v1"
+	. "gopkg.in/check.v1"
+	"gopkg.in/yaml.v1"
 	"math"
 	"reflect"
 	"strings"

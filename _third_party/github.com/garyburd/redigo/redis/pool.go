@@ -116,7 +116,7 @@ type Pool struct {
 	// the timeout to a value less than the server's timeout.
 	IdleTimeout time.Duration
 
-	// If Wait is true and the pool is at the MaxIdle limit, then Get() waits
+	// If Wait is true and the pool is at the MaxActive limit, then Get() waits
 	// for a connection to be returned to the pool before returning.
 	Wait bool
 
@@ -135,8 +135,9 @@ type idleConn struct {
 	t time.Time
 }
 
-// NewPool creates a new pool. This function is deprecated. Applications should
-// initialize the Pool fields directly as shown in example.
+// NewPool creates a new pool.
+//
+// Deprecated: Initialize the Pool directory as shown in the example.
 func NewPool(newFn func() (Conn, error), maxIdle int) *Pool {
 	return &Pool{Dial: newFn, MaxIdle: maxIdle}
 }
