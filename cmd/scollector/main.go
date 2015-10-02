@@ -18,7 +18,7 @@ import (
 	"strings"
 	"time"
 
-	"bosun.org/_third_party/github.com/BurntSushi/toml"
+	"bosun.org/Godeps/_workspace/src/github.com/BurntSushi/toml"
 	"bosun.org/cmd/scollector/collectors"
 	"bosun.org/cmd/scollector/conf"
 	"bosun.org/collect"

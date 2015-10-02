@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"bosun.org/_third_party/github.com/BurntSushi/toml"
+	"bosun.org/Godeps/_workspace/src/github.com/BurntSushi/toml"
 	"bosun.org/_third_party/github.com/StackExchange/httpunit"
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
