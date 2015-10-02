@@ -95,6 +95,10 @@
 			"Rev": "51f99c862475898df9773747d3accd05a7ca33c1"
 		},
 		{
+			"ImportPath": "github.com/bradfitz/slice",
+			"Rev": "a665b5dbaad5fc7474c1193c67ed138df1e1b0e7"
+		},
+		{
 			"ImportPath": "github.com/cupcake/rdb",
 			"Rev": "3454dcabd33cb8ea8261ffd6a45f4d836eb504cc"
 		},

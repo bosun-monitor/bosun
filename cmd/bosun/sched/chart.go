@@ -7,11 +7,11 @@ import (
 	"io"
 
 	"bosun.org/Godeps/_workspace/src/github.com/ajstarks/svgo"
+	"bosun.org/Godeps/_workspace/src/github.com/bradfitz/slice"
 	"bosun.org/Godeps/_workspace/src/github.com/vdobler/chart"
 	"bosun.org/Godeps/_workspace/src/github.com/vdobler/chart/imgg"
 	"bosun.org/Godeps/_workspace/src/github.com/vdobler/chart/svgg"
 	"bosun.org/_third_party/github.com/MiniProfiler/go/miniprofiler"
-	"bosun.org/_third_party/github.com/bradfitz/slice"
 	"bosun.org/cmd/bosun/expr"
 )
 

@@ -11,10 +11,10 @@ import (
 	"time"
 
 	svg "bosun.org/Godeps/_workspace/src/github.com/ajstarks/svgo"
+	"bosun.org/Godeps/_workspace/src/github.com/bradfitz/slice"
 	"bosun.org/Godeps/_workspace/src/github.com/vdobler/chart"
 	"bosun.org/Godeps/_workspace/src/github.com/vdobler/chart/svgg"
 	"bosun.org/_third_party/github.com/MiniProfiler/go/miniprofiler"
-	"bosun.org/_third_party/github.com/bradfitz/slice"
 	"bosun.org/_third_party/github.com/gorilla/mux"
 	"bosun.org/cmd/bosun/expr"
 	"bosun.org/cmd/bosun/expr/parse"
