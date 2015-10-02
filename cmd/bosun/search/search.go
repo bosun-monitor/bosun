@@ -164,6 +164,7 @@ var errNotFloat = fmt.Errorf("last: expected float64")
 // the value is treated as a counter. err is non nil if there is no match.
 func (s *Search) GetLast(metric, tags string, diff bool) (v float64, err error) {
 	s.RLock()
+	defer s.RUnlock()
 	p := s.last[metric+tags]
 	if p != nil {
 		if diff {
@@ -171,7 +172,6 @@ func (s *Search) GetLast(metric, tags string, diff bool) (v float64, err error) 
 		}
 		return p.lastVal, nil
 	}
-	s.RUnlock()
 	return 0, nil
 }
 
