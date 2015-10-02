@@ -2,6 +2,7 @@ package collectors // import "bosun.org/cmd/scollector/collectors"
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"net"
 	"os"
@@ -272,16 +273,19 @@ func metaIfaces(f func(iface net.Interface, tags opentsdb.TagSet)) {
 		if strings.HasPrefix(iface.Name, "lo") {
 			continue
 		}
-		tags := opentsdb.TagSet{"iface": fmt.Sprint("Interface", iface.Index)}
+		tags := opentsdb.TagSet{"iface": iface.Name}
 		metadata.AddMeta("", tags, "name", iface.Name, true)
 		if mac := strings.ToUpper(strings.Replace(iface.HardwareAddr.String(), ":", "", -1)); mac != "" {
 			metadata.AddMeta("", tags, "mac", mac, true)
 		}
-		ads, _ := iface.Addrs()
-		for i, ad := range ads {
-			addr := strings.Split(ad.String(), "/")[0]
-			metadata.AddMeta("", opentsdb.TagSet{"addr": fmt.Sprint("Addr", i)}.Merge(tags), "addr", addr, true)
+		rawAds, _ := iface.Addrs()
+		addrs := make([]string, len(rawAds))
+		for i, rAd := range rawAds {
+			addr := strings.Split(rAd.String(), "/")[0]
+			addrs[i] = addr
 		}
+		j, _ := json.Marshal(addrs)
+		metadata.AddMeta("", tags, "addresses", string(j), true)
 		if f != nil {
 			f(iface, tags)
 		}
