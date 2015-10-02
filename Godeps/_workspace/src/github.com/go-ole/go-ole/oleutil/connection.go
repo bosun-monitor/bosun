@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"unsafe"
 
-	ole "bosun.org/_third_party/github.com/go-ole/go-ole"
+	ole "bosun.org/Godeps/_workspace/src/github.com/go-ole/go-ole"
 )
 
 type stdDispatch struct {

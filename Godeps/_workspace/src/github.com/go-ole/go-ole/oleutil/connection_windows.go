@@ -7,7 +7,7 @@ import (
 	"syscall"
 	"unsafe"
 
-	ole "bosun.org/_third_party/github.com/go-ole/go-ole"
+	ole "bosun.org/Godeps/_workspace/src/github.com/go-ole/go-ole"
 )
 
 // ConnectObject creates a connection point between two services for communication.

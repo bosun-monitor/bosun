@@ -37,8 +37,8 @@ import (
 	"sync"
 	"time"
 
-	"bosun.org/_third_party/github.com/go-ole/go-ole"
-	"bosun.org/_third_party/github.com/go-ole/go-ole/oleutil"
+	"bosun.org/Godeps/_workspace/src/github.com/go-ole/go-ole"
+	"bosun.org/Godeps/_workspace/src/github.com/go-ole/go-ole/oleutil"
 )
 
 var l = log.New(os.Stdout, "", log.LstdFlags)

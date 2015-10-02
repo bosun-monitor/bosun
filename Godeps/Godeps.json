@@ -20,6 +20,10 @@
 			"Rev": "417cce822c7b9a379df5824be95228d177c5698b"
 		},
 		{
+			"ImportPath": "github.com/StackExchange/wmi",
+			"Rev": "f3e2bae1e0cb5aef83e319133eabfee30013a4a5"
+		},
+		{
 			"ImportPath": "github.com/ajstarks/svgo",
 			"Comment": "go.weekly.2012-01-27-112-g7729261",
 			"Rev": "77292617dc6b7ef6c9813385a6b6089969997285"
@@ -121,6 +125,11 @@
 		{
 			"ImportPath": "github.com/garyburd/redigo/redis",
 			"Rev": "764a32c188f6ce0bc2565349f0125b3ad4021ea9"
+		},
+		{
+			"ImportPath": "github.com/go-ole/go-ole",
+			"Comment": "v1.1.1-64-g4246eab",
+			"Rev": "4246eab2a27c71c143f965432ace52990308d362"
 		},
 		{
 			"ImportPath": "github.com/golang/freetype",

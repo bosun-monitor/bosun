@@ -2,7 +2,7 @@
 
 package oleutil
 
-import ole "bosun.org/_third_party/github.com/go-ole/go-ole"
+import ole "bosun.org/Godeps/_workspace/src/github.com/go-ole/go-ole"
 
 // ConnectObject creates a connection point between two services for communication.
 func ConnectObject(disp *ole.IDispatch, iid *ole.GUID, idisp interface{}) (uint32, error) {
