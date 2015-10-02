@@ -115,6 +115,14 @@
 			"Rev": "ccde4420e1fee9af5da365cb76075b95683f39a6"
 		},
 		{
+			"ImportPath": "github.com/garyburd/redigo/internal",
+			"Rev": "764a32c188f6ce0bc2565349f0125b3ad4021ea9"
+		},
+		{
+			"ImportPath": "github.com/garyburd/redigo/redis",
+			"Rev": "764a32c188f6ce0bc2565349f0125b3ad4021ea9"
+		},
+		{
 			"ImportPath": "github.com/golang/freetype",
 			"Comment": "release-120-gf29eb11",
 			"Rev": "f29eb116deb328d02ee5c573f02d442ca67d5532"

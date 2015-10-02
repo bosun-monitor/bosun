@@ -25,7 +25,7 @@ import (
 	"sync"
 	"time"
 
-	"bosun.org/_third_party/github.com/garyburd/redigo/internal"
+	"bosun.org/Godeps/_workspace/src/github.com/garyburd/redigo/internal"
 )
 
 var nowFunc = time.Now // for testing

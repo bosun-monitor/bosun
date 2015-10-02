@@ -12,7 +12,7 @@
 // License for the specific language governing permissions and limitations
 // under the License.
 
-package internal // import "bosun.org/_third_party/github.com/garyburd/redigo/internal"
+package internal
 
 import (
 	"strings"

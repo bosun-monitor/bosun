@@ -7,9 +7,9 @@ import (
 	"log"
 	"time"
 
+	"bosun.org/Godeps/_workspace/src/github.com/garyburd/redigo/redis"
 	"bosun.org/Godeps/_workspace/src/github.com/siddontang/ledisdb/config"
 	"bosun.org/Godeps/_workspace/src/github.com/siddontang/ledisdb/server"
-	"bosun.org/_third_party/github.com/garyburd/redigo/redis"
 	"bosun.org/collect"
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
