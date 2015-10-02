@@ -20,6 +20,56 @@
 			"Rev": "3ad29d1ad1c4f2023e355603324348cf1f4b2d48"
 		},
 		{
+			"ImportPath": "github.com/aws/aws-sdk-go/aws",
+			"Comment": "v0.9.11",
+			"Rev": "890e878e1bf2abba2e0c33e494daf3ca55b2e563"
+		},
+		{
+			"ImportPath": "github.com/aws/aws-sdk-go/internal/endpoints",
+			"Comment": "v0.9.11",
+			"Rev": "890e878e1bf2abba2e0c33e494daf3ca55b2e563"
+		},
+		{
+			"ImportPath": "github.com/aws/aws-sdk-go/internal/protocol/ec2query",
+			"Comment": "v0.9.11",
+			"Rev": "890e878e1bf2abba2e0c33e494daf3ca55b2e563"
+		},
+		{
+			"ImportPath": "github.com/aws/aws-sdk-go/internal/protocol/query",
+			"Comment": "v0.9.11",
+			"Rev": "890e878e1bf2abba2e0c33e494daf3ca55b2e563"
+		},
+		{
+			"ImportPath": "github.com/aws/aws-sdk-go/internal/protocol/rest",
+			"Comment": "v0.9.11",
+			"Rev": "890e878e1bf2abba2e0c33e494daf3ca55b2e563"
+		},
+		{
+			"ImportPath": "github.com/aws/aws-sdk-go/internal/protocol/xml/xmlutil",
+			"Comment": "v0.9.11",
+			"Rev": "890e878e1bf2abba2e0c33e494daf3ca55b2e563"
+		},
+		{
+			"ImportPath": "github.com/aws/aws-sdk-go/internal/signer/v4",
+			"Comment": "v0.9.11",
+			"Rev": "890e878e1bf2abba2e0c33e494daf3ca55b2e563"
+		},
+		{
+			"ImportPath": "github.com/aws/aws-sdk-go/service/cloudwatch",
+			"Comment": "v0.9.11",
+			"Rev": "890e878e1bf2abba2e0c33e494daf3ca55b2e563"
+		},
+		{
+			"ImportPath": "github.com/aws/aws-sdk-go/service/ec2",
+			"Comment": "v0.9.11",
+			"Rev": "890e878e1bf2abba2e0c33e494daf3ca55b2e563"
+		},
+		{
+			"ImportPath": "github.com/aws/aws-sdk-go/service/elb",
+			"Comment": "v0.9.11",
+			"Rev": "890e878e1bf2abba2e0c33e494daf3ca55b2e563"
+		},
+		{
 			"ImportPath": "github.com/aymerick/douceur/css",
 			"Comment": "v0.2.0-1-g7176f14",
 			"Rev": "7176f146738114e7386d4f915a0bbf55945e22c9"
@@ -47,6 +97,10 @@
 			"ImportPath": "github.com/llgcode/draw2d",
 			"Comment": "v1-63-gd6d74f1",
 			"Rev": "d6d74f19f9d6e3f838cba86207341c76d937807d"
+		},
+		{
+			"ImportPath": "github.com/vaughan0/go-ini",
+			"Rev": "a98ad7ee00ec53921f08832bc06ecf7fd600e6a1"
 		},
 		{
 			"ImportPath": "github.com/vdobler/chart",
