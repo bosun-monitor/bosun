@@ -16,7 +16,7 @@ import (
 	"strings"
 	"time"
 
-	"bosun.org/_third_party/github.com/facebookgo/httpcontrol"
+	"bosun.org/Godeps/_workspace/src/github.com/facebookgo/httpcontrol"
 	"bosun.org/_third_party/gopkg.in/fsnotify.v1"
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/sched"
