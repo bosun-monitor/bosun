@@ -45,6 +45,13 @@ func NameMatches(name string, regexes []*regexp.Regexp) bool {
 	return false
 }
 
+func Btoi(b bool) int {
+	if b {
+		return 1
+	}
+	return 0
+}
+
 func init() {
 	Set()
 }
