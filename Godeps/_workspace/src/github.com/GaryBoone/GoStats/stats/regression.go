@@ -2,9 +2,9 @@ package stats
 
 //
 // regression.go
-//
+// 
 // Author:   Gary Boone
-//
+// 
 // Copyright (c) 2011-2013 Gary Boone <gary.boone@gmail.com>.
 //
 // Changes:
@@ -28,8 +28,8 @@ type Regression struct {
 	n, sx, sy, sxx, sxy, syy float64
 }
 
-//
-//
+// 
+// 
 // Accessor Functions
 //
 //
@@ -43,7 +43,7 @@ func (r *Regression) Size() int {
 }
 
 //
-//
+// 
 // Incremental Functions
 //
 //
@@ -108,11 +108,11 @@ func (r *Regression) InterceptStandardError() float64 {
 	return s * math.Sqrt(1.0/r.n+mean_x*mean_x/ss_xx)
 }
 
-//
-//
+// 
+// 
 // Batch Functions
-//
-//
+// 
+// 
 
 func LinearRegression(xData, yData []float64) (slope, intercept, rsquared float64,
 	count int, slopeStdErr, interceptStdErr float64) {

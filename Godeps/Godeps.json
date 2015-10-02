@@ -11,6 +11,10 @@
 			"Rev": "056c9bc7be7190eaa7715723883caffa5f8fa3e4"
 		},
 		{
+			"ImportPath": "github.com/GaryBoone/GoStats/stats",
+			"Rev": "1993eafbef57be29ee8f5eb9d26a22f20ff3c207"
+		},
+		{
 			"ImportPath": "github.com/PuerkitoBio/goquery",
 			"Comment": "v0.3.2-80-g417cce8",
 			"Rev": "417cce822c7b9a379df5824be95228d177c5698b"

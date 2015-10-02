@@ -2,9 +2,9 @@ package stats
 
 //
 // stats.go
-//
+// 
 // Author:   Gary Boone
-//
+// 
 // Copyright (c) 2011-2013 Gary Boone <gary.boone@gmail.com>.
 //
 // Changes:
@@ -21,8 +21,8 @@ package stats
 //
 //    Obtain the descriptive stats at any time by calling Mean(), Variance(), etc.
 //
-// 3. Batch -- just calculate results for the passed-in array. These functions are prefixed by
-//    "Calc".
+// 3. Batch -- just calculate results for the passed-in array. These functions are prefixed by 
+//    "Calc". 
 //
 // See stats_test.go for examples of each.
 //
@@ -41,8 +41,8 @@ type Stats struct {
 	n, min, max, sum, mean, m2, m3, m4 float64
 }
 
-//
-//
+// 
+// 
 // Accessor Functions
 //
 //
@@ -72,7 +72,7 @@ func (d *Stats) Mean() float64 {
 }
 
 //
-//
+// 
 // Incremental Functions
 //
 //
@@ -166,7 +166,7 @@ func (d *Stats) SampleKurtosis() float64 {
 //
 // These are non-incremental functions that operate only on the data given them.
 // They're prefixed with 'Calc'.
-//
+// 
 func StatsCount(data []float64) int {
 	return len(data)
 }
