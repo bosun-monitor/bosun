@@ -43,8 +43,7 @@ var netFields = []struct {
 	{"compressed", metadata.Counter, metadata.Count},
 }
 
-var ifstatRE = regexp.MustCompile(`\s+(eth\d+|em\d+_\d+/\d+|em\d+_\d+|em\d+|` +
-	`bond\d+|team\d+|` + `p\d+p\d+_\d+/\d+|p\d+p\d+_\d+|p\d+p\d+):(.*)`)
+var ifstatRE = regexp.MustCompile(`(?:\s+)?([^:]+):(.*)`)
 
 func c_ipcount_linux() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
