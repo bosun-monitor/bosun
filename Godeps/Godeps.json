@@ -6,6 +6,11 @@
 	],
 	"Deps": [
 		{
+			"ImportPath": "github.com/BurntSushi/toml",
+			"Comment": "v0.1.0-21-g056c9bc",
+			"Rev": "056c9bc7be7190eaa7715723883caffa5f8fa3e4"
+		},
+		{
 			"ImportPath": "github.com/PuerkitoBio/goquery",
 			"Comment": "v0.3.2-80-g417cce8",
 			"Rev": "417cce822c7b9a379df5824be95228d177c5698b"
@@ -85,9 +90,26 @@
 			"Rev": "7176f146738114e7386d4f915a0bbf55945e22c9"
 		},
 		{
+			"ImportPath": "github.com/boltdb/bolt",
+			"Comment": "v1.0-129-g51f99c8",
+			"Rev": "51f99c862475898df9773747d3accd05a7ca33c1"
+		},
+		{
+			"ImportPath": "github.com/cupcake/rdb",
+			"Rev": "3454dcabd33cb8ea8261ffd6a45f4d836eb504cc"
+		},
+		{
+			"ImportPath": "github.com/edsrzf/mmap-go",
+			"Rev": "f9d5617258fa999241e93b43f2ff89e4507cc3f2"
+		},
+		{
 			"ImportPath": "github.com/golang/freetype",
 			"Comment": "release-120-gf29eb11",
 			"Rev": "f29eb116deb328d02ee5c573f02d442ca67d5532"
+		},
+		{
+			"ImportPath": "github.com/golang/snappy",
+			"Rev": "723cc1e459b8eea2dea4583200fd60757d40097a"
 		},
 		{
 			"ImportPath": "github.com/gorilla/css/scanner",
@@ -97,6 +119,79 @@
 			"ImportPath": "github.com/llgcode/draw2d",
 			"Comment": "v1-63-gd6d74f1",
 			"Rev": "d6d74f19f9d6e3f838cba86207341c76d937807d"
+		},
+		{
+			"ImportPath": "github.com/siddontang/go/bson",
+			"Rev": "b151716326d7c7faf22473c0b04fb7ceac88b587"
+		},
+		{
+			"ImportPath": "github.com/siddontang/go/filelock",
+			"Rev": "b151716326d7c7faf22473c0b04fb7ceac88b587"
+		},
+		{
+			"ImportPath": "github.com/siddontang/go/hack",
+			"Rev": "b151716326d7c7faf22473c0b04fb7ceac88b587"
+		},
+		{
+			"ImportPath": "github.com/siddontang/go/ioutil2",
+			"Rev": "b151716326d7c7faf22473c0b04fb7ceac88b587"
+		},
+		{
+			"ImportPath": "github.com/siddontang/go/log",
+			"Rev": "b151716326d7c7faf22473c0b04fb7ceac88b587"
+		},
+		{
+			"ImportPath": "github.com/siddontang/go/num",
+			"Rev": "b151716326d7c7faf22473c0b04fb7ceac88b587"
+		},
+		{
+			"ImportPath": "github.com/siddontang/go/snappy",
+			"Rev": "b151716326d7c7faf22473c0b04fb7ceac88b587"
+		},
+		{
+			"ImportPath": "github.com/siddontang/go/sync2",
+			"Rev": "b151716326d7c7faf22473c0b04fb7ceac88b587"
+		},
+		{
+			"ImportPath": "github.com/siddontang/goredis",
+			"Rev": "760763f78400635ed7b9b115511b8ed06035e908"
+		},
+		{
+			"ImportPath": "github.com/siddontang/ledisdb/config",
+			"Comment": "v0.5-25-g8138134",
+			"Rev": "81381343f881670b41762e7eff0f4f4b7ac6eb9c"
+		},
+		{
+			"ImportPath": "github.com/siddontang/ledisdb/ledis",
+			"Comment": "v0.5-25-g8138134",
+			"Rev": "81381343f881670b41762e7eff0f4f4b7ac6eb9c"
+		},
+		{
+			"ImportPath": "github.com/siddontang/ledisdb/rpl",
+			"Comment": "v0.5-25-g8138134",
+			"Rev": "81381343f881670b41762e7eff0f4f4b7ac6eb9c"
+		},
+		{
+			"ImportPath": "github.com/siddontang/ledisdb/server",
+			"Comment": "v0.5-25-g8138134",
+			"Rev": "81381343f881670b41762e7eff0f4f4b7ac6eb9c"
+		},
+		{
+			"ImportPath": "github.com/siddontang/ledisdb/store",
+			"Comment": "v0.5-25-g8138134",
+			"Rev": "81381343f881670b41762e7eff0f4f4b7ac6eb9c"
+		},
+		{
+			"ImportPath": "github.com/siddontang/rdb",
+			"Rev": "fc89ed2e418d27e3ea76e708e54276d2b44ae9cf"
+		},
+		{
+			"ImportPath": "github.com/syndtr/goleveldb/leveldb",
+			"Rev": "1a9d62f03ea92815b46fcaab357cfd4df264b1a0"
+		},
+		{
+			"ImportPath": "github.com/ugorji/go/codec",
+			"Rev": "2cb41eb350bb803298e42218d78a525daca640a5"
 		},
 		{
 			"ImportPath": "github.com/vaughan0/go-ini",
