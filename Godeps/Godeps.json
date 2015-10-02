@@ -1,0 +1,44 @@
+{
+	"ImportPath": "bosun.org",
+	"GoVersion": "go1.5rc1",
+	"Packages": [
+		"./..."
+	],
+	"Deps": [
+		{
+			"ImportPath": "github.com/ajstarks/svgo",
+			"Comment": "go.weekly.2012-01-27-112-g7729261",
+			"Rev": "77292617dc6b7ef6c9813385a6b6089969997285"
+		},
+		{
+			"ImportPath": "github.com/golang/freetype",
+			"Comment": "release-120-gf29eb11",
+			"Rev": "f29eb116deb328d02ee5c573f02d442ca67d5532"
+		},
+		{
+			"ImportPath": "github.com/llgcode/draw2d",
+			"Comment": "v1-63-gd6d74f1",
+			"Rev": "d6d74f19f9d6e3f838cba86207341c76d937807d"
+		},
+		{
+			"ImportPath": "github.com/vdobler/chart",
+			"Rev": "293b01f8b75d94214d56586bf8362d14e15533fd"
+		},
+		{
+			"ImportPath": "golang.org/x/image/draw",
+			"Rev": "baddd3465a05d84a6d8d3507547a91cb188c81ea"
+		},
+		{
+			"ImportPath": "golang.org/x/image/font",
+			"Rev": "baddd3465a05d84a6d8d3507547a91cb188c81ea"
+		},
+		{
+			"ImportPath": "golang.org/x/image/math/f64",
+			"Rev": "baddd3465a05d84a6d8d3507547a91cb188c81ea"
+		},
+		{
+			"ImportPath": "golang.org/x/image/math/fixed",
+			"Rev": "baddd3465a05d84a6d8d3507547a91cb188c81ea"
+		}
+	]
+}

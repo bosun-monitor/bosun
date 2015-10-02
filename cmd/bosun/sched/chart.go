@@ -6,12 +6,12 @@ import (
 	"image/png"
 	"io"
 
+	"bosun.org/Godeps/_workspace/src/github.com/ajstarks/svgo"
+	"bosun.org/Godeps/_workspace/src/github.com/vdobler/chart"
+	"bosun.org/Godeps/_workspace/src/github.com/vdobler/chart/imgg"
+	"bosun.org/Godeps/_workspace/src/github.com/vdobler/chart/svgg"
 	"bosun.org/_third_party/github.com/MiniProfiler/go/miniprofiler"
-	"bosun.org/_third_party/github.com/ajstarks/svgo"
 	"bosun.org/_third_party/github.com/bradfitz/slice"
-	"bosun.org/_third_party/github.com/vdobler/chart"
-	"bosun.org/_third_party/github.com/vdobler/chart/imgg"
-	"bosun.org/_third_party/github.com/vdobler/chart/svgg"
 	"bosun.org/cmd/bosun/expr"
 )
 
