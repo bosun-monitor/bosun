@@ -6,6 +6,7 @@ import (
 	"sort"
 
 	"bosun.org/_third_party/github.com/influxdb/influxdb/influxql"
+	"bosun.org/_third_party/github.com/influxdb/influxdb/models"
 )
 
 // ShowMeasurementsExecutor implements the Executor interface for a SHOW MEASUREMENTS statement.
@@ -25,18 +26,15 @@ func NewShowMeasurementsExecutor(stmt *influxql.ShowMeasurementsStatement, mappe
 }
 
 // Execute begins execution of the query and returns a channel to receive rows.
-func (e *ShowMeasurementsExecutor) Execute() <-chan *influxql.Row {
+func (e *ShowMeasurementsExecutor) Execute() <-chan *models.Row {
 	// Create output channel and stream data in a separate goroutine.
-	out := make(chan *influxql.Row, 0)
-
-	// It's important that all resources are released when execution completes.
-	defer e.close()
+	out := make(chan *models.Row, 0)
 
 	go func() {
 		// Open the mappers.
 		for _, m := range e.mappers {
 			if err := m.Open(); err != nil {
-				out <- &influxql.Row{Err: err}
+				out <- &models.Row{Err: err}
 				return
 			}
 		}
@@ -48,7 +46,7 @@ func (e *ShowMeasurementsExecutor) Execute() <-chan *influxql.Row {
 			// Get the data from the mapper.
 			c, err := m.NextChunk()
 			if err != nil {
-				out <- &influxql.Row{Err: err}
+				out <- &models.Row{Err: err}
 				return
 			} else if c == nil {
 				// Mapper had no data.
@@ -58,7 +56,7 @@ func (e *ShowMeasurementsExecutor) Execute() <-chan *influxql.Row {
 			// Convert the mapper chunk to a string array of measurement names.
 			mms, ok := c.([]string)
 			if !ok {
-				out <- &influxql.Row{Err: fmt.Errorf("show measurements mapper returned invalid type: %T", c)}
+				out <- &models.Row{Err: fmt.Errorf("show measurements mapper returned invalid type: %T", c)}
 				return
 			}
 
@@ -88,7 +86,7 @@ func (e *ShowMeasurementsExecutor) Execute() <-chan *influxql.Row {
 		}
 
 		// Put the results in a row and send it.
-		row := &influxql.Row{
+		row := &models.Row{
 			Name:    "measurements",
 			Columns: []string{"name"},
 			Values:  make([][]interface{}, 0, len(measurements)),
@@ -104,6 +102,8 @@ func (e *ShowMeasurementsExecutor) Execute() <-chan *influxql.Row {
 		}
 
 		close(out)
+		// It's important that all resources are released when execution completes.
+		e.close()
 	}()
 	return out
 }
@@ -120,19 +120,19 @@ func (e *ShowMeasurementsExecutor) close() {
 
 // ShowMeasurementsMapper is a mapper for collecting measurement names from a shard.
 type ShowMeasurementsMapper struct {
-	remote    Mapper
-	shard     *Shard
-	stmt      *influxql.ShowMeasurementsStatement
-	chunkSize int
-	state     interface{}
+	remote Mapper
+	shard  *Shard
+	stmt   *influxql.ShowMeasurementsStatement
+	state  interface{}
+
+	ChunkSize int
 }
 
 // NewShowMeasurementsMapper returns a mapper for the given shard, which will return data for the meta statement.
-func NewShowMeasurementsMapper(shard *Shard, stmt *influxql.ShowMeasurementsStatement, chunkSize int) *ShowMeasurementsMapper {
+func NewShowMeasurementsMapper(shard *Shard, stmt *influxql.ShowMeasurementsStatement) *ShowMeasurementsMapper {
 	return &ShowMeasurementsMapper{
-		shard:     shard,
-		stmt:      stmt,
-		chunkSize: chunkSize,
+		shard: shard,
+		stmt:  stmt,
 	}
 }
 
@@ -144,18 +144,20 @@ func (m *ShowMeasurementsMapper) Open() error {
 
 	var measurements Measurements
 
-	// If a WHERE clause was specified, filter the measurements.
-	if m.stmt.Condition != nil {
-		var err error
-		measurements, err = m.shard.index.measurementsByExpr(m.stmt.Condition)
-		if err != nil {
-			return err
+	if m.shard != nil {
+		// If a WHERE clause was specified, filter the measurements.
+		if m.stmt.Condition != nil {
+			var err error
+			measurements, err = m.shard.index.measurementsByExpr(m.stmt.Condition)
+			if err != nil {
+				return err
+			}
+		} else {
+			// Otherwise, get all measurements from the database.
+			measurements = m.shard.index.Measurements()
 		}
-	} else {
-		// Otherwise, get all measurements from the database.
-		measurements = m.shard.index.Measurements()
+		sort.Sort(measurements)
 	}
-	sort.Sort(measurements)
 
 	// Create a channel to send measurement names on.
 	ch := make(chan string)
@@ -174,10 +176,7 @@ func (m *ShowMeasurementsMapper) Open() error {
 }
 
 // SetRemote sets the remote mapper to use.
-func (m *ShowMeasurementsMapper) SetRemote(remote Mapper) error {
-	m.remote = remote
-	return nil
-}
+func (m *ShowMeasurementsMapper) SetRemote(remote Mapper) { m.remote = remote }
 
 // TagSets is only implemented on this mapper to satisfy the Mapper interface.
 func (m *ShowMeasurementsMapper) TagSets() []string { return nil }
@@ -210,13 +209,15 @@ func (m *ShowMeasurementsMapper) NextChunk() (interface{}, error) {
 // nextChunk implements next chunk logic for a local shard.
 func (m *ShowMeasurementsMapper) nextChunk() (interface{}, error) {
 	// Allocate array to hold measurement names.
-	names := make([]string, 0, m.chunkSize)
+	names := make([]string, 0, m.ChunkSize)
+
 	// Get the channel of measurement names from the state.
 	measurementNames := m.state.(chan string)
+
 	// Get the next chunk of names.
 	for n := range measurementNames {
 		names = append(names, n)
-		if len(names) == m.chunkSize {
+		if len(names) == m.ChunkSize {
 			break
 		}
 	}

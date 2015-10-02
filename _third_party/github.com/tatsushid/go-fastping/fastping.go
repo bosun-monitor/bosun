@@ -130,6 +130,8 @@ type Pinger struct {
 	// key string is IPAddr.String()
 	addrs   map[string]*net.IPAddr
 	network string
+	source  string
+	source6 string
 	hasIPv4 bool
 	hasIPv6 bool
 	ctx     *context
@@ -158,6 +160,8 @@ func NewPinger() *Pinger {
 		seq:     rand.Intn(0xffff),
 		addrs:   make(map[string]*net.IPAddr),
 		network: "ip",
+		source:  "",
+		source6: "",
 		hasIPv4: false,
 		hasIPv6: false,
 		Size:    TimeSliceLength,
@@ -183,6 +187,40 @@ func (p *Pinger) Network(network string) (string, error) {
 		return origNet, errors.New(network + " can't be used as ICMP endpoint")
 	}
 	return origNet, nil
+}
+
+// Source sets ipv4/ipv6 source IP for sending ICMP packets and returns the previous
+// setting. Empty value indicates to use system default one (for both ipv4 and ipv6).
+func (p *Pinger) Source(source string) (string, error) {
+	// using ipv4 previous value for new empty one
+	origSource := p.source
+	if "" == source {
+		p.mu.Lock()
+		p.source = ""
+		p.source6 = ""
+		p.mu.Unlock()
+		return origSource, nil
+	}
+
+	addr := net.ParseIP(source)
+	if addr == nil {
+		return origSource, errors.New(source + " is not a valid textual representation of an IPv4/IPv6 address")
+	}
+
+	if isIPv4(addr) {
+		p.mu.Lock()
+		p.source = source
+		p.mu.Unlock()
+	} else if isIPv6(addr) {
+		origSource = p.source6
+		p.mu.Lock()
+		p.source6 = source
+		p.mu.Unlock()
+	} else {
+		return origSource, errors.New(source + " is not a valid textual representation of an IPv4/IPv6 address")
+	}
+
+	return origSource, nil
 }
 
 // AddIP adds an IP address to Pinger. ipaddr arg should be a string like
@@ -347,8 +385,8 @@ func (p *Pinger) Err() error {
 	return p.ctx.err
 }
 
-func (p *Pinger) listen(netProto string) *icmp.PacketConn {
-	conn, err := icmp.ListenPacket(netProto, "")
+func (p *Pinger) listen(netProto string, source string) *icmp.PacketConn {
+	conn, err := icmp.ListenPacket(netProto, source)
 	if err != nil {
 		p.mu.Lock()
 		p.ctx.err = err
@@ -364,14 +402,14 @@ func (p *Pinger) run(once bool) {
 	p.debugln("Run(): Start")
 	var conn, conn6 *icmp.PacketConn
 	if p.hasIPv4 {
-		if conn = p.listen(ipv4Proto[p.network]); conn == nil {
+		if conn = p.listen(ipv4Proto[p.network], p.source); conn == nil {
 			return
 		}
 		defer conn.Close()
 	}
 
 	if p.hasIPv6 {
-		if conn6 = p.listen(ipv6Proto[p.network]); conn6 == nil {
+		if conn6 = p.listen(ipv6Proto[p.network], p.source6); conn6 == nil {
 			return
 		}
 		defer conn6.Close()

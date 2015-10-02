@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"bosun.org/_third_party/golang.org/x/net/icmp"
-	"bosun.org/_third_party/golang.org/x/net/internal/iana"
 	"bosun.org/_third_party/golang.org/x/net/ipv6"
 )
 
@@ -31,7 +30,7 @@ func ExampleConn_markingTCP() {
 		go func(c net.Conn) {
 			defer c.Close()
 			p := ipv6.NewConn(c)
-			if err := p.SetTrafficClass(iana.DiffServAF11); err != nil {
+			if err := p.SetTrafficClass(0x28); err != nil { // DSCP AF11
 				log.Fatal(err)
 			}
 			if err := p.SetHopLimit(128); err != nil {
@@ -103,7 +102,7 @@ func ExamplePacketConn_tracingIPPacketRoute() {
 		log.Fatal("no AAAA record found")
 	}
 
-	c, err := net.ListenPacket(fmt.Sprintf("ip6:%d", iana.ProtocolIPv6ICMP), "::") // ICMP for IPv6
+	c, err := net.ListenPacket("ip6:58", "::") // ICMP for IPv6
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -156,7 +155,7 @@ func ExamplePacketConn_tracingIPPacketRoute() {
 			}
 			log.Fatal(err)
 		}
-		rm, err := icmp.ParseMessage(iana.ProtocolIPv6ICMP, rb[:n])
+		rm, err := icmp.ParseMessage(58, rb[:n])
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -178,7 +177,7 @@ func ExamplePacketConn_tracingIPPacketRoute() {
 }
 
 func ExamplePacketConn_advertisingOSPFHello() {
-	c, err := net.ListenPacket(fmt.Sprintf("ip6:%d", iana.ProtocolOSPFIGP), "::") // OSPF for IPv6
+	c, err := net.ListenPacket("ip6:89", "::") // OSPF for IPv6
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -205,7 +204,7 @@ func ExamplePacketConn_advertisingOSPFHello() {
 	}
 
 	cm := ipv6.ControlMessage{
-		TrafficClass: iana.DiffServCS6,
+		TrafficClass: 0xc0, // DSCP CS6
 		HopLimit:     1,
 		IfIndex:      en0.Index,
 	}

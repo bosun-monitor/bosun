@@ -7,6 +7,9 @@ import (
 )
 
 const (
+	// DefaultEngine is the default engine for new shards
+	DefaultEngine = "bz1"
+
 	// DefaultMaxWALSize is the default size of the WAL before it is flushed.
 	DefaultMaxWALSize = 100 * 1024 * 1024 // 100MB
 
@@ -30,7 +33,7 @@ const (
 
 	// DefaultFlushColdInterval specifies how long after a partition has been cold
 	// for writes that a full flush and compaction are forced
-	DefaultFlushColdInterval = 5 * time.Minute
+	DefaultFlushColdInterval = 5 * time.Second
 
 	// DefaultParititionSizeThreshold specifies when a partition gets to this size in
 	// memory, we should slow down writes until it gets a chance to compact.
@@ -43,7 +46,8 @@ const (
 )
 
 type Config struct {
-	Dir string `toml:"dir"`
+	Dir    string `toml:"dir"`
+	Engine string `toml:"engine"`
 
 	// WAL config options for b1 (introduced in 0.9.2)
 	MaxWALSize             int           `toml:"max-wal-size"`
@@ -52,25 +56,31 @@ type Config struct {
 
 	// WAL configuration options for bz1 (introduced in 0.9.3)
 	WALDir                    string        `toml:"wal-dir"`
-	WALEnableLogging          bool          `toml:"wal-enable-logging"`
+	WALLoggingEnabled         bool          `toml:"wal-logging-enabled"`
 	WALReadySeriesSize        int           `toml:"wal-ready-series-size"`
 	WALCompactionThreshold    float64       `toml:"wal-compaction-threshold"`
 	WALMaxSeriesSize          int           `toml:"wal-max-series-size"`
 	WALFlushColdInterval      toml.Duration `toml:"wal-flush-cold-interval"`
 	WALPartitionSizeThreshold uint64        `toml:"wal-partition-size-threshold"`
+
+	// Query logging
+	QueryLogEnabled bool `toml:"query-log-enabled"`
 }
 
 func NewConfig() Config {
 	return Config{
+		Engine:                 DefaultEngine,
 		MaxWALSize:             DefaultMaxWALSize,
 		WALFlushInterval:       toml.Duration(DefaultWALFlushInterval),
 		WALPartitionFlushDelay: toml.Duration(DefaultWALPartitionFlushDelay),
 
-		WALEnableLogging:          true,
+		WALLoggingEnabled:         true,
 		WALReadySeriesSize:        DefaultReadySeriesSize,
 		WALCompactionThreshold:    DefaultCompactionThreshold,
 		WALMaxSeriesSize:          DefaultMaxSeriesSize,
 		WALFlushColdInterval:      toml.Duration(DefaultFlushColdInterval),
 		WALPartitionSizeThreshold: DefaultPartitionSizeThreshold,
+
+		QueryLogEnabled: true,
 	}
 }

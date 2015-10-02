@@ -1,7 +1,7 @@
 package ole
 
-// This tests more than one function. It tests all of the functions needed in order to retrieve an
-// SafeArray populated with Strings.
+// This tests more than one function. It tests all of the functions needed in
+// order to retrieve an SafeArray populated with Strings.
 func Example_safeArrayGetElementString() {
 	CoInitialize(0)
 	defer CoUninitialize()

@@ -6,15 +6,16 @@ import (
 )
 
 const (
-	IDENT_SPACES = 2
+	indentSpace = 2
 )
 
+// RuleKind represents a Rule kind
 type RuleKind int
 
 // Rule kinds
 const (
-	QUALIFIED_RULE RuleKind = iota
-	AT_RULE
+	QualifiedRule RuleKind = iota
+	AtRule
 )
 
 // At Rules than have Rules inside their block instead of Declarations
@@ -22,7 +23,7 @@ var atRulesWithRulesBlock = []string{
 	"@document", "@font-feature-values", "@keyframes", "@media", "@supports",
 }
 
-// A parsed CSS rule
+// Rule represents a parsed CSS rule
 type Rule struct {
 	Kind RuleKind
 
@@ -45,7 +46,7 @@ type Rule struct {
 	EmbedLevel int
 }
 
-// Instanciate a new Rule
+// NewRule instanciates a new Rule
 func NewRule(kind RuleKind) *Rule {
 	return &Rule{
 		Kind: kind,
@@ -55,18 +56,18 @@ func NewRule(kind RuleKind) *Rule {
 // Returns string representation of rule kind
 func (kind RuleKind) String() string {
 	switch kind {
-	case QUALIFIED_RULE:
+	case QualifiedRule:
 		return "Qualified Rule"
-	case AT_RULE:
+	case AtRule:
 		return "At Rule"
 	default:
 		return "WAT"
 	}
 }
 
-// Returns true if this rule embeds another rules
+// EmbedsRules returns true if this rule embeds another rules
 func (rule *Rule) EmbedsRules() bool {
-	if rule.Kind == AT_RULE {
+	if rule.Kind == AtRule {
 		for _, atRuleName := range atRulesWithRulesBlock {
 			if rule.Name == atRuleName {
 				return true
@@ -77,7 +78,7 @@ func (rule *Rule) EmbedsRules() bool {
 	return false
 }
 
-// Returns true if both rules are equals
+// Equal returns true if both rules are equals
 func (rule *Rule) Equal(other *Rule) bool {
 	if (rule.Kind != other.Kind) ||
 		(rule.Prelude != other.Prelude) ||
@@ -112,7 +113,7 @@ func (rule *Rule) Equal(other *Rule) bool {
 	return true
 }
 
-// Returns a string representation of rules differences
+// Diff returns a string representation of rules differences
 func (rule *Rule) Diff(other *Rule) []string {
 	result := []string{}
 
@@ -166,7 +167,7 @@ func (rule *Rule) Diff(other *Rule) []string {
 func (rule *Rule) String() string {
 	result := ""
 
-	if rule.Kind == QUALIFIED_RULE {
+	if rule.Kind == QualifiedRule {
 		for i, sel := range rule.Selectors {
 			if i != 0 {
 				result += ", "
@@ -174,7 +175,7 @@ func (rule *Rule) String() string {
 			result += sel
 		}
 	} else {
-		// AT_RULE
+		// AtRule
 		result += fmt.Sprintf("%s", rule.Name)
 
 		if rule.Prelude != "" {
@@ -210,7 +211,7 @@ func (rule *Rule) String() string {
 func (rule *Rule) indent() string {
 	result := ""
 
-	for i := 0; i < ((rule.EmbedLevel + 1) * IDENT_SPACES); i++ {
+	for i := 0; i < ((rule.EmbedLevel + 1) * indentSpace); i++ {
 		result += " "
 	}
 
@@ -221,7 +222,7 @@ func (rule *Rule) indent() string {
 func (rule *Rule) indentEndBlock() string {
 	result := ""
 
-	for i := 0; i < (rule.EmbedLevel * IDENT_SPACES); i++ {
+	for i := 0; i < (rule.EmbedLevel * indentSpace); i++ {
 		result += " "
 	}
 

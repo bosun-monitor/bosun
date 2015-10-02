@@ -11,6 +11,7 @@ import (
 
 	"bosun.org/_third_party/github.com/influxdb/influxdb/influxql"
 	"bosun.org/_third_party/github.com/influxdb/influxdb/meta"
+	"bosun.org/_third_party/github.com/influxdb/influxdb/models"
 	"bosun.org/_third_party/github.com/influxdb/influxdb/tsdb"
 )
 
@@ -22,7 +23,7 @@ func TestWritePointsAndExecuteQuery(t *testing.T) {
 	defer os.RemoveAll(store.Path())
 
 	// Write first point.
-	if err := store.WriteToShard(shardID, []tsdb.Point{tsdb.NewPoint(
+	if err := store.WriteToShard(shardID, []models.Point{models.NewPoint(
 		"cpu",
 		map[string]string{"host": "server"},
 		map[string]interface{}{"value": 1.0},
@@ -32,7 +33,7 @@ func TestWritePointsAndExecuteQuery(t *testing.T) {
 	}
 
 	// Write second point.
-	if err := store.WriteToShard(shardID, []tsdb.Point{tsdb.NewPoint(
+	if err := store.WriteToShard(shardID, []models.Point{models.NewPoint(
 		"cpu",
 		map[string]string{"host": "server"},
 		map[string]interface{}{"value": 1.0},
@@ -75,7 +76,7 @@ func TestWritePointsAndExecuteQuery_Update(t *testing.T) {
 	defer os.RemoveAll(store.Path())
 
 	// Write original point.
-	if err := store.WriteToShard(1, []tsdb.Point{tsdb.NewPoint(
+	if err := store.WriteToShard(1, []models.Point{models.NewPoint(
 		"temperature",
 		map[string]string{},
 		map[string]interface{}{"value": 100.0},
@@ -96,7 +97,7 @@ func TestWritePointsAndExecuteQuery_Update(t *testing.T) {
 	executor.ShardMapper = &testShardMapper{store: store}
 
 	// Rewrite point with new value.
-	if err := store.WriteToShard(1, []tsdb.Point{tsdb.NewPoint(
+	if err := store.WriteToShard(1, []models.Point{models.NewPoint(
 		"temperature",
 		map[string]string{},
 		map[string]interface{}{"value": 200.0},
@@ -116,14 +117,14 @@ func TestDropSeriesStatement(t *testing.T) {
 	store, executor := testStoreAndExecutor("")
 	defer os.RemoveAll(store.Path())
 
-	pt := tsdb.NewPoint(
+	pt := models.NewPoint(
 		"cpu",
 		map[string]string{"host": "server"},
 		map[string]interface{}{"value": 1.0},
 		time.Unix(1, 2),
 	)
 
-	err := store.WriteToShard(shardID, []tsdb.Point{pt})
+	err := store.WriteToShard(shardID, []models.Point{pt})
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
@@ -143,7 +144,7 @@ func TestDropSeriesStatement(t *testing.T) {
 	}
 
 	got = executeAndGetJSON("show tag keys from cpu", executor)
-	exepected = `[{"series":[{"name":"cpu","columns":["tagKey"]}]}]`
+	exepected = `[{}]`
 	if exepected != got {
 		t.Fatalf("exp: %s\ngot: %s", exepected, got)
 	}
@@ -162,7 +163,7 @@ func TestDropSeriesStatement(t *testing.T) {
 	}
 
 	got = executeAndGetJSON("show tag keys from cpu", executor)
-	exepected = `[{"series":[{"name":"cpu","columns":["tagKey"]}]}]`
+	exepected = `[{}]`
 	if exepected != got {
 		t.Fatalf("exp: %s\ngot: %s", exepected, got)
 	}
@@ -172,20 +173,20 @@ func TestDropMeasurementStatement(t *testing.T) {
 	store, executor := testStoreAndExecutor("")
 	defer os.RemoveAll(store.Path())
 
-	pt := tsdb.NewPoint(
+	pt := models.NewPoint(
 		"cpu",
 		map[string]string{"host": "server"},
 		map[string]interface{}{"value": 1.0},
 		time.Unix(1, 2),
 	)
-	pt2 := tsdb.NewPoint(
+	pt2 := models.NewPoint(
 		"memory",
 		map[string]string{"host": "server"},
 		map[string]interface{}{"value": 1.0},
 		time.Unix(1, 2),
 	)
 
-	if err := store.WriteToShard(shardID, []tsdb.Point{pt, pt2}); err != nil {
+	if err := store.WriteToShard(shardID, []models.Point{pt, pt2}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -238,14 +239,14 @@ func TestDropDatabase(t *testing.T) {
 	store, executor := testStoreAndExecutor("")
 	defer os.RemoveAll(store.Path())
 
-	pt := tsdb.NewPoint(
+	pt := models.NewPoint(
 		"cpu",
 		map[string]string{"host": "server"},
 		map[string]interface{}{"value": 1.0},
 		time.Unix(1, 2),
 	)
 
-	if err := store.WriteToShard(shardID, []tsdb.Point{pt}); err != nil {
+	if err := store.WriteToShard(shardID, []models.Point{pt}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -290,7 +291,7 @@ func TestDropDatabase(t *testing.T) {
 	executor.Store = store
 	executor.ShardMapper = &testShardMapper{store: store}
 
-	if err := store.WriteToShard(shardID, []tsdb.Point{pt}); err == nil || err.Error() != "shard not found" {
+	if err := store.WriteToShard(shardID, []models.Point{pt}); err == nil || err.Error() != "shard not found" {
 		t.Fatalf("expected shard to not be found")
 	}
 }
@@ -406,8 +407,8 @@ func (t *testMetastore) Database(name string) (*meta.DatabaseInfo, error) {
 						EndTime:   time.Now().Add(time.Hour),
 						Shards: []meta.ShardInfo{
 							{
-								ID:       uint64(1),
-								OwnerIDs: []uint64{1},
+								ID:     uint64(1),
+								Owners: []meta.ShardOwner{{NodeID: 1}},
 							},
 						},
 					},
@@ -440,8 +441,8 @@ func (t *testMetastore) RetentionPolicy(database, name string) (rpi *meta.Retent
 				EndTime:   time.Now().Add(time.Hour),
 				Shards: []meta.ShardInfo{
 					{
-						ID:       uint64(1),
-						OwnerIDs: []uint64{1},
+						ID:     uint64(1),
+						Owners: []meta.ShardOwner{{NodeID: 1}},
 					},
 				},
 			},
@@ -461,8 +462,8 @@ func (t *testMetastore) ShardGroupsByTimeRange(database, policy string, min, max
 			EndTime:   time.Now().Add(time.Hour),
 			Shards: []meta.ShardInfo{
 				{
-					ID:       uint64(1),
-					OwnerIDs: []uint64{1},
+					ID:     uint64(1),
+					Owners: []meta.ShardOwner{{NodeID: 1}},
 				},
 			},
 		},

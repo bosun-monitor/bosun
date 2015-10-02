@@ -74,7 +74,7 @@ func init() {
 type Style struct {
 	Symbol      int         // 0: no symbol; any codepoint: this symbol
 	SymbolColor color.Color // color of symbol
-	SymbolSize  float64     // ccaling factor of symbol
+	SymbolSize  float64     // scaling factor of symbol
 	LineStyle   LineStyle   // SolidLine, DashedLine, DottedLine, .... see below
 	LineColor   color.Color // color of line
 	LineWidth   int         // 0: no line,  >=1 width of line in pixel
@@ -100,7 +100,7 @@ func (ps PlotStyle) undefined() bool {
 // LineStyle describes the different types of lines.
 type LineStyle int
 
-// The supported line styles
+// The supported line styles.
 const (
 	SolidLine      LineStyle = iota //  ----------------------
 	DashedLine                      //  ----  ----  ----  ----
@@ -110,14 +110,14 @@ const (
 	LongDotLine
 )
 
-// Font describes a font
+// Font describes a font.
 type Font struct {
 	Name  string      // "": default
 	Size  FontSize    // relative size of font to default in output graphics
 	Color color.Color // "": default, other: use this
 }
 
-// FontSize is the reletive font size used in chart. Five sizes seem enough.
+// FontSize is the relative font size used in chart. Five sizes seem enough.
 type FontSize int
 
 const (

@@ -11,6 +11,7 @@ import (
 	"sync"
 
 	"bosun.org/_third_party/github.com/influxdb/influxdb/influxql"
+	"bosun.org/_third_party/github.com/influxdb/influxdb/models"
 )
 
 func NewStore(path string) *Store {
@@ -37,6 +38,7 @@ type Store struct {
 
 	EngineOptions EngineOptions
 	Logger        *log.Logger
+	closing       chan struct{}
 }
 
 // Path returns the store's root path.
@@ -66,6 +68,12 @@ func (s *Store) ShardN() int {
 func (s *Store) CreateShard(database, retentionPolicy string, shardID uint64) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
+	select {
+	case <-s.closing:
+		return fmt.Errorf("closing")
+	default:
+	}
 
 	// shard already exists
 	if _, ok := s.shards[shardID]; ok {
@@ -174,6 +182,17 @@ func (s *Store) DatabaseIndex(name string) *DatabaseIndex {
 	return s.databaseIndexes[name]
 }
 
+// Databases returns all the databases in the indexes
+func (s *Store) Databases() []string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	databases := []string{}
+	for db := range s.databaseIndexes {
+		databases = append(databases, db)
+	}
+	return databases
+}
+
 func (s *Store) Measurement(database, name string) *Measurement {
 	s.mu.RLock()
 	db := s.databaseIndexes[database]
@@ -182,6 +201,22 @@ func (s *Store) Measurement(database, name string) *Measurement {
 		return nil
 	}
 	return db.Measurement(name)
+}
+
+// DiskSize returns the size of all the shard files in bytes.  This size does not include the WAL size.
+func (s *Store) DiskSize() (int64, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	var size int64
+	for _, shardID := range s.ShardIDs() {
+		shard := s.Shard(shardID)
+		sz, err := shard.DiskSize()
+		if err != nil {
+			return 0, err
+		}
+		size += sz
+	}
+	return size, nil
 }
 
 // deleteSeries loops through the local shards and deletes the series data and metadata for the passed in series keys
@@ -270,6 +305,8 @@ func (s *Store) Open() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	s.closing = make(chan struct{})
+
 	s.shards = map[uint64]*Shard{}
 	s.databaseIndexes = map[string]*DatabaseIndex{}
 
@@ -292,7 +329,7 @@ func (s *Store) Open() error {
 	return nil
 }
 
-func (s *Store) WriteToShard(shardID uint64, points []Point) error {
+func (s *Store) WriteToShard(shardID uint64, points []models.Point) error {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	sh, ok := s.shards[shardID]
@@ -305,18 +342,24 @@ func (s *Store) WriteToShard(shardID uint64, points []Point) error {
 
 func (s *Store) CreateMapper(shardID uint64, stmt influxql.Statement, chunkSize int) (Mapper, error) {
 	shard := s.Shard(shardID)
-	if shard == nil {
-		// This can happen if the shard has been assigned, but hasn't actually been created yet.
-		return nil, nil
-	}
 
-	switch st := stmt.(type) {
+	switch stmt := stmt.(type) {
 	case *influxql.SelectStatement:
-		return NewSelectMapper(shard, st, chunkSize), nil
+		if (stmt.IsRawQuery && !stmt.HasDistinct()) || stmt.IsSimpleDerivative() {
+			m := NewRawMapper(shard, stmt)
+			m.ChunkSize = chunkSize
+			return m, nil
+		}
+		return NewAggregateMapper(shard, stmt), nil
+
 	case *influxql.ShowMeasurementsStatement:
-		return NewShowMeasurementsMapper(shard, st, chunkSize), nil
+		m := NewShowMeasurementsMapper(shard, stmt)
+		m.ChunkSize = chunkSize
+		return m, nil
+	case *influxql.ShowTagKeysStatement:
+		return NewShowTagKeysMapper(shard, stmt, chunkSize), nil
 	default:
-		return nil, fmt.Errorf("can't create mapper for statement type: %v", st)
+		return nil, fmt.Errorf("can't create mapper for statement type: %T", stmt)
 	}
 }
 
@@ -329,6 +372,10 @@ func (s *Store) Close() error {
 			return err
 		}
 	}
+	if s.closing != nil {
+		close(s.closing)
+	}
+	s.closing = nil
 	s.shards = nil
 	s.databaseIndexes = nil
 

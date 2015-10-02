@@ -1,7 +1,8 @@
 #Go OLE
 
+[![Build status](https://ci.appveyor.com/api/projects/status/qr0u2sf7q43us9fj?svg=true)](https://ci.appveyor.com/project/jacobsantos/go-ole-jgs28)
+[![Build Status](https://travis-ci.org/go-ole/go-ole.svg?branch=master)](https://travis-ci.org/go-ole/go-ole)
 [![GoDoc](https://godoc.org/github.com/go-ole/go-ole?status.svg)](https://godoc.org/github.com/go-ole/go-ole)
-[![Build Status](https://travis-ci.org/go-ole/go-ole.svg)](https://travis-ci.org/go-ole/go-ole)
 
 Go bindings for Windows COM using shared libraries instead of cgo.
 
