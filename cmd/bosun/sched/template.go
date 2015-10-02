@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"bosun.org/_third_party/github.com/aymerick/douceur/inliner"
+	"bosun.org/Godeps/_workspace/src/github.com/aymerick/douceur/inliner"
 	"bosun.org/_third_party/github.com/jmoiron/jsonq"
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/expr"
