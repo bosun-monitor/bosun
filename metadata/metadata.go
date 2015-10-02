@@ -190,7 +190,7 @@ func Init(u *url.URL, debug bool) error {
 func collectMetadata() {
 	// Wait a bit so hopefully our collectors have run once and populated the
 	// metadata.
-	time.Sleep(time.Second * 5)
+	time.Sleep(time.Minute)
 	for {
 		for _, f := range metafuncs {
 			f()
