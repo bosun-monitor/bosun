@@ -183,10 +183,14 @@ func c_if_team_linux() (opentsdb.MultiDataPoint, error) {
 				return md, err
 			}
 			var slaveCount int
+			var speed int64
 			for portName, port := range ts.TeamPorts {
 				slaveCount++
+				speed += int64(port.Link.Speed)
+				metadata.AddMeta("", opentsdb.TagSet{"iface": portName}, "master", name, true)
 				Add(&md, "linux.net.bond.slave.is_up", port.Link.Up, opentsdb.TagSet{"slave": portName, "bond": name}, metadata.Gauge, metadata.Bool, linuxNetBondSlaveIsUpDesc)
 			}
+			Add(&md, "os.net.bond.ifspeed", speed, opentsdb.TagSet{"bond": name}, metadata.Gauge, metadata.Megabit, osNetIfSpeedDesc)
 			Add(&md, "linux.net.bond.slave.count", slaveCount, opentsdb.TagSet{"bond": name}, metadata.Gauge, metadata.Count, linuxNetBondSlaveCount)
 		}
 	}
