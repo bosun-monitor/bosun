@@ -517,6 +517,10 @@ func (s *Schedule) Close() {
 		s.db.Close()
 	}
 	s.Unlock()
+	err := s.Search.BackupLast()
+	if err != nil {
+		slog.Error(err)
+	}
 }
 
 const pingFreq = time.Second * 15

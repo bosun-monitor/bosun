@@ -26,20 +26,27 @@ type DataAccess interface {
 	GetTagMetadata(tags opentsdb.TagSet, name string) ([]*TagMetadata, error)
 	DeleteTagMetadata(tags opentsdb.TagSet, name string) error
 
-	Search_AddMetricForTag(tagK, tagV, metric string, time int64) error
-	Search_GetMetricsForTag(tagK, tagV string) (map[string]int64, error)
+	Search() SearchDataAccess
+}
 
-	Search_AddTagKeyForMetric(metric, tagK string, time int64) error
-	Search_GetTagKeysForMetric(metric string) (map[string]int64, error)
+type SearchDataAccess interface {
+	AddMetricForTag(tagK, tagV, metric string, time int64) error
+	GetMetricsForTag(tagK, tagV string) (map[string]int64, error)
 
-	Search_AddMetric(metric string, time int64) error
-	Search_GetAllMetrics() (map[string]int64, error)
+	AddTagKeyForMetric(metric, tagK string, time int64) error
+	GetTagKeysForMetric(metric string) (map[string]int64, error)
 
-	Search_AddTagValue(metric, tagK, tagV string, time int64) error
-	Search_GetTagValues(metric, tagK string) (map[string]int64, error)
+	AddMetric(metric string, time int64) error
+	GetAllMetrics() (map[string]int64, error)
 
-	Search_AddMetricTagSet(metric, tagSet string, time int64) error
-	Search_GetMetricTagSets(metric string, tags opentsdb.TagSet) (map[string]int64, error)
+	AddTagValue(metric, tagK, tagV string, time int64) error
+	GetTagValues(metric, tagK string) (map[string]int64, error)
+
+	AddMetricTagSet(metric, tagSet string, time int64) error
+	GetMetricTagSets(metric string, tags opentsdb.TagSet) (map[string]int64, error)
+
+	BackupLastInfos(map[string]map[string]*LastInfo) error
+	LoadLastInfos() (map[string]map[string]*LastInfo, error)
 }
 
 type dataAccess struct {
