@@ -87,7 +87,23 @@ func c_omreport_ps() (opentsdb.MultiDataPoint, error) {
 			return
 		}
 		id := strings.Replace(fields[0], ":", "_", -1)
-		Add(&md, "hw.ps", severity(fields[1]), opentsdb.TagSet{"id": id}, metadata.Gauge, metadata.Ok, descDellHWPS)
+		ts := opentsdb.TagSet{"id": id}
+		Add(&md, "hw.ps", severity(fields[1]), ts, metadata.Gauge, metadata.Ok, descDellHWPS)
+		pm := &metadata.HWPowerSupply{}
+		if len(fields) < 6 {
+			return
+		}
+		if fields[4] != "" {
+			pm.RatedInputWattage = fields[4]
+		}
+		if fields[5] != "" {
+			pm.RatedOutputWattage = fields[5]
+		}
+		if j, err := json.Marshal(&pm); err == nil {
+			metadata.AddMeta("", ts, "psMeta", string(j), true)
+		} else {
+			slog.Error(err)
+		}
 	}, "chassis", "pwrsupplies")
 	return md, nil
 }
@@ -138,7 +154,32 @@ func c_omreport_storage_controller() (opentsdb.MultiDataPoint, error) {
 		}
 		c_omreport_storage_pdisk(fields[0], &md)
 		id := strings.Replace(fields[0], ":", "_", -1)
-		Add(&md, "hw.storage.controller", severity(fields[1]), opentsdb.TagSet{"id": id}, metadata.Gauge, metadata.Ok, descDellHWStorageCtl)
+		ts := opentsdb.TagSet{"id": id}
+		Add(&md, "hw.storage.controller", severity(fields[1]), ts, metadata.Gauge, metadata.Ok, descDellHWStorageCtl)
+		cm := &metadata.HWControllerMeta{}
+		if len(fields) < 8 {
+			return
+		}
+		if fields[2] != "" {
+			cm.Name = fields[2]
+		}
+		if fields[3] != "" {
+			cm.SlotId = fields[3]
+		}
+		if fields[4] != "" {
+			cm.State = fields[4]
+		}
+		if fields[5] != "" {
+			cm.FirmwareVersion = fields[5]
+		}
+		if fields[7] != "" {
+			cm.DriverVersion = fields[7]
+		}
+		if j, err := json.Marshal(&cm); err == nil {
+			metadata.AddMeta("", ts, "controllerMeta", string(j), true)
+		} else {
+			slog.Error(err)
+		}
 	}, "storage", "controller")
 	return md, nil
 }
@@ -193,7 +234,6 @@ func c_omreport_storage_pdisk(id string, md *opentsdb.MultiDataPoint) {
 		} else {
 			slog.Error(err)
 		}
-
 	}, "storage", "pdisk", "controller="+id)
 }
 
