@@ -143,19 +143,6 @@ func c_omreport_storage_controller() (opentsdb.MultiDataPoint, error) {
 	return md, nil
 }
 
-type hwDiskMeta struct {
-	Name            string
-	Media           string
-	Capacity        string
-	VendorId        string
-	ProductId       string
-	Serial          string
-	Part            string
-	NegotatiedSpeed string
-	capableSpeed    string
-	SectorSize      string
-}
-
 // c_omreport_storage_pdisk is called from the controller func, since it needs the encapsulating id.
 func c_omreport_storage_pdisk(id string, md *opentsdb.MultiDataPoint) {
 	readOmreport(func(fields []string) {
@@ -169,7 +156,7 @@ func c_omreport_storage_pdisk(id string, md *opentsdb.MultiDataPoint) {
 		if len(fields) < 32 {
 			return
 		}
-		dm := &hwDiskMeta{}
+		dm := &metadata.HWDiskMeta{}
 		if fields[2] != "" {
 			dm.Name = fields[2]
 		}
@@ -195,7 +182,7 @@ func c_omreport_storage_pdisk(id string, md *opentsdb.MultiDataPoint) {
 			dm.NegotatiedSpeed = fields[27]
 		}
 		if fields[28] != "" {
-			dm.capableSpeed = fields[28]
+			dm.CapableSpeed = fields[28]
 		}
 		if fields[31] != "" {
 			dm.SectorSize = fields[31]
