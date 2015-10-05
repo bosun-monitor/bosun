@@ -49,6 +49,7 @@ type Conf struct {
 	// namespace
 	ElasticIndexFilters []string
 	RabbitMQ            []RabbitMQ
+	MySQL               []MySQL
 }
 
 type HAProxy struct {
@@ -132,4 +133,18 @@ type RabbitMQ struct {
 type Github struct {
 	Repo  string
 	Token string
+}
+
+type MySQL struct {
+	MaxOpenConns       int
+	GetQueriesInterval int
+	DBName             string
+	InstId             int
+	Username           string
+	Password           string
+	Protocol           string
+	Address            string
+	Port               int
+	DBOfTable          string
+	TableName          string
 }
