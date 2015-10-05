@@ -14,7 +14,8 @@ import (
 )
 
 func (s *Schedule) dispatchNotifications() {
-	ticker := time.NewTicker(s.Conf.CheckFrequency * 2)
+	unknownTicker := time.NewTicker(s.Conf.CheckFrequency * 2)
+	errorTicker := time.NewTicker(2 * time.Minute)
 	timeout := s.CheckNotifications()
 	for {
 		select {
@@ -22,8 +23,10 @@ func (s *Schedule) dispatchNotifications() {
 			timeout = s.CheckNotifications()
 		case <-s.nc:
 			timeout = s.CheckNotifications()
-		case <-ticker.C:
+		case <-unknownTicker.C:
 			s.sendUnknownNotifications()
+		case <-errorTicker.C:
+			s.sendErrorNotifications()
 		}
 	}
 
@@ -317,4 +320,59 @@ func (s *Schedule) groupActionNotifications(aks []expr.AlertKey) map[*conf.Notif
 		}
 	}
 	return groupings
+}
+
+var errorSubjectTemplate *ttemplate.Template
+var errorBodyTemplate *htemplate.Template
+
+func init() {
+	subject := `{{$first := index .Errors 0}}{{$count := len .Errors}}
+{{if gt $count 1}} Errors executing {{$count}} alerts. 
+{{else}} Error executing alert {{$first.Alert}}: {{$first.Message}} 
+{{end}}`
+	body := `{{$count := len .Errors}} Errors executing {{$count}} alert{{if gt $count 1}}s{{end}}: <br/>
+<ul>{{range .Errors}}
+		<li>Alert: <strong> {{.Alert}}: </strong> {{.Message}}</li>
+	{{end}}</ul>`
+	errorSubjectTemplate = ttemplate.Must(ttemplate.New("").Parse(strings.Replace(subject, "\n", "", -1)))
+	errorBodyTemplate = htemplate.Must(htemplate.New("").Parse(body))
+}
+func (s *Schedule) sendErrorNotifications() {
+	groups := map[*conf.Notification][]*AlertError{}
+	s.alertStatusLock.Lock()
+	defer s.alertStatusLock.Unlock()
+	slog.Infof("Sending error notifications for %d errors.", len(s.pendingErrors))
+	for _, e := range s.pendingErrors {
+		alert, ok := s.Conf.Alerts[e.Alert]
+		if !ok {
+			continue
+		}
+		n := alert.WarnNotification
+		if len(n.Notifications) == 0 {
+			n = alert.CritNotification
+		}
+		nots := n.Get(s.Conf, nil)
+		for _, not := range nots {
+			groups[not] = append(groups[not], e)
+		}
+	}
+	s.pendingErrors = []*AlertError{}
+	for not, errs := range groups {
+		ctx := errorContext{Errors: errs}
+		buf := &bytes.Buffer{}
+		err := errorSubjectTemplate.Execute(buf, ctx)
+		if err != nil {
+			slog.Errorf("Error executing error subject template: %s", err)
+			continue
+		}
+		subject := buf.Bytes()
+		buf = &bytes.Buffer{}
+		err = errorBodyTemplate.Execute(buf, ctx)
+		if err != nil {
+			slog.Errorf("Error executing error body template: %s", err)
+			continue
+		}
+		body := buf.Bytes()
+		not.Notify(string(subject), string(body), subject, body, s.Conf, "errorNotification")
+	}
 }

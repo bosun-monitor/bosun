@@ -54,6 +54,8 @@ type Schedule struct {
 	Notifications map[expr.AlertKey]map[string]time.Time
 	//unknown states that need to be notified about. Collected and sent in batches.
 	pendingUnknowns map[*conf.Notification][]*State
+	//errors that need to be notified about
+	pendingErrors []*AlertError
 
 	alertStatusLock sync.Mutex
 	maxIncidentId   uint64
@@ -75,6 +77,7 @@ func (s *Schedule) Init(c *conf.Conf) error {
 	s.Group = make(map[time.Time]expr.AlertKeys)
 	s.Incidents = make(map[uint64]*Incident)
 	s.pendingUnknowns = make(map[*conf.Notification][]*State)
+	s.pendingErrors = []*AlertError{}
 	s.status = make(States)
 	s.LastCheck = time.Now()
 	s.ctx = &checkContext{time.Now(), cache.New(0)}
@@ -1132,6 +1135,7 @@ type AlertStatus struct {
 }
 
 type AlertError struct {
+	Alert               string
 	FirstTime, LastTime time.Time
 	Count               int
 	Message             string
@@ -1159,12 +1163,15 @@ func (s *Schedule) markAlertError(name string, err error) {
 	// else append new event
 	now := time.Now().UTC().Truncate(time.Second)
 	newError := func() {
-		as.Errors = append(as.Errors, &AlertError{
+		e := &AlertError{
+			Alert:     name,
 			FirstTime: now,
 			LastTime:  now,
 			Count:     1,
 			Message:   err.Error(),
-		})
+		}
+		as.Errors = append(as.Errors, e)
+		s.pendingErrors = append(s.pendingErrors, e)
 	}
 	if as.Success || len(as.Errors) == 0 {
 		newError()

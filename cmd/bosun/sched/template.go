@@ -51,6 +51,10 @@ type unknownContext struct {
 	schedule *Schedule
 }
 
+type errorContext struct {
+	Errors []*AlertError
+}
+
 func (s *Schedule) unknownData(t time.Time, name string, group expr.AlertKeys) *unknownContext {
 	return &unknownContext{
 		Time:     t,
