@@ -13153,7 +13153,7 @@ Uhr/hqCpi6vxtEkkNGeXvv7evyt3gxtB2PWr+aehzZ8iC+Fx8Oxr1ntYckni4XGeOL6ahyePVwAAAP//
 
 	"/partials/graph.html": {
 		local:   "web/static/partials/graph.html",
-		size:    8107,
+		size:    8100,
 		modtime: 0,
 		compressed: `
 H4sIAAAJbogA/+xZe28buRH/2/kUc4s2li9ZKbkmReuTXLiXay8o3EMTF0URBAG1S+0S5pJrkqvHqfru
@@ -13194,8 +13194,8 @@ TN4O2fvQHknnwjIUQT5JvmnD/af26s83xV7lGPsNtxaOXTQwjaLoua+UlMW+UpJJbhz4v1jEzLSnhYA/
 q1Az0m9y7W926JKeJZUnwBWZWzo1jUV7dKbBnIUWGpoxFKFDawK2Tcud/uWXSpSaA+jydzywfOWbb7hx
 PMIxTTnistehkG1DzE11vmqbn6YfPS/bbkS8MGzJO5Vc+t5o3i213bxJMuLL2vyJ/kzW66nTbHB5tNms
 1765QTh4s7neEv1xSfnNYmQIjb8bSGN0mYlih/ghmxeDQ3gGl/j/4dHh0T7y7xrJdwnjyER334oBhySd
-B5oYSj20IOANt5kRPt5tlUHneoIeXDyH+VHserCol/J1iN546LWfWa/nwx6xzebG6PTfAAAA///YEzBd
-qx8AAA==
+B5oYSj20IOANt5kRPt5tlUHneoIeXDyH+VHserCol/J1iN546LWfWa/nQyK22dwYlv4bAAD///SusWik
+HwAA
 `,
 	},
 
