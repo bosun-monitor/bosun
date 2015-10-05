@@ -50,6 +50,7 @@ type Conf struct {
 	// namespace
 	ElasticIndexFilters []string
 	RabbitMQ            []RabbitMQ
+	Nexpose             []Nexpose
 }
 
 type HAProxy struct {
@@ -61,6 +62,13 @@ type HAProxy struct {
 type HAProxyInstance struct {
 	Tier string
 	URL  string
+}
+
+type Nexpose struct {
+	Username string
+	Password string
+	Host     string
+	Insecure bool
 }
 
 type ICMP struct {
