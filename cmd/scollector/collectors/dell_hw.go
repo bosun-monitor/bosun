@@ -149,7 +149,41 @@ func c_omreport_storage_pdisk(id string, md *opentsdb.MultiDataPoint) {
 		}
 		//Need to find out what the various ID formats might be
 		id := strings.Replace(fields[0], ":", "_", -1)
-		Add(md, "hw.storage.pdisk", severity(fields[1]), opentsdb.TagSet{"id": id}, metadata.Gauge, metadata.Ok, descDellHWPDisk)
+		ts := opentsdb.TagSet{"id": id}
+		Add(md, "hw.storage.pdisk", severity(fields[1]), ts, metadata.Gauge, metadata.Ok, descDellHWPDisk)
+		if len(fields) < 32 {
+			return
+		}
+		if fields[2] != "" {
+			metadata.AddMeta("", ts, "name", fields[2], true)
+		}
+		if fields[6] != "" {
+			metadata.AddMeta("", ts, "media", fields[6], true)
+		}
+		if fields[19] != "" {
+			metadata.AddMeta("", ts, "capacity", fields[19], true)
+		}
+		if fields[23] != "" {
+			metadata.AddMeta("", ts, "vendorId", fields[23], true)
+		}
+		if fields[24] != "" {
+			metadata.AddMeta("", ts, "productId", fields[24], true)
+		}
+		if fields[25] != "" {
+			metadata.AddMeta("", ts, "serial", fields[25], true)
+		}
+		if fields[26] != "" {
+			metadata.AddMeta("", ts, "part", fields[26], true)
+		}
+		if fields[27] != "" {
+			metadata.AddMeta("", ts, "negotatiedSpeed", fields[27], true)
+		}
+		if fields[28] != "" {
+			metadata.AddMeta("", ts, "capableSpeed", fields[28], true)
+		}
+		if fields[31] != "" {
+			metadata.AddMeta("", ts, "sectorSize", fields[31], true)
+		}
 	}, "storage", "pdisk", "controller="+id)
 }
 
