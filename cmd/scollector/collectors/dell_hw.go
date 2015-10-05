@@ -1,6 +1,7 @@
 package collectors
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -8,6 +9,7 @@ import (
 
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
+	"bosun.org/slog"
 	"bosun.org/util"
 )
 
@@ -141,6 +143,19 @@ func c_omreport_storage_controller() (opentsdb.MultiDataPoint, error) {
 	return md, nil
 }
 
+type hwDiskMeta struct {
+	Name            string
+	Media           string
+	Capacity        string
+	VendorId        string
+	ProductId       string
+	Serial          string
+	Part            string
+	NegotatiedSpeed string
+	capableSpeed    string
+	SectorSize      string
+}
+
 // c_omreport_storage_pdisk is called from the controller func, since it needs the encapsulating id.
 func c_omreport_storage_pdisk(id string, md *opentsdb.MultiDataPoint) {
 	readOmreport(func(fields []string) {
@@ -154,36 +169,44 @@ func c_omreport_storage_pdisk(id string, md *opentsdb.MultiDataPoint) {
 		if len(fields) < 32 {
 			return
 		}
+		dm := &hwDiskMeta{}
 		if fields[2] != "" {
-			metadata.AddMeta("", ts, "name", fields[2], true)
+			dm.Name = fields[2]
 		}
 		if fields[6] != "" {
-			metadata.AddMeta("", ts, "media", fields[6], true)
+			dm.Media = fields[6]
 		}
 		if fields[19] != "" {
-			metadata.AddMeta("", ts, "capacity", fields[19], true)
+			dm.Capacity = fields[19]
 		}
 		if fields[23] != "" {
-			metadata.AddMeta("", ts, "vendorId", fields[23], true)
+			dm.VendorId = fields[23]
 		}
 		if fields[24] != "" {
-			metadata.AddMeta("", ts, "productId", fields[24], true)
+			dm.ProductId = fields[24]
 		}
 		if fields[25] != "" {
-			metadata.AddMeta("", ts, "serial", fields[25], true)
+			dm.Serial = fields[25]
 		}
 		if fields[26] != "" {
-			metadata.AddMeta("", ts, "part", fields[26], true)
+			dm.Part = fields[26]
 		}
 		if fields[27] != "" {
-			metadata.AddMeta("", ts, "negotatiedSpeed", fields[27], true)
+			dm.NegotatiedSpeed = fields[27]
 		}
 		if fields[28] != "" {
-			metadata.AddMeta("", ts, "capableSpeed", fields[28], true)
+			dm.capableSpeed = fields[28]
 		}
 		if fields[31] != "" {
-			metadata.AddMeta("", ts, "sectorSize", fields[31], true)
+			dm.SectorSize = fields[31]
+
 		}
+		if j, err := json.Marshal(&dm); err == nil {
+			metadata.AddMeta("", ts, "physicalDiskMeta", string(j), true)
+		} else {
+			slog.Error(err)
+		}
+
 	}, "storage", "pdisk", "controller="+id)
 }
 
