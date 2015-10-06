@@ -12,3 +12,16 @@ type HWDiskMeta struct {
 	CapableSpeed    string
 	SectorSize      string
 }
+
+type HWControllerMeta struct {
+	Name            string
+	SlotId          string
+	State           string
+	FirmwareVersion string
+	DriverVersion   string
+}
+
+type HWPowerSupply struct {
+	RatedInputWattage  string
+	RatedOutputWattage string
+}
