@@ -12,7 +12,7 @@ import (
 	"os"
 	"time"
 
-	"bosun.org/_third_party/github.com/boltdb/bolt"
+	"bosun.org/Godeps/_workspace/src/github.com/boltdb/bolt"
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/database"
 	"bosun.org/cmd/bosun/expr"

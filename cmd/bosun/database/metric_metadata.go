@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"bosun.org/_third_party/github.com/garyburd/redigo/redis"
+	"bosun.org/Godeps/_workspace/src/github.com/garyburd/redigo/redis"
 	"bosun.org/collect"
 	"bosun.org/opentsdb"
 )

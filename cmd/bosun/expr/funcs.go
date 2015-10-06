@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"bosun.org/_third_party/github.com/GaryBoone/GoStats/stats"
+	"bosun.org/Godeps/_workspace/src/github.com/GaryBoone/GoStats/stats"
 	"bosun.org/_third_party/github.com/MiniProfiler/go/miniprofiler"
 	"bosun.org/cmd/bosun/expr/parse"
 	"bosun.org/graphite"

@@ -1,7 +1,7 @@
 package collectors
 
 import (
-	"bosun.org/_third_party/github.com/StackExchange/wmi"
+	"bosun.org/Godeps/_workspace/src/github.com/StackExchange/wmi"
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
 )

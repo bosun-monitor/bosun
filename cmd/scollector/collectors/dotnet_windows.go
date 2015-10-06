@@ -5,7 +5,7 @@ import (
 	"regexp"
 	"strings"
 
-	"bosun.org/_third_party/github.com/StackExchange/wmi"
+	"bosun.org/Godeps/_workspace/src/github.com/StackExchange/wmi"
 	"bosun.org/cmd/scollector/conf"
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"

@@ -1,0 +1,10 @@
+*~
+x*.png
+x*.svg
+x*.txt
+example/example
+example/bestof.svg
+example/bestof.txt
+
+.idea
+*.iml

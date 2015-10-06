@@ -10,9 +10,9 @@ import (
 	"sync"
 	"time"
 
+	"bosun.org/Godeps/_workspace/src/github.com/boltdb/bolt"
+	"bosun.org/Godeps/_workspace/src/github.com/bradfitz/slice"
 	"bosun.org/_third_party/github.com/MiniProfiler/go/miniprofiler"
-	"bosun.org/_third_party/github.com/boltdb/bolt"
-	"bosun.org/_third_party/github.com/bradfitz/slice"
 	"bosun.org/_third_party/github.com/tatsushid/go-fastping"
 	"bosun.org/cmd/bosun/cache"
 	"bosun.org/cmd/bosun/conf"

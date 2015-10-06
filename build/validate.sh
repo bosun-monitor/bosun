@@ -1,6 +1,6 @@
 #!/bin/bash
 cd $GOPATH/src/bosun.org
-DIRS=`find . -maxdepth 1 -type d -iregex './[^._].*'`
+DIRS=`find . -maxdepth 1 -type d -iregex './[^._].*' -not -path './Godeps'`
 
 O=bosun-monitor
 R=bosun
