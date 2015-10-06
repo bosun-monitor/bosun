@@ -75,7 +75,7 @@ func c_windows_processes() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	var svc_dst_started []Win32_Service
 	for _, svc := range svc_dst {
-		if nameMatches(svc.Name, regexesProcesses) {
+		if util.NameMatches(svc.Name, regexesProcesses) {
 			if svc.Started {
 				svc_dst_started = append(svc_dst_started, svc)
 			}
@@ -92,7 +92,7 @@ func c_windows_processes() (opentsdb.MultiDataPoint, error) {
 		service_match := false
 		iis_match := false
 
-		process_match := nameMatches(v.Name, regexesProcesses)
+		process_match := util.NameMatches(v.Name, regexesProcesses)
 
 		id := "0"
 
@@ -162,15 +162,6 @@ func c_windows_processes() (opentsdb.MultiDataPoint, error) {
 		Add(&md, "win.proc.thread_count", v.ThreadCount, tags, metadata.Gauge, metadata.Count, descWinProcthread_count)
 	}
 	return md, nil
-}
-
-func nameMatches(name string, regexes []*regexp.Regexp) bool {
-	for _, r := range regexes {
-		if r.MatchString(name) {
-			return true
-		}
-	}
-	return false
 }
 
 func btoi(b bool) int {

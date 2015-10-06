@@ -3,6 +3,7 @@ package util // import "bosun.org/util"
 
 import (
 	"os"
+	"regexp"
 	"strings"
 )
 
@@ -33,6 +34,15 @@ func Set() {
 		h = "unknown"
 	}
 	Hostname = Clean(h)
+}
+
+func NameMatches(name string, regexes []*regexp.Regexp) bool {
+	for _, r := range regexes {
+		if r.MatchString(name) {
+			return true
+		}
+	}
+	return false
 }
 
 func init() {
