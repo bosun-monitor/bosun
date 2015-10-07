@@ -1,7 +1,10 @@
 package collectors
 
 import (
+	"encoding/json"
 	"fmt"
+	"net"
+	"sort"
 	"strings"
 	"time"
 
@@ -114,6 +117,22 @@ func c_meta_windows_ifaces() (opentsdb.MultiDataPoint, error) {
 		return md, err
 	}
 
+	mNicIndextoIPs := make(map[int]string)
+	ifaces, _ := net.Interfaces()
+	for _, iface := range ifaces {
+		if iface.Flags&(net.FlagLoopback|net.FlagPointToPoint) != 0 {
+			continue
+		}
+		rawAds, _ := iface.Addrs()
+		addrs := make([]string, len(rawAds))
+		for i, rAd := range rawAds {
+			addrs[i] = rAd.String()
+		}
+		sort.Strings(addrs)
+		j, _ := json.Marshal(addrs)
+		mNicIndextoIPs[iface.Index] = string(j)
+	}
+
 	for _, v := range dstAdapters {
 		tag := opentsdb.TagSet{"iface": fmt.Sprint("Interface", v.InterfaceIndex)}
 		metadata.AddMeta("", tag, "description", v.Description, true)
@@ -131,12 +150,11 @@ func c_meta_windows_ifaces() (opentsdb.MultiDataPoint, error) {
 			metadata.AddMeta("", tag, "master", nicMaster, true)
 		}
 
-		nicConfig := mNicConfigs[v.InterfaceIndex]
-		if nicConfig != nil {
-			for _, ip := range *nicConfig.IPAddress {
-				metadata.AddMeta("", tag, "addr", ip, true) // blocked by array support in WMI See https://github.com/StackExchange/wmi/issues/5
-			}
+		nicIPs := mNicIndextoIPs[int(v.InterfaceIndex)]
+		if nicIPs == "" {
+			nicIPs = "[]"
 		}
+		metadata.AddMeta("", tag, "addresses", nicIPs, true)
 	}
 	return md, nil
 }

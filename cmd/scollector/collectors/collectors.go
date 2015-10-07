@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -283,6 +284,7 @@ func metaIfaces(f func(iface net.Interface, tags opentsdb.TagSet)) {
 		for i, rAd := range rawAds {
 			addrs[i] = rAd.String()
 		}
+		sort.Strings(addrs)
 		j, _ := json.Marshal(addrs)
 		metadata.AddMeta("", tags, "addresses", string(j), true)
 		if f != nil {
