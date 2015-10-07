@@ -101,6 +101,9 @@ Default is 500.
 
 Filter (array of string): filters collectors matching these terms.
 
+MetricFilters (array of string): filters metrics matching these regular
+expressions.
+
 PProf (string): optional IP:Port binding to be used for debugging with pprof.
 Examples: localhost:6060 for loopback or :6060 for all IP addresses.
 

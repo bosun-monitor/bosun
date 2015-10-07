@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"regexp"
 	"sort"
 	"strings"
 	"sync"
@@ -97,6 +98,8 @@ var (
 	tlock     sync.Mutex
 	AddTags   opentsdb.TagSet
 
+	metricFilters = make([]*regexp.Regexp, 0)
+
 	AddProcessDotNetConfig = func(params conf.ProcessDotNet) error {
 		return fmt.Errorf("process_dotnet watching not implemented on this platform")
 	}
@@ -176,6 +179,10 @@ type MetricMeta struct {
 
 // AddTS is the same as Add but lets you specify the timestamp
 func AddTS(md *opentsdb.MultiDataPoint, name string, ts int64, value interface{}, t opentsdb.TagSet, rate metadata.RateType, unit metadata.Unit, desc string) {
+	// Check if we really want that metric
+	if skipMetric(name) {
+		return
+	}
 	if b, ok := value.(bool); ok {
 		if b {
 			value = 1
@@ -293,4 +300,28 @@ func metaIfaces(f func(iface net.Interface, tags opentsdb.TagSet)) {
 			f(iface, tags)
 		}
 	}
+}
+
+// AddMetricFilters adds metric filters provided by the conf
+func AddMetricFilters(s string) error {
+	re, err := regexp.Compile(s)
+	if err != nil {
+		return err
+	}
+	metricFilters = append(metricFilters, re)
+	return nil
+}
+
+// skipMetric will return true if we need to skip this metric
+func skipMetric(index string) bool {
+	// If no filters provided, we skip nothing
+	if len(metricFilters) == 0 {
+		return false
+	}
+	for _, re := range metricFilters {
+		if re.MatchString(index) {
+			return false
+		}
+	}
+	return true
 }
