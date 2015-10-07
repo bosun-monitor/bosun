@@ -14,7 +14,7 @@ import (
 	"bosun.org/opentsdb"
 )
 
-var builtInSNMPs = map[string]func(cfg conf.SNMP){"ifaces": SNMPIfaces, "cisco": SNMPCisco, "bridge": SNMPBridge}
+var builtInSNMPs = map[string]func(cfg conf.SNMP){"ifaces": SNMPIfaces, "cisco": SNMPCisco, "bridge": SNMPBridge, "ips": SNMPIPAddresses}
 
 func SNMP(cfg conf.SNMP, mibs map[string]conf.MIB) error {
 	if cfg.Host == "" {

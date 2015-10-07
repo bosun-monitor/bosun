@@ -281,8 +281,7 @@ func metaIfaces(f func(iface net.Interface, tags opentsdb.TagSet)) {
 		rawAds, _ := iface.Addrs()
 		addrs := make([]string, len(rawAds))
 		for i, rAd := range rawAds {
-			addr := strings.Split(rAd.String(), "/")[0]
-			addrs[i] = addr
+			addrs[i] = rAd.String()
 		}
 		j, _ := json.Marshal(addrs)
 		metadata.AddMeta("", tags, "addresses", string(j), true)
