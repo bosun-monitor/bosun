@@ -259,7 +259,7 @@ func (rp *relayProxy) relayMetadata(responseWriter http.ResponseWriter, r *http.
 	r.Body = reader
 	w := &relayWriter{ResponseWriter: responseWriter}
 	rp.BosunProxy.ServeHTTP(w, r)
-	if w.code != 200 {
+	if w.code != 204 {
 		verbose("got status %d", w.code)
 		return
 	}
