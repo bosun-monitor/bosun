@@ -1,10 +1,12 @@
 // +build darwin linux
+// note: this collector only works on hbase 1.0+
 
 package collectors
 
 import (
 	"encoding/json"
 	"net/http"
+	"regexp"
 	"strings"
 
 	"bosun.org/metadata"
@@ -18,8 +20,8 @@ func init() {
 }
 
 const (
-	hbURL    = "http://localhost:60030/jmx?qry=hadoop:service=RegionServer,name=RegionServerStatistics"
-	hbRepURL = "http://localhost:60030/jmx?qry=hadoop:service=Replication,name=*"
+	hbURL    = "http://localhost:60030/jmx?qry=Hadoop:service=HBase,name=RegionServer,sub=Server"
+	hbRepURL = "http://localhost:60030/jmx?qry=Hadoop:service=HBase,name=RegionServer,sub=Replication"
 	hbGCURL  = "http://localhost:60030/jmx?qry=java.lang:type=GarbageCollector,name=*"
 )
 
@@ -85,23 +87,23 @@ func c_hbase_replication() (opentsdb.MultiDataPoint, error) {
 	if err := getBeans(hbRepURL, &j); err != nil {
 		return nil, err
 	}
+	excludeReg, err := regexp.Compile("source.\\d")
+	if err != nil {
+		return nil, err
+	}
 	var md opentsdb.MultiDataPoint
 	for _, section := range j.Beans {
-		var tags opentsdb.TagSet
 		for k, v := range section {
-			if s, ok := v.(string); ok && k == "name" {
-				if strings.HasPrefix(s, "hadoop:service=Replication,name=ReplicationSource for") {
-					sa := strings.Split(s, " ")
-					if len(sa) == 3 {
-						tags = opentsdb.TagSet{"instance": sa[2]}
-						break
-					}
-				}
+			// source.[0-9] entries are for other hosts in the cluster
+			if excludeReg.MatchString(k) {
+				continue
 			}
-		}
-		for k, v := range section {
+			// Strip "source." and "sink." from the metric names.
+			shortName := strings.TrimPrefix(k, "source.")
+			shortName = strings.TrimPrefix(shortName, "sink.")
+			metric := "hbase.region." + shortName
 			if _, ok := v.(float64); ok {
-				Add(&md, "hbase.region."+k, v, tags, metadata.Unknown, metadata.None, "")
+				Add(&md, metric, v, nil, metadata.Unknown, metadata.None, "")
 			}
 		}
 	}
