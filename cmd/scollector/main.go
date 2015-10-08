@@ -134,6 +134,9 @@ func main() {
 	for _, r := range conf.Riak {
 		check(collectors.Riak(r.URL))
 	}
+	for _, m := range conf.MySQL {
+		check(collectors.MySQL(m))
+	}
 	if err != nil {
 		slog.Fatal(err)
 	}
