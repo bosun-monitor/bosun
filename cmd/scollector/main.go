@@ -134,6 +134,9 @@ func main() {
 	for _, r := range conf.Riak {
 		check(collectors.Riak(r.URL))
 	}
+	for _, cfg := range conf.Database {
+		check(collectors.Database(cfg))
+	}
 	if err != nil {
 		slog.Fatal(err)
 	}

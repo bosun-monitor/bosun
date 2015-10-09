@@ -230,5 +230,11 @@ Windows
 scollector has full Windows support. It can be run standalone, or installed as a
 service (see -winsvc). The Event Log is used when installed as a service.
 
+Database collector
+
+For configuring the database collector see:
+
+http://bosun.org/scollector/database-collector
+
 */
 package main
