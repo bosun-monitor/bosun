@@ -520,8 +520,17 @@ func (s *Schedule) Close() {
 }
 
 const pingFreq = time.Second * 15
+const pingWorkers = 20
 
 func (s *Schedule) PingHosts() {
+	ch := make(chan string, 0)
+	for i := 0; i < pingWorkers; i++ {
+		go func() {
+			for host := range ch {
+				pingHost(host)
+			}
+		}()
+	}
 	for range time.Tick(pingFreq) {
 		hosts, err := s.Search.TagValuesByTagKey("host", s.Conf.PingDuration)
 		if err != nil {
@@ -529,7 +538,7 @@ func (s *Schedule) PingHosts() {
 			continue
 		}
 		for _, host := range hosts {
-			go pingHost(host)
+			ch <- host
 		}
 	}
 }
