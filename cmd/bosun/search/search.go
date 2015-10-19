@@ -195,6 +195,7 @@ func (s *Search) loadLast() {
 func (s *Search) backupLoop() {
 	for {
 		time.Sleep(2 * time.Minute)
+		slog.Info("Backing up last data to redis")
 		err := s.BackupLast()
 		if err != nil {
 			slog.Error(err)
