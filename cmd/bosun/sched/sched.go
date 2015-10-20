@@ -977,156 +977,16 @@ func (s *Schedule) GetIncidentEvents(id uint64) (*Incident, []Event, []Action, e
 }
 
 type IncidentStatus struct {
-	IncidentID uint64
-	AlertKey   expr.AlertKey
-	Status     Status
-	Subject    string
-	Silenced   bool
-}
-
-func (s *Schedule) Host(filter string) (map[string]*HostData, error) {
-	hosts := make(map[string]*HostData)
-	allHosts, err := s.Search.TagValuesByTagKey("host", time.Hour*7*24)
-	if err != nil {
-		return nil, err
-	}
-	for _, h := range allHosts {
-		hosts[h] = newHostData()
-	}
-	states := s.GetOpenStates()
-	silences := s.Silenced()
-	for name, host := range hosts {
-		host.Name = name
-		for ak, state := range states {
-			if stateHost, ok := state.Group["host"]; !ok {
-				continue
-			} else if stateHost != host.Name {
-				continue
-			}
-			_, silenced := silences[ak]
-			is := IncidentStatus{
-				IncidentID: state.Last().IncidentId,
-				AlertKey:   state.AlertKey(),
-				Status:     state.Status(),
-				Subject:    state.Subject,
-				Silenced:   silenced,
-			}
-			host.OpenIncidentIDs = append(host.OpenIncidentIDs, is)
-		}
-		md, err := s.GetMetadata("", opentsdb.TagSet{"host": name})
-		if err != nil {
-			slog.Error(err)
-		}
-		for _, m := range md {
-			var iface *HostInterface
-			if name := m.Tags["iface"]; name != "" {
-				if host.Interfaces[name] == nil {
-					h := new(HostInterface)
-					host.Interfaces[name] = h
-				}
-				iface = host.Interfaces[name]
-			}
-			switch val := m.Value.(type) {
-			case string:
-				switch m.Name {
-				case "addr":
-					if iface != nil {
-						iface.IPAddresses = append(iface.IPAddresses, val)
-					}
-				case "description", "alias":
-					if iface != nil {
-						iface.Description = val
-					}
-				case "mac":
-					if iface != nil {
-						iface.MAC = val
-					}
-				case "manufacturer":
-					host.Manufacturer = val
-				case "master":
-					if iface != nil {
-						iface.Master = val
-					}
-				case "memory":
-					if name := m.Tags["name"]; name != "" {
-						host.Memory.Modules[name] = val
-					}
-				case "model":
-					host.Model = val
-				case "name":
-					if iface != nil {
-						iface.Name = val
-					}
-				case "processor":
-					if name := m.Tags["name"]; name != "" {
-						host.CPU.Processors[name] = val
-					}
-				case "serialNumber":
-					host.SerialNumber = val
-				case "version":
-					host.OS.Version = val
-				case "versionCaption", "uname":
-					host.OS.Caption = val
-				}
-			case float64:
-				switch m.Name {
-				case "memoryTotal":
-					host.Memory.Total = int64(val)
-				case "speed":
-					if iface != nil {
-						iface.LinkSpeed = int64(val)
-					}
-				}
-			}
-		}
-	}
-	return hosts, nil
-}
-
-type HostInterface struct {
-	Description string   `json:",omitempty"`
-	IPAddresses []string `json:",omitempty"`
-	Inbps       int64    `json:",omitempty"`
-	LinkSpeed   int64    `json:",omitempty"`
-	MAC         string   `json:",omitempty"`
-	Master      string   `json:",omitempty"`
-	Name        string   `json:",omitempty"`
-	Outbps      int64    `json:",omitempty"`
-}
-
-func newHostData() *HostData {
-	hd := &HostData{}
-	hd.CPU.Processors = make(map[string]string)
-	hd.Interfaces = make(map[string]*HostInterface)
-	hd.Memory.Modules = make(map[string]string)
-	hd.OpenIncidentIDs = make([]IncidentStatus, 0)
-	return hd
-}
-
-type HostData struct {
-	CPU struct {
-		Logical    int64             `json:",omitempty"`
-		Physical   int64             `json:",omitempty"`
-		Used       float64           `json:",omitempty"`
-		Processors map[string]string `json:",omitempty"`
-	}
-	OpenIncidentIDs []IncidentStatus
-	Interfaces      map[string]*HostInterface
-	LastBoot        int64  `json:",omitempty"`
-	LastUpdate      int64  `json:",omitempty"`
-	Manufacturer    string `json:",omitempty"`
-	Memory          struct {
-		Modules map[string]string `json:",omitempty"`
-		Total   int64             `json:",omitempty"`
-		Used    int64             `json:",omitempty"`
-	}
-	Model string `json:",omitempty"`
-	Name  string `json:",omitempty"`
-	OS    struct {
-		Caption string `json:",omitempty"`
-		Version string `json:",omitempty"`
-	}
-	SerialNumber string `json:",omitempty"`
+	IncidentID         uint64
+	Active             bool
+	AlertKey           expr.AlertKey
+	Status             Status
+	StatusTime         int64
+	Subject            string
+	Silenced           bool
+	LastAbnormalStatus Status
+	LastAbnormalTime   int64
+	NeedsAck           bool
 }
 
 //Alert Status is the current state of a single alert

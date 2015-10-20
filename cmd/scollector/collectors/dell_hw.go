@@ -89,7 +89,7 @@ func c_omreport_ps() (opentsdb.MultiDataPoint, error) {
 		id := strings.Replace(fields[0], ":", "_", -1)
 		ts := opentsdb.TagSet{"id": id}
 		Add(&md, "hw.ps", severity(fields[1]), ts, metadata.Gauge, metadata.Ok, descDellHWPS)
-		pm := &metadata.HWPowerSupply{}
+		pm := &metadata.HWPowerSupplyMeta{}
 		if len(fields) < 6 {
 			return
 		}
