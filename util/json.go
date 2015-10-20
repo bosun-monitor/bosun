@@ -13,6 +13,7 @@ func MarshalGzipJson(data interface{}) ([]byte, error) {
 	if err := enc.Encode(data); err != nil {
 		return nil, err
 	}
+	g.Flush()
 	return buf.Bytes(), nil
 }
 
