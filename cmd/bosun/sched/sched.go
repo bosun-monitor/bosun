@@ -68,6 +68,10 @@ type Schedule struct {
 }
 
 func (s *Schedule) Init(c *conf.Conf) error {
+	//initialize all variables and collections so they are ready to use.
+	//this will be called once at app start, and also every time the rule
+	//page runs, so be careful not to spawn long running processes that can't
+	//be avoided.
 	var err error
 	s.Conf = c
 	s.AlertStatuses = make(map[string]*AlertStatus)
@@ -90,7 +94,9 @@ func (s *Schedule) Init(c *conf.Conf) error {
 			s.DataAccess = database.NewDataAccess(bind, false)
 		}
 	}
-	s.Search = search.NewSearch(s.DataAccess)
+	if s.Search == nil {
+		s.Search = search.NewSearch(s.DataAccess)
+	}
 	if c.StateFile != "" {
 		s.db, err = bolt.Open(c.StateFile, 0600, nil)
 		if err != nil {
