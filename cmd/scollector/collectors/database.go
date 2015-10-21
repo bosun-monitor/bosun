@@ -104,7 +104,10 @@ func DatabaseCollect(c conf.Database, collectorStatsChan chan<- *ContinuousColle
 
 	waitGroup.Add(c.MaxOpenConns)
 	for i := 0; i < c.MaxOpenConns; i++ {
-		go DatabaseRunQueryWorker(c, db, waitGroup, queryChan, collectorStatsChan)
+		go func() {
+			DatabaseRunQueryWorker(c, db, queryChan, collectorStatsChan)
+			waitGroup.Done()
+		}()
 	}
 
 	for {
@@ -123,11 +126,11 @@ func DatabaseCollect(c conf.Database, collectorStatsChan chan<- *ContinuousColle
 		select {
 		case <-next:
 		case <-ContinuousCollectorVars.quit:
-			close(queryChan)
 			break
 		}
 	}
 
+	close(queryChan)
 	waitGroup.Wait()
 }
 
@@ -192,10 +195,8 @@ func DatabaseConnect(c conf.Database) (*sql.DB, error) {
 	return db, nil
 }
 
-func DatabaseRunQueryWorker(c conf.Database, db *sql.DB, waitGroup sync.WaitGroup, queryChan <-chan *DatabaseQuery, collectorStatsChan chan<- *ContinuousCollectorStats) {
+func DatabaseRunQueryWorker(c conf.Database, db *sql.DB, queryChan <-chan *DatabaseQuery, collectorStatsChan chan<- *ContinuousCollectorStats) {
 	var md opentsdb.MultiDataPoint
-
-	defer waitGroup.Done()
 
 	for query := range queryChan {
 		result := 0
