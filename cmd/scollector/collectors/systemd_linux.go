@@ -54,6 +54,7 @@ func c_systemd() (opentsdb.MultiDataPoint, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer conn.Close()
 
 	units, err := conn.ListUnits()
 	if err != nil {
