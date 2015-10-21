@@ -85,6 +85,7 @@ func c_windows_processes() (opentsdb.MultiDataPoint, error) {
 			Add(&md, "win.service.status", util.Btoi(svc.Status != "OK"), tags, metadata.Gauge, metadata.Ok, descWinServiceStatus)
 			Add(&md, "win.service.checkpoint", svc.CheckPoint, tags, metadata.Gauge, metadata.None, descWinServiceCheckPoint)
 			Add(&md, "win.service.wait_hint", svc.WaitHint, tags, metadata.Gauge, metadata.MilliSecond, descWinServiceWaitHint)
+			Add(&md, osServiceRunning, util.Btoi(svc.Started), tags, metadata.Gauge, metadata.Bool, osServiceRunningDesc)
 		}
 	}
 
