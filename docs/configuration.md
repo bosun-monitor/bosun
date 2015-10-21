@@ -121,12 +121,14 @@ Templates are the message body for emails that are sent when an alert is trigger
 * Expr: string of evaluated expression
 * Group: dictionary of tags for this alert (i.e., host=ny-redis01, db=42)
 * History: array of Events. An Event has a `Status` field (an integer) with a textual string representation; and a `Time` field. Most recent last. The status fields have identification methods: `IsNormal()`, `IsWarning()`, `IsCritical()`, `IsUnknown()`, `IsError()`.
+* Incident: URL for incident page
 * IsEmail: true if template is being rendered for an email. Needed because email clients often modify HTML.
 * Last: last Event of History array
 * Subject: string of template subject
 * Touched: time this alert was last updated
 * Alert: dictionary of rule data (but the first letter of each is uppercase)
   * Crit
+  * IncidentId
   * Name
   * Vars: alert variables, prefixed without the `$`. For example: `{{.Alert.Vars.q}}` to print `$q`.
   * Warn
