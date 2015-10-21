@@ -9,6 +9,7 @@ import (
 	"bosun.org/cmd/scollector/conf"
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
+	"bosun.org/util"
 )
 
 var regexesDotNet = []*regexp.Regexp{}
@@ -60,7 +61,7 @@ func c_dotnet_loading() (opentsdb.MultiDataPoint, error) {
 	}
 	var md opentsdb.MultiDataPoint
 	for _, v := range dst {
-		if !nameMatches(v.Name, regexesDotNet) {
+		if !util.NameMatches(v.Name, regexesDotNet) {
 			continue
 		}
 		id := "0"
@@ -132,7 +133,7 @@ func c_dotnet_memory() (opentsdb.MultiDataPoint, error) {
 		var name string
 		service_match := false
 		iis_match := false
-		process_match := nameMatches(v.Name, regexesDotNet)
+		process_match := util.NameMatches(v.Name, regexesDotNet)
 		id := "0"
 		if process_match {
 			raw_name := strings.Split(v.Name, "#")
@@ -147,7 +148,7 @@ func c_dotnet_memory() (opentsdb.MultiDataPoint, error) {
 		}
 		// A Service match could "overwrite" a process match, but that is probably what we would want.
 		for _, svc := range svc_dst {
-			if nameMatches(svc.Name, regexesDotNet) {
+			if util.NameMatches(svc.Name, regexesDotNet) {
 				// It is possible the pid has gone and been reused, but I think this unlikely
 				// and I'm not aware of an atomic join we could do anyways.
 				if svc.ProcessId != 0 && svc.ProcessId == v.ProcessID {
