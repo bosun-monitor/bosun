@@ -110,6 +110,7 @@ func DatabaseCollect(c conf.Database, collectorStatsChan chan<- *ContinuousColle
 		}()
 	}
 
+Loop:
 	for {
 		nextTime := queries[0].next
 		// maybe change to a priority queue instead of checking each slice?
@@ -126,7 +127,7 @@ func DatabaseCollect(c conf.Database, collectorStatsChan chan<- *ContinuousColle
 		select {
 		case <-next:
 		case <-ContinuousCollectorVars.quit:
-			break
+			break Loop
 		}
 	}
 
