@@ -25,85 +25,101 @@ func (s *Schedule) Host(filter string) (map[string]*HostData, error) {
 	silences := s.Silenced()
 	// These are all fetched by metric since that is how we store it in redis
 	// so this makes for the fastest response
-	osNetBytesTags, err := s.Search.FilteredTagSets("os.net.bytes", nil)
+	tagsByKey := func(metric, hostKey string) (map[string][]opentsdb.TagSet, error) {
+		byKey := make(map[string][]opentsdb.TagSet)
+		tags, err := s.Search.FilteredTagSets(metric, nil)
+		if err != nil {
+			return byKey, err
+		}
+		for _, ts := range tags {
+			if host, ok := ts[hostKey]; ok {
+				// Make sure the host exists based on our time filter
+				if _, ok := hosts[host]; ok {
+					byKey[host] = append(byKey[host], ts)
+				}
+			}
+		}
+		return byKey, nil
+	}
+	osNetBytesTags, err := tagsByKey("os.net.bytes", "host")
 	if err != nil {
 		return nil, err
 	}
-	osNetVirtualBytesTags, err := s.Search.FilteredTagSets("os.net.virtual.bytes", nil)
+	osNetVirtualBytesTags, err := tagsByKey("os.net.virtual.bytes", "host")
 	if err != nil {
 		return nil, err
 	}
-	osNetBondBytesTags, err := s.Search.FilteredTagSets("os.net.bond.bytes", nil)
+	osNetBondBytesTags, err := tagsByKey("os.net.bond.bytes", "host")
 	if err != nil {
 		return nil, err
 	}
-	osNetTunnelBytesTags, err := s.Search.FilteredTagSets("os.net.tunnel.bytes", nil)
+	osNetTunnelBytesTags, err := tagsByKey("os.net.tunnel.bytes", "host")
 	if err != nil {
 		return nil, err
 	}
-	osNetOtherBytesTags, err := s.Search.FilteredTagSets("os.net.other.bytes", nil)
+	osNetOtherBytesTags, err := tagsByKey("os.net.other.bytes", "host")
 	if err != nil {
 		return nil, err
 	}
-	osNetIfSpeedTags, err := s.Search.FilteredTagSets("os.net.ifspeed", nil)
+	osNetIfSpeedTags, err := tagsByKey("os.net.ifspeed", "host")
 	if err != nil {
 		return nil, err
 	}
-	osNetVirtualIfSpeedTags, err := s.Search.FilteredTagSets("os.net.virtual.ifspeed", nil)
+	osNetVirtualIfSpeedTags, err := tagsByKey("os.net.virtual.ifspeed", "host")
 	if err != nil {
 		return nil, err
 	}
-	osNetBondIfSpeedTags, err := s.Search.FilteredTagSets("os.net.bond.ifspeed", nil)
+	osNetBondIfSpeedTags, err := tagsByKey("os.net.bond.ifspeed", "host")
 	if err != nil {
 		return nil, err
 	}
-	osNetTunnelIfSpeedTags, err := s.Search.FilteredTagSets("os.net.tunnel.ifspeed", nil)
+	osNetTunnelIfSpeedTags, err := tagsByKey("os.net.tunnel.ifspeed", "host")
 	if err != nil {
 		return nil, err
 	}
-	osNetOtherIfSpeedTags, err := s.Search.FilteredTagSets("os.net.other.ifspeed", nil)
+	osNetOtherIfSpeedTags, err := tagsByKey("os.net.other.ifspeed", "host")
 	if err != nil {
 		return nil, err
 	}
-	hwChassisTags, err := s.Search.FilteredTagSets("hw.chassis", nil)
+	hwChassisTags, err := tagsByKey("hw.chassis", "host")
 	if err != nil {
 		return nil, err
 	}
-	hwPhysicalDiskTags, err := s.Search.FilteredTagSets("hw.storage.pdisk", nil)
+	hwPhysicalDiskTags, err := tagsByKey("hw.storage.pdisk", "host")
 	if err != nil {
 		return nil, err
 	}
-	hwVirtualDiskTags, err := s.Search.FilteredTagSets("hw.storage.vdisk", nil)
+	hwVirtualDiskTags, err := tagsByKey("hw.storage.vdisk", "host")
 	if err != nil {
 		return nil, err
 	}
-	hwControllersTags, err := s.Search.FilteredTagSets("hw.storage.controller", nil)
+	hwControllersTags, err := tagsByKey("hw.storage.controller", "host")
 	if err != nil {
 		return nil, err
 	}
-	hwBatteriesTags, err := s.Search.FilteredTagSets("hw.storage.battery", nil)
+	hwBatteriesTags, err := tagsByKey("hw.storage.battery", "host")
 	if err != nil {
 		return nil, err
 	}
-	hwPowerSuppliesTags, err := s.Search.FilteredTagSets("hw.ps", nil)
+	hwPowerSuppliesTags, err := tagsByKey("hw.ps", "host")
 	if err != nil {
 		return nil, err
 	}
-	hwTempsTags, err := s.Search.FilteredTagSets("hw.chassis.temps.reading", nil)
+	hwTempsTags, err := tagsByKey("hw.chassis.temps.reading", "host")
 	if err != nil {
 		return nil, err
 	}
-	hwBoardPowerTags, err := s.Search.FilteredTagSets("hw.chassis.power.reading", nil)
+	hwBoardPowerTags, err := tagsByKey("hw.chassis.power.reading", "host")
 	if err != nil {
 		return nil, err
 	}
-	diskTags, err := s.Search.FilteredTagSets("os.disk.fs.space_total", nil)
+	diskTags, err := tagsByKey("os.disk.fs.space_total", "host")
 	if err != nil {
 		return nil, err
 	}
 	// Will make the assumption that the metric bosun.ping.timeout, resolved, and rtt
 	// all share the same tagset
-	icmpTimeOutTags, err := s.Search.FilteredTagSets("bosun.ping.timeout", nil)
+	icmpTimeOutTags, err := tagsByKey("bosun.ping.timeout", "dst_host")
 	if err != nil {
 		return nil, err
 	}
@@ -115,18 +131,16 @@ func (s *Schedule) Host(filter string) (map[string]*HostData, error) {
 			slog.Error(err)
 		}
 		processHostIncidents(host, states, silences)
-		for _, ts := range icmpTimeOutTags {
-			if ts["dst_host"] != host.Name {
-				continue
-			}
+		for _, ts := range icmpTimeOutTags[host.Name] {
 			// The host tag represents the polling source for these set of metrics
 			source, ok := ts["host"]
 			if !ok {
 				slog.Errorf("couldn't find source tag for icmp data for host %s", host.Name)
 			}
 			// 1 Means it timed out
+			slog.Infoln("getting last for ", ts)
 			timeout, timestamp, err := s.Search.GetLast("bosun.ping.timeout", ts.String(), false)
-			if err != nil && !(timestamp > 0) {
+			if err != nil || timestamp <= 0 {
 				continue
 			}
 			rtt, rttTimestamp, _ := s.Search.GetLast("bosun.ping.rtt", ts.String(), false)
@@ -143,10 +157,7 @@ func (s *Schedule) Host(filter string) (map[string]*HostData, error) {
 
 		}
 		// Process Hardware Chassis States
-		for _, ts := range hwChassisTags {
-			if ts["host"] != host.Name {
-				continue
-			}
+		for _, ts := range hwChassisTags[host.Name] {
 			component, ok := ts["component"]
 			if !ok {
 				return nil, fmt.Errorf("couldn't find component tag for host %s", host.Name)
@@ -163,16 +174,13 @@ func (s *Schedule) Host(filter string) (map[string]*HostData, error) {
 				}
 			}
 		}
-		for _, ts := range hwTempsTags {
-			if ts["host"] != host.Name {
-				continue
-			}
+		for _, ts := range hwTempsTags[host.Name] {
 			name, ok := ts["name"]
 			if !ok {
 				slog.Errorf("couldn't find name tag %s for host %s", host.Name, name)
 			}
 			tStatus, timestamp, err := s.Search.GetLast("hw.chassis.temps", ts.String(), false)
-			celsius, rTimestamp, err := s.Search.GetLast("hw.chassis.temps.reading", ts.String(), false)
+			celsius, rTimestamp, _ := s.Search.GetLast("hw.chassis.temps.reading", ts.String(), false)
 			status := "Bad"
 			if tStatus == 0 {
 				status = "Ok"
@@ -186,10 +194,7 @@ func (s *Schedule) Host(filter string) (map[string]*HostData, error) {
 				}
 			}
 		}
-		for _, ts := range hwPowerSuppliesTags {
-			if ts["host"] != host.Name {
-				continue
-			}
+		for _, ts := range hwPowerSuppliesTags[host.Name] {
 			id, ok := ts["id"]
 			if !ok {
 				return nil, fmt.Errorf("couldn't find power supply tag for host %s", host.Name)
@@ -217,30 +222,23 @@ func (s *Schedule) Host(filter string) (map[string]*HostData, error) {
 				host.Hardware.PowerSupplies[id] = ps
 			}
 			for _, m := range hostMetadata {
-				if m.Time.Before(time.Now().Add(-timeFilterAge)) {
+				if m.Name != "psMeta" || m.Time.Before(time.Now().Add(-timeFilterAge)) {
 					continue
 				}
 				if !m.Tags.Equal(ts) {
 					continue
 				}
-				switch val := m.Value.(type) {
-				case string:
-					switch m.Name {
-					case "psMeta":
-						err = json.Unmarshal([]byte(val), &ps)
-						if err != nil {
-							slog.Errorf("error unmarshalling power supply meta for host %s, while generating host api: %s", host.Name, err)
-						} else {
-							host.Hardware.PowerSupplies[id] = ps
-						}
+				if val, ok := m.Value.(string); ok {
+					err = json.Unmarshal([]byte(val), &ps)
+					if err != nil {
+						slog.Errorf("error unmarshalling power supply meta for host %s, while generating host api: %s", host.Name, err)
+					} else {
+						host.Hardware.PowerSupplies[id] = ps
 					}
 				}
 			}
 		}
-		for _, ts := range hwBatteriesTags {
-			if ts["host"] != host.Name {
-				continue
-			}
+		for _, ts := range hwBatteriesTags[host.Name] {
 			id, ok := ts["id"]
 			if !ok {
 				slog.Errorf("couldn't find battery id tag %s for host %s", host.Name, id)
@@ -258,10 +256,7 @@ func (s *Schedule) Host(filter string) (map[string]*HostData, error) {
 				}
 			}
 		}
-		for _, ts := range hwBoardPowerTags {
-			if ts["host"] != host.Name {
-				continue
-			}
+		for _, ts := range hwBoardPowerTags[host.Name] {
 			fstatus, timestamp, err := s.Search.GetLast("hw.chassis.power.reading", ts.String(), false)
 			if err == nil && timestamp > 0 {
 				host.Hardware.BoardPowerReading = &BoardPowerReading{
@@ -270,10 +265,7 @@ func (s *Schedule) Host(filter string) (map[string]*HostData, error) {
 				}
 			}
 		}
-		for _, ts := range hwPhysicalDiskTags {
-			if ts["host"] != host.Name {
-				continue
-			}
+		for _, ts := range hwPhysicalDiskTags[host.Name] {
 			id, ok := ts["id"]
 			if !ok {
 				return nil, fmt.Errorf("couldn't find physical disk id tag for host %s", host.Name)
@@ -290,30 +282,23 @@ func (s *Schedule) Host(filter string) (map[string]*HostData, error) {
 				host.Hardware.Storage.PhysicalDisks[id] = pd
 			}
 			for _, m := range hostMetadata {
-				if m.Time.Before(time.Now().Add(-timeFilterAge)) {
+				if m.Name != "physicalDiskMeta" || m.Time.Before(time.Now().Add(-timeFilterAge)) {
 					continue
 				}
 				if !m.Tags.Equal(ts) {
 					continue
 				}
-				switch val := m.Value.(type) {
-				case string:
-					switch m.Name {
-					case "physicalDiskMeta":
-						err = json.Unmarshal([]byte(val), &pd)
-						if err != nil {
-							slog.Errorf("error unmarshalling addresses for host %s, interface %s while generating host api: %s", host.Name, m.Tags["iface"], err)
-						} else {
-							host.Hardware.Storage.PhysicalDisks[id] = pd
-						}
+				if val, ok := m.Value.(string); ok {
+					err = json.Unmarshal([]byte(val), &pd)
+					if err != nil {
+						slog.Errorf("error unmarshalling addresses for host %s, interface %s while generating host api: %s", host.Name, m.Tags["iface"], err)
+					} else {
+						host.Hardware.Storage.PhysicalDisks[id] = pd
 					}
 				}
 			}
 		}
-		for _, ts := range hwVirtualDiskTags {
-			if ts["host"] != host.Name {
-				continue
-			}
+		for _, ts := range hwVirtualDiskTags[host.Name] {
 			id, ok := ts["id"]
 			if !ok {
 				return nil, fmt.Errorf("couldn't find virtual disk id tag for host %s", host.Name)
@@ -330,10 +315,7 @@ func (s *Schedule) Host(filter string) (map[string]*HostData, error) {
 				}
 			}
 		}
-		for _, ts := range hwControllersTags {
-			if ts["host"] != host.Name {
-				continue
-			}
+		for _, ts := range hwControllersTags[host.Name] {
 			id, ok := ts["id"]
 			if !ok {
 				return nil, fmt.Errorf("couldn't find controller id tag for host %s", host.Name)
@@ -350,30 +332,23 @@ func (s *Schedule) Host(filter string) (map[string]*HostData, error) {
 				host.Hardware.Storage.Controllers[id] = c
 			}
 			for _, m := range hostMetadata {
-				if m.Time.Before(time.Now().Add(-timeFilterAge)) {
+				if m.Name != "controllerMeta" || m.Time.Before(time.Now().Add(-timeFilterAge)) {
 					continue
 				}
 				if !m.Tags.Equal(ts) {
 					continue
 				}
-				switch val := m.Value.(type) {
-				case string:
-					switch m.Name {
-					case "controllerMeta":
-						err = json.Unmarshal([]byte(val), &c)
-						if err != nil {
-							slog.Errorf("error unmarshalling controller meta for host %s %s", host.Name, err)
-						} else {
-							host.Hardware.Storage.Controllers[id] = c
-						}
+				if val, ok := m.Value.(string); ok {
+					err = json.Unmarshal([]byte(val), &c)
+					if err != nil {
+						slog.Errorf("error unmarshalling controller meta for host %s %s", host.Name, err)
+					} else {
+						host.Hardware.Storage.Controllers[id] = c
 					}
 				}
 			}
 		}
-		for _, ts := range diskTags {
-			if ts["host"] != host.Name {
-				continue
-			}
+		for _, ts := range diskTags[host.Name] {
 			disk, ok := ts["disk"]
 			if !ok {
 				return nil, fmt.Errorf("couldn't find disk tag for host %s", host.Name)
@@ -394,9 +369,8 @@ func (s *Schedule) Host(filter string) (map[string]*HostData, error) {
 		}
 		host.CPU.PercentUsed = cpu
 		host.CPU.StatsLastUpdated = timestamp
-		host.Memory.TotalBytes, timestamp, _ = s.Search.GetLast("os.mem.total", hostTagSet.String(), false)
+		host.Memory.TotalBytes, host.Memory.StatsLastUpdated, _ = s.Search.GetLast("os.mem.total", hostTagSet.String(), false)
 		host.Memory.UsedBytes, _, _ = s.Search.GetLast("os.mem.used", hostTagSet.String(), false)
-		host.Memory.StatsLastUpdated = timestamp
 		var uptime float64
 		uptime, timestamp, err = s.Search.GetLast("os.system.uptime", hostTagSet.String(), false)
 		if err == nil && timestamp > 0 {
@@ -414,7 +388,7 @@ func (s *Schedule) Host(filter string) (map[string]*HostData, error) {
 				}
 				iface = host.Interfaces[name]
 			}
-			if name := m.Tags["iname"]; name != "" {
+			if name := m.Tags["iname"]; name != "" && iface != nil {
 				iface.Name = name
 			}
 			switch val := m.Value.(type) {
@@ -490,7 +464,6 @@ func (s *Schedule) Host(filter string) (map[string]*HostData, error) {
 						}
 						host.VM.PowerStateLastUpdated = timestamp
 					}
-					//Is this safe?
 					if hostsHost, ok := hosts[val]; ok {
 						hostsHost.Guests = append(hostsHost.Guests, host.Name)
 					}
@@ -526,7 +499,7 @@ func (s *Schedule) Host(filter string) (map[string]*HostData, error) {
 				metric = "os.net.bytes"
 			}
 			for _, ts := range tags {
-				if ts["iface"] != ifaceId || ts["host"] != host {
+				if ts["iface"] != ifaceId {
 					continue
 				}
 				dir, ok := ts["direction"]
@@ -551,7 +524,7 @@ func (s *Schedule) Host(filter string) (map[string]*HostData, error) {
 				metric = "os.net.ifspeed"
 			}
 			for _, ts := range tags {
-				if ts["iface"] != ifaceId || ts["host"] != host {
+				if ts["iface"] != ifaceId {
 					continue
 				}
 				val, timestamp, err := s.Search.GetLast(metric, ts.String(), false)
@@ -562,34 +535,34 @@ func (s *Schedule) Host(filter string) (map[string]*HostData, error) {
 			return nil
 		}
 		for ifaceId, iface := range host.Interfaces {
-			if err := GetIfaceBits("", ifaceId, iface, host.Name, osNetBytesTags); err != nil {
+			if err := GetIfaceBits("", ifaceId, iface, host.Name, osNetBytesTags[host.Name]); err != nil {
 				return nil, err
 			}
-			if err := GetIfaceBits("virtual", ifaceId, iface, host.Name, osNetVirtualBytesTags); err != nil {
+			if err := GetIfaceBits("virtual", ifaceId, iface, host.Name, osNetVirtualBytesTags[host.Name]); err != nil {
 				return nil, err
 			}
-			if err := GetIfaceBits("bond", ifaceId, iface, host.Name, osNetBondBytesTags); err != nil {
+			if err := GetIfaceBits("bond", ifaceId, iface, host.Name, osNetBondBytesTags[host.Name]); err != nil {
 				return nil, err
 			}
-			if err := GetIfaceBits("tunnel", ifaceId, iface, host.Name, osNetTunnelBytesTags); err != nil {
+			if err := GetIfaceBits("tunnel", ifaceId, iface, host.Name, osNetTunnelBytesTags[host.Name]); err != nil {
 				return nil, err
 			}
-			if err := GetIfaceBits("other", ifaceId, iface, host.Name, osNetOtherBytesTags); err != nil {
+			if err := GetIfaceBits("other", ifaceId, iface, host.Name, osNetOtherBytesTags[host.Name]); err != nil {
 				return nil, err
 			}
-			if err := GetIfaceSpeed("", ifaceId, iface, host.Name, osNetIfSpeedTags); err != nil {
+			if err := GetIfaceSpeed("", ifaceId, iface, host.Name, osNetIfSpeedTags[host.Name]); err != nil {
 				return nil, err
 			}
-			if err := GetIfaceSpeed("virtual", ifaceId, iface, host.Name, osNetVirtualIfSpeedTags); err != nil {
+			if err := GetIfaceSpeed("virtual", ifaceId, iface, host.Name, osNetVirtualIfSpeedTags[host.Name]); err != nil {
 				return nil, err
 			}
-			if err := GetIfaceSpeed("bond", ifaceId, iface, host.Name, osNetBondIfSpeedTags); err != nil {
+			if err := GetIfaceSpeed("bond", ifaceId, iface, host.Name, osNetBondIfSpeedTags[host.Name]); err != nil {
 				return nil, err
 			}
-			if err := GetIfaceSpeed("tunnel", ifaceId, iface, host.Name, osNetTunnelIfSpeedTags); err != nil {
+			if err := GetIfaceSpeed("tunnel", ifaceId, iface, host.Name, osNetTunnelIfSpeedTags[host.Name]); err != nil {
 				return nil, err
 			}
-			if err := GetIfaceSpeed("other", ifaceId, iface, host.Name, osNetOtherIfSpeedTags); err != nil {
+			if err := GetIfaceSpeed("other", ifaceId, iface, host.Name, osNetOtherIfSpeedTags[host.Name]); err != nil {
 				return nil, err
 			}
 		}
