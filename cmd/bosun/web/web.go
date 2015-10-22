@@ -604,11 +604,14 @@ func Last(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 	if r.FormValue("counter") != "" {
 		counter = true
 	}
-	tags, err := opentsdb.ParseTags(r.FormValue("tagset"))
-	if err != nil {
-		return nil, err
-	}
-	return schedule.Search.GetLast(r.FormValue("metric"), tags, counter)
+	val, timestamp, err := schedule.Search.GetLast(r.FormValue("metric"), r.FormValue("tagset"), counter)
+	return struct {
+		Value     float64
+		Timestamp int64
+	}{
+		val,
+		timestamp,
+	}, err
 }
 
 func Version(w http.ResponseWriter, r *http.Request) {
