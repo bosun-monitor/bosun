@@ -117,6 +117,10 @@ func (s *Schedule) Host(filter string) (map[string]*HostData, error) {
 	if err != nil {
 		return nil, err
 	}
+	serviceTags, err := tagsByKey("os.service.running", "host")
+	if err != nil {
+		return nil, err
+	}
 	// Will make the assumption that the metric bosun.ping.timeout, resolved, and rtt
 	// all share the same tagset
 	icmpTimeOutTags, err := tagsByKey("bosun.ping.timeout", "dst_host")
@@ -138,7 +142,6 @@ func (s *Schedule) Host(filter string) (map[string]*HostData, error) {
 				slog.Errorf("couldn't find source tag for icmp data for host %s", host.Name)
 			}
 			// 1 Means it timed out
-			slog.Infoln("getting last for ", ts)
 			timeout, timestamp, err := s.Search.GetLast("bosun.ping.timeout", ts.String(), false)
 			if err != nil || timestamp <= 0 {
 				continue
@@ -155,6 +158,24 @@ func (s *Schedule) Host(filter string) (map[string]*HostData, error) {
 				RTTLastUpdated: rttTimestamp,
 			}
 
+		}
+		for _, ts := range serviceTags[host.Name] {
+			name, ok := ts["name"]
+			if !ok {
+				slog.Errorf("couldn't find service name tag %s for host %s", host.Name, name)
+				continue
+			}
+			fstatus, timestamp, err := s.Search.GetLast("os.service.running", ts.String(), false)
+			running := false
+			if fstatus != 0 {
+				running = true
+			}
+			if err == nil && timestamp > 0 {
+				host.Services[name] = &ServiceStatus{
+					Running:            running,
+					RunningLastUpdated: timestamp,
+				}
+			}
 		}
 		// Process Hardware Chassis States
 		for _, ts := range hwChassisTags[host.Name] {
@@ -684,6 +705,7 @@ func newHostData() *HostData {
 	hd.CPU.Processors = make(map[string]string)
 	hd.Interfaces = make(map[string]*HostInterface)
 	hd.Disks = make(map[string]*Disk)
+	hd.Services = make(map[string]*ServiceStatus)
 	hd.ICMPData = make(map[string]*ICMPData)
 	hd.Hardware = &Hardware{}
 	hd.Hardware.ChassisComponents = make(map[string]*ChassisComponent)
@@ -706,6 +728,9 @@ func (hd *HostData) Clean() {
 	}
 	if len(hd.Disks) == 0 {
 		hd.Disks = nil
+	}
+	if len(hd.Services) == 0 {
+		hd.Services = nil
 	}
 	hwLen := len(hd.Hardware.ChassisComponents) +
 		len(hd.Hardware.Memory) +
@@ -750,6 +775,11 @@ type Battery struct {
 	StatusLastUpdated int64
 }
 
+type ServiceStatus struct {
+	Running            bool
+	RunningLastUpdated int64
+}
+
 type HostData struct {
 	CPU struct {
 		Logical          int64 `json:",omitempty"`
@@ -770,9 +800,10 @@ type HostData struct {
 		UsedBytes        float64
 		StatsLastUpdated int64
 	}
-	Model string `json:",omitempty"`
-	Name  string `json:",omitempty"`
-	OS    struct {
+	Services map[string]*ServiceStatus `json:",omitempty"`
+	Model    string                    `json:",omitempty"`
+	Name     string                    `json:",omitempty"`
+	OS       struct {
 		Caption string `json:",omitempty"`
 		Version string `json:",omitempty"`
 	}
