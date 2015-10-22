@@ -27,10 +27,12 @@ var ContinuousCollectorVars struct {
 	dpChan                chan<- *opentsdb.DataPoint
 	quit                  <-chan struct{}
 	reTwoOrMoreUnderscore *regexp.Regexp
+	nameWorkerChan        map[string]chan *ContinuousCollectorStats
 }
 
 func init() {
 	ContinuousCollectorVars.reTwoOrMoreUnderscore = regexp.MustCompile("[_]{2,}")
+	ContinuousCollectorVars.nameWorkerChan = make(map[string]chan *ContinuousCollectorStats)
 }
 
 func (c *ContinuousCollector) Init() {
@@ -42,7 +44,11 @@ func (c *ContinuousCollector) Init() {
 func (c *ContinuousCollector) Run(dpChan chan<- *opentsdb.DataPoint, quit <-chan struct{}) {
 	ContinuousCollectorVars.dpChan = dpChan
 	ContinuousCollectorVars.quit = quit
-	collectorStatsChan := make(chan *ContinuousCollectorStats, 2)
+	collectorStatsChan, found := ContinuousCollectorVars.nameWorkerChan[c.Name()]
+	if !found {
+		collectorStatsChan = make(chan *ContinuousCollectorStats, 2)
+		ContinuousCollectorVars.nameWorkerChan[c.Name()] = collectorStatsChan
+	}
 	if !collect.DisableDefaultCollectors {
 		go ContinuousCollectorStatsWorker(c, collectorStatsChan, dpChan)
 	}
