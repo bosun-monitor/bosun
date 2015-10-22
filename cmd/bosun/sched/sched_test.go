@@ -70,35 +70,42 @@ func (n *nopDataAccess) GetTagMetadata(tags opentsdb.TagSet, name string) ([]*da
 func (n *nopDataAccess) DeleteTagMetadata(tags opentsdb.TagSet, name string) error {
 	panic("not implemented")
 }
-func (n *nopDataAccess) Search_AddMetricForTag(tagK, tagV, metric string, time int64) error {
+func (n *nopDataAccess) Search() database.SearchDataAccess { return n }
+func (n *nopDataAccess) AddMetricForTag(tagK, tagV, metric string, time int64) error {
 	panic("not implemented")
 }
-func (n *nopDataAccess) Search_GetMetricsForTag(tagK, tagV string) (map[string]int64, error) {
+func (n *nopDataAccess) GetMetricsForTag(tagK, tagV string) (map[string]int64, error) {
 	panic("not implemented")
 }
-func (n *nopDataAccess) Search_AddTagKeyForMetric(metric, tagK string, time int64) error {
+func (n *nopDataAccess) AddTagKeyForMetric(metric, tagK string, time int64) error {
 	panic("not implemented")
 }
-func (n *nopDataAccess) Search_GetTagKeysForMetric(metric string) (map[string]int64, error) {
+func (n *nopDataAccess) GetTagKeysForMetric(metric string) (map[string]int64, error) {
 	panic("not implemented")
 }
-func (n *nopDataAccess) Search_AddMetric(metric string, time int64) error {
+func (n *nopDataAccess) AddMetric(metric string, time int64) error {
 	panic("not implemented")
 }
-func (n *nopDataAccess) Search_GetAllMetrics() (map[string]int64, error) {
+func (n *nopDataAccess) GetAllMetrics() (map[string]int64, error) {
 	panic("not implemented")
 }
-func (n *nopDataAccess) Search_AddTagValue(metric, tagK, tagV string, time int64) error {
+func (n *nopDataAccess) AddTagValue(metric, tagK, tagV string, time int64) error {
 	panic("not implemented")
 }
-func (n *nopDataAccess) Search_GetTagValues(metric, tagK string) (map[string]int64, error) {
+func (n *nopDataAccess) GetTagValues(metric, tagK string) (map[string]int64, error) {
 	panic("not implemented")
 }
-func (n *nopDataAccess) Search_AddMetricTagSet(metric, tagSet string, time int64) error {
+func (n *nopDataAccess) AddMetricTagSet(metric, tagSet string, time int64) error {
 	panic("not implemented")
 }
-func (n *nopDataAccess) Search_GetMetricTagSets(metric string, tags opentsdb.TagSet) (map[string]int64, error) {
+func (n *nopDataAccess) GetMetricTagSets(metric string, tags opentsdb.TagSet) (map[string]int64, error) {
 	panic("not implemented")
+}
+func (n *nopDataAccess) BackupLastInfos(map[string]map[string]*database.LastInfo) error {
+	return nil
+}
+func (n *nopDataAccess) LoadLastInfos() (map[string]map[string]*database.LastInfo, error) {
+	return map[string]map[string]*database.LastInfo{}, nil
 }
 
 func initSched(c *conf.Conf) (*Schedule, error) {

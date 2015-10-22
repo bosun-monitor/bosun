@@ -165,13 +165,9 @@ func getLinuxProccesses() ([]*Process, error) {
 	}
 	var lps []*Process
 	for _, pid := range pids {
-		cmdline, err := ioutil.ReadFile("/proc/" + pid + "/cmdline")
-		if err != nil {
+		cl, err := getLinuxCmdline(pid)
+		if err != nil || cl == nil {
 			//Continue because the pid might not exist any more
-			continue
-		}
-		cl := strings.Split(string(cmdline), "\x00")
-		if len(cl) < 1 || len(cl[0]) == 0 {
 			continue
 		}
 		lp := &Process{
@@ -184,6 +180,18 @@ func getLinuxProccesses() ([]*Process, error) {
 		lps = append(lps, lp)
 	}
 	return lps, nil
+}
+
+func getLinuxCmdline(pid string) ([]string, error) {
+	cmdline, err := ioutil.ReadFile("/proc/" + pid + "/cmdline")
+	if err != nil {
+		return nil, err
+	}
+	cl := strings.Split(string(cmdline), "\x00")
+	if len(cl) < 1 || len(cl[0]) == 0 {
+		return nil, nil
+	}
+	return cl, nil
 }
 
 func c_linux_processes(procs []*WatchedProc) (opentsdb.MultiDataPoint, error) {

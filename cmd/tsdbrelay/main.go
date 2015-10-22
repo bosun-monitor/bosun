@@ -255,13 +255,12 @@ func (rp *relayProxy) denormalize(body io.Reader) {
 }
 
 func (rp *relayProxy) relayMetadata(responseWriter http.ResponseWriter, r *http.Request) {
-
 	reader := &passthru{ReadCloser: r.Body}
 	r.Body = reader
 	w := &relayWriter{ResponseWriter: responseWriter}
 	rp.BosunProxy.ServeHTTP(w, r)
 	if w.code != 204 {
-		verbose("got status", w.code)
+		verbose("got status %d", w.code)
 		return
 	}
 	verbose("relayed metadata to bosun")
@@ -279,7 +278,6 @@ func (rp *relayProxy) relayMetadata(responseWriter http.ResponseWriter, r *http.
 					return
 				}
 				req.Header.Set("Content-Type", "application/json")
-				req.Header.Set("Content-Encoding", "gzip")
 				req.Header.Add(relayHeader, myHost)
 				resp, err := http.DefaultClient.Do(req)
 				if err != nil {

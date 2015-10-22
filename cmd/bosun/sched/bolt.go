@@ -390,7 +390,7 @@ func migrateSearch(db *bolt.DB, data database.DataAccess) error {
 		if err := decode(db, "metric", &metric); err == nil {
 			for k, v := range metric {
 				for metric, time := range v {
-					data.Search_AddMetricForTag(k.A, k.B, metric, time)
+					data.Search().AddMetricForTag(k.A, k.B, metric, time)
 				}
 			}
 		} else {
@@ -400,9 +400,9 @@ func migrateSearch(db *bolt.DB, data database.DataAccess) error {
 		if err := decode(db, "tagk", &tagk); err == nil {
 			for metric, v := range tagk {
 				for tk, time := range v {
-					data.Search_AddTagKeyForMetric(metric, tk, time)
+					data.Search().AddTagKeyForMetric(metric, tk, time)
 				}
-				data.Search_AddMetric(metric, time.Now().Unix())
+				data.Search().AddMetric(metric, time.Now().Unix())
 			}
 		} else {
 			return err
@@ -412,8 +412,8 @@ func migrateSearch(db *bolt.DB, data database.DataAccess) error {
 		if err := decode(db, "tagv", &tagv); err == nil {
 			for k, v := range tagv {
 				for val, time := range v {
-					data.Search_AddTagValue(k.A, k.B, val, time)
-					data.Search_AddTagValue(database.Search_All, k.B, val, time)
+					data.Search().AddTagValue(k.A, k.B, val, time)
+					data.Search().AddTagValue(database.Search_All, k.B, val, time)
 				}
 			}
 		} else {

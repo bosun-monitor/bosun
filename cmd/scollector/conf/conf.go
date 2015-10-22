@@ -33,22 +33,24 @@ type Conf struct {
 	// the specified community.
 	KeepalivedCommunity string
 
-	HAProxy       []HAProxy
-	SNMP          []SNMP
-	MIBS          map[string]MIB
-	ICMP          []ICMP
-	Vsphere       []Vsphere
-	AWS           []AWS
-	Process       []ProcessParams
-	ProcessDotNet []ProcessDotNet
-	HTTPUnit      []HTTPUnit
-	Riak          []Riak
-	Github        []Github
+	HAProxy        []HAProxy
+	SNMP           []SNMP
+	MIBS           map[string]MIB
+	ICMP           []ICMP
+	Vsphere        []Vsphere
+	AWS            []AWS
+	Process        []ProcessParams
+	SystemdService []ServiceParams
+	ProcessDotNet  []ProcessDotNet
+	HTTPUnit       []HTTPUnit
+	Riak           []Riak
+	Github         []Github
 	// ElasticIndexFilters takes regular expressions and excludes indicies that
 	// match those filters from being monitored for metrics in the elastic.indices
 	// namespace
 	ElasticIndexFilters []string
 	RabbitMQ            []RabbitMQ
+	Nexpose             []Nexpose
 	Database            []Database
 }
 
@@ -61,6 +63,13 @@ type HAProxy struct {
 type HAProxyInstance struct {
 	Tier string
 	URL  string
+}
+
+type Nexpose struct {
+	Username string
+	Password string
+	Host     string
+	Insecure bool
 }
 
 type ICMP struct {

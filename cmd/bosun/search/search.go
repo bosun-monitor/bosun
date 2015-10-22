@@ -24,51 +24,52 @@ import (
 type Search struct {
 	DataAccess database.DataAccess
 
-	last map[string]*lastInfo
+	// metric -> tags -> struct
+	last map[string]map[string]*database.LastInfo
 
 	indexQueue chan *opentsdb.DataPoint
 	sync.RWMutex
-}
-
-type lastInfo struct {
-	lastVal      float64
-	diffFromPrev float64
-	timestamp    int64
 }
 
 func init() {
 	metadata.AddMetricMeta("bosun.search.index_queue", metadata.Gauge, metadata.Count, "Number of datapoints queued for indexing to redis")
 	metadata.AddMetricMeta("bosun.search.dropped", metadata.Counter, metadata.Count, "Number of datapoints discarded without being saved to redis")
 }
+
 func NewSearch(data database.DataAccess) *Search {
 	s := Search{
 		DataAccess: data,
-		last:       make(map[string]*lastInfo),
+		last:       make(map[string]map[string]*database.LastInfo),
 		indexQueue: make(chan *opentsdb.DataPoint, 300000),
 	}
 	collect.Set("search.index_queue", opentsdb.TagSet{}, func() interface{} { return len(s.indexQueue) })
+	s.loadLast()
 	go s.redisIndex(s.indexQueue)
+	go s.backupLoop()
 	return &s
 }
 
 func (s *Search) Index(mdp opentsdb.MultiDataPoint) {
 	for _, dp := range mdp {
 		s.Lock()
-		metric := dp.Metric
-		key := metric + dp.Tags.String()
-		p := s.last[key]
-		if p == nil {
-			p = &lastInfo{}
-			s.last[key] = p
+		mmap := s.last[dp.Metric]
+		if mmap == nil {
+			mmap = make(map[string]*database.LastInfo)
+			s.last[dp.Metric] = mmap
 		}
-		if p.timestamp < dp.Timestamp {
+		p := mmap[dp.Tags.String()]
+		if p == nil {
+			p = &database.LastInfo{}
+			mmap[dp.Tags.String()] = p
+		}
+		if p.Timestamp < dp.Timestamp {
 			if fv, err := getFloat(dp.Value); err == nil {
-				p.diffFromPrev = (fv - p.lastVal) / float64(dp.Timestamp-p.timestamp)
-				p.lastVal = fv
+				p.DiffFromPrev = (fv - p.LastVal) / float64(dp.Timestamp-p.Timestamp)
+				p.LastVal = fv
 			} else {
 				slog.Error(err)
 			}
-			p.timestamp = dp.Timestamp
+			p.Timestamp = dp.Timestamp
 		}
 		s.Unlock()
 		select {
@@ -94,31 +95,31 @@ func (s *Search) redisIndex(c <-chan *opentsdb.DataPoint) {
 		metric := dp.Metric
 		for k, v := range dp.Tags {
 			updateIfTime(fmt.Sprintf("kvm:%s:%s:%s", k, v, metric), func() {
-				if err := s.DataAccess.Search_AddMetricForTag(k, v, metric, now); err != nil {
+				if err := s.DataAccess.Search().AddMetricForTag(k, v, metric, now); err != nil {
 					slog.Error(err)
 				}
-				if err := s.DataAccess.Search_AddTagValue(metric, k, v, now); err != nil {
+				if err := s.DataAccess.Search().AddTagValue(metric, k, v, now); err != nil {
 					slog.Error(err)
 				}
 			})
 			updateIfTime(fmt.Sprintf("mk:%s:%s", metric, k), func() {
-				if err := s.DataAccess.Search_AddTagKeyForMetric(metric, k, now); err != nil {
+				if err := s.DataAccess.Search().AddTagKeyForMetric(metric, k, now); err != nil {
 					slog.Error(err)
 				}
 			})
 			updateIfTime(fmt.Sprintf("kv:%s:%s", k, v), func() {
-				if err := s.DataAccess.Search_AddTagValue(database.Search_All, k, v, now); err != nil {
+				if err := s.DataAccess.Search().AddTagValue(database.Search_All, k, v, now); err != nil {
 					slog.Error(err)
 				}
 			})
 			updateIfTime(fmt.Sprintf("m:%s", metric), func() {
-				if err := s.DataAccess.Search_AddMetric(metric, now); err != nil {
+				if err := s.DataAccess.Search().AddMetric(metric, now); err != nil {
 					slog.Error(err)
 				}
 			})
 		}
 		updateIfTime(fmt.Sprintf("mts:%s:%s", metric, dp.Tags.Tags()), func() {
-			if err := s.DataAccess.Search_AddMetricTagSet(metric, dp.Tags.Tags(), now); err != nil {
+			if err := s.DataAccess.Search().AddMetricTagSet(metric, dp.Tags.Tags(), now); err != nil {
 				slog.Error(err)
 			}
 		})
@@ -162,17 +163,61 @@ var errNotFloat = fmt.Errorf("last: expected float64")
 // GetLast returns the value of the most recent data point for the given metric
 // and tag. tags should be of the form "{key=val,key2=val2}". If diff is true,
 // the value is treated as a counter. err is non nil if there is no match.
-func (s *Search) GetLast(metric, tags string, diff bool) (v float64, err error) {
+func (s *Search) GetLast(metric string, tags opentsdb.TagSet, diff bool) (v float64, err error) {
 	s.RLock()
 	defer s.RUnlock()
-	p := s.last[metric+tags]
-	if p != nil {
-		if diff {
-			return p.diffFromPrev, nil
+
+	if mmap := s.last[metric]; mmap != nil {
+		if p := mmap[tags.String()]; p != nil {
+			if diff {
+				return p.DiffFromPrev, nil
+			}
+			return p.LastVal, nil
 		}
-		return p.lastVal, nil
 	}
 	return 0, nil
+}
+
+// load stored last data from redis
+func (s *Search) loadLast() {
+	s.Lock()
+	defer s.Unlock()
+	slog.Info("Loading last datapoints from redis")
+	m, err := s.DataAccess.Search().LoadLastInfos()
+	if err != nil {
+		slog.Error(err)
+	} else {
+		s.last = m
+	}
+	slog.Info("Done")
+}
+
+func (s *Search) backupLoop() {
+	for {
+		time.Sleep(2 * time.Minute)
+		slog.Info("Backing up last data to redis")
+		err := s.BackupLast()
+		if err != nil {
+			slog.Error(err)
+		}
+	}
+}
+func (s *Search) BackupLast() error {
+	s.RLock()
+	copyL := make(map[string]map[string]*database.LastInfo, len(s.last))
+	for m, mmap := range s.last {
+		innerCopy := make(map[string]*database.LastInfo, len(mmap))
+		copyL[m] = innerCopy
+		for ts, info := range mmap {
+			innerCopy[ts] = &database.LastInfo{
+				LastVal:      info.LastVal,
+				DiffFromPrev: info.DiffFromPrev,
+				Timestamp:    info.Timestamp,
+			}
+		}
+	}
+	s.RUnlock()
+	return s.DataAccess.Search().BackupLastInfos(copyL)
 }
 
 func (s *Search) Expand(q *opentsdb.Query) error {
@@ -203,7 +248,7 @@ func (s *Search) Expand(q *opentsdb.Query) error {
 }
 
 func (s *Search) UniqueMetrics() ([]string, error) {
-	m, err := s.DataAccess.Search_GetAllMetrics()
+	m, err := s.DataAccess.Search().GetAllMetrics()
 	if err != nil {
 		return nil, err
 	}
@@ -222,7 +267,7 @@ func (s *Search) TagValuesByTagKey(Tagk string, since time.Duration) ([]string, 
 }
 
 func (s *Search) MetricsByTagPair(tagk, tagv string) ([]string, error) {
-	metrics, err := s.DataAccess.Search_GetMetricsForTag(tagk, tagv)
+	metrics, err := s.DataAccess.Search().GetMetricsForTag(tagk, tagv)
 	if err != nil {
 		return nil, err
 	}
@@ -235,7 +280,7 @@ func (s *Search) MetricsByTagPair(tagk, tagv string) ([]string, error) {
 }
 
 func (s *Search) TagKeysByMetric(metric string) ([]string, error) {
-	keys, err := s.DataAccess.Search_GetTagKeysForMetric(metric)
+	keys, err := s.DataAccess.Search().GetTagKeysForMetric(metric)
 	if err != nil {
 		return nil, err
 	}
@@ -252,7 +297,7 @@ func (s *Search) TagValuesByMetricTagKey(metric, tagK string, since time.Duratio
 	if since > 0 {
 		t = time.Now().Add(-since).Unix()
 	}
-	vals, err := s.DataAccess.Search_GetTagValues(metric, tagK)
+	vals, err := s.DataAccess.Search().GetTagValues(metric, tagK)
 	if err != nil {
 		return nil, err
 	}
@@ -267,7 +312,7 @@ func (s *Search) TagValuesByMetricTagKey(metric, tagK string, since time.Duratio
 }
 
 func (s *Search) FilteredTagSets(metric string, tags opentsdb.TagSet) ([]opentsdb.TagSet, error) {
-	sets, err := s.DataAccess.Search_GetMetricTagSets(metric, tags)
+	sets, err := s.DataAccess.Search().GetMetricTagSets(metric, tags)
 	if err != nil {
 		return nil, err
 	}

@@ -25,11 +25,13 @@ import (
 	"time"
 
 	"bosun.org/cmd/bosun/expr"
+	"bosun.org/metadata"
 	"bosun.org/opentsdb"
 )
 
 var (
-	relay1, relay2 *os.Process
+	relay1, relay2     *os.Process
+	gotMeta1, gotMeta2 bool
 )
 
 func init() {
@@ -51,12 +53,14 @@ func init() {
 	relay2 = cmd.Process
 	dc1BosunMux := http.NewServeMux()
 	dc1BosunMux.HandleFunc("/api/index", handleBosun(dc1BosunReceived))
+	dc1BosunMux.HandleFunc("/api/metadata/put", handleMeta(&gotMeta1))
 	go func() {
 		fatal("DC1-Bosun", http.ListenAndServe(":5557", dc1BosunMux))
 	}()
 
 	dc2BosunMux := http.NewServeMux()
 	dc2BosunMux.HandleFunc("/api/index", handleBosun(dc2BosunReceived))
+	dc2BosunMux.HandleFunc("/api/metadata/put", handleMeta(&gotMeta2))
 	go func() {
 		fatal("DC2-Bosun", http.ListenAndServe(":6557", dc2BosunMux))
 	}()
@@ -132,6 +136,16 @@ func main() {
 	check("Tsdb DC1", "__h1.os.cpu{host=h1}", 1, dc1TsdbReceived)
 	check("Tsdb DC2", "__h1.os.cpu{host=h1}", 1, dc2TsdbReceived)
 	log.Println("test 2 ok")
+
+	metas := []metadata.Metasend{
+		{Metric: "foo", Name: "desc", Value: 42},
+	}
+	b, _ := json.Marshal(metas)
+	http.Post("http://localhost:5555/api/metadata/put", "application/json", bytes.NewReader(b))
+	time.Sleep(1 * time.Second)
+	if !gotMeta1 || !gotMeta2 {
+		fatal("Didn't get metadata in both datacenters. ", gotMeta1, gotMeta2)
+	}
 	killAll()
 }
 func check(node string, ak expr.AlertKey, expected int, data map[expr.AlertKey]int) {
@@ -140,10 +154,17 @@ func check(node string, ak expr.AlertKey, expected int, data map[expr.AlertKey]i
 		fatal(msg)
 	}
 }
+
 func handleBosun(data map[expr.AlertKey]int) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		readDps(r.Body, data)
 		w.WriteHeader(500)
+	}
+}
+
+func handleMeta(result *bool) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		*result = true
 	}
 }
 

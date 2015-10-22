@@ -17,3 +17,9 @@ type TagMetadata struct {
 	Value       string
 	LastTouched int64
 }
+
+type LastInfo struct {
+	LastVal      float64
+	DiffFromPrev float64
+	Timestamp    int64
+}

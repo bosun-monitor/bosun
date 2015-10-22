@@ -8,12 +8,12 @@ import (
 
 func TestSearch_Metric_RoundTrip(t *testing.T) {
 	host := randString(5)
-	err := testData.Search_AddMetricForTag("host", host, "os.cpu", 42)
+	err := testData.Search().AddMetricForTag("host", host, "os.cpu", 42)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	metrics, err := testData.Search_GetMetricsForTag("host", host)
+	metrics, err := testData.Search().GetMetricsForTag("host", host)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -25,19 +25,19 @@ func TestSearch_Metric_RoundTrip(t *testing.T) {
 }
 
 func TestSearch_MetricTagSets(t *testing.T) {
-	if err := testData.Search_AddMetricTagSet("services.status", "host=abc,service=def", 42); err != nil {
+	if err := testData.Search().AddMetricTagSet("services.status", "host=abc,service=def", 42); err != nil {
 		t.Fatal(err)
 	}
-	if err := testData.Search_AddMetricTagSet("os.cpu", "host=abc,service=def", 42); err != nil {
+	if err := testData.Search().AddMetricTagSet("os.cpu", "host=abc,service=def", 42); err != nil {
 		t.Fatal(err)
 	}
-	if err := testData.Search_AddMetricTagSet("services.status", "host=abc,service=ghi", 42); err != nil {
+	if err := testData.Search().AddMetricTagSet("services.status", "host=abc,service=ghi", 42); err != nil {
 		t.Fatal(err)
 	}
-	if err := testData.Search_AddMetricTagSet("services.status", "host=rrr,service=def", 42); err != nil {
+	if err := testData.Search().AddMetricTagSet("services.status", "host=rrr,service=def", 42); err != nil {
 		t.Fatal(err)
 	}
-	tagsets, err := testData.Search_GetMetricTagSets("services.status", opentsdb.TagSet{"host": "abc"})
+	tagsets, err := testData.Search().GetMetricTagSets("services.status", opentsdb.TagSet{"host": "abc"})
 	if err != nil {
 		t.Fatal(err)
 	}

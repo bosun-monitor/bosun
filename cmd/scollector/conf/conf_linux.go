@@ -6,3 +6,8 @@ type ProcessParams struct {
 	Args         string
 	IncludeCount bool
 }
+
+type ServiceParams struct {
+	Name      string
+	WatchProc bool
+}
