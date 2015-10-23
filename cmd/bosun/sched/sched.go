@@ -44,8 +44,6 @@ type Schedule struct {
 	Incidents map[uint64]*Incident
 	Search    *search.Search
 
-	AlertStatuses map[string]*AlertStatus
-
 	//channel signals an alert has added notifications, and notifications should be processed.
 	nc chan interface{}
 	//notifications to be sent immediately
@@ -55,10 +53,9 @@ type Schedule struct {
 	//unknown states that need to be notified about. Collected and sent in batches.
 	pendingUnknowns map[*conf.Notification][]*State
 
-	alertStatusLock sync.Mutex
-	maxIncidentId   uint64
-	incidentLock    sync.Mutex
-	db              *bolt.DB
+	maxIncidentId uint64
+	incidentLock  sync.Mutex
+	db            *bolt.DB
 
 	LastCheck time.Time
 
@@ -74,7 +71,6 @@ func (s *Schedule) Init(c *conf.Conf) error {
 	//be avoided.
 	var err error
 	s.Conf = c
-	s.AlertStatuses = make(map[string]*AlertStatus)
 	s.Silence = make(map[string]*Silence)
 	s.Group = make(map[time.Time]expr.AlertKeys)
 	s.Incidents = make(map[uint64]*Incident)
@@ -147,7 +143,7 @@ func (s *Schedule) PutMetadata(k metadata.Metakey, v interface{}) error {
 
 	isCoreMeta := (k.Name == "desc" || k.Name == "unit" || k.Name == "rate")
 	if !isCoreMeta {
-		s.DataAccess.PutTagMetadata(k.TagSet(), k.Name, fmt.Sprint(v), time.Now().UTC())
+		s.DataAccess.Metadata().PutTagMetadata(k.TagSet(), k.Name, fmt.Sprint(v), time.Now().UTC())
 		return nil
 	}
 	if k.Metric == "" {
@@ -161,15 +157,15 @@ func (s *Schedule) PutMetadata(k metadata.Metakey, v interface{}) error {
 		slog.Error(err)
 		return err
 	}
-	return s.DataAccess.PutMetricMetadata(k.Metric, k.Name, strVal)
+	return s.DataAccess.Metadata().PutMetricMetadata(k.Metric, k.Name, strVal)
 }
 
 func (s *Schedule) DeleteMetadata(tags opentsdb.TagSet, name string) error {
-	return s.DataAccess.DeleteTagMetadata(tags, name)
+	return s.DataAccess.Metadata().DeleteTagMetadata(tags, name)
 }
 
 func (s *Schedule) MetadataMetrics(metric string) (*database.MetricMetadata, error) {
-	mm, err := s.DataAccess.GetMetricMetadata(metric)
+	mm, err := s.DataAccess.Metadata().GetMetricMetadata(metric)
 	if err != nil {
 		return nil, err
 	}
@@ -205,7 +201,7 @@ func (s *Schedule) GetMetadata(metric string, subset opentsdb.TagSet) ([]metadat
 			})
 		}
 	} else {
-		meta, err := s.DataAccess.GetTagMetadata(subset, "")
+		meta, err := s.DataAccess.Metadata().GetTagMetadata(subset, "")
 		if err != nil {
 			return nil, err
 		}
@@ -995,123 +991,42 @@ type IncidentStatus struct {
 	NeedsAck           bool
 }
 
-//Alert Status is the current state of a single alert
-type AlertStatus struct {
-	Success bool
-	Errors  []*AlertError
-}
-
-type AlertError struct {
-	FirstTime, LastTime time.Time
-	Count               int
-	Message             string
-}
-
 func (s *Schedule) AlertSuccessful(name string) bool {
-	s.alertStatusLock.Lock()
-	defer s.alertStatusLock.Unlock()
-	if as, ok := s.AlertStatuses[name]; ok {
-		return as.Success
+	b, err := s.DataAccess.Errors().IsAlertFailing(name)
+	if err != nil {
+		slog.Error(err)
+		b = true
 	}
-	return true
+	return !b
 }
 
-func (s *Schedule) markAlertError(name string, err error) {
-	s.alertStatusLock.Lock()
-	defer s.alertStatusLock.Unlock()
-	as, ok := s.AlertStatuses[name]
-	if !ok {
-		as = &AlertStatus{}
-		s.AlertStatuses[name] = as
+func (s *Schedule) markAlertError(name string, e error) {
+	d := s.DataAccess.Errors()
+	if err := d.MarkAlertFailure(name, e.Error()); err != nil {
+		slog.Error(err)
+		return
 	}
-	// if it succeeded prior to now, make a new error event.
-	// else if message is same as last, coalesce together.
-	// else append new event
-	now := time.Now().UTC().Truncate(time.Second)
-	newError := func() {
-		as.Errors = append(as.Errors, &AlertError{
-			FirstTime: now,
-			LastTime:  now,
-			Count:     1,
-			Message:   err.Error(),
-		})
-	}
-	if as.Success || len(as.Errors) == 0 {
-		newError()
-	} else {
-		last := as.Errors[len(as.Errors)-1]
-		if err.Error() == last.Message {
-			last.Count++
-			last.LastTime = now
-		} else {
-			newError()
-		}
-	}
-	as.Success = false
+
 }
 
 func (s *Schedule) markAlertSuccessful(name string) {
-	s.alertStatusLock.Lock()
-	defer s.alertStatusLock.Unlock()
-	as, ok := s.AlertStatuses[name]
-	if !ok {
-		as = &AlertStatus{}
-		s.AlertStatuses[name] = as
+	if err := s.DataAccess.Errors().MarkAlertSuccess(name); err != nil {
+		slog.Error(err)
 	}
-	as.Success = true
 }
 
-func (s *Schedule) ClearErrorLine(alert string, startTime time.Time) {
-	s.alertStatusLock.Lock()
-	defer s.alertStatusLock.Unlock()
-	if as, ok := s.AlertStatuses[alert]; ok {
-		newErrors := make([]*AlertError, 0, len(as.Errors))
-		for _, err := range as.Errors {
-			if err.FirstTime != startTime {
-				newErrors = append(newErrors, err)
-			}
-		}
-		as.Errors = newErrors
-		if len(as.Errors) == 0 {
-			as.Success = true
-		}
+func (s *Schedule) ClearErrors(alert string) error {
+	if alert == "all" {
+		return s.DataAccess.Errors().ClearAll()
 	}
+	return s.DataAccess.Errors().ClearAlert(alert)
 }
 
 func (s *Schedule) getErrorCounts() (failing, total int) {
-	failing = 0
-	total = 0
-	s.alertStatusLock.Lock()
-	defer s.alertStatusLock.Unlock()
-	for _, as := range s.AlertStatuses {
-		if !as.Success {
-			failing++
-		}
-		for _, err := range as.Errors {
-			total += err.Count
-		}
+	var err error
+	failing, total, err = s.DataAccess.Errors().GetFailingAlertCounts()
+	if err != nil {
+		slog.Error(err)
 	}
 	return
-}
-
-func (s *Schedule) GetErrorHistory() map[string]*AlertStatus {
-	s.alertStatusLock.Lock()
-	defer s.alertStatusLock.Unlock()
-	mapCopy := make(map[string]*AlertStatus, len(s.AlertStatuses))
-	for name, as := range s.AlertStatuses {
-		asCopy := &AlertStatus{
-			Success: as.Success,
-			Errors:  make([]*AlertError, len(as.Errors)),
-		}
-		for i, err := range as.Errors {
-			asCopy.Errors[i] = &AlertError{
-				Count:     err.Count,
-				FirstTime: err.FirstTime.UTC(),
-				LastTime:  err.LastTime.UTC(),
-				Message:   err.Message,
-			}
-		}
-		mapCopy[name] = asCopy
-	}
-	return mapCopy
 }

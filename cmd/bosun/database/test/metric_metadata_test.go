@@ -6,13 +6,13 @@ import (
 
 func TestMetricMetadata_RoundTrip(t *testing.T) {
 	metric := randString(5)
-	if err := testData.PutMetricMetadata(metric, "desc", "cpu of a server"); err != nil {
+	if err := testData.Metadata().PutMetricMetadata(metric, "desc", "cpu of a server"); err != nil {
 		t.Fatal(err)
 	}
-	if err := testData.PutMetricMetadata(metric, "unit", "pct"); err != nil {
+	if err := testData.Metadata().PutMetricMetadata(metric, "unit", "pct"); err != nil {
 		t.Fatal(err)
 	}
-	meta, err := testData.GetMetricMetadata(metric)
+	meta, err := testData.Metadata().GetMetricMetadata(metric)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -28,7 +28,7 @@ func TestMetricMetadata_RoundTrip(t *testing.T) {
 }
 
 func TestMetricMetadata_NoneExists(t *testing.T) {
-	meta, err := testData.GetMetricMetadata("asfaklsfjlkasjf")
+	meta, err := testData.Metadata().GetMetricMetadata("asfaklsfjlkasjf")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -38,7 +38,7 @@ func TestMetricMetadata_NoneExists(t *testing.T) {
 }
 
 func TestMetricMetadata_BadField(t *testing.T) {
-	if err := testData.PutMetricMetadata(randString(7), "desc1", "foo"); err == nil {
+	if err := testData.Metadata().PutMetricMetadata(randString(7), "desc1", "foo"); err == nil {
 		t.Fatal("Expected failure to set bad metric metadata field")
 	}
 }
