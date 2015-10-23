@@ -10,6 +10,7 @@ import (
 	"net/mail"
 	"net/url"
 	"os"
+	"path/filepath"
 	"regexp"
 	"runtime"
 	"strconv"
@@ -30,6 +31,7 @@ import (
 type Conf struct {
 	Vars
 	Name             string        // Config file name
+	IncludeFiles     string        // Config include files glob string
 	CheckFrequency   time.Duration // Time between alert checks: 5m
 	DefaultRunEvery  int           // Default number of check intervals to run each alert: 1
 	HTTPListen       string        // Web server listen address: :80
@@ -338,6 +340,7 @@ func New(name, text string) (c *Conf, err error) {
 	defer errRecover(&err)
 	c = &Conf{
 		Name:             name,
+		IncludeFiles:     "",
 		CheckFrequency:   time.Minute * 5,
 		DefaultRunEvery:  1,
 		HTTPListen:       ":8070",
@@ -351,13 +354,20 @@ func New(name, text string) (c *Conf, err error) {
 		Templates:        make(map[string]*Template),
 		Alerts:           make(map[string]*Alert),
 		Notifications:    make(map[string]*Notification),
-		RawText:          text,
+		RawText:          "",
 		bodies:           htemplate.New(name).Funcs(htemplate.FuncMap(defaultFuncs)),
 		subjects:         ttemplate.New(name).Funcs(defaultFuncs),
 		Lookups:          make(map[string]*Lookup),
 		Macros:           make(map[string]*Macro),
 	}
-	c.tree, err = parse.Parse(name, text)
+	c.Update(text)
+	return
+}
+
+func (c *Conf) Update(text string) {
+	c.RawText = fmt.Sprint(c.RawText, "\n", text)
+	ctree, err := parse.Parse(c.Name, text)
+	c.tree = ctree
 	if err != nil {
 		c.error(err)
 	}
@@ -385,12 +395,13 @@ func New(name, text string) (c *Conf, err error) {
 			c.Hostname = h + c.Hostname
 		}
 	}
-	return
 }
 
 func (c *Conf) loadGlobal(p *parse.PairNode) {
 	v := c.Expand(p.Val.Text, nil, false)
 	switch k := p.Key.Text; k {
+	case "includeFiles":
+		c.loadIncludeFiles(v)
 	case "checkFrequency":
 		od, err := opentsdb.ParseDuration(v)
 		if err != nil {
@@ -532,6 +543,20 @@ func (c *Conf) loadGlobal(p *parse.PairNode) {
 		}
 		c.Vars[k] = v
 		c.Vars[k[1:]] = c.Vars[k]
+	}
+}
+
+func (c *Conf) loadIncludeFiles(includeFiles string) {
+	confFilenames, err := filepath.Glob(includeFiles)
+	if err != nil {
+		c.error(err)
+	}
+	for _, confFilename := range confFilenames {
+		f, err := ioutil.ReadFile(confFilename)
+		if err != nil {
+			c.error(err)
+		}
+		c.Update(string(f))
 	}
 }
 
