@@ -32,18 +32,16 @@ func generateDocImports() {
 		if err != nil {
 			log.Fatal(err)
 		}
-		defer file.Close()
-		pre := `---
+		text := `---
 layout: goimport
-path: `
-		if _, err := file.Write([]byte(pre)); err != nil {
+path: ***
+redirect_from: "/***/"
+---
+`
+		text = strings.Replace(text, "***", line, -1)
+		if _, err := file.Write([]byte(text)); err != nil {
 			log.Fatal(err)
 		}
-		if _, err := file.Write([]byte(line)); err != nil {
-			log.Fatal(err)
-		}
-		if _, err := file.Write([]byte("\n---\n")); err != nil {
-			log.Fatal(err)
-		}
+		file.Close()
 	}
 }
