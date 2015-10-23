@@ -117,12 +117,32 @@ Like band() but for graphite queries.
 
 ## InfluxDB Query Functions
 
-### influx(db string, query string, startDuration string, endDuration string) seriesSet
+### influx(db string, query string, startDuration string, endDuration, groupByInterval string) seriesSet
 
-Queries with influxql query on database db from startDuration ago to
-endDuration ago. WHERE clases for `time` are inserted automatically, and
-it is thus an error to specify `time` conditions in query. All tags returned
-by InfluxDB will be included in the results.
+Queries InfluxDB.
+
+All tags returned by InfluxDB will be included in the results.
+
+* `db` is the database name in InfluxDB
+* `query` is an InfluxDB select statement
+    NB: WHERE clauses for `time` are inserted automatically, and it is thus an error to specify `time` conditions in query.
+* `startDuration` and `endDuration` set the time window from now - see the OpenTSDB q() function for more details
+    They will be merged into the existing WHERE clause in the `query`.
+* `groupByInterval` is the `time.Duration` window which will be passed as an argument to a GROUP BY time() clause if given. This groups values in the given time buckets. This groups (or in OpenTSDB lingo "downsamples") the results to this timeframe. [Full documentation on Group by](https://influxdb.com/docs/v0.9/query_language/data_exploration.html#group-by).
+
+### Notes:
+
+  * By default, queries will be given a suffix of `fill(none)` to filter out any nil rows.
+
+## examples:
+
+These influx and opentsdb queries should give roughly the same results:
+
+```
+influx("db", '''SELECT non_negative_derivative(mean(value)) FROM "os.cpu" GROUP BY host''', "30m", "", "2m")
+
+q("sum:2m-avg:rate{counter,,1}:os.cpu{host=*}", "30m", "")
+```
 
 ## Logstash Query Functions
 
