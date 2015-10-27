@@ -51,6 +51,7 @@ type Conf struct {
 	ElasticIndexFilters []string
 	RabbitMQ            []RabbitMQ
 	Nexpose             []Nexpose
+	GoogleAnalytics     []GoogleAnalytics
 }
 
 type HAProxy struct {
@@ -69,6 +70,19 @@ type Nexpose struct {
 	Password string
 	Host     string
 	Insecure bool
+}
+
+type GoogleAnalytics struct {
+	ClientID string
+	Secret   string
+	Token    string
+	Sites    []GoogleAnalyticsSite
+}
+
+type GoogleAnalyticsSite struct {
+	Name    string
+	Profile string
+	Offset  int
 }
 
 type ICMP struct {
