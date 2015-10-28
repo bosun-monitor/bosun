@@ -107,9 +107,12 @@ func getTime(r *http.Request) (now time.Time, err error) {
 		if ft := r.FormValue("time"); len(ft) > 0 {
 			fd += " " + ft
 		} else {
-			fd += " " + now.Format("15:04")
+			fd += " " + now.Format("15:04:05")
 		}
-		now, err = time.Parse("2006-01-02 15:04", fd)
+		now, err = time.Parse("2006-01-02 15:04:05", fd)
+		if err != nil {
+			now, err = time.Parse("2006-01-02 15:04", fd)
+		}
 	}
 	return
 }
