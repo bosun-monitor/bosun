@@ -81,7 +81,7 @@ func (c *Context) HostView(host string) string {
 func (c *Context) Expr(v string) string {
 	p := url.Values{}
 	p.Add("date", c.runHistory.Start.Format(`2006-01-02`))
-	p.Add("time", c.runHistory.Start.Format(`15:04`))
+	p.Add("time", c.runHistory.Start.Format(`15:04:05`))
 	p.Add("expr", base64.StdEncoding.EncodeToString([]byte(opentsdb.ReplaceTags(v, c.Group))))
 	return c.schedule.Conf.MakeLink("/expr", &p)
 }
@@ -93,7 +93,7 @@ func (c *Context) GraphLink(v string) string {
 	p.Add("expr", base64.StdEncoding.EncodeToString([]byte(v)))
 	p.Add("tab", "graph")
 	p.Add("date", c.runHistory.Start.Format(`2006-01-02`))
-	p.Add("time", c.runHistory.Start.Format(`15:04`))
+	p.Add("time", c.runHistory.Start.Format(`15:04:05`))
 	return c.schedule.Conf.MakeLink("/expr", &p)
 }
 

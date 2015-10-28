@@ -21,7 +21,7 @@ type HWControllerMeta struct {
 	DriverVersion   string
 }
 
-type HWPowerSupply struct {
+type HWPowerSupplyMeta struct {
 	RatedInputWattage  string
 	RatedOutputWattage string
 }

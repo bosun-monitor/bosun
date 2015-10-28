@@ -163,19 +163,20 @@ var errNotFloat = fmt.Errorf("last: expected float64")
 // GetLast returns the value of the most recent data point for the given metric
 // and tag. tags should be of the form "{key=val,key2=val2}". If diff is true,
 // the value is treated as a counter. err is non nil if there is no match.
-func (s *Search) GetLast(metric string, tags opentsdb.TagSet, diff bool) (v float64, err error) {
+func (s *Search) GetLast(metric, tags string, diff bool) (v float64, t int64, err error) {
 	s.RLock()
 	defer s.RUnlock()
-
-	if mmap := s.last[metric]; mmap != nil {
-		if p := mmap[tags.String()]; p != nil {
+	m, mOk := s.last[metric]
+	if mOk {
+		p := m[tags]
+		if p != nil {
 			if diff {
-				return p.DiffFromPrev, nil
+				return p.DiffFromPrev, p.Timestamp, nil
 			}
-			return p.LastVal, nil
+			return p.LastVal, p.Timestamp, nil
 		}
 	}
-	return 0, nil
+	return 0, 0, fmt.Errorf("no match for %s:%s", metric, tags)
 }
 
 // load stored last data from redis
