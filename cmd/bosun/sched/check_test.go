@@ -245,6 +245,7 @@ func TestCheckNotifyUnknown(t *testing.T) {
 		t.Fatal(err)
 	}
 	c, err := conf.New("", fmt.Sprintf(`
+		minGroupSize = 2
 		template t {
 			subject = {{.Name}}: {{.Group | len}} unknown alerts
 		}
@@ -307,6 +308,7 @@ func TestCheckNotifyUnknownDefault(t *testing.T) {
 		t.Fatal(err)
 	}
 	c, err := conf.New("", fmt.Sprintf(`
+		minGroupSize = 2
 		template t {
 			subject = template
 		}

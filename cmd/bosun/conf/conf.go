@@ -59,6 +59,7 @@ type Conf struct {
 	Quiet            bool
 	NoSleep          bool
 	ShortURLKey      string
+	MinGroupSize     int
 
 	TSDBHost             string                    // OpenTSDB relay and query destination: ny-devtsdb04:4242
 	GraphiteHost         string                    // Graphite query host: foo.bar.baz
@@ -343,6 +344,7 @@ func New(name, text string) (c *Conf, err error) {
 		HTTPListen:       ":8070",
 		StateFile:        "bosun.state",
 		LedisDir:         "ledis_data",
+		MinGroupSize:     5,
 		PingDuration:     time.Hour * 24,
 		ResponseLimit:    1 << 20, // 1MB
 		SearchSince:      opentsdb.Day * 3,
@@ -526,6 +528,12 @@ func (c *Conf) loadGlobal(p *parse.PairNode) {
 		c.LedisDir = v
 	case "redisHost":
 		c.RedisHost = v
+	case "minGroupSize":
+		i, err := strconv.Atoi(v)
+		if err != nil {
+			c.error(err)
+		}
+		c.MinGroupSize = i
 	default:
 		if !strings.HasPrefix(k, "$") {
 			c.errorf("unknown key %s", k)

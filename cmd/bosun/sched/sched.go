@@ -248,7 +248,7 @@ func (states States) GroupStates(silenced map[expr.AlertKey]Silence) map[StateTu
 
 // GroupSets returns slices of TagSets, grouped by most common ancestor. Those
 // with no shared ancestor are grouped by alert name.
-func (states States) GroupSets() map[string]expr.AlertKeys {
+func (states States) GroupSets(minGroup int) map[string]expr.AlertKeys {
 	type Pair struct {
 		k, v string
 	}
@@ -275,7 +275,7 @@ func (states States) GroupSets() map[string]expr.AlertKeys {
 				pair = p
 			}
 		}
-		if max == 1 {
+		if max < minGroup {
 			break
 		}
 		var group expr.AlertKeys
@@ -294,23 +294,28 @@ func (states States) GroupSets() map[string]expr.AlertKeys {
 		}
 	}
 	// alerts
-	for {
-		if len(seen) == len(states) {
-			break
+	groupedByAlert := map[string]expr.AlertKeys{}
+	for _, s := range states {
+		if seen[s] {
+			continue
 		}
-		var group expr.AlertKeys
-		for _, s := range states {
-			if seen[s] {
-				continue
+		groupedByAlert[s.Alert] = append(groupedByAlert[s.Alert], s.AlertKey())
+	}
+	for a, aks := range groupedByAlert {
+		if len(aks) >= minGroup {
+			group := expr.AlertKeys{}
+			for _, ak := range aks {
+				group = append(group, ak)
 			}
-			if group == nil || s.AlertKey().Name() == group[0].Name() {
-				group = append(group, s.AlertKey())
-				seen[s] = true
-			}
+			groups[a] = group
 		}
-		if len(group) > 0 {
-			groups[group[0].Name()] = group
+	}
+	// ungrouped
+	for _, s := range states {
+		if seen[s] || len(groupedByAlert[s.Alert]) >= minGroup {
+			continue
 		}
+		groups[string(s.AlertKey())] = expr.AlertKeys{s.AlertKey()}
 	}
 	return groups
 }
@@ -405,7 +410,7 @@ func (s *Schedule) MarshalGroups(T miniprofiler.Timer, filter string) (*StateGro
 			case StWarning, StCritical, StUnknown:
 				var sets map[string]expr.AlertKeys
 				T.Step(fmt.Sprintf("GroupSets (%d): %v", len(states), tuple), func(T miniprofiler.Timer) {
-					sets = states.GroupSets()
+					sets = states.GroupSets(s.Conf.MinGroupSize)
 				})
 				for name, group := range sets {
 					g := StateGroup{
