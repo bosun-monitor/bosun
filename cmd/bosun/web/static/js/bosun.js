@@ -1500,43 +1500,27 @@ bosunControllers.controller('ErrorCtrl', ['$scope', '$http', '$location', '$rout
             $scope.error = "Error fetching data: " + data;
         })
             .finally(function () { $scope.loading = false; });
-        $scope.check = function (err) {
-            if (err.checked && !err.Shown) {
-                err.Shown = true;
-            }
-            _(err.Errors).forEach(function (line) {
-                line.checked = err.checked;
-            });
-        };
         $scope.click = function (err, event) {
             event.stopPropagation();
         };
         $scope.totalLines = function () {
-            var t = 0;
-            _($scope.errors).forEach(function (err) {
-                t += err.Errors.length;
-            });
-            return t;
+            return $scope.errors.length;
         };
         $scope.selectedLines = function () {
             var t = 0;
             _($scope.errors).forEach(function (err) {
-                _(err.Errors).forEach(function (line) {
-                    if (line.checked) {
-                        t++;
-                    }
-                });
+                if (err.checked) {
+                    t++;
+                }
             });
             return t;
         };
-        var getKeys = function (checkedOnly) {
+        var getChecked = function () {
             var keys = [];
             _($scope.errors).forEach(function (err) {
-                _(err.Errors).forEach(function (line) {
-                    if (!checkedOnly || line.checked) {
-                        keys.push({ alert: err.Name, start: line.FirstTime });
-                    }
-                });
+                if (err.checked) {
+                    keys.push(err.Name);
+                }
             });
             return keys;
         };
@@ -1550,11 +1534,10 @@ bosunControllers.controller('ErrorCtrl', ['$scope', '$http', '$location', '$rout
             });
         };
         $scope.clearAll = function () {
-            var keys = getKeys(false);
-            clear(keys);
+            clear(["all"]);
         };
         $scope.clearSelected = function () {
-            var keys = getKeys(true);
+            var keys = getChecked();
             clear(keys);
         };
         $scope.ruleLink = function (line, err) {

@@ -23,7 +23,7 @@
 		<div class="panel-heading" ng-click="err.Shown = !err.Shown">
 			<h4 class="panel-title">alert {{err.Name}} - ({{err.Sum}} events)
 			<label class="pull-right select">
-					<input type="checkbox" class="pull-right" ng-model="err.checked" ng-click="click(err, $event)" ng-change="check(err)">
+					<input type="checkbox" class="pull-right" ng-model="err.checked" ng-click="click(err, $event)">
 			</label>
 			</h4> 
 		</div>
@@ -31,9 +31,6 @@
 			<div class="alert alert-danger" role="alert" ng-repeat="line in err.Errors | orderBy:['-LastTime']" style="margin:0px;">
 				{{line.Message}} - {{line.Count}} times From <span ts-time="line.FirstTime"></span> To <span ts-time="line.LastTime"></span> 
 				 - <a ng-href="{{ruleLink(line,err)}}">Rule Page</a>
-				<label class="pull-right select">
-					<input type="checkbox" class="pull-right" ng-model="line.checked">
-				</label>
 			</div>
 		</div>
 	</div>

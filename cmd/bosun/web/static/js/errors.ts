@@ -33,47 +33,31 @@ bosunControllers.controller('ErrorCtrl', ['$scope', '$http', '$location', '$rout
   		})
 		.finally(()=>{$scope.loading=false})
 	
-	$scope.check = (err) => {
-		if (err.checked && !err.Shown){
-			err.Shown = true;
-		}
-		_(err.Errors).forEach((line)=>{
-			line.checked = err.checked;
-		})
-	};
 	
 	$scope.click = (err, event) => {
 		event.stopPropagation();
 	};
 	
 	$scope.totalLines = () => {
-		var t = 0;
-		_($scope.errors).forEach((err) =>{
-			t += err.Errors.length;
-		})
-		return t;
+		return $scope.errors.length;
 	};
 	
 	$scope.selectedLines = () => {
 		var t = 0;
 		_($scope.errors).forEach((err) =>{
-			_(err.Errors).forEach((line)=>{
-				if(line.checked){
-					t++;
-				}
-			})
+			if (err.checked){
+				t++;
+			}
 		})
 		return t;
 	};
 	
-	var getKeys = (checkedOnly: boolean) => {
+	var getChecked = () => {
 		var keys = [];
 		_($scope.errors).forEach((err) =>{
-			_(err.Errors).forEach((line)=>{
-				if(!checkedOnly || line.checked){
-					keys.push({alert:err.Name, start: line.FirstTime})
-				}
-			})
+			if (err.checked){
+				keys.push(err.Name)
+			}
 		})
 		return keys;
 	}
@@ -89,12 +73,11 @@ bosunControllers.controller('ErrorCtrl', ['$scope', '$http', '$location', '$rout
 	}
 	
 	$scope.clearAll = () =>{
-		var keys = getKeys(false);
-		clear(keys);
+		clear(["all"]);
 	}
 	
 	$scope.clearSelected = () => {
-		var keys = getKeys(true);
+		var keys = getChecked();
 		clear(keys);
 	}
 	
