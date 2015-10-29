@@ -256,6 +256,9 @@ func (c *nexposeConnection) login() error {
 		return err
 	}
 
+	if resp.SessionID == "" {
+		return fmt.Errorf("No SessionID in response.")
+	}
 	c.SessionID = resp.SessionID
 
 	// Set the cookie as well, in case we want to use the undocumented JSON API.
