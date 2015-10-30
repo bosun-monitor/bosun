@@ -40,6 +40,7 @@ func init() {
 func c_nexpose(username, password, host string, insecure bool, collectAssets bool) (opentsdb.MultiDataPoint, error) {
 	const (
 		descScanRunning   = "Nexpose scan running."
+		descScanRunTime   = "Duration scan has been running, in seconds."
 		descRiskScore     = "Risk score for a given site/device."
 		descVulnCount     = "Number of known vulnerabilities."
 		descExploitCount  = "Number of vulnerabilities exploitable via Metasploit. Subset of vuln_count."
@@ -106,13 +107,20 @@ func c_nexpose(username, password, host string, insecure bool, collectAssets boo
 		Add(&md, "nexpose.site.malware_count", site.MalwareCount, tags, metadata.Gauge, metadata.Vulnerabilities, descMalwareCount)
 	}
 
+	const timeFmt = "20060102T150405"
 	activeScans, err := c.scanActivity()
 	if err != nil {
 		return nil, err
 	}
 	for _, scan := range activeScans {
+		t, err := time.Parse(timeFmt, scan.StartTime[0:15])
+		if err != nil {
+			return nil, err
+		}
+		runtime := int(time.Since(t).Seconds())
 		if scan.Status == "running" {
 			Add(&md, "nexpose.scan.running", 1, opentsdb.TagSet{"site": siteNames[scan.SiteID]}, metadata.Gauge, metadata.Bool, descScanRunning)
+			Add(&md, "nexpose.scan.runtime", runtime, opentsdb.TagSet{"site": siteNames[scan.SiteID]}, metadata.Gauge, metadata.Second, descScanRunTime)
 		}
 	}
 
@@ -320,8 +328,8 @@ type scanSummary struct {
 	SiteID    int    `xml:"site-id,attr"`
 	EngineID  int    `xml:"engine-id,attr"`
 	Name      string `xml:"name,attr"`
-	StartTime string `xml:"startTime,attr"`
-	EndTime   string `xml:"endTime,attr"`
+	StartTime string `xml:"startTime,attr"` // %Y%M%dT%H%M%s, with 3-digit millis added to the end
+	EndTime   string `xml:"endTime,attr"`   // same as above
 	Status    string `xml:"status,attr"`
 }
 
