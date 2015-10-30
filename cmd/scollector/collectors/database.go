@@ -25,27 +25,23 @@ type DatabaseQuery struct {
 	next        time.Time
 }
 
-var DatabaseVars struct {
-	vaildDatabases map[string]bool
-}
-
 func init() {
-	DatabaseVars.vaildDatabases = map[string]bool{"mysql": true}
+	registerInit(
+		func(c *conf.Conf) {
+			for _, cfg := range c.Database {
+				DatabaseAddCollector(cfg)
+			}
+		})
 }
 
-func Database(c conf.Database) error {
-	return DatabaseAddCollector(c)
-}
-
-func DatabaseAddCollector(c conf.Database) error {
-	_, found := DatabaseVars.vaildDatabases[c.Type]
-	if !found {
-		return fmt.Errorf("%v: %v", "invalid Database Type", c.Type)
+func DatabaseAddCollector(c conf.Database) {
+	if c.Type != "mysql" {
+		slog.Fatalf("%v: %v", "invalid Database Type", c.Type)
 	}
 	if c.DBName != "" {
 		cleaned, _ := opentsdb.Clean(c.DBName)
 		if c.DBName != cleaned {
-			return fmt.Errorf("%v: %v", "invalid Database DBName", c.DBName)
+			slog.Fatalf("%v: %v", "invalid Database DBName", c.DBName)
 		}
 	}
 	if c.InstId < 1 {
@@ -81,8 +77,6 @@ func DatabaseAddCollector(c conf.Database) error {
 		name: c.Type,
 		tags: tags,
 	})
-
-	return nil
 }
 
 func DatabaseCollect(c conf.Database, collectorStatsChan chan<- *ContinuousCollectorStats) {
