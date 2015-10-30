@@ -7,48 +7,6 @@ import (
 	"bosun.org/cmd/scollector/conf"
 )
 
-func TestDatabase(t *testing.T) {
-	// test invaild type
-	myConf := conf.Database{Type: "bad type"}
-	err := Database(myConf)
-	e_error := fmt.Errorf("invalid Database Type: bad type")
-	if err == nil || err.Error() != e_error.Error() {
-		t.Error("Database expected:", e_error, "got:", err)
-	}
-
-	// test good type
-	myConf = conf.Database{Type: "mysql"}
-	err = Database(myConf)
-	e_error = nil
-	if err != e_error {
-		t.Error("Database expected:", e_error, "got:", err)
-	}
-
-	// test bad name
-	myConf = conf.Database{Type: "mysql", DBName: "bad name"}
-	err = Database(myConf)
-	e_error = fmt.Errorf("invalid Database DBName: bad name")
-	if err == nil || err.Error() != e_error.Error() {
-		t.Error("Database expected:", e_error, "got:", err)
-	}
-
-	// test good name
-	myConf = conf.Database{Type: "mysql", DBName: "good_name"}
-	err = Database(myConf)
-	e_error = nil
-	if err != e_error {
-		t.Error("Database expected:", e_error, "got:", err)
-	}
-
-	// test without database name
-	myConf = conf.Database{Type: "mysql"}
-	err = Database(myConf)
-	e_error = nil
-	if err != e_error {
-		t.Error("Database expected:", e_error, "got:", err)
-	}
-}
-
 func TestDatabaseParseResults(t *testing.T) {
 	// test one row
 	myConf := conf.Database{Type: "mysql", DBName: "good_name"}
