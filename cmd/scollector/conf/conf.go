@@ -28,6 +28,9 @@ type Conf struct {
 	// PProf is an IP:Port binding to be used for debugging with pprof package.
 	// Examples: localhost:6060 for loopback or :6060 for all IP addresses.
 	PProf string
+	// MetricFilters takes regular expressions and includes only indicies that
+	// match those filters from being monitored
+	MetricFilters []string
 
 	// KeepalivedCommunity, if not empty, enables the Keepalived collector with
 	// the specified community.

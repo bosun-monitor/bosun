@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 )
 
@@ -23,21 +24,32 @@ func generateDocImports() {
 	}
 	lines := strings.Split(string(output), "\n")
 	for _, line := range lines {
+
 		if line == "" || !strings.HasPrefix(line, "bosun.org/") {
 			continue
 		}
 		line = line[10:]
-		cleanedPkg := strings.Replace(line, "/", "_", -1)
-		file, err := os.Create("../../docs/pkgs/" + cleanedPkg + ".html")
+		if strings.HasPrefix(line, "docs") || strings.HasPrefix(line, "build") {
+			continue
+		}
+		fileName := filepath.Join("../../docs", line, "index.html")
+
+		err = os.MkdirAll(filepath.Dir(fileName), 0777)
 		if err != nil {
 			log.Fatal(err)
+
+		}
+
+		file, err := os.Create(fileName)
+		if err != nil {
+			log.Fatal(err)
+
 		}
 		text := `---
 layout: goimport
 path: ***
-redirect_from: "/***/"
 ---
-`
+			`
 		text = strings.Replace(text, "***", line, -1)
 		if _, err := file.Write([]byte(text)); err != nil {
 			log.Fatal(err)

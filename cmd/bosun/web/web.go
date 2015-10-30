@@ -22,6 +22,7 @@ import (
 	"bosun.org/cmd/bosun/sched"
 	"bosun.org/collect"
 	"bosun.org/metadata"
+	"bosun.org/models"
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
 	"bosun.org/util"
@@ -632,18 +633,38 @@ func ScheduleLockStatus(t miniprofiler.Timer, w http.ResponseWriter, r *http.Req
 
 func ErrorHistory(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	if r.Method == "GET" {
-		return schedule.GetErrorHistory(), nil
+		data, err := schedule.DataAccess.Errors().GetFullErrorHistory()
+		if err != nil {
+			return nil, err
+		}
+		type AlertStatus struct {
+			Success bool
+			Errors  []*models.AlertError
+		}
+		failingAlerts, err := schedule.DataAccess.Errors().GetFailingAlerts()
+		if err != nil {
+			return nil, err
+		}
+		m := make(map[string]*AlertStatus, len(data))
+		for a, list := range data {
+			m[a] = &AlertStatus{
+				Success: !failingAlerts[a],
+				Errors:  list,
+			}
+		}
+		return m, nil
 	}
-	data := []struct {
-		Alert string    `json:"Alert"`
-		Start time.Time `json:"Start"`
-	}{}
-	decoder := json.NewDecoder(r.Body)
-	if err := decoder.Decode(&data); err != nil {
-		return nil, err
-	}
-	for _, key := range data {
-		schedule.ClearErrorLine(key.Alert, key.Start)
+	if r.Method == "POST" {
+		data := []string{}
+		decoder := json.NewDecoder(r.Body)
+		if err := decoder.Decode(&data); err != nil {
+			return nil, err
+		}
+		for _, key := range data {
+			if err := schedule.ClearErrors(key); err != nil {
+				return nil, err
+			}
+		}
 	}
 	return nil, nil
 }

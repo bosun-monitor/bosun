@@ -59,6 +59,7 @@ Every variable is optional, though you should enable at least 1 backend.
 * emailFrom: from address for notification emails, required for email notifications
 * httpListen: HTTP listen address, defaults to `:8070`
 * hostname: when generating links in templates, use this value as the hostname instead of using the system's hostname
+* minGroupSize: minimum group size for alerts to be grouped together on dashboard. Default `5`.
 * ping: if present, will ping all values tagged with host
 * responseLimit: number of bytes to limit OpenTSDB responses, defaults to 1MB (`1048576`)
 * searchSince: duration of time to filter by during certain searches, defaults to `3d`; currently used by the hosts list on the items page

@@ -25,6 +25,10 @@ func metricMetaKey(metric string) string {
 
 const metricMetaTTL = int((time.Hour * 24 * 7) / time.Second)
 
+func (d *dataAccess) Metadata() MetadataDataAccess {
+	return d
+}
+
 func (d *dataAccess) PutMetricMetadata(metric string, field string, value string) error {
 	defer collect.StartTimer("redis", opentsdb.TagSet{"op": "PutMetricMeta"})()
 	if field != "desc" && field != "unit" && field != "rate" {

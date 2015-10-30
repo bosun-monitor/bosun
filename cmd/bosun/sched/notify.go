@@ -129,7 +129,7 @@ func (s *Schedule) sendUnknownNotifications() {
 		var c int
 		tHit := false
 		oTSets := make(map[string]expr.AlertKeys)
-		groupSets := ustates.GroupSets()
+		groupSets := ustates.GroupSets(s.Conf.MinGroupSize)
 		for name, group := range groupSets {
 			c++
 			if c >= s.Conf.UnknownThreshold && s.Conf.UnknownThreshold > 0 {
