@@ -17,6 +17,12 @@ import (
 
 // Core data access interface for everything sched needs
 type DataAccess interface {
+	Metadata() MetadataDataAccess
+	Search() SearchDataAccess
+	Errors() ErrorDataAccess
+}
+
+type MetadataDataAccess interface {
 	// Insert Metric Metadata. Field must be one of "desc", "rate", or "unit".
 	PutMetricMetadata(metric string, field string, value string) error
 	// Get Metric Metadata for given metric.
@@ -25,8 +31,6 @@ type DataAccess interface {
 	PutTagMetadata(tags opentsdb.TagSet, name string, value string, updated time.Time) error
 	GetTagMetadata(tags opentsdb.TagSet, name string) ([]*TagMetadata, error)
 	DeleteTagMetadata(tags opentsdb.TagSet, name string) error
-
-	Search() SearchDataAccess
 }
 
 type SearchDataAccess interface {
@@ -121,4 +125,27 @@ func newPool(server, password string, database int, isRedis bool, maxActive int,
 
 func init() {
 	collect.AggregateMeta("bosun.redis", metadata.MilliSecond, "time in milliseconds per redis call.")
+}
+
+// Ledis can't do DEL in a blanket way like redis can. It has a unique command per type.
+// These helpers allow easy switching.
+func (d *dataAccess) LCLEAR() string {
+	if d.isRedis {
+		return "DEL"
+	}
+	return "LCLEAR"
+}
+
+func (d *dataAccess) SCLEAR() string {
+	if d.isRedis {
+		return "DEL"
+	}
+	return "SCLEAR"
+}
+
+func (d *dataAccess) LMCLEAR(key string, value string) (string, []interface{}) {
+	if d.isRedis {
+		return "LREM", []interface{}{key, 0, value}
+	}
+	return "LMCLEAR", []interface{}{key, value}
 }

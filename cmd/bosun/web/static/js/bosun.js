@@ -1500,43 +1500,27 @@ bosunControllers.controller('ErrorCtrl', ['$scope', '$http', '$location', '$rout
             $scope.error = "Error fetching data: " + data;
         })
             .finally(function () { $scope.loading = false; });
-        $scope.check = function (err) {
-            if (err.checked && !err.Shown) {
-                err.Shown = true;
-            }
-            _(err.Errors).forEach(function (line) {
-                line.checked = err.checked;
-            });
-        };
         $scope.click = function (err, event) {
             event.stopPropagation();
         };
         $scope.totalLines = function () {
-            var t = 0;
-            _($scope.errors).forEach(function (err) {
-                t += err.Errors.length;
-            });
-            return t;
+            return $scope.errors.length;
         };
         $scope.selectedLines = function () {
             var t = 0;
             _($scope.errors).forEach(function (err) {
-                _(err.Errors).forEach(function (line) {
-                    if (line.checked) {
-                        t++;
-                    }
-                });
+                if (err.checked) {
+                    t++;
+                }
             });
             return t;
         };
-        var getKeys = function (checkedOnly) {
+        var getChecked = function () {
             var keys = [];
             _($scope.errors).forEach(function (err) {
-                _(err.Errors).forEach(function (line) {
-                    if (!checkedOnly || line.checked) {
-                        keys.push({ alert: err.Name, start: line.FirstTime });
-                    }
-                });
+                if (err.checked) {
+                    keys.push(err.Name);
+                }
             });
             return keys;
         };
@@ -1550,11 +1534,10 @@ bosunControllers.controller('ErrorCtrl', ['$scope', '$http', '$location', '$rout
             });
         };
         $scope.clearAll = function () {
-            var keys = getKeys(false);
-            clear(keys);
+            clear(["all"]);
         };
         $scope.clearSelected = function () {
-            var keys = getKeys(true);
+            var keys = getChecked();
             clear(keys);
         };
         $scope.ruleLink = function (line, err) {
@@ -2475,7 +2458,7 @@ bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$ro
             return m.format();
         };
     }]);
-bosunApp.directive('tsAckGroup', ['$location', function ($location) {
+bosunApp.directive('tsAckGroup', ['$location', '$timeout', function ($location, $timeout) {
         return {
             scope: {
                 ack: '=',
@@ -2492,6 +2475,11 @@ bosunApp.directive('tsAckGroup', ['$location', function ($location) {
                 scope.shown = {};
                 scope.collapse = function (i) {
                     scope.shown[i] = !scope.shown[i];
+                    if (scope.shown[i] && scope.groups[i].Children.length == 1) {
+                        $timeout(function () {
+                            scope.$broadcast("onOpen", i);
+                        }, 0);
+                    }
                 };
                 scope.click = function ($event, idx) {
                     scope.collapse(idx);
@@ -2572,6 +2560,7 @@ bosunApp.directive('tsState', ['$sce', '$http', function ($sce, $http) {
         return {
             templateUrl: '/partials/alertstate.html',
             link: function (scope, elem, attrs) {
+                var myIdx = attrs["tsGrp"];
                 scope.name = scope.child.AlertKey;
                 scope.state = scope.child.State;
                 scope.action = function (type) {
@@ -2594,6 +2583,11 @@ bosunApp.directive('tsState', ['$sce', '$http', function ($sce, $http) {
                         });
                     }
                 };
+                scope.$on('onOpen', function (e, i) {
+                    if (i == myIdx) {
+                        scope.toggle();
+                    }
+                });
                 scope.zws = function (v) {
                     if (!v) {
                         return '';

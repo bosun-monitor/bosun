@@ -31,3 +31,9 @@ func randString(l int) string {
 	}
 	return s
 }
+
+func check(t *testing.T, err error) {
+	if err != nil {
+		t.Fatal(err)
+	}
+}

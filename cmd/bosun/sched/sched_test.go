@@ -52,66 +52,37 @@ func check(s *Schedule, t time.Time) {
 }
 
 //fake data access for tests. Perhaps a full mock would be more appropriate, once the interface contains more.
-// this implementation just panics
-type nopDataAccess struct{}
+//any methods not explicitely implemented will likely cause a nil reference panic. This is good.
+type nopDataAccess struct {
+	database.MetadataDataAccess
+	database.SearchDataAccess
+	database.ErrorDataAccess
+	failingAlerts map[string]bool
+}
 
-func (n *nopDataAccess) PutMetricMetadata(metric string, field string, value string) error {
-	panic("not implemented")
-}
-func (n *nopDataAccess) GetMetricMetadata(metric string) (*database.MetricMetadata, error) {
-	panic("not implemented")
-}
-func (n *nopDataAccess) PutTagMetadata(tags opentsdb.TagSet, name string, value string, updated time.Time) error {
-	panic("not implemented")
-}
-func (n *nopDataAccess) GetTagMetadata(tags opentsdb.TagSet, name string) ([]*database.TagMetadata, error) {
-	panic("not implemented")
-}
-func (n *nopDataAccess) DeleteTagMetadata(tags opentsdb.TagSet, name string) error {
-	panic("not implemented")
-}
-func (n *nopDataAccess) Search() database.SearchDataAccess { return n }
-func (n *nopDataAccess) AddMetricForTag(tagK, tagV, metric string, time int64) error {
-	panic("not implemented")
-}
-func (n *nopDataAccess) GetMetricsForTag(tagK, tagV string) (map[string]int64, error) {
-	panic("not implemented")
-}
-func (n *nopDataAccess) AddTagKeyForMetric(metric, tagK string, time int64) error {
-	panic("not implemented")
-}
-func (n *nopDataAccess) GetTagKeysForMetric(metric string) (map[string]int64, error) {
-	panic("not implemented")
-}
-func (n *nopDataAccess) AddMetric(metric string, time int64) error {
-	panic("not implemented")
-}
-func (n *nopDataAccess) GetAllMetrics() (map[string]int64, error) {
-	panic("not implemented")
-}
-func (n *nopDataAccess) AddTagValue(metric, tagK, tagV string, time int64) error {
-	panic("not implemented")
-}
-func (n *nopDataAccess) GetTagValues(metric, tagK string) (map[string]int64, error) {
-	panic("not implemented")
-}
-func (n *nopDataAccess) AddMetricTagSet(metric, tagSet string, time int64) error {
-	panic("not implemented")
-}
-func (n *nopDataAccess) GetMetricTagSets(metric string, tags opentsdb.TagSet) (map[string]int64, error) {
-	panic("not implemented")
-}
-func (n *nopDataAccess) BackupLastInfos(map[string]map[string]*database.LastInfo) error {
-	return nil
-}
+func (n *nopDataAccess) Search() database.SearchDataAccess     { return n }
+func (n *nopDataAccess) Metadata() database.MetadataDataAccess { return n }
+func (n *nopDataAccess) Errors() database.ErrorDataAccess      { return n }
+
+func (n *nopDataAccess) BackupLastInfos(map[string]map[string]*database.LastInfo) error { return nil }
 func (n *nopDataAccess) LoadLastInfos() (map[string]map[string]*database.LastInfo, error) {
 	return map[string]map[string]*database.LastInfo{}, nil
 }
+func (n *nopDataAccess) MarkAlertSuccess(name string) error {
+	n.failingAlerts[name] = false
+	return nil
+}
+func (n *nopDataAccess) MarkAlertFailure(name string, msg string) error {
+	n.failingAlerts[name] = true
+	return nil
+}
+func (n *nopDataAccess) GetFailingAlertCounts() (int, int, error) { return 0, 0, nil }
+func (n *nopDataAccess) IsAlertFailing(name string) (bool, error) { return n.failingAlerts[name], nil }
 
 func initSched(c *conf.Conf) (*Schedule, error) {
 	c.StateFile = ""
 	s := new(Schedule)
-	s.DataAccess = &nopDataAccess{}
+	s.DataAccess = &nopDataAccess{failingAlerts: map[string]bool{}}
 	err := s.Init(c)
 	return s, err
 }
