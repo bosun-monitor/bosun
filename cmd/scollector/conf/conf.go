@@ -83,9 +83,10 @@ type GoogleAnalytics struct {
 }
 
 type GoogleAnalyticsSite struct {
-	Name    string
-	Profile string
-	Offset  int
+	Name     string
+	Profile  string
+	Offset   int
+	Detailed bool
 }
 
 type ICMP struct {

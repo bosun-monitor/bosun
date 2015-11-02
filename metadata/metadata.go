@@ -35,7 +35,8 @@ type Unit string
 const (
 	// None is a not-yet documented unit.
 	None            Unit = ""
-	A                    = "A" // Amps
+	A                    = "A"            // Amps
+	ActiveUsers          = "active users" // Google Analytics
 	Alert                = "alerts"
 	Abort                = "aborts"
 	Bool                 = "bool"
