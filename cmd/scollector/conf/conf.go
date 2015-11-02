@@ -58,6 +58,7 @@ type Conf struct {
 	RabbitMQ            []RabbitMQ
 	Nexpose             []Nexpose
 	GoogleAnalytics     []GoogleAnalytics
+	Cadvisor            []Cadvisor
 }
 
 type HAProxy struct {
@@ -162,4 +163,8 @@ type RabbitMQ struct {
 type Github struct {
 	Repo  string
 	Token string
+}
+
+type Cadvisor struct {
+	URL string
 }

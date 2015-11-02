@@ -96,6 +96,7 @@ const (
 	RPM                  = "RPM" // Rotations per minute.
 	Score                = "score"
 	Second               = "seconds"
+	Sector               = "sectors"
 	Segment              = "segments"
 	Server               = "servers"
 	Session              = "sessions"

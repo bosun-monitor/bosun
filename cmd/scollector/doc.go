@@ -236,5 +236,13 @@ Windows
 scollector has full Windows support. It can be run standalone, or installed as a
 service (see -winsvc). The Event Log is used when installed as a service.
 
+Cadvisor: Cadvisor endpoints to poll.
+Cadvisor collects system statistics about running containers.
+See https://github.com/google/cadvisor/ for documentation about configuring
+cadvisor.
+
+	[[Cadvisor]]
+		URL = "http://localhost:8080"
+
 */
 package main
