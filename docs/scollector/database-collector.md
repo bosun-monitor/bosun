@@ -21,7 +21,7 @@ When putting Scollector on the same box as the database, the below five lines is
 [[Database]]
 Type = "mysql"
 DBName = "my_friendly_name"
-Username = "app_stats"
+Username = "app_db_stats"
 Password = "type_password_here"
 ```
 
@@ -98,9 +98,9 @@ Interval = 20
 The MySQL database setup is straight forward, just need a username and password created that has the correct permissions. Depending on how secure you would like your database to be, you may want to configure a user with more limited permissions. Here is a configuration with more broad permissions that should work with most queries wanted.
 
 ```
-CREATE USER 'app_stats'@'%' IDENTIFIED BY 'type_password_here';
+CREATE USER 'app_db_stats'@'%' IDENTIFIED BY 'type_password_here';
 
-GRANT SELECT, PROCESS on *.* to `app_stats`;
+GRANT SELECT, PROCESS on *.* to `app_db_stats`;
 ```
 
   &nbsp;
