@@ -166,7 +166,9 @@ func (s *Schedule) runHistory(r *RunHistory, ak expr.AlertKey, event *Event, sil
 	wasOpen := state.Open
 	// render templates and open alert key if abnormal
 	if event.Status > StNormal {
-		s.executeTemplates(state, event, a, r)
+		if event.Status >= last {
+			s.executeTemplates(state, event, a, r)
+		}
 		state.Open = true
 		if a.Log {
 			state.Open = false

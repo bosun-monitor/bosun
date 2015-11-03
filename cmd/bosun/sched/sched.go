@@ -221,10 +221,11 @@ func (s *Schedule) GetMetadata(metric string, subset opentsdb.TagSet) ([]metadat
 type States map[expr.AlertKey]*State
 
 type StateTuple struct {
-	NeedAck  bool
-	Active   bool
-	Status   Status
-	Silenced bool
+	NeedAck       bool
+	Active        bool
+	Status        Status
+	CurrentStatus Status
+	Silenced      bool
 }
 
 // GroupStates groups by NeedAck, Active, Status, and Silenced.
@@ -233,10 +234,11 @@ func (states States) GroupStates(silenced map[expr.AlertKey]Silence) map[StateTu
 	for ak, st := range states {
 		_, sil := silenced[ak]
 		t := StateTuple{
-			st.NeedAck,
-			st.IsActive(),
-			st.AbnormalStatus(),
-			sil,
+			NeedAck:       st.NeedAck,
+			Active:        st.IsActive(),
+			Status:        st.AbnormalStatus(),
+			CurrentStatus: st.Status(),
+			Silenced:      sil,
 		}
 		if _, present := r[t]; !present {
 			r[t] = make(States)
@@ -341,16 +343,17 @@ func (s *Schedule) GetOpenStates() States {
 }
 
 type StateGroup struct {
-	Active   bool `json:",omitempty"`
-	Status   Status
-	Silenced bool
-	IsError  bool          `json:",omitempty"`
-	Subject  string        `json:",omitempty"`
-	Alert    string        `json:",omitempty"`
-	AlertKey expr.AlertKey `json:",omitempty"`
-	Ago      string        `json:",omitempty"`
-	State    *State        `json:",omitempty"`
-	Children []*StateGroup `json:",omitempty"`
+	Active        bool `json:",omitempty"`
+	Status        Status
+	Silenced      bool
+	CurrentStatus Status
+	IsError       bool          `json:",omitempty"`
+	Subject       string        `json:",omitempty"`
+	Alert         string        `json:",omitempty"`
+	AlertKey      expr.AlertKey `json:",omitempty"`
+	Ago           string        `json:",omitempty"`
+	State         *State        `json:",omitempty"`
+	Children      []*StateGroup `json:",omitempty"`
 }
 
 type StateGroups struct {
@@ -414,10 +417,11 @@ func (s *Schedule) MarshalGroups(T miniprofiler.Timer, filter string) (*StateGro
 				})
 				for name, group := range sets {
 					g := StateGroup{
-						Active:   tuple.Active,
-						Status:   tuple.Status,
-						Silenced: tuple.Silenced,
-						Subject:  fmt.Sprintf("%s - %s", tuple.Status, name),
+						Active:        tuple.Active,
+						Status:        tuple.Status,
+						CurrentStatus: tuple.CurrentStatus,
+						Silenced:      tuple.Silenced,
+						Subject:       fmt.Sprintf("%s - %s", tuple.Status, name),
 					}
 					for _, ak := range group {
 						st := s.status[ak].Copy()
