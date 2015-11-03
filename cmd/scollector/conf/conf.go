@@ -36,6 +36,9 @@ type Conf struct {
 	// the specified community.
 	KeepalivedCommunity string
 
+	//Override default network interface expression
+	IfaceExpr string
+
 	HAProxy        []HAProxy
 	SNMP           []SNMP
 	MIBS           map[string]MIB

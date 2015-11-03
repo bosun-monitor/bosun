@@ -2,22 +2,30 @@ package collectors
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
 
+	"bosun.org/cmd/scollector/conf"
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
 	"bosun.org/util"
 )
 
 func init() {
-	collectors = append(collectors, &IntervalCollector{F: c_ifstat_linux})
-	collectors = append(collectors, &IntervalCollector{F: c_ipcount_linux})
-	collectors = append(collectors, &IntervalCollector{F: c_if_team_linux})
-	collectors = append(collectors, &IntervalCollector{F: c_if_bond_linux})
+	registerInit(func(c *conf.Conf) {
+		if c.IfaceExpr != "" {
+			ifstatRE = regexp.MustCompile(fmt.Sprintf("(%s):(.*)", c.IfaceExpr))
+		}
+
+		collectors = append(collectors, &IntervalCollector{F: c_ifstat_linux})
+		collectors = append(collectors, &IntervalCollector{F: c_ipcount_linux})
+		collectors = append(collectors, &IntervalCollector{F: c_if_team_linux})
+		collectors = append(collectors, &IntervalCollector{F: c_if_bond_linux})
+	})
 }
 
 var netFields = []struct {
