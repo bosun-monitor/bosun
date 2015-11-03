@@ -2561,6 +2561,7 @@ bosunApp.directive('tsState', ['$sce', '$http', function ($sce, $http) {
             templateUrl: '/partials/alertstate.html',
             link: function (scope, elem, attrs) {
                 var myIdx = attrs["tsGrp"];
+                scope.currentStatus = attrs["tsGrpstatus"];
                 scope.name = scope.child.AlertKey;
                 scope.state = scope.child.State;
                 scope.action = function (type) {
