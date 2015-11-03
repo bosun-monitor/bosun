@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"sort"
 	"strings"
 	"time"
 
@@ -72,6 +73,7 @@ func c_snmp_ips(community, host string) (opentsdb.MultiDataPoint, error) {
 		for _, ipNet := range ipNets {
 			ips = append(ips, ipNet.String())
 		}
+		sort.Strings(ips)
 		j, err := json.Marshal(ips)
 		if err != nil {
 			slog.Errorf("error marshaling ips for host %v: %v", host, err)
