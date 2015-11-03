@@ -132,7 +132,7 @@ func (m Metakey) TagSet() opentsdb.TagSet {
 }
 
 var (
-	metadata  = make(map[Metakey]interface{})
+	metadata  = make(map[Metakey]string)
 	metalock  sync.Mutex
 	metahost  string
 	metafuncs []func()
@@ -225,7 +225,7 @@ type Metasend struct {
 	Metric string          `json:",omitempty"`
 	Tags   opentsdb.TagSet `json:",omitempty"`
 	Name   string          `json:",omitempty"`
-	Value  interface{}
+	Value  string
 	Time   *time.Time `json:",omitempty"`
 }
 

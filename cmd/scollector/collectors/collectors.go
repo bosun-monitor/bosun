@@ -197,10 +197,10 @@ func AddTS(md *opentsdb.MultiDataPoint, name string, ts int64, value interface{}
 		delete(tags, "host")
 	}
 	if rate != metadata.Unknown {
-		metadata.AddMeta(name, nil, "rate", rate, false)
+		metadata.AddMeta(name, nil, "rate", string(rate), false)
 	}
 	if unit != metadata.None {
-		metadata.AddMeta(name, nil, "unit", unit, false)
+		metadata.AddMeta(name, nil, "unit", string(unit), false)
 	}
 	if desc != "" {
 		metadata.AddMeta(name, tags, "desc", desc, false)
