@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -93,6 +94,7 @@ func c_snmp_bridge(community, host string) (opentsdb.MultiDataPoint, error) {
 		}
 	}
 	for iface, macs := range ifMacs {
+		sort.Strings(macs)
 		j, err := json.Marshal(macs)
 		if err != nil {
 			return md, nil
