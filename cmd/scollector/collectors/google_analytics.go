@@ -21,8 +21,17 @@ import (
 
 const descActiveUsers = "Number of unique users actively visiting the site."
 
-func init() {
+type multiError []error
 
+func (m multiError) Error() string {
+	var fullErr string
+	for _, err := range m {
+		fullErr = fmt.Sprintf("%s\n%s", fullErr, err)
+	}
+	return fullErr
+}
+
+func init() {
 	registerInit(func(c *conf.Conf) {
 		for _, g := range c.GoogleAnalytics {
 			collectors = append(collectors, &IntervalCollector{
@@ -38,6 +47,7 @@ func init() {
 
 func c_google_analytics(clientid string, secret string, tokenstr string, sites []conf.GoogleAnalyticsSite) (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
+	var mErr multiError
 
 	c, err := analyticsClient(clientid, secret, tokenstr)
 	if err != nil {
@@ -48,18 +58,22 @@ func c_google_analytics(clientid string, secret string, tokenstr string, sites [
 		return nil, err
 	}
 
+	dimensions := []string{"browser", "trafficType", "deviceCategory", "operatingSystem"}
 	for _, site := range sites {
 		getPageviews(&md, svc, site)
 		if site.Detailed {
-			getActiveUsers(&md, svc, site)
-			getActiveUsersByDimension(&md, svc, site, "browser")
-			getActiveUsersByDimension(&md, svc, site, "trafficType")
-			getActiveUsersByDimension(&md, svc, site, "deviceCategory")
-			getActiveUsersByDimension(&md, svc, site, "operatingSystem")
+			if err = getActiveUsers(&md, svc, site); err != nil {
+				mErr = append(mErr, err)
+			}
+			for _, dimension := range dimensions {
+				if err = getActiveUsersByDimension(&md, svc, site, dimension); err != nil {
+					mErr = append(mErr, err)
+				}
+			}
 		}
 	}
 
-	return md, err
+	return md, mErr
 }
 
 func getActiveUsersByDimension(md *opentsdb.MultiDataPoint, svc *analytics.Service, site conf.GoogleAnalyticsSite, dimension string) error {
