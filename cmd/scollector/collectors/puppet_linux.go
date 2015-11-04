@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"strconv"
+	"time"
 
 	"bosun.org/_third_party/gopkg.in/yaml.v1"
 	"bosun.org/metadata"
@@ -80,6 +81,7 @@ func puppet_linux() (opentsdb.MultiDataPoint, error) {
 		return nil, err
 	}
 	last_run, err := strconv.ParseInt(m.Time["last_run"], 10, 64)
+	seconds_since_run := time.Now().Unix() - last_run
 	//m.Version.Config appears to be the unix timestamp
 	AddTS(&md, "puppet.run.resources", last_run, m.Resources.Changed, opentsdb.TagSet{"resource": "changed"}, metadata.Gauge, metadata.Count, descPuppetChanged)
 	AddTS(&md, "puppet.run.resources", last_run, m.Resources.Failed, opentsdb.TagSet{"resource": "failed"}, metadata.Gauge, metadata.Count, descPuppetFailed)
@@ -90,6 +92,7 @@ func puppet_linux() (opentsdb.MultiDataPoint, error) {
 	AddTS(&md, "puppet.run.resources", last_run, m.Resources.Skipped, opentsdb.TagSet{"resource": "skipped"}, metadata.Gauge, metadata.Count, descPuppetSkipped)
 	AddTS(&md, "puppet.run.resources_total", last_run, m.Resources.Total, nil, metadata.Gauge, metadata.Count, descPuppetTotalResources)
 	AddTS(&md, "puppet.run.changes", last_run, m.Changes.Total, nil, metadata.Gauge, metadata.Count, descPuppetTotalChanges)
+	Add(&md, "puppet.last_run", seconds_since_run, nil, metadata.Gauge, metadata.Second, descPuppetLastRun)
 	for k, v := range m.Time {
 		metric, err := strconv.ParseFloat(v, 64)
 		if err != nil {
@@ -115,4 +118,5 @@ const (
 	descPuppetTotalChanges    = "Total number of changes."
 	descPuppetTotalTime       = "Total time which puppet took to run."
 	descPuppetModuleTime      = "Time which this tagged module took to run."
+	descPuppetLastRun         = "Number of seconds since puppet run last ran."
 )
