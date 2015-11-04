@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"bosun.org/cmd/bosun/expr"
+	"bosun.org/models"
 	"bosun.org/opentsdb"
 )
 
@@ -169,16 +169,16 @@ func TestDependency_OtherAlert_Unknown(t *testing.T) {
 			schedState{"a{host=ny02}", "unknown"}:      true,
 			schedState{"os.cpu{host=ny01}", "warning"}: true,
 		},
-		previous: map[expr.AlertKey]*State{
+		previous: map[models.AlertKey]*State{
 			"a{host=ny02}": state,
 		},
 	})
 }
 
 func TestDependency_OtherAlert_UnknownChain(t *testing.T) {
-	ab := expr.AlertKey("a{host=b}")
-	bb := expr.AlertKey("b{host=b}")
-	cb := expr.AlertKey("c{host=b}")
+	ab := models.AlertKey("a{host=b}")
+	bb := models.AlertKey("b{host=b}")
+	cb := models.AlertKey("c{host=b}")
 	as := NewStatus(ab)
 	as.Touched = queryTime.Add(-time.Hour)
 	as.Append(&Event{Status: StNormal})
@@ -215,7 +215,7 @@ func TestDependency_OtherAlert_UnknownChain(t *testing.T) {
 		state: map[schedState]bool{
 			schedState{string(ab), "unknown"}: true,
 		},
-		previous: map[expr.AlertKey]*State{
+		previous: map[models.AlertKey]*State{
 			ab: as,
 			bb: bs,
 			cb: cs,
@@ -255,7 +255,7 @@ func TestDependency_Blocks_Unknown(t *testing.T) {
 			},
 		},
 		state: map[schedState]bool{},
-		previous: map[expr.AlertKey]*State{
+		previous: map[models.AlertKey]*State{
 			"a{host=ny01}": state,
 		},
 	})
@@ -304,7 +304,7 @@ alert c {
 		state: map[schedState]bool{
 			schedState{"a{host=ny01,source=bosun01}", "warning"}: true,
 		},
-		previous: map[expr.AlertKey]*State{
+		previous: map[models.AlertKey]*State{
 			"a{host=ny01,source=bosun01}": pingState,
 			"b{host=ny01}":                scollState,
 			"c{host=ny01}":                cpuState,

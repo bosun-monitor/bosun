@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"bosun.org/cmd/bosun/conf"
-	"bosun.org/cmd/bosun/expr"
+	"bosun.org/models"
 	"bosun.org/opentsdb"
 )
 
@@ -35,9 +35,9 @@ func TestCheckFlapping(t *testing.T) {
 		t.Fatal(err)
 	}
 	s, _ := initSched(c)
-	ak := expr.NewAlertKey("a", nil)
+	ak := models.NewAlertKey("a", nil)
 	r := &RunHistory{
-		Events: map[expr.AlertKey]*Event{
+		Events: map[models.AlertKey]*Event{
 			ak: {Status: StWarning},
 		},
 	}
@@ -153,9 +153,9 @@ func TestIncidentIds(t *testing.T) {
 		t.Fatal(err)
 	}
 	s, _ := initSched(c)
-	ak := expr.NewAlertKey("a", nil)
+	ak := models.NewAlertKey("a", nil)
 	r := &RunHistory{
-		Events: map[expr.AlertKey]*Event{
+		Events: map[models.AlertKey]*Event{
 			ak: {Status: StWarning},
 		},
 	}
@@ -267,9 +267,9 @@ func TestCheckNotifyUnknown(t *testing.T) {
 		t.Fatal(err)
 	}
 	r := &RunHistory{
-		Events: map[expr.AlertKey]*Event{
-			expr.NewAlertKey("a", opentsdb.TagSet{"h": "x"}): {Status: StUnknown},
-			expr.NewAlertKey("a", opentsdb.TagSet{"h": "y"}): {Status: StUnknown},
+		Events: map[models.AlertKey]*Event{
+			models.NewAlertKey("a", opentsdb.TagSet{"h": "x"}): {Status: StUnknown},
+			models.NewAlertKey("a", opentsdb.TagSet{"h": "y"}): {Status: StUnknown},
 		},
 	}
 	s.RunHistory(r)
@@ -329,9 +329,9 @@ func TestCheckNotifyUnknownDefault(t *testing.T) {
 		t.Fatal(err)
 	}
 	r := &RunHistory{
-		Events: map[expr.AlertKey]*Event{
-			expr.NewAlertKey("a", opentsdb.TagSet{"h": "x"}): {Status: StUnknown},
-			expr.NewAlertKey("a", opentsdb.TagSet{"h": "y"}): {Status: StUnknown},
+		Events: map[models.AlertKey]*Event{
+			models.NewAlertKey("a", opentsdb.TagSet{"h": "x"}): {Status: StUnknown},
+			models.NewAlertKey("a", opentsdb.TagSet{"h": "y"}): {Status: StUnknown},
 		},
 	}
 	s.RunHistory(r)
@@ -454,9 +454,9 @@ func TestCheckCritUnknownEmpty(t *testing.T) {
 		t.Fatal(err)
 	}
 	s, _ := initSched(c)
-	ak := expr.NewAlertKey("a", nil)
+	ak := models.NewAlertKey("a", nil)
 	r := &RunHistory{
-		Events: map[expr.AlertKey]*Event{
+		Events: map[models.AlertKey]*Event{
 			ak: {Status: StNormal},
 		},
 	}

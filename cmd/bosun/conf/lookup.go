@@ -1,8 +1,8 @@
 package conf
 
 import (
-	"bosun.org/cmd/bosun/expr"
 	"bosun.org/cmd/bosun/search"
+	"bosun.org/models"
 	"bosun.org/opentsdb"
 )
 
@@ -13,7 +13,7 @@ type ExprLookup struct {
 }
 
 type ExprEntry struct {
-	AlertKey expr.AlertKey
+	AlertKey models.AlertKey
 	Values   map[string]string
 }
 

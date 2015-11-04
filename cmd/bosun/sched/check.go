@@ -13,6 +13,7 @@ import (
 	"bosun.org/collect"
 	"bosun.org/graphite"
 	"bosun.org/metadata"
+	"bosun.org/models"
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
 )
@@ -37,7 +38,7 @@ func init() {
 	collect.AggregateMeta("bosun.template.render", metadata.MilliSecond, "The amount of time it takes to render the specified alert template.")
 }
 
-func NewStatus(ak expr.AlertKey) *State {
+func NewStatus(ak models.AlertKey) *State {
 	g := ak.Group()
 	return &State{
 		Alert: ak.Name(),
@@ -47,7 +48,7 @@ func NewStatus(ak expr.AlertKey) *State {
 }
 
 // Get a copy of the status for the specified alert key
-func (s *Schedule) GetStatus(ak expr.AlertKey) *State {
+func (s *Schedule) GetStatus(ak models.AlertKey) *State {
 	s.Lock("GetStatus")
 	state := s.status[ak]
 	if state != nil {
@@ -57,13 +58,13 @@ func (s *Schedule) GetStatus(ak expr.AlertKey) *State {
 	return state
 }
 
-func (s *Schedule) SetStatus(ak expr.AlertKey, st *State) {
+func (s *Schedule) SetStatus(ak models.AlertKey, st *State) {
 	s.Lock("SetStatus")
 	s.status[ak] = st
 	s.Unlock()
 }
 
-func (s *Schedule) GetOrCreateStatus(ak expr.AlertKey) *State {
+func (s *Schedule) GetOrCreateStatus(ak models.AlertKey) *State {
 	s.Lock("GetOrCreateStatus")
 	state := s.status[ak]
 	if state == nil {
@@ -81,7 +82,7 @@ type RunHistory struct {
 	GraphiteContext graphite.Context
 	InfluxConfig    client.Config
 	Logstash        expr.LogstashElasticHosts
-	Events          map[expr.AlertKey]*Event
+	Events          map[models.AlertKey]*Event
 	schedule        *Schedule
 }
 
@@ -97,7 +98,7 @@ func (s *Schedule) NewRunHistory(start time.Time, cache *cache.Cache) *RunHistor
 	return &RunHistory{
 		Cache:           cache,
 		Start:           start,
-		Events:          make(map[expr.AlertKey]*Event),
+		Events:          make(map[models.AlertKey]*Event),
 		Context:         s.Conf.TSDBContext(),
 		GraphiteContext: s.Conf.GraphiteContext(),
 		InfluxConfig:    s.Conf.InfluxConfig,
@@ -122,7 +123,7 @@ func (s *Schedule) RunHistory(r *RunHistory) {
 }
 
 // RunHistory for a single alert key. Returns true if notifications were altered.
-func (s *Schedule) runHistory(r *RunHistory, ak expr.AlertKey, event *Event, silenced map[expr.AlertKey]Silence) bool {
+func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *Event, silenced map[models.AlertKey]Silence) bool {
 	checkNotify := false
 	// get existing state object for alert key. add to schedule status if doesn't already exist
 	state := s.GetStatus(ak)
@@ -149,15 +150,20 @@ func (s *Schedule) runHistory(r *RunHistory, ak expr.AlertKey, event *Event, sil
 	event.Time = r.Start
 	if prev.IncidentId != 0 {
 		// If last event has incident id and is not closed, we continue it.
-		s.incidentLock.Lock()
-		if incident, ok := s.Incidents[prev.IncidentId]; ok && incident.End == nil {
+		incident, err := s.DataAccess.Incidents().GetIncident(prev.IncidentId)
+		if err != nil {
+			slog.Error(err)
+		} else if incident.End == nil {
 			event.IncidentId = prev.IncidentId
 		}
-		s.incidentLock.Unlock()
 	}
 	if event.IncidentId == 0 && event.Status != StNormal {
-		// Otherwise, create new incident on first non-normal event.
-		event.IncidentId = s.createIncident(ak, event.Time).Id
+		incident, err := s.createIncident(ak, event.Time)
+		if err != nil {
+			slog.Error("Error creating incident", err)
+		} else {
+			event.IncidentId = incident.Id
+		}
 	}
 	// add new event to state
 	last := state.AbnormalStatus()
@@ -239,7 +245,7 @@ func (s *Schedule) runHistory(r *RunHistory, ak expr.AlertKey, event *Event, sil
 		}
 		// Auto close silenced alerts.
 		if _, ok := silenced[ak]; ok && event.Status == StNormal {
-			go func(ak expr.AlertKey) {
+			go func(ak models.AlertKey) {
 				slog.Infof("auto close %s because was silenced", ak)
 				err := s.Action("bosun", "Auto close because was silenced.", ActionClose, ak)
 				if err != nil {
@@ -356,7 +362,7 @@ func (s *Schedule) CollectStates() {
 		}
 		for notificationName := range nots {
 			ackByNotificationCounts[notificationName][state.NeedAck]++
-			if incident.Start.Before(unAckOldestByNotification[notificationName]) && state.NeedAck {
+			if incident != nil && incident.Start.Before(unAckOldestByNotification[notificationName]) && state.NeedAck {
 				unAckOldestByNotification[notificationName] = incident.Start
 			}
 		}
@@ -439,9 +445,9 @@ func (s *Schedule) CollectStates() {
 	}
 }
 
-func (r *RunHistory) GetUnknownAndUnevaluatedAlertKeys(alert string) (unknown, uneval []expr.AlertKey) {
-	unknown = []expr.AlertKey{}
-	uneval = []expr.AlertKey{}
+func (r *RunHistory) GetUnknownAndUnevaluatedAlertKeys(alert string) (unknown, uneval []models.AlertKey) {
+	unknown = []models.AlertKey{}
+	uneval = []models.AlertKey{}
 	r.schedule.Lock("GetUnknownUneval")
 	for ak, st := range r.schedule.status {
 		if ak.Name() != alert {
@@ -459,8 +465,8 @@ func (r *RunHistory) GetUnknownAndUnevaluatedAlertKeys(alert string) (unknown, u
 
 var bosunStartupTime = time.Now()
 
-func (s *Schedule) findUnknownAlerts(now time.Time, alert string) []expr.AlertKey {
-	keys := []expr.AlertKey{}
+func (s *Schedule) findUnknownAlerts(now time.Time, alert string) []models.AlertKey {
+	keys := []models.AlertKey{}
 	if time.Now().Sub(bosunStartupTime) < s.Conf.CheckFrequency {
 		return keys
 	}
@@ -490,7 +496,7 @@ func (s *Schedule) CheckAlert(T miniprofiler.Timer, r *RunHistory, a *conf.Alert
 	for _, ak := range s.findUnknownAlerts(r.Start, a.Name) {
 		r.Events[ak] = &Event{Status: StUnknown}
 	}
-	var warns, crits expr.AlertKeys
+	var warns, crits models.AlertKeys
 	d, err := s.executeExpr(T, r, a, a.Depends)
 	var deps expr.ResultSlice
 	if err == nil {
@@ -512,7 +518,7 @@ func (s *Schedule) CheckAlert(T miniprofiler.Timer, r *RunHistory, a *conf.Alert
 	slog.Infof("check alert %v done (%s): %v crits, %v warns, %v unevaluated, %v unknown", a.Name, time.Since(start), len(crits), len(warns), unevalCount, unknownCount)
 }
 
-func removeUnknownEvents(evs map[expr.AlertKey]*Event, alert string) {
+func removeUnknownEvents(evs map[models.AlertKey]*Event, alert string) {
 	for k, v := range evs {
 		if v.Status == StUnknown && k.Name() == alert {
 			delete(evs, k)
@@ -542,7 +548,7 @@ func filterDependencyResults(results *expr.Results) expr.ResultSlice {
 	return filtered
 }
 
-func markDependenciesUnevaluated(events map[expr.AlertKey]*Event, deps expr.ResultSlice, alert string) (unevalCount, unknownCount int) {
+func markDependenciesUnevaluated(events map[models.AlertKey]*Event, deps expr.ResultSlice, alert string) (unevalCount, unknownCount int) {
 	for ak, ev := range events {
 		if ak.Name() != alert {
 			continue
@@ -568,7 +574,7 @@ func (s *Schedule) executeExpr(T miniprofiler.Timer, rh *RunHistory, a *conf.Ale
 	return results, err
 }
 
-func (s *Schedule) CheckExpr(T miniprofiler.Timer, rh *RunHistory, a *conf.Alert, e *expr.Expr, checkStatus Status, ignore expr.AlertKeys) (alerts expr.AlertKeys, err error) {
+func (s *Schedule) CheckExpr(T miniprofiler.Timer, rh *RunHistory, a *conf.Alert, e *expr.Expr, checkStatus Status, ignore models.AlertKeys) (alerts models.AlertKeys, err error) {
 	if e == nil {
 		return
 	}
@@ -588,7 +594,7 @@ Loop:
 		if s.Conf.Squelched(a, r.Group) {
 			continue
 		}
-		ak := expr.NewAlertKey(a.Name, r.Group)
+		ak := models.NewAlertKey(a.Name, r.Group)
 		for _, v := range ignore {
 			if ak == v {
 				continue Loop

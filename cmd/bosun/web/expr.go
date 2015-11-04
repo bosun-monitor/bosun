@@ -19,6 +19,7 @@ import (
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/expr"
 	"bosun.org/cmd/bosun/sched"
+	"bosun.org/models"
 	"bosun.org/opentsdb"
 )
 
@@ -119,7 +120,7 @@ func getTime(r *http.Request) (now time.Time, err error) {
 
 type Res struct {
 	*sched.Event
-	Key expr.AlertKey
+	Key models.AlertKey
 }
 
 func procRule(t miniprofiler.Timer, c *conf.Conf, a *conf.Alert, now time.Time, summary bool, email string, template_group string) (*ruleResult, error) {
@@ -136,8 +137,8 @@ func procRule(t miniprofiler.Timer, c *conf.Conf, a *conf.Alert, now time.Time, 
 	if _, err := s.CheckExpr(t, rh, a, a.Crit, sched.StCritical, nil); err != nil {
 		return nil, err
 	}
-	keys := make(expr.AlertKeys, len(rh.Events))
-	criticals, warnings, normals := make([]expr.AlertKey, 0), make([]expr.AlertKey, 0), make([]expr.AlertKey, 0)
+	keys := make(models.AlertKeys, len(rh.Events))
+	criticals, warnings, normals := make([]models.AlertKey, 0), make([]models.AlertKey, 0), make([]models.AlertKey, 0)
 	i := 0
 	for k, v := range rh.Events {
 		v.Time = now
@@ -251,15 +252,15 @@ func procRule(t miniprofiler.Timer, c *conf.Conf, a *conf.Alert, now time.Time, 
 }
 
 type ruleResult struct {
-	Criticals []expr.AlertKey
-	Warnings  []expr.AlertKey
-	Normals   []expr.AlertKey
+	Criticals []models.AlertKey
+	Warnings  []models.AlertKey
+	Normals   []models.AlertKey
 	Time      time.Time
 
 	Body    string
 	Subject string
 	Data    interface{}
-	Result  map[expr.AlertKey]*sched.Event
+	Result  map[models.AlertKey]*sched.Event
 	Warning []string
 }
 
@@ -332,7 +333,7 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 	close(errch)
 	close(resch)
 	type Result struct {
-		Group  expr.AlertKey
+		Group  models.AlertKey
 		Result *sched.Event
 	}
 	type Set struct {
@@ -352,13 +353,13 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 		Errors       []string `json:",omitempty"`
 		Warnings     []string `json:",omitempty"`
 		Sets         []*Set
-		AlertHistory map[expr.AlertKey]*Histories
+		AlertHistory map[models.AlertKey]*Histories
 		Body         string      `json:",omitempty"`
 		Subject      string      `json:",omitempty"`
 		Data         interface{} `json:",omitempty"`
 		Hash         string
 	}{
-		AlertHistory: make(map[expr.AlertKey]*Histories),
+		AlertHistory: make(map[models.AlertKey]*Histories),
 		Hash:         hash,
 	}
 	for err := range errch {

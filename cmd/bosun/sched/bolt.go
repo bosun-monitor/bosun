@@ -15,9 +15,9 @@ import (
 	"bosun.org/_third_party/github.com/boltdb/bolt"
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/database"
-	"bosun.org/cmd/bosun/expr"
 	"bosun.org/collect"
 	"bosun.org/metadata"
+	"bosun.org/models"
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
 )
@@ -46,8 +46,6 @@ const (
 	dbNotifications    = "notifications"
 	dbSilence          = "silence"
 	dbStatus           = "status"
-	dbIncidents        = "incidents"
-	dbErrors           = "errors"
 )
 
 func (s *Schedule) save() {
@@ -59,7 +57,6 @@ func (s *Schedule) save() {
 		dbNotifications: s.Notifications,
 		dbSilence:       s.Silence,
 		dbStatus:        s.status,
-		dbIncidents:     s.Incidents,
 	}
 	tostore := make(map[string][]byte)
 	for name, data := range store {
@@ -141,23 +138,14 @@ func (s *Schedule) RestoreState() error {
 
 	s.Notifications = nil
 	db := s.db
-	notifications := make(map[expr.AlertKey]map[string]time.Time)
+	notifications := make(map[models.AlertKey]map[string]time.Time)
 	if err := decode(db, dbNotifications, &notifications); err != nil {
 		slog.Errorln(dbNotifications, err)
 	}
 	if err := decode(db, dbSilence, &s.Silence); err != nil {
 		slog.Errorln(dbSilence, err)
 	}
-	if err := decode(db, dbIncidents, &s.Incidents); err != nil {
-		slog.Errorln(dbIncidents, err)
-	}
 
-	// Calculate next incident id.
-	for _, i := range s.Incidents {
-		if i.Id > s.maxIncidentId {
-			s.maxIncidentId = i.Id
-		}
-	}
 	status := make(States)
 	if err := decode(db, dbStatus, &status); err != nil {
 		slog.Errorln(dbStatus, err)
@@ -213,9 +201,6 @@ func (s *Schedule) RestoreState() error {
 			}
 			s.AddNotification(ak, n, t)
 		}
-	}
-	if s.maxIncidentId == 0 {
-		s.createHistoricIncidents()
 	}
 	migrateOldDataToRedis(db, s.DataAccess)
 	// delete metrictags if they exist.
@@ -290,6 +275,9 @@ func migrateOldDataToRedis(db *bolt.DB, data database.DataAccess) error {
 		return err
 	}
 	if err := migrateSearch(db, data); err != nil {
+		return err
+	}
+	if err := migrateIncidents(db, data); err != nil {
 		return err
 	}
 	return nil
@@ -415,11 +403,41 @@ func migrateSearch(db *bolt.DB, data database.DataAccess) error {
 		} else {
 			return err
 		}
-		err = setMigrated(db, "search")
-		if err != nil {
+		if err = setMigrated(db, "search"); err != nil {
 			return err
 		}
 	}
+	return nil
+}
+
+func migrateIncidents(db *bolt.DB, data database.DataAccess) error {
+	migrated, err := isMigrated(db, "incidents")
+	if err != nil {
+		return err
+	}
+	if migrated {
+		//return nil
+	}
+	slog.Info("migrating incidents")
+	incidents := map[uint64]*models.Incident{}
+	if err := decode(db, "incidents", &incidents); err != nil {
+		return err
+	}
+	max := uint64(0)
+	for k, v := range incidents {
+		data.Incidents().UpdateIncident(k, v)
+		if k > max {
+			max = k
+		}
+	}
+
+	if err = data.Incidents().SetMaxId(max); err != nil {
+		return err
+	}
+	if err = setMigrated(db, "incidents"); err != nil {
+		return err
+	}
+
 	return nil
 }
 

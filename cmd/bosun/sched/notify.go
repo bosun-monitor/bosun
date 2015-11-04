@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"bosun.org/cmd/bosun/conf"
-	"bosun.org/cmd/bosun/expr"
+	"bosun.org/models"
 	"bosun.org/slog"
 )
 
@@ -91,7 +91,7 @@ func (s *Schedule) CheckNotifications() time.Duration {
 	return timeout
 }
 
-func (s *Schedule) sendNotifications(silenced map[expr.AlertKey]Silence) {
+func (s *Schedule) sendNotifications(silenced map[models.AlertKey]Silence) {
 	if s.Conf.Quiet {
 		slog.Infoln("quiet mode prevented", len(s.pendingNotifications), "notifications")
 		return
@@ -128,7 +128,7 @@ func (s *Schedule) sendUnknownNotifications() {
 		}
 		var c int
 		tHit := false
-		oTSets := make(map[string]expr.AlertKeys)
+		oTSets := make(map[string]models.AlertKeys)
 		groupSets := ustates.GroupSets(s.Conf.MinGroupSize)
 		for name, group := range groupSets {
 			c++
@@ -173,7 +173,7 @@ func (s *Schedule) notify(st *State, n *conf.Notification) {
 }
 
 // utnotify is single notification for N unknown groups into a single notification
-func (s *Schedule) utnotify(groups map[string]expr.AlertKeys, n *conf.Notification) {
+func (s *Schedule) utnotify(groups map[string]models.AlertKeys, n *conf.Notification) {
 	var total int
 	now := time.Now().UTC()
 	for _, group := range groups {
@@ -184,7 +184,7 @@ func (s *Schedule) utnotify(groups map[string]expr.AlertKeys, n *conf.Notificati
 	subject := fmt.Sprintf("%v unknown alert instances suppressed", total)
 	body := new(bytes.Buffer)
 	if err := unknownMultiGroup.Execute(body, struct {
-		Groups    map[string]expr.AlertKeys
+		Groups    map[string]models.AlertKeys
 		Threshold int
 	}{
 		groups,
@@ -207,7 +207,7 @@ var defaultUnknownTemplate = &conf.Template{
 	Subject: ttemplate.Must(ttemplate.New("").Parse(`{{.Name}}: {{.Group | len}} unknown alerts`)),
 }
 
-func (s *Schedule) unotify(name string, group expr.AlertKeys, n *conf.Notification) {
+func (s *Schedule) unotify(name string, group models.AlertKeys, n *conf.Notification) {
 	subject := new(bytes.Buffer)
 	body := new(bytes.Buffer)
 	now := time.Now().UTC()
@@ -230,9 +230,9 @@ func (s *Schedule) unotify(name string, group expr.AlertKeys, n *conf.Notificati
 	n.Notify(subject.String(), body.String(), subject.Bytes(), body.Bytes(), s.Conf, name)
 }
 
-func (s *Schedule) AddNotification(ak expr.AlertKey, n *conf.Notification, started time.Time) {
+func (s *Schedule) AddNotification(ak models.AlertKey, n *conf.Notification, started time.Time) {
 	if s.Notifications == nil {
-		s.Notifications = make(map[expr.AlertKey]map[string]time.Time)
+		s.Notifications = make(map[models.AlertKey]map[string]time.Time)
 	}
 	if s.Notifications[ak] == nil {
 		s.Notifications[ak] = make(map[string]time.Time)
@@ -264,7 +264,7 @@ func init() {
 	actionNotificationBodyTemplate = htemplate.Must(htemplate.New("").Parse(body))
 }
 
-func (s *Schedule) ActionNotify(at ActionType, user, message string, aks []expr.AlertKey) {
+func (s *Schedule) ActionNotify(at ActionType, user, message string, aks []models.AlertKey) {
 	groupings := s.groupActionNotifications(aks)
 
 	for notification, states := range groupings {
@@ -291,7 +291,7 @@ func (s *Schedule) ActionNotify(at ActionType, user, message string, aks []expr.
 	}
 }
 
-func (s *Schedule) groupActionNotifications(aks []expr.AlertKey) map[*conf.Notification][]*State {
+func (s *Schedule) groupActionNotifications(aks []models.AlertKey) map[*conf.Notification][]*State {
 	groupings := make(map[*conf.Notification][]*State)
 	for _, ak := range aks {
 		alert := s.Conf.Alerts[ak.Name()]

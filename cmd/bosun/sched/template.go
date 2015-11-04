@@ -18,6 +18,7 @@ import (
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/expr"
 	"bosun.org/cmd/bosun/expr/parse"
+	"bosun.org/models"
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
 )
@@ -46,12 +47,12 @@ func (s *Schedule) Data(rh *RunHistory, st *State, a *conf.Alert, isEmail bool) 
 type unknownContext struct {
 	Time  time.Time
 	Name  string
-	Group expr.AlertKeys
+	Group models.AlertKeys
 
 	schedule *Schedule
 }
 
-func (s *Schedule) unknownData(t time.Time, name string, group expr.AlertKeys) *unknownContext {
+func (s *Schedule) unknownData(t time.Time, name string, group models.AlertKeys) *unknownContext {
 	return &unknownContext{
 		Time:     t,
 		Group:    group,

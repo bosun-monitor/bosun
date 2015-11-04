@@ -16,6 +16,7 @@ import (
 	"bosun.org/cmd/bosun/expr/parse"
 	"bosun.org/cmd/bosun/search"
 	"bosun.org/graphite"
+	"bosun.org/models"
 	"bosun.org/opentsdb"
 )
 
@@ -50,7 +51,7 @@ type State struct {
 // Alert Status Provider is used to provide information about alert results.
 // This facilitates alerts referencing other alerts, even when they go unknown or unevaluated.
 type AlertStatusProvider interface {
-	GetUnknownAndUnevaluatedAlertKeys(alertName string) (unknown, unevaluated []AlertKey)
+	GetUnknownAndUnevaluatedAlertKeys(alertName string) (unknown, unevaluated []models.AlertKey)
 }
 
 var ErrUnknownOp = fmt.Errorf("expr: unknown op type")
