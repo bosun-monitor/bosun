@@ -2,6 +2,7 @@ package collectors
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"strconv"
@@ -19,6 +20,7 @@ func init() {
 const (
 	puppetPath       = "/var/lib/puppet/"
 	puppetRunSummary = "/var/lib/puppet/state/last_run_summary.yaml"
+	puppetRunReport  = "/var/lib/puppet/state/last_run_report.yaml"
 	puppetDisabled   = "/var/lib/puppet/state/agent_disabled.lock"
 )
 
@@ -51,6 +53,11 @@ type PRSummary struct {
 		Config string `yaml:"config"`
 		Puppet string `yaml:"puppet"`
 	} `yaml:"version"`
+}
+
+type PRReport struct {
+	Status string `yaml:"status"`
+	Time   string `yaml:"time"` // 2006-01-02 15:04:05.999999 -07:00
 }
 
 func puppet_linux() (opentsdb.MultiDataPoint, error) {
@@ -103,7 +110,36 @@ func puppet_linux() (opentsdb.MultiDataPoint, error) {
 		} else {
 			AddTS(&md, "puppet.run_duration", last_run, metric, opentsdb.TagSet{"time": k}, metadata.Gauge, metadata.Second, descPuppetModuleTime)
 		}
+	}
 
+	// Not all hosts will use puppet run reports
+	if _, err := os.Stat(puppetRunReport); err == nil {
+		f, err := ioutil.ReadFile(puppetRunReport)
+		if err != nil {
+			return md, err
+		}
+
+		var report PRReport
+		if err = yaml.Unmarshal(f, &report); err != nil {
+			return md, err
+		}
+
+		t, err := time.Parse("2006-01-02 15:04:05.999999 -07:00", report.Time)
+		if err != nil {
+			return md, fmt.Errorf("Error parsing report time: %s", err)
+		}
+
+		// As listed at https://docs.puppetlabs.com/puppet/latest/reference/format_report.html
+		var statusCode = map[string]int{
+			"changed":   0,
+			"unchanged": 1,
+			"failed":    2,
+		}
+		if status, ok := statusCode[report.Status]; ok {
+			AddTS(&md, "puppet.run.status", t.Unix(), status, nil, metadata.Gauge, metadata.StatusCode, descPuppetRunStatus)
+		} else {
+			return md, fmt.Errorf("Unknown status in %s: %s", puppetRunReport, report.Status)
+		}
 	}
 	return md, nil
 }
@@ -121,4 +157,5 @@ const (
 	descPuppetTotalTime       = "Total time which puppet took to run."
 	descPuppetModuleTime      = "Time which this tagged module took to run."
 	descPuppetLastRun         = "Number of seconds since puppet run last ran."
+	descPuppetRunStatus       = "0: changed, 1: unchanged, 2: failed"
 )
