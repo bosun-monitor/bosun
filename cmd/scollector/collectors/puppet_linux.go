@@ -96,12 +96,14 @@ func puppet_linux() (opentsdb.MultiDataPoint, error) {
 	for k, v := range m.Time {
 		metric, err := strconv.ParseFloat(v, 64)
 		if err != nil {
-			if k == "total" {
-				AddTS(&md, "puppet.run_duration_total", last_run, metric, nil, metadata.Gauge, metadata.Second, descPuppetTotalTime)
-			} else {
-				AddTS(&md, "puppet.run_duration", last_run, metric, opentsdb.TagSet{"time": k}, metadata.Gauge, metadata.Second, descPuppetModuleTime)
-			}
+			return md, fmt.Errorf("Error parsing time: %s", err)
 		}
+		if k == "total" {
+			AddTS(&md, "puppet.run_duration_total", last_run, metric, nil, metadata.Gauge, metadata.Second, descPuppetTotalTime)
+		} else {
+			AddTS(&md, "puppet.run_duration", last_run, metric, opentsdb.TagSet{"time": k}, metadata.Gauge, metadata.Second, descPuppetModuleTime)
+		}
+
 	}
 	return md, nil
 }
