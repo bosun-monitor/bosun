@@ -265,37 +265,63 @@ func (s *Schedule) executeTemplates(state *State, event *Event, a *conf.Alert, r
 	state.EmailSubject = nil
 	state.Attachments = nil
 	if event.Status != StUnknown {
+		var errs []error
 		metric := "template.render"
 		//Render subject
 		endTiming := collect.StartTimer(metric, opentsdb.TagSet{"alert": a.Name, "type": "subject"})
-		subject, serr := s.ExecuteSubject(r, a, state, false)
-		if serr != nil {
-			slog.Infof("%s: %v", state.AlertKey(), serr)
+		subject, err := s.ExecuteSubject(r, a, state, false)
+		if err != nil {
+			slog.Infof("%s: %v", state.AlertKey(), err)
+			errs = append(errs, err)
+		} else if subject == nil {
+			err = fmt.Errorf("Empty subject on %s", state.AlertKey())
+			slog.Error(err)
+			errs = append(errs, err)
 		}
 		endTiming()
+
 		//Render body
 		endTiming = collect.StartTimer(metric, opentsdb.TagSet{"alert": a.Name, "type": "body"})
-		body, _, berr := s.ExecuteBody(r, a, state, false)
-		if berr != nil {
-			slog.Infof("%s: %v", state.AlertKey(), berr)
+		body, _, err := s.ExecuteBody(r, a, state, false)
+		if err != nil {
+			slog.Infof("%s: %v", state.AlertKey(), err)
+			errs = append(errs, err)
+		} else if subject == nil {
+			err = fmt.Errorf("Empty body on %s", state.AlertKey())
+			slog.Error(err)
+			errs = append(errs, err)
 		}
 		endTiming()
+
 		//Render email body
 		endTiming = collect.StartTimer(metric, opentsdb.TagSet{"alert": a.Name, "type": "emailbody"})
-		emailbody, attachments, merr := s.ExecuteBody(r, a, state, true)
-		if merr != nil {
-			slog.Infof("%s: %v", state.AlertKey(), merr)
+		emailbody, attachments, err := s.ExecuteBody(r, a, state, true)
+		if err != nil {
+			slog.Infof("%s: %v", state.AlertKey(), err)
+			errs = append(errs, err)
+		} else if subject == nil {
+			err = fmt.Errorf("Empty email body on %s", state.AlertKey())
+			slog.Error(err)
+			errs = append(errs, err)
 		}
 		endTiming()
+
 		//Render email subject
 		endTiming = collect.StartTimer(metric, opentsdb.TagSet{"alert": a.Name, "type": "emailsubject"})
-		emailsubject, eserr := s.ExecuteSubject(r, a, state, true)
+		emailsubject, err := s.ExecuteSubject(r, a, state, true)
+		if err != nil {
+			slog.Infof("%s: %v", state.AlertKey(), err)
+			errs = append(errs, err)
+		} else if subject == nil {
+			err = fmt.Errorf("Empty email subject on %s", state.AlertKey())
+			slog.Error(err)
+			errs = append(errs, err)
+		}
 		endTiming()
-		if serr != nil || berr != nil || merr != nil || eserr != nil {
-			var err error
 
+		if errs != nil {
 			endTiming = collect.StartTimer(metric, opentsdb.TagSet{"alert": a.Name, "type": "bad"})
-			subject, body, err = s.ExecuteBadTemplate(serr, berr, r, a, state)
+			subject, body, err = s.ExecuteBadTemplate(errs, r, a, state)
 			endTiming()
 
 			if err != nil {

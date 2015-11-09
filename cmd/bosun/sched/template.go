@@ -144,12 +144,11 @@ func (s *Schedule) ExecuteSubject(rh *RunHistory, a *conf.Alert, st *State, isEm
 
 var error_body = template.Must(template.New("body_error_template").Parse(`
 	<p>There was a runtime error processing alert {{.State.AlertKey}} using the {{.Alert.Template.Name}} template. The following errors occurred:</p>
-	{{if .Serr}}
-		<p>Subject: {{.Serr}}</p>
+	<ul>
+	{{range .Errors}}
+		<li>{{.}}</li>
 	{{end}}
-	{{if .Berr}}
-		<p>Body: {{.Berr}}</p>
-	{{end}}
+	</ul>
 	<p>Use <a href="{{.Rule}}">this link</a> to the rule page to correct this.</p>
 	<h2>Generic Alert Information</h2>
 	<p>Status: {{.Last.Status}}</p>
@@ -167,24 +166,13 @@ var error_body = template.Must(template.New("body_error_template").Parse(`
 		</tr>
 	{{end}}</table>`))
 
-func (s *Schedule) ExecuteBadTemplate(s_err, b_err error, rh *RunHistory, a *conf.Alert, st *State) (subject, body []byte, err error) {
-	sub := "error: template rendering error in the "
-	if s_err != nil {
-		sub += "subject"
-	}
-	if s_err != nil && b_err != nil {
-		sub += " and "
-	}
-	if b_err != nil {
-		sub += "body"
-	}
-	sub += fmt.Sprintf(" for alert %v", st.AlertKey())
+func (s *Schedule) ExecuteBadTemplate(errs []error, rh *RunHistory, a *conf.Alert, st *State) (subject, body []byte, err error) {
+	sub := fmt.Sprintf("error: template rendering error for alert %v", st.AlertKey())
 	c := struct {
-		Serr, Berr error
+		Errors []error
 		*Context
 	}{
-		Serr:    s_err,
-		Berr:    b_err,
+		Errors:  errs,
 		Context: s.Data(rh, st, a, true),
 	}
 	buf := new(bytes.Buffer)
