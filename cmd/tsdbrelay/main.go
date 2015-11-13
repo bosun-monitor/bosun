@@ -16,6 +16,8 @@ import (
 	"strings"
 
 	"bosun.org/cmd/tsdbrelay/denormalize"
+	"bosun.org/collect"
+	"bosun.org/metadata"
 	"bosun.org/opentsdb"
 	"bosun.org/util"
 )
@@ -27,6 +29,10 @@ var (
 	tsdbServer      = flag.String("t", "", "Target OpenTSDB server. Can specify port with host:port.")
 	logVerbose      = flag.Bool("v", false, "enable verbose logging")
 	toDenormalize   = flag.String("denormalize", "", "List of metrics to denormalize. Comma seperated list of `metric__tagname__tagname` rules. Will be translated to `__tagvalue.tagvalue.metric`")
+
+	udpPort   = flag.Int("udp", 0, "port to listen for udp packets")
+	redisHost = flag.String("redis", "localhost:6379", "redis host for udp listener")
+	redisDb   = flag.Int("db", 0, "redis db to use for counters")
 )
 
 var (
@@ -106,7 +112,25 @@ func main() {
 		rp.relayMetadata(w, r)
 	})
 	http.Handle("/", tsdbProxy)
+
+	collectUrl := &url.URL{
+		Scheme: "http",
+		Host:   *listenAddr,
+		Path:   "/api/put",
+	}
+	if err = collect.Init(collectUrl, "tsdbrelay"); err != nil {
+		log.Fatal(err)
+	}
+	if *udpPort != 0 {
+		go collect.ListenUdp(*udpPort, *redisHost, *redisDb)
+	}
 	log.Fatal(http.ListenAndServe(*listenAddr, nil))
+}
+
+func init() {
+	metadata.AddMetricMeta("tsdbrelay.udp.packets", metadata.Counter, metadata.Count, "Number of valid udp packets received")
+	metadata.AddMetricMeta("tsdbrelay.puts.relayed", metadata.Counter, metadata.Count, "Number of successful puts relayed")
+	metadata.AddMetricMeta("tsdbrelay.metadata.relayed", metadata.Counter, metadata.Count, "Number of successful metadata puts relayed")
 }
 
 func verbose(format string, a ...interface{}) {
@@ -157,6 +181,7 @@ func (rp *relayProxy) relayPut(responseWriter http.ResponseWriter, r *http.Reque
 		return
 	}
 	verbose("relayed to tsdb")
+	collect.Add("puts.relayed", opentsdb.TagSet{}, 1)
 	// Send to bosun in a separate go routine so we can end the source's request.
 	go func() {
 		body := bytes.NewBuffer(reader.buf.Bytes())
@@ -264,6 +289,7 @@ func (rp *relayProxy) relayMetadata(responseWriter http.ResponseWriter, r *http.
 		return
 	}
 	verbose("relayed metadata to bosun")
+	collect.Add("metadata.relayed", opentsdb.TagSet{}, 1)
 	if r.Header.Get(relayHeader) != "" {
 		return
 	}

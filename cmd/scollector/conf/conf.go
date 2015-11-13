@@ -59,6 +59,7 @@ type Conf struct {
 	Nexpose             []Nexpose
 	GoogleAnalytics     []GoogleAnalytics
 	Cadvisor            []Cadvisor
+	RedisCounters       []RedisCounters
 }
 
 type HAProxy struct {
@@ -167,4 +168,9 @@ type Github struct {
 
 type Cadvisor struct {
 	URL string
+}
+
+type RedisCounters struct {
+	Server   string
+	Database int
 }

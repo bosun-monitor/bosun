@@ -231,11 +231,6 @@ management plugin on http://guest:guest@127.0.0.1:15672/ .
 	[[RabbitMQ]]
 	  URL = "https://user:password@hostname:15671"
 
-Windows
-
-scollector has full Windows support. It can be run standalone, or installed as a
-service (see -winsvc). The Event Log is used when installed as a service.
-
 Cadvisor: Cadvisor endpoints to poll.
 Cadvisor collects system statistics about running containers.
 See https://github.com/google/cadvisor/ for documentation about configuring
@@ -243,6 +238,21 @@ cadvisor.
 
 	[[Cadvisor]]
 		URL = "http://localhost:8080"
+
+RedisCounters: Reads a hash of metric/counters from a redis database.
+
+    [[RedisCounters]]
+        Server = "localhost:6379"
+        Database = 2
+
+Expects data populated via bosun's udp listener in the "scollectorCounters" hash.
+
+
+Windows
+
+scollector has full Windows support. It can be run standalone, or installed as a
+service (see -winsvc). The Event Log is used when installed as a service.
+
 
 */
 package main
