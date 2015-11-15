@@ -75,9 +75,9 @@ func removable_fs(name string) bool {
 
 func isPseudoFS(name string) (res bool) {
 	err := readLine("/proc/filesystems", func(s string) error {
-		if strings.Contains(s, name) && strings.Contains(s, "nodev") {
+		ss := strings.Split(s, "\t")
+		if len(ss) == 2 && ss[1] == name && ss[0] == "nodev" {
 			res = true
-			return nil
 		}
 		return nil
 	})
