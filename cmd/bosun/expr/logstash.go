@@ -199,7 +199,10 @@ func LSDateHistogram(e *State, T miniprofiler.Timer, index_root, keystring, filt
 	if err != nil {
 		return nil, err
 	}
+	// Extended bounds and min doc count are required to get values back when the bucket value is 0
+	ts := elastic.NewDateHistogramAggregation().Field("@timestamp").Interval(strings.Replace(interval, "M", "n", -1)).MinDocCount(0).ExtendedBoundsMin(req.Start).ExtendedBoundsMax(req.End)
 	ts := elastic.NewDateHistogramAggregation().Field("@timestamp").Interval(strings.Replace(interval, "M", "n", -1)).MinDocCount(0)
+	ts.ExtendedBoundsMin(req.Start)
 	ds, err := opentsdb.ParseDuration(interval)
 	if err != nil {
 		return nil, err
