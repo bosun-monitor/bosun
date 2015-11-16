@@ -148,13 +148,15 @@ q("sum:2m-avg:rate{counter,,1}:os.cpu{host=*}", "30m", "")
 
 ### lscount(indexRoot string, keyString string, filterString string, bucketDuration string, startDuration string, endDuration string) seriesSet
 
-lscount returns the per second rate of matching log documents.
+lscount returns a time bucked count of matching log documents.
 
   * `indexRoot` is the root name of the index to hit, the format is expected to be `fmt.Sprintf("%s-%s", index_root, d.Format("2006.01.02"))`.
   * `keyString` creates groups (like tagsets) and can also filter those groups. It is the format of `"field:regex,field:regex..."` The `:regex` can be ommited.
   * `filterString` is an Elastic regexp query that can be applied to any field. It is in the same format as the keystring argument.
-  * `bucketDuration` is in the same format is an opentsdb duration, and is the size of buckets returned (i.e. counts for every 10 minutes). In the case of lscount, that number is normalized to a per second rate by dividing the result by the number of seconds in the duration.
+  * `bucketDuration` is in the same format is an opentsdb duration, and is the size of buckets returned (i.e. counts for every 10 minutes). 
   * `startDuration` and `endDuration` set the time window from now - see the OpenTSDB q() function for more details.
+
+**Note:** As of Bosun 0.5.0, the results are no longer normalized per second. This resulted in bad extrapolations, and confusing interactions with functions like `sum(lscount(...))`. The rate will now be per bucket. If you still want the results normalized to per second, you can divide the result by the number of seconds with: `lscount("logstash", "logsource,program:bosun", $bucketDuration, "10m", "") / d($bucketDuration)`
 
 For example:
 
