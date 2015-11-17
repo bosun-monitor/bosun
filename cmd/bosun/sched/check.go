@@ -167,9 +167,16 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *Event, s
 	}
 	// add new event to state
 	last := state.AbnormalStatus()
+	wasOpen := state.Open
+	// last could be StNone if it is new. Set it to normal if so because StNormal >
+	// StNone. If the state is not open (closed), then the last state we care about
+	// isn't the last abnormal state, it's just normal.
+	if last < StNormal || !wasOpen {
+		last = StNormal
+	}
 	state.Append(event)
 	a := s.Conf.Alerts[ak.Name()]
-	wasOpen := state.Open
+
 	// render templates and open alert key if abnormal
 	if event.Status > StNormal {
 		if event.Status >= last {
@@ -230,12 +237,7 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *Event, s
 	}
 	// lock while we change notifications.
 	s.Lock("RunHistory")
-	// last could be StNone if it is new. Set it to normal if so because StNormal >
-	// StNone. If the state is not open (closed), then the last state we care about
-	// isn't the last abnormal state, it's just normal.
-	if last < StNormal || !wasOpen {
-		last = StNormal
-	}
+
 	if event.Status > last {
 		clearOld()
 		notifyCurrent()
