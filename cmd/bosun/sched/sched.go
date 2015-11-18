@@ -660,6 +660,22 @@ func (s *State) AbnormalStatus() Status {
 	return StNone
 }
 
+// WorstThisIncident returns the highest severity event with the same IncidentId as the Last event.
+func (s *State) WorstThisIncident() Status {
+	ev := s.Last()
+	worst := ev.Status
+	for i := len(s.History) - 2; i >= 0; i-- {
+		ev2 := s.History[i]
+		if ev2.IncidentId != ev.IncidentId {
+			break
+		}
+		if ev2.Status > worst {
+			worst = ev2.Status
+		}
+	}
+	return worst
+}
+
 func (s *State) IsActive() bool {
 	return s.Status() > StNormal
 }

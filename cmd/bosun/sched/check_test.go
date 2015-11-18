@@ -56,35 +56,32 @@ func TestCheckFlapping(t *testing.T) {
 		}
 		return false
 	}
-	s.RunHistory(r)
-	if !hasNots() {
-		t.Fatalf("expected notification: %v", s.pendingNotifications)
+
+	type stateTransition struct {
+		S          Status
+		ExpectNots bool
+	}
+	transitions := []stateTransition{
+		{StWarning, true},
+		{StNormal, false},
+		{StWarning, false},
+		{StNormal, false},
+		{StCritical, true},
+		{StWarning, false},
+		{StCritical, false},
+	}
+
+	for i, trans := range transitions {
+		r.Events[ak].Status = trans.S
+		s.RunHistory(r)
+		has := hasNots()
+		if has && !trans.ExpectNots {
+			t.Fatalf("unexpected notifications for transition %d.", i)
+		} else if !has && trans.ExpectNots {
+			t.Fatalf("expected notifications for transition %d.", i)
+		}
 	}
 	r.Events[ak].Status = StNormal
-	s.RunHistory(r)
-	if hasNots() {
-		t.Fatal("unexpected notification")
-	}
-	r.Events[ak].Status = StWarning
-	s.RunHistory(r)
-	if hasNots() {
-		t.Fatal("unexpected notification")
-	}
-	r.Events[ak].Status = StNormal
-	s.RunHistory(r)
-	if hasNots() {
-		t.Fatal("unexpected notification")
-	}
-	r.Events[ak].Status = StCritical
-	s.RunHistory(r)
-	if !hasNots() {
-		t.Fatal("expected notification")
-	}
-	r.Events[ak].Status = StNormal
-	s.RunHistory(r)
-	if hasNots() {
-		t.Fatal("unexpected notification")
-	}
 	s.RunHistory(r)
 	// Close the alert, so it should notify next time.
 	if err := s.Action("", "", ActionClose, ak); err != nil {
