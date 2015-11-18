@@ -133,7 +133,7 @@ func (m Metakey) TagSet() opentsdb.TagSet {
 }
 
 var (
-	metadata  = make(map[Metakey]interface{})
+	metadata  = make(map[Metakey]string)
 	metalock  sync.Mutex
 	metahost  string
 	metafuncs []func()
@@ -141,7 +141,7 @@ var (
 )
 
 // AddMeta adds a metadata entry to memory, which is queued for later sending.
-func AddMeta(metric string, tags opentsdb.TagSet, name string, value interface{}, setHost bool) {
+func AddMeta(metric string, tags opentsdb.TagSet, name string, value string, setHost bool) {
 	if tags == nil {
 		tags = make(opentsdb.TagSet)
 	}
@@ -174,8 +174,8 @@ func AddMeta(metric string, tags opentsdb.TagSet, name string, value interface{}
 // metric. Those fields are rate, unit, and description. If you need to document
 // tag keys then use AddMeta.
 func AddMetricMeta(metric string, rate RateType, unit Unit, desc string) {
-	AddMeta(metric, nil, "rate", rate, false)
-	AddMeta(metric, nil, "unit", unit, false)
+	AddMeta(metric, nil, "rate", string(rate), false)
+	AddMeta(metric, nil, "unit", string(unit), false)
 	AddMeta(metric, nil, "desc", desc, false)
 }
 
@@ -226,7 +226,7 @@ type Metasend struct {
 	Metric string          `json:",omitempty"`
 	Tags   opentsdb.TagSet `json:",omitempty"`
 	Name   string          `json:",omitempty"`
-	Value  interface{}
+	Value  string
 	Time   *time.Time `json:",omitempty"`
 }
 

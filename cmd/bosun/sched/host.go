@@ -249,14 +249,14 @@ func (s *Schedule) Host(filter string) (map[string]*HostData, error) {
 				if !m.Tags.Equal(ts) {
 					continue
 				}
-				if val, ok := m.Value.(string); ok {
-					err = json.Unmarshal([]byte(val), &ps)
-					if err != nil {
-						slog.Errorf("error unmarshalling power supply meta for host %s, while generating host api: %s", host.Name, err)
-					} else {
-						host.Hardware.PowerSupplies[id] = ps
-					}
+
+				err = json.Unmarshal([]byte(m.Value), &ps)
+				if err != nil {
+					slog.Errorf("error unmarshalling power supply meta for host %s, while generating host api: %s", host.Name, err)
+				} else {
+					host.Hardware.PowerSupplies[id] = ps
 				}
+
 			}
 		}
 		for _, ts := range hwBatteriesTags[host.Name] {
@@ -309,14 +309,13 @@ func (s *Schedule) Host(filter string) (map[string]*HostData, error) {
 				if !m.Tags.Equal(ts) {
 					continue
 				}
-				if val, ok := m.Value.(string); ok {
-					err = json.Unmarshal([]byte(val), &pd)
-					if err != nil {
-						slog.Errorf("error unmarshalling addresses for host %s, interface %s while generating host api: %s", host.Name, m.Tags["iface"], err)
-					} else {
-						host.Hardware.Storage.PhysicalDisks[id] = pd
-					}
+				err = json.Unmarshal([]byte(m.Value), &pd)
+				if err != nil {
+					slog.Errorf("error unmarshalling addresses for host %s, interface %s while generating host api: %s", host.Name, m.Tags["iface"], err)
+				} else {
+					host.Hardware.Storage.PhysicalDisks[id] = pd
 				}
+
 			}
 		}
 		for _, ts := range hwVirtualDiskTags[host.Name] {
@@ -359,14 +358,13 @@ func (s *Schedule) Host(filter string) (map[string]*HostData, error) {
 				if !m.Tags.Equal(ts) {
 					continue
 				}
-				if val, ok := m.Value.(string); ok {
-					err = json.Unmarshal([]byte(val), &c)
-					if err != nil {
-						slog.Errorf("error unmarshalling controller meta for host %s %s", host.Name, err)
-					} else {
-						host.Hardware.Storage.Controllers[id] = c
-					}
+				err = json.Unmarshal([]byte(m.Value), &c)
+				if err != nil {
+					slog.Errorf("error unmarshalling controller meta for host %s %s", host.Name, err)
+				} else {
+					host.Hardware.Storage.Controllers[id] = c
 				}
+
 			}
 		}
 		for _, ts := range diskTags[host.Name] {
@@ -412,105 +410,101 @@ func (s *Schedule) Host(filter string) (map[string]*HostData, error) {
 			if name := m.Tags["iname"]; name != "" && iface != nil {
 				iface.Name = name
 			}
-			switch val := m.Value.(type) {
-			case string:
-				switch m.Name {
-				case "addresses":
-					if iface != nil {
-						addresses := []string{}
-						err = json.Unmarshal([]byte(val), &addresses)
-						if err != nil {
-							slog.Errorf("error unmarshalling addresses for host %s, interface %s while generating host api: %s", host.Name, m.Tags["iface"], err)
-						}
-						for _, address := range addresses {
-							iface.IPAddresses = append(iface.IPAddresses, address)
-						}
+			val := m.Value
+			switch m.Name {
+			case "addresses":
+				if iface != nil {
+					addresses := []string{}
+					err = json.Unmarshal([]byte(val), &addresses)
+					if err != nil {
+						slog.Errorf("error unmarshalling addresses for host %s, interface %s while generating host api: %s", host.Name, m.Tags["iface"], err)
 					}
-				case "cdpCacheEntries":
-					if iface != nil {
-						var cdpCacheEntries CDPCacheEntries
-						err = json.Unmarshal([]byte(val), &cdpCacheEntries)
-						if err != nil {
-							slog.Errorf("error unmarshalling cdpCacheEntries for host %s, interface %s while generating host api: %s", host.Name, m.Tags["iface"], err)
-						} else {
-							iface.CDPCacheEntries = cdpCacheEntries
-						}
+					for _, address := range addresses {
+						iface.IPAddresses = append(iface.IPAddresses, address)
 					}
-				case "description", "alias":
-					if iface != nil {
-						iface.Description = val
-					}
-				case "mac":
-					if iface != nil {
-						iface.MAC = val
-					}
-				case "manufacturer":
-					host.Manufacturer = val
-				case "master":
-					if iface != nil {
-						iface.Master = val
-					}
-				case "memory":
-					if name := m.Tags["name"]; name != "" {
-						statusCode, timestamp, err := s.Search.GetLast("hw.chassis.memory", opentsdb.TagSet{"host": host.Name, "name": name}.String(), false)
-						// Status code uses the severity function in collectors/dell_hw.go. That is a binary
-						// state that is 0 for non-critical or Ok. Todo would be to update this with more
-						// complete status codes when HW collector is refactored and we have something to
-						// clean out addr entries from the tagset metadata db
-						host.Hardware.Memory[name] = &MemoryModule{
-							StatusLastUpdated: timestamp,
-							Size:              val,
-						}
-						status := "Bad"
-						if statusCode == 0 {
-							status = "Ok"
-						}
-						// Only set if we have a value
-						if err == nil && timestamp > 0 {
-							host.Hardware.Memory[name].Status = status
-						}
-					}
-				case "hypervisor":
-					host.VM = &VM{}
-					host.VM.Host = val
-					powerstate, timestamp, err := s.Search.GetLast("vsphere.guest.powered_state", opentsdb.TagSet{"guest": host.Name}.String(), false)
-					if timestamp > 0 && err != nil {
-						switch int64(powerstate) {
-						case 0:
-							host.VM.PowerState = "poweredOn"
-						case 1:
-							host.VM.PowerState = "poweredOff"
-						case 2:
-							host.VM.PowerState = "suspended"
-						}
-						host.VM.PowerStateLastUpdated = timestamp
-					}
-					if hostsHost, ok := hosts[val]; ok {
-						hostsHost.Guests = append(hostsHost.Guests, host.Name)
-					}
-				case "model":
-					host.Model = val
-				case "name":
-					if iface != nil {
-						iface.Name = val
-					}
-				case "processor":
-					if name := m.Tags["name"]; name != "" {
-						host.CPU.Processors[name] = val
-					}
-				case "serialNumber":
-					host.SerialNumber = val
-				case "version":
-					host.OS.Version = val
-				case "versionCaption", "uname":
-					host.OS.Caption = val
 				}
-			case float64:
-				switch m.Name {
-				case "speed":
-					if iface != nil {
-						iface.LinkSpeed = int64(val)
+			case "cdpCacheEntries":
+				if iface != nil {
+					var cdpCacheEntries CDPCacheEntries
+					err = json.Unmarshal([]byte(val), &cdpCacheEntries)
+					if err != nil {
+						slog.Errorf("error unmarshalling cdpCacheEntries for host %s, interface %s while generating host api: %s", host.Name, m.Tags["iface"], err)
+					} else {
+						iface.CDPCacheEntries = cdpCacheEntries
 					}
+				}
+			case "description", "alias":
+				if iface != nil {
+					iface.Description = val
+				}
+			case "mac":
+				if iface != nil {
+					iface.MAC = val
+				}
+			case "manufacturer":
+				host.Manufacturer = val
+			case "master":
+				if iface != nil {
+					iface.Master = val
+				}
+			case "memory":
+				if name := m.Tags["name"]; name != "" {
+					statusCode, timestamp, err := s.Search.GetLast("hw.chassis.memory", opentsdb.TagSet{"host": host.Name, "name": name}.String(), false)
+					// Status code uses the severity function in collectors/dell_hw.go. That is a binary
+					// state that is 0 for non-critical or Ok. Todo would be to update this with more
+					// complete status codes when HW collector is refactored and we have something to
+					// clean out addr entries from the tagset metadata db
+					host.Hardware.Memory[name] = &MemoryModule{
+						StatusLastUpdated: timestamp,
+						Size:              val,
+					}
+					status := "Bad"
+					if statusCode == 0 {
+						status = "Ok"
+					}
+					// Only set if we have a value
+					if err == nil && timestamp > 0 {
+						host.Hardware.Memory[name].Status = status
+					}
+				}
+			case "hypervisor":
+				host.VM = &VM{}
+				host.VM.Host = val
+				powerstate, timestamp, err := s.Search.GetLast("vsphere.guest.powered_state", opentsdb.TagSet{"guest": host.Name}.String(), false)
+				if timestamp > 0 && err != nil {
+					switch int64(powerstate) {
+					case 0:
+						host.VM.PowerState = "poweredOn"
+					case 1:
+						host.VM.PowerState = "poweredOff"
+					case 2:
+						host.VM.PowerState = "suspended"
+					}
+					host.VM.PowerStateLastUpdated = timestamp
+				}
+				if hostsHost, ok := hosts[val]; ok {
+					hostsHost.Guests = append(hostsHost.Guests, host.Name)
+				}
+			case "model":
+				host.Model = val
+			case "name":
+				if iface != nil {
+					iface.Name = val
+				}
+			case "processor":
+				if name := m.Tags["name"]; name != "" {
+					host.CPU.Processors[name] = val
+				}
+			case "serialNumber":
+				host.SerialNumber = val
+			case "version":
+				host.OS.Version = val
+			case "versionCaption", "uname":
+				host.OS.Caption = val
+			case "speed":
+				if iface != nil {
+					i, _ := strconv.ParseInt(val, 10, 64)
+					iface.LinkSpeed = i
 				}
 			}
 		}
