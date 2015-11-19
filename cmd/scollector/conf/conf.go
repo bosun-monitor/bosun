@@ -36,6 +36,9 @@ type Conf struct {
 	// the specified community.
 	KeepalivedCommunity string
 
+	//Override default network interface expression
+	IfaceExpr string
+
 	HAProxy        []HAProxy
 	SNMP           []SNMP
 	MIBS           map[string]MIB
@@ -55,6 +58,8 @@ type Conf struct {
 	RabbitMQ            []RabbitMQ
 	Nexpose             []Nexpose
 	GoogleAnalytics     []GoogleAnalytics
+	Cadvisor            []Cadvisor
+	RedisCounters       []RedisCounters
 	Database            []Database
 }
 
@@ -84,9 +89,10 @@ type GoogleAnalytics struct {
 }
 
 type GoogleAnalyticsSite struct {
-	Name    string
-	Profile string
-	Offset  int
+	Name     string
+	Profile  string
+	Offset   int
+	Detailed bool
 }
 
 type ICMP struct {
@@ -161,6 +167,15 @@ type Github struct {
 	Token string
 }
 
+type Cadvisor struct {
+	URL string
+}
+
+type RedisCounters struct {
+	Server   string
+	Database int
+}
+
 type DatabaseQuery struct {
 	Name        string
 	Query       string
@@ -181,3 +196,4 @@ type Database struct {
 	Port         int
 	Query        []DatabaseQuery
 }
+

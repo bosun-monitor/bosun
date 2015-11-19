@@ -1,3 +1,10 @@
+<style>
+.panel-heading{border-radius:3px;}
+.panel-danger-box{box-shadow: 5px 0 0 0 #a94442 inset;}
+.panel-warning-box{box-shadow: 5px 0 0 0 #8A6D3B inset;}
+.panel-success-box{box-shadow: 5px 0 0 0 #3C763D inset;}
+.panel-info-box{box-shadow: 5px 0 0 0 #31708f inset;}
+</style>
 <div class="panel-group" ng-show="groups">
 	<div class="clearfix">
 		<h3 ng-bind="ack" class="pull-left"></h3>
@@ -17,14 +24,14 @@
 		</span>
 	</div>
 	<div class="panel" ng-class="panelClass(group.Status)" ng-repeat="group in groups" ng-init="idx = $index">
-		<div class="panel-heading" ng-click="collapse(idx)">
+		<div class="panel-heading" ng-class="panelClass(group.CurrentStatus)+'-box'" ng-click="collapse(idx)">
 			<h4 class="panel-title">
 				<label class="pull-right select">
 					<input type="checkbox" class="pull-right" ng-model="group.checked" ng-click="click($event, $index)" ng-change="update()">
 				</label>
 				<a href>
-					<span class="glyphicon" ng-class="{'glyphicon-exclamation-sign': group.Active}"></span>
-					<span class="glyphicon" ng-class="{'glyphicon-volume-off': group.Silenced}"></span>
+					<span title="This exclamation icon represents that the alert is in an active (non-normal) state." class="glyphicon" ng-class="{'glyphicon-exclamation-sign': group.Active}"></span>
+					<span title="This mute icon represents that the alert has been silenced." class="glyphicon" ng-class="{'glyphicon-volume-off': group.Silenced}"></span>
 					<span ng-bind="group.Subject"></span>
 					<span class="pull-right">{{group.Children.length}} alerts</span>
 				</a>
@@ -33,9 +40,9 @@
 		<div class="panel-body panel-group" ng-if="shown[idx]">
 			<div
 				class="panel"
-				ng-class="panelClass(state.last.Status)"
+				ng-class="panelClass(group.Status)"
 				ng-repeat="child in group.Children"
-				ts-state ts-grp="{{idx}}">
+				ts-state ts-grp="{{idx}}" ts-grpStatus="{{group.CurrentStatus}}">
 			</div>
 		</div>
 	</div>

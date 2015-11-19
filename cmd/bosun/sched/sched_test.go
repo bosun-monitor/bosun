@@ -15,7 +15,7 @@ import (
 	"bosun.org/_third_party/github.com/MiniProfiler/go/miniprofiler"
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/database"
-	"bosun.org/cmd/bosun/expr"
+	"bosun.org/models"
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
 )
@@ -34,7 +34,7 @@ type schedTest struct {
 	queries map[string]opentsdb.ResponseSet
 	// state -> active
 	state    map[schedState]bool
-	previous map[expr.AlertKey]*State
+	previous map[models.AlertKey]*State
 }
 
 // test-only function to check all alerts immediately.
@@ -57,12 +57,16 @@ type nopDataAccess struct {
 	database.MetadataDataAccess
 	database.SearchDataAccess
 	database.ErrorDataAccess
+	database.IncidentDataAccess
 	failingAlerts map[string]bool
+	idCounter     uint64
+	incidents     map[uint64]*models.Incident
 }
 
-func (n *nopDataAccess) Search() database.SearchDataAccess     { return n }
-func (n *nopDataAccess) Metadata() database.MetadataDataAccess { return n }
-func (n *nopDataAccess) Errors() database.ErrorDataAccess      { return n }
+func (n *nopDataAccess) Search() database.SearchDataAccess      { return n }
+func (n *nopDataAccess) Metadata() database.MetadataDataAccess  { return n }
+func (n *nopDataAccess) Errors() database.ErrorDataAccess       { return n }
+func (n *nopDataAccess) Incidents() database.IncidentDataAccess { return n }
 
 func (n *nopDataAccess) BackupLastInfos(map[string]map[string]*database.LastInfo) error { return nil }
 func (n *nopDataAccess) LoadLastInfos() (map[string]map[string]*database.LastInfo, error) {
@@ -79,10 +83,26 @@ func (n *nopDataAccess) MarkAlertFailure(name string, msg string) error {
 func (n *nopDataAccess) GetFailingAlertCounts() (int, int, error) { return 0, 0, nil }
 func (n *nopDataAccess) IsAlertFailing(name string) (bool, error) { return n.failingAlerts[name], nil }
 
+func (n *nopDataAccess) CreateIncident(ak models.AlertKey, start time.Time) (*models.Incident, error) {
+	n.idCounter++
+	n.incidents[n.idCounter] = &models.Incident{Id: n.idCounter, Start: start, AlertKey: ak}
+	return n.incidents[n.idCounter], nil
+}
+func (n *nopDataAccess) GetIncident(id uint64) (*models.Incident, error) {
+	return n.incidents[id], nil
+}
+func (n *nopDataAccess) UpdateIncident(id uint64, i *models.Incident) error {
+	n.incidents[id] = i
+	return nil
+}
+
 func initSched(c *conf.Conf) (*Schedule, error) {
 	c.StateFile = ""
 	s := new(Schedule)
-	s.DataAccess = &nopDataAccess{failingAlerts: map[string]bool{}}
+	s.DataAccess = &nopDataAccess{
+		failingAlerts: map[string]bool{},
+		incidents:     map[uint64]*models.Incident{},
+	}
 	err := s.Init(c)
 	return s, err
 }
@@ -259,7 +279,7 @@ func TestUnknown(t *testing.T) {
 		state: map[schedState]bool{
 			schedState{"a{a=b}", "unknown"}: true,
 		},
-		previous: map[expr.AlertKey]*State{
+		previous: map[models.AlertKey]*State{
 			"a{a=b}": state,
 			"a{a=c}": stillValid,
 		},
@@ -285,7 +305,7 @@ func TestUnknown_HalfFreq(t *testing.T) {
 		state: map[schedState]bool{
 			schedState{"a{a=b}", "unknown"}: true,
 		},
-		previous: map[expr.AlertKey]*State{
+		previous: map[models.AlertKey]*State{
 			"a{a=b}": state,
 			"a{a=c}": stillValid,
 		},
@@ -305,7 +325,7 @@ func TestUnknown_WithError(t *testing.T) {
 			`q("avg:m{a=*}", ` + window5Min + `)`: nil,
 		},
 		state: map[schedState]bool{},
-		previous: map[expr.AlertKey]*State{
+		previous: map[models.AlertKey]*State{
 			"a{a=b}": state,
 		},
 	})

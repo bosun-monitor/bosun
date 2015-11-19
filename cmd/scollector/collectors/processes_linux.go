@@ -148,7 +148,11 @@ type byModTime []os.FileInfo
 func (bmt byModTime) Len() int      { return len(bmt) }
 func (bmt byModTime) Swap(i, j int) { bmt[i], bmt[j] = bmt[j], bmt[i] }
 func (bmt byModTime) Less(i, j int) bool {
-	return bmt[i].ModTime().Unix() < bmt[j].ModTime().Unix()
+	// If the creation times are identical, sort by filename (pid) instead.
+	if bmt[i].ModTime() == bmt[j].ModTime() {
+		return sort.StringsAreSorted([]string{bmt[i].Name(), bmt[j].Name()})
+	}
+	return bmt[i].ModTime().UnixNano() < bmt[j].ModTime().UnixNano()
 }
 
 func getLinuxProccesses() ([]*Process, error) {

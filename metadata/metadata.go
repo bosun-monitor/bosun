@@ -35,7 +35,8 @@ type Unit string
 const (
 	// None is a not-yet documented unit.
 	None            Unit = ""
-	A                    = "A" // Amps
+	A                    = "A"            // Amps
+	ActiveUsers          = "active users" // Google Analytics
 	Alert                = "alerts"
 	Abort                = "aborts"
 	Bool                 = "bool"
@@ -95,6 +96,7 @@ const (
 	RPM                  = "RPM" // Rotations per minute.
 	Score                = "score"
 	Second               = "seconds"
+	Sector               = "sectors"
 	Segment              = "segments"
 	Server               = "servers"
 	Session              = "sessions"

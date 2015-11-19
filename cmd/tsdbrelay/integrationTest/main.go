@@ -24,8 +24,8 @@ import (
 	"os/signal"
 	"time"
 
-	"bosun.org/cmd/bosun/expr"
 	"bosun.org/metadata"
+	"bosun.org/models"
 	"bosun.org/opentsdb"
 )
 
@@ -93,10 +93,10 @@ const (
 )
 
 var (
-	dc1BosunReceived = map[expr.AlertKey]int{}
-	dc2BosunReceived = map[expr.AlertKey]int{}
-	dc1TsdbReceived  = map[expr.AlertKey]int{}
-	dc2TsdbReceived  = map[expr.AlertKey]int{}
+	dc1BosunReceived = map[models.AlertKey]int{}
+	dc2BosunReceived = map[models.AlertKey]int{}
+	dc1TsdbReceived  = map[models.AlertKey]int{}
+	dc2TsdbReceived  = map[models.AlertKey]int{}
 )
 
 func main() {
@@ -148,14 +148,14 @@ func main() {
 	}
 	killAll()
 }
-func check(node string, ak expr.AlertKey, expected int, data map[expr.AlertKey]int) {
+func check(node string, ak models.AlertKey, expected int, data map[models.AlertKey]int) {
 	if data[ak] != expected {
 		msg := fmt.Sprintf("Expected %s to see %s %d times, but saw %d.", node, ak, expected, data[ak])
 		fatal(msg)
 	}
 }
 
-func handleBosun(data map[expr.AlertKey]int) http.HandlerFunc {
+func handleBosun(data map[models.AlertKey]int) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		readDps(r.Body, data)
 		w.WriteHeader(500)
@@ -168,7 +168,7 @@ func handleMeta(result *bool) http.HandlerFunc {
 	}
 }
 
-func handleTsdb(data map[expr.AlertKey]int) http.HandlerFunc {
+func handleTsdb(data map[models.AlertKey]int) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		readDps(r.Body, data)
 		w.WriteHeader(204)
@@ -183,7 +183,7 @@ func killAll() {
 		log.Println("Killing relay 2:", relay2.Kill())
 	}
 }
-func readDps(r io.Reader, data map[expr.AlertKey]int) {
+func readDps(r io.Reader, data map[models.AlertKey]int) {
 	gr, err := gzip.NewReader(r)
 	if err != nil {
 		fatal(err)
@@ -195,7 +195,7 @@ func readDps(r io.Reader, data map[expr.AlertKey]int) {
 		fatal(err)
 	}
 	for _, dp := range mdp {
-		ak := expr.NewAlertKey(dp.Metric, dp.Tags)
+		ak := models.NewAlertKey(dp.Metric, dp.Tags)
 		n, ok := data[ak]
 		if ok {
 			data[ak] = n + 1

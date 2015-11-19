@@ -104,6 +104,9 @@ Filter (array of string): filters collectors matching these terms.
 MetricFilters (array of string): filters metrics matching these regular
 expressions.
 
+IfaceExpr (string): Replaces the default regular expression for interface name
+matching on Linux.
+
 PProf (string): optional IP:Port binding to be used for debugging with pprof.
 Examples: localhost:6060 for loopback or :6060 for all IP addresses.
 
@@ -228,10 +231,28 @@ management plugin on http://guest:guest@127.0.0.1:15672/ .
 	[[RabbitMQ]]
 	  URL = "https://user:password@hostname:15671"
 
+Cadvisor: Cadvisor endpoints to poll.
+Cadvisor collects system statistics about running containers.
+See https://github.com/google/cadvisor/ for documentation about configuring
+cadvisor.
+
+	[[Cadvisor]]
+		URL = "http://localhost:8080"
+
+RedisCounters: Reads a hash of metric/counters from a redis database.
+
+    [[RedisCounters]]
+        Server = "localhost:6379"
+        Database = 2
+
+Expects data populated via bosun's udp listener in the "scollectorCounters" hash.
+
+
 Windows
 
 scollector has full Windows support. It can be run standalone, or installed as a
 service (see -winsvc). The Event Log is used when installed as a service.
+
 
 Database collector
 

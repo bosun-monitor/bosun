@@ -101,7 +101,7 @@ func (n *Notification) DoEmail(subject, body []byte, c *Conf, ak string, attachm
 		return
 	}
 	collect.Add("email.sent", nil, 1)
-	slog.Infof("relayed alert %v to %v sucessfully\n", ak, e.To)
+	slog.Infof("relayed alert %v to %v sucessfully. Subject: %d bytes. Body: %d bytes.", ak, e.To, len(subject), len(body))
 }
 
 // Send an email using the given host and SMTP auth (optional), returns any

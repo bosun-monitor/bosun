@@ -244,7 +244,7 @@ func (t TagSet) Valid() bool {
 
 func (d *DataPoint) clean() error {
 	if err := d.Tags.Clean(); err != nil {
-		return err
+		return fmt.Errorf("cleaning tags for metric %s: %s", d.Metric, err)
 	}
 	m, err := Clean(d.Metric)
 	if err != nil {
@@ -288,7 +288,7 @@ func (t TagSet) Clean() error {
 		}
 		vc, err := Clean(v)
 		if err != nil {
-			return fmt.Errorf("cleaning key %s: %s", v, err)
+			return fmt.Errorf("cleaning value %s for tag %s: %s", v, k, err)
 		}
 		if kc != k || vc != v {
 			delete(t, k)

@@ -3,7 +3,7 @@ package sched
 import (
 	"testing"
 
-	"bosun.org/cmd/bosun/expr"
+	"bosun.org/models"
 	"bosun.org/opentsdb"
 )
 
@@ -27,7 +27,7 @@ func TestGroupSets_AboveAndBelow(t *testing.T) {
 	}
 	states := States{}
 	for a, sub := range aks {
-		ak, err := expr.ParseAlertKey(a)
+		ak, err := models.ParseAlertKey(a)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -54,7 +54,7 @@ func TestGroupSets_ByAlert(t *testing.T) {
 	}
 	states := States{}
 	for a, sub := range aks {
-		ak, err := expr.ParseAlertKey(a)
+		ak, err := models.ParseAlertKey(a)
 		if err != nil {
 			t.Fatal(err)
 		}

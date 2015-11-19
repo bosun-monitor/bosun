@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"bosun.org/cmd/bosun/expr"
+	"bosun.org/models"
 	"bosun.org/opentsdb"
 )
 
@@ -78,8 +78,8 @@ func (s Silence) ID() string {
 
 // Silenced returns all currently silenced AlertKeys and the time they will be
 // unsilenced.
-func (s *Schedule) Silenced() map[expr.AlertKey]Silence {
-	aks := make(map[expr.AlertKey]Silence)
+func (s *Schedule) Silenced() map[models.AlertKey]Silence {
+	aks := make(map[models.AlertKey]Silence)
 	now := time.Now()
 	silenceLock.RLock()
 	defer silenceLock.RUnlock()
@@ -102,7 +102,7 @@ func (s *Schedule) Silenced() map[expr.AlertKey]Silence {
 
 var silenceLock = sync.RWMutex{}
 
-func (s *Schedule) AddSilence(start, end time.Time, alert, tagList string, forget, confirm bool, edit, user, message string) (map[expr.AlertKey]bool, error) {
+func (s *Schedule) AddSilence(start, end time.Time, alert, tagList string, forget, confirm bool, edit, user, message string) (map[models.AlertKey]bool, error) {
 	if start.IsZero() || end.IsZero() {
 		return nil, fmt.Errorf("both start and end must be specified")
 	}
@@ -138,7 +138,7 @@ func (s *Schedule) AddSilence(start, end time.Time, alert, tagList string, forge
 		s.Silence[si.ID()] = si
 		return nil, nil
 	}
-	aks := make(map[expr.AlertKey]bool)
+	aks := make(map[models.AlertKey]bool)
 	for ak := range s.status {
 		if si.Matches(ak.Name(), ak.Group()) {
 			aks[ak] = s.status[ak].IsActive()

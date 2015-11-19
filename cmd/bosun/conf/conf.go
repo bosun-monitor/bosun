@@ -23,6 +23,7 @@ import (
 	"bosun.org/cmd/bosun/expr"
 	eparse "bosun.org/cmd/bosun/expr/parse"
 	"bosun.org/graphite"
+	"bosun.org/models"
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
 )
@@ -672,7 +673,7 @@ func (c *Conf) loadLookup(s *parse.SectionNode) {
 				Def:  n.RawText,
 				Name: n.Name.Text,
 				ExprEntry: &ExprEntry{
-					AlertKey: expr.NewAlertKey("", tags),
+					AlertKey: models.NewAlertKey("", tags),
 					Values:   make(map[string]string),
 				},
 			}
