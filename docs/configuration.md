@@ -43,6 +43,7 @@ Every variable is optional, though you should enable at least 1 backend.
   * Tag value glob matching, for example `avg:metric.name{tag=something-*}`. However single asterists like `tag=*` will stil work.
   * The items page.
   * The graph page's tag list.
+* tsdbVersion: Defaults to 2.1 if not present. Should always be specified as Number.Number. Various OpenTSDB features are added with newer versions.
 * graphiteHost: an ip, hostname, ip:port, hostname:port or a URL, defaults to standard http/https ports, defaults to "/render" path.  Any non-zero path (even "/" overrides path)
 * graphiteHeader: a http header to be sent to graphite on each request in 'key:value' format. optional. can be specified multiple times.
 * logstashElasticHosts: Elasticsearch host populated by logstash. Must be a URL.

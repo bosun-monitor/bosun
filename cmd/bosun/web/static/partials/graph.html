@@ -83,54 +83,114 @@
 	<div class="col-sm-12">
 		<div class="tab-content">
 			<div class="tab-pane" ng-class="{active: $index == index}" ng-repeat="t in query_p">
-				<form class="form-horizontal col-sm-4">
-					<div class="form-group">
-						<label class="col-sm-4 control-label">Metric</label>
-						<div class="col-sm-8">
-							<input type="text" class="form-control" ng-model="t.metric" ng-options="m for m in metrics" ng-change="GetTagKByMetric($index)" ng-init="GetTagKByMetric($index)" limit="100" bs-typeahead min-length="0" bs-typeahead>
+				<div ng-if="filterSupport">
+					<form class="form-horizontal col-sm-4">
+						<div class="form-group">
+							<label class="col-sm-4 control-label">Metric</label>
+							<div class="col-sm-8">
+								<input type="text" class="form-control" ng-model="t.metric" ng-options="m for m in metrics" ng-change="GetTagKByMetric($index)" ng-init="GetTagKByMetric($index)" limit="100" bs-typeahead min-length="0" bs-typeahead>
+							</div>
 						</div>
-					</div>
-					<div class="form-group">
-						<label class="col-sm-4 control-label" tooltip title="The method used to combine multiple time series into a single time series. This behavior happens when specific or (*) values are omitted for tags.">Aggregator</label>
-						<div class="col-sm-8">
-							<select class="form-control" ng-model="t.aggregator" ng-options="agg for agg in aggregators"></select>
+						<div class="form-group">
+							<label class="col-sm-4 control-label" tooltip title="The method used to combine multiple time series into a single time series. This behavior happens when specific or (*) values are omitted for tags.">Aggregator</label>
+							<div class="col-sm-8">
+								<select class="form-control" ng-model="t.aggregator" ng-options="agg for agg in aggregators"></select>
+							</div>
 						</div>
-					</div>
-					<div class="form-group" ng-hide="autods">
-						<label class="col-sm-4 control-label" tooltip title="Downsample the data into fewer datapoints. Requires that the downsample window value is also provided.">Downsample</label>
-						<div class="col-sm-8">
-							<select ng-model="t.ds" ng-change="t.setDs()" ng-options="agg for agg in dsaggregators" class="form-control"></select>
+						<div class="form-group" ng-hide="autods">
+							<label class="col-sm-4 control-label" tooltip title="Downsample the data into fewer datapoints. Requires that the downsample window value is also provided.">Downsample</label>
+							<div class="col-sm-8">
+								<select ng-model="t.ds" ng-change="t.setDs()" ng-options="agg for agg in dsaggregators" class="form-control"></select>
+							</div>
 						</div>
-					</div>
-					<div class="form-group" ng-hide="autods">
-						<label class="col-sm-4 control-label" tooltip title="The time window to downsample to. For example 1h would return a datapoint for every hour by performing the downsample function over that hour. Time units are ms (millisecond), s (second), m (minute), h (hour), d (day), w (week), n (month), y (year).">Window</label>
-						<div class="col-sm-8">
-							<input type="text" class="form-control" ng-model="t.dstime" ng-change="t.setDs()">
+						<div class="form-group" ng-hide="autods">
+							<label class="col-sm-4 control-label" tooltip title="The time window to downsample to. For example 1h would return a datapoint for every hour by performing the downsample function over that hour. Time units are ms (millisecond), s (second), m (minute), h (hour), d (day), w (week), n (month), y (year).">Window</label>
+							<div class="col-sm-8">
+								<input type="text" class="form-control" ng-model="t.dstime" ng-change="t.setDs()">
+							</div>
 						</div>
-					</div>
-				</form>
-				<form class="form-horizontal col-sm-4">
-					<div class="form-group" ng-class="{'has-error': !canAuto[t.metric] && t.derivative == 'auto'}">
-						<label class="col-sm-4 control-label" tooltip title="If not set to gauge, this returns a per-second rate of change between points. If the values always increase (except for resets and rollovers), use counter. If the values can go down, use rate. A warning color indicates auto will default to counter.">Series Type</label>
-						<div class="col-sm-8">
-							<select ng-model="t.derivative" ng-change="t.setDerivative()" ng-options="r for r in rate_options" class="form-control"></select>
+						<div class="form-group" ng-class="{'has-error': !canAuto[t.metric] && t.derivative == 'auto'}">
+							<label class="col-sm-4 control-label" tooltip title="If not set to gauge, this returns a per-second rate of change between points. If the values always increase (except for resets and rollovers), use counter. If the values can go down, use rate. A warning color indicates auto will default to counter.">Type</label>
+							<div class="col-sm-8">
+								<select ng-model="t.derivative" ng-change="t.setDerivative()" ng-options="r for r in rate_options" class="form-control"></select>
+							</div>
 						</div>
-					</div>
-					<div class="form-group" ng-show="t.derivative == 'counter'">
-						<label class="col-sm-4 control-label" tooltip title="A positive integer representing the maximum value for the counter.">Counter Max</label>
-						<div class="col-sm-8">
-							<input type="number" class="form-control" ng-model="t.rateOptions.counterMax">
+						<div class="form-group" ng-show="t.derivative == 'counter'">
+							<label class="col-sm-4 control-label" tooltip title="A positive integer representing the maximum value for the counter.">Max</label>
+							<div class="col-sm-8">
+								<input type="number" class="form-control" ng-model="t.rateOptions.counterMax">
+							</div>
 						</div>
-					</div>
-				</form>
-				<form class="form-horizontal col-sm-4">
-					<div class="form-group" ng-repeat="k in sorted_tagks[$index]">
-						<label class="col-sm-4 control-label" tooltip title="Tag values for the tag. Can have multiple seperate by | which will return a time series for each one. Can also be * which returns a time series for each possible value.">{{k}} ({{tagvs[$parent.$index][k].length}})</label>
-						<div class="col-sm-8">
-							<input type="text" class="form-control" ng-model="t.tags[k]" ng-options="tv for tv in tagvs[$parent.$index][k]" bs-typeahead min-length="0" limit="100" ng-disabled="!t.metric_tags[k]">
+					</form>
+					<form class="form-horizontal col-sm-8">
+						<div class="form-group" ng-repeat="k in sorted_tagks[$index]">
+							<label class="col-sm-2 control-label" tooltip title="Enter in values to filter tags. The first filter (function and value) will act as a group by function - each match will corespond to a series. The second filter for the tag will filter the results of the series; instead of generating a new series the filtered series will be aggregated.">{{k}} ({{tagvs[$parent.$index][k].length}})</label>
+							<div class="col-sm-2">
+								<select title="Function to be used for a groupby filter." class="form-control" ng-model="t.gbFilters[k].type" ng-options="f for f in filters"></select>
+							</div>
+							<div class="col-sm-3">
+								<input type="text" class="form-control" ng-model="t.gbFilters[k].filter" ng-options="tv for tv in tagvs[$parent.$index][k]" bs-typeahead min-length="0" limit="100" ng-disabled="!t.metric_tags[k]">
+							</div>
+							<div class="col-sm-2">
+								<select title="Function to be used for a non-groupby filter." class="form-control" ng-model="t.nGbFilters[k].type" ng-options="f for f in filters"></select>
+							</div>
+							<div class="col-sm-3">
+								<input type="text" class="form-control" ng-model="t.nGbFilters[k].filter" ng-options="tv for tv in tagvs[$parent.$index][k]" bs-typeahead min-length="0" limit="100" ng-disabled="!t.metric_tags[k]">
+							</div>
 						</div>
-					</div>
-				</form>
+					</form>
+				</div>
+
+				<div ng-if="! filterSupport">
+					<form class="form-horizontal col-sm-4">
+						<div class="form-group">
+							<label class="col-sm-4 control-label">Metric</label>
+							<div class="col-sm-8">
+								<input type="text" class="form-control" ng-model="t.metric" ng-options="m for m in metrics" ng-change="GetTagKByMetric($index)" ng-init="GetTagKByMetric($index)" limit="100" bs-typeahead min-length="0" bs-typeahead>
+							</div>
+						</div>
+						<div class="form-group">
+							<label class="col-sm-4 control-label" tooltip title="The method used to combine multiple time series into a single time series. This behavior happens when specific or (*) values are omitted for tags.">Aggregator</label>
+							<div class="col-sm-8">
+								<select class="form-control" ng-model="t.aggregator" ng-options="agg for agg in aggregators"></select>
+							</div>
+						</div>
+						<div class="form-group" ng-hide="autods">
+							<label class="col-sm-4 control-label" tooltip title="Downsample the data into fewer datapoints. Requires that the downsample window value is also provided.">Downsample</label>
+							<div class="col-sm-8">
+								<select ng-model="t.ds" ng-change="t.setDs()" ng-options="agg for agg in dsaggregators" class="form-control"></select>
+							</div>
+						</div>
+						<div class="form-group" ng-hide="autods">
+							<label class="col-sm-4 control-label" tooltip title="The time window to downsample to. For example 1h would return a datapoint for every hour by performing the downsample function over that hour. Time units are ms (millisecond), s (second), m (minute), h (hour), d (day), w (week), n (month), y (year).">Window</label>
+							<div class="col-sm-8">
+								<input type="text" class="form-control" ng-model="t.dstime" ng-change="t.setDs()">
+							</div>
+						</div>
+					</form>
+					<form class="form-horizontal col-sm-4">
+						<div class="form-group" ng-class="{'has-error': !canAuto[t.metric] && t.derivative == 'auto'}">
+							<label class="col-sm-4 control-label" tooltip title="If not set to gauge, this returns a per-second rate of change between points. If the values always increase (except for resets and rollovers), use counter. If the values can go down, use rate. A warning color indicates auto will default to counter.">Series Type</label>
+							<div class="col-sm-8">
+								<select ng-model="t.derivative" ng-change="t.setDerivative()" ng-options="r for r in rate_options" class="form-control"></select>
+							</div>
+						</div>
+						<div class="form-group" ng-show="t.derivative == 'counter'">
+							<label class="col-sm-4 control-label" tooltip title="A positive integer representing the maximum value for the counter.">Counter Max</label>
+							<div class="col-sm-8">
+								<input type="number" class="form-control" ng-model="t.rateOptions.counterMax">
+							</div>
+						</div>
+					</form>
+					<form class="form-horizontal col-sm-4">
+						<div class="form-group" ng-repeat="k in sorted_tagks[$index]">
+							<label class="col-sm-4 control-label" tooltip title="Tag values for the tag. Can have multiple seperate by | which will return a time series for each one. Can also be * which returns a time series for each possible value.">{{k}} ({{tagvs[$parent.$index][k].length}})</label>
+							<div class="col-sm-8">
+								<input type="text" class="form-control" ng-model="t.tags[k]" ng-options="tv for tv in tagvs[$parent.$index][k]" bs-typeahead min-length="0" limit="100" ng-disabled="!t.metric_tags[k]">
+							</div>
+						</div>
+					</form>
+				</div>
 			</div>
 		</div>
 	</div>
@@ -176,5 +236,10 @@
 			<h5>{{k}}</h5>
 			{{v.Desc}}
 		</div>
+	</div>
+</div>
+<div class="row">
+	<div class="col-lg-12">
+		<p class="text-right"><small>OpenTSDB Version {{version.Major}}.{{version.Minor}}</small></p>
 	</div>
 </div>
