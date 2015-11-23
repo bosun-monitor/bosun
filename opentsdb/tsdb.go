@@ -19,6 +19,8 @@ import (
 	"time"
 	"unicode"
 	"unicode/utf8"
+
+	"bosun.org/slog"
 )
 
 // ResponseSet is a Multi-Set Response:
@@ -189,6 +191,29 @@ func (t TagSet) Tags() string {
 	return b.String()
 }
 
+func (t TagSet) AllSubsets() []string {
+	var keys []string
+	for k := range t {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return t.allSubsets("", 0, keys)
+}
+
+func (t TagSet) allSubsets(base string, start int, keys []string) []string {
+	subs := []string{}
+	for i := start; i < len(keys); i++ {
+		part := base
+		if part != "" {
+			part += ","
+		}
+		part += fmt.Sprintf("%s=%s", keys[i], t[keys[i]])
+		subs = append(subs, part)
+		subs = append(subs, t.allSubsets(part, i+1, keys)...)
+	}
+	return subs
+}
+
 // Returns true if the two tagsets "overlap".
 // Two tagsets overlap if they:
 // 1. Have at least one key/value pair that matches
@@ -219,7 +244,7 @@ func (t TagSet) Valid() bool {
 
 func (d *DataPoint) clean() error {
 	if err := d.Tags.Clean(); err != nil {
-		return err
+		return fmt.Errorf("cleaning tags for metric %s: %s", d.Metric, err)
 	}
 	m, err := Clean(d.Metric)
 	if err != nil {
@@ -263,7 +288,7 @@ func (t TagSet) Clean() error {
 		}
 		vc, err := Clean(v)
 		if err != nil {
-			return fmt.Errorf("cleaning key %s: %s", v, err)
+			return fmt.Errorf("cleaning value %s for tag %s: %s", v, k, err)
 		}
 		if kc != k || vc != v {
 			delete(t, k)
@@ -821,6 +846,7 @@ func (c *LimitContext) Query(r *Request) (tr ResponseSet, err error) {
 	err = json.NewDecoder(lr).Decode(&tr)
 	if lr.N == 0 {
 		err = fmt.Errorf("TSDB response too large: limited to %E bytes", float64(c.Limit))
+		slog.Error(err)
 		return
 	}
 	if err != nil {

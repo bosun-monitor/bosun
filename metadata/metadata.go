@@ -34,73 +34,86 @@ type Unit string
 
 const (
 	// None is a not-yet documented unit.
-	None           Unit = ""
-	A                   = "A" // Amps
-	Alert               = "alerts"
-	Abort               = "aborts"
-	Bool                = "bool"
-	BitsPerSecond       = "bits per second"
-	Bytes               = "bytes"
-	BytesPerSecond      = "bytes per second"
-	C                   = "C" // Celsius
-	Check               = "checks"
-	CHz                 = "CentiHertz"
-	Connection          = "connections"
-	Context             = "contexts"
-	ContextSwitch       = "context switches"
-	Count               = ""
-	Document            = "documents"
-	Entropy             = "entropy"
-	Error               = "errors"
-	Event               = ""
-	Eviction            = "evictions"
-	Fault               = "faults"
-	Flush               = "flushes"
-	Files               = "files"
-	Get                 = "gets"
-	GetExists           = "get exists"
-	Interupt            = "interupts"
-	Item                = "items"
-	KBytes              = "kbytes"
-	Key                 = "keys"
-	Load                = "load"
-	EMail               = "emails"
-	MHz                 = "MHz" // MegaHertz
-	Megabit             = "Mbit"
-	Merge               = "merges"
-	MilliSecond         = "milliseconds"
-	Ok                  = "ok" // "OK" or not status, 0 = ok, 1 = not ok
-	Operation           = "Operations"
-	Page                = "pages"
-	Pct                 = "percent" // Range of 0-100.
-	PerSecond           = "per second"
-	Process             = "processes"
-	Priority            = "priority"
-	Query               = "queries"
-	Redispatch          = "redispatches"
-	Refresh             = "refreshes"
-	Replica             = "replicas"
-	Retry               = "retries"
-	Response            = "responses"
-	Request             = "requests"
-	RPM                 = "RPM" // Rotations per minute.
-	Second              = "seconds"
-	Segment             = "segments"
-	Server              = "servers"
-	Session             = "sessions"
-	Shard               = "shards"
-	Socket              = "sockets"
-	Suggest             = "suggests"
-	StatusCode          = "status code"
-	Syscall             = "system calls"
-	Thread              = "threads"
-	Timestamp           = "timestamp"
-	Transition          = "transitions"
-	V                   = "V" // Volts
-	V10                 = "tenth-Volts"
-	Watt                = "Watts"
-	Weight              = "weight"
-	Yield               = "yields"
+	None            Unit = ""
+	A                    = "A"            // Amps
+	ActiveUsers          = "active users" // Google Analytics
+	Alert                = "alerts"
+	Abort                = "aborts"
+	Bool                 = "bool"
+	BitsPerSecond        = "bits per second"
+	Bytes                = "bytes"
+	BytesPerSecond       = "bytes per second"
+	C                    = "C" // Celsius
+	Channel              = "channels"
+	Check                = "checks"
+	CHz                  = "CentiHertz"
+	Connection           = "connections"
+	Consumer             = "consumers"
+	Context              = "contexts"
+	ContextSwitch        = "context switches"
+	Count                = ""
+	Document             = "documents"
+	Entropy              = "entropy"
+	Error                = "errors"
+	Event                = ""
+	Eviction             = "evictions"
+	Exchange             = "exchanges"
+	Fault                = "faults"
+	Flush                = "flushes"
+	Files                = "files"
+	Frame                = "frames"
+	Fraction             = "fraction"
+	Get                  = "gets"
+	GetExists            = "get exists"
+	Interupt             = "interupts"
+	Item                 = "items"
+	KBytes               = "kbytes"
+	Key                  = "keys"
+	Load                 = "load"
+	EMail                = "emails"
+	MHz                  = "MHz" // MegaHertz
+	Megabit              = "Mbit"
+	Merge                = "merges"
+	Message              = "messages"
+	MilliSecond          = "milliseconds"
+	Node                 = "nodes"
+	Ok                   = "ok" // "OK" or not status, 0 = ok, 1 = not ok
+	Operation            = "Operations"
+	Packet               = "packets"
+	Page                 = "pages"
+	Pct                  = "percent" // Range of 0-100.
+	PerSecond            = "per second"
+	Process              = "processes"
+	Priority             = "priority"
+	Query                = "queries"
+	Queue                = "queues"
+	Redispatch           = "redispatches"
+	Refresh              = "refreshes"
+	Replica              = "replicas"
+	Retry                = "retries"
+	Response             = "responses"
+	Request              = "requests"
+	RPM                  = "RPM" // Rotations per minute.
+	Score                = "score"
+	Second               = "seconds"
+	Sector               = "sectors"
+	Segment              = "segments"
+	Server               = "servers"
+	Session              = "sessions"
+	Shard                = "shards"
+	Socket               = "sockets"
+	Suggest              = "suggests"
+	StatusCode           = "status code"
+	Syscall              = "system calls"
+	Thread               = "threads"
+	Timestamp            = "timestamp"
+	Transition           = "transitions"
+	V                    = "V" // Volts
+	V10                  = "tenth-Volts"
+	Vulnerabilities      = "vulnerabilities"
+	Watt                 = "Watts"
+	Weight               = "weight"
+	Yield                = "yields"
 )
 
 // Metakey uniquely identifies a metadata entry.
@@ -181,7 +194,7 @@ func Init(u *url.URL, debug bool) error {
 func collectMetadata() {
 	// Wait a bit so hopefully our collectors have run once and populated the
 	// metadata.
-	time.Sleep(time.Second * 5)
+	time.Sleep(time.Minute)
 	for {
 		for _, f := range metafuncs {
 			f()
@@ -228,6 +241,7 @@ func sendMetadata(ms []Metasend) {
 		slog.Error(err)
 		return
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != 204 {
 		slog.Errorln("bad metadata return:", resp.Status)
 		return

@@ -65,37 +65,42 @@ func Graph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 	if s, ok := oreq.End.(string); ok && strings.Contains(s, "-ago") {
 		end = strings.TrimSuffix(s, "-ago")
 	}
+	if start == "" && end == "" {
+		s, sok := oreq.Start.(int64)
+		e, eok := oreq.End.(int64)
+		if sok && eok {
+			start = fmt.Sprintf("%vs", e-s)
+		}
+	}
 	m_units := make(map[string]string)
 	for i, q := range oreq.Queries {
 		if ar[i] {
-			ms := schedule.GetMetadata(q.Metric, nil)
-			found := false
-			for _, m := range ms {
-				if m.Name == "unit" {
-					if v, ok := m.Value.(string); ok {
-						m_units[q.Metric] = v
-					}
-				}
-				if m.Name == "rate" {
-					found = true
-					switch m.Value {
-					case metadata.Gauge:
-						// ignore
-					case metadata.Rate:
-						q.Rate = true
-					case metadata.Counter:
-						q.Rate = true
-						q.RateOptions = opentsdb.RateOptions{
-							Counter:    true,
-							ResetValue: 1,
-						}
-					default:
-						return nil, fmt.Errorf("unknown metadata rate: %s", m.Value)
-					}
-				}
+
+			meta, err := schedule.MetadataMetrics(q.Metric)
+			if err != nil {
+				return nil, err
 			}
-			if !found {
+			if meta == nil {
 				return nil, fmt.Errorf("no metadata for %s: cannot use auto rate", q)
+			}
+			if meta.Unit != "" {
+				m_units[q.Metric] = meta.Unit
+			}
+			if meta.Rate != "" {
+				switch meta.Rate {
+				case metadata.Gauge:
+					// ignore
+				case metadata.Rate:
+					q.Rate = true
+				case metadata.Counter:
+					q.Rate = true
+					q.RateOptions = opentsdb.RateOptions{
+						Counter:    true,
+						ResetValue: 1,
+					}
+				default:
+					return nil, fmt.Errorf("unknown metadata rate: %s", meta.Rate)
+				}
 			}
 		}
 		queries[i] = fmt.Sprintf(`q("%v", "%v", "%v")`, q, start, end)
@@ -204,7 +209,8 @@ func ExprGraph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (in
 	tsdbContext := schedule.Conf.TSDBContext()
 	graphiteContext := schedule.Conf.GraphiteContext()
 	ls := schedule.Conf.LogstashElasticHosts
-	res, _, err := e.Execute(tsdbContext, graphiteContext, ls, cacheObj, t, now, autods, false, schedule.Search, nil, nil)
+	influx := schedule.Conf.InfluxConfig
+	res, _, err := e.Execute(tsdbContext, graphiteContext, ls, influx, cacheObj, t, now, autods, false, schedule.Search, nil, nil)
 	if err != nil {
 		return nil, err
 	}

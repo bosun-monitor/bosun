@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"bosun.org/_third_party/github.com/stackexchange/mof"
+	"bosun.org/_third_party/github.com/StackExchange/mof"
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
 	"bosun.org/util"
@@ -78,7 +78,12 @@ func c_dsc_status() (opentsdb.MultiDataPoint, error) {
 		`/namespace:\\ROOT\Microsoft\Windows\DesiredStateConfiguration`, "class",
 		"MSFT_DSCLocalConfigurationManager", "call", "GetConfigurationStatus")
 	if err != nil {
-		return nil, err
+		//Skip if dsc is currently running a consistency check
+		if err.Error() == "exit status 2147749889" {
+			return md, nil
+		} else {
+			return nil, err
+		}
 	}
 	dscstatusbuffer := new(bytes.Buffer)
 	_, err = dscstatusbuffer.ReadFrom(dscstatusmof)

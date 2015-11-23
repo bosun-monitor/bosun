@@ -40,9 +40,11 @@
 </style>
 <div class="row">
 	<div class="col-sm-12">
+		<form>
 		<div class="form-group">
-			<input type="text" class="form-control" ng-model="expr" ng-keydown="keydown($event)" ng-init="eval()">
+			<textarea id="exprTextArea" class="form-control" ng-model="expr" ng-keydown="keydown($event)" ng-init="eval()" elastic></textarea>
 		</div>
+		</form>
 		<form class="form-inline">
 			<div class="form-group">
 				<label class="control-label">Date</label>
@@ -50,7 +52,7 @@
 			</div>
 			<div class="form-group">
 				<label class="control-label">Time</label>
-				<input type="text" class="form-control" ng-model="time" placeholder="HH:MM">
+				<input type="text" class="form-control" ng-model="time" placeholder="HH:MM:SS">
 			</div>
 			<div class="form-group">
 				<button class="btn btn-primary" ng-click="set()">Test</button>

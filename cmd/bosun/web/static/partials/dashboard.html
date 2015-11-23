@@ -21,7 +21,9 @@
 		>
 	</div>
 	<div class="col-sm-2">
-		<button class="col-sm-12 btn btn-default" ng-click="check()">Run Rule Check</button>
+		<a href="/errors"><button class="btn" ng-class="{'btn-default': !schedule.FailingAlerts, 'btn-danger': schedule.FailingAlerts}" style="float:right;" type="button">
+  			<span class="badge">{{schedule.FailingAlerts}}/{{schedule.UnclosedErrors}}</span> Errors
+		</button></a>
 	</div>
 </div>
 <div ts-ack-group="schedule.Groups.NeedAck" ack="'Needs Acknowledgement'" schedule="schedule" timeanddate="timeanddate"></div>

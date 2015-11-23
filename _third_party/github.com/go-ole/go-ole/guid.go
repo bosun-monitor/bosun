@@ -30,6 +30,11 @@ var (
 	// {E0133EB4-C36F-469A-9D3D-C66B84BE19ED}
 	IID_ICOMTestString = &GUID{0xe0133eb4, 0xc36f, 0x469a, [8]byte{0x9d, 0x3d, 0xc6, 0x6b, 0x84, 0xbe, 0x19, 0xed}}
 
+	// IID_ICOMTestInt8 is for ICOMTestInt8 interfaces.
+	//
+	// {BEB06610-EB84-4155-AF58-E2BFF53608B4}
+	IID_ICOMTestInt8 = &GUID{0xbeb06610, 0xeb84, 0x4155, [8]byte{0xaf, 0x58, 0xe2, 0xbf, 0xf5, 0x36, 0x80, 0xb4}}
+
 	// IID_ICOMTestInt16 is for ICOMTestInt16 interfaces.
 	//
 	// {DAA3F9FA-761E-4976-A860-8364CE55F6FC}
@@ -55,10 +60,25 @@ var (
 	// {BF908A81-8687-4E93-999F-D86FAB284BA0}
 	IID_ICOMTestDouble = &GUID{0xbf908a81, 0x8687, 0x4e93, [8]byte{0x99, 0x9f, 0xd8, 0x6f, 0xab, 0x28, 0x4b, 0xa0}}
 
+	// IID_ICOMTestBoolean is for ICOMTestBoolean interfaces.
+	//
+	// {D530E7A6-4EE8-40D1-8931-3D63B8605001}
+	IID_ICOMTestBoolean = &GUID{0xd530e7a6, 0x4ee8, 0x40d1, [8]byte{0x89, 0x31, 0x3d, 0x63, 0xb8, 0x60, 0x50, 0x10}}
+
+	// IID_ICOMEchoTestObject is for ICOMEchoTestObject interfaces.
+	//
+	// {6485B1EF-D780-4834-A4FE-1EBB51746CA3}
+	IID_ICOMEchoTestObject = &GUID{0x6485b1ef, 0xd780, 0x4834, [8]byte{0xa4, 0xfe, 0x1e, 0xbb, 0x51, 0x74, 0x6c, 0xa3}}
+
 	// IID_ICOMTestTypes is for ICOMTestTypes interfaces.
 	//
 	// {CCA8D7AE-91C0-4277-A8B3-FF4EDF28D3C0}
 	IID_ICOMTestTypes = &GUID{0xcca8d7ae, 0x91c0, 0x4277, [8]byte{0xa8, 0xb3, 0xff, 0x4e, 0xdf, 0x28, 0xd3, 0xc0}}
+
+	// CLSID_COMEchoTestObject is for COMEchoTestObject class.
+	//
+	// {3C24506A-AE9E-4D50-9157-EF317281F1B0}
+	CLSID_COMEchoTestObject = &GUID{0x3c24506a, 0xae9e, 0x4d50, [8]byte{0x91, 0x57, 0xef, 0x31, 0x72, 0x81, 0xf1, 0xb0}}
 
 	// CLSID_COMTestScalarClass is for COMTestScalarClass class.
 	//

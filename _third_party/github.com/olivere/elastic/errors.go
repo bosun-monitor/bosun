@@ -6,9 +6,21 @@ package elastic
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
+)
+
+var (
+	// ErrMissingIndex is returned e.g. from DeleteService if the index is missing.
+	ErrMissingIndex = errors.New("elastic: index is missing")
+
+	// ErrMissingType is returned e.g. from DeleteService if the type is missing.
+	ErrMissingType = errors.New("elastic: type is missing")
+
+	// ErrMissingId is returned e.g. from DeleteService if the document identifier is missing.
+	ErrMissingId = errors.New("elastic: id is missing")
 )
 
 func checkResponse(res *http.Response) error {
@@ -25,13 +37,16 @@ func checkResponse(res *http.Response) error {
 	}
 	errReply := new(Error)
 	err = json.Unmarshal(slurp, errReply)
-	if err == nil && errReply != nil {
+	if err != nil {
+		return fmt.Errorf("elastic: Error %d (%s)", res.StatusCode, http.StatusText(res.StatusCode))
+	}
+	if errReply != nil {
 		if errReply.Status == 0 {
 			errReply.Status = res.StatusCode
 		}
 		return errReply
 	}
-	return nil
+	return fmt.Errorf("elastic: Error %d (%s)", res.StatusCode, http.StatusText(res.StatusCode))
 }
 
 type Error struct {

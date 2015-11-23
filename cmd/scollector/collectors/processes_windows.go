@@ -6,13 +6,15 @@ import (
 	"strings"
 
 	"bosun.org/_third_party/github.com/StackExchange/wmi"
+	"bosun.org/cmd/scollector/conf"
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
+	"bosun.org/util"
 )
 
 var regexesProcesses = []*regexp.Regexp{}
 
-func AddProcessConfig(params ProcessParams) error {
+func AddProcessConfig(params conf.ProcessParams) error {
 	if params.Name == "" {
 		return fmt.Errorf("empty process Name")
 	}
@@ -22,10 +24,6 @@ func AddProcessConfig(params ProcessParams) error {
 	}
 	regexesProcesses = append(regexesProcesses, reg)
 	return nil
-}
-
-type ProcessParams struct {
-	Name string
 }
 
 func WatchProcesses() {
@@ -78,15 +76,16 @@ func c_windows_processes() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	var svc_dst_started []Win32_Service
 	for _, svc := range svc_dst {
-		if nameMatches(svc.Name, regexesProcesses) {
+		if util.NameMatches(svc.Name, regexesProcesses) {
 			if svc.Started {
 				svc_dst_started = append(svc_dst_started, svc)
 			}
 			tags := opentsdb.TagSet{"name": svc.Name}
-			Add(&md, "win.service.started", btoi(svc.Started), tags, metadata.Gauge, metadata.Bool, descWinServiceStatus)
-			Add(&md, "win.service.status", btoi(svc.Status != "OK"), tags, metadata.Gauge, metadata.Ok, descWinServiceStatus)
+			Add(&md, "win.service.started", util.Btoi(svc.Started), tags, metadata.Gauge, metadata.Bool, descWinServiceStarted)
+			Add(&md, "win.service.status", util.Btoi(svc.Status != "OK"), tags, metadata.Gauge, metadata.Ok, descWinServiceStatus)
 			Add(&md, "win.service.checkpoint", svc.CheckPoint, tags, metadata.Gauge, metadata.None, descWinServiceCheckPoint)
 			Add(&md, "win.service.wait_hint", svc.WaitHint, tags, metadata.Gauge, metadata.MilliSecond, descWinServiceWaitHint)
+			Add(&md, osServiceRunning, util.Btoi(svc.Started), tags, metadata.Gauge, metadata.Bool, osServiceRunningDesc)
 		}
 	}
 
@@ -95,7 +94,7 @@ func c_windows_processes() (opentsdb.MultiDataPoint, error) {
 		service_match := false
 		iis_match := false
 
-		process_match := nameMatches(v.Name, regexesProcesses)
+		process_match := util.NameMatches(v.Name, regexesProcesses)
 
 		id := "0"
 
@@ -165,22 +164,6 @@ func c_windows_processes() (opentsdb.MultiDataPoint, error) {
 		Add(&md, "win.proc.thread_count", v.ThreadCount, tags, metadata.Gauge, metadata.Count, descWinProcthread_count)
 	}
 	return md, nil
-}
-
-func nameMatches(name string, regexes []*regexp.Regexp) bool {
-	for _, r := range regexes {
-		if r.MatchString(name) {
-			return true
-		}
-	}
-	return false
-}
-
-func btoi(b bool) int {
-	if b {
-		return 1
-	}
-	return 0
 }
 
 // Divide CPU by 1e5 because: 1 seconds / 100 Nanoseconds = 1e7. This is the
@@ -268,8 +251,4 @@ type Win32_Service struct {
 type WorkerProcess struct {
 	AppPoolName string
 	ProcessId   uint32
-}
-
-type Win32_ComputerSystem struct {
-	NumberOfLogicalProcessors uint32
 }

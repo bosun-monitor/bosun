@@ -137,6 +137,7 @@ func c_network_windows() (opentsdb.MultiDataPoint, error) {
 		Add(&md, "win.net.dropped", nicStats.PacketsReceivedDiscarded, tagsIn, metadata.Counter, metadata.PerSecond, descWinNetPacketsReceivedDiscarded)
 		Add(&md, "win.net.errs", nicStats.PacketsOutboundErrors, tagsOut, metadata.Counter, metadata.PerSecond, descWinNetPacketsOutboundErrors)
 		Add(&md, "win.net.errs", nicStats.PacketsReceivedErrors, tagsIn, metadata.Counter, metadata.PerSecond, descWinNetPacketsReceivedErrors)
+		Add(&md, osNetIfSpeed, nicStats.CurrentBandwidth/1000000, opentsdb.TagSet{"iface": iface}, metadata.Gauge, metadata.Megabit, osNetIfSpeedDesc)
 		Add(&md, osNetBytes, nicStats.BytesReceivedPersec, tagsIn, metadata.Counter, metadata.BytesPerSecond, osNetBytesDesc)
 		Add(&md, osNetBytes, nicStats.BytesSentPersec, tagsOut, metadata.Counter, metadata.BytesPerSecond, osNetBytesDesc)
 		Add(&md, osNetPackets, nicStats.PacketsReceivedPersec, tagsIn, metadata.Counter, metadata.PerSecond, osNetPacketsDesc)
@@ -166,22 +167,26 @@ type Win32_PnPEntity struct {
 }
 
 type Win32_NetworkAdapter struct {
-	Description    string // Intel(R) Gigabit ET Quad Port Server Adapter (no index)
-	InterfaceIndex uint32
-	PNPDeviceID    string
+	Description     string // Intel(R) Gigabit ET Quad Port Server Adapter (no index)
+	InterfaceIndex  uint32
+	PNPDeviceID     string
+	NetConnectionID string  //NY-WEB09-PRI-NIC-A
+	Speed           *uint64 //Bits per Second
+	MACAddress      string  //00:1B:21:93:00:00
+	GUID            string
 }
 
 type Win32_PerfRawData_Tcpip_NetworkInterface struct {
-	CurrentBandwidth         uint32
-	BytesReceivedPersec      uint32
-	BytesSentPersec          uint32
+	CurrentBandwidth         uint64
+	BytesReceivedPersec      uint64
+	BytesSentPersec          uint64
 	Name                     string
-	PacketsOutboundDiscarded uint32
-	PacketsOutboundErrors    uint32
-	PacketsReceivedDiscarded uint32
-	PacketsReceivedErrors    uint32
-	PacketsReceivedPersec    uint32
-	PacketsSentPersec        uint32
+	PacketsOutboundDiscarded uint64
+	PacketsOutboundErrors    uint64
+	PacketsReceivedDiscarded uint64
+	PacketsReceivedErrors    uint64
+	PacketsReceivedPersec    uint64
+	PacketsSentPersec        uint64
 }
 
 // c_network_team_windows will add metrics for team network adapters from
@@ -239,21 +244,21 @@ func c_network_team_windows() (opentsdb.MultiDataPoint, error) {
 		Add(&md, "win.net.bond.packets_multicast", nicStats.SentMulticastPackets, tagsOut, metadata.Counter, metadata.PerSecond, descWinNetTeamSentMulticastPackets)
 		Add(&md, "win.net.bond.packets_broadcast", nicStats.ReceivedBroadcastPackets, tagsIn, metadata.Counter, metadata.PerSecond, descWinNetTeamReceivedBroadcastPackets)
 		Add(&md, "win.net.bond.packets_broadcast", nicStats.SentBroadcastPackets, tagsOut, metadata.Counter, metadata.PerSecond, descWinNetTeamSentBroadcastPackets)
-		Add(&md, osNetBondifspeed, linkSpeed/1000000, opentsdb.TagSet{"iface": iface}, metadata.Gauge, metadata.Megabit, osNetBondifspeedDesc)
-		Add(&md, osNetBondBytes, nicStats.ReceivedBytes, tagsIn, metadata.Counter, metadata.Bytes, osNetBondBytesDesc)
-		Add(&md, osNetBondBytes, nicStats.SentBytes, tagsOut, metadata.Counter, metadata.Bytes, osNetBondBytesDesc)
-		Add(&md, osNetBondUnicast, nicStats.ReceivedUnicastPackets, tagsIn, metadata.Counter, metadata.Count, osNetBondUnicastDesc)
-		Add(&md, osNetBondUnicast, nicStats.SentUnicastPackets, tagsOut, metadata.Counter, metadata.Count, osNetBondUnicastDesc)
-		Add(&md, osNetBondMulticast, nicStats.ReceivedMulticastPackets, tagsIn, metadata.Counter, metadata.Count, osNetBondMulticastDesc)
-		Add(&md, osNetBondMulticast, nicStats.SentMulticastPackets, tagsOut, metadata.Counter, metadata.Count, osNetBondMulticastDesc)
-		Add(&md, osNetBondBroadcast, nicStats.ReceivedBroadcastPackets, tagsIn, metadata.Counter, metadata.Count, osNetBondBroadcastDesc)
-		Add(&md, osNetBondBroadcast, nicStats.SentBroadcastPackets, tagsOut, metadata.Counter, metadata.Count, osNetBondBroadcastDesc)
-		Add(&md, osNetBondPackets, float64(nicStats.ReceivedUnicastPackets)+float64(nicStats.ReceivedMulticastPackets)+float64(nicStats.ReceivedBroadcastPackets), tagsIn, metadata.Counter, metadata.Count, osNetBondPacketsDesc)
-		Add(&md, osNetBondPackets, float64(nicStats.SentUnicastPackets)+float64(nicStats.SentMulticastPackets)+float64(nicStats.SentBroadcastPackets), tagsOut, metadata.Counter, metadata.Count, osNetBondPacketsDesc)
-		Add(&md, osNetBondDropped, nicStats.ReceivedDiscardedPackets, tagsIn, metadata.Counter, metadata.Count, osNetBondDroppedDesc)
-		Add(&md, osNetBondDropped, nicStats.OutboundDiscardedPackets, tagsOut, metadata.Counter, metadata.Count, osNetBondDroppedDesc)
-		Add(&md, osNetBondErrors, nicStats.ReceivedPacketErrors, tagsIn, metadata.Counter, metadata.Count, osNetBondErrorsDesc)
-		Add(&md, osNetBondErrors, nicStats.OutboundPacketErrors, tagsOut, metadata.Counter, metadata.Count, osNetBondErrorsDesc)
+		Add(&md, osNetBondIfSpeed, linkSpeed/1000000, opentsdb.TagSet{"iface": iface}, metadata.Gauge, metadata.Megabit, osNetIfSpeedDesc)
+		Add(&md, osNetBondBytes, nicStats.ReceivedBytes, tagsIn, metadata.Counter, metadata.Bytes, osNetBytesDesc)
+		Add(&md, osNetBondBytes, nicStats.SentBytes, tagsOut, metadata.Counter, metadata.Bytes, osNetBytesDesc)
+		Add(&md, osNetBondUnicast, nicStats.ReceivedUnicastPackets, tagsIn, metadata.Counter, metadata.Count, osNetUnicastDesc)
+		Add(&md, osNetBondUnicast, nicStats.SentUnicastPackets, tagsOut, metadata.Counter, metadata.Count, osNetUnicastDesc)
+		Add(&md, osNetBondMulticast, nicStats.ReceivedMulticastPackets, tagsIn, metadata.Counter, metadata.Count, osNetMulticastDesc)
+		Add(&md, osNetBondMulticast, nicStats.SentMulticastPackets, tagsOut, metadata.Counter, metadata.Count, osNetMulticastDesc)
+		Add(&md, osNetBondBroadcast, nicStats.ReceivedBroadcastPackets, tagsIn, metadata.Counter, metadata.Count, osNetBroadcastDesc)
+		Add(&md, osNetBondBroadcast, nicStats.SentBroadcastPackets, tagsOut, metadata.Counter, metadata.Count, osNetBroadcastDesc)
+		Add(&md, osNetBondPackets, float64(nicStats.ReceivedUnicastPackets)+float64(nicStats.ReceivedMulticastPackets)+float64(nicStats.ReceivedBroadcastPackets), tagsIn, metadata.Counter, metadata.Count, osNetPacketsDesc)
+		Add(&md, osNetBondPackets, float64(nicStats.SentUnicastPackets)+float64(nicStats.SentMulticastPackets)+float64(nicStats.SentBroadcastPackets), tagsOut, metadata.Counter, metadata.Count, osNetPacketsDesc)
+		Add(&md, osNetBondDropped, nicStats.ReceivedDiscardedPackets, tagsIn, metadata.Counter, metadata.Count, osNetDroppedDesc)
+		Add(&md, osNetBondDropped, nicStats.OutboundDiscardedPackets, tagsOut, metadata.Counter, metadata.Count, osNetDroppedDesc)
+		Add(&md, osNetBondErrors, nicStats.ReceivedPacketErrors, tagsIn, metadata.Counter, metadata.Count, osNetErrorsDesc)
+		Add(&md, osNetBondErrors, nicStats.OutboundPacketErrors, tagsOut, metadata.Counter, metadata.Count, osNetErrorsDesc)
 	}
 	return md, nil
 }

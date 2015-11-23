@@ -1,0 +1,21 @@
+#markdown: redcarpet
+#highlighter: pygments
+
+redcarpet:
+  extensions: ["no_intra_emphasis", "fenced_code_blocks", "autolink", "strikethrough", "superscript"]
+repository: bosun-monitor/bosun
+
+markdown_ext:  markdown,mkd,mkdn,md
+textile_ext:   textile
+
+gems:
+  - jekyll-redirect-from
+
+# gem install github-pages
+# gem install jekyll-github-metadata jekyll-mentions jekyll-redirect-from jekyll-sitemap jemoji
+#gems:
+#- jekyll-github-metadata
+#- jekyll-mentions
+#- jekyll-redirect-from
+#- jekyll-sitemap
+#- jemoji

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/tls"
 	"errors"
-	"log"
 	"net/http"
 	"net/mail"
 	"net/smtp"
@@ -13,6 +12,8 @@ import (
 	"bosun.org/_third_party/github.com/jordan-wright/email"
 	"bosun.org/collect"
 	"bosun.org/metadata"
+	"bosun.org/slog"
+	"bosun.org/util"
 )
 
 func init() {
@@ -52,14 +53,14 @@ func (n *Notification) GetPayload(subject, body string) (payload []byte) {
 }
 
 func (n *Notification) DoPrint(payload string) {
-	log.Println(payload)
+	slog.Infoln(payload)
 }
 
 func (n *Notification) DoPost(payload []byte) {
 	if n.Body != nil {
 		buf := new(bytes.Buffer)
 		if err := n.Body.Execute(buf, string(payload)); err != nil {
-			log.Println(err)
+			slog.Errorln(err)
 			return
 		}
 		payload = buf.Bytes()
@@ -69,22 +70,22 @@ func (n *Notification) DoPost(payload []byte) {
 		defer resp.Body.Close()
 	}
 	if err != nil {
-		log.Println(err)
+		slog.Error(err)
 		return
 	}
 	if resp.StatusCode >= 300 {
-		log.Println("bad response on notification post:", resp.Status)
+		slog.Errorln("bad response on notification post:", resp.Status)
 	}
 }
 
 func (n *Notification) DoGet() {
 	resp, err := http.Get(n.Get.String())
 	if err != nil {
-		log.Println(err)
+		slog.Error(err)
 		return
 	}
 	if resp.StatusCode >= 300 {
-		log.Println("bad response on notification get:", resp.Status)
+		slog.Error("bad response on notification get:", resp.Status)
 	}
 }
 
@@ -105,13 +106,14 @@ func (n *Notification) DoEmail(subject, body []byte, c *Conf, ak string, attachm
 	for _, a := range attachments {
 		e.Attach(bytes.NewBuffer(a.Data), a.Filename, a.ContentType)
 	}
+	e.Headers.Add("X-Bosun-Server", util.Hostname)
 	if err := Send(e, c.SMTPHost, c.SMTPUsername, c.SMTPPassword); err != nil {
 		collect.Add("email.sent_failed", nil, 1)
-		log.Printf("failed to send alert %v to %v %v\n", ak, e.To, err)
+		slog.Errorf("failed to send alert %v to %v %v\n", ak, e.To, err)
 		return
 	}
 	collect.Add("email.sent", nil, 1)
-	log.Printf("relayed alert %v to %v sucessfully\n", ak, e.To)
+	slog.Infof("relayed alert %v to %v sucessfully. Subject: %d bytes. Body: %d bytes.", ak, e.To, len(subject), len(body))
 }
 
 // Send an email using the given host and SMTP auth (optional), returns any

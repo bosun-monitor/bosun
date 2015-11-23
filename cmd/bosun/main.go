@@ -5,10 +5,8 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"net/http"
 	"net/http/httptest"
-	"net/http/httputil"
 	_ "net/http/pprof"
 	"net/url"
 	"os"
@@ -16,6 +14,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"syscall"
 	"time"
 
 	"bosun.org/_third_party/github.com/facebookgo/httpcontrol"
@@ -27,15 +26,33 @@ import (
 	"bosun.org/graphite"
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
+	"bosun.org/slog"
+	"bosun.org/util"
 	"bosun.org/version"
 )
 
+type bosunHttpTransport struct {
+	UserAgent string
+	http.RoundTripper
+}
+
+func (t *bosunHttpTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	if req.Header.Get("User-Agent") == "" {
+		req.Header.Add("User-Agent", t.UserAgent)
+	}
+	req.Header.Add("X-Bosun-Server", util.Hostname)
+	return t.RoundTripper.RoundTrip(req)
+}
+
 func init() {
 	client := &http.Client{
-		Transport: &httpcontrol.Transport{
-			Proxy:          http.ProxyFromEnvironment,
-			RequestTimeout: time.Minute,
-			MaxTries:       3,
+		Transport: &bosunHttpTransport{
+			"Bosun/" + version.ShortVersion(),
+			&httpcontrol.Transport{
+				Proxy:          http.ProxyFromEnvironment,
+				RequestTimeout: time.Minute,
+				MaxTries:       3,
+			},
 		},
 	}
 	http.DefaultClient = client
@@ -68,7 +85,7 @@ func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 	c, err := conf.ParseFile(*flagConf)
 	if err != nil {
-		log.Fatal(err)
+		slog.Fatal(err)
 	}
 	if *flagTest {
 		os.Exit(0)
@@ -81,32 +98,32 @@ func main() {
 		httpListen.Host = "localhost" + httpListen.Host
 	}
 	if err := metadata.Init(httpListen, false); err != nil {
-		log.Fatal(err)
+		slog.Fatal(err)
 	}
 	if err := sched.Load(c); err != nil {
-		log.Fatal(err)
+		slog.Fatal(err)
 	}
 	if c.RelayListen != "" {
 		go func() {
 			mux := http.NewServeMux()
-			mux.Handle("/api/", httputil.NewSingleHostReverseProxy(httpListen))
+			mux.Handle("/api/", util.NewSingleHostProxy(httpListen))
 			s := &http.Server{
 				Addr:    c.RelayListen,
 				Handler: mux,
 			}
-			log.Fatal(s.ListenAndServe())
+			slog.Fatal(s.ListenAndServe())
 		}()
 	}
 	if c.TSDBHost != "" {
 		if err := collect.Init(httpListen, "bosun"); err != nil {
-			log.Fatal(err)
+			slog.Fatal(err)
 		}
 		tsdbHost := &url.URL{
 			Scheme: "http",
 			Host:   c.TSDBHost,
 		}
 		if *flagReadonly {
-			rp := httputil.NewSingleHostReverseProxy(tsdbHost)
+			rp := util.NewSingleHostProxy(tsdbHost)
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				if r.URL.Path == "/api/put" {
 					w.WriteHeader(204)
@@ -114,7 +131,7 @@ func main() {
 				}
 				rp.ServeHTTP(w, r)
 			}))
-			log.Println("readonly relay at", ts.URL, "to", tsdbHost)
+			slog.Infoln("readonly relay at", ts.URL, "to", tsdbHost)
 			tsdbHost, _ = url.Parse(ts.URL)
 			c.TSDBHost = tsdbHost.Host
 		}
@@ -122,26 +139,26 @@ func main() {
 	if *flagQuiet {
 		c.Quiet = true
 	}
-	go func() { log.Fatal(web.Listen(c.HTTPListen, *flagDev, c.TSDBHost)) }()
+	go func() { slog.Fatal(web.Listen(c.HTTPListen, *flagDev, c.TSDBHost)) }()
 	go func() {
 		if !*flagNoChecks {
-			log.Fatal(sched.Run())
+			sched.Run()
 		}
 	}()
 	go func() {
 		sc := make(chan os.Signal, 1)
-		signal.Notify(sc, os.Interrupt)
+		signal.Notify(sc, os.Interrupt, syscall.SIGTERM)
 		killing := false
 		for range sc {
 			if killing {
-				log.Println("Second interrupt: exiting")
+				slog.Infoln("Second interrupt: exiting")
 				os.Exit(1)
 			}
 			killing = true
 			go func() {
-				log.Println("Interrupt: closing down...")
+				slog.Infoln("Interrupt: closing down...")
 				sched.Close()
-				log.Println("done")
+				slog.Infoln("done")
 				os.Exit(1)
 			}()
 		}
@@ -162,21 +179,21 @@ func quit() {
 func watch(root, pattern string, f func()) {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		log.Fatal(err)
+		slog.Fatal(err)
 	}
 	filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if matched, err := filepath.Match(pattern, info.Name()); err != nil {
-			log.Fatal(err)
+			slog.Fatal(err)
 		} else if !matched {
 			return nil
 		}
 		err = watcher.Add(path)
 		if err != nil {
-			log.Fatal(err)
+			slog.Fatal(err)
 		}
 		return nil
 	})
-	log.Println("watching", pattern, "in", root)
+	slog.Infoln("watching", pattern, "in", root)
 	wait := time.Now()
 	go func() {
 		for {
@@ -190,7 +207,7 @@ func watch(root, pattern string, f func()) {
 					wait = time.Now().Add(time.Second * 2)
 				}
 			case err := <-watcher.Errors:
-				log.Println("error:", err)
+				slog.Errorln("error:", err)
 			}
 		}
 	}()

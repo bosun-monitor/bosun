@@ -10,8 +10,8 @@ import (
 
 // Chart ist the very simple interface for all charts: They can be plotted to a graphics output.
 type Chart interface {
-	Plot(g Graphics) // Output chart to g
-	Reset()          // Reset any setting made during last plot
+	Plot(g Graphics) // Plot the chart to g.
+	Reset()          // Reset any setting made during last plot.
 }
 
 // Expansion determines the way an axis range is expanded to align
@@ -20,20 +20,22 @@ type Expansion int
 
 // Suitable values for Expand in RangeMode.
 const (
-	ExpandNextTic Expansion = iota // Set min/max to next tic really below/above min/max of data
-	ExpandToTic                    // Set to next tic below/above or equal to min/max of data
-	ExpandTight                    // Use data min/max as limit
+	ExpandNextTic Expansion = iota // Set min/max to next tic really below/above min/max of data.
+	ExpandToTic                    // Set to next tic below/above or equal to min/max of data.
+	ExpandTight                    // Use data min/max as limit.
 	ExpandABit                     // Like ExpandToTic and add/subtract ExpandABitFraction of tic distance.
 )
 
-var ExpandABitFraction = 0.5 // Fraction of tic spacing added in ExpandABit Range.Expand mode.
+// ExpandABitFraction is the fraction of a major tic spacing added during
+// axis range expansion with the ExpandABit mode.
+var ExpandABitFraction = 0.5
 
 // RangeMode describes how one end of an axis is set up. There are basically three different main modes:
-//   o Fixed: Fixed==true.
-//     Use Value/TValue as fixed value ignoring data.
-//   o Unconstrained autoscaling: Fixed==false && Constrained==false.
+//   * Fixed: Fixed==true.
+//     Use Value/TValue as fixed value this ignoring the actual data range.
+//   * Unconstrained autoscaling: Fixed==false && Constrained==false.
 //     Set range to whatever data requires.
-//   o Constrained autoscaling: Fixed==false && Constrained==true.
+//   * Constrained autoscaling: Fixed==false && Constrained==true.
 //     Scale axis according to data present, but limit scaling to intervall [Lower,Upper]
 // For both autoscaling modes Expand defines how much expansion is done below/above
 // the lowest/highest data point.
@@ -66,7 +68,7 @@ const (
 	MirrorAxisOnly    MirrorAxis = 1  // just draw a mirrord axis, but omit tics
 )
 
-// TicSettings describes how (if at all) tics are shown on an axis.
+// TicSetting describes how (if at all) tics are shown on an axis.
 type TicSetting struct {
 	Hide       bool       // dont show tics if true
 	HideLabels bool       // don't show tic labels if true
@@ -77,8 +79,15 @@ type TicSetting struct {
 	Grid       GridMode   // GridOff, GridLines, GridBlocks
 	Mirror     MirrorAxis // 0: mirror axis and tics, -1: don't mirror anything, 1: mirror axis only (no tics)
 
-	Format  func(float64) string              // User function to format tics.
-	TFormat func(time.Time, TimeDelta) string // User function to format tics for date/time axis
+	// Format is used to print the tic labels. If unset FmtFloat is used.
+	Format func(float64) string
+
+	// TFormat is used to print tic labels for date/time axis.
+	TFormat func(time.Time, TimeDelta) string
+
+	// TLocation allows to fix the timezone in which date/time axis tic labels
+	// are printed.
+	TLocation *time.Location
 
 	UserDelta bool // true if Delta or TDelta was input
 }
@@ -123,13 +132,14 @@ func (r *Range) Fixed(min, max, delta float64) {
 	r.TicSetting.Delta = delta
 }
 
+// TFixed is the date/time version of Fixed.
 func (r *Range) TFixed(min, max time.Time, delta TimeDelta) {
 	r.MinMode.Fixed, r.MaxMode.Fixed = true, true
 	r.MinMode.TValue, r.MaxMode.TValue = min, max
 	r.TicSetting.TDelta = delta
 }
 
-// Reset resets the fields in r which have been set up during a plot.
+// Reset the fields in r which have been set up during a plot.
 func (r *Range) Reset() {
 	r.Min, r.Max = 0, 0
 	r.TMin, r.TMax = time.Time{}, time.Time{}
@@ -143,7 +153,7 @@ func (r *Range) Reset() {
 	}
 }
 
-// Prepare the range r for use, especially set up all values needed for autoscale() to work properly
+// Prepare the range r for use, especially set up all values needed for autoscale() to work properly.
 func (r *Range) init() { r.Init() }
 func (r *Range) Init() {
 	// All the min stuff
@@ -242,16 +252,14 @@ func FmtFloat(f float64) string {
 			p--
 		}
 		return FmtFloat(f) + Units[p]
-	} else {
-		var p = 7
-		for math.Abs(f) > 1000 && p < 16 {
-			f /= 1000
-			p++
-		}
-		return FmtFloat(f) + Units[p]
-
 	}
-	return "xxx"
+
+	var p = 7
+	for math.Abs(f) > 1000 && p < 16 {
+		f /= 1000
+		p++
+	}
+	return FmtFloat(f) + Units[p]
 }
 
 func almostEqual(a, b, d float64) bool {
@@ -351,7 +359,7 @@ func tApplyRangeMode(mode RangeMode, val time.Time, step TimeDelta, upper bool) 
 		} else if sval > int64(mode.Upper) {
 			sval = int64(mode.Upper)
 		}
-		val = time.Unix(sval, 0)
+		val = time.Unix(sval, 0).In(val.Location())
 	}
 
 	switch mode.Expand {
@@ -371,9 +379,9 @@ func tApplyRangeMode(mode RangeMode, val time.Time, step TimeDelta, upper bool) 
 		s := tic.Unix()
 		if math.Abs(float64(s-val.Unix())/float64(step.Seconds())) < 0.15 {
 			if upper {
-				val = RoundUp(time.Unix(s+step.Seconds()/2, 0), step)
+				val = RoundUp(time.Unix(s+step.Seconds()/2, 0).In(val.Location()), step)
 			} else {
-				val = RoundDown(time.Unix(s-step.Seconds()/2, 0), step)
+				val = RoundDown(time.Unix(s-step.Seconds()/2, 0).In(val.Location()), step)
 			}
 		} else {
 			val = tic
@@ -382,10 +390,10 @@ func tApplyRangeMode(mode RangeMode, val time.Time, step TimeDelta, upper bool) 
 	case ExpandABit:
 		if upper {
 			tic = RoundDown(val, step)
-			val = time.Unix(tic.Unix()+step.Seconds()/2, 0)
+			val = time.Unix(tic.Unix()+step.Seconds()/2, 0).In(val.Location())
 		} else {
 			tic = RoundUp(val, step)
-			val = time.Unix(tic.Unix()-step.Seconds()/2, 0)
+			val = time.Unix(tic.Unix()-step.Seconds()/2, 0).In(val.Location())
 		}
 		return
 
@@ -417,6 +425,11 @@ func (r *Range) tSetup(desiredNumberOfTics, maxNumberOfTics int, delta, mindelta
 	// Set up time tic delta
 	mint := time.Unix(int64(r.DataMin), 0)
 	maxt := time.Unix(int64(r.DataMax), 0)
+
+	if r.TicSetting.TLocation != nil {
+		mint = mint.In(r.TicSetting.TLocation)
+		maxt = maxt.In(r.TicSetting.TLocation)
+	}
 
 	var ftic, ltic time.Time
 	r.TMin, ftic = tApplyRangeMode(r.MinMode, mint, td, false)
@@ -466,7 +479,11 @@ func (r *Range) tSetup(desiredNumberOfTics, maxNumberOfTics int, delta, mindelta
 		}
 		t := Tic{Pos: x, LabelPos: labelPos, Label: label, Align: align}
 		r.Tics = append(r.Tics, t)
-		ftic = RoundDown(time.Unix(ftic.Unix()+step+step/5, 0), td)
+		z := time.Unix(ftic.Unix()+step+step/5, 0)
+		if r.TicSetting.TLocation != nil {
+			z = z.In(r.TicSetting.TLocation)
+		}
+		ftic = RoundDown(z, td)
 	}
 	// last tic might not get label if period
 	if td.Period() {
@@ -587,7 +604,7 @@ func (r *Range) fSetup(desiredNumberOfTics, maxNumberOfTics int, delta, mindelta
 	}
 }
 
-// SetUp sets up several fields of Range r according to RangeModes and TicSettings.
+// Setup several fields of the Range r according to RangeModes and TicSettings.
 // DataMin and DataMax of r must be present and should indicate lowest and highest
 // value present in the data set. The following fields of r are filled:
 //   (T)Min and (T)Max    lower and upper limit of axis, (T)-version for date/time axis
@@ -599,7 +616,7 @@ func (r *Range) fSetup(desiredNumberOfTics, maxNumberOfTics int, delta, mindelta
 // The parameters desiredNumberOfTics and maxNumberOfTics are what the say.
 // sWidth and sOffset are screen-width and -offset and are used to set up the
 // Data-Screen conversion functions. If revert is true, than screen coordinates
-// are asumed to be the other way around than mathematical coordinates.
+// are assumed to be the other way around than mathematical coordinates.
 //
 // TODO(vodo) seperate screen stuff into own method.
 func (r *Range) Setup(desiredNumberOfTics, maxNumberOfTics, sWidth, sOffset int, revert bool) {

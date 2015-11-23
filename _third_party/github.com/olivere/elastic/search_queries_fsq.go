@@ -19,6 +19,8 @@ type FunctionScoreQuery struct {
 	boostMode  string
 	filters    []Filter
 	scoreFuncs []ScoreFunction
+	minScore   *float32
+	weight     *float64
 }
 
 // NewFunctionScoreQuery creates a new function score query.
@@ -73,6 +75,11 @@ func (q FunctionScoreQuery) Boost(boost float32) FunctionScoreQuery {
 	return q
 }
 
+func (q FunctionScoreQuery) MinScore(minScore float32) FunctionScoreQuery {
+	q.minScore = &minScore
+	return q
+}
+
 // Source returns JSON for the function score query.
 func (q FunctionScoreQuery) Source() interface{} {
 	source := make(map[string]interface{})
@@ -86,6 +93,11 @@ func (q FunctionScoreQuery) Source() interface{} {
 	}
 
 	if len(q.filters) == 1 && q.filters[0] == nil {
+		// Weight needs to be serialized on this level.
+		if weight := q.scoreFuncs[0].GetWeight(); weight != nil {
+			query["weight"] = weight
+		}
+		// Serialize the score function
 		query[q.scoreFuncs[0].Name()] = q.scoreFuncs[0].Source()
 	} else {
 		funcs := make([]interface{}, len(q.filters))
@@ -94,6 +106,11 @@ func (q FunctionScoreQuery) Source() interface{} {
 			if filter != nil {
 				hsh["filter"] = filter.Source()
 			}
+			// Weight needs to be serialized on this level.
+			if weight := q.scoreFuncs[i].GetWeight(); weight != nil {
+				hsh["weight"] = weight
+			}
+			// Serialize the score function
 			hsh[q.scoreFuncs[i].Name()] = q.scoreFuncs[i].Source()
 			funcs[i] = hsh
 		}
@@ -111,6 +128,9 @@ func (q FunctionScoreQuery) Source() interface{} {
 	}
 	if q.boost != nil {
 		query["boost"] = *q.boost
+	}
+	if q.minScore != nil {
+		query["min_score"] = *q.minScore
 	}
 
 	return source

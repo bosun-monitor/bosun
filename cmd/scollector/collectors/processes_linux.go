@@ -9,11 +9,12 @@ import (
 	"strconv"
 	"strings"
 
+	"bosun.org/cmd/scollector/conf"
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
 )
 
-func AddProcessConfig(params ProcessParams) error {
+func AddProcessConfig(params conf.ProcessParams) error {
 	p, err := NewWatchedProc(params)
 	if err != nil {
 		return err
@@ -38,12 +39,14 @@ func WatchProcesses() {
 
 func linuxProcMonitor(w *WatchedProc, md *opentsdb.MultiDataPoint) error {
 	var err error
+	var processCount int
 	for pid, id := range w.Processes {
 		file_status, e := os.Stat("/proc/" + pid)
 		if e != nil {
 			w.Remove(pid)
 			continue
 		}
+		processCount++
 		stats_file, e := ioutil.ReadFile("/proc/" + pid + "/stat")
 		if e != nil {
 			w.Remove(pid)
@@ -113,6 +116,9 @@ func linuxProcMonitor(w *WatchedProc, md *opentsdb.MultiDataPoint) error {
 		Add(md, "linux.proc.start_time", start_ts, tags, metadata.Gauge, metadata.Timestamp, descLinuxProcStartTS)
 		Add(md, "linux.proc.uptime", now()-start_ts, tags, metadata.Gauge, metadata.Second, descLinuxProcUptime)
 	}
+	if w.IncludeCount {
+		Add(md, "linux.proc.count", processCount, opentsdb.TagSet{"name": w.Name}, metadata.Gauge, metadata.Process, descLinuxProcCount)
+	}
 	return err
 }
 
@@ -134,13 +140,27 @@ const (
 	descLinuxHardFileLimit    = "The hard limit on the number of open file descriptors."
 	descLinuxProcUptime       = "The length of time, in seconds, since the process was started."
 	descLinuxProcStartTS      = "The timestamp of process start."
+	descLinuxProcCount        = "The number of currently running processes."
 )
+
+type byModTime []os.FileInfo
+
+func (bmt byModTime) Len() int      { return len(bmt) }
+func (bmt byModTime) Swap(i, j int) { bmt[i], bmt[j] = bmt[j], bmt[i] }
+func (bmt byModTime) Less(i, j int) bool {
+	// If the creation times are identical, sort by filename (pid) instead.
+	if bmt[i].ModTime() == bmt[j].ModTime() {
+		return sort.StringsAreSorted([]string{bmt[i].Name(), bmt[j].Name()})
+	}
+	return bmt[i].ModTime().UnixNano() < bmt[j].ModTime().UnixNano()
+}
 
 func getLinuxProccesses() ([]*Process, error) {
 	files, err := ioutil.ReadDir("/proc")
 	if err != nil {
 		return nil, err
 	}
+	sort.Sort(byModTime(files))
 	var pids []string
 	for _, f := range files {
 		if _, err := strconv.Atoi(f.Name()); err == nil && f.IsDir() {
@@ -149,13 +169,9 @@ func getLinuxProccesses() ([]*Process, error) {
 	}
 	var lps []*Process
 	for _, pid := range pids {
-		cmdline, err := ioutil.ReadFile("/proc/" + pid + "/cmdline")
-		if err != nil {
+		cl, err := getLinuxCmdline(pid)
+		if err != nil || cl == nil {
 			//Continue because the pid might not exist any more
-			continue
-		}
-		cl := strings.Split(string(cmdline), "\x00")
-		if len(cl) < 1 || len(cl[0]) == 0 {
 			continue
 		}
 		lp := &Process{
@@ -168,6 +184,18 @@ func getLinuxProccesses() ([]*Process, error) {
 		lps = append(lps, lp)
 	}
 	return lps, nil
+}
+
+func getLinuxCmdline(pid string) ([]string, error) {
+	cmdline, err := ioutil.ReadFile("/proc/" + pid + "/cmdline")
+	if err != nil {
+		return nil, err
+	}
+	cl := strings.Split(string(cmdline), "\x00")
+	if len(cl) < 1 || len(cl[0]) == 0 {
+		return nil, nil
+	}
+	return cl, nil
 }
 
 func c_linux_processes(procs []*WatchedProc) (opentsdb.MultiDataPoint, error) {
@@ -185,20 +213,14 @@ func c_linux_processes(procs []*WatchedProc) (opentsdb.MultiDataPoint, error) {
 	return md, err
 }
 
-type ProcessParams struct {
-	Command string
-	Name    string
-	Args    string
-}
-
 type Process struct {
 	Pid       string
 	Command   string
 	Arguments string
 }
 
-// NewWatchedProc takes a string of the form "command,name,regex".
-func NewWatchedProc(params ProcessParams) (*WatchedProc, error) {
+// NewWatchedProc takes a configuration block [[Process]] from conf
+func NewWatchedProc(params conf.ProcessParams) (*WatchedProc, error) {
 	if params.Name == "" {
 		params.Name = params.Command
 	}
@@ -206,19 +228,21 @@ func NewWatchedProc(params ProcessParams) (*WatchedProc, error) {
 		return nil, fmt.Errorf("bad process name: %v", params.Name)
 	}
 	return &WatchedProc{
-		Command:   params.Command,
-		Name:      params.Name,
-		Processes: make(map[string]int),
-		ArgMatch:  regexp.MustCompile(params.Args),
-		idPool:    new(idPool),
+		Command:      params.Command,
+		Name:         params.Name,
+		IncludeCount: params.IncludeCount,
+		Processes:    make(map[string]int),
+		ArgMatch:     regexp.MustCompile(params.Args),
+		idPool:       new(idPool),
 	}, nil
 }
 
 type WatchedProc struct {
-	Command   string
-	Name      string
-	Processes map[string]int
-	ArgMatch  *regexp.Regexp
+	Command      string
+	Name         string
+	IncludeCount bool
+	Processes    map[string]int
+	ArgMatch     *regexp.Regexp
 	*idPool
 }
 

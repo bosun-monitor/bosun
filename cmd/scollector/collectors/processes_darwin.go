@@ -1,12 +1,13 @@
 package collectors
 
-import "fmt"
+import (
+	"bosun.org/cmd/scollector/conf"
+	"fmt"
+)
 
-func AddProcessConfig(params ProcessParams) error {
+func AddProcessConfig(params conf.ProcessParams) error {
 	return fmt.Errorf("process watching not implemented on Darwin")
 }
-
-type ProcessParams struct{}
 
 func WatchProcesses() {
 }

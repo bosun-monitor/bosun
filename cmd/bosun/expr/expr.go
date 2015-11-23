@@ -10,11 +10,13 @@ import (
 	"time"
 
 	"bosun.org/_third_party/github.com/MiniProfiler/go/miniprofiler"
+	"bosun.org/_third_party/github.com/influxdb/influxdb/client"
 	"bosun.org/_third_party/github.com/olivere/elastic"
 	"bosun.org/cmd/bosun/cache"
 	"bosun.org/cmd/bosun/expr/parse"
 	"bosun.org/cmd/bosun/search"
 	"bosun.org/graphite"
+	"bosun.org/models"
 	"bosun.org/opentsdb"
 )
 
@@ -40,13 +42,16 @@ type State struct {
 	logstashQueries []elastic.SearchSource
 	logstashHosts   LogstashElasticHosts
 
+	// InfluxDB
+	InfluxConfig client.Config
+
 	History AlertStatusProvider
 }
 
 // Alert Status Provider is used to provide information about alert results.
 // This facilitates alerts referencing other alerts, even when they go unknown or unevaluated.
 type AlertStatusProvider interface {
-	GetUnknownAndUnevaluatedAlertKeys(alertName string) (unknown, unevaluated []AlertKey)
+	GetUnknownAndUnevaluatedAlertKeys(alertName string) (unknown, unevaluated []models.AlertKey)
 }
 
 var ErrUnknownOp = fmt.Errorf("expr: unknown op type")
@@ -73,7 +78,7 @@ func New(expr string, funcs ...map[string]parse.Func) (*Expr, error) {
 
 // Execute applies a parse expression to the specified OpenTSDB context, and
 // returns one result per group. T may be nil to ignore timings.
-func (e *Expr) Execute(c opentsdb.Context, g graphite.Context, l LogstashElasticHosts, cache *cache.Cache, T miniprofiler.Timer, now time.Time, autods int, unjoinedOk bool, search *search.Search, squelched func(tags opentsdb.TagSet) bool, history AlertStatusProvider) (r *Results, queries []opentsdb.Request, err error) {
+func (e *Expr) Execute(c opentsdb.Context, g graphite.Context, l LogstashElasticHosts, influxConfig client.Config, cache *cache.Cache, T miniprofiler.Timer, now time.Time, autods int, unjoinedOk bool, search *search.Search, squelched func(tags opentsdb.TagSet) bool, history AlertStatusProvider) (r *Results, queries []opentsdb.Request, err error) {
 	if squelched == nil {
 		squelched = func(tags opentsdb.TagSet) bool {
 			return false
@@ -85,6 +90,7 @@ func (e *Expr) Execute(c opentsdb.Context, g graphite.Context, l LogstashElastic
 		tsdbContext:     c,
 		graphiteContext: g,
 		logstashHosts:   l,
+		InfluxConfig:    influxConfig,
 		now:             now,
 		autods:          autods,
 		unjoinedOk:      unjoinedOk,
@@ -477,6 +483,8 @@ func operate(op string, a, b float64) (r float64) {
 		r = a - b
 	case "/":
 		r = a / b
+	case "%":
+		r = math.Mod(a, b)
 	case "==":
 		if a == b {
 			r = 1
@@ -578,7 +586,7 @@ func (e *State) walkFunc(node *parse.FuncNode, T miniprofiler.Timer) *Results {
 	var res *Results
 	T.Step("func: "+node.Name, func(T miniprofiler.Timer) {
 		var in []reflect.Value
-		for _, a := range node.Args {
+		for i, a := range node.Args {
 			var v interface{}
 			switch t := a.(type) {
 			case *parse.StringNode:
@@ -593,6 +601,9 @@ func (e *State) walkFunc(node *parse.FuncNode, T miniprofiler.Timer) *Results {
 				v = extractScalar(e.walkBinary(t, T))
 			default:
 				panic(fmt.Errorf("expr: unknown func arg type"))
+			}
+			if f, ok := v.(float64); ok && node.F.Args[i] == parse.TypeNumberSet {
+				v = fromScalar(f)
 			}
 			in = append(in, reflect.ValueOf(v))
 		}

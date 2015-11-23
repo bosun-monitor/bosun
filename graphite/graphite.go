@@ -62,6 +62,7 @@ func (r *Request) Query(host string, header http.Header) (Response, error) {
 		if u.Path != "" {
 			r.URL.Path = u.Path
 		}
+		r.URL.User = u.User
 	}
 	req, err := http.NewRequest("GET", r.URL.String(), nil)
 	if err != nil {

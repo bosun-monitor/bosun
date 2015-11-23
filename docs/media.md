@@ -4,7 +4,8 @@ title: Media
 ---
 
 <div class="row">
-	<h2>Presentation</h2>
+	<h2>Presentations</h2>
+	<p>See the <strong><a href="https://vimeo.com/131581326">Monitorama 2015 (PDX) presentation</a></strong> for the most up to date presentation. This presentation has screencasts of building an alert starting about 15 minutes in. The first 15 minutes explain some of the design principles behind bosun. After the first screen cast of building an alert there are also some example alerts.</p>
 	<p>See the <strong><a href="https://www.usenix.org/conference/lisa14/conference-program/presentation/brandt">LISA presentation</a></strong> for slides, video and audio.  
 		This was the first presentation on Bosun which was given right after release.  Serves as a great introduction to the underlying thoughs on problems with alerting and how Bosun solves them.  Still highly relevant, although since then Bosun has gained a few new features, most notably support for graphite and logstash/elasticsearch.</p>
 </div>

@@ -24,11 +24,12 @@ import (
 )
 
 var (
-	errMessageTooShort = errors.New("message too short")
-	errHeaderTooShort  = errors.New("header too short")
-	errBufferTooShort  = errors.New("buffer too short")
-	errOpNoSupport     = errors.New("operation not supported")
-	errNoExtension     = errors.New("no extension")
+	errMessageTooShort  = errors.New("message too short")
+	errHeaderTooShort   = errors.New("header too short")
+	errBufferTooShort   = errors.New("buffer too short")
+	errOpNoSupport      = errors.New("operation not supported")
+	errNoExtension      = errors.New("no extension")
+	errInvalidExtension = errors.New("invalid extension")
 )
 
 func checksum(b []byte) uint16 {

@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"bosun.org/cmd/bosun/conf"
-	"bosun.org/cmd/bosun/expr"
+	"bosun.org/models"
 	"bosun.org/opentsdb"
 )
 
@@ -16,8 +16,7 @@ func TestActionNotificationTemplates(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	s := &Schedule{}
-	s.Init(c)
+	s, _ := initSched(c)
 	data := &actionNotificationContext{}
 	data.ActionType = ActionAcknowledge
 	data.Message = "Bad things happened"
@@ -102,21 +101,19 @@ func TestActionNotificationGrouping(t *testing.T) {
 			warn = 1
 		}
 	`)
-	c.StateFile = ""
 	if err != nil {
 		t.Fatal(err)
 	}
-	s := Schedule{}
-	err = s.Init(c)
+	s, err := initSched(c)
 	if err != nil {
 		t.Fatal(err)
 	}
-	awarn := expr.AlertKey("a{host=w}")
-	acrit := expr.AlertKey("a{host=c}")
-	bwarn := expr.AlertKey("b{host=w}")
-	bcrit := expr.AlertKey("b{host=c}")
-	cA := expr.AlertKey("c{host=a}")
-	cB := expr.AlertKey("c{host=b}")
+	awarn := models.AlertKey("a{host=w}")
+	acrit := models.AlertKey("a{host=c}")
+	bwarn := models.AlertKey("b{host=w}")
+	bcrit := models.AlertKey("b{host=c}")
+	cA := models.AlertKey("c{host=a}")
+	cB := models.AlertKey("c{host=b}")
 	s.status[awarn] = &State{Alert: "a", Group: opentsdb.TagSet{"host": "w"}, History: []Event{{Status: StWarning}}}
 	s.status[acrit] = &State{Alert: "a", Group: opentsdb.TagSet{"host": "c"}, History: []Event{{Status: StCritical}}}
 	s.status[bwarn] = &State{Alert: "b", Group: opentsdb.TagSet{"host": "w"}, History: []Event{{Status: StWarning}}}
@@ -124,8 +121,8 @@ func TestActionNotificationGrouping(t *testing.T) {
 	s.status[cA] = &State{Alert: "c", Group: opentsdb.TagSet{"host": "a"}, History: []Event{{Status: StWarning}}}
 	s.status[cB] = &State{Alert: "c", Group: opentsdb.TagSet{"host": "b"}, History: []Event{{Status: StWarning}}}
 
-	groups := s.groupActionNotifications([]expr.AlertKey{awarn, acrit, bwarn, bcrit, cA, cB})
-	expect := func(not string, aks ...expr.AlertKey) {
+	groups := s.groupActionNotifications([]models.AlertKey{awarn, acrit, bwarn, bcrit, cA, cB})
+	expect := func(not string, aks ...models.AlertKey) {
 		n := c.Notifications[not]
 		actualAks, ok := groups[n]
 		if !ok {

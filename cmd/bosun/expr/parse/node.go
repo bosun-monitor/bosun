@@ -111,7 +111,9 @@ func (f *FuncNode) Check(t *Tree) error {
 	for i, a := range f.Args {
 		ft := f.F.Args[i]
 		at := a.Return()
-		if ft != at {
+		if ft == TypeNumberSet && at == TypeScalar {
+			// Scalars are promoted to NumberSets during execution.
+		} else if ft != at {
 			return fmt.Errorf("parse: expected %v, got %v", ft, at)
 		}
 		if err := a.Check(t); err != nil {

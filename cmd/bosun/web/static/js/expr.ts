@@ -1,4 +1,4 @@
-interface IExprScope extends ng.IScope {
+interface IExprScope extends RootScope {
 	expr: string;
 	error: string;
 	running: string;
@@ -17,6 +17,7 @@ interface IExprScope extends ng.IScope {
 }
 
 bosunControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route', function($scope: IExprScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService) {
+	
 	var search = $location.search();
 	var current: string;
 	try {
@@ -32,13 +33,13 @@ bosunControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route
 	$scope.date = search.date || '';
 	$scope.time = search.time || '';
 	$scope.expr = current;
+
 	$scope.running = current;
 	$scope.tab = search.tab || 'results';
 	$scope.animate();
-	$http.get('/api/expr?q=' +
-		encodeURIComponent(current) +
-		'&date=' + encodeURIComponent($scope.date) +
-		'&time=' + encodeURIComponent($scope.time))
+	$http.post('/api/expr?' +
+		'date=' + encodeURIComponent($scope.date) +
+		'&time=' + encodeURIComponent($scope.time),current)
 		.success((data) => {
 			$scope.result = data.Results;
 			$scope.queries = data.Queries;
@@ -89,8 +90,9 @@ bosunControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route
 		return graph;
 	}
 	$scope.keydown = function($event: any) {
-		if ($event.keyCode == 13) {
+		if ($event.shiftKey && $event.keyCode == 13) {
 			$scope.set();
 		}
-	}
+	};
+
 }]);

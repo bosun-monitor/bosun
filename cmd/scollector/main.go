@@ -7,8 +7,11 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net/http"
+	_ "net/http/pprof"
 	"net/url"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -17,6 +20,7 @@ import (
 
 	"bosun.org/_third_party/github.com/BurntSushi/toml"
 	"bosun.org/cmd/scollector/collectors"
+	"bosun.org/cmd/scollector/conf"
 	"bosun.org/collect"
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
@@ -30,7 +34,7 @@ var (
 	flagFilter          = flag.String("f", "", "Filters collectors matching these terms, separated by comma. Overrides Filter in conf file.")
 	flagList            = flag.Bool("l", false, "List available collectors.")
 	flagPrint           = flag.Bool("p", false, "Print to screen instead of sending to a host")
-	flagBatchSize       = flag.Int("b", 0, "OpenTSDB batch size. Used for debugging bad data.")
+	flagBatchSize       = flag.Int("b", 0, "OpenTSDB batch size. Default is 500.")
 	flagFake            = flag.Int("fake", 0, "Generates X fake data points on the test.fake metric per second.")
 	flagDebug           = flag.Bool("d", false, "Enables debug output.")
 	flagDisableMetadata = flag.Bool("m", false, "Disable sending of metadata.")
@@ -41,81 +45,197 @@ var (
 	mains []func()
 )
 
-type Conf struct {
-	// Host is the OpenTSDB or Bosun host to send data.
-	Host string
-	// FullHost enables full hostnames: doesn't truncate to first ".".
-	FullHost bool
-	// ColDir is the external collectors directory.
-	ColDir string
-	// Tags are added to every datapoint. If a collector specifies the same tag
-	// key, this one will be overwritten. The host tag is not supported.
-	Tags opentsdb.TagSet
-	// Hostname overrides the system hostname.
-	Hostname string
-	// DisableSelf disables sending of scollector self metrics.
-	DisableSelf bool
-	// Freq is the default frequency in seconds for most collectors.
-	Freq int
-	// Filter filters collectors matching these terms.
-	Filter []string
+func main() {
+	flag.Parse()
+	if *flagToToml != "" {
+		toToml(*flagToToml)
+		fmt.Println("toml conversion complete; remove all empty values by hand (empty strings, 0)")
+		return
+	}
+	if *flagPrint || *flagDebug {
+		slog.Set(&slog.StdLog{Log: log.New(os.Stdout, "", log.LstdFlags)})
+	}
+	if *flagVersion {
+		fmt.Println(version.GetVersionInfo("scollector"))
+		os.Exit(0)
+	}
+	for _, m := range mains {
+		m()
+	}
+	conf := readConf()
+	if *flagHost != "" {
+		conf.Host = *flagHost
+	}
+	if *flagFilter != "" {
+		conf.Filter = strings.Split(*flagFilter, ",")
+	}
+	if !conf.Tags.Valid() {
+		slog.Fatalf("invalid tags: %v", conf.Tags)
+	} else if conf.Tags["host"] != "" {
+		slog.Fatalf("host not supported in custom tags, use Hostname instead")
+	}
+	if conf.PProf != "" {
+		go func() {
+			slog.Infof("Starting pprof at http://%s/debug/pprof/", conf.PProf)
+			slog.Fatal(http.ListenAndServe(conf.PProf, nil))
+		}()
+	}
+	collectors.AddTags = conf.Tags
+	util.FullHostname = conf.FullHost
+	util.Set()
+	if conf.Hostname != "" {
+		util.Hostname = conf.Hostname
+	}
+	if err := collect.SetHostname(util.Hostname); err != nil {
+		slog.Fatal(err)
+	}
+	if conf.ColDir != "" {
+		collectors.InitPrograms(conf.ColDir)
+	}
+	var err error
+	check := func(e error) {
+		if e != nil {
+			err = e
+		}
+	}
+	collectors.Init(conf)
+	for _, r := range conf.MetricFilters {
+		check(collectors.AddMetricFilters(r))
+	}
+	for _, rmq := range conf.RabbitMQ {
+		check(collectors.RabbitMQ(rmq.URL))
+	}
+	for _, cfg := range conf.SNMP {
+		check(collectors.SNMP(cfg, conf.MIBS))
+	}
+	for _, i := range conf.ICMP {
+		check(collectors.ICMP(i.Host))
+	}
+	for _, a := range conf.AWS {
+		check(collectors.AWS(a.AccessKey, a.SecretKey, a.Region))
+	}
+	for _, v := range conf.Vsphere {
+		check(collectors.Vsphere(v.User, v.Password, v.Host))
+	}
+	for _, p := range conf.Process {
+		check(collectors.AddProcessConfig(p))
+	}
+	for _, p := range conf.ProcessDotNet {
+		check(collectors.AddProcessDotNetConfig(p))
+	}
+	for _, h := range conf.HTTPUnit {
+		if h.TOML != "" {
+			check(collectors.HTTPUnitTOML(h.TOML))
+		}
+		if h.Hiera != "" {
+			check(collectors.HTTPUnitHiera(h.Hiera))
+		}
+	}
+	for _, r := range conf.ElasticIndexFilters {
+		check(collectors.AddElasticIndexFilter(r))
+	}
+	for _, r := range conf.Riak {
+		check(collectors.Riak(r.URL))
+	}
+	if err != nil {
+		slog.Fatal(err)
+	}
+	collectors.KeepalivedCommunity = conf.KeepalivedCommunity
+	// Add all process collectors. This is platform specific.
+	collectors.WatchProcesses()
+	collectors.WatchProcessesDotNet()
 
-	// KeepalivedCommunity, if not empty, enables the Keepalived collector with
-	// the specified community.
-	KeepalivedCommunity string
-	HAProxy             []HAProxy
-	SNMP                []SNMP
-	ICMP                []ICMP
-	Vsphere             []Vsphere
-	AWS                 []AWS
-	Process             []collectors.ProcessParams
-	ProcessDotNet       []ProcessDotNet
-	HTTPUnit            []HTTPUnit
+	if *flagFake > 0 {
+		collectors.InitFake(*flagFake)
+	}
+	collect.Debug = *flagDebug
+	util.Debug = *flagDebug
+	collect.DisableDefaultCollectors = conf.DisableSelf
+	c := collectors.Search(conf.Filter)
+	if len(c) == 0 {
+		slog.Fatalf("Filter %v matches no collectors.", conf.Filter)
+	}
+	for _, col := range c {
+		col.Init()
+	}
+	u, err := parseHost(conf.Host)
+	if *flagList {
+		list(c)
+		return
+	} else if *flagPrint {
+		u = &url.URL{Scheme: "http", Host: "localhost:0"}
+	} else if err != nil {
+		slog.Fatalf("invalid host %v: %v", conf.Host, err)
+	}
+	freq := time.Second * time.Duration(conf.Freq)
+	if freq <= 0 {
+		slog.Fatal("freq must be > 0")
+	}
+	collectors.DefaultFreq = freq
+	collect.Freq = freq
+	if conf.BatchSize < 0 {
+		slog.Fatal("BatchSize must be > 0")
+	}
+	if conf.BatchSize != 0 {
+		collect.BatchSize = conf.BatchSize
+	}
+	collect.Tags = conf.Tags.Copy().Merge(opentsdb.TagSet{"os": runtime.GOOS})
+	if *flagPrint {
+		collect.Print = true
+	}
+	if !*flagDisableMetadata {
+		if err := metadata.Init(u, *flagDebug); err != nil {
+			slog.Fatal(err)
+		}
+	}
+	cdp, cquit := collectors.Run(c)
+	if u != nil {
+		slog.Infoln("OpenTSDB host:", u)
+	}
+	if err := collect.InitChan(u, "scollector", cdp); err != nil {
+		slog.Fatal(err)
+	}
+	if version.VersionDate != "" {
+		v, err := strconv.ParseInt(version.VersionDate, 10, 64)
+		if err == nil {
+			go func() {
+				metadata.AddMetricMeta("scollector.version", metadata.Gauge, metadata.None,
+					"Scollector version number, which indicates when scollector was built.")
+				for {
+					if err := collect.Put("version", collect.Tags, v); err != nil {
+						slog.Error(err)
+					}
+					time.Sleep(time.Hour)
+				}
+			}()
+		}
+	}
+	if *flagBatchSize > 0 {
+		collect.BatchSize = *flagBatchSize
+	}
+	go func() {
+		const maxMem = 500 * 1024 * 1024 // 500MB
+		var m runtime.MemStats
+		for range time.Tick(time.Minute) {
+			runtime.ReadMemStats(&m)
+			if m.Alloc > maxMem {
+				panic("memory max reached")
+			}
+		}
+	}()
+	sChan := make(chan os.Signal)
+	signal.Notify(sChan, os.Interrupt)
+	<-sChan
+	close(cquit)
+	// try to flush all datapoints on sigterm, but quit after 5 seconds no matter what.
+	time.AfterFunc(5*time.Second, func() {
+		os.Exit(0)
+	})
+	collect.Flush()
 }
 
-type HAProxy struct {
-	User      string
-	Password  string
-	Instances []HAProxyInstance
-}
-
-type HAProxyInstance struct {
-	Tier string
-	URL  string
-}
-
-type ICMP struct {
-	Host string
-}
-
-type Vsphere struct {
-	Host     string
-	User     string
-	Password string
-}
-
-type AWS struct {
-	AccessKey string
-	SecretKey string
-	Region    string
-}
-
-type SNMP struct {
-	Community string
-	Host      string
-}
-
-type ProcessDotNet struct {
-	Name string
-}
-
-type HTTPUnit struct {
-	TOML  string
-	Hiera string
-}
-
-func readConf() *Conf {
-	conf := &Conf{
+func readConf() *conf.Conf {
+	conf := &conf.Conf{
 		Freq: 15,
 	}
 	loc := *flagConf
@@ -147,163 +267,6 @@ func readConf() *Conf {
 		}
 	}
 	return conf
-}
-
-func main() {
-	flag.Parse()
-	if *flagToToml != "" {
-		toToml(*flagToToml)
-		fmt.Println("toml conversion complete; remove all empty values by hand (empty strings, 0)")
-		return
-	}
-	if *flagPrint || *flagDebug {
-		slog.Set(&slog.StdLog{Log: log.New(os.Stdout, "", log.LstdFlags)})
-	}
-	if *flagVersion {
-		fmt.Println(version.GetVersionInfo("scollector"))
-		os.Exit(0)
-	}
-	for _, m := range mains {
-		m()
-	}
-	conf := readConf()
-	if *flagHost != "" {
-		conf.Host = *flagHost
-	}
-	if *flagFilter != "" {
-		conf.Filter = strings.Split(*flagFilter, ",")
-	}
-	if !conf.Tags.Valid() {
-		slog.Fatalf("invalid tags: %v", conf.Tags)
-	} else if conf.Tags["host"] != "" {
-		slog.Fatalf("host not supported in custom tags, use Hostname instead")
-	}
-	collectors.AddTags = conf.Tags
-	util.FullHostname = conf.FullHost
-	util.Set()
-	if conf.Hostname != "" {
-		util.Hostname = conf.Hostname
-		if err := collect.SetHostname(conf.Hostname); err != nil {
-			slog.Fatal(err)
-		}
-	}
-	if conf.ColDir != "" {
-		collectors.InitPrograms(conf.ColDir)
-	}
-	var err error
-	check := func(e error) {
-		if e != nil {
-			err = e
-		}
-	}
-	for _, h := range conf.HAProxy {
-		for _, i := range h.Instances {
-			collectors.HAProxy(h.User, h.Password, i.Tier, i.URL)
-		}
-	}
-	for _, s := range conf.SNMP {
-		check(collectors.SNMP(s.Community, s.Host))
-	}
-	for _, i := range conf.ICMP {
-		check(collectors.ICMP(i.Host))
-	}
-	for _, a := range conf.AWS {
-		check(collectors.AWS(a.AccessKey, a.SecretKey, a.Region))
-	}
-	for _, v := range conf.Vsphere {
-		check(collectors.Vsphere(v.User, v.Password, v.Host))
-	}
-	for _, p := range conf.Process {
-		check(collectors.AddProcessConfig(p))
-	}
-	for _, h := range conf.HTTPUnit {
-		if h.TOML != "" {
-			check(collectors.HTTPUnitTOML(h.TOML))
-		}
-		if h.Hiera != "" {
-			check(collectors.HTTPUnitHiera(h.Hiera))
-		}
-	}
-	if err != nil {
-		slog.Fatal(err)
-	}
-	collectors.KeepalivedCommunity = conf.KeepalivedCommunity
-	// Add all process collectors. This is platform specific.
-	collectors.WatchProcesses()
-	collectors.WatchProcessesDotNet()
-
-	if *flagFake > 0 {
-		collectors.InitFake(*flagFake)
-	}
-	collect.Debug = *flagDebug
-	util.Debug = *flagDebug
-	collect.DisableDefaultCollectors = conf.DisableSelf
-	c := collectors.Search(conf.Filter)
-	if len(c) == 0 {
-		slog.Fatalf("Filter %v matches no collectors.", conf.Filter)
-	}
-	for _, col := range c {
-		col.Init()
-	}
-	u, err := parseHost(conf.Host)
-	if *flagList {
-		list(c)
-		return
-	} else if err != nil {
-		slog.Fatalf("invalid host %v: %v", conf.Host, err)
-	}
-	freq := time.Second * time.Duration(conf.Freq)
-	if freq <= 0 {
-		slog.Fatal("freq must be > 0")
-	}
-	collectors.DefaultFreq = freq
-	collect.Freq = freq
-	collect.Tags = opentsdb.TagSet{"os": runtime.GOOS}
-	if *flagPrint {
-		collect.Print = true
-	}
-	if !*flagDisableMetadata {
-		if err := metadata.Init(u, *flagDebug); err != nil {
-			slog.Fatal(err)
-		}
-	}
-	cdp := collectors.Run(c)
-	if u != nil {
-		slog.Infoln("OpenTSDB host:", u)
-	}
-	if err := collect.InitChan(u, "scollector", cdp); err != nil {
-		slog.Fatal(err)
-	}
-
-	if version.VersionDate != "" {
-		v, err := strconv.ParseInt(version.VersionDate, 10, 64)
-		if err == nil {
-			go func() {
-				metadata.AddMetricMeta("scollector.version", metadata.Gauge, metadata.None,
-					"Scollector version number, which indicates when scollector was built.")
-				for {
-					if err := collect.Put("version", collect.Tags, v); err != nil {
-						slog.Error(err)
-					}
-					time.Sleep(time.Hour)
-				}
-			}()
-		}
-	}
-	if *flagBatchSize > 0 {
-		collect.BatchSize = *flagBatchSize
-	}
-	go func() {
-		const maxMem = 500 * 1024 * 1024 // 500MB
-		var m runtime.MemStats
-		for range time.Tick(time.Minute) {
-			runtime.ReadMemStats(&m)
-			if m.Alloc > maxMem {
-				panic("memory max reached")
-			}
-		}
-	}()
-	select {}
 }
 
 func exePath() (string, error) {
@@ -360,13 +323,13 @@ func printPut(c chan *opentsdb.DataPoint) {
 }
 
 func toToml(fname string) {
-	var c Conf
+	var c conf.Conf
 	b, err := ioutil.ReadFile(*flagConf)
 	if err != nil {
 		slog.Fatal(err)
 	}
 	extra := new(bytes.Buffer)
-	var hap HAProxy
+	var hap conf.HAProxy
 	for i, line := range strings.Split(string(b), "\n") {
 		if strings.TrimSpace(line) == "" {
 			continue
@@ -392,14 +355,14 @@ func toToml(fname string) {
 				if len(sp) != 2 {
 					slog.Fatal("invalid snmp string:", v)
 				}
-				c.SNMP = append(c.SNMP, SNMP{
+				c.SNMP = append(c.SNMP, conf.SNMP{
 					Community: sp[0],
 					Host:      sp[1],
 				})
 			}
 		case "icmp":
 			for _, i := range strings.Split(v, ",") {
-				c.ICMP = append(c.ICMP, ICMP{i})
+				c.ICMP = append(c.ICMP, conf.ICMP{Host: i})
 			}
 		case "haproxy":
 			if v != "" {
@@ -420,7 +383,7 @@ func toToml(fname string) {
 			if len(sp) != 2 {
 				slog.Fatal("invalid haproxy_instance string:", v)
 			}
-			hap.Instances = append(hap.Instances, HAProxyInstance{
+			hap.Instances = append(hap.Instances, conf.HAProxyInstance{
 				Tier: sp[0],
 				URL:  sp[1],
 			})
@@ -446,7 +409,7 @@ func toToml(fname string) {
 				if len(accessKey) == 0 || len(secretKey) == 0 || len(region) == 0 {
 					slog.Fatal("invalid AWS string:", v)
 				}
-				c.AWS = append(c.AWS, AWS{
+				c.AWS = append(c.AWS, conf.AWS{
 					AccessKey: accessKey,
 					SecretKey: secretKey,
 					Region:    region,
@@ -468,7 +431,7 @@ func toToml(fname string) {
 				if len(user) == 0 || len(pwd) == 0 || len(host) == 0 {
 					slog.Fatal("invalid vsphere string:", v)
 				}
-				c.Vsphere = append(c.Vsphere, Vsphere{
+				c.Vsphere = append(c.Vsphere, conf.Vsphere{
 					User:     user,
 					Password: pwd,
 					Host:     host,
@@ -509,7 +472,7 @@ func toToml(fname string) {
 `, v))
 			}
 		case "process_dotnet":
-			c.ProcessDotNet = append(c.ProcessDotNet, ProcessDotNet{v})
+			c.ProcessDotNet = append(c.ProcessDotNet, conf.ProcessDotNet{Name: v})
 		case "keepalived_community":
 			c.KeepalivedCommunity = v
 		default:
@@ -522,13 +485,13 @@ func toToml(fname string) {
 
 	f, err := os.Create(fname)
 	if err != nil {
-		log.Fatal(err)
+		slog.Fatal(err)
 	}
 	if err := toml.NewEncoder(f).Encode(&c); err != nil {
-		log.Fatal(err)
+		slog.Fatal(err)
 	}
 	if _, err := extra.WriteTo(f); err != nil {
-		log.Fatal(err)
+		slog.Fatal(err)
 	}
 	f.Close()
 }

@@ -8,6 +8,7 @@ import (
 	"unicode/utf16"
 )
 
+// errstr converts error code to string.
 func errstr(errno int) string {
 	// ask windows for the remaining errors
 	var flags uint32 = syscall.FORMAT_MESSAGE_FROM_SYSTEM | syscall.FORMAT_MESSAGE_ARGUMENT_ARRAY | syscall.FORMAT_MESSAGE_IGNORE_INSERTS

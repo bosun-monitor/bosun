@@ -5,8 +5,8 @@ import (
 	"fmt"
 	htemplate "html/template"
 	"io/ioutil"
-	"log"
 	"net"
+	"net/http"
 	"net/mail"
 	"net/url"
 	"os"
@@ -18,11 +18,14 @@ import (
 	"time"
 
 	"bosun.org/_third_party/github.com/MiniProfiler/go/miniprofiler"
+	"bosun.org/_third_party/github.com/influxdb/influxdb/client"
 	"bosun.org/cmd/bosun/conf/parse"
 	"bosun.org/cmd/bosun/expr"
 	eparse "bosun.org/cmd/bosun/expr/parse"
 	"bosun.org/graphite"
+	"bosun.org/models"
 	"bosun.org/opentsdb"
+	"bosun.org/slog"
 )
 
 type Conf struct {
@@ -40,6 +43,8 @@ type Conf struct {
 	PingDuration     time.Duration // Duration from now to stop pinging hosts based on time since the host tag was touched
 	EmailFrom        string
 	StateFile        string
+	LedisDir         string
+	RedisHost        string
 	TimeAndDate      []int // timeanddate.com cities list
 	ResponseLimit    int64
 	SearchSince      opentsdb.Duration
@@ -47,7 +52,6 @@ type Conf struct {
 	UnknownThreshold int
 	Templates        map[string]*Template
 	Alerts           map[string]*Alert
-	OrderedAlerts    []*Alert                 `json:"-"` //alerts in order they appear.
 	Notifications    map[string]*Notification `json:"-"`
 	RawText          string
 	Macros           map[string]*Macro
@@ -56,10 +60,13 @@ type Conf struct {
 	Quiet            bool
 	NoSleep          bool
 	ShortURLKey      string
+	MinGroupSize     int
 
 	TSDBHost             string                    // OpenTSDB relay and query destination: ny-devtsdb04:4242
 	GraphiteHost         string                    // Graphite query host: foo.bar.baz
+	GraphiteHeaders      []string                  // extra http headers when querying graphite.
 	LogstashElasticHosts expr.LogstashElasticHosts // CSV Elastic Hosts (All part of the same cluster) that stores logstash documents, i.e http://ny-elastic01:9200
+	InfluxConfig         client.Config
 
 	tree            *parse.Tree
 	node            parse.Node
@@ -83,6 +90,17 @@ func (c *Conf) TSDBContext() opentsdb.Context {
 func (c *Conf) GraphiteContext() graphite.Context {
 	if c.GraphiteHost == "" {
 		return nil
+	}
+	if len(c.GraphiteHeaders) > 0 {
+		headers := http.Header(make(map[string][]string))
+		for _, s := range c.GraphiteHeaders {
+			kv := strings.Split(s, ":")
+			headers.Add(kv[0], kv[1])
+		}
+		return graphite.HostHeader{
+			Host:   c.GraphiteHost,
+			Header: headers,
+		}
 	}
 	return graphite.Host(c.GraphiteHost)
 }
@@ -327,6 +345,8 @@ func New(name, text string) (c *Conf, err error) {
 		DefaultRunEvery:  1,
 		HTTPListen:       ":8070",
 		StateFile:        "bosun.state",
+		LedisDir:         "ledis_data",
+		MinGroupSize:     5,
 		PingDuration:     time.Hour * 24,
 		ResponseLimit:    1 << 20, // 1MB
 		SearchSince:      opentsdb.Day * 3,
@@ -392,8 +412,39 @@ func (c *Conf) loadGlobal(p *parse.PairNode) {
 		c.TSDBHost = v
 	case "graphiteHost":
 		c.GraphiteHost = v
+	case "graphiteHeader":
+		if !strings.Contains(v, ":") {
+			c.errorf("graphiteHeader must be in key:value form")
+		}
+		c.GraphiteHeaders = append(c.GraphiteHeaders, v)
 	case "logstashElasticHosts":
 		c.LogstashElasticHosts = strings.Split(v, ",")
+	case "influxHost":
+		c.InfluxConfig.URL.Host = v
+		c.InfluxConfig.UserAgent = "bosun"
+		// Default scheme to non-TLS
+		c.InfluxConfig.URL.Scheme = "http"
+	case "influxUsername":
+		c.InfluxConfig.Username = v
+	case "influxPassword":
+		c.InfluxConfig.Password = v
+	case "influxTLS":
+		b, err := strconv.ParseBool(v)
+		if err != nil {
+			c.error(err)
+		}
+		if b {
+			c.InfluxConfig.URL.Scheme = "https"
+		} else {
+			c.InfluxConfig.URL.Scheme = "http"
+		}
+	case "influxTimeout":
+		od, err := opentsdb.ParseDuration(v)
+		if err != nil {
+			c.error(err)
+		}
+		d := time.Duration(od)
+		c.InfluxConfig.Timeout = d
 	case "httpListen":
 		c.HTTPListen = v
 	case "hostname":
@@ -475,6 +526,16 @@ func (c *Conf) loadGlobal(p *parse.PairNode) {
 		}
 	case "shortURLKey":
 		c.ShortURLKey = v
+	case "ledisDir":
+		c.LedisDir = v
+	case "redisHost":
+		c.RedisHost = v
+	case "minGroupSize":
+		i, err := strconv.Atoi(v)
+		if err != nil {
+			c.error(err)
+		}
+		c.MinGroupSize = i
 	default:
 		if !strings.HasPrefix(k, "$") {
 			c.errorf("unknown key %s", k)
@@ -613,7 +674,7 @@ func (c *Conf) loadLookup(s *parse.SectionNode) {
 				Def:  n.RawText,
 				Name: n.Name.Text,
 				ExprEntry: &ExprEntry{
-					AlertKey: expr.NewAlertKey("", tags),
+					AlertKey: models.NewAlertKey("", tags),
 					Values:   make(map[string]string),
 				},
 			}
@@ -676,6 +737,7 @@ var defaultFuncs = ttemplate.FuncMap{
 	"short": func(v string) string {
 		return strings.SplitN(v, ".", 2)[0]
 	},
+	"parseDuration": time.ParseDuration,
 }
 
 func (c *Conf) loadTemplate(s *parse.SectionNode) {
@@ -925,7 +987,6 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 	}
 	a.returnType = ret
 	c.Alerts[name] = &a
-	c.OrderedAlerts = append(c.OrderedAlerts, &a)
 }
 
 func (c *Conf) loadNotification(s *parse.SectionNode) {
@@ -947,7 +1008,7 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 		"json": func(v interface{}) string {
 			b, err := json.Marshal(v)
 			if err != nil {
-				log.Println(err)
+				slog.Errorln(err)
 			}
 			return string(b)
 		},
@@ -1048,7 +1109,7 @@ func (c *Conf) Expand(v string, vars map[string]string, ignoreBadExpand bool) st
 func (c *Conf) seen(v string, m map[string]bool) {
 	if m[v] {
 		switch v {
-		case "squelch", "critNotification", "warnNotification":
+		case "squelch", "critNotification", "warnNotification", "graphiteHeader":
 			// ignore
 		default:
 			c.errorf("duplicate key: %s", v)
@@ -1132,7 +1193,11 @@ func (c *Conf) Funcs() map[string]eparse.Func {
 		var tags []opentsdb.TagSet
 		for _, tag := range lookups.Tags {
 			var next []opentsdb.TagSet
-			for _, value := range e.Search.TagValuesByTagKey(tag, 0) {
+			vals, err := e.Search.TagValuesByTagKey(tag, 0)
+			if err != nil {
+				return nil, err
+			}
+			for _, value := range vals {
 				for _, s := range tags {
 					t := s.Copy()
 					t[tag] = value
@@ -1262,6 +1327,9 @@ func (c *Conf) Funcs() map[string]eparse.Func {
 	if len(c.LogstashElasticHosts) != 0 {
 		merge(expr.LogstashElastic)
 	}
+	if c.InfluxConfig.URL.Host != "" {
+		merge(expr.Influx)
+	}
 	return funcs
 }
 
@@ -1295,9 +1363,7 @@ func (c *Conf) alert(s *expr.State, T miniprofiler.Timer, name, key string) (res
 		return nil, err
 	}
 	if s.History != nil {
-
 		unknownTags, unevalTags := s.History.GetUnknownAndUnevaluatedAlertKeys(name)
-
 		// For currently unknown tags NOT in the result set, add an error result
 		for _, ak := range unknownTags {
 			found := false
@@ -1316,13 +1382,21 @@ func (c *Conf) alert(s *expr.State, T miniprofiler.Timer, name, key string) (res
 			}
 		}
 		//For all unevaluated tags in run history, make sure we report a nonzero result.
-	Loop:
-		for _, result := range results.Results {
-			for _, ak := range unevalTags {
+		for _, ak := range unevalTags {
+			found := false
+			for _, result := range results.Results {
 				if result.Group.Equal(ak.Group()) {
 					result.Value = expr.Number(1)
-					break Loop
+					found = true
+					break
 				}
+			}
+			if !found {
+				res := expr.Result{
+					Value: expr.Number(1),
+					Group: ak.Group(),
+				}
+				results.Results = append(results.Results, &res)
 			}
 		}
 	}

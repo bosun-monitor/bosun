@@ -1,6 +1,7 @@
 package collectors
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -8,6 +9,7 @@ import (
 
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
+	"bosun.org/slog"
 	"bosun.org/util"
 )
 
@@ -19,7 +21,7 @@ func init() {
 		&IntervalCollector{F: c_omreport_memory, Interval: interval},
 		&IntervalCollector{F: c_omreport_processors, Interval: interval},
 		&IntervalCollector{F: c_omreport_ps, Interval: interval},
-		&IntervalCollector{F: c_omreport_ps_amps, Interval: interval},
+		&IntervalCollector{F: c_omreport_ps_amps_sysboard_pwr, Interval: interval},
 		&IntervalCollector{F: c_omreport_storage_battery, Interval: interval},
 		&IntervalCollector{F: c_omreport_storage_controller, Interval: interval},
 		&IntervalCollector{F: c_omreport_storage_enclosure, Interval: interval},
@@ -85,12 +87,28 @@ func c_omreport_ps() (opentsdb.MultiDataPoint, error) {
 			return
 		}
 		id := strings.Replace(fields[0], ":", "_", -1)
-		Add(&md, "hw.ps", severity(fields[1]), opentsdb.TagSet{"id": id}, metadata.Gauge, metadata.Ok, descDellHWPS)
+		ts := opentsdb.TagSet{"id": id}
+		Add(&md, "hw.ps", severity(fields[1]), ts, metadata.Gauge, metadata.Ok, descDellHWPS)
+		pm := &metadata.HWPowerSupplyMeta{}
+		if len(fields) < 6 {
+			return
+		}
+		if fields[4] != "" {
+			pm.RatedInputWattage = fields[4]
+		}
+		if fields[5] != "" {
+			pm.RatedOutputWattage = fields[5]
+		}
+		if j, err := json.Marshal(&pm); err == nil {
+			metadata.AddMeta("", ts, "psMeta", string(j), true)
+		} else {
+			slog.Error(err)
+		}
 	}, "chassis", "pwrsupplies")
 	return md, nil
 }
 
-func c_omreport_ps_amps() (opentsdb.MultiDataPoint, error) {
+func c_omreport_ps_amps_sysboard_pwr() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	readOmreport(func(fields []string) {
 		if len(fields) == 2 && strings.Contains(fields[0], "Current") {
@@ -103,10 +121,14 @@ func c_omreport_ps_amps() (opentsdb.MultiDataPoint, error) {
 			Add(&md, "hw.chassis.current.reading", v_fields[0], opentsdb.TagSet{"id": id}, metadata.Gauge, metadata.A, descDellHWCurrent)
 		} else if len(fields) == 6 && (fields[2] == "System Board Pwr Consumption" || fields[2] == "System Board System Level") {
 			v_fields := strings.Fields(fields[3])
-			if len(v_fields) < 2 {
+			warn_fields := strings.Fields(fields[4])
+			fail_fields := strings.Fields(fields[5])
+			if len(v_fields) < 2 || len(warn_fields) < 2 || len(fail_fields) < 2 {
 				return
 			}
 			Add(&md, "hw.chassis.power.reading", v_fields[0], nil, metadata.Gauge, metadata.Watt, descDellHWPower)
+			Add(&md, "hw.chassis.power.warn_level", warn_fields[0], nil, metadata.Gauge, metadata.Watt, descDellHWPowerThreshold)
+			Add(&md, "hw.chassis.power.fail_level", fail_fields[0], nil, metadata.Gauge, metadata.Watt, descDellHWPowerThreshold)
 		}
 	}, "chassis", "pwrmonitoring")
 	return md, nil
@@ -132,7 +154,32 @@ func c_omreport_storage_controller() (opentsdb.MultiDataPoint, error) {
 		}
 		c_omreport_storage_pdisk(fields[0], &md)
 		id := strings.Replace(fields[0], ":", "_", -1)
-		Add(&md, "hw.storage.controller", severity(fields[1]), opentsdb.TagSet{"id": id}, metadata.Gauge, metadata.Ok, descDellHWStorageCtl)
+		ts := opentsdb.TagSet{"id": id}
+		Add(&md, "hw.storage.controller", severity(fields[1]), ts, metadata.Gauge, metadata.Ok, descDellHWStorageCtl)
+		cm := &metadata.HWControllerMeta{}
+		if len(fields) < 8 {
+			return
+		}
+		if fields[2] != "" {
+			cm.Name = fields[2]
+		}
+		if fields[3] != "" {
+			cm.SlotId = fields[3]
+		}
+		if fields[4] != "" {
+			cm.State = fields[4]
+		}
+		if fields[5] != "" {
+			cm.FirmwareVersion = fields[5]
+		}
+		if fields[7] != "" {
+			cm.DriverVersion = fields[7]
+		}
+		if j, err := json.Marshal(&cm); err == nil {
+			metadata.AddMeta("", ts, "controllerMeta", string(j), true)
+		} else {
+			slog.Error(err)
+		}
 	}, "storage", "controller")
 	return md, nil
 }
@@ -145,7 +192,48 @@ func c_omreport_storage_pdisk(id string, md *opentsdb.MultiDataPoint) {
 		}
 		//Need to find out what the various ID formats might be
 		id := strings.Replace(fields[0], ":", "_", -1)
-		Add(md, "hw.storage.pdisk", severity(fields[1]), opentsdb.TagSet{"id": id}, metadata.Gauge, metadata.Ok, descDellHWPDisk)
+		ts := opentsdb.TagSet{"id": id}
+		Add(md, "hw.storage.pdisk", severity(fields[1]), ts, metadata.Gauge, metadata.Ok, descDellHWPDisk)
+		if len(fields) < 32 {
+			return
+		}
+		dm := &metadata.HWDiskMeta{}
+		if fields[2] != "" {
+			dm.Name = fields[2]
+		}
+		if fields[6] != "" {
+			dm.Media = fields[6]
+		}
+		if fields[19] != "" {
+			dm.Capacity = fields[19]
+		}
+		if fields[23] != "" {
+			dm.VendorId = fields[23]
+		}
+		if fields[24] != "" {
+			dm.ProductId = fields[24]
+		}
+		if fields[25] != "" {
+			dm.Serial = fields[25]
+		}
+		if fields[26] != "" {
+			dm.Part = fields[26]
+		}
+		if fields[27] != "" {
+			dm.NegotatiedSpeed = fields[27]
+		}
+		if fields[28] != "" {
+			dm.CapableSpeed = fields[28]
+		}
+		if fields[31] != "" {
+			dm.SectorSize = fields[31]
+
+		}
+		if j, err := json.Marshal(&dm); err == nil {
+			metadata.AddMeta("", ts, "physicalDiskMeta", string(j), true)
+		} else {
+			slog.Error(err)
+		}
 	}, "storage", "pdisk", "controller="+id)
 }
 
@@ -292,7 +380,8 @@ const (
 	descDellHWVDisk          = "Overall status of virtual disks."
 	descDellHWPS             = "Overall status of power supplies."
 	descDellHWCurrent        = "Amps used per power supply."
-	descDellHWPower          = "Overall system power usage."
+	descDellHWPower          = "System board power usage."
+	descDellHWPowerThreshold = "The warning and failure levels set on the device for system board power usage."
 	descDellHWStorageBattery = "Status of storage controller backup batteries."
 	descDellHWStorageCtl     = "Overall status of storage controllers."
 	descDellHWPDisk          = "Overall status of physical disks."

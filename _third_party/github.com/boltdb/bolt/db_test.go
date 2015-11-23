@@ -42,6 +42,9 @@ func TestOpen_Timeout(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("timeout not supported on windows")
 	}
+	if runtime.GOOS == "solaris" {
+		t.Skip("solaris fcntl locks don't support intra-process locking")
+	}
 
 	path := tempfile()
 	defer os.Remove(path)
@@ -65,6 +68,9 @@ func TestOpen_Timeout(t *testing.T) {
 func TestOpen_Wait(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("timeout not supported on windows")
+	}
+	if runtime.GOOS == "solaris" {
+		t.Skip("solaris fcntl locks don't support intra-process locking")
 	}
 
 	path := tempfile()
@@ -228,6 +234,10 @@ func TestDB_Open_FileTooSmall(t *testing.T) {
 // and that a database can not be opened in read-write mode and in read-only
 // mode at the same time.
 func TestOpen_ReadOnly(t *testing.T) {
+	if runtime.GOOS == "solaris" {
+		t.Skip("solaris fcntl locks don't support intra-process locking")
+	}
+
 	bucket, key, value := []byte(`bucket`), []byte(`key`), []byte(`value`)
 
 	path := tempfile()
@@ -322,6 +332,49 @@ func TestDB_BeginRW_Closed(t *testing.T) {
 	tx, err := db.Begin(true)
 	equals(t, err, bolt.ErrDatabaseNotOpen)
 	assert(t, tx == nil, "")
+}
+
+func TestDB_Close_PendingTx_RW(t *testing.T) { testDB_Close_PendingTx(t, true) }
+func TestDB_Close_PendingTx_RO(t *testing.T) { testDB_Close_PendingTx(t, false) }
+
+// Ensure that a database cannot close while transactions are open.
+func testDB_Close_PendingTx(t *testing.T, writable bool) {
+	db := NewTestDB()
+	defer db.Close()
+
+	// Start transaction.
+	tx, err := db.Begin(true)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Open update in separate goroutine.
+	done := make(chan struct{})
+	go func() {
+		db.Close()
+		close(done)
+	}()
+
+	// Ensure database hasn't closed.
+	time.Sleep(100 * time.Millisecond)
+	select {
+	case <-done:
+		t.Fatal("database closed too early")
+	default:
+	}
+
+	// Commit transaction.
+	if err := tx.Commit(); err != nil {
+		t.Fatal(err)
+	}
+
+	// Ensure database closed now.
+	time.Sleep(100 * time.Millisecond)
+	select {
+	case <-done:
+	default:
+		t.Fatal("database did not close")
+	}
 }
 
 // Ensure a database can provide a transactional block.
@@ -748,7 +801,7 @@ func (db *TestDB) PrintStats() {
 
 // MustCheck runs a consistency check on the database and panics if any errors are found.
 func (db *TestDB) MustCheck() {
-	db.View(func(tx *bolt.Tx) error {
+	db.Update(func(tx *bolt.Tx) error {
 		// Collect all the errors.
 		var errors []error
 		for err := range tx.Check() {

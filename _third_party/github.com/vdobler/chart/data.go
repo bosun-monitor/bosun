@@ -4,19 +4,19 @@ import (
 	"math"
 )
 
-// Values is an interface for any type of data representable by a real.
+// Value is the interface for any type of data representable by a real.
 // Its standard implementation here is Real (float64).
 type Value interface {
 	XVal() float64
 }
 
-// A simple real value implemnting the Value interface
+// Real is a float64 implementing the Value interface.
 type Real float64
 
 func (r Real) XVal() float64 { return float64(r) }
 
-// XY-Value is an interface for any type of data which is point-like and has
-// a x- and y-coordinate. Its standard implementationhere is Point.
+// XYValue is the interface for any type of data which is point-like and has
+// a x- and y-coordinate. Its standard implementation here is Point.
 type XYValue interface {
 	XVal() float64
 	YVal() float64
@@ -30,21 +30,21 @@ func (p Point) YVal() float64            { return p.Y }
 func (p Point) XErr() (float64, float64) { return math.NaN(), math.NaN() }
 func (p Point) YErr() (float64, float64) { return math.NaN(), math.NaN() }
 
-// XYErrValue is an interface any type of data which is point-like (x,y) and
+// XYErrValue is the interface for any type of data which is point-like (x,y) and
 // has some measurement error.
 type XYErrValue interface {
 	XVal() float64
 	YVal() float64
-	XErr() (float64, float64) // X-range [min,max], error intervall. Use NaN to indicate "no error"
-	YErr() (float64, float64) // Same for y
+	XErr() (float64, float64) // X-range [min,max], error intervall. Use NaN to indicate "no error".
+	YErr() (float64, float64) // Y-range error interval (like XErr).
 }
 
 // EPoint represents a point in two dimensions (X,Y) with possible error ranges
-// in both dimensions. To faciliate common symetric errors, OffX/Y default to 0 and
+// in both dimensions. To faciliate common symetric errors, OffX/Y defaults to 0 and
 // only DeltaX/Y needs to be set up.
 type EPoint struct {
 	X, Y           float64
-	DeltaX, DeltaY float64 // Full range of x and y error, NaN for no errorbar
+	DeltaX, DeltaY float64 // Full range of x and y error, NaN for no errorbar.
 	OffX, OffY     float64 // Offset of error range (must be < Delta)
 }
 
@@ -71,14 +71,14 @@ func (p EPoint) BoundingBox() (xl, yl, xh, yh float64) { // bounding box
 	return
 }
 
-// CategoryValue is an interface for any type of data which is category-real-pair.
+// CategoryValue is the interface for any type of data which is a category-real-pair.
 type CategoryValue interface {
 	Category() string
 	Value() float64
 	Flaged() bool
 }
 
-// CatValue is the standard implementation for CategoryValue
+// CatValue is the standard implementation for CategoryValue.
 type CatValue struct {
 	Cat  string
 	Val  float64

@@ -34,6 +34,24 @@ func queuer() {
 	}
 }
 
+// Locks the queue and sends all datapoints. Intended to be used as scollector exits.
+func Flush() {
+	qlock.Lock()
+	for len(queue) > 0 {
+		i := len(queue)
+		if i > BatchSize {
+			i = BatchSize
+		}
+		sending := queue[:i]
+		queue = queue[i:]
+		if Debug {
+			slog.Infof("sending: %d, remaining: %d", i, len(queue))
+		}
+		sendBatch(sending)
+	}
+	qlock.Unlock()
+}
+
 func send() {
 	for {
 		qlock.Lock()
@@ -47,6 +65,7 @@ func send() {
 				slog.Infof("sending: %d, remaining: %d", i, len(queue))
 			}
 			qlock.Unlock()
+			Sample("collect.post.batchsize", Tags, float64(len(sending)))
 			sendBatch(sending)
 		} else {
 			qlock.Unlock()
@@ -73,6 +92,7 @@ func sendBatch(batch []*opentsdb.DataPoint) {
 		defer resp.Body.Close()
 	}
 	d := time.Since(now).Nanoseconds() / 1e6
+	Sample("collect.post.duration", Tags, float64(d))
 	Add("collect.post.total_duration", Tags, d)
 	Add("collect.post.count", Tags, 1)
 	// Some problem with connecting to the server; retry later.
@@ -129,7 +149,7 @@ func SendDataPoints(dps []*opentsdb.DataPoint, tsdb string) (*http.Response, err
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Content-Encoding", "gzip")
-
+	Add("collect.post.total_bytes", Tags, int64(buf.Len()))
 	resp, err := client.Do(req)
 	return resp, err
 }

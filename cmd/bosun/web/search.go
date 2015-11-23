@@ -2,7 +2,6 @@ package web
 
 import (
 	"net/http"
-	"strings"
 	"time"
 
 	"bosun.org/_third_party/github.com/MiniProfiler/go/miniprofiler"
@@ -12,51 +11,56 @@ import (
 
 // UniqueMetrics returns a sorted list of available metrics.
 func UniqueMetrics(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	includeAll := r.FormValue("all") != ""
-	values := schedule.Search.UniqueMetrics()
-	if !includeAll {
-		filtered := []string{}
-		for _, v := range values {
-			if len(v) < 2 || v[0:2] != "__" {
-				filtered = append(filtered, v)
-			}
-		}
-		values = filtered
+	values, err := schedule.Search.UniqueMetrics()
+	if err != nil {
+		return nil, err
 	}
-	return values, nil
+	// remove anything starting with double underscore.
+	q := r.URL.Query()
+	if v := q.Get("unfiltered"); v != "" {
+		return values, nil
+	}
+	filtered := []string{}
+	for _, v := range values {
+		if len(v) < 2 || v[0:2] != "__" {
+			filtered = append(filtered, v)
+		}
+	}
+	return filtered, nil
 }
 
 func TagKeysByMetric(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	metric := vars["metric"]
-	keys := schedule.Search.TagKeysByMetric(metric)
-	return keys, nil
+	return schedule.Search.TagKeysByMetric(metric)
 }
 
 func TagValuesByMetricTagKey(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	metric := vars["metric"]
 	tagk := vars["tagk"]
-	q := r.URL.Query()
-	var values []string
-	if len(q) > 0 {
-		tsf := make(map[string]string)
-		for k, v := range q {
-			tsf[k] = strings.Join(v, "")
+	return schedule.Search.TagValuesByMetricTagKey(metric, tagk, 0)
+}
+
+func FilteredTagsetsByMetric(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	vars := mux.Vars(r)
+	metric := vars["metric"]
+	tagset := opentsdb.TagSet{}
+	var err error
+	ts := r.FormValue("tags")
+	if ts != "" {
+		if tagset, err = opentsdb.ParseTags(ts); err != nil {
+			return nil, err
 		}
-		values = schedule.Search.FilteredTagValuesByMetricTagKey(metric, tagk, tsf)
-	} else {
-		values = schedule.Search.TagValuesByMetricTagKey(metric, tagk, 0)
 	}
-	return values, nil
+	return schedule.Search.FilteredTagSets(metric, tagset)
 }
 
 func MetricsByTagPair(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	tagk := vars["tagk"]
 	tagv := vars["tagv"]
-	values := schedule.Search.MetricsByTagPair(tagk, tagv)
-	return values, nil
+	return schedule.Search.MetricsByTagPair(tagk, tagv)
 }
 
 func TagValuesByTagKey(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
@@ -73,6 +77,5 @@ func TagValuesByTagKey(t miniprofiler.Timer, w http.ResponseWriter, r *http.Requ
 			return nil, err
 		}
 	}
-	values := schedule.Search.TagValuesByTagKey(tagk, time.Duration(since))
-	return values, nil
+	return schedule.Search.TagValuesByTagKey(tagk, time.Duration(since))
 }

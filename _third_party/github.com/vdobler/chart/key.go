@@ -6,16 +6,16 @@ import (
 
 // Key encapsulates settings for keys/legends in a chart.
 //
-// Key placement os governed by Pos which may take the following values:
+// Key placement is governed by Pos which may take the following values:
 //          otl  otc  otr
-//         +-------------+
-//     olt |itl  itc  itr| ort
-//         |             |
-//     olc |icl  icc  icr| orc
-//         |             |
-//     olb |ibl  ibc  ibr| orb
-//         +-------------+
-//          obl  obc  obr
+//         +-------------+          o: outside
+//     olt |itl  itc  itr| ort      i: inside
+//         |             |          t: top
+//     olc |icl  icc  icr| orc      c: centered
+//         |             |          b: bottom
+//     olb |ibl  ibc  ibr| orb      l: left
+//         +-------------+          c: centered
+//          obl  obc  obr           r: right
 //
 type Key struct {
 	Hide    bool       // Don't show key/legend if true
@@ -29,7 +29,7 @@ type Key struct {
 // KeyEntry encapsulates an antry in the key/legend.
 type KeyEntry struct {
 	Text      string    // Text to display
-	PlotStyle PlotStyle // What to show: symbol, line, bar, combi thereof
+	PlotStyle PlotStyle // What to show: symbol, line, bar or combination thereof
 	Style     Style     // How to show
 
 }
@@ -133,6 +133,7 @@ var (
 	KeyRowSep      float32 = 0.75 // Vertical spacing between individual rows.
 )
 
+// Layout determines how wide and broad the places keys in m will be rendered.
 func (key Key) Layout(bg BasicGraphics, m [][]*KeyEntry, font Font) (w, h int, colwidth, rowheight []int) {
 	fontwidth, fontheight, _ := bg.FontMetrics(font)
 	cols, rows := len(m), len(m[0])
@@ -210,6 +211,7 @@ func (key Key) Layout(bg BasicGraphics, m [][]*KeyEntry, font Font) (w, h int, c
 	return totalw, totalh, colwidth, rowheight
 }
 
+// GenericKey draws the key onto bg at (x,y).
 func GenericKey(bg BasicGraphics, x, y int, key Key, options PlotOptions) {
 	m := key.Place()
 	if len(m) == 0 {

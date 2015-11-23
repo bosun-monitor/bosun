@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"strings"
 	"time"
 
 	"bosun.org/slog"
@@ -33,27 +34,30 @@ func Command(timeout time.Duration, stdin io.Reader, name string, arg ...string)
 		slog.Infof("executing command: %v %v", name, arg)
 	}
 	c := exec.Command(name, arg...)
-	var b bytes.Buffer
-	c.Stdout = &b
+	b := &bytes.Buffer{}
+	c.Stdout = b
 	c.Stdin = stdin
-	done := make(chan error, 1)
-	go func() {
-		done <- c.Run()
-	}()
-	interrupt := time.After(timeout)
-	kill := time.After(timeout * 2)
-	for {
-		select {
-		case err := <-done:
-			return &b, err
-		case <-interrupt:
-			c.Process.Signal(os.Interrupt)
-		case <-kill:
-			// todo: figure out if this can leave the done chan hanging open
-			c.Process.Kill()
-			return nil, ErrTimeout
-		}
+	if err := c.Start(); err != nil {
+		return nil, err
 	}
+	timedOut := false
+	intTimer := time.AfterFunc(timeout, func() {
+		slog.Errorf("Process taking too long. Interrupting: %s %s", name, strings.Join(arg, " "))
+		c.Process.Signal(os.Interrupt)
+		timedOut = true
+	})
+	killTimer := time.AfterFunc(timeout, func() {
+		slog.Errorf("Process taking too long. Killing: %s %s", name, strings.Join(arg, " "))
+		c.Process.Signal(os.Interrupt)
+		timedOut = true
+	})
+	err := c.Wait()
+	intTimer.Stop()
+	killTimer.Stop()
+	if timedOut {
+		return nil, ErrTimeout
+	}
+	return b, err
 }
 
 // ReadCommand runs command name with args and calls line for each line from its

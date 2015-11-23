@@ -6,8 +6,10 @@ import (
 	"net/http"
 	"net/mail"
 	"net/url"
+	"regexp"
 	"sort"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -17,6 +19,7 @@ import (
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/expr"
 	"bosun.org/cmd/bosun/sched"
+	"bosun.org/models"
 	"bosun.org/opentsdb"
 )
 
@@ -26,8 +29,41 @@ import (
 // and then 5m from now you query -10min to -5m you'll get the same cached data, including the incomplete last points
 var cacheObj = cache.New(100)
 
-func Expr(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	e, err := expr.New(r.FormValue("q"), schedule.Conf.Funcs())
+func Expr(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (v interface{}, err error) {
+	defer func() {
+		if pan := recover(); pan != nil {
+			v = nil
+			err = fmt.Errorf("%v", pan)
+		}
+	}()
+	text, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	lines := strings.Split(strings.TrimSpace(string(text)), "\n")
+	var expression string
+	vars := map[string]string{}
+	varRegex := regexp.MustCompile(`(\$\w+)\s*=(.*)`)
+	for i, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		// last line is expression we care about
+		if i == len(lines)-1 {
+			expression = schedule.Conf.Expand(line, vars, false)
+		} else { // must be a variable declatation
+			matches := varRegex.FindStringSubmatch(line)
+			if len(matches) == 0 {
+				return nil, fmt.Errorf("Expext all lines before final expression to be variable declarations of form `$foo = something`")
+			}
+			name := strings.TrimSpace(matches[1])
+			value := strings.TrimSpace(matches[2])
+			vars[name] = schedule.Conf.Expand(value, vars, false)
+		}
+	}
+	e, err := expr.New(expression, schedule.Conf.Funcs())
 	if err != nil {
 		return nil, err
 	}
@@ -39,7 +75,8 @@ func Expr(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 	tsdbContext := schedule.Conf.TSDBContext()
 	graphiteContext := schedule.Conf.GraphiteContext()
 	ls := schedule.Conf.LogstashElasticHosts
-	res, queries, err := e.Execute(tsdbContext, graphiteContext, ls, cacheObj, t, now, 0, false, schedule.Search, nil, nil)
+	influx := schedule.Conf.InfluxConfig
+	res, queries, err := e.Execute(tsdbContext, graphiteContext, ls, influx, cacheObj, t, now, 0, false, schedule.Search, nil, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -71,25 +108,28 @@ func getTime(r *http.Request) (now time.Time, err error) {
 		if ft := r.FormValue("time"); len(ft) > 0 {
 			fd += " " + ft
 		} else {
-			fd += " " + now.Format("15:04")
+			fd += " " + now.Format("15:04:05")
 		}
-		now, err = time.Parse("2006-01-02 15:04", fd)
+		now, err = time.Parse("2006-01-02 15:04:05", fd)
+		if err != nil {
+			now, err = time.Parse("2006-01-02 15:04", fd)
+		}
 	}
 	return
 }
 
 type Res struct {
 	*sched.Event
-	Key expr.AlertKey
+	Key models.AlertKey
 }
 
 func procRule(t miniprofiler.Timer, c *conf.Conf, a *conf.Alert, now time.Time, summary bool, email string, template_group string) (*ruleResult, error) {
 	s := &sched.Schedule{}
+	s.DataAccess = schedule.DataAccess
+	s.Search = schedule.Search
 	if err := s.Init(c); err != nil {
 		return nil, err
 	}
-	s.Metadata = schedule.Metadata
-	s.Search = schedule.Search
 	rh := s.NewRunHistory(now, cacheObj)
 	if _, err := s.CheckExpr(t, rh, a, a.Warn, sched.StWarning, nil); err != nil {
 		return nil, err
@@ -97,8 +137,8 @@ func procRule(t miniprofiler.Timer, c *conf.Conf, a *conf.Alert, now time.Time, 
 	if _, err := s.CheckExpr(t, rh, a, a.Crit, sched.StCritical, nil); err != nil {
 		return nil, err
 	}
-	keys := make(expr.AlertKeys, len(rh.Events))
-	errors, criticals, warnings, normals := make([]expr.AlertKey, 0), make([]expr.AlertKey, 0), make([]expr.AlertKey, 0), make([]expr.AlertKey, 0)
+	keys := make(models.AlertKeys, len(rh.Events))
+	criticals, warnings, normals := make([]models.AlertKey, 0), make([]models.AlertKey, 0), make([]models.AlertKey, 0)
 	i := 0
 	for k, v := range rh.Events {
 		v.Time = now
@@ -111,8 +151,6 @@ func procRule(t miniprofiler.Timer, c *conf.Conf, a *conf.Alert, now time.Time, 
 			warnings = append(warnings, k)
 		case sched.StCritical:
 			criticals = append(criticals, k)
-		case sched.StError:
-			errors = append(errors, k)
 		default:
 			return nil, fmt.Errorf("unknown state type %v", v.Status)
 		}
@@ -143,9 +181,7 @@ func procRule(t miniprofiler.Timer, c *conf.Conf, a *conf.Alert, now time.Time, 
 				warning = append(warning, fmt.Sprintf("template group %s was not a subset of any result", template_group))
 			}
 		}
-		if e := instance.History[0]; e.Error != nil {
-			instance.Result = e.Error
-		} else if e.Crit != nil {
+		if e := instance.History[0]; e.Crit != nil {
 			instance.Result = e.Crit
 		} else if e.Warn != nil {
 			instance.Result = e.Warn
@@ -178,7 +214,7 @@ func procRule(t miniprofiler.Timer, c *conf.Conf, a *conf.Alert, now time.Time, 
 		}()
 		if s_err != nil || b_err != nil {
 			var err error
-			subject, body, err = s.ExecuteBadTemplate(s_err, b_err, rh, a, instance)
+			subject, body, err = s.ExecuteBadTemplate([]error{s_err, b_err}, rh, a, instance)
 			if err != nil {
 				subject = []byte(fmt.Sprintf("unable to create tempalate error notification: %v", err))
 			}
@@ -203,7 +239,6 @@ func procRule(t miniprofiler.Timer, c *conf.Conf, a *conf.Alert, now time.Time, 
 		data = s.Data(rh, instance, a, false)
 	}
 	return &ruleResult{
-		errors,
 		criticals,
 		warnings,
 		normals,
@@ -217,16 +252,15 @@ func procRule(t miniprofiler.Timer, c *conf.Conf, a *conf.Alert, now time.Time, 
 }
 
 type ruleResult struct {
-	Errors    []expr.AlertKey
-	Criticals []expr.AlertKey
-	Warnings  []expr.AlertKey
-	Normals   []expr.AlertKey
+	Criticals []models.AlertKey
+	Warnings  []models.AlertKey
+	Normals   []models.AlertKey
 	Time      time.Time
 
 	Body    string
 	Subject string
 	Data    interface{}
-	Result  map[expr.AlertKey]*sched.Event
+	Result  map[models.AlertKey]*sched.Event
 	Warning []string
 }
 
@@ -299,13 +333,13 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 	close(errch)
 	close(resch)
 	type Result struct {
-		Group  expr.AlertKey
+		Group  models.AlertKey
 		Result *sched.Event
 	}
 	type Set struct {
-		Error, Critical, Warning, Normal int
-		Time                             string
-		Results                          []*Result `json:",omitempty"`
+		Critical, Warning, Normal int
+		Time                      string
+		Results                   []*Result `json:",omitempty"`
 	}
 	type History struct {
 		Time, EndTime time.Time
@@ -319,13 +353,13 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 		Errors       []string `json:",omitempty"`
 		Warnings     []string `json:",omitempty"`
 		Sets         []*Set
-		AlertHistory map[expr.AlertKey]*Histories
+		AlertHistory map[models.AlertKey]*Histories
 		Body         string      `json:",omitempty"`
 		Subject      string      `json:",omitempty"`
 		Data         interface{} `json:",omitempty"`
 		Hash         string
 	}{
-		AlertHistory: make(map[expr.AlertKey]*Histories),
+		AlertHistory: make(map[models.AlertKey]*Histories),
 		Hash:         hash,
 	}
 	for err := range errch {
@@ -339,7 +373,6 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 			continue
 		}
 		set := Set{
-			Error:    len(res.Errors),
 			Critical: len(res.Criticals),
 			Warning:  len(res.Warnings),
 			Normal:   len(res.Normals),

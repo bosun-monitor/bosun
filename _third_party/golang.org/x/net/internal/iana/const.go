@@ -38,7 +38,7 @@ const (
 	CongestionExperienced = 0x3 // CE (Congestion Experienced)
 )
 
-// Protocol Numbers, Updated: 2015-01-06
+// Protocol Numbers, Updated: 2015-06-23
 const (
 	ProtocolIP             = 0   // IPv4 encapsulation, pseudo protocol number
 	ProtocolHOPOPT         = 0   // IPv6 Hop-by-Hop Option
@@ -157,7 +157,6 @@ const (
 	ProtocolSRP            = 119 // SpectraLink Radio Protocol
 	ProtocolUTI            = 120 // UTI
 	ProtocolSMP            = 121 // Simple Message Protocol
-	ProtocolSM             = 122 // Simple Multicast Protocol
 	ProtocolPTP            = 123 // Performance Transparency Protocol
 	ProtocolISIS           = 124 // ISIS over IPv4
 	ProtocolFIRE           = 125 // FIRE

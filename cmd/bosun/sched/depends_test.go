@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"bosun.org/cmd/bosun/expr"
+	"bosun.org/models"
 	"bosun.org/opentsdb"
 )
 
@@ -169,16 +169,16 @@ func TestDependency_OtherAlert_Unknown(t *testing.T) {
 			schedState{"a{host=ny02}", "unknown"}:      true,
 			schedState{"os.cpu{host=ny01}", "warning"}: true,
 		},
-		previous: map[expr.AlertKey]*State{
+		previous: map[models.AlertKey]*State{
 			"a{host=ny02}": state,
 		},
 	})
 }
 
 func TestDependency_OtherAlert_UnknownChain(t *testing.T) {
-	ab := expr.AlertKey("a{host=b}")
-	bb := expr.AlertKey("b{host=b}")
-	cb := expr.AlertKey("c{host=b}")
+	ab := models.AlertKey("a{host=b}")
+	bb := models.AlertKey("b{host=b}")
+	cb := models.AlertKey("c{host=b}")
 	as := NewStatus(ab)
 	as.Touched = queryTime.Add(-time.Hour)
 	as.Append(&Event{Status: StNormal})
@@ -215,7 +215,7 @@ func TestDependency_OtherAlert_UnknownChain(t *testing.T) {
 		state: map[schedState]bool{
 			schedState{string(ab), "unknown"}: true,
 		},
-		previous: map[expr.AlertKey]*State{
+		previous: map[models.AlertKey]*State{
 			ab: as,
 			bb: bs,
 			cb: cs,
@@ -255,38 +255,38 @@ func TestDependency_Blocks_Unknown(t *testing.T) {
 			},
 		},
 		state: map[schedState]bool{},
-		previous: map[expr.AlertKey]*State{
+		previous: map[models.AlertKey]*State{
 			"a{host=ny01}": state,
 		},
 	})
 }
 
 func TestDependency_AlertFunctionHasNoResults(t *testing.T) {
-	pingState := NewStatus("ping.host{host=ny01,source=bosun01}")
+	pingState := NewStatus("a{host=ny01,source=bosun01}")
 	pingState.Touched = queryTime.Add(-5 * time.Minute)
 	pingState.Append(&Event{Status: StNormal, Time: pingState.Touched})
 
-	scollState := NewStatus("scollector.down{host=ny01}")
+	scollState := NewStatus("b{host=ny01}")
 	scollState.Touched = queryTime.Add(-10 * time.Minute)
 	scollState.Append(&Event{Status: StNormal, Time: scollState.Touched})
 
-	cpuState := NewStatus("os.cpu{host=ny01}")
+	cpuState := NewStatus("c{host=ny01}")
 	cpuState.Touched = queryTime.Add(-10 * time.Minute)
 	cpuState.Append(&Event{Status: StWarning, Time: cpuState.Touched})
 
 	testSched(t, &schedTest{
 		conf: `
-alert ping.host {
+alert a {
     warn = max(rename(q("sum:bosun.ping.timeout{dst_host=*,host=*}", "5m", ""), "host=source,dst_host=host"))
 }
 
-alert scollector.down {
-	depends = alert("ping.host", "warn")
+alert b {
+	depends = alert("a", "warn")
 	warn = avg(q("avg:os.cpu{host=*}", "5m", "")) < -100
 }
 
-alert os.cpu {
-    depends = alert("scollector.down", "warn")
+alert c {
+    depends = alert("b", "warn")
     warn = avg(q("avg:rate{counter,,1}:os.cpu{host=*}", "5m", ""))
 }
 `,
@@ -302,12 +302,12 @@ alert os.cpu {
 			`q("avg:rate{counter,,1}:os.cpu{host=*}", ` + window5Min + `)`: {},
 		},
 		state: map[schedState]bool{
-			schedState{"ping.host{host=ny01,source=bosun01}", "warning"}: true,
+			schedState{"a{host=ny01,source=bosun01}", "warning"}: true,
 		},
-		previous: map[expr.AlertKey]*State{
-			"ping.host{host=ny01,source=bosun01}": pingState,
-			"scollector.down{host=ny01}":          scollState,
-			"os.cpu{host=ny01}":                   cpuState,
+		previous: map[models.AlertKey]*State{
+			"a{host=ny01,source=bosun01}": pingState,
+			"b{host=ny01}":                scollState,
+			"c{host=ny01}":                cpuState,
 		},
 	})
 }

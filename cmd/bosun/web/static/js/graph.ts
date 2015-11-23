@@ -149,6 +149,8 @@ interface IGraphScope extends ng.IScope {
 	y_labels: string[];
 	min: number;
 	max: number;
+	queryTime: string;
+	normalize: boolean;
 }
 
 bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route', '$timeout', function($scope: IGraphScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService, $timeout: ng.ITimeoutService) {
@@ -173,6 +175,7 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 	$scope.end = request.end;
 	$scope.autods = search.autods != 'false';
 	$scope.refresh = search.refresh == 'true';
+	$scope.normalize = search.normalize == 'true';
 	if (search.min) {
 		$scope.min = +search.min;
 	}
@@ -261,14 +264,9 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 			.error(function(error) {
 				$scope.error = 'Unable to fetch metrics: ' + error;
 			});
-		$http.get('/api/metadata/get?metric=' + metric)
+		$http.get('/api/metadata/metrics?metric=' + metric)
 			.success(data => {
-				var canAuto = false;
-				angular.forEach(data, val => {
-					if (val.Metric == metric && val.Name == 'rate') {
-						canAuto = true;
-					}
-				});
+				var canAuto = data && data.Rate;
 				$scope.canAuto[metric] = canAuto;
 			})
 			.error(err => {
@@ -334,6 +332,7 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 		$location.search('b64', btoa(JSON.stringify(r)));
 		$location.search('autods', $scope.autods ? undefined : 'false');
 		$location.search('refresh', $scope.refresh ? 'true' : undefined);
+		$location.search('normalize', $scope.normalize ? 'true' : undefined);
 		var min = angular.isNumber($scope.min) ? $scope.min.toString() : null;
 		var max = angular.isNumber($scope.max) ? $scope.max.toString() : null;
 		$location.search('min', min);
@@ -348,9 +347,7 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 	function getMetricMeta(metric: string) {
 		$http.get('/api/metadata/metrics?metric=' + encodeURIComponent(metric))
 			.success((data) => {
-				if (Object.keys(data).length == 1) {
-					$scope.meta[metric] = data[metric];
-				}
+				$scope.meta[metric] = data;
 			})
 			.error((error) => {
 				console.log("Error getting metadata for metric " + metric)
@@ -372,6 +369,12 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 		var min = angular.isNumber($scope.min) ? '&min=' + encodeURIComponent($scope.min.toString()) : '';
 		var max = angular.isNumber($scope.max) ? '&max=' + encodeURIComponent($scope.max.toString()) : '';
 		$scope.animate();
+		$scope.queryTime = '';
+		if (request.end && !isRel.exec(request.end)) {
+			var t = moment.utc(request.end, moment.defaultFormat);
+			$scope.queryTime = '&date=' + t.format('YYYY-MM-DD');
+			$scope.queryTime += '&time=' + t.format('HH:mm');
+		}
 		$http.get('/api/graph?' + 'b64=' + encodeURIComponent(btoa(JSON.stringify(request))) + autods + autorate + min + max)
 			.success((data) => {
 				$scope.result = data.Series;

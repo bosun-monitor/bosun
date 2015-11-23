@@ -26,6 +26,7 @@ var itemName = map[itemType]string{
 	itemMinus:      "-",
 	itemMult:       "*",
 	itemDiv:        "/",
+	itemMod:        "%",
 	itemNumber:     "number",
 	itemComma:      ",",
 	itemLeftParen:  "(",
@@ -66,13 +67,14 @@ var (
 	tMinus = item{itemMinus, 0, "-"}
 	tMult  = item{itemMult, 0, "*"}
 	tDiv   = item{itemDiv, 0, "/"}
+	tMod   = item{itemMod, 0, "%"}
 )
 
 var lexTests = []lexTest{
 	{"empty", "", []item{tEOF}},
 	{"spaces", " \t\n", []item{tEOF}},
 	{"text", `"now is the time"`, []item{{itemString, 0, `"now is the time"`}, tEOF}},
-	{"operators", "! && || < > <= >= == != + - * /", []item{
+	{"operators", "! && || < > <= >= == != + - * / %", []item{
 		tNot,
 		tAnd,
 		tOr,
@@ -86,6 +88,7 @@ var lexTests = []lexTest{
 		tMinus,
 		tMult,
 		tDiv,
+		tMod,
 		tEOF,
 	}},
 	{"numbers", "1 02 0x14 7.2 1e3 1.2e-4", []item{
@@ -123,8 +126,31 @@ var lexTests = []lexTest{
 		{itemNumber, 0, "0.4"},
 		tEOF,
 	}},
+	{"simple triple quote", `'''select'''`, []item{
+		{itemTripleQuotedString, 0, `'''select'''`},
+		tEOF,
+	}},
+	{"expression with triple quotes", `influx("db", '''select value from "mymetric.name.with.dots" where  "key" = 'single quoted value' and "other_key" = '' group by *''', "1h", "")`, []item{
+		{itemFunc, 0, "influx"},
+		tLpar,
+		{itemString, 0, `"db"`},
+		tComma,
+		{itemTripleQuotedString, 0, `'''select value from "mymetric.name.with.dots" where  "key" = 'single quoted value' and "other_key" = '' group by *'''`},
+		tComma,
+		{itemString, 0, `"1h"`},
+		tComma,
+		{itemString, 0, `""`},
+		tRpar,
+		tEOF,
+	}},
 	// errors
 	{"unclosed quote", "\"", []item{
+		{itemError, 0, "unterminated string"},
+	}},
+	{"single quote", "'single quote is invalid'", []item{
+		{itemError, 0, "invalid start of string, must use double qutoes or triple single quotes"},
+	}},
+	{"unclosed triple quote", "''' unclosed triple quote ''", []item{
 		{itemError, 0, "unterminated string"},
 	}},
 }

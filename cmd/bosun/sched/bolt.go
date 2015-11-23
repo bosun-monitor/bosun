@@ -9,29 +9,24 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"time"
 
 	"bosun.org/_third_party/github.com/boltdb/bolt"
 	"bosun.org/cmd/bosun/conf"
-	"bosun.org/cmd/bosun/expr"
+	"bosun.org/cmd/bosun/database"
 	"bosun.org/collect"
+	"bosun.org/metadata"
+	"bosun.org/models"
 	"bosun.org/opentsdb"
+	"bosun.org/slog"
 )
 
-var savePending bool
-
-func (s *Schedule) Save() {
-	go func() {
-		s.Lock()
-		defer s.Unlock()
-		if savePending {
-			return
-		}
-		savePending = true
-		time.AfterFunc(time.Second*5, s.save)
-	}()
+func (s *Schedule) performSave() {
+	for {
+		time.Sleep(60 * 10 * time.Second) // wait 10 minutes to throttle.
+		s.save()
+	}
 }
 
 type counterWriter struct {
@@ -48,34 +43,20 @@ func (c *counterWriter) Write(p []byte) (n int, err error) {
 const (
 	dbBucket           = "bindata"
 	dbConfigTextBucket = "configText"
-	dbMetric           = "metric"
-	dbTagk             = "tagk"
-	dbTagv             = "tagv"
-	dbMetricTags       = "metrictags"
 	dbNotifications    = "notifications"
 	dbSilence          = "silence"
 	dbStatus           = "status"
-	dbMetadata         = "metadata"
-	dbIncidents        = "incidents"
 )
 
 func (s *Schedule) save() {
-	defer func() {
-		savePending = false
-	}()
 	if s.db == nil {
 		return
 	}
+	s.Lock("Save")
 	store := map[string]interface{}{
-		dbMetric:        s.Search.Read.Metric,
-		dbTagk:          s.Search.Read.Tagk,
-		dbTagv:          s.Search.Read.Tagv,
-		dbMetricTags:    s.Search.Read.MetricTags,
 		dbNotifications: s.Notifications,
 		dbSilence:       s.Silence,
 		dbStatus:        s.status,
-		dbMetadata:      s.Metadata,
-		dbIncidents:     s.Incidents,
 	}
 	tostore := make(map[string][]byte)
 	for name, data := range store {
@@ -84,19 +65,21 @@ func (s *Schedule) save() {
 		cw := &counterWriter{w: gz}
 		enc := gob.NewEncoder(cw)
 		if err := enc.Encode(data); err != nil {
-			log.Printf("error saving %s: %v", name, err)
+			slog.Errorf("error saving %s: %v", name, err)
+			s.Unlock()
 			return
 		}
 		if err := gz.Flush(); err != nil {
-			log.Printf("gzip flush error saving %s: %v", name, err)
+			slog.Errorf("gzip flush error saving %s: %v", name, err)
 		}
 		if err := gz.Close(); err != nil {
-			log.Printf("gzip close error saving %s: %v", name, err)
+			slog.Errorf("gzip close error saving %s: %v", name, err)
 		}
 		tostore[name] = f.Bytes()
-		log.Printf("wrote %s: %v", name, conf.ByteSize(cw.written))
+		slog.Infof("wrote %s: %v", name, conf.ByteSize(cw.written))
 		collect.Put("statefile.size", opentsdb.TagSet{"object": name}, cw.written)
 	}
+	s.Unlock()
 	err := s.db.Update(func(tx *bolt.Tx) error {
 		b, err := tx.CreateBucketIfNotExists([]byte(dbBucket))
 		if err != nil {
@@ -110,77 +93,62 @@ func (s *Schedule) save() {
 		return nil
 	})
 	if err != nil {
-		log.Printf("save db update error: %v", err)
+		slog.Errorf("save db update error: %v", err)
 		return
 	}
 	fi, err := os.Stat(s.Conf.StateFile)
 	if err == nil {
 		collect.Put("statefile.size", opentsdb.TagSet{"object": "total"}, fi.Size())
 	}
-	log.Println("save to db complete")
+	slog.Infoln("save to db complete")
+}
+
+func decode(db *bolt.DB, name string, dst interface{}) error {
+	var data []byte
+	err := db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(dbBucket))
+		if b == nil {
+			return fmt.Errorf("unknown bucket: %v", dbBucket)
+		}
+		data = b.Get([]byte(name))
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	gr, err := gzip.NewReader(bytes.NewReader(data))
+	if err != nil {
+		return err
+	}
+	defer gr.Close()
+	return gob.NewDecoder(gr).Decode(dst)
 }
 
 // RestoreState restores notification and alert state from the file on disk.
 func (s *Schedule) RestoreState() error {
-	log.Println("RestoreState")
+	defer func() {
+		bosunStartupTime = time.Now()
+	}()
+	slog.Infoln("RestoreState")
 	start := time.Now()
-	s.Lock()
+	s.Lock("RestoreState")
 	defer s.Unlock()
 	s.Search.Lock()
 	defer s.Search.Unlock()
+
 	s.Notifications = nil
-	decode := func(name string, dst interface{}) error {
-		var data []byte
-		err := s.db.View(func(tx *bolt.Tx) error {
-			b := tx.Bucket([]byte(dbBucket))
-			if b == nil {
-				return fmt.Errorf("unknown bucket: %v", dbBucket)
-			}
-			data = b.Get([]byte(name))
-			return nil
-		})
-		if err != nil {
-			return err
-		}
-		gr, err := gzip.NewReader(bytes.NewReader(data))
-		if err != nil {
-			return err
-		}
-		defer gr.Close()
-		return gob.NewDecoder(gr).Decode(dst)
+	db := s.db
+	notifications := make(map[models.AlertKey]map[string]time.Time)
+	if err := decode(db, dbNotifications, &notifications); err != nil {
+		slog.Errorln(dbNotifications, err)
 	}
-	if err := decode(dbMetric, &s.Search.Metric); err != nil {
-		log.Println(dbMetric, err)
-	}
-	if err := decode(dbTagk, &s.Search.Tagk); err != nil {
-		log.Println(dbTagk, err)
-	}
-	if err := decode(dbTagv, &s.Search.Tagv); err != nil {
-		log.Println(dbTagv, err)
-	}
-	if err := decode(dbMetricTags, &s.Search.MetricTags); err != nil {
-		log.Println(dbMetricTags, err)
+	if err := decode(db, dbSilence, &s.Silence); err != nil {
+		slog.Errorln(dbSilence, err)
 	}
 
-	notifications := make(map[expr.AlertKey]map[string]time.Time)
-	if err := decode(dbNotifications, &notifications); err != nil {
-		log.Println(dbNotifications, err)
-	}
-	if err := decode(dbSilence, &s.Silence); err != nil {
-		log.Println(dbSilence, err)
-	}
-	if err := decode(dbIncidents, &s.Incidents); err != nil {
-		log.Println(dbIncidents, err)
-	}
-	// Calculate next incident id.
-	for _, i := range s.Incidents {
-		if i.Id > s.maxIncidentId {
-			s.maxIncidentId = i.Id
-		}
-	}
 	status := make(States)
-	if err := decode(dbStatus, &status); err != nil {
-		log.Println(dbStatus, err)
+	if err := decode(db, dbStatus, &status); err != nil {
+		slog.Errorln(dbStatus, err)
 	}
 	clear := func(r *Result) {
 		if r == nil {
@@ -191,10 +159,10 @@ func (s *Schedule) RestoreState() error {
 	for ak, st := range status {
 		a, present := s.Conf.Alerts[ak.Name()]
 		if !present {
-			log.Println("sched: alert no longer present, ignoring:", ak)
+			slog.Errorln("sched: alert no longer present, ignoring:", ak)
 			continue
 		} else if s.Conf.Squelched(a, st.Group) {
-			log.Println("sched: alert now squelched:", ak)
+			slog.Infoln("sched: alert now squelched:", ak)
 			continue
 		} else {
 			t := a.Unknown
@@ -206,37 +174,38 @@ func (s *Schedule) RestoreState() error {
 			}
 		}
 		clear(st.Result)
+		newHistory := []Event{}
 		for _, e := range st.History {
 			clear(e.Warn)
 			clear(e.Crit)
-			clear(e.Error)
+			// Remove error events which no longer are a thing.
+			if e.Status <= StUnknown {
+				newHistory = append(newHistory, e)
+			}
 		}
+		st.History = newHistory
 		s.status[ak] = st
 		if a.Log && st.Open {
 			st.Open = false
-			log.Printf("sched: alert %s is now log, closing, was %s", ak, st.Status())
+			slog.Infof("sched: alert %s is now log, closing, was %s", ak, st.Status())
 		}
 		for name, t := range notifications[ak] {
 			n, present := s.Conf.Notifications[name]
 			if !present {
-				log.Println("sched: notification not present during restore:", name)
+				slog.Infoln("sched: notification not present during restore:", name)
 				continue
 			}
 			if a.Log {
-				log.Println("sched: alert is now log, removing notification:", ak)
+				slog.Infoln("sched: alert is now log, removing notification:", ak)
 				continue
 			}
 			s.AddNotification(ak, n, t)
 		}
 	}
-	if err := decode(dbMetadata, &s.Metadata); err != nil {
-		log.Println(dbMetadata, err)
-	}
-	if s.maxIncidentId == 0 {
-		s.createHistoricIncidents()
-	}
-	s.Search.Copy()
-	log.Println("RestoreState done in", time.Since(start))
+	migrateOldDataToRedis(db, s.DataAccess)
+	// delete metrictags if they exist.
+	deleteKey(s.db, "metrictags")
+	slog.Infoln("RestoreState done in", time.Since(start))
 	return nil
 }
 
@@ -296,4 +265,212 @@ func (s *Schedule) GetStateFileBackup() ([]byte, error) {
 		return nil, err
 	}
 	return buf.Bytes(), nil
+}
+
+func migrateOldDataToRedis(db *bolt.DB, data database.DataAccess) error {
+	if err := migrateMetricMetadata(db, data); err != nil {
+		return err
+	}
+	if err := migrateTagMetadata(db, data); err != nil {
+		return err
+	}
+	if err := migrateSearch(db, data); err != nil {
+		return err
+	}
+	if err := migrateIncidents(db, data); err != nil {
+		return err
+	}
+	return nil
+}
+
+func migrateMetricMetadata(db *bolt.DB, data database.DataAccess) error {
+	migrated, err := isMigrated(db, "metadata-metric")
+	if err != nil {
+		return err
+	}
+	if !migrated {
+		slog.Info("Migrating metric metadata to new database format")
+		type MetadataMetric struct {
+			Unit        string `json:",omitempty"`
+			Type        string `json:",omitempty"`
+			Description string
+		}
+		mms := map[string]*MetadataMetric{}
+		if err := decode(db, "metadata-metric", &mms); err == nil {
+			for name, mm := range mms {
+				if mm.Description != "" {
+					err = data.Metadata().PutMetricMetadata(name, "desc", mm.Description)
+					if err != nil {
+						return err
+					}
+				}
+				if mm.Unit != "" {
+					err = data.Metadata().PutMetricMetadata(name, "unit", mm.Unit)
+					if err != nil {
+						return err
+					}
+				}
+				if mm.Type != "" {
+					err = data.Metadata().PutMetricMetadata(name, "rate", mm.Type)
+					if err != nil {
+						return err
+					}
+				}
+			}
+			err = setMigrated(db, "metadata-metric")
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func migrateTagMetadata(db *bolt.DB, data database.DataAccess) error {
+	migrated, err := isMigrated(db, "metadata")
+	if err != nil {
+		return err
+	}
+	if !migrated {
+		slog.Info("Migrating metadata to new database format")
+		type Metavalue struct {
+			Time  time.Time
+			Value interface{}
+		}
+		metadata := make(map[metadata.Metakey]*Metavalue)
+		if err := decode(db, "metadata", &metadata); err == nil {
+			for k, v := range metadata {
+				err = data.Metadata().PutTagMetadata(k.TagSet(), k.Name, fmt.Sprint(v.Value), v.Time)
+				if err != nil {
+					return err
+				}
+			}
+			err = deleteKey(db, "metadata")
+			if err != nil {
+				return err
+			}
+		}
+		err = setMigrated(db, "metadata")
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func migrateSearch(db *bolt.DB, data database.DataAccess) error {
+	migrated, err := isMigrated(db, "search")
+	if err != nil {
+		return err
+	}
+	if !migrated {
+		slog.Info("Migrating Search data to new database format")
+		type duple struct{ A, B string }
+		type present map[string]int64
+		type qmap map[duple]present
+		type smap map[string]present
+
+		metric := qmap{}
+		if err := decode(db, "metric", &metric); err == nil {
+			for k, v := range metric {
+				for metric, time := range v {
+					data.Search().AddMetricForTag(k.A, k.B, metric, time)
+				}
+			}
+		} else {
+			return err
+		}
+		tagk := smap{}
+		if err := decode(db, "tagk", &tagk); err == nil {
+			for metric, v := range tagk {
+				for tk, time := range v {
+					data.Search().AddTagKeyForMetric(metric, tk, time)
+				}
+				data.Search().AddMetric(metric, time.Now().Unix())
+			}
+		} else {
+			return err
+		}
+
+		tagv := qmap{}
+		if err := decode(db, "tagv", &tagv); err == nil {
+			for k, v := range tagv {
+				for val, time := range v {
+					data.Search().AddTagValue(k.A, k.B, val, time)
+					data.Search().AddTagValue(database.Search_All, k.B, val, time)
+				}
+			}
+		} else {
+			return err
+		}
+		if err = setMigrated(db, "search"); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func migrateIncidents(db *bolt.DB, data database.DataAccess) error {
+	migrated, err := isMigrated(db, "incidents")
+	if err != nil {
+		return err
+	}
+	if migrated {
+		return nil
+	}
+	slog.Info("migrating incidents")
+	incidents := map[uint64]*models.Incident{}
+	if err := decode(db, "incidents", &incidents); err != nil {
+		return err
+	}
+	max := uint64(0)
+	for k, v := range incidents {
+		data.Incidents().UpdateIncident(k, v)
+		if k > max {
+			max = k
+		}
+	}
+
+	if err = data.Incidents().SetMaxId(max); err != nil {
+		return err
+	}
+	if err = setMigrated(db, "incidents"); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func isMigrated(db *bolt.DB, name string) (bool, error) {
+	found := false
+	err := db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(dbBucket))
+		if b == nil {
+			return fmt.Errorf("unknown bucket: %v", dbBucket)
+		}
+		if dat := b.Get([]byte("isMigrated:" + name)); dat != nil {
+			found = true
+		}
+		return nil
+	})
+	return found, err
+}
+
+func setMigrated(db *bolt.DB, name string) error {
+	return db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(dbBucket))
+		if b == nil {
+			return fmt.Errorf("unknown bucket: %v", dbBucket)
+		}
+		return b.Put([]byte("isMigrated:"+name), []byte{1})
+	})
+}
+func deleteKey(db *bolt.DB, name string) error {
+	return db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(dbBucket))
+		if b == nil {
+			return fmt.Errorf("unknown bucket: %v", dbBucket)
+		}
+		return b.Delete([]byte(name))
+	})
 }

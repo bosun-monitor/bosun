@@ -44,8 +44,8 @@ const (
 	sysSizeofIPMreq         = 0x8
 	sysSizeofIPMreqn        = 0xc
 	sysSizeofIPMreqSource   = 0xc
-	sysSizeofGroupReq       = 0x84
-	sysSizeofGroupSourceReq = 0x104
+	sysSizeofGroupReq       = 0x88
+	sysSizeofGroupSourceReq = 0x108
 )
 
 type sysSockaddrStorage struct {
@@ -83,11 +83,13 @@ type sysIPMreqSource struct {
 
 type sysGroupReq struct {
 	Interface uint32
+	Pad_cgo_0 [4]byte
 	Group     sysSockaddrStorage
 }
 
 type sysGroupSourceReq struct {
 	Interface uint32
+	Pad_cgo_0 [4]byte
 	Group     sysSockaddrStorage
 	Source    sysSockaddrStorage
 }
