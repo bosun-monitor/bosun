@@ -20,7 +20,7 @@ func TestClean(t *testing.T) {
 	}
 }
 
-func TestParseQuery(t *testing.T) {
+func TestParseQueryV2_1(t *testing.T) {
 	tests := []struct {
 		query string
 		error bool
@@ -37,7 +37,7 @@ func TestParseQuery(t *testing.T) {
 		{"sum:stat{a=b=c}", true},
 	}
 	for _, q := range tests {
-		_, err := ParseQuery(q.query)
+		_, err := ParseQuery(q.query, Version2_1)
 		if err != nil && !q.error {
 			t.Errorf("got error: %s: %s", q.query, err)
 		} else if err == nil && q.error {
@@ -46,7 +46,39 @@ func TestParseQuery(t *testing.T) {
 	}
 }
 
-func TestParseRequest(t *testing.T) {
+func TestParseQueryV2_2(t *testing.T) {
+	tests := []struct {
+		query string
+		error bool
+	}{
+		{"sum:10m-avg:proc.stat.cpu{t=v,o=k}", false},
+		{"sum:10m-avg:rate:proc.stat.cpu", false},
+		{"sum:10m-avg:rate{counter,1,2}:proc.stat.cpu{t=v,o=k}", false},
+		{"sum:10m-avg:rate{counter,1,2}:proc.stat.cpu{t=v,o=k}{t=wildcard(v*)}", false},
+		{"sum:10m-avg:rate{counter,1,2}:proc.stat.cpu{}{t=wildcard(v*)}", false},
+		{"sum:proc.stat.cpu", false},
+		{"sum:rate:proc.stat.cpu{t=v,o=k}", false},
+
+		{"", true},
+		{"sum:cpu+", true},
+		// This is supported in 2.2
+		{"sum:cpu{}", false},
+		// This wouldn't be valid, but we are more permissive and will let opentsdb
+		// return errors. This is because there can be a regex filter now. Might
+		// be issues with escaping there however
+		{"sum:stat{a=b=c}", false},
+	}
+	for _, q := range tests {
+		_, err := ParseQuery(q.query, Version2_2)
+		if err != nil && !q.error {
+			t.Errorf("got error: %s: %s", q.query, err)
+		} else if err == nil && q.error {
+			t.Errorf("expected error: %s", q.query)
+		}
+	}
+}
+
+func TestParseRequestV2_1(t *testing.T) {
 	tests := []struct {
 		query string
 		error bool
@@ -60,11 +92,124 @@ func TestParseRequest(t *testing.T) {
 		{"start=1", true},
 	}
 	for _, q := range tests {
-		_, err := ParseRequest(q.query)
+		_, err := ParseRequest(q.query, Version2_1)
 		if err != nil && !q.error {
 			t.Errorf("got error: %s: %s", q.query, err)
 		} else if err == nil && q.error {
 			t.Errorf("expected error: %s", q.query)
+		}
+	}
+}
+
+func TestParseRequestV2_2(t *testing.T) {
+	tests := []struct {
+		query string
+		error bool
+	}{
+		{"start=1&m=sum:c", false},
+		{"start=1&m=sum:c&end=2", false},
+		{"start=1&m=sum:10m-avg:rate:proc.stat.cpu{t=v,o=k}", false},
+		{"start=1&m=sum:10m-avg:rate:proc.stat.cpu{}{t=v,o=k}", false},
+		{"start=1&m=sum:10m-avg:rate:proc.stat.cpu{z=iwildcard(foo*)}{t=v,o=k}", false},
+
+		{"start=&m=", true},
+		{"m=sum:c", true},
+		{"start=1", true},
+	}
+	for _, q := range tests {
+		_, err := ParseRequest(q.query, Version2_2)
+		if err != nil && !q.error {
+			t.Errorf("got error: %s: %s", q.query, err)
+		} else if err == nil && q.error {
+			t.Errorf("expected error: %s", q.query)
+		}
+	}
+}
+
+func TestParseFilters(t *testing.T) {
+	tests := []struct {
+		query   string
+		filters Filters
+	}{
+		{"sum:10m-avg:rate{counter,1,2}:proc.stat.cpu{t=v,o=k}",
+			Filters{
+				Filter{
+					Type:    "literal_or",
+					TagK:    "t",
+					Filter:  "v",
+					GroupBy: true,
+				},
+				Filter{
+					Type:    "literal_or",
+					TagK:    "o",
+					Filter:  "k",
+					GroupBy: true,
+				},
+			},
+		},
+		{"sum:10m-avg:rate:proc.stat.cpu{}{t=v,o=k}",
+			Filters{
+				Filter{
+					Type:    "literal_or",
+					TagK:    "t",
+					Filter:  "v",
+					GroupBy: false,
+				},
+				Filter{
+					Type:    "literal_or",
+					TagK:    "o",
+					Filter:  "k",
+					GroupBy: false,
+				},
+			},
+		},
+		{"sum:10m-avg:rate:proc.stat.cpu{t=v}{o=k}",
+			Filters{
+				Filter{
+					Type:    "literal_or",
+					TagK:    "t",
+					Filter:  "v",
+					GroupBy: true,
+				},
+				Filter{
+					Type:    "literal_or",
+					TagK:    "o",
+					Filter:  "k",
+					GroupBy: false,
+				},
+			},
+		},
+		{"sum:10m-avg:rate:proc.stat.cpu{t=v}{o=iwildcard(foo*)}",
+			Filters{
+				Filter{
+					Type:    "literal_or",
+					TagK:    "t",
+					Filter:  "v",
+					GroupBy: true,
+				},
+				Filter{
+					Type:    "iwildcard",
+					TagK:    "o",
+					Filter:  "foo*",
+					GroupBy: false,
+				},
+			},
+		},
+	}
+	for _, q := range tests {
+		parsedQuery, err := ParseQuery(q.query, Version2_2)
+		if err != nil {
+			t.Errorf("error parsing query %s: %s", q.query, err)
+			continue
+		}
+		if len(q.filters) != len(parsedQuery.Filters) {
+			t.Errorf("expected %d filters, got: %d", len(q.filters), len(parsedQuery.Filters))
+		} else {
+			for i, f := range parsedQuery.Filters {
+				if q.filters[i] != f {
+					t.Errorf("expected parsed filter %+v, got: %+v", q.filters[i], f)
+				}
+			}
 		}
 	}
 }
