@@ -56,7 +56,7 @@ func Expr(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (v inter
 		} else { // must be a variable declatation
 			matches := varRegex.FindStringSubmatch(line)
 			if len(matches) == 0 {
-				return nil, fmt.Errorf("Expext all lines before final expression to be variable declarations of form `$foo = something`")
+				return nil, fmt.Errorf("Expect all lines before final expression to be variable declarations of form `$foo = something`")
 			}
 			name := strings.TrimSpace(matches[1])
 			value := strings.TrimSpace(matches[2])

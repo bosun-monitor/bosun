@@ -113,6 +113,7 @@ func Listen(listenAddr string, devMode bool, tsdbHost string) error {
 	router.Handle("/api/tagv/{tagk}", JSON(TagValuesByTagKey))
 	router.Handle("/api/tagv/{tagk}/{metric}", JSON(TagValuesByMetricTagKey))
 	router.Handle("/api/tagsets/{metric}", JSON(FilteredTagsetsByMetric))
+	router.Handle("/api/opentsdb/version", JSON(OpenTSDBVersion))
 	router.HandleFunc("/api/version", Version)
 	router.Handle("/api/debug/schedlock", JSON(ScheduleLockStatus))
 	http.Handle("/", miniprofiler.NewHandler(Index))
@@ -300,6 +301,10 @@ func HealthCheck(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (
 	var h Health
 	h.RuleCheck = schedule.LastCheck.After(time.Now().Add(-schedule.Conf.CheckFrequency))
 	return h, nil
+}
+
+func OpenTSDBVersion(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	return schedule.Conf.TSDBContext().Version(), nil
 }
 
 func PutMetadata(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {

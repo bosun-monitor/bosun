@@ -29,12 +29,14 @@ func logstashTagQuery(args []parse.Node) (parse.Tags, error) {
 
 func tagQuery(args []parse.Node) (parse.Tags, error) {
 	n := args[0].(*parse.StringNode)
-	q, err := opentsdb.ParseQuery(n.Text)
+	// Since all 2.1 queries are valid 2.2 queries, at this time
+	// we can just use 2.2 to parse to identify group by tags
+	q, err := opentsdb.ParseQuery(n.Text, opentsdb.Version2_2)
 	if q == nil && err != nil {
 		return nil, err
 	}
 	t := make(parse.Tags)
-	for k := range q.Tags {
+	for k := range q.GroupByTags {
 		t[k] = struct{}{}
 	}
 	return t, nil
@@ -584,12 +586,14 @@ func bandTSDB(e *State, T miniprofiler.Timer, query, duration, period string, nu
 			err = fmt.Errorf("num out of bounds")
 		}
 		var q *opentsdb.Query
-		q, err = opentsdb.ParseQuery(query)
+		q, err = opentsdb.ParseQuery(query, e.tsdbContext.Version())
 		if err != nil {
 			return
 		}
-		if err = e.Search.Expand(q); err != nil {
-			return
+		if !e.tsdbContext.Version().FilterSupport() {
+			if err = e.Search.Expand(q); err != nil {
+				return
+			}
 		}
 		req := opentsdb.Request{
 			Queries: []*opentsdb.Query{q},
@@ -783,12 +787,14 @@ func graphiteTagQuery(args []parse.Node) (parse.Tags, error) {
 
 func Query(e *State, T miniprofiler.Timer, query, sduration, eduration string) (r *Results, err error) {
 	r = new(Results)
-	q, err := opentsdb.ParseQuery(query)
+	q, err := opentsdb.ParseQuery(query, e.tsdbContext.Version())
 	if q == nil && err != nil {
 		return
 	}
-	if err = e.Search.Expand(q); err != nil {
-		return
+	if !e.tsdbContext.Version().FilterSupport() {
+		if err = e.Search.Expand(q); err != nil {
+			return
+		}
 	}
 	sd, err := opentsdb.ParseDuration(sduration)
 	if err != nil {

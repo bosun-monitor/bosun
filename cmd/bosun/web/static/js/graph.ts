@@ -12,12 +12,26 @@ class RateOptions {
 	resetValue: number;
 }
 
+class Filter {
+	type: string;
+	tagk: string;
+	filter:  string;
+	groupBy: boolean;
+}
+
+class FilterMap {
+	[tagk: string]: Filter;
+}
+
 class Query {
 	aggregator: string;
 	metric: string;
 	rate: boolean;
 	rateOptions: RateOptions;
 	tags: TagSet;
+	filters: Filter[];
+	gbFilters: FilterMap;
+	nGbFilters: FilterMap;
 	metric_tags: any;
 	downsample: string;
 	ds: string;
@@ -43,8 +57,25 @@ class Query {
 		this.ds = q && q.ds || '';
 		this.dstime = q && q.dstime || '';
 		this.tags = q && q.tags || new TagSet;
+		this.gbFilters = q && q.gbFilters || new FilterMap;
+		this.nGbFilters = q && q.nGbFilters || new FilterMap;
+		this.setFilters();
 		this.setDs();
 		this.setDerivative();
+	}
+	setFilters() {
+		this.filters = [];
+		var that = this;
+		_.each(this.gbFilters, function(filter: Filter, tagk) {
+			if (filter.filter && filter.type) {
+				that.filters.push(filter);
+			}
+		});
+		_.each(this.nGbFilters, function(filter: Filter, tagk) {
+			if (filter.filter && filter.type) {
+				that.filters.push(filter);
+			}
+		});
 	}
 	setDs() {
 		if (this.dstime && this.ds) {
@@ -110,6 +141,11 @@ class Request {
 
 var graphRefresh: any;
 
+class Version {
+	Major: number;
+	Minor: number;
+}
+
 interface IGraphScope extends ng.IScope {
 	index: number;
 	url: string;
@@ -122,6 +158,7 @@ interface IGraphScope extends ng.IScope {
 	sorted_tagks: string[][];
 	query: string;
 	aggregators: string[];
+	version: any;
 	rate_options: string[];
 	dsaggregators: string[];
 	GetTagKByMetric: (index: number) => void;
@@ -151,11 +188,18 @@ interface IGraphScope extends ng.IScope {
 	max: number;
 	queryTime: string;
 	normalize: boolean;
+	filterSupport: boolean;
+	filters: string[];
 }
 
-bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route', '$timeout', function($scope: IGraphScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService, $timeout: ng.ITimeoutService) {
+bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route', '$timeout', 'version', function($scope: IGraphScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService, $timeout: ng.ITimeoutService, $version: any) {
+	$scope.version = $version.data;
 	$scope.aggregators = ["sum", "min", "max", "avg", "dev", "zimsum", "mimmin", "minmax"];
 	$scope.dsaggregators = ["", "sum", "min", "max", "avg", "dev", "zimsum", "mimmin", "minmax"];
+	$scope.filters = ["iliteral_or", "iwildcard", "literal_or", "not_iliteral_or", "not_literal_or", "regexp", "wildcard"];
+	if ($scope.version.Major >= 2 && $scope.version.Minor >= 2) {
+		$scope.filterSupport = true;
+	}
 	$scope.rate_options = ["auto", "gauge", "counter", "rate"];
 	$scope.canAuto = {};
 	var search = $location.search();
@@ -233,15 +277,36 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 				var q = $scope.query_p[index];
 				var tags = new TagSet;
 				q.metric_tags = {};
+				if (!q.gbFilters) {
+					q.gbFilters = new FilterMap;
+				}
+				if (!q.nGbFilters) {
+					q.nGbFilters = new FilterMap;
+				}
 				for (var i = 0; i < data.length; i++) {
 					var d = data[i];
-					q.metric_tags[d] = true;
+					if ($scope.filterSupport) {
+						if (!q.gbFilters[d]) {
+							var filter = new Filter;
+							filter.tagk = d;
+							filter.type = "literal_or";
+							filter.groupBy = true;
+							q.gbFilters[d] = filter;
+						}
+						if (!q.nGbFilters[d]) {
+							var filter = new Filter;
+							filter.tagk = d;
+							filter.type = "literal_or";
+							q.nGbFilters[d] = filter;
+						}
+					}
 					if (q.tags) {
 						tags[d] = q.tags[d];
 					}
 					if (!tags[d]) {
 						tags[d] = '';
 					}
+					q.metric_tags[d] = true;
 					GetTagVs(d, index);
 				}
 				angular.forEach(q.tags, (val, key) => {
@@ -283,7 +348,6 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 		.error(function(error) {
 			$scope.error = 'Unable to fetch metrics: ' + error;
 		});
-
 	function GetTagVs(k: string, index: number) {
 		$http.get('/api/tagv/' + k + '/' + $scope.query_p[index].metric)
 			.success(function(data: string[]) {
@@ -305,11 +369,13 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 			var q = new Query(p);
 			var tags = q.tags;
 			q.tags = new TagSet;
-			angular.forEach(tags, function(v, k) {
-				if (v && k) {
-					q.tags[k] = v;
-				}
-			});
+			if (! $scope.filterSupport) {
+				angular.forEach(tags, function(v, k) {
+					if (v && k) {
+						q.tags[k] = v;
+					}
+				});
+			}
 			request.queries.push(q);
 		});
 		return request;
@@ -327,6 +393,15 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 				}
 				delete r.queries[index].tags[tag];
 			});
+			if ($scope.filterSupport) {
+				_.each(r.queries[index].nGbFilters, (v, fKey) => {
+					if (m[fKey]) {
+						return
+					}
+					delete r.queries[index].nGbFilters[fKey];
+					delete r.queries[index].gbFilters[fKey];
+				});
+			}
 		});
 		r.prune();
 		$location.search('b64', btoa(JSON.stringify(r)));
@@ -350,7 +425,7 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 				$scope.meta[metric] = data;
 			})
 			.error((error) => {
-				console.log("Error getting metadata for metric " + metric)
+				console.log("Error getting metadata for metric " + metric);
 			})
 	}
 	function get(noRunning: boolean) {

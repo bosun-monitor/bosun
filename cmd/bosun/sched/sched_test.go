@@ -21,7 +21,7 @@ import (
 )
 
 func init() {
-	slog.Set(&slog.StdLog{log.New(ioutil.Discard, "", log.LstdFlags)})
+	slog.Set(&slog.StdLog{Log: log.New(ioutil.Discard, "", log.LstdFlags)})
 	log.SetOutput(ioutil.Discard)
 }
 
