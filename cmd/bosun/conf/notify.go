@@ -30,10 +30,10 @@ func (n *Notification) Notify(subject, body string, emailsubject, emailbody []by
 		go n.DoEmail(emailsubject, emailbody, c, ak, attachments...)
 	}
 	if n.Post != nil {
-		go n.DoPost([]byte(subject))
+		go n.DoPost([]byte(subject), ak)
 	}
 	if n.Get != nil {
-		go n.DoGet()
+		go n.DoGet(ak)
 	}
 	if n.Print {
 		go n.DoPrint(subject)
@@ -44,7 +44,7 @@ func (n *Notification) DoPrint(subject string) {
 	slog.Infoln(subject)
 }
 
-func (n *Notification) DoPost(subject []byte) {
+func (n *Notification) DoPost(subject []byte, ak string) {
 	if n.Body != nil {
 		buf := new(bytes.Buffer)
 		if err := n.Body.Execute(buf, string(subject)); err != nil {
@@ -63,10 +63,12 @@ func (n *Notification) DoPost(subject []byte) {
 	}
 	if resp.StatusCode >= 300 {
 		slog.Errorln("bad response on notification post:", resp.Status)
+	} else {
+		slog.Infof("post notification successful for alert %s. Response code %d.", ak, resp.StatusCode)
 	}
 }
 
-func (n *Notification) DoGet() {
+func (n *Notification) DoGet(ak string) {
 	resp, err := http.Get(n.Get.String())
 	if err != nil {
 		slog.Error(err)
@@ -74,6 +76,8 @@ func (n *Notification) DoGet() {
 	}
 	if resp.StatusCode >= 300 {
 		slog.Error("bad response on notification get:", resp.Status)
+	} else {
+		slog.Infof("get notification successful for alert %s. Response code %d.", ak, resp.StatusCode)
 	}
 }
 
