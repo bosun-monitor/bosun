@@ -60,13 +60,13 @@ type dataAccess struct {
 }
 
 // Create a new data access object pointed at the specified address. isRedis parameter used to distinguish true redis from ledis in-proc.
-func NewDataAccess(addr string, isRedis bool) DataAccess {
-	return newDataAccess(addr, isRedis)
+func NewDataAccess(addr string, isRedis bool, redisDb int, redisPass string) DataAccess {
+	return newDataAccess(addr, isRedis, redisDb, redisPass)
 }
 
-func newDataAccess(addr string, isRedis bool) *dataAccess {
+func newDataAccess(addr string, isRedis bool, redisDb int, redisPass string) *dataAccess {
 	return &dataAccess{
-		pool:    newPool(addr, "", 0, isRedis, 1000, true),
+		pool:    newPool(addr, redisPass, redisDb, isRedis, 1000, true),
 		isRedis: isRedis,
 	}
 }
