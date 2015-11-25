@@ -30,21 +30,25 @@ import (
 
 type Conf struct {
 	Vars
-	Name             string        // Config file name
-	CheckFrequency   time.Duration // Time between alert checks: 5m
-	DefaultRunEvery  int           // Default number of check intervals to run each alert: 1
-	HTTPListen       string        // Web server listen address: :80
-	Hostname         string
-	RelayListen      string // OpenTSDB relay listen address: :4242
-	SMTPHost         string // SMTP address: ny-mail:25
-	SMTPUsername     string // SMTP username
-	SMTPPassword     string // SMTP password
-	Ping             bool
-	PingDuration     time.Duration // Duration from now to stop pinging hosts based on time since the host tag was touched
-	EmailFrom        string
-	StateFile        string
-	LedisDir         string
-	RedisHost        string
+	Name            string        // Config file name
+	CheckFrequency  time.Duration // Time between alert checks: 5m
+	DefaultRunEvery int           // Default number of check intervals to run each alert: 1
+	HTTPListen      string        // Web server listen address: :80
+	Hostname        string
+	RelayListen     string // OpenTSDB relay listen address: :4242
+	SMTPHost        string // SMTP address: ny-mail:25
+	SMTPUsername    string // SMTP username
+	SMTPPassword    string // SMTP password
+	Ping            bool
+	PingDuration    time.Duration // Duration from now to stop pinging hosts based on time since the host tag was touched
+	EmailFrom       string
+	StateFile       string
+	LedisDir        string
+
+	RedisHost     string
+	RedisDb       int
+	RedisPassword string
+
 	TimeAndDate      []int // timeanddate.com cities list
 	ResponseLimit    int64
 	SearchSince      opentsdb.Duration
@@ -549,6 +553,14 @@ func (c *Conf) loadGlobal(p *parse.PairNode) {
 		c.LedisDir = v
 	case "redisHost":
 		c.RedisHost = v
+	case "redisPassword":
+		c.RedisPassword = v
+	case "redisDb":
+		i, err := strconv.Atoi(v)
+		if err != nil {
+			c.error(err)
+		}
+		c.RedisDb = i
 	case "minGroupSize":
 		i, err := strconv.Atoi(v)
 		if err != nil {

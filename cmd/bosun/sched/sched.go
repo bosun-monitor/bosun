@@ -74,14 +74,14 @@ func (s *Schedule) Init(c *conf.Conf) error {
 	s.ctx = &checkContext{time.Now(), cache.New(0)}
 	if s.DataAccess == nil {
 		if c.RedisHost != "" {
-			s.DataAccess = database.NewDataAccess(c.RedisHost, true)
+			s.DataAccess = database.NewDataAccess(c.RedisHost, true, c.RedisDb, c.RedisPassword)
 		} else {
 			bind := "127.0.0.1:9565"
 			_, err := database.StartLedis(c.LedisDir, bind)
 			if err != nil {
 				return err
 			}
-			s.DataAccess = database.NewDataAccess(bind, false)
+			s.DataAccess = database.NewDataAccess(bind, false, 0, "")
 		}
 	}
 	if s.Search == nil {
