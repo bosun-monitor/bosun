@@ -54,6 +54,17 @@ Every variable is optional, though you should enable at least 1 backend.
 * influxTLS: Whether to use TLS when connecting to InfluxDB. Default is false.
 * influxTimeout: Timeout duration for connections to InfluxDB.
 
+#### data storage
+
+With bosun v0.5.0, bosun uses redis as a storage mechanism for it's internal state. You can either run a redis instance to hold this data, or bosun can use an embedded server if you would rather run standalone (using [ledisDb](http://ledisdb.com/))
+
+Config items:
+* redisHost: redis server to use. Ex: `localhost:6379`. Redis 3.0 or greater is required.
+* redisDb: redis database to use. Default is `0`.
+* redisPassword: redis password.
+
+* ledisDir: directory for ledisDb to store it's data. Will default to `ledis_data` in working dir if no redis host is provided.
+
 #### settings
 
 * checkFrequency: time between alert checks, defaults to `5m`
