@@ -175,6 +175,7 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *Event, s
 		s.executeTemplates(state, event, a, r)
 		state.Open = true
 		if a.Log {
+			worst = StNormal
 			state.Open = false
 		}
 	}
