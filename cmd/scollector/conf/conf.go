@@ -60,6 +60,7 @@ type Conf struct {
 	GoogleAnalytics     []GoogleAnalytics
 	Cadvisor            []Cadvisor
 	RedisCounters       []RedisCounters
+	ExtraHop            []ExtraHop
 }
 
 type HAProxy struct {
@@ -173,4 +174,11 @@ type Cadvisor struct {
 type RedisCounters struct {
 	Server   string
 	Database int
+}
+
+type ExtraHop struct {
+	Host          string
+	APIKey        string
+	FilterBy      string
+	FilterPercent int
 }
