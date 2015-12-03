@@ -325,3 +325,17 @@ func skipMetric(index string) bool {
 	}
 	return true
 }
+
+type tsIntegrator func(int64, float64) float64
+
+func getTsIntegrator() tsIntegrator {
+	var total float64
+	var lastTimestamp int64
+	return func(timestamp int64, v float64) float64 {
+		if lastTimestamp > 0 {
+			total += v * float64(timestamp-lastTimestamp)
+		}
+		lastTimestamp = timestamp
+		return total
+	}
+}

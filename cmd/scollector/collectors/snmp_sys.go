@@ -16,14 +16,14 @@ const sysUpTime = ".1.3.6.1.2.1.1.3.0" // "The time (in hundredths of a second) 
 func SNMPSys(cfg conf.SNMP) {
 	collectors = append(collectors, &IntervalCollector{
 		F: func() (opentsdb.MultiDataPoint, error) {
-			return c_snmp_sys(cfg.Community, cfg.Host)
+			return c_snmp_sys(cfg.Host, cfg.Community)
 		},
 		Interval: time.Minute * 1,
 		name:     fmt.Sprintf("snmp-sys-%s", cfg.Host),
 	})
 }
 
-func c_snmp_sys(community, host string) (opentsdb.MultiDataPoint, error) {
+func c_snmp_sys(host, community string) (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	uptime, err := snmp_oid(host, community, sysUpTime)
 	if err != nil {

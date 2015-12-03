@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"strconv"
+	"time"
 
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
@@ -19,22 +20,23 @@ func Vsphere(user, pwd, host string) error {
 	if host == "" || user == "" || pwd == "" {
 		return fmt.Errorf("empty Host, User, or Password in Vsphere")
 	}
+	cpuIntegrators := make(map[string]tsIntegrator)
 	collectors = append(collectors, &IntervalCollector{
 		F: func() (opentsdb.MultiDataPoint, error) {
-			return c_vsphere(user, pwd, host)
+			return c_vsphere(user, pwd, host, cpuIntegrators)
 		},
 		name: fmt.Sprintf("vsphere-%s", host),
 	})
 	return nil
 }
 
-func c_vsphere(user, pwd, host string) (opentsdb.MultiDataPoint, error) {
+func c_vsphere(user, pwd, host string, cpuIntegrators map[string]tsIntegrator) (opentsdb.MultiDataPoint, error) {
 	v, err := vsphere.Connect(host, user, pwd)
 	if err != nil {
 		return nil, err
 	}
 	var md opentsdb.MultiDataPoint
-	if err := vsphereHost(v, &md); err != nil {
+	if err := vsphereHost(v, &md, cpuIntegrators); err != nil {
 		return nil, err
 	}
 	if err := vsphereDatastore(v, &md); err != nil {
@@ -111,7 +113,7 @@ type HostSystemIdentificationInfo struct {
 	} `xml:"identifierType"`
 }
 
-func vsphereHost(v *vsphere.Vsphere, md *opentsdb.MultiDataPoint) error {
+func vsphereHost(v *vsphere.Vsphere, md *opentsdb.MultiDataPoint, cpuIntegrators map[string]tsIntegrator) error {
 	res, err := v.Info("HostSystem", []string{
 		"name",
 		"summary.hardware.cpuMhz",
@@ -205,7 +207,12 @@ func vsphereHost(v *vsphere.Vsphere, md *opentsdb.MultiDataPoint) error {
 		if cpuMhz > 0 && cpuUse > 0 && cpuCores > 0 {
 			cpuTotal := cpuMhz * cpuCores
 			Add(md, "vsphere.cpu", cpuTotal-cpuUse, opentsdb.TagSet{"host": name, "type": "idle"}, metadata.Gauge, metadata.MHz, "")
-			Add(md, "vsphere.cpu.pct", float64(cpuUse)/float64(cpuTotal)*100, tags, metadata.Gauge, metadata.Pct, "")
+			pct := float64(cpuUse) / float64(cpuTotal) * 100
+			Add(md, "vsphere.cpu.pct", pct, tags, metadata.Gauge, metadata.Pct, "")
+			if _, ok := cpuIntegrators[name]; !ok {
+				cpuIntegrators[name] = getTsIntegrator()
+			}
+			Add(md, osCPU, cpuIntegrators[name](time.Now().Unix(), pct), tags, metadata.Counter, metadata.Pct, "")
 		}
 	}
 	return Error
