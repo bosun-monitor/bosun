@@ -66,6 +66,7 @@ type Conf struct {
 	LocalListener       string
 	TagOverride         []TagOverride
 	HadoopHost          string
+	Oracles             []Oracle
 }
 
 type HAProxy struct {
@@ -193,4 +194,14 @@ type TagOverride struct {
 	CollectorExpr string
 	MatchedTags   map[string]string
 	Tags          map[string]string
+}
+
+type Oracle struct {
+	ClusterName string
+	Instances   []OracleInstance
+}
+
+type OracleInstance struct {
+	ConnectString string
+	Role          string
 }

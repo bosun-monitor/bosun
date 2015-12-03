@@ -298,6 +298,22 @@ will deletes it.
 	    docker_name = ''
 	    source = 'kubelet'
 
+Oracles (array of table, keys are ClusterName, Instances): Oracle database
+instances to poll. The Instances key is an array of table with keys
+ConnectionString and Role, which are the same as using sqlplus.
+
+	[[Oracles]]
+	  ClusterName = "oracle rac name"
+	  [[Oracles.instances]]
+	    ConnectionString = "/"
+	    Role = "sysdba"
+	  [[Oracles.instances]]
+	    ConnectionString = "username/password@oraclehost/sid"
+	  [[Oracles.instances]]
+	    ConnectionString = "/@localnodevip/sid"
+	    Role = "sysdba"
+
+
 Windows
 
 scollector has full Windows support. It can be run standalone, or installed as a
