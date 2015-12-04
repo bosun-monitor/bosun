@@ -74,7 +74,7 @@ var (
 )
 
 var sqlplusParsers = []sqlplusQueryRowParser{
-	sqlplusQueryRowParser{
+	{
 		"select name from v$database;\n",
 		func(row string, md *opentsdb.MultiDataPoint, prefix string, common opentsdb.TagSet) error {
 			// get database name and add it to common tag set
@@ -82,7 +82,7 @@ var sqlplusParsers = []sqlplusQueryRowParser{
 			return nil
 		},
 	},
-	sqlplusQueryRowParser{
+	{
 		"select instance_name from v$instance;\n",
 		func(row string, md *opentsdb.MultiDataPoint, prefix string, common opentsdb.TagSet) error {
 			// get instance name and add it to common tag set
@@ -90,7 +90,7 @@ var sqlplusParsers = []sqlplusQueryRowParser{
 			return nil
 		},
 	},
-	sqlplusQueryRowParser{
+	{
 		"select METRIC_NAME || ',' || INTSIZE_CSEC || ',' || VALUE || ',' || METRIC_UNIT from v$sysmetric;\n",
 		func(row string, md *opentsdb.MultiDataPoint, prefix string, common opentsdb.TagSet) error {
 			fields := strings.Split(row, ",")
@@ -117,7 +117,7 @@ var sqlplusParsers = []sqlplusQueryRowParser{
 			return nil
 		},
 	},
-	sqlplusQueryRowParser{
+	{
 		"select NAME || ',' || VALUE from v$sysstat where NAME not like '%this session%';\n",
 		func(row string, md *opentsdb.MultiDataPoint, prefix string, common opentsdb.TagSet) error {
 			fields := strings.Split(row, ",")
@@ -143,7 +143,7 @@ var sqlplusParsers = []sqlplusQueryRowParser{
 			return nil
 		},
 	},
-	sqlplusQueryRowParser{
+	{
 		"select TABLESPACE_NAME || ',' || USED_PERCENT from dba_tablespace_usage_metrics;\n",
 		func(row string, md *opentsdb.MultiDataPoint, prefix string, common opentsdb.TagSet) error {
 			fields := strings.Split(row, ",")
@@ -162,7 +162,7 @@ var sqlplusParsers = []sqlplusQueryRowParser{
 			return nil
 		},
 	},
-	sqlplusQueryRowParser{
+	{
 		"select NAME || ',' || TYPE || ',' || TOTAL_MB || ',' || FREE_MB || ',' || USABLE_FILE_MB || ',' || OFFLINE_DISKS from v$asm_diskgroup_stat;\n",
 		func(row string, md *opentsdb.MultiDataPoint, prefix string, common opentsdb.TagSet) error {
 			fields := strings.Split(row, ",")
@@ -196,7 +196,7 @@ var sqlplusParsers = []sqlplusQueryRowParser{
 			return nil
 		},
 	},
-	sqlplusQueryRowParser{
+	{
 		"select FAILGROUP || ',' || READS || ',' || WRITES || ',' || READ_ERRS || ',' || WRITE_ERRS || ',' || READ_TIME || ',' || WRITE_TIME || ',' || BYTES_READ || ',' || BYTES_WRITTEN from v$asm_disk_iostat;\n",
 		func(row string, md *opentsdb.MultiDataPoint, prefix string, common opentsdb.TagSet) error {
 			fields := strings.Split(row, ",")
@@ -236,7 +236,7 @@ var sqlplusParsers = []sqlplusQueryRowParser{
 			return nil
 		},
 	},
-	sqlplusQueryRowParser{
+	{
 		"select b.WAIT_CLASS || ',' || a.AVERAGE_WAITER_COUNT || ',' || a.DBTIME_IN_WAIT || ',' || b.TOTAL_WAITS || ',' || b.TIME_WAITED || ',' || b.TOTAL_WAITS_FG || ',' || b.TIME_WAITED_FG from v$waitclassmetric a, v$system_wait_class b where a.WAIT_CLASS_ID = b.WAIT_CLASS_ID and WAIT_CLASS <> 'Idle';\n",
 		func(row string, md *opentsdb.MultiDataPoint, prefix string, common opentsdb.TagSet) error {
 			fields := strings.Split(row, ",")
