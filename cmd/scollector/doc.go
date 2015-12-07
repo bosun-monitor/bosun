@@ -247,6 +247,27 @@ RedisCounters: Reads a hash of metric/counters from a redis database.
 
 Expects data populated via bosun's udp listener in the "scollectorCounters" hash.
 
+ExtraHop (array of table): ExtraHop hosts to poll. The two filter options specify how
+scollector should filter out traffic from being submitted. The valid options are:
+
+	- namedprotocols (Only protocols that have an explicit name are submitted. The rest of the
+					  traffic will be pushed into proto=unnamed. So any protocol that begins with
+					  "tcp", "udp" or "SSL" will not be submitted (with the exception of SSL443).
+	- toppercent 	 (The top n% of traffic by volume will be submitted. The rest of the traffic
+				  	  will be pushed into proto=otherproto)
+	- none 			 (All protocols of any size will be submitted)
+
+FilterPercent applies when the FilterBy option is set to "toppercent". Only protocols that account
+for this much traffic will be logged. For example, if this is set to 90, then if the protocol
+accounts for less than 10% of the traffic, it will be dropped. This is OK if your traffic is
+heavilly dominated by asmall set of protocols, but if you have a fairly even spread of protocols
+then this filtering loses its usefulness.
+
+	[[ExtraHop]]
+	  Host = "extrahop01"
+	  APIkey = "abcdef1234567890"
+	  FilterBy = "toppercent"
+	  FilterPercent = 75
 
 Windows
 
