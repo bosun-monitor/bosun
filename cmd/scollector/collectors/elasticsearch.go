@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"regexp"
 	"strings"
+	"time"
 
 	"bosun.org/cmd/scollector/conf"
 	"bosun.org/metadata"
@@ -22,7 +23,21 @@ func init() {
 				slog.Errorf("Error processing ElasticIndexFilter: %s", err)
 			}
 		}
-		collectors = append(collectors, &IntervalCollector{F: c_elasticsearch, Enable: enableURL("http://localhost:9200/")})
+		collectors = append(collectors, &IntervalCollector{
+			F: func() (opentsdb.MultiDataPoint, error) {
+				return c_elasticsearch(false)
+			},
+			name:   "elasticsearch",
+			Enable: enableURL("http://localhost:9200/"),
+		})
+		collectors = append(collectors, &IntervalCollector{
+			F: func() (opentsdb.MultiDataPoint, error) {
+				return c_elasticsearch(true)
+			},
+			name:     "elasticsearch-indices",
+			Interval: time.Minute * 15,
+			Enable:   enableURL("http://localhost:9200/"),
+		})
 	})
 }
 
@@ -141,7 +156,7 @@ func (s *structProcessor) add(prefix string, st interface{}, ts opentsdb.TagSet)
 	}
 }
 
-func c_elasticsearch() (opentsdb.MultiDataPoint, error) {
+func c_elasticsearch(collectIndices bool) (opentsdb.MultiDataPoint, error) {
 	var status ElasticStatus
 	if err := esReq("/", "", &status); err != nil {
 		return nil, err
@@ -174,26 +189,28 @@ func c_elasticsearch() (opentsdb.MultiDataPoint, error) {
 		s.add("elastic.jvm.gc", nodeStats.JVM.GC.Collectors.Old, opentsdb.TagSet{"gc": "old"}.Merge(ts))
 		s.add("elastic.jvm.gc", nodeStats.JVM.GC.Collectors.Young, opentsdb.TagSet{"gc": "young"}.Merge(ts))
 	}
-	var indexStats ElasticIndexStats
-	if err := esReq("/_stats", "", &indexStats); err != nil {
-		return nil, err
-	}
-	for k, index := range clusterHealth.Indices {
-		if esSkipIndex(k) {
-			continue
+	if collectIndices {
+		var indexStats ElasticIndexStats
+		if err := esReq("/_stats", "", &indexStats); err != nil {
+			return nil, err
 		}
-		ts := opentsdb.TagSet{"index_name": k, "cluster": clusterStats.ClusterName}
-		s.add("elastic.health.indices", index, ts)
-		if status, ok := elasticStatusMap[index.Status]; ok {
-			Add(&md, "elastic.health.indices.status", status, ts, metadata.Gauge, metadata.StatusCode, "The current status of the index. Zero for green, one for yellow, two for red.")
+		for k, index := range clusterHealth.Indices {
+			if esSkipIndex(k) {
+				continue
+			}
+			ts := opentsdb.TagSet{"index_name": k, "cluster": clusterStats.ClusterName}
+			s.add("elastic.health.indices", index, ts)
+			if status, ok := elasticStatusMap[index.Status]; ok {
+				Add(&md, "elastic.health.indices.status", status, ts, metadata.Gauge, metadata.StatusCode, "The current status of the index. Zero for green, one for yellow, two for red.")
+			}
 		}
-	}
-	for k, index := range indexStats.Indices {
-		if esSkipIndex(k) {
-			continue
+		for k, index := range indexStats.Indices {
+			if esSkipIndex(k) {
+				continue
+			}
+			ts := opentsdb.TagSet{"index_name": k, "cluster": clusterStats.ClusterName}
+			s.add("elastic.indices.cluster", index.Primaries, ts)
 		}
-		ts := opentsdb.TagSet{"index_name": k, "cluster": clusterStats.ClusterName}
-		s.add("elastic.indices.cluster", index.Primaries, ts)
 	}
 	return md, nil
 }
