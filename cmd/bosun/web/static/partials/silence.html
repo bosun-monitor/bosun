@@ -110,11 +110,11 @@
 					<td ts-time="s.Start"></td>
 					<td ts-time="s.End"></td>
 					<td ng-bind="s.Alert"></td>
-					<td ng-bind="s.Tags"></td>
+					<td ng-bind="s.TagString"></td>
 					<td ng-bind="s.User"></td>
 					<td ng-bind="s.Message"></td>
 					<td>
-						<a class="btn btn-primary btn-xs" ng-href="/silence?start={{time(s.Start)}}&end={{time(s.End)}}&alert={{s.Alert}}&tags={{encode(s.Tags)}}{{s.Forget ? '&forget': ''}}&edit={{id}}">edit</a>
+						<a class="btn btn-primary btn-xs" ng-href="/silence?start={{time(s.Start)}}&end={{time(s.End)}}&alert={{s.Alert}}&tags={{encode(s.TagString)}}{{s.Forget ? '&forget': ''}}&edit={{id}}">edit</a>
 						<button class="btn btn-danger btn-xs" ng-click="clear(id)">clear</button>
 					</td>
 				</tr>

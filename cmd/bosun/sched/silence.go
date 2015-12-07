@@ -1,89 +1,26 @@
 package sched
 
 import (
-	"crypto/sha1"
-	"encoding/json"
 	"fmt"
-	"sync"
 	"time"
 
 	"bosun.org/models"
 	"bosun.org/opentsdb"
+	"bosun.org/slog"
 )
-
-type Silence struct {
-	Start, End time.Time
-	Alert      string
-	Tags       opentsdb.TagSet
-	Forget     bool
-	User       string
-	Message    string
-}
-
-func (s *Silence) MarshalJSON() ([]byte, error) {
-	return json.Marshal(struct {
-		Start, End time.Time
-		Alert      string
-		Tags       string
-		Forget     bool
-		User       string
-		Message    string
-	}{
-		Start:   s.Start,
-		End:     s.End,
-		Alert:   s.Alert,
-		Tags:    s.Tags.Tags(),
-		Forget:  s.Forget,
-		User:    s.User,
-		Message: s.Message,
-	})
-}
-
-func (s *Silence) Silenced(now time.Time, alert string, tags opentsdb.TagSet) bool {
-	if !s.ActiveAt(now) {
-		return false
-	}
-	return s.Matches(alert, tags)
-}
-
-func (s *Silence) ActiveAt(now time.Time) bool {
-	if now.Before(s.Start) || now.After(s.End) {
-		return false
-	}
-	return true
-}
-
-func (s *Silence) Matches(alert string, tags opentsdb.TagSet) bool {
-	if s.Alert != "" && s.Alert != alert {
-		return false
-	}
-	for k, pattern := range s.Tags {
-		tagv, ok := tags[k]
-		if !ok {
-			return false
-		}
-		matched, _ := Match(pattern, tagv)
-		if !matched {
-			return false
-		}
-	}
-	return true
-}
-
-func (s Silence) ID() string {
-	h := sha1.New()
-	fmt.Fprintf(h, "%s|%s|%s%s", s.Start, s.End, s.Alert, s.Tags)
-	return fmt.Sprintf("%x", h.Sum(nil))
-}
 
 // Silenced returns all currently silenced AlertKeys and the time they will be
 // unsilenced.
-func (s *Schedule) Silenced() map[models.AlertKey]Silence {
-	aks := make(map[models.AlertKey]Silence)
+func (s *Schedule) Silenced() map[models.AlertKey]models.Silence {
+	aks := make(map[models.AlertKey]models.Silence)
+
 	now := time.Now()
-	silenceLock.RLock()
-	defer silenceLock.RUnlock()
-	for _, si := range s.Silence {
+	silences, err := s.DataAccess.Silence().GetActiveSilences()
+	if err != nil {
+		slog.Error("Error fetching silences.", err)
+		return nil
+	}
+	for _, si := range silences {
 		if !si.ActiveAt(now) {
 			continue
 		}
@@ -100,8 +37,6 @@ func (s *Schedule) Silenced() map[models.AlertKey]Silence {
 	return aks
 }
 
-var silenceLock = sync.RWMutex{}
-
 func (s *Schedule) AddSilence(start, end time.Time, alert, tagList string, forget, confirm bool, edit, user, message string) (map[models.AlertKey]bool, error) {
 	if start.IsZero() || end.IsZero() {
 		return nil, fmt.Errorf("both start and end must be specified")
@@ -115,7 +50,7 @@ func (s *Schedule) AddSilence(start, end time.Time, alert, tagList string, forge
 	if alert == "" && tagList == "" {
 		return nil, fmt.Errorf("must specify either alert or tags")
 	}
-	si := &Silence{
+	si := &models.Silence{
 		Start:   start,
 		End:     end,
 		Alert:   alert,
@@ -130,12 +65,20 @@ func (s *Schedule) AddSilence(start, end time.Time, alert, tagList string, forge
 			return nil, err
 		}
 		si.Tags = tags
+		si.TagString = tags.Tags()
 	}
-	silenceLock.Lock()
-	defer silenceLock.Unlock()
 	if confirm {
-		delete(s.Silence, edit)
-		s.Silence[si.ID()] = si
+		if edit != "" {
+			if err := s.DataAccess.Silence().DeleteSilence(edit); err != nil {
+				return nil, err
+			}
+		}
+		if err := s.DataAccess.Silence().DeleteSilence(si.ID()); err != nil {
+			return nil, err
+		}
+		if err := s.DataAccess.Silence().AddSilence(si); err != nil {
+			return nil, err
+		}
 		return nil, nil
 	}
 	aks := make(map[models.AlertKey]bool)
@@ -148,8 +91,5 @@ func (s *Schedule) AddSilence(start, end time.Time, alert, tagList string, forge
 }
 
 func (s *Schedule) ClearSilence(id string) error {
-	silenceLock.Lock()
-	defer silenceLock.Unlock()
-	delete(s.Silence, id)
-	return nil
+	return s.DataAccess.Silence().DeleteSilence(id)
 }

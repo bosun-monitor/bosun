@@ -503,7 +503,11 @@ func (m MultiError) Error() string {
 }
 
 func SilenceGet(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	return schedule.Silence, nil
+	endingAfter := time.Now().UTC().Unix()
+	if t := r.FormValue("t"); t != "" {
+		endingAfter, _ = strconv.ParseInt(t, 10, 64)
+	}
+	return schedule.DataAccess.Silence().ListSilences(endingAfter)
 }
 
 var silenceLayouts = []string{

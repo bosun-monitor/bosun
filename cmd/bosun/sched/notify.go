@@ -91,7 +91,7 @@ func (s *Schedule) CheckNotifications() time.Duration {
 	return timeout
 }
 
-func (s *Schedule) sendNotifications(silenced map[models.AlertKey]Silence) {
+func (s *Schedule) sendNotifications(silenced map[models.AlertKey]models.Silence) {
 	if s.Conf.Quiet {
 		slog.Infoln("quiet mode prevented", len(s.pendingNotifications), "notifications")
 		return

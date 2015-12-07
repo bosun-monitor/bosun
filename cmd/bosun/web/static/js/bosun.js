@@ -2530,6 +2530,8 @@ bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$ro
         $scope.confirm = function () {
             $scope.error = null;
             $scope.testSilences = null;
+            $scope.edit = null;
+            $location.search('edit', null);
             state.confirm = 'true';
             $http.post('/api/silence/set', state)
                 .error(function (error) {
