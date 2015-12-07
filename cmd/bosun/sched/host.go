@@ -610,7 +610,7 @@ func (s *Schedule) Host(filter string) (map[string]*HostData, error) {
 	return hosts, nil
 }
 
-func processHostIncidents(host *HostData, states States, silences map[models.AlertKey]Silence) {
+func processHostIncidents(host *HostData, states States, silences map[models.AlertKey]models.Silence) {
 	for ak, state := range states {
 		if stateHost, ok := state.Group["host"]; !ok {
 			continue

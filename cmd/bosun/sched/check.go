@@ -123,7 +123,7 @@ func (s *Schedule) RunHistory(r *RunHistory) {
 }
 
 // RunHistory for a single alert key. Returns true if notifications were altered.
-func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *Event, silenced map[models.AlertKey]Silence) bool {
+func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *Event, silenced map[models.AlertKey]models.Silence) bool {
 	checkNotify := false
 	// get existing state object for alert key. add to schedule status if doesn't already exist
 	state := s.GetStatus(ak)
