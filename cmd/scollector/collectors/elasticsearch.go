@@ -173,6 +173,10 @@ func c_elasticsearch(collectIndices bool) (opentsdb.MultiDataPoint, error) {
 	if err := esReq("/_cluster/health", "level=indices", &clusterHealth); err != nil {
 		return nil, err
 	}
+	var indexStats ElasticIndexStats
+	if err := esReq("/_stats", "", &indexStats); err != nil {
+		return nil, err
+	}
 	var md opentsdb.MultiDataPoint
 	s := structProcessor{elasticVersion: status.Version.Number, md: &md}
 	ts := opentsdb.TagSet{"cluster": clusterStats.ClusterName}
@@ -183,6 +187,17 @@ func c_elasticsearch(collectIndices bool) (opentsdb.MultiDataPoint, error) {
 			if statusCode, ok := elasticStatusMap[clusterHealth.Status]; ok {
 				Add(&md, "elastic.health.status", statusCode, ts, metadata.Gauge, metadata.StatusCode, "The current status of the cluster. Zero for green, one for yellow, two for red.")
 			}
+			indexStatusCount := map[string]int{
+				"green":  0,
+				"yellow": 0,
+				"red":    0,
+			}
+			for _, index := range clusterHealth.Indices {
+				indexStatusCount[index.Status] += 1
+			}
+			for status, count := range indexStatusCount {
+				Add(&md, "elastic.health.index_status_count", count, opentsdb.TagSet{"status": status}.Merge(ts), metadata.Gauge, metadata.Unit("indices"), "Index counts by status.")
+			}
 		}
 		s.add("elastic", nodeStats, ts)
 		s.add("elastic.indices.local", nodeStats.Indices, ts)
@@ -190,10 +205,6 @@ func c_elasticsearch(collectIndices bool) (opentsdb.MultiDataPoint, error) {
 		s.add("elastic.jvm.gc", nodeStats.JVM.GC.Collectors.Young, opentsdb.TagSet{"gc": "young"}.Merge(ts))
 	}
 	if collectIndices {
-		var indexStats ElasticIndexStats
-		if err := esReq("/_stats", "", &indexStats); err != nil {
-			return nil, err
-		}
 		for k, index := range clusterHealth.Indices {
 			if esSkipIndex(k) {
 				continue
