@@ -180,8 +180,10 @@ func c_elasticsearch(collectIndices bool) (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	s := structProcessor{elasticVersion: status.Version.Number, md: &md}
 	ts := opentsdb.TagSet{"cluster": clusterStats.ClusterName}
+	isMaster := false
+	// As we're pulling _local stats here, this will only process 1 node.
 	for nodeID, nodeStats := range clusterStats.Nodes {
-		isMaster := nodeID == clusterState.MasterNode
+		isMaster = nodeID == clusterState.MasterNode
 		if isMaster {
 			s.add("elastic.health", clusterHealth, nil)
 			if statusCode, ok := elasticStatusMap[clusterHealth.Status]; ok {
@@ -200,26 +202,23 @@ func c_elasticsearch(collectIndices bool) (opentsdb.MultiDataPoint, error) {
 			}
 		}
 		s.add("elastic", nodeStats, ts)
+		// These are index stats in aggregate for this node.
 		s.add("elastic.indices.local", nodeStats.Indices, ts)
 		s.add("elastic.jvm.gc", nodeStats.JVM.GC.Collectors.Old, opentsdb.TagSet{"gc": "old"}.Merge(ts))
 		s.add("elastic.jvm.gc", nodeStats.JVM.GC.Collectors.Young, opentsdb.TagSet{"gc": "young"}.Merge(ts))
 	}
-	if collectIndices {
-		for k, index := range clusterHealth.Indices {
-			if esSkipIndex(k) {
-				continue
-			}
-			ts := opentsdb.TagSet{"index_name": k, "cluster": clusterStats.ClusterName}
-			s.add("elastic.health.indices", index, ts)
-			if status, ok := elasticStatusMap[index.Status]; ok {
-				Add(&md, "elastic.health.indices.status", status, ts, metadata.Gauge, metadata.StatusCode, "The current status of the index. Zero for green, one for yellow, two for red.")
-			}
-		}
+	if collectIndices && isMaster {
 		for k, index := range indexStats.Indices {
 			if esSkipIndex(k) {
 				continue
 			}
 			ts := opentsdb.TagSet{"index_name": k, "cluster": clusterStats.ClusterName}
+			s.add("elastic.health.indices", index, ts)
+			if indexHealth, ok := clusterHealth.Indices[k]; ok {
+				if status, ok := elasticStatusMap[indexHealth.Status]; ok {
+					Add(&md, "elastic.health.indices.status", status, ts, metadata.Gauge, metadata.StatusCode, "The current status of the index. Zero for green, one for yellow, two for red.")
+				}
+			}
 			s.add("elastic.indices.cluster", index.Primaries, ts)
 		}
 	}
