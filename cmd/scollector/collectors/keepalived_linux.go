@@ -38,6 +38,7 @@ type VRRPInstanceEntry struct {
 	VInstanceScriptFault       string
 	VInstanceScriptStop        string
 	VInstanceScript            string
+	VInstanceAccept            int64
 }
 
 const (
