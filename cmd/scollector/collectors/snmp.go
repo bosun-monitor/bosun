@@ -21,6 +21,7 @@ var builtInSNMPs = map[string]func(cfg conf.SNMP){
 	"ips":      SNMPIPAddresses,
 	"ciscobgp": SNMPCiscoBGP,
 	"sys":      SNMPSys,
+	"fortinet": SNMPFortinet,
 }
 
 func SNMP(cfg conf.SNMP, mibs map[string]conf.MIB) error {
