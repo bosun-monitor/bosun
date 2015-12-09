@@ -213,8 +213,8 @@ func c_elasticsearch(collectIndices bool) (opentsdb.MultiDataPoint, error) {
 				continue
 			}
 			ts := opentsdb.TagSet{"index_name": k, "cluster": clusterStats.ClusterName}
-			s.add("elastic.health.indices", index, ts)
 			if indexHealth, ok := clusterHealth.Indices[k]; ok {
+				s.add("elastic.health.indices", indexHealth, ts)
 				if status, ok := elasticStatusMap[indexHealth.Status]; ok {
 					Add(&md, "elastic.health.indices.status", status, ts, metadata.Gauge, metadata.StatusCode, "The current status of the index. Zero for green, one for yellow, two for red.")
 				}
