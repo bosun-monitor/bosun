@@ -107,6 +107,15 @@ func c_nexpose(username, password, host string, insecure bool, collectAssets boo
 		Add(&md, "nexpose.site.malware_count", site.MalwareCount, tags, metadata.Gauge, metadata.Vulnerabilities, descMalwareCount)
 	}
 
+	assetGroupSummaries, err := c.assetGroupListing()
+	if err != nil {
+		return nil, err
+	}
+	for _, group := range assetGroupSummaries {
+		tags := opentsdb.TagSet{"asset_group": group.Name}
+		Add(&md, "nexpose.asset_group.risk_score", group.RiskScore, tags, metadata.Gauge, metadata.Score, descRiskScore)
+	}
+
 	const timeFmt = "20060102T150405"
 	activeScans, err := c.scanActivity()
 	if err != nil {
@@ -139,12 +148,13 @@ type nexposeConnection struct {
 }
 
 type apiResponse struct {
-	XMLName       xml.Name
-	Message       string        `xml:"Message"`
-	SessionID     string        `xml:"session-id,attr"`
-	SiteSummaries []siteSummary `xml:"SiteSummary"`
-	ScanSummaries []scanSummary `xml:"ScanSummary"`
-	Devices       []device      `xml:"SiteDevices>device"`
+	XMLName             xml.Name
+	Message             string              `xml:"Message"`
+	SessionID           string              `xml:"session-id,attr"`
+	SiteSummaries       []siteSummary       `xml:"SiteSummary"`
+	ScanSummaries       []scanSummary       `xml:"ScanSummary"`
+	AssetGroupSummaries []assetGroupSummary `xml:"AssetGroupSummary"`
+	Devices             []device            `xml:"SiteDevices>device"`
 }
 
 type loginRequest struct {
@@ -301,6 +311,22 @@ func (c *nexposeConnection) siteListing() ([]siteSummary, error) {
 	}
 
 	return resp.SiteSummaries, nil
+}
+
+type assetGroupSummary struct {
+	ID        int     `xml:"id,attr"`
+	Name      string  `xml:"name,attr"`
+	RiskScore float64 `xml:"riskscore,attr"`
+}
+
+func (c *nexposeConnection) assetGroupListing() ([]assetGroupSummary, error) {
+	request := simpleRequest{XMLName: xml.Name{Local: "AssetGroupListingRequest"}, SessionID: c.SessionID}
+	resp, err := c.xmlRequest(&request, 1)
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.AssetGroupSummaries, nil
 }
 
 type device struct {
