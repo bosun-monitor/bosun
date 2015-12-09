@@ -185,9 +185,9 @@ func c_elasticsearch(collectIndices bool) (opentsdb.MultiDataPoint, error) {
 	for nodeID, nodeStats := range clusterStats.Nodes {
 		isMaster = nodeID == clusterState.MasterNode
 		if isMaster {
-			s.add("elastic.health", clusterHealth, nil)
+			s.add("elastic.health.cluster", clusterHealth, nil)
 			if statusCode, ok := elasticStatusMap[clusterHealth.Status]; ok {
-				Add(&md, "elastic.health.status", statusCode, ts, metadata.Gauge, metadata.StatusCode, "The current status of the cluster. Zero for green, one for yellow, two for red.")
+				Add(&md, "elastic.health.cluster.status", statusCode, ts, metadata.Gauge, metadata.StatusCode, "The current status of the cluster. Zero for green, one for yellow, two for red.")
 			}
 			indexStatusCount := map[string]int{
 				"green":  0,
@@ -198,7 +198,7 @@ func c_elasticsearch(collectIndices bool) (opentsdb.MultiDataPoint, error) {
 				indexStatusCount[index.Status] += 1
 			}
 			for status, count := range indexStatusCount {
-				Add(&md, "elastic.health.index_status_count", count, opentsdb.TagSet{"status": status}.Merge(ts), metadata.Gauge, metadata.Unit("indices"), "Index counts by status.")
+				Add(&md, "elastic.health.cluster.index_status_count", count, opentsdb.TagSet{"status": status}.Merge(ts), metadata.Gauge, metadata.Unit("indices"), "Index counts by status.")
 			}
 		}
 		s.add("elastic", nodeStats, ts)
