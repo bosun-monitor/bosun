@@ -16,7 +16,9 @@ import (
 
 var builtInSNMPs = map[string]func(cfg conf.SNMP){
 	"ifaces":   SNMPIfaces,
-	"cisco":    SNMPCisco,
+	"ios":      SNMPCiscoIOS,
+	"asa":      SNMPCiscoASA,
+	"nxos":     SNMPCiscoNXOS,
 	"bridge":   SNMPBridge,
 	"ips":      SNMPIPAddresses,
 	"ciscobgp": SNMPCiscoBGP,
