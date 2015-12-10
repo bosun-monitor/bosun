@@ -11,10 +11,10 @@ import (
 )
 
 const (
-	fortinetBaseOID        = ".1.3.6.1.4.1.12356.101"
-	fortinetCPU            = ".4.4.2.1.3"
-	fortinetMemTotal       = ".4.1.5.0"
-	fortinetMemPercentUsed = ".4.1.4.0"
+	fortinetBaseOID        = ".1.3.6.1.4.1.12356"
+	fortinetCPU            = ".101.4.4.2.1.3"
+	fortinetMemTotal       = ".101.4.1.5.0"
+	fortinetMemPercentUsed = ".101.4.1.4.0"
 )
 
 // SNMPFortinet registers a SNMP Fortinet collector for the given community and host.
@@ -66,6 +66,13 @@ func SNMPFortinet(cfg conf.SNMP) {
 			Interval: time.Second * 30,
 			name:     fmt.Sprintf("snmp-fortinet-os-%s", cfg.Host),
 		},
+		&IntervalCollector{
+			F: func() (opentsdb.MultiDataPoint, error) {
+				return c_fortinet_meta(cfg.Host, cfg.Community)
+			},
+			Interval: time.Minute * 5,
+			name:     fmt.Sprintf("snmp-fortinet-meta-%s", cfg.Host),
+		},
 	)
 }
 
@@ -113,5 +120,31 @@ func c_fortinet_os(host, community string, cpuIntegrators map[string]tsIntegrato
 	Add(&md, osMemFree, int64(memFree), ts, metadata.Gauge, metadata.Bytes, osMemFreeDesc)
 	Add(&md, osMemUsed, int64(float64(memTotalBytes)-memFree), ts, metadata.Gauge, metadata.Bytes, osMemUsedDesc)
 
+	return md, nil
+}
+
+const (
+	fortinetVersion = ".101.4.1.1.0"
+	fortinetSerial  = ".100.1.1.1.0"
+)
+
+func c_fortinet_meta(host, community string) (opentsdb.MultiDataPoint, error) {
+	var md opentsdb.MultiDataPoint
+	ts := opentsdb.TagSet{"host": host}
+	serial, err := snmpOidString(host, community, fortinetBaseOID+fortinetSerial)
+	if err != nil {
+		return md, fmt.Errorf("failed to get serial for host %v: %v", host, err)
+	}
+	metadata.AddMeta("", ts, "serialNumber", serial, false)
+	version, err := snmpOidString(host, community, fortinetBaseOID+fortinetVersion)
+	if err != nil {
+		return md, fmt.Errorf("failed to get serial for host %v: %v", host, err)
+	}
+	if version == "" {
+		return md, fmt.Errorf("got empty os version string for host %v", host)
+	}
+	// Fortinet could come from the manufactor oid, but since this is a fortinet
+	// only collector saving the extra poll call
+	metadata.AddMeta("", ts, "version", fmt.Sprintf("Fortinet: %v", version), false)
 	return md, nil
 }
