@@ -117,6 +117,12 @@ func snmp_oid(host, community, oid string) (*big.Int, error) {
 	return v, err
 }
 
+func snmpOidString(host, community, oid string) (string, error) {
+	var v []byte
+	err := snmp.Get(host, community, oid, &v)
+	return string(v), err
+}
+
 func snmp_convertToFloat(v interface{}) (float64, error) {
 	switch val := v.(type) {
 	case int:
