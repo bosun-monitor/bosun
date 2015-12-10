@@ -98,7 +98,7 @@ func c_fortinet_os(host, community string, cpuIntegrators map[string]tsIntegrato
 	if _, ok := cpuIntegrators[host]; !ok {
 		cpuIntegrators[host] = getTsIntegrator()
 	}
-	Add(&md, osCPU, cpuIntegrators[host](time.Now().Unix(), float64(totalPercent)/float64(coreCount)), opentsdb.TagSet{"host": host}, metadata.Gauge, metadata.Pct, "")
+	Add(&md, osCPU, cpuIntegrators[host](time.Now().Unix(), float64(totalPercent)/float64(coreCount)), opentsdb.TagSet{"host": host}, metadata.Counter, metadata.Pct, "")
 
 	// Memory
 	memTotal, err := snmp_oid(host, community, fortinetBaseOID+fortinetMemTotal)
