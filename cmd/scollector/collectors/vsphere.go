@@ -122,6 +122,7 @@ func vsphereHost(v *vsphere.Vsphere, md *opentsdb.MultiDataPoint, cpuIntegrators
 		"summary.hardware.numCpuCores",
 		"summary.quickStats.overallCpuUsage",    // MHz
 		"summary.quickStats.overallMemoryUsage", // MB
+		"summary.quickStats.uptime",             // seconds
 		"summary.hardware.otherIdentifyingInfo",
 		"summary.hardware.model",
 	})
@@ -168,6 +169,8 @@ func vsphereHost(v *vsphere.Vsphere, md *opentsdb.MultiDataPoint, cpuIntegrators
 					Add(md, "vsphere.cpu", cpuUse, opentsdb.TagSet{"host": name, "type": "usage"}, metadata.Gauge, metadata.MHz, "")
 				case "summary.hardware.numCpuCores":
 					cpuCores = i
+				case "summary.quickStats.uptime":
+					Add(md, osSystemUptime, i, opentsdb.TagSet{"host": name}, metadata.Gauge, metadata.Second, osSystemUptimeDesc)
 				}
 			case "xsd:string":
 				switch p.Name {
