@@ -26,6 +26,13 @@ func SNMPCiscoASA(cfg conf.SNMP) {
 			Interval: time.Second * 30,
 			name:     fmt.Sprintf("snmp-cisco-asa-%s", cfg.Host),
 		},
+		&IntervalCollector{
+			F: func() (opentsdb.MultiDataPoint, error) {
+				return c_cisco_desc(cfg.Host, cfg.Community)
+			},
+			Interval: time.Minute * 5,
+			name:     fmt.Sprintf("snmp-cisco-desc-%s", cfg.Host),
+		},
 	)
 }
 
@@ -40,6 +47,13 @@ func SNMPCiscoIOS(cfg conf.SNMP) {
 			Interval: time.Second * 30,
 			name:     fmt.Sprintf("snmp-cisco-ios-%s", cfg.Host),
 		},
+		&IntervalCollector{
+			F: func() (opentsdb.MultiDataPoint, error) {
+				return c_cisco_desc(cfg.Host, cfg.Community)
+			},
+			Interval: time.Minute * 5,
+			name:     fmt.Sprintf("snmp-cisco-desc-%s", cfg.Host),
+		},
 	)
 }
 
@@ -53,6 +67,13 @@ func SNMPCiscoNXOS(cfg conf.SNMP) {
 			},
 			Interval: time.Second * 30,
 			name:     fmt.Sprintf("snmp-cisco-nxos-%s", cfg.Host),
+		},
+		&IntervalCollector{
+			F: func() (opentsdb.MultiDataPoint, error) {
+				return c_cisco_desc(cfg.Host, cfg.Community)
+			},
+			Interval: time.Minute * 5,
+			name:     fmt.Sprintf("snmp-cisco-desc-%s", cfg.Host),
 		},
 	)
 }
@@ -216,5 +237,18 @@ func c_cisco_nxos(host, community string, cpuIntegrator tsIntegrator) (opentsdb.
 	} else {
 		slog.Errorf("failed to get both free and used memory for host %v", host)
 	}
+	return md, nil
+}
+
+func c_cisco_desc(host, community string) (opentsdb.MultiDataPoint, error) {
+	var md opentsdb.MultiDataPoint
+	desc, err := getSNMPDesc(host, community)
+	if err != nil {
+		return md, err
+	}
+	if desc == "" {
+		return md, fmt.Errorf("empty description string (used to get OS version) for cisco host %v", host)
+	}
+	metadata.AddMeta("", opentsdb.TagSet{"host": host}, "versionCaption", desc, false)
 	return md, nil
 }
