@@ -145,6 +145,6 @@ func c_fortinet_meta(host, community string) (opentsdb.MultiDataPoint, error) {
 	}
 	// Fortinet could come from the manufactor oid, but since this is a fortinet
 	// only collector saving the extra poll call
-	metadata.AddMeta("", ts, "version", fmt.Sprintf("Fortinet: %v", version), false)
+	metadata.AddMeta("", ts, "versionCaption", fmt.Sprintf("Fortinet: %v", version), false)
 	return md, nil
 }
