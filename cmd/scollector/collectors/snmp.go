@@ -11,6 +11,7 @@ import (
 	"bosun.org/cmd/scollector/conf"
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
+	"bosun.org/slog"
 	"bosun.org/snmp"
 )
 
@@ -72,7 +73,8 @@ func snmp_subtree(host, community, oid string) (map[string]interface{}, error) {
 			a = new(big.Int)
 			id, err := rows.Scan(&a)
 			if err != nil {
-				return nil, err
+				slog.Errorf("Error scanning oid %v on host %v: %v", oid, host, err)
+				continue
 			}
 			switch t := id.(type) {
 			case int:
@@ -83,7 +85,8 @@ func snmp_subtree(host, community, oid string) (map[string]interface{}, error) {
 		default:
 			id, err := rows.Scan(&a)
 			if err != nil {
-				return nil, err
+				slog.Errorf("Error scanning oid %v on host %v: %v", oid, host, err)
+				continue
 			}
 			switch t := id.(type) {
 			case int:
