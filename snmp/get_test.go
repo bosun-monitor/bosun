@@ -86,7 +86,7 @@ func TestCommunity(t *testing.T) {
 			ch <- test
 		}()
 	}
-	for _ = range communityTests {
+	for range communityTests {
 		test := <-ch
 		if (test.err == nil) != test.ok {
 			t.Errorf("%s invalid err: %s", test.str, test.err)
