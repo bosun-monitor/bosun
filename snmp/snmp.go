@@ -7,7 +7,7 @@ import (
 	"net"
 	"time"
 
-	"bosun.org/_third_party/github.com/mjibson/snmp/asn1"
+	"bosun.org/snmp/asn1"
 )
 
 // reserved binding values.
