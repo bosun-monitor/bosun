@@ -2,6 +2,7 @@ package collectors
 
 import (
 	"bytes"
+	"encoding/json"
 	"encoding/xml"
 	"fmt"
 	"io"
@@ -36,10 +37,12 @@ func c_vsphere(user, pwd, host string, cpuIntegrators map[string]tsIntegrator) (
 		return nil, err
 	}
 	var md opentsdb.MultiDataPoint
-	if err := vsphereHost(v, &md, cpuIntegrators); err != nil {
+	// reference ID to cleaned name
+	hostKey := make(map[string]string)
+	if err := vsphereHost(v, &md, cpuIntegrators, hostKey); err != nil {
 		return nil, err
 	}
-	if err := vsphereDatastore(v, &md); err != nil {
+	if err := vsphereDatastore(v, &md, hostKey); err != nil {
 		return nil, err
 	}
 	if err := vsphereGuest(util.Clean(host), v, &md); err != nil {
@@ -48,15 +51,28 @@ func c_vsphere(user, pwd, host string, cpuIntegrators map[string]tsIntegrator) (
 	return md, nil
 }
 
-func vsphereDatastore(v *vsphere.Vsphere, md *opentsdb.MultiDataPoint) error {
+type DatastoreHostMount struct {
+	Key       string `xml:"key"`
+	MountInfo struct {
+		Accessible bool   `xml:"accessible"`
+		AccessMode string `xml:"accessMode"`
+		Mounted    bool   `xml:"mounted"`
+		Path       string `xml:"path"`
+	} `xml:"mountInfo"`
+}
+
+func vsphereDatastore(v *vsphere.Vsphere, md *opentsdb.MultiDataPoint, hostKey map[string]string) error {
 	res, err := v.Info("Datastore", []string{
 		"name",
+		"host",
 		"summary.capacity",
 		"summary.freeSpace",
 	})
 	if err != nil {
 		return err
 	}
+	// host to mounted data stores
+	hostStores := make(map[string][]string)
 	var Error error
 	for _, r := range res {
 		var name string
@@ -92,6 +108,27 @@ func vsphereDatastore(v *vsphere.Vsphere, md *opentsdb.MultiDataPoint) error {
 					Add(md, "vsphere.disk.space_free", i, tags, metadata.Gauge, metadata.Bytes, "")
 					diskFree = i
 				}
+			case "ArrayOfDatastoreHostMount":
+				switch p.Name {
+				case "host":
+					d := xml.NewDecoder(bytes.NewBufferString(p.Val.Inner))
+
+					for {
+						var m DatastoreHostMount
+						err := d.Decode(&m)
+						if err == io.EOF {
+							break
+						}
+						if err != nil {
+							return err
+						}
+						if host, ok := hostKey[m.Key]; ok {
+							if m.MountInfo.Mounted && m.MountInfo.Accessible {
+								hostStores[host] = append(hostStores[host], name)
+							}
+						}
+					}
+				}
 			}
 		}
 		if diskTotal > 0 && diskFree > 0 {
@@ -100,6 +137,13 @@ func vsphereDatastore(v *vsphere.Vsphere, md *opentsdb.MultiDataPoint) error {
 			Add(md, osDiskUsed, diskUsed, tags, metadata.Gauge, metadata.Bytes, "")
 			Add(md, osDiskPctFree, float64(diskFree)/float64(diskTotal)*100, tags, metadata.Gauge, metadata.Pct, "")
 		}
+	}
+	for host, stores := range hostStores {
+		j, err := json.Marshal(stores)
+		if err != nil {
+			slog.Errorf("error marshaling datastores for host %v: %v", host, err)
+		}
+		metadata.AddMeta("", opentsdb.TagSet{"host": host}, "dataStores", string(j), false)
 	}
 	return Error
 }
@@ -113,7 +157,7 @@ type HostSystemIdentificationInfo struct {
 	} `xml:"identifierType"`
 }
 
-func vsphereHost(v *vsphere.Vsphere, md *opentsdb.MultiDataPoint, cpuIntegrators map[string]tsIntegrator) error {
+func vsphereHost(v *vsphere.Vsphere, md *opentsdb.MultiDataPoint, cpuIntegrators map[string]tsIntegrator, hostKey map[string]string) error {
 	res, err := v.Info("HostSystem", []string{
 		"name",
 		"summary.hardware.cpuMhz",
@@ -142,6 +186,7 @@ func vsphereHost(v *vsphere.Vsphere, md *opentsdb.MultiDataPoint, cpuIntegrators
 			Error = fmt.Errorf("vsphere: empty name")
 			continue
 		}
+		hostKey[r.ID] = name
 		tags := opentsdb.TagSet{
 			"host": name,
 		}

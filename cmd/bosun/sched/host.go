@@ -440,6 +440,24 @@ func (s *Schedule) Host(filter string) (map[string]*HostData, error) {
 					if iface != nil {
 						iface.Description = val
 					}
+				case "dataStores":
+					dataStores := []string{}
+					err = json.Unmarshal([]byte(val), &dataStores)
+					if err != nil {
+						slog.Errorf("error unmarshalling datastores for host %s while generating host api: %s", host.Name, err)
+					}
+					for _, dataStore := range dataStores {
+						tags := opentsdb.TagSet{"name": dataStore}.String()
+						total, totalTs, totalErr := s.Search.GetLast("vsphere.disk.space_total", tags, false)
+						used, usedTs, usedErr := s.Search.GetLast("vsphere.disk.space_used", tags, false)
+						if totalErr != nil || usedErr != nil || totalTs < 1 || usedTs < 1 {
+							continue
+						}
+						host.Disks[dataStore] = &Disk{
+							TotalBytes: total,
+							UsedBytes:  used,
+						}
+					}
 				case "mac":
 					if iface != nil {
 						iface.MAC = val
