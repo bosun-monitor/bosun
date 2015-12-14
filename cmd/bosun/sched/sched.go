@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net"
 	"reflect"
+	"strings"
 	"sync"
 	"time"
 
@@ -159,6 +160,12 @@ func (s *Schedule) DeleteMetadata(tags opentsdb.TagSet, name string) error {
 }
 
 func (s *Schedule) MetadataMetrics(metric string) (*database.MetricMetadata, error) {
+	//denormalized metrics should give metric metadata for their undenormalized counterparts
+	if strings.HasPrefix(metric, "__") {
+		if idx := strings.Index(metric, "."); idx != -1 {
+			metric = metric[idx+1:]
+		}
+	}
 	mm, err := s.DataAccess.Metadata().GetMetricMetadata(metric)
 	if err != nil {
 		return nil, err
