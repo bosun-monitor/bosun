@@ -44,14 +44,18 @@ func c_diskspace_windows() (opentsdb.MultiDataPoint, error) {
 			Add(&md, "win.disk.fs.percent_free", percent_free, tags, metadata.Gauge, metadata.Pct, osDiskPctFreeDesc)
 			Add(&md, osDiskPctFree, percent_free, tags, metadata.Gauge, metadata.Pct, osDiskPctFreeDesc)
 		}
+		if v.VolumeName != "" {
+			metadata.AddMeta("", tags, "label", v.VolumeName, true)
+		}
 	}
 	return md, nil
 }
 
 type Win32_LogicalDisk struct {
-	FreeSpace uint64
-	Name      string
-	Size      uint64
+	FreeSpace  uint64
+	Name       string
+	Size       uint64
+	VolumeName string
 }
 
 func c_physical_disk_windows() (opentsdb.MultiDataPoint, error) {

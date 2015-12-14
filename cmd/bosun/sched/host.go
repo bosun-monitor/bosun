@@ -381,6 +381,18 @@ func (s *Schedule) Host(filter string) (map[string]*HostData, error) {
 				UsedBytes:        used,
 				StatsLastUpdated: timestamp,
 			}
+			for _, m := range hostMetadata {
+				if m.Name != "label" || m.Time.Before(time.Now().Add(-timeFilterAge)) {
+					continue
+				}
+				if !m.Tags.Equal(ts) {
+					continue
+				}
+				if label, ok := m.Value.(string); ok {
+					host.Disks[disk].Label = label
+					break
+				}
+			}
 		}
 		// Get CPU, Memory, Uptime
 		var timestamp int64
@@ -660,6 +672,7 @@ type HostInterface struct {
 type Disk struct {
 	UsedBytes        float64
 	TotalBytes       float64
+	Label            string
 	StatsLastUpdated int64
 }
 
