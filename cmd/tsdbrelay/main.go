@@ -30,8 +30,7 @@ var (
 	logVerbose      = flag.Bool("v", false, "enable verbose logging")
 	toDenormalize   = flag.String("denormalize", "", "List of metrics to denormalize. Comma seperated list of `metric__tagname__tagname` rules. Will be translated to `__tagvalue.tagvalue.metric`")
 
-	udpPort   = flag.Int("udp", 0, "port to listen for udp packets")
-	redisHost = flag.String("redis", "localhost:6379", "redis host for udp listener")
+	redisHost = flag.String("redis", "", "redis host for aggregating external counters")
 	redisDb   = flag.Int("db", 0, "redis db to use for counters")
 )
 
@@ -108,6 +107,9 @@ func main() {
 	http.HandleFunc("/api/put", func(w http.ResponseWriter, r *http.Request) {
 		rp.relayPut(w, r, true)
 	})
+	if *redisHost != "" {
+		http.HandleFunc("/api/count", collect.HandleCounterPut(*redisHost, *redisDb))
+	}
 	http.HandleFunc("/api/metadata/put", func(w http.ResponseWriter, r *http.Request) {
 		rp.relayMetadata(w, r)
 	})
@@ -121,14 +123,10 @@ func main() {
 	if err = collect.Init(collectUrl, "tsdbrelay"); err != nil {
 		log.Fatal(err)
 	}
-	if *udpPort != 0 {
-		go collect.ListenUdp(*udpPort, *redisHost, *redisDb)
-	}
 	log.Fatal(http.ListenAndServe(*listenAddr, nil))
 }
 
 func init() {
-	metadata.AddMetricMeta("tsdbrelay.udp.packets", metadata.Counter, metadata.Count, "Number of valid udp packets received")
 	metadata.AddMetricMeta("tsdbrelay.puts.relayed", metadata.Counter, metadata.Count, "Number of successful puts relayed")
 	metadata.AddMetricMeta("tsdbrelay.metadata.relayed", metadata.Counter, metadata.Count, "Number of successful metadata puts relayed")
 }
