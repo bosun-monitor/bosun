@@ -263,7 +263,7 @@ func esStatsURL(version string) string {
 type ElasticHealth struct {
 	ActivePrimaryShards         int                           `json:"active_primary_shards" desc:"The number of active primary shards. Each document is stored in a single primary shard and then when it is indexed it is copied the replicas of that shard."`
 	ActiveShards                int                           `json:"active_shards" desc:"The number of active shards."`
-	ActiveShardsPercentAsNumber int                           `json:"active_shards_percent_as_number" version:"2"` // 2.0 only
+	ActiveShardsPercentAsNumber float64                       `json:"active_shards_percent_as_number" version:"2"` // 2.0 only
 	ClusterName                 string                        `json:"cluster_name"`
 	DelayedUnassignedShards     int                           `json:"delayed_unassigned_shards" version:"2"` // 2.0 only
 	Indices                     map[string]ElasticIndexHealth `json:"indices" exclude:"true"`
