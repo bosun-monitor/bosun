@@ -173,10 +173,10 @@ template ex {
 	{{template "name" .}}
 	Crit: {{.Alert.Crit}}
 
-	Tags:{{range $k, $v := .Tags}}
+	Tags:{{range $k, $v := .Group}}
 	{{$k}}: {{$v}}{{end}}
 	`
-	subject = {{.Alert.Name}}: {{.Alert.Vars.q | .E}} on {{.Tags.host}}
+	subject = {{.Alert.Name}}: {{.Alert.Vars.q | .E}} on {{.Group.host}}
 }
 ~~~
 
@@ -367,10 +367,10 @@ template cpu {
 	Name: {{.Alert.Name}}
 	Crit: {{.Alert.Crit}}
 	
-	Tags:{{range $k, $v := .Tags}}
+	Tags:{{range $k, $v := .Group}}
 	{{$k}}: {{$v}}{{end}}
 	`
-	subject = cpu idle at {{.Alert.Vars.q | .E}} on {{.Tags.host}}
+	subject = cpu idle at {{.Alert.Vars.q | .E}} on {{.Group.host}}
 }
 
 notification default {
