@@ -14,7 +14,7 @@ var BosunHighlightRules = function() {
 	var inAlertKeywords = "macro|template|crit|warn|depends|squelch|critNotification|" +
 	"warnNotification|unknown|unjoinedOk|ignoreUnknown|log"
 
-	var inNotificationKeywords = "email|post|get|print|contentType|next|timeout|body";
+	var inNotificationKeywords = "email|post|get|print|contentType|next|timeout|body|useBody";
 
 	var inTemplateKeywords = "subject|body";
 
