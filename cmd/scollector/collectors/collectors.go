@@ -61,6 +61,10 @@ const (
 	osNetAdminStatus   = "os.net.admin_status"
 	osNetOperStatus    = "os.net.oper_status"
 	osServiceRunning   = "os.service.running"
+	osProcCPU          = "os.proc.cpu"
+	osProcCount        = "os.proc.count"
+	osProcMemReal      = "os.proc.mem.real"
+	osProcMemVirtual   = "os.proc.mem.virtual"
 )
 
 const (
@@ -87,6 +91,10 @@ const (
 	osNetAdminStatusDesc = "The desired state of the interface. The testing(3) state indicates that no operational packets can be passed. When a managed system initializes, all interfaces start with ifAdminStatus in the down(2) state. As a result of either explicit management action or per configuration information retained by the managed system, ifAdminStatus is then changed to either the up(1) or testing(3) states (or remains in the down(2) state)."
 	osNetOperStatusDesc  = "The current operational state of the interface. The testing(3) state indicates that no operational packets can be passed. If ifAdminStatus is down(2) then ifOperStatus should be down(2). If ifAdminStatus is changed to up(1) then ifOperStatus should change to up(1) if the interface is ready to transmit and receive network traffic; it should change to dormant(5) if the interface is waiting for external actions (such as a serial line waiting for an incoming connection); it should remain in the down(2) state if and only if there is a fault that prevents it from going to the up(1) state; it should remain in the notPresent(6) state if the interface has missing (typically, hardware) components."
 	osServiceRunningDesc = "1: active, 0: inactive"
+	osProcCPUDesc        = "The summed percentage of CPU time used by processes with this name (0-100)."
+	osProcCountDesc      = "The number of processes running with this name."
+	osProcMemRealDesc    = "The total amount of real memory used by the processes with this name. For Linux this is RSS and in Windows it is the private working set."
+	osProcMemVirtualDesc = "The total amount of virtual memory used by the processes with this name."
 )
 
 var (
