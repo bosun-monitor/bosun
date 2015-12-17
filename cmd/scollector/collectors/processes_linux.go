@@ -162,12 +162,14 @@ func linuxProcMonitor(w *WatchedProc, md *opentsdb.MultiDataPoint) error {
 		return fmt.Errorf("failed to get core count: %v", err)
 	}
 	tsName := opentsdb.TagSet{"name": w.Name}
-	Add(md, osProcCPU, float64(totalCPU)/float64(coreCount), tsName, metadata.Counter, metadata.Pct, osProcCPUDesc)
-	Add(md, osProcMemReal, totalRSSMem*int64(os.Getpagesize()), tsName, metadata.Gauge, metadata.Bytes, osProcMemRealDesc)
-	Add(md, osProcMemVirtual, totalVirtualMem, tsName, metadata.Gauge, metadata.Bytes, osProcMemVirtualDesc)
+	if processCount > 0 {
+		Add(md, osProcCPU, float64(totalCPU)/float64(coreCount), tsName, metadata.Counter, metadata.Pct, osProcCPUDesc)
+		Add(md, osProcMemReal, totalRSSMem*int64(os.Getpagesize()), tsName, metadata.Gauge, metadata.Bytes, osProcMemRealDesc)
+		Add(md, osProcMemVirtual, totalVirtualMem, tsName, metadata.Gauge, metadata.Bytes, osProcMemVirtualDesc)
+		Add(md, osProcCount, processCount, tsName, metadata.Gauge, metadata.Process, osProcCountDesc)
+	}
 	if w.IncludeCount {
 		Add(md, "linux.proc.count", processCount, tsName, metadata.Gauge, metadata.Process, descLinuxProcCount)
-		Add(md, osProcCount, processCount, tsName, metadata.Gauge, metadata.Process, osProcCountDesc)
 	}
 	return err
 }
