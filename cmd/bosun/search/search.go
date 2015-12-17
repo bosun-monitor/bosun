@@ -179,6 +179,12 @@ func (s *Search) GetLast(metric, tags string, diff bool) (v float64, t int64, er
 	return 0, 0, fmt.Errorf("no match for %s:%s", metric, tags)
 }
 
+// GetLastInt64 is like GetLast but converts the value to an int64
+func (s *Search) GetLastInt64(metric, tags string, diff bool) (int64, int64, error) {
+	v, t, err := s.GetLast(metric, tags, diff)
+	return int64(v), t, err
+}
+
 // load stored last data from redis
 func (s *Search) loadLast() {
 	s.Lock()
