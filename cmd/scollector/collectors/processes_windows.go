@@ -92,7 +92,7 @@ func c_windows_processes() (opentsdb.MultiDataPoint, error) {
 	totalCPUByName := make(map[string]uint64)
 	totalVirtualMemByName := make(map[string]uint64)
 	totalPrivateWSMemByName := make(map[string]uint64)
-	countByName := make(map[string]int64)
+	countByName := make(map[string]int)
 
 	for _, v := range dst {
 		var name string
@@ -170,19 +170,22 @@ func c_windows_processes() (opentsdb.MultiDataPoint, error) {
 		Add(&md, "win.proc.priority_base", v.PriorityBase, tags, metadata.Gauge, metadata.None, descWinProcPriority_base)
 		Add(&md, "win.proc.private_bytes", v.PrivateBytes, tags, metadata.Gauge, metadata.Bytes, descWinProcPrivate_bytes)
 		Add(&md, "win.proc.thread_count", v.ThreadCount, tags, metadata.Gauge, metadata.Count, descWinProcthread_count)
-		countByName[name] += 1
-	}
-	for name, totalCPU := range totalCPUByName {
-		Add(&md, osProcCPU, totalCPU, opentsdb.TagSet{"name": name}, metadata.Counter, metadata.Pct, osProcCPUDesc)
-	}
-	for name, totalVM := range totalVirtualMemByName {
-		Add(&md, osProcMemVirtual, totalVM, opentsdb.TagSet{"name": name}, metadata.Gauge, metadata.Bytes, osProcMemVirtualDesc)
-	}
-	for name, totalPWS := range totalPrivateWSMemByName {
-		Add(&md, osProcMemReal, totalPWS, opentsdb.TagSet{"name": name}, metadata.Gauge, metadata.Bytes, osProcMemRealDesc)
+		countByName[name]++
 	}
 	for name, count := range countByName {
+		if count < 1 {
+			continue
+		}
 		Add(&md, osProcCount, count, opentsdb.TagSet{"name": name}, metadata.Gauge, metadata.Process, osProcCountDesc)
+		if totalCPU, ok := totalCPUByName[name]; ok {
+			Add(&md, osProcCPU, totalCPU, opentsdb.TagSet{"name": name}, metadata.Counter, metadata.Pct, osProcCPUDesc)
+		}
+		if totalVM, ok := totalVirtualMemByName[name]; ok {
+			Add(&md, osProcMemVirtual, totalVM, opentsdb.TagSet{"name": name}, metadata.Gauge, metadata.Bytes, osProcMemVirtualDesc)
+		}
+		if totalPWS, ok := totalPrivateWSMemByName[name]; ok {
+			Add(&md, osProcMemReal, totalPWS, opentsdb.TagSet{"name": name}, metadata.Gauge, metadata.Bytes, osProcMemRealDesc)
+		}
 	}
 	return md, nil
 }
