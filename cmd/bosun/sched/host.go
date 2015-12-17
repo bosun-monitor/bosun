@@ -200,9 +200,9 @@ func (s *Schedule) Host(filter string) (map[string]*HostData, error) {
 			if oldOrErr(p.CPUPercentLastUpdated, err) {
 				continue
 			}
-			p.UsedRealBytes, p.UsedRealBytesLastUpdated, _ = s.Search.GetLastInt64("os.proc.mem.real", ts.String(), true)
-			p.UsedVirtualBytes, p.UsedVirtualBytesLastUpdated, _ = s.Search.GetLastInt64("os.proc.mem.virtual", ts.String(), true)
-			p.Count, p.CountLastUpdated, _ = s.Search.GetLastInt64("os.proc.count", ts.String(), true)
+			p.UsedRealBytes, p.UsedRealBytesLastUpdated, _ = s.Search.GetLastInt64("os.proc.mem.real", ts.String(), false)
+			p.UsedVirtualBytes, p.UsedVirtualBytesLastUpdated, _ = s.Search.GetLastInt64("os.proc.mem.virtual", ts.String(), false)
+			p.Count, p.CountLastUpdated, _ = s.Search.GetLastInt64("os.proc.count", ts.String(), false)
 			host.Processes[name] = p
 		}
 		// Process Hardware Chassis States
