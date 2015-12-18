@@ -1970,6 +1970,9 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
                 if (!m) {
                     return;
                 }
+                if (!r.queries[index]) {
+                    return;
+                }
                 angular.forEach(q.tags, function (key, tag) {
                     if (m[tag]) {
                         return;
