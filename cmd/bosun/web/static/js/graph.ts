@@ -65,6 +65,18 @@ class Query {
 		this.tags = q && q.tags || new TagSet;
 		this.gbFilters = q && q.gbFilters || new FilterMap;
 		this.nGbFilters = q && q.nGbFilters || new FilterMap;
+		var that = this;
+		// Copy tags with values to group by filters so old links work
+		_.each(this.tags, function(v, k) {
+			if (v === "") {
+				return
+			}
+			var f = new(Filter);
+			f.filter = v;
+			f.groupBy = true;
+			f.tagk = k;
+			that.gbFilters[k] = f;
+		});
 		this.setFilters();
 		this.setDs();
 		this.setDerivative();
