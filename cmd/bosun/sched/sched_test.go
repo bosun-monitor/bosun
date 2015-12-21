@@ -15,6 +15,7 @@ import (
 	"bosun.org/_third_party/github.com/MiniProfiler/go/miniprofiler"
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/database"
+	"bosun.org/cmd/bosun/database/test"
 	"bosun.org/models"
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
@@ -51,77 +52,18 @@ func check(s *Schedule, t time.Time) {
 	}
 }
 
-//fake data access for tests. Perhaps a full mock would be more appropriate, once the interface contains more.
-//any methods not explicitely implemented will likely cause a nil reference panic. This is good.
-type nopDataAccess struct {
-	database.MetadataDataAccess
-	database.SearchDataAccess
-	database.ErrorDataAccess
-	database.IncidentDataAccess
-	database.SilenceDataAccess
-	failingAlerts map[string]bool
-	idCounter     uint64
-	incidents     map[uint64]*models.Incident
-	silences      map[string]*models.Silence
-}
+var db database.DataAccess
 
-func (n *nopDataAccess) Search() database.SearchDataAccess      { return n }
-func (n *nopDataAccess) Metadata() database.MetadataDataAccess  { return n }
-func (n *nopDataAccess) Errors() database.ErrorDataAccess       { return n }
-func (n *nopDataAccess) Incidents() database.IncidentDataAccess { return n }
-func (n *nopDataAccess) Silence() database.SilenceDataAccess    { return n }
-
-func (n *nopDataAccess) BackupLastInfos(map[string]map[string]*database.LastInfo) error { return nil }
-func (n *nopDataAccess) LoadLastInfos() (map[string]map[string]*database.LastInfo, error) {
-	return map[string]map[string]*database.LastInfo{}, nil
-}
-func (n *nopDataAccess) MarkAlertSuccess(name string) error {
-	n.failingAlerts[name] = false
-	return nil
-}
-func (n *nopDataAccess) MarkAlertFailure(name string, msg string) error {
-	n.failingAlerts[name] = true
-	return nil
-}
-func (n *nopDataAccess) GetFailingAlertCounts() (int, int, error) { return 0, 0, nil }
-func (n *nopDataAccess) IsAlertFailing(name string) (bool, error) { return n.failingAlerts[name], nil }
-
-func (n *nopDataAccess) CreateIncident(ak models.AlertKey, start time.Time) (*models.Incident, error) {
-	n.idCounter++
-	n.incidents[n.idCounter] = &models.Incident{Id: n.idCounter, Start: start, AlertKey: ak}
-	return n.incidents[n.idCounter], nil
-}
-func (n *nopDataAccess) GetIncident(id uint64) (*models.Incident, error) {
-	return n.incidents[id], nil
-}
-func (n *nopDataAccess) UpdateIncident(id uint64, i *models.Incident) error {
-	n.incidents[id] = i
-	return nil
-}
-func (n *nopDataAccess) GetActiveSilences() ([]*models.Silence, error) {
-	r := make([]*models.Silence, 0, len(n.silences))
-	for _, s := range n.silences {
-		r = append(r, s)
-	}
-	return r, nil
-}
-func (n *nopDataAccess) DeleteSilence(id string) error {
-	delete(n.silences, id)
-	return nil
-}
-func (n *nopDataAccess) AddSilence(s *models.Silence) error {
-	n.silences[s.ID()] = s
-	return nil
+func setup() func() {
+	testDb, closer := dbtest.StartTestRedis()
+	db = testDb
+	return closer
 }
 
 func initSched(c *conf.Conf) (*Schedule, error) {
 	c.StateFile = ""
 	s := new(Schedule)
-	s.DataAccess = &nopDataAccess{
-		failingAlerts: map[string]bool{},
-		incidents:     map[uint64]*models.Incident{},
-		silences:      map[string]*models.Silence{},
-	}
+	s.DataAccess = db
 	err := s.Init(c)
 	return s, err
 }
@@ -210,6 +152,7 @@ var queryTime = time.Date(2000, 1, 1, 12, 0, 0, 0, time.UTC)
 var window5Min = `"9.467277e+08", "9.46728e+08"`
 
 func TestCrit(t *testing.T) {
+	defer setup()()
 	s := testSched(t, &schedTest{
 		conf: `alert a {
 			crit = avg(q("avg:m{a=b}", "5m", "")) > 0
@@ -233,6 +176,7 @@ func TestCrit(t *testing.T) {
 }
 
 func TestBandDisableUnjoined(t *testing.T) {
+	defer setup()()
 	testSched(t, &schedTest{
 		conf: `alert a {
 			$sum = "sum:m{a=*}"
@@ -259,6 +203,7 @@ func TestBandDisableUnjoined(t *testing.T) {
 }
 
 func TestCount(t *testing.T) {
+	defer setup()()
 	testSched(t, &schedTest{
 		conf: `alert a {
 			crit = count("sum:m{a=*}", "5m", "") != 2
@@ -281,6 +226,7 @@ func TestCount(t *testing.T) {
 }
 
 func TestUnknown(t *testing.T) {
+	defer setup()()
 	state := NewStatus("a{a=b}")
 	state.Touched = queryTime.Add(-10 * time.Minute)
 	state.Append(&Event{Status: StNormal, Time: state.Touched})
@@ -306,6 +252,7 @@ func TestUnknown(t *testing.T) {
 }
 
 func TestUnknown_HalfFreq(t *testing.T) {
+	defer setup()()
 	state := NewStatus("a{a=b}")
 	state.Touched = queryTime.Add(-20 * time.Minute)
 	state.Append(&Event{Status: StNormal, Time: state.Touched})
@@ -332,6 +279,7 @@ func TestUnknown_HalfFreq(t *testing.T) {
 }
 
 func TestUnknown_WithError(t *testing.T) {
+	defer setup()()
 	state := NewStatus("a{a=b}")
 	state.Touched = queryTime.Add(-10 * time.Minute)
 	state.Append(&Event{Status: StNormal, Time: state.Touched})
@@ -354,6 +302,7 @@ func TestUnknown_WithError(t *testing.T) {
 }
 
 func TestRename(t *testing.T) {
+	defer setup()()
 	testSched(t, &schedTest{
 		conf: `
 		alert ping.host {

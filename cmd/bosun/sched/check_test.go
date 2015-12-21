@@ -15,7 +15,7 @@ import (
 )
 
 func TestCheckFlapping(t *testing.T) {
-
+	defer setup()()
 	c, err := conf.New("", `
 		template t {
 			subject = 1
@@ -95,7 +95,7 @@ func TestCheckFlapping(t *testing.T) {
 }
 
 func TestCheckSilence(t *testing.T) {
-
+	defer setup()()
 	done := make(chan bool, 1)
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		done <- true
@@ -141,6 +141,7 @@ func TestCheckSilence(t *testing.T) {
 }
 
 func TestIncidentIds(t *testing.T) {
+	defer setup()()
 	c, err := conf.New("", `
 		alert a {
 			crit = 1
@@ -188,6 +189,7 @@ func TestIncidentIds(t *testing.T) {
 }
 
 func TestCheckNotify(t *testing.T) {
+	defer setup()()
 	nc := make(chan string)
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		b, _ := ioutil.ReadAll(r.Body)
@@ -231,6 +233,7 @@ func TestCheckNotify(t *testing.T) {
 }
 
 func TestCheckNotifyUnknown(t *testing.T) {
+	defer setup()()
 	nc := make(chan string, 1)
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		b, _ := ioutil.ReadAll(r.Body)
@@ -294,6 +297,7 @@ Loop:
 
 // TestCheckNotifyUnknownDefault tests the default unknownTemplate.
 func TestCheckNotifyUnknownDefault(t *testing.T) {
+	defer setup()()
 	nc := make(chan string, 1)
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		b, _ := ioutil.ReadAll(r.Body)
@@ -355,6 +359,7 @@ Loop:
 }
 
 func TestCheckNotifyLog(t *testing.T) {
+	defer setup()()
 	nc := make(chan string, 1)
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		b, _ := ioutil.ReadAll(r.Body)
@@ -437,6 +442,7 @@ Loop:
 // unknown, it's body and subject are empty. This is because we should not
 // keep around the crit template renders if we are unknown.
 func TestCheckCritUnknownEmpty(t *testing.T) {
+	defer setup()()
 	c, err := conf.New("", `
 		template t {
 			subject = 1

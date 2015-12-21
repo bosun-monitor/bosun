@@ -11,6 +11,7 @@ import (
 // Crit returns {a=b},{a=c}, but {a=b} is ignored by dependency expression.
 // Result should be {a=c} only.
 func TestDependency_Simple(t *testing.T) {
+	defer setup()()
 	testSched(t, &schedTest{
 		conf: `alert a {
 			crit = avg(q("avg:c{a=*}", "5m", "")) > 0
@@ -50,6 +51,7 @@ func TestDependency_Simple(t *testing.T) {
 
 // Crit and depends don't have same tag sets.
 func TestDependency_Overlap(t *testing.T) {
+	defer setup()()
 	testSched(t, &schedTest{
 		conf: `alert a {
 			crit = avg(q("avg:c{a=*,b=*}", "5m", "")) > 0
@@ -88,6 +90,7 @@ func TestDependency_Overlap(t *testing.T) {
 }
 
 func TestDependency_OtherAlert(t *testing.T) {
+	defer setup()()
 	testSched(t, &schedTest{
 		conf: `alert a {
 			crit = avg(q("avg:a{host=*,cpu=*}", "5m", "")) > 0
@@ -129,6 +132,7 @@ func TestDependency_OtherAlert(t *testing.T) {
 }
 
 func TestDependency_OtherAlert_Unknown(t *testing.T) {
+	defer setup()()
 	state := NewStatus("a{host=ny02}")
 	state.Touched = queryTime.Add(-10 * time.Minute)
 	state.Append(&Event{Status: StNormal, Time: state.Touched})
@@ -176,6 +180,7 @@ func TestDependency_OtherAlert_Unknown(t *testing.T) {
 }
 
 func TestDependency_OtherAlert_UnknownChain(t *testing.T) {
+	defer setup()()
 	ab := models.AlertKey("a{host=b}")
 	bb := models.AlertKey("b{host=b}")
 	cb := models.AlertKey("c{host=b}")
@@ -233,6 +238,7 @@ func TestDependency_OtherAlert_UnknownChain(t *testing.T) {
 }
 
 func TestDependency_Blocks_Unknown(t *testing.T) {
+	defer setup()()
 	state := NewStatus("a{host=ny01}")
 	state.Touched = queryTime.Add(-10 * time.Minute)
 	state.Append(&Event{Status: StNormal, Time: state.Touched})
@@ -262,6 +268,7 @@ func TestDependency_Blocks_Unknown(t *testing.T) {
 }
 
 func TestDependency_AlertFunctionHasNoResults(t *testing.T) {
+	defer setup()()
 	pingState := NewStatus("a{host=ny01,source=bosun01}")
 	pingState.Touched = queryTime.Add(-5 * time.Minute)
 	pingState.Append(&Event{Status: StNormal, Time: pingState.Touched})
