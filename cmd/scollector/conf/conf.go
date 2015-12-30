@@ -169,6 +169,7 @@ type Github struct {
 
 type Cadvisor struct {
 	URL string
+    ShortContainerIds bool
 }
 
 type RedisCounters struct {
