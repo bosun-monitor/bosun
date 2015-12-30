@@ -61,6 +61,7 @@ type Conf struct {
 	Cadvisor            []Cadvisor
 	RedisCounters       []RedisCounters
 	ExtraHop            []ExtraHop
+	LocalListener       string
 }
 
 type HAProxy struct {
