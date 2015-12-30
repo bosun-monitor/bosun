@@ -269,6 +269,12 @@ then this filtering loses its usefulness.
 	  FilterBy = "toppercent"
 	  FilterPercent = 75
 
+LocalListener (string): local_listener will listen for HTTP request and forward
+the request to the configured OpenTSDB host while adding defined tags to
+metrics.
+
+	LocalListener = "localhost:4242"
+
 Windows
 
 scollector has full Windows support. It can be run standalone, or installed as a
