@@ -1,8 +1,8 @@
 package collectors
 
 import (
-	"regexp"
 	"strconv"
+    "regexp"
 
 	"bosun.org/_third_party/github.com/google/cadvisor/client"
 	"bosun.org/_third_party/github.com/google/cadvisor/info/v1"
@@ -169,13 +169,13 @@ func containerTagSet(ts opentsdb.TagSet, container *v1.ContainerInfo) opentsdb.T
 			tags = opentsdb.TagSet{
 				"docker_name": container.Aliases[0],
 				"docker_id":   container.Aliases[1][0:12],
-				"docker_host": apiHostName,
+                "docker_host": apiHostName,
 			}
 		} else {
 			tags = opentsdb.TagSet{
 				"docker_name": container.Aliases[0],
 				"docker_id":   container.Aliases[1],
-				"docker_host": apiHostName,
+                "docker_host": apiHostName,
 			}
 		}
 	} else {
@@ -300,9 +300,9 @@ func startCadvisorCollector(c *conf.Conf) {
 		if err != nil {
 			slog.Warningf("Could not start collector for URL [%s] due to err: %v", config.URL, err)
 		}
-		rp := regexp.MustCompile("^.*?//(?P<short_host>.*?)\\..*$")
-		matches := rp.FindAllStringSubmatch(config.URL, -1)
-		apiHostName = matches[0][1]
+        rp := regexp.MustCompile("^.*?//(?P<short_host>.*?)\\..*$")
+        matches := rp.FindAllStringSubmatch(config.URL,-1)
+        apiHostName = matches[0][1]
 		if config.ShortContainerIds == true {
 			shortContainerIds = config.ShortContainerIds
 		} else {
