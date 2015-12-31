@@ -1,6 +1,7 @@
 package collectors
 
 import (
+	"regexp"
 	"strconv"
 
 	"bosun.org/_third_party/github.com/google/cadvisor/client"
@@ -15,6 +16,9 @@ import (
 func init() {
 	registerInit(startCadvisorCollector)
 }
+
+var shortContainerIds bool
+var apiHostName string
 
 var cadvisorMeta = map[string]MetricMeta{
 	"container.cpu.system": {
@@ -161,10 +165,18 @@ func cadvisorAdd(md *opentsdb.MultiDataPoint, name string, value interface{}, ts
 func containerTagSet(ts opentsdb.TagSet, container *v1.ContainerInfo) opentsdb.TagSet {
 	var tags opentsdb.TagSet
 	if container.Namespace == "docker" {
-		tags = opentsdb.TagSet{
-			"name":        container.Name,
-			"docker_name": container.Aliases[0],
-			"docker_id":   container.Aliases[1],
+		if shortContainerIds == true {
+			tags = opentsdb.TagSet{
+				"docker_name": container.Aliases[0],
+				"docker_id":   container.Aliases[1][0:12],
+				"docker_host": apiHostName,
+			}
+		} else {
+			tags = opentsdb.TagSet{
+				"docker_name": container.Aliases[0],
+				"docker_id":   container.Aliases[1],
+				"docker_host": apiHostName,
+			}
 		}
 	} else {
 		tags = opentsdb.TagSet{
@@ -287,6 +299,14 @@ func startCadvisorCollector(c *conf.Conf) {
 		cClient, err := client.NewClient(config.URL)
 		if err != nil {
 			slog.Warningf("Could not start collector for URL [%s] due to err: %v", config.URL, err)
+		}
+		rp := regexp.MustCompile("^.*?//(?P<short_host>.*?)\\..*$")
+		matches := rp.FindAllStringSubmatch(config.URL, -1)
+		apiHostName = matches[0][1]
+		if config.ShortContainerIds == true {
+			shortContainerIds = config.ShortContainerIds
+		} else {
+			shortContainerIds = false
 		}
 		collectors = append(collectors, &IntervalCollector{
 			F: func() (opentsdb.MultiDataPoint, error) {
