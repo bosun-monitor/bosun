@@ -26,6 +26,16 @@ func SNMPCiscoASA(cfg conf.SNMP) {
 			Interval: time.Second * 30,
 			name:     fmt.Sprintf("snmp-cisco-asa-%s", cfg.Host),
 		},
+        //
+        // Execute ASA-specific checks in c_cisco_asa
+        //
+		&IntervalCollector{
+			F: func() (opentsdb.MultiDataPoint, error) {
+				return c_cisco_asa(cfg.Host, cfg.Community)
+			},
+			Interval: time.Second * 30,
+			name:     fmt.Sprintf("snmp-cisco-asa-specific-%s", cfg.Host),
+		},
 		&IntervalCollector{
 			F: func() (opentsdb.MultiDataPoint, error) {
 				return c_cisco_desc(cfg.Host, cfg.Community)
@@ -81,18 +91,40 @@ func SNMPCiscoNXOS(cfg conf.SNMP) {
 const (
 	ciscoBaseOID         = "1.3.6.1.4.1.9.9"
 	cpmCPUTotal5secRev   = ".109.1.1.1.1.6"
+    asaConnInUseCurrent  = ".147.1.2.2.2.1.5.40.6"
+    asaConnInUseMax      = ".147.1.2.2.2.1.5.40.7"
 	ciscoMemoryPoolTable = ".48.1.1.1"
 )
 
 const (
 	ciscoMemoryPoolFreeDesc = "The number of bytes from the memory pool that are currently in use by applications on the managed device."
 	ciscoMemoryPoolUsedDesc = "the number of bytes from the memory pool that are currently unused on the managed device."
+    asaConnInUseCurrentDesc = "The number of connections currently registered in the ASA firewall."
+    asaConnInUseMaxDesc     = "The maximum number of connections to an ASA firewall since last power cycle."
 )
 
 type ciscoMemoryPoolEntry struct {
 	PoolType string
 	Used     int64
 	Free     int64
+}
+
+func ciscoASAConn(host, community string, ts opentsdb.TagSet, md *opentsdb.MultiDataPoint) error {
+    connCurrent, err := snmp_oid(host, community, ciscoBaseOID+asaConnInUseCurrent)
+	if err != nil {
+		return fmt.Errorf("Error when receiving ASA current connection count.")
+	}
+
+    connMax, err := snmp_oid(host, community, ciscoBaseOID+asaConnInUseMax)
+	if err != nil {
+		return fmt.Errorf("Error when receiving ASA Max connections count.")
+	}
+
+    Add(md, "cisco.asa.conn_current", connCurrent, ts, metadata.Gauge, metadata.Connection, asaConnInUseCurrentDesc)
+    Add(md, "cisco.asa.conn_max", connMax, ts, metadata.Gauge, metadata.Connection, asaConnInUseMaxDesc)
+    return nil
+
+
 }
 
 func ciscoCPU(host, community string, ts opentsdb.TagSet, cpuIntegrator tsIntegrator, md *opentsdb.MultiDataPoint) error {
@@ -117,6 +149,17 @@ func ciscoCPU(host, community string, ts opentsdb.TagSet, cpuIntegrator tsIntegr
 		Add(md, osCPU, cpuIntegrator(time.Now().Unix(), float64(pct)), ts, metadata.Counter, metadata.Pct, "")
 	}
 	return nil
+}
+
+func c_cisco_asa(host, community string) (opentsdb.MultiDataPoint, error) {
+	var md opentsdb.MultiDataPoint
+	ts := opentsdb.TagSet{"host": host}
+
+    // ASA connection counts
+    if err := ciscoASAConn(host, community, ts, &md); err != nil {
+        return md, err
+    }
+    return md, nil
 }
 
 func c_cisco_ios(host, community string, cpuIntegrator tsIntegrator) (opentsdb.MultiDataPoint, error) {
