@@ -241,6 +241,7 @@ func sendMetadata(ms []Metasend) {
 		slog.Error(err)
 		return
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != 204 {
 		slog.Errorln("bad metadata return:", resp.Status)
 		return

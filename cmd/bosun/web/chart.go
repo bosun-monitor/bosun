@@ -104,8 +104,10 @@ func Graph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 			}
 		}
 		queries[i] = fmt.Sprintf(`q("%v", "%v", "%v")`, q, start, end)
-		if err := schedule.Search.Expand(q); err != nil {
-			return nil, err
+		if !schedule.Conf.TSDBContext().Version().FilterSupport() {
+			if err := schedule.Search.Expand(q); err != nil {
+				return nil, err
+			}
 		}
 	}
 	var tr opentsdb.ResponseSet

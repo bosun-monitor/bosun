@@ -6,10 +6,10 @@ import (
 	"strings"
 	"time"
 
-	"bosun.org/_third_party/github.com/mjibson/snmp"
 	"bosun.org/cmd/scollector/conf"
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
+	"bosun.org/snmp"
 )
 
 func SNMPCiscoBGP(cfg conf.SNMP) {

@@ -36,10 +36,9 @@ type Schedule struct {
 	mutexAquired  time.Time
 	mutexWaitTime int64
 
-	Conf    *conf.Conf
-	status  States
-	Silence map[string]*Silence
-	Group   map[time.Time]models.AlertKeys
+	Conf   *conf.Conf
+	status States
+	Group  map[time.Time]models.AlertKeys
 
 	Search *search.Search
 
@@ -68,7 +67,6 @@ func (s *Schedule) Init(c *conf.Conf) error {
 	//be avoided.
 	var err error
 	s.Conf = c
-	s.Silence = make(map[string]*Silence)
 	s.Group = make(map[time.Time]models.AlertKeys)
 	s.pendingUnknowns = make(map[*conf.Notification][]*State)
 	s.status = make(States)
@@ -225,7 +223,7 @@ type StateTuple struct {
 }
 
 // GroupStates groups by NeedAck, Active, Status, and Silenced.
-func (states States) GroupStates(silenced map[models.AlertKey]Silence) map[StateTuple]States {
+func (states States) GroupStates(silenced map[models.AlertKey]models.Silence) map[StateTuple]States {
 	r := make(map[StateTuple]States)
 	for ak, st := range states {
 		_, sil := silenced[ak]
@@ -362,7 +360,7 @@ type StateGroups struct {
 }
 
 func (s *Schedule) MarshalGroups(T miniprofiler.Timer, filter string) (*StateGroups, error) {
-	var silenced map[models.AlertKey]Silence
+	var silenced map[models.AlertKey]models.Silence
 	T.Step("Silenced", func(miniprofiler.Timer) {
 		silenced = s.Silenced()
 	})
@@ -658,6 +656,22 @@ func (s *State) AbnormalStatus() Status {
 		return ev.Status
 	}
 	return StNone
+}
+
+// WorstThisIncident returns the highest severity event with the same IncidentId as the Last event.
+func (s *State) WorstThisIncident() Status {
+	ev := s.Last()
+	worst := ev.Status
+	for i := len(s.History) - 2; i >= 0; i-- {
+		ev2 := s.History[i]
+		if ev2.IncidentId != ev.IncidentId {
+			break
+		}
+		if ev2.Status > worst {
+			worst = ev2.Status
+		}
+	}
+	return worst
 }
 
 func (s *State) IsActive() bool {

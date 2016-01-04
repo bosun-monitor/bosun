@@ -1,9 +1,10 @@
 package collect
 
 import (
-	"bytes"
-	"encoding/binary"
-	"net"
+	"compress/gzip"
+	"encoding/json"
+	"fmt"
+	"net/http"
 	"time"
 
 	"bosun.org/_third_party/github.com/garyburd/redigo/redis"
@@ -11,68 +12,44 @@ import (
 	"bosun.org/slog"
 )
 
-/*
- Listen on the specified udp port for events.
- This provides long term aggrigation for sparse events.
- wire format: opcode(1 byte) | data
+func HandleCounterPut(server string, database int) http.HandlerFunc {
 
-Opcodes:
- 1: increment - increments a redis counter for the specified metric/tag set
-     data: count(4 bytes signed int) | metric:tag1=foo,tag2=bar
-*/
-func ListenUdp(port int, redisHost string, redisDb int) error {
-	addr := net.UDPAddr{
-		Port: port,
-		IP:   net.ParseIP("0.0.0.0"),
-	}
-	conn, err := net.ListenUDP("udp", &addr)
-	if err != nil {
-		return err
-	}
-	pool := newRedisPool(redisHost, redisDb)
-	for {
-		buf := make([]byte, 1025)
-		n, addr, err := conn.ReadFromUDP(buf)
+	pool := newRedisPool(server, database)
+	return func(w http.ResponseWriter, r *http.Request) {
+		gReader, err := gzip.NewReader(r.Body)
 		if err != nil {
-			slog.Error(err)
-			continue
+			http.Error(w, err.Error(), 500)
+			return
 		}
-		if n == len(buf) { // if we get a full buffer, assume some was truncated.
-			slog.Errorf("Too large a udp packet received from: %s. Skipping.", addr.String())
-			continue
+		decoder := json.NewDecoder(gReader)
+		dps := []*opentsdb.DataPoint{}
+		err = decoder.Decode(&dps)
+		if err != nil {
+			http.Error(w, err.Error(), 500)
+			return
 		}
-		Add("udp.packets", opentsdb.TagSet{}, 1)
-		go func(data []byte, addr string) {
-			c := pool.Get()
-			defer c.Close()
-			if len(data) == 0 {
-				slog.Errorf("Empty packet received from %s.", addr)
-			}
-			switch data[0] {
-			case 1:
-				incrementRedisCounter(data[1:], addr, c)
+		conn := pool.Get()
+		defer conn.Close()
+		for _, dp := range dps {
+			mts := fmt.Sprintf("%s%s", dp.Metric, dp.Tags)
+			var i int64
+			switch v := dp.Value.(type) {
+			case int:
+				i = int64(v)
+			case int64:
+				i = v
+			case float64:
+				i = int64(v)
 			default:
-				slog.Errorf("Unknown opcode %d from %s.", data[0], addr)
+				http.Error(w, "Values must be integers.", 400)
+				return
 			}
-		}(buf[:n], addr.String())
-	}
-}
-
-func incrementRedisCounter(data []byte, addr string, conn redis.Conn) {
-	if len(data) < 5 {
-		slog.Errorf("Insufficient data for increment from %s.", addr)
-		return
-	}
-	r := bytes.NewReader(data)
-	var i int32
-	err := binary.Read(r, binary.BigEndian, &i)
-	if err != nil {
-		slog.Error(err)
-		return
-	}
-	mts := string(data[4:])
-	if _, err = conn.Do("HINCRBY", RedisCountersKey, mts, i); err != nil {
-		slog.Errorf("Error incrementing counter %s by %d. From %s. %s", mts, i, addr, err)
+			if _, err = conn.Do("HINCRBY", RedisCountersKey, mts, i); err != nil {
+				slog.Errorf("Error incrementing counter %s by %d. %s", mts, i, err)
+				http.Error(w, err.Error(), 500)
+				return
+			}
+		}
 	}
 }
 
@@ -89,7 +66,7 @@ func newRedisPool(server string, database int) *redis.Pool {
 			if err != nil {
 				return nil, err
 			}
-			if _, err := c.Do("CLIENT", "SETNAME", metricRoot+"UDP"); err != nil {
+			if _, err := c.Do("CLIENT", "SETNAME", metricRoot+"_counters"); err != nil {
 				c.Close()
 				return nil, err
 			}

@@ -39,7 +39,15 @@ bosunApp.config(['$routeProvider', '$locationProvider', '$httpProvider', functio
             when('/graph', {
             title: 'Graph',
             templateUrl: 'partials/graph.html',
-            controller: 'GraphCtrl'
+            controller: 'GraphCtrl',
+            resolve: {
+                'version': function ($http) {
+                    return $http({
+                        method: 'GET',
+                        url: '/api/opentsdb/version'
+                    });
+                }
+            }
         }).
             when('/host', {
             title: 'Host View',
@@ -1643,6 +1651,20 @@ var RateOptions = (function () {
     }
     return RateOptions;
 })();
+var Filter = (function () {
+    function Filter(f) {
+        this.type = f && f.type || "auto";
+        this.tagk = f && f.tagk || "";
+        this.filter = f && f.filter || "";
+        this.groupBy = f && f.groupBy || false;
+    }
+    return Filter;
+})();
+var FilterMap = (function () {
+    function FilterMap() {
+    }
+    return FilterMap;
+})();
 var Query = (function () {
     function Query(q) {
         this.aggregator = q && q.aggregator || 'sum';
@@ -1667,9 +1689,38 @@ var Query = (function () {
         this.ds = q && q.ds || '';
         this.dstime = q && q.dstime || '';
         this.tags = q && q.tags || new TagSet;
+        this.gbFilters = q && q.gbFilters || new FilterMap;
+        this.nGbFilters = q && q.nGbFilters || new FilterMap;
+        var that = this;
+        // Copy tags with values to group by filters so old links work
+        _.each(this.tags, function (v, k) {
+            if (v === "") {
+                return;
+            }
+            var f = new (Filter);
+            f.filter = v;
+            f.groupBy = true;
+            f.tagk = k;
+            that.gbFilters[k] = f;
+        });
+        this.setFilters();
         this.setDs();
         this.setDerivative();
     }
+    Query.prototype.setFilters = function () {
+        this.filters = [];
+        var that = this;
+        _.each(this.gbFilters, function (filter, tagk) {
+            if (filter.filter && filter.type) {
+                that.filters.push(filter);
+            }
+        });
+        _.each(this.nGbFilters, function (filter, tagk) {
+            if (filter.filter && filter.type) {
+                that.filters.push(filter);
+            }
+        });
+    };
     Query.prototype.setDs = function () {
         if (this.dstime && this.ds) {
             this.downsample = this.dstime + '-' + this.ds;
@@ -1732,9 +1783,19 @@ var Request = (function () {
     return Request;
 })();
 var graphRefresh;
-bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route', '$timeout', function ($scope, $http, $location, $route, $timeout) {
+var Version = (function () {
+    function Version() {
+    }
+    return Version;
+})();
+bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route', '$timeout', 'version', function ($scope, $http, $location, $route, $timeout, $version) {
+        $scope.version = $version.data;
         $scope.aggregators = ["sum", "min", "max", "avg", "dev", "zimsum", "mimmin", "minmax"];
         $scope.dsaggregators = ["", "sum", "min", "max", "avg", "dev", "zimsum", "mimmin", "minmax"];
+        $scope.filters = ["auto", "iliteral_or", "iwildcard", "literal_or", "not_iliteral_or", "not_literal_or", "regexp", "wildcard"];
+        if ($scope.version.Major >= 2 && $scope.version.Minor >= 2) {
+            $scope.filterSupport = true;
+        }
         $scope.rate_options = ["auto", "gauge", "counter", "rate"];
         $scope.canAuto = {};
         var search = $location.search();
@@ -1812,15 +1873,34 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
                 var q = $scope.query_p[index];
                 var tags = new TagSet;
                 q.metric_tags = {};
+                if (!q.gbFilters) {
+                    q.gbFilters = new FilterMap;
+                }
+                if (!q.nGbFilters) {
+                    q.nGbFilters = new FilterMap;
+                }
                 for (var i = 0; i < data.length; i++) {
                     var d = data[i];
-                    q.metric_tags[d] = true;
+                    if ($scope.filterSupport) {
+                        if (!q.gbFilters[d]) {
+                            var filter = new Filter;
+                            filter.tagk = d;
+                            filter.groupBy = true;
+                            q.gbFilters[d] = filter;
+                        }
+                        if (!q.nGbFilters[d]) {
+                            var filter = new Filter;
+                            filter.tagk = d;
+                            q.nGbFilters[d] = filter;
+                        }
+                    }
                     if (q.tags) {
                         tags[d] = q.tags[d];
                     }
                     if (!tags[d]) {
                         tags[d] = '';
                     }
+                    q.metric_tags[d] = true;
                     GetTagVs(d, index);
                 }
                 angular.forEach(q.tags, function (val, key) {
@@ -1884,11 +1964,13 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
                 var q = new Query(p);
                 var tags = q.tags;
                 q.tags = new TagSet;
-                angular.forEach(tags, function (v, k) {
-                    if (v && k) {
-                        q.tags[k] = v;
-                    }
-                });
+                if (!$scope.filterSupport) {
+                    angular.forEach(tags, function (v, k) {
+                        if (v && k) {
+                            q.tags[k] = v;
+                        }
+                    });
+                }
                 request.queries.push(q);
             });
             return request;
@@ -1900,12 +1982,24 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
                 if (!m) {
                     return;
                 }
+                if (!r.queries[index]) {
+                    return;
+                }
                 angular.forEach(q.tags, function (key, tag) {
                     if (m[tag]) {
                         return;
                     }
                     delete r.queries[index].tags[tag];
                 });
+                if ($scope.filterSupport) {
+                    _.each(r.queries[index].nGbFilters, function (v, fKey) {
+                        if (m[fKey]) {
+                            return;
+                        }
+                        delete r.queries[index].nGbFilters[fKey];
+                        delete r.queries[index].gbFilters[fKey];
+                    });
+                }
             });
             r.prune();
             $location.search('b64', btoa(JSON.stringify(r)));
@@ -1945,6 +2039,22 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
                 }
                 getMetricMeta(request.queries[i].metric);
             }
+            _.each(request.queries, function (q, qIndex) {
+                request.queries[qIndex].filters = _.map(q.filters, function (filter) {
+                    var f = new Filter(filter);
+                    if (f.filter && f.type) {
+                        if (f.type == "auto") {
+                            if (f.filter.indexOf("*") > -1) {
+                                f.type = f.filter == "*" ? f.type = "wildcard" : "iwildcard";
+                            }
+                            else {
+                                f.type = "literal_or";
+                            }
+                        }
+                    }
+                    return f;
+                });
+            });
             var min = angular.isNumber($scope.min) ? '&min=' + encodeURIComponent($scope.min.toString()) : '';
             var max = angular.isNumber($scope.max) ? '&max=' + encodeURIComponent($scope.max.toString()) : '';
             $scope.animate();
@@ -2435,6 +2545,8 @@ bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$ro
         $scope.confirm = function () {
             $scope.error = null;
             $scope.testSilences = null;
+            $scope.edit = null;
+            $location.search('edit', null);
             state.confirm = 'true';
             $http.post('/api/silence/set', state)
                 .error(function (error) {

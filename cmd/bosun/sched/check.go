@@ -123,7 +123,7 @@ func (s *Schedule) RunHistory(r *RunHistory) {
 }
 
 // RunHistory for a single alert key. Returns true if notifications were altered.
-func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *Event, silenced map[models.AlertKey]Silence) bool {
+func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *Event, silenced map[models.AlertKey]models.Silence) bool {
 	checkNotify := false
 	// get existing state object for alert key. add to schedule status if doesn't already exist
 	state := s.GetStatus(ak)
@@ -147,6 +147,7 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *Event, s
 	}
 	// assign incident id to new event if applicable
 	prev := state.Last()
+	worst := StNormal
 	event.Time = r.Start
 	if prev.IncidentId != 0 {
 		// If last event has incident id and is not closed, we continue it.
@@ -155,6 +156,7 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *Event, s
 			slog.Error(err)
 		} else if incident.End == nil {
 			event.IncidentId = prev.IncidentId
+			worst = state.WorstThisIncident()
 		}
 	}
 	if event.IncidentId == 0 && event.Status != StNormal {
@@ -165,23 +167,19 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *Event, s
 			event.IncidentId = incident.Id
 		}
 	}
-	// add new event to state
-	last := state.AbnormalStatus()
+
 	state.Append(event)
 	a := s.Conf.Alerts[ak.Name()]
-	wasOpen := state.Open
 	// render templates and open alert key if abnormal
 	if event.Status > StNormal {
-		if event.Status >= last {
-			s.executeTemplates(state, event, a, r)
-		}
+		s.executeTemplates(state, event, a, r)
 		state.Open = true
 		if a.Log {
+			worst = StNormal
 			state.Open = false
 		}
 	}
 	// On state increase, clear old notifications and notify current.
-	// On state decrease, and if the old alert was already acknowledged, notify current.
 	// If the old alert was not acknowledged, do nothing.
 	// Do nothing if state did not change.
 	notify := func(ns *conf.Notifications) {
@@ -228,32 +226,22 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *Event, s
 		state.NeedAck = false
 		delete(s.Notifications, ak)
 	}
+
 	// lock while we change notifications.
 	s.Lock("RunHistory")
-	// last could be StNone if it is new. Set it to normal if so because StNormal >
-	// StNone. If the state is not open (closed), then the last state we care about
-	// isn't the last abnormal state, it's just normal.
-	if last < StNormal || !wasOpen {
-		last = StNormal
-	}
-	if event.Status > last {
+	if event.Status > worst {
 		clearOld()
 		notifyCurrent()
-	} else if event.Status < last {
-		if _, hasOld := s.Notifications[ak]; hasOld {
-			notifyCurrent()
-		}
-		// Auto close silenced alerts.
-		if _, ok := silenced[ak]; ok && event.Status == StNormal {
-			go func(ak models.AlertKey) {
-				slog.Infof("auto close %s because was silenced", ak)
-				err := s.Action("bosun", "Auto close because was silenced.", ActionClose, ak)
-				if err != nil {
-					slog.Errorln(err)
-				}
-			}(ak)
-		}
+	} else if _, ok := silenced[ak]; ok && event.Status == StNormal {
+		go func(ak models.AlertKey) {
+			slog.Infof("auto close %s because was silenced", ak)
+			err := s.Action("bosun", "Auto close because was silenced.", ActionClose, ak)
+			if err != nil {
+				slog.Errorln(err)
+			}
+		}(ak)
 	}
+
 	s.Unlock()
 	return checkNotify
 }

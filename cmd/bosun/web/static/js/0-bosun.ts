@@ -42,6 +42,14 @@ bosunApp.config(['$routeProvider', '$locationProvider', '$httpProvider', functio
 			title: 'Graph',
 			templateUrl: 'partials/graph.html',
 			controller: 'GraphCtrl',
+			resolve: {
+				'version' : function($http) {
+					return $http({
+						method: 'GET',
+						url: '/api/opentsdb/version'
+					});
+				}
+			}
 		}).
 		when('/host', {
 			title: 'Host View',

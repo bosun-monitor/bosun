@@ -7,7 +7,7 @@ import (
 	"net"
 	"time"
 
-	"bosun.org/_third_party/github.com/mjibson/snmp/asn1"
+	"bosun.org/snmp/asn1"
 )
 
 // reserved binding values.
@@ -29,10 +29,6 @@ func (b *binding) unmarshal(v interface{}) error {
 	convertClass(&b.Value)
 	_, err := asn1.Unmarshal(b.Value.FullBytes, v)
 	if err != nil {
-		if _, ok := err.(asn1.StructuralError); ok {
-			return fmt.Errorf("type mismatch: {class:%d tag:%d} vs. %T: %v",
-				b.Value.Class, b.Value.Tag, v, err)
-		}
 		return err
 	}
 	v = convertType(v)

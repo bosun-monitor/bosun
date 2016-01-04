@@ -1,8 +1,11 @@
 package dbtest
 
 import (
+	"fmt"
 	"math/rand"
 	"os"
+	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 
@@ -34,6 +37,10 @@ func randString(l int) string {
 
 func check(t *testing.T, err error) {
 	if err != nil {
-		t.Fatal(err)
+		s := err.Error()
+		if _, filename, line, ok := runtime.Caller(1); ok {
+			s = fmt.Sprintf("%s:%d: %v", filepath.Base(filename), line, s)
+		}
+		t.Fatal(s)
 	}
 }

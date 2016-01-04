@@ -89,6 +89,11 @@ func c_windows_processes() (opentsdb.MultiDataPoint, error) {
 		}
 	}
 
+	totalCPUByName := make(map[string]uint64)
+	totalVirtualMemByName := make(map[string]uint64)
+	totalPrivateWSMemByName := make(map[string]uint64)
+	countByName := make(map[string]int)
+
 	for _, v := range dst {
 		var name string
 		service_match := false
@@ -140,6 +145,7 @@ func c_windows_processes() (opentsdb.MultiDataPoint, error) {
 		tags := opentsdb.TagSet{"name": name, "id": id}
 		AddTS(&md, "win.proc.cpu", ts, v.PercentPrivilegedTime/NS100_Seconds/numberOfLogicalProcessors, opentsdb.TagSet{"type": "privileged"}.Merge(tags), metadata.Counter, metadata.Pct, descWinProcCPU_priv)
 		AddTS(&md, "win.proc.cpu", ts, v.PercentUserTime/NS100_Seconds/numberOfLogicalProcessors, opentsdb.TagSet{"type": "user"}.Merge(tags), metadata.Counter, metadata.Pct, descWinProcCPU_user)
+		totalCPUByName[name] += v.PercentUserTime / NS100_Seconds / numberOfLogicalProcessors
 		AddTS(&md, "win.proc.cpu_total", ts, v.PercentProcessorTime/NS100_Seconds/numberOfLogicalProcessors, tags, metadata.Counter, metadata.Pct, descWinProcCPU_total)
 		Add(&md, "win.proc.elapsed_time", (v.Timestamp_Object-v.ElapsedTime)/v.Frequency_Object, tags, metadata.Gauge, metadata.Second, descWinProcElapsed_time)
 		Add(&md, "win.proc.handle_count", v.HandleCount, tags, metadata.Gauge, metadata.Count, descWinProcHandle_count)
@@ -155,13 +161,31 @@ func c_windows_processes() (opentsdb.MultiDataPoint, error) {
 		Add(&md, "win.proc.mem.pool_nonpaged_bytes", v.PoolNonpagedBytes, tags, metadata.Gauge, metadata.Bytes, descWinProcMemPool_nonpaged_bytes)
 		Add(&md, "win.proc.mem.pool_paged_bytes", v.PoolPagedBytes, tags, metadata.Gauge, metadata.Bytes, descWinProcMemPool_paged_bytes)
 		Add(&md, "win.proc.mem.vm.bytes", v.VirtualBytes, tags, metadata.Gauge, metadata.Bytes, descWinProcMemVmBytes)
+		totalVirtualMemByName[name] += v.VirtualBytes
 		Add(&md, "win.proc.mem.vm.bytes_peak", v.VirtualBytesPeak, tags, metadata.Gauge, metadata.Bytes, descWinProcMemVmBytes_peak)
 		Add(&md, "win.proc.mem.working_set", v.WorkingSet, tags, metadata.Gauge, metadata.Bytes, descWinProcMemWorking_set)
 		Add(&md, "win.proc.mem.working_set_peak", v.WorkingSetPeak, tags, metadata.Gauge, metadata.Bytes, descWinProcMemWorking_set_peak)
 		Add(&md, "win.proc.mem.working_set_private", v.WorkingSetPrivate, tags, metadata.Gauge, metadata.Bytes, descWinProcMemWorking_set_private)
+		totalPrivateWSMemByName[name] += v.WorkingSetPrivate
 		Add(&md, "win.proc.priority_base", v.PriorityBase, tags, metadata.Gauge, metadata.None, descWinProcPriority_base)
 		Add(&md, "win.proc.private_bytes", v.PrivateBytes, tags, metadata.Gauge, metadata.Bytes, descWinProcPrivate_bytes)
 		Add(&md, "win.proc.thread_count", v.ThreadCount, tags, metadata.Gauge, metadata.Count, descWinProcthread_count)
+		countByName[name]++
+	}
+	for name, count := range countByName {
+		if count < 1 {
+			continue
+		}
+		Add(&md, osProcCount, count, opentsdb.TagSet{"name": name}, metadata.Gauge, metadata.Process, osProcCountDesc)
+		if totalCPU, ok := totalCPUByName[name]; ok {
+			Add(&md, osProcCPU, totalCPU, opentsdb.TagSet{"name": name}, metadata.Counter, metadata.Pct, osProcCPUDesc)
+		}
+		if totalVM, ok := totalVirtualMemByName[name]; ok {
+			Add(&md, osProcMemVirtual, totalVM, opentsdb.TagSet{"name": name}, metadata.Gauge, metadata.Bytes, osProcMemVirtualDesc)
+		}
+		if totalPWS, ok := totalPrivateWSMemByName[name]; ok {
+			Add(&md, osProcMemReal, totalPWS, opentsdb.TagSet{"name": name}, metadata.Gauge, metadata.Bytes, osProcMemRealDesc)
+		}
 	}
 	return md, nil
 }

@@ -60,6 +60,8 @@ type Conf struct {
 	GoogleAnalytics     []GoogleAnalytics
 	Cadvisor            []Cadvisor
 	RedisCounters       []RedisCounters
+	ExtraHop            []ExtraHop
+	LocalListener       string
 	Database            []Database
 }
 
@@ -174,6 +176,13 @@ type Cadvisor struct {
 type RedisCounters struct {
 	Server   string
 	Database int
+}
+
+type ExtraHop struct {
+	Host          string
+	APIKey        string
+	FilterBy      string
+	FilterPercent int
 }
 
 type DatabaseQuery struct {

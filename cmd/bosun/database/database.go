@@ -20,6 +20,7 @@ type DataAccess interface {
 	Metadata() MetadataDataAccess
 	Search() SearchDataAccess
 	Errors() ErrorDataAccess
+	Silence() SilenceDataAccess
 	Incidents() IncidentDataAccess
 }
 

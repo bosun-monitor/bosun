@@ -131,12 +131,14 @@ func main() {
 			check(collectors.HTTPUnitHiera(h.Hiera))
 		}
 	}
-	for _, r := range conf.ElasticIndexFilters {
-		check(collectors.AddElasticIndexFilter(r))
-	}
 	for _, r := range conf.Riak {
 		check(collectors.Riak(r.URL))
 	}
+
+	for _, x := range conf.ExtraHop {
+		check(collectors.ExtraHop(x.Host, x.APIKey, x.FilterBy, x.FilterPercent))
+	}
+
 	if err != nil {
 		slog.Fatal(err)
 	}

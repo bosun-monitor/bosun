@@ -23,7 +23,7 @@ func (s *Schedule) Host(filter string) (map[string]*HostData, error) {
 	}
 	states := s.GetOpenStates()
 	silences := s.Silenced()
-	// These are all fetched by metric since that is how we store it in redis
+	// These are all fetched by metric since that is how we store it in redis,
 	// so this makes for the fastest response
 	tagsByKey := func(metric, hostKey string) (map[string][]opentsdb.TagSet, error) {
 		byKey := make(map[string][]opentsdb.TagSet)
@@ -40,6 +40,13 @@ func (s *Schedule) Host(filter string) (map[string]*HostData, error) {
 			}
 		}
 		return byKey, nil
+	}
+	oldTimestamp := time.Now().Add(-timeFilterAge).Unix()
+	oldOrErr := func(ts int64, err error) bool {
+		if ts < oldTimestamp || err != nil {
+			return true
+		}
+		return false
 	}
 	osNetBytesTags, err := tagsByKey("os.net.bytes", "host")
 	if err != nil {
@@ -121,6 +128,11 @@ func (s *Schedule) Host(filter string) (map[string]*HostData, error) {
 	if err != nil {
 		return nil, err
 	}
+	// Will assume the same tagsets exist .mem_real, .mem_virtual and possibly .count
+	processTags, err := tagsByKey("os.proc.cpu", "host")
+	if err != nil {
+		return nil, err
+	}
 	// Will make the assumption that the metric bosun.ping.timeout, resolved, and rtt
 	// all share the same tagset
 	icmpTimeOutTags, err := tagsByKey("bosun.ping.timeout", "dst_host")
@@ -143,7 +155,7 @@ func (s *Schedule) Host(filter string) (map[string]*HostData, error) {
 			}
 			// 1 Means it timed out
 			timeout, timestamp, err := s.Search.GetLast("bosun.ping.timeout", ts.String(), false)
-			if err != nil || timestamp <= 0 {
+			if oldOrErr(timestamp, err) {
 				continue
 			}
 			rtt, rttTimestamp, _ := s.Search.GetLast("bosun.ping.rtt", ts.String(), false)
@@ -162,7 +174,7 @@ func (s *Schedule) Host(filter string) (map[string]*HostData, error) {
 		for _, ts := range serviceTags[host.Name] {
 			name, ok := ts["name"]
 			if !ok {
-				slog.Errorf("couldn't find service name tag %s for host %s", host.Name, name)
+				slog.Errorf("couldn't find service name tag %s for host %s", name, host.Name)
 				continue
 			}
 			fstatus, timestamp, err := s.Search.GetLast("os.service.running", ts.String(), false)
@@ -170,12 +182,28 @@ func (s *Schedule) Host(filter string) (map[string]*HostData, error) {
 			if fstatus != 0 {
 				running = true
 			}
-			if err == nil && timestamp > 0 {
+			if !oldOrErr(timestamp, err) {
 				host.Services[name] = &ServiceStatus{
 					Running:            running,
 					RunningLastUpdated: timestamp,
 				}
 			}
+		}
+		for _, ts := range processTags[host.Name] {
+			name, ok := ts["name"]
+			if !ok {
+				slog.Errorf("couldn't find process name tag %s for host %s", name, host.Name)
+				continue
+			}
+			p := &Process{}
+			p.CPUPercentUsed, p.CPUPercentLastUpdated, err = s.Search.GetLast("os.proc.cpu", ts.String(), true)
+			if oldOrErr(p.CPUPercentLastUpdated, err) {
+				continue
+			}
+			p.UsedRealBytes, p.UsedRealBytesLastUpdated, _ = s.Search.GetLastInt64("os.proc.mem.real", ts.String(), false)
+			p.UsedVirtualBytes, p.UsedVirtualBytesLastUpdated, _ = s.Search.GetLastInt64("os.proc.mem.virtual", ts.String(), false)
+			p.Count, p.CountLastUpdated, _ = s.Search.GetLastInt64("os.proc.count", ts.String(), false)
+			host.Processes[name] = p
 		}
 		// Process Hardware Chassis States
 		for _, ts := range hwChassisTags[host.Name] {
@@ -184,13 +212,9 @@ func (s *Schedule) Host(filter string) (map[string]*HostData, error) {
 				return nil, fmt.Errorf("couldn't find component tag for host %s", host.Name)
 			}
 			fstatus, timestamp, err := s.Search.GetLast("hw.chassis", ts.String(), false)
-			status := "Bad"
-			if fstatus == 0 {
-				status = "Ok"
-			}
-			if err == nil && timestamp > 0 {
+			if !oldOrErr(timestamp, err) {
 				host.Hardware.ChassisComponents[component] = &ChassisComponent{
-					Status:            status,
+					Status:            statusString(int64(fstatus), 0, "Ok", "Bad"),
 					StatusLastUpdated: timestamp,
 				}
 			}
@@ -198,22 +222,17 @@ func (s *Schedule) Host(filter string) (map[string]*HostData, error) {
 		for _, ts := range hwTempsTags[host.Name] {
 			name, ok := ts["name"]
 			if !ok {
-				slog.Errorf("couldn't find name tag %s for host %s", host.Name, name)
+				slog.Errorf("couldn't find name tag %s for host %s", name, host.Name)
 			}
-			tStatus, timestamp, err := s.Search.GetLast("hw.chassis.temps", ts.String(), false)
-			celsius, rTimestamp, _ := s.Search.GetLast("hw.chassis.temps.reading", ts.String(), false)
-			status := "Bad"
-			if tStatus == 0 {
-				status = "Ok"
+			t := &Temp{}
+			var tStatus float64
+			tStatus, t.StatusLastUpdated, err = s.Search.GetLast("hw.chassis.temps", ts.String(), false)
+			t.Celsius, t.CelsiusLastUpdated, _ = s.Search.GetLast("hw.chassis.temps.reading", ts.String(), false)
+			if oldOrErr(t.StatusLastUpdated, err) {
+				continue
 			}
-			if err == nil && timestamp > 0 {
-				host.Hardware.Temps[name] = &Temp{
-					Celsius:            celsius,
-					Status:             status,
-					StatusLastUpdated:  timestamp,
-					CelsiusLastUpdated: rTimestamp,
-				}
-			}
+			t.Status = statusString(int64(tStatus), 0, "Ok", "Bad")
+			host.Hardware.Temps[name] = t
 		}
 		for _, ts := range hwPowerSuppliesTags[host.Name] {
 			id, ok := ts["id"]
@@ -225,28 +244,17 @@ func (s *Schedule) Host(filter string) (map[string]*HostData, error) {
 				slog.Errorf("couldn't conver it do integer for power supply id %s", id)
 			}
 			idPlus++
-			fstatus, timestamp, err := s.Search.GetLast("hw.ps", ts.String(), false)
-			status := "Bad"
-			if fstatus == 0 {
-				status = "Ok"
-			}
-			current, currentTimestamp, _ := s.Search.GetLast("hw.chassis.current.reading", opentsdb.TagSet{"host": host.Name, "id": fmt.Sprintf("PS%v", idPlus)}.String(), false)
-			volts, voltsTimestamp, _ := s.Search.GetLast("hw.chassis.volts.reading", opentsdb.TagSet{"host": host.Name, "name": fmt.Sprintf("PS%v_Voltage_%v", idPlus, idPlus)}.String(), false)
 			ps := &PowerSupply{}
-			if err == nil && timestamp > 0 {
-				ps.Status = status
-				ps.StatusLastUpdated = timestamp
-				ps.Amps = current
-				ps.AmpsLastUpdated = currentTimestamp
-				ps.Volts = volts
-				ps.VoltsLastUpdated = voltsTimestamp
-				host.Hardware.PowerSupplies[id] = ps
+			fstatus, timestamp, err := s.Search.GetLast("hw.ps", ts.String(), false)
+			ps.Amps, ps.AmpsLastUpdated, _ = s.Search.GetLast("hw.chassis.current.reading", opentsdb.TagSet{"host": host.Name, "id": fmt.Sprintf("PS%v", idPlus)}.String(), false)
+			ps.Volts, ps.VoltsLastUpdated, _ = s.Search.GetLast("hw.chassis.volts.reading", opentsdb.TagSet{"host": host.Name, "name": fmt.Sprintf("PS%v_Voltage_%v", idPlus, idPlus)}.String(), false)
+			if oldOrErr(timestamp, err) {
+				continue
 			}
+			ps.Status = statusString(int64(fstatus), 0, "Ok", "Bad")
+			host.Hardware.PowerSupplies[id] = ps
 			for _, m := range hostMetadata {
-				if m.Name != "psMeta" || m.Time.Before(time.Now().Add(-timeFilterAge)) {
-					continue
-				}
-				if !m.Tags.Equal(ts) {
+				if m.Name != "psMeta" || m.Time.Before(time.Now().Add(-timeFilterAge)) || !m.Tags.Equal(ts) {
 					continue
 				}
 				if val, ok := m.Value.(string); ok {
@@ -262,24 +270,20 @@ func (s *Schedule) Host(filter string) (map[string]*HostData, error) {
 		for _, ts := range hwBatteriesTags[host.Name] {
 			id, ok := ts["id"]
 			if !ok {
-				slog.Errorf("couldn't find battery id tag %s for host %s", host.Name, id)
+				slog.Errorf("couldn't find battery id tag %s for host %s", id, host.Name)
 				continue
 			}
 			fstatus, timestamp, err := s.Search.GetLast("hw.storage.battery", ts.String(), false)
-			status := "Bad"
-			if fstatus == 0 {
-				status = "Ok"
-			}
-			if err == nil && timestamp > 0 {
+			if !oldOrErr(timestamp, err) {
 				host.Hardware.Storage.Batteries[id] = &Battery{
-					Status:            status,
+					Status:            statusString(int64(fstatus), 0, "Ok", "Bad"),
 					StatusLastUpdated: timestamp,
 				}
 			}
 		}
 		for _, ts := range hwBoardPowerTags[host.Name] {
 			fstatus, timestamp, err := s.Search.GetLast("hw.chassis.power.reading", ts.String(), false)
-			if err == nil && timestamp > 0 {
+			if !oldOrErr(timestamp, err) {
 				host.Hardware.BoardPowerReading = &BoardPowerReading{
 					Watts:            int64(fstatus),
 					WattsLastUpdated: timestamp,
@@ -291,22 +295,15 @@ func (s *Schedule) Host(filter string) (map[string]*HostData, error) {
 			if !ok {
 				return nil, fmt.Errorf("couldn't find physical disk id tag for host %s", host.Name)
 			}
-			fstatus, timestamp, err := s.Search.GetLast("hw.storage.pdisk", ts.String(), false)
-			status := "Bad"
-			if fstatus == 0 {
-				status = "Ok"
-			}
 			pd := &PhysicalDisk{}
-			if err == nil && timestamp > 0 {
-				pd.Status = status
+			fstatus, timestamp, err := s.Search.GetLast("hw.storage.pdisk", ts.String(), false)
+			if !oldOrErr(timestamp, err) {
+				pd.Status = statusString(int64(fstatus), 0, "Ok", "Bad")
 				pd.StatusLastUpdated = timestamp
 				host.Hardware.Storage.PhysicalDisks[id] = pd
 			}
 			for _, m := range hostMetadata {
-				if m.Name != "physicalDiskMeta" || m.Time.Before(time.Now().Add(-timeFilterAge)) {
-					continue
-				}
-				if !m.Tags.Equal(ts) {
+				if m.Name != "physicalDiskMeta" || m.Time.Before(time.Now().Add(-timeFilterAge)) || !m.Tags.Equal(ts) {
 					continue
 				}
 				if val, ok := m.Value.(string); ok {
@@ -325,13 +322,9 @@ func (s *Schedule) Host(filter string) (map[string]*HostData, error) {
 				return nil, fmt.Errorf("couldn't find virtual disk id tag for host %s", host.Name)
 			}
 			fstatus, timestamp, err := s.Search.GetLast("hw.storage.vdisk", ts.String(), false)
-			status := "Bad"
-			if fstatus == 0 {
-				status = "Ok"
-			}
-			if err == nil && timestamp > 0 {
+			if !oldOrErr(timestamp, err) {
 				host.Hardware.Storage.VirtualDisks[id] = &VirtualDisk{
-					Status:            status,
+					Status:            statusString(int64(fstatus), 0, "Ok", "Bad"),
 					StatusLastUpdated: timestamp,
 				}
 			}
@@ -342,27 +335,20 @@ func (s *Schedule) Host(filter string) (map[string]*HostData, error) {
 				return nil, fmt.Errorf("couldn't find controller id tag for host %s", host.Name)
 			}
 			fstatus, timestamp, err := s.Search.GetLast("hw.storage.controller", ts.String(), false)
-			status := "Bad"
-			if fstatus == 0 {
-				status = "Ok"
-			}
 			c := &Controller{}
-			if err == nil && timestamp > 0 {
-				c.Status = status
+			if !oldOrErr(timestamp, err) {
+				c.Status = statusString(int64(fstatus), 0, "Ok", "Bad")
 				c.StatusLastUpdated = timestamp
 				host.Hardware.Storage.Controllers[id] = c
 			}
 			for _, m := range hostMetadata {
-				if m.Name != "controllerMeta" || m.Time.Before(time.Now().Add(-timeFilterAge)) {
-					continue
-				}
-				if !m.Tags.Equal(ts) {
+				if m.Name != "controllerMeta" || m.Time.Before(time.Now().Add(-timeFilterAge)) || !m.Tags.Equal(ts) {
 					continue
 				}
 				if val, ok := m.Value.(string); ok {
 					err = json.Unmarshal([]byte(val), &c)
 					if err != nil {
-						slog.Errorf("error unmarshalling controller meta for host %s %s", host.Name, err)
+						slog.Errorf("error unmarshalling controller meta for host %s: %s", host.Name, err)
 					} else {
 						host.Hardware.Storage.Controllers[id] = c
 					}
@@ -374,12 +360,21 @@ func (s *Schedule) Host(filter string) (map[string]*HostData, error) {
 			if !ok {
 				return nil, fmt.Errorf("couldn't find disk tag for host %s", host.Name)
 			}
-			total, timestamp, _ := s.Search.GetLast("os.disk.fs.space_total", ts.String(), false)
-			used, _, _ := s.Search.GetLast("os.disk.fs.space_used", ts.String(), false)
-			host.Disks[disk] = &Disk{
-				TotalBytes:       total,
-				UsedBytes:        used,
-				StatsLastUpdated: timestamp,
+			d := &Disk{}
+			d.TotalBytes, d.StatsLastUpdated, err = s.Search.GetLastInt64("os.disk.fs.space_total", ts.String(), false)
+			d.UsedBytes, _, _ = s.Search.GetLastInt64("os.disk.fs.space_used", ts.String(), false)
+			if oldOrErr(d.StatsLastUpdated, err) {
+				continue
+			}
+			host.Disks[disk] = d
+			for _, m := range hostMetadata {
+				if m.Name != "label" || m.Time.Before(time.Now().Add(-timeFilterAge)) || !m.Tags.Equal(ts) {
+					continue
+				}
+				if label, ok := m.Value.(string); ok {
+					host.Disks[disk].Label = label
+					break
+				}
 			}
 		}
 		// Get CPU, Memory, Uptime
@@ -392,11 +387,7 @@ func (s *Schedule) Host(filter string) (map[string]*HostData, error) {
 		host.CPU.StatsLastUpdated = timestamp
 		host.Memory.TotalBytes, host.Memory.StatsLastUpdated, _ = s.Search.GetLast("os.mem.total", hostTagSet.String(), false)
 		host.Memory.UsedBytes, _, _ = s.Search.GetLast("os.mem.used", hostTagSet.String(), false)
-		var uptime float64
-		uptime, timestamp, err = s.Search.GetLast("os.system.uptime", hostTagSet.String(), false)
-		if err == nil && timestamp > 0 {
-			host.UptimeSeconds = int64(uptime)
-		}
+		host.UptimeSeconds, _, _ = s.Search.GetLastInt64("os.system.uptime", hostTagSet.String(), false)
 		for _, m := range hostMetadata {
 			if m.Time.Before(time.Now().Add(-timeFilterAge)) {
 				continue
@@ -440,6 +431,24 @@ func (s *Schedule) Host(filter string) (map[string]*HostData, error) {
 					if iface != nil {
 						iface.Description = val
 					}
+				case "dataStores":
+					dataStores := []string{}
+					err = json.Unmarshal([]byte(val), &dataStores)
+					if err != nil {
+						slog.Errorf("error unmarshalling datastores for host %s while generating host api: %s", host.Name, err)
+					}
+					for _, dataStore := range dataStores {
+						tags := opentsdb.TagSet{"disk": dataStore}.String()
+						total, totalTs, totalErr := s.Search.GetLastInt64("vsphere.disk.space_total", tags, false)
+						used, usedTs, usedErr := s.Search.GetLastInt64("vsphere.disk.space_used", tags, false)
+						if totalErr != nil || usedErr != nil || totalTs < 1 || usedTs < 1 {
+							continue
+						}
+						host.Disks[dataStore] = &Disk{
+							TotalBytes: total,
+							UsedBytes:  used,
+						}
+					}
 				case "mac":
 					if iface != nil {
 						iface.MAC = val
@@ -452,7 +461,7 @@ func (s *Schedule) Host(filter string) (map[string]*HostData, error) {
 					}
 				case "memory":
 					if name := m.Tags["name"]; name != "" {
-						statusCode, timestamp, err := s.Search.GetLast("hw.chassis.memory", opentsdb.TagSet{"host": host.Name, "name": name}.String(), false)
+						fstatus, timestamp, err := s.Search.GetLast("hw.chassis.memory", opentsdb.TagSet{"host": host.Name, "name": name}.String(), false)
 						// Status code uses the severity function in collectors/dell_hw.go. That is a binary
 						// state that is 0 for non-critical or Ok. Todo would be to update this with more
 						// complete status codes when HW collector is refactored and we have something to
@@ -461,13 +470,9 @@ func (s *Schedule) Host(filter string) (map[string]*HostData, error) {
 							StatusLastUpdated: timestamp,
 							Size:              val,
 						}
-						status := "Bad"
-						if statusCode == 0 {
-							status = "Ok"
-						}
 						// Only set if we have a value
 						if err == nil && timestamp > 0 {
-							host.Hardware.Memory[name].Status = status
+							host.Hardware.Memory[name].Status = statusString(int64(fstatus), 0, "Ok", "Bad")
 						}
 					}
 				case "hypervisor":
@@ -527,7 +532,7 @@ func (s *Schedule) Host(filter string) (map[string]*HostData, error) {
 				if !ok {
 					continue
 				}
-				val, timestamp, _ := s.Search.GetLast(metric, ts.String(), true)
+				val, timestamp, _ := s.Search.GetLastInt64(metric, ts.String(), true)
 				if dir == "in" {
 					iface.Inbps = val * 8
 				}
@@ -548,9 +553,9 @@ func (s *Schedule) Host(filter string) (map[string]*HostData, error) {
 				if ts["iface"] != ifaceId {
 					continue
 				}
-				val, timestamp, err := s.Search.GetLast(metric, ts.String(), false)
-				if err == nil && timestamp > 0 {
-					iface.LinkSpeed = int64(val)
+				val, timestamp, err := s.Search.GetLastInt64(metric, ts.String(), false)
+				if !oldOrErr(timestamp, err) {
+					iface.LinkSpeed = val
 				}
 			}
 			return nil
@@ -592,7 +597,14 @@ func (s *Schedule) Host(filter string) (map[string]*HostData, error) {
 	return hosts, nil
 }
 
-func processHostIncidents(host *HostData, states States, silences map[models.AlertKey]Silence) {
+func statusString(val, goodVal int64, goodName, badName string) string {
+	if val == goodVal {
+		return goodName
+	}
+	return badName
+}
+
+func processHostIncidents(host *HostData, states States, silences map[models.AlertKey]models.Silence) {
 	for ak, state := range states {
 		if stateHost, ok := state.Group["host"]; !ok {
 			continue
@@ -629,19 +641,20 @@ type HostInterface struct {
 	IPAddresses      []string        `json:",omitempty"`
 	RemoteMacs       []string        `json:",omitempty"`
 	CDPCacheEntries  CDPCacheEntries `json:",omitempty"`
-	Inbps            float64
+	Inbps            int64
 	LinkSpeed        int64  `json:",omitempty"`
 	MAC              string `json:",omitempty"`
 	Master           string `json:",omitempty"`
 	Name             string `json:",omitempty"`
-	Outbps           float64
+	Outbps           int64
 	StatsLastUpdated int64
 	Type             string
 }
 
 type Disk struct {
-	UsedBytes        float64
-	TotalBytes       float64
+	UsedBytes        int64
+	TotalBytes       int64
+	Label            string `json:",omitempty"`
 	StatsLastUpdated int64
 }
 
@@ -706,6 +719,7 @@ func newHostData() *HostData {
 	hd.Interfaces = make(map[string]*HostInterface)
 	hd.Disks = make(map[string]*Disk)
 	hd.Services = make(map[string]*ServiceStatus)
+	hd.Processes = make(map[string]*Process)
 	hd.ICMPData = make(map[string]*ICMPData)
 	hd.Hardware = &Hardware{}
 	hd.Hardware.ChassisComponents = make(map[string]*ChassisComponent)
@@ -731,6 +745,9 @@ func (hd *HostData) Clean() {
 	}
 	if len(hd.Services) == 0 {
 		hd.Services = nil
+	}
+	if len(hd.Processes) == 0 {
+		hd.Processes = nil
 	}
 	hwLen := len(hd.Hardware.ChassisComponents) +
 		len(hd.Hardware.Memory) +
@@ -780,6 +797,17 @@ type ServiceStatus struct {
 	RunningLastUpdated int64
 }
 
+type Process struct {
+	CPUPercentUsed              float64
+	CPUPercentLastUpdated       int64
+	UsedRealBytes               int64
+	UsedRealBytesLastUpdated    int64
+	UsedVirtualBytes            int64
+	UsedVirtualBytesLastUpdated int64
+	Count                       int64
+	CountLastUpdated            int64
+}
+
 type HostData struct {
 	CPU struct {
 		Logical          int64 `json:",omitempty"`
@@ -800,10 +828,11 @@ type HostData struct {
 		UsedBytes        float64
 		StatsLastUpdated int64
 	}
-	Services map[string]*ServiceStatus `json:",omitempty"`
-	Model    string                    `json:",omitempty"`
-	Name     string                    `json:",omitempty"`
-	OS       struct {
+	Processes map[string]*Process       `json:",omitempty"`
+	Services  map[string]*ServiceStatus `json:",omitempty"`
+	Model     string                    `json:",omitempty"`
+	Name      string                    `json:",omitempty"`
+	OS        struct {
 		Caption string `json:",omitempty"`
 		Version string `json:",omitempty"`
 	}

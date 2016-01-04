@@ -5,10 +5,9 @@ import (
 	"reflect"
 	"strings"
 
-	"bosun.org/_third_party/github.com/mjibson/snmp"
-
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
+	"bosun.org/snmp"
 )
 
 type VRRPInstanceEntry struct {
@@ -38,6 +37,7 @@ type VRRPInstanceEntry struct {
 	VInstanceScriptFault       string
 	VInstanceScriptStop        string
 	VInstanceScript            string
+	VInstanceAccept            int64
 }
 
 const (
@@ -85,7 +85,7 @@ func c_snmp_keepalived_vrrp_instances() (opentsdb.MultiDataPoint, error) {
 		}
 		s := reflect.ValueOf(entry)
 		nFields := reflect.ValueOf(*entry).NumField()
-		if id[0]+1 > nFields {
+		if id[0] > nFields {
 			return nil, fmt.Errorf("unexpected number of fields for snmp keepalived VRRPInstanceTable")
 		}
 		v := s.Elem().Field(id[0] - 1)
