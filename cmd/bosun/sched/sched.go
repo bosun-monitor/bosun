@@ -819,6 +819,22 @@ func (s Status) MarshalJSON() ([]byte, error) {
 	return json.Marshal(s.String())
 }
 
+func (s *Status) UnmarshalJSON(b []byte) error {
+	switch string(b) {
+	case "normal":
+		*s = StNormal
+	case "warning":
+		*s = StWarning
+	case "critical":
+		*s = StCritical
+	case "unknown":
+		*s = StUnknown
+	default:
+		*s = StNone
+	}
+	return nil
+}
+
 func (s Status) IsNormal() bool   { return s == StNormal }
 func (s Status) IsWarning() bool  { return s == StWarning }
 func (s Status) IsCritical() bool { return s == StCritical }
