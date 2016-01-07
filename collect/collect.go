@@ -114,7 +114,7 @@ func InitChan(tsdbhost *url.URL, root string, ch chan *opentsdb.DataPoint) error
 	if strings.HasPrefix(u.Host, ":") {
 		u.Host = "localhost" + u.Host
 	}
-	q = make(chan *opentsdb.DataPoint, BatchSize)
+	q = make(chan *opentsdb.DataPoint, MaxQueueLen)
 	tsdbURL = u.String()
 	metricRoot = root + "."
 	tchan = ch
