@@ -36,6 +36,7 @@ func queuer() {
 
 // Locks the queue and sends all datapoints. Intended to be used as scollector exits.
 func Flush() {
+	flushData()
 	qlock.Lock()
 	for len(queue) > 0 {
 		i := len(queue)
