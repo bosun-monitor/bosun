@@ -14,6 +14,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"bosun.org/metadata"
@@ -54,7 +55,7 @@ var (
 	tsdbURL             string
 	osHostname          string
 	metricRoot          string
-	queue               []*opentsdb.DataPoint
+	q                   chan *opentsdb.DataPoint
 	qlock, mlock, slock sync.Mutex // Locks for queues, maps, stats.
 	counters            = make(map[string]*addMetric)
 	sets                = make(map[string]*setMetric)
@@ -113,6 +114,7 @@ func InitChan(tsdbhost *url.URL, root string, ch chan *opentsdb.DataPoint) error
 	if strings.HasPrefix(u.Host, ":") {
 		u.Host = "localhost" + u.Host
 	}
+	q = make(chan *opentsdb.DataPoint, BatchSize)
 	tsdbURL = u.String()
 	metricRoot = root + "."
 	tchan = ch
@@ -122,11 +124,8 @@ func InitChan(tsdbhost *url.URL, root string, ch chan *opentsdb.DataPoint) error
 	if DisableDefaultCollectors {
 		return nil
 	}
-	Set("collect.dropped", Tags, func() (i interface{}) {
-		slock.Lock()
-		i = dropped
-		slock.Unlock()
-		return
+	Set("collect.dropped", Tags, func() interface{} {
+		return atomic.LoadInt64(&dropped)
 	})
 	Set("collect.sent", Tags, func() (i interface{}) {
 		slock.Lock()
@@ -136,7 +135,7 @@ func InitChan(tsdbhost *url.URL, root string, ch chan *opentsdb.DataPoint) error
 	})
 	Set("collect.queued", Tags, func() (i interface{}) {
 		qlock.Lock()
-		i = len(queue)
+		i = len(q)
 		qlock.Unlock()
 		return
 	})

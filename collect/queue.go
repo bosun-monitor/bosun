@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
+	"sync/atomic"
 	"time"
 
 	"bosun.org/metadata"
@@ -16,20 +17,10 @@ import (
 func queuer() {
 	for dp := range tchan {
 		qlock.Lock()
-		for {
-			if len(queue) > MaxQueueLen {
-				slock.Lock()
-				dropped++
-				slock.Unlock()
-				break
-			}
-			queue = append(queue, dp)
-			select {
-			case dp = <-tchan:
-				continue
-			default:
-			}
-			break
+		select {
+		case q <- dp:
+		default:
+			atomic.AddInt64(&dropped, 1)
 		}
 		qlock.Unlock()
 	}
@@ -40,40 +31,53 @@ func Flush() {
 	flushData()
 	metadata.FlushMetadata()
 	qlock.Lock()
-	for len(queue) > 0 {
-		i := len(queue)
-		if i > BatchSize {
-			i = BatchSize
+	batch := make([]*opentsdb.DataPoint, 0, BatchSize)
+	send := func() {
+		if len(batch) == 0 {
+			return
 		}
-		sending := queue[:i]
-		queue = queue[i:]
 		if Debug {
-			slog.Infof("sending: %d, remaining: %d", i, len(queue))
+			slog.Infof("sending: %d, remaining: %d", len(batch), len(q))
 		}
-		sendBatch(sending)
+		sendBatch(batch)
 	}
+	for len(q) > 0 {
+		if len(batch) == BatchSize {
+			send()
+			batch = make([]*opentsdb.DataPoint, 0, BatchSize)
+		}
+	}
+	send()
+	// sleep to let send loop complete as well.
+	time.Sleep(time.Second * 2)
 	qlock.Unlock()
 }
 
 func send() {
 	for {
-		qlock.Lock()
-		if i := len(queue); i > 0 {
-			if i > BatchSize {
-				i = BatchSize
+		batch := make([]*opentsdb.DataPoint, 0, BatchSize)
+		timeout := time.After(time.Second)
+		//aggregate points into batch. Send when full or after 1 sec
+	Loop:
+		for {
+			select {
+			case dp := <-q:
+				batch = append(batch, dp)
+				if len(batch) == BatchSize {
+					break Loop
+				}
+			case <-timeout:
+				break Loop
 			}
-			sending := queue[:i]
-			queue = queue[i:]
-			if Debug {
-				slog.Infof("sending: %d, remaining: %d", i, len(queue))
-			}
-			qlock.Unlock()
-			Sample("collect.post.batchsize", Tags, float64(len(sending)))
-			sendBatch(sending)
-		} else {
-			qlock.Unlock()
-			time.Sleep(time.Second)
 		}
+		if len(batch) == 0 {
+			continue
+		}
+		if Debug {
+			slog.Infof("sending: %d, remaining: %d", len(batch), len(q))
+		}
+		Sample("collect.post.batchsize", Tags, float64(len(batch)))
+		sendBatch(batch)
 	}
 }
 
