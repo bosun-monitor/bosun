@@ -196,29 +196,32 @@ func collectMetadata() {
 	// metadata.
 	time.Sleep(time.Minute)
 	for {
-		for _, f := range metafuncs {
-			f()
-		}
-		metalock.Lock()
-		if len(metadata) == 0 {
-			metalock.Unlock()
-			continue
-		}
-		ms := make([]Metasend, len(metadata))
-		i := 0
-		for k, v := range metadata {
-			ms[i] = Metasend{
-				Metric: k.Metric,
-				Tags:   k.TagSet(),
-				Name:   k.Name,
-				Value:  v,
-			}
-			i++
-		}
-		metalock.Unlock()
-		sendMetadata(ms)
+		flushMetadata()
 		time.Sleep(time.Hour)
 	}
+}
+
+func flushMetadata() {
+	for _, f := range metafuncs {
+		f()
+	}
+	if len(metadata) == 0 {
+		return
+	}
+	metalock.Lock()
+	ms := make([]Metasend, len(metadata))
+	i := 0
+	for k, v := range metadata {
+		ms[i] = Metasend{
+			Metric: k.Metric,
+			Tags:   k.TagSet(),
+			Name:   k.Name,
+			Value:  v,
+		}
+		i++
+	}
+	metalock.Unlock()
+	sendMetadata(ms)
 }
 
 // Metasend is the struct for sending metadata to bosun.
