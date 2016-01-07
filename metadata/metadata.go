@@ -196,12 +196,12 @@ func collectMetadata() {
 	// metadata.
 	time.Sleep(time.Minute)
 	for {
-		flushMetadata()
+		FlushMetadata()
 		time.Sleep(time.Hour)
 	}
 }
 
-func flushMetadata() {
+func FlushMetadata() {
 	for _, f := range metafuncs {
 		f()
 	}
