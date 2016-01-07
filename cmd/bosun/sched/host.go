@@ -427,6 +427,16 @@ func (s *Schedule) Host(filter string) (map[string]*HostData, error) {
 							iface.CDPCacheEntries = cdpCacheEntries
 						}
 					}
+				case "remoteMacs":
+					if iface != nil {
+						remoteMacs := []string{}
+						err = json.Unmarshal([]byte(val), &remoteMacs)
+						if err != nil {
+							slog.Errorf("error unmarshalling remoteMacs for host %s, interface %s while generating host api: %s", host.Name, m.Tags["iface"], err)
+						} else {
+							iface.RemoteMacs = remoteMacs
+						}
+					}
 				case "description", "alias":
 					if iface != nil {
 						iface.Description = val
