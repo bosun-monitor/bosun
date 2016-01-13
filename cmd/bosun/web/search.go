@@ -63,6 +63,25 @@ func MetricsByTagPair(t miniprofiler.Timer, w http.ResponseWriter, r *http.Reque
 	return schedule.Search.MetricsByTagPair(tagk, tagv)
 }
 
+func MetricsByTagKey(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	vars := mux.Vars(r)
+	tagk := vars["tagk"]
+	tagValues, err := schedule.Search.TagValuesByTagKey(tagk, time.Duration(schedule.Conf.SearchSince))
+	if err != nil {
+		return nil, err
+	}
+	// map[tagv][metrics...]
+	tagvMetrics := make(map[string][]string)
+	for _, tagv := range tagValues {
+		metrics, err := schedule.Search.MetricsByTagPair(tagk, tagv)
+		if err != nil {
+			return nil, err
+		}
+		tagvMetrics[tagv] = metrics
+	}
+	return tagvMetrics, nil
+}
+
 func TagValuesByTagKey(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	tagk := vars["tagk"]
