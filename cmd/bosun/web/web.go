@@ -18,6 +18,7 @@ import (
 	"bosun.org/_third_party/github.com/MiniProfiler/go/miniprofiler"
 	"bosun.org/_third_party/github.com/gorilla/mux"
 	"bosun.org/cmd/bosun/conf"
+	"bosun.org/cmd/bosun/database"
 	"bosun.org/cmd/bosun/sched"
 	"bosun.org/collect"
 	"bosun.org/metadata"
@@ -102,6 +103,7 @@ func Listen(listenAddr string, devMode bool, tsdbHost string) error {
 	router.Handle("/api/metadata/put", JSON(PutMetadata))
 	router.Handle("/api/metadata/delete", JSON(DeleteMetadata)).Methods("DELETE")
 	router.Handle("/api/metric", JSON(UniqueMetrics))
+	router.Handle("/api/metric/{tagk}", JSON(MetricsByTagKey))
 	router.Handle("/api/metric/{tagk}/{tagv}", JSON(MetricsByTagPair))
 	router.Handle("/api/rule", JSON(Rule))
 	router.HandleFunc("/api/shorten", Shorten)
@@ -358,12 +360,58 @@ func GetMetadata(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (
 	return schedule.GetMetadata(r.FormValue("metric"), tags)
 }
 
+type MetricMetaTagKeys struct {
+	*database.MetricMetadata
+	TagKeys []string
+}
+
 func MetadataMetrics(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	metric := r.FormValue("metric")
-	if metric == "" {
-		return nil, fmt.Errorf("metric required")
+	if metric != "" {
+		m, err := schedule.MetadataMetrics(metric)
+		if err != nil {
+			return nil, err
+		}
+		keymap, err := schedule.DataAccess.Search().GetTagKeysForMetric(metric)
+		if err != nil {
+			return nil, err
+		}
+		var keys []string
+		for k := range keymap {
+			keys = append(keys, k)
+		}
+		return &MetricMetaTagKeys{
+			MetricMetadata: m,
+			TagKeys:        keys,
+		}, nil
 	}
-	return schedule.MetadataMetrics(metric)
+	all := make(map[string]*MetricMetaTagKeys)
+	metrics, err := schedule.DataAccess.Search().GetAllMetrics()
+	if err != nil {
+		return nil, err
+	}
+	for metric := range metrics {
+		if strings.HasPrefix(metric, "__") {
+			continue
+		}
+		m, err := schedule.MetadataMetrics(metric)
+		if err != nil {
+			return nil, err
+		}
+		keymap, err := schedule.DataAccess.Search().GetTagKeysForMetric(metric)
+		if err != nil {
+			return nil, err
+		}
+		var keys []string
+		for k := range keymap {
+			keys = append(keys, k)
+		}
+		all[metric] = &MetricMetaTagKeys{
+			MetricMetadata: m,
+			TagKeys:        keys,
+		}
+	}
+	return all, nil
 }
 
 func Alerts(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
