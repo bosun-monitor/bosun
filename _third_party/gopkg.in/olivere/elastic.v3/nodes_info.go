@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"gopkg.in/olivere/elastic.v3/uritemplates"
+	"bosun.org/_third_party/gopkg.in/olivere/elastic.v3/uritemplates"
 )
 
 var (

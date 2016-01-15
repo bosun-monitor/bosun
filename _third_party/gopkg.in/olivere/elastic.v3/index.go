@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"net/url"
 
-	"gopkg.in/olivere/elastic.v3/uritemplates"
+	"bosun.org/_third_party/gopkg.in/olivere/elastic.v3/uritemplates"
 )
 
 // IndexService adds or updates a typed JSON document in a specified index,

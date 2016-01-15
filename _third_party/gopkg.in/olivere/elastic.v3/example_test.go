@@ -12,7 +12,7 @@ import (
 	"reflect"
 	"time"
 
-	"gopkg.in/olivere/elastic.v3"
+	"bosun.org/_third_party/gopkg.in/olivere/elastic.v3"
 )
 
 type Tweet struct {
