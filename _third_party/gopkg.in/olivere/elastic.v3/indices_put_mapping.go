@@ -10,7 +10,7 @@ import (
 	"net/url"
 	"strings"
 
-	"gopkg.in/olivere/elastic.v3/uritemplates"
+	"bosun.org/_third_party/gopkg.in/olivere/elastic.v3/uritemplates"
 )
 
 // IndicesPutMappingService allows to register specific mapping definition

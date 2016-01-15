@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"net/url"
 
-	"gopkg.in/olivere/elastic.v3/uritemplates"
+	"bosun.org/_third_party/gopkg.in/olivere/elastic.v3/uritemplates"
 )
 
 // DeleteService allows to delete a typed JSON document from a specified
