@@ -10,7 +10,7 @@ import (
 	"net/url"
 	"strings"
 
-	"bosun.org/_third_party/gopkg.in/olivere/elastic.v3/uritemplates"
+	"gopkg.in/olivere/elastic.v3/uritemplates"
 )
 
 // IndicesExistsTypeService checks if one or more types exist in one or more indices.
