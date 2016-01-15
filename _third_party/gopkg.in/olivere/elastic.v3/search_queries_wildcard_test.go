@@ -8,7 +8,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"bosun.org/_third_party/gopkg.in/olivere/elastic.v3"
+	"gopkg.in/olivere/elastic.v3"
 )
 
 func ExampleWildcardQuery() {

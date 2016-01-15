@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"net/url"
 
-	"bosun.org/_third_party/gopkg.in/olivere/elastic.v3/uritemplates"
+	"gopkg.in/olivere/elastic.v3/uritemplates"
 )
 
 // PutTemplateService creates or updates a search template.
