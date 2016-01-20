@@ -6,18 +6,21 @@ import (
 	"math"
 	"reflect"
 	"runtime"
+	"runtime/debug"
 	"sort"
 	"time"
 
 	"bosun.org/_third_party/github.com/MiniProfiler/go/miniprofiler"
 	"bosun.org/_third_party/github.com/influxdb/influxdb/client"
-	"bosun.org/_third_party/github.com/olivere/elastic"
+	elasticOld "bosun.org/_third_party/github.com/olivere/elastic"
+	elastic "bosun.org/_third_party/gopkg.in/olivere/elastic.v3"
 	"bosun.org/cmd/bosun/cache"
 	"bosun.org/cmd/bosun/expr/parse"
 	"bosun.org/cmd/bosun/search"
 	"bosun.org/graphite"
 	"bosun.org/models"
 	"bosun.org/opentsdb"
+	"bosun.org/slog"
 )
 
 type State struct {
@@ -38,9 +41,13 @@ type State struct {
 	graphiteQueries []graphite.Request
 	graphiteContext graphite.Context
 
-	// LogstashElastic
-	logstashQueries []elastic.SearchSource
+	// LogstashElastic (for pre ES v2)
+	logstashQueries []elasticOld.SearchSource
 	logstashHosts   LogstashElasticHosts
+
+	// Elastic (for post ES v2)
+	elasticQueries []elastic.SearchSource
+	elasticHosts   ElasticHosts
 
 	// InfluxDB
 	InfluxConfig client.Config
@@ -78,7 +85,7 @@ func New(expr string, funcs ...map[string]parse.Func) (*Expr, error) {
 
 // Execute applies a parse expression to the specified OpenTSDB context, and
 // returns one result per group. T may be nil to ignore timings.
-func (e *Expr) Execute(c opentsdb.Context, g graphite.Context, l LogstashElasticHosts, influxConfig client.Config, cache *cache.Cache, T miniprofiler.Timer, now time.Time, autods int, unjoinedOk bool, search *search.Search, squelched func(tags opentsdb.TagSet) bool, history AlertStatusProvider) (r *Results, queries []opentsdb.Request, err error) {
+func (e *Expr) Execute(c opentsdb.Context, g graphite.Context, l LogstashElasticHosts, eh ElasticHosts, influxConfig client.Config, cache *cache.Cache, T miniprofiler.Timer, now time.Time, autods int, unjoinedOk bool, search *search.Search, squelched func(tags opentsdb.TagSet) bool, history AlertStatusProvider) (r *Results, queries []opentsdb.Request, err error) {
 	if squelched == nil {
 		squelched = func(tags opentsdb.TagSet) bool {
 			return false
@@ -90,6 +97,7 @@ func (e *Expr) Execute(c opentsdb.Context, g graphite.Context, l LogstashElastic
 		tsdbContext:     c,
 		graphiteContext: g,
 		logstashHosts:   l,
+		elasticHosts:    eh,
 		InfluxConfig:    influxConfig,
 		now:             now,
 		autods:          autods,
@@ -120,6 +128,7 @@ func (e *Expr) ExecuteState(s *State, T miniprofiler.Timer) (r *Results, queries
 func errRecover(errp *error) {
 	e := recover()
 	if e != nil {
+		slog.Infof("%s: %s", e, debug.Stack())
 		switch err := e.(type) {
 		case runtime.Error:
 			panic(e)
@@ -171,6 +180,31 @@ func (s Series) MarshalJSON() ([]byte, error) {
 		r[fmt.Sprint(k.Unix())] = Scalar(v)
 	}
 	return json.Marshal(r)
+}
+
+type ESQuery struct {
+	Query elastic.Query
+}
+
+func (e ESQuery) Type() parse.FuncType { return parse.TypeESQuery }
+func (e ESQuery) Value() interface{}   { return e }
+func (e ESQuery) MarshalJSON() ([]byte, error) {
+	source, err := e.Query.Source()
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(source)
+}
+
+type ESIndexer struct {
+	TimeField string
+	Generate  func(startDuration, endDuration *time.Time) ([]string, error)
+}
+
+func (e ESIndexer) Type() parse.FuncType { return parse.TypeESIndexer }
+func (e ESIndexer) Value() interface{}   { return e }
+func (e ESIndexer) MarshalJSON() ([]byte, error) {
+	return json.Marshal("ESGenerator")
 }
 
 type SortablePoint struct {
@@ -596,11 +630,11 @@ func (e *State) walkFunc(node *parse.FuncNode, T miniprofiler.Timer) *Results {
 			case *parse.NumberNode:
 				v = t.Float64
 			case *parse.FuncNode:
-				v = extractScalar(e.walkFunc(t, T))
+				v = extract(e.walkFunc(t, T))
 			case *parse.UnaryNode:
-				v = extractScalar(e.walkUnary(t, T))
+				v = extract(e.walkUnary(t, T))
 			case *parse.BinaryNode:
-				v = extractScalar(e.walkBinary(t, T))
+				v = extract(e.walkBinary(t, T))
 			default:
 				panic(fmt.Errorf("expr: unknown func arg type"))
 			}
@@ -627,10 +661,16 @@ func (e *State) walkFunc(node *parse.FuncNode, T miniprofiler.Timer) *Results {
 	return res
 }
 
-// extractScalar will return a float64 if res contains exactly one scalar.
-func extractScalar(res *Results) interface{} {
+// extract will return a float64 if res contains exactly one scalar or a ESQuery if that is the type
+func extract(res *Results) interface{} {
 	if len(res.Results) == 1 && res.Results[0].Type() == parse.TypeScalar {
 		return float64(res.Results[0].Value.Value().(Scalar))
+	}
+	if len(res.Results) == 1 && res.Results[0].Type() == parse.TypeESQuery {
+		return res.Results[0].Value.Value()
+	}
+	if len(res.Results) == 1 && res.Results[0].Type() == parse.TypeESIndexer {
+		return res.Results[0].Value.Value()
 	}
 	return res
 }

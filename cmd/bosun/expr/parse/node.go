@@ -103,20 +103,32 @@ func (f *FuncNode) StringAST() string {
 
 func (f *FuncNode) Check(t *Tree) error {
 	const errFuncType = "parse: bad argument type in %s, expected %s, got %s"
-	if len(f.Args) < len(f.F.Args) {
-		return fmt.Errorf("parse: not enough arguments for %s", f.Name)
-	} else if len(f.Args) > len(f.F.Args) {
-		return fmt.Errorf("parse: too many arguments for %s", f.Name)
-	}
-	for i, a := range f.Args {
-		ft := f.F.Args[i]
-		at := a.Return()
-		if ft == TypeNumberSet && at == TypeScalar {
-			// Scalars are promoted to NumberSets during execution.
-		} else if ft != at {
-			return fmt.Errorf("parse: expected %v, got %v", ft, at)
+	// For VArgs we make sure they are all of the expected type
+	if f.F.VArgs {
+		if len(f.Args) < len(f.F.Args) {
+			return fmt.Errorf("parse: variable argument functions need at least one arg")
 		}
-		if err := a.Check(t); err != nil {
+	} else {
+		if len(f.Args) < len(f.F.Args) {
+			return fmt.Errorf("parse: not enough arguments for %s", f.Name)
+		} else if len(f.Args) > len(f.F.Args) {
+			return fmt.Errorf("parse: too many arguments for %s", f.Name)
+		}
+	}
+	for i, arg := range f.Args {
+		var funcType FuncType
+		if f.F.VArgs && i >= f.F.VArgsPos {
+			funcType = f.F.Args[f.F.VArgsPos]
+		} else {
+			funcType = f.F.Args[i]
+		}
+		argType := arg.Return()
+		if funcType == TypeNumberSet && argType == TypeScalar {
+			// Scalars are promoted to NumberSets during execution.
+		} else if funcType != argType {
+			return fmt.Errorf("parse: expected %v, got %v for argument %v (%v)", funcType, argType, i, arg.String())
+		}
+		if err := arg.Check(t); err != nil {
 			return err
 		}
 	}
