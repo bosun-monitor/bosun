@@ -1129,10 +1129,10 @@ bosunApp.directive('elastic', [
 ]);
 bosunApp.directive('tsBar', ['$window', 'nfmtFilter', function ($window, fmtfilter) {
         var margin = {
-            top: 10,
-            right: 10,
-            bottom: 200,
-            left: 80
+            top: 20,
+            right: 20,
+            bottom: 0,
+            left: 200
         };
         return {
             scope: {
@@ -1144,22 +1144,21 @@ bosunApp.directive('tsBar', ['$window', 'nfmtFilter', function ($window, fmtfilt
                 var height = svgHeight - margin.top - margin.bottom;
                 var svgWidth;
                 var width;
-                var yScale = d3.scale.linear().range([height, 0]);
-                var xScale = d3.scale.ordinal().rangeRoundBands([0, width], .1);
+                var xScale = d3.scale.linear();
+                var yScale = d3.scale.ordinal();
                 var top = d3.select(elem[0])
                     .append('svg')
                     .attr('height', svgHeight)
                     .attr('width', '100%');
                 var svg = top
-                    .append('g')
-                    .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
+                    .append('g');
+                //.attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
                 var xAxis = d3.svg.axis()
                     .scale(xScale)
-                    .orient("bottom");
+                    .orient("top");
                 var yAxis = d3.svg.axis()
                     .scale(yScale)
-                    .orient("left")
-                    .ticks(10);
+                    .orient("left");
                 scope.$watch('data', update);
                 var w = angular.element($window);
                 scope.$watch(function () {
@@ -1169,14 +1168,24 @@ bosunApp.directive('tsBar', ['$window', 'nfmtFilter', function ($window, fmtfilt
                     scope.$apply();
                 });
                 function resize() {
+                    if (!scope.data) {
+                        return;
+                    }
                     svgWidth = elem.width();
                     if (svgWidth <= 0) {
                         return;
                     }
+                    margin.left = d3.max(scope.data, function (d) { return d.name.length * 8; });
                     width = svgWidth - margin.left - margin.right;
-                    xScale.rangeRoundBands([0, width], .1);
-                    xAxis.scale(xScale);
+                    svgHeight = scope.data.length * 15;
+                    height = svgHeight - margin.top - margin.bottom;
+                    xScale.range([0, width]);
+                    yScale.rangeRoundBands([0, height], .1);
+                    yAxis.scale(yScale);
+                    svg.attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
                     svg.attr('width', svgWidth);
+                    svg.attr('height', height);
+                    top.attr('height', svgHeight);
                     xAxis.ticks(width / 60);
                     draw();
                 }
@@ -1190,29 +1199,25 @@ bosunApp.directive('tsBar', ['$window', 'nfmtFilter', function ($window, fmtfilt
                     if (!scope.data) {
                         return;
                     }
-                    xScale.domain(scope.data.map(function (d) { return d.name; }));
-                    yScale.domain([0, d3.max(scope.data, function (d) { return d.Value; })]);
+                    yScale.domain(scope.data.map(function (d) { return d.name; }));
+                    xScale.domain([0, d3.max(scope.data, function (d) { return d.Value; })]);
                     svg.selectAll('g.axis').remove();
                     //X axis
                     svg.append("g")
                         .attr("class", "x axis")
-                        .attr("transform", "translate(0," + height + ")")
-                        .call(xAxis)
-                        .selectAll("text")
-                        .attr("class", "bar_label")
-                        .style("text-anchor", "end")
-                        .attr("transform", function (d) { return "rotate(-45)"; });
+                        .call(xAxis);
                     svg.append("g")
                         .attr("class", "y axis")
-                        .call(yAxis);
+                        .call(yAxis)
+                        .selectAll("text")
+                        .style("text-anchor", "end");
                     var bars = svg.selectAll(".bar").data(scope.data);
                     bars.enter()
                         .append("rect")
                         .attr("class", "bar")
-                        .attr("x", function (d) { return xScale(d.name); })
-                        .attr("width", xScale.rangeBand())
-                        .attr('height', function (d) { return height - yScale(d.Value); })
-                        .attr("y", function (d) { return yScale(d.Value); });
+                        .attr("y", function (d) { return yScale(d.name); })
+                        .attr("height", yScale.rangeBand())
+                        .attr('width', function (d) { return xScale(d.Value); });
                 }
                 ;
             }
