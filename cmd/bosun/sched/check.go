@@ -82,8 +82,10 @@ type RunHistory struct {
 	GraphiteContext graphite.Context
 	InfluxConfig    client.Config
 	Logstash        expr.LogstashElasticHosts
-	Events          map[models.AlertKey]*Event
-	schedule        *Schedule
+	Elastic         expr.ElasticHosts
+
+	Events   map[models.AlertKey]*Event
+	schedule *Schedule
 }
 
 // AtTime creates a new RunHistory starting at t with the same context and
@@ -103,6 +105,7 @@ func (s *Schedule) NewRunHistory(start time.Time, cache *cache.Cache) *RunHistor
 		GraphiteContext: s.Conf.GraphiteContext(),
 		InfluxConfig:    s.Conf.InfluxConfig,
 		Logstash:        s.Conf.LogstashElasticHosts,
+		Elastic:         s.Conf.ElasticHosts,
 		schedule:        s,
 	}
 }
@@ -584,7 +587,7 @@ func (s *Schedule) executeExpr(T miniprofiler.Timer, rh *RunHistory, a *conf.Ale
 	if e == nil {
 		return nil, nil
 	}
-	results, _, err := e.Execute(rh.Context, rh.GraphiteContext, rh.Logstash, rh.InfluxConfig, rh.Cache, T, rh.Start, 0, a.UnjoinedOK, s.Search, s.Conf.AlertSquelched(a), rh)
+	results, _, err := e.Execute(rh.Context, rh.GraphiteContext, rh.Logstash, rh.Elastic, rh.InfluxConfig, rh.Cache, T, rh.Start, 0, a.UnjoinedOK, s.Search, s.Conf.AlertSquelched(a), rh)
 	return results, err
 }
 

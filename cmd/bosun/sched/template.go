@@ -191,7 +191,7 @@ func (c *Context) evalExpr(e *expr.Expr, filter bool, series bool, autods int) (
 	if series && e.Root.Return() != parse.TypeSeriesSet {
 		return nil, "", fmt.Errorf("need a series, got %T (%v)", e, e)
 	}
-	res, _, err := e.Execute(c.runHistory.Context, c.runHistory.GraphiteContext, c.runHistory.Logstash, c.runHistory.InfluxConfig, c.runHistory.Cache, nil, c.runHistory.Start, autods, c.Alert.UnjoinedOK, c.schedule.Search, c.schedule.Conf.AlertSquelched(c.Alert), c.runHistory)
+	res, _, err := e.Execute(c.runHistory.Context, c.runHistory.GraphiteContext, c.runHistory.Logstash, c.runHistory.Elastic, c.runHistory.InfluxConfig, c.runHistory.Cache, nil, c.runHistory.Start, autods, c.Alert.UnjoinedOK, c.schedule.Search, c.schedule.Conf.AlertSquelched(c.Alert), c.runHistory)
 	if err != nil {
 		return nil, "", fmt.Errorf("%s: %v", e, err)
 	}
@@ -481,6 +481,47 @@ func (c *Context) LSQueryAll(index_root, keystring, filter, sduration, eduration
 		return nil, err
 	}
 	results, err := c.runHistory.Logstash.Query(req)
+	if err != nil {
+		return nil, err
+	}
+	r := make([]interface{}, len(results.Hits.Hits))
+	for i, h := range results.Hits.Hits {
+		var err error
+		err = json.Unmarshal(*h.Source, &r[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return r, nil
+}
+
+func (c *Context) ESQuery(indexRoot expr.ESIndexer, filter expr.ESQuery, sduration, eduration string, size int) (interface{}, error) {
+	req, err := expr.ESBaseQuery(c.runHistory.Start, indexRoot, c.runHistory.Elastic, filter.Query, sduration, eduration, size)
+	if err != nil {
+		return nil, err
+	}
+	req.Scope(&c.Group)
+	results, err := c.runHistory.Elastic.Query(req)
+	if err != nil {
+		return nil, err
+	}
+	r := make([]interface{}, len(results.Hits.Hits))
+	for i, h := range results.Hits.Hits {
+		var err error
+		err = json.Unmarshal(*h.Source, &r[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return r, nil
+}
+
+func (c *Context) ESQueryAll(indexRoot expr.ESIndexer, filter expr.ESQuery, sduration, eduration string, size int) (interface{}, error) {
+	req, err := expr.ESBaseQuery(c.runHistory.Start, indexRoot, c.runHistory.Elastic, filter.Query, sduration, eduration, size)
+	if err != nil {
+		return nil, err
+	}
+	results, err := c.runHistory.Elastic.Query(req)
 	if err != nil {
 		return nil, err
 	}

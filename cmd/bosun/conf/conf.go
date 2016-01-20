@@ -66,7 +66,8 @@ type Conf struct {
 	TSDBVersion          *opentsdb.Version         // If set to 2.2 , enable passthrough of wildcards and filters, and add support for groupby
 	GraphiteHost         string                    // Graphite query host: foo.bar.baz
 	GraphiteHeaders      []string                  // extra http headers when querying graphite.
-	LogstashElasticHosts expr.LogstashElasticHosts // CSV Elastic Hosts (All part of the same cluster) that stores logstash documents, i.e http://ny-elastic01:9200
+	LogstashElasticHosts expr.LogstashElasticHosts // CSV Elastic Hosts (All part of the same cluster) that stores logstash documents, i.e http://ny-elastic01:9200. Only works with elastc pre-v2, and expects the schema to be logstash's default.
+	ElasticHosts         expr.ElasticHosts         // CSV Elastic Hosts (All part of the same cluster), i.e http://ny-elastic01:9200. Only works with elastic v2+, and unlike logstash it is designed to be able to use various elastic schemas.
 	InfluxConfig         client.Config
 
 	tree            *parse.Tree
@@ -435,6 +436,8 @@ func (c *Conf) loadGlobal(p *parse.PairNode) {
 		c.GraphiteHeaders = append(c.GraphiteHeaders, v)
 	case "logstashElasticHosts":
 		c.LogstashElasticHosts = strings.Split(v, ",")
+	case "elasticHosts":
+		c.ElasticHosts = strings.Split(v, ",")
 	case "influxHost":
 		c.InfluxConfig.URL.Host = v
 		c.InfluxConfig.UserAgent = "bosun"
@@ -1342,6 +1345,9 @@ func (c *Conf) Funcs() map[string]eparse.Func {
 	}
 	if len(c.LogstashElasticHosts) != 0 {
 		merge(expr.LogstashElastic)
+	}
+	if len(c.ElasticHosts) != 0 {
+		merge(expr.Elastic)
 	}
 	if c.InfluxConfig.URL.Host != "" {
 		merge(expr.Influx)

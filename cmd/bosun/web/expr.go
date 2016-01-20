@@ -76,7 +76,8 @@ func Expr(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (v inter
 	graphiteContext := schedule.Conf.GraphiteContext()
 	ls := schedule.Conf.LogstashElasticHosts
 	influx := schedule.Conf.InfluxConfig
-	res, queries, err := e.Execute(tsdbContext, graphiteContext, ls, influx, cacheObj, t, now, 0, false, schedule.Search, nil, nil)
+	es := schedule.Conf.ElasticHosts
+	res, queries, err := e.Execute(tsdbContext, graphiteContext, ls, es, influx, cacheObj, t, now, 0, false, schedule.Search, nil, nil)
 	if err != nil {
 		return nil, err
 	}

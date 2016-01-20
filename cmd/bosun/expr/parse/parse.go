@@ -29,11 +29,13 @@ type Tree struct {
 }
 
 type Func struct {
-	Args   []FuncType
-	Return FuncType
-	Tags   func([]Node) (Tags, error)
-	F      interface{}
-	Check  func(*Tree, *FuncNode) error
+	Args     []FuncType
+	Return   FuncType
+	Tags     func([]Node) (Tags, error)
+	F        interface{}
+	VArgs    bool
+	VArgsPos int
+	Check    func(*Tree, *FuncNode) error
 }
 
 type FuncType int
@@ -48,6 +50,10 @@ func (f FuncType) String() string {
 		return "series"
 	case TypeScalar:
 		return "scalar"
+	case TypeESQuery:
+		return "esquery"
+	case TypeESIndexer:
+		return "esindexer"
 	default:
 		return "unknown"
 	}
@@ -58,6 +64,8 @@ const (
 	TypeScalar
 	TypeNumberSet
 	TypeSeriesSet
+	TypeESQuery
+	TypeESIndexer
 )
 
 type Tags map[string]struct{}

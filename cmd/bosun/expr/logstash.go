@@ -33,6 +33,15 @@ var LogstashElastic = map[string]parse.Func{
 	},
 }
 
+func logstashTagQuery(args []parse.Node) (parse.Tags, error) {
+	n := args[1].(*parse.StringNode)
+	t := make(parse.Tags)
+	for _, s := range strings.Split(n.Text, ",") {
+		t[strings.Split(s, ":")[0]] = struct{}{}
+	}
+	return t, nil
+}
+
 // This is an array of Logstash hosts and exists as a type for something to attach
 // methods to.  The elasticsearch library will use the listed to hosts to discover all
 // of the hosts in the config

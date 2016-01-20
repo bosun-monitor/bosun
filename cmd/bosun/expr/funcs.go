@@ -18,15 +18,6 @@ import (
 	"bosun.org/slog"
 )
 
-func logstashTagQuery(args []parse.Node) (parse.Tags, error) {
-	n := args[1].(*parse.StringNode)
-	t := make(parse.Tags)
-	for _, s := range strings.Split(n.Text, ",") {
-		t[strings.Split(s, ":")[0]] = struct{}{}
-	}
-	return t, nil
-}
-
 func tagQuery(args []parse.Node) (parse.Tags, error) {
 	n := args[0].(*parse.StringNode)
 	// Since all 2.1 queries are valid 2.2 queries, at this time
