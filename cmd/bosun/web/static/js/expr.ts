@@ -8,6 +8,7 @@ interface IExprScope extends RootScope {
 	set: () => void;
 	tab: string;
 	graph: any;
+	bar: any;
 	svg_url: string;
 	date: string;
 	time: string;
@@ -47,6 +48,20 @@ bosunControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route
 			if (data.Type == 'series') {
 				$scope.svg_url = '/api/egraph/' + btoa(current) + '.svg?now=' + Math.floor(Date.now() / 1000);
 				$scope.graph = toChart(data.Results);
+			}
+			if (data.Type == 'number') {
+				 angular.forEach(data.Results, (d) => {
+					var name = '{';
+					angular.forEach(d.Group, (tagv, tagk) => {
+							if (name.length > 1) {
+								 name += ',';
+							}
+							name += tagk + '=' + tagv;
+					});
+					name += '}';
+					d.name = name;
+				 });
+				$scope.bar = data.Results;
 			}
 			$scope.running = '';
 		})
