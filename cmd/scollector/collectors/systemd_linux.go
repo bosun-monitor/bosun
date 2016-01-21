@@ -112,7 +112,7 @@ func watchSystemdServiceProc(md *opentsdb.MultiDataPoint, conn *dbus.Conn, unit 
 	}
 
 	wp := WatchedProc{
-		Command:   cmdline[0],
+		Command:   regexp.MustCompile("^" + regexp.QuoteMeta(cmdline[0]) + "$"),
 		Name:      strings.TrimSuffix(unit.Name, ".service"),
 		Processes: make(map[string]int),
 		ArgMatch:  regexp.MustCompile(""),
