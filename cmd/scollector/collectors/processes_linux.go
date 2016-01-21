@@ -280,7 +280,7 @@ func NewWatchedProc(params conf.ProcessParams) (*WatchedProc, error) {
 		return nil, fmt.Errorf("bad process name: %v", params.Name)
 	}
 	return &WatchedProc{
-		Command:      params.Command,
+		Command:      regexp.MustCompile(params.Command),
 		Name:         params.Name,
 		IncludeCount: params.IncludeCount,
 		Processes:    make(map[string]int),
@@ -290,7 +290,7 @@ func NewWatchedProc(params conf.ProcessParams) (*WatchedProc, error) {
 }
 
 type WatchedProc struct {
-	Command      string
+	Command      *regexp.Regexp
 	Name         string
 	IncludeCount bool
 	Processes    map[string]int
@@ -304,7 +304,7 @@ func (w *WatchedProc) Check(procs []*Process) {
 		if _, ok := w.Processes[l.Pid]; ok {
 			continue
 		}
-		if !strings.Contains(l.Command, w.Command) {
+		if !w.Command.MatchString(l.Command) {
 			continue
 		}
 		if !w.ArgMatch.MatchString(l.Arguments) {
