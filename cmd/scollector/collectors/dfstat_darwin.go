@@ -17,7 +17,7 @@ func c_dfstat_darwin() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	util.ReadCommand(func(line string) error {
 		fields := strings.Fields(line)
-		if line == "" || len(fields) < 9 || !IsDigit(fields[2]) {
+		if _, err := strconv.Atoi(fields[2]); line == "" || len(fields) < 9 || err != nil {
 			return nil
 		}
 		mount := fields[8]

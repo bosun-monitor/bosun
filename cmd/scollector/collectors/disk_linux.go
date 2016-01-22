@@ -7,16 +7,15 @@ import (
 	"strconv"
 	"strings"
 
+	"bosun.org/_third_party/golang.org/x/sys/unix"
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
-	"bosun.org/util"
 )
 
 func init() {
 	collectors = append(collectors, &IntervalCollector{F: c_iostat_linux})
 	collectors = append(collectors, &IntervalCollector{F: c_dfstat_blocks_linux})
-	collectors = append(collectors, &IntervalCollector{F: c_dfstat_inodes_linux})
 }
 
 var diskLinuxFields = []struct {
@@ -73,41 +72,25 @@ func removable_fs(name string) bool {
 	return false
 }
 
-func isPseudoFS(name string) (res bool) {
-	err := readLine("/proc/filesystems", func(s string) error {
-		ss := strings.Split(s, "\t")
-		if len(ss) == 2 && ss[1] == name && ss[0] == "nodev" {
-			res = true
-		}
-		return nil
-	})
-	if err != nil {
-		slog.Errorf("can not read '/proc/filesystems': %v", err)
-	}
-	return
-}
-
 func c_iostat_linux() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	var removables []string
 	err := readLine("/proc/diskstats", func(s string) error {
 		values := strings.Fields(s)
-		if len(values) < 4 {
-			return nil
-		} else if values[3] == "0" {
+		if len(values) < 4 || values[3] == "0" {
 			// Skip disks that haven't done a single read.
 			return nil
 		}
 		metric := "linux.disk.part."
 		i0, _ := strconv.Atoi(values[0])
 		i1, _ := strconv.Atoi(values[1])
-		var block_size int64
+		var block_size int
 		device := values[2]
 		ts := opentsdb.TagSet{"dev": device}
 		if i1%16 == 0 && i0 > 1 {
 			metric = "linux.disk."
 			if b, err := ioutil.ReadFile("/sys/block/" + device + "/queue/hw_sector_size"); err == nil {
-				block_size, _ = strconv.ParseInt(strings.TrimSpace(string(b)), 10, 64)
+				block_size, _ = strconv.Atoi(strings.TrimSpace(string(b)))
 			}
 		}
 		if removable(values[0], values[1]) {
@@ -119,17 +102,17 @@ func c_iostat_linux() (opentsdb.MultiDataPoint, error) {
 			}
 		}
 		if len(values) == 14 {
-			var read_sectors, msec_read, write_sectors, msec_write float64
+			var read_sectors, msec_read, write_sectors, msec_write int
 			for i, v := range values[3:] {
 				switch diskLinuxFields[i].key {
 				case "read_sectors":
-					read_sectors, _ = strconv.ParseFloat(v, 64)
+					read_sectors, _ = strconv.Atoi(v)
 				case "msec_read":
-					msec_read, _ = strconv.ParseFloat(v, 64)
+					msec_read, _ = strconv.Atoi(v)
 				case "write_sectors":
-					write_sectors, _ = strconv.ParseFloat(v, 64)
+					write_sectors, _ = strconv.Atoi(v)
 				case "msec_write":
-					msec_write, _ = strconv.ParseFloat(v, 64)
+					msec_write, _ = strconv.Atoi(v)
 				}
 				Add(&md, metric+diskLinuxFields[i].key, v, ts, diskLinuxFields[i].rate, diskLinuxFields[i].unit, diskLinuxFields[i].desc)
 			}
@@ -140,8 +123,8 @@ func c_iostat_linux() (opentsdb.MultiDataPoint, error) {
 				Add(&md, metric+"time_per_write", write_sectors/msec_write, ts, metadata.Rate, metadata.MilliSecond, "")
 			}
 			if block_size != 0 {
-				Add(&md, metric+"bytes", int64(write_sectors)*block_size, opentsdb.TagSet{"type": "write"}.Merge(ts), metadata.Counter, metadata.Bytes, "Total number of bytes written to disk.")
-				Add(&md, metric+"bytes", int64(read_sectors)*block_size, opentsdb.TagSet{"type": "read"}.Merge(ts), metadata.Counter, metadata.Bytes, "Total number of bytes read to disk.")
+				Add(&md, metric+"bytes", write_sectors*block_size, opentsdb.TagSet{"type": "write"}.Merge(ts), metadata.Counter, metadata.Bytes, "Total number of bytes written to disk.")
+				Add(&md, metric+"bytes", read_sectors*block_size, opentsdb.TagSet{"type": "read"}.Merge(ts), metadata.Counter, metadata.Bytes, "Total number of bytes read to disk.")
 				Add(&md, metric+"block_size", block_size, ts, metadata.Gauge, metadata.Bytes, "Sector size of the block device.")
 			}
 		} else if len(values) == 7 {
@@ -158,23 +141,45 @@ func c_iostat_linux() (opentsdb.MultiDataPoint, error) {
 
 func c_dfstat_blocks_linux() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
-	err := util.ReadCommand(func(line string) error {
+
+	var devFS = []string{}
+	isPseudo := func(name string) bool {
+		if len(devFS) < 1 {
+			err := readLine("/proc/filesystems", func(s string) error {
+				ss := strings.Split(s, "\t")
+				if len(ss) == 2 && ss[0] != "nodev" {
+					devFS = append(devFS, ss[1])
+				}
+				return nil
+			})
+			if err != nil {
+				slog.Errorf("can not read '/proc/filesystems': %v", err)
+			}
+		}
+		for _, fs := range devFS {
+			if name == fs {
+				return false
+			}
+		}
+		return true
+	}
+
+	err := readLine("/proc/mounts", func(line string) error {
+		var sfs unix.Statfs_t
 		fields := strings.Fields(line)
-		// TODO: support mount points with spaces in them. They mess up the field order
-		// currently due to df's columnar output.
-		if len(fields) != 7 || !IsDigit(fields[2]) {
+		if isPseudo(fields[2]) {
 			return nil
 		}
+		r := strings.NewReplacer("\\040", " ", "\\011", "\t", "\\134", "\\")
+		fields[1] = r.Replace(fields[1])
 		// /dev/mapper/vg0-usr ext4 13384816 9996920 2815784 79% /usr
+		mount := fields[1]
+		unix.Statfs(mount, &sfs)
 		fs := fields[0]
-		fsType := fields[1]
-		spaceTotal := fields[2]
-		spaceUsed := fields[3]
-		spaceFree := fields[4]
-		mount := fields[6]
-		if isPseudoFS(fsType) {
-			return nil
-		}
+		spaceTotal := sfs.Blocks * uint64(sfs.Bsize)
+		spaceUsed := (sfs.Blocks - sfs.Bfree) * uint64(sfs.Bsize)
+		spaceFree := sfs.Bfree * uint64(sfs.Bsize)
+
 		tags := opentsdb.TagSet{"mount": mount}
 		os_tags := opentsdb.TagSet{"disk": mount}
 		metric := "linux.disk.fs."
@@ -189,42 +194,11 @@ func c_dfstat_blocks_linux() (opentsdb.MultiDataPoint, error) {
 		Add(&md, ometric+"space_total", spaceTotal, os_tags, metadata.Gauge, metadata.Bytes, osDiskTotalDesc)
 		Add(&md, ometric+"space_used", spaceUsed, os_tags, metadata.Gauge, metadata.Bytes, osDiskUsedDesc)
 		Add(&md, ometric+"space_free", spaceFree, os_tags, metadata.Gauge, metadata.Bytes, osDiskFreeDesc)
-		st, _ := strconv.ParseFloat(spaceTotal, 64)
-		sf, _ := strconv.ParseFloat(spaceFree, 64)
-		if st != 0 {
-			Add(&md, osDiskPctFree, sf/st*100, os_tags, metadata.Gauge, metadata.Pct, osDiskPctFreeDesc)
-		}
+		Add(&md, osDiskPctFree, spaceFree/spaceTotal*100, os_tags, metadata.Gauge, metadata.Pct, osDiskPctFreeDesc)
+		Add(&md, metric+"inodes_total", sfs.Files, tags, metadata.Gauge, metadata.Count, "")
+		Add(&md, metric+"inodes_used", sfs.Files-sfs.Ffree, tags, metadata.Gauge, metadata.Count, "")
+		Add(&md, metric+"inodes_free", sfs.Ffree, tags, metadata.Gauge, metadata.Count, "")
 		return nil
-	}, "df", "-lPT", "--block-size", "1")
-	return md, err
-}
-
-func c_dfstat_inodes_linux() (opentsdb.MultiDataPoint, error) {
-	var md opentsdb.MultiDataPoint
-	err := util.ReadCommand(func(line string) error {
-		fields := strings.Fields(line)
-		if len(fields) != 7 || !IsDigit(fields[2]) {
-			return nil
-		}
-		// /dev/mapper/vg0-usr ext4 851968 468711 383257 56% /usr
-		fs := fields[0]
-		fsType := fields[1]
-		inodesTotal := fields[2]
-		inodesUsed := fields[3]
-		inodesFree := fields[4]
-		mount := fields[6]
-		if isPseudoFS(fsType) {
-			return nil
-		}
-		tags := opentsdb.TagSet{"mount": mount}
-		metric := "linux.disk.fs."
-		if removable_fs(fs) {
-			metric += "rem."
-		}
-		Add(&md, metric+"inodes_total", inodesTotal, tags, metadata.Gauge, metadata.Count, "")
-		Add(&md, metric+"inodes_used", inodesUsed, tags, metadata.Gauge, metadata.Count, "")
-		Add(&md, metric+"inodes_free", inodesFree, tags, metadata.Gauge, metadata.Count, "")
-		return nil
-	}, "df", "-liPT")
+	})
 	return md, err
 }
