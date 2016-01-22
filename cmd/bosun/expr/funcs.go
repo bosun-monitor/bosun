@@ -318,7 +318,19 @@ var builtins = map[string]parse.Func{
 		Tags:   tagFirst,
 		F:      Sort,
 	},
-	
+	"shift": {
+		Args:   []parse.FuncType{parse.TypeSeriesSet, parse.TypeString},
+		Return: parse.TypeSeriesSet,
+		Tags:   tagFirst,
+		F:      Shift,
+	},
+	"merge": {
+		Args: []parse.FuncType{parse.TypeSeriesSet},
+		VArgs: true,
+		Return: parse.TypeSeriesSet,
+		Tags: tagFirst,
+		F: Merge,
+	},
 	// Distribution Functions
 	"dist": {
 		Args: []parse.FuncType{parse.TypeSeriesSet},
@@ -332,6 +344,33 @@ var builtins = map[string]parse.Func{
 		Tags: tagFirst,
 		F: Hist,	
 	},
+}
+
+func Merge(e *State, T miniprofiler.Timer, series ...*Results) (*Results, error){
+	if len(series) < 2 {
+		return series[0], nil
+	}
+	res := series[0]
+	for _, r := range series[1:] {
+		res.Results = append(res.Results, r.Results...)
+	}
+	return res, nil
+}
+
+func Shift(e *State, T miniprofiler.Timer, series *Results, d string) (*Results, error) {
+	dur, err := opentsdb.ParseDuration(d)
+	if err != nil {
+		return series, err
+	}
+	for _, result := range series.Results {
+		newSeries := make(Series)
+		for t, v := range result.Value.Value().(Series) {
+			newSeries[t.Add(time.Duration(dur))] = v
+		}
+		result.Group["shift"] = d
+		result.Value = newSeries
+	}
+	return series, nil
 }
 
 func Dist(e *State, T miniprofiler.Timer, series *Results) (*Results, error) {
