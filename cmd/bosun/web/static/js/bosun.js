@@ -1303,7 +1303,6 @@ bosunApp.directive('tsHist', ['$window', 'nfmtFilter', function ($window, fmtfil
                         .y(function (d) { return yScale(d.Count); })
                         .interpolate("step");
                     line.y0(yScale(0));
-                    //debugger;
                     //xScale.domain(scope.data.map((d: any) => { return d.name }));
                     xScale.domain([
                         Math.min.apply(Math, scope.data.map(function (d) { return d3.min(d.Value.Buckets, function (b) { return b.Low; }); })),
