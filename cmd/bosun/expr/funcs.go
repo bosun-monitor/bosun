@@ -318,6 +318,35 @@ var builtins = map[string]parse.Func{
 		Tags:   tagFirst,
 		F:      Sort,
 	},
+	
+	// Distribution Functions
+	"dist": {
+		Args: []parse.FuncType{parse.TypeSeriesSet},
+		Return: parse.TypeDistributionSet,
+		Tags: tagFirst,
+		F: Dist,	
+	},
+	"hist": {
+		Args: []parse.FuncType{parse.TypeSeriesSet, parse.TypeScalar},
+		Return: parse.TypeHistogramSet,
+		Tags: tagFirst,
+		F: Hist,	
+	},
+}
+
+func Dist(e *State, T miniprofiler.Timer, series *Results) (*Results, error) {
+	for _, v := range series.Results {
+		v.Value = v.Value.Value().(Series).Distribution()
+	}
+	return series, nil
+}
+
+func Hist(e *State, T miniprofiler.Timer, series *Results, binValue float64) (*Results, error) {
+	bins := int64(binValue)
+	for _, v := range series.Results {
+		v.Value = v.Value.Value().(Series).Histogram(bins)
+	}
+	return series, nil
 }
 
 func Epoch(e *State, T miniprofiler.Timer) (*Results, error) {

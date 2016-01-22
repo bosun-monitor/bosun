@@ -9,6 +9,7 @@ interface IExprScope extends RootScope {
 	tab: string;
 	graph: any;
 	bar: any;
+	hist: any;
 	svg_url: string;
 	date: string;
 	time: string;
@@ -62,6 +63,9 @@ bosunControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route
 					d.name = name;
 				 });
 				$scope.bar = data.Results;
+			}
+			if (data.Type == 'histogram') {
+				$scope.hist = data.Results;
 			}
 			$scope.running = '';
 		})

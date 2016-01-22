@@ -1223,6 +1223,141 @@ bosunApp.directive('tsBar', ['$window', 'nfmtFilter', function ($window, fmtfilt
             }
         };
     }]);
+bosunApp.directive('tsHist', ['$window', 'nfmtFilter', function ($window, fmtfilter) {
+        var margin = {
+            top: 10,
+            right: 10,
+            bottom: 200,
+            left: 80
+        };
+        var color = d3.scale.ordinal().range([
+            '#e41a1c',
+            '#377eb8',
+            '#4daf4a',
+            '#984ea3',
+            '#ff7f00',
+            '#a65628',
+            '#f781bf',
+            '#999999',
+        ]);
+        return {
+            scope: {
+                data: '=',
+                height: '='
+            },
+            link: function (scope, elem, attrs) {
+                var svgHeight = +scope.height || 150;
+                var height = svgHeight - margin.top - margin.bottom;
+                var svgWidth;
+                var width;
+                var yScale = d3.scale.linear().range([height, 0]);
+                var xScale = d3.scale.linear().range([0, width]);
+                var top = d3.select(elem[0])
+                    .append('svg')
+                    .attr('height', svgHeight)
+                    .attr('width', '100%');
+                var svg = top
+                    .append('g')
+                    .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
+                var xAxis = d3.svg.axis()
+                    .scale(xScale)
+                    .orient("bottom");
+                var yAxis = d3.svg.axis()
+                    .scale(yScale)
+                    .orient("left")
+                    .ticks(10);
+                var paths = svg.append('g');
+                scope.$watch('data', update);
+                var w = angular.element($window);
+                scope.$watch(function () {
+                    return w.width();
+                }, resize, true);
+                w.bind('resize', function () {
+                    scope.$apply();
+                });
+                function resize() {
+                    svgWidth = elem.width();
+                    if (svgWidth <= 0) {
+                        return;
+                    }
+                    width = svgWidth - margin.left - margin.right;
+                    xScale.range([0, width]);
+                    //
+                    xAxis.scale(xScale);
+                    svg.attr('width', svgWidth);
+                    xAxis.ticks(width / 60);
+                    draw();
+                }
+                function update(v) {
+                    if (!angular.isArray(v) || v.length == 0) {
+                        return;
+                    }
+                    resize();
+                }
+                function draw() {
+                    if (!scope.data) {
+                        return;
+                    }
+                    var line = d3.svg.area()
+                        .x(function (d) { console.log(d.Low, xScale(d.Low)); return xScale(d.Low); })
+                        .y(function (d) { return yScale(d.Count); })
+                        .interpolate("step");
+                    line.y0(yScale(0));
+                    //debugger;
+                    //xScale.domain(scope.data.map((d: any) => { return d.name }));
+                    xScale.domain([
+                        Math.min.apply(Math, scope.data.map(function (d) { return d3.min(d.Value.Buckets, function (b) { return b.Low; }); })),
+                        Math.max.apply(Math, scope.data.map(function (d) { return d3.max(d.Value.Buckets, function (b) { return b.Low; }); })),
+                    ]);
+                    //yScale.domain([0, d3.max(scope.data, (d: any) => { return d.Value })]);
+                    yScale.domain([
+                        Math.min.apply(Math, scope.data.map(function (d) { return d3.min(d.Value.Buckets, function (b) { return b.Count; }); })),
+                        Math.max.apply(Math, scope.data.map(function (d) { return d3.max(d.Value.Buckets, function (b) { return b.Count; }); })),
+                    ]);
+                    svg.selectAll('g.axis').remove();
+                    //X axis
+                    svg.append("g")
+                        .attr("class", "x axis")
+                        .attr("transform", "translate(0," + height + ")")
+                        .call(xAxis)
+                        .selectAll("text")
+                        .attr("class", "bar_label")
+                        .style("text-anchor", "end")
+                        .attr("transform", function (d) { return "rotate(-45)"; });
+                    svg.append("g")
+                        .attr("class", "y axis")
+                        .call(yAxis);
+                    scope.data.map(function (data, i) {
+                        paths.append("path")
+                            .attr("class", "line")
+                            .attr("d", line(data.Value.Buckets))
+                            .attr('stroke', function (d) { return color(JSON.stringify(data.Group)); })
+                            .attr("opacity", 0.5)
+                            .style('fill', function (d) { return color(JSON.stringify(data.Group)); });
+                        //var lines = paths.selectAll('.line').data(data.Value.Buckets);
+                        //lines = svg.selectAll(".line").data(data.Value.Buckets)
+                        //
+                        //lines.enter()
+                        //.append('path')
+                        //.attr('stroke', (d: any) => { return color(d.Name); })
+                        //.attr('class', 'line')
+                        //var bars = svg.selectAll(".bar").data(data.Value.Buckets);
+                        //var bWidth = data.Value.Buckets.length
+                        //debugger;////
+                        // bars.enter()
+                        // 	.append("rect")
+                        // 	.attr("class", "bar")
+                        // 	.attr("x", (d: any) => { console.log(d.Low); return xScale(d.Low); })
+                        // 	.attr("width", xScale(bWidth))
+                        // 	.attr("fill", "none")
+                        // 	.attr('height', (d: any) => { console.log(d.Count); return height - yScale(d.Count); })
+                        // 	.attr("y", (d: any) => { return yScale(d.Count); });
+                    });
+                }
+                ;
+            }
+        };
+    }]);
 bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function ($window, fmtfilter) {
         var margin = {
             top: 10,
@@ -1698,6 +1833,9 @@ bosunControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route
                     d.name = name;
                 });
                 $scope.bar = data.Results;
+            }
+            if (data.Type == 'histogram') {
+                $scope.hist = data.Results;
             }
             $scope.running = '';
         })

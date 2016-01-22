@@ -173,7 +173,6 @@ type Series map[time.Time]float64
 
 func (s Series) Type() parse.FuncType { return parse.TypeSeriesSet }
 func (s Series) Value() interface{}   { return s }
-
 func (s Series) MarshalJSON() ([]byte, error) {
 	r := make(map[string]interface{}, len(s))
 	for k, v := range s {
@@ -181,6 +180,137 @@ func (s Series) MarshalJSON() ([]byte, error) {
 	}
 	return json.Marshal(r)
 }
+func (s Series) Distribution() *Distribution {
+	d := Distribution{}
+	d.ValueCounts = make(map[float64]int64)
+	d.StartTime = math.MaxInt64
+	for t, v := range s {
+		nix := t.Unix()
+		if nix < d.StartTime {
+			d.StartTime = nix
+		}
+		if nix > d.EndTime {
+			d.EndTime = nix
+		}
+		d.ValueCounts[v]++
+	}
+	return &d
+}
+
+func (s Series) Histogram(bins int64) *Histogram {
+	h := Histogram{}
+	h.StartTime = math.MaxInt64
+	h.min = math.MaxFloat64
+	sortedValues := []float64{}
+	for t, v := range s {
+		sortedValues = append(sortedValues, v)
+		nix := t.Unix()
+		if nix < h.StartTime {
+			h.StartTime = nix
+		}
+		if nix > h.EndTime {
+			h.EndTime = nix
+		}
+		if v < h.min {
+			h.min = v
+		}
+		if v > h.max {
+			h.max = v
+		}
+	}
+	sort.Float64s(sortedValues)
+	bucketSize := (h.max - h.min) / float64(bins)
+	for i := h.min; i <= h.max+bucketSize; i += bucketSize {
+		h.Buckets = append(h.Buckets, &Bucket{i, 0})
+	}
+	for _, v := range sortedValues {
+		for i := 0;; {
+			if h.Buckets[i+1].Low > v && len(h.Buckets) == i+2 {
+				h.Buckets[i].Count++
+				break
+			}
+			if h.Buckets[i+1].Low > v && v < h.Buckets[i+2].Low {
+				h.Buckets[i].Count++
+				break
+			} else {
+				i++
+				continue
+			}
+		}
+	}
+	return &h
+}
+
+type Distribution struct {
+	ValueCounts map[float64]int64
+	StartTime   int64
+	EndTime     int64
+}
+
+func (d Distribution) Type() parse.FuncType { return parse.TypeDistributionSet }
+func (d Distribution) Value() interface{}   { return d }
+func (d Distribution) MarshalJSON() ([]byte, error) {
+	r := make(map[string]interface{}, len(d.ValueCounts))
+	for k, v := range d.ValueCounts {
+		r[fmt.Sprint(k)] = Scalar(v)
+	}
+	return json.Marshal(struct {
+		StartTime   int64
+		EndTime     int64
+		ValueCounts map[string]interface{}
+	}{
+		d.StartTime,
+		d.EndTime,
+		r,
+	})
+}
+
+type Bucket struct {
+	Low   float64
+	Count int64
+}
+
+type Histogram struct {
+	StartTime  int64
+	EndTime    int64
+	min        float64
+	max        float64
+	bucketLows []float64
+	Buckets    []*Bucket
+}
+
+func (h Histogram) Type() parse.FuncType { return parse.TypeHistogramSet }
+func (h Histogram) Value() interface{}   { return h }
+
+// func (d Distribution) MarshalJSON() ([]byte, error) {
+// 	//r := make(map[string]interface{}, len(d))
+// 	r := [][2]float64{}
+// 	sDist := NewSortedDistribution(d)
+// 	for _, SDPoint := range sDist {
+// 		r = append(r, [2]float64{SDPoint.Value, float64(SDPoint.Count)})
+// 	}
+// 	return json.Marshal(r)
+// }
+
+// type SortableDistributionPoint struct {
+// 	Value float64
+// 	Count int64
+// }
+
+// type SortableDistribution []SortableDistributionPoint
+
+// func (s SortableDistribution) Len() int           { return len(s) }
+// func (s SortableDistribution) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
+// func (s SortableDistribution) Less(i, j int) bool { return s[i].Value < s[j].Value }
+
+// func NewSortedDistribution(dist Distribution) SortableDistribution {
+// 	sDist := make(SortableDistribution, 0, len(dist))
+// 	for value, count := range dist {
+// 		sDist = append(sDist, SortableDistributionPoint{value, count})
+// 	}
+// 	sort.Sort(sDist)
+// 	return sDist
+// }
 
 type ESQuery struct {
 	Query elastic.Query

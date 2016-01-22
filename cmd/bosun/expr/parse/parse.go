@@ -54,6 +54,10 @@ func (f FuncType) String() string {
 		return "esquery"
 	case TypeESIndexer:
 		return "esindexer"
+	case TypeHistogramSet:
+		return "histogram"
+	case TypeDistributionSet:
+		return "distribution"
 	default:
 		return "unknown"
 	}
@@ -66,6 +70,8 @@ const (
 	TypeSeriesSet
 	TypeESQuery
 	TypeESIndexer
+	TypeDistributionSet
+	TypeHistogramSet
 )
 
 type Tags map[string]struct{}
@@ -214,7 +220,7 @@ func (t *Tree) startParse(funcs []map[string]Func, lex *lexer) {
 	for _, funcMap := range funcs {
 		for name, f := range funcMap {
 			switch f.Return {
-			case TypeSeriesSet, TypeNumberSet:
+			case TypeSeriesSet, TypeNumberSet, TypeDistributionSet, TypeHistogramSet:
 				if f.Tags == nil {
 					panic(fmt.Errorf("%v: expected Tags definition: got nil", name))
 				}
