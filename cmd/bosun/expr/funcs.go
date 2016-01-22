@@ -331,6 +331,20 @@ var builtins = map[string]parse.Func{
 		Tags: tagFirst,
 		F: Merge,
 	},
+	"mergeDist": {
+		Args: []parse.FuncType{parse.TypeDistributionSet},
+		VArgs: true,
+		Return: parse.TypeDistributionSet,
+		Tags: tagFirst,
+		F: Merge,
+	},
+	"mergeHist": {
+		Args: []parse.FuncType{parse.TypeHistogramSet},
+		VArgs: true,
+		Return: parse.TypeHistogramSet,
+		Tags: tagFirst,
+		F: Merge,
+	},
 	// Distribution Functions
 	"dist": {
 		Args: []parse.FuncType{parse.TypeSeriesSet},
@@ -343,6 +357,12 @@ var builtins = map[string]parse.Func{
 		Return: parse.TypeHistogramSet,
 		Tags: tagFirst,
 		F: Hist,	
+	},
+	"ghist": {
+		Args: []parse.FuncType{parse.TypeSeriesSet, parse.TypeScalar},
+		Return: parse.TypeHistogramSet,
+		Tags: tagFirst,
+		F: GHist,	
 	},
 }
 
@@ -384,6 +404,31 @@ func Hist(e *State, T miniprofiler.Timer, series *Results, binValue float64) (*R
 	bins := int64(binValue)
 	for _, v := range series.Results {
 		v.Value = v.Value.Value().(Series).Histogram(bins)
+	}
+	return series, nil
+}
+
+func GHist(e *State, T miniprofiler.Timer, series *Results, binValue float64) (*Results, error) {
+	bins := int64(binValue)
+	min := math.MaxFloat64
+	var max float64
+	
+	for _, v := range series.Results {
+		for _, v := range v.Value.Value().(Series) {
+			if v > max {
+				max = v
+			}
+			if v < min {
+				min = v
+			}
+		}
+	}
+	for _, v := range series.Results {
+		nV, err := v.Value.Value().(Series).HistogramRanged(min, max, bins)
+		if err != nil {
+			return series, err
+		}
+		v.Value = nV
 	}
 	return series, nil
 }
