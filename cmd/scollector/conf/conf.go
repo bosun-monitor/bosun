@@ -62,6 +62,7 @@ type Conf struct {
 	RedisCounters       []RedisCounters
 	ExtraHop            []ExtraHop
 	LocalListener       string
+	HadoopHost          string
 }
 
 type HAProxy struct {
