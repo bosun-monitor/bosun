@@ -484,7 +484,7 @@ bosunApp.directive('tsHist', ['$window', 'nfmtFilter', function($window: ng.IWin
 	var margin = {
 		top: 10,
 		right: 10,
-		bottom: 200,
+		bottom: 20,
 		left: 80,
 	};
 	var color = d3.scale.ordinal().range([
@@ -524,6 +524,21 @@ bosunApp.directive('tsHist', ['$window', 'nfmtFilter', function($window: ng.IWin
 				.orient("left")
 				.ticks(10);
 			var paths = svg.append('g');
+			var legendTop = d3.select(elem[0]).append('div');
+			var legend = d3.select(elem[0]).append('div');
+			legend.style('clear', 'both');
+			var drawLegend = () => {
+				var names = legend.selectAll('.series')
+					.data(scope.data, (d: any) => { return color(JSON.stringify(d.Group)); }); //color(JSON.stringify(data.Group))
+				//debugger;;
+				names.enter()
+					.append('div')
+					.attr('class', 'series')
+					.style('color', (d: any) => { return color(JSON.stringify(d.Group))})
+					.text((d: any) => { return JSON.stringify(d.Group)})
+				names.exit()
+					.remove();
+			};
 			scope.$watch('data', update);
 			var w = angular.element($window);
 			scope.$watch(() => {
@@ -560,13 +575,10 @@ bosunApp.directive('tsHist', ['$window', 'nfmtFilter', function($window: ng.IWin
 					.y(function(d) { return yScale(d.Count); })
 					.interpolate("step");
 				line.y0(yScale(0));
-				//xScale.domain(scope.data.map((d: any) => { return d.name }));
 				xScale.domain([
 					Math.min(...scope.data.map((d: any) => { return d3.min(d.Value.Buckets, (b: any) => {return b.Low}) })),
 					Math.max(...scope.data.map((d: any) => { return d3.max(d.Value.Buckets, (b: any) => {return b.Low}) })),
 				]);
-				//yScale.domain([0, d3.max(scope.data, (d: any) => { return d.Value })]);
-				
 				yScale.domain([
 					Math.min(...scope.data.map((d: any) => { return d3.min(d.Value.Buckets, (b: any) => {return b.Count}) })),
 					Math.max(...scope.data.map((d: any) => { return d3.max(d.Value.Buckets, (b: any) => {return b.Count}) })),
@@ -591,25 +603,8 @@ bosunApp.directive('tsHist', ['$window', 'nfmtFilter', function($window: ng.IWin
 					.attr('stroke', (d: any) => { return color(JSON.stringify(data.Group)); })
 					.attr("opacity", 0.5)
 					.style('fill', (d: any) => { return color(JSON.stringify(data.Group)); })
-				//var lines = paths.selectAll('.line').data(data.Value.Buckets);
-				//lines = svg.selectAll(".line").data(data.Value.Buckets)
-				//
-				//lines.enter()
-					//.append('path')
-						//.attr('stroke', (d: any) => { return color(d.Name); })
-					//.attr('class', 'line')
-					//var bars = svg.selectAll(".bar").data(data.Value.Buckets);
-					//var bWidth = data.Value.Buckets.length
-					//debugger;////
-					// bars.enter()
-					// 	.append("rect")
-					// 	.attr("class", "bar")
-					// 	.attr("x", (d: any) => { console.log(d.Low); return xScale(d.Low); })
-					// 	.attr("width", xScale(bWidth))
-					// 	.attr("fill", "none")
-					// 	.attr('height', (d: any) => { console.log(d.Count); return height - yScale(d.Count); })
-					// 	.attr("y", (d: any) => { return yScale(d.Count); });
 				});
+			drawLegend();
 			};
 		},
 	};
