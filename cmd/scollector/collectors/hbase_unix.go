@@ -9,21 +9,34 @@ import (
 	"regexp"
 	"strings"
 
+	"bosun.org/cmd/scollector/conf"
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
 )
 
+var (
+	hbURL    = "/jmx?qry=Hadoop:service=HBase,name=RegionServer,sub=Server"
+	hbRepURL = "/jmx?qry=Hadoop:service=HBase,name=RegionServer,sub=Replication"
+	hbGCURL  = "/jmx?qry=java.lang:type=GarbageCollector,name=*"
+)
+
 func init() {
+	registerInit(func(c *conf.Conf) {
+		host := ""
+		if c.HadoopHost != "" {
+			host = "http://" + c.HadoopHost
+		} else {
+			host = "http://localhost:60030"
+		}
+		hbURL = host + hbURL
+		hbRepURL = host + hbRepURL
+		hbGCURL = host + hbGCURL
+
+	})
 	collectors = append(collectors, &IntervalCollector{F: c_hbase_region, Enable: enableURL(hbURL)})
 	collectors = append(collectors, &IntervalCollector{F: c_hbase_replication, Enable: enableURL(hbRepURL)})
 	collectors = append(collectors, &IntervalCollector{F: c_hbase_gc, Enable: enableURL(hbGCURL)})
 }
-
-const (
-	hbURL    = "http://localhost:60030/jmx?qry=Hadoop:service=HBase,name=RegionServer,sub=Server"
-	hbRepURL = "http://localhost:60030/jmx?qry=Hadoop:service=HBase,name=RegionServer,sub=Replication"
-	hbGCURL  = "http://localhost:60030/jmx?qry=java.lang:type=GarbageCollector,name=*"
-)
 
 type jmx struct {
 	Beans []map[string]interface{} `json:"beans"`
