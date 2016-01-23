@@ -65,6 +65,7 @@ type Conf struct {
 	ExtraHop            []ExtraHop
 	LocalListener       string
 	TagOverride         []TagOverride
+	HadoopHost          string
 }
 
 type HAProxy struct {
