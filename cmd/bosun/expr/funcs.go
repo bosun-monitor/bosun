@@ -376,6 +376,12 @@ var builtins = map[string]parse.Func{
 		Tags:   tagFirst,
 		F:      GHist,
 	},
+	"ghistmm": {
+		Args:   []parse.FuncType{parse.TypeSeriesSet, parse.TypeScalar, parse.TypeScalar, parse.TypeScalar},
+		Return: parse.TypeHistogramSet,
+		Tags:   tagFirst,
+		F:      GHistMM,
+	},
 }
 
 func Merge(e *State, T miniprofiler.Timer, series ...*Results) (*Results, error) {
@@ -439,7 +445,19 @@ func GHist(e *State, T miniprofiler.Timer, series *Results, binValue float64) (*
 		}
 	}
 	for _, v := range series.Results {
-		nV, err := v.Value.Value().(Series).HistogramRanged(min, max, bins)
+		nV, err := v.Value.Value().(Series).HistogramRanged(min, max, bins, false)
+		if err != nil {
+			return series, err
+		}
+		v.Value = nV
+	}
+	return series, nil
+}
+
+func GHistMM(e *State, T miniprofiler.Timer, series *Results, binValue, min, max float64) (*Results, error) {
+	bins := int64(binValue)
+	for _, v := range series.Results {
+		nV, err := v.Value.Value().(Series).HistogramRanged(min, max, bins, true)
 		if err != nil {
 			return series, err
 		}

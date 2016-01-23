@@ -197,7 +197,7 @@ func (s Series) Distribution() *Distribution {
 	return &d
 }
 
-func (s Series) HistogramRanged(min, max float64, bins int64) (*Histogram, error) {
+func (s Series) HistogramRanged(min, max float64, bins int64, crop bool) (*Histogram, error) {
 	h := Histogram{}
 	h.StartTime = math.MaxInt64
 	h.min = math.MaxFloat64
@@ -218,11 +218,13 @@ func (s Series) HistogramRanged(min, max float64, bins int64) (*Histogram, error
 			h.max = v
 		}
 	}
-	if h.min < min {
-		return &h, fmt.Errorf("value outside of minimum range %v", min)
-	}
-	if h.max > max {
-		return &h, fmt.Errorf("value outside of maximum range %v", max)
+	if !crop {
+		if h.min < min {
+			return &h, fmt.Errorf("value outside of minimum range %v", min)
+		}
+		if h.max > max {
+			return &h, fmt.Errorf("value outside of maximum range %v", max)
+		}
 	}
 	sort.Float64s(sortedValues)
 	bucketSize := (max - min) / float64(bins)
@@ -230,7 +232,15 @@ func (s Series) HistogramRanged(min, max float64, bins int64) (*Histogram, error
 		h.Buckets = append(h.Buckets, &Bucket{i, 0})
 	}
 	for _, v := range sortedValues {
-		for i := 0;; {
+		if crop {
+			if v < min {
+				continue
+			}
+			if v >= max {
+				break
+			}
+		}
+		for i := 0; ; {
 			if h.Buckets[i+1].Low > v && len(h.Buckets) == i+2 {
 				h.Buckets[i].Count++
 				break
@@ -274,7 +284,7 @@ func (s Series) Histogram(bins int64) *Histogram {
 		h.Buckets = append(h.Buckets, &Bucket{i, 0})
 	}
 	for _, v := range sortedValues {
-		for i := 0;; {
+		for i := 0; ; {
 			if h.Buckets[i+1].Low > v && len(h.Buckets) == i+2 {
 				h.Buckets[i].Count++
 				break

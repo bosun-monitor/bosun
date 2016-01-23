@@ -479,12 +479,12 @@ bosunApp.directive('tsBar', ['$window', 'nfmtFilter', function($window: ng.IWind
 		},
 	};
 }]);
-
+//
 bosunApp.directive('tsHist', ['$window', 'nfmtFilter', function($window: ng.IWindowService, fmtfilter: any) {
 	var margin = {
 		top: 10,
 		right: 10,
-		bottom: 20,
+		bottom: 80,
 		left: 80,
 	};
 	var color = d3.scale.ordinal().range([
@@ -529,13 +529,18 @@ bosunApp.directive('tsHist', ['$window', 'nfmtFilter', function($window: ng.IWin
 			legend.style('clear', 'both');
 			var drawLegend = () => {
 				var names = legend.selectAll('.series')
-					.data(scope.data, (d: any) => { return color(JSON.stringify(d.Group)); }); //color(JSON.stringify(data.Group))
-				//debugger;;
+					.data(scope.data, (d: any) => { return color(JSON.stringify(d.Group)); });
 				names.enter()
 					.append('div')
 					.attr('class', 'series')
 					.style('color', (d: any) => { return color(JSON.stringify(d.Group))})
-					.text((d: any) => { return JSON.stringify(d.Group)})
+					.text((d: any) => { return JSON.stringify(d.Group); })
+					.on("click", (d: any, i: any) => {
+						var sel = d3.select("#hist" + i.toString())
+						var current = sel.style("opacity")
+						var o = current > 0 ? 0 : .6;
+						d3.select("#hist" + i.toString()).style("opacity", o);
+					});
 				names.exit()
 					.remove();
 			};
@@ -570,8 +575,9 @@ bosunApp.directive('tsHist', ['$window', 'nfmtFilter', function($window: ng.IWin
 				if (!scope.data) {
 					return;
 				}
+				console.log(scope.data)
 				var line = d3.svg.area()
-					.x(function(d) { console.log(d.Low, xScale(d.Low)); return xScale(d.Low); })
+					.x(function(d) { return xScale(d.Low); })
 					.y(function(d) { return yScale(d.Count); })
 					.interpolate("step");
 				line.y0(yScale(0));
@@ -595,14 +601,18 @@ bosunApp.directive('tsHist', ['$window', 'nfmtFilter', function($window: ng.IWin
 					.attr("transform", (d: any) => { return "rotate(-45)" });
 				svg.append("g")
 					.attr("class", "y axis")
-					.call(yAxis)		
+					.call(yAxis)
+				paths.remove()
+				paths = svg.append("g")
 				scope.data.map((data: any, i: any) => {
 					paths.append("path")
-					.attr("class", "line")
-					.attr("d", line(data.Value.Buckets))
-					.attr('stroke', (d: any) => { return color(JSON.stringify(data.Group)); })
-					.attr("opacity", 0.5)
-					.style('fill', (d: any) => { return color(JSON.stringify(data.Group)); })
+						.attr("class", "line")
+						.attr("id", (d: any) => { return "hist"+i.toString(); })
+						.attr("d", line(data.Value.Buckets))
+						.attr('stroke', (d) => { return d3.rgb(color(JSON.stringify(data.Group))).darker(1); })
+						.attr('stroke-width', 3)
+						.style("opacity", .6)
+						.style('fill', (d) => { return color(JSON.stringify(data.Group)); })
 				});
 			drawLegend();
 			};
