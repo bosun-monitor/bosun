@@ -43,7 +43,7 @@ class Query {
 	ds: string;
 	dstime: string;
 	derivative: string;
-	constructor(q?: any) {
+	constructor(filterSupport: boolean, q?: any) {
 		this.aggregator = q && q.aggregator || 'sum';
 		this.metric = q && q.metric || '';
 		this.rate = q && q.rate || false;
@@ -67,16 +67,18 @@ class Query {
 		this.nGbFilters = q && q.nGbFilters || new FilterMap;
 		var that = this;
 		// Copy tags with values to group by filters so old links work
-		_.each(this.tags, function(v, k) {
-			if (v === "") {
-				return
-			}
-			var f = new(Filter);
-			f.filter = v;
-			f.groupBy = true;
-			f.tagk = k;
-			that.gbFilters[k] = f;
-		});
+		if (filterSupport) {
+			_.each(this.tags, function(v, k) {
+				if (v === "") {
+					return
+				}
+				var f = new(Filter);
+				f.filter = v;
+				f.groupBy = true;
+				f.tagk = k;
+				that.gbFilters[k] = f;
+			});
+		}
 		this.setFilters();
 		this.setDs();
 		this.setDerivative();
@@ -231,7 +233,7 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 	$scope.sorted_tagks = [];
 	$scope.query_p = [];
 	angular.forEach(request.queries, (q, i) => {
-		$scope.query_p[i] = new Query(q);
+		$scope.query_p[i] = new Query($scope.filterSupport, q);
 	});
 	$scope.start = request.start;
 	$scope.end = request.end;
@@ -278,7 +280,7 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 	}
 	$scope.AddTab = function() {
 		$scope.index = $scope.query_p.length;
-		$scope.query_p.push(new Query);
+		$scope.query_p.push(new Query($scope.filterSupport));
 	};
 	$scope.setIndex = function(i: number) {
 		$scope.index = i;
@@ -382,7 +384,7 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 			if (!p.metric) {
 				return;
 			}
-			var q = new Query(p);
+			var q = new Query($scope.filterSupport, p);
 			var tags = q.tags;
 			q.tags = new TagSet;
 			if (! $scope.filterSupport) {

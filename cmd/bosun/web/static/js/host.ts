@@ -26,7 +26,7 @@ bosunControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route
 	var currentURL = $location.url();
 	$scope.mlink = (m: string) => {
 		var r = new Request();
-		var q = new Query();
+		var q = new Query(false);
 		q.metric = m;
 		q.tags = { 'host': $scope.host };
 		r.queries.push(q);
@@ -56,7 +56,7 @@ bosunControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route
 	var cpu_r = new Request();
 	cpu_r.start = $scope.time;
 	cpu_r.queries = [
-		new Query({
+		new Query(false, {
 			metric: 'os.cpu',
 			derivative: 'counter',
 			tags: { host: $scope.host },
@@ -72,11 +72,11 @@ bosunControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route
 		});
 	var mem_r = new Request();
 	mem_r.start = $scope.time;
-	mem_r.queries.push(new Query({
+	mem_r.queries.push(new Query(false, {
 		metric: "os.mem.total",
 		tags: { host: $scope.host },
 	}));
-	mem_r.queries.push(new Query({
+	mem_r.queries.push(new Query(false, {
 		metric: "os.mem.used",
 		tags: { host: $scope.host },
 	}));
@@ -92,7 +92,7 @@ bosunControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route
 	var net_bytes_r = new Request();
 	net_bytes_r.start = $scope.time;
 	net_bytes_r.queries = [
-		new Query({
+		new Query(false, {
 			metric: "os.net.bytes",
 			rate: true,
 			rateOptions: { counter: true, resetValue: 1 },
@@ -123,11 +123,11 @@ bosunControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route
 	var fs_r = new Request();
 	fs_r.start = $scope.time
 	fs_r.queries = [
-		new Query({
+		new Query(false, {
 			metric: "os.disk.fs.space_total",
 			tags: { host: $scope.host, disk: "*"},
 		}),
-		new Query({
+		new Query(false, {
 			metric: "os.disk.fs.space_used",
 			tags: { host: $scope.host, disk: "*"},
 		})
