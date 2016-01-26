@@ -12458,19 +12458,6 @@ lySVFAAA
 `,
 	},
 
-	"/js/tsd.json": {
-		local:   "web/static/js/tsd.json",
-		size:    941,
-		modtime: 0,
-		compressed: `
-H4sIAAAJbogA/6xSQW7DIBC85xWWz2lwjRUrOfcJ/cDarFNSm6WwjkSr/L1QkrZSrhysHQ+zM6uFr01V
-1Rd0XpOpjxF29TZRDi2l/4Gc9gHMO13EC07aaMY5vAaL6i6ckm4Bz+gyZYHfEsfBanPymRxWo2b8Rwv2
-aqd2fDvXxjPMc7Q9VmmoSIE5rTO4sxc39ORoZcxNd1XUjbQsmpN1P03ToCQ2XQMHObZd1/c9yiESo9q3
-rYRxf5DNc/3Tet3mnDhZXMBIDsUfLJ6y0IKGRS7F3Qci9uzAil9UPOPxPjzE96A/yy/rIap4wvljRRdE
-LsXdlRRKlnPdpO+6+Q4AAP//Z1JAE60DAAA=
-`,
-	},
-
 	"/js/underscore-min.js": {
 		local:   "web/static/js/underscore-min.js",
 		size:    15626,
