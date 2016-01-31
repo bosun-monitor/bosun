@@ -188,6 +188,9 @@ func (c *Context) evalExpr(e *expr.Expr, filter bool, series bool, autods int) (
 			return nil, "", err
 		}
 	}
+	if e.Root.Return() == parse.TypeHistogramSet {
+		series = false
+	}
 	if series && e.Root.Return() != parse.TypeSeriesSet {
 		return nil, "", fmt.Errorf("need a series, got %T (%v)", e, e)
 	}
@@ -219,6 +222,9 @@ func (c *Context) eval(v interface{}, filter bool, series bool, autods int) (res
 	}
 	if filter {
 		res = res.Filter(c.State.Group)
+	}
+	if len(res) > 0 && res[0].Type() == parse.TypeHistogramSet {
+		series = false
 	}
 	if series {
 		for _, k := range res {
@@ -280,12 +286,12 @@ func (c *Context) EvalAll(v interface{}) (interface{}, error) {
 }
 
 func (c *Context) graph(v interface{}, unit string, filter bool) (val interface{}, err error) {
-	defer func() {
-		if p := recover(); p != nil {
-			slog.Error("panic rendering graph", p)
-			val = "error rendering graph"
-		}
-	}()
+	// defer func() {
+	// 	if p := recover(); p != nil {
+	// 		slog.Error("panic rendering graph", p)
+	// 		val = "error rendering graph"
+	// 	}
+	// }()
 	res, exprText, err := c.eval(v, filter, true, 1000)
 	if err != nil {
 		return nil, err

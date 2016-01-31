@@ -177,6 +177,18 @@ var builtins = map[string]parse.Func{
 		Tags:   tagFirst,
 		F:      Forecast_lr,
 	},
+	"rslr": {
+		Args:   []parse.FuncType{parse.TypeSeriesSet},
+		Return: parse.TypeNumberSet,
+		Tags:   tagFirst,
+		F:      RS_lr,
+	},
+	"linelr": {
+		Args:   []parse.FuncType{parse.TypeSeriesSet, parse.TypeString},
+		Return: parse.TypeSeriesSet,
+		Tags:   tagFirst,
+		F:      Line_lr,
+	},
 	"last": {
 		Args:   []parse.FuncType{parse.TypeSeriesSet},
 		Return: parse.TypeNumberSet,
@@ -1385,6 +1397,8 @@ func (e *State) since(dps Series, args ...float64) (a float64) {
 	return s.Seconds()
 }
 
+
+
 func Forecast_lr(e *State, T miniprofiler.Timer, series *Results, y *Results) (r *Results, err error) {
 	return reduce(e, T, series, e.forecast_lr, y)
 }
@@ -1420,6 +1434,66 @@ func (e *State) forecast_lr(dps Series, args ...float64) float64 {
 		s = tenYears
 	}
 	return s.Seconds()
+}
+
+func RS_lr(e *State, T miniprofiler.Timer, series *Results) (*Results, error) {
+	return reduce(e, T, series, rs_lr)
+}
+
+func rs_lr(dps Series, args ...float64) float64 {
+	var x []float64
+	var y []float64
+	for k, v := range dps {
+		x = append(x, float64(k.Unix()))
+		y = append(y, v)
+	}
+	_, _, rSquared, _, _, _ := stats.LinearRegression(x, y)
+	return rSquared
+}
+
+func Line_lr(e *State, T miniprofiler.Timer, series *Results, d string) (*Results, error) {
+	dur, err := opentsdb.ParseDuration(d)
+	if err != nil {
+		return series, err
+	}
+	for _, res := range series.Results {
+		res.Value = line_lr(res.Value.(Series), time.Duration(dur))
+		res.Group.Merge(opentsdb.TagSet{"regression": "line"})
+	}
+	return series, nil
+}
+
+// line_lr generates a series representing the line up to duration in the future.
+func line_lr(dps Series, d time.Duration) Series {
+	//const tenYears = time.Hour * 24 * 365 * 10
+	var x []float64
+	var y []float64
+	sortedDPS := NewSortedSeries(dps)
+	var maxT time.Time
+	if len(sortedDPS) > 1 {
+		maxT = sortedDPS[len(sortedDPS)-1].T
+	}
+	var deltaT float64
+	for i, v := range sortedDPS {
+		xv := float64(v.T.Unix())
+		x = append(x, xv)
+		y = append(y, v.V)
+		if i > 0 {
+			deltaT += v.T.Sub(sortedDPS[i-1].T).Seconds()
+		}
+	}
+	deltaT = deltaT/float64(len(sortedDPS))
+	incr := int64(deltaT)
+	if incr < 1 {
+		incr = 1
+	}
+	var slope, intercept, _, _, _, _ = stats.LinearRegression(x, y)
+	s := make(Series)
+	// TODO start at minT instead? Also, just gen 2 datapoints? start and end.
+	for t := maxT; t.Before(maxT.Add(d)); t=t.Add(time.Duration(incr) * time.Second) {
+		s[t] = float64(t.Unix())*slope + intercept
+	}
+	return s
 }
 
 func Percentile(e *State, T miniprofiler.Timer, series *Results, p *Results) (r *Results, err error) {

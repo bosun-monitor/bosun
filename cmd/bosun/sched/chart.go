@@ -13,6 +13,8 @@ import (
 	"bosun.org/_third_party/github.com/vdobler/chart/imgg"
 	"bosun.org/_third_party/github.com/vdobler/chart/svgg"
 	"bosun.org/cmd/bosun/expr"
+	"bosun.org/slog"
+	"bosun.org/cmd/bosun/expr/parse"
 )
 
 var chartColors = []color.Color{
@@ -37,6 +39,7 @@ func Autostyle(i int) chart.Style {
 		LineStyle:   chart.SolidLine,
 		LineWidth:   1,
 		LineColor:   c,
+		FillColor: c,
 	}
 }
 
@@ -68,6 +71,41 @@ func (s *Schedule) ExprPNG(t miniprofiler.Timer, w io.Writer, width, height int,
 }
 
 func (s *Schedule) ExprGraph(t miniprofiler.Timer, unit string, res []*expr.Result) (chart.Chart, error) {
+	slog.Infoln(len(res))
+	if len(res) < 1 {
+		return seriesChart(t, unit, res)
+	}
+	slog.Infof("%T", res[0].Value)
+	switch res[0].Type() {
+	case parse.TypeSeriesSet:
+		slog.Infoln("Series chart!!")
+		return seriesChart(t, unit, res)
+	case parse.TypeHistogramSet:
+		return histoChart(t, unit, res)
+	// default:
+	// 	slog.Infof("%v", v.Type())
+	}
+	return seriesChart(t, unit, res)
+}
+
+func histoChart(t miniprofiler.Timer, unit string, res []*expr.Result) (chart.Chart, error) {
+	c := chart.BarChart{
+		Key: chart.Key{Pos: "itl"},
+		BarWidthFac: 3,
+	}
+	for ri, r := range res {
+		buckets := r.Value.(*expr.Histogram).Buckets
+		pts := make([]chart.Point, len(buckets))
+		for i, b := range buckets {
+			pts[i].Y = float64(b.Count)
+			pts[i].X = b.Low
+		}
+		c.AddData(r.Group.String(), pts, Autostyle(ri))
+	}
+	return &c, nil
+}
+
+func seriesChart(t miniprofiler.Timer, unit string, res []*expr.Result) (chart.Chart, error) {
 	c := chart.ScatterChart{
 		Key:    chart.Key{Pos: "itl"},
 		YRange: chart.Range{Label: unit},
