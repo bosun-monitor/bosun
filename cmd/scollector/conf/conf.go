@@ -23,6 +23,8 @@ type Conf struct {
 	Freq int
 	// BatchSize is the number of metrics that will be sent in each batch.
 	BatchSize int
+	// MaxQueueLen is the number of metrics keept internally.
+	MaxQueueLen int
 	// Filter filters collectors matching these terms.
 	Filter []string
 	// PProf is an IP:Port binding to be used for debugging with pprof package.
