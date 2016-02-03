@@ -18,6 +18,8 @@ type StreamCollector struct {
 	F    func() <-chan *opentsdb.MultiDataPoint
 	name string
 	init func()
+
+	TagOverride
 }
 
 func (s *StreamCollector) Init() {
@@ -41,6 +43,7 @@ func (s *StreamCollector) Run(dpchan chan<- *opentsdb.DataPoint, quit <-chan str
 				if _, found := dp.Tags["host"]; !found {
 					dp.Tags["host"] = util.Hostname
 				}
+				s.ApplyTagOverrides(dp.Tags)
 				dpchan <- dp
 				count++
 			}

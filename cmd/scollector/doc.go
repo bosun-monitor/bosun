@@ -275,6 +275,22 @@ metrics.
 
 	LocalListener = "localhost:4242"
 
+TagOverride (array of tables, key are CollectorExpr, MatchedTags and Tags): if a collector
+name matches CollectorExpr MatchedTags and Tags will be merged to all outgoing message
+produced by the collector, in that order. MatchedTags will apply a regexp to the tag
+defined by the key name and add tags based on the named match groups defined in the
+regexp. After tags defined in Tags will be merged, defining a tag as empty string
+will deletes it.
+
+	[[TagOverride]]
+	  CollectorExpr = 'cadvisor'
+	  [TagOverride.MatchedTags]
+	    docker_name = 'k8s_(?P<container_name>[^\.]+)\.[0-9a-z]+_(?P<pod_name>[^-]+)'
+	    docker_id = '^(?P<docker_id>.{12})'
+	  [TagOverride.Tags]
+	    docker_name = ''
+	    source = 'kubelet'
+
 Windows
 
 scollector has full Windows support. It can be run standalone, or installed as a

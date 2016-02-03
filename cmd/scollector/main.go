@@ -160,6 +160,10 @@ func main() {
 	for _, col := range c {
 		col.Init()
 	}
+	err = collectors.AddTagOverrides(c, conf.TagOverride)
+	if err != nil {
+		slog.Fatalf("Error adding tag overrides: %s", err)
+	}
 	u, err := parseHost(conf.Host)
 	if *flagList {
 		list(c)
