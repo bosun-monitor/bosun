@@ -140,11 +140,6 @@ func errRecover(errp *error) {
 	}
 }
 
-type Value interface {
-	Type() parse.FuncType
-	Value() interface{}
-}
-
 func marshalFloat(n float64) ([]byte, error) {
 	if math.IsNaN(n) {
 		return json.Marshal("NaN")
@@ -156,23 +151,28 @@ func marshalFloat(n float64) ([]byte, error) {
 	return json.Marshal(n)
 }
 
+type Value interface {
+	Type() models.FuncType
+	Value() interface{}
+}
+
 type Number float64
 
-func (n Number) Type() parse.FuncType         { return parse.TypeNumberSet }
+func (n Number) Type() models.FuncType        { return models.TypeNumberSet }
 func (n Number) Value() interface{}           { return n }
 func (n Number) MarshalJSON() ([]byte, error) { return marshalFloat(float64(n)) }
 
 type Scalar float64
 
-func (s Scalar) Type() parse.FuncType         { return parse.TypeScalar }
+func (s Scalar) Type() models.FuncType        { return models.TypeScalar }
 func (s Scalar) Value() interface{}           { return s }
 func (s Scalar) MarshalJSON() ([]byte, error) { return marshalFloat(float64(s)) }
 
 // Series is the standard form within bosun to represent timeseries data.
 type Series map[time.Time]float64
 
-func (s Series) Type() parse.FuncType { return parse.TypeSeriesSet }
-func (s Series) Value() interface{}   { return s }
+func (s Series) Type() models.FuncType { return models.TypeSeriesSet }
+func (s Series) Value() interface{}    { return s }
 
 func (s Series) MarshalJSON() ([]byte, error) {
 	r := make(map[string]interface{}, len(s))
@@ -186,8 +186,8 @@ type ESQuery struct {
 	Query elastic.Query
 }
 
-func (e ESQuery) Type() parse.FuncType { return parse.TypeESQuery }
-func (e ESQuery) Value() interface{}   { return e }
+func (e ESQuery) Type() models.FuncType { return models.TypeESQuery }
+func (e ESQuery) Value() interface{}    { return e }
 func (e ESQuery) MarshalJSON() ([]byte, error) {
 	source, err := e.Query.Source()
 	if err != nil {
@@ -201,8 +201,8 @@ type ESIndexer struct {
 	Generate  func(startDuration, endDuration *time.Time) ([]string, error)
 }
 
-func (e ESIndexer) Type() parse.FuncType { return parse.TypeESIndexer }
-func (e ESIndexer) Value() interface{}   { return e }
+func (e ESIndexer) Type() models.FuncType { return models.TypeESIndexer }
+func (e ESIndexer) Value() interface{}    { return e }
 func (e ESIndexer) MarshalJSON() ([]byte, error) {
 	return json.Marshal("ESGenerator")
 }
@@ -231,7 +231,7 @@ func NewSortedSeries(dps Series) SortableSeries {
 }
 
 type Result struct {
-	Computations
+	models.Computations
 	Value
 	Group opentsdb.TagSet
 }
@@ -289,22 +289,15 @@ func (r ResultSliceByGroup) Len() int           { return len(r) }
 func (r ResultSliceByGroup) Swap(i, j int)      { r[i], r[j] = r[j], r[i] }
 func (r ResultSliceByGroup) Less(i, j int) bool { return r[i].Group.String() < r[j].Group.String() }
 
-type Computations []Computation
-
-type Computation struct {
-	Text  string
-	Value interface{}
-}
-
 func (e *State) AddComputation(r *Result, text string, value interface{}) {
 	if !e.enableComputations {
 		return
 	}
-	r.Computations = append(r.Computations, Computation{opentsdb.ReplaceTags(text, r.Group), value})
+	r.Computations = append(r.Computations, models.Computation{Text: opentsdb.ReplaceTags(text, r.Group), Value: value})
 }
 
 type Union struct {
-	Computations
+	models.Computations
 	A, B  Value
 	Group opentsdb.TagSet
 }
@@ -638,7 +631,7 @@ func (e *State) walkFunc(node *parse.FuncNode, T miniprofiler.Timer) *Results {
 			default:
 				panic(fmt.Errorf("expr: unknown func arg type"))
 			}
-			if f, ok := v.(float64); ok && node.F.Args[i] == parse.TypeNumberSet {
+			if f, ok := v.(float64); ok && node.F.Args[i] == models.TypeNumberSet {
 				v = fromScalar(f)
 			}
 			in = append(in, reflect.ValueOf(v))
@@ -652,7 +645,7 @@ func (e *State) walkFunc(node *parse.FuncNode, T miniprofiler.Timer) *Results {
 				panic(err)
 			}
 		}
-		if node.Return() == parse.TypeNumberSet {
+		if node.Return() == models.TypeNumberSet {
 			for _, r := range res.Results {
 				e.AddComputation(r, node.String(), r.Value.(Number))
 			}
@@ -663,13 +656,13 @@ func (e *State) walkFunc(node *parse.FuncNode, T miniprofiler.Timer) *Results {
 
 // extract will return a float64 if res contains exactly one scalar or a ESQuery if that is the type
 func extract(res *Results) interface{} {
-	if len(res.Results) == 1 && res.Results[0].Type() == parse.TypeScalar {
+	if len(res.Results) == 1 && res.Results[0].Type() == models.TypeScalar {
 		return float64(res.Results[0].Value.Value().(Scalar))
 	}
-	if len(res.Results) == 1 && res.Results[0].Type() == parse.TypeESQuery {
+	if len(res.Results) == 1 && res.Results[0].Type() == models.TypeESQuery {
 		return res.Results[0].Value.Value()
 	}
-	if len(res.Results) == 1 && res.Results[0].Type() == parse.TypeESIndexer {
+	if len(res.Results) == 1 && res.Results[0].Type() == models.TypeESIndexer {
 		return res.Results[0].Value.Value()
 	}
 	return res

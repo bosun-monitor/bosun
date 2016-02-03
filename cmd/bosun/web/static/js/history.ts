@@ -21,23 +21,24 @@ bosunControllers.controller('HistoryCtrl', ['$scope', '$http', '$location', '$ro
 		keys[search.key] = true;
 	}
 	var params = Object.keys(keys).map((v: any) => { return 'ak=' + encodeURIComponent(v); }).join('&');
-	$http.get('/api/status?' + params)
+	$http.get('/api/status?' + params + "&all=1")
 		.success((data) => {
+			console.log(data);
 			var selected_alerts: any = {};
 			angular.forEach(data, function(v, ak) {
 				if (!keys[ak]) {
 					return;
 				}
-				v.History.map((h: any) => { h.Time = moment.utc(h.Time); });
-				angular.forEach(v.History, function(h: any, i: number) {
-					if (i + 1 < v.History.length) {
-						h.EndTime = v.History[i + 1].Time;
+				v.Events.map((h: any) => { h.Time = moment.utc(h.Time); });
+				angular.forEach(v.Events, function(h: any, i: number) {
+					if (i + 1 < v.Events.length) {
+						h.EndTime = v.Events[i + 1].Time;
 					} else {
 						h.EndTime = moment.utc();
 					}
 				});
 				selected_alerts[ak] = {
-					History: v.History.reverse(),
+					History: v.Events.reverse(),
 				};
 			});
 			if (Object.keys(selected_alerts).length > 0) {

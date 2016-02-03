@@ -38,41 +38,14 @@ func init() {
 	collect.AggregateMeta("bosun.template.render", metadata.MilliSecond, "The amount of time it takes to render the specified alert template.")
 }
 
-func NewStatus(ak models.AlertKey) *State {
-	g := ak.Group()
-	return &State{
-		Alert: ak.Name(),
-		Tags:  g.Tags(),
-		Group: g,
-	}
-}
-
-// Get a copy of the status for the specified alert key
-func (s *Schedule) GetStatus(ak models.AlertKey) *State {
-	s.Lock("GetStatus")
-	state := s.status[ak]
-	if state != nil {
-		state = state.Copy()
-	}
-	s.Unlock()
-	return state
-}
-
-func (s *Schedule) SetStatus(ak models.AlertKey, st *State) {
-	s.Lock("SetStatus")
-	s.status[ak] = st
-	s.Unlock()
-}
-
-func (s *Schedule) GetOrCreateStatus(ak models.AlertKey) *State {
-	s.Lock("GetOrCreateStatus")
-	state := s.status[ak]
-	if state == nil {
-		state = NewStatus(ak)
-		s.status[ak] = state
-	}
-	s.Unlock()
-	return state
+func NewIncident(ak models.AlertKey) *models.IncidentState {
+	s := &models.IncidentState{}
+	s.Start = time.Now()
+	s.AlertKey = ak
+	s.Alert = ak.Name()
+	s.Tags = ak.Group().Tags()
+	s.Result = &models.Result{}
+	return s
 }
 
 type RunHistory struct {
@@ -84,7 +57,7 @@ type RunHistory struct {
 	Logstash        expr.LogstashElasticHosts
 	Elastic         expr.ElasticHosts
 
-	Events   map[models.AlertKey]*Event
+	Events   map[models.AlertKey]*models.Event
 	schedule *Schedule
 }
 
@@ -100,7 +73,7 @@ func (s *Schedule) NewRunHistory(start time.Time, cache *cache.Cache) *RunHistor
 	return &RunHistory{
 		Cache:           cache,
 		Start:           start,
-		Events:          make(map[models.AlertKey]*Event),
+		Events:          make(map[models.AlertKey]*models.Event),
 		Context:         s.Conf.TSDBContext(),
 		GraphiteContext: s.Conf.GraphiteContext(),
 		InfluxConfig:    s.Conf.InfluxConfig,
@@ -115,7 +88,11 @@ func (s *Schedule) RunHistory(r *RunHistory) {
 	checkNotify := false
 	silenced := s.Silenced()
 	for ak, event := range r.Events {
-		checkNotify = s.runHistory(r, ak, event, silenced) || checkNotify
+		shouldNotify, err := s.runHistory(r, ak, event, silenced)
+		checkNotify = checkNotify || shouldNotify
+		if err != nil {
+			slog.Errorf("Error in runHistory for %s. %s.", ak, err)
+		}
 	}
 	if checkNotify && s.nc != nil {
 		select {
@@ -126,146 +103,148 @@ func (s *Schedule) RunHistory(r *RunHistory) {
 }
 
 // RunHistory for a single alert key. Returns true if notifications were altered.
-func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *Event, silenced map[models.AlertKey]models.Silence) bool {
-	checkNotify := false
-	// get existing state object for alert key. add to schedule status if doesn't already exist
-	state := s.GetStatus(ak)
-	if state == nil {
-		state = NewStatus(ak)
-		s.SetStatus(ak, state)
-	}
-	defer s.SetStatus(ak, state)
-	// make sure we always touch the state.
-	state.Touched = r.Start
-	// set state.Result according to event result
-	if event.Crit != nil {
-		state.Result = event.Crit
-	} else if event.Warn != nil {
-		state.Result = event.Warn
-	}
-	// if event is unevaluated, we are done.
-	state.Unevaluated = event.Unevaluated
-	if event.Unevaluated {
-		return checkNotify
-	}
-	// assign incident id to new event if applicable
-	prev := state.Last()
-	worst := StNormal
+func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.Event, silenced SilenceTester) (checkNotify bool, err error) {
 	event.Time = r.Start
-	if prev.IncidentId != 0 {
-		// If last event has incident id and is not closed, we continue it.
-		incident, err := s.DataAccess.Incidents().GetIncident(prev.IncidentId)
-		if err != nil {
-			slog.Error(err)
-		} else if incident.End == nil {
-			event.IncidentId = prev.IncidentId
-			worst = state.WorstThisIncident()
-		}
+	data := s.DataAccess.State()
+	err = data.TouchAlertKey(ak, time.Now())
+	if err != nil {
+		return
 	}
-	if event.IncidentId == 0 && event.Status != StNormal {
-		incident, err := s.createIncident(ak, event.Time)
-		if err != nil {
-			slog.Error("Error creating incident", err)
+	// get existing open incident if exists
+	incident, err := data.GetOpenIncident(ak)
+	if err != nil {
+		return
+	}
+	defer func() {
+		// save unless incident is new and closed (log alert)
+		if incident != nil && (incident.Id != 0 || incident.Open) {
+			err = data.UpdateIncidentState(incident)
 		} else {
-			event.IncidentId = incident.Id
+			err = data.SetUnevaluated(ak, event.Unevaluated) // if nothing to save, at least store the unevaluated state
+		}
+	}()
+	// If nothing is out of the ordinary we are done
+	if event.Status <= models.StNormal && incident == nil {
+		return
+	}
+
+	// if event is unevaluated, we are done also.
+	if incident != nil {
+		incident.Unevaluated = event.Unevaluated
+	}
+	if event.Unevaluated {
+		return
+	}
+
+	shouldNotify := false
+	if incident == nil {
+		incident = NewIncident(ak)
+		shouldNotify = true
+	}
+	// set state.Result according to event result
+	if event.Status == models.StCritical {
+		incident.Result = event.Crit
+	} else if event.Status == models.StWarning {
+		incident.Result = event.Warn
+	}
+
+	if event.Status > models.StNormal {
+		incident.LastAbnormalStatus = event.Status
+		incident.LastAbnormalTime = event.Time.UTC().Unix()
+	}
+	if event.Status > incident.WorstStatus {
+		incident.WorstStatus = event.Status
+		shouldNotify = true
+	}
+	if event.Status != incident.CurrentStatus {
+		incident.Events = append(incident.Events, *event)
+	}
+	incident.CurrentStatus = event.Status
+
+	a := s.Conf.Alerts[ak.Name()]
+	//render templates and open alert key if abnormal
+	if event.Status > models.StNormal {
+		s.executeTemplates(incident, event, a, r)
+		incident.Open = true
+		if a.Log {
+			incident.Open = false
 		}
 	}
 
-	state.Append(event)
-	a := s.Conf.Alerts[ak.Name()]
-	// render templates and open alert key if abnormal
-	if event.Status > StNormal {
-		s.executeTemplates(state, event, a, r)
-		state.Open = true
-		if a.Log {
-			worst = StNormal
-			state.Open = false
-		}
-	}
 	// On state increase, clear old notifications and notify current.
-	// If the old alert was not acknowledged, do nothing.
 	// Do nothing if state did not change.
 	notify := func(ns *conf.Notifications) {
 		if a.Log {
-			lastLogTime := state.LastLogTime
+			lastLogTime := s.lastLogTimes[ak]
 			now := time.Now()
 			if now.Before(lastLogTime.Add(a.MaxLogFrequency)) {
 				return
 			}
-			state.LastLogTime = now
+			s.lastLogTimes[ak] = now
 		}
-		nots := ns.Get(s.Conf, state.Group)
+		nots := ns.Get(s.Conf, incident.AlertKey.Group())
 		for _, n := range nots {
-			s.Notify(state, n)
+			s.Notify(incident, n)
 			checkNotify = true
 		}
 	}
+
 	notifyCurrent := func() {
-		// Auto close ignoreUnknowns.
-		if a.IgnoreUnknown && event.Status == StUnknown {
-			state.Open = false
-			state.Forgotten = true
-			state.NeedAck = false
-			state.Action("bosun", "Auto close because alert has ignoreUnknown.", ActionClose, event.Time)
-			slog.Infof("auto close %s because alert has ignoreUnknown", ak)
+		si := silenced(ak)
+		//Auto close ignoreUnknowns for new incident.
+		if a.IgnoreUnknown && event.Status == models.StUnknown {
+			incident.Open = false
 			return
-		} else if silenced[ak].Forget && event.Status == StUnknown {
-			state.Open = false
-			state.Forgotten = true
-			state.NeedAck = false
-			state.Action("bosun", "Auto close because alert is silenced and marked auto forget.", ActionClose, event.Time)
-			slog.Infof("auto close %s because alert is silenced and marked auto forget", ak)
+		} else if si != nil && si.Forget && event.Status == models.StUnknown {
+			incident.Open = false
 			return
 		}
-		state.NeedAck = true
+		incident.NeedAck = true
 		switch event.Status {
-		case StCritical, StUnknown:
+		case models.StCritical, models.StUnknown:
 			notify(a.CritNotification)
-		case StWarning:
+		case models.StWarning:
 			notify(a.WarnNotification)
 		}
 	}
 	clearOld := func() {
-		state.NeedAck = false
+		incident.NeedAck = false
 		delete(s.Notifications, ak)
 	}
 
 	// lock while we change notifications.
 	s.Lock("RunHistory")
-	if event.Status > worst {
+	if shouldNotify {
 		clearOld()
 		notifyCurrent()
-	} else if _, ok := silenced[ak]; ok && event.Status == StNormal {
+	}
+
+	// finally close an open alert with silence once it goes back to normal.
+	if si := silenced(ak); si != nil && event.Status == models.StNormal {
 		go func(ak models.AlertKey) {
 			slog.Infof("auto close %s because was silenced", ak)
-			err := s.Action("bosun", "Auto close because was silenced.", ActionClose, ak)
+			err := s.Action("bosun", "Auto close because was silenced.", models.ActionClose, ak)
 			if err != nil {
 				slog.Errorln(err)
 			}
 		}(ak)
 	}
-
 	s.Unlock()
-	return checkNotify
+	return checkNotify, nil
 }
 
-func (s *Schedule) executeTemplates(state *State, event *Event, a *conf.Alert, r *RunHistory) {
-	state.Subject = ""
-	state.Body = ""
-	state.EmailBody = nil
-	state.EmailSubject = nil
-	state.Attachments = nil
-	if event.Status != StUnknown {
+func (s *Schedule) executeTemplates(state *models.IncidentState, event *models.Event, a *conf.Alert, r *RunHistory) {
+	if event.Status != models.StUnknown {
 		var errs []error
 		metric := "template.render"
 		//Render subject
 		endTiming := collect.StartTimer(metric, opentsdb.TagSet{"alert": a.Name, "type": "subject"})
 		subject, err := s.ExecuteSubject(r, a, state, false)
 		if err != nil {
-			slog.Infof("%s: %v", state.AlertKey(), err)
+			slog.Infof("%s: %v", state.AlertKey, err)
 			errs = append(errs, err)
 		} else if subject == nil {
-			err = fmt.Errorf("Empty subject on %s", state.AlertKey())
+			err = fmt.Errorf("Empty subject on %s", state.AlertKey)
 			slog.Error(err)
 			errs = append(errs, err)
 		}
@@ -275,10 +254,10 @@ func (s *Schedule) executeTemplates(state *State, event *Event, a *conf.Alert, r
 		endTiming = collect.StartTimer(metric, opentsdb.TagSet{"alert": a.Name, "type": "body"})
 		body, _, err := s.ExecuteBody(r, a, state, false)
 		if err != nil {
-			slog.Infof("%s: %v", state.AlertKey(), err)
+			slog.Infof("%s: %v", state.AlertKey, err)
 			errs = append(errs, err)
 		} else if subject == nil {
-			err = fmt.Errorf("Empty body on %s", state.AlertKey())
+			err = fmt.Errorf("Empty body on %s", state.AlertKey)
 			slog.Error(err)
 			errs = append(errs, err)
 		}
@@ -288,10 +267,10 @@ func (s *Schedule) executeTemplates(state *State, event *Event, a *conf.Alert, r
 		endTiming = collect.StartTimer(metric, opentsdb.TagSet{"alert": a.Name, "type": "emailbody"})
 		emailbody, attachments, err := s.ExecuteBody(r, a, state, true)
 		if err != nil {
-			slog.Infof("%s: %v", state.AlertKey(), err)
+			slog.Infof("%s: %v", state.AlertKey, err)
 			errs = append(errs, err)
 		} else if subject == nil {
-			err = fmt.Errorf("Empty email body on %s", state.AlertKey())
+			err = fmt.Errorf("Empty email body on %s", state.AlertKey)
 			slog.Error(err)
 			errs = append(errs, err)
 		}
@@ -301,10 +280,10 @@ func (s *Schedule) executeTemplates(state *State, event *Event, a *conf.Alert, r
 		endTiming = collect.StartTimer(metric, opentsdb.TagSet{"alert": a.Name, "type": "emailsubject"})
 		emailsubject, err := s.ExecuteSubject(r, a, state, true)
 		if err != nil {
-			slog.Infof("%s: %v", state.AlertKey(), err)
+			slog.Infof("%s: %v", state.AlertKey, err)
 			errs = append(errs, err)
 		} else if subject == nil {
-			err = fmt.Errorf("Empty email subject on %s", state.AlertKey())
+			err = fmt.Errorf("Empty email subject on %s", state.AlertKey)
 			slog.Error(err)
 			errs = append(errs, err)
 		}
@@ -342,7 +321,7 @@ func (s *Schedule) CollectStates() {
 	for _, alert := range s.Conf.Alerts {
 		severityCounts[alert.Name] = make(map[string]int64)
 		abnormalCounts[alert.Name] = make(map[string]int64)
-		var i Status
+		var i models.Status
 		for i = 1; i.String() != "none"; i++ {
 			severityCounts[alert.Name][i.String()] = 0
 			abnormalCounts[alert.Name][i.String()] = 0
@@ -360,36 +339,37 @@ func (s *Schedule) CollectStates() {
 		ackByNotificationCounts[notificationName][false] = 0
 		ackByNotificationCounts[notificationName][true] = 0
 	}
-	for _, state := range s.status {
-		if !state.Open {
-			continue
-		}
-		name := state.AlertKey().Name()
-		alertDef := s.Conf.Alerts[name]
-		nots := make(map[string]bool)
-		for name := range alertDef.WarnNotification.Get(s.Conf, state.Group) {
-			nots[name] = true
-		}
-		for name := range alertDef.CritNotification.Get(s.Conf, state.Group) {
-			nots[name] = true
-		}
-		incident, err := s.GetIncident(state.Last().IncidentId)
-		if err != nil {
-			slog.Errorln(err)
-		}
-		for notificationName := range nots {
-			ackByNotificationCounts[notificationName][state.NeedAck]++
-			if incident != nil && incident.Start.Before(unAckOldestByNotification[notificationName]) && state.NeedAck {
-				unAckOldestByNotification[notificationName] = incident.Start
-			}
-		}
-		severity := state.Status().String()
-		lastAbnormal := state.AbnormalStatus().String()
-		severityCounts[state.Alert][severity]++
-		abnormalCounts[state.Alert][lastAbnormal]++
-		ackStatusCounts[state.Alert][state.NeedAck]++
-		activeStatusCounts[state.Alert][state.IsActive()]++
-	}
+	//TODO:
+	//	for _, state := range s.status {
+	//		if !state.Open {
+	//			continue
+	//		}
+	//		name := state.AlertKey.Name()
+	//		alertDef := s.Conf.Alerts[name]
+	//		nots := make(map[string]bool)
+	//		for name := range alertDef.WarnNotification.Get(s.Conf, state.Group) {
+	//			nots[name] = true
+	//		}
+	//		for name := range alertDef.CritNotification.Get(s.Conf, state.Group) {
+	//			nots[name] = true
+	//		}
+	//		incident, err := s.GetIncident(state.Last().IncidentId)
+	//		if err != nil {
+	//			slog.Errorln(err)
+	//		}
+	//		for notificationName := range nots {
+	//			ackByNotificationCounts[notificationName][state.NeedAck]++
+	//			if incident != nil && incident.Start.Before(unAckOldestByNotification[notificationName]) && state.NeedAck {
+	//				unAckOldestByNotification[notificationName] = incident.Start
+	//			}
+	//		}
+	//		severity := state.CurrentStatus.String()
+	//		lastAbnormal := state.LastAbnormalStatus.String()
+	//		severityCounts[state.Alert][severity]++
+	//		abnormalCounts[state.Alert][lastAbnormal]++
+	//		ackStatusCounts[state.Alert][state.NeedAck]++
+	//		activeStatusCounts[state.Alert][state.IsActive()]++
+	//	}
 	for notification := range ackByNotificationCounts {
 		ts := opentsdb.TagSet{"notification": notification}
 		err := collect.Put("alerts.acknowledgement_status_by_notification",
@@ -462,21 +442,12 @@ func (s *Schedule) CollectStates() {
 	}
 }
 
-func (r *RunHistory) GetUnknownAndUnevaluatedAlertKeys(alert string) (unknown, uneval []models.AlertKey) {
-	unknown = []models.AlertKey{}
-	uneval = []models.AlertKey{}
-	r.schedule.Lock("GetUnknownUneval")
-	for ak, st := range r.schedule.status {
-		if ak.Name() != alert {
-			continue
-		}
-		if st.Last().Status == StUnknown {
-			unknown = append(unknown, ak)
-		} else if st.Unevaluated {
-			uneval = append(uneval, ak)
-		}
+func (s *Schedule) GetUnknownAndUnevaluatedAlertKeys(alert string) (unknown, uneval []models.AlertKey) {
+	unknown, uneval, err := s.DataAccess.State().GetUnknownAndUnevalAlertKeys(alert)
+	if err != nil {
+		slog.Errorf("Error getting unknown/unevaluated alert keys: %s", err)
+		return nil, nil
 	}
-	r.schedule.Unlock()
 	return unknown, uneval
 }
 
@@ -487,23 +458,23 @@ func (s *Schedule) findUnknownAlerts(now time.Time, alert string) []models.Alert
 	if time.Now().Sub(bosunStartupTime) < s.Conf.CheckFrequency {
 		return keys
 	}
-	s.Lock("FindUnknown")
-	for ak, st := range s.status {
-		name := ak.Name()
-		if name != alert || st.Forgotten || !s.AlertSuccessful(ak.Name()) {
-			continue
-		}
-		a := s.Conf.Alerts[name]
-		t := a.Unknown
-		if t == 0 {
-			t = s.Conf.CheckFrequency * 2 * time.Duration(a.RunEvery)
-		}
-		if now.Sub(st.Touched) < t {
-			continue
-		}
+	if !s.AlertSuccessful(alert) {
+		return keys
+	}
+	a := s.Conf.Alerts[alert]
+	t := a.Unknown
+	if t == 0 {
+		t = s.Conf.CheckFrequency * 2 * time.Duration(a.RunEvery)
+	}
+	maxTouched := now.UTC().Unix() - int64(t.Seconds())
+	untouched, err := s.DataAccess.State().GetUntouchedSince(alert, maxTouched)
+	if err != nil {
+		slog.Errorf("Error finding unknown alerts for alert %s: %s.", alert, err)
+		return keys
+	}
+	for _, ak := range untouched {
 		keys = append(keys, ak)
 	}
-	s.Unlock()
 	return keys
 }
 
@@ -511,16 +482,16 @@ func (s *Schedule) CheckAlert(T miniprofiler.Timer, r *RunHistory, a *conf.Alert
 	slog.Infof("check alert %v start", a.Name)
 	start := time.Now()
 	for _, ak := range s.findUnknownAlerts(r.Start, a.Name) {
-		r.Events[ak] = &Event{Status: StUnknown}
+		r.Events[ak] = &models.Event{Status: models.StUnknown}
 	}
 	var warns, crits models.AlertKeys
 	d, err := s.executeExpr(T, r, a, a.Depends)
 	var deps expr.ResultSlice
 	if err == nil {
 		deps = filterDependencyResults(d)
-		crits, err = s.CheckExpr(T, r, a, a.Crit, StCritical, nil)
+		crits, err = s.CheckExpr(T, r, a, a.Crit, models.StCritical, nil)
 		if err == nil {
-			warns, err = s.CheckExpr(T, r, a, a.Warn, StWarning, crits)
+			warns, err = s.CheckExpr(T, r, a, a.Warn, models.StWarning, crits)
 		}
 	}
 	unevalCount, unknownCount := markDependenciesUnevaluated(r.Events, deps, a.Name)
@@ -535,9 +506,9 @@ func (s *Schedule) CheckAlert(T miniprofiler.Timer, r *RunHistory, a *conf.Alert
 	slog.Infof("check alert %v done (%s): %v crits, %v warns, %v unevaluated, %v unknown", a.Name, time.Since(start), len(crits), len(warns), unevalCount, unknownCount)
 }
 
-func removeUnknownEvents(evs map[models.AlertKey]*Event, alert string) {
+func removeUnknownEvents(evs map[models.AlertKey]*models.Event, alert string) {
 	for k, v := range evs {
-		if v.Status == StUnknown && k.Name() == alert {
+		if v.Status == models.StUnknown && k.Name() == alert {
 			delete(evs, k)
 		}
 	}
@@ -565,7 +536,7 @@ func filterDependencyResults(results *expr.Results) expr.ResultSlice {
 	return filtered
 }
 
-func markDependenciesUnevaluated(events map[models.AlertKey]*Event, deps expr.ResultSlice, alert string) (unevalCount, unknownCount int) {
+func markDependenciesUnevaluated(events map[models.AlertKey]*models.Event, deps expr.ResultSlice, alert string) (unevalCount, unknownCount int) {
 	for ak, ev := range events {
 		if ak.Name() != alert {
 			continue
@@ -575,7 +546,7 @@ func markDependenciesUnevaluated(events map[models.AlertKey]*Event, deps expr.Re
 				ev.Unevaluated = true
 				unevalCount++
 			}
-			if ev.Status == StUnknown {
+			if ev.Status == models.StUnknown {
 				unknownCount++
 			}
 		}
@@ -587,11 +558,11 @@ func (s *Schedule) executeExpr(T miniprofiler.Timer, rh *RunHistory, a *conf.Ale
 	if e == nil {
 		return nil, nil
 	}
-	results, _, err := e.Execute(rh.Context, rh.GraphiteContext, rh.Logstash, rh.Elastic, rh.InfluxConfig, rh.Cache, T, rh.Start, 0, a.UnjoinedOK, s.Search, s.Conf.AlertSquelched(a), rh)
+	results, _, err := e.Execute(rh.Context, rh.GraphiteContext, rh.Logstash, rh.Elastic, rh.InfluxConfig, rh.Cache, T, rh.Start, 0, a.UnjoinedOK, s.Search, s.Conf.AlertSquelched(a), s)
 	return results, err
 }
 
-func (s *Schedule) CheckExpr(T miniprofiler.Timer, rh *RunHistory, a *conf.Alert, e *expr.Expr, checkStatus Status, ignore models.AlertKeys) (alerts models.AlertKeys, err error) {
+func (s *Schedule) CheckExpr(T miniprofiler.Timer, rh *RunHistory, a *conf.Alert, e *expr.Expr, checkStatus models.Status, ignore models.AlertKeys) (alerts models.AlertKeys, err error) {
 	if e == nil {
 		return
 	}
@@ -618,37 +589,33 @@ Loop:
 			}
 		}
 		var n float64
-		switch v := r.Value.(type) {
-		case expr.Number:
-			n = float64(v)
-		case expr.Scalar:
-			n = float64(v)
-		default:
-			err = fmt.Errorf("expected number or scalar")
+		n, err = valueToFloat(r.Value)
+		if err != nil {
 			return
 		}
 		event := rh.Events[ak]
 		if event == nil {
-			event = new(Event)
+			event = new(models.Event)
 			rh.Events[ak] = event
 		}
-		result := &Result{
-			Result: r,
-			Expr:   e.String(),
+		result := &models.Result{
+			Computations: r.Computations,
+			Value:        models.Float(n),
+			Expr:         e.String(),
 		}
 		switch checkStatus {
-		case StWarning:
+		case models.StWarning:
 			event.Warn = result
-		case StCritical:
+		case models.StCritical:
 			event.Crit = result
 		}
 		status := checkStatus
 		if math.IsNaN(n) {
 			status = checkStatus
 		} else if n == 0 {
-			status = StNormal
+			status = models.StNormal
 		}
-		if status != StNormal {
+		if status != models.StNormal {
 			alerts = append(alerts, ak)
 		}
 		if status > rh.Events[ak].Status {
@@ -656,4 +623,17 @@ Loop:
 		}
 	}
 	return
+}
+
+func valueToFloat(val expr.Value) (float64, error) {
+	var n float64
+	switch v := val.(type) {
+	case expr.Number:
+		n = float64(v)
+	case expr.Scalar:
+		n = float64(v)
+	default:
+		return 0, fmt.Errorf("expected number or scalar")
+	}
+	return n, nil
 }

@@ -9,16 +9,17 @@ import (
 	"bosun.org/_third_party/github.com/MiniProfiler/go/miniprofiler"
 	"bosun.org/_third_party/github.com/influxdb/influxdb/client"
 	"bosun.org/_third_party/github.com/influxdb/influxdb/influxql"
-	"bosun.org/_third_party/github.com/influxdb/influxdb/models"
+	influxModels "bosun.org/_third_party/github.com/influxdb/influxdb/models"
 	"bosun.org/cmd/bosun/expr/parse"
+	"bosun.org/models"
 	"bosun.org/opentsdb"
 )
 
 // Influx is a map of functions to query InfluxDB.
 var Influx = map[string]parse.Func{
 	"influx": {
-		Args:   []parse.FuncType{parse.TypeString, parse.TypeString, parse.TypeString, parse.TypeString, parse.TypeString},
-		Return: parse.TypeSeriesSet,
+		Args:   []models.FuncType{models.TypeString, models.TypeString, models.TypeString, models.TypeString, models.TypeString},
+		Return: models.TypeSeriesSet,
 		Tags:   influxTag,
 		F:      InfluxQuery,
 	},
@@ -186,7 +187,7 @@ func influxQueryDuration(now time.Time, query, start, end, groupByInterval strin
 	return s.String(), nil
 }
 
-func timeInfluxRequest(e *State, T miniprofiler.Timer, db, query, startDuration, endDuration, groupByInterval string) (s []models.Row, err error) {
+func timeInfluxRequest(e *State, T miniprofiler.Timer, db, query, startDuration, endDuration, groupByInterval string) (s []influxModels.Row, err error) {
 	q, err := influxQueryDuration(e.now, query, startDuration, endDuration, groupByInterval)
 	if err != nil {
 		return nil, err
@@ -216,7 +217,7 @@ func timeInfluxRequest(e *State, T miniprofiler.Timer, db, query, startDuration,
 		var val interface{}
 		var ok bool
 		val, err = e.cache.Get(q, getFn)
-		if s, ok = val.([]models.Row); !ok {
+		if s, ok = val.([]influxModels.Row); !ok {
 			err = fmt.Errorf("influx: did not get a valid result from InfluxDB")
 		}
 	})

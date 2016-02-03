@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -432,56 +433,50 @@ func IncidentEvents(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request
 	if id == "" {
 		return nil, fmt.Errorf("id must be specified")
 	}
-	num, err := strconv.ParseUint(id, 10, 64)
+	num, err := strconv.ParseInt(id, 10, 64)
 	if err != nil {
 		return nil, err
 	}
-	incident, events, actions, err := schedule.GetIncidentEvents(uint64(num))
-	if err != nil {
-		return nil, err
-	}
-	return struct {
-		Incident *models.Incident
-		Events   []sched.Event
-		Actions  []sched.Action
-	}{incident, events, actions}, nil
+	return schedule.DataAccess.State().GetIncidentState(num)
 }
 
 func Incidents(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	alert := r.FormValue("alert")
-	toTime := time.Now().UTC()
-	fromTime := toTime.Add(-14 * 24 * time.Hour) // 2 weeks
+	// TODO: Incident Search
+	return nil, nil
+	//	alert := r.FormValue("alert")
+	//	toTime := time.Now().UTC()
+	//	fromTime := toTime.Add(-14 * 24 * time.Hour) // 2 weeks
 
-	if from := r.FormValue("from"); from != "" {
-		t, err := time.Parse(tsdbFormatSecs, from)
-		if err != nil {
-			return nil, err
-		}
-		fromTime = t
-	}
-	if to := r.FormValue("to"); to != "" {
-		t, err := time.Parse(tsdbFormatSecs, to)
-		if err != nil {
-			return nil, err
-		}
-		toTime = t
-	}
-	incidents, err := schedule.GetIncidents(alert, fromTime, toTime)
-	if err != nil {
-		return nil, err
-	}
-	maxIncidents := 200
-	if len(incidents) > maxIncidents {
-		incidents = incidents[:maxIncidents]
-	}
-	return incidents, nil
+	//	if from := r.FormValue("from"); from != "" {
+	//		t, err := time.Parse(tsdbFormatSecs, from)
+	//		if err != nil {
+	//			return nil, err
+	//		}
+	//		fromTime = t
+	//	}
+	//	if to := r.FormValue("to"); to != "" {
+	//		t, err := time.Parse(tsdbFormatSecs, to)
+	//		if err != nil {
+	//			return nil, err
+	//		}
+	//		toTime = t
+	//	}
+	//	incidents, err := schedule.GetIncidents(alert, fromTime, toTime)
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//	maxIncidents := 200
+	//	if len(incidents) > maxIncidents {
+	//		incidents = incidents[:maxIncidents]
+	//	}
+	//	return incidents, nil
 }
 
 func Status(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	r.ParseForm()
 	type ExtStatus struct {
 		AlertName string
-		*sched.State
+		*models.IncidentState
 	}
 	m := make(map[string]ExtStatus)
 	for _, k := range r.Form["ak"] {
@@ -489,8 +484,32 @@ func Status(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (inter
 		if err != nil {
 			return nil, err
 		}
-		st := ExtStatus{State: schedule.GetStatus(ak)}
-		if st.State == nil {
+		var state *models.IncidentState
+		if r.FormValue("all") != "" {
+			allInc, err := schedule.DataAccess.State().GetAllIncidents(ak)
+			if err != nil {
+				return nil, err
+			}
+			if len(allInc) == 0 {
+				return nil, fmt.Errorf("No incidents for alert key")
+			}
+			state = allInc[0]
+			allEvents := models.EventsByTime{}
+			for _, inc := range allInc {
+				for _, e := range inc.Events {
+					allEvents = append(allEvents, e)
+				}
+			}
+			sort.Sort(allEvents)
+			state.Events = allEvents
+		} else {
+			state, err = schedule.DataAccess.State().GetLatestIncident(ak)
+			if err != nil {
+				return nil, err
+			}
+		}
+		st := ExtStatus{IncidentState: state}
+		if st.IncidentState == nil {
 			return nil, fmt.Errorf("unknown alert key: %v", k)
 		}
 		st.AlertName = ak.Name()
@@ -511,14 +530,14 @@ func Action(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (inter
 	if err := j.Decode(&data); err != nil {
 		return nil, err
 	}
-	var at sched.ActionType
+	var at models.ActionType
 	switch data.Type {
 	case "ack":
-		at = sched.ActionAcknowledge
+		at = models.ActionAcknowledge
 	case "close":
-		at = sched.ActionClose
+		at = models.ActionClose
 	case "forget":
-		at = sched.ActionForget
+		at = models.ActionForget
 	}
 	errs := make(MultiError)
 	r.ParseForm()
@@ -539,7 +558,10 @@ func Action(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (inter
 		return nil, errs
 	}
 	if data.Notify && len(successful) != 0 {
-		schedule.ActionNotify(at, data.User, data.Message, successful)
+		err := schedule.ActionNotify(at, data.User, data.Message, successful)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return nil, nil
 }

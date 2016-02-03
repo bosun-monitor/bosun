@@ -18,7 +18,7 @@ var testData database.DataAccess
 func TestMain(m *testing.M) {
 	rand.Seed(time.Now().UnixNano())
 	var closeF func()
-	testData, closeF = StartTestRedis()
+	testData, closeF = StartTestRedis(9993)
 	status := m.Run()
 	closeF()
 	os.Exit(status)

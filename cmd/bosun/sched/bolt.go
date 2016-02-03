@@ -15,6 +15,7 @@ import (
 	"bosun.org/_third_party/github.com/boltdb/bolt"
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/database"
+	"bosun.org/cmd/bosun/expr"
 	"bosun.org/collect"
 	"bosun.org/metadata"
 	"bosun.org/models"
@@ -44,7 +45,6 @@ const (
 	dbBucket           = "bindata"
 	dbConfigTextBucket = "configText"
 	dbNotifications    = "notifications"
-	dbStatus           = "status"
 )
 
 func (s *Schedule) save() {
@@ -54,7 +54,6 @@ func (s *Schedule) save() {
 	s.Lock("Save")
 	store := map[string]interface{}{
 		dbNotifications: s.Notifications,
-		dbStatus:        s.status,
 	}
 	tostore := make(map[string][]byte)
 	for name, data := range store {
@@ -141,63 +140,66 @@ func (s *Schedule) RestoreState() error {
 		slog.Errorln(dbNotifications, err)
 	}
 
-	status := make(States)
-	if err := decode(db, dbStatus, &status); err != nil {
-		slog.Errorln(dbStatus, err)
+	//status := make(States)
+	//	if err := decode(db, dbStatus, &status); err != nil {
+	//		slog.Errorln(dbStatus, err)
+	//	}
+	//	clear := func(r *models.Result) {
+	//		if r == nil {
+	//			return
+	//		}
+	//		r.Computations = nil
+	//}
+	//TODO: ???
+	//	for ak, st := range status {
+	//		a, present := s.Conf.Alerts[ak.Name()]
+	//		if !present {
+	//			slog.Errorln("sched: alert no longer present, ignoring:", ak)
+	//			continue
+	//		} else if s.Conf.Squelched(a, st.Group) {
+	//			slog.Infoln("sched: alert now squelched:", ak)
+	//			continue
+	//		} else {
+	//			t := a.Unknown
+	//			if t == 0 {
+	//				t = s.Conf.CheckFrequency
+	//			}
+	//			if t == 0 && st.Last().Status == StUnknown {
+	//				st.Append(&Event{Status: StNormal, IncidentId: st.Last().IncidentId})
+	//			}
+	//		}
+	//		clear(st.Result)
+	//		newHistory := []Event{}
+	//		for _, e := range st.History {
+	//			clear(e.Warn)
+	//			clear(e.Crit)
+	//			// Remove error events which no longer are a thing.
+	//			if e.Status <= StUnknown {
+	//				newHistory = append(newHistory, e)
+	//			}
+	//		}
+	//		st.History = newHistory
+	//		s.status[ak] = st
+	//		if a.Log && st.Open {
+	//			st.Open = false
+	//			slog.Infof("sched: alert %s is now log, closing, was %s", ak, st.Status())
+	//		}
+	//	for name, t := range notifications[ak] {
+	//		n, present := s.Conf.Notifications[name]
+	//		if !present {
+	//			slog.Infoln("sched: notification not present during restore:", name)
+	//			continue
+	//		}
+	//		if a.Log {
+	//			slog.Infoln("sched: alert is now log, removing notification:", ak)
+	//			continue
+	//		}
+	//		s.AddNotification(ak, n, t)
+	//	}
+	//}
+	if err := migrateOldDataToRedis(db, s.DataAccess); err != nil {
+		return err
 	}
-	clear := func(r *Result) {
-		if r == nil {
-			return
-		}
-		r.Computations = nil
-	}
-	for ak, st := range status {
-		a, present := s.Conf.Alerts[ak.Name()]
-		if !present {
-			slog.Errorln("sched: alert no longer present, ignoring:", ak)
-			continue
-		} else if s.Conf.Squelched(a, st.Group) {
-			slog.Infoln("sched: alert now squelched:", ak)
-			continue
-		} else {
-			t := a.Unknown
-			if t == 0 {
-				t = s.Conf.CheckFrequency
-			}
-			if t == 0 && st.Last().Status == StUnknown {
-				st.Append(&Event{Status: StNormal, IncidentId: st.Last().IncidentId})
-			}
-		}
-		clear(st.Result)
-		newHistory := []Event{}
-		for _, e := range st.History {
-			clear(e.Warn)
-			clear(e.Crit)
-			// Remove error events which no longer are a thing.
-			if e.Status <= StUnknown {
-				newHistory = append(newHistory, e)
-			}
-		}
-		st.History = newHistory
-		s.status[ak] = st
-		if a.Log && st.Open {
-			st.Open = false
-			slog.Infof("sched: alert %s is now log, closing, was %s", ak, st.Status())
-		}
-		for name, t := range notifications[ak] {
-			n, present := s.Conf.Notifications[name]
-			if !present {
-				slog.Infoln("sched: notification not present during restore:", name)
-				continue
-			}
-			if a.Log {
-				slog.Infoln("sched: alert is now log, removing notification:", ak)
-				continue
-			}
-			s.AddNotification(ak, n, t)
-		}
-	}
-	migrateOldDataToRedis(db, s.DataAccess)
 	// delete metrictags if they exist.
 	deleteKey(s.db, "metrictags")
 	slog.Infoln("RestoreState done in", time.Since(start))
@@ -272,10 +274,10 @@ func migrateOldDataToRedis(db *bolt.DB, data database.DataAccess) error {
 	if err := migrateSearch(db, data); err != nil {
 		return err
 	}
-	if err := migrateIncidents(db, data); err != nil {
+	if err := migrateSilence(db, data); err != nil {
 		return err
 	}
-	if err := migrateSilence(db, data); err != nil {
+	if err := migrateState(db, data); err != nil {
 		return err
 	}
 	return nil
@@ -408,37 +410,6 @@ func migrateSearch(db *bolt.DB, data database.DataAccess) error {
 	return nil
 }
 
-func migrateIncidents(db *bolt.DB, data database.DataAccess) error {
-	migrated, err := isMigrated(db, "incidents")
-	if err != nil {
-		return err
-	}
-	if migrated {
-		return nil
-	}
-	slog.Info("migrating incidents")
-	incidents := map[uint64]*models.Incident{}
-	if err := decode(db, "incidents", &incidents); err != nil {
-		return err
-	}
-	max := uint64(0)
-	for k, v := range incidents {
-		data.Incidents().UpdateIncident(k, v)
-		if k > max {
-			max = k
-		}
-	}
-
-	if err = data.Incidents().SetMaxId(max); err != nil {
-		return err
-	}
-	if err = setMigrated(db, "incidents"); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func migrateSilence(db *bolt.DB, data database.DataAccess) error {
 	migrated, err := isMigrated(db, "silence")
 	if err != nil {
@@ -462,6 +433,152 @@ func migrateSilence(db *bolt.DB, data database.DataAccess) error {
 	return nil
 }
 
+func migrateState(db *bolt.DB, data database.DataAccess) error {
+	migrated, err := isMigrated(db, "state")
+	if err != nil {
+		return err
+	}
+	if migrated {
+		return nil
+	}
+	//redefine the structs as they were when we gob encoded them
+	type Result struct {
+		*expr.Result
+		Expr string
+	}
+	mResult := func(r *Result) *models.Result {
+		if r == nil || r.Result == nil {
+			return &models.Result{}
+		}
+		v, _ := valueToFloat(r.Result.Value)
+		return &models.Result{
+			Computations: r.Result.Computations,
+			Value:        models.Float(v),
+			Expr:         r.Expr,
+		}
+	}
+	type Event struct {
+		Warn, Crit  *Result
+		Status      models.Status
+		Time        time.Time
+		Unevaluated bool
+		IncidentId  uint64
+	}
+	type State struct {
+		*Result
+		History      []Event
+		Actions      []models.Action
+		Touched      time.Time
+		Alert        string
+		Tags         string
+		Group        opentsdb.TagSet
+		Subject      string
+		Body         string
+		EmailBody    []byte
+		EmailSubject []byte
+		Attachments  []*models.Attachment
+		NeedAck      bool
+		Open         bool
+		Forgotten    bool
+		Unevaluated  bool
+		LastLogTime  time.Time
+	}
+	type OldStates map[models.AlertKey]*State
+	slog.Info("migrating state")
+	states := OldStates{}
+	if err := decode(db, "status", &states); err != nil {
+		return err
+	}
+	for ak, state := range states {
+		if len(state.History) == 0 {
+			continue
+		}
+		var thisId uint64
+		events := []Event{}
+		addIncident := func(saveBody bool) error {
+			if thisId == 0 || len(events) == 0 || state == nil {
+				return nil
+			}
+			incident := NewIncident(ak)
+			incident.Expr = state.Expr
+
+			incident.NeedAck = state.NeedAck
+			incident.Open = state.Open
+			incident.Result = mResult(state.Result)
+			incident.Unevaluated = state.Unevaluated
+			incident.Start = events[0].Time
+			incident.Id = int64(thisId)
+			incident.Subject = state.Subject
+			if saveBody {
+				incident.Body = state.Body
+			}
+			for _, ev := range events {
+				incident.CurrentStatus = ev.Status
+				mEvent := models.Event{
+					Crit:        mResult(ev.Crit),
+					Status:      ev.Status,
+					Time:        ev.Time,
+					Unevaluated: ev.Unevaluated,
+					Warn:        mResult(ev.Warn),
+				}
+				incident.Events = append(incident.Events, mEvent)
+				if ev.Status > incident.WorstStatus {
+					incident.WorstStatus = ev.Status
+				}
+				if ev.Status > models.StNormal {
+					incident.LastAbnormalStatus = ev.Status
+					incident.LastAbnormalTime = ev.Time.UTC().Unix()
+				}
+			}
+			for _, ac := range state.Actions {
+				if ac.Time.Before(incident.Start) {
+					continue
+				}
+				incident.Actions = append(incident.Actions, ac)
+				if ac.Time.After(incident.Events[len(incident.Events)-1].Time) && ac.Type == models.ActionClose {
+					incident.End = &ac.Time
+					break
+				}
+			}
+			if err := data.State().ImportIncidentState(incident); err != nil {
+				return err
+			}
+			return nil
+		}
+		//essentially a rle algorithm to assign events to incidents
+		for _, e := range state.History {
+			if e.Status > models.StUnknown {
+				continue
+			}
+			if e.IncidentId == 0 {
+				//include all non-assigned incidents up to the next non-match
+				events = append(events, e)
+				continue
+			}
+			if thisId == 0 {
+				thisId = e.IncidentId
+				events = append(events, e)
+			}
+			if e.IncidentId != thisId {
+				if err := addIncident(false); err != nil {
+					return err
+				}
+				thisId = e.IncidentId
+				events = []Event{e}
+
+			} else {
+				events = append(events, e)
+			}
+		}
+		if err := addIncident(true); err != nil {
+			return err
+		}
+	}
+	if err = setMigrated(db, "state"); err != nil {
+		return err
+	}
+	return nil
+}
 func isMigrated(db *bolt.DB, name string) (bool, error) {
 	found := false
 	err := db.View(func(tx *bolt.Tx) error {

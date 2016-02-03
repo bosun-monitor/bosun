@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"bosun.org/metadata"
-	"bosun.org/models"
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
 )
@@ -21,7 +20,10 @@ func (s *Schedule) Host(filter string) (map[string]*HostData, error) {
 	for _, h := range allHosts {
 		hosts[h] = newHostData()
 	}
-	states := s.GetOpenStates()
+	states, err := s.GetOpenStates()
+	if err != nil {
+		return nil, err
+	}
 	silences := s.Silenced()
 	// These are all fetched by metric since that is how we store it in redis,
 	// so this makes for the fastest response
@@ -614,24 +616,24 @@ func statusString(val, goodVal int64, goodName, badName string) string {
 	return badName
 }
 
-func processHostIncidents(host *HostData, states States, silences map[models.AlertKey]models.Silence) {
+func processHostIncidents(host *HostData, states States, silences SilenceTester) {
 	for ak, state := range states {
-		if stateHost, ok := state.Group["host"]; !ok {
+		if stateHost, ok := state.AlertKey.Group()["host"]; !ok {
 			continue
 		} else if stateHost != host.Name {
 			continue
 		}
-		_, silenced := silences[ak]
+		silenced := silences(ak)
 		is := IncidentStatus{
-			IncidentID:         state.Last().IncidentId,
+			IncidentID:         state.Id,
 			Active:             state.IsActive(),
-			AlertKey:           state.AlertKey(),
-			Status:             state.Status(),
+			AlertKey:           state.AlertKey,
+			Status:             state.CurrentStatus,
 			StatusTime:         state.Last().Time.Unix(),
 			Subject:            state.Subject,
-			Silenced:           silenced,
-			LastAbnormalStatus: state.AbnormalStatus(),
-			LastAbnormalTime:   state.AbnormalEvent().Time.Unix(),
+			Silenced:           silenced != nil,
+			LastAbnormalStatus: state.LastAbnormalStatus,
+			LastAbnormalTime:   state.LastAbnormalTime,
 			NeedsAck:           state.NeedAck,
 		}
 		host.OpenIncidents = append(host.OpenIncidents, is)

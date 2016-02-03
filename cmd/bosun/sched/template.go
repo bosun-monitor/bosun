@@ -17,29 +17,28 @@ import (
 	"bosun.org/_third_party/github.com/jmoiron/jsonq"
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/expr"
-	"bosun.org/cmd/bosun/expr/parse"
 	"bosun.org/models"
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
 )
 
 type Context struct {
-	*State
+	*models.IncidentState
 	Alert   *conf.Alert
 	IsEmail bool
 
 	schedule    *Schedule
 	runHistory  *RunHistory
-	Attachments []*conf.Attachment
+	Attachments []*models.Attachment
 }
 
-func (s *Schedule) Data(rh *RunHistory, st *State, a *conf.Alert, isEmail bool) *Context {
+func (s *Schedule) Data(rh *RunHistory, st *models.IncidentState, a *conf.Alert, isEmail bool) *Context {
 	c := Context{
-		State:      st,
-		Alert:      a,
-		IsEmail:    isEmail,
-		schedule:   s,
-		runHistory: rh,
+		IncidentState: st,
+		Alert:         a,
+		IsEmail:       isEmail,
+		schedule:      s,
+		runHistory:    rh,
 	}
 	return &c
 }
@@ -65,7 +64,7 @@ func (s *Schedule) unknownData(t time.Time, name string, group models.AlertKeys)
 func (c *Context) Ack() string {
 	return c.schedule.Conf.MakeLink("/action", &url.Values{
 		"type": []string{"ack"},
-		"key":  []string{c.Alert.Name + c.State.Group.String()},
+		"key":  []string{c.Alert.Name + c.AlertKey.Group().String()},
 	})
 }
 
@@ -77,13 +76,21 @@ func (c *Context) HostView(host string) string {
 	})
 }
 
+// Hack so template can read IncidentId off of event.
+func (c *Context) Last() interface{} {
+	return struct {
+		models.Event
+		IncidentId int64
+	}{c.IncidentState.Last(), c.Id}
+}
+
 // Expr takes an expression in the form of a string, changes the tags to
 // match the context of the alert, and returns a link to the expression page.
 func (c *Context) Expr(v string) string {
 	p := url.Values{}
 	p.Add("date", c.runHistory.Start.Format(`2006-01-02`))
 	p.Add("time", c.runHistory.Start.Format(`15:04:05`))
-	p.Add("expr", base64.StdEncoding.EncodeToString([]byte(opentsdb.ReplaceTags(v, c.Group))))
+	p.Add("expr", base64.StdEncoding.EncodeToString([]byte(opentsdb.ReplaceTags(v, c.AlertKey.Group()))))
 	return c.schedule.Conf.MakeLink("/expr", &p)
 }
 
@@ -104,17 +111,17 @@ func (c *Context) Rule() (string, error) {
 	p.Add("alert", c.Alert.Name)
 	p.Add("fromDate", time.Format("2006-01-02"))
 	p.Add("fromTime", time.Format("15:04"))
-	p.Add("template_group", c.Group.Tags())
+	p.Add("template_group", c.Tags)
 	return c.schedule.Conf.MakeLink("/config", &p), nil
 }
 
 func (c *Context) Incident() string {
 	return c.schedule.Conf.MakeLink("/incident", &url.Values{
-		"id": []string{fmt.Sprint(c.State.Last().IncidentId)},
+		"id": []string{fmt.Sprint(c.Id)},
 	})
 }
 
-func (s *Schedule) ExecuteBody(rh *RunHistory, a *conf.Alert, st *State, isEmail bool) ([]byte, []*conf.Attachment, error) {
+func (s *Schedule) ExecuteBody(rh *RunHistory, a *conf.Alert, st *models.IncidentState, isEmail bool) ([]byte, []*models.Attachment, error) {
 	t := a.Template
 	if t == nil || t.Body == nil {
 		return nil, nil, nil
@@ -132,7 +139,7 @@ func (s *Schedule) ExecuteBody(rh *RunHistory, a *conf.Alert, st *State, isEmail
 	return buf.Bytes(), c.Attachments, nil
 }
 
-func (s *Schedule) ExecuteSubject(rh *RunHistory, a *conf.Alert, st *State, isEmail bool) ([]byte, error) {
+func (s *Schedule) ExecuteSubject(rh *RunHistory, a *conf.Alert, st *models.IncidentState, isEmail bool) ([]byte, error) {
 	t := a.Template
 	if t == nil || t.Subject == nil {
 		return nil, nil
@@ -166,8 +173,8 @@ var error_body = template.Must(template.New("body_error_template").Parse(`
 		</tr>
 	{{end}}</table>`))
 
-func (s *Schedule) ExecuteBadTemplate(errs []error, rh *RunHistory, a *conf.Alert, st *State) (subject, body []byte, err error) {
-	sub := fmt.Sprintf("error: template rendering error for alert %v", st.AlertKey())
+func (s *Schedule) ExecuteBadTemplate(errs []error, rh *RunHistory, a *conf.Alert, st *models.IncidentState) (subject, body []byte, err error) {
+	sub := fmt.Sprintf("error: template rendering error for alert %v", st.AlertKey)
 	c := struct {
 		Errors []error
 		*Context
@@ -183,15 +190,15 @@ func (s *Schedule) ExecuteBadTemplate(errs []error, rh *RunHistory, a *conf.Aler
 func (c *Context) evalExpr(e *expr.Expr, filter bool, series bool, autods int) (expr.ResultSlice, string, error) {
 	var err error
 	if filter {
-		e, err = expr.New(opentsdb.ReplaceTags(e.Text, c.State.Group), c.schedule.Conf.Funcs())
+		e, err = expr.New(opentsdb.ReplaceTags(e.Text, c.AlertKey.Group()), c.schedule.Conf.Funcs())
 		if err != nil {
 			return nil, "", err
 		}
 	}
-	if series && e.Root.Return() != parse.TypeSeriesSet {
+	if series && e.Root.Return() != models.TypeSeriesSet {
 		return nil, "", fmt.Errorf("need a series, got %T (%v)", e, e)
 	}
-	res, _, err := e.Execute(c.runHistory.Context, c.runHistory.GraphiteContext, c.runHistory.Logstash, c.runHistory.Elastic, c.runHistory.InfluxConfig, c.runHistory.Cache, nil, c.runHistory.Start, autods, c.Alert.UnjoinedOK, c.schedule.Search, c.schedule.Conf.AlertSquelched(c.Alert), c.runHistory)
+	res, _, err := e.Execute(c.runHistory.Context, c.runHistory.GraphiteContext, c.runHistory.Logstash, c.runHistory.Elastic, c.runHistory.InfluxConfig, c.runHistory.Cache, nil, c.runHistory.Start, autods, c.Alert.UnjoinedOK, c.schedule.Search, c.schedule.Conf.AlertSquelched(c.Alert), c.schedule)
 	if err != nil {
 		return nil, "", fmt.Errorf("%s: %v", e, err)
 	}
@@ -218,11 +225,11 @@ func (c *Context) eval(v interface{}, filter bool, series bool, autods int) (res
 		return nil, "", fmt.Errorf("expected string, expression or resultslice, got %T (%v)", v, v)
 	}
 	if filter {
-		res = res.Filter(c.State.Group)
+		res = res.Filter(c.AlertKey.Group())
 	}
 	if series {
 		for _, k := range res {
-			if k.Type() != parse.TypeSeriesSet {
+			if k.Type() != models.TypeSeriesSet {
 				return nil, "", fmt.Errorf("need a series, got %v (%v)", k.Type(), k)
 			}
 		}
@@ -232,7 +239,7 @@ func (c *Context) eval(v interface{}, filter bool, series bool, autods int) (res
 
 // Lookup returns the value for a key in the lookup table for the context's tagset.
 func (c *Context) Lookup(table, key string) (string, error) {
-	return c.LookupAll(table, key, c.Group)
+	return c.LookupAll(table, key, c.AlertKey.Group())
 }
 
 func (c *Context) LookupAll(table, key string, group interface{}) (string, error) {
@@ -254,7 +261,7 @@ func (c *Context) LookupAll(table, key string, group interface{}) (string, error
 	if v, ok := l.ToExpr().Get(key, t); ok {
 		return v, nil
 	}
-	return "", fmt.Errorf("no entry for key %v in table %v for tagset %v", key, table, c.Group)
+	return "", fmt.Errorf("no entry for key %v in table %v for tagset %v", key, table, c.AlertKey.Group())
 }
 
 // Eval takes a result or an expression which it evaluates to a result.
@@ -302,7 +309,7 @@ func (c *Context) graph(v interface{}, unit string, filter bool) (val interface{
 			return nil, err
 		}
 		name := fmt.Sprintf("%d.png", len(c.Attachments)+1)
-		c.Attachments = append(c.Attachments, &conf.Attachment{
+		c.Attachments = append(c.Attachments, &models.Attachment{
 			Data:        buf.Bytes(),
 			Filename:    name,
 			ContentType: "image/png",
@@ -469,7 +476,7 @@ func (c *Context) HTTPPost(url, bodyType, data string) string {
 
 func (c *Context) LSQuery(index_root, filter, sduration, eduration string, size int) (interface{}, error) {
 	var ks []string
-	for k, v := range c.Group {
+	for k, v := range c.AlertKey.Group() {
 		ks = append(ks, k+":"+v)
 	}
 	return c.LSQueryAll(index_root, strings.Join(ks, ","), filter, sduration, eduration, size)
@@ -500,7 +507,8 @@ func (c *Context) ESQuery(indexRoot expr.ESIndexer, filter expr.ESQuery, sdurati
 	if err != nil {
 		return nil, err
 	}
-	req.Scope(&c.Group)
+	tags := c.Group()
+	req.Scope(&tags)
 	results, err := c.runHistory.Elastic.Query(req)
 	if err != nil {
 		return nil, err
@@ -537,15 +545,15 @@ func (c *Context) ESQueryAll(indexRoot expr.ESIndexer, filter expr.ESQuery, sdur
 }
 
 type actionNotificationContext struct {
-	States     []*State
+	States     []*models.IncidentState
 	User       string
 	Message    string
-	ActionType ActionType
+	ActionType models.ActionType
 
 	schedule *Schedule
 }
 
-func (a actionNotificationContext) IncidentLink(i uint64) string {
+func (a actionNotificationContext) IncidentLink(i int64) string {
 	return a.schedule.Conf.MakeLink("/incident", &url.Values{
 		"id": []string{fmt.Sprint(i)},
 	})

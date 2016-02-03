@@ -140,10 +140,10 @@ bosunApp.directive('tsState', ['$sce', '$http', function($sce: ng.ISCEService, $
 				return v.replace(/([,{}()])/g, '$1\u200b');
 			};
 			scope.state.Touched = moment(scope.state.Touched).utc();
-			angular.forEach(scope.state.History, (v, k) => {
+			angular.forEach(scope.state.Events, (v, k) => {
 				v.Time = moment(v.Time).utc();
 			});
-			scope.state.last = scope.state.History[scope.state.History.length - 1];
+			scope.state.last = scope.state.Events[scope.state.Events.length - 1];
 			if (scope.state.Actions && scope.state.Actions.length > 0) {
 				scope.state.LastAction = scope.state.Actions[0];
 			}
