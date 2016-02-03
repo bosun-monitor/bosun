@@ -22,6 +22,8 @@ import (
 type ProgramCollector struct {
 	Path     string
 	Interval time.Duration
+
+	TagOverride
 }
 
 func InitPrograms(cpath string) {
@@ -152,6 +154,7 @@ func (c *ProgramCollector) runProgram(dpchan chan<- *opentsdb.DataPoint) (progEr
 				dp.Tags = opentsdb.TagSet{}
 			}
 			setExternalTags(dp.Tags)
+			c.ApplyTagOverrides(dp.Tags)
 			dpchan <- &dp
 			continue
 		} else {

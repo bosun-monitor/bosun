@@ -26,6 +26,8 @@ type Collector interface {
 	Run(chan<- *opentsdb.DataPoint, <-chan struct{})
 	Name() string
 	Init()
+	AddTagOverrides(map[string]string, opentsdb.TagSet) error
+	ApplyTagOverrides(opentsdb.TagSet)
 }
 
 const (
@@ -148,6 +150,23 @@ func Search(s []string) []Collector {
 		}
 	}
 	return r
+}
+
+// Adds configured tag overrides to all matching collectors
+func AddTagOverrides(s []Collector, tagOverride []conf.TagOverride) error {
+	for _, to := range tagOverride {
+		re := regexp.MustCompile(to.CollectorExpr)
+		for _, c := range s {
+			if re.MatchString(c.Name()) {
+				err := c.AddTagOverrides(to.MatchedTags, to.Tags)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+	return nil
 }
 
 // Run runs specified collectors. Use nil for all collectors.
