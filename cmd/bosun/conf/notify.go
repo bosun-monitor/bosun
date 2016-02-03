@@ -12,6 +12,7 @@ import (
 	"bosun.org/_third_party/github.com/jordan-wright/email"
 	"bosun.org/collect"
 	"bosun.org/metadata"
+	"bosun.org/models"
 	"bosun.org/slog"
 	"bosun.org/util"
 )
@@ -25,7 +26,7 @@ func init() {
 		"The number of email notifications that Bosun failed to send.")
 }
 
-func (n *Notification) Notify(subject, body string, emailsubject, emailbody []byte, c *Conf, ak string, attachments ...*Attachment) {
+func (n *Notification) Notify(subject, body string, emailsubject, emailbody []byte, c *Conf, ak string, attachments ...*models.Attachment) {
 	if len(n.Email) > 0 {
 		go n.DoEmail(emailsubject, emailbody, c, ak, attachments...)
 	}
@@ -93,13 +94,7 @@ func (n *Notification) DoGet(ak string) {
 	}
 }
 
-type Attachment struct {
-	Data        []byte
-	Filename    string
-	ContentType string
-}
-
-func (n *Notification) DoEmail(subject, body []byte, c *Conf, ak string, attachments ...*Attachment) {
+func (n *Notification) DoEmail(subject, body []byte, c *Conf, ak string, attachments ...*models.Attachment) {
 	e := email.NewEmail()
 	e.From = c.EmailFrom
 	for _, a := range n.Email {

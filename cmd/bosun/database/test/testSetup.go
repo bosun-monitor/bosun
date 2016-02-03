@@ -14,7 +14,7 @@ import (
 var flagReddisHost = flag.String("redis", "", "redis server to test against")
 var flagFlushRedis = flag.Bool("flush", false, "flush database before tests. DANGER!")
 
-func StartTestRedis() (database.DataAccess, func()) {
+func StartTestRedis(port int) (database.DataAccess, func()) {
 	flag.Parse()
 	// For redis tests we just point at an external server.
 	if *flagReddisHost != "" {
@@ -31,9 +31,9 @@ func StartTestRedis() (database.DataAccess, func()) {
 		return testData, func() {}
 	}
 	// To test ledis, start a local instance in a new tmp dir. We will attempt to delete it when we're done.
-	addr := "127.0.0.1:9876"
-	testPath := filepath.Join(os.TempDir(), "bosun_ledis_test", fmt.Sprint(time.Now().Unix()))
-	log.Println(testPath)
+	addr := fmt.Sprintf("127.0.0.1:%d", port)
+	testPath := filepath.Join(os.TempDir(), "bosun_ledis_test", fmt.Sprintf("%d-%d", time.Now().UnixNano(), port))
+	log.Println("Test ledis at", testPath, addr)
 	stop, err := database.StartLedis(testPath, addr)
 	if err != nil {
 		log.Fatal(err)

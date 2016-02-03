@@ -29,9 +29,9 @@ func (s *Schedule) dispatchNotifications() {
 
 }
 
-func (s *Schedule) Notify(st *State, n *conf.Notification) {
+func (s *Schedule) Notify(st *models.IncidentState, n *conf.Notification) {
 	if s.pendingNotifications == nil {
-		s.pendingNotifications = make(map[*conf.Notification][]*State)
+		s.pendingNotifications = make(map[*conf.Notification][]*models.IncidentState)
 	}
 	s.pendingNotifications[n] = append(s.pendingNotifications[n], st)
 }
@@ -45,7 +45,7 @@ func (s *Schedule) CheckNotifications() time.Duration {
 	notifications := s.Notifications
 	s.Notifications = nil
 	for ak, ns := range notifications {
-		if _, present := silenced[ak]; present {
+		if si := silenced(ak); si != nil {
 			slog.Infoln("silencing", ak)
 			continue
 		}
@@ -59,16 +59,30 @@ func (s *Schedule) CheckNotifications() time.Duration {
 				s.AddNotification(ak, n, t)
 				continue
 			}
-			st := s.status[ak]
-			if st == nil {
-				continue
+
+			//If alert is currently unevaluated because of a dependency,
+			//simply requeue it until the dependency resolves itself.
+			_, uneval := s.GetUnknownAndUnevaluatedAlertKeys(ak.Name())
+			unevaluated := false
+			for _, un := range uneval {
+				if un == ak {
+					unevaluated = true
+					break
+				}
 			}
-			// If alert is currently unevaluated because of a dependency,
-			// simply requeue it until the dependency resolves itself.
-			if st.Unevaluated {
+			if unevaluated {
 				s.AddNotification(ak, n, t)
 				continue
 			}
+			st, err := s.DataAccess.State().GetLatestIncident(ak)
+			if err != nil {
+				slog.Error(err)
+				continue
+			}
+			if st == nil {
+				continue
+			}
+
 			s.Notify(st, n)
 		}
 	}
@@ -91,16 +105,16 @@ func (s *Schedule) CheckNotifications() time.Duration {
 	return timeout
 }
 
-func (s *Schedule) sendNotifications(silenced map[models.AlertKey]models.Silence) {
+func (s *Schedule) sendNotifications(silenced SilenceTester) {
 	if s.Conf.Quiet {
 		slog.Infoln("quiet mode prevented", len(s.pendingNotifications), "notifications")
 		return
 	}
 	for n, states := range s.pendingNotifications {
 		for _, st := range states {
-			ak := st.AlertKey()
-			_, silenced := silenced[ak]
-			if st.Last().Status == StUnknown {
+			ak := st.AlertKey
+			silenced := silenced(ak) != nil
+			if st.CurrentStatus == models.StUnknown {
 				if silenced {
 					slog.Infoln("silencing unknown", ak)
 					continue
@@ -124,7 +138,7 @@ func (s *Schedule) sendUnknownNotifications() {
 	for n, states := range s.pendingUnknowns {
 		ustates := make(States)
 		for _, st := range states {
-			ustates[st.AlertKey()] = st
+			ustates[st.AlertKey] = st
 		}
 		var c int
 		tHit := false
@@ -148,7 +162,7 @@ func (s *Schedule) sendUnknownNotifications() {
 			s.utnotify(oTSets, n)
 		}
 	}
-	s.pendingUnknowns = make(map[*conf.Notification][]*State)
+	s.pendingUnknowns = make(map[*conf.Notification][]*models.IncidentState)
 }
 
 var unknownMultiGroup = ttemplate.Must(ttemplate.New("unknownMultiGroup").Parse(`
@@ -168,8 +182,8 @@ var unknownMultiGroup = ttemplate.Must(ttemplate.New("unknownMultiGroup").Parse(
 	</ul>
 	`))
 
-func (s *Schedule) notify(st *State, n *conf.Notification) {
-	n.Notify(st.Subject, st.Body, st.EmailSubject, st.EmailBody, s.Conf, string(st.AlertKey()), st.Attachments...)
+func (s *Schedule) notify(st *models.IncidentState, n *conf.Notification) {
+	n.Notify(st.Subject, st.Body, st.EmailSubject, st.EmailBody, s.Conf, string(st.AlertKey), st.Attachments...)
 }
 
 // utnotify is single notification for N unknown groups into a single notification
@@ -247,7 +261,7 @@ func init() {
 	subject := `{{$first := index .States 0}}{{$count := len .States}}
 {{.User}} {{.ActionType}}
 {{if gt $count 1}} {{$count}} Alerts. 
-{{else}} Incident #{{$first.Last.IncidentId}} ({{$first.Subject}}) 
+{{else}} Incident #{{$first.Id}} ({{$first.Subject}}) 
 {{end}}`
 	body := `{{$count := len .States}}{{.User}} {{.ActionType}} {{$count}} alert{{if gt $count 1}}s{{end}}: <br/>
 <strong>Message:</strong> {{.Message}} <br/>
@@ -255,7 +269,7 @@ func init() {
 <ul>
 	{{range .States}}
 		<li>
-			<a href="{{$.IncidentLink .Last.IncidentId}}">#{{.Last.IncidentId}}:</a> 
+			<a href="{{$.IncidentLink .Id}}">#{{.Id}}:</a> 
 			{{.Subject}}
 		</li>
 	{{end}}
@@ -264,11 +278,13 @@ func init() {
 	actionNotificationBodyTemplate = htemplate.Must(htemplate.New("").Parse(body))
 }
 
-func (s *Schedule) ActionNotify(at ActionType, user, message string, aks []models.AlertKey) {
-	groupings := s.groupActionNotifications(aks)
-
+func (s *Schedule) ActionNotify(at models.ActionType, user, message string, aks []models.AlertKey) error {
+	groupings, err := s.groupActionNotifications(aks)
+	if err != nil {
+		return err
+	}
 	for notification, states := range groupings {
-		incidents := []*State{}
+		incidents := []*models.IncidentState{}
 		for _, state := range states {
 			incidents = append(incidents, state)
 		}
@@ -289,18 +305,22 @@ func (s *Schedule) ActionNotify(at ActionType, user, message string, aks []model
 
 		notification.Notify(subject, buf.String(), []byte(subject), buf.Bytes(), s.Conf, "actionNotification")
 	}
+	return nil
 }
 
-func (s *Schedule) groupActionNotifications(aks []models.AlertKey) map[*conf.Notification][]*State {
-	groupings := make(map[*conf.Notification][]*State)
+func (s *Schedule) groupActionNotifications(aks []models.AlertKey) (map[*conf.Notification][]*models.IncidentState, error) {
+	groupings := make(map[*conf.Notification][]*models.IncidentState)
 	for _, ak := range aks {
 		alert := s.Conf.Alerts[ak.Name()]
-		status := s.GetStatus(ak)
+		status, err := s.DataAccess.State().GetLatestIncident(ak)
+		if err != nil {
+			return nil, err
+		}
 		if alert == nil || status == nil {
 			continue
 		}
 		var n *conf.Notifications
-		if status.Status() == StWarning {
+		if status.WorstStatus == models.StWarning || alert.CritNotification == nil {
 			n = alert.WarnNotification
 		} else {
 			n = alert.CritNotification
@@ -316,5 +336,5 @@ func (s *Schedule) groupActionNotifications(aks []models.AlertKey) map[*conf.Not
 			groupings[not] = append(groupings[not], status)
 		}
 	}
-	return groupings
+	return groupings, nil
 }

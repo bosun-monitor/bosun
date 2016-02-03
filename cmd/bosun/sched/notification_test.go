@@ -7,7 +7,6 @@ import (
 
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/models"
-	"bosun.org/opentsdb"
 )
 
 func TestActionNotificationTemplates(t *testing.T) {
@@ -18,15 +17,15 @@ func TestActionNotificationTemplates(t *testing.T) {
 	}
 	s, _ := initSched(c)
 	data := &actionNotificationContext{}
-	data.ActionType = ActionAcknowledge
+	data.ActionType = models.ActionAcknowledge
 	data.Message = "Bad things happened"
 	data.User = "Batman"
-	data.States = []*State{
+	data.States = []*models.IncidentState{
 		{
-			History: []Event{
+			Id: 224,
+			Events: []models.Event{
 				{
-					Status:     StCritical,
-					IncidentId: 224,
+					Status: models.StCritical,
 				},
 			},
 			Alert:   "xyz",
@@ -53,6 +52,7 @@ func TestActionNotificationTemplates(t *testing.T) {
 }
 
 func TestActionNotificationGrouping(t *testing.T) {
+	defer setup()()
 	c, err := conf.New("", `
 		template t{
 			subject = 2
@@ -114,14 +114,18 @@ func TestActionNotificationGrouping(t *testing.T) {
 	bcrit := models.AlertKey("b{host=c}")
 	cA := models.AlertKey("c{host=a}")
 	cB := models.AlertKey("c{host=b}")
-	s.status[awarn] = &State{Alert: "a", Group: opentsdb.TagSet{"host": "w"}, History: []Event{{Status: StWarning}}}
-	s.status[acrit] = &State{Alert: "a", Group: opentsdb.TagSet{"host": "c"}, History: []Event{{Status: StCritical}}}
-	s.status[bwarn] = &State{Alert: "b", Group: opentsdb.TagSet{"host": "w"}, History: []Event{{Status: StWarning}}}
-	s.status[bcrit] = &State{Alert: "b", Group: opentsdb.TagSet{"host": "c"}, History: []Event{{Status: StCritical}}}
-	s.status[cA] = &State{Alert: "c", Group: opentsdb.TagSet{"host": "a"}, History: []Event{{Status: StWarning}}}
-	s.status[cB] = &State{Alert: "c", Group: opentsdb.TagSet{"host": "b"}, History: []Event{{Status: StWarning}}}
+	da := s.DataAccess.State()
+	da.UpdateIncidentState(&models.IncidentState{AlertKey: awarn, Alert: awarn.Name(), Tags: awarn.Group().Tags(), WorstStatus: models.StWarning, Events: []models.Event{{Status: models.StWarning}}})
+	da.UpdateIncidentState(&models.IncidentState{AlertKey: acrit, Alert: acrit.Name(), Tags: acrit.Group().Tags(), WorstStatus: models.StCritical, Events: []models.Event{{Status: models.StCritical}}})
+	da.UpdateIncidentState(&models.IncidentState{AlertKey: bwarn, Alert: bwarn.Name(), Tags: bwarn.Group().Tags(), WorstStatus: models.StWarning, Events: []models.Event{{Status: models.StWarning}}})
+	da.UpdateIncidentState(&models.IncidentState{AlertKey: bcrit, Alert: bcrit.Name(), Tags: bcrit.Group().Tags(), WorstStatus: models.StCritical, Events: []models.Event{{Status: models.StCritical}}})
+	da.UpdateIncidentState(&models.IncidentState{AlertKey: cA, Alert: cA.Name(), Tags: cA.Group().Tags(), WorstStatus: models.StWarning, Events: []models.Event{{Status: models.StWarning}}})
+	da.UpdateIncidentState(&models.IncidentState{AlertKey: cB, Alert: cB.Name(), Tags: cB.Group().Tags(), WorstStatus: models.StWarning, Events: []models.Event{{Status: models.StWarning}}})
 
-	groups := s.groupActionNotifications([]models.AlertKey{awarn, acrit, bwarn, bcrit, cA, cB})
+	groups, err := s.groupActionNotifications([]models.AlertKey{awarn, acrit, bwarn, bcrit, cA, cB})
+	if err != nil {
+		t.Fatal(err)
+	}
 	expect := func(not string, aks ...models.AlertKey) {
 		n := c.Notifications[not]
 		actualAks, ok := groups[n]
@@ -132,8 +136,8 @@ func TestActionNotificationGrouping(t *testing.T) {
 			t.Fatalf("Count mismatch for grouping %s. %d != %d.", not, len(actualAks), len(aks))
 		}
 		for i, ak := range aks {
-			if actualAks[i].AlertKey() != ak {
-				t.Fatalf("Alert key mismatch at index %d. %s != %s.", i, actualAks[i].AlertKey(), ak)
+			if actualAks[i].AlertKey != ak {
+				t.Fatalf("Alert key mismatch at index %d. %s != %s.", i, actualAks[i].AlertKey, ak)
 			}
 		}
 	}

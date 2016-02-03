@@ -7,7 +7,7 @@
 			<a ng-href="errorHistory?alert={{encode(state.Alert)}}">
 				<span title="This fire icon represents that the alert has an underlying error. Errors come from things like a time series database issue or a malformed query." class="glyphicon" ng-class="{'glyphicon-fire': child.IsError}"></span>
 			</a>
-			<span ng-show="state.last.IncidentId">#{{state.last.IncidentId}}:</span>
+			<span ng-show="state.Id">#{{state.Id}}:</span>
 			<span ng-bind="child.Subject || child.AlertKey"></span>
 			
 			<span class="pull-right" ng-show="child.Ago" ts-since="child.Ago"></span>
@@ -41,7 +41,7 @@
 					<a ng-href="/history?key={{encode(name)}}">Full History</a>,
 					<a ng-href="{{state.RuleUrl}}">Rule Editor</a>,
 					<a ng-href="/expr?expr={{btoa(state.Expr)}}">Expression</a>,
-					<a ng-href="/incident?id={{state.last.IncidentId}}">Incident (#<span ng-bind="state.last.IncidentId"/>)</a>
+					<a ng-href="/incident?id={{state.Id}}">Incident (#<span ng-bind="state.Id"/>)</a>
 				</div>
 			</div>
 		</div>

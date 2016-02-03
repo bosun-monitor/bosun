@@ -13,6 +13,8 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	"bosun.org/models"
 )
 
 // Tree is the representation of a single parsed expression.
@@ -29,44 +31,14 @@ type Tree struct {
 }
 
 type Func struct {
-	Args     []FuncType
-	Return   FuncType
+	Args     []models.FuncType
+	Return   models.FuncType
 	Tags     func([]Node) (Tags, error)
 	F        interface{}
 	VArgs    bool
 	VArgsPos int
 	Check    func(*Tree, *FuncNode) error
 }
-
-type FuncType int
-
-func (f FuncType) String() string {
-	switch f {
-	case TypeNumberSet:
-		return "number"
-	case TypeString:
-		return "string"
-	case TypeSeriesSet:
-		return "series"
-	case TypeScalar:
-		return "scalar"
-	case TypeESQuery:
-		return "esquery"
-	case TypeESIndexer:
-		return "esindexer"
-	default:
-		return "unknown"
-	}
-}
-
-const (
-	TypeString FuncType = iota
-	TypeScalar
-	TypeNumberSet
-	TypeSeriesSet
-	TypeESQuery
-	TypeESIndexer
-)
 
 type Tags map[string]struct{}
 
@@ -214,7 +186,7 @@ func (t *Tree) startParse(funcs []map[string]Func, lex *lexer) {
 	for _, funcMap := range funcs {
 		for name, f := range funcMap {
 			switch f.Return {
-			case TypeSeriesSet, TypeNumberSet:
+			case models.TypeSeriesSet, models.TypeNumberSet:
 				if f.Tags == nil {
 					panic(fmt.Errorf("%v: expected Tags definition: got nil", name))
 				}

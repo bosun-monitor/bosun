@@ -9,6 +9,7 @@ import (
 	"bosun.org/_third_party/github.com/MiniProfiler/go/miniprofiler"
 	elastic "bosun.org/_third_party/gopkg.in/olivere/elastic.v3"
 	"bosun.org/cmd/bosun/expr/parse"
+	"bosun.org/models"
 	"bosun.org/opentsdb"
 )
 
@@ -29,85 +30,85 @@ func elasticTagQuery(args []parse.Node) (parse.Tags, error) {
 var Elastic = map[string]parse.Func{
 	// Funcs for querying elastic
 	"escount": {
-		Args:   []parse.FuncType{parse.TypeESIndexer, parse.TypeString, parse.TypeESQuery, parse.TypeString, parse.TypeString, parse.TypeString},
-		Return: parse.TypeSeriesSet,
+		Args:   []models.FuncType{models.TypeESIndexer, models.TypeString, models.TypeESQuery, models.TypeString, models.TypeString, models.TypeString},
+		Return: models.TypeSeriesSet,
 		Tags:   elasticTagQuery,
 		F:      ESCount,
 	},
 	"esstat": {
-		Args:   []parse.FuncType{parse.TypeESIndexer, parse.TypeString, parse.TypeESQuery, parse.TypeString, parse.TypeString, parse.TypeString, parse.TypeString, parse.TypeString},
-		Return: parse.TypeSeriesSet,
+		Args:   []models.FuncType{models.TypeESIndexer, models.TypeString, models.TypeESQuery, models.TypeString, models.TypeString, models.TypeString, models.TypeString, models.TypeString},
+		Return: models.TypeSeriesSet,
 		Tags:   elasticTagQuery,
 		F:      ESStat,
 	},
 
 	// Funcs to create elastic index names (ESIndexer type)
 	"esindices": {
-		Args:     []parse.FuncType{parse.TypeString, parse.TypeString},
+		Args:     []models.FuncType{models.TypeString, models.TypeString},
 		VArgs:    true,
 		VArgsPos: 1,
-		Return:   parse.TypeESIndexer,
+		Return:   models.TypeESIndexer,
 		F:        ESIndicies,
 	},
 	"esdaily": {
-		Args:     []parse.FuncType{parse.TypeString, parse.TypeString, parse.TypeString},
+		Args:     []models.FuncType{models.TypeString, models.TypeString, models.TypeString},
 		VArgs:    true,
 		VArgsPos: 1,
-		Return:   parse.TypeESIndexer,
+		Return:   models.TypeESIndexer,
 		F:        ESDaily,
 	},
 	"esls": {
-		Args:   []parse.FuncType{parse.TypeString},
-		Return: parse.TypeESIndexer,
+		Args:   []models.FuncType{models.TypeString},
+		Return: models.TypeESIndexer,
 		F:      ESLS,
 	},
 
 	// Funcs for generate elastic queries (ESQuery Type) to further filter results
 	"esall": {
-		Args:   []parse.FuncType{},
-		Return: parse.TypeESQuery,
+		Args:   []models.FuncType{},
+		Return: models.TypeESQuery,
 		F:      ESAll,
 	},
 	"esregexp": {
-		Args:   []parse.FuncType{parse.TypeString, parse.TypeString},
-		Return: parse.TypeESQuery,
+		Args:   []models.FuncType{models.TypeString, models.TypeString},
+		Return: models.TypeESQuery,
 		F:      ESRegexp,
 	},
 	"esquery": {
-		Args:   []parse.FuncType{parse.TypeString, parse.TypeString},
-		Return: parse.TypeESQuery,
+		Args:   []models.FuncType{models.TypeString, models.TypeString},
+		Return: models.TypeESQuery,
 		F:      ESQueryString,
 	},
 	"esand": {
-		Args:   []parse.FuncType{parse.TypeESQuery},
+		Args:   []models.FuncType{models.TypeESQuery},
 		VArgs:  true,
-		Return: parse.TypeESQuery,
+		Return: models.TypeESQuery,
 		F:      ESAnd,
 	},
 	"esor": {
-		Args:   []parse.FuncType{parse.TypeESQuery},
+		Args:   []models.FuncType{models.TypeESQuery},
 		VArgs:  true,
-		Return: parse.TypeESQuery,
+		Return: models.TypeESQuery,
 		F:      ESOr,
 	},
 	"esgt": {
-		Args:   []parse.FuncType{parse.TypeString, parse.TypeScalar},
-		Return: parse.TypeESQuery,
+		Args:   []models.FuncType{models.TypeString, models.TypeScalar},
+		Return: models.TypeESQuery,
 		F:      ESGT,
 	},
 	"esgte": {
-		Args:   []parse.FuncType{parse.TypeString, parse.TypeScalar},
-		Return: parse.TypeESQuery,
+		Args:   []models.FuncType{models.TypeString, models.TypeScalar},
+		Return: models.TypeESQuery,
 		F:      ESGTE,
 	},
 	"eslt": {
-		Args:   []parse.FuncType{parse.TypeString, parse.TypeScalar},
-		Return: parse.TypeESQuery,
+		Args:   []models.FuncType{models.TypeString, models.TypeScalar},
+		Return: models.TypeESQuery,
 		F:      ESLT,
 	},
 	"eslte": {
-		Args:   []parse.FuncType{parse.TypeString, parse.TypeScalar},
-		Return: parse.TypeESQuery,
+		Args:   []models.FuncType{models.TypeString, models.TypeScalar},
+		Return: models.TypeESQuery,
 		F:      ESLTE,
 	},
 }

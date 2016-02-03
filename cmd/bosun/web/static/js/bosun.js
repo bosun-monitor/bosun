@@ -2246,24 +2246,25 @@ bosunControllers.controller('HistoryCtrl', ['$scope', '$http', '$location', '$ro
             keys[search.key] = true;
         }
         var params = Object.keys(keys).map(function (v) { return 'ak=' + encodeURIComponent(v); }).join('&');
-        $http.get('/api/status?' + params)
+        $http.get('/api/status?' + params + "&all=1")
             .success(function (data) {
+            console.log(data);
             var selected_alerts = {};
             angular.forEach(data, function (v, ak) {
                 if (!keys[ak]) {
                     return;
                 }
-                v.History.map(function (h) { h.Time = moment.utc(h.Time); });
-                angular.forEach(v.History, function (h, i) {
-                    if (i + 1 < v.History.length) {
-                        h.EndTime = v.History[i + 1].Time;
+                v.Events.map(function (h) { h.Time = moment.utc(h.Time); });
+                angular.forEach(v.Events, function (h, i) {
+                    if (i + 1 < v.Events.length) {
+                        h.EndTime = v.Events[i + 1].Time;
                     }
                     else {
                         h.EndTime = moment.utc();
                     }
                 });
                 selected_alerts[ak] = {
-                    History: v.History.reverse()
+                    History: v.Events.reverse()
                 };
             });
             if (Object.keys(selected_alerts).length > 0) {
@@ -2432,9 +2433,9 @@ bosunControllers.controller('IncidentCtrl', ['$scope', '$http', '$location', '$r
         }
         $http.get('/api/incidents/events?id=' + id)
             .success(function (data) {
-            $scope.incident = data.Incident;
-            $scope.events = data.Events;
+            $scope.incident = data;
             $scope.actions = data.Actions;
+            $scope.events = data.Events;
         })
             .error(function (err) {
             $scope.error = err;
@@ -2820,10 +2821,10 @@ bosunApp.directive('tsState', ['$sce', '$http', function ($sce, $http) {
                     return v.replace(/([,{}()])/g, '$1\u200b');
                 };
                 scope.state.Touched = moment(scope.state.Touched).utc();
-                angular.forEach(scope.state.History, function (v, k) {
+                angular.forEach(scope.state.Events, function (v, k) {
                     v.Time = moment(v.Time).utc();
                 });
-                scope.state.last = scope.state.History[scope.state.History.length - 1];
+                scope.state.last = scope.state.Events[scope.state.Events.length - 1];
                 if (scope.state.Actions && scope.state.Actions.length > 0) {
                     scope.state.LastAction = scope.state.Actions[0];
                 }

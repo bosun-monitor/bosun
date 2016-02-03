@@ -5,16 +5,17 @@ import (
 	"strings"
 
 	"bosun.org/cmd/bosun/conf"
+	"bosun.org/models"
 )
 
-func makeFilter(filter string) (func(*conf.Conf, *conf.Alert, *State) bool, error) {
+func makeFilter(filter string) (func(*conf.Conf, *conf.Alert, *models.IncidentState) bool, error) {
 	fields := strings.Fields(filter)
 	if len(fields) == 0 {
-		return func(c *conf.Conf, a *conf.Alert, s *State) bool {
+		return func(c *conf.Conf, a *conf.Alert, s *models.IncidentState) bool {
 			return true
 		}, nil
 	}
-	fs := make(map[string][]func(c *conf.Conf, a *conf.Alert, s *State) bool)
+	fs := make(map[string][]func(c *conf.Conf, a *conf.Alert, s *models.IncidentState) bool)
 	for _, f := range fields {
 		negate := strings.HasPrefix(f, "!")
 		if negate {
@@ -29,8 +30,8 @@ func makeFilter(filter string) (func(*conf.Conf, *conf.Alert, *State) bool, erro
 		if len(sp) == 1 {
 			key = ""
 		}
-		add := func(fn func(c *conf.Conf, a *conf.Alert, s *State) bool) {
-			fs[key] = append(fs[key], func(c *conf.Conf, a *conf.Alert, s *State) bool {
+		add := func(fn func(c *conf.Conf, a *conf.Alert, s *models.IncidentState) bool) {
+			fs[key] = append(fs[key], func(c *conf.Conf, a *conf.Alert, s *models.IncidentState) bool {
 				v := fn(c, a, s)
 				if negate {
 					v = !v
@@ -40,8 +41,8 @@ func makeFilter(filter string) (func(*conf.Conf, *conf.Alert, *State) bool, erro
 		}
 		switch key {
 		case "":
-			add(func(c *conf.Conf, a *conf.Alert, s *State) bool {
-				ak := s.AlertKey()
+			add(func(c *conf.Conf, a *conf.Alert, s *models.IncidentState) bool {
+				ak := s.AlertKey
 				return strings.Contains(string(ak), value) || strings.Contains(string(s.Subject), value)
 			})
 		case "ack":
@@ -54,14 +55,14 @@ func makeFilter(filter string) (func(*conf.Conf, *conf.Alert, *State) bool, erro
 			default:
 				return nil, fmt.Errorf("unknown %s value: %s", key, value)
 			}
-			add(func(c *conf.Conf, a *conf.Alert, s *State) bool {
+			add(func(c *conf.Conf, a *conf.Alert, s *models.IncidentState) bool {
 				return s.NeedAck != v
 			})
 		case "notify":
-			add(func(c *conf.Conf, a *conf.Alert, s *State) bool {
+			add(func(c *conf.Conf, a *conf.Alert, s *models.IncidentState) bool {
 				r := false
 				f := func(ns *conf.Notifications) {
-					for k := range ns.Get(c, s.Group) {
+					for k := range ns.Get(c, s.AlertKey.Group()) {
 						if strings.Contains(k, value) {
 							r = true
 							break
@@ -73,27 +74,27 @@ func makeFilter(filter string) (func(*conf.Conf, *conf.Alert, *State) bool, erro
 				return r
 			})
 		case "status":
-			var v Status
+			var v models.Status
 			switch value {
 			case "normal":
-				v = StNormal
+				v = models.StNormal
 			case "warning":
-				v = StWarning
+				v = models.StWarning
 			case "critical":
-				v = StCritical
+				v = models.StCritical
 			case "unknown":
-				v = StUnknown
+				v = models.StUnknown
 			default:
 				return nil, fmt.Errorf("unknown %s value: %s", key, value)
 			}
-			add(func(c *conf.Conf, a *conf.Alert, s *State) bool {
-				return s.AbnormalStatus() == v
+			add(func(c *conf.Conf, a *conf.Alert, s *models.IncidentState) bool {
+				return s.LastAbnormalStatus == v
 			})
 		default:
 			return nil, fmt.Errorf("unknown filter key: %s", key)
 		}
 	}
-	return func(c *conf.Conf, a *conf.Alert, s *State) bool {
+	return func(c *conf.Conf, a *conf.Alert, s *models.IncidentState) bool {
 		for _, ors := range fs {
 			match := false
 			for _, f := range ors {
