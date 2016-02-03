@@ -28,7 +28,7 @@ Variables perform simple text replacement - they are not intelligent. They are a
 
 ### Environment Variables
 
-Environment variables may be used similarly to variables, but with `env.` preceeding the name. For example: `tsdbHost = ${env.TSDBHOST}` (with or without braces). It is an error to specify a non-existent or empty environment variable.
+Environment variables may be used similarly to variables, but with `env.` preceding the name. For example: `tsdbHost = ${env.TSDBHOST}` (with or without braces). It is an error to specify a non-existent or empty environment variable.
 
 ## Sections
 
@@ -39,8 +39,8 @@ Every variable is optional, though you should enable at least 1 backend.
 
 #### backends
 
-* tsdbHost: OpenTSDB host. Must be GZIP-aware (use the [next branch](https://github.com/opentsdb/opentsdb/tree/next)). Can specify both host and port: `tsdb-host:4242`. Defaults to port 4242 if no port specified. If you use opentsdb without relaying the data through Bosun currently the following won't work (and this isn't something we officially suport):
-  * Tag value glob matching, for example `avg:metric.name{tag=something-*}`. However single asterists like `tag=*` will stil work.
+* tsdbHost: OpenTSDB host. Must be GZIP-aware (use the [next branch](https://github.com/opentsdb/opentsdb/tree/next)). Can specify both host and port: `tsdb-host:4242`. Defaults to port 4242 if no port specified. If you use opentsdb without relaying the data through Bosun currently the following won't work (and this isn't something we officially support):
+  * Tag value glob matching, for example `avg:metric.name{tag=something-*}`. However single asterisks like `tag=*` will still work.
   * The items page.
   * The graph page's tag list.
 * tsdbVersion: Defaults to 2.1 if not present. Should always be specified as Number.Number. Various OpenTSDB features are added with newer versions.
