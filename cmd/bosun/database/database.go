@@ -153,3 +153,10 @@ func (d *dataAccess) LMCLEAR(key string, value string) (string, []interface{}) {
 	}
 	return "LMCLEAR", []interface{}{key, value}
 }
+
+func (d *dataAccess) HSCAN() string {
+	if d.isRedis {
+		return "HSCAN"
+	}
+	return "XHSCAN"
+}
