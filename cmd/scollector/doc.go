@@ -99,6 +99,9 @@ Freq (integer): is the default frequency in seconds for most collectors.
 BatchSize (integer): is the number of metrics that will be sent in each batch.
 Default is 500.
 
+MaxQueueLen (integer): is the number of metrics keept internally.
+Default is 200000.
+
 Filter (array of string): filters collectors matching these terms.
 
 MetricFilters (array of string): filters metrics matching these regular
