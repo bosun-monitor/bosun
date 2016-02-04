@@ -301,6 +301,10 @@ func (d *dataAccess) Forget(ak models.AlertKey) error {
 	conn := d.GetConnection()
 	defer conn.Close()
 
+	ids, err := int64s(conn.Do("LRANGE", incidentsForAlertKeyKey(ak), 0, -1))
+	if err != nil {
+		return slog.Wrap(err)
+	}
 	alert := ak.Name()
 	return d.transact(conn, func() error {
 		// last touched.
@@ -316,11 +320,6 @@ func (d *dataAccess) Forget(ak models.AlertKey) error {
 		}
 		//open set
 		if _, err := conn.Do("HDEL", statesOpenIncidentsKey, ak); err != nil {
-			return slog.Wrap(err)
-		}
-		//all incidents
-		ids, err := int64s(conn.Do("LRANGE", incidentsForAlertKeyKey(ak), 0, -1))
-		if err != nil {
 			return slog.Wrap(err)
 		}
 		if _, err = conn.Do("HDEL", statesOpenIncidentsKey, ak); err != nil {
