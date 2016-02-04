@@ -27,7 +27,7 @@ const (
 )
 
 var (
-	startQuery = time.Date(2015, time.April, 1, 12, 0, 0, 0, time.UTC)
+	startQuery = time.Date(2016, time.January, 13, 12, 0, 0, 0, time.UTC)
 	endQuery   = startQuery.Add(time.Hour - time.Second)
 	resPath    = "results"
 )
