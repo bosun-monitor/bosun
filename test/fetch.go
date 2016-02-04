@@ -17,7 +17,7 @@ import (
 	"time"
 
 	"bosun.org/opentsdb"
-	"github.com/influxdb/influxdb/client"
+	"github.com/influxdata/influxdb/client"
 )
 
 const (
@@ -142,9 +142,9 @@ func toInflux() error {
 					log.Fatal(err)
 				}
 				points = append(points, client.Point{
-					Name:      r.Metric,
-					Tags:      map[string]string(r.Tags),
-					Timestamp: time.Unix(i, 0),
+					Measurement: r.Metric,
+					Tags:        map[string]string(r.Tags),
+					Time:        time.Unix(i, 0),
 					Fields: map[string]interface{}{
 						"value": float64(v),
 					},
