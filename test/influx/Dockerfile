@@ -5,9 +5,7 @@ RUN apt-get update && apt-get install -y \
 	--no-install-recommends \
 	&& rm -rf /var/lib/apt/lists/*
 
-ENV INFLUXVER 0.9.0-rc24
-
-RUN curl http://get.influxdb.org/influxdb_${INFLUXVER}_amd64.deb > /tmp/deb \
+RUN curl https://s3.amazonaws.com/influxdb/influxdb_0.10.0-1_amd64.deb > /tmp/deb \
 	&& dpkg -i /tmp/deb \
 	&& rm /tmp/deb
 
