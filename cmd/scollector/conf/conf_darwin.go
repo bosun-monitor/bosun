@@ -1,6 +1,11 @@
 package conf
 
-type ProcessParams struct{}
+type ProcessParams struct {
+	Command      string
+	Name         string
+	Args         string
+	IncludeCount bool
+}
 
 type ServiceParams struct {
 	Name      string
