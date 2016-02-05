@@ -1,316 +1,435 @@
 package main
 
+// TODO:
+//  add graceful shutdown (http://www.hydrogen18.com/blog/stop-listening-http-server-go.html)
+//  add control of Transport settings (or at least tune)
+
 import (
+	"bufio"
 	"bytes"
 	"compress/gzip"
 	"encoding/json"
 	"flag"
-	"io"
-	"log"
+	"net"
 	"net/http"
-	"net/http/httptest"
 	"net/http/httputil"
 	"net/url"
-	"os"
-	"runtime"
+	"strconv"
 	"strings"
+	"time"
 
 	"bosun.org/cmd/tsdbrelay/denormalize"
 	"bosun.org/collect"
-	"bosun.org/metadata"
 	"bosun.org/opentsdb"
-	"bosun.org/util"
+	"bosun.org/slog"
 )
 
 var (
-	listenAddr      = flag.String("l", ":4242", "Listen address.")
-	bosunServer     = flag.String("b", "bosun", "Target Bosun server. Can specify port with host:port.")
+	bosunTransport *http.Transport
+	bosunProxy     *httputil.ReverseProxy
+
+	tsdbTransport *http.Transport
+	tsdbProxy     *httputil.ReverseProxy
+
+	denormalizationRules map[string]*denormalize.DenormalizationRule
+
+	// We juggle separate queues here in order to avoid them interfering with
+	// one another - one bloated queue won't slow a different one.
+	bosunRequestQueue     chan *CountedRequest
+	tsdbRequestQueue      chan *CountedRequest
+	secondaryRelaysQueues *[]chan *CountedRequest
+)
+
+var (
+	listenAddr  = flag.String("l", ":4242", "Listen address.")
+	bosunServer = flag.String("b", "bosun", "Target Bosun server. Can specify port with host:port.")
+	tsdbServer  = flag.String("t", "", "Target OpenTSDB server. Can specify port with host:port.")
+
 	secondaryRelays = flag.String("r", "", "Additional relays to send data to. Intended for secondary data center replication. Only response from primary tsdb server wil be relayed to clients.")
-	tsdbServer      = flag.String("t", "", "Target OpenTSDB server. Can specify port with host:port.")
-	logVerbose      = flag.Bool("v", false, "enable verbose logging")
 	toDenormalize   = flag.String("denormalize", "", "List of metrics to denormalize. Comma seperated list of `metric__tagname__tagname` rules. Will be translated to `__tagvalue.tagvalue.metric`")
 
 	redisHost = flag.String("redis", "", "redis host for aggregating external counters")
 	redisDb   = flag.Int("db", 0, "redis db to use for counters")
+
+	maxRetries       = flag.Int("a", 16, "Maximum number of times to attempt to asynchronously deliver a request")
+	maxRequestBuffer = flag.Int("u", 65535, "Maximum asynchronous request buffer size")
+	relayPoolSize    = flag.Int("w", 1024, "Maximum number of concurrent synchronous relay sessions")
+	maxRelayWaitTime = flag.Int("p", 5, "Maximum time to wait for a synchronous relay slot, in seconds")
+	workersPerQueue  = flag.Int("q", 16, "Number of worker goroutines to process asynchronous deliveries")
 )
 
-var (
-	tsdbPutURL    string
-	bosunIndexURL string
+var relayPool = make(chan bool, 64) // FIXME magic number
 
-	denormalizationRules map[string]*denormalize.DenormalizationRule
-
-	relayPutUrls []string
-)
-
-func main() {
-	runtime.GOMAXPROCS(runtime.NumCPU())
-	var err error
-	myHost, err = os.Hostname()
-	if err != nil || myHost == "" {
-		myHost = "tsdbrelay"
-	}
-
-	flag.Parse()
-	if *bosunServer == "" || *tsdbServer == "" {
-		log.Fatal("must specify both bosun and tsdb server")
-	}
-	log.Println("listen on", *listenAddr)
-	log.Println("relay to bosun at", *bosunServer)
-	log.Println("relay to tsdb at", *tsdbServer)
-	if *toDenormalize != "" {
-		var err error
-		denormalizationRules, err = denormalize.ParseDenormalizationRules(*toDenormalize)
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
-
-	tsdbURL := &url.URL{
-		Scheme: "http",
-		Host:   *tsdbServer,
-	}
-
-	u := url.URL{
-		Scheme: "http",
-		Host:   *tsdbServer,
-		Path:   "/api/put",
-	}
-	tsdbPutURL = u.String()
-	bosunURL := &url.URL{
-		Scheme: "http",
-		Host:   *bosunServer,
-	}
-	u = url.URL{
-		Scheme: "http",
-		Host:   *bosunServer,
-		Path:   "/api/index",
-	}
-	bosunIndexURL = u.String()
-	if *secondaryRelays != "" {
-		for _, rUrl := range strings.Split(*secondaryRelays, ",") {
-			u = url.URL{
-				Scheme: "http",
-				Host:   rUrl,
-				Path:   "/api/put",
-			}
-			relayPutUrls = append(relayPutUrls, u.String())
-		}
-	}
-
-	tsdbProxy := util.NewSingleHostProxy(tsdbURL)
-	bosunProxy := util.NewSingleHostProxy(bosunURL)
-	rp := &relayProxy{
-		TSDBProxy:  tsdbProxy,
-		BosunProxy: bosunProxy,
-	}
-	http.HandleFunc("/api/put", func(w http.ResponseWriter, r *http.Request) {
-		rp.relayPut(w, r, true)
-	})
-	if *redisHost != "" {
-		http.HandleFunc("/api/count", collect.HandleCounterPut(*redisHost, *redisDb))
-	}
-	http.HandleFunc("/api/metadata/put", func(w http.ResponseWriter, r *http.Request) {
-		rp.relayMetadata(w, r)
-	})
-	http.Handle("/", tsdbProxy)
-
-	collectUrl := &url.URL{
-		Scheme: "http",
-		Host:   *listenAddr,
-		Path:   "/api/put",
-	}
-	if err = collect.Init(collectUrl, "tsdbrelay"); err != nil {
-		log.Fatal(err)
-	}
-	log.Fatal(http.ListenAndServe(*listenAddr, nil))
-}
-
-func init() {
-	metadata.AddMetricMeta("tsdbrelay.puts.relayed", metadata.Counter, metadata.Count, "Number of successful puts relayed")
-	metadata.AddMetricMeta("tsdbrelay.metadata.relayed", metadata.Counter, metadata.Count, "Number of successful metadata puts relayed")
-}
-
-func verbose(format string, a ...interface{}) {
-	if *logVerbose {
-		log.Printf(format, a...)
-	}
-}
-
-type relayProxy struct {
-	TSDBProxy  *httputil.ReverseProxy
-	BosunProxy *httputil.ReverseProxy
-}
-
-type passthru struct {
-	io.ReadCloser
-	buf bytes.Buffer
-}
-
-func (p *passthru) Read(b []byte) (int, error) {
-	n, err := p.ReadCloser.Read(b)
-	p.buf.Write(b[:n])
-	return n, err
-}
-
-type relayWriter struct {
+// RelayResponseWriter is an extension of http.ResponseWriter that permits
+// us to capture the return code for later use.
+type RelayResponseWriter struct {
 	http.ResponseWriter
-	code int
+	ResponseCode int
 }
 
-func (rw *relayWriter) WriteHeader(code int) {
-	rw.code = code
-	rw.ResponseWriter.WriteHeader(code)
+// Pass the call along to http.ResponseWriter.WriteHeader, but save the return
+// code too.
+func (res *RelayResponseWriter) WriteHeader(code int) {
+	res.ResponseCode = code
+	res.ResponseWriter.WriteHeader(res.ResponseCode)
 }
 
-var (
-	relayHeader = "X-Relayed-From"
-	myHost      string
-)
-
-func (rp *relayProxy) relayPut(responseWriter http.ResponseWriter, r *http.Request, parse bool) {
-	isRelayed := r.Header.Get(relayHeader) != ""
-	reader := &passthru{ReadCloser: r.Body}
-	r.Body = reader
-	w := &relayWriter{ResponseWriter: responseWriter}
-	rp.TSDBProxy.ServeHTTP(w, r)
-	if w.code != 204 {
-		verbose("got status", w.code)
-		return
-	}
-	verbose("relayed to tsdb")
-	collect.Add("puts.relayed", opentsdb.TagSet{}, 1)
-	// Send to bosun in a separate go routine so we can end the source's request.
-	go func() {
-		body := bytes.NewBuffer(reader.buf.Bytes())
-		req, err := http.NewRequest(r.Method, bosunIndexURL, body)
-		if err != nil {
-			verbose("%v", err)
-			return
-		}
-		resp, err := http.DefaultClient.Do(req)
-		if err != nil {
-			verbose("bosun relay error: %v", err)
-			return
-		}
-		resp.Body.Close()
-		verbose("bosun relay success")
-	}()
-	// Parse and denormalize datapoints
-	if !isRelayed && parse && denormalizationRules != nil {
-		go rp.denormalize(bytes.NewReader(reader.buf.Bytes()))
-	}
-
-	if !isRelayed && len(relayPutUrls) > 0 {
-		go func() {
-			for _, relayUrl := range relayPutUrls {
-				body := bytes.NewBuffer(reader.buf.Bytes())
-				req, err := http.NewRequest(r.Method, relayUrl, body)
-				if err != nil {
-					verbose("%v", err)
-					return
-				}
-				req.Header.Set("Content-Type", "application/json")
-				req.Header.Set("Content-Encoding", "gzip")
-				req.Header.Add(relayHeader, myHost)
-				resp, err := http.DefaultClient.Do(req)
-				if err != nil {
-					verbose("secondary relay error: %v", err)
-					return
-				}
-				resp.Body.Close()
-				verbose("secondary relay success")
-			}
-		}()
-	}
+// CountedRequest is a type which lets us track the number of times
+// we've attempted to relay a request.
+type CountedRequest struct {
+	Request  []byte
+	NumTries int
 }
 
-func (rp *relayProxy) denormalize(body io.Reader) {
-	gReader, err := gzip.NewReader(body)
+// NopResponseWriter is a basic implementation of the ResponseWriter interface
+// that does nothing but store a response code. It returns an error if an attempt
+// is made to write to the body of the response.
+type NopResponseWriter struct {
+	ResponseCode int
+	wroteStatus  bool
+}
+
+// Want a Header? Here you go, have a Header. Headers for everyone.
+func (resp *NopResponseWriter) Header() http.Header {
+	return make(http.Header)
+}
+
+// Return an error indicating that we do not permit bodies. Implicitly set the
+// status code to 204 No Content if it hasn't been set otherwise.
+func (resp *NopResponseWriter) Write(_ []byte) (n int, err error) {
+	if !resp.wroteStatus {
+		resp.WriteHeader(http.StatusNoContent)
+	}
+	return 0, http.ErrBodyNotAllowed
+}
+
+// Store the given response code, and record that it's been explicitly set.
+func (resp *NopResponseWriter) WriteHeader(status int) {
+	resp.ResponseCode = status
+	resp.wroteStatus = true
+}
+
+// Synchronously relay the given request to the specified proxy, storing the
+// server's response in a RelayResponseWriter. This call will block until a
+// relay pool slot is available, or the channel receive times out.
+func synchRelay(destinationProxy *httputil.ReverseProxy, clientResp *RelayResponseWriter, reqBytes *[]byte) {
+	clientReq, err := requestFromBytes(reqBytes)
 	if err != nil {
-		verbose("error making gzip reader: %v", err)
+		slog.Error("synchRelay could not grok request bytes: ", reqBytes, " because ", err)
+		clientResp.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	decoder := json.NewDecoder(gReader)
+	slog.Debug("synchRelay got ", clientReq.URL.EscapedPath())
+	select {
+	case relayPool <- true:
+		slog.Debug("synchRelay got a slot for ", clientReq.URL.EscapedPath())
+		destinationProxy.ServeHTTP(clientResp, clientReq)
+		slog.Debug("synchRelay relayed request ", clientReq.URL.EscapedPath(), " with return code ", clientResp.ResponseCode)
+		<-relayPool
+	case <-time.After(time.Duration(*maxRelayWaitTime) * time.Second):
+		defer collect.Add("puts.queue_timeouts", opentsdb.TagSet{}, 1)
+		slog.Warning("synchRelay could not get a slot in time to relay ", clientReq.URL.EscapedPath())
+		clientResp.WriteHeader(http.StatusGatewayTimeout)
+	}
+	return
+}
+
+// Retrieve a (byte string) HTTP request from the queue, and forward it to the
+// supplied proxy. Monitors the response code, and returns the request to the
+// queue if it should be replayed. If delivery of the request has been attempted
+// too many times, abandon the request and log a warning.
+//
+// n.b. that the retry logic does not know anything about backing off or waiting.
+func retryingRelayWorker(requestQueue chan *CountedRequest, destinationProxy *httputil.ReverseProxy) {
+	slog.Info("rRW starting up")
+	defer slog.Info("rRW shutting down")
+	throwawayResp := &NopResponseWriter{}
+	for request := range requestQueue {
+		clientReq, err := requestFromBytes(&request.Request)
+		if err != nil {
+			slog.Error("rRW could not grok request bytes: ", request.Request, " because ", err)
+		}
+		slog.Debug("rRW got ", clientReq.URL.EscapedPath(), " with ", request.NumTries, " tries")
+		request.NumTries += 1
+		destinationProxy.ServeHTTP(throwawayResp, clientReq)
+		if shouldRetry(throwawayResp.ResponseCode) && request.NumTries < *maxRetries {
+			slog.Warning("rRW must replay ", clientReq.URL.EscapedPath(), ": got response ", throwawayResp.ResponseCode)
+			requestQueue <- request
+		} else {
+			slog.Debug("rRW is done with ", clientReq.URL.EscapedPath(),
+				": got response ", throwawayResp.ResponseCode,
+				" after ", request.NumTries, " tries")
+		}
+	}
+}
+
+// Does the response's status suggest that we should re-queue the request and
+// try it again?
+// Codes which suggest possible future success are 500, 502, 503, and 504.
+func shouldRetry(respCode int) bool {
+	switch respCode {
+	case http.StatusInternalServerError, http.StatusBadGateway, http.StatusServiceUnavailable, http.StatusGatewayTimeout:
+		return true
+	}
+	return false
+}
+
+// Take the request and put it on the queue for asynchronous relaying.
+func asynchRelay(requestQueue chan *CountedRequest, reqBytes *[]byte) {
+	trackedRequest := &CountedRequest{
+		Request:  *reqBytes,
+		NumTries: 0,
+	}
+	select {
+	case requestQueue <- trackedRequest:
+		return
+	default:
+		slog.Error("async could not put a request into the queue")
+		collect.Add("asynch.queue_overflow", opentsdb.TagSet{}, 1)
+	}
+}
+
+// Generate an http.Request from a byte array (presumably containing an HTTP request)
+func requestFromBytes(reqBytes *[]byte) (*http.Request, error) {
+	return http.ReadRequest(bufio.NewReader(bytes.NewBuffer(*reqBytes)))
+}
+
+// Handle the incoming HTTP request by synchronously relaying it to the TSDB
+// server (via tsdbProxy). If the proxy succeeds, asynchronously relay it to
+// the /api/index endpoint at Bosun (via bosunProxy), and return the TSDB response
+// code to the client. If the relay to TSDB does not succeed, return early.
+func putRelay(clientResp http.ResponseWriter, clientReq *http.Request) {
+	rtt := collect.StartTimer("puts.rtt", opentsdb.TagSet{})
+	defer rtt()
+	slog.Info("putRelay handling ", clientReq.URL.EscapedPath(), " for ", clientReq.RemoteAddr)
+	defer collect.Add("puts.received", opentsdb.TagSet{}, 1)
+
+	// Extract a copy of the request that we can pass around
+	reqBuf := new(bytes.Buffer)
+	clientReq.WriteProxy(reqBuf)
+	reqStore := reqBuf.Bytes()
+
+	// Munge the response type so we can capture the response code
+	synchResp := &RelayResponseWriter{ResponseWriter: clientResp}
+
+	// Relay the request data to tsdbProxy, returning the response in synchResp
+	synchRelay(tsdbProxy, synchResp, &reqStore)
+
+	if synchResp.ResponseCode != http.StatusNoContent {
+		slog.Warning("putRelay could not relay ", clientReq.URL.EscapedPath(), ": got response code ", synchResp.ResponseCode)
+	} else {
+		slog.Debug("putRelay succeeded at relaying ", clientReq.URL.EscapedPath())
+		defer collect.Add("puts.relayed", opentsdb.TagSet{"status": strconv.Itoa(synchResp.ResponseCode)}, 1)
+
+		// Rewrite the request to change the endpoint, so that Bosun will index
+		// it, and not forward it back to us, and then queue it for sending.
+		toIndex := bytes.Replace(reqStore[:], []byte("/api/put"), []byte("/api/index"), 1)
+		asynchRelay(bosunRequestQueue, &toIndex)
+
+		if clientReq.Header.Get("X-Forwarded-For") == "" && denormalizationRules != nil {
+			denormalizeAndQueue(&reqStore)
+		}
+
+		// Now send it to secondaries
+		if *secondaryRelays != "" {
+			for _, q := range *secondaryRelaysQueues {
+				asynchRelay(q, &reqStore)
+				slog.Debug("putRelay sent to a secondaryRelay")
+			}
+		}
+	}
+	// Return the synchronous response to the client.
+	clientResp = synchResp
+}
+
+func denormalizeAndQueue(reqBytes *[]byte) {
+	// Do some gymnastics to get the body of the request out of the byte blob :(
+	clientReq, err := requestFromBytes(reqBytes)
+	if err != nil {
+		slog.Error("dAQ could not grok request bytes: ", reqBytes, " because ", err)
+	}
+
+	gz, err := gzip.NewReader(clientReq.Body)
+	if err != nil {
+		slog.Error("dAQ could not create a gzip reader: ", err)
+	}
+	decoder := json.NewDecoder(gz)
 	dps := []*opentsdb.DataPoint{}
 	err = decoder.Decode(&dps)
 	if err != nil {
-		verbose("error decoding data points: %v", err)
+		slog.Debug("dAQ error decoding data points: ", err)
 		return
 	}
+
 	relayDps := []*opentsdb.DataPoint{}
 	for _, dp := range dps {
 		if rule, ok := denormalizationRules[dp.Metric]; ok {
 			if err = rule.Translate(dp); err == nil {
 				relayDps = append(relayDps, dp)
 			} else {
-				verbose(err.Error())
+				slog.Info(err.Error())
 			}
 		}
 	}
+
 	if len(relayDps) == 0 {
 		return
 	}
+
 	buf := &bytes.Buffer{}
 	gWriter := gzip.NewWriter(buf)
 	encoder := json.NewEncoder(gWriter)
 	err = encoder.Encode(relayDps)
 	if err != nil {
-		verbose("error encoding denormalized data points: %v", err)
+		slog.Info("error encoding denormalized data points: %v", err)
 		return
 	}
 	if err = gWriter.Close(); err != nil {
-		verbose("error zipping denormalized data points: %v", err)
+		slog.Info("error zipping denormalized data points: %v", err)
 		return
 	}
-	req, err := http.NewRequest("POST", tsdbPutURL, buf)
-	if err != nil {
-		verbose("%v", err)
-		return
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Content-Encoding", "gzip")
 
-	responseWriter := httptest.NewRecorder()
-	rp.relayPut(responseWriter, req, false)
+	clientReq.Body.Read(buf.Bytes())         // Read in the re-written body
+	clientReq.Write(buf)                     // Write out the whole request
+	reqStore := buf.Bytes()                  // Store the content for queueing
+	asynchRelay(tsdbRequestQueue, &reqStore) // Queue the request and forget
 
-	verbose("relayed %d denormalized data points. Tsdb response: %d", len(relayDps), responseWriter.Code)
+	slog.Debug("dAQ queued ", len(relayDps), " denormalized data points")
 }
 
-func (rp *relayProxy) relayMetadata(responseWriter http.ResponseWriter, r *http.Request) {
-	reader := &passthru{ReadCloser: r.Body}
-	r.Body = reader
-	w := &relayWriter{ResponseWriter: responseWriter}
-	rp.BosunProxy.ServeHTTP(w, r)
-	if w.code != 204 {
-		verbose("got status %d", w.code)
-		return
+// Synchronously relay the POSTed metadata to Bosun, skipping TSDB entirely.
+func metadataRelay(clientResp http.ResponseWriter, clientReq *http.Request) {
+	slog.Info("metadataRelay handling ", clientReq.URL.EscapedPath())
+	collect.Add("metadata.received", opentsdb.TagSet{}, 1)
+
+	synchResp := &RelayResponseWriter{ResponseWriter: clientResp}
+
+	// Extract the request so we can pass it to synchRelay
+	reqBuf := new(bytes.Buffer)
+	clientReq.WriteProxy(reqBuf)
+	reqStore := reqBuf.Bytes()
+
+	synchRelay(bosunProxy, synchResp, &reqStore)
+
+	if synchResp.ResponseCode != http.StatusNoContent {
+		slog.Warning("metadataRelay could not relay ", clientReq.URL.EscapedPath(), ": got response code ", synchResp.ResponseCode)
+	} else {
+		slog.Debug("metadataRelay succeeded at relaying ", clientReq.URL.EscapedPath())
+		defer collect.Add("metadata.relayed", opentsdb.TagSet{"status": strconv.Itoa(synchResp.ResponseCode)}, 1)
 	}
-	verbose("relayed metadata to bosun")
-	collect.Add("metadata.relayed", opentsdb.TagSet{}, 1)
-	if r.Header.Get(relayHeader) != "" {
-		return
+
+	clientResp = synchResp
+}
+
+func init() {
+	flag.Parse()
+	if *bosunServer == "" || *tsdbServer == "" {
+		slog.Fatal("Must specify both bosun and tsdb servers")
 	}
-	if len(relayPutUrls) != 0 {
-		go func() {
-			for _, relayUrl := range relayPutUrls {
-				relayUrl = strings.Replace(relayUrl, "/put", "/metadata/put", 1)
-				body := bytes.NewBuffer(reader.buf.Bytes())
-				req, err := http.NewRequest(r.Method, relayUrl, body)
-				if err != nil {
-					verbose("%v", err)
-					return
-				}
-				req.Header.Set("Content-Type", "application/json")
-				req.Header.Add(relayHeader, myHost)
-				resp, err := http.DefaultClient.Do(req)
-				if err != nil {
-					verbose("secondary relay error: %v", err)
-					return
-				}
-				resp.Body.Close()
-				verbose("secondary relay success")
+	slog.Info("Listening on ", *listenAddr)
+	slog.Info("Relaying to Bosun at ", *bosunServer)
+	slog.Info("Relaying to TSDB at ", *tsdbServer)
+
+	relayPool = make(chan bool, *relayPoolSize)
+
+	// FIXME warning, lots of magic numbers ahead!
+	bosunTransport = &http.Transport{
+		Dial: (&net.Dialer{
+			Timeout:   5 * time.Second,
+			KeepAlive: time.Minute,
+		}).Dial,
+		ResponseHeaderTimeout: 10 * time.Second,
+		MaxIdleConnsPerHost:   55,
+	}
+
+	bosunProxy = httputil.NewSingleHostReverseProxy(&url.URL{
+		Scheme: "http",
+		Host:   *bosunServer,
+	})
+	bosunProxy.Transport = bosunTransport
+
+	bosunRequestQueue = make(chan *CountedRequest, *maxRequestBuffer)
+
+	tsdbTransport = &http.Transport{
+		Dial: (&net.Dialer{
+			Timeout:   5 * time.Second,
+			KeepAlive: time.Minute,
+		}).Dial,
+		ResponseHeaderTimeout: 10 * time.Second,
+		MaxIdleConnsPerHost:   55,
+	}
+
+	tsdbProxy = httputil.NewSingleHostReverseProxy(&url.URL{
+		Scheme: "http",
+		Host:   *tsdbServer,
+	})
+	tsdbProxy.Transport = tsdbTransport
+
+	tsdbRequestQueue = make(chan *CountedRequest, *maxRequestBuffer)
+
+	if *toDenormalize != "" {
+		var err error
+		denormalizationRules, err = denormalize.ParseDenormalizationRules(*toDenormalize)
+		if err != nil {
+			slog.Fatal("error parsing denormalization rules on init: ", err)
+		}
+	}
+
+	if err := collect.Init(&url.URL{Scheme: "http", Host: *listenAddr, Path: "/api/put"}, "tsdbrelay"); err != nil {
+		slog.Fatal(err)
+	}
+	collect.Set("asynch.queuelength", opentsdb.TagSet{"queue": "bosun"}, func() interface{} { return len(bosunRequestQueue) })
+	collect.Set("asynch.queuelength", opentsdb.TagSet{"queue": "tsdb"}, func() interface{} { return len(tsdbRequestQueue) })
+	collect.Set("synch.active_workers", opentsdb.TagSet{}, func() interface{} { return len(relayPool) })
+}
+
+func main() {
+	defer close(bosunRequestQueue)
+	defer close(tsdbRequestQueue)
+
+	if *secondaryRelays != "" {
+		slog.Info("Planning to use secondary relays: ", *secondaryRelays)
+		secondaryHosts := strings.Split(*secondaryRelays, ",")
+		queuesArr := make([]chan *CountedRequest, len(secondaryHosts))
+		for i, h := range secondaryHosts {
+			slog.Debug("Setting up secondary relay number ", i, " to ", h)
+			secondaryQueue := make(chan *CountedRequest, *maxRequestBuffer)
+			queuesArr[i] = secondaryQueue
+			secondaryTransport := &http.Transport{
+				Dial: (&net.Dialer{
+					Timeout:   5 * time.Second,
+					KeepAlive: time.Minute,
+				}).Dial,
+				ResponseHeaderTimeout: 10 * time.Second,
+				MaxIdleConnsPerHost:   55,
 			}
-		}()
+			secondaryProxy := httputil.NewSingleHostReverseProxy(&url.URL{
+				Scheme: "http",
+				Host:   h,
+			})
+			secondaryProxy.Transport = secondaryTransport
+
+			go retryingRelayWorker(secondaryQueue, secondaryProxy)
+			collect.Set("asynch.queuelength", opentsdb.TagSet{"queue": h}, func() interface{} { return len(secondaryQueue) })
+		}
+		secondaryRelaysQueues = &queuesArr
+		slog.Debug("Created ", len(*secondaryRelaysQueues), " secondary queues")
+	}
+
+	createWorkersFor(*workersPerQueue, bosunRequestQueue, bosunProxy)
+	createWorkersFor(*workersPerQueue, tsdbRequestQueue, tsdbProxy)
+
+	http.HandleFunc("/api/put", putRelay)
+	http.HandleFunc("/api/metadata/put", metadataRelay)
+	if *redisHost != "" {
+		http.HandleFunc("/api/count", collect.HandleCounterPut(*redisHost, *redisDb))
+	}
+	http.Handle("/", tsdbProxy)
+	slog.Fatal(http.ListenAndServe(*listenAddr, nil))
+}
+
+func createWorkersFor(num int, q chan *CountedRequest, p *httputil.ReverseProxy) {
+	for i := 0; i < num; i++ {
+		go retryingRelayWorker(q, p)
 	}
 }
