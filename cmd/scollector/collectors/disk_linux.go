@@ -147,7 +147,7 @@ func c_dfstat_blocks_linux() (opentsdb.MultiDataPoint, error) {
 		if len(devFS) < 1 {
 			err := readLine("/proc/filesystems", func(s string) error {
 				ss := strings.Split(s, "\t")
-				if len(ss) == 2 && ss[0] != "nodev" {
+				if len(ss) == 2 && (ss[0] != "nodev" || ss[1] == "rootfs") {
 					devFS = append(devFS, ss[1])
 				}
 				return nil
