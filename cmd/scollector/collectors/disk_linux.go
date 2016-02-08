@@ -167,12 +167,11 @@ func c_dfstat_blocks_linux() (opentsdb.MultiDataPoint, error) {
 	err := readLine("/proc/mounts", func(line string) error {
 		var sfs unix.Statfs_t
 		fields := strings.Fields(line)
-		if isPseudo(fields[2]) {
+		if isPseudo(fields[2]) || len(fields) != 6 {
 			return nil
 		}
 		r := strings.NewReplacer("\\040", " ", "\\011", "\t", "\\134", "\\")
 		fields[1] = r.Replace(fields[1])
-		// /dev/mapper/vg0-usr ext4 13384816 9996920 2815784 79% /usr
 		mount := fields[1]
 		unix.Statfs(mount, &sfs)
 		fs := fields[0]
