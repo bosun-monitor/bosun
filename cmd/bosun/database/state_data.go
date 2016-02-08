@@ -55,7 +55,7 @@ type StateDataAccess interface {
 	GetIncidentState(incidentId int64) (*models.IncidentState, error)
 	GetAllIncidents(ak models.AlertKey) ([]*models.IncidentState, error)
 
-	UpdateIncidentState(s *models.IncidentState) error
+	UpdateIncidentState(s *models.IncidentState) (int64, error)
 	ImportIncidentState(s *models.IncidentState) error
 
 	Forget(ak models.AlertKey) error
@@ -201,15 +201,16 @@ func (d *dataAccess) GetIncidentState(incidentId int64) (*models.IncidentState, 
 	return d.getIncident(incidentId, conn)
 }
 
-func (d *dataAccess) UpdateIncidentState(s *models.IncidentState) error {
+func (d *dataAccess) UpdateIncidentState(s *models.IncidentState) (int64, error) {
 	return d.save(s, false)
 }
 
 func (d *dataAccess) ImportIncidentState(s *models.IncidentState) error {
-	return d.save(s, true)
+	_, err := d.save(s, true)
+	return err
 }
 
-func (d *dataAccess) save(s *models.IncidentState, isImport bool) error {
+func (d *dataAccess) save(s *models.IncidentState, isImport bool) (int64, error) {
 	defer collect.StartTimer("redis", opentsdb.TagSet{"op": "UpdateIncident"})()
 	conn := d.GetConnection()
 	defer conn.Close()
@@ -219,7 +220,7 @@ func (d *dataAccess) save(s *models.IncidentState, isImport bool) error {
 	if s.Id == 0 {
 		id, err := redis.Int64(conn.Do("INCR", "maxIncidentId"))
 		if err != nil {
-			return slog.Wrap(err)
+			return s.Id, slog.Wrap(err)
 		}
 		s.Id = id
 		isNew = true
@@ -230,12 +231,12 @@ func (d *dataAccess) save(s *models.IncidentState, isImport bool) error {
 		}
 		if max < s.Id {
 			if _, err = conn.Do("SET", "maxIncidentId", s.Id); err != nil {
-				return slog.Wrap(err)
+				return s.Id, slog.Wrap(err)
 			}
 		}
 		isNew = true
 	}
-	return d.transact(conn, func() error {
+	return s.Id, d.transact(conn, func() error {
 		if isNew {
 			// add to list for alert key
 			if _, err := conn.Do("LPUSH", incidentsForAlertKeyKey(s.AlertKey), s.Id); err != nil {
