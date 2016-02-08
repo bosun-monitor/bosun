@@ -15,7 +15,7 @@ func init() {
 	c := &IntervalCollector{
 		F: c_mssql,
 	}
-	c.init = wmiInit(c, func() interface{} { return &[]Win32_PerfRawData_MSSQLSERVER_SQLServerGeneralStatistics{} }, `WHERE Name <> '_Total'`, &sqlQuery)
+	c.init = wmiInit(c, func() interface{} { return &[]Win32_Win32_Service{} }, `WHERE Name Like 'MSSQL$%' or Name = 'MSSQLSERVER'`, &sqlQuery)
 	collectors = append(collectors, c)
 
 	var dstCluster []MSCluster_Cluster
@@ -69,10 +69,16 @@ var (
 )
 
 func c_mssql() (opentsdb.MultiDataPoint, error) {
+	var err error    
+	var svc_dst []Win32_Service
+	var svc_q = wmi.CreateQuery(&svc_dst, `WHERE Name Like 'MSSQL$%' or Name = 'MSSQLSERVER'`)
+	err = queryWmi(svc_q, &svc_dst)
+	if err != nil {
+		return nil, err
+	}
 	var md opentsdb.MultiDataPoint
-	var err error
-	add := func(f func() (opentsdb.MultiDataPoint, error)) {
-		dps, e := f()
+	add := func(f func([]Win32_Service) (opentsdb.MultiDataPoint, error)) {
+		dps, e := f(svc_dst)
 		if e != nil {
 			err = e
 		}
@@ -85,24 +91,32 @@ func c_mssql() (opentsdb.MultiDataPoint, error) {
 	return md, err
 }
 
-func c_mssql_general() (opentsdb.MultiDataPoint, error) {
-	var dst []Win32_PerfRawData_MSSQLSERVER_SQLServerGeneralStatistics
-	var q = wmi.CreateQuery(&dst, `WHERE Name <> '_Total'`)
-	if err := queryWmi(q, &dst); err != nil {
-		return nil, err
-	}
+func c_mssql_general(svc_dst []Win32_Service) (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
-	for _, v := range dst {
-		Add(&md, "mssql.user_connections", v.UserConnections, nil, metadata.Gauge, metadata.Count, descMSSQLUserConnections)
-		Add(&md, "mssql.connection_resets", v.ConnectionResetPersec, nil, metadata.Counter, metadata.PerSecond, descMSSQLConnectionResetPersec)
-		Add(&md, "mssql.logins", v.LoginsPersec, nil, metadata.Counter, metadata.PerSecond, descMSSQLLoginsPersec)
-		Add(&md, "mssql.logouts", v.LogoutsPersec, nil, metadata.Counter, metadata.PerSecond, descMSSQLLogoutsPersec)
-		Add(&md, "mssql.mars_deadlocks", v.MarsDeadlocks, nil, metadata.Counter, metadata.Count, descMSSQLMarsDeadlocks)
-		Add(&md, "mssql.proc_blocked", v.Processesblocked, nil, metadata.Gauge, metadata.Count, descMSSQLProcessesblocked)
-		Add(&md, "mssql.temptables_created", v.TempTablesCreationRate, nil, metadata.Counter, metadata.PerSecond, descMSSQLTempTablesCreationRate)
-		Add(&md, "mssql.temptables_to_destroy", v.TempTablesForDestruction, nil, metadata.Gauge, metadata.Count, descMSSQLTempTablesForDestruction)
-		Add(&md, "mssql.transactions_total", v.Transactions, nil, metadata.Gauge, metadata.Count, descMSSQLTransactions)
+	for _, w := range svc_dst {
+		var dst []Win32_PerfRawData_MSSQLSERVER_SQLServerGeneralStatistics
+		var q = wmi.CreateQuery(&dst, `WHERE Name <> '_Total'`)
+		var label = "mssqlserver"
+		if w.Name != `MSSQLSERVER` {
+		    q = strings.Replace(strings.Replace(q,`MSSQLSERVER_SQLServer`,w.Name + `_` + w.Name,1),`$`,"",2)
+		    label = strings.ToLower(w.Name[6:len(w.Name)])
+		}  
+		if err := queryWmi(q, &dst); err != nil {
+			return nil, err
+		}
+		for _, v := range dst {
+            		tags := opentsdb.TagSet{"instance": label} 
+			Add(&md, "mssql.user_connections", v.UserConnections, tags, metadata.Gauge, metadata.Count, descMSSQLUserConnections)
+			Add(&md, "mssql.connection_resets", v.ConnectionResetPersec, tags, metadata.Counter, metadata.PerSecond, descMSSQLConnectionResetPersec)
+			Add(&md, "mssql.logins", v.LoginsPersec, tags, metadata.Counter, metadata.PerSecond, descMSSQLLoginsPersec)
+			Add(&md, "mssql.logouts", v.LogoutsPersec, tags, metadata.Counter, metadata.PerSecond, descMSSQLLogoutsPersec)
+			Add(&md, "mssql.mars_deadlocks", v.MarsDeadlocks, tags, metadata.Counter, metadata.Count, descMSSQLMarsDeadlocks)
+			Add(&md, "mssql.proc_blocked", v.Processesblocked, tags, metadata.Gauge, metadata.Count, descMSSQLProcessesblocked)
+			Add(&md, "mssql.temptables_created", v.TempTablesCreationRate, tags, metadata.Counter, metadata.PerSecond, descMSSQLTempTablesCreationRate)
+			Add(&md, "mssql.temptables_to_destroy", v.TempTablesForDestruction, tags, metadata.Gauge, metadata.Count, descMSSQLTempTablesForDestruction)
+			Add(&md, "mssql.transactions_total", v.Transactions, tags, metadata.Gauge, metadata.Count, descMSSQLTransactions)
 
+		}
 	}
 	return md, nil
 }
@@ -131,25 +145,33 @@ type Win32_PerfRawData_MSSQLSERVER_SQLServerGeneralStatistics struct {
 	UserConnections          uint64
 }
 
-func c_mssql_statistics() (opentsdb.MultiDataPoint, error) {
-	var dst []Win32_PerfRawData_MSSQLSERVER_SQLServerSQLStatistics
-	var q = wmi.CreateQuery(&dst, `WHERE Name <> '_Total'`)
-	err := queryWmi(q, &dst)
-	if err != nil {
-		return nil, err
-	}
+func c_mssql_statistics(svc_dst []Win32_Service) (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
-	for _, v := range dst {
-		Add(&md, "mssql.autoparam_attempts", v.AutoParamAttemptsPersec, nil, metadata.Counter, metadata.PerSecond, descMSSQLAutoParamAttemptsPersec)
-		Add(&md, "mssql.autoparam_failed", v.FailedAutoParamsPersec, nil, metadata.Counter, metadata.PerSecond, descMSSQLFailedAutoParamsPersec)
-		Add(&md, "mssql.autoparam_forced", v.ForcedParameterizationsPersec, nil, metadata.Counter, metadata.PerSecond, descMSSQLForcedParameterizationsPersec)
-		Add(&md, "mssql.autoparam_safe", v.SafeAutoParamsPersec, nil, metadata.Counter, metadata.PerSecond, descMSSQLSafeAutoParamsPersec)
-		Add(&md, "mssql.autoparam_unsafe", v.UnsafeAutoParamsPersec, nil, metadata.Counter, metadata.PerSecond, descMSSQLUnsafeAutoParamsPersec)
-		Add(&md, "mssql.batches", v.BatchRequestsPersec, nil, metadata.Counter, metadata.PerSecond, descMSSQLBatchRequestsPersec)
-		Add(&md, "mssql.guided_plans", v.GuidedplanexecutionsPersec, nil, metadata.Counter, metadata.PerSecond, descMSSQLGuidedplanexecutionsPersec)
-		Add(&md, "mssql.misguided_plans", v.MisguidedplanexecutionsPersec, nil, metadata.Counter, metadata.PerSecond, descMSSQLMisguidedplanexecutionsPersec)
-		Add(&md, "mssql.compilations", v.SQLCompilationsPersec, nil, metadata.Counter, metadata.PerSecond, descMSSQLSQLCompilationsPersec)
-		Add(&md, "mssql.recompilations", v.SQLReCompilationsPersec, nil, metadata.Counter, metadata.PerSecond, descMSSQLSQLReCompilationsPersec)
+	for _, w := range svc_dst {
+		var dst []Win32_PerfRawData_MSSQLSERVER_SQLServerSQLStatistics
+		var q = wmi.CreateQuery(&dst, `WHERE Name <> '_Total'`)
+		var label = "mssqlserver"
+		if w.Name != `MSSQLSERVER` {
+		    q = strings.Replace(strings.Replace(q,`MSSQLSERVER_SQLServer`,w.Name + `_` + w.Name,1),`$`,"",2)
+		    label = strings.ToLower(w.Name[6:len(w.Name)])
+		}  
+		err := queryWmi(q, &dst)
+		if err != nil {
+			return nil, err
+		}
+		for _, v := range dst {
+            		tags := opentsdb.TagSet{"instance": label}  
+			Add(&md, "mssql.autoparam_attempts", v.AutoParamAttemptsPersec, tags, metadata.Counter, metadata.PerSecond, descMSSQLAutoParamAttemptsPersec)
+			Add(&md, "mssql.autoparam_failed", v.FailedAutoParamsPersec, tags, metadata.Counter, metadata.PerSecond, descMSSQLFailedAutoParamsPersec)
+			Add(&md, "mssql.autoparam_forced", v.ForcedParameterizationsPersec, tags, metadata.Counter, metadata.PerSecond, descMSSQLForcedParameterizationsPersec)
+			Add(&md, "mssql.autoparam_safe", v.SafeAutoParamsPersec, tags, metadata.Counter, metadata.PerSecond, descMSSQLSafeAutoParamsPersec)
+			Add(&md, "mssql.autoparam_unsafe", v.UnsafeAutoParamsPersec, tags, metadata.Counter, metadata.PerSecond, descMSSQLUnsafeAutoParamsPersec)
+			Add(&md, "mssql.batches", v.BatchRequestsPersec, tags, metadata.Counter, metadata.PerSecond, descMSSQLBatchRequestsPersec)
+			Add(&md, "mssql.guided_plans", v.GuidedplanexecutionsPersec, tags, metadata.Counter, metadata.PerSecond, descMSSQLGuidedplanexecutionsPersec)
+			Add(&md, "mssql.misguided_plans", v.MisguidedplanexecutionsPersec, tags, metadata.Counter, metadata.PerSecond, descMSSQLMisguidedplanexecutionsPersec)
+			Add(&md, "mssql.compilations", v.SQLCompilationsPersec, tags, metadata.Counter, metadata.PerSecond, descMSSQLSQLCompilationsPersec)
+			Add(&md, "mssql.recompilations", v.SQLReCompilationsPersec, tags, metadata.Counter, metadata.PerSecond, descMSSQLSQLReCompilationsPersec)
+		}
 	}
 	return md, nil
 }
@@ -180,23 +202,29 @@ type Win32_PerfRawData_MSSQLSERVER_SQLServerSQLStatistics struct {
 	UnsafeAutoParamsPersec        uint64
 }
 
-func c_mssql_locks() (opentsdb.MultiDataPoint, error) {
-	var dst []Win32_PerfRawData_MSSQLSERVER_SQLServerLocks
-	var q = wmi.CreateQuery(&dst, `WHERE Name = 'Page' OR Name = 'Extent' OR Name = 'Object' or Name = 'Database'`)
-	err := queryWmi(q, &dst)
-	if err != nil {
-		return nil, err
-	}
+func c_mssql_locks(svc_dst []Win32_Service) (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
-	for _, v := range dst {
-		tags := opentsdb.TagSet{"type": v.Name}
-		Add(&md, "mssql.lock_wait_time", v.AverageWaitTimems, tags, metadata.Counter, metadata.MilliSecond, descMSSQLAverageWaitTimems)
-		Add(&md, "mssql.lock_requests", v.LockRequestsPersec, tags, metadata.Counter, metadata.PerSecond, descMSSQLLockRequestsPersec)
-		Add(&md, "mssql.lock_timeouts", v.LockTimeoutsPersec, tags, metadata.Counter, metadata.PerSecond, descMSSQLLockTimeoutsPersec)
-		Add(&md, "mssql.lock_timeouts0", v.LockTimeoutstimeout0Persec, tags, metadata.Counter, metadata.PerSecond, descMSSQLLockTimeoutstimeout0Persec)
-		Add(&md, "mssql.lock_waits", v.LockWaitsPersec, tags, metadata.Counter, metadata.PerSecond, descMSSQLLockWaitsPersec)
-		Add(&md, "mssql.deadlocks", v.NumberofDeadlocksPersec, tags, metadata.Counter, metadata.PerSecond, descMSSQLNumberofDeadlocksPersec)
-
+	for _, w := range svc_dst {
+		var dst []Win32_PerfRawData_MSSQLSERVER_SQLServerLocks
+		var q = wmi.CreateQuery(&dst, `WHERE Name = 'Page' OR Name = 'Extent' OR Name = 'Object' or Name = 'Database'`)
+		var label = "mssqlserver"
+		if w.Name != `MSSQLSERVER` {
+		    q = strings.Replace(strings.Replace(q,`MSSQLSERVER_SQLServer`,w.Name + `_` + w.Name,1),`$`,"",2)
+		    label = strings.ToLower(w.Name[6:len(w.Name)])
+		}  
+		err := queryWmi(q, &dst)
+		if err != nil {
+			return nil, err
+		}
+		for _, v := range dst {
+			tags := opentsdb.TagSet{"instance": label,"type": v.Name}
+			Add(&md, "mssql.lock_wait_time", v.AverageWaitTimems, tags, metadata.Counter, metadata.MilliSecond, descMSSQLAverageWaitTimems)
+			Add(&md, "mssql.lock_requests", v.LockRequestsPersec, tags, metadata.Counter, metadata.PerSecond, descMSSQLLockRequestsPersec)
+			Add(&md, "mssql.lock_timeouts", v.LockTimeoutsPersec, tags, metadata.Counter, metadata.PerSecond, descMSSQLLockTimeoutsPersec)
+			Add(&md, "mssql.lock_timeouts0", v.LockTimeoutstimeout0Persec, tags, metadata.Counter, metadata.PerSecond, descMSSQLLockTimeoutstimeout0Persec)
+			Add(&md, "mssql.lock_waits", v.LockWaitsPersec, tags, metadata.Counter, metadata.PerSecond, descMSSQLLockWaitsPersec)
+			Add(&md, "mssql.deadlocks", v.NumberofDeadlocksPersec, tags, metadata.Counter, metadata.PerSecond, descMSSQLNumberofDeadlocksPersec)
+		}
 	}
 	return md, nil
 }
@@ -220,48 +248,54 @@ type Win32_PerfRawData_MSSQLSERVER_SQLServerLocks struct {
 	NumberofDeadlocksPersec    uint64
 }
 
-func c_mssql_databases() (opentsdb.MultiDataPoint, error) {
-	var dst []Win32_PerfRawData_MSSQLSERVER_SQLServerDatabases
-	var q = wmi.CreateQuery(&dst, `WHERE Name <> '_Total'`)
-	err := queryWmi(q, &dst)
-	if err != nil {
-		return nil, err
-	}
+func c_mssql_databases(svc_dst []Win32_Service) (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
-	for _, v := range dst {
-		tags := opentsdb.TagSet{"db": v.Name}
-		Add(&md, "mssql.active_transactions", v.ActiveTransactions, tags, metadata.Gauge, metadata.Count, descMSSQLActiveTransactions)
-		Add(&md, "mssql.backup_restore_throughput", v.BackupPerRestoreThroughputPersec, tags, metadata.Counter, metadata.PerSecond, descMSSQLBackupPerRestoreThroughputPersec)
-		Add(&md, "mssql.bulkcopy_rows", v.BulkCopyRowsPersec, tags, metadata.Counter, metadata.PerSecond, descMSSQLBulkCopyRowsPersec)
-		Add(&md, "mssql.bulkcopy_throughput", v.BulkCopyThroughputPersec, tags, metadata.Counter, metadata.KBytes, descMSSQLBulkCopyThroughputPersec)
-		Add(&md, "mssql.commit_table_entries", v.Committableentries, tags, metadata.Gauge, metadata.Count, descMSSQLCommittableentries)
-		Add(&md, "mssql.data_files_size", v.DataFilesSizeKB*1024, tags, metadata.Gauge, metadata.Bytes, descMSSQLDataFilesSizeKB)
-		Add(&md, "mssql.dbcc_logical_scan_bytes", v.DBCCLogicalScanBytesPersec, tags, metadata.Counter, metadata.BytesPerSecond, descMSSQLDBCCLogicalScanBytesPersec)
-		//Add(&md, "mssql.group_commit_time", v.GroupCommitTimePersec, tags, metadata.Counter, metadata.PerSecond, descMSSQLGroupCommitTimePersec)
-		Add(&md, "mssql.log_bytes_flushed", v.LogBytesFlushedPersec, tags, metadata.Counter, metadata.BytesPerSecond, descMSSQLLogBytesFlushedPersec)
-		Add(&md, "mssql.log_cache_hit_ratio", v.LogCacheHitRatio, tags, metadata.Counter, metadata.Pct, descMSSQLLogCacheHitRatio)
-		Add(&md, "mssql.log_cache_hit_ratio_base", v.LogCacheHitRatio_Base, tags, metadata.Counter, metadata.None, descMSSQLLogCacheHitRatio_Base)
-		Add(&md, "mssql.log_cache_reads", v.LogCacheReadsPersec, tags, metadata.Counter, metadata.PerSecond, descMSSQLLogCacheReadsPersec)
-		Add(&md, "mssql.log_files_size", v.LogFilesSizeKB*1024, tags, metadata.Gauge, metadata.Bytes, descMSSQLLogFilesSizeKB)
-		Add(&md, "mssql.log_files_used_size", v.LogFilesUsedSizeKB*1024, tags, metadata.Gauge, metadata.Bytes, descMSSQLLogFilesUsedSizeKB)
-		Add(&md, "mssql.log_flushes", v.LogFlushesPersec, tags, metadata.Counter, metadata.PerSecond, descMSSQLLogFlushesPersec)
-		Add(&md, "mssql.log_flush_waits", v.LogFlushWaitsPersec, tags, metadata.Counter, metadata.PerSecond, descMSSQLLogFlushWaitsPersec)
-		Add(&md, "mssql.log_flush_wait_time", v.LogFlushWaitTime, tags, metadata.Counter, metadata.MilliSecond, descMSSQLLogFlushWaitTime)
-		//Add(&md, "mssql.log_flush_write_time_ms", v.LogFlushWriteTimems, tags, metadata.Counter, metadata.MilliSecond, descMSSQLLogFlushWriteTimems)
-		Add(&md, "mssql.log_growths", v.LogGrowths, tags, metadata.Gauge, metadata.Count, descMSSQLLogGrowths)
-		//Add(&md, "mssql.log_pool_cache_misses", v.LogPoolCacheMissesPersec, tags, metadata.Counter, metadata.PerSecond, descMSSQLLogPoolCacheMissesPersec)
-		//Add(&md, "mssql.log_pool_disk_reads", v.LogPoolDiskReadsPersec, tags, metadata.Counter, metadata.PerSecond, descMSSQLLogPoolDiskReadsPersec)
-		//Add(&md, "mssql.log_pool_requests", v.LogPoolRequestsPersec, tags, metadata.Counter, metadata.PerSecond, descMSSQLLogPoolRequestsPersec)
-		Add(&md, "mssql.log_shrinks", v.LogShrinks, tags, metadata.Gauge, metadata.Count, descMSSQLLogShrinks)
-		Add(&md, "mssql.log_truncations", v.LogTruncations, tags, metadata.Gauge, metadata.Count, descMSSQLLogTruncations)
-		Add(&md, "mssql.percent_log_used", v.PercentLogUsed, tags, metadata.Gauge, metadata.Pct, descMSSQLPercentLogUsed)
-		Add(&md, "mssql.repl_pending_xacts", v.ReplPendingXacts, tags, metadata.Gauge, metadata.Count, descMSSQLReplPendingXacts)
-		Add(&md, "mssql.repl_trans_rate", v.ReplTransRate, tags, metadata.Counter, metadata.PerSecond, descMSSQLReplTransRate)
-		Add(&md, "mssql.shrink_data_movement_bytes", v.ShrinkDataMovementBytesPersec, tags, metadata.Counter, metadata.BytesPerSecond, descMSSQLShrinkDataMovementBytesPersec)
-		Add(&md, "mssql.tracked_transactions", v.TrackedtransactionsPersec, tags, metadata.Counter, metadata.PerSecond, descMSSQLTrackedtransactionsPersec)
-		Add(&md, "mssql.transactions", v.TransactionsPersec, tags, metadata.Counter, metadata.PerSecond, descMSSQLTransactionsPersec)
-		Add(&md, "mssql.write_transactions", v.WriteTransactionsPersec, tags, metadata.Counter, metadata.PerSecond, descMSSQLWriteTransactionsPersec)
-
+	for _, w := range svc_dst {
+		var dst []Win32_PerfRawData_MSSQLSERVER_SQLServerDatabases
+		var q = wmi.CreateQuery(&dst, `WHERE Name <> '_Total'`)
+		var label = "mssqlserver"
+		if w.Name != `MSSQLSERVER` {
+		    q = strings.Replace(strings.Replace(q,`MSSQLSERVER_SQLServer`,w.Name + `_` + w.Name,1),`$`,"",2)
+		    label = strings.ToLower(w.Name[6:len(w.Name)])
+		}  
+		err := queryWmi(q, &dst)
+		if err != nil {
+			return nil, err
+		}
+		for _, v := range dst {
+			tags := opentsdb.TagSet{"instance": label,"db": v.Name}
+			Add(&md, "mssql.active_transactions", v.ActiveTransactions, tags, metadata.Gauge, metadata.Count, descMSSQLActiveTransactions)
+			Add(&md, "mssql.backup_restore_throughput", v.BackupPerRestoreThroughputPersec, tags, metadata.Counter, metadata.PerSecond, descMSSQLBackupPerRestoreThroughputPersec)
+			Add(&md, "mssql.bulkcopy_rows", v.BulkCopyRowsPersec, tags, metadata.Counter, metadata.PerSecond, descMSSQLBulkCopyRowsPersec)
+			Add(&md, "mssql.bulkcopy_throughput", v.BulkCopyThroughputPersec, tags, metadata.Counter, metadata.KBytes, descMSSQLBulkCopyThroughputPersec)
+			Add(&md, "mssql.commit_table_entries", v.Committableentries, tags, metadata.Gauge, metadata.Count, descMSSQLCommittableentries)
+			Add(&md, "mssql.data_files_size", v.DataFilesSizeKB*1024, tags, metadata.Gauge, metadata.Bytes, descMSSQLDataFilesSizeKB)
+			Add(&md, "mssql.dbcc_logical_scan_bytes", v.DBCCLogicalScanBytesPersec, tags, metadata.Counter, metadata.BytesPerSecond, descMSSQLDBCCLogicalScanBytesPersec)
+			//Add(&md, "mssql.group_commit_time", v.GroupCommitTimePersec, tags, metadata.Counter, metadata.PerSecond, descMSSQLGroupCommitTimePersec)
+			Add(&md, "mssql.log_bytes_flushed", v.LogBytesFlushedPersec, tags, metadata.Counter, metadata.BytesPerSecond, descMSSQLLogBytesFlushedPersec)
+			Add(&md, "mssql.log_cache_hit_ratio", v.LogCacheHitRatio, tags, metadata.Counter, metadata.Pct, descMSSQLLogCacheHitRatio)
+			Add(&md, "mssql.log_cache_hit_ratio_base", v.LogCacheHitRatio_Base, tags, metadata.Counter, metadata.None, descMSSQLLogCacheHitRatio_Base)
+			Add(&md, "mssql.log_cache_reads", v.LogCacheReadsPersec, tags, metadata.Counter, metadata.PerSecond, descMSSQLLogCacheReadsPersec)
+			Add(&md, "mssql.log_files_size", v.LogFilesSizeKB*1024, tags, metadata.Gauge, metadata.Bytes, descMSSQLLogFilesSizeKB)
+			Add(&md, "mssql.log_files_used_size", v.LogFilesUsedSizeKB*1024, tags, metadata.Gauge, metadata.Bytes, descMSSQLLogFilesUsedSizeKB)
+			Add(&md, "mssql.log_flushes", v.LogFlushesPersec, tags, metadata.Counter, metadata.PerSecond, descMSSQLLogFlushesPersec)
+			Add(&md, "mssql.log_flush_waits", v.LogFlushWaitsPersec, tags, metadata.Counter, metadata.PerSecond, descMSSQLLogFlushWaitsPersec)
+			Add(&md, "mssql.log_flush_wait_time", v.LogFlushWaitTime, tags, metadata.Counter, metadata.MilliSecond, descMSSQLLogFlushWaitTime)
+			//Add(&md, "mssql.log_flush_write_time_ms", v.LogFlushWriteTimems, tags, metadata.Counter, metadata.MilliSecond, descMSSQLLogFlushWriteTimems)
+			Add(&md, "mssql.log_growths", v.LogGrowths, tags, metadata.Gauge, metadata.Count, descMSSQLLogGrowths)
+			//Add(&md, "mssql.log_pool_cache_misses", v.LogPoolCacheMissesPersec, tags, metadata.Counter, metadata.PerSecond, descMSSQLLogPoolCacheMissesPersec)
+			//Add(&md, "mssql.log_pool_disk_reads", v.LogPoolDiskReadsPersec, tags, metadata.Counter, metadata.PerSecond, descMSSQLLogPoolDiskReadsPersec)
+			//Add(&md, "mssql.log_pool_requests", v.LogPoolRequestsPersec, tags, metadata.Counter, metadata.PerSecond, descMSSQLLogPoolRequestsPersec)
+			Add(&md, "mssql.log_shrinks", v.LogShrinks, tags, metadata.Gauge, metadata.Count, descMSSQLLogShrinks)
+			Add(&md, "mssql.log_truncations", v.LogTruncations, tags, metadata.Gauge, metadata.Count, descMSSQLLogTruncations)
+			Add(&md, "mssql.percent_log_used", v.PercentLogUsed, tags, metadata.Gauge, metadata.Pct, descMSSQLPercentLogUsed)
+			Add(&md, "mssql.repl_pending_xacts", v.ReplPendingXacts, tags, metadata.Gauge, metadata.Count, descMSSQLReplPendingXacts)
+			Add(&md, "mssql.repl_trans_rate", v.ReplTransRate, tags, metadata.Counter, metadata.PerSecond, descMSSQLReplTransRate)
+			Add(&md, "mssql.shrink_data_movement_bytes", v.ShrinkDataMovementBytesPersec, tags, metadata.Counter, metadata.BytesPerSecond, descMSSQLShrinkDataMovementBytesPersec)
+			Add(&md, "mssql.tracked_transactions", v.TrackedtransactionsPersec, tags, metadata.Counter, metadata.PerSecond, descMSSQLTrackedtransactionsPersec)
+			Add(&md, "mssql.transactions", v.TransactionsPersec, tags, metadata.Counter, metadata.PerSecond, descMSSQLTransactionsPersec)
+			Add(&md, "mssql.write_transactions", v.WriteTransactionsPersec, tags, metadata.Counter, metadata.PerSecond, descMSSQLWriteTransactionsPersec)
+		}
 	}
 	return md, nil
 }
