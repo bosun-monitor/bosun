@@ -46,12 +46,24 @@ Every variable is optional, though you should enable at least 1 backend.
 * tsdbVersion: Defaults to 2.1 if not present. Should always be specified as Number.Number. Various OpenTSDB features are added with newer versions.
 * graphiteHost: an ip, hostname, ip:port, hostname:port or a URL, defaults to standard http/https ports, defaults to "/render" path.  Any non-zero path (even "/" overrides path)
 * graphiteHeader: a http header to be sent to graphite on each request in 'key:value' format. optional. can be specified multiple times.
-* logstashElasticHosts: Elasticsearch host populated by logstash. Must be a URL.
+* logstashElasticHosts: Elasticsearch hosts populated by logstash. Must be a CSV list of URLs and only works with elastic pre-v2. The hosts you list are used to discover all hosts in the cluster.
+* ElasticHosts: Elasticsearch hosts. This is not limited to logstash's schema. It must be a CSV list of URLs and only works with elastic v2 and later. The hosts you list are used to discover all hosts in the cluster.
 * influxHost: InfluxDB host address ip:port pair.
 * influxUsername: InfluxDB username. If empty will attempt to connect without authentication.
 * influxPassword: InfluxDB password. If empty will attempt to connect without authentication.
 * influxTLS: Whether to use TLS when connecting to InfluxDB. Default is false.
 * influxTimeout: Timeout duration for connections to InfluxDB.
+
+#### data storage
+
+With bosun v0.5.0, bosun uses redis as a storage mechanism for it's internal state. You can either run a redis instance to hold this data, or bosun can use an embedded server if you would rather run standalone (using [ledisDb](http://ledisdb.com/))
+
+Config items:
+* redisHost: redis server to use. Ex: `localhost:6379`. Redis 3.0 or greater is required.
+* redisDb: redis database to use. Default is `0`.
+* redisPassword: redis password.
+
+* ledisDir: directory for ledisDb to store it's data. Will default to `ledis_data` in working dir if no redis host is provided.
 
 #### settings
 
@@ -150,6 +162,28 @@ Templates are the message body for emails that are sent when an alert is trigger
 * HTTPGetJSON("url"): Performs an http get for the url and returns a [jsonq.JsonQuery object](https://godoc.org/github.com/jmoiron/jsonq)
 * LSQuery("indexRoot", "filterString", "startDuration", "endDuration", nResults). Returns an array of a length up to nResults of Marshaled Json documents (Go: marshaled to interface{}). This is like the lscount and lsstat functions. There is no `keyString` because the group (aka tags) if the alert is used.
 * LSQueryAll("indexRoot", "keyString" filterString", "startDuration", "endDuration", nResults). Like LSQuery but you have to specify the `keyString` since it is not scoped to the alert.
+* ESQuery(index ESIndexer, filter ESQuery, startDuration string, endDuration string, nResults Scalar). Returns an array of a length up to nResults of Marshaled Json documents (Go: marshaled to interface{}). This is like the escount and esstat functions. The group (aka tags) of the alert is used to further filter the results.
+* ESQueryAll((index ESIndexer, filter ESQuery, startDuration string, endDuration string, nResults Scalar). Like ESQuery but the results are not filtered based on the tagset (aka group) of the alert. As an example:
+
+```
+template test {
+	subject = {{.Last.Status}}: {{.Alert.Name}} on {{.Group.host}}
+	body = `
+	    {{ $filter := (.Eval .Alert.Vars.filter)}}
+	    {{ $index := (.Eval .Alert.Vars.index)}}
+	    {{range $i, $x := .ESQuery $index $filter "5m" "" 10 }}
+	        <p>{{$x.machinename}}</p>
+	    {{end}}
+	`
+}
+
+alert test {
+	template = test
+	$index = esls("logstash")
+	$filter = esand(esregexp("source", ".*"), esregexp("machinename", "ls-dc.*"))
+    crit = avg(escount($index, "source,machinename", $filter, "2m", "10m", ""))
+}
+```
 
 Global template functions:
 
@@ -173,10 +207,10 @@ template ex {
 	{{template "name" .}}
 	Crit: {{.Alert.Crit}}
 
-	Tags:{{range $k, $v := .Tags}}
+	Tags:{{range $k, $v := .Group}}
 	{{$k}}: {{$v}}{{end}}
 	`
-	subject = {{.Alert.Name}}: {{.Alert.Vars.q | .E}} on {{.Tags.host}}
+	subject = {{.Alert.Name}}: {{.Alert.Vars.q | .E}} on {{.Group.host}}
 }
 ~~~
 
@@ -367,10 +401,10 @@ template cpu {
 	Name: {{.Alert.Name}}
 	Crit: {{.Alert.Crit}}
 	
-	Tags:{{range $k, $v := .Tags}}
+	Tags:{{range $k, $v := .Group}}
 	{{$k}}: {{$v}}{{end}}
 	`
-	subject = cpu idle at {{.Alert.Vars.q | .E}} on {{.Tags.host}}
+	subject = cpu idle at {{.Alert.Vars.q | .E}} on {{.Group.host}}
 }
 
 notification default {

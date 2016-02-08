@@ -129,7 +129,7 @@ bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', '$q', '$r
         };
         $scope.req_from_m = function (m) {
             var r = new Request();
-            var q = new Query();
+            var q = new Query(false);
             q.metric = m;
             r.queries.push(q);
             return r;
@@ -1127,6 +1127,102 @@ bosunApp.directive('elastic', [
         };
     }
 ]);
+bosunApp.directive('tsBar', ['$window', 'nfmtFilter', function ($window, fmtfilter) {
+        var margin = {
+            top: 20,
+            right: 20,
+            bottom: 0,
+            left: 200
+        };
+        return {
+            scope: {
+                data: '=',
+                height: '='
+            },
+            link: function (scope, elem, attrs) {
+                var svgHeight = +scope.height || 150;
+                var height = svgHeight - margin.top - margin.bottom;
+                var svgWidth;
+                var width;
+                var xScale = d3.scale.linear();
+                var yScale = d3.scale.ordinal();
+                var top = d3.select(elem[0])
+                    .append('svg')
+                    .attr('height', svgHeight)
+                    .attr('width', '100%');
+                var svg = top
+                    .append('g');
+                //.attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
+                var xAxis = d3.svg.axis()
+                    .scale(xScale)
+                    .orient("top");
+                var yAxis = d3.svg.axis()
+                    .scale(yScale)
+                    .orient("left");
+                scope.$watch('data', update);
+                var w = angular.element($window);
+                scope.$watch(function () {
+                    return w.width();
+                }, resize, true);
+                w.bind('resize', function () {
+                    scope.$apply();
+                });
+                function resize() {
+                    if (!scope.data) {
+                        return;
+                    }
+                    svgWidth = elem.width();
+                    if (svgWidth <= 0) {
+                        return;
+                    }
+                    margin.left = d3.max(scope.data, function (d) { return d.name.length * 8; });
+                    width = svgWidth - margin.left - margin.right;
+                    svgHeight = scope.data.length * 15;
+                    height = svgHeight - margin.top - margin.bottom;
+                    xScale.range([0, width]);
+                    yScale.rangeRoundBands([0, height], .1);
+                    yAxis.scale(yScale);
+                    svg.attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
+                    svg.attr('width', svgWidth);
+                    svg.attr('height', height);
+                    top.attr('height', svgHeight);
+                    xAxis.ticks(width / 60);
+                    draw();
+                }
+                function update(v) {
+                    if (!angular.isArray(v) || v.length == 0) {
+                        return;
+                    }
+                    resize();
+                }
+                function draw() {
+                    if (!scope.data) {
+                        return;
+                    }
+                    yScale.domain(scope.data.map(function (d) { return d.name; }));
+                    xScale.domain([0, d3.max(scope.data, function (d) { return d.Value; })]);
+                    svg.selectAll('g.axis').remove();
+                    //X axis
+                    svg.append("g")
+                        .attr("class", "x axis")
+                        .call(xAxis);
+                    svg.append("g")
+                        .attr("class", "y axis")
+                        .call(yAxis)
+                        .selectAll("text")
+                        .style("text-anchor", "end");
+                    var bars = svg.selectAll(".bar").data(scope.data);
+                    bars.enter()
+                        .append("rect")
+                        .attr("class", "bar")
+                        .attr("y", function (d) { return yScale(d.name); })
+                        .attr("height", yScale.rangeBand())
+                        .attr('width', function (d) { return xScale(d.Value); });
+                }
+                ;
+            }
+        };
+    }]);
 bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function ($window, fmtfilter) {
         var margin = {
             top: 10,
@@ -1589,6 +1685,20 @@ bosunControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route
                 $scope.svg_url = '/api/egraph/' + btoa(current) + '.svg?now=' + Math.floor(Date.now() / 1000);
                 $scope.graph = toChart(data.Results);
             }
+            if (data.Type == 'number') {
+                angular.forEach(data.Results, function (d) {
+                    var name = '{';
+                    angular.forEach(d.Group, function (tagv, tagk) {
+                        if (name.length > 1) {
+                            name += ',';
+                        }
+                        name += tagk + '=' + tagv;
+                    });
+                    name += '}';
+                    d.name = name;
+                });
+                $scope.bar = data.Results;
+            }
             $scope.running = '';
         })
             .error(function (error) {
@@ -1666,7 +1776,7 @@ var FilterMap = (function () {
     return FilterMap;
 })();
 var Query = (function () {
-    function Query(q) {
+    function Query(filterSupport, q) {
         this.aggregator = q && q.aggregator || 'sum';
         this.metric = q && q.metric || '';
         this.rate = q && q.rate || false;
@@ -1693,16 +1803,18 @@ var Query = (function () {
         this.nGbFilters = q && q.nGbFilters || new FilterMap;
         var that = this;
         // Copy tags with values to group by filters so old links work
-        _.each(this.tags, function (v, k) {
-            if (v === "") {
-                return;
-            }
-            var f = new (Filter);
-            f.filter = v;
-            f.groupBy = true;
-            f.tagk = k;
-            that.gbFilters[k] = f;
-        });
+        if (filterSupport) {
+            _.each(this.tags, function (v, k) {
+                if (v === "") {
+                    return;
+                }
+                var f = new (Filter);
+                f.filter = v;
+                f.groupBy = true;
+                f.tagk = k;
+                that.gbFilters[k] = f;
+            });
+        }
         this.setFilters();
         this.setDs();
         this.setDerivative();
@@ -1809,7 +1921,7 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
         $scope.sorted_tagks = [];
         $scope.query_p = [];
         angular.forEach(request.queries, function (q, i) {
-            $scope.query_p[i] = new Query(q);
+            $scope.query_p[i] = new Query($scope.filterSupport, q);
         });
         $scope.start = request.start;
         $scope.end = request.end;
@@ -1856,7 +1968,7 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
         };
         $scope.AddTab = function () {
             $scope.index = $scope.query_p.length;
-            $scope.query_p.push(new Query);
+            $scope.query_p.push(new Query($scope.filterSupport));
         };
         $scope.setIndex = function (i) {
             $scope.index = i;
@@ -1961,7 +2073,7 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
                 if (!p.metric) {
                     return;
                 }
-                var q = new Query(p);
+                var q = new Query($scope.filterSupport, p);
                 var tags = q.tags;
                 q.tags = new TagSet;
                 if (!$scope.filterSupport) {
@@ -2134,24 +2246,25 @@ bosunControllers.controller('HistoryCtrl', ['$scope', '$http', '$location', '$ro
             keys[search.key] = true;
         }
         var params = Object.keys(keys).map(function (v) { return 'ak=' + encodeURIComponent(v); }).join('&');
-        $http.get('/api/status?' + params)
+        $http.get('/api/status?' + params + "&all=1")
             .success(function (data) {
+            console.log(data);
             var selected_alerts = {};
             angular.forEach(data, function (v, ak) {
                 if (!keys[ak]) {
                     return;
                 }
-                v.History.map(function (h) { h.Time = moment.utc(h.Time); });
-                angular.forEach(v.History, function (h, i) {
-                    if (i + 1 < v.History.length) {
-                        h.EndTime = v.History[i + 1].Time;
+                v.Events.map(function (h) { h.Time = moment.utc(h.Time); });
+                angular.forEach(v.Events, function (h, i) {
+                    if (i + 1 < v.Events.length) {
+                        h.EndTime = v.Events[i + 1].Time;
                     }
                     else {
                         h.EndTime = moment.utc();
                     }
                 });
                 selected_alerts[ak] = {
-                    History: v.History.reverse()
+                    History: v.Events.reverse()
                 };
             });
             if (Object.keys(selected_alerts).length > 0) {
@@ -2175,7 +2288,7 @@ bosunControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route
         var currentURL = $location.url();
         $scope.mlink = function (m) {
             var r = new Request();
-            var q = new Query();
+            var q = new Query(false);
             q.metric = m;
             q.tags = { 'host': $scope.host };
             r.queries.push(q);
@@ -2205,7 +2318,7 @@ bosunControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route
         var cpu_r = new Request();
         cpu_r.start = $scope.time;
         cpu_r.queries = [
-            new Query({
+            new Query(false, {
                 metric: 'os.cpu',
                 derivative: 'counter',
                 tags: { host: $scope.host }
@@ -2221,11 +2334,11 @@ bosunControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route
         });
         var mem_r = new Request();
         mem_r.start = $scope.time;
-        mem_r.queries.push(new Query({
+        mem_r.queries.push(new Query(false, {
             metric: "os.mem.total",
             tags: { host: $scope.host }
         }));
-        mem_r.queries.push(new Query({
+        mem_r.queries.push(new Query(false, {
             metric: "os.mem.used",
             tags: { host: $scope.host }
         }));
@@ -2241,7 +2354,7 @@ bosunControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route
         var net_bytes_r = new Request();
         net_bytes_r.start = $scope.time;
         net_bytes_r.queries = [
-            new Query({
+            new Query(false, {
                 metric: "os.net.bytes",
                 rate: true,
                 rateOptions: { counter: true, resetValue: 1 },
@@ -2273,11 +2386,11 @@ bosunControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route
         var fs_r = new Request();
         fs_r.start = $scope.time;
         fs_r.queries = [
-            new Query({
+            new Query(false, {
                 metric: "os.disk.fs.space_total",
                 tags: { host: $scope.host, disk: "*" }
             }),
-            new Query({
+            new Query(false, {
                 metric: "os.disk.fs.space_used",
                 tags: { host: $scope.host, disk: "*" }
             })
@@ -2320,9 +2433,9 @@ bosunControllers.controller('IncidentCtrl', ['$scope', '$http', '$location', '$r
         }
         $http.get('/api/incidents/events?id=' + id)
             .success(function (data) {
-            $scope.incident = data.Incident;
-            $scope.events = data.Events;
+            $scope.incident = data;
             $scope.actions = data.Actions;
+            $scope.events = data.Events;
         })
             .error(function (err) {
             $scope.error = err;
@@ -2708,10 +2821,10 @@ bosunApp.directive('tsState', ['$sce', '$http', function ($sce, $http) {
                     return v.replace(/([,{}()])/g, '$1\u200b');
                 };
                 scope.state.Touched = moment(scope.state.Touched).utc();
-                angular.forEach(scope.state.History, function (v, k) {
+                angular.forEach(scope.state.Events, function (v, k) {
                     v.Time = moment(v.Time).utc();
                 });
-                scope.state.last = scope.state.History[scope.state.History.length - 1];
+                scope.state.last = scope.state.Events[scope.state.Events.length - 1];
                 if (scope.state.Actions && scope.state.Actions.length > 0) {
                     scope.state.LastAction = scope.state.Actions[0];
                 }

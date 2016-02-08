@@ -144,7 +144,9 @@ influx("db", '''SELECT non_negative_derivative(mean(value)) FROM "os.cpu" GROUP 
 q("sum:2m-avg:rate{counter,,1}:os.cpu{host=*}", "30m", "")
 ```
 
-## Logstash Query Functions
+## Logstash Query Functions (Deprecated)
+
+The logstash query functions have been deprecated. Trying to create filters from a single parsed string turned out to be too limiting for people's requrements. **The logstash functions work only with pre v2 elastic, and the es functions work only with elastic v2 or later.**
 
 ### lscount(indexRoot string, keyString string, filterString string, bucketDuration string, startDuration string, endDuration string) seriesSet
 
@@ -175,6 +177,68 @@ lstat returns various summary stats per bucket for the specified `field`. The fi
   * If the type of the field value in Elastic (aka the mapping) is a number then the regexes won't act as a regex. The only thing you can do is an exact match on the number, ie "eventlogid:1234". It is recommended that anything that is a identifier should be stored as a string since they are not numbers even if they are made up entirely of numerals.
   * As of January 15, 2015 - logstash functionality is new so these functions may change a fair amount based on experience using them in alerts.
   * Alerts using this information likely want to set ignoreUnknown, since only "groups" that appear in the time frame are in the results.
+
+## Elastic Query Functions
+
+Elasitc replaces the deprecated logstash (ls) functions. It only works with Elastic v2+. It is meant to be able to work with any elastic documents that have a time field and not just logstash. It introduces two new types to allow for greater flexibility in querying. The ESIndexer type generates index names to query (based on the date range). There are now different functions to generate indexers for people with different configurations. The ESQuery type is generates elastic queries so you can filter your results. By making these new types, new Indexers and Elastic queries can be added over time.
+
+You can view the generated JSON for queries on the expr page by bring up miniprofiler with Alt-P.
+
+### escount(indexRoot ESIndexer, keyString string, filter ESQuery, bucketDuration string, startDuration string, endDuration string) seriesSet
+
+escount returns a time bucked count of matching documents. It uses the keystring, indexRoot, interval, and durations to create an [elastic Date Histogram Aggregation](https://www.elastic.co/guide/en/elasticsearch/reference/current/search-aggregations-bucket-datehistogram-aggregation.html).
+
+  * `indexIndexer` will always be a function that returns an ESIndexer, such as `esdaily`.
+  * `keyString` is a csv separated list of fields. The fields will become tag keys, and the values returned for fields become the correspond tag values. For example `host,errorCode`. If an empty string is given, then the result set will have a single series and will have an empty tagset `{}`. These keys become terms filters for the date histogram.
+  * `filter` will be a funtion that returns an ESQuery. The queries further refine the results. The fields you filter on can match the fields in the keyString, but don't have too. If you don't want to filter you results, use `esall()` here.
+  * `bucketDuration` is an opentsdb duration string. It sets the the span of time to bucket the count of documents. For example, "1m" will give you the count of documents per minute.
+  * `startDuration` and `endDuration` set the time window from now - see the OpenTSDB q() function for more details.
+
+### esstat(indexRoot ESIndexer, keyString string, filter ESQuery, bucketDuration string, startDuration string, endDuration string) seriesSet
+
+estat returns various summary stats per bucket for the specified `field`. The field must be numeric in elastic. rStat can be one of `avg`, `min`, `max`, `sum`, `sum_of_squares`, `variance`, `std_deviation`. The rest of the fields behave the same as escount.
+
+## Elastic Index Functions
+
+### esdaily (timeField string, indexRoot string, layout string) ESIndexer
+
+esdaily is for elastic indexes that have a date name for each day. Based on the timeframe of the enclosing es function (i.e. esstat and escount) to generate which indexes should be included in the query. It gets all indexes and won't include indices that don't exist. The layout specifer uses's [Go's time specification format](https://golang.org/pkg/time/#Parse). The timeField is the name of the field in elastic that contains timestamps for the documents.
+
+### esindicies(timeField string, index string...) ESIndexer
+esindices takes one or more literal indicies for the enclosing query to use. It does not check for existance of the index, and passes back the elastic error if the index does not exist. The timeField is the name of the field in elastic that contains timestamps for the documents.
+
+### esls(indexRoot string) ESIndexer
+esls is a shortcut for esdaily("@timestamp", indexRoot+"-", "2006.01.02") and is for the default daily format that logstash creates.
+
+## Elastic Query Generating Functions (for filtering)
+
+### esall() ESQuery
+esall returns an elastic matchall query, use this when you don't want to filter any documents.
+
+### esregexp(field string, regexp string)
+esregexp creates an [elastic regexp query](https://www.elastic.co/guide/en/elasticsearch/reference/2.x/query-dsl-regexp-query.html) for the specified field.
+
+### esquery(field string, querystring string)
+esquery creates a [full-text elastic query string query](https://www.elastic.co/guide/en/elasticsearch/reference/2.x/query-dsl-query-string-query.html). 
+
+### esand(queries.. ESQuery) ESQuery
+esand takes one or more ESQueries and combines them into an [elastic bool query](https://www.elastic.co/guide/en/elasticsearch/reference/2.x/query-dsl-bool-query.html) where all the queries "must" be true.
+
+### esor(queries.. ESQuery) ESQuery
+esor takes one or more ESQueries and combines them into an [elastic bool query](https://www.elastic.co/guide/en/elasticsearch/reference/2.x/query-dsl-bool-query.html) so that at least one must be true.
+
+###esgt(field string, value Scalar) ESQuery
+esgt takes a field (expected to be numeric field in elastic) and returns results where the value of that field is greater than the specified value. It creates an [elastic range query](https://www.elastic.co/guide/en/elasticsearch/reference/2.x/query-dsl-range-query.html).
+
+###esgte(field string, value Scalar) ESQuery
+esgt takes a field (expected to be numeric field in elastic) and returns results where the value of that field is greater than or equal to the specified value. It creates an [elastic range query](https://www.elastic.co/guide/en/elasticsearch/reference/2.x/query-dsl-range-query.html).
+
+###eslt(field string, value Scalar) ESQuery
+esgt takes a field (expected to be numeric field in elastic) and returns results where the value of that field is less than the specified value. It creates an [elastic range query](https://www.elastic.co/guide/en/elasticsearch/reference/2.x/query-dsl-range-query.html).
+
+###eslte(field string, value Scalar) ESQuery
+esgt takes a field (expected to be numeric field in elastic) and returns results where the value of that field is less than or equal to the specified value. It creates an [elastic range query](https://www.elastic.co/guide/en/elasticsearch/reference/2.x/query-dsl-range-query.html).
+
 
 ## OpenTSDB Query Functions
 

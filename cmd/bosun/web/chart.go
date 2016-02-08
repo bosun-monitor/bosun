@@ -17,9 +17,9 @@ import (
 	"bosun.org/_third_party/github.com/vdobler/chart"
 	"bosun.org/_third_party/github.com/vdobler/chart/svgg"
 	"bosun.org/cmd/bosun/expr"
-	"bosun.org/cmd/bosun/expr/parse"
 	"bosun.org/cmd/bosun/sched"
 	"bosun.org/metadata"
+	"bosun.org/models"
 	"bosun.org/opentsdb"
 )
 
@@ -204,7 +204,7 @@ func ExprGraph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (in
 	e, err := expr.New(q, schedule.Conf.Funcs())
 	if err != nil {
 		return nil, err
-	} else if e.Root.Return() != parse.TypeSeriesSet {
+	} else if e.Root.Return() != models.TypeSeriesSet {
 		return nil, fmt.Errorf("egraph: requires an expression that returns a series")
 	}
 	// it may not strictly be necessary to recreate the contexts each time, but we do to be safe
@@ -212,7 +212,8 @@ func ExprGraph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (in
 	graphiteContext := schedule.Conf.GraphiteContext()
 	ls := schedule.Conf.LogstashElasticHosts
 	influx := schedule.Conf.InfluxConfig
-	res, _, err := e.Execute(tsdbContext, graphiteContext, ls, influx, cacheObj, t, now, autods, false, schedule.Search, nil, nil)
+	es := schedule.Conf.ElasticHosts
+	res, _, err := e.Execute(tsdbContext, graphiteContext, ls, es, influx, cacheObj, t, now, autods, false, schedule.Search, nil, nil)
 	if err != nil {
 		return nil, err
 	}

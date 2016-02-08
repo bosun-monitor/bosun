@@ -161,7 +161,7 @@ bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', '$q', '$r
 	};
 	$scope.req_from_m = (m: string) => {
 		var r = new Request();
-		var q = new Query();
+		var q = new Query(false);
 		q.metric = m;
 		r.queries.push(q);
 		return r;

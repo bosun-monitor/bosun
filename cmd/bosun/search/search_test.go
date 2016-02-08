@@ -13,7 +13,7 @@ import (
 var testSearch *Search
 
 func TestMain(m *testing.M) {
-	testData, closeF := dbtest.StartTestRedis()
+	testData, closeF := dbtest.StartTestRedis(9990)
 	testSearch = NewSearch(testData)
 	status := m.Run()
 	closeF()

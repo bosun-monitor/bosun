@@ -116,6 +116,9 @@ func rabbitmqQueues(s string) (opentsdb.MultiDataPoint, error) {
 	}
 	var md opentsdb.MultiDataPoint
 	for _, q := range qs {
+		if strings.HasPrefix(q.Name, "amq.gen-") {
+			continue // skip auto-generated queues
+		}
 		splitNode := strings.Split(q.Node, "@")
 		if len(splitNode) < 2 {
 			return nil, fmt.Errorf("Error: invalid RabbitMQ node name, can not split '%s'", q.Node)

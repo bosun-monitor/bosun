@@ -8,6 +8,8 @@ import (
 	"flag"
 	"fmt"
 	"testing"
+
+	"bosun.org/models"
 )
 
 var debug = flag.Bool("debug", false, "show the errors produced by the main tests")
@@ -150,31 +152,39 @@ func tagNil(args []Node) (Tags, error) {
 
 var builtins = map[string]Func{
 	"avg": {
-		[]FuncType{TypeSeriesSet},
-		TypeNumberSet,
+		[]models.FuncType{models.TypeSeriesSet},
+		models.TypeNumberSet,
 		tagNil,
 		nil,
+		false,
+		0,
 		nil,
 	},
 	"band": {
-		[]FuncType{TypeString, TypeString, TypeString, TypeScalar},
-		TypeSeriesSet,
+		[]models.FuncType{models.TypeString, models.TypeString, models.TypeString, models.TypeScalar},
+		models.TypeSeriesSet,
 		tagNil,
 		nil,
+		false,
+		0,
 		nil,
 	},
 	"q": {
-		[]FuncType{TypeString, TypeString},
-		TypeSeriesSet,
+		[]models.FuncType{models.TypeString, models.TypeString},
+		models.TypeSeriesSet,
 		tagNil,
 		nil,
+		false,
+		0,
 		nil,
 	},
 	"forecastlr": {
-		[]FuncType{TypeSeriesSet, TypeScalar},
-		TypeNumberSet,
+		[]models.FuncType{models.TypeSeriesSet, models.TypeScalar},
+		models.TypeNumberSet,
 		tagNil,
 		nil,
+		false,
+		0,
 		nil,
 	},
 }

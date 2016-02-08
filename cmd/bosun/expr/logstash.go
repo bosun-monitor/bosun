@@ -10,6 +10,7 @@ import (
 	"bosun.org/_third_party/github.com/MiniProfiler/go/miniprofiler"
 	"bosun.org/_third_party/github.com/olivere/elastic"
 	"bosun.org/cmd/bosun/expr/parse"
+	"bosun.org/models"
 	"bosun.org/opentsdb"
 )
 
@@ -20,17 +21,26 @@ var lsClient *elastic.Client
 // logstash. They are only loaded when the elastic hosts are set in the config file
 var LogstashElastic = map[string]parse.Func{
 	"lscount": {
-		Args:   []parse.FuncType{parse.TypeString, parse.TypeString, parse.TypeString, parse.TypeString, parse.TypeString, parse.TypeString},
-		Return: parse.TypeSeriesSet,
+		Args:   []models.FuncType{models.TypeString, models.TypeString, models.TypeString, models.TypeString, models.TypeString, models.TypeString},
+		Return: models.TypeSeriesSet,
 		Tags:   logstashTagQuery,
 		F:      LSCount,
 	},
 	"lsstat": {
-		Args:   []parse.FuncType{parse.TypeString, parse.TypeString, parse.TypeString, parse.TypeString, parse.TypeString, parse.TypeString, parse.TypeString, parse.TypeString},
-		Return: parse.TypeSeriesSet,
+		Args:   []models.FuncType{models.TypeString, models.TypeString, models.TypeString, models.TypeString, models.TypeString, models.TypeString, models.TypeString, models.TypeString},
+		Return: models.TypeSeriesSet,
 		Tags:   logstashTagQuery,
 		F:      LSStat,
 	},
+}
+
+func logstashTagQuery(args []parse.Node) (parse.Tags, error) {
+	n := args[1].(*parse.StringNode)
+	t := make(parse.Tags)
+	for _, s := range strings.Split(n.Text, ",") {
+		t[strings.Split(s, ":")[0]] = struct{}{}
+	}
+	return t, nil
 }
 
 // This is an array of Logstash hosts and exists as a type for something to attach
