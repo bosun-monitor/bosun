@@ -625,7 +625,8 @@ func (s *Schedule) Action(user, message string, t models.ActionType, ak models.A
 		Type:    t,
 		User:    user,
 	})
-	return s.DataAccess.State().UpdateIncidentState(st)
+	_, err = s.DataAccess.State().UpdateIncidentState(st)
+	return err
 }
 
 type IncidentStatus struct {

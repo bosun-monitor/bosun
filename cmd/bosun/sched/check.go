@@ -110,15 +110,19 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.E
 	if err != nil {
 		return
 	}
+
+	si := silenced(ak)
+
 	// get existing open incident if exists
-	incident, err := data.GetOpenIncident(ak)
+	var incident *models.IncidentState
+	incident, err = data.GetOpenIncident(ak)
 	if err != nil {
 		return
 	}
 	defer func() {
 		// save unless incident is new and closed (log alert)
 		if incident != nil && (incident.Id != 0 || incident.Open) {
-			err = data.UpdateIncidentState(incident)
+			_, err = data.UpdateIncidentState(incident)
 		} else {
 			err = data.SetUnevaluated(ak, event.Unevaluated) // if nothing to save, at least store the unevaluated state
 		}
@@ -137,8 +141,10 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.E
 	}
 
 	shouldNotify := false
+	newIncident := false
 	if incident == nil {
 		incident = NewIncident(ak)
+		newIncident = true
 		shouldNotify = true
 	}
 	// set state.Result according to event result
@@ -162,6 +168,19 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.E
 	incident.CurrentStatus = event.Status
 
 	a := s.Conf.Alerts[ak.Name()]
+
+	//run a preliminary save on new incidents to get an id
+	if newIncident {
+		if a.Log || silencedOrIgnored(a, event, si) {
+			//a log or silenced/ignored alert will not need to be saved
+		} else {
+			incident.Id, err = s.DataAccess.State().UpdateIncidentState(incident)
+			if err != nil {
+				return
+			}
+		}
+	}
+
 	//render templates and open alert key if abnormal
 	if event.Status > models.StNormal {
 		s.executeTemplates(incident, event, a, r)
@@ -190,12 +209,8 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.E
 	}
 
 	notifyCurrent := func() {
-		si := silenced(ak)
 		//Auto close ignoreUnknowns for new incident.
-		if a.IgnoreUnknown && event.Status == models.StUnknown {
-			incident.Open = false
-			return
-		} else if si != nil && si.Forget && event.Status == models.StUnknown {
+		if silencedOrIgnored(a, event, si) {
 			incident.Open = false
 			return
 		}
@@ -232,6 +247,15 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.E
 	return checkNotify, nil
 }
 
+func silencedOrIgnored(a *conf.Alert, event *models.Event, si *models.Silence) bool {
+	if a.IgnoreUnknown && event.Status == models.StUnknown {
+		return true
+	}
+	if si != nil && si.Forget && event.Status == models.StUnknown {
+		return true
+	}
+	return false
+}
 func (s *Schedule) executeTemplates(state *models.IncidentState, event *models.Event, a *conf.Alert, r *RunHistory) {
 	if event.Status != models.StUnknown {
 		var errs []error
