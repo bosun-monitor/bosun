@@ -26,7 +26,6 @@ for GOOS in darwin windows linux ; do
 done
 
 
-
 echo -e "\nChecking gofmt -s -w for all folders that don't start with . or _"
 GOFMTRESULT=0
 GOFMTOUT=$(gofmt -l -s -w $DIRS);
@@ -67,6 +66,34 @@ if [ "$GOTESTRESULT" != 0 ]; then
 	BUILDMSG="${BUILDMSG}tests fail."
 fi
 
+echo -e "\nTesting that bosun starts and stops cleanly"
+#TODO: save linux build from above? cant seem to find where it is though.
+cd $GOPATH/src/bosun.org/cmd/bosun
+go build .
+echo -e "tsdbHost = localhost:4242\nledisDir = ../ledis_data\ncheckFrequency = 5m\nhttpListen = :8070\n" > dev.conf
+timeout 30 ./bosun & bosunpid=$! #Run bosun in background with a 30s timeout and capture the pid
+BOSUN_START_RESULT=$?
+sleep 5
+kill -SIGTERM $bosunpid
+BOSUN_SIGNAL_RESULT=$?
+wait $bosunpid
+BOSUN_STOP_RESULT=$?
+if [ "$BOSUN_START_RESULT" != 0 ]; then
+    echo "Failed to start bosun cleanly. Exit code $BOSUN_START_RESULT"
+fi
+if [ "$BOSUN_SIGNAL_RESULT" != 0 ]; then
+    echo "Failed to signal bosun to stop cleanly. Likely crashed before signal sent."
+fi
+if [ "$BOSUN_STOP_RESULT" != 1 ]; then
+    echo "Failed to stop bosun cleanly. Exit code $BOSUN_STOP_RESULT (124=60s test timeout reached)"
+else # Expected is 1, so reset to 0 if it worked
+    BOSUN_STOP_RESULT=0
+fi
+let "RUN_BOSUN = $BOSUN_START_RESULT | $BOSUN_SIGNAL_RESULT | $BOSUN_STOP_RESULT"
+if [ "$RUN_BOSUN" != 0 ]; then
+    BUILDMSG="${BUILDMSG}clean start/signal/stop failed. "
+fi
+
 BUILDSTATUS=failure
 if [ "$BUILDMSG" == '' ]; then
 	BUILDMSG="All checks Passed!"
@@ -77,5 +104,5 @@ if [ "$TRAVIS" != '' ]; then
 	setStatus -o $O -r $R -s=$BUILDSTATUS -c bosun -d="$BUILDMSG" -sha=$SHA
 fi
 
-let "RESULT = $GOBUILDRESULT | $GOFMTRESULT | $GOVETRESULT | $GOTESTRESULT | $GOGENERATERESULT | $GOGENERATEDIFFRESULT"
+let "RESULT = $GOBUILDRESULT | $GOFMTRESULT | $GOVETRESULT | $GOTESTRESULT | $GOGENERATERESULT | $GOGENERATEDIFFRESULT | $RUN_BOSUN"
 exit $RESULT
