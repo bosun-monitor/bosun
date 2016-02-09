@@ -113,6 +113,9 @@ func decode(db *bolt.DB, name string, dst interface{}) error {
 	if err != nil {
 		return err
 	}
+	if len(data) == 0 {
+		return nil
+	}
 	gr, err := gzip.NewReader(bytes.NewReader(data))
 	if err != nil {
 		return err
@@ -584,7 +587,8 @@ func isMigrated(db *bolt.DB, name string) (bool, error) {
 	err := db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(dbBucket))
 		if b == nil {
-			return fmt.Errorf("unknown bucket: %v", dbBucket)
+			found = true
+			return nil
 		}
 		if dat := b.Get([]byte("isMigrated:" + name)); dat != nil {
 			found = true
