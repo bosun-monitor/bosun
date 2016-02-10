@@ -101,14 +101,11 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 		}
 		switch {
 		case strings.HasPrefix(m[0], "cpu"):
-			metric_percpu := ""
 			tag_cpu := strings.TrimPrefix(m[0], "cpu")
 			if tag_cpu != "" {
 				num_cores++
-				metric_percpu = ".percpu"
 			}
-			fields := strings.Fields(m[1])
-			for i, value := range fields {
+			for i, value := range m[1:] {
 				if i >= len(CPU_FIELDS) {
 					break
 				}
@@ -117,29 +114,31 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 				}
 				if tag_cpu != "" {
 					tags["cpu"] = tag_cpu
+					Add(&md, "linux.cpu.percpu", value, tags, metadata.Counter, metadata.CHz, cpu_stat_desc[CPU_FIELDS[i]])
+				} else {
+					Add(&md, "linux.cpu", value, tags, metadata.Counter, metadata.CHz, cpu_stat_desc[CPU_FIELDS[i]])
 				}
-				Add(&md, "linux.cpu.percpu", value, tags, metadata.Counter, metadata.CHz, cpu_stat_desc[CPU_FIELDS[i]])
 			}
-			if metric_percpu == "" {
-				if len(fields) < 3 {
+			if tag_cpu == "" {
+				if len(m[1:]) < 3 {
 					return nil
 				}
-				user, err := strconv.Atoi(fields[0])
+				user, err := strconv.Atoi(m[1])
 				if err != nil {
 					return nil
 				}
-				nice, err := strconv.Atoi(fields[1])
+				nice, err := strconv.Atoi(m[2])
 				if err != nil {
 					return nil
 				}
-				system, err := strconv.Atoi(fields[2])
+				system, err := strconv.Atoi(m[3])
 				if err != nil {
 					return nil
 				}
 				t_util = user + nice + system
 			}
 		case m[0] == "intr":
-			Add(&md, "linux.intr", strings.Fields(m[1])[0], nil, metadata.Counter, metadata.Interupt, "")
+			Add(&md, "linux.intr", m[1], nil, metadata.Counter, metadata.Interupt, "")
 		case m[0] == "ctxt":
 			Add(&md, "linux.ctxt", m[1], nil, metadata.Counter, metadata.ContextSwitch, "")
 		case m[0] == "processes":
