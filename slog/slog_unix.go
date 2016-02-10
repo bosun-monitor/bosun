@@ -39,3 +39,8 @@ func (s *Syslog) Info(v string) {
 func (s *Syslog) Warning(v string) {
 	s.W.Warning("warning: " + v)
 }
+
+// Debug logs a message with debugging/trace information
+func (s *Syslog) Debug(v string) {
+	s.W.Debug("debug: " + v)
+}

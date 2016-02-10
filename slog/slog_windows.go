@@ -32,3 +32,8 @@ func (e *eventLog) Warning(v string) {
 func (e *eventLog) Error(v string) {
 	e.l.Error(e.id, fmt.Sprintf("error: %s", v))
 }
+
+func (e *eventLog) Debug(v string) {
+	// Windows logger doesn't have Debug, so use Info instead
+	e.l.Info(e.id, fmt.Sprintf("debug: %s", v))
+}
