@@ -142,6 +142,7 @@ func (s *Schedule) RestoreState() error {
 	if err := decode(db, dbNotifications, &notifications); err != nil {
 		slog.Errorln(dbNotifications, err)
 	}
+	s.Notifications = notifications
 
 	//status := make(States)
 	//	if err := decode(db, dbStatus, &status); err != nil {

@@ -15,13 +15,13 @@ import (
 
 func (s *Schedule) dispatchNotifications() {
 	ticker := time.NewTicker(s.Conf.CheckFrequency * 2)
-	timeout := s.CheckNotifications()
+	nextScheduled := time.After(s.CheckNotifications())
 	for {
 		select {
-		case <-time.After(timeout):
-			timeout = s.CheckNotifications()
+		case <-nextScheduled:
+			nextScheduled = time.After(s.CheckNotifications())
 		case <-s.nc:
-			timeout = s.CheckNotifications()
+			nextScheduled = time.After(s.CheckNotifications())
 		case <-ticker.C:
 			s.sendUnknownNotifications()
 		}
