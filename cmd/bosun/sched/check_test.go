@@ -126,11 +126,11 @@ func TestCheckSilence(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = s.AddSilence(time.Now().Add(-time.Hour), time.Now().Add(time.Hour), "a", "", false, true, "", "user", "message")
+	_, err = s.AddSilence(utcNow().Add(-time.Hour), utcNow().Add(time.Hour), "a", "", false, true, "", "user", "message")
 	if err != nil {
 		t.Fatal(err)
 	}
-	check(s, time.Now())
+	check(s, utcNow())
 	s.CheckNotifications()
 	select {
 	case <-done:
@@ -220,7 +220,7 @@ func TestCheckNotify(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	check(s, time.Now())
+	check(s, utcNow())
 	s.CheckNotifications()
 	select {
 	case r := <-nc:
@@ -396,7 +396,7 @@ func TestCheckNotifyLog(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	check(s, time.Now())
+	check(s, utcNow())
 	s.CheckNotifications()
 	gotA := false
 	gotB := false

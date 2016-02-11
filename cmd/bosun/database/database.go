@@ -22,6 +22,7 @@ type DataAccess interface {
 	Errors() ErrorDataAccess
 	State() StateDataAccess
 	Silence() SilenceDataAccess
+	Notifications() NotificationDataAccess
 }
 
 type MetadataDataAccess interface {

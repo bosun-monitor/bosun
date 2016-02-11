@@ -25,6 +25,10 @@ import (
 	"bosun.org/slog"
 )
 
+func utcNow() time.Time {
+	return time.Now().UTC()
+}
+
 func init() {
 	gob.Register(expr.Number(0))
 	gob.Register(expr.Scalar(0))
@@ -45,8 +49,7 @@ type Schedule struct {
 	nc chan interface{}
 	//notifications to be sent immediately
 	pendingNotifications map[*conf.Notification][]*models.IncidentState
-	//notifications we are currently tracking, potentially with future or repeated actions.
-	Notifications map[models.AlertKey]map[string]time.Time
+
 	//unknown states that need to be notified about. Collected and sent in batches.
 	pendingUnknowns map[*conf.Notification][]*models.IncidentState
 
@@ -70,8 +73,8 @@ func (s *Schedule) Init(c *conf.Conf) error {
 	s.Group = make(map[time.Time]models.AlertKeys)
 	s.pendingUnknowns = make(map[*conf.Notification][]*models.IncidentState)
 	s.lastLogTimes = make(map[models.AlertKey]time.Time)
-	s.LastCheck = time.Now()
-	s.ctx = &checkContext{time.Now(), cache.New(0)}
+	s.LastCheck = utcNow()
+	s.ctx = &checkContext{utcNow(), cache.New(0)}
 	if s.DataAccess == nil {
 		if c.RedisHost != "" {
 			s.DataAccess = database.NewDataAccess(c.RedisHost, true, c.RedisDb, c.RedisPassword)
@@ -111,9 +114,9 @@ func init() {
 }
 
 func (s *Schedule) Lock(method string) {
-	start := time.Now()
+	start := utcNow()
 	s.mutex.Lock()
-	s.mutexAquired = time.Now()
+	s.mutexAquired = utcNow()
 	s.mutexHolder = method
 	s.mutexWaitTime = int64(s.mutexAquired.Sub(start) / time.Millisecond) // remember this so we don't have to call put until we leave the critical section.
 }
@@ -137,7 +140,7 @@ func (s *Schedule) PutMetadata(k metadata.Metakey, v interface{}) error {
 
 	isCoreMeta := (k.Name == "desc" || k.Name == "unit" || k.Name == "rate")
 	if !isCoreMeta {
-		s.DataAccess.Metadata().PutTagMetadata(k.TagSet(), k.Name, fmt.Sprint(v), time.Now().UTC())
+		s.DataAccess.Metadata().PutTagMetadata(k.TagSet(), k.Name, fmt.Sprint(v), utcNow())
 		return nil
 	}
 	if k.Metric == "" {
@@ -505,12 +508,6 @@ func Close() {
 }
 
 func (s *Schedule) Close() {
-	s.save()
-	s.Lock("Close")
-	if s.db != nil {
-		s.db.Close()
-	}
-	s.Unlock()
 	err := s.Search.BackupLast()
 	if err != nil {
 		slog.Error(err)
@@ -585,12 +582,8 @@ func (s *Schedule) Action(user, message string, t models.ActionType, ak models.A
 	if st == nil {
 		return fmt.Errorf("no such alert key: %v", ak)
 	}
-	ack := func() {
-		delete(s.Notifications, ak)
-		st.NeedAck = false
-	}
 	isUnknown := st.LastAbnormalStatus == models.StUnknown
-	timestamp := time.Now().UTC()
+	timestamp := utcNow()
 	switch t {
 	case models.ActionAcknowledge:
 		if !st.NeedAck {
@@ -599,11 +592,11 @@ func (s *Schedule) Action(user, message string, t models.ActionType, ak models.A
 		if !st.Open {
 			return fmt.Errorf("cannot acknowledge closed alert")
 		}
-		ack()
-	case models.ActionClose:
-		if st.NeedAck {
-			ack()
+		st.NeedAck = false
+		if err := s.DataAccess.Notifications().ClearNotifications(ak); err != nil {
+			return err
 		}
+	case models.ActionClose:
 		if st.IsActive() {
 			return fmt.Errorf("cannot close active alert")
 		}

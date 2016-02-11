@@ -43,7 +43,7 @@ func (s *Schedule) Host(filter string) (map[string]*HostData, error) {
 		}
 		return byKey, nil
 	}
-	oldTimestamp := time.Now().Add(-timeFilterAge).Unix()
+	oldTimestamp := utcNow().Add(-timeFilterAge).Unix()
 	oldOrErr := func(ts int64, err error) bool {
 		if ts < oldTimestamp || err != nil {
 			return true
@@ -256,7 +256,7 @@ func (s *Schedule) Host(filter string) (map[string]*HostData, error) {
 			ps.Status = statusString(int64(fstatus), 0, "Ok", "Bad")
 			host.Hardware.PowerSupplies[id] = ps
 			for _, m := range hostMetadata {
-				if m.Name != "psMeta" || m.Time.Before(time.Now().Add(-timeFilterAge)) || !m.Tags.Equal(ts) {
+				if m.Name != "psMeta" || m.Time.Before(utcNow().Add(-timeFilterAge)) || !m.Tags.Equal(ts) {
 					continue
 				}
 				if val, ok := m.Value.(string); ok {
@@ -305,7 +305,7 @@ func (s *Schedule) Host(filter string) (map[string]*HostData, error) {
 				host.Hardware.Storage.PhysicalDisks[id] = pd
 			}
 			for _, m := range hostMetadata {
-				if m.Name != "physicalDiskMeta" || m.Time.Before(time.Now().Add(-timeFilterAge)) || !m.Tags.Equal(ts) {
+				if m.Name != "physicalDiskMeta" || m.Time.Before(utcNow().Add(-timeFilterAge)) || !m.Tags.Equal(ts) {
 					continue
 				}
 				if val, ok := m.Value.(string); ok {
@@ -344,7 +344,7 @@ func (s *Schedule) Host(filter string) (map[string]*HostData, error) {
 				host.Hardware.Storage.Controllers[id] = c
 			}
 			for _, m := range hostMetadata {
-				if m.Name != "controllerMeta" || m.Time.Before(time.Now().Add(-timeFilterAge)) || !m.Tags.Equal(ts) {
+				if m.Name != "controllerMeta" || m.Time.Before(utcNow().Add(-timeFilterAge)) || !m.Tags.Equal(ts) {
 					continue
 				}
 				if val, ok := m.Value.(string); ok {
@@ -370,7 +370,7 @@ func (s *Schedule) Host(filter string) (map[string]*HostData, error) {
 			}
 			host.Disks[disk] = d
 			for _, m := range hostMetadata {
-				if m.Name != "label" || m.Time.Before(time.Now().Add(-timeFilterAge)) || !m.Tags.Equal(ts) {
+				if m.Name != "label" || m.Time.Before(utcNow().Add(-timeFilterAge)) || !m.Tags.Equal(ts) {
 					continue
 				}
 				if label, ok := m.Value.(string); ok {
@@ -391,7 +391,7 @@ func (s *Schedule) Host(filter string) (map[string]*HostData, error) {
 		host.Memory.UsedBytes, _, _ = s.Search.GetLast("os.mem.used", hostTagSet.String(), false)
 		host.UptimeSeconds, _, _ = s.Search.GetLastInt64("os.system.uptime", hostTagSet.String(), false)
 		for _, m := range hostMetadata {
-			if m.Time.Before(time.Now().Add(-timeFilterAge)) {
+			if m.Time.Before(utcNow().Add(-timeFilterAge)) {
 				continue
 			}
 			var iface *HostInterface

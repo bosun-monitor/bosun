@@ -87,7 +87,6 @@ func Listen(listenAddr string, devMode bool, tsdbHost string) error {
 	router.HandleFunc("/api/", APIRedirect)
 	router.Handle("/api/action", JSON(Action))
 	router.Handle("/api/alerts", JSON(Alerts))
-	router.Handle("/api/backup", JSON(Backup))
 	router.Handle("/api/config", miniprofiler.NewHandler(Config))
 	router.Handle("/api/config_test", miniprofiler.NewHandler(ConfigTest))
 	router.Handle("/api/egraph/{bs}.svg", JSON(ExprGraph))
@@ -417,15 +416,6 @@ func MetadataMetrics(t miniprofiler.Timer, w http.ResponseWriter, r *http.Reques
 
 func Alerts(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	return schedule.MarshalGroups(t, r.FormValue("filter"))
-}
-
-func Backup(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	data, err := schedule.GetStateFileBackup()
-	if err != nil {
-		return nil, err
-	}
-	_, err = w.Write(data)
-	return nil, err
 }
 
 func IncidentEvents(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
