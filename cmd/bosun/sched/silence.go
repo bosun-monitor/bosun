@@ -14,7 +14,7 @@ type SilenceTester func(models.AlertKey) *models.Silence
 // Silenced returns a function that will determine if the given alert key is silenced at the current time.
 // A function is returned to avoid needing to enumerate all alert keys unneccesarily.
 func (s *Schedule) Silenced() SilenceTester {
-	now := time.Now()
+	now := utcNow()
 	silences, err := s.DataAccess.Silence().GetActiveSilences()
 	if err != nil {
 		slog.Error("Error fetching silences.", err)
