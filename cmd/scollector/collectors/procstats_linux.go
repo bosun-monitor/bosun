@@ -14,7 +14,7 @@ func init() {
 	collectors = append(collectors, &IntervalCollector{F: c_procstats_linux})
 }
 
-var CPU_FIELDS = []string{
+var cpu_fields = []string{
 	"user",
 	"nice",
 	"system",
@@ -25,6 +25,19 @@ var CPU_FIELDS = []string{
 	"steal",
 	"guest",
 	"guest_nice",
+}
+
+var cpu_stat_desc = []string{
+	"Normal processes executing in user mode.",
+	"Niced processes executing in user mode.",
+	"Processes executing in kernel mode.",
+	"Twiddling thumbs.",
+	"Waiting for I/O to complete.",
+	"Servicing interrupts.",
+	"Servicing soft irqs.",
+	"Involuntary wait.",
+	"Running a guest vm.",
+	"Running a niced guest vm.",
 }
 
 func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
@@ -82,18 +95,6 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 	}
 	num_cores := 0
 	var t_util int
-	cpu_stat_desc := map[string]string{
-		"user":       "Normal processes executing in user mode.",
-		"nice":       "Niced processes executing in user mode.",
-		"system":     "Processes executing in kernel mode.",
-		"idle":       "Twiddling thumbs.",
-		"iowait":     "Waiting for I/O to complete.",
-		"irq":        "Servicing interrupts.",
-		"softirq":    "Servicing soft irqs.",
-		"steal":      "Involuntary wait.",
-		"guest":      "Running a guest vm.",
-		"guest_nice": "Running a niced guest vm.",
-	}
 	if err := readLine("/proc/stat", func(s string) error {
 		m := strings.Split(s, " ")
 		if m == nil {
@@ -106,17 +107,17 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 				num_cores++
 			}
 			for i, value := range m[1:] {
-				if i >= len(CPU_FIELDS) {
+				if i >= len(cpu_fields) {
 					break
 				}
 				tags := opentsdb.TagSet{
-					"type": CPU_FIELDS[i],
+					"type": cpu_fields[i],
 				}
 				if tag_cpu != "" {
 					tags["cpu"] = tag_cpu
-					Add(&md, "linux.cpu.percpu", value, tags, metadata.Counter, metadata.CHz, cpu_stat_desc[CPU_FIELDS[i]])
+					Add(&md, "linux.cpu.percpu", value, tags, metadata.Counter, metadata.CHz, cpu_stat_desc[i])
 				} else {
-					Add(&md, "linux.cpu", value, tags, metadata.Counter, metadata.CHz, cpu_stat_desc[CPU_FIELDS[i]])
+					Add(&md, "linux.cpu", value, tags, metadata.Counter, metadata.CHz, cpu_stat_desc[i])
 				}
 			}
 			if tag_cpu == "" {
@@ -204,7 +205,7 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 		}
 		irq_type := strings.TrimRight(cols[0], ":")
 		if _, err := strconv.Atoi(irq_type); err == nil {
-			if cols[len(cols)-2] == "PCI-MSI-edge" && strings.Contains(cols[len(cols)-1], "eth") {
+			if len(cols) == num_cpus+3 && strings.HasPrefix(cols[num_cpus+1], "IR-") {
 				irq_type = cols[len(cols)-1]
 			} else {
 				// Interrupt type is just a number, ignore.
