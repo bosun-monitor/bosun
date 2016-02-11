@@ -183,6 +183,12 @@ var unknownMultiGroup = ttemplate.Must(ttemplate.New("unknownMultiGroup").Parse(
 	`))
 
 func (s *Schedule) notify(st *models.IncidentState, n *conf.Notification) {
+	if len(st.EmailSubject) == 0 {
+		st.EmailSubject = []byte(st.Subject)
+	}
+	if len(st.EmailBody) == 0 {
+		st.EmailBody = []byte(st.Body)
+	}
 	n.Notify(st.Subject, st.Body, st.EmailSubject, st.EmailBody, s.Conf, string(st.AlertKey), st.Attachments...)
 }
 

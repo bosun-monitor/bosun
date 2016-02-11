@@ -24,9 +24,9 @@ type IncidentState struct {
 
 	Subject      string
 	Body         string
-	EmailBody    []byte        `json:"-"`
-	EmailSubject []byte        `json:"-"`
-	Attachments  []*Attachment `json:"-"`
+	EmailBody    []byte
+	EmailSubject []byte
+	Attachments  []*Attachment
 
 	NeedAck bool
 	Open    bool

@@ -302,8 +302,13 @@ func (s *Schedule) executeTemplates(state *models.IncidentState, event *models.E
 		}
 		state.Subject = string(subject)
 		state.Body = string(body)
-		state.EmailBody = emailbody
-		state.EmailSubject = emailsubject
+		//don't save email seperately if they are identical
+		if string(state.EmailBody) != state.Body {
+			state.EmailBody = emailbody
+		}
+		if string(state.EmailSubject) != state.Subject {
+			state.EmailSubject = emailsubject
+		}
 		state.Attachments = attachments
 	}
 }
