@@ -649,7 +649,7 @@ func Config(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 	var text string
 	var err error
 	if hash := r.FormValue("hash"); hash != "" {
-		text, err = schedule.LoadTempConfig(hash)
+		text, err = schedule.DataAccess.Configs().GetTempConfig(hash)
 		if err != nil {
 			serveError(w, err)
 			return

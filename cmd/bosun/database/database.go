@@ -18,6 +18,7 @@ import (
 // Core data access interface for everything sched needs
 type DataAccess interface {
 	Metadata() MetadataDataAccess
+	Configs() ConfigDataAccess
 	Search() SearchDataAccess
 	Errors() ErrorDataAccess
 	State() StateDataAccess
