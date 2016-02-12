@@ -64,6 +64,7 @@ type Conf struct {
 	Quiet            bool
 	NoSleep          bool
 	ShortURLKey      string
+	InternetProxy    string
 	MinGroupSize     int
 
 	TSDBHost             string                    // OpenTSDB relay and query destination: ny-devtsdb04:4242
@@ -549,6 +550,8 @@ func (c *Conf) loadGlobal(p *parse.PairNode) {
 		}
 	case "shortURLKey":
 		c.ShortURLKey = v
+	case "internetProxy":
+		c.InternetProxy = v
 	case "ledisDir":
 		c.LedisDir = v
 	case "redisHost":
