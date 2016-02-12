@@ -503,12 +503,11 @@ func (c *Context) LSQueryAll(index_root, keystring, filter, sduration, eduration
 }
 
 func (c *Context) ESQuery(indexRoot expr.ESIndexer, filter expr.ESQuery, sduration, eduration string, size int) (interface{}, error) {
-	req, err := expr.ESBaseQuery(c.runHistory.Start, indexRoot, c.runHistory.Elastic, filter.Query, sduration, eduration, size)
+	newFilter := expr.ScopeES(c.Group(), filter.Query)
+	req, err := expr.ESBaseQuery(c.runHistory.Start, indexRoot, c.runHistory.Elastic, newFilter, sduration, eduration, size)
 	if err != nil {
 		return nil, err
 	}
-	tags := c.Group()
-	req.Scope(&tags)
 	results, err := c.runHistory.Elastic.Query(req)
 	if err != nil {
 		return nil, err
