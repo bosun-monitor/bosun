@@ -5,10 +5,10 @@ import (
 	"strings"
 	"time"
 
-	"bosun.org/_third_party/github.com/StackExchange/wmi"
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
 	"bosun.org/util"
+	"github.com/StackExchange/wmi"
 )
 
 func init() {

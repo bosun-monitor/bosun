@@ -6,13 +6,13 @@ import (
 	"strings"
 	"time"
 
-	"bosun.org/_third_party/github.com/MiniProfiler/go/miniprofiler"
-	"bosun.org/_third_party/github.com/influxdb/influxdb/client"
-	"bosun.org/_third_party/github.com/influxdb/influxdb/influxql"
-	influxModels "bosun.org/_third_party/github.com/influxdb/influxdb/models"
 	"bosun.org/cmd/bosun/expr/parse"
 	"bosun.org/models"
 	"bosun.org/opentsdb"
+	"github.com/MiniProfiler/go/miniprofiler"
+	"github.com/influxdata/influxdb/client"
+	"github.com/influxdata/influxdb/influxql"
+	influxModels "github.com/influxdata/influxdb/models"
 )
 
 // Influx is a map of functions to query InfluxDB.

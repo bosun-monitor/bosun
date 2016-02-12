@@ -9,10 +9,6 @@ import (
 	"sync"
 	"time"
 
-	"bosun.org/_third_party/github.com/MiniProfiler/go/miniprofiler"
-	"bosun.org/_third_party/github.com/boltdb/bolt"
-	"bosun.org/_third_party/github.com/bradfitz/slice"
-	"bosun.org/_third_party/github.com/tatsushid/go-fastping"
 	"bosun.org/cmd/bosun/cache"
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/database"
@@ -23,6 +19,10 @@ import (
 	"bosun.org/models"
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
+	"github.com/MiniProfiler/go/miniprofiler"
+	"github.com/boltdb/bolt"
+	"github.com/bradfitz/slice"
+	"github.com/tatsushid/go-fastping"
 )
 
 func utcNow() time.Time {

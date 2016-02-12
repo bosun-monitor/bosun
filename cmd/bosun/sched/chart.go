@@ -6,13 +6,13 @@ import (
 	"image/png"
 	"io"
 
-	"bosun.org/_third_party/github.com/MiniProfiler/go/miniprofiler"
-	"bosun.org/_third_party/github.com/ajstarks/svgo"
-	"bosun.org/_third_party/github.com/bradfitz/slice"
-	"bosun.org/_third_party/github.com/vdobler/chart"
-	"bosun.org/_third_party/github.com/vdobler/chart/imgg"
-	"bosun.org/_third_party/github.com/vdobler/chart/svgg"
 	"bosun.org/cmd/bosun/expr"
+	"github.com/MiniProfiler/go/miniprofiler"
+	"github.com/ajstarks/svgo"
+	"github.com/bradfitz/slice"
+	"github.com/vdobler/chart"
+	"github.com/vdobler/chart/imgg"
+	"github.com/vdobler/chart/svgg"
 )
 
 var chartColors = []color.Color{

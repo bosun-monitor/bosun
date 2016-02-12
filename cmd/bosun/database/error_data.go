@@ -1,12 +1,12 @@
 package database
 
 import (
-	"bosun.org/_third_party/github.com/garyburd/redigo/redis"
 	"bosun.org/collect"
 	"bosun.org/models"
 	"bosun.org/opentsdb"
 	"encoding/json"
 	"fmt"
+	"github.com/garyburd/redigo/redis"
 	"time"
 )
 

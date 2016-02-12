@@ -5,10 +5,10 @@ import (
 	"log"
 	"time"
 
-	"bosun.org/_third_party/github.com/garyburd/redigo/redis"
 	"bosun.org/collect"
 	"bosun.org/models"
 	"bosun.org/opentsdb"
+	"github.com/garyburd/redigo/redis"
 )
 
 /*

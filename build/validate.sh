@@ -1,9 +1,11 @@
 #!/bin/bash
 cd $GOPATH/src/bosun.org
-DIRS=`find . -maxdepth 1 -type d -iregex './[^._].*'`
+DIRS=`find . -maxdepth 1 -type d -iregex './[^._].*' | grep -v '/vendor'`
+PKGS=`go list bosun.org/... | grep -v /vendor/`
 
 O=bosun-monitor
 R=bosun
+ORIGINALGOOS=$GOOS
 SHA=`git rev-parse ${TRAVIS_COMMIT}^2`
 BUILDMSG=""
 if [ "$TRAVIS" != '' ]; then
@@ -12,11 +14,12 @@ fi
 
 
 echo -e "\nBuilding/..."
-
 GOBUILDRESULT=0
 GBUILDRESULT=0
 for GOOS in darwin windows linux ; do
 	export GOOS=$GOOS
+	export CGO_ENABLED=0
+	echo $GOOS
 	go build bosun.org/...
 	GBUILDRESULT=$?
 	if [ "$GBUILDRESULT" != 0 ]; then
@@ -24,7 +27,7 @@ for GOOS in darwin windows linux ; do
 		GOBUILDRESULT=$GBUILDRESULT
 	fi
 done
-
+export GOOS=$ORIGINALGOOS
 
 echo -e "\nChecking gofmt -s -w for all folders that don't start with . or _"
 GOFMTRESULT=0
@@ -37,7 +40,7 @@ if [ "$GOFMTOUT" != '' ]; then
 fi
 
 echo -e "\nRunning go vet bosun.org/..."
-go vet bosun.org/...
+go vet $PKGS
 GOVETRESULT=$?
 if [ "$GOVETRESULT" != 0 ]; then
 	BUILDMSG="${BUILDMSG}go vet found problems. "
@@ -47,7 +50,7 @@ echo -e "\nGetting esc"
 go get -u -v github.com/mjibson/esc
 
 echo -e "\nRunning go generate bosun.org/..."
-go generate bosun.org/...
+go generate $PKGS
 GOGENERATERESULT=$?
 GOGENERATEDIFF=$(git diff --exit-code --name-only)
 GOGENERATEDIFFRESULT=0
@@ -60,7 +63,7 @@ if [ "$GOGENERATEDIFF" != '' ]; then
 fi
 
 echo -e "\nRunning go test bosun.org/..."
-go test -v bosun.org/...
+go test -v $PKGS
 GOTESTRESULT=$?
 if [ "$GOTESTRESULT" != 0 ]; then
 	BUILDMSG="${BUILDMSG}tests fail."

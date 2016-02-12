@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"time"
 
-	"bosun.org/_third_party/github.com/MiniProfiler/go/miniprofiler"
-	"bosun.org/_third_party/github.com/gorilla/mux"
 	"bosun.org/opentsdb"
+	"github.com/MiniProfiler/go/miniprofiler"
+	"github.com/gorilla/mux"
 )
 
 // UniqueMetrics returns a sorted list of available metrics.

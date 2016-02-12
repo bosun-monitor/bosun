@@ -9,12 +9,12 @@ import (
 	"net/smtp"
 	"strings"
 
-	"bosun.org/_third_party/github.com/jordan-wright/email"
 	"bosun.org/collect"
 	"bosun.org/metadata"
 	"bosun.org/models"
 	"bosun.org/slog"
 	"bosun.org/util"
+	"github.com/jordan-wright/email"
 )
 
 func init() {

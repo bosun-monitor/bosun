@@ -9,14 +9,14 @@ import (
 	"strconv"
 	"time"
 
-	analytics "bosun.org/_third_party/google.golang.org/api/analytics/v3"
+	analytics "google.golang.org/api/analytics/v3"
 
-	"bosun.org/_third_party/golang.org/x/net/context"
-	"bosun.org/_third_party/golang.org/x/oauth2"
-	"bosun.org/_third_party/golang.org/x/oauth2/google"
 	"bosun.org/cmd/scollector/conf"
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
+	"golang.org/x/net/context"
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/google"
 )
 
 const descActiveUsers = "Number of unique users actively visiting the site."

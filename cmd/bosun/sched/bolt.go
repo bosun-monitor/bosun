@@ -7,13 +7,13 @@ import (
 	"fmt"
 	"time"
 
-	"bosun.org/_third_party/github.com/boltdb/bolt"
 	"bosun.org/cmd/bosun/database"
 	"bosun.org/cmd/bosun/expr"
 	"bosun.org/metadata"
 	"bosun.org/models"
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
+	"github.com/boltdb/bolt"
 )
 
 const (
