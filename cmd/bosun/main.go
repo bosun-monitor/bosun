@@ -136,6 +136,12 @@ func main() {
 			c.TSDBHost = tsdbHost.Host
 		}
 	}
+	if c.InternetProxy != "" {
+		web.InternetProxy, err = url.Parse(c.InternetProxy)
+		if err != nil {
+			slog.Fatalf("InternetProxy error: %s", err)
+		}
+	}
 	if *flagQuiet {
 		c.Quiet = true
 	}
