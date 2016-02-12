@@ -3,10 +3,7 @@ package sched
 import (
 	"bytes"
 	"compress/gzip"
-	"crypto/md5"
-	"encoding/base64"
 	"encoding/gob"
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -74,47 +71,6 @@ type storedConfig struct {
 	LastUsed time.Time
 }
 
-// Saves the provided config text in state file for later access.
-// Returns a hash of the file to be used as a retreival key.
-func (s *Schedule) SaveTempConfig(text string) (hash string, err error) {
-	sig := md5.Sum([]byte(text))
-	b64 := base64.StdEncoding.EncodeToString(sig[0:5])
-	data := storedConfig{Text: text, LastUsed: utcNow()}
-	bindata, err := json.Marshal(data)
-	if err != nil {
-		return "", err
-	}
-	err = s.db.Update(func(tx *bolt.Tx) error {
-		b, err := tx.CreateBucketIfNotExists([]byte(dbConfigTextBucket))
-		if err != nil {
-			return err
-		}
-		return b.Put([]byte(b64), bindata)
-	})
-	if err != nil {
-		return "", err
-	}
-	return b64, nil
-}
-
-// Retreive the specified config text from state file.
-func (s *Schedule) LoadTempConfig(hash string) (text string, err error) {
-	config := storedConfig{}
-	err = s.db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(dbConfigTextBucket))
-		data := b.Get([]byte(hash))
-		if data == nil || len(data) == 0 {
-			return fmt.Errorf("Config text '%s' not found", hash)
-		}
-		return json.Unmarshal(data, &config)
-	})
-	if err != nil {
-		return "", err
-	}
-	go s.SaveTempConfig(config.Text) //refresh timestamp.
-	return config.Text, nil
-}
-
 func migrateOldDataToRedis(db *bolt.DB, data database.DataAccess, s *Schedule) error {
 	if err := migrateMetricMetadata(db, data); err != nil {
 		return err
@@ -136,6 +92,7 @@ func migrateOldDataToRedis(db *bolt.DB, data database.DataAccess, s *Schedule) e
 	}
 	return nil
 }
+
 func migrateNotifications(db *bolt.DB, s *Schedule) error {
 	migrated, err := isMigrated(db, "notifications")
 	if err != nil {
