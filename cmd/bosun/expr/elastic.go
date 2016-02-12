@@ -493,13 +493,14 @@ func ESBaseQuery(now time.Time, indexer ESIndexer, l ElasticHosts, filter elasti
 	return &r, nil
 }
 
-func (r *ElasticRequest) Scope(ts *opentsdb.TagSet) {
+func ScopeES(ts opentsdb.TagSet, q elastic.Query) elastic.Query {
 	var filters []elastic.Query
-	for tagKey, tagValue := range *ts {
+	for tagKey, tagValue := range ts {
 		filters = append(filters, elastic.NewTermQuery(tagKey, tagValue))
 	}
+	filters = append(filters, q)
 	b := elastic.NewBoolQuery().Must(filters...)
-	r.Source = r.Source.Query(b)
+	return b
 }
 
 func processESBucketItem(b *elastic.AggregationBucketHistogramItem, rstat string) *float64 {
