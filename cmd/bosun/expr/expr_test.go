@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"bosun.org/_third_party/github.com/influxdb/influxdb/client"
 	"bosun.org/opentsdb"
+	"github.com/influxdata/influxdb/client"
 )
 
 func TestExprSimple(t *testing.T) {

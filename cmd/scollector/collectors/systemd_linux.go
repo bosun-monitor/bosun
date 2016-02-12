@@ -5,11 +5,11 @@ import (
 	"regexp"
 	"strings"
 
-	"bosun.org/_third_party/github.com/coreos/go-systemd/dbus"
 	"bosun.org/cmd/scollector/conf"
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
 	"bosun.org/util"
+	"github.com/coreos/go-systemd/dbus"
 )
 
 type systemdServiceConfig struct {

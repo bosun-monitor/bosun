@@ -8,9 +8,9 @@ import (
 	"strconv"
 	"time"
 
-	"bosun.org/_third_party/gopkg.in/yaml.v1"
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
+	"gopkg.in/yaml.v1"
 )
 
 func init() {

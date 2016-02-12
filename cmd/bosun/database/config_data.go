@@ -4,7 +4,7 @@ import (
 	"crypto/md5"
 	"encoding/base64"
 
-	"bosun.org/_third_party/github.com/garyburd/redigo/redis"
+	"github.com/garyburd/redigo/redis"
 
 	"bosun.org/collect"
 	"bosun.org/opentsdb"

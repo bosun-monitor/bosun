@@ -6,11 +6,11 @@ import (
 	"strings"
 	"time"
 
-	"bosun.org/_third_party/github.com/google/go-github/github"
 	"bosun.org/cmd/scollector/conf"
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
+	"github.com/google/go-github/github"
 )
 
 func init() {

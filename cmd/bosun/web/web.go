@@ -17,8 +17,6 @@ import (
 	"strings"
 	"time"
 
-	"bosun.org/_third_party/github.com/MiniProfiler/go/miniprofiler"
-	"bosun.org/_third_party/github.com/gorilla/mux"
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/database"
 	"bosun.org/cmd/bosun/sched"
@@ -29,6 +27,8 @@ import (
 	"bosun.org/slog"
 	"bosun.org/util"
 	"bosun.org/version"
+	"github.com/MiniProfiler/go/miniprofiler"
+	"github.com/gorilla/mux"
 )
 
 var (

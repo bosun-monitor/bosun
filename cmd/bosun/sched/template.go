@@ -13,13 +13,13 @@ import (
 	"strings"
 	"time"
 
-	"bosun.org/_third_party/github.com/aymerick/douceur/inliner"
-	"bosun.org/_third_party/github.com/jmoiron/jsonq"
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/expr"
 	"bosun.org/models"
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
+	"github.com/aymerick/douceur/inliner"
+	"github.com/jmoiron/jsonq"
 )
 
 type Context struct {

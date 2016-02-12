@@ -29,7 +29,7 @@ func generateDocImports() {
 			continue
 		}
 		line = line[10:]
-		if strings.HasPrefix(line, "docs") || strings.HasPrefix(line, "build") {
+		if strings.HasPrefix(line, "docs") || strings.HasPrefix(line, "build") || strings.HasPrefix(line, "vendor") {
 			continue
 		}
 		fileName := filepath.Join("../../docs", line, "index.html")

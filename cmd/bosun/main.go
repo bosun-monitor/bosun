@@ -17,8 +17,6 @@ import (
 	"syscall"
 	"time"
 
-	"bosun.org/_third_party/github.com/facebookgo/httpcontrol"
-	"bosun.org/_third_party/gopkg.in/fsnotify.v1"
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/sched"
 	"bosun.org/cmd/bosun/web"
@@ -29,6 +27,8 @@ import (
 	"bosun.org/slog"
 	"bosun.org/util"
 	"bosun.org/version"
+	"github.com/facebookgo/httpcontrol"
+	"gopkg.in/fsnotify.v1"
 )
 
 type bosunHttpTransport struct {

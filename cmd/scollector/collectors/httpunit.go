@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"time"
 
-	"bosun.org/_third_party/github.com/BurntSushi/toml"
-	"bosun.org/_third_party/github.com/StackExchange/httpunit"
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
+	"github.com/BurntSushi/toml"
+	"github.com/StackExchange/httpunit"
 )
 
 func HTTPUnitTOML(filename string) error {

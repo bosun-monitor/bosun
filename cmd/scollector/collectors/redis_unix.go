@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"bosun.org/_third_party/github.com/garyburd/redigo/redis"
+	"github.com/garyburd/redigo/redis"
 
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"

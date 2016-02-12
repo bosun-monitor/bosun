@@ -3,8 +3,8 @@ package cache // import "bosun.org/cmd/bosun/cache"
 import (
 	"sync"
 
-	"bosun.org/_third_party/github.com/golang/groupcache/lru"
-	"bosun.org/_third_party/github.com/golang/groupcache/singleflight"
+	"github.com/golang/groupcache/lru"
+	"github.com/golang/groupcache/singleflight"
 )
 
 type Cache struct {

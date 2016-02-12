@@ -5,12 +5,12 @@ import (
 	"strconv"
 	"strings"
 
-	"bosun.org/_third_party/github.com/garyburd/redigo/redis"
 	"bosun.org/cmd/scollector/conf"
 	"bosun.org/collect"
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
+	"github.com/garyburd/redigo/redis"
 )
 
 func init() {

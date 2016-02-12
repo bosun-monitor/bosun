@@ -7,12 +7,12 @@ import (
 	"log"
 	"time"
 
-	"bosun.org/_third_party/github.com/garyburd/redigo/redis"
-	"bosun.org/_third_party/github.com/siddontang/ledisdb/config"
-	"bosun.org/_third_party/github.com/siddontang/ledisdb/server"
 	"bosun.org/collect"
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
+	"github.com/garyburd/redigo/redis"
+	"github.com/siddontang/ledisdb/config"
+	"github.com/siddontang/ledisdb/server"
 )
 
 // Core data access interface for everything sched needs

@@ -6,11 +6,11 @@ import (
 	"strings"
 	"time"
 
-	"bosun.org/_third_party/github.com/MiniProfiler/go/miniprofiler"
-	elastic "bosun.org/_third_party/gopkg.in/olivere/elastic.v3"
 	"bosun.org/cmd/bosun/expr/parse"
 	"bosun.org/models"
 	"bosun.org/opentsdb"
+	"github.com/MiniProfiler/go/miniprofiler"
+	elastic "gopkg.in/olivere/elastic.v3"
 )
 
 // This uses a global client since the elastic client handles connections
