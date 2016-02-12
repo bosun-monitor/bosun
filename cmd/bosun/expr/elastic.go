@@ -489,8 +489,7 @@ func ESBaseQuery(now time.Time, indexer ESIndexer, l ElasticHosts, filter elasti
 	}
 	var q elastic.Query
 	q = elastic.NewRangeQuery(indexer.TimeField).Gte(st).Lte(en)
-	r.Source = r.Source.Query(q)
-	r.Source = r.Source.Query(filter)
+	r.Source = r.Source.Query(elastic.NewBoolQuery().Must(q, filter))
 	return &r, nil
 }
 
