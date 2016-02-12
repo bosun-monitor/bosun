@@ -8,6 +8,7 @@ import (
 	"html/template"
 	"io"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -34,6 +35,8 @@ var (
 	indexTemplate func() *template.Template
 	router        = mux.NewRouter()
 	schedule      = sched.DefaultSched
+
+	InternetProxy *url.URL
 )
 
 const (
@@ -285,7 +288,20 @@ func Shorten(w http.ResponseWriter, r *http.Request) {
 		serveError(w, err)
 		return
 	}
-	req, err := http.Post(u.String(), "application/json", bytes.NewBuffer(j))
+
+	transport := &http.Transport{
+		Dial: (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}).Dial,
+		TLSHandshakeTimeout: 10 * time.Second,
+	}
+	if InternetProxy != nil {
+		transport.Proxy = http.ProxyURL(InternetProxy)
+	}
+	c := http.Client{Transport: transport}
+
+	req, err := c.Post(u.String(), "application/json", bytes.NewBuffer(j))
 	if err != nil {
 		serveError(w, err)
 		return
