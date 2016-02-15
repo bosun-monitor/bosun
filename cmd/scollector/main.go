@@ -216,10 +216,10 @@ func main() {
 		collect.BatchSize = *flagBatchSize
 	}
 
-	if conf.MaxQueueLen < collect.BatchSize {
-		slog.Fatalf("MaxQueueLen must be >= %d (BatchSize)", collect.BatchSize)
-	}
 	if conf.MaxQueueLen != 0 {
+		if conf.MaxQueueLen < collect.BatchSize {
+			slog.Fatalf("MaxQueueLen must be >= %d (BatchSize)", collect.BatchSize)
+		}
 		collect.MaxQueueLen = conf.MaxQueueLen
 	}
 
