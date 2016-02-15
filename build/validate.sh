@@ -2,6 +2,7 @@
 cd $GOPATH/src/bosun.org
 DIRS=`find . -maxdepth 1 -type d -iregex './[^._].*' | grep -v '/vendor'`
 PKGS=`go list bosun.org/... | grep -v /vendor/`
+export GO15VENDOREXPERIMENT=1
 
 O=bosun-monitor
 R=bosun
