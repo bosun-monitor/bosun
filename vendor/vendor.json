@@ -1,6 +1,6 @@
 {
 	"comment": "",
-	"ignore": "test",
+	"ignore": "test lua lmdb",
 	"package": [
 		{
 			"path": "github.com/BurntSushi/toml",
@@ -715,12 +715,6 @@
 			"revisionTime": "2015-11-24T09:07:05+02:00"
 		},
 		{
-			"origin": "github.com/siddontang/ledisdb/vendor/gomdb",
-			"path": "gomdb",
-			"revision": "f0da91110fa3ae20a63581cd39764947b1f35500",
-			"revisionTime": "2015-11-28T11:26:35+08:00"
-		},
-		{
 			"path": "google.golang.org/api/analytics/v3",
 			"revision": "8a448fd57af58b0eaeb8fde0345ec7ae88e55076",
 			"revisionTime": "2016-02-12T10:41:35+11:00"
@@ -774,12 +768,6 @@
 			"path": "gopkg.in/yaml.v1",
 			"revision": "9f9df34309c04878acc86042b16630b0f696e1de",
 			"revisionTime": "2014-09-24T13:16:07-03:00"
-		},
-		{
-			"origin": "github.com/siddontang/ledisdb/vendor/lua",
-			"path": "lua",
-			"revision": "f0da91110fa3ae20a63581cd39764947b1f35500",
-			"revisionTime": "2015-11-28T11:26:35+08:00"
 		}
 	]
 }
