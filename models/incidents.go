@@ -196,6 +196,8 @@ const (
 	ActionAcknowledge
 	ActionClose
 	ActionForget
+	ActionForceClose
+	ActionPurge
 )
 
 func (a ActionType) String() string {
@@ -206,6 +208,10 @@ func (a ActionType) String() string {
 		return "Closed"
 	case ActionForget:
 		return "Forgotten"
+	case ActionForceClose:
+		return "ForceClosed"
+	case ActionPurge:
+		return "Purged"
 	default:
 		return "none"
 	}
@@ -223,6 +229,10 @@ func (a *ActionType) UnmarshalJSON(b []byte) error {
 		*a = ActionClose
 	case `"Forgotten"`:
 		*a = ActionForget
+	case `"Purged"`:
+		*a = ActionPurge
+	case `"ForceClosed"`:
+		*a = ActionForceClose
 	default:
 		*a = ActionNone
 	}

@@ -2861,3 +2861,15 @@ bosunApp.directive('tsForget', function () {
         templateUrl: '/partials/forget.html'
     };
 });
+bosunApp.directive('tsPurge', function () {
+    return {
+        restrict: 'E',
+        templateUrl: '/partials/purge.html'
+    };
+});
+bosunApp.directive('tsForceClose', function () {
+    return {
+        restrict: 'E',
+        templateUrl: '/partials/forceClose.html'
+    };
+});

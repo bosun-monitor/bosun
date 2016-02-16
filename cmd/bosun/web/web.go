@@ -544,6 +544,10 @@ func Action(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (inter
 		at = models.ActionClose
 	case "forget":
 		at = models.ActionForget
+	case "forceClose":
+		at = models.ActionForceClose
+	case "purge":
+		at = models.ActionPurge
 	}
 	errs := make(MultiError)
 	r.ParseForm()

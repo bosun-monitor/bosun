@@ -600,12 +600,16 @@ func (s *Schedule) Action(user, message string, t models.ActionType, ak models.A
 		if st.IsActive() {
 			return fmt.Errorf("cannot close active alert")
 		}
+		fallthrough
+	case models.ActionForceClose:
 		st.Open = false
 		st.End = &timestamp
 	case models.ActionForget:
 		if !isUnknown {
 			return fmt.Errorf("can only forget unknowns")
 		}
+		fallthrough
+	case models.ActionPurge:
 		return s.DataAccess.State().Forget(ak)
 	default:
 		return fmt.Errorf("unknown action type: %v", t)
