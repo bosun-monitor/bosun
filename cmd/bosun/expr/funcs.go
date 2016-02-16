@@ -101,6 +101,18 @@ var TSDB = map[string]parse.Func{
 		Tags:   tagQuery,
 		F:      Band,
 	},
+	"shiftBand": {
+		Args:   []models.FuncType{models.TypeString, models.TypeString, models.TypeString, models.TypeScalar},
+		Return: models.TypeSeriesSet,
+		Tags:   tagQuery,
+		F:      ShiftBand,
+	},
+	"over": {
+		Args:   []models.FuncType{models.TypeString, models.TypeString, models.TypeString, models.TypeScalar},
+		Return: models.TypeSeriesSet,
+		Tags:   tagQuery,
+		F:      Over,
+	},
 	"change": {
 		Args:   []models.FuncType{models.TypeString, models.TypeString, models.TypeString},
 		Return: models.TypeNumberSet,
@@ -319,6 +331,19 @@ var builtins = map[string]parse.Func{
 		Tags:   tagFirst,
 		F:      Sort,
 	},
+	"shift": {
+		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeString},
+		Return: models.TypeSeriesSet,
+		Tags:   tagFirst,
+		F:      Shift,
+	},
+	"merge": {
+		Args:   []models.FuncType{models.TypeSeriesSet},
+		VArgs:  true,
+		Return: models.TypeSeriesSet,
+		Tags:   tagFirst,
+		F:      Merge,
+	},
 }
 
 func Epoch(e *State, T miniprofiler.Timer) (*Results, error) {
@@ -368,6 +393,43 @@ func Filter(e *State, T miniprofiler.Timer, series *Results, number *Results) (*
 		}
 	}
 	series.Results = ns
+	return series, nil
+}
+
+func Merge(e *State, T miniprofiler.Timer, series ...*Results) (*Results, error) {
+	if len(series) == 0 {
+		return &Results{}, fmt.Errorf("merge requires at least one result")
+	}
+	if len(series) == 1 {
+		return series[0], nil
+	}
+	res := series[0]
+	seen := make(map[string]bool)
+	for _, r := range series[1:] {
+		for _, entry := range r.Results {
+			if _, ok := seen[entry.Group.String()]; ok {
+				return res, fmt.Errorf("duplicate group in merge: %s", entry.Group.String())
+			}
+			seen[entry.Group.String()] = true
+		}
+		res.Results = append(res.Results, r.Results...)
+	}
+	return res, nil
+}
+
+func Shift(e *State, T miniprofiler.Timer, series *Results, d string) (*Results, error) {
+	dur, err := opentsdb.ParseDuration(d)
+	if err != nil {
+		return series, err
+	}
+	for _, result := range series.Results {
+		newSeries := make(Series)
+		for t, v := range result.Value.Value().(Series) {
+			newSeries[t.Add(time.Duration(dur))] = v
+		}
+		result.Group["shift"] = d
+		result.Value = newSeries
+	}
 	return series, nil
 }
 
@@ -560,7 +622,7 @@ func GraphiteBand(e *State, T miniprofiler.Timer, query, duration, period, forma
 	return
 }
 
-func bandTSDB(e *State, T miniprofiler.Timer, query, duration, period string, num float64, rfunc func(*Results, *opentsdb.Response) error) (r *Results, err error) {
+func bandTSDB(e *State, T miniprofiler.Timer, query, duration, period string, num float64, rfunc func(*Results, *opentsdb.Response, time.Duration) error) (r *Results, err error) {
 	r = new(Results)
 	r.IgnoreOtherUnjoined = true
 	r.IgnoreUnjoined = true
@@ -609,7 +671,9 @@ func bandTSDB(e *State, T miniprofiler.Timer, query, duration, period string, nu
 				if e.squelched(res.Tags) {
 					continue
 				}
-				if err = rfunc(r, res); err != nil {
+				//offset := e.now.Sub(now.Add(time.Duration(p-d)))
+				offset := e.now.Sub(now)
+				if err = rfunc(r, res, offset); err != nil {
 					return
 				}
 			}
@@ -624,7 +688,7 @@ func Window(e *State, T miniprofiler.Timer, query, duration, period string, num 
 		return nil, fmt.Errorf("expr: Window: no %v function", rfunc)
 	}
 	windowFn := reflect.ValueOf(fn.F)
-	bandFn := func(results *Results, resp *opentsdb.Response) error {
+	bandFn := func(results *Results, resp *opentsdb.Response, offset time.Duration) error {
 		values := make(Series)
 		min := int64(math.MaxInt64)
 		for k, v := range resp.DPS {
@@ -695,7 +759,7 @@ func windowCheck(t *parse.Tree, f *parse.FuncNode) error {
 }
 
 func Band(e *State, T miniprofiler.Timer, query, duration, period string, num float64) (r *Results, err error) {
-	r, err = bandTSDB(e, T, query, duration, period, num, func(r *Results, res *opentsdb.Response) error {
+	r, err = bandTSDB(e, T, query, duration, period, num, func(r *Results, res *opentsdb.Response, offset time.Duration) error {
 		newarr := true
 		for _, a := range r.Results {
 			if !a.Group.Equal(res.Tags) {
@@ -729,6 +793,91 @@ func Band(e *State, T miniprofiler.Timer, query, duration, period string, num fl
 	if err != nil {
 		err = fmt.Errorf("expr: Band: %v", err)
 	}
+	return
+}
+
+func ShiftBand(e *State, T miniprofiler.Timer, query, duration, period string, num float64) (r *Results, err error) {
+	r, err = bandTSDB(e, T, query, duration, period, num, func(r *Results, res *opentsdb.Response, offset time.Duration) error {
+		values := make(Series)
+		a := &Result{Group: res.Tags.Merge(opentsdb.TagSet{"shift": offset.String()})}
+		for k, v := range res.DPS {
+			i, e := strconv.ParseInt(k, 10, 64)
+			if e != nil {
+				return e
+			}
+			values[time.Unix(i, 0).Add(offset).UTC()] = float64(v)
+		}
+		a.Value = values
+		r.Results = append(r.Results, a)
+		return nil
+	})
+	if err != nil {
+		err = fmt.Errorf("expr: Band: %v", err)
+	}
+	return
+}
+
+func Over(e *State, T miniprofiler.Timer, query, duration, period string, num float64) (r *Results, err error) {
+	r = new(Results)
+	r.IgnoreOtherUnjoined = true
+	r.IgnoreUnjoined = true
+	T.Step("band", func(T miniprofiler.Timer) {
+		var d, p opentsdb.Duration
+		d, err = opentsdb.ParseDuration(duration)
+		if err != nil {
+			return
+		}
+		p, err = opentsdb.ParseDuration(period)
+		if err != nil {
+			return
+		}
+		if num < 1 || num > 100 {
+			err = fmt.Errorf("num out of bounds")
+		}
+		var q *opentsdb.Query
+		q, err = opentsdb.ParseQuery(query, e.tsdbContext.Version())
+		if err != nil {
+			return
+		}
+		if !e.tsdbContext.Version().FilterSupport() {
+			if err = e.Search.Expand(q); err != nil {
+				return
+			}
+		}
+		req := opentsdb.Request{
+			Queries: []*opentsdb.Query{q},
+		}
+		now := e.now
+		req.End = now.Unix()
+		req.Start = now.Add(time.Duration(-d)).Unix()
+		for i := 0; i < int(num); i++ {
+			var s opentsdb.ResponseSet
+			s, err = timeTSDBRequest(e, T, &req)
+			if err != nil {
+				return
+			}
+			offset := e.now.Sub(now)
+			for _, res := range s {
+				if e.squelched(res.Tags) {
+					continue
+				}
+				values := make(Series)
+				a := &Result{Group: res.Tags.Merge(opentsdb.TagSet{"shift": offset.String()})}
+				for k, v := range res.DPS {
+					i, err := strconv.ParseInt(k, 10, 64)
+					if err != nil {
+						return
+					}
+					values[time.Unix(i, 0).Add(offset).UTC()] = float64(v)
+				}
+				a.Value = values
+				r.Results = append(r.Results, a)
+			}
+			now = now.Add(time.Duration(-p))
+			req.End = now.Unix()
+			req.Start = now.Add(time.Duration(-d)).Unix()
+		}
+	})
 	return
 }
 

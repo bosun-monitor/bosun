@@ -252,6 +252,9 @@ Generic query from endDuration to startDuration ago. If endDuration is the empty
 
 Band performs `num` queries of `duration` each, `period` apart and concatenates them together, starting `period` ago. So `band("avg:os.cpu", "1h", "1d", 7)` will return a series comprising of the given metric from 1d to 1d-1h-ago, 2d to 2d-1h-ago, etc, until 8d. This is a good way to get a time block from a certain hour of a day or certain day of a week over a long time period.
 
+### over(query string, duration string, period string, num scalar) seriesSet
+Over's arguments behave the same way as band. However over shifts the time of previous periods to be now, tags them with duration that each period was shifted, and merges those shifted periods into a single seriesSet. This is useful for displaying time over time graphs. For example, the same day week over week would be `over("avg:1h-avg:rate:os.cpu{host=ny-bosun01}", "1d", "1w", 4)`.
+
 ### change(query string, startDuration string, endDuration string) numberSet
 
 Change is a way to determine the change of a query from startDuration to endDuration. If endDuration is the empty string (`""`), now is used. The query must either be a rate or a counter converted to a rate with the `agg:rate:metric` flag.
@@ -478,6 +481,14 @@ Returns the first count (scalar) results of number.
 ## lookup(table string, key string) numberSet
 
 Returns the first key from the given lookup table with matching tags.
+
+##shift(seriesSet, dur string) seriesSet
+
+Shift takes a seriesSet and shifts the time forward by the value of dur ([OpenTSDB duration string](http://opentsdb.net/docs/build/html/user_guide/query/dates.html)) and adds a tag for representing the shift duration. This is meant so you can overlay times visually in a graph.
+
+## merge(SeriesSet...) seriesSet
+
+Merge takes multiple seriesSets and merges them into a single seriesSet. The function will error if any of the tag sets (groups) are identical. This is meant so you can display multiple seriesSets in a single expression graph.
 
 ## nv(numberSet, scalar) numberSet
 
