@@ -215,6 +215,14 @@ func main() {
 	if *flagBatchSize > 0 {
 		collect.BatchSize = *flagBatchSize
 	}
+
+	if conf.MaxQueueLen != 0 {
+		if conf.MaxQueueLen < collect.BatchSize {
+			slog.Fatalf("MaxQueueLen must be >= %d (BatchSize)", collect.BatchSize)
+		}
+		collect.MaxQueueLen = conf.MaxQueueLen
+	}
+
 	go func() {
 		const maxMem = 500 * 1024 * 1024 // 500MB
 		var m runtime.MemStats

@@ -1,6 +1,7 @@
 package dbtest
 
 import (
+	"fmt"
 	"testing"
 
 	"bosun.org/opentsdb"
@@ -43,5 +44,20 @@ func TestSearch_MetricTagSets(t *testing.T) {
 	}
 	if len(tagsets) != 2 {
 		t.Fatalf("Expected 2 tagsets. Found %d.", len(tagsets))
+	}
+}
+
+func TestSearch_MetricTagSets_Scan(t *testing.T) {
+	for i := int64(0); i < 10000; i++ {
+		if err := testData.Search().AddMetricTagSet("metric", fmt.Sprintf("host=abc%d", i), i); err != nil {
+			t.Fatal(err)
+		}
+	}
+	tagsets, err := testData.Search().GetMetricTagSets("metric", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(tagsets) != 10000 {
+		t.Fatalf("Expected 10000 tagsets. Found %d.", len(tagsets))
 	}
 }

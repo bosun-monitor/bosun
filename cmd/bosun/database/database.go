@@ -18,10 +18,12 @@ import (
 // Core data access interface for everything sched needs
 type DataAccess interface {
 	Metadata() MetadataDataAccess
+	Configs() ConfigDataAccess
 	Search() SearchDataAccess
 	Errors() ErrorDataAccess
 	State() StateDataAccess
 	Silence() SilenceDataAccess
+	Notifications() NotificationDataAccess
 }
 
 type MetadataDataAccess interface {
@@ -150,4 +152,11 @@ func (d *dataAccess) LMCLEAR(key string, value string) (string, []interface{}) {
 		return "LREM", []interface{}{key, 0, value}
 	}
 	return "LMCLEAR", []interface{}{key, value}
+}
+
+func (d *dataAccess) HSCAN() string {
+	if d.isRedis {
+		return "HSCAN"
+	}
+	return "XHSCAN"
 }

@@ -40,7 +40,7 @@ func init() {
 
 func NewIncident(ak models.AlertKey) *models.IncidentState {
 	s := &models.IncidentState{}
-	s.Start = time.Now()
+	s.Start = utcNow()
 	s.AlertKey = ak
 	s.Alert = ak.Name()
 	s.Tags = ak.Group().Tags()
@@ -106,7 +106,7 @@ func (s *Schedule) RunHistory(r *RunHistory) {
 func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.Event, silenced SilenceTester) (checkNotify bool, err error) {
 	event.Time = r.Start
 	data := s.DataAccess.State()
-	err = data.TouchAlertKey(ak, time.Now())
+	err = data.TouchAlertKey(ak, utcNow())
 	if err != nil {
 		return
 	}
@@ -176,7 +176,7 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.E
 	notify := func(ns *conf.Notifications) {
 		if a.Log {
 			lastLogTime := s.lastLogTimes[ak]
-			now := time.Now()
+			now := utcNow()
 			if now.Before(lastLogTime.Add(a.MaxLogFrequency)) {
 				return
 			}
@@ -207,15 +207,14 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.E
 			notify(a.WarnNotification)
 		}
 	}
-	clearOld := func() {
-		incident.NeedAck = false
-		delete(s.Notifications, ak)
-	}
 
 	// lock while we change notifications.
 	s.Lock("RunHistory")
 	if shouldNotify {
-		clearOld()
+		incident.NeedAck = false
+		if err = s.DataAccess.Notifications().ClearNotifications(ak); err != nil {
+			return
+		}
 		notifyCurrent()
 	}
 
@@ -302,8 +301,13 @@ func (s *Schedule) executeTemplates(state *models.IncidentState, event *models.E
 		}
 		state.Subject = string(subject)
 		state.Body = string(body)
-		state.EmailBody = emailbody
-		state.EmailSubject = emailsubject
+		//don't save email seperately if they are identical
+		if string(state.EmailBody) != state.Body {
+			state.EmailBody = emailbody
+		}
+		if string(state.EmailSubject) != state.Subject {
+			state.EmailSubject = emailsubject
+		}
 		state.Attachments = attachments
 	}
 }
@@ -389,7 +393,7 @@ func (s *Schedule) CollectStates() {
 		ts := opentsdb.TagSet{"notification": notification}
 		var ago time.Duration
 		if !timeStamp.Equal(time.Unix(1<<63-62135596801, 999999999)) {
-			ago = time.Now().UTC().Sub(timeStamp)
+			ago = utcNow().Sub(timeStamp)
 		}
 		err := collect.Put("alerts.oldest_unacked_by_notification",
 			ts,
@@ -451,11 +455,11 @@ func (s *Schedule) GetUnknownAndUnevaluatedAlertKeys(alert string) (unknown, une
 	return unknown, uneval
 }
 
-var bosunStartupTime = time.Now()
+var bosunStartupTime = utcNow()
 
 func (s *Schedule) findUnknownAlerts(now time.Time, alert string) []models.AlertKey {
 	keys := []models.AlertKey{}
-	if time.Now().Sub(bosunStartupTime) < s.Conf.CheckFrequency {
+	if utcNow().Sub(bosunStartupTime) < s.Conf.CheckFrequency {
 		return keys
 	}
 	if !s.AlertSuccessful(alert) {
@@ -480,7 +484,7 @@ func (s *Schedule) findUnknownAlerts(now time.Time, alert string) []models.Alert
 
 func (s *Schedule) CheckAlert(T miniprofiler.Timer, r *RunHistory, a *conf.Alert) {
 	slog.Infof("check alert %v start", a.Name)
-	start := time.Now()
+	start := utcNow()
 	for _, ak := range s.findUnknownAlerts(r.Start, a.Name) {
 		r.Events[ak] = &models.Event{Status: models.StUnknown}
 	}

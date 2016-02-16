@@ -8,6 +8,7 @@ import (
 	"html/template"
 	"io"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -34,6 +35,8 @@ var (
 	indexTemplate func() *template.Template
 	router        = mux.NewRouter()
 	schedule      = sched.DefaultSched
+
+	InternetProxy *url.URL
 )
 
 const (
@@ -87,7 +90,6 @@ func Listen(listenAddr string, devMode bool, tsdbHost string) error {
 	router.HandleFunc("/api/", APIRedirect)
 	router.Handle("/api/action", JSON(Action))
 	router.Handle("/api/alerts", JSON(Alerts))
-	router.Handle("/api/backup", JSON(Backup))
 	router.Handle("/api/config", miniprofiler.NewHandler(Config))
 	router.Handle("/api/config_test", miniprofiler.NewHandler(ConfigTest))
 	router.Handle("/api/egraph/{bs}.svg", JSON(ExprGraph))
@@ -286,7 +288,20 @@ func Shorten(w http.ResponseWriter, r *http.Request) {
 		serveError(w, err)
 		return
 	}
-	req, err := http.Post(u.String(), "application/json", bytes.NewBuffer(j))
+
+	transport := &http.Transport{
+		Dial: (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}).Dial,
+		TLSHandshakeTimeout: 10 * time.Second,
+	}
+	if InternetProxy != nil {
+		transport.Proxy = http.ProxyURL(InternetProxy)
+	}
+	c := http.Client{Transport: transport}
+
+	req, err := c.Post(u.String(), "application/json", bytes.NewBuffer(j))
 	if err != nil {
 		serveError(w, err)
 		return
@@ -417,15 +432,6 @@ func MetadataMetrics(t miniprofiler.Timer, w http.ResponseWriter, r *http.Reques
 
 func Alerts(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	return schedule.MarshalGroups(t, r.FormValue("filter"))
-}
-
-func Backup(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	data, err := schedule.GetStateFileBackup()
-	if err != nil {
-		return nil, err
-	}
-	_, err = w.Write(data)
-	return nil, err
 }
 
 func IncidentEvents(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
@@ -659,7 +665,7 @@ func Config(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 	var text string
 	var err error
 	if hash := r.FormValue("hash"); hash != "" {
-		text, err = schedule.LoadTempConfig(hash)
+		text, err = schedule.DataAccess.Configs().GetTempConfig(hash)
 		if err != nil {
 			serveError(w, err)
 			return

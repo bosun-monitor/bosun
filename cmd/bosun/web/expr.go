@@ -446,7 +446,7 @@ func buildConfig(r *http.Request) (c *conf.Conf, a *conf.Alert, hash string, err
 	}
 	c.StateFile = ""
 
-	hash, err = sched.DefaultSched.SaveTempConfig(string(config))
+	hash, err = sched.DefaultSched.DataAccess.Configs().SaveTempConfig(string(config))
 	if err != nil {
 		return nil, nil, "", err
 	}
