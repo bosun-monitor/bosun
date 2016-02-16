@@ -183,3 +183,17 @@ bosunApp.directive('tsForget', () => {
 		templateUrl: '/partials/forget.html',
 	};
 });
+
+bosunApp.directive('tsPurge', () => {
+	return {
+		restrict: 'E',
+		templateUrl: '/partials/purge.html',
+	};
+});
+
+bosunApp.directive('tsForceClose', () => {
+	return {
+		restrict: 'E',
+		templateUrl: '/partials/forceClose.html',
+	};
+});
