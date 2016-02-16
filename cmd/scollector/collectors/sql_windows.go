@@ -98,7 +98,7 @@ func c_mssql_general(svc_dst []Win32_Service) (opentsdb.MultiDataPoint, error) {
 		var q = wmi.CreateQuery(&dst, `WHERE Name <> '_Total'`)
 		var label = "mssqlserver"
 		if w.Name != `MSSQLSERVER` {
-		    q = strings.Replace(strings.Replace(q,`MSSQLSERVER_SQLServer`,w.Name + `_` + w.Name,1),`$`,"",2)
+            q = instance_wmiquery(w.Name,q)  
 		    label = strings.ToLower(w.Name[6:len(w.Name)])
 		}  
 		if err := queryWmi(q, &dst); err != nil {
@@ -152,7 +152,7 @@ func c_mssql_statistics(svc_dst []Win32_Service) (opentsdb.MultiDataPoint, error
 		var q = wmi.CreateQuery(&dst, `WHERE Name <> '_Total'`)
 		var label = "mssqlserver"
 		if w.Name != `MSSQLSERVER` {
-		    q = strings.Replace(strings.Replace(q,`MSSQLSERVER_SQLServer`,w.Name + `_` + w.Name,1),`$`,"",2)
+            q = instance_wmiquery(w.Name,q)  
 		    label = strings.ToLower(w.Name[6:len(w.Name)])
 		}  
 		err := queryWmi(q, &dst)
@@ -209,7 +209,7 @@ func c_mssql_locks(svc_dst []Win32_Service) (opentsdb.MultiDataPoint, error) {
 		var q = wmi.CreateQuery(&dst, `WHERE Name = 'Page' OR Name = 'Extent' OR Name = 'Object' or Name = 'Database'`)
 		var label = "mssqlserver"
 		if w.Name != `MSSQLSERVER` {
-		    q = strings.Replace(strings.Replace(q,`MSSQLSERVER_SQLServer`,w.Name + `_` + w.Name,1),`$`,"",2)
+            q = instance_wmiquery(w.Name,q)  
 		    label = strings.ToLower(w.Name[6:len(w.Name)])
 		}  
 		err := queryWmi(q, &dst)
@@ -255,7 +255,7 @@ func c_mssql_databases(svc_dst []Win32_Service) (opentsdb.MultiDataPoint, error)
 		var q = wmi.CreateQuery(&dst, `WHERE Name <> '_Total'`)
 		var label = "mssqlserver"
 		if w.Name != `MSSQLSERVER` {
-		    q = strings.Replace(strings.Replace(q,`MSSQLSERVER_SQLServer`,w.Name + `_` + w.Name,1),`$`,"",2)
+            q = instance_wmiquery(w.Name,q)  
 		    label = strings.ToLower(w.Name[6:len(w.Name)])
 		}  
 		err := queryWmi(q, &dst)
@@ -532,4 +532,9 @@ type MSCluster_Resource struct {
 	OwnerNode  string
 	Type       string
 	State      uint32
+}
+
+func instance_wmiquery(instancename string, wmiquery string) (string) {
+    var newname = strings.Replace(strings.Replace(instancename,`$`,"",1),`_`,"",-1)
+    return strings.Replace(wmiquery,`MSSQLSERVER_SQLServer`,newname + `_` + newname,1)
 }
