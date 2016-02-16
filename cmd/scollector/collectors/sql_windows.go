@@ -15,7 +15,7 @@ func init() {
 	c := &IntervalCollector{
 		F: c_mssql,
 	}
-	c.init = wmiInit(c, func() interface{} { return &[]Win32_Win32_Service{} }, `WHERE Name Like 'MSSQL$%' or Name = 'MSSQLSERVER'`, &sqlQuery)
+	c.init = wmiInit(c, func() interface{} { return &[]Win32_Service{} }, `WHERE Name Like 'MSSQL$%' or Name = 'MSSQLSERVER'`, &sqlQuery)
 	collectors = append(collectors, c)
 
 	var dstCluster []MSCluster_Cluster
