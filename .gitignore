@@ -1,2 +1,5 @@
 cmd/bosun/dev.conf
 docs/.jekyll-metadata
+cmd/bosun/bosun
+cmd/tsdbrelay/tsdbrelay
+cmd/scollector/scollector
