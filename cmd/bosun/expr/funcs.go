@@ -178,6 +178,12 @@ var builtins = map[string]parse.Func{
 		Tags:   tagFirst,
 		F:      Forecast_lr,
 	},
+	"linelr": {
+		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeString},
+		Return: models.TypeSeriesSet,
+		Tags:   tagFirst,
+		F:      Line_lr,
+	},
 	"last": {
 		Args:   []models.FuncType{models.TypeSeriesSet},
 		Return: models.TypeNumberSet,
@@ -1329,6 +1335,42 @@ func (e *State) forecast_lr(dps Series, args ...float64) float64 {
 		s = tenYears
 	}
 	return s.Seconds()
+}
+
+func Line_lr(e *State, T miniprofiler.Timer, series *Results, d string) (*Results, error) {
+	dur, err := opentsdb.ParseDuration(d)
+	if err != nil {
+		return series, err
+	}
+	for _, res := range series.Results {
+		res.Value = line_lr(res.Value.(Series), time.Duration(dur))
+		res.Group.Merge(opentsdb.TagSet{"regression": "line"})
+	}
+	return series, nil
+}
+
+// line_lr generates a series representing the line up to duration in the future.
+func line_lr(dps Series, d time.Duration) Series {
+	var x []float64
+	var y []float64
+	sortedDPS := NewSortedSeries(dps)
+	var maxT time.Time
+	if len(sortedDPS) > 1 {
+		maxT = sortedDPS[len(sortedDPS)-1].T
+	}
+	for _, v := range sortedDPS {
+		xv := float64(v.T.Unix())
+		x = append(x, xv)
+		y = append(y, v.V)
+	}
+	var slope, intercept, _, _, _, _ = stats.LinearRegression(x, y)
+	s := make(Series)
+	// First point in the regression line
+	s[maxT] = float64(maxT.Unix())*slope + intercept
+	// Last point
+	last := maxT.Add(d)
+	s[last] = float64(last.Unix())*slope + intercept
+	return s
 }
 
 func Percentile(e *State, T miniprofiler.Timer, series *Results, p *Results) (r *Results, err error) {

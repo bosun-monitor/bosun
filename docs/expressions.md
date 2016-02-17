@@ -311,6 +311,18 @@ Returns the first (least recent) data point in each series.
 
 Returns the number of seconds until a linear regression of each series will reach y_val.
 
+## linelr(seriesSet, d Duration) seriesSet
+
+Linelr return the linear regression line from the end of each series to end+duration (an [OpenTSDB duration string](http://opentsdb.net/docs/build/html/user_guide/query/dates.html)). It adds `regression=line` to the group / tagset. It is meant for graphing with expressions, for example:
+
+```
+$d = "1w"
+$q = q("avg:1h-avg:os.disk.fs.percent_free{}{host=ny-tsdb*,disk=/mnt*}", "2w", "")
+$line = linelr($q, "3n")
+$m = merge($q, $line)
+$m
+```
+
 ## last(seriesSet) numberSet
 
 Returns the last (most recent) data point in each series.
