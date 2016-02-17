@@ -386,7 +386,10 @@ func (s *Schedule) MarshalGroups(T miniprofiler.Timer, filter string) (*StateGro
 		for k, v := range status2 {
 			a := s.Conf.Alerts[k.Name()]
 			if a == nil {
-				slog.Errorf("unknown alert %s", k.Name())
+				slog.Errorf("unknown alert %s. Force closing.", k.Name())
+				if err2 = s.Action("bosun", "closing because alert doesn't exist.", models.ActionForceClose, k); err2 != nil {
+					slog.Error(err2)
+				}
 				continue
 			}
 			if matches(s.Conf, a, v) {
