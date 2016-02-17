@@ -14,7 +14,10 @@ var bosunApp = angular.module('bosunApp', [
     'ui.ace',
 ]);
 bosunApp.config(['$routeProvider', '$locationProvider', '$httpProvider', function ($routeProvider, $locationProvider, $httpProvider) {
-        $locationProvider.html5Mode(true);
+        $locationProvider.html5Mode({
+            enabled: true,
+            requireBase: false
+        });
         $routeProvider.
             when('/', {
             title: 'Dashboard',

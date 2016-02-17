@@ -17,6 +17,7 @@ interface IExprScope extends RootScope {
 	stop: () => any;
 }
 
+
 bosunControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route', function($scope: IExprScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService) {
 	
 	var search = $location.search();
@@ -41,7 +42,7 @@ bosunControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route
 	$http.post('/api/expr?' +
 		'date=' + encodeURIComponent($scope.date) +
 		'&time=' + encodeURIComponent($scope.time),current)
-		.success((data) => {
+		.success((data: any) => {
 			$scope.result = data.Results;
 			$scope.queries = data.Queries;
 			$scope.result_type = data.Type;

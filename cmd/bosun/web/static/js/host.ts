@@ -47,7 +47,7 @@ bosunControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route
 		return moment.duration(parseInt(m[1]), m[2].replace('n', 'M'))
 	}
 	$http.get('/api/metadata/get?tagk=host&tagv=' + encodeURIComponent($scope.host))
-		.success((data) => {
+		.success((data: any) => {
 			$scope.metadata = _.filter(data, function(i: any) {
 				return moment.utc(i.Time) > start;
 			});
@@ -63,7 +63,7 @@ bosunControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route
 		})
 	];
 	$http.get('/api/graph?' + 'json=' + encodeURIComponent(JSON.stringify(cpu_r)) + autods)
-		.success((data) => {
+		.success((data: any) => {
 			if (!data.Series) {
 				return;
 			}
@@ -81,7 +81,7 @@ bosunControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route
 		tags: { host: $scope.host },
 	}));
 	$http.get('/api/graph?' + 'json=' + encodeURIComponent(JSON.stringify(mem_r)) + autods)
-		.success((data) => {
+		.success((data: any) => {
 			if (!data.Series) {
 				return;
 			}
@@ -100,7 +100,7 @@ bosunControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route
 		})
 	];
 	$http.get('/api/graph?' + 'json=' + encodeURIComponent(JSON.stringify(net_bytes_r)) + autods)
-		.success((data) => {
+		.success((data: any) => {
 			if (!data.Series) {
 					return;
 			}
@@ -133,7 +133,7 @@ bosunControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route
 		})
 	];
 	$http.get('/api/graph?' + 'json=' + encodeURIComponent(JSON.stringify(fs_r)) + autods)
-		.success((data) => {
+		.success((data: any) => {
 			if (!data.Series) {
 					return;
 			}
