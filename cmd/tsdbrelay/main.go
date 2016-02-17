@@ -2,7 +2,6 @@ package main
 
 // TODO:
 //  add graceful shutdown (http://www.hydrogen18.com/blog/stop-listening-http-server-go.html)
-//  add control of Transport settings (or at least tune)
 
 import (
 	"bufio"
@@ -51,14 +50,17 @@ var (
 	redisHost = flag.String("redis", "", "redis host for aggregating external counters")
 	redisDb   = flag.Int("db", 0, "redis db to use for counters")
 
-	maxRetries       = flag.Int("a", 16, "Maximum number of times to attempt to asynchronously deliver a request")
-	maxRequestBuffer = flag.Int("u", 65535, "Maximum asynchronous request buffer size")
-	relayPoolSize    = flag.Int("w", 1024, "Maximum number of concurrent synchronous relay sessions")
-	maxRelayWaitTime = flag.Int("p", 5, "Maximum time to wait for a synchronous relay slot, in seconds")
-	workersPerQueue  = flag.Int("q", 16, "Number of worker goroutines to process asynchronous deliveries")
+	maxRetries       = flag.Int("a", 2, "Maximum number of times to attempt to asynchronously deliver a request")
+	maxRequestBuffer = flag.Int("u", 250000, "Maximum asynchronous request buffer size")
+	relayPoolSize    = flag.Int("w", 64, "Maximum number of concurrent synchronous relay sessions")
+	maxRelayWaitTime = flag.Int("p", 10, "Maximum time to wait for a synchronous relay slot, in seconds")
+	workersPerQueue  = flag.Int("q", 6, "Number of worker goroutines to process asynchronous deliveries")
+
+	synchTimeout = flag.Int("relaytimeout", 30, "TSDB/relay HTTP response timeout in seconds")
+	bosunTimeout = flag.Int("bosuntimeout", 30, "Bosun HTTP response timeout in seconds")
 )
 
-var relayPool = make(chan bool, 64) // FIXME magic number
+var relayPool chan bool
 
 // RelayResponseWriter is an extension of http.ResponseWriter that permits
 // us to capture the return code for later use.
@@ -332,13 +334,12 @@ func init() {
 
 	relayPool = make(chan bool, *relayPoolSize)
 
-	// FIXME warning, lots of magic numbers ahead!
 	bosunTransport = &http.Transport{
 		Dial: (&net.Dialer{
 			Timeout:   5 * time.Second,
 			KeepAlive: time.Minute,
 		}).Dial,
-		ResponseHeaderTimeout: 10 * time.Second,
+		ResponseHeaderTimeout: time.Duration(*bosunTimeout) * time.Second,
 		MaxIdleConnsPerHost:   55,
 	}
 
@@ -355,7 +356,7 @@ func init() {
 			Timeout:   5 * time.Second,
 			KeepAlive: time.Minute,
 		}).Dial,
-		ResponseHeaderTimeout: 10 * time.Second,
+		ResponseHeaderTimeout: time.Duration(*synchTimeout) * time.Second,
 		MaxIdleConnsPerHost:   55,
 	}
 
@@ -400,7 +401,7 @@ func main() {
 					Timeout:   5 * time.Second,
 					KeepAlive: time.Minute,
 				}).Dial,
-				ResponseHeaderTimeout: 10 * time.Second,
+				ResponseHeaderTimeout: time.Duration(*synchTimeout) * time.Second,
 				MaxIdleConnsPerHost:   55,
 			}
 			secondaryProxy := httputil.NewSingleHostReverseProxy(&url.URL{
