@@ -212,19 +212,27 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 		} else if len(cols) < 2 {
 			return nil
 		}
-		irq_type := strings.TrimRight(cols[0], ":")
-		if _, err := strconv.Atoi(irq_type); err == nil {
+		tags := opentsdb.TagSet{}
+		irq := strings.TrimRight(cols[0], ":")
+		tags["irq"] = irq
+		if len(cols) == 2 {
+			Add(&md, "linux.interrupts", cols[1], tags, metadata.Counter, metadata.Interupt, "")
+			return nil
+		}
+		device := ""
+		if _, err := strconv.Atoi(irq); err == nil {
 			if len(cols) >= num_cpus+3 && (strings.HasPrefix(cols[num_cpus+1], "IR-") || strings.HasPrefix(cols[num_cpus+1], "IO-") || strings.HasPrefix(cols[num_cpus+1], "PCI-")) {
-				irq_type = strings.Join(cols[len(cols)-1:], " ")
+				device = strings.ToLower(strings.Join([]string{"linux.interrupts", cols[num_cpus+1]}, "."))
+				tags["dev"] = strings.Join(cols[len(cols)-1:], " ")
 			}
 		}
-		for i, val := range cols[1:] {
-			if _, err := strconv.Atoi(val); i >= num_cpus || err != nil {
-				// All values read, remaining cols contain textual description.
-				slog.Errorln(err)
-				break
+		for i, val := range cols[1:num_cpus] {
+			tags["cpu"] = strconv.Itoa(i)
+			if device == "" {
+				Add(&md, "linux.interrupts", val, tags, metadata.Counter, metadata.Interupt, irq_type_desc[irq])
+			} else {
+				Add(&md, device, val, tags, metadata.Counter, metadata.Interupt, irq_type_desc[irq])
 			}
-			Add(&md, "linux.interrupts", val, opentsdb.TagSet{"type": irq_type, "cpu": strconv.Itoa(i)}, metadata.Counter, metadata.Interupt, irq_type_desc[irq_type])
 		}
 		return nil
 	}); err != nil {
