@@ -1,7 +1,7 @@
 bosunApp.directive('tsResults', function() {
 	return {
 		templateUrl: '/partials/results.html',
-		link: (scope, elem, attrs) => {
+		link: (scope: any, elem, attrs) => {
 			scope.isSeries = v => {
 				return typeof(v) === 'object';
 			};
@@ -29,6 +29,8 @@ bosunApp.directive('tsComputations', () => {
 	};
 });
 
+
+
 function fmtDuration(v: any) {
 	var diff = moment.duration(v, 'milliseconds');
 	var f;
@@ -37,6 +39,7 @@ function fmtDuration(v: any) {
 	}
 	return diff.format('d[d]hh[h]mm[m]ss[s]');
 }
+
 
 function fmtTime(v: any) {
 	var m = moment(v).utc();
@@ -163,7 +166,7 @@ bosunApp.directive('tsresizable', () => {
         scope: {
             callback: '&onResize'
         },
-        link: function postLink(scope, elem, attrs) {
+        link: function postLink(scope: any, elem: any, attrs) {
             elem.resizable();
             elem.on('resizestop', function (evt, ui) {
                 if (scope.callback) { scope.callback(); }

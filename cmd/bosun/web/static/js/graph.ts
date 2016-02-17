@@ -29,6 +29,7 @@ class FilterMap {
 	[tagk: string]: Filter;
 }
 
+
 class Query {
 	aggregator: string;
 	metric: string;
@@ -348,7 +349,7 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 				$scope.error = 'Unable to fetch metrics: ' + error;
 			});
 		$http.get('/api/metadata/metrics?metric=' + metric)
-			.success(data => {
+			.success((data: any) => {
 				var canAuto = data && data.Rate;
 				$scope.canAuto[metric] = canAuto;
 			})
@@ -487,7 +488,7 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 			$scope.queryTime += '&time=' + t.format('HH:mm');
 		}
 		$http.get('/api/graph?' + 'b64=' + encodeURIComponent(btoa(JSON.stringify(request))) + autods + autorate + min + max)
-			.success((data) => {
+			.success((data: any) => {
 				$scope.result = data.Series;
 				if (!$scope.result) {
 					$scope.warning = 'No Results';

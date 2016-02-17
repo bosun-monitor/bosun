@@ -124,7 +124,7 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 	}
 	
 	$http.get('/api/config?hash='+(search.hash || ''))
-		.success((data) => {
+		.success((data: any) => {
 			$scope.config_text = data;
 			$scope.items = parseItems();
 			buildAlertFromExpr();
@@ -192,7 +192,7 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 			'alert=' + encodeURIComponent($scope.selected_alert) +
 			'&from=' + encodeURIComponent(set.Time);
 		$http.post(url,$scope.config_text)
-			.success((data) => {
+			.success((data: any) => {
 				procResults(data);
 				set.Results = data.Sets[0].Results;
 			})
@@ -284,7 +284,7 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 	var line_re = /test:(\d+)/;
 	$scope.validate = () => {
 		$http.post('/api/config_test', $scope.config_text)
-			.success((data) => {
+			.success((data: any) => {
 				if (data == "") {
 					$scope.validationResult = "Valid";
 					$timeout(()=>{
@@ -344,7 +344,7 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 			'&email=' + encodeURIComponent($scope.email) +
 			'&template_group=' + encodeURIComponent($scope.template_group);
 		$http.post(url,$scope.config_text)
-			.success((data) => {
+			.success((data: any) => {
 				$scope.sets = data.Sets;
 				$scope.alert_history = data.AlertHistory;
 				if (data.Hash){
@@ -379,7 +379,7 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 			'&from=' + encodeURIComponent(moment.utc(v.Time).format()) +
 			'&template_group=' + encodeURIComponent(template);
 		$http.post(url, $scope.config_text)
-			.success((data) => {
+			.success((data: any) => {
 				v.subject = data.Subject;
 				v.body = $sce.trustAsHtml(data.Body);
 			})

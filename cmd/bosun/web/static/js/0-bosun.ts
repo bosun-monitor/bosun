@@ -16,7 +16,10 @@ var bosunApp = angular.module('bosunApp', [
 ]);
 
 bosunApp.config(['$routeProvider', '$locationProvider', '$httpProvider', function($routeProvider: ng.route.IRouteProvider, $locationProvider: ng.ILocationProvider, $httpProvider: ng.IHttpProvider) {
-	$locationProvider.html5Mode(true);
+	$locationProvider.html5Mode({
+        enabled: true,
+        requireBase: false
+    });
 	$routeProvider.
 		when('/', {
 			title: 'Dashboard',
@@ -137,6 +140,7 @@ interface IBosunScope extends RootScope {
 	values: any;
 }
 
+
 bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', '$q', '$rootScope', function($scope: IBosunScope, $route: ng.route.IRouteService, $http: ng.IHttpService, $q: ng.IQService, $rootScope: IRootScope) {
 	$scope.$on('$routeChangeSuccess', function(event, current, previous) {
 		$scope.stop(true);
@@ -192,8 +196,9 @@ bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', '$q', '$r
 		var d = $q.defer();
 		scheduleFilter = filter;
 		$scope.animate();
+        
 		var p = $http.get('/api/alerts?filter=' + encodeURIComponent(filter || ""))
-			.success(data => {
+			.success((data: any) => {
 				$scope.schedule = data;
 				$scope.timeanddate = data.TimeAndDate;
 				d.resolve();
@@ -297,7 +302,7 @@ bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', '$q', '$r
 	};
 	var short: any= $('#shortlink')[0];
 	$scope.shorten = () => {
-		$http.get('/api/shorten').success(data => {
+		$http.get('/api/shorten').success((data: any) => {
 			if (data.id) {
 				short.value = data.id;
 				$rootScope.shortlink = true;

@@ -62,7 +62,7 @@ bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$ro
 	}
 	function get() {
 		$http.get('/api/silence/get')
-			.success((data) => {
+			.success((data: any) => {
 				$scope.silences = [];
 				var now = moment.utc();
 				$scope.silences.push({
