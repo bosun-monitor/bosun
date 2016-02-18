@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"os"
 
-	"bosun.org/_third_party/github.com/google/go-github/github"
+	"github.com/google/go-github/github"
 )
 
 type myRoundTripper struct {

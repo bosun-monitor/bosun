@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"time"
 
-	"bosun.org/_third_party/github.com/garyburd/redigo/redis"
 	"bosun.org/collect"
 	"bosun.org/models"
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
+	"github.com/garyburd/redigo/redis"
 )
 
 /*

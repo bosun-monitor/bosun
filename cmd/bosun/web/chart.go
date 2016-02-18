@@ -10,17 +10,17 @@ import (
 	"strings"
 	"time"
 
-	"bosun.org/_third_party/github.com/MiniProfiler/go/miniprofiler"
-	svg "bosun.org/_third_party/github.com/ajstarks/svgo"
-	"bosun.org/_third_party/github.com/bradfitz/slice"
-	"bosun.org/_third_party/github.com/gorilla/mux"
-	"bosun.org/_third_party/github.com/vdobler/chart"
-	"bosun.org/_third_party/github.com/vdobler/chart/svgg"
 	"bosun.org/cmd/bosun/expr"
 	"bosun.org/cmd/bosun/sched"
 	"bosun.org/metadata"
 	"bosun.org/models"
 	"bosun.org/opentsdb"
+	"github.com/MiniProfiler/go/miniprofiler"
+	svg "github.com/ajstarks/svgo"
+	"github.com/bradfitz/slice"
+	"github.com/gorilla/mux"
+	"github.com/vdobler/chart"
+	"github.com/vdobler/chart/svgg"
 )
 
 // Graph takes an OpenTSDB request data structure and queries OpenTSDB. Use the

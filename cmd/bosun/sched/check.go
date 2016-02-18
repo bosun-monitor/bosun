@@ -5,8 +5,6 @@ import (
 	"math"
 	"time"
 
-	"bosun.org/_third_party/github.com/MiniProfiler/go/miniprofiler"
-	"bosun.org/_third_party/github.com/influxdb/influxdb/client"
 	"bosun.org/cmd/bosun/cache"
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/expr"
@@ -16,6 +14,8 @@ import (
 	"bosun.org/models"
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
+	"github.com/MiniProfiler/go/miniprofiler"
+	"github.com/influxdata/influxdb/client"
 )
 
 func init() {

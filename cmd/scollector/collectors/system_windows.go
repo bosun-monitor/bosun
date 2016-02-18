@@ -1,9 +1,9 @@
 package collectors
 
 import (
-	"bosun.org/_third_party/github.com/StackExchange/wmi"
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
+	"github.com/StackExchange/wmi"
 )
 
 func init() {

@@ -13,14 +13,14 @@ import (
 	"sync"
 	"time"
 
-	"bosun.org/_third_party/github.com/MiniProfiler/go/miniprofiler"
-	"bosun.org/_third_party/github.com/bradfitz/slice"
 	"bosun.org/cmd/bosun/cache"
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/expr"
 	"bosun.org/cmd/bosun/sched"
 	"bosun.org/models"
 	"bosun.org/opentsdb"
+	"github.com/MiniProfiler/go/miniprofiler"
+	"github.com/bradfitz/slice"
 )
 
 // for executing expressions/rules via the web UI, we use a cache that we retain during the lifetime of bosun

@@ -12,13 +12,13 @@ import (
 	"testing"
 	"time"
 
-	"bosun.org/_third_party/github.com/MiniProfiler/go/miniprofiler"
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/database"
 	"bosun.org/cmd/bosun/database/test"
 	"bosun.org/models"
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
+	"github.com/MiniProfiler/go/miniprofiler"
 )
 
 func init() {

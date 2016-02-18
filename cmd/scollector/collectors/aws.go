@@ -4,14 +4,15 @@ import (
 	"fmt"
 	"time"
 
-	"bosun.org/_third_party/github.com/aws/aws-sdk-go/aws"
-	"bosun.org/_third_party/github.com/aws/aws-sdk-go/aws/credentials"
-	"bosun.org/_third_party/github.com/aws/aws-sdk-go/service/cloudwatch"
-	"bosun.org/_third_party/github.com/aws/aws-sdk-go/service/ec2"
-	"bosun.org/_third_party/github.com/aws/aws-sdk-go/service/elb"
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/cloudwatch"
+	"github.com/aws/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go/service/elb"
 )
 
 const (
@@ -57,15 +58,15 @@ func c_aws(accessKey, secretKey, region string) (opentsdb.MultiDataPoint, error)
 		Credentials: creds,
 		Region:      &region,
 	}
-	ecc := ec2.New(conf)
+	ecc := ec2.New(session.New(), conf)
 	if ecc == nil {
 		return nil, fmt.Errorf("unable to login to EC2")
 	}
-	elb := elb.New(conf)
+	elb := elb.New(session.New(), conf)
 	if elb == nil {
 		return nil, fmt.Errorf("unable to login to ELB")
 	}
-	cw := cloudwatch.New(conf)
+	cw := cloudwatch.New(session.New(), conf)
 	if cw == nil {
 		return nil, fmt.Errorf("unable to login to CloudWatch")
 	}

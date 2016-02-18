@@ -10,13 +10,13 @@ import (
 	"strings"
 	"time"
 
-	"bosun.org/_third_party/github.com/GaryBoone/GoStats/stats"
-	"bosun.org/_third_party/github.com/MiniProfiler/go/miniprofiler"
 	"bosun.org/cmd/bosun/expr/parse"
 	"bosun.org/graphite"
 	"bosun.org/models"
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
+	"github.com/GaryBoone/GoStats/stats"
+	"github.com/MiniProfiler/go/miniprofiler"
 )
 
 func tagQuery(args []parse.Node) (parse.Tags, error) {

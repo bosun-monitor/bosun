@@ -6,9 +6,9 @@ import (
 	"strings"
 	"time"
 
-	"bosun.org/_third_party/github.com/kylebrandt/gohop"
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
+	"github.com/kylebrandt/gohop"
 )
 
 const extraHopIntervalSeconds int = 30

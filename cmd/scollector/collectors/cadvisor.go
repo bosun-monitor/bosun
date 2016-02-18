@@ -3,8 +3,8 @@ package collectors
 import (
 	"strconv"
 
-	"bosun.org/_third_party/github.com/google/cadvisor/client"
-	"bosun.org/_third_party/github.com/google/cadvisor/info/v1"
+	"github.com/google/cadvisor/client"
+	"github.com/google/cadvisor/info/v1"
 
 	"bosun.org/cmd/scollector/conf"
 	"bosun.org/metadata"

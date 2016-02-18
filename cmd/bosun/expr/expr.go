@@ -10,10 +10,6 @@ import (
 	"sort"
 	"time"
 
-	"bosun.org/_third_party/github.com/MiniProfiler/go/miniprofiler"
-	"bosun.org/_third_party/github.com/influxdb/influxdb/client"
-	elasticOld "bosun.org/_third_party/github.com/olivere/elastic"
-	elastic "bosun.org/_third_party/gopkg.in/olivere/elastic.v3"
 	"bosun.org/cmd/bosun/cache"
 	"bosun.org/cmd/bosun/expr/parse"
 	"bosun.org/cmd/bosun/search"
@@ -21,6 +17,10 @@ import (
 	"bosun.org/models"
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
+	"github.com/MiniProfiler/go/miniprofiler"
+	"github.com/influxdata/influxdb/client"
+	elasticOld "github.com/olivere/elastic"
+	elastic "gopkg.in/olivere/elastic.v3"
 )
 
 type State struct {

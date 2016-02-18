@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"strconv"
 
-	"bosun.org/_third_party/github.com/garyburd/redigo/redis"
 	"bosun.org/collect"
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
 	"bosun.org/util"
+	"github.com/garyburd/redigo/redis"
 )
 
 /*

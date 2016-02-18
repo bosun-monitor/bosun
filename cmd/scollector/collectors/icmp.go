@@ -5,9 +5,9 @@ import (
 	"net"
 	"time"
 
-	"bosun.org/_third_party/github.com/tatsushid/go-fastping"
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
+	"github.com/tatsushid/go-fastping"
 )
 
 type response struct {
