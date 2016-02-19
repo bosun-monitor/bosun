@@ -356,6 +356,12 @@ var builtins = map[string]parse.Func{
 		Tags:   tagFirst,
 		F:      Merge,
 	},
+    "addtag": {
+        Args:   []models.FuncType{models.TypeSeriesSet, models.TypeString, models.TypeString},
+		Return: models.TypeSeriesSet,
+		Tags:   tagFirst,
+		F:      AddTag,
+	},
 }
 
 func Epoch(e *State, T miniprofiler.Timer) (*Results, error) {
@@ -1500,4 +1506,11 @@ func Transpose(e *State, T miniprofiler.Timer, d *Results, gp string) (*Results,
 		r.Results = append(r.Results, res)
 	}
 	return &r, nil
+}
+
+func AddTag(e *State, T miniprofiler.Timer, series *Results, tagKey, tagValue string) (*Results, error) {
+	for _, res := range series.Results {
+		res.Group.Merge(opentsdb.TagSet{tagKey: tagValue})
+	}
+	return series, nil
 }
