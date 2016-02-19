@@ -196,6 +196,12 @@ var builtins = map[string]parse.Func{
 		Tags:   tagFirst,
 		F:      Length,
 	},
+	"log": {
+		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeString},
+		Return: models.TypeSeriesSet,
+		Tags:   tagFirst,
+		F:      Log,
+	},
 	"max": {
 		Args:   []models.FuncType{models.TypeSeriesSet},
 		Return: models.TypeNumberSet,
@@ -1267,6 +1273,27 @@ func last(dps Series, args ...float64) (a float64) {
 		}
 	}
 	return
+}
+
+func Log(e *State, T miniprofiler.Timer, series *Results, logType string) (*Results, error) {
+	for _, res := range series.Results {
+		for k, v := range res.Value.(Series) {
+			switch logType {
+			case "log":
+				res.Value.(Series)[k] = math.Log(v)
+			case "log10":
+				res.Value.(Series)[k] = math.Log10(v)
+			case "log2":
+				res.Value.(Series)[k] = math.Log2(v)
+			case "logb":
+				res.Value.(Series)[k] = math.Logb(v)
+			default:
+				return series, fmt.Errorf("log type must be one of log, log10, log2, or logb, is: %v", logType)
+			}
+
+		}
+	}
+	return series, nil
 }
 
 func First(e *State, T miniprofiler.Timer, series *Results) (*Results, error) {
