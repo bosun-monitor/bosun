@@ -20,11 +20,11 @@ ENV HBASE /hbase/hbase-$HBASEVER
 ENV JAVA_HOME /usr/lib/jvm/java-7-openjdk-amd64
 
 RUN mkdir -p /hbase \
-    && curl -SL http://apache.org/dist/hbase/stable/hbase-$HBASEVER-bin.tar.gz \
+    && curl -SL http://archive.apache.org/dist/hbase/$HBASEVER/hbase-$HBASEVER-bin.tar.gz \
     | tar -xzC /hbase \
     && mv /hbase/hbase-$HBASEVER /hbase/hbase
 
-RUN curl -SL https://storage.googleapis.com/golang/go1.5.1.linux-amd64.tar.gz \
+RUN curl -SL https://storage.googleapis.com/golang/go1.6.linux-amd64.tar.gz \
     | tar -xzC /usr/local
 
 COPY bosun $GOPATH/src/bosun.org/
