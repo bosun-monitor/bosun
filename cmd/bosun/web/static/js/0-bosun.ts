@@ -46,12 +46,18 @@ bosunApp.config(['$routeProvider', '$locationProvider', '$httpProvider', functio
 			templateUrl: 'partials/graph.html',
 			controller: 'GraphCtrl',
 			resolve: {
-				'version' : function($http) {
+				'version': function($http) {
 					return $http({
 						method: 'GET',
 						url: '/api/opentsdb/version'
 					});
-				}
+				},
+                'annotateEnabled': function($http) {
+					return $http({
+						method: 'GET',
+						url: '/api/annotate'
+					});
+				},
 			}
 		}).
 		when('/host', {
@@ -227,7 +233,7 @@ bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', '$q', '$r
 		.attr('height', sz)
 		.attr('width', sz);
 	svg.selectAll('rect.bg')
-		.data([[0, light], [sz/2, dark]])
+		.data([[0, light], [sz / 2, dark]])
 		.enter()
 		.append('rect')
 		.attr('class', 'bg')
@@ -300,7 +306,7 @@ bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', '$q', '$r
 			animateCount--;
 		}
 	};
-	var short: any= $('#shortlink')[0];
+	var short: any = $('#shortlink')[0];
 	$scope.shorten = () => {
 		$http.get('/api/shorten').success((data: any) => {
 			if (data.id) {
@@ -386,6 +392,22 @@ function setUser(name) {
 	createCookie('action-user', name, 1000);
 }
 
+function getOwner() {
+	return readCookie('action-owner');
+}
+
+function setOwner(name) {
+	createCookie('action-owner', name, 1000);
+}
+
+function getShowAnnotations() {
+	return readCookie('annotations-show');
+}
+
+function setShowAnnotations(yes) {
+	createCookie('annotations-show', yes, 1000);
+}
+
 // from: http://stackoverflow.com/a/15267754/864236
 
 bosunApp.filter('reverse', function() {
@@ -396,3 +418,42 @@ bosunApp.filter('reverse', function() {
 		return items.slice().reverse();
 	};
 });
+
+var timeFormat = 'YYYY-MM-DDTHH:mm:ssZ';
+
+class Annotation {
+	Id: string;
+	Message: string;
+	StartDate: string; // RFC3999
+	EndDate: string; // RFC3999
+	CreationUser: string;
+	Url: string;
+	Source: string;
+	Host: string;
+	Owner: string;
+	Category: string;
+
+	constructor(a?) {
+		a = a || {};
+		this.Id = a.Id || "";
+		this.Message = a.Message || "";
+		this.StartDate = a.StartDate || "";
+		this.EndDate = a.EndDate || "";
+		this.CreationUser = a.CreationUser || getUser() || "";
+		this.Url = a.Url || "";
+		this.Source = a.Source || "bosun-ui";
+		this.Host = a.Host || "";
+		this.Owner = a.Owner || getOwner() || "";
+		this.Category = a.Category || "";
+	}
+	setTimeUTC() {
+		var now = moment().utc().format(timeFormat)
+		this.StartDate = now;
+		this.EndDate = now;
+	}
+	setTime() {
+		var now = moment().format(timeFormat)
+		this.StartDate = now;
+		this.EndDate = now;
+	}
+}

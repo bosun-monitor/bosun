@@ -19,6 +19,7 @@ import (
 	svg "github.com/ajstarks/svgo"
 	"github.com/bradfitz/slice"
 	"github.com/gorilla/mux"
+	"github.com/kylebrandt/annotate"
 	"github.com/vdobler/chart"
 	"github.com/vdobler/chart/svgg"
 )
@@ -59,10 +60,19 @@ func Graph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 	}
 	queries := make([]string, len(oreq.Queries))
 	var start, end string
+	var startT, endT time.Time
 	if s, ok := oreq.Start.(string); ok && strings.Contains(s, "-ago") {
+		startT, err = opentsdb.ParseTime(s)
+		if err != nil {
+			return nil, err
+		}
 		start = strings.TrimSuffix(s, "-ago")
 	}
 	if s, ok := oreq.End.(string); ok && strings.Contains(s, "-ago") {
+		endT, err = opentsdb.ParseTime(s)
+		if err != nil {
+			return nil, err
+		}
 		end = strings.TrimSuffix(s, "-ago")
 	}
 	if start == "" && end == "" {
@@ -70,7 +80,15 @@ func Graph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 		e, eok := oreq.End.(int64)
 		if sok && eok {
 			start = fmt.Sprintf("%vs", e-s)
+			startT = time.Unix(s, 0)
+			endT = time.Unix(e, 0)
+			if err != nil {
+				return nil, err
+			}
 		}
+	}
+	if endT.Equal(time.Time{}) {
+		endT = time.Now().UTC()
 	}
 	m_units := make(map[string]string)
 	for i, q := range oreq.Queries {
@@ -163,12 +181,21 @@ func Graph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 		s.End()
 		return nil, nil
 	}
+	var a []annotate.Annotation
+	if schedule.Conf.AnnotateEnabled() {
+		a, err = annotateBackend.GetAnnotations(&startT, &endT, "", "", "", "", "")
+		if err != nil {
+			return nil, err
+		}
+	}
 	return struct {
-		Queries []string
-		Series  []*chartSeries
+		Queries     []string
+		Series      []*chartSeries
+		Annotations []annotate.Annotation
 	}{
 		queries,
 		cs,
+		a,
 	}, nil
 }
 

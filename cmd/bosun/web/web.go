@@ -27,16 +27,19 @@ import (
 	"bosun.org/slog"
 	"bosun.org/util"
 	"bosun.org/version"
+
 	"github.com/MiniProfiler/go/miniprofiler"
 	"github.com/gorilla/mux"
+	"github.com/kylebrandt/annotate/backend"
+	"github.com/kylebrandt/annotate/web"
 )
 
 var (
-	indexTemplate func() *template.Template
-	router        = mux.NewRouter()
-	schedule      = sched.DefaultSched
-
-	InternetProxy *url.URL
+	indexTemplate   func() *template.Template
+	router          = mux.NewRouter()
+	schedule        = sched.DefaultSched
+	InternetProxy   *url.URL
+	annotateBackend backend.Backend
 )
 
 const (
@@ -51,6 +54,7 @@ func init() {
 	miniprofiler.Enable = func(r *http.Request) bool {
 		return r.Header.Get(miniprofilerHeader) != ""
 	}
+
 	metadata.AddMetricMeta("bosun.search.puts_relayed", metadata.Counter, metadata.Request,
 		"The count of api put requests sent to Bosun for relaying to the backend server.")
 	metadata.AddMetricMeta("bosun.search.datapoints_relayed", metadata.Counter, metadata.Item,
@@ -87,6 +91,7 @@ func Listen(listenAddr string, devMode bool, tsdbHost string) error {
 		router.HandleFunc("/api/index", IndexTSDB)
 		router.Handle("/api/put", Relay(tsdbHost))
 	}
+
 	router.HandleFunc("/api/", APIRedirect)
 	router.Handle("/api/action", JSON(Action))
 	router.Handle("/api/alerts", JSON(Alerts))
@@ -119,6 +124,25 @@ func Listen(listenAddr string, devMode bool, tsdbHost string) error {
 	router.Handle("/api/tagv/{tagk}/{metric}", JSON(TagValuesByMetricTagKey))
 	router.Handle("/api/tagsets/{metric}", JSON(FilteredTagsetsByMetric))
 	router.Handle("/api/opentsdb/version", JSON(OpenTSDBVersion))
+	router.Handle("/api/annotate", JSON(AnnotateEnabled))
+
+	// Annotations
+	if schedule.Conf.AnnotateEnabled() {
+		var err error
+		index := schedule.Conf.AnnotateIndex
+		if index == "" {
+			index = "annotate"
+		}
+		annotateBackend, err = backend.NewElastic(schedule.Conf.AnnotateElasticHosts, index)
+		if err != nil {
+			return err
+		}
+		if err := annotateBackend.InitBackend(); err != nil {
+			return err
+		}
+		web.AddRoutes(router, "/api", []backend.Backend{annotateBackend}, false, false)
+	}
+
 	router.HandleFunc("/api/version", Version)
 	router.Handle("/api/debug/schedlock", JSON(ScheduleLockStatus))
 	http.Handle("/", miniprofiler.NewHandler(Index))
@@ -323,6 +347,10 @@ func HealthCheck(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (
 
 func OpenTSDBVersion(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	return schedule.Conf.TSDBContext().Version(), nil
+}
+
+func AnnotateEnabled(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	return schedule.Conf.AnnotateEnabled(), nil
 }
 
 func PutMetadata(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {

@@ -315,8 +315,7 @@
 		},
 		{
 			"path": "github.com/gorilla/context",
-			"revision": "1c83b3eabd45b6d76072b66b746c20815fb2872d",
-			"revisionTime": "2015-08-19T22:12:45-07:00"
+			"revision": ""
 		},
 		{
 			"path": "github.com/gorilla/css/scanner",
@@ -325,8 +324,7 @@
 		},
 		{
 			"path": "github.com/gorilla/mux",
-			"revision": "9c068cf16d982f8bd444b8c352acbeec34c4fe5b",
-			"revisionTime": "2015-11-11T18:35:30+08:00"
+			"revision": ""
 		},
 		{
 			"path": "github.com/influxdata/influxdb/client",
@@ -373,6 +371,21 @@
 			"path": "github.com/jordan-wright/email",
 			"revision": "f61123ea07e1921ac4f174e8c42225fd39bd6c6a",
 			"revisionTime": "2015-10-16T12:35:57-05:00"
+		},
+		{
+			"path": "github.com/kylebrandt/annotate",
+			"revision": "c36a19a447494cfec1435b4f785172fba3d8bae8",
+			"revisionTime": "2016-02-19T12:22:01-05:00"
+		},
+		{
+			"path": "github.com/kylebrandt/annotate/backend",
+			"revision": "c36a19a447494cfec1435b4f785172fba3d8bae8",
+			"revisionTime": "2016-02-19T12:22:01-05:00"
+		},
+		{
+			"path": "github.com/kylebrandt/annotate/web",
+			"revision": "c36a19a447494cfec1435b4f785172fba3d8bae8",
+			"revisionTime": "2016-02-19T12:22:01-05:00"
 		},
 		{
 			"path": "github.com/kylebrandt/gohop",
@@ -575,6 +588,12 @@
 			"revisionTime": "2015-08-18T21:58:05+09:00"
 		},
 		{
+			"origin": "github.com/kylebrandt/annotate/vendor/github.com/twinj/uuid",
+			"path": "github.com/twinj/uuid",
+			"revision": "0adcb7df180a0bbaa1f9268f62f2dc38dd1f46d7",
+			"revisionTime": "2016-02-17T17:07:42-05:00"
+		},
+		{
 			"path": "github.com/ugorji/go/codec",
 			"revision": "ea9cd21fa0bc41ee4bdd50ac7ed8cbc7ea2ed960",
 			"revisionTime": "2015-11-20T09:31:08-05:00"
@@ -751,18 +770,18 @@
 		},
 		{
 			"path": "gopkg.in/olivere/elastic.v3",
-			"revision": "6d1954a560f885207ff84c32ed0aaaebf11ec599",
-			"revisionTime": "2016-02-05T11:04:13+01:00"
+			"revision": "13355e19a360316f040c7f43cec0ed29f133d146",
+			"revisionTime": "2016-02-03T17:48:28+01:00"
 		},
 		{
 			"path": "gopkg.in/olivere/elastic.v3/backoff",
-			"revision": "6d1954a560f885207ff84c32ed0aaaebf11ec599",
-			"revisionTime": "2016-02-05T11:04:13+01:00"
+			"revision": "13355e19a360316f040c7f43cec0ed29f133d146",
+			"revisionTime": "2016-02-03T17:48:28+01:00"
 		},
 		{
 			"path": "gopkg.in/olivere/elastic.v3/uritemplates",
-			"revision": "6d1954a560f885207ff84c32ed0aaaebf11ec599",
-			"revisionTime": "2016-02-05T11:04:13+01:00"
+			"revision": "13355e19a360316f040c7f43cec0ed29f133d146",
+			"revisionTime": "2016-02-03T17:48:28+01:00"
 		},
 		{
 			"path": "gopkg.in/yaml.v1",
