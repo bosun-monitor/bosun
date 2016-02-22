@@ -783,9 +783,10 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWi
                 if (!angular.isArray(v) || v.length == 0) {
                     return;
                 }
-                //brush.clear();
                 d3.selectAll(".x.brush").call(brush.clear());
-                showAnnotations(scope.showAnnotations);
+                if (scope.annotateEnabled) {
+                    showAnnotations(scope.showAnnotations);
+                }
                 resize();
             }
             function draw() {
