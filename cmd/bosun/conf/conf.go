@@ -75,6 +75,9 @@ type Conf struct {
 	ElasticHosts         expr.ElasticHosts         // CSV Elastic Hosts (All part of the same cluster), i.e http://ny-elastic01:9200. Only works with elastic v2+, and unlike logstash it is designed to be able to use various elastic schemas.
 	InfluxConfig         client.Config
 
+	AnnotateElasticHosts []string // CSV of Elastic Hosts, currently the only backend in annotate
+	AnnotateIndex        string   // name of index / table
+
 	tree            *parse.Tree
 	node            parse.Node
 	unknownTemplate string
@@ -174,6 +177,10 @@ func (c *Conf) at(node parse.Node) {
 
 func (c *Conf) error(err error) {
 	c.errorf(err.Error())
+}
+
+func (c *Conf) AnnotateEnabled() bool {
+	return len(c.AnnotateElasticHosts) != 0
 }
 
 // errorf formats the error and terminates processing.
@@ -564,6 +571,10 @@ func (c *Conf) loadGlobal(p *parse.PairNode) {
 			c.error(err)
 		}
 		c.RedisDb = i
+	case "annotateElasticHosts":
+		c.AnnotateElasticHosts = strings.Split(v, ",")
+	case "annotationIndex":
+		c.AnnotateIndex = v
 	case "minGroupSize":
 		i, err := strconv.Atoi(v)
 		if err != nil {
