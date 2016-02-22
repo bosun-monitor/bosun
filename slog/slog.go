@@ -25,6 +25,7 @@ type Logger interface {
 	Info(v string)
 	Warning(v string)
 	Fatal(v string)
+	Debug(v string)
 }
 
 // StdLog logs to a log.Logger.
@@ -50,6 +51,11 @@ func (s *StdLog) Info(v string) {
 // Warning logs a warning message.
 func (s *StdLog) Warning(v string) {
 	s.Log.Println("warning:", rmNl(v))
+}
+
+// Debug logs a message with debugging info
+func (s *StdLog) Debug(v string) {
+	s.Log.Println("debug:", rmNl(v))
 }
 
 func rmNl(v string) string {
@@ -128,6 +134,21 @@ func Fatalf(format string, v ...interface{}) {
 func Fatalln(v ...interface{}) {
 	outputln(logging.Fatal, v...)
 	os.Exit(1)
+}
+
+// Debug logs an info message.
+func Debug(v ...interface{}) {
+	output(logging.Debug, v...)
+}
+
+// Debugf logs an info message.
+func Debugf(format string, v ...interface{}) {
+	outputf(logging.Debug, format, v...)
+}
+
+// Debugln logs an info message.
+func Debugln(v ...interface{}) {
+	outputln(logging.Debug, v...)
 }
 
 func out(f func(string), s string) {
