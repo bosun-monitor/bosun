@@ -17,7 +17,7 @@ import (
 // esc -o static.go -pkg web static
 func AddRoutes(router *mux.Router, prefix string, b []backend.Backend, enableUI, local bool) error {
 	backends = b
-	router.HandleFunc(prefix+"/annotation", InsertAnnotation).Methods("POST", "POST")
+	router.HandleFunc(prefix+"/annotation", InsertAnnotation).Methods("POST", "PUT")
 	router.HandleFunc(prefix+"/annotation/query", GetAnnotations).Methods("GET")
 	router.HandleFunc(prefix+"/annotation/{id}", GetAnnotation).Methods("GET")
 	router.HandleFunc(prefix+"/annotation/{id}", InsertAnnotation).Methods("PUT")

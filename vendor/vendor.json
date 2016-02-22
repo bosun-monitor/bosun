@@ -374,18 +374,18 @@
 		},
 		{
 			"path": "github.com/kylebrandt/annotate",
-			"revision": "c36a19a447494cfec1435b4f785172fba3d8bae8",
-			"revisionTime": "2016-02-19T12:22:01-05:00"
+			"revision": "3111ccf554a2b7ed145a932f19fe4d1d1c3e3ea1",
+			"revisionTime": "2016-02-22T12:07:25-05:00"
 		},
 		{
 			"path": "github.com/kylebrandt/annotate/backend",
-			"revision": "c36a19a447494cfec1435b4f785172fba3d8bae8",
-			"revisionTime": "2016-02-19T12:22:01-05:00"
+			"revision": "3111ccf554a2b7ed145a932f19fe4d1d1c3e3ea1",
+			"revisionTime": "2016-02-22T12:07:25-05:00"
 		},
 		{
 			"path": "github.com/kylebrandt/annotate/web",
-			"revision": "c36a19a447494cfec1435b4f785172fba3d8bae8",
-			"revisionTime": "2016-02-19T12:22:01-05:00"
+			"revision": "3111ccf554a2b7ed145a932f19fe4d1d1c3e3ea1",
+			"revisionTime": "2016-02-22T12:07:25-05:00"
 		},
 		{
 			"path": "github.com/kylebrandt/gohop",
