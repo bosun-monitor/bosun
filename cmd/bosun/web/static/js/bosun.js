@@ -1732,8 +1732,8 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function ($window, fmtfi
                 var extentDiff;
                 function brushed() {
                     var e;
-                    e = event;
-                    if (e.metaKey) {
+                    e = d3.event.sourceEvent;
+                    if (e.shiftKey) {
                         return;
                     }
                     var extent = brush.extent();
@@ -1752,8 +1752,8 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function ($window, fmtfi
                         return;
                     }
                     var e;
-                    e = event;
-                    if (!e.metaKey) {
+                    e = d3.event.sourceEvent;
+                    if (!e.shiftKey) {
                         return;
                     }
                     var extent = brush.extent();
