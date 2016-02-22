@@ -55,7 +55,11 @@ func Connect(host, user, pwd string) (*Vsphere, error) {
 	if uuid.UUID == "" {
 		return nil, fmt.Errorf("vsphere: no UUID during connect")
 	}
-	if err := v.call(fmt.Sprintf(soapLogin, user, pwd), nil); err != nil {
+	userbuf := new(bytes.Buffer)
+	pwdbuf := new(bytes.Buffer)
+	xml.EscapeText(userbuf, []byte(user))
+	xml.EscapeText(pwdbuf, []byte(pwd))
+	if err := v.call(fmt.Sprintf(soapLogin, userbuf, pwdbuf), nil); err != nil {
 		return nil, err
 	}
 	return v, nil
