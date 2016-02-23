@@ -174,8 +174,8 @@ func (rp *relayProxy) relayPut(responseWriter http.ResponseWriter, r *http.Reque
 	r.Body = reader
 	w := &relayWriter{ResponseWriter: responseWriter}
 	rp.TSDBProxy.ServeHTTP(w, r)
-	if w.code != 204 {
-		verbose("got status", w.code)
+	if w.code/100 != 2 {
+		verbose("got status %d", w.code)
 		return
 	}
 	verbose("relayed to tsdb")
