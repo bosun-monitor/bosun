@@ -90,6 +90,12 @@ func main() {
 	if *flagTest {
 		os.Exit(0)
 	}
+	if c.PProf != "" {
+		go func() {
+			slog.Infof("Starting pprof at http://%s/debug/pprof/", c.PProf)
+			slog.Fatal(http.ListenAndServe(c.PProf, nil))
+		}()
+	}
 	httpListen := &url.URL{
 		Scheme: "http",
 		Host:   c.HTTPListen,

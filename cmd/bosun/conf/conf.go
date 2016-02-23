@@ -42,6 +42,7 @@ type Conf struct {
 	Ping            bool
 	PingDuration    time.Duration // Duration from now to stop pinging hosts based on time since the host tag was touched
 	EmailFrom       string
+	PProf           string // PProf is an IP:Port binding to be used for debugging with pprof package.
 	StateFile       string
 	LedisDir        string
 
@@ -358,6 +359,7 @@ func New(name, text string) (c *Conf, err error) {
 		CheckFrequency:   time.Minute * 5,
 		DefaultRunEvery:  1,
 		HTTPListen:       ":8070",
+		PProf:            "",
 		StateFile:        "bosun.state",
 		LedisDir:         "ledis_data",
 		MinGroupSize:     5,
@@ -555,6 +557,8 @@ func (c *Conf) loadGlobal(p *parse.PairNode) {
 		if err := c.Squelch.Add(v); err != nil {
 			c.error(err)
 		}
+	case "pprof":
+		c.PProf = v
 	case "shortURLKey":
 		c.ShortURLKey = v
 	case "internetProxy":
