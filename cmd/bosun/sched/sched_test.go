@@ -338,3 +338,21 @@ func TestRename(t *testing.T) {
 		},
 	})
 }
+
+func TestUnknownsAreNormal(t *testing.T) {
+	defer setup()()
+	testSched(t, &schedTest{
+		conf: `alert a {
+            unknownIsNormal = true
+            crit = avg(q("avg:m{a=*}", "5m", "")) > 0
+		}`,
+		queries: map[string]opentsdb.ResponseSet{
+			`q("avg:m{a=*}", ` + window5Min + `)`: {},
+		},
+		state: map[schedState]bool{},
+		touched: map[models.AlertKey]time.Time{
+			"a{a=b}": queryTime.Add(-10 * time.Minute),
+			"a{a=c}": queryTime.Add(-9 * time.Minute),
+		},
+	})
+}
