@@ -32,8 +32,8 @@ type _escFile struct {
 	local      string
 	isDir      bool
 
-	data []byte
 	once sync.Once
+	data []byte
 	name string
 }
 
