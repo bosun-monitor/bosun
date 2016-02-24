@@ -14,8 +14,8 @@
 		},
 		{
 			"path": "github.com/MiniProfiler/go/miniprofiler",
-			"revision": "95327be6497880f82308a8b8307801aaa3a65324",
-			"revisionTime": "2015-01-06T09:09:26Z"
+			"revision": "3c4995d8add5a3aacf4068313aeb5dc3a9be36c6",
+			"revisionTime": "2016-02-23T21:48:46-05:00"
 		},
 		{
 			"path": "github.com/PuerkitoBio/goquery",

@@ -58,7 +58,7 @@ var (
 	StartHidden         = false
 	TrivialMilliseconds = 12.0
 
-	Version = "3.0.11"
+	Version = "3.0.12"
 
 	staticFiles map[string][]byte
 )
