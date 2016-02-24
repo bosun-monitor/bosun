@@ -1637,7 +1637,30 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function ($window, fmtfi
                         .attr("x", -(height / 2))
                         .attr("dy", "1em")
                         .text(_.uniq(scope.data.map(function (v) { return v.Unit; })).join("; "));
-                    if (scope.annotateEnabled) {
+                    if (scope.annotateEnabled && scope.annotations.length != 0) {
+                        var rowId = {}; // annotation Id -> rowId
+                        var rowEndDate = {}; // rowId -> EndDate
+                        var maxRow = 0;
+                        for (var i = 0; i < scope.annotations.length; i++) {
+                            if (i == 0) {
+                                rowId[scope.annotations[i].Id] = 0;
+                                rowEndDate[0] = scope.annotations[0].EndDate;
+                                continue;
+                            }
+                            for (var row = 0; row <= maxRow + 1; row++) {
+                                if (row == maxRow + 1) {
+                                    rowId[scope.annotations[i].Id] = row;
+                                    rowEndDate[row] = scope.annotations[i].EndDate;
+                                    maxRow += 1;
+                                    break;
+                                }
+                                if (rowEndDate[row] < scope.annotations[i].StartDate) {
+                                    rowId[scope.annotations[i].Id] = row;
+                                    rowEndDate[row] = scope.annotations[i].EndDate;
+                                    break;
+                                }
+                            }
+                        }
                         var annotations = ann.selectAll('.annotation')
                             .data(scope.annotations, function (d) { return d.Id; });
                         annotations.enter()
@@ -1649,7 +1672,7 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function ($window, fmtfi
                             }
                             return "hidden";
                         })
-                            .attr("y", function (d, i) { return i * ((height * .05) + 2); })
+                            .attr("y", function (d) { return rowId[d.Id] * ((height * .05) + 2); })
                             .attr("height", height * .05)
                             .attr("class", "annotation")
                             .attr("stroke", function (d) { return annColor(d.Id); })
@@ -2413,7 +2436,7 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
                 .success(function (data) {
                 $scope.result = data.Series;
                 if ($scope.annotateEnabled) {
-                    $scope.annotations = data.Annotations;
+                    $scope.annotations = _.sortBy(data.Annotations, function (d) { return d.StartDate; });
                 }
                 if (!$scope.result) {
                     $scope.warning = 'No Results';
