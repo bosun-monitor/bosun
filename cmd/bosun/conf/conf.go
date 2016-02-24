@@ -253,6 +253,7 @@ type Alert struct {
 	Unknown          time.Duration
 	MaxLogFrequency  time.Duration
 	IgnoreUnknown    bool
+	UnknownsNormal   bool
 	UnjoinedOK       bool `json:",omitempty"`
 	Log              bool
 	RunEvery         int
@@ -940,6 +941,8 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 			a.UnjoinedOK = true
 		case "ignoreUnknown":
 			a.IgnoreUnknown = true
+		case "unknownIsNormal":
+			a.UnknownsNormal = true
 		case "log":
 			a.Log = true
 		case "runEvery":

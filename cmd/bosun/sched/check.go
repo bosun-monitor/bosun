@@ -105,6 +105,11 @@ func (s *Schedule) RunHistory(r *RunHistory) {
 // RunHistory for a single alert key. Returns true if notifications were altered.
 func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.Event, silenced SilenceTester) (checkNotify bool, err error) {
 	event.Time = r.Start
+	a := s.Conf.Alerts[ak.Name()]
+	if a.UnknownsNormal && event.Status == models.StUnknown {
+		event.Status = models.StNormal
+	}
+
 	data := s.DataAccess.State()
 	err = data.TouchAlertKey(ak, utcNow())
 	if err != nil {
@@ -166,8 +171,6 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.E
 		incident.Events = append(incident.Events, *event)
 	}
 	incident.CurrentStatus = event.Status
-
-	a := s.Conf.Alerts[ak.Name()]
 
 	//run a preliminary save on new incidents to get an id
 	if newIncident {
