@@ -547,7 +547,7 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 			.success((data: any) => {
 				$scope.result = data.Series;
                 if ($scope.annotateEnabled) {
-				    $scope.annotations = data.Annotations;
+                    $scope.annotations = _.sortBy(data.Annotations, (d: Annotation) => { return d.StartDate; });
                 }
 				if (!$scope.result) {
 					$scope.warning = 'No Results';
