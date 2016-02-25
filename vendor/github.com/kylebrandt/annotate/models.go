@@ -2,6 +2,7 @@ package annotate
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 )
 
@@ -14,22 +15,67 @@ func (t RFC3339) MarshalJSON() ([]byte, error) {
 }
 
 func (t *RFC3339) UnmarshalJSON(b []byte) (err error) {
-    if b[0] == '"' && b[len(b)-1] == '"' {
-        b = b[1 : len(b)-1]
-    }
-    if len(b) == 0 {
-        t.Time = time.Time{}
-        return
-    }
-    t.Time, err = time.Parse(time.RFC3339, string(b))
-    return
+	if b[0] == '"' && b[len(b)-1] == '"' {
+		b = b[1 : len(b)-1]
+	}
+	if len(b) == 0 {
+		t.Time = time.Time{}
+		return
+	}
+	t.Time, err = time.Parse(time.RFC3339, string(b))
+	return
+}
+
+type Epoch struct {
+	time.Time
+}
+
+func (t Epoch) MarshalJSON() ([]byte, error) {
+	return []byte(fmt.Sprintf("%v", t.UTC().Unix())), nil
+}
+
+func (t *Epoch) UnmarshalJSON(b []byte) (err error) {
+	if len(b) == 0 {
+		t.Time = time.Time{}
+		return
+	}
+	epoch, err := strconv.ParseInt(string(b), 10, 64)
+	if err != nil {
+		return err
+	}
+	t.Time = time.Unix(epoch, 0)
+	return
 }
 
 type Annotation struct {
+	AnnotationFields
+	StartDate RFC3339
+	EndDate   RFC3339
+}
+
+type EpochAnnotation struct {
+	AnnotationFields
+	StartDate Epoch
+	EndDate   Epoch
+}
+
+func (ea *EpochAnnotation) AsAnnotation() (a Annotation) {
+	a.AnnotationFields = ea.AnnotationFields
+	a.StartDate.Time = ea.StartDate.Time
+	a.EndDate.Time = ea.EndDate.Time
+	return
+}
+
+func (a *Annotation) AsEpochAnnotation() (ea EpochAnnotation) {
+	ea.AnnotationFields = a.AnnotationFields
+	ea.StartDate.Time = a.StartDate.Time
+	ea.EndDate.Time = a.EndDate.Time
+	return
+}
+
+type AnnotationFields struct {
 	Id           string
 	Message      string
-	StartDate    RFC3339
-	EndDate      RFC3339
 	CreationUser string
 	Url          string
 	Source       string
@@ -50,6 +96,15 @@ const (
 )
 
 type Annotations []Annotation
+type EpochAnnotations []EpochAnnotation
+
+func (as Annotations) AsEpochAnnotations() EpochAnnotations {
+	eas := make(EpochAnnotations, len(as))
+	for i, a := range as {
+		eas[i] = a.AsEpochAnnotation()
+	}
+	return eas
+}
 
 func (a *Annotation) SetNow() {
 	a.StartDate.Time = time.Now()

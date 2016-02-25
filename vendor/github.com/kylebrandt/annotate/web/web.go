@@ -1,10 +1,13 @@
 package web
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/kylebrandt/annotate"
@@ -15,7 +18,7 @@ import (
 )
 
 // esc -o static.go -pkg web static
-func AddRoutes(router *mux.Router, prefix string, b []backend.Backend, enableUI, local bool) error {
+func AddRoutes(router *mux.Router, prefix string, b []backend.Backend, enableUI, useLocalAssets bool) error {
 	backends = b
 	router.HandleFunc(prefix+"/annotation", InsertAnnotation).Methods("POST", "PUT")
 	router.HandleFunc(prefix+"/annotation/query", GetAnnotations).Methods("GET")
@@ -26,7 +29,7 @@ func AddRoutes(router *mux.Router, prefix string, b []backend.Backend, enableUI,
 	if !enableUI {
 		return nil
 	}
-	webFS := FS(local)
+	webFS := FS(useLocalAssets)
 	index, err := webFS.Open("/static/index.html")
 	if err != nil {
 		return fmt.Errorf("Error opening static file: %v", err)
@@ -52,12 +55,23 @@ var (
 
 func InsertAnnotation(w http.ResponseWriter, req *http.Request) {
 	var a annotate.Annotation
+	var ea annotate.EpochAnnotation
+	epochFmt := false
 	id := mux.Vars(req)["id"]
-	d := json.NewDecoder(req.Body)
-	err := d.Decode(&a)
-	if err != nil {
-		serveError(w, err)
-		return
+
+	// Need to read the request body twice to try both formats, so tee the
+	b := bytes.NewBuffer(make([]byte, 0))
+	tee := io.TeeReader(req.Body, b)
+	d := json.NewDecoder(tee)
+	errRegFmt := d.Decode(&a)
+	if errRegFmt != nil {
+		d := json.NewDecoder(b)
+		errEpochFmt := d.Decode(&ea)
+		if errEpochFmt != nil {
+			serveError(w, fmt.Errorf("Could not unmarhsal json in RFC3339 fmt or Epoch fmt: %v, %v", errRegFmt, errEpochFmt))
+		}
+		a = ea.AsAnnotation()
+		epochFmt = true
 	}
 	if a.Id != "" && id != "" && a.Id != id {
 		serveError(w, fmt.Errorf("conflicting ids in request: url id %v, body id %v", id, a.Id))
@@ -71,7 +85,7 @@ func InsertAnnotation(w http.ResponseWriter, req *http.Request) {
 	if a.IsTimeNotSet() {
 		a.SetNow()
 	}
-	err = a.ValidateTime()
+	err := a.ValidateTime()
 	if err != nil {
 		serveError(w, err)
 	}
@@ -93,11 +107,26 @@ func InsertAnnotation(w http.ResponseWriter, req *http.Request) {
 			serveError(w, err)
 		}
 	}
-	err = json.NewEncoder(w).Encode(a)
-	if err != nil {
-		serveError(w, err)
-	}
+	format(&a, w, epochFmt)
 	w.Header().Set("Content-Type", "application/json")
+	return
+}
+
+func format(a *annotate.Annotation, w http.ResponseWriter, epochFmt bool) (e error) {
+	if epochFmt {
+		e = json.NewEncoder(w).Encode(a.AsEpochAnnotation())
+	} else {
+		e = json.NewEncoder(w).Encode(a)
+	}
+	return
+}
+
+func formatPlural(a annotate.Annotations, w http.ResponseWriter, epochFmt bool) (e error) {
+	if epochFmt {
+		e = json.NewEncoder(w).Encode(a.AsEpochAnnotations())
+	} else {
+		e = json.NewEncoder(w).Encode(a)
+	}
 	return
 }
 
@@ -113,11 +142,10 @@ func GetAnnotation(w http.ResponseWriter, req *http.Request) {
 			serveError(w, err)
 		}
 	}
-	err = json.NewEncoder(w).Encode(a)
+	err = format(a, w, req.URL.Query().Get("Epoch") == "1")
 	if err != nil {
 		serveError(w, err)
 	}
-
 	return
 }
 
@@ -157,28 +185,41 @@ func GetFieldValues(w http.ResponseWriter, req *http.Request) {
 
 func GetAnnotations(w http.ResponseWriter, req *http.Request) {
 	var a annotate.Annotations
-	var startT *time.Time
-	var endT *time.Time
+	var startT time.Time
+	var endT time.Time
 	var err error
 	w.Header().Set("Content-Type", "application/json")
 	// Time
 	start := req.URL.Query().Get(annotate.StartDate)
 	end := req.URL.Query().Get(annotate.EndDate)
 	if start != "" {
-		s, err := time.Parse(time.RFC3339, start)
-		if err != nil {
-			serveError(w, fmt.Errorf("error parsing StartDate %v: %v", start, err))
+		s, rfcErr := time.Parse(time.RFC3339, start)
+		if rfcErr != nil {
+			epoch, epochErr := strconv.ParseInt(start, 10, 64)
+			if epochErr != nil {
+				serveError(w, fmt.Errorf("couldn't parse StartDate as RFC3339 or epoch: %v, %v", rfcErr, epochErr))
+			}
+			s = time.Unix(epoch, 0)
 		}
-		startT = &s
+		startT = s
 	}
 	if end != "" {
-		e, err := time.Parse(time.RFC3339, end)
-		if err != nil {
-			serveError(w, fmt.Errorf("error parsing EndDate %v: %v", end, err))
+		s, rfcErr := time.Parse(time.RFC3339, end)
+		if rfcErr != nil {
+			epoch, epochErr := strconv.ParseInt(start, 10, 64)
+			if epochErr != nil {
+				serveError(w, fmt.Errorf("couldn't parse EndDate as RFC3339 or epoch: %v, %v", rfcErr, epochErr))
+			}
+			s = time.Unix(epoch, 0)
 		}
-		endT = &e
+		endT = s
 	}
-
+	if end == "" {
+		endT = time.Now().UTC()
+	}
+	if start == "" {
+		startT = time.Now().Add(-time.Hour * 24)
+	}
 	// Other Fields
 	source := req.URL.Query().Get(annotate.Source)
 	host := req.URL.Query().Get(annotate.Host)
@@ -188,7 +229,7 @@ func GetAnnotations(w http.ResponseWriter, req *http.Request) {
 
 	// Execute
 	for _, b := range backends {
-		a, err = b.GetAnnotations(startT, endT, source, host, creationUser, owner, category)
+		a, err = b.GetAnnotations(&startT, &endT, source, host, creationUser, owner, category)
 		//TODO Collect errors and insert into the backends that we can
 		if err != nil {
 			serveError(w, err)
@@ -196,8 +237,7 @@ func GetAnnotations(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// Encode
-	err = json.NewEncoder(w).Encode(a)
-	if err != nil {
+	if err := formatPlural(a, w, req.URL.Query().Get("Epoch") == "1"); err != nil {
 		serveError(w, err)
 	}
 	return
