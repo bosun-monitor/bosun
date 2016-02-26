@@ -38,13 +38,16 @@ func InitPrograms(cpath string) {
 		return
 	}
 	for _, idir := range idirs {
-		i, err := strconv.Atoi(idir.Name())
+		idirname := idir.Name()
+		i, err := strconv.Atoi(idirname)
 		if err != nil || i < 0 {
-			slog.Infoln("invalid collector folder name:", idir.Name())
+			if idirname != "etc" && idirname != "lib" {
+				slog.Infoln("invalid collector folder name:", idirname)
+			}
 			continue
 		}
 		interval := time.Second * time.Duration(i)
-		dir, err := os.Open(filepath.Join(cdir.Name(), idir.Name()))
+		dir, err := os.Open(filepath.Join(cdir.Name(), idirname))
 		if err != nil {
 			slog.Infoln(err)
 			continue
