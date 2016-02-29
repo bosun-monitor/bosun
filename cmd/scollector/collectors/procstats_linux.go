@@ -53,7 +53,7 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 	if err := readLine("/proc/meminfo", func(s string) error {
 		s = strings.TrimSuffix(s, " kB")
 		m := strings.Split(s, ":")
-		if m == nil {
+		if len(m) < 2 {
 			return nil
 		}
 		m[1] = strings.TrimSpace(m[1])
@@ -75,7 +75,7 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 	}
 	if err := readLine("/proc/vmstat", func(s string) error {
 		m := strings.Split(s, " ")
-		if m == nil {
+		if len(m) < 2 {
 			return nil
 		}
 		switch m[0] {
@@ -100,7 +100,7 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 	var t_util int
 	if err := readLine("/proc/stat", func(s string) error {
 		m := strings.Fields(s)
-		if m == nil {
+		if len(m) < 2 {
 			return nil
 		}
 		switch {
