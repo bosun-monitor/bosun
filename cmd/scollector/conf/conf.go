@@ -202,6 +202,6 @@ type Oracle struct {
 }
 
 type OracleInstance struct {
-	ConnectString string
-	Role          string
+	ConnectionString string
+	Role             string
 }

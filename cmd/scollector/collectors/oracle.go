@@ -49,7 +49,7 @@ func c_oracle(name string, inst conf.OracleInstance) (opentsdb.MultiDataPoint, e
 		},
 	}
 
-	args := []string{"-S", inst.ConnectString}
+	args := []string{"-S", inst.ConnectionString}
 	if role := inst.Role; role != "" {
 		args = append(args, "as")
 		args = append(args, role)

@@ -3,6 +3,7 @@ package collectors
 import (
 	"encoding/json"
 	"os/exec"
+	"strings"
 	"time"
 
 	"bosun.org/metadata"
@@ -42,9 +43,30 @@ func c_varnish_unix() (opentsdb.MultiDataPoint, error) {
 			continue
 		}
 
-		ts := opentsdb.TagSet{"type": v.Type}
-		if v.SubType != "" {
-			ts.Merge(opentsdb.TagSet{"subtype": v.SubType})
+		ts := opentsdb.TagSet{}
+
+		// special case for backend stats. extract backend name, host and port, put
+		// them in tags and remove them in name.
+		// the format is like "name(host,,port)" for the "ident" field of "VBE" type
+		if v.Type == "VBE" {
+			subtype := v.SubType
+
+			name = strings.Replace(name, "."+subtype, "", -1)
+
+			idx := strings.Index(subtype, "(")
+			if idx < 0 || len(subtype)-idx < 4 {
+				// output format changed, ignore
+				continue
+			}
+
+			ss := strings.Split(subtype[idx+1:len(subtype)-1], ",")
+			if len(ss) != 3 {
+				// output format changed, ignore
+				continue
+			}
+
+			ts.Merge(opentsdb.TagSet{"backend": subtype[:idx]})
+			ts.Merge(opentsdb.TagSet{"endpoint": ss[0] + "_" + ss[2]})
 		}
 
 		rate := metadata.RateType(metadata.Gauge)
@@ -57,7 +79,7 @@ func c_varnish_unix() (opentsdb.MultiDataPoint, error) {
 			unit = metadata.Bytes
 		}
 
-		Add(&md, metric+name, v.Value, ts, rate, unit, v.Desc)
+		Add(&md, metric+strings.ToLower(name), v.Value, ts, rate, unit, v.Desc)
 	}
 	return md, nil
 }
