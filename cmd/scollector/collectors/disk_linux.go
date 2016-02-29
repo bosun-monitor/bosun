@@ -7,10 +7,10 @@ import (
 	"strconv"
 	"strings"
 
-	"bosun.org/_third_party/golang.org/x/sys/unix"
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
+	"golang.org/x/sys/unix"
 )
 
 func init() {
