@@ -165,11 +165,13 @@ func Search(s []string) []Collector {
 		return collectors
 	}
 	var r []Collector
+	sort.Strings(s)
+	i := sort.SearchStrings(s, "*")
+	IncludeAll := i < len(s) && s[i] == "*"
 	for _, c := range collectors {
 		if matchInvertPattern(c.Name(), s) {
 			continue
-		}
-		if matchPattern(c.Name(), s) {
+		} else if IncludeAll || matchPattern(c.Name(), s) {
 			r = append(r, c)
 		}
 	}

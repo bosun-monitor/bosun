@@ -100,6 +100,7 @@ func main() {
 	}
 	collectors.Init(conf)
 	for _, r := range conf.MetricFilters {
+		slog.Infof("Adding MetricFilter: %v\n", r)
 		check(collectors.AddMetricFilters(r))
 	}
 	for _, rmq := range conf.RabbitMQ {
