@@ -125,7 +125,19 @@ func main() {
 		check(collectors.AddProcessDotNetConfig(p))
 	}
 	for _, h := range conf.HTTPUnit {
-		freq := time.Second * time.Duration(h.Freq)
+		var freq time.Duration
+		var parseerr error
+		if h.Freq == "" {
+			freq = time.Minute * 5
+		} else {
+			freq, parseerr = time.ParseDuration(h.Freq)
+			if parseerr != nil {
+				slog.Fatal(parseerr)
+			}
+			if freq < time.Second {
+				slog.Fatalf("Invalid HTTPUnit frequency %s, cannot be less than 1 second.", h.Freq)
+			}
+		}
 		if h.TOML != "" {
 			check(collectors.HTTPUnitTOML(h.TOML, freq))
 		}

@@ -29,9 +29,6 @@ func HTTPUnitHiera(filename string, freq time.Duration) error {
 }
 
 func HTTPUnitPlans(name string, plans *httpunit.Plans, freq time.Duration) {
-	if freq < time.Second {
-		freq = time.Minute * 5
-	}
 	collectors = append(collectors, &IntervalCollector{
 		F: func() (opentsdb.MultiDataPoint, error) {
 			return cHTTPUnit(plans)

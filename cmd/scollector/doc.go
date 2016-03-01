@@ -217,14 +217,14 @@ ProcessDotNet.
 HTTPUnit (array of table, keys are TOML, Hiera): httpunit TOML and Hiera
 files to read and monitor. See https://github.com/StackExchange/httpunit
 for documentation about the toml file. TOML and Hiera may both be specified,
-or just one. Freq is collector frequency in seconds.
+or just one. Freq is collector frequency as a duration string (default 5m).
 
 	[[HTTPUnit]]
 	  TOML = "/path/to/httpunit.toml"
 	  Hiera = "/path/to/listeners.json"
 	[[HTTPUnit]]
 	  TOML = "/some/other.toml"
-	  Freq = 15
+	  Freq = "30s"
 
 Riak (array of table, keys are URL): Riak hosts to poll.
 
