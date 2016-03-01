@@ -22,8 +22,9 @@ The flags are:
 	-h=""
 		OpenTSDB or Bosun host. Overrides Host in conf file.
 	-f=""
-		Filters collectors matching these terms, separated by
-		comma. Overrides Filter in conf file.
+		Only include collectors matching these comma separated terms. Prefix
+		with - to invert match and exclude collectors matching those terms. Use
+		*,-term,-anotherterm to include all collectors except excluded terms.
 	-b=0
 		OpenTSDB batch size. Default is 500.
 	-conf=""
@@ -102,10 +103,12 @@ Default is 500.
 MaxQueueLen (integer): is the number of metrics keept internally.
 Default is 200000.
 
-Filter (array of string): filters collectors matching these terms.
+Filter (array of string): Only include collectors matching these terms. Prefix
+with - to invert match and exclude collectors matching those terms. Use
+*,-term,-anotherterm to include all collectors except excluded terms.
 
-MetricFilters (array of string): filters metrics matching these regular
-expressions.
+MetricFilters (array of string): only send metrics matching these regular
+expressions. Example ['^(win\.cpu|win\.system\..*)$', 'free']
 
 IfaceExpr (string): Replaces the default regular expression for interface name
 matching on Linux.
