@@ -17,6 +17,7 @@ import (
 	"syscall"
 	"time"
 
+	"bosun.org/_version"
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/sched"
 	"bosun.org/cmd/bosun/web"
@@ -26,7 +27,6 @@ import (
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
 	"bosun.org/util"
-	"bosun.org/version"
 	"github.com/facebookgo/httpcontrol"
 	"gopkg.in/fsnotify.v1"
 )

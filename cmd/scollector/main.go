@@ -18,6 +18,7 @@ import (
 	"strings"
 	"time"
 
+	"bosun.org/_version"
 	"bosun.org/cmd/scollector/collectors"
 	"bosun.org/cmd/scollector/conf"
 	"bosun.org/collect"
@@ -25,7 +26,6 @@ import (
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
 	"bosun.org/util"
-	"bosun.org/version"
 	"github.com/BurntSushi/toml"
 )
 
