@@ -26,6 +26,8 @@ metric "__all__" is a special key that will hold all values for the tag key, reg
 
 All Metrics:
 search:allMetrics -> hash of metric name to timestamp
+
+search:mts:{metric} -> all tag sets for a metric. Hash with time stamps
 */
 
 const Search_All = "__all__"
@@ -206,4 +208,41 @@ func (d *dataAccess) LoadLastInfos() (map[string]map[string]*LastInfo, error) {
 		return nil, slog.Wrap(err)
 	}
 	return m, nil
+}
+
+//This function not exposed on any public interface. See cmd/bosun/database/test/util/purge_search_data.go for usage.
+func (d *dataAccess) PurgeSearchData(metric string, noop bool) error {
+	defer collect.StartTimer("redis", opentsdb.TagSet{"op": "PurgeSearchData"})()
+	conn := d.GetConnection()
+	defer conn.Close()
+
+	tagKeys, err := d.GetTagKeysForMetric(metric)
+	if err != nil {
+		return err
+	}
+	fmt.Println("HDEL", searchAllMetricsKey)
+	if !noop {
+		_, err = conn.Do("HDEL", searchAllMetricsKey, metric)
+		if err != nil {
+			return err
+		}
+	}
+	hashesToDelete := []string{
+		searchMetricTagSetKey(metric),
+		searchTagkKey(metric),
+	}
+	for tagk := range tagKeys {
+		hashesToDelete = append(hashesToDelete, searchTagvKey(metric, tagk))
+	}
+	cmd := d.HCLEAR()
+	for _, hash := range hashesToDelete {
+		fmt.Println(cmd, hash)
+		if !noop {
+			_, err = conn.Do(cmd, hash)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
