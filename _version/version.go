@@ -1,6 +1,6 @@
 // Package version holds some version data common to bosun and scollector.
 // Most of these values will be inserted at build time with `-ldFlags` directives for official builds.
-package version // import "bosun.org/version"
+package version // import "bosun.org/_version"
 
 import (
 	"fmt"

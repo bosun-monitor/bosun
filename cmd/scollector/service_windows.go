@@ -6,8 +6,8 @@ import (
 	"os"
 	"time"
 
+	"bosun.org/_version"
 	"bosun.org/slog"
-	"bosun.org/version"
 	"golang.org/x/sys/windows/registry"
 	"golang.org/x/sys/windows/svc"
 	"golang.org/x/sys/windows/svc/debug"
