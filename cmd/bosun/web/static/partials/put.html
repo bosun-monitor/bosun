@@ -20,7 +20,7 @@
 				<div class="form-group">
 					<label class="control-label col-sm-2">Metric</label>
 					<div class="col-sm-10">
-						<input type="text" class="form-control" ng-model="metric" ng-options="m for m in metrics" ng-change="GetTagKByMetric()" limit="30" bs-typeahead>
+						<input type="text" class="form-control" ng-model="metric" bs-options="m for m in metrics" ng-change="GetTagKByMetric()" limit="30" bs-typeahead>
 					</div>
 				</div>
 			</div>

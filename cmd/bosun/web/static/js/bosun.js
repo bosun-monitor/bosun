@@ -42,21 +42,7 @@ bosunApp.config(['$routeProvider', '$locationProvider', '$httpProvider', functio
             when('/graph', {
             title: 'Graph',
             templateUrl: 'partials/graph.html',
-            controller: 'GraphCtrl',
-            resolve: {
-                'version': function ($http) {
-                    return $http({
-                        method: 'GET',
-                        url: '/api/opentsdb/version'
-                    });
-                },
-                'annotateEnabled': function ($http) {
-                    return $http({
-                        method: 'GET',
-                        url: '/api/annotate'
-                    });
-                }
-            }
+            controller: 'GraphCtrl'
         }).
             when('/host', {
             title: 'Host View',
@@ -89,6 +75,11 @@ bosunApp.config(['$routeProvider', '$locationProvider', '$httpProvider', functio
             title: 'Data Entry',
             templateUrl: 'partials/put.html',
             controller: 'PutCtrl'
+        }).
+            when('/annotation', {
+            title: 'Annotation',
+            templateUrl: 'partials/annotation.html',
+            controller: 'AnnotationCtrl'
         }).
             when('/incident', {
             title: 'Incident',
@@ -127,6 +118,22 @@ bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', '$q', '$r
             }
             return null;
         };
+        $http.get("/api/annotate")
+            .success(function (data) {
+            $scope.annotateEnabled = data;
+        })
+            .error(function (data) {
+            console.log(data);
+        });
+        $http.get("/api/opentsdb/version")
+            .success(function (data) {
+            $scope.version = data;
+            $scope.opentsdbEnabled = $scope.version.Major != 0 && $scope.version.Minor != 0;
+        })
+            .error(function (data) {
+            console.log(data);
+        });
+        ;
         $scope.json = function (v) {
             return JSON.stringify(v, null, '  ');
         };
@@ -364,17 +371,17 @@ bosunApp.filter('reverse', function () {
 });
 var timeFormat = 'YYYY-MM-DDTHH:mm:ssZ';
 var Annotation = (function () {
-    function Annotation(a) {
+    function Annotation(a, get) {
         a = a || {};
         this.Id = a.Id || "";
         this.Message = a.Message || "";
         this.StartDate = a.StartDate || "";
         this.EndDate = a.EndDate || "";
-        this.CreationUser = a.CreationUser || getUser() || "";
+        this.CreationUser = a.CreationUser || !get && getUser() || "";
         this.Url = a.Url || "";
         this.Source = a.Source || "bosun-ui";
         this.Host = a.Host || "";
-        this.Owner = a.Owner || getOwner() || "";
+        this.Owner = a.Owner || !get && getOwner() || "";
         this.Category = a.Category || "";
     }
     Annotation.prototype.setTimeUTC = function () {
@@ -431,6 +438,59 @@ bosunControllers.controller('ActionCtrl', ['$scope', '$http', '$location', '$rou
                 alert(error);
             });
         };
+    }]);
+bosunControllers.controller('AnnotationCtrl', ['$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
+        var search = $location.search();
+        $scope.id = search.id;
+        if ($scope.id && $scope.id != "") {
+            $http.get('/api/annotation/' + $scope.id)
+                .success(function (data) {
+                $scope.annotation = new Annotation(data, true);
+                $scope.error = "";
+            })
+                .error(function (data) {
+                $scope.error = "failed to get annotation with id: " + $scope.id + ", error: " + data;
+            });
+        }
+        else {
+            $scope.annotation = new Annotation();
+            $scope.annotation.setTimeUTC();
+        }
+        $http.get('/api/annotation/values/Owner')
+            .success(function (data) {
+            $scope.owners = data;
+        });
+        $http.get('/api/annotation/values/Category')
+            .success(function (data) {
+            $scope.categories = data;
+        });
+        $http.get('/api/annotation/values/Host')
+            .success(function (data) {
+            $scope.hosts = data;
+        });
+        $scope.submitAnnotation = function () { return $http.post('/api/annotation', $scope.annotation)
+            .success(function (data) {
+            $scope.annotation = new Annotation(data, true);
+            $scope.error = "";
+            $scope.submitSuccess = true;
+            $scope.deleteSuccess = false;
+        })
+            .error(function (error) {
+            $scope.error = error;
+            $scope.submitSuccess = false;
+        }); };
+        $scope.deleteAnnotation = function () { return $http.delete('/api/annotation/' + $scope.annotation.Id)
+            .success(function (data) {
+            $scope.error = "";
+            $scope.deleteSuccess = true;
+            $scope.submitSuccess = false;
+            $scope.annotation = new (Annotation);
+            $scope.annotation.setTimeUTC();
+        })
+            .error(function (error) {
+            $scope.error = "failed to delete annotation with id: " + $scope.annotation.Id + ", error: " + error;
+            $scope.deleteSuccess = false;
+        }); };
     }]);
 bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$route', '$timeout', '$sce', function ($scope, $http, $location, $route, $timeout, $sce) {
         var search = $location.search();
@@ -2110,9 +2170,7 @@ var Version = (function () {
     }
     return Version;
 })();
-bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route', '$timeout', 'version', 'annotateEnabled', function ($scope, $http, $location, $route, $timeout, $version, $annoteEnabled) {
-        $scope.version = $version.data;
-        $scope.annotateEnabled = $annoteEnabled.data;
+bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route', '$timeout', function ($scope, $http, $location, $route, $timeout) {
         $scope.aggregators = ["sum", "min", "max", "avg", "dev", "zimsum", "mimmin", "minmax"];
         $scope.dsaggregators = ["", "sum", "min", "max", "avg", "dev", "zimsum", "mimmin", "minmax"];
         $scope.filters = ["auto", "iliteral_or", "iwildcard", "literal_or", "not_iliteral_or", "not_literal_or", "regexp", "wildcard"];
