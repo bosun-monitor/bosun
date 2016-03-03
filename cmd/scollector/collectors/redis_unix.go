@@ -285,7 +285,7 @@ func redisInit() {
 				return nil
 			}
 			port := strings.Split(sp[2], ":")[1]
-			if port != "0" {
+			if port != "0" && InContainer(sp[0]) == false {
 				add(port)
 			}
 			return nil
