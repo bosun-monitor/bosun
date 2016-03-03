@@ -174,6 +174,7 @@ func vsphereHost(v *vsphere.Vsphere, md *opentsdb.MultiDataPoint, cpuIntegrators
 		return err
 	}
 	var Error error
+	counterInfo := make(map[int]MetricInfo)
 	for _, r := range res {
 		var name string
 		for _, p := range r.Props {
@@ -262,6 +263,10 @@ func vsphereHost(v *vsphere.Vsphere, md *opentsdb.MultiDataPoint, cpuIntegrators
 			}
 			Add(md, osCPU, cpuIntegrators[name](time.Now().Unix(), pct), tags, metadata.Counter, metadata.Pct, "")
 		}
+		err := vspherePerfCounters(v, md, &tags, "vsphere.perf", "HostSystem", r.ID, counterInfo)
+		if err != nil {
+			Error = err
+		}
 	}
 	return Error
 }
@@ -299,6 +304,7 @@ func vsphereGuest(vsphereHost string, v *vsphere.Vsphere, md *opentsdb.MultiData
 		return err
 	}
 	var Error error
+	counterInfo := make(map[int]MetricInfo)
 	for _, r := range res {
 		var name string
 		for _, p := range r.Props {
@@ -394,8 +400,117 @@ func vsphereGuest(vsphereHost string, v *vsphere.Vsphere, md *opentsdb.MultiData
 			Add(md, "vsphere.guest.mem.free", memFree, tags, metadata.Gauge, metadata.Bytes, "")
 			Add(md, "vsphere.guest.mem.percent_free", float64(memFree)/float64(memTotal)*100, tags, metadata.Gauge, metadata.Pct, "")
 		}
+		err := vspherePerfCounters(v, md, &tags, "vsphere.guest.perf", "VirtualMachine", r.ID, counterInfo)
+		if err != nil {
+			Error = err
+		}
 	}
 	return Error
+}
+
+type MetricInfo struct {
+	Metric      string
+	Unit        string
+	Rate        string
+	Description string
+}
+
+func vspherePerfCounters(v *vsphere.Vsphere, md *opentsdb.MultiDataPoint, tags *opentsdb.TagSet, metricprefix string, etype string, ename string, ci map[int]MetricInfo) error {
+	pm, err := v.PerformanceProvider(etype, ename)
+	if err != nil {
+		return fmt.Errorf("vsphere: couldn't get Performance Manager for %s %s: %v", etype, ename, err)
+	}
+
+	pems, err := v.PerfCountersValues(etype, ename, pm)
+	if err != nil {
+		return fmt.Errorf("vsphere: couldn't get PerfCountersValues for %s %s: %v", etype, ename, err)
+	}
+
+	if pems == nil || pems.Value == nil {
+		// Empty counters list
+		return nil
+	}
+
+	var counters bytes.Buffer
+	for _, pem := range pems.Value {
+		if _, ok := ci[pem.Id.CounterId] ; !ok {
+			counters.WriteString(fmt.Sprintf("<counterId>%d</counterId>", pem.Id.CounterId))
+		}
+	}
+
+	if counters.Len() > 0 {
+		pcis, err := v.PerfCounterInfos(counters.String())
+		if err != nil {
+			return fmt.Errorf("vsphere: couldn't get PerfCounterInfos for %s %s: %v", etype, ename, err)
+		}
+		for _, pci := range pcis {
+			if _, ok := ci[pci.Key] ; !ok {
+				var mi MetricInfo
+				mi.Metric = fmt.Sprintf("%s.%s.%s", metricprefix, pci.GroupInfo.Key, pci.NameInfo.Key)
+				mi.Unit = pci.UnitInfo.Key
+				mi.Rate = pci.StatsType
+				mi.Description = pci.NameInfo.Summary + fmt.Sprintf(" (%s %s, original units: %s)", pci.RollupType, mi.Rate, mi.Unit)
+				ci[pci.Key] = mi
+			}
+		}
+	}
+
+	for _, pem := range pems.Value {
+		var pemrate metadata.RateType
+		var pemunit metadata.Unit
+		var value float64
+		ctri := ci[pem.Id.CounterId]
+		value = float64(pem.Value)
+		switch ctri.Rate {
+		case "absolute":
+			pemrate = metadata.Counter
+		case "delta":
+			pemrate = metadata.Gauge
+		case "rate":
+			pemrate = metadata.Rate
+		default:
+			pemrate = metadata.Gauge
+		}
+		switch ctri.Unit {
+		case "joule":
+			pemunit = metadata.None
+		case "kiloBytes":
+			pemunit = metadata.Bytes
+			value = value * 1024
+		case "kiloBytesPerSecond":
+			pemunit = metadata.BytesPerSecond
+			value = value * 1024
+		case "megaBytes":
+			pemunit = metadata.Bytes
+			value = value * 1024 * 1024
+		case "megaBytesPerSecond":
+			pemunit = metadata.BytesPerSecond
+			value = value * 1024 * 1024
+		case "megaHertz":
+			pemunit = metadata.MHz
+		case "microsecond":
+			pemunit = metadata.MilliSecond
+			value = value / 1000
+		case "millisecond":
+			pemunit = metadata.MilliSecond
+		case "number":
+			pemunit = metadata.None
+		case "percent":
+			pemunit = metadata.Pct
+		case "second":
+			pemunit = metadata.Second
+		case "watt":
+			pemunit = metadata.Watt
+		default:
+			pemunit = metadata.None
+		}
+		tagset := tags.Copy()
+		if pem.Id.Instance != "" {
+			tagset = tagset.Merge(opentsdb.TagSet{"instance": pem.Id.Instance})
+		}
+		Add(md, ctri.Metric, value, tagset, pemrate, pemunit, ctri.Description)
+	}
+	return nil
 }
 
 const (
