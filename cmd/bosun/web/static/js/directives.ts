@@ -858,7 +858,7 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWi
                     .attr("dy", "1em")
                     .text(_.uniq(scope.data.map(v => { return v.Unit })).join("; "));
 
-                if (scope.annotateEnabled && scope.annotations.length != 0) {
+                if (scope.annotateEnabled) {
                     var rowId = {}; // annotation Id -> rowId
                     var rowEndDate = {}; // rowId -> EndDate
                     var maxRow = 0;
