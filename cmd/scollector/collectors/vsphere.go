@@ -433,7 +433,7 @@ func vspherePerfCounters(v *vsphere.Vsphere, md *opentsdb.MultiDataPoint, tags *
 
 	var counters bytes.Buffer
 	for _, pem := range pems.Value {
-		if _, ok := ci[pem.Id.CounterId] ; !ok {
+		if _, ok := ci[pem.Id.CounterId]; !ok {
 			counters.WriteString(fmt.Sprintf("<counterId>%d</counterId>", pem.Id.CounterId))
 		}
 	}
@@ -444,7 +444,7 @@ func vspherePerfCounters(v *vsphere.Vsphere, md *opentsdb.MultiDataPoint, tags *
 			return fmt.Errorf("vsphere: couldn't get PerfCounterInfos for %s %s: %v", etype, ename, err)
 		}
 		for _, pci := range pcis {
-			if _, ok := ci[pci.Key] ; !ok {
+			if _, ok := ci[pci.Key]; !ok {
 				var mi MetricInfo
 				mi.Metric = fmt.Sprintf("%s.%s.%s", metricprefix, pci.GroupInfo.Key, pci.NameInfo.Key)
 				mi.Unit = pci.UnitInfo.Key
