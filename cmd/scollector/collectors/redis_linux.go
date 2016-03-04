@@ -1,5 +1,3 @@
-// +build darwin linux
-
 package collectors
 
 import (
