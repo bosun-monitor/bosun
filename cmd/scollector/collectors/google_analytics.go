@@ -73,7 +73,11 @@ func c_google_analytics(clientid string, secret string, tokenstr string, sites [
 		}
 	}
 
-	return md, mErr
+	if len(mErr) == 0 {
+		return md, nil
+	} else {
+		return md, mErr
+	}
 }
 
 func getActiveUsersByDimension(md *opentsdb.MultiDataPoint, svc *analytics.Service, site conf.GoogleAnalyticsSite, dimension string) error {
