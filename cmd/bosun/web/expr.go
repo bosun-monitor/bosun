@@ -47,7 +47,7 @@ func Expr(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (v inter
 	varRegex := regexp.MustCompile(`(\$\w+)\s*=(.*)`)
 	for i, line := range lines {
 		line = strings.TrimSpace(line)
-		if line == "" {
+		if line == ""  || strings.HasPrefix(line, "#") {
 			continue
 		}
 		// last line is expression we care about
