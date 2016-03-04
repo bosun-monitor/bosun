@@ -57,6 +57,7 @@ const (
 	itemString
 	itemFunc
 	itemTripleQuotedString
+	itemPow // **
 )
 
 const eof = -1
@@ -252,6 +253,8 @@ func lexSymbol(l *lexer) stateFn {
 		l.emit(itemEq)
 	case "!=":
 		l.emit(itemNotEq)
+	case "**":
+		l.emit(itemPow)
 	case "+":
 		l.emit(itemPlus)
 	case "-":

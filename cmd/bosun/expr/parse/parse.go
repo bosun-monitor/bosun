@@ -310,7 +310,7 @@ func (t *Tree) M() Node {
 	n := t.F()
 	for {
 		switch t.peek().typ {
-		case itemMult, itemDiv, itemMod:
+		case itemMult, itemDiv, itemMod, itemPow:
 			n = newBinary(t.next(), n, t.F())
 		default:
 			return n
