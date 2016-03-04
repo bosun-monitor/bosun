@@ -19,7 +19,6 @@ func (s *Schedule) Run() error {
 		go s.PingHosts()
 	}
 	go s.dispatchNotifications()
-	go s.performSave()
 	go s.updateCheckContext()
 	for _, a := range s.Conf.Alerts {
 		go s.RunAlert(a)
@@ -28,7 +27,7 @@ func (s *Schedule) Run() error {
 }
 func (s *Schedule) updateCheckContext() {
 	for {
-		ctx := &checkContext{time.Now(), cache.New(0)}
+		ctx := &checkContext{utcNow(), cache.New(0)}
 		s.ctx = ctx
 		time.Sleep(s.Conf.CheckFrequency)
 		s.Lock("CollectStates")
@@ -40,7 +39,7 @@ func (s *Schedule) RunAlert(a *conf.Alert) {
 	for {
 		wait := time.After(s.Conf.CheckFrequency * time.Duration(a.RunEvery))
 		s.checkAlert(a)
-		s.LastCheck = time.Now()
+		s.LastCheck = utcNow()
 		<-wait
 	}
 }
@@ -51,7 +50,7 @@ func (s *Schedule) checkAlert(a *conf.Alert) {
 	rh := s.NewRunHistory(checkTime, checkCache)
 	s.CheckAlert(nil, rh, a)
 
-	start := time.Now()
+	start := utcNow()
 	s.RunHistory(rh)
 	slog.Infof("runHistory on %s took %v\n", a.Name, time.Since(start))
 }

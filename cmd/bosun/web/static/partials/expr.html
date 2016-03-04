@@ -6,6 +6,9 @@
 		height: 500px;
 		margin-bottom: 24px;
 	}
+	.chart .bar {
+		fill: #428bca;
+	}
 	.chart .x_tick .title {
 		bottom: -24px;
 	}
@@ -67,8 +70,10 @@
 <ul class="nav nav-tabs">
 	<li ng-class="{active: tab == 'results'}"><a href ng-click="tab = 'results'">Results</a></li>
 	<li ng-show="graph" ng-class="{active: tab == 'graph'}"><a href ng-click="tab = 'graph'">Graph</a></li>
+	<li ng-show="bar" ng-class="{active: tab == 'bar'}"><a href ng-click="tab = 'bar'">Bar Chart</a></li>
 </ul>
 <div class="tab-content">
 	<div class="tab-pane" ng-class="{active: tab == 'results'}" ts-results></div>
-	<div class="tab-pane chart" ng-class="{active: tab == 'graph'}" ng-if="tab == 'graph'" ts-graph data="graph" height="400"></div>
+	<div class="tab-pane chart active" ng-if="tab == 'graph'" ts-graph data="graph" height="600"></div>
+	<div class="tab-pane chart active" ng-if="tab == 'bar'" ts-bar data="bar" height="600"></div>
 </div>

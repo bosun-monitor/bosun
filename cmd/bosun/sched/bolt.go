@@ -3,118 +3,39 @@ package sched
 import (
 	"bytes"
 	"compress/gzip"
-	"crypto/md5"
-	"encoding/base64"
 	"encoding/gob"
-	"encoding/json"
 	"fmt"
-	"io"
-	"os"
 	"time"
 
-	"bosun.org/_third_party/github.com/boltdb/bolt"
-	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/database"
-	"bosun.org/collect"
+	"bosun.org/cmd/bosun/expr"
 	"bosun.org/metadata"
 	"bosun.org/models"
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
+	"github.com/boltdb/bolt"
 )
-
-func (s *Schedule) performSave() {
-	for {
-		time.Sleep(60 * 10 * time.Second) // wait 10 minutes to throttle.
-		s.save()
-	}
-}
-
-type counterWriter struct {
-	written int
-	w       io.Writer
-}
-
-func (c *counterWriter) Write(p []byte) (n int, err error) {
-	n, err = c.w.Write(p)
-	c.written += n
-	return n, err
-}
 
 const (
 	dbBucket           = "bindata"
 	dbConfigTextBucket = "configText"
-	dbNotifications    = "notifications"
-	dbSilence          = "silence"
-	dbStatus           = "status"
 )
-
-func (s *Schedule) save() {
-	if s.db == nil {
-		return
-	}
-	s.Lock("Save")
-	store := map[string]interface{}{
-		dbNotifications: s.Notifications,
-		dbSilence:       s.Silence,
-		dbStatus:        s.status,
-	}
-	tostore := make(map[string][]byte)
-	for name, data := range store {
-		f := new(bytes.Buffer)
-		gz := gzip.NewWriter(f)
-		cw := &counterWriter{w: gz}
-		enc := gob.NewEncoder(cw)
-		if err := enc.Encode(data); err != nil {
-			slog.Errorf("error saving %s: %v", name, err)
-			s.Unlock()
-			return
-		}
-		if err := gz.Flush(); err != nil {
-			slog.Errorf("gzip flush error saving %s: %v", name, err)
-		}
-		if err := gz.Close(); err != nil {
-			slog.Errorf("gzip close error saving %s: %v", name, err)
-		}
-		tostore[name] = f.Bytes()
-		slog.Infof("wrote %s: %v", name, conf.ByteSize(cw.written))
-		collect.Put("statefile.size", opentsdb.TagSet{"object": name}, cw.written)
-	}
-	s.Unlock()
-	err := s.db.Update(func(tx *bolt.Tx) error {
-		b, err := tx.CreateBucketIfNotExists([]byte(dbBucket))
-		if err != nil {
-			return err
-		}
-		for name, data := range tostore {
-			if err := b.Put([]byte(name), data); err != nil {
-				return err
-			}
-		}
-		return nil
-	})
-	if err != nil {
-		slog.Errorf("save db update error: %v", err)
-		return
-	}
-	fi, err := os.Stat(s.Conf.StateFile)
-	if err == nil {
-		collect.Put("statefile.size", opentsdb.TagSet{"object": "total"}, fi.Size())
-	}
-	slog.Infoln("save to db complete")
-}
 
 func decode(db *bolt.DB, name string, dst interface{}) error {
 	var data []byte
 	err := db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(dbBucket))
 		if b == nil {
-			return fmt.Errorf("unknown bucket: %v", dbBucket)
+			return nil
 		}
 		data = b.Get([]byte(name))
 		return nil
 	})
 	if err != nil {
 		return err
+	}
+	if len(data) == 0 {
+		return nil
 	}
 	gr, err := gzip.NewReader(bytes.NewReader(data))
 	if err != nil {
@@ -127,82 +48,18 @@ func decode(db *bolt.DB, name string, dst interface{}) error {
 // RestoreState restores notification and alert state from the file on disk.
 func (s *Schedule) RestoreState() error {
 	defer func() {
-		bosunStartupTime = time.Now()
+		bosunStartupTime = utcNow()
 	}()
 	slog.Infoln("RestoreState")
-	start := time.Now()
+	start := utcNow()
 	s.Lock("RestoreState")
 	defer s.Unlock()
 	s.Search.Lock()
 	defer s.Search.Unlock()
 
-	s.Notifications = nil
-	db := s.db
-	notifications := make(map[models.AlertKey]map[string]time.Time)
-	if err := decode(db, dbNotifications, &notifications); err != nil {
-		slog.Errorln(dbNotifications, err)
+	if err := migrateOldDataToRedis(s.db, s.DataAccess, s); err != nil {
+		return err
 	}
-	if err := decode(db, dbSilence, &s.Silence); err != nil {
-		slog.Errorln(dbSilence, err)
-	}
-
-	status := make(States)
-	if err := decode(db, dbStatus, &status); err != nil {
-		slog.Errorln(dbStatus, err)
-	}
-	clear := func(r *Result) {
-		if r == nil {
-			return
-		}
-		r.Computations = nil
-	}
-	for ak, st := range status {
-		a, present := s.Conf.Alerts[ak.Name()]
-		if !present {
-			slog.Errorln("sched: alert no longer present, ignoring:", ak)
-			continue
-		} else if s.Conf.Squelched(a, st.Group) {
-			slog.Infoln("sched: alert now squelched:", ak)
-			continue
-		} else {
-			t := a.Unknown
-			if t == 0 {
-				t = s.Conf.CheckFrequency
-			}
-			if t == 0 && st.Last().Status == StUnknown {
-				st.Append(&Event{Status: StNormal, IncidentId: st.Last().IncidentId})
-			}
-		}
-		clear(st.Result)
-		newHistory := []Event{}
-		for _, e := range st.History {
-			clear(e.Warn)
-			clear(e.Crit)
-			// Remove error events which no longer are a thing.
-			if e.Status <= StUnknown {
-				newHistory = append(newHistory, e)
-			}
-		}
-		st.History = newHistory
-		s.status[ak] = st
-		if a.Log && st.Open {
-			st.Open = false
-			slog.Infof("sched: alert %s is now log, closing, was %s", ak, st.Status())
-		}
-		for name, t := range notifications[ak] {
-			n, present := s.Conf.Notifications[name]
-			if !present {
-				slog.Infoln("sched: notification not present during restore:", name)
-				continue
-			}
-			if a.Log {
-				slog.Infoln("sched: alert is now log, removing notification:", ak)
-				continue
-			}
-			s.AddNotification(ak, n, t)
-		}
-	}
-	migrateOldDataToRedis(db, s.DataAccess)
 	// delete metrictags if they exist.
 	deleteKey(s.db, "metrictags")
 	slog.Infoln("RestoreState done in", time.Since(start))
@@ -214,60 +71,7 @@ type storedConfig struct {
 	LastUsed time.Time
 }
 
-// Saves the provided config text in state file for later access.
-// Returns a hash of the file to be used as a retreival key.
-func (s *Schedule) SaveTempConfig(text string) (hash string, err error) {
-	sig := md5.Sum([]byte(text))
-	b64 := base64.StdEncoding.EncodeToString(sig[0:5])
-	data := storedConfig{Text: text, LastUsed: time.Now()}
-	bindata, err := json.Marshal(data)
-	if err != nil {
-		return "", err
-	}
-	err = s.db.Update(func(tx *bolt.Tx) error {
-		b, err := tx.CreateBucketIfNotExists([]byte(dbConfigTextBucket))
-		if err != nil {
-			return err
-		}
-		return b.Put([]byte(b64), bindata)
-	})
-	if err != nil {
-		return "", err
-	}
-	return b64, nil
-}
-
-// Retreive the specified config text from state file.
-func (s *Schedule) LoadTempConfig(hash string) (text string, err error) {
-	config := storedConfig{}
-	err = s.db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(dbConfigTextBucket))
-		data := b.Get([]byte(hash))
-		if data == nil || len(data) == 0 {
-			return fmt.Errorf("Config text '%s' not found", hash)
-		}
-		return json.Unmarshal(data, &config)
-	})
-	if err != nil {
-		return "", err
-	}
-	go s.SaveTempConfig(config.Text) //refresh timestamp.
-	return config.Text, nil
-}
-
-func (s *Schedule) GetStateFileBackup() ([]byte, error) {
-	buf := bytes.Buffer{}
-	err := s.db.View(func(tx *bolt.Tx) error {
-		_, err := tx.WriteTo(&buf)
-		return err
-	})
-	if err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
-}
-
-func migrateOldDataToRedis(db *bolt.DB, data database.DataAccess) error {
+func migrateOldDataToRedis(db *bolt.DB, data database.DataAccess, s *Schedule) error {
 	if err := migrateMetricMetadata(db, data); err != nil {
 		return err
 	}
@@ -277,8 +81,42 @@ func migrateOldDataToRedis(db *bolt.DB, data database.DataAccess) error {
 	if err := migrateSearch(db, data); err != nil {
 		return err
 	}
-	if err := migrateIncidents(db, data); err != nil {
+	if err := migrateSilence(db, data); err != nil {
 		return err
+	}
+	if err := migrateState(db, data); err != nil {
+		return err
+	}
+	if err := migrateNotifications(db, s); err != nil {
+		return err
+	}
+	return nil
+}
+
+func migrateNotifications(db *bolt.DB, s *Schedule) error {
+	migrated, err := isMigrated(db, "notifications")
+	if err != nil {
+		return err
+	}
+	if !migrated {
+		slog.Info("Migrating notifications to new database format")
+		nots := map[models.AlertKey]map[string]time.Time{}
+		err := decode(db, "notifications", &nots)
+		if err != nil {
+			return err
+		}
+		for ak, ns := range nots {
+			for n, t := range ns {
+				not := s.Conf.Notifications[n]
+				if not == nil {
+					continue
+				}
+				if err = s.DataAccess.Notifications().InsertNotification(ak, n, t.Add(not.Timeout)); err != nil {
+					return nil
+				}
+			}
+		}
+		setMigrated(db, "notifications")
 	}
 	return nil
 }
@@ -386,7 +224,7 @@ func migrateSearch(db *bolt.DB, data database.DataAccess) error {
 				for tk, time := range v {
 					data.Search().AddTagKeyForMetric(metric, tk, time)
 				}
-				data.Search().AddMetric(metric, time.Now().Unix())
+				data.Search().AddMetric(metric, utcNow().Unix())
 			}
 		} else {
 			return err
@@ -410,43 +248,182 @@ func migrateSearch(db *bolt.DB, data database.DataAccess) error {
 	return nil
 }
 
-func migrateIncidents(db *bolt.DB, data database.DataAccess) error {
-	migrated, err := isMigrated(db, "incidents")
+func migrateSilence(db *bolt.DB, data database.DataAccess) error {
+	migrated, err := isMigrated(db, "silence")
 	if err != nil {
 		return err
 	}
 	if migrated {
 		return nil
 	}
-	slog.Info("migrating incidents")
-	incidents := map[uint64]*models.Incident{}
-	if err := decode(db, "incidents", &incidents); err != nil {
+	slog.Info("migrating silence")
+	silence := map[string]*models.Silence{}
+	if err := decode(db, "silence", &silence); err != nil {
 		return err
 	}
-	max := uint64(0)
-	for k, v := range incidents {
-		data.Incidents().UpdateIncident(k, v)
-		if k > max {
-			max = k
-		}
+	for _, v := range silence {
+		v.TagString = v.Tags.Tags()
+		data.Silence().AddSilence(v)
 	}
-
-	if err = data.Incidents().SetMaxId(max); err != nil {
+	if err = setMigrated(db, "silence"); err != nil {
 		return err
 	}
-	if err = setMigrated(db, "incidents"); err != nil {
-		return err
-	}
-
 	return nil
 }
 
+func migrateState(db *bolt.DB, data database.DataAccess) error {
+	migrated, err := isMigrated(db, "state")
+	if err != nil {
+		return err
+	}
+	if migrated {
+		return nil
+	}
+	//redefine the structs as they were when we gob encoded them
+	type Result struct {
+		*expr.Result
+		Expr string
+	}
+	mResult := func(r *Result) *models.Result {
+		if r == nil || r.Result == nil {
+			return &models.Result{}
+		}
+		v, _ := valueToFloat(r.Result.Value)
+		return &models.Result{
+			Computations: r.Result.Computations,
+			Value:        models.Float(v),
+			Expr:         r.Expr,
+		}
+	}
+	type Event struct {
+		Warn, Crit  *Result
+		Status      models.Status
+		Time        time.Time
+		Unevaluated bool
+		IncidentId  uint64
+	}
+	type State struct {
+		*Result
+		History      []Event
+		Actions      []models.Action
+		Touched      time.Time
+		Alert        string
+		Tags         string
+		Group        opentsdb.TagSet
+		Subject      string
+		Body         string
+		EmailBody    []byte
+		EmailSubject []byte
+		Attachments  []*models.Attachment
+		NeedAck      bool
+		Open         bool
+		Forgotten    bool
+		Unevaluated  bool
+		LastLogTime  time.Time
+	}
+	type OldStates map[models.AlertKey]*State
+	slog.Info("migrating state")
+	states := OldStates{}
+	if err := decode(db, "status", &states); err != nil {
+		return err
+	}
+	for ak, state := range states {
+		if len(state.History) == 0 {
+			continue
+		}
+		var thisId uint64
+		events := []Event{}
+		addIncident := func(saveBody bool) error {
+			if thisId == 0 || len(events) == 0 || state == nil {
+				return nil
+			}
+			incident := NewIncident(ak)
+			incident.Expr = state.Expr
+
+			incident.NeedAck = state.NeedAck
+			incident.Open = state.Open
+			incident.Result = mResult(state.Result)
+			incident.Unevaluated = state.Unevaluated
+			incident.Start = events[0].Time
+			incident.Id = int64(thisId)
+			incident.Subject = state.Subject
+			if saveBody {
+				incident.Body = state.Body
+			}
+			for _, ev := range events {
+				incident.CurrentStatus = ev.Status
+				mEvent := models.Event{
+					Crit:        mResult(ev.Crit),
+					Status:      ev.Status,
+					Time:        ev.Time,
+					Unevaluated: ev.Unevaluated,
+					Warn:        mResult(ev.Warn),
+				}
+				incident.Events = append(incident.Events, mEvent)
+				if ev.Status > incident.WorstStatus {
+					incident.WorstStatus = ev.Status
+				}
+				if ev.Status > models.StNormal {
+					incident.LastAbnormalStatus = ev.Status
+					incident.LastAbnormalTime = ev.Time.UTC().Unix()
+				}
+			}
+			for _, ac := range state.Actions {
+				if ac.Time.Before(incident.Start) {
+					continue
+				}
+				incident.Actions = append(incident.Actions, ac)
+				if ac.Time.After(incident.Events[len(incident.Events)-1].Time) && ac.Type == models.ActionClose {
+					incident.End = &ac.Time
+					break
+				}
+			}
+			if err := data.State().ImportIncidentState(incident); err != nil {
+				return err
+			}
+			return nil
+		}
+		//essentially a rle algorithm to assign events to incidents
+		for _, e := range state.History {
+			if e.Status > models.StUnknown {
+				continue
+			}
+			if e.IncidentId == 0 {
+				//include all non-assigned incidents up to the next non-match
+				events = append(events, e)
+				continue
+			}
+			if thisId == 0 {
+				thisId = e.IncidentId
+				events = append(events, e)
+			}
+			if e.IncidentId != thisId {
+				if err := addIncident(false); err != nil {
+					return err
+				}
+				thisId = e.IncidentId
+				events = []Event{e}
+
+			} else {
+				events = append(events, e)
+			}
+		}
+		if err := addIncident(true); err != nil {
+			return err
+		}
+	}
+	if err = setMigrated(db, "state"); err != nil {
+		return err
+	}
+	return nil
+}
 func isMigrated(db *bolt.DB, name string) (bool, error) {
 	found := false
 	err := db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(dbBucket))
 		if b == nil {
-			return fmt.Errorf("unknown bucket: %v", dbBucket)
+			found = true
+			return nil
 		}
 		if dat := b.Get([]byte("isMigrated:" + name)); dat != nil {
 			found = true

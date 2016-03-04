@@ -7,9 +7,9 @@ import (
 	"log"
 	"net/http"
 
-	"bosun.org/_third_party/github.com/BurntSushi/toml"
 	"bosun.org/cmd/scollector/collectors"
 	"bosun.org/cmd/scollector/conf"
+	"github.com/BurntSushi/toml"
 )
 
 var devMode = flag.Bool("dev", false, "Dev mode. Use html from file-system instead of embedded copy.")

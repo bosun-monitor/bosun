@@ -2,14 +2,15 @@ package collectors
 
 import (
 	"fmt"
+	"os/exec"
 	"regexp"
 	"strings"
 
-	"bosun.org/_third_party/github.com/coreos/go-systemd/dbus"
 	"bosun.org/cmd/scollector/conf"
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
 	"bosun.org/util"
+	"github.com/coreos/go-systemd/dbus"
 )
 
 type systemdServiceConfig struct {
@@ -21,15 +22,17 @@ var systemdServices []*systemdServiceConfig
 
 func init() {
 	registerInit(func(c *conf.Conf) {
-		for _, s := range c.SystemdService {
-			AddSystemdServiceConfig(s)
+		if _, err := exec.LookPath("systemctl"); err == nil {
+			for _, s := range c.SystemdService {
+				AddSystemdServiceConfig(s)
+			}
+			collectors = append(collectors, &IntervalCollector{
+				F: func() (opentsdb.MultiDataPoint, error) {
+					return c_systemd()
+				},
+				name: "c_systemd",
+			})
 		}
-		collectors = append(collectors, &IntervalCollector{
-			F: func() (opentsdb.MultiDataPoint, error) {
-				return c_systemd()
-			},
-			name: "c_systemd",
-		})
 	})
 }
 
@@ -112,7 +115,7 @@ func watchSystemdServiceProc(md *opentsdb.MultiDataPoint, conn *dbus.Conn, unit 
 	}
 
 	wp := WatchedProc{
-		Command:   cmdline[0],
+		Command:   regexp.MustCompile("^" + regexp.QuoteMeta(cmdline[0]) + "$"),
 		Name:      strings.TrimSuffix(unit.Name, ".service"),
 		Processes: make(map[string]int),
 		ArgMatch:  regexp.MustCompile(""),

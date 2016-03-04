@@ -150,3 +150,30 @@ func outputf(f func(string), format string, v ...interface{}) {
 func outputln(f func(string), v ...interface{}) {
 	out(f, fmt.Sprintln(v...))
 }
+
+type wrappedError struct {
+	error
+	line string
+}
+
+func (w wrappedError) Error() string {
+	return fmt.Sprintf("%s: %s", w.line, w.error.Error())
+}
+
+//Helper to wrap an error with relevant line information. Wrap an error when it enters "our" code before passing it up the stack.
+//This will help narrow down the source of the error.
+func Wrap(err error) error {
+	if err == nil {
+		return nil
+	}
+	if _, ok := err.(wrappedError); ok {
+		return err
+	}
+	line := ""
+	if _, filename, l, ok := runtime.Caller(1); ok {
+		line = fmt.Sprintf("%s:%d", filepath.Base(filename), l)
+	} else {
+		return err
+	}
+	return wrappedError{err, line}
+}

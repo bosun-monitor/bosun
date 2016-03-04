@@ -1,0 +1,5 @@
+ListenAddress = ":8070"
+
+[[ElasticClusters]]
+Servers = ["http://ny-devlogstash04:9200"]
+Index = "annotate"

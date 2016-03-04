@@ -421,41 +421,45 @@ func checkClean(s, t string) error {
 
 func collect() {
 	for {
-		mlock.Lock()
-		now := time.Now().Unix()
-		for _, c := range counters {
-			dp := &opentsdb.DataPoint{
-				Metric:    metricRoot + c.metric,
-				Timestamp: now,
-				Value:     c.value,
-				Tags:      c.ts,
-			}
-			tchan <- dp
-		}
-		for _, s := range sets {
-			dp := &opentsdb.DataPoint{
-				Metric:    metricRoot + s.metric,
-				Timestamp: now,
-				Value:     s.f(),
-				Tags:      s.ts,
-			}
-			tchan <- dp
-		}
-		for _, s := range puts {
-			dp := &opentsdb.DataPoint{
-				Metric:    metricRoot + s.metric,
-				Timestamp: now,
-				Value:     s.value,
-				Tags:      s.ts,
-			}
-			tchan <- dp
-		}
-		for _, am := range aggs {
-			am.Process(now)
-		}
-		puts = make(map[string]*putMetric)
-		aggs = make(map[string]*agMetric)
-		mlock.Unlock()
 		time.Sleep(Freq)
+		flushData()
 	}
+}
+
+func flushData() {
+	mlock.Lock()
+	now := time.Now().Unix()
+	for _, c := range counters {
+		dp := &opentsdb.DataPoint{
+			Metric:    metricRoot + c.metric,
+			Timestamp: now,
+			Value:     c.value,
+			Tags:      c.ts,
+		}
+		tchan <- dp
+	}
+	for _, s := range sets {
+		dp := &opentsdb.DataPoint{
+			Metric:    metricRoot + s.metric,
+			Timestamp: now,
+			Value:     s.f(),
+			Tags:      s.ts,
+		}
+		tchan <- dp
+	}
+	for _, s := range puts {
+		dp := &opentsdb.DataPoint{
+			Metric:    metricRoot + s.metric,
+			Timestamp: now,
+			Value:     s.value,
+			Tags:      s.ts,
+		}
+		tchan <- dp
+	}
+	for _, am := range aggs {
+		am.Process(now)
+	}
+	puts = make(map[string]*putMetric)
+	aggs = make(map[string]*agMetric)
+	mlock.Unlock()
 }

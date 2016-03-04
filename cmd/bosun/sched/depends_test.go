@@ -11,6 +11,7 @@ import (
 // Crit returns {a=b},{a=c}, but {a=b} is ignored by dependency expression.
 // Result should be {a=c} only.
 func TestDependency_Simple(t *testing.T) {
+	defer setup()()
 	testSched(t, &schedTest{
 		conf: `alert a {
 			crit = avg(q("avg:c{a=*}", "5m", "")) > 0
@@ -50,6 +51,7 @@ func TestDependency_Simple(t *testing.T) {
 
 // Crit and depends don't have same tag sets.
 func TestDependency_Overlap(t *testing.T) {
+	defer setup()()
 	testSched(t, &schedTest{
 		conf: `alert a {
 			crit = avg(q("avg:c{a=*,b=*}", "5m", "")) > 0
@@ -88,6 +90,7 @@ func TestDependency_Overlap(t *testing.T) {
 }
 
 func TestDependency_OtherAlert(t *testing.T) {
+	defer setup()()
 	testSched(t, &schedTest{
 		conf: `alert a {
 			crit = avg(q("avg:a{host=*,cpu=*}", "5m", "")) > 0
@@ -129,9 +132,7 @@ func TestDependency_OtherAlert(t *testing.T) {
 }
 
 func TestDependency_OtherAlert_Unknown(t *testing.T) {
-	state := NewStatus("a{host=ny02}")
-	state.Touched = queryTime.Add(-10 * time.Minute)
-	state.Append(&Event{Status: StNormal, Time: state.Touched})
+	defer setup()()
 
 	testSched(t, &schedTest{
 		conf: `alert a {
@@ -169,25 +170,18 @@ func TestDependency_OtherAlert_Unknown(t *testing.T) {
 			schedState{"a{host=ny02}", "unknown"}:      true,
 			schedState{"os.cpu{host=ny01}", "warning"}: true,
 		},
-		previous: map[models.AlertKey]*State{
-			"a{host=ny02}": state,
+		touched: map[models.AlertKey]time.Time{
+			"a{host=ny02}": queryTime.Add(-10 * time.Minute),
 		},
 	})
 }
 
 func TestDependency_OtherAlert_UnknownChain(t *testing.T) {
+	defer setup()()
 	ab := models.AlertKey("a{host=b}")
 	bb := models.AlertKey("b{host=b}")
 	cb := models.AlertKey("c{host=b}")
-	as := NewStatus(ab)
-	as.Touched = queryTime.Add(-time.Hour)
-	as.Append(&Event{Status: StNormal})
-	bs := NewStatus(ab)
-	bs.Touched = queryTime
-	bs.Append(&Event{Status: StNormal})
-	cs := NewStatus(ab)
-	cs.Touched = queryTime
-	cs.Append(&Event{Status: StNormal})
+
 	s := testSched(t, &schedTest{
 		conf: `
 		alert a {
@@ -215,28 +209,37 @@ func TestDependency_OtherAlert_UnknownChain(t *testing.T) {
 		state: map[schedState]bool{
 			schedState{string(ab), "unknown"}: true,
 		},
-		previous: map[models.AlertKey]*State{
-			ab: as,
-			bb: bs,
-			cb: cs,
+		touched: map[models.AlertKey]time.Time{
+			ab: queryTime.Add(-time.Hour),
+			bb: queryTime,
+			cb: queryTime,
 		},
 	})
-	if s.status[ab].Unevaluated {
-		t.Errorf("should not be unevaluated: %s", ab)
+	check := func(ak models.AlertKey, expec bool) {
+		_, uneval, err := s.DataAccess.State().GetUnknownAndUnevalAlertKeys(ak.Name())
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, ak2 := range uneval {
+			if ak2 == ak {
+				if !expec {
+					t.Fatalf("Should not be unevaluated: %s", ak)
+				} else {
+					return
+				}
+			}
+		}
+		if expec {
+			t.Fatalf("Should be unevaluated: %s", ak)
+		}
 	}
-	if !s.status[bb].Unevaluated {
-		t.Errorf("should be unevaluated: %s", bb)
-	}
-	if !s.status[cb].Unevaluated {
-		t.Errorf("should be unevaluated: %s", cb)
-	}
+	check(ab, false)
+	check(bb, true)
+	check(cb, true)
 }
 
 func TestDependency_Blocks_Unknown(t *testing.T) {
-	state := NewStatus("a{host=ny01}")
-	state.Touched = queryTime.Add(-10 * time.Minute)
-	state.Append(&Event{Status: StNormal, Time: state.Touched})
-
+	defer setup()()
 	testSched(t, &schedTest{
 		conf: `alert a {
 			depends = avg(q("avg:b{host=*}", "5m", "")) > 0
@@ -255,24 +258,14 @@ func TestDependency_Blocks_Unknown(t *testing.T) {
 			},
 		},
 		state: map[schedState]bool{},
-		previous: map[models.AlertKey]*State{
-			"a{host=ny01}": state,
+		touched: map[models.AlertKey]time.Time{
+			"a{host=ny01}": queryTime.Add(-10 * time.Minute),
 		},
 	})
 }
 
 func TestDependency_AlertFunctionHasNoResults(t *testing.T) {
-	pingState := NewStatus("a{host=ny01,source=bosun01}")
-	pingState.Touched = queryTime.Add(-5 * time.Minute)
-	pingState.Append(&Event{Status: StNormal, Time: pingState.Touched})
-
-	scollState := NewStatus("b{host=ny01}")
-	scollState.Touched = queryTime.Add(-10 * time.Minute)
-	scollState.Append(&Event{Status: StNormal, Time: scollState.Touched})
-
-	cpuState := NewStatus("c{host=ny01}")
-	cpuState.Touched = queryTime.Add(-10 * time.Minute)
-	cpuState.Append(&Event{Status: StWarning, Time: cpuState.Touched})
+	defer setup()()
 
 	testSched(t, &schedTest{
 		conf: `
@@ -304,10 +297,10 @@ alert c {
 		state: map[schedState]bool{
 			schedState{"a{host=ny01,source=bosun01}", "warning"}: true,
 		},
-		previous: map[models.AlertKey]*State{
-			"a{host=ny01,source=bosun01}": pingState,
-			"b{host=ny01}":                scollState,
-			"c{host=ny01}":                cpuState,
+		touched: map[models.AlertKey]time.Time{
+			"a{host=ny01,source=bosun01}": queryTime.Add(-5 * time.Minute),
+			"b{host=ny01}":                queryTime.Add(-10 * time.Minute),
+			"c{host=ny01}":                queryTime.Add(-10 * time.Minute),
 		},
 	})
 }

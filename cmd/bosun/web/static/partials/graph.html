@@ -24,7 +24,7 @@
 			<div class="form-group">
 				<input
 					type="text"
-					class="form-control col-sm-2"
+					class="form-control"
 					ng-model="end"
 					placeholder="End"
 					tooltip
@@ -40,12 +40,17 @@
 			</div>
 			<div class="checkbox" tooltip title="Refresh every five seconds">
 				<label>
-					<input type="checkbox" ng-model="refresh"> Auto Refresh
+					<input type="checkbox" ng-model="refresh"> Refresh
 				</label>
 			</div>
 			<div class="checkbox" tooltip title="Normalize each series to 0-100% of the max value of the series. This is helpful for viewing correlation with multiple series of different metrics">
 				<label>
 					<input type="checkbox" ng-model="normalize"> Normalize
+				</label>
+			</div>
+            <div class="checkbox" tooltip title="Show Annotations. Hold shift when brushing graph to create an annotation." ng-show="annotateEnabled">
+				<label>
+					<input type="checkbox" ng-model="showAnnotations" ng-change="setShowAnnotations()"> Annotations
 				</label>
 			</div>
 			<div class="pull-right" ng-show="url">
@@ -88,19 +93,19 @@
 						<div class="form-group">
 							<label class="col-sm-4 control-label">Metric</label>
 							<div class="col-sm-8">
-								<input type="text" class="form-control" ng-model="t.metric" ng-options="m for m in metrics" ng-change="GetTagKByMetric($index)" ng-init="GetTagKByMetric($index)" limit="100" bs-typeahead min-length="0" bs-typeahead>
+								<input type="text" class="form-control" ng-model="t.metric" bs-options="m for m in metrics" ng-change="GetTagKByMetric($index)" ng-init="GetTagKByMetric($index)" limit="100" bs-typeahead min-length="0" bs-typeahead>
 							</div>
 						</div>
 						<div class="form-group">
 							<label class="col-sm-4 control-label" tooltip title="The method used to combine multiple time series into a single time series. This behavior happens when specific or (*) values are omitted for tags.">Aggregator</label>
 							<div class="col-sm-8">
-								<select class="form-control" ng-model="t.aggregator" ng-options="agg for agg in aggregators"></select>
+								<select class="form-control" ng-model="t.aggregator" ng-options="agg as agg for agg in aggregators"></select>
 							</div>
 						</div>
 						<div class="form-group" ng-hide="autods">
 							<label class="col-sm-4 control-label" tooltip title="Downsample the data into fewer datapoints. Requires that the downsample window value is also provided.">Downsample</label>
 							<div class="col-sm-8">
-								<select ng-model="t.ds" ng-change="t.setDs()" ng-options="agg for agg in dsaggregators" class="form-control"></select>
+								<select ng-model="t.ds" ng-change="t.setDs()" ng-options="agg as agg for agg in dsaggregators" class="form-control"></select>
 							</div>
 						</div>
 						<div class="form-group" ng-hide="autods">
@@ -112,7 +117,7 @@
 						<div class="form-group" ng-class="{'has-error': !canAuto[t.metric] && t.derivative == 'auto'}">
 							<label class="col-sm-4 control-label" tooltip title="If not set to gauge, this returns a per-second rate of change between points. If the values always increase (except for resets and rollovers), use counter. If the values can go down, use rate. A warning color indicates auto will default to counter.">Type</label>
 							<div class="col-sm-8">
-								<select ng-model="t.derivative" ng-change="t.setDerivative()" ng-options="r for r in rate_options" class="form-control"></select>
+								<select ng-model="t.derivative" ng-change="t.setDerivative()" ng-options="r as r for r in rate_options" class="form-control"></select>
 							</div>
 						</div>
 						<div class="form-group" ng-show="t.derivative == 'counter'">
@@ -126,16 +131,16 @@
 						<div class="form-group" ng-repeat="k in sorted_tagks[$index]">
 							<label class="col-sm-2 control-label" tooltip title="Enter in values to filter tags. The first filter (function and value) will act as a group by function - each match will corespond to a series. The second filter for the tag will filter the results of the series; instead of generating a new series the filtered series will be aggregated.">{{k}} ({{tagvs[$parent.$index][k].length}})</label>
 							<div class="col-sm-2">
-								<select title="Function to be used for a groupby filter." class="form-control" ng-model="t.gbFilters[k].type" ng-options="f for f in filters"></select>
+								<select title="Function to be used for a groupby filter." class="form-control" ng-model="t.gbFilters[k].type" ng-options="f as f for f in filters"></select>
 							</div>
 							<div class="col-sm-3">
-								<input type="text" class="form-control" ng-model="t.gbFilters[k].filter" ng-options="tv for tv in tagvs[$parent.$index][k]" bs-typeahead min-length="0" limit="100" ng-disabled="!t.metric_tags[k]">
+								<input type="text" class="form-control" ng-model="t.gbFilters[k].filter" bs-options="tv for tv in tagvs[$parent.$index][k]" bs-typeahead min-length="0" limit="100" ng-disabled="!t.metric_tags[k]">
 							</div>
 							<div class="col-sm-2">
-								<select title="Function to be used for a non-groupby filter." class="form-control" ng-model="t.nGbFilters[k].type" ng-options="f for f in filters"></select>
+								<select title="Function to be used for a non-groupby filter." class="form-control" ng-model="t.nGbFilters[k].type" ng-options="f as f for f in filters"></select>
 							</div>
 							<div class="col-sm-3">
-								<input type="text" class="form-control" ng-model="t.nGbFilters[k].filter" ng-options="tv for tv in tagvs[$parent.$index][k]" bs-typeahead min-length="0" limit="100" ng-disabled="!t.metric_tags[k]">
+								<input type="text" class="form-control" ng-model="t.nGbFilters[k].filter" bs-options="tv for tv in tagvs[$parent.$index][k]" bs-typeahead min-length="0" limit="100" ng-disabled="!t.metric_tags[k]">
 							</div>
 						</div>
 					</form>
@@ -146,19 +151,19 @@
 						<div class="form-group">
 							<label class="col-sm-4 control-label">Metric</label>
 							<div class="col-sm-8">
-								<input type="text" class="form-control" ng-model="t.metric" ng-options="m for m in metrics" ng-change="GetTagKByMetric($index)" ng-init="GetTagKByMetric($index)" limit="100" bs-typeahead min-length="0" bs-typeahead>
+								<input type="text" class="form-control" ng-model="t.metric" bs-options="m for m in metrics" ng-change="GetTagKByMetric($index)" ng-init="GetTagKByMetric($index)" limit="100" bs-typeahead min-length="0" bs-typeahead>
 							</div>
 						</div>
 						<div class="form-group">
 							<label class="col-sm-4 control-label" tooltip title="The method used to combine multiple time series into a single time series. This behavior happens when specific or (*) values are omitted for tags.">Aggregator</label>
 							<div class="col-sm-8">
-								<select class="form-control" ng-model="t.aggregator" ng-options="agg for agg in aggregators"></select>
+								<select class="form-control" ng-model="t.aggregator" ng-options="agg as agg for agg in aggregators"></select>
 							</div>
 						</div>
 						<div class="form-group" ng-hide="autods">
 							<label class="col-sm-4 control-label" tooltip title="Downsample the data into fewer datapoints. Requires that the downsample window value is also provided.">Downsample</label>
 							<div class="col-sm-8">
-								<select ng-model="t.ds" ng-change="t.setDs()" ng-options="agg for agg in dsaggregators" class="form-control"></select>
+								<select ng-model="t.ds" ng-change="t.setDs()" ng-options="agg as agg for agg in dsaggregators" class="form-control"></select>
 							</div>
 						</div>
 						<div class="form-group" ng-hide="autods">
@@ -172,7 +177,7 @@
 						<div class="form-group" ng-class="{'has-error': !canAuto[t.metric] && t.derivative == 'auto'}">
 							<label class="col-sm-4 control-label" tooltip title="If not set to gauge, this returns a per-second rate of change between points. If the values always increase (except for resets and rollovers), use counter. If the values can go down, use rate. A warning color indicates auto will default to counter.">Series Type</label>
 							<div class="col-sm-8">
-								<select ng-model="t.derivative" ng-change="t.setDerivative()" ng-options="r for r in rate_options" class="form-control"></select>
+								<select ng-model="t.derivative" ng-change="t.setDerivative()" ng-options="r as r for r in rate_options" class="form-control"></select>
 							</div>
 						</div>
 						<div class="form-group" ng-show="t.derivative == 'counter'">
@@ -186,7 +191,7 @@
 						<div class="form-group" ng-repeat="k in sorted_tagks[$index]">
 							<label class="col-sm-4 control-label" tooltip title="Tag values for the tag. Can have multiple seperate by | which will return a time series for each one. Can also be * which returns a time series for each possible value.">{{k}} ({{tagvs[$parent.$index][k].length}})</label>
 							<div class="col-sm-8">
-								<input type="text" class="form-control" ng-model="t.tags[k]" ng-options="tv for tv in tagvs[$parent.$index][k]" bs-typeahead min-length="0" limit="100" ng-disabled="!t.metric_tags[k]">
+								<input type="text" class="form-control" ng-model="t.tags[k]" bs-options="tv for tv in tagvs[$parent.$index][k]" bs-typeahead min-length="0" limit="100" ng-disabled="!t.metric_tags[k]">
 							</div>
 						</div>
 					</form>
@@ -212,7 +217,7 @@
 </div>
 <div class="row">
 	<div class="col-lg-12">
-		<div id="chart" ts-graph data="result" height="400" bstart="start" bend="end" enable-brush="true" min="min" max="max" normalize="normalize"></div>
+		<div id="chart" ts-graph data="result" annotation="annotation" annotations="annotations" annotate-enabled="annotateEnabled" show-annotations="showAnnotations" height="400" bstart="start" bend="end" enable-brush="true" min="min" max="max" normalize="normalize"></div>
 	</div>
 </div>
 <div class="row" ng-show="queries">
@@ -242,4 +247,75 @@
 	<div class="col-lg-12">
 		<p class="text-right"><small>OpenTSDB Version {{version.Major}}.{{version.Minor}}</small></p>
 	</div>
+</div>
+
+<a data-toggle="modal" data-target="#annotationModal" id="modalShower"></a>
+<div class="modal" id="annotationModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">&times;</button>
+                <h4 class="modal-title" id="annotationModalLabel">Annotation</h4>
+            </div>
+            <div class="modal-body">
+                <form class="form-horizontal">
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label" ng-click="switch()">StartDate</label>
+                        <div class="col-sm-6">
+                            <input type="text" class="form-control" ng-model="annotation.StartDate">
+                            <p class="help-block">Format: YYYY-MM-DDTHH:mm:ssZ (RFC3339). If StartDate and EndDate are blank, the time is set to now. If one of the two is blank, the blank field will be set to the time of the other.</p>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label" ng-click="switch()">EndDate</label>
+                        <div class="col-sm-6">
+                            <input type="text" class="form-control" ng-model="annotation.EndDate">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label">CreationUser</label>
+                        <div class="col-sm-6">
+                            <input type="text" class="form-control" ng-model="annotation.CreationUser">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label">Url</label>
+                        <div class="col-sm-6">
+                            <input type="text" class="form-control" ng-model="annotation.Url">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label">Host</label>
+                        <div class="col-sm-6">
+                            <input type="text" class="form-control" ng-model="annotation.Host" bs-options="h for h in hosts" bs-typeahead>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label">Owner</label>
+                        <div class="col-sm-6">
+                            <input type="text" class="form-control" ng-model="annotation.Owner" bs-options="o for o in owners" bs-typeahead>
+                        </div>
+                    </div>
+                        <div class="form-group">
+                        <label class="col-sm-2 control-label">Category</label>
+                        <div class="col-sm-6">
+                            <input type="text" class="form-control" ng-model="annotation.Category" bs-options="c for c in categories" bs-typeahead>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label">Message</label>
+                        <div class="col-sm-10">
+                            <textarea class="form-control" ng-model="annotation.Message"></textarea>
+                        </div>
+                    </div>
+                    <div ng-show="annotation.Id != ''">Editing Annotation</div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-danger" ng-click="deleteAnnotation()" data-dismiss="modal" >Delete</button>
+                <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" ng-click="submitAnnotation()" data-dismiss="modal">Save changes</button>
+            </div>
+        </div>
+    </div>
 </div>

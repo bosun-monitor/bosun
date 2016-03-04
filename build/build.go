@@ -16,10 +16,11 @@ import (
 var (
 	shaFlag         = flag.String("sha", "", "SHA to embed.")
 	buildBosun      = flag.Bool("bosun", false, "Only build Bosun.")
+	buildTsdb       = flag.Bool("tsdbrelay", false, "Only build tsdbrelay")
 	buildScollector = flag.Bool("scollector", false, "Only build scollector.")
 	output          = flag.String("output", "", "Output directory; defaults to $GOPATH/bin.")
 
-	allProgs = []string{"bosun", "scollector"}
+	allProgs = []string{"bosun", "scollector", "tsdbrelay"}
 )
 
 func main() {
@@ -37,14 +38,15 @@ func main() {
 	}
 
 	timeStr := time.Now().UTC().Format("20060102150405")
-	ldFlags := fmt.Sprintf("-X bosun.org/version.VersionSHA=%s -X bosun.org/version.VersionDate=%s", sha, timeStr)
+	ldFlags := fmt.Sprintf("-X bosun.org/_version.VersionSHA=%s -X bosun.org/_version.VersionDate=%s", sha, timeStr)
 
 	progs := allProgs
 	if *buildBosun {
 		progs = []string{"bosun"}
-	}
-	if *buildScollector {
+	} else if *buildScollector {
 		progs = []string{"scollector"}
+	} else if *buildTsdb {
+		progs = []string{"tsdbrelay"}
 	}
 	for _, app := range progs {
 		fmt.Println("building", app)

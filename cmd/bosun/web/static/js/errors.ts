@@ -14,7 +14,7 @@ interface IErrorScope extends IBosunScope {
 bosunControllers.controller('ErrorCtrl', ['$scope', '$http', '$location', '$route', function($scope: IErrorScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService) {
 	$scope.loading = true
 	$http.get('/api/errors')
-		.success((data) => {
+		.success((data: any) => {
 			$scope.errors = [];
 			_(data).forEach((err,name)=>{
 				err.Name = name;

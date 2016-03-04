@@ -8,9 +8,9 @@ import (
 	"strconv"
 	"time"
 
-	"bosun.org/_third_party/gopkg.in/yaml.v1"
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
+	"gopkg.in/yaml.v1"
 )
 
 func init() {
@@ -107,7 +107,7 @@ func puppet_linux() (opentsdb.MultiDataPoint, error) {
 		}
 		if k == "total" {
 			AddTS(&md, "puppet.run_duration_total", last_run, metric, nil, metadata.Gauge, metadata.Second, descPuppetTotalTime)
-		} else {
+		} else if k != "last_run" {
 			AddTS(&md, "puppet.run_duration", last_run, metric, opentsdb.TagSet{"time": k}, metadata.Gauge, metadata.Second, descPuppetModuleTime)
 		}
 	}

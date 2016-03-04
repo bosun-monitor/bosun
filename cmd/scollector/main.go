@@ -18,7 +18,7 @@ import (
 	"strings"
 	"time"
 
-	"bosun.org/_third_party/github.com/BurntSushi/toml"
+	"bosun.org/_version"
 	"bosun.org/cmd/scollector/collectors"
 	"bosun.org/cmd/scollector/conf"
 	"bosun.org/collect"
@@ -26,7 +26,7 @@ import (
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
 	"bosun.org/util"
-	"bosun.org/version"
+	"github.com/BurntSushi/toml"
 )
 
 var (
@@ -100,6 +100,7 @@ func main() {
 	}
 	collectors.Init(conf)
 	for _, r := range conf.MetricFilters {
+		slog.Infof("Adding MetricFilter: %v\n", r)
 		check(collectors.AddMetricFilters(r))
 	}
 	for _, rmq := range conf.RabbitMQ {
@@ -124,19 +125,34 @@ func main() {
 		check(collectors.AddProcessDotNetConfig(p))
 	}
 	for _, h := range conf.HTTPUnit {
+		var freq time.Duration
+		var parseerr error
+		if h.Freq == "" {
+			freq = time.Minute * 5
+		} else {
+			freq, parseerr = time.ParseDuration(h.Freq)
+			if parseerr != nil {
+				slog.Fatal(parseerr)
+			}
+			if freq < time.Second {
+				slog.Fatalf("Invalid HTTPUnit frequency %s, cannot be less than 1 second.", h.Freq)
+			}
+		}
 		if h.TOML != "" {
-			check(collectors.HTTPUnitTOML(h.TOML))
+			check(collectors.HTTPUnitTOML(h.TOML, freq))
 		}
 		if h.Hiera != "" {
-			check(collectors.HTTPUnitHiera(h.Hiera))
+			check(collectors.HTTPUnitHiera(h.Hiera, freq))
 		}
-	}
-	for _, r := range conf.ElasticIndexFilters {
-		check(collectors.AddElasticIndexFilter(r))
 	}
 	for _, r := range conf.Riak {
 		check(collectors.Riak(r.URL))
 	}
+
+	for _, x := range conf.ExtraHop {
+		check(collectors.ExtraHop(x.Host, x.APIKey, x.FilterBy, x.FilterPercent))
+	}
+
 	if err != nil {
 		slog.Fatal(err)
 	}
@@ -157,6 +173,10 @@ func main() {
 	}
 	for _, col := range c {
 		col.Init()
+	}
+	err = collectors.AddTagOverrides(c, conf.TagOverride)
+	if err != nil {
+		slog.Fatalf("Error adding tag overrides: %s", err)
 	}
 	u, err := parseHost(conf.Host)
 	if *flagList {
@@ -213,6 +233,14 @@ func main() {
 	if *flagBatchSize > 0 {
 		collect.BatchSize = *flagBatchSize
 	}
+
+	if conf.MaxQueueLen != 0 {
+		if conf.MaxQueueLen < collect.BatchSize {
+			slog.Fatalf("MaxQueueLen must be >= %d (BatchSize)", collect.BatchSize)
+		}
+		collect.MaxQueueLen = conf.MaxQueueLen
+	}
+
 	go func() {
 		const maxMem = 500 * 1024 * 1024 // 500MB
 		var m runtime.MemStats

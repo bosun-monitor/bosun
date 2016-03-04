@@ -7,10 +7,10 @@ import (
 	"strings"
 	"time"
 
-	"bosun.org/_third_party/github.com/StackExchange/wmi"
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
+	"github.com/StackExchange/wmi"
 )
 
 func init() {
@@ -330,10 +330,10 @@ func c_network_windows_tcp() (opentsdb.MultiDataPoint, error) {
 	}
 	var md opentsdb.MultiDataPoint
 	for _, v := range dst {
-		Add(&md, "win.net.tcp.failures", v.ConnectionFailures, nil, metadata.Gauge, metadata.Connection, descWinNetTCPv4ConnectionFailures)
-		Add(&md, "win.net.tcp.active", v.ConnectionsActive, nil, metadata.Gauge, metadata.Connection, descWinNetTCPv4ConnectionsActive)
+		Add(&md, "win.net.tcp.failures", v.ConnectionFailures, nil, metadata.Counter, metadata.Connection, descWinNetTCPv4ConnectionFailures)
+		Add(&md, "win.net.tcp.active", v.ConnectionsActive, nil, metadata.Counter, metadata.Connection, descWinNetTCPv4ConnectionsActive)
 		Add(&md, "win.net.tcp.established", v.ConnectionsEstablished, nil, metadata.Gauge, metadata.Connection, descWinNetTCPv4ConnectionsEstablished)
-		Add(&md, "win.net.tcp.passive", v.ConnectionsPassive, nil, metadata.Gauge, metadata.Connection, descWinNetTCPv4ConnectionsPassive)
+		Add(&md, "win.net.tcp.passive", v.ConnectionsPassive, nil, metadata.Counter, metadata.Connection, descWinNetTCPv4ConnectionsPassive)
 		Add(&md, "win.net.tcp.reset", v.ConnectionsReset, nil, metadata.Gauge, metadata.Connection, descWinNetTCPv4ConnectionsReset)
 		Add(&md, "win.net.tcp.segments", v.SegmentsReceivedPersec, opentsdb.TagSet{"type": "received"}, metadata.Counter, metadata.PerSecond, descWinNetTCPv4SegmentsReceivedPersec)
 		Add(&md, "win.net.tcp.segments", v.SegmentsRetransmittedPersec, opentsdb.TagSet{"type": "retransmitted"}, metadata.Counter, metadata.PerSecond, descWinNetTCPv4SegmentsRetransmittedPersec)

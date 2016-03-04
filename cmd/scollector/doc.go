@@ -22,8 +22,9 @@ The flags are:
 	-h=""
 		OpenTSDB or Bosun host. Overrides Host in conf file.
 	-f=""
-		Filters collectors matching these terms, separated by
-		comma. Overrides Filter in conf file.
+		Only include collectors matching these comma separated terms. Prefix
+		with - to invert match and exclude collectors matching those terms. Use
+		*,-term,-anotherterm to include all collectors except excluded terms.
 	-b=0
 		OpenTSDB batch size. Default is 500.
 	-conf=""
@@ -99,10 +100,15 @@ Freq (integer): is the default frequency in seconds for most collectors.
 BatchSize (integer): is the number of metrics that will be sent in each batch.
 Default is 500.
 
-Filter (array of string): filters collectors matching these terms.
+MaxQueueLen (integer): is the number of metrics keept internally.
+Default is 200000.
 
-MetricFilters (array of string): filters metrics matching these regular
-expressions.
+Filter (array of string): Only include collectors matching these terms. Prefix
+with - to invert match and exclude collectors matching those terms. Use
+*,-term,-anotherterm to include all collectors except excluded terms.
+
+MetricFilters (array of string): only send metrics matching these regular
+expressions. Example ['^(win\.cpu|win\.system\..*)$', 'free']
 
 IfaceExpr (string): Replaces the default regular expression for interface name
 matching on Linux.
@@ -211,13 +217,14 @@ ProcessDotNet.
 HTTPUnit (array of table, keys are TOML, Hiera): httpunit TOML and Hiera
 files to read and monitor. See https://github.com/StackExchange/httpunit
 for documentation about the toml file. TOML and Hiera may both be specified,
-or just one.
+or just one. Freq is collector frequency as a duration string (default 5m).
 
 	[[HTTPUnit]]
 	  TOML = "/path/to/httpunit.toml"
 	  Hiera = "/path/to/listeners.json"
 	[[HTTPUnit]]
 	  TOML = "/some/other.toml"
+	  Freq = "30s"
 
 Riak (array of table, keys are URL): Riak hosts to poll.
 
@@ -247,6 +254,49 @@ RedisCounters: Reads a hash of metric/counters from a redis database.
 
 Expects data populated via bosun's udp listener in the "scollectorCounters" hash.
 
+ExtraHop (array of table): ExtraHop hosts to poll. The two filter options specify how
+scollector should filter out traffic from being submitted. The valid options are:
+
+	- namedprotocols (Only protocols that have an explicit name are submitted. The rest of the
+					  traffic will be pushed into proto=unnamed. So any protocol that begins with
+					  "tcp", "udp" or "SSL" will not be submitted (with the exception of SSL443).
+	- toppercent 	 (The top n% of traffic by volume will be submitted. The rest of the traffic
+				  	  will be pushed into proto=otherproto)
+	- none 			 (All protocols of any size will be submitted)
+
+FilterPercent applies when the FilterBy option is set to "toppercent". Only protocols that account
+for this much traffic will be logged. For example, if this is set to 90, then if the protocol
+accounts for less than 10% of the traffic, it will be dropped. This is OK if your traffic is
+heavilly dominated by asmall set of protocols, but if you have a fairly even spread of protocols
+then this filtering loses its usefulness.
+
+	[[ExtraHop]]
+	  Host = "extrahop01"
+	  APIkey = "abcdef1234567890"
+	  FilterBy = "toppercent"
+	  FilterPercent = 75
+
+LocalListener (string): local_listener will listen for HTTP request and forward
+the request to the configured OpenTSDB host while adding defined tags to
+metrics.
+
+	LocalListener = "localhost:4242"
+
+TagOverride (array of tables, key are CollectorExpr, MatchedTags and Tags): if a collector
+name matches CollectorExpr MatchedTags and Tags will be merged to all outgoing message
+produced by the collector, in that order. MatchedTags will apply a regexp to the tag
+defined by the key name and add tags based on the named match groups defined in the
+regexp. After tags defined in Tags will be merged, defining a tag as empty string
+will deletes it.
+
+	[[TagOverride]]
+	  CollectorExpr = 'cadvisor'
+	  [TagOverride.MatchedTags]
+	    docker_name = 'k8s_(?P<container_name>[^\.]+)\.[0-9a-z]+_(?P<pod_name>[^-]+)'
+	    docker_id = '^(?P<docker_id>.{12})'
+	  [TagOverride.Tags]
+	    docker_name = ''
+	    source = 'kubelet'
 
 Windows
 

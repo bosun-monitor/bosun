@@ -15,13 +15,21 @@ import (
 
 func (s *Schedule) dispatchNotifications() {
 	ticker := time.NewTicker(s.Conf.CheckFrequency * 2)
-	timeout := s.CheckNotifications()
+	var next <-chan time.Time
+	nextAt := func(t time.Time) {
+		diff := t.Sub(utcNow())
+		if diff <= 0 {
+			diff = time.Millisecond
+		}
+		next = time.After(diff)
+	}
+	nextAt(utcNow())
 	for {
 		select {
-		case <-time.After(timeout):
-			timeout = s.CheckNotifications()
+		case <-next:
+			nextAt(s.CheckNotifications())
 		case <-s.nc:
-			timeout = s.CheckNotifications()
+			nextAt(s.CheckNotifications())
 		case <-ticker.C:
 			s.sendUnknownNotifications()
 		}
@@ -29,23 +37,26 @@ func (s *Schedule) dispatchNotifications() {
 
 }
 
-func (s *Schedule) Notify(st *State, n *conf.Notification) {
+func (s *Schedule) Notify(st *models.IncidentState, n *conf.Notification) {
 	if s.pendingNotifications == nil {
-		s.pendingNotifications = make(map[*conf.Notification][]*State)
+		s.pendingNotifications = make(map[*conf.Notification][]*models.IncidentState)
 	}
 	s.pendingNotifications[n] = append(s.pendingNotifications[n], st)
 }
 
-// CheckNotifications processes past notification events. It returns the
-// duration until the soonest notification triggers.
-func (s *Schedule) CheckNotifications() time.Duration {
+// CheckNotifications processes past notification events. It returns the next time a notification is needed.
+func (s *Schedule) CheckNotifications() time.Time {
 	silenced := s.Silenced()
 	s.Lock("CheckNotifications")
 	defer s.Unlock()
-	notifications := s.Notifications
-	s.Notifications = nil
+	latestTime := utcNow()
+	notifications, err := s.DataAccess.Notifications().GetDueNotifications()
+	if err != nil {
+		slog.Error("Error getting notifications", err)
+		return utcNow().Add(time.Minute)
+	}
 	for ak, ns := range notifications {
-		if _, present := silenced[ak]; present {
+		if si := silenced(ak); si != nil {
 			slog.Infoln("silencing", ak)
 			continue
 		}
@@ -54,19 +65,26 @@ func (s *Schedule) CheckNotifications() time.Duration {
 			if !present {
 				continue
 			}
-			remaining := t.Add(n.Timeout).Sub(time.Now())
-			if remaining > 0 {
-				s.AddNotification(ak, n, t)
+			//If alert is currently unevaluated because of a dependency,
+			//simply requeue it until the dependency resolves itself.
+			_, uneval := s.GetUnknownAndUnevaluatedAlertKeys(ak.Name())
+			unevaluated := false
+			for _, un := range uneval {
+				if un == ak {
+					unevaluated = true
+					break
+				}
+			}
+			if unevaluated {
+				s.QueueNotification(ak, n, t.Add(time.Minute))
 				continue
 			}
-			st := s.status[ak]
+			st, err := s.DataAccess.State().GetLatestIncident(ak)
+			if err != nil {
+				slog.Error(err)
+				continue
+			}
 			if st == nil {
-				continue
-			}
-			// If alert is currently unevaluated because of a dependency,
-			// simply requeue it until the dependency resolves itself.
-			if st.Unevaluated {
-				s.AddNotification(ak, n, t)
 				continue
 			}
 			s.Notify(st, n)
@@ -74,33 +92,29 @@ func (s *Schedule) CheckNotifications() time.Duration {
 	}
 	s.sendNotifications(silenced)
 	s.pendingNotifications = nil
-	timeout := time.Hour
-	now := time.Now()
-	for _, ns := range s.Notifications {
-		for name, t := range ns {
-			n, present := s.Conf.Notifications[name]
-			if !present {
-				continue
-			}
-			remaining := t.Add(n.Timeout).Sub(now)
-			if remaining < timeout {
-				timeout = remaining
-			}
-		}
+	err = s.DataAccess.Notifications().ClearNotificationsBefore(latestTime)
+	if err != nil {
+		slog.Error("Error clearing notifications", err)
+		return utcNow().Add(time.Minute)
+	}
+	timeout, err := s.DataAccess.Notifications().GetNextNotificationTime()
+	if err != nil {
+		slog.Error("Error getting next notification time", err)
+		return utcNow().Add(time.Minute)
 	}
 	return timeout
 }
 
-func (s *Schedule) sendNotifications(silenced map[models.AlertKey]Silence) {
+func (s *Schedule) sendNotifications(silenced SilenceTester) {
 	if s.Conf.Quiet {
 		slog.Infoln("quiet mode prevented", len(s.pendingNotifications), "notifications")
 		return
 	}
 	for n, states := range s.pendingNotifications {
 		for _, st := range states {
-			ak := st.AlertKey()
-			_, silenced := silenced[ak]
-			if st.Last().Status == StUnknown {
+			ak := st.AlertKey
+			silenced := silenced(ak) != nil
+			if st.CurrentStatus == models.StUnknown {
 				if silenced {
 					slog.Infoln("silencing unknown", ak)
 					continue
@@ -112,7 +126,7 @@ func (s *Schedule) sendNotifications(silenced map[models.AlertKey]Silence) {
 				s.notify(st, n)
 			}
 			if n.Next != nil {
-				s.AddNotification(ak, n.Next, time.Now().UTC())
+				s.QueueNotification(ak, n.Next, utcNow())
 			}
 		}
 	}
@@ -124,7 +138,7 @@ func (s *Schedule) sendUnknownNotifications() {
 	for n, states := range s.pendingUnknowns {
 		ustates := make(States)
 		for _, st := range states {
-			ustates[st.AlertKey()] = st
+			ustates[st.AlertKey] = st
 		}
 		var c int
 		tHit := false
@@ -148,7 +162,7 @@ func (s *Schedule) sendUnknownNotifications() {
 			s.utnotify(oTSets, n)
 		}
 	}
-	s.pendingUnknowns = make(map[*conf.Notification][]*State)
+	s.pendingUnknowns = make(map[*conf.Notification][]*models.IncidentState)
 }
 
 var unknownMultiGroup = ttemplate.Must(ttemplate.New("unknownMultiGroup").Parse(`
@@ -168,14 +182,20 @@ var unknownMultiGroup = ttemplate.Must(ttemplate.New("unknownMultiGroup").Parse(
 	</ul>
 	`))
 
-func (s *Schedule) notify(st *State, n *conf.Notification) {
-	n.Notify(st.Subject, st.Body, st.EmailSubject, st.EmailBody, s.Conf, string(st.AlertKey()), st.Attachments...)
+func (s *Schedule) notify(st *models.IncidentState, n *conf.Notification) {
+	if len(st.EmailSubject) == 0 {
+		st.EmailSubject = []byte(st.Subject)
+	}
+	if len(st.EmailBody) == 0 {
+		st.EmailBody = []byte(st.Body)
+	}
+	n.Notify(st.Subject, st.Body, st.EmailSubject, st.EmailBody, s.Conf, string(st.AlertKey), st.Attachments...)
 }
 
 // utnotify is single notification for N unknown groups into a single notification
 func (s *Schedule) utnotify(groups map[string]models.AlertKeys, n *conf.Notification) {
 	var total int
-	now := time.Now().UTC()
+	now := utcNow()
 	for _, group := range groups {
 		// Don't know what the following line does, just copied from unotify
 		s.Group[now] = group
@@ -210,7 +230,7 @@ var defaultUnknownTemplate = &conf.Template{
 func (s *Schedule) unotify(name string, group models.AlertKeys, n *conf.Notification) {
 	subject := new(bytes.Buffer)
 	body := new(bytes.Buffer)
-	now := time.Now().UTC()
+	now := utcNow()
 	s.Group[now] = group
 	t := s.Conf.UnknownTemplate
 	if t == nil {
@@ -230,14 +250,8 @@ func (s *Schedule) unotify(name string, group models.AlertKeys, n *conf.Notifica
 	n.Notify(subject.String(), body.String(), subject.Bytes(), body.Bytes(), s.Conf, name)
 }
 
-func (s *Schedule) AddNotification(ak models.AlertKey, n *conf.Notification, started time.Time) {
-	if s.Notifications == nil {
-		s.Notifications = make(map[models.AlertKey]map[string]time.Time)
-	}
-	if s.Notifications[ak] == nil {
-		s.Notifications[ak] = make(map[string]time.Time)
-	}
-	s.Notifications[ak][n.Name] = started
+func (s *Schedule) QueueNotification(ak models.AlertKey, n *conf.Notification, started time.Time) error {
+	return s.DataAccess.Notifications().InsertNotification(ak, n.Name, started.Add(n.Timeout))
 }
 
 var actionNotificationSubjectTemplate *ttemplate.Template
@@ -247,7 +261,7 @@ func init() {
 	subject := `{{$first := index .States 0}}{{$count := len .States}}
 {{.User}} {{.ActionType}}
 {{if gt $count 1}} {{$count}} Alerts. 
-{{else}} Incident #{{$first.Last.IncidentId}} ({{$first.Subject}}) 
+{{else}} Incident #{{$first.Id}} ({{$first.Subject}}) 
 {{end}}`
 	body := `{{$count := len .States}}{{.User}} {{.ActionType}} {{$count}} alert{{if gt $count 1}}s{{end}}: <br/>
 <strong>Message:</strong> {{.Message}} <br/>
@@ -255,7 +269,7 @@ func init() {
 <ul>
 	{{range .States}}
 		<li>
-			<a href="{{$.IncidentLink .Last.IncidentId}}">#{{.Last.IncidentId}}:</a> 
+			<a href="{{$.IncidentLink .Id}}">#{{.Id}}:</a> 
 			{{.Subject}}
 		</li>
 	{{end}}
@@ -264,11 +278,13 @@ func init() {
 	actionNotificationBodyTemplate = htemplate.Must(htemplate.New("").Parse(body))
 }
 
-func (s *Schedule) ActionNotify(at ActionType, user, message string, aks []models.AlertKey) {
-	groupings := s.groupActionNotifications(aks)
-
+func (s *Schedule) ActionNotify(at models.ActionType, user, message string, aks []models.AlertKey) error {
+	groupings, err := s.groupActionNotifications(aks)
+	if err != nil {
+		return err
+	}
 	for notification, states := range groupings {
-		incidents := []*State{}
+		incidents := []*models.IncidentState{}
 		for _, state := range states {
 			incidents = append(incidents, state)
 		}
@@ -289,18 +305,22 @@ func (s *Schedule) ActionNotify(at ActionType, user, message string, aks []model
 
 		notification.Notify(subject, buf.String(), []byte(subject), buf.Bytes(), s.Conf, "actionNotification")
 	}
+	return nil
 }
 
-func (s *Schedule) groupActionNotifications(aks []models.AlertKey) map[*conf.Notification][]*State {
-	groupings := make(map[*conf.Notification][]*State)
+func (s *Schedule) groupActionNotifications(aks []models.AlertKey) (map[*conf.Notification][]*models.IncidentState, error) {
+	groupings := make(map[*conf.Notification][]*models.IncidentState)
 	for _, ak := range aks {
 		alert := s.Conf.Alerts[ak.Name()]
-		status := s.GetStatus(ak)
+		status, err := s.DataAccess.State().GetLatestIncident(ak)
+		if err != nil {
+			return nil, err
+		}
 		if alert == nil || status == nil {
 			continue
 		}
 		var n *conf.Notifications
-		if status.Status() == StWarning {
+		if status.WorstStatus == models.StWarning || alert.CritNotification == nil {
 			n = alert.WarnNotification
 		} else {
 			n = alert.CritNotification
@@ -316,5 +336,5 @@ func (s *Schedule) groupActionNotifications(aks []models.AlertKey) map[*conf.Not
 			groupings[not] = append(groupings[not], status)
 		}
 	}
-	return groupings
+	return groupings, nil
 }

@@ -26,6 +26,8 @@ type IntervalCollector struct {
 	// internal use
 	sync.Mutex
 	enabled bool
+
+	TagOverride
 }
 
 func (c *IntervalCollector) Init() {
@@ -68,6 +70,7 @@ func (c *IntervalCollector) Run(dpchan chan<- *opentsdb.DataPoint, quit <-chan s
 				Add(&md, "scollector.collector.error", result, tags, metadata.Gauge, metadata.Ok, "Status of collector run. 1=Error, 0=Success.")
 			}
 			for _, dp := range md {
+				c.ApplyTagOverrides(dp.Tags)
 				dpchan <- dp
 			}
 		}

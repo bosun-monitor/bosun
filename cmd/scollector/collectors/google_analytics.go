@@ -9,14 +9,14 @@ import (
 	"strconv"
 	"time"
 
-	analytics "bosun.org/_third_party/google.golang.org/api/analytics/v3"
+	analytics "google.golang.org/api/analytics/v3"
 
-	"bosun.org/_third_party/golang.org/x/net/context"
-	"bosun.org/_third_party/golang.org/x/oauth2"
-	"bosun.org/_third_party/golang.org/x/oauth2/google"
 	"bosun.org/cmd/scollector/conf"
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
+	"golang.org/x/net/context"
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/google"
 )
 
 const descActiveUsers = "Number of unique users actively visiting the site."
@@ -86,7 +86,10 @@ func getActiveUsersByDimension(md *opentsdb.MultiDataPoint, svc *analytics.Servi
 	for _, row := range data.Rows {
 		// key will always be an string of the dimension we care about.
 		// For example, 'Chrome' would be a key for the 'browser' dimension.
-		key := row[0]
+		key, _ := opentsdb.Clean(row[0])
+		if key == "" {
+			key = "__blank__"
+		}
 		value, err := strconv.Atoi(row[1])
 		if err != nil {
 			return fmt.Errorf("Error parsing GA data: %s", err)

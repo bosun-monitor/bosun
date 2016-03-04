@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"bosun.org/_third_party/github.com/MiniProfiler/go/miniprofiler"
-	"bosun.org/_third_party/github.com/influxdb/influxdb/client"
 	"bosun.org/opentsdb"
+	"github.com/MiniProfiler/go/miniprofiler"
+	"github.com/influxdata/influxdb/client"
 )
 
 const influxTimeFmt = time.RFC3339Nano

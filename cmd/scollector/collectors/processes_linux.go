@@ -25,6 +25,25 @@ func AddProcessConfig(params conf.ProcessParams) error {
 
 var watchedProcs = []*WatchedProc{}
 
+// linuxCoreCount counts the number of logical cpus since that is how cpu ticks
+// are tracked
+func linuxCoreCount() (c int64, err error) {
+	if err = readLine("/proc/cpuinfo", func(s string) (err error) {
+		f := strings.Fields(s)
+		if len(f) > 2 && f[0] == "processor" {
+			c++
+			return
+		}
+		return
+	}); err != nil {
+		return c, fmt.Errorf("failed to read /proc/cpuinfo to get cpu core count: %v", err)
+	}
+	if c == 0 {
+		return c, fmt.Errorf("got a core count of 0, expected at least one core")
+	}
+	return
+}
+
 func WatchProcesses() {
 	if len(watchedProcs) == 0 {
 		return
@@ -40,6 +59,9 @@ func WatchProcesses() {
 func linuxProcMonitor(w *WatchedProc, md *opentsdb.MultiDataPoint) error {
 	var err error
 	var processCount int
+	var totalCPU int64
+	var totalVirtualMem int64
+	var totalRSSMem int64
 	for pid, id := range w.Processes {
 		file_status, e := os.Stat("/proc/" + pid)
 		if e != nil {
@@ -100,10 +122,29 @@ func linuxProcMonitor(w *WatchedProc, md *opentsdb.MultiDataPoint) error {
 			}
 		}
 		start_ts := file_status.ModTime().Unix()
+		user, err := strconv.ParseInt(stats[13], 10, 64)
+		if err != nil {
+			return fmt.Errorf("failed to convert process user cpu: %v", err)
+		}
+		sys, err := strconv.ParseInt(stats[14], 10, 64)
+		if err != nil {
+			return fmt.Errorf("failed to convert process system cpu: %v", err)
+		}
+		totalCPU += user + sys
 		Add(md, "linux.proc.cpu", stats[13], opentsdb.TagSet{"type": "user"}.Merge(tags), metadata.Counter, metadata.Pct, descLinuxProcCPUUser)
 		Add(md, "linux.proc.cpu", stats[14], opentsdb.TagSet{"type": "system"}.Merge(tags), metadata.Counter, metadata.Pct, descLinuxProcCPUSystem)
 		Add(md, "linux.proc.mem.fault", stats[9], opentsdb.TagSet{"type": "minflt"}.Merge(tags), metadata.Counter, metadata.Fault, descLinuxProcMemFaultMin)
 		Add(md, "linux.proc.mem.fault", stats[11], opentsdb.TagSet{"type": "majflt"}.Merge(tags), metadata.Counter, metadata.Fault, descLinuxProcMemFaultMax)
+		virtual, err := strconv.ParseInt(stats[22], 10, 64)
+		if err != nil {
+			return fmt.Errorf("failed to convert process user cpu: %v", err)
+		}
+		totalVirtualMem += virtual
+		rss, err := strconv.ParseInt(stats[23], 10, 64)
+		if err != nil {
+			return fmt.Errorf("failed to convert process system cpu: %v", err)
+		}
+		totalRSSMem += rss
 		Add(md, "linux.proc.mem.virtual", stats[22], tags, metadata.Gauge, metadata.Bytes, descLinuxProcMemVirtual)
 		Add(md, "linux.proc.mem.rss", stats[23], tags, metadata.Gauge, metadata.Page, descLinuxProcMemRss)
 		Add(md, "linux.proc.char_io", io[0], opentsdb.TagSet{"type": "read"}.Merge(tags), metadata.Counter, metadata.Bytes, descLinuxProcCharIoRead)
@@ -116,8 +157,19 @@ func linuxProcMonitor(w *WatchedProc, md *opentsdb.MultiDataPoint) error {
 		Add(md, "linux.proc.start_time", start_ts, tags, metadata.Gauge, metadata.Timestamp, descLinuxProcStartTS)
 		Add(md, "linux.proc.uptime", now()-start_ts, tags, metadata.Gauge, metadata.Second, descLinuxProcUptime)
 	}
+	coreCount, err := linuxCoreCount()
+	if err != nil {
+		return fmt.Errorf("failed to get core count: %v", err)
+	}
+	tsName := opentsdb.TagSet{"name": w.Name}
+	if processCount > 0 {
+		Add(md, osProcCPU, float64(totalCPU)/float64(coreCount), tsName, metadata.Counter, metadata.Pct, osProcCPUDesc)
+		Add(md, osProcMemReal, totalRSSMem*int64(os.Getpagesize()), tsName, metadata.Gauge, metadata.Bytes, osProcMemRealDesc)
+		Add(md, osProcMemVirtual, totalVirtualMem, tsName, metadata.Gauge, metadata.Bytes, osProcMemVirtualDesc)
+		Add(md, osProcCount, processCount, tsName, metadata.Gauge, metadata.Process, osProcCountDesc)
+	}
 	if w.IncludeCount {
-		Add(md, "linux.proc.count", processCount, opentsdb.TagSet{"name": w.Name}, metadata.Gauge, metadata.Process, descLinuxProcCount)
+		Add(md, "linux.proc.count", processCount, tsName, metadata.Gauge, metadata.Process, descLinuxProcCount)
 	}
 	return err
 }
@@ -228,7 +280,7 @@ func NewWatchedProc(params conf.ProcessParams) (*WatchedProc, error) {
 		return nil, fmt.Errorf("bad process name: %v", params.Name)
 	}
 	return &WatchedProc{
-		Command:      params.Command,
+		Command:      regexp.MustCompile(params.Command),
 		Name:         params.Name,
 		IncludeCount: params.IncludeCount,
 		Processes:    make(map[string]int),
@@ -238,7 +290,7 @@ func NewWatchedProc(params conf.ProcessParams) (*WatchedProc, error) {
 }
 
 type WatchedProc struct {
-	Command      string
+	Command      *regexp.Regexp
 	Name         string
 	IncludeCount bool
 	Processes    map[string]int
@@ -252,7 +304,7 @@ func (w *WatchedProc) Check(procs []*Process) {
 		if _, ok := w.Processes[l.Pid]; ok {
 			continue
 		}
-		if !strings.Contains(l.Command, w.Command) {
+		if !w.Command.MatchString(l.Command) {
 			continue
 		}
 		if !w.ArgMatch.MatchString(l.Arguments) {
@@ -283,4 +335,15 @@ func (i *idPool) get() int {
 
 func (i *idPool) put(v int) {
 	i.free = append(i.free, v)
+}
+
+// InContainer detects if a process is running in a Linux container.
+func InContainer(pid string) bool {
+	pidNameSpaceFile := fmt.Sprintf("/proc/%v/ns/pid", pid)
+	if pidNameSpace, err := os.Readlink(pidNameSpaceFile); err == nil {
+		if initNameSpace, err := os.Readlink("/proc/1/ns/pid"); err == nil {
+			return initNameSpace != pidNameSpace
+		}
+	}
+	return false
 }

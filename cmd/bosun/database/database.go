@@ -7,20 +7,23 @@ import (
 	"log"
 	"time"
 
-	"bosun.org/_third_party/github.com/garyburd/redigo/redis"
-	"bosun.org/_third_party/github.com/siddontang/ledisdb/config"
-	"bosun.org/_third_party/github.com/siddontang/ledisdb/server"
 	"bosun.org/collect"
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
+	"github.com/garyburd/redigo/redis"
+	"github.com/siddontang/ledisdb/config"
+	"github.com/siddontang/ledisdb/server"
 )
 
 // Core data access interface for everything sched needs
 type DataAccess interface {
 	Metadata() MetadataDataAccess
+	Configs() ConfigDataAccess
 	Search() SearchDataAccess
 	Errors() ErrorDataAccess
-	Incidents() IncidentDataAccess
+	State() StateDataAccess
+	Silence() SilenceDataAccess
+	Notifications() NotificationDataAccess
 }
 
 type MetadataDataAccess interface {
@@ -60,13 +63,13 @@ type dataAccess struct {
 }
 
 // Create a new data access object pointed at the specified address. isRedis parameter used to distinguish true redis from ledis in-proc.
-func NewDataAccess(addr string, isRedis bool) DataAccess {
-	return newDataAccess(addr, isRedis)
+func NewDataAccess(addr string, isRedis bool, redisDb int, redisPass string) DataAccess {
+	return newDataAccess(addr, isRedis, redisDb, redisPass)
 }
 
-func newDataAccess(addr string, isRedis bool) *dataAccess {
+func newDataAccess(addr string, isRedis bool, redisDb int, redisPass string) *dataAccess {
 	return &dataAccess{
-		pool:    newPool(addr, "", 0, isRedis, 1000, true),
+		pool:    newPool(addr, redisPass, redisDb, isRedis, 1000, true),
 		isRedis: isRedis,
 	}
 }
@@ -149,4 +152,11 @@ func (d *dataAccess) LMCLEAR(key string, value string) (string, []interface{}) {
 		return "LREM", []interface{}{key, 0, value}
 	}
 	return "LMCLEAR", []interface{}{key, value}
+}
+
+func (d *dataAccess) HSCAN() string {
+	if d.isRedis {
+		return "HSCAN"
+	}
+	return "XHSCAN"
 }

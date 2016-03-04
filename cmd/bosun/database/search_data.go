@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"strconv"
 
-	"bosun.org/_third_party/github.com/garyburd/redigo/redis"
 	"bosun.org/collect"
 	"bosun.org/opentsdb"
+	"bosun.org/slog"
 	"bosun.org/util"
+	"github.com/garyburd/redigo/redis"
 )
 
 /*
@@ -53,7 +54,7 @@ func (d *dataAccess) AddMetricForTag(tagK, tagV, metric string, time int64) erro
 	defer conn.Close()
 
 	_, err := conn.Do("HSET", searchMetricKey(tagK, tagV), metric, time)
-	return err
+	return slog.Wrap(err)
 }
 
 func (d *dataAccess) GetMetricsForTag(tagK, tagV string) (map[string]int64, error) {
@@ -65,6 +66,9 @@ func (d *dataAccess) GetMetricsForTag(tagK, tagV string) (map[string]int64, erro
 }
 
 func stringInt64Map(d interface{}, err error) (map[string]int64, error) {
+	if err != nil {
+		return nil, err
+	}
 	vals, err := redis.Strings(d, err)
 	if err != nil {
 		return nil, err
@@ -74,7 +78,7 @@ func stringInt64Map(d interface{}, err error) (map[string]int64, error) {
 		time, _ := strconv.ParseInt(vals[i], 10, 64)
 		result[vals[i-1]] = time
 	}
-	return result, err
+	return result, slog.Wrap(err)
 }
 
 func (d *dataAccess) AddTagKeyForMetric(metric, tagK string, time int64) error {
@@ -83,7 +87,7 @@ func (d *dataAccess) AddTagKeyForMetric(metric, tagK string, time int64) error {
 	defer conn.Close()
 
 	_, err := conn.Do("HSET", searchTagkKey(metric), tagK, time)
-	return err
+	return slog.Wrap(err)
 }
 
 func (d *dataAccess) GetTagKeysForMetric(metric string) (map[string]int64, error) {
@@ -100,7 +104,7 @@ func (d *dataAccess) AddMetric(metric string, time int64) error {
 	defer conn.Close()
 
 	_, err := conn.Do("HSET", searchAllMetricsKey, metric, time)
-	return err
+	return slog.Wrap(err)
 }
 func (d *dataAccess) GetAllMetrics() (map[string]int64, error) {
 	defer collect.StartTimer("redis", opentsdb.TagSet{"op": "GetAllMetrics"})()
@@ -116,8 +120,9 @@ func (d *dataAccess) AddTagValue(metric, tagK, tagV string, time int64) error {
 	defer conn.Close()
 
 	_, err := conn.Do("HSET", searchTagvKey(metric, tagK), tagV, time)
-	return err
+	return slog.Wrap(err)
 }
+
 func (d *dataAccess) GetTagValues(metric, tagK string) (map[string]int64, error) {
 	defer collect.StartTimer("redis", opentsdb.TagSet{"op": "GetTagValues"})()
 	conn := d.GetConnection()
@@ -132,27 +137,45 @@ func (d *dataAccess) AddMetricTagSet(metric, tagSet string, time int64) error {
 	defer conn.Close()
 
 	_, err := conn.Do("HSET", searchMetricTagSetKey(metric), tagSet, time)
-	return err
+	return slog.Wrap(err)
 }
+
 func (d *dataAccess) GetMetricTagSets(metric string, tags opentsdb.TagSet) (map[string]int64, error) {
 	defer collect.StartTimer("redis", opentsdb.TagSet{"op": "GetMetricTagSets"})()
 	conn := d.GetConnection()
 	defer conn.Close()
 
-	mtss, err := stringInt64Map(conn.Do("HGETALL", searchMetricTagSetKey(metric)))
-	if err != nil {
-		return nil, err
-	}
-	for mts := range mtss {
-		ts, err := opentsdb.ParseTags(mts)
+	var cursor = "0"
+	result := map[string]int64{}
+
+	for {
+		vals, err := redis.Values(conn.Do(d.HSCAN(), searchMetricTagSetKey(metric), cursor))
 		if err != nil {
-			return nil, err
+			return nil, slog.Wrap(err)
 		}
-		if !ts.Subset(tags) {
-			delete(mtss, mts)
+		cursor, err = redis.String(vals[0], nil)
+		if err != nil {
+			return nil, slog.Wrap(err)
+		}
+		mtss, err := stringInt64Map(vals[1], nil)
+		if err != nil {
+			return nil, slog.Wrap(err)
+		}
+		for mts, t := range mtss {
+			ts, err := opentsdb.ParseTags(mts)
+			if err != nil {
+				return nil, slog.Wrap(err)
+			}
+			if ts.Subset(tags) {
+				result[mts] = t
+			}
+		}
+
+		if cursor == "" || cursor == "0" {
+			break
 		}
 	}
-	return mtss, nil
+	return result, nil
 }
 
 func (d *dataAccess) BackupLastInfos(m map[string]map[string]*LastInfo) error {
@@ -162,10 +185,10 @@ func (d *dataAccess) BackupLastInfos(m map[string]map[string]*LastInfo) error {
 
 	dat, err := util.MarshalGzipJson(m)
 	if err != nil {
-		return err
+		return slog.Wrap(err)
 	}
 	_, err = conn.Do("SET", "search:last", dat)
-	return err
+	return slog.Wrap(err)
 }
 
 func (d *dataAccess) LoadLastInfos() (map[string]map[string]*LastInfo, error) {
@@ -175,12 +198,12 @@ func (d *dataAccess) LoadLastInfos() (map[string]map[string]*LastInfo, error) {
 
 	b, err := redis.Bytes(conn.Do("GET", "search:last"))
 	if err != nil {
-		return nil, err
+		return nil, slog.Wrap(err)
 	}
 	var m map[string]map[string]*LastInfo
 	err = util.UnmarshalGzipJson(b, &m)
 	if err != nil {
-		return nil, err
+		return nil, slog.Wrap(err)
 	}
 	return m, nil
 }

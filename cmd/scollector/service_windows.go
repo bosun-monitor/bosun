@@ -6,13 +6,13 @@ import (
 	"os"
 	"time"
 
-	"bosun.org/_third_party/golang.org/x/sys/windows/registry"
-	"bosun.org/_third_party/golang.org/x/sys/windows/svc"
-	"bosun.org/_third_party/golang.org/x/sys/windows/svc/debug"
-	"bosun.org/_third_party/golang.org/x/sys/windows/svc/eventlog"
-	"bosun.org/_third_party/golang.org/x/sys/windows/svc/mgr"
+	"bosun.org/_version"
 	"bosun.org/slog"
-	"bosun.org/version"
+	"golang.org/x/sys/windows/registry"
+	"golang.org/x/sys/windows/svc"
+	"golang.org/x/sys/windows/svc/debug"
+	"golang.org/x/sys/windows/svc/eventlog"
+	"golang.org/x/sys/windows/svc/mgr"
 )
 
 var win_service_command = flag.String("winsvc", "", "For Windows Service, can be install, remove, start, stop")

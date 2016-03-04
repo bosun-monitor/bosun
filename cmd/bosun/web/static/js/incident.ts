@@ -13,10 +13,10 @@ bosunControllers.controller('IncidentCtrl', ['$scope', '$http', '$location', '$r
 		return
 	}
 	$http.get('/api/incidents/events?id='+id)
-		.success((data) => {
-			$scope.incident = data.Incident;
-			$scope.events = data.Events;
+		.success((data: any) => {
+			$scope.incident = data;
 			$scope.actions = data.Actions;
+			$scope.events = data.Events;
 		})
 		.error(err => {
 			$scope.error = err;

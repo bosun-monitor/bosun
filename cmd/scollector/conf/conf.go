@@ -23,6 +23,8 @@ type Conf struct {
 	Freq int
 	// BatchSize is the number of metrics that will be sent in each batch.
 	BatchSize int
+	// MaxQueueLen is the number of metrics keept internally.
+	MaxQueueLen int
 	// Filter filters collectors matching these terms.
 	Filter []string
 	// PProf is an IP:Port binding to be used for debugging with pprof package.
@@ -60,6 +62,10 @@ type Conf struct {
 	GoogleAnalytics     []GoogleAnalytics
 	Cadvisor            []Cadvisor
 	RedisCounters       []RedisCounters
+	ExtraHop            []ExtraHop
+	LocalListener       string
+	TagOverride         []TagOverride
+	HadoopHost          string
 }
 
 type HAProxy struct {
@@ -151,6 +157,7 @@ type ProcessDotNet struct {
 type HTTPUnit struct {
 	TOML  string
 	Hiera string
+	Freq  string
 }
 
 type Riak struct {
@@ -173,4 +180,17 @@ type Cadvisor struct {
 type RedisCounters struct {
 	Server   string
 	Database int
+}
+
+type ExtraHop struct {
+	Host          string
+	APIKey        string
+	FilterBy      string
+	FilterPercent int
+}
+
+type TagOverride struct {
+	CollectorExpr string
+	MatchedTags   map[string]string
+	Tags          map[string]string
 }

@@ -8,16 +8,18 @@ import (
 	"html/template"
 	"io"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
 
-	"bosun.org/_third_party/github.com/MiniProfiler/go/miniprofiler"
-	"bosun.org/_third_party/github.com/gorilla/mux"
+	"bosun.org/_version"
 	"bosun.org/cmd/bosun/conf"
+	"bosun.org/cmd/bosun/database"
 	"bosun.org/cmd/bosun/sched"
 	"bosun.org/collect"
 	"bosun.org/metadata"
@@ -25,13 +27,19 @@ import (
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
 	"bosun.org/util"
-	"bosun.org/version"
+
+	"github.com/MiniProfiler/go/miniprofiler"
+	"github.com/gorilla/mux"
+	"github.com/kylebrandt/annotate/backend"
+	"github.com/kylebrandt/annotate/web"
 )
 
 var (
-	indexTemplate func() *template.Template
-	router        = mux.NewRouter()
-	schedule      = sched.DefaultSched
+	indexTemplate   func() *template.Template
+	router          = mux.NewRouter()
+	schedule        = sched.DefaultSched
+	InternetProxy   *url.URL
+	annotateBackend backend.Backend
 )
 
 const (
@@ -46,6 +54,7 @@ func init() {
 	miniprofiler.Enable = func(r *http.Request) bool {
 		return r.Header.Get(miniprofilerHeader) != ""
 	}
+
 	metadata.AddMetricMeta("bosun.search.puts_relayed", metadata.Counter, metadata.Request,
 		"The count of api put requests sent to Bosun for relaying to the backend server.")
 	metadata.AddMetricMeta("bosun.search.datapoints_relayed", metadata.Counter, metadata.Item,
@@ -82,10 +91,10 @@ func Listen(listenAddr string, devMode bool, tsdbHost string) error {
 		router.HandleFunc("/api/index", IndexTSDB)
 		router.Handle("/api/put", Relay(tsdbHost))
 	}
+
 	router.HandleFunc("/api/", APIRedirect)
 	router.Handle("/api/action", JSON(Action))
 	router.Handle("/api/alerts", JSON(Alerts))
-	router.Handle("/api/backup", JSON(Backup))
 	router.Handle("/api/config", miniprofiler.NewHandler(Config))
 	router.Handle("/api/config_test", miniprofiler.NewHandler(ConfigTest))
 	router.Handle("/api/egraph/{bs}.svg", JSON(ExprGraph))
@@ -102,6 +111,7 @@ func Listen(listenAddr string, devMode bool, tsdbHost string) error {
 	router.Handle("/api/metadata/put", JSON(PutMetadata))
 	router.Handle("/api/metadata/delete", JSON(DeleteMetadata)).Methods("DELETE")
 	router.Handle("/api/metric", JSON(UniqueMetrics))
+	router.Handle("/api/metric/{tagk}", JSON(MetricsByTagKey))
 	router.Handle("/api/metric/{tagk}/{tagv}", JSON(MetricsByTagPair))
 	router.Handle("/api/rule", JSON(Rule))
 	router.HandleFunc("/api/shorten", Shorten)
@@ -114,6 +124,25 @@ func Listen(listenAddr string, devMode bool, tsdbHost string) error {
 	router.Handle("/api/tagv/{tagk}/{metric}", JSON(TagValuesByMetricTagKey))
 	router.Handle("/api/tagsets/{metric}", JSON(FilteredTagsetsByMetric))
 	router.Handle("/api/opentsdb/version", JSON(OpenTSDBVersion))
+	router.Handle("/api/annotate", JSON(AnnotateEnabled))
+
+	// Annotations
+	if schedule.Conf.AnnotateEnabled() {
+		var err error
+		index := schedule.Conf.AnnotateIndex
+		if index == "" {
+			index = "annotate"
+		}
+		annotateBackend, err = backend.NewElastic(schedule.Conf.AnnotateElasticHosts, index)
+		if err != nil {
+			return err
+		}
+		if err := annotateBackend.InitBackend(); err != nil {
+			return err
+		}
+		web.AddRoutes(router, "/api", []backend.Backend{annotateBackend}, false, false)
+	}
+
 	router.HandleFunc("/api/version", Version)
 	router.Handle("/api/debug/schedlock", JSON(ScheduleLockStatus))
 	http.Handle("/", miniprofiler.NewHandler(Index))
@@ -283,7 +312,20 @@ func Shorten(w http.ResponseWriter, r *http.Request) {
 		serveError(w, err)
 		return
 	}
-	req, err := http.Post(u.String(), "application/json", bytes.NewBuffer(j))
+
+	transport := &http.Transport{
+		Dial: (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}).Dial,
+		TLSHandshakeTimeout: 10 * time.Second,
+	}
+	if InternetProxy != nil {
+		transport.Proxy = http.ProxyURL(InternetProxy)
+	}
+	c := http.Client{Transport: transport}
+
+	req, err := c.Post(u.String(), "application/json", bytes.NewBuffer(j))
 	if err != nil {
 		serveError(w, err)
 		return
@@ -304,7 +346,14 @@ func HealthCheck(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (
 }
 
 func OpenTSDBVersion(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	return schedule.Conf.TSDBContext().Version(), nil
+	if schedule.Conf.TSDBContext() != nil {
+		return schedule.Conf.TSDBContext().Version(), nil
+	}
+	return opentsdb.Version{0, 0}, nil
+}
+
+func AnnotateEnabled(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	return schedule.Conf.AnnotateEnabled(), nil
 }
 
 func PutMetadata(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
@@ -358,25 +407,62 @@ func GetMetadata(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (
 	return schedule.GetMetadata(r.FormValue("metric"), tags)
 }
 
+type MetricMetaTagKeys struct {
+	*database.MetricMetadata
+	TagKeys []string
+}
+
 func MetadataMetrics(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	metric := r.FormValue("metric")
-	if metric == "" {
-		return nil, fmt.Errorf("metric required")
+	if metric != "" {
+		m, err := schedule.MetadataMetrics(metric)
+		if err != nil {
+			return nil, err
+		}
+		keymap, err := schedule.DataAccess.Search().GetTagKeysForMetric(metric)
+		if err != nil {
+			return nil, err
+		}
+		var keys []string
+		for k := range keymap {
+			keys = append(keys, k)
+		}
+		return &MetricMetaTagKeys{
+			MetricMetadata: m,
+			TagKeys:        keys,
+		}, nil
 	}
-	return schedule.MetadataMetrics(metric)
+	all := make(map[string]*MetricMetaTagKeys)
+	metrics, err := schedule.DataAccess.Search().GetAllMetrics()
+	if err != nil {
+		return nil, err
+	}
+	for metric := range metrics {
+		if strings.HasPrefix(metric, "__") {
+			continue
+		}
+		m, err := schedule.MetadataMetrics(metric)
+		if err != nil {
+			return nil, err
+		}
+		keymap, err := schedule.DataAccess.Search().GetTagKeysForMetric(metric)
+		if err != nil {
+			return nil, err
+		}
+		var keys []string
+		for k := range keymap {
+			keys = append(keys, k)
+		}
+		all[metric] = &MetricMetaTagKeys{
+			MetricMetadata: m,
+			TagKeys:        keys,
+		}
+	}
+	return all, nil
 }
 
 func Alerts(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	return schedule.MarshalGroups(t, r.FormValue("filter"))
-}
-
-func Backup(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	data, err := schedule.GetStateFileBackup()
-	if err != nil {
-		return nil, err
-	}
-	_, err = w.Write(data)
-	return nil, err
 }
 
 func IncidentEvents(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
@@ -384,56 +470,50 @@ func IncidentEvents(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request
 	if id == "" {
 		return nil, fmt.Errorf("id must be specified")
 	}
-	num, err := strconv.ParseUint(id, 10, 64)
+	num, err := strconv.ParseInt(id, 10, 64)
 	if err != nil {
 		return nil, err
 	}
-	incident, events, actions, err := schedule.GetIncidentEvents(uint64(num))
-	if err != nil {
-		return nil, err
-	}
-	return struct {
-		Incident *models.Incident
-		Events   []sched.Event
-		Actions  []sched.Action
-	}{incident, events, actions}, nil
+	return schedule.DataAccess.State().GetIncidentState(num)
 }
 
 func Incidents(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	alert := r.FormValue("alert")
-	toTime := time.Now().UTC()
-	fromTime := toTime.Add(-14 * 24 * time.Hour) // 2 weeks
+	// TODO: Incident Search
+	return nil, nil
+	//	alert := r.FormValue("alert")
+	//	toTime := time.Now().UTC()
+	//	fromTime := toTime.Add(-14 * 24 * time.Hour) // 2 weeks
 
-	if from := r.FormValue("from"); from != "" {
-		t, err := time.Parse(tsdbFormatSecs, from)
-		if err != nil {
-			return nil, err
-		}
-		fromTime = t
-	}
-	if to := r.FormValue("to"); to != "" {
-		t, err := time.Parse(tsdbFormatSecs, to)
-		if err != nil {
-			return nil, err
-		}
-		toTime = t
-	}
-	incidents, err := schedule.GetIncidents(alert, fromTime, toTime)
-	if err != nil {
-		return nil, err
-	}
-	maxIncidents := 200
-	if len(incidents) > maxIncidents {
-		incidents = incidents[:maxIncidents]
-	}
-	return incidents, nil
+	//	if from := r.FormValue("from"); from != "" {
+	//		t, err := time.Parse(tsdbFormatSecs, from)
+	//		if err != nil {
+	//			return nil, err
+	//		}
+	//		fromTime = t
+	//	}
+	//	if to := r.FormValue("to"); to != "" {
+	//		t, err := time.Parse(tsdbFormatSecs, to)
+	//		if err != nil {
+	//			return nil, err
+	//		}
+	//		toTime = t
+	//	}
+	//	incidents, err := schedule.GetIncidents(alert, fromTime, toTime)
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//	maxIncidents := 200
+	//	if len(incidents) > maxIncidents {
+	//		incidents = incidents[:maxIncidents]
+	//	}
+	//	return incidents, nil
 }
 
 func Status(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	r.ParseForm()
 	type ExtStatus struct {
 		AlertName string
-		*sched.State
+		*models.IncidentState
 	}
 	m := make(map[string]ExtStatus)
 	for _, k := range r.Form["ak"] {
@@ -441,8 +521,32 @@ func Status(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (inter
 		if err != nil {
 			return nil, err
 		}
-		st := ExtStatus{State: schedule.GetStatus(ak)}
-		if st.State == nil {
+		var state *models.IncidentState
+		if r.FormValue("all") != "" {
+			allInc, err := schedule.DataAccess.State().GetAllIncidents(ak)
+			if err != nil {
+				return nil, err
+			}
+			if len(allInc) == 0 {
+				return nil, fmt.Errorf("No incidents for alert key")
+			}
+			state = allInc[0]
+			allEvents := models.EventsByTime{}
+			for _, inc := range allInc {
+				for _, e := range inc.Events {
+					allEvents = append(allEvents, e)
+				}
+			}
+			sort.Sort(allEvents)
+			state.Events = allEvents
+		} else {
+			state, err = schedule.DataAccess.State().GetLatestIncident(ak)
+			if err != nil {
+				return nil, err
+			}
+		}
+		st := ExtStatus{IncidentState: state}
+		if st.IncidentState == nil {
 			return nil, fmt.Errorf("unknown alert key: %v", k)
 		}
 		st.AlertName = ak.Name()
@@ -463,14 +567,18 @@ func Action(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (inter
 	if err := j.Decode(&data); err != nil {
 		return nil, err
 	}
-	var at sched.ActionType
+	var at models.ActionType
 	switch data.Type {
 	case "ack":
-		at = sched.ActionAcknowledge
+		at = models.ActionAcknowledge
 	case "close":
-		at = sched.ActionClose
+		at = models.ActionClose
 	case "forget":
-		at = sched.ActionForget
+		at = models.ActionForget
+	case "forceClose":
+		at = models.ActionForceClose
+	case "purge":
+		at = models.ActionPurge
 	}
 	errs := make(MultiError)
 	r.ParseForm()
@@ -491,7 +599,10 @@ func Action(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (inter
 		return nil, errs
 	}
 	if data.Notify && len(successful) != 0 {
-		schedule.ActionNotify(at, data.User, data.Message, successful)
+		err := schedule.ActionNotify(at, data.User, data.Message, successful)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return nil, nil
 }
@@ -503,7 +614,11 @@ func (m MultiError) Error() string {
 }
 
 func SilenceGet(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	return schedule.Silence, nil
+	endingAfter := time.Now().UTC().Unix()
+	if t := r.FormValue("t"); t != "" {
+		endingAfter, _ = strconv.ParseInt(t, 10, 64)
+	}
+	return schedule.DataAccess.Silence().ListSilences(endingAfter)
 }
 
 var silenceLayouts = []string{
@@ -585,7 +700,7 @@ func Config(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 	var text string
 	var err error
 	if hash := r.FormValue("hash"); hash != "" {
-		text, err = schedule.LoadTempConfig(hash)
+		text, err = schedule.DataAccess.Configs().GetTempConfig(hash)
 		if err != nil {
 			serveError(w, err)
 			return

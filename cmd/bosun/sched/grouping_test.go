@@ -8,7 +8,8 @@ import (
 )
 
 func TestGroupSets_Single(t *testing.T) {
-	states := States{"a{host=foo}": &State{Alert: "a", Group: opentsdb.TagSet{"host": "foo"}, Subject: "aaa"}}
+	ak := models.AlertKey("a{host=foo}")
+	states := States{ak: &models.IncidentState{AlertKey: ak, Alert: "a", Tags: opentsdb.TagSet{"host": "foo"}.Tags(), Subject: "aaa"}}
 	groups := states.GroupSets(5)
 	if len(groups) != 1 {
 		t.Fatalf("Expected 1 group. Found %d.", len(groups))
@@ -31,7 +32,7 @@ func TestGroupSets_AboveAndBelow(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		states[ak] = &State{Alert: ak.Name(), Group: ak.Group(), Subject: sub}
+		states[ak] = &models.IncidentState{AlertKey: models.AlertKey(a), Alert: ak.Name(), Tags: ak.Group().Tags(), Subject: sub}
 	}
 
 	groups := states.GroupSets(5)
@@ -58,7 +59,7 @@ func TestGroupSets_ByAlert(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		states[ak] = &State{Alert: ak.Name(), Group: ak.Group(), Subject: sub}
+		states[ak] = &models.IncidentState{AlertKey: models.AlertKey(a), Alert: ak.Name(), Tags: ak.Group().Tags(), Subject: sub}
 	}
 
 	groups := states.GroupSets(5)

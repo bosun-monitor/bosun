@@ -15,13 +15,20 @@ class RateOptions {
 class Filter {
 	type: string;
 	tagk: string;
-	filter:  string;
+	filter: string;
 	groupBy: boolean;
+	constructor(f?: Filter) {
+		this.type = f && f.type || "auto";
+		this.tagk = f && f.tagk || "";
+		this.filter = f && f.filter || "";
+		this.groupBy = f && f.groupBy || false;
+	}
 }
 
 class FilterMap {
 	[tagk: string]: Filter;
 }
+
 
 class Query {
 	aggregator: string;
@@ -37,7 +44,7 @@ class Query {
 	ds: string;
 	dstime: string;
 	derivative: string;
-	constructor(q?: any) {
+	constructor(filterSupport: boolean, q?: any) {
 		this.aggregator = q && q.aggregator || 'sum';
 		this.metric = q && q.metric || '';
 		this.rate = q && q.rate || false;
@@ -59,6 +66,20 @@ class Query {
 		this.tags = q && q.tags || new TagSet;
 		this.gbFilters = q && q.gbFilters || new FilterMap;
 		this.nGbFilters = q && q.nGbFilters || new FilterMap;
+		var that = this;
+		// Copy tags with values to group by filters so old links work
+		if (filterSupport) {
+			_.each(this.tags, function(v, k) {
+				if (v === "") {
+					return
+				}
+				var f = new (Filter);
+				f.filter = v;
+				f.groupBy = true;
+				f.tagk = k;
+				that.gbFilters[k] = f;
+			});
+		}
 		this.setFilters();
 		this.setDs();
 		this.setDerivative();
@@ -190,30 +211,48 @@ interface IGraphScope extends ng.IScope {
 	normalize: boolean;
 	filterSupport: boolean;
 	filters: string[];
+	annotations: any[];
+	annotation: any;
+	submitAnnotation: () => void;
+	deleteAnnotation: () => void;
+	owners: string[];
+	hosts: string[];
+	categories: string[];
+    annotateEnabled: boolean;
+    showAnnotations: boolean;
+    setShowAnnotations: (something: any) => void;
 }
 
-bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route', '$timeout', 'version', function($scope: IGraphScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService, $timeout: ng.ITimeoutService, $version: any) {
-	$scope.version = $version.data;
+bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route', '$timeout', function($scope: IGraphScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService, $timeout: ng.ITimeoutService) {
 	$scope.aggregators = ["sum", "min", "max", "avg", "dev", "zimsum", "mimmin", "minmax"];
 	$scope.dsaggregators = ["", "sum", "min", "max", "avg", "dev", "zimsum", "mimmin", "minmax"];
-	$scope.filters = ["iliteral_or", "iwildcard", "literal_or", "not_iliteral_or", "not_literal_or", "regexp", "wildcard"];
+	$scope.filters = ["auto", "iliteral_or", "iwildcard", "literal_or", "not_iliteral_or", "not_literal_or", "regexp", "wildcard"];
 	if ($scope.version.Major >= 2 && $scope.version.Minor >= 2) {
 		$scope.filterSupport = true;
 	}
 	$scope.rate_options = ["auto", "gauge", "counter", "rate"];
 	$scope.canAuto = {};
+    $scope.showAnnotations = (getShowAnnotations() == "true");
+    $scope.setShowAnnotations = () => {
+        if ($scope.showAnnotations) {
+            setShowAnnotations("true");
+            return;
+        }
+        setShowAnnotations("false");
+    }
 	var search = $location.search();
 	var j = search.json;
 	if (search.b64) {
 		j = atob(search.b64);
 	}
+	$scope.annotation = {};
 	var request = j ? JSON.parse(j) : new Request;
 	$scope.index = parseInt($location.hash()) || 0;
 	$scope.tagvs = [];
 	$scope.sorted_tagks = [];
 	$scope.query_p = [];
 	angular.forEach(request.queries, (q, i) => {
-		$scope.query_p[i] = new Query(q);
+		$scope.query_p[i] = new Query($scope.filterSupport, q);
 	});
 	$scope.start = request.start;
 	$scope.end = request.end;
@@ -254,17 +293,53 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 		}
 		return AbsToRel(s);
 	}
+	$scope.submitAnnotation = () => $http.post('/api/annotation', $scope.annotation)
+		.success((data) => {
+            //debugger;
+            if ($scope.annotation.Id == "" && $scope.annotation.Owner != "") {
+				setOwner($scope.annotation.Owner);
+			}
+			$scope.annotation = new Annotation(data);
+			$scope.error = "";
+            // This seems to make angular refresh, where a push doesn't
+            $scope.annotations = $scope.annotations.concat($scope.annotation);
+		})
+		.error((error) => {
+			$scope.error = error;
+		});
+	$scope.deleteAnnotation = () => $http.delete('/api/annotation/' + $scope.annotation.Id)
+		.success((data) => {
+			$scope.error = "";
+            $scope.annotations = _.without($scope.annotations, _.findWhere($scope.annotations, {Id: $scope.annotation.Id}));
+		})
+		.error((error) => {
+			$scope.error = error;
+		});
 	$scope.SwitchTimes = function() {
 		$scope.start = SwapTime($scope.start);
 		$scope.end = SwapTime($scope.end);
-	}
+	};
 	$scope.AddTab = function() {
 		$scope.index = $scope.query_p.length;
-		$scope.query_p.push(new Query);
+		$scope.query_p.push(new Query($scope.filterSupport));
 	};
 	$scope.setIndex = function(i: number) {
 		$scope.index = i;
 	};
+    if ($scope.annotateEnabled) {
+        $http.get('/api/annotation/values/Owner')
+            .success((data: string[]) => {
+                $scope.owners = data;
+            });
+        $http.get('/api/annotation/values/Category')
+            .success((data: string[]) => {
+                $scope.categories = data;
+            });
+        $http.get('/api/annotation/values/Host')
+            .success((data: string[]) => {
+                $scope.hosts = data;
+            });
+    }
 	$scope.GetTagKByMetric = function(index: number) {
 		$scope.tagvs[index] = new TagV;
 		var metric = $scope.query_p[index].metric;
@@ -289,14 +364,12 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 						if (!q.gbFilters[d]) {
 							var filter = new Filter;
 							filter.tagk = d;
-							filter.type = "literal_or";
 							filter.groupBy = true;
 							q.gbFilters[d] = filter;
 						}
 						if (!q.nGbFilters[d]) {
 							var filter = new Filter;
 							filter.tagk = d;
-							filter.type = "literal_or";
 							q.nGbFilters[d] = filter;
 						}
 					}
@@ -330,7 +403,7 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 				$scope.error = 'Unable to fetch metrics: ' + error;
 			});
 		$http.get('/api/metadata/metrics?metric=' + metric)
-			.success(data => {
+			.success((data: any) => {
 				var canAuto = data && data.Rate;
 				$scope.canAuto[metric] = canAuto;
 			})
@@ -366,10 +439,10 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 			if (!p.metric) {
 				return;
 			}
-			var q = new Query(p);
+			var q = new Query($scope.filterSupport, p);
 			var tags = q.tags;
 			q.tags = new TagSet;
-			if (! $scope.filterSupport) {
+			if (!$scope.filterSupport) {
 				angular.forEach(tags, function(v, k) {
 					if (v && k) {
 						q.tags[k] = v;
@@ -385,6 +458,9 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 		angular.forEach($scope.query_p, (q, index) => {
 			var m = q.metric_tags;
 			if (!m) {
+				return;
+			}
+			if (!r.queries[index]) {
 				return;
 			}
 			angular.forEach(q.tags, (key, tag) => {
@@ -435,12 +511,27 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 		}
 		var autorate = '';
 		$scope.meta = {};
-		for(var i = 0; i < request.queries.length; i++) {
+		for (var i = 0; i < request.queries.length; i++) {
 			if (request.queries[i].derivative == 'auto') {
 				autorate += '&autorate=' + i;
 			}
 			getMetricMeta(request.queries[i].metric);
 		}
+		_.each(request.queries, (q: Query, qIndex) => {
+			request.queries[qIndex].filters = _.map(q.filters, (filter: Filter) => {
+				var f = new Filter(filter);
+				if (f.filter && f.type) {
+					if (f.type == "auto") {
+						if (f.filter.indexOf("*") > -1) {
+							f.type = f.filter == "*" ? f.type = "wildcard" : "iwildcard";
+						} else {
+							f.type = "literal_or";
+						}
+					}
+				}
+				return f;
+			});
+		});
 		var min = angular.isNumber($scope.min) ? '&min=' + encodeURIComponent($scope.min.toString()) : '';
 		var max = angular.isNumber($scope.max) ? '&max=' + encodeURIComponent($scope.max.toString()) : '';
 		$scope.animate();
@@ -451,8 +542,11 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 			$scope.queryTime += '&time=' + t.format('HH:mm');
 		}
 		$http.get('/api/graph?' + 'b64=' + encodeURIComponent(btoa(JSON.stringify(request))) + autods + autorate + min + max)
-			.success((data) => {
+			.success((data: any) => {
 				$scope.result = data.Series;
+                if ($scope.annotateEnabled) {
+                    $scope.annotations = _.sortBy(data.Annotations, (d: Annotation) => { return d.StartDate; });
+                }
 				if (!$scope.result) {
 					$scope.warning = 'No Results';
 				} else {

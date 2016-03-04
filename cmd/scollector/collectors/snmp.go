@@ -8,13 +8,24 @@ import (
 	"strconv"
 	"strings"
 
-	"bosun.org/_third_party/github.com/mjibson/snmp"
 	"bosun.org/cmd/scollector/conf"
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
+	"bosun.org/slog"
+	"bosun.org/snmp"
 )
 
-var builtInSNMPs = map[string]func(cfg conf.SNMP){"ifaces": SNMPIfaces, "cisco": SNMPCisco, "bridge": SNMPBridge, "ips": SNMPIPAddresses, "ciscobgp": SNMPCiscoBGP}
+var builtInSNMPs = map[string]func(cfg conf.SNMP){
+	"ifaces":   SNMPIfaces,
+	"ios":      SNMPCiscoIOS,
+	"asa":      SNMPCiscoASA,
+	"nxos":     SNMPCiscoNXOS,
+	"bridge":   SNMPBridge,
+	"ips":      SNMPIPAddresses,
+	"ciscobgp": SNMPCiscoBGP,
+	"sys":      SNMPSys,
+	"fortinet": SNMPFortinet,
+}
 
 func SNMP(cfg conf.SNMP, mibs map[string]conf.MIB) error {
 	if cfg.Host == "" {
@@ -62,7 +73,8 @@ func snmp_subtree(host, community, oid string) (map[string]interface{}, error) {
 			a = new(big.Int)
 			id, err := rows.Scan(&a)
 			if err != nil {
-				return nil, err
+				slog.Errorf("Error scanning oid %v on host %v: %v", oid, host, err)
+				continue
 			}
 			switch t := id.(type) {
 			case int:
@@ -73,7 +85,8 @@ func snmp_subtree(host, community, oid string) (map[string]interface{}, error) {
 		default:
 			id, err := rows.Scan(&a)
 			if err != nil {
-				return nil, err
+				slog.Errorf("Error scanning oid %v on host %v: %v", oid, host, err)
+				continue
 			}
 			switch t := id.(type) {
 			case int:
@@ -105,6 +118,12 @@ func snmp_oid(host, community, oid string) (*big.Int, error) {
 	v := new(big.Int)
 	err := snmp.Get(host, community, oid, &v)
 	return v, err
+}
+
+func snmpOidString(host, community, oid string) (string, error) {
+	var v []byte
+	err := snmp.Get(host, community, oid, &v)
+	return string(v), err
 }
 
 func snmp_convertToFloat(v interface{}) (float64, error) {
