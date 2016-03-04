@@ -59,7 +59,7 @@ if [ "$GOGENERATEDIFF" != '' ]; then
     echo "Go generate needs to be run. The following files have changed:"
     echo "$GOGENERATEDIFF"
 	BUILDMSG="${BUILDMSG}go generate needs to run. "
-    GOGENERATEDIFFRESULT=1
+#    GOGENERATEDIFFRESULT=1
     git diff
 fi
 
