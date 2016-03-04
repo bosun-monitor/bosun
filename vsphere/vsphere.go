@@ -24,10 +24,10 @@ type Vsphere struct {
 
 // ServiceContent partial structure to hold basic vSphere info, including Performance Manager name.
 type ServiceContent struct {
-	RootFolder                string `xml:"rootFolder"`
-	ViewManager               string `xml:"viewManager,omitempty"`
-	About                     AboutInfo `xml:"about"`
-	PerfManager               string `xml:"perfManager,omitempty"`
+	RootFolder  string    `xml:"rootFolder"`
+	ViewManager string    `xml:"viewManager,omitempty"`
+	About       AboutInfo `xml:"about"`
+	PerfManager string    `xml:"perfManager,omitempty"`
 }
 
 // AboutInfo holds more basic vSphere info.
@@ -139,14 +139,14 @@ type ManagedObjectReference struct {
 
 // PerfProviderSummary describes capabilities of a performance provider.
 type PerfProviderSummary struct {
-	Entity           ManagedObjectReference `xml:"entity"`
+	Entity ManagedObjectReference `xml:"entity"`
 	// CurrentSupported True if the entity supports real-time (current) statistics.
-	CurrentSupported bool                   `xml:"currentSupported"`
-	SummarySupported bool                   `xml:"summarySupported"`
-	// RefreshRate Specifies in seconds the interval between which the system updates performance statistics. 
+	CurrentSupported bool `xml:"currentSupported"`
+	SummarySupported bool `xml:"summarySupported"`
+	// RefreshRate Specifies in seconds the interval between which the system updates performance statistics.
 	// Generally speaking, querying for a metric at a faster rate than this does not yield additional information.
 	// This value applies only to entities that support real-time (current) statistics.
-	RefreshRate      int                    `xml:"refreshRate,omitempty"`
+	RefreshRate int `xml:"refreshRate,omitempty"`
 }
 
 // PerformanceProvider Gets capabilities of a performance provider from a vSphere server.
@@ -171,14 +171,14 @@ type ElementDescription struct {
 
 // PerfCounterInfo contains metadata for a performance counter.
 type PerfCounterInfo struct {
-	Key                 int                `xml:"key"`
-	NameInfo            ElementDescription `xml:"nameInfo,typeattr"`
-	GroupInfo           ElementDescription `xml:"groupInfo,typeattr"`
-	UnitInfo            ElementDescription `xml:"unitInfo,typeattr"`
-	RollupType          string             `xml:"rollupType"`
-	StatsType           string             `xml:"statsType"`
-	Level               int                `xml:"level,omitempty"`
-	PerDeviceLevel      int                `xml:"perDeviceLevel,omitempty"`
+	Key            int                `xml:"key"`
+	NameInfo       ElementDescription `xml:"nameInfo,typeattr"`
+	GroupInfo      ElementDescription `xml:"groupInfo,typeattr"`
+	UnitInfo       ElementDescription `xml:"unitInfo,typeattr"`
+	RollupType     string             `xml:"rollupType"`
+	StatsType      string             `xml:"statsType"`
+	Level          int                `xml:"level,omitempty"`
+	PerDeviceLevel int                `xml:"perDeviceLevel,omitempty"`
 }
 
 // PerfCounterInfos retrieves counter information for the specified list of counter IDs.
@@ -212,16 +212,16 @@ type PerfMetricId struct {
 // PerfMetricIntSeries describes integer metric values.
 // The size of the array must match the size of sampleInfo in the EntityMetric that contains this series
 type PerfMetricIntSeries struct {
-	Id PerfMetricId `xml:"id"`
-	Value int64 `xml:"value,omitempty"`
+	Id    PerfMetricId `xml:"id"`
+	Value int64        `xml:"value,omitempty"`
 }
 
 // PerfEntityMetric stores metric values for a specific entity in 'normal' format.
 type PerfEntityMetric struct {
-	Entity ManagedObjectReference `xml:"entity"`
-	SampleInfo []PerfSampleInfo   `xml:"sampleInfo,omitempty"`
+	Entity     ManagedObjectReference `xml:"entity"`
+	SampleInfo []PerfSampleInfo       `xml:"sampleInfo,omitempty"`
 	//hardcoded int64
-	Value      []PerfMetricIntSeries `xml:"value,omitempty,typeattr"`
+	Value []PerfMetricIntSeries `xml:"value,omitempty,typeattr"`
 }
 
 // PerfCountersValues Retrieves the all performance realtime metrics for the specified entity (or entities).
@@ -301,10 +301,7 @@ const (
 	soapRetrieveServiceInstance = `<RetrieveProperties xmlns="urn:vim25"><_this type="PropertyCollector">propertyCollector</_this><specSet><propSet><type>ServiceInstance</type><all>false</all><pathSet>content</pathSet></propSet><objectSet><obj type="ServiceInstance">ServiceInstance</obj><skip>false</skip></objectSet></specSet></RetrieveProperties>`
 	soapCreateContainerView     = `<CreateContainerView xmlns="urn:vim25"><_this type="ViewManager">ViewManager</_this><container type="Folder">%s</container><type>%s</type><recursive>true</recursive></CreateContainerView>`
 	soapRetrieve                = `<RetrieveProperties xmlns="urn:vim25"><_this type="PropertyCollector">propertyCollector</_this><specSet><propSet><type>%s</type>%s</propSet><objectSet><obj type="ContainerView">%s</obj><skip>true</skip><selectSet xsi:type="TraversalSpec"><name>traverseEntities</name><type>ContainerView</type><path>view</path><skip>false</skip></selectSet></objectSet></specSet></RetrieveProperties>`
-	// PerfMgr, HostSystem, host-32 -> refreshRate=20, currentSupported=true, summarySupported=true
 	soapPerfProviderSummary     = `<QueryPerfProviderSummary xmlns="urn:vim25" xsi:type="QueryPerfProviderSummaryRequestType"><_this type="PerformanceManager">%s</_this><entity type="%s">%s</entity></QueryPerfProviderSummary>`
-	// PerfMgr, <counterId>470</counterId><counterId>471</counterId> -> key=470, nameInfo.label=Data receive rate, nameInfo.summary=Average amount of data received per second, nameInfo.key=bytesRx, groupInfo.label=Network, groupInfo.summary=Network, groupInfo.key=net, unitInfo.label=KBps, unitInfo.summary=Kilobytes per second, unitInfo.key=kiloBytesPerSecond, rollupType=average, statsType=rate, level=2, perDeviceLevel=3
 	soapQueryPerfCounters       = `<QueryPerfCounter xmlns="urn:vim25" xsi:type="QueryPerfCounterRequestType"><_this type="PerformanceManager">%s</_this>%s</QueryPerfCounter>`
-	// PerfMgr, HostSystem, host-32, 20 -> value.id.counterId=470, value.id.instance=vmnic0, value.value=0
 	soapQueryPerf               = `<QueryPerf xmlns="urn:vim25" xsi:type="QueryPerfRequestType"><_this type="PerformanceManager">%s</_this><querySpec><entity type="%s">%s</entity><maxSample>1</maxSample><intervalId>%d</intervalId></querySpec></QueryPerf>`
 )
