@@ -86,7 +86,10 @@ func getActiveUsersByDimension(md *opentsdb.MultiDataPoint, svc *analytics.Servi
 	for _, row := range data.Rows {
 		// key will always be an string of the dimension we care about.
 		// For example, 'Chrome' would be a key for the 'browser' dimension.
-		key := row[0]
+		key, _ := opentsdb.Clean(row[0])
+		if key == "" {
+			key = "__blank__"
+		}
 		value, err := strconv.Atoi(row[1])
 		if err != nil {
 			return fmt.Errorf("Error parsing GA data: %s", err)

@@ -336,3 +336,14 @@ func (i *idPool) get() int {
 func (i *idPool) put(v int) {
 	i.free = append(i.free, v)
 }
+
+// InContainer detects if a process is running in a Linux container.
+func InContainer(pid string) bool {
+	pidNameSpaceFile := fmt.Sprintf("/proc/%v/ns/pid", pid)
+	if pidNameSpace, err := os.Readlink(pidNameSpaceFile); err == nil {
+		if initNameSpace, err := os.Readlink("/proc/1/ns/pid"); err == nil {
+			return initNameSpace != pidNameSpace
+		}
+	}
+	return false
+}
