@@ -7,6 +7,7 @@ import (
 	"bosun.org/collect"
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
+	"bosun.org/slog"
 	"bosun.org/util"
 )
 
@@ -44,8 +45,12 @@ func (s *StreamCollector) Run(dpchan chan<- *opentsdb.DataPoint, quit <-chan str
 					dp.Tags["host"] = util.Hostname
 				}
 				s.ApplyTagOverrides(dp.Tags)
-				dpchan <- dp
-				count++
+				if dp.Valid() {
+					dpchan <- dp
+					count++
+				} else {
+					slog.Errorf("Invalid datapoint received for: %s", dp.Metric)
+				}
 			}
 		case <-quit:
 			return
