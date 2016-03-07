@@ -17,20 +17,20 @@ func init() {
 }
 
 var cadvisorMeta = map[string]MetricMeta{
-	"container.cpu.system": {
+	"container.cpu": {
 		RateType: metadata.Counter,
-		Unit:     metadata.Second,
-		Desc:     "Cumulative system cpu time consumed in seconds.",
+		Unit:     metadata.Nanosecond,
+		Desc:     "Cumulative cpu time consumed in user/system in nanoseconds.",
 	},
 	"container.cpu.usage": {
 		RateType: metadata.Counter,
-		Unit:     metadata.Second,
-		Desc:     "Cumulative cpu time consumed per cpu in seconds.",
+		Unit:     metadata.Nanosecond,
+		Desc:     "Cumulative cpu time consumed in nanoseconds.",
 	},
-	"container.cpu.user": {
+	"container.cpu.usage.percpu": {
 		RateType: metadata.Counter,
-		Unit:     metadata.Second,
-		Desc:     "Cumulative user cpu time consumed in seconds.",
+		Unit:     metadata.Nanosecond,
+		Desc:     "Cumulative cpu time consumed per cpu in nanoseconds.",
 	},
 	"container.cpu.loadavg": {
 		RateType: metadata.Gauge,
@@ -177,21 +177,24 @@ func containerTagSet(ts opentsdb.TagSet, container *v1.ContainerInfo) opentsdb.T
 	return tags
 }
 
-func statsForContainer(md *opentsdb.MultiDataPoint, container *v1.ContainerInfo) {
+func statsForContainer(md *opentsdb.MultiDataPoint, container *v1.ContainerInfo, perCpuUsage bool) {
 	stats := container.Stats[0]
 	var ts opentsdb.TagSet
 	if container.Spec.HasCpu {
+		cadvisorAdd(md, "container.cpu", stats.Cpu.Usage.System, containerTagSet(opentsdb.TagSet{"type": "system"}, container))
+		cadvisorAdd(md, "container.cpu", stats.Cpu.Usage.User, containerTagSet(opentsdb.TagSet{"type": "user"}, container))
+
 		ts = containerTagSet(ts, container)
 		cadvisorAdd(md, "container.cpu.loadavg", stats.Cpu.LoadAverage, ts)
-		cadvisorAdd(md, "container.cpu.system", stats.Cpu.Usage.System, ts)
-		cadvisorAdd(md, "container.cpu.user", stats.Cpu.Usage.User, ts)
-
-		ts = containerTagSet(opentsdb.TagSet{"cpu": "all"}, container)
 		cadvisorAdd(md, "container.cpu.usage", stats.Cpu.Usage.Total, ts)
-		for idx := range stats.Cpu.Usage.PerCpu {
-			ts = containerTagSet(opentsdb.TagSet{"cpu": strconv.Itoa(idx)}, container)
-			cadvisorAdd(md, "container.cpu.usage", stats.Cpu.Usage.PerCpu[idx], ts)
+
+		if perCpuUsage {
+			for idx := range stats.Cpu.Usage.PerCpu {
+				ts = containerTagSet(opentsdb.TagSet{"cpu": strconv.Itoa(idx)}, container)
+				cadvisorAdd(md, "container.cpu.usage.percpu", stats.Cpu.Usage.PerCpu[idx], ts)
+			}
 		}
+
 	}
 
 	if container.Spec.HasFilesystem {
@@ -266,7 +269,7 @@ func statsForContainer(md *opentsdb.MultiDataPoint, container *v1.ContainerInfo)
 	}
 }
 
-func c_cadvisor(c *client.Client) (opentsdb.MultiDataPoint, error) {
+func c_cadvisor(c *client.Client, perCpuUsage bool) (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 
 	containers, err := c.AllDockerContainers(&v1.ContainerInfoRequest{NumStats: 1})
@@ -276,7 +279,7 @@ func c_cadvisor(c *client.Client) (opentsdb.MultiDataPoint, error) {
 	}
 
 	for _, container := range containers {
-		statsForContainer(&md, &container)
+		statsForContainer(&md, &container, perCpuUsage)
 	}
 
 	return md, nil
@@ -290,7 +293,7 @@ func startCadvisorCollector(c *conf.Conf) {
 		}
 		collectors = append(collectors, &IntervalCollector{
 			F: func() (opentsdb.MultiDataPoint, error) {
-				return c_cadvisor(cClient)
+				return c_cadvisor(cClient, config.PerCpuUsage)
 			},
 			name: "cadvisor",
 		})
