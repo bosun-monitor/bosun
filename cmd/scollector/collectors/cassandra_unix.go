@@ -74,9 +74,10 @@ func c_nodestats_cfstats_linux() (opentsdb.MultiDataPoint, error) {
 
 		// every other value is simpler, and we only want the first word
 		values := strings.Fields(fields[1])
-		if values[0] == "NaN" {
+		if _, err := strconv.ParseFloat(values[0], 64); err != nil || values[0] == "NaN" {
 			return nil
 		}
+
 		metricset["cassandra.tables."+metric] = values[0]
 
 		submitMetrics(&md, metricset, tagset)
