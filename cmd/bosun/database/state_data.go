@@ -309,7 +309,7 @@ func (d *dataAccess) Forget(ak models.AlertKey) error {
 	alert := ak.Name()
 	return d.transact(conn, func() error {
 		// last touched.
-		if _, err := conn.Do("HDEL", statesLastTouchedKey(alert), ak); err != nil {
+		if _, err := conn.Do("ZREM", statesLastTouchedKey(alert), ak); err != nil {
 			return slog.Wrap(err)
 		}
 		// unknown/uneval sets
