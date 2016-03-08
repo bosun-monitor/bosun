@@ -230,7 +230,8 @@ O -> A {"||" A}
 A -> C {"&&" C}
 C -> P {( "==" | "!=" | ">" | ">=" | "<" | "<=") P}
 P -> M {( "+" | "-" ) M}
-M -> F {( "*" | "/" ) F}
+M -> E {( "*" | "/" ) E}
+E -> F {( "**" ) F}
 F -> v | "(" O ")" | "!" O | "-" O
 v -> number | func(..)
 Func -> name "(" param {"," param} ")"
@@ -287,10 +288,22 @@ func (t *Tree) P() Node {
 }
 
 func (t *Tree) M() Node {
+	n := t.E()
+	for {
+		switch t.peek().typ {
+		case itemMult, itemDiv, itemMod:
+			n = newBinary(t.next(), n, t.E())
+		default:
+			return n
+		}
+	}
+}
+
+func (t *Tree) E() Node {
 	n := t.F()
 	for {
 		switch t.peek().typ {
-		case itemMult, itemDiv, itemMod, itemPow:
+		case itemPow:
 			n = newBinary(t.next(), n, t.F())
 		default:
 			return n
