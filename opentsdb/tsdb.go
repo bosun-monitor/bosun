@@ -1002,11 +1002,18 @@ func FilterTags(r *Request, tr ResponseSet) {
 	}
 	for _, resp := range tr {
 		for k := range resp.Tags {
-			if _, present := r.Queries[0].Tags[k]; !present {
-				if _, present := r.Queries[0].GroupByTags[k]; !present {
-					delete(resp.Tags, k)
+			_, inTags := r.Queries[0].Tags[k]
+			inGroupBy := false
+			for _, filter := range r.Queries[0].Filters {
+				if filter.GroupBy && filter.TagK == k {
+					inGroupBy = true
+					break
 				}
 			}
+			if inTags || inGroupBy {
+				continue
+			}
+			delete(resp.Tags, k)
 		}
 	}
 }
