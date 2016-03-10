@@ -26,6 +26,19 @@
 	overflow-y: auto;
 }
 
+
+/* http://stackoverflow.com/questions/17206631/why-are-bootstrap-tabs-displaying-tab-pane-divs-with-incorrect-widths-when-using fixes timeline drawing at default width while tab is hidden */
+.tab-content > .tab-pane {
+    display: block;
+    height: 0;
+    overflow-y: hidden;
+    overflow-x: hidden;
+}
+
+.tab-content > .active {
+    height: auto;
+}
+
 </style>
 <label class="selectorDropdown" style="margin-right:15px;">Jump to:</label>
 <div class="row">
