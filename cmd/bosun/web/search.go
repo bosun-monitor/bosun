@@ -1,7 +1,9 @@
 package web
 
 import (
+	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"bosun.org/opentsdb"
@@ -11,12 +13,20 @@ import (
 
 // UniqueMetrics returns a sorted list of available metrics.
 func UniqueMetrics(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	values, err := schedule.Search.UniqueMetrics()
+	q := r.URL.Query()
+	var epoch int64
+	if v := q.Get("since"); v != "" {
+		var err error
+		epoch, err = strconv.ParseInt(v, 10, 64)
+		if err != nil {
+			serveError(w, fmt.Errorf("could not convert since parameter (expecting epoch value): %v", err))
+		}
+	}
+	values, err := schedule.Search.UniqueMetrics(epoch)
 	if err != nil {
 		return nil, err
 	}
 	// remove anything starting with double underscore.
-	q := r.URL.Query()
 	if v := q.Get("unfiltered"); v != "" {
 		return values, nil
 	}

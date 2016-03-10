@@ -71,7 +71,7 @@ func TestRelay(t *testing.T) {
 	}
 	time.Sleep(time.Second)
 
-	m, _ := schedule.Search.UniqueMetrics()
+	m, _ := schedule.Search.UniqueMetrics(0)
 	sort.Strings(m)
 	if len(m) != 2 || m[0] != "gzip-works" || m[1] != "no-gzip-works" {
 		t.Errorf("bad um: %v", m)

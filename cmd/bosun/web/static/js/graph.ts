@@ -414,7 +414,7 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 	if ($scope.query_p.length == 0) {
 		$scope.AddTab();
 	}
-	$http.get('/api/metric')
+	$http.get('/api/metric' + "?since=" + moment().utc().subtract(2, "days").unix())
 		.success(function(data: string[]) {
 			$scope.metrics = data;
 		})

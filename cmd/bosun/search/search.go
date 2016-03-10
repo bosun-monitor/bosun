@@ -254,16 +254,19 @@ func (s *Search) Expand(q *opentsdb.Query) error {
 	return nil
 }
 
-func (s *Search) UniqueMetrics() ([]string, error) {
+// UniqueMetrics returns a sorted slice of metrics where the
+// metric has been updated more recently than epoch
+func (s *Search) UniqueMetrics(epochFilter int64) ([]string, error) {
 	m, err := s.DataAccess.Search().GetAllMetrics()
 	if err != nil {
 		return nil, err
 	}
-	metrics := make([]string, len(m))
-	i := 0
-	for k := range m {
-		metrics[i] = k
-		i++
+	metrics := []string{}
+	for k, epoch := range m {
+		if epoch < epochFilter {
+			continue
+		}
+		metrics = append(metrics, k)
 	}
 	sort.Strings(metrics)
 	return metrics, nil
