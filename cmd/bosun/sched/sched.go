@@ -423,6 +423,7 @@ func (s *Schedule) MarshalGroups(T miniprofiler.Timer, filter string) (*StateGro
 						st := status[ak]
 						st.Body = ""
 						st.EmailBody = nil
+						st.Attachments = nil
 						g.Children = append(g.Children, &StateGroup{
 							Active:   tuple.Active,
 							Status:   tuple.Status,
