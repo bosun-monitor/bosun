@@ -521,6 +521,10 @@ func parseGraphiteResponse(req *graphite.Request, s *graphite.Response, formatTa
 				}
 			}
 		}
+		if !tags.Valid() {
+			msg := fmt.Sprintf("returned target '%s' would make an invalid tag '%s'", res.Target, tags.String())
+			return nil, fmt.Errorf(parseErrFmt, req.URL, msg)
+		}
 		if ts := tags.String(); !seen[ts] {
 			seen[ts] = true
 		} else {
