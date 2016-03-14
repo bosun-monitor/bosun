@@ -392,6 +392,11 @@ func Epoch(e *State, T miniprofiler.Timer) (*Results, error) {
 }
 
 func NV(e *State, T miniprofiler.Timer, series *Results, v float64) (results *Results, err error) {
+	// If there are no results in the set, promote it to a number with the empty group ({})
+	if len(series.Results) == 0 {
+		series.Results = append(series.Results, &Result{Value: Number(v), Group: make(opentsdb.TagSet)})
+		return series, nil
+	}
 	series.NaNValue = &v
 	return series, nil
 }
