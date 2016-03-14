@@ -79,6 +79,11 @@ var Elastic = map[string]parse.Func{
 		Return: models.TypeESQuery,
 		F:      ESQueryString,
 	},
+	"esexists": {
+		Args:   []models.FuncType{models.TypeString},
+		Return: models.TypeESQuery,
+		F:      ESExists,
+	},
 	"esand": {
 		Args:   []models.FuncType{models.TypeESQuery},
 		VArgs:  true,
@@ -90,6 +95,11 @@ var Elastic = map[string]parse.Func{
 		VArgs:  true,
 		Return: models.TypeESQuery,
 		F:      ESOr,
+	},
+	"esnot": {
+		Args:   []models.FuncType{models.TypeESQuery},
+		Return: models.TypeESQuery,
+		F:      ESNot,
 	},
 	"esgt": {
 		Args:   []models.FuncType{models.TypeString, models.TypeScalar},
@@ -135,6 +145,15 @@ func ESAnd(e *State, T miniprofiler.Timer, esqueries ...ESQuery) (*Results, erro
 	return &r, nil
 }
 
+func ESNot(e *State, T miniprofiler.Timer, query ESQuery) (*Results, error) {
+	var r Results
+	q := ESQuery{
+		Query: elastic.NewBoolQuery().MustNot(query.Query),
+	}
+	r.Results = append(r.Results, &Result{Value: q})
+	return &r, nil
+}
+
 func ESOr(e *State, T miniprofiler.Timer, esqueries ...ESQuery) (*Results, error) {
 	var r Results
 	queries := make([]elastic.Query, len(esqueries))
@@ -163,6 +182,14 @@ func ESQueryString(e *State, T miniprofiler.Timer, key string, query string) (*R
 	if key != "" {
 		qs.Field(key)
 	}
+	q := ESQuery{Query: qs}
+	r.Results = append(r.Results, &Result{Value: q})
+	return &r, nil
+}
+
+func ESExists(e *State, T miniprofiler.Timer, field string) (*Results, error) {
+	var r Results
+	qs := elastic.NewExistsQuery(field)
 	q := ESQuery{Query: qs}
 	r.Results = append(r.Results, &Result{Value: q})
 	return &r, nil
