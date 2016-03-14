@@ -331,6 +331,15 @@ var builtins = map[string]parse.Func{
 		Tags:   tagFirst,
 		F:      NV,
 	},
+	"series": {
+		Args:      []models.FuncType{models.TypeString, models.TypeScalar},
+		VArgs:     true,
+		VArgsPos:  1,
+		VArgsOmit: true,
+		Return:    models.TypeSeriesSet,
+		Tags:      tagFirst,
+		F:         SeriesFunc,
+	},
 	"sort": {
 		Args:   []models.FuncType{models.TypeNumberSet, models.TypeString},
 		Return: models.TypeNumberSet,
@@ -350,6 +359,28 @@ var builtins = map[string]parse.Func{
 		Tags:   tagFirst,
 		F:      Merge,
 	},
+}
+
+func SeriesFunc(e *State, T miniprofiler.Timer, tags string, pairs ...float64) (*Results, error) {
+	if len(pairs)%2 != 0 {
+		return nil, fmt.Errorf("uneven number of time stamps and values")
+	}
+	group, err := opentsdb.ParseTags(tags)
+	if err != nil {
+		return nil, fmt.Errorf("unable to parse tags: %v", err)
+	}
+	series := make(Series)
+	for i := 0; i < len(pairs); i += 2 {
+		series[time.Unix(int64(pairs[i]), 0)] = pairs[i+1]
+	}
+	return &Results{
+		Results: []*Result{
+			{
+				Value: series,
+				Group: group,
+			},
+		},
+	}, nil
 }
 
 func Epoch(e *State, T miniprofiler.Timer) (*Results, error) {

@@ -107,7 +107,7 @@ func (f *FuncNode) Check(t *Tree) error {
 	const errFuncType = "parse: bad argument type in %s, expected %s, got %s"
 	// For VArgs we make sure they are all of the expected type
 	if f.F.VArgs {
-		if len(f.Args) < len(f.F.Args) {
+		if len(f.Args) < len(f.F.Args) && !f.F.VArgsOmit {
 			return fmt.Errorf("parse: variable argument functions need at least one arg")
 		}
 	} else {

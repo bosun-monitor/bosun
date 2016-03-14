@@ -629,7 +629,16 @@ func (e *State) walkFunc(node *parse.FuncNode, T miniprofiler.Timer) *Results {
 			default:
 				panic(fmt.Errorf("expr: unknown func arg type"))
 			}
-			if f, ok := v.(float64); ok && node.F.Args[i] == models.TypeNumberSet {
+			var argType models.FuncType
+			if i >= len(node.F.Args) {
+				if !node.F.VArgs {
+					panic("expr: shouldn't be here, more args then expected and not variable argument type func")
+				}
+				argType = node.F.Args[node.F.VArgsPos]
+			} else {
+				argType = node.F.Args[i]
+			}
+			if f, ok := v.(float64); ok && argType == models.TypeNumberSet {
 				v = fromScalar(f)
 			}
 			in = append(in, reflect.ValueOf(v))

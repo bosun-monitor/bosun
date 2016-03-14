@@ -494,7 +494,17 @@ Returns the first count (scalar) results of number.
 
 Returns the first key from the given lookup table with matching tags.
 
-##shift(seriesSet, dur string) seriesSet
+## series(tagset string, epoch, value, ...) seriesSet
+
+Returns a seriesSet with one series. The series will have a group (a.k.a tagset). You can then optionally pass epoch value pairs (if non are provided, the series will be empty). This is can be used for testing or drawing arbitary lines. For example:
+
+```
+$now = epoch()
+$hourAgo =  $now-d("1h")
+merge(series("foo=bar", $hourAgo, 5, $now, 10), series("foo=bar2", $hourAgo, 6, $now, 11))
+```
+
+## shift(seriesSet, dur string) seriesSet
 
 Shift takes a seriesSet and shifts the time forward by the value of dur ([OpenTSDB duration string](http://opentsdb.net/docs/build/html/user_guide/query/dates.html)) and adds a tag for representing the shift duration. This is meant so you can overlay times visually in a graph.
 

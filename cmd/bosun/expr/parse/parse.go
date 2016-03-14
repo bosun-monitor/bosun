@@ -31,13 +31,14 @@ type Tree struct {
 }
 
 type Func struct {
-	Args     []models.FuncType
-	Return   models.FuncType
-	Tags     func([]Node) (Tags, error)
-	F        interface{}
-	VArgs    bool
-	VArgsPos int
-	Check    func(*Tree, *FuncNode) error
+	Args      []models.FuncType
+	Return    models.FuncType
+	Tags      func([]Node) (Tags, error)
+	F         interface{}
+	VArgs     bool
+	VArgsPos  int
+	VArgsOmit bool
+	Check     func(*Tree, *FuncNode) error
 }
 
 type Tags map[string]struct{}
