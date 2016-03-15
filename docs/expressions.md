@@ -452,6 +452,10 @@ Returns the absolute value of each element in the numberSet.
 
 Returns the number of seconds of the [OpenTSDB duration string](http://opentsdb.net/docs/build/html/user_guide/query/dates.html).
 
+## tod(scalar) string
+
+Returns an [OpenTSDB duration string](http://opentsdb.net/docs/build/html/user_guide/query/dates.html) that represents the given number of seconds. This lets you do math on durations and then pass it to the duration arguments in functions like `q()`
+
 ## des(series, alpha scalar, beta scalar) series
 
 Returns series smoothed using Holt-Winters double exponential smoothing. Alpha

@@ -168,6 +168,13 @@ func (s Scalar) Type() models.FuncType        { return models.TypeScalar }
 func (s Scalar) Value() interface{}           { return s }
 func (s Scalar) MarshalJSON() ([]byte, error) { return marshalFloat(float64(s)) }
 
+type String string
+
+func (s String) Type() models.FuncType { return models.TypeString }
+func (s String) Value() interface{}    { return s }
+
+//func (s String) MarshalJSON() ([]byte, error) { return json.Marshal(s) }
+
 // Series is the standard form within bosun to represent timeseries data.
 type Series map[time.Time]float64
 
@@ -244,6 +251,42 @@ type Results struct {
 	IgnoreOtherUnjoined bool
 	// If non nil, will set any NaN value to it.
 	NaNValue *float64
+}
+
+// Equal inspects if two results have the same content
+// error will return why they are not equal if they
+// are not equal
+func (a *Results) Equal(b *Results) (bool, error) {
+	if len(a.Results) != len(b.Results) {
+		return false, fmt.Errorf("unequal number of results: length a: %v, length b: %v", len(a.Results), len(b.Results))
+	}
+	if a.IgnoreUnjoined != b.IgnoreUnjoined {
+		return false, fmt.Errorf("ignoreUnjoined flag does not match a: %v, b: %v", a.IgnoreUnjoined, b.IgnoreUnjoined)
+	}
+	if a.IgnoreOtherUnjoined != b.IgnoreOtherUnjoined {
+		return false, fmt.Errorf("ignoreUnjoined flag does not match a: %v, b: %v", a.IgnoreOtherUnjoined, b.IgnoreOtherUnjoined)
+	}
+	if a.NaNValue != a.NaNValue {
+		return false, fmt.Errorf("NaNValue does not match a: %v, b: %v", a.NaNValue, b.NaNValue)
+	}
+	sortedA := ResultSliceByGroup(a.Results)
+	sort.Sort(sortedA)
+	sortedB := ResultSliceByGroup(b.Results)
+	sort.Sort(sortedB)
+	for i, result := range sortedA {
+		for ic, computation := range result.Computations {
+			if computation != sortedB[i].Computations[ic] {
+				return false, fmt.Errorf("mismatched computation a: %v, b: %v", computation, sortedB[ic])
+			}
+		}
+		if !result.Group.Equal(sortedB[i].Group) {
+			return false, fmt.Errorf("mismatched groups a: %v, b: %v", result.Group, sortedB[i].Group)
+		}
+		if result.Value != sortedB[i].Value {
+			return false, fmt.Errorf("values do not match a: %v, b: %v", result.Value, sortedB[i].Value)
+		}
+	}
+	return true, nil
 }
 
 type ResultSlice []*Result
@@ -671,6 +714,9 @@ func extract(res *Results) interface{} {
 	}
 	if len(res.Results) == 1 && res.Results[0].Type() == models.TypeESIndexer {
 		return res.Results[0].Value.Value()
+	}
+	if len(res.Results) == 1 && res.Results[0].Type() == models.TypeString {
+		return string(res.Results[0].Value.Value().(String))
 	}
 	return res
 }

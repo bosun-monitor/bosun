@@ -145,7 +145,29 @@ func leadingInt(s string) (x int64, rem string, err error) {
 }
 
 func (d Duration) String() string {
-	return fmt.Sprintf("%dms", time.Duration(d).Nanoseconds()/1e6)
+	return fmt.Sprintf("%dms", d/Millisecond)
+}
+
+func (d Duration) HumanString() string {
+	if d >= Year && d%Year == 0 {
+		return fmt.Sprintf("%dy", d/Year)
+	}
+	if d >= Week && d%Week == 0 {
+		return fmt.Sprintf("%dw", d/Week)
+	}
+	if d >= Day && d%Day == 0 {
+		return fmt.Sprintf("%dd", d/Day)
+	}
+	if d >= Hour && d%Hour == 0 {
+		return fmt.Sprintf("%dh", d/Hour)
+	}
+	if d >= Minute && d%Minute == 0 {
+		return fmt.Sprintf("%dh", d/Minute)
+	}
+	if d >= Second && d%Second == 0 {
+		return fmt.Sprintf("%ds", d/Second)
+	}
+	return fmt.Sprintf("%dms", d/Millisecond)
 }
 
 // Seconds returns the duration as a floating point number of seconds.

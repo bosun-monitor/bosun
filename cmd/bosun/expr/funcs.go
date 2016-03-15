@@ -272,6 +272,11 @@ var builtins = map[string]parse.Func{
 		Return: models.TypeScalar,
 		F:      Duration,
 	},
+	"tod": {
+		Args:   []models.FuncType{models.TypeScalar},
+		Return: models.TypeString,
+		F:      ToDuration,
+	},
 	"des": {
 		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeScalar, models.TypeScalar},
 		Return: models.TypeSeriesSet,
@@ -483,6 +488,15 @@ func Duration(e *State, T miniprofiler.Timer, d string) (*Results, error) {
 	return &Results{
 		Results: []*Result{
 			{Value: Scalar(duration.Seconds())},
+		},
+	}, nil
+}
+
+func ToDuration(e *State, T miniprofiler.Timer, sec float64) (*Results, error) {
+	d := opentsdb.Duration(time.Duration(int64(sec)) * time.Second)
+	return &Results{
+		Results: []*Result{
+			{Value: String(d.HumanString())},
 		},
 	}, nil
 }
