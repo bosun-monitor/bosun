@@ -270,15 +270,11 @@ func (b *BinaryNode) StringAST() string {
 func (b *BinaryNode) Check(t *Tree) error {
 	t1 := b.Args[0].Return()
 	t2 := b.Args[1].Return()
-	if t1 == models.TypeSeriesSet && t2 == models.TypeSeriesSet {
-		return fmt.Errorf("parse: type error in %s: at least one side must be a number", b)
+	if !(t1 == models.TypeSeriesSet || t1 == models.TypeNumberSet || t1 == models.TypeScalar) {
+		return fmt.Errorf("expected NumberSet, SeriesSet, or Scalar, got %v", string(t1))
 	}
-	check := t1
-	if t1 == models.TypeSeriesSet {
-		check = t2
-	}
-	if check != models.TypeNumberSet && check != models.TypeScalar {
-		return fmt.Errorf("parse: type error in %s: expected a number", b)
+	if !(t2 == models.TypeSeriesSet || t2 == models.TypeNumberSet || t2 == models.TypeScalar) {
+		return fmt.Errorf("expected NumberSet, SeriesSet, or Scalar, got %v", string(t1))
 	}
 	if err := b.Args[0].Check(t); err != nil {
 		return err

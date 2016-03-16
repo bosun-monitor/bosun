@@ -40,12 +40,16 @@ Various metrics can be combined by operators as long as one group is a subset of
 
 ## Operators
 
-The standard arithmetic (`+`, binary and unary `-`, `*`, `/`, `%`), relational (`<`, `>`, `==`, `!=`, `>=`, `<=`), and logical (`&&`, `||`, and unary `!`) operators are supported. The binary operators require the value on at least one side to be a scalar or NumberSet. Arrays will have the operator applied to each element. Examples:
+The standard arithmetic (`+`, binary and unary `-`, `*`, `/`, `%`), relational (`<`, `>`, `==`, `!=`, `>=`, `<=`), and logical (`&&`, `||`, and unary `!`) operators are supported. Examples:
 
 * `q("q") + 1`, which adds one to every element of the result of the query `"q"`
 * `-q("q")`, the negation of the results of the query
 * `5 > q("q")`, a series of numbers indicating whether each data point is more than five
 * `6 / 8`, the scalar value three-quarters
+
+### Series Operations
+
+If you combine two seriesSets with an operator (i.e. `q(..)` + `q(..)`), then operations are applied for each point in the series if there is a corresponding datapoint on the right hand side (RH). A corresponding datapoint is one which has the same timestamp (and normal group subset rules apply). If there is no corresponding datapoint on the left side, then the datapoint is dropped. This is a new feature as of 0.5.0.
 
 ### Precedence
 
@@ -481,6 +485,18 @@ Remove any values lower than or equal to number from a series. Will error if thi
 ## dropna(seriesSet) seriesSet
 
 Remove any NaN or Inf values from a series. Will error if this operation results in an empty series.
+
+## dropbool(seriesSet, seriesSet) seriesSet
+Drop datapoints where the corresponding value in the second series set is non-zero. (See Series Operations for what corresponding means). The following example drops tr_avg (avg response time per bucket) datapoints if the count in that bucket was + or - 100 from the average count over the time period. 
+
+Example:
+
+```
+$count = q("sum:traffic.haproxy.route_tr_count{host=literal_or(ny-logsql01),route=Questions/Show}", "30m", "")
+$avg = q("sum:traffic.haproxy.route_tr_avg{host=literal_or(ny-logsql01),route=Questions/Show}", "30m", "")
+$avgCount = avg($count)
+dropbool($avg, !($count < $avgCount-100 || $count > $avgCount+100))
+```
 
 ## epoch() scalar
 

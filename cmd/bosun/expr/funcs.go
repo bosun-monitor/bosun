@@ -313,6 +313,12 @@ var builtins = map[string]parse.Func{
 		Tags:   tagFirst,
 		F:      DropNA,
 	},
+	"dropbool": {
+		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeSeriesSet},
+		Return: models.TypeSeriesSet,
+		Tags:   tagFirst,
+		F:      DropBool,
+	},
 	"epoch": {
 		Args:   []models.FuncType{},
 		Return: models.TypeScalar,
@@ -386,6 +392,27 @@ func SeriesFunc(e *State, T miniprofiler.Timer, tags string, pairs ...float64) (
 			},
 		},
 	}, nil
+}
+
+func DropBool(e *State, T miniprofiler.Timer, target *Results, filter *Results) (*Results, error) {
+	res := Results{}
+	unions := e.union(target, filter, "dropbool union")
+	for _, union := range unions {
+		aSeries := union.A.Value().(Series)
+		bSeries := union.B.Value().(Series)
+		newSeries := make(Series)
+		for k, v := range aSeries {
+			if bv, ok := bSeries[k]; ok {
+				if bv != float64(0) {
+					newSeries[k] = v
+				}
+			}
+		}
+		if len(newSeries) > 0 {
+			res.Results = append(res.Results, &Result{Group: union.Group, Value: newSeries})
+		}
+	}
+	return &res, nil
 }
 
 func Epoch(e *State, T miniprofiler.Timer) (*Results, error) {

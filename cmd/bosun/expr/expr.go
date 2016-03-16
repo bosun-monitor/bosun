@@ -189,6 +189,10 @@ func (s Series) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r)
 }
 
+func (a Series) Equal(b Series) bool {
+	return reflect.DeepEqual(a, b)
+}
+
 type ESQuery struct {
 	Query elastic.Query
 }
@@ -282,9 +286,19 @@ func (a *Results) Equal(b *Results) (bool, error) {
 		if !result.Group.Equal(sortedB[i].Group) {
 			return false, fmt.Errorf("mismatched groups a: %v, b: %v", result.Group, sortedB[i].Group)
 		}
-		if result.Value != sortedB[i].Value {
-			return false, fmt.Errorf("values do not match a: %v, b: %v", result.Value, sortedB[i].Value)
+		switch t := result.Value.(type) {
+		case Number, Scalar, String:
+			if result.Value != sortedB[i].Value {
+				return false, fmt.Errorf("values do not match a: %v, b: %v", result.Value, sortedB[i].Value)
+			}
+		case Series:
+			if !t.Equal(sortedB[i].Value.(Series)) {
+				return false, fmt.Errorf("mismatched series in result a: %v, b: %v", t, sortedB[i].Value.(Series))
+			}
+		default:
+			panic(fmt.Sprintf("can't compare results with type %T", t))
 		}
+
 	}
 	return true, nil
 }
@@ -514,6 +528,14 @@ func (e *State) walkBinary(node *parse.BinaryNode, T miniprofiler.Timer) *Result
 					s := make(Series)
 					for k, v := range at {
 						s[k] = operate(node.OpStr, float64(v), bv)
+					}
+					value = s
+				case Series:
+					s := make(Series)
+					for k, av := range at {
+						if bv, ok := bt[k]; ok {
+							s[k] = operate(node.OpStr, av, bv)
+						}
 					}
 					value = s
 				default:

@@ -248,3 +248,61 @@ func TestQueryExpr(t *testing.T) {
 		}
 	}
 }
+
+func TestSeriesOperations(t *testing.T) {
+	seriesA := `series("key=a", 0, 1, 1, 2, 2, 1, 3, 4)`
+	seriesB := `series("key=a", 0, 1,       2, 0, 3, 4)`
+	seriesC := `series("key=a", 4, 1,       6, 0, 7, 4)`
+	template := "%v %v %v"
+	tests := []exprInOut{
+		{
+			fmt.Sprintf(template, seriesA, "+", seriesB),
+			Results{
+				Results: ResultSlice{
+					&Result{
+						Value: Series{
+							time.Unix(0, 0): 2,
+							time.Unix(2, 0): 1,
+							time.Unix(3, 0): 8,
+						},
+						Group: opentsdb.TagSet{"key": "a"},
+					},
+				},
+			},
+		},
+		{
+			fmt.Sprintf(template, seriesA, "+", seriesC),
+			Results{
+				Results: ResultSlice{
+					&Result{
+						Value: Series{
+						// Should be empty
+						},
+						Group: opentsdb.TagSet{"key": "a"},
+					},
+				},
+			},
+		},
+		{
+			fmt.Sprintf(template, seriesA, "/", seriesB),
+			Results{
+				Results: ResultSlice{
+					&Result{
+						Value: Series{
+							time.Unix(0, 0): 1,
+							time.Unix(2, 0): math.Inf(1),
+							time.Unix(3, 0): 1,
+						},
+						Group: opentsdb.TagSet{"key": "a"},
+					},
+				},
+			},
+		},
+	}
+	for _, test := range tests {
+		err := testExpression(test)
+		if err != nil {
+			t.Error(err)
+		}
+	}
+}
