@@ -471,15 +471,15 @@ func Filter(e *State, T miniprofiler.Timer, series *Results, number *Results) (*
 }
 
 func Merge(e *State, T miniprofiler.Timer, series ...*Results) (*Results, error) {
+	res := &Results{}
 	if len(series) == 0 {
-		return &Results{}, fmt.Errorf("merge requires at least one result")
+		return res, fmt.Errorf("merge requires at least one result")
 	}
 	if len(series) == 1 {
 		return series[0], nil
 	}
-	res := series[0]
 	seen := make(map[string]bool)
-	for _, r := range series[1:] {
+	for _, r := range series {
 		for _, entry := range r.Results {
 			if _, ok := seen[entry.Group.String()]; ok {
 				return res, fmt.Errorf("duplicate group in merge: %s", entry.Group.String())

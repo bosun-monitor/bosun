@@ -128,13 +128,14 @@ func (e *Expr) ExecuteState(s *State, T miniprofiler.Timer) (r *Results, queries
 func errRecover(errp *error) {
 	e := recover()
 	if e != nil {
-		slog.Infof("%s: %s", e, debug.Stack())
 		switch err := e.(type) {
 		case runtime.Error:
+			slog.Infof("%s: %s", e, debug.Stack())
 			panic(e)
 		case error:
 			*errp = err
 		default:
+			slog.Infof("%s: %s", e, debug.Stack())
 			panic(e)
 		}
 	}
@@ -293,7 +294,7 @@ func (a *Results) Equal(b *Results) (bool, error) {
 			}
 		case Series:
 			if !t.Equal(sortedB[i].Value.(Series)) {
-				return false, fmt.Errorf("mismatched series in result a: %v, b: %v", t, sortedB[i].Value.(Series))
+				return false, fmt.Errorf("mismatched series in result (Group: %s) a: %v, b: %v", result.Group, t, sortedB[i].Value.(Series))
 			}
 		default:
 			panic(fmt.Sprintf("can't compare results with type %T", t))

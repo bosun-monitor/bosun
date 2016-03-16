@@ -276,16 +276,6 @@ func (b *BinaryNode) Check(t *Tree) error {
 	if !(t2 == models.TypeSeriesSet || t2 == models.TypeNumberSet || t2 == models.TypeScalar) {
 		return fmt.Errorf("expected NumberSet, SeriesSet, or Scalar, got %v", string(t1))
 	}
-	// if t1 == models.TypeSeriesSet && t2 == models.TypeSeriesSet {
-	// 	return fmt.Errorf("parse: type error in %s: at least one side must be a number", b)
-	// }
-	// check := t1
-	// if t1 == models.TypeSeriesSet {
-	// 	check = t2
-	// }
-	// if check != models.TypeNumberSet && check != models.TypeScalar {
-	// 	return fmt.Errorf("parse: type error in %s: expected a number", b)
-	// }
 	if err := b.Args[0].Check(t); err != nil {
 		return err
 	}
