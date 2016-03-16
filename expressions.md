@@ -40,12 +40,16 @@ Various metrics can be combined by operators as long as one group is a subset of
 
 ## Operators
 
-The standard arithmetic (`+`, binary and unary `-`, `*`, `/`, `%`), relational (`<`, `>`, `==`, `!=`, `>=`, `<=`), and logical (`&&`, `||`, and unary `!`) operators are supported. The binary operators require the value on at least one side to be a scalar or NumberSet. Arrays will have the operator applied to each element. Examples:
+The standard arithmetic (`+`, binary and unary `-`, `*`, `/`, `%`), relational (`<`, `>`, `==`, `!=`, `>=`, `<=`), and logical (`&&`, `||`, and unary `!`) operators are supported. Examples:
 
 * `q("q") + 1`, which adds one to every element of the result of the query `"q"`
 * `-q("q")`, the negation of the results of the query
 * `5 > q("q")`, a series of numbers indicating whether each data point is more than five
 * `6 / 8`, the scalar value three-quarters
+
+### Series Operations
+
+If you combine two seriesSets with an operator (i.e. `q(..)` + `q(..)`), then operations are applied for each point in the series if there is a corresponding datapoint on the right hand side (RH). A corresponding datapoint is one which has the same timestamp (and normal group subset rules apply). If there is no corresponding datapoint on the left side, then the datapoint is dropped. This is a new feature as of 0.5.0.
 
 ### Precedence
 
@@ -452,6 +456,10 @@ Returns the absolute value of each element in the numberSet.
 
 Returns the number of seconds of the [OpenTSDB duration string](http://opentsdb.net/docs/build/html/user_guide/query/dates.html).
 
+## tod(scalar) string
+
+Returns an [OpenTSDB duration string](http://opentsdb.net/docs/build/html/user_guide/query/dates.html) that represents the given number of seconds. This lets you do math on durations and then pass it to the duration arguments in functions like `q()`
+
 ## des(series, alpha scalar, beta scalar) series
 
 Returns series smoothed using Holt-Winters double exponential smoothing. Alpha
@@ -478,6 +486,18 @@ Remove any values lower than or equal to number from a series. Will error if thi
 
 Remove any NaN or Inf values from a series. Will error if this operation results in an empty series.
 
+## dropbool(seriesSet, seriesSet) seriesSet
+Drop datapoints where the corresponding value in the second series set is non-zero. (See Series Operations for what corresponding means). The following example drops tr_avg (avg response time per bucket) datapoints if the count in that bucket was + or - 100 from the average count over the time period. 
+
+Example:
+
+```
+$count = q("sum:traffic.haproxy.route_tr_count{host=literal_or(ny-logsql01),route=Questions/Show}", "30m", "")
+$avg = q("sum:traffic.haproxy.route_tr_avg{host=literal_or(ny-logsql01),route=Questions/Show}", "30m", "")
+$avgCount = avg($count)
+dropbool($avg, !($count < $avgCount-100 || $count > $avgCount+100))
+```
+
 ## epoch() scalar
 
 Returns the Unix epoch in seconds of the expression start time (scalar).
@@ -494,7 +514,17 @@ Returns the first count (scalar) results of number.
 
 Returns the first key from the given lookup table with matching tags.
 
-##shift(seriesSet, dur string) seriesSet
+## series(tagset string, epoch, value, ...) seriesSet
+
+Returns a seriesSet with one series. The series will have a group (a.k.a tagset). You can then optionally pass epoch value pairs (if non are provided, the series will be empty). This is can be used for testing or drawing arbitary lines. For example:
+
+```
+$now = epoch()
+$hourAgo =  $now-d("1h")
+merge(series("foo=bar", $hourAgo, 5, $now, 10), series("foo=bar2", $hourAgo, 6, $now, 11))
+```
+
+## shift(seriesSet, dur string) seriesSet
 
 Shift takes a seriesSet and shifts the time forward by the value of dur ([OpenTSDB duration string](http://opentsdb.net/docs/build/html/user_guide/query/dates.html)) and adds a tag for representing the shift duration. This is meant so you can overlay times visually in a graph.
 
