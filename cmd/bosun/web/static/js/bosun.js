@@ -2084,6 +2084,17 @@ var Query = (function () {
                 f.tagk = k;
                 that.gbFilters[k] = f;
             });
+            // Load filters from raw query and turn them into gb and nGbFilters.
+            // This makes links from other pages work (i.e. the expr page)
+            if (_.has(q, 'filters')) {
+                _.each(q.filters, function (filter) {
+                    if (filter.groupBy) {
+                        that.gbFilters[filter.tagk] = filter;
+                        return;
+                    }
+                    that.nGbFilters[filter.tagk] = filter;
+                });
+            }
         }
         this.setFilters();
         this.setDs();

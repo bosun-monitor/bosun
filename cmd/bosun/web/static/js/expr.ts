@@ -19,7 +19,6 @@ interface IExprScope extends RootScope {
 
 
 bosunControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route', function($scope: IExprScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService) {
-	
 	var search = $location.search();
 	var current: string;
 	try {

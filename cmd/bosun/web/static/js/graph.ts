@@ -79,6 +79,17 @@ class Query {
 				f.tagk = k;
 				that.gbFilters[k] = f;
 			});
+			// Load filters from raw query and turn them into gb and nGbFilters.
+			// This makes links from other pages work (i.e. the expr page)
+			if (_.has(q, 'filters')) {
+				_.each(q.filters, function(filter: Filter) {
+					if (filter.groupBy) {
+						that.gbFilters[filter.tagk] = filter;
+						return;
+					}
+					that.nGbFilters[filter.tagk] = filter;
+				});
+			}
 		}
 		this.setFilters();
 		this.setDs();
@@ -218,9 +229,9 @@ interface IGraphScope extends ng.IScope {
 	owners: string[];
 	hosts: string[];
 	categories: string[];
-    annotateEnabled: boolean;
-    showAnnotations: boolean;
-    setShowAnnotations: (something: any) => void;
+	annotateEnabled: boolean;
+	showAnnotations: boolean;
+	setShowAnnotations: (something: any) => void;
 }
 
 bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route', '$timeout', function($scope: IGraphScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService, $timeout: ng.ITimeoutService) {
