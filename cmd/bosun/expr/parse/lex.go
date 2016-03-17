@@ -57,6 +57,7 @@ const (
 	itemString
 	itemFunc
 	itemTripleQuotedString
+    itemPow      // **
 )
 
 const eof = -1
@@ -181,6 +182,8 @@ Loop:
 			l.emit(itemLeftParen)
 		case r == ')':
 			l.emit(itemRightParen)
+        case "**":
+            l.emit(itemPow)
 		case r == '"':
 			return lexString
 		case r == '\'':
