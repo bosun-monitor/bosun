@@ -25,6 +25,11 @@ type Conf struct {
 	BatchSize int
 	// MaxQueueLen is the number of metrics keept internally.
 	MaxQueueLen int
+	// MaxMem is the maximum number of megabytes that can be allocated
+	// before scollector panics (shuts down). Default of 500 MB. This
+	// is a saftey mechanism to protect the host from the monitoring
+	// agent
+	MaxMem uint64
 	// Filter filters collectors matching these terms.
 	Filter []string
 	// PProf is an IP:Port binding to be used for debugging with pprof package.

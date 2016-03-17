@@ -240,14 +240,17 @@ func main() {
 		}
 		collect.MaxQueueLen = conf.MaxQueueLen
 	}
-
+	maxMemMegaBytes := uint64(500)
+	if conf.MaxMem != 0 {
+		maxMemMegaBytes = conf.MaxMem
+	}
 	go func() {
-		const maxMem = 500 * 1024 * 1024 // 500MB
+		maxMemBytes := maxMemMegaBytes * 1024 * 1024
 		var m runtime.MemStats
-		for range time.Tick(time.Minute) {
+		for range time.Tick(time.Second * 30) {
 			runtime.ReadMemStats(&m)
-			if m.Alloc > maxMem {
-				panic("memory max reached")
+			if m.Alloc > maxMemBytes {
+				panic(fmt.Sprintf("memory max reached: (current: %v bytes, max: %v bytes)", m.Alloc, maxMemBytes))
 			}
 		}
 	}()
