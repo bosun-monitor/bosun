@@ -182,8 +182,6 @@ Loop:
 			l.emit(itemLeftParen)
 		case r == ')':
 			l.emit(itemRightParen)
-        case "**":
-            l.emit(itemPow)
 		case r == '"':
 			return lexString
 		case r == '\'':
@@ -261,6 +259,8 @@ func lexSymbol(l *lexer) stateFn {
 		l.emit(itemMinus)
 	case "*":
 		l.emit(itemMult)
+    case "**":
+        l.emit(itemPow)
 	case "/":
 		l.emit(itemDiv)
 	case "%":
