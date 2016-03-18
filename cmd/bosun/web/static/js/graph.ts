@@ -232,6 +232,7 @@ interface IGraphScope extends ng.IScope {
 	annotateEnabled: boolean;
 	showAnnotations: boolean;
 	setShowAnnotations: (something: any) => void;
+	exprText: string;
 }
 
 bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route', '$timeout', function($scope: IGraphScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService, $timeout: ng.ITimeoutService) {
@@ -243,14 +244,14 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 	}
 	$scope.rate_options = ["auto", "gauge", "counter", "rate"];
 	$scope.canAuto = {};
-    $scope.showAnnotations = (getShowAnnotations() == "true");
-    $scope.setShowAnnotations = () => {
-        if ($scope.showAnnotations) {
-            setShowAnnotations("true");
-            return;
-        }
-        setShowAnnotations("false");
-    }
+	$scope.showAnnotations = (getShowAnnotations() == "true");
+	$scope.setShowAnnotations = () => {
+		if ($scope.showAnnotations) {
+			setShowAnnotations("true");
+			return;
+		}
+		setShowAnnotations("false");
+	}
 	var search = $location.search();
 	var j = search.json;
 	if (search.b64) {
@@ -306,14 +307,14 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 	}
 	$scope.submitAnnotation = () => $http.post('/api/annotation', $scope.annotation)
 		.success((data) => {
-            //debugger;
-            if ($scope.annotation.Id == "" && $scope.annotation.Owner != "") {
+			//debugger;
+			if ($scope.annotation.Id == "" && $scope.annotation.Owner != "") {
 				setOwner($scope.annotation.Owner);
 			}
 			$scope.annotation = new Annotation(data);
 			$scope.error = "";
-            // This seems to make angular refresh, where a push doesn't
-            $scope.annotations = $scope.annotations.concat($scope.annotation);
+			// This seems to make angular refresh, where a push doesn't
+			$scope.annotations = $scope.annotations.concat($scope.annotation);
 		})
 		.error((error) => {
 			$scope.error = error;
@@ -321,7 +322,7 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 	$scope.deleteAnnotation = () => $http.delete('/api/annotation/' + $scope.annotation.Id)
 		.success((data) => {
 			$scope.error = "";
-            $scope.annotations = _.without($scope.annotations, _.findWhere($scope.annotations, {Id: $scope.annotation.Id}));
+			$scope.annotations = _.without($scope.annotations, _.findWhere($scope.annotations, { Id: $scope.annotation.Id }));
 		})
 		.error((error) => {
 			$scope.error = error;
@@ -337,20 +338,21 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 	$scope.setIndex = function(i: number) {
 		$scope.index = i;
 	};
-    if ($scope.annotateEnabled) {
-        $http.get('/api/annotation/values/Owner')
-            .success((data: string[]) => {
-                $scope.owners = data;
-            });
-        $http.get('/api/annotation/values/Category')
-            .success((data: string[]) => {
-                $scope.categories = data;
-            });
-        $http.get('/api/annotation/values/Host')
-            .success((data: string[]) => {
-                $scope.hosts = data;
-            });
-    }
+	var alphabet = "abcdefghijklmnopqrstuvwxyz".split("");
+	if ($scope.annotateEnabled) {
+		$http.get('/api/annotation/values/Owner')
+			.success((data: string[]) => {
+				$scope.owners = data;
+			});
+		$http.get('/api/annotation/values/Category')
+			.success((data: string[]) => {
+				$scope.categories = data;
+			});
+		$http.get('/api/annotation/values/Host')
+			.success((data: string[]) => {
+				$scope.hosts = data;
+			});
+	}
 	$scope.GetTagKByMetric = function(index: number) {
 		$scope.tagvs[index] = new TagV;
 		var metric = $scope.query_p[index].metric;
@@ -555,15 +557,22 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 		$http.get('/api/graph?' + 'b64=' + encodeURIComponent(btoa(JSON.stringify(request))) + autods + autorate + min + max)
 			.success((data: any) => {
 				$scope.result = data.Series;
-                if ($scope.annotateEnabled) {
-                    $scope.annotations = _.sortBy(data.Annotations, (d: Annotation) => { return d.StartDate; });
-                }
+				if ($scope.annotateEnabled) {
+					$scope.annotations = _.sortBy(data.Annotations, (d: Annotation) => { return d.StartDate; });
+				}
 				if (!$scope.result) {
 					$scope.warning = 'No Results';
 				} else {
 					$scope.warning = '';
 				}
-				$scope.queries = data.Queries;
+				$scope.queries = data.Queries;	
+				$scope.exprText = "";
+				_.each($scope.queries, (q, i) => {
+						$scope.exprText += "$" + alphabet[i] + " = " + q + "\n";
+						if ( i == $scope.queries.length-1) {
+							$scope.exprText += "avg($" + alphabet[i] + ")"
+						}
+				});
 				$scope.running = '';
 				$scope.error = '';
 				var u = $location.absUrl();

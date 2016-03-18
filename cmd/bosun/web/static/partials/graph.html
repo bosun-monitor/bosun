@@ -48,7 +48,7 @@
 					<input type="checkbox" ng-model="normalize"> Normalize
 				</label>
 			</div>
-            <div class="checkbox" tooltip title="Show Annotations. Hold shift when brushing graph to create an annotation." ng-show="annotateEnabled">
+			<div class="checkbox" tooltip title="Show Annotations. Hold shift when brushing graph to create an annotation." ng-show="annotateEnabled">
 				<label>
 					<input type="checkbox" ng-model="showAnnotations" ng-change="setShowAnnotations()"> Annotations
 				</label>
@@ -225,6 +225,11 @@
 		<h4>Queries</h4>
 		<table class="table">
 			<tbody>
+				<tr ng-show="queries.length > 1">
+					<td>All</td>
+					<td><a href="/expr?expr={{btoa(exprText)}}{{queryTime}}" target="_blank">Expression</a></td>
+					<td><a href="/config?expr={{btoa(exprText)}}" target="_blank">Rule</a></td>
+				</tr>
 				<tr ng-repeat="q in queries">
 					<td ng-bind="q"></td>
 					<td><a href="/expr?expr={{btoa(q)}}{{queryTime}}" target="_blank">Expression</a></td>
@@ -251,71 +256,71 @@
 
 <a data-toggle="modal" data-target="#annotationModal" id="modalShower"></a>
 <div class="modal" id="annotationModal" tabindex="-1" role="dialog">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">&times;</button>
-                <h4 class="modal-title" id="annotationModalLabel">Annotation</h4>
-            </div>
-            <div class="modal-body">
-                <form class="form-horizontal">
-                    <div class="form-group">
-                        <label class="col-sm-2 control-label" ng-click="switch()">StartDate</label>
-                        <div class="col-sm-6">
-                            <input type="text" class="form-control" ng-model="annotation.StartDate">
-                            <p class="help-block">Format: YYYY-MM-DDTHH:mm:ssZ (RFC3339). If StartDate and EndDate are blank, the time is set to now. If one of the two is blank, the blank field will be set to the time of the other.</p>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label class="col-sm-2 control-label" ng-click="switch()">EndDate</label>
-                        <div class="col-sm-6">
-                            <input type="text" class="form-control" ng-model="annotation.EndDate">
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label class="col-sm-2 control-label">CreationUser</label>
-                        <div class="col-sm-6">
-                            <input type="text" class="form-control" ng-model="annotation.CreationUser">
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label class="col-sm-2 control-label">Url</label>
-                        <div class="col-sm-6">
-                            <input type="text" class="form-control" ng-model="annotation.Url">
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label class="col-sm-2 control-label">Host</label>
-                        <div class="col-sm-6">
-                            <input type="text" class="form-control" ng-model="annotation.Host" bs-options="h for h in hosts" bs-typeahead>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label class="col-sm-2 control-label">Owner</label>
-                        <div class="col-sm-6">
-                            <input type="text" class="form-control" ng-model="annotation.Owner" bs-options="o for o in owners" bs-typeahead>
-                        </div>
-                    </div>
-                        <div class="form-group">
-                        <label class="col-sm-2 control-label">Category</label>
-                        <div class="col-sm-6">
-                            <input type="text" class="form-control" ng-model="annotation.Category" bs-options="c for c in categories" bs-typeahead>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label class="col-sm-2 control-label">Message</label>
-                        <div class="col-sm-10">
-                            <textarea class="form-control" ng-model="annotation.Message"></textarea>
-                        </div>
-                    </div>
-                    <div ng-show="annotation.Id != ''">Editing Annotation</div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-danger" ng-click="deleteAnnotation()" data-dismiss="modal" >Delete</button>
-                <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" ng-click="submitAnnotation()" data-dismiss="modal">Save changes</button>
-            </div>
-        </div>
-    </div>
+	<div class="modal-dialog" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				<button type="button" class="close" data-dismiss="modal" aria-label="Close">&times;</button>
+				<h4 class="modal-title" id="annotationModalLabel">Annotation</h4>
+			</div>
+			<div class="modal-body">
+				<form class="form-horizontal">
+					<div class="form-group">
+						<label class="col-sm-2 control-label" ng-click="switch()">StartDate</label>
+						<div class="col-sm-6">
+							<input type="text" class="form-control" ng-model="annotation.StartDate">
+							<p class="help-block">Format: YYYY-MM-DDTHH:mm:ssZ (RFC3339). If StartDate and EndDate are blank, the time is set to now. If one of the two is blank, the blank field will be set to the time of the other.</p>
+						</div>
+					</div>
+					<div class="form-group">
+						<label class="col-sm-2 control-label" ng-click="switch()">EndDate</label>
+						<div class="col-sm-6">
+							<input type="text" class="form-control" ng-model="annotation.EndDate">
+						</div>
+					</div>
+					<div class="form-group">
+						<label class="col-sm-2 control-label">CreationUser</label>
+						<div class="col-sm-6">
+							<input type="text" class="form-control" ng-model="annotation.CreationUser">
+						</div>
+					</div>
+					<div class="form-group">
+						<label class="col-sm-2 control-label">Url</label>
+						<div class="col-sm-6">
+							<input type="text" class="form-control" ng-model="annotation.Url">
+						</div>
+					</div>
+					<div class="form-group">
+						<label class="col-sm-2 control-label">Host</label>
+						<div class="col-sm-6">
+							<input type="text" class="form-control" ng-model="annotation.Host" bs-options="h for h in hosts" bs-typeahead>
+						</div>
+					</div>
+					<div class="form-group">
+						<label class="col-sm-2 control-label">Owner</label>
+						<div class="col-sm-6">
+							<input type="text" class="form-control" ng-model="annotation.Owner" bs-options="o for o in owners" bs-typeahead>
+						</div>
+					</div>
+						<div class="form-group">
+						<label class="col-sm-2 control-label">Category</label>
+						<div class="col-sm-6">
+							<input type="text" class="form-control" ng-model="annotation.Category" bs-options="c for c in categories" bs-typeahead>
+						</div>
+					</div>
+					<div class="form-group">
+						<label class="col-sm-2 control-label">Message</label>
+						<div class="col-sm-10">
+							<textarea class="form-control" ng-model="annotation.Message"></textarea>
+						</div>
+					</div>
+					<div ng-show="annotation.Id != ''">Editing Annotation</div>
+				</form>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-danger" ng-click="deleteAnnotation()" data-dismiss="modal" >Delete</button>
+				<button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+				<button type="button" class="btn btn-primary" ng-click="submitAnnotation()" data-dismiss="modal">Save changes</button>
+			</div>
+		</div>
+	</div>
 </div>

@@ -2284,6 +2284,7 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
         $scope.setIndex = function (i) {
             $scope.index = i;
         };
+        var alphabet = "abcdefghijklmnopqrstuvwxyz".split("");
         if ($scope.annotateEnabled) {
             $http.get('/api/annotation/values/Owner')
                 .success(function (data) {
@@ -2514,6 +2515,13 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
                     $scope.warning = '';
                 }
                 $scope.queries = data.Queries;
+                $scope.exprText = "";
+                _.each($scope.queries, function (q, i) {
+                    $scope.exprText += "$" + alphabet[i] + " = " + q + "\n";
+                    if (i == $scope.queries.length - 1) {
+                        $scope.exprText += "avg($" + alphabet[i] + ")";
+                    }
+                });
                 $scope.running = '';
                 $scope.error = '';
                 var u = $location.absUrl();
