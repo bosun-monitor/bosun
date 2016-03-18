@@ -48,19 +48,40 @@ func TestDuration(t *testing.T) {
 }
 
 func TestToDuration(t *testing.T) {
-	d := exprInOut{
-		`tod(3600*2)`,
-		Results{
-			Results: ResultSlice{
-				&Result{
-					Value: String("2h"),
+	inputs := []int{
+		0,
+		1,
+		60,
+		3600,
+		86400,
+		604800,
+		31536000,
+	}
+	outputs := []string{
+		"0ms",
+		"1s",
+		"1m",
+		"1h",
+		"1d",
+		"1w",
+		"1y",
+	}
+
+	for i := range inputs {
+		d := exprInOut{
+			fmt.Sprintf(`tod(%d)`, inputs[i]),
+			Results{
+				Results: ResultSlice{
+					&Result{
+						Value: String(outputs[i]),
+					},
 				},
 			},
-		},
-	}
-	err := testExpression(d)
-	if err != nil {
-		t.Error(err)
+		}
+		err := testExpression(d)
+		if err != nil {
+			t.Error(err)
+		}
 	}
 }
 
