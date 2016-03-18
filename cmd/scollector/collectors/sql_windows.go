@@ -7,6 +7,7 @@ import (
 
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
+	"bosun.org/slog"
 	"bosun.org/util"
 	"github.com/StackExchange/wmi"
 )
@@ -15,7 +16,7 @@ func init() {
 	c := &IntervalCollector{
 		F: c_mssql,
 	}
-	c.init = wmiInit(c, func() interface{} { return &[]Win32_Service{} }, `WHERE Name Like 'MSSQL$%' or Name = 'MSSQLSERVER'`, &sqlQuery)
+	c.init = wmiInit(c, func() interface{} { return &[]Win32_Service{} }, wqlSQLInstanceFilter, &sqlQuery)
 	collectors = append(collectors, c)
 
 	var dstCluster []MSCluster_Cluster
@@ -56,7 +57,8 @@ func init() {
 }
 
 const (
-	rootMSCluster string = "root\\MSCluster"
+	rootMSCluster        string = "root\\MSCluster"
+	wqlSQLInstanceFilter string = `WHERE (Name Like 'MSSQL$%' or Name = 'MSSQLSERVER') and not (Name Like 'MSSQL$MICROSOFT##%')`
 )
 
 var (
@@ -71,10 +73,10 @@ var (
 func c_mssql() (opentsdb.MultiDataPoint, error) {
 	var err error
 	var svc_dst []Win32_Service
-	var svc_q = wmi.CreateQuery(&svc_dst, `WHERE Name Like 'MSSQL$%' or Name = 'MSSQLSERVER'`)
+	var svc_q = wmi.CreateQuery(&svc_dst, wqlSQLInstanceFilter)
 	err = queryWmi(svc_q, &svc_dst)
 	if err != nil {
-		return nil, err
+		return nil, slog.Wrap(err)
 	}
 	var md opentsdb.MultiDataPoint
 	add := func(f func([]Win32_Service) (opentsdb.MultiDataPoint, error)) {
@@ -102,7 +104,7 @@ func c_mssql_general(svc_dst []Win32_Service) (opentsdb.MultiDataPoint, error) {
 			label = strings.ToLower(w.Name[6:len(w.Name)])
 		}
 		if err := queryWmi(q, &dst); err != nil {
-			return nil, err
+			return nil, slog.Wrap(err)
 		}
 		for _, v := range dst {
 			tags := opentsdb.TagSet{"instance": label}
@@ -157,7 +159,7 @@ func c_mssql_statistics(svc_dst []Win32_Service) (opentsdb.MultiDataPoint, error
 		}
 		err := queryWmi(q, &dst)
 		if err != nil {
-			return nil, err
+			return nil, slog.Wrap(err)
 		}
 		for _, v := range dst {
 			tags := opentsdb.TagSet{"instance": label}
@@ -214,7 +216,7 @@ func c_mssql_locks(svc_dst []Win32_Service) (opentsdb.MultiDataPoint, error) {
 		}
 		err := queryWmi(q, &dst)
 		if err != nil {
-			return nil, err
+			return nil, slog.Wrap(err)
 		}
 		for _, v := range dst {
 			tags := opentsdb.TagSet{"instance": label, "type": v.Name}
@@ -260,7 +262,7 @@ func c_mssql_databases(svc_dst []Win32_Service) (opentsdb.MultiDataPoint, error)
 		}
 		err := queryWmi(q, &dst)
 		if err != nil {
-			return nil, err
+			return nil, slog.Wrap(err)
 		}
 		for _, v := range dst {
 			tags := opentsdb.TagSet{"instance": label, "db": v.Name}
@@ -372,7 +374,7 @@ type Win32_PerfRawData_MSSQLSERVER_SQLServerDatabases struct {
 func c_mssql_replica_db() (opentsdb.MultiDataPoint, error) {
 	var dst []Win32_PerfRawData_MSSQLSERVER_SQLServerDatabaseReplica
 	if err := queryWmi(sqlAGDBQuery, &dst); err != nil {
-		return nil, err
+		return nil, slog.Wrap(err)
 	}
 	var md opentsdb.MultiDataPoint
 	for _, v := range dst {
@@ -425,7 +427,7 @@ type Win32_PerfRawData_MSSQLSERVER_SQLServerDatabaseReplica struct {
 func c_mssql_replica_server() (opentsdb.MultiDataPoint, error) {
 	var dst []Win32_PerfRawData_MSSQLSERVER_SQLServerAvailabilityReplica
 	if err := queryWmi(sqlAGQuery, &dst); err != nil {
-		return nil, err
+		return nil, slog.Wrap(err)
 	}
 	var md opentsdb.MultiDataPoint
 	for _, v := range dst {
@@ -479,7 +481,7 @@ type Win32_PerfRawData_MSSQLSERVER_SQLServerAvailabilityReplica struct {
 func c_mssql_replica_votes() (opentsdb.MultiDataPoint, error) {
 	var dst []MSCluster_Node
 	if err := queryWmiNamespace(sqlAGVotes, &dst, rootMSCluster); err != nil {
-		return nil, err
+		return nil, slog.Wrap(err)
 	}
 
 	var md opentsdb.MultiDataPoint
@@ -513,7 +515,7 @@ func c_mssql_replica_resources() (opentsdb.MultiDataPoint, error) {
 	//Only report metrics for resources owned by this node
 	q := wmi.CreateQuery(&dst, fmt.Sprintf("WHERE OwnerNode = '%s'", util.Hostname))
 	if err := queryWmiNamespace(q, &dst, rootMSCluster); err != nil {
-		return nil, err
+		return nil, slog.Wrap(err)
 	}
 	var md opentsdb.MultiDataPoint
 	for _, v := range dst {
