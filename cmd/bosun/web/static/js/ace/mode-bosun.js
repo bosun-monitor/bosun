@@ -6,13 +6,10 @@ var TextHighlightRules = require("./text_highlight_rules").TextHighlightRules;
 
 var BosunHighlightRules = function() {
 
-	var globals = "checkFrequency|tsdbHost|graphiteHost|logstashElasticHosts|httpListen|" +
-		"hostname|relayListen|smtpHost|smtpUsername|smtpPassword|emailFrom|stateFile|ping|" +
-		"pingDuration|noSleep|blockedPutIPs|allowedPutIPs|unknownThreshold|timeAndDate|" +
-		"responseLimit|searchSince|unknownTemplate|squelch|shortURLKey";
+	var globals = "checkFrequency|tsdbHost|graphiteHost|logstashElasticHosts|httpListen|hostname|relayListen|smtpHost|smtpUsername|smtpPassword|emailFrom|stateFile|ping|pingDuration|noSleep|blockedPutIPs|allowedPutIPs|unknownThreshold|timeAndDate|responseLimit|searchSince|unknownTemplate|squelch|shortURLKey|tsdbVersion|elasticHosts|annotateElasticHosts|defaultRunEvery|redisHost|influxHost|influxUsername|influxPassword|influxTLS|influxTimeout|ledisDir";
 
 	var inAlertKeywords = "macro|template|crit|warn|depends|squelch|critNotification|" +
-	"warnNotification|unknown|unjoinedOk|ignoreUnknown|log"
+	"warnNotification|unknown|unjoinedOk|ignoreUnknown|log|maxLogFrequency"
 
 	var inNotificationKeywords = "email|post|get|print|contentType|next|timeout|body|useBody";
 
@@ -24,14 +21,15 @@ _
 
 	var graphiteFuncs = "graphiteBand|graphite";
 
-	var tsdbFuncs = "band|change|count|diff|q";
+	var tsdbFuncs = "band|change|count|diff|q|over|shiftBand";
 
-	var builtinFuncs = "avg|dev|first|forecastlr|last|len|max|median|min|" +
-	"percentile|since|sum|streak|rename|t|ungroup|abs|d|epoch|dropge|drople|dropna|des|nv";
+	var builtinFuncs = "abs|avg|cCount|d|des|dev|diff|dropbool|dropg|dropge|dropl|drople|dropna|epoch|filter|first|forecastlr|last|len|limit|linelr|max|median|merge|min|nv|percentile|rename|series|shift|since|sort|streak|sum|t|tod|ungroup";
 
 	var logstashFuncs = "lsstat|lscount";
 
-	var exprFuncs = [confFuncs, graphiteFuncs, tsdbFuncs, builtinFuncs, logstashFuncs].join("|")
+	var elasticFuncs = "esall|esand|escount|esdaily|esgt|esgte|esindices|esls|eslt|eslte|esor|esquery|esregexp|esstat"
+
+	var exprFuncs = [confFuncs, graphiteFuncs, tsdbFuncs, builtinFuncs, logstashFuncs, elasticFuncs].join("|")
 
 	this.$rules = {
 		"start" : [
