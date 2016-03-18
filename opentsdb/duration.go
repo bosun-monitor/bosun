@@ -162,7 +162,7 @@ func (d Duration) HumanString() string {
 		return fmt.Sprintf("%dh", d/Hour)
 	}
 	if d >= Minute && d%Minute == 0 {
-		return fmt.Sprintf("%dh", d/Minute)
+		return fmt.Sprintf("%dm", d/Minute)
 	}
 	if d >= Second && d%Second == 0 {
 		return fmt.Sprintf("%ds", d/Second)
