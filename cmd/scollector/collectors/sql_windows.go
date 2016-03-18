@@ -58,7 +58,7 @@ func init() {
 
 const (
 	rootMSCluster        string = "root\\MSCluster"
-	wqlSQLInstanceFilter string = `WHERE (Name Like 'MSSQL$%' or Name = 'MSSQLSERVER') and not (Name Like 'MSSQL$MICROSOFT##%')`
+	wqlSQLInstanceFilter string = `WHERE (Name Like 'MSSQL$%' or Name = 'MSSQLSERVER') and not (Name Like 'MSSQL$MICROSOFT##%' or StartMode = 'Disabled')`
 )
 
 var (
