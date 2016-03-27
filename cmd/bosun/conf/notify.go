@@ -148,7 +148,7 @@ func SendMail(addr, username, password string, from string, to []string, msg []b
 		return err
 	}
 	defer c.Close()
-	if err = c.Hello("localhost"); err != nil {
+	if err = c.Hello(util.Hostname); err != nil {
 		return err
 	}
 	if ok, _ := c.Extension("STARTTLS"); ok {
