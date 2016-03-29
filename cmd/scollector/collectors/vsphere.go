@@ -6,7 +6,9 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io"
+	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	"bosun.org/metadata"
@@ -16,12 +18,22 @@ import (
 	"bosun.org/vsphere"
 )
 
+var (
+	performanceMetrics = make([]*regexp.Regexp, 0)
+)
+
 // Vsphere registers a vSphere collector.
-func Vsphere(user, pwd, host string) error {
+func Vsphere(user, pwd, host string, perfmetrics []string) error {
 	if host == "" || user == "" || pwd == "" {
 		return fmt.Errorf("empty Host, User, or Password in Vsphere")
 	}
 	cpuIntegrators := make(map[string]tsIntegrator)
+	for _, metric := range perfmetrics {
+		err := vphereAddPerformanceMetricFilter(metric)
+		if err != nil {
+			slog.Errorf("Error processing PerformanceMetrics: %s", err)
+		}
+	}
 	collectors = append(collectors, &IntervalCollector{
 		F: func() (opentsdb.MultiDataPoint, error) {
 			return c_vsphere(user, pwd, host, cpuIntegrators)
@@ -31,22 +43,35 @@ func Vsphere(user, pwd, host string) error {
 	return nil
 }
 
+func vphereAddPerformanceMetricFilter(s string) error {
+	re, err := regexp.Compile(s)
+	if err != nil {
+		return err
+	}
+	performanceMetrics = append(performanceMetrics, re)
+	return nil
+}
+
 func c_vsphere(user, pwd, host string, cpuIntegrators map[string]tsIntegrator) (opentsdb.MultiDataPoint, error) {
 	v, err := vsphere.Connect(host, user, pwd)
 	if err != nil {
-		return nil, err
+		return nil, slog.Wrap(err)
 	}
 	var md opentsdb.MultiDataPoint
 	// reference ID to cleaned name
 	hostKey := make(map[string]string)
-	if err := vsphereHost(v, &md, cpuIntegrators, hostKey); err != nil {
-		return nil, err
+	storeKey := make(map[string]string)
+	if err := vsphereStores(v, storeKey); err != nil {
+		slog.Errorf("vsphere: couldn't get Datastores for %v: %v", host, err)
+	}
+	if err := vsphereHost(v, &md, cpuIntegrators, hostKey, storeKey); err != nil {
+		return nil, slog.Wrap(err)
 	}
 	if err := vsphereDatastore(v, &md, hostKey); err != nil {
-		return nil, err
+		return nil, slog.Wrap(err)
 	}
-	if err := vsphereGuest(util.Clean(host), v, &md); err != nil {
-		return nil, err
+	if err := vsphereGuest(util.Clean(host), v, &md, storeKey); err != nil {
+		return nil, slog.Wrap(err)
 	}
 	return md, nil
 }
@@ -59,6 +84,87 @@ type DatastoreHostMount struct {
 		Mounted    bool   `xml:"mounted"`
 		Path       string `xml:"path"`
 	} `xml:"mountInfo"`
+}
+
+type HostScsiDiskPartition struct {
+	DiskName  string `xml:"diskName"`
+	Partition int    `xml:"partition"`
+}
+
+type HostVmfsVolume struct {
+	Type   string                  `xml:"type"`
+	Name   string                  `xml:"name"`
+	Uuid   string                  `xml:"uuid"`
+	Extent []HostScsiDiskPartition `xml:"extent"`
+}
+
+type VmfsDatastoreInfo struct {
+	Name string          `xml:"name"`
+	Url  string          `xml:"url"`
+	Vmfs *HostVmfsVolume `xml:"vmfs,omitempty"`
+}
+
+func vsphereStores(v *vsphere.Vsphere, storeKey map[string]string) error {
+	res, err := v.Info("Datastore", []string{
+		"name",
+	})
+	if err != nil {
+		return err
+	}
+	for _, r := range res {
+		var name string
+		for _, p := range r.Props {
+			if p.Name == "name" {
+				name, err = opentsdb.Clean(p.Val.Inner)
+				if err != nil {
+					name = ""
+				}
+				break
+			}
+		}
+		if name == "" {
+			continue
+		}
+		storeKey[r.ID] = name
+	}
+
+	res, err = v.Datastores(storeKey)
+	if err != nil {
+		return err
+	}
+	for _, r := range res {
+		var name string
+		for _, p := range r.Props {
+			if p.Name == "name" {
+				name, err = opentsdb.Clean(p.Val.Inner)
+				if err != nil {
+					name = ""
+				}
+				break
+			}
+		}
+		if name == "" {
+			continue
+		}
+		storeKey[r.ID] = name
+		for _, p := range r.Props {
+			if p.Val.Type == "VmfsDatastoreInfo" {
+				var vdistring = fmt.Sprintf("<val xsi:type=\"VmfsDatastoreInfo\">%s</val>", p.Val.Inner)
+				var vdi VmfsDatastoreInfo
+				d := xml.NewDecoder(strings.NewReader(vdistring))
+				err := d.Decode(&vdi)
+				if err != nil {
+					continue
+				}
+				storeKey[vdi.Vmfs.Uuid] = name
+				for _, e := range vdi.Vmfs.Extent {
+					storeKey[e.DiskName] = name
+				}
+			}
+		}
+	}
+
+	return nil
 }
 
 func vsphereDatastore(v *vsphere.Vsphere, md *opentsdb.MultiDataPoint, hostKey map[string]string) error {
@@ -78,17 +184,20 @@ func vsphereDatastore(v *vsphere.Vsphere, md *opentsdb.MultiDataPoint, hostKey m
 		var name string
 		for _, p := range r.Props {
 			if p.Name == "name" {
-				name = p.Val.Inner
+				name, err = opentsdb.Clean(p.Val.Inner)
+				if err != nil {
+					name = ""
+				}
 				break
 			}
 		}
 		if name == "" {
-			Error = fmt.Errorf("vsphere: empty name")
+			Error = fmt.Errorf("vsphere: empty name for %s", r.ID)
 			continue
 		}
 		tags := opentsdb.TagSet{
-			"disk": name,
-			"host": "",
+			"disk":    name,
+			"vcenter": v.Vcenter(),
 		}
 		var diskTotal, diskFree int64
 		for _, p := range r.Props {
@@ -111,7 +220,7 @@ func vsphereDatastore(v *vsphere.Vsphere, md *opentsdb.MultiDataPoint, hostKey m
 			case "ArrayOfDatastoreHostMount":
 				switch p.Name {
 				case "host":
-					d := xml.NewDecoder(bytes.NewBufferString(p.Val.Inner))
+					d := xml.NewDecoder(strings.NewReader(p.Val.Inner))
 
 					for {
 						var m DatastoreHostMount
@@ -157,7 +266,7 @@ type HostSystemIdentificationInfo struct {
 	} `xml:"identifierType"`
 }
 
-func vsphereHost(v *vsphere.Vsphere, md *opentsdb.MultiDataPoint, cpuIntegrators map[string]tsIntegrator, hostKey map[string]string) error {
+func vsphereHost(v *vsphere.Vsphere, md *opentsdb.MultiDataPoint, cpuIntegrators map[string]tsIntegrator, hostKey map[string]string, storeKey map[string]string) error {
 	res, err := v.Info("HostSystem", []string{
 		"name",
 		"summary.hardware.cpuMhz",
@@ -174,21 +283,25 @@ func vsphereHost(v *vsphere.Vsphere, md *opentsdb.MultiDataPoint, cpuIntegrators
 		return err
 	}
 	var Error error
+	counterInfo := make(map[int]MetricInfo)
 	for _, r := range res {
 		var name string
+		var uncleanname string
 		for _, p := range r.Props {
 			if p.Name == "name" {
 				name = util.Clean(p.Val.Inner)
+				uncleanname = p.Val.Inner
 				break
 			}
 		}
 		if name == "" {
-			Error = fmt.Errorf("vsphere: empty name")
+			Error = fmt.Errorf("vsphere: empty name for %s: %s", r.ID, uncleanname)
 			continue
 		}
 		hostKey[r.ID] = name
 		tags := opentsdb.TagSet{
-			"host": name,
+			"host":    name,
+			"vcenter": v.Vcenter(),
 		}
 		var memTotal, memUsed int64
 		var cpuMhz, cpuCores, cpuUse int64
@@ -211,11 +324,11 @@ func vsphereHost(v *vsphere.Vsphere, md *opentsdb.MultiDataPoint, cpuIntegrators
 					cpuMhz = i
 				case "summary.quickStats.overallCpuUsage":
 					cpuUse = i
-					Add(md, "vsphere.cpu", cpuUse, opentsdb.TagSet{"host": name, "type": "usage"}, metadata.Gauge, metadata.MHz, "")
+					Add(md, "vsphere.cpu", cpuUse, opentsdb.TagSet{"host": name, "type": "usage", "vcenter": v.Vcenter()}, metadata.Gauge, metadata.MHz, "")
 				case "summary.hardware.numCpuCores":
 					cpuCores = i
 				case "summary.quickStats.uptime":
-					Add(md, osSystemUptime, i, opentsdb.TagSet{"host": name}, metadata.Gauge, metadata.Second, osSystemUptimeDesc)
+					Add(md, osSystemUptime, i, opentsdb.TagSet{"host": name, "vcenter": v.Vcenter()}, metadata.Gauge, metadata.Second, osSystemUptimeDesc)
 				}
 			case "xsd:string":
 				switch p.Name {
@@ -225,7 +338,7 @@ func vsphereHost(v *vsphere.Vsphere, md *opentsdb.MultiDataPoint, cpuIntegrators
 			case "ArrayOfHostSystemIdentificationInfo":
 				switch p.Name {
 				case "summary.hardware.otherIdentifyingInfo":
-					d := xml.NewDecoder(bytes.NewBufferString(p.Val.Inner))
+					d := xml.NewDecoder(strings.NewReader(p.Val.Inner))
 					// Blade servers may have multiple service tags. We want to use the last one.
 					var lastServiceTag string
 					for {
@@ -254,7 +367,7 @@ func vsphereHost(v *vsphere.Vsphere, md *opentsdb.MultiDataPoint, cpuIntegrators
 		}
 		if cpuMhz > 0 && cpuUse > 0 && cpuCores > 0 {
 			cpuTotal := cpuMhz * cpuCores
-			Add(md, "vsphere.cpu", cpuTotal-cpuUse, opentsdb.TagSet{"host": name, "type": "idle"}, metadata.Gauge, metadata.MHz, "")
+			Add(md, "vsphere.cpu", cpuTotal-cpuUse, opentsdb.TagSet{"host": name, "type": "idle", "vcenter": v.Vcenter()}, metadata.Gauge, metadata.MHz, "")
 			pct := float64(cpuUse) / float64(cpuTotal) * 100
 			Add(md, "vsphere.cpu.pct", pct, tags, metadata.Gauge, metadata.Pct, "")
 			if _, ok := cpuIntegrators[name]; !ok {
@@ -262,11 +375,15 @@ func vsphereHost(v *vsphere.Vsphere, md *opentsdb.MultiDataPoint, cpuIntegrators
 			}
 			Add(md, osCPU, cpuIntegrators[name](time.Now().Unix(), pct), tags, metadata.Counter, metadata.Pct, "")
 		}
+		err := vspherePerfCounters(v, md, &tags, "vsphere.perf", "HostSystem", r.ID, counterInfo, storeKey)
+		if err != nil {
+			Error = err
+		}
 	}
 	return Error
 }
 
-func vsphereGuest(vsphereHost string, v *vsphere.Vsphere, md *opentsdb.MultiDataPoint) error {
+func vsphereGuest(vsphereHost string, v *vsphere.Vsphere, md *opentsdb.MultiDataPoint, storeKey map[string]string) error {
 	hres, err := v.Info("HostSystem", []string{
 		"name",
 	})
@@ -299,20 +416,30 @@ func vsphereGuest(vsphereHost string, v *vsphere.Vsphere, md *opentsdb.MultiData
 		return err
 	}
 	var Error error
+	counterInfo := make(map[int]MetricInfo)
 	for _, r := range res {
 		var name string
+		var uncleanname string
+		var powered bool
 		for _, p := range r.Props {
 			if p.Name == "name" {
-				name = util.Clean(p.Val.Inner)
+				uncleanname = p.Val.Inner
+				// name is not not a hostname, so we should clean it for opentsdb compatibility only
+				name, err = opentsdb.Clean(uncleanname)
+				if err != nil {
+					name = ""
+				}
 				break
 			}
 		}
 		if name == "" {
-			Error = fmt.Errorf("vsphere: empty name")
+			if uncleanname != "" {
+				Error = fmt.Errorf("vsphere: empty name for %s: %s", r.ID, uncleanname)
+			}
 			continue
 		}
 		tags := opentsdb.TagSet{
-			"host": vsphereHost, "guest": name,
+			"host": vsphereHost, "guest": name, "vcenter": v.Vcenter(),
 		}
 		var memTotal, memUsed int64
 		for _, p := range r.Props {
@@ -344,7 +471,8 @@ func vsphereGuest(vsphereHost string, v *vsphere.Vsphere, md *opentsdb.MultiData
 				switch p.Name {
 				case "runtime.host":
 					if v, ok := hosts[s]; ok {
-						metadata.AddMeta("", opentsdb.TagSet{"host": name}, "hypervisor", v, false)
+						hyperclean, _ := opentsdb.Clean(v)
+						metadata.AddMeta("", opentsdb.TagSet{"host": name}, "hypervisor", hyperclean, false)
 					}
 				}
 			case "VirtualMachinePowerState":
@@ -354,6 +482,7 @@ func vsphereGuest(vsphereHost string, v *vsphere.Vsphere, md *opentsdb.MultiData
 				switch s {
 				case "poweredOn":
 					v = 0
+					powered = true
 				case "poweredOff":
 					v = 1
 				case "suspended":
@@ -394,8 +523,144 @@ func vsphereGuest(vsphereHost string, v *vsphere.Vsphere, md *opentsdb.MultiData
 			Add(md, "vsphere.guest.mem.free", memFree, tags, metadata.Gauge, metadata.Bytes, "")
 			Add(md, "vsphere.guest.mem.percent_free", float64(memFree)/float64(memTotal)*100, tags, metadata.Gauge, metadata.Pct, "")
 		}
+		if powered {
+			err := vspherePerfCounters(v, md, &tags, "vsphere.guest.perf", "VirtualMachine", r.ID, counterInfo, storeKey)
+			if err != nil {
+				Error = err
+			}
+		}
 	}
 	return Error
+}
+
+type MetricInfo struct {
+	Metric      string
+	Unit        string
+	Rate        string
+	Description string
+}
+
+func vsphereSkipPerformanceMetric(index string) bool {
+	for _, re := range performanceMetrics {
+		if re.MatchString(index) {
+			return false
+		}
+	}
+	return true
+}
+
+func vspherePerfCounters(v *vsphere.Vsphere, md *opentsdb.MultiDataPoint, tags *opentsdb.TagSet, metricprefix string, etype string, ename string, ci map[int]MetricInfo, instanceKey map[string]string) error {
+	pm, err := v.PerformanceProvider(etype, ename)
+	if err != nil {
+		return fmt.Errorf("vsphere: couldn't get Performance Manager for %s %s: %v", etype, ename, err)
+	}
+
+	Add(md, metricprefix+".interval", pm.RefreshRate, *tags, metadata.Gauge, metadata.Second, "vSphere Performance Manager Refresh Interval")
+
+	pems, err := v.PerfCountersValues(etype, ename, pm)
+	if err != nil {
+		return fmt.Errorf("vsphere: couldn't get PerfCountersValues for %s %s: %v", etype, ename, err)
+	}
+
+	if pems == nil || pems.Value == nil {
+		// Empty counters list
+		return nil
+	}
+
+	var counters bytes.Buffer
+	for _, pem := range pems.Value {
+		if _, ok := ci[pem.Id.CounterId]; !ok {
+			counters.WriteString(fmt.Sprintf("<counterId>%d</counterId>", pem.Id.CounterId))
+		}
+	}
+
+	if counters.Len() > 0 {
+		pcis, err := v.PerfCounterInfos(counters.String())
+		if err != nil {
+			return fmt.Errorf("vsphere: couldn't get PerfCounterInfos for %s %s: %v", etype, ename, err)
+		}
+		for _, pci := range pcis {
+			if _, ok := ci[pci.Key]; !ok {
+				var mi MetricInfo
+				mi.Metric = fmt.Sprintf("%s.%s.%s", metricprefix, pci.GroupInfo.Key, pci.NameInfo.Key)
+				mi.Unit = pci.UnitInfo.Key
+				mi.Rate = pci.StatsType
+				mi.Description = pci.NameInfo.Summary + fmt.Sprintf(" (%s %s, original units: %s)", pci.RollupType, mi.Rate, mi.Unit)
+				ci[pci.Key] = mi
+			}
+		}
+	}
+
+	for _, pem := range pems.Value {
+		ctri := ci[pem.Id.CounterId]
+		if vsphereSkipPerformanceMetric(ctri.Metric) {
+			continue
+		}
+		var pemrate metadata.RateType
+		var pemunit metadata.Unit
+		var value float64
+		value = float64(pem.Value)
+		switch ctri.Rate {
+		case "absolute":
+			pemrate = metadata.Counter
+		case "delta":
+			pemrate = metadata.Gauge
+		case "rate":
+			pemrate = metadata.Rate
+		default:
+			pemrate = metadata.Gauge
+		}
+		switch ctri.Unit {
+		case "joule":
+			pemunit = metadata.None
+		case "kiloBytes":
+			pemunit = metadata.Bytes
+			value = value * 1024
+		case "kiloBytesPerSecond":
+			pemunit = metadata.BytesPerSecond
+			value = value * 1024
+		case "megaBytes":
+			pemunit = metadata.Bytes
+			value = value * 1024 * 1024
+		case "megaBytesPerSecond":
+			pemunit = metadata.BytesPerSecond
+			value = value * 1024 * 1024
+		case "megaHertz":
+			pemunit = metadata.MHz
+		case "microsecond":
+			pemunit = metadata.MilliSecond
+			value = value / 1000
+		case "millisecond":
+			pemunit = metadata.MilliSecond
+		case "number":
+			pemunit = metadata.None
+		case "percent":
+			pemunit = metadata.Pct
+		case "second":
+			pemunit = metadata.Second
+		case "watt":
+			pemunit = metadata.Watt
+		default:
+			pemunit = metadata.None
+		}
+		tagset := tags.Copy()
+		if pem.Id.Instance != "" {
+			instance := pem.Id.Instance
+			tagset = tagset.Merge(opentsdb.TagSet{"instance": instance})
+			if strings.Contains(strings.ToLower(ctri.Metric), ".datastore.") {
+				if _, ok := instanceKey[instance]; ok {
+					tagset = tagset.Merge(opentsdb.TagSet{"datastore": instanceKey[instance]})
+				}
+			}
+			if strings.Contains(strings.ToLower(ctri.Metric), ".disk.") {
+				if _, ok := instanceKey[instance]; ok {
+					tagset = tagset.Merge(opentsdb.TagSet{"disk": instanceKey[instance]})
+				}
+			}
+		}
+		Add(md, ctri.Metric, value, tagset, pemrate, pemunit, ctri.Description)
+	}
+	return nil
 }
 
 const (

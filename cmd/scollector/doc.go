@@ -203,6 +203,9 @@ Vsphere (array of table, keys are Host, User, Password): vSphere hosts to poll.
 	  Host = "vsphere01"
 	  User = "vuser"
 	  Password = "pass"
+	  # Additional performance metrics to collect, like vsphere.perf.cpu.ready. Use PerformanceMetrics = ['.*'] to collect all additional metrics.
+	  # If PerformanceMetrics parameter is not set, you will still get a basic subset of vSphere metrics.
+	  PerformanceMetrics = ['\.cpu\.ready$', '^vsphere(\.guest)?\.perf\.(cpu|mem|net|power)\.', '^vsphere(\.guest)?\.perf\.mem\.(de)?compression']
 
 AWS (array of table, keys are AccessKey, SecretKey, Region, BillingProductCodesRegex,
 BillingBucketName, BillingBucketPath, BillingPurgeDays): AWS hosts to poll, and associated

@@ -142,9 +142,10 @@ type ICMP struct {
 }
 
 type Vsphere struct {
-	Host     string
-	User     string
-	Password string
+	Host               string
+	User               string
+	Password           string
+	PerformanceMetrics []string // Additional performance metrics to collect, like vsphere.perf.cpu.ready
 }
 
 type AWS struct {
