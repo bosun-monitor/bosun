@@ -483,12 +483,13 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 				delete r.queries[index].tags[tag];
 			});
 			if ($scope.filterSupport) {
-				_.each(r.queries[index].nGbFilters, (v, fKey) => {
-					if (m[fKey]) {
+				_.each(r.queries[index].filters, (f: Filter) => {
+					if (m[f.tagk]) {
 						return
 					}
-					delete r.queries[index].nGbFilters[fKey];
-					delete r.queries[index].gbFilters[fKey];
+					delete r.queries[index].nGbFilters[f.tagk];
+					delete r.queries[index].gbFilters[f.tagk];
+					r.queries[index].filters = _.without(r.queries[index].filters, _.findWhere(r.queries[index].filters, {tagk: f.tagk}));
 				});
 			}
 		});
