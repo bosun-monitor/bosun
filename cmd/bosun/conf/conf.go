@@ -251,7 +251,6 @@ type Alert struct {
 	CritNotification *Notifications
 	WarnNotification *Notifications
         NormNotification *Notifications
-	NotifyOnReturnToNorm bool
 	Unknown          time.Duration
 	MaxLogFrequency  time.Duration
 	IgnoreUnknown    bool
