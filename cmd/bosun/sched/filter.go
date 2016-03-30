@@ -71,6 +71,8 @@ func makeFilter(filter string) (func(*conf.Conf, *conf.Alert, *models.IncidentSt
 				}
 				f(a.CritNotification)
 				f(a.WarnNotification)
+				// VICTOROPS INTEGRATION
+				f(a.NormNotification)
 				return r
 			})
 		case "status":

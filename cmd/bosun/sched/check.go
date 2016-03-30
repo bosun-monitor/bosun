@@ -121,6 +121,9 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.E
 	// get existing open incident if exists
 	var incident *models.IncidentState
 	incident, err = data.GetOpenIncident(ak)
+
+	slog.Infof("event.Status = %s ", event.Status)
+
 	if err != nil {
 		return
 	}
@@ -152,6 +155,21 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.E
 		newIncident = true
 		shouldNotify = true
 	}
+
+
+	// VICTOROPS INTEGRATION: Enables notification of incidents which have returned to normal (Sends normNotification defined in config)
+	if event.Status <= models.StNormal && (incident.CurrentStatus == models.StWarning || incident.CurrentStatus == models.StCritical) {
+		slog.Infof("TRIGGER_RESOLVED: from %s to %s", incident.CurrentStatus, event.Status)
+		shouldNotify = true
+	}
+
+	// VICTOROPS INTEGRATION:  Enables notification of Incidents which have returned to normal but are now back to warning or critical. i.e. enable Flapping
+	if incident.CurrentStatus == models.StNormal && (event.Status == models.StCritical || event.Status == models.StWarning) {
+		slog.Infof("TRIGGER_REALERT: from %s to %s", incident.CurrentStatus, event.Status)
+		shouldNotify = true
+	}
+
+
 	// set state.Result according to event result
 	if event.Status == models.StCritical {
 		incident.Result = event.Crit
@@ -217,12 +235,16 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.E
 			incident.Open = false
 			return
 		}
-		incident.NeedAck = true
+		incident.NeedAck = false
 		switch event.Status {
 		case models.StCritical, models.StUnknown:
 			notify(a.CritNotification)
 		case models.StWarning:
 			notify(a.WarnNotification)
+		case models.StNormal:
+			// VICTOROPS INTEGRATION
+			incident.NeedAck = false
+			notify(a.NormNotification)
 		}
 	}
 
