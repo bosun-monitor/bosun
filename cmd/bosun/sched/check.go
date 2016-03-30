@@ -232,6 +232,7 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.E
 			incident.Open = false
 			return
 		}
+		// VICTOROPS INTEGRATION
 		incident.NeedAck = false
 		switch event.Status {
 		case models.StCritical, models.StUnknown:
@@ -248,7 +249,6 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.E
 	// lock while we change notifications.
 	s.Lock("RunHistory")
 	if shouldNotify {
-		// VICTOROPS INTEGRATION
 		incident.NeedAck = false
 		if err = s.DataAccess.Notifications().ClearNotifications(ak); err != nil {
 			return
