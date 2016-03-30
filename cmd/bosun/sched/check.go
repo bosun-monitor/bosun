@@ -121,9 +121,6 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.E
 	// get existing open incident if exists
 	var incident *models.IncidentState
 	incident, err = data.GetOpenIncident(ak)
-
-	slog.Infof("event.Status = %s ", event.Status)
-
 	if err != nil {
 		return
 	}
@@ -251,6 +248,7 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.E
 	// lock while we change notifications.
 	s.Lock("RunHistory")
 	if shouldNotify {
+		// VICTOROPS INTEGRATION
 		incident.NeedAck = false
 		if err = s.DataAccess.Notifications().ClearNotifications(ak); err != nil {
 			return
