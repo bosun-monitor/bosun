@@ -15,4 +15,13 @@ install:
   - go get github.com/captncraig/setStatus
   - npm i -g typescript@1.5.3
 
-script: $GOPATH/src/bosun.org/build/validate.sh
+script: $GOPATH/src/bosun.org/build/build.sh
+deploy:
+  provider: releases
+  api_key:
+    secure: cxu56BzTefwH76HloxxqD7fG+N73GERxqCVi9UV0mrViVXQD87LUFSmJ5r+bVBUTl1HoaWOGgWij34CDjkjGjoxMaCEQf/Lte0cxfk2i8Pw1V6Iv5dIgFKKw4Jyv3ewSpN3O/losPKJx8ep7g2TwGoVa876V9MHegrurIxjMyw3VgqW1hUKIL7Sn2WQlw3jpsrddFiXIf3jH5bHGl7VLHtDwJtuH8e6LKRf5iZQ9oipE0Mzgx4/rOnJpnRRSVFJ5bK/WOzvIAmrMKWqx1dQg+qprJbEswYwjIZeqE7aCK4W+qlY0VnbiaizWPHJIfipH+pBo1gojH3mTaORRCQUgayzqhIsY/zNMqnQAuUbMj0o7MO28tX28tUsRGTdfdiuhU+AEmpk9oCgW8iVqEPWwIkIOj9Kl34Bol7VWWQ2ZRa1fNFYMFaYvfY/afgNFB/hRUWcaPzT3qMPjaFxEKdQQmt1ng3Hg4xEQTc3XPVcWAaqY+ToZ77k9gphdr21w/xt46zvIv37HlfR8Dbo3BBvDi+cYpiKAoH+6JKPgQ31px3HNfAx8HWxlxUlCdKAqi5qI1LVWCdSuKwI/7ZiJBwne/K8L+19gsNgf34v0rjAQ75eFR6fGzux8LoJKay5rQ6lPkg/6C5xbAWpvvF1bZVtaSPfBZBbm2JZlgdx9a0XwShg=
+  file: $GOPATH/src/bosun.org/cmd/bosun/bosun
+  on:
+    repo: Skyscanner/bosun
+    branch: deploy/sandbox
+    tags: true

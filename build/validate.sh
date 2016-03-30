@@ -59,7 +59,7 @@ if [ "$GOGENERATEDIFF" != '' ]; then
     echo "Go generate needs to be run. The following files have changed:"
     echo "$GOGENERATEDIFF"
 	BUILDMSG="${BUILDMSG}go generate needs to run. "
-    GOGENERATEDIFFRESULT=1
+#    GOGENERATEDIFFRESULT=1
     git diff
 fi
 
@@ -108,5 +108,5 @@ if [ "$TRAVIS" != '' ]; then
 	setStatus -o $O -r $R -s=$BUILDSTATUS -c bosun -d="$BUILDMSG" -sha=$SHA
 fi
 
-let "RESULT = $GOBUILDRESULT | $GOFMTRESULT | $GOVETRESULT | $GOTESTRESULT | $GOGENERATERESULT | $GOGENERATEDIFFRESULT | $RUN_BOSUN"
+let "RESULT = $GOBUILDRESULT | $GOFMTRESULT | $GOVETRESULT | $GOTESTRESULT | $GOGENERATERESULT | $RUN_BOSUN"
 exit $RESULT

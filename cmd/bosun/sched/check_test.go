@@ -28,6 +28,7 @@ func TestCheckFlapping(t *testing.T) {
 			warn = 1
 			critNotification = n
 			crit = 1
+			normNotification = n
 			template = t
 		}
 	`)
@@ -61,6 +62,8 @@ func TestCheckFlapping(t *testing.T) {
 		S          models.Status
 		ExpectNots bool
 	}
+
+	/**
 	transitions := []stateTransition{
 		{models.StWarning, true},
 		{models.StNormal, false},
@@ -69,6 +72,19 @@ func TestCheckFlapping(t *testing.T) {
 		{models.StCritical, true},
 		{models.StWarning, false},
 		{models.StCritical, false},
+	}
+	 VICTOROPS INTEGRATION: These state Transitions have been commented out and replaced with a test case which matches the behaviour we want to integrate with victorops
+	*/
+
+	transitions := []stateTransition{
+		{models.StWarning, true},
+		{models.StNormal, true},
+		{models.StWarning, true},
+		{models.StNormal, true},
+		{models.StCritical, true},
+		{models.StWarning, false},
+		{models.StCritical, false},
+		{models.StNormal, true},
 	}
 
 	for i, trans := range transitions {

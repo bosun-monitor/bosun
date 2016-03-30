@@ -251,6 +251,7 @@ type Alert struct {
 	Squelch          Squelches  `json:"-"`
 	CritNotification *Notifications
 	WarnNotification *Notifications
+        NormNotification *Notifications
 	Unknown          time.Duration
 	MaxLogFrequency  time.Duration
 	IgnoreUnknown    bool
@@ -859,6 +860,8 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 		Name:             name,
 		CritNotification: new(Notifications),
 		WarnNotification: new(Notifications),
+		NormNotification: new(Notifications),
+
 	}
 	a.Text = s.RawText
 	procNotification := func(v string, ns *Notifications) {
@@ -921,6 +924,8 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 			procNotification(v, a.CritNotification)
 		case "warnNotification":
 			procNotification(v, a.WarnNotification)
+		case "normNotification":
+			procNotification(v, a.NormNotification)
 		case "unknown":
 			od, err := opentsdb.ParseDuration(v)
 			if err != nil {
