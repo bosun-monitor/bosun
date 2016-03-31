@@ -289,6 +289,12 @@
 			"revisionTime": "2015-01-25T10:08:32-08:00"
 		},
 		{
+			"checksumSHA1": "r2217M+60ykOkomU6p2mO4pLzug=",
+			"path": "github.com/golang/protobuf/proto",
+			"revision": "dda510ac0fd43b39770f22ac6260eb91d377bce3",
+			"revisionTime": "2016-03-30T00:19:00Z"
+		},
+		{
 			"path": "github.com/golang/snappy",
 			"revision": "5979233c5d6225d4a8e438cdd0b411888449ddab",
 			"revisionTime": "2016-02-12T22:30:41+11:00"
