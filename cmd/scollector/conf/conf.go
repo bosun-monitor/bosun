@@ -72,6 +72,7 @@ type Conf struct {
 	TagOverride         []TagOverride
 	HadoopHost          string
 	Oracles             []Oracle
+	JMXExporter         []JMXExporter
 }
 
 type HAProxy struct {
@@ -180,6 +181,10 @@ type Github struct {
 }
 
 type Cadvisor struct {
+	URL string
+}
+
+type JMXExporter struct {
 	URL string
 }
 

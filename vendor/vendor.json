@@ -408,6 +408,12 @@
 			"revisionTime": "2015-11-05T14:43:36+01:00"
 		},
 		{
+			"checksumSHA1": "Q2vw4HZBbnU8BLFt8VrzStwqSJg=",
+			"path": "github.com/matttproud/golang_protobuf_extensions/pbutil",
+			"revision": "d0c3fe89de86839aecf2e0579c40ba3bb336a453",
+			"revisionTime": "2015-10-11T10:25:29Z"
+		},
+		{
 			"path": "github.com/olivere/elastic",
 			"revision": "9fdb4e763e833f166e76009e5a33132877c32bfb",
 			"revisionTime": "2015-11-28T12:32:46+01:00"
@@ -416,6 +422,30 @@
 			"path": "github.com/olivere/elastic/uritemplates",
 			"revision": "9fdb4e763e833f166e76009e5a33132877c32bfb",
 			"revisionTime": "2015-11-28T12:32:46+01:00"
+		},
+		{
+			"checksumSHA1": "DvwvOlPNAgRntBzt3b3OSRMS2N4=",
+			"path": "github.com/prometheus/client_model/go",
+			"revision": "fa8ad6fec33561be4280a8f0514318c79d7f6cb6",
+			"revisionTime": "2015-02-12T10:17:44Z"
+		},
+		{
+			"checksumSHA1": "Zsc9IQzQDkOzqiAITqxEm0JXdws=",
+			"path": "github.com/prometheus/common/expfmt",
+			"revision": "40456948a47496dc22168e6af39297a2f8fbf38c",
+			"revisionTime": "2016-03-21T00:19:49Z"
+		},
+		{
+			"checksumSHA1": "GWlM3d2vPYyNATtTFgftS10/A9w=",
+			"path": "github.com/prometheus/common/internal/bitbucket.org/ww/goautoneg",
+			"revision": "40456948a47496dc22168e6af39297a2f8fbf38c",
+			"revisionTime": "2016-03-21T00:19:49Z"
+		},
+		{
+			"checksumSHA1": "IwxsYOL9A/K9rvHvGxfyY37dusk=",
+			"path": "github.com/prometheus/common/model",
+			"revision": "40456948a47496dc22168e6af39297a2f8fbf38c",
+			"revisionTime": "2016-03-21T00:19:49Z"
 		},
 		{
 			"path": "github.com/siddontang/go/bson",
@@ -788,5 +818,6 @@
 			"revision": "9f9df34309c04878acc86042b16630b0f696e1de",
 			"revisionTime": "2014-09-24T13:16:07-03:00"
 		}
-	]
+	],
+	"rootPath": "bosun.org"
 }

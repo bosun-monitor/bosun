@@ -118,6 +118,9 @@ func main() {
 	for _, v := range conf.Vsphere {
 		check(collectors.Vsphere(v.User, v.Password, v.Host))
 	}
+	for _, j := range conf.JMXExporter {
+		check(collectors.JMXExporter(j.URL))
+	}
 	for _, p := range conf.Process {
 		check(collectors.AddProcessConfig(p))
 	}

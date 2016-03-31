@@ -206,6 +206,12 @@ AWS (array of table, keys are AccessKey, SecretKey, Region): AWS hosts to poll.
 	  SecretKey = "snch0d"
 	  Region = "somewhere"
 
+JMXExporter: Endpoints to poll.
+JMXExporter collects JMX metrics exposed through JMX Exporter.
+See https://github.com/prometheus/jmx_exporter for more details about
+configuring JMX Exporter.
+  [[JMXExporter]]
+    URL = "http://127.0.0.1:7070/metrics"
 
 Process: processes to monitor.
 
