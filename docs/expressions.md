@@ -36,7 +36,7 @@ Groups are generally provided by your time series database. We also sometimes re
 Each group can become its own alert instance. This is what we mean by ***scope*** or dimensionality. Thus, you can do things like `avg(q("sum:sys.cpu{host=ny-*}", "5m", "")) > 0.8` to check the CPU usage for many New York hosts at once. The dimensions can be manipulated with our expression language.
 
 ### Group Subsets
-Various metrics can be combined by operators as long as one group is a subset of the other. A ***subset*** is when one of the groups contains all of the tag key-value pairs in the other. An empty group `{}` is a subset of all groups. `{host=foo}` is a subset of `{host=foo,interface=eth0}`, and neither `{host=foo,interface=eth0}` nor `{host=foo,parition=/}` are a subset of the other. Equal groups are considered subsets of each other.
+Various metrics can be combined by operators as long as one group is a subset of the other. A ***subset*** is when one of the groups contains all of the tag key-value pairs in the other. An empty group `{}` is a subset of all groups. `{host=foo}` is a subset of `{host=foo,interface=eth0}`, and neither `{host=foo,interface=eth0}` nor `{host=foo,partition=/}` are a subset of the other. Equal groups are considered subsets of each other.
 
 ## Operators
 
@@ -73,11 +73,11 @@ alert haproxy_session_limit {
     $notes = This alert monitors the percentage of sessions against the session limit in haproxy (maxconn) and alerts when we are getting close to that limit and will need to raise that limit. This alert was created due to a socket outage we experienced for that reason
     $current_sessions = max(q("sum:haproxy.frontend.scur{host=*,pxname=*,tier=*}", "5m", ""))
     $session_limit = max(q("sum:haproxy.frontend.slim{host=*,pxname=*,tier=*}", "5m", ""))
-    $q = ($current_sessions / $session_limit) * 100
-    warn = $q > 80
-    crit = $q > 95
+    $query = ($current_sessions / $session_limit) * 100
+    warn = $query > 80
+    crit = $query > 95
     warnNotification = default
-    critNotificaiton = default
+    critNotification = default
 }
 </pre>
 
@@ -88,7 +88,7 @@ We don't need to understand everything in this alert, but it is worth highlighti
  * `q("sum:haproxy.frontend.scur{host=*,pxname=*,tier=*}", "5m", "")` is an OpenTSDB query function, it returns *N* series, we know each series will have the host, pxname, and tier tag keys in their group based on the query.
  * `max(...)` is a reduction function. It takes each **series** and **reduces** it to a **number** (See the Data types section above).
  * `$current_sessions / $session_limit` these variables represent **numbers** and will have subset group matches so there for you can use the / **operator** between them.
- *  `warn = $q > 80` if this is true (non-zero) then the `warnNotification` will be triggered.
+ *  `warn = $query > 80` if this is true (non-zero) then the `warnNotification` will be triggered.
 
 # Query Functions
 
@@ -427,7 +427,7 @@ Alert if more than 50% of servers in a group have ping timeouts
     $number_down_series = sum($max_timeout_series)
     $total_servers = len($max_timeout_series)
     $percent_down = $number_down_servers / $total_servers) * 100
-    warnNotificaiton = $percent_down > 25
+    warnNotification = $percent_down > 25
   }
 ~~~
 
