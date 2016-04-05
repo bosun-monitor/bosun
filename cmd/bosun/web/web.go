@@ -561,6 +561,7 @@ func Action(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (inter
 		User    string
 		Message string
 		Keys    []string
+		Ids     []int64
 		Notify  bool
 	}
 	j := json.NewDecoder(r.Body)
@@ -588,9 +589,17 @@ func Action(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (inter
 		if err != nil {
 			return nil, err
 		}
-		err = schedule.Action(data.User, data.Message, at, ak)
+		err = schedule.ActionByAlertKey(data.User, data.Message, at, ak)
 		if err != nil {
 			errs[key] = err
+		} else {
+			successful = append(successful, ak)
+		}
+	}
+	for _, id := range data.Ids {
+		ak, err := schedule.ActionByIncidentId(data.User, data.Message, at, id)
+		if err != nil {
+			errs[fmt.Sprintf("%v", id)] = err
 		} else {
 			successful = append(successful, ak)
 		}

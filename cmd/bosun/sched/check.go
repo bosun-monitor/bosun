@@ -240,7 +240,7 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.E
 	if si := silenced(ak); si != nil && event.Status == models.StNormal {
 		go func(ak models.AlertKey) {
 			slog.Infof("auto close %s because was silenced", ak)
-			err := s.Action("bosun", "Auto close because was silenced.", models.ActionClose, ak)
+			err := s.ActionByAlertKey("bosun", "Auto close because was silenced.", models.ActionClose, ak)
 			if err != nil {
 				slog.Errorln(err)
 			}
