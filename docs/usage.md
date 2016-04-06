@@ -59,7 +59,11 @@ Alerts can be in one of the following severity levels (From highest to lowest):
 * **Acknowledge**: Prevent further notifications unless there is a state increase. This also moves it to the acknowledged section of the dashboard. When you acknowledge something you enter a name and a reason. So this means that the person has committed to fixing the problem or the alert.
 * **Close**: Make it disappear from the dashboard. This should be used when an alert is handled. Active alerts can not be closed (since all that will happen is that will reappear on the the dashboard after the next schedule run).
 * **Forget**: Make bosun forget about this instance of the alert. This is used on active unknown alerts. It is useful when something is not coming back (i.e. you have decommissioned a host). This act is non-destructive because if that data gets sent to bosun again everything will come back.
+* **Force Close**: Like close, but does not require alert to be in a normal state. In a few circumstances an alert can be "open" and "active" at the same time. This can occur when a host is decomissioned and an alert has ignoreUnknown set, for example. This may help to clear some of those "stuck" alerts.
+* **Purge**: Will delete an active alert and ALL history for that alert key. Should only be used when you absolutely want to forget all data about a host, like when shutting it down. Like forget, but does not require an alert to be unknown.
+
 * **History**: View a timeline of history for the selected alert instances.
+
 
 </div>
 </div>
