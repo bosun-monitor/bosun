@@ -13,16 +13,19 @@ import (
 
 const extraHopIntervalSeconds int = 30
 
-var extraHopFilterProtoBy string  //What to filter the traffic by. Valid values are "namedprotocols", "toppercent" or "none"
-var extraHopTopProtoPerc int      //Only log the top % of protocols by volume
-var extraHopOtherProtoName string //What name to log the "other" data under.
-var extraHopL7Description string  //What to append to the end of the L7 description metadata to explain what is and isn't filtered out
+var extraHopFilterProtoBy string       //What to filter the traffic by. Valid values are "namedprotocols", "toppercent" or "none"
+var extraHopTopProtoPerc int           //Only log the top % of protocols by volume
+var extraHopOtherProtoName string      //What name to log the "other" data under.
+var extraHopL7Description string       //What to append to the end of the L7 description metadata to explain what is and isn't filtered out
+var extraHopAdditionalMetrics []string //Other metrics to fetch from Extrahop
 
-//Register a collector for ExtraHop
-func ExtraHop(host, apikey, filterby string, filterpercent int) error {
+// ExtraHop collection registration
+func ExtraHop(host, apikey, filterby string, filterpercent int, customMetrics []string) error {
 	if host == "" || apikey == "" {
 		return fmt.Errorf("Empty host or API key for ExtraHop.")
 	}
+
+	extraHopAdditionalMetrics = customMetrics
 	extraHopFilterProtoBy = filterby
 	switch filterby { //Set up options
 	case "toppercent":
@@ -69,14 +72,50 @@ func c_extrahop(host, apikey string) (opentsdb.MultiDataPoint, error) {
 	if err := extraHopNetworks(c, &md); err != nil {
 		return nil, err
 	}
+	if err := extraHopGetAdditionalMetrics(c, &md); err != nil {
+		return nil, err
+	}
+
 	return md, nil
 }
 
-/*
-	This grabs the complex metrics of the L7 traffic from ExtraHop. It is a complex type because the data is not just a simple time series,
-	the data needs to be tagged with vlan, protocol, etc. We can do the network and vlan tagging ourselves, but the protocol tagging comes
-	from ExtraHop itself.
-*/
+func extraHopGetAdditionalMetrics(c *gohop.Client, md *opentsdb.MultiDataPoint) error {
+	for _, v := range extraHopAdditionalMetrics {
+		metric, err := gohop.StoEHMetric(v)
+		if err != nil {
+			return err
+		}
+		ms := []gohop.MetricSpec{ //Build a metric spec to tell ExtraHop what we want to pull out.
+			{Name: metric.MetricSpecName, CalcType: metric.MetricSpecCalcType, KeyPair: gohop.KeyPair{Key1Regex: "", Key2Regex: "", OpenTSDBKey1: "proto", Key2OpenTSDBKey2: ""}, OpenTSDBMetric: ehMetricNameEscape(v)},
+		}
+		mrk, err := c.KeyedMetricQuery(gohop.Cycle30Sec, metric.MetricCategory, metric.ObjectType, -60000, 0, ms, []int64{metric.ObjectId})
+		if err != nil {
+			return err
+		}
+		for _, a := range mrk.Stats {
+			for _, b := range a.Values {
+				for _, d := range b {
+					if d.Vtype == "tset" {
+						for _, e := range d.Tset {
+							*md = append(*md, &opentsdb.DataPoint{
+								Metric:    ehMetricNameEscape(d.Key.Str),
+								Timestamp: a.Time,
+								Value:     e.Value,
+								Tags:      ehItemNameToTagSet(c, e.Key.Str),
+							})
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+// extraHopNetworks grabs the complex metrics of the L7 traffic from ExtraHop. It is a complex type because the data is not just a simple time series,
+// the data needs to be tagged with vlan, protocol, etc. We can do the network and vlan tagging ourselves, but the protocol tagging comes
+// from ExtraHop itself.
 func extraHopNetworks(c *gohop.Client, md *opentsdb.MultiDataPoint) error {
 	nl, err := c.GetNetworkList(true) //Fetch the network list from ExtraHop, and include VLAN information
 	if err != nil {
@@ -169,4 +208,25 @@ func calculateDataCutoff(k gohop.MetricResponseKeyed) map[int64]int64 {
 		rets[k] = int64(float64(v) * (1 - float64(extraHopTopProtoPerc)/100))
 	}
 	return rets
+}
+
+func ehItemNameToTagSet(c *gohop.Client, ehName string) opentsdb.TagSet {
+	thisTagSet := opentsdb.TagSet{"host": strings.ToLower(c.APIUrl.Host)}
+	if strings.IndexAny(ehName, ",") == 0 {
+		return thisTagSet
+	}
+	nameParts := strings.Split(ehName, ",")
+	for _, p := range nameParts {
+		tagParts := strings.Split(p, "=")
+		if len(tagParts) > 0 {
+			thisTagSet[tagParts[0]] = tagParts[1]
+		}
+	}
+	return thisTagSet
+}
+
+func ehMetricNameEscape(metricName string) string {
+	metricName = strings.ToLower(metricName)
+	metricName = strings.Replace(metricName, " ", "_", -1)
+	return fmt.Sprintf("extrahop.application.%v", metricName)
 }

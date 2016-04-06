@@ -270,11 +270,33 @@ accounts for less than 10% of the traffic, it will be dropped. This is OK if you
 heavilly dominated by asmall set of protocols, but if you have a fairly even spread of protocols
 then this filtering loses its usefulness.
 
+AdditionalMetrics is formatted as such: [object_type].[object_id].[metric_category].[metric_spec_name]
+
+    - object_type:  is one of: "network", "device", "application", "vlan", "device_group", "activity_group"
+    - object_id:    can be found by querying the ExtraHop API (through the API Explorer) under the endpoint
+                    for the object type. For example, for "application", you would query the "/applications/"
+                    endpoint and locate the ID of the application you want to query.
+    - metric_category:  can be found in the Metric Catalogue for the metric you are wanting to query. e.g. for
+                        custom metrics, this is always "custom_detail"
+    - metric_spec_name: can be found in the Metric Catalogue for the metric you are wanting to query. e.g. for
+                        custom metrics, this is name you have specified in metricAddDetailCount() function in
+                        a trigger.
+
+For these additional metrics, it is expected that the key for the metric is in a keyvalue, comma seperated pair.
+This key will be converted into an OpenTSDB tagset. For example, if you have a key of
+"client=192.168.0.1,server=192.168.0.9,port=21441", this will be converted into an OpenTSDB tagset of the same
+values.
+
+CAUTION: Do not include unbounded values in your key if you can help it. Putting in something like client IP, or
+source/destination port, which are out of your control and specified by people external to your network, could
+end up putting millions of different keys into your Bosun instance - something you probably don't want.
+
 	[[ExtraHop]]
 	  Host = "extrahop01"
 	  APIkey = "abcdef1234567890"
 	  FilterBy = "toppercent"
 	  FilterPercent = 75
+      AdditionalMetrics = [ "application.12.custom_detail.my trigger metric" ]
 
 LocalListener (string): local_listener will listen for HTTP request and forward
 the request to the configured OpenTSDB host while adding defined tags to

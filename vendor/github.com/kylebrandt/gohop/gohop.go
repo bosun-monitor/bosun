@@ -128,19 +128,29 @@ type MetricStat struct {
 
 type MetricStatSimple struct {
 	MetricStat
-	Values []int64 `json:"values"`
+	Values []float64 `json:"values"`
 }
 
 type MetricStatKeyed struct {
 	MetricStat
 	Values [][]struct {
-		Key struct {
-			KeyType string `json:"key_type"`
-			Str     string `json:"str"`
-		} `json:"key"`
-		Value int64  `json:"value"`
-		Vtype string `json:"vtype"`
+		Key      MetricKey       `json:"key"`
+		RawValue json.RawMessage `json:"value"`
+		Vtype    string          `json:"vtype"`
+		Value    int64
+		Tset     MetricStatTset
 	} `json:"values"`
+}
+
+type MetricKey struct {
+	KeyType string `json:"key_type"`
+	Str     string `json:"str"`
+}
+
+type MetricStatTset []struct {
+	Key   MetricKey `json:"key"`
+	Value int64     `json:"value"`
+	Vtype string    `json:"vtype"`
 }
 
 type MetricResponseBase struct {
@@ -172,7 +182,7 @@ func (mr *MetricResponseSimple) OpenTSDBDataPoints(metricNames []string, objectK
 		if objectKey != "" && name != "" {
 			tagSet = opentsdb.TagSet{objectKey: name}
 		} else {
-			tagSet = nil
+			tagSet = opentsdb.TagSet{}
 		}
 		if !ok {
 			return md, fmt.Errorf("no name found for oid %s", s.Oid)
@@ -199,7 +209,7 @@ func (mr *MetricResponseSimple) OpenTSDBDataPoints(metricNames []string, objectK
 
 // Simple Metric query is for when you are making a query that doesn't
 // have any facets ("Keys").
-func (c *Client) SimpleMetricQuery(cycle, category, objectType string, fromMS, untilMS int64, metricsNames []string, objectIds []int64) (MetricResponseSimple, error) {
+func (c *Client) SimpleMetricQuery(cycle, category, objectType string, fromMS, untilMS int64, metrics []MetricSpec, objectIds []int64) (MetricResponseSimple, error) {
 	mq := MetricQuery{
 		Cycle:     cycle,
 		Category:  category,
@@ -208,9 +218,8 @@ func (c *Client) SimpleMetricQuery(cycle, category, objectType string, fromMS, u
 		From:      fromMS,
 		Until:     untilMS,
 	}
-	for _, name := range metricsNames {
-		mq.Specs = append(mq.Specs, MetricSpec{Name: name})
-	}
+	mq.Specs = append(mq.Specs, metrics...)
+
 	m := MetricResponseSimple{}
 	err := c.post("metrics", &mq, &m)
 	return m, err
@@ -263,7 +272,25 @@ func (c *Client) KeyedMetricQuery(cycle, category, objectType string, fromMS, un
 	}
 	m := MetricResponseKeyed{}
 	err := c.post("metrics", &mq, &m)
+	m.ParseValues()
 	return m, err
+}
+
+// ParseValues takes the RawValue field (which stores the plain JSON for the Values) and unmarshals it into
+// either the Tset or Value field, depending on the contents of the Vtype field
+func (m *MetricResponseKeyed) ParseValues() {
+	for a, _ := range (*m).Stats {
+		for b, _ := range (*m).Stats[a].Values {
+			for c, _ := range (*m).Stats[a].Values[b] {
+				if m.Stats[a].Values[b][c].Vtype == "tset" {
+					json.Unmarshal(m.Stats[a].Values[b][c].RawValue, &m.Stats[a].Values[b][c].Tset)
+				} else {
+					json.Unmarshal(m.Stats[a].Values[b][c].RawValue, &m.Stats[a].Values[b][c].Value)
+				}
+			}
+
+		}
+	}
 }
 
 type NetworkList []struct {
