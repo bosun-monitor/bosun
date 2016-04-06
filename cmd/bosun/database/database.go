@@ -147,6 +147,13 @@ func (d *dataAccess) SCLEAR() string {
 	return "SCLEAR"
 }
 
+func (d *dataAccess) HCLEAR() string {
+	if d.isRedis {
+		return "DEL"
+	}
+	return "HCLEAR"
+}
+
 func (d *dataAccess) LMCLEAR(key string, value string) (string, []interface{}) {
 	if d.isRedis {
 		return "LREM", []interface{}{key, 0, value}
