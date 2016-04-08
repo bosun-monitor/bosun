@@ -214,7 +214,37 @@ type ElasticHosts []string
 func (e ElasticHosts) InitClient() error {
 	if esClient == nil {
 		var err error
-		esClient, err = elastic.NewClient(elastic.SetURL(e...), elastic.SetMaxRetries(10))
+
+		countHosts := len(e)
+		username := ``
+		password := ``
+
+		// Getting the username and password from a bunch of URLs.
+		// Since the ElasticSearch Go client only supports a single username/password
+		//   combination, we just live with the first combination that we find.
+		for i := 0; i < countHosts; i++ {
+			url, err := url.Parse(e[i])
+			if err != nil {
+				return err
+			}
+
+			userinfo := url.User
+
+			u := userinfo.Username()
+			p, _ := userinfo.Password()
+
+			if u != `` || p != `` {
+				username = u
+				password = p
+				break
+			}
+		}
+
+		esClient, err = elastic.NewClient(
+			elastic.SetURL(e...),
+			elastic.SetMaxRetries(10),
+			elastic.SetBasicAuth(username, password),
+		)
 		if err != nil {
 			return err
 		}
