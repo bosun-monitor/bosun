@@ -1,0 +1,2 @@
+#Perm Destination                       Source
+exec  /usr/bin/annotate                 cmd/annotate/annotate

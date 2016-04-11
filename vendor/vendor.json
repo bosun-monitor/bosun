@@ -374,8 +374,8 @@
 		},
 		{
 			"path": "github.com/kylebrandt/annotate",
-			"revision": "6759c9ff0e101f0d91f6f92a9dfae206f769d2fb",
-			"revisionTime": "2016-02-25T08:25:13-05:00"
+			"revision": "bba4e3a68cdd913baee490772dac174449b94942",
+			"revisionTime": "2016-04-11T15:36:14-04:00"
 		},
 		{
 			"path": "github.com/kylebrandt/annotate/backend",

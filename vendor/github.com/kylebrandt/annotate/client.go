@@ -23,19 +23,3 @@ func SendAnnotation(apiRoot string, a Annotation) (Annotation, error) {
 	err = json.NewDecoder(res.Body).Decode(&a)
 	return a, err
 }
-
-//i.e.
-// func main() {
-// 	a := annotate.Annotation{
-// 		CreationUser: "kbrandt",
-// 		Owner:        "sre",
-// 		Category:     "test",
-// 		Message:      "lib send test",
-// 		Source:       "go lib",
-// 	}
-// 	a, err := annotate.SendAnnotation("http://annotate", a)
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-// 	log.Println(a)
-// }

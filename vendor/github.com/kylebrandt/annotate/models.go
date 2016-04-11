@@ -47,6 +47,20 @@ func (t *Epoch) UnmarshalJSON(b []byte) (err error) {
 	return
 }
 
+func NewAnnotation(id string, start, end time.Time, user, owner, source, host, category, url, message string) (a Annotation) {
+    a.Id = id
+    a.StartDate.Time = start
+    a.EndDate.Time = end
+    a.CreationUser = user
+    a.Owner = owner
+    a.Source = source
+    a.Category = category
+    a.Url = url
+    a.Message = message
+    a.Host = host
+    return
+}
+
 type Annotation struct {
 	AnnotationFields
 	StartDate RFC3339
