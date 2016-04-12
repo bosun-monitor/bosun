@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -69,12 +70,14 @@ func InsertAnnotation(w http.ResponseWriter, req *http.Request) {
 		errEpochFmt := d.Decode(&ea)
 		if errEpochFmt != nil {
 			serveError(w, fmt.Errorf("Could not unmarhsal json in RFC3339 fmt or Epoch fmt: %v, %v", errRegFmt, errEpochFmt))
+			return
 		}
 		a = ea.AsAnnotation()
 		epochFmt = true
 	}
 	if a.Id != "" && id != "" && a.Id != id {
 		serveError(w, fmt.Errorf("conflicting ids in request: url id %v, body id %v", id, a.Id))
+		return
 	}
 	if id != "" { // If we got the id in the url
 		a.Id = id
@@ -88,6 +91,7 @@ func InsertAnnotation(w http.ResponseWriter, req *http.Request) {
 	err := a.ValidateTime()
 	if err != nil {
 		serveError(w, err)
+		return
 	}
 	if a.Id == "" { //if Id isn't set, this is a new Annotation
 		a.Id = uuid.NewV4().String()
@@ -97,17 +101,23 @@ func InsertAnnotation(w http.ResponseWriter, req *http.Request) {
 			_, err := b.GetAnnotation(a.Id)
 			if err != nil {
 				serveError(w, fmt.Errorf("could not find annotation with id %v to update: %v", a.Id, err))
+				return
 			}
 		}
 	}
 	for _, b := range backends {
+		log.Println("Inserting", a)
 		err := b.InsertAnnotation(&a)
 		//TODO Collect errors and insert into the backends that we can
 		if err != nil {
 			serveError(w, err)
+			return
 		}
 	}
-	format(&a, w, epochFmt)
+	if err = format(&a, w, epochFmt); err != nil {
+		serveError(w, err)
+		return
+	}
 	w.Header().Set("Content-Type", "application/json")
 	return
 }
@@ -140,11 +150,13 @@ func GetAnnotation(w http.ResponseWriter, req *http.Request) {
 		//TODO Collect errors and insert into the backends that we can
 		if err != nil {
 			serveError(w, err)
+			return
 		}
 	}
 	err = format(a, w, req.URL.Query().Get("Epoch") == "1")
 	if err != nil {
 		serveError(w, err)
+		return
 	}
 	return
 }
@@ -159,6 +171,7 @@ func DeleteAnnotation(w http.ResponseWriter, req *http.Request) {
 		//TODO Make sure it is deleted from at least one backend?
 		if err != nil {
 			serveError(w, err)
+			return
 		}
 	}
 }
@@ -174,11 +187,13 @@ func GetFieldValues(w http.ResponseWriter, req *http.Request) {
 		//TODO Unique Results from all backends
 		if err != nil {
 			serveError(w, err)
+			return
 		}
 	}
 	err = json.NewEncoder(w).Encode(values)
 	if err != nil {
 		serveError(w, err)
+		return
 	}
 	return
 }
@@ -188,6 +203,21 @@ func GetAnnotations(w http.ResponseWriter, req *http.Request) {
 	var startT time.Time
 	var endT time.Time
 	var err error
+	for param, _ := range req.URL.Query() {
+		switch param {
+		case annotate.StartDate:
+		case annotate.EndDate:
+		case annotate.Source:
+		case annotate.Host:
+		case annotate.CreationUser:
+		case annotate.Owner:
+		case annotate.Category:
+		case annotate.Message:
+		default:
+			serveError(w, fmt.Errorf("%v is not a valid query field", param))
+			return
+		}
+	}
 	w.Header().Set("Content-Type", "application/json")
 	// Time
 	start := req.URL.Query().Get(annotate.StartDate)
@@ -198,6 +228,7 @@ func GetAnnotations(w http.ResponseWriter, req *http.Request) {
 			epoch, epochErr := strconv.ParseInt(start, 10, 64)
 			if epochErr != nil {
 				serveError(w, fmt.Errorf("couldn't parse StartDate as RFC3339 or epoch: %v, %v", rfcErr, epochErr))
+				return
 			}
 			s = time.Unix(epoch, 0)
 		}
@@ -209,6 +240,7 @@ func GetAnnotations(w http.ResponseWriter, req *http.Request) {
 			epoch, epochErr := strconv.ParseInt(start, 10, 64)
 			if epochErr != nil {
 				serveError(w, fmt.Errorf("couldn't parse EndDate as RFC3339 or epoch: %v, %v", rfcErr, epochErr))
+				return
 			}
 			s = time.Unix(epoch, 0)
 		}
@@ -226,23 +258,32 @@ func GetAnnotations(w http.ResponseWriter, req *http.Request) {
 	creationUser := req.URL.Query().Get(annotate.CreationUser)
 	owner := req.URL.Query().Get(annotate.Owner)
 	category := req.URL.Query().Get(annotate.Category)
+	message := req.URL.Query().Get(annotate.Message)
 
 	// Execute
 	for _, b := range backends {
-		a, err = b.GetAnnotations(&startT, &endT, source, host, creationUser, owner, category)
+		a, err = b.GetAnnotations(&startT, &endT, source, host, creationUser, owner, category, message)
 		//TODO Collect errors and insert into the backends that we can
 		if err != nil {
 			serveError(w, err)
+			return
 		}
 	}
 
 	// Encode
 	if err := formatPlural(a, w, req.URL.Query().Get("Epoch") == "1"); err != nil {
 		serveError(w, err)
+		return
 	}
 	return
 }
 
 func serveError(w http.ResponseWriter, err error) {
-	http.Error(w, err.Error(), http.StatusInternalServerError)
+	jsonError := struct {
+		Error string `json:"error"`
+	}{
+		err.Error(),
+	}
+	b, _ := json.Marshal(jsonError)
+	http.Error(w, string(b), http.StatusInternalServerError)
 }
