@@ -11,10 +11,10 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/kylebrandt/annotate"
+	"github.com/bosun-monitor/annotate"
 
 	"github.com/gorilla/mux"
-	"github.com/kylebrandt/annotate/backend"
+	"github.com/bosun-monitor/annotate/backend"
 	"github.com/twinj/uuid"
 )
 

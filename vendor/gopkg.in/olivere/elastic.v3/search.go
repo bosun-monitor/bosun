@@ -61,7 +61,7 @@ func (s *SearchService) Index(indices ...string) *SearchService {
 	return s
 }
 
-// Type allows to restrict the search to a list of types.
+// Types adds search restrictions for a list of types.
 func (s *SearchService) Type(types ...string) *SearchService {
 	if s.types == nil {
 		s.types = make([]string, 0)
@@ -413,10 +413,12 @@ type SearchSuggestion struct {
 // SearchSuggestionOption is an option of a SearchSuggestion.
 // See http://www.elasticsearch.org/guide/en/elasticsearch/reference/current/search-suggesters.html.
 type SearchSuggestionOption struct {
-	Text    string      `json:"text"`
-	Score   float64     `json:"score"`
-	Freq    int         `json:"freq"`
-	Payload interface{} `json:"payload"`
+	Text         string      `json:"text"`
+	Highlighted  string      `json:"highlighted"`
+	Score        float64     `json:"score"`
+	CollateMatch bool        `json:"collate_match"`
+	Freq         int         `json:"freq"` // deprecated in 2.x
+	Payload      interface{} `json:"payload"`
 }
 
 // Aggregations (see search_aggs.go)

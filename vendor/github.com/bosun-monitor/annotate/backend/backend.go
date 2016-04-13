@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/kylebrandt/annotate"
+	"github.com/bosun-monitor/annotate"
 	elastic "gopkg.in/olivere/elastic.v3"
 )
 

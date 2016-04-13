@@ -29,9 +29,9 @@ import (
 	"bosun.org/util"
 
 	"github.com/MiniProfiler/go/miniprofiler"
+	"github.com/bosun-monitor/annotate/backend"
+	"github.com/bosun-monitor/annotate/web"
 	"github.com/gorilla/mux"
-	"github.com/kylebrandt/annotate/backend"
-	"github.com/kylebrandt/annotate/web"
 )
 
 var (

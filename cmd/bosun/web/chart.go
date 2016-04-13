@@ -17,9 +17,9 @@ import (
 	"bosun.org/opentsdb"
 	"github.com/MiniProfiler/go/miniprofiler"
 	svg "github.com/ajstarks/svgo"
+	"github.com/bosun-monitor/annotate"
 	"github.com/bradfitz/slice"
 	"github.com/gorilla/mux"
-	"github.com/kylebrandt/annotate"
 	"github.com/vdobler/chart"
 	"github.com/vdobler/chart/svgg"
 )

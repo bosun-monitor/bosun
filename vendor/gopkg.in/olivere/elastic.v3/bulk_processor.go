@@ -186,6 +186,29 @@ func newBulkProcessorStats(workers int) *BulkProcessorStats {
 	return stats
 }
 
+func (st *BulkProcessorStats) dup() *BulkProcessorStats {
+	dst := new(BulkProcessorStats)
+	dst.Flushed = st.Flushed
+	dst.Committed = st.Committed
+	dst.Indexed = st.Indexed
+	dst.Created = st.Created
+	dst.Updated = st.Updated
+	dst.Deleted = st.Deleted
+	dst.Succeeded = st.Succeeded
+	dst.Failed = st.Failed
+	for _, src := range st.Workers {
+		dst.Workers = append(dst.Workers, src.dup())
+	}
+	return dst
+}
+
+func (st *BulkProcessorWorkerStats) dup() *BulkProcessorWorkerStats {
+	dst := new(BulkProcessorWorkerStats)
+	dst.Queued = st.Queued
+	dst.LastDuration = st.LastDuration
+	return dst
+}
+
 // -- Bulk Processor --
 
 // BulkProcessor encapsulates a task that accepts bulk requests and
@@ -324,7 +347,7 @@ func (p *BulkProcessor) Close() error {
 func (p *BulkProcessor) Stats() BulkProcessorStats {
 	p.statsMu.Lock()
 	defer p.statsMu.Unlock()
-	return *p.stats
+	return *p.stats.dup()
 }
 
 // Add adds a single request to commit by the BulkProcessorService.
@@ -458,9 +481,12 @@ func (w *bulkWorker) commit() error {
 	}
 	w.p.statsMu.Unlock()
 
+	// Save requests because they will be reset in commitFunc
+	reqs := w.service.requests
+
 	// Invoke before callback
 	if w.p.beforeFn != nil {
-		w.p.beforeFn(id, w.service.requests)
+		w.p.beforeFn(id, reqs)
 	}
 
 	// Commit bulk requests
@@ -473,7 +499,7 @@ func (w *bulkWorker) commit() error {
 
 	// Invoke after callback
 	if w.p.afterFn != nil {
-		w.p.afterFn(id, w.service.requests, res, err)
+		w.p.afterFn(id, reqs, res, err)
 	}
 
 	return err

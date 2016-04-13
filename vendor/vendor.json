@@ -188,6 +188,24 @@
 			"revisionTime": "2015-11-22T20:06:43-07:00"
 		},
 		{
+			"origin": "bosun.org/vendor/github.com/bosun-monitor/annotate",
+			"path": "github.com/bosun-monitor/annotate",
+			"revision": "c68328c0dab493f15ced69c4f64ad184bf69c902",
+			"revisionTime": "2016-04-13T14:41:03-04:00"
+		},
+		{
+			"origin": "bosun.org/vendor/github.com/bosun-monitor/annotate/backend",
+			"path": "github.com/bosun-monitor/annotate/backend",
+			"revision": "c68328c0dab493f15ced69c4f64ad184bf69c902",
+			"revisionTime": "2016-04-13T14:41:03-04:00"
+		},
+		{
+			"origin": "bosun.org/vendor/github.com/bosun-monitor/annotate/web",
+			"path": "github.com/bosun-monitor/annotate/web",
+			"revision": "c68328c0dab493f15ced69c4f64ad184bf69c902",
+			"revisionTime": "2016-04-13T14:41:03-04:00"
+		},
+		{
 			"path": "github.com/bradfitz/slice",
 			"revision": "a665b5dbaad5fc7474c1193c67ed138df1e1b0e7",
 			"revisionTime": "2014-04-30T10:51:40-04:00"
@@ -315,7 +333,8 @@
 		},
 		{
 			"path": "github.com/gorilla/context",
-			"revision": ""
+			"revision": "1ea25387ff6f684839d82767c1733ff4d4d15d0a",
+			"revisionTime": "2016-02-26T13:46:23-08:00"
 		},
 		{
 			"path": "github.com/gorilla/css/scanner",
@@ -324,7 +343,8 @@
 		},
 		{
 			"path": "github.com/gorilla/mux",
-			"revision": ""
+			"revision": "0eeaf8392f5b04950925b8a69fe70f110fa7cbfc",
+			"revisionTime": "2016-03-17T14:34:30-07:00"
 		},
 		{
 			"path": "github.com/influxdata/influxdb/client",
@@ -371,21 +391,6 @@
 			"path": "github.com/jordan-wright/email",
 			"revision": "f61123ea07e1921ac4f174e8c42225fd39bd6c6a",
 			"revisionTime": "2015-10-16T12:35:57-05:00"
-		},
-		{
-			"path": "github.com/kylebrandt/annotate",
-			"revision": "b96a8ca0b1726d7b50b7caa799884dc35754ad72",
-			"revisionTime": "2016-04-12T12:38:40-04:00"
-		},
-		{
-			"path": "github.com/kylebrandt/annotate/backend",
-			"revision": "b96a8ca0b1726d7b50b7caa799884dc35754ad72",
-			"revisionTime": "2016-04-12T12:38:40-04:00"
-		},
-		{
-			"path": "github.com/kylebrandt/annotate/web",
-			"revision": "b96a8ca0b1726d7b50b7caa799884dc35754ad72",
-			"revisionTime": "2016-04-12T12:38:40-04:00"
 		},
 		{
 			"path": "github.com/kylebrandt/gohop",
@@ -588,10 +593,9 @@
 			"revisionTime": "2015-08-18T21:58:05+09:00"
 		},
 		{
-			"origin": "github.com/kylebrandt/annotate/vendor/github.com/twinj/uuid",
 			"path": "github.com/twinj/uuid",
-			"revision": "0adcb7df180a0bbaa1f9268f62f2dc38dd1f46d7",
-			"revisionTime": "2016-02-17T17:07:42-05:00"
+			"revision": "89173bcdda19db0eb88aef1e1cb1cb2505561d31",
+			"revisionTime": "2015-10-29T14:44:42+10:00"
 		},
 		{
 			"path": "github.com/ugorji/go/codec",
@@ -770,18 +774,18 @@
 		},
 		{
 			"path": "gopkg.in/olivere/elastic.v3",
-			"revision": "13355e19a360316f040c7f43cec0ed29f133d146",
-			"revisionTime": "2016-02-03T17:48:28+01:00"
+			"revision": "bff1355ba593686c7bfc1abb7a8573f34a9c29d1",
+			"revisionTime": "2016-04-04T08:40:41+02:00"
 		},
 		{
 			"path": "gopkg.in/olivere/elastic.v3/backoff",
-			"revision": "13355e19a360316f040c7f43cec0ed29f133d146",
-			"revisionTime": "2016-02-03T17:48:28+01:00"
+			"revision": "bff1355ba593686c7bfc1abb7a8573f34a9c29d1",
+			"revisionTime": "2016-04-04T08:40:41+02:00"
 		},
 		{
 			"path": "gopkg.in/olivere/elastic.v3/uritemplates",
-			"revision": "13355e19a360316f040c7f43cec0ed29f133d146",
-			"revisionTime": "2016-02-03T17:48:28+01:00"
+			"revision": "bff1355ba593686c7bfc1abb7a8573f34a9c29d1",
+			"revisionTime": "2016-04-04T08:40:41+02:00"
 		},
 		{
 			"path": "gopkg.in/yaml.v1",
