@@ -121,7 +121,11 @@ func (s *Schedule) sendNotifications(silenced SilenceTester) {
 				}
 				s.pendingUnknowns[n] = append(s.pendingUnknowns[n], st)
 			} else if silenced {
-				slog.Infoln("silencing", ak)
+				slog.Infof("silencing %s", ak)
+				continue
+			} else if !st.Open || !st.NeedAck {
+				slog.Infof("Cannot notify acked or closed alert %s", ak)
+				continue
 			} else {
 				s.notify(st, n)
 			}
