@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"strings"
 	"time"
 
 	"github.com/bosun-monitor/annotate"
@@ -12,8 +13,8 @@ import (
 
 type Backend interface {
 	InsertAnnotation(a *annotate.Annotation) error
-	GetAnnotation(id string) (*annotate.Annotation, error)
-	GetAnnotations(start, end *time.Time, source, host, creationUser, owner, category, message string) (annotate.Annotations, error)
+	GetAnnotation(id string) (*annotate.Annotation, bool, error)
+	GetAnnotations(start, end *time.Time, source, host, creationUser, owner, category, url, message string) (annotate.Annotations, error)
 	DeleteAnnotation(id string) error
 	GetFieldValues(field string) ([]string, error)
 	InitBackend() error
@@ -37,19 +38,23 @@ func (e *Elastic) InsertAnnotation(a *annotate.Annotation) error {
 	return err
 }
 
-func (e *Elastic) GetAnnotation(id string) (*annotate.Annotation, error) {
+func (e *Elastic) GetAnnotation(id string) (*annotate.Annotation, bool, error) {
 	a := annotate.Annotation{}
 	if id == "" {
-		return &a, fmt.Errorf("must provide id")
+		return &a, false, fmt.Errorf("must provide id")
 	}
 	res, err := e.Get().Index(e.index).Type(docType).Id(id).Do()
+	// Ewwww...
+	if err != nil && strings.Contains(err.Error(), "Error 404") {
+		return &a, false, nil
+	}
 	if err != nil {
-		return &a, err
+		return &a, false, err
 	}
 	if err := json.Unmarshal(*res.Source, &a); err != nil {
-		return &a, err
+		return &a, res.Found, err
 	}
-	return &a, nil
+	return &a, res.Found, nil
 }
 
 func (e *Elastic) DeleteAnnotation(id string) error {
@@ -61,7 +66,7 @@ func (e *Elastic) DeleteAnnotation(id string) error {
 	//TODO? Check res.Found?
 }
 
-func (e *Elastic) GetAnnotations(start, end *time.Time, source, host, creationUser, owner, category, message string) (annotate.Annotations, error) {
+func (e *Elastic) GetAnnotations(start, end *time.Time, source, host, creationUser, owner, category, url, message string) (annotate.Annotations, error) {
 	annotations := annotate.Annotations{}
 	filters := []elastic.Query{}
 	if start != nil && end != nil {
@@ -83,6 +88,9 @@ func (e *Elastic) GetAnnotations(start, end *time.Time, source, host, creationUs
 	}
 	if category != "" {
 		filters = append(filters, elastic.NewTermQuery(annotate.Category, category))
+	}
+	if url != "" {
+		filters = append(filters, elastic.NewTermQuery(annotate.Url, url))
 	}
 	if message != "" {
 		filters = append(filters, elastic.NewTermQuery(annotate.Message, message))
@@ -154,6 +162,7 @@ func (e *Elastic) InitBackend() error {
 	p[annotate.CreationUser] = stringNA
 	p[annotate.Owner] = stringNA
 	p[annotate.Category] = stringNA
+	p[annotate.Url] = stringNA
 	mapping := make(map[string]interface{})
 	mapping["properties"] = p
 	q := e.PutMapping().Index(e.index).Type(docType).BodyJson(mapping)

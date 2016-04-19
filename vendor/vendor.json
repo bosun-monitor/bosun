@@ -190,20 +190,20 @@
 		{
 			"origin": "bosun.org/vendor/github.com/bosun-monitor/annotate",
 			"path": "github.com/bosun-monitor/annotate",
-			"revision": "c68328c0dab493f15ced69c4f64ad184bf69c902",
-			"revisionTime": "2016-04-13T14:41:03-04:00"
+			"revision": "36ef55491986246785767fd720b1dc06e1241fbf",
+			"revisionTime": "2016-04-19T13:55:59-04:00"
 		},
 		{
 			"origin": "bosun.org/vendor/github.com/bosun-monitor/annotate/backend",
 			"path": "github.com/bosun-monitor/annotate/backend",
-			"revision": "c68328c0dab493f15ced69c4f64ad184bf69c902",
-			"revisionTime": "2016-04-13T14:41:03-04:00"
+			"revision": "36ef55491986246785767fd720b1dc06e1241fbf",
+			"revisionTime": "2016-04-19T13:55:59-04:00"
 		},
 		{
 			"origin": "bosun.org/vendor/github.com/bosun-monitor/annotate/web",
 			"path": "github.com/bosun-monitor/annotate/web",
-			"revision": "c68328c0dab493f15ced69c4f64ad184bf69c902",
-			"revisionTime": "2016-04-13T14:41:03-04:00"
+			"revision": "36ef55491986246785767fd720b1dc06e1241fbf",
+			"revisionTime": "2016-04-19T13:55:59-04:00"
 		},
 		{
 			"path": "github.com/bradfitz/slice",
