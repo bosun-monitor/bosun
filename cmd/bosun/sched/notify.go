@@ -113,6 +113,10 @@ func (s *Schedule) sendNotifications(silenced SilenceTester) {
 	for n, states := range s.pendingNotifications {
 		for _, st := range states {
 			ak := st.AlertKey
+			alert := s.Conf.Alerts[ak.Name()]
+			if alert == nil {
+				continue
+			}
 			silenced := silenced(ak) != nil
 			if st.CurrentStatus == models.StUnknown {
 				if silenced {
@@ -123,7 +127,7 @@ func (s *Schedule) sendNotifications(silenced SilenceTester) {
 			} else if silenced {
 				slog.Infof("silencing %s", ak)
 				continue
-			} else if !st.Open || !st.NeedAck {
+			} else if !alert.Log && (!st.Open || !st.NeedAck) {
 				slog.Infof("Cannot notify acked or closed alert %s", ak)
 				continue
 			} else {
