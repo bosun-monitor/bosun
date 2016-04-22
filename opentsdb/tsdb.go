@@ -116,6 +116,9 @@ func (t TagSet) Copy() TagSet {
 
 // Merge adds or overwrites everything from o into t and returns t.
 func (t TagSet) Merge(o TagSet) TagSet {
+	if len(t) < 1 {
+		t = make(TagSet)
+	}
 	for k, v := range o {
 		t[k] = v
 	}

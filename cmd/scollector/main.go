@@ -69,6 +69,7 @@ func main() {
 	if *flagFilter != "" {
 		conf.Filter = strings.Split(*flagFilter, ",")
 	}
+	conf.Tags = conf.Tags.Merge(flagTags())
 	if !conf.Tags.Valid() {
 		slog.Fatalf("invalid tags: %v", conf.Tags)
 	} else if conf.Tags["host"] != "" {
@@ -525,4 +526,15 @@ func toToml(fname string) {
 		slog.Fatal(err)
 	}
 	f.Close()
+}
+
+func flagTags() opentsdb.TagSet {
+	presetTags := make(opentsdb.TagSet)
+	if len(flag.Args()) > 0 {
+		for _, arg := range flag.Args() {
+			tags := strings.Split(arg, "=")
+			presetTags[tags[0]] = tags[1]
+		}
+	}
+	return presetTags
 }
