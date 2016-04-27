@@ -32,6 +32,9 @@ func TestPrint(t *testing.T) {
 	if w := c.Alerts["braceTest"].Crit.Text; w != `avg(q("avg:o{t=m}", "", "")) > 1` {
 		t.Errorf("bad crit: %v", w)
 	}
+	if w := c.Alerts["macroBraceTest"].Crit.Text; w != `avg(q("avg:o{t=m}", "", "")) > 1` {
+		t.Errorf("bad crit: %v", w)
+	}
 	if w := c.Lookups["l"]; len(w.Entries) != 2 {
 		t.Errorf("bad lookup: %v", w)
 	}
