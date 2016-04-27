@@ -1142,7 +1142,7 @@ var exRE = regexp.MustCompile(`\$(?:[\w.]+|\{[\w.]+\})`)
 func (c *Conf) Expand(v string, vars map[string]string, ignoreBadExpand bool) string {
 	ss := exRE.ReplaceAllStringFunc(v, func(s string) string {
 		var n string
-		if strings.HasPrefix(s, "${") && strings.HasSuffix(s, "}") {
+		if strings.HasPrefix(s, "${") && strings.HasSuffix(s, "}") && !ignoreBadExpand {
 			s = "$" + s[2:len(s)-1]
 		}
 		if _n, ok := vars[s]; ok {
