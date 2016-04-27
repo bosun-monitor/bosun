@@ -787,6 +787,9 @@ var defaultFuncs = ttemplate.FuncMap{
 	"short": func(v string) string {
 		return strings.SplitN(v, ".", 2)[0]
 	},
+	"html": func(value interface{}) htemplate.HTML {
+		return htemplate.HTML(fmt.Sprint(value))
+	},
 	"parseDuration": time.ParseDuration,
 }
 
