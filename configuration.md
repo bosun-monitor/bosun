@@ -47,7 +47,7 @@ Every variable is optional, though you should enable at least 1 backend.
 * graphiteHost: an ip, hostname, ip:port, hostname:port or a URL, defaults to standard http/https ports, defaults to "/render" path.  Any non-zero path (even "/" overrides path)
 * graphiteHeader: a http header to be sent to graphite on each request in 'key:value' format. optional. can be specified multiple times.
 * logstashElasticHosts: Elasticsearch hosts populated by logstash. Must be a CSV list of URLs and only works with elastic pre-v2. The hosts you list are used to discover all hosts in the cluster.
-* ElasticHosts: Elasticsearch hosts. This is not limited to logstash's schema. It must be a CSV list of URLs and only works with elastic v2 and later. The hosts you list are used to discover all hosts in the cluster.
+* elasticHosts: Elasticsearch hosts. This is not limited to logstash's schema. It must be a CSV list of URLs and only works with elastic v2 and later. The hosts you list are used to discover all hosts in the cluster.
 * influxHost: InfluxDB host address ip:port pair.
 * influxUsername: InfluxDB username. If empty will attempt to connect without authentication.
 * influxPassword: InfluxDB password. If empty will attempt to connect without authentication.
@@ -193,6 +193,7 @@ Global template functions:
 * replace: [strings.Replace](http://golang.org/pkg/strings/#Replace)
 * short: Trims the string to everything before the first period. Useful for turning a FQDN into a shortname. For example: `{{short "foo.baz.com"}}` -> `foo`.
 * parseDuration: [time.ParseDuration](http://golang.org/pkg/time/#ParseDuration). Useful when working with an alert's .Last.Time.Add method to generate urls to other systems.
+* html: takes a string and renders it as html. Useful for when you have alert variables that contain html. For example in the alert you may have `$notes = <a href="...">Foo</a>` and the in the template you can render it as html with `{{ html .Alert.Vars.notes }}` 
 
 All body templates are associated, and so may be executed from another. Use the name of the other template section for inclusion. Subject templates are similarly associated.
 
