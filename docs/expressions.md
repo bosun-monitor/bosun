@@ -198,7 +198,7 @@ escount returns a time bucked count of matching documents. It uses the keystring
   * `bucketDuration` is an opentsdb duration string. It sets the the span of time to bucket the count of documents. For example, "1m" will give you the count of documents per minute.
   * `startDuration` and `endDuration` set the time window from now - see the OpenTSDB q() function for more details.
 
-### esstat(indexRoot ESIndexer, keyString string, filter ESQuery, bucketDuration string, startDuration string, endDuration string) seriesSet
+### esstat(indexRoot ESIndexer, keyString string, filter ESQuery, field string, rStat string, bucketDuration string, startDuration string, endDuration string) seriesSet
 
 estat returns various summary stats per bucket for the specified `field`. The field must be numeric in elastic. rStat can be one of `avg`, `min`, `max`, `sum`, `sum_of_squares`, `variance`, `std_deviation`. The rest of the fields behave the same as escount.
 
