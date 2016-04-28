@@ -231,16 +231,16 @@ esand takes one or more ESQueries and combines them into an [elastic bool query]
 ### esor(queries.. ESQuery) ESQuery
 esor takes one or more ESQueries and combines them into an [elastic bool query](https://www.elastic.co/guide/en/elasticsearch/reference/2.x/query-dsl-bool-query.html) so that at least one must be true.
 
-###esgt(field string, value Scalar) ESQuery
+### esgt(field string, value Scalar) ESQuery
 esgt takes a field (expected to be numeric field in elastic) and returns results where the value of that field is greater than the specified value. It creates an [elastic range query](https://www.elastic.co/guide/en/elasticsearch/reference/2.x/query-dsl-range-query.html).
 
-###esgte(field string, value Scalar) ESQuery
+### esgte(field string, value Scalar) ESQuery
 esgt takes a field (expected to be numeric field in elastic) and returns results where the value of that field is greater than or equal to the specified value. It creates an [elastic range query](https://www.elastic.co/guide/en/elasticsearch/reference/2.x/query-dsl-range-query.html).
 
-###eslt(field string, value Scalar) ESQuery
+### eslt(field string, value Scalar) ESQuery
 esgt takes a field (expected to be numeric field in elastic) and returns results where the value of that field is less than the specified value. It creates an [elastic range query](https://www.elastic.co/guide/en/elasticsearch/reference/2.x/query-dsl-range-query.html).
 
-###eslte(field string, value Scalar) ESQuery
+### eslte(field string, value Scalar) ESQuery
 esgt takes a field (expected to be numeric field in elastic) and returns results where the value of that field is less than or equal to the specified value. It creates an [elastic range query](https://www.elastic.co/guide/en/elasticsearch/reference/2.x/query-dsl-range-query.html).
 
 
