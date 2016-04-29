@@ -9,12 +9,13 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/bosun-monitor/annotate"
 
-	"github.com/gorilla/mux"
 	"github.com/bosun-monitor/annotate/backend"
+	"github.com/gorilla/mux"
 	"github.com/twinj/uuid"
 )
 
@@ -212,8 +213,10 @@ func GetAnnotations(w http.ResponseWriter, req *http.Request) {
 	var startT time.Time
 	var endT time.Time
 	var err error
-	for param, _ := range req.URL.Query() {
-		switch param {
+	values := req.URL.Query()
+	for param, _ := range values {
+		sp := strings.Split(param, ":")
+		switch sp[0] {
 		case annotate.StartDate:
 		case annotate.EndDate:
 		case annotate.Source:
@@ -223,6 +226,7 @@ func GetAnnotations(w http.ResponseWriter, req *http.Request) {
 		case annotate.Category:
 		case annotate.Url:
 		case annotate.Message:
+		case "Epoch":
 		default:
 			serveError(w, fmt.Errorf("%v is not a valid query field", param))
 			return
@@ -230,8 +234,8 @@ func GetAnnotations(w http.ResponseWriter, req *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	// Time
-	start := req.URL.Query().Get(annotate.StartDate)
-	end := req.URL.Query().Get(annotate.EndDate)
+	start := values.Get(annotate.StartDate)
+	end := values.Get(annotate.EndDate)
 	if start != "" {
 		s, rfcErr := time.Parse(time.RFC3339, start)
 		if rfcErr != nil {
@@ -262,18 +266,29 @@ func GetAnnotations(w http.ResponseWriter, req *http.Request) {
 	if start == "" {
 		startT = time.Now().Add(-time.Hour * 24)
 	}
-	// Other Fields
-	source := req.URL.Query().Get(annotate.Source)
-	host := req.URL.Query().Get(annotate.Host)
-	creationUser := req.URL.Query().Get(annotate.CreationUser)
-	owner := req.URL.Query().Get(annotate.Owner)
-	category := req.URL.Query().Get(annotate.Category)
-	url := req.URL.Query().Get(annotate.Url)
-	message := req.URL.Query().Get(annotate.Message)
+
+	// Queryable Fields
+	filters := []backend.FieldFilter{}
+	for param := range values {
+		sp := strings.Split(param, ":")
+		switch sp[0] {
+			case annotate.Source, annotate.Host, annotate.CreationUser, annotate.Owner, annotate.Category, annotate.Message:
+			default:
+				continue
+		}
+		filter := backend.FieldFilter{Field: sp[0], Value: values.Get(param)}
+		if len(sp) > 1 {
+			filter.Verb = sp[1]
+		}
+		if len(sp) > 2 {
+			filter.Not = true
+		}
+		filters = append(filters, filter)
+	}
 
 	// Execute
 	for _, b := range backends {
-		a, err = b.GetAnnotations(&startT, &endT, source, host, creationUser, owner, category, url, message)
+		a, err = b.GetAnnotations(&startT, &endT, filters...)
 		//TODO Collect errors and insert into the backends that we can
 		if err != nil {
 			serveError(w, err)
@@ -282,7 +297,7 @@ func GetAnnotations(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// Encode
-	if err := formatPlural(a, w, req.URL.Query().Get("Epoch") == "1"); err != nil {
+	if err := formatPlural(a, w, values.Get("Epoch") == "1"); err != nil {
 		serveError(w, err)
 		return
 	}

@@ -183,7 +183,7 @@ func Graph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 	}
 	var a []annotate.Annotation
 	if schedule.Conf.AnnotateEnabled() {
-		a, err = annotateBackend.GetAnnotations(&startT, &endT, "", "", "", "", "", "", "")
+		a, err = annotateBackend.GetAnnotations(&startT, &endT)
 		if err != nil {
 			return nil, err
 		}

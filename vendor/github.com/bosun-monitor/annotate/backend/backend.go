@@ -14,7 +14,7 @@ import (
 type Backend interface {
 	InsertAnnotation(a *annotate.Annotation) error
 	GetAnnotation(id string) (*annotate.Annotation, bool, error)
-	GetAnnotations(start, end *time.Time, source, host, creationUser, owner, category, url, message string) (annotate.Annotations, error)
+	GetAnnotations(start, end *time.Time, filters ...FieldFilter) (annotate.Annotations, error)
 	DeleteAnnotation(id string) error
 	GetFieldValues(field string) ([]string, error)
 	InitBackend() error
@@ -66,7 +66,17 @@ func (e *Elastic) DeleteAnnotation(id string) error {
 	//TODO? Check res.Found?
 }
 
-func (e *Elastic) GetAnnotations(start, end *time.Time, source, host, creationUser, owner, category, url, message string) (annotate.Annotations, error) {
+type FieldFilter struct {
+	Field string
+	Verb  string
+	Not   bool
+	Value string
+}
+
+const Is = "Is"
+const Empty = "Empty"
+
+func (e *Elastic) GetAnnotations(start, end *time.Time, fieldFilters ...FieldFilter) (annotate.Annotations, error) {
 	annotations := annotate.Annotations{}
 	filters := []elastic.Query{}
 	if start != nil && end != nil {
@@ -74,26 +84,29 @@ func (e *Elastic) GetAnnotations(start, end *time.Time, source, host, creationUs
 		endQ := elastic.NewRangeQuery(annotate.StartDate).Lte(end)
 		filters = append(filters, elastic.NewBoolQuery().Must(startQ, endQ))
 	}
-	if source != "" {
-		filters = append(filters, elastic.NewTermQuery(annotate.Source, source))
-	}
-	if host != "" {
-		filters = append(filters, elastic.NewTermQuery(annotate.Host, host))
-	}
-	if creationUser != "" {
-		filters = append(filters, elastic.NewTermQuery(annotate.CreationUser, creationUser))
-	}
-	if owner != "" {
-		filters = append(filters, elastic.NewTermQuery(annotate.Owner, owner))
-	}
-	if category != "" {
-		filters = append(filters, elastic.NewTermQuery(annotate.Category, category))
-	}
-	if url != "" {
-		filters = append(filters, elastic.NewTermQuery(annotate.Url, url))
-	}
-	if message != "" {
-		filters = append(filters, elastic.NewTermQuery(annotate.Message, message))
+	for _, filter := range fieldFilters {
+		switch filter.Field {
+		case annotate.Source, annotate.Host, annotate.CreationUser, annotate.Owner, annotate.Category:
+		default:
+			return annotations, fmt.Errorf("%v is not a field that can be filtered on", filter.Field)
+		}
+		var q elastic.Query
+		switch filter.Verb {
+		case Is, "":
+			q = elastic.NewTermQuery(filter.Field, filter.Value)
+		case Empty:
+			// Can't detect empty on a analyzed field
+			if filter.Field == annotate.Message {
+				return annotations, fmt.Errorf("message field does not support empty searches")
+			}
+			q = elastic.NewTermQuery(filter.Field, "")
+		default:
+			return annotations, fmt.Errorf("%v is not a valid query verb", filter.Verb)
+		}
+		if filter.Not {
+			q = elastic.NewBoolQuery().MustNot(q)
+		}
+		filters = append(filters, q)
 	}
 	res, err := e.Search(e.index).Query(elastic.NewBoolQuery().Must(filters...)).Size(e.maxResults).Do()
 	if err != nil {
