@@ -597,10 +597,20 @@ func (s *Schedule) ActionByIncidentId(user, message string, t models.ActionType,
 	return s.action(user, message, t, st)
 }
 
-func (s *Schedule) action(user, message string, t models.ActionType, st *models.IncidentState) (models.AlertKey, error) {
+func (s *Schedule) action(user, message string, t models.ActionType, st *models.IncidentState) (ak models.AlertKey, e error) {
 	if err := collect.Add("actions", opentsdb.TagSet{"user": user, "alert": st.AlertKey.Name(), "type": t.String()}, 1); err != nil {
 		slog.Errorln(err)
 	}
+	defer func() {
+		if e == nil {
+			if err := collect.Add("actions", opentsdb.TagSet{"user": user, "alert": st.AlertKey.Name(), "type": t.String()}, 1); err != nil {
+				slog.Errorln(err)
+			}
+			if err := s.DataAccess.Notifications().ClearNotifications(st.AlertKey); err != nil {
+				e = err
+			}
+		}
+	}()
 	isUnknown := st.LastAbnormalStatus == models.StUnknown
 	timestamp := utcNow()
 	switch t {
@@ -612,9 +622,6 @@ func (s *Schedule) action(user, message string, t models.ActionType, st *models.
 			return "", fmt.Errorf("cannot acknowledge closed alert")
 		}
 		st.NeedAck = false
-		if err := s.DataAccess.Notifications().ClearNotifications(st.AlertKey); err != nil {
-			return "", err
-		}
 	case models.ActionClose:
 		if st.IsActive() {
 			return "", fmt.Errorf("cannot close active alert")
@@ -632,11 +639,6 @@ func (s *Schedule) action(user, message string, t models.ActionType, st *models.
 		return st.AlertKey, s.DataAccess.State().Forget(st.AlertKey)
 	default:
 		return "", fmt.Errorf("unknown action type: %v", t)
-	}
-	// Would like to also track the alert group, but I believe this is impossible because any character
-	// that could be used as a delimiter could also be a valid tag key or tag value character
-	if err := collect.Add("actions", opentsdb.TagSet{"user": user, "alert": st.AlertKey.Name(), "type": t.String()}, 1); err != nil {
-		slog.Errorln(err)
 	}
 	st.Actions = append(st.Actions, models.Action{
 		Message: message,
