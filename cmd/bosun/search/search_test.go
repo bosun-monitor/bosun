@@ -14,7 +14,7 @@ var testSearch *Search
 
 func TestMain(m *testing.M) {
 	testData, closeF := dbtest.StartTestRedis(9990)
-	testSearch = NewSearch(testData)
+	testSearch = NewSearch(testData, false)
 	status := m.Run()
 	closeF()
 	os.Exit(status)
