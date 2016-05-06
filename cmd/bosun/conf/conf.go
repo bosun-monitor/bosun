@@ -63,6 +63,7 @@ type Conf struct {
 	Lookups          map[string]*Lookup
 	Squelch          Squelches `json:"-"`
 	Quiet            bool
+	SkipLast         bool
 	NoSleep          bool
 	ShortURLKey      string
 	InternetProxy    string

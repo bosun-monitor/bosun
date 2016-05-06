@@ -87,7 +87,7 @@ func (s *Schedule) Init(c *conf.Conf) error {
 		}
 	}
 	if s.Search == nil {
-		s.Search = search.NewSearch(s.DataAccess)
+		s.Search = search.NewSearch(s.DataAccess, c.SkipLast)
 	}
 	if c.StateFile != "" {
 		s.db, err = bolt.Open(c.StateFile, 0600, nil)
@@ -511,6 +511,9 @@ func Close() {
 }
 
 func (s *Schedule) Close() {
+	if s.Conf.SkipLast {
+		return
+	}
 	err := s.Search.BackupLast()
 	if err != nil {
 		slog.Error(err)

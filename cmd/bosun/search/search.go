@@ -36,16 +36,18 @@ func init() {
 	metadata.AddMetricMeta("bosun.search.dropped", metadata.Counter, metadata.Count, "Number of datapoints discarded without being saved to redis")
 }
 
-func NewSearch(data database.DataAccess) *Search {
+func NewSearch(data database.DataAccess, skipLast bool) *Search {
 	s := Search{
 		DataAccess: data,
 		last:       make(map[string]map[string]*database.LastInfo),
 		indexQueue: make(chan *opentsdb.DataPoint, 300000),
 	}
 	collect.Set("search.index_queue", opentsdb.TagSet{}, func() interface{} { return len(s.indexQueue) })
-	s.loadLast()
-	go s.redisIndex(s.indexQueue)
-	go s.backupLoop()
+	if !skipLast {
+		s.loadLast()
+		go s.redisIndex(s.indexQueue)
+		go s.backupLoop()
+	}
 	return &s
 }
 

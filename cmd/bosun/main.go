@@ -68,6 +68,7 @@ var (
 	flagQuiet    = flag.Bool("q", false, "quiet-mode: don't send any notifications except from the rule test page")
 	flagNoChecks = flag.Bool("n", false, "no-checks: don't run the checks at the run interval")
 	flagDev      = flag.Bool("dev", false, "enable dev mode: use local resources; no syslog")
+	flagSkipLast = flag.Bool("skiplast", false, "skip loading last datapoints from and to redis: useful for speeding up bosun startup time during development")
 	flagVersion  = flag.Bool("version", false, "Prints the version and exits")
 
 	mains []func()
@@ -99,6 +100,9 @@ func main() {
 	}
 	if err := metadata.Init(httpListen, false); err != nil {
 		slog.Fatal(err)
+	}
+	if *flagSkipLast {
+		c.SkipLast = true
 	}
 	if err := sched.Load(c); err != nil {
 		slog.Fatal(err)
