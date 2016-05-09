@@ -64,6 +64,7 @@ Config items:
 * redisPassword: redis password.
 
 * ledisDir: directory for ledisDb to store it's data. Will default to `ledis_data` in working dir if no redis host is provided.
+* ledisBindAddr: Address and port for ledis to bind to, defaults to `127.0.0.1:9565`.
 
 #### settings
 
