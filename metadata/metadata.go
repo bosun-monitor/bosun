@@ -118,6 +118,7 @@ const (
 	Thread               = "threads"
 	Timestamp            = "timestamp"
 	Transition           = "transitions"
+	USD                  = "US dollars"
 	V                    = "V" // Volts
 	V10                  = "tenth-Volts"
 	Vulnerabilities      = "vulnerabilities"

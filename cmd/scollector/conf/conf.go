@@ -72,6 +72,7 @@ type Conf struct {
 	TagOverride         []TagOverride
 	HadoopHost          string
 	Oracles             []Oracle
+	Fastly              []Fastly
 }
 
 type HAProxy struct {
@@ -97,6 +98,10 @@ type GoogleAnalytics struct {
 	Secret   string
 	Token    string
 	Sites    []GoogleAnalyticsSite
+}
+
+type Fastly struct {
+	Key string
 }
 
 type GoogleAnalyticsSite struct {
