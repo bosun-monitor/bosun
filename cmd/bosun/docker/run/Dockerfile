@@ -25,5 +25,5 @@ COPY create_tsdb_tables.sh /tsdb/
 
 COPY tmp /
 
-EXPOSE 8070 4242
+EXPOSE 8070 4242 9565
 CMD ["/usr/bin/supervisord"]
