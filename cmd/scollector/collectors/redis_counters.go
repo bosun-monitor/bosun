@@ -34,9 +34,6 @@ func c_redis_counters(server string, db int) (opentsdb.MultiDataPoint, error) {
 		return md, err
 	}
 	defer conn.Close()
-	if _, err := conn.Do("CLIENT", "SETNAME", "scollector"); err != nil {
-		return md, err
-	}
 	cursor := 0
 	for {
 		vals, err := redis.Values(conn.Do("HSCAN", collect.RedisCountersKey, cursor))
