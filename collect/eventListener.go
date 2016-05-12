@@ -66,10 +66,6 @@ func newRedisPool(server string, database int) *redis.Pool {
 			if err != nil {
 				return nil, err
 			}
-			if _, err := c.Do("CLIENT", "SETNAME", metricRoot+"_counters"); err != nil {
-				c.Close()
-				return nil, err
-			}
 			return c, err
 		},
 	}
