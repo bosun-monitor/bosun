@@ -21,14 +21,14 @@ func init() {
 				&IntervalCollector{
 					name: "redisCounters_" + red.Server,
 					F: func() (opentsdb.MultiDataPoint, error) {
-						return C_redis_counters(red.Server, red.Database)
+						return c_redis_counters(red.Server, red.Database)
 					},
 				})
 		}
 	})
 }
 
-func C_redis_counters(server string, db int) (opentsdb.MultiDataPoint, error) {
+func c_redis_counters(server string, db int) (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	conn, err := redis.Dial("tcp", server, redis.DialDatabase(db))
 	if err != nil {
