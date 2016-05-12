@@ -31,25 +31,25 @@ func c_redis_counters(server string, db int) (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	conn, err := redis.Dial("tcp", server, redis.DialDatabase(db))
 	if err != nil {
-		return md, err
+		return md, slog.Wrap(err)
 	}
 	defer conn.Close()
 	cursor := 0
 	for {
 		vals, err := redis.Values(conn.Do("HSCAN", collect.RedisCountersKey, cursor))
 		if err != nil {
-			return md, err
+			return md, slog.Wrap(err)
 		}
 		if len(vals) != 2 {
 			return md, fmt.Errorf("Unexpected number of values")
 		}
 		cursor, err = redis.Int(vals[0], nil)
 		if err != nil {
-			return md, err
+			return md, slog.Wrap(err)
 		}
 		pairs, err := redis.StringMap(vals[1], nil)
 		if err != nil {
-			return md, err
+			return md, slog.Wrap(err)
 		}
 		for mts, val := range pairs {
 			parts := strings.Split(mts, ":")
