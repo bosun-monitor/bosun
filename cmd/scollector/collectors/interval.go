@@ -30,6 +30,11 @@ type IntervalCollector struct {
 	TagOverride
 }
 
+func (c *IntervalCollector) ApplyFreqOverride(freq time.Duration) error {
+	c.Interval = freq
+	return nil
+}
+
 func (c *IntervalCollector) Init() {
 	if c.init != nil {
 		c.init()

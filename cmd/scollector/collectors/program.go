@@ -243,3 +243,11 @@ func parseTcollectorValue(line string) (*opentsdb.DataPoint, error) {
 func (c *ProgramCollector) Name() string {
 	return c.Path
 }
+
+func (c *ProgramCollector) ApplyFreqOverride(freq time.Duration) error {
+	if c.Interval == 0 {
+		return fmt.Errorf("can not override frequency of program collectors that are always running")
+	}
+	c.Interval = freq
+	return nil
+}

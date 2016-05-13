@@ -2,6 +2,8 @@
 package conf // import "bosun.org/cmd/scollector/conf"
 
 import (
+	"time"
+
 	"bosun.org/opentsdb"
 )
 
@@ -70,6 +72,7 @@ type Conf struct {
 	ExtraHop            []ExtraHop
 	LocalListener       string
 	TagOverride         []TagOverride
+	FreqOverride        FreqOverrides
 	HadoopHost          string
 	Oracles             []Oracle
 	Fastly              []Fastly
@@ -205,6 +208,32 @@ type TagOverride struct {
 	CollectorExpr string
 	MatchedTags   map[string]string
 	Tags          map[string]string
+}
+
+// Used for collector duration overrides
+type duration struct {
+	time.Duration
+}
+
+func (d *duration) UnmarshalText(text []byte) error {
+	var err error
+	d.Duration, err = time.ParseDuration(string(text))
+	return err
+}
+
+type FreqOverride struct {
+	CollectorName string
+	Frequency     duration
+}
+
+type FreqOverrides []FreqOverride
+
+func (f FreqOverrides) ByCollectorName() map[string]time.Duration {
+	m := make(map[string]time.Duration)
+	for _, o := range f {
+		m[o.CollectorName] = o.Frequency.Duration
+	}
+	return m
 }
 
 type Oracle struct {

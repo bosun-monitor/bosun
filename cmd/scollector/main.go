@@ -208,6 +208,12 @@ func main() {
 			slog.Fatal(err)
 		}
 	}
+	freqOverrides := conf.FreqOverride.ByCollectorName()
+	for _, collector := range c {
+		if duration, ok := freqOverrides[collector.Name()]; ok {
+			collector.ApplyFreqOverride(duration)
+		}
+	}
 	cdp, cquit := collectors.Run(c)
 	if u != nil {
 		slog.Infoln("OpenTSDB host:", u)

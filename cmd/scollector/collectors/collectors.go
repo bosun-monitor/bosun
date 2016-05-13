@@ -28,6 +28,7 @@ type Collector interface {
 	Init()
 	AddTagOverrides(map[string]string, opentsdb.TagSet) error
 	ApplyTagOverrides(opentsdb.TagSet)
+	ApplyFreqOverride(freq time.Duration) error
 }
 
 //These should be in alphabetical order to help prevent merge conflicts

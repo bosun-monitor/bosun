@@ -1,8 +1,10 @@
 package collectors
 
 import (
+	"fmt"
 	"reflect"
 	"runtime"
+	"time"
 
 	"bosun.org/collect"
 	"bosun.org/metadata"
@@ -26,6 +28,10 @@ func (s *StreamCollector) Init() {
 	if s.init != nil {
 		s.init()
 	}
+}
+
+func (c *StreamCollector) ApplyFreqOverride(freq time.Duration) error {
+	return fmt.Errorf("stream collectors have no frequency to be overriden")
 }
 
 func (s *StreamCollector) Run(dpchan chan<- *opentsdb.DataPoint, quit <-chan struct{}) {
