@@ -194,10 +194,11 @@ type RedisCounters struct {
 }
 
 type ExtraHop struct {
-	Host          string
-	APIKey        string
-	FilterBy      string
-	FilterPercent int
+	Host              string
+	APIKey            string
+	FilterBy          string
+	FilterPercent     int
+	AdditionalMetrics []string
 }
 
 type TagOverride struct {
