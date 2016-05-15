@@ -61,7 +61,14 @@ func (n *Notification) DoPrint(payload string) {
 }
 
 func (n *Notification) DoPost(payload []byte, ak string) {
-	if n.Body != nil {
+	if ak == "actionNotification" && n.ActionBody != nil {
+		buf := new(bytes.Buffer)
+		if err := n.ActionBody.Execute(buf, string(payload)); err != nil {
+			slog.Errorln(err)
+			return
+		}
+		payload = buf.Bytes()
+	} else if n.Body != nil {
 		buf := new(bytes.Buffer)
 		if err := n.Body.Execute(buf, string(payload)); err != nil {
 			slog.Errorln(err)

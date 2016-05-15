@@ -329,6 +329,7 @@ type Notification struct {
 	Email        []*mail.Address
 	Post, Get    *url.URL
 	Body         *ttemplate.Template
+	ActionBody   *ttemplate.Template
 	Print        bool
 	Next         *Notification
 	Timeout      time.Duration
@@ -336,10 +337,11 @@ type Notification struct {
 	RunOnActions bool
 	UseBody      bool
 
-	next      string
-	email     string
-	post, get string
-	body      string
+	next       string
+	email      string
+	post, get  string
+	body       string
+	actionbody string
 }
 
 func (n *Notification) MarshalJSON() ([]byte, error) {
@@ -1135,6 +1137,14 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 				c.error(err)
 			}
 			n.Body = tmpl
+		case "actionBody":
+			n.actionbody = v
+			tmpl := ttemplate.New(name).Funcs(funcs)
+			_, err := tmpl.Parse(n.actionbody)
+			if err != nil {
+				c.error(err)
+			}
+			n.ActionBody = tmpl
 		case "runOnActions":
 			n.RunOnActions = v == "true"
 		case "useBody":
