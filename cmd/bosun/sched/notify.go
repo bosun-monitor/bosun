@@ -200,7 +200,7 @@ func (s *Schedule) notify(st *models.IncidentState, n *conf.Notification) {
 	if len(st.EmailBody) == 0 {
 		st.EmailBody = []byte(st.Body)
 	}
-	n.Notify(st.Subject, st.Body, st.EmailSubject, st.EmailBody, s.Conf, string(st.AlertKey), st.Attachments...)
+	n.Notify(st.Subject, st.Body, st.EmailSubject, st.EmailBody, st.PostBody, s.Conf, string(st.AlertKey), st.Attachments...)
 }
 
 // utnotify is single notification for N unknown groups into a single notification
@@ -223,7 +223,7 @@ func (s *Schedule) utnotify(groups map[string]models.AlertKeys, n *conf.Notifica
 	}); err != nil {
 		slog.Errorln(err)
 	}
-	n.Notify(subject, body.String(), []byte(subject), body.Bytes(), s.Conf, "unknown_treshold")
+	n.Notify(subject, body.String(), []byte(subject), body.Bytes(), "", s.Conf, "unknown_treshold")
 }
 
 var defaultUnknownTemplate = &conf.Template{
@@ -258,7 +258,7 @@ func (s *Schedule) unotify(name string, group models.AlertKeys, n *conf.Notifica
 			slog.Infoln("unknown template error:", err)
 		}
 	}
-	n.Notify(subject.String(), body.String(), subject.Bytes(), body.Bytes(), s.Conf, name)
+	n.Notify(subject.String(), body.String(), subject.Bytes(), body.Bytes(), "", s.Conf, name)
 }
 
 func (s *Schedule) QueueNotification(ak models.AlertKey, n *conf.Notification, started time.Time) error {
@@ -314,7 +314,7 @@ func (s *Schedule) ActionNotify(at models.ActionType, user, message string, aks 
 			slog.Error("Error rendering action notification body", err)
 		}
 
-		notification.Notify(subject, buf.String(), []byte(subject), buf.Bytes(), s.Conf, "actionNotification")
+		notification.Notify(subject, buf.String(), []byte(subject), buf.Bytes(), "", s.Conf, "actionNotification")
 	}
 	return nil
 }

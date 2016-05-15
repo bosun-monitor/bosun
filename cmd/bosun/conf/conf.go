@@ -84,6 +84,7 @@ type Conf struct {
 	node            parse.Node
 	unknownTemplate string
 	bodies          *htemplate.Template
+	postbodies      *ttemplate.Template
 	subjects        *ttemplate.Template
 	squelch         []string
 }
@@ -313,11 +314,12 @@ func (c *Conf) parseNotifications(v string) (map[string]*Notification, error) {
 type Template struct {
 	Text string
 	Vars
-	Name    string
-	Body    *htemplate.Template `json:"-"`
-	Subject *ttemplate.Template `json:"-"`
+	Name     string
+	Body     *htemplate.Template `json:"-"`
+	PostBody *ttemplate.Template `json:"-"`
+	Subject  *ttemplate.Template `json:"-"`
 
-	body, subject string
+	body, postbody, subject string
 }
 
 type Notification struct {
@@ -376,6 +378,7 @@ func New(name, text string) (c *Conf, err error) {
 		Notifications:    make(map[string]*Notification),
 		RawText:          text,
 		bodies:           htemplate.New(name).Funcs(htemplate.FuncMap(defaultFuncs)),
+		postbodies:       ttemplate.New(name).Funcs(defaultFuncs),
 		subjects:         ttemplate.New(name).Funcs(defaultFuncs),
 		Lookups:          make(map[string]*Lookup),
 		Macros:           make(map[string]*Macro),
@@ -825,6 +828,14 @@ func (c *Conf) loadTemplate(s *parse.SectionNode) {
 					c.error(err)
 				}
 				t.Body = tmpl
+			case "postBody":
+				t.postbody = v
+				tmpl := c.postbodies.New(name).Funcs(funcs)
+				_, err := tmpl.Parse(t.postbody)
+				if err != nil {
+					c.error(err)
+				}
+				t.PostBody = tmpl
 			case "subject":
 				t.subject = v
 				tmpl := c.subjects.New(name).Funcs(funcs)
