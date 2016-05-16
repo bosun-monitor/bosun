@@ -17,6 +17,7 @@ import (
 	"bosun.org/slog"
 	"github.com/GaryBoone/GoStats/stats"
 	"github.com/MiniProfiler/go/miniprofiler"
+	"github.com/jinzhu/now"
 )
 
 func tagQuery(args []parse.Node) (parse.Tags, error) {
@@ -370,6 +371,11 @@ var builtins = map[string]parse.Func{
 		Tags:   tagFirst,
 		F:      Merge,
 	},
+	"month": {
+		Args:   []models.FuncType{models.TypeScalar, models.TypeString},
+		Return: models.TypeScalar,
+		F:      Month,
+	},
 }
 
 func SeriesFunc(e *State, T miniprofiler.Timer, tags string, pairs ...float64) (*Results, error) {
@@ -419,6 +425,26 @@ func Epoch(e *State, T miniprofiler.Timer) (*Results, error) {
 	return &Results{
 		Results: []*Result{
 			{Value: Scalar(float64(e.now.Unix()))},
+		},
+	}, nil
+}
+
+func Month(e *State, T miniprofiler.Timer, offset float64, startEnd string) (*Results, error) {
+	if startEnd != "start" && startEnd != "end" {
+		return nil, fmt.Errorf("last parameter for mtod must be 'start' or 'end'")
+	}
+	offsetInt := int(offset)
+	location := time.FixedZone(fmt.Sprintf("%v", offsetInt), offsetInt*60*60)
+	timeZoned := e.now.In(location)
+	var mtod float64
+	if startEnd == "start" {
+		mtod = float64(now.New(timeZoned).BeginningOfMonth().Unix())
+	} else {
+		mtod = float64(now.New(timeZoned).EndOfMonth().Unix())
+	}
+	return &Results{
+		Results: []*Result{
+			{Value: Scalar(float64(mtod))},
 		},
 	}, nil
 }

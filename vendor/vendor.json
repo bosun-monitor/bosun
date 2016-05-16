@@ -377,6 +377,11 @@
 			"revisionTime": "2016-02-12T14:50:30-07:00"
 		},
 		{
+			"path": "github.com/jinzhu/now",
+			"revision": "ce80572eb55aa0ac839330041ca9db1afa5f1f6c",
+			"revisionTime": "2015-10-01T22:15:11+08:00"
+		},
+		{
 			"origin": "github.com/aws/aws-sdk-go/vendor/github.com/jmespath/go-jmespath",
 			"path": "github.com/jmespath/go-jmespath",
 			"revision": "8041be5461786460d86b4358305fbdf32d37cfb2",
