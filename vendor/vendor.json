@@ -206,6 +206,11 @@
 			"revisionTime": "2016-04-29T11:34:44-04:00"
 		},
 		{
+			"path": "github.com/bosun-monitor/statusio",
+			"revision": "ab1583139762a47425d3c189a7cb6344c3220d95",
+			"revisionTime": "2016-05-16T12:08:16-04:00"
+		},
+		{
 			"path": "github.com/bradfitz/slice",
 			"revision": "a665b5dbaad5fc7474c1193c67ed138df1e1b0e7",
 			"revisionTime": "2014-04-30T10:51:40-04:00"

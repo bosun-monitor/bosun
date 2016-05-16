@@ -101,7 +101,8 @@ type GoogleAnalytics struct {
 }
 
 type Fastly struct {
-	Key string
+	Key            string
+	StatusBaseAddr string
 }
 
 type GoogleAnalyticsSite struct {

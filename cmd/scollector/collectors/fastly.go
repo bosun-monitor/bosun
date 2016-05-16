@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"reflect"
+	"regexp"
 	"strconv"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
+	"github.com/bosun-monitor/statusio"
 )
 
 func init() {
@@ -34,6 +36,15 @@ func init() {
 				name:     "c_fastly_billing",
 				Interval: time.Minute * 5,
 			})
+			if f.StatusBaseAddr != "" {
+				collectors = append(collectors, &IntervalCollector{
+					F: func() (opentsdb.MultiDataPoint, error) {
+						return c_fastly_status(f.StatusBaseAddr)
+					},
+					name:     "c_fastly_status",
+					Interval: time.Minute * 1,
+				})
+			}
 		}
 	})
 }
@@ -50,7 +61,88 @@ const (
 	fastlyBillingBeforeDiscountDesc = "The total incurred cost plus extras cost this month."
 	fastlyBillingDiscountDesc       = "The calculated discount rate this month."
 	fastlyBillingCostDesc           = "The final amount to be paid this month."
+
+	fastlyStatusPrefix             = "fastly.status."
+	fastlyComponentStatusDesc      = "The current status of the %v. 0: Operational, 1: Degraded Performance, 2: Partial Outage, 3: Major Outage." // see iota for statusio.ComponentStatus
+	fastlyScheduledMaintDesc       = "The number of currently scheduled maintenances. Does not include maintenance that is current active"
+	fastlyActiveScheduledMaintDesc = "The number of currently scheduled maintenances currently in progress. Includes the 'in_progress' and 'verifying'"
+	fastlyActiveIncidentDesc       = "The number of currently active incidents. Includes the 'investingating', 'identified', and 'monitoring' states."
 )
+
+var (
+	fastlyStatusPopRegex = regexp.MustCompile(`(.*)\(([A-Z]{3})\)`) // i.e. Miami (MIA)
+)
+
+func c_fastly_status(baseAddr string) (opentsdb.MultiDataPoint, error) {
+	var md opentsdb.MultiDataPoint
+	c := statusio.NewClient(baseAddr)
+	summary, err := c.GetSummary()
+	if err != nil {
+		return md, err
+	}
+
+	// Process Components (Pops, Support Systems)
+	for _, comp := range summary.Components {
+		match := fastlyStatusPopRegex.FindAllStringSubmatch(comp.Name, 1)
+		if len(match) != 0 && len(match[0]) == 3 { // We have a pop
+			//name := match[0][1]
+			code := match[0][2]
+			tagSet := opentsdb.TagSet{"code": code}
+			Add(&md, fastlyStatusPrefix+"pop", int(comp.Status), tagSet, metadata.Gauge, metadata.StatusCode, fmt.Sprintf(fastlyComponentStatusDesc, "pop"))
+			continue
+		}
+		// Must be service component
+		tagSet := opentsdb.TagSet{"service": comp.Name}
+		Add(&md, fastlyStatusPrefix+"service", int(comp.Status), tagSet, metadata.Gauge, metadata.StatusCode, fmt.Sprintf(fastlyComponentStatusDesc, "service"))
+	}
+
+	// Scheduled Maintenance
+	scheduledMaintByImpact := make(map[statusio.StatusIndicator]int)
+	activeScheduledMaintByImpact := make(map[statusio.StatusIndicator]int)
+	// Make Maps
+	for _, si := range statusio.StatusIndicatorValues {
+		scheduledMaintByImpact[si] = 0
+		activeScheduledMaintByImpact[si] = 0
+	}
+	// Group by scheduled vs inprogress/verifying
+	for _, maint := range summary.ScheduledMaintenances {
+		switch maint.Status {
+		case statusio.Scheduled:
+			scheduledMaintByImpact[maint.Impact]++
+		case statusio.InProgress, statusio.Verifying:
+			activeScheduledMaintByImpact[maint.Impact]++
+		}
+	}
+	for impact, count := range scheduledMaintByImpact {
+		tagSet := opentsdb.TagSet{"impact": fmt.Sprint(impact)}
+		Add(&md, fastlyStatusPrefix+"scheduled_maint_count", count, tagSet, metadata.Gauge, metadata.Count, fastlyScheduledMaintDesc)
+	}
+	for impact, count := range activeScheduledMaintByImpact {
+		tagSet := opentsdb.TagSet{"impact": fmt.Sprint(impact)}
+		Add(&md, fastlyStatusPrefix+"in_progress_maint_count", count, tagSet, metadata.Gauge, metadata.Count, fastlyActiveScheduledMaintDesc)
+	}
+
+	// Incidents
+	// Make Map
+	incidentsByImpact := make(map[statusio.StatusIndicator]int)
+	for _, si := range statusio.StatusIndicatorValues {
+		incidentsByImpact[si] = 0
+	}
+	for _, incident := range summary.Incidents {
+		switch incident.Status {
+		case statusio.Investigating, statusio.Identified, statusio.Monitoring:
+			incidentsByImpact[incident.Impact]++
+		default:
+			continue
+		}
+	}
+	for impact, count := range incidentsByImpact {
+		tagSet := opentsdb.TagSet{"impact": fmt.Sprint(impact)}
+		Add(&md, fastlyStatusPrefix+"active_incident_count", count, tagSet, metadata.Gauge, metadata.Incident, fastlyActiveIncidentDesc)
+	}
+
+	return md, nil
+}
 
 func c_fastly_billing(c fastlyClient) (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
