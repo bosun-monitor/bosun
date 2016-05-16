@@ -322,6 +322,7 @@ func containerTagSet(ts opentsdb.TagSet, container *v1.ContainerInfo) opentsdb.T
 	return tags
 }
 
+<<<<<<< HEAD
 func inBlkioWhitelist(name string) bool {
 	valid := false
 	for _, n := range blkioStatsWhitelist {
