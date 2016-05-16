@@ -1,7 +1,11 @@
 package collectors
 
 import (
+	"fmt"
+	"io/ioutil"
+	"os"
 	"strconv"
+	"strings"
 
 	"github.com/google/cadvisor/client"
 	"github.com/google/cadvisor/info/v1"
@@ -37,7 +41,146 @@ var cadvisorMeta = map[string]MetricMeta{
 		Unit:     metadata.Second,
 		Desc:     "Smoothed 10s average of number of runnable threads x 1000",
 	},
-	"container.fs.avalable": {
+
+	"container.diskio.io_service_bytes.async": {
+		RateType: metadata.Counter,
+		Unit:     metadata.Bytes,
+		Desc:     "Number of bytes transferred to/from the disk by the cgroup asynchronously",
+	},
+	"container.diskio.io_service_bytes.read": {
+		RateType: metadata.Counter,
+		Unit:     metadata.Bytes,
+		Desc:     "Number of bytes read from the disk by the cgroup",
+	},
+	"container.diskio.io_service_bytes.sync": {
+		RateType: metadata.Counter,
+		Unit:     metadata.Bytes,
+		Desc:     "Number of bytes transferred to/from the disk by the cgroup synchronously",
+	},
+	"container.diskio.io_service_bytes.write": {
+		RateType: metadata.Counter,
+		Unit:     metadata.Bytes,
+		Desc:     "Number of bytes written to the disk by the cgroup",
+	},
+
+	"container.diskio.io_serviced.async": {
+		RateType: metadata.Counter,
+		Unit:     metadata.Operation,
+		Desc:     "Number of async IOs issued to the disk by the cgroup",
+	},
+	"container.diskio.io_serviced.read": {
+		RateType: metadata.Counter,
+		Unit:     metadata.Operation,
+		Desc:     "Number of read issued to the disk by the group",
+	},
+	"container.diskio.io_serviced.sync": {
+		RateType: metadata.Counter,
+		Unit:     metadata.Operation,
+		Desc:     "Number of sync IOs issued to the disk by the cgroup",
+	},
+	"container.diskio.io_serviced.write": {
+		RateType: metadata.Counter,
+		Unit:     metadata.Operation,
+		Desc:     "Number of write issued to the disk by the group",
+	},
+
+	"container.diskio.io_queued.async": {
+		RateType: metadata.Gauge,
+		Unit:     metadata.Operation,
+		Desc:     "Total number of async requests queued up at any given instant for this cgroup",
+	},
+	"container.diskio.io_queued.read": {
+		RateType: metadata.Gauge,
+		Unit:     metadata.Operation,
+		Desc:     "Total number of read requests queued up at any given instant for this cgroup",
+	},
+	"container.diskio.io_queued.sync": {
+		RateType: metadata.Gauge,
+		Unit:     metadata.Operation,
+		Desc:     "Total number of sync requests queued up at any given instant for this cgroup",
+	},
+	"container.diskio.io_queued.write": {
+		RateType: metadata.Gauge,
+		Unit:     metadata.Operation,
+		Desc:     "Total number of write requests queued up at any given instant for this cgroup",
+	},
+
+	"container.diskio.sectors.count": {
+		RateType: metadata.Counter,
+		Unit:     metadata.Sector,
+		Desc:     "Number of sectors transferred to/from disk by the group",
+	},
+
+	"container.diskio.io_service_time.async": {
+		RateType: metadata.Counter,
+		Unit:     metadata.Nanosecond,
+		Desc:     "Total amount of time between async request dispatch and request completion for the IOs done by this cgroup",
+	},
+	"container.diskio.io_service_time.read": {
+		RateType: metadata.Counter,
+		Unit:     metadata.Nanosecond,
+		Desc:     "Total amount of time between read request dispatch and request completion for the IOs done by this cgroup",
+	},
+	"container.diskio.io_service_time.sync": {
+		RateType: metadata.Counter,
+		Unit:     metadata.Nanosecond,
+		Desc:     "Total amount of time between sync request dispatch and request completion for the IOs done by this cgroup",
+	},
+	"container.diskio.io_service_time.write": {
+		RateType: metadata.Counter,
+		Unit:     metadata.Nanosecond,
+		Desc:     "Total amount of time between write request dispatch and request completion for the IOs done by this cgroup",
+	},
+
+	"container.diskio.io_wait_time.async": {
+		RateType: metadata.Counter,
+		Unit:     metadata.Nanosecond,
+		Desc:     "Total amount of time the async IOs for this cgroup spent waiting in the scheduler queues for service",
+	},
+	"container.diskio.io_wait_time.read": {
+		RateType: metadata.Counter,
+		Unit:     metadata.Nanosecond,
+		Desc:     "Total amount of time the read request for this cgroup spent waiting in the scheduler queues for service",
+	},
+	"container.diskio.io_wait_time.sync": {
+		RateType: metadata.Counter,
+		Unit:     metadata.Nanosecond,
+		Desc:     "Total amount of time the sync IOs for this cgroup spent waiting in the scheduler queues for service",
+	},
+	"container.diskio.io_wait_time.write": {
+		RateType: metadata.Counter,
+		Unit:     metadata.Nanosecond,
+		Desc:     "Total amount of time the write request for this cgroup spent waiting in the scheduler queues for service",
+	},
+
+	"container.diskio.io_merged.async": {
+		RateType: metadata.Counter,
+		Unit:     metadata.Operation,
+		Desc:     "Total number of async requests merged into requests belonging to this cgroup.",
+	},
+	"container.diskio.io_merged.read": {
+		RateType: metadata.Counter,
+		Unit:     metadata.Operation,
+		Desc:     "Total number of read requests merged into requests belonging to this cgroup.",
+	},
+	"container.diskio.io_merged.sync": {
+		RateType: metadata.Counter,
+		Unit:     metadata.Operation,
+		Desc:     "Total number of sync requests merged into requests belonging to this cgroup.",
+	},
+	"container.diskio.io_merged.write": {
+		RateType: metadata.Counter,
+		Unit:     metadata.Operation,
+		Desc:     "Total number of write requests merged into requests belonging to this cgroup.",
+	},
+
+	"container.diskio.io_time.count": {
+		RateType: metadata.Counter,
+		Unit:     metadata.MilliSecond,
+		Desc:     "Disk time allocated to cgroup per device",
+	},
+
+	"container.fs.available": {
 		RateType: metadata.Gauge,
 		Unit:     metadata.Bytes,
 		Desc:     "Number of bytes available for non-root user.",
@@ -154,6 +297,8 @@ var cadvisorMeta = map[string]MetricMeta{
 	},
 }
 
+var blkioStatsWhitelist = []string{"Async", "Sync", "Read", "Write", "Count"}
+
 func cadvisorAdd(md *opentsdb.MultiDataPoint, name string, value interface{}, ts opentsdb.TagSet) {
 	Add(md, name, value, ts, cadvisorMeta[name].RateType, cadvisorMeta[name].Unit, cadvisorMeta[name].Desc)
 }
@@ -175,6 +320,60 @@ func containerTagSet(ts opentsdb.TagSet, container *v1.ContainerInfo) opentsdb.T
 		tags[k] = v
 	}
 	return tags
+}
+
+func inBlkioWhitelist(name string) bool {
+	valid := false
+	for _, n := range blkioStatsWhitelist {
+		if n == name {
+			valid = true
+			break
+		}
+	}
+	return valid
+}
+
+func addBlkioStat(md *opentsdb.MultiDataPoint, name string, diskStats v1.PerDiskStats, container *v1.ContainerInfo) {
+	device := blockDeviceLookup(diskStats.Major, diskStats.Minor)
+	for label, val := range diskStats.Stats {
+		if inBlkioWhitelist(label) {
+			cadvisorAdd(md, name+strings.ToLower(label), val, containerTagSet(opentsdb.TagSet{"dev": device}, container))
+		}
+	}
+}
+
+func blockDeviceLookup(major, minor uint64) string {
+	blockDevideLoopkupFallback := func(major, minor uint64) string {
+		slog.Errorf("Unable to perform lookup under /sys/dev/ for block device major(%d) minor(%d)", major, minor)
+		return fmt.Sprintf("major%d_minor%d", major, minor)
+	}
+
+	path := fmt.Sprintf("/sys/dev/block/%d:%d/uevent", major, minor)
+	file, err := os.Open(path)
+	if err != nil {
+		return blockDevideLoopkupFallback(major, minor)
+	}
+	defer file.Close()
+
+	content, err := ioutil.ReadAll(file)
+	if err != nil {
+		return blockDevideLoopkupFallback(major, minor)
+	}
+
+	startIdx := strings.Index(string(content), "DEVNAME=")
+	if startIdx == -1 {
+		return blockDevideLoopkupFallback(major, minor)
+	}
+
+	// Start after the =
+	startIdx += 7
+
+	endIdx := strings.Index(string(content[startIdx:]), "\n")
+	if endIdx == -1 {
+		return blockDevideLoopkupFallback(major, minor)
+	}
+
+	return string(content[startIdx : startIdx+endIdx])
 }
 
 func statsForContainer(md *opentsdb.MultiDataPoint, container *v1.ContainerInfo, perCpuUsage bool) {
@@ -266,6 +465,40 @@ func statsForContainer(md *opentsdb.MultiDataPoint, container *v1.ContainerInfo,
 		cadvisorAdd(md, "container.net.tcp6", stats.Network.Tcp6.SynRecv, containerTagSet(opentsdb.TagSet{"state": "synrecv"}, container))
 		cadvisorAdd(md, "container.net.tcp6", stats.Network.Tcp6.SynSent, containerTagSet(opentsdb.TagSet{"state": "synsent"}, container))
 		cadvisorAdd(md, "container.net.tcp6", stats.Network.Tcp6.TimeWait, containerTagSet(opentsdb.TagSet{"state": "timewait"}, container))
+	}
+
+	if container.Spec.HasDiskIo {
+		for _, d := range stats.DiskIo.IoServiceBytes {
+			addBlkioStat(md, "container.blkio.io_service_bytes.", d, container)
+		}
+
+		for _, d := range stats.DiskIo.IoServiced {
+			addBlkioStat(md, "container.blkio.io_serviced.", d, container)
+		}
+
+		for _, d := range stats.DiskIo.IoQueued {
+			addBlkioStat(md, "container.blkio.io_service_queued.", d, container)
+		}
+
+		for _, d := range stats.DiskIo.Sectors {
+			addBlkioStat(md, "container.blkio.sectors.", d, container)
+		}
+
+		for _, d := range stats.DiskIo.IoServiceTime {
+			addBlkioStat(md, "container.blkio.io_service_time.", d, container)
+		}
+
+		for _, d := range stats.DiskIo.IoWaitTime {
+			addBlkioStat(md, "container.blkio.io_wait_time.", d, container)
+		}
+
+		for _, d := range stats.DiskIo.IoMerged {
+			addBlkioStat(md, "container.blkio.io_merged.", d, container)
+		}
+
+		for _, d := range stats.DiskIo.IoTime {
+			addBlkioStat(md, "container.blkio.io_time.", d, container)
+		}
 	}
 }
 
