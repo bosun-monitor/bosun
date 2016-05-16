@@ -13,12 +13,12 @@ import (
 
 // DoNTLMRequest Perform a request using NTLM authentication
 func DoNTLMRequest(httpClient *http.Client, request *http.Request) (*http.Response, error) {
-	
+
 	handshakeReq, err := cloneRequest(request)
 	if err != nil {
 		return nil, err
 	}
-	
+
 	res, err := httpClient.Do(handshakeReq)
 	if err != nil && res == nil {
 		return nil, err
@@ -26,47 +26,47 @@ func DoNTLMRequest(httpClient *http.Client, request *http.Request) (*http.Respon
 
 	//If the status is 401 then we need to re-authenticate, otherwise it was successful
 	if res.StatusCode == 401 {
-		
-		auth, authOk := getDefaultCredentialsAuth() 
+
+		auth, authOk := getDefaultCredentialsAuth()
 		if authOk {
 			negotiateMessageBytes, err := auth.GetNegotiateBytes()
 			if err != nil {
 				return nil, err
 			}
 			defer auth.ReleaseContext()
-			
+
 			negotiateReq, err := cloneRequest(request)
 			if err != nil {
 				return nil, err
 			}
-			
+
 			challengeMessage, err := sendNegotiateRequest(httpClient, negotiateReq, negotiateMessageBytes)
 			if err != nil {
 				return nil, err
 			}
-			
+
 			challengeReq, err := cloneRequest(request)
 			if err != nil {
 				return nil, err
 			}
-			
+
 			responseBytes, err := auth.GetResponseBytes(challengeMessage)
-			
+
 			res, err := sendChallengeRequest(httpClient, challengeReq, responseBytes)
 			if err != nil {
 				return nil, err
 			}
-			
+
 			return res, nil
 		}
-	}   
-	 
+	}
+
 	return res, nil
 }
 
 func sendNegotiateRequest(httpClient *http.Client, request *http.Request, negotiateMessageBytes []byte) ([]byte, error) {
-	negotiateMsg :=  base64.StdEncoding.EncodeToString(negotiateMessageBytes)
-	
+	negotiateMsg := base64.StdEncoding.EncodeToString(negotiateMessageBytes)
+
 	request.Header.Add("Authorization", "NTLM "+negotiateMsg)
 	res, err := httpClient.Do(request)
 
@@ -118,7 +118,7 @@ func cloneRequest(request *http.Request) (*http.Request, error) {
 		return nil, err
 	}
 
-	for k, _ := range request.Header {
+	for k := range request.Header {
 		clonedReq.Header.Add(k, request.Header.Get(k))
 	}
 
@@ -163,11 +163,11 @@ func cloneRequestBody(req *http.Request) (io.ReadCloser, error) {
 }
 
 type cloneableBody struct {
-	bytes  []byte	// in-memory buffer of body
+	bytes  []byte    // in-memory buffer of body
 	file   *os.File  // file buffer of in-memory overflow
 	reader io.Reader // internal reader for Read()
-	closed bool	  // tracks whether body is closed
-	dup	*dupTracker
+	closed bool      // tracks whether body is closed
+	dup    *dupTracker
 }
 
 func newCloneableBody(r io.Reader, limit int64) (*cloneableBody, error) {

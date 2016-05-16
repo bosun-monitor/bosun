@@ -9,9 +9,9 @@ import (
 	"time"
 
 	"bosun.org/metadata"
+	"bosun.org/ntlm"
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
-	"bosun.org/ntlm"
 )
 
 func queuer() {
@@ -157,7 +157,7 @@ func SendDataPoints(dps []*opentsdb.DataPoint, tsdb string) (*http.Response, err
 
 	if UseNtlm {
 		return ntlm.DoNTLMRequest(client, req)
-	} 
+	}
 
 	resp, err := client.Do(req)
 	return resp, err

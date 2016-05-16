@@ -5,33 +5,33 @@ import (
 	"encoding/base64"
 	"io/ioutil"
 	"net/http"
+	"reflect"
 	"strings"
 	"testing"
-	"reflect"
 )
 
 func TestNtlmCloneRequest(t *testing.T) {
 	req1, _ := http.NewRequest("Method", "url", nil)
 	cloneOfReq1, err := cloneRequest(req1)
-	
+
 	if err != nil {
 		t.Fatalf("Unexpected exception!")
 	}
-	
+
 	assertRequestsEqual(t, req1, cloneOfReq1)
 
 	req2, _ := http.NewRequest("Method", "url", bytes.NewReader([]byte("Some data")))
 	cloneOfReq2, err := cloneRequest(req2)
-	
+
 	if err != nil {
 		t.Fatalf("Unexpected exception!")
 	}
-	
+
 	assertRequestsEqual(t, req2, cloneOfReq2)
 }
 
 func assertRequestsEqual(t *testing.T, req1 *http.Request, req2 *http.Request) {
-		
+
 	if req1.Method != req2.Method {
 		t.Fatalf("HTTP request methods are not equal")
 	}
@@ -60,11 +60,11 @@ func TestNtlmHeaderParseValid(t *testing.T) {
 	res.Header = make(map[string][]string)
 	res.Header.Add("Www-Authenticate", "NTLM "+base64.StdEncoding.EncodeToString([]byte("Some data")))
 	bytes, err := parseChallengeResponse(&res)
-	
+
 	if err != nil {
 		t.Fatalf("Unexpected exception!")
 	}
-	
+
 	// Check NTLM has been stripped from response
 	if strings.HasPrefix(string(bytes), "NTLM") {
 		t.Fatalf("Response contains NTLM prefix!")
@@ -90,7 +90,7 @@ func TestNtlmHeaderParseInvalid(t *testing.T) {
 	res.Header = make(map[string][]string)
 	res.Header.Add("Www-Authenticate", base64.StdEncoding.EncodeToString([]byte("NTLM I am a moose")))
 	_, err := parseChallengeResponse(&res)
-	
+
 	if err == nil {
 		t.Fatalf("Expected error, got none!")
 	}

@@ -67,8 +67,8 @@ func main() {
 	if *flagHost != "" {
 		conf.Host = *flagHost
 	}
-    if *flagNtlm {
-	    conf.UseNtlm = *flagNtlm
+	if *flagNtlm {
+		conf.UseNtlm = *flagNtlm
 	}
 	if *flagFilter != "" {
 		conf.Filter = strings.Split(*flagFilter, ",")
@@ -216,7 +216,7 @@ func main() {
 	if u != nil {
 		slog.Infoln("OpenTSDB host:", u)
 	}
-    collect.UseNtlm = conf.UseNtlm;
+	collect.UseNtlm = conf.UseNtlm
 	if err := collect.InitChan(u, "scollector", cdp); err != nil {
 		slog.Fatal(err)
 	}

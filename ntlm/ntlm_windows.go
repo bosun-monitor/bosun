@@ -40,8 +40,6 @@ const (
 	NTLMBUF_LEN                     = 12000
 )
 
-
-
 const ISC_REQ = ISC_REQ_CONFIDENTIALITY |
 	ISC_REQ_REPLAY_DETECT |
 	ISC_REQ_SEQUENCE_DETECT |
@@ -120,7 +118,7 @@ type SSPIAuth struct {
 }
 
 func getDefaultCredentialsAuth() (NtlmAuthenticator, bool) {
-    return getAuth("", "", "", "")
+	return getAuth("", "", "", "")
 }
 
 func getAuth(user, password, service, workstation string) (NtlmAuthenticator, bool) {
