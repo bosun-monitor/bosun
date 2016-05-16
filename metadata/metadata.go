@@ -71,6 +71,7 @@ const (
 	Fraction             = "fraction"
 	Get                  = "gets"
 	GetExists            = "get exists"
+	Incident             = "incidents"
 	Interupt             = "interupts"
 	InProgress           = "in progress"
 	Item                 = "items"
