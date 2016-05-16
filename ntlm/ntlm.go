@@ -29,11 +29,11 @@ func DoNTLMRequest(httpClient *http.Client, request *http.Request) (*http.Respon
 		
 		auth, authOk := getDefaultCredentialsAuth() 
 		if authOk {
-			negotiateMessageBytes, err := auth.InitialBytes()
+			negotiateMessageBytes, err := auth.GetNegotiateBytes()
 			if err != nil {
 				return nil, err
 			}
-			defer auth.Free()
+			defer auth.ReleaseContext()
 			
 			negotiateReq, err := cloneRequest(request)
 			if err != nil {
@@ -50,7 +50,7 @@ func DoNTLMRequest(httpClient *http.Client, request *http.Request) (*http.Respon
 				return nil, err
 			}
 			
-			responseBytes, err := auth.NextBytes(challengeMessage)
+			responseBytes, err := auth.GetResponseBytes(challengeMessage)
 			
 			res, err := sendChallengeRequest(httpClient, challengeReq, responseBytes)
 			if err != nil {

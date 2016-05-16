@@ -1,4 +1,8 @@
+// +build windows
+
 package ntlm
+
+// Windows implementation of NTLM authentication using SSPI (Security Support Provider Interface)
 
 import (
 	"fmt"
@@ -115,17 +119,11 @@ type SSPIAuth struct {
 	ctxt     SecHandle
 }
 
-type Auth interface {
-	InitialBytes() ([]byte, error)
-	NextBytes([]byte) ([]byte, error)
-	Free()
-}
-
-func getDefaultCredentialsAuth() (Auth, bool) {
+func getDefaultCredentialsAuth() (NtlmAuthenticator, bool) {
     return getAuth("", "", "", "")
 }
 
-func getAuth(user, password, service, workstation string) (Auth, bool) {
+func getAuth(user, password, service, workstation string) (NtlmAuthenticator, bool) {
 	if user == "" {
 		return &SSPIAuth{Service: service}, true
 	}
@@ -141,7 +139,7 @@ func getAuth(user, password, service, workstation string) (Auth, bool) {
 	}, true
 }
 
-func (auth *SSPIAuth) InitialBytes() ([]byte, error) {
+func (auth *SSPIAuth) GetNegotiateBytes() ([]byte, error) {
 	var identity *SEC_WINNT_AUTH_IDENTITY
 	if auth.UserName != "" {
 		identity = &SEC_WINNT_AUTH_IDENTITY{
@@ -214,7 +212,7 @@ func (auth *SSPIAuth) InitialBytes() ([]byte, error) {
 	return outbuf[:buf.cbBuffer], nil
 }
 
-func (auth *SSPIAuth) NextBytes(bytes []byte) ([]byte, error) {
+func (auth *SSPIAuth) GetResponseBytes(bytes []byte) ([]byte, error) {
 	var in_buf, out_buf SecBuffer
 	var in_desc, out_desc SecBufferDesc
 
@@ -266,7 +264,7 @@ func (auth *SSPIAuth) NextBytes(bytes []byte) ([]byte, error) {
 	return outbuf[:out_buf.cbBuffer], nil
 }
 
-func (auth *SSPIAuth) Free() {
+func (auth *SSPIAuth) ReleaseContext() {
 	syscall.Syscall6(sec_fn.DeleteSecurityContext,
 		1,
 		uintptr(unsafe.Pointer(&auth.ctxt)),
