@@ -46,6 +46,9 @@ type Conf struct {
 	//Override default network interface expression
 	IfaceExpr string
 
+	// UseNtlm specifies if HTTP requests should authenticate with NTLM.
+	UseNtlm bool
+
 	HAProxy        []HAProxy
 	SNMP           []SNMP
 	MIBS           map[string]MIB

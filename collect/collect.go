@@ -43,6 +43,9 @@ var (
 
 	// Tags is an opentsdb.TagSet used when sending self metrics.
 	Tags opentsdb.TagSet
+	
+	// Whether or not to use NTLM authentication
+	UseNtlm            bool = false
 
 	// Dropped is the number of dropped data points due to a full queue.
 	dropped int64

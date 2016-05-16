@@ -11,6 +11,7 @@ import (
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
+	"bosun.org/ntlm"
 )
 
 func queuer() {
@@ -153,6 +154,11 @@ func SendDataPoints(dps []*opentsdb.DataPoint, tsdb string) (*http.Response, err
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Content-Encoding", "gzip")
 	Add("collect.post.total_bytes", Tags, int64(buf.Len()))
+
+	if UseNtlm {
+		return ntlm.DoNTLMRequest(client, req)
+	} 
+
 	resp, err := client.Do(req)
 	return resp, err
 }
