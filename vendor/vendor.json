@@ -9,8 +9,8 @@
 		},
 		{
 			"path": "github.com/GROpenSourceDev/go-ntlm-auth/ntlm",
-			"revision": "8a40640e7191d143b75ad2be7ddb5a1a32f666bf",
-			"revisionTime": "2016-05-17T14:56:49Z"
+			"revision": "c83165347069ed2d950e617ab79d2b487f9f49a7",
+			"revisionTime": "2016-05-17T16:24:25Z"
 		},
 		{
 			"path": "github.com/GaryBoone/GoStats/stats",
