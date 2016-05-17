@@ -9,9 +9,9 @@ import (
 	"time"
 
 	"bosun.org/metadata"
-	"bosun.org/ntlm"
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
+	"github.com/GROpenSourceDev/go-ntlm-auth/ntlm"
 )
 
 func queuer() {
