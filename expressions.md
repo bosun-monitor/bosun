@@ -514,6 +514,27 @@ Returns the first count (scalar) results of number.
 
 Returns the first key from the given lookup table with matching tags.
 
+## month(offset scalar, startEnd string) scalar
+
+Returns the epoch of either the start or end of the month. Offset is the timezone offset from UTC that the month starts/ends at (but the returned epoch is representitive of UTC). startEnd must be either `"start"` or `"end"`. Useful for things like monthly billing, for example:
+
+```
+$hostInt = host=ny-nexus01,iname=Ethernet1/46
+$inMetric = "sum:5m-avg:rate{counter,,1}:__ny-nexus01.os.net.bytes{$hostInt,direction=in}"
+$outMetric = "sum:5m-avg:rate{counter,,1}:__ny-nexus01.os.net.bytes{$hostInt,direction=in}"
+$commit = 100
+$monthStart = month(-4, "start")
+$monthEnd = month(-4, "end")
+$monthLength = $monthEnd - $monthStart
+$burstTime = ($monthLength)*.05
+$burstableObservations = $burstTime / d("5m")
+$in = q($inMetric, tod(epoch()-$monthStart), "") * 8 / 1e6
+$out = q($inMetric, tod(epoch()-$monthStart), "") * 8 / 1e6
+$inOverCount = sum($in > $commit)
+$outOverCount = sum($out > $commit)
+$inOverCount > $burstableObservations || $outOverCount > $burstableObservations
+```
+
 ## series(tagset string, epoch, value, ...) seriesSet
 
 Returns a seriesSet with one series. The series will have a group (a.k.a tagset). You can then optionally pass epoch value pairs (if non are provided, the series will be empty). This is can be used for testing or drawing arbitary lines. For example:

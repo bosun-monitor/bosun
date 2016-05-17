@@ -59,6 +59,9 @@ title: Resources
 ### [ekg-bosun](https://hackage.haskell.org/package/ekg-bosun)
 > Send [ekg](https://github.com/tibbe/ekg) metrics from Haskell applications to Bosun.
 
+### [bosun_emitter](https://github.com/lukaspustina/bosun_emitter)
+> bosun_emitter is a Rust library and CLI standalone binary called `emit_bosun` that may be used on the command line or from any shell script to send a single metric datum to Bosun.
+
 _See also the list of built-in collectors included with [scollector](http://bosun.org/scollector/)_
 
   &nbsp;
