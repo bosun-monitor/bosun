@@ -41,145 +41,136 @@ var cadvisorMeta = map[string]MetricMeta{
 		Unit:     metadata.Second,
 		Desc:     "Smoothed 10s average of number of runnable threads x 1000",
 	},
-
-	"container.diskio.io_service_bytes.async": {
+	"container.blkio.io_service_bytes.async": {
 		RateType: metadata.Counter,
 		Unit:     metadata.Bytes,
 		Desc:     "Number of bytes transferred to/from the disk by the cgroup asynchronously",
 	},
-	"container.diskio.io_service_bytes.read": {
+	"container.blkio.io_service_bytes.read": {
 		RateType: metadata.Counter,
 		Unit:     metadata.Bytes,
 		Desc:     "Number of bytes read from the disk by the cgroup",
 	},
-	"container.diskio.io_service_bytes.sync": {
+	"container.blkio.io_service_bytes.sync": {
 		RateType: metadata.Counter,
 		Unit:     metadata.Bytes,
 		Desc:     "Number of bytes transferred to/from the disk by the cgroup synchronously",
 	},
-	"container.diskio.io_service_bytes.write": {
+	"container.blkio.io_service_bytes.write": {
 		RateType: metadata.Counter,
 		Unit:     metadata.Bytes,
 		Desc:     "Number of bytes written to the disk by the cgroup",
 	},
-
-	"container.diskio.io_serviced.async": {
+	"container.blkio.io_serviced.async": {
 		RateType: metadata.Counter,
 		Unit:     metadata.Operation,
 		Desc:     "Number of async IOs issued to the disk by the cgroup",
 	},
-	"container.diskio.io_serviced.read": {
+	"container.blkio.io_serviced.read": {
 		RateType: metadata.Counter,
 		Unit:     metadata.Operation,
 		Desc:     "Number of read issued to the disk by the group",
 	},
-	"container.diskio.io_serviced.sync": {
+	"container.blkio.io_serviced.sync": {
 		RateType: metadata.Counter,
 		Unit:     metadata.Operation,
 		Desc:     "Number of sync IOs issued to the disk by the cgroup",
 	},
-	"container.diskio.io_serviced.write": {
+	"container.blkio.io_serviced.write": {
 		RateType: metadata.Counter,
 		Unit:     metadata.Operation,
 		Desc:     "Number of write issued to the disk by the group",
 	},
-
-	"container.diskio.io_queued.async": {
+	"container.blkio.io_queued.async": {
 		RateType: metadata.Gauge,
 		Unit:     metadata.Operation,
 		Desc:     "Total number of async requests queued up at any given instant for this cgroup",
 	},
-	"container.diskio.io_queued.read": {
+	"container.blkio.io_queued.read": {
 		RateType: metadata.Gauge,
 		Unit:     metadata.Operation,
 		Desc:     "Total number of read requests queued up at any given instant for this cgroup",
 	},
-	"container.diskio.io_queued.sync": {
+	"container.blkio.io_queued.sync": {
 		RateType: metadata.Gauge,
 		Unit:     metadata.Operation,
 		Desc:     "Total number of sync requests queued up at any given instant for this cgroup",
 	},
-	"container.diskio.io_queued.write": {
+	"container.blkio.io_queued.write": {
 		RateType: metadata.Gauge,
 		Unit:     metadata.Operation,
 		Desc:     "Total number of write requests queued up at any given instant for this cgroup",
 	},
-
-	"container.diskio.sectors.count": {
+	"container.blkio.sectors.count": {
 		RateType: metadata.Counter,
 		Unit:     metadata.Sector,
 		Desc:     "Number of sectors transferred to/from disk by the group",
 	},
-
-	"container.diskio.io_service_time.async": {
+	"container.blkio.io_service_time.async": {
 		RateType: metadata.Counter,
 		Unit:     metadata.Nanosecond,
 		Desc:     "Total amount of time between async request dispatch and request completion for the IOs done by this cgroup",
 	},
-	"container.diskio.io_service_time.read": {
+	"container.blkio.io_service_time.read": {
 		RateType: metadata.Counter,
 		Unit:     metadata.Nanosecond,
 		Desc:     "Total amount of time between read request dispatch and request completion for the IOs done by this cgroup",
 	},
-	"container.diskio.io_service_time.sync": {
+	"container.blkio.io_service_time.sync": {
 		RateType: metadata.Counter,
 		Unit:     metadata.Nanosecond,
 		Desc:     "Total amount of time between sync request dispatch and request completion for the IOs done by this cgroup",
 	},
-	"container.diskio.io_service_time.write": {
+	"container.blkio.io_service_time.write": {
 		RateType: metadata.Counter,
 		Unit:     metadata.Nanosecond,
 		Desc:     "Total amount of time between write request dispatch and request completion for the IOs done by this cgroup",
 	},
-
-	"container.diskio.io_wait_time.async": {
+	"container.blkio.io_wait_time.async": {
 		RateType: metadata.Counter,
 		Unit:     metadata.Nanosecond,
 		Desc:     "Total amount of time the async IOs for this cgroup spent waiting in the scheduler queues for service",
 	},
-	"container.diskio.io_wait_time.read": {
+	"container.blkio.io_wait_time.read": {
 		RateType: metadata.Counter,
 		Unit:     metadata.Nanosecond,
 		Desc:     "Total amount of time the read request for this cgroup spent waiting in the scheduler queues for service",
 	},
-	"container.diskio.io_wait_time.sync": {
+	"container.blkio.io_wait_time.sync": {
 		RateType: metadata.Counter,
 		Unit:     metadata.Nanosecond,
 		Desc:     "Total amount of time the sync IOs for this cgroup spent waiting in the scheduler queues for service",
 	},
-	"container.diskio.io_wait_time.write": {
+	"container.blkio.io_wait_time.write": {
 		RateType: metadata.Counter,
 		Unit:     metadata.Nanosecond,
 		Desc:     "Total amount of time the write request for this cgroup spent waiting in the scheduler queues for service",
 	},
-
-	"container.diskio.io_merged.async": {
+	"container.blkio.io_merged.async": {
 		RateType: metadata.Counter,
 		Unit:     metadata.Operation,
 		Desc:     "Total number of async requests merged into requests belonging to this cgroup.",
 	},
-	"container.diskio.io_merged.read": {
+	"container.blkio.io_merged.read": {
 		RateType: metadata.Counter,
 		Unit:     metadata.Operation,
 		Desc:     "Total number of read requests merged into requests belonging to this cgroup.",
 	},
-	"container.diskio.io_merged.sync": {
+	"container.blkio.io_merged.sync": {
 		RateType: metadata.Counter,
 		Unit:     metadata.Operation,
 		Desc:     "Total number of sync requests merged into requests belonging to this cgroup.",
 	},
-	"container.diskio.io_merged.write": {
+	"container.blkio.io_merged.write": {
 		RateType: metadata.Counter,
 		Unit:     metadata.Operation,
 		Desc:     "Total number of write requests merged into requests belonging to this cgroup.",
 	},
-
-	"container.diskio.io_time.count": {
+	"container.blkio.io_time.count": {
 		RateType: metadata.Counter,
 		Unit:     metadata.MilliSecond,
 		Desc:     "Disk time allocated to cgroup per device",
 	},
-
 	"container.fs.available": {
 		RateType: metadata.Gauge,
 		Unit:     metadata.Bytes,
@@ -322,7 +313,6 @@ func containerTagSet(ts opentsdb.TagSet, container *v1.ContainerInfo) opentsdb.T
 	return tags
 }
 
-<<<<<<< HEAD
 func inBlkioWhitelist(name string) bool {
 	valid := false
 	for _, n := range blkioStatsWhitelist {
