@@ -241,11 +241,11 @@ func (e ElasticHosts) Query(r *ElasticRequest) (*elastic.SearchResult, error) {
 	if err != nil {
 		return nil, err
 	}
-	indicies, err := r.Indexer.Generate(r.Start, r.End)
+	indices, err := r.Indexer.Generate(r.Start, r.End)
 	if err != nil {
 		return nil, err
 	}
-	s.Index(indicies...)
+	s = s.Index(indices...)
 	return s.SearchSource(r.Source).Do()
 }
 
@@ -271,7 +271,12 @@ func (r *ElasticRequest) CacheKey() (string, error) {
 	if !ok {
 		return "", fmt.Errorf("failed to generate string representation of search source for cache key: %s", s)
 	}
-	return str, nil
+	// Todo don't generate indexes twice
+	indices, err := r.Indexer.Generate(r.Start, r.End)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("%v %v", str, indices), nil
 }
 
 // timeESRequest execute the elasticsearch query (which may set or hit cache) and returns
@@ -342,21 +347,22 @@ func ESWeekly(e *State, T miniprofiler.Timer, timeField, indexRoot, layout strin
 	indexer.TimeField = timeField
 	indexer.Generate = func(start, end *time.Time) ([]string, error) {
 		var err error
-		var selectedIndicies []string
+		var selectedIndices []string
+		var indices []string
 		T.StepCustomTiming("elastic", "genIndexes", "esweekly", func() {
 			err = e.elasticHosts.InitClient()
 			if err != nil {
 				return
 			}
-			indices, err := esClient.IndexNames()
+			indices, err = esClient.IndexNames()
 			if err != nil {
 				return
 			}
 			trunStart := startOfWeek(*start, int(wDay))
 			trunEnd := startOfWeek(*end, int(wDay))
-			selectedIndicies, err = selectIndices(indices, trunStart, trunEnd, indexRoot, layout)
+			selectedIndices, err = selectIndices(indices, trunStart, trunEnd, indexRoot, layout)
 		})
-		return selectedIndicies, err
+		return selectedIndices, err
 	}
 	r.Results = append(r.Results, &Result{Value: indexer})
 	return &r, nil
