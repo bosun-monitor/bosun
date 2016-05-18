@@ -51,11 +51,14 @@ var Elastic = map[string]parse.Func{
 		F:        ESIndicies,
 	},
 	"esdaily": {
-		Args:     []models.FuncType{models.TypeString, models.TypeString, models.TypeString},
-		VArgs:    true,
-		VArgsPos: 1,
-		Return:   models.TypeESIndexer,
-		F:        ESDaily,
+		Args:   []models.FuncType{models.TypeString, models.TypeString, models.TypeString},
+		Return: models.TypeESIndexer,
+		F:      ESDaily,
+	},
+	"esweekly": {
+		Args:   []models.FuncType{models.TypeString, models.TypeString, models.TypeString, models.TypeScalar},
+		Return: models.TypeESIndexer,
+		F:      ESWeekly,
 	},
 	"esls": {
 		Args:   []models.FuncType{models.TypeString},
@@ -314,10 +317,6 @@ func ESLS(e *State, T miniprofiler.Timer, indexRoot string) (*Results, error) {
 
 func ESDaily(e *State, T miniprofiler.Timer, timeField, indexRoot, layout string) (*Results, error) {
 	var r Results
-	err := e.elasticHosts.InitClient()
-	if err != nil {
-		return &r, err
-	}
 	indexer := ESIndexer{}
 	indexer.TimeField = timeField
 	indexer.Generate = func(start, end *time.Time) ([]string, error) {
@@ -330,28 +329,71 @@ func ESDaily(e *State, T miniprofiler.Timer, timeField, indexRoot, layout string
 			return []string{}, err
 		}
 		trunStart := start.Truncate(time.Hour * 24)
-		trunEnd := end.Truncate(time.Hour*24).AddDate(0, 0, 1)
-		var selectedIndices []string
-		for _, index := range indices {
-			date := strings.TrimPrefix(index, indexRoot)
-			if !strings.HasPrefix(index, indexRoot) {
-				continue
-			}
-			d, err := time.Parse(layout, date)
-			if err != nil {
-				continue
-			}
-			if !d.Before(trunStart) && !d.After(trunEnd) {
-				selectedIndices = append(selectedIndices, index)
-			}
-		}
-		if len(selectedIndices) == 0 {
-			return selectedIndices, fmt.Errorf("no elastic indices available during this time range, index[%s], start/end [%s|%s]", indexRoot, start.Format("2006.01.02"), end.Format("2006.01.02"))
-		}
-		return selectedIndices, nil
+		trunEnd := end.Truncate(time.Hour * 24)
+		return selectIndices(indices, trunStart, trunEnd, indexRoot, layout)
 	}
 	r.Results = append(r.Results, &Result{Value: indexer})
 	return &r, nil
+}
+
+func ESWeekly(e *State, T miniprofiler.Timer, timeField, indexRoot, layout string, wDay float64) (*Results, error) {
+	var r Results
+	indexer := ESIndexer{}
+	indexer.TimeField = timeField
+	indexer.Generate = func(start, end *time.Time) ([]string, error) {
+		var err error
+		var selectedIndicies []string
+		T.StepCustomTiming("elastic", "genIndexes", "esweekly", func() {
+			err = e.elasticHosts.InitClient()
+			if err != nil {
+				return
+			}
+			indices, err := esClient.IndexNames()
+			if err != nil {
+				return
+			}
+			trunStart := startOfWeek(*start, int(wDay))
+			trunEnd := startOfWeek(*end, int(wDay))
+			selectedIndicies, err = selectIndices(indices, trunStart, trunEnd, indexRoot, layout)
+		})
+		return selectedIndicies, err
+	}
+	r.Results = append(r.Results, &Result{Value: indexer})
+	return &r, nil
+}
+
+func selectIndices(indices []string, start, end time.Time, indexRoot, layout string) ([]string, error) {
+	var selectedIndices []string
+	for _, index := range indices {
+		date := strings.TrimPrefix(index, indexRoot)
+		if !strings.HasPrefix(index, indexRoot) {
+			continue
+		}
+		d, err := time.Parse(layout, date)
+		if err != nil {
+			continue
+		}
+		if !d.Before(start) && !d.After(end) {
+			selectedIndices = append(selectedIndices, index)
+		}
+	}
+	if len(selectedIndices) == 0 {
+		return selectedIndices, fmt.Errorf("no elastic indices available during this time range, index[%s], start/end [%s|%s]", indexRoot, start.Format(layout), end.Format(layout))
+	}
+	return selectedIndices, nil
+}
+
+func startOfWeek(t time.Time, firstDay int) time.Time {
+	t = t.Truncate(time.Hour * 24)
+	back := (int(t.Weekday()) - firstDay) % 7
+	if back == 0 {
+		back = 7
+	}
+	if back < 0 {
+		back += 7
+	}
+	d := time.Duration(back) * time.Hour * 24
+	return t.Add(-d)
 }
 
 func ESCount(e *State, T miniprofiler.Timer, indexer ESIndexer, keystring string, filter ESQuery, interval, sduration, eduration string) (r *Results, err error) {
