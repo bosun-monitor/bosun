@@ -373,7 +373,7 @@ func selectIndices(indices []string, start, end time.Time, indexRoot, layout str
 		if err != nil {
 			continue
 		}
-		if !d.Before(start) && !d.After(end) {
+		if !d.Before(start) && !d.After(end) || d == start || d == end {
 			selectedIndices = append(selectedIndices, index)
 		}
 	}
