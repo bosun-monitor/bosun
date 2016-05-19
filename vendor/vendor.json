@@ -352,6 +352,11 @@
 			"revisionTime": "2016-03-17T14:34:30-07:00"
 		},
 		{
+			"path": "github.com/grsmv/goweek",
+			"revision": "12b3f717c9066acef8f528a1ad8d4c3c47742842",
+			"revisionTime": "2016-01-29T14:12:59+02:00"
+		},
+		{
 			"path": "github.com/influxdata/influxdb/client",
 			"revision": "8e100998fab81a70f8b8fa8fbb41e1ed8cafa6f5",
 			"revisionTime": "2016-02-12T14:50:30-07:00"

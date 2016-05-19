@@ -3,6 +3,7 @@ package expr
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -10,6 +11,7 @@ import (
 	"bosun.org/models"
 	"bosun.org/opentsdb"
 	"github.com/MiniProfiler/go/miniprofiler"
+	"github.com/grsmv/goweek"
 	elastic "gopkg.in/olivere/elastic.v3"
 )
 
@@ -59,6 +61,11 @@ var Elastic = map[string]parse.Func{
 		Args:   []models.FuncType{models.TypeString, models.TypeString, models.TypeString, models.TypeScalar},
 		Return: models.TypeESIndexer,
 		F:      ESWeekly,
+	},
+	"esisoweekly": {
+		Args:   []models.FuncType{models.TypeString, models.TypeString, models.TypeString},
+		Return: models.TypeESIndexer,
+		F:      ESISOWeekly,
 	},
 	"esls": {
 		Args:   []models.FuncType{models.TypeString},
@@ -335,7 +342,7 @@ func ESDaily(e *State, T miniprofiler.Timer, timeField, indexRoot, layout string
 		}
 		trunStart := start.Truncate(time.Hour * 24)
 		trunEnd := end.Truncate(time.Hour * 24)
-		return selectIndices(indices, trunStart, trunEnd, indexRoot, layout)
+		return selectIndices(indices, trunStart, trunEnd, indexRoot, layout, false)
 	}
 	r.Results = append(r.Results, &Result{Value: indexer})
 	return &r, nil
@@ -360,7 +367,7 @@ func ESWeekly(e *State, T miniprofiler.Timer, timeField, indexRoot, layout strin
 			}
 			trunStart := startOfWeek(*start, int(wDay))
 			trunEnd := startOfWeek(*end, int(wDay))
-			selectedIndices, err = selectIndices(indices, trunStart, trunEnd, indexRoot, layout)
+			selectedIndices, err = selectIndices(indices, trunStart, trunEnd, indexRoot, layout, false)
 		})
 		return selectedIndices, err
 	}
@@ -368,16 +375,52 @@ func ESWeekly(e *State, T miniprofiler.Timer, timeField, indexRoot, layout strin
 	return &r, nil
 }
 
-func selectIndices(indices []string, start, end time.Time, indexRoot, layout string) ([]string, error) {
+func ESISOWeekly(e *State, T miniprofiler.Timer, timeField, indexRoot, layout string) (*Results, error) {
+	var r Results
+	indexer := ESIndexer{}
+	indexer.TimeField = timeField
+	indexer.Generate = func(start, end *time.Time) ([]string, error) {
+		var err error
+		var selectedIndices []string
+		var indices []string
+		T.StepCustomTiming("elastic", "genIndexes", "esweekly", func() {
+			err = e.elasticHosts.InitClient()
+			if err != nil {
+				return
+			}
+			indices, err = esClient.IndexNames()
+			if err != nil {
+				return
+			}
+			trunStart := startOfWeek(*start, 1)
+			trunEnd := startOfWeek(*end, 1)
+			selectedIndices, err = selectIndices(indices, trunStart, trunEnd, indexRoot, layout, true)
+		})
+		return selectedIndices, err
+	}
+	r.Results = append(r.Results, &Result{Value: indexer})
+	return &r, nil
+}
+
+func selectIndices(indices []string, start, end time.Time, indexRoot, layout string, isoWeek bool) ([]string, error) {
 	var selectedIndices []string
 	for _, index := range indices {
 		date := strings.TrimPrefix(index, indexRoot)
 		if !strings.HasPrefix(index, indexRoot) {
 			continue
 		}
-		d, err := time.Parse(layout, date)
-		if err != nil {
-			continue
+		var d time.Time
+		var err error
+		if isoWeek {
+			d, err = parseWeek(layout, date)
+			if err != nil {
+				continue
+			}
+		} else {
+			d, err = time.Parse(layout, date)
+			if err != nil {
+				continue
+			}
 		}
 		if !d.Before(start) && !d.After(end) || d == start || d == end {
 			selectedIndices = append(selectedIndices, index)
@@ -387,6 +430,35 @@ func selectIndices(indices []string, start, end time.Time, indexRoot, layout str
 		return selectedIndices, fmt.Errorf("no elastic indices available during this time range, index[%s], start/end [%s|%s]", indexRoot, start.Format(layout), end.Format(layout))
 	}
 	return selectedIndices, nil
+}
+
+// 2006 for year , 52 for week
+func parseWeek(layout, value string) (time.Time, error) {
+	var t time.Time
+	yearOffset := strings.Index(layout, "2006")
+	weekOffset := strings.Index(layout, "52")
+	if yearOffset < 0 || weekOffset < 0 {
+		return t, fmt.Errorf("unable to parse to weekly layout, expected 2006 and 52 in layout, got %v", layout)
+	}
+	if yearOffset+4 > len(value) {
+		return t, fmt.Errorf("failed ot parse weekly layout")
+	}
+	if weekOffset+2 > len(value) {
+		return t, fmt.Errorf("failed ot parse weekly layout")
+	}
+	yearNo, err := strconv.Atoi(value[yearOffset : yearOffset+4])
+	if err != nil {
+		return t, err
+	}
+	weekNo, err := strconv.Atoi(value[weekOffset : weekOffset+2])
+	if err != nil {
+		return t, err
+	}
+	week, err := goweek.NewWeek(yearNo, weekNo)
+	if err != nil {
+		return t, err
+	}
+	return week.Days[0], nil
 }
 
 func startOfWeek(t time.Time, firstDay int) time.Time {
