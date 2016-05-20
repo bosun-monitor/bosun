@@ -85,6 +85,27 @@ func TestToDuration(t *testing.T) {
 	}
 }
 
+func TestUngroup(t *testing.T) {
+	dictum := `series("foo=bar", 0, ungroup(last(series("foo=baz", 0, 1))))`
+	err := testExpression(exprInOut{
+		dictum,
+		Results{
+			Results: ResultSlice{
+				&Result{
+					Value: Series{
+						time.Unix(0, 0): 1,
+					},
+					Group: opentsdb.TagSet{"foo": "bar"},
+				},
+			},
+		},
+	})
+
+	if err != nil {
+		t.Error(err)
+	}
+}
+
 func TestMerge(t *testing.T) {
 	seriesA := `series("foo=bar", 0, 1)`
 	seriesB := `series("foo=baz", 0, 1)`

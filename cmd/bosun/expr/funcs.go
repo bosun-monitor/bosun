@@ -908,8 +908,13 @@ func Ungroup(e *State, T miniprofiler.Timer, d *Results) (*Results, error) {
 	if len(d.Results) != 1 {
 		return nil, fmt.Errorf("ungroup: requires exactly one group")
 	}
-	d.Results[0].Group = nil
-	return d, nil
+	return &Results{
+		Results: ResultSlice{
+			&Result{
+				Value: Scalar(d.Results[0].Value.Value().(Number)),
+			},
+		},
+	}, nil
 }
 
 func Transpose(e *State, T miniprofiler.Timer, d *Results, gp string) (*Results, error) {
