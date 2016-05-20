@@ -537,7 +537,7 @@ $inOverCount > $burstableObservations || $outOverCount > $burstableObservations
 
 ## series(tagset string, epoch, value, ...) seriesSet
 
-Returns a seriesSet with one series. The series will have a group (a.k.a tagset). You can then optionally pass epoch value pairs (if non are provided, the series will be empty). This is can be used for testing or drawing arbitary lines. For example:
+Returns a seriesSet with one series. The series will have a group (a.k.a tagset). The tagset can be "" for the empty group, or in "key=value,key=value" format. You can then optionally pass epoch value pairs (if non are provided, the series will be empty). This is can be used for testing or drawing arbitary lines. For example:
 
 ```
 $now = epoch()
