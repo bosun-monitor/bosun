@@ -315,10 +315,15 @@ func SeriesFunc(e *State, T miniprofiler.Timer, tags string, pairs ...float64) (
 	if len(pairs)%2 != 0 {
 		return nil, fmt.Errorf("uneven number of time stamps and values")
 	}
-	group, err := opentsdb.ParseTags(tags)
-	if err != nil {
-		return nil, fmt.Errorf("unable to parse tags: %v", err)
+	group := opentsdb.TagSet{}
+	if tags != "" {
+		var err error
+		group, err = opentsdb.ParseTags(tags)
+		if err != nil {
+			return nil, fmt.Errorf("unable to parse tags: %v", err)
+		}
 	}
+
 	series := make(Series)
 	for i := 0; i < len(pairs); i += 2 {
 		series[time.Unix(int64(pairs[i]), 0)] = pairs[i+1]
