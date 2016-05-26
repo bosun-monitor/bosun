@@ -52,7 +52,8 @@ var netFields = []struct {
 }
 
 var ifstatRE = regexp.MustCompile(`\s+(eth\d+|em\d+_\d+/\d+|em\d+_\d+|em\d+|` +
-	`bond\d+|team\d+|` + `p\d+p\d+_\d+/\d+|p\d+p\d+_\d+|p\d+p\d+):(.*)`)
+	`bond\d+|team\d+|` + `p\d+p\d+_\d+/\d+|p\d+p\d+_\d+|p\d+p\d+|wlan\d+|` +
+	`ppp\d+|tun\d+):(.*)`)
 
 func c_ipcount_linux() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
