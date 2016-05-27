@@ -433,7 +433,7 @@ func fastlyReflectAdd(md *opentsdb.MultiDataPoint, prefix, suffix string, st int
 		}
 		shouldDiv := divTag != ""
 		if shouldDiv {
-			descTag = fmt.Sprintf("%v %v", fastlyDivDesc, fastlyDivDesc)
+			descTag = fmt.Sprintf("%v %v", descTag, fastlyDivDesc)
 		}
 		fullMetric := fmt.Sprintf("%v.%v%v", prefix, metricName, suffix)
 		switch value := value.(type) {
