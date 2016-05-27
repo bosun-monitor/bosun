@@ -485,12 +485,14 @@ type IncidentSummary struct {
 	Alert                  string
 	AlertName              string
 	Tags                   opentsdb.TagSet
+	TagsString             string
 	CurrentStatus          models.Status
 	WorstStatus            models.Status
 	LastAbnormalStatus     models.Status
 	LastAbnormalTime       int64
 	Unevaluated            bool
 	NeedAck                bool
+	Silenced               bool
 	WarnNotificationChains [][]string
 	CritNotificationChains [][]string
 }
@@ -500,6 +502,10 @@ func ListOpenIncidents(t miniprofiler.Timer, w http.ResponseWriter, r *http.Requ
 	list, err := schedule.DataAccess.State().GetAllOpenIncidents()
 	if err != nil {
 		return nil, err
+	}
+	suppressor := schedule.Silenced()
+	if suppressor == nil {
+		return nil, fmt.Errorf("failed to get silences")
 	}
 	summaries := make([]IncidentSummary, len(list))
 	for i, iState := range list {
@@ -512,18 +518,19 @@ func ListOpenIncidents(t miniprofiler.Timer, w http.ResponseWriter, r *http.Requ
 			Alert:                  iState.Alert,
 			AlertName:              iState.AlertKey.Name(),
 			Tags:                   iState.AlertKey.Group(),
+			TagsString:             iState.AlertKey.Group().String(),
 			CurrentStatus:          iState.CurrentStatus,
 			WorstStatus:            iState.WorstStatus,
 			LastAbnormalStatus:     iState.LastAbnormalStatus,
 			LastAbnormalTime:       iState.LastAbnormalTime,
 			Unevaluated:            iState.Unevaluated,
 			NeedAck:                iState.NeedAck,
+			Silenced:               suppressor(iState.AlertKey) != nil,
 			WarnNotificationChains: conf.GetNotificationChains(schedule.Conf, warnNotifications),
 			CritNotificationChains: conf.GetNotificationChains(schedule.Conf, critNotifications),
 		}
 	}
 	return summaries, nil
-	//return summaries, nil
 }
 
 func Incidents(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
