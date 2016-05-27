@@ -105,6 +105,7 @@ func Listen(listenAddr string, devMode bool, tsdbHost string) error {
 	router.Handle("/api/host", JSON(Host))
 	router.Handle("/api/last", JSON(Last))
 	router.Handle("/api/incidents", JSON(Incidents))
+	router.Handle("/api/incidents/open", JSON(ListOpenIncidents))
 	router.Handle("/api/incidents/events", JSON(IncidentEvents))
 	router.Handle("/api/metadata/get", JSON(GetMetadata))
 	router.Handle("/api/metadata/metrics", JSON(MetadataMetrics))
@@ -475,6 +476,54 @@ func IncidentEvents(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request
 		return nil, err
 	}
 	return schedule.DataAccess.State().GetIncidentState(num)
+}
+
+type IncidentSummary struct {
+	Id                     int64
+	Subject                string
+	Start                  int64
+	Alert                  string
+	AlertName              string
+	Tags                   opentsdb.TagSet
+	CurrentStatus          models.Status
+	WorstStatus            models.Status
+	LastAbnormalStatus     models.Status
+	LastAbnormalTime       int64
+	Unevaluated            bool
+	NeedAck                bool
+	WarnNotificationChains [][]string
+	CritNotificationChains [][]string
+}
+
+func ListOpenIncidents(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	// TODO: Retune this when we no longer store templates with incidents
+	list, err := schedule.DataAccess.State().GetAllOpenIncidents()
+	if err != nil {
+		return nil, err
+	}
+	summaries := make([]IncidentSummary, len(list))
+	for i, iState := range list {
+		warnNotifications := schedule.Conf.Alerts[iState.AlertKey.Name()].WarnNotification.Get(schedule.Conf, iState.AlertKey.Group())
+		critNotifications := schedule.Conf.Alerts[iState.AlertKey.Name()].CritNotification.Get(schedule.Conf, iState.AlertKey.Group())
+		summaries[i] = IncidentSummary{
+			Id:                     iState.Id,
+			Subject:                iState.Subject,
+			Start:                  iState.Start.Unix(),
+			Alert:                  iState.Alert,
+			AlertName:              iState.AlertKey.Name(),
+			Tags:                   iState.AlertKey.Group(),
+			CurrentStatus:          iState.CurrentStatus,
+			WorstStatus:            iState.WorstStatus,
+			LastAbnormalStatus:     iState.LastAbnormalStatus,
+			LastAbnormalTime:       iState.LastAbnormalTime,
+			Unevaluated:            iState.Unevaluated,
+			NeedAck:                iState.NeedAck,
+			WarnNotificationChains: conf.GetNotificationChains(schedule.Conf, warnNotifications),
+			CritNotificationChains: conf.GetNotificationChains(schedule.Conf, critNotifications),
+		}
+	}
+	return summaries, nil
+	//return summaries, nil
 }
 
 func Incidents(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {

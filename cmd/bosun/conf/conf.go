@@ -295,6 +295,31 @@ func (ns *Notifications) Get(c *Conf, tags opentsdb.TagSet) map[string]*Notifica
 	return nots
 }
 
+func GetNotificationChains(c *Conf, n map[string]*Notification) ([][]string) {
+	chains := [][]string{}
+	for _, root := range n {
+		chain := []string{}
+		seen := make(map[string]bool)
+		var walkChain func(next *Notification)
+		walkChain = func(next *Notification) {
+			if (next == nil) {
+				chains = append(chains, chain)
+				return
+			}
+			if (seen[next.Name]) {
+				chain = append(chain, fmt.Sprintf("...%v", next.Name))
+				chains = append(chains, chain)
+				return
+			}
+			chain = append(chain, next.Name)
+			seen[next.Name] = true
+			walkChain(next.Next)
+		}
+		walkChain(root)
+	}
+	return chains
+}
+
 // parseNotifications parses the comma-separated string v for notifications and
 // returns them.
 func (c *Conf) parseNotifications(v string) (map[string]*Notification, error) {
@@ -340,9 +365,9 @@ type Notification struct {
 	body      string
 }
 
-func (n *Notification) MarshalJSON() ([]byte, error) {
-	return nil, fmt.Errorf("conf: cannot json marshal notifications")
-}
+// func (n *Notification) MarshalJSON() ([]byte, error) {
+// 	return nil, fmt.Errorf("conf: cannot json marshal notifications")
+// }
 
 type Vars map[string]string
 
