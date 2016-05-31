@@ -478,61 +478,6 @@ func IncidentEvents(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request
 	return schedule.DataAccess.State().GetIncidentState(num)
 }
 
-type IncidentSummary struct {
-	Id                     int64
-	Subject                string
-	Start                  int64
-	Alert                  string
-	AlertName              string
-	Tags                   opentsdb.TagSet
-	TagsString             string
-	CurrentStatus          models.Status
-	WorstStatus            models.Status
-	LastAbnormalStatus     models.Status
-	LastAbnormalTime       int64
-	Unevaluated            bool
-	NeedAck                bool
-	Silenced               bool
-	WarnNotificationChains [][]string
-	CritNotificationChains [][]string
-}
-
-func ListOpenIncidents(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	// TODO: Retune this when we no longer store templates with incidents
-	list, err := schedule.DataAccess.State().GetAllOpenIncidents()
-	if err != nil {
-		return nil, err
-	}
-	suppressor := schedule.Silenced()
-	if suppressor == nil {
-		return nil, fmt.Errorf("failed to get silences")
-	}
-	summaries := make([]IncidentSummary, len(list))
-	for i, iState := range list {
-		warnNotifications := schedule.Conf.Alerts[iState.AlertKey.Name()].WarnNotification.Get(schedule.Conf, iState.AlertKey.Group())
-		critNotifications := schedule.Conf.Alerts[iState.AlertKey.Name()].CritNotification.Get(schedule.Conf, iState.AlertKey.Group())
-		summaries[i] = IncidentSummary{
-			Id:                     iState.Id,
-			Subject:                iState.Subject,
-			Start:                  iState.Start.Unix(),
-			Alert:                  iState.Alert,
-			AlertName:              iState.AlertKey.Name(),
-			Tags:                   iState.AlertKey.Group(),
-			TagsString:             iState.AlertKey.Group().String(),
-			CurrentStatus:          iState.CurrentStatus,
-			WorstStatus:            iState.WorstStatus,
-			LastAbnormalStatus:     iState.LastAbnormalStatus,
-			LastAbnormalTime:       iState.LastAbnormalTime,
-			Unevaluated:            iState.Unevaluated,
-			NeedAck:                iState.NeedAck,
-			Silenced:               suppressor(iState.AlertKey) != nil,
-			WarnNotificationChains: conf.GetNotificationChains(schedule.Conf, warnNotifications),
-			CritNotificationChains: conf.GetNotificationChains(schedule.Conf, critNotifications),
-		}
-	}
-	return summaries, nil
-}
-
 func Incidents(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	// TODO: Incident Search
 	return nil, nil
