@@ -10,7 +10,6 @@ package parse
 import (
 	"fmt"
 	"runtime"
-	"runtime/debug"
 )
 
 // Tree is the representation of a single parsed expression.
@@ -98,7 +97,6 @@ func (t *Tree) expectOneOf(expected1, expected2 itemType, context string) item {
 
 // unexpected complains about the token and terminates processing.
 func (t *Tree) unexpected(token item, context string) {
-	debug.PrintStack()
 	t.errorf("unexpected %s in %s", token, context)
 }
 
@@ -204,4 +202,3 @@ func (t *Tree) v() Node {
 	}
 	return nil
 }
-

@@ -404,13 +404,13 @@
 		},
 		{
 			"path": "github.com/kylebrandt/boolq",
-			"revision": "9cb634993c9b0e2280559a7c45735985216e6486",
-			"revisionTime": "2016-05-31T17:44:58-04:00"
+			"revision": "3c0efef9c6cd5f400eba1871a3be6191796db71a",
+			"revisionTime": "2016-06-01T16:00:19-04:00"
 		},
 		{
 			"path": "github.com/kylebrandt/boolq/parse",
-			"revision": "9cb634993c9b0e2280559a7c45735985216e6486",
-			"revisionTime": "2016-05-31T17:44:58-04:00"
+			"revision": "3c0efef9c6cd5f400eba1871a3be6191796db71a",
+			"revisionTime": "2016-06-01T16:00:19-04:00"
 		},
 		{
 			"path": "github.com/kylebrandt/gohop",

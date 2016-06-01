@@ -31,8 +31,8 @@ type IncidentSummaryView struct {
 }
 
 func MakeIncidentSummary(c *conf.Conf, s SilenceTester, is *models.IncidentState) IncidentSummaryView {
-    warnNotifications := c.Alerts[is.AlertKey.Name()].WarnNotification.Get(c, is.AlertKey.Group())
-    critNotifications := c.Alerts[is.AlertKey.Name()].CritNotification.Get(c, is.AlertKey.Group())
+	warnNotifications := c.Alerts[is.AlertKey.Name()].WarnNotification.Get(c, is.AlertKey.Group())
+	critNotifications := c.Alerts[is.AlertKey.Name()].CritNotification.Get(c, is.AlertKey.Group())
 	return IncidentSummaryView{
 		Id:                     is.Id,
 		Subject:                is.Subject,
@@ -93,8 +93,8 @@ func (is IncidentSummaryView) Ask(filter string) (bool, error) {
 				if k == sp[0] && glob.Glob(sp[1], v) {
 					return true, nil
 				}
-				return false, nil
 			}
+			return false, nil
 		}
 		q := strings.TrimRight(value, "=")
 		_, ok := is.Tags[q]
