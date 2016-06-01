@@ -50,8 +50,39 @@ func (is IncidentSummary) Ask(filter string) (bool, error) {
 		default:
 			return false, fmt.Errorf("unknown %s value: %s", key, value)
 		}
+	case "hasTag":
+		if strings.Contains(value, "=") {
+			if strings.HasPrefix(value, "=") {
+				q := strings.TrimLeft(value, "=")
+				for _, v := range is.Tags {
+					if glob.Glob(q, v) {
+						return true, nil
+					}
+				}
+				return false, nil
+			}
+			if strings.HasSuffix(value, "=") {
+				q := strings.TrimRight(value, "=")
+				_, ok := is.Tags[q]
+				return ok, nil
+			}
+			sp := strings.Split(value, "=")
+			if len(sp) != 2 {
+				return false, fmt.Errorf("unexpected tag specification: %v", value)
+			}
+			for k, v := range is.Tags {
+				if k == sp[0] && glob.Glob(sp[1], v) {
+					return true, nil
+				}
+				return false, nil
+			}
+		}
+		q := strings.TrimRight(value, "=")
+		_, ok := is.Tags[q]
+		return ok, nil
+	case "name":
+		return glob.Glob(value, is.AlertName), nil
 	case "notify":
-		//fmt.Println("notify", key, value)
 		for _, chain := range is.WarnNotificationChains {
 			for _, wn := range chain {
 				if glob.Glob(value, wn) {
@@ -77,10 +108,13 @@ func (is IncidentSummary) Ask(filter string) (bool, error) {
 			return false, fmt.Errorf("unknown %s value: %s", key, value)
 		}
 	case "status": // CurrentStatus
-		if is.CurrentStatus.String() == value {
-			return true, nil
-		}
-		return false, nil
+		return is.CurrentStatus.String() == value, nil
+	case "worstStatus":
+		return is.WorstStatus.String() == value, nil
+	case "lastAbnormalStatus":
+		return is.LastAbnormalStatus.String() == value, nil
+	case "subject":
+		return glob.Glob(value, is.Subject), nil
 	}
 	return false, nil
 }
