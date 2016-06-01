@@ -66,6 +66,7 @@ func send() {
 			// If there is no backlog, wait for the minimum send interval before sending any more data
 			if i < BatchSize && time.Since(lastSent) < MinimumSendInterval {
 				qlock.Unlock()
+				time.Sleep(time.Second)
 				continue
 			}
 
