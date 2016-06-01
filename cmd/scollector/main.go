@@ -193,6 +193,13 @@ func main() {
 	}
 	collectors.DefaultFreq = freq
 	collect.Freq = freq
+
+	minimumSendInterval := time.Second * time.Duration(conf.MinimumSendInterval)
+	if minimumSendInterval < 0 {
+		slog.Fatal("minimumSendInterval must be >= 0")
+	}
+	collect.MinimumSendInterval = minimumSendInterval
+
 	if conf.BatchSize < 0 {
 		slog.Fatal("BatchSize must be > 0")
 	}

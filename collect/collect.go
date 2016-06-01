@@ -24,6 +24,9 @@ var (
 	// Freq is how often metrics are sent to OpenTSDB.
 	Freq = time.Second * 15
 
+	// MinimumSendInterval is the interval to wait between http posts
+	MinimumSendInterval = time.Second * 0
+
 	// MaxQueueLen is the maximum size of the queue, above which incoming data will
 	// be discarded. Defaults to about 150MB.
 	MaxQueueLen = 200000

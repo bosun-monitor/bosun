@@ -56,9 +56,19 @@ func Flush() {
 }
 
 func send() {
+
+	lastSent := time.Now()
+
 	for {
 		qlock.Lock()
 		if i := len(queue); i > 0 {
+
+			// If there is no backlog, wait for the minimum send interval before sending any more data
+			if i < BatchSize && time.Since(lastSent) < MinimumSendInterval {
+				qlock.Unlock()
+				continue
+			}
+
 			if i > BatchSize {
 				i = BatchSize
 			}
@@ -70,6 +80,7 @@ func send() {
 			qlock.Unlock()
 			Sample("collect.post.batchsize", Tags, float64(len(sending)))
 			sendBatch(sending)
+			lastSent = time.Now()
 		} else {
 			qlock.Unlock()
 			time.Sleep(time.Second)

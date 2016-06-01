@@ -21,6 +21,8 @@ type Conf struct {
 	DisableSelf bool
 	// Freq is the default frequency in seconds for most collectors.
 	Freq int
+	// MinimumSendInterval is the interval to wait between http posts
+	MinimumSendInterval int
 	// BatchSize is the number of metrics that will be sent in each batch.
 	BatchSize int
 	// MaxQueueLen is the number of metrics keept internally.
