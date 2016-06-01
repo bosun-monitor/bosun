@@ -22,6 +22,8 @@ import (
 	"github.com/MiniProfiler/go/miniprofiler"
 	"github.com/boltdb/bolt"
 	"github.com/bradfitz/slice"
+	"github.com/kylebrandt/boolq"
+	"github.com/kylebrandt/boolq/parse"
 	"github.com/tatsushid/go-fastping"
 )
 
@@ -372,15 +374,18 @@ func (s *Schedule) MarshalGroups(T miniprofiler.Timer, filter string) (*StateGro
 	}
 	t.FailingAlerts, t.UnclosedErrors = s.getErrorCounts()
 	T.Step("Setup", func(miniprofiler.Timer) {
-		matches, err2 := makeFilter(filter)
-		if err2 != nil {
-			err = err2
-			return
-		}
 		status2, err2 := s.GetOpenStates()
 		if err2 != nil {
 			err = err2
 			return
+		}
+		var parsedExpr *parse.Tree
+		if filter != "" {
+			parsedExpr, err2 = parse.Parse(filter)
+			if err2 != nil {
+				err = err2
+				return
+			}
 		}
 		for k, v := range status2 {
 			a := s.Conf.Alerts[k.Name()]
@@ -391,7 +396,18 @@ func (s *Schedule) MarshalGroups(T miniprofiler.Timer, filter string) (*StateGro
 				}
 				continue
 			}
-			if matches(s.Conf, a, v) {
+			if parsedExpr == nil {
+				status[k] = v
+				continue
+			}
+			is := MakeIncidentSummary(s.Conf, silenced, v)
+			match := false
+			match, err2 = boolq.AskParsedExpr(*parsedExpr, is)
+			if err2 != nil {
+				err = err2
+				return
+			}
+			if match {
 				status[k] = v
 			}
 		}
