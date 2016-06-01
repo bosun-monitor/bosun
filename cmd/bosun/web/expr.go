@@ -243,7 +243,11 @@ func procRule(t miniprofiler.Timer, c *conf.Conf, a *conf.Alert, now time.Time, 
 			} else if s_err != nil {
 				warning = append(warning, s_err.Error())
 			} else {
-				n.DoEmail(email_subject, email, schedule.Conf, string(primaryIncident.AlertKey), attachments...)
+				st := sched.NewIncident(primaryIncident.AlertKey)
+				st.EmailSubject = email_subject
+				st.EmailBody = email
+				st.Attachments = attachments
+				n.DoEmail(st, schedule.Conf)
 			}
 		}
 		data = s.Data(rh, primaryIncident, a, false)

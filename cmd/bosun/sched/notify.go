@@ -10,6 +10,7 @@ import (
 
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/models"
+	"bosun.org/opentsdb"
 	"bosun.org/slog"
 )
 
@@ -200,7 +201,7 @@ func (s *Schedule) notify(st *models.IncidentState, n *conf.Notification) {
 	if len(st.EmailBody) == 0 {
 		st.EmailBody = []byte(st.Body)
 	}
-	n.Notify(st.Subject, st.Body, st.EmailSubject, st.EmailBody, s.Conf, string(st.AlertKey), st.Attachments...)
+	n.Notify(st, s.Conf)
 }
 
 // utnotify is single notification for N unknown groups into a single notification
@@ -223,7 +224,12 @@ func (s *Schedule) utnotify(groups map[string]models.AlertKeys, n *conf.Notifica
 	}); err != nil {
 		slog.Errorln(err)
 	}
-	n.Notify(subject, body.String(), []byte(subject), body.Bytes(), s.Conf, "unknown_treshold")
+	st := NewIncident("unknown_threshold{}")
+	st.Subject = subject
+	st.Body = body.String()
+	st.EmailSubject = []byte(subject)
+	st.EmailBody = body.Bytes()
+	n.Notify(st, s.Conf)
 }
 
 var defaultUnknownTemplate = &conf.Template{
@@ -258,7 +264,13 @@ func (s *Schedule) unotify(name string, group models.AlertKeys, n *conf.Notifica
 			slog.Infoln("unknown template error:", err)
 		}
 	}
-	n.Notify(subject.String(), body.String(), subject.Bytes(), body.Bytes(), s.Conf, name)
+	ak := models.NewAlertKey("unknown", opentsdb.TagSet{"name": name})
+	st := NewIncident(ak)
+	st.Subject = subject.String()
+	st.Body = body.String()
+	st.EmailSubject = subject.Bytes()
+	st.EmailBody = body.Bytes()
+	n.Notify(st, s.Conf)
 }
 
 func (s *Schedule) QueueNotification(ak models.AlertKey, n *conf.Notification, started time.Time) error {
@@ -314,7 +326,12 @@ func (s *Schedule) ActionNotify(at models.ActionType, user, message string, aks 
 			slog.Error("Error rendering action notification body", err)
 		}
 
-		notification.Notify(subject, buf.String(), []byte(subject), buf.Bytes(), s.Conf, "actionNotification")
+		st := NewIncident("actionNotification{}")
+		st.Subject = subject
+		st.Body = buf.String()
+		st.EmailSubject = []byte(subject)
+		st.EmailBody = buf.Bytes()
+		notification.Notify(st, s.Conf)
 	}
 	return nil
 }
