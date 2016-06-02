@@ -24,8 +24,8 @@
 		},
 		{
 			"path": "github.com/StackExchange/httpunit",
-			"revision": "364b80cd33d2a3ac4a9f31e1ae6b9b5fd95cc059",
-			"revisionTime": "2015-10-01T10:36:33-04:00"
+			"revision": "703c8193424854efa55744afc5a73a8e9a9c8d15",
+			"revisionTime": "2016-06-02T13:58:31Z"
 		},
 		{
 			"path": "github.com/StackExchange/mof",
