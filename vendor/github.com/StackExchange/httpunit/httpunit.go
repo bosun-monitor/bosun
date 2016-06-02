@@ -229,7 +229,7 @@ func strEqual(a, b []string) bool {
 }
 
 // Timeout is the connection timeout.
-var Timeout = time.Second * 3
+var Timeout = time.Second * 10
 
 // TestPlan describes a test and its permutations (IP addresses).
 type TestPlan struct {
