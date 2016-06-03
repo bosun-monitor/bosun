@@ -208,8 +208,8 @@ estat returns various summary stats per bucket for the specified `field`. The fi
 
 esdaily is for elastic indexes that have a date name for each day. Based on the timeframe of the enclosing es function (i.e. esstat and escount) to generate which indexes should be included in the query. It gets all indexes and won't include indices that don't exist. The layout specifer uses's [Go's time specification format](https://golang.org/pkg/time/#Parse). The timeField is the name of the field in elastic that contains timestamps for the documents.
 
-### esindicies(timeField string, index string...) ESIndexer
-esindices takes one or more literal indicies for the enclosing query to use. It does not check for existance of the index, and passes back the elastic error if the index does not exist. The timeField is the name of the field in elastic that contains timestamps for the documents.
+### esindices(timeField string, index string...) ESIndexer
+esindices takes one or more literal indices for the enclosing query to use. It does not check for existance of the index, and passes back the elastic error if the index does not exist. The timeField is the name of the field in elastic that contains timestamps for the documents.
 
 ### esls(indexRoot string) ESIndexer
 esls is a shortcut for esdaily("@timestamp", indexRoot+"-", "2006.01.02") and is for the default daily format that logstash creates.
