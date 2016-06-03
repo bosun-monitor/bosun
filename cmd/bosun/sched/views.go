@@ -26,6 +26,7 @@ type IncidentSummaryView struct {
 	Unevaluated            bool
 	NeedAck                bool
 	Silenced               bool
+	Actions                []models.Action
 	WarnNotificationChains [][]string
 	CritNotificationChains [][]string
 }
@@ -47,6 +48,7 @@ func MakeIncidentSummary(c *conf.Conf, s SilenceTester, is *models.IncidentState
 		Unevaluated:            is.Unevaluated,
 		NeedAck:                is.NeedAck,
 		Silenced:               s(is.AlertKey) != nil,
+		Actions:                is.Actions,
 		WarnNotificationChains: conf.GetNotificationChains(c, warnNotifications),
 		CritNotificationChains: conf.GetNotificationChains(c, critNotifications),
 	}
@@ -111,6 +113,13 @@ func (is IncidentSummaryView) Ask(filter string) (bool, error) {
 		}
 	case "name":
 		return glob.Glob(value, is.AlertName), nil
+	case "user":
+		for _, action := range is.Actions {
+			if action.User == value {
+				return true, nil
+			}
+		}
+		return false, nil
 	case "notify":
 		for _, chain := range is.WarnNotificationChains {
 			for _, wn := range chain {
