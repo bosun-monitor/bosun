@@ -12,6 +12,20 @@ import (
 )
 
 // Views
+
+type EventSummary struct {
+	Status models.Status
+	Time   int64
+}
+
+// EventSummary is like a models.Event but strips the Results and Unevaluated
+func MakeEventSummary(e models.Event) (EventSummary, bool) {
+	return EventSummary{
+		Status: e.Status,
+		Time:   e.Time.Unix(),
+	}, e.Unevaluated
+}
+
 type IncidentSummaryView struct {
 	Id                     int64
 	Subject                string
@@ -27,6 +41,7 @@ type IncidentSummaryView struct {
 	NeedAck                bool
 	Silenced               bool
 	Actions                []models.Action
+	Events                 []EventSummary
 	WarnNotificationChains [][]string
 	CritNotificationChains [][]string
 }
@@ -34,6 +49,12 @@ type IncidentSummaryView struct {
 func MakeIncidentSummary(c *conf.Conf, s SilenceTester, is *models.IncidentState) IncidentSummaryView {
 	warnNotifications := c.Alerts[is.AlertKey.Name()].WarnNotification.Get(c, is.AlertKey.Group())
 	critNotifications := c.Alerts[is.AlertKey.Name()].CritNotification.Get(c, is.AlertKey.Group())
+	eventSummaries := []EventSummary{}
+	for _, event := range is.Events {
+		if eventSummary, unevaluated := MakeEventSummary(event); !unevaluated {
+			eventSummaries = append(eventSummaries, eventSummary)
+		}
+	}
 	return IncidentSummaryView{
 		Id:                     is.Id,
 		Subject:                is.Subject,
@@ -49,6 +70,7 @@ func MakeIncidentSummary(c *conf.Conf, s SilenceTester, is *models.IncidentState
 		NeedAck:                is.NeedAck,
 		Silenced:               s(is.AlertKey) != nil,
 		Actions:                is.Actions,
+		Events:                 eventSummaries,
 		WarnNotificationChains: conf.GetNotificationChains(c, warnNotifications),
 		CritNotificationChains: conf.GetNotificationChains(c, critNotifications),
 	}
