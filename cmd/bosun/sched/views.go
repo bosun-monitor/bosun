@@ -26,6 +26,22 @@ func MakeEventSummary(e models.Event) (EventSummary, bool) {
 	}, e.Unevaluated
 }
 
+type EpochAction struct {
+	User    string
+	Message string
+	Time    int64
+	Type    models.ActionType
+}
+
+func MakeEpochAction(a models.Action) (EpochAction) {
+    return EpochAction{
+        User: a.User,
+        Message: a.Message,
+        Time: a.Time.UTC().Unix(),
+        Type: a.Type,
+    }
+}
+
 type IncidentSummaryView struct {
 	Id                     int64
 	Subject                string
@@ -40,7 +56,7 @@ type IncidentSummaryView struct {
 	Unevaluated            bool
 	NeedAck                bool
 	Silenced               bool
-	Actions                []models.Action
+	Actions                []EpochAction
 	Events                 []EventSummary
 	WarnNotificationChains [][]string
 	CritNotificationChains [][]string
@@ -55,6 +71,10 @@ func MakeIncidentSummary(c *conf.Conf, s SilenceTester, is *models.IncidentState
 			eventSummaries = append(eventSummaries, eventSummary)
 		}
 	}
+    actions := make([]EpochAction, len(is.Actions))
+    for i, action := range is.Actions {
+        actions[i] = MakeEpochAction(action)
+    }
 	return IncidentSummaryView{
 		Id:                     is.Id,
 		Subject:                is.Subject,
@@ -69,7 +89,7 @@ func MakeIncidentSummary(c *conf.Conf, s SilenceTester, is *models.IncidentState
 		Unevaluated:            is.Unevaluated,
 		NeedAck:                is.NeedAck,
 		Silenced:               s(is.AlertKey) != nil,
-		Actions:                is.Actions,
+		Actions:                actions,
 		Events:                 eventSummaries,
 		WarnNotificationChains: conf.GetNotificationChains(c, warnNotifications),
 		CritNotificationChains: conf.GetNotificationChains(c, critNotifications),
