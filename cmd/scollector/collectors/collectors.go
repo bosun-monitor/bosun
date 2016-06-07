@@ -17,6 +17,7 @@ import (
 	"bosun.org/cmd/scollector/conf"
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
+	"bosun.org/slog"
 	"bosun.org/util"
 )
 
@@ -249,15 +250,6 @@ func AddTS(md *opentsdb.MultiDataPoint, name string, ts int64, value interface{}
 	} else if host == "" {
 		delete(tags, "host")
 	}
-	if rate != metadata.Unknown {
-		metadata.AddMeta(name, nil, "rate", rate, false)
-	}
-	if unit != metadata.None {
-		metadata.AddMeta(name, nil, "unit", unit, false)
-	}
-	if desc != "" {
-		metadata.AddMeta(name, tags, "desc", desc, false)
-	}
 
 	tags = AddTags.Copy().Merge(tags)
 	d := opentsdb.DataPoint{
@@ -266,7 +258,20 @@ func AddTS(md *opentsdb.MultiDataPoint, name string, ts int64, value interface{}
 		Value:     value,
 		Tags:      tags,
 	}
-	*md = append(*md, &d)
+	if d.Valid() {
+		*md = append(*md, &d)
+		if rate != metadata.Unknown {
+			metadata.AddMeta(name, nil, "rate", rate, false)
+		}
+		if unit != metadata.None {
+			metadata.AddMeta(name, nil, "unit", unit, false)
+		}
+		if desc != "" {
+			metadata.AddMeta(name, tags, "desc", desc, false)
+		}
+	} else {
+		slog.Errorf("Invalid datapoint received for: %s", name)
+	}
 }
 
 // Add appends a new data point with given metric name, value, and tags. Tags
