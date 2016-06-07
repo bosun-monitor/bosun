@@ -178,7 +178,7 @@ func (is IncidentSummaryView) Ask(filter string) (bool, error) {
 			}
 		}
 		return false, nil
-	case "silence":
+	case "silenced":
 		switch value {
 		case "true":
 			return is.Silenced == true, nil
