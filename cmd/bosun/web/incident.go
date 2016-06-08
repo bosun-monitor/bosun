@@ -23,18 +23,12 @@ func ListOpenIncidents(t miniprofiler.Timer, w http.ResponseWriter, r *http.Requ
 	summaries := []sched.IncidentSummaryView{}
 	filterText := r.FormValue("filter")
 	var parsedExpr *boolq.Tree
-	if filterText != "" {
-		parsedExpr, err = boolq.Parse(filterText)
-		if err != nil {
-			return nil, fmt.Errorf("bad filter: %v", err)
-		}
+	parsedExpr, err = boolq.Parse(filterText)
+	if err != nil {
+		return nil, fmt.Errorf("bad filter: %v", err)
 	}
 	for _, iState := range list {
 		is := sched.MakeIncidentSummary(schedule.Conf, suppressor, iState)
-		if parsedExpr == nil {
-			summaries = append(summaries, is)
-			continue
-		}
 		match, err := boolq.AskParsedExpr(parsedExpr, is)
 		if err != nil {
 			return nil, err

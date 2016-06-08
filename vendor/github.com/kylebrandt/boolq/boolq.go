@@ -31,6 +31,9 @@ func AskExpr(expr string, asker Asker) (bool, error) {
 // been parsed by parse.Parse on the expression. This is useful if you are calling
 // the same expression multiple times.
 func AskParsedExpr(q *Tree, asker Asker) (bool, error) {
+	if q.Tree.Root == nil {
+		return true, nil
+	}
 	return walk(q.Root, asker)
 }
 
@@ -42,6 +45,10 @@ type Tree struct {
 // It can be used wtih AskParsedExpr
 func Parse(text string) (*Tree, error) {
 	tree := &Tree{}
+	if text == "" {
+		tree.Tree = &parse.Tree{}
+		return tree, nil
+	}
 	var err error
 	tree.Tree, err = parse.Parse(text)
 	return tree, err

@@ -404,8 +404,8 @@
 		},
 		{
 			"path": "github.com/kylebrandt/boolq",
-			"revision": "fbef909db018d0e382a1ef721530456b9e76a72a",
-			"revisionTime": "2016-06-08T12:27:42-04:00"
+			"revision": "f869a7265c7ec4f3e2618a39b7b3877a5629eb17",
+			"revisionTime": "2016-06-08T12:45:48-04:00"
 		},
 		{
 			"path": "github.com/kylebrandt/boolq/parse",

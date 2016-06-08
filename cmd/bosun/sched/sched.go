@@ -379,12 +379,10 @@ func (s *Schedule) MarshalGroups(T miniprofiler.Timer, filter string) (*StateGro
 			return
 		}
 		var parsedExpr *boolq.Tree
-		if filter != "" {
-			parsedExpr, err2 = boolq.Parse(filter)
-			if err2 != nil {
-				err = err2
-				return
-			}
+		parsedExpr, err2 = boolq.Parse(filter)
+		if err2 != nil {
+			err = err2
+			return
 		}
 		for k, v := range status2 {
 			a := s.Conf.Alerts[k.Name()]
@@ -393,10 +391,6 @@ func (s *Schedule) MarshalGroups(T miniprofiler.Timer, filter string) (*StateGro
 				if err2 = s.ActionByAlertKey("bosun", "closing because alert doesn't exist.", models.ActionForceClose, k); err2 != nil {
 					slog.Error(err2)
 				}
-				continue
-			}
-			if parsedExpr == nil {
-				status[k] = v
 				continue
 			}
 			is := MakeIncidentSummary(s.Conf, silenced, v)
