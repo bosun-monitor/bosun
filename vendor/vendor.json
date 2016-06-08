@@ -403,6 +403,16 @@
 			"revisionTime": "2015-10-16T12:35:57-05:00"
 		},
 		{
+			"path": "github.com/kylebrandt/boolq",
+			"revision": "f869a7265c7ec4f3e2618a39b7b3877a5629eb17",
+			"revisionTime": "2016-06-08T12:45:48-04:00"
+		},
+		{
+			"path": "github.com/kylebrandt/boolq/parse",
+			"revision": "3c0efef9c6cd5f400eba1871a3be6191796db71a",
+			"revisionTime": "2016-06-01T16:00:19-04:00"
+		},
+		{
 			"path": "github.com/kylebrandt/gohop",
 			"revision": "605b5abd5cb7b630eb91cf1f35d365121ccdb6fd",
 			"revisionTime": "2015-11-20T15:56:38-05:00"
@@ -431,6 +441,11 @@
 			"path": "github.com/olivere/elastic/uritemplates",
 			"revision": "9fdb4e763e833f166e76009e5a33132877c32bfb",
 			"revisionTime": "2015-11-28T12:32:46+01:00"
+		},
+		{
+			"path": "github.com/ryanuber/go-glob",
+			"revision": "572520ed46dbddaed19ea3d9541bdd0494163693",
+			"revisionTime": "2016-02-26T00:37:05-08:00"
 		},
 		{
 			"path": "github.com/siddontang/go/bson",

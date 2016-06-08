@@ -105,6 +105,7 @@ func Listen(listenAddr string, devMode bool, tsdbHost string) error {
 	router.Handle("/api/host", JSON(Host))
 	router.Handle("/api/last", JSON(Last))
 	router.Handle("/api/incidents", JSON(Incidents))
+	router.Handle("/api/incidents/open", JSON(ListOpenIncidents))
 	router.Handle("/api/incidents/events", JSON(IncidentEvents))
 	router.Handle("/api/metadata/get", JSON(GetMetadata))
 	router.Handle("/api/metadata/metrics", JSON(MetadataMetrics))
