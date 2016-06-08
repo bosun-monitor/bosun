@@ -8,7 +8,6 @@ import (
 
 	"github.com/MiniProfiler/go/miniprofiler"
 	"github.com/kylebrandt/boolq"
-	"github.com/kylebrandt/boolq/parse"
 )
 
 func ListOpenIncidents(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
@@ -23,9 +22,9 @@ func ListOpenIncidents(t miniprofiler.Timer, w http.ResponseWriter, r *http.Requ
 	}
 	summaries := []sched.IncidentSummaryView{}
 	filterText := r.FormValue("filter")
-	var parsedExpr *parse.Tree
+	var parsedExpr *boolq.Tree
 	if filterText != "" {
-		parsedExpr, err = parse.Parse(filterText)
+		parsedExpr, err = boolq.Parse(filterText)
 		if err != nil {
 			return nil, fmt.Errorf("bad filter: %v", err)
 		}
@@ -36,7 +35,7 @@ func ListOpenIncidents(t miniprofiler.Timer, w http.ResponseWriter, r *http.Requ
 			summaries = append(summaries, is)
 			continue
 		}
-		match, err := boolq.AskParsedExpr(*parsedExpr, is)
+		match, err := boolq.AskParsedExpr(parsedExpr, is)
 		if err != nil {
 			return nil, err
 		}

@@ -30,8 +30,21 @@ func AskExpr(expr string, asker Asker) (bool, error) {
 // AskParsedExpr is like AskExpr but takes an expression that has already
 // been parsed by parse.Parse on the expression. This is useful if you are calling
 // the same expression multiple times.
-func AskParsedExpr(q parse.Tree, asker Asker) (bool, error) {
+func AskParsedExpr(q *Tree, asker Asker) (bool, error) {
 	return walk(q.Root, asker)
+}
+
+type Tree struct {
+	*parse.Tree
+}
+
+// Parse parses an expression and returns the parsed expression.
+// It can be used wtih AskParsedExpr
+func Parse(text string) (*Tree, error) {
+	tree := &Tree{}
+	var err error
+	tree.Tree, err = parse.Parse(text)
+	return tree, err
 }
 
 func walk(node parse.Node, asker Asker) (bool, error) {

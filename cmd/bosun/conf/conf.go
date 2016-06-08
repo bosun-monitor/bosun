@@ -295,6 +295,10 @@ func (ns *Notifications) Get(c *Conf, tags opentsdb.TagSet) map[string]*Notifica
 	return nots
 }
 
+// GetNotificationChains returns the warn or crit notification chains for a configured
+// alert. Each chain is a list of notification names. If a notification name
+// as already been seen in the chain it ends the list with the notification
+// name with a of "..." which indicates that the chain will loop.
 func GetNotificationChains(c *Conf, n map[string]*Notification) ([][]string) {
 	chains := [][]string{}
 	for _, root := range n {
@@ -364,10 +368,6 @@ type Notification struct {
 	post, get string
 	body      string
 }
-
-// func (n *Notification) MarshalJSON() ([]byte, error) {
-// 	return nil, fmt.Errorf("conf: cannot json marshal notifications")
-// }
 
 type Vars map[string]string
 

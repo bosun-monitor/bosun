@@ -23,7 +23,6 @@ import (
 	"github.com/boltdb/bolt"
 	"github.com/bradfitz/slice"
 	"github.com/kylebrandt/boolq"
-	"github.com/kylebrandt/boolq/parse"
 	"github.com/tatsushid/go-fastping"
 )
 
@@ -379,9 +378,9 @@ func (s *Schedule) MarshalGroups(T miniprofiler.Timer, filter string) (*StateGro
 			err = err2
 			return
 		}
-		var parsedExpr *parse.Tree
+		var parsedExpr *boolq.Tree
 		if filter != "" {
-			parsedExpr, err2 = parse.Parse(filter)
+			parsedExpr, err2 = boolq.Parse(filter)
 			if err2 != nil {
 				err = err2
 				return
@@ -402,7 +401,7 @@ func (s *Schedule) MarshalGroups(T miniprofiler.Timer, filter string) (*StateGro
 			}
 			is := MakeIncidentSummary(s.Conf, silenced, v)
 			match := false
-			match, err2 = boolq.AskParsedExpr(*parsedExpr, is)
+			match, err2 = boolq.AskParsedExpr(parsedExpr, is)
 			if err2 != nil {
 				err = err2
 				return
