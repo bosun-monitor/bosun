@@ -33,13 +33,13 @@ type EpochAction struct {
 	Type    models.ActionType
 }
 
-func MakeEpochAction(a models.Action) (EpochAction) {
-    return EpochAction{
-        User: a.User,
-        Message: a.Message,
-        Time: a.Time.UTC().Unix(),
-        Type: a.Type,
-    }
+func MakeEpochAction(a models.Action) EpochAction {
+	return EpochAction{
+		User:    a.User,
+		Message: a.Message,
+		Time:    a.Time.UTC().Unix(),
+		Type:    a.Type,
+	}
 }
 
 type IncidentSummaryView struct {
@@ -71,10 +71,10 @@ func MakeIncidentSummary(c *conf.Conf, s SilenceTester, is *models.IncidentState
 			eventSummaries = append(eventSummaries, eventSummary)
 		}
 	}
-    actions := make([]EpochAction, len(is.Actions))
-    for i, action := range is.Actions {
-        actions[i] = MakeEpochAction(action)
-    }
+	actions := make([]EpochAction, len(is.Actions))
+	for i, action := range is.Actions {
+		actions[i] = MakeEpochAction(action)
+	}
 	return IncidentSummaryView{
 		Id:                     is.Id,
 		Subject:                is.Subject,

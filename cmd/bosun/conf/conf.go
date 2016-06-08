@@ -299,18 +299,18 @@ func (ns *Notifications) Get(c *Conf, tags opentsdb.TagSet) map[string]*Notifica
 // alert. Each chain is a list of notification names. If a notification name
 // as already been seen in the chain it ends the list with the notification
 // name with a of "..." which indicates that the chain will loop.
-func GetNotificationChains(c *Conf, n map[string]*Notification) ([][]string) {
+func GetNotificationChains(c *Conf, n map[string]*Notification) [][]string {
 	chains := [][]string{}
 	for _, root := range n {
 		chain := []string{}
 		seen := make(map[string]bool)
 		var walkChain func(next *Notification)
 		walkChain = func(next *Notification) {
-			if (next == nil) {
+			if next == nil {
 				chains = append(chains, chain)
 				return
 			}
-			if (seen[next.Name]) {
+			if seen[next.Name] {
 				chain = append(chain, fmt.Sprintf("...%v", next.Name))
 				chains = append(chains, chain)
 				return
