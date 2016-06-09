@@ -26,38 +26,38 @@ import (
 type State struct {
 	*Expr
 	now                time.Time
-	cache              *cache.Cache
 	enableComputations bool
 	unjoinedOk         bool
+	autods             int
 
-	autods int
-
-	*Contexts
-	// OpenTSDB
-	tsdbQueries []opentsdb.Request
+	*Backends
 
 	// Bosun Internal
-
-	squelched func(tags opentsdb.TagSet) bool
-	Search    *search.Search
-	History   AlertStatusProvider
+	*BosunProviders
 
 	// Graphite
 	graphiteQueries []graphite.Request
-
 	// LogstashElastic (for pre ES v2)
 	logstashQueries []elasticOld.SearchSource
-
 	// Elastic (for post ES v2)
 	elasticQueries []elastic.SearchSource
+	// OpenTSDB
+	tsdbQueries []opentsdb.Request
 }
 
-type Contexts struct {
+type Backends struct {
 	TSDBContext     opentsdb.Context
 	GraphiteContext graphite.Context
 	LogstashHosts   LogstashElasticHosts
 	ElasticHosts    ElasticHosts
 	InfluxConfig    client.Config
+}
+
+type BosunProviders struct {
+	Squelched func(tags opentsdb.TagSet) bool
+	Search    *search.Search
+	History   AlertStatusProvider
+	Cache     *cache.Cache
 }
 
 // Alert Status Provider is used to provide information about alert results.
@@ -90,20 +90,19 @@ func New(expr string, funcs ...map[string]parse.Func) (*Expr, error) {
 
 // Execute applies a parse expression to the specified OpenTSDB context, and
 // returns one result per group. T may be nil to ignore timings.
-func (e *Expr) Execute(contexts *Contexts, cache *cache.Cache, T miniprofiler.Timer, now time.Time, autods int, unjoinedOk bool, search *search.Search, squelched func(tags opentsdb.TagSet) bool, history AlertStatusProvider) (r *Results, queries []opentsdb.Request, err error) {
-	if squelched == nil {
-		squelched = func(tags opentsdb.TagSet) bool {
+func (e *Expr) Execute(backends *Backends, providers *BosunProviders, T miniprofiler.Timer, now time.Time, autods int, unjoinedOk bool) (r *Results, queries []opentsdb.Request, err error) {
+	if providers.Squelched == nil {
+		providers.Squelched = func(tags opentsdb.TagSet) bool {
 			return false
 		}
 	}
 	s := &State{
-		Expr:       e,
-		now:        now,
-		autods:     autods,
-		unjoinedOk: unjoinedOk,
-		Contexts:   contexts,
-		Search:     search,
-		squelched:  squelched,
+		Expr:           e,
+		now:            now,
+		autods:         autods,
+		unjoinedOk:     unjoinedOk,
+		Backends:       backends,
+		BosunProviders: providers,
 	}
 	return e.ExecuteState(s, T)
 }

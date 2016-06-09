@@ -49,7 +49,7 @@ func NewIncident(ak models.AlertKey) *models.IncidentState {
 type RunHistory struct {
 	Cache    *cache.Cache
 	Start    time.Time
-	Contexts *expr.Contexts
+	Backends *expr.Backends
 	Events   map[models.AlertKey]*models.Event
 	schedule *Schedule
 }
@@ -64,16 +64,16 @@ func (rh *RunHistory) AtTime(t time.Time) *RunHistory {
 
 func (s *Schedule) NewRunHistory(start time.Time, cache *cache.Cache) *RunHistory {
 	r := &RunHistory{
-		Cache:  cache,
-		Start:  start,
-		Events: make(map[models.AlertKey]*models.Event),
+		Cache:    cache,
+		Start:    start,
+		Events:   make(map[models.AlertKey]*models.Event),
 		schedule: s,
-		Contexts: &expr.Contexts{
-			TSDBContext: s.Conf.TSDBContext(),
-			GraphiteContext:  s.Conf.GraphiteContext(),
-			InfluxConfig: s.Conf.InfluxConfig,
-			LogstashHosts: s.Conf.LogstashElasticHosts,
-			ElasticHosts: s.Conf.ElasticHosts,
+		Backends: &expr.Backends{
+			TSDBContext:     s.Conf.TSDBContext(),
+			GraphiteContext: s.Conf.GraphiteContext(),
+			InfluxConfig:    s.Conf.InfluxConfig,
+			LogstashHosts:   s.Conf.LogstashElasticHosts,
+			ElasticHosts:    s.Conf.ElasticHosts,
 		},
 	}
 	return r
@@ -585,7 +585,13 @@ func (s *Schedule) executeExpr(T miniprofiler.Timer, rh *RunHistory, a *conf.Ale
 	if e == nil {
 		return nil, nil
 	}
-	results, _, err := e.Execute(rh.Contexts, rh.Cache, T, rh.Start, 0, a.UnjoinedOK, s.Search, s.Conf.AlertSquelched(a), s)
+	providers := &expr.BosunProviders {
+		Cache: rh.Cache,
+		Search: s.Search,
+		Squelched: s.Conf.AlertSquelched(a),
+		History: s,
+	}
+	results, _, err := e.Execute(rh.Backends, providers, T, rh.Start, 0, a.UnjoinedOK)
 	return results, err
 }
 

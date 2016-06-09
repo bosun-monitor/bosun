@@ -110,7 +110,7 @@ func timeLSRequest(e *State, T miniprofiler.Timer, req *LogstashRequest) (resp *
 			return e.LogstashHosts.Query(req)
 		}
 		var val interface{}
-		val, err = e.cache.Get(string(b), getFn)
+		val, err = e.Cache.Get(string(b), getFn)
 		resp = val.(*elastic.SearchResult)
 	})
 	return
@@ -264,7 +264,7 @@ func LSDateHistogram(e *State, T miniprofiler.Timer, index_root, keystring, filt
 	var desc func(*elastic.AggregationBucketKeyItem, opentsdb.TagSet, []lsKeyMatch) error
 	desc = func(b *elastic.AggregationBucketKeyItem, tags opentsdb.TagSet, keys []lsKeyMatch) error {
 		if ts, found := b.DateHistogram("ts"); found {
-			if e.squelched(tags) {
+			if e.Squelched(tags) {
 				return nil
 			}
 			series := make(Series)

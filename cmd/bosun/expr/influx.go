@@ -53,7 +53,7 @@ func InfluxQuery(e *State, T miniprofiler.Timer, db, query, startDuration, endDu
 	r := new(Results)
 	for _, row := range qres {
 		tags := opentsdb.TagSet(row.Tags)
-		if e.squelched(tags) {
+		if e.Squelched(tags) {
 			continue
 		}
 		if len(row.Columns) != 2 {
@@ -216,7 +216,7 @@ func timeInfluxRequest(e *State, T miniprofiler.Timer, db, query, startDuration,
 		}
 		var val interface{}
 		var ok bool
-		val, err = e.cache.Get(q, getFn)
+		val, err = e.Cache.Get(q, getFn)
 		if s, ok = val.([]influxModels.Row); !ok {
 			err = fmt.Errorf("influx: did not get a valid result from InfluxDB")
 		}

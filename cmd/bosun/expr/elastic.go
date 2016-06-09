@@ -289,7 +289,7 @@ func timeESRequest(e *State, T miniprofiler.Timer, req *ElasticRequest) (resp *e
 			return e.ElasticHosts.Query(req)
 		}
 		var val interface{}
-		val, err = e.cache.Get(string(b), getFn)
+		val, err = e.Cache.Get(string(b), getFn)
 		resp = val.(*elastic.SearchResult)
 	})
 	return
@@ -423,7 +423,7 @@ func ESDateHistogram(e *State, T miniprofiler.Timer, indexer ESIndexer, keystrin
 	var desc func(*elastic.AggregationBucketKeyItem, opentsdb.TagSet, []string) error
 	desc = func(b *elastic.AggregationBucketKeyItem, tags opentsdb.TagSet, keys []string) error {
 		if ts, found := b.DateHistogram("ts"); found {
-			if e.squelched(tags) {
+			if e.Squelched(tags) {
 				return nil
 			}
 			series := make(Series)

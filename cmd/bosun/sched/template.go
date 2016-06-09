@@ -198,7 +198,13 @@ func (c *Context) evalExpr(e *expr.Expr, filter bool, series bool, autods int) (
 	if series && e.Root.Return() != models.TypeSeriesSet {
 		return nil, "", fmt.Errorf("need a series, got %T (%v)", e, e)
 	}
-	res, _, err := e.Execute(c.runHistory.Contexts, c.runHistory.Cache, nil, c.runHistory.Start, autods, c.Alert.UnjoinedOK, c.schedule.Search, c.schedule.Conf.AlertSquelched(c.Alert), c.schedule)
+	providers := &expr.BosunProviders {
+		Cache: c.runHistory.Cache,
+		Search: c.schedule.Search,
+		Squelched: c.schedule.Conf.AlertSquelched(c.Alert),
+		History: c.schedule,
+	}
+	res, _, err := e.Execute(c.runHistory.Backends, providers, nil, c.runHistory.Start, autods, c.Alert.UnjoinedOK)
 	if err != nil {
 		return nil, "", fmt.Errorf("%s: %v", e, err)
 	}
@@ -487,7 +493,7 @@ func (c *Context) LSQueryAll(index_root, keystring, filter, sduration, eduration
 	if err != nil {
 		return nil, err
 	}
-	results, err := c.runHistory.Contexts.LogstashHosts.Query(req)
+	results, err := c.runHistory.Backends.LogstashHosts.Query(req)
 	if err != nil {
 		return nil, err
 	}
@@ -508,7 +514,7 @@ func (c *Context) ESQuery(indexRoot expr.ESIndexer, filter expr.ESQuery, sdurati
 	if err != nil {
 		return nil, err
 	}
-	results, err := c.runHistory.Contexts.ElasticHosts.Query(req)
+	results, err := c.runHistory.Backends.ElasticHosts.Query(req)
 	if err != nil {
 		return nil, err
 	}
@@ -528,7 +534,7 @@ func (c *Context) ESQueryAll(indexRoot expr.ESIndexer, filter expr.ESQuery, sdur
 	if err != nil {
 		return nil, err
 	}
-	results, err := c.runHistory.Contexts.ElasticHosts.Query(req)
+	results, err := c.runHistory.Backends.ElasticHosts.Query(req)
 	if err != nil {
 		return nil, err
 	}

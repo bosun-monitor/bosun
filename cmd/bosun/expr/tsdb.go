@@ -82,7 +82,7 @@ func timeTSDBRequest(e *State, T miniprofiler.Timer, req *opentsdb.Request) (s o
 				return e.TSDBContext.Query(req)
 			}
 			var val interface{}
-			val, err = e.cache.Get(string(b), getFn)
+			val, err = e.Cache.Get(string(b), getFn)
 			s = val.(opentsdb.ResponseSet).Copy()
 
 		})
@@ -141,7 +141,7 @@ func bandTSDB(e *State, T miniprofiler.Timer, query, duration, period string, nu
 				return
 			}
 			for _, res := range s {
-				if e.squelched(res.Tags) {
+				if e.Squelched(res.Tags) {
 					continue
 				}
 				//offset := e.now.Sub(now.Add(time.Duration(p-d)))
@@ -331,7 +331,7 @@ func Over(e *State, T miniprofiler.Timer, query, duration, period string, num fl
 			}
 			offset := e.now.Sub(now)
 			for _, res := range s {
-				if e.squelched(res.Tags) {
+				if e.Squelched(res.Tags) {
 					continue
 				}
 				values := make(Series)
@@ -390,7 +390,7 @@ func Query(e *State, T miniprofiler.Timer, query, sduration, eduration string) (
 		return
 	}
 	for _, res := range s {
-		if e.squelched(res.Tags) {
+		if e.Squelched(res.Tags) {
 			continue
 		}
 		values := make(Series)
