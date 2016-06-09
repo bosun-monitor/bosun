@@ -585,11 +585,11 @@ func (s *Schedule) executeExpr(T miniprofiler.Timer, rh *RunHistory, a *conf.Ale
 	if e == nil {
 		return nil, nil
 	}
-	providers := &expr.BosunProviders {
-		Cache: rh.Cache,
-		Search: s.Search,
+	providers := &expr.BosunProviders{
+		Cache:     rh.Cache,
+		Search:    s.Search,
 		Squelched: s.Conf.AlertSquelched(a),
-		History: s,
+		History:   s,
 	}
 	results, _, err := e.Execute(rh.Backends, providers, T, rh.Start, 0, a.UnjoinedOK)
 	return results, err

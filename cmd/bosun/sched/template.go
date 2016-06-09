@@ -198,11 +198,11 @@ func (c *Context) evalExpr(e *expr.Expr, filter bool, series bool, autods int) (
 	if series && e.Root.Return() != models.TypeSeriesSet {
 		return nil, "", fmt.Errorf("need a series, got %T (%v)", e, e)
 	}
-	providers := &expr.BosunProviders {
-		Cache: c.runHistory.Cache,
-		Search: c.schedule.Search,
+	providers := &expr.BosunProviders{
+		Cache:     c.runHistory.Cache,
+		Search:    c.schedule.Search,
 		Squelched: c.schedule.Conf.AlertSquelched(c.Alert),
-		History: c.schedule,
+		History:   c.schedule,
 	}
 	res, _, err := e.Execute(c.runHistory.Backends, providers, nil, c.runHistory.Start, autods, c.Alert.UnjoinedOK)
 	if err != nil {
