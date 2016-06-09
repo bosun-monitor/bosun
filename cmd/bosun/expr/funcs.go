@@ -30,6 +30,19 @@ func tagQuery(args []parse.Node) (parse.Tags, error) {
 	return t, nil
 }
 
+func pureTags(args []parse.Node) (parse.Tags, error) {
+	tags := args[1].(*parse.StringNode)
+	ts, err := opentsdb.ParseTags(tags.Text)
+	if err != nil {
+		return nil, err
+	}
+	t := make(parse.Tags)
+	for k := range ts {
+		t[k] = struct{}{}
+	}
+	return t, nil
+}
+
 func tagFirst(args []parse.Node) (parse.Tags, error) {
 	return args[0].Tags()
 }
@@ -309,6 +322,40 @@ var builtins = map[string]parse.Func{
 		Return: models.TypeScalar,
 		F:      Month,
 	},
+	"qlast": {
+		Args:   []models.FuncType{models.TypeString, models.TypeString, models.TypeScalar},
+		Return: models.TypeSeriesSet,
+		Tags:   pureTags,
+		F:      GetLast,
+	},
+}
+
+func GetLast(s *State, T miniprofiler.Timer, metric, tags string, counter float64) (*Results, error) {
+	parsedTags, err := opentsdb.ParseTags(tags)
+	if err != nil {
+		return nil, err
+	}
+	isCounter := false
+	if counter != 0 {
+		isCounter = true
+	}
+	for k, v := range parsedTags {
+		if s.Search.Expand
+	}
+	v, t, err := s.Search.GetLast(metric, parsedTags.String(), isCounter)
+	if err != nil {
+		return nil, err
+	}
+	series := make(Series)
+	series[time.Unix(t, 0)] = v
+	return &Results{
+		Results: []*Result{
+			{
+				Value: series,
+				Group: parsedTags,
+			},
+		},
+	}, nil
 }
 
 func SeriesFunc(e *State, T miniprofiler.Timer, tags string, pairs ...float64) (*Results, error) {
