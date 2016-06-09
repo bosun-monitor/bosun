@@ -20,7 +20,11 @@ func testExpression(eio exprInOut) error {
 	if err != nil {
 		return err
 	}
-	r, _, err := e.Execute(nil, nil, nil, nil, client.Config{}, nil, nil, time.Now(), 0, false, nil, nil, nil)
+	backends := &Backends{
+		InfluxConfig: client.Config{},
+	}
+	providers := &BosunProviders{}
+	r, _, err := e.Execute(backends, providers, nil, queryTime, 0, false)
 	if err != nil {
 		return err
 	}

@@ -79,10 +79,10 @@ func timeTSDBRequest(e *State, T miniprofiler.Timer, req *opentsdb.Request) (s o
 	for {
 		T.StepCustomTiming("tsdb", "query", string(b), func() {
 			getFn := func() (interface{}, error) {
-				return e.tsdbContext.Query(req)
+				return e.TSDBContext.Query(req)
 			}
 			var val interface{}
-			val, err = e.cache.Get(string(b), getFn)
+			val, err = e.Cache.Get(string(b), getFn)
 			s = val.(opentsdb.ResponseSet).Copy()
 
 		})
@@ -113,11 +113,11 @@ func bandTSDB(e *State, T miniprofiler.Timer, query, duration, period string, nu
 			err = fmt.Errorf("num out of bounds")
 		}
 		var q *opentsdb.Query
-		q, err = opentsdb.ParseQuery(query, e.tsdbContext.Version())
+		q, err = opentsdb.ParseQuery(query, e.TSDBContext.Version())
 		if err != nil {
 			return
 		}
-		if !e.tsdbContext.Version().FilterSupport() {
+		if !e.TSDBContext.Version().FilterSupport() {
 			if err = e.Search.Expand(q); err != nil {
 				return
 			}
@@ -141,7 +141,7 @@ func bandTSDB(e *State, T miniprofiler.Timer, query, duration, period string, nu
 				return
 			}
 			for _, res := range s {
-				if e.squelched(res.Tags) {
+				if e.Squelched(res.Tags) {
 					continue
 				}
 				//offset := e.now.Sub(now.Add(time.Duration(p-d)))
@@ -308,11 +308,11 @@ func Over(e *State, T miniprofiler.Timer, query, duration, period string, num fl
 			err = fmt.Errorf("num out of bounds")
 		}
 		var q *opentsdb.Query
-		q, err = opentsdb.ParseQuery(query, e.tsdbContext.Version())
+		q, err = opentsdb.ParseQuery(query, e.TSDBContext.Version())
 		if err != nil {
 			return
 		}
-		if !e.tsdbContext.Version().FilterSupport() {
+		if !e.TSDBContext.Version().FilterSupport() {
 			if err = e.Search.Expand(q); err != nil {
 				return
 			}
@@ -331,7 +331,7 @@ func Over(e *State, T miniprofiler.Timer, query, duration, period string, num fl
 			}
 			offset := e.now.Sub(now)
 			for _, res := range s {
-				if e.squelched(res.Tags) {
+				if e.Squelched(res.Tags) {
 					continue
 				}
 				values := make(Series)
@@ -356,11 +356,11 @@ func Over(e *State, T miniprofiler.Timer, query, duration, period string, num fl
 
 func Query(e *State, T miniprofiler.Timer, query, sduration, eduration string) (r *Results, err error) {
 	r = new(Results)
-	q, err := opentsdb.ParseQuery(query, e.tsdbContext.Version())
+	q, err := opentsdb.ParseQuery(query, e.TSDBContext.Version())
 	if q == nil && err != nil {
 		return
 	}
-	if !e.tsdbContext.Version().FilterSupport() {
+	if !e.TSDBContext.Version().FilterSupport() {
 		if err = e.Search.Expand(q); err != nil {
 			return
 		}
@@ -390,7 +390,7 @@ func Query(e *State, T miniprofiler.Timer, query, sduration, eduration string) (
 		return
 	}
 	for _, res := range s {
-		if e.squelched(res.Tags) {
+		if e.Squelched(res.Tags) {
 			continue
 		}
 		values := make(Series)

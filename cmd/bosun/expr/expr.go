@@ -26,33 +26,38 @@ import (
 type State struct {
 	*Expr
 	now                time.Time
-	cache              *cache.Cache
 	enableComputations bool
+	unjoinedOk         bool
+	autods             int
 
-	// OpenTSDB
-	Search      *search.Search
-	autods      int
-	tsdbContext opentsdb.Context
-	tsdbQueries []opentsdb.Request
-	unjoinedOk  bool
-	squelched   func(tags opentsdb.TagSet) bool
+	*Backends
+
+	// Bosun Internal
+	*BosunProviders
 
 	// Graphite
 	graphiteQueries []graphite.Request
-	graphiteContext graphite.Context
-
 	// LogstashElastic (for pre ES v2)
 	logstashQueries []elasticOld.SearchSource
-	logstashHosts   LogstashElasticHosts
-
 	// Elastic (for post ES v2)
 	elasticQueries []elastic.SearchSource
-	elasticHosts   ElasticHosts
+	// OpenTSDB
+	tsdbQueries []opentsdb.Request
+}
 
-	// InfluxDB
-	InfluxConfig client.Config
+type Backends struct {
+	TSDBContext     opentsdb.Context
+	GraphiteContext graphite.Context
+	LogstashHosts   LogstashElasticHosts
+	ElasticHosts    ElasticHosts
+	InfluxConfig    client.Config
+}
 
-	History AlertStatusProvider
+type BosunProviders struct {
+	Squelched func(tags opentsdb.TagSet) bool
+	Search    *search.Search
+	History   AlertStatusProvider
+	Cache     *cache.Cache
 }
 
 // Alert Status Provider is used to provide information about alert results.
@@ -85,26 +90,19 @@ func New(expr string, funcs ...map[string]parse.Func) (*Expr, error) {
 
 // Execute applies a parse expression to the specified OpenTSDB context, and
 // returns one result per group. T may be nil to ignore timings.
-func (e *Expr) Execute(c opentsdb.Context, g graphite.Context, l LogstashElasticHosts, eh ElasticHosts, influxConfig client.Config, cache *cache.Cache, T miniprofiler.Timer, now time.Time, autods int, unjoinedOk bool, search *search.Search, squelched func(tags opentsdb.TagSet) bool, history AlertStatusProvider) (r *Results, queries []opentsdb.Request, err error) {
-	if squelched == nil {
-		squelched = func(tags opentsdb.TagSet) bool {
+func (e *Expr) Execute(backends *Backends, providers *BosunProviders, T miniprofiler.Timer, now time.Time, autods int, unjoinedOk bool) (r *Results, queries []opentsdb.Request, err error) {
+	if providers.Squelched == nil {
+		providers.Squelched = func(tags opentsdb.TagSet) bool {
 			return false
 		}
 	}
 	s := &State{
-		Expr:            e,
-		cache:           cache,
-		tsdbContext:     c,
-		graphiteContext: g,
-		logstashHosts:   l,
-		elasticHosts:    eh,
-		InfluxConfig:    influxConfig,
-		now:             now,
-		autods:          autods,
-		unjoinedOk:      unjoinedOk,
-		Search:          search,
-		squelched:       squelched,
-		History:         history,
+		Expr:           e,
+		now:            now,
+		autods:         autods,
+		unjoinedOk:     unjoinedOk,
+		Backends:       backends,
+		BosunProviders: providers,
 	}
 	return e.ExecuteState(s, T)
 }
