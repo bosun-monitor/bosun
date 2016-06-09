@@ -215,7 +215,7 @@ func timeGraphiteRequest(e *State, T miniprofiler.Timer, req *graphite.Request) 
 	T.StepCustomTiming("graphite", "query", string(b), func() {
 		key := req.CacheKey()
 		getFn := func() (interface{}, error) {
-			return e.graphiteContext.Query(req)
+			return e.GraphiteContext.Query(req)
 		}
 		var val interface{}
 		val, err = e.cache.Get(key, getFn)

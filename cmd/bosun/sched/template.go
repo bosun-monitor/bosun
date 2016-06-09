@@ -198,7 +198,7 @@ func (c *Context) evalExpr(e *expr.Expr, filter bool, series bool, autods int) (
 	if series && e.Root.Return() != models.TypeSeriesSet {
 		return nil, "", fmt.Errorf("need a series, got %T (%v)", e, e)
 	}
-	res, _, err := e.Execute(c.runHistory.Context, c.runHistory.GraphiteContext, c.runHistory.Logstash, c.runHistory.Elastic, c.runHistory.InfluxConfig, c.runHistory.Cache, nil, c.runHistory.Start, autods, c.Alert.UnjoinedOK, c.schedule.Search, c.schedule.Conf.AlertSquelched(c.Alert), c.schedule)
+	res, _, err := e.Execute(c.runHistory.Contexts, c.runHistory.Cache, nil, c.runHistory.Start, autods, c.Alert.UnjoinedOK, c.schedule.Search, c.schedule.Conf.AlertSquelched(c.Alert), c.schedule)
 	if err != nil {
 		return nil, "", fmt.Errorf("%s: %v", e, err)
 	}
@@ -483,11 +483,11 @@ func (c *Context) LSQuery(index_root, filter, sduration, eduration string, size 
 }
 
 func (c *Context) LSQueryAll(index_root, keystring, filter, sduration, eduration string, size int) (interface{}, error) {
-	req, err := expr.LSBaseQuery(c.runHistory.Start, index_root, c.runHistory.Logstash, keystring, filter, sduration, eduration, size)
+	req, err := expr.LSBaseQuery(c.runHistory.Start, index_root, keystring, filter, sduration, eduration, size)
 	if err != nil {
 		return nil, err
 	}
-	results, err := c.runHistory.Logstash.Query(req)
+	results, err := c.runHistory.Contexts.LogstashHosts.Query(req)
 	if err != nil {
 		return nil, err
 	}
@@ -504,11 +504,11 @@ func (c *Context) LSQueryAll(index_root, keystring, filter, sduration, eduration
 
 func (c *Context) ESQuery(indexRoot expr.ESIndexer, filter expr.ESQuery, sduration, eduration string, size int) (interface{}, error) {
 	newFilter := expr.ScopeES(c.Group(), filter.Query)
-	req, err := expr.ESBaseQuery(c.runHistory.Start, indexRoot, c.runHistory.Elastic, newFilter, sduration, eduration, size)
+	req, err := expr.ESBaseQuery(c.runHistory.Start, indexRoot, newFilter, sduration, eduration, size)
 	if err != nil {
 		return nil, err
 	}
-	results, err := c.runHistory.Elastic.Query(req)
+	results, err := c.runHistory.Contexts.ElasticHosts.Query(req)
 	if err != nil {
 		return nil, err
 	}
@@ -524,11 +524,11 @@ func (c *Context) ESQuery(indexRoot expr.ESIndexer, filter expr.ESQuery, sdurati
 }
 
 func (c *Context) ESQueryAll(indexRoot expr.ESIndexer, filter expr.ESQuery, sduration, eduration string, size int) (interface{}, error) {
-	req, err := expr.ESBaseQuery(c.runHistory.Start, indexRoot, c.runHistory.Elastic, filter.Query, sduration, eduration, size)
+	req, err := expr.ESBaseQuery(c.runHistory.Start, indexRoot, filter.Query, sduration, eduration, size)
 	if err != nil {
 		return nil, err
 	}
-	results, err := c.runHistory.Elastic.Query(req)
+	results, err := c.runHistory.Contexts.ElasticHosts.Query(req)
 	if err != nil {
 		return nil, err
 	}

@@ -236,12 +236,14 @@ func ExprGraph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (in
 		return nil, fmt.Errorf("egraph: requires an expression that returns a series")
 	}
 	// it may not strictly be necessary to recreate the contexts each time, but we do to be safe
-	tsdbContext := schedule.Conf.TSDBContext()
-	graphiteContext := schedule.Conf.GraphiteContext()
-	ls := schedule.Conf.LogstashElasticHosts
-	influx := schedule.Conf.InfluxConfig
-	es := schedule.Conf.ElasticHosts
-	res, _, err := e.Execute(tsdbContext, graphiteContext, ls, es, influx, cacheObj, t, now, autods, false, schedule.Search, nil, nil)
+	contexts := &expr.Contexts{
+		TSDBContext: schedule.Conf.TSDBContext(),
+		GraphiteContext:  schedule.Conf.GraphiteContext(),
+		InfluxConfig: schedule.Conf.InfluxConfig,
+		LogstashHosts: schedule.Conf.LogstashElasticHosts,
+		ElasticHosts: schedule.Conf.ElasticHosts,
+	}
+	res, _, err := e.Execute(contexts, cacheObj, t, now, autods, false, schedule.Search, nil, nil)
 	if err != nil {
 		return nil, err
 	}

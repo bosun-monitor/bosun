@@ -28,31 +28,36 @@ type State struct {
 	now                time.Time
 	cache              *cache.Cache
 	enableComputations bool
+	unjoinedOk         bool
 
+	autods int
+
+	*Contexts
 	// OpenTSDB
-	Search      *search.Search
-	autods      int
-	tsdbContext opentsdb.Context
 	tsdbQueries []opentsdb.Request
-	unjoinedOk  bool
-	squelched   func(tags opentsdb.TagSet) bool
+
+	// Bosun Internal
+
+	squelched func(tags opentsdb.TagSet) bool
+	Search    *search.Search
+	History   AlertStatusProvider
 
 	// Graphite
 	graphiteQueries []graphite.Request
-	graphiteContext graphite.Context
 
 	// LogstashElastic (for pre ES v2)
 	logstashQueries []elasticOld.SearchSource
-	logstashHosts   LogstashElasticHosts
 
 	// Elastic (for post ES v2)
 	elasticQueries []elastic.SearchSource
-	elasticHosts   ElasticHosts
+}
 
-	// InfluxDB
-	InfluxConfig client.Config
-
-	History AlertStatusProvider
+type Contexts struct {
+	TSDBContext     opentsdb.Context
+	GraphiteContext graphite.Context
+	LogstashHosts   LogstashElasticHosts
+	ElasticHosts    ElasticHosts
+	InfluxConfig    client.Config
 }
 
 // Alert Status Provider is used to provide information about alert results.
@@ -85,26 +90,20 @@ func New(expr string, funcs ...map[string]parse.Func) (*Expr, error) {
 
 // Execute applies a parse expression to the specified OpenTSDB context, and
 // returns one result per group. T may be nil to ignore timings.
-func (e *Expr) Execute(c opentsdb.Context, g graphite.Context, l LogstashElasticHosts, eh ElasticHosts, influxConfig client.Config, cache *cache.Cache, T miniprofiler.Timer, now time.Time, autods int, unjoinedOk bool, search *search.Search, squelched func(tags opentsdb.TagSet) bool, history AlertStatusProvider) (r *Results, queries []opentsdb.Request, err error) {
+func (e *Expr) Execute(contexts *Contexts, cache *cache.Cache, T miniprofiler.Timer, now time.Time, autods int, unjoinedOk bool, search *search.Search, squelched func(tags opentsdb.TagSet) bool, history AlertStatusProvider) (r *Results, queries []opentsdb.Request, err error) {
 	if squelched == nil {
 		squelched = func(tags opentsdb.TagSet) bool {
 			return false
 		}
 	}
 	s := &State{
-		Expr:            e,
-		cache:           cache,
-		tsdbContext:     c,
-		graphiteContext: g,
-		logstashHosts:   l,
-		elasticHosts:    eh,
-		InfluxConfig:    influxConfig,
-		now:             now,
-		autods:          autods,
-		unjoinedOk:      unjoinedOk,
-		Search:          search,
-		squelched:       squelched,
-		History:         history,
+		Expr:       e,
+		now:        now,
+		autods:     autods,
+		unjoinedOk: unjoinedOk,
+		Contexts:   contexts,
+		Search:     search,
+		squelched:  squelched,
 	}
 	return e.ExecuteState(s, T)
 }

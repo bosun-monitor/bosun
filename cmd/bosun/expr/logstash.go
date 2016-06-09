@@ -107,7 +107,7 @@ func timeLSRequest(e *State, T miniprofiler.Timer, req *LogstashRequest) (resp *
 	b, _ := json.MarshalIndent(req.Source.Source(), "", "  ")
 	T.StepCustomTiming("logstash", "query", string(b), func() {
 		getFn := func() (interface{}, error) {
-			return e.logstashHosts.Query(req)
+			return e.LogstashHosts.Query(req)
 		}
 		var val interface{}
 		val, err = e.cache.Get(string(b), getFn)
@@ -206,7 +206,7 @@ func LSStat(e *State, T miniprofiler.Timer, index_root, keystring, filter, field
 // that Bosun can understand
 func LSDateHistogram(e *State, T miniprofiler.Timer, index_root, keystring, filter, interval, sduration, eduration, stat_field, rstat string, size int) (r *Results, err error) {
 	r = new(Results)
-	req, err := LSBaseQuery(e.now, index_root, e.logstashHosts, keystring, filter, sduration, eduration, size)
+	req, err := LSBaseQuery(e.now, index_root, keystring, filter, sduration, eduration, size)
 	if err != nil {
 		return nil, err
 	}
@@ -339,7 +339,7 @@ func processBucketItem(b *elastic.AggregationBucketHistogramItem, rstat string) 
 }
 
 // LSBaseQuery builds the base query that both LSCount and LSStat share
-func LSBaseQuery(now time.Time, indexRoot string, l LogstashElasticHosts, keystring string, filter, sduration, eduration string, size int) (*LogstashRequest, error) {
+func LSBaseQuery(now time.Time, indexRoot string, keystring string, filter, sduration, eduration string, size int) (*LogstashRequest, error) {
 	start, err := opentsdb.ParseDuration(sduration)
 	if err != nil {
 		return nil, err
