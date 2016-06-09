@@ -64,7 +64,11 @@ func TestExprSimple(t *testing.T) {
 			t.Error(err)
 			break
 		}
-		r, _, err := e.Execute(nil, nil, nil, nil, client.Config{}, nil, nil, time.Now(), 0, false, nil, nil, nil)
+		backends := &Backends{
+			InfluxConfig: client.Config{},
+		}
+		providers := &BosunProviders{}
+		r, _, err := e.Execute(backends, providers, nil, time.Now(), 0, false)
 		if err != nil {
 			t.Error(err)
 			break
@@ -205,7 +209,12 @@ func TestQueryExpr(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		results, _, err := e.Execute(&opentsdb.LimitContext{Host: u.Host, Limit: 1e10, TSDBVersion: opentsdb.Version2_1}, nil, nil, nil, client.Config{}, nil, nil, queryTime, 0, false, nil, nil, nil)
+		backends := &Backends{
+			TSDBContext: &opentsdb.LimitContext{Host: u.Host, Limit: 1e10, TSDBVersion: opentsdb.Version2_1},
+			InfluxConfig: client.Config{},
+		}
+		providers := &BosunProviders{}
+		results, _, err := e.Execute(backends, providers, nil, queryTime, 0, false)
 		if err != nil {
 			t.Fatal(err)
 		}
