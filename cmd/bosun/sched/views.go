@@ -66,7 +66,11 @@ func MakeIncidentSummary(c *conf.Conf, s SilenceTester, is *models.IncidentState
 	warnNotifications := c.Alerts[is.AlertKey.Name()].WarnNotification.Get(c, is.AlertKey.Group())
 	critNotifications := c.Alerts[is.AlertKey.Name()].CritNotification.Get(c, is.AlertKey.Group())
 	eventSummaries := []EventSummary{}
+	nonNormalNonUnknownCount := 0
 	for _, event := range is.Events {
+		if event.Status > models.StNormal && event.Status < models.StUnknown {
+			nonNormalNonUnknownCount++
+		}
 		if eventSummary, unevaluated := MakeEventSummary(event); !unevaluated {
 			eventSummaries = append(eventSummaries, eventSummary)
 		}
@@ -75,9 +79,15 @@ func MakeIncidentSummary(c *conf.Conf, s SilenceTester, is *models.IncidentState
 	for i, action := range is.Actions {
 		actions[i] = MakeEpochAction(action)
 	}
+	subject := is.Subject
+	// There is no rendered subject when the state is unknown and
+	// there is no other non-normal status in the history.
+	if subject == "" && nonNormalNonUnknownCount == 0 {
+		subject = fmt.Sprintf("%s: %v", is.CurrentStatus, is.AlertKey)
+	}
 	return IncidentSummaryView{
 		Id:                     is.Id,
-		Subject:                is.Subject,
+		Subject:                subject,
 		Start:                  is.Start.Unix(),
 		AlertName:              is.AlertKey.Name(),
 		Tags:                   is.AlertKey.Group(),
