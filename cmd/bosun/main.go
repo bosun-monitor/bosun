@@ -197,6 +197,7 @@ func main() {
 			if err := sched.Load(newConf); err != nil {
 				slog.Fatal(err)
 			}
+			web.ResetSchedule() // Signal web to point to the new DefaultSchedule
 			go func() {
 				slog.Infoln("running new schedule")
 				if !*flagNoChecks {
