@@ -520,10 +520,13 @@ func Close() {
 }
 
 func (s *Schedule) Close() {
-	if s.Conf.SkipLast {
-		return
+	if !s.Conf.SkipLast {
+		err := s.Search.BackupLast()
+		if err != nil {
+			slog.Error(err)
+		}
 	}
-	err := s.Search.BackupLast()
+	err := s.DataAccess.Close()
 	if err != nil {
 		slog.Error(err)
 	}

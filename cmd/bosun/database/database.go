@@ -24,6 +24,7 @@ type DataAccess interface {
 	State() StateDataAccess
 	Silence() SilenceDataAccess
 	Notifications() NotificationDataAccess
+	Close() error
 }
 
 type MetadataDataAccess interface {
@@ -97,6 +98,10 @@ type Connector interface {
 
 func (d *dataAccess) GetConnection() redis.Conn {
 	return d.pool.Get()
+}
+
+func (d *dataAccess) Close() error {
+	return d.pool.Close()
 }
 
 func newPool(server, password string, database int, isRedis bool, maxActive int, wait bool) *redis.Pool {
