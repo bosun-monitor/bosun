@@ -45,7 +45,7 @@ func (s *Schedule) RunAlert(a *conf.Alert) {
 		select {
 		case <-wait:
 		case <-s.runnerContext.Done(): // for closing
-			slog.Infoln("stoping alert routine for %v", a.Name)
+			slog.Infof("Stopping alert routine for %v\n", a.Name)
 			return
 		}
 	}
@@ -55,8 +55,10 @@ func (s *Schedule) checkAlert(a *conf.Alert) {
 	checkTime := s.ctx.runTime
 	checkCache := s.ctx.checkCache
 	rh := s.NewRunHistory(checkTime, checkCache)
-	s.CheckAlert(nil, rh, a)
-
+	cancelled := s.CheckAlert(nil, rh, a)
+	if cancelled {
+		return
+	}
 	start := utcNow()
 	s.RunHistory(rh)
 	slog.Infof("runHistory on %s took %v\n", a.Name, time.Since(start))

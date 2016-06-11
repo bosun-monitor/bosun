@@ -508,21 +508,41 @@ func (s *Schedule) findUnknownAlerts(now time.Time, alert string) []models.Alert
 	return keys
 }
 
-func (s *Schedule) CheckAlert(T miniprofiler.Timer, r *RunHistory, a *conf.Alert) {
+func (s *Schedule) CheckAlert(T miniprofiler.Timer, r *RunHistory, a *conf.Alert) (cancelled bool) {
 	slog.Infof("check alert %v start", a.Name)
 	start := utcNow()
 	for _, ak := range s.findUnknownAlerts(r.Start, a.Name) {
 		r.Events[ak] = &models.Event{Status: models.StUnknown}
 	}
 	var warns, crits models.AlertKeys
-	d, err := s.executeExpr(T, r, a, a.Depends)
+	type res struct {
+		results *expr.Results
+		error   error
+	}
+	rc := make(chan res)
+	var d *expr.Results
+	var err error
+	go func() {
+		d, err := s.executeExpr(T, r, a, a.Depends)
+		rc <- res{d, err}
+	}()
+	select {
+	case res := <-rc:
+		d = res.results
+		err = res.error
+	case <-s.runnerContext.Done():
+		return true
+	}
 	var deps expr.ResultSlice
 	if err == nil {
 		deps = filterDependencyResults(d)
-		crits, err = s.CheckExpr(T, r, a, a.Crit, models.StCritical, nil)
-		if err == nil {
-			warns, err = s.CheckExpr(T, r, a, a.Warn, models.StWarning, crits)
+		crits, err, cancelled = s.CheckExpr(T, r, a, a.Crit, models.StCritical, nil)
+		if err == nil && !cancelled {
+			warns, err, cancelled = s.CheckExpr(T, r, a, a.Warn, models.StWarning, crits)
 		}
+	}
+	if cancelled {
+		return true
 	}
 	unevalCount, unknownCount := markDependenciesUnevaluated(r.Events, deps, a.Name)
 	if err != nil {
@@ -534,6 +554,7 @@ func (s *Schedule) CheckAlert(T miniprofiler.Timer, r *RunHistory, a *conf.Alert
 	}
 	collect.Put("check.duration", opentsdb.TagSet{"name": a.Name}, time.Since(start).Seconds())
 	slog.Infof("check alert %v done (%s): %v crits, %v warns, %v unevaluated, %v unknown", a.Name, time.Since(start), len(crits), len(warns), unevalCount, unknownCount)
+	return false
 }
 
 func removeUnknownEvents(evs map[models.AlertKey]*models.Event, alert string) {
@@ -598,7 +619,7 @@ func (s *Schedule) executeExpr(T miniprofiler.Timer, rh *RunHistory, a *conf.Ale
 	return results, err
 }
 
-func (s *Schedule) CheckExpr(T miniprofiler.Timer, rh *RunHistory, a *conf.Alert, e *expr.Expr, checkStatus models.Status, ignore models.AlertKeys) (alerts models.AlertKeys, err error) {
+func (s *Schedule) CheckExpr(T miniprofiler.Timer, rh *RunHistory, a *conf.Alert, e *expr.Expr, checkStatus models.Status, ignore models.AlertKeys) (alerts models.AlertKeys, err error, cancelled bool) {
 	if e == nil {
 		return
 	}
@@ -624,7 +645,7 @@ func (s *Schedule) CheckExpr(T miniprofiler.Timer, rh *RunHistory, a *conf.Alert
 		results = res.results
 		err = res.error
 	case <-s.runnerContext.Done():
-		return nil, nil
+		return nil, nil, true
 	}
 Loop:
 	for _, r := range results.Results {
