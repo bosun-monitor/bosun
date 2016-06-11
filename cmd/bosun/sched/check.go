@@ -609,9 +609,22 @@ func (s *Schedule) CheckExpr(T miniprofiler.Timer, rh *RunHistory, a *conf.Alert
 		collect.Add("check.errs", opentsdb.TagSet{"metric": a.Name}, 1)
 		slog.Errorln(err)
 	}()
-	results, err := s.executeExpr(T, rh, a, e)
-	if err != nil {
-		return nil, err
+	type res struct {
+		results *expr.Results
+		error   error
+	}
+	rc := make(chan res)
+	var results *expr.Results
+	go func() {
+		results, err := s.executeExpr(T, rh, a, e)
+		rc <- res{results, err}
+	}()
+	select {
+	case res := <-rc:
+		results = res.results
+		err = res.error
+	case <-s.runnerContext.Done():
+		return nil, nil
 	}
 Loop:
 	for _, r := range results.Results {
