@@ -36,11 +36,18 @@ func (s *Schedule) updateCheckContext() {
 	}
 }
 func (s *Schedule) RunAlert(a *conf.Alert) {
+	s.checksRunning.Add(1)
+	defer s.checksRunning.Done()
 	for {
 		wait := time.After(s.Conf.CheckFrequency * time.Duration(a.RunEvery))
 		s.checkAlert(a)
 		s.LastCheck = utcNow()
-		<-wait
+		select {
+		case <-wait:
+		case <-s.runnerContext.Done(): // for closing
+			slog.Infoln("stoping alert routine for %v", a.Name)
+			return
+		}
 	}
 }
 
