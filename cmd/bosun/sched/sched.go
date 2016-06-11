@@ -525,14 +525,14 @@ func (s *Schedule) Load(c *conf.Conf) error {
 	return s.RestoreState()
 }
 
-func Close() {
-	DefaultSched.Close()
+func Close(reload bool) {
+	DefaultSched.Close(reload)
 }
 
-func (s *Schedule) Close() {
+func (s *Schedule) Close(reload bool) {
 	s.cancelChecks()
 	s.checksRunning.Wait()
-	if s.Conf.SkipLast {
+	if s.Conf.SkipLast || reload {
 		return
 	}
 	err := s.Search.BackupLast()
