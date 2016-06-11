@@ -101,7 +101,6 @@ func (s *Schedule) Init(c *conf.Conf) error {
 		s.Search = search.NewSearch(s.DataAccess, c.SkipLast)
 	}
 	// if c.StateFile != "" {
-	// slog.Infoln("here4")
 	// 	s.db, err = bolt.Open(c.StateFile, 0600, nil)
 	// 	if err != nil {
 	// 		return err
@@ -534,13 +533,20 @@ func (s *Schedule) Close() {
 	s.cancelChecks()
 	s.checksRunning.Wait()
 	if s.Conf.SkipLast {
-		DefaultSched = &Schedule{}
 		return
 	}
 	err := s.Search.BackupLast()
 	if err != nil {
 		slog.Error(err)
 	}
+}
+
+func (s *Schedule) Reset() {
+	DefaultSched = &Schedule{}
+}
+
+func Reset() {
+	DefaultSched.Reset()
 }
 
 const pingFreq = time.Second * 15

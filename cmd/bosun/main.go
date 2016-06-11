@@ -179,14 +179,29 @@ func main() {
 		signal.Notify(sc, syscall.SIGUSR2)
 		for range sc {
 			slog.Infoln("reloading config")
+			newConf, err := conf.ParseFile(*flagConf)
+			if err != nil {
+				slog.Warning("not reloading, failed to load new conf", err)
+				continue
+			}
 			sched.Close()
+			sched.Reset()
 			slog.Infoln("schedule shutdown, loading new schedule")
-			if err := sched.Load(c); err != nil {
+			//newConf.TSDBHost = c.TSDBHost
+			if *flagQuiet {
+				newConf.Quiet = true
+			}
+			if *flagSkipLast {
+				newConf.SkipLast = true
+			}
+			if err := sched.Load(newConf); err != nil {
 				slog.Fatal(err)
 			}
 			go func() {
-				slog.Infoln("running new scheduled")
-				sched.Run()
+				slog.Infoln("running new schedule")
+				if !*flagNoChecks {
+					sched.Run()
+				}
 			}()
 			slog.Infoln("config reload complete")
 		}
