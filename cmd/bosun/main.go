@@ -167,13 +167,14 @@ func main() {
 			killing = true
 			go func() {
 				slog.Infoln("Interrupt: closing down...")
-				sched.Close()
+				sched.Close(false)
 				slog.Infoln("done")
 				os.Exit(1)
 			}()
 		}
 	}()
 
+	// Config Reloading
 	go func() {
 		sc := make(chan os.Signal, 1)
 		signal.Notify(sc, syscall.SIGUSR2)
@@ -184,8 +185,14 @@ func main() {
 				slog.Warning("not reloading, failed to load new conf", err)
 				continue
 			}
-			sched.Close()
+			oldSched := sched.DefaultSched
+			oldDA := oldSched.DataAccess
+			oldSearch := oldSched.Search
+			sched.Close(true)
 			sched.Reset()
+			newSched := sched.DefaultSched
+			newSched.Search = oldSearch
+			newSched.DataAccess = oldDA
 			slog.Infoln("schedule shutdown, loading new schedule")
 			//newConf.TSDBHost = c.TSDBHost
 			if *flagQuiet {
@@ -194,6 +201,7 @@ func main() {
 			if *flagSkipLast {
 				newConf.SkipLast = true
 			}
+			// Load does not set the DataAccess or Search if it is already set
 			if err := sched.Load(newConf); err != nil {
 				slog.Fatal(err)
 			}
