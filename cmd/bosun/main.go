@@ -173,6 +173,25 @@ func main() {
 			}()
 		}
 	}()
+
+	go func() {
+		sc := make(chan os.Signal, 1)
+		signal.Notify(sc, syscall.SIGUSR2)
+		for range sc {
+			slog.Infoln("reloading config")
+			sched.Close()
+			slog.Infoln("schedule shutdown, loading new schedule")
+			if err := sched.Load(c); err != nil {
+				slog.Fatal(err)
+			}
+			go func() {
+				slog.Infoln("running new scheduled")
+				sched.Run()
+			}()
+			slog.Infoln("config reload complete")
+		}
+	}()
+
 	if *flagWatch {
 		watch(".", "*.go", quit)
 		watch(filepath.Join("web", "static", "templates"), "*.html", web.RunEsc)
