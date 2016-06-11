@@ -75,7 +75,7 @@ func (s *Schedule) Init(c *conf.Conf) error {
 	//this will be called once at app start, and also every time the rule
 	//page runs, so be careful not to spawn long running processes that can't
 	//be avoided.
-	var err error
+	//var err error
 	s.Conf = c
 	s.Group = make(map[time.Time]models.AlertKeys)
 	s.pendingUnknowns = make(map[*conf.Notification][]*models.IncidentState)
@@ -100,12 +100,13 @@ func (s *Schedule) Init(c *conf.Conf) error {
 	if s.Search == nil {
 		s.Search = search.NewSearch(s.DataAccess, c.SkipLast)
 	}
-	if c.StateFile != "" {
-		s.db, err = bolt.Open(c.StateFile, 0600, nil)
-		if err != nil {
-			return err
-		}
-	}
+	// if c.StateFile != "" {
+	// slog.Infoln("here4")
+	// 	s.db, err = bolt.Open(c.StateFile, 0600, nil)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// }
 	return nil
 }
 
@@ -533,6 +534,7 @@ func (s *Schedule) Close() {
 	s.cancelChecks()
 	s.checksRunning.Wait()
 	if s.Conf.SkipLast {
+		DefaultSched = &Schedule{}
 		return
 	}
 	err := s.Search.BackupLast()
