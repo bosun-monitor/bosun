@@ -16,6 +16,7 @@ interface ISilenceScope extends ng.IScope {
 	disableConfirm: boolean;
 	time: (v: any) => string;
 	forget: string;
+	squelch: string;
 	user: string;
 	message: string;
 }
@@ -30,6 +31,7 @@ bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$ro
 	$scope.tags = search.tags;
 	$scope.edit = search.edit;
 	$scope.forget = search.forget;
+	$scope.squelch = search.squelch;
 	$scope.user = getUser();
 	$scope.message = search.message;
 	if (!$scope.end && !$scope.duration) {
@@ -97,12 +99,14 @@ bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$ro
 			tags: tags.join(','),
 			edit: $scope.edit,
 			forget: $scope.forget ? 'true' : null,
+			squelch: $scope.squelch ? 'true' : null,			
 			user: $scope.user,
 			message: $scope.message,
 		};
 		return data;
 	}
-	var any = search.start || search.end || search.duration || search.alert || search.hosts || search.tags || search.forget;
+
+	var any = search.start || search.end || search.duration || search.alert || search.hosts || search.tags || search.forget || search.squelch;
 	var state = getData();
 	$scope.change = () => {
 		$scope.disableConfirm = true;
@@ -129,6 +133,7 @@ bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$ro
 		$location.search('hosts', $scope.hosts || null);
 		$location.search('tags', $scope.tags || null);
 		$location.search('forget', $scope.forget || null);
+		$location.search('squelch', $scope.squelch || null);
 		$location.search('message', $scope.message || null);
 		$route.reload();
 	};
