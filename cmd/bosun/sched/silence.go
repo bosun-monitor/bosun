@@ -36,7 +36,33 @@ func (s *Schedule) Silenced() SilenceTester {
 	}
 }
 
-func (s *Schedule) AddSilence(start, end time.Time, alert, tagList string, forget, confirm bool, edit, user, message string) (map[models.AlertKey]bool, error) {
+
+// SilencedSquelched returns a function that will determine if the given alert key is silenced at the current time with a squelch.
+// A function is returned to avoid needing to enumerate all alert keys unneccesarily.
+func (s *Schedule) SilenceSquelched() SilenceTester {
+	now := utcNow()
+	silences, err := s.DataAccess.Silence().GetActiveSilences()
+	if err != nil {
+		slog.Error("Error fetching silences.", err)
+		return nil
+	}
+	return func(ak models.AlertKey) *models.Silence {
+		var lastEnding *models.Silence
+		for _, si := range silences {
+			if !si.ActiveAt(now) || !si.Squelch {
+				continue
+			}
+			if si.Silenced(now, ak.Name(), ak.Group()) {
+				if lastEnding == nil || lastEnding.End.Before(si.End) {
+					lastEnding = si
+				}
+			}
+		}
+		return lastEnding
+	}
+}
+
+func (s *Schedule) AddSilence(start, end time.Time, alert, tagList string, forget, confirm, squelch bool, edit, user, message string) (map[models.AlertKey]bool, error) {
 	if start.IsZero() || end.IsZero() {
 		return nil, fmt.Errorf("both start and end must be specified")
 	}
@@ -57,6 +83,7 @@ func (s *Schedule) AddSilence(start, end time.Time, alert, tagList string, forge
 		Forget:  forget,
 		User:    user,
 		Message: message,
+		Squelch: squelch,
 	}
 	if tagList != "" {
 		tags, err := opentsdb.ParseTags(tagList)

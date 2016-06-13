@@ -17,6 +17,7 @@ type Silence struct {
 	Forget     bool
 	User       string
 	Message    string
+	Squelch    bool
 }
 
 func (s *Silence) Silenced(now time.Time, alert string, tags opentsdb.TagSet) bool {

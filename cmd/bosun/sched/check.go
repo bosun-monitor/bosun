@@ -585,10 +585,19 @@ func (s *Schedule) executeExpr(T miniprofiler.Timer, rh *RunHistory, a *conf.Ale
 	if e == nil {
 		return nil, nil
 	}
+	silenceSquelcher := s.SilenceSquelched()
+	squelched := func(a *conf.Alert) func(ts opentsdb.TagSet) bool {
+		return func(ts opentsdb.TagSet) bool {
+			squelchedByConf := s.Conf.AlertSquelched(a)
+			ak := models.NewAlertKey(a.Name, ts)
+			squelchSilence := silenceSquelcher(ak)
+			return squelchedByConf(ts) || squelchSilence == nil || silenceSquelcher(ak).Silenced(rh.Start, a.Name, ts)
+		}
+	}
 	providers := &expr.BosunProviders{
 		Cache:     rh.Cache,
 		Search:    s.Search,
-		Squelched: s.Conf.AlertSquelched(a),
+		Squelched: squelched(a),
 		History:   s,
 	}
 	results, _, err := e.Execute(rh.Backends, providers, T, rh.Start, 0, a.UnjoinedOK)
