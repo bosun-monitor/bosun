@@ -179,6 +179,13 @@ func TestCheckSquelchedSilence(t *testing.T) {
 	}
 	check(s, now)
 	s.CheckNotifications()
+	states, err := s.GetOpenStates()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(states) != 0 {
+		t.Fatal("silence squelcher should result in 0 states, got ", len(states))
+	}
 	select {
 	case <-done:
 		t.Fatal("silenced notification was sent")

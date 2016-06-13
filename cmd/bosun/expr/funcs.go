@@ -328,6 +328,9 @@ func SeriesFunc(e *State, T miniprofiler.Timer, tags string, pairs ...float64) (
 	for i := 0; i < len(pairs); i += 2 {
 		series[time.Unix(int64(pairs[i]), 0)] = pairs[i+1]
 	}
+	if e.Squelched(group) {
+		return &Results{}, nil
+	}
 	return &Results{
 		Results: []*Result{
 			{
