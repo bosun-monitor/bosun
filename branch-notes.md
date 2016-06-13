@@ -2,7 +2,10 @@ Thoughts:
  - There might be certain aspects of the config that are not 'reloadable'. The main thing we want to reload is alert/template/lookup/macro etc configuration, not the actual system params. I think it is fine if the system params require a restart. If going this route I should reoganize the conf Struct to make it clear which are alert config and which are system config. Maybe this is configuration items realted to the schedule, vs those that are not.
  - This might be a good time to make the config an interface so the ground work for not text based configuration is in place?
  - What sort of signals can I used so this still works with Windows?
+  - SigUSR2 won't build on windows. I played with fsnotify but it seems wonky - i.e. it tries to reload the file before the writing of the file is complete when I edit it with vm.
+  - From https://golang.org/pkg/os/, "The only signal values guaranteed to be present on all systems are Interrupt (send the process an interrupt) and Kill (force the process to exit)." So maybe I need to change Int to be reload and kill?
  - Will I need to reload the web based schedule as well? 
+   - Seems I can just repoint the schedule pointer to the new schedule
 
 Main:
 
@@ -17,8 +20,8 @@ Main:
  - If command like quiet flag, set the conf to be quiet
  - as long as the nocheck flag is not present, start the schedule by calling `sched.run`. This is the main thing I'm going to need to trace
  - Make a interrupt handler, it calls sched.Close(). Make that does some of the work we need already
-  - Do watch stuff for development 
-  - select {}
+ - Do watch stuff for development 
+ - select {}
 
 Schedule Load and Init:
  - The package has a Default schedule that is a struct tied to the scope of the package
