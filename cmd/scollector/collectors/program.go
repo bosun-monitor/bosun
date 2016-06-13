@@ -219,7 +219,7 @@ func parseTcollectorValue(line string) (*opentsdb.DataPoint, error) {
 	if err != nil {
 		return nil, fmt.Errorf("bad value: %s", sp[2])
 	}
-	if !opentsdb.ValidTag(sp[0]) {
+	if !opentsdb.ValidTSDBString(sp[0]) {
 		return nil, fmt.Errorf("bad metric: %s", sp[0])
 	}
 	dp := opentsdb.DataPoint{

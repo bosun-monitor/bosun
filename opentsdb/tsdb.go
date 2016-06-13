@@ -70,7 +70,7 @@ type DataPoint struct {
 
 // MarshalJSON verifies d is valid and converts it to JSON.
 func (d *DataPoint) MarshalJSON() ([]byte, error) {
-	if err := d.clean(); err != nil {
+	if err := d.Clean(); err != nil {
 		return nil, err
 	}
 	return json.Marshal(struct {
@@ -89,7 +89,7 @@ func (d *DataPoint) MarshalJSON() ([]byte, error) {
 // Valid returns whether d contains valid data (populated fields, valid tags)
 // for submission to OpenTSDB.
 func (d *DataPoint) Valid() bool {
-	if d.Metric == "" || d.Timestamp == 0 || d.Value == nil || !d.Tags.Valid() {
+	if d.Metric == "" || !ValidTSDBString(d.Metric) || d.Timestamp == 0 || d.Value == nil || !d.Tags.Valid() {
 		return false
 	}
 	if _, err := strconv.ParseFloat(fmt.Sprint(d.Value), 64); err != nil {
@@ -242,7 +242,7 @@ func (t TagSet) Valid() bool {
 	return err == nil
 }
 
-func (d *DataPoint) clean() error {
+func (d *DataPoint) Clean() error {
 	if err := d.Tags.Clean(); err != nil {
 		return fmt.Errorf("cleaning tags for metric %s: %s", d.Metric, err)
 	}
@@ -311,7 +311,7 @@ func Replace(s, replacement string) (string, error) {
 	replaced := false
 	for len(s) > 0 {
 		r, size := utf8.DecodeRuneInString(s)
-		if unicode.IsLetter(r) || unicode.IsDigit(r) || r == '-' || r == '_' || r == '.' || r == '/' {
+		if isRuneValid(r) {
 			c += string(r)
 			replaced = false
 		} else if !replaced {
@@ -324,6 +324,10 @@ func Replace(s, replacement string) (string, error) {
 		return "", fmt.Errorf("clean result is empty")
 	}
 	return c, nil
+}
+
+func isRuneValid(r rune) bool {
+	return unicode.IsLetter(r) || unicode.IsDigit(r) || r == '-' || r == '_' || r == '.' || r == '/'
 }
 
 // MustReplace is like Replace, but returns an empty string on error.
@@ -574,7 +578,7 @@ func ParseTags(t string) (TagSet, error) {
 			if i > 0 {
 				continue
 			}
-			if !ValidTag(sp[i]) {
+			if !ValidTSDBString(sp[i]) {
 				err = fmt.Errorf("invalid character in %s", sp[i])
 			}
 		}
@@ -582,7 +586,7 @@ func ParseTags(t string) (TagSet, error) {
 			if s == "*" {
 				continue
 			}
-			if !ValidTag(s) {
+			if !ValidTSDBString(s) {
 				err = fmt.Errorf("invalid character in %s", sp[1])
 			}
 		}
@@ -594,19 +598,13 @@ func ParseTags(t string) (TagSet, error) {
 	return ts, err
 }
 
-// ValidTag returns true if s is a valid metric or tag.
-func ValidTag(s string) bool {
+// ValidTSDBString returns true if s is a valid metric or tag.
+func ValidTSDBString(s string) bool {
 	if s == "" {
 		return false
 	}
 	for _, c := range s {
-		switch {
-		case c >= 'a' && c <= 'z':
-		case c >= 'A' && c <= 'Z':
-		case c >= '0' && c <= '9':
-		case strings.ContainsAny(string(c), `-_./`):
-		case unicode.IsLetter(c):
-		default:
+		if !isRuneValid(c) {
 			return false
 		}
 	}
