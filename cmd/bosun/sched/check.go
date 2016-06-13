@@ -591,7 +591,13 @@ func (s *Schedule) executeExpr(T miniprofiler.Timer, rh *RunHistory, a *conf.Ale
 			squelchedByConf := s.Conf.AlertSquelched(a)
 			ak := models.NewAlertKey(a.Name, ts)
 			squelchSilence := silenceSquelcher(ak)
-			return squelchedByConf(ts) || squelchSilence == nil || silenceSquelcher(ak).Silenced(rh.Start, a.Name, ts)
+			squelchedBySilence := func(ts opentsdb.TagSet) bool {
+				if squelchSilence == nil {
+					return false
+				}
+				return silenceSquelcher(ak).Silenced(rh.Start, a.Name, ts)
+			}
+			return squelchedByConf(ts) || squelchedBySilence(ts)
 		}
 	}
 	providers := &expr.BosunProviders{

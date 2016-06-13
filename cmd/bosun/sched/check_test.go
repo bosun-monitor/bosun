@@ -126,11 +126,58 @@ func TestCheckSilence(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = s.AddSilence(utcNow().Add(-time.Hour), utcNow().Add(time.Hour), "a", "", false, true, "", "user", "message")
+	_, err = s.AddSilence(utcNow().Add(-time.Hour), utcNow().Add(time.Hour), "a", "", false, true, false, "", "user", "message")
 	if err != nil {
 		t.Fatal(err)
 	}
 	check(s, utcNow())
+	s.CheckNotifications()
+	select {
+	case <-done:
+		t.Fatal("silenced notification was sent")
+	case <-time.After(time.Second * 2):
+		// Timeout *probably* means the silence worked
+	}
+}
+
+func TestCheckSquelchedSilence(t *testing.T) {
+	defer setup()()
+	done := make(chan bool, 1)
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		done <- true
+	}))
+	defer ts.Close()
+	u, err := url.Parse(ts.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := utcNow()
+	c, err := conf.New("", fmt.Sprintf(`
+		template t {
+			subject = "test"
+			body = "test"
+		}
+		notification n {
+			post = http://%s/
+		}
+		alert a {
+			template = t
+			warnNotification = n
+			warn = avg(series("test=test1", %v, 1))
+		}
+	`, u.Host, now.Unix()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	s, err := initSched(c)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = s.AddSilence(now.Add(-time.Hour), now.Add(time.Hour), "a", "test=test1", false, true, true, "", "user", "message")
+	if err != nil {
+		t.Fatal(err)
+	}
+	check(s, now)
 	s.CheckNotifications()
 	select {
 	case <-done:
