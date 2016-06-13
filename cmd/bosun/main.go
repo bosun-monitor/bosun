@@ -174,45 +174,49 @@ func main() {
 		}
 	}()
 
-	// Config Reloading
+	reload := func() {
+		slog.Infoln("reloading config")
+		newConf, err := conf.ParseFile(*flagConf)
+		if err != nil {
+			slog.Warning("not reloading, failed to load new conf", err)
+			return
+		}
+		oldSched := sched.DefaultSched
+		oldDA := oldSched.DataAccess
+		oldSearch := oldSched.Search
+		sched.Close(true)
+		sched.Reset()
+		newSched := sched.DefaultSched
+		newSched.Search = oldSearch
+		newSched.DataAccess = oldDA
+		slog.Infoln("schedule shutdown, loading new schedule")
+		//newConf.TSDBHost = c.TSDBHost
+		if *flagQuiet {
+			newConf.Quiet = true
+		}
+		if *flagSkipLast {
+			newConf.SkipLast = true
+		}
+		// Load does not set the DataAccess or Search if it is already set
+		if err := sched.Load(newConf); err != nil {
+			slog.Fatal(err)
+		}
+		web.ResetSchedule() // Signal web to point to the new DefaultSchedule
+		go func() {
+			slog.Infoln("running new schedule")
+			if !*flagNoChecks {
+				sched.Run()
+			}
+		}()
+		slog.Infoln("config reload complete")
+	}
+
+	// Reload on Signal
 	go func() {
 		sc := make(chan os.Signal, 1)
 		signal.Notify(sc, syscall.SIGUSR2)
 		for range sc {
-			slog.Infoln("reloading config")
-			newConf, err := conf.ParseFile(*flagConf)
-			if err != nil {
-				slog.Warning("not reloading, failed to load new conf", err)
-				continue
-			}
-			oldSched := sched.DefaultSched
-			oldDA := oldSched.DataAccess
-			oldSearch := oldSched.Search
-			sched.Close(true)
-			sched.Reset()
-			newSched := sched.DefaultSched
-			newSched.Search = oldSearch
-			newSched.DataAccess = oldDA
-			slog.Infoln("schedule shutdown, loading new schedule")
-			//newConf.TSDBHost = c.TSDBHost
-			if *flagQuiet {
-				newConf.Quiet = true
-			}
-			if *flagSkipLast {
-				newConf.SkipLast = true
-			}
-			// Load does not set the DataAccess or Search if it is already set
-			if err := sched.Load(newConf); err != nil {
-				slog.Fatal(err)
-			}
-			web.ResetSchedule() // Signal web to point to the new DefaultSchedule
-			go func() {
-				slog.Infoln("running new schedule")
-				if !*flagNoChecks {
-					sched.Run()
-				}
-			}()
-			slog.Infoln("config reload complete")
+			reload()
 		}
 	}()
 
