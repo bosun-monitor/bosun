@@ -62,8 +62,14 @@ func (n *Notification) DoPost(st *models.IncidentState) {
 	ak := string(st.AlertKey)
 
 	if n.Body != nil {
+		var context interface{}
+		if n.UseFullContext {
+			context = st
+		} else {
+			context = string(payload)
+		}
 		buf := new(bytes.Buffer)
-		if err := n.Body.Execute(buf, string(payload)); err != nil {
+		if err := n.Body.Execute(buf, context); err != nil {
 			slog.Errorln(err)
 			return
 		}

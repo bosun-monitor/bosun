@@ -352,16 +352,17 @@ type Template struct {
 type Notification struct {
 	Text string
 	Vars
-	Name         string
-	Email        []*mail.Address
-	Post, Get    *url.URL
-	Body         *ttemplate.Template
-	Print        bool
-	Next         *Notification
-	Timeout      time.Duration
-	ContentType  string
-	RunOnActions bool
-	UseBody      bool
+	Name           string
+	Email          []*mail.Address
+	Post, Get      *url.URL
+	Body           *ttemplate.Template
+	Print          bool
+	Next           *Notification
+	Timeout        time.Duration
+	ContentType    string
+	RunOnActions   bool
+	UseBody        bool
+	UseFullContext bool
 
 	next      string
 	email     string
@@ -1153,6 +1154,8 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 			n.RunOnActions = v == "true"
 		case "useBody":
 			n.UseBody = v == "true"
+		case "useFullContext":
+			n.UseFullContext = v == "true"
 		default:
 			c.errorf("unknown key %s", k)
 		}
