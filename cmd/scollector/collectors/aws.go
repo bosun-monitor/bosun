@@ -37,7 +37,7 @@ const (
 
 var aws_period = int64(60)
 
-func AWS(accessKey, secretKey, region string) error {
+func AWS(accessKey, secretKey, region, productCodes, bucketName, bucketPath string, purgeDays int) error {
 	if accessKey == "" || secretKey == "" || region == "" {
 		return fmt.Errorf("empty AccessKey, SecretKey, or Region in AWS")
 	}
@@ -48,6 +48,16 @@ func AWS(accessKey, secretKey, region string) error {
 		Interval: 60 * time.Second,
 		name:     fmt.Sprintf("aws-%s", region),
 	})
+
+	if bucketName != "" && bucketPath != "" {
+		collectors = append(collectors, &IntervalCollector{
+			F: func() (opentsdb.MultiDataPoint, error) {
+				return c_awsBilling(accessKey, secretKey, region, productCodes, bucketName, bucketPath, purgeDays)
+			},
+			Interval: 1 * time.Hour,
+			name:     fmt.Sprintf("awsBilling-%s", region),
+		})
+	}
 	return nil
 }
 
@@ -76,7 +86,7 @@ func c_aws(accessKey, secretKey, region string) (opentsdb.MultiDataPoint, error)
 	}
 	loadBalancers, err := awsGetLoadBalancers(*elb)
 	if err != nil {
-		slog.Info("No ELB Load Balancecrs found.")
+		slog.Info("No ELB Load Balancers found.")
 	}
 	for _, loadBalancer := range loadBalancers {
 		awsGetELBLatency(*cw, &md, loadBalancer)
