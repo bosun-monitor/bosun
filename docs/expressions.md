@@ -512,7 +512,12 @@ Returns the first count (scalar) results of number.
 
 ## lookup(table string, key string) numberSet
 
+Returns the first key from the given lookup table with matching tags, this searches the built-in index and so only makes sense when using OpenTSDB and sending data to /index or relaying through bosun.
+
+## lookupSeries(series seriesSet, table string, key string) numberSet
+
 Returns the first key from the given lookup table with matching tags.
+The first argument is a series to use from which to derive the tag information.  This is good for alternative storage backends such as graphite and influxdb.
 
 ## month(offset scalar, startEnd string) scalar
 
