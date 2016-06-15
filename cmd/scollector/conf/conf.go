@@ -123,9 +123,13 @@ type Vsphere struct {
 }
 
 type AWS struct {
-	AccessKey string
-	SecretKey string
-	Region    string
+	AccessKey                string
+	SecretKey                string
+	Region                   string
+	BillingProductCodesRegex string
+	BillingBucketName        string
+	BillingBucketPath        string
+	BillingPurgeDays         int
 }
 
 type SNMP struct {
