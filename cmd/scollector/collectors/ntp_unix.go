@@ -70,11 +70,9 @@ func c_ntp_peers_unix() (opentsdb.MultiDataPoint, error) {
 		}
 		remote := fields[0]
 		tags := opentsdb.TagSet{"remote": remote, "refid": fields[1]}
-		var current_source int
 		if fl == "*" {
-			current_source = 1
+			tags = tags.Merge(opentsdb.TagSet{"current_source": "1"})
 		}
-		Add(&md, metric+"current_source", current_source, tags, metadata.Gauge, metadata.Bool, "")
 		Add(&md, metric+"stratum", fields[2], tags, metadata.Gauge, "Stratum", "")
 		when, err := ntpUnPretty(fields[4])
 		if err != nil {
