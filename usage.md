@@ -64,6 +64,9 @@ Alerts can be in one of the following severity levels (From highest to lowest):
 
 * **History**: View a timeline of history for the selected alert instances.
 
+# Annotations
+
+Annotations are currently stored in elastic. When annotations are enabled you can create, edit and visulize them on the the Graph page. There is also a Submit Annotations page that allows for creation and editing annotations. The API described in this [README](https://github.com/bosun-monitor/annotate/blob/master/web/README.md) gets injected into bosun under `/api/` - you can also find a description of the schema there. 
 
 </div>
 </div>
