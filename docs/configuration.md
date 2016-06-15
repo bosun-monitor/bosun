@@ -57,13 +57,13 @@ Every variable is optional, though you should enable at least 1 backend.
 
 #### data storage
 
-With bosun v0.5.0, bosun uses redis as a storage mechanism for it's internal state. You can either run a redis instance to hold this data, or bosun can use an embedded server if you would rather run standalone (using [ledisDb](http://ledisdb.com/))
+With bosun v0.5.0, bosun uses redis as a storage mechanism for it's internal state. You can either run a redis instance to hold this data, or bosun can use an embedded server if you would rather run standalone (using [ledisDb](http://ledisdb.com/)). Redis is recommend for production use. [This gist](https://gist.github.com/kylebrandt/3fdc97171b96ba46fd9e1d14abd03027) shows an example redis config, tested redis version, and an example cron job for backing up the redis data.
 
-Config items:
+Config items:  
+
 * redisHost: redis server to use. Ex: `localhost:6379`. Redis 3.0 or greater is required.
 * redisDb: redis database to use. Default is `0`.
 * redisPassword: redis password.
-
 * ledisDir: directory for ledisDb to store it's data. Will default to `ledis_data` in working dir if no redis host is provided.
 * ledisBindAddr: Address and port for ledis to bind to, defaults to `127.0.0.1:9565`.
 
