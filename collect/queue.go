@@ -160,7 +160,6 @@ func SendDataPoints(dps []*opentsdb.DataPoint, tsdb string) (*http.Response, err
 		resp, err := ntlm.DoNTLMRequest(client, req)
 
 		if resp.StatusCode == 401 {
-			// when using domain MSA account upon password reset scollector may become unauthorized
 			slog.Errorf("Scollector unauthorized to post data points to tsdb. Terminating.")
 			os.Exit(1)
 		}
