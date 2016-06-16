@@ -75,8 +75,80 @@ The color of the major of the bar is the incident's last abnormal status. The co
 * **Forget**: Make bosun forget about this instance of the alert. This is used on active unknown alerts. It is useful when something is not coming back (i.e. you have decommissioned a host). This act is non-destructive because if that data gets sent to bosun again everything will come back.
 * **Force Close**: Like close, but does not require alert to be in a normal state. In a few circumstances an alert can be "open" and "active" at the same time. This can occur when a host is decomissioned and an alert has ignoreUnknown set, for example. This may help to clear some of those "stuck" alerts.
 * **Purge**: Will delete an active alert and ALL history for that alert key. Should only be used when you absolutely want to forget all data about a host, like when shutting it down. Like forget, but does not require an alert to be unknown.
-
 * **History**: View a timeline of history for the selected alert instances.
+
+## Incident Filters
+
+The open incident filter supports joining terms in `()` as well as the `AND`, `OR`, and `!` operators. The following query terms are supported and are always in the format of `something:something`:
+
+<table>
+    <tr>
+        <th>Term Spec</th>
+        <th>Description</th>
+    </tr>
+    <tr>
+        <td><code>ack:(true|false)</code></td>
+        <td>If <code>ack:true</code> incidents that have been acknowledge are returned, when <code>ack:false</code>                        incidents that have not been acknowledged are returned.</td>
+    </tr>
+    <tr>
+        <td><code>hasTag:(tagKey|tagKey=|=tagValue|tagKey=tagValue)</code></td>
+        <td>Determine if the tag key, value, or key=value pair. If there is no equals sign, it is treated as a tag
+            key. Tag Values maybe have globs such has <code>hasTag:host=ny-*</code></td>
+    </tr>
+    <tr>
+        <td><code>hidden:(true|false)</code></td>
+        <td>If <code>hidden:false</code> incidents that are hidden will not be show. An incident is hidden if it
+            is in a silenced or unevaluated state. </td>
+    </tr>
+    <tr>
+        <td><code>name:(something*)</code></td>
+        <td>Returns incidents where the alert name (not including the tagset) matches the value. Globs can be used
+            in the value.</td>
+    </tr>
+    <tr>
+        <td><code>user:(username*)</code></td>
+        <td>Returns incidents where a user has taken any action on that incident. Globs can be used in the value</td>
+    </tr>
+    <tr>
+        <td><code>notify:(notificationName*)</code></td>
+        <td>Returns incidents where a the notificationName is somewhere in either the crit or warn notification chains.
+            Globs can be used in the value</td>
+    </tr>
+    <tr>
+        <td><code>silenced:(true|false)</code></td>
+        <td>If <code>silenced:false</code> incidents that have not been silenced are returned, when <code>silenced:true</code>                        incidents that have not been silenced are returned.</td>
+    </tr>
+    <tr>
+        <td><code>start:[<|>](1d)</code> </td>
+        <td>Returns incidents that started before <code><</code> or incidents that started after <code>></code> the
+            relative time to now based on the duration. Duration can be in units of s (seconds), m (minutes),
+            h (hours), d (days), w (weeks), n (months), y (years). If less than or greater than are not part
+            of the value, it defaults to greater than (after). Now is clock time and is not related to the time
+            range specified in Grafana.</td>
+    </tr>
+    <tr>
+        <td><code>unevaluated:(true|false)</code></td>
+        <td>If <code>unevaluated:false</code> incidents that are not in an unevaluated state are returned, when
+            <code>ack:true</code> incidents that are unevaluated are returned.</td>
+
+    </tr>
+    <tr>
+        <td><code>status:(normal|warning|critical|unknown)</code></td>
+        <td>Returns incidents that are currently in the requested state</td>
+    </tr>
+    <tr>
+        <td><code>worstStatus:(normal|warning|critical|unknown)</code></td>
+        <td>Returns incidents that have a worst status equal to the requested state</td>
+    </tr>
+    <tr>
+        <td><code>lastAbnormalStatus:(warning|critical|unknown)</code></td>
+        <td>Returns incidents that have a last abnormal status equal to the requested state</td>
+    </tr>
+    <tr>
+        <td><code>subject:(something*)</code></td>
+        <td>Returns incidents where the subject string matches the value. Globs can be used in the value</td>
+    </tr>
+</table>
 
 # Annotations
 
