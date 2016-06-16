@@ -276,7 +276,7 @@ func NewWatchedProc(params conf.ProcessParams) (*WatchedProc, error) {
 	if params.Name == "" {
 		params.Name = params.Command
 	}
-	if !opentsdb.ValidTag(params.Name) {
+	if !opentsdb.ValidTSDBString(params.Name) {
 		return nil, fmt.Errorf("bad process name: %v", params.Name)
 	}
 	return &WatchedProc{
