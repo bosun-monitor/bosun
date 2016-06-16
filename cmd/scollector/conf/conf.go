@@ -19,6 +19,8 @@ type Conf struct {
 	Hostname string
 	// DisableSelf disables sending of scollector self metrics.
 	DisableSelf bool
+	// DisableMetadata prevents scollector sending metadata to tsdbhost
+	DisableMetadata bool
 	// Freq is the default frequency in seconds for most collectors.
 	Freq int
 	// BatchSize is the number of metrics that will be sent in each batch.

@@ -63,6 +63,9 @@ func main() {
 		m()
 	}
 	conf := readConf()
+	if *flagDisableMetadata {
+		conf.DisableMetadata = true
+	}	
 	if *flagHost != "" {
 		conf.Host = *flagHost
 	}
@@ -203,7 +206,9 @@ func main() {
 	if *flagPrint {
 		collect.Print = true
 	}
-	if !*flagDisableMetadata {
+	
+	collect.DisableMetadata = conf.DisableMetadata
+	if !conf.DisableMetadata {
 		if err := metadata.Init(u, *flagDebug); err != nil {
 			slog.Fatal(err)
 		}

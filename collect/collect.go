@@ -41,6 +41,9 @@ var (
 	// generated.
 	DisableDefaultCollectors = false
 
+	// DisableMetadata prevents scollector sending metadata to tsdbhost
+	DisableMetadata = false
+
 	// Tags is an opentsdb.TagSet used when sending self metrics.
 	Tags opentsdb.TagSet
 
