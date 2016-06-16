@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
+	"sync/atomic"
 	"time"
 
 	"bosun.org/metadata"
@@ -15,12 +16,14 @@ import (
 
 func queuer() {
 	for dp := range tchan {
+		if err := dp.Clean(); err != nil {
+			atomic.AddInt64(&dropped, 1)
+			continue // if anything gets this far that can't be made valid, just drop it silently.
+		}
 		qlock.Lock()
 		for {
 			if len(queue) > MaxQueueLen {
-				slock.Lock()
-				dropped++
-				slock.Unlock()
+				atomic.AddInt64(&dropped, 1)
 				break
 			}
 			queue = append(queue, dp)
