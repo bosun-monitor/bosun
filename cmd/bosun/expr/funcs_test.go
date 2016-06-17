@@ -160,3 +160,41 @@ func TestMerge(t *testing.T) {
 		t.Errorf("error expected due to identical groups in merge but did not get one")
 	}
 }
+
+func TestTimedelta(t *testing.T) {
+	for _, i := range []struct {
+		input    string
+		expected Series
+	}{
+		{
+			`timedelta(series("foo=bar", 1466133600, 1, 1466133610, 1, 1466133710, 1))`,
+			Series{
+				time.Unix(1466133610, 0): 10,
+				time.Unix(1466133710, 0): 100,
+			},
+		},
+		{
+			`timedelta(series("foo=bar", 1466133600, 1))`,
+			Series{
+				time.Unix(1466133600, 0): 0,
+			},
+		},
+	} {
+
+		err := testExpression(exprInOut{
+			i.input,
+			Results{
+				Results: ResultSlice{
+					&Result{
+						Value: i.expected,
+						Group: opentsdb.TagSet{"foo": "bar"},
+					},
+				},
+			},
+		})
+
+		if err != nil {
+			t.Error(err)
+		}
+	}
+}
