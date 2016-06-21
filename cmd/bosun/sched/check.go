@@ -500,6 +500,9 @@ func (s *Schedule) findUnknownAlerts(now time.Time, alert string) []models.Alert
 		return keys
 	}
 	for _, ak := range untouched {
+		if a.Squelch.Squelched(ak.Group()) {
+			continue
+		}
 		keys = append(keys, ak)
 	}
 	return keys
