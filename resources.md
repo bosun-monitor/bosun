@@ -9,6 +9,9 @@ title: Resources
 ### [Installing Bosun for Production](https://medvedev.io/blog/posts/2015-06-21-bosun-install-1.html "Installing Bosun for production") by Dima Medvedev
 > A detailed walk-through of installing Bosun and OpenTSDB using Apache Ambari to setup HBase/Hadoop. See also [these snippets](https://gist.github.com/gbrayut/3af4bcd0458d2aa57dd2) for using Cloudera CDH 5.4.4 on RHEL 6.
 
+### [Stack Overflow's Bosun Architecture]
+> Reference setup of Bosun in a production environment.
+
 ### [Bosun Fundamentals](https://www.youtube.com/playlist?list=PLWetmRzVkFTdnjRmE-a-JRx2m8qgB6iu9) video playlist by Kyle Brandt
 > An introduction to the data model of Bosun’s primary time series backend OpenTSDB. The [first video](https://www.youtube.com/watch?v=DVavDN8tyIc&list=PLWetmRzVkFTdnjRmE-a-JRx2m8qgB6iu9&index=1) covers time series, metrics and tags, aggregation, rate calculation, and downsampling. The [second video](https://www.youtube.com/watch?v=7NYHOp3HlQc&list=PLWetmRzVkFTdnjRmE-a-JRx2m8qgB6iu9&index=2) covers data types, functions, operators, and set joins.
 
@@ -61,6 +64,9 @@ title: Resources
 
 ### [bosun_emitter](https://github.com/lukaspustina/bosun_emitter)
 > bosun_emitter is a Rust library and CLI standalone binary called `emit_bosun` that may be used on the command line or from any shell script to send a single metric datum to Bosun.
+
+### [opsgenie-bosun](https://github.com/TrentScholl/opsgenie-bosun)
+> OpsGenie Marid integration for Bosun.
 
 _See also the list of built-in collectors included with [scollector](http://bosun.org/scollector/)_
 
