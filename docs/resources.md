@@ -9,7 +9,7 @@ title: Resources
 ### [Installing Bosun for Production](https://medvedev.io/blog/posts/2015-06-21-bosun-install-1.html "Installing Bosun for production") by Dima Medvedev
 > A detailed walk-through of installing Bosun and OpenTSDB using Apache Ambari to setup HBase/Hadoop. See also [these snippets](https://gist.github.com/gbrayut/3af4bcd0458d2aa57dd2) for using Cloudera CDH 5.4.4 on RHEL 6.
 
-### [Stack Overflow's Bosun Architecture]
+### [Stack Overflow's Bosun Architecture](http://kbrandt.com/post/bosun_arch/)
 > Reference setup of Bosun in a production environment.
 
 ### [Bosun Fundamentals](https://www.youtube.com/playlist?list=PLWetmRzVkFTdnjRmE-a-JRx2m8qgB6iu9) video playlist by Kyle Brandt
