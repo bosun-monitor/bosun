@@ -245,7 +245,7 @@ func rabbitmqBackingQueueStatus(p string, ts opentsdb.TagSet, bqs rmqBackingQueu
 		metadata.Rate, metadata.Message, DescRmqBackingQueueStatusAvgEgressRate)
 	Add(&md, p+"avg_rate", bqs.AvgIngressRate, ts.Copy().Merge(opentsdb.TagSet{"method": "noack", "direction": "in"}),
 		metadata.Rate, metadata.Message, DescRmqBackingQueueStatusAvgIngressRate)
-	Add(&md, p+"len", bqs.AvgAckEgressRate, ts,
+	Add(&md, p+"len", bqs.Len, ts,
 		metadata.Gauge, metadata.Message, DescRmqBackingQueueStatusLen)
 	return md
 }
