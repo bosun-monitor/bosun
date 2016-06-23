@@ -309,6 +309,12 @@ var builtins = map[string]parse.Func{
 		Return: models.TypeScalar,
 		F:      Month,
 	},
+	"timedelta": {
+		Args:   []models.FuncType{models.TypeSeriesSet},
+		Return: models.TypeSeriesSet,
+		Tags:   tagFirst,
+		F:      TimeDelta,
+	},
 }
 
 func SeriesFunc(e *State, T miniprofiler.Timer, tags string, pairs ...float64) (*Results, error) {
@@ -633,6 +639,27 @@ func cCount(dps Series, args ...float64) (a float64) {
 		last = p.V
 	}
 	return float64(count)
+}
+
+func TimeDelta(e *State, T miniprofiler.Timer, series *Results) (*Results, error) {
+	for _, res := range series.Results {
+		sorted := NewSortedSeries(res.Value.Value().(Series))
+		newSeries := make(Series)
+		if len(sorted) < 2 {
+			newSeries[sorted[0].T] = 0
+			res.Value = newSeries
+			continue
+		}
+		lastTime := sorted[0].T.Unix()
+		for _, dp := range sorted[1:] {
+			unixTime := dp.T.Unix()
+			diff := unixTime - lastTime
+			newSeries[dp.T] = float64(diff)
+			lastTime = unixTime
+		}
+		res.Value = newSeries
+	}
+	return series, nil
 }
 
 func Count(e *State, T miniprofiler.Timer, query, sduration, eduration string) (r *Results, err error) {
