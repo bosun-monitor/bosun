@@ -137,6 +137,7 @@ All tags returned by InfluxDB will be included in the results.
 ### Notes:
 
   * By default, queries will be given a suffix of `fill(none)` to filter out any nil rows.
+  * Influx queries themselves often use both double and single quotes. So you will likely need to use triple single quotes (`'''`) for many queries. When using single quotes in triple single quotes, you may need a space. So for example `'''select max(value) from "my.measurement" where key = 'val''''` is not valid but `'''select max(value) from "my.measurement" where key = 'val' '''` is.
 
 ## examples:
 
