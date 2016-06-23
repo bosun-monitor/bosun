@@ -232,7 +232,13 @@ esand takes one or more ESQueries and combines them into an [elastic bool query]
 ### esor(queries.. ESQuery) ESQuery
 esor takes one or more ESQueries and combines them into an [elastic bool query](https://www.elastic.co/guide/en/elasticsearch/reference/2.x/query-dsl-bool-query.html) so that at least one must be true.
 
-### esgt(field string, value Scalar) ESQuery
+### esnot(query ESQuery) ESQuery
+esnot takes a query and inverses the logic using must_not from an [elastic bool query](https://www.elastic.co/guide/en/elasticsearch/reference/2.x/query-dsl-bool-query.html).
+
+### esexists(field string) ESQuery
+esexists is true when the specified field exists.
+
+###esgt(field string, value Scalar) ESQuery
 esgt takes a field (expected to be numeric field in elastic) and returns results where the value of that field is greater than the specified value. It creates an [elastic range query](https://www.elastic.co/guide/en/elasticsearch/reference/2.x/query-dsl-range-query.html).
 
 ### esgte(field string, value Scalar) ESQuery
