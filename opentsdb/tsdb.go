@@ -453,25 +453,36 @@ func ParseRequest(req string, version Version) (*Request, error) {
 	return &r, nil
 }
 
-var qRE2_1 = regexp.MustCompile(`^(\w+):(?:(\w+-\w+):)?(?:(rate.*):)?([\w./-]+)(?:\{([\w./,=*-|]+)\})?$`)
-var qRE2_2 = regexp.MustCompile(`^(\w+):(?:(\w+-\w+):)?(?:(rate.*):)?([\w./-]+)(?:\{([^}]+)?\})?(?:\{([^}]+)?\})?$`)
+var qRE2_1 = regexp.MustCompile(`^(?P<aggregator>\w+):(?:(?P<downsample>\w+-\w+):)?(?:(?P<rate>rate.*):)?(?P<metric>[\w./-]+)(?:\{([\w./,=*-|]+)\})?$`)
+var qRE2_2 = regexp.MustCompile(`^(?P<aggregator>\w+):(?:(?P<downsample>\w+-\w+(?:-(?:\w+))?):)?(?:(?P<rate>rate.*):)?(?P<metric>[\w./-]+)(?:\{([^}]+)?\})?(?:\{([^}]+)?\})?$`)
 
 // ParseQuery parses OpenTSDB queries of the form: avg:rate:cpu{k=v}. Validation
 // errors will be returned along with a valid Query.
 func ParseQuery(query string, version Version) (q *Query, err error) {
+	var regExp = qRE2_1
 	q = new(Query)
-	m := qRE2_1.FindStringSubmatch(query)
 	if version.FilterSupport() {
-		m = qRE2_2.FindStringSubmatch(query)
+		regExp = qRE2_2
 	}
+
+	m := regExp.FindStringSubmatch(query)
+
 	if m == nil {
 		return nil, fmt.Errorf("opentsdb: bad query format: %s", query)
 	}
-	q.Aggregator = m[1]
-	q.Downsample = m[2]
-	q.Rate = strings.HasPrefix(m[3], "rate")
-	if q.Rate && len(m[3]) > 4 {
-		s := m[3][4:]
+
+	result := make(map[string]string)
+	for i, name := range regExp.SubexpNames() {
+		if i != 0 {
+			result[name] = m[i]
+		}
+	}
+
+	q.Aggregator = result["aggregator"]
+	q.Downsample = result["downsample"]
+	q.Rate = strings.HasPrefix(result["rate"], "rate")
+	if q.Rate && len(result["rate"]) > 4 {
+		s := result["rate"][4:]
 		if !strings.HasSuffix(s, "}") || !strings.HasPrefix(s, "{") {
 			err = fmt.Errorf("opentsdb: invalid rate options")
 			return
@@ -491,20 +502,23 @@ func ParseQuery(query string, version Version) (q *Query, err error) {
 			}
 		}
 	}
-	q.Metric = m[4]
-	if !version.FilterSupport() {
-		if len(m) > 5 && m[5] != "" {
-			tags, e := ParseTags(m[5])
-			if e != nil {
-				err = e
-				if tags == nil {
-					return
-				}
+	q.Metric = result["metric"]
+
+	if !version.FilterSupport() && len(m) > 5 && m[5] != "" {
+		tags, e := ParseTags(m[5])
+		if e != nil {
+			err = e
+			if tags == nil {
+				return
 			}
-			q.Tags = tags
 		}
+		q.Tags = tags
+	}
+
+	if !version.FilterSupport() {
 		return
 	}
+
 	// OpenTSDB Greater than 2.2, treating as filters
 	q.GroupByTags = make(TagSet)
 	q.Filters = make([]Filter, 0)
@@ -518,10 +532,11 @@ func ParseQuery(query string, version Version) (q *Query, err error) {
 	if m[6] != "" {
 		f, err := ParseFilters(m[6], false, q)
 		if err != nil {
-			return nil, fmt.Errorf("Failed to parse filter(s): %s", m[5])
+			return nil, fmt.Errorf("Failed to parse filter(s): %s", m[6])
 		}
 		q.Filters = append(q.Filters, f...)
 	}
+
 	return
 }
 
