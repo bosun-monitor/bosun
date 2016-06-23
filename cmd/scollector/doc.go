@@ -241,10 +241,11 @@ management plugin on http://guest:guest@127.0.0.1:15672/ .
 Cadvisor: Cadvisor endpoints to poll.
 Cadvisor collects system statistics about running containers.
 See https://github.com/google/cadvisor/ for documentation about configuring
-cadvisor.
+cadvisor. You can enable per cpu usage metric reporting optionally.
 
 	[[Cadvisor]]
 		URL = "http://localhost:8080"
+		PerCpuUsage = true
 
 RedisCounters: Reads a hash of metric/counters from a redis database.
 

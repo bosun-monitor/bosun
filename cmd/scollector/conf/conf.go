@@ -186,7 +186,8 @@ type Github struct {
 }
 
 type Cadvisor struct {
-	URL string
+	URL         string
+	PerCpuUsage bool
 }
 
 type RedisCounters struct {
