@@ -125,6 +125,13 @@ bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', '$q', '$r
             .error(function (data) {
             console.log(data);
         });
+        $http.get("/api/quiet")
+            .success(function (data) {
+            $scope.quiet = data;
+        })
+            .error(function (data) {
+            console.log(data);
+        });
         $http.get("/api/opentsdb/version")
             .success(function (data) {
             $scope.version = data;
