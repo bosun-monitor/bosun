@@ -57,7 +57,7 @@ const (
 	itemString
 	itemFunc
 	itemTripleQuotedString
-	itemPow      // '**'
+	itemPow // '**'
 )
 
 const eof = -1
