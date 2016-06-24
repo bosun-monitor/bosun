@@ -33,13 +33,6 @@
 		</table>
 	</div>
 
-	<div class="row" ng-if="body">
-		<h4>Last Abnormal Rendered Body</h4>
-		<div class="col-sm-12">
-			<hr/>
-		</div>
-		<div class="col-sm-12" ng-bind-html="body"></div>
-	</div>
 	<h4>Events</h4>
 	<div class="panel" ng-class="panelClass(v.Status)" ng-repeat="($index, v) in events">
 		<div class="panel-heading" ng-click="collapse($index, v)">

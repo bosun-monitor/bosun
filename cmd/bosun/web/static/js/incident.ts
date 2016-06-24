@@ -8,6 +8,7 @@ interface IIncidentScope extends ng.IScope {
 	collapse: any;
 	loadTimelinePanel: any;
 	config_text: any;
+	lastNonUnknownAbnormalIdx: any;
 }
 
 
@@ -22,11 +23,16 @@ bosunControllers.controller('IncidentCtrl', ['$scope', '$http', '$location', '$r
 		.success((data: any) => {
 			$scope.config_text = data;
 		});
-	$scope.loadTimelinePanel = (v: any) => {
+	$scope.loadTimelinePanel = (v: any, i: any) => {
 		if (v.doneLoading && !v.error) { return; }
 		v.error = null;
 		v.doneLoading = false;
-		//debugger;
+		if (i == $scope.lastNonUnknownAbnormalIdx) {
+			v.subject = $scope.incident.Subject;
+			v.body = $scope.body;
+			v.doneLoading = true;
+			return;
+		}
 		var ak = $scope.incident.AlertKey;
 		var openBrack = ak.indexOf("{");
 		var closeBrack = ak.indexOf("}");
@@ -52,15 +58,21 @@ bosunControllers.controller('IncidentCtrl', ['$scope', '$http', '$location', '$r
 	$scope.collapse = (i: any, v: any) => {
 		$scope.shown[i] = !$scope.shown[i];
 		if ($scope.loadTimelinePanel && $scope.shown[i]) {
-			$scope.loadTimelinePanel(v);
+			$scope.loadTimelinePanel(v, i);
 		}
 	};
 	$http.get('/api/incidents/events?id=' + id)
 		.success((data: any) => {
 			$scope.incident = data;
-			console.log(data);
 			$scope.actions = data.Actions;
-			$scope.events = data.Events;
+			$scope.events = data.Events.reverse();
+			for (var i = 0; i < $scope.events.length; i++) {
+				var e = $scope.events[i];
+				if (e.Status != 'normal' && e.Status != 'unknown') {
+					$scope.lastNonUnknownAbnormalIdx = i;
+					break;
+				}
+			}
 			$scope.body = $sce.trustAsHtml(data.Body);
 		})
 		.error(err => {

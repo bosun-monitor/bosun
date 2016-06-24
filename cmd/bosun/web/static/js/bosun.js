@@ -2779,13 +2779,18 @@ bosunControllers.controller('IncidentCtrl', ['$scope', '$http', '$location', '$r
             .success(function (data) {
             $scope.config_text = data;
         });
-        $scope.loadTimelinePanel = function (v) {
+        $scope.loadTimelinePanel = function (v, i) {
             if (v.doneLoading && !v.error) {
                 return;
             }
             v.error = null;
             v.doneLoading = false;
-            //debugger;
+            if (i == $scope.lastNonUnknownAbnormalIdx) {
+                v.subject = $scope.incident.Subject;
+                v.body = $scope.body;
+                v.doneLoading = true;
+                return;
+            }
             var ak = $scope.incident.AlertKey;
             var openBrack = ak.indexOf("{");
             var closeBrack = ak.indexOf("}");
@@ -2811,7 +2816,7 @@ bosunControllers.controller('IncidentCtrl', ['$scope', '$http', '$location', '$r
         $scope.collapse = function (i, v) {
             $scope.shown[i] = !$scope.shown[i];
             if ($scope.loadTimelinePanel && $scope.shown[i]) {
-                $scope.loadTimelinePanel(v);
+                $scope.loadTimelinePanel(v, i);
             }
         };
         $http.get('/api/incidents/events?id=' + id)
@@ -2819,7 +2824,14 @@ bosunControllers.controller('IncidentCtrl', ['$scope', '$http', '$location', '$r
             $scope.incident = data;
             console.log(data);
             $scope.actions = data.Actions;
-            $scope.events = data.Events;
+            $scope.events = data.Events.reverse();
+            for (var i = 0; i < $scope.events.length; i++) {
+                var e = $scope.events[i];
+                if (e.Status != 'normal' && e.Status != 'unknown') {
+                    $scope.lastNonUnknownAbnormalIdx = i;
+                    break;
+                }
+            }
             $scope.body = $sce.trustAsHtml(data.Body);
         })
             .error(function (err) {
