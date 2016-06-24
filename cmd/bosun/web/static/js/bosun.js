@@ -2779,6 +2779,10 @@ bosunControllers.controller('IncidentCtrl', ['$scope', '$http', '$location', '$r
             .success(function (data) {
             $scope.config_text = data;
         });
+        $scope.action = function (type) {
+            var key = encodeURIComponent($scope.incident.AlertKey);
+            return '/action?type=' + type + '&key=' + key;
+        };
         $scope.loadTimelinePanel = function (v, i) {
             if (v.doneLoading && !v.error) {
                 return;
@@ -2822,17 +2826,20 @@ bosunControllers.controller('IncidentCtrl', ['$scope', '$http', '$location', '$r
         $http.get('/api/incidents/events?id=' + id)
             .success(function (data) {
             $scope.incident = data;
+            $scope.state = $scope.incident;
             console.log(data);
             $scope.actions = data.Actions;
+            $scope.body = $sce.trustAsHtml(data.Body);
             $scope.events = data.Events.reverse();
             for (var i = 0; i < $scope.events.length; i++) {
                 var e = $scope.events[i];
                 if (e.Status != 'normal' && e.Status != 'unknown') {
                     $scope.lastNonUnknownAbnormalIdx = i;
+                    $scope.collapse(i, e); // Expand the panel of the current body
                     break;
                 }
             }
-            $scope.body = $sce.trustAsHtml(data.Body);
+            $scope.collapse;
         })
             .error(function (err) {
             $scope.error = err;

@@ -9,6 +9,8 @@ interface IIncidentScope extends ng.IScope {
 	loadTimelinePanel: any;
 	config_text: any;
 	lastNonUnknownAbnormalIdx: any;
+	state: any;
+	action: any;
 }
 
 
@@ -23,6 +25,10 @@ bosunControllers.controller('IncidentCtrl', ['$scope', '$http', '$location', '$r
 		.success((data: any) => {
 			$scope.config_text = data;
 		});
+	$scope.action = (type: string) => {
+		var key = encodeURIComponent($scope.incident.AlertKey);
+		return '/action?type=' + type + '&key=' + key;
+	};
 	$scope.loadTimelinePanel = (v: any, i: any) => {
 		if (v.doneLoading && !v.error) { return; }
 		v.error = null;
@@ -64,16 +70,20 @@ bosunControllers.controller('IncidentCtrl', ['$scope', '$http', '$location', '$r
 	$http.get('/api/incidents/events?id=' + id)
 		.success((data: any) => {
 			$scope.incident = data;
+			$scope.state = $scope.incident;
+			console.log(data);
 			$scope.actions = data.Actions;
+			$scope.body = $sce.trustAsHtml(data.Body);
 			$scope.events = data.Events.reverse();
 			for (var i = 0; i < $scope.events.length; i++) {
 				var e = $scope.events[i];
 				if (e.Status != 'normal' && e.Status != 'unknown') {
 					$scope.lastNonUnknownAbnormalIdx = i;
+					$scope.collapse(i, e); // Expand the panel of the current body
 					break;
 				}
 			}
-			$scope.body = $sce.trustAsHtml(data.Body);
+			$scope.collapse
 		})
 		.error(err => {
 			$scope.error = err;
