@@ -2768,18 +2768,59 @@ bosunControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route
             $scope.fsdata = tmp;
         });
     }]);
-bosunControllers.controller('IncidentCtrl', ['$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
+bosunControllers.controller('IncidentCtrl', ['$scope', '$http', '$location', '$route', '$sce', function ($scope, $http, $location, $route, $sce) {
         var search = $location.search();
         var id = search.id;
         if (!id) {
             $scope.error = "must supply incident id as query parameter";
             return;
         }
+        $http.get('/api/config')
+            .success(function (data) {
+            $scope.config_text = data;
+        });
+        $scope.loadTimelinePanel = function (v) {
+            if (v.doneLoading && !v.error) {
+                return;
+            }
+            v.error = null;
+            v.doneLoading = false;
+            //debugger;
+            var ak = $scope.incident.AlertKey;
+            var openBrack = ak.indexOf("{");
+            var closeBrack = ak.indexOf("}");
+            var alertName = ak.substr(0, openBrack);
+            var template = ak.substring(openBrack + 1, closeBrack);
+            var url = '/api/rule?' +
+                'alert=' + encodeURIComponent(alertName) +
+                '&from=' + encodeURIComponent(moment.utc(v.Time).format()) +
+                '&template_group=' + encodeURIComponent(template);
+            $http.post(url, $scope.config_text)
+                .success(function (data) {
+                v.subject = data.Subject;
+                v.body = $sce.trustAsHtml(data.Body);
+            })
+                .error(function (error) {
+                v.error = error;
+            })
+                .finally(function () {
+                v.doneLoading = true;
+            });
+        };
+        $scope.shown = {};
+        $scope.collapse = function (i, v) {
+            $scope.shown[i] = !$scope.shown[i];
+            if ($scope.loadTimelinePanel && $scope.shown[i]) {
+                $scope.loadTimelinePanel(v);
+            }
+        };
         $http.get('/api/incidents/events?id=' + id)
             .success(function (data) {
             $scope.incident = data;
+            console.log(data);
             $scope.actions = data.Actions;
             $scope.events = data.Events;
+            $scope.body = $sce.trustAsHtml(data.Body);
         })
             .error(function (err) {
             $scope.error = err;
