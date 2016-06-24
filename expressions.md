@@ -137,6 +137,7 @@ All tags returned by InfluxDB will be included in the results.
 ### Notes:
 
   * By default, queries will be given a suffix of `fill(none)` to filter out any nil rows.
+  * Influx queries themselves often use both double and single quotes. So you will likely need to use triple single quotes (`'''`) for many queries. When using single quotes in triple single quotes, you may need a space. So for example `'''select max(value) from "my.measurement" where key = 'val''''` is not valid but `'''select max(value) from "my.measurement" where key = 'val' '''` is.
 
 ## examples:
 
@@ -159,7 +160,7 @@ lscount returns a time bucked count of matching log documents.
   * `indexRoot` is the root name of the index to hit, the format is expected to be `fmt.Sprintf("%s-%s", index_root, d.Format("2006.01.02"))`.
   * `keyString` creates groups (like tagsets) and can also filter those groups. It is the format of `"field:regex,field:regex..."` The `:regex` can be ommited.
   * `filterString` is an Elastic regexp query that can be applied to any field. It is in the same format as the keystring argument.
-  * `bucketDuration` is in the same format is an opentsdb duration, and is the size of buckets returned (i.e. counts for every 10 minutes). 
+  * `bucketDuration` is in the same format is an opentsdb duration, and is the size of buckets returned (i.e. counts for every 10 minutes).
   * `startDuration` and `endDuration` set the time window from now - see the OpenTSDB q() function for more details.
 
 **Note:** As of Bosun 0.5.0, the results are no longer normalized per second. This resulted in bad extrapolations, and confusing interactions with functions like `sum(lscount(...))`. The rate will now be per bucket. If you still want the results normalized to per second, you can divide the result by the number of seconds with: `lscount("logstash", "logsource,program:bosun", $bucketDuration, "10m", "") / d($bucketDuration)`
@@ -223,7 +224,7 @@ esall returns an elastic matchall query, use this when you don't want to filter 
 esregexp creates an [elastic regexp query](https://www.elastic.co/guide/en/elasticsearch/reference/2.x/query-dsl-regexp-query.html) for the specified field.
 
 ### esquery(field string, querystring string)
-esquery creates a [full-text elastic query string query](https://www.elastic.co/guide/en/elasticsearch/reference/2.x/query-dsl-query-string-query.html). 
+esquery creates a [full-text elastic query string query](https://www.elastic.co/guide/en/elasticsearch/reference/2.x/query-dsl-query-string-query.html).
 
 ### esand(queries.. ESQuery) ESQuery
 esand takes one or more ESQueries and combines them into an [elastic bool query](https://www.elastic.co/guide/en/elasticsearch/reference/2.x/query-dsl-bool-query.html) where all the queries "must" be true.
@@ -231,7 +232,13 @@ esand takes one or more ESQueries and combines them into an [elastic bool query]
 ### esor(queries.. ESQuery) ESQuery
 esor takes one or more ESQueries and combines them into an [elastic bool query](https://www.elastic.co/guide/en/elasticsearch/reference/2.x/query-dsl-bool-query.html) so that at least one must be true.
 
-### esgt(field string, value Scalar) ESQuery
+### esnot(query ESQuery) ESQuery
+esnot takes a query and inverses the logic using must_not from an [elastic bool query](https://www.elastic.co/guide/en/elasticsearch/reference/2.x/query-dsl-bool-query.html).
+
+### esexists(field string) ESQuery
+esexists is true when the specified field exists.
+
+###esgt(field string, value Scalar) ESQuery
 esgt takes a field (expected to be numeric field in elastic) and returns results where the value of that field is greater than the specified value. It creates an [elastic range query](https://www.elastic.co/guide/en/elasticsearch/reference/2.x/query-dsl-range-query.html).
 
 ### esgte(field string, value Scalar) ESQuery
@@ -373,9 +380,9 @@ Transposes N series of length 1 to 1 series of length N. If the group parameter 
 
 How transpose works conceptually
 
-Transpose Grouped results into a Single Result:  
+Transpose Grouped results into a Single Result:
 
-Before Transpose (Value Type is NumberSet):  
+Before Transpose (Value Type is NumberSet):
 
 Group       | Value  |
 ----------- | ----- |
@@ -383,15 +390,15 @@ Group       | Value  |
 {host=web02} | 7 |
 {host=web03} | 4 |
 
-After Transpose (Value Type is SeriesSet):  
+After Transpose (Value Type is SeriesSet):
 
 Group        | Value  |
 ----------- | ----- |
 {} | 1,7,4 |
 
-Transpose Groups results into Multiple Results:  
+Transpose Groups results into Multiple Results:
 
-Before Transpose by host (Value Type is NumberSet)  
+Before Transpose by host (Value Type is NumberSet)
 
 Group        | Value  |
 ----------- | ----- |
@@ -399,7 +406,7 @@ Group        | Value  |
 {host=web01,disc=d} | 3 |
 {host=web02,disc=c} | 4 |
 
-After Transpose by "host" (Value type is SeriesSet)  
+After Transpose by "host" (Value type is SeriesSet)
 
 Group        | Value  |
 ------------ | ------ |
@@ -487,7 +494,7 @@ Remove any values lower than or equal to number from a series. Will error if thi
 Remove any NaN or Inf values from a series. Will error if this operation results in an empty series.
 
 ## dropbool(seriesSet, seriesSet) seriesSet
-Drop datapoints where the corresponding value in the second series set is non-zero. (See Series Operations for what corresponding means). The following example drops tr_avg (avg response time per bucket) datapoints if the count in that bucket was + or - 100 from the average count over the time period. 
+Drop datapoints where the corresponding value in the second series set is non-zero. (See Series Operations for what corresponding means). The following example drops tr_avg (avg response time per bucket) datapoints if the count in that bucket was + or - 100 from the average count over the time period.
 
 Example:
 
@@ -571,5 +578,19 @@ Accepts a series and a set of tags to rename in `Key1=NewK1,Key2=NewK2` format. 
 Returns the results sorted by value in ascending ("asc") or descending ("desc")
 order. Results are first sorted by groupname and then stably sorted so that
 results with identical values are always in the same order.
+
+## timedelta(seriesSet) seriesSet
+
+Returns the difference between successive timestamps in a series. For example:
+
+```
+timedelta(series("foo=bar", 1466133600, 1, 1466133610, 1, 1466133710, 1))
+```
+
+Would return a seriesSet equal to:
+
+```
+series("foo=bar", 1466133610, 10, 1466133710, 100)
+```
 
 </div>
