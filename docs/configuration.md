@@ -44,6 +44,7 @@ Every variable is optional, though you should enable at least 1 backend.
   * The items page.
   * The graph page's tag list.
 * tsdbVersion: Defaults to 2.1 if not present. Should always be specified as Number.Number. Various OpenTSDB features are added with newer versions.
+* relayListen: Listen on the given address (i.e., set to :4242) and will pass through all /api/X calls to your OpenTSDB server. This is an optinal parameter when using OpenTSDB so it is not required for any Bosun functionality
 * graphiteHost: an ip, hostname, ip:port, hostname:port or a URL, defaults to standard http/https ports, defaults to "/render" path.  Any non-zero path (even "/" overrides path)
 * graphiteHeader: a http header to be sent to graphite on each request in 'key:value' format. optional. can be specified multiple times.
 * logstashElasticHosts: Elasticsearch hosts populated by logstash. Must be a CSV list of URLs and only works with elastic pre-v2. The hosts you list are used to discover all hosts in the cluster.
