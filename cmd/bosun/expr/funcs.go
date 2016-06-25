@@ -453,6 +453,9 @@ func quickSelect(data sort.Interface, k int, max bool) {
 	low := 0
 	high := data.Len() - 1
 
+	// if we asked to last k and we
+	// don't have that much everyone
+	// is in the set
 	if k > data.Len() {
 		return
 	}
