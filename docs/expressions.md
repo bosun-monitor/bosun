@@ -94,7 +94,7 @@ We don't need to understand everything in this alert, but it is worth highlighti
 
 ## Graphite Query Functions
 
-### GraphiteQuery(query string, startDuration string, endDuration string, format string) seriesSet
+### graphite(query string, startDuration string, endDuration string, format string) seriesSet
 
 Performs a graphite query.  the duration format is the internal bosun format (which happens to be the same as OpenTSDB's format).
 Functions pretty much the same as q() (see that for more info) but for graphite.
@@ -115,7 +115,7 @@ returns seriesSet named like `collectd.web15.cpu.3.idle`, requiring a format lik
 For advanced cases, you can use graphite's alias(), aliasSub(), etc to compose the exact parseable output format you need.
 This happens when the outer graphite function is something like "avg()" or "sum()" in which case graphite's output series will be identified as "avg(some.string.here)".
 
-### GraphiteBand(query string, duration string, period string, format string, num string) seriesSet
+### graphiteBand(query string, duration string, period string, format string, num string) seriesSet
 
 Like band() but for graphite queries.
 
