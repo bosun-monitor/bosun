@@ -137,9 +137,9 @@ All tags returned by InfluxDB will be included in the results.
 ### Notes:
 
   * By default, queries will be given a suffix of `fill(none)` to filter out any nil rows.
-  * Influx queries themselves often use both double and single quotes. So you will likely need to use triple single quotes (`'''`) for many queries. When using single quotes in triple single quotes, you may need a space. So for example `'''select max(value) from "my.measurement" where key = 'val''''` is not valid but `'''select max(value) from "my.measurement" where key = 'val' '''` is.
+  * Influx queries themselves often use both double and single (quoting issues are often encountered [as per the documentation](https://docs.influxdata.com/influxdb/v0.13/troubleshooting/frequently_encountered_issues/#single-quoting-and-double-quoting-in-queries)). So you will likely need to use triple single quotes (`'''`) for many queries. When using single quotes in triple single quotes, you may need a space. So for example `'''select max(value) from "my.measurement" where key = 'val''''` is not valid but `'''select max(value) from "my.measurement" where key = 'val' '''` is.
 
-## examples:
+### examples:
 
 These influx and opentsdb queries should give roughly the same results:
 
@@ -147,6 +147,12 @@ These influx and opentsdb queries should give roughly the same results:
 influx("db", '''SELECT non_negative_derivative(mean(value)) FROM "os.cpu" GROUP BY host''', "30m", "", "2m")
 
 q("sum:2m-avg:rate{counter,,1}:os.cpu{host=*}", "30m", "")
+```
+
+Querying graphite sent to influx (note the quoting):
+
+```
+influx("graphite", '''select sum(value) from "df-root_df_complex-free" where env='prod' and node='web' ''', "2h", "1m", "1m")
 ```
 
 ## Logstash Query Functions (Deprecated)
