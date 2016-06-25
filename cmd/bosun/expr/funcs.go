@@ -174,6 +174,13 @@ var builtins = map[string]parse.Func{
 	},
 
 	// Group functions
+	"addtags": {
+		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeString},
+		Return: models.TypeSeriesSet,
+		Tags:   tagRename,
+		F:      AddTags,
+	},
+
 	"rename": {
 		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeString},
 		Return: models.TypeSeriesSet,
@@ -931,6 +938,23 @@ func Rename(e *State, T miniprofiler.Timer, series *Results, s string) (*Results
 				}
 
 			}
+		}
+	}
+	return series, nil
+}
+
+func AddTags(e *State, T miniprofiler.Timer, series *Results, s string) (*Results, error) {
+	for _, section := range strings.Split(s, ",") {
+		kv := strings.Split(section, "=")
+		if len(kv) != 2 {
+			return nil, fmt.Errorf("error passing groups")
+		}
+		tagKey, tagValue := kv[0], kv[1]
+		for _, res := range series.Results {
+			if _, ok := res.Group[tagKey]; ok {
+				return nil, fmt.Errorf("%s key already in group", tagKey)
+			}
+			res.Group[tagKey] = tagValue
 		}
 	}
 	return series, nil
