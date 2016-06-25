@@ -231,6 +231,14 @@ func (s SortableSeries) Len() int           { return len(s) }
 func (s SortableSeries) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
 func (s SortableSeries) Less(i, j int) bool { return s[i].T.Before(s[j].T) }
 
+func NewSortableSeries(dps Series) SortableSeries {
+	series := make(SortableSeries, 0, len(dps))
+	for t, v := range dps {
+		series = append(series, SortablePoint{t, v})
+	}
+	return series
+}
+
 func NewSortedSeries(dps Series) SortableSeries {
 	series := make(SortableSeries, 0, len(dps))
 	for t, v := range dps {

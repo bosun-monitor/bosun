@@ -2,6 +2,8 @@ package expr
 
 import (
 	"fmt"
+	"reflect"
+	"sort"
 	"testing"
 	"time"
 
@@ -177,6 +179,111 @@ func TestTimedelta(t *testing.T) {
 			`timedelta(series("foo=bar", 1466133600, 1))`,
 			Series{
 				time.Unix(1466133600, 0): 0,
+			},
+		},
+	} {
+
+		err := testExpression(exprInOut{
+			i.input,
+			Results{
+				Results: ResultSlice{
+					&Result{
+						Value: i.expected,
+						Group: opentsdb.TagSet{"foo": "bar"},
+					},
+				},
+			},
+		})
+
+		if err != nil {
+			t.Error(err)
+		}
+	}
+}
+
+func TestQuickSelect(t *testing.T) {
+	for testCase, i := range []struct {
+		description string
+		input       sort.IntSlice
+		number      int
+		max         bool
+		expected    sort.IntSlice
+	}{
+		{
+			"sanity check that returns 3 min results",
+			[]int{1, 2, 4, 5, 6, 7, 8},
+			3,
+			false,
+			[]int{1, 2, 4},
+		},
+		{
+			"case with multiple of the same number in return",
+			[]int{1, 2, 4, 1, 5, 1, 6, 7, 8, 1},
+			3,
+			false,
+			[]int{1, 1, 1},
+		},
+		{
+			"sanity check that returns 3 max results",
+			[]int{99, 2, 4, 1, 5, 1, 6, 7, 8, 1, 0, 100},
+			3,
+			true,
+			[]int{99, 100, 8},
+		},
+		{
+			"case where requested results are longer than array",
+			[]int{1},
+			3,
+			true,
+			[]int{1},
+		},
+	} {
+
+		quickSelect(i.input, i.number, i.max)
+
+		// quickSelect doesn't provide order
+		// lets just sort for ease of test
+		// also quickSelect doesn't care if
+		// you ask for more results than it has
+		found := i.input
+		if i.number < len(i.input) {
+			found = i.input[:i.number]
+		}
+
+		expected := i.expected
+		sort.Sort(found)
+		sort.Sort(expected)
+
+		if !reflect.DeepEqual(
+			found,
+			expected,
+		) {
+			t.Errorf(
+				"Test case %d: found %v expected %v\n",
+				testCase,
+				i.input[:i.number],
+				i.expected,
+			)
+		}
+	}
+}
+
+func TestTail(t *testing.T) {
+	for _, i := range []struct {
+		input    string
+		expected Series
+	}{
+		{
+			`tail(series("foo=bar", 1466133600, 1, 1466133610, 1, 1466133710, 1), 2)`,
+			Series{
+				time.Unix(1466133610, 0): 1,
+				time.Unix(1466133710, 0): 1,
+			},
+		},
+		{
+			`tail(series("foo=bar", 1466133600, 1), 2)`,
+			Series{
+				time.Unix(1466133600, 0): 1,
 			},
 		},
 	} {
