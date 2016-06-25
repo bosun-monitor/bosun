@@ -84,6 +84,7 @@ Config items:
 * stateFile: bosun state file, defaults to `bosun.state`
 * unknownTemplate: name of the template for unknown alerts
 * shortURLKey: goo.gl API key, needed if you hit usage limits when using the short link button
+* timeAndDate: The configuration parameter for the worldclock links is timeAndDate, i.e. `timeAndDate = 202,75,179,136` adds adds Portland, Denver, New York, and London to the datetime links generated in alerts. See [timeanddate.com documentation](http://www.timeanddate.com/worldclock/converter-about.html)
 
 #### SMTP Authentication
 
