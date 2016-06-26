@@ -3,7 +3,6 @@ package expr
 import (
 	"fmt"
 	"math"
-	"math/rand"
 	"sort"
 	"strings"
 	"time"
@@ -447,80 +446,33 @@ func Filter(e *State, T miniprofiler.Timer, series *Results, number *Results) (*
 	return series, nil
 }
 
-func quickSelect(data sort.Interface, k int, max bool) {
-
-	var pivotIndex int
-	low := 0
-	high := data.Len() - 1
-
-	// if we asked to last k and we
-	// don't have that much everyone
-	// is in the set
-	if k > data.Len() {
-		return
-	}
-
-	for {
-
-		if low >= high {
-			return
-		}
-
-		pivotIndex = rand.Intn(high+1-low) + low
-		pivotIndex = partition(data, low, high, pivotIndex, max)
-
-		if k < pivotIndex {
-			high = pivotIndex - 1
-		} else if k > pivotIndex {
-			low = pivotIndex + 1
-		} else {
-			return
-		}
-	}
-}
-
-func partition(data sort.Interface, low, high, pivotIndex int, max bool) int {
-	partitionIndex := low
-	data.Swap(pivotIndex, high)
-	for i := low; i < high; i++ {
-		if (!data.Less(i, high) && max) || (data.Less(i, high) && !max) {
-			data.Swap(i, partitionIndex)
-			partitionIndex++
-		}
-
-	}
-	data.Swap(partitionIndex, high)
-	return partitionIndex
-}
-
 func Tail(e *State, T miniprofiler.Timer, series *Results, v float64) (*Results, error) {
+	tailLength := int(v)
 	for _, sr := range series.Results {
 		// if there are fewer points than the requested tail
 		// short circut and just return current series
-		if len(sr.Value.Value().(Series)) > int(v) {
+		if len(sr.Value.Value().(Series)) <= tailLength {
+			continue
+		}
 
-			// create new sortable series
-			// that is not sorted
-			oldSr := sr.Value.Value().(Series)
-			sortable := NewSortableSeries(oldSr)
+		// create new sorted series
+		// not going to do quick select
+		// see https://github.com/bosun-monitor/bosun/pull/1802
+		// for details
+		oldSr := sr.Value.Value().(Series)
+		sorted := NewSortedSeries(oldSr)
 
-			// create new series keep a reference
-			// and point sr.Value interface at reference
-			// as we don't need old series any more
-			newSeries := make(Series)
-			sr.Value = newSeries
+		// create new series keep a reference
+		// and point sr.Value interface at reference
+		// as we don't need old series any more
+		newSeries := make(Series)
+		sr.Value = newSeries
 
-			// make the front of series have
-			// largest ts be in the front of
-			// sortable series
-			quickSelect(sortable, int(v), true)
-
-			// load up new series with desired
-			// number of points
-			// we already checked len so this is safe
-			for count := 0; count < int(v); count++ {
-				newSeries[sortable[count].T] = sortable[count].V
-			}
+		// load up new series with desired
+		// number of points
+		// we already checked len so this is safe
+		for _, item := range sorted[len(sorted)-tailLength : len(sorted)] {
+			newSeries[item.T] = item.V
 		}
 	}
 
