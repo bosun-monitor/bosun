@@ -473,7 +473,7 @@ func Tail(e *State, T miniprofiler.Timer, series *Results, number *Results) (*Re
 		// load up new series with desired
 		// number of points
 		// we already checked len so this is safe
-		for _, item := range sorted[len(sorted)-tailLength : len(sorted)] {
+		for _, item := range sorted[len(sorted)-tailLength:] {
 			newSeries[item.T] = item.V
 		}
 		res.Results = append(res.Results, s)
