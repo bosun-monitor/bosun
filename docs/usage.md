@@ -76,6 +76,7 @@ The color of the major of the bar is the incident's last abnormal status. The co
 * **Force Close**: Like close, but does not require alert to be in a normal state. In a few circumstances an alert can be "open" and "active" at the same time. This can occur when a host is decomissioned and an alert has ignoreUnknown set, for example. This may help to clear some of those "stuck" alerts.
 * **Purge**: Will delete an active alert and ALL history for that alert key. Should only be used when you absolutely want to forget all data about a host, like when shutting it down. Like forget, but does not require an alert to be unknown.
 * **History**: View a timeline of history for the selected alert instances.
+* **Note**: Attach a note to an incident. This has no impact on the behavior of the alert and is purely for communication.
 
 ## Incident Filters
 
