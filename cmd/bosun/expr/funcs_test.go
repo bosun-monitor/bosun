@@ -217,6 +217,13 @@ func TestTail(t *testing.T) {
 				time.Unix(1466133600, 0): 1,
 			},
 		},
+		{
+			`tail(series("foo=bar", 1466133600, 1, 1466133610, 1, 1466133710, 1), last(series("foo=bar", 1466133600, 2)))`,
+			Series{
+				time.Unix(1466133610, 0): 1,
+				time.Unix(1466133710, 0): 1,
+			},
+		},
 	} {
 
 		err := testExpression(exprInOut{

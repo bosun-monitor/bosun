@@ -316,7 +316,7 @@ var builtins = map[string]parse.Func{
 		F:      TimeDelta,
 	},
 	"tail": {
-		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeScalar},
+		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeNumberSet},
 		Return: models.TypeSeriesSet,
 		Tags:   tagFirst,
 		F:      Tail,
@@ -446,27 +446,29 @@ func Filter(e *State, T miniprofiler.Timer, series *Results, number *Results) (*
 	return series, nil
 }
 
-func Tail(e *State, T miniprofiler.Timer, series *Results, v float64) (*Results, error) {
-	tailLength := int(v)
-	for _, sr := range series.Results {
+func Tail(e *State, T miniprofiler.Timer, series *Results, number *Results) (*Results, error) {
+	f := func(res *Results, s *Result, floats []float64) error {
+		tailLength := int(floats[0])
+
 		// if there are fewer points than the requested tail
 		// short circut and just return current series
-		if len(sr.Value.Value().(Series)) <= tailLength {
-			continue
+		if len(s.Value.Value().(Series)) <= tailLength {
+			res.Results = append(res.Results, s)
+			return nil
 		}
 
 		// create new sorted series
 		// not going to do quick select
 		// see https://github.com/bosun-monitor/bosun/pull/1802
 		// for details
-		oldSr := sr.Value.Value().(Series)
+		oldSr := s.Value.Value().(Series)
 		sorted := NewSortedSeries(oldSr)
 
 		// create new series keep a reference
 		// and point sr.Value interface at reference
 		// as we don't need old series any more
 		newSeries := make(Series)
-		sr.Value = newSeries
+		s.Value = newSeries
 
 		// load up new series with desired
 		// number of points
@@ -474,9 +476,11 @@ func Tail(e *State, T miniprofiler.Timer, series *Results, v float64) (*Results,
 		for _, item := range sorted[len(sorted)-tailLength : len(sorted)] {
 			newSeries[item.T] = item.V
 		}
+		res.Results = append(res.Results, s)
+		return nil
 	}
 
-	return series, nil
+	return match(f, series, number)
 }
 
 func Merge(e *State, T miniprofiler.Timer, series ...*Results) (*Results, error) {
