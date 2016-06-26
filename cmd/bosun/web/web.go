@@ -586,6 +586,8 @@ func Action(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (inter
 		at = models.ActionForceClose
 	case "purge":
 		at = models.ActionPurge
+	case "note":
+		at = models.ActionNote
 	}
 	errs := make(MultiError)
 	r.ParseForm()

@@ -649,6 +649,8 @@ func (s *Schedule) action(user, message string, t models.ActionType, st *models.
 		fallthrough
 	case models.ActionPurge:
 		return st.AlertKey, s.DataAccess.State().Forget(st.AlertKey)
+	case models.ActionNote:
+		// pass
 	default:
 		return "", fmt.Errorf("unknown action type: %v", t)
 	}
