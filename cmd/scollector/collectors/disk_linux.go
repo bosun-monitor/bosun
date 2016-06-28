@@ -9,7 +9,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"unicode/utf8"
 
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
@@ -21,9 +20,8 @@ func init() {
 	collectors = append(collectors, &IntervalCollector{F: c_iostat_linux})
 	collectors = append(collectors, &IntervalCollector{F: c_dfstat_blocks_linux})
 	collectors = append(collectors, &IntervalCollector{F: c_dfstat_inodes_linux})
-	// todo: explain what exactly is interval, looks more like a
-	// timeout to me
-	collectors = append(collectors, &IntervalCollector{F: c_mdadm_linux})
+	// todo: increase timer for Mdadm: won't change that often
+	collectors = append(collectors, &IntervalCollector{F: checkMdadmLinux})
 }
 
 var diskLinuxFields = []struct {
@@ -164,29 +162,39 @@ func c_iostat_linux() (opentsdb.MultiDataPoint, error) {
 }
 
 // Check mdadm raid arrays on linux
-// linux.disk.mdadm.failed value:
-//   0 => active
-//   1 => something else, error
-func c_mdadm_linux() (opentsdb.MultiDataPoint, error) {
+// linux.disk.mdadm.failed values:
+const (
+	mdadmUnknown = iota
+	mdadmActive  // 1 => ACTIVE
+	mdadmError   // 2 => raid has an unspecified error
+	mdadmDesc    = "0: unknown, 1: raid is active, 2: bad state (not active)"
+)
+
+// makes errcheck happy,
+// http://www.blevesearch.com/news/Deferred-Cleanup,-Checking-Errors,-and-Potential-Problems/
+func errClose(c io.Closer) {
+	_ = c.Close()
+}
+
+func checkMdadmLinux() (opentsdb.MultiDataPoint, error) {
 	mdstat, err := os.Open("/proc/mdstat")
-	defer mdstat.Close()
 	if err != nil {
 		// there is no mdadm: not really an error
 		return opentsdb.MultiDataPoint{}, nil
 	}
-	return mdadmLinux(mdstat)
+	defer errClose(mdstat)
+	return parseMdadmOutput(mdstat)
 }
 
-// mock our file for testing purpose
-func mdadmLinux(mdStat io.Reader) (opentsdb.MultiDataPoint, error) {
+// mock our file for testing purposes
+func parseMdadmOutput(mdStat io.Reader) (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
-	var descr = "0: raid is active, 1: bad state (not active)"
 	scanner := bufio.NewScanner(mdStat)
 	for scanner.Scan() {
 		l := scanner.Text()
 		// md125 : active raid1 sda2[0] sdb2[1]
 		// s:0   1 2      3     disks...
-		if utf8.RuneCountInString(l) <= 2 || l[0:2] != "md" { // l =~ /^md/
+		if !strings.HasPrefix(l, "md") {
 			continue
 		}
 		fields := strings.SplitN(l[2:], " ", 4)
@@ -198,17 +206,17 @@ func mdadmLinux(mdStat io.Reader) (opentsdb.MultiDataPoint, error) {
 			continue
 		}
 		volumeName := "md" + fields[0]
-		raidFailed := 0 // 0: ok, 1: ko
+		raidFailed := mdadmActive
 		if fields[2] != "active" {
-			raidFailed = 1
+			raidFailed = mdadmError
 		}
 
 		metric := "linux.disk.mdadm.failed"
 		tags := opentsdb.TagSet{"volume": volumeName}
 
 		// Now let's write some datapoints
-		// FIXME: do we have to write linux.disk. + os.disk.?
-		Add(&md, metric, raidFailed, tags, metadata.Gauge, metadata.Bool, descr)
+		Add(&md, metric, raidFailed, tags, metadata.Gauge, metadata.StatusCode,
+			mdadmDesc)
 	}
 	return md, nil
 }
