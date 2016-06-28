@@ -561,13 +561,13 @@ func c_mssql_memory(svc_dst []Win32_Service) (opentsdb.MultiDataPoint, error) {
 }
 
 const (
-	descMSSQLTargetServerMemoryKB   = "Indicates the ideal amount of memory the server can consume."
-	descMSSQLTotalServerMemoryKB    = "Specifies the amount of memory the server has committed using the memory manager."
+	descMSSQLTargetServerMemoryKB = "Indicates the ideal amount of memory the server can consume."
+	descMSSQLTotalServerMemoryKB  = "Specifies the amount of memory the server has committed using the memory manager."
 )
 
 type Win32_PerfRawData_MSSQLSERVER_SQLServerMemoryManager struct {
-	TargetServerMemoryKB    uint64
-	TotalServerMemoryKB     uint64 
+	TargetServerMemoryKB uint64
+	TotalServerMemoryKB  uint64
 }
 
 func c_mssql_buffer(svc_dst []Win32_Service) (opentsdb.MultiDataPoint, error) {
@@ -592,11 +592,11 @@ func c_mssql_buffer(svc_dst []Win32_Service) (opentsdb.MultiDataPoint, error) {
 }
 
 const (
-	descMSSQLPagelifeexpectancy   = "Indicates the number of seconds a page will stay in the buffer pool without references."
+	descMSSQLPagelifeexpectancy = "Indicates the number of seconds a page will stay in the buffer pool without references."
 )
 
 type Win32_PerfRawData_MSSQLSERVER_SQLServerBufferManager struct {
-	Pagelifeexpectancy    uint64 
+	Pagelifeexpectancy uint64
 }
 
 func instanceWMIQuery(instancename string, wmiquery string) string {
