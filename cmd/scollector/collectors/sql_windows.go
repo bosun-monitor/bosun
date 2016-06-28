@@ -90,6 +90,8 @@ func c_mssql() (opentsdb.MultiDataPoint, error) {
 	add(c_mssql_statistics)
 	add(c_mssql_locks)
 	add(c_mssql_databases)
+	add(c_mssql_memory)
+	add(c_mssql_buffer)
 	return md, err
 }
 
@@ -534,6 +536,67 @@ type MSCluster_Resource struct {
 	OwnerNode  string
 	Type       string
 	State      uint32
+}
+
+func c_mssql_memory(svc_dst []Win32_Service) (opentsdb.MultiDataPoint, error) {
+	var md opentsdb.MultiDataPoint
+	for _, w := range svc_dst {
+		var dst []Win32_PerfRawData_MSSQLSERVER_SQLServerMemoryManager
+		q := wmi.CreateQuery(&dst, ``)
+		label := "mssqlserver"
+		if w.Name != `MSSQLSERVER` {
+			q = instanceWMIQuery(w.Name, q)
+			label = strings.ToLower(w.Name[6:len(w.Name)])
+		}
+		if err := queryWmi(q, &dst); err != nil {
+			return nil, slog.Wrap(err)
+		}
+		for _, v := range dst {
+			tags := opentsdb.TagSet{"instance": label}
+			Add(&md, "mssql.target_server_memory_kb", v.TargetServerMemoryKB, tags, metadata.Gauge, metadata.KBytes, descMSSQLTargetServerMemoryKB)
+			Add(&md, "mssql.total_server_memory_kb​", v.TotalServerMemoryKB, tags, metadata.Gauge, metadata.KBytes, descMSSQLTotalServerMemoryKB)
+		}
+	}
+	return md, nil
+}
+
+const (
+	descMSSQLTargetServerMemoryKB = "Indicates the ideal amount of memory the server can consume."
+	descMSSQLTotalServerMemoryKB  = "Specifies the amount of memory the server has committed using the memory manager."
+)
+
+type Win32_PerfRawData_MSSQLSERVER_SQLServerMemoryManager struct {
+	TargetServerMemoryKB uint64
+	TotalServerMemoryKB  uint64
+}
+
+func c_mssql_buffer(svc_dst []Win32_Service) (opentsdb.MultiDataPoint, error) {
+	var md opentsdb.MultiDataPoint
+	for _, w := range svc_dst {
+		var dst []Win32_PerfRawData_MSSQLSERVER_SQLServerBufferManager
+		q := wmi.CreateQuery(&dst, ``)
+		label := "mssqlserver"
+		if w.Name != `MSSQLSERVER` {
+			q = instanceWMIQuery(w.Name, q)
+			label = strings.ToLower(w.Name[6:len(w.Name)])
+		}
+		if err := queryWmi(q, &dst); err != nil {
+			return nil, slog.Wrap(err)
+		}
+		for _, v := range dst {
+			tags := opentsdb.TagSet{"instance": label}
+			Add(&md, "mssql.page_life_expectancy", v.Pagelifeexpectancy, tags, metadata.Gauge, metadata.Second, descMSSQLPagelifeexpectancy)
+		}
+	}
+	return md, nil
+}
+
+const (
+	descMSSQLPagelifeexpectancy = "Indicates the number of seconds a page will stay in the buffer pool without references."
+)
+
+type Win32_PerfRawData_MSSQLSERVER_SQLServerBufferManager struct {
+	Pagelifeexpectancy uint64
 }
 
 func instanceWMIQuery(instancename string, wmiquery string) string {
