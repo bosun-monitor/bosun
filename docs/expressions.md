@@ -380,6 +380,14 @@ Sum.
 
 Group functions modify the OpenTSDB groups.
 
+## addtags(seriesSet, group string) seriesSet
+
+Accepts a series and a set of tags to add in `Key1=NewK1,Key2=NewK2` format. This is useful when you want to add series to set with merge and have tag collisions.
+
+## rename(seriesSet, string) seriesSet
+
+Accepts a series and a set of tags to rename in `Key1=NewK1,Key2=NewK2` format. All data points will have the tag keys renamed according to the spec provided, in order. This can be useful for combining results from seperate queries that have similar tagsets with different tag keys.
+
 ## t(numberSet, group string) seriesSet
 
 Transposes N series of length 1 to 1 series of length N. If the group parameter is not the empty string, the number of series returned is equal to the number of tagks passed. This is useful for performing scalar aggregation across multiple results from a query. For example, to get the total memory used on the web tier: `sum(t(avg(q("avg:os.mem.used{host=*-web*}", "5m", "")), ""))`.
@@ -574,10 +582,6 @@ Merge takes multiple seriesSets and merges them into a single seriesSet. The fun
 ## nv(numberSet, scalar) numberSet
 
 Change the NaN value during binary operations (when joining two queries) of unknown groups to the scalar. This is useful to prevent unknown group and other errors from bubbling up.
-
-## rename(seriesSet, string) seriesSet
-
-Accepts a series and a set of tags to rename in `Key1=NewK1,Key2=NewK2` format. All data points will have the tag keys renamed according to the spec provided, in order. This can be useful for combining results from seperate queries that have similar tagsets with different tag keys.
 
 ## sort(numberSet, (asc|desc) string) numberSet
 
