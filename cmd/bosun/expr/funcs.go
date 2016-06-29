@@ -73,6 +73,7 @@ func tagRename(args []parse.Node) (parse.Tags, error) {
 	return tags, nil
 }
 
+<<<<<<< 45102aa71b0dcdc6da012dc484b5e3e0c682deb2
 var builtins = map[string]parse.Func{
 	// Reduction functions
 
