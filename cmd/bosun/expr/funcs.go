@@ -944,12 +944,14 @@ func Rename(e *State, T miniprofiler.Timer, series *Results, s string) (*Results
 }
 
 func AddTags(e *State, T miniprofiler.Timer, series *Results, s string) (*Results, error) {
-	for _, section := range strings.Split(s, ",") {
-		kv := strings.Split(section, "=")
-		if len(kv) != 2 {
-			return nil, fmt.Errorf("error passing groups")
-		}
-		tagKey, tagValue := kv[0], kv[1]
+	if s == "" {
+		return series, nil
+	}
+	tagSetToAdd, err := opentsdb.ParseTags(s)
+	if err != nil {
+		return nil, err
+	}
+	for tagKey, tagValue := range tagSetToAdd {
 		for _, res := range series.Results {
 			if _, ok := res.Group[tagKey]; ok {
 				return nil, fmt.Errorf("%s key already in group", tagKey)
