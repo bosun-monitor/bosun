@@ -110,6 +110,56 @@ func TestUngroup(t *testing.T) {
 	}
 }
 
+func TestMap(t *testing.T) {
+	err := testExpression(exprInOut{
+		`map(series("test=test", 0, 1, 1, 3), expr(v()+1))`,
+		Results{
+			Results: ResultSlice{
+				&Result{
+					Value: Series{
+						time.Unix(0, 0): 2,
+						time.Unix(1, 0): 4,
+					},
+					Group: opentsdb.TagSet{"test": "test"},
+				},
+			},
+		},
+	})
+	if err != nil {
+		t.Error(err)
+	}
+
+	err = testExpression(exprInOut{
+		`avg(map(series("test=test", 0, 1, 1, 3), expr(v()+1)))`,
+		Results{
+			Results: ResultSlice{
+				&Result{
+					Value: Number(3),
+					Group: opentsdb.TagSet{"test": "test"},
+				},
+			},
+		},
+	})
+	if err != nil {
+		t.Error(err)
+	}
+
+	err = testExpression(exprInOut{
+		`1 + avg(map(series("test=test", 0, 1, 1, 3), expr(v()+1))) + 1`,
+		Results{
+			Results: ResultSlice{
+				&Result{
+					Value: Number(5),
+					Group: opentsdb.TagSet{"test": "test"},
+				},
+			},
+		},
+	})
+	if err != nil {
+		t.Error(err)
+	}
+}
+
 func TestMerge(t *testing.T) {
 	seriesA := `series("foo=bar", 0, 1)`
 	seriesB := `series("foo=baz", 0, 1)`

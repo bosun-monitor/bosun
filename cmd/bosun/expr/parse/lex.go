@@ -58,6 +58,7 @@ const (
 	itemFunc
 	itemTripleQuotedString
 	itemPow // '**'
+	itemExpr
 )
 
 const eof = -1
@@ -278,6 +279,10 @@ func lexFunc(l *lexer) stateFn {
 			// absorb
 		default:
 			l.backup()
+			if l.input[l.start:l.pos] == "expr" {
+				l.emit(itemExpr)
+				return lexItem
+			}
 			l.emit(itemFunc)
 			return lexItem
 		}

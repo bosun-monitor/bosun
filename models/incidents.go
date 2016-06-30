@@ -130,6 +130,7 @@ const (
 	TypeSeriesSet
 	TypeESQuery
 	TypeESIndexer
+	TypeExpr
 )
 
 type Status int

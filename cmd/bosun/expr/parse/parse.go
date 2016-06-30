@@ -22,7 +22,8 @@ type Tree struct {
 	Text string // text parsed to create the expression.
 	Root Node   // top-level root of the tree, returns a number.
 
-	funcs []map[string]Func
+	funcs   []map[string]Func
+	mapExpr bool
 
 	// Parsing only; cleared after parse.
 	lex       *lexer
@@ -38,6 +39,7 @@ type Func struct {
 	VArgs     bool
 	VArgsPos  int
 	VArgsOmit bool
+	MapFunc   bool // Func is only valid in map expressions
 	Check     func(*Tree, *FuncNode) error
 }
 
@@ -90,6 +92,14 @@ func (t Tags) Intersection(o Tags) Tags {
 // is returned with the error.
 func Parse(text string, funcs ...map[string]Func) (t *Tree, err error) {
 	t = New()
+	t.Text = text
+	err = t.Parse(text, funcs...)
+	return
+}
+
+func ParseSub(text string, funcs ...map[string]Func) (t *Tree, err error) {
+	t = New()
+	t.mapExpr = true
 	t.Text = text
 	err = t.Parse(text, funcs...)
 	return
@@ -314,17 +324,17 @@ func (t *Tree) E() Node {
 
 func (t *Tree) F() Node {
 	switch token := t.peek(); token.typ {
-	case itemNumber, itemFunc:
+	case itemNumber, itemFunc, itemExpr:
 		return t.v()
 	case itemNot, itemMinus:
 		return newUnary(t.next(), t.F())
 	case itemLeftParen:
 		t.next()
 		n := t.O()
-		t.expect(itemRightParen, "input")
+		t.expect(itemRightParen, "input: F()")
 		return n
 	default:
-		t.unexpected(token, "input")
+		t.unexpected(token, "input: F()")
 	}
 	return nil
 }
@@ -340,8 +350,45 @@ func (t *Tree) v() Node {
 	case itemFunc:
 		t.backup()
 		return t.Func()
+	case itemExpr:
+		start := t.lex.pos
+		t.next()
+		leftCount := 0
+		rightCount := 0
+		fmt.Println("Going over tokens")
+	TOKENS:
+		for {
+			switch token = t.next(); token.typ {
+			case itemLeftParen:
+				leftCount++
+			case itemRightParen:
+				fmt.Println("right paren, yay")
+				rightCount++
+				if rightCount > leftCount {
+					fmt.Println("breaking sub expression")
+					break TOKENS
+				}
+			case itemEOF:
+				t.unexpected(token, "input: v()")
+			default:
+				// continue
+			}
+		}
+		fmt.Println("Out of tokens loop")
+		n, err := newExprNode(t.lex.input[start:t.lex.pos-1], t.lex.pos-1)
+		if err != nil {
+			t.error(err)
+		}
+		fmt.Println("going to parse sub expression: ", n.Text)
+		// not the correct place to inject, but doing it here for now
+		n.Tree, err = ParseSub(n.Text, t.funcs...)
+		if err != nil {
+			t.error(err)
+		}
+		fmt.Println("returning exprNode")
+		return n
 	default:
-		t.unexpected(token, "input")
+		t.unexpected(token, "input: v()")
 	}
 	return nil
 }
