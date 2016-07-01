@@ -193,13 +193,13 @@ func TestMap(t *testing.T) {
 	}
 
 	err = testExpression(exprInOut{
-		`map(series("test=test", 0, -2, 1, 3), expr(abs(1)))`,
+		`map(series("test=test", 0, -2, 1, 3), expr(abs(v())))`,
 		Results{
 			Results: ResultSlice{
 				&Result{
 					Value: Series{
-						time.Unix(0, 0): 1,
-						time.Unix(1, 0): 1,
+						time.Unix(0, 0): 2,
+						time.Unix(1, 0): 3,
 					},
 					Group: opentsdb.TagSet{"test": "test"},
 				},
