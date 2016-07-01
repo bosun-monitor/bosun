@@ -20,8 +20,10 @@ func init() {
 	collectors = append(collectors, &IntervalCollector{F: c_iostat_linux})
 	collectors = append(collectors, &IntervalCollector{F: c_dfstat_blocks_linux})
 	collectors = append(collectors, &IntervalCollector{F: c_dfstat_inodes_linux})
-	// todo: increase timer for Mdadm: won't change that often
-	collectors = append(collectors, &IntervalCollector{F: checkMdadmLinux})
+	collectors = append(collectors, &IntervalCollector{
+		F:        checkMdadmLinux,
+		Interval: 1 * time.Minute,
+	})
 }
 
 var diskLinuxFields = []struct {
