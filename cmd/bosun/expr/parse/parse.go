@@ -246,7 +246,7 @@ E -> F {( "**" ) F}
 F -> v | "(" O ")" | "!" O | "-" O
 v -> number | func(..)
 Func -> name "(" param {"," param} ")"
-param -> number | "string" | [query]
+param -> number | "string" | subExpr | [query]
 */
 
 // expr:
@@ -324,7 +324,7 @@ func (t *Tree) E() Node {
 
 func (t *Tree) F() Node {
 	switch token := t.peek(); token.typ {
-	case itemNumber, itemFunc, itemExpr:
+	case itemNumber, itemFunc:
 		return t.v()
 	case itemNot, itemMinus:
 		return newUnary(t.next(), t.F())
@@ -350,49 +350,6 @@ func (t *Tree) v() Node {
 	case itemFunc:
 		t.backup()
 		return t.Func()
-	case itemExpr:
-		fmt.Println(token.String())
-		t.expect(itemLeftParen, "v() expect left paran in itemExpr")
-		start := t.lex.lastPos
-		leftCount := 1	
-		fmt.Println("Going over tokens")
-	TOKENS:
-		for {
-			switch token = t.next(); token.typ {
-			case itemLeftParen:
-				fmt.Println("left paren")
-				leftCount++
-			case itemFunc:
-				fmt.Println("itemFunc in subExpr")
-			case itemRightParen:
-				fmt.Println("right paren")
-				leftCount--
-				if leftCount == 0 {
-					t.expect(itemRightParen, "v() expect right paren in itemExpr")
-					t.backup()
-					fmt.Println("breaking sub expression")
-					break TOKENS
-				}
-			case itemEOF:
-				t.unexpected(token, "input: v()")
-			default:
-				// continue
-			}
-		}
-		fmt.Println("Out of tokens loop: on token ", t.token[0].String())
-		//t.expect(itemRightParen, "v() expect right paren in itemExpr")
-		n, err := newExprNode(t.lex.input[start:t.lex.lastPos], t.lex.lastPos)
-		if err != nil {
-			t.error(err)
-		}
-		fmt.Println("going to parse sub expression: ", n.Text)
-		// not the correct place to inject, but doing it here for now
-		n.Tree, err = ParseSub(n.Text, t.funcs...)
-		if err != nil {
-			t.error(err)
-		}
-		fmt.Println("returning exprNode")
-		return n
 	default:
 		t.unexpected(token, "input: v()")
 	}
@@ -422,6 +379,49 @@ func (t *Tree) Func() (f *FuncNode) {
 			f.append(newString(token.pos, token.val, s))
 		case itemRightParen:
 			return
+		case itemExpr:
+			fmt.Println(token.String())
+			t.expect(itemLeftParen, "v() expect left paran in itemExpr")
+			start := t.lex.lastPos
+			leftCount := 1
+			fmt.Println("Going over tokens")
+		TOKENS:
+			for {
+				switch token = t.next(); token.typ {
+				case itemLeftParen:
+					fmt.Println("left paren")
+					leftCount++
+				case itemFunc:
+					fmt.Println("itemFunc in subExpr")
+				case itemRightParen:
+					fmt.Println("right paren")
+					leftCount--
+					if leftCount == 0 {
+						t.expect(itemRightParen, "v() expect right paren in itemExpr")
+						t.backup()
+						fmt.Println("breaking sub expression")
+						break TOKENS
+					}
+				case itemEOF:
+					t.unexpected(token, "input: v()")
+				default:
+					// continue
+				}
+			}
+			fmt.Println("Out of tokens loop: on token ", t.token[0].String())
+			//t.expect(itemRightParen, "v() expect right paren in itemExpr")
+			n, err := newExprNode(t.lex.input[start:t.lex.lastPos], t.lex.lastPos)
+			if err != nil {
+				t.error(err)
+			}
+			fmt.Println("going to parse sub expression: ", n.Text)
+			// not the correct place to inject, but doing it here for now
+			n.Tree, err = ParseSub(n.Text, t.funcs...)
+			if err != nil {
+				t.error(err)
+			}
+			fmt.Println("returning exprNode")
+			f.append(n)
 		}
 		switch token = t.next(); token.typ {
 		case itemComma:
@@ -444,6 +444,20 @@ func (t *Tree) GetFunction(name string) (v Func, ok bool) {
 		}
 	}
 	return
+}
+
+func (t *Tree) SetFunction(name string, F interface{}) error {
+	for i, funcMap := range t.funcs {
+		if funcMap == nil {
+			continue
+		}
+		if v, ok := funcMap[name]; ok {
+			v.F = F
+			t.funcs[i][name] = v
+			return nil
+		}
+	}
+	return fmt.Errorf("can not set function, function %v not found", name)
 }
 
 func (t *Tree) String() string {
