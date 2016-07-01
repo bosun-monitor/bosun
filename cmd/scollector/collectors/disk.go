@@ -1,5 +1,7 @@
 package collectors
 
+//go:generate stringer -type=mdadmState,spinState
+
 // things that are not OS specific.
 // ie: can compile and execute anywhere
 
@@ -15,18 +17,26 @@ import (
 
 // Check mdadm raid arrays on linux
 // linux.disk.mdadm.state values:
+
+type mdadmState int
+
 const (
-	mdadmUnknown  = iota
-	mdadmNormal   // 1 => active or clean state
-	mdadmFailed   // 2 => raid is failed
-	mdadmDegraded // 3 => raid is degraded
-	mdadmDesc     = "raid 0: unknown, 1: normal, 2: failed, 3: degraded"
-	syncDesc      = "percent of spindles synchronization. 100% is fully synced"
+	mdadmUnknown  mdadmState = iota
+	mdadmNormal              // 1 => active or clean state
+	mdadmFailed              // 2 => raid is failed
+	mdadmDegraded            // 3 => raid is degraded
 )
+
+const (
+	mdadmDesc = "raid 0: unknown, 1: normal, 2: failed, 3: degraded"
+	syncDesc  = "percent of spindles synchronization. 100% is fully synced"
+)
+
+type spinState int
 
 // Check individual spindle disks in the array
 const (
-	spinFailed = iota
+	spinFailed spinState = iota
 	spinActive
 	spinSpare
 	spinDesc = "spin 0: failed, 1: active, 2: spare"
@@ -34,7 +44,7 @@ const (
 
 type volumeDetail struct {
 	syncProgress  float32 // progress: between 0..100%
-	state         int
+	state         mdadmState
 	failedSpindle []string
 	activeSpindle []string
 	spareSpindle  []string
@@ -64,7 +74,7 @@ func getSpindle(l string) (dev string, gotit bool) {
 	return "", false
 }
 
-func getState(l string) (state int, gotit bool) {
+func getState(l string) (state mdadmState, gotit bool) {
 	if !strings.HasPrefix(l, "State : ") {
 		return mdadmUnknown, false
 	}
@@ -116,14 +126,14 @@ func parseExamineMdadm(examine io.Reader) (detail volumeDetail) {
 	return detail
 }
 
-func addMetricSpindle(md *opentsdb.MultiDataPoint, names []string, status int, volume string) {
+func addMetricSpindle(md *opentsdb.MultiDataPoint, names []string, status spinState, volume string) {
 	metric := "linux.disk.mdadm.spindle"
 	for _, name := range names {
 		tags := opentsdb.TagSet{
 			"volume":  volume,
 			"spindle": name,
 		}
-		Add(md, metric, status, tags, metadata.Gauge, metadata.StatusCode, spinDesc)
+		Add(md, metric, int(status), tags, metadata.Gauge, metadata.StatusCode, spinDesc)
 	}
 }
 

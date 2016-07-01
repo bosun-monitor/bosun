@@ -41,7 +41,7 @@ func TestGetSpindle(t *testing.T) {
 }
 
 type state struct {
-	s  int
+	s  mdadmState
 	ok bool
 }
 
