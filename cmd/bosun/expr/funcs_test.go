@@ -158,6 +158,57 @@ func TestMap(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+
+	err = testExpression(exprInOut{
+		`max(map(series("test=test", 0, 1, 1, 3), expr(v()+v())))`,
+		Results{
+			Results: ResultSlice{
+				&Result{
+					Value: Number(6),
+					Group: opentsdb.TagSet{"test": "test"},
+				},
+			},
+		},
+	})
+	if err != nil {
+		t.Error(err)
+	}
+
+	err = testExpression(exprInOut{
+		`map(series("test=test", 0, -2, 1, 3), expr(1+1))`,
+		Results{
+			Results: ResultSlice{
+				&Result{
+					Value: Series{
+						time.Unix(0, 0): 2,
+						time.Unix(1, 0): 2,
+					},
+					Group: opentsdb.TagSet{"test": "test"},
+				},
+			},
+		},
+	})
+	if err != nil {
+		t.Error(err)
+	}
+
+	err = testExpression(exprInOut{
+		`map(series("test=test", 0, -2, 1, 3), expr(abs(1)))`,
+		Results{
+			Results: ResultSlice{
+				&Result{
+					Value: Series{
+						time.Unix(0, 0): 1,
+						time.Unix(1, 0): 1,
+					},
+					Group: opentsdb.TagSet{"test": "test"},
+				},
+			},
+		},
+	})
+	if err != nil {
+		t.Error(err)
+	}
 }
 
 func TestMerge(t *testing.T) {

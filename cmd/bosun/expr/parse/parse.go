@@ -230,7 +230,7 @@ func (t *Tree) Parse(text string, funcs ...map[string]Func) (err error) {
 // It runs to EOF.
 func (t *Tree) parse() {
 	t.Root = t.O()
-	t.expect(itemEOF, "input")
+	t.expect(itemEOF, "root input")
 	if err := t.Root.Check(t); err != nil {
 		t.error(err)
 	}
@@ -351,20 +351,25 @@ func (t *Tree) v() Node {
 		t.backup()
 		return t.Func()
 	case itemExpr:
-		start := t.lex.pos
-		t.next()
-		leftCount := 0
-		rightCount := 0
+		fmt.Println(token.String())
+		t.expect(itemLeftParen, "v() expect left paran in itemExpr")
+		start := t.lex.lastPos
+		leftCount := 1	
 		fmt.Println("Going over tokens")
 	TOKENS:
 		for {
 			switch token = t.next(); token.typ {
 			case itemLeftParen:
+				fmt.Println("left paren")
 				leftCount++
+			case itemFunc:
+				fmt.Println("itemFunc in subExpr")
 			case itemRightParen:
-				fmt.Println("right paren, yay")
-				rightCount++
-				if rightCount > leftCount {
+				fmt.Println("right paren")
+				leftCount--
+				if leftCount == 0 {
+					t.expect(itemRightParen, "v() expect right paren in itemExpr")
+					t.backup()
 					fmt.Println("breaking sub expression")
 					break TOKENS
 				}
@@ -374,8 +379,9 @@ func (t *Tree) v() Node {
 				// continue
 			}
 		}
-		fmt.Println("Out of tokens loop")
-		n, err := newExprNode(t.lex.input[start:t.lex.pos-1], t.lex.pos-1)
+		fmt.Println("Out of tokens loop: on token ", t.token[0].String())
+		//t.expect(itemRightParen, "v() expect right paren in itemExpr")
+		n, err := newExprNode(t.lex.input[start:t.lex.lastPos], t.lex.lastPos)
 		if err != nil {
 			t.error(err)
 		}
