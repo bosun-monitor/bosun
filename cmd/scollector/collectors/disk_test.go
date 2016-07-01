@@ -26,12 +26,12 @@ type spindle struct {
 
 func TestGetSpindle(t *testing.T) {
 	tests := map[string]spindle{
-		"2       8       19        0      active sync   /dev/sdb3": spindle{"/dev/sdb3", true},
-		"2       0        0        2      removed":                 spindle{"", false},
-		"3       8       17        -      faulty   /dev/sdb1":      spindle{"/dev/sdb1", true},
-		"fdaf /dev ": spindle{"", false},
-		"fdsa":       spindle{"", false},
-		"":           spindle{"", false},
+		"2       8       19        0      active sync   /dev/sdb3": {"/dev/sdb3", true},
+		"2       0        0        2      removed":                 {"", false},
+		"3       8       17        -      faulty   /dev/sdb1":      {"/dev/sdb1", true},
+		"fdaf /dev ": {"", false},
+		"fdsa":       {"", false},
+		"":           {"", false},
 	}
 	for s, expected := range tests {
 		if dev, ok := getSpindle(s); ok != expected.ok || dev != expected.dev {
@@ -47,10 +47,10 @@ type state struct {
 
 func TestGetState(t *testing.T) {
 	tests := map[string]state{
-		"State : clean, degraded": state{mdadmDegraded, true},
-		"State : active, FAILED":  state{mdadmFailed, true},
-		"State : clean":           state{mdadmNormal, true},
-		" fdaf /dev ":             state{mdadmUnknown, false},
+		"State : clean, degraded": {mdadmDegraded, true},
+		"State : active, FAILED":  {mdadmFailed, true},
+		"State : clean":           {mdadmNormal, true},
+		" fdaf /dev ":             {mdadmUnknown, false},
 	}
 	for s, expected := range tests {
 		if state, ok := getState(s); ok != expected.ok || state != expected.s {
@@ -66,7 +66,7 @@ func compTab(a []string, b []string) bool {
 	if len(a) == 0 {
 		return true
 	}
-	for i, _ := range a {
+	for i := range a {
 		if a[i] != b[i] {
 			return false
 		}
