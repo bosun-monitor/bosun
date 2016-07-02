@@ -100,7 +100,12 @@ Freq (integer): is the default frequency in seconds for most collectors.
 BatchSize (integer): is the number of metrics that will be sent in each batch.
 Default is 500.
 
-MaxQueueLen (integer): is the number of metrics keept internally.
+MinimumSendInterval (integer): is the minimum time in seconds to wait between
+sending batches of data to TSDB. This property is only used if there is no
+backlog of data. This property is to be used with a higher BatchSize value
+if you wish to throttle the amount of calls to TSDB.
+
+MaxQueueLen (integer): is the number of metrics kept internally.
 Default is 200000.
 
 Filter (array of string): Only include collectors matching these terms. Prefix
