@@ -338,7 +338,7 @@ var builtins = map[string]parse.Func{
 		F:      Tail,
 	},
 	"map": {
-		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeExpr},
+		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeNumberExpr},
 		Return: models.TypeSeriesSet,
 		Tags:   tagFirst,
 		F:      Map,
@@ -355,7 +355,7 @@ func V(e *State, T miniprofiler.Timer) (*Results, error) {
 }
 
 func Map(e *State, T miniprofiler.Timer, series *Results, expr *Results) (*Results, error) {
-	newExpr := Expr{expr.Results[0].Value.Value().(SubExpr).Tree}
+	newExpr := Expr{expr.Results[0].Value.Value().(NumberExpr).Tree}
 	for _, result := range series.Results {
 		newSeries := make(Series)
 		for t, v := range result.Value.Value().(Series) {

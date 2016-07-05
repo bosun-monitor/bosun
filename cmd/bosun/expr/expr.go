@@ -174,10 +174,10 @@ type String string
 func (s String) Type() models.FuncType { return models.TypeString }
 func (s String) Value() interface{}    { return s }
 
-type SubExpr Expr
+type NumberExpr Expr
 
-func (s SubExpr) Type() models.FuncType { return models.TypeExpr }
-func (s SubExpr) Value() interface{}    { return s }
+func (s NumberExpr) Type() models.FuncType { return models.TypeNumberExpr }
+func (s NumberExpr) Value() interface{}    { return s }
 
 //func (s String) MarshalJSON() ([]byte, error) { return json.Marshal(s) }
 
@@ -479,7 +479,7 @@ func (e *State) walkExpr(node *parse.ExprNode, T miniprofiler.Timer) *Results {
 	return &Results{
 		Results: ResultSlice{
 			&Result{
-				Value: SubExpr{node.Tree},
+				Value: NumberExpr{node.Tree},
 			},
 		},
 	}
@@ -762,7 +762,7 @@ func extract(res *Results) interface{} {
 	if len(res.Results) == 1 && res.Results[0].Type() == models.TypeString {
 		return string(res.Results[0].Value.Value().(String))
 	}
-	if len(res.Results) == 1 && res.Results[0].Type() == models.TypeExpr {
+	if len(res.Results) == 1 && res.Results[0].Type() == models.TypeNumberExpr {
 		return res.Results[0].Value.Value()
 	}
 	return res

@@ -126,6 +126,7 @@ func (f *FuncNode) Check(t *Tree) error {
 			funcType = f.F.Args[i]
 		}
 		argType := arg.Return()
+		fmt.Printf("func tpye %v, arg type %v\n", funcType, argType)
 		if funcType == models.TypeNumberSet && argType == models.TypeScalar {
 			// Scalars are promoted to NumberSets during execution.
 		} else if funcType != argType {
@@ -175,8 +176,8 @@ type ExprNode struct {
 func newExprNode(text string, pos Pos) (*ExprNode, error) {
 	return &ExprNode{
 		NodeType: NodeExpr,
-		Text: text,
-		Pos: pos,
+		Text:     text,
+		Pos:      pos,
 	}, nil
 }
 
@@ -193,7 +194,14 @@ func (s *ExprNode) Check(*Tree) error {
 }
 
 func (s *ExprNode) Return() models.FuncType {
-	return models.TypeExpr
+	switch s.Tree.Root.Return() {
+	case models.TypeNumberSet, models.TypeScalar:
+		return models.TypeNumberExpr
+	case models.TypeSeriesSet:
+		return models.TypeSeriesExpr
+	default:
+		return models.TypeUnexpected
+	}
 }
 
 func (s *ExprNode) Tags() (Tags, error) {

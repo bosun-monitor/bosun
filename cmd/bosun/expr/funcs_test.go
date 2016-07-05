@@ -11,12 +11,19 @@ import (
 )
 
 type exprInOut struct {
-	expr string
-	out  Results
+	expr           string
+	out            Results
+	shouldParseErr bool
 }
 
 func testExpression(eio exprInOut) error {
 	e, err := New(eio.expr, builtins)
+	if eio.shouldParseErr {
+		if err == nil {
+			return fmt.Errorf("no error when expected error on %v", eio.expr)
+		}
+		return nil
+	}
 	if err != nil {
 		return err
 	}
@@ -44,6 +51,7 @@ func TestDuration(t *testing.T) {
 				},
 			},
 		},
+		false,
 	}
 	err := testExpression(d)
 	if err != nil {
@@ -81,6 +89,7 @@ func TestToDuration(t *testing.T) {
 					},
 				},
 			},
+			false,
 		}
 		err := testExpression(d)
 		if err != nil {
@@ -103,6 +112,7 @@ func TestUngroup(t *testing.T) {
 				},
 			},
 		},
+		false,
 	})
 
 	if err != nil {
@@ -124,6 +134,7 @@ func TestMap(t *testing.T) {
 				},
 			},
 		},
+		false,
 	})
 	if err != nil {
 		t.Error(err)
@@ -139,6 +150,7 @@ func TestMap(t *testing.T) {
 				},
 			},
 		},
+		false,
 	})
 	if err != nil {
 		t.Error(err)
@@ -154,6 +166,7 @@ func TestMap(t *testing.T) {
 				},
 			},
 		},
+		false,
 	})
 	if err != nil {
 		t.Error(err)
@@ -169,6 +182,7 @@ func TestMap(t *testing.T) {
 				},
 			},
 		},
+		false,
 	})
 	if err != nil {
 		t.Error(err)
@@ -187,6 +201,7 @@ func TestMap(t *testing.T) {
 				},
 			},
 		},
+		false,
 	})
 	if err != nil {
 		t.Error(err)
@@ -205,6 +220,26 @@ func TestMap(t *testing.T) {
 				},
 			},
 		},
+		false,
+	})
+	if err != nil {
+		t.Error(err)
+	}
+
+	err = testExpression(exprInOut{
+		`map(series("test=test", 0, -2, 1, 3), expr(series("test=test", 0, v())))`,
+		Results{
+			Results: ResultSlice{
+				&Result{
+					Value: Series{
+						time.Unix(0, 0): 2,
+						time.Unix(1, 0): 3,
+					},
+					Group: opentsdb.TagSet{"test": "test"},
+				},
+			},
+		},
+		true, // expect parse error here, series result not valid as TypeNumberExpr
 	})
 	if err != nil {
 		t.Error(err)
@@ -232,6 +267,7 @@ func TestMerge(t *testing.T) {
 				},
 			},
 		},
+		false,
 	})
 	if err != nil {
 		t.Error(err)
@@ -256,6 +292,7 @@ func TestMerge(t *testing.T) {
 				},
 			},
 		},
+		false,
 	})
 	if err == nil {
 		t.Errorf("error expected due to identical groups in merge but did not get one")
@@ -292,6 +329,7 @@ func TestTimedelta(t *testing.T) {
 					},
 				},
 			},
+			false,
 		})
 
 		if err != nil {
