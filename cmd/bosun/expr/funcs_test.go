@@ -120,8 +120,6 @@ func TestUngroup(t *testing.T) {
 	}
 }
 
-
-
 func TestMerge(t *testing.T) {
 	seriesA := `series("foo=bar", 0, 1)`
 	seriesB := `series("foo=baz", 0, 1)`
