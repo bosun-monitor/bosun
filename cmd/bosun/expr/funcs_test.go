@@ -198,3 +198,48 @@ func TestTimedelta(t *testing.T) {
 		}
 	}
 }
+
+func TestTail(t *testing.T) {
+	for _, i := range []struct {
+		input    string
+		expected Series
+	}{
+		{
+			`tail(series("foo=bar", 1466133600, 1, 1466133610, 1, 1466133710, 1), 2)`,
+			Series{
+				time.Unix(1466133610, 0): 1,
+				time.Unix(1466133710, 0): 1,
+			},
+		},
+		{
+			`tail(series("foo=bar", 1466133600, 1), 2)`,
+			Series{
+				time.Unix(1466133600, 0): 1,
+			},
+		},
+		{
+			`tail(series("foo=bar", 1466133600, 1, 1466133610, 1, 1466133710, 1), last(series("foo=bar", 1466133600, 2)))`,
+			Series{
+				time.Unix(1466133610, 0): 1,
+				time.Unix(1466133710, 0): 1,
+			},
+		},
+	} {
+
+		err := testExpression(exprInOut{
+			i.input,
+			Results{
+				Results: ResultSlice{
+					&Result{
+						Value: i.expected,
+						Group: opentsdb.TagSet{"foo": "bar"},
+					},
+				},
+			},
+		})
+
+		if err != nil {
+			t.Error(err)
+		}
+	}
+}

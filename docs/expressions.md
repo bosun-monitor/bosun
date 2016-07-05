@@ -625,4 +625,18 @@ Would return a seriesSet equal to:
 series("foo=bar", 1466133610, 10, 1466133710, 100)
 ```
 
+## tail(seriesSet, num numberSet) seriesSet
+
+Returns the most recent num points from a series. If the series is shorter than the number of requeted points the series is unchanged as all points are in the requested window. This function is useful for making calculating on the leading edge. For example:
+
+```
+tail(series("foo=bar", 1466133600, 1, 1466133610, 1, 1466133710, 1), 2)
+```
+
+Would return a seriesSet equal to:
+
+```
+series("foo=bar", 1466133610, 1, 1466133710, 1)
+```
+
 </div>
