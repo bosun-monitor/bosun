@@ -214,7 +214,7 @@ func (a ActionType) String() string {
 	case ActionPurge:
 		return "Purged"
 	case ActionNote:
-		return "Note"
+		return "Added Note"
 	default:
 		return "none"
 	}
