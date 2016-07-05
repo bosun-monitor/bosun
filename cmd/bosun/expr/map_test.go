@@ -144,4 +144,23 @@ func TestMap(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+
+	err = testExpression(exprInOut{
+		`map(series("test=test", 0, -2, 1, 0), expr(!v()))`,
+		Results{
+			Results: ResultSlice{
+				&Result{
+					Value: Series{
+						time.Unix(0, 0): 0,
+						time.Unix(1, 0): 1,
+					},
+					Group: opentsdb.TagSet{"test": "test"},
+				},
+			},
+		},
+		false,
+	})
+	if err != nil {
+		t.Error(err)
+	}
 }

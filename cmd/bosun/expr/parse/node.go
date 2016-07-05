@@ -129,7 +129,6 @@ func (f *FuncNode) Check(t *Tree) error {
 			funcType = f.F.Args[i]
 		}
 		argType := arg.Return()
-		fmt.Printf("func tpye %v, arg type %v\n", funcType, argType)
 		if funcType == models.TypeNumberSet && argType == models.TypeScalar {
 			// Scalars are promoted to NumberSets during execution.
 		} else if funcType != argType {
