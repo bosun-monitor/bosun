@@ -3170,7 +3170,7 @@ bosunApp.directive('tsState', ['$sce', '$http', function ($sce, $http) {
                 });
                 scope.state.last = scope.state.Events[scope.state.Events.length - 1];
                 if (scope.state.Actions && scope.state.Actions.length > 0) {
-                    scope.state.LastAction = scope.state.Actions[0];
+                    scope.state.LastAction = scope.state.Actions[scope.state.Actions.length - 1];
                 }
                 scope.state.RuleUrl = '/config?' +
                     'alert=' + encodeURIComponent(scope.state.Alert) +
@@ -3187,6 +3187,12 @@ bosunApp.directive('tsState', ['$sce', '$http', function ($sce, $http) {
             }
         };
     }]);
+bosunApp.directive('tsNote', function () {
+    return {
+        restrict: 'E',
+        templateUrl: '/partials/note.html'
+    };
+});
 bosunApp.directive('tsAck', function () {
     return {
         restrict: 'E',

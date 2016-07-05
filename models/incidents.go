@@ -198,6 +198,7 @@ const (
 	ActionForget
 	ActionForceClose
 	ActionPurge
+	ActionNote
 )
 
 func (a ActionType) String() string {
@@ -212,6 +213,8 @@ func (a ActionType) String() string {
 		return "ForceClosed"
 	case ActionPurge:
 		return "Purged"
+	case ActionNote:
+		return "Added Note"
 	default:
 		return "none"
 	}
@@ -233,6 +236,8 @@ func (a *ActionType) UnmarshalJSON(b []byte) error {
 		*a = ActionPurge
 	case `"ForceClosed"`:
 		*a = ActionForceClose
+	case `"Note"`:
+		*a = ActionNote
 	default:
 		*a = ActionNone
 	}
