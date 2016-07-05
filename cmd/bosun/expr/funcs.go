@@ -352,6 +352,7 @@ func SeriesFunc(e *State, T miniprofiler.Timer, tags string, pairs ...float64) (
 
 func Crop(e *State, T miniprofiler.Timer, sSet *Results, startSet *Results, endSet *Results) (*Results, error) {
 	results := Results{}
+INNER:
 	for _, seriesResult := range sSet.Results {
 		for _, startResult := range startSet.Results {
 			for _, endResult := range endSet.Results {
@@ -362,6 +363,7 @@ func Crop(e *State, T miniprofiler.Timer, sSet *Results, startSet *Results, endS
 				if (startHasNoGroup || startOverlapsSeries) && (endHasNoGroup || endOverlapsSeries) {
 					res := crop(e, seriesResult, startResult, endResult)
 					results.Results = append(results.Results, res)
+					continue INNER
 				}
 			}
 		}
