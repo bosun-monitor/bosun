@@ -231,15 +231,28 @@ func TestMap(t *testing.T) {
 		Results{
 			Results: ResultSlice{
 				&Result{
-					Value: Series{
-						time.Unix(0, 0): 2,
-						time.Unix(1, 0): 3,
-					},
+					Value: Series{},
 					Group: opentsdb.TagSet{"test": "test"},
 				},
 			},
 		},
 		true, // expect parse error here, series result not valid as TypeNumberExpr
+	})
+	if err != nil {
+		t.Error(err)
+	}
+
+	err = testExpression(exprInOut{
+		`v()`,
+		Results{
+			Results: ResultSlice{
+				&Result{
+					Value: Series{},
+					Group: opentsdb.TagSet{"test": "test"},
+				},
+			},
+		},
+		true, // v() is not outside a map expression
 	})
 	if err != nil {
 		t.Error(err)

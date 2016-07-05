@@ -105,6 +105,9 @@ func (f *FuncNode) StringAST() string {
 }
 
 func (f *FuncNode) Check(t *Tree) error {
+	if f.F.MapFunc && !t.mapExpr {
+		return fmt.Errorf("%v is only valid in a map expression", f.Name)
+	}
 	const errFuncType = "parse: bad argument type in %s, expected %s, got %s"
 	// For VArgs we make sure they are all of the expected type
 	if f.F.VArgs {
