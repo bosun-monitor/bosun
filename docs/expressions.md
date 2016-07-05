@@ -473,6 +473,28 @@ expression from the host.down alert.
 
 Returns the absolute value of each element in the numberSet.
 
+## crop(series seriesSet, start numberSet, end numberSet) seriesSet
+
+Returns a seriesSet where each series is has datapoints removed if the datapoint is before start (from now, in seconds) or after end (also from now, in seconds). This is useful if you want to alert on different timespans for different items in a set, for example:
+
+```
+lookup test {
+    entry host=ny-bosun01 {
+        start = 30
+    }
+    entry host=* {
+        start = 60
+    }
+}
+
+alert test {
+    template = test
+    $q = q("avg:rate:os.cpu{host=ny-bosun*}", "5m", "")
+    $c = crop($q, lookup("test", "start") , 0)
+    crit = avg($c)
+}
+```
+
 ## d(string) scalar
 
 Returns the number of seconds of the [OpenTSDB duration string](http://opentsdb.net/docs/build/html/user_guide/query/dates.html).

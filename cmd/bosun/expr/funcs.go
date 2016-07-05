@@ -208,6 +208,12 @@ var builtins = map[string]parse.Func{
 		Tags:   tagFirst,
 		F:      Abs,
 	},
+	"crop": {
+		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeNumberSet, models.TypeNumberSet},
+		Return: models.TypeSeriesSet,
+		Tags:   tagFirst,
+		F:      Crop,
+	},
 	"d": {
 		Args:   []models.FuncType{models.TypeString},
 		Return: models.TypeScalar,
@@ -349,6 +355,41 @@ func SeriesFunc(e *State, T miniprofiler.Timer, tags string, pairs ...float64) (
 			},
 		},
 	}, nil
+}
+
+func Crop(e *State, T miniprofiler.Timer, sSet *Results, startSet *Results, endSet *Results) (*Results, error) {
+	results := Results{}
+INNER:
+	for _, seriesResult := range sSet.Results {
+		for _, startResult := range startSet.Results {
+			for _, endResult := range endSet.Results {
+				startHasNoGroup := len(startResult.Group) == 0
+				endHasNoGroup := len(endResult.Group) == 0
+				startOverlapsSeries := seriesResult.Group.Overlaps(startResult.Group)
+				endOverlapsSeries := seriesResult.Group.Overlaps(endResult.Group)
+				if (startHasNoGroup || startOverlapsSeries) && (endHasNoGroup || endOverlapsSeries) {
+					res := crop(e, seriesResult, startResult, endResult)
+					results.Results = append(results.Results, res)
+					continue INNER
+				}
+			}
+		}
+	}
+	return &results, nil
+}
+
+func crop(e *State, seriesResult *Result, startResult *Result, endResult *Result) *Result {
+	startNumber := startResult.Value.(Number)
+	endNumber := endResult.Value.(Number)
+	start := e.now.Add(-time.Duration(time.Duration(startNumber) * time.Second))
+	end := e.now.Add(-time.Duration(time.Duration(endNumber) * time.Second))
+	series := seriesResult.Value.(Series)
+	for timeStamp := range series {
+		if timeStamp.Before(start) || timeStamp.After(end) {
+			delete(series, timeStamp)
+		}
+	}
+	return seriesResult
 }
 
 func DropBool(e *State, T miniprofiler.Timer, target *Results, filter *Results) (*Results, error) {
