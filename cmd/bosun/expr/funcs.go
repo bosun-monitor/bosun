@@ -208,15 +208,12 @@ var builtins = map[string]parse.Func{
 		Tags:   tagFirst,
 		F:      Abs,
 	},
-<<<<<<< c0f7de5f3621be76750c1595358bb873f9449f80
 	"crop": {
 		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeNumberSet, models.TypeNumberSet},
 		Return: models.TypeSeriesSet,
 		Tags:   tagFirst,
 		F:      Crop,
 	},
-=======
->>>>>>> restore builtins
 	"d": {
 		Args:   []models.FuncType{models.TypeString},
 		Return: models.TypeScalar,
