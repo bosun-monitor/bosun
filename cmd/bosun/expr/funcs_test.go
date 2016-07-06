@@ -249,6 +249,7 @@ func TestTail(t *testing.T) {
 					},
 				},
 			},
+			false,
 		})
 
 		if err != nil {
