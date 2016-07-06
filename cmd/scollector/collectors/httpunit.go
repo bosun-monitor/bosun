@@ -43,6 +43,7 @@ func cHTTPUnit(plans *httpunit.Plans) (opentsdb.MultiDataPoint, error) {
 	if err != nil {
 		return nil, err
 	}
+	unix_now := time.Now().Unix()
 	var md opentsdb.MultiDataPoint
 	for r := range ch {
 		tags := opentsdb.TagSet{
@@ -63,7 +64,9 @@ func cHTTPUnit(plans *httpunit.Plans) (opentsdb.MultiDataPoint, error) {
 			if r.Case.URL.Scheme == "https" {
 				Add(&md, "hu.cert.valid", !r.Result.InvalidCert, tags, metadata.Gauge, metadata.Bool, descHTTPUnitCertValid)
 				if resp := r.Result.Resp; resp != nil && resp.TLS != nil && len(resp.TLS.PeerCertificates) > 0 {
-					Add(&md, "hu.cert.expires", resp.TLS.PeerCertificates[0].NotAfter.Unix(), tags, metadata.Gauge, metadata.Timestamp, descHTTPUnitCertExpires)
+					expiration := resp.TLS.PeerCertificates[0].NotAfter.Unix()
+					Add(&md, "hu.cert.expires", expiration, tags, metadata.Gauge, metadata.Timestamp, descHTTPUnitCertExpires)
+					Add(&md, "hu.cert.valid_for", unix_now-expiration, tags, metadata.Gauge, metadata.Second, descHTTPUnitCertValidFor)
 				}
 			}
 		}
@@ -79,5 +82,6 @@ const (
 	descHTTPUnitExpectedRegex   = "1 if the response matched expected regex, else 0."
 	descHTTPUnitCertValid       = "1 if the SSL certificate is valid, else 0."
 	descHTTPUnitCertExpires     = "Unix epoch time of the certificate expiration."
+	descHTTPUnitCertValidFor    = "Number of seconds until certificate expiration."
 	descHTTPUnitTotalTime       = "Total time consumed by test case."
 )
