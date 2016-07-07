@@ -118,6 +118,10 @@ func (f FuncType) String() string {
 		return "esquery"
 	case TypeESIndexer:
 		return "esindexer"
+	case TypeNumberExpr:
+		return "numberexpr"
+	case TypeSeriesExpr:
+		return "seriesexpr"
 	default:
 		return "unknown"
 	}
@@ -130,6 +134,9 @@ const (
 	TypeSeriesSet
 	TypeESQuery
 	TypeESIndexer
+	TypeNumberExpr
+	TypeSeriesExpr // No implmentation yet
+	TypeUnexpected
 )
 
 type Status int

@@ -58,6 +58,7 @@ const (
 	NodeUnary                  // Unary operator: !, -
 	NodeString                 // A string constant.
 	NodeNumber                 // A numerical constant.
+	NodeExpr                   // A sub expression
 )
 
 // Nodes.
@@ -104,6 +105,9 @@ func (f *FuncNode) StringAST() string {
 }
 
 func (f *FuncNode) Check(t *Tree) error {
+	if f.F.MapFunc && !t.mapExpr {
+		return fmt.Errorf("%v is only valid in a map expression", f.Name)
+	}
 	const errFuncType = "parse: bad argument type in %s, expected %s, got %s"
 	// For VArgs we make sure they are all of the expected type
 	if f.F.VArgs {
@@ -162,6 +166,48 @@ type NumberNode struct {
 	Uint64  uint64  // The unsigned integer value.
 	Float64 float64 // The floating-point value.
 	Text    string  // The original textual representation from the input.
+}
+
+type ExprNode struct {
+	NodeType
+	Pos
+	Text string
+	Tree *Tree
+}
+
+func newExprNode(text string, pos Pos) (*ExprNode, error) {
+	return &ExprNode{
+		NodeType: NodeExpr,
+		Text:     text,
+		Pos:      pos,
+	}, nil
+}
+
+func (s *ExprNode) String() string {
+	return fmt.Sprintf("%v", s.Text)
+}
+
+func (s *ExprNode) StringAST() string {
+	return s.String()
+}
+
+func (s *ExprNode) Check(*Tree) error {
+	return nil
+}
+
+func (s *ExprNode) Return() models.FuncType {
+	switch s.Tree.Root.Return() {
+	case models.TypeNumberSet, models.TypeScalar:
+		return models.TypeNumberExpr
+	case models.TypeSeriesSet:
+		return models.TypeSeriesExpr
+	default:
+		return models.TypeUnexpected
+	}
+}
+
+func (s *ExprNode) Tags() (Tags, error) {
+	return nil, nil
 }
 
 func newNumber(pos Pos, text string) (*NumberNode, error) {
@@ -365,7 +411,7 @@ func Walk(n Node, f func(Node)) {
 		for _, a := range n.Args {
 			Walk(a, f)
 		}
-	case *NumberNode, *StringNode:
+	case *NumberNode, *StringNode, *ExprNode:
 		// Ignore.
 	case *UnaryNode:
 		Walk(n.Arg, f)

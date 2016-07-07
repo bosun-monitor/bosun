@@ -562,6 +562,30 @@ Returns the first key from the given lookup table with matching tags, this searc
 Returns the first key from the given lookup table with matching tags.
 The first argument is a series to use from which to derive the tag information.  This is good for alternative storage backends such as graphite and influxdb.
 
+## map(series seriesSet, subExpr numberSetExpr) seriesSet
+
+map applies the subExpr to each value in each series in the set. A special function `v()` which is only available in a numberSetExpr and it gives you the value for each item in the series.
+
+For example you can do something like the following to get the absolute value for each item in the series (since the normal `abs()` function works on normal numbers, not series:
+
+```
+$q = q("avg:rate:os.cpu{host=*bosun*}", "5m", "")
+map($q, expr(abs(v())))
+```
+
+Or for another example, this would get you the absolute difference of each datapoint from the series average as a new series:
+
+```
+$q = q("avg:rate:os.cpu{host=*bosun*}", "5m", "")
+map($q, expr(abs(v()-avg($q))))
+```
+
+Since this function is not optimized for a particular operation on a seriesSet it may not be very efficent. If you find you are doing things that involve more complex expressions within the `expr(...)` inside map (for example, having query functions in there) than you may want to consider requesting a new function to be added to bosun's DSL.
+
+## expr(expression)
+
+expr takes an expression and returns either a numberSetExpr or a seriesSetExpr depending on the resulting type of the inner expression. This exists for functions like `map` - it is currently not valid in the expression language outside of function arguments.
+
 ## month(offset scalar, startEnd string) scalar
 
 Returns the epoch of either the start or end of the month. Offset is the timezone offset from UTC that the month starts/ends at (but the returned epoch is representitive of UTC). startEnd must be either `"start"` or `"end"`. Useful for things like monthly billing, for example:

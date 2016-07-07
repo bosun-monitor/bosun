@@ -29,6 +29,7 @@ type State struct {
 	enableComputations bool
 	unjoinedOk         bool
 	autods             int
+	vValue             float64
 
 	*Backends
 
@@ -76,6 +77,7 @@ func (e *Expr) MarshalJSON() ([]byte, error) {
 	return json.Marshal(e.String())
 }
 
+// New creates a new expression tree
 func New(expr string, funcs ...map[string]parse.Func) (*Expr, error) {
 	funcs = append(funcs, builtins)
 	t, err := parse.Parse(expr, funcs...)
@@ -171,6 +173,11 @@ type String string
 
 func (s String) Type() models.FuncType { return models.TypeString }
 func (s String) Value() interface{}    { return s }
+
+type NumberExpr Expr
+
+func (s NumberExpr) Type() models.FuncType { return models.TypeNumberExpr }
+func (s NumberExpr) Value() interface{}    { return s }
 
 //func (s String) MarshalJSON() ([]byte, error) { return json.Marshal(s) }
 
@@ -460,10 +467,22 @@ func (e *State) walk(node parse.Node, T miniprofiler.Timer) *Results {
 		res = e.walkUnary(node, T)
 	case *parse.FuncNode:
 		res = e.walkFunc(node, T)
+	case *parse.ExprNode:
+		res = e.walkExpr(node, T)
 	default:
 		panic(fmt.Errorf("expr: unknown node type"))
 	}
 	return res
+}
+
+func (e *State) walkExpr(node *parse.ExprNode, T miniprofiler.Timer) *Results {
+	return &Results{
+		Results: ResultSlice{
+			&Result{
+				Value: NumberExpr{node.Tree},
+			},
+		},
+	}
 }
 
 func (e *State) walkBinary(node *parse.BinaryNode, T miniprofiler.Timer) *Results {
@@ -692,6 +711,8 @@ func (e *State) walkFunc(node *parse.FuncNode, T miniprofiler.Timer) *Results {
 				v = extract(e.walkUnary(t, T))
 			case *parse.BinaryNode:
 				v = extract(e.walkBinary(t, T))
+			case *parse.ExprNode:
+				v = e.walkExpr(t, T)
 			default:
 				panic(fmt.Errorf("expr: unknown func arg type"))
 			}
@@ -740,6 +761,9 @@ func extract(res *Results) interface{} {
 	}
 	if len(res.Results) == 1 && res.Results[0].Type() == models.TypeString {
 		return string(res.Results[0].Value.Value().(String))
+	}
+	if len(res.Results) == 1 && res.Results[0].Type() == models.TypeNumberExpr {
+		return res.Results[0].Value.Value()
 	}
 	return res
 }

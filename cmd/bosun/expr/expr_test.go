@@ -278,6 +278,7 @@ func TestSeriesOperations(t *testing.T) {
 					},
 				},
 			},
+			false,
 		},
 		{
 			fmt.Sprintf(template, seriesA, "+", seriesC),
@@ -291,6 +292,7 @@ func TestSeriesOperations(t *testing.T) {
 					},
 				},
 			},
+			false,
 		},
 		{
 			fmt.Sprintf(template, seriesA, "/", seriesB),
@@ -306,6 +308,7 @@ func TestSeriesOperations(t *testing.T) {
 					},
 				},
 			},
+			false,
 		},
 	}
 	for _, test := range tests {

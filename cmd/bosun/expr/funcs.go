@@ -334,6 +334,49 @@ var builtins = map[string]parse.Func{
 		Tags:   tagFirst,
 		F:      Tail,
 	},
+	"map": {
+		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeNumberExpr},
+		Return: models.TypeSeriesSet,
+		Tags:   tagFirst,
+		F:      Map,
+	},
+	"v": {
+		Return:  models.TypeScalar,
+		F:       V,
+		MapFunc: true,
+	},
+}
+
+func V(e *State, T miniprofiler.Timer) (*Results, error) {
+	return fromScalar(e.vValue), nil
+}
+
+func Map(e *State, T miniprofiler.Timer, series *Results, expr *Results) (*Results, error) {
+	newExpr := Expr{expr.Results[0].Value.Value().(NumberExpr).Tree}
+	for _, result := range series.Results {
+		newSeries := make(Series)
+		for t, v := range result.Value.Value().(Series) {
+			e.vValue = v
+			subResults, _, err := newExpr.ExecuteState(e, T)
+			if err != nil {
+				return series, err
+			}
+			for _, res := range subResults.Results {
+				var v float64
+				switch res.Value.Value().(type) {
+				case Number:
+					v = float64(res.Value.Value().(Number))
+				case Scalar:
+					v = float64(res.Value.Value().(Scalar))
+				default:
+					return series, fmt.Errorf("wrong return type for map expr: %v", res.Type())
+				}
+				newSeries[t] = v
+			}
+		}
+		result.Value = newSeries
+	}
+	return series, nil
 }
 
 func SeriesFunc(e *State, T miniprofiler.Timer, tags string, pairs ...float64) (*Results, error) {
