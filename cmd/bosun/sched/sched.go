@@ -98,7 +98,6 @@ func (s *Schedule) Init(c conf.ConfProvider) error {
 		}
 	}
 	if s.Search == nil {
-	}
 		s.Search = search.NewSearch(s.DataAccess, c.GetSkipLast())
 	}
 	return nil

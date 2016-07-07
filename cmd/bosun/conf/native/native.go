@@ -194,6 +194,10 @@ func ParseFile(fname string) (*NativeConf, error) {
 	return NewNativeConf(fname, string(f))
 }
 
+func (c *NativeConf) SaveConf(newConf *NativeConf) error {
+	return ioutil.WriteFile(c.Name, []byte(newConf.RawText), os.FileMode(int(0640)))
+}
+
 func NewNativeConf(name, text string) (c *NativeConf, err error) {
 	defer errRecover(&err)
 	c = &NativeConf{
@@ -701,6 +705,9 @@ func (c *NativeConf) SetAlert(name, alertText string, hash string) (string, erro
 	newConf, err := NewNativeConf(c.Name, newRawConf.String())
 	if err != nil {
 		return "", fmt.Errorf("new config not valid: %v", err)
+	}
+	if err := c.SaveConf(newConf); err != nil {
+		return "", fmt.Errorf("couldn't save config file")
 	}
 	return newConf.RawText, nil
 }

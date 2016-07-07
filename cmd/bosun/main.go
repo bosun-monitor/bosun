@@ -150,34 +150,10 @@ func main() {
 	if *flagQuiet {
 		c.Quiet = true
 	}
-	go func() { slog.Fatal(web.Listen(c.HTTPListen, *flagDev, c.TSDBHost)) }()
-	go func() {
-		if !*flagNoChecks {
-			sched.Run()
-		}
-	}()
-	go func() {
-		sc := make(chan os.Signal, 1)
-		signal.Notify(sc, os.Interrupt, syscall.SIGTERM)
-		killing := false
-		for range sc {
-			if killing {
-				slog.Infoln("Second interrupt: exiting")
-				os.Exit(1)
-			}
-			killing = true
-			go func() {
-				slog.Infoln("Interrupt: closing down...")
-				sched.Close(false)
-				slog.Infoln("done")
-				os.Exit(1)
-			}()
-		}
-	}()
 
 	reload := func() {
 		slog.Infoln("reloading config")
-		newConf, err := conf.ParseFile(*flagConf)
+		newConf, err := native.ParseFile(*flagConf)
 		if err != nil {
 			slog.Warning("not reloading, failed to load new conf", err)
 			return
@@ -211,6 +187,31 @@ func main() {
 		}()
 		slog.Infoln("config reload complete")
 	}
+
+	go func() { slog.Fatal(web.Listen(c.HTTPListen, *flagDev, c.TSDBHost, reload)) }()
+	go func() {
+		if !*flagNoChecks {
+			sched.Run()
+		}
+	}()
+	go func() {
+		sc := make(chan os.Signal, 1)
+		signal.Notify(sc, os.Interrupt, syscall.SIGTERM)
+		killing := false
+		for range sc {
+			if killing {
+				slog.Infoln("Second interrupt: exiting")
+				os.Exit(1)
+			}
+			killing = true
+			go func() {
+				slog.Infoln("Interrupt: closing down...")
+				sched.Close(false)
+				slog.Infoln("done")
+				os.Exit(1)
+			}()
+		}
+	}()
 
 	// Reload on Signal
 	go func() {
