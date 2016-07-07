@@ -62,9 +62,13 @@ type IncidentSummaryView struct {
 	CritNotificationChains [][]string
 }
 
-func MakeIncidentSummary(c *conf.Conf, s SilenceTester, is *models.IncidentState) IncidentSummaryView {
-	warnNotifications := c.Alerts[is.AlertKey.Name()].WarnNotification.Get(c, is.AlertKey.Group())
-	critNotifications := c.Alerts[is.AlertKey.Name()].CritNotification.Get(c, is.AlertKey.Group())
+func MakeIncidentSummary(c conf.ConfProvider, s SilenceTester, is *models.IncidentState) IncidentSummaryView {
+	alert := c.GetAlert(is.AlertKey.Name())
+	if alert == nil {
+		panic("should not be called on nonexistant alert, for now at least TODO?")
+	}
+	warnNotifications := alert.WarnNotification.Get(c, is.AlertKey.Group())
+	critNotifications := alert.CritNotification.Get(c, is.AlertKey.Group())
 	eventSummaries := []EventSummary{}
 	nonNormalNonUnknownCount := 0
 	for _, event := range is.Events {

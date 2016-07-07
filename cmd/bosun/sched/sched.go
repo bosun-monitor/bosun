@@ -43,7 +43,7 @@ type Schedule struct {
 	mutexAquired  time.Time
 	mutexWaitTime int64
 
-	Conf  *conf.Conf
+	Conf  conf.ConfProvider
 	Group map[time.Time]models.AlertKeys
 
 	Search *search.Search
@@ -70,7 +70,7 @@ type Schedule struct {
 	checksRunning sync.WaitGroup
 }
 
-func (s *Schedule) Init(c *conf.Conf) error {
+func (s *Schedule) Init(c conf.ConfProvider) error {
 	//initialize all variables and collections so they are ready to use.
 	//this will be called once at app start, and also every time the rule
 	//page runs, so be careful not to spawn long running processes that can't
@@ -87,25 +87,20 @@ func (s *Schedule) Init(c *conf.Conf) error {
 	s.checksRunning = sync.WaitGroup{}
 
 	if s.DataAccess == nil {
-		if c.RedisHost != "" {
-			s.DataAccess = database.NewDataAccess(c.RedisHost, true, c.RedisDb, c.RedisPassword)
+		if c.GetRedisHost() != "" {
+			s.DataAccess = database.NewDataAccess(c.GetRedisHost(), true, c.GetRedisDb(), c.GetRedisPassword())
 		} else {
-			_, err := database.StartLedis(c.LedisDir, c.LedisBindAddr)
+			_, err := database.StartLedis(c.GetLedisDir(), c.GetLedisBindAddr())
 			if err != nil {
 				return err
 			}
-			s.DataAccess = database.NewDataAccess(c.LedisBindAddr, false, 0, "")
+			s.DataAccess = database.NewDataAccess(c.GetLedisBindAddr(), false, 0, "")
 		}
 	}
 	if s.Search == nil {
-		s.Search = search.NewSearch(s.DataAccess, c.SkipLast)
 	}
-	// if c.StateFile != "" {
-	// 	s.db, err = bolt.Open(c.StateFile, 0600, nil)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// }
+		s.Search = search.NewSearch(s.DataAccess, c.GetSkipLast())
+	}
 	return nil
 }
 
@@ -379,7 +374,7 @@ func (s *Schedule) MarshalGroups(T miniprofiler.Timer, filter string) (*StateGro
 	var err error
 	status := make(States)
 	t := StateGroups{
-		TimeAndDate: s.Conf.TimeAndDate,
+		TimeAndDate: s.Conf.GetTimeAndDate(),
 	}
 	t.FailingAlerts, t.UnclosedErrors = s.getErrorCounts()
 	T.Step("Setup", func(miniprofiler.Timer) {
@@ -395,7 +390,7 @@ func (s *Schedule) MarshalGroups(T miniprofiler.Timer, filter string) (*StateGro
 			return
 		}
 		for k, v := range status2 {
-			a := s.Conf.Alerts[k.Name()]
+			a := s.Conf.GetAlert(k.Name())
 			if a == nil {
 				slog.Errorf("unknown alert %s. Force closing.", k.Name())
 				if err2 = s.ActionByAlertKey("bosun", "closing because alert doesn't exist.", models.ActionForceClose, k); err2 != nil {
@@ -428,7 +423,7 @@ func (s *Schedule) MarshalGroups(T miniprofiler.Timer, filter string) (*StateGro
 			case models.StWarning, models.StCritical, models.StUnknown:
 				var sets map[string]models.AlertKeys
 				T.Step(fmt.Sprintf("GroupSets (%d): %v", len(states), tuple), func(T miniprofiler.Timer) {
-					sets = states.GroupSets(s.Conf.MinGroupSize)
+					sets = states.GroupSets(s.Conf.GetMinGroupSize())
 				})
 				for name, group := range sets {
 					g := StateGroup{
@@ -506,7 +501,7 @@ func marshalTime(t time.Time) string {
 var DefaultSched = &Schedule{}
 
 // Load loads a configuration into the default schedule.
-func Load(c *conf.Conf) error {
+func Load(c conf.ConfProvider) error {
 	return DefaultSched.Load(c)
 }
 
@@ -515,14 +510,14 @@ func Run() error {
 	return DefaultSched.Run()
 }
 
-func (s *Schedule) Load(c *conf.Conf) error {
+func (s *Schedule) Load(c conf.ConfProvider) error {
 	if err := s.Init(c); err != nil {
 		return err
 	}
 	if s.db == nil {
 		return nil
 	}
-	return s.RestoreState()
+	return nil
 }
 
 func Close(reload bool) {
@@ -532,7 +527,7 @@ func Close(reload bool) {
 func (s *Schedule) Close(reload bool) {
 	s.cancelChecks()
 	s.checksRunning.Wait()
-	if s.Conf.SkipLast || reload {
+	if s.Conf.GetSkipLast() || reload {
 		return
 	}
 	err := s.Search.BackupLast()
@@ -553,7 +548,7 @@ const pingFreq = time.Second * 15
 
 func (s *Schedule) PingHosts() {
 	for range time.Tick(pingFreq) {
-		hosts, err := s.Search.TagValuesByTagKey("host", s.Conf.PingDuration)
+		hosts, err := s.Search.TagValuesByTagKey("host", s.Conf.GetPingDuration())
 		if err != nil {
 			slog.Error(err)
 			continue

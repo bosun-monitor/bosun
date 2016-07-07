@@ -190,7 +190,7 @@ func (s *Schedule) ExecuteBadTemplate(errs []error, rh *RunHistory, a *conf.Aler
 func (c *Context) evalExpr(e *expr.Expr, filter bool, series bool, autods int) (expr.ResultSlice, string, error) {
 	var err error
 	if filter {
-		e, err = expr.New(opentsdb.ReplaceTags(e.Text, c.AlertKey.Group()), c.schedule.Conf.Funcs())
+		e, err = expr.New(opentsdb.ReplaceTags(e.Text, c.AlertKey.Group()), c.schedule.Conf.GetFuncs())
 		if err != nil {
 			return nil, "", err
 		}
@@ -218,7 +218,7 @@ func (c *Context) evalExpr(e *expr.Expr, filter bool, series bool, autods int) (
 func (c *Context) eval(v interface{}, filter bool, series bool, autods int) (res expr.ResultSlice, title string, err error) {
 	switch v := v.(type) {
 	case string:
-		e, err := expr.New(v, c.schedule.Conf.Funcs())
+		e, err := expr.New(v, c.schedule.Conf.GetFuncs())
 		if err != nil {
 			return nil, "", fmt.Errorf("%s: %v", v, err)
 		}
@@ -260,8 +260,8 @@ func (c *Context) LookupAll(table, key string, group interface{}) (string, error
 	case opentsdb.TagSet:
 		t = v
 	}
-	l, ok := c.schedule.Conf.Lookups[table]
-	if !ok {
+	l := c.schedule.Conf.GetLookup(table)
+	if l == nil {
 		return "", fmt.Errorf("unknown lookup table %v", table)
 	}
 	if v, ok := l.ToExpr().Get(key, t); ok {

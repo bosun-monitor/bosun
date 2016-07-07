@@ -14,7 +14,7 @@ import (
 )
 
 func (s *Schedule) dispatchNotifications() {
-	ticker := time.NewTicker(s.Conf.CheckFrequency * 2)
+	ticker := time.NewTicker(s.Conf.GetCheckFrequency() * 2)
 	var next <-chan time.Time
 	nextAt := func(t time.Time) {
 		diff := t.Sub(utcNow())
@@ -61,8 +61,8 @@ func (s *Schedule) CheckNotifications() time.Time {
 			continue
 		}
 		for name, t := range ns {
-			n, present := s.Conf.Notifications[name]
-			if !present {
+			n := s.Conf.GetNotification(name)
+			if n == nil {
 				continue
 			}
 			//If alert is currently unevaluated because of a dependency,
@@ -106,14 +106,14 @@ func (s *Schedule) CheckNotifications() time.Time {
 }
 
 func (s *Schedule) sendNotifications(silenced SilenceTester) {
-	if s.Conf.Quiet {
+	if s.Conf.GetQuiet() {
 		slog.Infoln("quiet mode prevented", len(s.pendingNotifications), "notifications")
 		return
 	}
 	for n, states := range s.pendingNotifications {
 		for _, st := range states {
 			ak := st.AlertKey
-			alert := s.Conf.Alerts[ak.Name()]
+			alert := s.Conf.GetAlert(ak.Name())
 			if alert == nil {
 				continue
 			}
@@ -154,10 +154,10 @@ func (s *Schedule) sendUnknownNotifications() {
 		var c int
 		tHit := false
 		oTSets := make(map[string]models.AlertKeys)
-		groupSets := ustates.GroupSets(s.Conf.MinGroupSize)
+		groupSets := ustates.GroupSets(s.Conf.GetMinGroupSize())
 		for name, group := range groupSets {
 			c++
-			if c >= s.Conf.UnknownThreshold && s.Conf.UnknownThreshold > 0 {
+			if c >= s.Conf.GetUnknownThreshold() && s.Conf.GetUnknownThreshold() > 0 {
 				if !tHit && len(groupSets) == 0 {
 					// If the threshold is hit but only 1 email remains, just send the normal unknown
 					s.unotify(name, group, n)
@@ -219,7 +219,7 @@ func (s *Schedule) utnotify(groups map[string]models.AlertKeys, n *conf.Notifica
 		Threshold int
 	}{
 		groups,
-		s.Conf.UnknownThreshold,
+		s.Conf.GetUnknownThreshold(),
 	}); err != nil {
 		slog.Errorln(err)
 	}
@@ -243,7 +243,7 @@ func (s *Schedule) unotify(name string, group models.AlertKeys, n *conf.Notifica
 	body := new(bytes.Buffer)
 	now := utcNow()
 	s.Group[now] = group
-	t := s.Conf.UnknownTemplate
+	t := s.Conf.GetUnknownTemplate()
 	if t == nil {
 		t = defaultUnknownTemplate
 	}
@@ -322,7 +322,7 @@ func (s *Schedule) ActionNotify(at models.ActionType, user, message string, aks 
 func (s *Schedule) groupActionNotifications(aks []models.AlertKey) (map[*conf.Notification][]*models.IncidentState, error) {
 	groupings := make(map[*conf.Notification][]*models.IncidentState)
 	for _, ak := range aks {
-		alert := s.Conf.Alerts[ak.Name()]
+		alert := s.Conf.GetAlert(ak.Name())
 		status, err := s.DataAccess.State().GetLatestIncident(ak)
 		if err != nil {
 			return nil, err

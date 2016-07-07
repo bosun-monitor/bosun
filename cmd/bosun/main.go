@@ -18,7 +18,8 @@ import (
 	"time"
 
 	"bosun.org/_version"
-	"bosun.org/cmd/bosun/conf"
+
+	"bosun.org/cmd/bosun/conf/native"
 	"bosun.org/cmd/bosun/sched"
 	"bosun.org/cmd/bosun/web"
 	"bosun.org/collect"
@@ -84,7 +85,7 @@ func main() {
 		m()
 	}
 	runtime.GOMAXPROCS(runtime.NumCPU())
-	c, err := conf.ParseFile(*flagConf)
+	c, err := native.ParseFile(*flagConf)
 	if err != nil {
 		slog.Fatal(err)
 	}

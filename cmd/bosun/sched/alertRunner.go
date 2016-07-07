@@ -15,12 +15,12 @@ func (s *Schedule) Run() error {
 		return fmt.Errorf("sched: nil configuration")
 	}
 	s.nc = make(chan interface{}, 1)
-	if s.Conf.Ping {
+	if s.Conf.GetPing() {
 		go s.PingHosts()
 	}
 	go s.dispatchNotifications()
 	go s.updateCheckContext()
-	for _, a := range s.Conf.Alerts {
+	for _, a := range s.Conf.GetAlerts() {
 		go s.RunAlert(a)
 	}
 	return nil
@@ -29,7 +29,7 @@ func (s *Schedule) updateCheckContext() {
 	for {
 		ctx := &checkContext{utcNow(), cache.New(0)}
 		s.ctx = ctx
-		time.Sleep(s.Conf.CheckFrequency)
+		time.Sleep(s.Conf.GetCheckFrequency())
 		s.Lock("CollectStates")
 		s.CollectStates()
 		s.Unlock()
@@ -39,7 +39,7 @@ func (s *Schedule) RunAlert(a *conf.Alert) {
 	s.checksRunning.Add(1)
 	defer s.checksRunning.Done()
 	for {
-		wait := time.After(s.Conf.CheckFrequency * time.Duration(a.RunEvery))
+		wait := time.After(s.Conf.GetCheckFrequency() * time.Duration(a.RunEvery))
 		s.checkAlert(a)
 		s.LastCheck = utcNow()
 		select {

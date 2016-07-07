@@ -69,11 +69,11 @@ func (s *Schedule) NewRunHistory(start time.Time, cache *cache.Cache) *RunHistor
 		Events:   make(map[models.AlertKey]*models.Event),
 		schedule: s,
 		Backends: &expr.Backends{
-			TSDBContext:     s.Conf.TSDBContext(),
-			GraphiteContext: s.Conf.GraphiteContext(),
-			InfluxConfig:    s.Conf.InfluxConfig,
-			LogstashHosts:   s.Conf.LogstashElasticHosts,
-			ElasticHosts:    s.Conf.ElasticHosts,
+			TSDBContext:     s.Conf.GetTSDBContext(),
+			GraphiteContext: s.Conf.GetGraphiteContext(),
+			InfluxConfig:    s.Conf.GetInfluxContext(),
+			LogstashHosts:   s.Conf.GetLogstashContext(),
+			ElasticHosts:    s.Conf.GetElasticContext(),
 		},
 	}
 	return r
@@ -101,7 +101,7 @@ func (s *Schedule) RunHistory(r *RunHistory) {
 // RunHistory for a single alert key. Returns true if notifications were altered.
 func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.Event, silenced SilenceTester) (checkNotify bool, err error) {
 	event.Time = r.Start
-	a := s.Conf.Alerts[ak.Name()]
+	a := s.Conf.GetAlert(ak.Name())
 	if a.UnknownsNormal && event.Status == models.StUnknown {
 		event.Status = models.StNormal
 	}
@@ -345,7 +345,7 @@ func (s *Schedule) CollectStates() {
 	unAckOldestByNotification := make(map[string]time.Time)
 	activeStatusCounts := make(map[string]map[bool]int64)
 	// Initalize the Counts
-	for _, alert := range s.Conf.Alerts {
+	for _, alert := range s.Conf.GetAlerts() {
 		severityCounts[alert.Name] = make(map[string]int64)
 		abnormalCounts[alert.Name] = make(map[string]int64)
 		var i models.Status
@@ -360,7 +360,7 @@ func (s *Schedule) CollectStates() {
 		ackStatusCounts[alert.Name][true] = 0
 		activeStatusCounts[alert.Name][true] = 0
 	}
-	for notificationName := range s.Conf.Notifications {
+	for notificationName := range s.Conf.GetNotifications() {
 		unAckOldestByNotification[notificationName] = time.Unix(1<<63-62135596801, 999999999)
 		ackByNotificationCounts[notificationName] = make(map[bool]int64)
 		ackByNotificationCounts[notificationName][false] = 0
@@ -482,16 +482,16 @@ var bosunStartupTime = utcNow()
 
 func (s *Schedule) findUnknownAlerts(now time.Time, alert string) []models.AlertKey {
 	keys := []models.AlertKey{}
-	if utcNow().Sub(bosunStartupTime) < s.Conf.CheckFrequency {
+	if utcNow().Sub(bosunStartupTime) < s.Conf.GetCheckFrequency() {
 		return keys
 	}
 	if !s.AlertSuccessful(alert) {
 		return keys
 	}
-	a := s.Conf.Alerts[alert]
+	a := s.Conf.GetAlert(alert)
 	t := a.Unknown
 	if t == 0 {
-		t = s.Conf.CheckFrequency * 2 * time.Duration(a.RunEvery)
+		t = s.Conf.GetCheckFrequency() * 2 * time.Duration(a.RunEvery)
 	}
 	maxTouched := now.UTC().Unix() - int64(t.Seconds())
 	untouched, err := s.DataAccess.State().GetUntouchedSince(alert, maxTouched)

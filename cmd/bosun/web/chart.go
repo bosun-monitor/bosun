@@ -122,7 +122,7 @@ func Graph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 			}
 		}
 		queries[i] = fmt.Sprintf(`q("%v", "%v", "%v")`, q, start, end)
-		if !schedule.Conf.TSDBContext().Version().FilterSupport() {
+		if !schedule.Conf.GetTSDBContext().Version().FilterSupport() {
 			if err := schedule.Search.Expand(q); err != nil {
 				return nil, err
 			}
@@ -131,7 +131,7 @@ func Graph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 	var tr opentsdb.ResponseSet
 	b, _ := json.MarshalIndent(oreq, "", "  ")
 	t.StepCustomTiming("tsdb", "query", string(b), func() {
-		h := schedule.Conf.TSDBHost
+		h := schedule.Conf.GetTSDBHost()
 		if h == "" {
 			err = fmt.Errorf("tsdbHost not set")
 			return
@@ -229,7 +229,7 @@ func ExprGraph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (in
 		}
 		now = time.Unix(i, 0).UTC()
 	}
-	e, err := expr.New(q, schedule.Conf.Funcs())
+	e, err := expr.New(q, schedule.Conf.GetFuncs())
 	if err != nil {
 		return nil, err
 	} else if e.Root.Return() != models.TypeSeriesSet {
@@ -237,11 +237,11 @@ func ExprGraph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (in
 	}
 	// it may not strictly be necessary to recreate the contexts each time, but we do to be safe
 	backends := &expr.Backends{
-		TSDBContext:     schedule.Conf.TSDBContext(),
-		GraphiteContext: schedule.Conf.GraphiteContext(),
-		InfluxConfig:    schedule.Conf.InfluxConfig,
-		LogstashHosts:   schedule.Conf.LogstashElasticHosts,
-		ElasticHosts:    schedule.Conf.ElasticHosts,
+		TSDBContext:     schedule.Conf.GetTSDBContext(),
+		GraphiteContext: schedule.Conf.GetGraphiteContext(),
+		InfluxConfig:    schedule.Conf.GetInfluxContext(),
+		LogstashHosts:   schedule.Conf.GetLogstashContext(),
+		ElasticHosts:    schedule.Conf.GetElasticContext(),
 	}
 	providers := &expr.BosunProviders{
 		Cache:     cacheObj,

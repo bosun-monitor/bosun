@@ -18,7 +18,7 @@ import (
 	"time"
 
 	"bosun.org/_version"
-	"bosun.org/cmd/bosun/conf"
+	"bosun.org/cmd/bosun/conf/native"
 	"bosun.org/cmd/bosun/database"
 	"bosun.org/cmd/bosun/sched"
 	"bosun.org/collect"
@@ -131,11 +131,11 @@ func Listen(listenAddr string, devMode bool, tsdbHost string) error {
 	// Annotations
 	if schedule.Conf.AnnotateEnabled() {
 		var err error
-		index := schedule.Conf.AnnotateIndex
+		index := schedule.Conf.GetAnnotateIndex()
 		if index == "" {
 			index = "annotate"
 		}
-		annotateBackend, err = backend.NewElastic(schedule.Conf.AnnotateElasticHosts, index)
+		annotateBackend, err = backend.NewElastic(schedule.Conf.GetAnnotateElasticHosts(), index)
 		if err != nil {
 			return err
 		}
@@ -306,8 +306,8 @@ func Shorten(w http.ResponseWriter, r *http.Request) {
 		Host:   "www.googleapis.com",
 		Path:   "/urlshortener/v1/url",
 	}
-	if schedule.Conf.ShortURLKey != "" {
-		u.RawQuery = "key=" + schedule.Conf.ShortURLKey
+	if schedule.Conf.GetShortURLKey() != "" {
+		u.RawQuery = "key=" + schedule.Conf.GetShortURLKey()
 	}
 	j, err := json.Marshal(struct {
 		LongURL string `json:"longUrl"`
@@ -346,18 +346,18 @@ type Health struct {
 }
 
 func Quiet(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	return schedule.Conf.Quiet, nil
+	return schedule.Conf.GetQuiet(), nil
 }
 
 func HealthCheck(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	var h Health
-	h.RuleCheck = schedule.LastCheck.After(time.Now().Add(-schedule.Conf.CheckFrequency))
+	h.RuleCheck = schedule.LastCheck.After(time.Now().Add(-schedule.Conf.GetCheckFrequency()))
 	return h, nil
 }
 
 func OpenTSDBVersion(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	if schedule.Conf.TSDBContext() != nil {
-		return schedule.Conf.TSDBContext().Version(), nil
+	if schedule.Conf.GetTSDBContext() != nil {
+		return schedule.Conf.GetTSDBContext().Version(), nil
 	}
 	return opentsdb.Version{0, 0}, nil
 }
@@ -711,7 +711,7 @@ func ConfigTest(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 		serveError(w, fmt.Errorf("empty config"))
 		return
 	}
-	_, err = conf.New("test", string(b))
+	_, err = native.NewNativeConf("test", string(b))
 	if err != nil {
 		fmt.Fprintf(w, err.Error())
 	}
@@ -727,7 +727,7 @@ func Config(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	} else {
-		text = schedule.Conf.RawText
+		text = schedule.Conf.GetRawText()
 	}
 	fmt.Fprint(w, text)
 }

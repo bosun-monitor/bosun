@@ -15,6 +15,7 @@ import (
 
 	"bosun.org/cmd/bosun/cache"
 	"bosun.org/cmd/bosun/conf"
+	"bosun.org/cmd/bosun/conf/native"
 	"bosun.org/cmd/bosun/expr"
 	"bosun.org/cmd/bosun/sched"
 	"bosun.org/models"
@@ -63,7 +64,7 @@ func Expr(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (v inter
 			vars[name] = schedule.Conf.Expand(value, vars, false)
 		}
 	}
-	e, err := expr.New(expression, schedule.Conf.Funcs())
+	e, err := expr.New(expression, schedule.Conf.GetFuncs())
 	if err != nil {
 		return nil, err
 	}
@@ -73,11 +74,11 @@ func Expr(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (v inter
 	}
 	// it may not strictly be necessary to recreate the contexts each time, but we do to be safe
 	backends := &expr.Backends{
-		TSDBContext:     schedule.Conf.TSDBContext(),
-		GraphiteContext: schedule.Conf.GraphiteContext(),
-		InfluxConfig:    schedule.Conf.InfluxConfig,
-		LogstashHosts:   schedule.Conf.LogstashElasticHosts,
-		ElasticHosts:    schedule.Conf.ElasticHosts,
+		TSDBContext:     schedule.Conf.GetTSDBContext(),
+		GraphiteContext: schedule.Conf.GetGraphiteContext(),
+		InfluxConfig:    schedule.Conf.GetInfluxContext(),
+		LogstashHosts:   schedule.Conf.GetLogstashContext(),
+		ElasticHosts:    schedule.Conf.GetElasticContext(),
 	}
 	providers := &expr.BosunProviders{
 		Cache:     cacheObj,
@@ -132,7 +133,7 @@ type Res struct {
 	Key models.AlertKey
 }
 
-func procRule(t miniprofiler.Timer, c *conf.Conf, a *conf.Alert, now time.Time, summary bool, email string, template_group string) (*ruleResult, error) {
+func procRule(t miniprofiler.Timer, c conf.ConfProvider, a *conf.Alert, now time.Time, summary bool, email string, template_group string) (*ruleResult, error) {
 	s := &sched.Schedule{}
 	s.DataAccess = schedule.DataAccess
 	s.Search = schedule.Search
@@ -442,29 +443,25 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 	return &ret, nil
 }
 
-func buildConfig(r *http.Request) (c *conf.Conf, a *conf.Alert, hash string, err error) {
+func buildConfig(r *http.Request) (c conf.ConfProvider, a *conf.Alert, hash string, err error) {
 	config, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		return nil, nil, "", err
 	}
-
-	c, err = conf.New("Test Config", string(config))
+	c, err = native.NewNativeConf("Test Config", string(config))
 	if err != nil {
 		return nil, nil, "", err
 	}
-	c.StateFile = ""
-
 	hash, err = sched.DefaultSched.DataAccess.Configs().SaveTempConfig(string(config))
 	if err != nil {
 		return nil, nil, "", err
 	}
-
 	alertName := r.FormValue("alert")
 	if alertName == "" {
 		return nil, nil, "", fmt.Errorf("must supply alert to run")
 	}
-	a, ok := c.Alerts[alertName]
-	if !ok {
+	a = c.GetAlert(alertName)
+	if a == nil {
 		return nil, nil, "", fmt.Errorf("alert %s not found", alertName)
 	}
 	return c, a, hash, nil

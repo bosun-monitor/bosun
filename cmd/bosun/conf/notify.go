@@ -26,7 +26,7 @@ func init() {
 		"The number of email notifications that Bosun failed to send.")
 }
 
-func (n *Notification) Notify(subject, body string, emailsubject, emailbody []byte, c *Conf, ak string, attachments ...*models.Attachment) {
+func (n *Notification) Notify(subject, body string, emailsubject, emailbody []byte, c ConfProvider, ak string, attachments ...*models.Attachment) {
 	if len(n.Email) > 0 {
 		go n.DoEmail(emailsubject, emailbody, c, ak, attachments...)
 	}
@@ -94,9 +94,9 @@ func (n *Notification) DoGet(ak string) {
 	}
 }
 
-func (n *Notification) DoEmail(subject, body []byte, c *Conf, ak string, attachments ...*models.Attachment) {
+func (n *Notification) DoEmail(subject, body []byte, c ConfProvider, ak string, attachments ...*models.Attachment) {
 	e := email.NewEmail()
-	e.From = c.EmailFrom
+	e.From = c.GetEmailFrom()
 	for _, a := range n.Email {
 		e.To = append(e.To, a.Address)
 	}
@@ -106,7 +106,7 @@ func (n *Notification) DoEmail(subject, body []byte, c *Conf, ak string, attachm
 		e.Attach(bytes.NewBuffer(a.Data), a.Filename, a.ContentType)
 	}
 	e.Headers.Add("X-Bosun-Server", util.Hostname)
-	if err := Send(e, c.SMTPHost, c.SMTPUsername, c.SMTPPassword); err != nil {
+	if err := Send(e, c.GetSMTPHost(), c.GetSMTPUsername(), c.GetSMTPPassword()); err != nil {
 		collect.Add("email.sent_failed", nil, 1)
 		slog.Errorf("failed to send alert %v to %v %v\n", ak, e.To, err)
 		return
