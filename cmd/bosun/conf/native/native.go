@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"net"
 	"net/http"
 	"net/mail"
 	"net/url"
@@ -451,18 +450,6 @@ func (c *NativeConf) loadSection(s *parse.SectionNode) {
 	default:
 		c.errorf("unknown section type: %s", s.SectionType.Text)
 	}
-}
-
-func (c *NativeConf) parseIPs(s string) (nets []*net.IPNet) {
-	rawCIDRs := strings.Split(s, ",")
-	for _, rc := range rawCIDRs {
-		_, ipnet, err := net.ParseCIDR(rc)
-		if err != nil {
-			c.error(err)
-		}
-		nets = append(nets, ipnet)
-	}
-	return nets
 }
 
 type nodePair struct {
