@@ -1,6 +1,7 @@
 package native
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -683,6 +684,27 @@ func (c *NativeConf) loadTemplate(s *parse.SectionNode) {
 
 var lookupNotificationRE = regexp.MustCompile(`^lookup\("(.*)", "(.*)"\)$`)
 
+func (c *NativeConf) SetAlert(name, alertText string, hash string) (string, error) {
+	// TODO check hash to make sure it matches what the running config is
+	a := c.GetAlert(name)
+	var newRawConf bytes.Buffer
+	if a == nil {
+		newRawConf.WriteString(c.RawText)
+		newRawConf.WriteString("\n")
+		newRawConf.WriteString(alertText)
+		//Alert Does not exists
+	} else {
+		newRawConf.WriteString(c.RawText[:a.Locator.(conf.NativeLocator)[0]])
+		newRawConf.WriteString(alertText)
+		newRawConf.WriteString(c.RawText[a.Locator.(conf.NativeLocator)[1]:])
+	}
+	newConf, err := NewNativeConf(c.Name, newRawConf.String())
+	if err != nil {
+		return "", fmt.Errorf("new config not valid: %v", err)
+	}
+	return newConf.RawText, nil
+}
+
 func (c *NativeConf) loadAlert(s *parse.SectionNode) {
 	name := s.Name.Text
 	if _, ok := c.Alerts[name]; ok {
@@ -695,6 +717,10 @@ func (c *NativeConf) loadAlert(s *parse.SectionNode) {
 		WarnNotification: new(conf.Notifications),
 	}
 	a.Text = s.RawText
+	start := int(s.Position())
+	end := int(s.Position()) + len(s.RawText)
+	a.Locator = conf.NativeLocator{start, end}
+	a.LocatorType = conf.TypeNative
 	procNotification := func(v string, ns *conf.Notifications) {
 		if lookup := lookupNotificationRE.FindStringSubmatch(v); lookup != nil {
 			if ns.Lookups == nil {

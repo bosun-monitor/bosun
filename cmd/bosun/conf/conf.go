@@ -113,7 +113,7 @@ type ConfProvider interface {
 
 	GetAlerts() map[string]*Alert
 	GetAlert(string) *Alert
-	//SetAlert(string, *Alert)
+	SetAlert(string, string, string) (string, error)
 
 	GetNotifications() map[string]*Notification
 	GetNotification(string) *Notification
@@ -351,4 +351,14 @@ type Alert struct {
 
 	TemplateName string   `json:"-"`
 	RawSquelch   []string `json:"-"`
+	Locator      interface{}
+	LocatorType  LocatorType
 }
+
+type LocatorType int
+
+const (
+	TypeNative LocatorType = iota
+)
+
+type NativeLocator []int

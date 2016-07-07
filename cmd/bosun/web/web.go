@@ -97,6 +97,7 @@ func Listen(listenAddr string, devMode bool, tsdbHost string) error {
 	router.Handle("/api/alerts", JSON(Alerts))
 	router.Handle("/api/config", miniprofiler.NewHandler(Config))
 	router.Handle("/api/config_test", miniprofiler.NewHandler(ConfigTest))
+	router.Handle("/api/config/alert", miniprofiler.NewHandler(SetAlert)).Methods(http.MethodPost)
 	router.Handle("/api/egraph/{bs}.{format:svg|png}", JSON(ExprGraph))
 	router.Handle("/api/errors", JSON(ErrorHistory))
 	router.Handle("/api/expr", JSON(Expr))
@@ -728,6 +729,27 @@ func Config(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		text = schedule.Conf.GetRawText()
+	}
+	fmt.Fprint(w, text)
+}
+
+func SetAlert(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
+	var text string
+	var err error
+	data := struct {
+		Name      string
+		AlertText string
+		Hash      string
+	}{}
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&data); err != nil {
+		serveError(w, err)
+		return
+	}
+	text, err = schedule.Conf.SetAlert(data.Name, data.AlertText, data.Hash)
+	if err != nil {
+		serveError(w, err)
+		return
 	}
 	fmt.Fprint(w, text)
 }
