@@ -94,7 +94,7 @@ We don't need to understand everything in this alert, but it is worth highlighti
 
 ## Graphite Query Functions
 
-### GraphiteQuery(query string, startDuration string, endDuration string, format string) seriesSet
+### graphite(query string, startDuration string, endDuration string, format string) seriesSet
 
 Performs a graphite query.  the duration format is the internal bosun format (which happens to be the same as OpenTSDB's format).
 Functions pretty much the same as q() (see that for more info) but for graphite.
@@ -115,7 +115,7 @@ returns seriesSet named like `collectd.web15.cpu.3.idle`, requiring a format lik
 For advanced cases, you can use graphite's alias(), aliasSub(), etc to compose the exact parseable output format you need.
 This happens when the outer graphite function is something like "avg()" or "sum()" in which case graphite's output series will be identified as "avg(some.string.here)".
 
-### GraphiteBand(query string, duration string, period string, format string, num string) seriesSet
+### graphiteBand(query string, duration string, period string, format string, num string) seriesSet
 
 Like band() but for graphite queries.
 
@@ -137,8 +137,9 @@ All tags returned by InfluxDB will be included in the results.
 ### Notes:
 
   * By default, queries will be given a suffix of `fill(none)` to filter out any nil rows.
+  * Influx queries themselves often use both double and single (quoting issues are often encountered [as per the documentation](https://docs.influxdata.com/influxdb/v0.13/troubleshooting/frequently_encountered_issues/#single-quoting-and-double-quoting-in-queries)). So you will likely need to use triple single quotes (`'''`) for many queries. When using single quotes in triple single quotes, you may need a space. So for example `'''select max(value) from "my.measurement" where key = 'val''''` is not valid but `'''select max(value) from "my.measurement" where key = 'val' '''` is.
 
-## examples:
+### examples:
 
 These influx and opentsdb queries should give roughly the same results:
 
@@ -146,6 +147,12 @@ These influx and opentsdb queries should give roughly the same results:
 influx("db", '''SELECT non_negative_derivative(mean(value)) FROM "os.cpu" GROUP BY host''', "30m", "", "2m")
 
 q("sum:2m-avg:rate{counter,,1}:os.cpu{host=*}", "30m", "")
+```
+
+Querying graphite sent to influx (note the quoting):
+
+```
+influx("graphite", '''select sum(value) from "df-root_df_complex-free" where env='prod' and node='web' ''', "2h", "1m", "1m")
 ```
 
 ## Logstash Query Functions (Deprecated)
@@ -159,7 +166,7 @@ lscount returns a time bucked count of matching log documents.
   * `indexRoot` is the root name of the index to hit, the format is expected to be `fmt.Sprintf("%s-%s", index_root, d.Format("2006.01.02"))`.
   * `keyString` creates groups (like tagsets) and can also filter those groups. It is the format of `"field:regex,field:regex..."` The `:regex` can be ommited.
   * `filterString` is an Elastic regexp query that can be applied to any field. It is in the same format as the keystring argument.
-  * `bucketDuration` is in the same format is an opentsdb duration, and is the size of buckets returned (i.e. counts for every 10 minutes). 
+  * `bucketDuration` is in the same format is an opentsdb duration, and is the size of buckets returned (i.e. counts for every 10 minutes).
   * `startDuration` and `endDuration` set the time window from now - see the OpenTSDB q() function for more details.
 
 **Note:** As of Bosun 0.5.0, the results are no longer normalized per second. This resulted in bad extrapolations, and confusing interactions with functions like `sum(lscount(...))`. The rate will now be per bucket. If you still want the results normalized to per second, you can divide the result by the number of seconds with: `lscount("logstash", "logsource,program:bosun", $bucketDuration, "10m", "") / d($bucketDuration)`
@@ -208,8 +215,8 @@ estat returns various summary stats per bucket for the specified `field`. The fi
 
 esdaily is for elastic indexes that have a date name for each day. Based on the timeframe of the enclosing es function (i.e. esstat and escount) to generate which indexes should be included in the query. It gets all indexes and won't include indices that don't exist. The layout specifer uses's [Go's time specification format](https://golang.org/pkg/time/#Parse). The timeField is the name of the field in elastic that contains timestamps for the documents.
 
-### esindicies(timeField string, index string...) ESIndexer
-esindices takes one or more literal indicies for the enclosing query to use. It does not check for existance of the index, and passes back the elastic error if the index does not exist. The timeField is the name of the field in elastic that contains timestamps for the documents.
+### esindices(timeField string, index string...) ESIndexer
+esindices takes one or more literal indices for the enclosing query to use. It does not check for existance of the index, and passes back the elastic error if the index does not exist. The timeField is the name of the field in elastic that contains timestamps for the documents.
 
 ### esls(indexRoot string) ESIndexer
 esls is a shortcut for esdaily("@timestamp", indexRoot+"-", "2006.01.02") and is for the default daily format that logstash creates.
@@ -223,7 +230,7 @@ esall returns an elastic matchall query, use this when you don't want to filter 
 esregexp creates an [elastic regexp query](https://www.elastic.co/guide/en/elasticsearch/reference/2.x/query-dsl-regexp-query.html) for the specified field.
 
 ### esquery(field string, querystring string)
-esquery creates a [full-text elastic query string query](https://www.elastic.co/guide/en/elasticsearch/reference/2.x/query-dsl-query-string-query.html). 
+esquery creates a [full-text elastic query string query](https://www.elastic.co/guide/en/elasticsearch/reference/2.x/query-dsl-query-string-query.html).
 
 ### esand(queries.. ESQuery) ESQuery
 esand takes one or more ESQueries and combines them into an [elastic bool query](https://www.elastic.co/guide/en/elasticsearch/reference/2.x/query-dsl-bool-query.html) where all the queries "must" be true.
@@ -231,7 +238,13 @@ esand takes one or more ESQueries and combines them into an [elastic bool query]
 ### esor(queries.. ESQuery) ESQuery
 esor takes one or more ESQueries and combines them into an [elastic bool query](https://www.elastic.co/guide/en/elasticsearch/reference/2.x/query-dsl-bool-query.html) so that at least one must be true.
 
-### esgt(field string, value Scalar) ESQuery
+### esnot(query ESQuery) ESQuery
+esnot takes a query and inverses the logic using must_not from an [elastic bool query](https://www.elastic.co/guide/en/elasticsearch/reference/2.x/query-dsl-bool-query.html).
+
+### esexists(field string) ESQuery
+esexists is true when the specified field exists.
+
+###esgt(field string, value Scalar) ESQuery
 esgt takes a field (expected to be numeric field in elastic) and returns results where the value of that field is greater than the specified value. It creates an [elastic range query](https://www.elastic.co/guide/en/elasticsearch/reference/2.x/query-dsl-range-query.html).
 
 ### esgte(field string, value Scalar) ESQuery
@@ -367,15 +380,23 @@ Sum.
 
 Group functions modify the OpenTSDB groups.
 
+## addtags(seriesSet, group string) seriesSet
+
+Accepts a series and a set of tags to add in `Key1=NewK1,Key2=NewK2` format. This is useful when you want to add series to set with merge and have tag collisions.
+
+## rename(seriesSet, string) seriesSet
+
+Accepts a series and a set of tags to rename in `Key1=NewK1,Key2=NewK2` format. All data points will have the tag keys renamed according to the spec provided, in order. This can be useful for combining results from seperate queries that have similar tagsets with different tag keys.
+
 ## t(numberSet, group string) seriesSet
 
 Transposes N series of length 1 to 1 series of length N. If the group parameter is not the empty string, the number of series returned is equal to the number of tagks passed. This is useful for performing scalar aggregation across multiple results from a query. For example, to get the total memory used on the web tier: `sum(t(avg(q("avg:os.mem.used{host=*-web*}", "5m", "")), ""))`.
 
 How transpose works conceptually
 
-Transpose Grouped results into a Single Result:  
+Transpose Grouped results into a Single Result:
 
-Before Transpose (Value Type is NumberSet):  
+Before Transpose (Value Type is NumberSet):
 
 Group       | Value  |
 ----------- | ----- |
@@ -383,15 +404,15 @@ Group       | Value  |
 {host=web02} | 7 |
 {host=web03} | 4 |
 
-After Transpose (Value Type is SeriesSet):  
+After Transpose (Value Type is SeriesSet):
 
 Group        | Value  |
 ----------- | ----- |
 {} | 1,7,4 |
 
-Transpose Groups results into Multiple Results:  
+Transpose Groups results into Multiple Results:
 
-Before Transpose by host (Value Type is NumberSet)  
+Before Transpose by host (Value Type is NumberSet)
 
 Group        | Value  |
 ----------- | ----- |
@@ -399,7 +420,7 @@ Group        | Value  |
 {host=web01,disc=d} | 3 |
 {host=web02,disc=c} | 4 |
 
-After Transpose by "host" (Value type is SeriesSet)  
+After Transpose by "host" (Value type is SeriesSet)
 
 Group        | Value  |
 ------------ | ------ |
@@ -452,6 +473,28 @@ expression from the host.down alert.
 
 Returns the absolute value of each element in the numberSet.
 
+## crop(series seriesSet, start numberSet, end numberSet) seriesSet
+
+Returns a seriesSet where each series is has datapoints removed if the datapoint is before start (from now, in seconds) or after end (also from now, in seconds). This is useful if you want to alert on different timespans for different items in a set, for example:
+
+```
+lookup test {
+    entry host=ny-bosun01 {
+        start = 30
+    }
+    entry host=* {
+        start = 60
+    }
+}
+
+alert test {
+    template = test
+    $q = q("avg:rate:os.cpu{host=ny-bosun*}", "5m", "")
+    $c = crop($q, lookup("test", "start") , 0)
+    crit = avg($c)
+}
+```
+
 ## d(string) scalar
 
 Returns the number of seconds of the [OpenTSDB duration string](http://opentsdb.net/docs/build/html/user_guide/query/dates.html).
@@ -487,7 +530,7 @@ Remove any values lower than or equal to number from a series. Will error if thi
 Remove any NaN or Inf values from a series. Will error if this operation results in an empty series.
 
 ## dropbool(seriesSet, seriesSet) seriesSet
-Drop datapoints where the corresponding value in the second series set is non-zero. (See Series Operations for what corresponding means). The following example drops tr_avg (avg response time per bucket) datapoints if the count in that bucket was + or - 100 from the average count over the time period. 
+Drop datapoints where the corresponding value in the second series set is non-zero. (See Series Operations for what corresponding means). The following example drops tr_avg (avg response time per bucket) datapoints if the count in that bucket was + or - 100 from the average count over the time period.
 
 Example:
 
@@ -512,11 +555,61 @@ Returns the first count (scalar) results of number.
 
 ## lookup(table string, key string) numberSet
 
+Returns the first key from the given lookup table with matching tags, this searches the built-in index and so only makes sense when using OpenTSDB and sending data to /index or relaying through bosun.
+
+## lookupSeries(series seriesSet, table string, key string) numberSet
+
 Returns the first key from the given lookup table with matching tags.
+The first argument is a series to use from which to derive the tag information.  This is good for alternative storage backends such as graphite and influxdb.
+
+## map(series seriesSet, subExpr numberSetExpr) seriesSet
+
+map applies the subExpr to each value in each series in the set. A special function `v()` which is only available in a numberSetExpr and it gives you the value for each item in the series.
+
+For example you can do something like the following to get the absolute value for each item in the series (since the normal `abs()` function works on normal numbers, not series:
+
+```
+$q = q("avg:rate:os.cpu{host=*bosun*}", "5m", "")
+map($q, expr(abs(v())))
+```
+
+Or for another example, this would get you the absolute difference of each datapoint from the series average as a new series:
+
+```
+$q = q("avg:rate:os.cpu{host=*bosun*}", "5m", "")
+map($q, expr(abs(v()-avg($q))))
+```
+
+Since this function is not optimized for a particular operation on a seriesSet it may not be very efficent. If you find you are doing things that involve more complex expressions within the `expr(...)` inside map (for example, having query functions in there) than you may want to consider requesting a new function to be added to bosun's DSL.
+
+## expr(expression)
+
+expr takes an expression and returns either a numberSetExpr or a seriesSetExpr depending on the resulting type of the inner expression. This exists for functions like `map` - it is currently not valid in the expression language outside of function arguments.
+
+## month(offset scalar, startEnd string) scalar
+
+Returns the epoch of either the start or end of the month. Offset is the timezone offset from UTC that the month starts/ends at (but the returned epoch is representitive of UTC). startEnd must be either `"start"` or `"end"`. Useful for things like monthly billing, for example:
+
+```
+$hostInt = host=ny-nexus01,iname=Ethernet1/46
+$inMetric = "sum:5m-avg:rate{counter,,1}:__ny-nexus01.os.net.bytes{$hostInt,direction=in}"
+$outMetric = "sum:5m-avg:rate{counter,,1}:__ny-nexus01.os.net.bytes{$hostInt,direction=in}"
+$commit = 100
+$monthStart = month(-4, "start")
+$monthEnd = month(-4, "end")
+$monthLength = $monthEnd - $monthStart
+$burstTime = ($monthLength)*.05
+$burstableObservations = $burstTime / d("5m")
+$in = q($inMetric, tod(epoch()-$monthStart), "") * 8 / 1e6
+$out = q($inMetric, tod(epoch()-$monthStart), "") * 8 / 1e6
+$inOverCount = sum($in > $commit)
+$outOverCount = sum($out > $commit)
+$inOverCount > $burstableObservations || $outOverCount > $burstableObservations
+```
 
 ## series(tagset string, epoch, value, ...) seriesSet
 
-Returns a seriesSet with one series. The series will have a group (a.k.a tagset). You can then optionally pass epoch value pairs (if non are provided, the series will be empty). This is can be used for testing or drawing arbitary lines. For example:
+Returns a seriesSet with one series. The series will have a group (a.k.a tagset). The tagset can be "" for the empty group, or in "key=value,key=value" format. You can then optionally pass epoch value pairs (if non are provided, the series will be empty). This is can be used for testing or drawing arbitary lines. For example:
 
 ```
 $now = epoch()
@@ -536,14 +629,38 @@ Merge takes multiple seriesSets and merges them into a single seriesSet. The fun
 
 Change the NaN value during binary operations (when joining two queries) of unknown groups to the scalar. This is useful to prevent unknown group and other errors from bubbling up.
 
-## rename(seriesSet, string) seriesSet
-
-Accepts a series and a set of tags to rename in `Key1=NewK1,Key2=NewK2` format. All data points will have the tag keys renamed according to the spec provided, in order. This can be useful for combining results from seperate queries that have similar tagsets with different tag keys.
-
 ## sort(numberSet, (asc|desc) string) numberSet
 
 Returns the results sorted by value in ascending ("asc") or descending ("desc")
 order. Results are first sorted by groupname and then stably sorted so that
 results with identical values are always in the same order.
+
+## timedelta(seriesSet) seriesSet
+
+Returns the difference between successive timestamps in a series. For example:
+
+```
+timedelta(series("foo=bar", 1466133600, 1, 1466133610, 1, 1466133710, 1))
+```
+
+Would return a seriesSet equal to:
+
+```
+series("foo=bar", 1466133610, 10, 1466133710, 100)
+```
+
+## tail(seriesSet, num numberSet) seriesSet
+
+Returns the most recent num points from a series. If the series is shorter than the number of requeted points the series is unchanged as all points are in the requested window. This function is useful for making calculating on the leading edge. For example:
+
+```
+tail(series("foo=bar", 1466133600, 1, 1466133610, 1, 1466133710, 1), 2)
+```
+
+Would return a seriesSet equal to:
+
+```
+series("foo=bar", 1466133610, 1, 1466133710, 1)
+```
 
 </div>

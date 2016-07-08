@@ -57,6 +57,8 @@ const (
 	itemString
 	itemFunc
 	itemTripleQuotedString
+	itemPow // '**'
+	itemExpr
 )
 
 const eof = -1
@@ -258,6 +260,8 @@ func lexSymbol(l *lexer) stateFn {
 		l.emit(itemMinus)
 	case "*":
 		l.emit(itemMult)
+	case "**":
+		l.emit(itemPow)
 	case "/":
 		l.emit(itemDiv)
 	case "%":
@@ -275,6 +279,10 @@ func lexFunc(l *lexer) stateFn {
 			// absorb
 		default:
 			l.backup()
+			if l.input[l.start:l.pos] == "expr" {
+				l.emit(itemExpr)
+				return lexItem
+			}
 			l.emit(itemFunc)
 			return lexItem
 		}

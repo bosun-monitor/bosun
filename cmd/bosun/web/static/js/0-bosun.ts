@@ -137,9 +137,9 @@ interface IBosunScope extends RootScope {
     values: any;
     annotateEnabled: boolean;
     opentsdbEnabled: boolean;
+    quiet: boolean;
     version: any;
 }
-
 
 bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', '$q', '$rootScope', function($scope: IBosunScope, $route: ng.route.IRouteService, $http: ng.IHttpService, $q: ng.IQService, $rootScope: IRootScope) {
     $scope.$on('$routeChangeSuccess', function(event, current, previous) {
@@ -157,6 +157,13 @@ bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', '$q', '$r
     $http.get("/api/annotate")
         .success((data: any) => {
             $scope.annotateEnabled = data;
+        })
+        .error((data: any) => {
+            console.log(data);
+        });
+    $http.get("/api/quiet")
+        .success((data: any) => {
+            $scope.quiet = data;
         })
         .error((data: any) => {
             console.log(data);

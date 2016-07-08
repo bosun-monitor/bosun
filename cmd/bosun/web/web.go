@@ -104,7 +104,9 @@ func Listen(listenAddr string, devMode bool, tsdbHost string) error {
 	router.Handle("/api/health", JSON(HealthCheck))
 	router.Handle("/api/host", JSON(Host))
 	router.Handle("/api/last", JSON(Last))
+	router.Handle("/api/quiet", JSON(Quiet))
 	router.Handle("/api/incidents", JSON(Incidents))
+	router.Handle("/api/incidents/open", JSON(ListOpenIncidents))
 	router.Handle("/api/incidents/events", JSON(IncidentEvents))
 	router.Handle("/api/metadata/get", JSON(GetMetadata))
 	router.Handle("/api/metadata/metrics", JSON(MetadataMetrics))
@@ -337,6 +339,10 @@ func Shorten(w http.ResponseWriter, r *http.Request) {
 type Health struct {
 	// RuleCheck is true if last check happened within the check frequency window.
 	RuleCheck bool
+}
+
+func Quiet(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	return schedule.Conf.Quiet, nil
 }
 
 func HealthCheck(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
@@ -580,6 +586,8 @@ func Action(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (inter
 		at = models.ActionForceClose
 	case "purge":
 		at = models.ActionPurge
+	case "note":
+		at = models.ActionNote
 	}
 	errs := make(MultiError)
 	r.ParseForm()

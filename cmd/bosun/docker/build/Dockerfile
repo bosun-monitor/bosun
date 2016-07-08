@@ -24,7 +24,7 @@ RUN mkdir -p /hbase \
     | tar -xzC /hbase \
     && mv /hbase/hbase-$HBASEVER /hbase/hbase
 
-RUN curl -SL https://storage.googleapis.com/golang/go1.6.linux-amd64.tar.gz \
+RUN curl -SL https://storage.googleapis.com/golang/go1.6.2.linux-amd64.tar.gz \
     | tar -xzC /usr/local
 
 COPY bosun $GOPATH/src/bosun.org/
@@ -35,3 +35,4 @@ ENV PATH $PATH:/usr/local/go/bin:$GOPATH/bin
 RUN go run build/build.go \
 	&& bosun -version \
 	&& scollector -version
+#   && tsdbrelay -version doesn't work. See https://github.com/bosun-monitor/bosun/issues/1792

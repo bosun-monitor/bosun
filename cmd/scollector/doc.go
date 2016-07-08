@@ -199,13 +199,36 @@ Vsphere (array of table, keys are Host, User, Password): vSphere hosts to poll.
 	  User = "vuser"
 	  Password = "pass"
 
-AWS (array of table, keys are AccessKey, SecretKey, Region): AWS hosts to poll.
+AWS (array of table, keys are AccessKey, SecretKey, Region, BillingProductCodesRegex,
+BillingBucketName, BillingBucketPath, BillingPurgeDays): AWS hosts to poll, and associated
+billing information.
+
+To report AWS billing information to OpenTSDB or Bosun, you need to configure AWS to
+generate billing reports, which will be put into an S3 bucket. See for more detail:
+http://docs.aws.amazon.com/awsaccountbilling/latest/aboutv2/detailed-billing-reports.html
+
+Once the reports are going into the S3, bucket, the Bucket Name and the Prefix Path that
+you entered during the report setup need to be entered below. Do not enter a blank bucket
+path as this is not supported.
+
+Reports that are over a certain number of days old are purged by scollector. Set the key
+BillingPurgeDays to 0 to disable purging of old reports (not that this may increase your S3
+usage costs as all reports are processed each time the collector runs).
+
+Do not populate the Billing keys if you do not wish to load billing data into OpenTSDB or
+Bosun.
+
+Only products whose name matches the BillingProductCodesRegex key will have their billing
+data sent to OpenTSDB or Bosun.
 
 	[[AWS]]
 	  AccessKey = "aoesnuth"
 	  SecretKey = "snch0d"
 	  Region = "somewhere"
-
+	  BillingProductCodesRegex = "^Amazon(S3|Glacier|Route53)$"
+	  BillingBucketName = "mybucket.billing"
+	  BillingBucketPath = "reports"
+	  BillingPurgeDays = 2
 
 Process: processes to monitor.
 
@@ -241,10 +264,11 @@ management plugin on http://guest:guest@127.0.0.1:15672/ .
 Cadvisor: Cadvisor endpoints to poll.
 Cadvisor collects system statistics about running containers.
 See https://github.com/google/cadvisor/ for documentation about configuring
-cadvisor.
+cadvisor. You can enable per cpu usage metric reporting optionally.
 
 	[[Cadvisor]]
 		URL = "http://localhost:8080"
+		PerCpuUsage = true
 
 RedisCounters: Reads a hash of metric/counters from a redis database.
 

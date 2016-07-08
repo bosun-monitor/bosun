@@ -22,7 +22,8 @@ type Tree struct {
 	Text string // text parsed to create the expression.
 	Root Node   // top-level root of the tree, returns a number.
 
-	funcs []map[string]Func
+	funcs   []map[string]Func
+	mapExpr bool
 
 	// Parsing only; cleared after parse.
 	lex       *lexer
@@ -38,6 +39,7 @@ type Func struct {
 	VArgs     bool
 	VArgsPos  int
 	VArgsOmit bool
+	MapFunc   bool // Func is only valid in map expressions
 	Check     func(*Tree, *FuncNode) error
 }
 
@@ -90,6 +92,14 @@ func (t Tags) Intersection(o Tags) Tags {
 // is returned with the error.
 func Parse(text string, funcs ...map[string]Func) (t *Tree, err error) {
 	t = New()
+	t.Text = text
+	err = t.Parse(text, funcs...)
+	return
+}
+
+func ParseSub(text string, funcs ...map[string]Func) (t *Tree, err error) {
+	t = New()
+	t.mapExpr = true
 	t.Text = text
 	err = t.Parse(text, funcs...)
 	return
@@ -220,7 +230,7 @@ func (t *Tree) Parse(text string, funcs ...map[string]Func) (err error) {
 // It runs to EOF.
 func (t *Tree) parse() {
 	t.Root = t.O()
-	t.expect(itemEOF, "input")
+	t.expect(itemEOF, "root input")
 	if err := t.Root.Check(t); err != nil {
 		t.error(err)
 	}
@@ -231,11 +241,12 @@ O -> A {"||" A}
 A -> C {"&&" C}
 C -> P {( "==" | "!=" | ">" | ">=" | "<" | "<=") P}
 P -> M {( "+" | "-" ) M}
-M -> F {( "*" | "/" ) F}
+M -> E {( "*" | "/" ) F}
+E -> F {( "**" ) F}
 F -> v | "(" O ")" | "!" O | "-" O
 v -> number | func(..)
 Func -> name "(" param {"," param} ")"
-param -> number | "string" | [query]
+param -> number | "string" | subExpr | [query]
 */
 
 // expr:
@@ -288,10 +299,22 @@ func (t *Tree) P() Node {
 }
 
 func (t *Tree) M() Node {
-	n := t.F()
+	n := t.E()
 	for {
 		switch t.peek().typ {
 		case itemMult, itemDiv, itemMod:
+			n = newBinary(t.next(), n, t.E())
+		default:
+			return n
+		}
+	}
+}
+
+func (t *Tree) E() Node {
+	n := t.F()
+	for {
+		switch t.peek().typ {
+		case itemPow:
 			n = newBinary(t.next(), n, t.F())
 		default:
 			return n
@@ -308,10 +331,10 @@ func (t *Tree) F() Node {
 	case itemLeftParen:
 		t.next()
 		n := t.O()
-		t.expect(itemRightParen, "input")
+		t.expect(itemRightParen, "input: F()")
 		return n
 	default:
-		t.unexpected(token, "input")
+		t.unexpected(token, "input: F()")
 	}
 	return nil
 }
@@ -328,7 +351,7 @@ func (t *Tree) v() Node {
 		t.backup()
 		return t.Func()
 	default:
-		t.unexpected(token, "input")
+		t.unexpected(token, "input: v()")
 	}
 	return nil
 }
@@ -356,6 +379,38 @@ func (t *Tree) Func() (f *FuncNode) {
 			f.append(newString(token.pos, token.val, s))
 		case itemRightParen:
 			return
+		case itemExpr:
+			t.expect(itemLeftParen, "v() expect left paran in itemExpr")
+			start := t.lex.lastPos
+			leftCount := 1
+		TOKENS:
+			for {
+				switch token = t.next(); token.typ {
+				case itemLeftParen:
+					leftCount++
+				case itemFunc:
+				case itemRightParen:
+					leftCount--
+					if leftCount == 0 {
+						t.expect(itemRightParen, "v() expect right paren in itemExpr")
+						t.backup()
+						break TOKENS
+					}
+				case itemEOF:
+					t.unexpected(token, "input: v()")
+				default:
+					// continue
+				}
+			}
+			n, err := newExprNode(t.lex.input[start:t.lex.lastPos], t.lex.lastPos)
+			if err != nil {
+				t.error(err)
+			}
+			n.Tree, err = ParseSub(n.Text, t.funcs...)
+			if err != nil {
+				t.error(err)
+			}
+			f.append(n)
 		}
 		switch token = t.next(); token.typ {
 		case itemComma:
@@ -378,6 +433,20 @@ func (t *Tree) GetFunction(name string) (v Func, ok bool) {
 		}
 	}
 	return
+}
+
+func (t *Tree) SetFunction(name string, F interface{}) error {
+	for i, funcMap := range t.funcs {
+		if funcMap == nil {
+			continue
+		}
+		if v, ok := funcMap[name]; ok {
+			v.F = F
+			t.funcs[i][name] = v
+			return nil
+		}
+	}
+	return fmt.Errorf("can not set function, function %v not found", name)
 }
 
 func (t *Tree) String() string {

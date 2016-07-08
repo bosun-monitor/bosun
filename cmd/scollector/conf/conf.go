@@ -104,7 +104,8 @@ type GoogleAnalytics struct {
 }
 
 type Fastly struct {
-	Key string
+	Key            string
+	StatusBaseAddr string
 }
 
 type GoogleAnalyticsSite struct {
@@ -125,9 +126,13 @@ type Vsphere struct {
 }
 
 type AWS struct {
-	AccessKey string
-	SecretKey string
-	Region    string
+	AccessKey                string
+	SecretKey                string
+	Region                   string
+	BillingProductCodesRegex string
+	BillingBucketName        string
+	BillingBucketPath        string
+	BillingPurgeDays         int
 }
 
 type SNMP struct {
@@ -188,7 +193,8 @@ type Github struct {
 }
 
 type Cadvisor struct {
-	URL string
+	URL         string
+	PerCpuUsage bool
 }
 
 type RedisCounters struct {

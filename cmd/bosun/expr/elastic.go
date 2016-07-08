@@ -79,6 +79,11 @@ var Elastic = map[string]parse.Func{
 		Return: models.TypeESQuery,
 		F:      ESQueryString,
 	},
+	"esexists": {
+		Args:   []models.FuncType{models.TypeString},
+		Return: models.TypeESQuery,
+		F:      ESExists,
+	},
 	"esand": {
 		Args:   []models.FuncType{models.TypeESQuery},
 		VArgs:  true,
@@ -90,6 +95,11 @@ var Elastic = map[string]parse.Func{
 		VArgs:  true,
 		Return: models.TypeESQuery,
 		F:      ESOr,
+	},
+	"esnot": {
+		Args:   []models.FuncType{models.TypeESQuery},
+		Return: models.TypeESQuery,
+		F:      ESNot,
 	},
 	"esgt": {
 		Args:   []models.FuncType{models.TypeString, models.TypeScalar},
@@ -135,6 +145,15 @@ func ESAnd(e *State, T miniprofiler.Timer, esqueries ...ESQuery) (*Results, erro
 	return &r, nil
 }
 
+func ESNot(e *State, T miniprofiler.Timer, query ESQuery) (*Results, error) {
+	var r Results
+	q := ESQuery{
+		Query: elastic.NewBoolQuery().MustNot(query.Query),
+	}
+	r.Results = append(r.Results, &Result{Value: q})
+	return &r, nil
+}
+
 func ESOr(e *State, T miniprofiler.Timer, esqueries ...ESQuery) (*Results, error) {
 	var r Results
 	queries := make([]elastic.Query, len(esqueries))
@@ -163,6 +182,14 @@ func ESQueryString(e *State, T miniprofiler.Timer, key string, query string) (*R
 	if key != "" {
 		qs.Field(key)
 	}
+	q := ESQuery{Query: qs}
+	r.Results = append(r.Results, &Result{Value: q})
+	return &r, nil
+}
+
+func ESExists(e *State, T miniprofiler.Timer, field string) (*Results, error) {
+	var r Results
+	qs := elastic.NewExistsQuery(field)
 	q := ESQuery{Query: qs}
 	r.Results = append(r.Results, &Result{Value: q})
 	return &r, nil
@@ -286,10 +313,10 @@ func timeESRequest(e *State, T miniprofiler.Timer, req *ElasticRequest) (resp *e
 	}
 	T.StepCustomTiming("elastic", "query", string(b), func() {
 		getFn := func() (interface{}, error) {
-			return e.elasticHosts.Query(req)
+			return e.ElasticHosts.Query(req)
 		}
 		var val interface{}
-		val, err = e.cache.Get(string(b), getFn)
+		val, err = e.Cache.Get(string(b), getFn)
 		resp = val.(*elastic.SearchResult)
 	})
 	return
@@ -314,14 +341,14 @@ func ESLS(e *State, T miniprofiler.Timer, indexRoot string) (*Results, error) {
 
 func ESDaily(e *State, T miniprofiler.Timer, timeField, indexRoot, layout string) (*Results, error) {
 	var r Results
-	err := e.elasticHosts.InitClient()
+	err := e.ElasticHosts.InitClient()
 	if err != nil {
 		return &r, err
 	}
 	indexer := ESIndexer{}
 	indexer.TimeField = timeField
 	indexer.Generate = func(start, end *time.Time) ([]string, error) {
-		err := e.elasticHosts.InitClient()
+		err := e.ElasticHosts.InitClient()
 		if err != nil {
 			return []string{}, err
 		}
@@ -365,7 +392,7 @@ func ESStat(e *State, T miniprofiler.Timer, indexer ESIndexer, keystring string,
 
 func ESDateHistogram(e *State, T miniprofiler.Timer, indexer ESIndexer, keystring string, filter elastic.Query, interval, sduration, eduration, stat_field, rstat string, size int) (r *Results, err error) {
 	r = new(Results)
-	req, err := ESBaseQuery(e.now, indexer, e.elasticHosts, filter, sduration, eduration, size)
+	req, err := ESBaseQuery(e.now, indexer, filter, sduration, eduration, size)
 	if err != nil {
 		return nil, err
 	}
@@ -423,7 +450,7 @@ func ESDateHistogram(e *State, T miniprofiler.Timer, indexer ESIndexer, keystrin
 	var desc func(*elastic.AggregationBucketKeyItem, opentsdb.TagSet, []string) error
 	desc = func(b *elastic.AggregationBucketKeyItem, tags opentsdb.TagSet, keys []string) error {
 		if ts, found := b.DateHistogram("ts"); found {
-			if e.squelched(tags) {
+			if e.Squelched(tags) {
 				return nil
 			}
 			series := make(Series)
@@ -467,7 +494,7 @@ func ESDateHistogram(e *State, T miniprofiler.Timer, indexer ESIndexer, keystrin
 }
 
 // ESBaseQuery builds the base query that both ESCount and ESStat share
-func ESBaseQuery(now time.Time, indexer ESIndexer, l ElasticHosts, filter elastic.Query, sduration, eduration string, size int) (*ElasticRequest, error) {
+func ESBaseQuery(now time.Time, indexer ESIndexer, filter elastic.Query, sduration, eduration string, size int) (*ElasticRequest, error) {
 	start, err := opentsdb.ParseDuration(sduration)
 	if err != nil {
 		return nil, err

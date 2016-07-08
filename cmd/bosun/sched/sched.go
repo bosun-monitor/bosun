@@ -22,6 +22,7 @@ import (
 	"github.com/MiniProfiler/go/miniprofiler"
 	"github.com/boltdb/bolt"
 	"github.com/bradfitz/slice"
+	"github.com/kylebrandt/boolq"
 	"github.com/tatsushid/go-fastping"
 )
 
@@ -372,12 +373,13 @@ func (s *Schedule) MarshalGroups(T miniprofiler.Timer, filter string) (*StateGro
 	}
 	t.FailingAlerts, t.UnclosedErrors = s.getErrorCounts()
 	T.Step("Setup", func(miniprofiler.Timer) {
-		matches, err2 := makeFilter(filter)
+		status2, err2 := s.GetOpenStates()
 		if err2 != nil {
 			err = err2
 			return
 		}
-		status2, err2 := s.GetOpenStates()
+		var parsedExpr *boolq.Tree
+		parsedExpr, err2 = boolq.Parse(filter)
 		if err2 != nil {
 			err = err2
 			return
@@ -391,7 +393,14 @@ func (s *Schedule) MarshalGroups(T miniprofiler.Timer, filter string) (*StateGro
 				}
 				continue
 			}
-			if matches(s.Conf, a, v) {
+			is := MakeIncidentSummary(s.Conf, silenced, v)
+			match := false
+			match, err2 = boolq.AskParsedExpr(parsedExpr, is)
+			if err2 != nil {
+				err = err2
+				return
+			}
+			if match {
 				status[k] = v
 			}
 		}
@@ -640,6 +649,8 @@ func (s *Schedule) action(user, message string, t models.ActionType, st *models.
 		fallthrough
 	case models.ActionPurge:
 		return st.AlertKey, s.DataAccess.State().Forget(st.AlertKey)
+	case models.ActionNote:
+		// pass
 	default:
 		return "", fmt.Errorf("unknown action type: %v", t)
 	}

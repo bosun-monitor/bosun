@@ -229,7 +229,7 @@ func strEqual(a, b []string) bool {
 }
 
 // Timeout is the connection timeout.
-var Timeout = time.Second * 3
+var Timeout = time.Second * 10
 
 // TestPlan describes a test and its permutations (IP addresses).
 type TestPlan struct {
@@ -237,9 +237,10 @@ type TestPlan struct {
 	URL   string
 	IPs   []string
 
-	Code  int
-	Text  string
-	Regex string
+	Code    int
+	Text    string
+	Regex   string
+	Timeout time.Duration
 }
 
 // Cases computes the actual test cases from a test plan. filter and no10 are described in Plans.Test.
@@ -321,9 +322,13 @@ func (p *TestPlan) Cases(filter string, no10 bool, IPs IPMap) ([]*TestCase, erro
 				ExpectCode:  code,
 				ExpectText:  p.Text,
 				ExpectRegex: re,
+				Timeout:     p.Timeout * time.Second,
 			}
 			if c.IP == nil {
 				return fmt.Errorf("invalid ip: %v", ip)
+			}
+			if c.Timeout == 0 {
+				c.Timeout = Timeout
 			}
 			cases = append(cases, c)
 		}
@@ -382,6 +387,8 @@ type TestCase struct {
 	ExpectCode  int
 	ExpectText  string
 	ExpectRegex *regexp.Regexp
+
+	Timeout time.Duration
 }
 
 type TestResult struct {
@@ -421,7 +428,7 @@ func (c *TestCase) testConnect() (r *TestResult) {
 	defer func() {
 		r.TimeTotal = time.Now().Sub(t)
 	}()
-	conn, err := net.DialTimeout(c.URL.Scheme, c.addr(), Timeout)
+	conn, err := net.DialTimeout(c.URL.Scheme, c.addr(), c.Timeout)
 	if err != nil {
 		r.Result = err
 		return
@@ -439,7 +446,7 @@ func (c *TestCase) testHTTP() (r *TestResult) {
 	}()
 	tr := &http.Transport{
 		Dial: func(network, a string) (net.Conn, error) {
-			conn, err := net.DialTimeout(network, c.addr(), Timeout)
+			conn, err := net.DialTimeout(network, c.addr(), c.Timeout)
 			if err != nil {
 				r.Connected = false
 			}
@@ -453,7 +460,7 @@ func (c *TestCase) testHTTP() (r *TestResult) {
 		return
 	}
 	timedOut := false
-	timout := time.AfterFunc(Timeout, func() {
+	timout := time.AfterFunc(c.Timeout, func() {
 		timedOut = true
 		r.Connected = false
 		tr.CancelRequest(req)

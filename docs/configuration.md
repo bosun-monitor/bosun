@@ -44,10 +44,12 @@ Every variable is optional, though you should enable at least 1 backend.
   * The items page.
   * The graph page's tag list.
 * tsdbVersion: Defaults to 2.1 if not present. Should always be specified as Number.Number. Various OpenTSDB features are added with newer versions.
+* relayListen: Listen on the given address (i.e., set to :4242) and will pass through all /api/X calls to your OpenTSDB server. This is an optinal parameter when using OpenTSDB so it is not required for any Bosun functionality
 * graphiteHost: an ip, hostname, ip:port, hostname:port or a URL, defaults to standard http/https ports, defaults to "/render" path.  Any non-zero path (even "/" overrides path)
 * graphiteHeader: a http header to be sent to graphite on each request in 'key:value' format. optional. can be specified multiple times.
 * logstashElasticHosts: Elasticsearch hosts populated by logstash. Must be a CSV list of URLs and only works with elastic pre-v2. The hosts you list are used to discover all hosts in the cluster.
 * elasticHosts: Elasticsearch hosts. This is not limited to logstash's schema. It must be a CSV list of URLs and only works with elastic v2 and later. The hosts you list are used to discover all hosts in the cluster.
+* annotateElasticHosts: Enables annotations by setting this. Is a CSV list of URLs like elasticHosts. More on annotations in the [usage documentation](http://bosun.org/usage#annotations). By default the index is named "annotate" and will be created if it doesn't exist. You can change which index to use/create with the annotateIndex setting.
 * influxHost: InfluxDB host address ip:port pair.
 * influxUsername: InfluxDB username. If empty will attempt to connect without authentication.
 * influxPassword: InfluxDB password. If empty will attempt to connect without authentication.
@@ -56,13 +58,13 @@ Every variable is optional, though you should enable at least 1 backend.
 
 #### data storage
 
-With bosun v0.5.0, bosun uses redis as a storage mechanism for it's internal state. You can either run a redis instance to hold this data, or bosun can use an embedded server if you would rather run standalone (using [ledisDb](http://ledisdb.com/))
+With bosun v0.5.0, bosun uses redis as a storage mechanism for it's internal state. You can either run a redis instance to hold this data, or bosun can use an embedded server if you would rather run standalone (using [ledisDb](http://ledisdb.com/)). Redis is recommend for production use. [This gist](https://gist.github.com/kylebrandt/3fdc97171b96ba46fd9e1d14abd03027) shows an example redis config, tested redis version, and an example cron job for backing up the redis data.
 
-Config items:
+Config items:  
+
 * redisHost: redis server to use. Ex: `localhost:6379`. Redis 3.0 or greater is required.
 * redisDb: redis database to use. Default is `0`.
 * redisPassword: redis password.
-
 * ledisDir: directory for ledisDb to store it's data. Will default to `ledis_data` in working dir if no redis host is provided.
 * ledisBindAddr: Address and port for ledis to bind to, defaults to `127.0.0.1:9565`.
 
@@ -82,6 +84,7 @@ Config items:
 * stateFile: bosun state file, defaults to `bosun.state`
 * unknownTemplate: name of the template for unknown alerts
 * shortURLKey: goo.gl API key, needed if you hit usage limits when using the short link button
+* timeAndDate: The configuration parameter for the worldclock links is timeAndDate, i.e. `timeAndDate = 202,75,179,136` adds adds Portland, Denver, New York, and London to the datetime links generated in alerts. See [timeanddate.com documentation](http://www.timeanddate.com/worldclock/converter-about.html)
 
 #### SMTP Authentication
 

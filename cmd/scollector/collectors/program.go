@@ -73,6 +73,7 @@ func isExecutable(f os.FileInfo) bool {
 	switch runtime.GOOS {
 	case "windows":
 		exts := strings.Split(os.Getenv("PATHEXT"), ";")
+		exts = append(exts, ".PS1")
 		fileExt := filepath.Ext(strings.ToUpper(f.Name()))
 		for _, ext := range exts {
 			if filepath.Ext(strings.ToUpper(ext)) == fileExt {
@@ -115,7 +116,12 @@ func (c *ProgramCollector) Init() {
 var setupExternalCommand = func(cmd *exec.Cmd) {}
 
 func (c *ProgramCollector) runProgram(dpchan chan<- *opentsdb.DataPoint) (progError error) {
-	cmd := exec.Command(c.Path)
+	var cmd *exec.Cmd
+	if runtime.GOOS == "windows" && strings.EqualFold(filepath.Ext(c.Path), ".ps1") {
+		cmd = exec.Command("powershell", "-NoProfile", "-NoLogo", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", c.Path)
+	} else {
+		cmd = exec.Command(c.Path)
+	}
 	setupExternalCommand(cmd)
 	pr, pw := io.Pipe()
 	s := bufio.NewScanner(pr)
@@ -219,7 +225,7 @@ func parseTcollectorValue(line string) (*opentsdb.DataPoint, error) {
 	if err != nil {
 		return nil, fmt.Errorf("bad value: %s", sp[2])
 	}
-	if !opentsdb.ValidTag(sp[0]) {
+	if !opentsdb.ValidTSDBString(sp[0]) {
 		return nil, fmt.Errorf("bad metric: %s", sp[0])
 	}
 	dp := opentsdb.DataPoint{

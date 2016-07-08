@@ -67,6 +67,12 @@ func TestParseQueryV2_2(t *testing.T) {
 		// return errors. This is because there can be a regex filter now. Might
 		// be issues with escaping there however
 		{"sum:stat{a=b=c}", false},
+
+		//test fill policies
+		{"sum:10m-avg-zero:proc.stat.cpu{t=v,o=k}", false},
+		{"sum:10m-avg-:proc.stat.cpu{t=v,o=k}", true},
+		{"sum:10m-avg-none:rate:proc.stat.cpu", false},
+		{"sum:10m-avg-:rate{counter,1,2}:proc.stat.cpu{t=v,o=k}", true},
 	}
 	for _, q := range tests {
 		_, err := ParseQuery(q.query, Version2_2)
@@ -288,7 +294,7 @@ func TestQueryString(t *testing.T) {
 	}
 }
 
-func TestValidTag(t *testing.T) {
+func TestValidTSDBString(t *testing.T) {
 	tests := map[string]bool{
 		"abcXYZ012_./-": true,
 
@@ -297,7 +303,7 @@ func TestValidTag(t *testing.T) {
 		"a=b": false,
 	}
 	for s, v := range tests {
-		r := ValidTag(s)
+		r := ValidTSDBString(s)
 		if v != r {
 			t.Errorf("%v: got %v, expected %v", s, r, v)
 		}

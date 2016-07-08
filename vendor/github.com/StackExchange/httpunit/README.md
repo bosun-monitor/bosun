@@ -62,6 +62,7 @@ Each `[[plan]]` lists:
  * `code =` For http/https, the expected status code, default 200.
  * `string =` For http/https, a string we expect to find in the result.
  * `regex =` For http/https, a regular expression we expect to match in the result.
+ * `timeout =` An optional timeout for the test in seconds. Default is 3 seconds.
 
 The test plan is run once for each item in the ips list, or more if macros
 are in effect.

@@ -52,10 +52,14 @@ func TestInfluxQueryDuration(t *testing.T) {
 
 func TestInfluxQuery(t *testing.T) {
 	e := State{
-		now:          time.Date(2015, time.February, 25, 0, 0, 0, 0, time.UTC),
-		InfluxConfig: client.Config{},
-		squelched: func(tags opentsdb.TagSet) bool {
-			return false
+		now: time.Date(2015, time.February, 25, 0, 0, 0, 0, time.UTC),
+		Backends: &Backends{
+			InfluxConfig: client.Config{},
+		},
+		BosunProviders: &BosunProviders{
+			Squelched: func(tags opentsdb.TagSet) bool {
+				return false
+			},
 		},
 	}
 	_, err := InfluxQuery(&e, new(miniprofiler.Profile), "db", "select * from alh limit 10", "1n", "", "")

@@ -8,6 +8,7 @@ import (
 	"bosun.org/cmd/scollector/conf"
 	"bosun.org/collect"
 	"bosun.org/metadata"
+	"bosun.org/models"
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
 	"github.com/garyburd/redigo/redis"
@@ -34,16 +35,27 @@ func c_redis_counters(server string, db int) (opentsdb.MultiDataPoint, error) {
 		return md, slog.Wrap(err)
 	}
 	defer conn.Close()
-	cursor := 0
+
+	//do a dance to detect proper hscan command for ledis or redis
+	hscanCmd := "XHSCAN"
+	info, err := redis.String(conn.Do("info", "server"))
+	if err != nil {
+		return md, slog.Wrap(err)
+	}
+	if strings.Contains(info, "redis_version") {
+		hscanCmd = "HSCAN"
+	}
+
+	cursor := "0"
 	for {
-		vals, err := redis.Values(conn.Do("HSCAN", collect.RedisCountersKey, cursor))
+		vals, err := redis.Values(conn.Do(hscanCmd, collect.RedisCountersKey, cursor))
 		if err != nil {
 			return md, slog.Wrap(err)
 		}
 		if len(vals) != 2 {
 			return md, fmt.Errorf("Unexpected number of values")
 		}
-		cursor, err = redis.Int(vals[0], nil)
+		cursor, err = redis.String(vals[0], nil)
 		if err != nil {
 			return md, slog.Wrap(err)
 		}
@@ -51,26 +63,17 @@ func c_redis_counters(server string, db int) (opentsdb.MultiDataPoint, error) {
 		if err != nil {
 			return md, slog.Wrap(err)
 		}
-		for mts, val := range pairs {
-			parts := strings.Split(mts, ":")
-			if len(parts) != 2 {
-				slog.Errorf("Invalid metric tag set counter: %s", mts)
-				continue
-			}
-			metric := parts[0]
-			tags, err := opentsdb.ParseTags(parts[1])
-			if err != nil {
-				slog.Errorf("Invalid tags: %s", parts[1])
-				continue
-			}
+		for key, val := range pairs {
+			ak := models.AlertKey(key)
+
 			v, err := strconv.Atoi(val)
 			if err != nil {
 				slog.Errorf("Invalid counter value: %s", val)
 				continue
 			}
-			Add(&md, metric, v, tags, metadata.Counter, metadata.Count, "")
+			Add(&md, ak.Name(), v, ak.Group(), metadata.Counter, metadata.Count, "")
 		}
-		if cursor == 0 {
+		if cursor == "" || cursor == "0" {
 			break
 		}
 	}

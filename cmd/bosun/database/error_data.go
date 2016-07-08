@@ -143,6 +143,7 @@ func errorListKey(name string) string {
 }
 func (d *dataAccess) getLastErrorEvent(name string) (*models.AlertError, error) {
 	conn := d.GetConnection()
+	defer conn.Close()
 	str, err := redis.Bytes(conn.Do("LINDEX", errorListKey(name), "0"))
 	if err != nil {
 		if err == redis.ErrNil {

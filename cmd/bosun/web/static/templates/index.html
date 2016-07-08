@@ -107,6 +107,7 @@
 						<li ng-show="annotateEnabled" ng-class="active('annotation')"><a href="/annotation">Submit Annotation</a></li>
 					</ul>
 					<ul class="nav navbar-nav navbar-right">
+						<li ng-if="quiet" class="navbar-text alert-danger">Quiet Mode Enabled</li>
 						<li>
 							<button class="btn btn-default navbar-btn btn-sm" ng-click="shorten()" ng-hide="shortlink">Short Link</button>
 							<input type="text" class="navbar-btn btn-sm form-control input-sm" id="shortlink" ng-show="shortlink">

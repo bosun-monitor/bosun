@@ -159,6 +159,7 @@ var builtins = map[string]Func{
 		false,
 		0,
 		false,
+		false,
 		nil,
 	},
 	"band": {
@@ -168,6 +169,7 @@ var builtins = map[string]Func{
 		nil,
 		false,
 		0,
+		false,
 		false,
 		nil,
 	},
@@ -179,6 +181,7 @@ var builtins = map[string]Func{
 		false,
 		0,
 		false,
+		false,
 		nil,
 	},
 	"forecastlr": {
@@ -188,6 +191,7 @@ var builtins = map[string]Func{
 		nil,
 		false,
 		0,
+		false,
 		false,
 		nil,
 	},

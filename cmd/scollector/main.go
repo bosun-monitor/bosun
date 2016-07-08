@@ -117,7 +117,7 @@ func main() {
 		check(collectors.ICMP(i.Host))
 	}
 	for _, a := range conf.AWS {
-		check(collectors.AWS(a.AccessKey, a.SecretKey, a.Region))
+		check(collectors.AWS(a.AccessKey, a.SecretKey, a.Region, a.BillingProductCodesRegex, a.BillingBucketName, a.BillingBucketPath, a.BillingPurgeDays))
 	}
 	for _, v := range conf.Vsphere {
 		check(collectors.Vsphere(v.User, v.Password, v.Host))

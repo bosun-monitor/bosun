@@ -71,6 +71,7 @@ const (
 	Fraction             = "fraction"
 	Get                  = "gets"
 	GetExists            = "get exists"
+	Incident             = "incidents"
 	Interupt             = "interupts"
 	InProgress           = "in progress"
 	Item                 = "items"
@@ -83,6 +84,7 @@ const (
 	Merge                = "merges"
 	Message              = "messages"
 	MilliSecond          = "milliseconds"
+	Nanosecond           = "nanoseconds"
 	Node                 = "nodes"
 	Ok                   = "ok" // "OK" or not status, 0 = ok, 1 = not ok
 	Operation            = "Operations"

@@ -1,22 +1,18 @@
 package expr
 
 import (
-	"encoding/json"
 	"fmt"
 	"math"
-	"reflect"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 
 	"bosun.org/cmd/bosun/expr/parse"
-	"bosun.org/graphite"
 	"bosun.org/models"
 	"bosun.org/opentsdb"
-	"bosun.org/slog"
 	"github.com/GaryBoone/GoStats/stats"
 	"github.com/MiniProfiler/go/miniprofiler"
+	"github.com/jinzhu/now"
 )
 
 func tagQuery(args []parse.Node) (parse.Tags, error) {
@@ -75,68 +71,6 @@ func tagRename(args []parse.Node) (parse.Tags, error) {
 		}
 	}
 	return tags, nil
-}
-
-// Graphite defines functions for use with a Graphite backend.
-var Graphite = map[string]parse.Func{
-	"graphiteBand": {
-		Args:   []models.FuncType{models.TypeString, models.TypeString, models.TypeString, models.TypeString, models.TypeScalar},
-		Return: models.TypeSeriesSet,
-		Tags:   graphiteTagQuery,
-		F:      GraphiteBand,
-	},
-	"graphite": {
-		Args:   []models.FuncType{models.TypeString, models.TypeString, models.TypeString, models.TypeString},
-		Return: models.TypeSeriesSet,
-		Tags:   graphiteTagQuery,
-		F:      GraphiteQuery,
-	},
-}
-
-// TSDB defines functions for use with an OpenTSDB backend.
-var TSDB = map[string]parse.Func{
-	"band": {
-		Args:   []models.FuncType{models.TypeString, models.TypeString, models.TypeString, models.TypeScalar},
-		Return: models.TypeSeriesSet,
-		Tags:   tagQuery,
-		F:      Band,
-	},
-	"shiftBand": {
-		Args:   []models.FuncType{models.TypeString, models.TypeString, models.TypeString, models.TypeScalar},
-		Return: models.TypeSeriesSet,
-		Tags:   tagQuery,
-		F:      ShiftBand,
-	},
-	"over": {
-		Args:   []models.FuncType{models.TypeString, models.TypeString, models.TypeString, models.TypeScalar},
-		Return: models.TypeSeriesSet,
-		Tags:   tagQuery,
-		F:      Over,
-	},
-	"change": {
-		Args:   []models.FuncType{models.TypeString, models.TypeString, models.TypeString},
-		Return: models.TypeNumberSet,
-		Tags:   tagQuery,
-		F:      Change,
-	},
-	"count": {
-		Args:   []models.FuncType{models.TypeString, models.TypeString, models.TypeString},
-		Return: models.TypeScalar,
-		F:      Count,
-	},
-	"q": {
-		Args:   []models.FuncType{models.TypeString, models.TypeString, models.TypeString},
-		Return: models.TypeSeriesSet,
-		Tags:   tagQuery,
-		F:      Query,
-	},
-	"window": {
-		Args:   []models.FuncType{models.TypeString, models.TypeString, models.TypeString, models.TypeScalar, models.TypeString},
-		Return: models.TypeSeriesSet,
-		Tags:   tagQuery,
-		F:      Window,
-		Check:  windowCheck,
-	},
 }
 
 var builtins = map[string]parse.Func{
@@ -240,6 +174,13 @@ var builtins = map[string]parse.Func{
 	},
 
 	// Group functions
+	"addtags": {
+		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeString},
+		Return: models.TypeSeriesSet,
+		Tags:   tagRename,
+		F:      AddTags,
+	},
+
 	"rename": {
 		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeString},
 		Return: models.TypeSeriesSet,
@@ -266,6 +207,12 @@ var builtins = map[string]parse.Func{
 		Return: models.TypeNumberSet,
 		Tags:   tagFirst,
 		F:      Abs,
+	},
+	"crop": {
+		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeNumberSet, models.TypeNumberSet},
+		Return: models.TypeSeriesSet,
+		Tags:   tagFirst,
+		F:      Crop,
 	},
 	"d": {
 		Args:   []models.FuncType{models.TypeString},
@@ -370,16 +317,81 @@ var builtins = map[string]parse.Func{
 		Tags:   tagFirst,
 		F:      Merge,
 	},
+	"month": {
+		Args:   []models.FuncType{models.TypeScalar, models.TypeString},
+		Return: models.TypeScalar,
+		F:      Month,
+	},
+	"timedelta": {
+		Args:   []models.FuncType{models.TypeSeriesSet},
+		Return: models.TypeSeriesSet,
+		Tags:   tagFirst,
+		F:      TimeDelta,
+	},
+	"tail": {
+		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeNumberSet},
+		Return: models.TypeSeriesSet,
+		Tags:   tagFirst,
+		F:      Tail,
+	},
+	"map": {
+		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeNumberExpr},
+		Return: models.TypeSeriesSet,
+		Tags:   tagFirst,
+		F:      Map,
+	},
+	"v": {
+		Return:  models.TypeScalar,
+		F:       V,
+		MapFunc: true,
+	},
+}
+
+func V(e *State, T miniprofiler.Timer) (*Results, error) {
+	return fromScalar(e.vValue), nil
+}
+
+func Map(e *State, T miniprofiler.Timer, series *Results, expr *Results) (*Results, error) {
+	newExpr := Expr{expr.Results[0].Value.Value().(NumberExpr).Tree}
+	for _, result := range series.Results {
+		newSeries := make(Series)
+		for t, v := range result.Value.Value().(Series) {
+			e.vValue = v
+			subResults, _, err := newExpr.ExecuteState(e, T)
+			if err != nil {
+				return series, err
+			}
+			for _, res := range subResults.Results {
+				var v float64
+				switch res.Value.Value().(type) {
+				case Number:
+					v = float64(res.Value.Value().(Number))
+				case Scalar:
+					v = float64(res.Value.Value().(Scalar))
+				default:
+					return series, fmt.Errorf("wrong return type for map expr: %v", res.Type())
+				}
+				newSeries[t] = v
+			}
+		}
+		result.Value = newSeries
+	}
+	return series, nil
 }
 
 func SeriesFunc(e *State, T miniprofiler.Timer, tags string, pairs ...float64) (*Results, error) {
 	if len(pairs)%2 != 0 {
 		return nil, fmt.Errorf("uneven number of time stamps and values")
 	}
-	group, err := opentsdb.ParseTags(tags)
-	if err != nil {
-		return nil, fmt.Errorf("unable to parse tags: %v", err)
+	group := opentsdb.TagSet{}
+	if tags != "" {
+		var err error
+		group, err = opentsdb.ParseTags(tags)
+		if err != nil {
+			return nil, fmt.Errorf("unable to parse tags: %v", err)
+		}
 	}
+
 	series := make(Series)
 	for i := 0; i < len(pairs); i += 2 {
 		series[time.Unix(int64(pairs[i]), 0)] = pairs[i+1]
@@ -392,6 +404,41 @@ func SeriesFunc(e *State, T miniprofiler.Timer, tags string, pairs ...float64) (
 			},
 		},
 	}, nil
+}
+
+func Crop(e *State, T miniprofiler.Timer, sSet *Results, startSet *Results, endSet *Results) (*Results, error) {
+	results := Results{}
+INNER:
+	for _, seriesResult := range sSet.Results {
+		for _, startResult := range startSet.Results {
+			for _, endResult := range endSet.Results {
+				startHasNoGroup := len(startResult.Group) == 0
+				endHasNoGroup := len(endResult.Group) == 0
+				startOverlapsSeries := seriesResult.Group.Overlaps(startResult.Group)
+				endOverlapsSeries := seriesResult.Group.Overlaps(endResult.Group)
+				if (startHasNoGroup || startOverlapsSeries) && (endHasNoGroup || endOverlapsSeries) {
+					res := crop(e, seriesResult, startResult, endResult)
+					results.Results = append(results.Results, res)
+					continue INNER
+				}
+			}
+		}
+	}
+	return &results, nil
+}
+
+func crop(e *State, seriesResult *Result, startResult *Result, endResult *Result) *Result {
+	startNumber := startResult.Value.(Number)
+	endNumber := endResult.Value.(Number)
+	start := e.now.Add(-time.Duration(time.Duration(startNumber) * time.Second))
+	end := e.now.Add(-time.Duration(time.Duration(endNumber) * time.Second))
+	series := seriesResult.Value.(Series)
+	for timeStamp := range series {
+		if timeStamp.Before(start) || timeStamp.After(end) {
+			delete(series, timeStamp)
+		}
+	}
+	return seriesResult
 }
 
 func DropBool(e *State, T miniprofiler.Timer, target *Results, filter *Results) (*Results, error) {
@@ -419,6 +466,26 @@ func Epoch(e *State, T miniprofiler.Timer) (*Results, error) {
 	return &Results{
 		Results: []*Result{
 			{Value: Scalar(float64(e.now.Unix()))},
+		},
+	}, nil
+}
+
+func Month(e *State, T miniprofiler.Timer, offset float64, startEnd string) (*Results, error) {
+	if startEnd != "start" && startEnd != "end" {
+		return nil, fmt.Errorf("last parameter for mtod must be 'start' or 'end'")
+	}
+	offsetInt := int(offset)
+	location := time.FixedZone(fmt.Sprintf("%v", offsetInt), offsetInt*60*60)
+	timeZoned := e.now.In(location)
+	var mtod float64
+	if startEnd == "start" {
+		mtod = float64(now.New(timeZoned).BeginningOfMonth().Unix())
+	} else {
+		mtod = float64(now.New(timeZoned).EndOfMonth().Unix())
+	}
+	return &Results{
+		Results: []*Result{
+			{Value: Scalar(float64(mtod))},
 		},
 	}, nil
 }
@@ -468,6 +535,43 @@ func Filter(e *State, T miniprofiler.Timer, series *Results, number *Results) (*
 	}
 	series.Results = ns
 	return series, nil
+}
+
+func Tail(e *State, T miniprofiler.Timer, series *Results, number *Results) (*Results, error) {
+	f := func(res *Results, s *Result, floats []float64) error {
+		tailLength := int(floats[0])
+
+		// if there are fewer points than the requested tail
+		// short circut and just return current series
+		if len(s.Value.Value().(Series)) <= tailLength {
+			res.Results = append(res.Results, s)
+			return nil
+		}
+
+		// create new sorted series
+		// not going to do quick select
+		// see https://github.com/bosun-monitor/bosun/pull/1802
+		// for details
+		oldSr := s.Value.Value().(Series)
+		sorted := NewSortedSeries(oldSr)
+
+		// create new series keep a reference
+		// and point sr.Value interface at reference
+		// as we don't need old series any more
+		newSeries := make(Series)
+		s.Value = newSeries
+
+		// load up new series with desired
+		// number of points
+		// we already checked len so this is safe
+		for _, item := range sorted[len(sorted)-tailLength:] {
+			newSeries[item.T] = item.V
+		}
+		res.Results = append(res.Results, s)
+		return nil
+	}
+
+	return match(f, series, number)
 }
 
 func Merge(e *State, T miniprofiler.Timer, series ...*Results) (*Results, error) {
@@ -574,574 +678,6 @@ func DropNA(e *State, T miniprofiler.Timer, series *Results) (*Results, error) {
 	return DropValues(e, T, series, fromScalar(0), dropFunction)
 }
 
-func parseGraphiteResponse(req *graphite.Request, s *graphite.Response, formatTags []string) ([]*Result, error) {
-	const parseErrFmt = "graphite ParseError (%s): %s"
-	if len(*s) == 0 {
-		return nil, fmt.Errorf(parseErrFmt, req.URL, "empty response")
-	}
-	seen := make(map[string]bool)
-	results := make([]*Result, 0)
-	for _, res := range *s {
-		// build tag set
-		tags := make(opentsdb.TagSet)
-		if len(formatTags) == 1 && formatTags[0] == "" {
-			tags["key"] = res.Target
-		} else {
-			nodes := strings.Split(res.Target, ".")
-			if len(nodes) < len(formatTags) {
-				msg := fmt.Sprintf("returned target '%s' does not match format '%s'", res.Target, strings.Join(formatTags, ","))
-				return nil, fmt.Errorf(parseErrFmt, req.URL, msg)
-			}
-			for i, key := range formatTags {
-				if len(key) > 0 {
-					tags[key] = nodes[i]
-				}
-			}
-		}
-		if !tags.Valid() {
-			msg := fmt.Sprintf("returned target '%s' would make an invalid tag '%s'", res.Target, tags.String())
-			return nil, fmt.Errorf(parseErrFmt, req.URL, msg)
-		}
-		if ts := tags.String(); !seen[ts] {
-			seen[ts] = true
-		} else {
-			return nil, fmt.Errorf(parseErrFmt, req.URL, fmt.Sprintf("More than 1 series identified by tagset '%v'", ts))
-		}
-		// build data
-		dps := make(Series)
-		for _, dp := range res.Datapoints {
-			if len(dp) != 2 {
-				return nil, fmt.Errorf(parseErrFmt, req.URL, fmt.Sprintf("Datapoint has != 2 fields: %v", dp))
-			}
-			if len(dp[0].String()) == 0 {
-				// none value. skip this record
-				continue
-			}
-			val, err := dp[0].Float64()
-			if err != nil {
-				msg := fmt.Sprintf("value '%s' cannot be decoded to Float64: %s", dp[0], err.Error())
-				return nil, fmt.Errorf(parseErrFmt, req.URL, msg)
-			}
-			unixTS, err := dp[1].Int64()
-			if err != nil {
-				msg := fmt.Sprintf("timestamp '%s' cannot be decoded to Int64: %s", dp[1], err.Error())
-				return nil, fmt.Errorf(parseErrFmt, req.URL, msg)
-			}
-			t := time.Unix(unixTS, 0)
-			dps[t] = val
-		}
-		results = append(results, &Result{
-			Value: dps,
-			Group: tags,
-		})
-	}
-	return results, nil
-}
-
-func GraphiteBand(e *State, T miniprofiler.Timer, query, duration, period, format string, num float64) (r *Results, err error) {
-	r = new(Results)
-	r.IgnoreOtherUnjoined = true
-	r.IgnoreUnjoined = true
-	T.Step("graphiteBand", func(T miniprofiler.Timer) {
-		var d, p opentsdb.Duration
-		d, err = opentsdb.ParseDuration(duration)
-		if err != nil {
-			return
-		}
-		p, err = opentsdb.ParseDuration(period)
-		if err != nil {
-			return
-		}
-		if num < 1 || num > 100 {
-			err = fmt.Errorf("expr: Band: num out of bounds")
-		}
-		req := &graphite.Request{
-			Targets: []string{query},
-		}
-		now := e.now
-		req.End = &now
-		st := e.now.Add(-time.Duration(d))
-		req.Start = &st
-		for i := 0; i < int(num); i++ {
-			now = now.Add(time.Duration(-p))
-			req.End = &now
-			st := now.Add(time.Duration(-d))
-			req.Start = &st
-			var s graphite.Response
-			s, err = timeGraphiteRequest(e, T, req)
-			if err != nil {
-				return
-			}
-			formatTags := strings.Split(format, ".")
-			var results []*Result
-			results, err = parseGraphiteResponse(req, &s, formatTags)
-			if err != nil {
-				return
-			}
-			if i == 0 {
-				r.Results = results
-			} else {
-				// different graphite requests might return series with different id's.
-				// i.e. a different set of tagsets.  merge the data of corresponding tagsets
-				for _, result := range results {
-					updateKey := -1
-					for j, existing := range r.Results {
-						if result.Group.Equal(existing.Group) {
-							updateKey = j
-							break
-						}
-					}
-					if updateKey == -1 {
-						// result tagset is new
-						r.Results = append(r.Results, result)
-						updateKey = len(r.Results) - 1
-					}
-					for k, v := range result.Value.(Series) {
-						r.Results[updateKey].Value.(Series)[k] = v
-					}
-				}
-			}
-		}
-	})
-	if err != nil {
-		return nil, fmt.Errorf("graphiteBand: %v", err)
-	}
-	return
-}
-
-func bandTSDB(e *State, T miniprofiler.Timer, query, duration, period string, num float64, rfunc func(*Results, *opentsdb.Response, time.Duration) error) (r *Results, err error) {
-	r = new(Results)
-	r.IgnoreOtherUnjoined = true
-	r.IgnoreUnjoined = true
-	T.Step("band", func(T miniprofiler.Timer) {
-		var d, p opentsdb.Duration
-		d, err = opentsdb.ParseDuration(duration)
-		if err != nil {
-			return
-		}
-		p, err = opentsdb.ParseDuration(period)
-		if err != nil {
-			return
-		}
-		if num < 1 || num > 100 {
-			err = fmt.Errorf("num out of bounds")
-		}
-		var q *opentsdb.Query
-		q, err = opentsdb.ParseQuery(query, e.tsdbContext.Version())
-		if err != nil {
-			return
-		}
-		if !e.tsdbContext.Version().FilterSupport() {
-			if err = e.Search.Expand(q); err != nil {
-				return
-			}
-		}
-		req := opentsdb.Request{
-			Queries: []*opentsdb.Query{q},
-		}
-		now := e.now
-		req.End = now.Unix()
-		req.Start = now.Add(time.Duration(-d)).Unix()
-		if err = req.SetTime(e.now); err != nil {
-			return
-		}
-		for i := 0; i < int(num); i++ {
-			now = now.Add(time.Duration(-p))
-			req.End = now.Unix()
-			req.Start = now.Add(time.Duration(-d)).Unix()
-			var s opentsdb.ResponseSet
-			s, err = timeTSDBRequest(e, T, &req)
-			if err != nil {
-				return
-			}
-			for _, res := range s {
-				if e.squelched(res.Tags) {
-					continue
-				}
-				//offset := e.now.Sub(now.Add(time.Duration(p-d)))
-				offset := e.now.Sub(now)
-				if err = rfunc(r, res, offset); err != nil {
-					return
-				}
-			}
-		}
-	})
-	return
-}
-
-func Window(e *State, T miniprofiler.Timer, query, duration, period string, num float64, rfunc string) (*Results, error) {
-	fn, ok := e.GetFunction(rfunc)
-	if !ok {
-		return nil, fmt.Errorf("expr: Window: no %v function", rfunc)
-	}
-	windowFn := reflect.ValueOf(fn.F)
-	bandFn := func(results *Results, resp *opentsdb.Response, offset time.Duration) error {
-		values := make(Series)
-		min := int64(math.MaxInt64)
-		for k, v := range resp.DPS {
-			i, e := strconv.ParseInt(k, 10, 64)
-			if e != nil {
-				return e
-			}
-			if i < min {
-				min = i
-			}
-			values[time.Unix(i, 0).UTC()] = float64(v)
-		}
-		if len(values) == 0 {
-			return nil
-		}
-		callResult := &Results{
-			Results: ResultSlice{
-				&Result{
-					Group: resp.Tags,
-					Value: values,
-				},
-			},
-		}
-		fnResult := windowFn.Call([]reflect.Value{reflect.ValueOf(e), reflect.ValueOf(T), reflect.ValueOf(callResult)})
-		if !fnResult[1].IsNil() {
-			if err := fnResult[1].Interface().(error); err != nil {
-				return err
-			}
-		}
-		minTime := time.Unix(min, 0).UTC()
-		fres := float64(fnResult[0].Interface().(*Results).Results[0].Value.(Number))
-		found := false
-		for _, result := range results.Results {
-			if result.Group.Equal(resp.Tags) {
-				found = true
-				v := result.Value.(Series)
-				v[minTime] = fres
-				break
-			}
-		}
-		if !found {
-			results.Results = append(results.Results, &Result{
-				Group: resp.Tags,
-				Value: Series{
-					minTime: fres,
-				},
-			})
-		}
-		return nil
-	}
-	r, err := bandTSDB(e, T, query, duration, period, num, bandFn)
-	if err != nil {
-		err = fmt.Errorf("expr: Window: %v", err)
-	}
-	return r, err
-}
-
-func windowCheck(t *parse.Tree, f *parse.FuncNode) error {
-	name := f.Args[4].(*parse.StringNode).Text
-	v, ok := t.GetFunction(name)
-	if !ok {
-		return fmt.Errorf("expr: Window: unknown function %v", name)
-	}
-	if len(v.Args) != 1 || v.Args[0] != models.TypeSeriesSet || v.Return != models.TypeNumberSet {
-		return fmt.Errorf("expr: Window: %v is not a reduction function", name)
-	}
-	return nil
-}
-
-func Band(e *State, T miniprofiler.Timer, query, duration, period string, num float64) (r *Results, err error) {
-	r, err = bandTSDB(e, T, query, duration, period, num, func(r *Results, res *opentsdb.Response, offset time.Duration) error {
-		newarr := true
-		for _, a := range r.Results {
-			if !a.Group.Equal(res.Tags) {
-				continue
-			}
-			newarr = false
-			values := a.Value.(Series)
-			for k, v := range res.DPS {
-				i, e := strconv.ParseInt(k, 10, 64)
-				if e != nil {
-					return e
-				}
-				values[time.Unix(i, 0).UTC()] = float64(v)
-			}
-		}
-		if newarr {
-			values := make(Series)
-			a := &Result{Group: res.Tags}
-			for k, v := range res.DPS {
-				i, e := strconv.ParseInt(k, 10, 64)
-				if e != nil {
-					return e
-				}
-				values[time.Unix(i, 0).UTC()] = float64(v)
-			}
-			a.Value = values
-			r.Results = append(r.Results, a)
-		}
-		return nil
-	})
-	if err != nil {
-		err = fmt.Errorf("expr: Band: %v", err)
-	}
-	return
-}
-
-func ShiftBand(e *State, T miniprofiler.Timer, query, duration, period string, num float64) (r *Results, err error) {
-	r, err = bandTSDB(e, T, query, duration, period, num, func(r *Results, res *opentsdb.Response, offset time.Duration) error {
-		values := make(Series)
-		a := &Result{Group: res.Tags.Merge(opentsdb.TagSet{"shift": offset.String()})}
-		for k, v := range res.DPS {
-			i, e := strconv.ParseInt(k, 10, 64)
-			if e != nil {
-				return e
-			}
-			values[time.Unix(i, 0).Add(offset).UTC()] = float64(v)
-		}
-		a.Value = values
-		r.Results = append(r.Results, a)
-		return nil
-	})
-	if err != nil {
-		err = fmt.Errorf("expr: Band: %v", err)
-	}
-	return
-}
-
-func Over(e *State, T miniprofiler.Timer, query, duration, period string, num float64) (r *Results, err error) {
-	r = new(Results)
-	r.IgnoreOtherUnjoined = true
-	r.IgnoreUnjoined = true
-	T.Step("band", func(T miniprofiler.Timer) {
-		var d, p opentsdb.Duration
-		d, err = opentsdb.ParseDuration(duration)
-		if err != nil {
-			return
-		}
-		p, err = opentsdb.ParseDuration(period)
-		if err != nil {
-			return
-		}
-		if num < 1 || num > 100 {
-			err = fmt.Errorf("num out of bounds")
-		}
-		var q *opentsdb.Query
-		q, err = opentsdb.ParseQuery(query, e.tsdbContext.Version())
-		if err != nil {
-			return
-		}
-		if !e.tsdbContext.Version().FilterSupport() {
-			if err = e.Search.Expand(q); err != nil {
-				return
-			}
-		}
-		req := opentsdb.Request{
-			Queries: []*opentsdb.Query{q},
-		}
-		now := e.now
-		req.End = now.Unix()
-		req.Start = now.Add(time.Duration(-d)).Unix()
-		for i := 0; i < int(num); i++ {
-			var s opentsdb.ResponseSet
-			s, err = timeTSDBRequest(e, T, &req)
-			if err != nil {
-				return
-			}
-			offset := e.now.Sub(now)
-			for _, res := range s {
-				if e.squelched(res.Tags) {
-					continue
-				}
-				values := make(Series)
-				a := &Result{Group: res.Tags.Merge(opentsdb.TagSet{"shift": offset.String()})}
-				for k, v := range res.DPS {
-					i, err := strconv.ParseInt(k, 10, 64)
-					if err != nil {
-						return
-					}
-					values[time.Unix(i, 0).Add(offset).UTC()] = float64(v)
-				}
-				a.Value = values
-				r.Results = append(r.Results, a)
-			}
-			now = now.Add(time.Duration(-p))
-			req.End = now.Unix()
-			req.Start = now.Add(time.Duration(-d)).Unix()
-		}
-	})
-	return
-}
-
-func GraphiteQuery(e *State, T miniprofiler.Timer, query string, sduration, eduration, format string) (r *Results, err error) {
-	sd, err := opentsdb.ParseDuration(sduration)
-	if err != nil {
-		return
-	}
-	ed := opentsdb.Duration(0)
-	if eduration != "" {
-		ed, err = opentsdb.ParseDuration(eduration)
-		if err != nil {
-			return
-		}
-	}
-	st := e.now.Add(-time.Duration(sd))
-	et := e.now.Add(-time.Duration(ed))
-	req := &graphite.Request{
-		Targets: []string{query},
-		Start:   &st,
-		End:     &et,
-	}
-	s, err := timeGraphiteRequest(e, T, req)
-	if err != nil {
-		return nil, err
-	}
-	formatTags := strings.Split(format, ".")
-	r = new(Results)
-	results, err := parseGraphiteResponse(req, &s, formatTags)
-	if err != nil {
-		return nil, err
-	}
-	r.Results = results
-
-	return
-}
-
-func graphiteTagQuery(args []parse.Node) (parse.Tags, error) {
-	t := make(parse.Tags)
-	n := args[3].(*parse.StringNode)
-	for _, s := range strings.Split(n.Text, ".") {
-		if s != "" {
-			t[s] = struct{}{}
-		}
-	}
-	return t, nil
-}
-
-func Query(e *State, T miniprofiler.Timer, query, sduration, eduration string) (r *Results, err error) {
-	r = new(Results)
-	q, err := opentsdb.ParseQuery(query, e.tsdbContext.Version())
-	if q == nil && err != nil {
-		return
-	}
-	if !e.tsdbContext.Version().FilterSupport() {
-		if err = e.Search.Expand(q); err != nil {
-			return
-		}
-	}
-	sd, err := opentsdb.ParseDuration(sduration)
-	if err != nil {
-		return
-	}
-	req := opentsdb.Request{
-		Queries: []*opentsdb.Query{q},
-		Start:   fmt.Sprintf("%s-ago", sd),
-	}
-	if eduration != "" {
-		var ed opentsdb.Duration
-		ed, err = opentsdb.ParseDuration(eduration)
-		if err != nil {
-			return
-		}
-		req.End = fmt.Sprintf("%s-ago", ed)
-	}
-	var s opentsdb.ResponseSet
-	if err = req.SetTime(e.now); err != nil {
-		return
-	}
-	s, err = timeTSDBRequest(e, T, &req)
-	if err != nil {
-		return
-	}
-	for _, res := range s {
-		if e.squelched(res.Tags) {
-			continue
-		}
-		values := make(Series)
-		for k, v := range res.DPS {
-			i, err := strconv.ParseInt(k, 10, 64)
-			if err != nil {
-				return nil, err
-			}
-			values[time.Unix(i, 0).UTC()] = float64(v)
-		}
-		r.Results = append(r.Results, &Result{
-			Value: values,
-			Group: res.Tags,
-		})
-	}
-	return
-}
-
-func timeGraphiteRequest(e *State, T miniprofiler.Timer, req *graphite.Request) (resp graphite.Response, err error) {
-	e.graphiteQueries = append(e.graphiteQueries, *req)
-	b, _ := json.MarshalIndent(req, "", "  ")
-	T.StepCustomTiming("graphite", "query", string(b), func() {
-		key := req.CacheKey()
-		getFn := func() (interface{}, error) {
-			return e.graphiteContext.Query(req)
-		}
-		var val interface{}
-		val, err = e.cache.Get(key, getFn)
-		resp = val.(graphite.Response)
-	})
-	return
-}
-
-const tsdbMaxTries = 3
-
-func timeTSDBRequest(e *State, T miniprofiler.Timer, req *opentsdb.Request) (s opentsdb.ResponseSet, err error) {
-	e.tsdbQueries = append(e.tsdbQueries, *req)
-	if e.autods > 0 {
-		for _, q := range req.Queries {
-			if q.Downsample == "" {
-				if err := req.AutoDownsample(e.autods); err != nil {
-					return nil, err
-				}
-			}
-		}
-	}
-	b, _ := json.MarshalIndent(req, "", "  ")
-	tries := 1
-	for {
-		T.StepCustomTiming("tsdb", "query", string(b), func() {
-			getFn := func() (interface{}, error) {
-				return e.tsdbContext.Query(req)
-			}
-			var val interface{}
-			val, err = e.cache.Get(string(b), getFn)
-			s = val.(opentsdb.ResponseSet).Copy()
-
-		})
-		if err == nil || tries == tsdbMaxTries {
-			break
-		}
-		slog.Errorf("Error on tsdb query %d: %s", tries, err.Error())
-		tries++
-	}
-	return
-}
-
-func Change(e *State, T miniprofiler.Timer, query, sduration, eduration string) (r *Results, err error) {
-	r = new(Results)
-	sd, err := opentsdb.ParseDuration(sduration)
-	if err != nil {
-		return
-	}
-	var ed opentsdb.Duration
-	if eduration != "" {
-		ed, err = opentsdb.ParseDuration(eduration)
-		if err != nil {
-			return
-		}
-	}
-	r, err = Query(e, T, query, sduration, eduration)
-	if err != nil {
-		return
-	}
-	r, err = reduce(e, T, r, change, fromScalar((sd - ed).Seconds()))
-	return
-}
-
-func change(dps Series, args ...float64) float64 {
-	return avg(dps) * args[0]
-}
-
 func fromScalar(f float64) *Results {
 	return &Results{
 		Results: ResultSlice{
@@ -1237,6 +773,27 @@ func cCount(dps Series, args ...float64) (a float64) {
 		last = p.V
 	}
 	return float64(count)
+}
+
+func TimeDelta(e *State, T miniprofiler.Timer, series *Results) (*Results, error) {
+	for _, res := range series.Results {
+		sorted := NewSortedSeries(res.Value.Value().(Series))
+		newSeries := make(Series)
+		if len(sorted) < 2 {
+			newSeries[sorted[0].T] = 0
+			res.Value = newSeries
+			continue
+		}
+		lastTime := sorted[0].T.Unix()
+		for _, dp := range sorted[1:] {
+			unixTime := dp.T.Unix()
+			diff := unixTime - lastTime
+			newSeries[dp.T] = float64(diff)
+			lastTime = unixTime
+		}
+		res.Value = newSeries
+	}
+	return series, nil
 }
 
 func Count(e *State, T miniprofiler.Timer, query, sduration, eduration string) (r *Results, err error) {
@@ -1513,12 +1070,36 @@ func Rename(e *State, T miniprofiler.Timer, series *Results, s string) (*Results
 	return series, nil
 }
 
+func AddTags(e *State, T miniprofiler.Timer, series *Results, s string) (*Results, error) {
+	if s == "" {
+		return series, nil
+	}
+	tagSetToAdd, err := opentsdb.ParseTags(s)
+	if err != nil {
+		return nil, err
+	}
+	for tagKey, tagValue := range tagSetToAdd {
+		for _, res := range series.Results {
+			if _, ok := res.Group[tagKey]; ok {
+				return nil, fmt.Errorf("%s key already in group", tagKey)
+			}
+			res.Group[tagKey] = tagValue
+		}
+	}
+	return series, nil
+}
+
 func Ungroup(e *State, T miniprofiler.Timer, d *Results) (*Results, error) {
 	if len(d.Results) != 1 {
 		return nil, fmt.Errorf("ungroup: requires exactly one group")
 	}
-	d.Results[0].Group = nil
-	return d, nil
+	return &Results{
+		Results: ResultSlice{
+			&Result{
+				Value: Scalar(d.Results[0].Value.Value().(Number)),
+			},
+		},
+	}, nil
 }
 
 func Transpose(e *State, T miniprofiler.Timer, d *Results, gp string) (*Results, error) {

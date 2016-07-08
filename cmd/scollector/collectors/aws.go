@@ -37,21 +37,34 @@ const (
 
 var aws_period = int64(60)
 
-func AWS(accessKey, secretKey, region string) error {
+func AWS(accessKey, secretKey, region, productCodes, bucketName, bucketPath string, purgeDays int) error {
 	if accessKey == "" || secretKey == "" || region == "" {
 		return fmt.Errorf("empty AccessKey, SecretKey, or Region in AWS")
 	}
+	//mhenderson: There are some alerts in the aws collector that we don't want to output in the event that
+	//billing only is enabled, as you might enable billing without having any EC3 or ELB instances.
+	billingEnabled := bucketName != "" && bucketPath != ""
 	collectors = append(collectors, &IntervalCollector{
 		F: func() (opentsdb.MultiDataPoint, error) {
-			return c_aws(accessKey, secretKey, region)
+			return c_aws(accessKey, secretKey, region, billingEnabled)
 		},
 		Interval: 60 * time.Second,
 		name:     fmt.Sprintf("aws-%s", region),
 	})
+
+	if billingEnabled {
+		collectors = append(collectors, &IntervalCollector{
+			F: func() (opentsdb.MultiDataPoint, error) {
+				return c_awsBilling(accessKey, secretKey, region, productCodes, bucketName, bucketPath, purgeDays)
+			},
+			Interval: 1 * time.Hour,
+			name:     fmt.Sprintf("awsBilling-%s", region),
+		})
+	}
 	return nil
 }
 
-func c_aws(accessKey, secretKey, region string) (opentsdb.MultiDataPoint, error) {
+func c_aws(accessKey, secretKey, region string, billingEnabled bool) (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	creds := credentials.NewStaticCredentials(accessKey, secretKey, "")
 	conf := &aws.Config{
@@ -71,12 +84,12 @@ func c_aws(accessKey, secretKey, region string) (opentsdb.MultiDataPoint, error)
 		return nil, fmt.Errorf("unable to login to CloudWatch")
 	}
 	instances, err := awsGetInstances(*ecc)
-	if err != nil {
-		slog.Info("No EC2 Instances found.")
+	if err != nil && !billingEnabled {
+		slog.Warning("No EC2 Instances found.")
 	}
 	loadBalancers, err := awsGetLoadBalancers(*elb)
-	if err != nil {
-		slog.Info("No ELB Load Balancecrs found.")
+	if err != nil && !billingEnabled {
+		slog.Warning("No ELB Load Balancers found.")
 	}
 	for _, loadBalancer := range loadBalancers {
 		awsGetELBLatency(*cw, &md, loadBalancer)

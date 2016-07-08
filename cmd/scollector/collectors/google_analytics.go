@@ -58,7 +58,7 @@ func c_google_analytics(clientid string, secret string, tokenstr string, sites [
 		return nil, err
 	}
 
-	dimensions := []string{"browser", "trafficType", "deviceCategory", "operatingSystem"}
+	dimensions := []string{"browser", "trafficType", "source", "deviceCategory", "operatingSystem"}
 	for _, site := range sites {
 		getPageviews(&md, svc, site)
 		if site.Detailed {
