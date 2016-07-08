@@ -6,12 +6,14 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"sync/atomic"
 	"time"
 
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
+	"github.com/GROpenSourceDev/go-ntlm-auth/ntlm"
 )
 
 func queuer() {
@@ -156,6 +158,18 @@ func SendDataPoints(dps []*opentsdb.DataPoint, tsdb string) (*http.Response, err
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Content-Encoding", "gzip")
 	Add("collect.post.total_bytes", Tags, int64(buf.Len()))
+
+	if UseNtlm {
+		resp, err := ntlm.DoNTLMRequest(client, req)
+
+		if resp.StatusCode == 401 {
+			slog.Errorf("Scollector unauthorized to post data points to tsdb. Terminating.")
+			os.Exit(1)
+		}
+
+		return resp, err
+	}
+
 	resp, err := client.Do(req)
 	return resp, err
 }
