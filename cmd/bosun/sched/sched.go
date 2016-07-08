@@ -9,6 +9,8 @@ import (
 	"sync"
 	"time"
 
+	"golang.org/x/net/context"
+
 	"bosun.org/cmd/bosun/cache"
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/database"
@@ -62,6 +64,10 @@ type Schedule struct {
 	ctx *checkContext
 
 	DataAccess database.DataAccess
+
+	runnerContext context.Context
+	cancelChecks  context.CancelFunc
+	checksRunning sync.WaitGroup
 }
 
 func (s *Schedule) Init(c *conf.Conf) error {
@@ -69,13 +75,17 @@ func (s *Schedule) Init(c *conf.Conf) error {
 	//this will be called once at app start, and also every time the rule
 	//page runs, so be careful not to spawn long running processes that can't
 	//be avoided.
-	var err error
+	//var err error
 	s.Conf = c
 	s.Group = make(map[time.Time]models.AlertKeys)
 	s.pendingUnknowns = make(map[*conf.Notification][]*models.IncidentState)
 	s.lastLogTimes = make(map[models.AlertKey]time.Time)
 	s.LastCheck = utcNow()
 	s.ctx = &checkContext{utcNow(), cache.New(0)}
+
+	s.runnerContext, s.cancelChecks = context.WithCancel(context.Background())
+	s.checksRunning = sync.WaitGroup{}
+
 	if s.DataAccess == nil {
 		if c.RedisHost != "" {
 			s.DataAccess = database.NewDataAccess(c.RedisHost, true, c.RedisDb, c.RedisPassword)
@@ -90,12 +100,12 @@ func (s *Schedule) Init(c *conf.Conf) error {
 	if s.Search == nil {
 		s.Search = search.NewSearch(s.DataAccess, c.SkipLast)
 	}
-	if c.StateFile != "" {
-		s.db, err = bolt.Open(c.StateFile, 0600, nil)
-		if err != nil {
-			return err
-		}
-	}
+	// if c.StateFile != "" {
+	// 	s.db, err = bolt.Open(c.StateFile, 0600, nil)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// }
 	return nil
 }
 
@@ -515,18 +525,28 @@ func (s *Schedule) Load(c *conf.Conf) error {
 	return s.RestoreState()
 }
 
-func Close() {
-	DefaultSched.Close()
+func Close(reload bool) {
+	DefaultSched.Close(reload)
 }
 
-func (s *Schedule) Close() {
-	if s.Conf.SkipLast {
+func (s *Schedule) Close(reload bool) {
+	s.cancelChecks()
+	s.checksRunning.Wait()
+	if s.Conf.SkipLast || reload {
 		return
 	}
 	err := s.Search.BackupLast()
 	if err != nil {
 		slog.Error(err)
 	}
+}
+
+func (s *Schedule) Reset() {
+	DefaultSched = &Schedule{}
+}
+
+func Reset() {
+	DefaultSched.Reset()
 }
 
 const pingFreq = time.Second * 15

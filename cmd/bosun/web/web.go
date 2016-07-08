@@ -162,6 +162,10 @@ type relayProxy struct {
 	*httputil.ReverseProxy
 }
 
+func ResetSchedule() {
+	schedule = sched.DefaultSched
+}
+
 type passthru struct {
 	io.ReadCloser
 	buf bytes.Buffer

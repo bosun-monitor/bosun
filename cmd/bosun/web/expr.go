@@ -140,10 +140,10 @@ func procRule(t miniprofiler.Timer, c *conf.Conf, a *conf.Alert, now time.Time, 
 		return nil, err
 	}
 	rh := s.NewRunHistory(now, cacheObj)
-	if _, err := s.CheckExpr(t, rh, a, a.Warn, models.StWarning, nil); err != nil {
+	if _, err, _ := s.CheckExpr(t, rh, a, a.Warn, models.StWarning, nil); err != nil {
 		return nil, err
 	}
-	if _, err := s.CheckExpr(t, rh, a, a.Crit, models.StCritical, nil); err != nil {
+	if _, err, _ := s.CheckExpr(t, rh, a, a.Crit, models.StCritical, nil); err != nil {
 		return nil, err
 	}
 	keys := make(models.AlertKeys, len(rh.Events))
