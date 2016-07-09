@@ -747,7 +747,7 @@ func SetAlert(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 		serveError(w, err)
 		return
 	}
-	text, err = schedule.Conf.SetAlert(data.Name, data.AlertText, data.Hash)
+	text, err = schedule.Conf.SetAlert(data.Name, data.AlertText)
 	if err != nil {
 		serveError(w, err)
 		return

@@ -693,7 +693,7 @@ func (c *NativeConf) loadTemplate(s *parse.SectionNode) {
 
 var lookupNotificationRE = regexp.MustCompile(`^lookup\("(.*)", "(.*)"\)$`)
 
-func (c *NativeConf) SetAlert(name, alertText string, hash string) (string, error) {
+func (c *NativeConf) SetAlert(name, alertText string) (string, error) {
 	select {
 	case c.writeLock <- true:
 		// Got Write Lock
@@ -703,20 +703,14 @@ func (c *NativeConf) SetAlert(name, alertText string, hash string) (string, erro
 	defer func() {
 		<-c.writeLock
 	}()
-	// TODO check hash to make sure it matches what the running config is
 	a := c.GetAlert(name)
-	var newRawConf bytes.Buffer
+	var newRawConf string
 	if a == nil {
-		newRawConf.WriteString(c.RawText)
-		newRawConf.WriteString("\n")
-		newRawConf.WriteString(alertText)
-		//Alert Does not exists
+		newRawConf = writeSection(nil, c.RawText, alertText)
 	} else {
-		newRawConf.WriteString(c.RawText[:getLocationStart(a)])
-		newRawConf.WriteString(alertText)
-		newRawConf.WriteString(c.RawText[getLocationEnd(a):])
+		newRawConf = writeSection(a.Locator, c.RawText, alertText)
 	}
-	newConf, err := NewNativeConf(c.Name, newRawConf.String())
+	newConf, err := NewNativeConf(c.Name, newRawConf)
 	if err != nil {
 		return "", fmt.Errorf("new config not valid: %v", err)
 	}
@@ -730,17 +724,33 @@ func (c *NativeConf) SetAlert(name, alertText string, hash string) (string, erro
 	return "reloaded", nil
 }
 
-func setLocation(a *conf.Alert, start int, end int) {
-	a.Location = conf.NativeLocator{start, end}
-	a.LocatorType = conf.TypeNative
+func writeSection(l *conf.Locator, orginalRaw, newText string) string {
+	var newRawConf bytes.Buffer
+	if l == nil {
+		newRawConf.WriteString(orginalRaw)
+		newRawConf.WriteString("\n")
+		newRawConf.WriteString(newText)
+		return newRawConf.String()
+	}
+	newRawConf.WriteString(orginalRaw[:getLocationStart(l)])
+	newRawConf.WriteString(newText)
+	newRawConf.WriteString(orginalRaw[getLocationEnd(l):])
+	return newRawConf.String()
 }
 
-func getLocationStart(a *conf.Alert) int {
-	return a.Location.(conf.NativeLocator)[0]
+func newLocator(start int, end int) (*conf.Locator) {
+	l := &conf.Locator{}
+	l.Location = conf.NativeLocator{start, end}
+	l.LocatorType = conf.TypeNative
+	return l
 }
 
-func getLocationEnd(a *conf.Alert) int {
-	return a.Location.(conf.NativeLocator)[1]
+func getLocationStart(l *conf.Locator) int {
+	return l.Location.(conf.NativeLocator)[0]
+}
+
+func getLocationEnd(l *conf.Locator) int {
+	return l.Location.(conf.NativeLocator)[1]
 }
 
 func (c *NativeConf) loadAlert(s *parse.SectionNode) {
@@ -753,12 +763,11 @@ func (c *NativeConf) loadAlert(s *parse.SectionNode) {
 		Name:             name,
 		CritNotification: new(conf.Notifications),
 		WarnNotification: new(conf.Notifications),
-		Locator:          new(conf.Locator),
 	}
 	a.Text = s.RawText
 	start := int(s.Position())
 	end := int(s.Position()) + len(s.RawText)
-	setLocation(&a, start, end)
+	a.Locator = newLocator(start, end)
 	procNotification := func(v string, ns *conf.Notifications) {
 		if lookup := lookupNotificationRE.FindStringSubmatch(v); lookup != nil {
 			if ns.Lookups == nil {
@@ -951,6 +960,9 @@ func (c *NativeConf) loadNotification(s *parse.SectionNode) {
 		RunOnActions: true,
 	}
 	n.Text = s.RawText
+	start := int(s.Position())
+	end := int(s.Position()) + len(s.RawText)
+	n.Locator = newLocator(start, end)
 	funcs := ttemplate.FuncMap{
 		"V": func(v string) string {
 			return c.Expand(v, n.Vars, false)

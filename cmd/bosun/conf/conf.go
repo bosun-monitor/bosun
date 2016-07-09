@@ -20,7 +20,6 @@ import (
 	ttemplate "text/template"
 )
 
-
 type ConfProvider interface {
 
 	// TODO? Any other implementation is probably going to need to have more error returns on these
@@ -107,7 +106,7 @@ type ConfProvider interface {
 
 	GetAlerts() map[string]*Alert
 	GetAlert(string) *Alert
-	SetAlert(string, string, string) (string, error)
+	SetAlert(string, string) (string, error)
 
 	GetNotifications() map[string]*Notification
 	GetNotification(string) *Notification
@@ -156,8 +155,6 @@ type ConfProvider interface {
 	SetReload(reload func() error)
 	Reload() error
 }
-
-
 
 type Squelch map[string]*regexp.Regexp
 
@@ -232,6 +229,8 @@ type Notification struct {
 	RawEmail        string `json:"-"`
 	RawPost, RawGet string `json:"-"`
 	RawBody         string `json:"-"`
+
+	*Locator `json:"-"`
 }
 
 type Vars map[string]string
@@ -350,7 +349,8 @@ type Alert struct {
 
 	TemplateName string   `json:"-"`
 	RawSquelch   []string `json:"-"`
-	*Locator
+
+	*Locator `json:"-"`
 }
 
 type LocationType int
@@ -363,5 +363,5 @@ type NativeLocator []int
 
 type Locator struct {
 	LocatorType LocationType
-	Location interface{}
+	Location    interface{}
 }
