@@ -69,6 +69,16 @@ func (c *NativeConf) BulkEdit(edits conf.BulkEditRequest) error {
 			if n != nil {
 				l = n.Locator
 			}
+		case "lookup":
+			look := newConf.GetLookup(edit.Name)
+			if look != nil {
+				l = look.Locator
+			}
+		case "macro":
+			m := newConf.GetMacro(edit.Name)
+			if m != nil {
+				l = m.Locator
+			}
 		default:
 			return fmt.Errorf("%v is an unsuported type for bulk edit. must be alert, template, notification", edit.Type)
 		}
