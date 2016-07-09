@@ -20,17 +20,11 @@ import (
 	ttemplate "text/template"
 )
 
+
 type ConfProvider interface {
 
-	// Need to be able to get contexts
-	// TSDBContext() opentsdb.Context
-	// GraphiteContext() opentsdb.Context
-	//GetVar(string) (string, bool)
-	//SetVar(string, string)
-
-	//SetName(string)
-	//GetName() string
-	// Systemy Things
+	// TODO? Any other implementation is probably going to need to have more error returns on these
+	// TODO? Break this into mutable things (sections that write to the conf store), runtime only mutable (i.e. quiet) in which case the setters don't actually change config
 
 	//SetCheckFrequency(time.Duration)
 	GetCheckFrequency() time.Duration
@@ -82,10 +76,10 @@ type ConfProvider interface {
 	//SetSearchSince(opentsdb.Duration)
 	GetSearchSince() opentsdb.Duration
 
-	//SetQuiet(bool)
+	SetQuiet(bool) // Runtime Only
 	GetQuiet() bool
 
-	//SetSkipLast(bool)
+	SetSkipLast(bool) // Runtime Only
 	GetSkipLast() bool
 
 	//SetNoSleep(bool)
@@ -130,7 +124,7 @@ type ConfProvider interface {
 	AlertSquelched(*Alert) func(opentsdb.TagSet) bool
 	Squelched(*Alert, opentsdb.TagSet) bool
 
-	//SetTSDBHost(string)
+	SetTSDBHost(tsdbHost string)
 	GetTSDBHost() string
 	//SetTSDBVersion(*opentsdb.Version)
 	GetTSDBVersion() *opentsdb.Version
@@ -158,6 +152,9 @@ type ConfProvider interface {
 	Expand(string, map[string]string, bool) string
 
 	GetRawText() string
+
+	SetReload(reload func())
+	Reload()
 }
 
 type Squelch map[string]*regexp.Regexp
@@ -351,14 +348,18 @@ type Alert struct {
 
 	TemplateName string   `json:"-"`
 	RawSquelch   []string `json:"-"`
-	Locator      interface{}
-	LocatorType  LocatorType
+	*Locator
 }
 
-type LocatorType int
+type LocationType int
 
 const (
-	TypeNative LocatorType = iota
+	TypeNative LocationType = iota
 )
 
 type NativeLocator []int
+
+type Locator struct {
+	LocatorType LocationType
+	Location interface{}
+}

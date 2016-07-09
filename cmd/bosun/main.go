@@ -19,6 +19,7 @@ import (
 
 	"bosun.org/_version"
 
+	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/conf/native"
 	"bosun.org/cmd/bosun/sched"
 	"bosun.org/cmd/bosun/web"
@@ -85,16 +86,18 @@ func main() {
 		m()
 	}
 	runtime.GOMAXPROCS(runtime.NumCPU())
-	c, err := native.ParseFile(*flagConf)
+	nativeConf, err := native.ParseFile(*flagConf)
 	if err != nil {
 		slog.Fatal(err)
 	}
 	if *flagTest {
 		os.Exit(0)
 	}
+	var confProvider conf.ConfProvider
+	confProvider = nativeConf
 	httpListen := &url.URL{
 		Scheme: "http",
-		Host:   c.HTTPListen,
+		Host:   confProvider.GetHTTPListen(),
 	}
 	if strings.HasPrefix(httpListen.Host, ":") {
 		httpListen.Host = "localhost" + httpListen.Host
@@ -103,29 +106,29 @@ func main() {
 		slog.Fatal(err)
 	}
 	if *flagSkipLast {
-		c.SkipLast = true
+		confProvider.SetSkipLast(true)
 	}
-	if err := sched.Load(c); err != nil {
+	if err := sched.Load(nativeConf); err != nil {
 		slog.Fatal(err)
 	}
-	if c.RelayListen != "" {
+	if confProvider.GetRelayListen() != "" {
 		go func() {
 			mux := http.NewServeMux()
 			mux.Handle("/api/", util.NewSingleHostProxy(httpListen))
 			s := &http.Server{
-				Addr:    c.RelayListen,
+				Addr:    confProvider.GetRelayListen(),
 				Handler: mux,
 			}
 			slog.Fatal(s.ListenAndServe())
 		}()
 	}
-	if c.TSDBHost != "" {
+	if confProvider.GetTSDBHost() != "" {
 		if err := collect.Init(httpListen, "bosun"); err != nil {
 			slog.Fatal(err)
 		}
 		tsdbHost := &url.URL{
 			Scheme: "http",
-			Host:   c.TSDBHost,
+			Host:   confProvider.GetTSDBHost(),
 		}
 		if *flagReadonly {
 			rp := util.NewSingleHostProxy(tsdbHost)
@@ -138,26 +141,27 @@ func main() {
 			}))
 			slog.Infoln("readonly relay at", ts.URL, "to", tsdbHost)
 			tsdbHost, _ = url.Parse(ts.URL)
-			c.TSDBHost = tsdbHost.Host
+			confProvider.SetTSDBHost(tsdbHost.Host)
 		}
 	}
-	if c.InternetProxy != "" {
-		web.InternetProxy, err = url.Parse(c.InternetProxy)
+	if confProvider.GetInternetProxy() != "" {
+		web.InternetProxy, err = url.Parse(nativeConf.GetInternetProxy())
 		if err != nil {
 			slog.Fatalf("InternetProxy error: %s", err)
 		}
 	}
 	if *flagQuiet {
-		c.Quiet = true
+		confProvider.SetQuiet(true)
 	}
-
-	reload := func() {
+	var reload func()
+	reload = func() {
 		slog.Infoln("reloading config")
 		newConf, err := native.ParseFile(*flagConf)
 		if err != nil {
 			slog.Warning("not reloading, failed to load new conf", err)
 			return
 		}
+		newConf.SetReload(reload)
 		oldSched := sched.DefaultSched
 		oldDA := oldSched.DataAccess
 		oldSearch := oldSched.Search
@@ -169,10 +173,10 @@ func main() {
 		slog.Infoln("schedule shutdown, loading new schedule")
 		//newConf.TSDBHost = c.TSDBHost
 		if *flagQuiet {
-			newConf.Quiet = true
+			newConf.SetQuiet(true)
 		}
 		if *flagSkipLast {
-			newConf.SkipLast = true
+			newConf.SetSkipLast(true)
 		}
 		// Load does not set the DataAccess or Search if it is already set
 		if err := sched.Load(newConf); err != nil {
@@ -188,7 +192,9 @@ func main() {
 		slog.Infoln("config reload complete")
 	}
 
-	go func() { slog.Fatal(web.Listen(c.HTTPListen, *flagDev, c.TSDBHost, reload)) }()
+	confProvider.SetReload(reload)
+
+	go func() { slog.Fatal(web.Listen(confProvider.GetHTTPListen(), *flagDev, confProvider.GetTSDBHost(), reload)) }()
 	go func() {
 		if !*flagNoChecks {
 			sched.Run()

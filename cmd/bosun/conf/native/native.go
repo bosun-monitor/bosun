@@ -84,6 +84,8 @@ type NativeConf struct {
 	AnnotateElasticHosts []string // CSV of Elastic Hosts, currently the only backend in annotate
 	AnnotateIndex        string   // name of index / table
 
+	reload func()
+
 	tree            *parse.Tree
 	node            parse.Node
 	unknownTemplate string
@@ -698,9 +700,9 @@ func (c *NativeConf) SetAlert(name, alertText string, hash string) (string, erro
 		newRawConf.WriteString(alertText)
 		//Alert Does not exists
 	} else {
-		newRawConf.WriteString(c.RawText[:a.Locator.(conf.NativeLocator)[0]])
+		newRawConf.WriteString(c.RawText[:getLocationStart(a)])
 		newRawConf.WriteString(alertText)
-		newRawConf.WriteString(c.RawText[a.Locator.(conf.NativeLocator)[1]:])
+		newRawConf.WriteString(c.RawText[getLocationEnd(a):])
 	}
 	newConf, err := NewNativeConf(c.Name, newRawConf.String())
 	if err != nil {
@@ -709,7 +711,21 @@ func (c *NativeConf) SetAlert(name, alertText string, hash string) (string, erro
 	if err := c.SaveConf(newConf); err != nil {
 		return "", fmt.Errorf("couldn't save config file")
 	}
-	return newConf.RawText, nil
+	go c.reload()
+	return "reloading...", nil
+}
+
+func setLocation(a *conf.Alert, start int, end int) {
+	a.Location = conf.NativeLocator{start, end}
+	a.LocatorType = conf.TypeNative
+}
+
+func getLocationStart(a *conf.Alert) int {
+	return a.Location.(conf.NativeLocator)[0]
+}
+
+func getLocationEnd(a *conf.Alert) int {
+	return a.Location.(conf.NativeLocator)[1]
 }
 
 func (c *NativeConf) loadAlert(s *parse.SectionNode) {
@@ -722,12 +738,12 @@ func (c *NativeConf) loadAlert(s *parse.SectionNode) {
 		Name:             name,
 		CritNotification: new(conf.Notifications),
 		WarnNotification: new(conf.Notifications),
+		Locator: new(conf.Locator),
 	}
 	a.Text = s.RawText
 	start := int(s.Position())
 	end := int(s.Position()) + len(s.RawText)
-	a.Locator = conf.NativeLocator{start, end}
-	a.LocatorType = conf.TypeNative
+	setLocation(&a, start, end)
 	procNotification := func(v string, ns *conf.Notifications) {
 		if lookup := lookupNotificationRE.FindStringSubmatch(v); lookup != nil {
 			if ns.Lookups == nil {
@@ -1407,8 +1423,16 @@ func (c *NativeConf) GetSearchSince() opentsdb.Duration {
 	return c.SearchSince
 }
 
+func (c *NativeConf) SetQuiet(quiet bool) {
+	c.Quiet = quiet
+}
+
 func (c *NativeConf) GetQuiet() bool {
 	return c.Quiet
+}
+
+func (c *NativeConf) SetSkipLast(skipLast bool) {
+	c.SkipLast = skipLast
 }
 
 func (c *NativeConf) GetSkipLast() bool {
@@ -1469,6 +1493,10 @@ func (c *NativeConf) GetSquelches() conf.Squelches {
 	return c.Squelch
 }
 
+func (c *NativeConf) SetTSDBHost(tsdbHost string) {
+	c.TSDBHost = tsdbHost
+}
+
 func (c *NativeConf) GetTSDBHost() string {
 	return c.TSDBHost
 }
@@ -1510,4 +1538,12 @@ func (c *NativeConf) GetElasticContext() expr.ElasticHosts {
 
 func (c *NativeConf) GetRawText() string {
 	return c.RawText
+}
+
+func (c *NativeConf) SetReload(reload func()) {
+	c.reload = reload
+}
+
+func (c *NativeConf) Reload() {
+	c.reload()
 }
