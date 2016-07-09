@@ -153,9 +153,11 @@ type ConfProvider interface {
 
 	GetRawText() string
 
-	SetReload(reload func())
-	Reload()
+	SetReload(reload func() error)
+	Reload() error
 }
+
+
 
 type Squelch map[string]*regexp.Regexp
 

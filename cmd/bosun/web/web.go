@@ -65,7 +65,7 @@ func init() {
 		"HTTP response codes from the backend server for request relayed through Bosun.")
 }
 
-func Listen(listenAddr string, devMode bool, tsdbHost string, reload func()) error {
+func Listen(listenAddr string, devMode bool, tsdbHost string) error {
 	if devMode {
 		slog.Infoln("using local web assets")
 	}
@@ -92,14 +92,10 @@ func Listen(listenAddr string, devMode bool, tsdbHost string, reload func()) err
 		router.Handle("/api/put", Relay(tsdbHost))
 	}
 
-	callReload := func(w http.ResponseWriter, r *http.Request) {
-		reload()
-	}
 
 	router.HandleFunc("/api/", APIRedirect)
 	router.Handle("/api/action", JSON(Action))
 	router.Handle("/api/alerts", JSON(Alerts))
-	router.HandleFunc("/api/reload", callReload)
 	router.Handle("/api/config", miniprofiler.NewHandler(Config))
 	router.Handle("/api/config_test", miniprofiler.NewHandler(ConfigTest))
 	router.Handle("/api/config/alert", miniprofiler.NewHandler(SetAlert)).Methods(http.MethodPost)

@@ -84,7 +84,7 @@ type NativeConf struct {
 	AnnotateElasticHosts []string // CSV of Elastic Hosts, currently the only backend in annotate
 	AnnotateIndex        string   // name of index / table
 
-	reload func()
+	reload func() error
 
 	tree            *parse.Tree
 	node            parse.Node
@@ -92,6 +92,8 @@ type NativeConf struct {
 	bodies          *htemplate.Template
 	subjects        *ttemplate.Template
 	squelch         []string
+
+	writeLock chan bool
 }
 
 // TSDBContext returns an OpenTSDB context limited to
@@ -225,6 +227,7 @@ func NewNativeConf(name, text string) (c *NativeConf, err error) {
 		subjects:         ttemplate.New(name).Funcs(defaultFuncs),
 		Lookups:          make(map[string]*conf.Lookup),
 		Macros:           make(map[string]*conf.Macro),
+		writeLock:        make(chan bool, 1),
 	}
 	c.tree, err = parse.Parse(name, text)
 	if err != nil {
@@ -691,6 +694,15 @@ func (c *NativeConf) loadTemplate(s *parse.SectionNode) {
 var lookupNotificationRE = regexp.MustCompile(`^lookup\("(.*)", "(.*)"\)$`)
 
 func (c *NativeConf) SetAlert(name, alertText string, hash string) (string, error) {
+	select {
+	case c.writeLock <- true:
+		// Got Write Lock
+	default:
+		return "", fmt.Errorf("cannot write alert, write in progress")
+	}
+	defer func() {
+		<-c.writeLock
+	}()
 	// TODO check hash to make sure it matches what the running config is
 	a := c.GetAlert(name)
 	var newRawConf bytes.Buffer
@@ -711,8 +723,11 @@ func (c *NativeConf) SetAlert(name, alertText string, hash string) (string, erro
 	if err := c.SaveConf(newConf); err != nil {
 		return "", fmt.Errorf("couldn't save config file")
 	}
-	go c.reload()
-	return "reloading...", nil
+	err = c.reload()
+	if err != nil {
+		return "", err
+	}
+	return "reloaded", nil
 }
 
 func setLocation(a *conf.Alert, start int, end int) {
@@ -738,7 +753,7 @@ func (c *NativeConf) loadAlert(s *parse.SectionNode) {
 		Name:             name,
 		CritNotification: new(conf.Notifications),
 		WarnNotification: new(conf.Notifications),
-		Locator: new(conf.Locator),
+		Locator:          new(conf.Locator),
 	}
 	a.Text = s.RawText
 	start := int(s.Position())
@@ -1540,10 +1555,10 @@ func (c *NativeConf) GetRawText() string {
 	return c.RawText
 }
 
-func (c *NativeConf) SetReload(reload func()) {
+func (c *NativeConf) SetReload(reload func() error) {
 	c.reload = reload
 }
 
-func (c *NativeConf) Reload() {
-	c.reload()
+func (c *NativeConf) Reload() error {
+	return c.reload()
 }

@@ -153,13 +153,21 @@ func main() {
 	if *flagQuiet {
 		confProvider.SetQuiet(true)
 	}
-	var reload func()
-	reload = func() {
-		slog.Infoln("reloading config")
+	var reload func() error
+	reloading := make(chan bool, 1)
+	reload = func() error {
+		select {
+		case reloading <- true:
+			fmt.Println("got lock")
+		default:
+			return fmt.Errorf("not reloading, reload in progress")
+		}
+		defer func() {
+			<-reloading
+		}()
 		newConf, err := native.ParseFile(*flagConf)
 		if err != nil {
-			slog.Warning("not reloading, failed to load new conf", err)
-			return
+			return err
 		}
 		newConf.SetReload(reload)
 		oldSched := sched.DefaultSched
@@ -190,11 +198,14 @@ func main() {
 			}
 		}()
 		slog.Infoln("config reload complete")
+		return nil
 	}
 
 	confProvider.SetReload(reload)
 
-	go func() { slog.Fatal(web.Listen(confProvider.GetHTTPListen(), *flagDev, confProvider.GetTSDBHost(), reload)) }()
+	go func() {
+		slog.Fatal(web.Listen(confProvider.GetHTTPListen(), *flagDev, confProvider.GetTSDBHost()))
+	}()
 	go func() {
 		if !*flagNoChecks {
 			sched.Run()
@@ -224,7 +235,10 @@ func main() {
 		sc := make(chan os.Signal, 1)
 		signal.Notify(sc, syscall.SIGUSR2)
 		for range sc {
-			reload()
+			err := reload()
+			if err != nil {
+				slog.Warning(err)
+			}
 		}
 	}()
 
