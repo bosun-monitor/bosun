@@ -119,6 +119,8 @@ type ConfProvider interface {
 	GetLookup(string) *Lookup
 	//SetLookup(string, *Lookup)
 
+	BulkEdit(BulkEditRequest) error
+
 	GetSquelches() Squelches
 	//SetSquelches(Squelches)
 	AlertSquelched(*Alert) func(opentsdb.TagSet) bool
@@ -368,4 +370,13 @@ type NativeLocator []int
 type Locator struct {
 	LocatorType LocationType
 	Location    interface{}
+}
+
+type BulkEditRequest []EditRequest
+
+type EditRequest struct {
+	Name   string
+	Type   string
+	Text   string
+	Delete bool
 }

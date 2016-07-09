@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"bosun.org/_version"
+	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/conf/native"
 	"bosun.org/cmd/bosun/database"
 	"bosun.org/cmd/bosun/sched"
@@ -99,6 +100,7 @@ func Listen(listenAddr string, devMode bool, tsdbHost string) error {
 	router.Handle("/api/config_test", miniprofiler.NewHandler(ConfigTest))
 	router.Handle("/api/config/alert", miniprofiler.NewHandler(SetAlert)).Methods(http.MethodPost)
 	router.Handle("/api/config/alert/{name}", miniprofiler.NewHandler(DeleteAlert)).Methods(http.MethodDelete)
+	router.Handle("/api/config/bulkedit", miniprofiler.NewHandler(BulkEdit)).Methods(http.MethodPost)
 	router.Handle("/api/egraph/{bs}.{format:svg|png}", JSON(ExprGraph))
 	router.Handle("/api/errors", JSON(ErrorHistory))
 	router.Handle("/api/expr", JSON(Expr))
@@ -732,6 +734,21 @@ func Config(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 		text = schedule.Conf.GetRawText()
 	}
 	fmt.Fprint(w, text)
+}
+
+func BulkEdit(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
+	bulkEdit := conf.BulkEditRequest{}
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&bulkEdit); err != nil {
+		serveError(w, err)
+		return
+	}
+	err := schedule.Conf.BulkEdit(bulkEdit)
+	if err != nil {
+		serveError(w, err)
+		return
+	}
+	fmt.Fprint(w, "edit successful")
 }
 
 func SetAlert(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {

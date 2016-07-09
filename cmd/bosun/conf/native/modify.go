@@ -30,13 +30,70 @@ func (c *NativeConf) SetAlert(name, alertText string) (string, error) {
 		return "", fmt.Errorf("new config not valid: %v", err)
 	}
 	if err := c.SaveConf(newConf); err != nil {
-		return "", fmt.Errorf("couldn't save config file")
+		return "", fmt.Errorf("couldn't save config file: %v", err)
 	}
 	err = c.reload()
 	if err != nil {
 		return "", err
 	}
 	return "reloaded", nil
+}
+
+func (c *NativeConf) BulkEdit(edits conf.BulkEditRequest) error {
+	select {
+	case c.writeLock <- true:
+		// Got Write Lock
+	default:
+		return fmt.Errorf("cannot write alert, write in progress")
+	}
+	defer func() {
+		<-c.writeLock
+	}()
+	newConf := c
+	var err error
+	for _, edit := range edits {
+		var l *conf.Locator
+		switch edit.Type {
+		case "alert":
+			a := newConf.GetAlert(edit.Name)
+			if a != nil {
+				l = a.Locator
+			}
+		case "template":
+			t := newConf.GetTemplate(edit.Name)
+			if t != nil {
+				l = t.Locator
+			}
+		case "notification":
+			n := newConf.GetNotification(edit.Name)
+			if n != nil {
+				l = n.Locator
+			}
+		default:
+			return fmt.Errorf("%v is an unsuported type for bulk edit. must be alert, template, notification", edit.Type)
+		}
+		var rawConf string
+		if edit.Delete {
+			if l == nil {
+				return fmt.Errorf("could not delete %v:%v - not found", edit.Type, edit.Name)
+			}
+			rawConf = removeSection(l, newConf.RawText)
+		} else {
+			rawConf = writeSection(l, newConf.RawText, edit.Text)
+		}
+		newConf, err = NewNativeConf(c.Name, rawConf)
+		if err != nil {
+			return fmt.Errorf("could not create new conf: failed on step %v:%v : %v", edit.Type, edit.Name, err)
+		}
+	}
+	if err := c.SaveConf(newConf); err != nil {
+		return fmt.Errorf("couldn't save config file: %v", err)
+	}
+	err = c.reload()
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (c *NativeConf) DeleteAlert(name string) error {
@@ -74,6 +131,7 @@ func writeSection(l *conf.Locator, orginalRaw, newText string) string {
 		newRawConf.WriteString(orginalRaw)
 		newRawConf.WriteString("\n")
 		newRawConf.WriteString(newText)
+		newRawConf.WriteString("\n")
 		return newRawConf.String()
 	}
 	newRawConf.WriteString(orginalRaw[:getLocationStart(l)])
