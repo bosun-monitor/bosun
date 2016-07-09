@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"bosun.org/cmd/bosun/conf"
+	"bosun.org/cmd/bosun/conf/native/parse"
 )
 
 func (c *NativeConf) SetAlert(name, alertText string) (string, error) {
@@ -43,7 +44,7 @@ func (c *NativeConf) DeleteAlert(name string) error {
 	case c.writeLock <- true:
 		// Got Write Lock
 	default:
-		return fmt.Errorf("cannot write alert, write in progress")
+		return fmt.Errorf("cannot delete alert, write in progress")
 	}
 	defer func() {
 		<-c.writeLock
@@ -88,8 +89,10 @@ func removeSection(l *conf.Locator, orginalRaw string) string {
 	return newRawConf.String()
 }
 
-func newLocator(start int, end int) *conf.Locator {
+func newSectionLocator(s *parse.SectionNode) *conf.Locator {
 	l := &conf.Locator{}
+	start := int(s.Position())
+	end := int(s.Position()) + len(s.RawText)
 	l.Location = conf.NativeLocator{start, end}
 	l.LocatorType = conf.TypeNative
 	return l

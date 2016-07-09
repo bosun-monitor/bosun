@@ -210,6 +210,7 @@ type Template struct {
 	Subject *ttemplate.Template `json:"-"`
 
 	RawBody, RawSubject string
+	*Locator            `json:"-"`
 }
 
 type Notification struct {
@@ -300,10 +301,11 @@ func GetNotificationChains(c ConfProvider, n map[string]*Notification) [][]strin
 }
 
 type Lookup struct {
-	Text    string
-	Name    string
-	Tags    []string
-	Entries []*Entry
+	Text     string
+	Name     string
+	Tags     []string
+	Entries  []*Entry
+	*Locator `json:"-"`
 }
 
 func (lookup *Lookup) ToExpr() *ExprLookup {
@@ -323,9 +325,10 @@ type Entry struct {
 }
 
 type Macro struct {
-	Text  string
-	Pairs interface{} // this is BAD TODO
-	Name  string
+	Text     string
+	Pairs    interface{} // this is BAD TODO
+	Name     string
+	*Locator `json:"-"`
 }
 
 type Alert struct {

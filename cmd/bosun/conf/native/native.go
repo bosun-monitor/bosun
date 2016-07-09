@@ -525,6 +525,7 @@ func (c *NativeConf) loadLookup(s *parse.SectionNode) {
 		Name: name,
 	}
 	l.Text = s.RawText
+	l.Locator = newSectionLocator(s)
 	var lookupTags opentsdb.TagSet
 	saw := make(map[string]bool)
 	for _, n := range s.Nodes.Nodes {
@@ -592,6 +593,7 @@ func (c *NativeConf) loadMacro(s *parse.SectionNode) {
 		Name: name,
 	}
 	m.Text = s.RawText
+	m.Locator = newSectionLocator(s)
 	pairs := c.getPairs(s, nil, sMacro)
 	for _, p := range pairs {
 		if _, ok := m.Pairs.([]nodePair); !ok { //bad
@@ -643,6 +645,7 @@ func (c *NativeConf) loadTemplate(s *parse.SectionNode) {
 		Name: name,
 	}
 	t.Text = s.RawText
+	t.Locator = newSectionLocator(s)
 	funcs := ttemplate.FuncMap{
 		"V": func(v string) string {
 			return c.Expand(v, t.Vars, false)
@@ -704,9 +707,7 @@ func (c *NativeConf) loadAlert(s *parse.SectionNode) {
 		WarnNotification: new(conf.Notifications),
 	}
 	a.Text = s.RawText
-	start := int(s.Position())
-	end := int(s.Position()) + len(s.RawText)
-	a.Locator = newLocator(start, end)
+	a.Locator = newSectionLocator(s)
 	procNotification := func(v string, ns *conf.Notifications) {
 		if lookup := lookupNotificationRE.FindStringSubmatch(v); lookup != nil {
 			if ns.Lookups == nil {
@@ -899,9 +900,7 @@ func (c *NativeConf) loadNotification(s *parse.SectionNode) {
 		RunOnActions: true,
 	}
 	n.Text = s.RawText
-	start := int(s.Position())
-	end := int(s.Position()) + len(s.RawText)
-	n.Locator = newLocator(start, end)
+	n.Locator = newSectionLocator(s)
 	funcs := ttemplate.FuncMap{
 		"V": func(v string) string {
 			return c.Expand(v, n.Vars, false)
