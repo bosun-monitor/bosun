@@ -107,6 +107,7 @@ type ConfProvider interface {
 	GetAlerts() map[string]*Alert
 	GetAlert(string) *Alert
 	SetAlert(string, string) (string, error)
+	DeleteAlert(alertName string) error
 
 	GetNotifications() map[string]*Notification
 	GetNotification(string) *Notification

@@ -92,13 +92,13 @@ func Listen(listenAddr string, devMode bool, tsdbHost string) error {
 		router.Handle("/api/put", Relay(tsdbHost))
 	}
 
-
 	router.HandleFunc("/api/", APIRedirect)
 	router.Handle("/api/action", JSON(Action))
 	router.Handle("/api/alerts", JSON(Alerts))
 	router.Handle("/api/config", miniprofiler.NewHandler(Config))
 	router.Handle("/api/config_test", miniprofiler.NewHandler(ConfigTest))
 	router.Handle("/api/config/alert", miniprofiler.NewHandler(SetAlert)).Methods(http.MethodPost)
+	router.Handle("/api/config/alert/{name}", miniprofiler.NewHandler(DeleteAlert)).Methods(http.MethodDelete)
 	router.Handle("/api/egraph/{bs}.{format:svg|png}", JSON(ExprGraph))
 	router.Handle("/api/errors", JSON(ErrorHistory))
 	router.Handle("/api/expr", JSON(Expr))
@@ -740,7 +740,6 @@ func SetAlert(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 	data := struct {
 		Name      string
 		AlertText string
-		Hash      string
 	}{}
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&data); err != nil {
@@ -752,8 +751,22 @@ func SetAlert(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 		serveError(w, err)
 		return
 	}
-
 	fmt.Fprint(w, text)
+}
+
+func DeleteAlert(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	name := vars["name"]
+	if name == "" {
+		serveError(w, fmt.Errorf("must provide alert name"))
+		return
+	}
+	err := schedule.Conf.DeleteAlert(name)
+	if err != nil {
+		serveError(w, err)
+		return
+	}
+	fmt.Fprint(w, fmt.Sprintf("%v deleted", name))
 }
 
 func APIRedirect(w http.ResponseWriter, req *http.Request) {
