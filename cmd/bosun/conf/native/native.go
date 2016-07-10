@@ -1,6 +1,7 @@
 package native
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -91,8 +92,34 @@ type NativeConf struct {
 	bodies          *htemplate.Template
 	subjects        *ttemplate.Template
 	squelch         []string
+	expecting       expects
 
 	writeLock chan bool
+}
+
+type expects []expect
+
+func (c *NativeConf) satisfyExpectation(name, etype string, this interface{}) error {
+	for i, expect := range c.expecting {
+		if expect.Name == name && expect.Type == etype {
+			switch expect.Type {
+			case "template":
+				if expect.By.Type == "alert" {
+					c.Alerts[expect.By.Name].Template = this.(*conf.Template)
+				}
+			default:
+				return fmt.Errorf("unsupported expect type: %v", expect.Type)
+			}
+			c.expecting = append(c.expecting[:i], c.expecting[i+1:]...) // Remove
+		}
+	}
+	return nil
+}
+
+type expect struct {
+	Name string
+	Type string
+	By   *expect
 }
 
 // TSDBContext returns an OpenTSDB context limited to
@@ -255,6 +282,13 @@ func NewNativeConf(name, text string) (c *NativeConf, err error) {
 			}
 			c.Hostname = h + c.Hostname
 		}
+	}
+	if len(c.expecting) != 0 {
+		var buffer bytes.Buffer
+		for _, e := range c.expecting {
+			buffer.WriteString(fmt.Sprintf("%v:%v expected %v:%v, but not found. ",  e.Type, e.Name, e.By.Type, e.By.Name))
+		}
+		return c, fmt.Errorf(buffer.String()) // replace somethings :)
 	}
 	return
 }
@@ -644,6 +678,7 @@ func (c *NativeConf) loadTemplate(s *parse.SectionNode) {
 		Vars: make(map[string]string),
 		Name: name,
 	}
+	c.satisfyExpectation(name, "template", &t)
 	t.Text = s.RawText
 	t.Locator = newSectionLocator(s)
 	funcs := ttemplate.FuncMap{
@@ -749,10 +784,18 @@ func (c *NativeConf) loadAlert(s *parse.SectionNode) {
 		case "template":
 			a.TemplateName = v
 			t, ok := c.Templates[a.TemplateName]
-			if !ok {
-				c.errorf("template not found %s", a.TemplateName)
+			if ok {
+				a.Template = t
+				continue
 			}
-			a.Template = t
+			c.expecting = append(c.expecting, expect{
+				Name: a.TemplateName,
+				Type: "template",
+				By: &expect{
+					Name: a.Name,
+					Type: "alert",
+				},
+			})
 		case "crit":
 			a.Crit = c.NewExpr(v)
 		case "warn":
@@ -869,17 +912,17 @@ func (c *NativeConf) loadAlert(s *parse.SectionNode) {
 		if a.Warn == nil {
 			c.errorf("warnNotification specified, but no warn")
 		}
-		if a.Template == nil {
-			c.errorf("warnNotification specified, but no template")
-		}
+		// if a.Template == nil {
+		// 	c.errorf("warnNotification specified, but no template")
+		// }
 	}
 	if len(a.CritNotification.Notifications) != 0 {
 		if a.Crit == nil {
 			c.errorf("critNotification specified, but no crit")
 		}
-		if a.Template == nil {
-			c.errorf("critNotification specified, but no template")
-		}
+		// if a.Template == nil {
+		// 	c.errorf("critNotification specified, but no template")
+		// }
 	}
 	if a.RunEvery == 0 {
 		a.RunEvery = c.DefaultRunEvery
