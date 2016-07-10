@@ -9,14 +9,14 @@ import (
 	"testing"
 	"time"
 
-	"bosun.org/cmd/bosun/conf"
+	"bosun.org/cmd/bosun/conf/native"
 	"bosun.org/models"
 	"bosun.org/opentsdb"
 )
 
 func TestCheckFlapping(t *testing.T) {
 	defer setup()()
-	c, err := conf.New("", `
+	c, err := native.NewNativeConf("", `
 		template t {
 			subject = 1
 		}
@@ -105,7 +105,7 @@ func TestCheckSilence(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	c, err := conf.New("", fmt.Sprintf(`
+	c, err := native.NewNativeConf("", fmt.Sprintf(`
 		template t {
 			subject = "test"
 			body = "test"
@@ -142,7 +142,7 @@ func TestCheckSilence(t *testing.T) {
 
 func TestIncidentIds(t *testing.T) {
 	defer setup()()
-	c, err := conf.New("", `
+	c, err := native.NewNativeConf("", `
 		alert a {
 			crit = 1
 		}
@@ -200,7 +200,7 @@ func TestCheckNotify(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	c, err := conf.New("", fmt.Sprintf(`
+	c, err := native.NewNativeConf("", fmt.Sprintf(`
 		template t {
 			subject = {{.Last.Status}}
 		}
@@ -244,7 +244,7 @@ func TestCheckNotifyUnknown(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	c, err := conf.New("", fmt.Sprintf(`
+	c, err := native.NewNativeConf("", fmt.Sprintf(`
 		minGroupSize = 2
 		template t {
 			subject = {{.Name}}: {{.Group | len}} unknown alerts
@@ -308,7 +308,7 @@ func TestCheckNotifyUnknownDefault(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	c, err := conf.New("", fmt.Sprintf(`
+	c, err := native.NewNativeConf("", fmt.Sprintf(`
 		minGroupSize = 2
 		template t {
 			subject = template
@@ -370,7 +370,7 @@ func TestCheckNotifyLog(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	c, err := conf.New("", fmt.Sprintf(`
+	c, err := native.NewNativeConf("", fmt.Sprintf(`
 		template t {
 			subject = {{.Alert.Name}}
 		}

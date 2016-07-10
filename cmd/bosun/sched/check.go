@@ -647,6 +647,9 @@ func (s *Schedule) CheckExpr(T miniprofiler.Timer, rh *RunHistory, a *conf.Alert
 	case <-s.runnerContext.Done():
 		return nil, nil, true
 	}
+	if err != nil {
+		return
+	}
 Loop:
 	for _, r := range results.Results {
 		if s.Conf.Squelched(a, r.Group) {

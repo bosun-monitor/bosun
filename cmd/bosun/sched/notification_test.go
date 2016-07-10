@@ -5,12 +5,12 @@ import (
 	"strings"
 	"testing"
 
-	"bosun.org/cmd/bosun/conf"
+	"bosun.org/cmd/bosun/conf/native"
 	"bosun.org/models"
 )
 
 func TestActionNotificationTemplates(t *testing.T) {
-	c, err := conf.New("", `hostname = abc`)
+	c, err := native.NewNativeConf("", `hostname = abc`)
 	c.StateFile = ""
 	if err != nil {
 		t.Fatal(err)
@@ -53,7 +53,7 @@ func TestActionNotificationTemplates(t *testing.T) {
 
 func TestActionNotificationGrouping(t *testing.T) {
 	defer setup()()
-	c, err := conf.New("", `
+	c, err := native.NewNativeConf("", `
 		template t{
 			subject = 2
 		}
