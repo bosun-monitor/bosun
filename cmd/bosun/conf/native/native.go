@@ -93,6 +93,13 @@ type NativeConf struct {
 	squelch         []string
 
 	writeLock chan bool
+
+	deferredSections map[string][]deferredSection // SectionType:[]deferredSection
+}
+
+type deferredSection struct {
+	LoadFunc    func(*parse.SectionNode)
+	SectionNode *parse.SectionNode
 }
 
 // TSDBContext returns an OpenTSDB context limited to
@@ -227,6 +234,7 @@ func NewNativeConf(name, text string) (c *NativeConf, err error) {
 		Lookups:          make(map[string]*conf.Lookup),
 		Macros:           make(map[string]*conf.Macro),
 		writeLock:        make(chan bool, 1),
+		deferredSections: make(map[string][]deferredSection),
 	}
 	c.tree, err = parse.Parse(name, text)
 	if err != nil {
@@ -245,6 +253,27 @@ func NewNativeConf(name, text string) (c *NativeConf, err error) {
 			c.errorf("unexpected parse node %s", n)
 		}
 	}
+
+	loadSections := func(sectionType string) {
+		for _, dSec := range c.deferredSections[sectionType] {
+			c.at(dSec.SectionNode)
+			dSec.LoadFunc(dSec.SectionNode)
+		}
+	}
+
+	loadSections("template")
+	if c.unknownTemplate != "" {
+		t, ok := c.Templates[c.unknownTemplate]
+		if !ok {
+			c.errorf("template not found: %s", c.unknownTemplate)
+		}
+		c.UnknownTemplate = t
+	}
+	loadSections("notification")
+	loadSections("macro")
+	loadSections("lookup")
+	loadSections("alert")
+
 	if c.Hostname == "" {
 		c.Hostname = c.HTTPListen
 		if strings.HasPrefix(c.Hostname, ":") {
@@ -397,11 +426,6 @@ func (c *NativeConf) loadGlobal(p *parse.PairNode) {
 		c.SearchSince = s
 	case "unknownTemplate":
 		c.unknownTemplate = v
-		t, ok := c.Templates[c.unknownTemplate]
-		if !ok {
-			c.errorf("template not found: %s", c.unknownTemplate)
-		}
-		c.UnknownTemplate = t
 	case "squelch":
 		c.squelch = append(c.squelch, v)
 		if err := c.Squelch.Add(v); err != nil {
@@ -445,20 +469,23 @@ func (c *NativeConf) loadGlobal(p *parse.PairNode) {
 }
 
 func (c *NativeConf) loadSection(s *parse.SectionNode) {
+	ds := deferredSection{}
 	switch s.SectionType.Text {
 	case "template":
-		c.loadTemplate(s)
+		ds.LoadFunc = c.loadTemplate
 	case "alert":
-		c.loadAlert(s)
+		ds.LoadFunc = c.loadAlert
 	case "notification":
-		c.loadNotification(s)
+		ds.LoadFunc = c.loadNotification
 	case "macro":
-		c.loadMacro(s)
+		ds.LoadFunc = c.loadMacro
 	case "lookup":
-		c.loadLookup(s)
+		ds.LoadFunc = c.loadLookup
 	default:
 		c.errorf("unknown section type: %s", s.SectionType.Text)
 	}
+	ds.SectionNode = s
+	c.deferredSections[s.SectionType.Text] = append(c.deferredSections[s.SectionType.Text], ds)
 }
 
 type nodePair struct {
