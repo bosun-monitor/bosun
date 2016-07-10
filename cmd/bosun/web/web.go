@@ -101,6 +101,7 @@ func Listen(listenAddr string, devMode bool, tsdbHost string) error {
 	router.Handle("/api/config/alert", miniprofiler.NewHandler(SetAlert)).Methods(http.MethodPost)
 	router.Handle("/api/config/alert/{name}", miniprofiler.NewHandler(DeleteAlert)).Methods(http.MethodDelete)
 	router.Handle("/api/config/bulkedit", miniprofiler.NewHandler(BulkEdit)).Methods(http.MethodPost)
+	router.Handle("/api/config/save", miniprofiler.NewHandler(SaveConfig)).Methods(http.MethodPost)
 	router.Handle("/api/egraph/{bs}.{format:svg|png}", JSON(ExprGraph))
 	router.Handle("/api/errors", JSON(ErrorHistory))
 	router.Handle("/api/expr", JSON(Expr))
@@ -734,6 +735,23 @@ func Config(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 		text = schedule.Conf.GetRawText()
 	}
 	fmt.Fprint(w, text)
+}
+
+func SaveConfig(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
+	data := struct {
+		Config string
+	}{}
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&data); err != nil {
+		serveError(w, err)
+		return
+	}
+	err := schedule.Conf.SaveRawText(data.Config)
+	if err != nil {
+		serveError(w, err)
+		return
+	}
+	fmt.Fprint(w, "save successful")
 }
 
 func BulkEdit(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {

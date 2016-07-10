@@ -872,6 +872,25 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
             var blob = new Blob([$scope.config_text], { type: "text/plain;charset=utf-8" });
             saveAs(blob, "bosun.conf");
         };
+        $scope.saveConfig = function () {
+            $scope.saveResult = "Saving; Please Wait";
+            $http.post('/api/config/save', { "Config": $scope.config_text })
+                .success(function (data) {
+                $scope.saveResult = "Config Saved; Reloading";
+            })
+                .error(function (error) {
+                $scope.saveResult = error;
+            });
+        };
+        $scope.saveClass = function () {
+            if ($scope.saveResult == "Saving; Please Wait") {
+                return "alert-warning";
+            }
+            if ($scope.saveResult == "Config Saved; Reloading") {
+                return "alert-success";
+            }
+            return "alert-danger";
+        };
         return $scope;
     }]);
 bosunControllers.controller('DashboardCtrl', ['$scope', '$http', '$location', function ($scope, $http, $location) {

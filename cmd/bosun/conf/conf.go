@@ -154,6 +154,7 @@ type ConfProvider interface {
 	Expand(string, map[string]string, bool) string
 
 	GetRawText() string
+	SaveRawText(string) error
 
 	SetReload(reload func() error)
 	Reload() error

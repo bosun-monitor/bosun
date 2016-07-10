@@ -51,14 +51,22 @@
 		</ul>
 	</div>
 	<div class="btn btn-default" ng-show="quickJumpTarget" ng-bind="quickJumpTarget" ng-click="quickJump()"></div>
-	<div class="btn btn-default actionButtons" ng-click="validate()">Validate</div>
-	<div class="btn btn-default actionButtons" ng-click="aceToggleHighlight()">Toggle Syntax Highlighting</div>
-	<div class="btn btn-default actionButtons" ng-click="downloadConfig()">Download</div>
+	<div class="btn btn-sm actionButtons" ng-click="saveConfig()">Save and Reload</div>
+	<div class="btn btn-sm actionButtons" ng-click="validate()">Validate</div>
+	<div class="btn btn-sm actionButtons" ng-click="aceToggleHighlight()">Syntax Highlighting</div>
+	<div class="btn btn-sm actionButtons" ng-click="downloadConfig()">Download</div>
 </div>
 <div class="row" ng-show="validationResult">
 	<div class="col-lg-12">
 		<div class="alert alert-dismissible" ng-class="validationResult == 'Valid' ? 'alert-success' : 'alert-danger'" ng-bind="validationResult">
 			<button type="button" class="close" ng-click="validationResult=''"><span>&times;</span></button>
+		</div>
+	</div>
+</div>
+<div class="row" ng-show="saveResult">
+	<div class="col-lg-12">
+		<div class="alert" ng-class="saveClass()">{{saveResult}}
+			<button ng-show="saveClass() != 'alert-warning'" type="button" class="close" ng-click="saveResult=''"><span>&times;</span></button>
 		</div>
 	</div>
 </div>

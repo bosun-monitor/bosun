@@ -39,6 +39,21 @@ func (c *NativeConf) SetAlert(name, alertText string) (string, error) {
 	return "reloaded", nil
 }
 
+func (c *NativeConf) SaveRawText(rawConfig string) error {
+	newConf, err := NewNativeConf(c.Name, rawConfig)
+	if err != nil {
+		return err
+	}
+	if err = c.SaveConf(newConf); err != nil {
+		return fmt.Errorf("couldn't save config file: %v", err)
+	}
+	err = c.reload()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (c *NativeConf) BulkEdit(edits conf.BulkEditRequest) error {
 	select {
 	case c.writeLock <- true:
