@@ -500,6 +500,9 @@ func riak(s string) (opentsdb.MultiDataPoint, error) {
 	}
 	for k, v := range r {
 		if m, ok := riakMeta[k]; ok {
+			if v == "undefined" {
+				continue
+			}
 			if strings.HasPrefix(m.Metric, "node.latency") {
 				if nl, ok := v.(float64); ok {
 					v = nl / 1000000
