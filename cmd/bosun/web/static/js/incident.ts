@@ -11,6 +11,7 @@ interface IIncidentScope extends ng.IScope {
 	lastNonUnknownAbnormalIdx: any;
 	state: any;
 	action: any;
+	configLink: string;
 }
 
 
@@ -26,7 +27,7 @@ bosunControllers.controller('IncidentCtrl', ['$scope', '$http', '$location', '$r
 			$scope.config_text = data;
 		});
 	$scope.action = (type: string) => {
-		var key = encodeURIComponent($scope.incident.AlertKey);
+		var key = encodeURIComponent($scope.state.AlertKey);
 		return '/action?type=' + type + '&key=' + key;
 	};
 	$scope.loadTimelinePanel = (v: any, i: any) => {
@@ -40,14 +41,7 @@ bosunControllers.controller('IncidentCtrl', ['$scope', '$http', '$location', '$r
 			return;
 		}
 		var ak = $scope.incident.AlertKey;
-		var openBrack = ak.indexOf("{");
-		var closeBrack = ak.indexOf("}");
-		var alertName = ak.substr(0, openBrack);
-		var template = ak.substring(openBrack + 1, closeBrack);
-		var url = '/api/rule?' +
-			'alert=' + encodeURIComponent(alertName) +
-			'&from=' + encodeURIComponent(moment.utc(v.Time).format()) +
-			'&template_group=' + encodeURIComponent(template);
+		var url = ruleUrl(ak, moment(v.Time))
 		$http.post(url, $scope.config_text)
 			.success((data: any) => {
 				v.subject = data.Subject;
@@ -71,10 +65,10 @@ bosunControllers.controller('IncidentCtrl', ['$scope', '$http', '$location', '$r
 		.success((data: any) => {
 			$scope.incident = data;
 			$scope.state = $scope.incident;
-			console.log(data);
 			$scope.actions = data.Actions;
 			$scope.body = $sce.trustAsHtml(data.Body);
 			$scope.events = data.Events.reverse();
+			$scope.configLink = configUrl($scope.incident.AlertKey, moment.unix($scope.incident.LastAbnormalTime *1000));
 			for (var i = 0; i < $scope.events.length; i++) {
 				var e = $scope.events[i];
 				if (e.Status != 'normal' && e.Status != 'unknown') {
@@ -83,7 +77,7 @@ bosunControllers.controller('IncidentCtrl', ['$scope', '$http', '$location', '$r
 					break;
 				}
 			}
-			$scope.collapse
+			$scope.collapse;
 		})
 		.error(err => {
 			$scope.error = err;

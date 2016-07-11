@@ -483,6 +483,7 @@ func IncidentEvents(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request
 	return schedule.DataAccess.State().GetIncidentState(num)
 }
 
+
 func Incidents(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	// TODO: Incident Search
 	return nil, nil

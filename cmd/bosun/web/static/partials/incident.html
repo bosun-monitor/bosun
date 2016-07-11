@@ -3,7 +3,7 @@
 		<div class="alert alert-danger" ng-bind="error"></div>
 	</div>
 </div>
-<div ng-show="incident">
+<div ng-show="incident && state">
 	<div class="row">
 		<h3> Incident {{incident.Id}}</h3>
 	</div>
@@ -41,7 +41,7 @@
 					<p><strong>Last Abnormal Status:</strong></p>
 				</div>
 				<div class="col-sm-9">
-					<span ng-bind="incident.LastAbnormalStatus" /> since <span ts-time="incident.LastAbnormalTime" />
+					<span ng-bind="incident.LastAbnormalStatus" /> since <span ts-time-unix="incident.LastAbnormalTime" />
 				</div>
 			</div>
 			<div class="row">
@@ -50,7 +50,7 @@
 				</div>
 				<div class="col-sm-9">
 					<a ng-href="/history?key={{encode(incident.AlertKey)}}">Full History</a>,
-					<a ng-href="{{incident.RuleUrl}}">Rule Editor</a>,
+					<a ng-href="{{configLink}}">Rule Editor</a>,
 					<a ng-href="/expr?expr={{btoa(incident.Expr)}}">Expression</a>
 				</div>
 			</div>
@@ -72,7 +72,7 @@
 				<div class="col-sm-3">
 					<p><strong>Actions:</strong></p>
 				</div>
-				<div class="col-sm-9">
+				<div class="col-sm-9" ng-if="state.AlertKey">
 					<ts-ack></ts-ack>
 					<ts-close></ts-close>
 					<ts-force-close></ts-force-close>
