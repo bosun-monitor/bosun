@@ -279,7 +279,7 @@ func check(resp *response, req *request) (err error) {
 	if e, i := resp.ErrorStatus, resp.ErrorIndex; e != 0 {
 		err := fmt.Errorf("server error: %v", errorStatus(e))
 		if i >= 0 && i < len(resp.Bindings) {
-			err = fmt.Errorf("binding %+v: %v", req.Bindings[i], err)
+			err = fmt.Errorf("binding %+v: %v", resp.Bindings[i], err)
 		}
 		return err
 	}
