@@ -93,6 +93,35 @@ bosunApp.directive("tsTime", function() {
     };
 });
 
+bosunApp.directive("tsTimeUnix", function() {
+    return {
+        link: function(scope: ITimeScope, elem: any, attrs: any) {
+            scope.$watch(attrs.tsTimeUnix, (v: any) => {
+                var m = moment(v * 1000).utc();
+                var text = fmtTime(m);
+                if (attrs.tsEndTime) {
+                    var diff = moment(scope.$eval(attrs.tsEndTime)).diff(m);
+                    var duration = fmtDuration(diff);
+                    text += " for " + duration;
+                }
+                if (attrs.noLink) {
+                    elem.text(text);
+                } else {
+                    var el = document.createElement('a');
+                    el.text = text;
+                    el.href = 'http://www.timeanddate.com/worldclock/converted.html?iso=';
+                    el.href += m.format('YYYYMMDDTHHmm');
+                    el.href += '&p1=0';
+                    angular.forEach(scope.timeanddate, (v, k) => {
+                        el.href += '&p' + (k + 2) + '=' + v;
+                    });
+                    elem.html(el);
+                }
+            });
+        },
+    };
+});
+
 bosunApp.directive("tsSince", function() {
     return {
         link: function(scope: IBosunScope, elem: any, attrs: any) {

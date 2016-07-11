@@ -3,21 +3,107 @@
 		<div class="alert alert-danger" ng-bind="error"></div>
 	</div>
 </div>
-<div ng-show="incident">
+<div ng-show="incident && state">
 	<div class="row">
-		<h3> Incident {{incident.Id}}: {{incident.AlertKey}} </h3>
+		<h3> Incident {{incident.Id}}</h3>
 	</div>
-	
 	<div class="row">
-		<h4 ng-show="incident.End"><span ts-time="incident.Start" ts-end-time="incident.End" no-link="true"></span></h4>
-		<h4 ng-hide="incident.End"><span ts-time="incident.Start" no-link="true" /> (Open)</h4>
+		<p ng-show="incident.End">End Time:<span ts-time="incident.Start" ts-end-time="incident.End" no-link="true"></span></p>
 	</div>
-	<h3>Actions</h3>
+	<div class="row">
+		<div class="col-sm-6">
+			<div class="row">
+				<div class="col-sm-3">
+					<p><strong>Alert Key:</strong></p>
+				</div>
+				<div class="col-sm-9">
+					<span ng-bind="incident.AlertKey" />
+				</div>
+			</div>
+			<div class="row">
+				<div class="col-sm-3">
+					<p><strong>Start Time:</strong></p>
+				</div>
+				<div class="col-sm-9">
+					<span ts-time="incident.Start"/>
+				</div>
+			</div>
+			<div class="row">
+				<div class="col-sm-3">
+					<p><strong>Current Status:</strong></p>
+				</div>
+				<div class="col-sm-9">
+					<span ng-bind="incident.CurrentStatus" /> since <span ts-time="incident.Time" />
+				</div>
+			</div>
+			<div class="row">
+				<div class="col-sm-3">
+					<p><strong>Last Abnormal Status:</strong></p>
+				</div>
+				<div class="col-sm-9">
+					<span ng-bind="incident.LastAbnormalStatus" /> since <span ts-time-unix="incident.LastAbnormalTime" />
+				</div>
+			</div>
+			<div class="row">
+				<div class="col-sm-3">
+					<p><strong>Views:</strong></p>
+				</div>
+				<div class="col-sm-9">
+					<a ng-href="/history?key={{encode(incident.AlertKey)}}">Full History</a>,
+					<a ng-href="{{configLink}}">Rule Editor</a>,
+					<a ng-href="/expr?expr={{btoa(incident.Expr)}}">Expression</a>
+				</div>
+			</div>
+		</div>
+		<div class="col-sm-6">
+			<div class="row">
+				<div class="col-sm-3">
+					<p><strong>Silence:</strong></p>
+				</div>
+				<div class="col-sm-9">
+					<a class="btn btn-default btn-xs" ng-href="/silence?duration=1h&alert={{incident.Alert}}&tags={{encode(incident.Tags)}}">1 hour</a>
+					<a class="btn btn-default btn-xs" ng-href="/silence?duration=2h&alert={{incident.Alert}}&tags={{encode(incident.Tags)}}">2 hours</a>
+					<a class="btn btn-default btn-xs" ng-href="/silence?duration=6h&alert={{incident.Alert}}&tags={{encode(incident.Tags)}}">6 hours</a>
+					<a class="btn btn-default btn-xs" ng-href="/silence?duration=12h&alert={{incident.Alert}}&tags={{encode(incident.Tags)}}">12 hours</a>
+					<a class="btn btn-default btn-xs" ng-href="/silence?duration=24h&alert={{incident.Alert}}&tags={{encode(incident.Tags)}}">24 hours</a>
+				</div>
+			</div>
+			<div class="row">
+				<div class="col-sm-3">
+					<p><strong>Actions:</strong></p>
+				</div>
+				<div class="col-sm-9" ng-if="state.AlertKey">
+					<ts-note></ts-note>
+					<ts-ack></ts-ack>
+					<ts-close></ts-close>
+					<ts-force-close></ts-force-close>
+					<ts-forget ng-if="group.Status == 'unknown'"></ts-forget>
+					<ts-purge></ts-purge>
+				</div>
+			</div>
+			<div class="row" ng-show="incident.LastAction">
+				<div class="col-sm-3">
+					<p><strong>Last Action:</strong></p>
+				</div>
+				<div class="col-sm-9">
+					{{incident.LastAction.Type}}
+					<span ng-show="incident.LastAction.User">by {{incident.LastAction.User}}</span> at <span ts-time="incident.LastAction.Time"></span>
+					<span ng-show="incident.LastAction.Message">: {{incident.LastAction.Message}}</span>
+				</div>
+			</div>
+		</div>
+	</div>
+	<div class="row">
+		<h4>Actions</h4>
+	</div>
 	<div class="row" ng-hide="actions.length">No actions</div>
 	<div class="row" ng-show="actions.length">
 		<table class="table table-striped" style="width:100%">
 			<thead>
-			<td>Type</td><td>User</td><td>Message</td><td>Time</td>
+				<td>Type</td>
+				<td>User</td>
+				<td>Message</td>
+				<td>Time</td>
 			</thead>
 			<tbody>
 				<tr ng-repeat="a in actions">
@@ -29,15 +115,38 @@
 			</tbody>
 		</table>
 	</div>
-	<h3>Events</h3>
+
 	<div class="row">
-		<table class="table" style="width:100%">
-			<tbody>
-				<tr id="{{'panel' + $parent.$index + '-' + $index}}" ng-class="panelClass(v.Status, '')" ng-repeat="v in events">
-					<td ng-bind="incident.AlertKey + ': ' + v.Status"></td>
-					<td style="text-align:right;" ng-show="v.Time" ts-time="v.Time"></td>
-				</tr>
-			</tbody>
-		</table>
+		<h4>Events</h4>
+	</div>
+	<div class="row panel" ng-class="panelClass(v.Status)" ng-repeat="($index, v) in events">
+		<div class="panel-heading" ng-click="collapse($index, v)">
+			<h4 class="panel-title">
+				<a href>
+					<span ng-bind="v.Status"></span>
+					<span class="pull-right" ng-show="v.Time" ts-time="v.Time" ts-end-time="v.EndTime" no-link="true"></span>
+				</a>
+			</h4>
+		</div>
+		<div class="panel-body" ng-if="shown[$index]">
+			<div ng-show="!v.doneLoading">Loading...</div>
+			<div class="row" ng-show="v.error">
+				<div class="col-lg-12">
+					<pre class="alert alert-danger" ng-bind="v.error" style="white-space: pre-wrap;"></pre>
+				</div>
+			</div>
+			<div class="panel panel-default">
+				<div class="panel-heading">
+					<h3 class="panel-title">Subject</h3>
+				</div>
+				<div class="panel-body template" ng-bind="v.subject"></div>
+			</div>
+			<div class="panel panel-default">
+				<div class="panel-heading">
+					<h3 class="panel-title">Body</h3>
+				</div>
+				<div class="panel-body template" ng-bind-html="v.body"></div>
+			</div>
+		</div>
 	</div>
 </div>
