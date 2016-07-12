@@ -19,25 +19,25 @@ import (
 type mdadmState int
 
 const (
-	mdadmUnknown  mdadmState = iota
-	mdadmNormal              // 1 => active or clean state
-	mdadmFailed              // 2 => raid is failed
-	mdadmDegraded            // 3 => raid is degraded
+	mdadmUnknown  mdadmState = 0
+	mdadmNormal              = 1 // active or clean state
+	mdadmFailed              = 2 // raid is failed
+	mdadmDegraded            = 3 // raid is degraded
 )
 
 const (
 	mdadmDesc = "raid 0: unknown, 1: normal, 2: failed, 3: degraded"
 	syncDesc  = "percent of spindles synchronization. 100% is fully synced"
+	spinDesc  = "spin 0: failed, 1: active, 2: spare"
 )
 
 type spinState int
 
 // Check individual spindle disks in the array
 const (
-	spinFailed spinState = iota
-	spinActive
-	spinSpare
-	spinDesc = "spin 0: failed, 1: active, 2: spare"
+	spinFailed spinState = 0
+	spinActive           = 1
+	spinSpare            = 2
 )
 
 type volumeDetail struct {
