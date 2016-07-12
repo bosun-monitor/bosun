@@ -3,9 +3,12 @@ package collectors
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
@@ -17,6 +20,10 @@ func init() {
 	collectors = append(collectors, &IntervalCollector{F: c_iostat_linux})
 	collectors = append(collectors, &IntervalCollector{F: c_dfstat_blocks_linux})
 	collectors = append(collectors, &IntervalCollector{F: c_dfstat_inodes_linux})
+	collectors = append(collectors, &IntervalCollector{
+		F:        checkMdadmLinux,
+		Interval: 1 * time.Minute,
+	})
 }
 
 var diskLinuxFields = []struct {
@@ -154,6 +161,49 @@ func c_iostat_linux() (opentsdb.MultiDataPoint, error) {
 		return nil
 	})
 	return md, err
+}
+
+func examineMdadmVolume(volumeName string) (volumeDetail, error) {
+	// command to get mdadm status
+	tmout := 2 * time.Second
+	// We don't use --test because it has failed us in the past.
+	// Maybe we should use it sometime in the future
+	output, err := util.Command(tmout, nil, "mdadm", "--detail", volumeName)
+	detail := parseExamineMdadm(output)
+	return detail, err
+}
+
+// keep only fileNames that are devices
+func filterVolumes(volumes []string) []string {
+	out := make([]string, 0, len(volumes))
+	for _, vol := range volumes {
+		finfo, err := os.Stat(vol)
+		if err != nil { // if we can't stat, we won't monitor
+			continue
+		}
+		if finfo.Mode()&os.ModeDevice != 0 {
+			out = append(out, vol)
+		}
+	}
+	return out
+}
+
+func checkMdadmLinux() (opentsdb.MultiDataPoint, error) {
+	var md opentsdb.MultiDataPoint
+
+	volumes, err := filepath.Glob("/dev/md*")
+	if err != nil {
+		return md, err
+	}
+	for _, volume := range filterVolumes(volumes) {
+		detail, err := examineMdadmVolume(volume)
+		if err != nil {
+			slog.Errorf("mdadm: can't parse %s data, %s", volume, err)
+			continue
+		}
+		addMdadmMetric(&md, volume, detail)
+	}
+	return md, nil
 }
 
 func c_dfstat_blocks_linux() (opentsdb.MultiDataPoint, error) {

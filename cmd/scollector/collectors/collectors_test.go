@@ -1,16 +1,23 @@
 package collectors
 
 import (
-	"bosun.org/opentsdb"
 	"testing"
+
+	"bosun.org/opentsdb"
 )
 
 func TestIsDigit(t *testing.T) {
-	if IsDigit("1a3") {
-		t.Error("1a3: expected false")
+	numbers := []string{"029", "1", "400"}
+	not_numbers := []string{"1a3", " 3", "-1", "3.0", "am"}
+	for _, s := range not_numbers {
+		if IsDigit(s) {
+			t.Errorf("%s: not expected to be a digit", s)
+		}
 	}
-	if !IsDigit("029") {
-		t.Error("029: expected true")
+	for _, n := range numbers {
+		if !IsDigit(n) {
+			t.Errorf("%s: expected to be a digit", n)
+		}
 	}
 }
 
