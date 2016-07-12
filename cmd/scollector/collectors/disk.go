@@ -1,7 +1,5 @@
 package collectors
 
-//go:generate stringer -type=mdadmState,spinState
-
 // things that are not OS specific.
 // ie: can compile and execute anywhere
 
