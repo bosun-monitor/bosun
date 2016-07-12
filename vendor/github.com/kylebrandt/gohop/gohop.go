@@ -133,13 +133,15 @@ type MetricStatSimple struct {
 
 type MetricStatKeyed struct {
 	MetricStat
-	Values [][]struct {
-		Key      MetricKey       `json:"key"`
-		RawValue json.RawMessage `json:"value"`
-		Vtype    string          `json:"vtype"`
-		Value    int64
-		Tset     MetricStatTset
-	} `json:"values"`
+	Values [][]MetricStatKeyedValue `json:"values"`
+}
+
+type MetricStatKeyedValue struct {
+	Key      MetricKey       `json:"key"`
+	RawValue json.RawMessage `json:"value"`
+	Vtype    string          `json:"vtype"`
+	Value    int64
+	Tset     MetricStatTset
 }
 
 type MetricKey struct {

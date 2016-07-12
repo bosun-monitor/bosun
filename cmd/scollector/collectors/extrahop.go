@@ -3,6 +3,7 @@ package collectors
 import (
 	"fmt"
 	"net/url"
+	"regexp"
 	"strings"
 	"time"
 
@@ -18,9 +19,11 @@ var extraHopTopProtoPerc int           //Only log the top % of protocols by volu
 var extraHopOtherProtoName string      //What name to log the "other" data under.
 var extraHopL7Description string       //What to append to the end of the L7 description metadata to explain what is and isn't filtered out
 var extraHopAdditionalMetrics []string //Other metrics to fetch from Extrahop
+var extraHopCertificateMatch *regexp.Regexp
+var extraHopCertificateActivityGroup int
 
 // ExtraHop collection registration
-func ExtraHop(host, apikey, filterby string, filterpercent int, customMetrics []string) error {
+func ExtraHop(host, apikey, filterby string, filterpercent int, customMetrics []string, certMatch string, certActivityGroup int) error {
 	if host == "" || apikey == "" {
 		return fmt.Errorf("Empty host or API key for ExtraHop.")
 	}
@@ -55,6 +58,15 @@ func ExtraHop(host, apikey, filterby string, filterpercent int, customMetrics []
 	if err != nil {
 		return err
 	}
+
+	if certMatch != "" {
+		compiledRegexp, err := regexp.Compile(certMatch)
+		if err != nil {
+			return err
+		}
+		extraHopCertificateMatch = compiledRegexp
+		extraHopCertificateActivityGroup = certActivityGroup
+	}
 	collectors = append(collectors, &IntervalCollector{
 		F: func() (opentsdb.MultiDataPoint, error) {
 			return c_extrahop(host, apikey)
@@ -73,6 +85,9 @@ func c_extrahop(host, apikey string) (opentsdb.MultiDataPoint, error) {
 		return nil, err
 	}
 	if err := extraHopGetAdditionalMetrics(c, &md); err != nil {
+		return nil, err
+	}
+	if err := extraHopGetCertificates(c, &md); err != nil {
 		return nil, err
 	}
 
@@ -95,7 +110,8 @@ func extraHopGetAdditionalMetrics(c *gohop.Client, md *opentsdb.MultiDataPoint) 
 		for _, a := range mrk.Stats {
 			for _, b := range a.Values {
 				for _, d := range b {
-					if d.Vtype == "tset" {
+					switch d.Vtype {
+					case "tset":
 						for _, e := range d.Tset {
 							*md = append(*md, &opentsdb.DataPoint{
 								Metric:    ehMetricNameEscape(d.Key.Str),
@@ -178,6 +194,121 @@ func extraHopNetworks(c *gohop.Client, md *opentsdb.MultiDataPoint) error {
 		}
 	}
 	return nil
+}
+
+func extraHopGetCertificates(c *gohop.Client, md *opentsdb.MultiDataPoint) error {
+	if extraHopCertificateMatch == nil {
+		return nil
+	}
+
+	if err := extraHopGetCertificateByCount(c, md); err != nil {
+		return err
+	}
+
+	if err := extraHopGetCertificateByExpiry(c, md); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func extraHopGetCertificateByCount(c *gohop.Client, md *opentsdb.MultiDataPoint) error {
+	//These are the metrics we are populating in this part of the collector
+	metricNameCount := "extrahop.certificates"
+
+	//Metadata for the above metrics
+	metadata.AddMeta(metricNameCount, nil, "rate", metadata.Gauge, false)
+	metadata.AddMeta(metricNameCount, nil, "unit", metadata.Count, false)
+	metadata.AddMeta(metricNameCount, nil, "desc", "The number of times a given certificate was seen", false)
+
+	ms := []gohop.MetricSpec{ //Build a metric spec to tell ExtraHop what we want to pull out.
+		{Name: "cert_subject", KeyPair: gohop.KeyPair{Key1Regex: "", Key2Regex: "", OpenTSDBKey1: "", Key2OpenTSDBKey2: ""}, OpenTSDBMetric: metricNameCount},
+	}
+	mrk, err := c.KeyedMetricQuery(gohop.Cycle30Sec, "ssl_server_detail", "activity_group", -60000, 0, ms, []int64{int64(extraHopCertificateActivityGroup)})
+	if err != nil {
+		return err
+	}
+
+	//At this time we have a keyed metric response from ExtraHop. We need to find all the stats, then the values of the stats, and then
+	//filter out to only the records we want.
+	for _, a := range mrk.Stats {
+		for _, b := range a.Values {
+			for _, d := range b {
+				thisPoint := getSSLDataPointFromSet(metricNameCount, c.APIUrl.Host, a.Time, &d)
+				if thisPoint != nil {
+					*md = append(*md, thisPoint)
+				}
+			}
+		}
+	}
+	return nil
+}
+func extraHopGetCertificateByExpiry(c *gohop.Client, md *opentsdb.MultiDataPoint) error {
+	//These are the metrics we are populating in this part of the collector
+	metricNameExpiry := "extrahop.certificates.expiry"
+	metricNameTillExpiry := "extrahop.certificates.tillexpiry"
+
+	//Metadata for the above metrics
+	metadata.AddMeta(metricNameExpiry, nil, "rate", metadata.Gauge, false)
+	metadata.AddMeta(metricNameExpiry, nil, "unit", metadata.Timestamp, false)
+	metadata.AddMeta(metricNameExpiry, nil, "desc", "Timestamp of when the certificate expires", false)
+
+	metadata.AddMeta(metricNameTillExpiry, nil, "rate", metadata.Gauge, false)
+	metadata.AddMeta(metricNameTillExpiry, nil, "unit", metadata.Second, false)
+	metadata.AddMeta(metricNameTillExpiry, nil, "desc", "Number of seconds until the certificate expires", false)
+
+	ms := []gohop.MetricSpec{ //Build a metric spec to tell ExtraHop what we want to pull out.
+		{Name: "cert_expiration", KeyPair: gohop.KeyPair{Key1Regex: "", Key2Regex: "", OpenTSDBKey1: "", Key2OpenTSDBKey2: ""}, OpenTSDBMetric: metricNameExpiry},
+	}
+	mrk, err := c.KeyedMetricQuery(gohop.Cycle30Sec, "ssl_server_detail", "activity_group", -60000, 0, ms, []int64{int64(extraHopCertificateActivityGroup)})
+	if err != nil {
+		return err
+	}
+
+	//At this time we have a keyed metric response from ExtraHop. We need to find all the stats, then the values of the stats, and then
+	//filter out to only the records we want.
+	for _, a := range mrk.Stats {
+		for _, b := range a.Values {
+			for _, d := range b {
+				thisPointExpiry := getSSLDataPointFromSet(metricNameExpiry, c.APIUrl.Host, a.Time, &d)
+				if thisPointExpiry != nil {
+					*md = append(*md, thisPointExpiry)
+				}
+
+				thisPointTillExpiry := getSSLDataPointFromSet(metricNameTillExpiry, c.APIUrl.Host, a.Time, &d)
+				if thisPointTillExpiry != nil {
+					thisPointTillExpiry.Value = thisPointTillExpiry.Value.(int64) - (a.Time / 1000)
+					*md = append(*md, thisPointTillExpiry)
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func getSSLDataPointFromSet(metricName, APIUrlHost string, timestamp int64, d *gohop.MetricStatKeyedValue) *opentsdb.DataPoint {
+	//The metric key comes as subject:crypt_strength, e.g. *.example.com:RSA_2048
+	if strings.IndexAny(d.Key.Str, ":") == -1 { //If the certificate key doesn't contain a : then ignore
+		return nil
+	}
+	certParts := strings.Split(d.Key.Str, ":") //Get the subject and the crypt_strength into seperate parts
+	if len(certParts) != 2 {                   //If we don't get exactly 2 parts when we split on the :, then ignore
+		return nil
+	}
+	certSubject := strings.ToLower(certParts[0])            //Make the subject consistently lowercase
+	certStrength := certParts[1]                            //Get the crypt_strength
+	if !extraHopCertificateMatch.MatchString(certSubject) { //If this certificate does not match the subject name we're filtering on, then ignore
+		return nil
+	}
+	certSubject = strings.Replace(certSubject, "*.", "wild_", -1)                                                     //* is an important part of the subject, but an invalid tag. This should make it pretty obvious that we mean a wildcard cert, not a subdomain of "wild"
+	certTags := opentsdb.TagSet{"host": strings.ToLower(APIUrlHost), "subject": certSubject, "keysize": certStrength} //Tags for the metrics
+	//Add a key that is the raw expiry time
+	return &opentsdb.DataPoint{
+		Metric:    metricName,
+		Timestamp: timestamp,
+		Value:     d.Value,
+		Tags:      certTags,
+	}
 }
 
 //These are used when looping through which L7 traffic to get. We want byte counts and packet counts, and this is the metadata that goes with them.
