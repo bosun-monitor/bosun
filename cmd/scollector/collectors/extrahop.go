@@ -107,23 +107,23 @@ func extraHopGetAdditionalMetrics(c *gohop.Client, md *opentsdb.MultiDataPoint) 
 		if err != nil {
 			return err
 		}
-		for _, a := range mrk.Stats {
-			for _, b := range a.Values {
-				for _, d := range b {
-					switch d.Vtype {
-					case "tset":
-						for _, e := range d.Tset {
-							*md = append(*md, &opentsdb.DataPoint{
-								Metric:    ehMetricNameEscape(d.Key.Str),
-								Timestamp: a.Time,
-								Value:     e.Value,
-								Tags:      ehItemNameToTagSet(c, e.Key.Str),
-							})
-						}
-					}
+
+		//This is our function that is going to be executed on each data point in the extrahop dataset
+		appendMetricPoint := func(c *gohop.Client, md *opentsdb.MultiDataPoint, a *gohop.MetricStatKeyed, b *[]gohop.MetricStatKeyedValue, d *gohop.MetricStatKeyedValue) {
+			switch d.Vtype {
+			case "tset":
+				for _, e := range d.Tset {
+					*md = append(*md, &opentsdb.DataPoint{
+						Metric:    ehMetricNameEscape(d.Key.Str),
+						Timestamp: a.Time,
+						Value:     e.Value,
+						Tags:      ehItemNameToTagSet(c, e.Key.Str),
+					})
 				}
 			}
 		}
+
+		processGohopStat(&mrk, c, md, appendMetricPoint) //This will loop through our datapoint structure and execute appendCountPoints on each final data piece
 	}
 
 	return nil
@@ -231,16 +231,17 @@ func extraHopGetCertificateByCount(c *gohop.Client, md *opentsdb.MultiDataPoint)
 
 	//At this time we have a keyed metric response from ExtraHop. We need to find all the stats, then the values of the stats, and then
 	//filter out to only the records we want.
-	for _, a := range mrk.Stats {
-		for _, b := range a.Values {
-			for _, d := range b {
-				thisPoint := getSSLDataPointFromSet(metricNameCount, c.APIUrl.Host, a.Time, &d)
-				if thisPoint != nil {
-					*md = append(*md, thisPoint)
-				}
-			}
+
+	//This is our function that is going to be executed on each data point in the extrahop dataset
+	appendCountPoints := func(c *gohop.Client, md *opentsdb.MultiDataPoint, a *gohop.MetricStatKeyed, b *[]gohop.MetricStatKeyedValue, d *gohop.MetricStatKeyedValue) {
+		thisPoint := getSSLDataPointFromSet(metricNameCount, c.APIUrl.Host, a.Time, d)
+		if thisPoint != nil {
+			*md = append(*md, thisPoint)
 		}
 	}
+
+	processGohopStat(&mrk, c, md, appendCountPoints) //This will loop through our datapoint structure and execute appendCountPoints on each final data piece
+
 	return nil
 }
 func extraHopGetCertificateByExpiry(c *gohop.Client, md *opentsdb.MultiDataPoint) error {
@@ -267,23 +268,35 @@ func extraHopGetCertificateByExpiry(c *gohop.Client, md *opentsdb.MultiDataPoint
 
 	//At this time we have a keyed metric response from ExtraHop. We need to find all the stats, then the values of the stats, and then
 	//filter out to only the records we want.
+
+	//This is our function that is going to be executed on each data point in the extrahop dataset
+	appendExpiryPoints := func(c *gohop.Client, md *opentsdb.MultiDataPoint, a *gohop.MetricStatKeyed, b *[]gohop.MetricStatKeyedValue, d *gohop.MetricStatKeyedValue) {
+		thisPointExpiry := getSSLDataPointFromSet(metricNameExpiry, c.APIUrl.Host, a.Time, d)
+		if thisPointExpiry != nil {
+			*md = append(*md, thisPointExpiry)
+		}
+
+		thisPointTillExpiry := getSSLDataPointFromSet(metricNameTillExpiry, c.APIUrl.Host, a.Time, d)
+		if thisPointTillExpiry != nil {
+			thisPointTillExpiry.Value = thisPointTillExpiry.Value.(int64) - (a.Time / 1000)
+			*md = append(*md, thisPointTillExpiry)
+		}
+	}
+
+	processGohopStat(&mrk, c, md, appendExpiryPoints) //This will loop through our datapoint structure and execute appendExpiryPoints on each final data piece
+	return nil
+}
+
+type processFunc func(*gohop.Client, *opentsdb.MultiDataPoint, *gohop.MetricStatKeyed, *[]gohop.MetricStatKeyedValue, *gohop.MetricStatKeyedValue)
+
+func processGohopStat(mrk *gohop.MetricResponseKeyed, c *gohop.Client, md *opentsdb.MultiDataPoint, pc processFunc) {
 	for _, a := range mrk.Stats {
 		for _, b := range a.Values {
 			for _, d := range b {
-				thisPointExpiry := getSSLDataPointFromSet(metricNameExpiry, c.APIUrl.Host, a.Time, &d)
-				if thisPointExpiry != nil {
-					*md = append(*md, thisPointExpiry)
-				}
-
-				thisPointTillExpiry := getSSLDataPointFromSet(metricNameTillExpiry, c.APIUrl.Host, a.Time, &d)
-				if thisPointTillExpiry != nil {
-					thisPointTillExpiry.Value = thisPointTillExpiry.Value.(int64) - (a.Time / 1000)
-					*md = append(*md, thisPointTillExpiry)
-				}
+				pc(c, md, &a, &b, &d)
 			}
 		}
 	}
-	return nil
 }
 
 func getSSLDataPointFromSet(metricName, APIUrlHost string, timestamp int64, d *gohop.MetricStatKeyedValue) *opentsdb.DataPoint {
