@@ -739,14 +739,17 @@ func Config(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 
 func SaveConfig(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 	data := struct {
-		Config string
+		Config  string
+		User    string // should come from auth
+		Message string
+		Other []string
 	}{}
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&data); err != nil {
 		serveError(w, err)
 		return
 	}
-	err := schedule.Conf.SaveRawText(data.Config)
+	err := schedule.Conf.SaveRawText(data.Config, data.User, data.Message, data.Other...)
 	if err != nil {
 		serveError(w, err)
 		return

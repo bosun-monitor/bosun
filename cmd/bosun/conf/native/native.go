@@ -95,6 +95,7 @@ type NativeConf struct {
 	writeLock chan bool
 
 	deferredSections map[string][]deferredSection // SectionType:[]deferredSection
+	saveHook         *conf.SaveHook // func that gets called on save if not nil
 }
 
 type deferredSection struct {
@@ -1538,4 +1539,12 @@ func (c *NativeConf) SetReload(reload func() error) {
 
 func (c *NativeConf) Reload() error {
 	return c.reload()
+}
+
+func (c *NativeConf) SetSaveHook(sh conf.SaveHook) {
+	c.saveHook = &sh
+}
+
+func (c *NativeConf) callSaveHook(rawConfig, user, message string, args ...string) error {
+	return (*c.saveHook)(rawConfig, user, message, args...)
 }

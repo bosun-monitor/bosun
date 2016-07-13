@@ -39,13 +39,24 @@ func (c *NativeConf) SetAlert(name, alertText string) (string, error) {
 	return "reloaded", nil
 }
 
-func (c *NativeConf) SaveRawText(rawConfig string) error {
+func (c *NativeConf) SaveRawText(rawConfig, user, message string, args ...string) error {
 	newConf, err := NewNativeConf(c.Name, rawConfig)
 	if err != nil {
 		return err
 	}
 	if err = c.SaveConf(newConf); err != nil {
 		return fmt.Errorf("couldn't save config file: %v", err)
+	}
+	if c.saveHook != nil {
+		err := c.callSaveHook(rawConfig, user, message, args...)
+		if err != nil {
+			sErr := c.SaveConf(c)
+			restore := "successful"
+			if sErr != nil {
+				restore = sErr.Error()
+			} 
+			return fmt.Errorf("failed to call save hook: %v. Restoring config: %v", err, restore)
+		}
 	}
 	err = c.reload()
 	if err != nil {

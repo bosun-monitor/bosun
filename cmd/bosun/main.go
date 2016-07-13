@@ -153,6 +153,10 @@ func main() {
 	if *flagQuiet {
 		confProvider.SetQuiet(true)
 	}
+
+	tempHook := conf.MakeSaveCommandHook("./hook.sh")
+	confProvider.SetSaveHook(tempHook)
+
 	var reload func() error
 	reloading := make(chan bool, 1)
 	reload = func() error {
@@ -169,6 +173,7 @@ func main() {
 		if err != nil {
 			return err
 		}
+		confProvider.SetSaveHook(tempHook)
 		newConf.SetReload(reload)
 		oldSched := sched.DefaultSched
 		oldDA := oldSched.DataAccess

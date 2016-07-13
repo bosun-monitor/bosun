@@ -1,9 +1,11 @@
 package conf // import "bosun.org/cmd/bosun/conf"
 
 import (
+	"bytes"
 	"fmt"
 	"net/mail"
 	"net/url"
+	"os/exec"
 	"regexp"
 	"strings"
 	"time"
@@ -18,6 +20,8 @@ import (
 
 	htemplate "html/template"
 	ttemplate "text/template"
+
+	"bosun.org/slog"
 )
 
 type ConfProvider interface {
@@ -154,10 +158,12 @@ type ConfProvider interface {
 	Expand(string, map[string]string, bool) string
 
 	GetRawText() string
-	SaveRawText(string) error
+	SaveRawText(rawConf, user, message string, args ...string) error
 
 	SetReload(reload func() error)
 	Reload() error
+
+	SetSaveHook(SaveHook)
 }
 
 type Squelch map[string]*regexp.Regexp
@@ -380,4 +386,32 @@ type EditRequest struct {
 	Type   string
 	Text   string
 	Delete bool
+}
+
+type SaveHook func(user, message string, args ...string) error
+
+// MakeSaveCommandHook takes a command name and will run it on save
+// passing user, message, args... as arguments to the command
+func MakeSaveCommandHook(cmdName string) SaveHook {
+	f := func(user, message string, args ...string) error {
+		cArgs := []string{user, message}
+		cArgs = append(cArgs, args...)
+		c := exec.Command(cmdName, cArgs...)
+		var cOut bytes.Buffer
+		var cErr bytes.Buffer
+		c.Stdout = &cOut
+		c.Stderr = &cErr
+		err := c.Start()
+		if err != nil {
+			return err
+		}
+		err = c.Wait()
+		if err != nil {
+			slog.Warning(cErr.String())
+			return err
+		}
+		slog.Infoln(cOut.String())
+		return nil
+	}
+	return f
 }
