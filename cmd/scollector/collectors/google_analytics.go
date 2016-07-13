@@ -6,6 +6,7 @@ import (
 	"encoding/gob"
 	"fmt"
 	"net/http"
+	"sort"
 	"strconv"
 	"time"
 
@@ -58,15 +59,19 @@ func c_google_analytics(clientid string, secret string, tokenstr string, sites [
 		return nil, err
 	}
 
-	dimensions := []string{"browser", "trafficType", "source", "deviceCategory", "operatingSystem"}
+	// dimension: max records we want to fetch
+	// "source" has a very long tail so we limit it to something sane
+	// TODO: Dimensions we want and associated attributes should eventually be
+	// setup in configuration.
+	dimensions := map[string]int{"browser": -1, "trafficType": -1, "source": 10, "deviceCategory": -1, "operatingSystem": -1}
 	for _, site := range sites {
 		getPageviews(&md, svc, site)
 		if site.Detailed {
 			if err = getActiveUsers(&md, svc, site); err != nil {
 				mErr = append(mErr, err)
 			}
-			for _, dimension := range dimensions {
-				if err = getActiveUsersByDimension(&md, svc, site, dimension); err != nil {
+			for dimension, topN := range dimensions {
+				if err = getActiveUsersByDimension(&md, svc, site, dimension, topN); err != nil {
 					mErr = append(mErr, err)
 				}
 			}
@@ -80,14 +85,26 @@ func c_google_analytics(clientid string, secret string, tokenstr string, sites [
 	}
 }
 
-func getActiveUsersByDimension(md *opentsdb.MultiDataPoint, svc *analytics.Service, site conf.GoogleAnalyticsSite, dimension string) error {
+type kv struct {
+	key   string
+	value int
+}
+
+type kvList []kv
+
+func (p kvList) Len() int           { return len(p) }
+func (p kvList) Less(i, j int) bool { return p[i].value < p[j].value }
+func (p kvList) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
+
+func getActiveUsersByDimension(md *opentsdb.MultiDataPoint, svc *analytics.Service, site conf.GoogleAnalyticsSite, dimension string, topN int) error {
 	call := svc.Data.Realtime.Get("ga:"+site.Profile, "rt:activeusers").Dimensions("rt:" + dimension)
 	data, err := call.Do()
 	if err != nil {
 		return err
 	}
 	tags := opentsdb.TagSet{"site": site.Name}
-	for _, row := range data.Rows {
+	rows := make(kvList, len(data.Rows))
+	for i, row := range data.Rows {
 		// key will always be an string of the dimension we care about.
 		// For example, 'Chrome' would be a key for the 'browser' dimension.
 		key, _ := opentsdb.Clean(row[0])
@@ -98,8 +115,17 @@ func getActiveUsersByDimension(md *opentsdb.MultiDataPoint, svc *analytics.Servi
 		if err != nil {
 			return fmt.Errorf("Error parsing GA data: %s", err)
 		}
+		rows[i] = kv{key: key, value: value}
+	}
+	sort.Sort(sort.Reverse(rows))
+	if topN != -1 && topN < len(rows) {
+		topRows := make(kvList, topN)
+		topRows = rows[:topN]
+		rows = topRows
+	}
 
-		Add(md, "google.analytics.realtime.activeusers.by_"+dimension, value, opentsdb.TagSet{dimension: key}.Merge(tags), metadata.Gauge, metadata.ActiveUsers, descActiveUsers)
+	for _, row := range rows {
+		Add(md, "google.analytics.realtime.activeusers.by_"+dimension, row.value, opentsdb.TagSet{dimension: row.key}.Merge(tags), metadata.Gauge, metadata.ActiveUsers, descActiveUsers)
 	}
 	return nil
 }
