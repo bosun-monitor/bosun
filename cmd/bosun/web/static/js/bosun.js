@@ -538,6 +538,7 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
         $scope.tab = search.tab || 'results';
         $scope.aceTheme = 'chrome';
         $scope.aceMode = 'bosun';
+        $scope.user = readCookie("action-user");
         var expr = search.expr;
         function buildAlertFromExpr() {
             if (!expr)
@@ -874,8 +875,13 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
         };
         $scope.saveConfig = function () {
             $scope.saveResult = "Saving; Please Wait";
-            $http.post('/api/config/save', { "Config": $scope.config_text })
+            $http.post('/api/config/save', {
+                "Config": $scope.config_text,
+                "User": $scope.user,
+                "Message": $scope.message
+            })
                 .success(function (data) {
+                createCookie("action-user", $scope.user, 1000);
                 $scope.saveResult = "Config Saved; Reloading";
             })
                 .error(function (error) {

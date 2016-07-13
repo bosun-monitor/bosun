@@ -173,7 +173,7 @@ func main() {
 		if err != nil {
 			return err
 		}
-		confProvider.SetSaveHook(tempHook)
+		newConf.SetSaveHook(tempHook)
 		newConf.SetReload(reload)
 		oldSched := sched.DefaultSched
 		oldDA := oldSched.DataAccess

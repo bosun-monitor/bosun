@@ -48,7 +48,7 @@ func (c *NativeConf) SaveRawText(rawConfig, user, message string, args ...string
 		return fmt.Errorf("couldn't save config file: %v", err)
 	}
 	if c.saveHook != nil {
-		err := c.callSaveHook(rawConfig, user, message, args...)
+		err := c.callSaveHook(c.Name, user, message, args...)
 		if err != nil {
 			sErr := c.SaveConf(c)
 			restore := "successful"

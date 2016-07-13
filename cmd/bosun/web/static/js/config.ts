@@ -48,6 +48,10 @@ interface IConfigScope extends IBosunScope {
 	scrollToInterval: (v: string) => void;
 	show: (v: any) => void;
 	loadTimelinePanel: (entry: any, v: any) => void;
+
+	// saving
+	user: string;
+	message: string;
 }
 
 bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$route', '$timeout', '$sce', function ($scope: IConfigScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService, $timeout: ng.ITimeoutService, $sce: ng.ISCEService) {
@@ -66,6 +70,8 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 	$scope.tab = search.tab || 'results';
 	$scope.aceTheme = 'chrome';
 	$scope.aceMode = 'bosun';
+	$scope.user = readCookie("action-user");
+
 
 	var expr = search.expr;
 	function buildAlertFromExpr() {
@@ -409,8 +415,14 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 
 	$scope.saveConfig = () => {
 		$scope.saveResult = "Saving; Please Wait"
-		$http.post('/api/config/save', { "Config": $scope.config_text })
+		$http.post('/api/config/save',
+			{
+				"Config": $scope.config_text,
+				"User": $scope.user,
+				"Message": $scope.message
+			})
 			.success((data: any) => {
+				createCookie("action-user", $scope.user, 1000);
 				$scope.saveResult = "Config Saved; Reloading";
 			})
 			.error((error) => {
@@ -419,16 +431,16 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 	}
 
 	$scope.saveClass = () => {
-		if ($scope.saveResult ==  "Saving; Please Wait") {
+		if ($scope.saveResult == "Saving; Please Wait") {
 			return "alert-warning"
 		}
-		if ($scope.saveResult ==  "Config Saved; Reloading") {
+		if ($scope.saveResult == "Config Saved; Reloading") {
 			return "alert-success"
 		}
 		return "alert-danger"
 	}
 
-	return $scope;	
+	return $scope;
 }]);
 
 // declared in FileSaver.js

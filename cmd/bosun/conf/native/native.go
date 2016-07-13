@@ -1545,6 +1545,6 @@ func (c *NativeConf) SetSaveHook(sh conf.SaveHook) {
 	c.saveHook = &sh
 }
 
-func (c *NativeConf) callSaveHook(rawConfig, user, message string, args ...string) error {
-	return (*c.saveHook)(rawConfig, user, message, args...)
+func (c *NativeConf) callSaveHook(file, user, message string, args ...string) error {
+	return (*c.saveHook)(file, user, message, args...)
 }

@@ -388,14 +388,17 @@ type EditRequest struct {
 	Delete bool
 }
 
-type SaveHook func(user, message string, args ...string) error
+type SaveHook func(files, user, message string, args ...string) error
 
 // MakeSaveCommandHook takes a command name and will run it on save
-// passing user, message, args... as arguments to the command
+// passing files, user, message, args... as arguments to the command
+// the first arg of args is expected to be the file name. In the future
+// if we have multifile storage, it could be either a director
 func MakeSaveCommandHook(cmdName string) SaveHook {
-	f := func(user, message string, args ...string) error {
-		cArgs := []string{user, message}
+	f := func(files, user, message string, args ...string) error {
+		cArgs := []string{files, user, message}
 		cArgs = append(cArgs, args...)
+		slog.Infof("executing command hook %v\n", cmdName)
 		c := exec.Command(cmdName, cArgs...)
 		var cOut bytes.Buffer
 		var cErr bytes.Buffer
@@ -415,3 +418,5 @@ func MakeSaveCommandHook(cmdName string) SaveHook {
 	}
 	return f
 }
+
+// 2016/07/13 11:37:18 info: conf.go:416: ./hook.sh prod.conf kbrandt arf2
