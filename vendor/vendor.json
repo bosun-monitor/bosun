@@ -3,6 +3,18 @@
 	"ignore": "test lua lmdb",
 	"package": [
 		{
+			"checksumSHA1": "jtx+tVLvGm43UNOZhrH1O/lY5Go=",
+			"path": "bosun.org/opentsdb",
+			"revision": "3db82a9cf2c8fb7db339c6a36b39b71b66b0d9e8",
+			"revisionTime": "2016-07-12T16:55:19Z"
+		},
+		{
+			"checksumSHA1": "h4yWd5MfegTSTf5nSK15aQSBfjg=",
+			"path": "bosun.org/slog",
+			"revision": "3db82a9cf2c8fb7db339c6a36b39b71b66b0d9e8",
+			"revisionTime": "2016-07-12T16:55:19Z"
+		},
+		{
 			"path": "github.com/BurntSushi/toml",
 			"revision": "5c4df71dfe9ac89ef6287afc05e4c1b16ae65a1e",
 			"revisionTime": "2016-01-02T09:47:48-05:00"
@@ -466,9 +478,10 @@
 			"revisionTime": "2016-06-01T16:00:19-04:00"
 		},
 		{
+			"checksumSHA1": "BszNNpknUB4h5MONKecmBMPvpSI=",
 			"path": "github.com/kylebrandt/gohop",
-			"revision": "605b5abd5cb7b630eb91cf1f35d365121ccdb6fd",
-			"revisionTime": "2015-11-20T15:56:38-05:00"
+			"revision": "f6dbeb38f6df78d7edcc9407936a9b50b7f13af0",
+			"revisionTime": "2016-07-12T17:53:59Z"
 		},
 		{
 			"path": "github.com/llgcode/draw2d",

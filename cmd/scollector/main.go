@@ -154,7 +154,7 @@ func main() {
 	}
 
 	for _, x := range conf.ExtraHop {
-		check(collectors.ExtraHop(x.Host, x.APIKey, x.FilterBy, x.FilterPercent, x.AdditionalMetrics))
+		check(collectors.ExtraHop(x.Host, x.APIKey, x.FilterBy, x.FilterPercent, x.AdditionalMetrics, x.CertificateSubjectMatch, x.CertificateActivityGroup))
 	}
 
 	if err != nil {

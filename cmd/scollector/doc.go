@@ -315,12 +315,23 @@ CAUTION: Do not include unbounded values in your key if you can help it. Putting
 source/destination port, which are out of your control and specified by people external to your network, could
 end up putting millions of different keys into your Bosun instance - something you probably don't want.
 
+CertificateSubjectMatch and CertificateActivityGroup are used for collecting SSL information from ExtraHop. The
+key CertificateSubjectMatch is used to match against the certificate subject. If there is no match, we discard
+the certificate record. This is important as certificate subjects are essentially unbound, as EH return all
+certificates it sees, regardless of where they originated.
+
+The key CertificateActivityGroup is the Activity Group you want to pass through to ExtraHop to pull the certificates
+from. There is a group called "SSL Servers" which is most likely the group you want to use. You will need to discover
+the group number for this group and put it in here.
+
 	[[ExtraHop]]
 	  Host = "extrahop01"
 	  APIkey = "abcdef1234567890"
 	  FilterBy = "toppercent"
 	  FilterPercent = 75
-      AdditionalMetrics = [ "application.12.custom_detail.my trigger metric" ]
+    AdditionalMetrics = [ "application.12.custom_detail.my trigger metric" ]
+		CertificateSubjectMatch = "example.(com|org|net)"
+		CertificateActivityGroup = 46
 
 LocalListener (string): local_listener will listen for HTTP request and forward
 the request to the configured OpenTSDB host while adding defined tags to
