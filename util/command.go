@@ -46,9 +46,9 @@ func Command(timeout time.Duration, stdin io.Reader, name string, arg ...string)
 		c.Process.Signal(os.Interrupt)
 		timedOut = true
 	})
-	killTimer := time.AfterFunc(timeout, func() {
+	killTimer := time.AfterFunc(timeout*2, func() {
 		slog.Errorf("Process taking too long. Killing: %s %s", name, strings.Join(arg, " "))
-		c.Process.Signal(os.Interrupt)
+		c.Process.Signal(os.Kill)
 		timedOut = true
 	})
 	err := c.Wait()
