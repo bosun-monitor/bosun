@@ -72,4 +72,11 @@ _See also the list of built-in collectors included with [scollector](http://bosu
 
   &nbsp;
 
+## Tools
+
+### [hubot-bosun](https://github.com/lukaspustina/hubot-bosun) by Lukas Pustina
+> Bosun integration for [Hubot](https://hubot.github.com) allowing to ack and close incidents as well as to create and clear silences with optional prettified Slack output.
+
+  &nbsp;
+
 ## [Screenshots and other Media](/media)
