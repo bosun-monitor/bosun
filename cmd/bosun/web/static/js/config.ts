@@ -55,6 +55,9 @@ interface IConfigScope extends IBosunScope {
 	diff: string;
 	diffConfig: () => void;
 	expandDiff: boolean;
+	runningHash: string;
+	runningChanged: boolean;
+	//getRunningHash: () => void;
 }
 
 bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$route', '$timeout', '$sce', function ($scope: IConfigScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService, $timeout: ng.ITimeoutService, $sce: ng.ISCEService) {
@@ -65,6 +68,8 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 	$scope.toTime = search.toTime || '';
 	$scope.intervals = +search.intervals || 5;
 	$scope.duration = +search.duration || null;
+	$scope.runningHash = search.runningHash || null;
+	$scope.runningChanged = search.runningChanged || false;
 	$scope.config_text = 'Loading config...';
 	$scope.selected_alert = search.alert || '';
 	$scope.email = search.email || '';
@@ -218,6 +223,29 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 			});
 	};
 
+	var getRunningHash = () => {
+		(function tick() {
+			$http.get('/api/config/running_hash')
+				.success((data: any) => {
+					$timeout(tick, 10 * 1000);
+					if ($scope.runningHash) {
+						if (data.Hash != $scope.runningHash) {
+							$scope.runningChanged = true;
+							return
+						}
+					}
+					$scope.runningHash = data.Hash;
+					$scope.runningChanged = false;
+				})
+				.error(function (data) {
+					$scope.validationResult = "Error getting running config hash: " + data;
+				})
+		})()
+	};
+
+	getRunningHash();
+
+
 	$scope.setInterval = () => {
 		var from = moment.utc($scope.fromDate + ' ' + $scope.fromTime);
 		var to = moment.utc($scope.toDate + ' ' + $scope.toTime);
@@ -328,6 +356,8 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 		$location.search('duration', String($scope.duration) || null);
 		$location.search('email', $scope.email || null);
 		$location.search('template_group', $scope.template_group || null);
+		$location.search('runningHash', $scope.runningHash)
+		$location.search('runningChanged', $scope.runningChanged)
 		$scope.animate();
 		var from = moment.utc($scope.fromDate + ' ' + $scope.fromTime);
 		var to = moment.utc($scope.toDate + ' ' + $scope.toTime);
@@ -417,7 +447,6 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 		saveAs(blob, "bosun.conf");
 	}
 
-
 	$scope.diffConfig = () => {
 		$scope.expandDiff = $scope.expandDiff == false ? true : false;
 		//$scope.saveResult = "Saving; Please Wait"
@@ -437,6 +466,21 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 			})
 			.error((error) => {
 				//TODO Handle error
+			});
+	}
+
+	$scope.saveConfig = () => {
+		$scope.saveResult = "Saving; Please Wait"
+		$http.post('/api/config/save', 			{
+				"Config": $scope.config_text,
+				"User": $scope.user,
+				"Message": $scope.message
+			})
+			.success((data: any) => {
+				$scope.saveResult = "Config Saved; Reloading";
+			})
+			.error((error) => {
+				$scope.saveResult = error;
 			});
 	}
 

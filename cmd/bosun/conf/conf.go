@@ -3,6 +3,7 @@ package conf // import "bosun.org/cmd/bosun/conf"
 import (
 	"bytes"
 	"fmt"
+	"hash/fnv"
 	"net/mail"
 	"net/url"
 	"os/exec"
@@ -158,6 +159,7 @@ type ConfProvider interface {
 	Expand(string, map[string]string, bool) string
 
 	GetRawText() string
+	GetHash() string
 	SaveRawText(rawConf, user, message string, args ...string) error
 	RawDiff(rawConf string) (string, error)
 
@@ -420,4 +422,8 @@ func MakeSaveCommandHook(cmdName string) SaveHook {
 	return f
 }
 
-// 2016/07/13 11:37:18 info: conf.go:416: ./hook.sh prod.conf kbrandt arf2
+func GenHash(s string) string {
+	h := fnv.New32a()
+	h.Write([]byte(s))
+	return fmt.Sprintf("%v", h.Sum32())
+}

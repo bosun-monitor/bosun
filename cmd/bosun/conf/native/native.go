@@ -95,7 +95,8 @@ type NativeConf struct {
 	writeLock chan bool
 
 	deferredSections map[string][]deferredSection // SectionType:[]deferredSection
-	saveHook         *conf.SaveHook // func that gets called on save if not nil
+	saveHook         *conf.SaveHook               // func that gets called on save if not nil
+	Hash             string
 }
 
 type deferredSection struct {
@@ -286,6 +287,7 @@ func NewNativeConf(name, text string) (c *NativeConf, err error) {
 			c.Hostname = h + c.Hostname
 		}
 	}
+	c.genHash()
 	return
 }
 
@@ -1547,4 +1549,12 @@ func (c *NativeConf) SetSaveHook(sh conf.SaveHook) {
 
 func (c *NativeConf) callSaveHook(file, user, message string, args ...string) error {
 	return (*c.saveHook)(file, user, message, args...)
+}
+
+func (c *NativeConf) genHash() {
+	c.Hash = conf.GenHash(c.RawText)
+}
+
+func (c *NativeConf) GetHash() string {
+	return c.Hash
 }

@@ -103,6 +103,7 @@ func Listen(listenAddr string, devMode bool, tsdbHost string) error {
 	router.Handle("/api/config/bulkedit", miniprofiler.NewHandler(BulkEdit)).Methods(http.MethodPost)
 	router.Handle("/api/config/save", miniprofiler.NewHandler(SaveConfig)).Methods(http.MethodPost)
 	router.Handle("/api/config/diff", miniprofiler.NewHandler(DiffConfig)).Methods(http.MethodPost)
+	router.Handle("/api/config/running_hash", JSON(ConfigRunningHash))
 	router.Handle("/api/egraph/{bs}.{format:svg|png}", JSON(ExprGraph))
 	router.Handle("/api/errors", JSON(ErrorHistory))
 	router.Handle("/api/expr", JSON(Expr))
@@ -776,6 +777,15 @@ func DiffConfig(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	fmt.Fprint(w, diff)
+}
+
+func ConfigRunningHash(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	hash := schedule.Conf.GetHash()
+	return struct{
+		Hash string
+	}{
+		hash,
+	}, nil
 }
 
 func BulkEdit(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {

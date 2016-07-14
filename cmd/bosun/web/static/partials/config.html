@@ -55,7 +55,7 @@
 		</ul>
 	</div>
 	<div class="btn btn-default" ng-show="quickJumpTarget" ng-bind="quickJumpTarget" ng-click="quickJump()"></div>
-	<div class="btn btn-sm actionButtons" data-toggle="modal" data-target="#configSaveModal">Save Dialogue</div>
+	<div class="btn btn-sm actionButtons" ng-class="runningChanged == true ? 'alert-danger' : ''" data-toggle="modal" data-target="#configSaveModal">Save Dialogue</div>
 	<div class="btn btn-sm actionButtons" ng-click="validate()">Validate</div>
 	<div class="btn btn-sm actionButtons" ng-click="aceToggleHighlight()">Syntax Highlighting</div>
 	<div class="btn btn-sm actionButtons" ng-click="downloadConfig()">Download</div>
