@@ -159,6 +159,7 @@ type ConfProvider interface {
 
 	GetRawText() string
 	SaveRawText(rawConf, user, message string, args ...string) error
+	RawDiff(rawConf string) (string, error)
 
 	SetReload(reload func() error)
 	Reload() error

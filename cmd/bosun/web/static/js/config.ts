@@ -52,6 +52,8 @@ interface IConfigScope extends IBosunScope {
 	// saving
 	user: string;
 	message: string;
+	diff: string;
+	diffConfig: () => void;
 }
 
 bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$route', '$timeout', '$sce', function ($scope: IConfigScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService, $timeout: ng.ITimeoutService, $sce: ng.ISCEService) {
@@ -413,9 +415,10 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 		saveAs(blob, "bosun.conf");
 	}
 
-	$scope.saveConfig = () => {
-		$scope.saveResult = "Saving; Please Wait"
-		$http.post('/api/config/save',
+
+	$scope.diffConfig = () => {
+		//$scope.saveResult = "Saving; Please Wait"
+		$http.post('/api/config/diff',
 			{
 				"Config": $scope.config_text,
 				"User": $scope.user,
@@ -423,10 +426,11 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 			})
 			.success((data: any) => {
 				createCookie("action-user", $scope.user, 1000);
-				$scope.saveResult = "Config Saved; Reloading";
+				//debugger;
+				$scope.diff = data;
 			})
 			.error((error) => {
-				$scope.saveResult = error;
+				//TODO Handle error
 			});
 	}
 

@@ -102,6 +102,7 @@ func Listen(listenAddr string, devMode bool, tsdbHost string) error {
 	router.Handle("/api/config/alert/{name}", miniprofiler.NewHandler(DeleteAlert)).Methods(http.MethodDelete)
 	router.Handle("/api/config/bulkedit", miniprofiler.NewHandler(BulkEdit)).Methods(http.MethodPost)
 	router.Handle("/api/config/save", miniprofiler.NewHandler(SaveConfig)).Methods(http.MethodPost)
+	router.Handle("/api/config/diff", miniprofiler.NewHandler(DiffConfig)).Methods(http.MethodPost)
 	router.Handle("/api/egraph/{bs}.{format:svg|png}", JSON(ExprGraph))
 	router.Handle("/api/errors", JSON(ErrorHistory))
 	router.Handle("/api/expr", JSON(Expr))
@@ -742,7 +743,7 @@ func SaveConfig(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 		Config  string
 		User    string // should come from auth
 		Message string
-		Other []string
+		Other   []string
 	}{}
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&data); err != nil {
@@ -755,6 +756,26 @@ func SaveConfig(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	fmt.Fprint(w, "save successful")
+}
+
+func DiffConfig(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
+	data := struct {
+		Config  string
+		User    string // should come from auth
+		Message string
+		Other   []string
+	}{}
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&data); err != nil {
+		serveError(w, err)
+		return
+	}
+	diff, err := schedule.Conf.RawDiff(data.Config)
+	if err != nil {
+		serveError(w, err)
+		return
+	}
+	fmt.Fprint(w, diff)
 }
 
 func BulkEdit(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {

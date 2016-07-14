@@ -873,19 +873,20 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
             var blob = new Blob([$scope.config_text], { type: "text/plain;charset=utf-8" });
             saveAs(blob, "bosun.conf");
         };
-        $scope.saveConfig = function () {
-            $scope.saveResult = "Saving; Please Wait";
-            $http.post('/api/config/save', {
+        $scope.diffConfig = function () {
+            //$scope.saveResult = "Saving; Please Wait"
+            $http.post('/api/config/diff', {
                 "Config": $scope.config_text,
                 "User": $scope.user,
                 "Message": $scope.message
             })
                 .success(function (data) {
                 createCookie("action-user", $scope.user, 1000);
-                $scope.saveResult = "Config Saved; Reloading";
+                //debugger;
+                $scope.diff = data;
             })
                 .error(function (error) {
-                $scope.saveResult = error;
+                //TODO Handle error
             });
         };
         $scope.saveClass = function () {

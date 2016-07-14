@@ -154,7 +154,7 @@ func main() {
 		confProvider.SetQuiet(true)
 	}
 
-	tempHook := conf.MakeSaveCommandHook("./hook.sh")
+	tempHook := conf.MakeSaveCommandHook("/Users/kbrandt/src/hook/hook")
 	confProvider.SetSaveHook(tempHook)
 
 	var reload func() error

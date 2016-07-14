@@ -55,6 +55,8 @@
 	<div class="btn btn-sm actionButtons" ng-click="validate()">Validate</div>
 	<div class="btn btn-sm actionButtons" ng-click="aceToggleHighlight()">Syntax Highlighting</div>
 	<div class="btn btn-sm actionButtons" ng-click="downloadConfig()">Download</div>
+	<div class="btn btn-sm actionButtons" ng-click="diffConfig()">Diff</div>
+	
 </div>
 <div class="row" ng-show="validationResult">
 	<div class="col-lg-12">
@@ -308,3 +310,5 @@
 		</div>
 	</div>
 </div>
+
+<pre ng-show="diff" ng-bind="diff"></pre>

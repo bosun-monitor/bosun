@@ -6,6 +6,7 @@ import (
 
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/conf/native/parse"
+	"github.com/pmezard/go-difflib/difflib"
 )
 
 func (c *NativeConf) SetAlert(name, alertText string) (string, error) {
@@ -54,7 +55,7 @@ func (c *NativeConf) SaveRawText(rawConfig, user, message string, args ...string
 			restore := "successful"
 			if sErr != nil {
 				restore = sErr.Error()
-			} 
+			}
 			return fmt.Errorf("failed to call save hook: %v. Restoring config: %v", err, restore)
 		}
 	}
@@ -198,4 +199,15 @@ func getLocationStart(l *conf.Locator) int {
 
 func getLocationEnd(l *conf.Locator) int {
 	return l.Location.(conf.NativeLocator)[1]
+}
+
+func (c *NativeConf) RawDiff(rawConf string) (string, error) {
+	diff := difflib.UnifiedDiff{
+		A:        difflib.SplitLines(c.RawText),
+		B:        difflib.SplitLines(rawConf),
+		FromFile: c.Name,
+		ToFile:   c.Name,
+		Context:  3,
+	}
+	return difflib.GetUnifiedDiffString(diff)
 }
