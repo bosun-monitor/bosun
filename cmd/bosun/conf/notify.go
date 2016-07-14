@@ -26,21 +26,21 @@ func init() {
 		"The number of email notifications that Bosun failed to send.")
 }
 
-func (n *Notification) Notify(subject, body string, emailsubject, emailbody []byte, c *Conf, ak string, attachments ...*models.Attachment) {
+func (n *Notification) Notify(st *models.IncidentState, c *Conf) {
 	if len(n.Email) > 0 {
-		go n.DoEmail(emailsubject, emailbody, c, ak, attachments...)
+		go n.DoEmail(st, c)
 	}
 	if n.Post != nil {
-		go n.DoPost(n.GetPayload(subject, body), ak)
+		go n.DoPost(st)
 	}
 	if n.Get != nil {
-		go n.DoGet(ak)
+		go n.DoGet(string(st.AlertKey))
 	}
 	if n.Print {
 		if n.UseBody {
-			go n.DoPrint("Subject: " + subject + ", Body: " + body)
+			go n.DoPrint("Subject: " + st.Subject + ", Body: " + st.Body)
 		} else {
-			go n.DoPrint(subject)
+			go n.DoPrint(st.Subject)
 		}
 	}
 }
@@ -57,10 +57,19 @@ func (n *Notification) DoPrint(payload string) {
 	slog.Infoln(payload)
 }
 
-func (n *Notification) DoPost(payload []byte, ak string) {
+func (n *Notification) DoPost(st *models.IncidentState) {
+	payload := n.GetPayload(st.Subject, st.Body)
+	ak := string(st.AlertKey)
+
 	if n.Body != nil {
+		var context interface{}
+		if n.UseFullContext {
+			context = st
+		} else {
+			context = string(payload)
+		}
 		buf := new(bytes.Buffer)
-		if err := n.Body.Execute(buf, string(payload)); err != nil {
+		if err := n.Body.Execute(buf, context); err != nil {
 			slog.Errorln(err)
 			return
 		}
@@ -94,17 +103,20 @@ func (n *Notification) DoGet(ak string) {
 	}
 }
 
-func (n *Notification) DoEmail(subject, body []byte, c *Conf, ak string, attachments ...*models.Attachment) {
+func (n *Notification) DoEmail(st *models.IncidentState, c *Conf) {
 	e := email.NewEmail()
 	e.From = c.EmailFrom
 	for _, a := range n.Email {
 		e.To = append(e.To, a.Address)
 	}
-	e.Subject = string(subject)
-	e.HTML = body
-	for _, a := range attachments {
-		e.Attach(bytes.NewBuffer(a.Data), a.Filename, a.ContentType)
+	e.Subject = string(st.EmailSubject)
+	e.HTML = st.EmailBody
+	if st.Attachments != nil {
+		for _, a := range st.Attachments {
+			e.Attach(bytes.NewBuffer(a.Data), a.Filename, a.ContentType)
+		}
 	}
+	ak := string(st.AlertKey)
 	e.Headers.Add("X-Bosun-Server", util.Hostname)
 	if err := Send(e, c.SMTPHost, c.SMTPUsername, c.SMTPPassword); err != nil {
 		collect.Add("email.sent_failed", nil, 1)
@@ -112,7 +124,7 @@ func (n *Notification) DoEmail(subject, body []byte, c *Conf, ak string, attachm
 		return
 	}
 	collect.Add("email.sent", nil, 1)
-	slog.Infof("relayed alert %v to %v sucessfully. Subject: %d bytes. Body: %d bytes.", ak, e.To, len(subject), len(body))
+	slog.Infof("relayed alert %v to %v sucessfully. Subject: %d bytes. Body: %d bytes.", ak, e.To, len(st.EmailSubject), len(st.EmailBody))
 }
 
 // Send an email using the given host and SMTP auth (optional), returns any
