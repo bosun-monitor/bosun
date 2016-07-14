@@ -160,7 +160,7 @@ type ConfProvider interface {
 
 	GetRawText() string
 	GetHash() string
-	SaveRawText(rawConf, user, message string, args ...string) error
+	SaveRawText(rawConf, diff, user, message string, args ...string) error
 	RawDiff(rawConf string) (string, error)
 
 	SetReload(reload func() error)

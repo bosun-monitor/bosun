@@ -743,6 +743,7 @@ func SaveConfig(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 	data := struct {
 		Config  string
 		User    string // should come from auth
+		Diff    string
 		Message string
 		Other   []string
 	}{}
@@ -751,7 +752,7 @@ func SaveConfig(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 		serveError(w, err)
 		return
 	}
-	err := schedule.Conf.SaveRawText(data.Config, data.User, data.Message, data.Other...)
+	err := schedule.Conf.SaveRawText(data.Config, data.Diff, data.User, data.Message, data.Other...)
 	if err != nil {
 		serveError(w, err)
 		return
@@ -781,7 +782,7 @@ func DiffConfig(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 
 func ConfigRunningHash(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	hash := schedule.Conf.GetHash()
-	return struct{
+	return struct {
 		Hash string
 	}{
 		hash,

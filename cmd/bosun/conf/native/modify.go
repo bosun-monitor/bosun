@@ -40,10 +40,18 @@ func (c *NativeConf) SetAlert(name, alertText string) (string, error) {
 	return "reloaded", nil
 }
 
-func (c *NativeConf) SaveRawText(rawConfig, user, message string, args ...string) error {
+func (c *NativeConf) SaveRawText(rawConfig, diff, user, message string, args ...string) error {
 	newConf, err := NewNativeConf(c.Name, rawConfig)
 	if err != nil {
 		return err
+	}
+
+	currentDiff, err := c.RawDiff(rawConfig)
+	if err != nil {
+		return fmt.Errorf("couldn't save config because failed to generate a diff: %v", err)
+	}
+	if currentDiff != diff {
+		return fmt.Errorf("couldn't save config file because the change and supplied diff do not match the current diff")
 	}
 	if err = c.SaveConf(newConf); err != nil {
 		return fmt.Errorf("couldn't save config file: %v", err)

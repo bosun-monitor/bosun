@@ -238,7 +238,7 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 					$scope.runningChanged = false;
 				})
 				.error(function (data) {
-					$scope.validationResult = "Error getting running config hash: " + data;
+					$scope.validationResult = "Error getting running config hash: " + data; // TODO dedicated dismissable alert for this, and also clear on success above.
 				})
 		})()
 	};
@@ -469,15 +469,18 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 			});
 	}
 
+
 	$scope.saveConfig = () => {
 		$scope.saveResult = "Saving; Please Wait"
-		$http.post('/api/config/save', 			{
-				"Config": $scope.config_text,
-				"User": $scope.user,
-				"Message": $scope.message
-			})
+		$http.post('/api/config/save', {
+			"Config": $scope.config_text,
+			"Diff": $scope.diff,
+			"User": $scope.user,
+			"Message": $scope.message
+		})
 			.success((data: any) => {
 				$scope.saveResult = "Config Saved; Reloading";
+				$scope.runningHash = undefined;
 			})
 			.error((error) => {
 				$scope.saveResult = error;
