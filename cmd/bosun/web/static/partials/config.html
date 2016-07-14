@@ -39,6 +39,10 @@
     height: auto;
 }
 
+#configSaveModal .modal-dialog {
+  width: 50%;
+}
+
 </style>
 <label class="selectorDropdown" style="margin-right:15px;">Jump to:</label>
 <div class="row">
@@ -51,12 +55,10 @@
 		</ul>
 	</div>
 	<div class="btn btn-default" ng-show="quickJumpTarget" ng-bind="quickJumpTarget" ng-click="quickJump()"></div>
-	<div class="btn btn-sm actionButtons" data-toggle="modal" data-target="#configSaveModal" ">Save Dialogue</div>
+	<div class="btn btn-sm actionButtons" data-toggle="modal" data-target="#configSaveModal">Save Dialogue</div>
 	<div class="btn btn-sm actionButtons" ng-click="validate()">Validate</div>
 	<div class="btn btn-sm actionButtons" ng-click="aceToggleHighlight()">Syntax Highlighting</div>
 	<div class="btn btn-sm actionButtons" ng-click="downloadConfig()">Download</div>
-	<div class="btn btn-sm actionButtons" ng-click="diffConfig()">Diff</div>
-	
 </div>
 <div class="row" ng-show="validationResult">
 	<div class="col-lg-12">
@@ -281,7 +283,7 @@
 
 <!-- Save Modal -->
 <div class="modal fade" id="configSaveModal" tabindex="-1" role="dialog">
-	<div class="modal-dialog" role="document">
+	<div class="modal-dialog modal-admin" role="document">
 		<div class="modal-content">
 			<div class="modal-header">
 				<button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
@@ -303,12 +305,14 @@
 					</div>
 				</div>
 			</div>
+			<div>
+				<pre ng-show="diff && expandDiff" ng-bind="diff"></pre>
+			</div>
 			<div class="modal-footer">
-				<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-				<button type="button" class="btn btn-primary" data-dismiss="modal" ng-click="saveConfig()">Save and Reload</button>
+				<button type="button" class="btn btn-primary" ng-click="diffConfig()">Show Diff</button>
+				<button type="button" class="btn btn-default" data-dismiss="modal" ng-click="expandDiff = false;">Close</button>
+				<button type="button" class="btn btn-primary" data-dismiss="modal" ng-click="expandDiff = false; saveConfig()">Save and Reload</button>
 			</div>
 		</div>
 	</div>
 </div>
-
-<pre ng-show="diff" ng-bind="diff"></pre>

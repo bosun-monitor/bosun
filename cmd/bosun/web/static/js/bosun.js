@@ -539,6 +539,7 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
         $scope.aceTheme = 'chrome';
         $scope.aceMode = 'bosun';
         $scope.user = readCookie("action-user");
+        $scope.expandDiff = false;
         var expr = search.expr;
         function buildAlertFromExpr() {
             if (!expr)
@@ -874,7 +875,11 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
             saveAs(blob, "bosun.conf");
         };
         $scope.diffConfig = function () {
+            $scope.expandDiff = $scope.expandDiff == false ? true : false;
             //$scope.saveResult = "Saving; Please Wait"
+            if ($scope.expandDiff == false) {
+                return;
+            }
             $http.post('/api/config/diff', {
                 "Config": $scope.config_text,
                 "User": $scope.user,

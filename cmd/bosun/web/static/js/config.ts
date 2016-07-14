@@ -54,6 +54,7 @@ interface IConfigScope extends IBosunScope {
 	message: string;
 	diff: string;
 	diffConfig: () => void;
+	expandDiff: boolean;
 }
 
 bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$route', '$timeout', '$sce', function ($scope: IConfigScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService, $timeout: ng.ITimeoutService, $sce: ng.ISCEService) {
@@ -73,6 +74,7 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 	$scope.aceTheme = 'chrome';
 	$scope.aceMode = 'bosun';
 	$scope.user = readCookie("action-user");
+	$scope.expandDiff = false;
 
 
 	var expr = search.expr;
@@ -417,7 +419,11 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 
 
 	$scope.diffConfig = () => {
+		$scope.expandDiff = $scope.expandDiff == false ? true : false;
 		//$scope.saveResult = "Saving; Please Wait"
+		if ($scope.expandDiff == false) {
+			return;
+		}
 		$http.post('/api/config/diff',
 			{
 				"Config": $scope.config_text,
