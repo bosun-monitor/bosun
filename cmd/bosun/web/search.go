@@ -63,7 +63,16 @@ func FilteredTagsetsByMetric(t miniprofiler.Timer, w http.ResponseWriter, r *htt
 			return nil, err
 		}
 	}
-	return schedule.Search.FilteredTagSets(metric, tagset)
+
+	since := int64(0)
+	sinceStr := r.FormValue("since")
+	if sinceStr != "" {
+		since, err = strconv.ParseInt(sinceStr, 10, 64) //since will be set to 0 again in case of errors
+		if err != nil {
+			return nil, err
+		}
+	}
+	return schedule.Search.FilteredTagSets(metric, tagset, since)
 }
 
 func MetricsByTagPair(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
