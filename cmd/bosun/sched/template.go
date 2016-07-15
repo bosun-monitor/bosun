@@ -514,7 +514,7 @@ func (c *Context) ESQuery(indexRoot expr.ESIndexer, filter expr.ESQuery, sdurati
 	if err != nil {
 		return nil, err
 	}
-	results, err := c.runHistory.Backends.ElasticHosts.Query(req)
+	results, err := c.runHistory.Backends.ElasticConfig.Query(req)
 	if err != nil {
 		return nil, err
 	}
@@ -534,7 +534,7 @@ func (c *Context) ESQueryAll(indexRoot expr.ESIndexer, filter expr.ESQuery, sdur
 	if err != nil {
 		return nil, err
 	}
-	results, err := c.runHistory.Backends.ElasticHosts.Query(req)
+	results, err := c.runHistory.Backends.ElasticConfig.Query(req)
 	if err != nil {
 		return nil, err
 	}

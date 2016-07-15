@@ -50,7 +50,7 @@ type Backends struct {
 	TSDBContext     opentsdb.Context
 	GraphiteContext graphite.Context
 	LogstashHosts   LogstashElasticHosts
-	ElasticHosts    ElasticHosts
+	ElasticConfig   ElasticConfig
 	InfluxConfig    client.Config
 }
 

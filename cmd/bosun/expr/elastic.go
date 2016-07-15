@@ -236,12 +236,19 @@ func ESLTE(e *State, T miniprofiler.Timer, key string, lte float64) (*Results, e
 // of the hosts in the config
 type ElasticHosts []string
 
+type ElasticConfig struct {
+	ElasticHostsSet   bool
+	ClientOptionFuncs []elastic.ClientOptionFunc
+}
+
 // InitClient sets up the elastic client. If the client has already been
 // initalized it is a noop
-func (e ElasticHosts) InitClient() error {
+func (e ElasticConfig) InitClient() error {
 	if esClient == nil {
 		var err error
-		esClient, err = elastic.NewClient(elastic.SetURL(e...), elastic.SetMaxRetries(10))
+		esClient, err = elastic.NewClient(
+			e.ClientOptionFuncs...,
+		)
 		if err != nil {
 			return err
 		}
@@ -250,7 +257,7 @@ func (e ElasticHosts) InitClient() error {
 }
 
 // getService returns an elasticsearch service based on the global client
-func (e *ElasticHosts) getService() (*elastic.SearchService, error) {
+func (e *ElasticConfig) getService() (*elastic.SearchService, error) {
 	err := e.InitClient()
 	if err != nil {
 		return nil, err
@@ -260,7 +267,7 @@ func (e *ElasticHosts) getService() (*elastic.SearchService, error) {
 
 // Query takes a Logstash request, applies it a search service, and then queries
 // elasticsearch.
-func (e ElasticHosts) Query(r *ElasticRequest) (*elastic.SearchResult, error) {
+func (e ElasticConfig) Query(r *ElasticRequest) (*elastic.SearchResult, error) {
 	s, err := e.getService()
 	if err != nil {
 		return nil, err
@@ -313,7 +320,7 @@ func timeESRequest(e *State, T miniprofiler.Timer, req *ElasticRequest) (resp *e
 	}
 	T.StepCustomTiming("elastic", "query", string(b), func() {
 		getFn := func() (interface{}, error) {
-			return e.ElasticHosts.Query(req)
+			return e.ElasticConfig.Query(req)
 		}
 		var val interface{}
 		val, err = e.Cache.Get(string(b), getFn)
@@ -341,14 +348,14 @@ func ESLS(e *State, T miniprofiler.Timer, indexRoot string) (*Results, error) {
 
 func ESDaily(e *State, T miniprofiler.Timer, timeField, indexRoot, layout string) (*Results, error) {
 	var r Results
-	err := e.ElasticHosts.InitClient()
+	err := e.ElasticConfig.InitClient()
 	if err != nil {
 		return &r, err
 	}
 	indexer := ESIndexer{}
 	indexer.TimeField = timeField
 	indexer.Generate = func(start, end *time.Time) ([]string, error) {
-		err := e.ElasticHosts.InitClient()
+		err := e.ElasticConfig.InitClient()
 		if err != nil {
 			return []string{}, err
 		}

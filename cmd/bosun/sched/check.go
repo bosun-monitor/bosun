@@ -73,7 +73,7 @@ func (s *Schedule) NewRunHistory(start time.Time, cache *cache.Cache) *RunHistor
 			GraphiteContext: s.Conf.GraphiteContext(),
 			InfluxConfig:    s.Conf.InfluxConfig,
 			LogstashHosts:   s.Conf.LogstashElasticHosts,
-			ElasticHosts:    s.Conf.ElasticHosts,
+			ElasticConfig:   s.Conf.ElasticConfig,
 		},
 	}
 	return r

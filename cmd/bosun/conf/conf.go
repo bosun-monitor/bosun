@@ -26,6 +26,7 @@ import (
 	"bosun.org/slog"
 	"github.com/MiniProfiler/go/miniprofiler"
 	"github.com/influxdata/influxdb/client"
+	elastic "gopkg.in/olivere/elastic.v3"
 )
 
 type Conf struct {
@@ -74,7 +75,7 @@ type Conf struct {
 	GraphiteHost         string                    // Graphite query host: foo.bar.baz
 	GraphiteHeaders      []string                  // extra http headers when querying graphite.
 	LogstashElasticHosts expr.LogstashElasticHosts // CSV Elastic Hosts (All part of the same cluster) that stores logstash documents, i.e http://ny-elastic01:9200. Only works with elastc pre-v2, and expects the schema to be logstash's default.
-	ElasticHosts         expr.ElasticHosts         // CSV Elastic Hosts (All part of the same cluster), i.e http://ny-elastic01:9200. Only works with elastic v2+, and unlike logstash it is designed to be able to use various elastic schemas.
+	ElasticConfig        expr.ElasticConfig        // CSV Elastic Hosts (All part of the same cluster), i.e http://ny-elastic01:9200. Only works with elastic v2+, and unlike logstash it is designed to be able to use various elastic schemas.
 	InfluxConfig         client.Config
 
 	AnnotateElasticHosts []string // CSV of Elastic Hosts, currently the only backend in annotate
@@ -477,8 +478,98 @@ func (c *Conf) loadGlobal(p *parse.PairNode) {
 		c.GraphiteHeaders = append(c.GraphiteHeaders, v)
 	case "logstashElasticHosts":
 		c.LogstashElasticHosts = strings.Split(v, ",")
+	case "elasticMaxRetries":
+		value, err := strconv.Atoi(v)
+		if err != nil {
+			c.error(err)
+		}
+		c.ElasticConfig.ClientOptionFuncs = append(
+			c.ElasticConfig.ClientOptionFuncs,
+			elastic.SetMaxRetries(value),
+		)
+	case "elasticHealthcheck":
+		value, err := strconv.ParseBool(v)
+		if err != nil {
+			c.error(err)
+		}
+		c.ElasticConfig.ClientOptionFuncs = append(
+			c.ElasticConfig.ClientOptionFuncs,
+			elastic.SetHealthcheck(value),
+		)
+	case "elasticHealthcheckTimeoutStartup":
+		value, err := opentsdb.ParseDuration(v)
+		if err != nil {
+			c.error(err)
+		}
+		c.ElasticConfig.ClientOptionFuncs = append(
+			c.ElasticConfig.ClientOptionFuncs,
+			elastic.SetHealthcheckTimeoutStartup(time.Duration(value)),
+		)
+	case "elasticHealthcheckTimeout":
+		value, err := opentsdb.ParseDuration(v)
+		if err != nil {
+			c.error(err)
+		}
+		c.ElasticConfig.ClientOptionFuncs = append(
+			c.ElasticConfig.ClientOptionFuncs,
+			elastic.SetHealthcheckTimeout(time.Duration(value)),
+		)
+	case "elasticScheme":
+		c.ElasticConfig.ClientOptionFuncs = append(
+			c.ElasticConfig.ClientOptionFuncs,
+			elastic.SetScheme(v),
+		)
+	case "elasticSniff":
+		value, err := strconv.ParseBool(v)
+		if err != nil {
+			c.error(err)
+		}
+		c.ElasticConfig.ClientOptionFuncs = append(
+			c.ElasticConfig.ClientOptionFuncs,
+			elastic.SetSniff(value),
+		)
+	case "elasticSnifferTimeoutStartup":
+		value, err := opentsdb.ParseDuration(v)
+		if err != nil {
+			c.error(err)
+		}
+		c.ElasticConfig.ClientOptionFuncs = append(
+			c.ElasticConfig.ClientOptionFuncs,
+			elastic.SetSnifferTimeoutStartup(time.Duration(value)),
+		)
+	case "elasticSnifferTimeout":
+		value, err := opentsdb.ParseDuration(v)
+		if err != nil {
+			c.error(err)
+		}
+		c.ElasticConfig.ClientOptionFuncs = append(
+			c.ElasticConfig.ClientOptionFuncs,
+			elastic.SetSnifferTimeout(time.Duration(value)),
+		)
+	case "elasticSnifferInterval":
+		value, err := opentsdb.ParseDuration(v)
+		if err != nil {
+			c.error(err)
+		}
+		c.ElasticConfig.ClientOptionFuncs = append(
+			c.ElasticConfig.ClientOptionFuncs,
+			elastic.SetSnifferInterval(time.Duration(value)),
+		)
+	case "elasticBasicAuth":
+		values := strings.Split(v, ":")
+		if len(values) != 2 {
+			c.errorf("elasticBasicAuth must be of the form user:password")
+		}
+		c.ElasticConfig.ClientOptionFuncs = append(
+			c.ElasticConfig.ClientOptionFuncs,
+			elastic.SetBasicAuth(values[0], values[1]),
+		)
 	case "elasticHosts":
-		c.ElasticHosts = strings.Split(v, ",")
+		c.ElasticConfig.ElasticHostsSet = true
+		c.ElasticConfig.ClientOptionFuncs = append(
+			c.ElasticConfig.ClientOptionFuncs,
+			elastic.SetURL(strings.Split(v, ",")...),
+		)
 	case "influxHost":
 		c.InfluxConfig.URL.Host = v
 		c.InfluxConfig.UserAgent = "bosun"
@@ -1408,7 +1499,7 @@ func (c *Conf) Funcs() map[string]eparse.Func {
 	if len(c.LogstashElasticHosts) != 0 {
 		merge(expr.LogstashElastic)
 	}
-	if len(c.ElasticHosts) != 0 {
+	if c.ElasticConfig.ElasticHostsSet {
 		merge(expr.Elastic)
 	}
 	if c.InfluxConfig.URL.Host != "" {

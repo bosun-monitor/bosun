@@ -77,7 +77,7 @@ func Expr(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (v inter
 		GraphiteContext: schedule.Conf.GraphiteContext(),
 		InfluxConfig:    schedule.Conf.InfluxConfig,
 		LogstashHosts:   schedule.Conf.LogstashElasticHosts,
-		ElasticHosts:    schedule.Conf.ElasticHosts,
+		ElasticConfig:   schedule.Conf.ElasticConfig,
 	}
 	providers := &expr.BosunProviders{
 		Cache:     cacheObj,
