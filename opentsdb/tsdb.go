@@ -953,6 +953,24 @@ type Version struct {
 	Minor int64
 }
 
+func (v *Version) UnmarshalText(text []byte) error {
+	var err error
+	v = &Version{}
+	split := strings.Split(string(text), ".")
+	if len(split) != 2 {
+		return fmt.Errorf("invalid opentsdb version, expected number.number, (i.e 2.2) got %v", text)
+	}
+	v.Major, err = strconv.ParseInt(split[0], 10, 64)
+	if err != nil {
+		return fmt.Errorf("could not parse major version number for opentsdb version: %v", split[0])
+	}
+	v.Minor, err = strconv.ParseInt(split[0], 10, 64)
+	if err != nil {
+		return fmt.Errorf("could not parse minor version number for opentsdb version: %v", split[1])
+	}
+	return nil
+}
+
 func (v Version) FilterSupport() bool {
 	return v.Major >= 2 && v.Minor >= 2
 }

@@ -25,112 +25,35 @@ import (
 	"bosun.org/slog"
 )
 
-type ConfProvider interface {
 
-	// TODO? Any other implementation is probably going to need to have more error returns on these
-	// TODO? Break this into mutable things (sections that write to the conf store), runtime only mutable (i.e. quiet) in which case the setters don't actually change config
-
-	//SetCheckFrequency(time.Duration)
-	GetCheckFrequency() time.Duration
-	//GetDefaultRunEvery() int
-	//SetDefaultRunEvery(int)
-
-	//SetHTTPListen(string)
+type SystemConfProvider interface {
 	GetHTTPListen() string
-
-	//SetHostname(string)
-	GetHostname() string
-
-	//SetRelayListen(string)
 	GetRelayListen() string
-
 	//SetSMTPHost(string)
 	GetSMTPHost() string
 	//SetSMTPUsername(string)  // SMTP username
 	GetSMTPUsername() string // SMTP username
 	//SetSMTPPassword(string)  // SMTP password
 	GetSMTPPassword() string // SMTP password
-
-	//SetPing(bool)
 	GetPing() bool
-	//SetPingDuration(time.Duration) // Duration from now to stop pinging hosts based on time since the host tag was touched
 	GetPingDuration() time.Duration
-
-	//SetEmailFrom(string)
 	GetEmailFrom() string
-
-	//SetLedisDir(string)
 	GetLedisDir() string
-	//SetLedisBindAddr(string)
 	GetLedisBindAddr() string
-
-	//SetRedisHost(string)
 	GetRedisHost() string
-	//SetRedisDb(int)
 	GetRedisDb() int
-	//SetRedisPassword(string)
 	GetRedisPassword() string
-
-	//SetTimeAndDate([]int)
 	GetTimeAndDate() []int
-
-	//SetResponseLimit(int64)
 	GetResponseLimit() int64
-
-	//SetSearchSince(opentsdb.Duration)
 	GetSearchSince() opentsdb.Duration
-
 	SetQuiet(bool) // Runtime Only
 	GetQuiet() bool
 
 	SetSkipLast(bool) // Runtime Only
 	GetSkipLast() bool
 
-	//SetNoSleep(bool)
-	GetNoSleep() bool
-
-	//SetShortURLKey(string)
 	GetShortURLKey() string
-
-	//SetInternetProxy(string)
 	GetInternetProxy() string
-
-	//SetMinGroupSize(int)
-	GetMinGroupSize() int
-
-	// Alert Configuration Things
-
-	//SetUnknownTemplate(*Template)
-	GetUnknownTemplate() *Template
-
-	//SetUnknownThreshold(int)
-	GetUnknownThreshold() int
-
-	GetTemplate(string) *Template
-	//SetTemplate(string, *Template)
-
-	GetAlerts() map[string]*Alert
-	GetAlert(string) *Alert
-	SetAlert(string, string) (string, error)
-	DeleteAlert(alertName string) error
-
-	GetNotifications() map[string]*Notification
-	GetNotification(string) *Notification
-	//SetNotification(string, *Notification)
-
-	GetMacro(string) *Macro
-	//SetMacro(string, *Macro)
-
-	GetLookup(string) *Lookup
-	//SetLookup(string, *Lookup)
-
-	BulkEdit(BulkEditRequest) error
-
-	GetSquelches() Squelches
-	//SetSquelches(Squelches)
-	AlertSquelched(*Alert) func(opentsdb.TagSet) bool
-	Squelched(*Alert, opentsdb.TagSet) bool
-
 	SetTSDBHost(tsdbHost string)
 	GetTSDBHost() string
 	//SetTSDBVersion(*opentsdb.Version)
@@ -155,17 +78,46 @@ type ConfProvider interface {
 	AnnotateEnabled() bool
 
 	MakeLink(string, *url.Values) string
-	GetFuncs() map[string]parse.Func
-	Expand(string, map[string]string, bool) string
 
+	GetFuncs() map[string]parse.Func // Looks like maybe this needs to be broken into two things, one that loads funcs based on what is in the system, and one that loads the special "conf functions" (i.e. lookups)
+}
+
+type RuleConfProvider interface {
+	GetCheckFrequency() time.Duration
+	GetMinGroupSize() int
+	GetUnknownTemplate() *Template
+	GetUnknownThreshold() int
+	GetTemplate(string) *Template
+
+	GetAlerts() map[string]*Alert
+	GetAlert(string) *Alert
+	SetAlert(string, string) (string, error)
+	DeleteAlert(alertName string) error
+
+	GetNotifications() map[string]*Notification
+	GetNotification(string) *Notification
+
+	GetMacro(string) *Macro
+
+	GetLookup(string) *Lookup
+
+	GetSquelches() Squelches
+	//SetSquelches(Squelches)
+	AlertSquelched(*Alert) func(opentsdb.TagSet) bool
+	Squelched(*Alert, opentsdb.TagSet) bool
+	Expand(string, map[string]string, bool) string
+}
+
+type ConfProvider interface {
+	SystemConfProvider
+	RuleConfProvider
+
+	BulkEdit(BulkEditRequest) error
 	GetRawText() string
 	GetHash() string
 	SaveRawText(rawConf, diff, user, message string, args ...string) error
 	RawDiff(rawConf string) (string, error)
-
 	SetReload(reload func() error)
-	Reload() error
-
 	SetSaveHook(SaveHook)
 }
 

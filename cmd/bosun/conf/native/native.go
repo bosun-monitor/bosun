@@ -65,9 +65,9 @@ type NativeConf struct {
 	Macros           map[string]*conf.Macro
 	Lookups          map[string]*conf.Lookup
 	Squelch          conf.Squelches `json:"-"`
-	Quiet            bool
-	SkipLast         bool
-	NoSleep          bool
+	Quiet            bool // will remove since cmdlline arg
+	SkipLast         bool // will remove since cmdline arg
+	NoSleep          bool 
 	ShortURLKey      string
 	InternetProxy    string
 	MinGroupSize     int

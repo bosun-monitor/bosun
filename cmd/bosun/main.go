@@ -12,7 +12,6 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"syscall"
 	"time"
@@ -63,6 +62,7 @@ func init() {
 }
 
 var (
+	flagSysConf  = flag.String("s", "bosun.toml", "system configuration file location, in toml format")
 	flagConf     = flag.String("c", "dev.conf", "config file location")
 	flagTest     = flag.Bool("t", false, "test for valid config; exits with 0 on success, else 1")
 	flagWatch    = flag.Bool("w", false, "watch .go files below current directory and exit; also build typescript files on change")
@@ -85,7 +85,12 @@ func main() {
 	for _, m := range mains {
 		m()
 	}
-	runtime.GOMAXPROCS(runtime.NumCPU())
+	systemConf, err := conf.LoadSystemConfigFile(*flagSysConf)
+	if err != nil {
+		slog.Fatal(err)
+	}
+	fmt.Printf("%#v\n", systemConf)
+	os.Exit(0)
 	nativeConf, err := native.ParseFile(*flagConf)
 	if err != nil {
 		slog.Fatal(err)
