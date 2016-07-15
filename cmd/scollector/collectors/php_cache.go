@@ -88,41 +88,42 @@ package collectors
 }
 *******************************************************************	
 */
- 
+
 import (
 	"encoding/json"
-	"time"
 	"log"
 	"net/http"
+	"time"
 
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
 	"io/ioutil"
 )
+
 const (
-	URL             	= "http://localhost/cache-status.php"
-	COLLECTION_INTERVAL 	= 15
-	DEFAULT_TIMEOUT     	= 10
+	URL                 = "http://localhost/cache-status.php"
+	COLLECTION_INTERVAL = 15
+	DEFAULT_TIMEOUT     = 10
 )
 
-type phpCache struct{
-	OpcacheGetStatus phpCacheOpcacheGetStatus	`json:"opcache_get_status"`
-	ApcCacheInfoUser phpCacheApcCacheInfoUser       `json:"apc_cache_info_user"`
-	ApcSmaInfo 	 phpCacheApcSmaInfo	        `json:"apc_sma_info"`
+type phpCache struct {
+	OpcacheGetStatus phpCacheOpcacheGetStatus `json:"opcache_get_status"`
+	ApcCacheInfoUser phpCacheApcCacheInfoUser `json:"apc_cache_info_user"`
+	ApcSmaInfo       phpCacheApcSmaInfo       `json:"apc_sma_info"`
 }
 type phpCacheOpcacheGetStatus struct {
-	CacheFull  	  bool 				`json:"cache_full"`
-	OpcacheEnabled    bool 				`json:"opcache_enabled"`
-	RestartInProgress bool 				`json:"restart_in_progress"`
-	RestartPending    bool 				`json:"restart_pending"`
-	MemoryUsage 	  phpCacheMemoryUsage  		`json:"memory_usage"`
-	OpcacheStatistics phpCacheOpcacheStatistics     `json:"opcache_statistics"`
+	CacheFull         bool                      `json:"cache_full"`
+	OpcacheEnabled    bool                      `json:"opcache_enabled"`
+	RestartInProgress bool                      `json:"restart_in_progress"`
+	RestartPending    bool                      `json:"restart_pending"`
+	MemoryUsage       phpCacheMemoryUsage       `json:"memory_usage"`
+	OpcacheStatistics phpCacheOpcacheStatistics `json:"opcache_statistics"`
 }
 type phpCacheMemoryUsage struct {
-	CurrentWastedPercentage float64   	`json:"current_wasted_percentage"`
-	FreeMemory              int       	`json:"free_memory"`
-	UsedMemory              int     	`json:"used_memory"`
-	WastedMemory            int     	`json:"wasted_memory"`
+	CurrentWastedPercentage float64 `json:"current_wasted_percentage"`
+	FreeMemory              int     `json:"free_memory"`
+	UsedMemory              int     `json:"used_memory"`
+	WastedMemory            int     `json:"wasted_memory"`
 }
 type phpCacheOpcacheStatistics struct {
 	BlacklistMissRatio int     `json:"blacklist_miss_ratio"`
@@ -153,10 +154,11 @@ type phpCacheApcCacheInfoUser struct {
 	TTL                int    `json:"ttl"`
 }
 type phpCacheApcSmaInfo struct {
-	NumSeg   int    `json:"num_seg"`
-	SegSize  int    `json:"seg_size"`
-	AvailMem int    `json:"avail_mem"`
+	NumSeg   int `json:"num_seg"`
+	SegSize  int `json:"seg_size"`
+	AvailMem int `json:"avail_mem"`
 }
+
 var phpcachedMeta = map[string]MetricMeta{
 	//memory usage
 	"opcache.memused": {
@@ -280,11 +282,10 @@ var phpcachedMeta = map[string]MetricMeta{
 		Unit:     metadata.Pct,
 		Desc:     "Percentage of the memory used (memory size/(available + memory size)) of the apcu.",
 	},
-
 }
 
 func init() {
- collectors = append(collectors, &IntervalCollector{F: c_php_cache_stats})
+	collectors = append(collectors, &IntervalCollector{F: c_php_cache_stats})
 }
 
 func c_php_cache_stats() (opentsdb.MultiDataPoint, error) {
@@ -307,7 +308,7 @@ func c_php_cache_stats() (opentsdb.MultiDataPoint, error) {
 			var php phpCache
 
 			jsonDataFromHttp, err := ioutil.ReadAll(response.Body)
-			if(err != nil){
+			if err != nil {
 				log.Fatal(err)
 			}
 			if err := json.Unmarshal([]byte(jsonDataFromHttp), &php); err != nil {
@@ -321,7 +322,7 @@ func c_php_cache_stats() (opentsdb.MultiDataPoint, error) {
 			addElementSameKeyAndElementName(&md, "opcache.memwastedpct", mu.CurrentWastedPercentage)
 
 			if mu.UsedMemory > 0 || mu.FreeMemory > 0 {
-				addElementSameKeyAndElementName(&md, "opcache.memusedpct", 100.0 * float64(mu.UsedMemory) / float64(mu.UsedMemory + mu.FreeMemory))
+				addElementSameKeyAndElementName(&md, "opcache.memusedpct", 100.0*float64(mu.UsedMemory)/float64(mu.UsedMemory+mu.FreeMemory))
 			}
 
 			var os = php.OpcacheGetStatus.OpcacheStatistics
@@ -330,7 +331,7 @@ func c_php_cache_stats() (opentsdb.MultiDataPoint, error) {
 			addElementSameKeyAndElementName(&md, "opcache.maxitems", os.MaxCachedKeys)
 
 			if os.MaxCachedKeys > 0 {
-				addElementSameKeyAndElementName(&md, "opcache.itemspct", 100.0 * float64(os.NumCachedKeys) / float64(os.MaxCachedKeys))
+				addElementSameKeyAndElementName(&md, "opcache.itemspct", 100.0*float64(os.NumCachedKeys)/float64(os.MaxCachedKeys))
 			}
 
 			addElementSameKeyAndElementName(&md, "opcache.hits", os.Hits)
@@ -347,27 +348,26 @@ func c_php_cache_stats() (opentsdb.MultiDataPoint, error) {
 			addElementSameKeyAndElementName(&md, "apcu.items", au.NumEntries)
 			addElementSameKeyAndElementName(&md, "apcu.memused", au.MemSize)
 
-
 			var am = php.ApcSmaInfo
 			addElementSameKeyAndElementName(&md, "apcu.memfree", am.AvailMem)
-			addElementSameKeyAndElementName(&md, "apcu.memtotal", am.AvailMem + au.MemSize)
+			addElementSameKeyAndElementName(&md, "apcu.memtotal", am.AvailMem+au.MemSize)
 			if am.AvailMem > 0 || au.MemSize > 0 {
-				addElementSameKeyAndElementName(&md, "apcu.memusedpct", 100.0 * float64(au.MemSize) / float64(am.AvailMem + au.MemSize))
+				addElementSameKeyAndElementName(&md, "apcu.memusedpct", 100.0*float64(au.MemSize)/float64(am.AvailMem+au.MemSize))
 			}
 		}
 	}
 	return md, nil
 }
 
-func addElement(md *opentsdb.MultiDataPoint, keyName string, elementName string,value interface{}){
-	var elementTagSet 	  = phpcachedMeta[keyName].TagSet
-	var elementRateType 	= phpcachedMeta[keyName].RateType
-	var elementUnit     	= phpcachedMeta[keyName].Unit
-	var elementDesc 	    = phpcachedMeta[keyName].Desc
+func addElement(md *opentsdb.MultiDataPoint, keyName string, elementName string, value interface{}) {
+	var elementTagSet = phpcachedMeta[keyName].TagSet
+	var elementRateType = phpcachedMeta[keyName].RateType
+	var elementUnit = phpcachedMeta[keyName].Unit
+	var elementDesc = phpcachedMeta[keyName].Desc
 
-	Add(md,"php." + elementName,value,elementTagSet,elementRateType,elementUnit,elementDesc)
+	Add(md, "php."+elementName, value, elementTagSet, elementRateType, elementUnit, elementDesc)
 }
 
-func addElementSameKeyAndElementName(md *opentsdb.MultiDataPoint, elementName string,value interface{}){
-	addElement(md,elementName,elementName,value)
+func addElementSameKeyAndElementName(md *opentsdb.MultiDataPoint, elementName string, value interface{}) {
+	addElement(md, elementName, elementName, value)
 }
