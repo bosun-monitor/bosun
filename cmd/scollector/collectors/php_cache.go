@@ -1,8 +1,93 @@
 package collectors
 
 /**
-	We need a file : cache-status.php at the specified URL in the constants
- */
+	***We need a file : cache-status.php at the specified URL in the constants (normally at the web server root) :
+	****************************************************************
+	<?php
+	
+	// serve up some data about PHP's opcache and APCu subsystems as a JSON document
+	
+	// only permit access from localhost (to put in comments if testing on localhost)
+	if (filter_input(INPUT_SERVER, 'REMOTE_ADDR') != '127.0.0.1') {
+	    header('HTTP/1.0 403 Forbidden');
+	    header('Content-Type: text/plain');
+	    echo "Forbidden\n";
+	    exit;
+	}
+	
+	$cache_info = [];
+	
+	if (function_exists('opcache_get_status')) {
+	    $cache_info['opcache_get_status'] = opcache_get_status(false);
+	}
+	if (function_exists('apc_cache_info')) {
+	    $cache_info['apc_cache_info_user'] = apc_cache_info("user", true);
+	}
+	if (function_exists('apc_sma_info')) {
+	    $cache_info['apc_sma_info'] = apc_sma_info(true);
+	}
+	
+	header('Content-Type: application/json');
+	echo json_encode($cache_info);
+	
+	********************************************************************
+	And this should output something like :
+	********************************************************************
+	{
+	"opcache_get_status": {
+		"opcache_enabled": true,
+		"cache_full": true,
+		"restart_pending": false,
+		"restart_in_progress": false,
+		"memory_usage": {
+			"used_memory": 44909176,
+			"free_memory": 22176648,
+			"wasted_memory": 23040,
+			"current_wasted_percentage": 0.034332275390625
+		},
+		"interned_strings_usage": {
+			"buffer_size": 4194304,
+			"used_memory": 4194296,
+			"free_memory": 8,
+			"number_of_strings": 37270
+		},
+		"opcache_statistics": {
+			"num_cached_scripts": 2131,
+			"num_cached_keys": 3907,
+			"max_cached_keys": 3907,
+			"hits": 17896,
+			"start_time": 1468430984,
+			"last_restart_time": 0,
+			"oom_restarts": 0,
+			"hash_restarts": 0,
+			"manual_restarts": 0,
+			"misses": 6928,
+			"blacklist_misses": 0,
+			"blacklist_miss_ratio": 0,
+			"opcache_hit_rate": 72.091524331292
+		}
+	},
+	"apc_cache_info_user": {
+		"num_slots": 4099,
+		"ttl": 0,
+		"num_hits": 18198,
+		"num_misses": 4161,
+		"num_inserts": 4193,
+		"num_entries": 4174,
+		"num_expunges": 0,
+		"start_time": 1468430984,
+		"mem_size": 2738144,
+		"file_upload_progress": 1,
+		"memory_type": "mmap"
+	},
+	"apc_sma_info": {
+		"num_seg": 1,
+		"seg_size": 33554296,
+		"avail_mem": 30649592
+	}
+}
+*******************************************************************	
+*/
  
 import (
 	"encoding/json"
@@ -15,7 +100,7 @@ import (
 	"io/ioutil"
 )
 const (
-	URL               	  = "http://localhost/cache-status.php"
+	URL             	= "http://localhost/cache-status.php"
 	COLLECTION_INTERVAL 	= 15
 	DEFAULT_TIMEOUT     	= 10
 )
