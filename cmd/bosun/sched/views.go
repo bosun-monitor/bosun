@@ -143,9 +143,12 @@ func (is IncidentSummaryView) Ask(filter string) (bool, error) {
 			if len(sp) != 2 {
 				return false, fmt.Errorf("unexpected tag specification: %v", value)
 			}
+			tagValues := strings.Split(sp[1], "|")
 			for k, v := range is.Tags {
-				if k == sp[0] && glob.Glob(sp[1], v) {
-					return true, nil
+				for _, tagValue := range tagValues {
+					if k == sp[0] && glob.Glob(tagValue, v) {
+						return true, nil
+					}
 				}
 			}
 			return false, nil
