@@ -21,12 +21,12 @@ const (
 )
 
 type phpCache struct{
-	OpcacheGetStatus phpCacheOpcacheGetStatus	      `json:"opcache_get_status"`
+	OpcacheGetStatus phpCacheOpcacheGetStatus	`json:"opcache_get_status"`
 	ApcCacheInfoUser phpCacheApcCacheInfoUser       `json:"apc_cache_info_user"`
-	ApcSmaInfo 	 phpCacheApcSmaInfo		              `json:"apc_sma_info"`
+	ApcSmaInfo 	 phpCacheApcSmaInfo	        `json:"apc_sma_info"`
 }
 type phpCacheOpcacheGetStatus struct {
-	CacheFull  	      bool 				`json:"cache_full"`
+	CacheFull  	  bool 				`json:"cache_full"`
 	OpcacheEnabled    bool 				`json:"opcache_enabled"`
 	RestartInProgress bool 				`json:"restart_in_progress"`
 	RestartPending    bool 				`json:"restart_pending"`
@@ -34,8 +34,8 @@ type phpCacheOpcacheGetStatus struct {
 	OpcacheStatistics phpCacheOpcacheStatistics     `json:"opcache_statistics"`
 }
 type phpCacheMemoryUsage struct {
-	CurrentWastedPercentage float64   `json:"current_wasted_percentage"`
-	FreeMemory              int       `json:"free_memory"`
+	CurrentWastedPercentage float64   	`json:"current_wasted_percentage"`
+	FreeMemory              int       	`json:"free_memory"`
 	UsedMemory              int     	`json:"used_memory"`
 	WastedMemory            int     	`json:"wasted_memory"`
 }
