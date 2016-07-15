@@ -57,7 +57,8 @@ interface IConfigScope extends IBosunScope {
 	expandDiff: boolean;
 	runningHash: string;
 	runningChanged: boolean;
-	//getRunningHash: () => void;
+	runningHashResult: string;
+	getRunningHash: () => void;
 }
 
 bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$route', '$timeout', '$sce', function ($scope: IConfigScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService, $timeout: ng.ITimeoutService, $sce: ng.ISCEService) {
@@ -223,11 +224,12 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 			});
 	};
 
-	var getRunningHash = () => {
+	$scope.getRunningHash = () => {
 		(function tick() {
 			$http.get('/api/config/running_hash')
 				.success((data: any) => {
-					$timeout(tick, 10 * 1000);
+					$scope.runningHashResult = '';
+					$timeout(tick, 15 * 1000);
 					if ($scope.runningHash) {
 						if (data.Hash != $scope.runningHash) {
 							$scope.runningChanged = true;
@@ -238,12 +240,12 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 					$scope.runningChanged = false;
 				})
 				.error(function (data) {
-					$scope.validationResult = "Error getting running config hash: " + data; // TODO dedicated dismissable alert for this, and also clear on success above.
+					$scope.runningHashResult = "Error getting running config hash: " + data;
 				})
 		})()
 	};
 
-	getRunningHash();
+	$scope.getRunningHash();
 
 
 	$scope.setInterval = () => {
@@ -448,11 +450,6 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 	}
 
 	$scope.diffConfig = () => {
-		$scope.expandDiff = $scope.expandDiff == false ? true : false;
-		//$scope.saveResult = "Saving; Please Wait"
-		if ($scope.expandDiff == false) {
-			return;
-		}
 		$http.post('/api/config/diff',
 			{
 				"Config": $scope.config_text,
@@ -462,7 +459,8 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 			.success((data: any) => {
 				createCookie("action-user", $scope.user, 1000);
 				//debugger;
-				$scope.diff = data;
+				$scope.diff = data || "No Diff";
+				// Reset running hash if there is no difference?
 			})
 			.error((error) => {
 				//TODO Handle error

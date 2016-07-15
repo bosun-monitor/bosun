@@ -55,7 +55,7 @@
 		</ul>
 	</div>
 	<div class="btn btn-default" ng-show="quickJumpTarget" ng-bind="quickJumpTarget" ng-click="quickJump()"></div>
-	<div class="btn btn-sm actionButtons" ng-class="runningChanged == true ? 'alert-danger' : ''" data-toggle="modal" data-target="#configSaveModal">Save Dialogue</div>
+	<div class="btn btn-sm actionButtons" ng-class="runningChanged == true ? 'alert-danger' : ''" data-toggle="modal" data-target="#configSaveModal" ng-click="diffConfig()">Save Dialogue</div>
 	<div class="btn btn-sm actionButtons" ng-click="validate()">Validate</div>
 	<div class="btn btn-sm actionButtons" ng-click="aceToggleHighlight()">Syntax Highlighting</div>
 	<div class="btn btn-sm actionButtons" ng-click="downloadConfig()">Download</div>
@@ -71,6 +71,13 @@
 	<div class="col-lg-12">
 		<div class="alert" ng-class="saveClass()">{{saveResult}}
 			<button ng-show="saveClass() != 'alert-warning'" type="button" class="close" ng-click="saveResult=''"><span>&times;</span></button>
+		</div>
+	</div>
+</div>
+<div class="row" ng-show="runningHashResult">
+	<div class="col-lg-12">
+		<div class="alert alert-warning">{{runningHashResult}}
+			<button type="button" class="close" ng-click="runningHashResult=''; getRunningHash()"><span>&times;</span></button>
 		</div>
 	</div>
 </div>
@@ -306,12 +313,12 @@
 				</div>
 			</div>
 			<div>
-				<pre ng-show="diff && expandDiff" ng-bind="diff"></pre>
+				<pre ng-bind="diff"></pre>
 			</div>
 			<div class="modal-footer">
-				<button type="button" class="btn btn-primary" ng-click="diffConfig()">Show Diff</button>
-				<button type="button" class="btn btn-default" data-dismiss="modal" ng-click="expandDiff = false;">Close</button>
-				<button type="button" class="btn btn-primary" data-dismiss="modal" ng-click="expandDiff = false; saveConfig()">Save and Reload</button>
+				<button type="button" class="btn btn-primary" ng-click="diffConfig()">Refresh Diff</button>
+				<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+				<button type="button" class="btn btn-primary" data-dismiss="modal" ng-click="saveConfig()">Save and Reload</button>
 			</div>
 		</div>
 	</div>

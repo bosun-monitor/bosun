@@ -679,11 +679,12 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
                 delete (set.show);
             });
         };
-        var getRunningHash = function () {
+        $scope.getRunningHash = function () {
             (function tick() {
                 $http.get('/api/config/running_hash')
                     .success(function (data) {
-                    $timeout(tick, 10 * 1000);
+                    $scope.runningHashResult = '';
+                    $timeout(tick, 15 * 1000);
                     if ($scope.runningHash) {
                         if (data.Hash != $scope.runningHash) {
                             $scope.runningChanged = true;
@@ -694,11 +695,11 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
                     $scope.runningChanged = false;
                 })
                     .error(function (data) {
-                    $scope.validationResult = "Error getting running config hash: " + data; // TODO dedicated dismissable alert for this, and also clear on success above.
+                    $scope.runningHashResult = "Error getting running config hash: " + data;
                 });
             })();
         };
-        getRunningHash();
+        $scope.getRunningHash();
         $scope.setInterval = function () {
             var from = moment.utc($scope.fromDate + ' ' + $scope.fromTime);
             var to = moment.utc($scope.toDate + ' ' + $scope.toTime);
@@ -899,11 +900,6 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
             saveAs(blob, "bosun.conf");
         };
         $scope.diffConfig = function () {
-            $scope.expandDiff = $scope.expandDiff == false ? true : false;
-            //$scope.saveResult = "Saving; Please Wait"
-            if ($scope.expandDiff == false) {
-                return;
-            }
             $http.post('/api/config/diff', {
                 "Config": $scope.config_text,
                 "User": $scope.user,
@@ -912,7 +908,8 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
                 .success(function (data) {
                 createCookie("action-user", $scope.user, 1000);
                 //debugger;
-                $scope.diff = data;
+                $scope.diff = data || "No Diff";
+                // Reset running hash if there is no difference?
             })
                 .error(function (error) {
                 //TODO Handle error
