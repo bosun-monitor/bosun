@@ -955,7 +955,6 @@ type Version struct {
 
 func (v *Version) UnmarshalText(text []byte) error {
 	var err error
-	v = &Version{}
 	split := strings.Split(string(text), ".")
 	if len(split) != 2 {
 		return fmt.Errorf("invalid opentsdb version, expected number.number, (i.e 2.2) got %v", text)

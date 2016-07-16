@@ -39,7 +39,11 @@ func (s *Schedule) RunAlert(a *conf.Alert) {
 	s.checksRunning.Add(1)
 	defer s.checksRunning.Done()
 	for {
-		wait := time.After(s.SystemConf.GetCheckFrequency() * time.Duration(a.RunEvery))
+		runEvery := s.SystemConf.GetDefaultRunEvery()
+		if (a.RunEvery != 0) {
+			runEvery = a.RunEvery
+		}
+		wait := time.After(s.SystemConf.GetCheckFrequency() * time.Duration(runEvery))
 		s.checkAlert(a)
 		s.LastCheck = utcNow()
 		select {

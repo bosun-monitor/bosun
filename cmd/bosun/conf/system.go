@@ -66,7 +66,7 @@ func (sc *SystemConf) EnabledBackends() EnabledBackends {
 type OpenTSDBConf struct {
 	ResponseLimit int64
 	Host          string            // OpenTSDB relay and query destination: ny-devtsdb04:4242
-	Version       *opentsdb.Version // If set to 2.2 , enable passthrough of wildcards and filters, and add support for groupby
+	Version       opentsdb.Version // If set to 2.2 , enable passthrough of wildcards and filters, and add support for groupby
 }
 
 type GraphiteConf struct {
@@ -120,7 +120,7 @@ func LoadSystemConfigFile(fileName string) (*SystemConf, error) {
 		PingDuration: duration{Duration: time.Hour * 24},
 		OpenTSDBConf: OpenTSDBConf{
 			ResponseLimit: 1 << 20, // 1MB
-			Version:       &opentsdb.Version2_1,
+			Version:       opentsdb.Version2_1,
 		},
 		SearchSince:      opentsdb.Day * 3,
 		UnknownThreshold: 5,
@@ -213,6 +213,10 @@ func (sc *SystemConf) GetCheckFrequency() time.Duration {
 	return sc.CheckFrequency.Duration
 }
 
+func (sc *SystemConf) GetDefaultRunEvery() int {
+    return sc.DefaultRunEvery
+}
+
 func (sc *SystemConf) GetUnknownThreshold() int {
 	return sc.UnknownThreshold
 }
@@ -238,7 +242,7 @@ func (sc *SystemConf) GetTSDBHost() string {
 }
 
 func (sc *SystemConf) GetTSDBVersion() *opentsdb.Version {
-	return sc.OpenTSDBConf.Version
+	return &sc.OpenTSDBConf.Version
 }
 
 func (sc *SystemConf) GetGraphiteHost() string {
@@ -261,13 +265,13 @@ func (sc *SystemConf) GetAnnotateIndex() string {
 	return sc.AnnotateConf.Index
 }
 
-// TSDBContext returns an OpenTSDB context limited to
+// GetTSDBContext returns an OpenTSDB context limited to
 // c.ResponseLimit. A nil context is returned if TSDBHost is not set.
 func (sc *SystemConf) GetTSDBContext() opentsdb.Context {
 	if sc.OpenTSDBConf.Host == "" {
 		return nil
 	}
-	return opentsdb.NewLimitContext(sc.OpenTSDBConf.Host, sc.OpenTSDBConf.ResponseLimit, *sc.OpenTSDBConf.Version)
+	return opentsdb.NewLimitContext(sc.OpenTSDBConf.Host, sc.OpenTSDBConf.ResponseLimit, sc.OpenTSDBConf.Version)
 }
 
 // GraphiteContext returns a Graphite context. A nil context is returned if

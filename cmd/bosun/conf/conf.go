@@ -47,6 +47,7 @@ type SystemConfProvider interface {
 	GetSearchSince() opentsdb.Duration
 
 	GetCheckFrequency() time.Duration
+	GetDefaultRunEvery() int
 	GetUnknownThreshold() int
 	GetMinGroupSize() int
 

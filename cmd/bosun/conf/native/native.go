@@ -31,8 +31,6 @@ import (
 type NativeConf struct {
 	Vars            conf.Vars
 	Name            string        // Config file name
-	CheckFrequency  time.Duration // Time between alert checks: 5m
-	DefaultRunEvery int           // Default number of check intervals to run each alert: 1
 
 	UnknownTemplate *conf.Template
 	Templates       map[string]*conf.Template
@@ -657,9 +655,7 @@ func (c *NativeConf) loadAlert(s *parse.SectionNode) {
 			c.errorf("critNotification specified, but no template")
 		}
 	}
-	if a.RunEvery == 0 {
-		a.RunEvery = c.DefaultRunEvery
-	}
+
 	a.ReturnType = ret
 	c.Alerts[name] = &a
 }
