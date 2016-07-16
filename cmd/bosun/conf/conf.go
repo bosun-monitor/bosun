@@ -25,7 +25,6 @@ import (
 	"bosun.org/slog"
 )
 
-
 type SystemConfProvider interface {
 	GetHTTPListen() string
 	GetRelayListen() string
@@ -46,22 +45,18 @@ type SystemConfProvider interface {
 	GetTimeAndDate() []int
 	GetResponseLimit() int64
 	GetSearchSince() opentsdb.Duration
-	SetQuiet(bool) // Runtime Only
-	GetQuiet() bool
 
-	SetSkipLast(bool) // Runtime Only
-	GetSkipLast() bool
+	GetCheckFrequency() time.Duration
+	GetUnknownThreshold() int
+	GetMinGroupSize() int
 
 	GetShortURLKey() string
 	GetInternetProxy() string
 	SetTSDBHost(tsdbHost string)
 	GetTSDBHost() string
-	//SetTSDBVersion(*opentsdb.Version)
 	GetTSDBVersion() *opentsdb.Version
 
-	//SetGraphiteHost(string)
 	GetGraphiteHost() string
-	//SetGraphiteHeaders([]string)
 	GetGraphiteHeaders() []string
 
 	//SetLogstashElasticHosts(expr.LogstashElasticHosts)
@@ -78,15 +73,12 @@ type SystemConfProvider interface {
 	AnnotateEnabled() bool
 
 	MakeLink(string, *url.Values) string
-
-	GetFuncs() map[string]parse.Func // Looks like maybe this needs to be broken into two things, one that loads funcs based on what is in the system, and one that loads the special "conf functions" (i.e. lookups)
+	EnabledBackends() EnabledBackends
 }
 
 type RuleConfProvider interface {
-	GetCheckFrequency() time.Duration
-	GetMinGroupSize() int
+	RuleConfWriter // Wrong place for now
 	GetUnknownTemplate() *Template
-	GetUnknownThreshold() int
 	GetTemplate(string) *Template
 
 	GetAlerts() map[string]*Alert
@@ -106,12 +98,11 @@ type RuleConfProvider interface {
 	AlertSquelched(*Alert) func(opentsdb.TagSet) bool
 	Squelched(*Alert, opentsdb.TagSet) bool
 	Expand(string, map[string]string, bool) string
+	GetFuncs(EnabledBackends) map[string]parse.Func // Looks like maybe this needs to be broken into two things, one that loads funcs based on what is in the system, and one that loads the special "conf functions" (i.e. lookups)
+
 }
 
-type ConfProvider interface {
-	SystemConfProvider
-	RuleConfProvider
-
+type RuleConfWriter interface {
 	BulkEdit(BulkEditRequest) error
 	GetRawText() string
 	GetHash() string
@@ -208,7 +199,7 @@ type Notifications struct {
 }
 
 // Get returns the set of notifications based on given tags.
-func (ns *Notifications) Get(c ConfProvider, tags opentsdb.TagSet) map[string]*Notification {
+func (ns *Notifications) Get(c RuleConfProvider, tags opentsdb.TagSet) map[string]*Notification {
 	nots := make(map[string]*Notification)
 	for name, n := range ns.Notifications {
 		nots[name] = n
@@ -239,7 +230,7 @@ func (ns *Notifications) Get(c ConfProvider, tags opentsdb.TagSet) map[string]*N
 // alert. Each chain is a list of notification names. If a notification name
 // as already been seen in the chain it ends the list with the notification
 // name with a of "..." which indicates that the chain will loop.
-func GetNotificationChains(c ConfProvider, n map[string]*Notification) [][]string {
+func GetNotificationChains(c RuleConfProvider, n map[string]*Notification) [][]string {
 	chains := [][]string{}
 	for _, root := range n {
 		chain := []string{}

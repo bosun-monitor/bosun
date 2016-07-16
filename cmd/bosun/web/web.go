@@ -136,13 +136,13 @@ func Listen(listenAddr string, devMode bool, tsdbHost string) error {
 	router.Handle("/api/annotate", JSON(AnnotateEnabled))
 
 	// Annotations
-	if schedule.Conf.AnnotateEnabled() {
+	if schedule.SystemConf.AnnotateEnabled() {
 		var err error
-		index := schedule.Conf.GetAnnotateIndex()
+		index := schedule.SystemConf.GetAnnotateIndex()
 		if index == "" {
 			index = "annotate"
 		}
-		annotateBackend, err = backend.NewElastic(schedule.Conf.GetAnnotateElasticHosts(), index)
+		annotateBackend, err = backend.NewElastic(schedule.SystemConf.GetAnnotateElasticHosts(), index)
 		if err != nil {
 			return err
 		}
@@ -313,8 +313,8 @@ func Shorten(w http.ResponseWriter, r *http.Request) {
 		Host:   "www.googleapis.com",
 		Path:   "/urlshortener/v1/url",
 	}
-	if schedule.Conf.GetShortURLKey() != "" {
-		u.RawQuery = "key=" + schedule.Conf.GetShortURLKey()
+	if schedule.SystemConf.GetShortURLKey() != "" {
+		u.RawQuery = "key=" + schedule.SystemConf.GetShortURLKey()
 	}
 	j, err := json.Marshal(struct {
 		LongURL string `json:"longUrl"`
@@ -353,24 +353,24 @@ type Health struct {
 }
 
 func Quiet(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	return schedule.Conf.GetQuiet(), nil
+	return schedule.GetQuiet(), nil
 }
 
 func HealthCheck(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	var h Health
-	h.RuleCheck = schedule.LastCheck.After(time.Now().Add(-schedule.Conf.GetCheckFrequency()))
+	h.RuleCheck = schedule.LastCheck.After(time.Now().Add(-schedule.SystemConf.GetCheckFrequency()))
 	return h, nil
 }
 
 func OpenTSDBVersion(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	if schedule.Conf.GetTSDBContext() != nil {
-		return schedule.Conf.GetTSDBContext().Version(), nil
+	if schedule.SystemConf.GetTSDBContext() != nil {
+		return schedule.SystemConf.GetTSDBContext().Version(), nil
 	}
 	return opentsdb.Version{0, 0}, nil
 }
 
 func AnnotateEnabled(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	return schedule.Conf.AnnotateEnabled(), nil
+	return schedule.SystemConf.AnnotateEnabled(), nil
 }
 
 func PutMetadata(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
@@ -718,7 +718,7 @@ func ConfigTest(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 		serveError(w, fmt.Errorf("empty config"))
 		return
 	}
-	_, err = native.NewNativeConf("test", string(b))
+	_, err = native.NewNativeConf("test", schedule.SystemConf.EnabledBackends(), string(b))
 	if err != nil {
 		fmt.Fprintf(w, err.Error())
 	}
@@ -734,7 +734,7 @@ func Config(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	} else {
-		text = schedule.Conf.GetRawText()
+		text = schedule.RuleConf.GetRawText()
 	}
 	fmt.Fprint(w, text)
 }
@@ -752,7 +752,7 @@ func SaveConfig(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 		serveError(w, err)
 		return
 	}
-	err := schedule.Conf.SaveRawText(data.Config, data.Diff, data.User, data.Message, data.Other...)
+	err := schedule.RuleConf.SaveRawText(data.Config, data.Diff, data.User, data.Message, data.Other...)
 	if err != nil {
 		serveError(w, err)
 		return
@@ -772,7 +772,7 @@ func DiffConfig(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 		serveError(w, err)
 		return
 	}
-	diff, err := schedule.Conf.RawDiff(data.Config)
+	diff, err := schedule.RuleConf.RawDiff(data.Config)
 	if err != nil {
 		serveError(w, err)
 		return
@@ -781,7 +781,7 @@ func DiffConfig(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 }
 
 func ConfigRunningHash(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	hash := schedule.Conf.GetHash()
+	hash := schedule.RuleConf.GetHash()
 	return struct {
 		Hash string
 	}{
@@ -796,7 +796,7 @@ func BulkEdit(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 		serveError(w, err)
 		return
 	}
-	err := schedule.Conf.BulkEdit(bulkEdit)
+	err := schedule.RuleConf.BulkEdit(bulkEdit)
 	if err != nil {
 		serveError(w, err)
 		return
@@ -816,7 +816,7 @@ func SetAlert(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 		serveError(w, err)
 		return
 	}
-	text, err = schedule.Conf.SetAlert(data.Name, data.AlertText)
+	text, err = schedule.RuleConf.SetAlert(data.Name, data.AlertText)
 	if err != nil {
 		serveError(w, err)
 		return
@@ -831,7 +831,7 @@ func DeleteAlert(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 		serveError(w, fmt.Errorf("must provide alert name"))
 		return
 	}
-	err := schedule.Conf.DeleteAlert(name)
+	err := schedule.RuleConf.DeleteAlert(name)
 	if err != nil {
 		serveError(w, err)
 		return

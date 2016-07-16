@@ -62,7 +62,7 @@ func (s *Schedule) unknownData(t time.Time, name string, group models.AlertKeys)
 
 // Ack returns the URL to acknowledge an alert.
 func (c *Context) Ack() string {
-	return c.schedule.Conf.MakeLink("/action", &url.Values{
+	return c.schedule.SystemConf.MakeLink("/action", &url.Values{
 		"type": []string{"ack"},
 		"key":  []string{c.Alert.Name + c.AlertKey.Group().String()},
 	})
@@ -70,7 +70,7 @@ func (c *Context) Ack() string {
 
 // HostView returns the URL to the host view page.
 func (c *Context) HostView(host string) string {
-	return c.schedule.Conf.MakeLink("/host", &url.Values{
+	return c.schedule.SystemConf.MakeLink("/host", &url.Values{
 		"time": []string{"1d-ago"},
 		"host": []string{host},
 	})
@@ -91,7 +91,7 @@ func (c *Context) Expr(v string) string {
 	p.Add("date", c.runHistory.Start.Format(`2006-01-02`))
 	p.Add("time", c.runHistory.Start.Format(`15:04:05`))
 	p.Add("expr", base64.StdEncoding.EncodeToString([]byte(opentsdb.ReplaceTags(v, c.AlertKey.Group()))))
-	return c.schedule.Conf.MakeLink("/expr", &p)
+	return c.schedule.SystemConf.MakeLink("/expr", &p)
 }
 
 // GraphLink takes an expression in the form of a string, and returns a link to
@@ -102,7 +102,7 @@ func (c *Context) GraphLink(v string) string {
 	p.Add("tab", "graph")
 	p.Add("date", c.runHistory.Start.Format(`2006-01-02`))
 	p.Add("time", c.runHistory.Start.Format(`15:04:05`))
-	return c.schedule.Conf.MakeLink("/expr", &p)
+	return c.schedule.SystemConf.MakeLink("/expr", &p)
 }
 
 func (c *Context) Rule() (string, error) {
@@ -112,11 +112,11 @@ func (c *Context) Rule() (string, error) {
 	p.Add("fromDate", time.Format("2006-01-02"))
 	p.Add("fromTime", time.Format("15:04"))
 	p.Add("template_group", c.Tags)
-	return c.schedule.Conf.MakeLink("/config", &p), nil
+	return c.schedule.SystemConf.MakeLink("/config", &p), nil
 }
 
 func (c *Context) Incident() string {
-	return c.schedule.Conf.MakeLink("/incident", &url.Values{
+	return c.schedule.SystemConf.MakeLink("/incident", &url.Values{
 		"id": []string{fmt.Sprint(c.Id)},
 	})
 }
@@ -190,7 +190,7 @@ func (s *Schedule) ExecuteBadTemplate(errs []error, rh *RunHistory, a *conf.Aler
 func (c *Context) evalExpr(e *expr.Expr, filter bool, series bool, autods int) (expr.ResultSlice, string, error) {
 	var err error
 	if filter {
-		e, err = expr.New(opentsdb.ReplaceTags(e.Text, c.AlertKey.Group()), c.schedule.Conf.GetFuncs())
+		e, err = expr.New(opentsdb.ReplaceTags(e.Text, c.AlertKey.Group()), c.schedule.RuleConf.GetFuncs(c.schedule.SystemConf.EnabledBackends()))
 		if err != nil {
 			return nil, "", err
 		}
@@ -201,7 +201,7 @@ func (c *Context) evalExpr(e *expr.Expr, filter bool, series bool, autods int) (
 	providers := &expr.BosunProviders{
 		Cache:     c.runHistory.Cache,
 		Search:    c.schedule.Search,
-		Squelched: c.schedule.Conf.AlertSquelched(c.Alert),
+		Squelched: c.schedule.RuleConf.AlertSquelched(c.Alert),
 		History:   c.schedule,
 	}
 	res, _, err := e.Execute(c.runHistory.Backends, providers, nil, c.runHistory.Start, autods, c.Alert.UnjoinedOK)
@@ -218,7 +218,7 @@ func (c *Context) evalExpr(e *expr.Expr, filter bool, series bool, autods int) (
 func (c *Context) eval(v interface{}, filter bool, series bool, autods int) (res expr.ResultSlice, title string, err error) {
 	switch v := v.(type) {
 	case string:
-		e, err := expr.New(v, c.schedule.Conf.GetFuncs())
+		e, err := expr.New(v, c.schedule.RuleConf.GetFuncs(c.schedule.SystemConf.EnabledBackends()))
 		if err != nil {
 			return nil, "", fmt.Errorf("%s: %v", v, err)
 		}
@@ -260,7 +260,7 @@ func (c *Context) LookupAll(table, key string, group interface{}) (string, error
 	case opentsdb.TagSet:
 		t = v
 	}
-	l := c.schedule.Conf.GetLookup(table)
+	l := c.schedule.RuleConf.GetLookup(table)
 	if l == nil {
 		return "", fmt.Errorf("unknown lookup table %v", table)
 	}
@@ -559,7 +559,7 @@ type actionNotificationContext struct {
 }
 
 func (a actionNotificationContext) IncidentLink(i int64) string {
-	return a.schedule.Conf.MakeLink("/incident", &url.Values{
+	return a.schedule.SystemConf.MakeLink("/incident", &url.Values{
 		"id": []string{fmt.Sprint(i)},
 	})
 }

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"net/http"
 	"net/mail"
 	"net/url"
 	"os"
@@ -14,7 +13,6 @@ import (
 	"strings"
 	"time"
 
-	"bosun.org/graphite"
 	"bosun.org/models"
 	"bosun.org/slog"
 
@@ -28,7 +26,6 @@ import (
 
 	"bosun.org/opentsdb"
 	"github.com/MiniProfiler/go/miniprofiler"
-	"github.com/influxdata/influxdb/client"
 )
 
 type NativeConf struct {
@@ -36,54 +33,19 @@ type NativeConf struct {
 	Name            string        // Config file name
 	CheckFrequency  time.Duration // Time between alert checks: 5m
 	DefaultRunEvery int           // Default number of check intervals to run each alert: 1
-	HTTPListen      string        // Web server listen address: :80
-	Hostname        string
-	RelayListen     string // OpenTSDB relay listen address: :4242
-	SMTPHost        string // SMTP address: ny-mail:25
-	SMTPUsername    string // SMTP username
-	SMTPPassword    string // SMTP password
-	Ping            bool
-	PingDuration    time.Duration // Duration from now to stop pinging hosts based on time since the host tag was touched
-	EmailFrom       string
-	StateFile       string
-	LedisDir        string
-	LedisBindAddr   string
 
-	RedisHost     string
-	RedisDb       int
-	RedisPassword string
+	UnknownTemplate *conf.Template
+	Templates       map[string]*conf.Template
+	Alerts          map[string]*conf.Alert
+	Notifications   map[string]*conf.Notification `json:"-"`
+	RawText         string
+	Macros          map[string]*conf.Macro
+	Lookups         map[string]*conf.Lookup
+	Squelch         conf.Squelches `json:"-"`
+	NoSleep         bool
 
-	TimeAndDate      []int // timeanddate.com cities list
-	ResponseLimit    int64
-	SearchSince      opentsdb.Duration
-	UnknownTemplate  *conf.Template
-	UnknownThreshold int
-	Templates        map[string]*conf.Template
-	Alerts           map[string]*conf.Alert
-	Notifications    map[string]*conf.Notification `json:"-"`
-	RawText          string
-	Macros           map[string]*conf.Macro
-	Lookups          map[string]*conf.Lookup
-	Squelch          conf.Squelches `json:"-"`
-	Quiet            bool // will remove since cmdlline arg
-	SkipLast         bool // will remove since cmdline arg
-	NoSleep          bool 
-	ShortURLKey      string
-	InternetProxy    string
-	MinGroupSize     int
-
-	TSDBHost             string                    // OpenTSDB relay and query destination: ny-devtsdb04:4242
-	TSDBVersion          *opentsdb.Version         // If set to 2.2 , enable passthrough of wildcards and filters, and add support for groupby
-	GraphiteHost         string                    // Graphite query host: foo.bar.baz
-	GraphiteHeaders      []string                  // extra http headers when querying graphite.
-	LogstashElasticHosts expr.LogstashElasticHosts // CSV Elastic Hosts (All part of the same cluster) that stores logstash documents, i.e http://ny-elastic01:9200. Only works with elastc pre-v2, and expects the schema to be logstash's default.
-	ElasticHosts         expr.ElasticHosts         // CSV Elastic Hosts (All part of the same cluster), i.e http://ny-elastic01:9200. Only works with elastic v2+, and unlike logstash it is designed to be able to use various elastic schemas.
-	InfluxConfig         client.Config
-
-	AnnotateElasticHosts []string // CSV of Elastic Hosts, currently the only backend in annotate
-	AnnotateIndex        string   // name of index / table
-
-	reload func() error
+	reload   func() error
+	backends conf.EnabledBackends
 
 	tree            *parse.Tree
 	node            parse.Node
@@ -104,35 +66,6 @@ type deferredSection struct {
 	SectionNode *parse.SectionNode
 }
 
-// TSDBContext returns an OpenTSDB context limited to
-// c.ResponseLimit. A nil context is returned if TSDBHost is not set.
-func (c *NativeConf) GetTSDBContext() opentsdb.Context {
-	if c.TSDBHost == "" {
-		return nil
-	}
-	return opentsdb.NewLimitContext(c.TSDBHost, c.ResponseLimit, *c.TSDBVersion)
-}
-
-// GraphiteContext returns a Graphite context. A nil context is returned if
-// GraphiteHost is not set.
-func (c *NativeConf) GetGraphiteContext() graphite.Context {
-	if c.GraphiteHost == "" {
-		return nil
-	}
-	if len(c.GraphiteHeaders) > 0 {
-		headers := http.Header(make(map[string][]string))
-		for _, s := range c.GraphiteHeaders {
-			kv := strings.Split(s, ":")
-			headers.Add(kv[0], kv[1])
-		}
-		return graphite.HostHeader{
-			Host:   c.GraphiteHost,
-			Header: headers,
-		}
-	}
-	return graphite.Host(c.GraphiteHost)
-}
-
 func (c *NativeConf) AlertSquelched(a *conf.Alert) func(opentsdb.TagSet) bool {
 	return func(tags opentsdb.TagSet) bool {
 		return c.Squelched(a, tags)
@@ -150,10 +83,6 @@ func (c *NativeConf) at(node parse.Node) {
 
 func (c *NativeConf) error(err error) {
 	c.errorf(err.Error())
-}
-
-func (c *NativeConf) AnnotateEnabled() bool {
-	return len(c.AnnotateElasticHosts) != 0
 }
 
 // errorf formats the error and terminates processing.
@@ -198,34 +127,22 @@ func (c *NativeConf) parseNotifications(v string) (map[string]*conf.Notification
 	return ns, nil
 }
 
-func ParseFile(fname string) (*NativeConf, error) {
+func ParseFile(fname string, backends conf.EnabledBackends) (*NativeConf, error) {
 	f, err := ioutil.ReadFile(fname)
 	if err != nil {
 		return nil, err
 	}
-	return NewNativeConf(fname, string(f))
+	return NewNativeConf(fname, backends, string(f))
 }
 
 func (c *NativeConf) SaveConf(newConf *NativeConf) error {
 	return ioutil.WriteFile(c.Name, []byte(newConf.RawText), os.FileMode(int(0640)))
 }
 
-func NewNativeConf(name, text string) (c *NativeConf, err error) {
+func NewNativeConf(name string, backends conf.EnabledBackends, text string) (c *NativeConf, err error) {
 	defer errRecover(&err)
 	c = &NativeConf{
 		Name:             name,
-		CheckFrequency:   time.Minute * 5,
-		DefaultRunEvery:  1,
-		HTTPListen:       ":8070",
-		StateFile:        "bosun.state",
-		LedisDir:         "ledis_data",
-		LedisBindAddr:    "127.0.0.1:9565",
-		MinGroupSize:     5,
-		PingDuration:     time.Hour * 24,
-		ResponseLimit:    1 << 20, // 1MB
-		SearchSince:      opentsdb.Day * 3,
-		TSDBVersion:      &opentsdb.Version2_1,
-		UnknownThreshold: 5,
 		Vars:             make(map[string]string),
 		Templates:        make(map[string]*conf.Template),
 		Alerts:           make(map[string]*conf.Alert),
@@ -237,6 +154,7 @@ func NewNativeConf(name, text string) (c *NativeConf, err error) {
 		Macros:           make(map[string]*conf.Macro),
 		writeLock:        make(chan bool, 1),
 		deferredSections: make(map[string][]deferredSection),
+		backends:         backends,
 	}
 	c.tree, err = parse.Parse(name, text)
 	if err != nil {
@@ -276,17 +194,6 @@ func NewNativeConf(name, text string) (c *NativeConf, err error) {
 	loadSections("lookup")
 	loadSections("alert")
 
-	if c.Hostname == "" {
-		c.Hostname = c.HTTPListen
-		if strings.HasPrefix(c.Hostname, ":") {
-			h, err := os.Hostname()
-			if err != nil {
-				c.at(nil)
-				c.error(err)
-			}
-			c.Hostname = h + c.Hostname
-		}
-	}
 	c.genHash()
 	return
 }
@@ -294,139 +201,6 @@ func NewNativeConf(name, text string) (c *NativeConf, err error) {
 func (c *NativeConf) loadGlobal(p *parse.PairNode) {
 	v := c.Expand(p.Val.Text, nil, false)
 	switch k := p.Key.Text; k {
-	case "checkFrequency":
-		od, err := opentsdb.ParseDuration(v)
-		if err != nil {
-			c.error(err)
-		}
-		d := time.Duration(od)
-		if d < time.Second {
-			c.errorf("checkFrequency duration must be at least 1s")
-		}
-		c.CheckFrequency = d
-	case "tsdbHost":
-		if !strings.Contains(v, ":") && v != "" {
-			v += ":4242"
-		}
-		c.TSDBHost = v
-	case "tsdbVersion":
-		sp := strings.Split(v, ".")
-		if len(sp) != 2 {
-			c.errorf("tsdbVersion must be in number.number form")
-		}
-		major, err := strconv.ParseInt(sp[0], 10, 64)
-		if err != nil {
-			c.errorf("error pasing opentsdb major version number %v: %v", sp[0], err)
-		}
-		minor, err := strconv.ParseInt(sp[1], 10, 64)
-		if err != nil {
-			c.errorf("error pasing opentsdb minor version number %v: %v", sp[1], err)
-		}
-		c.TSDBVersion = &opentsdb.Version{Major: major, Minor: minor}
-	case "graphiteHost":
-		c.GraphiteHost = v
-	case "graphiteHeader":
-		if !strings.Contains(v, ":") {
-			c.errorf("graphiteHeader must be in key:value form")
-		}
-		c.GraphiteHeaders = append(c.GraphiteHeaders, v)
-	case "logstashElasticHosts":
-		c.LogstashElasticHosts = strings.Split(v, ",")
-	case "elasticHosts":
-		c.ElasticHosts = strings.Split(v, ",")
-	case "influxHost":
-		c.InfluxConfig.URL.Host = v
-		c.InfluxConfig.UserAgent = "bosun"
-		// Default scheme to non-TLS
-		c.InfluxConfig.URL.Scheme = "http"
-	case "influxUsername":
-		c.InfluxConfig.Username = v
-	case "influxPassword":
-		c.InfluxConfig.Password = v
-	case "influxTLS":
-		b, err := strconv.ParseBool(v)
-		if err != nil {
-			c.error(err)
-		}
-		if b {
-			c.InfluxConfig.URL.Scheme = "https"
-		} else {
-			c.InfluxConfig.URL.Scheme = "http"
-		}
-	case "influxTimeout":
-		od, err := opentsdb.ParseDuration(v)
-		if err != nil {
-			c.error(err)
-		}
-		d := time.Duration(od)
-		c.InfluxConfig.Timeout = d
-	case "httpListen":
-		c.HTTPListen = v
-	case "hostname":
-		c.Hostname = v
-	case "relayListen":
-		c.RelayListen = v
-	case "smtpHost":
-		c.SMTPHost = v
-	case "smtpUsername":
-		c.SMTPUsername = v
-	case "smtpPassword":
-		c.SMTPPassword = v
-	case "emailFrom":
-		c.EmailFrom = v
-	case "stateFile":
-		c.StateFile = v
-	case "ping":
-		c.Ping = true
-	case "pingDuration":
-		d, err := time.ParseDuration(v)
-		if err != nil {
-			c.errorf(err.Error())
-		}
-		c.PingDuration = d
-	case "noSleep":
-		c.NoSleep = true
-	case "unknownThreshold":
-		i, err := strconv.Atoi(v)
-		if err != nil {
-			c.error(err)
-		}
-		c.UnknownThreshold = i
-	case "timeAndDate":
-		sp := strings.Split(v, ",")
-		var t []int
-		for _, s := range sp {
-			i, err := strconv.Atoi(strings.TrimSpace(s))
-			if err != nil {
-				c.error(err)
-			}
-			t = append(t, i)
-		}
-		c.TimeAndDate = t
-	case "responseLimit":
-		i, err := strconv.ParseInt(v, 10, 64)
-		if err != nil {
-			c.error(err)
-		}
-		if i <= 0 {
-			c.errorf("responseLimit must be > 0")
-		}
-		c.ResponseLimit = i
-	case "defaultRunEvery":
-		var err error
-		c.DefaultRunEvery, err = strconv.Atoi(v)
-		if err != nil {
-			c.error(err)
-		}
-		if c.DefaultRunEvery <= 0 {
-			c.errorf("defaultRunEvery must be > 0")
-		}
-	case "searchSince":
-		s, err := opentsdb.ParseDuration(v)
-		if err != nil {
-			c.error(err)
-		}
-		c.SearchSince = s
 	case "unknownTemplate":
 		c.unknownTemplate = v
 	case "squelch":
@@ -434,34 +208,6 @@ func (c *NativeConf) loadGlobal(p *parse.PairNode) {
 		if err := c.Squelch.Add(v); err != nil {
 			c.error(err)
 		}
-	case "shortURLKey":
-		c.ShortURLKey = v
-	case "internetProxy":
-		c.InternetProxy = v
-	case "ledisDir":
-		c.LedisDir = v
-	case "ledisBindAddr":
-		c.LedisBindAddr = v
-	case "redisHost":
-		c.RedisHost = v
-	case "redisPassword":
-		c.RedisPassword = v
-	case "redisDb":
-		i, err := strconv.Atoi(v)
-		if err != nil {
-			c.error(err)
-		}
-		c.RedisDb = i
-	case "annotateElasticHosts":
-		c.AnnotateElasticHosts = strings.Split(v, ",")
-	case "annotationIndex":
-		c.AnnotateIndex = v
-	case "minGroupSize":
-		i, err := strconv.Atoi(v)
-		if err != nil {
-			c.error(err)
-		}
-		c.MinGroupSize = i
 	default:
 		if !strings.HasPrefix(k, "$") {
 			c.errorf("unknown key %s", k)
@@ -950,9 +696,6 @@ func (c *NativeConf) loadNotification(s *parse.SectionNode) {
 		v := p.val
 		switch k := p.key; k {
 		case "email":
-			if c.SMTPHost == "" || c.EmailFrom == "" {
-				c.errorf("email notifications require both smtpHost and emailFrom to be set")
-			}
 			n.RawEmail = v
 			email, err := mail.ParseAddressList(n.RawEmail)
 			if err != nil {
@@ -1094,7 +837,7 @@ var builtins = htemplate.FuncMap{
 func nilFunc() {}
 
 func (c *NativeConf) NewExpr(s string) *expr.Expr {
-	exp, err := expr.New(s, c.GetFuncs())
+	exp, err := expr.New(s, c.GetFuncs(c.backends))
 	if err != nil {
 		c.error(err)
 	}
@@ -1107,7 +850,7 @@ func (c *NativeConf) NewExpr(s string) *expr.Expr {
 	return exp
 }
 
-func (c *NativeConf) GetFuncs() map[string]eparse.Func {
+func (c *NativeConf) GetFuncs(backends conf.EnabledBackends) map[string]eparse.Func {
 	lookup := func(e *expr.State, T miniprofiler.Timer, lookup, key string) (results *expr.Results, err error) {
 		results = new(expr.Results)
 		results.IgnoreUnjoined = true
@@ -1248,19 +991,19 @@ func (c *NativeConf) GetFuncs() map[string]eparse.Func {
 			funcs[k] = v
 		}
 	}
-	if c.TSDBHost != "" {
+	if backends.OpenTSDB {
 		merge(expr.TSDB)
 	}
-	if c.GraphiteHost != "" {
+	if backends.Graphite {
 		merge(expr.Graphite)
 	}
-	if len(c.LogstashElasticHosts) != 0 {
+	if backends.Logstash {
 		merge(expr.LogstashElastic)
 	}
-	if len(c.ElasticHosts) != 0 {
+	if backends.Elastic {
 		merge(expr.Elastic)
 	}
-	if c.InfluxConfig.URL.Host != "" {
+	if backends.Influx {
 		merge(expr.Influx)
 	}
 	return funcs
@@ -1336,126 +1079,8 @@ func (c *NativeConf) alert(s *expr.State, T miniprofiler.Timer, name, key string
 	return results, nil
 }
 
-func (c *NativeConf) MakeLink(path string, v *url.Values) string {
-	u := url.URL{
-		Scheme:   "http",
-		Host:     c.Hostname,
-		Path:     path,
-		RawQuery: v.Encode(),
-	}
-	return u.String()
-}
-
-func (c *NativeConf) GetCheckFrequency() time.Duration {
-	return c.CheckFrequency
-}
-
-func (c *NativeConf) GetHTTPListen() string {
-	return c.HTTPListen
-}
-
-func (c *NativeConf) GetHostname() string {
-	return c.Hostname
-}
-
-func (c *NativeConf) GetRelayListen() string {
-	return c.RelayListen
-}
-
-func (c *NativeConf) GetSMTPHost() string {
-	return c.SMTPHost
-}
-
-func (c *NativeConf) GetSMTPUsername() string {
-	return c.SMTPUsername
-}
-
-func (c *NativeConf) GetSMTPPassword() string {
-	return c.SMTPPassword
-}
-
-func (c *NativeConf) GetPing() bool {
-	return c.Ping
-}
-
-func (c *NativeConf) GetPingDuration() time.Duration {
-	return c.PingDuration
-}
-
-func (c *NativeConf) GetEmailFrom() string {
-	return c.EmailFrom
-}
-
-func (c *NativeConf) GetLedisDir() string {
-	return c.LedisDir
-}
-
-func (c *NativeConf) GetLedisBindAddr() string {
-	return c.LedisBindAddr
-}
-
-func (c *NativeConf) GetRedisHost() string {
-	return c.RedisHost
-}
-
-func (c *NativeConf) GetRedisDb() int {
-	return c.RedisDb
-}
-
-func (c *NativeConf) GetRedisPassword() string {
-	return c.RedisPassword
-}
-
-func (c *NativeConf) GetTimeAndDate() []int {
-	return c.TimeAndDate
-}
-
-func (c *NativeConf) GetResponseLimit() int64 {
-	return c.ResponseLimit
-}
-
-func (c *NativeConf) GetSearchSince() opentsdb.Duration {
-	return c.SearchSince
-}
-
-func (c *NativeConf) SetQuiet(quiet bool) {
-	c.Quiet = quiet
-}
-
-func (c *NativeConf) GetQuiet() bool {
-	return c.Quiet
-}
-
-func (c *NativeConf) SetSkipLast(skipLast bool) {
-	c.SkipLast = skipLast
-}
-
-func (c *NativeConf) GetSkipLast() bool {
-	return c.SkipLast
-}
-
-func (c *NativeConf) GetNoSleep() bool {
-	return c.NoSleep
-}
-
-func (c *NativeConf) GetShortURLKey() string {
-	return c.ShortURLKey
-}
-
-func (c *NativeConf) GetInternetProxy() string {
-	return c.InternetProxy
-}
-
-func (c *NativeConf) GetMinGroupSize() int {
-	return c.MinGroupSize
-}
-
 func (c *NativeConf) GetUnknownTemplate() *conf.Template {
 	return c.UnknownTemplate
-}
-
-func (c *NativeConf) GetUnknownThreshold() int {
-	return c.UnknownThreshold
 }
 
 func (c *NativeConf) GetTemplate(s string) *conf.Template {
@@ -1481,54 +1106,13 @@ func (c *NativeConf) GetNotification(s string) *conf.Notification {
 func (c *NativeConf) GetMacro(s string) *conf.Macro {
 	return c.Macros[s]
 }
+
 func (c *NativeConf) GetLookup(s string) *conf.Lookup {
 	return c.Lookups[s]
 }
+
 func (c *NativeConf) GetSquelches() conf.Squelches {
 	return c.Squelch
-}
-
-func (c *NativeConf) SetTSDBHost(tsdbHost string) {
-	c.TSDBHost = tsdbHost
-}
-
-func (c *NativeConf) GetTSDBHost() string {
-	return c.TSDBHost
-}
-func (c *NativeConf) GetTSDBVersion() *opentsdb.Version {
-	return c.TSDBVersion
-}
-
-func (c *NativeConf) GetGraphiteHost() string {
-	return c.GraphiteHost
-}
-
-func (c *NativeConf) GetGraphiteHeaders() []string {
-	return c.GraphiteHeaders
-}
-
-func (c *NativeConf) GetLogstashElasticHosts() expr.LogstashElasticHosts {
-	return c.LogstashElasticHosts
-}
-
-func (c *NativeConf) GetAnnotateElasticHosts() expr.ElasticHosts {
-	return c.AnnotateElasticHosts
-}
-
-func (c *NativeConf) GetAnnotateIndex() string {
-	return c.AnnotateIndex
-}
-
-func (c *NativeConf) GetInfluxContext() client.Config {
-	return c.InfluxConfig
-}
-
-func (c *NativeConf) GetLogstashContext() expr.LogstashElasticHosts {
-	return c.LogstashElasticHosts
-}
-
-func (c *NativeConf) GetElasticContext() expr.ElasticHosts {
-	return c.ElasticHosts
 }
 
 func (c *NativeConf) GetRawText() string {

@@ -28,7 +28,7 @@ func ListOpenIncidents(t miniprofiler.Timer, w http.ResponseWriter, r *http.Requ
 		return nil, fmt.Errorf("bad filter: %v", err)
 	}
 	for _, iState := range list {
-		is := sched.MakeIncidentSummary(schedule.Conf, suppressor, iState)
+		is := sched.MakeIncidentSummary(schedule.RuleConf, suppressor, iState)
 		match, err := boolq.AskParsedExpr(parsedExpr, is)
 		if err != nil {
 			return nil, err

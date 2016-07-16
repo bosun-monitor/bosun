@@ -26,7 +26,7 @@ func init() {
 		"The number of email notifications that Bosun failed to send.")
 }
 
-func (n *Notification) Notify(subject, body string, emailsubject, emailbody []byte, c ConfProvider, ak string, attachments ...*models.Attachment) {
+func (n *Notification) Notify(subject, body string, emailsubject, emailbody []byte, c SystemConfProvider, ak string, attachments ...*models.Attachment) {
 	if len(n.Email) > 0 {
 		go n.DoEmail(emailsubject, emailbody, c, ak, attachments...)
 	}
@@ -94,7 +94,7 @@ func (n *Notification) DoGet(ak string) {
 	}
 }
 
-func (n *Notification) DoEmail(subject, body []byte, c ConfProvider, ak string, attachments ...*models.Attachment) {
+func (n *Notification) DoEmail(subject, body []byte, c SystemConfProvider, ak string, attachments ...*models.Attachment) {
 	e := email.NewEmail()
 	e.From = c.GetEmailFrom()
 	for _, a := range n.Email {

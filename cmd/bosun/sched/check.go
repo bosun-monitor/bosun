@@ -69,11 +69,11 @@ func (s *Schedule) NewRunHistory(start time.Time, cache *cache.Cache) *RunHistor
 		Events:   make(map[models.AlertKey]*models.Event),
 		schedule: s,
 		Backends: &expr.Backends{
-			TSDBContext:     s.Conf.GetTSDBContext(),
-			GraphiteContext: s.Conf.GetGraphiteContext(),
-			InfluxConfig:    s.Conf.GetInfluxContext(),
-			LogstashHosts:   s.Conf.GetLogstashContext(),
-			ElasticHosts:    s.Conf.GetElasticContext(),
+			TSDBContext:     s.SystemConf.GetTSDBContext(),
+			GraphiteContext: s.SystemConf.GetGraphiteContext(),
+			InfluxConfig:    s.SystemConf.GetInfluxContext(),
+			LogstashHosts:   s.SystemConf.GetLogstashContext(),
+			ElasticHosts:    s.SystemConf.GetElasticContext(),
 		},
 	}
 	return r
@@ -101,7 +101,7 @@ func (s *Schedule) RunHistory(r *RunHistory) {
 // RunHistory for a single alert key. Returns true if notifications were altered.
 func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.Event, silenced SilenceTester) (checkNotify bool, err error) {
 	event.Time = r.Start
-	a := s.Conf.GetAlert(ak.Name())
+	a := s.RuleConf.GetAlert(ak.Name())
 	if a.UnknownsNormal && event.Status == models.StUnknown {
 		event.Status = models.StNormal
 	}
@@ -200,7 +200,7 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.E
 			}
 			s.lastLogTimes[ak] = now
 		}
-		nots := ns.Get(s.Conf, incident.AlertKey.Group())
+		nots := ns.Get(s.RuleConf, incident.AlertKey.Group())
 		for _, n := range nots {
 			s.Notify(incident, n)
 			checkNotify = true
@@ -345,7 +345,7 @@ func (s *Schedule) CollectStates() {
 	unAckOldestByNotification := make(map[string]time.Time)
 	activeStatusCounts := make(map[string]map[bool]int64)
 	// Initalize the Counts
-	for _, alert := range s.Conf.GetAlerts() {
+	for _, alert := range s.RuleConf.GetAlerts() {
 		severityCounts[alert.Name] = make(map[string]int64)
 		abnormalCounts[alert.Name] = make(map[string]int64)
 		var i models.Status
@@ -360,7 +360,7 @@ func (s *Schedule) CollectStates() {
 		ackStatusCounts[alert.Name][true] = 0
 		activeStatusCounts[alert.Name][true] = 0
 	}
-	for notificationName := range s.Conf.GetNotifications() {
+	for notificationName := range s.RuleConf.GetNotifications() {
 		unAckOldestByNotification[notificationName] = time.Unix(1<<63-62135596801, 999999999)
 		ackByNotificationCounts[notificationName] = make(map[bool]int64)
 		ackByNotificationCounts[notificationName][false] = 0
@@ -482,16 +482,16 @@ var bosunStartupTime = utcNow()
 
 func (s *Schedule) findUnknownAlerts(now time.Time, alert string) []models.AlertKey {
 	keys := []models.AlertKey{}
-	if utcNow().Sub(bosunStartupTime) < s.Conf.GetCheckFrequency() {
+	if utcNow().Sub(bosunStartupTime) < s.SystemConf.GetCheckFrequency() {
 		return keys
 	}
 	if !s.AlertSuccessful(alert) {
 		return keys
 	}
-	a := s.Conf.GetAlert(alert)
+	a := s.RuleConf.GetAlert(alert)
 	t := a.Unknown
 	if t == 0 {
-		t = s.Conf.GetCheckFrequency() * 2 * time.Duration(a.RunEvery)
+		t = s.SystemConf.GetCheckFrequency() * 2 * time.Duration(a.RunEvery)
 	}
 	maxTouched := now.UTC().Unix() - int64(t.Seconds())
 	untouched, err := s.DataAccess.State().GetUntouchedSince(alert, maxTouched)
@@ -612,7 +612,7 @@ func (s *Schedule) executeExpr(T miniprofiler.Timer, rh *RunHistory, a *conf.Ale
 	providers := &expr.BosunProviders{
 		Cache:     rh.Cache,
 		Search:    s.Search,
-		Squelched: s.Conf.AlertSquelched(a),
+		Squelched: s.RuleConf.AlertSquelched(a),
 		History:   s,
 	}
 	results, _, err := e.Execute(rh.Backends, providers, T, rh.Start, 0, a.UnjoinedOK)
@@ -652,7 +652,7 @@ func (s *Schedule) CheckExpr(T miniprofiler.Timer, rh *RunHistory, a *conf.Alert
 	}
 Loop:
 	for _, r := range results.Results {
-		if s.Conf.Squelched(a, r.Group) {
+		if s.RuleConf.Squelched(a, r.Group) {
 			continue
 		}
 		ak := models.NewAlertKey(a.Name, r.Group)

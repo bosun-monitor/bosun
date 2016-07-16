@@ -11,16 +11,16 @@ import (
 
 // Run should be called once (and only once) to start all schedule activity.
 func (s *Schedule) Run() error {
-	if s.Conf == nil {
+	if s.RuleConf == nil || s.SystemConf == nil {
 		return fmt.Errorf("sched: nil configuration")
 	}
 	s.nc = make(chan interface{}, 1)
-	if s.Conf.GetPing() {
+	if s.SystemConf.GetPing() {
 		go s.PingHosts()
 	}
 	go s.dispatchNotifications()
 	go s.updateCheckContext()
-	for _, a := range s.Conf.GetAlerts() {
+	for _, a := range s.RuleConf.GetAlerts() {
 		go s.RunAlert(a)
 	}
 	return nil
@@ -29,7 +29,7 @@ func (s *Schedule) updateCheckContext() {
 	for {
 		ctx := &checkContext{utcNow(), cache.New(0)}
 		s.ctx = ctx
-		time.Sleep(s.Conf.GetCheckFrequency())
+		time.Sleep(s.SystemConf.GetCheckFrequency())
 		s.Lock("CollectStates")
 		s.CollectStates()
 		s.Unlock()
@@ -39,7 +39,7 @@ func (s *Schedule) RunAlert(a *conf.Alert) {
 	s.checksRunning.Add(1)
 	defer s.checksRunning.Done()
 	for {
-		wait := time.After(s.Conf.GetCheckFrequency() * time.Duration(a.RunEvery))
+		wait := time.After(s.SystemConf.GetCheckFrequency() * time.Duration(a.RunEvery))
 		s.checkAlert(a)
 		s.LastCheck = utcNow()
 		select {

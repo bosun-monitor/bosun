@@ -53,7 +53,7 @@ func Expr(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (v inter
 		}
 		// last line is expression we care about
 		if i == len(lines)-1 {
-			expression = schedule.Conf.Expand(line, vars, false)
+			expression = schedule.RuleConf.Expand(line, vars, false)
 		} else { // must be a variable declatation
 			matches := varRegex.FindStringSubmatch(line)
 			if len(matches) == 0 {
@@ -61,10 +61,10 @@ func Expr(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (v inter
 			}
 			name := strings.TrimSpace(matches[1])
 			value := strings.TrimSpace(matches[2])
-			vars[name] = schedule.Conf.Expand(value, vars, false)
+			vars[name] = schedule.RuleConf.Expand(value, vars, false)
 		}
 	}
-	e, err := expr.New(expression, schedule.Conf.GetFuncs())
+	e, err := expr.New(expression, schedule.RuleConf.GetFuncs(schedule.SystemConf.EnabledBackends()))
 	if err != nil {
 		return nil, err
 	}
@@ -74,11 +74,11 @@ func Expr(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (v inter
 	}
 	// it may not strictly be necessary to recreate the contexts each time, but we do to be safe
 	backends := &expr.Backends{
-		TSDBContext:     schedule.Conf.GetTSDBContext(),
-		GraphiteContext: schedule.Conf.GetGraphiteContext(),
-		InfluxConfig:    schedule.Conf.GetInfluxContext(),
-		LogstashHosts:   schedule.Conf.GetLogstashContext(),
-		ElasticHosts:    schedule.Conf.GetElasticContext(),
+		TSDBContext:     schedule.SystemConf.GetTSDBContext(),
+		GraphiteContext: schedule.SystemConf.GetGraphiteContext(),
+		InfluxConfig:    schedule.SystemConf.GetInfluxContext(),
+		LogstashHosts:   schedule.SystemConf.GetLogstashContext(),
+		ElasticHosts:    schedule.SystemConf.GetElasticContext(),
 	}
 	providers := &expr.BosunProviders{
 		Cache:     cacheObj,
@@ -133,11 +133,11 @@ type Res struct {
 	Key models.AlertKey
 }
 
-func procRule(t miniprofiler.Timer, c conf.ConfProvider, a *conf.Alert, now time.Time, summary bool, email string, template_group string) (*ruleResult, error) {
+func procRule(t miniprofiler.Timer, ruleConf conf.RuleConfProvider, a *conf.Alert, now time.Time, summary bool, email string, template_group string) (*ruleResult, error) {
 	s := &sched.Schedule{}
 	s.DataAccess = schedule.DataAccess
 	s.Search = schedule.Search
-	if err := s.Init(c); err != nil {
+	if err := s.Init(schedule.SystemConf, ruleConf, false, false); err != nil {
 		return nil, err
 	}
 	rh := s.NewRunHistory(now, cacheObj)
@@ -244,7 +244,7 @@ func procRule(t miniprofiler.Timer, c conf.ConfProvider, a *conf.Alert, now time
 			} else if s_err != nil {
 				warning = append(warning, s_err.Error())
 			} else {
-				n.DoEmail(email_subject, email, schedule.Conf, string(primaryIncident.AlertKey), attachments...)
+				n.DoEmail(email_subject, email, schedule.SystemConf, string(primaryIncident.AlertKey), attachments...)
 			}
 		}
 		data = s.Data(rh, primaryIncident, a, false)
@@ -443,12 +443,12 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 	return &ret, nil
 }
 
-func buildConfig(r *http.Request) (c conf.ConfProvider, a *conf.Alert, hash string, err error) {
+func buildConfig(r *http.Request) (c conf.RuleConfProvider, a *conf.Alert, hash string, err error) {
 	config, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		return nil, nil, "", err
 	}
-	c, err = native.NewNativeConf("Test Config", string(config))
+	c, err = native.NewNativeConf("Test Config", schedule.SystemConf.EnabledBackends(), string(config))
 	if err != nil {
 		return nil, nil, "", err
 	}

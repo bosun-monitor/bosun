@@ -26,7 +26,7 @@ func (c *NativeConf) SetAlert(name, alertText string) (string, error) {
 	} else {
 		newRawConf = writeSection(a.Locator, c.RawText, alertText)
 	}
-	newConf, err := NewNativeConf(c.Name, newRawConf)
+	newConf, err := NewNativeConf(c.Name, c.backends, newRawConf)
 	if err != nil {
 		return "", fmt.Errorf("new config not valid: %v", err)
 	}
@@ -41,7 +41,7 @@ func (c *NativeConf) SetAlert(name, alertText string) (string, error) {
 }
 
 func (c *NativeConf) SaveRawText(rawConfig, diff, user, message string, args ...string) error {
-	newConf, err := NewNativeConf(c.Name, rawConfig)
+	newConf, err := NewNativeConf(c.Name, c.backends, rawConfig)
 	if err != nil {
 		return err
 	}
@@ -126,7 +126,7 @@ func (c *NativeConf) BulkEdit(edits conf.BulkEditRequest) error {
 		} else {
 			rawConf = writeSection(l, newConf.RawText, edit.Text)
 		}
-		newConf, err = NewNativeConf(c.Name, rawConf)
+		newConf, err = NewNativeConf(c.Name, c.backends, rawConf)
 		if err != nil {
 			return fmt.Errorf("could not create new conf: failed on step %v:%v : %v", edit.Type, edit.Name, err)
 		}
@@ -156,7 +156,7 @@ func (c *NativeConf) DeleteAlert(name string) error {
 		return fmt.Errorf("alert %v not found", name)
 	}
 	newRawConf := removeSection(a.Locator, c.RawText)
-	newConf, err := NewNativeConf(c.Name, newRawConf)
+	newConf, err := NewNativeConf(c.Name, c.backends, newRawConf)
 	if err != nil {
 		return fmt.Errorf("new config not valid: %v", err)
 	}
