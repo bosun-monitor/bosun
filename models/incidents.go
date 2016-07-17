@@ -24,6 +24,7 @@ type IncidentState struct {
 
 	Subject      string
 	Body         string
+	PostBody     string
 	EmailBody    []byte
 	EmailSubject []byte
 	Attachments  []*Attachment

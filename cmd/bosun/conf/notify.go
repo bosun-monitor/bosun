@@ -26,12 +26,12 @@ func init() {
 		"The number of email notifications that Bosun failed to send.")
 }
 
-func (n *Notification) Notify(subject, body string, emailsubject, emailbody []byte, c *Conf, ak string, attachments ...*models.Attachment) {
+func (n *Notification) Notify(subject, body string, emailsubject, emailbody []byte, postbody string, c *Conf, ak string, attachments ...*models.Attachment) {
 	if len(n.Email) > 0 {
 		go n.DoEmail(emailsubject, emailbody, c, ak, attachments...)
 	}
 	if n.Post != nil {
-		go n.DoPost(n.GetPayload(subject, body), ak)
+		go n.DoPost(n.GetPayload(subject, body, postbody), ak)
 	}
 	if n.Get != nil {
 		go n.DoGet(ak)
@@ -45,7 +45,10 @@ func (n *Notification) Notify(subject, body string, emailsubject, emailbody []by
 	}
 }
 
-func (n *Notification) GetPayload(subject, body string) (payload []byte) {
+func (n *Notification) GetPayload(subject, body, postbody string) (payload []byte) {
+	if postbody != "" {
+		return []byte(postbody)
+	}
 	if n.UseBody {
 		return []byte(body)
 	} else {
@@ -58,7 +61,14 @@ func (n *Notification) DoPrint(payload string) {
 }
 
 func (n *Notification) DoPost(payload []byte, ak string) {
-	if n.Body != nil {
+	if ak == "actionNotification" && n.ActionBody != nil {
+		buf := new(bytes.Buffer)
+		if err := n.ActionBody.Execute(buf, string(payload)); err != nil {
+			slog.Errorln(err)
+			return
+		}
+		payload = buf.Bytes()
+	} else if n.Body != nil {
 		buf := new(bytes.Buffer)
 		if err := n.Body.Execute(buf, string(payload)); err != nil {
 			slog.Errorln(err)

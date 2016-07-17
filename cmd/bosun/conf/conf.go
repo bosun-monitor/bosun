@@ -84,6 +84,7 @@ type Conf struct {
 	node            parse.Node
 	unknownTemplate string
 	bodies          *htemplate.Template
+	postbodies      *ttemplate.Template
 	subjects        *ttemplate.Template
 	squelch         []string
 }
@@ -342,11 +343,12 @@ func (c *Conf) parseNotifications(v string) (map[string]*Notification, error) {
 type Template struct {
 	Text string
 	Vars
-	Name    string
-	Body    *htemplate.Template `json:"-"`
-	Subject *ttemplate.Template `json:"-"`
+	Name     string
+	Body     *htemplate.Template `json:"-"`
+	PostBody *ttemplate.Template `json:"-"`
+	Subject  *ttemplate.Template `json:"-"`
 
-	body, subject string
+	body, postbody, subject string
 }
 
 type Notification struct {
@@ -356,6 +358,7 @@ type Notification struct {
 	Email        []*mail.Address
 	Post, Get    *url.URL
 	Body         *ttemplate.Template
+	ActionBody   *ttemplate.Template
 	Print        bool
 	Next         *Notification
 	Timeout      time.Duration
@@ -363,10 +366,11 @@ type Notification struct {
 	RunOnActions bool
 	UseBody      bool
 
-	next      string
-	email     string
-	post, get string
-	body      string
+	next       string
+	email      string
+	post, get  string
+	body       string
+	actionbody string
 }
 
 type Vars map[string]string
@@ -401,6 +405,7 @@ func New(name, text string) (c *Conf, err error) {
 		Notifications:    make(map[string]*Notification),
 		RawText:          text,
 		bodies:           htemplate.New(name).Funcs(htemplate.FuncMap(defaultFuncs)),
+		postbodies:       ttemplate.New(name).Funcs(defaultFuncs),
 		subjects:         ttemplate.New(name).Funcs(defaultFuncs),
 		Lookups:          make(map[string]*Lookup),
 		Macros:           make(map[string]*Macro),
@@ -850,6 +855,14 @@ func (c *Conf) loadTemplate(s *parse.SectionNode) {
 					c.error(err)
 				}
 				t.Body = tmpl
+			case "postBody":
+				t.postbody = v
+				tmpl := c.postbodies.New(name).Funcs(funcs)
+				_, err := tmpl.Parse(t.postbody)
+				if err != nil {
+					c.error(err)
+				}
+				t.PostBody = tmpl
 			case "subject":
 				t.subject = v
 				tmpl := c.subjects.New(name).Funcs(funcs)
@@ -1149,6 +1162,14 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 				c.error(err)
 			}
 			n.Body = tmpl
+		case "actionBody":
+			n.actionbody = v
+			tmpl := ttemplate.New(name).Funcs(funcs)
+			_, err := tmpl.Parse(n.actionbody)
+			if err != nil {
+				c.error(err)
+			}
+			n.ActionBody = tmpl
 		case "runOnActions":
 			n.RunOnActions = v == "true"
 		case "useBody":

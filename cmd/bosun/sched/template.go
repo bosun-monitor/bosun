@@ -121,20 +121,35 @@ func (c *Context) Incident() string {
 	})
 }
 
-func (s *Schedule) ExecuteBody(rh *RunHistory, a *conf.Alert, st *models.IncidentState, isEmail bool) ([]byte, []*models.Attachment, error) {
+func (s *Schedule) ExecuteBody(rh *RunHistory, a *conf.Alert, st *models.IncidentState, isEmail bool, isPost ...bool) ([]byte, []*models.Attachment, error) {
+	ispost := false
+	if len(isPost) > 0 {
+		ispost = isPost[0]
+	}
+
 	t := a.Template
 	if t == nil || t.Body == nil {
 		return nil, nil, nil
 	}
+	if ispost && t.PostBody == nil {
+		return nil, nil, nil
+	}
 	c := s.Data(rh, st, a, isEmail)
 	buf := new(bytes.Buffer)
-	if err := t.Body.Execute(buf, c); err != nil {
-		return nil, nil, err
-	}
-	if inline, err := inliner.Inline(buf.String()); err == nil {
-		buf = bytes.NewBufferString(inline)
+
+	if ispost {
+		if err := t.PostBody.Execute(buf, c); err != nil {
+			return nil, nil, err
+		}
 	} else {
-		slog.Errorln(err)
+		if err := t.Body.Execute(buf, c); err != nil {
+			return nil, nil, err
+		}
+		if inline, err := inliner.Inline(buf.String()); err == nil {
+			buf = bytes.NewBufferString(inline)
+		} else {
+			slog.Errorln(err)
+		}
 	}
 	return buf.Bytes(), c.Attachments, nil
 }
