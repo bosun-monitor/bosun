@@ -43,6 +43,7 @@ type SystemConf struct {
 	AnnotateConf AnnotateConf
 
 	CommandHookPath string
+	RuleFilePath    string
 }
 
 type EnabledBackends struct {
@@ -242,6 +243,10 @@ func (sc *SystemConf) GetInternetProxy() string {
 
 func (sc *SystemConf) GetCommandHookPath() string {
 	return sc.CommandHookPath
+}
+
+func (sc *SystemConf) GetRuleFilePath() string {
+	return sc.RuleFilePath
 }
 
 func (sc *SystemConf) SetTSDBHost(tsdbHost string) {

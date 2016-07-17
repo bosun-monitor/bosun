@@ -51,6 +51,7 @@ type SystemConfProvider interface {
 	GetShortURLKey() string
 	GetInternetProxy() string
 
+	GetRuleFilePath() string
 	GetCommandHookPath() string
 
 	SetTSDBHost(tsdbHost string)
@@ -104,7 +105,6 @@ type RuleConfProvider interface {
 	Squelched(*Alert, opentsdb.TagSet) bool
 	Expand(string, map[string]string, bool) string
 	GetFuncs(EnabledBackends) map[string]parse.Func
-
 }
 
 type RuleConfWriter interface {

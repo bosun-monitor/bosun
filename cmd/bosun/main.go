@@ -62,8 +62,7 @@ func init() {
 }
 
 var (
-	flagSysConf  = flag.String("s", "bosun.toml", "system configuration file location, in toml format")
-	flagConf     = flag.String("c", "dev.conf", "config file location")
+	flagConf     = flag.String("c", "bosun.toml", "system config file location")
 	flagTest     = flag.Bool("t", false, "test for valid config; exits with 0 on success, else 1")
 	flagWatch    = flag.Bool("w", false, "watch .go files below current directory and exit; also build typescript files on change")
 	flagReadonly = flag.Bool("r", false, "readonly-mode: don't write or relay any OpenTSDB metrics")
@@ -85,7 +84,7 @@ func main() {
 	for _, m := range mains {
 		m()
 	}
-	systemConf, err := conf.LoadSystemConfigFile(*flagSysConf)
+	systemConf, err := conf.LoadSystemConfigFile(*flagConf)
 	if err != nil {
 		slog.Fatal(err)
 	}
@@ -93,7 +92,7 @@ func main() {
 	if err != nil {
 		slog.Fatal(err)
 	}
-	nativeConf, err := native.ParseFile(*flagConf, systemConf.EnabledBackends())
+	nativeConf, err := native.ParseFile(sysProvider.GetRuleFilePath(), systemConf.EnabledBackends())
 	if err != nil {
 		slog.Fatal(err)
 	}
@@ -171,7 +170,7 @@ func main() {
 		defer func() {
 			<-reloading
 		}()
-		newConf, err := native.ParseFile(*flagConf, sysProvider.EnabledBackends())
+		newConf, err := native.ParseFile(sysProvider.GetRuleFilePath(), sysProvider.EnabledBackends())
 		if err != nil {
 			return err
 		}
