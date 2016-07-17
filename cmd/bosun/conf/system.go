@@ -136,9 +136,12 @@ func LoadSystemConfigFile(fileName string) (*SystemConf, error) {
 		SearchSince:      opentsdb.Day * 3,
 		UnknownThreshold: 5,
 	}
-	fmt.Println(fileName)
-	if _, err := toml.DecodeFile(fileName, &sc); err != nil {
+	decodeMeta, err := toml.DecodeFile(fileName, &sc)
+	if err != nil {
 		return sc, err
+	}
+	if len(decodeMeta.Undecoded()) > 0 {
+		return sc, fmt.Errorf("undecoded fields in system configuration: %v", decodeMeta.Undecoded())
 	}
 	return sc, nil
 }
