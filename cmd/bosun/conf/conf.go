@@ -28,11 +28,9 @@ import (
 type SystemConfProvider interface {
 	GetHTTPListen() string
 	GetRelayListen() string
-	//SetSMTPHost(string)
+
 	GetSMTPHost() string
-	//SetSMTPUsername(string)  // SMTP username
 	GetSMTPUsername() string // SMTP username
-	//SetSMTPPassword(string)  // SMTP password
 	GetSMTPPassword() string // SMTP password
 	GetPing() bool
 	GetPingDuration() time.Duration
@@ -43,7 +41,6 @@ type SystemConfProvider interface {
 	GetRedisDb() int
 	GetRedisPassword() string
 	GetTimeAndDate() []int
-	GetResponseLimit() int64
 	GetSearchSince() opentsdb.Duration
 
 	GetCheckFrequency() time.Duration
@@ -53,14 +50,12 @@ type SystemConfProvider interface {
 
 	GetShortURLKey() string
 	GetInternetProxy() string
+
+	GetCommandHookPath() string
+
 	SetTSDBHost(tsdbHost string)
 	GetTSDBHost() string
-	GetTSDBVersion() *opentsdb.Version
 
-	GetGraphiteHost() string
-	GetGraphiteHeaders() []string
-
-	//SetLogstashElasticHosts(expr.LogstashElasticHosts)
 	GetLogstashElasticHosts() expr.LogstashElasticHosts
 	GetAnnotateElasticHosts() expr.ElasticHosts
 	GetAnnotateIndex() string
@@ -75,6 +70,16 @@ type SystemConfProvider interface {
 
 	MakeLink(string, *url.Values) string
 	EnabledBackends() EnabledBackends
+}
+
+func ValidateSystemConf(sc SystemConfProvider) error {
+	if sc.GetSMTPHost() == "" && sc.GetEmailFrom() == "" {
+		return fmt.Errorf("email notififications require that both SMTP Host and EmailFrom be set")
+	}
+	if sc.GetDefaultRunEvery() <= 0 {
+		return fmt.Errorf("default run every must be greater than 0, is %v", sc.GetDefaultRunEvery())
+	}
+	return nil
 }
 
 type RuleConfProvider interface {
@@ -95,11 +100,10 @@ type RuleConfProvider interface {
 	GetLookup(string) *Lookup
 
 	GetSquelches() Squelches
-	//SetSquelches(Squelches)
 	AlertSquelched(*Alert) func(opentsdb.TagSet) bool
 	Squelched(*Alert, opentsdb.TagSet) bool
 	Expand(string, map[string]string, bool) string
-	GetFuncs(EnabledBackends) map[string]parse.Func // Looks like maybe this needs to be broken into two things, one that loads funcs based on what is in the system, and one that loads the special "conf functions" (i.e. lookups)
+	GetFuncs(EnabledBackends) map[string]parse.Func
 
 }
 
@@ -341,8 +345,12 @@ type SaveHook func(files, user, message string, args ...string) error
 // passing files, user, message, args... as arguments to the command
 // the first arg of args is expected to be the file name. In the future
 // if we have multifile storage, it could be either a director
-func MakeSaveCommandHook(cmdName string) SaveHook {
-	f := func(files, user, message string, args ...string) error {
+func MakeSaveCommandHook(cmdName string) (f SaveHook, err error) {
+	_, err = exec.LookPath(cmdName)
+	if err != nil {
+		return f, fmt.Errorf("command %v not found, failed to create save hook: %v", cmdName, err)
+	}
+	f = func(files, user, message string, args ...string) error {
 		cArgs := []string{files, user, message}
 		cArgs = append(cArgs, args...)
 		slog.Infof("executing command hook %v\n", cmdName)
@@ -363,7 +371,7 @@ func MakeSaveCommandHook(cmdName string) SaveHook {
 		slog.Infoln(cOut.String())
 		return nil
 	}
-	return f
+	return
 }
 
 func GenHash(s string) string {

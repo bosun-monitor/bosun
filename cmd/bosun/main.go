@@ -89,6 +89,10 @@ func main() {
 	if err != nil {
 		slog.Fatal(err)
 	}
+	sysProvider, err := systemConf.GetSystemConfProvider()
+	if err != nil {
+		slog.Fatal(err)
+	}
 	nativeConf, err := native.ParseFile(*flagConf, systemConf.EnabledBackends())
 	if err != nil {
 		slog.Fatal(err)
@@ -96,10 +100,7 @@ func main() {
 	if *flagTest {
 		os.Exit(0)
 	}
-	var ruleProvider conf.RuleConfProvider
-	ruleProvider = nativeConf
-	var sysProvider conf.SystemConfProvider
-	sysProvider = systemConf
+	var ruleProvider conf.RuleConfProvider = nativeConf
 	httpListen := &url.URL{
 		Scheme: "http",
 		Host:   sysProvider.GetHTTPListen(),
@@ -152,9 +153,11 @@ func main() {
 			slog.Fatalf("InternetProxy error: %s", err)
 		}
 	}
-
-	tempHook := conf.MakeSaveCommandHook("/Users/kbrandt/src/hook/hook")
-	ruleProvider.SetSaveHook(tempHook)
+	cmdHook, err := conf.MakeSaveCommandHook(sysProvider.GetCommandHookPath())
+	if err != nil {
+		slog.Fatal(err)
+	}
+	ruleProvider.SetSaveHook(cmdHook)
 
 	var reload func() error
 	reloading := make(chan bool, 1)
@@ -172,7 +175,7 @@ func main() {
 		if err != nil {
 			return err
 		}
-		newConf.SetSaveHook(tempHook)
+		newConf.SetSaveHook(cmdHook)
 		newConf.SetReload(reload)
 		oldSched := sched.DefaultSched
 		oldDA := oldSched.DataAccess
@@ -225,18 +228,6 @@ func main() {
 				slog.Infoln("done")
 				os.Exit(1)
 			}()
-		}
-	}()
-
-	// Reload on Signal
-	go func() {
-		sc := make(chan os.Signal, 1)
-		signal.Notify(sc, syscall.SIGUSR2)
-		for range sc {
-			err := reload()
-			if err != nil {
-				slog.Warning(err)
-			}
 		}
 	}()
 

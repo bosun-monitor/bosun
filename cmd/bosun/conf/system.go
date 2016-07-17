@@ -2,10 +2,8 @@ package conf
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/url"
-	"strings"
 	"time"
 
 	"bosun.org/cmd/bosun/expr"
@@ -43,6 +41,8 @@ type SystemConf struct {
 	LogStashConf LogStashConf
 
 	AnnotateConf AnnotateConf
+
+	CommandHookPath string
 }
 
 type EnabledBackends struct {
@@ -65,13 +65,13 @@ func (sc *SystemConf) EnabledBackends() EnabledBackends {
 
 type OpenTSDBConf struct {
 	ResponseLimit int64
-	Host          string            // OpenTSDB relay and query destination: ny-devtsdb04:4242
+	Host          string           // OpenTSDB relay and query destination: ny-devtsdb04:4242
 	Version       opentsdb.Version // If set to 2.2 , enable passthrough of wildcards and filters, and add support for groupby
 }
 
 type GraphiteConf struct {
 	Host    string
-	Headers []string
+	Headers map[string]string
 }
 
 type AnnotateConf struct {
@@ -107,6 +107,17 @@ type SMTPConf struct {
 	Password  string `json:"-"`
 }
 
+// GetSystemConfProvider returns the SystemConfProvider interface
+// and validates the logic of the configuration. If the configuration
+// is not valid an error is returned
+func (sc *SystemConf) GetSystemConfProvider() (SystemConfProvider, error) {
+	var provider SystemConfProvider = sc
+	if err := ValidateSystemConf(sc); err != nil {
+		return provider, err
+	}
+	return provider, nil
+}
+
 func LoadSystemConfigFile(fileName string) (*SystemConf, error) {
 	sc := &SystemConf{
 		CheckFrequency:  duration{Duration: time.Minute * 5},
@@ -125,11 +136,8 @@ func LoadSystemConfigFile(fileName string) (*SystemConf, error) {
 		SearchSince:      opentsdb.Day * 3,
 		UnknownThreshold: 5,
 	}
-	fileContents, err := ioutil.ReadFile(fileName)
-	if err != nil {
-		return sc, fmt.Errorf("failed to load system config file: %v", err)
-	}
-	if _, err := toml.Decode(string(fileContents), &sc); err != nil {
+	fmt.Println(fileName)
+	if _, err := toml.DecodeFile(fileName, &sc); err != nil {
 		return sc, err
 	}
 	return sc, nil
@@ -201,10 +209,6 @@ func (sc *SystemConf) GetTimeAndDate() []int {
 	return sc.TimeAndDate
 }
 
-func (sc *SystemConf) GetResponseLimit() int64 {
-	return sc.OpenTSDBConf.ResponseLimit
-}
-
 func (sc *SystemConf) GetSearchSince() opentsdb.Duration {
 	return sc.SearchSince
 }
@@ -214,7 +218,7 @@ func (sc *SystemConf) GetCheckFrequency() time.Duration {
 }
 
 func (sc *SystemConf) GetDefaultRunEvery() int {
-    return sc.DefaultRunEvery
+	return sc.DefaultRunEvery
 }
 
 func (sc *SystemConf) GetUnknownThreshold() int {
@@ -233,24 +237,16 @@ func (sc *SystemConf) GetInternetProxy() string {
 	return sc.InternetProxy
 }
 
+func (sc *SystemConf) GetCommandHookPath() string {
+	return sc.CommandHookPath
+}
+
 func (sc *SystemConf) SetTSDBHost(tsdbHost string) {
 	sc.OpenTSDBConf.Host = tsdbHost
 }
 
 func (sc *SystemConf) GetTSDBHost() string {
 	return sc.OpenTSDBConf.Host
-}
-
-func (sc *SystemConf) GetTSDBVersion() *opentsdb.Version {
-	return &sc.OpenTSDBConf.Version
-}
-
-func (sc *SystemConf) GetGraphiteHost() string {
-	return sc.GraphiteConf.Host
-}
-
-func (sc *SystemConf) GetGraphiteHeaders() []string {
-	return sc.GraphiteConf.Headers
 }
 
 func (sc *SystemConf) GetLogstashElasticHosts() expr.LogstashElasticHosts {
@@ -282,9 +278,8 @@ func (sc *SystemConf) GetGraphiteContext() graphite.Context {
 	}
 	if len(sc.GraphiteConf.Headers) > 0 {
 		headers := http.Header(make(map[string][]string))
-		for _, s := range sc.GraphiteConf.Headers {
-			kv := strings.Split(s, ":")
-			headers.Add(kv[0], kv[1])
+		for k, v := range sc.GraphiteConf.Headers {
+			headers.Add(k, v)
 		}
 		return graphite.HostHeader{
 			Host:   sc.GraphiteConf.Host,
@@ -319,24 +314,3 @@ func (sc *SystemConf) MakeLink(path string, v *url.Values) string {
 	}
 	return u.String()
 }
-
-// TODO Validation
-// defaultRunEvery > 0
-// The following to hostname?
-	// if c.Hostname == "" {
-	// 	c.Hostname = c.HTTPListen
-	// 	if strings.HasPrefix(c.Hostname, ":") {
-	// 		h, err := os.Hostname()
-	// 		if err != nil {
-	// 			c.at(nil)
-	// 			c.error(err)
-	// 		}
-	// 		c.Hostname = h + c.Hostname
-	// 	}
-	// }
-
-    // SMTP Validation:
-    // if c.SMTPHost == "" || c.EmailFrom == "" {
-	// 			c.errorf("email notifications require both smtpHost and emailFrom to be set")
-	// 		}
-
