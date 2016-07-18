@@ -491,7 +491,11 @@ func (s *Schedule) findUnknownAlerts(now time.Time, alert string) []models.Alert
 	a := s.RuleConf.GetAlert(alert)
 	t := a.Unknown
 	if t == 0 {
-		t = s.SystemConf.GetCheckFrequency() * 2 * time.Duration(a.RunEvery)
+		runEvery := s.SystemConf.GetDefaultRunEvery()
+		if a.RunEvery != 0 {
+			runEvery = a.RunEvery
+		}
+		t = s.SystemConf.GetCheckFrequency() * 2 * time.Duration(runEvery)
 	}
 	maxTouched := now.UTC().Unix() - int64(t.Seconds())
 	untouched, err := s.DataAccess.State().GetUntouchedSince(alert, maxTouched)

@@ -19,7 +19,7 @@ type SystemConf struct {
 	RelayListen   string
 	Hostname      string
 	Ping          bool
-	PingDuration  duration // Duration from now to stop pinging hosts based on time since the host tag was touched
+	PingDuration  Duration // Duration from now to stop pinging hosts based on time since the host tag was touched
 	TimeAndDate   []int    // timeanddate.com cities list
 	SearchSince   opentsdb.Duration
 	ShortURLKey   string
@@ -27,7 +27,7 @@ type SystemConf struct {
 	MinGroupSize  int
 
 	UnknownThreshold int
-	CheckFrequency   duration // Time between alert checks: 5m
+	CheckFrequency   Duration // Time between alert checks: 5m
 	DefaultRunEvery  int      // Default number of check intervals to run each alert: 1
 
 	DBConf DBConf
@@ -121,7 +121,7 @@ func (sc *SystemConf) GetSystemConfProvider() (SystemConfProvider, error) {
 
 func LoadSystemConfigFile(fileName string) (*SystemConf, error) {
 	sc := &SystemConf{
-		CheckFrequency:  duration{Duration: time.Minute * 5},
+		CheckFrequency:  Duration{Duration: time.Minute * 5},
 		DefaultRunEvery: 1,
 		HTTPListen:      ":8070",
 		DBConf: DBConf{
@@ -129,7 +129,7 @@ func LoadSystemConfigFile(fileName string) (*SystemConf, error) {
 			LedisBindAddr: "127.0.0.1:9565",
 		},
 		MinGroupSize: 5,
-		PingDuration: duration{Duration: time.Hour * 24},
+		PingDuration: Duration{Duration: time.Hour * 24},
 		OpenTSDBConf: OpenTSDBConf{
 			ResponseLimit: 1 << 20, // 1MB
 			Version:       opentsdb.Version2_1,
@@ -147,11 +147,11 @@ func LoadSystemConfigFile(fileName string) (*SystemConf, error) {
 	return sc, nil
 }
 
-type duration struct {
+type Duration struct {
 	time.Duration
 }
 
-func (d *duration) UnmarshalText(text []byte) error {
+func (d *Duration) UnmarshalText(text []byte) error {
 	var err error
 	d.Duration, err = time.ParseDuration(string(text))
 	return err

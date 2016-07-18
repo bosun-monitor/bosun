@@ -11,11 +11,11 @@ import (
 )
 
 func TestActionNotificationTemplates(t *testing.T) {
-	c, err := rule.NewConf("", conf.EnabledBackends{}, `hostname = abc`)
+	c, err := rule.NewConf("", conf.EnabledBackends{}, ``)
 	if err != nil {
 		t.Fatal(err)
 	}
-	s, _ := initSched(c)
+	s, _ := initSched(&conf.SystemConf{Hostname: "abc"}, c)
 	data := &actionNotificationContext{}
 	data.ActionType = models.ActionAcknowledge
 	data.Message = "Bad things happened"
@@ -104,7 +104,7 @@ func TestActionNotificationGrouping(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	s, err := initSched(c)
+	s, err := initSched(&conf.SystemConf{}, c)
 	if err != nil {
 		t.Fatal(err)
 	}

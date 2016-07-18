@@ -23,6 +23,7 @@ import (
 )
 
 func init() {
+	//slog.Set(&slog.StdLog{Log: log.New(os.Stdout, "", log.LstdFlags)})
 	slog.Set(&slog.StdLog{Log: log.New(ioutil.Discard, "", log.LstdFlags)})
 	log.SetOutput(ioutil.Discard)
 }
@@ -48,7 +49,6 @@ func check(s *Schedule, t time.Time) {
 	sort.Strings(names)
 	for _, n := range names {
 		a := s.RuleConf.GetAlerts()[n]
-		fmt.Println(a)
 		s.ctx.runTime = t
 		s.checkAlert(a)
 	}
@@ -62,10 +62,10 @@ func setup() func() {
 	return closer
 }
 
-func initSched(c conf.ConfProvider) (*Schedule, error) {
+func initSched(sc conf.SystemConfProvider, c conf.RuleConfProvider) (*Schedule, error) {
 	s := new(Schedule)
 	s.DataAccess = db
-	err := s.Init(c)
+	err := s.Init(sc, c, false, false)
 	return s, err
 }
 
@@ -98,16 +98,17 @@ func testSched(t *testing.T, st *schedTest) (s *Schedule) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	confs := "tsdbHost = " + u.Host + "\n" + st.conf
-	c, err := rule.NewConf("testconf", confs)
+	//confs := "tsdbHost = " + u.Host + "\n" + st.conf
+	c, err := rule.NewConf("testconf", conf.EnabledBackends{OpenTSDB: true}, st.conf)
 	if err != nil {
 		t.Error(err)
-		t.Logf("conf:\n%s", confs)
+		t.Logf("conf:\n%s", st.conf)
 		return
 	}
 
 	time.Sleep(time.Millisecond * 250)
-	s, _ = initSched(c)
+	sysConf := &conf.SystemConf{CheckFrequency: conf.Duration{Duration: time.Minute * 5}, DefaultRunEvery: 1, UnknownThreshold: 5, MinGroupSize: 5, OpenTSDBConf: conf.OpenTSDBConf{Host: u.Host, ResponseLimit: 1 << 20}}
+	s, _ = initSched(sysConf, c)
 	for ak, time := range st.touched {
 		s.DataAccess.State().TouchAlertKey(ak, time)
 	}
