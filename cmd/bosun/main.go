@@ -19,7 +19,7 @@ import (
 	"bosun.org/_version"
 
 	"bosun.org/cmd/bosun/conf"
-	"bosun.org/cmd/bosun/conf/native"
+	"bosun.org/cmd/bosun/conf/rule"
 	"bosun.org/cmd/bosun/sched"
 	"bosun.org/cmd/bosun/web"
 	"bosun.org/collect"
@@ -92,14 +92,14 @@ func main() {
 	if err != nil {
 		slog.Fatal(err)
 	}
-	nativeConf, err := native.ParseFile(sysProvider.GetRuleFilePath(), systemConf.EnabledBackends())
+	ruleConf, err := rule.ParseFile(sysProvider.GetRuleFilePath(), systemConf.EnabledBackends())
 	if err != nil {
 		slog.Fatal(err)
 	}
 	if *flagTest {
 		os.Exit(0)
 	}
-	var ruleProvider conf.RuleConfProvider = nativeConf
+	var ruleProvider conf.RuleConfProvider = ruleConf
 	httpListen := &url.URL{
 		Scheme: "http",
 		Host:   sysProvider.GetHTTPListen(),
@@ -170,7 +170,7 @@ func main() {
 		defer func() {
 			<-reloading
 		}()
-		newConf, err := native.ParseFile(sysProvider.GetRuleFilePath(), sysProvider.EnabledBackends())
+		newConf, err := rule.ParseFile(sysProvider.GetRuleFilePath(), sysProvider.EnabledBackends())
 		if err != nil {
 			return err
 		}

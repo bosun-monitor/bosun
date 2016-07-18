@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"bosun.org/cmd/bosun/conf"
-	"bosun.org/cmd/bosun/conf/native"
+	"bosun.org/cmd/bosun/conf/rule"
 	"bosun.org/cmd/bosun/database"
 	"bosun.org/cmd/bosun/database/test"
 	"bosun.org/models"
@@ -42,12 +42,12 @@ type schedTest struct {
 // test-only function to check all alerts immediately.
 func check(s *Schedule, t time.Time) {
 	names := []string{}
-	for a := range s.Conf.GetAlerts() {
+	for a := range s.RuleConf.GetAlerts() {
 		names = append(names, a)
 	}
 	sort.Strings(names)
 	for _, n := range names {
-		a := s.Conf.GetAlerts()[n]
+		a := s.RuleConf.GetAlerts()[n]
 		fmt.Println(a)
 		s.ctx.runTime = t
 		s.checkAlert(a)
@@ -99,7 +99,7 @@ func testSched(t *testing.T, st *schedTest) (s *Schedule) {
 		t.Fatal(err)
 	}
 	confs := "tsdbHost = " + u.Host + "\n" + st.conf
-	c, err := native.NewNativeConf("testconf", confs)
+	c, err := rule.NewConf("testconf", confs)
 	if err != nil {
 		t.Error(err)
 		t.Logf("conf:\n%s", confs)

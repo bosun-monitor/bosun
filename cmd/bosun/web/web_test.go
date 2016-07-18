@@ -4,11 +4,12 @@ import (
 	"testing"
 	"time"
 
-	"bosun.org/cmd/bosun/conf/native"
+	"bosun.org/cmd/bosun/conf"
+	"bosun.org/cmd/bosun/conf/rule"
 )
 
 func TestErrorTemplate(t *testing.T) {
-	c, err := native.NewNativeConf("", `
+	c, err := rule.NewConf("", conf.EnabledBackends{}, `
 		template t {
 			body = {{.Eval "invalid"}}
 		}

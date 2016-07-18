@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"bosun.org/cmd/bosun/conf/native"
+	"bosun.org/cmd/bosun/conf/rule"
 	"bosun.org/cmd/bosun/database"
 	"bosun.org/cmd/bosun/database/test"
 )
@@ -28,7 +28,7 @@ func TestMain(m *testing.M) {
 
 func TestRelay(t *testing.T) {
 	schedule.DataAccess = testData
-	schedule.Init(new(native.NativeConf))
+	schedule.Init(new(rule.Conf))
 	rs := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(204)
 	}))

@@ -1,4 +1,4 @@
-package native
+package rule
 
 import (
 	"encoding/json"
@@ -20,7 +20,7 @@ import (
 	ttemplate "text/template"
 
 	"bosun.org/cmd/bosun/conf"
-	"bosun.org/cmd/bosun/conf/native/parse"
+	"bosun.org/cmd/bosun/conf/rule/parse"
 	"bosun.org/cmd/bosun/expr"
 	eparse "bosun.org/cmd/bosun/expr/parse"
 
@@ -28,9 +28,9 @@ import (
 	"github.com/MiniProfiler/go/miniprofiler"
 )
 
-type NativeConf struct {
-	Vars            conf.Vars
-	Name            string        // Config file name
+type Conf struct {
+	Vars conf.Vars
+	Name string // Config file name
 
 	UnknownTemplate *conf.Template
 	Templates       map[string]*conf.Template
@@ -64,27 +64,27 @@ type deferredSection struct {
 	SectionNode *parse.SectionNode
 }
 
-func (c *NativeConf) AlertSquelched(a *conf.Alert) func(opentsdb.TagSet) bool {
+func (c *Conf) AlertSquelched(a *conf.Alert) func(opentsdb.TagSet) bool {
 	return func(tags opentsdb.TagSet) bool {
 		return c.Squelched(a, tags)
 	}
 }
 
-func (c *NativeConf) Squelched(a *conf.Alert, tags opentsdb.TagSet) bool {
+func (c *Conf) Squelched(a *conf.Alert, tags opentsdb.TagSet) bool {
 	return c.Squelch.Squelched(tags) || a.Squelch.Squelched(tags)
 }
 
 // at marks the state to be on node n, for error reporting.
-func (c *NativeConf) at(node parse.Node) {
+func (c *Conf) at(node parse.Node) {
 	c.node = node
 }
 
-func (c *NativeConf) error(err error) {
+func (c *Conf) error(err error) {
 	c.errorf(err.Error())
 }
 
 // errorf formats the error and terminates processing.
-func (c *NativeConf) errorf(format string, args ...interface{}) {
+func (c *Conf) errorf(format string, args ...interface{}) {
 	if c.node == nil {
 		format = fmt.Sprintf("conf: %s: %s", c.Name, format)
 	} else {
@@ -112,7 +112,7 @@ func errRecover(errp *error) {
 
 // parseNotifications parses the comma-separated string v for notifications and
 // returns them.
-func (c *NativeConf) parseNotifications(v string) (map[string]*conf.Notification, error) {
+func (c *Conf) parseNotifications(v string) (map[string]*conf.Notification, error) {
 	ns := make(map[string]*conf.Notification)
 	for _, s := range strings.Split(v, ",") {
 		s = strings.TrimSpace(s)
@@ -125,21 +125,21 @@ func (c *NativeConf) parseNotifications(v string) (map[string]*conf.Notification
 	return ns, nil
 }
 
-func ParseFile(fname string, backends conf.EnabledBackends) (*NativeConf, error) {
+func ParseFile(fname string, backends conf.EnabledBackends) (*Conf, error) {
 	f, err := ioutil.ReadFile(fname)
 	if err != nil {
 		return nil, err
 	}
-	return NewNativeConf(fname, backends, string(f))
+	return NewConf(fname, backends, string(f))
 }
 
-func (c *NativeConf) SaveConf(newConf *NativeConf) error {
+func (c *Conf) SaveConf(newConf *Conf) error {
 	return ioutil.WriteFile(c.Name, []byte(newConf.RawText), os.FileMode(int(0640)))
 }
 
-func NewNativeConf(name string, backends conf.EnabledBackends, text string) (c *NativeConf, err error) {
+func NewConf(name string, backends conf.EnabledBackends, text string) (c *Conf, err error) {
 	defer errRecover(&err)
-	c = &NativeConf{
+	c = &Conf{
 		Name:             name,
 		Vars:             make(map[string]string),
 		Templates:        make(map[string]*conf.Template),
@@ -196,7 +196,7 @@ func NewNativeConf(name string, backends conf.EnabledBackends, text string) (c *
 	return
 }
 
-func (c *NativeConf) loadGlobal(p *parse.PairNode) {
+func (c *Conf) loadGlobal(p *parse.PairNode) {
 	v := c.Expand(p.Val.Text, nil, false)
 	switch k := p.Key.Text; k {
 	case "unknownTemplate":
@@ -215,7 +215,7 @@ func (c *NativeConf) loadGlobal(p *parse.PairNode) {
 	}
 }
 
-func (c *NativeConf) loadSection(s *parse.SectionNode) {
+func (c *Conf) loadSection(s *parse.SectionNode) {
 	ds := deferredSection{}
 	switch s.SectionType.Text {
 	case "template":
@@ -248,7 +248,7 @@ const (
 	sMacro
 )
 
-func (c *NativeConf) getPairs(s *parse.SectionNode, vars conf.Vars, st sectionType) (pairs []nodePair) {
+func (c *Conf) getPairs(s *parse.SectionNode, vars conf.Vars, st sectionType) (pairs []nodePair) {
 	saw := make(map[string]bool)
 	ignoreBadExpand := st == sMacro
 	add := func(n parse.Node, k, v string) {
@@ -290,7 +290,7 @@ func (c *NativeConf) getPairs(s *parse.SectionNode, vars conf.Vars, st sectionTy
 	return
 }
 
-func (c *NativeConf) loadLookup(s *parse.SectionNode) {
+func (c *Conf) loadLookup(s *parse.SectionNode) {
 	name := s.Name.Text
 	if _, ok := c.Lookups[name]; ok {
 		c.errorf("duplicate lookup name: %s", name)
@@ -358,7 +358,7 @@ func (c *NativeConf) loadLookup(s *parse.SectionNode) {
 	c.Lookups[name] = &l
 }
 
-func (c *NativeConf) loadMacro(s *parse.SectionNode) {
+func (c *Conf) loadMacro(s *parse.SectionNode) {
 	name := s.Name.Text
 	if _, ok := c.Macros[name]; ok {
 		c.errorf("duplicate macro name: %s", name)
@@ -409,7 +409,7 @@ var defaultFuncs = ttemplate.FuncMap{
 	"parseDuration": time.ParseDuration,
 }
 
-func (c *NativeConf) loadTemplate(s *parse.SectionNode) {
+func (c *Conf) loadTemplate(s *parse.SectionNode) {
 	name := s.Name.Text
 	if _, ok := c.Templates[name]; ok {
 		c.errorf("duplicate template name: %s", name)
@@ -469,7 +469,7 @@ func (c *NativeConf) loadTemplate(s *parse.SectionNode) {
 
 var lookupNotificationRE = regexp.MustCompile(`^lookup\("(.*)", "(.*)"\)$`)
 
-func (c *NativeConf) loadAlert(s *parse.SectionNode) {
+func (c *Conf) loadAlert(s *parse.SectionNode) {
 	name := s.Name.Text
 	if _, ok := c.Alerts[name]; ok {
 		c.errorf("duplicate alert name: %s", name)
@@ -660,7 +660,7 @@ func (c *NativeConf) loadAlert(s *parse.SectionNode) {
 	c.Alerts[name] = &a
 }
 
-func (c *NativeConf) loadNotification(s *parse.SectionNode) {
+func (c *Conf) loadNotification(s *parse.SectionNode) {
 	name := s.Name.Text
 	if _, ok := c.Notifications[name]; ok {
 		c.errorf("duplicate notification name: %s", name)
@@ -753,7 +753,7 @@ func (c *NativeConf) loadNotification(s *parse.SectionNode) {
 
 var exRE = regexp.MustCompile(`\$(?:[\w.]+|\{[\w.]+\})`)
 
-func (c *NativeConf) Expand(v string, vars map[string]string, ignoreBadExpand bool) string {
+func (c *Conf) Expand(v string, vars map[string]string, ignoreBadExpand bool) string {
 	ss := exRE.ReplaceAllStringFunc(v, func(s string) string {
 		var n string
 		if strings.HasPrefix(s, "${") && strings.HasSuffix(s, "}") && !ignoreBadExpand {
@@ -775,7 +775,7 @@ func (c *NativeConf) Expand(v string, vars map[string]string, ignoreBadExpand bo
 	return ss
 }
 
-func (c *NativeConf) seen(v string, m map[string]bool) {
+func (c *Conf) seen(v string, m map[string]bool) {
 	if m[v] {
 		switch v {
 		case "squelch", "critNotification", "warnNotification", "graphiteHeader":
@@ -832,7 +832,7 @@ var builtins = htemplate.FuncMap{
 
 func nilFunc() {}
 
-func (c *NativeConf) NewExpr(s string) *expr.Expr {
+func (c *Conf) NewExpr(s string) *expr.Expr {
 	exp, err := expr.New(s, c.GetFuncs(c.backends))
 	if err != nil {
 		c.error(err)
@@ -846,7 +846,7 @@ func (c *NativeConf) NewExpr(s string) *expr.Expr {
 	return exp
 }
 
-func (c *NativeConf) GetFuncs(backends conf.EnabledBackends) map[string]eparse.Func {
+func (c *Conf) GetFuncs(backends conf.EnabledBackends) map[string]eparse.Func {
 	lookup := func(e *expr.State, T miniprofiler.Timer, lookup, key string) (results *expr.Results, err error) {
 		results = new(expr.Results)
 		results.IgnoreUnjoined = true
@@ -1005,7 +1005,7 @@ func (c *NativeConf) GetFuncs(backends conf.EnabledBackends) map[string]eparse.F
 	return funcs
 }
 
-func (c *NativeConf) getAlertExpr(name, key string) (*conf.Alert, *expr.Expr, error) {
+func (c *Conf) getAlertExpr(name, key string) (*conf.Alert, *expr.Expr, error) {
 	a := c.Alerts[name]
 	if a == nil {
 		return nil, nil, fmt.Errorf("bad alert name %v", name)
@@ -1025,7 +1025,7 @@ func (c *NativeConf) getAlertExpr(name, key string) (*conf.Alert, *expr.Expr, er
 	return a, e, nil
 }
 
-func (c *NativeConf) alert(s *expr.State, T miniprofiler.Timer, name, key string) (results *expr.Results, err error) {
+func (c *Conf) alert(s *expr.State, T miniprofiler.Timer, name, key string) (results *expr.Results, err error) {
 	_, e, err := c.getAlertExpr(name, key)
 	if err != nil {
 		return nil, err
@@ -1075,66 +1075,66 @@ func (c *NativeConf) alert(s *expr.State, T miniprofiler.Timer, name, key string
 	return results, nil
 }
 
-func (c *NativeConf) GetUnknownTemplate() *conf.Template {
+func (c *Conf) GetUnknownTemplate() *conf.Template {
 	return c.UnknownTemplate
 }
 
-func (c *NativeConf) GetTemplate(s string) *conf.Template {
+func (c *Conf) GetTemplate(s string) *conf.Template {
 	return c.Templates[s]
 }
 
-func (c *NativeConf) GetAlerts() map[string]*conf.Alert {
+func (c *Conf) GetAlerts() map[string]*conf.Alert {
 	return c.Alerts
 }
 
-func (c *NativeConf) GetAlert(s string) *conf.Alert {
+func (c *Conf) GetAlert(s string) *conf.Alert {
 	return c.Alerts[s]
 }
 
-func (c *NativeConf) GetNotifications() map[string]*conf.Notification {
+func (c *Conf) GetNotifications() map[string]*conf.Notification {
 	return c.Notifications
 }
 
-func (c *NativeConf) GetNotification(s string) *conf.Notification {
+func (c *Conf) GetNotification(s string) *conf.Notification {
 	return c.Notifications[s]
 }
 
-func (c *NativeConf) GetMacro(s string) *conf.Macro {
+func (c *Conf) GetMacro(s string) *conf.Macro {
 	return c.Macros[s]
 }
 
-func (c *NativeConf) GetLookup(s string) *conf.Lookup {
+func (c *Conf) GetLookup(s string) *conf.Lookup {
 	return c.Lookups[s]
 }
 
-func (c *NativeConf) GetSquelches() conf.Squelches {
+func (c *Conf) GetSquelches() conf.Squelches {
 	return c.Squelch
 }
 
-func (c *NativeConf) GetRawText() string {
+func (c *Conf) GetRawText() string {
 	return c.RawText
 }
 
-func (c *NativeConf) SetReload(reload func() error) {
+func (c *Conf) SetReload(reload func() error) {
 	c.reload = reload
 }
 
-func (c *NativeConf) Reload() error {
+func (c *Conf) Reload() error {
 	return c.reload()
 }
 
-func (c *NativeConf) SetSaveHook(sh conf.SaveHook) {
+func (c *Conf) SetSaveHook(sh conf.SaveHook) {
 	c.saveHook = &sh
 }
 
-func (c *NativeConf) callSaveHook(file, user, message string, args ...string) error {
+func (c *Conf) callSaveHook(file, user, message string, args ...string) error {
 	return (*c.saveHook)(file, user, message, args...)
 }
 
-func (c *NativeConf) genHash() {
+func (c *Conf) genHash() {
 	c.Hash = conf.GenHash(c.RawText)
 }
 
-func (c *NativeConf) GetHash() string {
+func (c *Conf) GetHash() string {
 	return c.Hash
 }

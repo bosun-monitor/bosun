@@ -1,15 +1,15 @@
-package native
+package rule
 
 import (
 	"bytes"
 	"fmt"
 
 	"bosun.org/cmd/bosun/conf"
-	"bosun.org/cmd/bosun/conf/native/parse"
+	"bosun.org/cmd/bosun/conf/rule/parse"
 	"github.com/pmezard/go-difflib/difflib"
 )
 
-func (c *NativeConf) SetAlert(name, alertText string) (string, error) {
+func (c *Conf) SetAlert(name, alertText string) (string, error) {
 	select {
 	case c.writeLock <- true:
 		// Got Write Lock
@@ -26,7 +26,7 @@ func (c *NativeConf) SetAlert(name, alertText string) (string, error) {
 	} else {
 		newRawConf = writeSection(a.Locator, c.RawText, alertText)
 	}
-	newConf, err := NewNativeConf(c.Name, c.backends, newRawConf)
+	newConf, err := NewConf(c.Name, c.backends, newRawConf)
 	if err != nil {
 		return "", fmt.Errorf("new config not valid: %v", err)
 	}
@@ -40,8 +40,8 @@ func (c *NativeConf) SetAlert(name, alertText string) (string, error) {
 	return "reloaded", nil
 }
 
-func (c *NativeConf) SaveRawText(rawConfig, diff, user, message string, args ...string) error {
-	newConf, err := NewNativeConf(c.Name, c.backends, rawConfig)
+func (c *Conf) SaveRawText(rawConfig, diff, user, message string, args ...string) error {
+	newConf, err := NewConf(c.Name, c.backends, rawConfig)
 	if err != nil {
 		return err
 	}
@@ -74,7 +74,7 @@ func (c *NativeConf) SaveRawText(rawConfig, diff, user, message string, args ...
 	return nil
 }
 
-func (c *NativeConf) BulkEdit(edits conf.BulkEditRequest) error {
+func (c *Conf) BulkEdit(edits conf.BulkEditRequest) error {
 	select {
 	case c.writeLock <- true:
 		// Got Write Lock
@@ -126,7 +126,7 @@ func (c *NativeConf) BulkEdit(edits conf.BulkEditRequest) error {
 		} else {
 			rawConf = writeSection(l, newConf.RawText, edit.Text)
 		}
-		newConf, err = NewNativeConf(c.Name, c.backends, rawConf)
+		newConf, err = NewConf(c.Name, c.backends, rawConf)
 		if err != nil {
 			return fmt.Errorf("could not create new conf: failed on step %v:%v : %v", edit.Type, edit.Name, err)
 		}
@@ -141,7 +141,7 @@ func (c *NativeConf) BulkEdit(edits conf.BulkEditRequest) error {
 	return nil
 }
 
-func (c *NativeConf) DeleteAlert(name string) error {
+func (c *Conf) DeleteAlert(name string) error {
 	select {
 	case c.writeLock <- true:
 		// Got Write Lock
@@ -156,7 +156,7 @@ func (c *NativeConf) DeleteAlert(name string) error {
 		return fmt.Errorf("alert %v not found", name)
 	}
 	newRawConf := removeSection(a.Locator, c.RawText)
-	newConf, err := NewNativeConf(c.Name, c.backends, newRawConf)
+	newConf, err := NewConf(c.Name, c.backends, newRawConf)
 	if err != nil {
 		return fmt.Errorf("new config not valid: %v", err)
 	}
@@ -209,7 +209,7 @@ func getLocationEnd(l *conf.Locator) int {
 	return l.Location.(conf.NativeLocator)[1]
 }
 
-func (c *NativeConf) RawDiff(rawConf string) (string, error) {
+func (c *Conf) RawDiff(rawConf string) (string, error) {
 	diff := difflib.UnifiedDiff{
 		A:        difflib.SplitLines(c.RawText),
 		B:        difflib.SplitLines(rawConf),

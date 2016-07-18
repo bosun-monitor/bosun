@@ -19,7 +19,7 @@ import (
 
 	"bosun.org/_version"
 	"bosun.org/cmd/bosun/conf"
-	"bosun.org/cmd/bosun/conf/native"
+	"bosun.org/cmd/bosun/conf/rule"
 	"bosun.org/cmd/bosun/database"
 	"bosun.org/cmd/bosun/sched"
 	"bosun.org/collect"
@@ -718,7 +718,7 @@ func ConfigTest(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 		serveError(w, fmt.Errorf("empty config"))
 		return
 	}
-	_, err = native.NewNativeConf("test", schedule.SystemConf.EnabledBackends(), string(b))
+	_, err = rule.NewConf("test", schedule.SystemConf.EnabledBackends(), string(b))
 	if err != nil {
 		fmt.Fprintf(w, err.Error())
 	}

@@ -1,4 +1,4 @@
-package native
+package rule
 
 import (
 	"io/ioutil"
@@ -18,7 +18,7 @@ func TestPrint(t *testing.T) {
 	if err := os.Setenv("env", "1"); err != nil {
 		t.Fatal(err)
 	}
-	c, err := NewNativeConf(fname, string(b))
+	c, err := NewConf(fname,  conf.EnabledBackends{OpenTSDB: true}, string(b))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -79,7 +79,7 @@ func TestInvalid(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		_, err = NewNativeConf(fname, string(b))
+		_, err = NewConf(fname,  conf.EnabledBackends{OpenTSDB: true}, string(b))
 		if err == nil {
 			t.Error("expected error in", path)
 			continue
