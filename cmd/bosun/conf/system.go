@@ -1,6 +1,7 @@
 package conf
 
 import (
+	"bytes"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -10,6 +11,7 @@ import (
 	"bosun.org/graphite"
 	"bosun.org/opentsdb"
 	"github.com/BurntSushi/toml"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/influxdata/influxdb/client"
 )
 
@@ -44,6 +46,7 @@ type SystemConf struct {
 
 	CommandHookPath string
 	RuleFilePath    string
+	md              toml.MetaData
 }
 
 type EnabledBackends struct {
@@ -89,7 +92,13 @@ type ElasticConf struct {
 }
 
 type InfluxConf struct {
-	client.Config
+	URL       URL
+	Username  string
+	Password  string `json:"-"`
+	UserAgent string
+	Timeout   Duration
+	UnsafeSSL bool
+	Precision string
 }
 
 type DBConf struct {
@@ -119,8 +128,9 @@ func (sc *SystemConf) GetSystemConfProvider() (SystemConfProvider, error) {
 	return provider, nil
 }
 
-func LoadSystemConfigFile(fileName string) (*SystemConf, error) {
-	sc := &SystemConf{
+// NewSystemConf retruns a system conf with default values set
+func newSystemConf() *SystemConf {
+	return &SystemConf{
 		CheckFrequency:  Duration{Duration: time.Minute * 5},
 		DefaultRunEvery: 1,
 		HTTPListen:      ":8070",
@@ -137,6 +147,10 @@ func LoadSystemConfigFile(fileName string) (*SystemConf, error) {
 		SearchSince:      opentsdb.Day * 3,
 		UnknownThreshold: 5,
 	}
+}
+
+func LoadSystemConfigFile(fileName string) (*SystemConf, error) {
+	sc := newSystemConf()
 	decodeMeta, err := toml.DecodeFile(fileName, &sc)
 	if err != nil {
 		return sc, err
@@ -144,17 +158,22 @@ func LoadSystemConfigFile(fileName string) (*SystemConf, error) {
 	if len(decodeMeta.Undecoded()) > 0 {
 		return sc, fmt.Errorf("undecoded fields in system configuration: %v", decodeMeta.Undecoded())
 	}
+	sc.md = decodeMeta
+	spew.Dump(decodeMeta)
 	return sc, nil
 }
 
-type Duration struct {
-	time.Duration
-}
-
-func (d *Duration) UnmarshalText(text []byte) error {
-	var err error
-	d.Duration, err = time.ParseDuration(string(text))
-	return err
+func LoadSystemConfig(conf string) (*SystemConf, error) {
+	sc := newSystemConf()
+	decodeMeta, err := toml.Decode(conf, &sc)
+	if err != nil {
+		return sc, err
+	}
+	if len(decodeMeta.Undecoded()) > 0 {
+		return sc, fmt.Errorf("undecoded fields in system configuration: %v", decodeMeta.Undecoded())
+	}
+	sc.md = decodeMeta
+	return sc, nil
 }
 
 func (sc *SystemConf) GetHTTPListen() string {
@@ -298,7 +317,26 @@ func (sc *SystemConf) GetGraphiteContext() graphite.Context {
 }
 
 func (sc *SystemConf) GetInfluxContext() client.Config {
-	return sc.InfluxConf.Config
+	c := client.NewConfig()
+	if sc.md.IsDefined("URL") {
+		c.URL = *sc.InfluxConf.URL.URL
+	}
+	if sc.md.IsDefined("Username") {
+		c.Username = sc.InfluxConf.Username
+	}
+	if sc.md.IsDefined("Password") {
+		c.Password = sc.InfluxConf.Password
+	}
+	if sc.md.IsDefined("UserAgent") {
+		c.UserAgent = sc.InfluxConf.UserAgent
+	}
+	if sc.md.IsDefined("Timeout") {
+		c.Timeout = sc.InfluxConf.Timeout.Duration
+	}
+	if sc.md.IsDefined("UnsafeSsl") {
+		c.UnsafeSsl = sc.InfluxConf.UnsafeSSL
+	}
+	return c
 }
 
 func (sc *SystemConf) GetLogstashContext() expr.LogstashElasticHosts {
@@ -321,4 +359,24 @@ func (sc *SystemConf) MakeLink(path string, v *url.Values) string {
 		RawQuery: v.Encode(),
 	}
 	return u.String()
+}
+
+type Duration struct {
+	time.Duration
+}
+
+func (d *Duration) UnmarshalText(text []byte) error {
+	var err error
+	d.Duration, err = time.ParseDuration(string(text))
+	return err
+}
+
+type URL struct {
+	*url.URL
+}
+
+func (u *URL) UnmarshalText(text []byte) error {
+	var err error
+	u.URL, err = url.Parse(string(bytes.Trim(text, `\"`)))
+	return err
 }
