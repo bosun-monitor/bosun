@@ -11,7 +11,6 @@ import (
 	"bosun.org/graphite"
 	"bosun.org/opentsdb"
 	"github.com/BurntSushi/toml"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/influxdata/influxdb/client"
 )
 
@@ -61,7 +60,7 @@ func (sc *SystemConf) EnabledBackends() EnabledBackends {
 	b := EnabledBackends{}
 	b.OpenTSDB = sc.OpenTSDBConf.Host != ""
 	b.Graphite = sc.GraphiteConf.Host != ""
-	b.Influx = sc.InfluxConf.URL.Host != ""
+	b.Influx = sc.InfluxConf.URL.URL != nil && sc.InfluxConf.URL.Host != ""
 	b.Logstash = len(sc.LogStashConf.Hosts) != 0
 	b.Elastic = len(sc.ElasticConf.Hosts) != 0
 	return b
@@ -159,7 +158,6 @@ func LoadSystemConfigFile(fileName string) (*SystemConf, error) {
 		return sc, fmt.Errorf("undecoded fields in system configuration: %v", decodeMeta.Undecoded())
 	}
 	sc.md = decodeMeta
-	spew.Dump(decodeMeta)
 	return sc, nil
 }
 
