@@ -96,8 +96,6 @@ type RuleConfProvider interface {
 	GetNotifications() map[string]*Notification
 	GetNotification(string) *Notification
 
-	GetMacro(string) *Macro
-
 	GetLookup(string) *Lookup
 
 	GetSquelches() Squelches
