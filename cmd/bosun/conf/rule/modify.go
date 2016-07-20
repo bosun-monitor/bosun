@@ -9,12 +9,16 @@ import (
 	"github.com/pmezard/go-difflib/difflib"
 )
 
+// SaveRawText saves a new configuration file. The contextual diff of the change is provided
+// to verify that no other changes have happened since the save request is issue. User, message, and
+// args are passed to an optionally configured save hook. If the config file is not valid the file
+// will not be saved. If the savehook fails to run or returns an error thaen the orginal config
+// will be restored and the reload will not take place.
 func (c *Conf) SaveRawText(rawConfig, diff, user, message string, args ...string) error {
 	newConf, err := NewConf(c.Name, c.backends, rawConfig)
 	if err != nil {
 		return err
 	}
-
 	currentDiff, err := c.RawDiff(rawConfig)
 	if err != nil {
 		return fmt.Errorf("couldn't save config because failed to generate a diff: %v", err)
@@ -43,6 +47,8 @@ func (c *Conf) SaveRawText(rawConfig, diff, user, message string, args ...string
 	return nil
 }
 
+// BulkEdit applies sequental edits to the configuration file. Each individual edit
+// must generate a valid configuration or the edit request will fail.
 func (c *Conf) BulkEdit(edits conf.BulkEditRequest) error {
 	select {
 	case c.writeLock <- true:
@@ -110,40 +116,9 @@ func (c *Conf) BulkEdit(edits conf.BulkEditRequest) error {
 	return nil
 }
 
-func (c *Conf) DeleteAlert(name string) error {
-	select {
-	case c.writeLock <- true:
-		// Got Write Lock
-	default:
-		return fmt.Errorf("cannot delete alert, write in progress")
-	}
-	defer func() {
-		<-c.writeLock
-	}()
-	a := c.GetAlert(name)
-	if a == nil {
-		return fmt.Errorf("alert %v not found", name)
-	}
-	newRawConf := removeSection(a.Locator.(Location), c.RawText)
-	newConf, err := NewConf(c.Name, c.backends, newRawConf)
-	if err != nil {
-		return fmt.Errorf("new config not valid: %v", err)
-	}
-	if err := c.SaveConf(newConf); err != nil {
-		return fmt.Errorf("couldn't save config file: %v", err)
-	}
-	err = c.reload()
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
+// Location stores the start byte position and end byte position of
+// an object in the raw configuration
 type Location []int
-
-func (l Location) Location() []int {
-	return l
-}
 
 func writeSection(l Location, orginalRaw, newText string) string {
 	var newRawConf bytes.Buffer
@@ -181,6 +156,11 @@ func getLocationEnd(l Location) int {
 	return l[1]
 }
 
+// RawDiff returns a contextual diff of the running rule configuration
+// against the provided configuration. This contextual diff library
+// does not guarantee that the generated unified diff can be applied
+// so this is only used for human consumption and verifying that the diff
+// has not change since an edit request was issued
 func (c *Conf) RawDiff(rawConf string) (string, error) {
 	diff := difflib.UnifiedDiff{
 		A:        difflib.SplitLines(c.RawText),
