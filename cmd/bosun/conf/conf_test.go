@@ -9,15 +9,13 @@ import (
 
 func TestSquelch(t *testing.T) {
 	s := Squelches{
-		[]Squelch{
-			map[string]*regexp.Regexp{
-				"x": regexp.MustCompile("ab"),
-				"y": regexp.MustCompile("bc"),
-			},
-			map[string]*regexp.Regexp{
-				"x": regexp.MustCompile("ab"),
-				"z": regexp.MustCompile("de"),
-			},
+		map[string]*regexp.Regexp{
+			"x": regexp.MustCompile("ab"),
+			"y": regexp.MustCompile("bc"),
+		},
+		map[string]*regexp.Regexp{
+			"x": regexp.MustCompile("ab"),
+			"z": regexp.MustCompile("de"),
 		},
 	}
 	type squelchTest struct {

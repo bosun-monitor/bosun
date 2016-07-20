@@ -98,7 +98,6 @@ type RuleConfProvider interface {
 
 	GetLookup(string) *Lookup
 
-	GetSquelches() Squelches
 	AlertSquelched(*Alert) func(opentsdb.TagSet) bool
 	Squelched(*Alert, opentsdb.TagSet) bool
 	Expand(string, map[string]string, bool) string
@@ -115,12 +114,15 @@ type RuleConfWriter interface {
 	SetSaveHook(SaveHook)
 }
 
+// Squelch is a map of tag keys to regexes that are applied to tag values. Squelches
+// are used to filter results from query responses
 type Squelch map[string]*regexp.Regexp
 
-type Squelches struct {
-	s []Squelch
-}
+// Squelches is a collection of Squelch
+type Squelches []Squelch
 
+// Add adds a sqluech baed on the tags in the first argument. The value of the tag
+// is a regular expression. Tags are passed as a string in the format of
 func (s *Squelches) Add(v string) error {
 	tags, err := opentsdb.ParseTags(v)
 	if tags == nil && err != nil {
@@ -134,13 +136,13 @@ func (s *Squelches) Add(v string) error {
 		}
 		sq[k] = re
 	}
-	s.s = append(s.s, sq)
+	*s = append(*s, sq)
 	return nil
 }
 
 func (s *Squelches) Squelched(tags opentsdb.TagSet) bool {
-	for _, q := range s.s {
-		if q.Squelched(tags) {
+	for _, squelch := range *s {
+		if squelch.Squelched(tags) {
 			return true
 		}
 	}
