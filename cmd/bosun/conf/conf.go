@@ -25,6 +25,9 @@ import (
 	"bosun.org/slog"
 )
 
+// SystemConfProvider providers all the information about the system configuration.
+// the interface exists to ensure that no changes are made to the system configuration
+// outside of the package without a setter
 type SystemConfProvider interface {
 	GetHTTPListen() string
 	GetRelayListen() string
@@ -61,7 +64,7 @@ type SystemConfProvider interface {
 	GetAnnotateElasticHosts() expr.ElasticHosts
 	GetAnnotateIndex() string
 
-	// Contexts , not sure these should be in conf but leaving them there for now
+	// Contexts
 	GetTSDBContext() opentsdb.Context
 	GetGraphiteContext() graphite.Context
 	GetInfluxContext() client.Config
@@ -90,7 +93,7 @@ func ValidateSystemConf(sc SystemConfProvider) error {
 // this inside bosun in the rule package. The interface exists to ensure that the rest of
 // Bosun does not manipulate the rule configuration in unexpected ways. Also so the possibility
 // of an alternative store for rules can exist the future. However, when this is added it is expected
-// that the interface will change signficantly.
+// that the interface will change significantly.
 type RuleConfProvider interface {
 	RuleConfWriter
 	GetUnknownTemplate() *Template

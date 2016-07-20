@@ -14,8 +14,9 @@ import (
 	"github.com/influxdata/influxdb/client"
 )
 
+// SystemConf contains all the information that bosun needs to run. Outside of the conf package
+// usage should be through conf.SystemConfProvider
 type SystemConf struct {
-	Name          string
 	HTTPListen    string
 	RelayListen   string
 	Hostname      string
@@ -48,6 +49,10 @@ type SystemConf struct {
 	md              toml.MetaData
 }
 
+// EnabledBackends stores which query backends supported by bosun are enabled
+// via the system configuration. This is used so it can be passed to the rule parser
+// and the parse errors can be thrown for query functions that are used when the backend
+// is not enabled
 type EnabledBackends struct {
 	OpenTSDB bool
 	Graphite bool
@@ -56,6 +61,8 @@ type EnabledBackends struct {
 	Logstash bool
 }
 
+// EnabledBackends returns and EnabledBackends struct which contains fields
+// to state if a backend is enabled in the configuration or not
 func (sc *SystemConf) EnabledBackends() EnabledBackends {
 	b := EnabledBackends{}
 	b.OpenTSDB = sc.OpenTSDBConf.Host != ""
@@ -66,30 +73,39 @@ func (sc *SystemConf) EnabledBackends() EnabledBackends {
 	return b
 }
 
+// OpenTSDBConf contains OpenTSDB specific configuration information. The ResponseLimit
+// will prevent Bosun from loading responses larger than its size in bytes. The version
+// enables certain features of OpenTSDB querying
 type OpenTSDBConf struct {
 	ResponseLimit int64
 	Host          string           // OpenTSDB relay and query destination: ny-devtsdb04:4242
 	Version       opentsdb.Version // If set to 2.2 , enable passthrough of wildcards and filters, and add support for groupby
 }
 
+// GraphiteConf contains a string representing the host of a graphite server and
+// a map of headers to be sent with each Graphite request
 type GraphiteConf struct {
 	Host    string
 	Headers map[string]string
 }
 
+// AnnotateConf contains the elastic configuration to enable Annotations support
 type AnnotateConf struct {
 	Hosts []string // CSV of Elastic Hosts, currently the only backend in annotate
 	Index string   // name of index / table
 }
 
+// LogstashConf contains a list of elastic hosts for the depcrecated logstash functions
 type LogStashConf struct {
 	Hosts expr.LogstashElasticHosts
 }
 
+// ElasticConf contains configuration for an elastic host that Bosun can query
 type ElasticConf struct {
 	Hosts expr.ElasticHosts
 }
 
+// ElasticConf contains configuration for an influx host that Bosun can query
 type InfluxConf struct {
 	URL       URL
 	Username  string
@@ -100,6 +116,7 @@ type InfluxConf struct {
 	Precision string
 }
 
+// DBConf stores the connection information for Bosun's internal storage
 type DBConf struct {
 	RedisHost     string
 	RedisDb       int
@@ -109,6 +126,8 @@ type DBConf struct {
 	LedisBindAddr string
 }
 
+// SMTPConf contains information for the mail server for which bosun will
+// send emails through
 type SMTPConf struct {
 	EmailFrom string
 	Host      string
@@ -148,6 +167,8 @@ func newSystemConf() *SystemConf {
 	}
 }
 
+// LoadSystemConfigFile loads the system configuration in TOML format. It will
+// error if there are values in the config that were not parsed
 func LoadSystemConfigFile(fileName string) (*SystemConf, error) {
 	sc := newSystemConf()
 	decodeMeta, err := toml.DecodeFile(fileName, &sc)
@@ -161,6 +182,7 @@ func LoadSystemConfigFile(fileName string) (*SystemConf, error) {
 	return sc, nil
 }
 
+// LoadSystemConfig is like LoadSystemConfigFile but loads the config from a string
 func LoadSystemConfig(conf string) (*SystemConf, error) {
 	sc := newSystemConf()
 	decodeMeta, err := toml.Decode(conf, &sc)
@@ -359,6 +381,8 @@ func (sc *SystemConf) MakeLink(path string, v *url.Values) string {
 	return u.String()
 }
 
+// Duration is a time.Duration with a UnmarshalText method so
+// durations can be decoded from TOML.
 type Duration struct {
 	time.Duration
 }
@@ -369,6 +393,8 @@ func (d *Duration) UnmarshalText(text []byte) error {
 	return err
 }
 
+// URL is a *url.URL with a UnmarshalText method so
+// durations can be decoded from TOML.
 type URL struct {
 	*url.URL
 }
