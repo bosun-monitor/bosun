@@ -73,8 +73,9 @@ type SystemConfProvider interface {
 	EnabledBackends() EnabledBackends
 }
 
+// ValidateSystemConf runs sanity checks on the system configuration
 func ValidateSystemConf(sc SystemConfProvider) error {
-	if sc.GetSMTPHost() == "" && sc.GetEmailFrom() == "" {
+	if sc.GetSMTPHost() == "" && sc.GetEmailFrom() != "" || sc.GetSMTPHost() != "" && sc.GetEmailFrom() == "" {
 		return fmt.Errorf("email notififications require that both SMTP Host and EmailFrom be set")
 	}
 	if sc.GetDefaultRunEvery() <= 0 {
@@ -83,8 +84,15 @@ func ValidateSystemConf(sc SystemConfProvider) error {
 	return nil
 }
 
+// RuleConfProvider is an interface for accessing information that bosun needs to know about
+// rule configuration. Rule configuration includes Macros, Alerts, Notifications, Lookup
+// tables, squelching, and variable expansion. Currently there is only one implementation of
+// this inside bosun in the rule package. The interface exists to ensure that the rest of
+// Bosun does not manipulate the rule configuration in unexpected ways. Also so the possibility
+// of an alternative store for rules can exist the future. However, when this is added it is expected
+// that the interface will change signficantly.
 type RuleConfProvider interface {
-	RuleConfWriter // Wrong place for now
+	RuleConfWriter
 	GetUnknownTemplate() *Template
 	GetTemplate(string) *Template
 
@@ -104,6 +112,8 @@ type RuleConfProvider interface {
 	GetFuncs(EnabledBackends) map[string]parse.Func
 }
 
+// RuleConfWriter is a collection of the methods that are used to manipulate the configuration
+// Save methods will trigger the reload that has been passed to the rule configuration
 type RuleConfWriter interface {
 	BulkEdit(BulkEditRequest) error
 	GetRawText() string
@@ -140,6 +150,8 @@ func (s *Squelches) Add(v string) error {
 	return nil
 }
 
+// Squelched takes a tag set and returns true if the given
+// tagset should be squelched based on the Squelches
 func (s *Squelches) Squelched(tags opentsdb.TagSet) bool {
 	for _, squelch := range *s {
 		if squelch.Squelched(tags) {
@@ -149,6 +161,8 @@ func (s *Squelches) Squelched(tags opentsdb.TagSet) bool {
 	return false
 }
 
+// Squelched takes a tag set and returns true if the given
+// tagset should be squelched based on the Squelche
 func (s Squelch) Squelched(tags opentsdb.TagSet) bool {
 	if len(s) == 0 {
 		return false
@@ -162,6 +176,8 @@ func (s Squelch) Squelched(tags opentsdb.TagSet) bool {
 	return true
 }
 
+// Template stores information about a notification template. Templates
+// are based on Go's text and html/template.
 type Template struct {
 	Text string
 	Vars
@@ -173,6 +189,9 @@ type Template struct {
 	*Locator            `json:"-"`
 }
 
+// Notification stores information about a notification. A notification
+// is the definition of an action that should be performed when an
+// alert is triggered
 type Notification struct {
 	Text string
 	Vars
@@ -195,15 +214,21 @@ type Notification struct {
 	*Locator `json:"-"`
 }
 
+// Vars holds a map of variable names to the variable's value
 type Vars map[string]string
 
+// Notifications contains a mapping of notification names to
+// all notifications in the configuration. The Lookups Property
+// enables notification lookups - the ability to trigger different
+// notifications based an alerts resulting tags
 type Notifications struct {
 	Notifications map[string]*Notification `json:"-"`
 	// Table key -> table
 	Lookups map[string]*Lookup
 }
 
-// Get returns the set of notifications based on given tags.
+// Get returns the set of notifications based on given tags and applys any notification
+// lookup tables
 func (ns *Notifications) Get(c RuleConfProvider, tags opentsdb.TagSet) map[string]*Notification {
 	nots := make(map[string]*Notification)
 	for name, n := range ns.Notifications {
@@ -260,6 +285,8 @@ func GetNotificationChains(c RuleConfProvider, n map[string]*Notification) [][]s
 	return chains
 }
 
+// A Lookup is used to return values based on the tags of a response. It
+// provides switch/case functionality
 type Lookup struct {
 	Text     string
 	Name     string
@@ -278,12 +305,15 @@ func (lookup *Lookup) ToExpr() *ExprLookup {
 	return &l
 }
 
+// Entry is an entry in a Lookup.
 type Entry struct {
 	*ExprEntry
 	Def  string
 	Name string
 }
 
+// Macro provides the ability to reuse partial sections of
+// alert definition text. Macros can contain other macros
 type Macro struct {
 	Text     string
 	Pairs    interface{} // this is BAD TODO
@@ -291,6 +321,11 @@ type Macro struct {
 	*Locator `json:"-"`
 }
 
+// Alert stores all information about alerts. All other major
+// sections of rule configuration are referenced by alerts including
+// Templates, Macros, and Notifications. Alerts hold the expressions
+// that determine the Severity of the Alert. There are also flags the
+// alter the behavior of the alert and how the expression is evaluated
 type Alert struct {
 	Text string
 	Vars
