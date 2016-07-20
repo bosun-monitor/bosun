@@ -9,37 +9,6 @@ import (
 	"github.com/pmezard/go-difflib/difflib"
 )
 
-func (c *Conf) SetAlert(name, alertText string) (string, error) {
-	select {
-	case c.writeLock <- true:
-		// Got Write Lock
-	default:
-		return "", fmt.Errorf("cannot write alert, write in progress")
-	}
-	defer func() {
-		<-c.writeLock
-	}()
-	a := c.GetAlert(name)
-	var newRawConf string
-	if a == nil {
-		newRawConf = writeSection(nil, c.RawText, alertText)
-	} else {
-		newRawConf = writeSection(a.Locator, c.RawText, alertText)
-	}
-	newConf, err := NewConf(c.Name, c.backends, newRawConf)
-	if err != nil {
-		return "", fmt.Errorf("new config not valid: %v", err)
-	}
-	if err := c.SaveConf(newConf); err != nil {
-		return "", fmt.Errorf("couldn't save config file: %v", err)
-	}
-	err = c.reload()
-	if err != nil {
-		return "", err
-	}
-	return "reloaded", nil
-}
-
 func (c *Conf) SaveRawText(rawConfig, diff, user, message string, args ...string) error {
 	newConf, err := NewConf(c.Name, c.backends, rawConfig)
 	if err != nil {
@@ -87,35 +56,35 @@ func (c *Conf) BulkEdit(edits conf.BulkEditRequest) error {
 	newConf := c
 	var err error
 	for _, edit := range edits {
-		var l *conf.Locator
+		var l Location
 		switch edit.Type {
 		case "alert":
 			a := newConf.GetAlert(edit.Name)
 			if a != nil {
-				l = a.Locator
+				l = a.Locator.(Location)
 			}
 		case "template":
 			t := newConf.GetTemplate(edit.Name)
 			if t != nil {
-				l = t.Locator
+				l = t.Locator.(Location)
 			}
 		case "notification":
 			n := newConf.GetNotification(edit.Name)
 			if n != nil {
-				l = n.Locator
+				l = n.Locator.(Location)
 			}
 		case "lookup":
 			look := newConf.GetLookup(edit.Name)
 			if look != nil {
-				l = look.Locator
+				l = look.Locator.(Location)
 			}
 		case "macro":
 			m := newConf.GetMacro(edit.Name)
 			if m != nil {
-				l = m.Locator
+				l = m.Locator.(Location)
 			}
 		default:
-			return fmt.Errorf("%v is an unsuported type for bulk edit. must be alert, template, notification", edit.Type)
+			return fmt.Errorf("%v is an unsuported type for bulk edit. must be alert, template, notification, lookup or macro", edit.Type)
 		}
 		var rawConf string
 		if edit.Delete {
@@ -155,7 +124,7 @@ func (c *Conf) DeleteAlert(name string) error {
 	if a == nil {
 		return fmt.Errorf("alert %v not found", name)
 	}
-	newRawConf := removeSection(a.Locator, c.RawText)
+	newRawConf := removeSection(a.Locator.(Location), c.RawText)
 	newConf, err := NewConf(c.Name, c.backends, newRawConf)
 	if err != nil {
 		return fmt.Errorf("new config not valid: %v", err)
@@ -170,7 +139,13 @@ func (c *Conf) DeleteAlert(name string) error {
 	return nil
 }
 
-func writeSection(l *conf.Locator, orginalRaw, newText string) string {
+type Location []int
+
+func (l Location) Location() []int {
+	return l
+}
+
+func writeSection(l Location, orginalRaw, newText string) string {
 	var newRawConf bytes.Buffer
 	if l == nil {
 		newRawConf.WriteString(orginalRaw)
@@ -185,28 +160,25 @@ func writeSection(l *conf.Locator, orginalRaw, newText string) string {
 	return newRawConf.String()
 }
 
-func removeSection(l *conf.Locator, orginalRaw string) string {
+func removeSection(l Location, orginalRaw string) string {
 	var newRawConf bytes.Buffer
 	newRawConf.WriteString(orginalRaw[:getLocationStart(l)])
 	newRawConf.WriteString(orginalRaw[getLocationEnd(l):])
 	return newRawConf.String()
 }
 
-func newSectionLocator(s *parse.SectionNode) *conf.Locator {
-	l := &conf.Locator{}
+func newSectionLocator(s *parse.SectionNode) Location {
 	start := int(s.Position())
 	end := int(s.Position()) + len(s.RawText)
-	l.Location = conf.NativeLocator{start, end}
-	l.LocatorType = conf.TypeNative
-	return l
+	return Location{start, end}
 }
 
-func getLocationStart(l *conf.Locator) int {
-	return l.Location.(conf.NativeLocator)[0]
+func getLocationStart(l Location) int {
+	return l[0]
 }
 
-func getLocationEnd(l *conf.Locator) int {
-	return l.Location.(conf.NativeLocator)[1]
+func getLocationEnd(l Location) int {
+	return l[1]
 }
 
 func (c *Conf) RawDiff(rawConf string) (string, error) {

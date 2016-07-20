@@ -98,8 +98,6 @@ func Listen(listenAddr string, devMode bool, tsdbHost string) error {
 	router.Handle("/api/alerts", JSON(Alerts))
 	router.Handle("/api/config", miniprofiler.NewHandler(Config))
 	router.Handle("/api/config_test", miniprofiler.NewHandler(ConfigTest))
-	router.Handle("/api/config/alert", miniprofiler.NewHandler(SetAlert)).Methods(http.MethodPost)
-	router.Handle("/api/config/alert/{name}", miniprofiler.NewHandler(DeleteAlert)).Methods(http.MethodDelete)
 	router.Handle("/api/config/bulkedit", miniprofiler.NewHandler(BulkEdit)).Methods(http.MethodPost)
 	router.Handle("/api/config/save", miniprofiler.NewHandler(SaveConfig)).Methods(http.MethodPost)
 	router.Handle("/api/config/diff", miniprofiler.NewHandler(DiffConfig)).Methods(http.MethodPost)
@@ -802,41 +800,6 @@ func BulkEdit(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	fmt.Fprint(w, "edit successful")
-}
-
-func SetAlert(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
-	var text string
-	var err error
-	data := struct {
-		Name      string
-		AlertText string
-	}{}
-	decoder := json.NewDecoder(r.Body)
-	if err := decoder.Decode(&data); err != nil {
-		serveError(w, err)
-		return
-	}
-	text, err = schedule.RuleConf.SetAlert(data.Name, data.AlertText)
-	if err != nil {
-		serveError(w, err)
-		return
-	}
-	fmt.Fprint(w, text)
-}
-
-func DeleteAlert(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	name := vars["name"]
-	if name == "" {
-		serveError(w, fmt.Errorf("must provide alert name"))
-		return
-	}
-	err := schedule.RuleConf.DeleteAlert(name)
-	if err != nil {
-		serveError(w, err)
-		return
-	}
-	fmt.Fprint(w, fmt.Sprintf("%v deleted", name))
 }
 
 func APIRedirect(w http.ResponseWriter, req *http.Request) {

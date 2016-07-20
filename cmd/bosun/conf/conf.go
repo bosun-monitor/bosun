@@ -98,8 +98,6 @@ type RuleConfProvider interface {
 
 	GetAlerts() map[string]*Alert
 	GetAlert(string) *Alert
-	SetAlert(string, string) (string, error)
-	DeleteAlert(alertName string) error
 
 	GetNotifications() map[string]*Notification
 	GetNotification(string) *Notification
@@ -186,7 +184,7 @@ type Template struct {
 	Subject *ttemplate.Template `json:"-"`
 
 	RawBody, RawSubject string
-	*Locator            `json:"-"`
+	Locator             `json:"-"`
 }
 
 // Notification stores information about a notification. A notification
@@ -211,7 +209,7 @@ type Notification struct {
 	RawPost, RawGet string `json:"-"`
 	RawBody         string `json:"-"`
 
-	*Locator `json:"-"`
+	Locator `json:"-"`
 }
 
 // Vars holds a map of variable names to the variable's value
@@ -288,11 +286,11 @@ func GetNotificationChains(c RuleConfProvider, n map[string]*Notification) [][]s
 // A Lookup is used to return values based on the tags of a response. It
 // provides switch/case functionality
 type Lookup struct {
-	Text     string
-	Name     string
-	Tags     []string
-	Entries  []*Entry
-	*Locator `json:"-"`
+	Text    string
+	Name    string
+	Tags    []string
+	Entries []*Entry
+	Locator `json:"-"`
 }
 
 func (lookup *Lookup) ToExpr() *ExprLookup {
@@ -315,10 +313,10 @@ type Entry struct {
 // Macro provides the ability to reuse partial sections of
 // alert definition text. Macros can contain other macros
 type Macro struct {
-	Text     string
-	Pairs    interface{} // this is BAD TODO
-	Name     string
-	*Locator `json:"-"`
+	Text    string
+	Pairs   interface{} // this is BAD TODO
+	Name    string
+	Locator `json:"-"`
 }
 
 // Alert stores all information about alerts. All other major
@@ -349,24 +347,21 @@ type Alert struct {
 	TemplateName string   `json:"-"`
 	RawSquelch   []string `json:"-"`
 
-	*Locator `json:"-"`
+	Locator `json:"-"`
 }
 
-type LocationType int
+// A Locator stores the information about the location of the rule in the underlying
+// rule store
+type Locator interface{}
 
-const (
-	TypeNative LocationType = iota
-)
-
-type NativeLocator []int
-
-type Locator struct {
-	LocatorType LocationType
-	Location    interface{}
-}
-
+// BulkEditRequest is a collection of BulkEditRequest to be applied sequentially
 type BulkEditRequest []EditRequest
 
+// EditRequest is a proposed edit to the config file for sections. The Name is the name of section,
+// Type can be "alert", "template", "notification", "lookup", or "macro". The Text should be the full
+// text of the definition, including the delaration and brackets (i.e. "alert foo { .. }"). If Delete
+// is true then the section will be deleted. In order to rename something, specify the old name in the
+// Name field but have the Text definition contain the new name.
 type EditRequest struct {
 	Name   string
 	Type   string
@@ -374,12 +369,15 @@ type EditRequest struct {
 	Delete bool
 }
 
+// SaveHook is a function that is passed files as a string (currently the only implementation
+// has a single file, so there is no convention for the format of multiple files yet), a user
+// a message and vargs. A SaveHook is called when using bosun to save the config. A save is reverted
+// when the SaveHook returns an error.
 type SaveHook func(files, user, message string, args ...string) error
 
-// MakeSaveCommandHook takes a command name and will run it on save
-// passing files, user, message, args... as arguments to the command
-// the first arg of args is expected to be the file name. In the future
-// if we have multifile storage, it could be either a director
+// MakeSaveCommandHook takes a fuction based on the command name and will run it on save passing files, user,
+// message, args... as arguments to the command. For the SaveHook function that is returned, If the command fails
+// to execute or returns a non normal output then an error is returned.
 func MakeSaveCommandHook(cmdName string) (f SaveHook, err error) {
 	_, err = exec.LookPath(cmdName)
 	if err != nil {
@@ -409,6 +407,9 @@ func MakeSaveCommandHook(cmdName string) (f SaveHook, err error) {
 	return
 }
 
+// GenHash generates a unique hash of a string. It is used so we can compare
+// edited text configuration to running text configuration and see if it has
+// changed
 func GenHash(s string) string {
 	h := fnv.New32a()
 	h.Write([]byte(s))
