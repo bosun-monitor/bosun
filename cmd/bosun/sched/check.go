@@ -523,17 +523,21 @@ func (s *Schedule) CheckAlert(T miniprofiler.Timer, r *RunHistory, a *conf.Alert
 		results *expr.Results
 		error   error
 	}
-	rc := make(chan res)
+	// buffered channel so go func that runs executeExpr won't leak if the Check is cancelled
+	// by the closing of the schedule
+	rc := make(chan res, 1)
 	var d *expr.Results
 	var err error
 	go func() {
 		d, err := s.executeExpr(T, r, a, a.Depends)
-		rc <- res{d, err}
+		rc <- res{d, err} // this will hang forever if the channel isn't buffered since nothing will ever receieve from rc
 	}()
 	select {
 	case res := <-rc:
 		d = res.results
 		err = res.error
+	// If the schedule closes before the expression has finised executing, we abandon the
+	// execution of the expression
 	case <-s.runnerContext.Done():
 		return true
 	}
@@ -638,7 +642,8 @@ func (s *Schedule) CheckExpr(T miniprofiler.Timer, rh *RunHistory, a *conf.Alert
 		results *expr.Results
 		error   error
 	}
-	rc := make(chan res)
+	// See s.CheckAlert for an explanation of execution and cancellation with this channel
+	rc := make(chan res, 1)
 	var results *expr.Results
 	go func() {
 		results, err := s.executeExpr(T, rh, a, e)

@@ -69,8 +69,13 @@ type Schedule struct {
 
 	DataAccess database.DataAccess
 
+	// runnerContext is a context to track running alert routines
 	runnerContext context.Context
-	cancelChecks  context.CancelFunc
+	// cancelChecks is the function to call to cancel all alert routines
+	cancelChecks context.CancelFunc
+	// checksRunning waits for alert checks to finish before reloading
+	// things that take significant time should be cancelled (i.e. expression execution)
+	// whereas the runHistory is allowed to complete
 	checksRunning sync.WaitGroup
 }
 
@@ -90,6 +95,7 @@ func (s *Schedule) Init(systemConf conf.SystemConfProvider, ruleConf conf.RuleCo
 	s.LastCheck = utcNow()
 	s.ctx = &checkContext{utcNow(), cache.New(0)}
 
+	// Initialize the context and waitgroup used to gracefully shutdown bosun as well as reload
 	s.runnerContext, s.cancelChecks = context.WithCancel(context.Background())
 	s.checksRunning = sync.WaitGroup{}
 

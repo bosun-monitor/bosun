@@ -72,7 +72,7 @@ var (
 	flagSkipLast = flag.Bool("skiplast", false, "skip loading last datapoints from and to redis: useful for speeding up bosun startup time during development")
 	flagVersion  = flag.Bool("version", false, "Prints the version and exits")
 
-	mains []func()
+	mains []func() // Used to hook up syslog on *nix systems
 )
 
 func main() {
@@ -159,11 +159,11 @@ func main() {
 	ruleProvider.SetSaveHook(cmdHook)
 
 	var reload func() error
-	reloading := make(chan bool, 1)
+	reloading := make(chan bool, 1) // a lock that we can give up acquiring
 	reload = func() error {
 		select {
 		case reloading <- true:
-			fmt.Println("got lock")
+			// Got lock
 		default:
 			return fmt.Errorf("not reloading, reload in progress")
 		}

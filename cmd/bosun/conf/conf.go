@@ -78,7 +78,9 @@ type SystemConfProvider interface {
 
 // ValidateSystemConf runs sanity checks on the system configuration
 func ValidateSystemConf(sc SystemConfProvider) error {
-	if sc.GetSMTPHost() == "" && sc.GetEmailFrom() != "" || sc.GetSMTPHost() != "" && sc.GetEmailFrom() == "" {
+	hasSMTPHost := sc.GetSMTPHost() != ""
+	hasEmailFrom := sc.GetEmailFrom() != ""
+	if hasSMTPHost != hasEmailFrom {
 		return fmt.Errorf("email notififications require that both SMTP Host and EmailFrom be set")
 	}
 	if sc.GetDefaultRunEvery() <= 0 {
