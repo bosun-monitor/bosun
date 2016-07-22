@@ -1,47 +1,52 @@
 <style type="text/css">
-
-.resize {
-   	margin-bottom: 15px;
-	border: 1px solid lightgrey;
-	height : 500px;
-	width: 100%
-}
-
-.ace_editor  {
-	width: 100%;
-	height: 100%;
-}
-
-.selectorDropdown{
-	float: left;
-	margin-right: 5px;
-	margin-bottom: 15px;
-}
-.actionButtons{
-	float:right;margin-left:5px;
-}
-
-.section-button {
-	max-height: 500px;
-	overflow-y: auto;
-}
-
-
-/* http://stackoverflow.com/questions/17206631/why-are-bootstrap-tabs-displaying-tab-pane-divs-with-incorrect-widths-when-using fixes timeline drawing at default width while tab is hidden */
-.tab-content > .tab-pane {
-    display: block;
-    height: 0;
-    overflow-y: hidden;
-    overflow-x: hidden;
-}
-
-.tab-content > .active {
-    height: auto;
-}
-
-#configSaveModal .modal-dialog {
-  width: 50%;
-}
+	.resize {
+		margin-bottom: 15px;
+		border: 1px solid lightgrey;
+		height: 500px;
+		width: 100%
+	}
+	
+	.ace_editor {
+		width: 100%;
+		height: 100%;
+	}
+	
+	.selectorDropdown {
+		float: left;
+		margin-right: 5px;
+		margin-bottom: 15px;
+	}
+	
+	.actionButtons {
+		float: right;
+		margin-left: 5px;
+	}
+	
+	.section-button {
+		max-height: 500px;
+		overflow-y: auto;
+	}
+	/* http://stackoverflow.com/questions/17206631/why-are-bootstrap-tabs-displaying-tab-pane-divs-with-incorrect-widths-when-using fixes timeline drawing at default width while tab is hidden */
+	
+	.tab-content > .tab-pane {
+		display: block;
+		height: 0;
+		overflow-y: hidden;
+		overflow-x: hidden;
+	}
+	
+	.tab-content > .active {
+		height: auto;
+	}
+	
+	#configSaveModal .modal-dialog {
+		width: 50%;
+	}
+	
+	.popover {
+		max-width: 600px;
+		outline: none !important;
+	}
 
 </style>
 <label class="selectorDropdown" style="margin-right:15px;">Jump to:</label>
@@ -55,7 +60,7 @@
 		</ul>
 	</div>
 	<div class="btn btn-default" ng-show="quickJumpTarget" ng-bind="quickJumpTarget" ng-click="quickJump()"></div>
-	<div class="btn btn-sm actionButtons" ng-class="runningChanged == true ? 'alert-danger' : ''" data-toggle="modal" data-target="#configSaveModal" ng-click="diffConfig()">Save Dialogue</div>
+	<div class="btn btn-sm actionButtons" data-toggle="modal" data-target="#configSaveModal" ng-click="diffConfig()">Save Dialogue</div>
 	<div class="btn btn-sm actionButtons" ng-click="validate()">Validate</div>
 	<div class="btn btn-sm actionButtons" ng-click="aceToggleHighlight()">Syntax Highlighting</div>
 	<div class="btn btn-sm actionButtons" ng-click="downloadConfig()">Download</div>
@@ -74,6 +79,13 @@
 		</div>
 	</div>
 </div>
+<div class="row" ng-show="runningChanged">
+	<div class="col-lg-12">
+		<div class="alert alert-danger">The running configuration has been changed since you started editing.
+			<div style="outline: none;" class="pull-right" data-placement="bottom" data-title="Help" data-content="{{runningChangedHelp}}" bs-popover><span class="glyphicon glyphicon-question-sign"></span></div>
+		</div>
+	</div>
+</div>
 <div class="row" ng-show="runningHashResult">
 	<div class="col-lg-12">
 		<div class="alert alert-warning">{{runningHashResult}}
@@ -83,7 +95,8 @@
 </div>
 <div class="row">
 	<div tsresizable on-resize="editor.resize()" class='resize'>
-		<div ui-ace="{ onLoad : aceLoaded, mode: aceMode, theme: aceTheme, advanced: { fontSize: '14px', fontFamily: 'Menlo, Monaco, Consolas, monospace' }}" ng-model="config_text" ></div>
+		<div ui-ace="{ onLoad : aceLoaded, mode: aceMode, theme: aceTheme, advanced: { fontSize: '14px', fontFamily: 'Menlo, Monaco, Consolas, monospace' }}"
+			ng-model="config_text"></div>
 	</div>
 </div>
 <div class="row">
@@ -91,25 +104,29 @@
 		<form class="form-inline">
 			<div class="form-group">
 				<label class="control-label">From</label>
-				<input type="text" class="form-control" style="width:9em" ng-model="fromDate" ng-change="setInterval()" placeholder="yyyy-mm-dd" bs-datepicker data-date-format="yyyy-MM-dd" data-date-type="string">
+				<input type="text" class="form-control" style="width:9em" ng-model="fromDate" ng-change="setInterval()" placeholder="yyyy-mm-dd"
+					bs-datepicker data-date-format="yyyy-MM-dd" data-date-type="string">
 				<input type="text" class="form-control" style="width:9em" ng-model="fromTime" ng-change="setInterval()" placeholder="HH:MM">
 			</div>
 			<div class="form-group">
 				<label class="control-label">To</label>
-				<input type="text" class="form-control" style="width:9em" ng-model="toDate" ng-change="setInterval()" placeholder="yyyy-mm-dd" bs-datepicker data-date-format="yyyy-MM-dd" data-date-type="string">
+				<input type="text" class="form-control" style="width:9em" ng-model="toDate" ng-change="setInterval()" placeholder="yyyy-mm-dd"
+					bs-datepicker data-date-format="yyyy-MM-dd" data-date-type="string">
 			</div>
 			<div class="form-group">
 				<input type="text" class="form-control" style="width:9em" ng-model="toTime" ng-change="setInterval()" placeholder="HH:MM">
 			</div>
 			<div class="form-group">
 				<label class="control-label">Intervals</label>
-				<input type="number" min="2" step="1" style="width:7em" class="form-control" ng-model="intervals" ng-change="setInterval()" ng-disabled="!fromDate || !toDate" tooltip title="Number of evaluations between timespan.">
+				<input type="number" min="2" step="1" style="width:7em" class="form-control" ng-model="intervals" ng-change="setInterval()"
+					ng-disabled="!fromDate || !toDate" tooltip title="Number of evaluations between timespan.">
 			</div>
 			<div class="form-group">
 				<label class="control-label">Step Duration (m)</label>
-				<input type="number" min="1" step="1" style="width:7em" class="form-control" ng-model="duration" ng-change="setDuration()" ng-disabled="!fromDate || !toDate" tooltip title="Step duration in minutes between intervals.">
+				<input type="number" min="1" step="1" style="width:7em" class="form-control" ng-model="duration" ng-change="setDuration()"
+					ng-disabled="!fromDate || !toDate" tooltip title="Step duration in minutes between intervals.">
 			</div>
-			
+
 		</form>
 	</div>
 </div>
@@ -236,7 +253,9 @@
 					</thead>
 					<tbody>
 						<tr ng-repeat="set in sets">
-							<td><a href="#" ng-bind="set.Time" ng-click="scrollToInterval($index)"></a></td>
+							<td>
+								<a href="#" ng-bind="set.Time" ng-click="scrollToInterval($index)"></a>
+							</td>
 							<td ng-bind="set.Critical || ''" ng-class="set.Critical ? 'danger' : ''"></td>
 							<td ng-bind="set.Warning || ''" ng-class="set.Warning ? 'warning' : ''"></td>
 							<td ng-bind="set.Normal || ''" ng-class="set.Normal ? 'success' : ''"></td>
@@ -318,7 +337,8 @@
 			<div class="modal-footer">
 				<button type="button" class="btn btn-primary" ng-click="diffConfig()">Refresh Diff</button>
 				<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-				<button type="button" class="btn btn-primary" data-dismiss="modal" ng-click="saveConfig()">Save and Reload</button>
+				<button type="button" class="btn btn-primary" ng-class="runningChanged == true ? 'alert-warning' : ''" data-dismiss="modal"
+					ng-click="saveConfig()" title="This will save and reload the config if the config is valid. If the config is not valid (or if the Diff has changed since viewing it) the config will not be saved and a reload will not happen. If this button is yellow (warning) then the running config has changed since you started editing on the rule page - be careful not to overwrite other's changes.">Save and Reload</button>
 			</div>
 		</div>
 	</div>

@@ -391,7 +391,7 @@ func MakeSaveCommandHook(cmdName string) (f SaveHook, err error) {
 	f = func(files, user, message string, args ...string) error {
 		cArgs := []string{files, user, message}
 		cArgs = append(cArgs, args...)
-		slog.Infof("executing command hook %v\n", cmdName)
+		slog.Infof("executing save hook %v\n", cmdName)
 		c := exec.Command(cmdName, cArgs...)
 		var cOut bytes.Buffer
 		var cErr bytes.Buffer
@@ -406,7 +406,7 @@ func MakeSaveCommandHook(cmdName string) (f SaveHook, err error) {
 			slog.Warning(cErr.String())
 			return err
 		}
-		slog.Infoln(cOut.String())
+		slog.Infof("save hook ouput: %v\n", cOut.String())
 		return nil
 	}
 	return

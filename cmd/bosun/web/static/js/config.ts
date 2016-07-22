@@ -57,6 +57,7 @@ interface IConfigScope extends IBosunScope {
 	expandDiff: boolean;
 	runningHash: string;
 	runningChanged: boolean;
+	runningChangedHelp: string;
 	runningHashResult: string;
 	getRunningHash: () => void;
 }
@@ -81,7 +82,7 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 	$scope.aceMode = 'bosun';
 	$scope.user = readCookie("action-user");
 	$scope.expandDiff = false;
-
+	$scope.runningChangedHelp = "The running config has been changed. This means you are in danger of overwriting someone else's changes. To view the changes open the 'Save Dialogue' and you will see a unified diff. The only way to get rid of the error panel is to open a new instance of the rule editor and copy your changes into it. You are still permitted to save without doing this, but then you must be very careful not to overwrite anyone else's changes.";
 
 	var expr = search.expr;
 	function buildAlertFromExpr() {

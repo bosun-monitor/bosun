@@ -25,6 +25,7 @@ func (s *Schedule) Run() error {
 	}
 	return nil
 }
+
 func (s *Schedule) updateCheckContext() {
 	for {
 		ctx := &checkContext{utcNow(), cache.New(0)}
@@ -35,6 +36,7 @@ func (s *Schedule) updateCheckContext() {
 		s.Unlock()
 	}
 }
+
 func (s *Schedule) RunAlert(a *conf.Alert) {
 	// Add to waitgroup for running alert
 	s.checksRunning.Add(1)
