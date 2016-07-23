@@ -226,6 +226,9 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 	};
 
 	$scope.getRunningHash = () => {
+		if (! $scope.saveEnabled) {
+			return
+		}
 		(function tick() {
 			$http.get('/api/config/running_hash')
 				.success((data: any) => {
@@ -459,17 +462,19 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 			})
 			.success((data: any) => {
 				createCookie("action-user", $scope.user, 1000);
-				//debugger;
 				$scope.diff = data || "No Diff";
 				// Reset running hash if there is no difference?
 			})
 			.error((error) => {
-				//TODO Handle error
+				$scope.diff = "Failed to load diff: " + error;
 			});
 	}
 
 
 	$scope.saveConfig = () => {
+		if (! $scope.saveEnabled) {
+			return;
+		}
 		$scope.saveResult = "Saving; Please Wait"
 		$http.post('/api/config/save', {
 			"Config": $scope.config_text,

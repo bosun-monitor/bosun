@@ -44,6 +44,7 @@ type SystemConf struct {
 
 	AnnotateConf AnnotateConf
 
+	EnableSave      bool
 	CommandHookPath string
 	RuleFilePath    string
 	md              toml.MetaData
@@ -312,6 +313,11 @@ func (sc *SystemConf) GetShortURLKey() string {
 // only impacts requests made for shortlinks to https://goo.gl/
 func (sc *SystemConf) GetInternetProxy() string {
 	return sc.InternetProxy
+}
+
+// SaveEnabled returns if saving via the UI and config editing API endpoints should be enabled
+func (sc *SystemConf) SaveEnabled() bool {
+	return sc.EnableSave
 }
 
 // GetCommandHookPath returns the path of a command that should be run on every save

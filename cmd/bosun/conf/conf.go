@@ -55,6 +55,7 @@ type SystemConfProvider interface {
 	GetInternetProxy() string
 
 	GetRuleFilePath() string
+	SaveEnabled() bool
 	GetCommandHookPath() string
 
 	SetTSDBHost(tsdbHost string)

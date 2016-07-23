@@ -18,7 +18,6 @@ import (
 	"time"
 
 	"bosun.org/_version"
-	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/conf/rule"
 	"bosun.org/cmd/bosun/database"
 	"bosun.org/cmd/bosun/sched"
@@ -98,10 +97,13 @@ func Listen(listenAddr string, devMode bool, tsdbHost string) error {
 	router.Handle("/api/alerts", JSON(Alerts))
 	router.Handle("/api/config", miniprofiler.NewHandler(Config))
 	router.Handle("/api/config_test", miniprofiler.NewHandler(ConfigTest))
-	router.Handle("/api/config/bulkedit", miniprofiler.NewHandler(BulkEdit)).Methods(http.MethodPost)
-	router.Handle("/api/config/save", miniprofiler.NewHandler(SaveConfig)).Methods(http.MethodPost)
-	router.Handle("/api/config/diff", miniprofiler.NewHandler(DiffConfig)).Methods(http.MethodPost)
-	router.Handle("/api/config/running_hash", JSON(ConfigRunningHash))
+	router.Handle("/api/save_enabled", JSON(SaveEnabled))
+	if schedule.SystemConf.SaveEnabled() {
+		router.Handle("/api/config/bulkedit", miniprofiler.NewHandler(BulkEdit)).Methods(http.MethodPost)
+		router.Handle("/api/config/save", miniprofiler.NewHandler(SaveConfig)).Methods(http.MethodPost)
+		router.Handle("/api/config/diff", miniprofiler.NewHandler(DiffConfig)).Methods(http.MethodPost)
+		router.Handle("/api/config/running_hash", JSON(ConfigRunningHash))
+	}
 	router.Handle("/api/egraph/{bs}.{format:svg|png}", JSON(ExprGraph))
 	router.Handle("/api/errors", JSON(ErrorHistory))
 	router.Handle("/api/expr", JSON(Expr))
@@ -245,6 +247,18 @@ func IndexTSDB(w http.ResponseWriter, r *http.Request) {
 	indexTSDB(r, body)
 }
 
+type appSetings struct {
+	SaveEnabled     bool
+	AnnotateEnabled bool
+	Quiet           bool
+	Version         opentsdb.Version
+}
+
+type indexVariables struct {
+	Includes template.HTML
+	Settings string
+}
+
 func Index(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path == "/graph" {
 		r.ParseForm()
@@ -256,10 +270,26 @@ func Index(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	r.Header.Set(miniprofilerHeader, "true")
-	err := indexTemplate().Execute(w, struct {
-		Includes template.HTML
-	}{
+	// Set some global settings for the UI to know about. This saves us from
+	// having to make an HTTP call to see what features should be enabled
+	// in the UI
+	openTSDBVersion := opentsdb.Version{0, 0}
+	if schedule.SystemConf.GetTSDBContext() != nil {
+		openTSDBVersion = schedule.SystemConf.GetTSDBContext().Version()
+	}
+	settings, err := json.Marshal(appSetings{
+		schedule.SystemConf.SaveEnabled(),
+		schedule.SystemConf.AnnotateEnabled(),
+		schedule.GetQuiet(),
+		openTSDBVersion,
+	})
+	if err != nil {
+		serveError(w, err)
+		return
+	}
+	err = indexTemplate().Execute(w, indexVariables{
 		t.Includes(),
+		string(settings),
 	})
 	if err != nil {
 		serveError(w, err)
@@ -735,71 +765,6 @@ func Config(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 		text = schedule.RuleConf.GetRawText()
 	}
 	fmt.Fprint(w, text)
-}
-
-func SaveConfig(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
-	data := struct {
-		Config  string
-		User    string // should come from auth
-		Diff    string
-		Message string
-		Other   []string
-	}{}
-	decoder := json.NewDecoder(r.Body)
-	if err := decoder.Decode(&data); err != nil {
-		serveError(w, err)
-		return
-	}
-	err := schedule.RuleConf.SaveRawText(data.Config, data.Diff, data.User, data.Message, data.Other...)
-	if err != nil {
-		serveError(w, err)
-		return
-	}
-	fmt.Fprint(w, "save successful")
-}
-
-func DiffConfig(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
-	data := struct {
-		Config  string
-		User    string // should come from auth
-		Message string
-		Other   []string
-	}{}
-	decoder := json.NewDecoder(r.Body)
-	if err := decoder.Decode(&data); err != nil {
-		serveError(w, err)
-		return
-	}
-	diff, err := schedule.RuleConf.RawDiff(data.Config)
-	if err != nil {
-		serveError(w, err)
-		return
-	}
-	fmt.Fprint(w, diff)
-}
-
-func ConfigRunningHash(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	hash := schedule.RuleConf.GetHash()
-	return struct {
-		Hash string
-	}{
-		hash,
-	}, nil
-}
-
-func BulkEdit(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
-	bulkEdit := conf.BulkEditRequest{}
-	decoder := json.NewDecoder(r.Body)
-	if err := decoder.Decode(&bulkEdit); err != nil {
-		serveError(w, err)
-		return
-	}
-	err := schedule.RuleConf.BulkEdit(bulkEdit)
-	if err != nil {
-		serveError(w, err)
-		return
-	}
-	fmt.Fprint(w, "edit successful")
 }
 
 func APIRedirect(w http.ResponseWriter, req *http.Request) {

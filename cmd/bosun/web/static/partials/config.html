@@ -60,7 +60,7 @@
 		</ul>
 	</div>
 	<div class="btn btn-default" ng-show="quickJumpTarget" ng-bind="quickJumpTarget" ng-click="quickJump()"></div>
-	<div class="btn btn-sm actionButtons" data-toggle="modal" data-target="#configSaveModal" ng-click="diffConfig()">Save Dialogue</div>
+	<div class="btn btn-sm actionButtons" data-toggle="modal" data-target="#configSaveModal" ng-click="diffConfig()" ng-if="saveEnabled">Save Dialogue</div>
 	<div class="btn btn-sm actionButtons" ng-click="validate()">Validate</div>
 	<div class="btn btn-sm actionButtons" ng-click="aceToggleHighlight()">Syntax Highlighting</div>
 	<div class="btn btn-sm actionButtons" ng-click="downloadConfig()">Download</div>
@@ -79,14 +79,14 @@
 		</div>
 	</div>
 </div>
-<div class="row" ng-show="runningChanged">
+<div class="row" ng-show="runningChanged" ng-if="saveEnabled">
 	<div class="col-lg-12">
 		<div class="alert alert-danger">The running configuration has been changed since you started editing.
 			<div style="outline: none;" class="pull-right" data-placement="bottom" data-title="Help" data-content="{{runningChangedHelp}}" bs-popover><span class="glyphicon glyphicon-question-sign"></span></div>
 		</div>
 	</div>
 </div>
-<div class="row" ng-show="runningHashResult">
+<div class="row" ng-show="runningHashResult" ng-if="saveEnabled">
 	<div class="col-lg-12">
 		<div class="alert alert-warning">{{runningHashResult}}
 			<button type="button" class="close" ng-click="runningHashResult=''; getRunningHash()"><span>&times;</span></button>

@@ -118,29 +118,13 @@ bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', '$q', '$r
             }
             return null;
         };
-        $http.get("/api/annotate")
-            .success(function (data) {
-            $scope.annotateEnabled = data;
-        })
-            .error(function (data) {
-            console.log(data);
-        });
-        $http.get("/api/quiet")
-            .success(function (data) {
-            $scope.quiet = data;
-        })
-            .error(function (data) {
-            console.log(data);
-        });
-        $http.get("/api/opentsdb/version")
-            .success(function (data) {
-            $scope.version = data;
+        $scope.init = function (settings) {
+            $scope.saveEnabled = settings.SaveEnabled;
+            $scope.annotateEnabled = settings.AnnotateEnabled;
+            $scope.quiet = settings.Quiet;
+            $scope.version = settings.Version;
             $scope.opentsdbEnabled = $scope.version.Major != 0 && $scope.version.Minor != 0;
-        })
-            .error(function (data) {
-            console.log(data);
-        });
-        ;
+        };
         $scope.json = function (v) {
             return JSON.stringify(v, null, '  ');
         };
@@ -681,6 +665,9 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
             });
         };
         $scope.getRunningHash = function () {
+            if (!$scope.saveEnabled) {
+                return;
+            }
             (function tick() {
                 $http.get('/api/config/running_hash')
                     .success(function (data) {
@@ -908,15 +895,17 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
             })
                 .success(function (data) {
                 createCookie("action-user", $scope.user, 1000);
-                //debugger;
                 $scope.diff = data || "No Diff";
                 // Reset running hash if there is no difference?
             })
                 .error(function (error) {
-                //TODO Handle error
+                $scope.diff = "Failed to load diff: " + error;
             });
         };
         $scope.saveConfig = function () {
+            if (!$scope.saveEnabled) {
+                return;
+            }
             $scope.saveResult = "Saving; Please Wait";
             $http.post('/api/config/save', {
                 "Config": $scope.config_text,
