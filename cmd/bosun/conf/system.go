@@ -171,22 +171,23 @@ func newSystemConf() *SystemConf {
 // LoadSystemConfigFile loads the system configuration in TOML format. It will
 // error if there are values in the config that were not parsed
 func LoadSystemConfigFile(fileName string) (*SystemConf, error) {
-	sc := newSystemConf()
-	decodeMeta, err := toml.DecodeFile(fileName, &sc)
-	if err != nil {
-		return sc, err
-	}
-	if len(decodeMeta.Undecoded()) > 0 {
-		return sc, fmt.Errorf("undecoded fields in system configuration: %v", decodeMeta.Undecoded())
-	}
-	sc.md = decodeMeta
-	return sc, nil
+	return loadSystemConfig(fileName, true)
 }
 
 // LoadSystemConfig is like LoadSystemConfigFile but loads the config from a string
 func LoadSystemConfig(conf string) (*SystemConf, error) {
+	return loadSystemConfig(conf, false)
+}
+
+func loadSystemConfig(conf string, isFileName bool) (*SystemConf, error) {
 	sc := newSystemConf()
-	decodeMeta, err := toml.Decode(conf, &sc)
+	var decodeMeta toml.MetaData
+	var err error
+	if isFileName {
+		decodeMeta, err = toml.DecodeFile(conf, &sc)
+	} else {
+		decodeMeta, err = toml.Decode(conf, &sc)
+	}
 	if err != nil {
 		return sc, err
 	}
