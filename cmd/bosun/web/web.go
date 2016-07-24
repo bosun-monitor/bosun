@@ -40,6 +40,7 @@ var (
 	schedule        = sched.DefaultSched
 	InternetProxy   *url.URL
 	annotateBackend backend.Backend
+	reload          func() error
 )
 
 const (
@@ -65,7 +66,7 @@ func init() {
 		"HTTP response codes from the backend server for request relayed through Bosun.")
 }
 
-func Listen(listenAddr string, devMode bool, tsdbHost string) error {
+func Listen(listenAddr string, devMode bool, tsdbHost string, reloadFunc func() error) error {
 	if devMode {
 		slog.Infoln("using local web assets")
 	}
@@ -79,6 +80,8 @@ func Listen(listenAddr string, devMode bool, tsdbHost string) error {
 		}
 		return templates
 	}
+
+	reload = reloadFunc
 
 	if !devMode {
 		tpl := indexTemplate()
@@ -103,6 +106,7 @@ func Listen(listenAddr string, devMode bool, tsdbHost string) error {
 		router.Handle("/api/config/save", miniprofiler.NewHandler(SaveConfig)).Methods(http.MethodPost)
 		router.Handle("/api/config/diff", miniprofiler.NewHandler(DiffConfig)).Methods(http.MethodPost)
 		router.Handle("/api/config/running_hash", JSON(ConfigRunningHash))
+		router.Handle("/api/reload", JSON(Reload)).Methods(http.MethodPost)
 	}
 	router.Handle("/api/egraph/{bs}.{format:svg|png}", JSON(ExprGraph))
 	router.Handle("/api/errors", JSON(ErrorHistory))
@@ -378,6 +382,25 @@ func Shorten(w http.ResponseWriter, r *http.Request) {
 type Health struct {
 	// RuleCheck is true if last check happened within the check frequency window.
 	RuleCheck bool
+}
+
+func Reload(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	d := json.NewDecoder(r.Body)
+	var sane struct {
+		Reload bool
+	}
+	if err := d.Decode(&sane); err != nil {
+		return nil, fmt.Errorf("failed to decode post body: %v", err)
+	}
+	if !sane.Reload {
+		return nil, fmt.Errorf("reload must be set to true in post body")
+	}
+	err := reload()
+	if err != nil {
+		return nil, fmt.Errorf("failed to reload: %v", err)
+	}
+	return "reloaded", nil
+
 }
 
 func Quiet(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
