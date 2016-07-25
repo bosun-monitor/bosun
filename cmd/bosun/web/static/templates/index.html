@@ -79,6 +79,9 @@
 				border-color: black;
 				border-width: 2px;
 			}
+			[ng\:cloak], [ng-cloak], [data-ng-cloak], [x-ng-cloak], .ng-cloak, .x-ng-cloak {
+  display: none !important;
+}
 		</style>
 	</head>
 	<body ng-controller="BosunCtrl" ng-init="init({{.Settings}})">
@@ -104,11 +107,11 @@
 						<li ng-class="active('config')"><a href="/config">Rule Editor</a></li>
 						<li ng-class="active('silence')"><a href="/silence">Silence</a></li>
 						<li ng-show="opentsdbEnabled" ng-class="active('put')"><a href="/put">Submit Data</a></li>
-						<li ng-show="annotateEnabled" ng-class="active('annotation')"><a href="/annotation">Submit Annotation</a></li>
+						<li ng-show="annotateEnabled" ng-class="active('annotation')" ng-cloak><a href="/annotation">Submit Annotation</a></li>
 					</ul>
 					<ul class="nav navbar-nav navbar-right">
-						<li ng-if="quiet" class="navbar-text alert-danger">Quiet Mode Enabled</li>
-						<li>
+						<li ng-if="quiet" class="navbar-text alert-danger" ng-cloak>Quiet Mode Enabled</li>
+						<li ng-cloak>
 							<button class="btn btn-default navbar-btn btn-sm" ng-click="shorten()" ng-hide="shortlink">Short Link</button>
 							<input type="text" class="navbar-btn btn-sm form-control input-sm" id="shortlink" ng-show="shortlink">
 						</li>
