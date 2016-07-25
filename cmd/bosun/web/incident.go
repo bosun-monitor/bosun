@@ -20,7 +20,7 @@ func ListOpenIncidents(t miniprofiler.Timer, w http.ResponseWriter, r *http.Requ
 	if suppressor == nil {
 		return nil, fmt.Errorf("failed to get silences")
 	}
-	summaries := []sched.IncidentSummaryView{}
+	summaries := []*sched.IncidentSummaryView{}
 	filterText := r.FormValue("filter")
 	var parsedExpr *boolq.Tree
 	parsedExpr, err = boolq.Parse(filterText)
@@ -28,7 +28,10 @@ func ListOpenIncidents(t miniprofiler.Timer, w http.ResponseWriter, r *http.Requ
 		return nil, fmt.Errorf("bad filter: %v", err)
 	}
 	for _, iState := range list {
-		is := sched.MakeIncidentSummary(schedule.RuleConf, suppressor, iState)
+		is, err := sched.MakeIncidentSummary(schedule.RuleConf, suppressor, iState)
+		if err != nil {
+			return nil, err
+		}
 		match, err := boolq.AskParsedExpr(parsedExpr, is)
 		if err != nil {
 			return nil, err

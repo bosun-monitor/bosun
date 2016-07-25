@@ -410,7 +410,11 @@ func (s *Schedule) MarshalGroups(T miniprofiler.Timer, filter string) (*StateGro
 				}
 				continue
 			}
-			is := MakeIncidentSummary(s.RuleConf, silenced, v)
+			is, err2 := MakeIncidentSummary(s.RuleConf, silenced, v)
+			if err2 != nil {
+				err = err2
+				return
+			}
 			match := false
 			match, err2 = boolq.AskParsedExpr(parsedExpr, is)
 			if err2 != nil {
