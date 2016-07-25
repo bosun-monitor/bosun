@@ -323,18 +323,21 @@ func (s *Search) TagValuesByMetricTagKey(metric, tagK string, since time.Duratio
 	return r, nil
 }
 
-func (s *Search) FilteredTagSets(metric string, tags opentsdb.TagSet) ([]opentsdb.TagSet, error) {
+func (s *Search) FilteredTagSets(metric string, tags opentsdb.TagSet, since int64) ([]opentsdb.TagSet, error) {
 	sets, err := s.DataAccess.Search().GetMetricTagSets(metric, tags)
 	if err != nil {
 		return nil, err
 	}
 	r := []opentsdb.TagSet{}
-	for k := range sets {
+	for k, lastSeen := range sets {
 		ts, err := opentsdb.ParseTags(k)
 		if err != nil {
 			return nil, err
 		}
-		r = append(r, ts)
+		if lastSeen >= since {
+			r = append(r, ts)
+		}
+
 	}
 	return r, nil
 }
