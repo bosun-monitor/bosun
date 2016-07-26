@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"bosun.org/cmd/bosun/conf"
+	"bosun.org/cmd/bosun/conf/rule"
 	"bosun.org/cmd/bosun/database"
 	"bosun.org/cmd/bosun/database/test"
 )
@@ -28,7 +29,7 @@ func TestMain(m *testing.M) {
 
 func TestRelay(t *testing.T) {
 	schedule.DataAccess = testData
-	schedule.Init(new(conf.Conf))
+	schedule.Init(&conf.SystemConf{}, new(rule.Conf), false, false)
 	rs := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(204)
 	}))

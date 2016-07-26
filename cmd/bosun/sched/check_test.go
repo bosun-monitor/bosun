@@ -10,13 +10,14 @@ import (
 	"time"
 
 	"bosun.org/cmd/bosun/conf"
+	"bosun.org/cmd/bosun/conf/rule"
 	"bosun.org/models"
 	"bosun.org/opentsdb"
 )
 
 func TestCheckFlapping(t *testing.T) {
 	defer setup()()
-	c, err := conf.New("", `
+	c, err := rule.NewConf("", conf.EnabledBackends{}, `
 		template t {
 			subject = 1
 		}
@@ -34,7 +35,7 @@ func TestCheckFlapping(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	s, _ := initSched(c)
+	s, _ := initSched(&conf.SystemConf{}, c)
 	ak := models.NewAlertKey("a", nil)
 	r := &RunHistory{
 		Events: map[models.AlertKey]*models.Event{
@@ -105,7 +106,7 @@ func TestCheckSilence(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	c, err := conf.New("", fmt.Sprintf(`
+	c, err := rule.NewConf("", conf.EnabledBackends{}, fmt.Sprintf(`
 		template t {
 			subject = "test"
 			body = "test"
@@ -122,7 +123,7 @@ func TestCheckSilence(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	s, err := initSched(c)
+	s, err := initSched(&conf.SystemConf{}, c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -142,7 +143,7 @@ func TestCheckSilence(t *testing.T) {
 
 func TestIncidentIds(t *testing.T) {
 	defer setup()()
-	c, err := conf.New("", `
+	c, err := rule.NewConf("", conf.EnabledBackends{}, `
 		alert a {
 			crit = 1
 		}
@@ -150,7 +151,7 @@ func TestIncidentIds(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	s, _ := initSched(c)
+	s, _ := initSched(&conf.SystemConf{}, c)
 	ak := models.NewAlertKey("a", nil)
 	r := &RunHistory{
 		Events: map[models.AlertKey]*models.Event{
@@ -200,7 +201,7 @@ func TestCheckNotify(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	c, err := conf.New("", fmt.Sprintf(`
+	c, err := rule.NewConf("", conf.EnabledBackends{}, fmt.Sprintf(`
 		template t {
 			subject = {{.Last.Status}}
 		}
@@ -216,7 +217,7 @@ func TestCheckNotify(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	s, err := initSched(c)
+	s, err := initSched(&conf.SystemConf{}, c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -244,8 +245,7 @@ func TestCheckNotifyUnknown(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	c, err := conf.New("", fmt.Sprintf(`
-		minGroupSize = 2
+	c, err := rule.NewConf("", conf.EnabledBackends{}, fmt.Sprintf(`
 		template t {
 			subject = {{.Name}}: {{.Group | len}} unknown alerts
 		}
@@ -262,7 +262,7 @@ func TestCheckNotifyUnknown(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	s, err := initSched(c)
+	s, err := initSched(&conf.SystemConf{MinGroupSize: 2}, c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -308,8 +308,7 @@ func TestCheckNotifyUnknownDefault(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	c, err := conf.New("", fmt.Sprintf(`
-		minGroupSize = 2
+	c, err := rule.NewConf("", conf.EnabledBackends{}, fmt.Sprintf(`
 		template t {
 			subject = template
 		}
@@ -325,7 +324,7 @@ func TestCheckNotifyUnknownDefault(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	s, err := initSched(c)
+	s, err := initSched(&conf.SystemConf{MinGroupSize: 2}, c)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -370,7 +369,7 @@ func TestCheckNotifyLog(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	c, err := conf.New("", fmt.Sprintf(`
+	c, err := rule.NewConf("", conf.EnabledBackends{}, fmt.Sprintf(`
 		template t {
 			subject = {{.Alert.Name}}
 		}
@@ -392,7 +391,7 @@ func TestCheckNotifyLog(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	s, err := initSched(c)
+	s, err := initSched(&conf.SystemConf{}, c)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -6,16 +6,16 @@ import (
 	"testing"
 
 	"bosun.org/cmd/bosun/conf"
+	"bosun.org/cmd/bosun/conf/rule"
 	"bosun.org/models"
 )
 
 func TestActionNotificationTemplates(t *testing.T) {
-	c, err := conf.New("", `hostname = abc`)
-	c.StateFile = ""
+	c, err := rule.NewConf("", conf.EnabledBackends{}, ``)
 	if err != nil {
 		t.Fatal(err)
 	}
-	s, _ := initSched(c)
+	s, _ := initSched(&conf.SystemConf{Hostname: "abc"}, c)
 	data := &actionNotificationContext{}
 	data.ActionType = models.ActionAcknowledge
 	data.Message = "Bad things happened"
@@ -53,7 +53,7 @@ func TestActionNotificationTemplates(t *testing.T) {
 
 func TestActionNotificationGrouping(t *testing.T) {
 	defer setup()()
-	c, err := conf.New("", `
+	c, err := rule.NewConf("", conf.EnabledBackends{}, `
 		template t{
 			subject = 2
 		}
@@ -104,7 +104,7 @@ func TestActionNotificationGrouping(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	s, err := initSched(c)
+	s, err := initSched(&conf.SystemConf{}, c)
 	if err != nil {
 		t.Fatal(err)
 	}

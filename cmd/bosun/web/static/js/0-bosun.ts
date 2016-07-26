@@ -137,8 +137,10 @@ interface IBosunScope extends RootScope {
     values: any;
     annotateEnabled: boolean;
     opentsdbEnabled: boolean;
+    saveEnabled: boolean;
     quiet: boolean;
     version: any;
+    init: any;
 }
 
 bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', '$q', '$rootScope', function ($scope: IBosunScope, $route: ng.route.IRouteService, $http: ng.IHttpService, $q: ng.IQService, $rootScope: IRootScope) {
@@ -154,28 +156,14 @@ bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', '$q', '$r
         }
         return null;
     };
-    $http.get("/api/annotate")
-        .success((data: any) => {
-            $scope.annotateEnabled = data;
-        })
-        .error((data: any) => {
-            console.log(data);
-        });
-    $http.get("/api/quiet")
-        .success((data: any) => {
-            $scope.quiet = data;
-        })
-        .error((data: any) => {
-            console.log(data);
-        });
-    $http.get("/api/opentsdb/version")
-        .success((data: any) => {
-            $scope.version = data;
-            $scope.opentsdbEnabled = $scope.version.Major != 0 && $scope.version.Minor != 0;
-        })
-        .error((data: any) => {
-            console.log(data);
-        });;
+    $scope.init = (settings: any) => {
+        $scope.saveEnabled = settings.SaveEnabled;
+        $scope.annotateEnabled = settings.AnnotateEnabled;
+        $scope.quiet = settings.Quiet;
+        $scope.version = settings.Version;
+        $scope.opentsdbEnabled = $scope.version.Major != 0 && $scope.version.Minor != 0;
+    }
+
     $scope.json = (v: any) => {
         return JSON.stringify(v, null, '  ');
     };

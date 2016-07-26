@@ -118,29 +118,13 @@ bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', '$q', '$r
             }
             return null;
         };
-        $http.get("/api/annotate")
-            .success(function (data) {
-            $scope.annotateEnabled = data;
-        })
-            .error(function (data) {
-            console.log(data);
-        });
-        $http.get("/api/quiet")
-            .success(function (data) {
-            $scope.quiet = data;
-        })
-            .error(function (data) {
-            console.log(data);
-        });
-        $http.get("/api/opentsdb/version")
-            .success(function (data) {
-            $scope.version = data;
+        $scope.init = function (settings) {
+            $scope.saveEnabled = settings.SaveEnabled;
+            $scope.annotateEnabled = settings.AnnotateEnabled;
+            $scope.quiet = settings.Quiet;
+            $scope.version = settings.Version;
             $scope.opentsdbEnabled = $scope.version.Major != 0 && $scope.version.Minor != 0;
-        })
-            .error(function (data) {
-            console.log(data);
-        });
-        ;
+        };
         $scope.json = function (v) {
             return JSON.stringify(v, null, '  ');
         };
@@ -530,6 +514,8 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
         $scope.toTime = search.toTime || '';
         $scope.intervals = +search.intervals || 5;
         $scope.duration = +search.duration || null;
+        $scope.runningHash = search.runningHash || null;
+        $scope.runningChanged = search.runningChanged || false;
         $scope.config_text = 'Loading config...';
         $scope.selected_alert = search.alert || '';
         $scope.email = search.email || '';
@@ -538,6 +524,9 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
         $scope.tab = search.tab || 'results';
         $scope.aceTheme = 'chrome';
         $scope.aceMode = 'bosun';
+        $scope.user = readCookie("action-user");
+        $scope.expandDiff = false;
+        $scope.runningChangedHelp = "The running config has been changed. This means you are in danger of overwriting someone else's changes. To view the changes open the 'Save Dialogue' and you will see a unified diff. The only way to get rid of the error panel is to open a new instance of the rule editor and copy your changes into it. You are still permitted to save without doing this, but then you must be very careful not to overwrite anyone else's changes.";
         var expr = search.expr;
         function buildAlertFromExpr() {
             if (!expr)
@@ -675,6 +664,30 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
                 delete (set.show);
             });
         };
+        $scope.getRunningHash = function () {
+            if (!$scope.saveEnabled) {
+                return;
+            }
+            (function tick() {
+                $http.get('/api/config/running_hash')
+                    .success(function (data) {
+                    $scope.runningHashResult = '';
+                    $timeout(tick, 15 * 1000);
+                    if ($scope.runningHash) {
+                        if (data.Hash != $scope.runningHash) {
+                            $scope.runningChanged = true;
+                            return;
+                        }
+                    }
+                    $scope.runningHash = data.Hash;
+                    $scope.runningChanged = false;
+                })
+                    .error(function (data) {
+                    $scope.runningHashResult = "Error getting running config hash: " + data;
+                });
+            })();
+        };
+        $scope.getRunningHash();
         $scope.setInterval = function () {
             var from = moment.utc($scope.fromDate + ' ' + $scope.fromTime);
             var to = moment.utc($scope.toDate + ' ' + $scope.toTime);
@@ -784,6 +797,8 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
             $location.search('duration', String($scope.duration) || null);
             $location.search('email', $scope.email || null);
             $location.search('template_group', $scope.template_group || null);
+            $location.search('runningHash', $scope.runningHash);
+            $location.search('runningChanged', $scope.runningChanged);
             $scope.animate();
             var from = moment.utc($scope.fromDate + ' ' + $scope.fromTime);
             var to = moment.utc($scope.toDate + ' ' + $scope.toTime);
@@ -871,6 +886,49 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
         $scope.downloadConfig = function () {
             var blob = new Blob([$scope.config_text], { type: "text/plain;charset=utf-8" });
             saveAs(blob, "bosun.conf");
+        };
+        $scope.diffConfig = function () {
+            $http.post('/api/config/diff', {
+                "Config": $scope.config_text,
+                "User": $scope.user,
+                "Message": $scope.message
+            })
+                .success(function (data) {
+                createCookie("action-user", $scope.user, 1000);
+                $scope.diff = data || "No Diff";
+                // Reset running hash if there is no difference?
+            })
+                .error(function (error) {
+                $scope.diff = "Failed to load diff: " + error;
+            });
+        };
+        $scope.saveConfig = function () {
+            if (!$scope.saveEnabled) {
+                return;
+            }
+            $scope.saveResult = "Saving; Please Wait";
+            $http.post('/api/config/save', {
+                "Config": $scope.config_text,
+                "Diff": $scope.diff,
+                "User": $scope.user,
+                "Message": $scope.message
+            })
+                .success(function (data) {
+                $scope.saveResult = "Config Saved; Reloading";
+                $scope.runningHash = undefined;
+            })
+                .error(function (error) {
+                $scope.saveResult = error;
+            });
+        };
+        $scope.saveClass = function () {
+            if ($scope.saveResult == "Saving; Please Wait") {
+                return "alert-warning";
+            }
+            if ($scope.saveResult == "Config Saved; Reloading") {
+                return "alert-success";
+            }
+            return "alert-danger";
         };
         return $scope;
     }]);

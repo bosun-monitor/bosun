@@ -57,7 +57,7 @@ func TestIndex(t *testing.T) {
 	metrics, err := testSearch.MetricsByTagPair("host", "abc")
 	checkEqual(t, err, "metricsByPair", []string{"os.cpu", "os.cpu2"}, metrics)
 
-	filtered, err := testSearch.FilteredTagSets("os.mem", opentsdb.TagSet{"foo": "q"})
+	filtered, err := testSearch.FilteredTagSets("os.mem", opentsdb.TagSet{"foo": "q"}, 0)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -15,6 +15,7 @@ import (
 
 	"bosun.org/cmd/bosun/cache"
 	"bosun.org/cmd/bosun/conf"
+	"bosun.org/cmd/bosun/conf/rule"
 	"bosun.org/cmd/bosun/expr"
 	"bosun.org/cmd/bosun/sched"
 	"bosun.org/models"
@@ -52,7 +53,7 @@ func Expr(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (v inter
 		}
 		// last line is expression we care about
 		if i == len(lines)-1 {
-			expression = schedule.Conf.Expand(line, vars, false)
+			expression = schedule.RuleConf.Expand(line, vars, false)
 		} else { // must be a variable declatation
 			matches := varRegex.FindStringSubmatch(line)
 			if len(matches) == 0 {
@@ -60,10 +61,10 @@ func Expr(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (v inter
 			}
 			name := strings.TrimSpace(matches[1])
 			value := strings.TrimSpace(matches[2])
-			vars[name] = schedule.Conf.Expand(value, vars, false)
+			vars[name] = schedule.RuleConf.Expand(value, vars, false)
 		}
 	}
-	e, err := expr.New(expression, schedule.Conf.Funcs())
+	e, err := expr.New(expression, schedule.RuleConf.GetFuncs(schedule.SystemConf.EnabledBackends()))
 	if err != nil {
 		return nil, err
 	}
@@ -73,11 +74,11 @@ func Expr(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (v inter
 	}
 	// it may not strictly be necessary to recreate the contexts each time, but we do to be safe
 	backends := &expr.Backends{
-		TSDBContext:     schedule.Conf.TSDBContext(),
-		GraphiteContext: schedule.Conf.GraphiteContext(),
-		InfluxConfig:    schedule.Conf.InfluxConfig,
-		LogstashHosts:   schedule.Conf.LogstashElasticHosts,
-		ElasticHosts:    schedule.Conf.ElasticHosts,
+		TSDBContext:     schedule.SystemConf.GetTSDBContext(),
+		GraphiteContext: schedule.SystemConf.GetGraphiteContext(),
+		InfluxConfig:    schedule.SystemConf.GetInfluxContext(),
+		LogstashHosts:   schedule.SystemConf.GetLogstashContext(),
+		ElasticHosts:    schedule.SystemConf.GetElasticContext(),
 	}
 	providers := &expr.BosunProviders{
 		Cache:     cacheObj,
@@ -132,18 +133,18 @@ type Res struct {
 	Key models.AlertKey
 }
 
-func procRule(t miniprofiler.Timer, c *conf.Conf, a *conf.Alert, now time.Time, summary bool, email string, template_group string) (*ruleResult, error) {
+func procRule(t miniprofiler.Timer, ruleConf conf.RuleConfProvider, a *conf.Alert, now time.Time, summary bool, email string, template_group string) (*ruleResult, error) {
 	s := &sched.Schedule{}
 	s.DataAccess = schedule.DataAccess
 	s.Search = schedule.Search
-	if err := s.Init(c); err != nil {
+	if err := s.Init(schedule.SystemConf, ruleConf, false, false); err != nil {
 		return nil, err
 	}
 	rh := s.NewRunHistory(now, cacheObj)
-	if _, err := s.CheckExpr(t, rh, a, a.Warn, models.StWarning, nil); err != nil {
+	if _, err, _ := s.CheckExpr(t, rh, a, a.Warn, models.StWarning, nil); err != nil {
 		return nil, err
 	}
-	if _, err := s.CheckExpr(t, rh, a, a.Crit, models.StCritical, nil); err != nil {
+	if _, err, _ := s.CheckExpr(t, rh, a, a.Crit, models.StCritical, nil); err != nil {
 		return nil, err
 	}
 	keys := make(models.AlertKeys, len(rh.Events))
@@ -243,7 +244,7 @@ func procRule(t miniprofiler.Timer, c *conf.Conf, a *conf.Alert, now time.Time, 
 			} else if s_err != nil {
 				warning = append(warning, s_err.Error())
 			} else {
-				n.DoEmail(email_subject, email, schedule.Conf, string(primaryIncident.AlertKey), attachments...)
+				n.DoEmail(email_subject, email, schedule.SystemConf, string(primaryIncident.AlertKey), attachments...)
 			}
 		}
 		data = s.Data(rh, primaryIncident, a, false)
@@ -442,29 +443,25 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 	return &ret, nil
 }
 
-func buildConfig(r *http.Request) (c *conf.Conf, a *conf.Alert, hash string, err error) {
+func buildConfig(r *http.Request) (c conf.RuleConfProvider, a *conf.Alert, hash string, err error) {
 	config, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		return nil, nil, "", err
 	}
-
-	c, err = conf.New("Test Config", string(config))
+	c, err = rule.NewConf("Test Config", schedule.SystemConf.EnabledBackends(), string(config))
 	if err != nil {
 		return nil, nil, "", err
 	}
-	c.StateFile = ""
-
 	hash, err = sched.DefaultSched.DataAccess.Configs().SaveTempConfig(string(config))
 	if err != nil {
 		return nil, nil, "", err
 	}
-
 	alertName := r.FormValue("alert")
 	if alertName == "" {
 		return nil, nil, "", fmt.Errorf("must supply alert to run")
 	}
-	a, ok := c.Alerts[alertName]
-	if !ok {
+	a = c.GetAlert(alertName)
+	if a == nil {
 		return nil, nil, "", fmt.Errorf("alert %s not found", alertName)
 	}
 	return c, a, hash, nil

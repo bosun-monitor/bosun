@@ -62,9 +62,13 @@ type IncidentSummaryView struct {
 	CritNotificationChains [][]string
 }
 
-func MakeIncidentSummary(c *conf.Conf, s SilenceTester, is *models.IncidentState) IncidentSummaryView {
-	warnNotifications := c.Alerts[is.AlertKey.Name()].WarnNotification.Get(c, is.AlertKey.Group())
-	critNotifications := c.Alerts[is.AlertKey.Name()].CritNotification.Get(c, is.AlertKey.Group())
+func MakeIncidentSummary(c conf.RuleConfProvider, s SilenceTester, is *models.IncidentState) (*IncidentSummaryView, error) {
+	alert := c.GetAlert(is.AlertKey.Name())
+	if alert == nil {
+		return nil, fmt.Errorf("alert %v does not exist in the configuration", is.AlertKey.Name())
+	}
+	warnNotifications := alert.WarnNotification.Get(c, is.AlertKey.Group())
+	critNotifications := alert.CritNotification.Get(c, is.AlertKey.Group())
 	eventSummaries := []EventSummary{}
 	nonNormalNonUnknownCount := 0
 	for _, event := range is.Events {
@@ -85,7 +89,7 @@ func MakeIncidentSummary(c *conf.Conf, s SilenceTester, is *models.IncidentState
 	if subject == "" && nonNormalNonUnknownCount == 0 {
 		subject = fmt.Sprintf("%s: %v", is.CurrentStatus, is.AlertKey)
 	}
-	return IncidentSummaryView{
+	return &IncidentSummaryView{
 		Id:                     is.Id,
 		Subject:                subject,
 		Start:                  is.Start.Unix(),
@@ -103,7 +107,7 @@ func MakeIncidentSummary(c *conf.Conf, s SilenceTester, is *models.IncidentState
 		Events:                 eventSummaries,
 		WarnNotificationChains: conf.GetNotificationChains(c, warnNotifications),
 		CritNotificationChains: conf.GetNotificationChains(c, critNotifications),
-	}
+	}, nil
 }
 
 func (is IncidentSummaryView) Ask(filter string) (bool, error) {

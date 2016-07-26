@@ -509,6 +509,12 @@
 			"revisionTime": "2015-11-28T12:32:46+01:00"
 		},
 		{
+			"origin": "bosun.org/vendor/github.com/pmezard/go-difflib/difflib",
+			"path": "github.com/pmezard/go-difflib/difflib",
+			"revision": "792786c7400a136282c1664665ae0a8db921c6c2",
+			"revisionTime": "2016-01-10T11:55:54+01:00"
+		},
+		{
 			"path": "github.com/ryanuber/go-glob",
 			"revision": "572520ed46dbddaed19ea3d9541bdd0494163693",
 			"revisionTime": "2016-02-26T00:37:05-08:00"
