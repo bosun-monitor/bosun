@@ -74,7 +74,7 @@ echo -e "\nTesting that bosun starts and stops cleanly"
 #TODO: save linux build from above? cant seem to find where it is though.
 cd $GOPATH/src/bosun.org/cmd/bosun
 go build .
-echo -e '"RuleFilePath = "rule.conf' > bosun.toml
+echo -e 'RuleFilePath = "rule.conf"' > bosun.toml
 echo "" > rule.conf
 timeout 30 ./bosun & bosunpid=$! #Run bosun in background with a 30s timeout and capture the pid
 BOSUN_START_RESULT=$?
