@@ -152,12 +152,14 @@ func main() {
 			slog.Fatalf("InternetProxy error: %s", err)
 		}
 	}
-	cmdHook, err := conf.MakeSaveCommandHook(sysProvider.GetCommandHookPath())
-	if err != nil {
-		slog.Fatal(err)
+	var cmdHook conf.SaveHook
+	if hookPath := sysProvider.GetCommandHookPath(); hookPath != "" {
+		cmdHook, err = conf.MakeSaveCommandHook(hookPath)
+		if err != nil {
+			slog.Fatal(err)
+		}
+		ruleProvider.SetSaveHook(cmdHook)
 	}
-	ruleProvider.SetSaveHook(cmdHook)
-
 	var reload func() error
 	reloading := make(chan bool, 1) // a lock that we can give up acquiring
 	reload = func() error {
