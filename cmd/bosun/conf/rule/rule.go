@@ -55,7 +55,7 @@ type Conf struct {
 	writeLock chan bool
 
 	deferredSections map[string][]deferredSection // SectionType:[]deferredSection
-	saveHook         *conf.SaveHook               // func that gets called on save if not nil
+	saveHook         conf.SaveHook                // func that gets called on save if not nil
 	Hash             string
 }
 
@@ -1124,11 +1124,14 @@ func (c *Conf) Reload() error {
 }
 
 func (c *Conf) SetSaveHook(sh conf.SaveHook) {
-	c.saveHook = &sh
+	c.saveHook = sh
 }
 
 func (c *Conf) callSaveHook(file, user, message string, args ...string) error {
-	return (*c.saveHook)(file, user, message, args...)
+	if c.saveHook == nil {
+		return nil
+	}
+	return c.saveHook(file, user, message, args...)
 }
 
 func (c *Conf) genHash() {
