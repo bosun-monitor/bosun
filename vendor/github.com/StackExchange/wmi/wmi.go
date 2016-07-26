@@ -34,7 +34,6 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/go-ole/go-ole"
@@ -45,8 +44,13 @@ var l = log.New(os.Stdout, "", log.LstdFlags)
 
 var (
 	ErrInvalidEntityType = errors.New("wmi: invalid entity type")
-	lock                 sync.Mutex
+	// ErrNilCreateObject is the error returned if CreateObject returns nil even
+	// if the error was nil.
+	ErrNilCreateObject = errors.New("wmi: create object returned nil")
 )
+
+// S_FALSE is returned by CoInitializeEx if it was already called on this thread.
+const S_FALSE = 0x00000001
 
 // QueryNamespace invokes Query with the given namespace on the local machine.
 func QueryNamespace(query string, dst interface{}, namespace string) error {
@@ -119,28 +123,23 @@ func (c *Client) Query(query string, dst interface{}, connectServerArgs ...inter
 		return ErrInvalidEntityType
 	}
 
-	lock.Lock()
-	defer lock.Unlock()
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 
-	err := ole.CoInitializeEx(0, ole.COINIT_MULTITHREADED)
+	err := ole.CoInitializeEx(0, ole.COINIT_APARTMENTTHREADED)
 	if err != nil {
-		oleerr := err.(*ole.OleError)
-		// S_FALSE           = 0x00000001 // CoInitializeEx was already called on this thread
-		if oleerr.Code() != ole.S_OK && oleerr.Code() != 0x00000001 {
+		oleCode := err.(*ole.OleError).Code()
+		if oleCode != ole.S_OK && oleCode != S_FALSE {
 			return err
 		}
-	} else {
-		// Only invoke CoUninitialize if the thread was not initizlied before.
-		// This will allow other go packages based on go-ole play along
-		// with this library.
-		defer ole.CoUninitialize()
 	}
+	defer ole.CoUninitialize()
 
 	unknown, err := oleutil.CreateObject("WbemScripting.SWbemLocator")
 	if err != nil {
 		return err
+	} else if unknown == nil {
+		return ErrNilCreateObject
 	}
 	defer unknown.Release()
 
@@ -171,19 +170,33 @@ func (c *Client) Query(query string, dst interface{}, connectServerArgs ...inter
 		return err
 	}
 
+	enumProperty, err := result.GetProperty("_NewEnum")
+	if err != nil {
+		return err
+	}
+	defer enumProperty.Clear()
+
+	enum, err := enumProperty.ToIUnknown().IEnumVARIANT(ole.IID_IEnumVariant)
+	if err != nil {
+		return err
+	}
+	if enum == nil {
+		return fmt.Errorf("can't get IEnumVARIANT, enum is nil")
+	}
+
 	// Initialize a slice with Count capacity
 	dv.Set(reflect.MakeSlice(dv.Type(), 0, int(count)))
 
 	var errFieldMismatch error
-	for i := int64(0); i < count; i++ {
+	for itemRaw, length, err := enum.Next(1); length > 0; itemRaw, length, err = enum.Next(1) {
+		if err != nil {
+			return err
+		}
+
 		err := func() error {
 			// item is a SWbemObject, but really a Win32_Process
-			itemRaw, err := oleutil.CallMethod(result, "ItemIndex", i)
-			if err != nil {
-				return err
-			}
 			item := itemRaw.ToIDispatch()
-			defer itemRaw.Clear()
+			defer item.Release()
 
 			ev := reflect.New(elemType)
 			if err = c.loadEntity(ev.Interface(), item); err != nil {
