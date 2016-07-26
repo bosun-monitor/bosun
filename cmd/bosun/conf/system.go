@@ -23,7 +23,7 @@ type SystemConf struct {
 	Ping          bool
 	PingDuration  Duration // Duration from now to stop pinging hosts based on time since the host tag was touched
 	TimeAndDate   []int    // timeanddate.com cities list
-	SearchSince   opentsdb.Duration
+	SearchSince   Duration
 	ShortURLKey   string
 	InternetProxy string
 	MinGroupSize  int
@@ -163,7 +163,7 @@ func newSystemConf() *SystemConf {
 			ResponseLimit: 1 << 20, // 1MB
 			Version:       opentsdb.Version2_1,
 		},
-		SearchSince:      opentsdb.Day * 3,
+		SearchSince:      Duration{time.Duration(opentsdb.Day) * 3},
 		UnknownThreshold: 5,
 	}
 }
@@ -276,8 +276,8 @@ func (sc *SystemConf) GetTimeAndDate() []int {
 
 // GetSearchSince returns the duration that certain search requests should filter out results
 // if they are older (have not been indexed) since the duration
-func (sc *SystemConf) GetSearchSince() opentsdb.Duration {
-	return sc.SearchSince
+func (sc *SystemConf) GetSearchSince() time.Duration {
+	return sc.SearchSince.Duration
 }
 
 // GetCheckFrequency returns the default CheckFrequency that the schedule should run at. Checks by

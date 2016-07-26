@@ -7,53 +7,29 @@ import (
 	"bosun.org/cmd/bosun/expr"
 	"bosun.org/opentsdb"
 
-	"github.com/stretchr/testify/assert"
 	"net/url"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestSystemToml(t *testing.T) {
-	conf := `
-Hostname = "bosun.example.com"
-HTTPListen = ":8080"
-TimeAndDate = [ 202, 75, 179, 136 ]
-ShortURLKey = "aKey"
-CommandHookPath = "/Users/kbrandt/src/hook/hook"
-RuleFilePath = "/Users/kbrandt/src/testProdRepo/prod.conf"
-
-[OpenTSDBConf]
-    Host = "ny-tsdb01:4242"
-    Version = 2.2
-    ResponseLimit = 25000000
-
-#Test comment
-
-[ElasticConf]
-    Hosts = ["http://ny-lselastic01.example.com:9200", "http://ny-lselastic02.example.com:9200"]
-
-[DBConf]
-    RedisHost = "localhost:6389"
-
-[SMTPConf]
-    EmailFrom = "bosun@example.com"
-    Host = "mail.example.com"
-
-[InfluxConf]
-    URL = "https://myInfluxServer:1234"
-    Timeout = "5m"
-    UnsafeSSL = true
-
-`
-	sc, err := LoadSystemConfig(conf)
+	sc, err := LoadSystemConfigFile("test.toml")
 	if err != nil {
-		t.Errorf("failed to parse config file: %v", err)
+		t.Errorf("failed to load/parse config file: %v", err)
 		return
 	}
-	_ = sc
 	assert.Equal(t, sc.Hostname, "bosun.example.com", "Hostname not equal")
+	assert.Equal(t, sc.DefaultRunEvery, 5)
+	assert.Equal(t, sc.CheckFrequency, Duration{time.Minute})
+	assert.Equal(t, sc.Ping, true)
+	assert.Equal(t, sc.MinGroupSize, 5)
+	assert.Equal(t, sc.UnknownThreshold, 5)
+	assert.Equal(t, sc.SearchSince, Duration{Duration: time.Hour * 72})
 	assert.Equal(t, sc.PingDuration, Duration{Duration: time.Hour * 24}, "PingDuration does not match (should be set by default)")
 	assert.Equal(t, sc.HTTPListen, ":8080", "HTTPListen does not match")
 	assert.Equal(t, sc.TimeAndDate, []int{202, 75, 179, 136}, "TimeAndDate does not match")
 	assert.Equal(t, sc.ShortURLKey, "aKey")
+	assert.Equal(t, sc.EnableSave, false)
 	assert.Equal(t, sc.CommandHookPath, "/Users/kbrandt/src/hook/hook")
 	assert.Equal(t, sc.RuleFilePath, "/Users/kbrandt/src/testProdRepo/prod.conf")
 	assert.Equal(t, sc.OpenTSDBConf, OpenTSDBConf{

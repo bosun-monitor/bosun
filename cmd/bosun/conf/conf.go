@@ -44,7 +44,7 @@ type SystemConfProvider interface {
 	GetRedisDb() int
 	GetRedisPassword() string
 	GetTimeAndDate() []int
-	GetSearchSince() opentsdb.Duration
+	GetSearchSince() time.Duration
 
 	GetCheckFrequency() time.Duration
 	GetDefaultRunEvery() int
