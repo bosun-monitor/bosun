@@ -52,6 +52,12 @@ CommandHookPath = "/Users/kbrandt/src/hook/hook"
 [ElasticConf]
 	Hosts = ["http://ny-lselastic01.example.com:9200", "http://ny-lselastic02.example.com:9200"]
 
+# Configuration for embedding the annotate service (also enables annotations if hosts are defined)
+[AnnotateConf]
+    Hosts = ["http://ny-lselastic01.example.com:9200", "http://ny-lselastic02.example.com:9200"]
+    # Set the Index name that annotations are stored in. Default is annotate
+    # Index = annotate
+
 # Configuration for Bosun's internal storage. Can be Ledis (Default) or Redis. Redis is recommended
 # for production setups. Defaults for ledis are below but would be ignored since redis takes
 # precedence

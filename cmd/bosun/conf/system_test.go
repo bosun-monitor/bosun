@@ -40,6 +40,9 @@ func TestSystemToml(t *testing.T) {
 	assert.Equal(t, sc.ElasticConf, ElasticConf{
 		Hosts: expr.ElasticHosts{"http://ny-lselastic01.example.com:9200", "http://ny-lselastic02.example.com:9200"},
 	})
+	assert.Equal(t, sc.AnnotateConf, AnnotateConf{
+		Hosts: []string{"http://ny-lselastic01.example.com:9200", "http://ny-lselastic02.example.com:9200"},
+	})
 	assert.Equal(t, sc.DBConf, DBConf{
 		RedisHost:     "localhost:6389", // From Config
 		LedisDir:      "ledis_data",     // Default
