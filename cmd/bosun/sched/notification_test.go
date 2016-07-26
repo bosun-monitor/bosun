@@ -5,9 +5,9 @@ import (
 	"strings"
 	"testing"
 
+	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/conf/rule"
 	"bosun.org/models"
-	"bosun.org/cmd/bosun/conf"
 )
 
 func TestActionNotificationTemplates(t *testing.T) {

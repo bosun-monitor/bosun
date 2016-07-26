@@ -46,7 +46,7 @@ RuleFilePath = "/Users/kbrandt/src/testProdRepo/prod.conf"
 	sc, err := LoadSystemConfig(conf)
 	if err != nil {
 		t.Errorf("failed to parse config file: %v", err)
-        return
+		return
 	}
 	_ = sc
 	assert.Equal(t, sc.Hostname, "bosun.example.com", "Hostname not equal")
@@ -74,9 +74,9 @@ RuleFilePath = "/Users/kbrandt/src/testProdRepo/prod.conf"
 		EmailFrom: "bosun@example.com",
 		Host:      "mail.example.com",
 	}, "SMTPConf does not match")
-    assert.Equal(t, sc.InfluxConf, InfluxConf{
-        URL: URL{&url.URL{Scheme: "https", Host: "myInfluxServer:1234"}},
-        Timeout: Duration{time.Minute * 5},
-        UnsafeSSL: true,
-    })
+	assert.Equal(t, sc.InfluxConf, InfluxConf{
+		URL:       URL{&url.URL{Scheme: "https", Host: "myInfluxServer:1234"}},
+		Timeout:   Duration{time.Minute * 5},
+		UnsafeSSL: true,
+	})
 }
