@@ -334,3 +334,33 @@ func TestAllSubsets(t *testing.T) {
 		t.Fatal("Expect 15 subsets")
 	}
 }
+
+func TestReplace(t *testing.T) {
+	tests := []struct{ in, out string }{
+		{"abc", "abc"},
+		{"ny-web01", "ny-web01"},
+		{"_./", "_./"},
+		{"%%%a", ".a"},
+	}
+	for i, test := range tests {
+		out, err := Replace(test.in, ".")
+		if err != nil {
+			t.Errorf("Test %d: %s", i, err)
+		}
+		if out != test.out {
+			t.Errorf("Test %d: %s != %s", i, out, test.out)
+		}
+	}
+}
+
+func BenchmarkReplace_Noop(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		Replace("abcdefghijklmnopqrstuvwxyz", "")
+	}
+}
+
+func BenchmarkReplace_Something(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		Replace("abcdef&hij@@$$opq#stuvw*yz", "")
+	}
+}

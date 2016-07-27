@@ -307,6 +307,9 @@ func Clean(s string) (string, error) {
 // tag values and replaces them.
 // See: http://opentsdb.net/docs/build/html/user_guide/writing.html#metrics-and-tags
 func Replace(s, replacement string) (string, error) {
+	if !needsReplacement(s) {
+		return s, nil
+	}
 	var c string
 	replaced := false
 	for len(s) > 0 {
@@ -315,6 +318,7 @@ func Replace(s, replacement string) (string, error) {
 			c += string(r)
 			replaced = false
 		} else if !replaced {
+			//only replace the first occurence of an invalid character.
 			c += replacement
 			replaced = true
 		}
@@ -324,6 +328,15 @@ func Replace(s, replacement string) (string, error) {
 		return "", fmt.Errorf("clean result is empty")
 	}
 	return c, nil
+}
+
+func needsReplacement(s string) bool {
+	for _, r := range []rune(s) {
+		if !isRuneValid(r) {
+			return true
+		}
+	}
+	return false
 }
 
 func isRuneValid(r rune) bool {
