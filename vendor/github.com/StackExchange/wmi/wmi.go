@@ -34,6 +34,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/go-ole/go-ole"
@@ -47,6 +48,7 @@ var (
 	// ErrNilCreateObject is the error returned if CreateObject returns nil even
 	// if the error was nil.
 	ErrNilCreateObject = errors.New("wmi: create object returned nil")
+	lock                 sync.Mutex
 )
 
 // S_FALSE is returned by CoInitializeEx if it was already called on this thread.
@@ -123,10 +125,12 @@ func (c *Client) Query(query string, dst interface{}, connectServerArgs ...inter
 		return ErrInvalidEntityType
 	}
 
+	lock.Lock()
+	defer lock.Unlock()
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 
-	err := ole.CoInitializeEx(0, ole.COINIT_APARTMENTTHREADED)
+	err := ole.CoInitializeEx(0, ole.COINIT_MULTITHREADED)
 	if err != nil {
 		oleCode := err.(*ole.OleError).Code()
 		if oleCode != ole.S_OK && oleCode != S_FALSE {
