@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -142,16 +143,22 @@ func recordSent(num int) {
 	slock.Unlock()
 }
 
+var bufferPool = sync.Pool{
+	New: func() interface{} { return &bytes.Buffer{} },
+}
+
 func SendDataPoints(dps []*opentsdb.DataPoint, tsdb string) (*http.Response, error) {
-	var buf bytes.Buffer
-	g := gzip.NewWriter(&buf)
+	buf := bufferPool.Get().(*bytes.Buffer)
+	defer bufferPool.Put(buf)
+	buf.Reset()
+	g := gzip.NewWriter(buf)
 	if err := json.NewEncoder(g).Encode(dps); err != nil {
 		return nil, err
 	}
 	if err := g.Close(); err != nil {
 		return nil, err
 	}
-	req, err := http.NewRequest("POST", tsdb, &buf)
+	req, err := http.NewRequest("POST", tsdb, buf)
 	if err != nil {
 		return nil, err
 	}
