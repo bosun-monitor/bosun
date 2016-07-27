@@ -372,6 +372,13 @@ ConnectionString and Role, which are the same as using sqlplus.
 	    ConnectionString = "/@localnodevip/sid"
 	    Role = "sysdba"
 
+Postgresql(array of table, keys are Name, ConnectionString): Postgresql database instances to poll.
+
+  [[Postgresql]]
+    ConnectionString = "postgres:///"
+  [[Postgresql]]
+    Name = "docker"
+    ConnectionString = "postgres://postgres:@172.17.0.2/postgres?sslmode=disable"
 
 Windows
 

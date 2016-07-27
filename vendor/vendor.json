@@ -265,19 +265,16 @@
 			"revisionTime": "2015-11-22T20:06:43-07:00"
 		},
 		{
-			"origin": "bosun.org/vendor/github.com/bosun-monitor/annotate",
 			"path": "github.com/bosun-monitor/annotate",
 			"revision": "fa0f15c651bfe666cd287c2ba760436b41c85cf4",
 			"revisionTime": "2016-08-04T13:41:31-04:00"
 		},
 		{
-			"origin": "bosun.org/vendor/github.com/bosun-monitor/annotate/backend",
 			"path": "github.com/bosun-monitor/annotate/backend",
 			"revision": "fa0f15c651bfe666cd287c2ba760436b41c85cf4",
 			"revisionTime": "2016-08-04T13:41:31-04:00"
 		},
 		{
-			"origin": "bosun.org/vendor/github.com/bosun-monitor/annotate/web",
 			"path": "github.com/bosun-monitor/annotate/web",
 			"revision": "fa0f15c651bfe666cd287c2ba760436b41c85cf4",
 			"revisionTime": "2016-08-04T13:41:31-04:00"
@@ -484,6 +481,13 @@
 			"revisionTime": "2016-07-12T17:53:59Z"
 		},
 		{
+			"checksumSHA1": "qv9MkcO9g55hR4RT44i7iaQnzQs=",
+			"path": "github.com/lib/pq",
+			"revision": "80f8150043c80fb52dee6bc863a709cdac7ec8f8",
+			"revisionTime": "2016-08-06T14:40:29Z",
+			"tree": true
+		},
+		{
 			"path": "github.com/llgcode/draw2d",
 			"revision": "9ffe0e7eb54c1b3d28eb45a24b578dc2d1bdb6b3",
 			"revisionTime": "2015-11-05T14:43:36+01:00"
@@ -509,7 +513,6 @@
 			"revisionTime": "2015-11-28T12:32:46+01:00"
 		},
 		{
-			"origin": "bosun.org/vendor/github.com/pmezard/go-difflib/difflib",
 			"path": "github.com/pmezard/go-difflib/difflib",
 			"revision": "792786c7400a136282c1664665ae0a8db921c6c2",
 			"revisionTime": "2016-01-10T11:55:54+01:00"

@@ -76,6 +76,7 @@ type Conf struct {
 	HadoopHost          string
 	Oracles             []Oracle
 	Fastly              []Fastly
+	Postgresql          []Postgresql
 }
 
 type HAProxy struct {
@@ -227,4 +228,9 @@ type Oracle struct {
 type OracleInstance struct {
 	ConnectionString string
 	Role             string
+}
+
+type Postgresql struct {
+	Name             string
+	ConnectionString string
 }
