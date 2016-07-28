@@ -48,6 +48,13 @@ CommandHookPath = "/Users/kbrandt/src/hook/hook"
 	# ResponseLimit will make requests error if the response from opentsdb is larger than this setting in bytes. Default of 1MB
 	ResponseLimit = 25000000
 
+# Configuration for to enable to Graphite Backend
+[GraphiteConf]
+	Host = "localhost:80"
+	[GraphiteConf.Headers]
+		X-Meow = "Mix"
+
+
 # Configuration of hosts to enable the Elastic backend
 [ElasticConf]
 	Hosts = ["http://ny-lselastic01.example.com:9200", "http://ny-lselastic02.example.com:9200"]

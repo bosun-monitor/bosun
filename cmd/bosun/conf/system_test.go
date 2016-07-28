@@ -37,6 +37,10 @@ func TestSystemToml(t *testing.T) {
 		ResponseLimit: 25000000,
 		Version:       opentsdb.Version2_2,
 	})
+	assert.Equal(t, sc.GraphiteConf, GraphiteConf{
+		Host: "localhost:80",
+		Headers: map[string]string{"X-Meow": "Mix"},
+	})
 	assert.Equal(t, sc.ElasticConf, ElasticConf{
 		Hosts: expr.ElasticHosts{"http://ny-lselastic01.example.com:9200", "http://ny-lselastic02.example.com:9200"},
 	})
