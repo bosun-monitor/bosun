@@ -454,7 +454,7 @@ func (d *Duration) UnmarshalText(text []byte) error {
 }
 
 // URL is a *url.URL with a UnmarshalText method so
-// durations can be decoded from TOML.
+// a url can be decoded from TOML.
 type URL struct {
 	*url.URL
 }
