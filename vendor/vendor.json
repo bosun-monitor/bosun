@@ -626,8 +626,8 @@
 		},
 		{
 			"path": "github.com/stackexchange/wmi",
-			"revision": "d4ae5b448be53329ab38edcbc8aa1d196fc87f21",
-			"revisionTime": "2016-07-26T18:57:16-06:00"
+			"revision": "771c736650b4aabf956d9103ba5bf439414f79f9",
+			"revisionTime": "2016-07-24T15:06:07+02:00"
 		},
 		{
 			"path": "github.com/syndtr/goleveldb/leveldb",

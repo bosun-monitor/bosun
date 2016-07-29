@@ -34,7 +34,6 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/go-ole/go-ole"
@@ -48,7 +47,6 @@ var (
 	// ErrNilCreateObject is the error returned if CreateObject returns nil even
 	// if the error was nil.
 	ErrNilCreateObject = errors.New("wmi: create object returned nil")
-	lock                 sync.Mutex
 )
 
 // S_FALSE is returned by CoInitializeEx if it was already called on this thread.
@@ -125,12 +123,10 @@ func (c *Client) Query(query string, dst interface{}, connectServerArgs ...inter
 		return ErrInvalidEntityType
 	}
 
-	lock.Lock()
-	defer lock.Unlock()
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 
-	err := ole.CoInitializeEx(0, ole.COINIT_MULTITHREADED)
+	err := ole.CoInitializeEx(0, ole.COINIT_APARTMENTTHREADED)
 	if err != nil {
 		oleCode := err.(*ole.OleError).Code()
 		if oleCode != ole.S_OK && oleCode != S_FALSE {
@@ -187,6 +183,7 @@ func (c *Client) Query(query string, dst interface{}, connectServerArgs ...inter
 	if enum == nil {
 		return fmt.Errorf("can't get IEnumVARIANT, enum is nil")
 	}
+	defer enum.Release()
 
 	// Initialize a slice with Count capacity
 	dv.Set(reflect.MakeSlice(dv.Type(), 0, int(count)))
@@ -347,6 +344,17 @@ func (c *Client) loadEntity(dst interface{}, src *ole.IDispatch) (errFieldMismat
 					StructType: of.Type(),
 					FieldName:  n,
 					Reason:     "not a bool",
+				}
+			}
+		case float32:
+			switch f.Kind() {
+			case reflect.Float32:
+				f.SetFloat(float64(val))
+			default:
+				return &ErrFieldMismatch{
+					StructType: of.Type(),
+					FieldName:  n,
+					Reason:     "not a Float32",
 				}
 			}
 		default:
