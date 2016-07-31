@@ -391,22 +391,22 @@ func (sc *SystemConf) GetGraphiteContext() graphite.Context {
 // to query Influx.
 func (sc *SystemConf) GetInfluxContext() client.Config {
 	c := client.NewConfig()
-	if sc.md.IsDefined("URL") {
+	if sc.md.IsDefined("InfluxConf", "URL") {
 		c.URL = *sc.InfluxConf.URL.URL
 	}
-	if sc.md.IsDefined("Username") {
+	if sc.md.IsDefined("InfluxConf", "Username") {
 		c.Username = sc.InfluxConf.Username
 	}
-	if sc.md.IsDefined("Password") {
+	if sc.md.IsDefined("InfluxConf", "Password") {
 		c.Password = sc.InfluxConf.Password
 	}
-	if sc.md.IsDefined("UserAgent") {
+	if sc.md.IsDefined("InfluxConf", "UserAgent") {
 		c.UserAgent = sc.InfluxConf.UserAgent
 	}
-	if sc.md.IsDefined("Timeout") {
+	if sc.md.IsDefined("InfluxConf", "Timeout") {
 		c.Timeout = sc.InfluxConf.Timeout.Duration
 	}
-	if sc.md.IsDefined("UnsafeSsl") {
+	if sc.md.IsDefined("InfluxConf", "UnsafeSsl") {
 		c.UnsafeSsl = sc.InfluxConf.UnsafeSSL
 	}
 	return c
