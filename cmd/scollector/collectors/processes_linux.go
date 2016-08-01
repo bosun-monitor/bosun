@@ -62,18 +62,29 @@ func linuxProcMonitor(w *WatchedProc, md *opentsdb.MultiDataPoint) error {
 	var totalCPU int64
 	var totalVirtualMem int64
 	var totalRSSMem int64
-	for pid, id := range w.Processes {
-		file_status, e := os.Stat("/proc/" + pid)
-		if e != nil {
-			w.Remove(pid)
-			continue
+	var systemUptime int64
+	var bootTime int64
+	var uptimeIntRE = regexp.MustCompile(`(\d+)(\.+\d+)?\s(\d+)(\.+\d+)?`)
+	uptime_file, e := ioutil.ReadFile("/proc/uptime")
+	if e == nil {
+		systemUptimeString := uptimeIntRE.FindStringSubmatch(string(uptime_file))
+		if systemUptimeString != nil {
+			systemUptime, err = strconv.ParseInt(systemUptimeString[1], 10, 64)
+			if err != nil {
+				return fmt.Errorf("failed to convert machine uptime: %v", err)
+			}
+			bootTime = now() - systemUptime
+		} else {
+			return fmt.Errorf("can't retrieve system uptime")
 		}
-		processCount++
+	}
+	for pid, id := range w.Processes {
 		stats_file, e := ioutil.ReadFile("/proc/" + pid + "/stat")
 		if e != nil {
 			w.Remove(pid)
 			continue
 		}
+		processCount++
 		io_file, e := ioutil.ReadFile("/proc/" + pid + "/io")
 		if e != nil {
 			w.Remove(pid)
@@ -121,7 +132,13 @@ func linuxProcMonitor(w *WatchedProc, md *opentsdb.MultiDataPoint) error {
 				}
 			}
 		}
-		start_ts := file_status.ModTime().Unix()
+		start_ts, err := strconv.ParseInt(stats[21], 10, 64)
+		if err != nil {
+			return fmt.Errorf("failed to convert process uptime: %v", err)
+		}
+
+		//Convert clock ticks per second to second. http://stackoverflow.com/questions/17410841/how-does-user-hz-solve-the-jiffy-scaling-issue
+		start_ts = (start_ts / 100) + bootTime
 		user, err := strconv.ParseInt(stats[13], 10, 64)
 		if err != nil {
 			return fmt.Errorf("failed to convert process user cpu: %v", err)
