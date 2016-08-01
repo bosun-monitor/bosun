@@ -23,7 +23,7 @@ type SystemConf struct {
 	Ping          bool
 	PingDuration  Duration // Duration from now to stop pinging hosts based on time since the host tag was touched
 	TimeAndDate   []int    // timeanddate.com cities list
-	SearchSince   opentsdb.Duration
+	SearchSince   Duration
 	ShortURLKey   string
 	InternetProxy string
 	MinGroupSize  int
@@ -163,7 +163,7 @@ func newSystemConf() *SystemConf {
 			ResponseLimit: 1 << 20, // 1MB
 			Version:       opentsdb.Version2_1,
 		},
-		SearchSince:      opentsdb.Day * 3,
+		SearchSince:      Duration{time.Duration(opentsdb.Day) * 3},
 		UnknownThreshold: 5,
 	}
 }
@@ -276,8 +276,8 @@ func (sc *SystemConf) GetTimeAndDate() []int {
 
 // GetSearchSince returns the duration that certain search requests should filter out results
 // if they are older (have not been indexed) since the duration
-func (sc *SystemConf) GetSearchSince() opentsdb.Duration {
-	return sc.SearchSince
+func (sc *SystemConf) GetSearchSince() time.Duration {
+	return sc.SearchSince.Duration
 }
 
 // GetCheckFrequency returns the default CheckFrequency that the schedule should run at. Checks by
@@ -391,22 +391,22 @@ func (sc *SystemConf) GetGraphiteContext() graphite.Context {
 // to query Influx.
 func (sc *SystemConf) GetInfluxContext() client.Config {
 	c := client.NewConfig()
-	if sc.md.IsDefined("URL") {
+	if sc.md.IsDefined("InfluxConf", "URL") {
 		c.URL = *sc.InfluxConf.URL.URL
 	}
-	if sc.md.IsDefined("Username") {
+	if sc.md.IsDefined("InfluxConf", "Username") {
 		c.Username = sc.InfluxConf.Username
 	}
-	if sc.md.IsDefined("Password") {
+	if sc.md.IsDefined("InfluxConf", "Password") {
 		c.Password = sc.InfluxConf.Password
 	}
-	if sc.md.IsDefined("UserAgent") {
+	if sc.md.IsDefined("InfluxConf", "UserAgent") {
 		c.UserAgent = sc.InfluxConf.UserAgent
 	}
-	if sc.md.IsDefined("Timeout") {
+	if sc.md.IsDefined("InfluxConf", "Timeout") {
 		c.Timeout = sc.InfluxConf.Timeout.Duration
 	}
-	if sc.md.IsDefined("UnsafeSsl") {
+	if sc.md.IsDefined("InfluxConf", "UnsafeSsl") {
 		c.UnsafeSsl = sc.InfluxConf.UnsafeSSL
 	}
 	return c
@@ -454,7 +454,7 @@ func (d *Duration) UnmarshalText(text []byte) error {
 }
 
 // URL is a *url.URL with a UnmarshalText method so
-// durations can be decoded from TOML.
+// a url can be decoded from TOML.
 type URL struct {
 	*url.URL
 }

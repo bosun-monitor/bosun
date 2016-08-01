@@ -85,7 +85,7 @@ func MetricsByTagPair(t miniprofiler.Timer, w http.ResponseWriter, r *http.Reque
 func MetricsByTagKey(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	tagk := vars["tagk"]
-	tagValues, err := schedule.Search.TagValuesByTagKey(tagk, time.Duration(schedule.SystemConf.GetSearchSince()))
+	tagValues, err := schedule.Search.TagValuesByTagKey(tagk, schedule.SystemConf.GetSearchSince())
 	if err != nil {
 		return nil, err
 	}
@@ -105,15 +105,15 @@ func TagValuesByTagKey(t miniprofiler.Timer, w http.ResponseWriter, r *http.Requ
 	vars := mux.Vars(r)
 	tagk := vars["tagk"]
 	s := r.FormValue("since")
-	var since opentsdb.Duration
+	var since time.Duration
 	if s == "default" {
 		since = schedule.SystemConf.GetSearchSince()
 	} else if s != "" {
-		var err error
-		since, err = opentsdb.ParseDuration(s)
+		td, err := opentsdb.ParseDuration(s)
 		if err != nil {
 			return nil, err
 		}
+		since = time.Duration(td)
 	}
-	return schedule.Search.TagValuesByTagKey(tagk, time.Duration(since))
+	return schedule.Search.TagValuesByTagKey(tagk, since)
 }
