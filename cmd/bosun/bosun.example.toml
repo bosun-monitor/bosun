@@ -1,3 +1,6 @@
+# Note: This file is tested as part of Bosun's tests. Editing outside of comments
+# may cause tests to fail
+
 # Hostname will be used when links are created in templates (i.e. acknowledge links)
 Hostname = "bosun.example.com"
 
@@ -18,7 +21,7 @@ TimeAndDate = [ 202, 75, 179, 136 ]
 # An API key for generating goo.gl shortlinks
 ShortURLKey = "aKey"
 
-# The minumum amount of alerts to create an alert on the dashboard. Default is 5
+# The minumum amount of alerts to create an alert group on the dashboard. Default is 5
 MinGroupSize = 5
 
 # How many unknown alerts in a check cycle are needed before a group notiofication is created
