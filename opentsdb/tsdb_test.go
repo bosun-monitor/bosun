@@ -20,6 +20,13 @@ func TestClean(t *testing.T) {
 	}
 }
 
+func TestEmptyPoint(t *testing.T) {
+	d := DataPoint{}
+	if d.Clean() == nil {
+		t.Fatal("empty datapoint should not be cleanable")
+	}
+}
+
 func TestParseQueryV2_1(t *testing.T) {
 	tests := []struct {
 		query string

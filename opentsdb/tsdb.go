@@ -273,6 +273,9 @@ func (d *DataPoint) Clean() error {
 			}
 		}
 	}
+	if !d.Valid() {
+		return fmt.Errorf("datapoint is invalid")
+	}
 	return nil
 }
 
