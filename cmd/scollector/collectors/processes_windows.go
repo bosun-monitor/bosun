@@ -270,6 +270,7 @@ type Win32_Service struct {
 	Started    bool
 	Status     string
 	WaitHint   uint32
+	StartMode  string
 }
 
 type WorkerProcess struct {
