@@ -45,6 +45,7 @@ type SystemConf struct {
 	AnnotateConf AnnotateConf
 
 	EnableSave      bool
+	EnableReload    bool
 	CommandHookPath string
 	RuleFilePath    string
 	md              toml.MetaData
@@ -319,6 +320,12 @@ func (sc *SystemConf) GetInternetProxy() string {
 // SaveEnabled returns if saving via the UI and config editing API endpoints should be enabled
 func (sc *SystemConf) SaveEnabled() bool {
 	return sc.EnableSave
+}
+
+// ReloadEnabled returns if reloading of the rule config should be enabled. This will return
+// true if save is enabled but reload is not enabled.
+func (sc *SystemConf) ReloadEnabled() bool {
+	return sc.EnableSave || sc.EnableReload
 }
 
 // GetCommandHookPath returns the path of a command that should be run on every save

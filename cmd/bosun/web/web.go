@@ -101,12 +101,14 @@ func Listen(listenAddr string, devMode bool, tsdbHost string, reloadFunc func() 
 	router.Handle("/api/config", miniprofiler.NewHandler(Config))
 	router.Handle("/api/config_test", miniprofiler.NewHandler(ConfigTest))
 	router.Handle("/api/save_enabled", JSON(SaveEnabled))
+	if schedule.SystemConf.ReloadEnabled() { // Is true of save is enabled
+		router.Handle("/api/reload", JSON(Reload)).Methods(http.MethodPost)
+	}
 	if schedule.SystemConf.SaveEnabled() {
 		router.Handle("/api/config/bulkedit", miniprofiler.NewHandler(BulkEdit)).Methods(http.MethodPost)
 		router.Handle("/api/config/save", miniprofiler.NewHandler(SaveConfig)).Methods(http.MethodPost)
 		router.Handle("/api/config/diff", miniprofiler.NewHandler(DiffConfig)).Methods(http.MethodPost)
 		router.Handle("/api/config/running_hash", JSON(ConfigRunningHash))
-		router.Handle("/api/reload", JSON(Reload)).Methods(http.MethodPost)
 	}
 	router.Handle("/api/egraph/{bs}.{format:svg|png}", JSON(ExprGraph))
 	router.Handle("/api/errors", JSON(ErrorHistory))

@@ -56,6 +56,7 @@ type SystemConfProvider interface {
 
 	GetRuleFilePath() string
 	SaveEnabled() bool
+	ReloadEnabled() bool
 	GetCommandHookPath() string
 
 	SetTSDBHost(tsdbHost string)
