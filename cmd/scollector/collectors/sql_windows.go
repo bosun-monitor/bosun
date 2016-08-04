@@ -586,7 +586,9 @@ func c_mssql_buffer(svc_dst []Win32_Service) (opentsdb.MultiDataPoint, error) {
 		for _, v := range dst {
 			tags := opentsdb.TagSet{"instance": label}
 			Add(&md, "mssql.buffer.page_life_expectancy", v.PageLifeExpectancy, tags, metadata.Gauge, metadata.Second, descMSSQLPageLifeExpectancy)
-			Add(&md, "mssql.buffer.cache_hit_ratio", v.BufferCacheHitRatio*100/v.BufferCacheHitRatio_Base, tags, metadata.Gauge, metadata.Pct, descBufferCacheHitRatio)
+			if v.BufferCacheHitRatio_Base != 0 {
+				Add(&md, "mssql.buffer.cache_hit_ratio", float64(v.BufferCacheHitRatio*100)/float64(v.BufferCacheHitRatio_Base), tags, metadata.Gauge, metadata.Pct, descBufferCacheHitRatio)
+			}
 		}
 	}
 	return md, nil
