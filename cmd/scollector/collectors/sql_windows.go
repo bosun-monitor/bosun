@@ -553,8 +553,8 @@ func c_mssql_memory(svc_dst []Win32_Service) (opentsdb.MultiDataPoint, error) {
 		}
 		for _, v := range dst {
 			tags := opentsdb.TagSet{"instance": label}
-			Add(&md, "mssql.target_server_memory_kb", v.TargetServerMemoryKB, tags, metadata.Gauge, metadata.KBytes, descMSSQLTargetServerMemoryKB)
-			Add(&md, "mssql.total_server_memory_kb​", v.TotalServerMemoryKB, tags, metadata.Gauge, metadata.KBytes, descMSSQLTotalServerMemoryKB)
+			Add(&md, "mssql.memory.target", v.TargetServerMemoryKB*1024, tags, metadata.Gauge, metadata.Bytes, descMSSQLTargetServerMemoryKB)
+			Add(&md, "mssql.memory.total", v.TotalServerMemoryKB*1024, tags, metadata.Gauge, metadata.Bytes, descMSSQLTotalServerMemoryKB)
 		}
 	}
 	return md, nil
@@ -585,18 +585,22 @@ func c_mssql_buffer(svc_dst []Win32_Service) (opentsdb.MultiDataPoint, error) {
 		}
 		for _, v := range dst {
 			tags := opentsdb.TagSet{"instance": label}
-			Add(&md, "mssql.page_life_expectancy", v.Pagelifeexpectancy, tags, metadata.Gauge, metadata.Second, descMSSQLPagelifeexpectancy)
+			Add(&md, "mssql.buffer.page_life_expectancy", v.PageLifeExpectancy, tags, metadata.Gauge, metadata.Second, descMSSQLPageLifeExpectancy)
+			Add(&md, "mssql.buffer.cache_hit_ratio", v.BufferCacheHitRatio*100/v.BufferCacheHitRatio_Base, tags, metadata.Gauge, metadata.Pct, descBufferCacheHitRatio)
 		}
 	}
 	return md, nil
 }
 
 const (
-	descMSSQLPagelifeexpectancy = "Indicates the number of seconds a page will stay in the buffer pool without references."
+	descMSSQLPageLifeExpectancy = "Indicates the number of seconds a page will stay in the buffer pool without references."
+	descBufferCacheHitRatio     = "Percentage of pages that were found in the buffer pool without having to incur a read from disk."
 )
 
 type Win32_PerfRawData_MSSQLSERVER_SQLServerBufferManager struct {
-	Pagelifeexpectancy uint64
+	PageLifeExpectancy       uint64
+	BufferCacheHitRatio      uint64
+	BufferCacheHitRatio_Base uint64
 }
 
 func instanceWMIQuery(instancename string, wmiquery string) string {
