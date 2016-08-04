@@ -13,7 +13,7 @@ CheckFrequency = "1m"
 DefaultRunEvery = 5
 
 # Path to the rule file (file that contains definitions for alerts, macros, lookups, templates, and notifications)
-RuleFilePath = "/Users/kbrandt/src/testProdRepo/prod.conf"
+RuleFilePath = "dev.sample.conf"
 
 # timeanddate.com zones (only for use in the UI)
 TimeAndDate = [ 202, 75, 179, 136 ]

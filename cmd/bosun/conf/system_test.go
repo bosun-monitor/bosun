@@ -31,7 +31,7 @@ func TestSystemToml(t *testing.T) {
 	assert.Equal(t, sc.ShortURLKey, "aKey")
 	assert.Equal(t, sc.EnableSave, false)
 	assert.Equal(t, sc.CommandHookPath, "/Users/kbrandt/src/hook/hook")
-	assert.Equal(t, sc.RuleFilePath, "/Users/kbrandt/src/testProdRepo/prod.conf")
+	assert.Equal(t, sc.RuleFilePath, "dev.sample.conf")
 	assert.Equal(t, sc.OpenTSDBConf, OpenTSDBConf{
 		Host:          "ny-tsdb01:4242",
 		ResponseLimit: 25000000,
