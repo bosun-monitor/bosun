@@ -169,6 +169,9 @@ func examineMdadmVolume(volumeName string) (volumeDetail, error) {
 	// We don't use --test because it has failed us in the past.
 	// Maybe we should use it sometime in the future
 	output, err := util.Command(tmout, nil, "mdadm", "--detail", volumeName)
+	if err != nil {
+		return volumeDetail{}, err
+	}
 	detail := parseExamineMdadm(output)
 	return detail, err
 }
