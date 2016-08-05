@@ -561,12 +561,14 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 				if ($scope.annotateEnabled) {
 					$scope.annotations = _.sortBy(data.Annotations, (d: Annotation) => { return d.StartDate; });
 				}
+				$scope.warning = '';
 				if (!$scope.result) {
 					$scope.warning = 'No Results';
-				} else {
-					$scope.warning = '';
 				}
-				$scope.queries = data.Queries;	
+				if (data.Warnings.length > 0) {
+					$scope.warning += data.Warnings.join(" ");
+				}
+				$scope.queries = data.Queries;
 				$scope.exprText = "";
 				_.each($scope.queries, (q, i) => {
 						$scope.exprText += "$" + alphabet[i] + " = " + q + "\n";

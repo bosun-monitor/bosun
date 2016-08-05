@@ -182,20 +182,23 @@ func Graph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 		return nil, nil
 	}
 	var a []annotate.Annotation
+	warnings := []string{}
 	if schedule.SystemConf.AnnotateEnabled() {
 		a, err = annotateBackend.GetAnnotations(&startT, &endT)
 		if err != nil {
-			return nil, err
+			warnings = append(warnings, fmt.Sprintf("unable to get annotations: %v", err))
 		}
 	}
 	return struct {
 		Queries     []string
 		Series      []*chartSeries
 		Annotations []annotate.Annotation
+		Warnings    []string
 	}{
 		queries,
 		cs,
 		a,
+		warnings,
 	}, nil
 }
 

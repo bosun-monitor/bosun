@@ -24,21 +24,30 @@ const docType = "annotation"
 
 type Elastic struct {
 	*elastic.Client
-	index      string
-	maxResults int
+	index       string
+	urls        []string
+	maxResults  int
+	initialized bool
 }
 
-func NewElastic(urls []string, index string) (*Elastic, error) {
-	e, err := elastic.NewClient(elastic.SetURL(urls...))
-	return &Elastic{e, index, 200}, err
+func NewElastic(urls []string, index string) *Elastic {
+	return &Elastic{&elastic.Client{}, index, urls, 200, false}
 }
+
+var unInitErr = fmt.Errorf("backend has not been initialized")
 
 func (e *Elastic) InsertAnnotation(a *annotate.Annotation) error {
+	if !e.initialized {
+		return unInitErr
+	}
 	_, err := e.Index().Index(e.index).BodyJson(a).Id(a.Id).Type(docType).Do()
 	return err
 }
 
 func (e *Elastic) GetAnnotation(id string) (*annotate.Annotation, bool, error) {
+	if !e.initialized {
+		return nil, false, unInitErr
+	}
 	a := annotate.Annotation{}
 	if id == "" {
 		return &a, false, fmt.Errorf("must provide id")
@@ -58,6 +67,9 @@ func (e *Elastic) GetAnnotation(id string) (*annotate.Annotation, bool, error) {
 }
 
 func (e *Elastic) DeleteAnnotation(id string) error {
+	if !e.initialized {
+		return unInitErr
+	}
 	_, err := e.Delete().Index(e.index).Type(docType).Id(id).Do()
 	if err != nil {
 		return err
@@ -77,6 +89,9 @@ const Is = "Is"
 const Empty = "Empty"
 
 func (e *Elastic) GetAnnotations(start, end *time.Time, fieldFilters ...FieldFilter) (annotate.Annotations, error) {
+	if !e.initialized {
+		return nil, unInitErr
+	}
 	annotations := annotate.Annotations{}
 	filters := []elastic.Query{}
 	if start != nil && end != nil {
@@ -121,6 +136,9 @@ func (e *Elastic) GetAnnotations(start, end *time.Time, fieldFilters ...FieldFil
 }
 
 func (e *Elastic) GetFieldValues(field string) ([]string, error) {
+	if !e.initialized {
+		return nil, unInitErr
+	}
 	terms := []string{}
 	switch field {
 	case annotate.Source, annotate.Host, annotate.CreationUser, annotate.Owner, annotate.Category:
@@ -146,6 +164,11 @@ func (e *Elastic) GetFieldValues(field string) ([]string, error) {
 }
 
 func (e *Elastic) InitBackend() error {
+	ec, err := elastic.NewClient(elastic.SetURL(e.urls...))
+	if err != nil {
+		return err
+	}
+	e.Client = ec
 	exists, err := e.IndexExists(e.index).Do()
 	if err != nil {
 		return err
@@ -183,5 +206,6 @@ func (e *Elastic) InitBackend() error {
 	if (res != nil && !res.Acknowledged) || err != nil {
 		return fmt.Errorf("failed to create elastic mapping (ack: %v): %v", res != nil && res.Acknowledged, err)
 	}
-	return err
+	e.initialized = true
+	return nil
 }

@@ -143,19 +143,24 @@ func Listen(listenAddr string, devMode bool, tsdbHost string, reloadFunc func() 
 
 	// Annotations
 	if schedule.SystemConf.AnnotateEnabled() {
-		var err error
 		index := schedule.SystemConf.GetAnnotateIndex()
 		if index == "" {
 			index = "annotate"
 		}
-		annotateBackend, err = backend.NewElastic(schedule.SystemConf.GetAnnotateElasticHosts(), index)
-		if err != nil {
-			return err
-		}
-		if err := annotateBackend.InitBackend(); err != nil {
-			return err
-		}
+		annotateBackend = backend.NewElastic(schedule.SystemConf.GetAnnotateElasticHosts(), index)
+
+		go func() {
+			for {
+				err := annotateBackend.InitBackend()
+				if err == nil {
+					return
+				}
+				slog.Warningf("could not initalize annotate backend, will try again: %v", err)
+				time.Sleep(time.Second * 30)
+			}
+		}()
 		web.AddRoutes(router, "/api", []backend.Backend{annotateBackend}, false, false)
+
 	}
 
 	router.HandleFunc("/api/version", Version)
