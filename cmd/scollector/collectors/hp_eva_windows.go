@@ -3,14 +3,16 @@ package collectors
 import (
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
+	"bosun.org/slog"
 	"github.com/StackExchange/wmi"
 )
 
 func init() {
-	var dst []win32PerfRawDataEVAPMEXTHPEVAStorageArray
+	var dst []Win32_PerfRawData_EVAPMEXT_HPEVAStorageArray
 	var q = wmi.CreateQuery(&dst, ``)
 	err := queryWmi(q, &dst)
 	if err != nil {
+		slog.Info(err)
 		return // No HP EVA datasources found
 	}
 	collectors = append(collectors, &IntervalCollector{F: cHPEvaVirtualDiskWindows})
@@ -27,11 +29,11 @@ const (
 )
 
 func cHPEvaVirtualDiskWindows() (opentsdb.MultiDataPoint, error) {
-	var dst []win32PerfRawDataEVAPMEXTHPEVAVirtualDisk
+	var dst []Win32_PerfRawData_EVAPMEXT_HPEVAVirtualDisk
 	var q = wmi.CreateQuery(&dst, ``)
 	err := queryWmi(q, &dst)
 	if err != nil {
-		return nil, err
+		return nil, slog.Wrap(err)
 	}
 	var md opentsdb.MultiDataPoint
 	for _, v := range dst {
@@ -57,7 +59,7 @@ const (
 )
 
 //See msdn for counter types http://msdn.microsoft.com/en-us/library/ms804035.aspx
-type win32PerfRawDataEVAPMEXTHPEVAVirtualDisk struct {
+type Win32_PerfRawData_EVAPMEXT_HPEVAVirtualDisk struct {
 	Name              string
 	ReadHitKBPers     uint64
 	ReadHitLatencyus  uint64
@@ -71,11 +73,11 @@ type win32PerfRawDataEVAPMEXTHPEVAVirtualDisk struct {
 }
 
 func cHPEvaHostConnectionWindows() (opentsdb.MultiDataPoint, error) {
-	var dst []win32PerfRawDataEVAPMEXTHPEVAHostConnection
+	var dst []Win32_PerfRawData_EVAPMEXT_HPEVAHostConnection
 	var q = wmi.CreateQuery(&dst, ``)
 	err := queryWmi(q, &dst)
 	if err != nil {
-		return nil, err
+		return nil, slog.Wrap(err)
 	}
 	var md opentsdb.MultiDataPoint
 	for _, v := range dst {
@@ -88,17 +90,17 @@ const (
 	descHostConnectionQueueDepth = "HP EVA host connections: Connection queue depth."
 )
 
-type win32PerfRawDataEVAPMEXTHPEVAHostConnection struct {
+type Win32_PerfRawData_EVAPMEXT_HPEVAHostConnection struct {
 	Name       string
 	QueueDepth uint16 // HP EVA host connections: Connection queue depth
 }
 
 func cHPEvaStorageControllerWindows() (opentsdb.MultiDataPoint, error) {
-	var dst []win32PerfRawDataEVAPMEXTHPEVAStorageController
+	var dst []Win32_PerfRawData_EVAPMEXT_HPEVAStorageController
 	var q = wmi.CreateQuery(&dst, ``)
 	err := queryWmi(q, &dst)
 	if err != nil {
-		return nil, err
+		return nil, slog.Wrap(err)
 	}
 	var md opentsdb.MultiDataPoint
 	for _, v := range dst {
@@ -113,18 +115,18 @@ const (
 	descStoragePercentProcessorTime    = "HP Enterprise Virtual Array storage controller metrics: Percentage CPU time."
 )
 
-type win32PerfRawDataEVAPMEXTHPEVAStorageController struct {
+type Win32_PerfRawData_EVAPMEXT_HPEVAStorageController struct {
 	Name                    string
 	PercentDataTransferTime uint16 // HP Enterprise Virtual Array storage controller metrics: Percentage CPU time
 	PercentProcessorTime    uint16 // HP Enterprise Virtual Array storage controller metrics: Percentage CPU time used to perform data transfer operations
 }
 
 func cHPEvaStorageArrayWindows() (opentsdb.MultiDataPoint, error) {
-	var dst []win32PerfRawDataEVAPMEXTHPEVAStorageArray
+	var dst []Win32_PerfRawData_EVAPMEXT_HPEVAStorageArray
 	var q = wmi.CreateQuery(&dst, ``)
 	err := queryWmi(q, &dst)
 	if err != nil {
-		return nil, err
+		return nil, slog.Wrap(err)
 	}
 	var md opentsdb.MultiDataPoint
 	for _, v := range dst {
@@ -139,18 +141,18 @@ const (
 	descStorageTotalhostReqPers = "HP Enterprise Virtual Array general metrics: The total number of host requests per second."
 )
 
-type win32PerfRawDataEVAPMEXTHPEVAStorageArray struct {
+type Win32_PerfRawData_EVAPMEXT_HPEVAStorageArray struct {
 	Name             string
 	TotalhostKBPers  uint64 // HP Enterprise Virtual Array general metrics: The total number of host requests in KBytes per second
 	TotalhostReqPers uint32 // HP Enterprise Virtual Array general metrics: The total number of host requests per second
 }
 
 func cHPEvaHostPortWindows() (opentsdb.MultiDataPoint, error) {
-	var dst []win32PerfRawDataEVAPMEXTHPEVAHostPortStatistics
+	var dst []Win32_PerfRawData_EVAPMEXT_HPEVAHostPortStatistics
 	var q = wmi.CreateQuery(&dst, ``)
 	err := queryWmi(q, &dst)
 	if err != nil {
-		return nil, err
+		return nil, slog.Wrap(err)
 	}
 	var md opentsdb.MultiDataPoint
 	for _, v := range dst {
@@ -172,7 +174,7 @@ const (
 	descHostPortLatencyus    = "HP EVA Host port statistics: Latency in milliseconds."
 )
 
-type win32PerfRawDataEVAPMEXTHPEVAHostPortStatistics struct {
+type Win32_PerfRawData_EVAPMEXT_HPEVAHostPortStatistics struct {
 	Name           string
 	AvQueueDepth   uint16 // HP EVA Host port statistics: Average queue depth
 	ReadKBPers     uint64 // HP EVA Host port statistics: Read rate in KBytes per second
@@ -184,11 +186,11 @@ type win32PerfRawDataEVAPMEXTHPEVAHostPortStatistics struct {
 }
 
 func cHPEvaPhysicalDiskGroupWindows() (opentsdb.MultiDataPoint, error) {
-	var dst []win32PerfRawDataEVAPMEXTHPEVAPhysicalDiskGroup
+	var dst []Win32_PerfRawData_EVAPMEXT_HPEVAPhysicalDiskGroup
 	var q = wmi.CreateQuery(&dst, ``)
 	err := queryWmi(q, &dst)
 	if err != nil {
-		return nil, err
+		return nil, slog.Wrap(err)
 	}
 	var md opentsdb.MultiDataPoint
 	for _, v := range dst {
@@ -212,7 +214,7 @@ const (
 	descPhysicalDiskLatencyus       = "HP EVA Physical Disk Group performance data: Average latency in milliseconds. EVA XL only."
 )
 
-type win32PerfRawDataEVAPMEXTHPEVAPhysicalDiskGroup struct {
+type Win32_PerfRawData_EVAPMEXT_HPEVAPhysicalDiskGroup struct {
 	Name            string
 	DriveLatencyus  uint64 // HP EVA Physical Disk Group performance data: Average drive latency in microseconds. EVA GL only
 	DriveQueueDepth uint16 // HP EVA Physical Disk Group performance data: Average depth of the drive queue
