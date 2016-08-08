@@ -199,6 +199,128 @@ func (a Series) Equal(b Series) bool {
 	return reflect.DeepEqual(a, b)
 }
 
+func (s Series) HistogramRanged(min, max float64, bins int64, crop bool) (*Histogram, error) {
+	h := Histogram{}
+	h.StartTime = math.MaxInt64
+	h.min = math.MaxFloat64
+	sortedValues := []float64{}
+	for t, v := range s {
+		sortedValues = append(sortedValues, v)
+		nix := t.Unix()
+		if nix < h.StartTime {
+			h.StartTime = nix
+		}
+		if nix > h.EndTime {
+			h.EndTime = nix
+		}
+		if v < h.min {
+			h.min = v
+		}
+		if v > h.max {
+			h.max = v
+		}
+	}
+	if !crop {
+		if h.min < min {
+			return &h, fmt.Errorf("value outside of minimum range %v", min)
+		}
+		if h.max > max {
+			return &h, fmt.Errorf("value outside of maximum range %v", max)
+		}
+	}
+	sort.Float64s(sortedValues)
+	bucketSize := (max - min) / float64(bins)
+	for i := min; i <= max+bucketSize; i += bucketSize {
+		h.Buckets = append(h.Buckets, &Bucket{i, 0})
+	}
+	for _, v := range sortedValues {
+		if crop {
+			if v < min {
+				continue
+			}
+			if v >= max {
+				break
+			}
+		}
+		for i := 0; ; {
+			if h.Buckets[i+1].Low > v && len(h.Buckets) == i+2 {
+				h.Buckets[i].Count++
+				break
+			}
+			if h.Buckets[i+1].Low > v && v < h.Buckets[i+2].Low {
+				h.Buckets[i].Count++
+				break
+			} else {
+				i++
+				continue
+			}
+		}
+	}
+	return &h, nil
+}
+
+func (s Series) Histogram(bins int64) *Histogram {
+	h := Histogram{}
+	h.StartTime = math.MaxInt64
+	h.min = math.MaxFloat64
+	sortedValues := []float64{}
+	for t, v := range s {
+		sortedValues = append(sortedValues, v)
+		nix := t.Unix()
+		if nix < h.StartTime {
+			h.StartTime = nix
+		}
+		if nix > h.EndTime {
+			h.EndTime = nix
+		}
+		if v < h.min {
+			h.min = v
+		}
+		if v > h.max {
+			h.max = v
+		}
+	}
+	sort.Float64s(sortedValues)
+	bucketSize := (h.max - h.min) / float64(bins)
+	for i := h.min; i <= h.max+bucketSize; i += bucketSize {
+		h.Buckets = append(h.Buckets, &Bucket{i, 0})
+	}
+	for _, v := range sortedValues {
+		for i := 0; ; {
+			if h.Buckets[i+1].Low > v && len(h.Buckets) == i+2 {
+				h.Buckets[i].Count++
+				break
+			}
+			if h.Buckets[i+1].Low > v && v < h.Buckets[i+2].Low {
+				h.Buckets[i].Count++
+				break
+			} else {
+				i++
+				continue
+			}
+		}
+	}
+	return &h
+}
+
+type Bucket struct {
+	Low   float64
+	Count int64
+}
+
+type Histogram struct {
+	StartTime  int64
+	EndTime    int64
+	min        float64
+	max        float64
+	bucketLows []float64
+	Buckets    []*Bucket
+}
+
+func (h Histogram) Type() models.FuncType { return models.TypeHistogramSet }
+func (h Histogram) Value() interface{}   { return h }
+
+
 type ESQuery struct {
 	Query elastic.Query
 }

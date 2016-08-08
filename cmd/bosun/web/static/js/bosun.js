@@ -1995,6 +1995,146 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function ($window, fmtfi
             }
         };
     }]);
+bosunApp.directive('tsHist', ['$window', 'nfmtFilter', function ($window, fmtfilter) {
+        var margin = {
+            top: 10,
+            right: 10,
+            bottom: 80,
+            left: 80
+        };
+        var color = d3.scale.ordinal().range([
+            '#e41a1c',
+            '#377eb8',
+            '#4daf4a',
+            '#984ea3',
+            '#ff7f00',
+            '#a65628',
+            '#f781bf',
+            '#999999',
+        ]);
+        return {
+            scope: {
+                data: '=',
+                height: '='
+            },
+            link: function (scope, elem, attrs) {
+                var svgHeight = +scope.height || 150;
+                var height = svgHeight - margin.top - margin.bottom;
+                var svgWidth;
+                var width;
+                var yScale = d3.scale.linear().range([height, 0]);
+                var xScale = d3.scale.linear().range([0, width]);
+                var top = d3.select(elem[0])
+                    .append('svg')
+                    .attr('height', svgHeight)
+                    .attr('width', '100%');
+                var svg = top
+                    .append('g')
+                    .attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
+                var xAxis = d3.svg.axis()
+                    .scale(xScale)
+                    .orient("bottom");
+                var yAxis = d3.svg.axis()
+                    .scale(yScale)
+                    .orient("left")
+                    .ticks(10);
+                var paths = svg.append('g');
+                var legendTop = d3.select(elem[0]).append('div');
+                var legend = d3.select(elem[0]).append('div');
+                legend.style('clear', 'both');
+                var drawLegend = function () {
+                    var names = legend.selectAll('.series')
+                        .data(scope.data, function (d) { return color(JSON.stringify(d.Group)); });
+                    names.enter()
+                        .append('div')
+                        .attr('class', 'series')
+                        .style('color', function (d) { return color(JSON.stringify(d.Group)); })
+                        .text(function (d) { return JSON.stringify(d.Group); })
+                        .on("click", function (d, i) {
+                        var sel = d3.select("#hist" + i.toString());
+                        var current = Number(sel.style("opacity"));
+                        var o = current > 0 ? 0 : .6;
+                        d3.select("#hist" + i.toString()).style("opacity", o);
+                    });
+                    names.exit()
+                        .remove();
+                };
+                scope.$watch('data', update);
+                var w = angular.element($window);
+                scope.$watch(function () {
+                    return w.width();
+                }, resize, true);
+                w.bind('resize', function () {
+                    scope.$apply();
+                });
+                function resize() {
+                    svgWidth = elem.width();
+                    if (svgWidth <= 0) {
+                        return;
+                    }
+                    width = svgWidth - margin.left - margin.right;
+                    xScale.range([0, width]);
+                    //
+                    xAxis.scale(xScale);
+                    svg.attr('width', svgWidth);
+                    xAxis.ticks(width / 60);
+                    draw();
+                }
+                function update(v) {
+                    if (!angular.isArray(v) || v.length == 0) {
+                        return;
+                    }
+                    resize();
+                }
+                function draw() {
+                    if (!scope.data) {
+                        return;
+                    }
+                    console.log(scope.data);
+                    var line = d3.svg.area()
+                        .x(function (d) { return xScale(d.Low); })
+                        .y(function (d) { return yScale(d.Count); })
+                        .interpolate("step");
+                    line.y0(yScale(0));
+                    xScale.domain([
+                        Math.min.apply(Math, scope.data.map(function (d) { return d3.min(d.Value.Buckets, function (b) { return b.Low; }); })),
+                        Math.max.apply(Math, scope.data.map(function (d) { return d3.max(d.Value.Buckets, function (b) { return b.Low; }); })),
+                    ]);
+                    yScale.domain([
+                        Math.min.apply(Math, scope.data.map(function (d) { return d3.min(d.Value.Buckets, function (b) { return b.Count; }); })),
+                        Math.max.apply(Math, scope.data.map(function (d) { return d3.max(d.Value.Buckets, function (b) { return b.Count; }); })),
+                    ]);
+                    svg.selectAll('g.axis').remove();
+                    //X axis
+                    svg.append("g")
+                        .attr("class", "x axis")
+                        .attr("transform", "translate(0," + height + ")")
+                        .call(xAxis)
+                        .selectAll("text")
+                        .attr("class", "bar_label")
+                        .style("text-anchor", "end")
+                        .attr("transform", function (d) { return "rotate(-45)"; });
+                    svg.append("g")
+                        .attr("class", "y axis")
+                        .call(yAxis);
+                    paths.remove();
+                    paths = svg.append("g");
+                    scope.data.map(function (data, i) {
+                        paths.append("path")
+                            .attr("class", "line")
+                            .attr("id", function (d) { return "hist" + i.toString(); })
+                            .attr("d", line(data.Value.Buckets))
+                            .attr('stroke', function (d) { return d3.rgb(color(JSON.stringify(data.Group))).darker(1); })
+                            .attr('stroke-width', 3)
+                            .style("opacity", .6)
+                            .style('fill', function (d) { return color(JSON.stringify(data.Group)); });
+                    });
+                    drawLegend();
+                }
+                ;
+            }
+        };
+    }]);
 bosunControllers.controller('ErrorCtrl', ['$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
         $scope.loading = true;
         $http.get('/api/errors')
@@ -2110,6 +2250,9 @@ bosunControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route
                     d.name = name;
                 });
                 $scope.bar = data.Results;
+            }
+            if (data.Type == 'histogram') {
+                $scope.hist = data.Results;
             }
             $scope.running = '';
         })

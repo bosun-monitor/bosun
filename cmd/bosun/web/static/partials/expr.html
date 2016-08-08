@@ -71,9 +71,11 @@
 	<li ng-class="{active: tab == 'results'}"><a href ng-click="tab = 'results'">Results</a></li>
 	<li ng-show="graph" ng-class="{active: tab == 'graph'}"><a href ng-click="tab = 'graph'">Graph</a></li>
 	<li ng-show="bar" ng-class="{active: tab == 'bar'}"><a href ng-click="tab = 'bar'">Bar Chart</a></li>
+	<li ng-show="hist" ng-class="{active: tab == 'hist'}"><a href ng-click="tab = 'hist'">Histogram</a></li>
 </ul>
 <div class="tab-content">
 	<div class="tab-pane" ng-class="{active: tab == 'results'}" ts-results></div>
 	<div class="tab-pane chart active" ng-if="tab == 'graph'" ts-graph data="graph" height="600"></div>
 	<div class="tab-pane chart active" ng-if="tab == 'bar'" ts-bar data="bar" height="600"></div>
+	<div class="tab-pane chart active" ng-if="tab == 'hist'" ts-hist data="hist" height="600"></div>
 </div>

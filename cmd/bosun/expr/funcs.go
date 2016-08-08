@@ -353,6 +353,27 @@ var builtins = map[string]parse.Func{
 		F:       V,
 		MapFunc: true,
 	},
+
+	// Histogram functions
+	"stoh": {
+		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeScalar, models.TypeScalar, models.TypeScalar},
+		Return: models.TypeHistogramSet,
+		Tags:   tagFirst,
+		F:      Stoh,
+	},
+}
+
+// Series to histogram
+func Stoh(e *State, T miniprofiler.Timer, series *Results, binValue, min, max float64) (*Results, error) {
+	bins := int64(binValue)
+	for _, v := range series.Results {
+		nV, err := v.Value.Value().(Series).HistogramRanged(min, max, bins, true)
+		if err != nil {
+			return series, err
+		}
+		v.Value = nV
+	}
+	return series, nil
 }
 
 func V(e *State, T miniprofiler.Timer) (*Results, error) {

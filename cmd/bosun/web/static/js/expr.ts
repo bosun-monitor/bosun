@@ -15,6 +15,7 @@ interface IExprScope extends RootScope {
 	keydown: ($event: any) => void;
 	animate: () => any;
 	stop: () => any;
+	hist: any;
 }
 
 
@@ -62,6 +63,9 @@ bosunControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route
 					d.name = name;
 				 });
 				$scope.bar = data.Results;
+			}
+			if (data.Type == 'histogram') {
+				$scope.hist = data.Results;
 			}
 			$scope.running = '';
 		})

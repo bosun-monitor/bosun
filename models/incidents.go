@@ -124,6 +124,8 @@ func (f FuncType) String() string {
 		return "seriesexpr"
 	case TypeTable:
 		return "table"
+	case TypeHistogramSet:
+		return "histogram"
 	default:
 		return "unknown"
 	}
@@ -134,12 +136,15 @@ const (
 	TypeScalar
 	TypeNumberSet
 	TypeSeriesSet
+	TypeDistributionSet
+	TypeHistogramSet
 	TypeESQuery
 	TypeESIndexer
 	TypeNumberExpr
 	TypeSeriesExpr // No implmentation yet
 	TypeTable
 	TypeUnexpected
+
 )
 
 type Status int

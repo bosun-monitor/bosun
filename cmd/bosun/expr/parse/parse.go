@@ -197,7 +197,7 @@ func (t *Tree) startParse(funcs []map[string]Func, lex *lexer) {
 	for _, funcMap := range funcs {
 		for name, f := range funcMap {
 			switch f.Return {
-			case models.TypeSeriesSet, models.TypeNumberSet:
+			case models.TypeSeriesSet, models.TypeNumberSet, models.TypeHistogramSet:
 				if f.Tags == nil {
 					panic(fmt.Errorf("%v: expected Tags definition: got nil", name))
 				}
