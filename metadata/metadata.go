@@ -15,6 +15,11 @@ import (
 	"bosun.org/util"
 )
 
+var (
+	// DisableMetadata prevents scollector sending metadata to tsdbhost
+	DisableMetadata = false
+)
+
 // RateType is the type of rate for a metric: gauge, counter, or rate.
 type RateType string
 
@@ -153,6 +158,9 @@ var (
 
 // AddMeta adds a metadata entry to memory, which is queued for later sending.
 func AddMeta(metric string, tags opentsdb.TagSet, name string, value interface{}, setHost bool) {
+	if DisableMetadata {
+		return
+	}
 	if tags == nil {
 		tags = make(opentsdb.TagSet)
 	}
@@ -213,6 +221,9 @@ func collectMetadata() {
 }
 
 func FlushMetadata() {
+	if DisableMetadata {
+		return
+	}
 	for _, f := range metafuncs {
 		f()
 	}

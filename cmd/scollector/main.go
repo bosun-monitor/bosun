@@ -207,7 +207,7 @@ func main() {
 		collect.Print = true
 	}
 
-	collect.DisableMetadata = conf.DisableMetadata
+	metadata.DisableMetadata = conf.DisableMetadata
 	if !conf.DisableMetadata {
 		if err := metadata.Init(u, *flagDebug); err != nil {
 			slog.Fatal(err)
