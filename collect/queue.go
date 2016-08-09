@@ -20,7 +20,7 @@ import (
 func queuer() {
 	for dp := range tchan {
 		if err := dp.Clean(); err != nil {
-			atomic.AddInt64(&dropped, 1)
+			atomic.AddInt64(&discarded, 1)
 			continue // if anything gets this far that can't be made valid, just drop it silently.
 		}
 		qlock.Lock()
@@ -32,6 +32,10 @@ func queuer() {
 			queue = append(queue, dp)
 			select {
 			case dp = <-tchan:
+				if err := dp.Clean(); err != nil {
+					atomic.AddInt64(&discarded, 1)
+					break // if anything gets this far that can't be made valid, just drop it silently.
+				}
 				continue
 			default:
 			}

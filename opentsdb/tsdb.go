@@ -293,6 +293,9 @@ func (t TagSet) Clean() error {
 		if err != nil {
 			return fmt.Errorf("cleaning value %s for tag %s: %s", v, k, err)
 		}
+		if kc == "" || vc == "" {
+			return fmt.Errorf("cleaning value [%s] for tag [%s] result in an empty string", v, k)
+		}
 		if kc != k || vc != v {
 			delete(t, k)
 			t[kc] = vc
