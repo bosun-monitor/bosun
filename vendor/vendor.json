@@ -344,8 +344,8 @@
 		},
 		{
 			"path": "github.com/godbus/dbus",
-			"revision": "7b3b905fed818f8653cda2ddb27605624a182513",
-			"revisionTime": "2016-02-03T12:07:45-08:00"
+			"revision": "7a8c533d28e8162671a81090af5b9f78b74e2d26",
+			"revisionTime": "2016-07-27T10:45:41-07:00"
 		},
 		{
 			"path": "github.com/gogo/protobuf/proto",
