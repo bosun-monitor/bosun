@@ -12,7 +12,6 @@ func init() {
 	var q = wmi.CreateQuery(&dst, ``)
 	err := queryWmi(q, &dst)
 	if err != nil {
-		slog.Info(err)
 		return // No HP EVA datasources found
 	}
 	collectors = append(collectors, &IntervalCollector{F: cHPEvaVirtualDiskWindows})
