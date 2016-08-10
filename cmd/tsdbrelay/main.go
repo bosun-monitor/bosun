@@ -12,7 +12,6 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"os"
-	"runtime"
 	"strings"
 
 	"bosun.org/cmd/tsdbrelay/denormalize"
@@ -44,7 +43,6 @@ var (
 )
 
 func main() {
-	runtime.GOMAXPROCS(runtime.NumCPU())
 	var err error
 	myHost, err = os.Hostname()
 	if err != nil || myHost == "" {
