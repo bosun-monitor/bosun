@@ -315,11 +315,11 @@ type Histogram struct {
 	max        float64
 	bucketLows []float64
 	Buckets    []*Bucket
+	Interval   int64
 }
 
 func (h Histogram) Type() models.FuncType { return models.TypeHistogramSet }
-func (h Histogram) Value() interface{}   { return h }
-
+func (h Histogram) Value() interface{}    { return h }
 
 type ESQuery struct {
 	Query elastic.Query

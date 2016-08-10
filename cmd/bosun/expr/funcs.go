@@ -364,6 +364,7 @@ var builtins = map[string]parse.Func{
 }
 
 // Series to histogram
+// Should maybe be the size of the bin instead of number of bins...?
 func Stoh(e *State, T miniprofiler.Timer, series *Results, binValue, min, max float64) (*Results, error) {
 	bins := int64(binValue)
 	for _, v := range series.Results {

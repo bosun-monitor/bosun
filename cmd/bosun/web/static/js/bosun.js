@@ -2038,7 +2038,7 @@ bosunApp.directive('tsHist', ['$window', 'nfmtFilter', function ($window, fmtfil
                     .scale(yScale)
                     .orient("left")
                     .ticks(10);
-                var paths = svg.append('g');
+                var bars = svg.append('g');
                 var legendTop = d3.select(elem[0]).append('div');
                 var legend = d3.select(elem[0]).append('div');
                 legend.style('clear', 'both');
@@ -2091,11 +2091,11 @@ bosunApp.directive('tsHist', ['$window', 'nfmtFilter', function ($window, fmtfil
                         return;
                     }
                     console.log(scope.data);
-                    var line = d3.svg.area()
-                        .x(function (d) { return xScale(d.Low); })
-                        .y(function (d) { return yScale(d.Count); })
-                        .interpolate("step");
-                    line.y0(yScale(0));
+                    // var line = d3.svg.area()
+                    // 	.x(function(d) { return xScale(d.Low); })
+                    // 	.y(function(d) { return yScale(d.Count); })
+                    // 	.interpolate("step");
+                    // line.y0(yScale(0));
                     xScale.domain([
                         Math.min.apply(Math, scope.data.map(function (d) { return d3.min(d.Value.Buckets, function (b) { return b.Low; }); })),
                         Math.max.apply(Math, scope.data.map(function (d) { return d3.max(d.Value.Buckets, function (b) { return b.Low; }); })),
@@ -2117,17 +2117,25 @@ bosunApp.directive('tsHist', ['$window', 'nfmtFilter', function ($window, fmtfil
                     svg.append("g")
                         .attr("class", "y axis")
                         .call(yAxis);
-                    paths.remove();
-                    paths = svg.append("g");
+                    bars.remove();
+                    bars = svg.append("g");
+                    // var bar = svg.selectAll(".bar")
+                    //     .data(scope.data)
+                    //     .enter().append("g")
+                    //     .attr("class", "bar")
                     scope.data.map(function (data, i) {
-                        paths.append("path")
-                            .attr("class", "line")
-                            .attr("id", function (d) { return "hist" + i.toString(); })
-                            .attr("d", line(data.Value.Buckets))
-                            .attr('stroke', function (d) { return d3.rgb(color(JSON.stringify(data.Group))).darker(1); })
-                            .attr('stroke-width', 3)
-                            .style("opacity", .6)
-                            .style('fill', function (d) { return color(JSON.stringify(data.Group)); });
+                        var bargroup = bars.append("g")
+                            .attr("id", function (d) { return "hist" + i.toString(); });
+                        data.Value.Buckets.map(function (bucket, j) {
+                            bargroup.append("rect")
+                                .attr("y", yScale(bucket.Count))
+                                .attr("x", xScale(data.Value.Interval) * j)
+                                .attr("width", xScale(data.Value.Interval))
+                                .attr("height", height - yScale(bucket.Count))
+                                .style('fill', function (d) { return color(JSON.stringify(data.Group)); })
+                                .attr('stroke', function (d) { return d3.rgb(color(JSON.stringify(data.Group))).darker(1); })
+                                .style("opacity", .6);
+                        });
                     });
                     drawLegend();
                 }

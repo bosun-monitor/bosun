@@ -511,7 +511,7 @@ func ESHistogram(e *State, T miniprofiler.Timer, indexer ESIndexer, keyString st
 		if tags == nil {
 			tags = make(opentsdb.TagSet)
 		}
-		h := Histogram{}
+		h := Histogram{Interval: int64(interval)}
 		for _, v := range items.Buckets {
 			h.Buckets = append(h.Buckets, &Bucket{float64(v.Key), v.DocCount})
 		}
