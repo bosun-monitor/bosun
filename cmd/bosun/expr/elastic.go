@@ -399,7 +399,18 @@ func ESStat(e *State, T miniprofiler.Timer, indexer ESIndexer, keystring string,
 // 2016-09-22T22:26:14.679270711Z
 const elasticRFC3339 = "date_optional_time"
 
-func ESDateHistogram(e *State, T miniprofiler.Timer, indexer ESIndexer, keystring string, filter elastic.Query, interval, sduration, eduration, stat_field, rstat string, size int) (r *Results, err error) {
+func keyAggregations(keyString, innerAggName string, innerAgg elastic.Aggregation, req *ElasticRequest) []string {
+	keys := strings.Split(keyString, ",")
+	aggregation := elastic.NewTermsAggregation().Field(keys[len(keys)-1]).Size(0)
+	aggregation = aggregation.SubAggregation(innerAggName, innerAgg)
+	for i := len(keys) - 2; i > -1; i-- {
+		aggregation = elastic.NewTermsAggregation().Field(keys[i]).Size(0).SubAggregation("g_"+keys[i+1], aggregation)
+	}
+	req.Source = req.Source.Aggregation("g_"+keys[0], aggregation)
+	return keys
+}
+
+func ESDateHistogram(e *State, T miniprofiler.Timer, indexer ESIndexer, keyString string, filter elastic.Query, interval, sduration, eduration, stat_field, rstat string, size int) (r *Results, err error) {
 	r = new(Results)
 	req, err := ESBaseQuery(e.now, indexer, filter, sduration, eduration, size)
 	if err != nil {
@@ -415,7 +426,26 @@ func ESDateHistogram(e *State, T miniprofiler.Timer, indexer ESIndexer, keystrin
 			return r, fmt.Errorf("stat function %v not a valid option", rstat)
 		}
 	}
-	if keystring == "" {
+	processTS := func(items *elastic.AggregationBucketHistogramItems, tags opentsdb.TagSet) {
+		if tags == nil {
+			tags = make(opentsdb.TagSet)
+		}
+		series := make(Series)
+		for _, v := range items.Buckets {
+			val := processESBucketItem(v, rstat)
+			if val != nil {
+				series[time.Unix(v.Key/1000, 0).UTC()] = *val
+			}
+		}
+		if len(series) == 0 {
+			return
+		}
+		r.Results = append(r.Results, &Result{
+			Value: series,
+			Group: tags,
+		})
+	}
+	if keyString == "" {
 		req.Source = req.Source.Aggregation("ts", ts)
 		result, err := timeESRequest(e, T, req)
 		if err != nil {
@@ -425,29 +455,10 @@ func ESDateHistogram(e *State, T miniprofiler.Timer, indexer ESIndexer, keystrin
 		if !found {
 			return nil, fmt.Errorf("expected time series not found in elastic reply")
 		}
-		series := make(Series)
-		for _, v := range ts.Buckets {
-			val := processESBucketItem(v, rstat)
-			if val != nil {
-				series[time.Unix(v.Key/1000, 0).UTC()] = *val
-			}
-		}
-		if len(series) == 0 {
-			return r, nil
-		}
-		r.Results = append(r.Results, &Result{
-			Value: series,
-			Group: make(opentsdb.TagSet),
-		})
+		processTS(ts, nil)
 		return r, nil
 	}
-	keys := strings.Split(keystring, ",")
-	aggregation := elastic.NewTermsAggregation().Field(keys[len(keys)-1]).Size(0)
-	aggregation = aggregation.SubAggregation("ts", ts)
-	for i := len(keys) - 2; i > -1; i-- {
-		aggregation = elastic.NewTermsAggregation().Field(keys[i]).Size(0).SubAggregation("g_"+keys[i+1], aggregation)
-	}
-	req.Source = req.Source.Aggregation("g_"+keys[0], aggregation)
+	keys := keyAggregations(keyString, "ts", ts, req)
 	result, err := timeESRequest(e, T, req)
 	if err != nil {
 		return nil, err
@@ -462,20 +473,7 @@ func ESDateHistogram(e *State, T miniprofiler.Timer, indexer ESIndexer, keystrin
 			if e.Squelched(tags) {
 				return nil
 			}
-			series := make(Series)
-			for _, v := range ts.Buckets {
-				val := processESBucketItem(v, rstat)
-				if val != nil {
-					series[time.Unix(v.Key/1000, 0).UTC()] = *val
-				}
-			}
-			if len(series) == 0 {
-				return nil
-			}
-			r.Results = append(r.Results, &Result{
-				Value: series,
-				Group: tags.Copy(),
-			})
+			processTS(ts, tags)
 			return nil
 		}
 		if len(keys) < 1 {
@@ -502,44 +500,44 @@ func ESDateHistogram(e *State, T miniprofiler.Timer, indexer ESIndexer, keystrin
 	return r, nil
 }
 
-func ESHistogram(e *State, T miniprofiler.Timer, indexer ESIndexer, keystring string, filter ESQuery, sduration, eduration, field string, interval float64) (r *Results, err error) {
+func ESHistogram(e *State, T miniprofiler.Timer, indexer ESIndexer, keyString string, filter ESQuery, sduration, eduration, field string, interval float64) (r *Results, err error) {
 	r = new(Results)
 	req, err := ESBaseQuery(e.now, indexer, filter.Query, sduration, eduration, 0)
 	if err != nil {
 		return nil, err
 	}
-	//ts := elastic.NewDateHistogramAggregation().Field(indexer.TimeField).Interval(strings.Replace(interval, "M", "n", -1)).MinDocCount(0).ExtendedBoundsMin(req.Start).ExtendedBoundsMax(req.End)
 	hs := elastic.NewHistogramAggregation().Field(field).ExtendedBoundsMin(0).Interval(int64(interval))
-	if keystring == "" {
+	processHS := func(items *elastic.AggregationBucketHistogramItems, tags opentsdb.TagSet) {
+		if tags == nil {
+			tags = make(opentsdb.TagSet)
+		}
+		h := Histogram{}
+		for _, v := range items.Buckets {
+			h.Buckets = append(h.Buckets, &Bucket{float64(v.Key), v.DocCount})
+		}
+		if len(h.Buckets) == 0 {
+			return
+		}
+		r.Results = append(r.Results, &Result{
+			Value: h,
+			Group: tags,
+		})
+		return
+	}
+	if keyString == "" {
 		req.Source = req.Source.Aggregation("hs", hs)
 		result, err := timeESRequest(e, T, req)
 		if err != nil {
 			return nil, err
 		}
-		hs, found := result.Aggregations.DateHistogram("hs")
+		hs, found := result.Aggregations.Histogram("hs")
 		if !found {
 			return nil, fmt.Errorf("expected time series not found in elastic reply")
 		}
-		h := Histogram{}
-		for _, v := range hs.Buckets {
-			h.Buckets = append(h.Buckets, &Bucket{float64(v.Key), v.DocCount})
-		}
-		if len(h.Buckets) == 0 {
-			return r, nil
-		}
-		r.Results = append(r.Results, &Result{
-			Value: h,
-			Group: make(opentsdb.TagSet),
-		})
+		processHS(hs, nil)
 		return r, nil
 	}
-	keys := strings.Split(keystring, ",")
-	aggregation := elastic.NewTermsAggregation().Field(keys[len(keys)-1]).Size(0)
-	aggregation = aggregation.SubAggregation("hs", hs)
-	for i := len(keys) - 2; i > -1; i-- {
-		aggregation = elastic.NewTermsAggregation().Field(keys[i]).Size(0).SubAggregation("g_"+keys[i+1], aggregation)
-	}
-	req.Source = req.Source.Aggregation("g_"+keys[0], aggregation)
+	keys := keyAggregations(keyString, "hs", hs, req)
 	result, err := timeESRequest(e, T, req)
 	if err != nil {
 		return nil, err
@@ -550,21 +548,16 @@ func ESHistogram(e *State, T miniprofiler.Timer, indexer ESIndexer, keystring st
 	}
 	var desc func(*elastic.AggregationBucketKeyItem, opentsdb.TagSet, []string) error
 	desc = func(b *elastic.AggregationBucketKeyItem, tags opentsdb.TagSet, keys []string) error {
+		// TODO: Have same buckets across all histograms that make up the set
+		// TODO: Don't get empty buckets, and fill them in after since that could
+		// be a fair a mount of json
+		// TODO: (Maybe?) Figure out how to get items in edge limits into buckets. i.e. so
+		// the last bucket includes everything greater than it .. maybe
 		if hs, found := b.Histogram("hs"); found {
 			if e.Squelched(tags) {
 				return nil
 			}
-			h := Histogram{}
-			for _, v := range hs.Buckets {
-				h.Buckets = append(h.Buckets, &Bucket{float64(v.Key), v.DocCount})
-			}
-			if len(h.Buckets) == 0 {
-				return nil
-			}
-			r.Results = append(r.Results, &Result{
-				Value: h,
-				Group: tags.Copy(),
-			})
+			processHS(hs, tags)
 			return nil
 		}
 		if len(keys) < 1 {
@@ -590,6 +583,7 @@ func ESHistogram(e *State, T miniprofiler.Timer, indexer ESIndexer, keystring st
 	}
 	return r, nil
 }
+
 
 // ESBaseQuery builds the base query that both ESCount and ESStat share
 func ESBaseQuery(now time.Time, indexer ESIndexer, filter elastic.Query, sduration, eduration string, size int) (*ElasticRequest, error) {
