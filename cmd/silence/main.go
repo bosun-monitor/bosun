@@ -8,7 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"os/user"
+	"runtime"
 	"time"
 
 	"bytes"
@@ -28,14 +28,21 @@ var (
 
 func main() {
 	flag.Parse()
-	u, err := user.Current()
-	if err != nil {
-		log.Fatal(err)
-	}
-	un := u.Username
-	sudo := os.Getenv("SUDO_USER")
-	if sudo != "" {
-		un = sudo
+	un := *flagUser
+	if un == "" {
+		// Use os.Getenv because os/user and user.Current() requires cgo
+		switch runtime.GOOS {
+		case "darwin", "linux":
+			un = os.Getenv("USER")
+		case "windows":
+			un = os.Getenv("USERNAME")
+		default:
+			un = "UNKNOWN"
+		}
+		sudo := os.Getenv("SUDO_USER")
+		if sudo != "" {
+			un = sudo
+		}
 	}
 	if *flagTags == "" {
 		flagTagsIsPresent := false
