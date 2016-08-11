@@ -58,7 +58,10 @@ func store(src, dest interface{}) error {
 		reflect.ValueOf(dest).Elem().Set(reflect.ValueOf(src))
 		return nil
 	} else if hasStruct(dest) {
-		rv := reflect.ValueOf(dest).Elem()
+		rv := reflect.ValueOf(dest)
+		if rv.Kind() == reflect.Interface || rv.Kind() == reflect.Ptr {
+			rv = rv.Elem()
+		}
 		switch rv.Kind() {
 		case reflect.Struct:
 			vs, ok := src.([]interface{})
