@@ -20,16 +20,19 @@ func c_system_windows() (opentsdb.MultiDataPoint, error) {
 	}
 	var md opentsdb.MultiDataPoint
 	for _, v := range dst {
-		//see http://microsoft.public.win32.programmer.wmi.narkive.com/09kqthVC/lastbootuptime
-		var uptime = (v.Timestamp_Object - v.SystemUpTime) / v.Frequency_Object
+		if v.Frequency_Object != 0 {
+			//see http://microsoft.public.win32.programmer.wmi.narkive.com/09kqthVC/lastbootuptime
+			var uptime = (v.Timestamp_Object - v.SystemUpTime) / v.Frequency_Object
+			Add(&md, "win.system.uptime", uptime, nil, metadata.Gauge, metadata.Second, osSystemUptimeDesc)
+			Add(&md, osSystemUptime, uptime, nil, metadata.Gauge, metadata.Second, osSystemUptimeDesc)
+		}
 		Add(&md, "win.system.context_switches", v.ContextSwitchesPersec, nil, metadata.Counter, metadata.ContextSwitch, descWinSystemContextSwitchesPersec)
 		Add(&md, "win.system.exceptions", v.ExceptionDispatchesPersec, nil, metadata.Counter, metadata.PerSecond, descWinSystemExceptionDispatchesPersec)
 		Add(&md, "win.system.cpu_queue", v.ProcessorQueueLength, nil, metadata.Gauge, metadata.Count, descWinSystemProcessorQueueLength)
 		Add(&md, "win.system.syscall", v.SystemCallsPersec, nil, metadata.Counter, metadata.Syscall, descWinSystemSystemCallsPersec)
 		Add(&md, "win.system.threads", v.Threads, nil, metadata.Gauge, metadata.Count, descWinSystemThreads)
-		Add(&md, "win.system.uptime", uptime, nil, metadata.Gauge, metadata.Second, osSystemUptimeDesc)
 		Add(&md, "win.system.processes", v.Processes, nil, metadata.Gauge, metadata.Count, descWinSystemProcesses)
-		Add(&md, osSystemUptime, uptime, nil, metadata.Gauge, metadata.Second, osSystemUptimeDesc)
+
 	}
 	return md, nil
 }

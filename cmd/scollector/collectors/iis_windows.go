@@ -121,11 +121,13 @@ func c_iis_apppool() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	for _, v := range dst {
 		tags := opentsdb.TagSet{"name": v.Name}
-		uptime := (v.Timestamp_Object - v.CurrentApplicationPoolUptime) / v.Frequency_Object
-		failtime := (v.Timestamp_Object - v.TimeSinceLastWorkerProcessFailure) / v.Frequency_Object
+		if v.Frequency_Object != 0 {
+			uptime := (v.Timestamp_Object - v.CurrentApplicationPoolUptime) / v.Frequency_Object
+			failtime := (v.Timestamp_Object - v.TimeSinceLastWorkerProcessFailure) / v.Frequency_Object
+			Add(&md, "iis.apppool.uptime", uptime, tags, metadata.Gauge, metadata.Second, descIISAppPoolCurrentApplicationPoolUptime)
+			Add(&md, "iis.apppool.time_since_failure", failtime, tags, metadata.Gauge, metadata.Second, descIISAppPoolTimeSinceLastWorkerProcessFailure)
+		}
 		Add(&md, "iis.apppool.state", v.CurrentApplicationPoolState, tags, metadata.Gauge, metadata.StatusCode, descIISAppPoolCurrentApplicationPoolState)
-		Add(&md, "iis.apppool.uptime", uptime, tags, metadata.Gauge, metadata.Second, descIISAppPoolCurrentApplicationPoolUptime)
-		Add(&md, "iis.apppool.time_since_failure", failtime, tags, metadata.Gauge, metadata.Second, descIISAppPoolTimeSinceLastWorkerProcessFailure)
 		Add(&md, "iis.apppool.processes", v.CurrentWorkerProcesses, opentsdb.TagSet{"name": v.Name, "type": "current"}, metadata.Gauge, metadata.Count, descIISAppPoolCurrentWorkerProcesses)
 		Add(&md, "iis.apppool.processes", v.MaximumWorkerProcesses, opentsdb.TagSet{"name": v.Name, "type": "maximum"}, metadata.Gauge, metadata.Count, descIISAppPoolMaximumWorkerProcesses)
 		Add(&md, "iis.apppool.processes", v.RecentWorkerProcessFailures, opentsdb.TagSet{"name": v.Name, "type": "failed"}, metadata.Gauge, metadata.Count, descIISAppPoolRecentWorkerProcessFailures)
