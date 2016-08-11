@@ -1,4 +1,4 @@
-interface IAnnotationScope extends ng.IScope {
+interface IAnnotationScope extends IBosunScope {
     id: string;
     annotation: Annotation;
     error: string;
@@ -11,7 +11,7 @@ interface IAnnotationScope extends ng.IScope {
     deleteSuccess: boolean;
 }
 
-bosunControllers.controller('AnnotationCtrl', ['$scope', '$http', '$location', '$route', function($scope: IAnnotationScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService) {
+bosunControllers.controller('AnnotationCtrl', ['$scope', '$http', '$location', '$route', function ($scope: IAnnotationScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService) {
     var search = $location.search();
     $scope.id = search.id;
     if ($scope.id && $scope.id != "") {
@@ -40,28 +40,40 @@ bosunControllers.controller('AnnotationCtrl', ['$scope', '$http', '$location', '
             $scope.hosts = data;
         });
 
-    $scope.submitAnnotation = () => $http.post('/api/annotation', $scope.annotation)
-        .success((data) => {
-            $scope.annotation = new Annotation(data, true);
-            $scope.error = "";
-            $scope.submitSuccess = true;
-            $scope.deleteSuccess = false;
-        })
-        .error((error) => {
-            $scope.error = error;
-            $scope.submitSuccess = false;
-        });
+    $scope.submitAnnotation = () => {
+        $scope.animate();
+        $http.post('/api/annotation', $scope.annotation)
+            .success((data) => {
+                $scope.annotation = new Annotation(data, true);
+                $scope.error = "";
+                $scope.submitSuccess = true;
+                $scope.deleteSuccess = false;
+            })
+            .error((error) => {
+                $scope.error = "failed to create annotation: " + error.error;
+                $scope.submitSuccess = false;
+            })
+            .finally(() => {
+                $scope.stop();
+            });
+    };
 
-    $scope.deleteAnnotation = () => $http.delete('/api/annotation/' + $scope.annotation.Id)
-        .success((data) => {
-            $scope.error = "";
-            $scope.deleteSuccess = true;
-            $scope.submitSuccess = false;
-            $scope.annotation = new (Annotation);
-            $scope.annotation.setTimeUTC();
-        })
-        .error((error) => {
-            $scope.error = "failed to delete annotation with id: " + $scope.annotation.Id + ", error: " + error;
-            $scope.deleteSuccess = false;
-        });
+    $scope.deleteAnnotation = () => {
+        $scope.animate();
+        $http.delete('/api/annotation/' + $scope.annotation.Id)
+            .success((data) => {
+                $scope.error = "";
+                $scope.deleteSuccess = true;
+                $scope.submitSuccess = false;
+                $scope.annotation = new (Annotation);
+                $scope.annotation.setTimeUTC();
+            })
+            .error((error) => {
+                $scope.error = "failed to delete annotation with id: " + $scope.annotation.Id + ", error: " + error.error;
+                $scope.deleteSuccess = false;
+            })
+            .finally(() => {
+                $scope.stop();
+            });
+    }
 }]);

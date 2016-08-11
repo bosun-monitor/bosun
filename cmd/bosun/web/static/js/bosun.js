@@ -482,29 +482,41 @@ bosunControllers.controller('AnnotationCtrl', ['$scope', '$http', '$location', '
             .success(function (data) {
             $scope.hosts = data;
         });
-        $scope.submitAnnotation = function () { return $http.post('/api/annotation', $scope.annotation)
-            .success(function (data) {
-            $scope.annotation = new Annotation(data, true);
-            $scope.error = "";
-            $scope.submitSuccess = true;
-            $scope.deleteSuccess = false;
-        })
-            .error(function (error) {
-            $scope.error = error;
-            $scope.submitSuccess = false;
-        }); };
-        $scope.deleteAnnotation = function () { return $http.delete('/api/annotation/' + $scope.annotation.Id)
-            .success(function (data) {
-            $scope.error = "";
-            $scope.deleteSuccess = true;
-            $scope.submitSuccess = false;
-            $scope.annotation = new (Annotation);
-            $scope.annotation.setTimeUTC();
-        })
-            .error(function (error) {
-            $scope.error = "failed to delete annotation with id: " + $scope.annotation.Id + ", error: " + error;
-            $scope.deleteSuccess = false;
-        }); };
+        $scope.submitAnnotation = function () {
+            $scope.animate();
+            $http.post('/api/annotation', $scope.annotation)
+                .success(function (data) {
+                $scope.annotation = new Annotation(data, true);
+                $scope.error = "";
+                $scope.submitSuccess = true;
+                $scope.deleteSuccess = false;
+            })
+                .error(function (error) {
+                $scope.error = "failed to create annotation: " + error.error;
+                $scope.submitSuccess = false;
+            })
+                .finally(function () {
+                $scope.stop();
+            });
+        };
+        $scope.deleteAnnotation = function () {
+            $scope.animate();
+            $http.delete('/api/annotation/' + $scope.annotation.Id)
+                .success(function (data) {
+                $scope.error = "";
+                $scope.deleteSuccess = true;
+                $scope.submitSuccess = false;
+                $scope.annotation = new (Annotation);
+                $scope.annotation.setTimeUTC();
+            })
+                .error(function (error) {
+                $scope.error = "failed to delete annotation with id: " + $scope.annotation.Id + ", error: " + error.error;
+                $scope.deleteSuccess = false;
+            })
+                .finally(function () {
+                $scope.stop();
+            });
+        };
     }]);
 bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$route', '$timeout', '$sce', function ($scope, $http, $location, $route, $timeout, $sce) {
         var search = $location.search();
@@ -2626,11 +2638,12 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
                 if ($scope.annotateEnabled) {
                     $scope.annotations = _.sortBy(data.Annotations, function (d) { return d.StartDate; });
                 }
+                $scope.warning = '';
                 if (!$scope.result) {
                     $scope.warning = 'No Results';
                 }
-                else {
-                    $scope.warning = '';
+                if (data.Warnings.length > 0) {
+                    $scope.warning += data.Warnings.join(" ");
                 }
                 $scope.queries = data.Queries;
                 $scope.exprText = "";
