@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"regexp"
+
 	"bosun.org/cmd/bosun/expr/parse"
 	"bosun.org/models"
 	"bosun.org/opentsdb"
@@ -179,6 +181,13 @@ var builtins = map[string]parse.Func{
 		Return: models.TypeSeriesSet,
 		Tags:   tagRename,
 		F:      AddTags,
+	},
+
+	"extags": { // extract tags
+		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeString, models.TypeString, models.TypeString},
+		Return: models.TypeSeriesSet,
+		Tags:   tagFirst,
+		F:      ExtractTags,
 	},
 
 	"rename": {
@@ -1086,6 +1095,39 @@ func AddTags(e *State, T miniprofiler.Timer, series *Results, s string) (*Result
 			res.Group[tagKey] = tagValue
 		}
 	}
+	return series, nil
+}
+
+func ExtractTags(e *State, T miniprofiler.Timer, series *Results, sourceKey, pattern, newKey string) (*Results, error) {
+	if sourceKey == "" {
+		return series, nil
+	}
+	re, err := regexp.Compile(pattern)
+	if err != nil {
+		return nil, err
+	}
+	if re.NumSubexp() != 1 {
+		return nil, fmt.Errorf("expected one capture group in regexp, got %v", re.NumSubexp())
+	}
+	//for tagKey, tagValue := range tagSetToAdd {
+	for _, res := range series.Results {
+		if _, ok := res.Group[newKey]; ok {
+			return nil, fmt.Errorf("%s key already in group", newKey)
+		}
+		if value, ok := res.Group[sourceKey]; ok {
+			extract := re.FindStringSubmatch(value)
+			if extract == nil { // Maybe this should just continue?
+				return nil, fmt.Errorf("no regex match for value of %v", value)
+			}
+			if len(extract) != 2 {
+				return nil, fmt.Errorf("unexpected number of matches, expected 2 got %v : %v", len(extract), extract)
+			}
+			res.Group[newKey] = extract[1]
+		} else {
+			return nil, fmt.Errorf("source key of %v not found", sourceKey)
+		}
+	}
+	//}
 	return series, nil
 }
 
