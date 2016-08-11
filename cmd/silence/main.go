@@ -20,7 +20,7 @@ var (
 	flagHost     = flag.String("h", "bosun", "Hostname of your bosun server, defaults to bosun.")
 	flagUser     = flag.String("u", "", "Username, defaults to the username returned from the OS.")
 	flagDuration = flag.String("d", "30m", "A duration to silence this host for. Defaults to 30m and the format is defined at http://golang.org/pkg/time/#ParseDuration")
-	flagTags     = flag.String("t", "", "OpenTSDB tags to be silenced in the format of tagKey=value,tagKey=value. Defaults to host=<hostname>.")
+	flagTags     = flag.String("t", "", "OpenTSDB tags to be silenced in the format of tagKey=value,tagKey=value. Defaults to host=<hostname>, use -t= to use empty tag set.")
 	flagAlert    = flag.String("a", "", "Name of the alert to silence, defaults to empty which means all alerts.")
 	flagMessage  = flag.String("m", "", "Reason for the silence, defaults to an empty string.")
 	flagForget   = flag.String("f", "", "Set to 'true' to forget anything that goes unknown during the silence. Used when decommissioning something.")
@@ -38,7 +38,15 @@ func main() {
 		un = sudo
 	}
 	if *flagTags == "" {
-		*flagTags = "host=" + util.Hostname
+		flagTagsIsPresent := false
+		for _, arg := range os.Args {
+			if arg == "-t=" {
+				flagTagsIsPresent = true
+			}
+		}
+		if !flagTagsIsPresent {
+			*flagTags = "host=" + util.Hostname
+		}
 	}
 	now := time.Now().UTC()
 	d, err := time.ParseDuration(*flagDuration)
