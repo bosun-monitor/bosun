@@ -50,6 +50,9 @@ var (
 	// Dropped is the number of dropped data points due to a full queue.
 	dropped int64
 
+	// Dropped is the number of discarded data points due to being invalid
+	discarded int64
+
 	// Sent is the number of sent data points.
 	sent int64
 
@@ -71,6 +74,7 @@ var (
 
 const (
 	descCollectAlloc             = "Total number of bytes allocated and still in use by the runtime (via runtime.ReadMemStats)."
+	descCollectDiscarded         = "Counter of discarded data points due to being invalid."
 	descCollectDropped           = "Counter of dropped data points due to the queue being full."
 	descCollectGoRoutines        = "Total number of goroutines that currently exist (via runtime.NumGoroutine)."
 	descCollectGcCpuFraction     = "fraction of CPU time used by GC"
@@ -131,6 +135,13 @@ func InitChan(tsdbhost *url.URL, root string, ch chan *opentsdb.DataPoint) error
 		slock.Unlock()
 		return
 	})
+	Set("collect.discarded", Tags, func() (i interface{}) {
+		slock.Lock()
+		i = discarded
+		slock.Unlock()
+		return
+	})
+
 	Set("collect.sent", Tags, func() (i interface{}) {
 		slock.Lock()
 		i = sent
@@ -176,6 +187,7 @@ func InitChan(tsdbhost *url.URL, root string, ch chan *opentsdb.DataPoint) error
 	metadata.AddMetricMeta(metricRoot+"collect.queued", metadata.Gauge, metadata.Item, descCollectQueued)
 	metadata.AddMetricMeta(metricRoot+"collect.sent", metadata.Counter, metadata.PerSecond, descCollectSent)
 	metadata.AddMetricMeta(metricRoot+"collect.dropped", metadata.Counter, metadata.PerSecond, descCollectDropped)
+	metadata.AddMetricMeta(metricRoot+"collect.discarded", metadata.Counter, metadata.PerSecond, descCollectDiscarded)
 	// Make sure these get zeroed out instead of going unknown on restart
 	Add("collect.post.error", Tags, 0)
 	Add("collect.post.bad_status", Tags, 0)
