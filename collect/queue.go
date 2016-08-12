@@ -78,7 +78,9 @@ func send() {
 				slog.Infof("sending: %d, remaining: %d", i, len(queue))
 			}
 			qlock.Unlock()
-			Sample("collect.post.batchsize", Tags, float64(len(sending)))
+			if DisableDefaultCollectors == false {
+				Sample("collect.post.batchsize", Tags, float64(len(sending)))
+			}
 			sendBatch(sending)
 		} else {
 			qlock.Unlock()
