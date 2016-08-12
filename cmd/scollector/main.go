@@ -220,7 +220,7 @@ func main() {
 	if err := collect.InitChan(u, "scollector", cdp); err != nil {
 		slog.Fatal(err)
 	}
-	if version.VersionDate != "" {
+	if collect.DisableDefaultCollectors == false && version.VersionDate != "" {
 		v, err := strconv.ParseInt(version.VersionDate, 10, 64)
 		if err == nil {
 			go func() {
