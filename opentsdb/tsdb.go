@@ -92,7 +92,8 @@ func (d *DataPoint) Valid() bool {
 	if d.Metric == "" || !ValidTSDBString(d.Metric) || d.Timestamp == 0 || d.Value == nil || !d.Tags.Valid() {
 		return false
 	}
-	if _, err := strconv.ParseFloat(fmt.Sprint(d.Value), 64); err != nil {
+	f, err := strconv.ParseFloat(fmt.Sprint(d.Value), 64)
+	if err != nil || math.IsNaN(f) {
 		return false
 	}
 	return true
