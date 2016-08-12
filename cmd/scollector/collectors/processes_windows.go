@@ -2,6 +2,7 @@ package collectors
 
 import (
 	"fmt"
+	"os"
 	"regexp"
 	"strings"
 
@@ -134,6 +135,10 @@ func c_windows_processes() (opentsdb.MultiDataPoint, error) {
 				name = strings.Join([]string{"iis", a_pool.AppPoolName}, "_")
 				break
 			}
+		}
+
+		if v.IDProcess == uint32(os.Getpid()) {
+			TotalScollectorMemoryMB = v.WorkingSetPrivate / 1024 / 1024
 		}
 
 		if !(service_match || process_match || iis_match) {

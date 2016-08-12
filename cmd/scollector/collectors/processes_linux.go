@@ -25,6 +25,8 @@ func AddProcessConfig(params conf.ProcessParams) error {
 
 var watchedProcs = []*WatchedProc{}
 
+var osPageSize = os.Getpagesize()
+
 // linuxCoreCount counts the number of logical cpus since that is how cpu ticks
 // are tracked
 func linuxCoreCount() (c int64, err error) {
@@ -137,16 +139,20 @@ func linuxProcMonitor(w *WatchedProc, md *opentsdb.MultiDataPoint) error {
 		Add(md, "linux.proc.mem.fault", stats[11], opentsdb.TagSet{"type": "majflt"}.Merge(tags), metadata.Counter, metadata.Fault, descLinuxProcMemFaultMax)
 		virtual, err := strconv.ParseInt(stats[22], 10, 64)
 		if err != nil {
-			return fmt.Errorf("failed to convert process user cpu: %v", err)
+			return fmt.Errorf("failed to convert process virtual memory: %v", err)
 		}
 		totalVirtualMem += virtual
 		rss, err := strconv.ParseInt(stats[23], 10, 64)
 		if err != nil {
-			return fmt.Errorf("failed to convert process system cpu: %v", err)
+			return fmt.Errorf("failed to convert process rss memory: %v", err)
+		}
+		if pid == string(os.Getpid()) {
+			TotalScollectorMemoryMB = uint64(rss) * uint64(osPageSize) / 1024 / 1024
 		}
 		totalRSSMem += rss
 		Add(md, "linux.proc.mem.virtual", stats[22], tags, metadata.Gauge, metadata.Bytes, descLinuxProcMemVirtual)
 		Add(md, "linux.proc.mem.rss", stats[23], tags, metadata.Gauge, metadata.Page, descLinuxProcMemRss)
+		Add(md, "linux.proc.mem.rss_bytes", rss*int64(osPageSize), tags, metadata.Gauge, metadata.Bytes, descLinuxProcMemRssBytes)
 		Add(md, "linux.proc.char_io", io[0], opentsdb.TagSet{"type": "read"}.Merge(tags), metadata.Counter, metadata.Bytes, descLinuxProcCharIoRead)
 		Add(md, "linux.proc.char_io", io[1], opentsdb.TagSet{"type": "write"}.Merge(tags), metadata.Counter, metadata.Bytes, descLinuxProcCharIoWrite)
 		Add(md, "linux.proc.syscall", io[2], opentsdb.TagSet{"type": "read"}.Merge(tags), metadata.Counter, metadata.Syscall, descLinuxProcSyscallRead)
@@ -180,7 +186,8 @@ const (
 	descLinuxProcMemFaultMin  = "The number of minor faults the process has made which have not required loading a memory page from disk."
 	descLinuxProcMemFaultMax  = "The number of major faults the process has made which have required loading a memory page from disk."
 	descLinuxProcMemVirtual   = "The virtual memory size."
-	descLinuxProcMemRss       = "The resident set size (number of pages the process has in real memory."
+	descLinuxProcMemRss       = "The resident set size (number of pages the process has in real memory including shared pages)."
+	descLinuxProcMemRssBytes  = "The resident set size (number of bytes the process has in real memory including shared pages)."
 	descLinuxProcCharIoRead   = "The number of bytes which this task has caused to be read from storage. This is simply the sum of bytes which this process passed to read(2) and similar system calls. It includes things such as terminal I/O and is unaffected by whether or not actual physical disk I/O was required (the read might have been satisfied from pagecache)"
 	descLinuxProcCharIoWrite  = "The number of bytes which this task has caused, or shall cause to be written to disk. Similar caveats apply here as with read."
 	descLinuxProcSyscallRead  = "An attempt to count the number of read I/O operations—that is, system calls such as read(2) and pread(2)."

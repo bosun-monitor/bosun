@@ -120,6 +120,9 @@ var (
 	WatchProcessesDotNet = func() {}
 
 	KeepalivedCommunity = ""
+
+	//TotalScollectorMemory stores the total memory used by Scollector (including CGO and WMI)
+	TotalScollectorMemoryMB uint64
 )
 
 func init() {
