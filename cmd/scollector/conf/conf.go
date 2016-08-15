@@ -195,6 +195,7 @@ type Github struct {
 type Cadvisor struct {
 	URL         string
 	PerCpuUsage bool
+	IsRemote    bool
 }
 
 type RedisCounters struct {

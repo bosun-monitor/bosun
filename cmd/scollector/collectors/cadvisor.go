@@ -290,6 +290,8 @@ var cadvisorMeta = map[string]MetricMeta{
 
 var blkioStatsWhitelist = []string{"Async", "Sync", "Read", "Write", "Count"}
 
+var knownDiskMapErrors = make(map[string]bool)
+
 func cadvisorAdd(md *opentsdb.MultiDataPoint, name string, value interface{}, ts opentsdb.TagSet) {
 	Add(md, name, value, ts, cadvisorMeta[name].RateType, cadvisorMeta[name].Unit, cadvisorMeta[name].Desc)
 }
@@ -324,8 +326,13 @@ func inBlkioWhitelist(name string) bool {
 	return valid
 }
 
-func addBlkioStat(md *opentsdb.MultiDataPoint, name string, diskStats v1.PerDiskStats, container *v1.ContainerInfo) {
-	device := blockDeviceLookup(diskStats.Major, diskStats.Minor)
+func addBlkioStat(md *opentsdb.MultiDataPoint, name string, diskStats v1.PerDiskStats, container *v1.ContainerInfo, config *conf.Cadvisor) {
+	var device string
+	if config.IsRemote {
+		device = fmt.Sprintf("major%d_minor%d", diskStats.Major, diskStats.Minor)
+	} else {
+		device = blockDeviceLookup(diskStats.Major, diskStats.Minor)
+	}
 	for label, val := range diskStats.Stats {
 		if inBlkioWhitelist(label) {
 			cadvisorAdd(md, name+strings.ToLower(label), val, containerTagSet(opentsdb.TagSet{"dev": device}, container))
@@ -335,8 +342,12 @@ func addBlkioStat(md *opentsdb.MultiDataPoint, name string, diskStats v1.PerDisk
 
 func blockDeviceLookup(major, minor uint64) string {
 	blockDevideLoopkupFallback := func(major, minor uint64) string {
-		slog.Errorf("Unable to perform lookup under /sys/dev/ for block device major(%d) minor(%d)", major, minor)
-		return fmt.Sprintf("major%d_minor%d", major, minor)
+		name := fmt.Sprintf("major%d_minor%d", major, minor)
+		if _, ok := knownDiskMapErrors[name]; ok == false {
+			slog.Errorf("Unable to perform lookup under /sys/dev/ for block device major(%d) minor(%d). Use IsRemote = true to disable lookups. This error will only be displayed once.", major, minor)
+			knownDiskMapErrors[name] = true
+		}
+		return name
 	}
 
 	path := fmt.Sprintf("/sys/dev/block/%d:%d/uevent", major, minor)
@@ -367,7 +378,7 @@ func blockDeviceLookup(major, minor uint64) string {
 	return string(content[startIdx : startIdx+endIdx])
 }
 
-func statsForContainer(md *opentsdb.MultiDataPoint, container *v1.ContainerInfo, perCpuUsage bool) {
+func statsForContainer(md *opentsdb.MultiDataPoint, container *v1.ContainerInfo, config *conf.Cadvisor) {
 	stats := container.Stats[0]
 	var ts opentsdb.TagSet
 	if container.Spec.HasCpu {
@@ -378,7 +389,7 @@ func statsForContainer(md *opentsdb.MultiDataPoint, container *v1.ContainerInfo,
 		cadvisorAdd(md, "container.cpu.loadavg", stats.Cpu.LoadAverage, ts)
 		cadvisorAdd(md, "container.cpu.usage", stats.Cpu.Usage.Total, ts)
 
-		if perCpuUsage {
+		if config.PerCpuUsage {
 			for idx := range stats.Cpu.Usage.PerCpu {
 				ts = containerTagSet(opentsdb.TagSet{"cpu": strconv.Itoa(idx)}, container)
 				cadvisorAdd(md, "container.cpu.usage.percpu", stats.Cpu.Usage.PerCpu[idx], ts)
@@ -460,40 +471,40 @@ func statsForContainer(md *opentsdb.MultiDataPoint, container *v1.ContainerInfo,
 
 	if container.Spec.HasDiskIo {
 		for _, d := range stats.DiskIo.IoServiceBytes {
-			addBlkioStat(md, "container.blkio.io_service_bytes.", d, container)
+			addBlkioStat(md, "container.blkio.io_service_bytes.", d, container, config)
 		}
 
 		for _, d := range stats.DiskIo.IoServiced {
-			addBlkioStat(md, "container.blkio.io_serviced.", d, container)
+			addBlkioStat(md, "container.blkio.io_serviced.", d, container, config)
 		}
 
 		for _, d := range stats.DiskIo.IoQueued {
-			addBlkioStat(md, "container.blkio.io_service_queued.", d, container)
+			addBlkioStat(md, "container.blkio.io_service_queued.", d, container, config)
 		}
 
 		for _, d := range stats.DiskIo.Sectors {
-			addBlkioStat(md, "container.blkio.sectors.", d, container)
+			addBlkioStat(md, "container.blkio.sectors.", d, container, config)
 		}
 
 		for _, d := range stats.DiskIo.IoServiceTime {
-			addBlkioStat(md, "container.blkio.io_service_time.", d, container)
+			addBlkioStat(md, "container.blkio.io_service_time.", d, container, config)
 		}
 
 		for _, d := range stats.DiskIo.IoWaitTime {
-			addBlkioStat(md, "container.blkio.io_wait_time.", d, container)
+			addBlkioStat(md, "container.blkio.io_wait_time.", d, container, config)
 		}
 
 		for _, d := range stats.DiskIo.IoMerged {
-			addBlkioStat(md, "container.blkio.io_merged.", d, container)
+			addBlkioStat(md, "container.blkio.io_merged.", d, container, config)
 		}
 
 		for _, d := range stats.DiskIo.IoTime {
-			addBlkioStat(md, "container.blkio.io_time.", d, container)
+			addBlkioStat(md, "container.blkio.io_time.", d, container, config)
 		}
 	}
 }
 
-func c_cadvisor(c *client.Client, perCpuUsage bool) (opentsdb.MultiDataPoint, error) {
+func c_cadvisor(c *client.Client, config *conf.Cadvisor) (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 
 	containers, err := c.AllDockerContainers(&v1.ContainerInfoRequest{NumStats: 1})
@@ -503,7 +514,7 @@ func c_cadvisor(c *client.Client, perCpuUsage bool) (opentsdb.MultiDataPoint, er
 	}
 
 	for _, container := range containers {
-		statsForContainer(&md, &container, perCpuUsage)
+		statsForContainer(&md, &container, config)
 	}
 
 	return md, nil
@@ -517,7 +528,7 @@ func startCadvisorCollector(c *conf.Conf) {
 		}
 		collectors = append(collectors, &IntervalCollector{
 			F: func() (opentsdb.MultiDataPoint, error) {
-				return c_cadvisor(cClient, config.PerCpuUsage)
+				return c_cadvisor(cClient, &config)
 			},
 			name: "cadvisor",
 		})
