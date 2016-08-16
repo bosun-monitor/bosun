@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"reflect"
+	"strings"
 	"sync"
 	"time"
 
@@ -197,6 +198,9 @@ func Init(u *url.URL, debug bool) error {
 	mh, err := u.Parse("/api/metadata/put")
 	if err != nil {
 		return err
+	}
+	if strings.HasPrefix(mh.Host, ":") {
+		mh.Host = "localhost" + mh.Host
 	}
 	metahost = mh.String()
 	metadebug = debug

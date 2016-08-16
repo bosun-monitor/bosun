@@ -44,6 +44,8 @@ var (
 	denormalizationRules map[string]*denormalize.DenormalizationRule
 
 	relayPutUrls []string
+
+	tags = opentsdb.TagSet{}
 )
 
 func main() {
@@ -130,12 +132,23 @@ func main() {
 	if err = collect.Init(collectUrl, "tsdbrelay"); err != nil {
 		log.Fatal(err)
 	}
+	if err := metadata.Init(collectUrl, false); err != nil {
+		log.Fatal(err)
+	}
+	// Make sure these get zeroed out instead of going unknown on restart
+	collect.Add("puts.relayed", tags, 0)
+	collect.Add("puts.error", tags, 0)
+	collect.Add("metadata.relayed", tags, 0)
+	collect.Add("metadata.error", tags, 0)
+	collect.Add("additional.puts.relayed", tags, 0)
+	collect.Add("additional.puts.error", tags, 0)
+	metadata.AddMetricMeta("tsdbrelay.puts.relayed", metadata.Counter, metadata.Count, "Number of successful puts relayed to opentsdb target")
+	metadata.AddMetricMeta("tsdbrelay.puts.error", metadata.Counter, metadata.Count, "Number of puts that could not be relayed to opentsdb target")
+	metadata.AddMetricMeta("tsdbrelay.metadata.relayed", metadata.Counter, metadata.Count, "Number of successful metadata puts relayed to bosun target")
+	metadata.AddMetricMeta("tsdbrelay.metadata.error", metadata.Counter, metadata.Count, "Number of metadata puts that could not be relayed to bosun target")
+	metadata.AddMetricMeta("tsdbrelay.additional.puts.relayed", metadata.Counter, metadata.Count, "Number of successful puts relayed to additional targets")
+	metadata.AddMetricMeta("tsdbrelay.additional.puts.error", metadata.Counter, metadata.Count, "Number of puts that could not be relayed to additional targets")
 	log.Fatal(http.ListenAndServe(*listenAddr, nil))
-}
-
-func init() {
-	metadata.AddMetricMeta("tsdbrelay.puts.relayed", metadata.Counter, metadata.Count, "Number of successful puts relayed")
-	metadata.AddMetricMeta("tsdbrelay.metadata.relayed", metadata.Counter, metadata.Count, "Number of successful metadata puts relayed")
 }
 
 func verbose(format string, a ...interface{}) {
@@ -183,10 +196,11 @@ func (rp *relayProxy) relayPut(responseWriter http.ResponseWriter, r *http.Reque
 	rp.TSDBProxy.ServeHTTP(w, r)
 	if w.code/100 != 2 {
 		verbose("got status %d", w.code)
+		collect.Add("puts.error", tags, 1)
 		return
 	}
 	verbose("relayed to tsdb")
-	collect.Add("puts.relayed", opentsdb.TagSet{}, 1)
+	collect.Add("puts.relayed", tags, 1)
 	// Send to bosun in a separate go routine so we can end the source's request.
 	go func() {
 		body := bytes.NewBuffer(reader.buf.Bytes())
@@ -223,10 +237,12 @@ func (rp *relayProxy) relayPut(responseWriter http.ResponseWriter, r *http.Reque
 				resp, err := http.DefaultClient.Do(req)
 				if err != nil {
 					verbose("secondary relay error: %v", err)
+					collect.Add("puts.additional.error", tags, 1)
 					return
 				}
 				resp.Body.Close()
 				verbose("secondary relay success")
+				collect.Add("puts.additional.relayed", tags, 1)
 			}
 		}()
 	}
@@ -291,10 +307,11 @@ func (rp *relayProxy) relayMetadata(responseWriter http.ResponseWriter, r *http.
 	rp.BosunProxy.ServeHTTP(w, r)
 	if w.code != 204 {
 		verbose("got status %d", w.code)
+		collect.Add("metadata.error", tags, 1)
 		return
 	}
 	verbose("relayed metadata to bosun")
-	collect.Add("metadata.relayed", opentsdb.TagSet{}, 1)
+	collect.Add("metadata.relayed", tags, 1)
 	if r.Header.Get(relayHeader) != "" {
 		return
 	}
@@ -312,11 +329,11 @@ func (rp *relayProxy) relayMetadata(responseWriter http.ResponseWriter, r *http.
 				req.Header.Add(relayHeader, myHost)
 				resp, err := http.DefaultClient.Do(req)
 				if err != nil {
-					verbose("secondary relay error: %v", err)
+					verbose("secondary relay metadata error: %v", err)
 					return
 				}
 				resp.Body.Close()
-				verbose("secondary relay success")
+				verbose("secondary relay metadata success")
 			}
 		}()
 	}
