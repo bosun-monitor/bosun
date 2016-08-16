@@ -1,18 +1,18 @@
 FROM debian:wheezy
 
 RUN apt-get update && apt-get install -y \
-	automake \
-	curl \
-	git \
-	make \
-	openjdk-7-jdk \
-	python \
-	--no-install-recommends \
-	&& rm -rf /var/lib/apt/lists/*
+    automake \
+    curl \
+    git \
+    make \
+    openjdk-7-jdk \
+    python \
+    --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/*
 
 ENV TSDB /tsdb
 RUN git clone --single-branch --depth 1 git://github.com/OpenTSDB/opentsdb.git $TSDB && \
-	cd $TSDB && bash ./build.sh
+    cd $TSDB && bash ./build.sh
 
 ENV GOPATH /go
 ENV HBASEVER 1.1.2
@@ -24,7 +24,7 @@ RUN mkdir -p /hbase \
     | tar -xzC /hbase \
     && mv /hbase/hbase-$HBASEVER /hbase/hbase
 
-RUN curl -SL https://storage.googleapis.com/golang/go1.6.2.linux-amd64.tar.gz \
+RUN curl -SL https://storage.googleapis.com/golang/go1.7.linux-amd64.tar.gz \
     | tar -xzC /usr/local
 
 COPY bosun $GOPATH/src/bosun.org/
@@ -33,6 +33,6 @@ WORKDIR $GOPATH/src/bosun.org
 ENV PATH $PATH:/usr/local/go/bin:$GOPATH/bin
 
 RUN go run build/build.go \
-	&& bosun -version \
-	&& scollector -version
-#   && tsdbrelay -version doesn't work. See https://github.com/bosun-monitor/bosun/issues/1792
+    && bosun -version \
+    && scollector -version \
+    && tsdbrelay -version

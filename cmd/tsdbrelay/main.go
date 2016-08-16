@@ -5,6 +5,7 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -13,6 +14,8 @@ import (
 	"net/url"
 	"os"
 	"strings"
+
+	version "bosun.org/_version"
 
 	"bosun.org/cmd/tsdbrelay/denormalize"
 	"bosun.org/collect"
@@ -28,6 +31,7 @@ var (
 	tsdbServer      = flag.String("t", "", "Target OpenTSDB server. Can specify port with host:port.")
 	logVerbose      = flag.Bool("v", false, "enable verbose logging")
 	toDenormalize   = flag.String("denormalize", "", "List of metrics to denormalize. Comma seperated list of `metric__tagname__tagname` rules. Will be translated to `__tagvalue.tagvalue.metric`")
+	flagVersion     = flag.Bool("version", false, "Prints the version and exits.")
 
 	redisHost = flag.String("redis", "", "redis host for aggregating external counters")
 	redisDb   = flag.Int("db", 0, "redis db to use for counters")
@@ -50,9 +54,14 @@ func main() {
 	}
 
 	flag.Parse()
+	if *flagVersion {
+		fmt.Println(version.GetVersionInfo("tsdbrelay"))
+		os.Exit(0)
+	}
 	if *bosunServer == "" || *tsdbServer == "" {
 		log.Fatal("must specify both bosun and tsdb server")
 	}
+	log.Println(version.GetVersionInfo("tsdbrelay"))
 	log.Println("listen on", *listenAddr)
 	log.Println("relay to bosun at", *bosunServer)
 	log.Println("relay to tsdb at", *tsdbServer)
