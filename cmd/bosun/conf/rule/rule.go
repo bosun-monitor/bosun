@@ -399,6 +399,9 @@ var defaultFuncs = ttemplate.FuncMap{
 	"pct": func(i interface{}) string {
 		return fmt.Sprintf("%.2f%%", i)
 	},
+	"parseFloat": func(s string) (float64, error) {
+		return strconv.ParseFloat(s, 64)
+	},
 	"replace": strings.Replace,
 	"short": func(v string) string {
 		return strings.SplitN(v, ".", 2)[0]
