@@ -182,21 +182,24 @@ var builtins = map[string]parse.Func{
 		Tags:   tagRename,
 		F:      AddTags,
 	},
-
 	"extags": { // extract tags
 		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeString, models.TypeString, models.TypeString},
 		Return: models.TypeSeriesSet,
-		Tags:   tagFirst,
+		Tags:   tagFirst, // wrong?
 		F:      ExtractTags,
 	},
-
+	"vreplace": {
+		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeString, models.TypeString, models.TypeString},
+		Return: models.TypeSeriesSet,
+		Tags:   tagFirst, // wrong?
+		F:      ReplaceTagValue,
+	},
 	"rename": {
 		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeString},
 		Return: models.TypeSeriesSet,
 		Tags:   tagRename,
 		F:      Rename,
 	},
-
 	"t": {
 		Args:   []models.FuncType{models.TypeNumberSet, models.TypeString},
 		Return: models.TypeSeriesSet,
@@ -1109,7 +1112,6 @@ func ExtractTags(e *State, T miniprofiler.Timer, series *Results, sourceKey, pat
 	if re.NumSubexp() != 1 {
 		return nil, fmt.Errorf("expected one capture group in regexp, got %v", re.NumSubexp())
 	}
-	//for tagKey, tagValue := range tagSetToAdd {
 	for _, res := range series.Results {
 		if _, ok := res.Group[newKey]; ok {
 			return nil, fmt.Errorf("%s key already in group", newKey)
@@ -1127,7 +1129,25 @@ func ExtractTags(e *State, T miniprofiler.Timer, series *Results, sourceKey, pat
 			return nil, fmt.Errorf("source key of %v not found", sourceKey)
 		}
 	}
-	//}
+	return series, nil
+}
+
+func ReplaceTagValue(e *State, T miniprofiler.Timer, series *Results, tagKey, pattern, replacement string) (*Results, error) {
+	// TODO make sure there are no duplicate tag sets as a result of this operation
+	if tagKey == "" {
+		return series, fmt.Errorf("must specify tag key")
+	}
+	re, err := regexp.Compile(pattern)
+	if err != nil {
+		return nil, fmt.Errorf("could not compile %v into a regular expression: %v", pattern, err)
+	}
+	for _, res := range series.Results {
+		tagValue, ok := res.Group[tagKey]
+		if !ok {
+			return series, fmt.Errorf("specified tag key %v not found in tagset %v", tagKey, res.Group)
+		}
+		res.Group[tagKey] = re.ReplaceAllLiteralString(tagValue, replacement)
+	}
 	return series, nil
 }
 
