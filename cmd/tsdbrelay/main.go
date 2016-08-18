@@ -229,7 +229,7 @@ func (rp *relayProxy) relayPut(responseWriter http.ResponseWriter, r *http.Reque
 				req, err := http.NewRequest(r.Method, relayUrl, body)
 				if err != nil {
 					verbose("relayPutUrls connect error: %v", err)
-					collect.Add("puts.additional.error", tags, 1)
+					collect.Add("additional.puts.error", tags, 1)
 					continue
 				}
 				req.Header.Set("Content-Type", "application/json")
@@ -238,12 +238,12 @@ func (rp *relayProxy) relayPut(responseWriter http.ResponseWriter, r *http.Reque
 				resp, err := http.DefaultClient.Do(req)
 				if err != nil {
 					verbose("secondary relay error: %v", err)
-					collect.Add("puts.additional.error", tags, 1)
+					collect.Add("additional.puts.error", tags, 1)
 					continue
 				}
 				resp.Body.Close()
 				verbose("secondary relay success")
-				collect.Add("puts.additional.relayed", tags, 1)
+				collect.Add("additional.puts.relayed", tags, 1)
 			}
 		}()
 	}
