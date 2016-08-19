@@ -265,19 +265,16 @@
 			"revisionTime": "2015-11-22T20:06:43-07:00"
 		},
 		{
-			"origin": "bosun.org/vendor/github.com/bosun-monitor/annotate",
 			"path": "github.com/bosun-monitor/annotate",
 			"revision": "fa0f15c651bfe666cd287c2ba760436b41c85cf4",
 			"revisionTime": "2016-08-04T13:41:31-04:00"
 		},
 		{
-			"origin": "bosun.org/vendor/github.com/bosun-monitor/annotate/backend",
 			"path": "github.com/bosun-monitor/annotate/backend",
 			"revision": "fa0f15c651bfe666cd287c2ba760436b41c85cf4",
 			"revisionTime": "2016-08-04T13:41:31-04:00"
 		},
 		{
-			"origin": "bosun.org/vendor/github.com/bosun-monitor/annotate/web",
 			"path": "github.com/bosun-monitor/annotate/web",
 			"revision": "fa0f15c651bfe666cd287c2ba760436b41c85cf4",
 			"revisionTime": "2016-08-04T13:41:31-04:00"
@@ -468,6 +465,12 @@
 			"revisionTime": "2015-10-16T12:35:57-05:00"
 		},
 		{
+			"checksumSHA1": "g+afVQQVopBLiLB5pFZp/8s6aBs=",
+			"path": "github.com/kardianos/osext",
+			"revision": "c2c54e542fb797ad986b31721e1baedf214ca413",
+			"revisionTime": "2016-08-11T00:15:26Z"
+		},
+		{
 			"path": "github.com/kylebrandt/boolq",
 			"revision": "f869a7265c7ec4f3e2618a39b7b3877a5629eb17",
 			"revisionTime": "2016-06-08T12:45:48-04:00"
@@ -509,7 +512,6 @@
 			"revisionTime": "2015-11-28T12:32:46+01:00"
 		},
 		{
-			"origin": "bosun.org/vendor/github.com/pmezard/go-difflib/difflib",
 			"path": "github.com/pmezard/go-difflib/difflib",
 			"revision": "792786c7400a136282c1664665ae0a8db921c6c2",
 			"revisionTime": "2016-01-10T11:55:54+01:00"
