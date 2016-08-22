@@ -314,12 +314,24 @@ type Histogram struct {
 	min        float64
 	max        float64
 	bucketLows []float64
-	Buckets    []*Bucket
+	Buckets    Buckets
 	Interval   int64
 }
 
+type Buckets []*Bucket
+
 func (h Histogram) Type() models.FuncType { return models.TypeHistogramSet }
 func (h Histogram) Value() interface{}    { return h }
+
+type HistogramSeries struct {
+	TimeBuckets map[int64]Buckets
+	Interval int64
+	Start int64
+	BucketCount int64
+}
+
+func (h HistogramSeries) Type() models.FuncType { return models.TypeHistogramSeries }
+func (h HistogramSeries) Value() interface{}    { return h }
 
 type ESQuery struct {
 	Query elastic.Query

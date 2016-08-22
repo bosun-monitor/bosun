@@ -138,6 +138,7 @@ const (
 	TypeSeriesSet
 	TypeDistributionSet
 	TypeHistogramSet
+	TypeHistogramSeries
 	TypeESQuery
 	TypeESIndexer
 	TypeNumberExpr

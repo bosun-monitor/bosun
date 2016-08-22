@@ -47,6 +47,12 @@ var Elastic = map[string]parse.Func{
 		Tags:   elasticTagQuery,
 		F:      ESHistogram,
 	},
+	"eshm": {
+		Args:   []models.FuncType{models.TypeESIndexer, models.TypeESQuery, models.TypeString, models.TypeScalar, models.TypeScalar, models.TypeScalar, models.TypeString, models.TypeString, models.TypeString},
+		Return: models.TypeHistogramSeries,
+		Tags:   nil,
+		F:      ESHeatMap,
+	},
 
 	// Funcs to create elastic index names (ESIndexer type)
 	"esindices": {
@@ -584,6 +590,59 @@ func ESHistogram(e *State, T miniprofiler.Timer, indexer ESIndexer, keyString st
 	return r, nil
 }
 
+func ESHeatMap(e *State, T miniprofiler.Timer, indexer ESIndexer, filter ESQuery, field string, hInterval, min, bucketCount float64, tInterval, sduration, eduration string) (r *Results, err error) {
+	r = new(Results)
+	req, err := ESBaseQuery(e.now, indexer, filter.Query, sduration, eduration, 0)
+	if err != nil {
+		return nil, err
+	}
+	hSource := elastic.NewHistogramAggregation().Field(field).Offset(int64(min)).Interval(int64(hInterval))
+	tSource := elastic.NewDateHistogramAggregation().Field(indexer.TimeField).Interval(strings.Replace(tInterval, "M", "n", -1)).MinDocCount(0).ExtendedBoundsMin(req.Start).ExtendedBoundsMax(req.End)
+	tSource = tSource.SubAggregation("hs", hSource)
+	req.Source = req.Source.Aggregation("ts", tSource)
+	result, err := timeESRequest(e, T, req)
+	if err != nil {
+		return nil, err
+	}
+	tsr, found := result.Aggregations.DateHistogram("ts")
+	if !found {
+		return nil, fmt.Errorf("expected DateHistogram aggregation ts not found in response")
+	}
+	finalBucket := int64(min) + int64(hInterval)*int64(bucketCount) - int64(hInterval)
+	hs := HistogramSeries{
+		Start: int64(min), 
+		BucketCount: int64(bucketCount), 
+		Interval: int64(hInterval), 
+		TimeBuckets: make(map[int64]Buckets),
+	}
+	for _, timeBucket := range tsr.Buckets {
+		timeStamp := time.Unix(timeBucket.Key/1000, 0).UTC().Unix()
+		hAgg, found := timeBucket.Aggregations.Histogram("hs")
+		if !found {
+			return nil, fmt.Errorf("expected Histogram aggregation hs not found in response")
+		}
+		var under int64
+		var over int64
+		for _, bucket := range hAgg.Buckets {
+			switch {
+			case bucket.Key < int64(min):
+				under += bucket.DocCount
+				continue
+			case bucket.Key == int64(min):
+				bucket.DocCount += under
+			case bucket.Key >= finalBucket:
+				over += bucket.DocCount
+				continue
+			}
+			hs.TimeBuckets[timeStamp] = append(hs.TimeBuckets[timeStamp], &Bucket{float64(bucket.Key), bucket.DocCount})
+		}
+		if over > 0 {
+			hs.TimeBuckets[timeStamp] = append(hs.TimeBuckets[timeStamp], &Bucket{float64(finalBucket), over})
+		}
+		r.Results = append(r.Results, &Result{Value: hs})
+	}
+	return r, nil
+}
 
 // ESBaseQuery builds the base query that both ESCount and ESStat share
 func ESBaseQuery(now time.Time, indexer ESIndexer, filter elastic.Query, sduration, eduration string, size int) (*ElasticRequest, error) {
