@@ -1,7 +1,6 @@
 package ping // import "bosun.org/cmd/bosun/ping"
 
 import (
-	"fmt"
 	"net"
 	"time"
 
