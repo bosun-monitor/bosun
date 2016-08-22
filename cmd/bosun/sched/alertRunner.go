@@ -15,9 +15,6 @@ func (s *Schedule) Run() error {
 		return fmt.Errorf("sched: nil configuration")
 	}
 	s.nc = make(chan interface{}, 1)
-	if s.SystemConf.GetPing() {
-		go s.PingHosts()
-	}
 	go s.dispatchNotifications()
 	go s.updateCheckContext()
 	for _, a := range s.RuleConf.GetAlerts() {
