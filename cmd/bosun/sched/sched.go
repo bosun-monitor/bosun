@@ -1,7 +1,6 @@
 package sched // import "bosun.org/cmd/bosun/sched"
 
 import (
-	"encoding/gob"
 	"fmt"
 	"reflect"
 	"strings"
@@ -13,7 +12,6 @@ import (
 	"bosun.org/cmd/bosun/cache"
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/database"
-	"bosun.org/cmd/bosun/expr"
 	"bosun.org/cmd/bosun/search"
 	"bosun.org/collect"
 	"bosun.org/metadata"
@@ -21,18 +19,12 @@ import (
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
 	"github.com/MiniProfiler/go/miniprofiler"
-	"github.com/boltdb/bolt"
 	"github.com/bradfitz/slice"
 	"github.com/kylebrandt/boolq"
 )
 
 func utcNow() time.Time {
 	return time.Now().UTC()
-}
-
-func init() {
-	gob.Register(expr.Number(0))
-	gob.Register(expr.Scalar(0))
 }
 
 type Schedule struct {
@@ -57,8 +49,6 @@ type Schedule struct {
 
 	//unknown states that need to be notified about. Collected and sent in batches.
 	pendingUnknowns map[*conf.Notification][]*models.IncidentState
-
-	db *bolt.DB
 
 	lastLogTimes map[models.AlertKey]time.Time
 	LastCheck    time.Time
@@ -516,22 +506,12 @@ var DefaultSched = &Schedule{}
 
 // Load loads a configuration into the default schedule.
 func Load(systemConf conf.SystemConfProvider, ruleConf conf.RuleConfProvider, skipLast, quiet bool) error {
-	return DefaultSched.Load(systemConf, ruleConf, skipLast, quiet)
+	return DefaultSched.Init(systemConf, ruleConf, skipLast, quiet)
 }
 
 // Run runs the default schedule.
 func Run() error {
 	return DefaultSched.Run()
-}
-
-func (s *Schedule) Load(systemConf conf.SystemConfProvider, ruleConf conf.RuleConfProvider, skipLast, quiet bool) error {
-	if err := s.Init(systemConf, ruleConf, skipLast, quiet); err != nil {
-		return err
-	}
-	if s.db == nil {
-		return nil
-	}
-	return nil
 }
 
 func Close(reload bool) {
