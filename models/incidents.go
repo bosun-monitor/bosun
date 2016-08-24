@@ -126,6 +126,8 @@ func (f FuncType) String() string {
 		return "table"
 	case TypeHistogramSet:
 		return "histogram"
+	case TypeHistogramSeries:
+		return "histoseries"
 	default:
 		return "unknown"
 	}

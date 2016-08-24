@@ -639,8 +639,8 @@ func ESHeatMap(e *State, T miniprofiler.Timer, indexer ESIndexer, filter ESQuery
 		if over > 0 {
 			hs.TimeBuckets[timeStamp] = append(hs.TimeBuckets[timeStamp], &Bucket{float64(finalBucket), over})
 		}
-		r.Results = append(r.Results, &Result{Value: hs})
 	}
+	r.Results = append(r.Results, &Result{Value: hs})	
 	return r, nil
 }
 

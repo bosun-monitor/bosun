@@ -1210,3 +1210,159 @@ bosunApp.directive('tsHist', ['$window', 'nfmtFilter', function ($window: ng.IWi
 		},
 	};
 }]);
+
+
+
+bosunApp.directive('tsHm', ['$window', 'nfmtFilter', function ($window: ng.IWindowService, fmtfilter: any) {
+	var margin = {
+		top: 10,
+		right: 10,
+		bottom: 80,
+		left: 80,
+	};
+	var color = d3.scale.ordinal().range([
+		'#e41a1c',
+		'#377eb8',
+		'#4daf4a',
+		'#984ea3',
+		'#ff7f00',
+		'#a65628',
+		'#f781bf',
+		'#999999',
+	]);
+	return {
+		scope: {
+			data: '=',
+			height: '=',
+		},
+		link: (scope: any, elem: any, attrs: any) => {
+			var svgHeight = +scope.height || 150;
+			var height = svgHeight - margin.top - margin.bottom;
+			var svgWidth: number;
+			var width: number;
+			var yScale = d3.scale.linear().range([height, 0]);
+			var xScale = d3.time.scale.utc();
+			var top = d3.select(elem[0])
+				.append('svg')
+				.attr('height', svgHeight)
+				.attr('width', '100%');
+			var svg = top
+				.append('g')
+				.attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
+			var xAxis = d3.svg.axis()
+				.scale(xScale)
+				.orient("bottom");
+			var yAxis = d3.svg.axis()
+				.scale(yScale)
+				.orient("left")
+				.ticks(10);
+			var heatMap = svg.append('g');
+			scope.$watch('data', update);
+			var w = angular.element($window);
+			scope.$watch(() => {
+				return w.width();
+			}, resize, true);
+			w.bind('resize', () => {
+				scope.$apply();
+			});
+			function resize() {
+				svgWidth = elem.width();
+				if (svgWidth <= 0) {
+					return;
+				}
+				width = svgWidth - margin.left - margin.right;
+				xScale.range([0, width]);
+				//
+				xAxis.scale(xScale);
+				svg.attr('width', svgWidth);
+				xAxis.ticks(width / 60);
+				draw();
+			}
+			function update(v: any) {
+				if (!angular.isArray(v) || v.length == 0) {
+					return;
+				}
+				resize();
+			}
+			function draw() {
+				if (!scope.data) {
+					return;
+				}
+				console.log(scope.data)
+				var times = _.map(scope.data.TimeBuckets, (v, k) => { return Number(k) * 1000});
+				var counts: Array<number> = [];
+				_.map(scope.data.TimeBuckets, (buckets: any) => { 
+					_.map(buckets, (bucket: any) => { 
+						counts.push(bucket.Count); 
+					})
+				});
+
+
+				var colorScale = d3.scale.linear().
+					domain([Math.min(...counts), Math.max(...counts)])
+					.range(["white", "red"]);
+
+				times = _.sortBy(times, (v) => {return v})
+				var tInterval = times[1] - times[0] // TODO check times length
+				xScale.domain([
+					_.min(times),
+					_.max(times) + tInterval,
+				]);
+				yScale.domain([
+					scope.data.Start,
+					scope.data.Start + scope.data.BucketCount * scope.data.Interval,
+				]);
+
+
+				svg.selectAll('g.axis').remove();
+				//X axis
+				svg.append("g")
+					.attr("class", "x axis")
+					.attr("transform", "translate(0," + height + ")")
+					.call(xAxis)
+					.selectAll("text")
+					.attr("class", "bar_label")
+					.style("text-anchor", "end")
+					.attr("transform", (d: any) => { return "rotate(-45)" });
+				svg.append("g")
+					.attr("class", "y axis")
+					.call(yAxis)
+				heatMap.remove()
+				heatMap = svg.append("g")
+				////debugger;
+
+				_.map(scope.data.TimeBuckets, (buckets: any, ts: string) => { 
+					var column = heatMap.append("g");
+					var time = xScale(Number(ts) * 1000);
+					//debugger;
+					_.map(buckets, (bucket: any) => {
+						heatMap.append("rect")
+							.attr("x", time)
+							.attr("y", yScale(bucket.Low + scope.data.Interval))
+							.attr("bucketLow", bucket.Low)
+							.attr("bucketCount", bucket.Count)
+							.attr("width", (width/times.length) - 1)
+							.attr("height", (height - yScale(scope.data.Interval)) - 1) 
+							.style("fill", function(d) { return colorScale(bucket.Count); })
+					})
+				});
+
+				// scope.data.map((data: any, i: any) => {
+				// 	var bargroup = heatMap.append("g")
+				// 			.attr("id", (d: any) => { return "hist" + i.toString(); })	
+				// 	data.Value.Buckets.map((bucket: any, j: number) => {
+				// 		bargroup.append("rect")
+				// 			.attr("y", yScale(bucket.Count))
+				// 			.attr("x", xScale(data.Value.Interval) * j)
+				// 			.attr("height", height - yScale(bucket.Count))
+				// 			.attr("width", xScale(data.Value.Interval))
+				// 			.style('fill', (d) => { return color(JSON.stringify(data.Group)); })
+				// 			.attr('stroke', (d) => { return d3.rgb(color(JSON.stringify(data.Group))).darker(1); })
+				// 			//.attr('stroke-width', 3)
+				// 			.style("opacity", .6)
+				// 	})
+				// });
+			};
+		},
+	};
+}]);
