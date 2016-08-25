@@ -479,6 +479,7 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 		Name:             name,
 		CritNotification: new(conf.Notifications),
 		WarnNotification: new(conf.Notifications),
+		NormNotification: new(conf.Notifications),
 	}
 	a.Text = s.RawText
 	a.Locator = newSectionLocator(s)
@@ -542,6 +543,8 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 			procNotification(v, a.CritNotification)
 		case "warnNotification":
 			procNotification(v, a.WarnNotification)
+		case "normNotification":
+			procNotification(v, a.NormNotification)
 		case "unknown":
 			od, err := opentsdb.ParseDuration(v)
 			if err != nil {
@@ -570,6 +573,8 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 			a.UnknownsNormal = true
 		case "log":
 			a.Log = true
+		case "autoClose":
+			a.AutoClose = true
 		case "runEvery":
 			var err error
 			a.RunEvery, err = strconv.Atoi(v)
@@ -628,6 +633,11 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 			}
 		}
 		for _, n := range a.WarnNotification.Notifications {
+			if n.Next != nil {
+				c.errorf("cannot use log with a chained notification")
+			}
+		}
+		for _, n := range a.NormNotification.Notifications {
 			if n.Next != nil {
 				c.errorf("cannot use log with a chained notification")
 			}
@@ -778,7 +788,7 @@ func (c *Conf) Expand(v string, vars map[string]string, ignoreBadExpand bool) st
 func (c *Conf) seen(v string, m map[string]bool) {
 	if m[v] {
 		switch v {
-		case "squelch", "critNotification", "warnNotification", "graphiteHeader":
+		case "squelch", "critNotification", "warnNotification", "normNotification", "graphiteHeader":
 			// ignore
 		default:
 			c.errorf("duplicate key: %s", v)

@@ -342,12 +342,14 @@ type Alert struct {
 	Squelch          Squelches  `json:"-"`
 	CritNotification *Notifications
 	WarnNotification *Notifications
+	NormNotification *Notifications
 	Unknown          time.Duration
 	MaxLogFrequency  time.Duration
 	IgnoreUnknown    bool
 	UnknownsNormal   bool
 	UnjoinedOK       bool `json:",omitempty"`
 	Log              bool
+	AutoClose        bool
 	RunEvery         int
 	ReturnType       models.FuncType
 
