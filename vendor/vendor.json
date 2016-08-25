@@ -346,8 +346,8 @@
 		},
 		{
 			"path": "github.com/gogo/protobuf/proto",
-			"revision": "d3235f01ecae4901dd9f7ea6af57a352c0189deb",
-			"revisionTime": "2015-11-16T18:18:27+02:00"
+			"revision": "966a6f4b3274f2692aa2f30df2ea5c7172c832ca",
+			"revisionTime": "2016-08-25T19:39:02+02:00"
 		},
 		{
 			"path": "github.com/golang/freetype",
