@@ -180,6 +180,13 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.E
 		}
 	}
 
+	// close the incident and render templates, if event is normal and configured to auto-close
+	if !newIncident && event.Status == models.StNormal && a.AutoClose {
+		incident.Open = false
+		shouldNotify = true
+		s.executeTemplates(incident, event, a, r)
+	}
+
 	//render templates and open alert key if abnormal
 	if event.Status > models.StNormal {
 		s.executeTemplates(incident, event, a, r)
@@ -219,6 +226,8 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.E
 			notify(a.CritNotification)
 		case models.StWarning:
 			notify(a.WarnNotification)
+		case models.StNormal:
+			notify(a.NormNotification)
 		}
 	}
 
