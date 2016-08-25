@@ -213,6 +213,8 @@ func (rw *relayWriter) WriteHeader(code int) {
 
 var (
 	relayHeader = "X-Relayed-From"
+	encHeader   = "Content-Encoding"
+	typeHeader  = "Content-Type"
 	myHost      string
 )
 
@@ -260,8 +262,12 @@ func (rp *relayProxy) relayPut(responseWriter http.ResponseWriter, r *http.Reque
 					collect.Add("additional.puts.error", tags, 1)
 					continue
 				}
-				req.Header.Set("Content-Type", "application/json")
-				req.Header.Set("Content-Encoding", "gzip")
+				if contenttype := r.Header.Get(typeHeader); contenttype != "" {
+					req.Header.Set(typeHeader, contenttype)
+				}
+				if encoding := r.Header.Get(encHeader); encoding != "" {
+					req.Header.Set(encHeader, encoding)
+				}
 				req.Header.Add(relayHeader, myHost)
 				resp, err := http.DefaultClient.Do(req)
 				if err != nil {
@@ -320,8 +326,8 @@ func (rp *relayProxy) denormalize(body io.Reader) {
 		verbose("error posting denormalized data points: %v", err)
 		return
 	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Content-Encoding", "gzip")
+	req.Header.Set(typeHeader, "application/json")
+	req.Header.Set(encHeader, "gzip")
 
 	responseWriter := httptest.NewRecorder()
 	rp.relayPut(responseWriter, req, false)
@@ -354,7 +360,12 @@ func (rp *relayProxy) relayMetadata(responseWriter http.ResponseWriter, r *http.
 					verbose("metadata relayPutUrls error %v", err)
 					continue
 				}
-				req.Header.Set("Content-Type", "application/json")
+				if contenttype := r.Header.Get(typeHeader); contenttype != "" {
+					req.Header.Set(typeHeader, contenttype)
+				}
+				if encoding := r.Header.Get(encHeader); encoding != "" {
+					req.Header.Set(encHeader, encoding)
+				}
 				req.Header.Add(relayHeader, myHost)
 				resp, err := http.DefaultClient.Do(req)
 				if err != nil {
