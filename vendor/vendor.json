@@ -435,6 +435,11 @@
 			"revisionTime": "2016-08-25T15:20:30-05:00"
 		},
 		{
+			"path": "github.com/influxdata/influxdb/influxql/neldermead",
+			"revision": "8b234546a8c68e04136b6a07d9022b2359a5b9fe",
+			"revisionTime": "2016-08-25T15:20:30-05:00"
+		},
+		{
 			"path": "github.com/influxdata/influxdb/models",
 			"revision": "8b234546a8c68e04136b6a07d9022b2359a5b9fe",
 			"revisionTime": "2016-08-25T15:20:30-05:00"
