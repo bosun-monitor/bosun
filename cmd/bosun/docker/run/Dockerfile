@@ -19,9 +19,11 @@ ENV HBASE /hbase/hbase
 ENV HBASE_HOME $HBASE
 ENV JAVA_HOME /usr/lib/jvm/java-7-openjdk-amd64
 ENV TSDBRELAY_OPTS -b localhost:8070 -t localhost:4242 -l 0.0.0.0:5252 -redis localhost:9565
-ENV TERM dumb
+ENV TERM xterm
 
 COPY bosun.conf /data/
+COPY bosunrules.conf /data/
+COPY bosun.toml /data/
 COPY scollector.toml /data/
 COPY hbase-site.xml $HBASE/conf/
 COPY start_hbase.sh /hbase/

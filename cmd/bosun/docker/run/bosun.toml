@@ -1,0 +1,84 @@
+# Hostname will be used when links are created in templates (i.e. acknowledge links)
+#Hostname = "bosun.example.com"
+
+# The HTTP IP and Port to Listen on. Default is ":8070"
+#HTTPListen = ":8080"
+
+# Alert checks are run by default every CheckFrequency * DefaultRunEvery. RunEvery can be overridden
+# by indivdual alerts. Defaults are "5m" and 1
+CheckFrequency = "1m"
+DefaultRunEvery = 5
+
+# Path to the rule file (file that contains definitions for alerts, macros, lookups, templates, and notifications)
+RuleFilePath = "/data/bosunrules.conf"
+
+# timeanddate.com zones (only for use in the UI)
+TimeAndDate = [ 202, 75, 179, 136 ]
+
+# An API key for generating goo.gl shortlinks
+#ShortURLKey = "aKey"
+
+# The minumum amount of alerts to create an alert group on the dashboard. Default is 5
+MinGroupSize = 5
+
+# How many unknown alerts in a check cycle are needed before a group notiofication is created
+UnknownThreshold = 5
+
+# This makes it so Bosun ping's and records a metric for every value of the "host" tag it has seen. Default is false
+Ping = false
+
+# How long before hosts stop being pinged if we haven't seen a tagset for that host.Alert. Default is 24 hours
+PingDuration = "24h"
+
+# How long certain items and metrics should be displayed in the UI if we haven't seen them. Default 3 days
+SearchSince = "72h"
+
+# Enable saving API endpoints and the ability to save the config via the UI. Default is false
+EnableSave   = true
+EnableReload = true
+
+# Path to a command that will be executed on save of the rule configuration. This command is passed a filename, username, message, and vargs
+# If the command does not execute save operations will be canceled and the rule file will be restored
+#CommandHookPath = "/Users/kbrandt/src/hook/hook"
+
+# Configuration to enable the OpenTSDB Backend
+[OpenTSDBConf]
+	Host = "localhost:4242"
+	# Default is 2.1, certain features like filters are enabled when the version is set to 2.2
+	Version = 2.2
+	# ResponseLimit will make requests error if the response from opentsdb is larger than this setting in bytes. Default of 1MB
+	ResponseLimit = 25000000
+
+# Configuration for to enable to Graphite Backend
+#[GraphiteConf]
+#	Host = "localhost:80"
+#	[GraphiteConf.Headers]
+#		X-Meow = "Mix"
+
+# Configuration of hosts to enable the Elastic backend
+#[ElasticConf]
+#	Hosts = ["http://ny-lselastic01.example.com:9200", "http://ny-lselastic02.example.com:9200"]
+
+# Configuration for embedding the annotate service (also enables annotations if hosts are defined)
+#[AnnotateConf]
+#    Hosts = ["http://ny-lselastic01.example.com:9200", "http://ny-lselastic02.example.com:9200"]
+#    # Set the Index name that annotations are stored in. Default is annotate
+#    # Index = annotate
+
+# Configuration for Bosun's internal storage. Can be Ledis (Default) or Redis. Redis is recommended
+# for production setups. Defaults for ledis are below but would be ignored since redis takes
+# precedence
+[DBConf]
+	LedisDir = "/data/ledis_data"
+	LedisBindAddr = "0.0.0.0:9565"	
+
+# Configuration to enable Bosun to be able to send email notifications
+#[SMTPConf]
+#	EmailFrom = "bosun@example.com"
+#	Host = "mail.example.com"
+
+# Configuration to enable the InfluxDB backend
+#[InfluxConf]
+#	URL = "https://myInfluxServer:1234"
+#	Timeout = "5m"
+#	UnsafeSSL = true
