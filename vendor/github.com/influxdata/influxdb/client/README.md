@@ -26,7 +26,7 @@ Though not necessary for experimentation, you may want to create a new user
 and authenticate the connection to your database.
 
 For more information please check out the
-[Admin Docs](https://docs.influxdata.com/influxdb/v0.10/administration).
+[Admin Docs](https://docs.influxdata.com/influxdb/latest/administration/).
 
 For the impatient, you can create a new admin user _bubba_ by firing off the
 [InfluxDB CLI](https://github.com/influxdata/influxdb/blob/master/cmd/influx/main.go).
@@ -48,12 +48,9 @@ the configuration below.
 ```go
 package main
 
-import
 import (
-	"net/url"
-	"fmt"
 	"log"
-	"os"
+	"time"
 
 	"github.com/influxdata/influxdb/client/v2"
 )
@@ -66,17 +63,25 @@ const (
 
 func main() {
 	// Make client
-	c := client.NewHTTPClient(client.HTTPConfig{
+	c, err := client.NewHTTPClient(client.HTTPConfig{
 		Addr: "http://localhost:8086",
 		Username: username,
 		Password: password,
 	})
 
+	if err != nil {
+	    log.Fatalln("Error: ", err)
+	}
+
 	// Create a new point batch
-	bp := client.NewBatchPoints(client.BatchPointsConfig{
+	bp, err := client.NewBatchPoints(client.BatchPointsConfig{
 		Database:  MyDB,
 		Precision: "s",
 	})
+
+	if err != nil {
+	    log.Fatalln("Error: ", err)
+	}
 
 	// Create a point and add to batch
 	tags := map[string]string{"cpu": "cpu-total"}
@@ -85,7 +90,12 @@ func main() {
 		"system": 53.3,
 		"user":   46.6,
 	}
-	pt := client.NewPoint("cpu_usage", tags, fields, time.Now())
+	pt, err := client.NewPoint("cpu_usage", tags, fields, time.Now())
+
+	if err != nil {
+	    log.Fatalln("Error: ", err)
+	}
+
 	bp.AddPoint(pt)
 
 	// Write the batch

@@ -1,14 +1,20 @@
 package influxql
 
 import (
+	"bytes"
+	"encoding/binary"
+	"fmt"
+	"io"
+	"math"
 	"sort"
 
 	"github.com/gogo/protobuf/proto"
-	"github.com/influxdata/influxdb/influxql/internal"
+	internal "github.com/influxdata/influxdb/influxql/internal"
 )
 
-// ZeroTime is the Unix nanosecond timestamp for time.Time{}.
-const ZeroTime = int64(-6795364578871345152)
+// ZeroTime is the Unix nanosecond timestamp for no time.
+// This time is not used by the query engine or the storage engine as a valid time.
+const ZeroTime = int64(math.MinInt64)
 
 // Point represents a value in a series that occurred at a given time.
 type Point interface {
@@ -28,6 +34,31 @@ type Point interface {
 
 // Points represents a list of points.
 type Points []Point
+
+// Clone returns a deep copy of a.
+func (a Points) Clone() []Point {
+	other := make([]Point, len(a))
+	for i, p := range a {
+		if p == nil {
+			other[i] = nil
+			continue
+		}
+
+		switch p := p.(type) {
+		case *FloatPoint:
+			other[i] = p.Clone()
+		case *IntegerPoint:
+			other[i] = p.Clone()
+		case *StringPoint:
+			other[i] = p.Clone()
+		case *BooleanPoint:
+			other[i] = p.Clone()
+		default:
+			panic(fmt.Sprintf("unable to clone point: %T", p))
+		}
+	}
+	return other
+}
 
 // Tags represent a map of keys and values.
 // It memoizes its key so it can be used efficiently during query execution.
@@ -86,7 +117,7 @@ func (t *Tags) Value(k string) string {
 
 // Subset returns a new tags object with a subset of the keys.
 func (t *Tags) Subset(keys []string) Tags {
-	if t.m == nil || len(keys) == 0 {
+	if len(keys) == 0 {
 		return Tags{}
 	}
 
@@ -164,7 +195,27 @@ func encodeTags(m map[string]string) []byte {
 }
 
 // decodeTags parses an identifier into a map of tags.
-func decodeTags(id []byte) map[string]string { panic("FIXME: implement") }
+func decodeTags(id []byte) map[string]string {
+	a := bytes.Split(id, []byte{'\x00'})
+
+	// There must be an even number of segments.
+	if len(a) > 0 && len(a)%2 == 1 {
+		a = a[:len(a)-1]
+	}
+
+	// Return nil if there are no segments.
+	if len(a) == 0 {
+		return nil
+	}
+	mid := len(a) / 2
+
+	// Decode key/value tags.
+	m := make(map[string]string)
+	for i := 0; i < mid; i++ {
+		m[string(a[i])] = string(a[i+mid])
+	}
+	return m
+}
 
 func encodeAux(aux []interface{}) []*internal.Aux {
 	pb := make([]*internal.Aux, len(aux))
@@ -194,6 +245,10 @@ func encodeAux(aux []interface{}) []*internal.Aux {
 }
 
 func decodeAux(pb []*internal.Aux) []interface{} {
+	if len(pb) == 0 {
+		return nil
+	}
+
 	aux := make([]interface{}, len(pb))
 	for i := range pb {
 		switch pb[i].GetDataType() {
@@ -226,4 +281,59 @@ func decodeAux(pb []*internal.Aux) []interface{} {
 		}
 	}
 	return aux
+}
+
+// PointDecoder decodes generic points from a reader.
+type PointDecoder struct {
+	r     io.Reader
+	stats IteratorStats
+}
+
+// NewPointDecoder returns a new instance of PointDecoder that reads from r.
+func NewPointDecoder(r io.Reader) *PointDecoder {
+	return &PointDecoder{r: r}
+}
+
+// Stats returns iterator stats embedded within the stream.
+func (dec *PointDecoder) Stats() IteratorStats { return dec.stats }
+
+// DecodePoint reads from the underlying reader and unmarshals into p.
+func (dec *PointDecoder) DecodePoint(p *Point) error {
+	for {
+		// Read length.
+		var sz uint32
+		if err := binary.Read(dec.r, binary.BigEndian, &sz); err != nil {
+			return err
+		}
+
+		// Read point data.
+		buf := make([]byte, sz)
+		if _, err := io.ReadFull(dec.r, buf); err != nil {
+			return err
+		}
+
+		// Unmarshal into point.
+		var pb internal.Point
+		if err := proto.Unmarshal(buf, &pb); err != nil {
+			return err
+		}
+
+		// If the point contains stats then read stats and retry.
+		if pb.Stats != nil {
+			dec.stats = decodeIteratorStats(pb.Stats)
+			continue
+		}
+
+		if pb.IntegerValue != nil {
+			*p = decodeIntegerPoint(&pb)
+		} else if pb.StringValue != nil {
+			*p = decodeStringPoint(&pb)
+		} else if pb.BooleanValue != nil {
+			*p = decodeBooleanPoint(&pb)
+		} else {
+			*p = decodeFloatPoint(&pb)
+		}
+
+		return nil
+	}
 }
