@@ -250,10 +250,12 @@ unknownTemplate = ut
 
 An alert is an evaluated expression which can trigger actions like emailing or logging. The expression must yield a scalar. The alert triggers if not equal to zero. Alerts act on each tag set returned by the query. It is an error for alerts to specify start or end times. Those will be determined by the various functions and the alerting system.
 
+* autoClose: if present, will close incident if alert status is evaluated to normal.
 * crit: expression of a critical alert (which will send an email)
 * critNotification: comma-separated list of notifications to trigger on critical. This line may appear multiple times and duplicate notifications, which will be merged so only one of each notification is triggered. Lookup tables may be used when `lookup("table", "key")` is an entire `critNotification` value. See example below.
 * depends: expression that this alert depends on. If the expression is non-zero, this alert is unevaluated. Unevaluated alerts do not change state or become unknown.
 * ignoreUnknown: if present, will prevent alert from becoming unknown
+* normNotification: identical to critNotification, but for normals. Only triggered if `autoClose` is enabled.
 * unknownIsNormal: will convert unkown events into normal events. For example, if you are alerting for the existence of error log messages, when there are none, that means things are normal. Using `ignoreUnknown` with this setting would be uneccesary.
 * runEvery: multiple of global `checkFrequency` at which to run this alert. If unspecified, the global `defaultRunEvery` will be used.
 * squelch: <a name="squelch"></a> comma-separated list of `tagk=tagv` pairs. `tagv` is a regex. If the current tag group matches all values, the alert is squelched, and will not trigger as crit or warn. For example, `squelch = host=ny-web.*,tier=prod` will match any group that has at least that host and tier. Note that the group may have other tags assigned to it, but since all elements of the squelch list were met, it is considered a match. Multiple squelch lines may appear; a tag group matches if any of the squelch lines match.
