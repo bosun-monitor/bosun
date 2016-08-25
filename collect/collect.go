@@ -47,6 +47,9 @@ var (
 	// Whether or not to use NTLM authentication
 	UseNtlm bool = false
 
+	// DefaultClient can be used to override the HTTP client that will be used to make requests.
+	DefaultClient *http.Client = http.DefaultClient
+
 	// Dropped is the number of dropped data points due to a full queue.
 	dropped int64
 
@@ -66,10 +69,6 @@ var (
 	sets                = make(map[string]*setMetric)
 	puts                = make(map[string]*putMetric)
 	aggs                = make(map[string]*agMetric)
-	client              = &http.Client{
-		Transport: &timeoutTransport{Transport: new(http.Transport)},
-		Timeout:   time.Minute,
-	}
 )
 
 const (
@@ -90,19 +89,6 @@ const (
 	descCollectQueued            = "Total number of items currently queued and waiting to be sent to the server."
 	descCollectSent              = "Counter of data points sent to the server."
 )
-
-type timeoutTransport struct {
-	*http.Transport
-	Timeout time.Time
-}
-
-func (t *timeoutTransport) RoundTrip(r *http.Request) (*http.Response, error) {
-	if time.Now().After(t.Timeout) {
-		t.Transport.CloseIdleConnections()
-		t.Timeout = time.Now().Add(time.Minute * 5)
-	}
-	return t.Transport.RoundTrip(r)
-}
 
 // InitChan is similar to Init, but uses the given channel instead of creating a
 // new one.
