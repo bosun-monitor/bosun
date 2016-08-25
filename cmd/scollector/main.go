@@ -27,6 +27,7 @@ import (
 	"bosun.org/slog"
 	"bosun.org/util"
 	"github.com/BurntSushi/toml"
+	"github.com/facebookgo/httpcontrol"
 )
 
 var (
@@ -46,6 +47,18 @@ var (
 	mains []func()
 )
 
+type scollectorHTTPTransport struct {
+	UserAgent string
+	http.RoundTripper
+}
+
+func (t *scollectorHTTPTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	if req.Header.Get("User-Agent") == "" {
+		req.Header.Add("User-Agent", t.UserAgent)
+	}
+	return t.RoundTripper.RoundTrip(req)
+}
+
 func main() {
 	flag.Parse()
 	if *flagToToml != "" {
@@ -64,6 +77,20 @@ func main() {
 		m()
 	}
 	conf := readConf()
+	ua := "Scollector/" + version.ShortVersion()
+	if conf.UserAgentMessage != "" {
+		ua += fmt.Sprintf(" (%s)", conf.UserAgentMessage)
+	}
+	client := &http.Client{
+		Transport: &scollectorHTTPTransport{
+			ua,
+			&httpcontrol.Transport{
+				RequestTimeout: time.Minute,
+			},
+		},
+	}
+	http.DefaultClient = client
+	collect.DefaultClient = client
 	if *flagHost != "" {
 		conf.Host = *flagHost
 	}
