@@ -13,6 +13,9 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"time"
+
+	"github.com/facebookgo/httpcontrol"
 
 	version "bosun.org/_version"
 
@@ -47,6 +50,31 @@ var (
 
 	tags = opentsdb.TagSet{}
 )
+
+type tsdbrelayHTTPTransport struct {
+	UserAgent string
+	http.RoundTripper
+}
+
+func (t *tsdbrelayHTTPTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	if req.Header.Get("User-Agent") == "" {
+		req.Header.Add("User-Agent", t.UserAgent)
+	}
+	return t.RoundTripper.RoundTrip(req)
+}
+
+func init() {
+	client := &http.Client{
+		Transport: &tsdbrelayHTTPTransport{
+			"Tsdbrelay/" + version.ShortVersion(),
+			&httpcontrol.Transport{
+				RequestTimeout: time.Minute,
+			},
+		},
+	}
+	http.DefaultClient = client
+	collect.DefaultClient = client
+}
 
 func main() {
 	var err error

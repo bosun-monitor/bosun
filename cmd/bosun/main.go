@@ -60,6 +60,14 @@ func init() {
 	http.DefaultClient = client
 	opentsdb.DefaultClient = client
 	graphite.DefaultClient = client
+	collect.DefaultClient = &http.Client{
+		Transport: &bosunHttpTransport{
+			"Bosun/" + version.ShortVersion(),
+			&httpcontrol.Transport{
+				RequestTimeout: time.Minute,
+			},
+		},
+	}
 }
 
 var (
