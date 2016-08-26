@@ -58,6 +58,7 @@ type Conf struct {
 	ICMP           []ICMP
 	Vsphere        []Vsphere
 	AWS            []AWS
+	AzureEA        []AzureEA
 	Process        []ProcessParams
 	SystemdService []ServiceParams
 	ProcessDotNet  []ProcessDotNet
@@ -136,6 +137,12 @@ type AWS struct {
 	BillingBucketName        string
 	BillingBucketPath        string
 	BillingPurgeDays         int
+}
+
+type AzureEA struct {
+	EANumber          uint32
+	APIKey            string
+	LogBillingDetails bool
 }
 
 type SNMP struct {
