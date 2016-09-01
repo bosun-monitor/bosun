@@ -238,14 +238,16 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.E
 		err := s.ActionByAlertKey("bosun", msg, models.ActionClose, ak)
 		if err != nil {
 			slog.Errorln(err)
-		}
+		} else if sendNotifiction {
+            s.ActionNotify(models.ActionClose, "bosun", reason, [ak])
+        }
 	}
 	// finally close an open alert with silence or CloseOnNormal once it goes back to normal.
 	if event.Status == models.StNormal {
 		if si := silenced(ak); si != nil {
-			go autoClose(ak, "silenced")
+			go autoClose(ak, "silenced", false)
 		} else if a.CloseOnNormal {
-			go autoClose(ak, "normal")
+			go autoClose(ak, "normal", true)
 		}
 	}
 	s.Unlock()
