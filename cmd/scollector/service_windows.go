@@ -8,7 +8,6 @@ import (
 
 	"bosun.org/_version"
 	"bosun.org/slog"
-	"golang.org/x/sys/windows/registry"
 	"golang.org/x/sys/windows/svc"
 	"golang.org/x/sys/windows/svc/debug"
 	"golang.org/x/sys/windows/svc/eventlog"
@@ -136,7 +135,7 @@ func controlService(name string, c svc.Cmd, to svc.State) error {
 	if err != nil {
 		return fmt.Errorf("could not send control=%d: %v", c, err)
 	}
-	timeout := time.Now().Add(10 * time.Second)
+	timeout := time.Now().Add(35 * time.Second)
 	for status.State != to {
 		if timeout.Before(time.Now()) {
 			return fmt.Errorf("timeout waiting for service to go to state=%d", to)
@@ -172,11 +171,6 @@ loop:
 }
 
 func runService(name string, isDebug bool) {
-	errFix := fixEventMessageFile(name) //Temp fix. Remove after a few weeks.
-	if errFix != nil {
-		slog.Errorf("%s fixEventMessageFile failed: %v", name, errFix)
-		return
-	}
 	if isDebug {
 		slog.SetEventLog(debug.New(name), 1)
 	} else {
@@ -199,28 +193,4 @@ func runService(name string, isDebug bool) {
 	}
 	slog.Infof("%s service stopped", name)
 	os.Exit(0)
-}
-
-// This is a temporary method to fix an issue with the EventMessageFile.
-// See http://stackoverflow.com/questions/29130586 for details.
-func fixEventMessageFile(src string) error {
-	const addKeyName = `SYSTEM\CurrentControlSet\Services\EventLog\Application`
-	appkey, err := registry.OpenKey(registry.LOCAL_MACHINE, addKeyName, registry.ALL_ACCESS)
-	if err != nil {
-		return err
-	}
-	defer appkey.Close()
-	sk, alreadyExist, err := registry.CreateKey(appkey, src, registry.ALL_ACCESS)
-	if err != nil {
-		return err
-	}
-	defer sk.Close()
-	if alreadyExist {
-		// Update REG_SZ key with expanded value for %systemroot% variable.
-		err = sk.SetStringValue("EventMessageFile", os.ExpandEnv("${systemroot}\\System32\\EventCreate.exe"))
-		if err != nil {
-			return err
-		}
-	}
-	return nil
 }
