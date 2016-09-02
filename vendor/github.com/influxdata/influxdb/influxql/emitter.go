@@ -12,7 +12,6 @@ type Emitter struct {
 	buf       []Point
 	itrs      []Iterator
 	ascending bool
-	chunkSize int
 
 	tags Tags
 	row  *models.Row
@@ -26,12 +25,11 @@ type Emitter struct {
 }
 
 // NewEmitter returns a new instance of Emitter that pulls from itrs.
-func NewEmitter(itrs []Iterator, ascending bool, chunkSize int) *Emitter {
+func NewEmitter(itrs []Iterator, ascending bool) *Emitter {
 	return &Emitter{
 		buf:       make([]Point, len(itrs)),
 		itrs:      itrs,
 		ascending: ascending,
-		chunkSize: chunkSize,
 	}
 }
 
@@ -41,22 +39,20 @@ func (e *Emitter) Close() error {
 }
 
 // Emit returns the next row from the iterators.
-func (e *Emitter) Emit() (*models.Row, error) {
+func (e *Emitter) Emit() *models.Row {
 	// Immediately end emission if there are no iterators.
 	if len(e.itrs) == 0 {
-		return nil, nil
+		return nil
 	}
 
 	// Continually read from iterators until they are exhausted.
 	for {
 		// Fill buffer. Return row if no more points remain.
-		t, name, tags, err := e.loadBuf()
-		if err != nil {
-			return nil, err
-		} else if t == ZeroTime {
+		t, name, tags := e.loadBuf()
+		if t == ZeroTime {
 			row := e.row
 			e.row = nil
-			return row, nil
+			return row
 		}
 
 		// Read next set of values from all iterators at a given time/name/tags.
@@ -65,37 +61,33 @@ func (e *Emitter) Emit() (*models.Row, error) {
 		if values == nil {
 			row := e.row
 			e.row = nil
-			return row, nil
+			return row
 		}
 
 		// If there's no row yet then create one.
-		// If the name and tags match the existing row, append to that row if
-		// the number of values doesn't exceed the chunk size.
+		// If the name and tags match the existing row, append to that row.
 		// Otherwise return existing row and add values to next emitted row.
 		if e.row == nil {
 			e.createRow(name, tags, values)
-		} else if e.row.Name == name && e.tags.Equals(&tags) && (e.chunkSize <= 0 || len(e.row.Values) < e.chunkSize) {
+		} else if e.row.Name == name && e.tags.Equals(&tags) {
 			e.row.Values = append(e.row.Values, values)
 		} else {
 			row := e.row
 			e.createRow(name, tags, values)
-			return row, nil
+			return row
 		}
 	}
 }
 
 // loadBuf reads in points into empty buffer slots.
 // Returns the next time/name/tags to emit for.
-func (e *Emitter) loadBuf() (t int64, name string, tags Tags, err error) {
+func (e *Emitter) loadBuf() (t int64, name string, tags Tags) {
 	t = ZeroTime
 
 	for i := range e.itrs {
 		// Load buffer, if empty.
 		if e.buf[i] == nil {
-			e.buf[i], err = e.readIterator(e.itrs[i])
-			if err != nil {
-				break
-			}
+			e.buf[i] = e.readIterator(e.itrs[i])
 		}
 
 		// Skip if buffer is empty.
@@ -178,38 +170,30 @@ func (e *Emitter) readAt(t int64, name string, tags Tags) []interface{} {
 }
 
 // readIterator reads the next point from itr.
-func (e *Emitter) readIterator(itr Iterator) (Point, error) {
+func (e *Emitter) readIterator(itr Iterator) Point {
 	if itr == nil {
-		return nil, nil
+		return nil
 	}
 
 	switch itr := itr.(type) {
 	case FloatIterator:
-		if p, err := itr.Next(); err != nil {
-			return nil, err
-		} else if p != nil {
-			return p, nil
+		if p := itr.Next(); p != nil {
+			return p
 		}
 	case IntegerIterator:
-		if p, err := itr.Next(); err != nil {
-			return nil, err
-		} else if p != nil {
-			return p, nil
+		if p := itr.Next(); p != nil {
+			return p
 		}
 	case StringIterator:
-		if p, err := itr.Next(); err != nil {
-			return nil, err
-		} else if p != nil {
-			return p, nil
+		if p := itr.Next(); p != nil {
+			return p
 		}
 	case BooleanIterator:
-		if p, err := itr.Next(); err != nil {
-			return nil, err
-		} else if p != nil {
-			return p, nil
+		if p := itr.Next(); p != nil {
+			return p
 		}
 	default:
 		panic(fmt.Sprintf("unsupported iterator: %T", itr))
 	}
-	return nil, nil
+	return nil
 }

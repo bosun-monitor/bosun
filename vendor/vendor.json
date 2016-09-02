@@ -421,33 +421,33 @@
 		},
 		{
 			"path": "github.com/influxdata/influxdb/client",
-			"revision": "8b234546a8c68e04136b6a07d9022b2359a5b9fe",
-			"revisionTime": "2016-08-25T15:20:30-05:00"
+			"revision": "8e100998fab81a70f8b8fa8fbb41e1ed8cafa6f5",
+			"revisionTime": "2016-02-12T14:50:30-07:00"
 		},
 		{
 			"path": "github.com/influxdata/influxdb/influxql",
-			"revision": "8b234546a8c68e04136b6a07d9022b2359a5b9fe",
-			"revisionTime": "2016-08-25T15:20:30-05:00"
+			"revision": "8e100998fab81a70f8b8fa8fbb41e1ed8cafa6f5",
+			"revisionTime": "2016-02-12T14:50:30-07:00"
 		},
 		{
 			"path": "github.com/influxdata/influxdb/influxql/internal",
-			"revision": "8b234546a8c68e04136b6a07d9022b2359a5b9fe",
-			"revisionTime": "2016-08-25T15:20:30-05:00"
+			"revision": "8e100998fab81a70f8b8fa8fbb41e1ed8cafa6f5",
+			"revisionTime": "2016-02-12T14:50:30-07:00"
 		},
 		{
 			"path": "github.com/influxdata/influxdb/models",
-			"revision": "8b234546a8c68e04136b6a07d9022b2359a5b9fe",
-			"revisionTime": "2016-08-25T15:20:30-05:00"
+			"revision": "8e100998fab81a70f8b8fa8fbb41e1ed8cafa6f5",
+			"revisionTime": "2016-02-12T14:50:30-07:00"
 		},
 		{
 			"path": "github.com/influxdata/influxdb/pkg/escape",
-			"revision": "8b234546a8c68e04136b6a07d9022b2359a5b9fe",
-			"revisionTime": "2016-08-25T15:20:30-05:00"
+			"revision": "8e100998fab81a70f8b8fa8fbb41e1ed8cafa6f5",
+			"revisionTime": "2016-02-12T14:50:30-07:00"
 		},
 		{
 			"path": "github.com/influxdata/influxdb/pkg/slices",
-			"revision": "8b234546a8c68e04136b6a07d9022b2359a5b9fe",
-			"revisionTime": "2016-08-25T15:20:30-05:00"
+			"revision": "8e100998fab81a70f8b8fa8fbb41e1ed8cafa6f5",
+			"revisionTime": "2016-02-12T14:50:30-07:00"
 		},
 		{
 			"path": "github.com/jinzhu/now",

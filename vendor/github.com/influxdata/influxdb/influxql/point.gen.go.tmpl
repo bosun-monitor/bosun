@@ -1,18 +1,13 @@
 package influxql
 
 import (
-	"encoding/binary"
-	"io"
-
 	"github.com/gogo/protobuf/proto"
-	internal "github.com/influxdata/influxdb/influxql/internal"
+	"github.com/influxdata/influxdb/influxql/internal"
 )
 
 {{range .}}
 
 // {{.Name}}Point represents a point with a {{.Type}} value.
-// DO NOT ADD ADDITIONAL FIELDS TO THIS STRUCT.
-// See TestPoint_Fields in influxql/point_test.go for more details.
 type {{.Name}}Point struct {
 	Name string
 	Tags Tags
@@ -21,10 +16,6 @@ type {{.Name}}Point struct {
 	Nil   bool
 	Value {{.Type}}
 	Aux   []interface{}
-
-	// Total number of points that were combined into this point from an aggregate.
-	// If this is zero, the point is not the result of an aggregate function.
-	Aggregated uint32
 }
 
 func (v *{{.Name}}Point) name() string       { return v.Name }
@@ -56,12 +47,11 @@ func (v *{{.Name}}Point) Clone() *{{.Name}}Point {
 
 func encode{{.Name}}Point(p *{{.Name}}Point) *internal.Point {
   return &internal.Point{
-    Name:       proto.String(p.Name),
-    Tags:       proto.String(p.Tags.ID()),
-    Time:       proto.Int64(p.Time),
-    Nil:        proto.Bool(p.Nil),
-    Aux:        encodeAux(p.Aux),
-		Aggregated: proto.Uint32(p.Aggregated),
+    Name: proto.String(p.Name),
+    Tags: proto.String(p.Tags.ID()),
+    Time: proto.Int64(p.Time),
+    Nil: proto.Bool(p.Nil),
+    Aux: encodeAux(p.Aux),
 
     {{if eq .Name "Float"}}
       FloatValue: proto.Float64(p.Value),
@@ -77,27 +67,21 @@ func encode{{.Name}}Point(p *{{.Name}}Point) *internal.Point {
 
 func decode{{.Name}}Point(pb *internal.Point) *{{.Name}}Point {
   return &{{.Name}}Point{
-    Name:       pb.GetName(),
-    Tags:       newTagsID(pb.GetTags()),
-    Time:       pb.GetTime(),
-    Nil:        pb.GetNil(),
-    Aux:        decodeAux(pb.Aux),
-		Aggregated: pb.GetAggregated(),
-    Value:      pb.Get{{.Name}}Value(),
+    Name:  pb.GetName(),
+    Tags:  newTagsID(pb.GetTags()),
+    Time:  pb.GetTime(),
+    Nil:   pb.GetNil(),
+    Aux:   decodeAux(pb.Aux),
+    Value: pb.Get{{.Name}}Value(),
   }
 }
 
 // {{.name}}Points represents a slice of points sortable by value.
 type {{.name}}Points []{{.Name}}Point
 
-func (a {{.name}}Points) Len() int { return len(a) }
-func (a {{.name}}Points) Less(i, j int) bool {
-	if a[i].Time != a[j].Time {
-		return a[i].Time < a[j].Time
-	}
-	return {{if ne .Name "Boolean"}}a[i].Value < a[j].Value{{else}}!a[i].Value{{end}}
-}
-func (a {{.name}}Points) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+func (a {{.name}}Points) Len() int           { return len(a) }
+func (a {{.name}}Points) Less(i, j int) bool { return a[i].Time < a[j].Time }
+func (a {{.name}}Points) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 
 // {{.name}}PointsByValue represents a slice of points sortable by value.
 type {{.name}}PointsByValue []{{.Name}}Point
@@ -109,13 +93,6 @@ func (a {{.name}}PointsByValue) Less(i, j int) bool { return !a[i].Value }
 func (a {{.name}}PointsByValue) Less(i, j int) bool { return a[i].Value < a[j].Value }
 {{end}}
 func (a {{.name}}PointsByValue) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-
-// {{.name}}PointsByTime represents a slice of points sortable by value.
-type {{.name}}PointsByTime []{{.Name}}Point
-
-func (a {{.name}}PointsByTime) Len() int           { return len(a) }
-func (a {{.name}}PointsByTime) Less(i, j int) bool { return a[i].Time < a[j].Time }
-func (a {{.name}}PointsByTime) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 
 // {{.name}}PointByFunc represents a slice of points sortable by a function.
 type {{.name}}PointsByFunc struct {
@@ -141,85 +118,6 @@ func {{.name}}PointsSortBy(points []{{.Name}}Point, cmp func(a, b *{{.Name}}Poin
 	return &{{.name}}PointsByFunc{
 		points: points,
 		cmp: cmp,
-	}
-}
-
-// {{.Name}}PointEncoder encodes {{.Name}}Point points to a writer.
-type {{.Name}}PointEncoder struct {
-	w io.Writer
-}
-
-// New{{.Name}}PointEncoder returns a new instance of {{.Name}}PointEncoder that writes to w.
-func New{{.Name}}PointEncoder(w io.Writer) *{{.Name}}PointEncoder {
-	return &{{.Name}}PointEncoder{w: w}
-}
-
-// Encode{{.Name}}Point marshals and writes p to the underlying writer.
-func (enc *{{.Name}}PointEncoder) Encode{{.Name}}Point(p *{{.Name}}Point) error {
-	// Marshal to bytes.
-	buf, err := proto.Marshal(encode{{.Name}}Point(p))
-	if err != nil {
-		return err
-	}
-
-	// Write the length.
-	if err := binary.Write(enc.w, binary.BigEndian, uint32(len(buf))); err != nil {
-		return err
-	}
-
-	// Write the encoded point.
-	if _, err := enc.w.Write(buf); err != nil {
-		return err
-	}
-	return nil
-}
-
-
-// {{.Name}}PointDecoder decodes {{.Name}}Point points from a reader.
-type {{.Name}}PointDecoder struct {
-	r     io.Reader
-	stats IteratorStats
-}
-
-// New{{.Name}}PointDecoder returns a new instance of {{.Name}}PointDecoder that reads from r.
-func New{{.Name}}PointDecoder(r io.Reader) *{{.Name}}PointDecoder {
-	return &{{.Name}}PointDecoder{r: r}
-}
-
-// Stats returns iterator stats embedded within the stream.
-func (dec *{{.Name}}PointDecoder) Stats() IteratorStats { return dec.stats }
-
-// Decode{{.Name}}Point reads from the underlying reader and unmarshals into p.
-func (dec *{{.Name}}PointDecoder) Decode{{.Name}}Point(p *{{.Name}}Point) error {
-	for {
-		// Read length.
-		var sz uint32
-		if err := binary.Read(dec.r, binary.BigEndian, &sz); err != nil {
-			return err
-		}
-
-		// Read point data.
-		buf := make([]byte, sz)
-		if _, err := io.ReadFull(dec.r, buf); err != nil {
-			return err
-		}
-
-		// Unmarshal into point.
-		var pb internal.Point
-		if err := proto.Unmarshal(buf, &pb); err != nil {
-			return err
-		}
-
-		// If the point contains stats then read stats and retry.
-		if pb.Stats != nil {
-			dec.stats = decodeIteratorStats(pb.Stats)
-			continue
-		}
-
-		// Decode into point object.
-		*p = *decode{{.Name}}Point(&pb)
-
-		return nil
 	}
 }
 

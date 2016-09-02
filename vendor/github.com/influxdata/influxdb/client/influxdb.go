@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -33,18 +32,6 @@ const (
 type Query struct {
 	Command  string
 	Database string
-
-	// Chunked tells the server to send back chunked responses. This places
-	// less load on the server by sending back chunks of the response rather
-	// than waiting for the entire response all at once.
-	Chunked bool
-
-	// ChunkSize sets the maximum number of rows that will be returned per
-	// chunk. Chunks are either divided based on their series or if they hit
-	// the chunk size limit.
-	//
-	// Chunked must be set to true for this option to be used.
-	ChunkSize int
 }
 
 // ParseConnectionString will parse a string to create a valid connection URL
@@ -170,18 +157,12 @@ func (c *Client) Query(q Query) (*Response, error) {
 	values := u.Query()
 	values.Set("q", q.Command)
 	values.Set("db", q.Database)
-	if q.Chunked {
-		values.Set("chunked", "true")
-		if q.ChunkSize > 0 {
-			values.Set("chunk_size", strconv.Itoa(q.ChunkSize))
-		}
-	}
 	if c.precision != "" {
 		values.Set("epoch", c.precision)
 	}
 	u.RawQuery = values.Encode()
 
-	req, err := http.NewRequest("POST", u.String(), nil)
+	req, err := http.NewRequest("GET", u.String(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -197,38 +178,19 @@ func (c *Client) Query(q Query) (*Response, error) {
 	defer resp.Body.Close()
 
 	var response Response
-	if q.Chunked {
-		cr := NewChunkedResponse(resp.Body)
-		for {
-			r, err := cr.NextResponse()
-			if err != nil {
-				// If we got an error while decoding the response, send that back.
-				return nil, err
-			}
+	dec := json.NewDecoder(resp.Body)
+	dec.UseNumber()
+	decErr := dec.Decode(&response)
 
-			if r == nil {
-				break
-			}
-
-			response.Results = append(response.Results, r.Results...)
-			if r.Err != nil {
-				response.Err = r.Err
-				break
-			}
-		}
-	} else {
-		dec := json.NewDecoder(resp.Body)
-		dec.UseNumber()
-		if err := dec.Decode(&response); err != nil {
-			// Ignore EOF errors if we got an invalid status code.
-			if !(err == io.EOF && resp.StatusCode != http.StatusOK) {
-				return nil, err
-			}
-		}
+	// ignore this error if we got an invalid status code
+	if decErr != nil && decErr.Error() == "EOF" && resp.StatusCode != http.StatusOK {
+		decErr = nil
 	}
-
-	// If we don't have an error in our json response, and didn't get StatusOK,
-	// then send back an error.
+	// If we got a valid decode error, send that back
+	if decErr != nil {
+		return nil, decErr
+	}
+	// If we don't have an error in our json response, and didn't get StatusOK, then send back an error
 	if resp.StatusCode != http.StatusOK && response.Error() == nil {
 		return &response, fmt.Errorf("received status code %d from server", resp.StatusCode)
 	}
@@ -387,31 +349,22 @@ func (c *Client) Ping() (time.Duration, string, error) {
 
 // Structs
 
-// Message represents a user message.
-type Message struct {
-	Level string `json:"level,omitempty"`
-	Text  string `json:"text,omitempty"`
-}
-
 // Result represents a resultset returned from a single statement.
 type Result struct {
-	Series   []models.Row
-	Messages []*Message
-	Err      error
+	Series []models.Row
+	Err    error
 }
 
 // MarshalJSON encodes the result into JSON.
 func (r *Result) MarshalJSON() ([]byte, error) {
 	// Define a struct that outputs "error" as a string.
 	var o struct {
-		Series   []models.Row `json:"series,omitempty"`
-		Messages []*Message   `json:"messages,omitempty"`
-		Err      string       `json:"error,omitempty"`
+		Series []models.Row `json:"series,omitempty"`
+		Err    string       `json:"error,omitempty"`
 	}
 
 	// Copy fields to output struct.
 	o.Series = r.Series
-	o.Messages = r.Messages
 	if r.Err != nil {
 		o.Err = r.Err.Error()
 	}
@@ -422,9 +375,8 @@ func (r *Result) MarshalJSON() ([]byte, error) {
 // UnmarshalJSON decodes the data into the Result struct
 func (r *Result) UnmarshalJSON(b []byte) error {
 	var o struct {
-		Series   []models.Row `json:"series,omitempty"`
-		Messages []*Message   `json:"messages,omitempty"`
-		Err      string       `json:"error,omitempty"`
+		Series []models.Row `json:"series,omitempty"`
+		Err    string       `json:"error,omitempty"`
 	}
 
 	dec := json.NewDecoder(bytes.NewBuffer(b))
@@ -434,7 +386,6 @@ func (r *Result) UnmarshalJSON(b []byte) error {
 		return err
 	}
 	r.Series = o.Series
-	r.Messages = o.Messages
 	if o.Err != "" {
 		r.Err = errors.New(o.Err)
 	}
@@ -486,7 +437,7 @@ func (r *Response) UnmarshalJSON(b []byte) error {
 
 // Error returns the first error from any statement.
 // Returns nil if no errors occurred on any statements.
-func (r *Response) Error() error {
+func (r Response) Error() error {
 	if r.Err != nil {
 		return r.Err
 	}
@@ -496,31 +447,6 @@ func (r *Response) Error() error {
 		}
 	}
 	return nil
-}
-
-// ChunkedResponse represents a response from the server that
-// uses chunking to stream the output.
-type ChunkedResponse struct {
-	dec *json.Decoder
-}
-
-// NewChunkedResponse reads a stream and produces responses from the stream.
-func NewChunkedResponse(r io.Reader) *ChunkedResponse {
-	dec := json.NewDecoder(r)
-	dec.UseNumber()
-	return &ChunkedResponse{dec: dec}
-}
-
-// NextResponse reads the next line of the stream and returns a response.
-func (r *ChunkedResponse) NextResponse() (*Response, error) {
-	var response Response
-	if err := r.dec.Decode(&response); err != nil {
-		if err == io.EOF {
-			return nil, nil
-		}
-		return nil, err
-	}
-	return &response, nil
 }
 
 // Point defines the fields that will be written to the database
@@ -562,7 +488,7 @@ func (p *Point) MarshalJSON() ([]byte, error) {
 // MarshalString renders string representation of a Point with specified
 // precision. The default precision is nanoseconds.
 func (p *Point) MarshalString() string {
-	pt, err := models.NewPoint(p.Measurement, models.NewTags(p.Tags), p.Fields, p.Time)
+	pt, err := models.NewPoint(p.Measurement, p.Tags, p.Fields, p.Time)
 	if err != nil {
 		return "# ERROR: " + err.Error() + " " + p.Measurement
 	}

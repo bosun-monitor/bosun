@@ -3,7 +3,7 @@
 		"Name":"Float",
 		"name":"float",
 		"Type":"float64",
-		"Nil":"0",
+		"Nil":"math.NaN()",
 		"Zero":"float64(0)"
 	},
 	{

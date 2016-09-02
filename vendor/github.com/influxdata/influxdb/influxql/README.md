@@ -98,16 +98,16 @@ _cpu_stats
 ALL           ALTER         ANY           AS            ASC           BEGIN
 BY            CREATE        CONTINUOUS    DATABASE      DATABASES     DEFAULT
 DELETE        DESC          DESTINATIONS  DIAGNOSTICS   DISTINCT      DROP
-DURATION      END           EVERY         EXPLAIN       FIELD         FOR
-FORCE         FROM          GRANT         GRANTS        GROUP         GROUPS
-IN            INF           INNER         INSERT        INTO          KEY
-KEYS          LIMIT         SHOW          MEASUREMENT   MEASUREMENTS  NAME
-OFFSET        ON            ORDER         PASSWORD      POLICY        POLICIES
-PRIVILEGES    QUERIES       QUERY         READ          REPLICATION   RESAMPLE
-RETENTION     REVOKE        SELECT        SERIES        SET           SHARD
-SHARDS        SLIMIT        SOFFSET       STATS         SUBSCRIPTION  SUBSCRIPTIONS
-TAG           TO            USER          USERS         VALUES        WHERE
-WITH          WRITE
+DURATION      END           EVERY         EXISTS        EXPLAIN       FIELD
+FOR           FORCE         FROM          GRANT         GRANTS        GROUP
+GROUPS        IF            IN            INF           INNER         INSERT
+INTO          KEY           KEYS          LIMIT         SHOW          MEASUREMENT
+MEASUREMENTS  NOT           OFFSET        ON            ORDER         PASSWORD
+POLICY        POLICIES      PRIVILEGES    QUERIES       QUERY         READ
+REPLICATION   RESAMPLE      RETENTION     REVOKE        SELECT        SERIES
+SERVER        SERVERS       SET           SHARD         SHARDS        SLIMIT
+SOFFSET       STATS         SUBSCRIPTION  SUBSCRIPTIONS TAG           TO
+USER          USERS         VALUES        WHERE         WITH          WRITE
 ```
 
 ## Literals
@@ -356,20 +356,6 @@ CREATE USER jdoe WITH PASSWORD '1337password';
 -- Create a cluster admin.
 -- Note: Unlike the GRANT statement, the "PRIVILEGES" keyword is required here.
 CREATE USER jdoe WITH PASSWORD '1337password' WITH ALL PRIVILEGES;
-```
-
-### DELETE
-
-```
-delete_stmt = "DELETE" ( from_clause | where_clause | from_clause where_clause ) .
-```
-
-#### Example:
-
-```sql
-DELETE FROM cpu
-DELETE FROM cpu WHERE time < '2000-01-01T00:00:00Z'
-DELETE WHERE time < '2000-01-01T00:00:00Z'
 ```
 
 ### DROP CONTINUOUS QUERY
@@ -770,7 +756,7 @@ measurement      = measurement_name |
 
 measurements     = measurement { "," measurement } .
 
-measurement_name = identifier | regex_lit .
+measurement_name = identifier .
 
 password         = string_lit .
 
