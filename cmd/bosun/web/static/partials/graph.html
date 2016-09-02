@@ -19,6 +19,8 @@
 					placeholder="Start"
 					tooltip
 					title="Can be absolute or relative time. Relative times follow the format <amount><time unit>-ago. Time Units are ms (Millisecond), s (second), m (minute), h (hour), d (day), w (week), n (month), y (year). Absolute time is in the format yyyy/MM/dd-HH:mm:ss , where any of the time (but not date) parts can be omitted."
+					ng-keydown="keydown($event)"
+					tabindex="5"
 					>
 			</div>
 			<div class="form-group">
@@ -29,33 +31,35 @@
 					placeholder="End"
 					tooltip
 					title="Current time if blank. Can be absolute or relative time. Relative times follow the format <amount><time unit>-ago. Time Units are ms (Millisecond), s (second), m (minute), h (hour), d (day), w (week), n (month), y (year). Absolute time is in the format yyyy/MM/dd-HH:mm:ss , where any of the time (but not date) parts can be omitted."
+					ng-keydown="keydown($event)"
+					tabindex="5"
 					>
 			</div>
-			<button class="btn btn-primary" ng-click="Query()">Query</button>
-			<button class="btn btn-default" tooltip title="Switch between absolute and relative time. Switching from absolute to relative time rounds the time." ng-click="SwitchTimes()">Switch Time</button>
+			<button class="btn btn-primary" ng-click="Query()" tabindex="5">Query</button>
+			<button class="btn btn-default" tooltip title="Switch between absolute and relative time. Switching from absolute to relative time rounds the time." ng-click="SwitchTimes()" tabindex="5">Switch Time</button>
 			<div class="checkbox" tooltip title="Auto downsample using avg and the width in pixels of the displayed graph (recommended). Overrides any downsample options from the query below">
 				<label>
-					<input type="checkbox" ng-model="autods"> Auto Downsample
+					<input type="checkbox" ng-model="autods" tabindex="5"> Auto Downsample
 				</label>
 			</div>
 			<div class="checkbox" tooltip title="Refresh every five seconds">
 				<label>
-					<input type="checkbox" ng-model="refresh"> Refresh
+					<input type="checkbox" ng-model="refresh" tabindex="5"> Refresh
 				</label>
 			</div>
 			<div class="checkbox" tooltip title="Normalize each series to 0-100% of the max value of the series. This is helpful for viewing correlation with multiple series of different metrics">
 				<label>
-					<input type="checkbox" ng-model="normalize"> Normalize
+					<input type="checkbox" ng-model="normalize" tabindex="5"> Normalize
 				</label>
 			</div>
 			<div class="checkbox" tooltip title="Show Annotations. Hold shift when brushing graph to create an annotation." ng-show="annotateEnabled">
 				<label>
-					<input type="checkbox" ng-model="showAnnotations" ng-change="setShowAnnotations()"> Annotations
+					<input type="checkbox" ng-model="showAnnotations" ng-change="setShowAnnotations()" tabindex="5"> Annotations
 				</label>
 			</div>
 			<div class="pull-right" ng-show="url">
-				<ts-popup url="url"></ts-popup>
-				<a class="btn btn-default" ng-href="{{url}}&png=.png" target="_blank">image</a>
+				<ts-popup url="url" tabindex="5"></ts-popup>
+				<a class="btn btn-default" ng-href="{{url}}&png=.png" target="_blank" tabindex="5">image</a>
 			</div>
 		</form>
 	</div>
@@ -63,8 +67,8 @@
 <div class="row">
 	<div class="col-sm-9">
 		<ul class="graph nav nav-tabs">
-			<li ng-repeat="t in query_p" ng-class="{active: $index == index}"><a href ng-click="setIndex($index)">Query {{$index + 1}}</a></li>
-			<li><a href ng-click="AddTab()">+</a></li>
+			<li ng-repeat="t in query_p" ng-class="{active: $index == index}"><a href ng-click="setIndex($index)" tabindex="5">Query {{$index + 1}}</a></li>
+			<li><a href ng-click="AddTab()" tabindex="5">+</a></li>
 		</ul>
 	</div>
 	<div class="col-sm-3">
@@ -72,13 +76,13 @@
 			<div class="form-group col-sm-6" tooltip title="Y axis minimum; leave empty for auto.">
 				<label class="control-label">y min</label>
 				<div>
-					<input type="number" class="form-control" style="width: 100%" ng-model="min">
+					<input type="number" class="form-control" style="width: 100%" ng-model="min" tabindex="5">
 				</div>
 			</div>
 			<div class="form-group col-sm-6" tooltip title="Y axis maximum; leave empty for auto.">
 				<label class="control-label">y max</label>
 				<div>
-					<input type="number" class="form-control" style="width: 100%" ng-model="max">
+					<input type="number" class="form-control" style="width: 100%" ng-model="max" tabindex="5">
 				</div>
 			</div>
 		</form>
@@ -93,31 +97,31 @@
 						<div class="form-group">
 							<label class="col-sm-4 control-label">Metric</label>
 							<div class="col-sm-8">
-								<input type="text" class="form-control" ng-model="t.metric" bs-options="m for m in metrics" ng-change="GetTagKByMetric($index)" ng-init="GetTagKByMetric($index)" limit="100" bs-typeahead min-length="0" bs-typeahead>
+								<input type="text" class="form-control" ng-model="t.metric" bs-options="m for m in metrics" ng-change="GetTagKByMetric($index)" ng-init="GetTagKByMetric($index)" limit="100" bs-typeahead min-length="0" bs-typeahead tabindex="3" autofocus ng-keydown="keydown($event)">
 							</div>
 						</div>
 						<div class="form-group">
 							<label class="col-sm-4 control-label" tooltip title="The method used to combine multiple time series into a single time series. This behavior happens when specific or (*) values are omitted for tags.">Aggregator</label>
 							<div class="col-sm-8">
-								<select class="form-control" ng-model="t.aggregator" ng-options="agg as agg for agg in aggregators"></select>
+								<select class="form-control" ng-model="t.aggregator" ng-options="agg as agg for agg in aggregators" tabindex="3"></select>
 							</div>
 						</div>
 						<div class="form-group" ng-hide="autods">
 							<label class="col-sm-4 control-label" tooltip title="Downsample the data into fewer datapoints. Requires that the downsample window value is also provided.">Downsample</label>
 							<div class="col-sm-8">
-								<select ng-model="t.ds" ng-change="t.setDs()" ng-options="agg as agg for agg in dsaggregators" class="form-control"></select>
+								<select ng-model="t.ds" ng-change="t.setDs()" ng-options="agg as agg for agg in dsaggregators" class="form-control" tabindex="3"></select>
 							</div>
 						</div>
 						<div class="form-group" ng-hide="autods">
 							<label class="col-sm-4 control-label" tooltip title="The time window to downsample to. For example 1h would return a datapoint for every hour by performing the downsample function over that hour. Time units are ms (millisecond), s (second), m (minute), h (hour), d (day), w (week), n (month), y (year).">Window</label>
 							<div class="col-sm-8">
-								<input type="text" class="form-control" ng-model="t.dstime" ng-change="t.setDs()">
+								<input type="text" class="form-control" ng-model="t.dstime" ng-change="t.setDs()" tabindex="3" ng-keydown="keydown($event)">
 							</div>
 						</div>
 						<div class="form-group" ng-class="{'has-error': !canAuto[t.metric] && t.derivative == 'auto'}">
 							<label class="col-sm-4 control-label" tooltip title="If not set to gauge, this returns a per-second rate of change between points. If the values always increase (except for resets and rollovers), use counter. If the values can go down, use rate. A warning color indicates auto will default to counter.">Type</label>
 							<div class="col-sm-8">
-								<select ng-model="t.derivative" ng-change="t.setDerivative()" ng-options="r as r for r in rate_options" class="form-control"></select>
+								<select ng-model="t.derivative" ng-change="t.setDerivative()" ng-options="r as r for r in rate_options" class="form-control" tabindex="3"></select>
 							</div>
 						</div>
 						<div class="form-group" ng-show="t.derivative == 'counter'">
@@ -131,16 +135,16 @@
 						<div class="form-group" ng-repeat="k in sorted_tagks[$index]">
 							<label class="col-sm-2 control-label" tooltip title="Enter in values to filter tags. The first filter (function and value) will act as a group by function - each match will corespond to a series. The second filter for the tag will filter the results of the series; instead of generating a new series the filtered series will be aggregated.">{{k}} ({{tagvs[$parent.$index][k].length}})</label>
 							<div class="col-sm-2">
-								<select title="Function to be used for a groupby filter." class="form-control" ng-model="t.gbFilters[k].type" ng-options="f as f for f in filters"></select>
+								<select title="Function to be used for a groupby filter." class="form-control" ng-model="t.gbFilters[k].type" ng-options="f as f for f in filters" tabindex="4"></select>
 							</div>
 							<div class="col-sm-3">
-								<input type="text" class="form-control" ng-model="t.gbFilters[k].filter" bs-options="tv for tv in tagvs[$parent.$index][k]" bs-typeahead min-length="0" limit="100" ng-disabled="!t.metric_tags[k]">
+								<input type="text" class="form-control" ng-model="t.gbFilters[k].filter" bs-options="tv for tv in tagvs[$parent.$index][k]" bs-typeahead min-length="0" limit="100" ng-disabled="!t.metric_tags[k]" tabindex="4" ng-keydown="keydown($event)">
 							</div>
 							<div class="col-sm-2">
-								<select title="Function to be used for a non-groupby filter." class="form-control" ng-model="t.nGbFilters[k].type" ng-options="f as f for f in filters"></select>
+								<select title="Function to be used for a non-groupby filter." class="form-control" ng-model="t.nGbFilters[k].type" ng-options="f as f for f in filters" tabindex="4"></select>
 							</div>
 							<div class="col-sm-3">
-								<input type="text" class="form-control" ng-model="t.nGbFilters[k].filter" bs-options="tv for tv in tagvs[$parent.$index][k]" bs-typeahead min-length="0" limit="100" ng-disabled="!t.metric_tags[k]">
+								<input type="text" class="form-control" ng-model="t.nGbFilters[k].filter" bs-options="tv for tv in tagvs[$parent.$index][k]" bs-typeahead min-length="0" limit="100" ng-disabled="!t.metric_tags[k]" tabindex="4" ng-keydown="keydown($event)">
 							</div>
 						</div>
 					</form>
@@ -151,7 +155,7 @@
 						<div class="form-group">
 							<label class="col-sm-4 control-label">Metric</label>
 							<div class="col-sm-8">
-								<input type="text" class="form-control" ng-model="t.metric" bs-options="m for m in metrics" ng-change="GetTagKByMetric($index)" ng-init="GetTagKByMetric($index)" limit="100" bs-typeahead min-length="0" bs-typeahead>
+								<input type="text" class="form-control" ng-model="t.metric" bs-options="m for m in metrics" ng-change="GetTagKByMetric($index)" ng-init="GetTagKByMetric($index)" limit="100" bs-typeahead min-length="0" bs-typeahead >
 							</div>
 						</div>
 						<div class="form-group">
@@ -227,13 +231,13 @@
 			<tbody>
 				<tr ng-show="queries.length > 1">
 					<td>All</td>
-					<td><a href="/expr?expr={{btoa(exprText)}}{{queryTime}}" target="_blank">Expression</a></td>
-					<td><a href="/config?expr={{btoa(exprText)}}" target="_blank">Rule</a></td>
+					<td><a href="/expr?expr={{btoa(exprText)}}{{queryTime}}" target="_blank" tabindex="6">Expression</a></td>
+					<td><a href="/config?expr={{btoa(exprText)}}" target="_blank" tabindex="6">Rule</a></td>
 				</tr>
 				<tr ng-repeat="q in queries">
 					<td ng-bind="q"></td>
-					<td><a href="/expr?expr={{btoa(q)}}{{queryTime}}" target="_blank">Expression</a></td>
-					<td><a href="/config?expr={{btoa('avg(' + q + ')')}}" target="_blank">Rule</a></td>
+					<td><a href="/expr?expr={{btoa(q)}}{{queryTime}}" target="_blank" tabindex="6">Expression</a></td>
+					<td><a href="/config?expr={{btoa('avg(' + q + ')')}}" target="_blank" tabindex="6">Rule</a></td>
 				</tr>
 			</tbody>
 		</table>

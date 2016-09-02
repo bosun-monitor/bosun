@@ -1,3 +1,5 @@
+/// <reference path="0-bosun.ts" />
+
 bosunApp.directive('tsResults', function() {
     return {
         templateUrl: '/partials/results.html',
@@ -213,6 +215,18 @@ bosunApp.directive('tsTableSort', ['$timeout', ($timeout: ng.ITimeoutService) =>
             });
         },
     };
+}]);
+
+// https://gist.github.com/mlynch/dd407b93ed288d499778
+bosunApp.directive('autofocus', ['$timeout', function($timeout) {
+  return {
+    restrict: 'A',
+    link : function($scope, $element) {
+      $timeout(function() {
+        $element[0].focus();
+      });
+    }
+  }
 }]);
 
 bosunApp.directive('tsTimeLine', () => {

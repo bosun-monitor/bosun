@@ -620,6 +620,7 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
         $scope.aceLoaded = function (_editor) {
             editor = _editor;
             $scope.editor = editor;
+            editor.focus();
             editor.getSession().setUseWrapMode(true);
             editor.on("blur", function () {
                 $scope.$apply(function () {
@@ -970,6 +971,7 @@ bosunControllers.controller('DashboardCtrl', ['$scope', '$http', '$location', fu
             }
         };
     }]);
+/// <reference path="0-bosun.ts" />
 bosunApp.directive('tsResults', function () {
     return {
         templateUrl: '/partials/results.html',
@@ -1164,6 +1166,17 @@ bosunApp.directive('tsTableSort', ['$timeout', function ($timeout) {
                     $(elem).tablesorter({
                         sortList: scope.$eval(attrs.tsTableSort)
                     });
+                });
+            }
+        };
+    }]);
+// https://gist.github.com/mlynch/dd407b93ed288d499778
+bosunApp.directive('autofocus', ['$timeout', function ($timeout) {
+        return {
+            restrict: 'A',
+            link: function ($scope, $element) {
+                $timeout(function () {
+                    $element[0].focus();
                 });
             }
         };
@@ -2145,6 +2158,7 @@ bosunControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route
             }
         };
     }]);
+/// <reference path="0-bosun.ts" />
 var TagSet = (function () {
     function TagSet() {
     }
@@ -2542,6 +2556,11 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
             });
             return request;
         }
+        $scope.keydown = function ($event) {
+            if ($event.shiftKey && $event.keyCode == 13) {
+                $scope.Query();
+            }
+        };
         $scope.Query = function () {
             var r = getRequest();
             angular.forEach($scope.query_p, function (q, index) {

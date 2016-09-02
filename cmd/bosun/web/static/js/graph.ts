@@ -1,3 +1,5 @@
+/// <reference path="0-bosun.ts" />
+
 class TagSet {
 	[tagk: string]: string;
 }
@@ -69,7 +71,7 @@ class Query {
 		var that = this;
 		// Copy tags with values to group by filters so old links work
 		if (filterSupport) {
-			_.each(this.tags, function(v, k) {
+			_.each(this.tags, function (v, k) {
 				if (v === "") {
 					return
 				}
@@ -82,7 +84,7 @@ class Query {
 			// Load filters from raw query and turn them into gb and nGbFilters.
 			// This makes links from other pages work (i.e. the expr page)
 			if (_.has(q, 'filters')) {
-				_.each(q.filters, function(filter: Filter) {
+				_.each(q.filters, function (filter: Filter) {
 					if (filter.groupBy) {
 						that.gbFilters[filter.tagk] = filter;
 						return;
@@ -98,12 +100,12 @@ class Query {
 	setFilters() {
 		this.filters = [];
 		var that = this;
-		_.each(this.gbFilters, function(filter: Filter, tagk) {
+		_.each(this.gbFilters, function (filter: Filter, tagk) {
 			if (filter.filter && filter.type) {
 				that.filters.push(filter);
 			}
 		});
-		_.each(this.nGbFilters, function(filter: Filter, tagk) {
+		_.each(this.nGbFilters, function (filter: Filter, tagk) {
 			if (filter.filter && filter.type) {
 				that.filters.push(filter);
 			}
@@ -233,9 +235,10 @@ interface IGraphScope extends ng.IScope {
 	showAnnotations: boolean;
 	setShowAnnotations: (something: any) => void;
 	exprText: string;
+	keydown: ($event: any) => void;
 }
 
-bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route', '$timeout', function($scope: IGraphScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService, $timeout: ng.ITimeoutService) {
+bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route', '$timeout', function ($scope: IGraphScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService, $timeout: ng.ITimeoutService) {
 	$scope.aggregators = ["sum", "min", "max", "avg", "dev", "zimsum", "mimmin", "minmax"];
 	$scope.dsaggregators = ["", "sum", "min", "max", "avg", "dev", "zimsum", "mimmin", "minmax"];
 	$scope.filters = ["auto", "iliteral_or", "iwildcard", "literal_or", "not_iliteral_or", "not_literal_or", "regexp", "wildcard"];
@@ -327,15 +330,15 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 		.error((error) => {
 			$scope.error = error;
 		});
-	$scope.SwitchTimes = function() {
+	$scope.SwitchTimes = function () {
 		$scope.start = SwapTime($scope.start);
 		$scope.end = SwapTime($scope.end);
 	};
-	$scope.AddTab = function() {
+	$scope.AddTab = function () {
 		$scope.index = $scope.query_p.length;
 		$scope.query_p.push(new Query($scope.filterSupport));
 	};
-	$scope.setIndex = function(i: number) {
+	$scope.setIndex = function (i: number) {
 		$scope.index = i;
 	};
 	var alphabet = "abcdefghijklmnopqrstuvwxyz".split("");
@@ -353,7 +356,7 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 				$scope.hosts = data;
 			});
 	}
-	$scope.GetTagKByMetric = function(index: number) {
+	$scope.GetTagKByMetric = function (index: number) {
 		$scope.tagvs[index] = new TagV;
 		var metric = $scope.query_p[index].metric;
 		if (!metric) {
@@ -361,7 +364,7 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 			return;
 		}
 		$http.get('/api/tagk/' + metric)
-			.success(function(data: string[]) {
+			.success(function (data: string[]) {
 				var q = $scope.query_p[index];
 				var tags = new TagSet;
 				q.metric_tags = {};
@@ -412,7 +415,7 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 					return a.localeCompare(b);
 				});
 			})
-			.error(function(error) {
+			.error(function (error) {
 				$scope.error = 'Unable to fetch metrics: ' + error;
 			});
 		$http.get('/api/metadata/metrics?metric=' + metric)
@@ -428,19 +431,19 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 		$scope.AddTab();
 	}
 	$http.get('/api/metric' + "?since=" + moment().utc().subtract(2, "days").unix())
-		.success(function(data: string[]) {
+		.success(function (data: string[]) {
 			$scope.metrics = data;
 		})
-		.error(function(error) {
+		.error(function (error) {
 			$scope.error = 'Unable to fetch metrics: ' + error;
 		});
 	function GetTagVs(k: string, index: number) {
 		$http.get('/api/tagv/' + k + '/' + $scope.query_p[index].metric)
-			.success(function(data: string[]) {
+			.success(function (data: string[]) {
 				data.sort();
 				$scope.tagvs[index][k] = data;
 			})
-			.error(function(error) {
+			.error(function (error) {
 				$scope.error = 'Unable to fetch metrics: ' + error;
 			});
 	}
@@ -448,7 +451,7 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 		request = new Request;
 		request.start = $scope.start;
 		request.end = $scope.end;
-		angular.forEach($scope.query_p, function(p) {
+		angular.forEach($scope.query_p, function (p) {
 			if (!p.metric) {
 				return;
 			}
@@ -456,7 +459,7 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 			var tags = q.tags;
 			q.tags = new TagSet;
 			if (!$scope.filterSupport) {
-				angular.forEach(tags, function(v, k) {
+				angular.forEach(tags, function (v, k) {
 					if (v && k) {
 						q.tags[k] = v;
 					}
@@ -466,7 +469,12 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 		});
 		return request;
 	}
-	$scope.Query = function() {
+		$scope.keydown = function ($event: any) {
+		if ($event.shiftKey && $event.keyCode == 13) {
+			$scope.Query();
+		}
+	};
+	$scope.Query = function () {
 		var r = getRequest();
 		angular.forEach($scope.query_p, (q, index) => {
 			var m = q.metric_tags;
@@ -489,7 +497,7 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 					}
 					delete r.queries[index].nGbFilters[f.tagk];
 					delete r.queries[index].gbFilters[f.tagk];
-					r.queries[index].filters = _.without(r.queries[index].filters, _.findWhere(r.queries[index].filters, {tagk: f.tagk}));
+					r.queries[index].filters = _.without(r.queries[index].filters, _.findWhere(r.queries[index].filters, { tagk: f.tagk }));
 				});
 			}
 		});
@@ -571,10 +579,10 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 				$scope.queries = data.Queries;
 				$scope.exprText = "";
 				_.each($scope.queries, (q, i) => {
-						$scope.exprText += "$" + alphabet[i] + " = " + q + "\n";
-						if ( i == $scope.queries.length-1) {
-							$scope.exprText += "avg($" + alphabet[i] + ")"
-						}
+					$scope.exprText += "$" + alphabet[i] + " = " + q + "\n";
+					if (i == $scope.queries.length - 1) {
+						$scope.exprText += "avg($" + alphabet[i] + ")"
+					}
 				});
 				$scope.running = '';
 				$scope.error = '';

@@ -168,6 +168,7 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 	$scope.aceLoaded = function (_editor) {
 		editor = _editor;
 		$scope.editor = editor;
+		editor.focus();
 		editor.getSession().setUseWrapMode(true);
 		editor.on("blur", function () {
 			$scope.$apply(function () {
