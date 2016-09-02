@@ -1,12 +1,23 @@
 package win32
 
 import (
+	"log"
 	"os"
 	"runtime"
 	"syscall"
 	"unsafe"
 )
 
+var (
+	procCreateJobObjectW          = kernel32.NewProc("CreateJobObjectW")
+	procQueryInformationJobObject = kernel32.NewProc("QueryInformationJobObject")
+	procSetInformationJobObject   = kernel32.NewProc("SetInformationJobObject")
+	procAssignProcessToJobObject  = kernel32.NewProc("AssignProcessToJobObject")
+)
+
+//
+// from https://github.com/contester/runlib/tree/72955ff7415fbf3c6568bba3ebb6b90719408e98/win32
+//
 func CreateJobObject(sa *syscall.SecurityAttributes, name *uint16) (syscall.Handle, error) {
 	r1, _, e1 := procCreateJobObjectW.Call(
 		uintptr(unsafe.Pointer(sa)),
@@ -94,7 +105,7 @@ type JobObjectBasicLimitInformation struct {
 }
 
 const (
-	JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE          = 0x2000
+	JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE          = 0x2000 //This is what we want https://msdn.microsoft.com/en-us/library/windows/desktop/ms684147(v=vs.85).aspx
 	JOB_OBJECT_LIMIT_DIE_ON_UNHANDLED_EXCEPTION = 0x400
 	JOB_OBJECT_LIMIT_ACTIVE_PROCESS             = 8
 	JOB_OBJECT_LIMIT_JOB_MEMORY                 = 0x200
@@ -141,7 +152,51 @@ func AssignProcessToJobObject(job syscall.Handle, process syscall.Handle) error 
 	return nil
 }
 
-const (
-	MEM_COMMIT     = 0x00001000
-	PAGE_READWRITE = 0x04
-)
+//
+// from https://github.com/golang/benchmarks/blob/master/driver/driver_windows.go
+//
+func initJob() {
+	currentProcess, err := syscall.GetCurrentProcess()
+	if err != nil {
+		log.Fatalf("GetCurrentProcess failed: %v", err)
+	}
+	// Create Job object and assign current process to it.
+	jobObject, err := createJobObject(nil, syscall.StringToUTF16Ptr("ScollectorJob"))
+	if err != nil {
+		log.Printf("CreateJobObject failed: %v", err)
+		return
+	}
+	log.Printf("CreateJobObject: %v", jobObject)
+	log.Printf("CreateJobObject GetLastError: %v", syscall.GetLastError())
+	if err = assignProcessToJobObject(jobObject, currentProcess); err != nil {
+		log.Printf("AssignProcessToJobObject failed: %v", err)
+		syscall.Close(jobObject)
+		return
+	}
+	log.Print("AssignProcessToJobObject finished")
+}
+
+func createJobObject(jobAttrs *syscall.SecurityAttributes, name *uint16) (handle syscall.Handle, err error) {
+	r0, _, e1 := syscall.Syscall(procCreateJobObjectW.Addr(), 2, uintptr(unsafe.Pointer(jobAttrs)), uintptr(unsafe.Pointer(name)), 0)
+	handle = syscall.Handle(r0)
+	if handle == 0 {
+		if e1 != 0 {
+			err = error(e1)
+		} else {
+			err = syscall.EINVAL
+		}
+	}
+	return
+}
+
+func assignProcessToJobObject(job syscall.Handle, process syscall.Handle) (err error) {
+	r1, _, e1 := syscall.Syscall(procAssignProcessToJobObject.Addr(), 2, uintptr(job), uintptr(process), 0)
+	if r1 == 0 {
+		if e1 != 0 {
+			err = error(e1)
+		} else {
+			err = syscall.EINVAL
+		}
+	}
+	return
+}

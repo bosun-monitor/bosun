@@ -3,12 +3,8 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"os"
-	"sync"
-	"syscall"
 	"time"
-	"unsafe"
 
 	"bosun.org/_version"
 	"bosun.org/slog"
@@ -20,82 +16,8 @@ import (
 
 var win_service_command = flag.String("winsvc", "", "For Windows Service, can be install, remove, start, stop")
 
-// access to Windows APIs
-var (
-	modkernel32                  = syscall.NewLazyDLL("kernel32.dll")
-	modpsapi                     = syscall.NewLazyDLL("psapi.dll")
-	procGetProcessMemoryInfo     = modpsapi.NewProc("GetProcessMemoryInfo")
-	procSetProcessAffinityMask   = modkernel32.NewProc("SetProcessAffinityMask")
-	procCreateJobObjectW         = modkernel32.NewProc("CreateJobObjectW")
-	procOpenJobObjectW           = modkernel32.NewProc("OpenJobObjectW")
-	procAssignProcessToJobObject = modkernel32.NewProc("AssignProcessToJobObject")
-	procSetInformationJobObject  = modkernel32.NewProc("SetInformationJobObject")
-
-	initJobOnce    sync.Once
-	currentProcess syscall.Handle
-	childMu        sync.Mutex
-	childProcesses []syscall.Handle
-)
-
-type JobObjectExtendedLimitInformation struct {
-	BasicLimitInformation JobObjectBasicLimitInformation
-	IoInfo                IoCounters
-	ProcessMemoryLimit    uintptr // SIZE_T
-	JobMemoryLimit        uintptr // SIZE_T
-	PeakProcessMemoryUsed uintptr // SIZE_T
-	PeakJobMemoryUsed     uintptr // SIZE_T
-}
-
 func init() {
 	mains = append(mains, win_service_main)
-	var err error
-	currentProcess, err = syscall.GetCurrentProcess()
-	if err != nil {
-		log.Fatalf("GetCurrentProcess failed: %v", err)
-	}
-	initJob()
-}
-
-func initJob() {
-	// Create Job object and assign current process to it.
-	jobObject, err := createJobObject(nil, syscall.StringToUTF16Ptr("ScollectorJob"))
-	if err != nil {
-		log.Printf("CreateJobObject failed: %v", err)
-		return
-	}
-	log.Printf("CreateJobObject: %v", jobObject)
-	log.Printf("CreateJobObject GetLastError: %v", syscall.GetLastError())
-	if err = assignProcessToJobObject(jobObject, currentProcess); err != nil {
-		log.Printf("AssignProcessToJobObject failed: %v", err)
-		syscall.Close(jobObject)
-		return
-	}
-	log.Print("AssignProcessToJobObject finished")
-}
-
-func createJobObject(jobAttrs *syscall.SecurityAttributes, name *uint16) (handle syscall.Handle, err error) {
-	r0, _, e1 := syscall.Syscall(procCreateJobObjectW.Addr(), 2, uintptr(unsafe.Pointer(jobAttrs)), uintptr(unsafe.Pointer(name)), 0)
-	handle = syscall.Handle(r0)
-	if handle == 0 {
-		if e1 != 0 {
-			err = error(e1)
-		} else {
-			err = syscall.EINVAL
-		}
-	}
-	return
-}
-
-func assignProcessToJobObject(job syscall.Handle, process syscall.Handle) (err error) {
-	r1, _, e1 := syscall.Syscall(procAssignProcessToJobObject.Addr(), 2, uintptr(job), uintptr(process), 0)
-	if r1 == 0 {
-		if e1 != 0 {
-			err = error(e1)
-		} else {
-			err = syscall.EINVAL
-		}
-	}
-	return
 }
 
 func win_service_main() {
