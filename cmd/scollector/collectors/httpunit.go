@@ -52,7 +52,7 @@ func cHTTPUnit(plans *httpunit.Plans) (opentsdb.MultiDataPoint, error) {
 			"url_host":     r.Case.URL.Host,
 			"hc_test_case": r.Plan.Label,
 		}
-		ms := r.Result.TimeTotal / time.Millisecond
+		ms := int64(r.Result.TimeTotal / time.Millisecond)
 		Add(&md, "hu.error", r.Result.Result != nil, tags, metadata.Gauge, metadata.Bool, descHTTPUnitError)
 		Add(&md, "hu.socket_connected", r.Result.Connected, tags, metadata.Gauge, metadata.Bool, descHTTPUnitSocketConnected)
 		Add(&md, "hu.time_total", ms, tags, metadata.Gauge, metadata.MilliSecond, descHTTPUnitTotalTime)
