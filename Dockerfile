@@ -8,7 +8,7 @@ ADD . /go/src/bosun.org
 WORKDIR /go/src/bosun.org
 RUN go run /go/src/bosun.org/build/build.go
 
-RUN cp /go/src/bosun.org/docker-compose/bosun.minimal.toml /bosun/config/bosun.toml
+RUN mkdir -p /bosun/config && cp /go/src/bosun.org/docker-compose/bosun.minimal.toml /bosun/config/bosun.toml
 RUN touch /bosun/config/bosun.conf
 RUN rm -rf /go/src
 
