@@ -30,7 +30,9 @@ import (
 // outside of the package without a setter
 type SystemConfProvider interface {
 	GetHTTPListen() string
-	GetRelayListen() string
+	GetHTTPSListen() string
+	GetTLSCertFile() string
+	GetTLSKeyFile() string
 
 	GetSMTPHost() string
 	GetSMTPUsername() string // SMTP username
@@ -87,6 +89,9 @@ func ValidateSystemConf(sc SystemConfProvider) error {
 	}
 	if sc.GetDefaultRunEvery() <= 0 {
 		return fmt.Errorf("default run every must be greater than 0, is %v", sc.GetDefaultRunEvery())
+	}
+	if sc.GetHTTPSListen() != "" && (sc.GetTLSCertFile() == "" || sc.GetTLSKeyFile() == "") {
+		return fmt.Errorf("must specify TLSCertFile and TLSKeyFile if HTTPSListen is specified")
 	}
 	return nil
 }

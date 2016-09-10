@@ -17,8 +17,11 @@ import (
 // SystemConf contains all the information that bosun needs to run. Outside of the conf package
 // usage should be through conf.SystemConfProvider
 type SystemConf struct {
-	HTTPListen    string
-	RelayListen   string
+	HTTPListen  string
+	HTTPSListen string
+	TLSCertFile string
+	TLSKeyFile  string
+
 	Hostname      string
 	Ping          bool
 	PingDuration  Duration // Duration from now to stop pinging hosts based on time since the host tag was touched
@@ -204,10 +207,19 @@ func (sc *SystemConf) GetHTTPListen() string {
 	return sc.HTTPListen
 }
 
-// GetRelayListen returns an address on which bosun will listen and Proxy all requests to /api
-// it was added so one can make OpenTSDB API endpoints available at the same URL as Bosun.
-func (sc *SystemConf) GetRelayListen() string {
-	return sc.RelayListen
+// GetHTTPSListen returns the hostname:port that Bosun should listen on with tls
+func (sc *SystemConf) GetHTTPSListen() string {
+	return sc.HTTPSListen
+}
+
+// GetTLSCertFile returns the path to the tls certificate to listen with (pem format). Must be specified with HTTPSListen.
+func (sc *SystemConf) GetTLSCertFile() string {
+	return sc.TLSCertFile
+}
+
+// GetTLSKeyFile returns the path to the tls key to listen with (pem format). Must be specified with HTTPSListen.
+func (sc *SystemConf) GetTLSKeyFile() string {
+	return sc.TLSKeyFile
 }
 
 // GetSMTPHost returns the SMTP mail server host that Bosun will use to relay through
