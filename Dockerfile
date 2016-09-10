@@ -13,3 +13,16 @@ RUN rm -rf /go/src
 RUN ls /go/bin
 
 RUN bosun -version
+
+EXPOSE 8080
+
+#in case you need direct access to ledis
+EXPOSE 9565
+
+#volume for ledisdb data
+VOLUME /bosun/data
+
+#volume for bosun config
+VOLUME /bosun/config
+
+CMD /go/bin/bosun -c /bosun/data/bosun.conf
