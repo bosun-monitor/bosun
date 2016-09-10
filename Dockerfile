@@ -27,4 +27,4 @@ VOLUME /bosun/data
 #volume for bosun config
 VOLUME /bosun/config
 
-CMD /go/bin/bosun -c /bosun/data/bosun.toml
+CMD /go/bin/bosun -c /bosun/config/bosun.toml
