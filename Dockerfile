@@ -1,13 +1,4 @@
-FROM debian:wheezy
-
-RUN apt-get update && apt-get install -y \
-    git \
-    curl \
-    --no-install-recommends \
-    && rm -rf /var/lib/apt/lists/*
-
-RUN curl -SL https://storage.googleapis.com/golang/go1.7.linux-amd64.tar.gz \
-    | tar -xzC /usr/local
+FROM golang:1.7-alpine
 
 ADD . /go/src/bosun.org
 
