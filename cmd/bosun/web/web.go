@@ -66,11 +66,15 @@ func init() {
 		"HTTP response codes from the backend server for request relayed through Bosun.")
 }
 
-func Listen(listenAddr string, devMode bool, tsdbHost string, reloadFunc func() error) error {
+func Listen(httpAddr, httpsAddr, certFile, keyFile string, devMode bool, tsdbHost string, reloadFunc func() error) error {
 	if devMode {
 		slog.Infoln("using local web assets")
 	}
 	webFS := FS(devMode)
+
+	if httpAddr == "" && httpsAddr == "" {
+		return fmt.Errorf("Either http or https address needs to be specified.")
+	}
 
 	indexTemplate = func() *template.Template {
 		str := FSMustString(devMode, "/templates/index.html")
@@ -171,9 +175,25 @@ func Listen(listenAddr string, devMode bool, tsdbHost string, reloadFunc func() 
 	http.Handle("/partials/", fs)
 	http.Handle("/static/", http.StripPrefix("/static/", fs))
 	http.Handle("/favicon.ico", fs)
-	slog.Infoln("bosun web listening on:", listenAddr)
 	slog.Infoln("tsdb host:", tsdbHost)
-	return http.ListenAndServe(listenAddr, nil)
+
+	errChan := make(chan error, 1)
+	if httpAddr != "" {
+		go func() {
+			slog.Infoln("bosun web listening http on:", httpAddr)
+			errChan <- http.ListenAndServe(httpAddr, nil)
+		}()
+	}
+	if httpsAddr != "" {
+		go func() {
+			slog.Infoln("bosun web listening https on:", httpsAddr)
+			if certFile == "" || keyFile == "" {
+				errChan <- fmt.Errorf("certFile and keyfile must be specified to use https")
+			}
+			errChan <- http.ListenAndServeTLS(httpsAddr, certFile, keyFile, nil)
+		}()
+	}
+	return <-errChan
 }
 
 type relayProxy struct {
