@@ -1,0 +1,11 @@
+#minimal toml file for standalone bosun image
+
+HTTPListen = ":8080"
+CheckFrequency = "1m"
+DefaultRunEvery = 5
+RuleFilePath = "/bosun/data/bosun.conf"
+EnableSave = true
+
+[DBConf]
+	LedisDir = "/bosun/data"
+	LedisBindAddr = "127.0.0.1:9565"

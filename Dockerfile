@@ -8,6 +8,8 @@ ADD . /go/src/bosun.org
 WORKDIR /go/src/bosun.org
 RUN go run /go/src/bosun.org/build/build.go
 
+RUN cp /go/src/bosun.org/docker-compose/bosun.minimal.toml /bosun/config/bosun.toml
+RUN touch /bosun/config/bosun.conf
 RUN rm -rf /go/src
 
 RUN ls /go/bin
@@ -25,4 +27,4 @@ VOLUME /bosun/data
 #volume for bosun config
 VOLUME /bosun/config
 
-CMD /go/bin/bosun -c /bosun/data/bosun.conf
+CMD /go/bin/bosun -c /bosun/data/bosun.toml
