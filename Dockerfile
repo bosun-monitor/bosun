@@ -1,5 +1,10 @@
 FROM golang:1.7-alpine
 
+RUN apt-get update && apt-get install -y \
+    git \
+    --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/*
+    
 ADD . /go/src/bosun.org
 
 WORKDIR /go/src/bosun.org
