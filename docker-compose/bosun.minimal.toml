@@ -3,7 +3,7 @@
 HTTPListen = ":8080"
 CheckFrequency = "1m"
 DefaultRunEvery = 5
-RuleFilePath = "/bosun/data/bosun.conf"
+RuleFilePath = "/bosun/config/bosun.conf"
 EnableSave = true
 
 [DBConf]
