@@ -151,12 +151,16 @@ func (sc *SystemConf) GetSystemConfProvider() (SystemConfProvider, error) {
 	return provider, nil
 }
 
+const (
+	defaultHTTPListen = ":8070"
+)
+
 // NewSystemConf retruns a system conf with default values set
 func newSystemConf() *SystemConf {
 	return &SystemConf{
 		CheckFrequency:  Duration{Duration: time.Minute * 5},
 		DefaultRunEvery: 1,
-		HTTPListen:      ":8070",
+		HTTPListen:      defaultHTTPListen,
 		DBConf: DBConf{
 			LedisDir:      "ledis_data",
 			LedisBindAddr: "127.0.0.1:9565",
@@ -199,6 +203,10 @@ func loadSystemConfig(conf string, isFileName bool) (*SystemConf, error) {
 		return sc, fmt.Errorf("undecoded fields in system configuration: %v", decodeMeta.Undecoded())
 	}
 	sc.md = decodeMeta
+	// clear default http listen if not explicitly specified
+	if !decodeMeta.IsDefined("HTTPListen") && decodeMeta.IsDefined("HTTPSListen") {
+		sc.HTTPListen = ""
+	}
 	return sc, nil
 }
 
