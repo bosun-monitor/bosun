@@ -25,6 +25,7 @@ import (
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
+	"bosun.org/snmp"
 	"bosun.org/util"
 	"github.com/BurntSushi/toml"
 	"github.com/facebookgo/httpcontrol"
@@ -122,6 +123,9 @@ func main() {
 	}
 	if conf.ColDir != "" {
 		collectors.InitPrograms(conf.ColDir)
+	}
+	if conf.SNMPTimeout > 0 {
+		snmp.Timeout = conf.SNMPTimeout
 	}
 	var err error
 	check := func(e error) {
