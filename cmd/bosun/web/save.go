@@ -9,7 +9,7 @@ import (
 	"github.com/MiniProfiler/go/miniprofiler"
 )
 
-func SaveConfig(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
+func SaveConfig(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	data := struct {
 		Config  string
 		User    string // should come from auth
@@ -19,18 +19,17 @@ func SaveConfig(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 	}{}
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&data); err != nil {
-		serveError(w, err)
-		return
+		return nil, err
 	}
 	err := schedule.RuleConf.SaveRawText(data.Config, data.Diff, data.User, data.Message, data.Other...)
 	if err != nil {
-		serveError(w, err)
-		return
+		return nil, err
 	}
 	fmt.Fprint(w, "save successful")
+	return nil, nil
 }
 
-func DiffConfig(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
+func DiffConfig(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	data := struct {
 		Config  string
 		User    string // should come from auth
@@ -39,15 +38,14 @@ func DiffConfig(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 	}{}
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&data); err != nil {
-		serveError(w, err)
-		return
+		return nil, err
 	}
 	diff, err := schedule.RuleConf.RawDiff(data.Config)
 	if err != nil {
-		serveError(w, err)
-		return
+		return nil, err
 	}
 	fmt.Fprint(w, diff)
+	return nil, nil
 }
 
 func ConfigRunningHash(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
@@ -59,19 +57,18 @@ func ConfigRunningHash(t miniprofiler.Timer, w http.ResponseWriter, r *http.Requ
 	}, nil
 }
 
-func BulkEdit(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
+func BulkEdit(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	bulkEdit := conf.BulkEditRequest{}
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&bulkEdit); err != nil {
-		serveError(w, err)
-		return
+		return nil, err
 	}
 	err := schedule.RuleConf.BulkEdit(bulkEdit)
 	if err != nil {
-		serveError(w, err)
-		return
+		return nil, err
 	}
 	fmt.Fprint(w, "edit successful")
+	return nil, nil
 }
 
 func SaveEnabled(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {

@@ -94,56 +94,68 @@ func Listen(httpAddr, httpsAddr, certFile, keyFile string, devMode bool, tsdbHos
 		}
 	}
 
+	baseChain := MiddlewareChain{miniprofileMiddleware, gzipMiddleware}
+	wrap := baseChain.Build()
+	wrapFunc := func(h http.HandlerFunc) http.Handler { return wrap(h) }
+
 	if tsdbHost != "" {
 		router.HandleFunc("/api/index", IndexTSDB)
 		router.Handle("/api/put", Relay(tsdbHost))
 	}
 
-	router.HandleFunc("/api/", APIRedirect)
-	router.Handle("/api/action", JSON(Action))
-	router.Handle("/api/alerts", JSON(Alerts))
-	router.Handle("/api/config", miniprofiler.NewHandler(Config))
-	router.Handle("/api/config_test", miniprofiler.NewHandler(ConfigTest))
-	router.Handle("/api/save_enabled", JSON(SaveEnabled))
+	// api routes have their own function signature. Using JSON as an adapter function of sorts
+	api := func(route string, f func(miniprofiler.Timer, http.ResponseWriter, *http.Request) (interface{}, error)) *mux.Route {
+		return router.Handle(route, wrap(JSON(f)))
+	}
+	// some routes directly implement http listener
+	plain := func(route string, h http.HandlerFunc) *mux.Route {
+		return router.Handle(route, wrap(h))
+	}
+	plain("/api/", APIRedirect)
+	api("/api/action", Action)
+	api("/api/alerts", Alerts)
+	api("/api/save_enabled", SaveEnabled)
+	api("/api/config", Config)
+	api("/api/config_test", ConfigTest)
 	if schedule.SystemConf.ReloadEnabled() { // Is true of save is enabled
-		router.Handle("/api/reload", JSON(Reload)).Methods(http.MethodPost)
+		api("/api/reload", Reload).Methods(http.MethodPost)
 	}
 	if schedule.SystemConf.SaveEnabled() {
-		router.Handle("/api/config/bulkedit", miniprofiler.NewHandler(BulkEdit)).Methods(http.MethodPost)
-		router.Handle("/api/config/save", miniprofiler.NewHandler(SaveConfig)).Methods(http.MethodPost)
-		router.Handle("/api/config/diff", miniprofiler.NewHandler(DiffConfig)).Methods(http.MethodPost)
-		router.Handle("/api/config/running_hash", JSON(ConfigRunningHash))
+		api("/api/config/bulkedit", BulkEdit).Methods(http.MethodPost)
+		api("/api/config/save", SaveConfig).Methods(http.MethodPost)
+		api("/api/config/diff", DiffConfig).Methods(http.MethodPost)
+		api("/api/config/running_hash", ConfigRunningHash)
 	}
-	router.Handle("/api/egraph/{bs}.{format:svg|png}", JSON(ExprGraph))
-	router.Handle("/api/errors", JSON(ErrorHistory))
-	router.Handle("/api/expr", JSON(Expr))
-	router.Handle("/api/graph", JSON(Graph))
-	router.Handle("/api/health", JSON(HealthCheck))
-	router.Handle("/api/host", JSON(Host))
-	router.Handle("/api/last", JSON(Last))
-	router.Handle("/api/quiet", JSON(Quiet))
-	router.Handle("/api/incidents", JSON(Incidents))
-	router.Handle("/api/incidents/open", JSON(ListOpenIncidents))
-	router.Handle("/api/incidents/events", JSON(IncidentEvents))
-	router.Handle("/api/metadata/get", JSON(GetMetadata))
-	router.Handle("/api/metadata/metrics", JSON(MetadataMetrics))
-	router.Handle("/api/metadata/put", JSON(PutMetadata))
-	router.Handle("/api/metadata/delete", JSON(DeleteMetadata)).Methods("DELETE")
-	router.Handle("/api/metric", JSON(UniqueMetrics))
-	router.Handle("/api/metric/{tagk}", JSON(MetricsByTagKey))
-	router.Handle("/api/metric/{tagk}/{tagv}", JSON(MetricsByTagPair))
-	router.Handle("/api/rule", JSON(Rule))
-	router.HandleFunc("/api/shorten", Shorten)
-	router.Handle("/api/silence/clear", JSON(SilenceClear))
-	router.Handle("/api/silence/get", JSON(SilenceGet))
-	router.Handle("/api/silence/set", JSON(SilenceSet))
-	router.Handle("/api/status", JSON(Status))
-	router.Handle("/api/tagk/{metric}", JSON(TagKeysByMetric))
-	router.Handle("/api/tagv/{tagk}", JSON(TagValuesByTagKey))
-	router.Handle("/api/tagv/{tagk}/{metric}", JSON(TagValuesByMetricTagKey))
-	router.Handle("/api/tagsets/{metric}", JSON(FilteredTagsetsByMetric))
-	router.Handle("/api/opentsdb/version", JSON(OpenTSDBVersion))
-	router.Handle("/api/annotate", JSON(AnnotateEnabled))
+	api("/api/egraph/{bs}.{format:svg|png}", ExprGraph)
+	api("/api/errors", ErrorHistory)
+	api("/api/expr", Expr)
+	api("/api/graph", Graph)
+	api("/api/health", HealthCheck)
+	api("/api/host", Host)
+	api("/api/last", Last)
+	api("/api/quiet", Quiet)
+	api("/api/incidents", Incidents)
+	api("/api/incidents/open", ListOpenIncidents)
+	api("/api/incidents/events", IncidentEvents)
+	api("/api/metadata/get", GetMetadata)
+	api("/api/metadata/metrics", MetadataMetrics)
+	api("/api/metadata/put", PutMetadata)
+	api("/api/metadata/delete", DeleteMetadata).Methods("DELETE")
+	api("/api/metric", UniqueMetrics)
+	api("/api/metric/{tagk}", MetricsByTagKey)
+	api("/api/metric/{tagk}/{tagv}", MetricsByTagPair)
+	api("/api/rule", Rule)
+	api("/api/shorten", Shorten)
+	api("/api/silence/clear", SilenceClear)
+	api("/api/silence/get", SilenceGet)
+	api("/api/silence/set", SilenceSet)
+	api("/api/status", Status)
+	api("/api/tagk/{metric}", TagKeysByMetric)
+	api("/api/tagv/{tagk}", TagValuesByTagKey)
+	api("/api/tagv/{tagk}/{metric}", TagValuesByMetricTagKey)
+	api("/api/tagsets/{metric}", FilteredTagsetsByMetric)
+	api("/api/opentsdb/version", OpenTSDBVersion)
+	api("/api/annotate", AnnotateEnabled)
 
 	// Annotations
 	if schedule.SystemConf.AnnotateEnabled() {
@@ -163,20 +175,21 @@ func Listen(httpAddr, httpsAddr, certFile, keyFile string, devMode bool, tsdbHos
 				time.Sleep(time.Second * 30)
 			}
 		}()
+		//TODO: kinda hard to wrap these calls with middleware.
 		web.AddRoutes(router, "/api", []backend.Backend{annotateBackend}, false, false)
-
 	}
 
 	router.HandleFunc("/api/version", Version)
-	router.Handle("/api/debug/schedlock", JSON(ScheduleLockStatus))
-	http.Handle("/", miniprofiler.NewHandler(Index))
-	http.Handle("/api/", router)
-	fs := http.FileServer(webFS)
-	http.Handle("/partials/", fs)
-	http.Handle("/static/", http.StripPrefix("/static/", fs))
-	http.Handle("/favicon.ico", fs)
-	slog.Infoln("tsdb host:", tsdbHost)
 
+	http.Handle("/", wrapFunc(Index))
+	http.Handle("/api/", router)
+
+	fs := http.FileServer(webFS)
+	http.Handle("/partials/", wrap(fs))
+	http.Handle("/static/", wrap(http.StripPrefix("/static/", fs)))
+	http.Handle("/favicon.ico", wrap(fs))
+
+	slog.Infoln("tsdb host:", tsdbHost)
 	errChan := make(chan error, 1)
 	if httpAddr != "" {
 		go func() {
@@ -290,7 +303,8 @@ type indexVariables struct {
 	Settings string
 }
 
-func Index(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
+func Index(w http.ResponseWriter, r *http.Request) {
+	t := miniprofiler.GetTimer(r)
 	if r.URL.Path == "/graph" {
 		r.ParseForm()
 		if _, present := r.Form["png"]; present {
@@ -347,26 +361,19 @@ func JSON(h func(miniprofiler.Timer, http.ResponseWriter, *http.Request) (interf
 			serveError(w, err)
 			return
 		}
-		var tw io.Writer = w
-		if strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
-			w.Header().Set("Content-Encoding", "gzip")
-			gz := gzip.NewWriter(w)
-			defer gz.Close()
-			tw = gz
-		}
 		if cb := r.FormValue("callback"); cb != "" {
 			w.Header().Add("Content-Type", "application/javascript")
-			tw.Write([]byte(cb + "("))
-			buf.WriteTo(tw)
-			tw.Write([]byte(")"))
+			w.Write([]byte(cb + "("))
+			buf.WriteTo(w)
+			w.Write([]byte(")"))
 			return
 		}
 		w.Header().Add("Content-Type", "application/json")
-		buf.WriteTo(tw)
+		buf.WriteTo(w)
 	})
 }
 
-func Shorten(w http.ResponseWriter, r *http.Request) {
+func Shorten(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	u := url.URL{
 		Scheme: "https",
 		Host:   "www.googleapis.com",
@@ -381,10 +388,8 @@ func Shorten(w http.ResponseWriter, r *http.Request) {
 		r.Referer(),
 	})
 	if err != nil {
-		serveError(w, err)
-		return
+		return nil, err
 	}
-
 	transport := &http.Transport{
 		Dial: (&net.Dialer{
 			Timeout:   30 * time.Second,
@@ -397,13 +402,13 @@ func Shorten(w http.ResponseWriter, r *http.Request) {
 	}
 	c := http.Client{Transport: transport}
 
-	req, err := c.Post(u.String(), "application/json", bytes.NewBuffer(j))
+	resp, err := c.Post(u.String(), "application/json", bytes.NewBuffer(j))
 	if err != nil {
-		serveError(w, err)
-		return
+		return nil, err
 	}
-	io.Copy(w, req.Body)
-	req.Body.Close()
+	io.Copy(w, resp.Body)
+	resp.Body.Close()
+	return nil, nil
 }
 
 type Health struct {
@@ -786,35 +791,34 @@ func SilenceClear(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) 
 	return nil, schedule.ClearSilence(id)
 }
 
-func ConfigTest(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
+func ConfigTest(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	b, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		serveError(w, err)
-		return
+		return nil, err
 	}
 	if len(b) == 0 {
-		serveError(w, fmt.Errorf("empty config"))
-		return
+		return nil, fmt.Errorf("empty config")
 	}
 	_, err = rule.NewConf("test", schedule.SystemConf.EnabledBackends(), string(b))
 	if err != nil {
-		fmt.Fprintf(w, err.Error())
+		return nil, err
 	}
+	return nil, nil
 }
 
-func Config(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
+func Config(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	var text string
 	var err error
 	if hash := r.FormValue("hash"); hash != "" {
 		text, err = schedule.DataAccess.Configs().GetTempConfig(hash)
 		if err != nil {
-			serveError(w, err)
-			return
+			return nil, err
 		}
 	} else {
 		text = schedule.RuleConf.GetRawText()
 	}
 	fmt.Fprint(w, text)
+	return nil, nil
 }
 
 func APIRedirect(w http.ResponseWriter, req *http.Request) {
