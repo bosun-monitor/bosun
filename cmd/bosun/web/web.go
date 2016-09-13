@@ -105,18 +105,18 @@ func Listen(httpAddr, httpsAddr, certFile, keyFile string, devMode bool, tsdbHos
 
 	// api routes have their own function signature. Using JSON as an adapter function of sorts
 	api := func(route string, f func(miniprofiler.Timer, http.ResponseWriter, *http.Request) (interface{}, error)) *mux.Route {
-		return router.Handle(route, wrap(JSON(f)))
+		return router.Handle(route, wrap(jsonWrapper(f)))
 	}
 	// some routes directly implement http listener
 	plain := func(route string, h http.HandlerFunc) *mux.Route {
 		return router.Handle(route, wrap(h))
 	}
-	plain("/api/", APIRedirect)
-	api("/api/action", Action)
-	api("/api/alerts", Alerts)
+	plain("/api/", apiRedirect)
+	api("/api/action", action)
+	api("/api/alerts", alerts)
 	api("/api/save_enabled", SaveEnabled)
-	api("/api/config", Config)
-	api("/api/config_test", ConfigTest)
+	api("/api/config", config)
+	api("/api/config_test", configTest)
 	if schedule.SystemConf.ReloadEnabled() { // Is true of save is enabled
 		api("/api/reload", Reload).Methods(http.MethodPost)
 	}
@@ -127,35 +127,35 @@ func Listen(httpAddr, httpsAddr, certFile, keyFile string, devMode bool, tsdbHos
 		api("/api/config/running_hash", ConfigRunningHash)
 	}
 	api("/api/egraph/{bs}.{format:svg|png}", ExprGraph)
-	api("/api/errors", ErrorHistory)
+	api("/api/errors", errorHistory)
 	api("/api/expr", Expr)
 	api("/api/graph", Graph)
-	api("/api/health", HealthCheck)
-	api("/api/host", Host)
-	api("/api/last", Last)
-	api("/api/quiet", Quiet)
-	api("/api/incidents", Incidents)
+	api("/api/health", healthCheck)
+	api("/api/host", host)
+	api("/api/last", last)
+	api("/api/quiet", quiet)
+	api("/api/incidents", incidents)
 	api("/api/incidents/open", ListOpenIncidents)
-	api("/api/incidents/events", IncidentEvents)
-	api("/api/metadata/get", GetMetadata)
-	api("/api/metadata/metrics", MetadataMetrics)
-	api("/api/metadata/put", PutMetadata)
-	api("/api/metadata/delete", DeleteMetadata).Methods("DELETE")
-	api("/api/metric", UniqueMetrics)
-	api("/api/metric/{tagk}", MetricsByTagKey)
-	api("/api/metric/{tagk}/{tagv}", MetricsByTagPair)
+	api("/api/incidents/events", incidentEvents)
+	api("/api/metadata/get", getMetadata)
+	api("/api/metadata/metrics", metadataMetrics)
+	api("/api/metadata/put", putMetadata)
+	api("/api/metadata/delete", deleteMetadata).Methods("DELETE")
+	api("/api/metric", uniqueMetrics)
+	api("/api/metric/{tagk}", metricsByTagKey)
+	api("/api/metric/{tagk}/{tagv}", metricsByTagPair)
 	api("/api/rule", Rule)
-	api("/api/shorten", Shorten)
-	api("/api/silence/clear", SilenceClear)
-	api("/api/silence/get", SilenceGet)
-	api("/api/silence/set", SilenceSet)
-	api("/api/status", Status)
-	api("/api/tagk/{metric}", TagKeysByMetric)
-	api("/api/tagv/{tagk}", TagValuesByTagKey)
-	api("/api/tagv/{tagk}/{metric}", TagValuesByMetricTagKey)
-	api("/api/tagsets/{metric}", FilteredTagsetsByMetric)
-	api("/api/opentsdb/version", OpenTSDBVersion)
-	api("/api/annotate", AnnotateEnabled)
+	api("/api/shorten", shorten)
+	api("/api/silence/clear", silenceClear)
+	api("/api/silence/get", silenceGet)
+	api("/api/silence/set", silenceSet)
+	api("/api/status", status)
+	api("/api/tagk/{metric}", tagKeysByMetric)
+	api("/api/tagv/{tagk}", tagValuesByTagKey)
+	api("/api/tagv/{tagk}/{metric}", tagValuesByMetricTagKey)
+	api("/api/tagsets/{metric}", filteredTagsetsByMetric)
+	api("/api/opentsdb/version", openTSDBVersion)
+	api("/api/annotate", annotateEnabled)
 
 	// Annotations
 	if schedule.SystemConf.AnnotateEnabled() {
@@ -181,7 +181,7 @@ func Listen(httpAddr, httpsAddr, certFile, keyFile string, devMode bool, tsdbHos
 
 	router.HandleFunc("/api/version", Version)
 
-	http.Handle("/", wrapFunc(Index))
+	http.Handle("/", wrapFunc(index))
 	http.Handle("/api/", router)
 
 	fs := http.FileServer(webFS)
@@ -303,7 +303,7 @@ type indexVariables struct {
 	Settings string
 }
 
-func Index(w http.ResponseWriter, r *http.Request) {
+func index(w http.ResponseWriter, r *http.Request) {
 	t := miniprofiler.GetTimer(r)
 	if r.URL.Path == "/graph" {
 		r.ParseForm()
@@ -345,7 +345,7 @@ func serveError(w http.ResponseWriter, err error) {
 	http.Error(w, err.Error(), http.StatusInternalServerError)
 }
 
-func JSON(h func(miniprofiler.Timer, http.ResponseWriter, *http.Request) (interface{}, error)) http.Handler {
+func jsonWrapper(h func(miniprofiler.Timer, http.ResponseWriter, *http.Request) (interface{}, error)) http.Handler {
 	return miniprofiler.NewHandler(func(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
 		d, err := h(t, w, r)
 		if err != nil {
@@ -373,7 +373,7 @@ func JSON(h func(miniprofiler.Timer, http.ResponseWriter, *http.Request) (interf
 	})
 }
 
-func Shorten(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func shorten(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	u := url.URL{
 		Scheme: "https",
 		Host:   "www.googleapis.com",
@@ -435,28 +435,28 @@ func Reload(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (inter
 
 }
 
-func Quiet(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func quiet(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	return schedule.GetQuiet(), nil
 }
 
-func HealthCheck(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func healthCheck(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	var h Health
 	h.RuleCheck = schedule.LastCheck.After(time.Now().Add(-schedule.SystemConf.GetCheckFrequency()))
 	return h, nil
 }
 
-func OpenTSDBVersion(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func openTSDBVersion(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	if schedule.SystemConf.GetTSDBContext() != nil {
 		return schedule.SystemConf.GetTSDBContext().Version(), nil
 	}
 	return opentsdb.Version{0, 0}, nil
 }
 
-func AnnotateEnabled(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func annotateEnabled(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	return schedule.SystemConf.AnnotateEnabled(), nil
 }
 
-func PutMetadata(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func putMetadata(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	d := json.NewDecoder(r.Body)
 	var ms []metadata.Metasend
 	if err := d.Decode(&ms); err != nil {
@@ -476,7 +476,7 @@ func PutMetadata(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (
 	return nil, nil
 }
 
-func DeleteMetadata(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func deleteMetadata(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	d := json.NewDecoder(r.Body)
 	var ms []struct {
 		Tags opentsdb.TagSet
@@ -494,7 +494,7 @@ func DeleteMetadata(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request
 	return nil, nil
 }
 
-func GetMetadata(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func getMetadata(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	tags := make(opentsdb.TagSet)
 	r.ParseForm()
 	vals := r.Form["tagv"]
@@ -512,7 +512,7 @@ type MetricMetaTagKeys struct {
 	TagKeys []string
 }
 
-func MetadataMetrics(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func metadataMetrics(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	metric := r.FormValue("metric")
 	if metric != "" {
 		m, err := schedule.MetadataMetrics(metric)
@@ -561,11 +561,11 @@ func MetadataMetrics(t miniprofiler.Timer, w http.ResponseWriter, r *http.Reques
 	return all, nil
 }
 
-func Alerts(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func alerts(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	return schedule.MarshalGroups(t, r.FormValue("filter"))
 }
 
-func IncidentEvents(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func incidentEvents(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	id := r.FormValue("id")
 	if id == "" {
 		return nil, fmt.Errorf("id must be specified")
@@ -577,7 +577,7 @@ func IncidentEvents(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request
 	return schedule.DataAccess.State().GetIncidentState(num)
 }
 
-func Incidents(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func incidents(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	// TODO: Incident Search
 	return nil, nil
 	//	alert := r.FormValue("alert")
@@ -609,7 +609,7 @@ func Incidents(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (in
 	//	return incidents, nil
 }
 
-func Status(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func status(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	r.ParseForm()
 	type ExtStatus struct {
 		AlertName string
@@ -655,7 +655,7 @@ func Status(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (inter
 	return m, nil
 }
 
-func Action(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func action(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	var data struct {
 		Type    string
 		User    string
@@ -724,7 +724,7 @@ func (m MultiError) Error() string {
 	return fmt.Sprint(map[string]error(m))
 }
 
-func SilenceGet(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func silenceGet(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	endingAfter := time.Now().UTC().Unix()
 	if t := r.FormValue("t"); t != "" {
 		endingAfter, _ = strconv.ParseInt(t, 10, 64)
@@ -743,7 +743,7 @@ var silenceLayouts = []string{
 	"2006-01-02 15:04",
 }
 
-func SilenceSet(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func silenceSet(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	var start, end time.Time
 	var err error
 	var data map[string]string
@@ -786,12 +786,12 @@ func SilenceSet(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (i
 	return schedule.AddSilence(start, end, data["alert"], data["tags"], data["forget"] == "true", len(data["confirm"]) > 0, data["edit"], data["user"], data["message"])
 }
 
-func SilenceClear(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func silenceClear(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	id := r.FormValue("id")
 	return nil, schedule.ClearSilence(id)
 }
 
-func ConfigTest(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func configTest(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	b, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		return nil, err
@@ -806,7 +806,7 @@ func ConfigTest(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (i
 	return nil, nil
 }
 
-func Config(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func config(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	var text string
 	var err error
 	if hash := r.FormValue("hash"); hash != "" {
@@ -821,18 +821,18 @@ func Config(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (inter
 	return nil, nil
 }
 
-func APIRedirect(w http.ResponseWriter, req *http.Request) {
+func apiRedirect(w http.ResponseWriter, req *http.Request) {
 	http.Redirect(w, req, "http://bosun.org/api.html", 302)
 }
 
-func Host(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func host(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	return schedule.Host(r.FormValue("filter"))
 }
 
-// Last returns the most recent datapoint for a metric+tagset. The metric+tagset
+// last returns the most recent datapoint for a metric+tagset. The metric+tagset
 // string should be formated like os.cpu{host=foo}. The tag porition expects the
 // that the keys will be in alphabetical order.
-func Last(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func last(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	var counter bool
 	if r.FormValue("counter") != "" {
 		counter = true
@@ -851,19 +851,7 @@ func Version(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, version.GetVersionInfo("bosun"))
 }
 
-func ScheduleLockStatus(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	data := struct {
-		Process string
-		HeldFor string
-	}{}
-	if holder, since := schedule.GetLockStatus(); holder != "" {
-		data.Process = holder
-		data.HeldFor = time.Now().Sub(since).String()
-	}
-	return data, nil
-}
-
-func ErrorHistory(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func errorHistory(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	if r.Method == "GET" {
 		data, err := schedule.DataAccess.Errors().GetFullErrorHistory()
 		if err != nil {
