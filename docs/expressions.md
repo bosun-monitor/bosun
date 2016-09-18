@@ -621,6 +621,24 @@ merge(series("foo=bar", $hourAgo, 5, $now, 10), series("foo=bar2", $hourAgo, 6, 
 
 Shift takes a seriesSet and shifts the time forward by the value of dur ([OpenTSDB duration string](http://opentsdb.net/docs/build/html/user_guide/query/dates.html)) and adds a tag for representing the shift duration. This is meant so you can overlay times visually in a graph.
 
+## leftjoin(tagsCSV string, dataCSV string, ...numberSet) table
+leftjoin takes multiple numberSets and joins them to the first numberSet to form a table. tagsCSV is a string that is comma delimited, and should match tags from query that you want to display (i.e., "host,disk"). dataCSV is a list of column names for each numberset, so it should have the same number of labels as there are numberSets.
+
+The only current intended use case is for constructing "Table" panels in Grafana.
+
+For Example, the following in Grafana would create a table that shows the CPU of each host for the current period, the cpu for the adjacent previous period, and the difference between them:
+
+```
+$cpuMetric = "avg:$ds-avg:rate{counter,,1}:os.cpu{host=*bosun*}{}"
+$currentCPU = avg(q($cpuMetric, "$start", ""))
+$span = (epoch() - (epoch() - d("$start")))
+$previousCPU = avg(q($cpuMetric, tod($span*2), "$start"))
+$delta = $currentCPU - $previousCPU
+leftjoin("host", "Current CPU,Previous CPU,Change", $currentCPU, $previousCPU, $delta)
+```
+
+Note that in the above example is intended to be used in Grafana via the Bosun datasource, so `$start` and `$ds` are replaced by Grafana before the query is sent to Bosun.
+
 ## merge(SeriesSet...) seriesSet
 
 Merge takes multiple seriesSets and merges them into a single seriesSet. The function will error if any of the tag sets (groups) are identical. This is meant so you can display multiple seriesSets in a single expression graph.

@@ -224,6 +224,14 @@ func (e ESIndexer) MarshalJSON() ([]byte, error) {
 	return json.Marshal("ESGenerator")
 }
 
+type Table struct {
+	Columns []string
+	Rows    [][]interface{}
+}
+
+func (t Table) Type() models.FuncType { return models.TypeTable }
+func (t Table) Value() interface{}    { return t }
+
 type SortablePoint struct {
 	T time.Time
 	V float64

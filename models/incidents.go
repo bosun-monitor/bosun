@@ -122,6 +122,8 @@ func (f FuncType) String() string {
 		return "numberexpr"
 	case TypeSeriesExpr:
 		return "seriesexpr"
+	case TypeTable:
+		return "table"
 	default:
 		return "unknown"
 	}
@@ -136,6 +138,7 @@ const (
 	TypeESIndexer
 	TypeNumberExpr
 	TypeSeriesExpr // No implmentation yet
+	TypeTable
 	TypeUnexpected
 )
 
