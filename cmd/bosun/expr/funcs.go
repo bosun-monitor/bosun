@@ -611,13 +611,13 @@ func LeftJoin(e *State, T miniprofiler.Timer, keysCSV, columnsCSV string, rowDat
 	}
 	keyColumns := strings.Split(keysCSV, ",")
 	dataColumns := strings.Split(columnsCSV, ",")
-	keyWidth := len(keyColumns)
-	keyIndex := make(map[string]int)
-	for i, v := range keyColumns {
-		keyIndex[v] = i
-	}
 	if len(dataColumns) != dataWidth {
 		return res, fmt.Errorf("mismatch in length of data rows and data labels")
+	}
+	keyWidth := len(keyColumns)
+	keyIndex := make(map[string]int, keyWidth)
+	for i, v := range keyColumns {
+		keyIndex[v] = i
 	}
 	t := Table{}
 	t.Columns = append(keyColumns, dataColumns...)
