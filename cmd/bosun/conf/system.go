@@ -41,6 +41,7 @@ type SystemConf struct {
 	InfluxConf   InfluxConf
 	ElasticConf  ElasticConf
 	LogStashConf LogStashConf
+	SQLDbs       map[string]SQLDb
 
 	AnnotateConf AnnotateConf
 
@@ -100,6 +101,12 @@ type AnnotateConf struct {
 // LogStashConf contains a list of elastic hosts for the depcrecated logstash functions
 type LogStashConf struct {
 	Hosts expr.LogstashElasticHosts
+}
+
+//SQLDb is information needed to connect to a sql database. Connection string is specific to each driver.
+type SQLDb struct {
+	ConnectionString string
+	Driver           string
 }
 
 // ElasticConf contains configuration for an elastic host that Bosun can query

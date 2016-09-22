@@ -1002,6 +1002,7 @@ func (c *Conf) GetFuncs(backends conf.EnabledBackends) map[string]eparse.Func {
 	if backends.Influx {
 		merge(expr.Influx)
 	}
+	merge(expr.SQLFuncs)
 	return funcs
 }
 

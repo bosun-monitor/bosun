@@ -140,6 +140,7 @@ const (
 	TypeSeriesExpr // No implmentation yet
 	TypeTable
 	TypeUnexpected
+	TypeSQLConfig
 )
 
 type Status int

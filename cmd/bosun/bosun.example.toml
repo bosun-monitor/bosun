@@ -86,3 +86,11 @@ CommandHookPath = "/Users/kbrandt/src/hook/hook"
 	URL = "https://myInfluxServer:1234"
 	Timeout = "5m"
 	UnsafeSSL = true
+
+[SQLDbs]
+    [SQLDbs.dbName]
+        ConnectionString = "abc"
+        Driver = "mssql"
+    [SQLDbs.foobar]
+        ConnectionString = "abc"
+        Driver = "postgres"

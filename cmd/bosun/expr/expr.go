@@ -773,5 +773,8 @@ func extract(res *Results) interface{} {
 	if len(res.Results) == 1 && res.Results[0].Type() == models.TypeNumberExpr {
 		return res.Results[0].Value.Value()
 	}
+	if len(res.Results) == 1 && res.Results[0].Type() == models.TypeSQLConfig {
+		return res.Results[0].Value.Value()
+	}
 	return res
 }
