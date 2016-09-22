@@ -1,8 +1,11 @@
 package web
 
 import (
+	"context"
 	"net/http"
+	"net/url"
 
+	"bosun.org/cmd/bosun/web/auth"
 	"bosun.org/collect"
 	"bosun.org/opentsdb"
 	"github.com/MiniProfiler/go/miniprofiler"
@@ -38,20 +41,30 @@ func (c MiddlewareChain) Build() func(http.Handler) http.Handler {
 	}
 }
 
-// func authMiddleware(required auth.PermissionLevel, provider auth.Provider) MiddlewareFunc {
-// 	return func(next http.HandlerFunc) http.Handler {
-// 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-// 			user, _ := provider.GetUser(r)
-// 			if user != nil && user.Permissions >= required {
-// 				newR := r.WithContext(context.WithValue(r.Context(), "user", user))
-// 				next(w, newR)
-// 				return
-// 			}
-// 			//auth failure. Redirect to login
-// 			http.Redirect(w, r, "/login/?u="+url.QueryEscape(r.URL.String()), http.StatusFound)
-// 		})
-// 	}
-// }
+func authMiddleware(required auth.PermissionLevel, provider auth.Provider) MiddlewareFunc {
+	return func(next http.HandlerFunc) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			user, err := provider.GetUser(r)
+			if err != nil {
+				//log maybe
+			}
+			if user == nil {
+				user = &auth.User{
+					Name:        "",
+					AuthMethod:  "none",
+					Permissions: auth.None,
+				}
+			}
+			if user.Permissions >= required {
+				newR := r.WithContext(context.WithValue(r.Context(), "user", user))
+				next(w, newR)
+				return
+			}
+			//auth failure. Redirect to login if html, or 403 for api
+			http.Redirect(w, r, "/login/?u="+url.QueryEscape(r.URL.String()), http.StatusFound)
+		})
+	}
+}
 
 // handle gzip with third-party package
 func gzipMiddleware(next http.HandlerFunc) http.Handler {
