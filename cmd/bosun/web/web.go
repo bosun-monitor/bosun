@@ -94,9 +94,9 @@ func Listen(httpAddr, httpsAddr, certFile, keyFile string, devMode bool, tsdbHos
 		}
 	}
 
-	baseChain := MiddlewareChain{miniprofileMiddleware, gzipMiddleware}
+	// middlewares everything gets
+	baseChain := MiddlewareChain{miniprofileMiddleware, gzipMiddleware, protocolLoggingMiddleware}
 	wrap := baseChain.Build()
-	wrapFunc := func(h http.HandlerFunc) http.Handler { return wrap(h) }
 
 	if tsdbHost != "" {
 		router.HandleFunc("/api/index", IndexTSDB)
@@ -111,6 +111,7 @@ func Listen(httpAddr, httpsAddr, certFile, keyFile string, devMode bool, tsdbHos
 	plain := func(route string, h http.HandlerFunc) *mux.Route {
 		return router.Handle(route, wrap(h))
 	}
+
 	plain("/api/", apiRedirect)
 	api("/api/action", action)
 	api("/api/alerts", alerts)
@@ -181,7 +182,7 @@ func Listen(httpAddr, httpsAddr, certFile, keyFile string, devMode bool, tsdbHos
 
 	router.HandleFunc("/api/version", Version)
 
-	http.Handle("/", wrapFunc(index))
+	http.Handle("/", wrap(http.HandlerFunc(index)))
 	http.Handle("/api/", router)
 
 	fs := http.FileServer(webFS)
@@ -346,7 +347,8 @@ func serveError(w http.ResponseWriter, err error) {
 }
 
 func jsonWrapper(h func(miniprofiler.Timer, http.ResponseWriter, *http.Request) (interface{}, error)) http.Handler {
-	return miniprofiler.NewHandler(func(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t := miniprofiler.GetTimer(r)
 		d, err := h(t, w, r)
 		if err != nil {
 			serveError(w, err)

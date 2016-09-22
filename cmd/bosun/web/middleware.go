@@ -68,7 +68,7 @@ func protocolLoggingMiddleware(next http.HandlerFunc) http.Handler {
 		if r.TLS != nil {
 			proto = "https"
 		}
-		collect.Add("bosun.requests", opentsdb.TagSet{"proto": proto}, 1)
+		collect.Add("requests_by_protocol", opentsdb.TagSet{"proto": proto}, 1)
 		next(w, r)
 	})
 }
