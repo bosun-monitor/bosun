@@ -390,6 +390,9 @@ func ESStat(e *State, T miniprofiler.Timer, indexer ESIndexer, keystring string,
 	return ESDateHistogram(e, T, indexer, keystring, filter.Query, interval, sduration, eduration, field, rstat, 0)
 }
 
+// 2016-09-22T22:26:14.679270711Z
+const elasticRFC3339 = "date_optional_time"
+
 func ESDateHistogram(e *State, T miniprofiler.Timer, indexer ESIndexer, keystring string, filter elastic.Query, interval, sduration, eduration, stat_field, rstat string, size int) (r *Results, err error) {
 	r = new(Results)
 	req, err := ESBaseQuery(e.now, indexer, filter, sduration, eduration, size)
@@ -397,7 +400,7 @@ func ESDateHistogram(e *State, T miniprofiler.Timer, indexer ESIndexer, keystrin
 		return nil, err
 	}
 	// Extended bounds and min doc count are required to get values back when the bucket value is 0
-	ts := elastic.NewDateHistogramAggregation().Field(indexer.TimeField).Interval(strings.Replace(interval, "M", "n", -1)).MinDocCount(0).ExtendedBoundsMin(req.Start).ExtendedBoundsMax(req.End)
+	ts := elastic.NewDateHistogramAggregation().Field(indexer.TimeField).Interval(strings.Replace(interval, "M", "n", -1)).MinDocCount(0).ExtendedBoundsMin(req.Start).ExtendedBoundsMax(req.End).Format(elasticRFC3339)
 	if stat_field != "" {
 		ts = ts.SubAggregation("stats", elastic.NewExtendedStatsAggregation().Field(stat_field))
 		switch rstat {
@@ -515,7 +518,7 @@ func ESBaseQuery(now time.Time, indexer ESIndexer, filter elastic.Query, sdurati
 		Source:  elastic.NewSearchSource().Size(size),
 	}
 	var q elastic.Query
-	q = elastic.NewRangeQuery(indexer.TimeField).Gte(st).Lte(en)
+	q = elastic.NewRangeQuery(indexer.TimeField).Gte(st).Lte(en).Format(elasticRFC3339)
 	r.Source = r.Source.Query(elastic.NewBoolQuery().Must(q, filter))
 	return &r, nil
 }
