@@ -7,6 +7,7 @@ import (
 	"log"
 	"time"
 
+	"bosun.org/cmd/bosun/web/auth"
 	"bosun.org/collect"
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
@@ -24,6 +25,7 @@ type DataAccess interface {
 	State() StateDataAccess
 	Silence() SilenceDataAccess
 	Notifications() NotificationDataAccess
+	Tokens() auth.TokenDataAccess
 }
 
 type MetadataDataAccess interface {

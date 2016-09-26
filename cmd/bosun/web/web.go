@@ -18,9 +18,11 @@ import (
 	"time"
 
 	"bosun.org/_version"
+	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/conf/rule"
 	"bosun.org/cmd/bosun/database"
 	"bosun.org/cmd/bosun/sched"
+	"bosun.org/cmd/bosun/web/auth"
 	"bosun.org/collect"
 	"bosun.org/metadata"
 	"bosun.org/models"
@@ -66,7 +68,7 @@ func init() {
 		"HTTP response codes from the backend server for request relayed through Bosun.")
 }
 
-func Listen(httpAddr, httpsAddr, certFile, keyFile string, devMode bool, tsdbHost string, reloadFunc func() error) error {
+func Listen(httpAddr, httpsAddr, certFile, keyFile string, devMode bool, tsdbHost string, reloadFunc func() error, authConfig conf.AuthConf) error {
 	if devMode {
 		slog.Infoln("using local web assets")
 	}
@@ -93,10 +95,13 @@ func Listen(httpAddr, httpsAddr, certFile, keyFile string, devMode bool, tsdbHos
 			return tpl
 		}
 	}
+	provider := buildAuth(authConfig)
 
 	// middlewares everything gets
 	baseChain := MiddlewareChain{miniprofileMiddleware, gzipMiddleware, protocolLoggingMiddleware}
-	wrap := baseChain.Build()
+	noAuth := baseChain.Extend(authMiddleware(auth.None, provider))
+	readAuth := baseChain.Extend(authMiddleware(auth.Reader, provider))
+	writeAuth := baseChain.Extend(authMiddleware(auth.Admin, provider))
 
 	if tsdbHost != "" {
 		router.HandleFunc("/api/index", IndexTSDB)
@@ -105,58 +110,68 @@ func Listen(httpAddr, httpsAddr, certFile, keyFile string, devMode bool, tsdbHos
 
 	// api routes have their own function signature. Using JSON as an adapter function of sorts
 	api := func(route string, f func(miniprofiler.Timer, http.ResponseWriter, *http.Request) (interface{}, error)) *mux.Route {
-		return router.Handle(route, wrap(jsonWrapper(f)))
+		return router.Handle(route, noAuth.Build()(jsonWrapper(f)))
 	}
-	// some routes directly implement http listener
-	plain := func(route string, h http.HandlerFunc) *mux.Route {
-		return router.Handle(route, wrap(h))
+	apiR := func(route string, f func(miniprofiler.Timer, http.ResponseWriter, *http.Request) (interface{}, error)) *mux.Route {
+		return router.Handle(route, readAuth.Build()(jsonWrapper(f)))
+	}
+	apiW := func(route string, f func(miniprofiler.Timer, http.ResponseWriter, *http.Request) (interface{}, error)) *mux.Route {
+		return router.Handle(route, writeAuth.Build()(jsonWrapper(f)))
 	}
 
+	// some routes directly implement http listener
+	wrap := noAuth.Build()
+	wrapR := readAuth.Build()
+	plain := func(route string, h http.HandlerFunc) *mux.Route {
+		return router.Handle(route, noAuth.Build()(h))
+	}
+
+	http.Handle("/login/", provider.LoginHandler())
 	plain("/api/", apiRedirect)
-	api("/api/action", action)
-	api("/api/alerts", alerts)
-	api("/api/save_enabled", SaveEnabled)
-	api("/api/config", config)
-	api("/api/config_test", configTest)
+	apiW("/api/action", action)
+	apiR("/api/alerts", alerts)
+	apiR("/api/save_enabled", SaveEnabled)
+	apiR("/api/config", config)
+	apiR("/api/config_test", configTest)
 	if schedule.SystemConf.ReloadEnabled() { // Is true of save is enabled
-		api("/api/reload", Reload).Methods(http.MethodPost)
+		apiW("/api/reload", Reload).Methods(http.MethodPost)
 	}
 	if schedule.SystemConf.SaveEnabled() {
-		api("/api/config/bulkedit", BulkEdit).Methods(http.MethodPost)
-		api("/api/config/save", SaveConfig).Methods(http.MethodPost)
-		api("/api/config/diff", DiffConfig).Methods(http.MethodPost)
-		api("/api/config/running_hash", ConfigRunningHash)
+		apiW("/api/config/bulkedit", BulkEdit).Methods(http.MethodPost)
+		apiW("/api/config/save", SaveConfig).Methods(http.MethodPost)
+		apiR("/api/config/diff", DiffConfig).Methods(http.MethodPost)
+		apiR("/api/config/running_hash", ConfigRunningHash)
 	}
-	api("/api/egraph/{bs}.{format:svg|png}", ExprGraph)
-	api("/api/errors", errorHistory)
-	api("/api/expr", Expr)
-	api("/api/graph", Graph)
+	apiR("/api/egraph/{bs}.{format:svg|png}", ExprGraph)
+	apiR("/api/errors", errorHistory)
+	apiR("/api/expr", Expr)
+	apiR("/api/graph", Graph)
 	api("/api/health", healthCheck)
-	api("/api/host", host)
-	api("/api/last", last)
-	api("/api/quiet", quiet)
-	api("/api/incidents", incidents)
-	api("/api/incidents/open", ListOpenIncidents)
-	api("/api/incidents/events", incidentEvents)
-	api("/api/metadata/get", getMetadata)
-	api("/api/metadata/metrics", metadataMetrics)
-	api("/api/metadata/put", putMetadata)
-	api("/api/metadata/delete", deleteMetadata).Methods("DELETE")
-	api("/api/metric", uniqueMetrics)
-	api("/api/metric/{tagk}", metricsByTagKey)
-	api("/api/metric/{tagk}/{tagv}", metricsByTagPair)
-	api("/api/rule", Rule)
-	api("/api/shorten", shorten)
-	api("/api/silence/clear", silenceClear)
-	api("/api/silence/get", silenceGet)
-	api("/api/silence/set", silenceSet)
-	api("/api/status", status)
-	api("/api/tagk/{metric}", tagKeysByMetric)
-	api("/api/tagv/{tagk}", tagValuesByTagKey)
-	api("/api/tagv/{tagk}/{metric}", tagValuesByMetricTagKey)
-	api("/api/tagsets/{metric}", filteredTagsetsByMetric)
-	api("/api/opentsdb/version", openTSDBVersion)
-	api("/api/annotate", annotateEnabled)
+	apiR("/api/host", host)
+	apiR("/api/last", last)
+	apiR("/api/quiet", quiet)
+	apiR("/api/incidents", incidents)
+	apiR("/api/incidents/open", ListOpenIncidents)
+	apiR("/api/incidents/events", incidentEvents)
+	apiR("/api/metadata/get", getMetadata)
+	apiR("/api/metadata/metrics", metadataMetrics)
+	apiW("/api/metadata/put", putMetadata) //TODO: does this need write access?
+	apiW("/api/metadata/delete", deleteMetadata).Methods("DELETE")
+	apiR("/api/metric", uniqueMetrics)
+	apiR("/api/metric/{tagk}", metricsByTagKey)
+	apiR("/api/metric/{tagk}/{tagv}", metricsByTagPair)
+	apiR("/api/rule", Rule)
+	apiR("/api/shorten", shorten)
+	apiW("/api/silence/clear", silenceClear)
+	apiR("/api/silence/get", silenceGet)
+	apiW("/api/silence/set", silenceSet)
+	apiR("/api/status", status)
+	apiR("/api/tagk/{metric}", tagKeysByMetric)
+	apiR("/api/tagv/{tagk}", tagValuesByTagKey)
+	apiR("/api/tagv/{tagk}/{metric}", tagValuesByMetricTagKey)
+	apiR("/api/tagsets/{metric}", filteredTagsetsByMetric)
+	apiR("/api/opentsdb/version", openTSDBVersion)
+	apiR("/api/annotate", annotateEnabled)
 
 	// Annotations
 	if schedule.SystemConf.AnnotateEnabled() {
@@ -180,12 +195,14 @@ func Listen(httpAddr, httpsAddr, certFile, keyFile string, devMode bool, tsdbHos
 		web.AddRoutes(router, "/api", []backend.Backend{annotateBackend}, false, false)
 	}
 
-	router.HandleFunc("/api/version", Version)
+	plain("/api/version", Version)
 
-	http.Handle("/", wrap(http.HandlerFunc(index)))
+	http.Handle("/", wrapR(http.HandlerFunc(index)))
+
 	http.Handle("/api/", router)
 
 	fs := http.FileServer(webFS)
+
 	http.Handle("/partials/", wrap(fs))
 	http.Handle("/static/", wrap(http.StripPrefix("/static/", fs)))
 	http.Handle("/favicon.ico", wrap(fs))
@@ -208,6 +225,32 @@ func Listen(httpAddr, httpsAddr, certFile, keyFile string, devMode bool, tsdbHos
 		}()
 	}
 	return <-errChan
+}
+
+func buildAuth(cfg conf.AuthConf) auth.Provider {
+	providers := []auth.Provider{}
+	if cfg.LDAPServer != "" {
+		grps := make([]*auth.LdapGroup, len(cfg.Groups))
+		for i, g := range cfg.Groups {
+			grps[i] = &auth.LdapGroup{
+				Path:  g.Path,
+				Level: auth.Permission(g.AccesLevel),
+			}
+		}
+		p := auth.NewLdap(cfg.LDAPServer, cfg.Domain, grps, cfg.RootSearchPath, cfg.CookieSecret)
+		providers = append(providers, p)
+	}
+	if cfg.TokenSecret != "" {
+		tok := auth.NewToken(cfg.TokenSecret, nil)
+		providers = append(providers, tok)
+	}
+	if len(providers) == 1 {
+		return providers[0]
+	}
+	if len(providers) > 1 {
+		return auth.MultipleProviders(providers)
+	}
+	return auth.NoAuth{}
 }
 
 type relayProxy struct {

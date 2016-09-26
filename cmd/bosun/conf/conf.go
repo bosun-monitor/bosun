@@ -63,6 +63,7 @@ type SystemConfProvider interface {
 
 	SetTSDBHost(tsdbHost string)
 	GetTSDBHost() string
+	GetAuthConfig() AuthConf
 
 	GetLogstashElasticHosts() expr.LogstashElasticHosts
 	GetAnnotateElasticHosts() expr.ElasticHosts

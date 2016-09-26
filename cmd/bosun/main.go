@@ -214,7 +214,7 @@ func main() {
 	ruleProvider.SetReload(reload)
 
 	go func() {
-		slog.Fatal(web.Listen(sysProvider.GetHTTPListen(), sysProvider.GetHTTPSListen(), sysProvider.GetTLSCertFile(), sysProvider.GetTLSKeyFile(), *flagDev, sysProvider.GetTSDBHost(), reload))
+		slog.Fatal(web.Listen(sysProvider.GetHTTPListen(), sysProvider.GetHTTPSListen(), sysProvider.GetTLSCertFile(), sysProvider.GetTLSKeyFile(), *flagDev, sysProvider.GetTSDBHost(), reload, sysProvider.GetAuthConfig()))
 	}()
 	go func() {
 		if !*flagNoChecks {

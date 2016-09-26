@@ -2,6 +2,7 @@ package auth
 
 import (
 	"net/http"
+	"strings"
 )
 
 // PermissionLevel is a level of permission required for an operation
@@ -26,6 +27,18 @@ func (p PermissionLevel) String() string {
 		return "Admin"
 	}
 	return "Unknown"
+}
+
+func Permission(s string) PermissionLevel {
+	switch strings.ToLower(s) {
+	case "none":
+		return None
+	case "read":
+		return Reader
+	case "admin":
+		return Admin
+	}
+	return None
 }
 
 // User represents a "user" with their name and Permissions

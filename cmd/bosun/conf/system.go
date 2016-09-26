@@ -45,6 +45,8 @@ type SystemConf struct {
 	ElasticConf  ElasticConf
 	LogStashConf LogStashConf
 
+	AuthConf AuthConf
+
 	AnnotateConf AnnotateConf
 
 	EnableSave      bool
@@ -103,6 +105,21 @@ type AnnotateConf struct {
 // LogStashConf contains a list of elastic hosts for the depcrecated logstash functions
 type LogStashConf struct {
 	Hosts expr.LogstashElasticHosts
+}
+
+type AuthConf struct {
+	LDAPServer     string
+	Groups         []*LDAPGroup
+	RootSearchPath string
+	Domain         string
+	CookieSecret   string //secret string to encrypt cookies
+
+	TokenSecret string //secret string to encrypt. Must be supplied to enable token based auth
+}
+
+type LDAPGroup struct {
+	Path       string
+	AccesLevel string //Read or Admin
 }
 
 // ElasticConf contains configuration for an elastic host that Bosun can query
@@ -286,6 +303,10 @@ func (sc *SystemConf) GetRedisDb() int {
 // GetRedisPassword returns the password that should be used to connect to redis
 func (sc *SystemConf) GetRedisPassword() string {
 	return sc.DBConf.RedisPassword
+}
+
+func (sc *SystemConf) GetAuthConfig() AuthConf {
+	return sc.AuthConf
 }
 
 // GetTimeAndDate returns the http://www.timeanddate.com/ that should be available to the UI

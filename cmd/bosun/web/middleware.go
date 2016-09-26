@@ -2,8 +2,10 @@ package web
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"bosun.org/cmd/bosun/web/auth"
 	"bosun.org/collect"
@@ -44,7 +46,9 @@ func (c MiddlewareChain) Build() func(http.Handler) http.Handler {
 func authMiddleware(required auth.PermissionLevel, provider auth.Provider) MiddlewareFunc {
 	return func(next http.HandlerFunc) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			fmt.Printf("ASDASDASDAd %T\n", provider)
 			user, err := provider.GetUser(r)
+			fmt.Println(user, err)
 			if err != nil {
 				//log maybe
 			}
@@ -55,13 +59,20 @@ func authMiddleware(required auth.PermissionLevel, provider auth.Provider) Middl
 					Permissions: auth.None,
 				}
 			}
+			fmt.Println(user, user.Permissions, required)
 			if user.Permissions >= required {
 				newR := r.WithContext(context.WithValue(r.Context(), "user", user))
 				next(w, newR)
 				return
 			}
 			//auth failure. Redirect to login if html, or 403 for api
-			http.Redirect(w, r, "/login/?u="+url.QueryEscape(r.URL.String()), http.StatusFound)
+			if strings.Contains(r.Header.Get("Accept"), "html") {
+				http.Redirect(w, r, "/login/?u="+url.QueryEscape(r.URL.String()), http.StatusFound)
+				return
+			}
+			http.Error(w, "Not authorized", 403)
+			return
+
 		})
 	}
 }

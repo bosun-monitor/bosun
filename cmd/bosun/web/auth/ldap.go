@@ -16,10 +16,11 @@ import (
 )
 
 type ldapProvider struct {
-	LdapAddr string
-	Groups   []*LdapGroup
-	Domain   string
-	s        *securecookie.SecureCookie
+	LdapAddr       string
+	Groups         []*LdapGroup
+	Domain         string
+	RootSearchPath string
+	s              *securecookie.SecureCookie
 }
 
 type LdapGroup struct {
@@ -35,7 +36,7 @@ func (a byPermission) Less(i, j int) bool { return a[i].Level < a[j].Level }
 
 const ldapCookieName = "ldap-auth"
 
-func NewLdap(addr string, domain string, groups []*LdapGroup, secret string) Provider {
+func NewLdap(addr string, domain string, groups []*LdapGroup, rootSearch, secret string) Provider {
 	//derive hash and block keys from secret string
 	hkey := sha256.Sum256([]byte(secret))
 	bkey := sha256.Sum256([]byte(hkey[:]))
@@ -43,10 +44,11 @@ func NewLdap(addr string, domain string, groups []*LdapGroup, secret string) Pro
 	s.SetSerializer(securecookie.JSONEncoder{})
 	sort.Sort(sort.Reverse(byPermission(groups)))
 	return &ldapProvider{
-		LdapAddr: addr,
-		Groups:   groups,
-		Domain:   domain,
-		s:        s,
+		LdapAddr:       addr,
+		Groups:         groups,
+		Domain:         domain,
+		RootSearchPath: rootSearch,
+		s:              s,
 	}
 }
 
@@ -130,12 +132,11 @@ func (l *ldapProvider) Authorize(un, pw string) (PermissionLevel, error) {
 		//no groups specified. Assume anyone who can bind is an admin
 		return Admin, nil
 	}
-	rootSearch := "DC=ds,DC=stackexchange,DC=com"
 	for _, group := range l.Groups {
 		if group.Path == "*" {
 			return group.Level, nil
 		}
-		isMember, err := checkGroupMembership(un, conn, rootSearch, map[string]bool{}, []string{group.Path})
+		isMember, err := checkGroupMembership(un, conn, l.RootSearchPath, map[string]bool{}, []string{group.Path})
 		if err != nil {
 			slog.Error("Error checking group membership", err)
 			continue
@@ -155,6 +156,7 @@ func checkGroupMembership(un string, conn *ldap.Conn, rootSearch string, already
 		alreadySearched[g] = true
 		grps[i] = fmt.Sprintf("(memberof=%s)", g)
 	}
+	//find all users or groups that are direct members of ANY of the given groups
 	searchRequest := ldap.NewSearchRequest(
 		rootSearch,
 		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
@@ -170,9 +172,11 @@ func checkGroupMembership(un string, conn *ldap.Conn, rootSearch string, already
 	for _, ent := range sr.Entries {
 		objType := ent.Attributes[0].Values[1]
 		acctName := ent.Attributes[1].Values[0]
+		//a group we have not seen. Add it to the next search batch.
 		if objType == "group" && !alreadySearched[ent.DN] {
 			nextSearches = append(nextSearches, ent.DN)
 		}
+		//a user with the correct name. We found it!
 		if objType == "person" && acctName == un {
 			return true, nil
 		}
@@ -183,7 +187,7 @@ func checkGroupMembership(un string, conn *ldap.Conn, rootSearch string, already
 	return false, nil
 }
 
-// login form and css from getbootstrap.com/examples/signin/
+// login form and css stolen and adapted from getbootstrap.com/examples/signin/
 var ldapLoginForm = template.Must(template.New("").Parse(`
 <html>
 <head>
