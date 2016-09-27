@@ -10,6 +10,7 @@ import (
 	"bosun.org/models"
 	"bosun.org/opentsdb"
 	"github.com/MiniProfiler/go/miniprofiler"
+	"github.com/jinzhu/now"
 	elastic "gopkg.in/olivere/elastic.v3"
 )
 
@@ -51,11 +52,14 @@ var Elastic = map[string]parse.Func{
 		F:        ESIndicies,
 	},
 	"esdaily": {
-		Args:     []models.FuncType{models.TypeString, models.TypeString, models.TypeString},
-		VArgs:    true,
-		VArgsPos: 1,
-		Return:   models.TypeESIndexer,
-		F:        ESDaily,
+		Args:   []models.FuncType{models.TypeString, models.TypeString, models.TypeString},
+		Return: models.TypeESIndexer,
+		F:      ESDaily,
+	},
+	"esmonthly": {
+		Args:   []models.FuncType{models.TypeString, models.TypeString, models.TypeString},
+		Return: models.TypeESIndexer,
+		F:      ESMonthly,
 	},
 	"esls": {
 		Args:   []models.FuncType{models.TypeString},
@@ -374,6 +378,48 @@ func ESDaily(e *State, T miniprofiler.Timer, timeField, indexRoot, layout string
 		}
 		if len(selectedIndices) == 0 {
 			return selectedIndices, fmt.Errorf("no elastic indices available during this time range, index[%s], start/end [%s|%s]", indexRoot, start.Format("2006.01.02"), end.Format("2006.01.02"))
+		}
+		return selectedIndices, nil
+	}
+	r.Results = append(r.Results, &Result{Value: indexer})
+	return &r, nil
+}
+
+func ESMonthly(e *State, T miniprofiler.Timer, timeField, indexRoot, layout string) (*Results, error) {
+	var r Results
+	err := e.ElasticHosts.InitClient()
+	if err != nil {
+		return &r, err
+	}
+	indexer := ESIndexer{}
+	indexer.TimeField = timeField
+	indexer.Generate = func(start, end *time.Time) ([]string, error) {
+		err := e.ElasticHosts.InitClient()
+		if err != nil {
+			return []string{}, err
+		}
+		indices, err := esClient.IndexNames()
+		if err != nil {
+			return []string{}, err
+		}
+		monthStart := now.New(*start).BeginningOfMonth()
+		monthEnd := now.New(*end).EndOfMonth()
+		var selectedIndices []string
+		for _, index := range indices {
+			date := strings.TrimPrefix(index, indexRoot)
+			if !strings.HasPrefix(index, indexRoot) {
+				continue
+			}
+			d, err := time.Parse(layout, date)
+			if err != nil {
+				continue
+			}
+			if !d.Before(monthStart) && !d.After(monthEnd) {
+				selectedIndices = append(selectedIndices, index)
+			}
+		}
+		if len(selectedIndices) == 0 {
+			return selectedIndices, fmt.Errorf("no elastic indices available during this time range")
 		}
 		return selectedIndices, nil
 	}
