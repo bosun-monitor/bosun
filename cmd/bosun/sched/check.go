@@ -232,14 +232,15 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.E
 		notifyCurrent()
 	}
 
-	autoClose := func(ak models.AlertKey, reason string) {
+	autoClose := func(ak models.AlertKey, reason string, sendNotification bool) {
 		msg := fmt.Sprintf("auto close %s because %s", ak, reason)
 		slog.Infof(msg)
 		err := s.ActionByAlertKey("bosun", msg, models.ActionClose, ak)
 		if err != nil {
 			slog.Errorln(err)
-		} else if sendNotifiction {
-            s.ActionNotify(models.ActionClose, "bosun", reason, [ak])
+		} else if sendNotification {
+		aks := []models.AlertKey{ak}
+            s.ActionNotify(models.ActionClose, "bosun", reason, aks)
         }
 	}
 	// finally close an open alert with silence or CloseOnNormal once it goes back to normal.
