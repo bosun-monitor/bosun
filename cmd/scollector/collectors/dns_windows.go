@@ -40,9 +40,9 @@ func c_dns_windows() (opentsdb.MultiDataPoint, error) {
 				}
 			} else { //Unique stat, we can put it straight away
 				if "" == p.Grouping {
-					Add(&md, "dns."+p.Category+"."+p.Metric, v.Value, opentsdb.TagSet{}, p.RateType, metadata.Count, p.Description)
+					Add(&md, "dns."+p.Category+"."+p.Metric, *v.Value, opentsdb.TagSet{}, p.RateType, metadata.Count, p.Description)
 				} else {
-					Add(&md, "dns."+p.Category+"."+p.Metric, v.Value, opentsdb.TagSet{"type": p.Grouping}, p.RateType, metadata.Count, p.Description)
+					Add(&md, "dns."+p.Category+"."+p.Metric, *v.Value, opentsdb.TagSet{"type": p.Grouping}, p.RateType, metadata.Count, p.Description)
 				}
 			}
 		}
@@ -50,9 +50,9 @@ func c_dns_windows() (opentsdb.MultiDataPoint, error) {
 	for _, v := range dupes { //ForEach record in our added up duplicates
 		if p, ok := DNSStatPropertyMap[v.Name]; ok {
 			if "" == p.Grouping {
-				Add(&md, "dns."+p.Category+"."+p.Metric, v.Value, opentsdb.TagSet{}, p.RateType, metadata.Count, p.Description)
+				Add(&md, "dns."+p.Category+"."+p.Metric, *v.Value, opentsdb.TagSet{}, p.RateType, metadata.Count, p.Description)
 			} else {
-				Add(&md, "dns."+p.Category+"."+p.Metric, v.Value, opentsdb.TagSet{"type": p.Grouping}, p.RateType, metadata.Count, p.Description)
+				Add(&md, "dns."+p.Category+"."+p.Metric, *v.Value, opentsdb.TagSet{"type": p.Grouping}, p.RateType, metadata.Count, p.Description)
 			}
 		}
 
