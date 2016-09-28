@@ -10,6 +10,9 @@ import (
 	"bosun.org/snmp/asn1"
 )
 
+//Timeout is the number of seconds to use for conn.SetReadDeadline
+var Timeout = 30
+
 // reserved binding values.
 var (
 	null           = asn1.RawValue{Class: 0, Tag: 5}
@@ -236,7 +239,7 @@ func (s *SNMP) do(req *request) (*response, error) {
 		return nil, err
 	}
 	buf = make([]byte, 10000, 10000)
-	if err := conn.SetReadDeadline(time.Now().Add(5 * time.Second)); err != nil {
+	if err := conn.SetReadDeadline(time.Now().Add(time.Duration(Timeout) * time.Second)); err != nil {
 		return nil, err
 	}
 	n, err := conn.Read(buf)

@@ -2,6 +2,7 @@
 package util // import "bosun.org/util"
 
 import (
+	"net"
 	"os"
 	"regexp"
 	"strings"
@@ -18,7 +19,11 @@ var (
 // Clean cleans a hostname based on the current FullHostname setting.
 func Clean(s string) string {
 	if !FullHostname {
-		s = strings.SplitN(s, ".", 2)[0]
+		//only split if string is not an IP address
+		ip := net.ParseIP(s)
+		if ip == nil {
+			s = strings.SplitN(s, ".", 2)[0]
+		}
 	}
 	return strings.ToLower(s)
 }
@@ -26,11 +31,7 @@ func Clean(s string) string {
 // Set sets Hostntame based on the current preferences.
 func Set() {
 	h, err := os.Hostname()
-	if err == nil {
-		if !FullHostname {
-			h = strings.SplitN(h, ".", 2)[0]
-		}
-	} else {
+	if err != nil {
 		h = "unknown"
 	}
 	Hostname = Clean(h)
