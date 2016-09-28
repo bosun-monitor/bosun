@@ -46,7 +46,6 @@ func (c MiddlewareChain) Build() func(http.Handler) http.Handler {
 func authMiddleware(required auth.PermissionLevel, provider auth.Provider) MiddlewareFunc {
 	return func(next http.HandlerFunc) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			fmt.Printf("ASDASDASDAd %T\n", provider)
 			user, err := provider.GetUser(r)
 			fmt.Println(user, err)
 			if err != nil {

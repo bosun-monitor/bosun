@@ -95,7 +95,7 @@ func Listen(httpAddr, httpsAddr, certFile, keyFile string, devMode bool, tsdbHos
 			return tpl
 		}
 	}
-	provider := buildAuth(authConfig)
+	provider, tok := buildAuth(authConfig)
 
 	// middlewares everything gets
 	baseChain := MiddlewareChain{miniprofileMiddleware, gzipMiddleware, protocolLoggingMiddleware}
@@ -123,7 +123,7 @@ func Listen(httpAddr, httpsAddr, certFile, keyFile string, devMode bool, tsdbHos
 	wrap := noAuth.Build()
 	wrapR := readAuth.Build()
 	plain := func(route string, h http.HandlerFunc) *mux.Route {
-		return router.Handle(route, noAuth.Build()(h))
+		return router.Handle(route, wrap(h))
 	}
 
 	http.Handle("/login/", provider.LoginHandler())
@@ -172,7 +172,11 @@ func Listen(httpAddr, httpsAddr, certFile, keyFile string, devMode bool, tsdbHos
 	apiR("/api/tagsets/{metric}", filteredTagsetsByMetric)
 	apiR("/api/opentsdb/version", openTSDBVersion)
 	apiR("/api/annotate", annotateEnabled)
-
+	if tok != nil {
+		apiW("/api/tokens", tok.ListTokens).Methods("GET")
+		apiW("/api/tokens", tok.CreateToken).Methods("POST")
+		apiW("/api/tokens", tok.Revoke).Methods("DELETE")
+	}
 	// Annotations
 	if schedule.SystemConf.AnnotateEnabled() {
 		index := schedule.SystemConf.GetAnnotateIndex()
@@ -227,8 +231,9 @@ func Listen(httpAddr, httpsAddr, certFile, keyFile string, devMode bool, tsdbHos
 	return <-errChan
 }
 
-func buildAuth(cfg conf.AuthConf) auth.Provider {
+func buildAuth(cfg conf.AuthConf) (auth.Provider, *auth.TokenProvider) {
 	providers := []auth.Provider{}
+	var tok *auth.TokenProvider
 	if cfg.LDAPServer != "" {
 		grps := make([]*auth.LdapGroup, len(cfg.Groups))
 		for i, g := range cfg.Groups {
@@ -241,16 +246,16 @@ func buildAuth(cfg conf.AuthConf) auth.Provider {
 		providers = append(providers, p)
 	}
 	if cfg.TokenSecret != "" {
-		tok := auth.NewToken(cfg.TokenSecret, nil)
+		tok = auth.NewToken(cfg.TokenSecret, func() auth.TokenDataAccess { return schedule.DataAccess.Tokens() })
 		providers = append(providers, tok)
 	}
 	if len(providers) == 1 {
-		return providers[0]
+		return providers[0], tok
 	}
 	if len(providers) > 1 {
-		return auth.MultipleProviders(providers)
+		return auth.MultipleProviders(providers), tok
 	}
-	return auth.NoAuth{}
+	return auth.NoAuth{}, nil
 }
 
 type relayProxy struct {

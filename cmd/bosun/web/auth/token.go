@@ -6,11 +6,13 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net/http"
+
+	"github.com/MiniProfiler/go/miniprofiler"
 )
 
 type TokenProvider struct {
 	secret string
-	data   TokenDataAccess
+	data   func() TokenDataAccess
 }
 
 type TokenDataAccess interface {
@@ -26,7 +28,7 @@ type Token struct {
 	Perms PermissionLevel
 }
 
-func NewToken(secret string, data TokenDataAccess) *TokenProvider {
+func NewToken(secret string, data func() TokenDataAccess) *TokenProvider {
 	return &TokenProvider{
 		secret: secret,
 		data:   data,
@@ -39,7 +41,7 @@ func NewToken(secret string, data TokenDataAccess) *TokenProvider {
 
 func (t *TokenProvider) GetUser(r *http.Request) (*User, error) {
 	if tok := r.FormValue("token"); tok != "" {
-		return t.data.LookupToken(t.hashToken(tok))
+		return t.data().LookupToken(t.hashToken(tok))
 	}
 	return nil, nil
 }
@@ -62,7 +64,7 @@ func (t *TokenProvider) hashToken(tok string) string {
 	return base64.StdEncoding.EncodeToString(sum[:])
 }
 
-func (t *TokenProvider) CreateToken(w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func (t *TokenProvider) CreateToken(timer miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	if err := r.ParseForm(); err != nil {
 		return nil, err
 	}
@@ -73,16 +75,16 @@ func (t *TokenProvider) CreateToken(w http.ResponseWriter, r *http.Request) (int
 		User:  r.FormValue("user"),
 		Perms: Permission(r.FormValue("level")),
 	}
-	if err := t.data.StoreToken(token); err != nil {
+	if err := t.data().StoreToken(token); err != nil {
 		return nil, err
 	}
 	return tok, nil
 }
 
-func (t *TokenProvider) ListTokens(w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	return t.data.ListTokens()
+func (t *TokenProvider) ListTokens(timer miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	return t.data().ListTokens()
 }
 
-func (t *TokenProvider) Revoke(w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	return nil, t.data.RevokeToken(r.FormValue("hash"))
+func (t *TokenProvider) Revoke(timer miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	return nil, t.data().RevokeToken(r.FormValue("hash"))
 }
