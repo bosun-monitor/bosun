@@ -49,6 +49,7 @@ Incidents can be in one of the following severity levels (From highest to lowest
 * **Silenced**: Someone has created a silence rule that stops this alert from triggering any notification. It will also automatically close when the alert is no longer active. This is indicated by a speaker with an X icon on the dashboard: ![Silence Glyph](public/silence.png).
 * **Acknowledged**: Someone has acknowledged the alert, the reason and person should be available via the web interface. Acknowledged alerts stop sending notification chains as long as the severity doesn't increase.
 * **Unacknowledged**: Nobody has acknowledged the alert yet at its current severity level.
+* **Unevaluated**: An incident is unevaluated if the dependency expression as defined in the alert's depends keyword is non-zero. Unevaluated alerts do not change state or become unknown. If an incident is open then it will still show up on the dashboard, but with a question mark glyph. New incidents will not be created.
 
 # Dashboard
 

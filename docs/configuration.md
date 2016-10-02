@@ -1,6 +1,6 @@
 ---
 layout: default
-title: Configuration
+title: Configuration (0.5.0 and earlier)
 order: 3
 ---
 
@@ -17,6 +17,11 @@ order: 3
 <div class="doc-body col-sm-9" markdown="1">
 
 <p class="title h1">{{page.title}}</p>
+
+<div class="admonition">
+<p class="admonition-title">Attention</p>
+<p>This documentation is for versions prior to 0.6.0. For 0.6.0 there are two different documentation sections that replace this section: <a href="/system_configuration">system configuration</a> and <a href="/definitions">definitions</a>.</p>
+</div>
 
 {% raw %}
 

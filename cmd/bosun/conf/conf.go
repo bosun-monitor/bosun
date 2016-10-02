@@ -339,7 +339,9 @@ type Macro struct {
 // sections of rule configuration are referenced by alerts including
 // Templates, Macros, and Notifications. Alerts hold the expressions
 // that determine the Severity of the Alert. There are also flags the
-// alter the behavior of the alert and how the expression is evaluated
+// alter the behavior of the alert and how the expression is evaluated.
+// This structure is available to users from templates. Consult documentation
+// before making changes
 type Alert struct {
 	Text string
 	Vars

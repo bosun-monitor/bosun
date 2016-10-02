@@ -104,6 +104,7 @@
 		.sidebar {
 			overflow-y: auto;
 			height: 100%;
+			padding-bottom: 50px;
 		}
 
 		.bluebullet ul {
@@ -111,8 +112,62 @@
 			padding-left: 0em;
 		}
 
+		.highlighter-rouge {
+			font-family: monospace;
+		}
+
+		/* Bosun Keywords */
+		.keyword {
+			font-family: monospace;
+			font-weight: bold;
+			font-size: 18px;
+			color: #1f5296;
+
+			margin-bottom: 5px;
+		}
+
+		/* Bosun Template Vars */
+		.var {
+			font-family: monospace;
+			font-weight: bold;
+			font-size: 18px;
+			color: #1f5296;
+
+			margin-bottom: 5px;
+		}
+
+		/* Bosun Template Functions */
+		.func {
+			font-family: monospace;
+			font-weight: bold;
+			font-size: 18px;
+			color: #1f5296;
+
+			margin-bottom: 5px;
+		}
+
+		/* Bosun Template Types */
+		.type {
+			font-family: monospace;
+			font-weight: bold;
+			font-size: 18px;
+			color: #1f5296;
+
+			margin-bottom: 5px;
+		}
+
+		/* Bosun Expression Funcs */
+		.exprFunc {
+			font-family: monospace;
+			font-weight: bold;
+			font-size: 18px;
+			color: #1f5296;
+
+			margin-bottom: 5px;
+		}
+
 		#markdown-toc a {
-			font-size: 14px;
+			font-size: 13px;
 			color: grey;
 		}
 
@@ -131,7 +186,7 @@
 
 		/* Larger size in general */
 		p, li, ul {
-			font-size: 16px;
+			font-size: 15px;
 		}
 
 		.hometitle {
@@ -141,7 +196,7 @@
 
 		/* Compensate for fixed header */
 		.anchor {
-			padding-top: 55px; margin-top: -55px;
+			padding-top: 55px; margin-top: -40px;
 		}
 
 		.endpoint {
@@ -198,6 +253,54 @@
 		.carousel-indicators .active {
 			background-color: #FF7600;
 		}
+
+		/* taken from http://opentsdb.net/docs/build/html/_static/solar.css */
+		div.admonition {
+			font-size: 0.9em;
+			margin: 1em 0 1em 0;
+			border: 1px solid #eee;
+			background-color: #f7f7f7;
+			padding: 0;
+			-moz-box-shadow: 0px 8px 6px -8px #93a1a1;
+			-webkit-box-shadow: 0px 8px 6px -8px #93a1a1;
+			box-shadow: 0px 8px 6px -8px #93a1a1;
+		}
+
+		div.admonition p, div.admonition div.highlight {
+			margin: 0.5em 1em 0.5em 1em;
+		}
+
+		div.admonition p.admonition-title
+		{
+			margin: 0;
+			padding: 0.2em 0 0.2em 0.6em;
+			color: white;
+			border-bottom: 1px solid #eee8d5;
+			font-weight: bold;
+			background-color: #268bd2;
+		}
+
+		div.warning p.admonition-title,
+		div.important p.admonition-title {
+			background-color: #cb4b16;
+		}
+
+		div.hint p.admonition-title,
+		div.tip p.admonition-title {
+			background-color: #859900;
+		}
+
+		div.caution p.admonition-title,
+		div.attention p.admonition-title,
+		div.danger p.admonition-title,
+		div.error p.admonition-title {
+			background-color: #dc322f;
+		}
+
+		div.admonition ul, div.admonition ol {
+			margin: 0.1em 0.5em 0.5em 3em;
+			padding: 0;
+		}
 	</style>
 
 	</head>
@@ -241,11 +344,13 @@
 							<a href="#" class="dropdown-toggle" data-toggle="dropdown">Documentation <span class="caret"></span></a>
 							<ul class="dropdown-menu">
 								<li><a href="/quickstart">Quick Start</a></li>
-								<li><a href="/expressions">Expression Language</a></li>
-								<li><a href="/configuration">Configuration</a></li>
 								<li><a href="/usage">Usage</a></li>
+								<li><a href="/system_configuration">System Configuration</a></li>
+								<li><a href="/definitions">Definitions (RuleConf)</a></li>
+								<li><a href="/expressions">Expression Language</a></li>
 								<li><a href="/examples">Examples</a></li>
 								<li><a href="/api">API</a></li>
+								<li><a href="/configuration">Configuration (Pre 0.6.0)</a></li>
 							</ul>
 						</li>
 					</ul>
