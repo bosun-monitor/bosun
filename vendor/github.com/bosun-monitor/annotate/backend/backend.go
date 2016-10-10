@@ -3,6 +3,7 @@ package backend
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"reflect"
 	"strings"
 	"time"
@@ -123,14 +124,21 @@ func (e *Elastic) GetAnnotations(start, end *time.Time, fieldFilters ...FieldFil
 		}
 		filters = append(filters, q)
 	}
-	res, err := e.Search(e.index).Query(elastic.NewBoolQuery().Must(filters...)).Size(e.maxResults).Do()
-	if err != nil {
-		return annotations, err
-	}
+
 	var aType annotate.Annotation
-	for _, item := range res.Each(reflect.TypeOf(aType)) {
-		a := item.(annotate.Annotation)
-		annotations = append(annotations, a)
+	scroll := e.Scroll(e.index).Query(elastic.NewBoolQuery().Must(filters...)).Size(e.maxResults).Pretty(true)
+	for {
+		res, err := scroll.Do()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return annotations, err
+		}
+		for _, item := range res.Each(reflect.TypeOf(aType)) {
+			a := item.(annotate.Annotation)
+			annotations = append(annotations, a)
+		}
 	}
 	return annotations, nil
 }
