@@ -18,6 +18,7 @@ import (
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
 	"github.com/MiniProfiler/go/miniprofiler"
+	"github.com/bosun-monitor/annotate"
 	"github.com/influxdata/influxdb/client"
 	elasticOld "github.com/olivere/elastic"
 	elastic "gopkg.in/olivere/elastic.v3"
@@ -52,6 +53,7 @@ type Backends struct {
 	LogstashHosts   LogstashElasticHosts
 	ElasticHosts    ElasticHosts
 	InfluxConfig    client.Config
+	AnnotateContext annotate.Client
 }
 
 type BosunProviders struct {
