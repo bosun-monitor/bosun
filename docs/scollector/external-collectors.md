@@ -10,6 +10,8 @@ External collectors are executables or scripts that scollector invokes, collects
 
 The [ColDir](http://godoc.org/bosun.org/cmd/scollector#hdr-Configuration_File) configuration key specifies the external collector directory, which is usually set to something like **/opt/scollector/collectors** in Linux or **C:\Program Files\scollector\collectors** in Windows. It should contain numbered directories just like the ones used in [OpenTSDB tcollector](http://opentsdb.net/docs/build/html/user_guide/utilities/tcollector.html#collecting-lots-of-metrics-with-tcollector). Each directory represents how often scollector will try to invoke the collectors in that folder (example: **60** = every 60 seconds). Use a directory named **0** for any executables or scripts that will run continuously and create output on their own schedule. Any non-numeric named directories will be ignored, and a lib and etc directory are often used for library and config data shared by all collectors.
 
+There are examples of external collectors in a few different languages on the Stack Overflow Documentation topic for [Scollector External Collectors](http://stackoverflow.com/documentation/bosun/720/scollector-external-collectors).
+
   &nbsp;
 
 ### Simple data output format
