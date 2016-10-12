@@ -1061,6 +1061,7 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function ($window: ng.IW
 }]);
 
 
+
 bosunApp.directive('tsHist', ['$window', 'nfmtFilter', function ($window: ng.IWindowService, fmtfilter: any) {
 	var margin = {
 		top: 10,
