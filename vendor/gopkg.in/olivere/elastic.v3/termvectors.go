@@ -5,10 +5,11 @@
 package elastic
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/url"
 	"strings"
+
+	"golang.org/x/net/context"
 
 	"gopkg.in/olivere/elastic.v3/uritemplates"
 )
@@ -278,6 +279,11 @@ func (s *TermvectorsService) Validate() error {
 
 // Do executes the operation.
 func (s *TermvectorsService) Do() (*TermvectorsResponse, error) {
+	return s.DoC(nil)
+}
+
+// DoC executes the operation.
+func (s *TermvectorsService) DoC(ctx context.Context) (*TermvectorsResponse, error) {
 	// Check pre-conditions
 	if err := s.Validate(); err != nil {
 		return nil, err
@@ -316,14 +322,14 @@ func (s *TermvectorsService) Do() (*TermvectorsResponse, error) {
 	}
 
 	// Get HTTP response
-	res, err := s.client.PerformRequest("GET", path, params, body)
+	res, err := s.client.PerformRequestC(ctx, "GET", path, params, body)
 	if err != nil {
 		return nil, err
 	}
 
 	// Return operation response
 	ret := new(TermvectorsResponse)
-	if err := json.Unmarshal(res.Body, ret); err != nil {
+	if err := s.client.decoder.Decode(res.Body, ret); err != nil {
 		return nil, err
 	}
 	return ret, nil
@@ -430,6 +436,7 @@ type TokenInfo struct {
 
 type TermsInfo struct {
 	DocFreq  int64       `json:"doc_freq"`
+	Score    float64     `json:"score"`
 	TermFreq int64       `json:"term_freq"`
 	Ttf      int64       `json:"ttf"`
 	Tokens   []TokenInfo `json:"tokens"`

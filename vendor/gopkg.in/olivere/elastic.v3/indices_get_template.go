@@ -5,10 +5,11 @@
 package elastic
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/url"
 	"strings"
+
+	"golang.org/x/net/context"
 
 	"gopkg.in/olivere/elastic.v3/uritemplates"
 )
@@ -93,6 +94,11 @@ func (s *IndicesGetTemplateService) Validate() error {
 
 // Do executes the operation.
 func (s *IndicesGetTemplateService) Do() (map[string]*IndicesGetTemplateResponse, error) {
+	return s.DoC(nil)
+}
+
+// DoC executes the operation.
+func (s *IndicesGetTemplateService) DoC(ctx context.Context) (map[string]*IndicesGetTemplateResponse, error) {
 	// Check pre-conditions
 	if err := s.Validate(); err != nil {
 		return nil, err
@@ -105,14 +111,14 @@ func (s *IndicesGetTemplateService) Do() (map[string]*IndicesGetTemplateResponse
 	}
 
 	// Get HTTP response
-	res, err := s.client.PerformRequest("GET", path, params, nil)
+	res, err := s.client.PerformRequestC(ctx, "GET", path, params, nil)
 	if err != nil {
 		return nil, err
 	}
 
 	// Return operation response
 	var ret map[string]*IndicesGetTemplateResponse
-	if err := json.Unmarshal(res.Body, &ret); err != nil {
+	if err := s.client.decoder.Decode(res.Body, &ret); err != nil {
 		return nil, err
 	}
 	return ret, nil

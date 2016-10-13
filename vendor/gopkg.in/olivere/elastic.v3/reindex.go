@@ -5,9 +5,10 @@
 package elastic
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/url"
+
+	"golang.org/x/net/context"
 )
 
 // ReindexService is a method to copy documents from one index to another.
@@ -249,6 +250,11 @@ func (s *ReindexService) body() (interface{}, error) {
 
 // Do executes the operation.
 func (s *ReindexService) Do() (*ReindexResponse, error) {
+	return s.DoC(nil)
+}
+
+// DoC executes the operation.
+func (s *ReindexService) DoC(ctx context.Context) (*ReindexResponse, error) {
 	// Check pre-conditions
 	if err := s.Validate(); err != nil {
 		return nil, err
@@ -267,14 +273,14 @@ func (s *ReindexService) Do() (*ReindexResponse, error) {
 	}
 
 	// Get HTTP response
-	res, err := s.client.PerformRequest("POST", path, params, body)
+	res, err := s.client.PerformRequestC(ctx, "POST", path, params, body)
 	if err != nil {
 		return nil, err
 	}
 
 	// Return operation response
 	ret := new(ReindexResponse)
-	if err := json.Unmarshal(res.Body, ret); err != nil {
+	if err := s.client.decoder.Decode(res.Body, ret); err != nil {
 		return nil, err
 	}
 	return ret, nil
@@ -437,7 +443,7 @@ func (r *ReindexSource) Source() (interface{}, error) {
 	}
 
 	if len(r.sorters) > 0 {
-		sortarr := make([]interface{}, 0)
+		var sortarr []interface{}
 		for _, sorter := range r.sorters {
 			src, err := sorter.Source()
 			if err != nil {
@@ -447,7 +453,7 @@ func (r *ReindexSource) Source() (interface{}, error) {
 		}
 		source["sort"] = sortarr
 	} else if len(r.sorts) > 0 {
-		sortarr := make([]interface{}, 0)
+		var sortarr []interface{}
 		for _, sort := range r.sorts {
 			src, err := sort.Source()
 			if err != nil {

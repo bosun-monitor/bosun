@@ -1,14 +1,15 @@
-// Copyright 2012-2015 Oliver Eilhard. All rights reserved.
+// Copyright 2012-present Oliver Eilhard. All rights reserved.
 // Use of this source code is governed by a MIT-license.
 // See http://olivere.mit-license.org/license.txt for details.
 
 package elastic
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/url"
 	"strings"
+
+	"golang.org/x/net/context"
 
 	"gopkg.in/olivere/elastic.v3/uritemplates"
 )
@@ -258,6 +259,10 @@ func (s *CountService) Validate() error {
 
 // Do executes the operation.
 func (s *CountService) Do() (int64, error) {
+	return s.DoC(nil)
+}
+
+func (s *CountService) DoC(ctx context.Context) (int64, error) {
 	// Check pre-conditions
 	if err := s.Validate(); err != nil {
 		return 0, err
@@ -286,14 +291,14 @@ func (s *CountService) Do() (int64, error) {
 	}
 
 	// Get HTTP response
-	res, err := s.client.PerformRequest("POST", path, params, body)
+	res, err := s.client.PerformRequestC(ctx, "POST", path, params, body)
 	if err != nil {
 		return 0, err
 	}
 
 	// Return result
 	ret := new(CountResponse)
-	if err := json.Unmarshal(res.Body, ret); err != nil {
+	if err := s.client.decoder.Decode(res.Body, ret); err != nil {
 		return 0, err
 	}
 	if ret != nil {

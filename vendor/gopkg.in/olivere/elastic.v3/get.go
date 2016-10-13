@@ -10,6 +10,8 @@ import (
 	"net/url"
 	"strings"
 
+	"golang.org/x/net/context"
+
 	"gopkg.in/olivere/elastic.v3/uritemplates"
 )
 
@@ -224,6 +226,11 @@ func (s *GetService) buildURL() (string, url.Values, error) {
 
 // Do executes the operation.
 func (s *GetService) Do() (*GetResult, error) {
+	return s.DoC(nil)
+}
+
+// Do executes the operation.
+func (s *GetService) DoC(ctx context.Context) (*GetResult, error) {
 	// Check pre-conditions
 	if err := s.Validate(); err != nil {
 		return nil, err
@@ -236,14 +243,14 @@ func (s *GetService) Do() (*GetResult, error) {
 	}
 
 	// Get HTTP response
-	res, err := s.client.PerformRequest("GET", path, params, nil)
+	res, err := s.client.PerformRequestC(ctx, "GET", path, params, nil)
 	if err != nil {
 		return nil, err
 	}
 
 	// Return operation response
 	ret := new(GetResult)
-	if err := json.Unmarshal(res.Body, ret); err != nil {
+	if err := s.client.decoder.Decode(res.Body, ret); err != nil {
 		return nil, err
 	}
 	return ret, nil

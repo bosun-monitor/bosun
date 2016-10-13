@@ -5,9 +5,10 @@
 package elastic
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/url"
+
+	"golang.org/x/net/context"
 
 	"gopkg.in/olivere/elastic.v3/uritemplates"
 )
@@ -83,6 +84,11 @@ func (s *DeleteTemplateService) Validate() error {
 
 // Do executes the operation.
 func (s *DeleteTemplateService) Do() (*DeleteTemplateResponse, error) {
+	return s.DoC(nil)
+}
+
+// DoC executes the operation.
+func (s *DeleteTemplateService) DoC(ctx context.Context) (*DeleteTemplateResponse, error) {
 	// Check pre-conditions
 	if err := s.Validate(); err != nil {
 		return nil, err
@@ -95,14 +101,14 @@ func (s *DeleteTemplateService) Do() (*DeleteTemplateResponse, error) {
 	}
 
 	// Get HTTP response
-	res, err := s.client.PerformRequest("DELETE", path, params, nil)
+	res, err := s.client.PerformRequestC(ctx, "DELETE", path, params, nil)
 	if err != nil {
 		return nil, err
 	}
 
 	// Return operation response
 	ret := new(DeleteTemplateResponse)
-	if err := json.Unmarshal(res.Body, ret); err != nil {
+	if err := s.client.decoder.Decode(res.Body, ret); err != nil {
 		return nil, err
 	}
 	return ret, nil

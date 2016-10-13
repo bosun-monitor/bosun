@@ -10,6 +10,8 @@ import (
 	"net/url"
 	"strings"
 
+	"golang.org/x/net/context"
+
 	"gopkg.in/olivere/elastic.v3/uritemplates"
 )
 
@@ -58,11 +60,15 @@ func (s *SuggestService) Suggester(suggester Suggester) *SuggestService {
 }
 
 func (s *SuggestService) Do() (SuggestResult, error) {
+	return s.DoC(nil)
+}
+
+func (s *SuggestService) DoC(ctx context.Context) (SuggestResult, error) {
 	// Build url
 	path := "/"
 
 	// Indices part
-	indexPart := make([]string, 0)
+	var indexPart []string
 	for _, index := range s.indices {
 		index, err := uritemplates.Expand("{index}", map[string]string{
 			"index": index,
@@ -100,7 +106,7 @@ func (s *SuggestService) Do() (SuggestResult, error) {
 	}
 
 	// Get response
-	res, err := s.client.PerformRequest("POST", path, params, body)
+	res, err := s.client.PerformRequestC(ctx, "POST", path, params, body)
 	if err != nil {
 		return nil, err
 	}
@@ -108,18 +114,18 @@ func (s *SuggestService) Do() (SuggestResult, error) {
 	// There is a _shard object that cannot be deserialized.
 	// So we use json.RawMessage instead.
 	var suggestions map[string]*json.RawMessage
-	if err := json.Unmarshal(res.Body, &suggestions); err != nil {
+	if err := s.client.decoder.Decode(res.Body, &suggestions); err != nil {
 		return nil, err
 	}
 
 	ret := make(SuggestResult)
 	for name, result := range suggestions {
 		if name != "_shards" {
-			var s []Suggestion
-			if err := json.Unmarshal(*result, &s); err != nil {
+			var sug []Suggestion
+			if err := s.client.decoder.Decode(*result, &sug); err != nil {
 				return nil, err
 			}
-			ret[name] = s
+			ret[name] = sug
 		}
 	}
 
@@ -136,8 +142,9 @@ type Suggestion struct {
 }
 
 type suggestionOption struct {
-	Text    string      `json:"text"`
-	Score   float64     `json:"score"`
-	Freq    int         `json:"freq"`
-	Payload interface{} `json:"payload"`
+	Text         string      `json:"text"`
+	Score        float64     `json:"score"`
+	Freq         int         `json:"freq"`
+	Payload      interface{} `json:"payload"`
+	CollateMatch bool        `json:"collate_match"`
 }

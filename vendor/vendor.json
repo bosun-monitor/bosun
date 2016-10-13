@@ -266,18 +266,18 @@
 		},
 		{
 			"path": "github.com/bosun-monitor/annotate",
-			"revision": "fa0f15c651bfe666cd287c2ba760436b41c85cf4",
-			"revisionTime": "2016-08-04T13:41:31-04:00"
+			"revision": "153a3f738fe5b134cc683b9a6c3aafada763da3c",
+			"revisionTime": "2016-10-13T08:56:52-04:00"
 		},
 		{
 			"path": "github.com/bosun-monitor/annotate/backend",
-			"revision": "fa0f15c651bfe666cd287c2ba760436b41c85cf4",
-			"revisionTime": "2016-08-04T13:41:31-04:00"
+			"revision": "153a3f738fe5b134cc683b9a6c3aafada763da3c",
+			"revisionTime": "2016-10-13T08:56:52-04:00"
 		},
 		{
 			"path": "github.com/bosun-monitor/annotate/web",
-			"revision": "fa0f15c651bfe666cd287c2ba760436b41c85cf4",
-			"revisionTime": "2016-08-04T13:41:31-04:00"
+			"revision": "153a3f738fe5b134cc683b9a6c3aafada763da3c",
+			"revisionTime": "2016-10-13T08:56:52-04:00"
 		},
 		{
 			"path": "github.com/bosun-monitor/statusio",
@@ -878,18 +878,18 @@
 		},
 		{
 			"path": "gopkg.in/olivere/elastic.v3",
-			"revision": "bff1355ba593686c7bfc1abb7a8573f34a9c29d1",
-			"revisionTime": "2016-04-04T08:40:41+02:00"
+			"revision": "1ad75b5396674e9c783400e89106bc0c8da9d786",
+			"revisionTime": "2016-10-16T12:21:59+02:00"
 		},
 		{
 			"path": "gopkg.in/olivere/elastic.v3/backoff",
-			"revision": "bff1355ba593686c7bfc1abb7a8573f34a9c29d1",
-			"revisionTime": "2016-04-04T08:40:41+02:00"
+			"revision": "1ad75b5396674e9c783400e89106bc0c8da9d786",
+			"revisionTime": "2016-10-16T12:21:59+02:00"
 		},
 		{
 			"path": "gopkg.in/olivere/elastic.v3/uritemplates",
-			"revision": "bff1355ba593686c7bfc1abb7a8573f34a9c29d1",
-			"revisionTime": "2016-04-04T08:40:41+02:00"
+			"revision": "1ad75b5396674e9c783400e89106bc0c8da9d786",
+			"revisionTime": "2016-10-16T12:21:59+02:00"
 		},
 		{
 			"path": "gopkg.in/yaml.v1",

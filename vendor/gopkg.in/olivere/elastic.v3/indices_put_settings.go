@@ -5,10 +5,11 @@
 package elastic
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/url"
 	"strings"
+
+	"golang.org/x/net/context"
 
 	"gopkg.in/olivere/elastic.v3/uritemplates"
 )
@@ -145,6 +146,11 @@ func (s *IndicesPutSettingsService) Validate() error {
 
 // Do executes the operation.
 func (s *IndicesPutSettingsService) Do() (*IndicesPutSettingsResponse, error) {
+	return s.DoC(nil)
+}
+
+// DoC executes the operation.
+func (s *IndicesPutSettingsService) DoC(ctx context.Context) (*IndicesPutSettingsResponse, error) {
 	// Check pre-conditions
 	if err := s.Validate(); err != nil {
 		return nil, err
@@ -165,14 +171,14 @@ func (s *IndicesPutSettingsService) Do() (*IndicesPutSettingsResponse, error) {
 	}
 
 	// Get HTTP response
-	res, err := s.client.PerformRequest("PUT", path, params, body)
+	res, err := s.client.PerformRequestC(ctx, "PUT", path, params, body)
 	if err != nil {
 		return nil, err
 	}
 
 	// Return operation response
 	ret := new(IndicesPutSettingsResponse)
-	if err := json.Unmarshal(res.Body, ret); err != nil {
+	if err := s.client.decoder.Decode(res.Body, ret); err != nil {
 		return nil, err
 	}
 	return ret, nil
