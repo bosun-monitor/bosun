@@ -5,10 +5,11 @@
 package elastic
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/url"
 	"strings"
+
+	"golang.org/x/net/context"
 
 	"gopkg.in/olivere/elastic.v3/uritemplates"
 )
@@ -68,11 +69,15 @@ func (s *OptimizeService) Pretty(pretty bool) *OptimizeService {
 }
 
 func (s *OptimizeService) Do() (*OptimizeResult, error) {
+	return s.DoC(nil)
+}
+
+func (s *OptimizeService) DoC(ctx context.Context) (*OptimizeResult, error) {
 	// Build url
 	path := "/"
 
 	// Indices part
-	indexPart := make([]string, 0)
+	var indexPart []string
 	for _, index := range s.indices {
 		index, err := uritemplates.Expand("{index}", map[string]string{
 			"index": index,
@@ -110,14 +115,14 @@ func (s *OptimizeService) Do() (*OptimizeResult, error) {
 	}
 
 	// Get response
-	res, err := s.client.PerformRequest("POST", path, params, nil)
+	res, err := s.client.PerformRequestC(ctx, "POST", path, params, nil)
 	if err != nil {
 		return nil, err
 	}
 
 	// Return result
 	ret := new(OptimizeResult)
-	if err := json.Unmarshal(res.Body, ret); err != nil {
+	if err := s.client.decoder.Decode(res.Body, ret); err != nil {
 		return nil, err
 	}
 	return ret, nil

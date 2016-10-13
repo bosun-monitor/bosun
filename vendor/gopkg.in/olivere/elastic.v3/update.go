@@ -5,10 +5,11 @@
 package elastic
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/url"
 	"strings"
+
+	"golang.org/x/net/context"
 
 	"gopkg.in/olivere/elastic.v3/uritemplates"
 )
@@ -264,6 +265,11 @@ func (b *UpdateService) body() (interface{}, error) {
 
 // Do executes the update operation.
 func (b *UpdateService) Do() (*UpdateResponse, error) {
+	return b.DoC(nil)
+}
+
+// DoC executes the update operation.
+func (b *UpdateService) DoC(ctx context.Context) (*UpdateResponse, error) {
 	path, params, err := b.url()
 	if err != nil {
 		return nil, err
@@ -276,14 +282,14 @@ func (b *UpdateService) Do() (*UpdateResponse, error) {
 	}
 
 	// Get response
-	res, err := b.client.PerformRequest("POST", path, params, body)
+	res, err := b.client.PerformRequestC(ctx, "POST", path, params, body)
 	if err != nil {
 		return nil, err
 	}
 
 	// Return result
 	ret := new(UpdateResponse)
-	if err := json.Unmarshal(res.Body, ret); err != nil {
+	if err := b.client.decoder.Decode(res.Body, ret); err != nil {
 		return nil, err
 	}
 	return ret, nil

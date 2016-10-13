@@ -28,7 +28,6 @@ type PhraseSuggester struct {
 	tokenLimit              *int
 	preTag, postTag         *string
 	collateQuery            *string
-	collateFilter           *string
 	collatePreference       *string
 	collateParams           map[string]interface{}
 	collatePrune            *bool
@@ -159,11 +158,6 @@ func (q *PhraseSuggester) CollateQuery(collateQuery string) *PhraseSuggester {
 	return q
 }
 
-func (q *PhraseSuggester) CollateFilter(collateFilter string) *PhraseSuggester {
-	q.collateFilter = &collateFilter
-	return q
-}
-
 func (q *PhraseSuggester) CollatePreference(collatePreference string) *PhraseSuggester {
 	q.collatePreference = &collatePreference
 	return q
@@ -220,7 +214,7 @@ func (q *PhraseSuggester) Source(includeName bool) (interface{}, error) {
 		}
 		suggester["context"] = src
 	default:
-		ctxq := make([]interface{}, 0)
+		var ctxq []interface{}
 		for _, query := range q.contextQueries {
 			src, err := query.Source()
 			if err != nil {
@@ -255,7 +249,7 @@ func (q *PhraseSuggester) Source(includeName bool) (interface{}, error) {
 	}
 	if q.generators != nil && len(q.generators) > 0 {
 		for typ, generators := range q.generators {
-			arr := make([]interface{}, 0)
+			var arr []interface{}
 			for _, g := range generators {
 				src, err := g.Source()
 				if err != nil {
@@ -283,14 +277,11 @@ func (q *PhraseSuggester) Source(includeName bool) (interface{}, error) {
 		}
 		suggester["highlight"] = hl
 	}
-	if q.collateQuery != nil || q.collateFilter != nil {
+	if q.collateQuery != nil {
 		collate := make(map[string]interface{})
 		suggester["collate"] = collate
 		if q.collateQuery != nil {
 			collate["query"] = *q.collateQuery
-		}
-		if q.collateFilter != nil {
-			collate["filter"] = *q.collateFilter
 		}
 		if q.collatePreference != nil {
 			collate["preference"] = *q.collatePreference

@@ -5,9 +5,10 @@
 package elastic
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/url"
+
+	"golang.org/x/net/context"
 
 	"gopkg.in/olivere/elastic.v3/uritemplates"
 )
@@ -240,6 +241,11 @@ func (s *IndexService) Validate() error {
 
 // Do executes the operation.
 func (s *IndexService) Do() (*IndexResponse, error) {
+	return s.DoC(nil)
+}
+
+// DoC executes the operation.
+func (s *IndexService) DoC(ctx context.Context) (*IndexResponse, error) {
 	// Check pre-conditions
 	if err := s.Validate(); err != nil {
 		return nil, err
@@ -260,14 +266,14 @@ func (s *IndexService) Do() (*IndexResponse, error) {
 	}
 
 	// Get HTTP response
-	res, err := s.client.PerformRequest(method, path, params, body)
+	res, err := s.client.PerformRequestC(ctx, method, path, params, body)
 	if err != nil {
 		return nil, err
 	}
 
 	// Return operation response
 	ret := new(IndexResponse)
-	if err := json.Unmarshal(res.Body, ret); err != nil {
+	if err := s.client.decoder.Decode(res.Body, ret); err != nil {
 		return nil, err
 	}
 	return ret, nil
