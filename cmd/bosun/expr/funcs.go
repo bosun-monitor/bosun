@@ -1138,6 +1138,9 @@ func AddTags(e *State, T miniprofiler.Timer, series *Results, s string) (*Result
 	}
 	for tagKey, tagValue := range tagSetToAdd {
 		for _, res := range series.Results {
+			if res.Group == nil {
+				res.Group = make(opentsdb.TagSet)
+			}
 			if _, ok := res.Group[tagKey]; ok {
 				return nil, fmt.Errorf("%s key already in group", tagKey)
 			}
