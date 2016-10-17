@@ -1886,10 +1886,12 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function ($window, fmtfi
                             .attr("width", function (d) {
                             var startT = moment(d.StartDate).utc().unix() * 1000;
                             var endT = moment(d.EndDate).utc().unix() * 1000;
-                            if (startT == endT) {
-                                return 3;
+                            var calcWidth = xScale(endT) - xScale(startT);
+                            // Never render boxes with less than 8 pixels are they are difficult to click
+                            if (calcWidth < 8) {
+                                return 8;
                             }
-                            return xScale(endT) - xScale(startT);
+                            return calcWidth;
                         })
                             .on("mouseenter", function (ann) {
                             if (!scope.showAnnotations) {
