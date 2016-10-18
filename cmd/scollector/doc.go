@@ -377,6 +377,14 @@ ConnectionString and Role, which are the same as using sqlplus.
 	    ConnectionString = "/@localnodevip/sid"
 	    Role = "sysdba"
 
+RedisRemote (array of table, keys are Address and Name): Address is the
+host:port of the redis instance to poll. Name is an additional tag to added
+to metrics from that instance.
+
+	[[RedisRemote]]
+	Address = "localhost:6379"
+	Name = "default"
+
 
 Windows
 
