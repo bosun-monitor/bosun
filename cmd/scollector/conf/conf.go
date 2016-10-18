@@ -55,33 +55,30 @@ type Conf struct {
 	// SNMPTimeout is the number of seconds to wait for SNMP responses (default 30)
 	SNMPTimeout int
 
-	HAProxy        []HAProxy
-	SNMP           []SNMP
-	MIBS           map[string]MIB
-	ICMP           []ICMP
-	Vsphere        []Vsphere
-	AWS            []AWS
-	Process        []ProcessParams
-	SystemdService []ServiceParams
-	ProcessDotNet  []ProcessDotNet
-	HTTPUnit       []HTTPUnit
-	Riak           []Riak
-	Github         []Github
-	// ElasticIndexFilters takes regular expressions and excludes indicies that
-	// match those filters from being monitored for metrics in the elastic.indices
-	// namespace
-	ElasticIndexFilters []string
-	RabbitMQ            []RabbitMQ
-	Nexpose             []Nexpose
-	GoogleAnalytics     []GoogleAnalytics
-	Cadvisor            []Cadvisor
-	RedisCounters       []RedisCounters
-	ExtraHop            []ExtraHop
-	LocalListener       string
-	TagOverride         []TagOverride
-	HadoopHost          string
-	Oracles             []Oracle
-	Fastly              []Fastly
+	HAProxy         []HAProxy
+	SNMP            []SNMP
+	MIBS            map[string]MIB
+	ICMP            []ICMP
+	Vsphere         []Vsphere
+	AWS             []AWS
+	Process         []ProcessParams
+	SystemdService  []ServiceParams
+	ProcessDotNet   []ProcessDotNet
+	HTTPUnit        []HTTPUnit
+	Riak            []Riak
+	Github          []Github
+	Elasticsearch   []Elasticsearch
+	RabbitMQ        []RabbitMQ
+	Nexpose         []Nexpose
+	GoogleAnalytics []GoogleAnalytics
+	Cadvisor        []Cadvisor
+	RedisCounters   []RedisCounters
+	ExtraHop        []ExtraHop
+	LocalListener   string
+	TagOverride     []TagOverride
+	HadoopHost      string
+	Oracles         []Oracle
+	Fastly          []Fastly
 }
 
 type HAProxy struct {
@@ -233,4 +230,14 @@ type Oracle struct {
 type OracleInstance struct {
 	ConnectionString string
 	Role             string
+}
+
+type Elasticsearch struct {
+	URL         string
+	IndicesFreq int
+
+	// IndexFilters takes regular expressions and excludes indicies that
+	// match those filters from being monitored for metrics in the elastic.indices
+	// namespace
+	IndexFilters []string
 }

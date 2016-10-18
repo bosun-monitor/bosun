@@ -2,6 +2,7 @@ package collectors
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -17,27 +18,47 @@ import (
 
 func init() {
 	registerInit(func(c *conf.Conf) {
-		for _, filter := range c.ElasticIndexFilters {
-			err := AddElasticIndexFilter(filter)
-			if err != nil {
-				slog.Errorf("Error processing ElasticIndexFilter: %s", err)
-			}
+		// Defaults to single local endpoint if enabled without config
+		if len(c.Elasticsearch) == 0 {
+			c.Elasticsearch = make([]conf.Elasticsearch, 1)
+			c.Elasticsearch[0] = conf.Elasticsearch{URL: "http://localhost:9200"}
 		}
-		collectors = append(collectors, &IntervalCollector{
-			F: func() (opentsdb.MultiDataPoint, error) {
-				return c_elasticsearch(false)
-			},
-			name:   "elasticsearch",
-			Enable: enableURL("http://localhost:9200/"),
-		})
-		collectors = append(collectors, &IntervalCollector{
-			F: func() (opentsdb.MultiDataPoint, error) {
-				return c_elasticsearch(true)
-			},
-			name:     "elasticsearch-indices",
-			Interval: time.Minute * 15,
-			Enable:   enableURL("http://localhost:9200/"),
-		})
+
+		for _, es := range c.Elasticsearch {
+			u, err := url.Parse(es.URL)
+			if err != nil {
+				slog.Errorf("Error processing ElasticSearch url: %s", err)
+			}
+
+			elasticIndexFilters := make(esIndexFilter, 0)
+			for _, filter := range es.IndexFilters {
+				re, err := regexp.Compile(filter)
+				if err != nil {
+					slog.Errorf("Error processing ElasticSearch IndexFilter: %s", err)
+				}
+				elasticIndexFilters = append(elasticIndexFilters, re)
+			}
+			collectors = append(collectors, &IntervalCollector{
+				F: func() (opentsdb.MultiDataPoint, error) {
+					return c_elasticsearch(false, u, elasticIndexFilters)
+				},
+				name:   fmt.Sprintf("elasticsearch-%s", es.URL),
+				Enable: enableURL(es.URL),
+			})
+
+			indicesFreq := time.Minute * 15
+			if es.IndicesFreq != 0 {
+				indicesFreq = time.Duration(es.IndicesFreq) * time.Second
+			}
+			collectors = append(collectors, &IntervalCollector{
+				F: func() (opentsdb.MultiDataPoint, error) {
+					return c_elasticsearch(true, u, elasticIndexFilters)
+				},
+				name:     fmt.Sprintf("elasticsearch-indices-%s", es.URL),
+				Interval: indicesFreq,
+				Enable:   enableURL(es.URL),
+			})
+		}
 	})
 }
 
@@ -48,16 +69,17 @@ var (
 		"yellow": 1,
 		"red":    2,
 	}
-	elasticIndexFilters = make([]*regexp.Regexp, 0)
 )
 
-func AddElasticIndexFilter(s string) error {
-	re, err := regexp.Compile(s)
-	if err != nil {
-		return err
+type esIndexFilter []*regexp.Regexp
+
+func (i esIndexFilter) skipIndex(index string) bool {
+	for _, re := range i {
+		if re.MatchString(index) {
+			return true
+		}
 	}
-	elasticIndexFilters = append(elasticIndexFilters, re)
-	return nil
+	return false
 }
 
 type structProcessor struct {
@@ -156,25 +178,25 @@ func (s *structProcessor) add(prefix string, st interface{}, ts opentsdb.TagSet)
 	}
 }
 
-func c_elasticsearch(collectIndices bool) (opentsdb.MultiDataPoint, error) {
+func c_elasticsearch(collectIndices bool, esUrl *url.URL, indexFilter esIndexFilter) (opentsdb.MultiDataPoint, error) {
 	var status ElasticStatus
-	if err := esReq("/", "", &status); err != nil {
+	if err := esReq(esUrl, "/", "", &status); err != nil {
 		return nil, err
 	}
 	var clusterStats ElasticClusterStats
-	if err := esReq(esStatsURL(status.Version.Number), "", &clusterStats); err != nil {
+	if err := esReq(esUrl, esStatsURL(status.Version.Number), "", &clusterStats); err != nil {
 		return nil, err
 	}
 	var clusterState ElasticClusterState
-	if err := esReq("/_cluster/state/master_node", "", &clusterState); err != nil {
+	if err := esReq(esUrl, "/_cluster/state/master_node", "", &clusterState); err != nil {
 		return nil, err
 	}
 	var clusterHealth ElasticHealth
-	if err := esReq("/_cluster/health", "level=indices", &clusterHealth); err != nil {
+	if err := esReq(esUrl, "/_cluster/health", "level=indices", &clusterHealth); err != nil {
 		return nil, err
 	}
 	var indexStats ElasticIndexStats
-	if err := esReq("/_stats", "", &indexStats); err != nil {
+	if err := esReq(esUrl, "/_stats", "", &indexStats); err != nil {
 		return nil, err
 	}
 	var md opentsdb.MultiDataPoint
@@ -209,7 +231,7 @@ func c_elasticsearch(collectIndices bool) (opentsdb.MultiDataPoint, error) {
 	}
 	if collectIndices && isMaster {
 		for k, index := range indexStats.Indices {
-			if esSkipIndex(k) {
+			if indexFilter.skipIndex(k) {
 				continue
 			}
 			ts := opentsdb.TagSet{"index_name": k, "cluster": clusterStats.ClusterName}
@@ -225,23 +247,16 @@ func c_elasticsearch(collectIndices bool) (opentsdb.MultiDataPoint, error) {
 	return md, nil
 }
 
-func esSkipIndex(index string) bool {
-	for _, re := range elasticIndexFilters {
-		if re.MatchString(index) {
-			return true
-		}
+func esReq(url *url.URL, path, query string, v interface{}) error {
+	timeout := time.Duration(10 * time.Second)
+	client := http.Client{
+		Timeout: timeout,
 	}
-	return false
-}
 
-func esReq(path, query string, v interface{}) error {
-	u := &url.URL{
-		Scheme:   "http",
-		Host:     "localhost:9200",
-		Path:     path,
-		RawQuery: query,
-	}
-	resp, err := http.Get(u.String())
+	url.Path = path
+	url.RawQuery = query
+
+	resp, err := client.Get(url.String())
 	if err != nil {
 		return nil
 	}

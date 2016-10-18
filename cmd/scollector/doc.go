@@ -377,6 +377,16 @@ ConnectionString and Role, which are the same as using sqlplus.
 	    ConnectionString = "/@localnodevip/sid"
 	    Role = "sysdba"
 
+Elasticsearch (array of tables, key are URL, IndicesFreq and IndexFilters): URL is
+the base path to an elasticsearch cluster. IndicesFreq is the frequency in seconds
+at which indices stats are polled (it's expensive), defaults to every 15 minutes.
+IndexFilters is an array of regular expressions that excludes indices matching from
+indices stats.
+
+	[[Elasticsearch]]
+	  URL = "http://localhost:9200/"
+	  IndicesFreq = 900
+	  IndexFilters = ["nostats.*"]
 
 Windows
 
