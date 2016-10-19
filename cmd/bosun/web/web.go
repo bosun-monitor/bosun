@@ -29,9 +29,27 @@ import (
 	"bosun.org/util"
 
 	"github.com/MiniProfiler/go/miniprofiler"
+	"github.com/NYTimes/gziphandler"
 	"github.com/bosun-monitor/annotate/backend"
 	"github.com/bosun-monitor/annotate/web"
+	"github.com/captncraig/easyauth"
 	"github.com/gorilla/mux"
+	"github.com/justinas/alice"
+)
+
+type role easyauth.Role
+
+const (
+	fullyOpen   role = 0
+	canViewDash      = 1 << iota
+	canViewConfig
+	canPutData
+	canPerformActions
+	canRunTests
+	canSaveConfig
+
+	roleReader = canViewDash | canViewConfig
+	roleAmin   = 0xFFFFFFFF
 )
 
 var (
@@ -94,26 +112,48 @@ func Listen(httpAddr, httpsAddr, certFile, keyFile string, devMode bool, tsdbHos
 		}
 	}
 
-	if tsdbHost != "" {
-		router.HandleFunc("/api/index", IndexTSDB)
-		router.Handle("/api/put", Relay(tsdbHost))
+	baseChain := alice.New(miniprofilerMiddleware, endpointStatsMiddleware, gziphandler.GzipHandler)
+
+	auth, err := easyauth.New()
+	if err != nil {
+		slog.Fatal(err)
+	}
+	handle := func(route string, h http.Handler, perms role) *mux.Route {
+		return router.Handle(route, baseChain.Then(auth.Wrap(h, easyauth.Role(perms))))
+	}
+	handleFunc := func(route string, h http.HandlerFunc, perms role) *mux.Route {
+		return handle(route, h, perms)
 	}
 
-	router.HandleFunc("/api/", APIRedirect)
-	router.Handle("/api/action", JSON(Action))
-	router.Handle("/api/alerts", JSON(Alerts))
-	router.Handle("/api/config", miniprofiler.NewHandler(Config))
-	router.Handle("/api/config_test", miniprofiler.NewHandler(ConfigTest))
-	router.Handle("/api/save_enabled", JSON(SaveEnabled))
+	var (
+		GET  = http.MethodGet
+		POST = http.MethodPost
+	)
+
+	if tsdbHost != "" {
+		handleFunc("/api/index", IndexTSDB, canPutData).Name("tsdb_index")
+		handle("/api/put", Relay(tsdbHost), canPutData).Name("tsdb_put")
+	}
+
+	handleFunc("/api/", APIRedirect, fullyOpen).Name("api_redir")
+	handle("/api/action", JSON(Action), canPerformActions).Name("action").Methods(GET)
+	handle("/api/alerts", JSON(Alerts), canViewDash).Name("alerts").Methods(GET)
+	handle("/api/config", JSON(Config), canViewConfig).Name("get_config").Methods(GET)
+
+	handle("/api/config_test", JSON(ConfigTest), canRunTests).Name("config_test").Methods(POST)
+	handle("/api/save_enabled", JSON(SaveEnabled), fullyOpen).Name("seve_enabled").Methods(GET)
+
 	if schedule.SystemConf.ReloadEnabled() { // Is true of save is enabled
-		router.Handle("/api/reload", JSON(Reload)).Methods(http.MethodPost)
+		handle("/api/reload", JSON(Reload), canSaveConfig).Name("can_save").Methods(POST)
 	}
+
 	if schedule.SystemConf.SaveEnabled() {
-		router.Handle("/api/config/bulkedit", miniprofiler.NewHandler(BulkEdit)).Methods(http.MethodPost)
-		router.Handle("/api/config/save", miniprofiler.NewHandler(SaveConfig)).Methods(http.MethodPost)
-		router.Handle("/api/config/diff", miniprofiler.NewHandler(DiffConfig)).Methods(http.MethodPost)
-		router.Handle("/api/config/running_hash", JSON(ConfigRunningHash))
+		handle("/api/config/bulkedit", JSON(BulkEdit), canSaveConfig).Name("bulk_edit").Methods(POST)
+		handle("/api/config/save", JSON(SaveConfig), canSaveConfig).Name("config_save").Methods(POST)
+		handle("/api/config/diff", JSON(DiffConfig), canSaveConfig).Name("config_diff").Methods(POST)
+		handle("/api/config/running_hash", JSON(ConfigRunningHash), canViewConfig).Name("config_hash").Methods(GET)
 	}
+
 	router.Handle("/api/egraph/{bs}.{format:svg|png}", JSON(ExprGraph))
 	router.Handle("/api/errors", JSON(ErrorHistory))
 	router.Handle("/api/expr", JSON(Expr))
@@ -786,35 +826,34 @@ func SilenceClear(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) 
 	return nil, schedule.ClearSilence(id)
 }
 
-func ConfigTest(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
+func ConfigTest(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	b, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		serveError(w, err)
-		return
+		return nil, err
 	}
 	if len(b) == 0 {
-		serveError(w, fmt.Errorf("empty config"))
-		return
+		return nil, fmt.Errorf("empty config")
 	}
 	_, err = rule.NewConf("test", schedule.SystemConf.EnabledBackends(), string(b))
 	if err != nil {
 		fmt.Fprintf(w, err.Error())
 	}
+	return nil, nil
 }
 
-func Config(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
+func Config(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	var text string
 	var err error
 	if hash := r.FormValue("hash"); hash != "" {
 		text, err = schedule.DataAccess.Configs().GetTempConfig(hash)
 		if err != nil {
-			serveError(w, err)
-			return
+			return nil, err
 		}
 	} else {
 		text = schedule.RuleConf.GetRawText()
 	}
 	fmt.Fprint(w, text)
+	return nil, nil
 }
 
 func APIRedirect(w http.ResponseWriter, req *http.Request) {
