@@ -30,9 +30,10 @@
 			"revisionTime": "2013-01-21T16:17:00-08:00"
 		},
 		{
+			"checksumSHA1": "SRbwal3qWa6cgvaLNHSenDmG3V0=",
 			"path": "github.com/MiniProfiler/go/miniprofiler",
-			"revision": "3c4995d8add5a3aacf4068313aeb5dc3a9be36c6",
-			"revisionTime": "2016-02-23T21:48:46-05:00"
+			"revision": "3296d396d47267cb86b34b80c2030eb3284296c8",
+			"revisionTime": "2016-07-19T19:58:34Z"
 		},
 		{
 			"path": "github.com/PuerkitoBio/goquery",
