@@ -12,7 +12,7 @@ func init() {
 }
 
 func startRedisRemoteCollector(c *conf.Conf) {
-	for _, r := range c.RedisRemote {
+	for _, r := range c.Redis {
 		collectors = append(collectors, &IntervalCollector{
 			F: func() (opentsdb.MultiDataPoint, error) {
 				return c_redis(r)

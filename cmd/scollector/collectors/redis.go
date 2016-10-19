@@ -262,7 +262,7 @@ func redisKeyCount(line string) (int64, error) {
 	return v, nil
 }
 
-func c_redis(r conf.RedisRemote) (opentsdb.MultiDataPoint, error) {
+func c_redis(r conf.Redis) (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	var Error error
 
@@ -285,10 +285,7 @@ func c_redis(r conf.RedisRemote) (opentsdb.MultiDataPoint, error) {
 			continue
 		}
 	}
-	tags := make(opentsdb.TagSet)
-	if r.Name != "" {
-		tags["name"] = r.Name
-	}
+	tags := opentsdb.TagSet(r.Tags).Copy()
 
 	var keyspace bool
 	var keys int64
