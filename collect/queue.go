@@ -170,6 +170,9 @@ func SendDataPoints(dps []*opentsdb.DataPoint, tsdb string) (*http.Response, err
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Content-Encoding", "gzip")
+	if AuthToken != "" {
+		req.Header.Set("X-Access-Token", AuthToken)
+	}
 	Add("collect.post.total_bytes", Tags, int64(buf.Len()))
 
 	if UseNtlm {

@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/MiniProfiler/go/miniprofiler"
+	"github.com/captncraig/easyauth"
 	"github.com/gorilla/mux"
 
 	"bosun.org/collect"
@@ -37,4 +38,22 @@ var endpointStatsMiddleware = func(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r)
 		t()
 	})
+}
+
+type noopAuth struct{}
+
+func (n noopAuth) GetUser(r *http.Request) (*easyauth.User, error) {
+	//TODO: make sure ui sends header when possible
+	name := "anonymous"
+	if q := r.FormValue("user"); q != "" {
+		name = q
+	} else if h := r.Header.Get("X-Bosun-User"); h != "" {
+		name = h
+	}
+	//everybody is an admin!
+	return &easyauth.User{
+		Access:   roleReader,
+		Username: name,
+		Method:   "noop",
+	}, nil
 }

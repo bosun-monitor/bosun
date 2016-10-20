@@ -33,23 +33,25 @@ import (
 	"github.com/bosun-monitor/annotate/backend"
 	"github.com/bosun-monitor/annotate/web"
 	"github.com/captncraig/easyauth"
+	"github.com/captncraig/easyauth/providers/token"
+	"github.com/captncraig/easyauth/providers/token/redisStore"
 	"github.com/gorilla/mux"
 	"github.com/justinas/alice"
 )
 
-type role easyauth.Role
-
 const (
-	fullyOpen   role = 0
-	canViewDash      = 1 << iota
+	canViewDash easyauth.Role = 1 << iota
 	canViewConfig
 	canPutData
 	canPerformActions
 	canRunTests
 	canSaveConfig
+	canViewAnnotations
+	canCreateAnnotations
 
-	roleReader = canViewDash | canViewConfig
-	roleAmin   = 0xFFFFFFFF
+	fullyOpen  = 0
+	roleReader = canViewDash | canViewConfig | canViewAnnotations
+	roleAdmin  = 0xFFFFFFFF
 )
 
 var (
@@ -115,13 +117,21 @@ func Listen(httpAddr, httpsAddr, certFile, keyFile string, devMode bool, tsdbHos
 	baseChain := alice.New(miniprofilerMiddleware, endpointStatsMiddleware, gziphandler.GzipHandler)
 
 	auth, err := easyauth.New()
+	selfStore, _ := token.NewJsonStore("")
+	selfToken := token.NewToken(easyauth.RandomString(16), selfStore)
+	tok, _ := selfToken.NewToken("bosun", roleAdmin)
+	collect.AuthToken = tok
+	redisStore.New(schedule.DataAccess)
+	auth.AddProvider("self", selfToken)
+	auth.AddProvider("noop", noopAuth{})
+
 	if err != nil {
 		slog.Fatal(err)
 	}
-	handle := func(route string, h http.Handler, perms role) *mux.Route {
-		return router.Handle(route, baseChain.Then(auth.Wrap(h, easyauth.Role(perms))))
+	handle := func(route string, h http.Handler, perms easyauth.Role) *mux.Route {
+		return router.Handle(route, baseChain.Then(auth.Wrap(h, perms)))
 	}
-	handleFunc := func(route string, h http.HandlerFunc, perms role) *mux.Route {
+	handleFunc := func(route string, h http.HandlerFunc, perms easyauth.Role) *mux.Route {
 		return handle(route, h, perms)
 	}
 
@@ -134,7 +144,7 @@ func Listen(httpAddr, httpsAddr, certFile, keyFile string, devMode bool, tsdbHos
 		handleFunc("/api/index", IndexTSDB, canPutData).Name("tsdb_index")
 		handle("/api/put", Relay(tsdbHost), canPutData).Name("tsdb_put")
 	}
-
+	router.PathPrefix("/auth/").Handler(auth.LoginHandler())
 	handleFunc("/api/", APIRedirect, fullyOpen).Name("api_redir")
 	handle("/api/action", JSON(Action), canPerformActions).Name("action").Methods(GET)
 	handle("/api/alerts", JSON(Alerts), canViewDash).Name("alerts").Methods(GET)
@@ -143,7 +153,7 @@ func Listen(httpAddr, httpsAddr, certFile, keyFile string, devMode bool, tsdbHos
 	handle("/api/config_test", JSON(ConfigTest), canRunTests).Name("config_test").Methods(POST)
 	handle("/api/save_enabled", JSON(SaveEnabled), fullyOpen).Name("seve_enabled").Methods(GET)
 
-	if schedule.SystemConf.ReloadEnabled() { // Is true of save is enabled
+	if schedule.SystemConf.ReloadEnabled() {
 		handle("/api/reload", JSON(Reload), canSaveConfig).Name("can_save").Methods(POST)
 	}
 
@@ -154,26 +164,26 @@ func Listen(httpAddr, httpsAddr, certFile, keyFile string, devMode bool, tsdbHos
 		handle("/api/config/running_hash", JSON(ConfigRunningHash), canViewConfig).Name("config_hash").Methods(GET)
 	}
 
-	router.Handle("/api/egraph/{bs}.{format:svg|png}", JSON(ExprGraph))
-	router.Handle("/api/errors", JSON(ErrorHistory))
-	router.Handle("/api/expr", JSON(Expr))
-	router.Handle("/api/graph", JSON(Graph))
-	router.Handle("/api/health", JSON(HealthCheck))
-	router.Handle("/api/host", JSON(Host))
-	router.Handle("/api/last", JSON(Last))
-	router.Handle("/api/quiet", JSON(Quiet))
-	router.Handle("/api/incidents", JSON(Incidents))
-	router.Handle("/api/incidents/open", JSON(ListOpenIncidents))
-	router.Handle("/api/incidents/events", JSON(IncidentEvents))
-	router.Handle("/api/metadata/get", JSON(GetMetadata))
-	router.Handle("/api/metadata/metrics", JSON(MetadataMetrics))
-	router.Handle("/api/metadata/put", JSON(PutMetadata))
-	router.Handle("/api/metadata/delete", JSON(DeleteMetadata)).Methods("DELETE")
-	router.Handle("/api/metric", JSON(UniqueMetrics))
-	router.Handle("/api/metric/{tagk}", JSON(MetricsByTagKey))
-	router.Handle("/api/metric/{tagk}/{tagv}", JSON(MetricsByTagPair))
-	router.Handle("/api/rule", JSON(Rule))
-	router.HandleFunc("/api/shorten", Shorten)
+	handle("/api/egraph/{bs}.{format:svg|png}", JSON(ExprGraph), canRunTests).Name("graph_img")
+	handle("/api/errors", JSON(ErrorHistory), canViewDash).Name("errors").Methods(GET)
+	handle("/api/expr", JSON(Expr), canRunTests).Name("expr").Methods(POST)
+	handle("/api/graph", JSON(Graph), canRunTests).Name("graph").Methods(GET)
+
+	handle("/api/health", JSON(HealthCheck), fullyOpen).Name("health_check").Methods(GET)
+	handle("/api/host", JSON(Host), canViewDash).Name("host").Methods(GET)
+	handle("/api/last", JSON(Last), canViewDash).Name("last").Methods(GET)
+	handle("/api/quiet", JSON(Quiet), canViewDash).Name("quiet").Methods(GET)
+	handle("/api/incidents/open", JSON(ListOpenIncidents), canViewDash).Name("open_incidents").Methods(GET)
+	handle("/api/incidents/events", JSON(IncidentEvents), canViewDash).Name("incident_events").Methods(GET)
+	handle("/api/metadata/get", JSON(GetMetadata), canViewDash).Name("meta_get").Methods(GET)
+	handle("/api/metadata/metrics", JSON(MetadataMetrics), canViewDash).Name("meta_metrics").Methods(GET)
+	handle("/api/metadata/put", JSON(PutMetadata), canPutData).Name("meta_put").Methods(POST)
+	handle("/api/metadata/delete", JSON(DeleteMetadata), canPutData).Name("meta_delete").Methods(http.MethodDelete)
+	handle("/api/metric", JSON(UniqueMetrics), canViewDash).Name("meta_uniqe_metrics").Methods(GET)
+	handle("/api/metric/{tagk}", JSON(MetricsByTagKey), canViewDash).Name("meta_metrics_by_tag").Methods(GET)
+	handle("/api/metric/{tagk}/{tagv}", JSON(MetricsByTagPair), canViewDash).Name("meta_metric_by_tag_pair").Methods(GET)
+	handle("/api/rule", JSON(Rule), canRunTests).Name("rule_test").Methods(POST)
+	handle("/api/shorten", JSON(Shorten), canViewDash).Name("shorten")
 	router.Handle("/api/silence/clear", JSON(SilenceClear))
 	router.Handle("/api/silence/get", JSON(SilenceGet))
 	router.Handle("/api/silence/set", JSON(SilenceSet))
@@ -203,25 +213,28 @@ func Listen(httpAddr, httpsAddr, certFile, keyFile string, devMode bool, tsdbHos
 				time.Sleep(time.Second * 30)
 			}
 		}()
-		web.AddRoutes(router, "/api", []backend.Backend{annotateBackend}, false, false)
-
+		read := baseChain.Append(auth.Wrapper(canViewAnnotations)).ThenFunc
+		write := baseChain.Append(auth.Wrapper(canCreateAnnotations)).ThenFunc
+		web.AddRoutesWithMiddleware(router, "/api", []backend.Backend{annotateBackend}, false, false, read, write)
 	}
 
 	router.HandleFunc("/api/version", Version)
 	router.Handle("/api/debug/schedlock", JSON(ScheduleLockStatus))
-	http.Handle("/", miniprofiler.NewHandler(Index))
-	http.Handle("/api/", router)
 	fs := http.FileServer(webFS)
-	http.Handle("/partials/", fs)
-	http.Handle("/static/", http.StripPrefix("/static/", fs))
-	http.Handle("/favicon.ico", fs)
-	slog.Infoln("tsdb host:", tsdbHost)
+	router.PathPrefix("/partials/").Handler(fs)
+	router.PathPrefix("/static/").Handler(http.StripPrefix("/static/", fs))
+	router.PathPrefix("/favicon.ico").Handler(fs)
+	router.PathPrefix(miniprofiler.PATH).Handler(http.StripPrefix(miniprofiler.PATH, http.HandlerFunc(miniprofiler.MiniProfilerHandler)))
 
+	//MUST BE LAST!
+	router.PathPrefix("/").Handler(miniprofiler.NewHandler(Index))
+
+	slog.Infoln("tsdb host:", tsdbHost)
 	errChan := make(chan error, 1)
 	if httpAddr != "" {
 		go func() {
 			slog.Infoln("bosun web listening http on:", httpAddr)
-			errChan <- http.ListenAndServe(httpAddr, nil)
+			errChan <- http.ListenAndServe(httpAddr, router)
 		}()
 	}
 	if httpsAddr != "" {
@@ -230,7 +243,7 @@ func Listen(httpAddr, httpsAddr, certFile, keyFile string, devMode bool, tsdbHos
 			if certFile == "" || keyFile == "" {
 				errChan <- fmt.Errorf("certFile and keyfile must be specified to use https")
 			}
-			errChan <- http.ListenAndServeTLS(httpsAddr, certFile, keyFile, nil)
+			errChan <- http.ListenAndServeTLS(httpsAddr, certFile, keyFile, router)
 		}()
 	}
 	return <-errChan
@@ -372,7 +385,8 @@ func serveError(w http.ResponseWriter, err error) {
 }
 
 func JSON(h func(miniprofiler.Timer, http.ResponseWriter, *http.Request) (interface{}, error)) http.Handler {
-	return miniprofiler.NewHandler(func(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t := miniprofiler.GetTimer(r)
 		d, err := h(t, w, r)
 		if err != nil {
 			serveError(w, err)
@@ -387,26 +401,12 @@ func JSON(h func(miniprofiler.Timer, http.ResponseWriter, *http.Request) (interf
 			serveError(w, err)
 			return
 		}
-		var tw io.Writer = w
-		if strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
-			w.Header().Set("Content-Encoding", "gzip")
-			gz := gzip.NewWriter(w)
-			defer gz.Close()
-			tw = gz
-		}
-		if cb := r.FormValue("callback"); cb != "" {
-			w.Header().Add("Content-Type", "application/javascript")
-			tw.Write([]byte(cb + "("))
-			buf.WriteTo(tw)
-			tw.Write([]byte(")"))
-			return
-		}
-		w.Header().Add("Content-Type", "application/json")
-		buf.WriteTo(tw)
+		w.Header().Set("Content-Type", "application/json")
+		buf.WriteTo(w)
 	})
 }
 
-func Shorten(w http.ResponseWriter, r *http.Request) {
+func Shorten(_ miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	u := url.URL{
 		Scheme: "https",
 		Host:   "www.googleapis.com",
@@ -421,8 +421,7 @@ func Shorten(w http.ResponseWriter, r *http.Request) {
 		r.Referer(),
 	})
 	if err != nil {
-		serveError(w, err)
-		return
+		return nil, err
 	}
 
 	transport := &http.Transport{
@@ -439,11 +438,11 @@ func Shorten(w http.ResponseWriter, r *http.Request) {
 
 	req, err := c.Post(u.String(), "application/json", bytes.NewBuffer(j))
 	if err != nil {
-		serveError(w, err)
-		return
+		return nil, err
 	}
 	io.Copy(w, req.Body)
 	req.Body.Close()
+	return nil, nil
 }
 
 type Health struct {
@@ -610,38 +609,6 @@ func IncidentEvents(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request
 		return nil, err
 	}
 	return schedule.DataAccess.State().GetIncidentState(num)
-}
-
-func Incidents(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	// TODO: Incident Search
-	return nil, nil
-	//	alert := r.FormValue("alert")
-	//	toTime := time.Now().UTC()
-	//	fromTime := toTime.Add(-14 * 24 * time.Hour) // 2 weeks
-
-	//	if from := r.FormValue("from"); from != "" {
-	//		t, err := time.Parse(tsdbFormatSecs, from)
-	//		if err != nil {
-	//			return nil, err
-	//		}
-	//		fromTime = t
-	//	}
-	//	if to := r.FormValue("to"); to != "" {
-	//		t, err := time.Parse(tsdbFormatSecs, to)
-	//		if err != nil {
-	//			return nil, err
-	//		}
-	//		toTime = t
-	//	}
-	//	incidents, err := schedule.GetIncidents(alert, fromTime, toTime)
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//	maxIncidents := 200
-	//	if len(incidents) > maxIncidents {
-	//		incidents = incidents[:maxIncidents]
-	//	}
-	//	return incidents, nil
 }
 
 func Status(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {

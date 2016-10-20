@@ -266,19 +266,22 @@
 			"revisionTime": "2015-11-22T20:06:43-07:00"
 		},
 		{
+			"checksumSHA1": "jx1hiVjE68LP+EMqgSiOJ5udPCQ=",
 			"path": "github.com/bosun-monitor/annotate",
-			"revision": "aaf0bbfced111be924ca14fd4cf79fb2aa9ba95a",
-			"revisionTime": "2016-10-15T11:00:20-04:00"
+			"revision": "3e927ac14b8b7fa27633dc2c99a64c7e41ef684e",
+			"revisionTime": "2016-10-19T22:13:39Z"
 		},
 		{
+			"checksumSHA1": "LEPgxj7V8AQFOGFB4aqyDl7nuAw=",
 			"path": "github.com/bosun-monitor/annotate/backend",
-			"revision": "aaf0bbfced111be924ca14fd4cf79fb2aa9ba95a",
-			"revisionTime": "2016-10-15T11:00:20-04:00"
+			"revision": "3e927ac14b8b7fa27633dc2c99a64c7e41ef684e",
+			"revisionTime": "2016-10-19T22:13:39Z"
 		},
 		{
+			"checksumSHA1": "GdXtpLoHxfTdgsdgr3XaEmT7eCk=",
 			"path": "github.com/bosun-monitor/annotate/web",
-			"revision": "aaf0bbfced111be924ca14fd4cf79fb2aa9ba95a",
-			"revisionTime": "2016-10-15T11:00:20-04:00"
+			"revision": "3e927ac14b8b7fa27633dc2c99a64c7e41ef684e",
+			"revisionTime": "2016-10-19T22:13:39Z"
 		},
 		{
 			"path": "github.com/bosun-monitor/statusio",

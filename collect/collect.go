@@ -59,6 +59,9 @@ var (
 	// Sent is the number of sent data points.
 	sent int64
 
+	//Authtoken is the token to use to communicate with bosun
+	AuthToken string
+
 	tchan               chan *opentsdb.DataPoint
 	tsdbURL             string
 	osHostname          string
