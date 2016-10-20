@@ -52,11 +52,14 @@ var Elastic = map[string]parse.Func{
 		F:        ESIndicies,
 	},
 	"esdaily": {
-		Args:     []models.FuncType{models.TypeString, models.TypeString, models.TypeString},
-		VArgs:    true,
-		VArgsPos: 1,
-		Return:   models.TypeESIndexer,
-		F:        ESDaily,
+		Args:   []models.FuncType{models.TypeString, models.TypeString, models.TypeString},
+		Return: models.TypeESIndexer,
+		F:      ESDaily,
+	},
+	"esmonthly": {
+		Args:   []models.FuncType{models.TypeString, models.TypeString, models.TypeString},
+		Return: models.TypeESIndexer,
+		F:      ESMonthly,
 	},
 	"esls": {
 		Args:   []models.FuncType{models.TypeString},
@@ -277,10 +280,10 @@ func (e ElasticHosts) Query(r *ElasticRequest) (*elastic.SearchResult, error) {
 	if err != nil {
 		return nil, err
 	}
-	if (res.Shards == nil) {
+	if res.Shards == nil {
 		return nil, fmt.Errorf("no shard info in reply, should not be here please file issue")
 	}
-	if (res.Shards.Successful == 0) {
+	if res.Shards.Successful == 0 {
 		return nil, fmt.Errorf("no successful shards in result, perhaps the index does exist, total shards: %v, failed shards: %v", res.Shards.Total, res.Shards.Failed)
 	}
 	return res, nil
@@ -363,6 +366,23 @@ func ESDaily(e *State, T miniprofiler.Timer, timeField, indexRoot, layout string
 		truncStart := now.New(*start).BeginningOfDay()
 		truncEnd := now.New(*end).BeginningOfDay()
 		for d := truncStart; !d.After(truncEnd); d = d.AddDate(0, 0, 1) {
+			indices = append(indices, fmt.Sprintf("%v%v", indexRoot, d.Format(layout)))
+		}
+		return indices
+	}
+	r.Results = append(r.Results, &Result{Value: indexer})
+	return &r, nil
+}
+
+func ESMonthly(e *State, T miniprofiler.Timer, timeField, indexRoot, layout string) (*Results, error) {
+	var r Results
+	indexer := ESIndexer{}
+	indexer.TimeField = timeField
+	indexer.Generate = func(start, end *time.Time) []string {
+		var indices []string
+		truncStart := now.New(*start).BeginningOfMonth()
+		truncEnd := now.New(*end).BeginningOfMonth()
+		for d := truncStart; !d.After(truncEnd); d = d.AddDate(0, 1, 0) {
 			indices = append(indices, fmt.Sprintf("%v%v", indexRoot, d.Format(layout)))
 		}
 		return indices
