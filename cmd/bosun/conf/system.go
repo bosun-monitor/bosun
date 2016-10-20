@@ -48,6 +48,8 @@ type SystemConf struct {
 
 	AnnotateConf AnnotateConf
 
+	AuthConf *AuthConf
+
 	EnableSave      bool
 	EnableReload    bool
 	CommandHookPath string
@@ -141,6 +143,40 @@ type SMTPConf struct {
 	Host      string
 	Username  string
 	Password  string `json:"-"`
+}
+
+//AuthConf is configuration for bosun's authentication
+type AuthConf struct {
+	//Secret string to hash auth tokens. Needed to enable token auth.
+	TokenSecret string
+	//LDAP configuration
+	LDAP LDAPConf
+}
+
+type LDAPConf struct {
+	// Domain name (used to make domain/username)
+	Domain string
+	// LDAP server
+	LdapAddr string
+	// allow insecure ldap connection?
+	AllowInsecure bool
+	// default permission level for anyone who can log in. Try "Reader".
+	DefaultPermission string
+	//List of group level permissions
+	Groups []*LDAPGroup
+	//List of user specific permission levels
+	Users map[string]string
+	//Root search path for group lookups. Usually something like "DC=myorg,DC=com".
+	//Only needed if using group permissions
+	RootSearchPath string
+}
+
+//LDAPGroup is a Group level access specification for ldap
+type LDAPGroup struct {
+	// group search path string
+	Path string
+	// Access to grant members of group Ex: "Admin"
+	Role string
 }
 
 // GetSystemConfProvider returns the SystemConfProvider interface
@@ -289,6 +325,10 @@ func (sc *SystemConf) GetRedisDb() int {
 // GetRedisPassword returns the password that should be used to connect to redis
 func (sc *SystemConf) GetRedisPassword() string {
 	return sc.DBConf.RedisPassword
+}
+
+func (sc *SystemConf) GetAuthConf() *AuthConf {
+	return sc.AuthConf
 }
 
 // GetTimeAndDate returns the http://www.timeanddate.com/ that should be available to the UI

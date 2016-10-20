@@ -69,6 +69,8 @@ type SystemConfProvider interface {
 	GetAnnotateElasticHosts() expr.ElasticHosts
 	GetAnnotateIndex() string
 
+	GetAuthConf() *AuthConf
+
 	// Contexts
 	GetTSDBContext() opentsdb.Context
 	GetGraphiteContext() graphite.Context

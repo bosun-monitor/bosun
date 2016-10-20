@@ -250,13 +250,25 @@ type Metasend struct {
 	Time   *time.Time `json:",omitempty"`
 }
 
+//AuthToken to use to talk to bosun
+var AuthToken string
+
 func sendMetadata(ms []Metasend) {
 	b, err := json.Marshal(&ms)
 	if err != nil {
 		slog.Error(err)
 		return
 	}
-	resp, err := http.Post(metahost, "application/json", bytes.NewBuffer(b))
+	req, err := http.NewRequest(http.MethodPost, metahost, bytes.NewBuffer(b))
+	if err != nil {
+		slog.Error(err)
+		return
+	}
+	req.Header.Set("Content-Type", "application/json")
+	if AuthToken != "" {
+		req.Header.Set("X-Access-Token", AuthToken)
+	}
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		slog.Error(err)
 		return

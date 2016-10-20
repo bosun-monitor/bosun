@@ -177,16 +177,13 @@ func SendDataPoints(dps []*opentsdb.DataPoint, tsdb string) (*http.Response, err
 
 	if UseNtlm {
 		resp, err := ntlm.DoNTLMRequest(DefaultClient, req)
-
 		if err != nil {
 			return nil, err
 		}
-
 		if resp.StatusCode == 401 {
 			slog.Errorf("Scollector unauthorized to post data points to tsdb. Terminating.")
 			os.Exit(1)
 		}
-
 		return resp, err
 	}
 
