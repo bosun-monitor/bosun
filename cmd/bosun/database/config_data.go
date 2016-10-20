@@ -6,8 +6,6 @@ import (
 
 	"github.com/garyburd/redigo/redis"
 
-	"bosun.org/collect"
-	"bosun.org/opentsdb"
 	"bosun.org/slog"
 )
 
@@ -23,8 +21,7 @@ func (d *dataAccess) Configs() ConfigDataAccess {
 const configLifetime = 60 * 24 * 14 // 2 weeks
 
 func (d *dataAccess) SaveTempConfig(text string) (string, error) {
-	defer collect.StartTimer("redis", opentsdb.TagSet{"op": "SaveTempConfig"})()
-	conn := d.GetConnection()
+	conn := d.Get()
 	defer conn.Close()
 
 	sig := md5.Sum([]byte(text))
@@ -38,8 +35,7 @@ func (d *dataAccess) SaveTempConfig(text string) (string, error) {
 }
 
 func (d *dataAccess) GetTempConfig(hash string) (string, error) {
-	defer collect.StartTimer("redis", opentsdb.TagSet{"op": "GetTempConfig"})()
-	conn := d.GetConnection()
+	conn := d.Get()
 	defer conn.Close()
 
 	key := "tempConfig:" + hash

@@ -5,6 +5,8 @@ package database
 
 import (
 	"log"
+	"runtime"
+	"strings"
 	"time"
 
 	"bosun.org/collect"
@@ -90,13 +92,39 @@ func StartLedis(dataDir string, bind string) (stop func(), err error) {
 	return app.Close, nil
 }
 
-//interface so things can get a raw connection (mostly tests), but still discourage it.
-type Connector interface {
-	GetConnection() redis.Conn
+//RedisConnector is a simple interface so things can get a raw connection (mostly tests), but still discourage it.
+// makes dataAccess interchangable with redis.Pool
+type RedisConnector interface {
+	Get() redis.Conn
 }
 
-func (d *dataAccess) GetConnection() redis.Conn {
-	return d.pool.Get()
+//simple wrapper around a redis conn. Uses close to also stop and submit a simple timer for bosun stats on operations.
+type connWrapper struct {
+	redis.Conn
+	closer func()
+}
+
+func (c *connWrapper) Close() error {
+	err := c.Conn.Close()
+	c.closer()
+	return err
+}
+
+func (d *dataAccess) Get() redis.Conn {
+	closer := collect.StartTimer("redis", opentsdb.TagSet{"op": myCallerName()})
+	return &connWrapper{
+		Conn:   d.pool.Get(),
+		closer: closer,
+	}
+}
+
+//gets name of function that called the currently executing function.
+func myCallerName() string {
+	fpcs := make([]uintptr, 1)
+	runtime.Callers(3, fpcs)
+	fun := runtime.FuncForPC(fpcs[0])
+	nameSplit := strings.Split(fun.Name(), ".")
+	return nameSplit[len(nameSplit)-1]
 }
 
 func newPool(server, password string, database int, isRedis bool, maxActive int, wait bool) *redis.Pool {

@@ -5,9 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"bosun.org/collect"
 	"bosun.org/models"
-	"bosun.org/opentsdb"
 	"bosun.org/slog"
 	"github.com/garyburd/redigo/redis"
 )
@@ -68,8 +66,7 @@ func (d *dataAccess) State() StateDataAccess {
 }
 
 func (d *dataAccess) TouchAlertKey(ak models.AlertKey, t time.Time) error {
-	defer collect.StartTimer("redis", opentsdb.TagSet{"op": "TouchAlertKey"})()
-	conn := d.GetConnection()
+	conn := d.Get()
 	defer conn.Close()
 
 	_, err := conn.Do("ZADD", statesLastTouchedKey(ak.Name()), t.UTC().Unix(), string(ak))
@@ -77,8 +74,7 @@ func (d *dataAccess) TouchAlertKey(ak models.AlertKey, t time.Time) error {
 }
 
 func (d *dataAccess) GetUntouchedSince(alert string, time int64) ([]models.AlertKey, error) {
-	defer collect.StartTimer("redis", opentsdb.TagSet{"op": "GetUntouchedSince"})()
-	conn := d.GetConnection()
+	conn := d.Get()
 	defer conn.Close()
 
 	results, err := redis.Strings(conn.Do("ZRANGEBYSCORE", statesLastTouchedKey(alert), "-inf", time))
@@ -93,8 +89,7 @@ func (d *dataAccess) GetUntouchedSince(alert string, time int64) ([]models.Alert
 }
 
 func (d *dataAccess) GetOpenIncident(ak models.AlertKey) (*models.IncidentState, error) {
-	defer collect.StartTimer("redis", opentsdb.TagSet{"op": "GetOpenIncident"})()
-	conn := d.GetConnection()
+	conn := d.Get()
 	defer conn.Close()
 
 	inc, err := d.getLatestIncident(ak, conn)
@@ -126,16 +121,14 @@ func (d *dataAccess) getLatestIncident(ak models.AlertKey, conn redis.Conn) (*mo
 }
 
 func (d *dataAccess) GetLatestIncident(ak models.AlertKey) (*models.IncidentState, error) {
-	defer collect.StartTimer("redis", opentsdb.TagSet{"op": "GetLatestIncident"})()
-	conn := d.GetConnection()
+	conn := d.Get()
 	defer conn.Close()
 
 	return d.getLatestIncident(ak, conn)
 }
 
 func (d *dataAccess) GetAllOpenIncidents() ([]*models.IncidentState, error) {
-	defer collect.StartTimer("redis", opentsdb.TagSet{"op": "GetAllOpenIncidents"})()
-	conn := d.GetConnection()
+	conn := d.Get()
 	defer conn.Close()
 
 	// get open ids
@@ -147,8 +140,7 @@ func (d *dataAccess) GetAllOpenIncidents() ([]*models.IncidentState, error) {
 }
 
 func (d *dataAccess) GetAllIncidents(ak models.AlertKey) ([]*models.IncidentState, error) {
-	defer collect.StartTimer("redis", opentsdb.TagSet{"op": "GetAllIncidents"})()
-	conn := d.GetConnection()
+	conn := d.Get()
 	defer conn.Close()
 
 	ids, err := int64s(conn.Do("LRANGE", incidentsForAlertKeyKey(ak), 0, -1))
@@ -195,8 +187,7 @@ func (d *dataAccess) getIncident(incidentId int64, conn redis.Conn) (*models.Inc
 }
 
 func (d *dataAccess) GetIncidentState(incidentId int64) (*models.IncidentState, error) {
-	defer collect.StartTimer("redis", opentsdb.TagSet{"op": "GetIncident"})()
-	conn := d.GetConnection()
+	conn := d.Get()
 	defer conn.Close()
 	return d.getIncident(incidentId, conn)
 }
@@ -211,8 +202,7 @@ func (d *dataAccess) ImportIncidentState(s *models.IncidentState) error {
 }
 
 func (d *dataAccess) save(s *models.IncidentState, isImport bool) (int64, error) {
-	defer collect.StartTimer("redis", opentsdb.TagSet{"op": "UpdateIncident"})()
-	conn := d.GetConnection()
+	conn := d.Get()
 	defer conn.Close()
 
 	isNew := false
@@ -284,8 +274,7 @@ func (d *dataAccess) save(s *models.IncidentState, isImport bool) (int64, error)
 }
 
 func (d *dataAccess) SetUnevaluated(ak models.AlertKey, uneval bool) error {
-	defer collect.StartTimer("redis", opentsdb.TagSet{"op": "SetUnevaluated"})()
-	conn := d.GetConnection()
+	conn := d.Get()
 	defer conn.Close()
 
 	op := "SREM"
@@ -298,8 +287,7 @@ func (d *dataAccess) SetUnevaluated(ak models.AlertKey, uneval bool) error {
 
 // The nucular option. Delete all we know about this alert key
 func (d *dataAccess) Forget(ak models.AlertKey) error {
-	defer collect.StartTimer("redis", opentsdb.TagSet{"op": "Forget"})()
-	conn := d.GetConnection()
+	conn := d.Get()
 	defer conn.Close()
 
 	ids, err := int64s(conn.Do("LRANGE", incidentsForAlertKeyKey(ak), 0, -1))
@@ -340,8 +328,7 @@ func (d *dataAccess) Forget(ak models.AlertKey) error {
 }
 
 func (d *dataAccess) GetUnknownAndUnevalAlertKeys(alert string) ([]models.AlertKey, []models.AlertKey, error) {
-	defer collect.StartTimer("redis", opentsdb.TagSet{"op": "GetUnknownAndUnevalAlertKeys"})()
-	conn := d.GetConnection()
+	conn := d.Get()
 	defer conn.Close()
 
 	unknownS, err := redis.Strings(conn.Do("SMEMBERS", statesUnknownKey(alert)))
