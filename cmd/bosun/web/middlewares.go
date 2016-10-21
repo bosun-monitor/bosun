@@ -1,6 +1,7 @@
 package web
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/MiniProfiler/go/miniprofiler"
@@ -28,28 +29,51 @@ var endpointStatsMiddleware = func(next http.Handler) http.Handler {
 		if r.TLS != nil {
 			proto = "https"
 		}
-		collect.Add("bosun.http_protocol", opentsdb.TagSet{"proto": proto}, 1)
+		collect.Add("http_protocol", opentsdb.TagSet{"proto": proto}, 1)
 
 		//if we use gorilla named routes, we can add stats and timings per route
 		routeName := ""
 		if route := mux.CurrentRoute(r); route != nil {
 			routeName = route.GetName()
-		}
 		if routeName == "" {
 			routeName = "unknown"
 		}
-		t := collect.StartTimer("bosun.http_routes", opentsdb.TagSet{"route": routeName})
+		t := collect.StartTimer("http_routes", opentsdb.TagSet{"route": routeName})
 		next.ServeHTTP(w, r)
 		t()
 	})
 }
 
-func buildAuth(cfg *conf.AuthConf) (easyauth.AuthManager, *token.TokenProvider, error) {
+type noopAuth struct{}
 
-	if cfg == nil {
-		return nil, nil, nil
+func (n noopAuth) GetUser(r *http.Request) (*easyauth.User, error) {
+	//TODO: make sure ui sends header when possible, instead of json body
+	name := "anonymous"
+	if q := r.FormValue("user"); q != "" {
+		name = q
+	} else if h := r.Header.Get("X-Bosun-User"); h != "" {
+		name = h
 	}
-	auth, err := easyauth.New(easyauth.CookieSecret("ASDASDASDASDASD"))
+	//everybody is an admin!
+	return &easyauth.User{
+		Access:   roleReader,
+		Username: name,
+		Method:   "noop",
+	}, nil
+}
+
+func buildAuth(cfg *conf.AuthConf) (easyauth.AuthManager, *token.TokenProvider, error) {
+	if cfg == nil {
+		authEnabled = false
+		auth, err := easyauth.New()
+		if err != nil {
+			return nil, nil, err
+		}
+		auth.AddProvider("nop", noopAuth{})
+		return auth, nil, nil
+	}
+	authEnabled = true
+	auth, err := easyauth.New(easyauth.CookieSecret("ASDASDASDASDASD")) //TODO: from cfg
 	if err != nil {
 		return nil, nil, err
 	}

@@ -39,12 +39,15 @@ import (
 )
 
 var (
-	indexTemplate   func() *template.Template
-	router          = mux.NewRouter()
-	schedule        = sched.DefaultSched
+	indexTemplate func() *template.Template
+	router        = mux.NewRouter()
+	schedule      = sched.DefaultSched
+	//InternetProxy is a url to use as a proxy when communicating with external services.
+	//currently only google's shortener.
 	InternetProxy   *url.URL
 	annotateBackend backend.Backend
 	reload          func() error
+	authEnabled     bool
 )
 
 const (
@@ -107,10 +110,7 @@ func Listen(httpAddr, httpsAddr, certFile, keyFile string, devMode bool, tsdbHos
 
 	//helpers to add routes with middleware
 	handle := func(route string, h http.Handler, perms easyauth.Role) *mux.Route {
-		if auth != nil {
-			return router.Handle(route, baseChain.Then(auth.Wrap(h, perms)))
-		}
-		return router.Handle(route, baseChain.Then(h))
+		return router.Handle(route, baseChain.Then(auth.Wrap(h, perms)))
 	}
 	handleFunc := func(route string, h http.HandlerFunc, perms easyauth.Role) *mux.Route {
 		return handle(route, h, perms)
