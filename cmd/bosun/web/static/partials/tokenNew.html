@@ -1,0 +1,53 @@
+<h2>New Access Token</h2>
+<div class="alert alert-danger" ng-show="ct.status">{{ct.status}}</div>
+<div ng-show="ct.createdToken">
+    <div class='alert alert-success'>This is your new token. Please save it, because you will not be able to access it again.</div>
+    <h3>{{ct.createdToken}} <button class="btn btn-default" ngclipboard data-clipboard-text="{{ct.createdToken}}"><span class="glyphicon glyphicon-copy"></span></button></h3>
+    
+    <p> Usage: <pre>{url}?token={{ct.createdToken}}</pre>
+    or in header:
+    <pre>X-Access-Token= {{ct.createdToken}}</pre>
+    <a class='btn btn-primary' href='/tokens'>Back</a>
+</div>
+<div ng-hide="ct.createdToken">
+<form class="form-horizontal" name="myForm">
+	<div class="form-group control-group">
+		<label class="col-md-1 control-label">Username</label>
+		<div class="col-md-3" ng-class="{'has-error': myForm.user.$invalid}">
+			<input type="text"  name="user" class="form-control" ng-model="ct.token.User"  required>
+		</div>
+	</div>
+	<div class="form-group control-group" >
+		<label class="col-md-1 control-label ">Description</label>
+		<div class="col-md-3" ng-class="{'has-error': myForm.desc.$invalid}">
+			<input type="text" name="desc" class="form-control" ng-model="ct.token.Description" required>
+		</div>
+	</div>
+
+<div class='row'>
+	<div class='col-md-3'>
+		<h4>Roles</h4>
+		<div ng-repeat="role in ct.roles">
+			<div class="checkbox">
+				<label>
+                    <input type="checkbox" ng-checked="ct.getBits() == role.Bits" ng-click="ct.setRole(role.Bits, $event)"/> 
+                    <span data-animation="am-flip-x" bs-tooltip="role.Desc" placement='right'>{{role.Name}} <span class='glyphicon glyphicon-question-sign'/></span>
+                </label>
+			</div>
+		</div>
+	</div>
+	<div class='col-md-3'>
+		<h4>Permissions</h4>
+		<div ng-repeat="perm in ct.permissions">
+			<div class="checkbox">
+				<label>
+                    <input type="checkbox" ng-model="perm.Active"/> 
+                    <span data-animation="am-flip-x" bs-tooltip="perm.Desc" placement='right'>{{perm.Name}} <span class='glyphicon glyphicon-question-sign'/></span>
+                </label>
+			</div>
+		</div>
+	</div>
+</div>
+<button class='btn btn-primary' ng-click="ct.create()" ng-disabled="myForm.$invalid">Create</button>
+</form>
+</div>

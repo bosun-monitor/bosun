@@ -2,6 +2,7 @@
 /// <reference path="angular-route.d.ts" />
 /// <reference path="angular-sanitize.d.ts" />
 /// <reference path="bootstrap.d.ts" />
+/// <reference path="jquery.d.ts" />
 /// <reference path="moment.d.ts" />
 /// <reference path="moment-duration-format.d.ts" />
 /// <reference path="d3.d.ts" />
@@ -10,8 +11,10 @@ var bosunApp = angular.module('bosunApp', [
     'ngRoute',
     'bosunControllers',
     'mgcrea.ngStrap',
+    'mgcrea.ngStrap.tooltip',
     'ngSanitize',
     'ui.ace',
+    'ngclipboard',
 ]);
 bosunApp.config(['$routeProvider', '$locationProvider', '$httpProvider', function ($routeProvider, $locationProvider, $httpProvider) {
         $locationProvider.html5Mode({
@@ -85,6 +88,14 @@ bosunApp.config(['$routeProvider', '$locationProvider', '$httpProvider', functio
             title: 'Incident',
             templateUrl: 'partials/incident.html',
             controller: 'IncidentCtrl'
+        }).
+            when('/tokens', {
+            title: 'Access Tokens',
+            template: "<token-list></token-list>"
+        }).
+            when('/tokens/new', {
+            title: 'New Access Token',
+            template: "<new-token></new-token>"
         }).
             otherwise({
             redirectTo: '/'
@@ -2982,6 +2993,7 @@ bosunControllers.controller('IncidentCtrl', ['$scope', '$http', '$location', '$r
             $scope.error = err;
         });
     }]);
+/// <reference path="0-bosun.ts" />
 bosunControllers.controller('ItemsCtrl', ['$scope', '$http', function ($scope, $http) {
         $http.get('/api/metric')
             .success(function (data) {
@@ -3419,4 +3431,118 @@ bosunApp.directive('tsForceClose', function () {
         restrict: 'E',
         templateUrl: '/partials/forceClose.html'
     };
+});
+/// <reference path="0-bosun.ts" />
+var Token = (function () {
+    function Token() {
+        this.Description = "";
+        this.Role = 0;
+        this.User = "";
+    }
+    return Token;
+})();
+var TokenListController = (function () {
+    function TokenListController($http) {
+        var _this = this;
+        this.$http = $http;
+        this.delete = function (hash) {
+            _this.status = "Deleting...";
+            _this.$http.delete("/api/tokens?hash=" + encodeURIComponent(hash))
+                .then(function () {
+                _this.status = "";
+                _this.load();
+            }, function (err) {
+                _this.status = 'Unable to delete token: ' + err;
+            });
+        };
+        this.load = function () {
+            _this.status = "Loading...";
+            _this.$http.get("/api/tokens").then(function (resp) {
+                _(resp.data).forEach(function (tok) {
+                    tok.LastUsed = moment.utc(tok.LastUsed);
+                });
+                _this.tokens = resp.data;
+                _this.status = "";
+            }, function (err) {
+                _this.status = 'Unable to fetch tokens: ' + err;
+            });
+        };
+        this.load();
+    }
+    TokenListController.$inject = ['$http'];
+    return TokenListController;
+})();
+bosunApp.component('tokenList', {
+    controller: TokenListController,
+    controllerAs: "ct",
+    template: "\n<div class=\"alert alert-danger\" ng-show=\"ct.status\">{{ct.status}}</div>\n<h2>Access Tokens</h2>\n    <table class=\"table table-striped\">\n        <thead>\n        <tr>\n            <th>ID</th>\n            <th>User</th>\n            <th>Description</th>\n            <th>Last Used</th>\n        </tr>\n        </thead>\n        <tbody>\n        <tr  ng-repeat=\"tok in ct.tokens\">\n            <td>{{tok.Hash | limitTo: 6}}</td>\n            <td>{{tok.User}}</td>\n            <td>{{tok.Description}}</td>\n            <td><span ng-show=\"tok.LastUsed.year() > 2000\" ts-since=\"tok.LastUsed\"></span> <span ng-show=\"tok.LastUsed.year() <= 2000\">Never</span></td>\n            <td><a class='btn btn-danger glyphicon glyphicon-trash' ng-click='ct.delete(tok.Hash)'></a></td>\n        </tr>\n        </tbody>\n    </table>\n    <a class='btn btn-primary' href='/tokens/new'><span class='glyphicon glyphicon-plus'/> Create new token</a>\n" });
+/// <reference path="0-bosun.ts" />
+/// <reference path="tokenList.ts" />
+var BitMeta = (function () {
+    function BitMeta() {
+    }
+    return BitMeta;
+})();
+var NewTokenController = (function () {
+    function NewTokenController($http) {
+        var _this = this;
+        this.$http = $http;
+        this.token = new Token();
+        this.hasBits = function (bits) {
+            return (bits & _this.token.Role) != 0;
+        };
+        this.setRole = function (bits, event) {
+            _(_this.permissions).each(function (perm) {
+                if (!event.currentTarget.checked) {
+                    perm.Active = false;
+                }
+                else {
+                    perm.Active = (perm.Bits & bits) != 0;
+                }
+            });
+        };
+        this.getBits = function () {
+            return _(_this.permissions).reduce(function (sum, p) { return sum + (p.Active ? p.Bits : 0); }, 0);
+        };
+        this.status = "Loading...";
+        this.$http.get("/api/roles").then(function (resp) {
+            _this.status = "";
+            _this.permissions = resp.data.Permissions;
+            _this.roles = resp.data.Roles;
+            _this.cleanRoles();
+        }, function (err) {
+            _this.status = 'Unable to load roles: ' + err;
+        });
+    }
+    NewTokenController.prototype.cleanRoles = function () {
+        var _this = this;
+        //fix admin role that has extra bits corresponding to future permissions.
+        //causes bit math to go crazy and overflow. 
+        //prevents easily  making tokens that grant unknown future perms too.
+        _(this.roles).each(function (role) {
+            var mask = 0;
+            _(_this.permissions).each(function (p) {
+                if ((p.Bits & role.Bits) != 0) {
+                    mask |= p.Bits;
+                }
+            });
+            role.Bits = mask;
+        });
+    };
+    NewTokenController.prototype.create = function () {
+        var _this = this;
+        this.token.Role = this.getBits();
+        this.status = "Creating...";
+        this.$http.post("/api/tokens", this.token).then(function (resp) {
+            _this.status = "";
+            _this.createdToken = resp.data.replace(/"/g, "");
+        }, function (err) { _this.status = 'Unable to load roles: ' + err; });
+    };
+    NewTokenController.$inject = ['$http'];
+    return NewTokenController;
+})();
+bosunApp.component("newToken", {
+    controller: NewTokenController,
+    controllerAs: "ct",
+    templateUrl: "/partials/tokenNew.html"
 });

@@ -75,6 +75,7 @@ func buildAuth(cfg *conf.AuthConf) (easyauth.AuthManager, *token.TokenProvider, 
 			return nil, nil, err
 		}
 		authTokens = token.NewToken(cfg.TokenSecret, tokData)
+		auth.AddProvider("tok", authTokens)
 	}
 	return auth, authTokens, nil
 }

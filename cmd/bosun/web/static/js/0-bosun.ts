@@ -2,6 +2,7 @@
 /// <reference path="angular-route.d.ts" />
 /// <reference path="angular-sanitize.d.ts" />
 /// <reference path="bootstrap.d.ts" />
+/// <reference path="jquery.d.ts" />
 /// <reference path="moment.d.ts" />
 /// <reference path="moment-duration-format.d.ts" />
 /// <reference path="d3.d.ts" />
@@ -11,8 +12,10 @@ var bosunApp = angular.module('bosunApp', [
     'ngRoute',
     'bosunControllers',
     'mgcrea.ngStrap',
+    'mgcrea.ngStrap.tooltip',
     'ngSanitize',
     'ui.ace',
+    'ngclipboard',
 ]);
 
 bosunApp.config(['$routeProvider', '$locationProvider', '$httpProvider', function ($routeProvider: ng.route.IRouteProvider, $locationProvider: ng.ILocationProvider, $httpProvider: ng.IHttpProvider) {
@@ -87,6 +90,14 @@ bosunApp.config(['$routeProvider', '$locationProvider', '$httpProvider', functio
             title: 'Incident',
             templateUrl: 'partials/incident.html',
             controller: 'IncidentCtrl',
+        }).
+        when('/tokens',{
+            title: 'Access Tokens',
+            template: `<token-list></token-list>`,
+        }).
+        when('/tokens/new',{
+            title: 'New Access Token',
+            template: `<new-token></new-token>`,
         }).
         otherwise({
             redirectTo: '/',
