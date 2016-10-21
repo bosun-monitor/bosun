@@ -62,6 +62,10 @@ class NewTokenController {
         )
     }
 
+    public encoded(){
+        return encodeURIComponent(this.createdToken)
+    }
+
     static $inject = ['$http'];
     constructor(private $http: ng.IHttpService) {
         this.status = "Loading..."

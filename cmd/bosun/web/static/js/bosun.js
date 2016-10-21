@@ -3538,6 +3538,9 @@ var NewTokenController = (function () {
             _this.createdToken = resp.data.replace(/"/g, "");
         }, function (err) { _this.status = 'Unable to load roles: ' + err; });
     };
+    NewTokenController.prototype.encoded = function () {
+        return encodeURIComponent(this.createdToken);
+    };
     NewTokenController.$inject = ['$http'];
     return NewTokenController;
 })();

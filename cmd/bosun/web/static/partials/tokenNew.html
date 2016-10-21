@@ -4,9 +4,11 @@
     <div class='alert alert-success'>This is your new token. Please save it, because you will not be able to access it again.</div>
     <h3>{{ct.createdToken}} <button class="btn btn-default" ngclipboard data-clipboard-text="{{ct.createdToken}}"><span class="glyphicon glyphicon-copy"></span></button></h3>
     
-    <p> Usage: <pre>{url}?token={{ct.createdToken}}</pre>
+    <p> Usage: <pre>{url}?token={{ct.encoded()}}</pre>
     or in header:
     <pre>X-Access-Token= {{ct.createdToken}}</pre>
+    or even make a cookie
+    <pre>document.cookie="AccessToken={{ct.createdToken}}; expires=Thu, 18 Dec 2018 12:00:00 UTC; path=/";</pre>
     <a class='btn btn-primary' href='/tokens'>Back</a>
 </div>
 <div ng-hide="ct.createdToken">
