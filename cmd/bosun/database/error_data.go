@@ -1,9 +1,7 @@
 package database
 
 import (
-	"bosun.org/collect"
 	"bosun.org/models"
-	"bosun.org/opentsdb"
 	"encoding/json"
 	"fmt"
 	"github.com/garyburd/redigo/redis"
@@ -43,16 +41,14 @@ const (
 )
 
 func (d *dataAccess) MarkAlertSuccess(name string) error {
-	defer collect.StartTimer("redis", opentsdb.TagSet{"op": "MarkAlertSuccess"})()
-	conn := d.GetConnection()
+	conn := d.Get()
 	defer conn.Close()
 	_, err := conn.Do("SREM", failingAlerts, name)
 	return err
 }
 
 func (d *dataAccess) MarkAlertFailure(name string, msg string) error {
-	defer collect.StartTimer("redis", opentsdb.TagSet{"op": "MarkAlertFailure"})()
-	conn := d.GetConnection()
+	conn := d.Get()
 	defer conn.Close()
 
 	failing, err := d.IsAlertFailing(name)
@@ -103,8 +99,7 @@ func (d *dataAccess) MarkAlertFailure(name string, msg string) error {
 }
 
 func (d *dataAccess) GetFailingAlertCounts() (int, int, error) {
-	defer collect.StartTimer("redis", opentsdb.TagSet{"op": "GetFailingAlertCounts"})()
-	conn := d.GetConnection()
+	conn := d.Get()
 	defer conn.Close()
 	failing, err := redis.Int(conn.Do("SCARD", failingAlerts))
 	if err != nil {
@@ -118,8 +113,7 @@ func (d *dataAccess) GetFailingAlertCounts() (int, int, error) {
 }
 
 func (d *dataAccess) GetFailingAlerts() (map[string]bool, error) {
-	defer collect.StartTimer("redis", opentsdb.TagSet{"op": "GetFailingAlertCounts"})()
-	conn := d.GetConnection()
+	conn := d.Get()
 	defer conn.Close()
 	alerts, err := redis.Strings(conn.Do("SMEMBERS", failingAlerts))
 	if err != nil {
@@ -132,8 +126,7 @@ func (d *dataAccess) GetFailingAlerts() (map[string]bool, error) {
 	return r, nil
 }
 func (d *dataAccess) IsAlertFailing(name string) (bool, error) {
-	defer collect.StartTimer("redis", opentsdb.TagSet{"op": "IsAlertFailing"})()
-	conn := d.GetConnection()
+	conn := d.Get()
 	defer conn.Close()
 	return redis.Bool(conn.Do("SISMEMBER", failingAlerts, name))
 }
@@ -142,7 +135,7 @@ func errorListKey(name string) string {
 	return fmt.Sprintf("errors:%s", name)
 }
 func (d *dataAccess) getLastErrorEvent(name string) (*models.AlertError, error) {
-	conn := d.GetConnection()
+	conn := d.Get()
 	defer conn.Close()
 	str, err := redis.Bytes(conn.Do("LINDEX", errorListKey(name), "0"))
 	if err != nil {
@@ -159,8 +152,7 @@ func (d *dataAccess) getLastErrorEvent(name string) (*models.AlertError, error) 
 }
 
 func (d *dataAccess) GetFullErrorHistory() (map[string][]*models.AlertError, error) {
-	defer collect.StartTimer("redis", opentsdb.TagSet{"op": "GetFullErrorHistory"})()
-	conn := d.GetConnection()
+	conn := d.Get()
 	defer conn.Close()
 
 	alerts, err := redis.Strings(conn.Do("SMEMBERS", alertsWithErrors))
@@ -188,8 +180,7 @@ func (d *dataAccess) GetFullErrorHistory() (map[string][]*models.AlertError, err
 }
 
 func (d *dataAccess) ClearAlert(name string) error {
-	defer collect.StartTimer("redis", opentsdb.TagSet{"op": "ClearAlert"})()
-	conn := d.GetConnection()
+	conn := d.Get()
 	defer conn.Close()
 
 	_, err := conn.Do("SREM", alertsWithErrors, name)
@@ -216,8 +207,7 @@ func (d *dataAccess) ClearAlert(name string) error {
 //Things could forseeably get a bit inconsistent if concurrent changes happen in just the wrong way.
 //Clear all should do a more thourogh cleanup to fully reset things.
 func (d *dataAccess) ClearAll() error {
-	defer collect.StartTimer("redis", opentsdb.TagSet{"op": "ClearAll"})()
-	conn := d.GetConnection()
+	conn := d.Get()
 	defer conn.Close()
 
 	alerts, err := redis.Strings(conn.Do("SMEMBERS", alertsWithErrors))

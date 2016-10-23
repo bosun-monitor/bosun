@@ -5,9 +5,7 @@ import (
 	"log"
 	"time"
 
-	"bosun.org/collect"
 	"bosun.org/models"
-	"bosun.org/opentsdb"
 	"github.com/garyburd/redigo/redis"
 )
 
@@ -39,8 +37,7 @@ func (d *dataAccess) Silence() SilenceDataAccess {
 }
 
 func (d *dataAccess) GetActiveSilences() ([]*models.Silence, error) {
-	defer collect.StartTimer("redis", opentsdb.TagSet{"op": "GetActiveSilences"})()
-	conn := d.GetConnection()
+	conn := d.Get()
 	defer conn.Close()
 
 	now := time.Now().UTC()
@@ -88,8 +85,7 @@ func getSilences(ids []string, conn redis.Conn) ([]*models.Silence, error) {
 }
 
 func (d *dataAccess) AddSilence(s *models.Silence) error {
-	defer collect.StartTimer("redis", opentsdb.TagSet{"op": "AddSilence"})()
-	conn := d.GetConnection()
+	conn := d.Get()
 	defer conn.Close()
 
 	if _, err := conn.Do("ZADD", silenceIdx, s.End.UTC().Unix(), s.ID()); err != nil {
@@ -104,8 +100,7 @@ func (d *dataAccess) AddSilence(s *models.Silence) error {
 }
 
 func (d *dataAccess) DeleteSilence(id string) error {
-	defer collect.StartTimer("redis", opentsdb.TagSet{"op": "DeleteSilence"})()
-	conn := d.GetConnection()
+	conn := d.Get()
 	defer conn.Close()
 
 	if _, err := conn.Do("ZREM", silenceIdx, id); err != nil {
@@ -118,8 +113,7 @@ func (d *dataAccess) DeleteSilence(id string) error {
 }
 
 func (d *dataAccess) ListSilences(endingAfter int64) (map[string]*models.Silence, error) {
-	defer collect.StartTimer("redis", opentsdb.TagSet{"op": "ListSilences"})()
-	conn := d.GetConnection()
+	conn := d.Get()
 	defer conn.Close()
 
 	ids, err := redis.Strings(conn.Do("ZRANGEBYSCORE", silenceIdx, endingAfter, "+inf"))

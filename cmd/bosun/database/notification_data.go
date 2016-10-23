@@ -7,9 +7,7 @@ import (
 
 	"github.com/garyburd/redigo/redis"
 
-	"bosun.org/collect"
 	"bosun.org/models"
-	"bosun.org/opentsdb"
 	"bosun.org/slog"
 )
 
@@ -48,8 +46,7 @@ func (d *dataAccess) Notifications() NotificationDataAccess {
 }
 
 func (d *dataAccess) InsertNotification(ak models.AlertKey, notification string, dueAt time.Time) error {
-	defer collect.StartTimer("redis", opentsdb.TagSet{"op": "InsertNotification"})()
-	conn := d.GetConnection()
+	conn := d.Get()
 	defer conn.Close()
 
 	_, err := conn.Do("ZADD", pendingNotificationsKey, dueAt.UTC().Unix(), fmt.Sprintf("%s:%s", ak, notification))
@@ -61,8 +58,7 @@ func (d *dataAccess) InsertNotification(ak models.AlertKey, notification string,
 }
 
 func (d *dataAccess) GetDueNotifications() (map[models.AlertKey]map[string]time.Time, error) {
-	defer collect.StartTimer("redis", opentsdb.TagSet{"op": "GetDueNotifications"})()
-	conn := d.GetConnection()
+	conn := d.Get()
 	defer conn.Close()
 	m, err := redis.Int64Map(conn.Do("ZRANGEBYSCORE", pendingNotificationsKey, 0, time.Now().UTC().Unix(), "WITHSCORES"))
 	if err != nil {
@@ -84,8 +80,7 @@ func (d *dataAccess) GetDueNotifications() (map[models.AlertKey]map[string]time.
 }
 
 func (d *dataAccess) ClearNotificationsBefore(t time.Time) error {
-	defer collect.StartTimer("redis", opentsdb.TagSet{"op": "ClearNotificationsBefore"})()
-	conn := d.GetConnection()
+	conn := d.Get()
 	defer conn.Close()
 
 	_, err := conn.Do("ZREMRANGEBYSCORE", pendingNotificationsKey, 0, t.UTC().Unix())
@@ -93,8 +88,7 @@ func (d *dataAccess) ClearNotificationsBefore(t time.Time) error {
 }
 
 func (d *dataAccess) ClearNotifications(ak models.AlertKey) error {
-	defer collect.StartTimer("redis", opentsdb.TagSet{"op": "ClearNotifications"})()
-	conn := d.GetConnection()
+	conn := d.Get()
 	defer conn.Close()
 
 	nots, err := redis.Strings(conn.Do("SMEMBERS", notsByAlertKeyKey(ak)))
@@ -116,8 +110,7 @@ func (d *dataAccess) ClearNotifications(ak models.AlertKey) error {
 }
 
 func (d *dataAccess) GetNextNotificationTime() (time.Time, error) {
-	defer collect.StartTimer("redis", opentsdb.TagSet{"op": "GetNextNotificationTime"})()
-	conn := d.GetConnection()
+	conn := d.Get()
 	defer conn.Close()
 
 	m, err := redis.Int64Map(conn.Do("ZRANGE", pendingNotificationsKey, 0, 0, "WITHSCORES"))
