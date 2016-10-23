@@ -249,11 +249,6 @@
 			"revisionTime": "2015-08-27T17:13:52+02:00"
 		},
 		{
-			"path": "github.com/boltdb/bolt",
-			"revision": "6e1ca38c6a73025366cd8705553b404746ee6e63",
-			"revisionTime": "2015-11-22T20:06:43-07:00"
-		},
-		{
 			"path": "github.com/bosun-monitor/annotate",
 			"revision": "7a63972472cdcbd52933b5580927efca995e4598",
 			"revisionTime": "2016-10-19T16:13:39-06:00"
@@ -592,11 +587,6 @@
 		},
 		{
 			"path": "github.com/siddontang/ledisdb/store",
-			"revision": "f0da91110fa3ae20a63581cd39764947b1f35500",
-			"revisionTime": "2015-11-28T11:26:35+08:00"
-		},
-		{
-			"path": "github.com/siddontang/ledisdb/store/boltdb",
 			"revision": "f0da91110fa3ae20a63581cd39764947b1f35500",
 			"revisionTime": "2015-11-28T11:26:35+08:00"
 		},
