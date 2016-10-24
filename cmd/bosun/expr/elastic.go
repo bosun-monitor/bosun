@@ -10,6 +10,7 @@ import (
 	"bosun.org/models"
 	"bosun.org/opentsdb"
 	"github.com/MiniProfiler/go/miniprofiler"
+	"github.com/jinzhu/now"
 	elastic "gopkg.in/olivere/elastic.v3"
 )
 
@@ -51,11 +52,14 @@ var Elastic = map[string]parse.Func{
 		F:        ESIndicies,
 	},
 	"esdaily": {
-		Args:     []models.FuncType{models.TypeString, models.TypeString, models.TypeString},
-		VArgs:    true,
-		VArgsPos: 1,
-		Return:   models.TypeESIndexer,
-		F:        ESDaily,
+		Args:   []models.FuncType{models.TypeString, models.TypeString, models.TypeString},
+		Return: models.TypeESIndexer,
+		F:      ESDaily,
+	},
+	"esmonthly": {
+		Args:   []models.FuncType{models.TypeString, models.TypeString, models.TypeString},
+		Return: models.TypeESIndexer,
+		F:      ESMonthly,
 	},
 	"esls": {
 		Args:   []models.FuncType{models.TypeString},
@@ -265,37 +269,47 @@ func (e ElasticHosts) Query(r *ElasticRequest) (*elastic.SearchResult, error) {
 	if err != nil {
 		return nil, err
 	}
-	indicies, err := r.Indexer.Generate(r.Start, r.End)
 	if err != nil {
 		return nil, err
 	}
-	s.Index(indicies...)
-	return s.SearchSource(r.Source).Do()
+	s.Index(r.Indices...)
+	// With IgnoreUnavailable there can be gaps in the indices (i.e. missing days) and we will not error
+	// If no indices match than there will be no successful shards and and error is returned in that case
+	s.IgnoreUnavailable(true)
+	res, err := s.SearchSource(r.Source).Do()
+	if err != nil {
+		return nil, err
+	}
+	if res.Shards == nil {
+		return nil, fmt.Errorf("no shard info in reply, should not be here please file issue")
+	}
+	if res.Shards.Successful == 0 {
+		return nil, fmt.Errorf("no successful shards in result, perhaps the index does exist, total shards: %v, failed shards: %v", res.Shards.Total, res.Shards.Failed)
+	}
+	return res, nil
 }
 
 // ElasticRequest is a container for the information needed to query elasticsearch or a date
 // histogram.
 type ElasticRequest struct {
-	Indexer ESIndexer
+	Indices []string
 	Start   *time.Time
 	End     *time.Time
 	Source  *elastic.SearchSource // This the object that we build queries in
 }
 
 // CacheKey returns the text of the elastic query. That text is the indentifer for
-// the query in the cache
+// the query in the cache. It is a combination of the indices queries and the json query content
 func (r *ElasticRequest) CacheKey() (string, error) {
 	s, err := r.Source.Source()
 	if err != nil {
 		return "", err
 	}
-	var str string
-	var ok bool
-	str, ok = s.(string)
-	if !ok {
-		return "", fmt.Errorf("failed to generate string representation of search source for cache key: %s", s)
+	b, err := json.Marshal(s)
+	if err != nil {
+		return "", fmt.Errorf("failed to generate json representation of search source for cache key: %s", s)
 	}
-	return str, nil
+	return fmt.Sprintf("%v\n%s", r.Indices, b), nil
 }
 
 // timeESRequest execute the elasticsearch query (which may set or hit cache) and returns
@@ -311,28 +325,32 @@ func timeESRequest(e *State, T miniprofiler.Timer, req *ElasticRequest) (resp *e
 	if err != nil {
 		return resp, err
 	}
-	T.StepCustomTiming("elastic", "query", string(b), func() {
+	key, err := req.CacheKey()
+	if err != nil {
+		return nil, err
+	}
+	T.StepCustomTiming("elastic", "query", fmt.Sprintf("%v\n%s", req.Indices, b), func() {
 		getFn := func() (interface{}, error) {
 			return e.ElasticHosts.Query(req)
 		}
 		var val interface{}
-		val, err = e.Cache.Get(string(b), getFn)
+		val, err = e.Cache.Get(key, getFn)
 		resp = val.(*elastic.SearchResult)
 	})
 	return
 }
 
-func ESIndicies(e *State, T miniprofiler.Timer, timeField string, literalIndices ...string) (*Results, error) {
+func ESIndicies(e *State, T miniprofiler.Timer, timeField string, literalIndices ...string) *Results {
 	var r Results
 	indexer := ESIndexer{}
 	// Don't check for existing indexes in this case, just pass through and let elastic return
 	// an error at query time if the index does not exist
-	indexer.Generate = func(start, end *time.Time) ([]string, error) {
-		return literalIndices, nil
+	indexer.Generate = func(start, end *time.Time) []string {
+		return literalIndices
 	}
 	indexer.TimeField = timeField
 	r.Results = append(r.Results, &Result{Value: indexer})
-	return &r, nil
+	return &r
 }
 
 func ESLS(e *State, T miniprofiler.Timer, indexRoot string) (*Results, error) {
@@ -341,41 +359,33 @@ func ESLS(e *State, T miniprofiler.Timer, indexRoot string) (*Results, error) {
 
 func ESDaily(e *State, T miniprofiler.Timer, timeField, indexRoot, layout string) (*Results, error) {
 	var r Results
-	err := e.ElasticHosts.InitClient()
-	if err != nil {
-		return &r, err
-	}
 	indexer := ESIndexer{}
 	indexer.TimeField = timeField
-	indexer.Generate = func(start, end *time.Time) ([]string, error) {
-		err := e.ElasticHosts.InitClient()
-		if err != nil {
-			return []string{}, err
+	indexer.Generate = func(start, end *time.Time) []string {
+		var indices []string
+		truncStart := now.New(*start).BeginningOfDay()
+		truncEnd := now.New(*end).BeginningOfDay()
+		for d := truncStart; !d.After(truncEnd); d = d.AddDate(0, 0, 1) {
+			indices = append(indices, fmt.Sprintf("%v%v", indexRoot, d.Format(layout)))
 		}
-		indices, err := esClient.IndexNames()
-		if err != nil {
-			return []string{}, err
+		return indices
+	}
+	r.Results = append(r.Results, &Result{Value: indexer})
+	return &r, nil
+}
+
+func ESMonthly(e *State, T miniprofiler.Timer, timeField, indexRoot, layout string) (*Results, error) {
+	var r Results
+	indexer := ESIndexer{}
+	indexer.TimeField = timeField
+	indexer.Generate = func(start, end *time.Time) []string {
+		var indices []string
+		truncStart := now.New(*start).BeginningOfMonth()
+		truncEnd := now.New(*end).BeginningOfMonth()
+		for d := truncStart; !d.After(truncEnd); d = d.AddDate(0, 1, 0) {
+			indices = append(indices, fmt.Sprintf("%v%v", indexRoot, d.Format(layout)))
 		}
-		trunStart := start.Truncate(time.Hour * 24)
-		trunEnd := end.Truncate(time.Hour*24).AddDate(0, 0, 1)
-		var selectedIndices []string
-		for _, index := range indices {
-			date := strings.TrimPrefix(index, indexRoot)
-			if !strings.HasPrefix(index, indexRoot) {
-				continue
-			}
-			d, err := time.Parse(layout, date)
-			if err != nil {
-				continue
-			}
-			if !d.Before(trunStart) && !d.After(trunEnd) {
-				selectedIndices = append(selectedIndices, index)
-			}
-		}
-		if len(selectedIndices) == 0 {
-			return selectedIndices, fmt.Errorf("no elastic indices available during this time range, index[%s], start/end [%s|%s]", indexRoot, start.Format("2006.01.02"), end.Format("2006.01.02"))
-		}
-		return selectedIndices, nil
+		return indices
 	}
 	r.Results = append(r.Results, &Result{Value: indexer})
 	return &r, nil
@@ -511,8 +521,9 @@ func ESBaseQuery(now time.Time, indexer ESIndexer, filter elastic.Query, sdurati
 	}
 	st := now.Add(time.Duration(-start))
 	en := now.Add(time.Duration(-end))
+	indices := indexer.Generate(&st, &en)
 	r := ElasticRequest{
-		Indexer: indexer,
+		Indices: indices,
 		Start:   &st,
 		End:     &en,
 		Source:  elastic.NewSearchSource().Size(size),

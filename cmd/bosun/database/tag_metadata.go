@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"bosun.org/collect"
 	"bosun.org/opentsdb"
 	"github.com/garyburd/redigo/redis"
 )
@@ -29,8 +28,7 @@ func tagMetaIdxKey(tagK, tagV string) string {
 }
 
 func (d *dataAccess) PutTagMetadata(tags opentsdb.TagSet, name string, value string, updated time.Time) error {
-	defer collect.StartTimer("redis", opentsdb.TagSet{"op": "PutTagMeta"})()
-	conn := d.GetConnection()
+	conn := d.Get()
 	defer conn.Close()
 	key := tagMetaKey(tags, name)
 	keyValue := fmt.Sprintf("%d:%s", updated.UTC().Unix(), value)
@@ -48,8 +46,7 @@ func (d *dataAccess) PutTagMetadata(tags opentsdb.TagSet, name string, value str
 }
 
 func (d *dataAccess) DeleteTagMetadata(tags opentsdb.TagSet, name string) error {
-	defer collect.StartTimer("redis", opentsdb.TagSet{"op": "DeleteTagMeta"})()
-	conn := d.GetConnection()
+	conn := d.Get()
 	defer conn.Close()
 	key := tagMetaKey(tags, name)
 	_, err := conn.Do("DEL", key)
@@ -66,8 +63,7 @@ func (d *dataAccess) DeleteTagMetadata(tags opentsdb.TagSet, name string) error 
 }
 
 func (d *dataAccess) GetTagMetadata(tags opentsdb.TagSet, name string) ([]*TagMetadata, error) {
-	defer collect.StartTimer("redis", opentsdb.TagSet{"op": "GetTagMeta"})()
-	conn := d.GetConnection()
+	conn := d.Get()
 	defer conn.Close()
 	args := []interface{}{}
 	for tagK, tagV := range tags {
