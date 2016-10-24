@@ -24,6 +24,12 @@
 			"revisionTime": "2016-07-19T19:58:34Z"
 		},
 		{
+			"checksumSHA1": "XeG94RjA9o/0wo9Fuw6NSRGYnjk=",
+			"path": "github.com/NYTimes/gziphandler",
+			"revision": "63027b26b87e2ae2ce3810393d4b81021cfd3a35",
+			"revisionTime": "2016-04-19T20:25:41Z"
+		},
+		{
 			"path": "github.com/PuerkitoBio/goquery",
 			"revision": "417cce822c7b9a379df5824be95228d177c5698b",
 			"revisionTime": "2015-09-27T16:28:20-04:00"
@@ -277,6 +283,30 @@
 			"path": "github.com/bradfitz/slice",
 			"revision": "a665b5dbaad5fc7474c1193c67ed138df1e1b0e7",
 			"revisionTime": "2014-04-30T10:51:40-04:00"
+		},
+		{
+			"checksumSHA1": "1PzVHiUMzbLdhQUDHPXlINCC2Uc=",
+			"path": "github.com/captncraig/easyauth",
+			"revision": "7b2374bad4668b85df6066634d61828ad1d76ab7",
+			"revisionTime": "2016-10-24T18:37:08Z"
+		},
+		{
+			"checksumSHA1": "23VEUUJGS8KRo4xpyu9qjTlx2KE=",
+			"path": "github.com/captncraig/easyauth/providers/ldap",
+			"revision": "7b2374bad4668b85df6066634d61828ad1d76ab7",
+			"revisionTime": "2016-10-24T18:37:08Z"
+		},
+		{
+			"checksumSHA1": "OMn8A9bUV1Uu25mPu+SQA/d3mB8=",
+			"path": "github.com/captncraig/easyauth/providers/token",
+			"revision": "7b2374bad4668b85df6066634d61828ad1d76ab7",
+			"revisionTime": "2016-10-24T18:37:08Z"
+		},
+		{
+			"checksumSHA1": "PsDW8TfhJegLfi3WJ/YUzK/73RE=",
+			"path": "github.com/captncraig/easyauth/providers/token/redisStore",
+			"revision": "7b2374bad4668b85df6066634d61828ad1d76ab7",
+			"revisionTime": "2016-10-24T18:37:08Z"
 		},
 		{
 			"path": "github.com/coreos/go-systemd/dbus",
@@ -876,9 +906,21 @@
 			"revisionTime": "2016-02-11T13:26:58+11:00"
 		},
 		{
+			"checksumSHA1": "230gzuFjQb4KSsAV1XCO/ZRn9qQ=",
+			"path": "gopkg.in/asn1-ber.v1",
+			"revision": "9eae18c3681ae3d3c677ac2b80a8fe57de45fc09",
+			"revisionTime": "2014-11-19T15:00:59Z"
+		},
+		{
 			"path": "gopkg.in/fsnotify.v1",
 			"revision": "8611c35ab31c1c28aa903d33cf8b6e44a399b09e",
 			"revisionTime": "2016-01-10T16:04:37+01:00"
+		},
+		{
+			"checksumSHA1": "FPRuCOqEJPDFPm9w0AZYa/cMGwY=",
+			"path": "gopkg.in/ldap.v1",
+			"revision": "0041a412703908abb6602d225f874508dcfddd74",
+			"revisionTime": "2015-02-24T15:54:22Z"
 		},
 		{
 			"path": "gopkg.in/olivere/elastic.v3",

@@ -15,6 +15,8 @@ import (
 	"github.com/garyburd/redigo/redis"
 	"github.com/siddontang/ledisdb/config"
 	"github.com/siddontang/ledisdb/server"
+
+	"github.com/captncraig/easyauth/providers/token/redisStore"
 )
 
 // Core data access interface for everything sched needs
@@ -117,6 +119,8 @@ func (d *dataAccess) Get() redis.Conn {
 		closer: closer,
 	}
 }
+
+var _ redisStore.Connector = (*dataAccess)(nil) //just a compile time interface check
 
 //gets name of function that called the currently executing function.
 func myCallerName() string {

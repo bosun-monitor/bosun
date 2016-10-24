@@ -8,6 +8,7 @@ import (
 	"github.com/captncraig/easyauth"
 	"github.com/captncraig/easyauth/providers/ldap"
 	"github.com/captncraig/easyauth/providers/token"
+	"github.com/captncraig/easyauth/providers/token/redisStore"
 	"github.com/gorilla/mux"
 
 	"bosun.org/cmd/bosun/conf"
@@ -35,6 +36,7 @@ var endpointStatsMiddleware = func(next http.Handler) http.Handler {
 		routeName := ""
 		if route := mux.CurrentRoute(r); route != nil {
 			routeName = route.GetName()
+		}
 		if routeName == "" {
 			routeName = "unknown"
 		}
@@ -94,11 +96,11 @@ func buildAuth(cfg *conf.AuthConf) (easyauth.AuthManager, *token.TokenProvider, 
 
 	var authTokens *token.TokenProvider
 	if cfg.TokenSecret != "" {
-		tokData, err := token.NewJsonStore("tokens.json") //TODO: redis once pr merged
-		if err != nil {
-			return nil, nil, err
+		data, ok := schedule.DataAccess.(redisStore.Connector)
+		if !ok {
+			return nil, nil, fmt.Errorf("web's data access does not implement correct redis connector interface")
 		}
-		authTokens = token.NewToken(cfg.TokenSecret, tokData)
+		authTokens = token.NewToken(cfg.TokenSecret, redisStore.New(data))
 		auth.AddProvider("tok", authTokens)
 	}
 	return auth, authTokens, nil
