@@ -769,6 +769,27 @@ See the examples in the functions that follow to see examples of Error handling.
 `.Ack` creates a link to Bosun's view for alert acknowledgement. This is generated using the [system configuration's Hostname](/system_configuration#hostname) value as the root of the link.
 
 
+##### .UseElastic(host string)
+{: .func}
+
+`.UseElastic` set the ElasticHost context object which is used in ESQuery and ESQueryAll functions mentioned below.
+
+Querying [foo](system_configuration#example-2) cluster:
+
+```
+template test {
+        subject = {{.Last.Status}}: {{.Alert.Name}} on {{.Group.host}}
+        body = `
+            {{ $filter := (.Eval .Alert.Vars.filter)}}
+            {{ $index := (.Eval .Alert.Vars.index)}}
+            {{ .UseElastic "foo" }}
+            {{range $i, $x := .ESQuery $index $filter "5m" "" 10}}
+                <p>{{$x.machinename}}</p>
+            {{end}}
+        `
+}
+``` 
+
 ##### .ESQuery(indexRoot expr.ESIndexer, filter expr.ESQuery, sduration, eduration string, size int) ([]interface{})
 {: .func}
 

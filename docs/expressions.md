@@ -164,6 +164,17 @@ Elasitc replaces the deprecated logstash (ls) functions. It only works with Elas
 
 You can view the generated JSON for queries on the expr page by bring up miniprofiler with Alt-P.
 
+### PrefixKey
+PrefixKey is a quoted string used to query different elastic cluster and can be passed as a prefix to elastic query functions mentioned below. If not used the query will be made on [default](system_configuration#elasticconfdefault) cluster.
+
+Querying [foo](system_configuration#example-2) cluster:
+
+```
+$index = esindices("timestamp", "errors")
+$filter = esquery("nginx", "POST")
+crit = max(["foo"]escount($index, "host", $filter, "1h", "30m", "")) > 2 
+```
+
 ### escount(indexRoot ESIndexer, keyString string, filter ESQuery, bucketDuration string, startDuration string, endDuration string) seriesSet
 {: .exprFunc}
 
