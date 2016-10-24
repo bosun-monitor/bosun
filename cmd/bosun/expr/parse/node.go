@@ -26,6 +26,7 @@ type Node interface {
 	Check(*Tree) error // performs type checking for itself and sub-nodes
 	Return() models.FuncType
 	Tags() (Tags, error)
+
 	// Make sure only functions in this package can create Nodes.
 	unexported()
 }
@@ -59,6 +60,7 @@ const (
 	NodeString                 // A string constant.
 	NodeNumber                 // A numerical constant.
 	NodeExpr                   // A sub expression
+	NodePrefix                 // A host prefix [""]
 )
 
 // Nodes.
@@ -138,6 +140,7 @@ func (f *FuncNode) Check(t *Tree) error {
 			return err
 		}
 	}
+
 	if f.F.Check != nil {
 		return f.F.Check(t, f)
 	}
@@ -289,6 +292,45 @@ func (s *StringNode) Return() models.FuncType {
 }
 
 func (s *StringNode) Tags() (Tags, error) {
+	return nil, nil
+}
+
+// Prefix holds a string constant.
+type PrefixNode struct {
+	NodeType
+	Pos
+	Arg  Node
+	Text string
+}
+
+func newPrefix(text string, pos Pos, arg Node) *PrefixNode {
+	return &PrefixNode{NodeType: NodePrefix, Text: text, Pos: pos, Arg: arg}
+}
+
+func (p *PrefixNode) String() string {
+	return fmt.Sprintf("%s%s", p.Text, p.Arg)
+}
+
+func (p *PrefixNode) StringAST() string {
+	return p.String()
+}
+
+func (p *PrefixNode) Check(t *Tree) error {
+	rt := p.Arg.Return()
+
+	if !(rt == models.TypeSeriesSet) {
+		return fmt.Errorf("parse: type error in %s, expected %s, got %s", p, "prefix", rt)
+	}
+
+	return p.Arg.Check(t)
+
+}
+
+func (p *PrefixNode) Return() models.FuncType {
+	return p.Arg.Return()
+}
+
+func (p *PrefixNode) Tags() (Tags, error) {
 	return nil, nil
 }
 

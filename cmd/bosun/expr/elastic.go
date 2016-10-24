@@ -16,6 +16,7 @@ import (
 
 // This uses a global client since the elastic client handles connections
 var esClient *elastic.Client
+var prefixkey bool
 
 func elasticTagQuery(args []parse.Node) (parse.Tags, error) {
 	n := args[1].(*parse.StringNode)
@@ -238,17 +239,39 @@ func ESLTE(e *State, T miniprofiler.Timer, key string, lte float64) (*Results, e
 // ElasticHosts is an array of Logstash hosts and exists as a type for something to attach
 // methods to.  The elasticsearch library will use the listed to hosts to discover all
 // of the hosts in the config
-type ElasticHosts []string
+// type ElasticHosts []string
+type ElasticHosts struct {
+	Hosts     map[string]ElasticConfig
+	PrefixKey string
+	Keys      []string
+}
+
+type ElasticConfig struct {
+	Hosts             []string
+	SimpleClient      bool
+	ClientOptionFuncs []elastic.ClientOptionFunc
+}
 
 // InitClient sets up the elastic client. If the client has already been
 // initalized it is a noop
 func (e ElasticHosts) InitClient() error {
-	if esClient == nil {
-		var err error
-		esClient, err = elastic.NewClient(elastic.SetURL(e...), elastic.SetMaxRetries(10))
-		if err != nil {
-			return err
-		}
+	var err error
+	if e.PrefixKey == "" {
+		e.PrefixKey = "default"
+	}
+	if e.Hosts[e.PrefixKey].SimpleClient {
+		// simple client enabled
+		esClient, err = elastic.NewSimpleClient(elastic.SetURL(e.Hosts[e.PrefixKey].Hosts...), elastic.SetMaxRetries(10))
+	} else if len(e.Hosts[e.PrefixKey].Hosts) == 0 {
+		// client option enabled
+		esClient, err = elastic.NewClient(e.Hosts[e.PrefixKey].ClientOptionFuncs...)
+	} else {
+		// default behavior
+		esClient, err = elastic.NewClient(elastic.SetURL(e.Hosts[e.PrefixKey].Hosts...), elastic.SetMaxRetries(10))
+	}
+
+	if err != nil {
+		return err
 	}
 	return nil
 }
@@ -259,6 +282,7 @@ func (e *ElasticHosts) getService() (*elastic.SearchService, error) {
 	if err != nil {
 		return nil, err
 	}
+	prefixkey = false
 	return esClient.Search(), nil
 }
 
@@ -272,7 +296,9 @@ func (e ElasticHosts) Query(r *ElasticRequest) (*elastic.SearchResult, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	s.Index(r.Indices...)
+
 	// With IgnoreUnavailable there can be gaps in the indices (i.e. missing days) and we will not error
 	// If no indices match than there will be no successful shards and and error is returned in that case
 	s.IgnoreUnavailable(true)
@@ -293,13 +319,14 @@ func (e ElasticHosts) Query(r *ElasticRequest) (*elastic.SearchResult, error) {
 // histogram.
 type ElasticRequest struct {
 	Indices []string
+	HostKey string
 	Start   *time.Time
 	End     *time.Time
 	Source  *elastic.SearchSource // This the object that we build queries in
 }
 
 // CacheKey returns the text of the elastic query. That text is the indentifer for
-// the query in the cache. It is a combination of the indices queries and the json query content
+// the query in the cache. It is a combination of the host key, indices queries and the json query content
 func (r *ElasticRequest) CacheKey() (string, error) {
 	s, err := r.Source.Source()
 	if err != nil {
@@ -309,7 +336,8 @@ func (r *ElasticRequest) CacheKey() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to generate json representation of search source for cache key: %s", s)
 	}
-	return fmt.Sprintf("%v\n%s", r.Indices, b), nil
+
+	return fmt.Sprintf("%s:%v\n%s", r.HostKey, r.Indices, b), nil
 }
 
 // timeESRequest execute the elasticsearch query (which may set or hit cache) and returns
@@ -329,7 +357,7 @@ func timeESRequest(e *State, T miniprofiler.Timer, req *ElasticRequest) (resp *e
 	if err != nil {
 		return nil, err
 	}
-	T.StepCustomTiming("elastic", "query", fmt.Sprintf("%v\n%s", req.Indices, b), func() {
+	T.StepCustomTiming("elastic", "query", fmt.Sprintf("%s:%v\n%s", req.HostKey, req.Indices, b), func() {
 		getFn := func() (interface{}, error) {
 			return e.ElasticHosts.Query(req)
 		}
@@ -405,7 +433,7 @@ const elasticRFC3339 = "date_optional_time"
 
 func ESDateHistogram(e *State, T miniprofiler.Timer, indexer ESIndexer, keystring string, filter elastic.Query, interval, sduration, eduration, stat_field, rstat string, size int) (r *Results, err error) {
 	r = new(Results)
-	req, err := ESBaseQuery(e.now, indexer, filter, sduration, eduration, size)
+	req, err := ESBaseQuery(e.now, indexer, filter, sduration, eduration, size, e.ElasticHosts.PrefixKey)
 	if err != nil {
 		return nil, err
 	}
@@ -507,7 +535,7 @@ func ESDateHistogram(e *State, T miniprofiler.Timer, indexer ESIndexer, keystrin
 }
 
 // ESBaseQuery builds the base query that both ESCount and ESStat share
-func ESBaseQuery(now time.Time, indexer ESIndexer, filter elastic.Query, sduration, eduration string, size int) (*ElasticRequest, error) {
+func ESBaseQuery(now time.Time, indexer ESIndexer, filter elastic.Query, sduration, eduration string, size int, key string) (*ElasticRequest, error) {
 	start, err := opentsdb.ParseDuration(sduration)
 	if err != nil {
 		return nil, err
@@ -524,6 +552,7 @@ func ESBaseQuery(now time.Time, indexer ESIndexer, filter elastic.Query, sdurati
 	indices := indexer.Generate(&st, &en)
 	r := ElasticRequest{
 		Indices: indices,
+		HostKey: key,
 		Start:   &st,
 		End:     &en,
 		Source:  elastic.NewSearchSource().Size(size),

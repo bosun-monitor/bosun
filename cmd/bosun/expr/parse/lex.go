@@ -59,6 +59,7 @@ const (
 	itemTripleQuotedString
 	itemPow // '**'
 	itemExpr
+	itemPrefix // [prefix]
 )
 
 const eof = -1
@@ -183,6 +184,8 @@ Loop:
 			l.emit(itemLeftParen)
 		case r == ')':
 			l.emit(itemRightParen)
+		case r == '[':
+			return lexPrefixBegin
 		case r == '"':
 			return lexString
 		case r == '\'':
@@ -297,6 +300,31 @@ func lexString(l *lexer) stateFn {
 			return lexItem
 		case eof:
 			return l.errorf("unterminated string")
+		}
+	}
+}
+
+func lexPrefixBegin(l *lexer) stateFn {
+	for {
+		switch l.next() {
+		case '"':
+			return lexPrefixEnd
+		case eof:
+			return l.errorf("unterminated prefix string, must use double quotes e.g [\"foo\"]")
+		}
+	}
+}
+
+func lexPrefixEnd(l *lexer) stateFn {
+	for {
+		switch l.next() {
+		case '"':
+			if l.next() == ']' {
+				l.emit(itemPrefix)
+				return lexItem
+			}
+		case eof:
+			return l.errorf("unterminated prefix string, must use double quotes e.g [\"foo\"]")
 		}
 	}
 }

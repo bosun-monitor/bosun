@@ -245,8 +245,9 @@ M -> E {( "*" | "/" ) F}
 E -> F {( "**" ) F}
 F -> v | "(" O ")" | "!" O | "-" O
 v -> number | func(..)
-Func -> name "(" param {"," param} ")"
+Func -> optPrefix name "(" param {"," param} ")"
 param -> number | "string" | subExpr | [query]
+optPrefix -> [ prefix ]
 */
 
 // expr:
@@ -328,6 +329,9 @@ func (t *Tree) F() Node {
 		return t.v()
 	case itemNot, itemMinus:
 		return newUnary(t.next(), t.F())
+	case itemPrefix:
+		token := t.next()
+		return newPrefix(token.val, token.pos, t.F())
 	case itemLeftParen:
 		t.next()
 		n := t.O()
