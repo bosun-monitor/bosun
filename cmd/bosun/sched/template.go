@@ -26,6 +26,7 @@ type Context struct {
 	*models.IncidentState
 	Alert   *conf.Alert
 	IsEmail bool
+	Errors  []string
 
 	schedule    *Schedule
 	runHistory  *RunHistory
@@ -218,7 +219,8 @@ func (c *Context) evalExpr(e *expr.Expr, filter bool, series bool, autods int) (
 func (c *Context) eval(v interface{}, filter bool, series bool, autods int) (res expr.ResultSlice, title string, err error) {
 	switch v := v.(type) {
 	case string:
-		e, err := expr.New(v, c.schedule.RuleConf.GetFuncs(c.schedule.SystemConf.EnabledBackends()))
+		var e *expr.Expr
+		e, err = expr.New(v, c.schedule.RuleConf.GetFuncs(c.schedule.SystemConf.EnabledBackends()))
 		if err != nil {
 			return nil, "", fmt.Errorf("%s: %v", v, err)
 		}
@@ -230,78 +232,96 @@ func (c *Context) eval(v interface{}, filter bool, series bool, autods int) (res
 	default:
 		return nil, "", fmt.Errorf("expected string, expression or resultslice, got %T (%v)", v, v)
 	}
-	if filter {
+	if filter && err != nil {
 		res = res.Filter(c.AlertKey.Group())
 	}
-	if series {
+	if series && err != nil {
 		for _, k := range res {
 			if k.Type() != models.TypeSeriesSet {
 				return nil, "", fmt.Errorf("need a series, got %v (%v)", k.Type(), k)
 			}
 		}
 	}
-	return
+	return res, title, err
 }
 
 // Lookup returns the value for a key in the lookup table for the context's tagset.
-func (c *Context) Lookup(table, key string) (string, error) {
+// the returned string may be the representation of an error
+func (c *Context) Lookup(table, key string) string {
 	return c.LookupAll(table, key, c.AlertKey.Group())
 }
 
-func (c *Context) LookupAll(table, key string, group interface{}) (string, error) {
+func (c *Context) LookupAll(table, key string, group interface{}) string {
 	var t opentsdb.TagSet
 	switch v := group.(type) {
 	case string:
 		var err error
 		t, err = opentsdb.ParseTags(v)
 		if err != nil {
-			return "", err
+			c.addError(err)
+			return err.Error()
 		}
 	case opentsdb.TagSet:
 		t = v
 	}
 	l := c.schedule.RuleConf.GetLookup(table)
 	if l == nil {
-		return "", fmt.Errorf("unknown lookup table %v", table)
+		err := fmt.Errorf("unknown lookup table %v", table)
+		c.addError(err)
+		return err.Error()
 	}
 	if v, ok := l.ToExpr().Get(key, t); ok {
-		return v, nil
+		return v
 	}
-	return "", fmt.Errorf("no entry for key %v in table %v for tagset %v", key, table, c.AlertKey.Group())
+	err := fmt.Errorf("no entry for key %v in table %v for tagset %v", key, table, c.AlertKey.Group())
+	c.addError(err)
+	return err.Error()
+}
+
+func (c *Context) addError(e error) {
+	c.Errors = append(c.Errors, e.Error())
 }
 
 // Eval takes a result or an expression which it evaluates to a result.
 // It returns a value with tags corresponding to the context's tags.
 // If no such result is found, the first result with
 // nil tags is returned. If no such result is found, nil is returned.
-func (c *Context) Eval(v interface{}) (interface{}, error) {
+func (c *Context) Eval(v interface{}) interface{} {
 	res, _, err := c.eval(v, true, false, 0)
 	if err != nil {
-		return nil, err
+		c.addError(err)
+		return nil
 	}
 	if len(res) == 0 {
-		return math.NaN(), nil
+		return math.NaN()
 	}
 	// TODO: don't choose a random result, make sure there's exactly 1
-	return res[0].Value, nil
+	return res[0].Value
 }
 
 // EvalAll returns the executed expression (or the given result as is).
-func (c *Context) EvalAll(v interface{}) (interface{}, error) {
+func (c *Context) EvalAll(v interface{}) interface{} {
 	res, _, err := c.eval(v, false, false, 0)
-	return res, err
+	if err != nil {
+		c.addError(err)
+		return nil
+	}
+	return res
 }
 
-func (c *Context) graph(v interface{}, unit string, filter bool) (val interface{}, err error) {
+func (c *Context) graph(v interface{}, unit string, filter bool) (val interface{}) {
 	defer func() {
 		if p := recover(); p != nil {
-			slog.Error("panic rendering graph", p)
-			val = "error rendering graph"
+			err := fmt.Errorf("panic rendering graph %v", p)
+			c.addError(err)
+			slog.Error(err)
+			val = err.Error()
 		}
 	}()
 	res, exprText, err := c.eval(v, filter, true, 1000)
 	if err != nil {
-		return nil, err
+		c.addError(err)
+		return err.Error()
 	}
 	var buf bytes.Buffer
 	const width = 800
@@ -312,7 +332,8 @@ func (c *Context) graph(v interface{}, unit string, filter bool) (val interface{
 	if c.IsEmail {
 		err := c.schedule.ExprPNG(nil, &buf, width, height, unit, res)
 		if err != nil {
-			return nil, err
+			c.addError(err)
+			return err.Error()
 		}
 		name := fmt.Sprintf("%d.png", len(c.Attachments)+1)
 		c.Attachments = append(c.Attachments, &models.Attachment{
@@ -325,20 +346,21 @@ func (c *Context) graph(v interface{}, unit string, filter bool) (val interface{
 			template.HTMLEscapeString(fmt.Sprint(v)),
 			name,
 			footerHTML,
-		)), nil
+		))
 	}
 	buf.WriteString(fmt.Sprintf(`<a href="%s" style="text-decoration: none">`, c.GraphLink(exprText)))
 	if err := c.schedule.ExprSVG(nil, &buf, width, height, unit, res); err != nil {
-		return nil, err
+		c.addError(err)
+		return err.Error()
 	}
 	buf.WriteString(`</a>`)
 	buf.WriteString(footerHTML)
-	return template.HTML(buf.String()), nil
+	return template.HTML(buf.String())
 }
 
 // Graph returns an SVG for the given result (or expression, for which it gets the result)
 // with same tags as the context's tags.
-func (c *Context) Graph(v interface{}, args ...string) (interface{}, error) {
+func (c *Context) Graph(v interface{}, args ...string) interface{} {
 	var unit string
 	if len(args) > 0 {
 		unit = args[0]
@@ -347,7 +369,7 @@ func (c *Context) Graph(v interface{}, args ...string) (interface{}, error) {
 }
 
 // GraphAll returns an SVG for the given result (or expression, for which it gets the result).
-func (c *Context) GraphAll(v interface{}, args ...string) (interface{}, error) {
+func (c *Context) GraphAll(v interface{}, args ...string) interface{} {
 	var unit string
 	if len(args) > 0 {
 		unit = args[0]
@@ -355,31 +377,33 @@ func (c *Context) GraphAll(v interface{}, args ...string) (interface{}, error) {
 	return c.graph(v, unit, false)
 }
 
-func (c *Context) GetMeta(metric, name string, v interface{}) (interface{}, error) {
+func (c *Context) GetMeta(metric, name string, v interface{}) interface{} {
 	var t opentsdb.TagSet
 	switch v := v.(type) {
 	case string:
 		var err error
 		t, err = opentsdb.ParseTags(v)
 		if err != nil {
-			return t, err
+			c.addError(err)
+			return nil
 		}
 	case opentsdb.TagSet:
 		t = v
 	}
 	meta, err := c.schedule.GetMetadata(metric, t)
 	if err != nil {
-		return nil, err
+		c.addError(err)
+		return nil
 	}
 	if name == "" {
-		return meta, nil
+		return meta
 	}
 	for _, m := range meta {
 		if m.Name == name {
-			return m.Value, nil
+			return m.Value
 		}
 	}
-	return nil, nil
+	return "metadta not found"
 }
 
 // LeftJoin takes slices of results and expressions for which it gets the slices of results.
@@ -387,6 +411,7 @@ func (c *Context) GetMeta(metric, name string, v interface{}) (interface{}, erro
 // Joining is performed by group: a group that includes all tags (with same values) of the first group is a match.
 func (c *Context) LeftJoin(v ...interface{}) (interface{}, error) {
 	if len(v) < 2 {
+		// A template error is thrown here since this should be caught when defining at testing the template
 		return nil, fmt.Errorf("need at least two values (each can be an expression or result slice), got %v", len(v))
 	}
 	// temporarily store the results in a results[M][Ni] Result matrix:
@@ -395,7 +420,8 @@ func (c *Context) LeftJoin(v ...interface{}) (interface{}, error) {
 	for col, val := range v {
 		queryResults, _, err := c.eval(val, false, false, 0)
 		if err != nil {
-			return nil, err
+			c.addError(err)
+			return nil, nil
 		}
 		results[col] = queryResults
 	}
@@ -424,49 +450,58 @@ func (c *Context) LeftJoin(v ...interface{}) (interface{}, error) {
 func (c *Context) HTTPGet(url string) string {
 	resp, err := http.Get(url)
 	if err != nil {
+		c.addError(err)
 		return err.Error()
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode >= 300 {
-		return fmt.Sprintf("%v: returned %v", url, resp.Status)
+		err := fmt.Errorf("%v: returned %v", url, resp.Status)
+		c.addError(err)
+		return err.Error()
 	}
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
+		c.addError(err)
 		return err.Error()
 	}
 	return string(body)
 }
 
-func (c *Context) HTTPGetJSON(url string) (*jsonq.JsonQuery, error) {
+func (c *Context) HTTPGetJSON(url string) *jsonq.JsonQuery {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return nil, err
+		c.addError(err)
+		return nil
 	}
 	req.Header.Set("Accept", "application/json")
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil, err
+		c.addError(err)
+		return nil
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("%v: returned %v", url, resp.Status)
+		c.addError(fmt.Errorf("%v: returned %v", url, resp.Status))
 	}
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, err
+		c.addError(err)
+		return nil
 	}
 	data := make(map[string]interface{})
 	err = json.Unmarshal(body, &data)
 	if err != nil {
-		return nil, err
+		c.addError(err)
+		return nil
 	}
-	return jsonq.NewQuery(data), nil
+	return jsonq.NewQuery(data)
 }
 
 func (c *Context) HTTPPost(url, bodyType, data string) string {
 	resp, err := http.Post(url, bodyType, bytes.NewBufferString(data))
 	if err != nil {
+		c.addError(err)
 		return err.Error()
 	}
 	defer resp.Body.Close()
@@ -475,78 +510,92 @@ func (c *Context) HTTPPost(url, bodyType, data string) string {
 	}
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
+		c.addError(err)
 		return err.Error()
 	}
 	return string(body)
 }
 
-func (c *Context) LSQuery(index_root, filter, sduration, eduration string, size int) (interface{}, error) {
+func (c *Context) LSQuery(index_root, filter, sduration, eduration string, size int) interface{} {
 	var ks []string
 	for k, v := range c.AlertKey.Group() {
 		ks = append(ks, k+":"+v)
 	}
-	return c.LSQueryAll(index_root, strings.Join(ks, ","), filter, sduration, eduration, size)
+	res := c.LSQueryAll(index_root, strings.Join(ks, ","), filter, sduration, eduration, size)
+	if res != nil {
+		return nil
+	}
+	return res
 }
 
-func (c *Context) LSQueryAll(index_root, keystring, filter, sduration, eduration string, size int) (interface{}, error) {
+func (c *Context) LSQueryAll(index_root, keystring, filter, sduration, eduration string, size int) interface{} {
 	req, err := expr.LSBaseQuery(c.runHistory.Start, index_root, keystring, filter, sduration, eduration, size)
 	if err != nil {
-		return nil, err
+		c.addError(err)
+		return nil
 	}
 	results, err := c.runHistory.Backends.LogstashHosts.Query(req)
 	if err != nil {
-		return nil, err
+		c.addError(err)
+		return nil
 	}
 	r := make([]interface{}, len(results.Hits.Hits))
 	for i, h := range results.Hits.Hits {
 		var err error
 		err = json.Unmarshal(*h.Source, &r[i])
 		if err != nil {
-			return nil, err
+			c.addError(err)
+			return nil
 		}
 	}
-	return r, nil
+	return r
 }
 
-func (c *Context) ESQuery(indexRoot expr.ESIndexer, filter expr.ESQuery, sduration, eduration string, size int) (interface{}, error) {
+func (c *Context) ESQuery(indexRoot expr.ESIndexer, filter expr.ESQuery, sduration, eduration string, size int) interface{} {
 	newFilter := expr.ScopeES(c.Group(), filter.Query)
 	req, err := expr.ESBaseQuery(c.runHistory.Start, indexRoot, newFilter, sduration, eduration, size)
 	if err != nil {
-		return nil, err
+		c.addError(err)
+		return nil
 	}
 	results, err := c.runHistory.Backends.ElasticHosts.Query(req)
 	if err != nil {
-		return nil, err
+		c.addError(err)
+		return nil
 	}
 	r := make([]interface{}, len(results.Hits.Hits))
 	for i, h := range results.Hits.Hits {
 		var err error
 		err = json.Unmarshal(*h.Source, &r[i])
 		if err != nil {
-			return nil, err
+			c.addError(err)
+			return nil
 		}
 	}
-	return r, nil
+	return r
 }
 
-func (c *Context) ESQueryAll(indexRoot expr.ESIndexer, filter expr.ESQuery, sduration, eduration string, size int) (interface{}, error) {
+func (c *Context) ESQueryAll(indexRoot expr.ESIndexer, filter expr.ESQuery, sduration, eduration string, size int) interface{} {
 	req, err := expr.ESBaseQuery(c.runHistory.Start, indexRoot, filter.Query, sduration, eduration, size)
 	if err != nil {
-		return nil, err
+		c.addError(err)
+		return nil
 	}
 	results, err := c.runHistory.Backends.ElasticHosts.Query(req)
 	if err != nil {
-		return nil, err
+		c.addError(err)
+		return nil
 	}
 	r := make([]interface{}, len(results.Hits.Hits))
 	for i, h := range results.Hits.Hits {
 		var err error
 		err = json.Unmarshal(*h.Source, &r[i])
 		if err != nil {
-			return nil, err
+			c.addError(err)
+			return nil
 		}
 	}
-	return r, nil
+	return r
 }
 
 type actionNotificationContext struct {
