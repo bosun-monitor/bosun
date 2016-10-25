@@ -225,17 +225,23 @@ func (c *Context) eval(v interface{}, filter bool, series bool, autods int) (res
 			return nil, "", fmt.Errorf("%s: %v", v, err)
 		}
 		res, title, err = c.evalExpr(e, filter, series, autods)
+		if err != nil {
+			return
+		}
 	case *expr.Expr:
 		res, title, err = c.evalExpr(v, filter, series, autods)
+		if err != nil {
+			return
+		}
 	case expr.ResultSlice:
 		res = v
 	default:
 		return nil, "", fmt.Errorf("expected string, expression or resultslice, got %T (%v)", v, v)
 	}
-	if filter && err != nil {
+	if filter {
 		res = res.Filter(c.AlertKey.Group())
 	}
-	if series && err != nil {
+	if series {
 		for _, k := range res {
 			if k.Type() != models.TypeSeriesSet {
 				return nil, "", fmt.Errorf("need a series, got %v (%v)", k.Type(), k)
@@ -521,11 +527,7 @@ func (c *Context) LSQuery(index_root, filter, sduration, eduration string, size 
 	for k, v := range c.AlertKey.Group() {
 		ks = append(ks, k+":"+v)
 	}
-	res := c.LSQueryAll(index_root, strings.Join(ks, ","), filter, sduration, eduration, size)
-	if res != nil {
-		return nil
-	}
-	return res
+	return c.LSQueryAll(index_root, strings.Join(ks, ","), filter, sduration, eduration, size)
 }
 
 func (c *Context) LSQueryAll(index_root, keystring, filter, sduration, eduration string, size int) interface{} {
