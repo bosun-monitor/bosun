@@ -95,7 +95,7 @@ func main() {
 	}
 	systemConf, err := conf.LoadSystemConfigFile(*flagConf)
 	if err != nil {
-		slog.Fatal(err)
+		slog.Fatalf("couldn't read system configuration: %v", err)
 	}
 	sysProvider, err := systemConf.GetSystemConfProvider()
 	if err != nil {
@@ -103,7 +103,7 @@ func main() {
 	}
 	ruleConf, err := rule.ParseFile(sysProvider.GetRuleFilePath(), systemConf.EnabledBackends())
 	if err != nil {
-		slog.Fatal(err)
+		slog.Fatalf("couldn't read rules: %v", err)
 	}
 	if *flagTest {
 		os.Exit(0)
