@@ -21,7 +21,7 @@ func StartTestRedis(port int) (database.DataAccess, func()) {
 		testData := database.NewDataAccess(*flagReddisHost, true, 0, "")
 		if *flagFlushRedis {
 			log.Println("FLUSHING REDIS")
-			c := testData.(database.Connector).GetConnection()
+			c := testData.(database.RedisConnector).Get()
 			defer c.Close()
 			_, err := c.Do("FLUSHDB")
 			if err != nil {

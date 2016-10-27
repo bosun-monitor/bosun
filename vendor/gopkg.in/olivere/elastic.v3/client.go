@@ -17,11 +17,14 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"golang.org/x/net/context"
+	"golang.org/x/net/context/ctxhttp"
 )
 
 const (
 	// Version is the current version of Elastic.
-	Version = "3.0.30"
+	Version = "3.0.56"
 
 	// DefaultUrl is the default endpoint of Elasticsearch on the local machine.
 	// It is used e.g. when initializing a new Client without a specific URL.
@@ -679,18 +682,21 @@ func (c *Client) dumpResponse(resp *http.Response) {
 
 // sniffer periodically runs sniff.
 func (c *Client) sniffer() {
-	for {
-		c.mu.RLock()
-		timeout := c.snifferTimeout
-		ticker := time.After(c.snifferInterval)
-		c.mu.RUnlock()
+	c.mu.RLock()
+	timeout := c.snifferTimeout
+	interval := c.snifferInterval
+	c.mu.RUnlock()
 
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	for {
 		select {
 		case <-c.snifferStop:
 			// we are asked to stop, so we signal back that we're stopping now
 			c.snifferStop <- true
 			return
-		case <-ticker:
+		case <-ticker.C:
 			c.sniff(timeout)
 		}
 	}
@@ -710,7 +716,7 @@ func (c *Client) sniff(timeout time.Duration) error {
 
 	// Use all available URLs provided to sniff the cluster.
 	urlsMap := make(map[string]bool)
-	urls := make([]string, 0)
+	var urls []string
 
 	// Add all URLs provided on startup
 	for _, url := range c.urls {
@@ -761,7 +767,7 @@ func (c *Client) sniff(timeout time.Duration) error {
 // from the result of calling Nodes Info API. Otherwise, an empty array
 // is returned.
 func (c *Client) sniffNode(url string) []*conn {
-	nodes := make([]*conn, 0)
+	var nodes []*conn
 
 	// Call the Nodes Info API at /_nodes/http
 	req, err := NewRequest("GET", url+"/_nodes/http")
@@ -837,7 +843,7 @@ func (c *Client) extractHostname(scheme, address string) string {
 func (c *Client) updateConns(conns []*conn) {
 	c.connsMu.Lock()
 
-	newConns := make([]*conn, 0)
+	var newConns []*conn
 
 	// Build up new connections:
 	// If we find an existing connection, use that (including no. of failures etc.).
@@ -866,18 +872,21 @@ func (c *Client) updateConns(conns []*conn) {
 
 // healthchecker periodically runs healthcheck.
 func (c *Client) healthchecker() {
-	for {
-		c.mu.RLock()
-		timeout := c.healthcheckTimeout
-		ticker := time.After(c.healthcheckInterval)
-		c.mu.RUnlock()
+	c.mu.RLock()
+	timeout := c.healthcheckTimeout
+	interval := c.healthcheckInterval
+	c.mu.RUnlock()
 
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	for {
 		select {
 		case <-c.healthcheckStop:
 			// we are asked to stop, so we signal back that we're stopping now
 			c.healthcheckStop <- true
 			return
-		case <-ticker:
+		case <-ticker.C:
 			c.healthcheck(timeout, false)
 		}
 	}
@@ -983,11 +992,11 @@ func (c *Client) next() (*conn, error) {
 	i := 0
 	numConns := len(c.conns)
 	for {
-		i += 1
+		i++
 		if i > numConns {
 			break // we visited all conns: they all seem to be dead
 		}
-		c.cindex += 1
+		c.cindex++
 		if c.cindex >= numConns {
 			c.cindex = 0
 		}
@@ -1033,6 +1042,19 @@ func (c *Client) mustActiveConn() error {
 // This is necessary for services that expect e.g. HTTP status 404 as a
 // valid outcome (Exists, IndicesExists, IndicesTypeExists).
 func (c *Client) PerformRequest(method, path string, params url.Values, body interface{}, ignoreErrors ...int) (*Response, error) {
+	return c.PerformRequestC(nil, method, path, params, body, ignoreErrors...)
+}
+
+// PerformRequestC does a HTTP request to Elasticsearch.
+// It returns a response and an error on failure.
+//
+// Optionally, a list of HTTP error codes to ignore can be passed.
+// This is necessary for services that expect e.g. HTTP status 404 as a
+// valid outcome (Exists, IndicesExists, IndicesTypeExists).
+//
+// If ctx is not nil, it uses the ctxhttp to do the request,
+// enabling both request cancelation as well as timeout.
+func (c *Client) PerformRequestC(ctx context.Context, method, path string, params url.Values, body interface{}, ignoreErrors ...int) (*Response, error) {
 	start := time.Now().UTC()
 
 	c.mu.RLock()
@@ -1073,7 +1095,7 @@ func (c *Client) PerformRequest(method, path string, params url.Values, body int
 				// Force a healtcheck as all connections seem to be dead.
 				c.healthcheck(timeout, false)
 			}
-			retries -= 1
+			retries--
 			if retries <= 0 {
 				return nil, err
 			}
@@ -1110,9 +1132,14 @@ func (c *Client) PerformRequest(method, path string, params url.Values, body int
 		c.dumpRequest((*http.Request)(req))
 
 		// Get response
-		res, err := c.c.Do((*http.Request)(req))
+		var res *http.Response
+		if ctx == nil {
+			res, err = c.c.Do((*http.Request)(req))
+		} else {
+			res, err = ctxhttp.Do(ctx, c.c, (*http.Request)(req))
+		}
 		if err != nil {
-			retries -= 1
+			retries--
 			if retries <= 0 {
 				c.errorf("elastic: %s is dead", conn.URL())
 				conn.MarkAsDead()
@@ -1234,8 +1261,19 @@ func (c *Client) ReindexTask() *ReindexService {
 	return NewReindexService(c)
 }
 
-// TODO Term Vectors
-// TODO Multi termvectors API
+// TermVectors returns information and statistics on terms in the fields
+// of a particular document.
+func (c *Client) TermVectors(index, typ string) *TermvectorsService {
+	builder := NewTermvectorsService(c)
+	builder = builder.Index(index).Type(typ)
+	return builder
+}
+
+// MultiTermVectors returns information and statistics on terms in the fields
+// of multiple documents.
+func (c *Client) MultiTermVectors() *MultiTermvectorService {
+	return NewMultiTermvectorService(c)
+}
 
 // -- Search APIs --
 
@@ -1274,7 +1312,11 @@ func (c *Client) Percolate() *PercolateService {
 // TODO Search Shards API
 // TODO Search Exists API
 // TODO Validate API
-// TODO Field Stats API
+
+// FieldStats returns statistical information about fields in indices.
+func (c *Client) FieldStats(indices ...string) *FieldStatsService {
+	return NewFieldStatsService(c).Index(indices...)
+}
 
 // Exists checks if a document exists.
 func (c *Client) Exists() *ExistsService {
@@ -1492,6 +1534,11 @@ func (c *Client) NodesInfo() *NodesInfoService {
 	return NewNodesInfoService(c)
 }
 
+// NodesStats retrieves one or more or all of the cluster nodes statistics.
+func (c *Client) NodesStats() *NodesStatsService {
+	return NewNodesStatsService(c)
+}
+
 // TasksCancel cancels tasks running on the specified nodes.
 func (c *Client) TasksCancel() *TasksCancelService {
 	return NewTasksCancelService(c)
@@ -1539,7 +1586,7 @@ func (c *Client) IndexNames() ([]string, error) {
 		return nil, err
 	}
 	var names []string
-	for name, _ := range res {
+	for name := range res {
 		names = append(names, name)
 	}
 	return names, nil
@@ -1581,12 +1628,4 @@ func (c *Client) WaitForGreenStatus(timeout string) error {
 // See WaitForStatus for more details.
 func (c *Client) WaitForYellowStatus(timeout string) error {
 	return c.WaitForStatus("yellow", timeout)
-}
-
-// TermVectors returns information and statistics on terms in the fields
-// of a particular document.
-func (c *Client) TermVectors(index, typ string) *TermvectorsService {
-	builder := NewTermvectorsService(c)
-	builder = builder.Index(index).Type(typ)
-	return builder
 }

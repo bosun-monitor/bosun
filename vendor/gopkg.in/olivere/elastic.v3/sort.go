@@ -1,4 +1,4 @@
-// Copyright 2012-2015 Oliver Eilhard. All rights reserved.
+// Copyright 2012-present Oliver Eilhard. All rights reserved.
 // Use of this source code is governed by a MIT-license.
 // See http://olivere.mit-license.org/license.txt for details.
 
@@ -42,10 +42,14 @@ func (info SortInfo) Source() (interface{}, error) {
 		prop["ignore_unmapped"] = *info.IgnoreUnmapped
 	}
 	if info.SortMode != "" {
-		prop["sort_mode"] = info.SortMode
+		prop["mode"] = info.SortMode
 	}
 	if info.NestedFilter != nil {
-		prop["nested_filter"] = info.NestedFilter
+		src, err := info.NestedFilter.Source()
+		if err != nil {
+			return nil, err
+		}
+		prop["nested_filter"] = src
 	}
 	if info.NestedPath != "" {
 		prop["nested_path"] = info.NestedPath
@@ -53,6 +57,23 @@ func (info SortInfo) Source() (interface{}, error) {
 	source := make(map[string]interface{})
 	source[info.Field] = prop
 	return source, nil
+}
+
+// -- SortByDoc --
+
+// SortByDoc sorts by the "_doc" field, as described in
+// https://www.elastic.co/guide/en/elasticsearch/reference/master/search-request-scroll.html.
+//
+// Example:
+//   ss := elastic.NewSearchSource()
+//   ss = ss.SortBy(elastic.SortByDoc{})
+type SortByDoc struct {
+	Sorter
+}
+
+// Source returns the JSON-serializable data.
+func (s SortByDoc) Source() (interface{}, error) {
+	return "_doc", nil
 }
 
 // -- ScoreSort --
@@ -337,7 +358,7 @@ func (s GeoDistanceSort) Source() (interface{}, error) {
 	source["_geo_distance"] = x
 
 	// Points
-	ptarr := make([]interface{}, 0)
+	var ptarr []interface{}
 	for _, pt := range s.points {
 		ptarr = append(ptarr, pt.Source())
 	}

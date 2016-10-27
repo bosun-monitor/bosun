@@ -18,6 +18,7 @@ import (
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
 	"github.com/MiniProfiler/go/miniprofiler"
+	"github.com/bosun-monitor/annotate"
 	"github.com/influxdata/influxdb/client"
 	elasticOld "github.com/olivere/elastic"
 	elastic "gopkg.in/olivere/elastic.v3"
@@ -52,6 +53,7 @@ type Backends struct {
 	LogstashHosts   LogstashElasticHosts
 	ElasticHosts    ElasticHosts
 	InfluxConfig    client.Config
+	AnnotateContext annotate.Client
 }
 
 type BosunProviders struct {
@@ -215,7 +217,7 @@ func (e ESQuery) MarshalJSON() ([]byte, error) {
 
 type ESIndexer struct {
 	TimeField string
-	Generate  func(startDuration, endDuration *time.Time) ([]string, error)
+	Generate  func(startDuration, endDuration *time.Time) []string
 }
 
 func (e ESIndexer) Type() models.FuncType { return models.TypeESIndexer }
@@ -223,6 +225,14 @@ func (e ESIndexer) Value() interface{}    { return e }
 func (e ESIndexer) MarshalJSON() ([]byte, error) {
 	return json.Marshal("ESGenerator")
 }
+
+type Table struct {
+	Columns []string
+	Rows    [][]interface{}
+}
+
+func (t Table) Type() models.FuncType { return models.TypeTable }
+func (t Table) Value() interface{}    { return t }
 
 type SortablePoint struct {
 	T time.Time

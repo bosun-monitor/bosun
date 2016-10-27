@@ -6,6 +6,12 @@ title: Process Monitoring
 
 ## Monitoring Processes with Scollector
 
+### Overview
+
+Scollector can be used to monitor processes and services in Windows and Linux. Some processes like IIS application pools are monitored automatically, but usually you need to specify which processes and services you want to monitor. By having a standard list of processes that are monitored on all systems as part of the default Windows or Linux toml file you won't need to perform any additional configuration when deploying new systems.
+
+There are examples of process monitoring on the Stack Overflow Documentation topic for [Scollector Process and Service monitoring](http://stackoverflow.com/documentation/bosun/721/scollector-process-and-service-monitoring). 
+
 ### Linux
 
 Scollector will monitor any Linux processes specified in the configuration file.

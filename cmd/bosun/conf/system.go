@@ -11,6 +11,7 @@ import (
 	"bosun.org/graphite"
 	"bosun.org/opentsdb"
 	"github.com/BurntSushi/toml"
+	"github.com/bosun-monitor/annotate"
 	"github.com/influxdata/influxdb/client"
 )
 
@@ -61,6 +62,7 @@ type EnabledBackends struct {
 	Influx   bool
 	Elastic  bool
 	Logstash bool
+	Annotate bool
 }
 
 // EnabledBackends returns and EnabledBackends struct which contains fields
@@ -72,6 +74,7 @@ func (sc *SystemConf) EnabledBackends() EnabledBackends {
 	b.Influx = sc.InfluxConf.URL.URL != nil && sc.InfluxConf.URL.Host != ""
 	b.Logstash = len(sc.LogStashConf.Hosts) != 0
 	b.Elastic = len(sc.ElasticConf.Hosts) != 0
+	b.Annotate = len(sc.AnnotateConf.Hosts) != 0
 	return b
 }
 
@@ -417,6 +420,10 @@ func (sc *SystemConf) GetInfluxContext() client.Config {
 		c.UnsafeSsl = sc.InfluxConf.UnsafeSSL
 	}
 	return c
+}
+
+func (sc *SystemConf) GetAnnotateContext() annotate.Client {
+	return annotate.NewClient(fmt.Sprintf("http://%v/api", sc.HTTPListen)) // TODO Fix for HTTPS
 }
 
 // GetLogstashContext returns a Logstash context which contains all the information needed

@@ -3,18 +3,6 @@
 	"ignore": "test lua lmdb",
 	"package": [
 		{
-			"checksumSHA1": "jtx+tVLvGm43UNOZhrH1O/lY5Go=",
-			"path": "bosun.org/opentsdb",
-			"revision": "3db82a9cf2c8fb7db339c6a36b39b71b66b0d9e8",
-			"revisionTime": "2016-07-12T16:55:19Z"
-		},
-		{
-			"checksumSHA1": "h4yWd5MfegTSTf5nSK15aQSBfjg=",
-			"path": "bosun.org/slog",
-			"revision": "3db82a9cf2c8fb7db339c6a36b39b71b66b0d9e8",
-			"revisionTime": "2016-07-12T16:55:19Z"
-		},
-		{
 			"path": "github.com/BurntSushi/toml",
 			"revision": "5c4df71dfe9ac89ef6287afc05e4c1b16ae65a1e",
 			"revisionTime": "2016-01-02T09:47:48-05:00"
@@ -30,9 +18,10 @@
 			"revisionTime": "2013-01-21T16:17:00-08:00"
 		},
 		{
+			"checksumSHA1": "SRbwal3qWa6cgvaLNHSenDmG3V0=",
 			"path": "github.com/MiniProfiler/go/miniprofiler",
-			"revision": "3c4995d8add5a3aacf4068313aeb5dc3a9be36c6",
-			"revisionTime": "2016-02-23T21:48:46-05:00"
+			"revision": "3296d396d47267cb86b34b80c2030eb3284296c8",
+			"revisionTime": "2016-07-19T19:58:34Z"
 		},
 		{
 			"path": "github.com/PuerkitoBio/goquery",
@@ -266,18 +255,18 @@
 		},
 		{
 			"path": "github.com/bosun-monitor/annotate",
-			"revision": "fa0f15c651bfe666cd287c2ba760436b41c85cf4",
-			"revisionTime": "2016-08-04T13:41:31-04:00"
+			"revision": "7a63972472cdcbd52933b5580927efca995e4598",
+			"revisionTime": "2016-10-19T16:13:39-06:00"
 		},
 		{
 			"path": "github.com/bosun-monitor/annotate/backend",
-			"revision": "fa0f15c651bfe666cd287c2ba760436b41c85cf4",
-			"revisionTime": "2016-08-04T13:41:31-04:00"
+			"revision": "7a63972472cdcbd52933b5580927efca995e4598",
+			"revisionTime": "2016-10-19T16:13:39-06:00"
 		},
 		{
 			"path": "github.com/bosun-monitor/annotate/web",
-			"revision": "fa0f15c651bfe666cd287c2ba760436b41c85cf4",
-			"revisionTime": "2016-08-04T13:41:31-04:00"
+			"revision": "7a63972472cdcbd52933b5580927efca995e4598",
+			"revisionTime": "2016-10-19T16:13:39-06:00"
 		},
 		{
 			"path": "github.com/bosun-monitor/statusio",
@@ -405,19 +394,28 @@
 			"revisionTime": "2015-10-28T14:53:53-04:00"
 		},
 		{
+			"checksumSHA1": "g/V4qrXjUGG9B+e3hB+4NAYJ5Gs=",
 			"path": "github.com/gorilla/context",
-			"revision": "1ea25387ff6f684839d82767c1733ff4d4d15d0a",
-			"revisionTime": "2016-02-26T13:46:23-08:00"
+			"revision": "08b5f424b9271eedf6f9f0ce86cb9396ed337a42",
+			"revisionTime": "2016-08-17T18:46:32Z"
 		},
 		{
+			"checksumSHA1": "UNlILKZlAiLwYYwj70y+Q8n13D0=",
 			"path": "github.com/gorilla/css/scanner",
 			"revision": "a80e24ada2699166544311f07c26ef37eaf64012",
-			"revisionTime": "2015-03-17T15:22:38-07:00"
+			"revisionTime": "2015-03-17T22:22:38Z"
 		},
 		{
+			"checksumSHA1": "urMd7A9QPAJYY0GZJL9qBhlUmD8=",
 			"path": "github.com/gorilla/mux",
-			"revision": "0eeaf8392f5b04950925b8a69fe70f110fa7cbfc",
-			"revisionTime": "2016-03-17T14:34:30-07:00"
+			"revision": "757bef944d0f21880861c2dd9c871ca543023cba",
+			"revisionTime": "2016-09-20T23:08:13Z"
+		},
+		{
+			"checksumSHA1": "veX5bpYOBjZZWMyWxXxys8EH9d8=",
+			"path": "github.com/gorilla/securecookie",
+			"revision": "fa5329f913702981df43dcb2a380bac429c810b5",
+			"revisionTime": "2016-10-03T05:16:01Z"
 		},
 		{
 			"path": "github.com/influxdata/influxdb/client",
@@ -463,6 +461,12 @@
 			"path": "github.com/jordan-wright/email",
 			"revision": "f61123ea07e1921ac4f174e8c42225fd39bd6c6a",
 			"revisionTime": "2015-10-16T12:35:57-05:00"
+		},
+		{
+			"checksumSHA1": "OBvAHqWjdI4NQVAqTkcQAdTuCFY=",
+			"path": "github.com/justinas/alice",
+			"revision": "1051eaf52fcafdd87ead59d28b065f1fcb8274ec",
+			"revisionTime": "2016-09-10T10:38:22Z"
 		},
 		{
 			"checksumSHA1": "g+afVQQVopBLiLB5pFZp/8s6aBs=",
@@ -878,18 +882,18 @@
 		},
 		{
 			"path": "gopkg.in/olivere/elastic.v3",
-			"revision": "bff1355ba593686c7bfc1abb7a8573f34a9c29d1",
-			"revisionTime": "2016-04-04T08:40:41+02:00"
+			"revision": "1ad75b5396674e9c783400e89106bc0c8da9d786",
+			"revisionTime": "2016-10-16T12:21:59+02:00"
 		},
 		{
 			"path": "gopkg.in/olivere/elastic.v3/backoff",
-			"revision": "bff1355ba593686c7bfc1abb7a8573f34a9c29d1",
-			"revisionTime": "2016-04-04T08:40:41+02:00"
+			"revision": "1ad75b5396674e9c783400e89106bc0c8da9d786",
+			"revisionTime": "2016-10-16T12:21:59+02:00"
 		},
 		{
 			"path": "gopkg.in/olivere/elastic.v3/uritemplates",
-			"revision": "bff1355ba593686c7bfc1abb7a8573f34a9c29d1",
-			"revisionTime": "2016-04-04T08:40:41+02:00"
+			"revision": "1ad75b5396674e9c783400e89106bc0c8da9d786",
+			"revisionTime": "2016-10-16T12:21:59+02:00"
 		},
 		{
 			"path": "gopkg.in/yaml.v1",

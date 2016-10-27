@@ -74,6 +74,7 @@ func (s *Schedule) NewRunHistory(start time.Time, cache *cache.Cache) *RunHistor
 			InfluxConfig:    s.SystemConf.GetInfluxContext(),
 			LogstashHosts:   s.SystemConf.GetLogstashContext(),
 			ElasticHosts:    s.SystemConf.GetElasticContext(),
+			AnnotateContext: s.SystemConf.GetAnnotateContext(),
 		},
 	}
 	return r

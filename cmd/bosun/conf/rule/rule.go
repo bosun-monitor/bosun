@@ -379,22 +379,29 @@ func (c *Conf) loadMacro(s *parse.SectionNode) {
 	c.Macros[name] = &m
 }
 
+// Note: Funcs that can error should return a pointer. In the error case the pointer
+// should be non-nil. The exception to this is when a string is returned, in which case
+// the string format of the error should be returned. This allows for error handling within
+// templates for information that is helpful but not stricly necessary
 var defaultFuncs = ttemplate.FuncMap{
-	"bytes": func(v interface{}) (conf.ByteSize, error) {
+	"bytes": func(v interface{}) string {
 		switch v := v.(type) {
 		case string:
 			f, err := strconv.ParseFloat(v, 64)
-			return conf.ByteSize(f), err
+			if err != nil {
+				return err.Error()
+			}
+			return conf.ByteSize(f).String()
 		case int:
-			return conf.ByteSize(v), nil
+			return conf.ByteSize(v).String()
 		case float64:
-			return conf.ByteSize(v), nil
+			return conf.ByteSize(v).String()
 		case expr.Number:
-			return conf.ByteSize(v), nil
+			return conf.ByteSize(v).String()
 		case expr.Scalar:
-			return conf.ByteSize(v), nil
+			return conf.ByteSize(v).String()
 		}
-		return conf.ByteSize(0), fmt.Errorf("unexpected type: %T (%v)", v, v)
+		return fmt.Errorf("unexpected type passed to bytes function: %T (%v)", v, v).Error()
 	},
 	"pct": func(i interface{}) string {
 		return fmt.Sprintf("%.2f%%", i)
@@ -406,7 +413,13 @@ var defaultFuncs = ttemplate.FuncMap{
 	"html": func(value interface{}) htemplate.HTML {
 		return htemplate.HTML(fmt.Sprint(value))
 	},
-	"parseDuration": time.ParseDuration,
+	"parseDuration": func(s string) *time.Duration {
+		d, err := time.ParseDuration(s)
+		if err != nil {
+			return nil
+		}
+		return &d
+	},
 }
 
 func (c *Conf) loadTemplate(s *parse.SectionNode) {
@@ -1011,6 +1024,9 @@ func (c *Conf) GetFuncs(backends conf.EnabledBackends) map[string]eparse.Func {
 	}
 	if backends.Influx {
 		merge(expr.Influx)
+	}
+	if backends.Annotate {
+		merge(expr.Annotate)
 	}
 	return funcs
 }

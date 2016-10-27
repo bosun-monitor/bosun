@@ -310,6 +310,14 @@ var builtins = map[string]parse.Func{
 		Tags:   tagFirst,
 		F:      Shift,
 	},
+	"leftjoin": {
+		Args:     []models.FuncType{models.TypeString, models.TypeString, models.TypeNumberSet},
+		VArgs:    true,
+		VArgsPos: 2,
+		Return:   models.TypeTable,
+		Tags:     nil, // TODO
+		F:        LeftJoin,
+	},
 	"merge": {
 		Args:   []models.FuncType{models.TypeSeriesSet},
 		VArgs:  true,
@@ -593,6 +601,56 @@ func Merge(e *State, T miniprofiler.Timer, series ...*Results) (*Results, error)
 		res.Results = append(res.Results, r.Results...)
 	}
 	return res, nil
+}
+
+func LeftJoin(e *State, T miniprofiler.Timer, keysCSV, columnsCSV string, rowData ...*Results) (*Results, error) {
+	res := &Results{}
+	dataWidth := len(rowData)
+	if dataWidth == 0 {
+		return res, fmt.Errorf("leftjoin requires at least one item to populate rows")
+	}
+	keyColumns := strings.Split(keysCSV, ",")
+	dataColumns := strings.Split(columnsCSV, ",")
+	if len(dataColumns) != dataWidth {
+		return res, fmt.Errorf("mismatch in length of data rows and data labels")
+	}
+	keyWidth := len(keyColumns)
+	keyIndex := make(map[string]int, keyWidth)
+	for i, v := range keyColumns {
+		keyIndex[v] = i
+	}
+	t := Table{}
+	t.Columns = append(keyColumns, dataColumns...)
+	rowWidth := len(dataColumns) + len(keyColumns)
+	rowGroups := []opentsdb.TagSet{}
+	for i, r := range rowData {
+		if i == 0 {
+			for _, val := range r.Results {
+				row := make([]interface{}, rowWidth)
+				for k, v := range val.Group {
+					if ki, ok := keyIndex[k]; ok {
+						row[ki] = v
+					}
+				}
+				row[keyWidth+i] = val.Value.Value()
+				rowGroups = append(rowGroups, val.Group)
+				t.Rows = append(t.Rows, row)
+			}
+			continue
+		}
+		for rowIndex, group := range rowGroups {
+			for _, val := range r.Results {
+				if group.Subset(val.Group) {
+					t.Rows[rowIndex][keyWidth+i] = val.Value.Value()
+				}
+			}
+		}
+	}
+	return &Results{
+		Results: []*Result{
+			{Value: t},
+		},
+	}, nil
 }
 
 func Shift(e *State, T miniprofiler.Timer, series *Results, d string) (*Results, error) {
@@ -1080,6 +1138,9 @@ func AddTags(e *State, T miniprofiler.Timer, series *Results, s string) (*Result
 	}
 	for tagKey, tagValue := range tagSetToAdd {
 		for _, res := range series.Results {
+			if res.Group == nil {
+				res.Group = make(opentsdb.TagSet)
+			}
 			if _, ok := res.Group[tagKey]; ok {
 				return nil, fmt.Errorf("%s key already in group", tagKey)
 			}

@@ -49,6 +49,12 @@ type Conf struct {
 	// UseNtlm specifies if HTTP requests should authenticate with NTLM.
 	UseNtlm bool
 
+	// UserAgentMessage is an optional message that is appended to the User Agent
+	UserAgentMessage string
+
+	// SNMPTimeout is the number of seconds to wait for SNMP responses (default 30)
+	SNMPTimeout int
+
 	HAProxy        []HAProxy
 	SNMP           []SNMP
 	MIBS           map[string]MIB

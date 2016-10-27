@@ -3,7 +3,10 @@ package annotate
 import (
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
+
+	glob "github.com/ryanuber/go-glob"
 )
 
 type RFC3339 struct {
@@ -71,6 +74,55 @@ type EpochAnnotation struct {
 	AnnotationFields
 	StartDate Epoch
 	EndDate   Epoch
+}
+
+// AnnotationsByStartID is a Type to sort by start time then by id
+type AnnotationsByStartID Annotations
+
+func (b AnnotationsByStartID) Len() int      { return len(b) }
+func (b AnnotationsByStartID) Swap(i, j int) { b[i], b[j] = b[j], b[i] }
+func (b AnnotationsByStartID) Less(i, j int) bool {
+	if b[i].StartDate.Time.Before(b[j].StartDate.Time) {
+		return true
+	}
+	if b[i].StartDate.Time.After(b[j].StartDate.Time) {
+		return false
+	}
+	return b[i].Id < b[j].Id
+}
+
+func emptyOrGlob(userVal, fieldVal string) bool {
+	if userVal == "empty" && fieldVal == "" {
+		return true
+	}
+	return glob.Glob(userVal, fieldVal)
+}
+
+// Ask makes it so annotations can be filtered in memory using
+// github.com/kylebrandt/boolq
+func (a Annotation) Ask(filter string) (bool, error) {
+	sp := strings.SplitN(filter, ":", 2)
+	if len(sp) != 2 {
+		return false, fmt.Errorf("bad filter, filter must be in k:v format, got %v", filter)
+	}
+	key := sp[0]
+	value := sp[1]
+	switch key {
+	case "owner":
+		return emptyOrGlob(value, a.Owner), nil
+	case "user":
+		return emptyOrGlob(value, a.CreationUser), nil
+	case "host":
+		return emptyOrGlob(value, a.Host), nil
+	case "category":
+		return emptyOrGlob(value, a.Category), nil
+	case "url":
+		return emptyOrGlob(value, a.Url), nil
+	case "message":
+		return emptyOrGlob(value, a.Message), nil
+	default:
+		return false, fmt.Errorf("invalid keyword: %s", key)
+	}
 }
 
 func (ea *EpochAnnotation) AsAnnotation() (a Annotation) {

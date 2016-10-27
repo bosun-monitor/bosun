@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strconv"
 
-	"bosun.org/collect"
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
 	"bosun.org/util"
@@ -51,8 +50,7 @@ func (d *dataAccess) Search() SearchDataAccess {
 }
 
 func (d *dataAccess) AddMetricForTag(tagK, tagV, metric string, time int64) error {
-	defer collect.StartTimer("redis", opentsdb.TagSet{"op": "AddMetricForTag"})()
-	conn := d.GetConnection()
+	conn := d.Get()
 	defer conn.Close()
 
 	_, err := conn.Do("HSET", searchMetricKey(tagK, tagV), metric, time)
@@ -60,8 +58,7 @@ func (d *dataAccess) AddMetricForTag(tagK, tagV, metric string, time int64) erro
 }
 
 func (d *dataAccess) GetMetricsForTag(tagK, tagV string) (map[string]int64, error) {
-	defer collect.StartTimer("redis", opentsdb.TagSet{"op": "GetMetricsForTag"})()
-	conn := d.GetConnection()
+	conn := d.Get()
 	defer conn.Close()
 
 	return stringInt64Map(conn.Do("HGETALL", searchMetricKey(tagK, tagV)))
@@ -84,8 +81,7 @@ func stringInt64Map(d interface{}, err error) (map[string]int64, error) {
 }
 
 func (d *dataAccess) AddTagKeyForMetric(metric, tagK string, time int64) error {
-	defer collect.StartTimer("redis", opentsdb.TagSet{"op": "AddTagKeyForMetric"})()
-	conn := d.GetConnection()
+	conn := d.Get()
 	defer conn.Close()
 
 	_, err := conn.Do("HSET", searchTagkKey(metric), tagK, time)
@@ -93,32 +89,28 @@ func (d *dataAccess) AddTagKeyForMetric(metric, tagK string, time int64) error {
 }
 
 func (d *dataAccess) GetTagKeysForMetric(metric string) (map[string]int64, error) {
-	defer collect.StartTimer("redis", opentsdb.TagSet{"op": "GetTagKeysForMetric"})()
-	conn := d.GetConnection()
+	conn := d.Get()
 	defer conn.Close()
 
 	return stringInt64Map(conn.Do("HGETALL", searchTagkKey(metric)))
 }
 
 func (d *dataAccess) AddMetric(metric string, time int64) error {
-	defer collect.StartTimer("redis", opentsdb.TagSet{"op": "AddMetric"})()
-	conn := d.GetConnection()
+	conn := d.Get()
 	defer conn.Close()
 
 	_, err := conn.Do("HSET", searchAllMetricsKey, metric, time)
 	return slog.Wrap(err)
 }
 func (d *dataAccess) GetAllMetrics() (map[string]int64, error) {
-	defer collect.StartTimer("redis", opentsdb.TagSet{"op": "GetAllMetrics"})()
-	conn := d.GetConnection()
+	conn := d.Get()
 	defer conn.Close()
 
 	return stringInt64Map(conn.Do("HGETALL", searchAllMetricsKey))
 }
 
 func (d *dataAccess) AddTagValue(metric, tagK, tagV string, time int64) error {
-	defer collect.StartTimer("redis", opentsdb.TagSet{"op": "AddTagValue"})()
-	conn := d.GetConnection()
+	conn := d.Get()
 	defer conn.Close()
 
 	_, err := conn.Do("HSET", searchTagvKey(metric, tagK), tagV, time)
@@ -126,16 +118,14 @@ func (d *dataAccess) AddTagValue(metric, tagK, tagV string, time int64) error {
 }
 
 func (d *dataAccess) GetTagValues(metric, tagK string) (map[string]int64, error) {
-	defer collect.StartTimer("redis", opentsdb.TagSet{"op": "GetTagValues"})()
-	conn := d.GetConnection()
+	conn := d.Get()
 	defer conn.Close()
 
 	return stringInt64Map(conn.Do("HGETALL", searchTagvKey(metric, tagK)))
 }
 
 func (d *dataAccess) AddMetricTagSet(metric, tagSet string, time int64) error {
-	defer collect.StartTimer("redis", opentsdb.TagSet{"op": "AddMetricTagSet"})()
-	conn := d.GetConnection()
+	conn := d.Get()
 	defer conn.Close()
 
 	_, err := conn.Do("HSET", searchMetricTagSetKey(metric), tagSet, time)
@@ -143,8 +133,7 @@ func (d *dataAccess) AddMetricTagSet(metric, tagSet string, time int64) error {
 }
 
 func (d *dataAccess) GetMetricTagSets(metric string, tags opentsdb.TagSet) (map[string]int64, error) {
-	defer collect.StartTimer("redis", opentsdb.TagSet{"op": "GetMetricTagSets"})()
-	conn := d.GetConnection()
+	conn := d.Get()
 	defer conn.Close()
 
 	var cursor = "0"
@@ -181,8 +170,7 @@ func (d *dataAccess) GetMetricTagSets(metric string, tags opentsdb.TagSet) (map[
 }
 
 func (d *dataAccess) BackupLastInfos(m map[string]map[string]*LastInfo) error {
-	defer collect.StartTimer("redis", opentsdb.TagSet{"op": "BackupLast"})()
-	conn := d.GetConnection()
+	conn := d.Get()
 	defer conn.Close()
 
 	dat, err := util.MarshalGzipJson(m)
@@ -194,8 +182,7 @@ func (d *dataAccess) BackupLastInfos(m map[string]map[string]*LastInfo) error {
 }
 
 func (d *dataAccess) LoadLastInfos() (map[string]map[string]*LastInfo, error) {
-	defer collect.StartTimer("redis", opentsdb.TagSet{"op": "LoadLast"})()
-	conn := d.GetConnection()
+	conn := d.Get()
 	defer conn.Close()
 
 	b, err := redis.Bytes(conn.Do("GET", "search:last"))
@@ -212,8 +199,7 @@ func (d *dataAccess) LoadLastInfos() (map[string]map[string]*LastInfo, error) {
 
 //This function not exposed on any public interface. See cmd/bosun/database/test/util/purge_search_data.go for usage.
 func (d *dataAccess) PurgeSearchData(metric string, noop bool) error {
-	defer collect.StartTimer("redis", opentsdb.TagSet{"op": "PurgeSearchData"})()
-	conn := d.GetConnection()
+	conn := d.Get()
 	defer conn.Close()
 
 	tagKeys, err := d.GetTagKeysForMetric(metric)

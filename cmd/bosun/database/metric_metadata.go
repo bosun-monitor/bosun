@@ -2,11 +2,8 @@ package database
 
 import (
 	"fmt"
-	"time"
-
-	"bosun.org/collect"
-	"bosun.org/opentsdb"
 	"github.com/garyburd/redigo/redis"
+	"time"
 )
 
 /*
@@ -30,19 +27,17 @@ func (d *dataAccess) Metadata() MetadataDataAccess {
 }
 
 func (d *dataAccess) PutMetricMetadata(metric string, field string, value string) error {
-	defer collect.StartTimer("redis", opentsdb.TagSet{"op": "PutMetricMeta"})()
 	if field != "desc" && field != "unit" && field != "rate" {
 		return fmt.Errorf("Unknown metric metadata field: %s", field)
 	}
-	conn := d.GetConnection()
+	conn := d.Get()
 	defer conn.Close()
 	_, err := conn.Do("HMSET", metricMetaKey(metric), field, value, "lastTouched", time.Now().UTC().Unix())
 	return err
 }
 
 func (d *dataAccess) GetMetricMetadata(metric string) (*MetricMetadata, error) {
-	defer collect.StartTimer("redis", opentsdb.TagSet{"op": "GetMetricMeta"})()
-	conn := d.GetConnection()
+	conn := d.Get()
 	defer conn.Close()
 	v, err := redis.Values(conn.Do("HGETALL", metricMetaKey(metric)))
 	if err != nil {

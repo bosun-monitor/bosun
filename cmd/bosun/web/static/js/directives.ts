@@ -1,3 +1,5 @@
+/// <reference path="0-bosun.ts" />
+
 bosunApp.directive('tsResults', function() {
     return {
         templateUrl: '/partials/results.html',
@@ -213,6 +215,18 @@ bosunApp.directive('tsTableSort', ['$timeout', ($timeout: ng.ITimeoutService) =>
             });
         },
     };
+}]);
+
+// https://gist.github.com/mlynch/dd407b93ed288d499778
+bosunApp.directive('autofocus', ['$timeout', function($timeout) {
+  return {
+    restrict: 'A',
+    link : function($scope, $element) {
+      $timeout(function() {
+        $element[0].focus();
+      });
+    }
+  }
 }]);
 
 bosunApp.directive('tsTimeLine', () => {
@@ -934,10 +948,12 @@ bosunApp.directive('tsGraph', ['$window', 'nfmtFilter', function($window: ng.IWi
                         .attr("width", (d: any) => {
                             var startT = moment(d.StartDate).utc().unix() * 1000
                             var endT = moment(d.EndDate).utc().unix() * 1000
-                            if (startT == endT) {
-                                return 3
+                            var calcWidth = xScale(endT) - xScale(startT)
+                            // Never render boxes with less than 8 pixels are they are difficult to click
+                            if (calcWidth < 8) {
+                                return 8;
                             }
-                            return xScale(endT) - xScale(startT)
+                            return calcWidth;
                         })
                         .on("mouseenter", (ann) => {
                             if (!scope.showAnnotations) {

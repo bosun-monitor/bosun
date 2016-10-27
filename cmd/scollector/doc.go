@@ -103,6 +103,11 @@ Default is 500.
 MaxQueueLen (integer): is the number of metrics keept internally.
 Default is 200000.
 
+UserAgentMessage (string): is an optional message that will be appended to the
+User Agent when making HTTP requests. This can be used to add contact details
+so external services are aware of who is making the requests.
+Example: Scollector/0.6.0 (UserAgentMessage added here)
+
 Filter (array of string): Only include collectors matching these terms. Prefix
 with - to invert match and exclude collectors matching those terms. Use
 *,-term,-anotherterm to include all collectors except excluded terms.

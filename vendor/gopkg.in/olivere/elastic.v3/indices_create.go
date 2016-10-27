@@ -5,9 +5,10 @@
 package elastic
 
 import (
-	"encoding/json"
 	"errors"
 	"net/url"
+
+	"golang.org/x/net/context"
 
 	"gopkg.in/olivere/elastic.v3/uritemplates"
 )
@@ -77,6 +78,11 @@ func (b *IndicesCreateService) Pretty(pretty bool) *IndicesCreateService {
 
 // Do executes the operation.
 func (b *IndicesCreateService) Do() (*IndicesCreateResult, error) {
+	return b.DoC(nil)
+}
+
+// DoC executes the operation.
+func (b *IndicesCreateService) DoC(ctx context.Context) (*IndicesCreateResult, error) {
 	if b.index == "" {
 		return nil, errors.New("missing index name")
 	}
@@ -109,13 +115,13 @@ func (b *IndicesCreateService) Do() (*IndicesCreateResult, error) {
 	}
 
 	// Get response
-	res, err := b.client.PerformRequest("PUT", path, params, body)
+	res, err := b.client.PerformRequestC(ctx, "PUT", path, params, body)
 	if err != nil {
 		return nil, err
 	}
 
 	ret := new(IndicesCreateResult)
-	if err := json.Unmarshal(res.Body, ret); err != nil {
+	if err := b.client.decoder.Decode(res.Body, ret); err != nil {
 		return nil, err
 	}
 	return ret, nil

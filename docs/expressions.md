@@ -300,6 +300,91 @@ comprising of the average of given metric from 1d to 1d-1h-ago, 2d to
 instead of concatenating series together, each series is reduced to a number,
 and those numbers created into a series.
 
+# Annotation Query Functions
+These function are available when annotate is enabled via Bosun's configuration.
+
+## Annotation Filters
+For the following annotation functions, `filter` is a string with the following specification.
+
+Items in a filter are in the format `keyword:value`. The value is either a glob pattern or literal string to match, or the reserved word `empty` which means that the value of the field is an empty string.
+
+Possible keywords are: `owner`, `user`, `host`, `category`, `url`, and `message`. 
+
+All items can be combined in boolean logic by using paranthesis groupging, `!` as not, `AND` as logical and, and `OR` as logical or.
+
+For example, `"owner:sre AND ! user:empty"` would show things that belong to sre, and have a username specified. When annotations are created by a process, we don't specify a user.
+
+## antable(filter string, fieldsCSV string, startDuration, endDuration) Table
+Antable is meant for shoowing annotations in a Grafana table, where Grafana's "To Table Transform" under options is set to type "Table".
+
+See Annotation Filters above to understand filters. FieldsCSV is a list of columns to display in the table. They can be in any order. The possible columns you can include are: `start`, `end`, `owner`, `user`, `host`, `category`, `url`, `link` `message`, `duration`. At least one column must be specified.
+
+`link` is unlike the others in that it actually returns the HTML to construct a link, whereas `url` is the the text of the link. This is so when using a Grafana table and Grafana v3.1.1 or later, you can have a link in a table as long as you enable sanitize HTML within the Grafana Column Styles.
+
+For example: `antable("owner:sre AND category:outage", "start,end,user,owner,category,message", "8w", "")` will return a table of annotations with the selected columns in FieldCSV going back 8 weeks from the time of the query.
+
+# ancounts(filter string, startDuration string, endDuration string) seriesSet
+ancounts returns a series representing the number of annotations that matched the filter for the specified period. One might expect a number instead of a series, but by having a series it has a useful property. We can count outages that span'd across the requested time frame and count them as fractional outages.
+
+If an annotation's timespan is contained entirely within the request timespan, or the timespan of the request is within the the timespan of the annotation, a 1 is added to the series.
+
+If an annotation either starts before the requested start time, or ends after the requested start time then it is counted as a fractional outage (Assuming the annotation ended or started respectively with the requested time frame).
+
+If there are no annotations within the requested time period, then the value `NaN` will be returned.
+
+For example:
+
+The following request is made at `2016-09-21 14:49:00`.
+
+```
+$filter = "owner:sre AND category:outage"
+$back = "1n"
+$count = ancounts($filter, $back, "")
+# TimeFrame of the Fractional annotation: "2016-09-21T14:47:56Z", "2016-09-21T14:50:53Z" (Duration: 2m56 sec)
+$count
+```
+
+Returns:
+```
+{
+  "0": 1,
+  "1": 1,
+  "2": 0.3615819209039548
+}
+```
+
+The float values means that 36% of the annotation fell with the requested time frame. Once can get the sum of these by doing `sum($count)`, result of `2.36...` to get the fractional sum, or `len($count)`, result `3` to get the count.
+
+Note: The index values above, 0, 1, and 2 are disregarded and are just there so we can use the same underlying type as a time series.
+
+
+# andurations(filter string, startDuration, endDuration string) seriesSet
+andurations behaves in a similiar way to ancounts. The difference is that the values you returned will be the duration of annotation in seconds. 
+
+If the duration spans part of the requested time frame, only the duration of the annotation that falls within the timerange will be returns as a value for that annotation. If the annotation starts before the request and ends after the request, the duration of the request timeframe will be returned.
+
+If there are no annotations within the requested time period, then the value `NaN` will be returned.
+
+For example, a identical query to the example in ancounts but using andurations instead:
+
+```
+$filter = "owner:sre AND category:outage"
+$back = "1n"
+$durations = andurations($filter, $back, "")
+# TimeFrame of the Fractional Outage: "2016-09-21T14:47:56Z", "2016-09-21T14:50:53Z",
+$durations
+```
+
+Returns:
+```
+	
+{
+  "0": 402,
+  "1": 758,
+  "2": 64
+}
+```
+
 # Reduction Functions
 
 All reduction functions take a seriesSet and return a numberSet with one element per unique group.
@@ -620,6 +705,24 @@ merge(series("foo=bar", $hourAgo, 5, $now, 10), series("foo=bar2", $hourAgo, 6, 
 ## shift(seriesSet, dur string) seriesSet
 
 Shift takes a seriesSet and shifts the time forward by the value of dur ([OpenTSDB duration string](http://opentsdb.net/docs/build/html/user_guide/query/dates.html)) and adds a tag for representing the shift duration. This is meant so you can overlay times visually in a graph.
+
+## leftjoin(tagsCSV string, dataCSV string, ...numberSet) table
+leftjoin takes multiple numberSets and joins them to the first numberSet to form a table. tagsCSV is a string that is comma delimited, and should match tags from query that you want to display (i.e., "host,disk"). dataCSV is a list of column names for each numberset, so it should have the same number of labels as there are numberSets.
+
+The only current intended use case is for constructing "Table" panels in Grafana.
+
+For Example, the following in Grafana would create a table that shows the CPU of each host for the current period, the cpu for the adjacent previous period, and the difference between them:
+
+```
+$cpuMetric = "avg:$ds-avg:rate{counter,,1}:os.cpu{host=*bosun*}{}"
+$currentCPU = avg(q($cpuMetric, "$start", ""))
+$span = (epoch() - (epoch() - d("$start")))
+$previousCPU = avg(q($cpuMetric, tod($span*2), "$start"))
+$delta = $currentCPU - $previousCPU
+leftjoin("host", "Current CPU,Previous CPU,Change", $currentCPU, $previousCPU, $delta)
+```
+
+Note that in the above example is intended to be used in Grafana via the Bosun datasource, so `$start` and `$ds` are replaced by Grafana before the query is sent to Bosun.
 
 ## merge(SeriesSet...) seriesSet
 

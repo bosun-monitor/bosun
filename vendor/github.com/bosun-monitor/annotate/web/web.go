@@ -20,14 +20,30 @@ import (
 )
 
 // esc -o static.go -pkg web static
+
+//AddRoutes will add annotate routes to the given router, using the specified prefix
 func AddRoutes(router *mux.Router, prefix string, b []backend.Backend, enableUI, useLocalAssets bool) error {
+	return AddRoutesWithMiddleware(router, prefix, b, enableUI, useLocalAssets, nil, nil)
+}
+
+func noopMiddleware(h http.HandlerFunc) http.Handler { return h }
+
+//AddRoutesWithMiddleware will add annotate routes to the given router, using the specified prefix. It accepts two middleware functions that will be applied to each route,
+//depending on whether they are a "read" operation, or a "write" operation
+func AddRoutesWithMiddleware(router *mux.Router, prefix string, b []backend.Backend, enableUI, useLocalAssets bool, readMiddleware, modifyMiddleware func(http.HandlerFunc) http.Handler) error {
+	if readMiddleware == nil {
+		readMiddleware = noopMiddleware
+	}
+	if modifyMiddleware == nil {
+		modifyMiddleware = noopMiddleware
+	}
 	backends = b
-	router.HandleFunc(prefix+"/annotation", InsertAnnotation).Methods("POST", "PUT")
-	router.HandleFunc(prefix+"/annotation/query", GetAnnotations).Methods("GET")
-	router.HandleFunc(prefix+"/annotation/{id}", GetAnnotation).Methods("GET")
-	router.HandleFunc(prefix+"/annotation/{id}", InsertAnnotation).Methods("PUT")
-	router.HandleFunc(prefix+"/annotation/{id}", DeleteAnnotation).Methods("DELETE")
-	router.HandleFunc(prefix+"/annotation/values/{field}", GetFieldValues).Methods("GET")
+	router.Handle(prefix+"/annotation", modifyMiddleware(InsertAnnotation)).Methods("POST", "PUT")
+	router.Handle(prefix+"/annotation/query", readMiddleware(GetAnnotations)).Methods("GET")
+	router.Handle(prefix+"/annotation/{id}", readMiddleware(GetAnnotation)).Methods("GET")
+	router.Handle(prefix+"/annotation/{id}", modifyMiddleware(InsertAnnotation)).Methods("PUT")
+	router.Handle(prefix+"/annotation/{id}", modifyMiddleware(DeleteAnnotation)).Methods("DELETE")
+	router.Handle(prefix+"/annotation/values/{field}", readMiddleware(GetFieldValues)).Methods("GET")
 	if !enableUI {
 		return nil
 	}
@@ -41,7 +57,7 @@ func AddRoutes(router *mux.Router, prefix string, b []backend.Backend, enableUI,
 		return err
 	}
 	router.PathPrefix("/static/").Handler(http.FileServer(webFS))
-	router.PathPrefix("/").HandlerFunc(Index).Methods("GET")
+	router.PathPrefix("/").Handler(readMiddleware(Index)).Methods("GET")
 	return nil
 }
 
@@ -272,9 +288,9 @@ func GetAnnotations(w http.ResponseWriter, req *http.Request) {
 	for param := range values {
 		sp := strings.Split(param, ":")
 		switch sp[0] {
-			case annotate.Source, annotate.Host, annotate.CreationUser, annotate.Owner, annotate.Category, annotate.Message:
-			default:
-				continue
+		case annotate.Source, annotate.Host, annotate.CreationUser, annotate.Owner, annotate.Category, annotate.Message:
+		default:
+			continue
 		}
 		filter := backend.FieldFilter{Field: sp[0], Value: values.Get(param)}
 		if len(sp) > 1 {
