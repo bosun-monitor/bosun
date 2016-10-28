@@ -21,7 +21,8 @@ ENV JAVA_HOME /usr/lib/jvm/java-7-openjdk-amd64
 ENV TSDBRELAY_OPTS -b localhost:8070 -t localhost:4242 -l 0.0.0.0:5252 -redis localhost:9565
 ENV TERM dumb
 
-COPY bosun.conf /data/
+COPY bosun.toml /data/
+COPY rules.conf /data/
 COPY scollector.toml /data/
 COPY hbase-site.xml $HBASE/conf/
 COPY start_hbase.sh /hbase/

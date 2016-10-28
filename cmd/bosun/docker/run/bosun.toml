@@ -1,0 +1,5 @@
+RuleFilePath = "/data/rules.conf"
+
+[OpenTSDBConf]
+Host = "localhost:4242"
+Version = "2.2"
