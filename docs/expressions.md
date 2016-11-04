@@ -475,7 +475,7 @@ Accepts a series and a set of tags to rename in `Key1=NewK1,Key2=NewK2` format. 
 
 ## remove(seriesSet, string) seriesSet
 
-Accepts a series and a tag key to remove from the set. The function will error if remove the tag key from the set would have a duplicate item in it.
+Accepts a series and a tag key to remove from the set. The function will error if removing the tag key from the set would cause the resulting set to have a duplicate item in it.
 
 ## t(numberSet, group string) seriesSet
 
