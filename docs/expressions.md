@@ -473,6 +473,10 @@ Accepts a series and a set of tags to add in `Key1=NewK1,Key2=NewK2` format. Thi
 
 Accepts a series and a set of tags to rename in `Key1=NewK1,Key2=NewK2` format. All data points will have the tag keys renamed according to the spec provided, in order. This can be useful for combining results from seperate queries that have similar tagsets with different tag keys.
 
+## remove(seriesSet, string) seriesSet
+
+Accepts a series and a tag key to remove from the set. The function will error if remove the tag key from the set would have a duplicate item in it.
+
 ## t(numberSet, group string) seriesSet
 
 Transposes N series of length 1 to 1 series of length N. If the group parameter is not the empty string, the number of series returned is equal to the number of tagks passed. This is useful for performing scalar aggregation across multiple results from a query. For example, to get the total memory used on the web tier: `sum(t(avg(q("avg:os.mem.used{host=*-web*}", "5m", "")), ""))`.
