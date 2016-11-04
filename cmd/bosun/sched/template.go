@@ -28,6 +28,8 @@ type Context struct {
 	IsEmail bool
 	Errors  []string
 
+	TemplateVars map[string]interface{}
+
 	schedule    *Schedule
 	runHistory  *RunHistory
 	Attachments []*models.Attachment
@@ -40,6 +42,7 @@ func (s *Schedule) Data(rh *RunHistory, st *models.IncidentState, a *conf.Alert,
 		IsEmail:       isEmail,
 		schedule:      s,
 		runHistory:    rh,
+		TemplateVars: make(map[string]interface{}),
 	}
 	return &c
 }
@@ -598,6 +601,11 @@ func (c *Context) ESQueryAll(indexRoot expr.ESIndexer, filter expr.ESQuery, sdur
 		}
 	}
 	return r
+}
+
+func (c *Context) SetVar(key string, val interface{}) interface{} {
+	c.TemplateVars[key] = val
+	return nil
 }
 
 type actionNotificationContext struct {

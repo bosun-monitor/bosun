@@ -413,6 +413,34 @@ var defaultFuncs = ttemplate.FuncMap{
 	"html": func(value interface{}) htemplate.HTML {
 		return htemplate.HTML(fmt.Sprint(value))
 	},
+	"makeSlice": func(values ...interface{}) interface{} {
+		s := make([]interface{}, len(values))
+		for i := range s {
+			s[i] = values[i]
+		}
+		return s
+	},
+	"makeMap": func(values ...interface{}) interface{} {
+		m := make(map[string]interface{}, len(values))
+		for i := range values {
+			if i%2 == 0 {
+				continue
+			}
+			if s, ok := values[i-1].(string); ok {
+				m[s] = values[i]
+			} else {
+				return nil
+			}
+		}
+		return m
+	},
+	"json": func(v interface{}) string {
+		b, err := json.Marshal(v)
+		if err != nil {
+			slog.Errorln(err)
+		}
+		return string(b)
+	},
 	"parseDuration": func(s string) *time.Duration {
 		d, err := time.ParseDuration(s)
 		if err != nil {
