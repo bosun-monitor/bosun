@@ -93,7 +93,7 @@ func (d *DataPoint) Valid() bool {
 		return false
 	}
 	f, err := strconv.ParseFloat(fmt.Sprint(d.Value), 64)
-	if err != nil || math.IsNaN(f) {
+	if err != nil || math.IsNaN(f) || math.IsInf(f, 0) {
 		return false
 	}
 	return true
