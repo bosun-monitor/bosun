@@ -50,7 +50,7 @@ func c_google_analytics(clientid string, secret string, tokenstr string, sites [
 	var md opentsdb.MultiDataPoint
 	var mErr multiError
 
-	c, err := analyticsClient(clientid, secret, tokenstr)
+	c, err := googleAPIClient(clientid, secret, tokenstr, []string{analytics.AnalyticsScope})
 	if err != nil {
 		return nil, err
 	}
@@ -183,16 +183,17 @@ func getPageviews(md *opentsdb.MultiDataPoint, svc *analytics.Service, site conf
 	return nil
 }
 
-// analyticsClient() takes in a clientid, secret, and a base64'd gob representing the cached oauth token.
-// Generating the token is left as an exercise to the reader. (TODO)
-func analyticsClient(clientid string, secret string, tokenstr string) (*http.Client, error) {
+// googleAPIClient() takes in a clientid, secret, a base64'd gob representing
+// the cached oauth token, and a list of oauth scopes.  Generating the token is
+// left as an exercise to the reader.
+func googleAPIClient(clientid string, secret string, tokenstr string, scopes []string) (*http.Client, error) {
 	ctx := context.Background()
 
 	config := &oauth2.Config{
 		ClientID:     clientid,
 		ClientSecret: secret,
 		Endpoint:     google.Endpoint,
-		Scopes:       []string{analytics.AnalyticsScope},
+		Scopes:       scopes,
 	}
 
 	token := new(oauth2.Token)

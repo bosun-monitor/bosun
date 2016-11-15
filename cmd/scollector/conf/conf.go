@@ -74,6 +74,7 @@ type Conf struct {
 	RabbitMQ            []RabbitMQ
 	Nexpose             []Nexpose
 	GoogleAnalytics     []GoogleAnalytics
+	GoogleWebmaster     []GoogleWebmaster
 	Cadvisor            []Cadvisor
 	RedisCounters       []RedisCounters
 	ExtraHop            []ExtraHop
@@ -107,6 +108,12 @@ type GoogleAnalytics struct {
 	Secret   string
 	Token    string
 	Sites    []GoogleAnalyticsSite
+}
+
+type GoogleWebmaster struct {
+	ClientID string
+	Secret   string
+	Token    string
 }
 
 type Fastly struct {
