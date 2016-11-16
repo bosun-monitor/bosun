@@ -1,12 +1,34 @@
+/// <reference path="moment.d.ts" />
+/// <reference path="moment-duration-format.d.ts" />
+//Represents an auth token
+var Token = (function () {
+    function Token() {
+        this.Description = "";
+        this.Role = 0;
+        this.User = "";
+    }
+    return Token;
+})();
+//metadata about a single role or permission
+var BitMeta = (function () {
+    function BitMeta() {
+    }
+    return BitMeta;
+})();
+//all roles/permissions for bosun
+var RoleDefs = (function () {
+    function RoleDefs() {
+    }
+    return RoleDefs;
+})();
 /// <reference path="angular.d.ts" />
 /// <reference path="angular-route.d.ts" />
 /// <reference path="angular-sanitize.d.ts" />
 /// <reference path="bootstrap.d.ts" />
 /// <reference path="jquery.d.ts" />
-/// <reference path="moment.d.ts" />
-/// <reference path="moment-duration-format.d.ts" />
 /// <reference path="d3.d.ts" />
 /// <reference path="underscore.d.ts" />
+/// <reference path="models.ts" />
 var bosunApp = angular.module('bosunApp', [
     'ngRoute',
     'bosunControllers',
@@ -116,7 +138,8 @@ bosunApp.run(['$location', '$rootScope', function ($location, $rootScope) {
         });
     }]);
 var bosunControllers = angular.module('bosunControllers', []);
-bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', '$q', '$rootScope', function ($scope, $route, $http, $q, $rootScope) {
+bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', '$q', '$rootScope', 'authService',
+    function ($scope, $route, $http, $q, $rootScope, AuthService) {
         $scope.$on('$routeChangeSuccess', function (event, current, previous) {
             $scope.stop(true);
         });
@@ -135,6 +158,9 @@ bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', '$q', '$r
             $scope.quiet = settings.Quiet;
             $scope.version = settings.Version;
             $scope.opentsdbEnabled = $scope.version.Major != 0 && $scope.version.Minor != 0;
+            $scope.tokensEnabled = settings.TokensEnabled;
+            $scope.auth = AuthService;
+            AuthService.Init(settings.AuthEnabled, settings.Username, settings.Roles, settings.Permissions);
         };
         $scope.json = function (v) {
             return JSON.stringify(v, null, '  ');
@@ -421,9 +447,101 @@ var Annotation = (function () {
     };
     return Annotation;
 })();
+/// <reference path="0-bosun.ts" />
+bosunControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
+        var search = $location.search();
+        var current;
+        try {
+            current = atob(search.expr);
+        }
+        catch (e) {
+            current = '';
+        }
+        if (!current) {
+            $location.search('expr', btoa('avg(q("avg:rate:os.cpu{host=*bosun*}", "5m", "")) > 80'));
+            return;
+        }
+        $scope.date = search.date || '';
+        $scope.time = search.time || '';
+        $scope.expr = current;
+        $scope.running = current;
+        $scope.tab = search.tab || 'results';
+        $scope.animate();
+        $http.post('/api/expr?' +
+            'date=' + encodeURIComponent($scope.date) +
+            '&time=' + encodeURIComponent($scope.time), current)
+            .success(function (data) {
+            $scope.result = data.Results;
+            $scope.queries = data.Queries;
+            $scope.result_type = data.Type;
+            if (data.Type == 'series') {
+                $scope.svg_url = '/api/egraph/' + btoa(current) + '.svg?now=' + Math.floor(Date.now() / 1000);
+                $scope.graph = toChart(data.Results);
+            }
+            if (data.Type == 'number') {
+                angular.forEach(data.Results, function (d) {
+                    var name = '{';
+                    angular.forEach(d.Group, function (tagv, tagk) {
+                        if (name.length > 1) {
+                            name += ',';
+                        }
+                        name += tagk + '=' + tagv;
+                    });
+                    name += '}';
+                    d.name = name;
+                });
+                $scope.bar = data.Results;
+            }
+            $scope.running = '';
+        })
+            .error(function (error) {
+            $scope.error = error;
+            $scope.running = '';
+        })
+            .finally(function () {
+            $scope.stop();
+        });
+        $scope.set = function () {
+            $location.search('expr', btoa($scope.expr));
+            $location.search('date', $scope.date || null);
+            $location.search('time', $scope.time || null);
+            $route.reload();
+        };
+        function toChart(res) {
+            var graph = [];
+            angular.forEach(res, function (d, idx) {
+                var data = [];
+                angular.forEach(d.Value, function (val, ts) {
+                    data.push([+ts, val]);
+                });
+                if (data.length == 0) {
+                    return;
+                }
+                var name = '{';
+                angular.forEach(d.Group, function (tagv, tagk) {
+                    if (name.length > 1) {
+                        name += ',';
+                    }
+                    name += tagk + '=' + tagv;
+                });
+                name += '}';
+                var series = {
+                    Data: data,
+                    Name: name
+                };
+                graph[idx] = series;
+            });
+            return graph;
+        }
+        $scope.keydown = function ($event) {
+            if ($event.shiftKey && $event.keyCode == 13) {
+                $scope.set();
+            }
+        };
+    }]);
+/// <reference path="expr.ts" />
 bosunControllers.controller('ActionCtrl', ['$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
         var search = $location.search();
-        $scope.user = readCookie("action-user");
         $scope.type = search.type;
         $scope.notify = true;
         $scope.msgValid = true;
@@ -449,12 +567,10 @@ bosunControllers.controller('ActionCtrl', ['$scope', '$http', '$location', '$rou
             }
             var data = {
                 Type: $scope.type,
-                User: $scope.user,
                 Message: $scope.message,
                 Keys: $scope.keys,
                 Notify: $scope.notify
             };
-            createCookie("action-user", $scope.user, 1000);
             $http.post('/api/action', data)
                 .success(function (data) {
                 $location.url('/');
@@ -529,6 +645,66 @@ bosunControllers.controller('AnnotationCtrl', ['$scope', '$http', '$location', '
             });
         };
     }]);
+/// <reference path="0-bosun.ts" />
+var AuthService = (function () {
+    function AuthService() {
+    }
+    AuthService.prototype.Init = function (authEnabled, username, roles, userPerms) {
+        this.roles = roles;
+        this.username = username;
+        this.userPerms = userPerms;
+        this.authEnabled = authEnabled;
+        this.cleanRoles();
+        if (!authEnabled) {
+            var cookVal = readCookie("action-user");
+            if (cookVal) {
+                this.username = cookVal;
+            }
+        }
+    };
+    AuthService.prototype.HasPermission = function (s) {
+        for (var _i = 0, _a = this.roles.Permissions; _i < _a.length; _i++) {
+            var p = _a[_i];
+            if (p.Name == s) {
+                return (p.Bits & this.userPerms) != 0;
+            }
+        }
+        return true;
+    };
+    AuthService.prototype.GetRoles = function () {
+        return this.roles;
+    };
+    AuthService.prototype.Username = function (u) {
+        if (!this.authEnabled && angular.isDefined(u)) {
+            this.username = u;
+            createCookie("action-user", u, 90);
+        }
+        return this.username;
+    };
+    AuthService.prototype.Enabled = function () {
+        return this.authEnabled;
+    };
+    AuthService.prototype.SetUsername = function (u) {
+        this.username = u;
+    };
+    AuthService.prototype.cleanRoles = function () {
+        var _this = this;
+        //fix admin role that has extra bits corresponding to future permissions.
+        //causes bit math to go crazy and overflow. 
+        //prevents easily  making tokens that grant unknown future perms too.
+        _(this.roles.Roles).each(function (role) {
+            var mask = 0;
+            _(_this.roles.Permissions).each(function (p) {
+                if ((p.Bits & role.Bits) != 0) {
+                    mask |= p.Bits;
+                }
+            });
+            role.Bits = mask;
+        });
+    };
+    return AuthService;
+})();
+bosunApp.service("authService", AuthService);
 bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$route', '$timeout', '$sce', function ($scope, $http, $location, $route, $timeout, $sce) {
         var search = $location.search();
         $scope.fromDate = search.fromDate || '';
@@ -2080,97 +2256,6 @@ bosunControllers.controller('ErrorCtrl', ['$scope', '$http', '$location', '$rout
             return url;
         };
     }]);
-bosunControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
-        var search = $location.search();
-        var current;
-        try {
-            current = atob(search.expr);
-        }
-        catch (e) {
-            current = '';
-        }
-        if (!current) {
-            $location.search('expr', btoa('avg(q("avg:rate:os.cpu{host=*bosun*}", "5m", "")) > 80'));
-            return;
-        }
-        $scope.date = search.date || '';
-        $scope.time = search.time || '';
-        $scope.expr = current;
-        $scope.running = current;
-        $scope.tab = search.tab || 'results';
-        $scope.animate();
-        $http.post('/api/expr?' +
-            'date=' + encodeURIComponent($scope.date) +
-            '&time=' + encodeURIComponent($scope.time), current)
-            .success(function (data) {
-            $scope.result = data.Results;
-            $scope.queries = data.Queries;
-            $scope.result_type = data.Type;
-            if (data.Type == 'series') {
-                $scope.svg_url = '/api/egraph/' + btoa(current) + '.svg?now=' + Math.floor(Date.now() / 1000);
-                $scope.graph = toChart(data.Results);
-            }
-            if (data.Type == 'number') {
-                angular.forEach(data.Results, function (d) {
-                    var name = '{';
-                    angular.forEach(d.Group, function (tagv, tagk) {
-                        if (name.length > 1) {
-                            name += ',';
-                        }
-                        name += tagk + '=' + tagv;
-                    });
-                    name += '}';
-                    d.name = name;
-                });
-                $scope.bar = data.Results;
-            }
-            $scope.running = '';
-        })
-            .error(function (error) {
-            $scope.error = error;
-            $scope.running = '';
-        })
-            .finally(function () {
-            $scope.stop();
-        });
-        $scope.set = function () {
-            $location.search('expr', btoa($scope.expr));
-            $location.search('date', $scope.date || null);
-            $location.search('time', $scope.time || null);
-            $route.reload();
-        };
-        function toChart(res) {
-            var graph = [];
-            angular.forEach(res, function (d, idx) {
-                var data = [];
-                angular.forEach(d.Value, function (val, ts) {
-                    data.push([+ts, val]);
-                });
-                if (data.length == 0) {
-                    return;
-                }
-                var name = '{';
-                angular.forEach(d.Group, function (tagv, tagk) {
-                    if (name.length > 1) {
-                        name += ',';
-                    }
-                    name += tagk + '=' + tagv;
-                });
-                name += '}';
-                var series = {
-                    Data: data,
-                    Name: name
-                };
-                graph[idx] = series;
-            });
-            return graph;
-        }
-        $scope.keydown = function ($event) {
-            if ($event.shiftKey && $event.keyCode == 13) {
-                $scope.set();
-            }
-        };
-    }]);
 /// <reference path="0-bosun.ts" />
 var TagSet = (function () {
     function TagSet() {
@@ -3433,14 +3518,6 @@ bosunApp.directive('tsForceClose', function () {
     };
 });
 /// <reference path="0-bosun.ts" />
-var Token = (function () {
-    function Token() {
-        this.Description = "";
-        this.Role = 0;
-        this.User = "";
-    }
-    return Token;
-})();
 var TokenListController = (function () {
     function TokenListController($http) {
         var _this = this;
@@ -3477,16 +3554,11 @@ bosunApp.component('tokenList', {
     controllerAs: "ct",
     template: "\n<div class=\"alert alert-danger\" ng-show=\"ct.status\">{{ct.status}}</div>\n<h2>Access Tokens</h2>\n    <table class=\"table table-striped\">\n        <thead>\n        <tr>\n            <th>ID</th>\n            <th>User</th>\n            <th>Description</th>\n            <th>Last Used</th>\n        </tr>\n        </thead>\n        <tbody>\n        <tr  ng-repeat=\"tok in ct.tokens\">\n            <td>{{tok.Hash | limitTo: 6}}</td>\n            <td>{{tok.User}}</td>\n            <td>{{tok.Description}}</td>\n            <td><span ng-show=\"tok.LastUsed.year() > 2000\" ts-since=\"tok.LastUsed\"></span> <span ng-show=\"tok.LastUsed.year() <= 2000\">Never</span></td>\n            <td><a class='btn btn-danger glyphicon glyphicon-trash' ng-click='ct.delete(tok.Hash)'></a></td>\n        </tr>\n        </tbody>\n    </table>\n    <a class='btn btn-primary' href='/tokens/new'><span class='glyphicon glyphicon-plus'/> Create new token</a>\n" });
 /// <reference path="0-bosun.ts" />
-/// <reference path="tokenList.ts" />
-var BitMeta = (function () {
-    function BitMeta() {
-    }
-    return BitMeta;
-})();
 var NewTokenController = (function () {
-    function NewTokenController($http) {
+    function NewTokenController($http, auth) {
         var _this = this;
         this.$http = $http;
+        this.auth = auth;
         this.token = new Token();
         this.hasBits = function (bits) {
             return (bits & _this.token.Role) != 0;
@@ -3504,31 +3576,10 @@ var NewTokenController = (function () {
         this.getBits = function () {
             return _(_this.permissions).reduce(function (sum, p) { return sum + (p.Active ? p.Bits : 0); }, 0);
         };
-        this.status = "Loading...";
-        this.$http.get("/api/roles").then(function (resp) {
-            _this.status = "";
-            _this.permissions = resp.data.Permissions;
-            _this.roles = resp.data.Roles;
-            _this.cleanRoles();
-        }, function (err) {
-            _this.status = 'Unable to load roles: ' + err;
-        });
+        var defs = auth.GetRoles();
+        this.permissions = defs.Permissions;
+        this.roles = defs.Roles;
     }
-    NewTokenController.prototype.cleanRoles = function () {
-        var _this = this;
-        //fix admin role that has extra bits corresponding to future permissions.
-        //causes bit math to go crazy and overflow. 
-        //prevents easily  making tokens that grant unknown future perms too.
-        _(this.roles).each(function (role) {
-            var mask = 0;
-            _(_this.permissions).each(function (p) {
-                if ((p.Bits & role.Bits) != 0) {
-                    mask |= p.Bits;
-                }
-            });
-            role.Bits = mask;
-        });
-    };
     NewTokenController.prototype.create = function () {
         var _this = this;
         this.token.Role = this.getBits();
@@ -3541,7 +3592,7 @@ var NewTokenController = (function () {
     NewTokenController.prototype.encoded = function () {
         return encodeURIComponent(this.createdToken);
     };
-    NewTokenController.$inject = ['$http'];
+    NewTokenController.$inject = ['$http', 'authService'];
     return NewTokenController;
 })();
 bosunApp.component("newToken", {

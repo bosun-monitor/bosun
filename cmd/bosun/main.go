@@ -253,6 +253,7 @@ func main() {
 }
 
 func quit() {
+	slog.Error("Exiting")
 	os.Exit(0)
 }
 
@@ -280,6 +281,9 @@ func watch(root, pattern string, f func()) {
 			select {
 			case event := <-watcher.Events:
 				if wait.After(time.Now()) {
+					continue
+				}
+				if event.Name == "web/static.go" {
 					continue
 				}
 				if event.Op&fsnotify.Write == fsnotify.Write {

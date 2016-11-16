@@ -47,7 +47,9 @@ var (
 	InternetProxy   *url.URL
 	annotateBackend backend.Backend
 	reload          func() error
-	authEnabled     bool
+
+	tokensEnabled bool
+	authEnabled   bool
 )
 
 const (
@@ -73,7 +75,7 @@ func init() {
 		"HTTP response codes from the backend server for request relayed through Bosun.")
 }
 
-func Listen(httpAddr, httpsAddr, certFile, keyFile string, devMode bool, tsdbHost string, reloadFunc func() error, authConfig *conf.AuthConf) error {
+func Listen(httpAddr, httpsAddr, certFile, keyFile string, devMode bool, tsdbHost string, reloadFunc func() error, authConfig conf.AuthConf) error {
 	if devMode {
 		slog.Infoln("using local web assets")
 	}
@@ -127,11 +129,11 @@ func Listen(httpAddr, httpsAddr, certFile, keyFile string, devMode bool, tsdbHos
 	}
 	router.PathPrefix("/auth/").Handler(auth.LoginHandler())
 	handleFunc("/api/", APIRedirect, fullyOpen).Name("api_redir")
-	handle("/api/action", JSON(Action), canPerformActions).Name("action").Methods(GET)
+	handle("/api/action", JSON(Action), canPerformActions).Name("action").Methods(POST)
 	handle("/api/alerts", JSON(Alerts), canViewDash).Name("alerts").Methods(GET)
 	handle("/api/config", JSON(Config), canViewConfig).Name("get_config").Methods(GET)
 
-	handle("/api/config_test", JSON(ConfigTest), canRunTests).Name("config_test").Methods(POST)
+	handle("/api/config_test", JSON(ConfigTest), canViewConfig).Name("config_test").Methods(POST)
 	handle("/api/save_enabled", JSON(SaveEnabled), fullyOpen).Name("seve_enabled").Methods(GET)
 
 	if schedule.SystemConf.ReloadEnabled() {
@@ -205,7 +207,6 @@ func Listen(httpAddr, httpsAddr, certFile, keyFile string, devMode bool, tsdbHos
 	}
 	if tokens != nil {
 		handle("/api/tokens", tokens.AdminHandler(), canManageTokens).Name("tokens")
-		handle("/api/roles", JSON(getRoleDefinitions), canManageTokens).Name("token_roles")
 	}
 
 	router.Handle("/api/version", baseChain.ThenFunc(Version)).Name("version").Methods(GET)
@@ -218,7 +219,7 @@ func Listen(httpAddr, httpsAddr, certFile, keyFile string, devMode bool, tsdbHos
 	router.PathPrefix(miniprofiler.PATH).Handler(baseChain.Then(miniprofilerRoutes)).Name("miniprofiler")
 
 	//MUST BE LAST!
-	router.PathPrefix("/").Handler(baseChain.Then(auth.Wrap(miniprofiler.NewHandler(Index), canViewDash))).Name("index")
+	router.PathPrefix("/").Handler(baseChain.Then(auth.Wrap(JSON(Index), canViewDash))).Name("index")
 
 	slog.Infoln("tsdb host:", tsdbHost)
 	errChan := make(chan error, 1)
@@ -327,6 +328,12 @@ type appSetings struct {
 	AnnotateEnabled bool
 	Quiet           bool
 	Version         opentsdb.Version
+
+	AuthEnabled   bool
+	TokensEnabled bool
+	Username      string
+	Permissions   easyauth.Role
+	Roles         *roleMetadata
 }
 
 type indexVariables struct {
@@ -334,41 +341,50 @@ type indexVariables struct {
 	Settings string
 }
 
-func Index(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
+func Index(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	if r.URL.Path == "/graph" {
 		r.ParseForm()
 		if _, present := r.Form["png"]; present {
 			if _, err := Graph(t, w, r); err != nil {
-				serveError(w, err)
+				return nil, err
 			}
-			return
+			return nil, nil
 		}
 	}
 	r.Header.Set(miniprofilerHeader, "true")
 	// Set some global settings for the UI to know about. This saves us from
 	// having to make an HTTP call to see what features should be enabled
 	// in the UI
-	openTSDBVersion := opentsdb.Version{0, 0}
+	openTSDBVersion := opentsdb.Version{}
 	if schedule.SystemConf.GetTSDBContext() != nil {
 		openTSDBVersion = schedule.SystemConf.GetTSDBContext().Version()
 	}
-	settings, err := json.Marshal(appSetings{
-		schedule.SystemConf.SaveEnabled(),
-		schedule.SystemConf.AnnotateEnabled(),
-		schedule.GetQuiet(),
-		openTSDBVersion,
-	})
+	u := easyauth.GetUser(r)
+	as := &appSetings{
+		SaveEnabled:     schedule.SystemConf.SaveEnabled(),
+		AnnotateEnabled: schedule.SystemConf.AnnotateEnabled(),
+		Quiet:           schedule.GetQuiet(),
+		Version:         openTSDBVersion,
+		AuthEnabled:     authEnabled,
+		TokensEnabled:   tokensEnabled,
+		Roles:           roleDefs,
+	}
+	if u != nil {
+		as.Username = u.Username
+		as.Permissions = u.Access
+	}
+	settings, err := json.Marshal(as)
 	if err != nil {
-		serveError(w, err)
-		return
+		return nil, err
 	}
 	err = indexTemplate().Execute(w, indexVariables{
 		t.Includes(),
 		string(settings),
 	})
 	if err != nil {
-		serveError(w, err)
+		return nil, err
 	}
+	return nil, nil
 }
 
 func serveError(w http.ResponseWriter, err error) {
@@ -652,10 +668,17 @@ func Status(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (inter
 	return m, nil
 }
 
+func getUsername(r *http.Request) string {
+	user := easyauth.GetUser(r)
+	if user != nil {
+		return user.Username
+	}
+	return "unknown"
+}
+
 func Action(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	var data struct {
 		Type    string
-		User    string
 		Message string
 		Keys    []string
 		Ids     []int64
@@ -683,12 +706,13 @@ func Action(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (inter
 	errs := make(MultiError)
 	r.ParseForm()
 	successful := []models.AlertKey{}
+	uname := getUsername(r)
 	for _, key := range data.Keys {
 		ak, err := models.ParseAlertKey(key)
 		if err != nil {
 			return nil, err
 		}
-		err = schedule.ActionByAlertKey(data.User, data.Message, at, ak)
+		err = schedule.ActionByAlertKey(uname, data.Message, at, ak)
 		if err != nil {
 			errs[key] = err
 		} else {
@@ -696,7 +720,7 @@ func Action(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (inter
 		}
 	}
 	for _, id := range data.Ids {
-		ak, err := schedule.ActionByIncidentId(data.User, data.Message, at, id)
+		ak, err := schedule.ActionByIncidentId(uname, data.Message, at, id)
 		if err != nil {
 			errs[fmt.Sprintf("%v", id)] = err
 		} else {
@@ -707,7 +731,7 @@ func Action(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (inter
 		return nil, errs
 	}
 	if data.Notify && len(successful) != 0 {
-		err := schedule.ActionNotify(at, data.User, data.Message, successful)
+		err := schedule.ActionNotify(at, uname, data.Message, successful)
 		if err != nil {
 			return nil, err
 		}

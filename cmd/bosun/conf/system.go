@@ -48,7 +48,7 @@ type SystemConf struct {
 
 	AnnotateConf AnnotateConf
 
-	AuthConf *AuthConf
+	AuthConf AuthConf
 
 	EnableSave      bool
 	EnableReload    bool
@@ -147,8 +147,11 @@ type SMTPConf struct {
 
 //AuthConf is configuration for bosun's authentication
 type AuthConf struct {
+	AuthEnabled bool
 	//Secret string to hash auth tokens. Needed to enable token auth.
 	TokenSecret string
+	//Secret sting used to encrypt cookie.
+	CookieSecret string
 	//LDAP configuration
 	LDAP LDAPConf
 }
@@ -163,7 +166,7 @@ type LDAPConf struct {
 	// default permission level for anyone who can log in. Try "Reader".
 	DefaultPermission string
 	//List of group level permissions
-	Groups []*LDAPGroup
+	Groups []LDAPGroup
 	//List of user specific permission levels
 	Users map[string]string
 	//Root search path for group lookups. Usually something like "DC=myorg,DC=com".
@@ -327,7 +330,7 @@ func (sc *SystemConf) GetRedisPassword() string {
 	return sc.DBConf.RedisPassword
 }
 
-func (sc *SystemConf) GetAuthConf() *AuthConf {
+func (sc *SystemConf) GetAuthConf() AuthConf {
 	return sc.AuthConf
 }
 

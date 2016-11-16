@@ -51,51 +51,44 @@ type noopAuth struct{}
 func (n noopAuth) GetUser(r *http.Request) (*easyauth.User, error) {
 	//TODO: make sure ui sends header when possible, instead of json body
 	name := "anonymous"
-	if q := r.FormValue("user"); q != "" {
-		name = q
-	} else if h := r.Header.Get("X-Bosun-User"); h != "" {
-		name = h
+	if cookie, err := r.Cookie("action-user"); err == nil {
+		name = cookie.Value
 	}
 	//everybody is an admin!
 	return &easyauth.User{
-		Access:   roleReader,
+		Access:   roleAdmin,
 		Username: name,
 		Method:   "noop",
 	}, nil
 }
 
-func buildAuth(cfg *conf.AuthConf) (easyauth.AuthManager, *token.TokenProvider, error) {
-	if cfg == nil {
-		authEnabled = false
-		auth, err := easyauth.New()
+func buildAuth(cfg conf.AuthConf) (easyauth.AuthManager, *token.TokenProvider, error) {
+	auth, err := easyauth.New(easyauth.CookieSecret(cfg.CookieSecret))
+	if err != nil {
+		return nil, nil, err
+	}
+	if cfg.AuthEnabled == false {
+		auth.AddProvider("nop", noopAuth{})
+	} else {
+		authEnabled = true
+		// in proc token store so bosun can send data to itself with an ephemeral token
+		selfStore, _ := token.NewJsonStore("")
+		selfToken := token.NewToken(easyauth.RandomString(16), selfStore)
+		tok, _ := selfToken.NewToken("bosun", "internal bosun token", canPutData)
+		collect.AuthToken = tok
+		metadata.AuthToken = tok
+		auth.AddProvider("self", selfToken)
+	}
+	if cfg.LDAP.LdapAddr != "" {
+		l, err := buildLDAPConfig(cfg.LDAP)
 		if err != nil {
 			return nil, nil, err
 		}
-		auth.AddProvider("nop", noopAuth{})
-		return auth, nil, nil
+		auth.AddProvider("ldap", l)
 	}
-	authEnabled = true
-	auth, err := easyauth.New(easyauth.CookieSecret("ASDASDASDASDASD")) //TODO: from cfg
-	if err != nil {
-		return nil, nil, err
-	}
-
-	l, err := buildLDAPConfig(cfg.LDAP)
-	if err != nil {
-		return nil, nil, err
-	}
-	auth.AddProvider("ldap", l)
-
-	// in proc token store so bosun can send data to itself with an ephemeral token
-	selfStore, _ := token.NewJsonStore("")
-	selfToken := token.NewToken(easyauth.RandomString(16), selfStore)
-	tok, _ := selfToken.NewToken("bosun", "internal bosun token", canPutData)
-	collect.AuthToken = tok
-	metadata.AuthToken = tok
-	auth.AddProvider("self", selfToken)
-
 	var authTokens *token.TokenProvider
 	if cfg.TokenSecret != "" {
+		tokensEnabled = true
 		data, ok := schedule.DataAccess.(redisStore.Connector)
 		if !ok {
 			return nil, nil, fmt.Errorf("web's data access does not implement correct redis connector interface")

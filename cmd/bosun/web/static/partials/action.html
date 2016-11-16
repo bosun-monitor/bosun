@@ -8,7 +8,7 @@
 	<div class="form-group" ng-class="(user != '') ? '' : 'has-error' ">
 		<label class="col-sm-2 control-label">Username</label>
 		<div class="col-sm-6">
-			<input type="text"class="form-control" ng-model="user">
+			<input type="text"class="form-control"  ng-disabled="auth.Enabled()" ng-model="auth.Username" ng-model-options="{ getterSetter: true }">
 		</div>
 	</div>
 	<div class="form-group" ng-class="msgValid ? '' : 'has-error' ">

@@ -1,13 +1,5 @@
 /// <reference path="0-bosun.ts" />
 
-class Token {
-    public Hash: string;
-    public Description: string = "";
-    public Role: number = 0;
-    public User: string = "";
-    public LastUsed: Moment;
-}
-
 class TokenListController {
     tokens: Array<Token>;
     status: string ;
