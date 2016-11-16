@@ -70,6 +70,7 @@ func getWebmasterErrorsMetrics(svc *webmasters.Service) (*opentsdb.MultiDataPoin
 		}
 		tags := opentsdb.TagSet{}
 		tags["site"] = u.Host
+		tags["scheme"] = u.Scheme
 		crawlErrors, err := svc.Urlcrawlerrorscounts.Query(site.SiteUrl).LatestCountsOnly(true).Do()
 		if err != nil {
 			return nil, err
