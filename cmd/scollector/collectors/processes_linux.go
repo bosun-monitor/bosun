@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"bosun.org/cmd/scollector/conf"
 	"bosun.org/metadata"
@@ -64,37 +65,38 @@ func linuxProcMonitor(w *WatchedProc, md *opentsdb.MultiDataPoint) error {
 	var totalCPU int64
 	var totalVirtualMem int64
 	var totalRSSMem int64
-	for pid, id := range w.Processes {
+	for proc, id := range w.Processes {
+		pid := proc.Pid
 		file_status, e := os.Stat("/proc/" + pid)
 		if e != nil {
-			w.Remove(pid)
+			w.Remove(proc)
 			continue
 		}
 		processCount++
 		stats_file, e := ioutil.ReadFile("/proc/" + pid + "/stat")
 		if e != nil {
-			w.Remove(pid)
+			w.Remove(proc)
 			continue
 		}
 		io_file, e := ioutil.ReadFile("/proc/" + pid + "/io")
 		if e != nil {
-			w.Remove(pid)
+			w.Remove(proc)
 			continue
 		}
 		limits, e := ioutil.ReadFile("/proc/" + pid + "/limits")
 		if e != nil {
-			w.Remove(pid)
+			w.Remove(proc)
 			continue
 		}
 		fd_dir, e := os.Open("/proc/" + pid + "/fd")
 		if e != nil {
-			w.Remove(pid)
+			w.Remove(proc)
 			continue
 		}
 		fds, e := fd_dir.Readdirnames(0)
 		fd_dir.Close()
 		if e != nil {
-			w.Remove(pid)
+			w.Remove(proc)
 			continue
 		}
 		stats := strings.Fields(string(stats_file))
@@ -220,22 +222,23 @@ func getLinuxProccesses() ([]*Process, error) {
 		return nil, err
 	}
 	sort.Sort(byModTime(files))
-	var pids []string
+	var pidFiles []os.FileInfo
 	for _, f := range files {
 		if _, err := strconv.Atoi(f.Name()); err == nil && f.IsDir() {
-			pids = append(pids, f.Name())
+			pidFiles = append(pidFiles, f)
 		}
 	}
 	var lps []*Process
-	for _, pid := range pids {
-		cl, err := getLinuxCmdline(pid)
+	for _, pidFile := range pidFiles {
+		cl, err := getLinuxCmdline(pidFile.Name())
 		if err != nil || cl == nil {
 			//Continue because the pid might not exist any more
 			continue
 		}
 		lp := &Process{
-			Pid:     pid,
+			Pid:     pidFile.Name(),
 			Command: cl[0],
+			Started: pidFile.ModTime(),
 		}
 		if len(cl) > 1 {
 			lp.Arguments = strings.Join(cl[1:], "")
@@ -276,6 +279,7 @@ type Process struct {
 	Pid       string
 	Command   string
 	Arguments string
+	Started   time.Time
 }
 
 // NewWatchedProc takes a configuration block [[Process]] from conf
@@ -290,7 +294,7 @@ func NewWatchedProc(params conf.ProcessParams) (*WatchedProc, error) {
 		Command:      regexp.MustCompile(params.Command),
 		Name:         params.Name,
 		IncludeCount: params.IncludeCount,
-		Processes:    make(map[string]int),
+		Processes:    make(map[Process]int),
 		ArgMatch:     regexp.MustCompile(params.Args),
 		idPool:       new(idPool),
 	}, nil
@@ -300,15 +304,19 @@ type WatchedProc struct {
 	Command      *regexp.Regexp
 	Name         string
 	IncludeCount bool
-	Processes    map[string]int
+	Processes    map[Process]int
 	ArgMatch     *regexp.Regexp
 	*idPool
 }
 
-// Check finds all matching processes and assigns them a new unique id.
+// Check finds all matching processes and assigns them a new unique id. If
+// WatchedProc has processes that no longer exist, it removes them from
+// WatchedProc.Processes.
 func (w *WatchedProc) Check(procs []*Process) {
+	procFound := make(map[Process]bool)
 	for _, l := range procs {
-		if _, ok := w.Processes[l.Pid]; ok {
+		if _, ok := w.Processes[*l]; ok {
+			procFound[*l] = true
 			continue
 		}
 		if !w.Command.MatchString(l.Command) {
@@ -317,13 +325,19 @@ func (w *WatchedProc) Check(procs []*Process) {
 		if !w.ArgMatch.MatchString(l.Arguments) {
 			continue
 		}
-		w.Processes[l.Pid] = w.get()
+		w.Processes[*l] = w.get()
+		procFound[*l] = true
+	}
+	for proc, _ := range w.Processes {
+		if !procFound[proc] {
+			w.Remove(proc)
+		}
 	}
 }
 
-func (w *WatchedProc) Remove(pid string) {
-	w.put(w.Processes[pid])
-	delete(w.Processes, pid)
+func (w *WatchedProc) Remove(proc Process) {
+	w.put(w.Processes[proc])
+	delete(w.Processes, proc)
 }
 
 type idPool struct {

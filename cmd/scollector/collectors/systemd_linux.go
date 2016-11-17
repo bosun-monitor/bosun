@@ -2,8 +2,10 @@ package collectors
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"bosun.org/cmd/scollector/conf"
@@ -100,13 +102,14 @@ func watchSystemdServiceProc(md *opentsdb.MultiDataPoint, conn *dbus.Conn, unit 
 		return err
 	}
 
-	mainPID := mainPIDProp.Value.Value().(uint32)
+	mainPID := mainPIDProp.Value.Value().(int)
 	// MainPID is 0 if there is no running service.
 	if mainPID == 0 {
 		return nil
 	}
+	pidStr := strconv.Itoa(mainPID)
 
-	cmdline, err := getLinuxCmdline(fmt.Sprint(mainPID))
+	cmdline, err := getLinuxCmdline(pidStr)
 	if err != nil {
 		return err
 	}
@@ -114,15 +117,26 @@ func watchSystemdServiceProc(md *opentsdb.MultiDataPoint, conn *dbus.Conn, unit 
 		return nil
 	}
 
+	pidFile, err := os.Stat("/proc/" + pidStr)
+	if err != nil {
+		return err
+	}
+
+	proc := Process{
+		Pid:     pidStr,
+		Command: cmdline[0],
+		Started: pidFile.ModTime(),
+	}
+
 	wp := WatchedProc{
 		Command:   regexp.MustCompile("^" + regexp.QuoteMeta(cmdline[0]) + "$"),
 		Name:      strings.TrimSuffix(unit.Name, ".service"),
-		Processes: make(map[string]int),
+		Processes: make(map[Process]int),
 		ArgMatch:  regexp.MustCompile(""),
 		idPool:    new(idPool)}
 
 	// Since we only have one PID per service (at the moment), this is always set to 1
-	wp.Processes[fmt.Sprint(mainPID)] = wp.get()
+	wp.Processes[proc] = wp.get()
 
 	if e := linuxProcMonitor(&wp, md); e != nil {
 		return e
