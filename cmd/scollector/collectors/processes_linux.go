@@ -329,7 +329,7 @@ func (w *WatchedProc) Check(procs []*Process) {
 		w.Processes[*l] = w.get()
 		procFound[*l] = true
 	}
-	for proc, _ := range w.Processes {
+	for proc := range w.Processes {
 		if !procFound[proc] {
 			w.Remove(proc)
 		}
