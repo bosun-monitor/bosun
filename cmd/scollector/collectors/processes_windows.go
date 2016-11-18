@@ -177,6 +177,7 @@ func c_windows_processes() (opentsdb.MultiDataPoint, error) {
 		Add(&md, "win.proc.priority_base", v.PriorityBase, tags, metadata.Gauge, metadata.None, descWinProcPriority_base)
 		Add(&md, "win.proc.private_bytes", v.PrivateBytes, tags, metadata.Gauge, metadata.Bytes, descWinProcPrivate_bytes)
 		Add(&md, "win.proc.thread_count", v.ThreadCount, tags, metadata.Gauge, metadata.Count, descWinProcthread_count)
+		Add(&md, "win.proc.pid", v.IDProcess, tags, metadata.Gauge, metadata.Unit("PID"), osProcPID)
 		countByName[name]++
 	}
 	for name, count := range countByName {

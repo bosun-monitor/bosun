@@ -164,6 +164,7 @@ func linuxProcMonitor(w *WatchedProc, md *opentsdb.MultiDataPoint) error {
 		Add(md, "linux.proc.num_fds", len(fds), tags, metadata.Gauge, metadata.Files, descLinuxProcFd)
 		Add(md, "linux.proc.start_time", start_ts, tags, metadata.Gauge, metadata.Timestamp, descLinuxProcStartTS)
 		Add(md, "linux.proc.uptime", now()-start_ts, tags, metadata.Gauge, metadata.Second, descLinuxProcUptime)
+		Add(md, "linux.proc.pid", pid, tags, metadata.Gauge, metadata.Unit("PID"), osProcPID)
 	}
 	coreCount, err := linuxCoreCount()
 	if err != nil {

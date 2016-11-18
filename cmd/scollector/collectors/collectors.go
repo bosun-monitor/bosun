@@ -99,6 +99,7 @@ const (
 	osProcCPUDesc        = "The summed percentage of CPU time used by processes with this name (0-100)."
 	osProcMemRealDesc    = "The total amount of real memory used by the processes with this name. For Linux this is RSS and in Windows it is the private working set."
 	osProcMemVirtualDesc = "The total amount of virtual memory used by the processes with this name."
+	osProcPID            = "The PID of the process being tracked by a given ID tag. As this metric value represents the actual PID, it is not suitable for any form of aggregation."
 	osServiceRunningDesc = "1: active, 0: inactive"
 	osSystemUptimeDesc   = "Seconds since last reboot."
 )
