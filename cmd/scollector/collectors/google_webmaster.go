@@ -52,6 +52,9 @@ func c_google_webmaster(clientID, secret, tokenStr string) (opentsdb.MultiDataPo
 func getWebmasterErrorsMetrics(svc *webmasters.Service) (*opentsdb.MultiDataPoint, error) {
 	md := &opentsdb.MultiDataPoint{}
 
+	throttle := time.Tick(time.Second / 2)
+
+	<-throttle
 	sites, err := svc.Sites.List().Do()
 	if err != nil {
 		return nil, err
@@ -71,6 +74,7 @@ func getWebmasterErrorsMetrics(svc *webmasters.Service) (*opentsdb.MultiDataPoin
 		tags := opentsdb.TagSet{}
 		tags["site"] = u.Host
 		tags["scheme"] = u.Scheme
+		<-throttle
 		crawlErrors, err := svc.Urlcrawlerrorscounts.Query(site.SiteUrl).LatestCountsOnly(true).Do()
 		if err != nil {
 			return nil, err
