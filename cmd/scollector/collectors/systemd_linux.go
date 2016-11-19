@@ -102,12 +102,15 @@ func watchSystemdServiceProc(md *opentsdb.MultiDataPoint, conn *dbus.Conn, unit 
 		return err
 	}
 
-	mainPID := mainPIDProp.Value.Value().(int)
+	mainPID, ok := mainPIDProp.Value.Value().(uint32)
+	if !ok {
+		return fmt.Errorf("Received unexpected PID type for service %s.", unit.Name)
+	}
 	// MainPID is 0 if there is no running service.
 	if mainPID == 0 {
 		return nil
 	}
-	pidStr := strconv.Itoa(mainPID)
+	pidStr := strconv.Itoa(int(mainPID))
 
 	cmdline, err := getLinuxCmdline(pidStr)
 	if err != nil {
