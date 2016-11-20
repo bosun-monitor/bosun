@@ -63,7 +63,6 @@ func getWebmasterErrorsMetrics(svc *webmasters.Service) (*opentsdb.MultiDataPoin
 	metricName := "google.webmaster.errors"
 	for _, site := range sites.SiteEntry {
 		u, err := url.Parse(site.SiteUrl)
-
 		if err != nil {
 			return nil, err
 		}
@@ -74,9 +73,9 @@ func getWebmasterErrorsMetrics(svc *webmasters.Service) (*opentsdb.MultiDataPoin
 		tags := opentsdb.TagSet{}
 		tags["site"] = u.Host
 		tags["scheme"] = u.Scheme
+		tags["path"] = u.Path
 		<-throttle
-		// We intentionally don't fetch latest counts as those appear to have incomplete datapoints.
-		crawlErrors, err := svc.Urlcrawlerrorscounts.Query(site.SiteUrl).LatestCountsOnly(false).Do()
+		crawlErrors, err := svc.Urlcrawlerrorscounts.Query(site.SiteUrl).LatestCountsOnly(true).Do()
 		if err != nil {
 			return nil, err
 		}
@@ -87,10 +86,6 @@ func getWebmasterErrorsMetrics(svc *webmasters.Service) (*opentsdb.MultiDataPoin
 				t, err := time.Parse(time.RFC3339, entry.Timestamp)
 				if err != nil {
 					return md, err
-				}
-				// Exclude datapoints older than 3 days.
-				if time.Now().Sub(t) > time.Hour*24*3 {
-					continue
 				}
 				AddTS(md, metricName, t.Unix(), entry.Count, tags, metadata.Gauge, metadata.Error, "")
 			}
