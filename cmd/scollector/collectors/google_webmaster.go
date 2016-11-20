@@ -60,7 +60,6 @@ func getWebmasterErrorsMetrics(svc *webmasters.Service) (*opentsdb.MultiDataPoin
 		return nil, err
 	}
 
-	metricName := "google.webmaster.errors"
 	for _, site := range sites.SiteEntry {
 		u, err := url.Parse(site.SiteUrl)
 		if err != nil {
@@ -87,10 +86,12 @@ func getWebmasterErrorsMetrics(svc *webmasters.Service) (*opentsdb.MultiDataPoin
 				if err != nil {
 					return md, err
 				}
-				AddTS(md, metricName, t.Unix(), entry.Count, tags, metadata.Gauge, metadata.Error, "")
+				AddTS(md, "google.webmaster.errors", t.Unix(), entry.Count, tags, metadata.Gauge, metadata.Error, descGoogleWebmasterErrors)
 			}
 		}
 	}
 
 	return md, nil
 }
+
+const descGoogleWebmasterErrors = "The number of crawl errors that Google experienced on a given site. Note that if Google webmaster is tracking multiple paths for a given site, then error counts in parent paths (/) will include errors from any child paths (/foo). As such, aggregation across parent and child paths will result in erroneous results."
