@@ -158,7 +158,9 @@ func SendMail(addr, username, password string, from string, to []string, msg []b
 		if len(username) > 0 || len(password) > 0 {
 			hostWithoutPort := strings.Split(addr, ":")[0]
 			auth := smtp.PlainAuth("", username, password, hostWithoutPort)
-			c.Auth(auth)
+			if err = c.Auth(auth); err != nil {
+				return err
+			}
 		}
 	}
 	if err = c.Mail(from); err != nil {

@@ -37,12 +37,11 @@ class AuthService implements IAuthService {
         }
         return this.username
     }
+    public GetUsername():string {
+        return this.username
+    }
     public Enabled() {
         return this.authEnabled;
-    }
-    public SetUsername(u: string) {
-        
-        this.username = u;
     }
     private cleanRoles() {
         //fix admin role that has extra bits corresponding to future permissions.
@@ -60,3 +59,15 @@ class AuthService implements IAuthService {
     }
 }
 bosunApp.service("authService", AuthService)
+
+//simple component to show a <username-input> easily
+class UsernameInputController {
+    static $inject = ['authService'];
+    constructor(private auth: IAuthService) {
+    }
+}
+bosunApp.component("usernameInput", {
+    controller: UsernameInputController,
+    controllerAs: "ct",
+    template: '<input type="text"class="form-control"  ng-disabled="ct.auth.Enabled()" ng-model="ct.auth.Username" ng-model-options="{ getterSetter: true }">',
+})

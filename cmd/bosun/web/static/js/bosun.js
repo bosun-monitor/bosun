@@ -393,12 +393,6 @@ function readCookie(name) {
 function eraseCookie(name) {
     createCookie(name, "", -1);
 }
-function getUser() {
-    return readCookie('action-user');
-}
-function setUser(name) {
-    createCookie('action-user', name, 1000);
-}
 function getOwner() {
     return readCookie('action-owner');
 }
@@ -428,7 +422,7 @@ var Annotation = (function () {
         this.Message = a.Message || "";
         this.StartDate = a.StartDate || "";
         this.EndDate = a.EndDate || "";
-        this.CreationUser = a.CreationUser || !get && getUser() || "";
+        this.CreationUser = a.CreationUser || "";
         this.Url = a.Url || "";
         this.Source = a.Source || "bosun-ui";
         this.Host = a.Host || "";
@@ -580,6 +574,7 @@ bosunControllers.controller('ActionCtrl', ['$scope', '$http', '$location', '$rou
             });
         };
     }]);
+/// <reference path="0-bosun.ts" />
 bosunControllers.controller('AnnotationCtrl', ['$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
         var search = $location.search();
         $scope.id = search.id;
@@ -611,6 +606,7 @@ bosunControllers.controller('AnnotationCtrl', ['$scope', '$http', '$location', '
         });
         $scope.submitAnnotation = function () {
             $scope.animate();
+            $scope.annotation.CreationUser = $scope.auth.GetUsername();
             $http.post('/api/annotation', $scope.annotation)
                 .success(function (data) {
                 $scope.annotation = new Annotation(data, true);
@@ -681,11 +677,11 @@ var AuthService = (function () {
         }
         return this.username;
     };
+    AuthService.prototype.GetUsername = function () {
+        return this.username;
+    };
     AuthService.prototype.Enabled = function () {
         return this.authEnabled;
-    };
-    AuthService.prototype.SetUsername = function (u) {
-        this.username = u;
     };
     AuthService.prototype.cleanRoles = function () {
         var _this = this;
@@ -705,6 +701,20 @@ var AuthService = (function () {
     return AuthService;
 })();
 bosunApp.service("authService", AuthService);
+//simple component to show a <username-input> easily
+var UsernameInputController = (function () {
+    function UsernameInputController(auth) {
+        this.auth = auth;
+    }
+    UsernameInputController.$inject = ['authService'];
+    return UsernameInputController;
+})();
+bosunApp.component("usernameInput", {
+    controller: UsernameInputController,
+    controllerAs: "ct",
+    template: '<input type="text"class="form-control"  ng-disabled="ct.auth.Enabled()" ng-model="ct.auth.Username" ng-model-options="{ getterSetter: true }">'
+});
+/// <reference path="0-bosun.ts" />
 bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$route', '$timeout', '$sce', function ($scope, $http, $location, $route, $timeout, $sce) {
         var search = $location.search();
         $scope.fromDate = search.fromDate || '';
@@ -723,7 +733,6 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
         $scope.tab = search.tab || 'results';
         $scope.aceTheme = 'chrome';
         $scope.aceMode = 'bosun';
-        $scope.user = readCookie("action-user");
         $scope.expandDiff = false;
         $scope.runningChangedHelp = "The running config has been changed. This means you are in danger of overwriting someone else's changes. To view the changes open the 'Save Dialogue' and you will see a unified diff. The only way to get rid of the error panel is to open a new instance of the rule editor and copy your changes into it. You are still permitted to save without doing this, but then you must be very careful not to overwrite anyone else's changes.";
         var expr = search.expr;
@@ -1090,11 +1099,9 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
         $scope.diffConfig = function () {
             $http.post('/api/config/diff', {
                 "Config": $scope.config_text,
-                "User": $scope.user,
                 "Message": $scope.message
             })
                 .success(function (data) {
-                createCookie("action-user", $scope.user, 1000);
                 $scope.diff = data || "No Diff";
                 // Reset running hash if there is no difference?
             })
@@ -1110,7 +1117,6 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
             $http.post('/api/config/save', {
                 "Config": $scope.config_text,
                 "Diff": $scope.diff,
-                "User": $scope.user,
                 "Message": $scope.message
             })
                 .success(function (data) {
@@ -2422,7 +2428,7 @@ var Version = (function () {
     }
     return Version;
 })();
-bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route', '$timeout', function ($scope, $http, $location, $route, $timeout) {
+bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route', '$timeout', 'authService', function ($scope, $http, $location, $route, $timeout, auth) {
         $scope.aggregators = ["sum", "min", "max", "avg", "dev", "zimsum", "mimmin", "minmax"];
         $scope.dsaggregators = ["", "sum", "min", "max", "avg", "dev", "zimsum", "mimmin", "minmax"];
         $scope.filters = ["auto", "iliteral_or", "iwildcard", "literal_or", "not_iliteral_or", "not_literal_or", "regexp", "wildcard"];
@@ -2444,7 +2450,7 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
         if (search.b64) {
             j = atob(search.b64);
         }
-        $scope.annotation = {};
+        $scope.annotation = new Annotation();
         var request = j ? JSON.parse(j) : new Request;
         $scope.index = parseInt($location.hash()) || 0;
         $scope.tagvs = [];
@@ -2492,20 +2498,23 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
             }
             return AbsToRel(s);
         }
-        $scope.submitAnnotation = function () { return $http.post('/api/annotation', $scope.annotation)
-            .success(function (data) {
-            //debugger;
-            if ($scope.annotation.Id == "" && $scope.annotation.Owner != "") {
-                setOwner($scope.annotation.Owner);
-            }
-            $scope.annotation = new Annotation(data);
-            $scope.error = "";
-            // This seems to make angular refresh, where a push doesn't
-            $scope.annotations = $scope.annotations.concat($scope.annotation);
-        })
-            .error(function (error) {
-            $scope.error = error;
-        }); };
+        $scope.submitAnnotation = function () {
+            $scope.annotation.CreationUser = auth.GetUsername();
+            $http.post('/api/annotation', $scope.annotation)
+                .success(function (data) {
+                //debugger;
+                if ($scope.annotation.Id == "" && $scope.annotation.Owner != "") {
+                    setOwner($scope.annotation.Owner);
+                }
+                $scope.annotation = new Annotation(data);
+                $scope.error = "";
+                // This seems to make angular refresh, where a push doesn't
+                $scope.annotations = $scope.annotations.concat($scope.annotation);
+            })
+                .error(function (error) {
+                $scope.error = error;
+            });
+        };
         $scope.deleteAnnotation = function () { return $http.delete('/api/annotation/' + $scope.annotation.Id)
             .success(function (data) {
             $scope.error = "";
@@ -3181,6 +3190,7 @@ bosunControllers.controller('PutCtrl', ['$scope', '$http', '$route', function ($
             });
         };
     }]);
+/// <reference path="0-bosun.ts" />
 bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
         var search = $location.search();
         $scope.start = search.start;
@@ -3191,7 +3201,6 @@ bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$ro
         $scope.tags = search.tags;
         $scope.edit = search.edit;
         $scope.forget = search.forget;
-        $scope.user = getUser();
         $scope.message = search.message;
         if (!$scope.end && !$scope.duration) {
             $scope.duration = '1h';
@@ -3258,7 +3267,6 @@ bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$ro
                 tags: tags.join(','),
                 edit: $scope.edit,
                 forget: $scope.forget ? 'true' : null,
-                user: $scope.user,
                 message: $scope.message
             };
             return data;
@@ -3282,7 +3290,6 @@ bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$ro
             });
         }
         $scope.test = function () {
-            setUser($scope.user);
             $location.search('start', $scope.start || null);
             $location.search('end', $scope.end || null);
             $location.search('duration', $scope.duration || null);

@@ -12,7 +12,6 @@ import (
 func SaveConfig(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	data := struct {
 		Config  string
-		User    string // should come from auth
 		Diff    string
 		Message string
 		Other   []string
@@ -21,7 +20,7 @@ func SaveConfig(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (i
 	if err := decoder.Decode(&data); err != nil {
 		return nil, err
 	}
-	err := schedule.RuleConf.SaveRawText(data.Config, data.Diff, data.User, data.Message, data.Other...)
+	err := schedule.RuleConf.SaveRawText(data.Config, data.Diff, getUsername(r), data.Message, data.Other...)
 	if err != nil {
 		return nil, err
 	}
@@ -32,10 +31,11 @@ func SaveConfig(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (i
 func DiffConfig(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	data := struct {
 		Config  string
-		User    string // should come from auth
 		Message string
+		User    string
 		Other   []string
 	}{}
+	data.User = getUsername(r)
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&data); err != nil {
 		return nil, err

@@ -121,7 +121,7 @@ interface IAuthService {
     HasPermission: (role: string) => boolean;
     GetRoles: () => RoleDefs;
     Username: (u: string) => string;
-    SetUsername: (u: string) => void;
+    GetUsername: () => string;
     Enabled: ()=> boolean;
 }
 
@@ -439,14 +439,6 @@ function eraseCookie(name) {
     createCookie(name, "", -1);
 }
 
-function getUser() {
-    return readCookie('action-user');
-}
-
-function setUser(name) {
-    createCookie('action-user', name, 1000);
-}
-
 function getOwner() {
     return readCookie('action-owner');
 }
@@ -489,14 +481,14 @@ class Annotation {
     Host: string;
     Owner: string;
     Category: string;
-
+    
     constructor(a?, get?: boolean) {
         a = a || {};
         this.Id = a.Id || "";
         this.Message = a.Message || "";
         this.StartDate = a.StartDate || "";
         this.EndDate = a.EndDate || "";
-        this.CreationUser = a.CreationUser || !get && getUser() || "";
+        this.CreationUser = a.CreationUser || "";
         this.Url = a.Url || "";
         this.Source = a.Source || "bosun-ui";
         this.Host = a.Host || "";
