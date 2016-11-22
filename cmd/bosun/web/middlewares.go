@@ -63,6 +63,9 @@ func (n noopAuth) GetUser(r *http.Request) (*easyauth.User, error) {
 }
 
 func buildAuth(cfg conf.AuthConf) (easyauth.AuthManager, *token.TokenProvider, error) {
+	if cfg.CookieSecret == "" {
+		cfg.CookieSecret = "CookiesAreInsecure"
+	}
 	auth, err := easyauth.New(easyauth.CookieSecret(cfg.CookieSecret))
 	if err != nil {
 		return nil, nil, err
