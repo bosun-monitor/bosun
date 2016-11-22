@@ -235,6 +235,28 @@ data sent to OpenTSDB or Bosun.
 	  BillingBucketPath = "reports"
 	  BillingPurgeDays = 2
 
+
+AzureEA (array of table, keys are EANumber, APIKey and LogBillingDetails): Azure Enterprise
+Agreements to poll for billing information.
+
+EANumber is your Enterprise Agreement number. You can find this in your Enterprise Agreement portal.
+
+APIKey is the API key as provided by the Azure EA Portal. To generate your API key for this collector,
+you will need to log into your Azure Enterprise Agreement portal (ea.azure.com), click the
+"Download Usage" link, then choose "API Key" on the download page. You can then generate your API
+key there. Keys are valid 6 months, so you will require some maintenance of this collector twice a year.
+
+LogBillingDetails tells scollector to add the following tags to your metrics:
+   - costcenter
+	 - accountname
+	 - subscription
+If you are a heavy Azure EA user, then these additional tags may be useful for breaking down costs.
+
+	[[AzureEA]]
+	  EANumber = "123456"
+	  APIKey = "joiIiwiaXNzIjoiZWEubWljcm9zb2Z0YXp1cmUuY29tIiwiYXVkIjoiY2xpZW50LmVhLm1"
+	  LogBillingDetails = false
+
 Process: processes to monitor.
 
 ProcessDotNet: .NET processes to monitor on Windows.

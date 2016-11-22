@@ -1,4 +1,6 @@
 #!/bin/bash
+echo "Sleeping for 30 seconds to give HBase time to warm up"
+sleep 30 
 
 if [ ! -e $TSDB/opentsdb_tables_created.txt ]; then
 	echo "creating tsdb tables"

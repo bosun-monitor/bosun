@@ -401,7 +401,7 @@ func statsForContainer(md *opentsdb.MultiDataPoint, container *v1.ContainerInfo,
 	if container.Spec.HasFilesystem {
 		for idx := range stats.Filesystem {
 			ts = containerTagSet(opentsdb.TagSet{"device": stats.Filesystem[idx].Device}, container)
-			cadvisorAdd(md, "container.fs.avalable", stats.Filesystem[idx].Available, ts)
+			cadvisorAdd(md, "container.fs.available", stats.Filesystem[idx].Available, ts)
 			cadvisorAdd(md, "container.fs.limit", stats.Filesystem[idx].Limit, ts)
 			cadvisorAdd(md, "container.fs.usage", stats.Filesystem[idx].Usage, ts)
 			cadvisorAdd(md, "container.fs.reads.time", stats.Filesystem[idx].ReadTime, ts)

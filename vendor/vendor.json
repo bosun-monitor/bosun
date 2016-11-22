@@ -359,6 +359,12 @@
 			"revisionTime": "2015-11-13T23:36:43-06:00"
 		},
 		{
+			"origin": "github.com/mhenderson-so/azure-ea-billing/vendor/github.com/gocarina/gocsv",
+			"path": "github.com/gocarina/gocsv",
+			"revision": "4eed67242fcc782d56e769a4aa0ac71a2a20281b",
+			"revisionTime": "2016-08-25T15:57:35-04:00"
+		},
+		{
 			"path": "github.com/godbus/dbus",
 			"revision": "7a8c533d28e8162671a81090af5b9f78b74e2d26",
 			"revisionTime": "2016-07-27T10:45:41-07:00"
@@ -534,6 +540,12 @@
 			"path": "github.com/llgcode/draw2d/draw2dimg",
 			"revision": "9ffe0e7eb54c1b3d28eb45a24b578dc2d1bdb6b3",
 			"revisionTime": "2015-11-05T14:43:36+01:00"
+		},
+		{
+			"checksumSHA1": "eOQgUSMZQ82Xm255tBLjWaEeCsg=",
+			"path": "github.com/mhenderson-so/azure-ea-billing",
+			"revision": "4eed67242fcc782d56e769a4aa0ac71a2a20281b",
+			"revisionTime": "2016-08-25T19:57:35Z"
 		},
 		{
 			"path": "github.com/olivere/elastic",
@@ -876,24 +888,34 @@
 			"revisionTime": "2015-11-24T09:07:05+02:00"
 		},
 		{
+			"checksumSHA1": "i/YnKamNDfiUJVihx7j5A1/7/jc=",
 			"path": "google.golang.org/api/analytics/v3",
-			"revision": "8a448fd57af58b0eaeb8fde0345ec7ae88e55076",
-			"revisionTime": "2016-02-12T10:41:35+11:00"
+			"revision": "a53f28dc539c26b08a77fc5ae954e02917686ef4",
+			"revisionTime": "2016-11-11T22:12:31Z"
 		},
 		{
+			"checksumSHA1": "I1JSeU5OMapl+4s2VrnBkMon3Bw=",
 			"path": "google.golang.org/api/gensupport",
-			"revision": "8a448fd57af58b0eaeb8fde0345ec7ae88e55076",
-			"revisionTime": "2016-02-12T10:41:35+11:00"
+			"revision": "a53f28dc539c26b08a77fc5ae954e02917686ef4",
+			"revisionTime": "2016-11-11T22:12:31Z"
 		},
 		{
+			"checksumSHA1": "okBeNPclS/nvIkPEH/tZa3cxDnM=",
 			"path": "google.golang.org/api/googleapi",
-			"revision": "8a448fd57af58b0eaeb8fde0345ec7ae88e55076",
-			"revisionTime": "2016-02-12T10:41:35+11:00"
+			"revision": "a53f28dc539c26b08a77fc5ae954e02917686ef4",
+			"revisionTime": "2016-11-11T22:12:31Z"
 		},
 		{
+			"checksumSHA1": "1K0JxrUfDqAB3MyRiU1LKjfHyf4=",
 			"path": "google.golang.org/api/googleapi/internal/uritemplates",
-			"revision": "8a448fd57af58b0eaeb8fde0345ec7ae88e55076",
-			"revisionTime": "2016-02-12T10:41:35+11:00"
+			"revision": "a53f28dc539c26b08a77fc5ae954e02917686ef4",
+			"revisionTime": "2016-11-11T22:12:31Z"
+		},
+		{
+			"checksumSHA1": "deB1F/U6oh+6BaIHTcN2fuPasJA=",
+			"path": "google.golang.org/api/webmasters/v3",
+			"revision": "a53f28dc539c26b08a77fc5ae954e02917686ef4",
+			"revisionTime": "2016-11-11T22:12:31Z"
 		},
 		{
 			"path": "google.golang.org/cloud/compute/metadata",
