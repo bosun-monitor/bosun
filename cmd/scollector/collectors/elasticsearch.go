@@ -185,7 +185,7 @@ func c_elasticsearch(collectIndices bool) (opentsdb.MultiDataPoint, error) {
 	for nodeID, nodeStats := range clusterStats.Nodes {
 		isMaster = nodeID == clusterState.MasterNode
 		if isMaster {
-			s.add("elastic.health.cluster", clusterHealth, nil)
+			s.add("elastic.health.cluster", clusterHealth, ts)
 			if statusCode, ok := elasticStatusMap[clusterHealth.Status]; ok {
 				Add(&md, "elastic.health.cluster.status", statusCode, ts, metadata.Gauge, metadata.StatusCode, "The current status of the cluster. Zero for green, one for yellow, two for red.")
 			}
