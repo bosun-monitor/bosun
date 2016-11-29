@@ -369,6 +369,7 @@ type Request struct {
 	GlobalAnnotations bool        `json:"globalAnnotations,omitempty"`
 	MsResolution      bool        `json:"msResolution,omitempty"`
 	ShowTSUIDs        bool        `json:"showTSUIDs,omitempty"`
+	Delete            bool        `json:"delete,omitempty"`
 }
 
 // RequestFromJSON creates a new request from JSON.
