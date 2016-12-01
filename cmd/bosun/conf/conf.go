@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/bosun-monitor/annotate"
-	"github.com/influxdata/influxdb/client"
+	"github.com/influxdata/influxdb/client/v2"
 
 	"bosun.org/cmd/bosun/expr"
 	"bosun.org/cmd/bosun/expr/parse"
@@ -70,7 +70,7 @@ type SystemConfProvider interface {
 	// Contexts
 	GetTSDBContext() opentsdb.Context
 	GetGraphiteContext() graphite.Context
-	GetInfluxContext() client.Config
+	GetInfluxContext() client.HTTPConfig
 	GetLogstashContext() expr.LogstashElasticHosts
 	GetElasticContext() expr.ElasticHosts
 	AnnotateEnabled() bool
