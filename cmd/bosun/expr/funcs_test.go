@@ -7,7 +7,7 @@ import (
 
 	"bosun.org/opentsdb"
 
-	"github.com/influxdata/influxdb/client"
+	"github.com/influxdata/influxdb/client/v2"
 )
 
 type exprInOut struct {
@@ -28,7 +28,7 @@ func testExpression(eio exprInOut) error {
 		return err
 	}
 	backends := &Backends{
-		InfluxConfig: client.Config{},
+		InfluxConfig: client.HTTPConfig{},
 	}
 	providers := &BosunProviders{}
 	r, _, err := e.Execute(backends, providers, nil, queryTime, 0, false)

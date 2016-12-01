@@ -7,7 +7,7 @@ import (
 
 	"bosun.org/opentsdb"
 	"github.com/MiniProfiler/go/miniprofiler"
-	"github.com/influxdata/influxdb/client"
+	"github.com/influxdata/influxdb/client/v2"
 )
 
 const influxTimeFmt = time.RFC3339Nano
@@ -54,7 +54,7 @@ func TestInfluxQuery(t *testing.T) {
 	e := State{
 		now: time.Date(2015, time.February, 25, 0, 0, 0, 0, time.UTC),
 		Backends: &Backends{
-			InfluxConfig: client.Config{},
+			InfluxConfig: client.HTTPConfig{},
 		},
 		BosunProviders: &BosunProviders{
 			Squelched: func(tags opentsdb.TagSet) bool {

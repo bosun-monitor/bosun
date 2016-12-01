@@ -10,7 +10,7 @@ import (
 	"bosun.org/models"
 	"bosun.org/opentsdb"
 	"github.com/MiniProfiler/go/miniprofiler"
-	"github.com/influxdata/influxdb/client"
+	"github.com/influxdata/influxdb/client/v2"
 	"github.com/influxdata/influxdb/influxql"
 	influxModels "github.com/influxdata/influxdb/models"
 )
@@ -192,7 +192,7 @@ func timeInfluxRequest(e *State, T miniprofiler.Timer, db, query, startDuration,
 	if err != nil {
 		return nil, err
 	}
-	conn, err := client.NewClient(e.InfluxConfig)
+	conn, err := client.NewHTTPClient(e.InfluxConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -205,14 +205,19 @@ func timeInfluxRequest(e *State, T miniprofiler.Timer, db, query, startDuration,
 			if err != nil {
 				return nil, err
 			}
-			if res.Err != nil {
-				return nil, res.Err
+			if res.Error() != nil {
+				return nil, res.Error()
 			}
 			if len(res.Results) != 1 {
 				return nil, fmt.Errorf("influx: expected one result")
 			}
+
 			r := res.Results[0]
-			return r.Series, r.Err
+			if r.Err == "" {
+				return r.Series, nil
+			}
+			err = fmt.Errorf(r.Err)
+			return r.Series, err
 		}
 		var val interface{}
 		var ok bool

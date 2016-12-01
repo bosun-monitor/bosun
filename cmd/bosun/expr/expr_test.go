@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"bosun.org/opentsdb"
-	"github.com/influxdata/influxdb/client"
+	"github.com/influxdata/influxdb/client/v2"
 )
 
 func TestExprSimple(t *testing.T) {
@@ -65,7 +65,7 @@ func TestExprSimple(t *testing.T) {
 			break
 		}
 		backends := &Backends{
-			InfluxConfig: client.Config{},
+			InfluxConfig: client.HTTPConfig{},
 		}
 		providers := &BosunProviders{}
 		r, _, err := e.Execute(backends, providers, nil, time.Now(), 0, false)
@@ -211,7 +211,7 @@ func TestQueryExpr(t *testing.T) {
 		}
 		backends := &Backends{
 			TSDBContext:  &opentsdb.LimitContext{Host: u.Host, Limit: 1e10, TSDBVersion: opentsdb.Version2_1},
-			InfluxConfig: client.Config{},
+			InfluxConfig: client.HTTPConfig{},
 		}
 		providers := &BosunProviders{}
 		results, _, err := e.Execute(backends, providers, nil, queryTime, 0, false)

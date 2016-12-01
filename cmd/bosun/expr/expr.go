@@ -19,7 +19,7 @@ import (
 	"bosun.org/slog"
 	"github.com/MiniProfiler/go/miniprofiler"
 	"github.com/bosun-monitor/annotate"
-	"github.com/influxdata/influxdb/client"
+	"github.com/influxdata/influxdb/client/v2"
 	elasticOld "github.com/olivere/elastic"
 	elastic "gopkg.in/olivere/elastic.v3"
 )
@@ -52,7 +52,7 @@ type Backends struct {
 	GraphiteContext graphite.Context
 	LogstashHosts   LogstashElasticHosts
 	ElasticHosts    ElasticHosts
-	InfluxConfig    client.Config
+	InfluxConfig    client.HTTPConfig
 	AnnotateContext annotate.Client
 }
 
