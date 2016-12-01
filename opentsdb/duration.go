@@ -174,3 +174,13 @@ func (d Duration) HumanString() string {
 func (d Duration) Seconds() float64 {
 	return time.Duration(d).Seconds()
 }
+
+func (d *Duration) UnmarshalText(text []byte) error {
+	duration, err := ParseDuration(string(text))
+	if err != nil {
+		return err
+	}
+
+	*d = duration
+	return nil
+}
