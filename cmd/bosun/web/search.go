@@ -105,10 +105,8 @@ func TagValuesByTagKey(t miniprofiler.Timer, w http.ResponseWriter, r *http.Requ
 	vars := mux.Vars(r)
 	tagk := vars["tagk"]
 	s := r.FormValue("since")
-	var since time.Duration
-	if s == "default" {
-		since = schedule.SystemConf.GetSearchSince()
-	} else if s != "" {
+	since := schedule.SystemConf.GetSearchSince()
+	if s != "" {
 		td, err := opentsdb.ParseDuration(s)
 		if err != nil {
 			return nil, err
