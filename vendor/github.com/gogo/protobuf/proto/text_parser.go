@@ -1,7 +1,7 @@
-// Extensions for Protocol Buffers to create more go like structures.
+// Protocol Buffers for Go with Gadgets
 //
-// Copyright (c) 2013, Vastech SA (PTY) LTD. All rights reserved.
-// http://github.com/gogo/protobuf/gogoproto
+// Copyright (c) 2013, The GoGo Authors. All rights reserved.
+// http://github.com/gogo/protobuf
 //
 // Go support for Protocol Buffers - Google's data interchange format
 //
@@ -119,6 +119,14 @@ func isIdentOrNumberChar(c byte) bool {
 func isWhitespace(c byte) bool {
 	switch c {
 	case ' ', '\t', '\n', '\r':
+		return true
+	}
+	return false
+}
+
+func isQuote(c byte) bool {
+	switch c {
+	case '"', '\'':
 		return true
 	}
 	return false
@@ -338,13 +346,13 @@ func (p *textParser) next() *token {
 	p.advance()
 	if p.done {
 		p.cur.value = ""
-	} else if len(p.cur.value) > 0 && p.cur.value[0] == '"' {
+	} else if len(p.cur.value) > 0 && isQuote(p.cur.value[0]) {
 		// Look for multiple quoted strings separated by whitespace,
 		// and concatenate them.
 		cat := p.cur
 		for {
 			p.skipWhitespace()
-			if p.done || p.s[0] != '"' {
+			if p.done || !isQuote(p.s[0]) {
 				break
 			}
 			p.advance()
@@ -511,7 +519,7 @@ func (p *textParser) readStruct(sv reflect.Value, terminator string) error {
 				}
 				reqFieldErr = err
 			}
-			ep := sv.Addr().Interface().(extendableProto)
+			ep := sv.Addr().Interface().(Message)
 			if !rep {
 				SetExtension(ep, desc, ext.Interface())
 			} else {
@@ -563,8 +571,9 @@ func (p *textParser) readStruct(sv reflect.Value, terminator string) error {
 
 			// The map entry should be this sequence of tokens:
 			//	< key : KEY value : VALUE >
-			// Technically the "key" and "value" could come in any order,
-			// but in practice they won't.
+			// However, implementations may omit key or value, and technically
+			// we should support them in any order.  See b/28924776 for a time
+			// this went wrong.
 
 			tok := p.next()
 			var terminator string
@@ -576,32 +585,39 @@ func (p *textParser) readStruct(sv reflect.Value, terminator string) error {
 			default:
 				return p.errorf("expected '{' or '<', found %q", tok.value)
 			}
-			if err := p.consumeToken("key"); err != nil {
-				return err
-			}
-			if err := p.consumeToken(":"); err != nil {
-				return err
-			}
-			if err := p.readAny(key, props.mkeyprop); err != nil {
-				return err
-			}
-			if err := p.consumeOptionalSeparator(); err != nil {
-				return err
-			}
-			if err := p.consumeToken("value"); err != nil {
-				return err
-			}
-			if err := p.checkForColon(props.mvalprop, dst.Type().Elem()); err != nil {
-				return err
-			}
-			if err := p.readAny(val, props.mvalprop); err != nil {
-				return err
-			}
-			if err := p.consumeOptionalSeparator(); err != nil {
-				return err
-			}
-			if err := p.consumeToken(terminator); err != nil {
-				return err
+			for {
+				tok := p.next()
+				if tok.err != nil {
+					return tok.err
+				}
+				if tok.value == terminator {
+					break
+				}
+				switch tok.value {
+				case "key":
+					if err := p.consumeToken(":"); err != nil {
+						return err
+					}
+					if err := p.readAny(key, props.mkeyprop); err != nil {
+						return err
+					}
+					if err := p.consumeOptionalSeparator(); err != nil {
+						return err
+					}
+				case "value":
+					if err := p.checkForColon(props.mvalprop, dst.Type().Elem()); err != nil {
+						return err
+					}
+					if err := p.readAny(val, props.mvalprop); err != nil {
+						return err
+					}
+					if err := p.consumeOptionalSeparator(); err != nil {
+						return err
+					}
+				default:
+					p.back()
+					return p.errorf(`expected "key", "value", or %q, found %q`, terminator, tok.value)
+				}
 			}
 
 			dst.SetMapIndex(key, val)
@@ -624,7 +640,8 @@ func (p *textParser) readStruct(sv reflect.Value, terminator string) error {
 				return err
 			}
 			reqFieldErr = err
-		} else if props.Required {
+		}
+		if props.Required {
 			reqCount--
 		}
 
@@ -724,15 +741,15 @@ func (p *textParser) readAny(v reflect.Value, props *Properties) error {
 				if err != nil {
 					return err
 				}
-				tok := p.next()
-				if tok.err != nil {
-					return tok.err
+				ntok := p.next()
+				if ntok.err != nil {
+					return ntok.err
 				}
-				if tok.value == "]" {
+				if ntok.value == "]" {
 					break
 				}
-				if tok.value != "," {
-					return p.errorf("Expected ']' or ',' found %q", tok.value)
+				if ntok.value != "," {
+					return p.errorf("Expected ']' or ',' found %q", ntok.value)
 				}
 			}
 			return nil
