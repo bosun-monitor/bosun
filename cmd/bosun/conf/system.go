@@ -10,9 +10,13 @@ import (
 	"bosun.org/cmd/bosun/expr"
 	"bosun.org/graphite"
 	"bosun.org/opentsdb"
+	"crypto/tls"
+	"crypto/x509"
 	"github.com/BurntSushi/toml"
 	"github.com/bosun-monitor/annotate"
 	"github.com/influxdata/influxdb/client/v2"
+	"github.com/palantir/stacktrace"
+	"io/ioutil"
 )
 
 // SystemConf contains all the information that bosun needs to run. Outside of the conf package
@@ -44,6 +48,8 @@ type SystemConf struct {
 	LogStashConf LogStashConf
 
 	AnnotateConf AnnotateConf
+
+	SecurityConf SecurityConf
 
 	EnableSave      bool
 	EnableReload    bool
@@ -98,6 +104,12 @@ type GraphiteConf struct {
 type AnnotateConf struct {
 	Hosts []string // CSV of Elastic Hosts, currently the only backend in annotate
 	Index string   // name of index / table
+}
+
+type SecurityConf struct {
+	SslCas         []string
+	SslKey         string
+	SslCertificate string
 }
 
 // LogStashConf contains a list of elastic hosts for the depcrecated logstash functions
@@ -416,10 +428,65 @@ func (sc *SystemConf) GetInfluxContext() client.HTTPConfig {
 	if sc.md.IsDefined("InfluxConf", "Timeout") {
 		c.Timeout = sc.InfluxConf.Timeout.Duration
 	}
-	if sc.md.IsDefined("InfluxConf", "UnsafeSsl") {
-		c.InsecureSkipVerify = sc.InfluxConf.UnsafeSSL
+	if sc.md.IsDefined("SecurityConf") {
+		if tlsConf, err := sc.loadTLSConfig(); err == nil {
+			c.TLSConfig = tlsConf
+		}
 	}
+
 	return c
+}
+
+var defaultCipherSuites = []uint16{
+	// this cipher suite is included to enable http/2.  for details, see
+	// https://blog.bracelab.com/achieving-perfect-ssl-labs-score-with-go
+	tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+	tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+	tls.TLS_RSA_WITH_AES_256_GCM_SHA384,
+	tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
+	tls.TLS_RSA_WITH_AES_256_CBC_SHA,
+}
+
+func (sc *SystemConf) loadTLSConfig() (*tls.Config, error) {
+	cert, err := tls.LoadX509KeyPair(sc.SecurityConf.SslCertificate, sc.SecurityConf.SslKey)
+	if err != nil {
+		return nil, stacktrace.Propagate(err, "Failed to load Certificate from cert file %v and key %v", sc.SecurityConf.SslCertificate, sc.SecurityConf.SslKey)
+	}
+	tlsConfig := &tls.Config{
+		Certificates:             []tls.Certificate{cert},
+		MinVersion:               tls.VersionTLS12,
+		PreferServerCipherSuites: true,
+		CipherSuites:             defaultCipherSuites,
+		InsecureSkipVerify:       sc.InfluxConf.UnsafeSSL,
+	}
+
+	if len(sc.SecurityConf.SslCas) == 0 {
+		return tlsConfig, nil
+	}
+
+	caCertPool, err := sc.buildCaCertPool()
+	if err != nil {
+		return nil, stacktrace.Propagate(err, "")
+	}
+
+	tlsConfig.RootCAs = caCertPool
+	tlsConfig.BuildNameToCertificate()
+
+	return tlsConfig, nil
+}
+
+func (sc *SystemConf) buildCaCertPool() (*x509.CertPool, error) {
+	caCertPool := x509.NewCertPool()
+	for _, caFile := range sc.SecurityConf.SslCas {
+		cert, err := ioutil.ReadFile(caFile)
+		if err != nil {
+			return nil, stacktrace.Propagate(err, "Failed to load CA file from %v", caFile)
+		}
+
+		caCertPool.AppendCertsFromPEM(cert)
+	}
+
+	return caCertPool, nil
 }
 
 func (sc *SystemConf) GetAnnotateContext() annotate.Client {
