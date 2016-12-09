@@ -7,8 +7,6 @@ import (
 	"bosun.org/cmd/bosun/expr"
 	"bosun.org/opentsdb"
 
-	"net/url"
-
 	"github.com/stretchr/testify/assert"
 )
 
