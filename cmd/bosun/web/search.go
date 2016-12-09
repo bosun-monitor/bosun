@@ -59,7 +59,8 @@ func TagValuesByMetricTagKey(t miniprofiler.Timer, w http.ResponseWriter, r *htt
 func getSince(r *http.Request) (time.Duration, error) {
 	s := r.FormValue("since")
 	since := schedule.SystemConf.GetSearchSince()
-	if s != "" {
+
+	if s != "" && s != "default" {
 		td, err := opentsdb.ParseDuration(s)
 		if err != nil {
 			return 0, err
