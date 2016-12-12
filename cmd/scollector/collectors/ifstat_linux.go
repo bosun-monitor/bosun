@@ -81,9 +81,8 @@ func c_ifstat_linux() (opentsdb.MultiDataPoint, error) {
 	direction := func(i int) string {
 		if i >= 8 {
 			return "out"
-		} else {
-			return "in"
 		}
+		return "in"
 	}
 	err := readLine("/proc/net/dev", func(s string) error {
 		m := ifstatRE.FindStringSubmatch(s)
