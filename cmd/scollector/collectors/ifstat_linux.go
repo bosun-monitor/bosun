@@ -3,6 +3,7 @@ package collectors
 import (
 	"bufio"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -94,42 +95,64 @@ func getNicSpeed(r io.Reader) (speed string, err error) {
 	return
 }
 
-func c_ifstat_linux() (opentsdb.MultiDataPoint, error) {
-	var md opentsdb.MultiDataPoint
+func recordNicSpeed(md *opentsdb.MultiDataPoint, intf string, bond string) error {
+	r, err := os.Open("/sys/class/net/" + intf + "/speed")
+	if err != nil {
+		return err
+	}
+	defer r.Close()
+	speed, err := getNicSpeed(r)
+	if err != nil {
+		return err
+	}
+
+	tags := opentsdb.TagSet{"iface": intf}
+	Add(md, "linux.net."+bond+"ifspeed", speed, tags, metadata.Gauge, metadata.Megabit, "")
+	Add(md, "os.net."+bond+"ifspeed", speed, tags, metadata.Gauge, metadata.Megabit, "")
+	return nil
+}
+
+func parseProcNetDev(line string) (intf string, stats []string, err error) {
+	m := ifstatRE.FindStringSubmatch(line) // intname: val1 val2 val3...
+	if m == nil {
+		return "", nil, errors.New("Can't parse line") // ugly
+	}
+
+	intf = m[1]
+	stats = strings.Fields(m[2])
+	return
+}
+
+func c_ifstat_linux() (md opentsdb.MultiDataPoint, err error) {
 	direction := func(i int) string {
 		if i >= 8 {
 			return "out"
 		}
 		return "in"
 	}
+
 	// see: http://stackoverflow.com/a/4943975/995368
-	err := readLine("/proc/net/dev", func(s string) error {
-		m := ifstatRE.FindStringSubmatch(s) // intname: val1 val2 val3...
-		if m == nil {
+	err = readLine("/proc/net/dev", func(s string) error {
+		intf, stats, err := parseProcNetDev(s)
+		if err != nil {
 			return nil
-		}
-		intf := m[1]
-		stats := strings.Fields(m[2])
-		tags := opentsdb.TagSet{"iface": intf}
+		} // fixme: should return an error
+
 		var bond string
 		if strings.HasPrefix(intf, "bond") || strings.HasPrefix(intf, "team") {
 			bond = "bond."
 		}
 
-		// Detect speed of the interface in question
-		r, err := os.Open("/sys/class/net/" + intf + "/speed")
-		if err != nil { return err }
-		defer r.Close()
-		speed, err := getNicSpeed(r)
-		if err != nil { return err }
-		Add(&md, "linux.net."+bond+"ifspeed", speed, tags, metadata.Gauge, metadata.Megabit, "")
-		Add(&md, "os.net."+bond+"ifspeed", speed, tags, metadata.Gauge, metadata.Megabit, "")
+		// Find speed of the interface in question
+		if err := recordNicSpeed(&md, intf, bond); err != nil {
+			return err
+		}
 
 		// more specific fields are located under linux.net. domain
 		// generic OS agnostic data can be found under os.net. domain
 		normalize := func(s string) string { return strings.Replace(s, ".", "_", -1) }
 		for i, v := range stats {
-			tags = opentsdb.TagSet{"iface": intf, "direction": direction(i)}
+			tags := opentsdb.TagSet{"iface": intf, "direction": direction(i)}
 			nf := netFields[i]
 			Add(&md, "linux.net."+bond+normalize(nf.key), v, tags, nf.rate, nf.unit, "")
 			if i < 4 || (i >= 8 && i < 12) {
