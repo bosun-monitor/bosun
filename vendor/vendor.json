@@ -536,10 +536,10 @@
 			"revisionTime": "2015-11-05T14:43:36+01:00"
 		},
 		{
-			"checksumSHA1": "eOQgUSMZQ82Xm255tBLjWaEeCsg=",
+			"checksumSHA1": "ltMx61rRH1F1LsSto7voLWuRQpw=",
 			"path": "github.com/mhenderson-so/azure-ea-billing",
-			"revision": "4eed67242fcc782d56e769a4aa0ac71a2a20281b",
-			"revisionTime": "2016-08-25T19:57:35Z"
+			"revision": "4fd1a790460cd26f319b17f40c9559142db03bf0",
+			"revisionTime": "2016-08-29T17:56:29Z"
 		},
 		{
 			"path": "github.com/olivere/elastic",
