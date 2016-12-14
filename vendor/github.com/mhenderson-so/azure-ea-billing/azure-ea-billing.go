@@ -17,7 +17,7 @@ import (
 var AzureConfig Config
 
 // If no URI base is specificed, this is what we will use instead.
-var defaultBase = "http://ea.azure.com"
+var defaultBase = "https://ea.azure.com"
 
 // GetUsageReports returns all of the reports that are present in the EA Billing API. This is usually your first call, as
 // it returns an array of reports in .AvailableMonths, which is required for feeding into GetMonthReportCSV.

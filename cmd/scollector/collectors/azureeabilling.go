@@ -66,7 +66,7 @@ func processAzureEAReports(reports *azureeabilling.UsageReports, md *opentsdb.Mu
 	for _, r := range reports.AvailableMonths {
 		//There's potentially a lot of reports. We only want to process this months + last months report
 		if !(thisMonth == r.Month || lastMonth == r.Month) {
-			return nil
+			continue
 		}
 
 		csv := azBillConf.AZEABillingConfig.GetMonthReportsCSV(r, azureeabilling.DownloadForStructs)
