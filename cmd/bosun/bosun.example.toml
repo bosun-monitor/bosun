@@ -85,4 +85,4 @@ CommandHookPath = "/Users/kbrandt/src/hook/hook"
 [InfluxConf]
 	URL = "https://myInfluxServer:1234"
 	Timeout = "5m"
-	UnsafeSSL = true
+	UnsafeSsl = true
