@@ -107,8 +107,8 @@ func recordNicSpeed(md *opentsdb.MultiDataPoint, intf string, bond string) error
 	}
 
 	tags := opentsdb.TagSet{"iface": intf}
-	Add(md, "linux.net."+bond+"ifspeed", speed, tags, metadata.Gauge, metadata.Megabit, "")
-	Add(md, "os.net."+bond+"ifspeed", speed, tags, metadata.Gauge, metadata.Megabit, "")
+	Add(md, "linux.net."+bond+"ifspeed", speed, tags, metadata.Gauge, metadata.Megabit, osNetIfSpeedDesc)
+	Add(md, "os.net."+bond+"ifspeed", speed, tags, metadata.Gauge, metadata.Megabit, osNetIfSpeedDesc)
 	return nil
 }
 
