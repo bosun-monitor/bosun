@@ -283,9 +283,6 @@ func watch(root, pattern string, f func()) {
 				if wait.After(time.Now()) {
 					continue
 				}
-				if event.Name == "web/static.go" {
-					continue
-				}
 				if event.Op&fsnotify.Write == fsnotify.Write {
 					f()
 					wait = time.Now().Add(time.Second * 2)

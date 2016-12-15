@@ -17,9 +17,9 @@ import (
 	"bosun.org/opentsdb"
 )
 
-// custom middlewares for bosun. Must match  alice.Constructor signature (func(http.Handler) http.Handler)
+// This file contains custom middlewares for bosun. Must match alice.Constructor signature (func(http.Handler) http.Handler)
 
-var miniprofilerMiddleware = func(next http.Handler) http.Handler {
+var miniProfilerMiddleware = func(next http.Handler) http.Handler {
 	return miniprofiler.NewContextHandler(next.ServeHTTP)
 }
 
@@ -49,7 +49,6 @@ var endpointStatsMiddleware = func(next http.Handler) http.Handler {
 type noopAuth struct{}
 
 func (n noopAuth) GetUser(r *http.Request) (*easyauth.User, error) {
-	//TODO: make sure ui sends header when possible, instead of json body
 	name := "anonymous"
 	if cookie, err := r.Cookie("action-user"); err == nil {
 		name = cookie.Value
@@ -62,15 +61,24 @@ func (n noopAuth) GetUser(r *http.Request) (*easyauth.User, error) {
 	}, nil
 }
 
-func buildAuth(cfg conf.AuthConf) (easyauth.AuthManager, *token.TokenProvider, error) {
+func buildAuth(cfg *conf.AuthConf) (easyauth.AuthManager, *token.TokenProvider, error) {
+	if cfg == nil {
+		auth, err := easyauth.New()
+		if err != nil {
+			return nil, nil, err
+		}
+		auth.AddProvider("nop", noopAuth{})
+		return auth, nil, nil
+	}
+	const defaultCookieSecret = "CookiesAreInsecure"
 	if cfg.CookieSecret == "" {
-		cfg.CookieSecret = "CookiesAreInsecure"
+		cfg.CookieSecret = defaultCookieSecret
 	}
 	auth, err := easyauth.New(easyauth.CookieSecret(cfg.CookieSecret))
 	if err != nil {
 		return nil, nil, err
 	}
-	if cfg.AuthEnabled == false {
+	if cfg.AuthDisabled {
 		auth.AddProvider("nop", noopAuth{})
 	} else {
 		authEnabled = true
@@ -92,11 +100,7 @@ func buildAuth(cfg conf.AuthConf) (easyauth.AuthManager, *token.TokenProvider, e
 	var authTokens *token.TokenProvider
 	if cfg.TokenSecret != "" {
 		tokensEnabled = true
-		data, ok := schedule.DataAccess.(redisStore.Connector)
-		if !ok {
-			return nil, nil, fmt.Errorf("web's data access does not implement correct redis connector interface")
-		}
-		authTokens = token.NewToken(cfg.TokenSecret, redisStore.New(data))
+		authTokens = token.NewToken(cfg.TokenSecret, redisStore.New(schedule.DataAccess))
 		auth.AddProvider("tok", authTokens)
 	}
 	return auth, authTokens, nil

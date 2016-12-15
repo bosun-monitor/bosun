@@ -48,13 +48,9 @@ func RunTsc() {
 func run(name string, arg ...string) {
 	log.Println("running", name, arg)
 	c := exec.Command(name, arg...)
-	log.Println("Starting")
-	c.Stdout = os.Stdout
-	c.Stderr = os.Stderr
 	if err := c.Run(); err != nil {
 		log.Printf("run error: %v: %v", name, err)
 	}
-	log.Println("run complete:", name)
 }
 
 func deepCompareDifferent(file1, file2 string) bool {

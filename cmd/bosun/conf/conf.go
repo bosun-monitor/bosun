@@ -69,7 +69,7 @@ type SystemConfProvider interface {
 	GetAnnotateElasticHosts() expr.ElasticHosts
 	GetAnnotateIndex() string
 
-	GetAuthConf() AuthConf
+	GetAuthConf() *AuthConf
 
 	// Contexts
 	GetTSDBContext() opentsdb.Context

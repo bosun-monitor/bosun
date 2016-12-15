@@ -21,6 +21,7 @@ import (
 
 // Core data access interface for everything sched needs
 type DataAccess interface {
+	RedisConnector
 	Metadata() MetadataDataAccess
 	Configs() ConfigDataAccess
 	Search() SearchDataAccess

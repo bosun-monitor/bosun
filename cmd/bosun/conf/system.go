@@ -48,7 +48,7 @@ type SystemConf struct {
 
 	AnnotateConf AnnotateConf
 
-	AuthConf AuthConf
+	AuthConf *AuthConf
 
 	EnableSave      bool
 	EnableReload    bool
@@ -147,7 +147,7 @@ type SMTPConf struct {
 
 //AuthConf is configuration for bosun's authentication
 type AuthConf struct {
-	AuthEnabled bool
+	AuthDisabled bool
 	//Secret string to hash auth tokens. Needed to enable token auth.
 	TokenSecret string
 	//Secret sting used to encrypt cookie.
@@ -330,7 +330,7 @@ func (sc *SystemConf) GetRedisPassword() string {
 	return sc.DBConf.RedisPassword
 }
 
-func (sc *SystemConf) GetAuthConf() AuthConf {
+func (sc *SystemConf) GetAuthConf() *AuthConf {
 	return sc.AuthConf
 }
 
