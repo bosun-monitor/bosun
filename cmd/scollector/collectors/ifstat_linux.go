@@ -33,27 +33,41 @@ func init() {
 	})
 }
 
+const (
+	ifstatBytes      = "Number of bytes transfered since last counter reset"
+	ifstatPackets    = "Number of packets transfered since last counter reset"
+	ifstatErrs       = "Number of errors seen on that NIC since last counter reset"
+	ifstatDropped    = "Number of dropped frames since last counter reset"
+	ifstatFifo       = ""
+	ifstatFrame      = "Number of incoming framing errors since last counter reset"
+	ifstatCompressed = ""
+	ifstatMulticast  = "Number of multicast errors since last counter reset"
+	ifstatCollisions = "Number of collisions for outgoing traffic"
+	ifstatCarrier    = ""
+)
+
 var netFields = []struct {
 	key  string
 	rate metadata.RateType
 	unit metadata.Unit
+	desc string
 }{
-	{"bytes", metadata.Counter, metadata.Bytes},
-	{"packets", metadata.Counter, metadata.Count},
-	{"errs", metadata.Counter, metadata.Count},
-	{"dropped", metadata.Counter, metadata.Count},
-	{"fifo.errs", metadata.Counter, metadata.Count},
-	{"frame.errs", metadata.Counter, metadata.Count},
-	{"compressed", metadata.Counter, metadata.Count},
-	{"multicast", metadata.Counter, metadata.Count},
-	{"bytes", metadata.Counter, metadata.Bytes},
-	{"packets", metadata.Counter, metadata.Count},
-	{"errs", metadata.Counter, metadata.Count},
-	{"dropped", metadata.Counter, metadata.Count},
-	{"fifo.errs", metadata.Counter, metadata.Count},
-	{"collisions", metadata.Counter, metadata.Count},
-	{"carrier.errs", metadata.Counter, metadata.Count},
-	{"compressed", metadata.Counter, metadata.Count},
+	{"bytes", metadata.Counter, metadata.Bytes, ifstatBytes},
+	{"packets", metadata.Counter, metadata.Count, ifstatPackets},
+	{"errs", metadata.Counter, metadata.Count, ifstatErrs},
+	{"dropped", metadata.Counter, metadata.Count, ifstatDropped},
+	{"fifo.errs", metadata.Counter, metadata.Count, ifstatFifo},
+	{"frame.errs", metadata.Counter, metadata.Count, ifstatFrame},
+	{"compressed", metadata.Counter, metadata.Count, ifstatCompressed},
+	{"multicast", metadata.Counter, metadata.Count, ifstatMulticast},
+	{"bytes", metadata.Counter, metadata.Bytes, ifstatBytes},
+	{"packets", metadata.Counter, metadata.Count, ifstatPackets},
+	{"errs", metadata.Counter, metadata.Count, ifstatErrs},
+	{"dropped", metadata.Counter, metadata.Count, ifstatDropped},
+	{"fifo.errs", metadata.Counter, metadata.Count, ifstatFifo},
+	{"collisions", metadata.Counter, metadata.Count, ifstatCollisions},
+	{"carrier.errs", metadata.Counter, metadata.Count, ifstatCarrier},
+	{"compressed", metadata.Counter, metadata.Count, ifstatCompressed},
 }
 
 var ifstatRE = regexp.MustCompile(`\s+(eth\d+|em\d+_\d+/\d+|em\d+_\d+|em\d+|` +
@@ -76,8 +90,8 @@ func c_ipcount_linux() (opentsdb.MultiDataPoint, error) {
 	if err != nil {
 		return md, err
 	}
-	Add(&md, "linux.net.ip_count", v4c, opentsdb.TagSet{"version": "4"}, metadata.Gauge, "IP_Addresses", "")
-	Add(&md, "linux.net.ip_count", v6c, opentsdb.TagSet{"version": "6"}, metadata.Gauge, "IP_Addresses", "")
+	Add(&md, "linux.net.ip_count", v4c, opentsdb.TagSet{"version": "4"}, metadata.Gauge, "IP_Addresses", "Total number of IPv4 addresses on the box")
+	Add(&md, "linux.net.ip_count", v6c, opentsdb.TagSet{"version": "6"}, metadata.Gauge, "IP_Addresses", "Total number of IPv6 addresses on the box")
 	return md, nil
 }
 
@@ -154,9 +168,9 @@ func c_ifstat_linux() (md opentsdb.MultiDataPoint, err error) {
 		for i, v := range stats {
 			tags := opentsdb.TagSet{"iface": intf, "direction": direction(i)}
 			nf := netFields[i]
-			Add(&md, "linux.net."+bond+normalize(nf.key), v, tags, nf.rate, nf.unit, "")
+			Add(&md, "linux.net."+bond+normalize(nf.key), v, tags, nf.rate, nf.unit, nf.desc)
 			if i < 4 || (i >= 8 && i < 12) {
-				Add(&md, "os.net."+bond+normalize(nf.key), v, tags, nf.rate, nf.unit, "")
+				Add(&md, "os.net."+bond+normalize(nf.key), v, tags, nf.rate, nf.unit, nf.desc)
 			}
 		}
 		return nil
