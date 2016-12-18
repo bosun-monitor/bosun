@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"bosun.org/cmd/scollector/collectors/fs"
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
