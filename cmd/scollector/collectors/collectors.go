@@ -299,6 +299,7 @@ func Add(md *opentsdb.MultiDataPoint, name string, value interface{}, t opentsdb
 	AddTS(md, name, now(), value, t, rate, unit, desc)
 }
 
+// readLine read each line from file fname and apply line() function
 func readLine(fname string, line func(string) error) error {
 	f, err := os.Open(fname)
 	if err != nil {
