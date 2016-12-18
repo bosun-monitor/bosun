@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"bosun.org/cmd/scollector/collectors/fs"
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
@@ -78,20 +79,6 @@ func removable_fs(name string) bool {
 		return strings.Trim(string(b), "\n") == "1"
 	}
 	return false
-}
-
-func isPseudoFS(name string) (res bool) {
-	err := readLine("/proc/filesystems", func(s string) error {
-		ss := strings.Split(s, "\t")
-		if len(ss) == 2 && ss[1] == name && ss[0] == "nodev" {
-			res = true
-		}
-		return nil
-	})
-	if err != nil {
-		slog.Errorf("can not read '/proc/filesystems': %v", err)
-	}
-	return
 }
 
 func c_iostat_linux() (opentsdb.MultiDataPoint, error) {
@@ -211,7 +198,11 @@ func checkMdadmLinux() (opentsdb.MultiDataPoint, error) {
 
 func c_dfstat_blocks_linux() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
-	err := util.ReadCommand(func(line string) error {
+	psFS, err := fs.GetPseudoFS()
+	if err != nil {
+		return md, err
+	}
+	err = util.ReadCommand(func(line string) error {
 		fields := strings.Fields(line)
 		// TODO: support mount points with spaces in them. They mess up the field order
 		// currently due to df's columnar output.
@@ -225,7 +216,7 @@ func c_dfstat_blocks_linux() (opentsdb.MultiDataPoint, error) {
 		spaceUsed := fields[3]
 		spaceFree := fields[4]
 		mount := fields[6]
-		if isPseudoFS(fsType) {
+		if psFS.IsPseudo(fsType) {
 			return nil
 		}
 		tags := opentsdb.TagSet{"mount": mount}
@@ -254,7 +245,11 @@ func c_dfstat_blocks_linux() (opentsdb.MultiDataPoint, error) {
 
 func c_dfstat_inodes_linux() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
-	err := util.ReadCommand(func(line string) error {
+	psFS, err := fs.GetPseudoFS()
+	if err != nil {
+		return md, err
+	}
+	err = util.ReadCommand(func(line string) error {
 		fields := strings.Fields(line)
 		if len(fields) != 7 || !IsDigit(fields[2]) {
 			return nil
@@ -266,7 +261,7 @@ func c_dfstat_inodes_linux() (opentsdb.MultiDataPoint, error) {
 		inodesUsed := fields[3]
 		inodesFree := fields[4]
 		mount := fields[6]
-		if isPseudoFS(fsType) {
+		if psFS.IsPseudo(fsType) {
 			return nil
 		}
 		tags := opentsdb.TagSet{"mount": mount}
@@ -274,9 +269,9 @@ func c_dfstat_inodes_linux() (opentsdb.MultiDataPoint, error) {
 		if removable_fs(fs) {
 			metric += "rem."
 		}
-		Add(&md, metric+"inodes_total", inodesTotal, tags, metadata.Gauge, metadata.Count, "")
-		Add(&md, metric+"inodes_used", inodesUsed, tags, metadata.Gauge, metadata.Count, "")
-		Add(&md, metric+"inodes_free", inodesFree, tags, metadata.Gauge, metadata.Count, "")
+		Add(&md, metric+"inodes_total", inodesTotal, tags, metadata.Gauge, metadata.Count, "Total number of inodes on filesystem (used + free)")
+		Add(&md, metric+"inodes_used", inodesUsed, tags, metadata.Gauge, metadata.Count, "Number of inodes used on filesystem")
+		Add(&md, metric+"inodes_free", inodesFree, tags, metadata.Gauge, metadata.Count, "Number of free inodes on filesystem")
 		return nil
 	}, "df", "-liPT")
 	return md, err
