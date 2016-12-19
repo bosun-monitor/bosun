@@ -14,7 +14,9 @@ import (
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
+	"crypto/tls"
 	"github.com/GROpenSourceDev/go-ntlm-auth/ntlm"
+	"strings"
 )
 
 func queuer() {
@@ -174,9 +176,15 @@ func SendDataPoints(dps []*opentsdb.DataPoint, tsdb string) (*http.Response, err
 		req.Header.Set("X-Access-Token", AuthToken)
 	}
 	Add("collect.post.total_bytes", Tags, int64(buf.Len()))
+	client := DefaultClient
+	if strings.Contains(tsdb, "localhost") {
+		client = &http.Client{Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		}}
+	}
 
 	if UseNtlm {
-		resp, err := ntlm.DoNTLMRequest(DefaultClient, req)
+		resp, err := ntlm.DoNTLMRequest(client, req)
 		if err != nil {
 			return nil, err
 		}
@@ -187,6 +195,6 @@ func SendDataPoints(dps []*opentsdb.DataPoint, tsdb string) (*http.Response, err
 		return resp, err
 	}
 
-	resp, err := DefaultClient.Do(req)
+	resp, err := client.Do(req)
 	return resp, err
 }

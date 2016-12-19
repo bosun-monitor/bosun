@@ -14,6 +14,7 @@ import (
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
 	"bosun.org/util"
+	"crypto/tls"
 )
 
 // RateType is the type of rate for a metric: gauge, counter, or rate.
@@ -268,7 +269,13 @@ func sendMetadata(ms []Metasend) {
 	if AuthToken != "" {
 		req.Header.Set("X-Access-Token", AuthToken)
 	}
-	resp, err := http.DefaultClient.Do(req)
+	client := http.DefaultClient
+	if strings.Contains(metahost, "localhost") {
+		client = &http.Client{Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		}}
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		slog.Error(err)
 		return
