@@ -320,13 +320,13 @@
 		},
 		{
 			"path": "github.com/go-ole/go-ole",
-			"revision": "97ac8b05c02bbb755d36549e7e607433dfbef4b2",
-			"revisionTime": "2015-11-13T23:36:43-06:00"
+			"revision": "5e9c030faf78847db7aa77e3661b9cc449de29b7",
+			"revisionTime": "2016-11-16T15:46:58+09:00"
 		},
 		{
 			"path": "github.com/go-ole/go-ole/oleutil",
-			"revision": "97ac8b05c02bbb755d36549e7e607433dfbef4b2",
-			"revisionTime": "2015-11-13T23:36:43-06:00"
+			"revision": "5e9c030faf78847db7aa77e3661b9cc449de29b7",
+			"revisionTime": "2016-11-16T15:46:58+09:00"
 		},
 		{
 			"origin": "github.com/mhenderson-so/azure-ea-billing/vendor/github.com/gocarina/gocsv",
