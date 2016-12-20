@@ -667,12 +667,6 @@
 			"revisionTime": "2015-03-07T10:11:20+08:00"
 		},
 		{
-			"checksumSHA1": "E6i9XUmpDwr1fMulY4JCVcFJSDA=",
-			"path": "github.com/stackexchange/wmi",
-			"revision": "e54cbda6595d7293a7a468ccf9525f6bc8887f99",
-			"revisionTime": "2016-08-11T21:45:55Z"
-		},
-		{
 			"path": "github.com/syndtr/goleveldb/leveldb",
 			"revision": "1a9d62f03ea92815b46fcaab357cfd4df264b1a0",
 			"revisionTime": "2015-08-19T12:16:22+07:00"
