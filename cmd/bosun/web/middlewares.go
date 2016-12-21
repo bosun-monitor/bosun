@@ -81,13 +81,6 @@ func buildAuth(cfg *conf.AuthConf) (easyauth.AuthManager, *token.TokenProvider, 
 		auth.AddProvider("nop", noopAuth{})
 	} else {
 		authEnabled = true
-		// in proc token store so bosun can send data to itself with an ephemeral token
-		selfStore, _ := token.NewJsonStore("")
-		selfToken := token.NewToken(easyauth.RandomString(16), selfStore)
-		tok, _ := selfToken.NewToken("bosun", "internal bosun token", canPutData)
-		collect.AuthToken = tok
-		metadata.AuthToken = tok
-		auth.AddProvider("self", selfToken)
 	}
 	if cfg.LDAP.LdapAddr != "" {
 		l, err := buildLDAPConfig(cfg.LDAP)

@@ -14,7 +14,6 @@ import (
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
 	"bosun.org/util"
-	"crypto/tls"
 )
 
 // RateType is the type of rate for a metric: gauge, counter, or rate.
@@ -209,6 +208,15 @@ func Init(u *url.URL, debug bool) error {
 	return nil
 }
 
+var putFunction func(k Metakey, v interface{}) error
+
+func InitF(debug bool, f func(k Metakey, v interface{}) error) error {
+	putFunction = f
+	metadebug = debug
+	go collectMetadata()
+	return nil
+}
+
 func collectMetadata() {
 	// Wait a bit so hopefully our collectors have run once and populated the
 	// metadata.
@@ -251,10 +259,25 @@ type Metasend struct {
 	Time   *time.Time `json:",omitempty"`
 }
 
-//AuthToken to use to talk to bosun
-var AuthToken string
-
 func sendMetadata(ms []Metasend) {
+	if putFunction != nil {
+		for _, m := range ms {
+			key := Metakey{
+				Metric: m.Metric,
+				Name:   m.Name,
+				Tags:   m.Tags.Tags(),
+			}
+			err := putFunction(key, m.Value)
+			if err != nil {
+				slog.Error(err)
+				continue
+			}
+		}
+	} else {
+		postMetadata(ms)
+	}
+}
+func postMetadata(ms []Metasend) {
 	b, err := json.Marshal(&ms)
 	if err != nil {
 		slog.Error(err)
@@ -266,15 +289,7 @@ func sendMetadata(ms []Metasend) {
 		return
 	}
 	req.Header.Set("Content-Type", "application/json")
-	if AuthToken != "" {
-		req.Header.Set("X-Access-Token", AuthToken)
-	}
 	client := http.DefaultClient
-	if strings.Contains(metahost, "localhost") {
-		client = &http.Client{Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		}}
-	}
 	resp, err := client.Do(req)
 	if err != nil {
 		slog.Error(err)

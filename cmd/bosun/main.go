@@ -123,13 +123,16 @@ func main() {
 	if strings.HasPrefix(selfAddress.Host, ":") {
 		selfAddress.Host = "localhost" + selfAddress.Host
 	}
-	if err := metadata.Init(selfAddress, false); err != nil {
-		slog.Fatal(err)
-	}
+
 	if err := sched.Load(sysProvider, ruleProvider, *flagSkipLast, *flagQuiet); err != nil {
 		slog.Fatal(err)
 	}
+	if err := metadata.InitF(false, func(k metadata.Metakey, v interface{}) error { return sched.DefaultSched.PutMetadata(k, v) }); err != nil {
+		slog.Fatal(err)
+	}
 	if sysProvider.GetTSDBHost() != "" {
+		relay := web.Relay(sysProvider.GetTSDBHost())
+		collect.DirectHandler = relay
 		if err := collect.Init(selfAddress, "bosun"); err != nil {
 			slog.Fatal(err)
 		}

@@ -16,6 +16,8 @@ import (
 	"bosun.org/slog"
 	"crypto/tls"
 	"github.com/GROpenSourceDev/go-ntlm-auth/ntlm"
+	"net/http/httptest"
+	"net/http/httputil"
 	"strings"
 )
 
@@ -156,6 +158,33 @@ var bufferPool = sync.Pool{
 }
 
 func SendDataPoints(dps []*opentsdb.DataPoint, tsdb string) (*http.Response, error) {
+	req, err := buildHTTPRequest(dps, tsdb)
+	if err != nil {
+		return nil, err
+	}
+	if DirectHandler != nil {
+		rec := httptest.NewRecorder()
+		DirectHandler.ServeHTTP(rec, req)
+		return rec.Result(), nil
+	}
+	client := DefaultClient
+
+	if UseNtlm {
+		resp, err := ntlm.DoNTLMRequest(client, req)
+		if err != nil {
+			return nil, err
+		}
+		if resp.StatusCode == 401 {
+			slog.Errorf("Scollector unauthorized to post data points to tsdb. Terminating.")
+			os.Exit(1)
+		}
+		return resp, err
+	}
+	resp, err := client.Do(req)
+	return resp, err
+}
+
+func buildHTTPRequest(dps []*opentsdb.DataPoint, tsdb string) (*http.Request, error) {
 	buf := bufferPool.Get().(*bytes.Buffer)
 	defer bufferPool.Put(buf)
 	buf.Reset()
@@ -176,25 +205,5 @@ func SendDataPoints(dps []*opentsdb.DataPoint, tsdb string) (*http.Response, err
 		req.Header.Set("X-Access-Token", AuthToken)
 	}
 	Add("collect.post.total_bytes", Tags, int64(buf.Len()))
-	client := DefaultClient
-	if strings.Contains(tsdb, "localhost") {
-		client = &http.Client{Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		}}
-	}
-
-	if UseNtlm {
-		resp, err := ntlm.DoNTLMRequest(client, req)
-		if err != nil {
-			return nil, err
-		}
-		if resp.StatusCode == 401 {
-			slog.Errorf("Scollector unauthorized to post data points to tsdb. Terminating.")
-			os.Exit(1)
-		}
-		return resp, err
-	}
-
-	resp, err := client.Do(req)
-	return resp, err
+	return req, nil
 }
