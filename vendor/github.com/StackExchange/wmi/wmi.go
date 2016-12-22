@@ -158,16 +158,18 @@ func (c *Client) Query(query string, dst interface{}, connectServerArgs ...inter
 	if err != nil {
 		return err
 	}
-	service := serviceRaw.ToIDispatch()
 	defer serviceRaw.Clear()
+	service := serviceRaw.ToIDispatch()
+	defer service.Release()
 
 	// result is a SWBemObjectSet
 	resultRaw, err := oleutil.CallMethod(service, "ExecQuery", query)
 	if err != nil {
 		return err
 	}
-	result := resultRaw.ToIDispatch()
 	defer resultRaw.Clear()
+	result := resultRaw.ToIDispatch()
+	defer result.Release()
 
 	count, err := oleInt64(result, "Count")
 	if err != nil {

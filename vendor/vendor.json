@@ -40,8 +40,8 @@
 		},
 		{
 			"path": "github.com/StackExchange/wmi",
-			"revision": "f4452b3678eaa14aafb0b058fcd60645a304ea8c",
-			"revisionTime": "2016-10-07T09:40:34-05:00"
+			"revision": "af0a2b3e08956158bcb039424e2624a8fb3b5d92",
+			"revisionTime": "2016-12-22T13:47:54-07:00"
 		},
 		{
 			"path": "github.com/ajstarks/svgo",
