@@ -377,7 +377,7 @@ func Shorten(w http.ResponseWriter, r *http.Request) {
 	}
 	c := http.Client{Transport: transport}
 
-	req, err := c.Post(u.String(), "application/json", bytes.NewBuffer(j))
+	req, err := c.Post(u.String(), "application/json", bytes.NewReader(j))
 	if err != nil {
 		serveError(w, err)
 		return
