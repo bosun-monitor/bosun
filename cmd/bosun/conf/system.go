@@ -18,8 +18,11 @@ import (
 // SystemConf contains all the information that bosun needs to run. Outside of the conf package
 // usage should be through conf.SystemConfProvider
 type SystemConf struct {
-	HTTPListen    string
-	RelayListen   string
+	HTTPListen  string
+	HTTPSListen string
+	TLSCertFile string
+	TLSKeyFile  string
+
 	Hostname      string
 	Ping          bool
 	PingDuration  Duration // Duration from now to stop pinging hosts based on time since the host tag was touched
@@ -151,12 +154,16 @@ func (sc *SystemConf) GetSystemConfProvider() (SystemConfProvider, error) {
 	return provider, nil
 }
 
+const (
+	defaultHTTPListen = ":8070"
+)
+
 // NewSystemConf retruns a system conf with default values set
 func newSystemConf() *SystemConf {
 	return &SystemConf{
 		CheckFrequency:  Duration{Duration: time.Minute * 5},
 		DefaultRunEvery: 1,
-		HTTPListen:      ":8070",
+		HTTPListen:      defaultHTTPListen,
 		DBConf: DBConf{
 			LedisDir:      "ledis_data",
 			LedisBindAddr: "127.0.0.1:9565",
@@ -199,6 +206,10 @@ func loadSystemConfig(conf string, isFileName bool) (*SystemConf, error) {
 		return sc, fmt.Errorf("undecoded fields in system configuration: %v", decodeMeta.Undecoded())
 	}
 	sc.md = decodeMeta
+	// clear default http listen if not explicitly specified
+	if !decodeMeta.IsDefined("HTTPListen") && decodeMeta.IsDefined("HTTPSListen") {
+		sc.HTTPListen = ""
+	}
 	return sc, nil
 }
 
@@ -207,10 +218,19 @@ func (sc *SystemConf) GetHTTPListen() string {
 	return sc.HTTPListen
 }
 
-// GetRelayListen returns an address on which bosun will listen and Proxy all requests to /api
-// it was added so one can make OpenTSDB API endpoints available at the same URL as Bosun.
-func (sc *SystemConf) GetRelayListen() string {
-	return sc.RelayListen
+// GetHTTPSListen returns the hostname:port that Bosun should listen on with tls
+func (sc *SystemConf) GetHTTPSListen() string {
+	return sc.HTTPSListen
+}
+
+// GetTLSCertFile returns the path to the tls certificate to listen with (pem format). Must be specified with HTTPSListen.
+func (sc *SystemConf) GetTLSCertFile() string {
+	return sc.TLSCertFile
+}
+
+// GetTLSKeyFile returns the path to the tls key to listen with (pem format). Must be specified with HTTPSListen.
+func (sc *SystemConf) GetTLSKeyFile() string {
+	return sc.TLSKeyFile
 }
 
 // GetSMTPHost returns the SMTP mail server host that Bosun will use to relay through
