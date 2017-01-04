@@ -7,8 +7,6 @@ import (
 	"bosun.org/cmd/bosun/expr"
 	"bosun.org/opentsdb"
 
-	"net/url"
-
 	"github.com/stretchr/testify/assert"
 )
 
@@ -58,7 +56,7 @@ func TestSystemToml(t *testing.T) {
 		Host:      "mail.example.com",
 	}, "SMTPConf does not match")
 	assert.Equal(t, sc.InfluxConf, InfluxConf{
-		URL:       URL{&url.URL{Scheme: "https", Host: "myInfluxServer:1234"}},
+		URL:       "https://myInfluxServer:1234",
 		Timeout:   Duration{time.Minute * 5},
 		UnsafeSSL: true,
 	})

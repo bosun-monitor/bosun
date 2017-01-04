@@ -14,6 +14,17 @@ type SelectOptions struct {
 
 	// The upper bound for a select call.
 	MaxTime time.Time
+
+	// Node to exclusively read from.
+	// If zero, all nodes are used.
+	NodeID uint64
+
+	// An optional channel that, if closed, signals that the select should be
+	// interrupted.
+	InterruptCh <-chan struct{}
+
+	// Maximum number of concurrent series.
+	MaxSeriesN int
 }
 
 // Select executes stmt against ic and returns a list of iterators to stream from.
@@ -34,11 +45,11 @@ func Select(stmt *SelectStatement, ic IteratorCreator, sopt *SelectOptions) ([]I
 	}
 
 	// Determine auxiliary fields to be selected.
-	opt.Aux = make([]string, 0, len(info.refs))
+	opt.Aux = make([]VarRef, 0, len(info.refs))
 	for ref := range info.refs {
-		opt.Aux = append(opt.Aux, ref.Val)
+		opt.Aux = append(opt.Aux, *ref)
 	}
-	sort.Strings(opt.Aux)
+	sort.Sort(VarRefs(opt.Aux))
 
 	// If there are multiple auxilary fields and no calls then construct an aux iterator.
 	if len(info.calls) == 0 && len(info.refs) > 0 {
@@ -51,7 +62,7 @@ func Select(stmt *SelectStatement, ic IteratorCreator, sopt *SelectOptions) ([]I
 		if call.Name == "top" || call.Name == "bottom" {
 			for i := 1; i < len(call.Args)-1; i++ {
 				ref := call.Args[i].(*VarRef)
-				opt.Aux = append(opt.Aux, ref.Val)
+				opt.Aux = append(opt.Aux, *ref)
 				extraFields++
 			}
 		}
@@ -74,7 +85,18 @@ func Select(stmt *SelectStatement, ic IteratorCreator, sopt *SelectOptions) ([]I
 		}
 	}
 
-	return buildFieldIterators(fields, ic, opt)
+	// Determine if there is one call and it is a selector.
+	selector := false
+	if len(info.calls) == 1 {
+		for call := range info.calls {
+			switch call.Name {
+			case "first", "last", "min", "max", "percentile":
+				selector = true
+			}
+		}
+	}
+
+	return buildFieldIterators(fields, ic, opt, selector)
 }
 
 // buildAuxIterators creates a set of iterators from a single combined auxilary iterator.
@@ -83,11 +105,22 @@ func buildAuxIterators(fields Fields, ic IteratorCreator, opt IteratorOptions) (
 	input, err := ic.CreateIterator(opt)
 	if err != nil {
 		return nil, err
+	} else if input == nil {
+		input = &nilFloatIterator{}
 	}
 
 	// Filter out duplicate rows, if required.
 	if opt.Dedupe {
-		input = NewDedupeIterator(input)
+		// If there is no group by and it is a float iterator, see if we can use a fast dedupe.
+		if itr, ok := input.(FloatIterator); ok && len(opt.Dimensions) == 0 {
+			if sz := len(fields); sz > 0 && sz < 3 {
+				input = newFloatFastDedupeIterator(itr)
+			} else {
+				input = NewDedupeIterator(itr)
+			}
+		} else {
+			input = NewDedupeIterator(input)
+		}
 	}
 
 	// Apply limit & offset.
@@ -95,42 +128,42 @@ func buildAuxIterators(fields Fields, ic IteratorCreator, opt IteratorOptions) (
 		input = NewLimitIterator(input, opt)
 	}
 
-	seriesKeys, err := ic.SeriesKeys(opt)
-	if err != nil {
-		input.Close()
-		return nil, err
-	}
-
 	// Wrap in an auxilary iterator to separate the fields.
-	aitr := NewAuxIterator(input, seriesKeys, opt)
+	aitr := NewAuxIterator(input, opt)
 
 	// Generate iterators for each field.
 	itrs := make([]Iterator, len(fields))
-	for i, f := range fields {
-		expr := Reduce(f.Expr, nil)
-		switch expr := expr.(type) {
-		case *VarRef:
-			itrs[i] = aitr.Iterator(expr.Val)
-		case *BinaryExpr:
-			itr, err := buildExprIterator(expr, aitr, opt)
-			if err != nil {
-				return nil, fmt.Errorf("error constructing iterator for field '%s': %s", f.String(), err)
+	if err := func() error {
+		for i, f := range fields {
+			expr := Reduce(f.Expr, nil)
+			switch expr := expr.(type) {
+			case *VarRef:
+				itrs[i] = aitr.Iterator(expr.Val, expr.Type)
+			case *BinaryExpr:
+				itr, err := buildExprIterator(expr, aitr, opt, false)
+				if err != nil {
+					return fmt.Errorf("error constructing iterator for field '%s': %s", f.String(), err)
+				}
+				itrs[i] = itr
+			default:
+				return fmt.Errorf("invalid expression type: %T", expr)
 			}
-			itrs[i] = itr
-		default:
-			panic("unreachable")
 		}
+		return nil
+	}(); err != nil {
+		Iterators(Iterators(itrs).filterNonNil()).Close()
+		aitr.Close()
+		return nil, err
 	}
-	aitr.Start()
 
-	// Drain primary aux iterator since there is no reader for it.
-	go drainIterator(aitr)
+	// Background the primary iterator since there is no reader for it.
+	aitr.Background()
 
 	return itrs, nil
 }
 
 // buildFieldIterators creates an iterator for each field expression.
-func buildFieldIterators(fields Fields, ic IteratorCreator, opt IteratorOptions) ([]Iterator, error) {
+func buildFieldIterators(fields Fields, ic IteratorCreator, opt IteratorOptions, selector bool) ([]Iterator, error) {
 	// Create iterators from fields against the iterator creator.
 	itrs := make([]Iterator, len(fields))
 
@@ -148,7 +181,7 @@ func buildFieldIterators(fields Fields, ic IteratorCreator, opt IteratorOptions)
 			}
 
 			expr := Reduce(f.Expr, nil)
-			itr, err := buildExprIterator(expr, ic, opt)
+			itr, err := buildExprIterator(expr, ic, opt, selector)
 			if err != nil {
 				return err
 			}
@@ -160,14 +193,9 @@ func buildFieldIterators(fields Fields, ic IteratorCreator, opt IteratorOptions)
 			return nil
 		}
 
-		seriesKeys, err := ic.SeriesKeys(opt)
-		if err != nil {
-			return err
-		}
-
 		// Build the aux iterators. Previous validation should ensure that only one
 		// call was present so we build an AuxIterator from that input.
-		aitr := NewAuxIterator(input, seriesKeys, opt)
+		aitr := NewAuxIterator(input, opt)
 		for i, f := range fields {
 			if itrs[i] != nil {
 				itrs[i] = aitr
@@ -175,7 +203,7 @@ func buildFieldIterators(fields Fields, ic IteratorCreator, opt IteratorOptions)
 			}
 
 			expr := Reduce(f.Expr, nil)
-			itr, err := buildExprIterator(expr, aitr, opt)
+			itr, err := buildExprIterator(expr, aitr, opt, false)
 			if err != nil {
 				return err
 			}
@@ -200,145 +228,237 @@ func buildFieldIterators(fields Fields, ic IteratorCreator, opt IteratorOptions)
 }
 
 // buildExprIterator creates an iterator for an expression.
-func buildExprIterator(expr Expr, ic IteratorCreator, opt IteratorOptions) (Iterator, error) {
+func buildExprIterator(expr Expr, ic IteratorCreator, opt IteratorOptions, selector bool) (Iterator, error) {
 	opt.Expr = expr
 
 	switch expr := expr.(type) {
 	case *VarRef:
-		return ic.CreateIterator(opt)
+		itr, err := ic.CreateIterator(opt)
+		if err != nil {
+			return nil, err
+		} else if itr == nil {
+			itr = &nilFloatIterator{}
+		}
+		return itr, nil
 	case *Call:
 		// FIXME(benbjohnson): Validate that only calls with 1 arg are passed to IC.
 
-		var err error
-		var itr Iterator
 		switch expr.Name {
-		case "count":
-			switch arg := expr.Args[0].(type) {
-			case *Call:
-				if arg.Name == "distinct" {
-					input, err := buildExprIterator(arg, ic, opt)
+		case "distinct":
+			input, err := buildExprIterator(expr.Args[0].(*VarRef), ic, opt, selector)
+			if err != nil {
+				return nil, err
+			}
+			input, err = NewDistinctIterator(input, opt)
+			if err != nil {
+				return nil, err
+			}
+			return NewIntervalIterator(input, opt), nil
+		case "sample":
+			input, err := buildExprIterator(expr.Args[0], ic, opt, selector)
+			if err != nil {
+				return nil, err
+			}
+			size := expr.Args[1].(*IntegerLiteral)
+
+			return newSampleIterator(input, opt, int(size.Val))
+		case "holt_winters", "holt_winters_with_fit":
+			input, err := buildExprIterator(expr.Args[0], ic, opt, selector)
+			if err != nil {
+				return nil, err
+			}
+			h := expr.Args[1].(*IntegerLiteral)
+			m := expr.Args[2].(*IntegerLiteral)
+
+			includeFitData := "holt_winters_with_fit" == expr.Name
+
+			interval := opt.Interval.Duration
+			// Redifine interval to be unbounded to capture all aggregate results
+			opt.StartTime = MinTime
+			opt.EndTime = MaxTime
+			opt.Interval = Interval{}
+
+			return newHoltWintersIterator(input, opt, int(h.Val), int(m.Val), includeFitData, interval)
+		case "derivative", "non_negative_derivative", "difference", "moving_average", "elapsed":
+			if !opt.Interval.IsZero() {
+				if opt.Ascending {
+					opt.StartTime -= int64(opt.Interval.Duration)
+				} else {
+					opt.EndTime += int64(opt.Interval.Duration)
+				}
+			}
+
+			input, err := buildExprIterator(expr.Args[0], ic, opt, selector)
+			if err != nil {
+				return nil, err
+			}
+
+			switch expr.Name {
+			case "derivative", "non_negative_derivative":
+				interval := opt.DerivativeInterval()
+				isNonNegative := (expr.Name == "non_negative_derivative")
+				return newDerivativeIterator(input, opt, interval, isNonNegative)
+			case "elapsed":
+				interval := opt.ElapsedInterval()
+				return newElapsedIterator(input, opt, interval)
+			case "difference":
+				return newDifferenceIterator(input, opt)
+			case "moving_average":
+				n := expr.Args[1].(*IntegerLiteral)
+				if n.Val > 1 && !opt.Interval.IsZero() {
+					if opt.Ascending {
+						opt.StartTime -= int64(opt.Interval.Duration) * (n.Val - 1)
+					} else {
+						opt.EndTime += int64(opt.Interval.Duration) * (n.Val - 1)
+					}
+				}
+				return newMovingAverageIterator(input, int(n.Val), opt)
+			}
+			panic(fmt.Sprintf("invalid series aggregate function: %s", expr.Name))
+		case "cumulative_sum":
+			input, err := buildExprIterator(expr.Args[0], ic, opt, selector)
+			if err != nil {
+				return nil, err
+			}
+			return newCumulativeSumIterator(input, opt)
+		default:
+			itr, err := func() (Iterator, error) {
+				switch expr.Name {
+				case "count":
+					switch arg := expr.Args[0].(type) {
+					case *Call:
+						if arg.Name == "distinct" {
+							input, err := buildExprIterator(arg, ic, opt, selector)
+							if err != nil {
+								return nil, err
+							}
+							return newCountIterator(input, opt)
+						}
+					}
+
+					itr, err := ic.CreateIterator(opt)
+					if err != nil {
+						return nil, err
+					} else if itr == nil {
+						itr = &nilFloatIterator{}
+					}
+					return itr, nil
+				case "min", "max", "sum", "first", "last", "mean":
+					itr, err := ic.CreateIterator(opt)
+					if err != nil {
+						return nil, err
+					} else if itr == nil {
+						itr = &nilFloatIterator{}
+					}
+					return itr, nil
+				case "median":
+					input, err := buildExprIterator(expr.Args[0].(*VarRef), ic, opt, false)
 					if err != nil {
 						return nil, err
 					}
-					itr = newCountIterator(input, opt)
-				}
-			default:
-				itr, err = ic.CreateIterator(opt)
-			}
-		case "min", "max", "sum", "first", "last":
-			itr, err = ic.CreateIterator(opt)
-		case "distinct":
-			input, err := buildExprIterator(expr.Args[0].(*VarRef), ic, opt)
-			if err != nil {
-				return nil, err
-			}
-			return NewDistinctIterator(input, opt), nil
-		case "mean":
-			// OPTIMIZE(benbjohnson): convert to map/reduce
-			input, err := buildExprIterator(expr.Args[0].(*VarRef), ic, opt)
-			if err != nil {
-				return nil, err
-			}
-			itr = newMeanIterator(input, opt)
-		case "median":
-			input, err := buildExprIterator(expr.Args[0].(*VarRef), ic, opt)
-			if err != nil {
-				return nil, err
-			}
-			itr = newMedianIterator(input, opt)
-		case "stddev":
-			input, err := buildExprIterator(expr.Args[0].(*VarRef), ic, opt)
-			if err != nil {
-				return nil, err
-			}
-			itr = newStddevIterator(input, opt)
-		case "spread":
-			// OPTIMIZE(benbjohnson): convert to map/reduce
-			input, err := buildExprIterator(expr.Args[0].(*VarRef), ic, opt)
-			if err != nil {
-				return nil, err
-			}
-			itr = newSpreadIterator(input, opt)
-		case "top":
-			var tags []int
-			if len(expr.Args) < 2 {
-				return nil, fmt.Errorf("top() requires 2 or more arguments, got %d", len(expr.Args))
-			} else if len(expr.Args) > 2 {
-				// We need to find the indices of where the tag values are stored in Aux
-				// This section is O(n^2), but for what should be a low value.
-				for i := 1; i < len(expr.Args)-1; i++ {
-					ref := expr.Args[i].(*VarRef)
-					for index, name := range opt.Aux {
-						if name == ref.Val {
-							tags = append(tags, index)
-							break
+					return newMedianIterator(input, opt)
+				case "mode":
+					input, err := buildExprIterator(expr.Args[0].(*VarRef), ic, opt, false)
+					if err != nil {
+						return nil, err
+					}
+					return NewModeIterator(input, opt)
+				case "stddev":
+					input, err := buildExprIterator(expr.Args[0].(*VarRef), ic, opt, false)
+					if err != nil {
+						return nil, err
+					}
+					return newStddevIterator(input, opt)
+				case "spread":
+					// OPTIMIZE(benbjohnson): convert to map/reduce
+					input, err := buildExprIterator(expr.Args[0].(*VarRef), ic, opt, false)
+					if err != nil {
+						return nil, err
+					}
+					return newSpreadIterator(input, opt)
+				case "top":
+					var tags []int
+					if len(expr.Args) < 2 {
+						return nil, fmt.Errorf("top() requires 2 or more arguments, got %d", len(expr.Args))
+					} else if len(expr.Args) > 2 {
+						// We need to find the indices of where the tag values are stored in Aux
+						// This section is O(n^2), but for what should be a low value.
+						for i := 1; i < len(expr.Args)-1; i++ {
+							ref := expr.Args[i].(*VarRef)
+							for index, aux := range opt.Aux {
+								if aux.Val == ref.Val {
+									tags = append(tags, index)
+									break
+								}
+							}
 						}
 					}
-				}
-			}
 
-			input, err := buildExprIterator(expr.Args[0].(*VarRef), ic, opt)
-			if err != nil {
-				return nil, err
-			}
-			n := expr.Args[len(expr.Args)-1].(*NumberLiteral)
-			itr = newTopIterator(input, opt, n, tags)
-		case "bottom":
-			var tags []int
-			if len(expr.Args) < 2 {
-				return nil, fmt.Errorf("bottom() requires 2 or more arguments, got %d", len(expr.Args))
-			} else if len(expr.Args) > 2 {
-				// We need to find the indices of where the tag values are stored in Aux
-				// This section is O(n^2), but for what should be a low value.
-				for i := 1; i < len(expr.Args)-1; i++ {
-					ref := expr.Args[i].(*VarRef)
-					for index, name := range opt.Aux {
-						if name == ref.Val {
-							tags = append(tags, index)
-							break
+					input, err := buildExprIterator(expr.Args[0].(*VarRef), ic, opt, false)
+					if err != nil {
+						return nil, err
+					}
+					n := expr.Args[len(expr.Args)-1].(*IntegerLiteral)
+					return newTopIterator(input, opt, n, tags)
+				case "bottom":
+					var tags []int
+					if len(expr.Args) < 2 {
+						return nil, fmt.Errorf("bottom() requires 2 or more arguments, got %d", len(expr.Args))
+					} else if len(expr.Args) > 2 {
+						// We need to find the indices of where the tag values are stored in Aux
+						// This section is O(n^2), but for what should be a low value.
+						for i := 1; i < len(expr.Args)-1; i++ {
+							ref := expr.Args[i].(*VarRef)
+							for index, aux := range opt.Aux {
+								if aux.Val == ref.Val {
+									tags = append(tags, index)
+									break
+								}
+							}
 						}
 					}
+
+					input, err := buildExprIterator(expr.Args[0].(*VarRef), ic, opt, false)
+					if err != nil {
+						return nil, err
+					}
+					n := expr.Args[len(expr.Args)-1].(*IntegerLiteral)
+					return newBottomIterator(input, opt, n, tags)
+				case "percentile":
+					input, err := buildExprIterator(expr.Args[0].(*VarRef), ic, opt, false)
+					if err != nil {
+						return nil, err
+					}
+					var percentile float64
+					switch arg := expr.Args[1].(type) {
+					case *NumberLiteral:
+						percentile = arg.Val
+					case *IntegerLiteral:
+						percentile = float64(arg.Val)
+					}
+					return newPercentileIterator(input, opt, percentile)
+				default:
+					return nil, fmt.Errorf("unsupported call: %s", expr.Name)
+				}
+			}()
+
+			if err != nil {
+				return nil, err
+			}
+
+			if !selector || !opt.Interval.IsZero() {
+				if expr.Name != "top" && expr.Name != "bottom" {
+					itr = NewIntervalIterator(itr, opt)
+				}
+				if !opt.Interval.IsZero() && opt.Fill != NoFill {
+					itr = NewFillIterator(itr, expr, opt)
 				}
 			}
-
-			input, err := buildExprIterator(expr.Args[0].(*VarRef), ic, opt)
-			if err != nil {
-				return nil, err
+			if opt.InterruptCh != nil {
+				itr = NewInterruptIterator(itr, opt.InterruptCh)
 			}
-			n := expr.Args[len(expr.Args)-1].(*NumberLiteral)
-			itr = newBottomIterator(input, opt, n, tags)
-		case "percentile":
-			input, err := buildExprIterator(expr.Args[0].(*VarRef), ic, opt)
-			if err != nil {
-				return nil, err
-			}
-			percentile := expr.Args[1].(*NumberLiteral).Val
-			itr = newPercentileIterator(input, opt, percentile)
-		case "derivative", "non_negative_derivative":
-			input, err := buildExprIterator(expr.Args[0], ic, opt)
-			if err != nil {
-				return nil, err
-			}
-
-			interval := opt.DerivativeInterval()
-			isNonNegative := (expr.Name == "non_negative_derivative")
-
-			// Derivatives do not use GROUP BY intervals or time constraints, so clear these options.
-			opt.Interval = Interval{}
-			opt.StartTime, opt.EndTime = MinTime, MaxTime
-			return newDerivativeIterator(input, opt, interval, isNonNegative), nil
-		default:
-			panic(fmt.Sprintf("unsupported call: %s", expr.Name))
+			return itr, nil
 		}
-
-		if err != nil {
-			return nil, err
-		}
-
-		if !opt.Interval.IsZero() && opt.Fill != NoFill {
-			itr = NewFillIterator(itr, expr, opt)
-		}
-		return itr, nil
 	case *BinaryExpr:
 		if rhs, ok := expr.RHS.(Literal); ok {
 			// The right hand side is a literal. It is more common to have the RHS be a literal,
@@ -348,85 +468,124 @@ func buildExprIterator(expr Expr, ic IteratorCreator, opt IteratorOptions) (Iter
 				return nil, fmt.Errorf("unable to construct an iterator from two literals: LHS: %T, RHS: %T", lhs, rhs)
 			}
 
-			lhs, err := buildExprIterator(expr.LHS, ic, opt)
+			lhs, err := buildExprIterator(expr.LHS, ic, opt, false)
 			if err != nil {
 				return nil, err
 			}
 			return buildRHSTransformIterator(lhs, rhs, expr.Op, ic, opt)
 		} else if lhs, ok := expr.LHS.(Literal); ok {
-			rhs, err := buildExprIterator(expr.RHS, ic, opt)
+			rhs, err := buildExprIterator(expr.RHS, ic, opt, false)
 			if err != nil {
 				return nil, err
 			}
 			return buildLHSTransformIterator(lhs, rhs, expr.Op, ic, opt)
 		} else {
 			// We have two iterators. Combine them into a single iterator.
-			lhs, err := buildExprIterator(expr.LHS, ic, opt)
+			lhs, err := buildExprIterator(expr.LHS, ic, opt, false)
 			if err != nil {
 				return nil, err
 			}
-			rhs, err := buildExprIterator(expr.RHS, ic, opt)
+			rhs, err := buildExprIterator(expr.RHS, ic, opt, false)
 			if err != nil {
 				return nil, err
 			}
 			return buildTransformIterator(lhs, rhs, expr.Op, ic, opt)
 		}
 	case *ParenExpr:
-		return buildExprIterator(expr.Expr, ic, opt)
+		return buildExprIterator(expr.Expr, ic, opt, selector)
 	default:
-		panic(fmt.Sprintf("invalid expression type: %T", expr)) // FIXME
+		return nil, fmt.Errorf("invalid expression type: %T", expr)
 	}
 }
 
 func buildRHSTransformIterator(lhs Iterator, rhs Literal, op Token, ic IteratorCreator, opt IteratorOptions) (Iterator, error) {
-	fn := binaryExprFunc(iteratorDataType(lhs), op)
+	fn := binaryExprFunc(iteratorDataType(lhs), literalDataType(rhs), op)
 	switch fn := fn.(type) {
 	case func(float64, float64) float64:
-		input, ok := lhs.(FloatIterator)
-		if !ok {
-			return nil, fmt.Errorf("type mismatch, expected rhs to be FloatIterator, got %T", rhs)
+		var input FloatIterator
+		switch lhs := lhs.(type) {
+		case FloatIterator:
+			input = lhs
+		case IntegerIterator:
+			input = &integerFloatCastIterator{input: lhs}
+		default:
+			return nil, fmt.Errorf("type mismatch on LHS, unable to use %T as a FloatIterator", lhs)
 		}
-		lit, ok := rhs.(*NumberLiteral)
-		if !ok {
-			return nil, fmt.Errorf("type mismatch, expected lhs to be NumberLiteral, got %T", lhs)
+
+		var val float64
+		switch rhs := rhs.(type) {
+		case *NumberLiteral:
+			val = rhs.Val
+		case *IntegerLiteral:
+			val = float64(rhs.Val)
+		default:
+			return nil, fmt.Errorf("type mismatch on RHS, unable to use %T as a NumberLiteral", rhs)
 		}
 		return &floatTransformIterator{
 			input: input,
 			fn: func(p *FloatPoint) *FloatPoint {
 				if p == nil {
 					return nil
+				} else if p.Nil {
+					return p
 				}
-				p.Value = fn(p.Value, lit.Val)
+				p.Value = fn(p.Value, val)
 				return p
 			},
 		}, nil
-	case func(int64, int64) int64:
+	case func(int64, int64) float64:
 		input, ok := lhs.(IntegerIterator)
 		if !ok {
-			return nil, fmt.Errorf("type mismatch, expected rhs to be IntegerIterator, got %T", rhs)
+			return nil, fmt.Errorf("type mismatch on LHS, unable to use %T as a IntegerIterator", lhs)
 		}
-		lit, ok := rhs.(*NumberLiteral)
-		if !ok {
-			return nil, fmt.Errorf("type mismatch, expected lhs to be NumberLiteral, got %T", lhs)
+
+		var val int64
+		switch rhs := rhs.(type) {
+		case *IntegerLiteral:
+			val = rhs.Val
+		default:
+			return nil, fmt.Errorf("type mismatch on RHS, unable to use %T as a IntegerLiteral", rhs)
 		}
-		return &integerTransformIterator{
+		return &integerFloatTransformIterator{
 			input: input,
-			fn: func(p *IntegerPoint) *IntegerPoint {
+			fn: func(p *IntegerPoint) *FloatPoint {
 				if p == nil {
 					return nil
 				}
-				p.Value = fn(p.Value, int64(lit.Val))
-				return p
+
+				fp := &FloatPoint{
+					Name: p.Name,
+					Tags: p.Tags,
+					Time: p.Time,
+					Aux:  p.Aux,
+				}
+				if p.Nil {
+					fp.Nil = true
+				} else {
+					fp.Value = fn(p.Value, val)
+				}
+				return fp
 			},
 		}, nil
 	case func(float64, float64) bool:
-		input, ok := lhs.(FloatIterator)
-		if !ok {
-			return nil, fmt.Errorf("type mismatch, expected lhs to be FloatIterator, got %T", lhs)
+		var input FloatIterator
+		switch lhs := lhs.(type) {
+		case FloatIterator:
+			input = lhs
+		case IntegerIterator:
+			input = &integerFloatCastIterator{input: lhs}
+		default:
+			return nil, fmt.Errorf("type mismatch on LHS, unable to use %T as a FloatIterator", lhs)
 		}
-		lit, ok := rhs.(*NumberLiteral)
-		if !ok {
-			return nil, fmt.Errorf("type mismatch, expected lhs to be NumberLiteral, got %T", rhs)
+
+		var val float64
+		switch rhs := rhs.(type) {
+		case *NumberLiteral:
+			val = rhs.Val
+		case *IntegerLiteral:
+			val = float64(rhs.Val)
+		default:
+			return nil, fmt.Errorf("type mismatch on RHS, unable to use %T as a NumberLiteral", rhs)
 		}
 		return &floatBoolTransformIterator{
 			input: input,
@@ -434,23 +593,64 @@ func buildRHSTransformIterator(lhs Iterator, rhs Literal, op Token, ic IteratorC
 				if p == nil {
 					return nil
 				}
-				return &BooleanPoint{
-					Name:  p.Name,
-					Tags:  p.Tags,
-					Time:  p.Time,
-					Value: fn(p.Value, lit.Val),
-					Aux:   p.Aux,
+
+				bp := &BooleanPoint{
+					Name: p.Name,
+					Tags: p.Tags,
+					Time: p.Time,
+					Aux:  p.Aux,
 				}
+				if p.Nil {
+					bp.Nil = true
+				} else {
+					bp.Value = fn(p.Value, val)
+				}
+				return bp
+			},
+		}, nil
+	case func(int64, int64) int64:
+		var input IntegerIterator
+		switch lhs := lhs.(type) {
+		case IntegerIterator:
+			input = lhs
+		default:
+			return nil, fmt.Errorf("type mismatch on LHS, unable to use %T as an IntegerIterator", lhs)
+		}
+
+		var val int64
+		switch rhs := rhs.(type) {
+		case *IntegerLiteral:
+			val = rhs.Val
+		default:
+			return nil, fmt.Errorf("type mismatch on RHS, unable to use %T as an IntegerLiteral", rhs)
+		}
+		return &integerTransformIterator{
+			input: input,
+			fn: func(p *IntegerPoint) *IntegerPoint {
+				if p == nil {
+					return nil
+				} else if p.Nil {
+					return p
+				}
+				p.Value = fn(p.Value, val)
+				return p
 			},
 		}, nil
 	case func(int64, int64) bool:
-		input, ok := lhs.(IntegerIterator)
-		if !ok {
-			return nil, fmt.Errorf("type mismatch, expected lhs to be IntegerIterator, got %T", lhs)
+		var input IntegerIterator
+		switch lhs := lhs.(type) {
+		case IntegerIterator:
+			input = lhs
+		default:
+			return nil, fmt.Errorf("type mismatch on LHS, unable to use %T as an IntegerIterator", lhs)
 		}
-		lit, ok := rhs.(*NumberLiteral)
-		if !ok {
-			return nil, fmt.Errorf("type mismatch, expected lhs to be NumberLiteral, got %T", rhs)
+
+		var val int64
+		switch rhs := rhs.(type) {
+		case *IntegerLiteral:
+			val = rhs.Val
+		default:
+			return nil, fmt.Errorf("type mismatch on RHS, unable to use %T as an IntegerLiteral", rhs)
 		}
 		return &integerBoolTransformIterator{
 			input: input,
@@ -458,13 +658,19 @@ func buildRHSTransformIterator(lhs Iterator, rhs Literal, op Token, ic IteratorC
 				if p == nil {
 					return nil
 				}
-				return &BooleanPoint{
-					Name:  p.Name,
-					Tags:  p.Tags,
-					Time:  p.Time,
-					Value: fn(p.Value, int64(lit.Val)),
-					Aux:   p.Aux,
+
+				bp := &BooleanPoint{
+					Name: p.Name,
+					Tags: p.Tags,
+					Time: p.Time,
+					Aux:  p.Aux,
 				}
+				if p.Nil {
+					bp.Nil = true
+				} else {
+					bp.Value = fn(p.Value, val)
+				}
+				return bp
 			},
 		}, nil
 	}
@@ -472,54 +678,93 @@ func buildRHSTransformIterator(lhs Iterator, rhs Literal, op Token, ic IteratorC
 }
 
 func buildLHSTransformIterator(lhs Literal, rhs Iterator, op Token, ic IteratorCreator, opt IteratorOptions) (Iterator, error) {
-	fn := binaryExprFunc(iteratorDataType(rhs), op)
+	fn := binaryExprFunc(literalDataType(lhs), iteratorDataType(rhs), op)
 	switch fn := fn.(type) {
 	case func(float64, float64) float64:
-		lit, ok := lhs.(*NumberLiteral)
-		if !ok {
-			return nil, fmt.Errorf("type mismatch, expected lhs to be NumberLiteral, got %T", lhs)
+		var input FloatIterator
+		switch rhs := rhs.(type) {
+		case FloatIterator:
+			input = rhs
+		case IntegerIterator:
+			input = &integerFloatCastIterator{input: rhs}
+		default:
+			return nil, fmt.Errorf("type mismatch on RHS, unable to use %T as a FloatIterator", rhs)
 		}
-		input, ok := rhs.(FloatIterator)
-		if !ok {
-			return nil, fmt.Errorf("type mismatch, expected rhs to be FloatIterator, got %T", rhs)
+
+		var val float64
+		switch lhs := lhs.(type) {
+		case *NumberLiteral:
+			val = lhs.Val
+		case *IntegerLiteral:
+			val = float64(lhs.Val)
+		default:
+			return nil, fmt.Errorf("type mismatch on LHS, unable to use %T as a NumberLiteral", lhs)
 		}
 		return &floatTransformIterator{
 			input: input,
 			fn: func(p *FloatPoint) *FloatPoint {
 				if p == nil {
 					return nil
+				} else if p.Nil {
+					return p
 				}
-				p.Value = fn(lit.Val, p.Value)
+				p.Value = fn(val, p.Value)
 				return p
 			},
 		}, nil
-	case func(int64, int64) int64:
-		lit, ok := lhs.(*NumberLiteral)
-		if !ok {
-			return nil, fmt.Errorf("type mismatch, expected lhs to be NumberLiteral, got %T", lhs)
-		}
+	case func(int64, int64) float64:
 		input, ok := rhs.(IntegerIterator)
 		if !ok {
-			return nil, fmt.Errorf("type mismatch, expected rhs to be IntegerIterator, got %T", rhs)
+			return nil, fmt.Errorf("type mismatch on RHS, unable to use %T as a IntegerIterator", lhs)
 		}
-		return &integerTransformIterator{
+
+		var val int64
+		switch lhs := lhs.(type) {
+		case *IntegerLiteral:
+			val = lhs.Val
+		default:
+			return nil, fmt.Errorf("type mismatch on LHS, unable to use %T as a IntegerLiteral", rhs)
+		}
+		return &integerFloatTransformIterator{
 			input: input,
-			fn: func(p *IntegerPoint) *IntegerPoint {
+			fn: func(p *IntegerPoint) *FloatPoint {
 				if p == nil {
 					return nil
 				}
-				p.Value = fn(int64(lit.Val), p.Value)
-				return p
+
+				fp := &FloatPoint{
+					Name: p.Name,
+					Tags: p.Tags,
+					Time: p.Time,
+					Aux:  p.Aux,
+				}
+				if p.Nil {
+					fp.Nil = true
+				} else {
+					fp.Value = fn(val, p.Value)
+				}
+				return fp
 			},
 		}, nil
 	case func(float64, float64) bool:
-		lit, ok := lhs.(*NumberLiteral)
-		if !ok {
-			return nil, fmt.Errorf("type mismatch, expected lhs to be NumberLiteral, got %T", lhs)
+		var input FloatIterator
+		switch rhs := rhs.(type) {
+		case FloatIterator:
+			input = rhs
+		case IntegerIterator:
+			input = &integerFloatCastIterator{input: rhs}
+		default:
+			return nil, fmt.Errorf("type mismatch on RHS, unable to use %T as a FloatIterator", rhs)
 		}
-		input, ok := rhs.(FloatIterator)
-		if !ok {
-			return nil, fmt.Errorf("type mismatch, expected lhs to be FloatIterator, got %T", rhs)
+
+		var val float64
+		switch lhs := lhs.(type) {
+		case *NumberLiteral:
+			val = lhs.Val
+		case *IntegerLiteral:
+			val = float64(lhs.Val)
+		default:
+			return nil, fmt.Errorf("type mismatch on LHS, unable to use %T as a NumberLiteral", lhs)
 		}
 		return &floatBoolTransformIterator{
 			input: input,
@@ -527,23 +772,64 @@ func buildLHSTransformIterator(lhs Literal, rhs Iterator, op Token, ic IteratorC
 				if p == nil {
 					return nil
 				}
-				return &BooleanPoint{
-					Name:  p.Name,
-					Tags:  p.Tags,
-					Time:  p.Time,
-					Value: fn(lit.Val, p.Value),
-					Aux:   p.Aux,
+
+				bp := &BooleanPoint{
+					Name: p.Name,
+					Tags: p.Tags,
+					Time: p.Time,
+					Aux:  p.Aux,
 				}
+				if p.Nil {
+					bp.Nil = true
+				} else {
+					bp.Value = fn(val, p.Value)
+				}
+				return bp
+			},
+		}, nil
+	case func(int64, int64) int64:
+		var input IntegerIterator
+		switch rhs := rhs.(type) {
+		case IntegerIterator:
+			input = rhs
+		default:
+			return nil, fmt.Errorf("type mismatch on RHS, unable to use %T as an IntegerIterator", rhs)
+		}
+
+		var val int64
+		switch lhs := lhs.(type) {
+		case *IntegerLiteral:
+			val = lhs.Val
+		default:
+			return nil, fmt.Errorf("type mismatch on LHS, unable to use %T as an IntegerLiteral", lhs)
+		}
+		return &integerTransformIterator{
+			input: input,
+			fn: func(p *IntegerPoint) *IntegerPoint {
+				if p == nil {
+					return nil
+				} else if p.Nil {
+					return p
+				}
+				p.Value = fn(val, p.Value)
+				return p
 			},
 		}, nil
 	case func(int64, int64) bool:
-		lit, ok := lhs.(*NumberLiteral)
-		if !ok {
-			return nil, fmt.Errorf("type mismatch, expected lhs to be NumberLiteral, got %T", lhs)
+		var input IntegerIterator
+		switch rhs := rhs.(type) {
+		case IntegerIterator:
+			input = rhs
+		default:
+			return nil, fmt.Errorf("type mismatch on RHS, unable to use %T as an IntegerIterator", rhs)
 		}
-		input, ok := rhs.(IntegerIterator)
-		if !ok {
-			return nil, fmt.Errorf("type mismatch, expected lhs to be IntegerIterator, got %T", rhs)
+
+		var val int64
+		switch lhs := lhs.(type) {
+		case *IntegerLiteral:
+			val = lhs.Val
+		default:
+			return nil, fmt.Errorf("type mismatch on LHS, unable to use %T as an IntegerLiteral", lhs)
 		}
 		return &integerBoolTransformIterator{
 			input: input,
@@ -551,13 +837,19 @@ func buildLHSTransformIterator(lhs Literal, rhs Iterator, op Token, ic IteratorC
 				if p == nil {
 					return nil
 				}
-				return &BooleanPoint{
-					Name:  p.Name,
-					Tags:  p.Tags,
-					Time:  p.Time,
-					Value: fn(int64(lit.Val), p.Value),
-					Aux:   p.Aux,
+
+				bp := &BooleanPoint{
+					Name: p.Name,
+					Tags: p.Tags,
+					Time: p.Time,
+					Aux:  p.Aux,
 				}
+				if p.Nil {
+					bp.Nil = true
+				} else {
+					bp.Value = fn(val, p.Value)
+				}
+				return bp
 			},
 		}, nil
 	}
@@ -565,110 +857,80 @@ func buildLHSTransformIterator(lhs Literal, rhs Iterator, op Token, ic IteratorC
 }
 
 func buildTransformIterator(lhs Iterator, rhs Iterator, op Token, ic IteratorCreator, opt IteratorOptions) (Iterator, error) {
-	fn := binaryExprFunc(iteratorDataType(lhs), op)
+	fn := binaryExprFunc(iteratorDataType(lhs), iteratorDataType(rhs), op)
 	switch fn := fn.(type) {
 	case func(float64, float64) float64:
-		left, ok := lhs.(FloatIterator)
-		if !ok {
-			return nil, fmt.Errorf("type mismatch, expected lhs to be FloatIterator, got %T", lhs)
+		var left FloatIterator
+		switch lhs := lhs.(type) {
+		case FloatIterator:
+			left = lhs
+		case IntegerIterator:
+			left = &integerFloatCastIterator{input: lhs}
+		default:
+			return nil, fmt.Errorf("type mismatch on LHS, unable to use %T as a FloatIterator", lhs)
 		}
-		right, ok := rhs.(FloatIterator)
-		if !ok {
-			return nil, fmt.Errorf("type mismatch, expected lhs to be FloatIterator, got %T", rhs)
+
+		var right FloatIterator
+		switch rhs := rhs.(type) {
+		case FloatIterator:
+			right = rhs
+		case IntegerIterator:
+			right = &integerFloatCastIterator{input: rhs}
+		default:
+			return nil, fmt.Errorf("type mismatch on RHS, unable to use %T as a FloatIterator", rhs)
 		}
-		return &floatTransformIterator{
-			input: left,
-			fn: func(p *FloatPoint) *FloatPoint {
-				if p == nil {
-					return nil
-				}
-				p2 := right.Next()
-				if p2 == nil {
-					return nil
-				}
-				p.Value = fn(p.Value, p2.Value)
-				return p
-			},
-		}, nil
+		return newFloatExprIterator(left, right, opt, fn), nil
+	case func(int64, int64) float64:
+		left, ok := lhs.(IntegerIterator)
+		if !ok {
+			return nil, fmt.Errorf("type mismatch on LHS, unable to use %T as a IntegerIterator", lhs)
+		}
+		right, ok := rhs.(IntegerIterator)
+		if !ok {
+			return nil, fmt.Errorf("type mismatch on RHS, unable to use %T as a IntegerIterator", rhs)
+		}
+		return newIntegerFloatExprIterator(left, right, opt, fn), nil
 	case func(int64, int64) int64:
 		left, ok := lhs.(IntegerIterator)
 		if !ok {
-			return nil, fmt.Errorf("type mismatch, expected lhs to be IntegerIterator, got %T", lhs)
+			return nil, fmt.Errorf("type mismatch on LHS, unable to use %T as a IntegerIterator", lhs)
 		}
 		right, ok := rhs.(IntegerIterator)
 		if !ok {
-			return nil, fmt.Errorf("type mismatch, expected lhs to be IntegerIterator, got %T", rhs)
+			return nil, fmt.Errorf("type mismatch on RHS, unable to use %T as a IntegerIterator", rhs)
 		}
-		return &integerTransformIterator{
-			input: left,
-			fn: func(p *IntegerPoint) *IntegerPoint {
-				if p == nil {
-					return nil
-				}
-				p2 := right.Next()
-				if p2 == nil {
-					return nil
-				}
-				p.Value = fn(p.Value, p2.Value)
-				return p
-			},
-		}, nil
+		return newIntegerExprIterator(left, right, opt, fn), nil
 	case func(float64, float64) bool:
-		left, ok := lhs.(FloatIterator)
-		if !ok {
-			return nil, fmt.Errorf("type mismatch, expected lhs to be FloatIterator, got %T", lhs)
+		var left FloatIterator
+		switch lhs := lhs.(type) {
+		case FloatIterator:
+			left = lhs
+		case IntegerIterator:
+			left = &integerFloatCastIterator{input: lhs}
+		default:
+			return nil, fmt.Errorf("type mismatch on LHS, unable to use %T as a FloatIterator", lhs)
 		}
-		right, ok := rhs.(FloatIterator)
-		if !ok {
-			return nil, fmt.Errorf("type mismatch, expected lhs to be FloatIterator, got %T", rhs)
+
+		var right FloatIterator
+		switch rhs := rhs.(type) {
+		case FloatIterator:
+			right = rhs
+		case IntegerIterator:
+			right = &integerFloatCastIterator{input: rhs}
+		default:
+			return nil, fmt.Errorf("type mismatch on RHS, unable to use %T as a FloatIterator", rhs)
 		}
-		return &floatBoolTransformIterator{
-			input: left,
-			fn: func(p *FloatPoint) *BooleanPoint {
-				if p == nil {
-					return nil
-				}
-				p2 := right.Next()
-				if p2 == nil {
-					return nil
-				}
-				return &BooleanPoint{
-					Name:  p.Name,
-					Tags:  p.Tags,
-					Time:  p.Time,
-					Value: fn(p.Value, p2.Value),
-					Aux:   p.Aux,
-				}
-			},
-		}, nil
+		return newFloatBooleanExprIterator(left, right, opt, fn), nil
 	case func(int64, int64) bool:
 		left, ok := lhs.(IntegerIterator)
 		if !ok {
-			return nil, fmt.Errorf("type mismatch, expected lhs to be IntegerIterator, got %T", lhs)
+			return nil, fmt.Errorf("type mismatch on LHS, unable to use %T as a IntegerIterator", lhs)
 		}
 		right, ok := rhs.(IntegerIterator)
 		if !ok {
-			return nil, fmt.Errorf("type mismatch, expected lhs to be IntegerIterator, got %T", rhs)
+			return nil, fmt.Errorf("type mismatch on LHS, unable to use %T as a IntegerIterator", rhs)
 		}
-		return &integerBoolTransformIterator{
-			input: left,
-			fn: func(p *IntegerPoint) *BooleanPoint {
-				if p == nil {
-					return nil
-				}
-				p2 := right.Next()
-				if p2 == nil {
-					return nil
-				}
-				return &BooleanPoint{
-					Name:  p.Name,
-					Tags:  p.Tags,
-					Time:  p.Time,
-					Value: fn(p.Value, p2.Value),
-					Aux:   p.Aux,
-				}
-			},
-		}, nil
+		return newIntegerBooleanExprIterator(left, right, opt, fn), nil
 	}
 	return nil, fmt.Errorf("unable to construct transform iterator from %T and %T", lhs, rhs)
 }
@@ -688,13 +950,33 @@ func iteratorDataType(itr Iterator) DataType {
 	}
 }
 
-func binaryExprFunc(typ DataType, op Token) interface{} {
+func literalDataType(lit Literal) DataType {
+	switch lit.(type) {
+	case *NumberLiteral:
+		return Float
+	case *IntegerLiteral:
+		return Integer
+	case *StringLiteral:
+		return String
+	case *BooleanLiteral:
+		return Boolean
+	default:
+		return Unknown
+	}
+}
+
+func binaryExprFunc(typ1 DataType, typ2 DataType, op Token) interface{} {
 	var fn interface{}
-	switch typ {
+	switch typ1 {
 	case Float:
 		fn = floatBinaryExprFunc(op)
 	case Integer:
-		fn = integerBinaryExprFunc(op)
+		switch typ2 {
+		case Float:
+			fn = floatBinaryExprFunc(op)
+		default:
+			fn = integerBinaryExprFunc(op)
+		}
 	}
 	return fn
 }
@@ -739,11 +1021,11 @@ func integerBinaryExprFunc(op Token) interface{} {
 	case MUL:
 		return func(lhs, rhs int64) int64 { return lhs * rhs }
 	case DIV:
-		return func(lhs, rhs int64) int64 {
+		return func(lhs, rhs int64) float64 {
 			if rhs == 0 {
-				return int64(0)
+				return float64(0)
 			}
-			return lhs / rhs
+			return float64(lhs) / float64(rhs)
 		}
 	case EQ:
 		return func(lhs, rhs int64) bool { return lhs == rhs }

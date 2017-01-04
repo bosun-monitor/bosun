@@ -7,7 +7,7 @@ import (
 
 	"bosun.org/opentsdb"
 	"github.com/MiniProfiler/go/miniprofiler"
-	"github.com/influxdata/influxdb/client"
+	"github.com/influxdata/influxdb/client/v2"
 )
 
 const influxTimeFmt = time.RFC3339Nano
@@ -29,11 +29,11 @@ func TestInfluxQueryDuration(t *testing.T) {
 		},
 		{
 			"select * from a WHERE value > 0", "",
-			fmt.Sprintf("SELECT * FROM a WHERE value > 0.000 AND time >= '%s' AND time <= '%s' fill(none)", start, end),
+			fmt.Sprintf("SELECT * FROM a WHERE value > 0 AND time >= '%s' AND time <= '%s' fill(none)", start, end),
 		},
 		{
 			"select * from a WHERE value > 0", "15m",
-			fmt.Sprintf("SELECT * FROM a WHERE value > 0.000 AND time >= '%s' AND time <= '%s' GROUP BY time(15m) fill(none)", start, end),
+			fmt.Sprintf("SELECT * FROM a WHERE value > 0 AND time >= '%s' AND time <= '%s' GROUP BY time(15m) fill(none)", start, end),
 		},
 		{
 			"select * from a WHERE time > 0 fill(none)", "",
@@ -54,7 +54,7 @@ func TestInfluxQuery(t *testing.T) {
 	e := State{
 		now: time.Date(2015, time.February, 25, 0, 0, 0, 0, time.UTC),
 		Backends: &Backends{
-			InfluxConfig: client.Config{},
+			InfluxConfig: client.HTTPConfig{},
 		},
 		BosunProviders: &BosunProviders{
 			Squelched: func(tags opentsdb.TagSet) bool {

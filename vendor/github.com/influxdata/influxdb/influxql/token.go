@@ -7,28 +7,31 @@ import (
 // Token is a lexical token of the InfluxQL language.
 type Token int
 
+// These are a comprehensive list of InfluxQL language tokens.
 const (
-	// Special tokens
+	// ILLEGAL Token, EOF, WS are Special InfluxQL tokens.
 	ILLEGAL Token = iota
 	EOF
 	WS
 
-	literal_beg
-	// Literals
-	IDENT        // main
-	NUMBER       // 12345.67
-	DURATION_VAL // 13h
-	STRING       // "abc"
-	BADSTRING    // "abc
-	BADESCAPE    // \q
-	TRUE         // true
-	FALSE        // false
-	REGEX        // Regular expressions
-	BADREGEX     // `.*
-	literal_end
+	literalBeg
+	// IDENT and the following are InfluxQL literal tokens.
+	IDENT       // main
+	BOUNDPARAM  // $param
+	NUMBER      // 12345.67
+	INTEGER     // 12345
+	DURATIONVAL // 13h
+	STRING      // "abc"
+	BADSTRING   // "abc
+	BADESCAPE   // \q
+	TRUE        // true
+	FALSE       // false
+	REGEX       // Regular expressions
+	BADREGEX    // `.*
+	literalEnd
 
-	operator_beg
-	// Operators
+	operatorBeg
+	// ADD and the following are InfluxQL Operators
 	ADD // +
 	SUB // -
 	MUL // *
@@ -45,17 +48,18 @@ const (
 	LTE      // <=
 	GT       // >
 	GTE      // >=
-	operator_end
+	operatorEnd
 
-	LPAREN    // (
-	RPAREN    // )
-	COMMA     // ,
-	COLON     // :
-	SEMICOLON // ;
-	DOT       // .
+	LPAREN      // (
+	RPAREN      // )
+	COMMA       // ,
+	COLON       // :
+	DOUBLECOLON // ::
+	SEMICOLON   // ;
+	DOT         // .
 
-	keyword_beg
-	// Keywords
+	keywordBeg
+	// ALL and the following are InfluxQL Keywords
 	ALL
 	ALTER
 	ANY
@@ -65,7 +69,6 @@ const (
 	BY
 	CREATE
 	CONTINUOUS
-	DATA
 	DATABASE
 	DATABASES
 	DEFAULT
@@ -78,30 +81,25 @@ const (
 	DURATION
 	END
 	EVERY
-	EXISTS
 	EXPLAIN
 	FIELD
 	FOR
-	FORCE
 	FROM
 	GRANT
 	GRANTS
 	GROUP
 	GROUPS
-	IF
 	IN
 	INF
-	INNER
 	INSERT
 	INTO
 	KEY
 	KEYS
+	KILL
 	LIMIT
-	META
 	MEASUREMENT
 	MEASUREMENTS
 	NAME
-	NOT
 	OFFSET
 	ON
 	ORDER
@@ -118,8 +116,6 @@ const (
 	REVOKE
 	SELECT
 	SERIES
-	SERVER
-	SERVERS
 	SET
 	SHOW
 	SHARD
@@ -137,7 +133,7 @@ const (
 	WHERE
 	WITH
 	WRITE
-	keyword_end
+	keywordEnd
 )
 
 var tokens = [...]string{
@@ -145,15 +141,15 @@ var tokens = [...]string{
 	EOF:     "EOF",
 	WS:      "WS",
 
-	IDENT:        "IDENT",
-	NUMBER:       "NUMBER",
-	DURATION_VAL: "DURATION_VAL",
-	STRING:       "STRING",
-	BADSTRING:    "BADSTRING",
-	BADESCAPE:    "BADESCAPE",
-	TRUE:         "TRUE",
-	FALSE:        "FALSE",
-	REGEX:        "REGEX",
+	IDENT:       "IDENT",
+	NUMBER:      "NUMBER",
+	DURATIONVAL: "DURATIONVAL",
+	STRING:      "STRING",
+	BADSTRING:   "BADSTRING",
+	BADESCAPE:   "BADESCAPE",
+	TRUE:        "TRUE",
+	FALSE:       "FALSE",
+	REGEX:       "REGEX",
 
 	ADD: "+",
 	SUB: "-",
@@ -172,12 +168,13 @@ var tokens = [...]string{
 	GT:       ">",
 	GTE:      ">=",
 
-	LPAREN:    "(",
-	RPAREN:    ")",
-	COMMA:     ",",
-	COLON:     ":",
-	SEMICOLON: ";",
-	DOT:       ".",
+	LPAREN:      "(",
+	RPAREN:      ")",
+	COMMA:       ",",
+	COLON:       ":",
+	DOUBLECOLON: "::",
+	SEMICOLON:   ";",
+	DOT:         ".",
 
 	ALL:           "ALL",
 	ALTER:         "ALTER",
@@ -188,7 +185,6 @@ var tokens = [...]string{
 	BY:            "BY",
 	CREATE:        "CREATE",
 	CONTINUOUS:    "CONTINUOUS",
-	DATA:          "DATA",
 	DATABASE:      "DATABASE",
 	DATABASES:     "DATABASES",
 	DEFAULT:       "DEFAULT",
@@ -201,30 +197,25 @@ var tokens = [...]string{
 	DURATION:      "DURATION",
 	END:           "END",
 	EVERY:         "EVERY",
-	EXISTS:        "EXISTS",
 	EXPLAIN:       "EXPLAIN",
 	FIELD:         "FIELD",
 	FOR:           "FOR",
-	FORCE:         "FORCE",
 	FROM:          "FROM",
 	GRANT:         "GRANT",
 	GRANTS:        "GRANTS",
 	GROUP:         "GROUP",
 	GROUPS:        "GROUPS",
-	IF:            "IF",
 	IN:            "IN",
 	INF:           "INF",
-	INNER:         "INNER",
 	INSERT:        "INSERT",
 	INTO:          "INTO",
 	KEY:           "KEY",
 	KEYS:          "KEYS",
+	KILL:          "KILL",
 	LIMIT:         "LIMIT",
 	MEASUREMENT:   "MEASUREMENT",
 	MEASUREMENTS:  "MEASUREMENTS",
-	META:          "META",
 	NAME:          "NAME",
-	NOT:           "NOT",
 	OFFSET:        "OFFSET",
 	ON:            "ON",
 	ORDER:         "ORDER",
@@ -241,8 +232,6 @@ var tokens = [...]string{
 	REVOKE:        "REVOKE",
 	SELECT:        "SELECT",
 	SERIES:        "SERIES",
-	SERVER:        "SERVER",
-	SERVERS:       "SERVERS",
 	SET:           "SET",
 	SHOW:          "SHOW",
 	SHARD:         "SHARD",
@@ -266,7 +255,7 @@ var keywords map[string]Token
 
 func init() {
 	keywords = make(map[string]Token)
-	for tok := keyword_beg + 1; tok < keyword_end; tok++ {
+	for tok := keywordBeg + 1; tok < keywordEnd; tok++ {
 		keywords[strings.ToLower(tokens[tok])] = tok
 	}
 	for _, tok := range []Token{AND, OR} {
@@ -302,7 +291,7 @@ func (tok Token) Precedence() int {
 }
 
 // isOperator returns true for operator tokens.
-func (tok Token) isOperator() bool { return tok > operator_beg && tok < operator_end }
+func (tok Token) isOperator() bool { return tok > operatorBeg && tok < operatorEnd }
 
 // tokstr returns a literal if provided, otherwise returns the token string.
 func tokstr(tok Token, lit string) string {

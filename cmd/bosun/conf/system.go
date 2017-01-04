@@ -12,7 +12,7 @@ import (
 	"bosun.org/opentsdb"
 	"github.com/BurntSushi/toml"
 	"github.com/bosun-monitor/annotate"
-	"github.com/influxdata/influxdb/client"
+	"github.com/influxdata/influxdb/client/v2"
 )
 
 // SystemConf contains all the information that bosun needs to run. Outside of the conf package
@@ -76,7 +76,7 @@ func (sc *SystemConf) EnabledBackends() EnabledBackends {
 	b := EnabledBackends{}
 	b.OpenTSDB = sc.OpenTSDBConf.Host != ""
 	b.Graphite = sc.GraphiteConf.Host != ""
-	b.Influx = sc.InfluxConf.URL.URL != nil && sc.InfluxConf.URL.Host != ""
+	b.Influx = sc.InfluxConf.URL != ""
 	b.Logstash = len(sc.LogStashConf.Hosts) != 0
 	b.Elastic = len(sc.ElasticConf.Hosts) != 0
 	b.Annotate = len(sc.AnnotateConf.Hosts) != 0
@@ -117,7 +117,7 @@ type ElasticConf struct {
 
 // InfluxConf contains configuration for an influx host that Bosun can query
 type InfluxConf struct {
-	URL       URL
+	URL       string
 	Username  string
 	Password  string `json:"-"`
 	UserAgent string
@@ -462,10 +462,10 @@ func (sc *SystemConf) GetGraphiteContext() graphite.Context {
 
 // GetInfluxContext returns a Influx context which contains all the information needed
 // to query Influx.
-func (sc *SystemConf) GetInfluxContext() client.Config {
-	c := client.NewConfig()
+func (sc *SystemConf) GetInfluxContext() client.HTTPConfig {
+	c := client.HTTPConfig{}
 	if sc.md.IsDefined("InfluxConf", "URL") {
-		c.URL = *sc.InfluxConf.URL.URL
+		c.Addr = sc.InfluxConf.URL
 	}
 	if sc.md.IsDefined("InfluxConf", "Username") {
 		c.Username = sc.InfluxConf.Username
@@ -480,7 +480,7 @@ func (sc *SystemConf) GetInfluxContext() client.Config {
 		c.Timeout = sc.InfluxConf.Timeout.Duration
 	}
 	if sc.md.IsDefined("InfluxConf", "UnsafeSsl") {
-		c.UnsafeSsl = sc.InfluxConf.UnsafeSSL
+		c.InsecureSkipVerify = sc.InfluxConf.UnsafeSSL
 	}
 	return c
 }

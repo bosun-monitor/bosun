@@ -362,6 +362,21 @@ func (c *Client) loadEntity(dst interface{}, src *ole.IDispatch) (errFieldMismat
 				}
 			}
 		default:
+			// Only support []string slices for now
+			if f.Kind() == reflect.Slice && f.Type().Elem().Kind() == reflect.String {
+				safeArray := prop.ToArray()
+				if safeArray != nil {
+					arr := safeArray.ToValueArray()
+					fArr := reflect.MakeSlice(f.Type(), len(arr), len(arr))
+					for i, v := range arr {
+						s := fArr.Index(i)
+						s.SetString(v.(string))
+					}
+					f.Set(fArr)
+					break
+				}
+			}
+
 			typeof := reflect.TypeOf(val)
 			if typeof == nil && (isPtr || c.NonePtrZero) {
 				if (isPtr && c.PtrNil) || (!isPtr && c.NonePtrZero) {

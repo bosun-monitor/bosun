@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -227,9 +228,22 @@ func dscStateToStatusCode(t string) int64 {
 }
 
 func dscStartDateToAge(startdate string) float64 {
-	t, err := time.Parse("2006/01/02 15:04:05", startdate)
+	var t = time.Time{}
+	var err error
+	// See https://msdn.microsoft.com/en-us/library/aa387237(v=vs.85).aspx for different WMI date time formats
+	if len(startdate) == 25 && strings.IndexAny(startdate, "+-") == 21 {
+		//Parse yyyymmddHHMMSS.mmmmmmsUUU where sUUU is timezone in +/- minutes from UTC
+		tzmin, err := strconv.Atoi(startdate[21:])
+		if err != nil {
+			return -1
+		}
+		t, err = time.ParseInLocation("20060102150405.999999", startdate[0:21], time.FixedZone("WMI", tzmin*60))
+	} else {
+		//Parse yyyy-mm-dd HH:MM:SS:mmm and assume UTC
+		t, err = time.Parse("2006/01/02 15:04:05", startdate)
+	}
 	if err != nil {
 		return -1
 	}
-	return time.Now().Sub(t).Seconds()
+	return time.Now().UTC().Sub(t).Seconds()
 }

@@ -49,7 +49,25 @@ func TagValuesByMetricTagKey(t miniprofiler.Timer, w http.ResponseWriter, r *htt
 	vars := mux.Vars(r)
 	metric := vars["metric"]
 	tagk := vars["tagk"]
-	return schedule.Search.TagValuesByMetricTagKey(metric, tagk, 0)
+	since, err := getSince(r)
+	if err != nil {
+		return nil, err
+	}
+	return schedule.Search.TagValuesByMetricTagKey(metric, tagk, since)
+}
+
+func getSince(r *http.Request) (time.Duration, error) {
+	s := r.FormValue("since")
+	since := schedule.SystemConf.GetSearchSince()
+
+	if s != "" && s != "default" {
+		td, err := opentsdb.ParseDuration(s)
+		if err != nil {
+			return 0, err
+		}
+		since = time.Duration(td)
+	}
+	return since, nil
 }
 
 func FilteredTagsetsByMetric(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
@@ -85,7 +103,11 @@ func MetricsByTagPair(t miniprofiler.Timer, w http.ResponseWriter, r *http.Reque
 func MetricsByTagKey(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	tagk := vars["tagk"]
-	tagValues, err := schedule.Search.TagValuesByTagKey(tagk, schedule.SystemConf.GetSearchSince())
+	since, err := getSince(r)
+	if err != nil {
+		return nil, err
+	}
+	tagValues, err := schedule.Search.TagValuesByTagKey(tagk, since)
 	if err != nil {
 		return nil, err
 	}
@@ -104,16 +126,9 @@ func MetricsByTagKey(t miniprofiler.Timer, w http.ResponseWriter, r *http.Reques
 func TagValuesByTagKey(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	tagk := vars["tagk"]
-	s := r.FormValue("since")
-	var since time.Duration
-	if s == "default" {
-		since = schedule.SystemConf.GetSearchSince()
-	} else if s != "" {
-		td, err := opentsdb.ParseDuration(s)
-		if err != nil {
-			return nil, err
-		}
-		since = time.Duration(td)
+	since, err := getSince(r)
+	if err != nil {
+		return nil, err
 	}
 	return schedule.Search.TagValuesByTagKey(tagk, since)
 }
