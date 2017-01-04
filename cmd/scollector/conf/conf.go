@@ -76,6 +76,7 @@ type Conf struct {
 	Nexpose             []Nexpose
 	GoogleAnalytics     []GoogleAnalytics
 	GoogleWebmaster     []GoogleWebmaster
+	GoogleCloudBilling  []GoogleCloudBilling
 	Cadvisor            []Cadvisor
 	RedisCounters       []RedisCounters
 	ExtraHop            []ExtraHop
@@ -153,6 +154,11 @@ type AzureEA struct {
 	EANumber          uint32
 	APIKey            string
 	LogBillingDetails bool
+}
+
+type GoogleCloudBilling struct {
+	BucketName string
+	AuthBase64 string
 }
 
 type SNMP struct {
