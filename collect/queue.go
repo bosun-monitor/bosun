@@ -14,11 +14,8 @@ import (
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
-	"crypto/tls"
 	"github.com/GROpenSourceDev/go-ntlm-auth/ntlm"
 	"net/http/httptest"
-	"net/http/httputil"
-	"strings"
 )
 
 func queuer() {

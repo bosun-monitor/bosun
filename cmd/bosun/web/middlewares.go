@@ -12,7 +12,6 @@ import (
 
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/collect"
-	"bosun.org/metadata"
 	"bosun.org/opentsdb"
 )
 
