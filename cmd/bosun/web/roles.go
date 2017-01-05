@@ -20,6 +20,7 @@ const (
 	canCreateAnnotations
 	canSilence
 	canManageTokens
+	canOverwriteUsername
 )
 
 const (
@@ -40,6 +41,7 @@ var roleDefs = &roleMetadata{
 		{canCreateAnnotations, "Create Annotations", "Can add and manage annotations via api"},
 		{canSilence, "Silence", "Can add and manage silences"},
 		{canManageTokens, "Manage Tokens", "Can manage authorization tokens"},
+		{canOverwriteUsername, "Set Username", "Allows external services to set username in api requests"},
 	},
 	Roles: []bitDesc{
 		{roleReader, "Reader", "Read access to dashboard"},

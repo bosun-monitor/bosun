@@ -13,6 +13,7 @@ func SaveConfig(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (i
 	data := struct {
 		Config  string
 		Diff    string
+		User    string
 		Message string
 		Other   []string
 	}{}
@@ -20,7 +21,13 @@ func SaveConfig(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (i
 	if err := decoder.Decode(&data); err != nil {
 		return nil, err
 	}
-	err := schedule.RuleConf.SaveRawText(data.Config, data.Diff, getUsername(r), data.Message, data.Other...)
+	if data.User != "" && !userCanOverwriteUsername(r) {
+		http.Error(w, "Not Authorized to set User", 400)
+		return nil, nil
+	} else if data.User == "" {
+		data.User = getUsername(r)
+	}
+	err := schedule.RuleConf.SaveRawText(data.Config, data.Diff, data.User, data.Message, data.Other...)
 	if err != nil {
 		return nil, err
 	}
@@ -35,7 +42,12 @@ func DiffConfig(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (i
 		User    string
 		Other   []string
 	}{}
-	data.User = getUsername(r)
+	if data.User != "" && !userCanOverwriteUsername(r) {
+		http.Error(w, "Not Authorized to set User", 400)
+		return nil, nil
+	} else if data.User == "" {
+		data.User = getUsername(r)
+	}
 	decoder := json.NewDecoder(r.Body)
 	if err := decoder.Decode(&data); err != nil {
 		return nil, err

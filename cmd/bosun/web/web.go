@@ -676,6 +676,14 @@ func getUsername(r *http.Request) string {
 	return "unknown"
 }
 
+func userCanOverwriteUsername(r *http.Request) bool {
+	user := easyauth.GetUser(r)
+	if user != nil {
+		return user.Access&canOverwriteUsername != 0
+	}
+	return false
+}
+
 func Action(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	var data struct {
 		Type    string
@@ -683,6 +691,7 @@ func Action(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (inter
 		Keys    []string
 		Ids     []int64
 		Notify  bool
+		User    string
 	}
 	j := json.NewDecoder(r.Body)
 	if err := j.Decode(&data); err != nil {
@@ -706,13 +715,20 @@ func Action(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (inter
 	errs := make(MultiError)
 	r.ParseForm()
 	successful := []models.AlertKey{}
-	uname := getUsername(r)
+
+	if data.User != "" && !userCanOverwriteUsername(r) {
+		http.Error(w, "Not Authorized to set User", 400)
+		return nil, nil
+	} else if data.User == "" {
+		data.User = getUsername(r)
+	}
+
 	for _, key := range data.Keys {
 		ak, err := models.ParseAlertKey(key)
 		if err != nil {
 			return nil, err
 		}
-		err = schedule.ActionByAlertKey(uname, data.Message, at, ak)
+		err = schedule.ActionByAlertKey(data.User, data.Message, at, ak)
 		if err != nil {
 			errs[key] = err
 		} else {
@@ -720,7 +736,7 @@ func Action(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (inter
 		}
 	}
 	for _, id := range data.Ids {
-		ak, err := schedule.ActionByIncidentId(uname, data.Message, at, id)
+		ak, err := schedule.ActionByIncidentId(data.User, data.Message, at, id)
 		if err != nil {
 			errs[fmt.Sprintf("%v", id)] = err
 		} else {
@@ -731,7 +747,7 @@ func Action(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (inter
 		return nil, errs
 	}
 	if data.Notify && len(successful) != 0 {
-		err := schedule.ActionNotify(at, uname, data.Message, successful)
+		err := schedule.ActionNotify(at, data.User, data.Message, successful)
 		if err != nil {
 			return nil, err
 		}
@@ -804,7 +820,14 @@ func SilenceSet(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (i
 		}
 		end = start.Add(time.Duration(d))
 	}
-	return schedule.AddSilence(start, end, data["alert"], data["tags"], data["forget"] == "true", len(data["confirm"]) > 0, data["edit"], getUsername(r), data["message"])
+	username := getUsername(r)
+	if _, ok := data["user"]; ok && !userCanOverwriteUsername(r) {
+		http.Error(w, "Not authorized to set 'user' parameter", 400)
+		return nil, nil
+	} else if ok {
+		username = data["user"]
+	}
+	return schedule.AddSilence(start, end, data["alert"], data["tags"], data["forget"] == "true", len(data["confirm"]) > 0, data["edit"], username, data["message"])
 }
 
 func SilenceClear(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
