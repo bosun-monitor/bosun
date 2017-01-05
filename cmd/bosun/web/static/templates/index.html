@@ -122,12 +122,14 @@
 								<li ng-show="opentsdbEnabled" ng-class="active('put')"><a href="/put">Submit Data</a></li>
 							</ul>
 						</li>
-						<li class="dropdown" ng-cloak><a href="#" class="dropdown-toggle" data-toggle="dropdown" >{{ "{{" }}auth.Username(){{ "}}" }}<b class="caret"></b></a>
+						{{ $Username := "{{auth.Username()}}" }}
+						<li ng-if="auth.Enabled() || tokensEnabled" class="dropdown" ng-cloak><a href="#" class="dropdown-toggle" data-toggle="dropdown" ><span class='glyphicon glyphicon-user'></span>{{$Username}}<b class="caret"></b></a>
 							<ul class="dropdown-menu">
 								<li ng-if="auth.Enabled()"><a href="/login/out" target='_self'>Log out</a></li>
 								<li ng-if="tokensEnabled"><a href="/tokens">Manage Auth Tokens</a></li>
 							</ul>
 						</li>
+						<li ng-if="!auth.Enabled() && !tokensEnabled"><span class='glyphicon glyphicon-user'></span>{{ $Username }}</li>
 					</ul>
 				</div>
 			</div>
