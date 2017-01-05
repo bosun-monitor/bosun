@@ -129,7 +129,7 @@
 								<li ng-if="tokensEnabled"><a href="/tokens">Manage Auth Tokens</a></li>
 							</ul>
 						</li>
-						<li ng-if="!auth.Enabled() && !tokensEnabled"><span class='glyphicon glyphicon-user'></span>{{ $Username }}</li>
+						<li ng-cloak class='navbar-text' ng-if="!auth.Enabled() && !tokensEnabled"><span class='glyphicon glyphicon-user'></span>{{ $Username }}</li>
 					</ul>
 				</div>
 			</div>
