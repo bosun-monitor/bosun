@@ -106,7 +106,6 @@
 						<li ng-class="active('expr')"><a href="/expr">Expression</a></li>
 						<li ng-class="active('config')"><a href="/config">Rule Editor</a></li>
 						<li ng-class="active('silence')"><a href="/silence">Silence</a></li>
-						<li ng-show="opentsdbEnabled" ng-class="active('put')"><a href="/put">Submit Data</a></li>
 						<li ng-show="annotateEnabled" ng-class="active('annotation')" ng-cloak><a href="/annotation">Submit Annotation</a></li>
 					</ul>
 					<ul class="nav navbar-nav navbar-right">
@@ -120,12 +119,13 @@
 								<li><a href="http://bosun.org/configuration.html">Configuration and Expression Syntax</a></li>
 								<li><a href="http://bosun.org/api.html">API Endpoints</a></li>
 								<li><a href="http://opentsdb.net/docs/build/html/index.html">OpenTSDB Documentation</a></li>
+								<li ng-show="opentsdbEnabled" ng-class="active('put')"><a href="/put">Submit Data</a></li>
 							</ul>
 						</li>
-						<li class="dropdown" ><a href="#" class="dropdown-toggle" data-toggle="dropdown" >{{ "{{" }}auth.Username(){{ "}}" }}<b class="caret"></b></a>
+						<li class="dropdown" ng-cloak><a href="#" class="dropdown-toggle" data-toggle="dropdown" >{{ "{{" }}auth.Username(){{ "}}" }}<b class="caret"></b></a>
 							<ul class="dropdown-menu">
-								<li><a href="/login/out" target='_self'>Log out</a></li>
-								<li><a href="/tokens">Manage Auth Tokens</a></li>
+								<li ng-if="auth.Enabled()"><a href="/login/out" target='_self'>Log out</a></li>
+								<li ng-if="tokensEnabled"><a href="/tokens">Manage Auth Tokens</a></li>
 							</ul>
 						</li>
 					</ul>
