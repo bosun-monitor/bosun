@@ -362,6 +362,27 @@ the group number for this group and put it in here.
 		CertificateSubjectMatch = "example.(com|org|net)"
 		CertificateActivityGroup = 46
 
+
+GoogleCloudBilling (array of table, keys are BucketName and AuthBase64): If you have one or more Google Cloud
+billing accounts, scollector can read those bills and send their data.
+
+To report Google Cloud billing information to OpenTSDB or Bosun, you need to configure Google Cloud to
+generate billing reports in JSON format, which will be put into a storage bucket. See for more detail:
+https://support.google.com/cloud/answer/6293835?hl=en
+
+One you have configured the reports to go into the bucket, you will need to enter the name of your
+bucket in the BucketName key. You will also need to configure a Service Account with the permission of
+"Storage Object Viewer", and give that storage account read access to your bucket that contains the
+bill exports. For more information about service accounts, see: https://cloud.google.com/compute/docs/access/service-accounts
+
+Once you have created your service account, Google Cloud Console will provide you with a JSON-formatted
+private key. You will need to convert that key to base64 encoding and place it in the AuthBase64 key.
+
+  [[GoogleCloudBilling]]
+    BucketName = "example-billing-bucket"
+    AuthBase64 = "ew0KICAidHlwZSI6ICJzZXJ2aWNlX2FjY291bnQiLA0KICAicHJvamVjdF9pZCI6ICJleGFtcGxlLXByb2plY3QiLA0KICAicHJpdmF0ZV9rZXlfaWQiOiAiMDhkZmY4ZDRhZjAyZTUzOTA5YzAyMGViM2MyNjg0ZWU2ZDc5NzFlNyIsDQogICJwcml2YXRlX2tleSI6ICItLS0tLUJFR0lOIFBSSVZBVEUgS0VZLS0tLS1cNG5jUldHbzBQMldhVVAxV01DUHJIWHk2eE1EU2dhTXNHSlpMb2hiQVxuUEo5MXc1SDFKbkRNY21SWFg4RUp2VEZGamZTb0R0d2ZwRmswTVYwUEFvR0JBSTZQR3BEVWdXMWRRSzVGQ2hQd1xuTHZkZlRXUGE5NmpadEpcbi0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS1cbiIsDQogICJjbGllbnRfZW1haWwiOiAic2NvbGxlY3Rvci1iaWxsaW5nQGV4YW1wbGUtcHJvamVjdC5pYW0uZ3NlcnZpY2VhY2NvdW50LmNvbSIsDQogICJjbGllbnRfaWQiOiAiNTg3NDU4NDEyNDUyNTYwMTUwOCIsDQogICJhdXRoX3VyaSI6ICJodHRwczovL2FjY291bnRzLmdvb2dsZS5jb20vby9vYXV0aDIvYXV0aCIsDQogICJ0b2tlbl91cmkiOiAiaHR0cHM6Ly9hY2NvdW50cy5nb29nbGUuY29tL28vb2F1dGgyL3Rva2VuIiwNCiAgImF1dGhfcHJvdmlkZXJfeDUwOV9jZXJ0X3VybCI6ICJodHRwczovL3d3dy5nb29nbGVhcGlzLmNvbS9vYXV0aDIvdjEvY2VydHMiLA0KICAiY2xpZW50X3g1MDlfY2VydF91cmwiOiAiaHR0cHM6Ly93d3cuZ29vZ2xlYXBpcy5jb20vcm9ib3QvdjEvbWV0YWRhdGEveDUwOS9zY29sbGVjdG9yLWJpbGxpbmclNDBleGFtcGxlLXByb2plY3QuaWFtLmdzZXJ2aWNlYWNjb3VudC5jb20iDQp9DQo="
+
+
 LocalListener (string): local_listener will listen for HTTP request and forward
 the request to the configured OpenTSDB host while adding defined tags to
 metrics.

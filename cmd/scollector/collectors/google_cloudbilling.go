@@ -1,23 +1,17 @@
 package collectors
 
 import (
-	"bytes"
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
+	"math"
 	"strconv"
+	"strings"
 	"time"
 
 	"golang.org/x/oauth2/google"
-
 	"google.golang.org/api/storage/v1"
-
-	"encoding/base64"
-
-	"encoding/json"
-
-	"strings"
-
-	"math"
 
 	"bosun.org/cmd/scollector/conf"
 	"bosun.org/metadata"
@@ -25,7 +19,8 @@ import (
 	"bosun.org/slog"
 )
 
-var gcbConf = conf.GoogleCloudBilling{}
+var gcbConf conf.GoogleCloudBilling
+var gcbClient *storage.Service
 
 const (
 	gcbHoursInDay = 24
@@ -33,31 +28,36 @@ const (
 	gcbCostDesc   = "Cost of consuming given Google Cloud services"
 )
 
+func init() {
+	registerInit(startGoogleCloudBilling)
+}
+
 // GoogleCloudBilling instantiates the GoogleCloudBilling collector
-func GoogleCloudBilling(bucketName, authBase64 string) error {
-	if bucketName != "" {
-		gcbConf = conf.GoogleCloudBilling{
-			BucketName: bucketName,
-			AuthBase64: authBase64,
+func startGoogleCloudBilling(c *conf.Conf) {
+	for _, config := range c.GoogleCloudBilling {
+		if config.BucketName == "" {
+			slog.Errorln("No bucket name for Google Cloud Billing exports specified")
 		}
+		gcbConf = conf.GoogleCloudBilling{
+			BucketName: config.BucketName,
+			AuthBase64: config.AuthBase64,
+		}
+		newClient, err := createGCStorageClient()
+		if err != nil {
+			slog.Errorln("Could not create Google Cloud storage client: %s", err)
+		}
+		gcbClient = newClient
 		collectors = append(collectors, &IntervalCollector{
 			F:        c_googlecloudbilling,
 			Interval: 1 * time.Hour,
 		})
 	}
-
-	return nil
 }
 
 func c_googlecloudbilling() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
-	//Create a connection to the Google Cloud services
-	gcClient, err := createGCStorageClient()
-	if err != nil {
-		return nil, err
-	}
 	//Get the list of available files from the storage bucket
-	reports, err := gcClient.Objects.List(gcbConf.BucketName).Do()
+	reports, err := gcbClient.Objects.List(gcbConf.BucketName).Do()
 	if err != nil {
 		return nil, err
 	}
@@ -88,24 +88,19 @@ func c_googlecloudbilling() (opentsdb.MultiDataPoint, error) {
 		if err != nil {
 			continue
 		}
-		if !(dateDate.Before(dateRangeEnd) && dateDate.After(dateRangeStart)) {
+		if dateDate.Before(dateRangeStart) || dateDate.After(dateRangeEnd) {
 			continue
 		}
 		//Ok, so we want to process this. Now we need to download the file, convert it to a string containing the JSON,
 		//unmarshall that into the bill struct and send it off for processing
-		thisItemResponse, err := gcClient.Objects.Get(item.Bucket, item.Name).Download()
+		thisItemResponse, err := gcbClient.Objects.Get(item.Bucket, item.Name).Download()
 		if err != nil {
 			return md, fmt.Errorf("gcloud: Could not download %s: %s", item.Name, err)
 		}
-		buf := bytes.NewBuffer(make([]byte, 0, thisItemResponse.ContentLength))
-		_, readErr := buf.ReadFrom(thisItemResponse.Body)
-		if readErr != nil {
-			return md, fmt.Errorf("gcloud: Could not read %s: %s", item.Name, err)
-		}
 
-		//We have our []byte containing our JSON, so unmarshal that into the struct
 		var thisBill gcBill
-		err = json.Unmarshal(buf.Bytes(), &thisBill)
+		decoder := json.NewDecoder(thisItemResponse.Body)
+		err = decoder.Decode(&thisBill)
 		if err != nil {
 			return md, fmt.Errorf("gcloud: Could not unmarshal %s to JSON: %s", item.Name, err)
 		}
@@ -137,8 +132,8 @@ func processGCBill(md *opentsdb.MultiDataPoint, thisBill *gcBill) error {
 			slog.Errorf("gcloud: could not convert %s to time.Time: %s", item.EndTime, err)
 			continue
 		}
-		startTime = startTime.In(time.UTC) //We want to send UTC data
-		endTime = endTime.In(time.UTC)
+		startTime = startTime.UTC() //We want to send UTC data
+		endTime = endTime.UTC()
 
 		//Now that we have proper start/end times, we can figure out how many hours there was inbetween,
 		//and the values per hour. In the event of partial hours, we will round down.
@@ -202,11 +197,6 @@ func createGCStorageClient() (*storage.Service, error) {
 	ctx := context.Background()
 	hc := jwt.Client(ctx)
 	return storage.New(hc)
-}
-
-type googleCloudBillingConfig struct {
-	BucketName string
-	GCClient   *storage.Service
 }
 
 type gcBill []struct {

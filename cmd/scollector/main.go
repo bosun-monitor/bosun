@@ -153,9 +153,6 @@ func main() {
 	for _, ea := range conf.AzureEA {
 		check(collectors.AzureEABilling(ea.EANumber, ea.APIKey, ea.LogBillingDetails))
 	}
-	for _, gcb := range conf.GoogleCloudBilling {
-		check(collectors.GoogleCloudBilling(gcb.BucketName, gcb.AuthBase64))
-	}
 	for _, v := range conf.Vsphere {
 		check(collectors.Vsphere(v.User, v.Password, v.Host))
 	}
