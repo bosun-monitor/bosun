@@ -15,10 +15,10 @@ import (
 var azBillConf = azureEABillingConfig{}
 
 const (
-	hoursInDay = 24
-	usageDesc  = "Usage of Azure service. Category is concatenated meter details. Resource is concatenated resource group and resource name."
-	costDesc   = "Cost of Azure service. Category is concatenated meter details. Resource is concatenated resource group and resource name."
-	priceDesc  = "Azure price sheet data for Enterprise Agreement services"
+	azHoursInDay = 24
+	azUsageDesc  = "Usage of Azure service. Category is concatenated meter details. Resource is concatenated resource group and resource name."
+	azCostDesc   = "Cost of Azure service. Category is concatenated meter details. Resource is concatenated resource group and resource name."
+	azPriceDesc  = "Azure price sheet data for Enterprise Agreement services"
 )
 
 func AzureEABilling(ea uint32, key string, logBilling bool) error {
@@ -100,7 +100,7 @@ func processAzureEAPriceSheetRow(p *azureeabilling.PriceSheetRow, md *opentsdb.M
 		"partnumber": p.PartNumber,
 		"service":    fullProdName,
 	}
-	Add(md, "azure.ea.pricesheet", priceString, tags, metadata.Gauge, metadata.Count, priceDesc)
+	Add(md, "azure.ea.pricesheet", priceString, tags, metadata.Gauge, metadata.Count, azPriceDesc)
 	return nil
 }
 
@@ -150,7 +150,7 @@ func processAzureEADetailRow(p *azureeabilling.DetailRow, md *opentsdb.MultiData
 	recordDate := time.Date(p.Year, time.Month(p.Month), p.Day, 0, 0, 0, 0, time.UTC)
 
 	//Because we need to log this hourly and we only have daily data, divide the daily cost into hourly costs
-	qtyPerHour := p.ConsumedQuantity / hoursInDay
+	qtyPerHour := p.ConsumedQuantity / azHoursInDay
 
 	//ExtendedCost is stored only in a string, because it's a variable number of decimal places. Which means we can't reliably store it in an int, and storing in a float reduces precision.
 	//This way we're choosing ourselves to drop the precision, which adds up to around 10-20c under initial testing.
@@ -158,13 +158,13 @@ func processAzureEADetailRow(p *azureeabilling.DetailRow, md *opentsdb.MultiData
 	if err != nil {
 		return err
 	}
-	costPerHour := costPerDay / hoursInDay
+	costPerHour := costPerDay / azHoursInDay
 
 	//Get 24 records for 24 hours in a day
-	for i := 0; i < hoursInDay; i++ {
+	for i := 0; i < azHoursInDay; i++ {
 		recordTime := recordDate.Add(time.Duration(i) * time.Hour)
-		AddTS(md, "azure.ea.usage", recordTime.Unix(), qtyPerHour, tags, metadata.Gauge, metadata.Count, usageDesc)
-		AddTS(md, "azure.ea.cost", recordTime.Unix(), costPerHour, tags, metadata.Gauge, metadata.Count, costDesc)
+		AddTS(md, "azure.ea.usage", recordTime.Unix(), qtyPerHour, tags, metadata.Gauge, metadata.Count, azUsageDesc)
+		AddTS(md, "azure.ea.cost", recordTime.Unix(), costPerHour, tags, metadata.Gauge, metadata.Count, azCostDesc)
 	}
 
 	return nil
