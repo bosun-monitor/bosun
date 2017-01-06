@@ -225,7 +225,7 @@ interface IGraphScope extends ng.IScope {
 	filterSupport: boolean;
 	filters: string[];
 	annotations: any[];
-	annotation: any;
+	annotation: Annotation;
 	submitAnnotation: () => void;
 	deleteAnnotation: () => void;
 	owners: string[];
@@ -238,7 +238,7 @@ interface IGraphScope extends ng.IScope {
 	keydown: ($event: any) => void;
 }
 
-bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route', '$timeout', function ($scope: IGraphScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService, $timeout: ng.ITimeoutService) {
+bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route', '$timeout','authService', function ($scope: IGraphScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService, $timeout: ng.ITimeoutService, auth: IAuthService) {
 	$scope.aggregators = ["sum", "min", "max", "avg", "dev", "zimsum", "mimmin", "minmax"];
 	$scope.dsaggregators = ["", "sum", "min", "max", "avg", "dev", "zimsum", "mimmin", "minmax"];
 	$scope.filters = ["auto", "iliteral_or", "iwildcard", "literal_or", "not_iliteral_or", "not_literal_or", "regexp", "wildcard"];
@@ -260,7 +260,7 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 	if (search.b64) {
 		j = atob(search.b64);
 	}
-	$scope.annotation = {};
+	$scope.annotation = new Annotation();
 	var request = j ? JSON.parse(j) : new Request;
 	$scope.index = parseInt($location.hash()) || 0;
 	$scope.tagvs = [];
@@ -308,7 +308,9 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 		}
 		return AbsToRel(s);
 	}
-	$scope.submitAnnotation = () => $http.post('/api/annotation', $scope.annotation)
+	$scope.submitAnnotation = () => {
+		$scope.annotation.CreationUser = auth.GetUsername();
+		$http.post('/api/annotation', $scope.annotation)
 		.success((data) => {
 			//debugger;
 			if ($scope.annotation.Id == "" && $scope.annotation.Owner != "") {
@@ -322,6 +324,7 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 		.error((error) => {
 			$scope.error = error;
 		});
+	}
 	$scope.deleteAnnotation = () => $http.delete('/api/annotation/' + $scope.annotation.Id)
 		.success((data) => {
 			$scope.error = "";
@@ -469,7 +472,7 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 		});
 		return request;
 	}
-		$scope.keydown = function ($event: any) {
+	$scope.keydown = function ($event: any) {
 		if ($event.shiftKey && $event.keyCode == 13) {
 			$scope.Query();
 		}

@@ -1,17 +1,42 @@
+/// <reference path="moment.d.ts" />
+/// <reference path="moment-duration-format.d.ts" />
+//Represents an auth token
+var Token = (function () {
+    function Token() {
+        this.Description = "";
+        this.Role = 0;
+        this.User = "";
+    }
+    return Token;
+})();
+//metadata about a single role or permission
+var BitMeta = (function () {
+    function BitMeta() {
+    }
+    return BitMeta;
+})();
+//all roles/permissions for bosun
+var RoleDefs = (function () {
+    function RoleDefs() {
+    }
+    return RoleDefs;
+})();
 /// <reference path="angular.d.ts" />
 /// <reference path="angular-route.d.ts" />
 /// <reference path="angular-sanitize.d.ts" />
 /// <reference path="bootstrap.d.ts" />
-/// <reference path="moment.d.ts" />
-/// <reference path="moment-duration-format.d.ts" />
+/// <reference path="jquery.d.ts" />
 /// <reference path="d3.d.ts" />
 /// <reference path="underscore.d.ts" />
+/// <reference path="models.ts" />
 var bosunApp = angular.module('bosunApp', [
     'ngRoute',
     'bosunControllers',
     'mgcrea.ngStrap',
+    'mgcrea.ngStrap.tooltip',
     'ngSanitize',
     'ui.ace',
+    'ngclipboard',
 ]);
 bosunApp.config(['$routeProvider', '$locationProvider', '$httpProvider', function ($routeProvider, $locationProvider, $httpProvider) {
         $locationProvider.html5Mode({
@@ -86,6 +111,14 @@ bosunApp.config(['$routeProvider', '$locationProvider', '$httpProvider', functio
             templateUrl: 'partials/incident.html',
             controller: 'IncidentCtrl'
         }).
+            when('/tokens', {
+            title: 'Access Tokens',
+            template: "<token-list></token-list>"
+        }).
+            when('/tokens/new', {
+            title: 'New Access Token',
+            template: "<new-token></new-token>"
+        }).
             otherwise({
             redirectTo: '/'
         });
@@ -105,7 +138,8 @@ bosunApp.run(['$location', '$rootScope', function ($location, $rootScope) {
         });
     }]);
 var bosunControllers = angular.module('bosunControllers', []);
-bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', '$q', '$rootScope', function ($scope, $route, $http, $q, $rootScope) {
+bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', '$q', '$rootScope', 'authService',
+    function ($scope, $route, $http, $q, $rootScope, AuthService) {
         $scope.$on('$routeChangeSuccess', function (event, current, previous) {
             $scope.stop(true);
         });
@@ -124,6 +158,9 @@ bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', '$q', '$r
             $scope.quiet = settings.Quiet;
             $scope.version = settings.Version;
             $scope.opentsdbEnabled = $scope.version.Major != 0 && $scope.version.Minor != 0;
+            $scope.tokensEnabled = settings.TokensEnabled;
+            $scope.auth = AuthService;
+            AuthService.Init(settings.AuthEnabled, settings.Username, settings.Roles, settings.Permissions);
         };
         $scope.json = function (v) {
             return JSON.stringify(v, null, '  ');
@@ -356,12 +393,6 @@ function readCookie(name) {
 function eraseCookie(name) {
     createCookie(name, "", -1);
 }
-function getUser() {
-    return readCookie('action-user');
-}
-function setUser(name) {
-    createCookie('action-user', name, 1000);
-}
 function getOwner() {
     return readCookie('action-owner');
 }
@@ -391,7 +422,7 @@ var Annotation = (function () {
         this.Message = a.Message || "";
         this.StartDate = a.StartDate || "";
         this.EndDate = a.EndDate || "";
-        this.CreationUser = a.CreationUser || !get && getUser() || "";
+        this.CreationUser = a.CreationUser || "";
         this.Url = a.Url || "";
         this.Source = a.Source || "bosun-ui";
         this.Host = a.Host || "";
@@ -410,9 +441,101 @@ var Annotation = (function () {
     };
     return Annotation;
 })();
+/// <reference path="0-bosun.ts" />
+bosunControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
+        var search = $location.search();
+        var current;
+        try {
+            current = atob(search.expr);
+        }
+        catch (e) {
+            current = '';
+        }
+        if (!current) {
+            $location.search('expr', btoa('avg(q("avg:rate:os.cpu{host=*bosun*}", "5m", "")) > 80'));
+            return;
+        }
+        $scope.date = search.date || '';
+        $scope.time = search.time || '';
+        $scope.expr = current;
+        $scope.running = current;
+        $scope.tab = search.tab || 'results';
+        $scope.animate();
+        $http.post('/api/expr?' +
+            'date=' + encodeURIComponent($scope.date) +
+            '&time=' + encodeURIComponent($scope.time), current)
+            .success(function (data) {
+            $scope.result = data.Results;
+            $scope.queries = data.Queries;
+            $scope.result_type = data.Type;
+            if (data.Type == 'series') {
+                $scope.svg_url = '/api/egraph/' + btoa(current) + '.svg?now=' + Math.floor(Date.now() / 1000);
+                $scope.graph = toChart(data.Results);
+            }
+            if (data.Type == 'number') {
+                angular.forEach(data.Results, function (d) {
+                    var name = '{';
+                    angular.forEach(d.Group, function (tagv, tagk) {
+                        if (name.length > 1) {
+                            name += ',';
+                        }
+                        name += tagk + '=' + tagv;
+                    });
+                    name += '}';
+                    d.name = name;
+                });
+                $scope.bar = data.Results;
+            }
+            $scope.running = '';
+        })
+            .error(function (error) {
+            $scope.error = error;
+            $scope.running = '';
+        })
+            .finally(function () {
+            $scope.stop();
+        });
+        $scope.set = function () {
+            $location.search('expr', btoa($scope.expr));
+            $location.search('date', $scope.date || null);
+            $location.search('time', $scope.time || null);
+            $route.reload();
+        };
+        function toChart(res) {
+            var graph = [];
+            angular.forEach(res, function (d, idx) {
+                var data = [];
+                angular.forEach(d.Value, function (val, ts) {
+                    data.push([+ts, val]);
+                });
+                if (data.length == 0) {
+                    return;
+                }
+                var name = '{';
+                angular.forEach(d.Group, function (tagv, tagk) {
+                    if (name.length > 1) {
+                        name += ',';
+                    }
+                    name += tagk + '=' + tagv;
+                });
+                name += '}';
+                var series = {
+                    Data: data,
+                    Name: name
+                };
+                graph[idx] = series;
+            });
+            return graph;
+        }
+        $scope.keydown = function ($event) {
+            if ($event.shiftKey && $event.keyCode == 13) {
+                $scope.set();
+            }
+        };
+    }]);
+/// <reference path="expr.ts" />
 bosunControllers.controller('ActionCtrl', ['$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
         var search = $location.search();
-        $scope.user = readCookie("action-user");
         $scope.type = search.type;
         $scope.notify = true;
         $scope.msgValid = true;
@@ -438,12 +561,10 @@ bosunControllers.controller('ActionCtrl', ['$scope', '$http', '$location', '$rou
             }
             var data = {
                 Type: $scope.type,
-                User: $scope.user,
                 Message: $scope.message,
                 Keys: $scope.keys,
                 Notify: $scope.notify
             };
-            createCookie("action-user", $scope.user, 1000);
             $http.post('/api/action', data)
                 .success(function (data) {
                 $location.url('/');
@@ -453,6 +574,7 @@ bosunControllers.controller('ActionCtrl', ['$scope', '$http', '$location', '$rou
             });
         };
     }]);
+/// <reference path="0-bosun.ts" />
 bosunControllers.controller('AnnotationCtrl', ['$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
         var search = $location.search();
         $scope.id = search.id;
@@ -484,6 +606,7 @@ bosunControllers.controller('AnnotationCtrl', ['$scope', '$http', '$location', '
         });
         $scope.submitAnnotation = function () {
             $scope.animate();
+            $scope.annotation.CreationUser = $scope.auth.GetUsername();
             $http.post('/api/annotation', $scope.annotation)
                 .success(function (data) {
                 $scope.annotation = new Annotation(data, true);
@@ -518,6 +641,80 @@ bosunControllers.controller('AnnotationCtrl', ['$scope', '$http', '$location', '
             });
         };
     }]);
+/// <reference path="0-bosun.ts" />
+var AuthService = (function () {
+    function AuthService() {
+    }
+    AuthService.prototype.Init = function (authEnabled, username, roles, userPerms) {
+        this.roles = roles;
+        this.username = username;
+        this.userPerms = userPerms;
+        this.authEnabled = authEnabled;
+        this.cleanRoles();
+        if (!authEnabled) {
+            var cookVal = readCookie("action-user");
+            if (cookVal) {
+                this.username = cookVal;
+            }
+        }
+    };
+    AuthService.prototype.HasPermission = function (s) {
+        for (var _i = 0, _a = this.roles.Permissions; _i < _a.length; _i++) {
+            var p = _a[_i];
+            if (p.Name == s) {
+                return (p.Bits & this.userPerms) != 0;
+            }
+        }
+        return true;
+    };
+    AuthService.prototype.GetRoles = function () {
+        return this.roles;
+    };
+    AuthService.prototype.Username = function (u) {
+        if (!this.authEnabled && angular.isDefined(u)) {
+            this.username = u;
+            createCookie("action-user", u, 90);
+        }
+        return this.username;
+    };
+    AuthService.prototype.GetUsername = function () {
+        return this.username;
+    };
+    AuthService.prototype.Enabled = function () {
+        return this.authEnabled;
+    };
+    AuthService.prototype.cleanRoles = function () {
+        var _this = this;
+        //fix admin role that has extra bits corresponding to future permissions.
+        //causes bit math to go crazy and overflow. 
+        //prevents easily  making tokens that grant unknown future perms too.
+        _(this.roles.Roles).each(function (role) {
+            var mask = 0;
+            _(_this.roles.Permissions).each(function (p) {
+                if ((p.Bits & role.Bits) != 0) {
+                    mask |= p.Bits;
+                }
+            });
+            role.Bits = mask;
+        });
+    };
+    return AuthService;
+})();
+bosunApp.service("authService", AuthService);
+//simple component to show a <username-input> easily
+var UsernameInputController = (function () {
+    function UsernameInputController(auth) {
+        this.auth = auth;
+    }
+    UsernameInputController.$inject = ['authService'];
+    return UsernameInputController;
+})();
+bosunApp.component("usernameInput", {
+    controller: UsernameInputController,
+    controllerAs: "ct",
+    template: '<input type="text"class="form-control"  ng-disabled="ct.auth.Enabled()" ng-model="ct.auth.Username" ng-model-options="{ getterSetter: true }">'
+});
+/// <reference path="0-bosun.ts" />
 bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$route', '$timeout', '$sce', function ($scope, $http, $location, $route, $timeout, $sce) {
         var search = $location.search();
         $scope.fromDate = search.fromDate || '';
@@ -536,7 +733,6 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
         $scope.tab = search.tab || 'results';
         $scope.aceTheme = 'chrome';
         $scope.aceMode = 'bosun';
-        $scope.user = readCookie("action-user");
         $scope.expandDiff = false;
         $scope.runningChangedHelp = "The running config has been changed. This means you are in danger of overwriting someone else's changes. To view the changes open the 'Save Dialogue' and you will see a unified diff. The only way to get rid of the error panel is to open a new instance of the rule editor and copy your changes into it. You are still permitted to save without doing this, but then you must be very careful not to overwrite anyone else's changes.";
         var expr = search.expr;
@@ -903,11 +1099,9 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
         $scope.diffConfig = function () {
             $http.post('/api/config/diff', {
                 "Config": $scope.config_text,
-                "User": $scope.user,
                 "Message": $scope.message
             })
                 .success(function (data) {
-                createCookie("action-user", $scope.user, 1000);
                 $scope.diff = data || "No Diff";
                 // Reset running hash if there is no difference?
             })
@@ -923,7 +1117,6 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
             $http.post('/api/config/save', {
                 "Config": $scope.config_text,
                 "Diff": $scope.diff,
-                "User": $scope.user,
                 "Message": $scope.message
             })
                 .success(function (data) {
@@ -2069,97 +2262,6 @@ bosunControllers.controller('ErrorCtrl', ['$scope', '$http', '$location', '$rout
             return url;
         };
     }]);
-bosunControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
-        var search = $location.search();
-        var current;
-        try {
-            current = atob(search.expr);
-        }
-        catch (e) {
-            current = '';
-        }
-        if (!current) {
-            $location.search('expr', btoa('avg(q("avg:rate:os.cpu{host=*bosun*}", "5m", "")) > 80'));
-            return;
-        }
-        $scope.date = search.date || '';
-        $scope.time = search.time || '';
-        $scope.expr = current;
-        $scope.running = current;
-        $scope.tab = search.tab || 'results';
-        $scope.animate();
-        $http.post('/api/expr?' +
-            'date=' + encodeURIComponent($scope.date) +
-            '&time=' + encodeURIComponent($scope.time), current)
-            .success(function (data) {
-            $scope.result = data.Results;
-            $scope.queries = data.Queries;
-            $scope.result_type = data.Type;
-            if (data.Type == 'series') {
-                $scope.svg_url = '/api/egraph/' + btoa(current) + '.svg?now=' + Math.floor(Date.now() / 1000);
-                $scope.graph = toChart(data.Results);
-            }
-            if (data.Type == 'number') {
-                angular.forEach(data.Results, function (d) {
-                    var name = '{';
-                    angular.forEach(d.Group, function (tagv, tagk) {
-                        if (name.length > 1) {
-                            name += ',';
-                        }
-                        name += tagk + '=' + tagv;
-                    });
-                    name += '}';
-                    d.name = name;
-                });
-                $scope.bar = data.Results;
-            }
-            $scope.running = '';
-        })
-            .error(function (error) {
-            $scope.error = error;
-            $scope.running = '';
-        })
-            .finally(function () {
-            $scope.stop();
-        });
-        $scope.set = function () {
-            $location.search('expr', btoa($scope.expr));
-            $location.search('date', $scope.date || null);
-            $location.search('time', $scope.time || null);
-            $route.reload();
-        };
-        function toChart(res) {
-            var graph = [];
-            angular.forEach(res, function (d, idx) {
-                var data = [];
-                angular.forEach(d.Value, function (val, ts) {
-                    data.push([+ts, val]);
-                });
-                if (data.length == 0) {
-                    return;
-                }
-                var name = '{';
-                angular.forEach(d.Group, function (tagv, tagk) {
-                    if (name.length > 1) {
-                        name += ',';
-                    }
-                    name += tagk + '=' + tagv;
-                });
-                name += '}';
-                var series = {
-                    Data: data,
-                    Name: name
-                };
-                graph[idx] = series;
-            });
-            return graph;
-        }
-        $scope.keydown = function ($event) {
-            if ($event.shiftKey && $event.keyCode == 13) {
-                $scope.set();
-            }
-        };
-    }]);
 /// <reference path="0-bosun.ts" />
 var TagSet = (function () {
     function TagSet() {
@@ -2326,7 +2428,7 @@ var Version = (function () {
     }
     return Version;
 })();
-bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route', '$timeout', function ($scope, $http, $location, $route, $timeout) {
+bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$route', '$timeout', 'authService', function ($scope, $http, $location, $route, $timeout, auth) {
         $scope.aggregators = ["sum", "min", "max", "avg", "dev", "zimsum", "mimmin", "minmax"];
         $scope.dsaggregators = ["", "sum", "min", "max", "avg", "dev", "zimsum", "mimmin", "minmax"];
         $scope.filters = ["auto", "iliteral_or", "iwildcard", "literal_or", "not_iliteral_or", "not_literal_or", "regexp", "wildcard"];
@@ -2348,7 +2450,7 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
         if (search.b64) {
             j = atob(search.b64);
         }
-        $scope.annotation = {};
+        $scope.annotation = new Annotation();
         var request = j ? JSON.parse(j) : new Request;
         $scope.index = parseInt($location.hash()) || 0;
         $scope.tagvs = [];
@@ -2396,20 +2498,23 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
             }
             return AbsToRel(s);
         }
-        $scope.submitAnnotation = function () { return $http.post('/api/annotation', $scope.annotation)
-            .success(function (data) {
-            //debugger;
-            if ($scope.annotation.Id == "" && $scope.annotation.Owner != "") {
-                setOwner($scope.annotation.Owner);
-            }
-            $scope.annotation = new Annotation(data);
-            $scope.error = "";
-            // This seems to make angular refresh, where a push doesn't
-            $scope.annotations = $scope.annotations.concat($scope.annotation);
-        })
-            .error(function (error) {
-            $scope.error = error;
-        }); };
+        $scope.submitAnnotation = function () {
+            $scope.annotation.CreationUser = auth.GetUsername();
+            $http.post('/api/annotation', $scope.annotation)
+                .success(function (data) {
+                //debugger;
+                if ($scope.annotation.Id == "" && $scope.annotation.Owner != "") {
+                    setOwner($scope.annotation.Owner);
+                }
+                $scope.annotation = new Annotation(data);
+                $scope.error = "";
+                // This seems to make angular refresh, where a push doesn't
+                $scope.annotations = $scope.annotations.concat($scope.annotation);
+            })
+                .error(function (error) {
+                $scope.error = error;
+            });
+        };
         $scope.deleteAnnotation = function () { return $http.delete('/api/annotation/' + $scope.annotation.Id)
             .success(function (data) {
             $scope.error = "";
@@ -2982,6 +3087,7 @@ bosunControllers.controller('IncidentCtrl', ['$scope', '$http', '$location', '$r
             $scope.error = err;
         });
     }]);
+/// <reference path="0-bosun.ts" />
 bosunControllers.controller('ItemsCtrl', ['$scope', '$http', function ($scope, $http) {
         $http.get('/api/metric')
             .success(function (data) {
@@ -3084,6 +3190,7 @@ bosunControllers.controller('PutCtrl', ['$scope', '$http', '$route', function ($
             });
         };
     }]);
+/// <reference path="0-bosun.ts" />
 bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
         var search = $location.search();
         $scope.start = search.start;
@@ -3094,7 +3201,6 @@ bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$ro
         $scope.tags = search.tags;
         $scope.edit = search.edit;
         $scope.forget = search.forget;
-        $scope.user = getUser();
         $scope.message = search.message;
         if (!$scope.end && !$scope.duration) {
             $scope.duration = '1h';
@@ -3161,7 +3267,6 @@ bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$ro
                 tags: tags.join(','),
                 edit: $scope.edit,
                 forget: $scope.forget ? 'true' : null,
-                user: $scope.user,
                 message: $scope.message
             };
             return data;
@@ -3185,7 +3290,6 @@ bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$ro
             });
         }
         $scope.test = function () {
-            setUser($scope.user);
             $location.search('start', $scope.start || null);
             $location.search('end', $scope.end || null);
             $location.search('duration', $scope.duration || null);
@@ -3419,4 +3523,87 @@ bosunApp.directive('tsForceClose', function () {
         restrict: 'E',
         templateUrl: '/partials/forceClose.html'
     };
+});
+/// <reference path="0-bosun.ts" />
+var TokenListController = (function () {
+    function TokenListController($http) {
+        var _this = this;
+        this.$http = $http;
+        this.delete = function (hash) {
+            _this.status = "Deleting...";
+            _this.$http.delete("/api/tokens?hash=" + encodeURIComponent(hash))
+                .then(function () {
+                _this.status = "";
+                _this.load();
+            }, function (err) {
+                _this.status = 'Unable to delete token: ' + err;
+            });
+        };
+        this.load = function () {
+            _this.status = "Loading...";
+            _this.$http.get("/api/tokens").then(function (resp) {
+                _(resp.data).forEach(function (tok) {
+                    tok.LastUsed = moment.utc(tok.LastUsed);
+                });
+                _this.tokens = resp.data;
+                _this.status = "";
+            }, function (err) {
+                _this.status = 'Unable to fetch tokens: ' + err;
+            });
+        };
+        this.load();
+    }
+    TokenListController.$inject = ['$http'];
+    return TokenListController;
+})();
+bosunApp.component('tokenList', {
+    controller: TokenListController,
+    controllerAs: "ct",
+    template: "\n<div class=\"alert alert-danger\" ng-show=\"ct.status\">{{ct.status}}</div>\n<h2>Access Tokens</h2>\n    <table class=\"table table-striped\">\n        <thead>\n        <tr>\n            <th>ID</th>\n            <th>User</th>\n            <th>Description</th>\n            <th>Last Used</th>\n        </tr>\n        </thead>\n        <tbody>\n        <tr  ng-repeat=\"tok in ct.tokens\">\n            <td>{{tok.Hash | limitTo: 6}}</td>\n            <td>{{tok.User}}</td>\n            <td>{{tok.Description}}</td>\n            <td><span ng-show=\"tok.LastUsed.year() > 2000\" ts-since=\"tok.LastUsed\"></span> <span ng-show=\"tok.LastUsed.year() <= 2000\">Never</span></td>\n            <td><a class='btn btn-danger glyphicon glyphicon-trash' ng-click='ct.delete(tok.Hash)'></a></td>\n        </tr>\n        </tbody>\n    </table>\n    <a class='btn btn-primary' href='/tokens/new'><span class='glyphicon glyphicon-plus'/> Create new token</a>\n" });
+/// <reference path="0-bosun.ts" />
+var NewTokenController = (function () {
+    function NewTokenController($http, auth) {
+        var _this = this;
+        this.$http = $http;
+        this.auth = auth;
+        this.token = new Token();
+        this.hasBits = function (bits) {
+            return (bits & _this.token.Role) != 0;
+        };
+        this.setRole = function (bits, event) {
+            _(_this.permissions).each(function (perm) {
+                if (!event.currentTarget.checked) {
+                    perm.Active = false;
+                }
+                else {
+                    perm.Active = (perm.Bits & bits) != 0;
+                }
+            });
+        };
+        this.getBits = function () {
+            return _(_this.permissions).reduce(function (sum, p) { return sum + (p.Active ? p.Bits : 0); }, 0);
+        };
+        var defs = auth.GetRoles();
+        this.permissions = defs.Permissions;
+        this.roles = defs.Roles;
+    }
+    NewTokenController.prototype.create = function () {
+        var _this = this;
+        this.token.Role = this.getBits();
+        this.status = "Creating...";
+        this.$http.post("/api/tokens", this.token).then(function (resp) {
+            _this.status = "";
+            _this.createdToken = resp.data.replace(/"/g, "");
+        }, function (err) { _this.status = 'Unable to load roles: ' + err; });
+    };
+    NewTokenController.prototype.encoded = function () {
+        return encodeURIComponent(this.createdToken);
+    };
+    NewTokenController.$inject = ['$http', 'authService'];
+    return NewTokenController;
+})();
+bosunApp.component("newToken", {
+    controller: NewTokenController,
+    controllerAs: "ct",
+    templateUrl: "/partials/tokenNew.html"
 });

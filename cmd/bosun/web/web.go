@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"bosun.org/_version"
+	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/conf/rule"
 	"bosun.org/cmd/bosun/database"
 	"bosun.org/cmd/bosun/sched"
@@ -29,18 +30,26 @@ import (
 	"bosun.org/util"
 
 	"github.com/MiniProfiler/go/miniprofiler"
+	"github.com/NYTimes/gziphandler"
 	"github.com/bosun-monitor/annotate/backend"
 	"github.com/bosun-monitor/annotate/web"
+	"github.com/captncraig/easyauth"
 	"github.com/gorilla/mux"
+	"github.com/justinas/alice"
 )
 
 var (
-	indexTemplate   func() *template.Template
-	router          = mux.NewRouter()
-	schedule        = sched.DefaultSched
+	indexTemplate func() *template.Template
+	router        = mux.NewRouter()
+	schedule      = sched.DefaultSched
+	//InternetProxy is a url to use as a proxy when communicating with external services.
+	//currently only google's shortener.
 	InternetProxy   *url.URL
 	annotateBackend backend.Backend
 	reload          func() error
+
+	tokensEnabled bool
+	authEnabled   bool
 )
 
 const (
@@ -66,11 +75,15 @@ func init() {
 		"HTTP response codes from the backend server for request relayed through Bosun.")
 }
 
-func Listen(listenAddr string, devMode bool, tsdbHost string, reloadFunc func() error) error {
+func Listen(httpAddr, httpsAddr, certFile, keyFile string, devMode bool, tsdbHost string, reloadFunc func() error, authConfig *conf.AuthConf) error {
 	if devMode {
 		slog.Infoln("using local web assets")
 	}
 	webFS := FS(devMode)
+
+	if httpAddr == "" && httpsAddr == "" {
+		return fmt.Errorf("Either http or https address needs to be specified.")
+	}
 
 	indexTemplate = func() *template.Template {
 		str := FSMustString(devMode, "/templates/index.html")
@@ -90,56 +103,80 @@ func Listen(listenAddr string, devMode bool, tsdbHost string, reloadFunc func() 
 		}
 	}
 
-	if tsdbHost != "" {
-		router.HandleFunc("/api/index", IndexTSDB)
-		router.Handle("/api/put", Relay(tsdbHost))
+	baseChain := alice.New(miniProfilerMiddleware, endpointStatsMiddleware, gziphandler.GzipHandler)
+
+	auth, tokens, err := buildAuth(authConfig)
+	if err != nil {
+		slog.Fatal(err)
 	}
 
-	router.HandleFunc("/api/", APIRedirect)
-	router.Handle("/api/action", JSON(Action))
-	router.Handle("/api/alerts", JSON(Alerts))
-	router.Handle("/api/config", miniprofiler.NewHandler(Config))
-	router.Handle("/api/config_test", miniprofiler.NewHandler(ConfigTest))
-	router.Handle("/api/save_enabled", JSON(SaveEnabled))
-	if schedule.SystemConf.ReloadEnabled() { // Is true of save is enabled
-		router.Handle("/api/reload", JSON(Reload)).Methods(http.MethodPost)
+	//helpers to add routes with middleware
+	handle := func(route string, h http.Handler, perms easyauth.Role) *mux.Route {
+		return router.Handle(route, baseChain.Then(auth.Wrap(h, perms)))
 	}
+	handleFunc := func(route string, h http.HandlerFunc, perms easyauth.Role) *mux.Route {
+		return handle(route, h, perms)
+	}
+
+	const (
+		GET  = http.MethodGet
+		POST = http.MethodPost
+	)
+
+	if tsdbHost != "" {
+		handleFunc("/api/index", IndexTSDB, canPutData).Name("tsdb_index")
+		handle("/api/put", Relay(tsdbHost), canPutData).Name("tsdb_put")
+	}
+	router.PathPrefix("/auth/").Handler(auth.LoginHandler())
+	handleFunc("/api/", APIRedirect, fullyOpen).Name("api_redir")
+	handle("/api/action", JSON(Action), canPerformActions).Name("action").Methods(POST)
+	handle("/api/alerts", JSON(Alerts), canViewDash).Name("alerts").Methods(GET)
+	handle("/api/config", JSON(Config), canViewConfig).Name("get_config").Methods(GET)
+
+	handle("/api/config_test", JSON(ConfigTest), canViewConfig).Name("config_test").Methods(POST)
+	handle("/api/save_enabled", JSON(SaveEnabled), fullyOpen).Name("seve_enabled").Methods(GET)
+
+	if schedule.SystemConf.ReloadEnabled() {
+		handle("/api/reload", JSON(Reload), canSaveConfig).Name("can_save").Methods(POST)
+	}
+
 	if schedule.SystemConf.SaveEnabled() {
-		router.Handle("/api/config/bulkedit", miniprofiler.NewHandler(BulkEdit)).Methods(http.MethodPost)
-		router.Handle("/api/config/save", miniprofiler.NewHandler(SaveConfig)).Methods(http.MethodPost)
-		router.Handle("/api/config/diff", miniprofiler.NewHandler(DiffConfig)).Methods(http.MethodPost)
-		router.Handle("/api/config/running_hash", JSON(ConfigRunningHash))
+		handle("/api/config/bulkedit", JSON(BulkEdit), canSaveConfig).Name("bulk_edit").Methods(POST)
+		handle("/api/config/save", JSON(SaveConfig), canSaveConfig).Name("config_save").Methods(POST)
+		handle("/api/config/diff", JSON(DiffConfig), canSaveConfig).Name("config_diff").Methods(POST)
+		handle("/api/config/running_hash", JSON(ConfigRunningHash), canViewConfig).Name("config_hash").Methods(GET)
 	}
-	router.Handle("/api/egraph/{bs}.{format:svg|png}", JSON(ExprGraph))
-	router.Handle("/api/errors", JSON(ErrorHistory))
-	router.Handle("/api/expr", JSON(Expr))
-	router.Handle("/api/graph", JSON(Graph))
-	router.Handle("/api/health", JSON(HealthCheck))
-	router.Handle("/api/host", JSON(Host))
-	router.Handle("/api/last", JSON(Last))
-	router.Handle("/api/quiet", JSON(Quiet))
-	router.Handle("/api/incidents", JSON(Incidents))
-	router.Handle("/api/incidents/open", JSON(ListOpenIncidents))
-	router.Handle("/api/incidents/events", JSON(IncidentEvents))
-	router.Handle("/api/metadata/get", JSON(GetMetadata))
-	router.Handle("/api/metadata/metrics", JSON(MetadataMetrics))
-	router.Handle("/api/metadata/put", JSON(PutMetadata))
-	router.Handle("/api/metadata/delete", JSON(DeleteMetadata)).Methods("DELETE")
-	router.Handle("/api/metric", JSON(UniqueMetrics))
-	router.Handle("/api/metric/{tagk}", JSON(MetricsByTagKey))
-	router.Handle("/api/metric/{tagk}/{tagv}", JSON(MetricsByTagPair))
-	router.Handle("/api/rule", JSON(Rule))
-	router.HandleFunc("/api/shorten", Shorten)
-	router.Handle("/api/silence/clear", JSON(SilenceClear))
-	router.Handle("/api/silence/get", JSON(SilenceGet))
-	router.Handle("/api/silence/set", JSON(SilenceSet))
-	router.Handle("/api/status", JSON(Status))
-	router.Handle("/api/tagk/{metric}", JSON(TagKeysByMetric))
-	router.Handle("/api/tagv/{tagk}", JSON(TagValuesByTagKey))
-	router.Handle("/api/tagv/{tagk}/{metric}", JSON(TagValuesByMetricTagKey))
-	router.Handle("/api/tagsets/{metric}", JSON(FilteredTagsetsByMetric))
-	router.Handle("/api/opentsdb/version", JSON(OpenTSDBVersion))
-	router.Handle("/api/annotate", JSON(AnnotateEnabled))
+
+	handle("/api/egraph/{bs}.{format:svg|png}", JSON(ExprGraph), canRunTests).Name("expr_graph")
+	handle("/api/errors", JSON(ErrorHistory), canViewDash).Name("errors").Methods(GET, POST)
+	handle("/api/expr", JSON(Expr), canRunTests).Name("expr").Methods(POST)
+	handle("/api/graph", JSON(Graph), canViewDash).Name("graph").Methods(GET)
+
+	handle("/api/health", JSON(HealthCheck), fullyOpen).Name("health_check").Methods(GET)
+	handle("/api/host", JSON(Host), canViewDash).Name("host").Methods(GET)
+	handle("/api/last", JSON(Last), canViewDash).Name("last").Methods(GET)
+	handle("/api/quiet", JSON(Quiet), canViewDash).Name("quiet").Methods(GET)
+	handle("/api/incidents/open", JSON(ListOpenIncidents), canViewDash).Name("open_incidents").Methods(GET)
+	handle("/api/incidents/events", JSON(IncidentEvents), canViewDash).Name("incident_events").Methods(GET)
+	handle("/api/metadata/get", JSON(GetMetadata), canViewDash).Name("meta_get").Methods(GET)
+	handle("/api/metadata/metrics", JSON(MetadataMetrics), canViewDash).Name("meta_metrics").Methods(GET)
+	handle("/api/metadata/put", JSON(PutMetadata), canPutData).Name("meta_put").Methods(POST)
+	handle("/api/metadata/delete", JSON(DeleteMetadata), canPutData).Name("meta_delete").Methods(http.MethodDelete)
+	handle("/api/metric", JSON(UniqueMetrics), canViewDash).Name("meta_uniqe_metrics").Methods(GET)
+	handle("/api/metric/{tagk}", JSON(MetricsByTagKey), canViewDash).Name("meta_metrics_by_tag").Methods(GET)
+	handle("/api/metric/{tagk}/{tagv}", JSON(MetricsByTagPair), canViewDash).Name("meta_metric_by_tag_pair").Methods(GET)
+	handle("/api/rule", JSON(Rule), canRunTests).Name("rule_test").Methods(POST)
+	handle("/api/shorten", JSON(Shorten), canViewDash).Name("shorten")
+	handle("/api/silence/clear", JSON(SilenceClear), canSilence).Name("silence_clear")
+	handle("/api/silence/get", JSON(SilenceGet), canViewDash).Name("silence_get").Methods(GET)
+	handle("/api/silence/set", JSON(SilenceSet), canSilence).Name("silence_set")
+	handle("/api/status", JSON(Status), canViewDash).Name("status").Methods(GET)
+	handle("/api/tagk/{metric}", JSON(TagKeysByMetric), canViewDash).Name("search_tkeys_by_metric").Methods(GET)
+	handle("/api/tagv/{tagk}", JSON(TagValuesByTagKey), canViewDash).Name("search_tvals_by_metric").Methods(GET)
+	handle("/api/tagv/{tagk}/{metric}", JSON(TagValuesByMetricTagKey), canViewDash).Name("search_tvals_by_metrictagkey").Methods(GET)
+	handle("/api/tagsets/{metric}", JSON(FilteredTagsetsByMetric), canViewDash).Name("search_tagsets_by_metric").Methods(GET)
+	handle("/api/opentsdb/version", JSON(OpenTSDBVersion), fullyOpen).Name("otsdb_version").Methods(GET)
+	handle("/api/annotate", JSON(AnnotateEnabled), fullyOpen).Name("annotate_enabled").Methods(GET)
 
 	// Annotations
 	if schedule.SystemConf.AnnotateEnabled() {
@@ -159,21 +196,49 @@ func Listen(listenAddr string, devMode bool, tsdbHost string, reloadFunc func() 
 				time.Sleep(time.Second * 30)
 			}
 		}()
-		web.AddRoutes(router, "/api", []backend.Backend{annotateBackend}, false, false)
-
+		read := baseChain.Append(auth.Wrapper(canViewAnnotations)).ThenFunc
+		write := baseChain.Append(auth.Wrapper(canCreateAnnotations)).ThenFunc
+		web.AddRoutesWithMiddleware(router, "/api", []backend.Backend{annotateBackend}, false, false, read, write)
 	}
 
-	router.HandleFunc("/api/version", Version)
-	router.Handle("/api/debug/schedlock", JSON(ScheduleLockStatus))
-	http.Handle("/", miniprofiler.NewHandler(Index))
-	http.Handle("/api/", router)
+	//auth specific stuff
+	if auth != nil {
+		router.PathPrefix("/login").Handler(http.StripPrefix("/login", auth.LoginHandler())).Name("auth")
+	}
+	if tokens != nil {
+		handle("/api/tokens", tokens.AdminHandler(), canManageTokens).Name("tokens")
+	}
+
+	router.Handle("/api/version", baseChain.ThenFunc(Version)).Name("version").Methods(GET)
 	fs := http.FileServer(webFS)
-	http.Handle("/partials/", fs)
-	http.Handle("/static/", http.StripPrefix("/static/", fs))
-	http.Handle("/favicon.ico", fs)
-	slog.Infoln("bosun web listening on:", listenAddr)
+	router.PathPrefix("/partials/").Handler(baseChain.Then(fs)).Name("partials")
+	router.PathPrefix("/static/").Handler(baseChain.Then(http.StripPrefix("/static/", fs))).Name("static")
+	router.PathPrefix("/favicon.ico").Handler(baseChain.Then(fs)).Name("favicon")
+
+	var miniprofilerRoutes = http.StripPrefix(miniprofiler.PATH, http.HandlerFunc(miniprofiler.MiniProfilerHandler))
+	router.PathPrefix(miniprofiler.PATH).Handler(baseChain.Then(miniprofilerRoutes)).Name("miniprofiler")
+
+	//MUST BE LAST!
+	router.PathPrefix("/").Handler(baseChain.Then(auth.Wrap(JSON(Index), canViewDash))).Name("index")
+
 	slog.Infoln("tsdb host:", tsdbHost)
-	return http.ListenAndServe(listenAddr, nil)
+	errChan := make(chan error, 1)
+	if httpAddr != "" {
+		go func() {
+			slog.Infoln("bosun web listening http on:", httpAddr)
+			errChan <- http.ListenAndServe(httpAddr, router)
+		}()
+	}
+	if httpsAddr != "" {
+		go func() {
+			slog.Infoln("bosun web listening https on:", httpsAddr)
+			if certFile == "" || keyFile == "" {
+				errChan <- fmt.Errorf("certFile and keyfile must be specified to use https")
+			}
+			errChan <- http.ListenAndServeTLS(httpsAddr, certFile, keyFile, router)
+		}()
+	}
+	return <-errChan
 }
 
 type relayProxy struct {
@@ -263,6 +328,12 @@ type appSetings struct {
 	AnnotateEnabled bool
 	Quiet           bool
 	Version         opentsdb.Version
+
+	AuthEnabled   bool
+	TokensEnabled bool
+	Username      string
+	Permissions   easyauth.Role
+	Roles         *roleMetadata
 }
 
 type indexVariables struct {
@@ -270,41 +341,50 @@ type indexVariables struct {
 	Settings string
 }
 
-func Index(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
+func Index(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	if r.URL.Path == "/graph" {
 		r.ParseForm()
 		if _, present := r.Form["png"]; present {
 			if _, err := Graph(t, w, r); err != nil {
-				serveError(w, err)
+				return nil, err
 			}
-			return
+			return nil, nil
 		}
 	}
 	r.Header.Set(miniprofilerHeader, "true")
 	// Set some global settings for the UI to know about. This saves us from
 	// having to make an HTTP call to see what features should be enabled
 	// in the UI
-	openTSDBVersion := opentsdb.Version{0, 0}
+	openTSDBVersion := opentsdb.Version{}
 	if schedule.SystemConf.GetTSDBContext() != nil {
 		openTSDBVersion = schedule.SystemConf.GetTSDBContext().Version()
 	}
-	settings, err := json.Marshal(appSetings{
-		schedule.SystemConf.SaveEnabled(),
-		schedule.SystemConf.AnnotateEnabled(),
-		schedule.GetQuiet(),
-		openTSDBVersion,
-	})
+	u := easyauth.GetUser(r)
+	as := &appSetings{
+		SaveEnabled:     schedule.SystemConf.SaveEnabled(),
+		AnnotateEnabled: schedule.SystemConf.AnnotateEnabled(),
+		Quiet:           schedule.GetQuiet(),
+		Version:         openTSDBVersion,
+		AuthEnabled:     authEnabled,
+		TokensEnabled:   tokensEnabled,
+		Roles:           roleDefs,
+	}
+	if u != nil {
+		as.Username = u.Username
+		as.Permissions = u.Access
+	}
+	settings, err := json.Marshal(as)
 	if err != nil {
-		serveError(w, err)
-		return
+		return nil, err
 	}
 	err = indexTemplate().Execute(w, indexVariables{
 		t.Includes(),
 		string(settings),
 	})
 	if err != nil {
-		serveError(w, err)
+		return nil, err
 	}
+	return nil, nil
 }
 
 func serveError(w http.ResponseWriter, err error) {
@@ -312,7 +392,8 @@ func serveError(w http.ResponseWriter, err error) {
 }
 
 func JSON(h func(miniprofiler.Timer, http.ResponseWriter, *http.Request) (interface{}, error)) http.Handler {
-	return miniprofiler.NewHandler(func(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		t := miniprofiler.GetTimer(r)
 		d, err := h(t, w, r)
 		if err != nil {
 			serveError(w, err)
@@ -322,31 +403,21 @@ func JSON(h func(miniprofiler.Timer, http.ResponseWriter, *http.Request) (interf
 			return
 		}
 		buf := new(bytes.Buffer)
-		if err := json.NewEncoder(buf).Encode(d); err != nil {
+		enc := json.NewEncoder(buf)
+		if strings.Contains(r.Header.Get("Accept"), "html") {
+			enc.SetIndent("", "  ")
+		}
+		if err := enc.Encode(d); err != nil {
 			slog.Error(err)
 			serveError(w, err)
 			return
 		}
-		var tw io.Writer = w
-		if strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
-			w.Header().Set("Content-Encoding", "gzip")
-			gz := gzip.NewWriter(w)
-			defer gz.Close()
-			tw = gz
-		}
-		if cb := r.FormValue("callback"); cb != "" {
-			w.Header().Add("Content-Type", "application/javascript")
-			tw.Write([]byte(cb + "("))
-			buf.WriteTo(tw)
-			tw.Write([]byte(")"))
-			return
-		}
-		w.Header().Add("Content-Type", "application/json")
-		buf.WriteTo(tw)
+		w.Header().Set("Content-Type", "application/json")
+		buf.WriteTo(w)
 	})
 }
 
-func Shorten(w http.ResponseWriter, r *http.Request) {
+func Shorten(_ miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	u := url.URL{
 		Scheme: "https",
 		Host:   "www.googleapis.com",
@@ -361,8 +432,7 @@ func Shorten(w http.ResponseWriter, r *http.Request) {
 		r.Referer(),
 	})
 	if err != nil {
-		serveError(w, err)
-		return
+		return nil, err
 	}
 
 	transport := &http.Transport{
@@ -379,11 +449,11 @@ func Shorten(w http.ResponseWriter, r *http.Request) {
 
 	req, err := c.Post(u.String(), "application/json", bytes.NewBuffer(j))
 	if err != nil {
-		serveError(w, err)
-		return
+		return nil, err
 	}
 	io.Copy(w, req.Body)
 	req.Body.Close()
+	return nil, nil
 }
 
 type Health struct {
@@ -552,38 +622,6 @@ func IncidentEvents(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request
 	return schedule.DataAccess.State().GetIncidentState(num)
 }
 
-func Incidents(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	// TODO: Incident Search
-	return nil, nil
-	//	alert := r.FormValue("alert")
-	//	toTime := time.Now().UTC()
-	//	fromTime := toTime.Add(-14 * 24 * time.Hour) // 2 weeks
-
-	//	if from := r.FormValue("from"); from != "" {
-	//		t, err := time.Parse(tsdbFormatSecs, from)
-	//		if err != nil {
-	//			return nil, err
-	//		}
-	//		fromTime = t
-	//	}
-	//	if to := r.FormValue("to"); to != "" {
-	//		t, err := time.Parse(tsdbFormatSecs, to)
-	//		if err != nil {
-	//			return nil, err
-	//		}
-	//		toTime = t
-	//	}
-	//	incidents, err := schedule.GetIncidents(alert, fromTime, toTime)
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//	maxIncidents := 200
-	//	if len(incidents) > maxIncidents {
-	//		incidents = incidents[:maxIncidents]
-	//	}
-	//	return incidents, nil
-}
-
 func Status(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	r.ParseForm()
 	type ExtStatus struct {
@@ -630,14 +668,30 @@ func Status(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (inter
 	return m, nil
 }
 
+func getUsername(r *http.Request) string {
+	user := easyauth.GetUser(r)
+	if user != nil {
+		return user.Username
+	}
+	return "unknown"
+}
+
+func userCanOverwriteUsername(r *http.Request) bool {
+	user := easyauth.GetUser(r)
+	if user != nil {
+		return user.Access&canOverwriteUsername != 0
+	}
+	return false
+}
+
 func Action(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	var data struct {
 		Type    string
-		User    string
 		Message string
 		Keys    []string
 		Ids     []int64
 		Notify  bool
+		User    string
 	}
 	j := json.NewDecoder(r.Body)
 	if err := j.Decode(&data); err != nil {
@@ -661,6 +715,14 @@ func Action(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (inter
 	errs := make(MultiError)
 	r.ParseForm()
 	successful := []models.AlertKey{}
+
+	if data.User != "" && !userCanOverwriteUsername(r) {
+		http.Error(w, "Not Authorized to set User", 400)
+		return nil, nil
+	} else if data.User == "" {
+		data.User = getUsername(r)
+	}
+
 	for _, key := range data.Keys {
 		ak, err := models.ParseAlertKey(key)
 		if err != nil {
@@ -758,7 +820,14 @@ func SilenceSet(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (i
 		}
 		end = start.Add(time.Duration(d))
 	}
-	return schedule.AddSilence(start, end, data["alert"], data["tags"], data["forget"] == "true", len(data["confirm"]) > 0, data["edit"], data["user"], data["message"])
+	username := getUsername(r)
+	if _, ok := data["user"]; ok && !userCanOverwriteUsername(r) {
+		http.Error(w, "Not authorized to set 'user' parameter", 400)
+		return nil, nil
+	} else if ok {
+		username = data["user"]
+	}
+	return schedule.AddSilence(start, end, data["alert"], data["tags"], data["forget"] == "true", len(data["confirm"]) > 0, data["edit"], username, data["message"])
 }
 
 func SilenceClear(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
@@ -766,35 +835,34 @@ func SilenceClear(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) 
 	return nil, schedule.ClearSilence(id)
 }
 
-func ConfigTest(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
+func ConfigTest(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	b, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		serveError(w, err)
-		return
+		return nil, err
 	}
 	if len(b) == 0 {
-		serveError(w, fmt.Errorf("empty config"))
-		return
+		return nil, fmt.Errorf("empty config")
 	}
 	_, err = rule.NewConf("test", schedule.SystemConf.EnabledBackends(), string(b))
 	if err != nil {
 		fmt.Fprintf(w, err.Error())
 	}
+	return nil, nil
 }
 
-func Config(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) {
+func Config(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	var text string
 	var err error
 	if hash := r.FormValue("hash"); hash != "" {
 		text, err = schedule.DataAccess.Configs().GetTempConfig(hash)
 		if err != nil {
-			serveError(w, err)
-			return
+			return nil, err
 		}
 	} else {
 		text = schedule.RuleConf.GetRawText()
 	}
 	fmt.Fprint(w, text)
+	return nil, nil
 }
 
 func APIRedirect(w http.ResponseWriter, req *http.Request) {
@@ -825,18 +893,6 @@ func Last(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 
 func Version(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, version.GetVersionInfo("bosun"))
-}
-
-func ScheduleLockStatus(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	data := struct {
-		Process string
-		HeldFor string
-	}{}
-	if holder, since := schedule.GetLockStatus(); holder != "" {
-		data.Process = holder
-		data.HeldFor = time.Now().Sub(since).String()
-	}
-	return data, nil
 }
 
 func ErrorHistory(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {

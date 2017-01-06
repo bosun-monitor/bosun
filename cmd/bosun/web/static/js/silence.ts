@@ -1,3 +1,5 @@
+
+/// <reference path="0-bosun.ts" />
 interface ISilenceScope extends ng.IScope {
 	silences: any;
 	error: string;
@@ -30,7 +32,6 @@ bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$ro
 	$scope.tags = search.tags;
 	$scope.edit = search.edit;
 	$scope.forget = search.forget;
-	$scope.user = getUser();
 	$scope.message = search.message;
 	if (!$scope.end && !$scope.duration) {
 		$scope.duration = '1h';
@@ -97,7 +98,6 @@ bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$ro
 			tags: tags.join(','),
 			edit: $scope.edit,
 			forget: $scope.forget ? 'true' : null,
-			user: $scope.user,
 			message: $scope.message,
 		};
 		return data;
@@ -121,7 +121,6 @@ bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$ro
 			});
 	}
 	$scope.test = () => {
-		setUser($scope.user);
 		$location.search('start', $scope.start || null);
 		$location.search('end', $scope.end || null);
 		$location.search('duration', $scope.duration || null);

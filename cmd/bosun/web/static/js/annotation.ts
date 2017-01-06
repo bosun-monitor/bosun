@@ -1,3 +1,4 @@
+/// <reference path="0-bosun.ts" />
 interface IAnnotationScope extends IBosunScope {
     id: string;
     annotation: Annotation;
@@ -39,11 +40,13 @@ bosunControllers.controller('AnnotationCtrl', ['$scope', '$http', '$location', '
         .success((data: string[]) => {
             $scope.hosts = data;
         });
+    
 
     $scope.submitAnnotation = () => {
         $scope.animate();
+        $scope.annotation.CreationUser = $scope.auth.GetUsername();
         $http.post('/api/annotation', $scope.annotation)
-            .success((data) => {
+            .success((data: any) => {
                 $scope.annotation = new Annotation(data, true);
                 $scope.error = "";
                 $scope.submitSuccess = true;

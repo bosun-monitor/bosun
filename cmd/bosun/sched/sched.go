@@ -2,7 +2,6 @@ package sched // import "bosun.org/cmd/bosun/sched"
 
 import (
 	"fmt"
-	"reflect"
 	"strings"
 	"sync"
 	"time"
@@ -153,13 +152,7 @@ func (s *Schedule) PutMetadata(k metadata.Metakey, v interface{}) error {
 		slog.Error(err)
 		return err
 	}
-	strVal, ok := v.(string)
-	if !ok {
-		err := fmt.Errorf("desc, rate, and unit require value to be string. Found: %s", reflect.TypeOf(v))
-		slog.Error(err)
-		return err
-	}
-	return s.DataAccess.Metadata().PutMetricMetadata(k.Metric, k.Name, strVal)
+	return s.DataAccess.Metadata().PutMetricMetadata(k.Metric, k.Name, fmt.Sprint(v))
 }
 
 func (s *Schedule) DeleteMetadata(tags opentsdb.TagSet, name string) error {

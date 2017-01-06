@@ -1,3 +1,5 @@
+/// <reference path="0-bosun.ts" />
+
 interface IItemsScope extends ng.IScope {
 	metrics: string[];
 	hosts: string[];

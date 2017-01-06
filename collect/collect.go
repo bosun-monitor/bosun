@@ -59,6 +59,9 @@ var (
 	// Sent is the number of sent data points.
 	sent int64
 
+	//Authtoken is the token to use to communicate with bosun
+	AuthToken string
+
 	tchan               chan *opentsdb.DataPoint
 	tsdbURL             string
 	osHostname          string
@@ -69,6 +72,9 @@ var (
 	sets                = make(map[string]*setMetric)
 	puts                = make(map[string]*putMetric)
 	aggs                = make(map[string]*agMetric)
+
+	//DirectHandler is an http handler to invoke instead of actually making a network request
+	DirectHandler http.Handler
 )
 
 const (

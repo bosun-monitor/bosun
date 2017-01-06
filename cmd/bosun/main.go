@@ -109,32 +109,31 @@ func main() {
 		os.Exit(0)
 	}
 	var ruleProvider conf.RuleConfProvider = ruleConf
-	httpListen := &url.URL{
-		Scheme: "http",
-		Host:   sysProvider.GetHTTPListen(),
+
+	addrToSendTo := sysProvider.GetHTTPSListen()
+	proto := "https"
+	if addrToSendTo == "" {
+		addrToSendTo = sysProvider.GetHTTPListen()
+		proto = "http"
 	}
-	if strings.HasPrefix(httpListen.Host, ":") {
-		httpListen.Host = "localhost" + httpListen.Host
+	selfAddress := &url.URL{
+		Scheme: proto,
+		Host:   addrToSendTo,
 	}
-	if err := metadata.Init(httpListen, false); err != nil {
-		slog.Fatal(err)
+	if strings.HasPrefix(selfAddress.Host, ":") {
+		selfAddress.Host = "localhost" + selfAddress.Host
 	}
+
 	if err := sched.Load(sysProvider, ruleProvider, *flagSkipLast, *flagQuiet); err != nil {
 		slog.Fatal(err)
 	}
-	if sysProvider.GetRelayListen() != "" {
-		go func() {
-			mux := http.NewServeMux()
-			mux.Handle("/api/", util.NewSingleHostProxy(httpListen))
-			s := &http.Server{
-				Addr:    sysProvider.GetRelayListen(),
-				Handler: mux,
-			}
-			slog.Fatal(s.ListenAndServe())
-		}()
+	if err := metadata.InitF(false, func(k metadata.Metakey, v interface{}) error { return sched.DefaultSched.PutMetadata(k, v) }); err != nil {
+		slog.Fatal(err)
 	}
 	if sysProvider.GetTSDBHost() != "" {
-		if err := collect.Init(httpListen, "bosun"); err != nil {
+		relay := web.Relay(sysProvider.GetTSDBHost())
+		collect.DirectHandler = relay
+		if err := collect.Init(selfAddress, "bosun"); err != nil {
 			slog.Fatal(err)
 		}
 		tsdbHost := &url.URL{
@@ -218,7 +217,9 @@ func main() {
 	ruleProvider.SetReload(reload)
 
 	go func() {
-		slog.Fatal(web.Listen(sysProvider.GetHTTPListen(), *flagDev, sysProvider.GetTSDBHost(), reload))
+		slog.Fatal(web.Listen(sysProvider.GetHTTPListen(), sysProvider.GetHTTPSListen(),
+			sysProvider.GetTLSCertFile(), sysProvider.GetTLSKeyFile(), *flagDev,
+			sysProvider.GetTSDBHost(), reload, sysProvider.GetAuthConf()))
 	}()
 	go func() {
 		if !*flagNoChecks {
@@ -255,6 +256,7 @@ func main() {
 }
 
 func quit() {
+	slog.Error("Exiting")
 	os.Exit(0)
 }
 
