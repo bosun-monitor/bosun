@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/json"
+	_ "expvar"
 	"flag"
 	"fmt"
 	"io"
