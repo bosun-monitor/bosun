@@ -286,6 +286,19 @@ func (s *Schedule) executeTemplates(state *models.IncidentState, event *models.E
 		}
 		endTiming()
 
+		//Render payload
+		endTiming = collect.StartTimer(metric, opentsdb.TagSet{"alert": a.Name, "type": "payload"})
+		payload, err := s.ExecutePayload(r, a, state, false)
+		if err != nil {
+			slog.Infof("%s: %v", state.AlertKey, err)
+			errs = append(errs, err)
+		} else if subject == nil && body == nil {
+			err = fmt.Errorf("Empty payload on %s", state.AlertKey)
+			slog.Error(err)
+			errs = append(errs, err)
+		}
+		endTiming()
+
 		//Render email body
 		endTiming = collect.StartTimer(metric, opentsdb.TagSet{"alert": a.Name, "type": "emailbody"})
 		emailbody, attachments, err := s.ExecuteBody(r, a, state, true)
@@ -325,6 +338,7 @@ func (s *Schedule) executeTemplates(state *models.IncidentState, event *models.E
 		}
 		state.Subject = string(subject)
 		state.Body = string(body)
+		state.Payload = string(payload)
 		//don't save email seperately if they are identical
 		if string(state.EmailBody) != state.Body {
 			state.EmailBody = emailbody

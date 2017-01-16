@@ -140,6 +140,16 @@ func (s *Schedule) ExecuteBody(rh *RunHistory, a *conf.Alert, st *models.Inciden
 	return buf.Bytes(), c.Attachments, nil
 }
 
+func (s *Schedule) ExecutePayload(rh *RunHistory, a *conf.Alert, st *models.IncidentState, isEmail bool) ([]byte, error) {
+	t := a.Template
+	if t == nil || t.Payload == nil {
+		return nil, nil
+	}
+	buf := new(bytes.Buffer)
+	err := t.Payload.Execute(buf, s.Data(rh, st, a, isEmail))
+	return buf.Bytes(), err
+}
+
 func (s *Schedule) ExecuteSubject(rh *RunHistory, a *conf.Alert, st *models.IncidentState, isEmail bool) ([]byte, error) {
 	t := a.Template
 	if t == nil || t.Subject == nil {

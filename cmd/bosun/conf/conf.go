@@ -198,9 +198,38 @@ type Template struct {
 	Name    string
 	Body    *htemplate.Template `json:"-"`
 	Subject *ttemplate.Template `json:"-"`
+	Payload *ttemplate.Template `json:"-"`
 
-	RawBody, RawSubject string
-	Locator             `json:"-"`
+	RawBody, RawSubject, RawPayload string
+	Locator                         `json:"-"`
+}
+
+func (t *Template) GenerateMessage(n *Notification, data interface{}) NotificationMessage {
+	body := new(bytes.Buffer)
+	subject := new(bytes.Buffer)
+	payload := new(bytes.Buffer)
+	if t.Body != nil {
+		if err := t.Body.Execute(body, &data); err != nil {
+			slog.Infoln("unknown template error:", err)
+		}
+	}
+	if t.Subject != nil {
+		if err := t.Subject.Execute(subject, &data); err != nil {
+			slog.Infoln("unknown template error:", err)
+		}
+	}
+	if t.Payload != nil {
+		if err := t.Payload.Execute(payload, &data); err != nil {
+			slog.Infoln("unknown template error:", err)
+		}
+	}
+
+	return NotificationMessage{
+		Subject:      subject.String(),
+		Body:         body.String(),
+		Payload:      payload.String(),
+		Notification: n,
+	}
 }
 
 // Notification stores information about a notification. A notification
@@ -219,6 +248,7 @@ type Notification struct {
 	ContentType  string
 	RunOnActions bool
 	UseBody      bool
+	UsePayload   bool
 
 	NextName        string `json:"-"`
 	RawEmail        string `json:"-"`

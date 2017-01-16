@@ -1,8 +1,6 @@
 package sched
 
 import (
-	"bytes"
-	"fmt"
 	htemplate "html/template"
 	"strings"
 	ttemplate "text/template"
@@ -12,6 +10,11 @@ import (
 	"bosun.org/models"
 	"bosun.org/slog"
 )
+
+// Default hardcoded templates
+var actionNotificationTemplate *conf.Template
+var defaultUnknownMultigroupTemplate *conf.Template
+var defaultUnknownTemplate *conf.Template
 
 func (s *Schedule) dispatchNotifications() {
 	ticker := time.NewTicker(s.SystemConf.GetCheckFrequency() * 2)
@@ -134,7 +137,7 @@ func (s *Schedule) sendNotifications(silenced SilenceTester) {
 				}
 				continue
 			} else {
-				s.notify(st, n)
+				s.notify(st, n, alert)
 			}
 			if n.Next != nil {
 				s.QueueNotification(ak, n.Next, utcNow())
@@ -176,31 +179,20 @@ func (s *Schedule) sendUnknownNotifications() {
 	s.pendingUnknowns = make(map[*conf.Notification][]*models.IncidentState)
 }
 
-var unknownMultiGroup = ttemplate.Must(ttemplate.New("unknownMultiGroup").Parse(`
-	<p>Threshold of {{ .Threshold }} reached for unknown notifications. The following unknown
-	group emails were not sent.
-	<ul>
-	{{ range $group, $alertKeys := .Groups }}
-		<li>
-			{{ $group }}
-			<ul>
-				{{ range $ak := $alertKeys }}
-				<li>{{ $ak }}</li>
-				{{ end }}
-			<ul>
-		</li>
-	{{ end }}
-	</ul>
-	`))
+func (s *Schedule) notify(st *models.IncidentState, n *conf.Notification, a *conf.Alert) {
+	msg := conf.NotificationMessage{
+		Subject:     st.Subject,
+		Body:        st.Body,
+		Payload:     st.Payload,
+		Attachments: st.Attachments,
+		Vars:        make(map[string]interface{}),
+	}
 
-func (s *Schedule) notify(st *models.IncidentState, n *conf.Notification) {
-	if len(st.EmailSubject) == 0 {
-		st.EmailSubject = []byte(st.Subject)
-	}
-	if len(st.EmailBody) == 0 {
-		st.EmailBody = []byte(st.Body)
-	}
-	n.Notify(st.Subject, st.Body, st.EmailSubject, st.EmailBody, s.SystemConf, string(st.AlertKey), st.Attachments...)
+	msg.Vars["Alert"] = a
+	msg.Vars["Incident"] = st
+	msg.Vars["Notification"] = n
+
+	n.Notify(msg, s.SystemConf, string(st.AlertKey))
 }
 
 // utnotify is single notification for N unknown groups into a single notification
@@ -212,35 +204,19 @@ func (s *Schedule) utnotify(groups map[string]models.AlertKeys, n *conf.Notifica
 		s.Group[now] = group
 		total += len(group)
 	}
-	subject := fmt.Sprintf("%v unknown alert instances suppressed", total)
-	body := new(bytes.Buffer)
-	if err := unknownMultiGroup.Execute(body, struct {
+
+	msg := defaultUnknownMultigroupTemplate.GenerateMessage(n, struct {
 		Groups    map[string]models.AlertKeys
 		Threshold int
 	}{
 		groups,
 		s.SystemConf.GetUnknownThreshold(),
-	}); err != nil {
-		slog.Errorln(err)
-	}
-	n.Notify(subject, body.String(), []byte(subject), body.Bytes(), s.SystemConf, "unknown_treshold")
-}
+	})
 
-var defaultUnknownTemplate = &conf.Template{
-	Body: htemplate.Must(htemplate.New("").Parse(`
-		<p>Time: {{.Time}}
-		<p>Name: {{.Name}}
-		<p>Alerts:
-		{{range .Group}}
-			<br>{{.}}
-		{{end}}
-	`)),
-	Subject: ttemplate.Must(ttemplate.New("").Parse(`{{.Name}}: {{.Group | len}} unknown alerts`)),
+	n.Notify(msg, s.SystemConf, "unknown_treshold")
 }
 
 func (s *Schedule) unotify(name string, group models.AlertKeys, n *conf.Notification) {
-	subject := new(bytes.Buffer)
-	body := new(bytes.Buffer)
 	now := utcNow()
 	s.Group[now] = group
 	t := s.RuleConf.GetUnknownTemplate()
@@ -248,25 +224,15 @@ func (s *Schedule) unotify(name string, group models.AlertKeys, n *conf.Notifica
 		t = defaultUnknownTemplate
 	}
 	data := s.unknownData(now, name, group)
-	if t.Body != nil {
-		if err := t.Body.Execute(body, &data); err != nil {
-			slog.Infoln("unknown template error:", err)
-		}
-	}
-	if t.Subject != nil {
-		if err := t.Subject.Execute(subject, &data); err != nil {
-			slog.Infoln("unknown template error:", err)
-		}
-	}
-	n.Notify(subject.String(), body.String(), subject.Bytes(), body.Bytes(), s.SystemConf, name)
+
+	msg := t.GenerateMessage(n, &data)
+
+	n.Notify(msg, s.SystemConf, name)
 }
 
 func (s *Schedule) QueueNotification(ak models.AlertKey, n *conf.Notification, started time.Time) error {
 	return s.DataAccess.Notifications().InsertNotification(ak, n.Name, started.Add(n.Timeout))
 }
-
-var actionNotificationSubjectTemplate *ttemplate.Template
-var actionNotificationBodyTemplate *htemplate.Template
 
 func init() {
 	subject := `{{$first := index .States 0}}{{$count := len .States}}
@@ -285,8 +251,57 @@ func init() {
 		</li>
 	{{end}}
 </ul>`
-	actionNotificationSubjectTemplate = ttemplate.Must(ttemplate.New("").Parse(strings.Replace(subject, "\n", "", -1)))
-	actionNotificationBodyTemplate = htemplate.Must(htemplate.New("").Parse(body))
+	payload := `
+{{$count := len .States}}{{.User}} {{.ActionType}} {{$count}} alert{{if gt $count 1}}s{{end}}:
+Message: {{.Message}}
+Incidents:
+	{{range .States}}
+			<a href="{{$.IncidentLink .Id}}">#{{.Id}}:</a>
+			{{.Subject}}
+	{{end}}
+	`
+
+	actionNotificationSubjectTemplate := ttemplate.Must(ttemplate.New("").Parse(strings.Replace(subject, "\n", "", -1)))
+	actionNotificationBodyTemplate := htemplate.Must(htemplate.New("").Parse(body))
+	actionNotificationPayloadTemplate := ttemplate.Must(ttemplate.New("").Parse(payload))
+
+	actionNotificationTemplate = &conf.Template{
+		Body:    actionNotificationBodyTemplate,
+		Subject: actionNotificationSubjectTemplate,
+		Payload: actionNotificationPayloadTemplate,
+	}
+
+	defaultUnknownMultigroupTemplate = &conf.Template{
+		Subject: ttemplate.Must(ttemplate.New("").Parse(`{{.Name}}: {{.Group | len}} unknown alerts`)),
+		Body: htemplate.Must(htemplate.New("unknownMultiGroup").Parse(`
+	<p>Threshold of {{ .Threshold }} reached for unknown notifications. The following unknown
+	group emails were not sent.
+	<ul>
+	{{ range $group, $alertKeys := .Groups }}
+		<li>
+			{{ $group }}
+			<ul>
+				{{ range $ak := $alertKeys }}
+				<li>{{ $ak }}</li>
+				{{ end }}
+			<ul>
+		</li>
+	{{ end }}
+	</ul>
+	`)),
+	}
+
+	defaultUnknownTemplate = &conf.Template{
+		Subject: ttemplate.Must(ttemplate.New("").Parse(`{{.Name}}: {{.Group | len}} unknown alerts`)),
+		Body: htemplate.Must(htemplate.New("").Parse(`
+		<p>Time: {{.Time}}
+		<p>Name: {{.Name}}
+		<p>Alerts:
+		{{range .Group}}
+			<br>{{.}}
+		{{end}}
+	`)),
+	}
 }
 
 func (s *Schedule) ActionNotify(at models.ActionType, user, message string, aks []models.AlertKey) error {
@@ -301,20 +316,9 @@ func (s *Schedule) ActionNotify(at models.ActionType, user, message string, aks 
 		}
 		data := actionNotificationContext{incidents, user, message, at, s}
 
-		buf := &bytes.Buffer{}
-		err := actionNotificationSubjectTemplate.Execute(buf, data)
-		if err != nil {
-			slog.Error("Error rendering action notification subject", err)
-		}
-		subject := buf.String()
+		msg := actionNotificationTemplate.GenerateMessage(notification, data)
 
-		buf = &bytes.Buffer{}
-		err = actionNotificationBodyTemplate.Execute(buf, data)
-		if err != nil {
-			slog.Error("Error rendering action notification body", err)
-		}
-
-		notification.Notify(subject, buf.String(), []byte(subject), buf.Bytes(), s.SystemConf, "actionNotification")
+		notification.Notify(msg, s.SystemConf, "actionNotification")
 	}
 	return nil
 }
