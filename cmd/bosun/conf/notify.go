@@ -26,47 +26,70 @@ func init() {
 		"The number of email notifications that Bosun failed to send.")
 }
 
-func (n *Notification) Notify(subject, body string, emailsubject, emailbody []byte, c SystemConfProvider, ak string, attachments ...*models.Attachment) {
+type NotificationMessage struct {
+	Vars map[string]interface{}
+	Subject string
+	Body string
+	Payload string
+	Attachments []*models.Attachment
+
+	Notification *Notification
+}
+
+
+// HACK This is quite a dirty way to maintain backward compatibility and support
+// {{js .}} substitution of body/subject inside Notification body template for POST.
+func (nm NotificationMessage) String() string {
+	request := nm.Subject
+	if nm.Notification.UseBody && nm.Body != "" {
+		request = nm.Body
+	} else if nm.Notification.UsePayload && nm.Payload != "" {
+		request = nm.Payload
+	}
+
+	if request == "" {
+		request = "Template subsection is empty"
+		slog.Warningln("No content to send in notification message")
+	}
+
+	return request
+}
+
+func (n *Notification) Notify(message NotificationMessage, c SystemConfProvider, ak string ) {
+	m := message
+	m.Notification = n
 	if len(n.Email) > 0 {
-		go n.DoEmail(emailsubject, emailbody, c, ak, attachments...)
+		go n.DoEmail(m, c, ak)
 	}
 	if n.Post != nil {
-		go n.DoPost(n.GetPayload(subject, body), ak)
+		go n.DoPost(m, ak)
 	}
 	if n.Get != nil {
-		go n.DoGet(ak)
-	}
-	if n.Print {
-		if n.UseBody {
-			go n.DoPrint("Subject: " + subject + ", Body: " + body)
-		} else {
-			go n.DoPrint(subject)
-		}
+		go n.DoGet(m, ak)
 	}
 }
 
-func (n *Notification) GetPayload(subject, body string) (payload []byte) {
-	if n.UseBody {
-		return []byte(body)
-	} else {
-		return []byte(subject)
-	}
-}
 
 func (n *Notification) DoPrint(payload string) {
 	slog.Infoln(payload)
 }
 
-func (n *Notification) DoPost(payload []byte, ak string) {
+func (n *Notification) DoPost(message NotificationMessage, ak string) {
+	request := message.String()
+
+	// Notification's body provides template for API integrations
 	if n.Body != nil {
 		buf := new(bytes.Buffer)
-		if err := n.Body.Execute(buf, string(payload)); err != nil {
+		err := n.Body.Execute(buf, message)
+		if err != nil {
 			slog.Errorln(err)
 			return
 		}
-		payload = buf.Bytes()
+		request = buf.String()
 	}
-	resp, err := http.Post(n.Post.String(), n.ContentType, bytes.NewBuffer(payload))
+
+
+	resp, err := http.Post(n.Post.String(), n.ContentType, bytes.NewBuffer([]byte(request)))
 	if resp != nil && resp.Body != nil {
 		defer resp.Body.Close()
 	}
@@ -79,9 +102,13 @@ func (n *Notification) DoPost(payload []byte, ak string) {
 	} else {
 		slog.Infof("post notification successful for alert %s. Response code %d.", ak, resp.StatusCode)
 	}
+
+	if n.Print {
+		go n.DoPrint("POST payload: " + string(request))
+	}
 }
 
-func (n *Notification) DoGet(ak string) {
+func (n *Notification) DoGet(message NotificationMessage, ak string) {
 	resp, err := http.Get(n.Get.String())
 	if err != nil {
 		slog.Error(err)
@@ -94,15 +121,17 @@ func (n *Notification) DoGet(ak string) {
 	}
 }
 
-func (n *Notification) DoEmail(subject, body []byte, c SystemConfProvider, ak string, attachments ...*models.Attachment) {
+func (n *Notification) DoEmail(message NotificationMessage, c SystemConfProvider, ak string) {
 	e := email.NewEmail()
 	e.From = c.GetEmailFrom()
 	for _, a := range n.Email {
 		e.To = append(e.To, a.Address)
 	}
-	e.Subject = string(subject)
-	e.HTML = body
-	for _, a := range attachments {
+	e.Subject = string(message.Subject)
+	e.HTML = []byte(message.Body)
+
+	// TODO: Check if we do extensive data copying here
+	for _, a := range message.Attachments {
 		e.Attach(bytes.NewBuffer(a.Data), a.Filename, a.ContentType)
 	}
 	e.Headers.Add("X-Bosun-Server", util.Hostname)
@@ -112,7 +141,12 @@ func (n *Notification) DoEmail(subject, body []byte, c SystemConfProvider, ak st
 		return
 	}
 	collect.Add("email.sent", nil, 1)
-	slog.Infof("relayed alert %v to %v sucessfully. Subject: %d bytes. Body: %d bytes.", ak, e.To, len(subject), len(body))
+	slog.Infof("relayed alert %v to %v sucessfully. Subject: %d bytes. Body: %d bytes.", ak, e.To,
+		len(message.Subject), len(message.Body))
+
+	if n.Print {
+		go n.DoPrint("Subject: " + message.Subject + ", Body: " + message.Body)
+	}
 }
 
 // Send an email using the given host and SMTP auth (optional), returns any
