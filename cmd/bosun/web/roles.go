@@ -27,6 +27,7 @@ const (
 	fullyOpen  easyauth.Role = 0
 	roleReader               = canViewDash | canViewConfig | canViewAnnotations
 	roleAdmin                = 0xFFFFFFFF
+	roleWriter               = roleAdmin ^ canManageTokens ^ canOverwriteUsername
 )
 
 var roleDefs = &roleMetadata{
@@ -44,8 +45,9 @@ var roleDefs = &roleMetadata{
 		{canOverwriteUsername, "Set Username", "Allows external services to set username in api requests"},
 	},
 	Roles: []bitDesc{
-		{roleReader, "Reader", "Read access to dashboard"},
+		{roleReader, "Reader", "Read access to dashboard and alert data"},
 		{roleAdmin, "Admin", "Full access to all functionality"},
+		{roleWriter, "Writer", "Write access to alert data and actions"},
 	},
 }
 

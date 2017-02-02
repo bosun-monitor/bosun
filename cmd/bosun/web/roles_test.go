@@ -6,6 +6,15 @@ import (
 	"github.com/captncraig/easyauth"
 )
 
+func TestWriterRole(t *testing.T) {
+	if roleWriter&canManageTokens != 0 {
+		t.Error("Writer should not be able to manage tokens")
+	}
+	if roleWriter&canCreateAnnotations != canCreateAnnotations {
+		t.Error("Writer should be able to create annotations")
+	}
+}
+
 func TestRoleParse(t *testing.T) {
 	tests := []struct {
 		s      string
