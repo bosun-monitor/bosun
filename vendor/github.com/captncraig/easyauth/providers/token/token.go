@@ -18,7 +18,7 @@ type TokenProvider struct {
 }
 
 type TokenDataAccess interface {
-	LookupToken(hash string) (*easyauth.User, error)
+	LookupToken(hash string) (*Token, error)
 	StoreToken(*Token) error
 	RevokeToken(hash string) error
 	ListTokens() ([]*Token, error)
@@ -30,6 +30,7 @@ type Token struct {
 	Role        easyauth.Role
 	Description string
 	LastUsed    time.Time
+	RoleHash    string // Hash of token and Role for security purposes
 }
 
 func NewToken(secret string, data TokenDataAccess) *TokenProvider {
@@ -40,15 +41,28 @@ func NewToken(secret string, data TokenDataAccess) *TokenProvider {
 }
 
 func (t *TokenProvider) GetUser(r *http.Request) (*easyauth.User, error) {
-	var tok string
+	var tokn string
 	if cook, err := r.Cookie("AccessToken"); err == nil {
-		tok = cook.Value
-	} else if tok = r.FormValue("token"); tok == "" {
-		if tok = r.Header.Get("X-Access-Token"); tok == "" {
+		tokn = cook.Value
+	} else if tokn = r.FormValue("token"); tokn == "" {
+		if tokn = r.Header.Get("X-Access-Token"); tokn == "" {
 			return nil, nil
 		}
 	}
-	return t.data.LookupToken(t.hashToken(tok))
+	tok, err := t.data.LookupToken(t.hashToken(tokn))
+	if err != nil {
+		return nil, err
+	}
+	//verify hash with role to ensure not tampered with
+	hashWithRole := t.hashToken(tokn + fmt.Sprint(tok.Role))
+	if hashWithRole != tok.RoleHash {
+		return nil, fmt.Errorf("Token hash mismatch")
+	}
+	return &easyauth.User{
+		Access:   tok.Role,
+		Method:   "token",
+		Username: tok.User,
+	}, nil
 }
 
 func (t *TokenProvider) LoginHandler() http.Handler {
@@ -63,6 +77,7 @@ func (t *TokenProvider) generateToken() string {
 	return base64.StdEncoding.EncodeToString(buf)
 }
 
+//Creates two hashes. One with the roles included (for security against modification), and one without (for fast lookup)
 func (t *TokenProvider) hashToken(tok string) string {
 	data := append([]byte(tok), []byte(t.secret)...)
 	sum := sha256.Sum256(data)
@@ -72,11 +87,13 @@ func (t *TokenProvider) hashToken(tok string) string {
 func (t *TokenProvider) NewToken(user, description string, role easyauth.Role) (string, error) {
 	tok := t.generateToken()
 	hash := t.hashToken(tok)
+	hashWithRole := t.hashToken(tok + fmt.Sprint(role))
 	token := &Token{
 		Hash:        hash,
 		User:        user,
 		Role:        role,
 		Description: description,
+		RoleHash:    hashWithRole,
 	}
 	if err := t.data.StoreToken(token); err != nil {
 		return "", err

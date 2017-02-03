@@ -5,8 +5,6 @@ import (
 	"os"
 	"sync"
 	"time"
-
-	"github.com/captncraig/easyauth"
 )
 
 //json store is a simple token store that keeps tokens in-memory,
@@ -62,7 +60,7 @@ func (j *jsonStore) write() error {
 	return encoder.Encode(j.tokens)
 }
 
-func (j *jsonStore) LookupToken(hash string) (*easyauth.User, error) {
+func (j *jsonStore) LookupToken(hash string) (*Token, error) {
 	j.RLock()
 	tok, ok := j.tokens[hash]
 	j.RUnlock()
@@ -72,11 +70,7 @@ func (j *jsonStore) LookupToken(hash string) (*easyauth.User, error) {
 	tok.LastUsed = time.Now().UTC()
 	j.Lock() //lock to update last used timestamp
 	defer j.Unlock()
-	return &easyauth.User{
-		Access:   tok.Role,
-		Method:   "token",
-		Username: tok.User,
-	}, j.write()
+	return tok, j.write()
 }
 
 func (j *jsonStore) StoreToken(t *Token) error {

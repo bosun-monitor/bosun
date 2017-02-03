@@ -7,7 +7,6 @@ import (
 
 	"github.com/garyburd/redigo/redis"
 
-	"github.com/captncraig/easyauth"
 	"github.com/captncraig/easyauth/providers/token"
 )
 
@@ -32,7 +31,7 @@ const (
 	timestampsKey   = "accessTokenTimestamps"
 )
 
-func (s *store) LookupToken(hash string) (*easyauth.User, error) {
+func (s *store) LookupToken(hash string) (*token.Token, error) {
 	conn := s.Get()
 	defer conn.Close()
 
@@ -48,11 +47,7 @@ func (s *store) LookupToken(hash string) (*easyauth.User, error) {
 		return nil, err
 	}
 	conn.Do("HSET", timestampsKey, hash, time.Now().UTC().Unix()) //eat failure here
-	return &easyauth.User{
-		Access:   tok.Role,
-		Method:   "token",
-		Username: tok.User,
-	}, nil
+	return tok, nil
 }
 
 func (s *store) StoreToken(t *token.Token) error {

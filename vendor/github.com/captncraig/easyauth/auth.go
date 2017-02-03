@@ -157,6 +157,7 @@ func (m *authManager) Wrapper(required Role) func(http.Handler) http.Handler {
 
 func (m *authManager) Wrap(next http.Handler, required Role) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		orig := r
 		r = m.buildContext(w, r)
 		var u *User
 		var err error
@@ -167,6 +168,7 @@ func (m *authManager) Wrap(next http.Handler, required Role) http.Handler {
 				continue
 			}
 			if u != nil {
+				r = orig //don't send intenral context to real handler
 				r = r.WithContext(context.WithValue(r.Context(), userContextKey, u))
 				break
 			}
