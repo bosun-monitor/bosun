@@ -8,10 +8,12 @@ import (
 	"html/template"
 	"io"
 	"io/ioutil"
+	"log"
 	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"runtime/debug"
 	"sort"
 	"strconv"
 	"strings"
@@ -177,7 +179,7 @@ func Listen(httpAddr, httpsAddr, certFile, keyFile string, devMode bool, tsdbHos
 	handle("/api/tagsets/{metric}", JSON(FilteredTagsetsByMetric), canViewDash).Name("search_tagsets_by_metric").Methods(GET)
 	handle("/api/opentsdb/version", JSON(OpenTSDBVersion), fullyOpen).Name("otsdb_version").Methods(GET)
 	handle("/api/annotate", JSON(AnnotateEnabled), fullyOpen).Name("annotate_enabled").Methods(GET)
-
+	handle("/api/badroute", JSON(BadRoute), fullyOpen)
 	// Annotations
 	if schedule.SystemConf.AnnotateEnabled() {
 		index := schedule.SystemConf.GetAnnotateIndex()
@@ -223,10 +225,15 @@ func Listen(httpAddr, httpsAddr, certFile, keyFile string, devMode bool, tsdbHos
 
 	slog.Infoln("tsdb host:", tsdbHost)
 	errChan := make(chan error, 1)
+	srv := &http.Server{
+		ErrorLog: myLogger,
+		Addr:     httpAddr,
+		Handler:  router,
+	}
 	if httpAddr != "" {
 		go func() {
 			slog.Infoln("bosun web listening http on:", httpAddr)
-			errChan <- http.ListenAndServe(httpAddr, router)
+			errChan <- srv.ListenAndServe()
 		}()
 	}
 	if httpsAddr != "" {
@@ -235,11 +242,23 @@ func Listen(httpAddr, httpsAddr, certFile, keyFile string, devMode bool, tsdbHos
 			if certFile == "" || keyFile == "" {
 				errChan <- fmt.Errorf("certFile and keyfile must be specified to use https")
 			}
-			errChan <- http.ListenAndServeTLS(httpsAddr, certFile, keyFile, router)
+			errChan <- srv.ListenAndServeTLS(certFile, keyFile)
 		}()
 	}
 	return <-errChan
 }
+
+type myDebugWriter struct{}
+
+func (myDebugWriter) Write(b []byte) (int, error) {
+	log.Print(string(b))
+	if strings.Contains(string(b), "multiple response.WriteHeader") {
+		debug.PrintStack()
+	}
+	return len(b), nil
+}
+
+var myLogger = log.New(myDebugWriter{}, "", 0)
 
 type relayProxy struct {
 	*httputil.ReverseProxy
@@ -499,6 +518,12 @@ func OpenTSDBVersion(t miniprofiler.Timer, w http.ResponseWriter, r *http.Reques
 
 func AnnotateEnabled(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	return schedule.SystemConf.AnnotateEnabled(), nil
+}
+
+func BadRoute(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	w.WriteHeader(200)
+	w.WriteHeader(400)
+	return nil, nil
 }
 
 func PutMetadata(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
