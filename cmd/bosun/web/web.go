@@ -225,19 +225,25 @@ func Listen(httpAddr, httpsAddr, certFile, keyFile string, devMode bool, tsdbHos
 
 	slog.Infoln("tsdb host:", tsdbHost)
 	errChan := make(chan error, 1)
-	srv := &http.Server{
-		ErrorLog: myLogger,
-		Addr:     httpAddr,
-		Handler:  router,
-	}
+
 	if httpAddr != "" {
 		go func() {
+			srv := &http.Server{
+				ErrorLog: myLogger,
+				Addr:     httpAddr,
+				Handler:  router,
+			}
 			slog.Infoln("bosun web listening http on:", httpAddr)
 			errChan <- srv.ListenAndServe()
 		}()
 	}
 	if httpsAddr != "" {
 		go func() {
+			srv := &http.Server{
+				ErrorLog: myLogger,
+				Addr:     httpsAddr,
+				Handler:  router,
+			}
 			slog.Infoln("bosun web listening https on:", httpsAddr)
 			if certFile == "" || keyFile == "" {
 				errChan <- fmt.Errorf("certFile and keyfile must be specified to use https")
