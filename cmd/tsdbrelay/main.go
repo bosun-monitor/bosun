@@ -61,6 +61,9 @@ func (t *tsdbrelayHTTPTransport) RoundTrip(req *http.Request) (*http.Response, e
 	if req.Header.Get("User-Agent") == "" {
 		req.Header.Add("User-Agent", t.UserAgent)
 	}
+	if req.Header.Get("X-Access-Token") == "" {
+		req.Header.Add("X-Access-Token", t.UserAgent)
+	}
 	return t.RoundTripper.RoundTrip(req)
 }
 
