@@ -241,6 +241,9 @@ func (rp *relayProxy) relayPut(responseWriter http.ResponseWriter, r *http.Reque
 			verbose("bosun connect error: %v", err)
 			return
 		}
+		if access := r.Header.Get(accessHeader); access != "" {
+			req.Header.Set(accessHeader, access)
+		}
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
 			verbose("bosun relay error: %v", err)
