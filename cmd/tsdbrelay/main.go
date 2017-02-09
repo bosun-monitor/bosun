@@ -61,9 +61,6 @@ func (t *tsdbrelayHTTPTransport) RoundTrip(req *http.Request) (*http.Response, e
 	if req.Header.Get("User-Agent") == "" {
 		req.Header.Add("User-Agent", t.UserAgent)
 	}
-	if req.Header.Get("X-Access-Token") == "" {
-		req.Header.Add("X-Access-Token", t.UserAgent)
-	}
 	return t.RoundTripper.RoundTrip(req)
 }
 
@@ -216,10 +213,11 @@ func (rw *relayWriter) WriteHeader(code int) {
 }
 
 var (
-	relayHeader = "X-Relayed-From"
-	encHeader   = "Content-Encoding"
-	typeHeader  = "Content-Type"
-	myHost      string
+	relayHeader  = "X-Relayed-From"
+	encHeader    = "Content-Encoding"
+	typeHeader   = "Content-Type"
+	accessHeader = "X-Access-Header"
+	myHost       string
 )
 
 func (rp *relayProxy) relayPut(responseWriter http.ResponseWriter, r *http.Request, parse bool) {
@@ -268,6 +266,9 @@ func (rp *relayProxy) relayPut(responseWriter http.ResponseWriter, r *http.Reque
 				}
 				if contenttype := r.Header.Get(typeHeader); contenttype != "" {
 					req.Header.Set(typeHeader, contenttype)
+				}
+				if access := r.Header.Get(accessHeader); access != "" {
+					req.Header.Set(accessHeader, access)
 				}
 				if encoding := r.Header.Get(encHeader); encoding != "" {
 					req.Header.Set(encHeader, encoding)
@@ -366,6 +367,9 @@ func (rp *relayProxy) relayMetadata(responseWriter http.ResponseWriter, r *http.
 				}
 				if contenttype := r.Header.Get(typeHeader); contenttype != "" {
 					req.Header.Set(typeHeader, contenttype)
+				}
+				if access := r.Header.Get(accessHeader); access != "" {
+					req.Header.Set(accessHeader, access)
 				}
 				if encoding := r.Header.Get(encHeader); encoding != "" {
 					req.Header.Set(encHeader, encoding)
