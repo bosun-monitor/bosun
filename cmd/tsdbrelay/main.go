@@ -216,7 +216,7 @@ var (
 	relayHeader  = "X-Relayed-From"
 	encHeader    = "Content-Encoding"
 	typeHeader   = "Content-Type"
-	accessHeader = "X-Access-Header"
+	accessHeader = "X-Access-Token"
 	myHost       string
 )
 
