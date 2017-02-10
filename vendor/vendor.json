@@ -287,26 +287,26 @@
 		{
 			"checksumSHA1": "6uI9vIE0lJTMqhksuV1a0qN+TCo=",
 			"path": "github.com/captncraig/easyauth",
-			"revision": "07e080082fd88e597999274d07d6a08b7fd5deaf",
-			"revisionTime": "2017-02-10T19:42:31Z"
+			"revision": "913ff61699acd71dc6af597fa29c15055b590950",
+			"revisionTime": "2017-02-10T19:47:46Z"
 		},
 		{
 			"checksumSHA1": "23VEUUJGS8KRo4xpyu9qjTlx2KE=",
 			"path": "github.com/captncraig/easyauth/providers/ldap",
-			"revision": "07e080082fd88e597999274d07d6a08b7fd5deaf",
-			"revisionTime": "2017-02-10T19:42:31Z"
+			"revision": "913ff61699acd71dc6af597fa29c15055b590950",
+			"revisionTime": "2017-02-10T19:47:46Z"
 		},
 		{
 			"checksumSHA1": "vg8l+UEt3ChxGA9AehC4TCqkhdU=",
 			"path": "github.com/captncraig/easyauth/providers/token",
-			"revision": "07e080082fd88e597999274d07d6a08b7fd5deaf",
-			"revisionTime": "2017-02-10T19:42:31Z"
+			"revision": "913ff61699acd71dc6af597fa29c15055b590950",
+			"revisionTime": "2017-02-10T19:47:46Z"
 		},
 		{
-			"checksumSHA1": "phUKfvd8P8aypnuq0+COBjpeXc8=",
+			"checksumSHA1": "bG2Nz0IR6+f6Re6IHrZN/yxfm1U=",
 			"path": "github.com/captncraig/easyauth/providers/token/redisStore",
-			"revision": "07e080082fd88e597999274d07d6a08b7fd5deaf",
-			"revisionTime": "2017-02-10T19:42:31Z"
+			"revision": "913ff61699acd71dc6af597fa29c15055b590950",
+			"revisionTime": "2017-02-10T19:47:46Z"
 		},
 		{
 			"path": "github.com/coreos/go-systemd/dbus",

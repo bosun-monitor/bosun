@@ -7,6 +7,7 @@ import (
 
 	"github.com/garyburd/redigo/redis"
 
+	"fmt"
 	"github.com/captncraig/easyauth/providers/token"
 )
 
@@ -37,6 +38,9 @@ func (s *store) LookupToken(hash string) (*token.Token, error) {
 
 	val, err := redis.String(conn.Do("HGET", accessTokensKey, hash))
 	if err != nil {
+		if err == redis.ErrNil {
+			return nil, fmt.Errorf("Token not found")
+		}
 		return nil, err
 	}
 	tok := &token.Token{}
