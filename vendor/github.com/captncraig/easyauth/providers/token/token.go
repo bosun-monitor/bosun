@@ -44,7 +44,7 @@ func (t *TokenProvider) GetUser(r *http.Request) (*easyauth.User, error) {
 	var tokn string
 	if cook, err := r.Cookie("AccessToken"); err == nil {
 		tokn = cook.Value
-	} else if tokn = r.FormValue("token"); tokn == "" {
+	} else if tokn = r.URL.Query().Get("token"); tokn == "" {
 		if tokn = r.Header.Get("X-Access-Token"); tokn == "" {
 			return nil, nil
 		}
