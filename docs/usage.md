@@ -88,16 +88,16 @@ The open incident filter supports joining terms in `()` as well as the `AND`, `O
         <th>Description</th>
     </tr>
     <tr>
-    <td><code>ackTime:[<|>](1d)</code></td>
+        <td><code>ack:(true|false)</code></td>
+        <td>If <code>ack:true</code> incidents that have been acknowledge are returned, when <code>ack:false</code>                        incidents that have not been acknowledged are returned.</td>
+    </tr>
+    <tr>
+        <td><code>ackTime:[<|>](1d)</code></td>
         <td>Returns incidents that were acknowledged before <code><</code> or incidents that were acknowledged after <code>></code> the
             relative time to now based on the duration. Duration can be in units of s (seconds), m (minutes),
             h (hours), d (days), w (weeks), n (months), y (years). If less than or greater than are not part
             of the value, it defaults to greater than (after). Now is clock time and is not related to the time
             range specified in Grafana. For example, <code>ackTime:<24h</code> shows incidents that were acknowledged more than 24 hours ago.</td>
-    </tr>
-    <tr>
-        <td><code>ackTime:(true|false)</code></td>
-        <td>If <code>ack:true</code> incidents that have been acknowledge are returned, when <code>ack:false</code>                        incidents that have not been acknowledged are returned.</td>
     </tr>
     <tr>
         <td><code>hasTag:(tagKey|tagKey=|=tagValue|tagKey=tagValue)</code></td>
