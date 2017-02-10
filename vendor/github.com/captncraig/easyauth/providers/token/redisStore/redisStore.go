@@ -37,9 +37,6 @@ func (s *store) LookupToken(hash string) (*token.Token, error) {
 
 	val, err := redis.String(conn.Do("HGET", accessTokensKey, hash))
 	if err != nil {
-		if err == redis.ErrNil {
-			return nil, nil
-		}
 		return nil, err
 	}
 	tok := &token.Token{}
