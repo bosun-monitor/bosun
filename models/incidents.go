@@ -23,10 +23,10 @@ type IncidentState struct {
 	Actions []Action `json:",omitempty"`
 
 	Subject      string
-	Body         string
-	EmailBody    []byte
-	EmailSubject []byte
-	Attachments  []*Attachment
+	// Body         string
+	// EmailBody    []byte
+	// EmailSubject []byte
+	// Attachments  []*Attachment
 
 	NeedAck bool
 	Open    bool
@@ -38,6 +38,13 @@ type IncidentState struct {
 
 	LastAbnormalStatus Status
 	LastAbnormalTime   int64
+}
+
+type RenderedTemplates struct {
+	Body         string
+	EmailBody    []byte
+	EmailSubject []byte
+	Attachments  []*Attachment
 }
 
 func (s *IncidentState) Group() opentsdb.TagSet {

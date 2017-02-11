@@ -636,7 +636,7 @@ func Status(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (inter
 		}
 		var state *models.IncidentState
 		if r.FormValue("all") != "" {
-			allInc, err := schedule.DataAccess.State().GetAllIncidents(ak)
+			allInc, err := schedule.DataAccess.State().GetAllIncidentsByAlertKey(ak)
 			if err != nil {
 				return nil, err
 			}

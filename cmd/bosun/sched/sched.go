@@ -100,6 +100,9 @@ func (s *Schedule) Init(systemConf conf.SystemConfProvider, ruleConf conf.RuleCo
 	if s.Search == nil {
 		s.Search = search.NewSearch(s.DataAccess, skipLast)
 	}
+	if err := s.DataAccess.Migrate(); err != nil {
+		return err
+	}
 	return nil
 }
 
