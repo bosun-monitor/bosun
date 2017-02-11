@@ -63,7 +63,9 @@ type oldIncidentState struct {
 func migrateRenderedTemplates(d *dataAccess) error {
 	slog.Infoln("Running rendered template migration")
 
-	ids, err := d.getAllIncidentIds()
+	// Hacky Work better?
+	ids, err := d.getAllIncidentIdsByKeys()
+	slog.Infoln("migrating %v incidents", len(ids))
 	if err != nil {
 		return err
 	}
@@ -110,7 +112,9 @@ func migrateRenderedTemplates(d *dataAccess) error {
 			LastAbnormalStatus: oldState.LastAbnormalStatus,
 			LastAbnormalTime:   oldState.LastAbnormalTime,
 		}
-		_ = newState
+		if _, err := d.State().UpdateIncidentState(newState); err != nil {
+			return slog.Wrap(err)
+		}
 	}
 
 	return nil
@@ -133,6 +137,9 @@ func (d *dataAccess) Migrate() error {
 			if _, err := redis.Bool(conn.Do("Get", "allIncidents")); err == redis.ErrNil {
 				slog.Infoln("assuming new installation because allIncidents key not found")
 				slog.Infoln("writing current schema version")
+				if _, err := conn.Do("SET", schemaKey, SchemaVersion); err != nil {
+					return slog.Wrap(err)
+				}
 				version = SchemaVersion
 				return nil
 			}
@@ -142,11 +149,15 @@ func (d *dataAccess) Migrate() error {
 	}
 
 	for _, task := range tasks {
-		if task.Version > version {
+		if task.Version > version { // Not sure logic is correct don't care right now.
 			// Check if migration has been run if not that run
 			err := task.Task(d)
 			if err != nil {
-				// Mark Migration as Complete
+				if _, err := conn.Do("SET", schemaKey, SchemaVersion); err != nil {
+					return slog.Wrap(err)
+				}
+			} else {
+				return slog.Wrap(err)
 			}
 		}
 	}

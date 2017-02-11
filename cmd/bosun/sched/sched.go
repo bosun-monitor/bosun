@@ -26,6 +26,8 @@ func utcNow() time.Time {
 	return time.Now().UTC()
 }
 
+
+
 type Schedule struct {
 	mutex         sync.Mutex
 	mutexHolder   string
@@ -44,7 +46,7 @@ type Schedule struct {
 	//channel signals an alert has added notifications, and notifications should be processed.
 	nc chan interface{}
 	//notifications to be sent immediately
-	pendingNotifications map[*conf.Notification][]*models.IncidentState
+	pendingNotifications map[*conf.Notification][]*IncidentWithTemplates
 
 	//unknown states that need to be notified about. Collected and sent in batches.
 	pendingUnknowns map[*conf.Notification][]*models.IncidentState
@@ -435,9 +437,6 @@ func (s *Schedule) MarshalGroups(T miniprofiler.Timer, filter string) (*StateGro
 					}
 					for _, ak := range group {
 						st := status[ak]
-						st.Body = ""
-						st.EmailBody = nil
-						st.Attachments = nil
 						g.Children = append(g.Children, &StateGroup{
 							Active:   tuple.Active,
 							Status:   tuple.Status,

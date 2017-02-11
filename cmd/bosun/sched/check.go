@@ -117,6 +117,7 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.E
 
 	// get existing open incident if exists
 	var incident *models.IncidentState
+	var rt *models.RenderedTemplates
 	incident, err = data.GetOpenIncident(ak)
 	if err != nil {
 		return
@@ -125,8 +126,18 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.E
 		// save unless incident is new and closed (log alert)
 		if incident != nil && (incident.Id != 0 || incident.Open) {
 			_, err = data.UpdateIncidentState(incident)
+			if err != nil {
+				return
+			}
+			err = data.SetRenderedTemplates(incident.Id, rt)
+			if err != nil {
+				return
+			}
 		} else {
 			err = data.SetUnevaluated(ak, event.Unevaluated) // if nothing to save, at least store the unevaluated state
+			if err != nil {
+				return
+			}
 		}
 	}()
 	// If nothing is out of the ordinary we are done
@@ -183,7 +194,8 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.E
 
 	//render templates and open alert key if abnormal
 	if event.Status > models.StNormal {
-		s.executeTemplates(incident, event, a, r)
+		s.executeTemplates(incident, rt, event, a, r)
+		s.DataAccess.State().SetRenderedTemplates(incident.Id, rt)
 		incident.Open = true
 		if a.Log {
 			incident.Open = false
@@ -203,7 +215,7 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.E
 		}
 		nots := ns.Get(s.RuleConf, incident.AlertKey.Group())
 		for _, n := range nots {
-			s.Notify(incident, n)
+			s.Notify(incident, rt, n)
 			checkNotify = true
 		}
 	}
@@ -256,7 +268,7 @@ func silencedOrIgnored(a *conf.Alert, event *models.Event, si *models.Silence) b
 	}
 	return false
 }
-func (s *Schedule) executeTemplates(state *models.IncidentState, event *models.Event, a *conf.Alert, r *RunHistory) {
+func (s *Schedule) executeTemplates(state *models.IncidentState, rt *models.RenderedTemplates, event *models.Event, a *conf.Alert, r *RunHistory) {
 	if event.Status != models.StUnknown {
 		var errs []error
 		metric := "template.render"
@@ -272,6 +284,8 @@ func (s *Schedule) executeTemplates(state *models.IncidentState, event *models.E
 			errs = append(errs, err)
 		}
 		endTiming()
+
+
 
 		//Render body
 		endTiming = collect.StartTimer(metric, opentsdb.TagSet{"alert": a.Name, "type": "body"})
@@ -324,15 +338,16 @@ func (s *Schedule) executeTemplates(state *models.IncidentState, event *models.E
 			attachments = nil
 		}
 		state.Subject = string(subject)
-		state.Body = string(body)
+		//state.Body = string(body)
+		rt.Body = string(body)
 		//don't save email seperately if they are identical
-		if string(state.EmailBody) != state.Body {
-			state.EmailBody = emailbody
+		if string(rt.EmailBody) != rt.Body {
+			rt.EmailBody = emailbody
 		}
-		if string(state.EmailSubject) != state.Subject {
-			state.EmailSubject = emailsubject
+		if string(rt.EmailSubject) != state.Subject {
+			rt.EmailSubject = emailsubject
 		}
-		state.Attachments = attachments
+		rt.Attachments = attachments
 	}
 }
 

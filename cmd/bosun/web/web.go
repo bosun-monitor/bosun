@@ -627,6 +627,7 @@ func Status(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (inter
 	type ExtStatus struct {
 		AlertName string
 		*models.IncidentState
+		*models.RenderedTemplates
 	}
 	m := make(map[string]ExtStatus)
 	for _, k := range r.Form["ak"] {
@@ -658,7 +659,11 @@ func Status(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (inter
 				return nil, err
 			}
 		}
-		st := ExtStatus{IncidentState: state}
+		rt, err := schedule.DataAccess.State().GetRenderedTemplates(state.Id)
+		if err != nil {
+			return nil, err
+		}
+		st := ExtStatus{IncidentState: state, RenderedTemplates: rt}
 		if st.IncidentState == nil {
 			return nil, fmt.Errorf("unknown alert key: %v", k)
 		}

@@ -211,6 +211,25 @@ func (d *dataAccess) getAllIncidentIds() ([]int64, error) {
 		}
 	}
 	return ids, nil
+}
+
+func (d *dataAccess) getAllIncidentIdsByKeys() ([]int64, error) {
+	conn := d.Get()
+	defer conn.Close()
+
+	summaries, err := redis.Strings(conn.Do("KEYS", "incidentById:*"))
+	if err != nil {
+		return nil, slog.Wrap(err)
+	}
+	ids := make([]int64, len(summaries))
+	for i, sum := range summaries {
+		var err error
+		ids[i], err = strconv.ParseInt(strings.Split(sum, ":")[1], 0, 64)
+		if err != nil {
+			return nil, slog.Wrap(err)
+		}
+	}
+	return ids, nil
 
 }
 
