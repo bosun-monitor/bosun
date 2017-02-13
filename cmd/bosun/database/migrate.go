@@ -21,7 +21,7 @@ type Migration struct {
 }
 
 var tasks = []Migration{
-	Migration{
+	{
 		UID:     "Migrate Rendered Templates",
 		Task:    migrateRenderedTemplates,
 		Version: 1,
