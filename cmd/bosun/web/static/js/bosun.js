@@ -667,6 +667,32 @@ var AuthService = (function () {
         }
         return true;
     };
+    AuthService.prototype.PermissionsFor = function (bits) {
+        if (bits == null) {
+            bits = this.userPerms;
+        }
+        var perms = [];
+        for (var _i = 0, _a = this.roles.Permissions; _i < _a.length; _i++) {
+            var p = _a[_i];
+            if (p.Bits & bits) {
+                perms.push(p.Name);
+            }
+        }
+        return perms;
+    };
+    AuthService.prototype.RoleFor = function (bits) {
+        if (bits == null) {
+            bits = this.userPerms;
+        }
+        var perms = [];
+        for (var _i = 0, _a = this.roles.Roles; _i < _a.length; _i++) {
+            var r = _a[_i];
+            if (r.Bits == bits) {
+                return r.Name;
+            }
+        }
+        return null;
+    };
     AuthService.prototype.GetRoles = function () {
         return this.roles;
     };
@@ -3526,9 +3552,10 @@ bosunApp.directive('tsForceClose', function () {
 });
 /// <reference path="0-bosun.ts" />
 var TokenListController = (function () {
-    function TokenListController($http) {
+    function TokenListController($http, auth) {
         var _this = this;
         this.$http = $http;
+        this.auth = auth;
         this.delete = function (hash) {
             _this.status = "Deleting...";
             _this.$http.delete("/api/tokens?hash=" + encodeURIComponent(hash))
@@ -3544,6 +3571,8 @@ var TokenListController = (function () {
             _this.$http.get("/api/tokens").then(function (resp) {
                 _(resp.data).forEach(function (tok) {
                     tok.LastUsed = moment.utc(tok.LastUsed);
+                    tok.Permissions = _this.auth.PermissionsFor(tok.Role);
+                    tok.RoleName = _this.auth.RoleFor(tok.Role) || ("" + tok.Permissions.length + " Permissions");
                 });
                 _this.tokens = resp.data;
                 _this.status = "";
@@ -3551,15 +3580,28 @@ var TokenListController = (function () {
                 _this.status = 'Unable to fetch tokens: ' + err;
             });
         };
+        this.permList = function (tok) {
+            //HACK: return html string for popover. angular-strap has bad api for this
+            var h = "<div class=\"popover\" tabindex=\"-1\">\n        <div class=\"arrow\"></div>\n        <div class=\"popover-content\"><ul>";
+            var perms = _this.auth.PermissionsFor(tok.Role);
+            for (var i = 0; i < perms.length; i++) {
+                var p = perms[i];
+                var open = "<strong>";
+                var close = "</strong>";
+                h += "<li>" + open + p + close + "</li>";
+            }
+            h += "</ul></div></div>";
+            return h;
+        };
         this.load();
     }
-    TokenListController.$inject = ['$http'];
+    TokenListController.$inject = ['$http', "authService"];
     return TokenListController;
 })();
 bosunApp.component('tokenList', {
     controller: TokenListController,
     controllerAs: "ct",
-    template: "\n<div class=\"alert alert-danger\" ng-show=\"ct.status\">{{ct.status}}</div>\n<h2>Access Tokens</h2>\n    <table class=\"table table-striped\">\n        <thead>\n        <tr>\n            <th>ID</th>\n            <th>User</th>\n            <th>Description</th>\n            <th>Last Used</th>\n        </tr>\n        </thead>\n        <tbody>\n        <tr  ng-repeat=\"tok in ct.tokens\">\n            <td>{{tok.Hash | limitTo: 6}}</td>\n            <td>{{tok.User}}</td>\n            <td>{{tok.Description}}</td>\n            <td><span ng-show=\"tok.LastUsed.year() > 2000\" ts-since=\"tok.LastUsed\"></span> <span ng-show=\"tok.LastUsed.year() <= 2000\">Never</span></td>\n            <td><a class='btn btn-danger glyphicon glyphicon-trash' ng-click='ct.delete(tok.Hash)'></a></td>\n        </tr>\n        </tbody>\n    </table>\n    <a class='btn btn-primary' href='/tokens/new'><span class='glyphicon glyphicon-plus'/> Create new token</a>\n" });
+    template: "\n<div class=\"alert alert-danger\" ng-show=\"ct.status\">{{ct.status}}</div>\n<h2>Access Tokens</h2>\n    <table class=\"table table-striped\">\n        <thead>\n        <tr>\n            <th>ID</th>\n            <th>User</th>\n            <th>Description</th>\n            <th>Permissions</th>\n            <th>Last Used</th>\n            <th></th>\n        </tr>\n        </thead>\n        <tbody>\n        <tr  ng-repeat=\"tok in ct.tokens | orderBy:'-LastUsed'\">\n            <td>{{tok.Hash | limitTo: 6}}</td>\n            <td>{{tok.User}}</td>\n            <td>{{tok.Description}}</td>\n            <td>\n                <a type=\"button\" \n                class=\"btn\" \n                title=\"{{popover.title}}\" \n                data-template=\"{{ct.permList(tok)}}\" \n                data-animation=\"am-flip-x\" \n                data-trigger=\"hover\"\n                data-auto-close=\"1\" bs-popover>{{tok.RoleName}}</a>\n \n            </td>\n            <td><span ng-if=\"tok.LastUsed.year() > 2000\" ts-since=\"tok.LastUsed\"></span> <span ng-if=\"tok.LastUsed.year() <= 2000\">Never</span></td>\n            <td><a class='btn btn-danger glyphicon glyphicon-trash' ng-click='ct.delete(tok.Hash)'></a></td>\n        </tr>\n        </tbody>\n    </table>\n    <a class='btn btn-primary' href='/tokens/new'><span class='glyphicon glyphicon-plus'/> Create new token</a>\n" });
 /// <reference path="0-bosun.ts" />
 var NewTokenController = (function () {
     function NewTokenController($http, auth) {

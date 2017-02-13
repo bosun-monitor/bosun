@@ -18,9 +18,11 @@ class TokenListController {
     load = () =>{
         this.status = "Loading..."
         this.$http.get("/api/tokens").then(
-            (resp: ng.IHttpPromiseCallbackArg<Array<Token>>) => {
+            (resp: ng.IHttpPromiseCallbackArg<Token[]>) => {
                 _(resp.data).forEach((tok) => {
-                    tok.LastUsed = moment.utc(tok.LastUsed)
+                    tok.LastUsed = moment.utc(tok.LastUsed);
+                    tok.Permissions = this.auth.PermissionsFor(tok.Role);
+                    tok.RoleName = this.auth.RoleFor(tok.Role) || ("" + tok.Permissions.length+" Permissions");
                 })
                 this.tokens = resp.data;
                 this.status = "";
@@ -30,8 +32,24 @@ class TokenListController {
         )
     }
 
-    static $inject = ['$http'];
-    constructor(private $http: ng.IHttpService) {
+    permList = (tok: Token): string =>{
+        //HACK: return html string for popover. angular-strap has bad api for this
+        var h = `<div class="popover" tabindex="-1">
+        <div class="arrow"></div>
+        <div class="popover-content"><ul>`
+        var perms = this.auth.PermissionsFor(tok.Role);
+        for (var i = 0; i< perms.length; i++){
+            var p = perms[i];
+            var open = "<strong>";
+            var close = "</strong>";
+            h += "<li>"+open+p+close+"</li>";
+        }
+        h += `</ul></div></div>`
+        return h;
+    }
+
+    static $inject = ['$http', "authService"];
+    constructor(private $http: ng.IHttpService, private auth: IAuthService) {
         this.load();
     }
 }
@@ -48,15 +66,27 @@ bosunApp.component('tokenList', {
             <th>ID</th>
             <th>User</th>
             <th>Description</th>
+            <th>Permissions</th>
             <th>Last Used</th>
+            <th></th>
         </tr>
         </thead>
         <tbody>
-        <tr  ng-repeat="tok in ct.tokens">
+        <tr  ng-repeat="tok in ct.tokens | orderBy:'-LastUsed'">
             <td>{{tok.Hash | limitTo: 6}}</td>
             <td>{{tok.User}}</td>
             <td>{{tok.Description}}</td>
-            <td><span ng-show="tok.LastUsed.year() > 2000" ts-since="tok.LastUsed"></span> <span ng-show="tok.LastUsed.year() <= 2000">Never</span></td>
+            <td>
+                <a type="button" 
+                class="btn" 
+                title="{{popover.title}}" 
+                data-template="{{ct.permList(tok)}}" 
+                data-animation="am-flip-x" 
+                data-trigger="hover"
+                data-auto-close="1" bs-popover>{{tok.RoleName}}</a>
+ 
+            </td>
+            <td><span ng-if="tok.LastUsed.year() > 2000" ts-since="tok.LastUsed"></span> <span ng-if="tok.LastUsed.year() <= 2000">Never</span></td>
             <td><a class='btn btn-danger glyphicon glyphicon-trash' ng-click='ct.delete(tok.Hash)'></a></td>
         </tr>
         </tbody>
