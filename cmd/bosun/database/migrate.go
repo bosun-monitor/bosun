@@ -2,7 +2,6 @@ package database
 
 import (
 	"encoding/json"
-	"time"
 
 	"bosun.org/models"
 	"bosun.org/slog"
@@ -29,43 +28,16 @@ var tasks = []Migration{
 }
 
 type oldIncidentState struct {
-	Id       int64
-	Start    time.Time
-	End      *time.Time
-	AlertKey models.AlertKey
-	Alert    string // helper data since AlertKeys don't serialize to JSON well
-	Tags     string // string representation of Group
-
-	*models.Result
-
-	// Most recent last.
-	Events  []models.Event  `json:",omitempty"`
-	Actions []models.Action `json:",omitempty"`
-
-	Subject      string
-	Body         string
-	EmailBody    []byte
-	EmailSubject []byte
-	Attachments  []*models.Attachment
-
-	NeedAck bool
-	Open    bool
-
-	Unevaluated bool
-
-	CurrentStatus models.Status
-	WorstStatus   models.Status
-
-	LastAbnormalStatus models.Status
-	LastAbnormalTime   int64
+	*models.IncidentState
+	*models.RenderedTemplates
 }
 
 func migrateRenderedTemplates(d *dataAccess) error {
-	slog.Infoln("Running rendered template migration")
+	slog.Infoln("Running rendered template migration. This can take several minutes.")
 
 	// Hacky Work better?
 	ids, err := d.getAllIncidentIdsByKeys()
-	slog.Infoln("migrating %v incidents", len(ids))
+	slog.Infof("migrating %v incidents", len(ids))
 	if err != nil {
 		return err
 	}
@@ -82,45 +54,17 @@ func migrateRenderedTemplates(d *dataAccess) error {
 		if err := json.Unmarshal(b, oldState); err != nil {
 			slog.Wrap(err)
 		}
-		rt := &models.RenderedTemplates{
-			Body:         oldState.Body,
-			EmailBody:    oldState.EmailBody,
-			EmailSubject: oldState.EmailSubject,
-			Attachments:  oldState.Attachments,
-		}
-		if err := d.State().SetRenderedTemplates(oldState.Id, rt); err != nil {
+		if err := d.State().SetRenderedTemplates(oldState.Id, oldState.RenderedTemplates); err != nil {
 			return slog.Wrap(err)
 		}
-
-		newState := &models.IncidentState{
-			Id:       oldState.Id,
-			Start:    oldState.Start,
-			End:      oldState.End,
-			AlertKey: oldState.AlertKey,
-			Alert:    oldState.Alert,
-			Tags:     oldState.Tags,
-			Result:   oldState.Result,
-
-			Events:             oldState.Events,
-			Actions:            oldState.Actions,
-			Subject:            oldState.Subject,
-			NeedAck:            oldState.NeedAck,
-			Open:               oldState.Open,
-			Unevaluated:        oldState.Unevaluated,
-			CurrentStatus:      oldState.CurrentStatus,
-			WorstStatus:        oldState.WorstStatus,
-			LastAbnormalStatus: oldState.LastAbnormalStatus,
-			LastAbnormalTime:   oldState.LastAbnormalTime,
-		}
-		data, err := json.Marshal(newState)
+		data, err := json.Marshal(oldState.IncidentState)
 		if err != nil {
 			return slog.Wrap(err)
 		}
-		if _, err := conn.Do("SET", incidentStateKey(newState.Id), data); err != nil {
+		if _, err := conn.Do("SET", incidentStateKey(oldState.Id), data); err != nil {
 			return slog.Wrap(err)
 		}
 	}
-
 	return nil
 }
 

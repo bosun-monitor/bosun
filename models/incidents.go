@@ -24,8 +24,6 @@ type IncidentState struct {
 
 	Subject string
 
-	rt *RenderedTemplates
-
 	NeedAck bool
 	Open    bool
 

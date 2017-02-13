@@ -59,7 +59,6 @@ type StateDataAccess interface {
 	GetLatestIncident(ak models.AlertKey) (*models.IncidentState, error)
 	GetAllOpenIncidents() ([]*models.IncidentState, error)
 	GetIncidentState(incidentId int64) (*models.IncidentState, error)
-	//GetAllIncidentIds() ([]int64, error)
 
 	GetAllIncidentsByAlertKey(ak models.AlertKey) ([]*models.IncidentState, error)
 
