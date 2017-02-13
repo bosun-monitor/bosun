@@ -11,7 +11,6 @@ class AuthService implements IAuthService {
         this.userPerms = userPerms;
         this.authEnabled = authEnabled;
         this.cleanRoles();
-
         if(!authEnabled){
             var cookVal = readCookie("action-user")
             if (cookVal){
@@ -19,6 +18,7 @@ class AuthService implements IAuthService {
             }
         }
     }
+
     public HasPermission(s: string) {
         for (let p of this.roles.Permissions) {
             if (p.Name == s) {
