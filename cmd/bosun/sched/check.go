@@ -126,13 +126,7 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.E
 		// save unless incident is new and closed (log alert)
 		if incident != nil && (incident.Id != 0 || incident.Open) {
 			_, err = data.UpdateIncidentState(incident)
-			if err != nil {
-				return
-			}
 			err = data.SetRenderedTemplates(incident.Id, rt)
-			if err != nil {
-				return
-			}
 		} else {
 			err = data.SetUnevaluated(ak, event.Unevaluated) // if nothing to save, at least store the unevaluated state
 			if err != nil {
@@ -195,7 +189,6 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.E
 	//render templates and open alert key if abnormal
 	if event.Status > models.StNormal {
 		s.executeTemplates(incident, rt, event, a, r)
-		s.DataAccess.State().SetRenderedTemplates(incident.Id, rt)
 		incident.Open = true
 		if a.Log {
 			incident.Open = false
