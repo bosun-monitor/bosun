@@ -22,11 +22,7 @@ type IncidentState struct {
 	Events  []Event  `json:",omitempty"`
 	Actions []Action `json:",omitempty"`
 
-	Subject      string
-	// Body         string
-	// EmailBody    []byte
-	// EmailSubject []byte
-	// Attachments  []*Attachment
+	Subject string
 
 	rt *RenderedTemplates
 

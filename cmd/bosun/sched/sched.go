@@ -26,8 +26,6 @@ func utcNow() time.Time {
 	return time.Now().UTC()
 }
 
-
-
 type Schedule struct {
 	mutex         sync.Mutex
 	mutexHolder   string

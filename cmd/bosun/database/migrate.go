@@ -6,7 +6,7 @@ import (
 
 	"bosun.org/models"
 	"bosun.org/slog"
-	"github.com/beego/redigo/redis"
+	"github.com/garyburd/redigo/redis"
 )
 
 // Version 0 is the schema that was never verisoned

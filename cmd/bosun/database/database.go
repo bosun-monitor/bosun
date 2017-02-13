@@ -34,7 +34,6 @@ type DataAccess interface {
 	Migrate() error
 }
 
-
 type MetadataDataAccess interface {
 	// Insert Metric Metadata. Field must be one of "desc", "rate", or "unit".
 	PutMetricMetadata(metric string, field string, value string) error

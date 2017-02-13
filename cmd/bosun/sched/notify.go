@@ -88,7 +88,7 @@ func (s *Schedule) CheckNotifications() time.Time {
 				continue
 			}
 			st, err := s.DataAccess.State().GetLatestIncident(ak)
-			
+
 			if err != nil {
 				slog.Error(err)
 				continue

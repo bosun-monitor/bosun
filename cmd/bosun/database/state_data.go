@@ -28,7 +28,6 @@ incidents:{ak} - List of incidents for alert key
 allIncidents - List of all incidents ever. Value is "incidentId:timestamp:ak"
 */
 
-
 const (
 	statesOpenIncidentsKey = "openIncidents"
 )
