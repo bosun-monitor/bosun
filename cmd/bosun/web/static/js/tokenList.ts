@@ -77,10 +77,7 @@ bosunApp.component('tokenList', {
             <td>{{tok.User}}</td>
             <td>{{tok.Description}}</td>
             <td>
-                <a type="button" 
-                class="btn" 
-                title="{{popover.title}}" 
-                data-template="{{ct.permList(tok)}}" 
+                <a data-template="{{ct.permList(tok)}}" 
                 data-animation="am-flip-x" 
                 data-trigger="hover"
                 data-auto-close="1" bs-popover>{{tok.RoleName}}</a>
