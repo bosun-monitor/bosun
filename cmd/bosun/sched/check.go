@@ -117,7 +117,7 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.E
 
 	// get existing open incident if exists
 	var incident *models.IncidentState
-	var rt *models.RenderedTemplates
+	rt := &models.RenderedTemplates{}
 	incident, err = data.GetOpenIncident(ak)
 	if err != nil {
 		return
@@ -236,40 +236,40 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.E
 	}
 
 	// lock while we change notifications.
-	s.Lock("RunHistory")
-	if shouldNotify {
-		incident.NeedAck = false
-		if err = s.DataAccess.Notifications().ClearNotifications(ak); err != nil {
-			return
-		}
-		notifyCurrent()
-	}
-
-	// finally close an open alert with silence once it goes back to normal.
-	if si := silenced(ak); si != nil && event.Status == models.StNormal {
-		go func(ak models.AlertKey) {
-			slog.Infof("auto close %s because was silenced", ak)
-			err := s.ActionByAlertKey("bosun", "Auto close because was silenced.", models.ActionClose, ak)
-			if err != nil {
-				slog.Errorln(err)
+		s.Lock("RunHistory")
+		if shouldNotify {
+			incident.NeedAck = false
+			if err = s.DataAccess.Notifications().ClearNotifications(ak); err != nil {
+				return
 			}
-		}(ak)
-	}
-	s.Unlock()
-	return checkNotify, nil
-}
+			notifyCurrent()
+		}
 
-func silencedOrIgnored(a *conf.Alert, event *models.Event, si *models.Silence) bool {
-	if a.IgnoreUnknown && event.Status == models.StUnknown {
-		return true
+		// finally close an open alert with silence once it goes back to normal.
+		if si := silenced(ak); si != nil && event.Status == models.StNormal {
+			go func(ak models.AlertKey) {
+				slog.Infof("auto close %s because was silenced", ak)
+				err := s.ActionByAlertKey("bosun", "Auto close because was silenced.", models.ActionClose, ak)
+				if err != nil {
+					slog.Errorln(err)
+				}
+			}(ak)
+		}
+		s.Unlock()
+		return checkNotify, nil
 	}
-	if si != nil && si.Forget && event.Status == models.StUnknown {
-		return true
+
+	func silencedOrIgnored(a *conf.Alert, event *models.Event, si *models.Silence) bool {
+		if a.IgnoreUnknown && event.Status == models.StUnknown {
+			return true
+		}
+		if si != nil && si.Forget && event.Status == models.StUnknown {
+			return true
+		}
+		return false
 	}
-	return false
-}
-func (s *Schedule) executeTemplates(state *models.IncidentState, rt *models.RenderedTemplates, event *models.Event, a *conf.Alert, r *RunHistory) {
-	if event.Status != models.StUnknown {
+	func (s *Schedule) executeTemplates(state *models.IncidentState, rt *models.RenderedTemplates, event *models.Event, a *conf.Alert, r *RunHistory) {
+		if event.Status != models.StUnknown {
 		var errs []error
 		metric := "template.render"
 		//Render subject
