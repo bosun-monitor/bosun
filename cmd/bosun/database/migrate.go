@@ -112,7 +112,11 @@ func migrateRenderedTemplates(d *dataAccess) error {
 			LastAbnormalStatus: oldState.LastAbnormalStatus,
 			LastAbnormalTime:   oldState.LastAbnormalTime,
 		}
-		if _, err := d.State().UpdateIncidentState(newState); err != nil {
+		data, err := json.Marshal(newState)
+		if err != nil {
+			return slog.Wrap(err)
+		}
+		if _, err := conn.Do("SET", incidentStateKey(newState.Id), data); err != nil {
 			return slog.Wrap(err)
 		}
 	}
