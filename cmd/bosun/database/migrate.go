@@ -104,16 +104,17 @@ func (d *dataAccess) Migrate() error {
 	}
 
 	for _, task := range tasks {
-		if task.Version > version { // Not sure logic is correct don't care right now.
+		if task.Version > version {
 			// Check if migration has been run if not that run
 			err := task.Task(d)
 			if err != nil {
 				return slog.Wrap(err)
 			}
+			if _, err := conn.Do("SET", schemaKey, task.Version); err != nil {
+				return slog.Wrap(err)
+			}
 		}
-		if _, err := conn.Do("SET", schemaKey, SchemaVersion); err != nil {
-			return slog.Wrap(err)
-		}
+
 	}
 	return nil
 }

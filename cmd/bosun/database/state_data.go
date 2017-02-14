@@ -16,7 +16,7 @@ import (
 /*
 incidentById:{id} - json encoded state. Authoritative source.
 
-renderedTemplatesById:{id} - json encoded RenderedTemplates ny Incident Id
+renderedTemplatesById:{id} - json encoded RenderedTemplates by Incident Id
 
 lastTouched:{alert} - ZSET of alert key to last touched time stamp
 unknown:{alert} - Set of unknown alert keys for alert
@@ -192,25 +192,10 @@ func (d *dataAccess) GetAllIncidentsByAlertKey(ak models.AlertKey) ([]*models.In
 	return d.incidentMultiGet(conn, ids)
 }
 
-func (d *dataAccess) getAllIncidentIds() ([]int64, error) {
-	conn := d.Get()
-	defer conn.Close()
-
-	summaries, err := redis.Strings(conn.Do("LRANGE", "allIncidents", 0, -1))
-	if err != nil {
-		return nil, slog.Wrap(err)
-	}
-	ids := make([]int64, len(summaries))
-	for i, sum := range summaries {
-		var err error
-		ids[i], err = strconv.ParseInt(strings.Split(sum, ":")[0], 0, 64)
-		if err != nil {
-			return nil, slog.Wrap(err)
-		}
-	}
-	return ids, nil
-}
-
+// In general one should not use the redis KEYS command. So this is only used
+// in migration. If we want to use a proper index of all incidents
+// then issues with allIncidents must be fixed. Currently it is planned
+// to remove allIncidents in a future commit
 func (d *dataAccess) getAllIncidentIdsByKeys() ([]int64, error) {
 	conn := d.Get()
 	defer conn.Close()
@@ -228,7 +213,6 @@ func (d *dataAccess) getAllIncidentIdsByKeys() ([]int64, error) {
 		}
 	}
 	return ids, nil
-
 }
 
 func (d *dataAccess) incidentMultiGet(conn redis.Conn, ids []int64) ([]*models.IncidentState, error) {
