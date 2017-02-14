@@ -118,7 +118,7 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.E
 	// get existing open incident if exists
 	var incident *models.IncidentState
 	rt := &models.RenderedTemplates{}
-	
+
 	incident, err = data.GetOpenIncident(ak)
 	if err != nil {
 		return
