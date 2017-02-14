@@ -50,6 +50,7 @@ type Conf struct {
 	unknownTemplate string
 	bodies          *htemplate.Template
 	subjects        *ttemplate.Template
+	payloads	*ttemplate.Template
 	squelch         []string
 
 	writeLock chan bool
@@ -148,6 +149,7 @@ func NewConf(name string, backends conf.EnabledBackends, text string) (c *Conf, 
 		RawText:          text,
 		bodies:           htemplate.New(name).Funcs(htemplate.FuncMap(defaultFuncs)),
 		subjects:         ttemplate.New(name).Funcs(defaultFuncs),
+		payloads:	  ttemplate.New(name).Funcs(defaultFuncs),
 		Lookups:          make(map[string]*conf.Lookup),
 		Macros:           make(map[string]*conf.Macro),
 		writeLock:        make(chan bool, 1),
@@ -446,6 +448,14 @@ func (c *Conf) loadTemplate(s *parse.SectionNode) {
 			c.seen(p.Key.Text, saw)
 			v := p.Val.Text
 			switch k := p.Key.Text; k {
+			case "payload":
+				t.RawPayload = v
+				tmpl := c.payloads.New(name).Funcs(funcs)
+				_, err := tmpl.Parse(t.RawPayload)
+				if err != nil {
+					c.error(err)
+				}
+				t.Payload = tmpl
 			case "body":
 				t.RawBody = v
 				tmpl := c.bodies.New(name).Funcs(htemplate.FuncMap(funcs))
@@ -474,8 +484,8 @@ func (c *Conf) loadTemplate(s *parse.SectionNode) {
 		}
 	}
 	c.at(s)
-	if t.Body == nil && t.Subject == nil {
-		c.errorf("neither body or subject specified")
+	if t.Body == nil && t.Subject == nil && t.Payload == nil{
+		c.errorf("neither body or subject or payload specified")
 	}
 	c.Templates[name] = &t
 }
@@ -754,6 +764,8 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 			n.RunOnActions = v == "true"
 		case "useBody":
 			n.UseBody = v == "true"
+		case "usePayload":
+			n.UsePayload = v == "true"
 		default:
 			c.errorf("unknown key %s", k)
 		}
@@ -761,6 +773,9 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 	c.at(s)
 	if n.Timeout > 0 && n.Next == nil {
 		c.errorf("timeout specified without next")
+	}
+	if n.UsePayload && n.UseBody {
+		c.errorf("cannot use payload and body at the same time")
 	}
 }
 
