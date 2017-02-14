@@ -265,15 +265,17 @@ func quit() {
 }
 
 func initDataAccess(systemConf conf.SystemConfProvider) (database.DataAccess, error) {
+	var da database.DataAccess
 	if systemConf.GetRedisHost() != "" {
-		return database.NewDataAccess(systemConf.GetRedisHost(), true, systemConf.GetRedisDb(), systemConf.GetRedisPassword()), nil
+		da = database.NewDataAccess(systemConf.GetRedisHost(), true, systemConf.GetRedisDb(), systemConf.GetRedisPassword())
+	} else {
+		_, err := database.StartLedis(systemConf.GetLedisDir(), systemConf.GetLedisBindAddr())
+		if err != nil {
+			return nil, err
+		}
+		da = database.NewDataAccess(systemConf.GetLedisBindAddr(), false, 0, "")
 	}
-	_, err := database.StartLedis(systemConf.GetLedisDir(), systemConf.GetLedisBindAddr())
-	if err != nil {
-		return nil, err
-	}
-	da := database.NewDataAccess(systemConf.GetLedisBindAddr(), false, 0, "")
-	err = da.Migrate()
+	err := da.Migrate()
 	return da, err
 }
 
