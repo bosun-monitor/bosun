@@ -54,16 +54,23 @@ func migrateRenderedTemplates(d *dataAccess) error {
 		if err := json.Unmarshal(b, oldState); err != nil {
 			slog.Wrap(err)
 		}
-		if err := d.State().SetRenderedTemplates(oldState.Id, oldState.RenderedTemplates); err != nil {
-			return slog.Wrap(err)
-		}
-		data, err := json.Marshal(oldState.IncidentState)
+
+		incidentStateJSON, err := json.Marshal(oldState.IncidentState)
 		if err != nil {
 			return slog.Wrap(err)
 		}
-		if _, err := conn.Do("SET", incidentStateKey(oldState.Id), data); err != nil {
+		if _, err := conn.Do("SET", incidentStateKey(oldState.Id), incidentStateJSON); err != nil {
 			return slog.Wrap(err)
 		}
+
+		renderedTemplatesJSON, err := json.Marshal(oldState.RenderedTemplates)
+		if err != nil {
+			return slog.Wrap(err)
+		}
+		if _, err := conn.Do("SET", renderedTemplatesKey(oldState.Id), renderedTemplatesJSON); err != nil {
+			return slog.Wrap(err)
+		}
+
 	}
 	return nil
 }
