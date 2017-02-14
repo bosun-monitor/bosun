@@ -64,8 +64,7 @@ func setup() func() {
 
 func initSched(sc conf.SystemConfProvider, c conf.RuleConfProvider) (*Schedule, error) {
 	s := new(Schedule)
-	s.DataAccess = db
-	err := s.Init(sc, c, false, false)
+	err := s.Init(sc, c, db, false, false)
 	return s, err
 }
 

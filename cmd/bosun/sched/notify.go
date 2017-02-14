@@ -37,11 +37,19 @@ func (s *Schedule) dispatchNotifications() {
 
 }
 
-func (s *Schedule) Notify(st *models.IncidentState, n *conf.Notification) {
+type IncidentWithTemplates struct {
+	*models.IncidentState
+	*models.RenderedTemplates
+}
+
+func (s *Schedule) Notify(st *models.IncidentState, rt *models.RenderedTemplates, n *conf.Notification) {
+	it := &IncidentWithTemplates{}
+	it.IncidentState = st
+	it.RenderedTemplates = rt
 	if s.pendingNotifications == nil {
-		s.pendingNotifications = make(map[*conf.Notification][]*models.IncidentState)
+		s.pendingNotifications = make(map[*conf.Notification][]*IncidentWithTemplates)
 	}
-	s.pendingNotifications[n] = append(s.pendingNotifications[n], st)
+	s.pendingNotifications[n] = append(s.pendingNotifications[n], it)
 }
 
 // CheckNotifications processes past notification events. It returns the next time a notification is needed.
@@ -80,6 +88,7 @@ func (s *Schedule) CheckNotifications() time.Time {
 				continue
 			}
 			st, err := s.DataAccess.State().GetLatestIncident(ak)
+
 			if err != nil {
 				slog.Error(err)
 				continue
@@ -87,7 +96,12 @@ func (s *Schedule) CheckNotifications() time.Time {
 			if st == nil {
 				continue
 			}
-			s.Notify(st, n)
+			rt, err := s.DataAccess.State().GetRenderedTemplates(st.Id)
+			if err != nil {
+				slog.Error(err)
+				continue
+			}
+			s.Notify(st, rt, n)
 		}
 	}
 	s.sendNotifications(silenced)
@@ -123,7 +137,7 @@ func (s *Schedule) sendNotifications(silenced SilenceTester) {
 					slog.Infoln("silencing unknown", ak)
 					continue
 				}
-				s.pendingUnknowns[n] = append(s.pendingUnknowns[n], st)
+				s.pendingUnknowns[n] = append(s.pendingUnknowns[n], st.IncidentState)
 			} else if silenced {
 				slog.Infof("silencing %s", ak)
 				continue
@@ -134,7 +148,7 @@ func (s *Schedule) sendNotifications(silenced SilenceTester) {
 				}
 				continue
 			} else {
-				s.notify(st, n)
+				s.notify(st.IncidentState, st.RenderedTemplates, n)
 			}
 			if n.Next != nil {
 				s.QueueNotification(ak, n.Next, utcNow())
@@ -193,14 +207,14 @@ var unknownMultiGroup = ttemplate.Must(ttemplate.New("unknownMultiGroup").Parse(
 	</ul>
 	`))
 
-func (s *Schedule) notify(st *models.IncidentState, n *conf.Notification) {
-	if len(st.EmailSubject) == 0 {
-		st.EmailSubject = []byte(st.Subject)
+func (s *Schedule) notify(st *models.IncidentState, rt *models.RenderedTemplates, n *conf.Notification) {
+	if len(rt.EmailSubject) == 0 {
+		rt.EmailSubject = []byte(st.Subject)
 	}
-	if len(st.EmailBody) == 0 {
-		st.EmailBody = []byte(st.Body)
+	if len(rt.EmailBody) == 0 {
+		rt.EmailBody = []byte(rt.Body)
 	}
-	n.Notify(st.Subject, st.Body, st.EmailSubject, st.EmailBody, s.SystemConf, string(st.AlertKey), st.Attachments...)
+	n.Notify(st.Subject, rt.Body, rt.EmailSubject, rt.EmailBody, s.SystemConf, string(st.AlertKey), rt.Attachments...)
 }
 
 // utnotify is single notification for N unknown groups into a single notification

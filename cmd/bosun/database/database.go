@@ -19,6 +19,8 @@ import (
 	"github.com/captncraig/easyauth/providers/token/redisStore"
 )
 
+var SchemaVersion = int64(1)
+
 // Core data access interface for everything sched needs
 type DataAccess interface {
 	RedisConnector
@@ -29,6 +31,7 @@ type DataAccess interface {
 	State() StateDataAccess
 	Silence() SilenceDataAccess
 	Notifications() NotificationDataAccess
+	Migrate() error
 }
 
 type MetadataDataAccess interface {
