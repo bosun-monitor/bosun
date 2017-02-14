@@ -20,6 +20,7 @@ import (
 
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/conf/rule"
+	"bosun.org/cmd/bosun/database"
 	"bosun.org/cmd/bosun/ping"
 	"bosun.org/cmd/bosun/sched"
 	"bosun.org/cmd/bosun/web"
@@ -124,7 +125,12 @@ func main() {
 		selfAddress.Host = "localhost" + selfAddress.Host
 	}
 
-	if err := sched.Load(sysProvider, ruleProvider, *flagSkipLast, *flagQuiet); err != nil {
+	da, err := initDataAccess(sysProvider)
+	if err != nil {
+		slog.Fatal(err)
+	}
+
+	if err := sched.Load(sysProvider, ruleProvider, da, *flagSkipLast, *flagQuiet); err != nil {
 		slog.Fatal(err)
 	}
 	if err := metadata.InitF(false, func(k metadata.Metakey, v interface{}) error { return sched.DefaultSched.PutMetadata(k, v) }); err != nil {
@@ -190,17 +196,15 @@ func main() {
 		newConf.SetSaveHook(cmdHook)
 		newConf.SetReload(reload)
 		oldSched := sched.DefaultSched
-		oldDA := oldSched.DataAccess
 		oldSearch := oldSched.Search
 		sched.Close(true)
 		sched.Reset()
 		newSched := sched.DefaultSched
 		newSched.Search = oldSearch
-		newSched.DataAccess = oldDA
 		slog.Infoln("schedule shutdown, loading new schedule")
 
 		// Load does not set the DataAccess or Search if it is already set
-		if err := sched.Load(sysProvider, newConf, *flagSkipLast, *flagQuiet); err != nil {
+		if err := sched.Load(sysProvider, newConf, da, *flagSkipLast, *flagQuiet); err != nil {
 			slog.Fatal(err)
 		}
 		web.ResetSchedule() // Signal web to point to the new DefaultSchedule
@@ -258,6 +262,19 @@ func main() {
 func quit() {
 	slog.Error("Exiting")
 	os.Exit(0)
+}
+
+func initDataAccess(systemConf conf.SystemConfProvider) (database.DataAccess, error) {
+	if systemConf.GetRedisHost() != "" {
+		return database.NewDataAccess(systemConf.GetRedisHost(), true, systemConf.GetRedisDb(), systemConf.GetRedisPassword()), nil
+	}
+	_, err := database.StartLedis(systemConf.GetLedisDir(), systemConf.GetLedisBindAddr())
+	if err != nil {
+		return nil, err
+	}
+	da := database.NewDataAccess(systemConf.GetLedisBindAddr(), false, 0, "")
+	err = da.Migrate()
+	return da, err
 }
 
 func watch(root, pattern string, f func()) {
