@@ -23,6 +23,9 @@ func (s *Schedule) Run() error {
 	return nil
 }
 
+// updateCheckContext sets the checkContext attached to the schedule
+// at the configured check frequency (which is maximum frequency) that
+// alerts will run. It also sends some stats about states to OpenTSDB
 func (s *Schedule) updateCheckContext() {
 	for {
 		ctx := &checkContext{utcNow(), cache.New(0)}
@@ -34,6 +37,8 @@ func (s *Schedule) updateCheckContext() {
 	}
 }
 
+// RunAlert is an infinite loop that checks a single defined alert until
+// the schedule is closed
 func (s *Schedule) RunAlert(a *conf.Alert) {
 	// Add to waitgroup for running alert
 	s.checksRunning.Add(1)

@@ -498,6 +498,9 @@ func (s *Schedule) findUnknownAlerts(now time.Time, alert string) []models.Alert
 	if utcNow().Sub(bosunStartupTime) < s.SystemConf.GetCheckFrequency() {
 		return keys
 	}
+	// If the alert failed to execute, then return no alert keys. Since findUnknownAlerts gets 
+	// called before checking the alert expressions, this is checking if the previous alert
+	// run was successful I believe - I do not understand why yet.
 	if !s.AlertSuccessful(alert) {
 		return keys
 	}
@@ -525,6 +528,9 @@ func (s *Schedule) findUnknownAlerts(now time.Time, alert string) []models.Alert
 	return keys
 }
 
+// CheckAlert executes the expression of defined in conf.Alert passed to it. It takes the result
+// of these expressions, combined with (XX for unknowns/dependencies?) to populate the RunHistory's states
+// for the alert check
 func (s *Schedule) CheckAlert(T miniprofiler.Timer, r *RunHistory, a *conf.Alert) (cancelled bool) {
 	slog.Infof("check alert %v start with now set to %v", a.Name, r.Start.Format("2006-01-02 15:04:05.999999999"))
 	start := utcNow()
