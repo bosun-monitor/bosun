@@ -493,8 +493,13 @@ func (s *Schedule) GetUnknownAndUnevaluatedAlertKeys(alert string) (unknown, une
 
 var bosunStartupTime = utcNow()
 
+// findUnknownAlerts determines when an alertkey should be considered unknown
+// and then compares that to the TouchTime of the alert as fetched from the datastore 
 func (s *Schedule) findUnknownAlerts(now time.Time, alert string) []models.AlertKey {
 	keys := []models.AlertKey{}
+	// Do not return unknowns if Bosun has just started. Maybe this is here in case 
+	// Bosun is also functioning as your TSDB relay. But maybe it just masks some
+	// other issue we don't understand right now
 	if utcNow().Sub(bosunStartupTime) < s.SystemConf.GetCheckFrequency() {
 		return keys
 	}
@@ -504,6 +509,8 @@ func (s *Schedule) findUnknownAlerts(now time.Time, alert string) []models.Alert
 	if !s.AlertSuccessful(alert) {
 		return keys
 	}
+
+	// Get the alert definition to see if it has its own Unknown duration defined 
 	a := s.RuleConf.GetAlert(alert)
 	t := a.Unknown
 	if t == 0 {
@@ -511,9 +518,16 @@ func (s *Schedule) findUnknownAlerts(now time.Time, alert string) []models.Alert
 		if a.RunEvery != 0 {
 			runEvery = a.RunEvery
 		}
+		// If unknown time has not be defined for the alert, than we use 
+		// the alert's check interval (Freq * Duration) multiplied by two
+		// to estasblish the unknown time
 		t = s.SystemConf.GetCheckFrequency() * 2 * time.Duration(runEvery)
 	}
+
+	// now is the time passed to this function
 	maxTouched := now.UTC().Unix() - int64(t.Seconds())
+	// Fetch the last touch time from redis for the alert key. This gets set
+	// "touched" only in the runHistory method on the schedule
 	untouched, err := s.DataAccess.State().GetUntouchedSince(alert, maxTouched)
 	if err != nil {
 		slog.Errorf("Error finding unknown alerts for alert %s: %s.", alert, err)
