@@ -82,6 +82,7 @@ func (e *Expr) MarshalJSON() ([]byte, error) {
 // New creates a new expression tree
 func New(expr string, funcs ...map[string]parse.Func) (*Expr, error) {
 	funcs = append(funcs, builtins)
+	funcs = append(funcs, TSDB)
 	t, err := parse.Parse(expr, funcs...)
 	if err != nil {
 		return nil, err
