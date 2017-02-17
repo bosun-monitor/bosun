@@ -526,7 +526,7 @@ func (s *Schedule) findUnknownAlerts(now time.Time, alert string) []models.Alert
 }
 
 func (s *Schedule) CheckAlert(T miniprofiler.Timer, r *RunHistory, a *conf.Alert) (cancelled bool) {
-	slog.Infof("check alert %v start", a.Name)
+	slog.Infof("check alert %v start with now set to %v", a.Name, r.Start.Format("2006-01-02 15:04:05.999999999"))
 	start := utcNow()
 	for _, ak := range s.findUnknownAlerts(r.Start, a.Name) {
 		r.Events[ak] = &models.Event{Status: models.StUnknown}
