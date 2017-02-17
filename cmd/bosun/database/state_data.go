@@ -77,30 +77,15 @@ func (d *dataAccess) SetRenderedTemplates(incidentId int64, rt *models.RenderedT
 	conn := d.Get()
 	defer conn.Close()
 
-	data, err := json.Marshal(rt)
-	if err != nil {
-		return slog.Wrap(err)
-	}
-	_, err = conn.Do("SET", renderedTemplatesKey(incidentId), data)
-	if err != nil {
-		return slog.Wrap(err)
-	}
-	return nil
+	return d.WriteCompressedJSON(conn, renderedTemplatesKey(incidentId), rt)
 }
 
 func (d *dataAccess) GetRenderedTemplates(incidentId int64) (*models.RenderedTemplates, error) {
 	conn := d.Get()
 	defer conn.Close()
-
-	b, err := redis.Bytes(conn.Do("GET", renderedTemplatesKey(incidentId)))
-	if err != nil {
-		return nil, slog.Wrap(err)
-	}
 	renderedT := &models.RenderedTemplates{}
-	if err = json.Unmarshal(b, renderedT); err != nil {
-		return nil, slog.Wrap(err)
-	}
-	return renderedT, nil
+	err := d.ReadCompressedJSON(conn, renderedTemplatesKey(incidentId), renderedT)
+	return renderedT, err
 }
 
 func (d *dataAccess) State() StateDataAccess {

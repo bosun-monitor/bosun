@@ -4,6 +4,8 @@
 package database
 
 import (
+	"bytes"
+	"encoding/json"
 	"log"
 	"runtime"
 	"strings"
@@ -12,10 +14,12 @@ import (
 	"bosun.org/collect"
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
+	"bosun.org/slog"
 	"github.com/garyburd/redigo/redis"
 	"github.com/siddontang/ledisdb/config"
 	"github.com/siddontang/ledisdb/server"
 
+	"compress/gzip"
 	"github.com/captncraig/easyauth/providers/token/redisStore"
 )
 
@@ -202,4 +206,52 @@ func (d *dataAccess) HSCAN() string {
 		return "HSCAN"
 	}
 	return "XHSCAN"
+}
+
+func (d *dataAccess) WriteJSON(conn redis.Conn, key string, data interface{}) error {
+	dat, err := json.Marshal(data)
+	if err != nil {
+		return slog.Wrap(err)
+	}
+	if _, err = conn.Do("SET", key, dat); err != nil {
+		return slog.Wrap(err)
+	}
+	return nil
+}
+
+func (d *dataAccess) WriteCompressedJSON(conn redis.Conn, key string, data interface{}) error {
+	buf := &bytes.Buffer{}
+	gz := gzip.NewWriter(buf)
+	j := json.NewEncoder(gz)
+	if err := j.Encode(data); err != nil {
+		return slog.Wrap(err)
+	}
+	if err := gz.Close(); err != nil {
+		return slog.Wrap(err)
+	}
+	if _, err := conn.Do("SET", key, buf.Bytes()); err != nil {
+		return slog.Wrap(err)
+	}
+	return nil
+}
+
+func (d *dataAccess) ReadCompressedJSON(conn redis.Conn, key string, dst interface{}) error {
+	dat, err := redis.Bytes(conn.Do("GET", key))
+	if err != nil {
+		return slog.Wrap(err)
+	}
+	gz, err := gzip.NewReader(bytes.NewReader(dat))
+	if err != nil {
+		return slog.Wrap(err)
+	}
+	j := json.NewDecoder(gz)
+	return j.Decode(dst)
+}
+
+func (d *dataAccess) ReadJSON(conn redis.Conn, key string, dst interface{}) error {
+	dat, err := redis.Bytes(conn.Do("GET", key))
+	if err != nil {
+		return slog.Wrap(err)
+	}
+	return json.Unmarshal(dat, dst)
 }

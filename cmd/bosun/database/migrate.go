@@ -25,6 +25,11 @@ var tasks = []Migration{
 		Task:    migrateRenderedTemplates,
 		Version: 1,
 	},
+	{
+		UID:     "Compress Rendered Templates",
+		Task:    compressRenderedTemplates,
+		Version: 2,
+	},
 }
 
 type oldIncidentState struct {
@@ -45,7 +50,10 @@ func migrateRenderedTemplates(d *dataAccess) error {
 	conn := d.Get()
 	defer conn.Close()
 
-	for _, id := range ids {
+	for i, id := range ids {
+		if i%1000 == 0 && i != 0 {
+			slog.Info(i)
+		}
 		b, err := redis.Bytes(conn.Do("GET", incidentStateKey(id)))
 		if err != nil {
 			return slog.Wrap(err)
@@ -72,6 +80,33 @@ func migrateRenderedTemplates(d *dataAccess) error {
 		}
 
 	}
+	return nil
+}
+
+func compressRenderedTemplates(d *dataAccess) error {
+	slog.Infoln("Compressing rendered templates. This can take several minutes.")
+
+	// Hacky Work better?
+	ids, err := d.getAllIncidentIdsByKeys()
+	slog.Infof("compressing %v incidents", len(ids))
+	if err != nil {
+		return err
+	}
+
+	conn := d.Get()
+	defer conn.Close()
+
+	for i, id := range ids {
+		if i%1000 == 0 && i != 0 {
+			slog.Info(i)
+		}
+		rt := &models.RenderedTemplates{}
+		if err = d.ReadJSON(conn, renderedTemplatesKey(id), rt); err != nil {
+			return err
+		}
+		d.WriteCompressedJSON(conn, renderedTemplatesKey(id), rt)
+	}
+
 	return nil
 }
 
@@ -113,6 +148,7 @@ func (d *dataAccess) Migrate() error {
 			if _, err := conn.Do("SET", schemaKey, task.Version); err != nil {
 				return slog.Wrap(err)
 			}
+			break
 		}
 
 	}
