@@ -66,6 +66,8 @@ func (s *Schedule) RunAlert(a *conf.Alert) {
 				lastCheckID = ctx.id
 				break
 			}
+			//if the timing is just wrong, we could hit this twice in the same interval. One second wait should be enough
+			//to desync us from the context changing routine.
 			collect.Add("check.context_not_changed", opentsdb.TagSet{"alert": a.Name}, 1)
 			time.Sleep(time.Second)
 		}
