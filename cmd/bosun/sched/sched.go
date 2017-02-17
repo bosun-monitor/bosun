@@ -95,6 +95,7 @@ func (s *Schedule) Init(systemConf conf.SystemConfProvider, ruleConf conf.RuleCo
 type checkContext struct {
 	runTime    time.Time
 	checkCache *cache.Cache
+	id         int64
 }
 
 func init() {
