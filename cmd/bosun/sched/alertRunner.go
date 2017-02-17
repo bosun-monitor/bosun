@@ -29,10 +29,8 @@ func (s *Schedule) Run() error {
 var checkContextLock = sync.RWMutex{}
 
 func (s *Schedule) updateCheckContext() {
-	var checkID int64
 	for {
-		ctx := &checkContext{utcNow(), cache.New(0), checkID}
-		checkID++
+		ctx := &checkContext{utcNow(), cache.New(0)}
 		checkContextLock.Lock()
 		s.ctx = ctx
 		checkContextLock.Unlock()
@@ -48,7 +46,7 @@ func (s *Schedule) RunAlert(a *conf.Alert) {
 	s.checksRunning.Add(1)
 	// ensure when an alert is done it is removed from the wait group
 	defer s.checksRunning.Done()
-	var lastCheckID int64 = -1
+	var lastCheckTime time.Time
 	// Calcaulate runEvery based on system default and override if an alert has a
 	// custom runEvery
 	runEvery := s.SystemConf.GetDefaultRunEvery()
@@ -62,8 +60,8 @@ func (s *Schedule) RunAlert(a *conf.Alert) {
 			ctx = s.ctx
 			checkContextLock.RUnlock()
 			//make sure the context has actually changed
-			if ctx.id != lastCheckID {
-				lastCheckID = ctx.id
+			if ctx.runTime != lastCheckTime {
+				lastCheckTime = ctx.runTime
 				break
 			}
 			//if the timing is just wrong, we could hit this twice in the same interval. One second wait should be enough

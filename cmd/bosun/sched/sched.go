@@ -80,7 +80,7 @@ func (s *Schedule) Init(systemConf conf.SystemConfProvider, ruleConf conf.RuleCo
 	s.pendingUnknowns = make(map[*conf.Notification][]*models.IncidentState)
 	s.lastLogTimes = make(map[models.AlertKey]time.Time)
 	s.LastCheck = utcNow()
-	s.ctx = &checkContext{utcNow(), cache.New(0), 0}
+	s.ctx = &checkContext{utcNow(), cache.New(0)}
 	s.DataAccess = dataAccess
 	// Initialize the context and waitgroup used to gracefully shutdown bosun as well as reload
 	s.runnerContext, s.cancelChecks = context.WithCancel(context.Background())
@@ -95,7 +95,6 @@ func (s *Schedule) Init(systemConf conf.SystemConfProvider, ruleConf conf.RuleCo
 type checkContext struct {
 	runTime    time.Time
 	checkCache *cache.Cache
-	id         int64
 }
 
 func init() {
