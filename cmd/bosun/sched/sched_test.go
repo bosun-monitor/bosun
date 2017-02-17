@@ -50,7 +50,7 @@ func check(s *Schedule, t time.Time) {
 	for _, n := range names {
 		a := s.RuleConf.GetAlerts()[n]
 		s.ctx.runTime = t
-		s.checkAlert(a)
+		s.checkAlert(a, s.ctx)
 	}
 }
 
