@@ -20,12 +20,9 @@ $(function(){
 		$(".alert").hide();
 		$("#submit").prop('disabled', true);
 		var email = $("#email").val();
-		var fname = $("#fname").val();
-		var lname = $("#lname").val();
-		var url = "https://www.runhook.com/eaakslsvhhtcu3bvkcijmcvpju?email=" + email;
+		var url = "https://puny-hygienic.gomix.me/?email=" + email;
 		$.get(url, function(data){
 			$(".alert-success").show();
-			
 		}) .fail(function(jqXHR) {
 			$(".alert-danger").show();
 			$(".alert-danger").text(jqXHR.responseText);

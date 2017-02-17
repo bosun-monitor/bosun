@@ -76,6 +76,7 @@ The color of the major of the bar is the incident's last abnormal status. The co
 * **Force Close**: Like close, but does not require alert to be in a normal state. In a few circumstances an alert can be "open" and "active" at the same time. This can occur when a host is decomissioned and an alert has ignoreUnknown set, for example. This may help to clear some of those "stuck" alerts.
 * **Purge**: Will delete an active alert and ALL history for that alert key. Should only be used when you absolutely want to forget all data about a host, like when shutting it down. Like forget, but does not require an alert to be unknown.
 * **History**: View a timeline of history for the selected alert instances.
+* **Note**: Attach a note to an incident. This has no impact on the behavior of the alert and is purely for communication.
 
 ## Incident Filters
 
@@ -89,6 +90,14 @@ The open incident filter supports joining terms in `()` as well as the `AND`, `O
     <tr>
         <td><code>ack:(true|false)</code></td>
         <td>If <code>ack:true</code> incidents that have been acknowledge are returned, when <code>ack:false</code>                        incidents that have not been acknowledged are returned.</td>
+    </tr>
+    <tr>
+        <td><code>ackTime:[<|>](1d)</code></td>
+        <td>Returns incidents that were acknowledged before <code><</code> or incidents that were acknowledged after <code>></code> the
+            relative time to now based on the duration. Duration can be in units of s (seconds), m (minutes),
+            h (hours), d (days), w (weeks), n (months), y (years). If less than or greater than are not part
+            of the value, it defaults to greater than (after). Now is clock time and is not related to the time
+            range specified in Grafana. For example, <code>ackTime:<24h</code> shows incidents that were acknowledged more than 24 hours ago.</td>
     </tr>
     <tr>
         <td><code>hasTag:(tagKey|tagKey=|=tagValue|tagKey=tagValue)</code></td>
@@ -130,7 +139,6 @@ The open incident filter supports joining terms in `()` as well as the `AND`, `O
         <td><code>unevaluated:(true|false)</code></td>
         <td>If <code>unevaluated:false</code> incidents that are not in an unevaluated state are returned, when
             <code>ack:true</code> incidents that are unevaluated are returned.</td>
-
     </tr>
     <tr>
         <td><code>status:(normal|warning|critical|unknown)</code></td>
