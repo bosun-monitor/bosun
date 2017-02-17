@@ -214,6 +214,12 @@ var builtins = map[string]parse.Func{
 		Tags:   tagFirst,
 		F:      Crop,
 	},
+	"cps": {
+		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeString},
+		Return: models.TypeSeriesSet,
+		Tags:   tagFirst,
+		F:      CPS,
+	},
 	"d": {
 		Args:   []models.FuncType{models.TypeString},
 		Return: models.TypeScalar,
@@ -412,6 +418,32 @@ func SeriesFunc(e *State, T miniprofiler.Timer, tags string, pairs ...float64) (
 			},
 		},
 	}, nil
+}
+
+// Counter Per Second
+func CPS(e *State, T miniprofiler.Timer, sSet *Results, rate string) (*Results, error) {
+	for resIndex, res := range sSet.Results {
+		sorted := NewSortedSeries(res.Value.(Series))
+		var last SortablePoint
+		newSeries := make(Series)
+		for i, dp := range sorted {
+			if i == 0 {
+				last = dp
+				continue
+			}
+			timeDiff := dp.T.Sub(last.T)
+			valueDiff := dp.V - last.V
+			// skip if negative
+			if valueDiff < 0 {
+				last = dp
+				continue
+			}
+			newSeries[dp.T] = valueDiff / timeDiff.Seconds()
+			last = dp
+		}
+		sSet.Results[resIndex].Value = newSeries
+	}
+	return sSet, nil
 }
 
 func Crop(e *State, T miniprofiler.Timer, sSet *Results, startSet *Results, endSet *Results) (*Results, error) {
