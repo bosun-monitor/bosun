@@ -50,6 +50,7 @@ var (
 
 	tokensEnabled bool
 	authEnabled   bool
+	startTime     time.Time
 )
 
 const (
@@ -75,7 +76,8 @@ func init() {
 		"HTTP response codes from the backend server for request relayed through Bosun.")
 }
 
-func Listen(httpAddr, httpsAddr, certFile, keyFile string, devMode bool, tsdbHost string, reloadFunc func() error, authConfig *conf.AuthConf) error {
+func Listen(httpAddr, httpsAddr, certFile, keyFile string, devMode bool, tsdbHost string, reloadFunc func() error, authConfig *conf.AuthConf, st time.Time) error {
+	startTime = st
 	if devMode {
 		slog.Infoln("using local web assets")
 	}
@@ -458,7 +460,10 @@ func Shorten(_ miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (inte
 
 type Health struct {
 	// RuleCheck is true if last check happened within the check frequency window.
-	RuleCheck bool
+	RuleCheck     bool
+	Quiet         bool
+	UptimeSeconds int64
+	StartEpoch    int64
 }
 
 func Reload(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
@@ -487,6 +492,9 @@ func Quiet(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 func HealthCheck(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	var h Health
 	h.RuleCheck = schedule.LastCheck.After(time.Now().Add(-schedule.SystemConf.GetCheckFrequency()))
+	h.Quiet = schedule.GetQuiet()
+	h.UptimeSeconds = int64(time.Since(startTime).Seconds())
+	h.StartEpoch = startTime.Unix()
 	return h, nil
 }
 
