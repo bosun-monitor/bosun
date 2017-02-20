@@ -47,7 +47,10 @@ func (t *bosunHttpTransport) RoundTrip(req *http.Request) (*http.Response, error
 	return t.RoundTripper.RoundTrip(req)
 }
 
+var startTime time.Time
+
 func init() {
+	startTime = time.Now().UTC()
 	client := &http.Client{
 		Transport: &bosunHttpTransport{
 			"Bosun/" + version.ShortVersion(),
@@ -223,7 +226,7 @@ func main() {
 	go func() {
 		slog.Fatal(web.Listen(sysProvider.GetHTTPListen(), sysProvider.GetHTTPSListen(),
 			sysProvider.GetTLSCertFile(), sysProvider.GetTLSKeyFile(), *flagDev,
-			sysProvider.GetTSDBHost(), reload, sysProvider.GetAuthConf()))
+			sysProvider.GetTSDBHost(), reload, sysProvider.GetAuthConf(), startTime))
 	}()
 	go func() {
 		if !*flagNoChecks {
