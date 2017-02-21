@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	_ "expvar"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -126,6 +127,9 @@ func main() {
 	}
 	if conf.SNMPTimeout > 0 {
 		snmp.Timeout = conf.SNMPTimeout
+	}
+	if conf.UseSWbemServicesClient {
+		conf.InitializeSWbemServices()
 	}
 	var err error
 	check := func(e error) {
