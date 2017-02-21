@@ -16,6 +16,8 @@ import (
 
 var win_service_command = flag.String("winsvc", "", "For Windows Service, can be install, remove, start, stop")
 
+var serviceRunning = false
+
 func init() {
 	mains = append(mains, win_service_main)
 }
@@ -39,6 +41,15 @@ func win_service_main() {
 		}
 		if !isIntSess {
 			go runService(svcName, false)
+			for {
+				//Need to wait for service go routine to finish initializing. Otherwise the collector goroutines could
+				//use all the CPU and cause Windows Service API to bail with a service unresponsive on startup error.
+				//If service doesn't start within 30 seconds then the Windows Service API will kill the process.
+				time.Sleep(time.Millisecond * 200)
+				if serviceRunning {
+					break
+				}
+			}
 		}
 		return
 	default:
@@ -155,6 +166,7 @@ func (m *s) Execute(args []string, r <-chan svc.ChangeRequest, changes chan<- sv
 	const cmdsAccepted = svc.AcceptStop | svc.AcceptShutdown
 	changes <- svc.Status{State: svc.StartPending}
 	changes <- svc.Status{State: svc.Running, Accepts: cmdsAccepted}
+	serviceRunning = true
 loop:
 	for c := range r {
 		switch c.Cmd {
