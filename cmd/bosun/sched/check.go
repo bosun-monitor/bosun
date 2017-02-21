@@ -614,7 +614,7 @@ func markDependenciesUnevaluated(events map[models.AlertKey]*models.Event, deps 
 			continue
 		}
 		for _, dep := range deps {
-			if dep.Group.Overlaps(ak.Group()) {
+			if len(dep.Group) == 0 || dep.Group.Overlaps(ak.Group()) {
 				ev.Unevaluated = true
 				unevalCount++
 			}
