@@ -32,7 +32,8 @@ type Conf struct {
 	MaxMem uint64
 	// Filter filters collectors matching these terms.
 	Filter []string
-	// PProf is an IP:Port binding to be used for debugging with pprof package.
+	// PProf is an IP:Port binding to be used for debugging with pprof and expvar package.
+	// When enabled data is exposed via http://host:port/debug/pprof or /debug/vars
 	// Examples: localhost:6060 for loopback or :6060 for all IP addresses.
 	PProf string
 	// MetricFilters takes regular expressions and includes only indicies that
@@ -54,6 +55,9 @@ type Conf struct {
 
 	// SNMPTimeout is the number of seconds to wait for SNMP responses (default 30)
 	SNMPTimeout int
+
+	// UseSWbemServicesClient specifies if the wmi package should use SWbemServices.
+	UseSWbemServicesClient bool
 
 	HAProxy        []HAProxy
 	SNMP           []SNMP
