@@ -123,6 +123,8 @@ interface IAuthService {
     Username: (u: string) => string;
     GetUsername: () => string;
     Enabled: ()=> boolean;
+    PermissionsFor: (bits: number) =>string[];
+    RoleFor: (bits: number) => string;
 }
 
 bosunApp.run(['$location', '$rootScope', function ($location: ng.ILocationService, $rootScope: IRootScope) {

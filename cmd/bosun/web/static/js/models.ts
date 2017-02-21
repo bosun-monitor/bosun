@@ -8,6 +8,9 @@ class Token {
     public Role: number = 0;
     public User: string = "";
     public LastUsed: Moment;
+
+    public Permissions: string[];
+    public RoleName: string;
 }
 
 //metadata about a single role or permission

@@ -48,6 +48,8 @@ func RunTsc() {
 func run(name string, arg ...string) {
 	log.Println("running", name, arg)
 	c := exec.Command(name, arg...)
+	c.Stderr = os.Stderr
+	c.Stdout = os.Stdout
 	if err := c.Run(); err != nil {
 		log.Printf("run error: %v: %v", name, err)
 	}
