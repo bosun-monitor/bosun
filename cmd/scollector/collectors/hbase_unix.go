@@ -63,7 +63,7 @@ func c_hbase_region() (opentsdb.MultiDataPoint, error) {
 	if len(j.Beans) > 0 && len(j.Beans[0]) > 0 {
 		for k, v := range j.Beans[0] {
 			if vv, ok := v.(float64); ok {
-				if vv <= math.MaxInt64 {
+				if vv < math.MaxInt64 {
 					Add(&md, "hbase.region."+k, v, nil, metadata.Unknown, metadata.None, "")
 				}
 			}
@@ -84,7 +84,7 @@ func c_hbase_gc() (opentsdb.MultiDataPoint, error) {
 			ts := opentsdb.TagSet{"name": name}
 			for k, v := range bean {
 				if vv, ok := v.(float64); ok {
-					if vv <= math.MaxInt64 {
+					if vv < math.MaxInt64 {
 						switch k {
 						case "CollectionCount":
 							Add(&md, metric+k, v, ts, metadata.Counter, metadata.Count, "A counter for the number of times that garbage collection has been called.")
@@ -120,7 +120,7 @@ func c_hbase_replication() (opentsdb.MultiDataPoint, error) {
 			shortName = strings.TrimPrefix(shortName, "sink.")
 			metric := "hbase.region." + shortName
 			if vv, ok := v.(float64); ok {
-				if vv <= math.MaxInt64 {
+				if vv < math.MaxInt64 {
 					Add(&md, metric, v, nil, metadata.Unknown, metadata.None, "")
 				}
 			}
