@@ -51,6 +51,7 @@ const (
 	nodeString
 	nodeNumber
 	nodeBool
+	nodeNil
 )
 
 // Nodes.
@@ -124,6 +125,19 @@ func newBool(pos pos, val bool) *boolNode {
 
 func (b *boolNode) Value() interface{} {
 	return b.Val
+}
+
+type nilNode struct {
+	nodeType
+	pos
+}
+
+func newNil(pos pos) *nilNode {
+	return &nilNode{nodeType: nodeNil, pos: pos}
+}
+
+func (b *nilNode) Value() interface{} {
+	return nil
 }
 
 type classNode struct {

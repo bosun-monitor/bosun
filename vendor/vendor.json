@@ -41,8 +41,8 @@
 		},
 		{
 			"path": "github.com/StackExchange/mof",
-			"revision": "2bb66392c0273ed914c2b83442e8a61effa42678",
-			"revisionTime": "2015-06-18T18:52:08-04:00"
+			"revision": "cfc83d4047d1c05c81d9c54ac1eaedb076582114",
+			"revisionTime": "2017-02-27T16:04:56-07:00"
 		},
 		{
 			"path": "github.com/StackExchange/wmi",
