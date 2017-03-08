@@ -289,6 +289,16 @@ func (c *Context) addError(e error) {
 	c.Errors = append(c.Errors, e.Error())
 }
 
+// LastError gets the most recent error string for the context's
+// Error slice or returns an empty string if the error slice is
+// empty
+func (c *Context) LastError() string {
+	if len(c.Errors) > 0 {
+		return c.Errors[len(c.Errors)-1]
+	}
+	return ""
+}
+
 // Eval takes a result or an expression which it evaluates to a result.
 // It returns a value with tags corresponding to the context's tags.
 // If no such result is found, the first result with
