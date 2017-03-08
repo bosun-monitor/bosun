@@ -156,9 +156,10 @@ type AzureEA struct {
 }
 
 type SNMP struct {
-	Community string
-	Host      string
-	MIBs      []string
+	Community  string
+	Host       string
+	MIBs       []string
+	TagIfAlias bool
 }
 
 type MIB struct {

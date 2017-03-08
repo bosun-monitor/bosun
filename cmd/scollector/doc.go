@@ -147,7 +147,9 @@ to poll. The Instances key is an array of table with keys Tier and URL.
 	    URL = "http://ny-host01:40/haproxy\;csv"
 
 SNMP (array of table, keys are Community and Host): SNMP hosts to connect
-to at a 5 minute poll interval.
+to at a 5 minute poll interval. Optional TagIfAlias flag will record IfAlias
+(Cisco interface "description") as a tag for OpenTSDB installations
+that don't support metadata.
 
 	[[SNMP]]
 	  Community = "com"
@@ -158,6 +160,7 @@ to at a 5 minute poll interval.
 	  Host = "host2"
 	  # List of mibs to run for this host. Default is built-in set of ["ifaces","cisco"]
 	  MIBs = ["custom", "ifaces"]
+	  TagIfAlias = true
 
 MIBs (map of string to table): Allows user-specified, custom SNMP configurations.
 

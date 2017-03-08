@@ -40,7 +40,7 @@ const (
 func SNMPIfaces(cfg conf.SNMP) {
 	collectors = append(collectors, &IntervalCollector{
 		F: func() (opentsdb.MultiDataPoint, error) {
-			return c_snmp_ifaces(cfg.Community, cfg.Host)
+			return c_snmp_ifaces(cfg.Community, cfg.Host, cfg.TagIfAlias)
 		},
 		Interval: time.Second * 30,
 		name:     fmt.Sprintf("snmp-ifaces-%s", cfg.Host),
@@ -68,7 +68,7 @@ func switchInterfaceMetric(metric string, iname string, ifType int64) string {
 	}
 }
 
-func c_snmp_ifaces(community, host string) (opentsdb.MultiDataPoint, error) {
+func c_snmp_ifaces(community, host string, tagIfAlias bool) (opentsdb.MultiDataPoint, error) {
 	ifNamesRaw, err := snmp_subtree(host, community, ifName)
 	if err != nil || len(ifNamesRaw) == 0 {
 		ifNamesRaw, err = snmp_subtree(host, community, ifDescr)
@@ -103,9 +103,11 @@ func c_snmp_ifaces(community, host string) (opentsdb.MultiDataPoint, error) {
 		ifTypes[k] = val
 	}
 	for k, v := range ifAliasesRaw {
+		// Replace spaces with underscores for readability, then clean bad characters
+		newAlias := strings.Replace(fmt.Sprintf("%s", v), " ", "_", -1)
+		ifAliases[k], _ = opentsdb.Clean(newAlias)
 		// In case clean would come up empty, prevent the point from being removed
 		// by setting our own empty case.
-		ifAliases[k], _ = opentsdb.Clean(fmt.Sprintf("%s", v))
 		if ifAliases[k] == "" {
 			ifAliases[k] = "NA"
 		}
@@ -125,6 +127,9 @@ func c_snmp_ifaces(community, host string) (opentsdb.MultiDataPoint, error) {
 				"host":  host,
 				"iface": fmt.Sprintf("%s", k),
 				"iname": ifNames[k],
+			}
+			if tagIfAlias && ifAliases[k] != "NA" {
+				tags["ialias"] = ifAliases[k]
 			}
 			if sA.dir != "" {
 				tags["direction"] = sA.dir
