@@ -8,6 +8,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/http/httputil"
@@ -249,6 +250,8 @@ func (rp *relayProxy) relayPut(responseWriter http.ResponseWriter, r *http.Reque
 			verbose("bosun relay error: %v", err)
 			return
 		}
+		// Drain up to 512 bytes and close the body to let the Transport reuse the connection
+		io.CopyN(ioutil.Discard, resp.Body, 512)
 		resp.Body.Close()
 		verbose("bosun relay success")
 	}()
@@ -283,6 +286,8 @@ func (rp *relayProxy) relayPut(responseWriter http.ResponseWriter, r *http.Reque
 					collect.Add("additional.puts.error", tags, 1)
 					continue
 				}
+				// Drain up to 512 bytes and close the body to let the Transport reuse the connection
+				io.CopyN(ioutil.Discard, resp.Body, 512)
 				resp.Body.Close()
 				verbose("secondary relay success")
 				collect.Add("additional.puts.relayed", tags, 1)
@@ -383,6 +388,8 @@ func (rp *relayProxy) relayMetadata(responseWriter http.ResponseWriter, r *http.
 					verbose("secondary relay metadata error: %v", err)
 					continue
 				}
+				// Drain up to 512 bytes and close the body to let the Transport reuse the connection
+				io.CopyN(ioutil.Discard, resp.Body, 512)
 				resp.Body.Close()
 				verbose("secondary relay metadata success")
 			}
