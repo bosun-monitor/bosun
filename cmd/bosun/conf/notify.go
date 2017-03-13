@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"crypto/tls"
 	"errors"
+	"io"
+	"io/ioutil"
 	"net/http"
 	"net/mail"
 	"net/smtp"
@@ -68,6 +70,8 @@ func (n *Notification) DoPost(payload []byte, ak string) {
 	}
 	resp, err := http.Post(n.Post.String(), n.ContentType, bytes.NewBuffer(payload))
 	if resp != nil && resp.Body != nil {
+		// Drain up to 512 bytes and close the body to let the Transport reuse the connection
+		io.CopyN(ioutil.Discard, resp.Body, 512)
 		defer resp.Body.Close()
 	}
 	if err != nil {

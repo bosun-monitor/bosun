@@ -6,6 +6,8 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"log"
 	"net/url"
 	"strconv"
@@ -114,6 +116,8 @@ func main() {
 				return err
 			}
 			defer putResp.Body.Close()
+			// Drain up to 512 bytes and close the body to let the Transport reuse the connection
+			io.CopyN(ioutil.Discard, putResp.Body, 512)
 
 			if putResp.StatusCode != 204 {
 				return fmt.Errorf("Non 204 status code from opentsdb: %d", putResp.StatusCode)

@@ -4,6 +4,8 @@ package metadata // import "bosun.org/metadata"
 import (
 	"bytes"
 	"encoding/json"
+	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -296,6 +298,8 @@ func postMetadata(ms []Metasend) {
 		return
 	}
 	defer resp.Body.Close()
+	// Drain up to 512 bytes and close the body to let the Transport reuse the connection
+	io.CopyN(ioutil.Discard, resp.Body, 512)
 	if resp.StatusCode != 204 {
 		slog.Errorln("bad metadata return:", resp.Status)
 		return

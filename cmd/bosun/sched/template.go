@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"io"
 	"io/ioutil"
 	"math"
 	"net/http"
@@ -461,6 +462,8 @@ func (c *Context) HTTPGet(url string) string {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode >= 300 {
+		// Drain up to 512 bytes and close the body to let the Transport reuse the connection
+		io.CopyN(ioutil.Discard, resp.Body, 512)
 		err := fmt.Errorf("%v: returned %v", url, resp.Status)
 		c.addError(err)
 		return err.Error()
@@ -512,6 +515,8 @@ func (c *Context) HTTPPost(url, bodyType, data string) string {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode >= 300 {
+		// Drain up to 512 bytes and close the body to let the Transport reuse the connection
+		io.CopyN(ioutil.Discard, resp.Body, 512)
 		return fmt.Sprintf("%v: returned %v", url, resp.Status)
 	}
 	body, err := ioutil.ReadAll(resp.Body)
