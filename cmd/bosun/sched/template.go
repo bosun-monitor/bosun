@@ -480,12 +480,7 @@ func (c *Context) LeftJoin(v ...interface{}) (interface{}, error) {
 }
 
 func (c *Context) HTTPGet(url string) string {
-	req, err := http.NewRequest("GET", url, nil)
-	if err != nil {
-		c.addError(err)
-		return err.Error()
-	}
-	resp, err := DefaultClient.Do(req)
+	resp, err := DefaultClient.Get(url)
 	if err != nil {
 		c.addError(err)
 		return err.Error()
@@ -537,7 +532,7 @@ func (c *Context) HTTPGetJSON(url string) *jsonq.JsonQuery {
 }
 
 func (c *Context) HTTPPost(url, bodyType, data string) string {
-	resp, err := http.Post(url, bodyType, bytes.NewBufferString(data))
+	resp, err := DefaultClient.Post(url, bodyType, bytes.NewBufferString(data))
 	if err != nil {
 		c.addError(err)
 		return err.Error()
