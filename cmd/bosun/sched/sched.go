@@ -169,6 +169,9 @@ func (s *Schedule) GetMetadata(metric string, subset opentsdb.TagSet) ([]metadat
 		if err != nil {
 			return nil, err
 		}
+		if meta == nil {
+			return nil, fmt.Errorf("metadata for metric %v not found", metric)
+		}
 		if meta.Desc != "" {
 			ms = append(ms, metadata.Metasend{
 				Metric: metric,

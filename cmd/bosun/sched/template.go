@@ -420,9 +420,12 @@ func (c *Context) GetMeta(metric, name string, v interface{}) interface{} {
 		t = v
 	}
 	meta, err := c.schedule.GetMetadata(metric, t)
-	if err != nil {
+	if err != nil && name == "" {
 		c.addError(err)
 		return nil
+	}
+	if err != nil {
+		return err.Error()
 	}
 	if name == "" {
 		return meta
@@ -432,7 +435,7 @@ func (c *Context) GetMeta(metric, name string, v interface{}) interface{} {
 			return m.Value
 		}
 	}
-	return "metadta not found"
+	return "metadata not found"
 }
 
 // LeftJoin takes slices of results and expressions for which it gets the slices of results.
