@@ -400,15 +400,21 @@ func (c *Context) GraphAll(v interface{}, args ...string) interface{} {
 	return c.graph(v, unit, false)
 }
 
+// GetMeta fetches either metric metadata (if a metric name is provided)
+// or metadata about a tagset key by name
 func (c *Context) GetMeta(metric, name string, v interface{}) interface{} {
 	var t opentsdb.TagSet
 	switch v := v.(type) {
 	case string:
-		var err error
-		t, err = opentsdb.ParseTags(v)
-		if err != nil {
-			c.addError(err)
-			return nil
+		if v == "" {
+			t = make(opentsdb.TagSet)
+		} else {
+			var err error
+			t, err = opentsdb.ParseTags(v)
+			if err != nil {
+				c.addError(err)
+				return nil
+			}
 		}
 	case opentsdb.TagSet:
 		t = v
