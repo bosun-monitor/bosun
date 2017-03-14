@@ -72,6 +72,14 @@ func init() {
 			},
 		},
 	}
+	sched.DefaultClient = &http.Client{
+		Transport: &bosunHttpTransport{
+			"Bosun/" + version.ShortVersion(),
+			&httpcontrol.Transport{
+				RequestTimeout: time.Second * 5,
+			},
+		},
+	}
 }
 
 var (

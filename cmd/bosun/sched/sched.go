@@ -2,6 +2,7 @@ package sched // import "bosun.org/cmd/bosun/sched"
 
 import (
 	"fmt"
+	"net/http"
 	"strings"
 	"sync"
 	"time"
@@ -21,6 +22,9 @@ import (
 	"github.com/bradfitz/slice"
 	"github.com/kylebrandt/boolq"
 )
+
+// DefaultClient is the default http client for requests made from templates. It is configured in cmd/bosun/main.go
+var DefaultClient *http.Client
 
 func utcNow() time.Time {
 	return time.Now().UTC()
