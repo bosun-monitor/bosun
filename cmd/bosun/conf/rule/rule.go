@@ -634,6 +634,8 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 			c.errorf("Depends and crit/warn must share at least one tag.")
 		}
 	}
+	warnLength := len(a.WarnNotification.Notifications) + len(a.WarnNotification.Lookups)
+	critLength := len(a.CritNotification.Notifications) + len(a.CritNotification.Lookups)
 	if a.Log {
 		for _, n := range a.CritNotification.Notifications {
 			if n.Next != nil {
@@ -645,9 +647,10 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 				c.errorf("cannot use log with a chained notification")
 			}
 		}
+		if warnLength+critLength == 0 {
+			c.errorf("log specified but no notification")
+		}
 	}
-	warnLength := len(a.WarnNotification.Notifications) + len(a.WarnNotification.Lookups)
-	critLength := len(a.CritNotification.Notifications) + len(a.CritNotification.Lookups)
 	if warnLength+critLength > 0 && a.Template == nil {
 		c.errorf("notifications specified but no template")
 	}
