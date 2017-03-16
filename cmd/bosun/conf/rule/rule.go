@@ -648,7 +648,7 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 	}
 	warnLength := len(a.WarnNotification.Notifications) + len(a.WarnNotification.Lookups)
 	critLength := len(a.CritNotification.Notifications) + len(a.CritNotification.Lookups)
-	if warnLength+critLength == 0 && a.Template == nil {
+	if warnLength+critLength > 0 && a.Template == nil {
 		c.errorf("notifications specified but no template")
 	}
 	a.ReturnType = ret
