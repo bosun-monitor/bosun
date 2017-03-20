@@ -70,8 +70,8 @@ func TestInvalid(t *testing.T) {
 		"lookup-key-pairs-dup": `conf: lookup-key-pairs-dup:3:1: at <entry b=2,a=1 { }>: duplicate entry`,
 		"crit-warn-unmatching-tags": `conf: crit-warn-unmatching-tags:1:0: at <alert broken {\n	cri...>: crit tags (a,c) and warn tags (c) must be equal`,
 		"depends-no-overlap": `conf: depends-no-overlap:1:0: at <alert broken {\n	dep...>: Depends and crit/warn must share at least one tag.`,
-		"log-no-notification": `conf: log-no-notification:1:0: at <alert a {\n	crit = 1...>: log + crit specified, but no critNotification`,
-		"crit-notification-no-template": `conf: crit-notification-no-template:5:0: at <alert a {\n	crit = 1...>: critNotification specified, but no template`,
+		"log-no-notification": `conf: log-no-notification:1:0: at <alert a {\n	crit = 1...>: log specified but no notification`,
+		"crit-notification-no-template": `conf: crit-notification-no-template:5:0: at <alert a {\n	crit = 1...>: notifications specified but no template`,
 	}
 	for fname, reason := range names {
 		path := filepath.Join("invalid", fname)
