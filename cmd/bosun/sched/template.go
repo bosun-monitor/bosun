@@ -62,6 +62,12 @@ func (s *Schedule) unknownData(t time.Time, name string, group models.AlertKeys)
 	}
 }
 
+// Note: All Context methods that can return nil must return literal nils
+// and not typed nils when returning errors to ensure that our global template
+// function notNil behaves correctly. Context Functions that return an object
+// that users can dereference return nils on errors. Ones that return images or
+// string just return the error message.
+
 // Ack returns the URL to acknowledge an alert.
 func (c *Context) Ack() string {
 	return c.schedule.SystemConf.MakeLink("/action", &url.Values{
@@ -107,14 +113,14 @@ func (c *Context) GraphLink(v string) string {
 	return c.schedule.SystemConf.MakeLink("/expr", &p)
 }
 
-func (c *Context) Rule() (string, error) {
+func (c *Context) Rule() string {
 	p := url.Values{}
 	time := c.runHistory.Start
 	p.Add("alert", c.Alert.Name)
 	p.Add("fromDate", time.Format("2006-01-02"))
 	p.Add("fromTime", time.Format("15:04"))
 	p.Add("template_group", c.Tags)
-	return c.schedule.SystemConf.MakeLink("/config", &p), nil
+	return c.schedule.SystemConf.MakeLink("/config", &p)
 }
 
 func (c *Context) Incident() string {
