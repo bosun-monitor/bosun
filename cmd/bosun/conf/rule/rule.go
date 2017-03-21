@@ -413,6 +413,19 @@ var defaultFuncs = ttemplate.FuncMap{
 	"html": func(value interface{}) htemplate.HTML {
 		return htemplate.HTML(fmt.Sprint(value))
 	},
+	// There is a trap here, this will only make sure that
+	// it is a untyped nil. A typed nil would return true
+	// here. So it is vital that we only return literal
+	// nils from functions when they error with notNil.
+	// This is needed because template's conditionals
+	// treat things like 0 and false as "not true" just like
+	// nil.
+	"notNil": func(value interface{}) bool {
+		if value == nil {
+			return false
+		}
+		return true
+	},
 	"parseDuration": func(s string) *time.Duration {
 		d, err := time.ParseDuration(s)
 		if err != nil {
