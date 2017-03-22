@@ -20,6 +20,7 @@ interface IConfigScope extends IBosunScope {
 	downloadConfig: () => void;
 	saveConfig: () => void;
 	saveClass: () => string;
+	sectionToDocs: { [type: string]: string; };
 
 	//rule execution options
 	fromDate: string;
@@ -82,6 +83,14 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 	$scope.aceMode = 'bosun';
 	$scope.expandDiff = false;
 	$scope.runningChangedHelp = "The running config has been changed. This means you are in danger of overwriting someone else's changes. To view the changes open the 'Save Dialogue' and you will see a unified diff. The only way to get rid of the error panel is to open a new instance of the rule editor and copy your changes into it. You are still permitted to save without doing this, but then you must be very careful not to overwrite anyone else's changes.";
+
+	$scope.sectionToDocs = {
+		"alert": "https://bosun.org/definitions#alert-definitions",
+		"template": "https://bosun.org/definitions#templates",
+		"lookup": "https://bosun.org/definitions#lookup-tables",
+		"notification": "https://bosun.org/definitions#notifications",
+		"macro": "https://bosun.org/definitions#macros"
+	}
 
 	var expr = search.expr;
 	function buildAlertFromExpr() {
