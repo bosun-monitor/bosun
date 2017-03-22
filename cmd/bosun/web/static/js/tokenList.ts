@@ -84,9 +84,9 @@ bosunApp.component('tokenList', {
  
             </td>
             <td><span ng-if="tok.LastUsed.year() > 2000" ts-since="tok.LastUsed"></span> <span ng-if="tok.LastUsed.year() <= 2000">Never</span></td>
-            <td><a class='btn btn-danger glyphicon glyphicon-trash' ng-click='ct.delete(tok.Hash)'></a></td>
+            <td><a class='btn btn-danger fa fa-trash' ng-click='ct.delete(tok.Hash)'></a></td>
         </tr>
         </tbody>
     </table>
-    <a class='btn btn-primary' href='/tokens/new'><span class='glyphicon glyphicon-plus'/> Create new token</a>
+    <a class='btn btn-primary' href='/tokens/new'><span class='fa fa-plus'/> Create new token</a>
 `});

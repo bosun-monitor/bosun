@@ -31,8 +31,8 @@
 					<input type="checkbox" class="pull-right" ng-model="group.checked" ng-click="click($event, $index)" ng-change="update()">
 				</label>
 				<a href>
-					<span title="This exclamation icon represents that the alert is in an active (non-normal) state." class="glyphicon" ng-class="{'glyphicon-exclamation-sign': group.Active}"></span>
-					<span title="This mute icon represents that the alert has been silenced." class="glyphicon" ng-class="{'glyphicon-volume-off': group.Silenced}"></span>
+					<span title="This exclamation icon represents that the alert is in an active (non-normal) state." class="fa" ng-class="{'fa-exclamation-circle': group.Active}"></span>
+					<span title="This mute icon represents that the alert has been silenced." class="fa" ng-class="{'fa-volume-off': group.Silenced}"></span>
 					<span ng-bind="group.Subject"></span>
 					<span class="pull-right">{{group.Children.length}} alerts</span>
 				</a>
