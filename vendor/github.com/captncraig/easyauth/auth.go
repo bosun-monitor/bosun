@@ -90,7 +90,7 @@ func New(opts ...Option) (AuthManager, error) {
 	var mgr = &authManager{
 		names: map[string]bool{},
 		cookie: &CookieManager{
-			duration: int(time.Hour * 24 * 30),
+			duration: int((time.Hour * 24 * 30) / time.Second),
 		},
 	}
 	for _, opt := range opts {
