@@ -7,6 +7,7 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1.0">
 		<link href="/static/css/bootstrap.min.css" rel="stylesheet">
 		<link href="/static/css/jquery-ui.min.css" rel="stylesheet">
+		<link href="/static/css/font-awesome.min.css" rel="stylesheet">
 		<style>
 			.navbar-static-top {
 				margin-bottom: 19px;
@@ -123,13 +124,13 @@
 							</ul>
 						</li>
 						{{ $Username := "{{auth.Username()}}" }}
-						<li ng-if="auth.Enabled() || tokensEnabled" class="dropdown" ng-cloak><a href="#" class="dropdown-toggle" data-toggle="dropdown" ><span class='glyphicon glyphicon-user'></span>{{$Username}}<b class="caret"></b></a>
+						<li ng-if="auth.Enabled() || tokensEnabled" class="dropdown" ng-cloak><a href="#" class="dropdown-toggle" data-toggle="dropdown" ><span class='fa fa-user'></span> {{$Username}}<b class="caret"></b></a>
 							<ul class="dropdown-menu">
 								<li ng-if="auth.Enabled()"><a href="/login/out" target='_self'>Log out</a></li>
 								<li ng-if="tokensEnabled && auth.HasPermission('Manage Tokens')"><a href="/tokens">Manage Auth Tokens</a></li>
 							</ul>
 						</li>
-						<li ng-cloak class='navbar-text' ng-if="!auth.Enabled() && !tokensEnabled"><span class='glyphicon glyphicon-user'></span> {{ $Username }}</li>
+						<li ng-cloak class='navbar-text' ng-if="!auth.Enabled() && !tokensEnabled"><span class='fa fa-user'></span> {{ $Username }}</li>
 					</ul>
 				</div>
 			</div>

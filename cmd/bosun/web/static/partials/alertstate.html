@@ -1,11 +1,11 @@
 <div class="panel-heading" ng-class="panelClass(currentStatus)+'-box'" ng-click="toggle()">
 	<h4 class="panel-title">
 		<a href>
-			<span title="This exclamation icon represents that the alert is in an active (non-normal) state." class="glyphicon" ng-class="{'glyphicon-exclamation-sign': state.last.Status && state.last.Status != 'normal'}"></span>
-			<span title="This mute icon represents that the alert has been silenced." class="glyphicon" ng-class="{'glyphicon-volume-off': child.Silenced}"></span>
-			<span title="This question mark icon represents that the alert is in an unevaluated state. Alerts are unevaluated when a dependency is active." class="glyphicon" ng-class="{'glyphicon-question-sign': state.Unevaluated}"></span>
+			<span title="This exclamation icon represents that the alert is in an active (non-normal) state." class="fa" ng-class="{'fa-exclamation-circle': state.last.Status && state.last.Status != 'normal'}"></span>
+			<span title="This mute icon represents that the alert has been silenced." class="fa" ng-class="{'fa-volume-off': child.Silenced}"></span>
+			<span title="This question mark icon represents that the alert is in an unevaluated state. Alerts are unevaluated when a dependency is active." class="fa" ng-class="{'fa-question-circle': state.Unevaluated}"></span>
 			<a ng-href="errorHistory?alert={{encode(state.Alert)}}">
-				<span title="This fire icon represents that the alert has an underlying error. Errors come from things like a time series database issue or a malformed query." class="glyphicon" ng-class="{'glyphicon-fire': child.IsError}"></span>
+				<span title="This fire icon represents that the alert has an underlying error. Errors come from things like a time series database issue or a malformed query." class="fa" ng-class="{'fa-fire': child.IsError}"></span>
 			</a>
 			<span ng-show="state.Id">#{{state.Id}}:</span>
 			<span ng-bind="child.Subject || child.AlertKey"></span>
