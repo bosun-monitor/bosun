@@ -742,6 +742,19 @@ bosunApp.component("usernameInput", {
     template: '<input type="text"class="form-control"  ng-disabled="ct.auth.Enabled()" ng-model="ct.auth.Username" ng-model-options="{ getterSetter: true }">'
 });
 /// <reference path="0-bosun.ts" />
+/// <reference path="ace/ace.d.ts" />
+function nsoaGetSnippets() {
+    return [{
+            name: "lookup",
+            content: "lookup=${1:ns_field}:lookup_table=${2:oa_table}:lookup_by=${3:oa_field}:lookup_return=${4:oa_field}",
+            tabTrigger: "lookup"
+        },
+        {
+            name: "dropdown",
+            content: "<${1:oa_field} ${2:ns_field}>\n    ${3:ns_value} ${4:oa_value}\n</${1}>\n",
+            tabTrigger: "dropdown"
+        }];
+}
 bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$route', '$timeout', '$sce', function ($scope, $http, $location, $route, $timeout, $sce) {
         var search = $location.search();
         $scope.fromDate = search.fromDate || '';
@@ -850,25 +863,13 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
         $scope.aceLoaded = function (_editor) {
             editor = _editor;
             $scope.editor = editor;
+            editor.$blockScrolling = Infinity;
             editor.focus();
             editor.getSession().setUseWrapMode(true);
             editor.on("blur", function () {
                 $scope.$apply(function () {
                     $scope.items = parseItems();
                 });
-            });
-        };
-        var syntax = true;
-        $scope.aceToggleHighlight = function () {
-            if (syntax) {
-                editor.getSession().setMode();
-                syntax = false;
-                return;
-            }
-            syntax = true;
-            editor.getSession().setMode({
-                path: 'ace/mode/' + $scope.aceMode,
-                v: Date.now()
             });
         };
         $scope.scrollTo = function (type, name) {

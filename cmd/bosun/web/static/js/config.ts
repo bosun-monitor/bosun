@@ -1,4 +1,7 @@
 /// <reference path="0-bosun.ts" />
+/// <reference path="ace/ace.d.ts" />
+
+
 interface IConfigScope extends IBosunScope {
 	// text loading/navigation
 	config_text: string;
@@ -62,6 +65,19 @@ interface IConfigScope extends IBosunScope {
 	runningHashResult: string;
 	getRunningHash: () => void;
 }
+
+ function nsoaGetSnippets() {
+     return [{
+         name: "lookup",
+         content: "lookup=${1:ns_field}:lookup_table=${2:oa_table}:lookup_by=${3:oa_field}:lookup_return=${4:oa_field}",
+         tabTrigger: "lookup"
+     },
+     {
+         name: "dropdown",
+         content: "<${1:oa_field} ${2:ns_field}>\n    ${3:ns_value} ${4:oa_value}\n</${1}>\n",
+         tabTrigger: "dropdown"
+     }];
+ }
 
 bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$route', '$timeout', '$sce', function ($scope: IConfigScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService, $timeout: ng.ITimeoutService, $sce: ng.ISCEService) {
 	var search = $location.search();
@@ -176,6 +192,7 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 	$scope.aceLoaded = function (_editor) {
 		editor = _editor;
 		$scope.editor = editor;
+		editor.$blockScrolling = Infinity;
 		editor.focus();
 		editor.getSession().setUseWrapMode(true);
 		editor.on("blur", function () {
@@ -184,19 +201,6 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 			});
 		});
 	};
-	var syntax = true;
-	$scope.aceToggleHighlight = function () {
-		if (syntax) {
-			editor.getSession().setMode();
-			syntax = false;
-			return;
-		}
-		syntax = true;
-		editor.getSession().setMode({
-			path: 'ace/mode/' + $scope.aceMode,
-			v: Date.now()
-		});
-	}
 	$scope.scrollTo = (type: string, name: string) => {
 		var searchRegex = new RegExp("^\\s*" + type + "\\s+" + name, "g");
 		editor.find(searchRegex, {
@@ -235,7 +239,7 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 	};
 
 	$scope.getRunningHash = () => {
-		if (! $scope.saveEnabled) {
+		if (!$scope.saveEnabled) {
 			return
 		}
 		(function tick() {
@@ -479,7 +483,7 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 
 
 	$scope.saveConfig = () => {
-		if (! $scope.saveEnabled) {
+		if (!$scope.saveEnabled) {
 			return;
 		}
 		$scope.saveResult = "Saving; Please Wait"

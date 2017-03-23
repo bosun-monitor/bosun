@@ -98,7 +98,17 @@
 </div>
 <div class="row">
 	<div tsresizable on-resize="editor.resize()" class='resize'>
-		<div ui-ace="{ onLoad : aceLoaded, mode: aceMode, theme: aceTheme, advanced: { fontSize: '14px', fontFamily: 'Menlo, Monaco, Consolas, monospace' }}"
+		<div ui-ace="{ 
+			onLoad : aceLoaded, 
+			theme: aceTheme,
+			mode: 'bosun',
+			advanced: { 
+				fontSize: '14px', 
+				fontFamily: 'Menlo, Monaco, Consolas, monospace', 
+				enableSnippets: true,
+				enableBasicAutocompletion: true,
+				enableLiveAutocompletion: false
+			}}"
 			ng-model="config_text"></div>
 	</div>
 </div>
