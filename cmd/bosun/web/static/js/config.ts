@@ -64,20 +64,11 @@ interface IConfigScope extends IBosunScope {
 	runningChangedHelp: string;
 	runningHashResult: string;
 	getRunningHash: () => void;
+	snippetManager: any;
+	bosunSnippets: any;
+	listSnippets: (v: any) => any;
+	insertSnippet: (v: any) => void;
 }
-
- function nsoaGetSnippets() {
-     return [{
-         name: "lookup",
-         content: "lookup=${1:ns_field}:lookup_table=${2:oa_table}:lookup_by=${3:oa_field}:lookup_return=${4:oa_field}",
-         tabTrigger: "lookup"
-     },
-     {
-         name: "dropdown",
-         content: "<${1:oa_field} ${2:ns_field}>\n    ${3:ns_value} ${4:oa_value}\n</${1}>\n",
-         tabTrigger: "dropdown"
-     }];
- }
 
 bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$route', '$timeout', '$sce', function ($scope: IConfigScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService, $timeout: ng.ITimeoutService, $sce: ng.ISCEService) {
 	var search = $location.search();
@@ -195,12 +186,29 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 		editor.$blockScrolling = Infinity;
 		editor.focus();
 		editor.getSession().setUseWrapMode(true);
+		$scope.snippetManager = ace.require("ace/snippets").snippetManager;
+		$scope.bosunSnippets = $scope.snippetManager.snippetNameMap["bosun"];
 		editor.on("blur", function () {
 			$scope.$apply(function () {
 				$scope.items = parseItems();
 			});
 		});
 	};
+
+	$scope.listSnippets = function() {
+		var snips = $scope.snippetManager.snippetNameMap["bosun"];
+		if (snips) {
+			return Object.keys(snips)
+		}
+		return {};
+	}
+
+	$scope.insertSnippet = function(snippetName) {
+		$scope.snippetManager.insertSnippetForSelection($scope.editor, $scope.snippetManager.snippetNameMap["bosun"][snippetName].content);
+		$scope.editor.focus();
+		$scope.editor.tabstopManager.tabNext()
+	}
+
 	$scope.scrollTo = (type: string, name: string) => {
 		var searchRegex = new RegExp("^\\s*" + type + "\\s+" + name, "g");
 		editor.find(searchRegex, {

@@ -63,6 +63,14 @@
 			<li role="presentation" ng-repeat="item in list | orderBy:'toString()'"><a role="menuitem" tabindex="-1" ng-click="scrollTo(type,item);">{{item}}</a></li>
 		</ul>
 	</div>
+	<div class="dropdown selectorDropdown">
+		<button class="btn btn-primary btn-xs dropdown-toggle" type="button" id="itemSelector" data-toggle="dropdown">
+			Snippets <i class="fa fa-caret-down"></i>
+		</button> 
+		<ul class="dropdown-menu section-button" role="menu">
+			<li role="presentation"  ng-repeat="name in listSnippets()"><a ng-click="insertSnippet(name)" role="menuitem" tabindex="-1">{{name}}</a></li>
+		<ul>
+	</div>
 	<div class="btn btn-default btn-xs" ng-show="quickJumpTarget" ng-bind="quickJumpTarget" ng-click="quickJump()"></div>
 	<div class="btn btn-default btn-xs actionButtons" data-toggle="modal" data-target="#configSaveModal" ng-click="diffConfig()" ng-if="saveEnabled">Save</div>
 	<div class="btn btn-default btn-xs actionButtons" ng-click="validate()">Validate</div>
@@ -99,6 +107,7 @@
 <div class="row">
 	<div tsresizable on-resize="editor.resize()" class='resize'>
 		<div ui-ace="{ 
+			require: ['ace/ext/language_tools'],
 			onLoad : aceLoaded, 
 			theme: aceTheme,
 			mode: 'bosun',
