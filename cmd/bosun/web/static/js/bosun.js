@@ -218,7 +218,8 @@ bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', '$q', '$r
             p.finally($scope.stop);
             return d.promise;
         };
-        var sz = 30;
+        // Size of the logo in (width and height) of the Bosun logo in the navbar
+        var sz = 25;
         var orig = 700;
         var light = '#4ba2d9';
         var dark = '#1f5296';
