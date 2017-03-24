@@ -55,7 +55,7 @@ No crit notifications will be sent if `critNotification` is not declared in the 
 
 #### critNotification
 {: .keyword}
-A comma-separated list of notifications to trigger on critical a state (when the crit expression is non-zero). This line may appear multiple times and duplicate notifications, which will be merged so only one of each notification is triggered. [Lookup tables](/definitions#lookup-tables) may be used when `lookup("table", "key")` is an entire `critNotification` value.
+A comma-separated list of notifications to trigger on critical a state (when the crit expression is non-zero). This line may appear multiple times and duplicate notifications, which will be merged so only one of each notification is triggered. [Lookup tables](/definitions#lookup-tables) may be used when `lookup("table", "key")` is the only `critNotification` value. This means you can't mix notifications names with lookups in the same `critNotification`. However, since an alert can have multiple `critNotification` entries you make one entry that has a lookup, and another that has notification names.
 
 #### depends
 {: .keyword}
@@ -119,11 +119,11 @@ The name of the [template](/definitions#templates) that will be used to send ale
 
 #### unjoinedOk
 {: .keyword}
-If present expressions within the alert will ignore unjoined expression errors. Unjoins happen when expressions with in an alert use a comparison operator (i.e. `>` or `&&`), and there are tagsets in one set but are not in the other set.
+If present, expressions within the alert will ignore unjoined expression errors. Unjoins happen when expressions with in an alert use a comparison operator (i.e. `>` or `&&`), and there are tagsets in one set but are not in the other set.
 
 #### unknown
 {: .keyword}
-`unknown` is the duration (i.e. `unknown = 5m` ) at which to mark an incident [unknown](/usage#severity-states) if it can not be evaluated. It defaults the system configuration global variable [CheckFrequency](/system_configuration#checkfrequency). Bosun remembers the tagsets it has seen for an alert and determines an alert to be unknown when a tagset is no longer present for the alert. 
+`unknown` is the duration (i.e. `unknown = 5m` ) at which to mark an incident as [unknown](/usage#severity-states) if it can not be evaluated. It defaults the system configuration global variable [CheckFrequency](/system_configuration#checkfrequency). Bosun remembers the tagsets it has seen for an alert and determines an alert to be unknown when a tagset is no longer present for the alert. 
 
 #### unknownIsNormal
 {: .keyword}
