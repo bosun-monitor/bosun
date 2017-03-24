@@ -177,10 +177,10 @@ The Jump dropdowns <a href="/usage#rule-editor-image" class="image-number">①</
 
 At the end there is a switcher that can be used when you are working on an alert. It allows you to just back and forth between the alert and the alert referenced in the template.
 
-## Download / Save / Validate
+## Download / Validate
 The download button <a href="/usage#rule-editor-image" class="image-number">②</a> will download the config file as a text file. Validate makes sure that Bosun considers the config valid using the same validation that is required for Bosun to start.
 
-### Config Saving
+## Config Saving
 Save <a href="/usage#rule-editor-image" class="image-number">②</a> will bring up a dialogue that lets you save the config. This only appears if you have permission to save the config, and tbe [system configuration's `EnableSave`]() has been set to true.
 
 # Annotations
