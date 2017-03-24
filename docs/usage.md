@@ -183,6 +183,14 @@ The download button <a href="/usage#rule-editor-image" class="image-number">②<
 ## Config Saving
 Save <a href="/usage#rule-editor-image" class="image-number">②</a> will bring up a dialogue that lets you save the config. This only appears if you have permission to save the config, and tbe [system configuration's `EnableSave`]() has been set to true.
 
+The save dialogue will show you a contextual diff of your config and the running config. There are several protections in place to prevent you from overwriting someone else's config:
+
+  * The Rule Editor will show a warning if the config has been saved since you started editing it
+  * A contextual-diff is shown of your changes versus the running config
+  * When the file is being saved, a global lock is taken so nobody else can edit it via bosun
+
+When the config file 
+
 # Annotations
 
 Annotations are currently stored in elastic. When annotations are enabled you can create, edit and visulize them on the the Graph page. There is also a Submit Annotations page that allows for creation and editing annotations. The API described in this [README](https://github.com/bosun-monitor/annotate/blob/master/web/README.md) gets injected into bosun under `/api/` - you can also find a description of the schema there. 
