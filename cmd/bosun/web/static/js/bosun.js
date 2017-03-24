@@ -533,6 +533,17 @@ bosunControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route
                 $scope.set();
             }
         };
+        var editor;
+        $scope.aceLoaded = function (_editor) {
+            editor = _editor;
+            $scope.editor = editor;
+            // The following isn't working so I just removed the warning from the ace.js
+            // editor.$blockScrolling = Infinity;
+            editor.focus();
+            editor.getSession().setUseWrapMode(true);
+            $scope.snippetManager = ace.require("ace/snippets").snippetManager;
+            $scope.bosunSnippets = $scope.snippetManager.snippetNameMap["bosun"];
+        };
     }]);
 /// <reference path="expr.ts" />
 bosunControllers.controller('ActionCtrl', ['$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
@@ -851,7 +862,8 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
         $scope.aceLoaded = function (_editor) {
             editor = _editor;
             $scope.editor = editor;
-            editor.$blockScrolling = Infinity;
+            // The following isn't working so I just removed the warning from the ace.js
+            // editor.$blockScrolling = Infinity;
             editor.focus();
             editor.getSession().setUseWrapMode(true);
             $scope.snippetManager = ace.require("ace/snippets").snippetManager;

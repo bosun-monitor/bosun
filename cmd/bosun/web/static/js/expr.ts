@@ -16,6 +16,13 @@ interface IExprScope extends IBosunScope {
 	keydown: ($event: any) => void;
 	animate: () => any;
 	stop: () => any;
+	
+	bosunSnippets: any;
+	listSnippets: (v: any) => any;
+	insertSnippet: (v: any) => void;
+	aceLoaded: (editor: any) => void;
+	editor: any;
+	snippetManager: any;
 }
 
 bosunControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route', function($scope: IExprScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService) {
@@ -108,6 +115,17 @@ bosunControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route
 		if ($event.shiftKey && $event.keyCode == 13) {
 			$scope.set();
 		}
+	};
+	var editor;
+	$scope.aceLoaded = function (_editor) {
+		editor = _editor;
+		$scope.editor = editor;
+		// The following isn't working so I just removed the warning from the ace.js
+		// editor.$blockScrolling = Infinity;
+		editor.focus();
+		editor.getSession().setUseWrapMode(true);
+		$scope.snippetManager = ace.require("ace/snippets").snippetManager;
+		$scope.bosunSnippets = $scope.snippetManager.snippetNameMap["bosun"];
 	};
 
 }]);

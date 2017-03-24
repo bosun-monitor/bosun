@@ -63,6 +63,7 @@
 			<li role="presentation" ng-repeat="item in list | orderBy:'toString()'"><a role="menuitem" tabindex="-1" ng-click="scrollTo(type,item);">{{item}}</a></li>
 		</ul>
 	</div>
+	<div class="btn btn-default btn-xs selectorDropdown" ng-show="quickJumpTarget" ng-bind="quickJumpTarget" ng-click="quickJump()" tabindex="-1"></div>		
 	<div class="dropdown selectorDropdown">
 		<button class="btn btn-primary btn-xs dropdown-toggle" type="button" id="itemSelector" data-toggle="dropdown">
 			Snippets <i class="fa fa-caret-down"></i>
@@ -71,7 +72,6 @@
 			<li role="presentation"  ng-repeat="name in listSnippets()"><a ng-click="insertSnippet(name)" role="menuitem" tabindex="-1">{{name}}</a></li>
 		<ul>
 	</div>
-	<div class="btn btn-default btn-xs" ng-show="quickJumpTarget" ng-bind="quickJumpTarget" ng-click="quickJump()"></div>
 	<div class="btn btn-default btn-xs actionButtons" data-toggle="modal" data-target="#configSaveModal" ng-click="diffConfig()" ng-if="saveEnabled">Save</div>
 	<div class="btn btn-default btn-xs actionButtons" ng-click="validate()">Validate</div>
 	<div class="btn btn-default btn-xs actionButtons" ng-click="downloadConfig()">Download</div>
@@ -115,8 +115,7 @@
 				fontSize: '14px', 
 				fontFamily: 'Menlo, Monaco, Consolas, monospace', 
 				enableSnippets: true,
-				enableBasicAutocompletion: true,
-				enableLiveAutocompletion: false
+				enableBasicAutocompletion: true
 			}}"
 			ng-model="config_text"></div>
 	</div>
