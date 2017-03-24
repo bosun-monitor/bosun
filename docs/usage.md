@@ -159,6 +159,21 @@ The open incident filter supports joining terms in `()` as well as the `AND`, `O
     </tr>
 </table>
 
+# Rule Editor
+The rule editor allows you to edit the [RuleConf](), preview rendered templates, and test alerts against historical data.
+
+![Rule Editor Image](/public/rule_editor.jpg)
+
+## Jump Buttons
+The Jump dropdowns <span class="image-number">①</span> will take you to defined sections within the config. In particular, the alert dropdown selects which alert will be used for testing.
+
+At the end there is a switcher that can be used when you are working on an alert. It allows you to just back and forth between the alert and the alert referenced in the template.
+
+## Download / Save / Validate
+The download button will download the config file as a text file. Validate makes sure that Bosun considers the config valid using the same validation that is required for Bosun to start.
+
+Save will bring up a dialogue that lets you save the config. This only appears if you have permission to save the config, and 
+
 # Annotations
 
 Annotations are currently stored in elastic. When annotations are enabled you can create, edit and visulize them on the the Graph page. There is also a Submit Annotations page that allows for creation and editing annotations. The API described in this [README](https://github.com/bosun-monitor/annotate/blob/master/web/README.md) gets injected into bosun under `/api/` - you can also find a description of the schema there. 
