@@ -162,17 +162,26 @@ The open incident filter supports joining terms in `()` as well as the `AND`, `O
 # Rule Editor
 The rule editor allows you to edit the [RuleConf](), preview rendered templates, and test alerts against historical data.
 
+## Rule Editor Image
 ![Rule Editor Image](/public/rule_editor.jpg)
 
+## Textarea
+The text area will be loaded with the running config when the Rule Editor view is loaded. A hash of the config when you start editing it is saved. If someone else edits the UI and saves it, Bosun will detect that the config has changed and show a warning above the text area.
+
+When you run test your version of the config is saved in Bosun, and you can link to it so others can see it.
+
+The editor is build using the open source [Ace editor](https://ace.c9.io/)
+
 ## Jump Buttons
-The Jump dropdowns <span class="image-number">①</span> will take you to defined sections within the config. In particular, the alert dropdown selects which alert will be used for testing.
+The Jump dropdowns <a href="/usage#rule-editor-image" class="image-number">①</a> will take you to defined sections within the config. In particular, the alert dropdown selects which alert will be used for testing.
 
 At the end there is a switcher that can be used when you are working on an alert. It allows you to just back and forth between the alert and the alert referenced in the template.
 
 ## Download / Save / Validate
-The download button will download the config file as a text file. Validate makes sure that Bosun considers the config valid using the same validation that is required for Bosun to start.
+The download button <a href="/usage#rule-editor-image" class="image-number">②</a> will download the config file as a text file. Validate makes sure that Bosun considers the config valid using the same validation that is required for Bosun to start.
 
-Save will bring up a dialogue that lets you save the config. This only appears if you have permission to save the config, and 
+### Config Saving
+Save <a href="/usage#rule-editor-image" class="image-number">②</a> will bring up a dialogue that lets you save the config. This only appears if you have permission to save the config, and tbe [system configuration's `EnableSave`]() has been set to true.
 
 # Annotations
 
