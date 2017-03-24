@@ -120,12 +120,29 @@ bosunControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route
 	$scope.aceLoaded = function (_editor) {
 		editor = _editor;
 		$scope.editor = editor;
+		editor.setOptions({
+			enableSnippets: true
+		});
+		editor.session.setMode("ace/mode/bosun");
+		$scope.snippetManager = ace.require("ace/snippets").snippetManager;
+		editor.renderer.on('afterRender', function() {
+			console.log("whatt", $scope.snippetManager.snippetMap.bosun)
+			_.each($scope.snippetManager.snippetMap, (v: any, k: string) => {
+				console.log(v, k);
+			});
+		});
+		console.log($scope.snippetManager.snippetMap);
+		var langTools = ace.require("ace/ext/language_tools");
+		editor.completers = [langTools.snippetCompleter];
+		editor.setOptions({
+			enableBasicAutocompletion: true,}
+		);
 		// The following isn't working so I just removed the warning from the ace.js
 		// editor.$blockScrolling = Infinity;
 		editor.focus();
 		editor.getSession().setUseWrapMode(true);
-		$scope.snippetManager = ace.require("ace/snippets").snippetManager;
 		$scope.bosunSnippets = $scope.snippetManager.snippetNameMap["bosun"];
+		//debugger;
 	};
 
 }]);

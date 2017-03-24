@@ -183,6 +183,9 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 	$scope.aceLoaded = function (_editor) {
 		editor = _editor;
 		$scope.editor = editor;
+		var langTools = ace.require("ace/ext/language_tools");
+		editor.completers = [langTools.snippetCompleter];
+		editor.setOptions({enableBasicAutocompletion: true});
 		// The following isn't working so I just removed the warning from the ace.js
 		// editor.$blockScrolling = Infinity;
 		editor.focus();
