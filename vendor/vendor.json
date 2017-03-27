@@ -261,18 +261,18 @@
 		},
 		{
 			"path": "github.com/bosun-monitor/annotate",
-			"revision": "7a63972472cdcbd52933b5580927efca995e4598",
-			"revisionTime": "2016-10-19T16:13:39-06:00"
+			"revision": "c0740ed2ddc60564a6aff2ad44fb375b479e55ca",
+			"revisionTime": "2017-03-27T16:30:27-04:00"
 		},
 		{
 			"path": "github.com/bosun-monitor/annotate/backend",
-			"revision": "7a63972472cdcbd52933b5580927efca995e4598",
-			"revisionTime": "2016-10-19T16:13:39-06:00"
+			"revision": "c0740ed2ddc60564a6aff2ad44fb375b479e55ca",
+			"revisionTime": "2017-03-27T16:30:27-04:00"
 		},
 		{
 			"path": "github.com/bosun-monitor/annotate/web",
-			"revision": "7a63972472cdcbd52933b5580927efca995e4598",
-			"revisionTime": "2016-10-19T16:13:39-06:00"
+			"revision": "c0740ed2ddc60564a6aff2ad44fb375b479e55ca",
+			"revisionTime": "2017-03-27T16:30:27-04:00"
 		},
 		{
 			"path": "github.com/bosun-monitor/statusio",

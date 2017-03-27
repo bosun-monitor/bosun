@@ -25,14 +25,15 @@ const docType = "annotation"
 
 type Elastic struct {
 	*elastic.Client
-	index       string
-	urls        []string
-	maxResults  int
-	initialized bool
+	index        string
+	urls         []string
+	simpleClient bool
+	maxResults   int
+	initialized  bool
 }
 
-func NewElastic(urls []string, index string) *Elastic {
-	return &Elastic{&elastic.Client{}, index, urls, 200, false}
+func NewElastic(urls []string, simpleclient bool, index string) *Elastic {
+	return &Elastic{&elastic.Client{}, index, urls, simpleclient, 200, false}
 }
 
 var unInitErr = fmt.Errorf("backend has not been initialized")
@@ -172,7 +173,15 @@ func (e *Elastic) GetFieldValues(field string) ([]string, error) {
 }
 
 func (e *Elastic) InitBackend() error {
-	ec, err := elastic.NewClient(elastic.SetURL(e.urls...))
+	var err error
+	var ec *elastic.Client
+
+	if e.simpleClient {
+		ec, err = elastic.NewSimpleClient(elastic.SetURL(e.urls...))
+	} else {
+		ec, err = elastic.NewClient(elastic.SetURL(e.urls...))
+	}
+
 	if err != nil {
 		return err
 	}
