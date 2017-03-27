@@ -19,6 +19,7 @@ import (
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
 	"github.com/MiniProfiler/go/miniprofiler"
+	"github.com/bosun-monitor/annotate/backend"
 	"github.com/bradfitz/slice"
 	"github.com/kylebrandt/boolq"
 )
@@ -41,6 +42,8 @@ type Schedule struct {
 	Group      map[time.Time]models.AlertKeys
 
 	Search *search.Search
+
+	annotate backend.Backend
 
 	skipLast bool
 	quiet    bool
@@ -70,7 +73,7 @@ type Schedule struct {
 	checksRunning sync.WaitGroup
 }
 
-func (s *Schedule) Init(systemConf conf.SystemConfProvider, ruleConf conf.RuleConfProvider, dataAccess database.DataAccess, skipLast, quiet bool) error {
+func (s *Schedule) Init(systemConf conf.SystemConfProvider, ruleConf conf.RuleConfProvider, dataAccess database.DataAccess, annotate backend.Backend, skipLast, quiet bool) error {
 	//initialize all variables and collections so they are ready to use.
 	//this will be called once at app start, and also every time the rule
 	//page runs, so be careful not to spawn long running processes that can't
@@ -81,6 +84,7 @@ func (s *Schedule) Init(systemConf conf.SystemConfProvider, ruleConf conf.RuleCo
 	s.SystemConf = systemConf
 	s.RuleConf = ruleConf
 	s.Group = make(map[time.Time]models.AlertKeys)
+	s.annotate = annotate
 	s.pendingUnknowns = make(map[*conf.Notification][]*models.IncidentState)
 	s.lastLogTimes = make(map[models.AlertKey]time.Time)
 	s.LastCheck = utcNow()
@@ -491,8 +495,8 @@ func marshalTime(t time.Time) string {
 var DefaultSched = &Schedule{}
 
 // Load loads a configuration into the default schedule.
-func Load(systemConf conf.SystemConfProvider, ruleConf conf.RuleConfProvider, dataAccess database.DataAccess, skipLast, quiet bool) error {
-	return DefaultSched.Init(systemConf, ruleConf, dataAccess, skipLast, quiet)
+func Load(systemConf conf.SystemConfProvider, ruleConf conf.RuleConfProvider, dataAccess database.DataAccess, annotate backend.Backend, skipLast, quiet bool) error {
+	return DefaultSched.Init(systemConf, ruleConf, dataAccess, annotate, skipLast, quiet)
 }
 
 // Run runs the default schedule.

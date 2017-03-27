@@ -11,7 +11,6 @@ import (
 	"bosun.org/graphite"
 	"bosun.org/opentsdb"
 	"github.com/BurntSushi/toml"
-	"github.com/bosun-monitor/annotate"
 	"github.com/influxdata/influxdb/client/v2"
 )
 
@@ -483,10 +482,6 @@ func (sc *SystemConf) GetInfluxContext() client.HTTPConfig {
 		c.InsecureSkipVerify = sc.InfluxConf.UnsafeSSL
 	}
 	return c
-}
-
-func (sc *SystemConf) GetAnnotateContext() annotate.Client {
-	return annotate.NewClient(fmt.Sprintf("http://%v/api", sc.HTTPListen)) // TODO Fix for HTTPS
 }
 
 // GetLogstashContext returns a Logstash context which contains all the information needed
