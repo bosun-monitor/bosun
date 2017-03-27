@@ -168,7 +168,7 @@ func TestCrit(t *testing.T) {
 			},
 		},
 		state: map[schedState]bool{
-			schedState{"a{a=b}", "critical"}: true,
+			{"a{a=b}", "critical"}: true,
 		},
 	})
 	if !s.AlertSuccessful("a") {
@@ -236,7 +236,7 @@ func TestUnknown(t *testing.T) {
 			`q("avg:m{a=*}", ` + window5Min + `)`: {},
 		},
 		state: map[schedState]bool{
-			schedState{"a{a=b}", "unknown"}: true,
+			{"a{a=b}", "unknown"}: true,
 		},
 		touched: map[models.AlertKey]time.Time{
 			"a{a=b}": queryTime.Add(-10 * time.Minute),
@@ -256,7 +256,7 @@ func TestUnknown_HalfFreq(t *testing.T) {
 			`q("avg:m{a=*}", ` + window5Min + `)`: {},
 		},
 		state: map[schedState]bool{
-			schedState{"a{a=b}", "unknown"}: true,
+			{"a{a=b}", "unknown"}: true,
 		},
 		touched: map[models.AlertKey]time.Time{
 			"a{a=b}": queryTime.Add(-20 * time.Minute),
@@ -333,9 +333,9 @@ func TestRename(t *testing.T) {
 			},
 		},
 		state: map[schedState]bool{
-			schedState{"ping.host{host=ny-kbrandt02,source=ny-kbrandt02}", "warning"}: true,
-			schedState{"ping.host{host=ny-web01,source=ny-kbrandt02}", "warning"}:     true,
-			schedState{"os.cpu{host=ny-web02}", "warning"}:                            true,
+			{"ping.host{host=ny-kbrandt02,source=ny-kbrandt02}", "warning"}: true,
+			{"ping.host{host=ny-web01,source=ny-kbrandt02}", "warning"}:     true,
+			{"os.cpu{host=ny-web02}", "warning"}:                            true,
 		},
 	})
 }

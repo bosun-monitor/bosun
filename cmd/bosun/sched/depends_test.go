@@ -44,7 +44,7 @@ func TestDependency_Simple(t *testing.T) {
 			},
 		},
 		state: map[schedState]bool{
-			schedState{"a{a=c}", "critical"}: true,
+			{"a{a=c}", "critical"}: true,
 		},
 	})
 }
@@ -84,7 +84,7 @@ func TestDependency_Overlap(t *testing.T) {
 			},
 		},
 		state: map[schedState]bool{
-			schedState{"a{a=c,b=q}", "critical"}: true,
+			{"a{a=c,b=q}", "critical"}: true,
 		},
 	})
 }
@@ -125,8 +125,8 @@ func TestDependency_OtherAlert(t *testing.T) {
 			},
 		},
 		state: map[schedState]bool{
-			schedState{"a{cpu=0,host=ny01}", "critical"}: true,
-			schedState{"c{host=ny01}", "critical"}:       true,
+			{"a{cpu=0,host=ny01}", "critical"}: true,
+			{"c{host=ny01}", "critical"}:       true,
 		},
 	})
 }
@@ -167,8 +167,8 @@ func TestDependency_OtherAlert_Unknown(t *testing.T) {
 			},
 		},
 		state: map[schedState]bool{
-			schedState{"a{host=ny02}", "unknown"}:      true,
-			schedState{"os.cpu{host=ny01}", "warning"}: true,
+			{"a{host=ny02}", "unknown"}:      true,
+			{"os.cpu{host=ny01}", "warning"}: true,
 		},
 		touched: map[models.AlertKey]time.Time{
 			"a{host=ny02}": queryTime.Add(-10 * time.Minute),
@@ -207,7 +207,7 @@ func TestDependency_OtherAlert_UnknownChain(t *testing.T) {
 			}},
 		},
 		state: map[schedState]bool{
-			schedState{string(ab), "unknown"}: true,
+			{string(ab), "unknown"}: true,
 		},
 		touched: map[models.AlertKey]time.Time{
 			ab: queryTime.Add(-time.Hour),
@@ -295,7 +295,7 @@ alert c {
 			`q("avg:rate{counter,,1}:os.cpu{host=*}", ` + window5Min + `)`: {},
 		},
 		state: map[schedState]bool{
-			schedState{"a{host=ny01,source=bosun01}", "warning"}: true,
+			{"a{host=ny01,source=bosun01}", "warning"}: true,
 		},
 		touched: map[models.AlertKey]time.Time{
 			"a{host=ny01,source=bosun01}": queryTime.Add(-5 * time.Minute),
