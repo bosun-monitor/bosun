@@ -147,7 +147,7 @@ func main() {
 		if index == "" {
 			index = "annotate"
 		}
-		annotateBackend = backend.NewElastic(sysProvider.GetAnnotateElasticHosts(), index)
+		annotateBackend = backend.NewElastic([]string(sysProvider.GetAnnotateElasticHosts()), false, index)
 		go func() {
 			for {
 				err := annotateBackend.InitBackend()

@@ -95,7 +95,8 @@ func emptyOrGlob(userVal, fieldVal string) bool {
 	if userVal == "empty" && fieldVal == "" {
 		return true
 	}
-	return glob.Glob(userVal, fieldVal)
+
+	return glob.Glob(strings.ToLower(userVal), strings.ToLower(fieldVal))
 }
 
 // Ask makes it so annotations can be filtered in memory using
