@@ -742,13 +742,16 @@ template context_bound_type_example {
 ```
 
 ### Template Error handling
-Templates can throw errors at runtime (i.e. when a notification is sent). Although the configuration check makes sure that templates are valid, you can still do things like try to dereference objects that are nil pointers.
+Templates can throw errors at runtime (i.e. when a notification is sent). Although the configuration check makes sure that templates are valid, you can still do things like try to reference objects that are nil pointers.
 
-When a template fails to render, a generic notification will be emailed to the people that would have received the alert. In the case of a post notification (where the subject is used). The following text will be posted `error: template rendering error for alert <alertkey>` where the alert key is something like `os.cpu{host=a}`.
+When a template fails to render:
 
-In order to prevent the template from completelying failing and resulting in the generic notification, errors can be handled inside the application. 
+ * Email: A generic notification will be emailed to the people that would have received the alert.
+ * Post notification (where the subject is used): The following text will be posted `error: template rendering error for alert <alertkey>` where the alert key is something like `os.cpu{host=a}`
 
-Errors are handled differently depending on the [type of the function](/definitions#template-function-types) (Context Bound vs Global). When context bound functions have errors the `.Errors` variable attached to the template context is appended to. This is not the case for global functions. 
+In order to prevent the template from completely failing and resulting in the generic notification, errors can be handled inside the application. 
+
+Errors are handled differently depending on the [type of the function](/definitions#template-function-types) (Context Bound vs Global). When context bound functions have errors the error string is appended to the [`.Errors` template variable](/definitions#errors). This is not the case for global functions. 
 
 Global functions always returns strings except for parseDuration. When global functions error than `.Errors` is *not* appended to, but the string that would have been returned with an error is show in the template. parseDuration returns nil when it errors, and in this one exception you can't see what the error is.
 
@@ -1015,12 +1018,12 @@ template meta {
 }
 ```
 
-##### .Graph(string|Expression, unit string) (image)
+##### .Graph(string|Expression, yAxisLabel string) (image)
 {: .func}
 
 Creates a graph of the expression. It will error (that can not be handled) if the return type of the expression is not a `seriesSet` ([see data types](/expressions#data-types)). If the expression is a an OpenTSDB query, it will be auto downsampled so that there are approx no more than 1000 points per series in the graph. Like `.Eval`, it filters the results to only those that include the tag key/value pairs of the alert instance. In other words, in the example, for an alert on `host=a` only the series for host a would be graphed.
 
-If the optional unit argument is provided it will be shown as a label on the y axis.
+If the optional yAxisLabel argument is provided it will be shown as a label on the y axis.
 
 When the rendered graph is viewed in Bosun's UI (either the config test UI, or the dashboard) than the Graph will be an SVG. For email notifications the graph is rendered into a PNG. This is because most email providers don't allow SVGs embedded in emails.
 
@@ -1050,7 +1053,7 @@ template graph {
 }
 ```
 
-##### .GraphAll(string|Expression, unit string) (image)
+##### .GraphAll(string|Expression, yAxisLabel string) (image)
 {: .func}
 
 `.GraphAll` behaves exactly like the [`.Graph` function](/definitions#graphstringexpression-unit-string-image) but does not filter results to match the tagset of the alert. So if you changed the call in the example for `.Graph` to be `.GraphAll`, in an alert about `host=a` the series for both host a and host b would displayed (unlike Graph where only the series for host a would be displayed). 
@@ -1132,7 +1135,7 @@ Returns the string representation of the last Error from the [`.Errors` alert va
 
 `LeftJoin` allows you to construct tables from the results of multiple expressions. `LeftJoin` takes two or more expressions that return numberSets as arguments. The function evaluates each expression. It then joins the results of other expressions to the first expression. The join is based on the tag sets of the results. If the tagset is a subset or equal the results of the first expression, it will be joined. 
 
-The output can be though of as a table that is structured as an array of rows, where each row is an array. More technically it is a slice of slices that point to [Result](/definitions#result) objects where each result will be a numberSet type.
+The output can be thought of as a table that is structured as an array of rows, where each row is an array. More technically it is a slice of slices that point to [Result](/definitions#result) objects where each result will be a numberSet type.
 
 If the expression results in an error nil will be returned and `.Errors` will be appended to.
 
@@ -1295,7 +1298,7 @@ alert parseDuration {
 ##### pct(number) (string)
 {: .func}
 
-`pct` takes a number, limits it to two decimal places and adds a "%" suffix. It does *not* multiply the number by 100.
+`pct` formats a number as percent. It preserves two decimal places and adds a "%" suffix. It does not do any calculations (in other words, it does *not* multiply the number by 100).
 
 Example:
 
@@ -1418,7 +1421,7 @@ It is important to note that the `Warn` and `Crit` fields are pointers. So if th
 An Event Result (note: in the code this is actually a `models.Result`) has two properties:
 
 * `Expr`: A string representation of the full expression used to generate the value of the Result's Value.
-* `Value`: A float representing the result of the parent expression.
+* `Value`: A float representing the calculated result of the expression.
 
 There is a third property **Computations**. But it is not recommended that you access it even though it is available and it will not be documented.
 
@@ -1461,9 +1464,9 @@ The `Status` type is an integer that represents the current severity status of t
 A `TagSet` (technically an `opentsdb.TagSet`, but is not actually particular to OpenTSDB) a map of key values to key tags. Both the value and key are strings (`map[string]string`). 
 
 ## Notifications
-Notifications are referenced by alerts via [warnNotification](/definitions#warnnotification) and [critNotification](/definitions#critnotification) keywords. They specify actions (such as emailing) to perform when incidents change severity or humans perform actions on incidents (See the [lifetime of an incident](/usage#the-lifetime-of-an-incident)). When actions execute they use the templates that are pointed to by the alert that also references the notification.
+Notifications are referenced by alerts via [warnNotification](/definitions#warnnotification) and [critNotification](/definitions#critnotification) keywords. They specify actions (such as email) to perform when incidents change severity or user performed actions on incidents (See the [lifetime of an incident](/usage#the-lifetime-of-an-incident)). When actions execute they use the templates that are pointed to by the alert that references the notification.
 
-Notifications are independent of each other and executed concurrently (if there are many notifications for an alert, one will not block another).
+Notifications are independent of each other and executed concurrently (if there are many notifications for an alert, one will not block the other).
 
 ### Chained Notifications
 Notifications can also be chained to other notifications (or even itself) using the optional `next` and `timeout` notification keywords. Chained notifications will execute until an alert is acknowledged or closed. 

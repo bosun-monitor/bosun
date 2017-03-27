@@ -5,7 +5,7 @@ title: API Documentation
 
 <div class="row">
 <div class="col-sm-3" >
-  <div data-spy="affix" data-offset-top="0" data-offset-bottom="0" markdown="1">
+  <div  class="sidebar" data-spy="affix" data-offset-top="0" data-offset-bottom="0" markdown="1">
  
  * Some TOC
  {:toc}
