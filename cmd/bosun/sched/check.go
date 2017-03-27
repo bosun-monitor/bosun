@@ -74,7 +74,6 @@ func (s *Schedule) NewRunHistory(start time.Time, cache *cache.Cache) *RunHistor
 			InfluxConfig:    s.SystemConf.GetInfluxContext(),
 			LogstashHosts:   s.SystemConf.GetLogstashContext(),
 			ElasticHosts:    s.SystemConf.GetElasticContext(),
-			AnnotateContext: s.SystemConf.GetAnnotateContext(),
 		},
 	}
 	return r
@@ -635,6 +634,7 @@ func (s *Schedule) executeExpr(T miniprofiler.Timer, rh *RunHistory, a *conf.Ale
 		Search:    s.Search,
 		Squelched: s.RuleConf.AlertSquelched(a),
 		History:   s,
+		Annotate:  s.annotate,
 	}
 	results, _, err := e.Execute(rh.Backends, providers, T, rh.Start, 0, a.UnjoinedOK)
 	return results, err

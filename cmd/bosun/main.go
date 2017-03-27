@@ -30,6 +30,7 @@ import (
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
 	"bosun.org/util"
+	"github.com/bosun-monitor/annotate/backend"
 	"github.com/facebookgo/httpcontrol"
 	"gopkg.in/fsnotify.v1"
 )
@@ -140,8 +141,26 @@ func main() {
 	if err != nil {
 		slog.Fatal(err)
 	}
-
-	if err := sched.Load(sysProvider, ruleProvider, da, *flagSkipLast, *flagQuiet); err != nil {
+	var annotateBackend backend.Backend
+	if sysProvider.AnnotateEnabled() {
+		index := sysProvider.GetAnnotateIndex()
+		if index == "" {
+			index = "annotate"
+		}
+		annotateBackend = backend.NewElastic(sysProvider.GetAnnotateElasticHosts(), index)
+		go func() {
+			for {
+				err := annotateBackend.InitBackend()
+				if err == nil {
+					return
+				}
+				slog.Warningf("could not initialize annotate backend, will try again: %v", err)
+				time.Sleep(time.Second * 30)
+			}
+		}()
+		web.AnnotateBackend = annotateBackend
+	}
+	if err := sched.Load(sysProvider, ruleProvider, da, annotateBackend, *flagSkipLast, *flagQuiet); err != nil {
 		slog.Fatal(err)
 	}
 	if err := metadata.InitF(false, func(k metadata.Metakey, v interface{}) error { return sched.DefaultSched.PutMetadata(k, v) }); err != nil {
@@ -215,7 +234,7 @@ func main() {
 		slog.Infoln("schedule shutdown, loading new schedule")
 
 		// Load does not set the DataAccess or Search if it is already set
-		if err := sched.Load(sysProvider, newConf, da, *flagSkipLast, *flagQuiet); err != nil {
+		if err := sched.Load(sysProvider, newConf, da, annotateBackend, *flagSkipLast, *flagQuiet); err != nil {
 			slog.Fatal(err)
 		}
 		web.ResetSchedule() // Signal web to point to the new DefaultSchedule

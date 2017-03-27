@@ -45,7 +45,7 @@ var (
 	//InternetProxy is a url to use as a proxy when communicating with external services.
 	//currently only google's shortener.
 	InternetProxy   *url.URL
-	annotateBackend backend.Backend
+	AnnotateBackend backend.Backend
 	reload          func() error
 
 	tokensEnabled bool
@@ -182,25 +182,9 @@ func Listen(httpAddr, httpsAddr, certFile, keyFile string, devMode bool, tsdbHos
 
 	// Annotations
 	if schedule.SystemConf.AnnotateEnabled() {
-		index := schedule.SystemConf.GetAnnotateIndex()
-		if index == "" {
-			index = "annotate"
-		}
-		annotateBackend = backend.NewElastic(schedule.SystemConf.GetAnnotateElasticHosts(), index)
-
-		go func() {
-			for {
-				err := annotateBackend.InitBackend()
-				if err == nil {
-					return
-				}
-				slog.Warningf("could not initalize annotate backend, will try again: %v", err)
-				time.Sleep(time.Second * 30)
-			}
-		}()
 		read := baseChain.Append(auth.Wrapper(canViewAnnotations)).ThenFunc
 		write := baseChain.Append(auth.Wrapper(canCreateAnnotations)).ThenFunc
-		web.AddRoutesWithMiddleware(router, "/api", []backend.Backend{annotateBackend}, false, false, read, write)
+		web.AddRoutesWithMiddleware(router, "/api", []backend.Backend{AnnotateBackend}, false, false, read, write)
 	}
 
 	//auth specific stuff

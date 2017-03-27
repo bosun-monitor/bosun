@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bosun-monitor/annotate"
 	"github.com/influxdata/influxdb/client/v2"
 
 	"bosun.org/cmd/bosun/expr"
@@ -78,7 +77,6 @@ type SystemConfProvider interface {
 	GetLogstashContext() expr.LogstashElasticHosts
 	GetElasticContext() expr.ElasticHosts
 	AnnotateEnabled() bool
-	GetAnnotateContext() annotate.Client // for function queries which will use the API
 
 	MakeLink(string, *url.Values) string
 	EnabledBackends() EnabledBackends
