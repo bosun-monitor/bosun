@@ -139,7 +139,7 @@ But not sure I trust that.
 All your key value pairs must be defined before any sections are defined. Sections are used for things that have multiple values to configure them. In particular the various time series database providers.
 
 ### DBConf
-`DBConf` defines what internal storage Bosun should use. There are currently to choices, a built-in redis like server called ledis or redis. Redis is recommended for production setups. 
+`DBConf` defines what internal storage Bosun should use. There are currently two choices, a built-in redis like server called ledis or redis. Redis is recommended for production setups. 
 
 The default is to use ledis. If Both Redis and ledis are defined, Redis will take preference and the ledis configuration will be ignored. Ledis is the default, so if `RedisHost` is not specified ledis will be used even if you have no `DBConf` configuration defined.
 
