@@ -170,7 +170,7 @@ The text area will be loaded with the running config when the Rule Editor view i
 
 When you run test your version of the config is saved in Bosun, and you can link to it so others can see it.
 
-The editor is build using the open source [Ace editor](https://ace.c9.io/).
+The editor is built using the open source [Ace editor](https://ace.c9.io/).
 
 ## Jump Buttons
 The Jump drop downs <a href="/usage#rule-editor-image" class="image-number">①</a> will take you to defined sections within the config. In particular, the alert drop down selects which alert will be used for testing.
@@ -181,7 +181,7 @@ At the end there is a switcher that can be used when you are working on an alert
 The download button <a href="/usage#rule-editor-image" class="image-number">②</a> will download the config file as a text file. Validate makes sure that Bosun considers the config valid using the same validation that is required for Bosun to start.
 
 ## Definition [Rule] Saving
-The save button <a href="/usage#rule-editor-image" class="image-number">②</a> will bring up a dialogue that lets you save the config. This only appears if you have permission to save the config, and tbe [system configuration's `EnableSave`](/system_configuration#enablesave) has been set to true.
+The save button <a href="/usage#rule-editor-image" class="image-number">②</a> will bring up a dialogue that lets you save the config. This only appears if you have permission to save the config, and the [system configuration's `EnableSave`](/system_configuration#enablesave) has been set to true.
 
 The save dialogue will show you a contextual diff of your config and the running config. There are several protections in place to prevent you from overwriting someone elses configuration changes:
 
@@ -196,7 +196,7 @@ An external command to run on saves can also be defined with the [CommandHookPat
 In all cases where a save fails, a reload will not happen and the save will not be persisted (the definitions file will not be changed).
 
 ## Alert Testing
-Alerts can be tested before they are committed to production. This allows you to refine the trigger conditions to control the signal to noise and to preview the rendered templates to make sure alerts are informative. This done by selecting the alert the from the [Jump Alert Drop down](http://localhost:4000/usage#jump-buttons) at <a href="/usage#rule-editor-image" class="image-number">①</a> and the clicking the test alert button at <a href="/usage#rule-editor-image" class="image-number">④</a>.
+Alerts can be tested before they are committed to production. This allows you to refine the trigger conditions to control the signal to noise and to preview the rendered templates to make sure alerts are informative. This done by selecting the alert the from the [Jump Alert Drop down](/usage#jump-buttons) at <a href="/usage#rule-editor-image" class="image-number">①</a> and the clicking the test alert button at <a href="/usage#rule-editor-image" class="image-number">④</a>.
 
 There are two ways you can test alerts: 
  
@@ -212,7 +212,7 @@ Which item from the result set that will be rendered in the Template tab is cont
 <p>When working on a template it is good to set the <span class="docFromLabel">From</span> time to a fixed date. That way when expressions are rerun they will likely hit Bosun's query cache and things will be faster.</p>
 </div>
 
-The <span class="docFromLabel">Email</span> field at <a href="/usage#rule-editor-image" class="image-number">④</a> makes it so when an alert is tested, the rendered template is email to the address specified in the field. This is so you can check for any differences between what you see in the <span class="docFromLabel">Template</span> tab.
+The <span class="docFromLabel">Email</span> field at <a href="/usage#rule-editor-image" class="image-number">④</a> makes it so when an alert is tested, the rendered template is emailed to the address specified in the field. This is so you can check for any differences between what you see in the <span class="docFromLabel">Template</span> tab.
 
 Setting both <span class="docFromLabel">From</span> and <span class="docFromLabel">To</span> enables testing multiple iterations of the selected alert over time. The number of iterations depends on the setting to the two linked fields <span class="docFromLabel">Intervals</span> and <span class="docFromLabel">Step Duration</span> at <a href="/usage#rule-editor-image" class="image-number">③</a>. Changing one changes the other. Intervals will be the number of runs to do even spaced out over the duration of <span class="docFromLabel">From</span> to <span class="docFromLabel">To</span> and <span class="docFromLabel">Step Duration</span> is how much time in minutes should be between intervals. Doing a test over time will populate the <span class="docFromLabel">Timeline</span> tab <a href="/usage#rule-editor-image" class="image-number">⑤</a> which draws a clickable graphic of severity states for each item in the set:
 
