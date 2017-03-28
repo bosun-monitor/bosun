@@ -205,18 +205,20 @@ There are two ways you can test alerts:
   
 Which behavior is used depends on the `From` and `To` fields at <a href="/usage#rule-editor-image" class="image-number">③</a>. If `From` is left blank, that a single iteration is tested with the time current time. If `From` is set to a time and `To` is unset, a single iteration will be done at that time. When doing single iteration testing the `Results` and `Template` <a href="/usage#rule-editor-image" class="image-number">⑤</a> tabs at will be populated. The `Results` tabs show the warn/crit results for each set, and a rendered template will be show in the `Template` tab.
 
-
+Which item from the result set that will be rendered in the Template tab is controlled by the `Template Group` field at <a href="/usage#rule-editor-image" class="image-number">④</a>. Which result to use for the template is picked by specifying a tagset in the format of `key=value,key=value`. The first result that has the specified tags will be used. If no results match, than the first result is chosen.
 
 <div class="admonition">
 <p class="admonition-title">Tip</p>
 <p>When working on a template it is good to set the <code>From</code> time to a fixed date. That way when expressions are rerun they will likely hit Bosun's query cache and things will be faster.</p>
 </div>
 
+The `Email` field at <a href="/usage#rule-editor-image" class="image-number">④</a> makes it so when an alert is tested, the rendered template is email to the address specified in the field. This is so you can check for any differences between what you see in the `Template` tab.
 
+Setting both `From` and `To` enables testing multiple iterations of the selected alert over time. The number of iterations depends on the setting to the two linked fields `Intervals` and `Step Duration` at <a href="/usage#rule-editor-image" class="image-number">③</a>. Changing one changes the other. Intervals will be the number of runs to do even spaced out over the duration of `From` to `To` and `Step Duration` is how much time should be between intervals. Doing a test over time will populate the `Timeline` tab <a href="/usage#rule-editor-image" class="image-number">⑤</a> which draws a clickable graphic of severity states for each item in the set:
 
-<a href="/usage#rule-editor-image" class="image-number">③</a> 
-<a href="/usage#rule-editor-image" class="image-number">④</a> 
-<a href="/usage#rule-editor-image" class="image-number">⑤</a> 
+![Rule Editor Timeline Image](/public/timeline.jpg)
+
+Each row in the image is one of the items in the result set. The color squares represent the severity of that instance. The X-Axis is time. When you click the a square on the image, it will take you to the event you clicked and show you what the template would look like at that time for that particular item.
 
 # Annotations
 
