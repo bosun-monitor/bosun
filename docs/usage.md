@@ -170,7 +170,7 @@ The text area will be loaded with the running config when the Rule Editor view i
 
 When you run test your version of the config is saved in Bosun, and you can link to it so others can see it.
 
-The editor is build using the open source [Ace editor](https://ace.c9.io/)
+The editor is build using the open source [Ace editor](https://ace.c9.io/).
 
 ## Jump Buttons
 The Jump dropdowns <a href="/usage#rule-editor-image" class="image-number">①</a> will take you to defined sections within the config. In particular, the alert dropdown selects which alert will be used for testing.
@@ -183,17 +183,44 @@ The download button <a href="/usage#rule-editor-image" class="image-number">②<
 ## Config Saving
 Save <a href="/usage#rule-editor-image" class="image-number">②</a> will bring up a dialogue that lets you save the config. This only appears if you have permission to save the config, and tbe [system configuration's `EnableSave`]() has been set to true.
 
-The save dialogue will show you a contextual diff of your config and the running config. There are several protections in place to prevent you from overwriting someone else's config:
+The save dialogue will show you a contextual diff of your config and the running config. There are several protections in place to prevent you from overwriting someone elses configuration changes:
 
   * The Rule Editor will show a warning if the config has been saved since you started editing it
-  * A contextual-diff is shown of your changes versus the running config
-  * When the file is being saved, a global lock is taken so nobody else can edit it via bosun
+  * A contextual-diff is shown of your changes versus the running config (and the save we fail if the contextual diff happens to change in the time window before you hit save)
+  * When the file is being saved, a global lock is taken in Bosun so nobody else can save while the save his happening
 
-When the config file 
+If the config file is successfully saved then Bosun will reload the new definitions. Alerts that are currently being processed will be cancelled and restarted. In other words, a restart of the Bosun process is *not* required for the new changes to take effect.
+
+An external command to run on saves can also be defined with the [CommandHookPath setting in the system configuration](/system_configuration#commandhookpath). This can be used to do things like create backups of the file or check the changes into version control. If this command returns a non-zero exit code, saving will also fail.
+
+In all cases where a save fails, a reload will not happen and the save will not be persisted (the definitions file will not be changed).
+
+## Alert Testing
+Alerts can be tested before they are committed to production. This allows you to refine the trigger conditions to control the signal to noise and to preview the rendered templates to make sure alerts are informative. This done by selecting the alert the from the [Jump Alert Dropdown](http://localhost:4000/usage#jump-buttons) at <a href="/usage#rule-editor-image" class="image-number">①</a> and the clicking the test alert button at <a href="/usage#rule-editor-image" class="image-number">④</a>.
+
+There are two ways you can test alerts: 
+ 
+  1. A single iteration (a snapshot of time)
+  2. Multiple iterations over a period of time. 
+  
+Which behavior is used depends on the `From` and `To` fields at <a href="/usage#rule-editor-image" class="image-number">③</a>. If `From` is left blank, that a single iteration is tested with the time current time. If `From` is set to a time and `To` is unset, a single iteration will be done at that time. When doing single iteration testing the `Results` and `Template` <a href="/usage#rule-editor-image" class="image-number">⑤</a> tabs at will be populated. The `Results` tabs show the warn/crit results for each set, and a rendered template will be show in the `Template` tab.
+
+
+
+<div class="admonition">
+<p class="admonition-title">Tip</p>
+<p>When working on a template it is good to set the <code>From</code> time to a fixed date. That way when expressions are rerun they will likely hit Bosun's query cache and things will be faster.</p>
+</div>
+
+
+
+<a href="/usage#rule-editor-image" class="image-number">③</a> 
+<a href="/usage#rule-editor-image" class="image-number">④</a> 
+<a href="/usage#rule-editor-image" class="image-number">⑤</a> 
 
 # Annotations
 
-Annotations are currently stored in elastic. When annotations are enabled you can create, edit and visulize them on the the Graph page. There is also a Submit Annotations page that allows for creation and editing annotations. The API described in this [README](https://github.com/bosun-monitor/annotate/blob/master/web/README.md) gets injected into bosun under `/api/` - you can also find a description of the schema there. 
+Annotations are currently stored in elastic. When annotations are enabled you can create, edit and visualize them on the the Graph page. There is also a Submit Annotations page that allows for creation and editing annotations. The API described in this [README](https://github.com/bosun-monitor/annotate/blob/master/web/README.md) gets injected into bosun under `/api/` - you can also find a description of the schema there. 
 
 </div>
 </div>
