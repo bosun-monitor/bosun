@@ -160,28 +160,28 @@ The open incident filter supports joining terms in `()` as well as the `AND`, `O
 </table>
 
 # Rule Editor
-The rule editor allows you to edit the [RuleConf](), preview rendered templates, and test alerts against historical data.
+The rule editor allows you to edit the the definitions in the [RuleConf](/definitions), preview rendered templates, and test alerts against historical data.
 
 ## Rule Editor Image
 ![Rule Editor Image](/public/rule_editor.jpg)
 
 ## Textarea
-The text area will be loaded with the running config when the Rule Editor view is loaded. A hash of the config when you start editing it is saved. If someone else edits the UI and saves it, Bosun will detect that the config has changed and show a warning above the text area.
+The text area will be loaded with the running config when the Rule Editor view is loaded. A hash of the config when you start editing it is saved. If someone else edits the UI and saves it, Bosun will detect that the config hash has changed and show a warning above the text area.
 
 When you run test your version of the config is saved in Bosun, and you can link to it so others can see it.
 
 The editor is build using the open source [Ace editor](https://ace.c9.io/).
 
 ## Jump Buttons
-The Jump dropdowns <a href="/usage#rule-editor-image" class="image-number">①</a> will take you to defined sections within the config. In particular, the alert dropdown selects which alert will be used for testing.
+The Jump drop downs <a href="/usage#rule-editor-image" class="image-number">①</a> will take you to defined sections within the config. In particular, the alert drop down selects which alert will be used for testing.
 
 At the end there is a switcher that can be used when you are working on an alert. It allows you to just back and forth between the alert and the alert referenced in the template.
 
 ## Download / Validate
 The download button <a href="/usage#rule-editor-image" class="image-number">②</a> will download the config file as a text file. Validate makes sure that Bosun considers the config valid using the same validation that is required for Bosun to start.
 
-## Config Saving
-Save <a href="/usage#rule-editor-image" class="image-number">②</a> will bring up a dialogue that lets you save the config. This only appears if you have permission to save the config, and tbe [system configuration's `EnableSave`]() has been set to true.
+## Definition [Rule] Saving
+The save button <a href="/usage#rule-editor-image" class="image-number">②</a> will bring up a dialogue that lets you save the config. This only appears if you have permission to save the config, and tbe [system configuration's `EnableSave`](/system_configuration#enablesave) has been set to true.
 
 The save dialogue will show you a contextual diff of your config and the running config. There are several protections in place to prevent you from overwriting someone elses configuration changes:
 
@@ -196,25 +196,25 @@ An external command to run on saves can also be defined with the [CommandHookPat
 In all cases where a save fails, a reload will not happen and the save will not be persisted (the definitions file will not be changed).
 
 ## Alert Testing
-Alerts can be tested before they are committed to production. This allows you to refine the trigger conditions to control the signal to noise and to preview the rendered templates to make sure alerts are informative. This done by selecting the alert the from the [Jump Alert Dropdown](http://localhost:4000/usage#jump-buttons) at <a href="/usage#rule-editor-image" class="image-number">①</a> and the clicking the test alert button at <a href="/usage#rule-editor-image" class="image-number">④</a>.
+Alerts can be tested before they are committed to production. This allows you to refine the trigger conditions to control the signal to noise and to preview the rendered templates to make sure alerts are informative. This done by selecting the alert the from the [Jump Alert Drop down](http://localhost:4000/usage#jump-buttons) at <a href="/usage#rule-editor-image" class="image-number">①</a> and the clicking the test alert button at <a href="/usage#rule-editor-image" class="image-number">④</a>.
 
 There are two ways you can test alerts: 
  
   1. A single iteration (a snapshot of time)
   2. Multiple iterations over a period of time. 
   
-Which behavior is used depends on the `From` and `To` fields at <a href="/usage#rule-editor-image" class="image-number">③</a>. If `From` is left blank, that a single iteration is tested with the time current time. If `From` is set to a time and `To` is unset, a single iteration will be done at that time. When doing single iteration testing the `Results` and `Template` <a href="/usage#rule-editor-image" class="image-number">⑤</a> tabs at will be populated. The `Results` tabs show the warn/crit results for each set, and a rendered template will be show in the `Template` tab.
+Which behavior is used depends on the <span class="docFromLabel">From</span> and <label>To</label> fields at <a href="/usage#rule-editor-image" class="image-number">③</a>. If <span class="docFromLabel">From</span> is left blank, that a single iteration is tested with the time current time. If <span class="docFromLabel">From</span> is set to a time and <span class="docFromLabel">To</span> is unset, a single iteration will be done at that time. When doing single iteration testing the <span class="docFromLabel">Results</span> and <span class="docFromLabel">Template</span> <a href="/usage#rule-editor-image" class="image-number">⑤</a> tabs at will be populated. The <span class="docFromLabel">Results</span> tabs show the warn/crit results for each set, and a rendered template will be show in the  <span class="docFromLabel">Template</span> tab.
 
-Which item from the result set that will be rendered in the Template tab is controlled by the `Template Group` field at <a href="/usage#rule-editor-image" class="image-number">④</a>. Which result to use for the template is picked by specifying a tagset in the format of `key=value,key=value`. The first result that has the specified tags will be used. If no results match, than the first result is chosen.
+Which item from the result set that will be rendered in the Template tab is controlled by the <span class="docFromLabel">Template Group</span> field at <a href="/usage#rule-editor-image" class="image-number">④</a>. Which result to use for the template is picked by specifying a tagset in the format of `key=value,key=value`. The first result that has the specified tags will be used. If no results match, than the first result is chosen.
 
 <div class="admonition">
 <p class="admonition-title">Tip</p>
-<p>When working on a template it is good to set the <code>From</code> time to a fixed date. That way when expressions are rerun they will likely hit Bosun's query cache and things will be faster.</p>
+<p>When working on a template it is good to set the <span class="docFromLabel">From</span> time to a fixed date. That way when expressions are rerun they will likely hit Bosun's query cache and things will be faster.</p>
 </div>
 
-The `Email` field at <a href="/usage#rule-editor-image" class="image-number">④</a> makes it so when an alert is tested, the rendered template is email to the address specified in the field. This is so you can check for any differences between what you see in the `Template` tab.
+The <span class="docFromLabel">Email</span> field at <a href="/usage#rule-editor-image" class="image-number">④</a> makes it so when an alert is tested, the rendered template is email to the address specified in the field. This is so you can check for any differences between what you see in the <span class="docFromLabel">Template</span> tab.
 
-Setting both `From` and `To` enables testing multiple iterations of the selected alert over time. The number of iterations depends on the setting to the two linked fields `Intervals` and `Step Duration` at <a href="/usage#rule-editor-image" class="image-number">③</a>. Changing one changes the other. Intervals will be the number of runs to do even spaced out over the duration of `From` to `To` and `Step Duration` is how much time should be between intervals. Doing a test over time will populate the `Timeline` tab <a href="/usage#rule-editor-image" class="image-number">⑤</a> which draws a clickable graphic of severity states for each item in the set:
+Setting both <span class="docFromLabel">From</span> and <span class="docFromLabel">To</span> enables testing multiple iterations of the selected alert over time. The number of iterations depends on the setting to the two linked fields <span class="docFromLabel">Intervals</span> and <span class="docFromLabel">Step Duration</span> at <a href="/usage#rule-editor-image" class="image-number">③</a>. Changing one changes the other. Intervals will be the number of runs to do even spaced out over the duration of <span class="docFromLabel">From</span> to <span class="docFromLabel">To</span> and <span class="docFromLabel">Step Duration</span> is how much time in minutes should be between intervals. Doing a test over time will populate the <span class="docFromLabel">Timeline</span> tab <a href="/usage#rule-editor-image" class="image-number">⑤</a> which draws a clickable graphic of severity states for each item in the set:
 
 ![Rule Editor Timeline Image](/public/timeline.jpg)
 
