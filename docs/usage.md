@@ -16,40 +16,41 @@ title: Usage
 <div class="doc-body col-sm-9" markdown="1">
 
 <p class="title h1">{{page.title}}</p>
-This part of the documentation covers using bosun after you have defined you configuration and your alerts.
+This part of the documentation covers using Bosun's user interface and the incident workflow.
 
 # Alerts and Incidents
 
 ## Overview
-Each alert definition has the potential to turn into multiple incidents (an instantation of the alert). Incidents get a unique global ID and are also associated with an Alery Key. The Alert Key is made up of the alert name and the tagset. Every possible group in your top level expression is evaluated independently. As an example, with an expression like `avg(q("avg:rate{counter,,1}:os.cpu{host=*}", "5m", ""))` you can have the potential to create an incident for every tag-value of the "host" tag-key that has sent data for the os.cpu metric.
+Each alert definition has the potential to turn into multiple incidents (an instantiation of the alert). Incidents get a unique global ID and are also associated with an Alert Key. The Alert Key is made up of the alert name and the tagset. Every possible group in your top level expression is evaluated independently. As an example, with an expression like `avg(q("avg:rate{counter,,1}:os.cpu{host=*}", "5m", ""))` you can have the potential to create an incident for every tag-value of the "host" tag-key that has sent data for the os.cpu metric.
 
-### The lifetime of an incident
+## The lifetime of an incident
 
-An incident gets created when the warn or crit expression evaulates to non-zero, or the alert goes unknown. Once an incident has been created it will notify users only when the lifetime severity of the incident increases. An exception to this is if you have set up notification chains, in which case the alert will send more notifications until someone acknowledges the alert.
+An incident gets created when the warn or crit expression evaluates to non-zero, or the alert goes unknown. Once an incident has been created it will notify users only when the lifetime severity of the incident increases. An exception to this is if you have set up notification chains, in which case the alert will send more notifications until someone acknowledges the alert.
 
-#### Example
+Example:
+
  * You have an alert named high.cpu defined, and it has warn expression like `avg(q(os.cpu{host=*} ...)) > 50`. One of your hosts (web01) triggers the warn condition of the alert
  * We now have an incident, the incident will get a global ID like #23412 and will have an alert key of `high.cpu{host=web01}` and will have a current severity state of warn. Assuming a notification has been set up, the notification will be sent (i.e. an email)
  * The incident then goes back to normal severity, and then to warn again. When this happens, no notifications are sent. It is important to note that **notifications are only sent when the lifetime severity of an incident increases**. The lifetime of the incident continues until the alert has been closed - which is generally done by a user.
  * The incident can be closed when it goes back to normal state. Once the incident is closed, it is possible for a new incident to be created for the same Alert Key (`high.cpu{host=web01}`).
 
-#### Severity States
+## Severity States
 
 Incidents can be in one of the following severity levels (From highest to lowest):
 
-* **Unknown**: When a warn or crit expression can not be evaluated because data is missing. When you define an alert bosun tracks each instance (aka group) for each expression used in the expression. If one of these is no longer present, that instance goes into an unknown state. Since bosun has data pushed to it, unknown can mean that either data collection has failed, or that the source is down. Unknown triggers when there is no data in a query + the check frequency. This means that if a query spans an hour, it will be one hour + the check frequency before it triggers.
-* **Error**: There is some sort of bosun internal error such as divide by zero or "response too large" with the alert.
+* **Unknown**: When a warn or crit expression can not be evaluated because data is missing. When you define an alert bosun tracks each resulting tagset from the warn/crit expressions. If a tagset is no longer present, that instance goes into an unknown state. Since bosun has data pushed to it, unknown can mean that either data collection has failed, or that the source is down. Unknown triggers when there is no data for the tagset in 2x the check frequency duration. This means that if a query spans an hour, it will be one hour + 2x the check frequency before it triggers.
+* **Error**: There is some sort of bosun internal error such as divide by zero or "response too large" with the alert. The error can be viewed by clicking the Errors button on the dashboard
 * **Critical**: The expression that `crit` is equal to in the alert definition is non-zero (true). It is recommend that "Critical" be thought of as "has failed".
 * **Warning**: The expression that `warn` is equal to in the alert definition is non-zero (true) *and* critical is not true. It is recommended that warning be thought of ha "could lead to failure".
 * **Normal**: None of the above states.
 
-#### Additional States
+## Additional States
 
-* **Active**: The alert is currently in a non-normal state. This is indicated by an exclamation on the dashboard: ![Exclamation Glyph](public/exclamation.png).
-* **Silenced**: Someone has created a silence rule that stops this alert from triggering any notification. It will also automatically close when the alert is no longer active. This is indicated by a speaker with an X icon on the dashboard: ![Silence Glyph](public/silence.png).
+* **Active**: The alert is currently in a non-normal state. This is indicated by an exclamation on the dashboard: <i class="fa fa-exclamation-circle fa-lg" aria-hidden="true"></i>.  Alerts don't disappear from the dashboard when they are no longer active until they are closed. This is to ensure that all alerts get handled - which reduces alert noise and fatigue.
+* **Silenced**: Someone has created a silence rule that stops this alert from triggering any notification. It will also automatically close when the alert is no longer active. This is indicated by a volume off speaker icon: <i class="fa fa-volume-off fa-lg" aria-hidden="true"></i>.
 * **Acknowledged**: Someone has acknowledged the alert, the reason and person should be available via the web interface. Acknowledged alerts stop sending notification chains as long as the severity doesn't increase.
 * **Unacknowledged**: Nobody has acknowledged the alert yet at its current severity level.
-* **Unevaluated**: An incident is unevaluated if the dependency expression as defined in the alert's depends keyword is non-zero. Unevaluated alerts do not change state or become unknown. If an incident is open then it will still show up on the dashboard, but with a question mark glyph. New incidents will not be created.
+* **Unevaluated**: An incident is unevaluated if the dependency expression as defined in the alert's depends keyword is non-zero. Unevaluated alerts do not change state or become unknown. If an incident is open then it will still show up on the dashboard, but with a question mark icon: <i class="fa fa-question-circle fa-lg" aria-hidden="true"></i>. New incidents will not be created.
 
 # Dashboard
 
@@ -59,23 +60,26 @@ Incidents can be in one of the following severity levels (From highest to lowest
 
 The color of the major of the bar is the incident's last abnormal status. The color that makes up the sliver on the left side of the bar is the incident's current status.
 
-* **Blue**: Unknown
-* **Red**: Critical
-* **Yellow**: Warning
-* **Green**: Normal
+* <span class="text-info">**Blue**:</span> Unknown
+* <span class="text-danger">**Red**:</span> Critical
+* <span class="text-warning">**Yellow**:</span> Warning
+* <span class="text-success"> **Green**:</span> Normal
 
 ### Icons
 
-* ![Exclamation Glyph](public/exclamation.png) An Exclamation means the alert is currently triggered (active). Alerts don't disappear from the dashboard when they are no longer active until they are closed. This is to ensure that all alerts get handled - which reduces alert noise and fatigue.
-* ![Silence Glyph](public/silence.png) A silence icon means the alert has been silenced. Silenced alerts don't send notifications, and automatically close when no longer active.
+* <i class="fa fa-exclamation-circle fa-lg" aria-hidden="true"></i> An exclamation icon means the alert is currently in an [active state](/usage#additional-states).
+* <i class="fa fa-volume-off fa-lg" aria-hidden="true"></i> A silence icon means the alert has been [silenced](/usage#additional-states).
+* <i class="fa fa-question-circle fa-lg" aria-hidden="true"></i> A question icon means the alert is [unevaluated](/usage#additional-states).
+* <i class="fa fa-fire fa-lg" aria-hidden="true"></i> A fire icon means the alert is in an [error state](/usage#severity-states).
+
 
 ## Actions
 
 * **Acknowledge**: Prevent further notifications unless there is a state increase. This also moves it to the acknowledged section of the dashboard. When you acknowledge something you enter a name and a reason. So this means that the person has committed to fixing the problem or the alert.
 * **Close**: Make it disappear from the dashboard. This should be used when an alert is handled. Active (non-normal) alerts can not be closed (since all that will happen is that will reappear on the the dashboard after the next schedule run).
 * **Forget**: Make bosun forget about this instance of the alert. This is used on active unknown alerts. It is useful when something is not coming back (i.e. you have decommissioned a host). This act is non-destructive because if that data gets sent to bosun again everything will come back.
-* **Force Close**: Like close, but does not require alert to be in a normal state. In a few circumstances an alert can be "open" and "active" at the same time. This can occur when a host is decomissioned and an alert has ignoreUnknown set, for example. This may help to clear some of those "stuck" alerts.
-* **Purge**: Will delete an active alert and ALL history for that alert key. Should only be used when you absolutely want to forget all data about a host, like when shutting it down. Like forget, but does not require an alert to be unknown.
+* **Force Close**: Like close, but does not require alert to be in a normal state. In a few circumstances an alert can be "open" and "active" at the same time. This can occur when a host is decommissioned and an alert has ignoreUnknown set, for example. This may help to clear some of those "stuck" alerts.
+* **Purge**: Will delete an active alert and *all* history for that alert key. Should only be used when you absolutely want to forget all data about a host, like when shutting it down. Like forget, but does not require an alert to be unknown.
 * **History**: View a timeline of history for the selected alert instances.
 * **Note**: Attach a note to an incident. This has no impact on the behavior of the alert and is purely for communication.
 
