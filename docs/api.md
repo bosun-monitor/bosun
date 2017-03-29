@@ -19,7 +19,7 @@ title: API Documentation
 
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
-<p>Unfortunately, the API documentation has not been properly maintained. When this is fixed this warning will be removed. Much of this documentation is still useful, but for now it is best to check the <a href="https://github.com/bosun-monitor/bosun/blob/master/cmd/bosun/web/web.go">code in web.go()</a> as the canonical reference. The handler's in <code>Listen</code> list all possible API routes.</p>
+<p>Unfortunately, the API documentation has not been properly maintained. When this is fixed this warning will be removed. Much of this documentation is still useful, but for now it is best to check the <a href="https://github.com/bosun-monitor/bosun/blob/master/cmd/bosun/web/web.go">code in web.go</a> as the canonical reference. The handler's in <code>Listen</code> list all possible API routes.</p>
 </div>
 
 # Sending Data

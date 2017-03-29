@@ -320,7 +320,7 @@ This specifies the user agent that bosun should identify itself as when querying
 ```
 
 ### AuthConf
-`AuthConf` configures your bosun authentication settings. If not specified, your bosun instance will have no authentication, and will be open to anybody.
+`AuthConf` configures your bosun authentication settings. If not specified, your bosun instance will have no authentication, and will be open to anybody. When using Auth SSL should be used so credentials are not sent in clear text.
 
 #### CookieSecret
 A secret string used to encrypt cookies bosun sets in client browsers to prevent token forgery. We recommend a longish random string here.
