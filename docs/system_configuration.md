@@ -21,11 +21,11 @@ order: 3
 {% raw %}
 
 ## Changes Since 0.5.0
-This configuration has been split into two different files. One file is for [definitions](/definitions) of various Bosun sections such as alerts, templates, etc, This file, can be edited and saved via Bosun's UI when [the `EnableSave` setting](/system_configuration#enablesave) has been enabled. 
+This configuration has been split into two different files. One file is for [definitions](/definitions) of various Bosun sections such as alerts, templates, notifications, etc. The definitions file can be edited and [saved via Bosun's Rule Editor UI](/usage#definition-rule-saving) when [the `EnableSave` setting](/system_configuration#enablesave) has been enabled. 
 
 This was done because the definitions can now be reloaded without restarting the Bosun process. This also means that users can edit alerts directly in the UI.
 
-System configuration has been moved into a new file. Settings in this file require that Bosun be restarted. The new file format is in [toml](https://github.com/toml-lang/toml). The page documents this new system configuration. 
+System configuration has been moved into a new file. Settings in this file require that Bosun be restarted. The new file format is in [TOML](https://github.com/toml-lang/toml). The page documents this new system configuration. 
 
 There is also an [example file](https://github.com/bosun-monitor/bosun/blob/master/cmd/bosun/bosun.example.toml) that can be looked at. It should be noted that this file does not follow the tradition of commenting out all defaults. This is because the file is used for testing as well. For the time being, the value of the example being tested is has been valued over following that tradition for until we have the bandwidth to duplicate the two files in a way where this tradition can be maintained. 
 
@@ -38,16 +38,28 @@ Example:
 `Hostname = "bosun.example.com"`
 
 ### HTTPListen
-`HTTPListen` sets the HTTP IP and Port to Listen on. (TODO: Document what this will look like when we have SSL merged). The default if not specified is to listen on `:8070`
+`HTTPListen` sets the HTTP IP and Port to listen on. The default if not specified is to listen on `:8070`. However, if `HTTPSListen` is defined and `HTTPListen` is not defined there will be no default, and Bosun will only listen on HTTPS.
 
 Example:
 `HTTPListen = ":8080"`
 
 ### HTTPSListen
-(TODO: Document)
+`HTTPSListen` sets the HTTPS (SSL) IP and Port to listen on. This requires that `TLSCertFile` and `TLSKeyFile` are defined.
+
+### TLSCertFile
+The value of `TLSCertFile` is the path to the PEM encoded certificate bosun should use for `HTTPSListen`. In may contain intermediate certificates followed by the leaf certificate to form a chain.
+
+Example:
+`TLSCertFile = "/etc/ssl/certs/bosun.example.com.crt"`
+
+### TLSKeyFile
+The value of `TLSKeyFile` is the path to the PEM encoded private key that corresponds to the `TLSCertFile`.
+
+Example:
+`TLSKeyFile = "/etc/ssl/certs/bosun.example.com.key"`
 
 ### CheckFrequency
-`CheckFrequency` specifies the minimum interval that alert checks will run at on a schedule. The format of the value is the same as [Go's duration format](https://golang.org/pkg/time/#Duration.String). By default, alert checks are run at every `CheckFrequency` multipied by the `DefaultRunEvery` value. This defaults to "5m".
+`CheckFrequency` specifies the minimum interval that alert checks will run at on a schedule. The format of the value is the same as [Go's duration format](https://golang.org/pkg/time/#Duration.String). By default, alert checks are run at every `CheckFrequency` multiplied by the `DefaultRunEvery` value. This defaults to "5m".
 
 Example:
 `CheckFrequency = "1m"`
@@ -61,7 +73,7 @@ Example:
 `DefaultRunEvery = 5`
 
 ### RuleFilePath
-This is the path to the file that contains all the definitions of alerts, macros, lookups, templates, notifications, and global variables which are [documented here](/definitions). If saving is enabled, this file can be written to by Bosun via the API or UI.
+This is the path to the file that contains all the definitions of alerts, macros, lookups, templates, notifications, and global variables which are [documented here](/definitions). If saving is enabled, this file can be written to by Bosun via the API or [Save UI](/usage#definition-rule-saving).
 
 Example: `RuleFilePath = "dev.sample.conf"`
 
@@ -92,7 +104,7 @@ This is done because unknowns are generally caused by the data "disappearing". S
 Example: `UnknownThreshold = 5`
 
 ### Ping
-If set to `true`, Bosun will ping every value of the host tag that it has indexed (TODO: link to an explanation of indexing) and record that value to your TSDB. It currently only support OpenTSDB style data input, which is means you must use either OpenTSDB or Influx with the OpenTSDB endpoint on Influx configured. 
+If set to `true`, Bosun will ping every value of the host tag that it has indexed and record that value to your TSDB. It currently only support OpenTSDB style data input, which is means you must use either OpenTSDB or Influx with the OpenTSDB endpoint on Influx configured. 
 
 Example: 
 `Ping = true`
@@ -114,7 +126,7 @@ Example: `SearchSince = "72h"`
 Example: `EnableSave = true`
 
 ### ReloadEnabled
-`ReloadEnabled` sets if reloading of the rule configuration should be enabled. If `EnableSave` is `true`, then reloading gets enabled regardless of this setting. Reloads can be triggered via the API by (TODO: Document the reload web api).
+`ReloadEnabled` sets if reloading of the rule configuration should be enabled. If `EnableSave` is `true`, then reloading gets enabled regardless of this setting. Reloads can be triggered via [`/api/reload` in the REST API](/api#apireload) as well.
 
 Example:
 `EnableSave = true`
@@ -196,7 +208,7 @@ Ledis Configuration:
 ```
 
 ### OpenTSDBConf
-`OpenTSDBConf` enables an OpenTSDB provider, and also enables OpenTSDB specific functions in the expression language. This also enables the Graph tab in Bosun's UI as that is OpenTSDB specific. However, you can still graph other time series DBs in Bosun's UI by using the Expression tab.
+`OpenTSDBConf` enables an OpenTSDB provider, and also enables [OpenTSDB specific functions]() in the expression language. This also enables the Graph tab in Bosun's UI as that is OpenTSDB specific. However, you can still graph other time series DBs in Bosun's UI by using the Expression tab.
 
 #### Host 
 `Host` specifies the hostname and port to connect to for OpenTSDB.
