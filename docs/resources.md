@@ -77,6 +77,9 @@ _See also the list of built-in collectors included with [scollector](http://bosu
 ### [hubot-bosun](https://github.com/lukaspustina/hubot-bosun) by Lukas Pustina
 > Bosun integration for [Hubot](https://hubot.github.com) allowing to ack and close incidents as well as to create and clear silences with optional prettified Slack output.
 
+### [discreet-scollector](https://forge.puppet.com/discreet/scollector) by Chris Pisano
+> Puppet module for installing and configuring the SCollector agent.
+
   &nbsp;
 
 ## [Screenshots and other Media](/media)
