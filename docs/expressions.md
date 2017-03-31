@@ -188,6 +188,8 @@ estat returns various summary stats per bucket for the specified `field`. The fi
 esdaily is for elastic indexes that have a date name for each day. Based on the timeframe of the enclosing es function (i.e. esstat and escount) to generate which indexes should be included in the query. It gets all indexes and won't include indices that don't exist. The layout specifier uses's [Go's time specification format](https://golang.org/pkg/time/#Parse). The timeField is the name of the field in elastic that contains timestamps for the documents.
 
 ### esmonthly (timeField string, indexRoot string, layout string) ESIndexer
+{: .exprFunc}
+
 esmonthly is like esdaily except that it is for monthly indices. It is expect the index name is the first of every month.
 
 ### esindices(timeField string, index string...) ESIndexer
