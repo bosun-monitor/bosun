@@ -24,7 +24,7 @@ Bosun currently supports two types of authentication when authentication is enab
  1. LDAP authentication
  2. Token Based access
 
-The two intended uses of these methods is user authentication and api authentication respectively. Authorization is a new feature to Bosun and it is intended the Bosun is still run in a trusted network even when authorization is enabled.
+The two intended uses of these methods is user authentication and api authentication respectively. Authorization is a new feature in Bosun 0.6.0. Even when authorization is enabled, Bosun should still be run inside a trusted network.
 
 ## Setup
 The authentication feature gets enabled when you define the [AuthConf section of the system configuration](/system_configuration#authconf). Authentication tokens can be set up via the UI by setting [AuthDisabled](/system_configuration#authdisabled) before authentication is enabled. `AuthDisabled` makes it so the authentication *feature* is enabled but authentication itself is not enabled. With `AuthDisabled` set to true anonymous users can create auth tokens via Bosun's user interface.
@@ -63,7 +63,7 @@ Permissions provide the ability to certain things with both, and Roles are a col
     </tr>
     <tr>
         <td>View Annotations</td>
-        <td>Admin, Writer, Reader</td></td>
+        <td>Admin, Writer, Reader</td>
         <td>Can view annotations on graph page</td>
     </tr>
     <tr>
@@ -92,7 +92,7 @@ Permissions provide the ability to certain things with both, and Roles are a col
         <td>Can add and manage silences</td>
     </tr>
     <tr>
-        <td>Manage Tokens"</td>
+        <td>Manage Tokens</td>
         <td>Admin</td>
         <td>Can manage authorization tokens</td>
     </tr>
