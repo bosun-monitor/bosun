@@ -18,7 +18,6 @@ title: Administration
 <p class="title h1">{{page.title}}</p>
 This part of the documentation covers various aspects of Bosun administration. 
 
-
 # Authentication
 Bosun currently supports two types of authentication when authentication is enabled:
 
@@ -28,12 +27,12 @@ Bosun currently supports two types of authentication when authentication is enab
 The two intended uses of these methods is user authentication and api authentication respectively. Authorization is a new feature to Bosun and it is intended the Bosun is still run in a trusted network even when authorization is enabled.
 
 ## Setup
-The authentication feature gets enabled when you define the [AuthConf section of the system configuration](/system_configuration#authconf). Authentication tokens can be set up via the UI by setting [AuthDisabled](/system_configuration#authdisabled). `AuthDisabled` makes it so the authentication *feature* is enabled but authentication itself is not enabled. With `AuthDisabled` set to true anonymous users can create auth tokens via Bosun's user interface.
+The authentication feature gets enabled when you define the [AuthConf section of the system configuration](/system_configuration#authconf). Authentication tokens can be set up via the UI by setting [AuthDisabled](/system_configuration#authdisabled) before authentication is enabled. `AuthDisabled` makes it so the authentication *feature* is enabled but authentication itself is not enabled. With `AuthDisabled` set to true anonymous users can create auth tokens via Bosun's user interface.
 
 ## Auth Token UI
-When the authentication feature is enabled, you should see a `Manage Auth Tokens` menu item under your username in Bosun's UI in the upper right corner. You will be able to see this if `AuthDisabled` is true, and you have the `Manage Tokens` Permission set for your user.
+When the authentication feature is enabled, you should see a <span class="docFromLabel">Manage Auth Tokens</span> menu item under your username in Bosun's UI in the upper right corner. You will be able to see this if `AuthDisabled` is true or if you have the `Manage Tokens` Permission set for your user.
 
-From there you can create new auth tokens in two steps as show in the following images. Note that once you retrieve a token from the second screen, you will *not* be able to view the token itself. You will still be able to see the name, description, permissions set, and the last time it was used.
+From there you can create new auth tokens in two steps as show in the following images. Note that once you retrieve a token from the second screen, you will *not* be able to view the token itself again. You will still be able to see the name, description, permissions set, and the last time it was used.
 
 First Screen:
 
@@ -51,11 +50,6 @@ Permissions provide the ability to certain things with both, and Roles are a col
         <th>Permission</th>
         <th>Roles</th>
         <th>Description</th>
-    </tr>
-    <tr>
-        <td></td>
-        <td></td>
-        <td></td>
     </tr>
     <tr>
         <td>View Dashboard</td>
@@ -113,4 +107,3 @@ Permissions provide the ability to certain things with both, and Roles are a col
 
 </div>
 </div>
-

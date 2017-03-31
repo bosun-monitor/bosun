@@ -208,7 +208,7 @@ Ledis Configuration:
 ```
 
 ### OpenTSDBConf
-`OpenTSDBConf` enables an OpenTSDB provider, and also enables [OpenTSDB specific functions]() in the expression language. This also enables the Graph tab in Bosun's UI as that is OpenTSDB specific. However, you can still graph other time series DBs in Bosun's UI by using the Expression tab.
+`OpenTSDBConf` enables an OpenTSDB provider, and also enables [OpenTSDB specific functions](/expressions#opentsdb-query-functions) in the expression language. This also enables the Graph tab in Bosun's UI as that is OpenTSDB specific. However, you can still graph other time series DBs in Bosun's UI by using the Expression tab.
 
 #### Host 
 `Host` specifies the hostname and port to connect to for OpenTSDB.
