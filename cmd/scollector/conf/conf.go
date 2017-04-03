@@ -50,9 +50,9 @@ type Conf struct {
 	// UseNtlm specifies if HTTP requests should authenticate with NTLM.
 	UseNtlm bool
 
-	// XAccessToken is an optional string that sets the X-Access-Token HTTP header
+	// AuthToken is an optional string that sets the X-Access-Token HTTP header
 	// which is used to authenticate against Bosun
-	XAccessToken string
+	AuthToken string
 
 	// UserAgentMessage is an optional message that is appended to the User Agent
 	UserAgentMessage string

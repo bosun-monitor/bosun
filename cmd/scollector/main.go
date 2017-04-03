@@ -51,16 +51,12 @@ var (
 
 type scollectorHTTPTransport struct {
 	UserAgent    string
-	XAccessToken string
 	http.RoundTripper
 }
 
 func (t *scollectorHTTPTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	if req.Header.Get("User-Agent") == "" {
 		req.Header.Add("User-Agent", t.UserAgent)
-	}
-	if t.XAccessToken != "" {
-		req.Header.Add("X-Access-Token", t.XAccessToken)
 	}
 	return t.RoundTripper.RoundTrip(req)
 }
@@ -87,10 +83,13 @@ func main() {
 	if conf.UserAgentMessage != "" {
 		ua += fmt.Sprintf(" (%s)", conf.UserAgentMessage)
 	}
+	if conf.AuthToken != "" {
+		collect.AuthToken = conf.AuthToken
+		metadata.AuthToken = conf.AuthToken
+	}
 	client := &http.Client{
 		Transport: &scollectorHTTPTransport{
 			ua,
-			conf.XAccessToken,
 			&httpcontrol.Transport{
 				RequestTimeout: time.Minute,
 			},
