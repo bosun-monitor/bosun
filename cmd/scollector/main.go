@@ -50,7 +50,7 @@ var (
 )
 
 type scollectorHTTPTransport struct {
-	UserAgent    string
+	UserAgent string
 	http.RoundTripper
 }
 
