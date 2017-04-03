@@ -83,6 +83,10 @@ func main() {
 	if conf.UserAgentMessage != "" {
 		ua += fmt.Sprintf(" (%s)", conf.UserAgentMessage)
 	}
+	if conf.AuthToken != "" {
+		collect.AuthToken = conf.AuthToken
+		metadata.AuthToken = conf.AuthToken
+	}
 	client := &http.Client{
 		Transport: &scollectorHTTPTransport{
 			ua,

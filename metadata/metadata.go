@@ -18,6 +18,12 @@ import (
 	"bosun.org/util"
 )
 
+var (
+	// AuthToken is an optional string that sets the X-Access-Token HTTP header
+	// which is used to authenticate against Bosun
+	AuthToken string
+)
+
 // RateType is the type of rate for a metric: gauge, counter, or rate.
 type RateType string
 
@@ -291,6 +297,9 @@ func postMetadata(ms []Metasend) {
 		return
 	}
 	req.Header.Set("Content-Type", "application/json")
+	if AuthToken != "" {
+		req.Header.Set("X-Access-Token", AuthToken)
+	}
 	client := http.DefaultClient
 	resp, err := client.Do(req)
 	if err != nil {

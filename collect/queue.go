@@ -12,11 +12,12 @@ import (
 	"sync/atomic"
 	"time"
 
+	"net/http/httptest"
+
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
 	"github.com/GROpenSourceDev/go-ntlm-auth/ntlm"
-	"net/http/httptest"
 )
 
 func queuer() {
