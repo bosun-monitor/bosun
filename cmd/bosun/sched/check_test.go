@@ -17,7 +17,7 @@ import (
 
 func TestCheckFlapping(t *testing.T) {
 	defer setup()()
-	c, err := rule.NewConf("", conf.EnabledBackends{}, `
+	c, err := rule.NewConf("", conf.EnabledBackends{}, nil, `
 		template t {
 			subject = 1
 		}
@@ -106,7 +106,7 @@ func TestCheckSilence(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	c, err := rule.NewConf("", conf.EnabledBackends{}, fmt.Sprintf(`
+	c, err := rule.NewConf("", conf.EnabledBackends{}, nil, fmt.Sprintf(`
 		template t {
 			subject = "test"
 			body = "test"
@@ -143,7 +143,7 @@ func TestCheckSilence(t *testing.T) {
 
 func TestIncidentIds(t *testing.T) {
 	defer setup()()
-	c, err := rule.NewConf("", conf.EnabledBackends{}, `
+	c, err := rule.NewConf("", conf.EnabledBackends{}, nil, `
 		alert a {
 			crit = 1
 		}
@@ -201,7 +201,7 @@ func TestCheckNotify(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	c, err := rule.NewConf("", conf.EnabledBackends{}, fmt.Sprintf(`
+	c, err := rule.NewConf("", conf.EnabledBackends{}, nil, fmt.Sprintf(`
 		template t {
 			subject = {{.Last.Status}}
 		}
@@ -245,7 +245,7 @@ func TestCheckNotifyUnknown(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	c, err := rule.NewConf("", conf.EnabledBackends{}, fmt.Sprintf(`
+	c, err := rule.NewConf("", conf.EnabledBackends{}, nil, fmt.Sprintf(`
 		template t {
 			subject = {{.Name}}: {{.Group | len}} unknown alerts
 		}
@@ -308,7 +308,7 @@ func TestCheckNotifyUnknownDefault(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	c, err := rule.NewConf("", conf.EnabledBackends{}, fmt.Sprintf(`
+	c, err := rule.NewConf("", conf.EnabledBackends{}, nil, fmt.Sprintf(`
 		template t {
 			subject = template
 		}
@@ -369,7 +369,7 @@ func TestCheckNotifyLog(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	c, err := rule.NewConf("", conf.EnabledBackends{}, fmt.Sprintf(`
+	c, err := rule.NewConf("", conf.EnabledBackends{}, nil, fmt.Sprintf(`
 		template t {
 			subject = {{.Alert.Name}}
 		}

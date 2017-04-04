@@ -98,7 +98,7 @@ func testSched(t *testing.T, st *schedTest) (s *Schedule) {
 		t.Fatal(err)
 	}
 	//confs := "tsdbHost = " + u.Host + "\n" + st.conf
-	c, err := rule.NewConf("testconf", conf.EnabledBackends{OpenTSDB: true}, st.conf)
+	c, err := rule.NewConf("testconf", conf.EnabledBackends{OpenTSDB: true}, nil, st.conf)
 	if err != nil {
 		t.Error(err)
 		t.Logf("conf:\n%s", st.conf)
