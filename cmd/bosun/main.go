@@ -275,7 +275,7 @@ func main() {
 				slog.Infoln("Interrupt: closing down...")
 				sched.Close(false)
 				slog.Infoln("done")
-				os.Exit(1)
+				os.Exit(0)
 			}()
 		}
 	}()
