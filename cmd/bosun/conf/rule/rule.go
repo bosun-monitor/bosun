@@ -45,6 +45,8 @@ type Conf struct {
 	reload   func() error
 	backends conf.EnabledBackends
 
+	sysVars map[string]string
+
 	tree            *parse.Tree
 	node            parse.Node
 	unknownTemplate string
@@ -125,19 +127,19 @@ func (c *Conf) parseNotifications(v string) (map[string]*conf.Notification, erro
 	return ns, nil
 }
 
-func ParseFile(fname string, backends conf.EnabledBackends) (*Conf, error) {
+func ParseFile(fname string, backends conf.EnabledBackends, sysVars map[string]string) (*Conf, error) {
 	f, err := ioutil.ReadFile(fname)
 	if err != nil {
 		return nil, err
 	}
-	return NewConf(fname, backends, string(f))
+	return NewConf(fname, backends, sysVars, string(f))
 }
 
 func (c *Conf) SaveConf(newConf *Conf) error {
 	return ioutil.WriteFile(c.Name, []byte(newConf.RawText), os.FileMode(int(0640)))
 }
 
-func NewConf(name string, backends conf.EnabledBackends, text string) (c *Conf, err error) {
+func NewConf(name string, backends conf.EnabledBackends, sysVars map[string]string, text string) (c *Conf, err error) {
 	defer errRecover(&err)
 	c = &Conf{
 		Name:             name,
@@ -153,6 +155,7 @@ func NewConf(name string, backends conf.EnabledBackends, text string) (c *Conf, 
 		writeLock:        make(chan bool, 1),
 		deferredSections: make(map[string][]deferredSection),
 		backends:         backends,
+		sysVars:          sysVars,
 	}
 	c.tree, err = parse.Parse(name, text)
 	if err != nil {
@@ -776,6 +779,8 @@ func (c *Conf) Expand(v string, vars map[string]string, ignoreBadExpand bool) st
 			n = _n
 		} else if strings.HasPrefix(s, "$env.") {
 			n = os.Getenv(s[5:])
+		} else if strings.HasPrefix(s, "$sys.") {
+			n = c.sysVars[s[5:]]
 		} else if ignoreBadExpand {
 			return s
 		} else {

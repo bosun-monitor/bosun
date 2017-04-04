@@ -39,6 +39,8 @@ type SystemConf struct {
 
 	SMTPConf SMTPConf
 
+	RuleVars map[string]string
+
 	OpenTSDBConf OpenTSDBConf
 	GraphiteConf GraphiteConf
 	InfluxConf   InfluxConf
@@ -331,6 +333,12 @@ func (sc *SystemConf) GetRedisPassword() string {
 
 func (sc *SystemConf) GetAuthConf() *AuthConf {
 	return sc.AuthConf
+}
+
+// GetRuleVars user defined variables that will be available to the rule configuration
+// under "$sys.". This is so values with secrets can be defined in the system configuration
+func (sc *SystemConf) GetRuleVars() map[string]string {
+	return sc.RuleVars
 }
 
 // GetTimeAndDate returns the http://www.timeanddate.com/ that should be available to the UI

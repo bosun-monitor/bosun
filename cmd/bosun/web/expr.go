@@ -448,7 +448,7 @@ func buildConfig(r *http.Request) (c conf.RuleConfProvider, a *conf.Alert, hash 
 	if err != nil {
 		return nil, nil, "", err
 	}
-	c, err = rule.NewConf("Test Config", schedule.SystemConf.EnabledBackends(), string(config))
+	c, err = rule.NewConf("Test Config", schedule.SystemConf.EnabledBackends(), schedule.SystemConf.GetRuleVars(), string(config))
 	if err != nil {
 		return nil, nil, "", err
 	}

@@ -34,6 +34,8 @@ type SystemConfProvider interface {
 	GetTLSCertFile() string
 	GetTLSKeyFile() string
 
+	GetRuleVars() map[string]string
+
 	GetSMTPHost() string
 	GetSMTPUsername() string // SMTP username
 	GetSMTPPassword() string // SMTP password
