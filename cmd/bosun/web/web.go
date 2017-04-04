@@ -840,7 +840,7 @@ func ConfigTest(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (i
 	if len(b) == 0 {
 		return nil, fmt.Errorf("empty config")
 	}
-	_, err = rule.NewConf("test", schedule.SystemConf.EnabledBackends(), string(b))
+	_, err = rule.NewConf("test", schedule.SystemConf.EnabledBackends(), nil, string(b))
 	if err != nil {
 		fmt.Fprintf(w, err.Error())
 	}
