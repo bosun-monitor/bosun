@@ -65,7 +65,7 @@ Example:
 `CheckFrequency = "1m"`
 
 ### DefaultRunEvery
-By default, alert checks are run at every [`CheckFrequency`](/system_configuration#checkevery) multiplied by the `DefaultRunEvery` value. This can be overridden in an alert definition with the [`runEvery` keyword](http://localhost:4000/definitions#runevery). This defaults to 1.
+By default, alert checks are run at every [`CheckFrequency`](/system_configuration#checkevery) multiplied by the `DefaultRunEvery` value. This can be overridden in an alert definition with the [`runEvery` keyword](/definitions#runevery). This defaults to 1.
  
 So for example if you have a `CheckFrequency` of "1m" and a `DefaultRunEvery` of 5, alerts by default will run every 5 minutes. But you could have some run as frequent as every "1m", and others that run less often (any multiple of "1m").
 
@@ -149,6 +149,28 @@ But not sure I trust that.
 
 ## Configuration Sections
 All your key value pairs must be defined before any sections are defined. Sections are used for things that have multiple values to configure them. In particular the various time series database providers.
+
+### RuleVars
+Rule vars lets you define variables that will then be turned into [global variables](/definitions#global-variables) available to definitions under `$sys.`. This is designed for when you have some secrets you don't want exposed in the definitions file. The values of these variables *can* still be accessed from Bosun's rule editor and expression UI, so this only helps hide them so you don't accidentally include them in screenshots or when copying and pasting your config.
+
+Example: 
+
+```
+[RuleVars]
+    CHAT = "https://chat.example.com/1?key=mySecretKey"
+    foo = "baz"
+```
+
+The above could then be used in the rule configuration like:
+
+```
+notification chat {
+    post = ${sys.CHAT}
+    runOnActions = false
+}
+```
+
+They can also be accessed in templates with the [`V()` function](/definitions#vstring-string)
 
 ### DBConf
 `DBConf` defines what internal storage Bosun should use. There are currently two choices, a built-in redis like server called ledis or redis. Redis is recommended for production setups. 
