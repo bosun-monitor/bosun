@@ -41,6 +41,41 @@ var cadvisorMeta = map[string]MetricMeta{
 		Unit:     metadata.Second,
 		Desc:     "Smoothed 10s average of number of runnable threads x 1000",
 	},
+	"container.cpu.cfs.periods": {
+		RateType: metadata.Counter,
+		Unit:     metadata.Period,
+		Desc:     "Number of elapsed enforcement intervals.",
+	},
+	"container.cpu.cfs.throttled_periods": {
+		RateType: metadata.Counter,
+		Unit:     metadata.Period,
+		Desc:     "Number of times tasks in the cgroup have been throttled.",
+	},
+	"container.cpu.cfs.throttled_time": {
+		RateType: metadata.Counter,
+		Unit:     metadata.Nanosecond,
+		Desc:     "Cumulative throttled cpu time.",
+	},
+	"container.cpu.spec.limit": {
+		RateType: metadata.Gauge,
+		Unit:     metadata.Share,
+		Desc:     "Number of cpu shares requested.",
+	},
+	"container.cpu.spec.max_limit": {
+		RateType: metadata.Gauge,
+		Unit:     metadata.Share,
+		Desc:     "Guaranteed cpu shares.",
+	},
+	"container.cpu.spec.quota": {
+		RateType: metadata.Gauge,
+		Unit:     metadata.Nanosecond,
+		Desc:     "Cpu time requested.",
+	},
+	"container.cpu.spec.period": {
+		RateType: metadata.Gauge,
+		Unit:     metadata.Period,
+		Desc:     "Cpu periods requested.",
+	},
 	"container.blkio.io_service_bytes.async": {
 		RateType: metadata.Counter,
 		Unit:     metadata.Bytes,
@@ -260,6 +295,41 @@ var cadvisorMeta = map[string]MetricMeta{
 		Unit:     metadata.Bytes,
 		Desc:     "Current working set.",
 	},
+	"container.memory.cache": {
+		RateType: metadata.Gauge,
+		Unit:     metadata.Bytes,
+		Desc:     "Current cache size.",
+	},
+	"container.memory.rss": {
+		RateType: metadata.Gauge,
+		Unit:     metadata.Bytes,
+		Desc:     "Current resident set size.",
+	},
+	"container.memory.swap": {
+		RateType: metadata.Gauge,
+		Unit:     metadata.Bytes,
+		Desc:     "Current swap size.",
+	},
+	"container.memory.spec.reservation": {
+		RateType: metadata.Gauge,
+		Unit:     metadata.Bytes,
+		Desc:     "The amount of memory requested.",
+	},
+	"container.memory.spec.limit": {
+		RateType: metadata.Gauge,
+		Unit:     metadata.Bytes,
+		Desc:     "The amount of memory limit.",
+	},
+	"container.memory.spec.max_limit": {
+		RateType: metadata.Gauge,
+		Unit:     metadata.Bytes,
+		Desc:     "The amount of guaranteed memory.",
+	},
+	"container.memory.spec.swaplimit": {
+		RateType: metadata.Gauge,
+		Unit:     metadata.Bytes,
+		Desc:     "The amount of swap space requested.",
+	},
 	"container.net.bytes": {
 		RateType: metadata.Counter,
 		Unit:     metadata.Bytes,
@@ -389,6 +459,15 @@ func statsForContainer(md *opentsdb.MultiDataPoint, container *v1.ContainerInfo,
 		cadvisorAdd(md, "container.cpu.loadavg", stats.Cpu.LoadAverage, ts)
 		cadvisorAdd(md, "container.cpu.usage", stats.Cpu.Usage.Total, ts)
 
+		cadvisorAdd(md, "container.cpu.cfs.periods", stats.Cpu.CFS.Periods, containerTagSet(nil, container))
+		cadvisorAdd(md, "container.cpu.cfs.throttled_periods", stats.Cpu.CFS.ThrottledPeriods, containerTagSet(nil, container))
+		cadvisorAdd(md, "container.cpu.cfs.throttled_time", stats.Cpu.CFS.ThrottledTime, containerTagSet(nil, container))
+
+		cadvisorAdd(md, "container.cpu.spec.limit", container.Spec.Cpu.Limit, containerTagSet(nil, container))
+		cadvisorAdd(md, "container.cpu.spec.max_limit", container.Spec.Cpu.MaxLimit, containerTagSet(nil, container))
+		cadvisorAdd(md, "container.cpu.spec.quota", container.Spec.Cpu.Quota*1e4, containerTagSet(nil, container))
+		cadvisorAdd(md, "container.cpu.spec.period", container.Spec.Cpu.Period, containerTagSet(nil, container))
+
 		if config.PerCpuUsage {
 			for idx := range stats.Cpu.Usage.PerCpu {
 				ts = containerTagSet(opentsdb.TagSet{"cpu": strconv.Itoa(idx)}, container)
@@ -429,6 +508,12 @@ func statsForContainer(md *opentsdb.MultiDataPoint, container *v1.ContainerInfo,
 			containerTagSet(opentsdb.TagSet{"scope": "hierarchy", "type": "pgmajfault"}, container))
 		cadvisorAdd(md, "container.memory.working_set", stats.Memory.WorkingSet, containerTagSet(nil, container))
 		cadvisorAdd(md, "container.memory.usage", stats.Memory.Usage, containerTagSet(nil, container))
+		cadvisorAdd(md, "container.memory.cache", stats.Memory.Cache, containerTagSet(nil, container))
+		cadvisorAdd(md, "container.memory.rss", stats.Memory.RSS, containerTagSet(nil, container))
+		cadvisorAdd(md, "container.memory.swap", stats.Memory.Swap, containerTagSet(nil, container))
+		cadvisorAdd(md, "container.memory.spec.limit", container.Spec.Memory.Limit, containerTagSet(nil, container))
+		cadvisorAdd(md, "container.memory.spec.reservation", container.Spec.Memory.Reservation, containerTagSet(nil, container))
+		cadvisorAdd(md, "container.memory.spec.swaplimit", container.Spec.Memory.SwapLimit, containerTagSet(nil, container))
 	}
 
 	if container.Spec.HasNetwork {

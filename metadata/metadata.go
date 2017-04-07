@@ -100,6 +100,7 @@ const (
 	Packet               = "packets"
 	Page                 = "pages"
 	Pct                  = "percent" // Range of 0-100.
+	Period               = "period"
 	PerSecond            = "per second"
 	Process              = "processes"
 	Priority             = "priority"
@@ -121,6 +122,7 @@ const (
 	Server               = "servers"
 	Session              = "sessions"
 	Shard                = "shards"
+	Share                = "share"
 	Slave                = "slaves"
 	Socket               = "sockets"
 	Suggest              = "suggests"
