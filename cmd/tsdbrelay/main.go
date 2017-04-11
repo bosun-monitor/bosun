@@ -48,7 +48,8 @@ var (
 
 	denormalizationRules map[string]*denormalize.DenormalizationRule
 
-	relayPutUrls []string
+	relayDataUrls     []string
+	relayMetadataUrls []string
 
 	tags = opentsdb.TagSet{}
 )
@@ -105,35 +106,35 @@ func main() {
 		}
 	}
 
-	tsdbURL := &url.URL{
-		Scheme: "http",
-		Host:   *tsdbServer,
+	tsdbURL, err := parseHost(*tsdbServer, "", true)
+	if err != nil {
+		slog.Fatalf("Invalid -t value: %s", err)
 	}
-
-	u := url.URL{
-		Scheme: "http",
-		Host:   *tsdbServer,
-		Path:   "/api/put",
-	}
+	u := *tsdbURL
+	u.Path = "/api/put"
 	tsdbPutURL = u.String()
-	bosunURL := &url.URL{
-		Scheme: "http",
-		Host:   *bosunServer,
+	bosunURL, err := parseHost(*bosunServer, "", true)
+	if err != nil {
+		slog.Fatalf("Invalid -b value: %s", err)
 	}
-	u = url.URL{
-		Scheme: "http",
-		Host:   *bosunServer,
-		Path:   "/api/index",
-	}
+	u = *bosunURL
+	u.Path = "/api/index"
 	bosunIndexURL = u.String()
 	if *secondaryRelays != "" {
-		for _, rUrl := range strings.Split(*secondaryRelays, ",") {
-			u = url.URL{
-				Scheme: "http",
-				Host:   rUrl,
-				Path:   "/api/put",
+		for _, rURL := range strings.Split(*secondaryRelays, ",") {
+			u, err := parseHost(rURL, "/api/put", false)
+			if err != nil {
+				slog.Fatalf("Invalid -r value '%s': %s", rURL, err)
 			}
-			relayPutUrls = append(relayPutUrls, u.String())
+			f := u.Fragment
+			u.Fragment = ""
+			if f == "" || strings.ToLower(f) == "data-only" {
+				relayDataUrls = append(relayDataUrls, u.String())
+			}
+			if f == "" || strings.ToLower(f) == "metadata-only" {
+				u.Path = "/metadata/put"
+				relayMetadataUrls = append(relayMetadataUrls, u.String())
+			}
 		}
 	}
 
@@ -260,13 +261,13 @@ func (rp *relayProxy) relayPut(responseWriter http.ResponseWriter, r *http.Reque
 		go rp.denormalize(bytes.NewReader(reader.buf.Bytes()))
 	}
 
-	if !isRelayed && len(relayPutUrls) > 0 {
+	if !isRelayed && len(relayDataUrls) > 0 {
 		go func() {
-			for _, relayUrl := range relayPutUrls {
+			for _, relayURL := range relayDataUrls {
 				body := bytes.NewBuffer(reader.buf.Bytes())
-				req, err := http.NewRequest(r.Method, relayUrl, body)
+				req, err := http.NewRequest(r.Method, relayURL, body)
 				if err != nil {
-					verbose("relayPutUrls connect error: %v", err)
+					verbose("%s connect error: %v", relayURL, err)
 					collect.Add("additional.puts.error", tags, 1)
 					continue
 				}
@@ -363,14 +364,13 @@ func (rp *relayProxy) relayMetadata(responseWriter http.ResponseWriter, r *http.
 	if r.Header.Get(relayHeader) != "" {
 		return
 	}
-	if len(relayPutUrls) != 0 {
+	if len(relayMetadataUrls) != 0 {
 		go func() {
-			for _, relayUrl := range relayPutUrls {
-				relayUrl = strings.Replace(relayUrl, "/put", "/metadata/put", 1)
+			for _, relayURL := range relayMetadataUrls {
 				body := bytes.NewBuffer(reader.buf.Bytes())
-				req, err := http.NewRequest(r.Method, relayUrl, body)
+				req, err := http.NewRequest(r.Method, relayURL, body)
 				if err != nil {
-					verbose("metadata relayPutUrls error %v", err)
+					verbose("metadata %s error %v", relayURL, err)
 					continue
 				}
 				if contenttype := r.Header.Get(typeHeader); contenttype != "" {
@@ -395,4 +395,27 @@ func (rp *relayProxy) relayMetadata(responseWriter http.ResponseWriter, r *http.
 			}
 		}()
 	}
+}
+
+// Parses a url of the form proto://host:port/path#fragment with the following rules:
+// proto:// is optional and will default to http:// if omitted
+// :port is optional and will use the default if omitted
+// /path is optional and will be ignored, will always be replaced by newpath
+// #fragment is optional and will be removed if removeFragment is true
+func parseHost(host string, newpath string, removeFragment bool) (*url.URL, error) {
+	if !strings.Contains(host, "//") {
+		host = "http://" + host
+	}
+	u, err := url.Parse(host)
+	if err != nil {
+		return nil, err
+	}
+	if u.Host == "" {
+		return nil, fmt.Errorf("no host specified")
+	}
+	u.Path = newpath
+	if removeFragment {
+		u.Fragment = ""
+	}
+	return u, nil
 }

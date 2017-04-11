@@ -22,15 +22,16 @@ Usage:
 
 The flags are:
 	-b="bosun"
-		Target Bosun server. Can specify port with host:port.
+		Target Bosun server. Can specify as host, host:port, or https://host:port.
 	-t=""
-		Target OpenTSDB server. Can specify port with host:port.
+		Target OpenTSDB server. Can specify as host, host:port or https://host:port.
 	-l=":4242"
 		Listen address.
 	-v=false
 	    Enable verbose logging
 	-r=""
 		Additional relays to send data to, comma seperated. Intended for secondary data center replication. Only response from primary tsdb server wil be relayed to clients.
+		Examples: hostA:port,https://hostB:port,hostC#data-only,https://hostD:8080#metadata-only
 	-redis=""
 		Redis host to store external counter data in
 	-db=0
