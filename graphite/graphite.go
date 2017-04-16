@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -119,6 +120,15 @@ func readTraceback(resp *http.Response) (*[]string, error) {
 // DefaultClient is the default HTTP client for requests.
 var DefaultClient = &http.Client{
 	Timeout: time.Minute,
+	Transport: &http.Transport{
+		MaxIdleConnsPerHost: 0,
+		Proxy:               http.ProxyFromEnvironment,
+		Dial: (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}).Dial,
+		TLSHandshakeTimeout: 10 * time.Second,
+	},
 }
 
 // Context is the interface for querying a Graphite server.
