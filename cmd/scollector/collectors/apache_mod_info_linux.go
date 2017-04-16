@@ -32,7 +32,7 @@ More specifically it finds the line that looks like:
  "Timeouts: connection: 60 keep-alive: 15"
 and returns the two values contained therein.
 */
-func extractTimeouts(doc *html.Node) (int, int, error) {
+func extractTimeouts(doc *html.Node) (isServerInfo bool, connectionTimeout, keepAlive int, err error) {
 
 	// Walk the node tree.
 	// If the node is a "dt",
@@ -46,7 +46,11 @@ func extractTimeouts(doc *html.Node) (int, int, error) {
 	var searchTimeouts func(*html.Node) string
 
 	walkSubtree = func(n *html.Node) string {
-		if n.Type == html.ElementNode && n.Data == "dt" {
+		if n.Type == html.ElementNode && n.Data == "h1" {
+			if n := n.FirstChild; n != nil && n.Type == html.TextNode && n.Data == "Apache Server Information" {
+				isServerInfo = true
+			}
+		} else if n.Type == html.ElementNode && n.Data == "dt" {
 			if val := searchTimeouts(n); val != "" {
 				return val
 			}
@@ -75,21 +79,25 @@ func extractTimeouts(doc *html.Node) (int, int, error) {
 	original := walkSubtree(doc)
 	parts := strings.Fields(original)
 	if len(parts) < 4 {
-		return 0, 0, fmt.Errorf("fewer than 4 fields found on connection:/keep-alive line")
+		err = fmt.Errorf("fewer than 4 fields found on connection:/keep-alive line")
+		return
 	}
 	if (parts[0] != "connection:") || (parts[2] != "keep-alive:") {
-		return 0, 0, fmt.Errorf("format changed in connection:/keep-alive: line")
+		err = fmt.Errorf("format changed in connection:/keep-alive: line")
+		return
 	}
 
-	c, err := strconv.Atoi(parts[1])
+	connectionTimeout, err = strconv.Atoi(parts[1])
 	if err != nil {
-		return 0, 0, fmt.Errorf("connection timeout is not an integer")
+		err = fmt.Errorf("connection timeout is not an integer")
+		return
 	}
-	k, err := strconv.Atoi(parts[3])
+	keepAlive, err = strconv.Atoi(parts[3])
 	if err != nil {
-		return 0, 0, fmt.Errorf("keep-alive value is not an integer")
+		err = fmt.Errorf("keep-alive value is not an integer")
+		return
 	}
-	return c, k, nil
+	return
 }
 
 /* extractMpmInfo processes the "?server" parse tree and extracts MPM settings.
@@ -196,7 +204,10 @@ func c_apache_mod_info() (opentsdb.MultiDataPoint, error) {
 		return nil, fmt.Errorf("unable to parse ?server status page")
 	}
 
-	connection_timeout, keepalive, err := extractTimeouts(n)
+	isServerInfo, connection_timeout, keepalive, err := extractTimeouts(n)
+	if !isServerInfo {
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}
