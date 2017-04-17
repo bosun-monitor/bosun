@@ -1,5 +1,7 @@
 # bosun
 
+[![Join the chat at https://gitter.im/bosun-monitor/bosun](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/bosun-monitor/bosun?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 Bosun is a time series alerting framework developed by Stack Exchange. Scollector is a metric collection agent. Learn more at [bosun.org](http://bosun.org).
 
 [![Build Status](https://travis-ci.org/bosun-monitor/bosun.svg?branch=master)](https://travis-ci.org/bosun-monitor/bosun/branches)
