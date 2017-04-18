@@ -1,5 +1,2 @@
 cmd/bosun/dev.conf
 docs/.jekyll-metadata
-cmd/scollector/vendor
-cmd/scollector/vendor/*
-cmd/scollector/scollecto.*
