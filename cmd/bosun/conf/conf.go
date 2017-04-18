@@ -377,7 +377,7 @@ type BulkEditRequest []EditRequest
 
 // EditRequest is a proposed edit to the config file for sections. The Name is the name of section,
 // Type can be "alert", "template", "notification", "lookup", or "macro". The Text should be the full
-// text of the definition, including the delaration and brackets (i.e. "alert foo { .. }"). If Delete
+// text of the definition, including the declaration and brackets (i.e. "alert foo { .. }"). If Delete
 // is true then the section will be deleted. In order to rename something, specify the old name in the
 // Name field but have the Text definition contain the new name.
 type EditRequest struct {
@@ -393,7 +393,7 @@ type EditRequest struct {
 // when the SaveHook returns an error.
 type SaveHook func(files, user, message string, args ...string) error
 
-// MakeSaveCommandHook takes a fuction based on the command name and will run it on save passing files, user,
+// MakeSaveCommandHook takes a function based on the command name and will run it on save passing files, user,
 // message, args... as arguments to the command. For the SaveHook function that is returned, If the command fails
 // to execute or returns a non normal output then an error is returned.
 func MakeSaveCommandHook(cmdName string) (f SaveHook, err error) {
@@ -417,9 +417,9 @@ func MakeSaveCommandHook(cmdName string) (f SaveHook, err error) {
 		err = c.Wait()
 		if err != nil {
 			slog.Warning(cErr.String())
-			return err
+			return fmt.Errorf("%v: %v", err, cErr.String())
 		}
-		slog.Infof("save hook ouput: %v\n", cOut.String())
+		slog.Infof("save hook output: %v\n", cOut.String())
 		return nil
 	}
 	return
