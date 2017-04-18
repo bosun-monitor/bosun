@@ -1,0 +1,11 @@
+FullHost = true
+Freq = 30
+
+[Tags]
+    env = "prd"
+    dc = "mp"
+    application = "monitoring"
+
+[[Process]]
+    Name = "scollector"
+    Command = ".*scollector"
