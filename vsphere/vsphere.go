@@ -19,6 +19,33 @@ type Vsphere struct {
 	header  http.Header
 	cookies http.CookieJar
 	client  *http.Client
+	service *ServiceContent
+}
+
+// ServiceContent partial structure to hold basic vSphere info, including Performance Manager name.
+type ServiceContent struct {
+	RootFolder  string    `xml:"rootFolder"`
+	ViewManager string    `xml:"viewManager,omitempty"`
+	About       AboutInfo `xml:"about"`
+	PerfManager string    `xml:"perfManager,omitempty"`
+}
+
+// AboutInfo holds more basic vSphere info.
+type AboutInfo struct {
+	Name                  string `xml:"name"`
+	FullName              string `xml:"fullName"`
+	Vendor                string `xml:"vendor"`
+	Version               string `xml:"version"`
+	Build                 string `xml:"build"`
+	LocaleVersion         string `xml:"localeVersion,omitempty"`
+	LocaleBuild           string `xml:"localeBuild,omitempty"`
+	OsType                string `xml:"osType"`
+	ProductLineId         string `xml:"productLineId"`
+	ApiType               string `xml:"apiType"`
+	ApiVersion            string `xml:"apiVersion"`
+	InstanceUuid          string `xml:"instanceUuid,omitempty"`
+	LicenseProductName    string `xml:"licenseProductName,omitempty"`
+	LicenseProductVersion string `xml:"licenseProductVersion,omitempty"`
 }
 
 // Connect connects and logs in to a vSphere host.
@@ -46,15 +73,16 @@ func Connect(host, user, pwd string) (*Vsphere, error) {
 		},
 		cookies: jar,
 	}
-	uuid := struct {
-		UUID string `xml:"Body>RetrieveServiceContentResponse>returnval>about>instanceUuid"`
+	service := struct {
+		SC *ServiceContent `xml:"Body>RetrieveServiceContentResponse>returnval"`
 	}{}
-	if err := v.call(soapConnect, &uuid); err != nil {
+	if err := v.call(soapConnect, &service); err != nil {
 		return nil, err
 	}
-	if uuid.UUID == "" {
+	if service.SC.About.InstanceUuid == "" {
 		return nil, fmt.Errorf("vsphere: no UUID during connect")
 	}
+	v.service = service.SC
 	userbuf := new(bytes.Buffer)
 	pwdbuf := new(bytes.Buffer)
 	xml.EscapeText(userbuf, []byte(user))
@@ -101,6 +129,115 @@ func (v *Vsphere) Info(Type string, properties []string) ([]*Result, error) {
 		return nil, err
 	}
 	return vms.Results, nil
+}
+
+// ManagedObjectReference refers to a server-side Managed Object (made for type-value information).
+type ManagedObjectReference struct {
+	Type  string `xml:"type,attr"`
+	Value string `xml:",chardata"`
+}
+
+// PerfProviderSummary describes capabilities of a performance provider.
+type PerfProviderSummary struct {
+	Entity ManagedObjectReference `xml:"entity"`
+	// CurrentSupported True if the entity supports real-time (current) statistics.
+	CurrentSupported bool `xml:"currentSupported"`
+	SummarySupported bool `xml:"summarySupported"`
+	// RefreshRate Specifies in seconds the interval between which the system updates performance statistics.
+	// Generally speaking, querying for a metric at a faster rate than this does not yield additional information.
+	// This value applies only to entities that support real-time (current) statistics.
+	RefreshRate int `xml:"refreshRate,omitempty"`
+}
+
+// PerformanceProvider Gets capabilities of a performance provider from a vSphere server.
+func (v *Vsphere) PerformanceProvider(entityType string, entity string) (*PerfProviderSummary, error) {
+	var pm struct {
+		ProviderSummary *PerfProviderSummary `xml:"Body>QueryPerfProviderSummaryResponse>returnval"`
+	}
+	body := fmt.Sprintf(soapPerfProviderSummary, v.service.PerfManager, entityType, entity)
+	fmt.Println(body)
+	if err := v.call(body, &pm); err != nil {
+		return nil, err
+	}
+	return pm.ProviderSummary, nil
+}
+
+// ElementDescription Static strings used for describing an object model string or enumeration.
+type ElementDescription struct {
+	Label   string `xml:"label"`
+	Summary string `xml:"summary"`
+	Key     string `xml:"key"`
+}
+
+// PerfCounterInfo contains metadata for a performance counter.
+type PerfCounterInfo struct {
+	Key            int                `xml:"key"`
+	NameInfo       ElementDescription `xml:"nameInfo,typeattr"`
+	GroupInfo      ElementDescription `xml:"groupInfo,typeattr"`
+	UnitInfo       ElementDescription `xml:"unitInfo,typeattr"`
+	RollupType     string             `xml:"rollupType"`
+	StatsType      string             `xml:"statsType"`
+	Level          int                `xml:"level,omitempty"`
+	PerDeviceLevel int                `xml:"perDeviceLevel,omitempty"`
+}
+
+// PerfCounterInfos retrieves counter information for the specified list of counter IDs.
+func (v *Vsphere) PerfCounterInfos(counters string) ([]*PerfCounterInfo, error) {
+	var pcis struct {
+		PerfCounters []*PerfCounterInfo `xml:"Body>QueryPerfCounterResponse>returnval"`
+	}
+	// counters should be prepared in form of a string of multiple <counterId>%d</counterId>
+	body := fmt.Sprintf(soapQueryPerfCounters, v.service.PerfManager, counters)
+	fmt.Println(body)
+	if err := v.call(body, &pcis); err != nil {
+		return nil, err
+	}
+	return pcis.PerfCounters, nil
+}
+
+// PerfSampleInfo describes information contained in a sample collection, its timestamp, and sampling interval.
+type PerfSampleInfo struct {
+	Timestamp time.Time `xml:"timestamp"`
+	Interval  int       `xml:"interval"`
+}
+
+// PerfMetricId describes a performance counter with a performance counter ID and an instance name.
+// The instance name identifies the instance and is derived from configuration names.
+// For host and virtual machine devices, the instance name is the device name.
+type PerfMetricId struct {
+	CounterId int    `xml:"counterId"`
+	Instance  string `xml:"instance"`
+}
+
+// PerfMetricIntSeries describes integer metric values.
+// The size of the array must match the size of sampleInfo in the EntityMetric that contains this series
+type PerfMetricIntSeries struct {
+	Id    PerfMetricId `xml:"id"`
+	Value int64        `xml:"value,omitempty"`
+}
+
+// PerfEntityMetric stores metric values for a specific entity in 'normal' format.
+type PerfEntityMetric struct {
+	Entity     ManagedObjectReference `xml:"entity"`
+	SampleInfo []PerfSampleInfo       `xml:"sampleInfo,omitempty"`
+	//hardcoded int64
+	Value []PerfMetricIntSeries `xml:"value,omitempty,typeattr"`
+}
+
+// PerfCountersValues Retrieves the all performance realtime metrics for the specified entity (or entities).
+func (v *Vsphere) PerfCountersValues(entityType string, entity string, pm *PerfProviderSummary) (*PerfEntityMetric, error) {
+	var pems struct {
+		PerfCountersValues *PerfEntityMetric `xml:"Body>QueryPerfResponse>returnval"`
+	}
+	if !pm.CurrentSupported {
+		return nil, nil
+	}
+	body := fmt.Sprintf(soapQueryPerf, v.service.PerfManager, entityType, entity, pm.RefreshRate)
+	fmt.Println(body)
+	if err := v.call(body, &pems); err != nil {
+		return nil, err
+	}
+	return pems.PerfCountersValues, nil
 }
 
 func (v *Vsphere) call(body string, dst interface{}) error {
@@ -164,4 +301,7 @@ const (
 	soapRetrieveServiceInstance = `<RetrieveProperties xmlns="urn:vim25"><_this type="PropertyCollector">propertyCollector</_this><specSet><propSet><type>ServiceInstance</type><all>false</all><pathSet>content</pathSet></propSet><objectSet><obj type="ServiceInstance">ServiceInstance</obj><skip>false</skip></objectSet></specSet></RetrieveProperties>`
 	soapCreateContainerView     = `<CreateContainerView xmlns="urn:vim25"><_this type="ViewManager">ViewManager</_this><container type="Folder">%s</container><type>%s</type><recursive>true</recursive></CreateContainerView>`
 	soapRetrieve                = `<RetrieveProperties xmlns="urn:vim25"><_this type="PropertyCollector">propertyCollector</_this><specSet><propSet><type>%s</type>%s</propSet><objectSet><obj type="ContainerView">%s</obj><skip>true</skip><selectSet xsi:type="TraversalSpec"><name>traverseEntities</name><type>ContainerView</type><path>view</path><skip>false</skip></selectSet></objectSet></specSet></RetrieveProperties>`
+	soapPerfProviderSummary     = `<QueryPerfProviderSummary xmlns="urn:vim25" xsi:type="QueryPerfProviderSummaryRequestType"><_this type="PerformanceManager">%s</_this><entity type="%s">%s</entity></QueryPerfProviderSummary>`
+	soapQueryPerfCounters       = `<QueryPerfCounter xmlns="urn:vim25" xsi:type="QueryPerfCounterRequestType"><_this type="PerformanceManager">%s</_this>%s</QueryPerfCounter>`
+	soapQueryPerf               = `<QueryPerf xmlns="urn:vim25" xsi:type="QueryPerfRequestType"><_this type="PerformanceManager">%s</_this><querySpec><entity type="%s">%s</entity><maxSample>1</maxSample><intervalId>%d</intervalId></querySpec></QueryPerf>`
 )
