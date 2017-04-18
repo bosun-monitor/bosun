@@ -134,7 +134,7 @@ Example:
 ### CommandHookPath
 When enabling saving, and a user issues a save, you have the option to run a executable or script by specifying this parameter. This allows you to do things like backup the file on writes or commit the file to a git repo.
 
-This command is passed a filename, username, message, and vargs (vargs is currently not used). If the command exits a non-zero exit code, then the changes will be reverted (the file before the changes is copied back and bosun doesn't restart).
+This command is passed a filename, username, message, and vargs (vargs is currently not used). If the command exits a non-zero exit code, then the changes will be reverted (the file before the changes is copied back and bosun doesn't restart). When the configuration is saved via the user interface, any messages to standard error will be shown to the user when there is a non-zero exit code.
 
 Example:
 `CommandHookPath = "/Users/kbrandt/src/hook/hook"`
