@@ -196,13 +196,14 @@ alert test {
 
 Global template functions:
 
-* V: performs variable expansion on the argument and returns it. Needed since normal variable expansion is not done due to the `$` character being used by the Go template syntax.
+* V: performs variable expansion on the argument and returns it. Needed since normal variable expansion is not done due to the `$` character being used by the Go template syntax. The returned type is a string.
 * bytes: converts the string input into a human-readable number of bytes with extension KB, MB, GB, etc.
 * pct: formats the float argument as a percentage. For example: `{{5.1 | pct}}` -> `5.10%`.
 * replace: [strings.Replace](http://golang.org/pkg/strings/#Replace)
 * short: Trims the string to everything before the first period. Useful for turning a FQDN into a shortname. For example: `{{short "foo.baz.com"}}` -> `foo`.
 * parseDuration: [time.ParseDuration](http://golang.org/pkg/time/#ParseDuration). Useful when working with an alert's .Last.Time.Add method to generate urls to other systems.
 * html: takes a string and renders it as html. Useful for when you have alert variables that contain html. For example in the alert you may have `$notes = <a href="...">Foo</a>` and the in the template you can render it as html with `{{ html .Alert.Vars.notes }}` 
+* parseFloat: Turns a string into float64. Return type is (float64, error). i.e. `{{gt 1.0 (V "$foo" | parseFloat)}}` to get a float64 for the global variable `$foo` which has a string type since that is what `V` returns.
 
 All body templates are associated, and so may be executed from another. Use the name of the other template section for inclusion. Subject templates are similarly associated.
 
