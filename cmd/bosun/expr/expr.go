@@ -715,9 +715,14 @@ func (e *State) walkPrefix(node *parse.PrefixNode, T miniprofiler.Timer) *Result
 	key, _ = strconv.Unquote(key)
 	switch node := node.Arg.(type) {
 	case *parse.FuncNode:
+		// TODO. Change this to be more generic by having some sort of "supports prefix"
+		// also perhaps better as part of check IIRC (look later)
 		if strings.Contains(node.Name, "es") {
-			e.ElasticHosts.PrefixKey = key
-			prefixkey = true
+			// e.ElasticHosts.PrefixKey = key
+			// prefixkey = true
+
+			// Set the prefix on the func node
+			node.Prefix = key
 		}
 		return e.walk(node, T)
 	default:
@@ -772,7 +777,12 @@ func (e *State) walkFunc(node *parse.FuncNode, T miniprofiler.Timer) *Results {
 		}
 
 		f := reflect.ValueOf(node.F.F)
-		fr := f.Call(append([]reflect.Value{reflect.ValueOf(e), reflect.ValueOf(T)}, in...))
+		fr := []reflect.Value{}
+		if node.F.PrefixEnabled {
+			fr = f.Call(append([]reflect.Value{reflect.ValueOf(node.Prefix), reflect.ValueOf(e), reflect.ValueOf(T)}, in...))
+		} else {
+			fr = f.Call(append([]reflect.Value{reflect.ValueOf(e), reflect.ValueOf(T)}, in...))
+		}
 		res = fr[0].Interface().(*Results)
 		if len(fr) > 1 && !fr[1].IsNil() {
 			err := fr[1].Interface().(error)

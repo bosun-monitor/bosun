@@ -40,6 +40,7 @@ type Func struct {
 	VArgsPos  int
 	VArgsOmit bool
 	MapFunc   bool // Func is only valid in map expressions
+	PrefixEnabled bool
 	Check     func(*Tree, *FuncNode) error
 }
 

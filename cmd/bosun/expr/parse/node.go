@@ -72,6 +72,8 @@ type FuncNode struct {
 	Name string
 	F    Func
 	Args []Node
+	// Prefix is comes from the preceeding prefix node
+	Prefix string
 }
 
 func newFunc(pos Pos, name string, f Func) *FuncNode {

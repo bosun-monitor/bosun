@@ -9,6 +9,7 @@ import (
 	"bosun.org/cmd/bosun/expr/parse"
 	"bosun.org/models"
 	"bosun.org/opentsdb"
+	"bosun.org/slog"
 	"github.com/MiniProfiler/go/miniprofiler"
 	"github.com/jinzhu/now"
 	elastic "gopkg.in/olivere/elastic.v3"
@@ -32,10 +33,11 @@ func elasticTagQuery(args []parse.Node) (parse.Tags, error) {
 var Elastic = map[string]parse.Func{
 	// Funcs for querying elastic
 	"escount": {
-		Args:   []models.FuncType{models.TypeESIndexer, models.TypeString, models.TypeESQuery, models.TypeString, models.TypeString, models.TypeString},
-		Return: models.TypeSeriesSet,
-		Tags:   elasticTagQuery,
-		F:      ESCount,
+		Args:          []models.FuncType{models.TypeESIndexer, models.TypeString, models.TypeESQuery, models.TypeString, models.TypeString, models.TypeString},
+		Return:        models.TypeSeriesSet,
+		Tags:          elasticTagQuery,
+		F:             ESCount,
+		PrefixEnabled: true,
 	},
 	"esstat": {
 		Args:   []models.FuncType{models.TypeESIndexer, models.TypeString, models.TypeESQuery, models.TypeString, models.TypeString, models.TypeString, models.TypeString, models.TypeString},
@@ -419,7 +421,8 @@ func ESMonthly(e *State, T miniprofiler.Timer, timeField, indexRoot, layout stri
 	return &r, nil
 }
 
-func ESCount(e *State, T miniprofiler.Timer, indexer ESIndexer, keystring string, filter ESQuery, interval, sduration, eduration string) (r *Results, err error) {
+func ESCount(prefix string, e *State, T miniprofiler.Timer, indexer ESIndexer, keystring string, filter ESQuery, interval, sduration, eduration string) (r *Results, err error) {
+	slog.Infoln("Prefix: ", prefix)
 	return ESDateHistogram(e, T, indexer, keystring, filter.Query, interval, sduration, eduration, "", "", 0)
 }
 
