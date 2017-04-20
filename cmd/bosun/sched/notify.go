@@ -345,7 +345,7 @@ func (s *Schedule) groupActionNotifications(aks []models.AlertKey) (map[*conf.No
 			continue
 		}
 		var n *conf.Notifications
-		if status.WorstStatus == models.StWarning || alert.CritNotification == nil {
+		if status.WorstStatus <= models.StWarning || alert.CritNotification == nil {
 			n = alert.WarnNotification
 		} else {
 			n = alert.CritNotification
