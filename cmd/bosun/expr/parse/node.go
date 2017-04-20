@@ -317,14 +317,13 @@ func (p *PrefixNode) StringAST() string {
 }
 
 func (p *PrefixNode) Check(t *Tree) error {
-	rt := p.Arg.Return()
-
-	if !(rt == models.TypeSeriesSet) {
-		return fmt.Errorf("parse: type error in %s, expected %s, got %s", p, "prefix", rt)
+	if p.Arg.Type() != NodeFunc {
+		return fmt.Errorf("parse: prefix on non-function")
 	}
-
+	if !p.Arg.(*FuncNode).F.PrefixEnabled {
+		return fmt.Errorf("func %v does not support a prefix", p.Arg.(*FuncNode).Name)
+	}
 	return p.Arg.Check(t)
-
 }
 
 func (p *PrefixNode) Return() models.FuncType {
