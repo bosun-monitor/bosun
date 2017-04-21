@@ -12,13 +12,17 @@ import (
 	"github.com/MiniProfiler/go/miniprofiler"
 	"github.com/jinzhu/now"
 	elastic "gopkg.in/olivere/elastic.v3"
+	"sync"
 )
 
 // Map of prefixes to corresponding clients
-var esClients map[string]*elastic.Client
+var esClients struct {
+	sync.Mutex
+	m map[string]*elastic.Client
+}
 
 func init() {
-	esClients = make(map[string]*elastic.Client)
+	esClients.m = make(map[string]*elastic.Client)
 }
 
 func elasticTagQuery(args []parse.Node) (parse.Tags, error) {
@@ -267,24 +271,23 @@ func (e ElasticHosts) InitClient(prefix string) error {
 		}
 		return fmt.Errorf("prefix %v not defined, available prefixes are: %v", prefix, prefixes)
 	}
-
-	// TODO? Since SimpleClient isn't "long lived", does that need to be created each time?
-	if c := esClients[prefix]; c != nil {
+	if c := esClients.m[prefix]; c != nil {
 		// client already initialized
 		return nil
 	}
+	esClients.Lock()
 	var err error
 	if e.Hosts[prefix].SimpleClient {
 		// simple client enabled
-		esClients[prefix], err = elastic.NewSimpleClient(elastic.SetURL(e.Hosts[prefix].Hosts...), elastic.SetMaxRetries(10))
+		esClients.m[prefix], err = elastic.NewSimpleClient(elastic.SetURL(e.Hosts[prefix].Hosts...), elastic.SetMaxRetries(10))
 	} else if len(e.Hosts[prefix].Hosts) == 0 {
 		// client option enabled
-		esClients[prefix], err = elastic.NewClient(e.Hosts[prefix].ClientOptionFuncs...)
+		esClients.m[prefix], err = elastic.NewClient(e.Hosts[prefix].ClientOptionFuncs...)
 	} else {
 		// default behavior
-		esClients[prefix], err = elastic.NewClient(elastic.SetURL(e.Hosts[prefix].Hosts...), elastic.SetMaxRetries(10))
+		esClients.m[prefix], err = elastic.NewClient(elastic.SetURL(e.Hosts[prefix].Hosts...), elastic.SetMaxRetries(10))
 	}
-
+	esClients.Unlock()
 	if err != nil {
 		return err
 	}
@@ -297,7 +300,7 @@ func (e *ElasticHosts) getService(prefix string) (*elastic.SearchService, error)
 	if err != nil {
 		return nil, err
 	}
-	return esClients[prefix].Search(), nil
+	return esClients.m[prefix].Search(), nil
 }
 
 // Query takes a Logstash request, applies it a search service, and then queries
