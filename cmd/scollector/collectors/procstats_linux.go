@@ -113,6 +113,7 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 			return nil
 		}
 		if strings.HasPrefix(m[1], "cpu") {
+			total_cpu := 0.0
 			metric_percpu := ""
 			tag_cpu := ""
 			cpu_m := statCPURE.FindStringSubmatch(m[1])
@@ -122,6 +123,13 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 				tag_cpu = cpu_m[1]
 			}
 			fields := strings.Fields(m[2])
+			for _, value := range fields {
+				vf, err := strconv.ParseFloat(value, 64)
+				if err != nil {
+					return nil
+				}
+				total_cpu += vf
+			}
 			for i, value := range fields {
 				if i >= len(CPU_FIELDS) {
 					break
@@ -133,6 +141,12 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 					tags["cpu"] = tag_cpu
 				}
 				Add(&md, "linux.cpu"+metric_percpu, value, tags, metadata.Counter, metadata.CHz, cpu_stat_desc[CPU_FIELDS[i]])
+
+				vf, err := strconv.ParseFloat(value, 64)
+				if err != nil {
+					return nil
+				}
+				Add(&md, "linux.percent_cpu"+metric_percpu, vf/total_cpu*100.0, tags, metadata.Counter, metadata.Pct, cpu_stat_desc[CPU_FIELDS[i]])
 			}
 			if metric_percpu == "" {
 				if len(fields) < 3 {
