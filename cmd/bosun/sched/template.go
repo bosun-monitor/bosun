@@ -32,6 +32,7 @@ type Context struct {
 	schedule    *Schedule
 	runHistory  *RunHistory
 	Attachments []*models.Attachment
+	ElasticHost string
 }
 
 func (s *Schedule) Data(rh *RunHistory, st *models.IncidentState, a *conf.Alert, isEmail bool) *Context {
@@ -41,6 +42,7 @@ func (s *Schedule) Data(rh *RunHistory, st *models.IncidentState, a *conf.Alert,
 		IsEmail:       isEmail,
 		schedule:      s,
 		runHistory:    rh,
+		ElasticHost:   "default",
 	}
 	return &c
 }
@@ -127,6 +129,11 @@ func (c *Context) Incident() string {
 	return c.schedule.SystemConf.MakeLink("/incident", &url.Values{
 		"id": []string{fmt.Sprint(c.Id)},
 	})
+}
+
+func (c *Context) UseElastic(host string) interface{} {
+	c.ElasticHost = host
+	return nil
 }
 
 func (s *Schedule) ExecuteBody(rh *RunHistory, a *conf.Alert, st *models.IncidentState, isEmail bool) ([]byte, []*models.Attachment, error) {
@@ -584,7 +591,7 @@ func (c *Context) LSQueryAll(index_root, keystring, filter, sduration, eduration
 
 func (c *Context) ESQuery(indexRoot expr.ESIndexer, filter expr.ESQuery, sduration, eduration string, size int) interface{} {
 	newFilter := expr.ScopeES(c.Group(), filter.Query)
-	req, err := expr.ESBaseQuery(c.runHistory.Start, indexRoot, newFilter, sduration, eduration, size)
+	req, err := expr.ESBaseQuery(c.runHistory.Start, indexRoot, newFilter, sduration, eduration, size, c.ElasticHost)
 	if err != nil {
 		c.addError(err)
 		return nil
@@ -607,7 +614,7 @@ func (c *Context) ESQuery(indexRoot expr.ESIndexer, filter expr.ESQuery, sdurati
 }
 
 func (c *Context) ESQueryAll(indexRoot expr.ESIndexer, filter expr.ESQuery, sduration, eduration string, size int) interface{} {
-	req, err := expr.ESBaseQuery(c.runHistory.Start, indexRoot, filter.Query, sduration, eduration, size)
+	req, err := expr.ESBaseQuery(c.runHistory.Start, indexRoot, filter.Query, sduration, eduration, size, c.ElasticHost)
 	if err != nil {
 		c.addError(err)
 		return nil

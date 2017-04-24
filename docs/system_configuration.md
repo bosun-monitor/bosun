@@ -253,7 +253,7 @@ This does not cancel the query with OpenTSDB, but bosun will stop processing the
 ```
 
 ### ElasticConf
-`ElasticConf` enables you to query an elastic cluster. The [elastic expression functions](/expressions#elastic-query-functions) become available when this is defined. The functions are designed more to be used for querying log formatted data and stats from those logs. 
+`ElasticConf` enables you to query multiple elastic clusters. The [elastic expression functions](/expressions#elastic-query-functions) become available when this is defined. The functions are designed more to be used for querying log formatted data and stats from those logs. 
 
 The functions that would allow you to use elastic effectively as a time-seris based backend do not currently exist.
 
@@ -262,14 +262,40 @@ The functions that would allow you to use elastic effectively as a time-seris ba
 <p>The format of elastic configuration may change before the final 0.6.0 release.</a>.</p>
 </div>
 
+#### ElasticConf.default
+` [ElasticConf.default]` the default cluster to query when [PrefixKey](/expressions#prefixkey) is not passed to the [elastic expression functions](/expressions#elastic-query-functions).
+
 #### Hosts
 `Hosts` is a list of hosts that are members of the cluster. It will uses these hosts to discover all the other hosts in the cluster. So you don't have to specify every host in the cluster for Bosun to query it. [This article on Sniffing](https://github.com/olivere/elastic/wiki/Sniffing) describes how this discovery functions.
+
+#### SimpleClient
+`SimpleClient` is a boolean when setting true periodic health checks and sniffing will be disabled. This is useful when you want to query from a single or fixed number of elasticsearch node.
+
+#### ClientOptions
+`ClientOptions` let you specify advance [elastic](http://olivere.github.io/elastic/) client options e.g. basic authentication, http schema etc.
 
 #### Example
 
 ```
 [ElasticConf]
-	Hosts = ["http://ny-lselastic01.example.com:9200", "http://ny-lselastic02.example.com:9200"]
+    [ElasticConf.default]
+        Hosts = ["http://ny-lselastic01.example.com:9200", "http://ny-lselastic02.example.com:9200"]
+
+    [ElasticConf.foo]
+        Hosts = ["http://ny-lselastic01.example.com:9200", "http://ny-lselastic02.example.com:9200"]
+        SimpleClient = true
+      
+    [ElasticConf.bar]
+        Hosts = ["http://ny-lselastic01.example.com:9200", "http://ny-lselastic02.example.com:9200"]
+        
+        [ElasticConf.bar.ClientOptions]
+           Enabled = true
+           BasicAuthUsername = "admin"
+           BasicAuthPassword = "testing"
+           Scheme = "https" => default http
+           SnifferEnabled = false => default true
+           SnifferTimeoutStartup = 10 => default 5s 
+           HealthcheckEnabled = false
 ```
 
 ### GraphiteConf
@@ -301,14 +327,41 @@ Embeds the annotation service. This enables the ability to submit and edit annot
 #### Hosts
 `Hosts` is a list of hosts that are members of the cluster. It will uses these hosts to discover all the other hosts in the cluster. So you don't have to specify every host in the cluster for Bosun to query it. [This article on Sniffing](https://github.com/olivere/elastic/wiki/Sniffing) describes how this discovery functions.
 
+#### SimpleClient
+`SimpleClient` is a boolean when set true periodic health checks and sniffing will be disabled. This is useful when you want to query from a single or fixed number of elasticsearch node.
+
 #### Index
 The elastic index to store annotations in. If not set the default is "annotate".
+
+#### ClientOptions
+`ClientOptions` let you specify advance [elastic](http://olivere.github.io/elastic/) client options e.g. basic authentication, http schema etc.
 
 #### Example
 ```
 [AnnotateConf]
     Hosts = ["http://ny-lselastic01.example.com:9200", "http://ny-lselastic02.example.com:9200"]
-     Index = myAnnotate
+    Index = myAnnotate
+```
+
+```
+[AnnotateConf]
+    Hosts = ["http://ny-lselastic01.example.com:9200", "http://ny-lselastic02.example.com:9200"]
+    SimpleClient = true
+    Index = myAnnotate
+```
+
+```
+[AnnotateConf]
+    Hosts = ["http://ny-lselastic01.example.com:9200", "http://ny-lselastic02.example.com:9200"]
+    Index = myAnnotate
+    [AnnotateConf.ClientOptions]
+           Enabled = true
+           BasicAuthUsername = "admin"
+           BasicAuthPassword = "testing"
+           Scheme = "https" => default http
+           SnifferEnabled = false => default true
+           SnifferTimeoutStartup = 10 => default 5s 
+           HealthcheckEnabled = false
 ```
 
 ### InfluxConf
