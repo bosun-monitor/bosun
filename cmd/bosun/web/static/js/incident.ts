@@ -61,7 +61,7 @@ bosunControllers.controller('IncidentCtrl', ['$scope', '$http', '$location', '$r
 			$scope.loadTimelinePanel(v, i);
 		}
 	};
-	$http.get('/api/incidents/events?id=' + id)
+	$http.get('/api/incidents/events?id=' + encodeURIComponent(id))
 		.success((data: any) => {
 			$scope.incident = data;
 			$scope.state = $scope.incident;

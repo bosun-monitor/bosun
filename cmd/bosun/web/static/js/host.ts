@@ -36,7 +36,7 @@ bosunControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route
 		$location.search('tab', t);
 		$scope.tab = t;
 	};
-	$http.get('/api/metric/host/' + $scope.host)
+	$http.get('/api/metric/host/' + encodeURIComponent($scope.host))
 		.success(function(data: string[]) {
 			$scope.metrics = data || [];
 		});

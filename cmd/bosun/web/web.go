@@ -113,11 +113,12 @@ func Listen(httpAddr, httpsAddr, certFile, keyFile string, devMode bool, tsdbHos
 	}
 
 	//helpers to add routes with middleware
-	handle := func(route string, h http.Handler, perms easyauth.Role) *mux.Route {
-		return router.Handle(route, baseChain.Then(auth.Wrap(h, perms)))
+	apiRouter := router.PathPrefix("/api").Subrouter().UseEncodedPath()
+	apiHandle := func(route string, h http.Handler, perms easyauth.Role) *mux.Route {
+		return apiRouter.Handle(route, baseChain.Then(auth.Wrap(h, perms)))
 	}
-	handleFunc := func(route string, h http.HandlerFunc, perms easyauth.Role) *mux.Route {
-		return handle(route, h, perms)
+	apiHandleFunc := func(route string, h http.HandlerFunc, perms easyauth.Role) *mux.Route {
+		return apiHandle(route, h, perms)
 	}
 
 	const (
@@ -126,59 +127,59 @@ func Listen(httpAddr, httpsAddr, certFile, keyFile string, devMode bool, tsdbHos
 	)
 
 	if tsdbHost != "" {
-		handleFunc("/api/index", IndexTSDB, canPutData).Name("tsdb_index")
-		handle("/api/put", Relay(tsdbHost), canPutData).Name("tsdb_put")
+		apiHandleFunc("/index", IndexTSDB, canPutData).Name("tsdb_index")
+		apiHandle("/put", Relay(tsdbHost), canPutData).Name("tsdb_put")
 	}
 	router.PathPrefix("/auth/").Handler(auth.LoginHandler())
-	handleFunc("/api/", APIRedirect, fullyOpen).Name("api_redir")
-	handle("/api/action", JSON(Action), canPerformActions).Name("action").Methods(POST)
-	handle("/api/alerts", JSON(Alerts), canViewDash).Name("alerts").Methods(GET)
-	handle("/api/config", JSON(Config), canViewConfig).Name("get_config").Methods(GET)
+	// handapiHeFunc("/", APIRedirect, fullyOpen).Name("api_redir")
+	apiHandle("/action", JSON(Action), canPerformActions).Name("action").Methods(POST)
+	apiHandle("/alerts", JSON(Alerts), canViewDash).Name("alerts").Methods(GET)
+	apiHandle("/config", JSON(Config), canViewConfig).Name("get_config").Methods(GET)
 
-	handle("/api/config_test", JSON(ConfigTest), canViewConfig).Name("config_test").Methods(POST)
-	handle("/api/save_enabled", JSON(SaveEnabled), fullyOpen).Name("seve_enabled").Methods(GET)
+	apiHandle("/config_test", JSON(ConfigTest), canViewConfig).Name("config_test").Methods(POST)
+	apiHandle("/save_enabled", JSON(SaveEnabled), fullyOpen).Name("seve_enabled").Methods(GET)
 
 	if schedule.SystemConf.ReloadEnabled() {
-		handle("/api/reload", JSON(Reload), canSaveConfig).Name("can_save").Methods(POST)
+		apiHandle("/reload", JSON(Reload), canSaveConfig).Name("can_save").Methods(POST)
 	}
 
 	if schedule.SystemConf.SaveEnabled() {
-		handle("/api/config/bulkedit", JSON(BulkEdit), canSaveConfig).Name("bulk_edit").Methods(POST)
-		handle("/api/config/save", JSON(SaveConfig), canSaveConfig).Name("config_save").Methods(POST)
-		handle("/api/config/diff", JSON(DiffConfig), canSaveConfig).Name("config_diff").Methods(POST)
-		handle("/api/config/running_hash", JSON(ConfigRunningHash), canViewConfig).Name("config_hash").Methods(GET)
+		apiHandle("/config/bulkedit", JSON(BulkEdit), canSaveConfig).Name("bulk_edit").Methods(POST)
+		apiHandle("/config/save", JSON(SaveConfig), canSaveConfig).Name("config_save").Methods(POST)
+		apiHandle("/config/diff", JSON(DiffConfig), canSaveConfig).Name("config_diff").Methods(POST)
+		apiHandle("/config/running_hash", JSON(ConfigRunningHash), canViewConfig).Name("config_hash").Methods(GET)
 	}
 
-	handle("/api/egraph/{bs}.{format:svg|png}", JSON(ExprGraph), canRunTests).Name("expr_graph")
-	handle("/api/errors", JSON(ErrorHistory), canViewDash).Name("errors").Methods(GET, POST)
-	handle("/api/expr", JSON(Expr), canRunTests).Name("expr").Methods(POST)
-	handle("/api/graph", JSON(Graph), canViewDash).Name("graph").Methods(GET)
+	apiHandle("/egraph/{bs}.{format:svg|png}", JSON(ExprGraph), canRunTests).Name("expr_graph")
+	apiHandle("/errors", JSON(ErrorHistory), canViewDash).Name("errors").Methods(GET, POST)
+	apiHandle("/expr", JSON(Expr), canRunTests).Name("expr").Methods(POST)
+	apiHandle("/graph", JSON(Graph), canViewDash).Name("graph").Methods(GET)
 
-	handle("/api/health", JSON(HealthCheck), fullyOpen).Name("health_check").Methods(GET)
-	handle("/api/host", JSON(Host), canViewDash).Name("host").Methods(GET)
-	handle("/api/last", JSON(Last), canViewDash).Name("last").Methods(GET)
-	handle("/api/quiet", JSON(Quiet), canViewDash).Name("quiet").Methods(GET)
-	handle("/api/incidents/open", JSON(ListOpenIncidents), canViewDash).Name("open_incidents").Methods(GET)
-	handle("/api/incidents/events", JSON(IncidentEvents), canViewDash).Name("incident_events").Methods(GET)
-	handle("/api/metadata/get", JSON(GetMetadata), canViewDash).Name("meta_get").Methods(GET)
-	handle("/api/metadata/metrics", JSON(MetadataMetrics), canViewDash).Name("meta_metrics").Methods(GET)
-	handle("/api/metadata/put", JSON(PutMetadata), canPutData).Name("meta_put").Methods(POST)
-	handle("/api/metadata/delete", JSON(DeleteMetadata), canPutData).Name("meta_delete").Methods(http.MethodDelete)
-	handle("/api/metric", JSON(UniqueMetrics), canViewDash).Name("meta_uniqe_metrics").Methods(GET)
-	handle("/api/metric/{tagk}", JSON(MetricsByTagKey), canViewDash).Name("meta_metrics_by_tag").Methods(GET)
-	handle("/api/metric/{tagk}/{tagv}", JSON(MetricsByTagPair), canViewDash).Name("meta_metric_by_tag_pair").Methods(GET)
-	handle("/api/rule", JSON(Rule), canRunTests).Name("rule_test").Methods(POST)
-	handle("/api/shorten", JSON(Shorten), canViewDash).Name("shorten")
-	handle("/api/silence/clear", JSON(SilenceClear), canSilence).Name("silence_clear")
-	handle("/api/silence/get", JSON(SilenceGet), canViewDash).Name("silence_get").Methods(GET)
-	handle("/api/silence/set", JSON(SilenceSet), canSilence).Name("silence_set")
-	handle("/api/status", JSON(Status), canViewDash).Name("status").Methods(GET)
-	handle("/api/tagk/{metric}", JSON(TagKeysByMetric), canViewDash).Name("search_tkeys_by_metric").Methods(GET)
-	handle("/api/tagv/{tagk}", JSON(TagValuesByTagKey), canViewDash).Name("search_tvals_by_metric").Methods(GET)
-	handle("/api/tagv/{tagk}/{metric}", JSON(TagValuesByMetricTagKey), canViewDash).Name("search_tvals_by_metrictagkey").Methods(GET)
-	handle("/api/tagsets/{metric}", JSON(FilteredTagsetsByMetric), canViewDash).Name("search_tagsets_by_metric").Methods(GET)
-	handle("/api/opentsdb/version", JSON(OpenTSDBVersion), fullyOpen).Name("otsdb_version").Methods(GET)
-	handle("/api/annotate", JSON(AnnotateEnabled), fullyOpen).Name("annotate_enabled").Methods(GET)
+	apiHandle("/health", JSON(HealthCheck), fullyOpen).Name("health_check").Methods(GET)
+	apiHandle("/host", JSON(Host), canViewDash).Name("host").Methods(GET)
+	apiHandle("/last", JSON(Last), canViewDash).Name("last").Methods(GET)
+	apiHandle("/quiet", JSON(Quiet), canViewDash).Name("quiet").Methods(GET)
+	apiHandle("/incidents/open", JSON(ListOpenIncidents), canViewDash).Name("open_incidents").Methods(GET)
+	apiHandle("/incidents/events", JSON(IncidentEvents), canViewDash).Name("incident_events").Methods(GET)
+	apiHandle("/metadata/get", JSON(GetMetadata), canViewDash).Name("meta_get").Methods(GET)
+	apiHandle("/metadata/metrics", JSON(MetadataMetrics), canViewDash).Name("meta_metrics").Methods(GET)
+	apiHandle("/metadata/put", JSON(PutMetadata), canPutData).Name("meta_put").Methods(POST)
+	apiHandle("/metadata/delete", JSON(DeleteMetadata), canPutData).Name("meta_delete").Methods(http.MethodDelete)
+	apiHandle("/metric", JSON(UniqueMetrics), canViewDash).Name("meta_uniqe_metrics").Methods(GET)
+	apiHandle("/metric/{tagk}", JSON(MetricsByTagKey), canViewDash).Name("meta_metrics_by_tag").Methods(GET)
+	apiHandle("/metric/{tagk}/{tagv}", JSON(MetricsByTagPair), canViewDash).Name("meta_metric_by_tag_pair").Methods(GET)
+	apiHandle("/rule", JSON(Rule), canRunTests).Name("rule_test").Methods(POST)
+	apiHandle("/shorten", JSON(Shorten), canViewDash).Name("shorten")
+	apiHandle("/silence/clear", JSON(SilenceClear), canSilence).Name("silence_clear")
+	apiHandle("/silence/get", JSON(SilenceGet), canViewDash).Name("silence_get").Methods(GET)
+	apiHandle("/silence/set", JSON(SilenceSet), canSilence).Name("silence_set")
+	apiHandle("/status", JSON(Status), canViewDash).Name("status").Methods(GET)
+	apiHandle("/tagk/{metric}", JSON(TagKeysByMetric), canViewDash).Name("search_tkeys_by_metric").Methods(GET)
+	apiHandle("/tagv/{tagk}", JSON(TagValuesByTagKey), canViewDash).Name("search_tvals_by_metric").Methods(GET)
+	apiHandle("/tagv/{tagk}/{metric}", JSON(TagValuesByMetricTagKey), canViewDash).Name("search_tvals_by_metrictagkey").Methods(GET)
+	apiHandle("/tagsets/{metric}", JSON(FilteredTagsetsByMetric), canViewDash).Name("search_tagsets_by_metric").Methods(GET)
+	apiHandle("/opentsdb/version", JSON(OpenTSDBVersion), fullyOpen).Name("otsdb_version").Methods(GET)
+	apiHandle("/annotate", JSON(AnnotateEnabled), fullyOpen).Name("annotate_enabled").Methods(GET)
 
 	// Annotations
 	if schedule.SystemConf.AnnotateEnabled() {
@@ -192,10 +193,10 @@ func Listen(httpAddr, httpsAddr, certFile, keyFile string, devMode bool, tsdbHos
 		router.PathPrefix("/login").Handler(http.StripPrefix("/login", auth.LoginHandler())).Name("auth")
 	}
 	if tokens != nil {
-		handle("/api/tokens", tokens.AdminHandler(), canManageTokens).Name("tokens")
+		apiHandle("/tokens", tokens.AdminHandler(), canManageTokens).Name("tokens")
 	}
 
-	router.Handle("/api/version", baseChain.ThenFunc(Version)).Name("version").Methods(GET)
+	apiRouter.Handle("/version", baseChain.ThenFunc(Version)).Name("version").Methods(GET)
 	fs := http.FileServer(webFS)
 	router.PathPrefix("/partials/").Handler(baseChain.Then(fs)).Name("partials")
 	router.PathPrefix("/static/").Handler(baseChain.Then(http.StripPrefix("/static/", fs))).Name("static")

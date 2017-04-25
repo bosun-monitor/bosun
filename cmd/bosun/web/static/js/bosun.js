@@ -580,7 +580,7 @@ bosunControllers.controller('AnnotationCtrl', ['$scope', '$http', '$location', '
         var search = $location.search();
         $scope.id = search.id;
         if ($scope.id && $scope.id != "") {
-            $http.get('/api/annotation/' + $scope.id)
+            $http.get('/api/annotation/' + encodeURIComponent($scope.id))
                 .success(function (data) {
                 $scope.annotation = new Annotation(data, true);
                 $scope.error = "";
@@ -625,7 +625,7 @@ bosunControllers.controller('AnnotationCtrl', ['$scope', '$http', '$location', '
         };
         $scope.deleteAnnotation = function () {
             $scope.animate();
-            $http.delete('/api/annotation/' + $scope.annotation.Id)
+            $http.delete('/api/annotation/' + encodeURIComponent($scope.annotation.Id))
                 .success(function (data) {
                 $scope.error = "";
                 $scope.deleteSuccess = true;
@@ -827,7 +827,7 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
             }
             return items;
         }
-        $http.get('/api/config?hash=' + (search.hash || ''))
+        $http.get('/api/config?hash=' + encodeURIComponent(search.hash || ''))
             .success(function (data) {
             $scope.config_text = data;
             $scope.items = parseItems();
@@ -2549,7 +2549,7 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
                 $scope.error = error;
             });
         };
-        $scope.deleteAnnotation = function () { return $http.delete('/api/annotation/' + $scope.annotation.Id)
+        $scope.deleteAnnotation = function () { return $http.delete('/api/annotation/' + encodeURIComponent($scope.annotation.Id))
             .success(function (data) {
             $scope.error = "";
             $scope.annotations = _.without($scope.annotations, _.findWhere($scope.annotations, { Id: $scope.annotation.Id }));
@@ -2590,7 +2590,7 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
                 $scope.canAuto[metric] = true;
                 return;
             }
-            $http.get('/api/tagk/' + metric)
+            $http.get('/api/tagk/' + encodeURIComponent(metric))
                 .success(function (data) {
                 var q = $scope.query_p[index];
                 var tags = new TagSet;
@@ -2646,7 +2646,7 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
                 .error(function (error) {
                 $scope.error = 'Unable to fetch metrics: ' + error;
             });
-            $http.get('/api/metadata/metrics?metric=' + metric)
+            $http.get('/api/metadata/metrics?metric=' + encodeURIComponent(metric))
                 .success(function (data) {
                 var canAuto = data && data.Rate;
                 $scope.canAuto[metric] = canAuto;
@@ -2666,7 +2666,7 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
             $scope.error = 'Unable to fetch metrics: ' + error;
         });
         function GetTagVs(k, index) {
-            $http.get('/api/tagv/' + k + '/' + $scope.query_p[index].metric)
+            $http.get('/api/tagv/' + encodeURIComponent(k) + '/' + encodeURIComponent($scope.query_p[index].metric))
                 .success(function (data) {
                 data.sort();
                 $scope.tagvs[index][k] = data;
@@ -2925,7 +2925,7 @@ bosunControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route
             $location.search('tab', t);
             $scope.tab = t;
         };
-        $http.get('/api/metric/host/' + $scope.host)
+        $http.get('/api/metric/host/' + encodeURIComponent($scope.host))
             .success(function (data) {
             $scope.metrics = data || [];
         });
@@ -3099,7 +3099,7 @@ bosunControllers.controller('IncidentCtrl', ['$scope', '$http', '$location', '$r
                 $scope.loadTimelinePanel(v, i);
             }
         };
-        $http.get('/api/incidents/events?id=' + id)
+        $http.get('/api/incidents/events?id=' + encodeURIComponent(id))
             .success(function (data) {
             $scope.incident = data;
             $scope.state = $scope.incident;
@@ -3137,92 +3137,6 @@ bosunControllers.controller('ItemsCtrl', ['$scope', '$http', function ($scope, $
             .error(function (error) {
             $scope.status = 'Unable to fetch hosts: ' + error;
         });
-    }]);
-var Tag = (function () {
-    function Tag() {
-    }
-    return Tag;
-})();
-var DP = (function () {
-    function DP() {
-    }
-    return DP;
-})();
-bosunControllers.controller('PutCtrl', ['$scope', '$http', '$route', function ($scope, $http, $route) {
-        $scope.tags = [new Tag];
-        var dp = new DP;
-        dp.k = moment().utc().format();
-        $scope.dps = [dp];
-        $http.get('/api/metric')
-            .success(function (data) {
-            $scope.metrics = data;
-        })
-            .error(function (error) {
-            $scope.error = 'Unable to fetch metrics: ' + error;
-        });
-        $scope.Submit = function () {
-            var data = [];
-            var tags = {};
-            angular.forEach($scope.tags, function (v, k) {
-                if (v.k || v.v) {
-                    tags[v.k] = v.v;
-                }
-            });
-            angular.forEach($scope.dps, function (v, k) {
-                if (v.k && v.v) {
-                    var ts = parseInt(moment.utc(v.k, tsdbDateFormat).format('X'));
-                    data.push({
-                        metric: $scope.metric,
-                        timestamp: ts,
-                        value: parseFloat(v.v),
-                        tags: tags
-                    });
-                }
-            });
-            $scope.running = 'submitting data...';
-            $scope.success = '';
-            $scope.error = '';
-            $http.post('/api/put', data)
-                .success(function () {
-                $scope.running = '';
-                $scope.success = 'Data Submitted';
-            })
-                .error(function (error) {
-                $scope.running = '';
-                $scope.error = error.error.message;
-            });
-        };
-        $scope.AddTag = function () {
-            var last = $scope.tags[$scope.tags.length - 1];
-            if (last.k && last.v) {
-                $scope.tags.push(new Tag);
-            }
-        };
-        $scope.AddDP = function () {
-            var last = $scope.dps[$scope.dps.length - 1];
-            if (last.k && last.v) {
-                var dp = new DP;
-                dp.k = moment.utc(last.k, tsdbDateFormat).add(15, 'seconds').format();
-                $scope.dps.push(dp);
-            }
-        };
-        $scope.GetTagKByMetric = function () {
-            $http.get('/api/tagk/' + $scope.metric)
-                .success(function (data) {
-                if (!angular.isArray(data)) {
-                    return;
-                }
-                $scope.tags = [new Tag];
-                for (var i = 0; i < data.length; i++) {
-                    var t = new Tag;
-                    t.k = data[i];
-                    $scope.tags.push(t);
-                }
-            })
-                .error(function (error) {
-                $scope.error = 'Unable to fetch metrics: ' + error;
-            });
-        };
     }]);
 /// <reference path="0-bosun.ts" />
 bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {

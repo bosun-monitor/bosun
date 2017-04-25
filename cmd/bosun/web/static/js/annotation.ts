@@ -16,7 +16,7 @@ bosunControllers.controller('AnnotationCtrl', ['$scope', '$http', '$location', '
     var search = $location.search();
     $scope.id = search.id;
     if ($scope.id && $scope.id != "") {
-        $http.get('/api/annotation/' + $scope.id)
+        $http.get('/api/annotation/' + encodeURIComponent($scope.id))
             .success((data: any) => {
                 $scope.annotation = new Annotation(data, true);
                 $scope.error = "";
@@ -63,7 +63,7 @@ bosunControllers.controller('AnnotationCtrl', ['$scope', '$http', '$location', '
 
     $scope.deleteAnnotation = () => {
         $scope.animate();
-        $http.delete('/api/annotation/' + $scope.annotation.Id)
+        $http.delete('/api/annotation/' + encodeURIComponent($scope.annotation.Id))
             .success((data) => {
                 $scope.error = "";
                 $scope.deleteSuccess = true;

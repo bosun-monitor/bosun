@@ -325,7 +325,7 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 			$scope.error = error;
 		});
 	}
-	$scope.deleteAnnotation = () => $http.delete('/api/annotation/' + $scope.annotation.Id)
+	$scope.deleteAnnotation = () => $http.delete('/api/annotation/' + encodeURIComponent($scope.annotation.Id))
 		.success((data) => {
 			$scope.error = "";
 			$scope.annotations = _.without($scope.annotations, _.findWhere($scope.annotations, { Id: $scope.annotation.Id }));
@@ -366,7 +366,7 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 			$scope.canAuto[metric] = true;
 			return;
 		}
-		$http.get('/api/tagk/' + metric)
+		$http.get('/api/tagk/' + encodeURIComponent(metric))
 			.success(function (data: string[]) {
 				var q = $scope.query_p[index];
 				var tags = new TagSet;
@@ -421,7 +421,7 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 			.error(function (error) {
 				$scope.error = 'Unable to fetch metrics: ' + error;
 			});
-		$http.get('/api/metadata/metrics?metric=' + metric)
+		$http.get('/api/metadata/metrics?metric=' + encodeURIComponent(metric))
 			.success((data: any) => {
 				var canAuto = data && data.Rate;
 				$scope.canAuto[metric] = canAuto;
@@ -441,7 +441,7 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 			$scope.error = 'Unable to fetch metrics: ' + error;
 		});
 	function GetTagVs(k: string, index: number) {
-		$http.get('/api/tagv/' + k + '/' + $scope.query_p[index].metric)
+		$http.get('/api/tagv/' + encodeURIComponent(k) + '/' + encodeURIComponent($scope.query_p[index].metric))
 			.success(function (data: string[]) {
 				data.sort();
 				$scope.tagvs[index][k] = data;
