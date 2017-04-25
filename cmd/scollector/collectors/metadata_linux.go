@@ -79,6 +79,8 @@ func c_meta_linux_serial() (opentsdb.MultiDataPoint, error) {
 		switch fields[0] {
 		case "\tSerial Number":
 			metadata.AddMeta("", nil, "serialNumber", strings.TrimSpace(fields[1]), true)
+		case "\tManufacturer":
+			metadata.AddMeta("", nil, "manufacturer", strings.TrimSpace(fields[1]), true)
 		case "\tProduct Name":
 			metadata.AddMeta("", nil, "model", strings.TrimSpace(fields[1]), true)
 		}
