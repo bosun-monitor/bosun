@@ -122,12 +122,8 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.E
 	if err != nil {
 		return
 	}
-	if incident != nil {
-		rt, err = data.GetRenderedTemplates(incident.Id)
-		if err != nil {
-			return
-		}
-	}
+	slog.Infof("runHistory: Found incident for ak %v: %v", ak, incident)
+
 	defer func() {
 		// save unless incident is new and closed (log alert)
 		if incident != nil && (incident.Id != 0 || incident.Open) {
@@ -140,6 +136,34 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.E
 			}
 		}
 	}()
+	if incident != nil {
+		rt, err = data.GetRenderedTemplates(incident.Id)
+		if err != nil {
+			return
+		}
+		for _, action := range incident.Actions {
+			slog.Infoln(action.Type, action.Type == models.ActionDelayedClose, !action.Fullfilled)
+			if action.Type == models.ActionDelayedClose && !action.Fullfilled {
+				if r.Start.Before(action.Deadline) {
+					if event.Status == models.StNormal {
+						slog.Infof("closing alert %v on delayed close because the alert has returned to normal before deadline", incident.AlertKey)
+						action.Fullfilled = true // need to make sure it is persisted
+						incident.Open = false
+						incident.End = &r.Start
+						return
+					}
+				} else {
+					// We are after Deadline
+					slog.Infof("force closing alert %v on delayed close because the alert is after the deadline", incident.AlertKey)
+					action.Fullfilled = true // need to make sure it is persisted
+					incident.Open = false
+					incident.End = &r.Start
+					return
+				}
+
+			}
+		}
+	}
 	// If nothing is out of the ordinary we are done
 	if event.Status <= models.StNormal && incident == nil {
 		return

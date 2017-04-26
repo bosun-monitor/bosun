@@ -205,10 +205,12 @@ func (s Status) IsUnknown() bool  { return s == StUnknown }
 type Action struct {
 	// These are available to users via the template language. Changes here
 	// should be reflected in the documentation
-	User    string
-	Message string
-	Time    time.Time
-	Type    ActionType
+	User       string
+	Message    string
+	Time       time.Time
+	Type       ActionType
+	Deadline   time.Time // For delayed closed
+	Fullfilled bool
 }
 
 type ActionType int // Available to users in templates, document changes in Bosun docs
@@ -221,6 +223,7 @@ const (
 	ActionForceClose
 	ActionPurge
 	ActionNote
+	ActionDelayedClose
 )
 
 func (a ActionType) String() string {
@@ -237,6 +240,8 @@ func (a ActionType) String() string {
 		return "Purged"
 	case ActionNote:
 		return "Note"
+	case ActionDelayedClose:
+		return "DelayedClose"
 	default:
 		return "none"
 	}
@@ -260,6 +265,8 @@ func (a *ActionType) UnmarshalJSON(b []byte) error {
 		*a = ActionForceClose
 	case `"Note"`:
 		*a = ActionNote
+	case `"DelayedClose"`:
+		*a = ActionDelayedClose
 	default:
 		*a = ActionNone
 	}

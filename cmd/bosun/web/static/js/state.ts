@@ -185,6 +185,13 @@ bosunApp.directive('tsClose', () => {
 	};
 });
 
+bosunApp.directive('tsDelayedClose', () => {
+	return {
+		restrict: 'E',
+		templateUrl: '/partials/delayedClose.html',
+	};
+});
+
 bosunApp.directive('tsForget', () => {
 	return {
 		restrict: 'E',

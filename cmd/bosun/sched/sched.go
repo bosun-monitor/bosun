@@ -579,6 +579,12 @@ func (s *Schedule) action(user, message string, t models.ActionType, st *models.
 	}()
 	isUnknown := st.LastAbnormalStatus == models.StUnknown
 	timestamp := utcNow()
+	action := models.Action{
+		Message: message,
+		Time: timestamp,
+		Type: t,
+		User: user,
+	}
 	switch t {
 	case models.ActionAcknowledge:
 		if !st.NeedAck {
@@ -605,15 +611,20 @@ func (s *Schedule) action(user, message string, t models.ActionType, st *models.
 		return st.AlertKey, s.DataAccess.State().Forget(st.AlertKey)
 	case models.ActionNote:
 		// pass
+	case models.ActionDelayedClose:
+		alertDef := s.RuleConf.GetAlert(st.AlertKey.Name())
+		// TODO Make this a method on an alert
+		runEvery := alertDef.RunEvery
+		if runEvery == 0 {
+			runEvery = s.SystemConf.GetDefaultRunEvery()
+		}
+		//s ak.Name
+		action.Deadline = timestamp.Add(time.Duration(runEvery) * s.SystemConf.GetCheckFrequency())
 	default:
 		return "", fmt.Errorf("unknown action type: %v", t)
 	}
-	st.Actions = append(st.Actions, models.Action{
-		Message: message,
-		Time:    timestamp,
-		Type:    t,
-		User:    user,
-	})
+	
+	st.Actions = append(st.Actions, action)
 	_, err := s.DataAccess.State().UpdateIncidentState(st)
 	return st.AlertKey, err
 }
