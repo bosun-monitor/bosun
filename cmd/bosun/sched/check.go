@@ -122,7 +122,6 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.E
 	if err != nil {
 		return
 	}
-	slog.Infof("runHistory: Found incident for ak %v: %v", ak, incident)
 
 	defer func() {
 		// save unless incident is new and closed (log alert)
@@ -147,17 +146,23 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.E
 				if r.Start.Before(action.Deadline) {
 					if event.Status == models.StNormal {
 						slog.Infof("closing alert %v on delayed close because the alert has returned to normal before deadline", incident.AlertKey)
-						action.Fullfilled = true // need to make sure it is persisted
-						incident.Open = false
-						incident.End = &r.Start
+						action.Fullfilled = true
+						cerr := s.ActionByAlertKey("bosun", fmt.Sprintf("close on behalf of delayed close by %v", action.User), models.ActionClose, ak)
+						incident, err = data.GetIncidentState(incident.Id)
+						if cerr != nil {
+							slog.Errorln(cerr)
+						}
 						return
 					}
 				} else {
 					// We are after Deadline
 					slog.Infof("force closing alert %v on delayed close because the alert is after the deadline", incident.AlertKey)
-					action.Fullfilled = true // need to make sure it is persisted
-					incident.Open = false
-					incident.End = &r.Start
+					action.Fullfilled = true
+					cerr := s.ActionByAlertKey("bosun", fmt.Sprintf("forceclose on behalf of delayed close by %v", action.User), models.ActionForceClose, ak)
+					incident, err = data.GetIncidentState(incident.Id)
+					if cerr != nil {
+						slog.Errorln(cerr)
+					}
 					return
 				}
 

@@ -581,9 +581,9 @@ func (s *Schedule) action(user, message string, t models.ActionType, st *models.
 	timestamp := utcNow()
 	action := models.Action{
 		Message: message,
-		Time: timestamp,
-		Type: t,
-		User: user,
+		Time:    timestamp,
+		Type:    t,
+		User:    user,
 	}
 	switch t {
 	case models.ActionAcknowledge:
@@ -623,7 +623,7 @@ func (s *Schedule) action(user, message string, t models.ActionType, st *models.
 	default:
 		return "", fmt.Errorf("unknown action type: %v", t)
 	}
-	
+
 	st.Actions = append(st.Actions, action)
 	_, err := s.DataAccess.State().UpdateIncidentState(st)
 	return st.AlertKey, err
