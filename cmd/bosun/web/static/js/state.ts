@@ -107,8 +107,6 @@ bosunApp.directive('tsState', ['$sce', '$http', function ($sce: ng.ISCEService, 
 			var myIdx = attrs["tsGrp"];
 			scope.currentStatus = attrs["tsGrpstatus"]
 			scope.name = scope.child.AlertKey;
-			debugger;
-
 			scope.state = scope.child.State;
 			scope.action = (type: string) => {
 				var key = encodeURIComponent(scope.name);

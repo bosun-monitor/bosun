@@ -1,40 +1,42 @@
 <form class="form-horizontal">
 	<div class="form-group">
-		<label class="col-sm-2 control-label">Action</label>
+		<label class="col-sm-3 control-label">Action</label>
 		<div class="col-sm-6">
 			<p class="form-control-static" ng-bind="type"></p>
 		</div>
 	</div>
 	<div class="form-group" ng-class="(user != '') ? '' : 'has-error' ">
-		<label class="col-sm-2 control-label">Username</label>
+		<label class="col-sm-3 control-label">Username</label>
 		<div class="col-sm-6">
 			<username-input></username-input>
 		</div>
 	</div>
 	<div class="form-group" ng-class="msgValid ? '' : 'has-error' ">
-		<label class="col-sm-2 control-label">Message</label>
+		<label class="col-sm-3 control-label">Message</label>
 		<div class="col-sm-6">
 			<textarea rows="10" class="form-control" ng-model="message" ng-change="validateMsg()" ng-blur="validateMsg()"></textarea>
 		</div>
 	</div>
 	<div class="form-group" ng-show="activeIncidents" ng-class="durationValid ? '' : 'has-error' ">
-		<label class="col-sm-2 control-label">DelayedClose Duration</label>
-		<div class="col-sm-6">
-			<input class="form-control" ng-model="duration"  ng-change="validateDuration()"></input>
+		<label class="col-sm-3 control-label">Delayed Close Duration 
+			<i class="fa fa-question-circle-o fa-lg" aria-hidden="true"></i>
+		</label>
+		<div class="col-sm-1">
+			<input class="form-control" ng-model="duration" ng-change="validateDuration()"></input>
 		</div>
 	</div>
 	<div class="form-group">
-		<div class="col-sm-offset-2 col-sm-6"> 
+		<div class="col-sm-offset-3 col-sm-6"> 
 			<div class="checkbox"><label><input type="checkbox" ng-model="notify" ng-change="validateMsg()"> Send Notification</label></div>
 		</div>
 	</div>
 	<div class="form-group">
-		<div class="col-sm-offset-2 col-sm-6">
+		<div class="col-sm-offset-3 col-sm-6">
 			<button type="submit" class="btn btn-default" ng-click="submit()">Submit</button>
 		</div>
 	</div>
 	<div class="form-group">
-		<div class="col-sm-offset-2 col-sm-10">
+		<div class="col-sm-offset-3 col-sm-9">
 			<h4>Alert<span ng-show="keys.length > 1">s</span></h4>
 			<ul class="list-unstyled">
 				<li ng-repeat="k in keys" ng-bind="k"></li>
