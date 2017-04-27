@@ -1,0 +1,47 @@
+<div class="alert alert-danger" ng-show="ct.status">{{ct.status}}</div>
+<h2>Access Tokens</h2>
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>User</th>
+            <th>Description</th>
+            <th>Permissions</th>
+            <th>Last Used</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr ng-repeat="tok in ct.tokens | orderBy:'-LastUsed'">
+            <td>{{tok.Hash | limitTo: 6}}</td>
+            <td>{{tok.User}}</td>
+            <td>{{tok.Description}}</td>
+            <td>
+                <a data-template="{{ct.permList(tok)}}" data-animation="am-flip-x" data-trigger="hover" data-auto-close="1" bs-popover>{{tok.RoleName}}</a>
+            </td>
+            <td><span ng-if="tok.LastUsed.year() > 2000" ts-since="tok.LastUsed"></span> <span ng-if="tok.LastUsed.year() <= 2000">Never</span></td>
+            <td>
+                <a class='btn btn-danger fa fa-trash' ng-click='ct.deleteTarget = tok.Hash' data-toggle="modal" data-target="#myModal"></a>
+            </td>
+        </tr>
+    </tbody>
+</table>
+<a class='btn btn-primary' href='/tokens/new'><span class='fa fa-plus' /> Create new token</a>
+
+<div class="modal fade" tabindex="-1" role="dialog" id="myModal">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title">Confirm Delete</h4>
+            </div>
+            <div class="modal-body">
+                <p>Really delete token?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-danger" ng-click='ct.delete()' data-dismiss="modal">Delete</button>
+                <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>

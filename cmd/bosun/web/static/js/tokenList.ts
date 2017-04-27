@@ -3,10 +3,12 @@
 class TokenListController {
     tokens: Array<Token>;
     status: string ;
+    deleteTarget: string;
 
-    delete = (hash: string) => {
+    delete = () => {
         this.status = "Deleting..."
-        this.$http.delete("/api/tokens?hash=" + encodeURIComponent(hash))
+        this.deleteTarget = "";
+        this.$http.delete("/api/tokens?hash=" + encodeURIComponent(this.deleteTarget))
             .then(() => {
                 this.status = "";
                 this.load();
@@ -57,36 +59,4 @@ class TokenListController {
 bosunApp.component('tokenList', {
     controller: TokenListController,
     controllerAs: "ct",
-    template: `
-<div class="alert alert-danger" ng-show="ct.status">{{ct.status}}</div>
-<h2>Access Tokens</h2>
-    <table class="table table-striped">
-        <thead>
-        <tr>
-            <th>ID</th>
-            <th>User</th>
-            <th>Description</th>
-            <th>Permissions</th>
-            <th>Last Used</th>
-            <th></th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr  ng-repeat="tok in ct.tokens | orderBy:'-LastUsed'">
-            <td>{{tok.Hash | limitTo: 6}}</td>
-            <td>{{tok.User}}</td>
-            <td>{{tok.Description}}</td>
-            <td>
-                <a data-template="{{ct.permList(tok)}}" 
-                data-animation="am-flip-x" 
-                data-trigger="hover"
-                data-auto-close="1" bs-popover>{{tok.RoleName}}</a>
- 
-            </td>
-            <td><span ng-if="tok.LastUsed.year() > 2000" ts-since="tok.LastUsed"></span> <span ng-if="tok.LastUsed.year() <= 2000">Never</span></td>
-            <td><a class='btn btn-danger fa fa-trash' ng-click='ct.delete(tok.Hash)'></a></td>
-        </tr>
-        </tbody>
-    </table>
-    <a class='btn btn-primary' href='/tokens/new'><span class='fa fa-plus'/> Create new token</a>
-`});
+    templateUrl : '/static/partials/tokenList.html'});
