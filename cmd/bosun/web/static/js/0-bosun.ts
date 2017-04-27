@@ -6,7 +6,7 @@
 /// <reference path="underscore.d.ts" />
 /// <reference path="models.ts" />
 
-declare var d3:any;
+declare var d3: any;
 
 var bosunApp = angular.module('bosunApp', [
     'ngRoute',
@@ -21,106 +21,95 @@ var bosunApp = angular.module('bosunApp', [
 interface ITitleRoute extends ng.route.IRoute {
     title?: string;
 }
-interface myRP extends ng.route.IRouteProvider {
-    when(url:string, title: ITitleRoute): myRP
-}
-
 
 bosunApp.config(['$routeProvider', '$locationProvider', '$httpProvider', function ($routeProvider: ng.route.IRouteProvider, $locationProvider: ng.ILocationProvider, $httpProvider: ng.IHttpProvider) {
     $locationProvider.html5Mode({
         enabled: true,
         requireBase: false
     });
-    
-    //adapter to use routes with title in them
-    var p = (rp: ng.route.IRouteProvider):myRP => {
-        var myrp = <myRP>{}
-        myrp.when = (url:string, route: ITitleRoute): myRP =>{
-            rp.when(url, route)
-            return myrp;
-        }
-        return myrp;
+
+    var when = (u: string, r: ITitleRoute) => {
+        $routeProvider.when(u, r);
     }
-    
-    p($routeProvider).
-        when('/', {
-            title: 'Dashboard',
-            templateUrl: 'partials/dashboard.html',
-            controller: 'DashboardCtrl',
-        }).
-        when('/items', {
-            title: 'Items',
-            templateUrl: 'partials/items.html',
-            controller: 'ItemsCtrl',
-        }).
-        when('/expr', {
-            title: 'Expression',
-            templateUrl: 'partials/expr.html',
-            controller: 'ExprCtrl',
-        }).
-        when('/errors', {
-            title: 'Errors',
-            templateUrl: 'partials/errors.html',
-            controller: 'ErrorCtrl',
-        }).
-        when('/graph', {
-            title: 'Graph',
-            templateUrl: 'partials/graph.html',
-            controller: 'GraphCtrl',
-        }).
-        when('/host', {
-            title: 'Host View',
-            templateUrl: 'partials/host.html',
-            controller: 'HostCtrl',
-            reloadOnSearch: false,
-        }).
-        when('/silence', {
-            title: 'Silence',
-            templateUrl: 'partials/silence.html',
-            controller: 'SilenceCtrl',
-        }).
-        when('/config', {
-            title: 'Configuration',
-            templateUrl: 'partials/config.html',
-            controller: 'ConfigCtrl',
-            reloadOnSearch: false,
-        }).
-        when('/action', {
-            title: 'Action',
-            templateUrl: 'partials/action.html',
-            controller: 'ActionCtrl',
-        }).
-        when('/history', {
-            title: 'Alert History',
-            templateUrl: 'partials/history.html',
-            controller: 'HistoryCtrl',
-        }).
-        when('/put', {
-            title: 'Data Entry',
-            templateUrl: 'partials/put.html',
-            controller: 'PutCtrl',
-        }).
-        when('/annotation', {
-            title: 'Annotation',
-            templateUrl: 'partials/annotation.html',
-            controller: 'AnnotationCtrl',
-        }).
-        when('/incident', {
-            title: 'Incident',
-            templateUrl: 'partials/incident.html',
-            controller: 'IncidentCtrl',
-        }).
-        when('/tokens', {
-            title: 'Access Tokens',
-            template: `<token-list></token-list>`,
-        }).
-        when('/tokens/new', {
-            title: 'New Access Token',
-            template: `<new-token></new-token>`,
-        }).
-        otherwise({
-            redirectTo: '/',
-        });
+
+    when('/', {
+        title: 'Dashboard',
+        templateUrl: 'partials/dashboard.html',
+        controller: 'DashboardCtrl',
+    })
+    when('/items', {
+        title: 'Items',
+        templateUrl: 'partials/items.html',
+        controller: 'ItemsCtrl',
+    })
+    when('/expr', {
+        title: 'Expression',
+        templateUrl: 'partials/expr.html',
+        controller: 'ExprCtrl',
+    })
+    when('/errors', {
+        title: 'Errors',
+        templateUrl: 'partials/errors.html',
+        controller: 'ErrorCtrl',
+    })
+    when('/graph', {
+        title: 'Graph',
+        templateUrl: 'partials/graph.html',
+        controller: 'GraphCtrl',
+    })
+    when('/host', {
+        title: 'Host View',
+        templateUrl: 'partials/host.html',
+        controller: 'HostCtrl',
+        reloadOnSearch: false,
+    })
+    when('/silence', {
+        title: 'Silence',
+        templateUrl: 'partials/silence.html',
+        controller: 'SilenceCtrl',
+    })
+    when('/config', {
+        title: 'Configuration',
+        templateUrl: 'partials/config.html',
+        controller: 'ConfigCtrl',
+        reloadOnSearch: false,
+    })
+    when('/action', {
+        title: 'Action',
+        templateUrl: 'partials/action.html',
+        controller: 'ActionCtrl',
+    })
+    when('/history', {
+        title: 'Alert History',
+        templateUrl: 'partials/history.html',
+        controller: 'HistoryCtrl',
+    })
+    when('/put', {
+        title: 'Data Entry',
+        templateUrl: 'partials/put.html',
+        controller: 'PutCtrl',
+    })
+    when('/annotation', {
+        title: 'Annotation',
+        templateUrl: 'partials/annotation.html',
+        controller: 'AnnotationCtrl',
+    })
+    when('/incident', {
+        title: 'Incident',
+        templateUrl: 'partials/incident.html',
+        controller: 'IncidentCtrl',
+    })
+    when('/tokens', {
+        title: 'Access Tokens',
+        template: `<token-list></token-list>`,
+    })
+    when('/tokens/new', {
+        title: 'New Access Token',
+        template: `<new-token></new-token>`,
+    })
+    $routeProvider.otherwise({
+        redirectTo: '/',
+    });
     $httpProvider.interceptors.push(function ($q) {
         return {
             'request': function (config) {
@@ -137,13 +126,13 @@ interface IRootScope extends ng.IScope {
 }
 
 interface IAuthService {
-    Init: (authEnabled: boolean,username: string, roles: RoleDefs, userPerms: number) => void;
+    Init: (authEnabled: boolean, username: string, roles: RoleDefs, userPerms: number) => void;
     HasPermission: (role: string) => boolean;
     GetRoles: () => RoleDefs;
     Username: (u: string) => string;
     GetUsername: () => string;
-    Enabled: ()=> boolean;
-    PermissionsFor: (bits: number) =>string[];
+    Enabled: () => boolean;
+    PermissionsFor: (bits: number) => string[];
     RoleFor: (bits: number) => string;
 }
 
@@ -500,7 +489,7 @@ class Annotation {
     Host: string;
     Owner: string;
     Category: string;
-    
+
     constructor(a?, get?: boolean) {
         a = a || {};
         this.Id = a.Id || "";

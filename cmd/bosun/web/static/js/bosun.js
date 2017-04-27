@@ -42,92 +42,85 @@ bosunApp.config(['$routeProvider', '$locationProvider', '$httpProvider', functio
             enabled: true,
             requireBase: false
         });
-        //adapter to use routes with title in them
-        var p = function (rp) {
-            var myrp = {};
-            myrp.when = function (url, route) {
-                rp.when(url, route);
-                return myrp;
-            };
-            return myrp;
+        var when = function (u, r) {
+            $routeProvider.when(u, r);
         };
-        p($routeProvider).
-            when('/', {
+        when('/', {
             title: 'Dashboard',
             templateUrl: 'partials/dashboard.html',
             controller: 'DashboardCtrl'
-        }).
-            when('/items', {
+        });
+        when('/items', {
             title: 'Items',
             templateUrl: 'partials/items.html',
             controller: 'ItemsCtrl'
-        }).
-            when('/expr', {
+        });
+        when('/expr', {
             title: 'Expression',
             templateUrl: 'partials/expr.html',
             controller: 'ExprCtrl'
-        }).
-            when('/errors', {
+        });
+        when('/errors', {
             title: 'Errors',
             templateUrl: 'partials/errors.html',
             controller: 'ErrorCtrl'
-        }).
-            when('/graph', {
+        });
+        when('/graph', {
             title: 'Graph',
             templateUrl: 'partials/graph.html',
             controller: 'GraphCtrl'
-        }).
-            when('/host', {
+        });
+        when('/host', {
             title: 'Host View',
             templateUrl: 'partials/host.html',
             controller: 'HostCtrl',
             reloadOnSearch: false
-        }).
-            when('/silence', {
+        });
+        when('/silence', {
             title: 'Silence',
             templateUrl: 'partials/silence.html',
             controller: 'SilenceCtrl'
-        }).
-            when('/config', {
+        });
+        when('/config', {
             title: 'Configuration',
             templateUrl: 'partials/config.html',
             controller: 'ConfigCtrl',
             reloadOnSearch: false
-        }).
-            when('/action', {
+        });
+        when('/action', {
             title: 'Action',
             templateUrl: 'partials/action.html',
             controller: 'ActionCtrl'
-        }).
-            when('/history', {
+        });
+        when('/history', {
             title: 'Alert History',
             templateUrl: 'partials/history.html',
             controller: 'HistoryCtrl'
-        }).
-            when('/put', {
+        });
+        when('/put', {
             title: 'Data Entry',
             templateUrl: 'partials/put.html',
             controller: 'PutCtrl'
-        }).
-            when('/annotation', {
+        });
+        when('/annotation', {
             title: 'Annotation',
             templateUrl: 'partials/annotation.html',
             controller: 'AnnotationCtrl'
-        }).
-            when('/incident', {
+        });
+        when('/incident', {
             title: 'Incident',
             templateUrl: 'partials/incident.html',
             controller: 'IncidentCtrl'
-        }).
-            when('/tokens', {
+        });
+        when('/tokens', {
             title: 'Access Tokens',
             template: "<token-list></token-list>"
-        }).
-            when('/tokens/new', {
+        });
+        when('/tokens/new', {
             title: 'New Access Token',
             template: "<new-token></new-token>"
-        }).
-            otherwise({
+        });
+        $routeProvider.otherwise({
             redirectTo: '/'
         });
         $httpProvider.interceptors.push(function ($q) {
