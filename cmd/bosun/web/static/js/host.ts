@@ -4,7 +4,7 @@ interface IHostScope extends ng.IScope {
 	time: string;
 	tab: string;
 	metrics: string[];
-	mlink: (m: string) => Request;
+	mlink: (m: string) => GraphRequest;
 	setTab: (m: string) => void;
 	idata: any;
 	fsdata: any;
@@ -25,7 +25,7 @@ bosunControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route
 	$scope.metrics = [];
 	var currentURL = $location.url();
 	$scope.mlink = (m: string) => {
-		var r = new Request();
+		var r = new GraphRequest();
 		var q = new Query(false);
 		q.metric = m;
 		q.tags = { 'host': $scope.host };
@@ -53,7 +53,7 @@ bosunControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route
 			});
 		});
 	var autods = '&autods=100';
-	var cpu_r = new Request();
+	var cpu_r = new GraphRequest();
 	cpu_r.start = $scope.time;
 	cpu_r.queries = [
 		new Query(false, {
@@ -70,7 +70,7 @@ bosunControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route
 			data.Series[0].Name = 'Percent Used';
 			$scope.cpu = data.Series;
 		});
-	var mem_r = new Request();
+	var mem_r = new GraphRequest();
 	mem_r.start = $scope.time;
 	mem_r.queries.push(new Query(false, {
 		metric: "os.mem.total",
@@ -89,7 +89,7 @@ bosunControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route
 			$scope.mem_total = Math.max.apply(null, data.Series[0].Data.map((d: any) => { return d[1]; }));
 			$scope.mem = [data.Series[1]];
 		});
-	var net_bytes_r = new Request();
+	var net_bytes_r = new GraphRequest();
 	net_bytes_r.start = $scope.time;
 	net_bytes_r.queries = [
 		new Query(false, {
@@ -120,7 +120,7 @@ bosunControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route
 			});
 			$scope.idata = tmp;
 		});
-	var fs_r = new Request();
+	var fs_r = new GraphRequest();
 	fs_r.start = $scope.time
 	fs_r.queries = [
 		new Query(false, {

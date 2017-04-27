@@ -139,7 +139,7 @@ class Query {
 	}
 }
 
-class Request {
+class GraphRequest {
 	start: string;
 	end: string;
 	queries: Query[];
@@ -261,7 +261,7 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 		j = atob(search.b64);
 	}
 	$scope.annotation = new Annotation();
-	var request = j ? JSON.parse(j) : new Request;
+	var request = j ? JSON.parse(j) : new GraphRequest;
 	$scope.index = parseInt($location.hash()) || 0;
 	$scope.tagvs = [];
 	$scope.sorted_tagks = [];
@@ -451,7 +451,7 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 			});
 	}
 	function getRequest() {
-		request = new Request;
+		request = new GraphRequest;
 		request.start = $scope.start;
 		request.end = $scope.end;
 		angular.forEach($scope.query_p, function (p) {

@@ -17,12 +17,31 @@ var bosunApp = angular.module('bosunApp', [
     'ngclipboard',
 ]);
 
+interface ITitleRoute extends ng.route.IRoute {
+    title?: string;
+}
+interface myRP extends ng.route.IRouteProvider {
+    when(url:string, title: ITitleRoute): myRP
+}
+
+
 bosunApp.config(['$routeProvider', '$locationProvider', '$httpProvider', function ($routeProvider: ng.route.IRouteProvider, $locationProvider: ng.ILocationProvider, $httpProvider: ng.IHttpProvider) {
     $locationProvider.html5Mode({
         enabled: true,
         requireBase: false
     });
-    $routeProvider.
+    
+    //adapter to use routes with title in them
+    var p = (rp: ng.route.IRouteProvider):myRP => {
+        var myrp = <myRP>{}
+        myrp.when = (url:string, route: ITitleRoute): myRP =>{
+            rp.when(url, route)
+            return myrp;
+        }
+        return myrp;
+    }
+    
+    p($routeProvider).
         when('/', {
             title: 'Dashboard',
             templateUrl: 'partials/dashboard.html',
@@ -149,7 +168,7 @@ interface IBosunScope extends RootScope {
     panelClass: (v: string) => string;
     timeanddate: number[];
     schedule: any;
-    req_from_m: (m: string) => Request;
+    req_from_m: (m: string) => GraphRequest;
     refresh: (filter: string) => any;
     animate: () => any;
     stop: (all?: boolean) => any;
@@ -201,7 +220,7 @@ bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', '$q', '$r
             return encodeURIComponent(v);
         };
         $scope.req_from_m = (m: string) => {
-            var r = new Request();
+            var r = new GraphRequest();
             var q = new Query(false);
             q.metric = m;
             r.queries.push(q);
@@ -411,16 +430,12 @@ declare function escape(string: string): string;
 
 declare function unescape(string: string): string;
 
-interface Date {
-    toGMTString(): string;
-}
-
 function createCookie(name, value, days) {
     var expires;
     if (days) {
         var date = new Date();
         date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
-        expires = "; expires=" + date.toGMTString();
+        expires = "; expires=" + date.toUTCString();
     } else {
         expires = "";
     }
