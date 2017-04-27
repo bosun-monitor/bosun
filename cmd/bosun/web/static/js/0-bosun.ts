@@ -3,9 +3,10 @@
 /// <reference path="angular-sanitize.d.ts" />
 /// <reference path="bootstrap.d.ts" />
 /// <reference path="jquery.d.ts" />
-/// <reference path="d3.d.ts" />
 /// <reference path="underscore.d.ts" />
 /// <reference path="models.ts" />
+
+declare var d3:any;
 
 var bosunApp = angular.module('bosunApp', [
     'ngRoute',
