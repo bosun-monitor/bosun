@@ -244,9 +244,8 @@ bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', '$q', '$r
             $scope.animate();
 
             var p = $http.get('/api/alerts?filter=' + encodeURIComponent(filter || ""))
-                .success((data: StateGroups) => {
-                    //$scope.schedule = new StateGroups(data);
-                    $scope.schedule = data;
+                .success((data: any) => {
+                    $scope.schedule = new StateGroups(data);
                     $scope.timeanddate = data.TimeAndDate;
                     d.resolve();
                 })
@@ -524,11 +523,24 @@ class IncidentEvent {
     Status: number;
     Time: string; // moment?
     Unevaluated: boolean;
+
+    constructor(ie) {
+        this.Value = ie.Value;
+        this.Expr = ie.Expr;
+        this.Status = ie.Status;
+        this.Time = ie.Time;
+        this.Unevaluated = ie.Unevaluated;
+    }
 }
 
 class Result {
     Value: number;
     Expr: string;
+
+    constructor(r) {
+        this.Value = r.Value;
+        this.Expr = r.Expr;
+    }
 }
 
 class Action {
@@ -538,6 +550,15 @@ class Action {
     Type: string;
     Deadline: string; // moment?
     Fullfilled: boolean;
+
+    constructor(a) {
+        this.User = a.User;
+        this.Message = a.Message;
+        this.Time = a.Time;
+        this.Type = a.Type;
+        this.Deadline = a.Deadline;
+        this.Fullfilled = a.Fullfilled;
+    }
 }
 
 // See models/incident.go
@@ -567,6 +588,38 @@ class IncidentState {
     LastAbnormalStatus: string;
     LastAbnormalTime: number; // Epoch
 
+    constructor(is) {
+        this.Id = is.Id;
+        this.Start = is.Start;
+        this.End = is.End;
+        this.AlertKey = is.AlertKey;
+        this.Alert = is.Alert;
+
+        this.Value = is.Value;
+        this.Expr = is.Expr;
+        this.Events = new Array<IncidentEvent>();
+        if (is.Events) {
+            for (let e of is.Events) {
+                this.Events.push(new IncidentEvent(e))
+            }
+        }
+        this.Actions = new Array<Action>();
+        if (is.Actions) {
+            for (let a of is.Actions) {
+                this.Actions.push(new Action(a))
+            }
+        }
+        this.Subject = is.Subject;
+        this.NeedAck = is.NeedAck;
+        this.Open = is.Open;
+        this.Unevaluated = is.Unevaluated;
+        this.CurrentStatus = is.CurrentStatus;
+        this.WorstStatus = is.WorstStatus;
+        this.LastAbnormalStatus = is.LastAbnormalStatus;
+        this.LastAbnormalTime = is.LastAbnormalTime;
+    }
+
+
     IsPendingClose(): boolean {
         for (let action of this.Actions) {
             if (action.Deadline != "" && !action.Fullfilled) {
@@ -588,11 +641,43 @@ class StateGroup {
     AlertKey: string;
     State: IncidentState;
     Children: StateGroup[];
+
+    constructor(sg) {
+        this.Active = sg.Active;
+        this.Status = sg.Status;
+        this.CurrentStatus = sg.CurrentStatus;
+        this.Silenced = sg.Silenced;
+        this.IsError = sg.IsError;
+        this.Subject = sg.Subject;
+        this.Alert = sg.Alert;
+        this.AlertKey = sg.AlertKey;
+        if (sg.State) {
+            this.State = new IncidentState(sg.State);
+        }
+        this.Children = new Array<StateGroup>();
+        if (sg.Children) {
+            for (let c of sg.Children) {
+                this.Children.push(new StateGroup(c));
+            }
+        }
+    }
+
 }
 
 class Groups {
     NeedAck: StateGroup[];
     Acknowledged: StateGroup[];
+
+    constructor(g) {
+        this.NeedAck = new Array<StateGroup>();
+        for (let sg of g.NeedAck) {
+            this.NeedAck.push(new StateGroup(sg));
+        }
+        this.Acknowledged = new Array<StateGroup>();
+        for (let sg of g.Acknowledged) {
+            this.Acknowledged.push(new StateGroup(sg));
+        }
+    }
 }
 
 
@@ -601,4 +686,11 @@ class StateGroups {
     TimeAndDate: number[];
     FailingAlerts: number;
     UnclosedErrors: number;
+
+    constructor(sgs) {
+        this.Groups = new Groups(sgs.Groups);
+        this.TimeAndDate = sgs.TimeAndDate;
+        this.FailingAlerts = sgs.FailingAlerts;
+        this.UnclosedErrors = sgs.UnclosedErrors;
+    }
 }

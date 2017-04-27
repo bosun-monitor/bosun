@@ -3861,8 +3861,7 @@ bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', '$q', '$r
             $scope.animate();
             var p = $http.get('/api/alerts?filter=' + encodeURIComponent(filter || ""))
                 .success(function (data) {
-                //$scope.schedule = new StateGroups(data);
-                $scope.schedule = data;
+                $scope.schedule = new StateGroups(data);
                 $scope.timeanddate = data.TimeAndDate;
                 d.resolve();
             })
@@ -4098,23 +4097,65 @@ var Annotation = (function () {
 })();
 // See models/incident.go Event (can't be event here because JS uses that)
 var IncidentEvent = (function () {
-    function IncidentEvent() {
+    function IncidentEvent(ie) {
+        this.Value = ie.Value;
+        this.Expr = ie.Expr;
+        this.Status = ie.Status;
+        this.Time = ie.Time;
+        this.Unevaluated = ie.Unevaluated;
     }
     return IncidentEvent;
 })();
 var Result = (function () {
-    function Result() {
+    function Result(r) {
+        this.Value = r.Value;
+        this.Expr = r.Expr;
     }
     return Result;
 })();
 var Action = (function () {
-    function Action() {
+    function Action(a) {
+        this.User = a.User;
+        this.Message = a.Message;
+        this.Time = a.Time;
+        this.Type = a.Type;
+        this.Deadline = a.Deadline;
+        this.Fullfilled = a.Fullfilled;
     }
     return Action;
 })();
 // See models/incident.go
 var IncidentState = (function () {
-    function IncidentState() {
+    function IncidentState(is) {
+        this.Id = is.Id;
+        this.Start = is.Start;
+        this.End = is.End;
+        this.AlertKey = is.AlertKey;
+        this.Alert = is.Alert;
+        this.Value = is.Value;
+        this.Expr = is.Expr;
+        this.Events = new Array();
+        if (is.Events) {
+            for (var _i = 0, _a = is.Events; _i < _a.length; _i++) {
+                var e = _a[_i];
+                this.Events.push(new IncidentEvent(e));
+            }
+        }
+        this.Actions = new Array();
+        if (is.Actions) {
+            for (var _b = 0, _c = is.Actions; _b < _c.length; _b++) {
+                var a = _c[_b];
+                this.Actions.push(new Action(a));
+            }
+        }
+        this.Subject = is.Subject;
+        this.NeedAck = is.NeedAck;
+        this.Open = is.Open;
+        this.Unevaluated = is.Unevaluated;
+        this.CurrentStatus = is.CurrentStatus;
+        this.WorstStatus = is.WorstStatus;
+        this.LastAbnormalStatus = is.LastAbnormalStatus;
+        this.LastAbnormalTime = is.LastAbnormalTime;
     }
     IncidentState.prototype.IsPendingClose = function () {
         for (var _i = 0, _a = this.Actions; _i < _a.length; _i++) {
@@ -4128,17 +4169,49 @@ var IncidentState = (function () {
     return IncidentState;
 })();
 var StateGroup = (function () {
-    function StateGroup() {
+    function StateGroup(sg) {
+        this.Active = sg.Active;
+        this.Status = sg.Status;
+        this.CurrentStatus = sg.CurrentStatus;
+        this.Silenced = sg.Silenced;
+        this.IsError = sg.IsError;
+        this.Subject = sg.Subject;
+        this.Alert = sg.Alert;
+        this.AlertKey = sg.AlertKey;
+        if (sg.State) {
+            this.State = new IncidentState(sg.State);
+        }
+        this.Children = new Array();
+        if (sg.Children) {
+            for (var _i = 0, _a = sg.Children; _i < _a.length; _i++) {
+                var c = _a[_i];
+                this.Children.push(new StateGroup(c));
+            }
+        }
     }
     return StateGroup;
 })();
 var Groups = (function () {
-    function Groups() {
+    function Groups(g) {
+        this.NeedAck = new Array();
+        for (var _i = 0, _a = g.NeedAck; _i < _a.length; _i++) {
+            var sg = _a[_i];
+            this.NeedAck.push(new StateGroup(sg));
+        }
+        this.Acknowledged = new Array();
+        for (var _b = 0, _c = g.Acknowledged; _b < _c.length; _b++) {
+            var sg = _c[_b];
+            this.Acknowledged.push(new StateGroup(sg));
+        }
     }
     return Groups;
 })();
 var StateGroups = (function () {
-    function StateGroups() {
+    function StateGroups(sgs) {
+        this.Groups = new Groups(sgs.Groups);
+        this.TimeAndDate = sgs.TimeAndDate;
+        this.FailingAlerts = sgs.FailingAlerts;
+        this.UnclosedErrors = sgs.UnclosedErrors;
     }
     return StateGroups;
 })();
