@@ -44,19 +44,17 @@ func (t *TokenProvider) GetUser(r *http.Request) (*easyauth.User, error) {
 	var tokn string
 	if cook, err := r.Cookie("AccessToken"); err == nil {
 		tokn = cook.Value
-	} else if tokn = r.URL.Query().Get("token"); tokn == "" {
-		if tokn = r.Header.Get("X-Access-Token"); tokn == "" {
-			return nil, nil
-		}
+	} else if tokn = r.Header.Get("X-Access-Token"); tokn == "" {
+		return nil, nil
 	}
 	tok, err := t.data.LookupToken(t.hashToken(tokn))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("From %s: %s", r.RemoteAddr, err)
 	}
 	//verify hash with role to ensure not tampered with
 	hashWithRole := t.hashToken(tokn + fmt.Sprint(tok.Role))
 	if hashWithRole != tok.RoleHash {
-		return nil, fmt.Errorf("Token hash mismatch")
+		return nil, fmt.Errorf("Token hash mismatch from %s", r.RemoteAddr)
 	}
 	return &easyauth.User{
 		Access:   tok.Role,

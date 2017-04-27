@@ -29,6 +29,12 @@ type LdapProvider struct {
 
 	//Name to use for cookie
 	CookieName string
+
+	// Function to call on successful login. Can change user data or roles if desired.
+	// return non-nil error to deny the login
+	OnLogin func(u *easyauth.User) error
+
+	OnLoginFail func(string)
 }
 
 //ensure at compile time we implement the interfaces we intend to
@@ -86,6 +92,12 @@ func (l *LdapProvider) HandlePost(w http.ResponseWriter, r *http.Request) {
 		Method:   "ldap",
 		Access:   role,
 	}
+	if l.OnLogin != nil {
+		err := l.OnLogin(user)
+		if err != nil {
+			panic("Error from login callback")
+		}
+	}
 	easyauth.GetCookieManager(r).SetCookie(w, l.cookieName(), 0, user)
 	easyauth.GetRedirector(r)()
 }
@@ -103,6 +115,9 @@ func (l *LdapProvider) Authorize(un, pw string) easyauth.Role {
 	err = conn.Bind(fullUn, pw)
 	if err != nil {
 		log.Println(err)
+		if l.OnLoginFail != nil {
+			l.OnLoginFail(un)
+		}
 		panic("Invalid Credentials")
 	}
 	var role = l.DefaultPermission
