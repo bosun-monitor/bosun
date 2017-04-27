@@ -449,7 +449,7 @@ bosunControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route
         $http.post('/api/expr?' +
             'date=' + encodeURIComponent($scope.date) +
             '&time=' + encodeURIComponent($scope.time), current)
-            .success(function (data) {
+            .then(function (data) {
             $scope.result = data.Results;
             $scope.queries = data.Queries;
             $scope.result_type = data.Type;
@@ -472,8 +472,7 @@ bosunControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route
                 $scope.bar = data.Results;
             }
             $scope.running = '';
-        })
-            .error(function (error) {
+        }, function (error) {
             $scope.error = error;
             $scope.running = '';
         })
@@ -2475,24 +2474,22 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
         $scope.submitAnnotation = function () {
             $scope.annotation.CreationUser = auth.GetUsername();
             $http.post('/api/annotation', $scope.annotation)
-                .success(function (data) {
+                .then(function (data) {
                 if ($scope.annotation.Id == "" && $scope.annotation.Owner != "") {
                     setOwner($scope.annotation.Owner);
                 }
                 $scope.annotation = new Annotation(data);
                 $scope.error = "";
                 $scope.annotations = $scope.annotations.concat($scope.annotation);
-            })
-                .error(function (error) {
+            }, function (error) {
                 $scope.error = error;
             });
         };
         $scope.deleteAnnotation = function () { return $http.delete('/api/annotation/' + $scope.annotation.Id)
-            .success(function (data) {
+            .then(function (data) {
             $scope.error = "";
             $scope.annotations = _.without($scope.annotations, _.findWhere($scope.annotations, { Id: $scope.annotation.Id }));
-        })
-            .error(function (error) {
+        }, function (error) {
             $scope.error = error;
         }); };
         $scope.SwitchTimes = function () {
@@ -2509,15 +2506,15 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
         var alphabet = "abcdefghijklmnopqrstuvwxyz".split("");
         if ($scope.annotateEnabled) {
             $http.get('/api/annotation/values/Owner')
-                .success(function (data) {
+                .then(function (data) {
                 $scope.owners = data;
             });
             $http.get('/api/annotation/values/Category')
-                .success(function (data) {
+                .then(function (data) {
                 $scope.categories = data;
             });
             $http.get('/api/annotation/values/Host')
-                .success(function (data) {
+                .then(function (data) {
                 $scope.hosts = data;
             });
         }
@@ -2529,7 +2526,7 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
                 return;
             }
             $http.get('/api/tagk/' + metric)
-                .success(function (data) {
+                .then(function (data) {
                 var q = $scope.query_p[index];
                 var tags = new TagSet;
                 q.metric_tags = {};
@@ -2579,16 +2576,14 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
                     }
                     return a.localeCompare(b);
                 });
-            })
-                .error(function (error) {
+            }, function (error) {
                 $scope.error = 'Unable to fetch metrics: ' + error;
             });
             $http.get('/api/metadata/metrics?metric=' + metric)
-                .success(function (data) {
+                .then(function (data) {
                 var canAuto = data && data.Rate;
                 $scope.canAuto[metric] = canAuto;
-            })
-                .error(function (err) {
+            }, function (err) {
                 $scope.error = err;
             });
         };
@@ -2596,19 +2591,17 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
             $scope.AddTab();
         }
         $http.get('/api/metric' + "?since=" + moment().utc().subtract(2, "days").unix())
-            .success(function (data) {
+            .then(function (data) {
             $scope.metrics = data;
-        })
-            .error(function (error) {
+        }, function (error) {
             $scope.error = 'Unable to fetch metrics: ' + error;
         });
         function GetTagVs(k, index) {
             $http.get('/api/tagv/' + k + '/' + $scope.query_p[index].metric)
-                .success(function (data) {
+                .then(function (data) {
                 data.sort();
                 $scope.tagvs[index][k] = data;
-            })
-                .error(function (error) {
+            }, function (error) {
                 $scope.error = 'Unable to fetch metrics: ' + error;
             });
         }
@@ -2684,10 +2677,9 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
         var autods = $scope.autods ? '&autods=' + $('#chart').width() : '';
         function getMetricMeta(metric) {
             $http.get('/api/metadata/metrics?metric=' + encodeURIComponent(metric))
-                .success(function (data) {
+                .then(function (data) {
                 $scope.meta[metric] = data;
-            })
-                .error(function (error) {
+            }, function (error) {
                 console.log("Error getting metadata for metric " + metric);
             });
         }
@@ -2730,7 +2722,7 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
                 $scope.queryTime += '&time=' + t.format('HH:mm');
             }
             $http.get('/api/graph?' + 'b64=' + encodeURIComponent(btoa(JSON.stringify(request))) + autods + autorate + min + max)
-                .success(function (data) {
+                .then(function (data) {
                 $scope.result = data.Series;
                 if ($scope.annotateEnabled) {
                     $scope.annotations = _.sortBy(data.Annotations, function (d) { return d.StartDate; });
@@ -2756,8 +2748,7 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
                 u = u.substr(0, u.indexOf('?')) + '?';
                 u += 'b64=' + search.b64 + autods + autorate + min + max;
                 $scope.url = u;
-            })
-                .error(function (error) {
+            }, function (error) {
                 $scope.error = error;
                 $scope.running = '';
             })
@@ -2811,7 +2802,7 @@ bosunControllers.controller('HistoryCtrl', ['$scope', '$http', '$location', '$ro
         }
         var params = Object.keys(keys).map(function (v) { return 'ak=' + encodeURIComponent(v); }).join('&');
         $http.get('/api/status?' + params + "&all=1")
-            .success(function (data) {
+            .then(function (data) {
             console.log(data);
             var selected_alerts = {};
             angular.forEach(data, function (v, ak) {
@@ -2837,8 +2828,7 @@ bosunControllers.controller('HistoryCtrl', ['$scope', '$http', '$location', '$ro
             else {
                 $scope.error = 'No Matching Alerts Found';
             }
-        })
-            .error(function (err) {
+        }, function (err) {
             $scope.error = err;
         });
     }]);
@@ -2863,7 +2853,7 @@ bosunControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route
             $scope.tab = t;
         };
         $http.get('/api/metric/host/' + $scope.host)
-            .success(function (data) {
+            .then(function (data) {
             $scope.metrics = data || [];
         });
         var start = moment().utc().subtract(parseDuration($scope.time));
@@ -2873,7 +2863,7 @@ bosunControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route
             return moment.duration(parseInt(m[1]), m[2].replace('n', 'M'));
         }
         $http.get('/api/metadata/get?tagk=host&tagv=' + encodeURIComponent($scope.host))
-            .success(function (data) {
+            .then(function (data) {
             $scope.metadata = _.filter(data, function (i) {
                 return moment.utc(i.Time) > start;
             });
@@ -2889,7 +2879,7 @@ bosunControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route
             })
         ];
         $http.get('/api/graph?' + 'json=' + encodeURIComponent(JSON.stringify(cpu_r)) + autods)
-            .success(function (data) {
+            .then(function (data) {
             if (!data.Series) {
                 return;
             }
@@ -2907,7 +2897,7 @@ bosunControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route
             tags: { host: $scope.host },
         }));
         $http.get('/api/graph?' + 'json=' + encodeURIComponent(JSON.stringify(mem_r)) + autods)
-            .success(function (data) {
+            .then(function (data) {
             if (!data.Series) {
                 return;
             }
@@ -2926,7 +2916,7 @@ bosunControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route
             })
         ];
         $http.get('/api/graph?' + 'json=' + encodeURIComponent(JSON.stringify(net_bytes_r)) + autods)
-            .success(function (data) {
+            .then(function (data) {
             if (!data.Series) {
                 return;
             }
@@ -2960,7 +2950,7 @@ bosunControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route
             })
         ];
         $http.get('/api/graph?' + 'json=' + encodeURIComponent(JSON.stringify(fs_r)) + autods)
-            .success(function (data) {
+            .then(function (data) {
             if (!data.Series) {
                 return;
             }
@@ -2996,7 +2986,7 @@ bosunControllers.controller('IncidentCtrl', ['$scope', '$http', '$location', '$r
             return;
         }
         $http.get('/api/config')
-            .success(function (data) {
+            .then(function (data) {
             $scope.config_text = data;
         });
         $scope.action = function (type) {
@@ -3018,11 +3008,10 @@ bosunControllers.controller('IncidentCtrl', ['$scope', '$http', '$location', '$r
             var ak = $scope.incident.AlertKey;
             var url = ruleUrl(ak, moment(v.Time));
             $http.post(url, $scope.config_text)
-                .success(function (data) {
+                .then(function (data) {
                 v.subject = data.Subject;
                 v.body = $sce.trustAsHtml(data.Body);
-            })
-                .error(function (error) {
+            }, function (error) {
                 v.error = error;
             })
                 .finally(function () {
@@ -3037,7 +3026,7 @@ bosunControllers.controller('IncidentCtrl', ['$scope', '$http', '$location', '$r
             }
         };
         $http.get('/api/incidents/events?id=' + id)
-            .success(function (data) {
+            .then(function (data) {
             $scope.incident = data;
             $scope.state = $scope.incident;
             $scope.actions = data.Actions;
@@ -3053,24 +3042,21 @@ bosunControllers.controller('IncidentCtrl', ['$scope', '$http', '$location', '$r
                 }
             }
             $scope.collapse;
-        })
-            .error(function (err) {
+        }, function (err) {
             $scope.error = err;
         });
     }]);
 bosunControllers.controller('ItemsCtrl', ['$scope', '$http', function ($scope, $http) {
         $http.get('/api/metric')
-            .success(function (data) {
+            .then(function (data) {
             $scope.metrics = data;
-        })
-            .error(function (error) {
+        }, function (error) {
             $scope.status = 'Unable to fetch metrics: ' + error;
         });
         $http.get('/api/tagv/host?since=default')
-            .success(function (data) {
+            .then(function (data) {
             $scope.hosts = data;
-        })
-            .error(function (error) {
+        }, function (error) {
             $scope.status = 'Unable to fetch hosts: ' + error;
         });
     }]);
@@ -3090,10 +3076,9 @@ bosunControllers.controller('PutCtrl', ['$scope', '$http', '$route', function ($
         dp.k = moment().utc().format();
         $scope.dps = [dp];
         $http.get('/api/metric')
-            .success(function (data) {
+            .then(function (data) {
             $scope.metrics = data;
-        })
-            .error(function (error) {
+        }, function (error) {
             $scope.error = 'Unable to fetch metrics: ' + error;
         });
         $scope.Submit = function () {
@@ -3119,11 +3104,10 @@ bosunControllers.controller('PutCtrl', ['$scope', '$http', '$route', function ($
             $scope.success = '';
             $scope.error = '';
             $http.post('/api/put', data)
-                .success(function () {
+                .then(function () {
                 $scope.running = '';
                 $scope.success = 'Data Submitted';
-            })
-                .error(function (error) {
+            }, function (error) {
                 $scope.running = '';
                 $scope.error = error.error.message;
             });
@@ -3144,7 +3128,7 @@ bosunControllers.controller('PutCtrl', ['$scope', '$http', '$route', function ($
         };
         $scope.GetTagKByMetric = function () {
             $http.get('/api/tagk/' + $scope.metric)
-                .success(function (data) {
+                .then(function (data) {
                 if (!angular.isArray(data)) {
                     return;
                 }
@@ -3154,8 +3138,7 @@ bosunControllers.controller('PutCtrl', ['$scope', '$http', '$route', function ($
                     t.k = data[i];
                     $scope.tags.push(t);
                 }
-            })
-                .error(function (error) {
+            }, function (error) {
                 $scope.error = 'Unable to fetch metrics: ' + error;
             });
         };
@@ -3201,7 +3184,7 @@ bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$ro
         }
         function get() {
             $http.get('/api/silence/get')
-                .success(function (data) {
+                .then(function (data) {
                 $scope.silences = [];
                 var now = moment.utc();
                 $scope.silences.push({
@@ -3216,8 +3199,7 @@ bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$ro
                     name: 'Past',
                     silences: filter(data, null, null, null, now, 25)
                 });
-            })
-                .error(function (error) {
+            }, function (error) {
                 $scope.error = error;
             });
         }
@@ -3275,7 +3257,7 @@ bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$ro
             $location.search('edit', null);
             state.confirm = 'true';
             $http.post('/api/silence/set', state)
-                .error(function (error) {
+                .then(function () { }, function (error) {
                 $scope.error = error;
             })
                 .finally(get);
@@ -3286,7 +3268,7 @@ bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$ro
             }
             $scope.error = null;
             $http.post('/api/silence/clear?id=' + id, {})
-                .error(function (error) {
+                .then(function () { }, function (error) {
                 $scope.error = error;
             })
                 .finally(get);
@@ -3413,11 +3395,10 @@ bosunApp.directive('tsState', ['$sce', '$http', function ($sce, $http) {
                         scope.state.Body = "loading...";
                         loadedBody = true;
                         $http.get('/api/status?ak=' + scope.child.AlertKey)
-                            .success(function (data) {
+                            .then(function (data) {
                             var body = data[scope.child.AlertKey].Body;
                             scope.state.Body = $sce.trustAsHtml(body);
-                        })
-                            .error(function (err) {
+                        }, function (err) {
                             scope.state.Body = "Error loading template body: " + err;
                         });
                     }

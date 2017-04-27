@@ -311,7 +311,7 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 	$scope.submitAnnotation = () => {
 		$scope.annotation.CreationUser = auth.GetUsername();
 		$http.post('/api/annotation', $scope.annotation)
-		.success((data) => {
+		.then((data) => {
 			//debugger;
 			if ($scope.annotation.Id == "" && $scope.annotation.Owner != "") {
 				setOwner($scope.annotation.Owner);
@@ -320,17 +320,15 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 			$scope.error = "";
 			// This seems to make angular refresh, where a push doesn't
 			$scope.annotations = $scope.annotations.concat($scope.annotation);
-		})
-		.error((error) => {
+		},(error) => {
 			$scope.error = error;
 		});
 	}
 	$scope.deleteAnnotation = () => $http.delete('/api/annotation/' + $scope.annotation.Id)
-		.success((data) => {
+		.then((data) => {
 			$scope.error = "";
 			$scope.annotations = _.without($scope.annotations, _.findWhere($scope.annotations, { Id: $scope.annotation.Id }));
-		})
-		.error((error) => {
+		},(error) => {
 			$scope.error = error;
 		});
 	$scope.SwitchTimes = function () {
@@ -347,15 +345,15 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 	var alphabet = "abcdefghijklmnopqrstuvwxyz".split("");
 	if ($scope.annotateEnabled) {
 		$http.get('/api/annotation/values/Owner')
-			.success((data: string[]) => {
+			.then((data: string[]) => {
 				$scope.owners = data;
 			});
 		$http.get('/api/annotation/values/Category')
-			.success((data: string[]) => {
+			.then((data: string[]) => {
 				$scope.categories = data;
 			});
 		$http.get('/api/annotation/values/Host')
-			.success((data: string[]) => {
+			.then((data: string[]) => {
 				$scope.hosts = data;
 			});
 	}
@@ -367,7 +365,7 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 			return;
 		}
 		$http.get('/api/tagk/' + metric)
-			.success(function (data: string[]) {
+			.then(function (data: string[]) {
 				var q = $scope.query_p[index];
 				var tags = new TagSet;
 				q.metric_tags = {};
@@ -417,16 +415,14 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 					}
 					return a.localeCompare(b);
 				});
-			})
-			.error(function (error) {
+			},function (error) {
 				$scope.error = 'Unable to fetch metrics: ' + error;
 			});
 		$http.get('/api/metadata/metrics?metric=' + metric)
-			.success((data: any) => {
+			.then((data: any) => {
 				var canAuto = data && data.Rate;
 				$scope.canAuto[metric] = canAuto;
-			})
-			.error(err => {
+			},err => {
 				$scope.error = err;
 			});
 	};
@@ -434,19 +430,17 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 		$scope.AddTab();
 	}
 	$http.get('/api/metric' + "?since=" + moment().utc().subtract(2, "days").unix())
-		.success(function (data: string[]) {
+		.then(function (data: string[]) {
 			$scope.metrics = data;
-		})
-		.error(function (error) {
+		},function (error) {
 			$scope.error = 'Unable to fetch metrics: ' + error;
 		});
 	function GetTagVs(k: string, index: number) {
 		$http.get('/api/tagv/' + k + '/' + $scope.query_p[index].metric)
-			.success(function (data: string[]) {
+			.then(function (data: string[]) {
 				data.sort();
 				$scope.tagvs[index][k] = data;
-			})
-			.error(function (error) {
+			},function (error) {
 				$scope.error = 'Unable to fetch metrics: ' + error;
 			});
 	}
@@ -522,10 +516,9 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 	var autods = $scope.autods ? '&autods=' + $('#chart').width() : '';
 	function getMetricMeta(metric: string) {
 		$http.get('/api/metadata/metrics?metric=' + encodeURIComponent(metric))
-			.success((data) => {
+			.then((data) => {
 				$scope.meta[metric] = data;
-			})
-			.error((error) => {
+			},(error) => {
 				console.log("Error getting metadata for metric " + metric);
 			})
 	}
@@ -567,7 +560,7 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 			$scope.queryTime += '&time=' + t.format('HH:mm');
 		}
 		$http.get('/api/graph?' + 'b64=' + encodeURIComponent(btoa(JSON.stringify(request))) + autods + autorate + min + max)
-			.success((data: any) => {
+			.then((data: any) => {
 				$scope.result = data.Series;
 				if ($scope.annotateEnabled) {
 					$scope.annotations = _.sortBy(data.Annotations, (d: Annotation) => { return d.StartDate; });
@@ -593,8 +586,7 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
 				u = u.substr(0, u.indexOf('?')) + '?';
 				u += 'b64=' + search.b64 + autods + autorate + min + max;
 				$scope.url = u;
-			})
-			.error((error) => {
+			},(error) => {
 				$scope.error = error;
 				$scope.running = '';
 			})

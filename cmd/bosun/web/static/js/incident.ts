@@ -23,7 +23,7 @@ bosunControllers.controller('IncidentCtrl', ['$scope', '$http', '$location', '$r
 		return
 	}
 	$http.get('/api/config')
-		.success((data: any) => {
+		.then((data: any) => {
 			$scope.config_text = data;
 		});
 	$scope.action = (type: string) => {
@@ -43,11 +43,10 @@ bosunControllers.controller('IncidentCtrl', ['$scope', '$http', '$location', '$r
 		var ak = $scope.incident.AlertKey;
 		var url = ruleUrl(ak, moment(v.Time))
 		$http.post(url, $scope.config_text)
-			.success((data: any) => {
+			.then((data: any) => {
 				v.subject = data.Subject;
 				v.body = $sce.trustAsHtml(data.Body);
-			})
-			.error((error) => {
+			},(error) => {
 				v.error = error;
 			})
 			.finally(() => {
@@ -62,7 +61,7 @@ bosunControllers.controller('IncidentCtrl', ['$scope', '$http', '$location', '$r
 		}
 	};
 	$http.get('/api/incidents/events?id=' + id)
-		.success((data: any) => {
+		.then((data: any) => {
 			$scope.incident = data;
 			$scope.state = $scope.incident;
 			$scope.actions = data.Actions;
@@ -78,8 +77,7 @@ bosunControllers.controller('IncidentCtrl', ['$scope', '$http', '$location', '$r
 				}
 			}
 			$scope.collapse;
-		})
-		.error(err => {
+		},err => {
 			$scope.error = err;
 		});
 }]);

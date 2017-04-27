@@ -37,17 +37,17 @@ bosunControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route
 		$scope.tab = t;
 	};
 	$http.get('/api/metric/host/' + $scope.host)
-		.success(function(data: string[]) {
+		.then(function(data: string[]) {
 			$scope.metrics = data || [];
 		});
 	var start = moment().utc().subtract(parseDuration($scope.time));
 	function parseDuration(v: string) {
 		var pattern = /(\d+)(d|y|n|h|m|s)-ago/;
 		var m = pattern.exec(v);
-		return moment.duration(parseInt(m[1]), m[2].replace('n', 'M'))
+		return moment.duration(parseInt(m[1]), <moment.unitOfTime.DurationConstructor> m[2].replace('n', 'M'))
 	}
 	$http.get('/api/metadata/get?tagk=host&tagv=' + encodeURIComponent($scope.host))
-		.success((data: any) => {
+		.then((data: any) => {
 			$scope.metadata = _.filter(data, function(i: any) {
 				return moment.utc(i.Time) > start;
 			});
@@ -63,7 +63,7 @@ bosunControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route
 		})
 	];
 	$http.get('/api/graph?' + 'json=' + encodeURIComponent(JSON.stringify(cpu_r)) + autods)
-		.success((data: any) => {
+		.then((data: any) => {
 			if (!data.Series) {
 				return;
 			}
@@ -81,7 +81,7 @@ bosunControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route
 		tags: { host: $scope.host },
 	}));
 	$http.get('/api/graph?' + 'json=' + encodeURIComponent(JSON.stringify(mem_r)) + autods)
-		.success((data: any) => {
+		.then((data: any) => {
 			if (!data.Series) {
 				return;
 			}
@@ -100,7 +100,7 @@ bosunControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route
 		})
 	];
 	$http.get('/api/graph?' + 'json=' + encodeURIComponent(JSON.stringify(net_bytes_r)) + autods)
-		.success((data: any) => {
+		.then((data: any) => {
 			if (!data.Series) {
 					return;
 			}
@@ -133,7 +133,7 @@ bosunControllers.controller('HostCtrl', ['$scope', '$http', '$location', '$route
 		})
 	];
 	$http.get('/api/graph?' + 'json=' + encodeURIComponent(JSON.stringify(fs_r)) + autods)
-		.success((data: any) => {
+		.then((data: any) => {
 			if (!data.Series) {
 					return;
 			}

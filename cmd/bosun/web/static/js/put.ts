@@ -22,16 +22,15 @@ interface IPutScope extends ng.IScope {
 	AddDP: () => void;
 }
 
-bosunControllers.controller('PutCtrl', ['$scope', '$http', '$route', function($scope: IPutScope, $http: ng.IHttpService, $route: ng.route.IRouteService) {
+bosunControllers.controller('PutCtrl', ['$scope', '$http', '$route', function ($scope: IPutScope, $http: ng.IHttpService, $route: ng.route.IRouteService) {
 	$scope.tags = [new Tag];
 	var dp = new DP;
 	dp.k = moment().utc().format();
 	$scope.dps = [dp];
 	$http.get('/api/metric')
-		.success(function(data: string[]) {
+		.then(function (data: string[]) {
 			$scope.metrics = data;
-		})
-		.error(function(error) {
+		}, function (error) {
 			$scope.error = 'Unable to fetch metrics: ' + error;
 		});
 	$scope.Submit = () => {
@@ -39,7 +38,7 @@ bosunControllers.controller('PutCtrl', ['$scope', '$http', '$route', function($s
 		var tags: any = {};
 		angular.forEach($scope.tags, (v, k) => {
 			if (v.k || v.v) {
-				tags[v.k] =  v.v;
+				tags[v.k] = v.v;
 			}
 		});
 		angular.forEach($scope.dps, (v, k) => {
@@ -57,14 +56,13 @@ bosunControllers.controller('PutCtrl', ['$scope', '$http', '$route', function($s
 		$scope.success = '';
 		$scope.error = '';
 		$http.post('/api/put', data)
-			.success(() => {
+			.then(() => {
 				$scope.running = '';
 				$scope.success = 'Data Submitted';
-				})
-			.error((error: any) => {
-					$scope.running = '';
-					$scope.error = error.error.message;
-				});
+			}, (error: any) => {
+				$scope.running = '';
+				$scope.error = error.error.message;
+			});
 	}
 	$scope.AddTag = () => {
 		var last = $scope.tags[$scope.tags.length - 1];
@@ -82,7 +80,7 @@ bosunControllers.controller('PutCtrl', ['$scope', '$http', '$route', function($s
 	}
 	$scope.GetTagKByMetric = () => {
 		$http.get('/api/tagk/' + $scope.metric)
-			.success(function(data: string[]) {
+			.then(function (data: string[]) {
 				if (!angular.isArray(data)) {
 					return;
 				}
@@ -92,8 +90,7 @@ bosunControllers.controller('PutCtrl', ['$scope', '$http', '$route', function($s
 					t.k = data[i];
 					$scope.tags.push(t);
 				}
-			})
-			.error(function(error) {
+			}, function (error) {
 				$scope.error = 'Unable to fetch metrics: ' + error;
 			});
 	};

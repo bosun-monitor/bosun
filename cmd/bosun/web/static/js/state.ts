@@ -119,11 +119,10 @@ bosunApp.directive('tsState', ['$sce', '$http', function($sce: ng.ISCEService, $
 					scope.state.Body = "loading...";
 					loadedBody = true;
 					$http.get('/api/status?ak='+scope.child.AlertKey)
-						.success(data => {
+						.then(data => {
 							var body = data[scope.child.AlertKey].Body;
 							scope.state.Body = $sce.trustAsHtml(body);
-						})
-						.error(err => {
+						},err => {
 							scope.state.Body = "Error loading template body: " + err;
 						});
 				}

@@ -41,7 +41,7 @@ bosunControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route
 	$http.post('/api/expr?' +
 		'date=' + encodeURIComponent($scope.date) +
 		'&time=' + encodeURIComponent($scope.time),current)
-		.success((data: any) => {
+		.then((data: any) => {
 			$scope.result = data.Results;
 			$scope.queries = data.Queries;
 			$scope.result_type = data.Type;
@@ -64,8 +64,7 @@ bosunControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route
 				$scope.bar = data.Results;
 			}
 			$scope.running = '';
-		})
-		.error((error) => {
+		},(error) => {
 			$scope.error = error;
 			$scope.running = '';
 		})

@@ -22,7 +22,7 @@ bosunControllers.controller('HistoryCtrl', ['$scope', '$http', '$location', '$ro
 	}
 	var params = Object.keys(keys).map((v: any) => { return 'ak=' + encodeURIComponent(v); }).join('&');
 	$http.get('/api/status?' + params + "&all=1")
-		.success((data) => {
+		.then((data) => {
 			console.log(data);
 			var selected_alerts: any = {};
 			angular.forEach(data, function(v, ak) {
@@ -46,8 +46,7 @@ bosunControllers.controller('HistoryCtrl', ['$scope', '$http', '$location', '$ro
 			} else {
 				$scope.error = 'No Matching Alerts Found';
 			}
-		})
-		.error(err => {
+		},err => {
 			$scope.error = err;
 		});
 }]);

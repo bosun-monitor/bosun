@@ -63,7 +63,7 @@ bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$ro
 	}
 	function get() {
 		$http.get('/api/silence/get')
-			.success((data: any) => {
+			.then((data: any) => {
 				$scope.silences = [];
 				var now = moment.utc();
 				$scope.silences.push({
@@ -78,8 +78,7 @@ bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$ro
 					name: 'Past',
 					silences: filter(data, null, null, null, now, 25)
 				});
-			})
-			.error((error) => {
+			},(error) => {
 				$scope.error = error;
 			});
 	}
@@ -110,7 +109,7 @@ bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$ro
 	if (any) {
 		$scope.error = null;
 		$http.post('/api/silence/set', state)
-			.then((data) => {
+			.then((data:any) => {
 				if (!data) {
 					data = {'(none)': false};
 				}
