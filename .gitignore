@@ -1,2 +1,3 @@
 cmd/bosun/dev.conf
 docs/.jekyll-metadata
+cmd/bosun/ledis_data/

@@ -5,7 +5,6 @@
 	<h3>{{ct.createdToken}} <button class="btn btn-default" ngclipboard data-clipboard-text="{{ct.createdToken}}"><span class="fa fa-copy"></span></button></h3>
 
 	<p> Usage:
-		<pre>{url}?token={{ct.encoded()}}</pre> or in header:
 		<pre>X-Access-Token= {{ct.createdToken}}</pre> or even make a cookie
 		<pre>document.cookie="AccessToken={{ct.createdToken}}; expires=Thu, 18 Dec 2018 12:00:00 UTC; path=/";</pre>
 		<a class='btn btn-primary' href='/tokens'>Back</a>
