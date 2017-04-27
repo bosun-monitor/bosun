@@ -570,11 +570,9 @@ class IncidentState {
     IsPendingClose(): boolean {
         for (let action of this.Actions) {
             if (action.Deadline != "" && !action.Fullfilled) {
-                console.log("pending true")
                 return true;
             }
         }
-        console.log("pending false")        
         return false;
     }
 }

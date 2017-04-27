@@ -4120,11 +4120,9 @@ var IncidentState = (function () {
         for (var _i = 0, _a = this.Actions; _i < _a.length; _i++) {
             var action = _a[_i];
             if (action.Deadline != "" && !action.Fullfilled) {
-                console.log("pending true");
                 return true;
             }
         }
-        console.log("pending false");
         return false;
     };
     return IncidentState;
