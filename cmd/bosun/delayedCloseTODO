@@ -1,0 +1,7 @@
+- Help in action ctrl explaining delayed close
+- Help explaining duration format for delayed close
+- Add Deadline time to view of actions
+- Update documentation with new close behavior
+- Show remaining time in tooltip for dashboard indicator of delayed close
+- Add incidentfilter for delayed close
+- update grafana plugin to support delayed close
