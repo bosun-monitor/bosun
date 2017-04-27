@@ -4095,6 +4095,43 @@ var Annotation = (function () {
     };
     return Annotation;
 })();
+// See models/incident.go Event (can't be event here because JS uses that)
+var IncidentEvent = (function () {
+    function IncidentEvent() {
+    }
+    return IncidentEvent;
+})();
+var Result = (function () {
+    function Result() {
+    }
+    return Result;
+})();
+var Action = (function () {
+    function Action() {
+    }
+    return Action;
+})();
+// See models/incident.go
+var IncidentState = (function () {
+    function IncidentState() {
+    }
+    return IncidentState;
+})();
+var Groups = (function () {
+    function Groups() {
+    }
+    return Groups;
+})();
+var StateGroup = (function () {
+    function StateGroup() {
+    }
+    return StateGroup;
+})();
+var StateGroups = (function () {
+    function StateGroups() {
+    }
+    return StateGroups;
+})();
 /// <reference path="0-bosun.ts" />
 bosunControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
         var search = $location.search();

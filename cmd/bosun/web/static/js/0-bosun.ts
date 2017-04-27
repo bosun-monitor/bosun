@@ -157,8 +157,8 @@ interface IBosunScope extends RootScope {
     encode: (v: string) => string;
     panelClass: (v: string) => string;
     timeanddate: number[];
-    schedule: any;
     req_from_m: (m: string) => GraphRequest;
+    schedule: StateGroups;
     refresh: (filter: string) => any;
     animate: () => any;
     stop: (all?: boolean) => any;
@@ -513,4 +513,81 @@ class Annotation {
         this.StartDate = now;
         this.EndDate = now;
     }
+}
+
+// See models/incident.go Event (can't be event here because JS uses that)
+class IncidentEvent {
+    // Embedded properties of Result struct
+    Value: number;
+    Expr: string;
+    Status: number;
+    Time: string; // moment?
+    Unevaluated: boolean;
+}
+
+class Result {
+    Value: number;
+    Expr: string;
+}
+
+class Action {
+    User: string;
+    Message: string;
+    Time: string; // moment?
+    Type: string;
+    Deadline: string; // moment?
+    Fullfilled: boolean;
+}
+
+// See models/incident.go
+class IncidentState {
+    Id: number;
+    Start: string; // moment object?
+    End: string; // Pointer so nullable, also moment?
+    AlertKey: string;
+    Alert: string;
+
+    // Embedded properties of Result struct
+    Value: number;
+    Expr: string;
+
+    Events: IncidentEvent[];
+    Actions: Action[];
+
+    Subject: string;
+
+    NeedAck: boolean;
+    Open: boolean;
+    Unevaluated: boolean;
+
+    CurrentStatus: string; // Status enum??
+    WorstStatus: string;
+
+    LastAbnormalStatus: string;
+    LastAbnormalTime: number; // Epoch
+}
+
+class Groups {
+    NeedAck: StateGroup[];
+    Acknowledged: StateGroup[];
+}
+
+class StateGroup {
+    Active: boolean;
+    Status: string;
+    CurrentStatus: string;
+    Silenced: boolean;
+    IsError: boolean;
+    Subject: string;
+    Alert: string;
+    AlertKey: string;
+    State: IncidentState;
+    Childen: StateGroup[];
+}
+
+class StateGroups {
+    Groups: Groups;
+    TimeAndDate: number[];
+    FailingAlerts: number;
+    UnclosedErrors: number;
 }
