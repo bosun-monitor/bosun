@@ -1,7 +1,7 @@
 
 /// <reference path="expr.ts" />
 
-interface IActionScope extends IExprScope {
+interface IActionScope extends IBosunScope {
 	type: string;
 	user: string;
 	message: string;
@@ -10,16 +10,24 @@ interface IActionScope extends IExprScope {
 	submit: () => void;
 	validateMsg: () => void;
 	msgValid: boolean;
+	activeIncidents: boolean;
+	duration: string;
+	durationValid: boolean;
 }
 
 bosunControllers.controller('ActionCtrl', ['$scope', '$http', '$location', '$route', function ($scope: IActionScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService) {
 	var search = $location.search();
 	$scope.type = search.type;
+	$scope.activeIncidents = search.active == "true";
 	$scope.notify = true;
 	$scope.msgValid = true;
 	$scope.message = "";
 	$scope.validateMsg = () => {
 		$scope.msgValid = (!$scope.notify) || ($scope.message != "");
+	}
+	$scope.durationValid = true;
+	$scope.validateDuration = () => {
+		$scope.durationValid = $scope.duration == "" || parseDuration($scope.duration).asMilliseconds() != 0;
 	}
 
 	if (search.key) {
@@ -34,7 +42,8 @@ bosunControllers.controller('ActionCtrl', ['$scope', '$http', '$location', '$rou
 	}
 	$scope.submit = () => {
 		$scope.validateMsg();
-		if (!$scope.msgValid || ($scope.user == "")) {
+		$scope.validateDuration();
+		if (!$scope.msgValid || ($scope.user == "") || !$scope.durationValid) {
 			return;
 		}
 		var data = {
@@ -43,6 +52,9 @@ bosunControllers.controller('ActionCtrl', ['$scope', '$http', '$location', '$rou
 			Keys: $scope.keys,
 			Notify: $scope.notify,
 		};
+		if ($scope.duration != "") {
+			data['Time'] = moment.utc().add(parseDuration($scope.duration));
+		}
 		$http.post('/api/action', data)
 			.success((data) => {
 				$location.url('/');

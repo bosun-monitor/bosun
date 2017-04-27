@@ -11,17 +11,17 @@ bosunApp.directive('tsAckGroup', ['$location', '$timeout', ($location: ng.ILocat
 		link: (scope: any, elem: any, attrs: any) => {
 			scope.canAckSelected = scope.ack == 'Needs Acknowledgement';
 			scope.panelClass = scope.$parent.panelClass;
-			
+
 			scope.btoa = scope.$parent.btoa;
 			scope.encode = scope.$parent.encode;
 			scope.shown = {};
 			scope.collapse = (i: any) => {
 				scope.shown[i] = !scope.shown[i];
-				
-				if (scope.shown[i] && scope.groups[i].Children.length == 1){
-					$timeout(function(){
+
+				if (scope.shown[i] && scope.groups[i].Children.length == 1) {
+					$timeout(function () {
 						scope.$broadcast("onOpen", i);
-					}, 0);      
+					}, 0);
 				}
 			};
 			scope.click = ($event: any, idx: number) => {
@@ -100,25 +100,28 @@ bosunApp.directive('tsAckGroup', ['$location', '$timeout', ($location: ng.ILocat
 	};
 }]);
 
-bosunApp.directive('tsState', ['$sce', '$http', function($sce: ng.ISCEService, $http: ng.IHttpService) {
+bosunApp.directive('tsState', ['$sce', '$http', function ($sce: ng.ISCEService, $http: ng.IHttpService) {
 	return {
 		templateUrl: '/partials/alertstate.html',
-		link: function(scope: any, elem: any, attrs: any) {
+		link: function (scope: any, elem: any, attrs: any) {
 			var myIdx = attrs["tsGrp"];
 			scope.currentStatus = attrs["tsGrpstatus"]
 			scope.name = scope.child.AlertKey;
+			debugger;
+
 			scope.state = scope.child.State;
 			scope.action = (type: string) => {
 				var key = encodeURIComponent(scope.name);
-				return '/action?type=' + type + '&key=' + key;
+				var active = scope.child.Status != "normal"
+				return '/action?type=' + type + '&key=' + key + '&active=' + active;
 			};
 			var loadedBody = false;
-			scope.toggle = () =>{
+			scope.toggle = () => {
 				scope.show = !scope.show;
-				if(scope.show && !loadedBody){
+				if (scope.show && !loadedBody) {
 					scope.state.Body = "loading...";
 					loadedBody = true;
-					$http.get('/api/status?ak='+scope.child.AlertKey)
+					$http.get('/api/status?ak=' + scope.child.AlertKey)
 						.success(data => {
 							var body = data[scope.child.AlertKey].Body;
 							scope.state.Body = $sce.trustAsHtml(body);
@@ -128,11 +131,11 @@ bosunApp.directive('tsState', ['$sce', '$http', function($sce: ng.ISCEService, $
 						});
 				}
 			};
-			scope.$on('onOpen', function(e,i) { 
-				if(i == myIdx){ 
-        			scope.toggle();
-				}        
-    		});
+			scope.$on('onOpen', function (e, i) {
+				if (i == myIdx) {
+					scope.toggle();
+				}
+			});
 			scope.zws = (v: string) => {
 				if (!v) {
 					return '';
@@ -145,7 +148,7 @@ bosunApp.directive('tsState', ['$sce', '$http', function($sce: ng.ISCEService, $
 			});
 			scope.state.last = scope.state.Events[scope.state.Events.length - 1];
 			if (scope.state.Actions && scope.state.Actions.length > 0) {
-				scope.state.LastAction = scope.state.Actions[scope.state.Actions.length-1];
+				scope.state.LastAction = scope.state.Actions[scope.state.Actions.length - 1];
 			}
 			scope.state.RuleUrl = '/config?' +
 				'alert=' + encodeURIComponent(scope.state.Alert) +
@@ -182,13 +185,6 @@ bosunApp.directive('tsClose', () => {
 	return {
 		restrict: 'E',
 		templateUrl: '/partials/close.html',
-	};
-});
-
-bosunApp.directive('tsDelayedClose', () => {
-	return {
-		restrict: 'E',
-		templateUrl: '/partials/delayedClose.html',
 	};
 });
 

@@ -658,11 +658,16 @@ bosunControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route
 bosunControllers.controller('ActionCtrl', ['$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
         var search = $location.search();
         $scope.type = search.type;
+        $scope.activeIncidents = search.active == "true";
         $scope.notify = true;
         $scope.msgValid = true;
         $scope.message = "";
         $scope.validateMsg = function () {
             $scope.msgValid = (!$scope.notify) || ($scope.message != "");
+        };
+        $scope.durationValid = true;
+        $scope.validateDuration = function () {
+            $scope.durationValid = $scope.duration == "" || parseDuration($scope.duration).asMilliseconds() != 0;
         };
         if (search.key) {
             var keys = search.key;
@@ -677,7 +682,8 @@ bosunControllers.controller('ActionCtrl', ['$scope', '$http', '$location', '$rou
         }
         $scope.submit = function () {
             $scope.validateMsg();
-            if (!$scope.msgValid || ($scope.user == "")) {
+            $scope.validateDuration();
+            if (!$scope.msgValid || ($scope.user == "") || !$scope.durationValid) {
                 return;
             }
             var data = {
@@ -686,6 +692,9 @@ bosunControllers.controller('ActionCtrl', ['$scope', '$http', '$location', '$rou
                 Keys: $scope.keys,
                 Notify: $scope.notify
             };
+            if ($scope.duration != "") {
+                data['Time'] = moment.utc().add(parseDuration($scope.duration));
+            }
             $http.post('/api/action', data)
                 .success(function (data) {
                 $location.url('/');
@@ -1366,9 +1375,12 @@ function fmtTime(v) {
     return m.format() + ' (' + inn + fmtDuration(msdiff) + ago + ')';
 }
 function parseDuration(v) {
-    var pattern = /(\d+)(d|y|n|h|m|s)-ago/;
+    var pattern = /(\d+)(d|y|n|h|m|s)(-ago)?/;
     var m = pattern.exec(v);
-    return moment.duration(parseInt(m[1]), m[2].replace('n', 'M'));
+    if (m) {
+        return moment.duration(parseInt(m[1]), m[2].replace('n', 'M'));
+    }
+    return moment.duration(0);
 }
 bosunApp.directive("tsTime", function () {
     return {
@@ -3577,10 +3589,12 @@ bosunApp.directive('tsState', ['$sce', '$http', function ($sce, $http) {
                 var myIdx = attrs["tsGrp"];
                 scope.currentStatus = attrs["tsGrpstatus"];
                 scope.name = scope.child.AlertKey;
+                debugger;
                 scope.state = scope.child.State;
                 scope.action = function (type) {
                     var key = encodeURIComponent(scope.name);
-                    return '/action?type=' + type + '&key=' + key;
+                    var active = scope.child.Status != "normal";
+                    return '/action?type=' + type + '&key=' + key + '&active=' + active;
                 };
                 var loadedBody = false;
                 scope.toggle = function () {
@@ -3648,12 +3662,6 @@ bosunApp.directive('tsClose', function () {
     return {
         restrict: 'E',
         templateUrl: '/partials/close.html'
-    };
-});
-bosunApp.directive('tsDelayedClose', function () {
-    return {
-        restrict: 'E',
-        templateUrl: '/partials/delayedClose.html'
     };
 });
 bosunApp.directive('tsForget', function () {

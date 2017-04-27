@@ -141,13 +141,12 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.E
 			return
 		}
 		for _, action := range incident.Actions {
-			slog.Infoln(action.Type, action.Type == models.ActionDelayedClose, !action.Fullfilled)
 			if action.Type == models.ActionDelayedClose && !action.Fullfilled {
 				if r.Start.Before(action.Deadline) {
 					if event.Status == models.StNormal {
 						slog.Infof("closing alert %v on delayed close because the alert has returned to normal before deadline", incident.AlertKey)
 						action.Fullfilled = true
-						cerr := s.ActionByAlertKey("bosun", fmt.Sprintf("close on behalf of delayed close by %v", action.User), models.ActionClose, ak)
+						cerr := s.ActionByAlertKey("bosun", fmt.Sprintf("close on behalf of delayed close by %v", action.User), models.ActionClose, nil, ak)
 						incident, err = data.GetIncidentState(incident.Id)
 						if cerr != nil {
 							slog.Errorln(cerr)
@@ -158,14 +157,13 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.E
 					// We are after Deadline
 					slog.Infof("force closing alert %v on delayed close because the alert is after the deadline", incident.AlertKey)
 					action.Fullfilled = true
-					cerr := s.ActionByAlertKey("bosun", fmt.Sprintf("forceclose on behalf of delayed close by %v", action.User), models.ActionForceClose, ak)
+					cerr := s.ActionByAlertKey("bosun", fmt.Sprintf("forceclose on behalf of delayed close by %v", action.User), models.ActionForceClose, nil, ak)
 					incident, err = data.GetIncidentState(incident.Id)
 					if cerr != nil {
 						slog.Errorln(cerr)
 					}
 					return
 				}
-
 			}
 		}
 	}
@@ -277,7 +275,7 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.E
 	if si := silenced(ak); si != nil && event.Status == models.StNormal {
 		go func(ak models.AlertKey) {
 			slog.Infof("auto close %s because was silenced", ak)
-			err := s.ActionByAlertKey("bosun", "Auto close because was silenced.", models.ActionClose, ak)
+			err := s.ActionByAlertKey("bosun", "Auto close because was silenced.", models.ActionClose, nil, ak)
 			if err != nil {
 				slog.Errorln(err)
 			}

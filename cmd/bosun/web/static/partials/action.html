@@ -17,6 +17,12 @@
 			<textarea rows="10" class="form-control" ng-model="message" ng-change="validateMsg()" ng-blur="validateMsg()"></textarea>
 		</div>
 	</div>
+	<div class="form-group" ng-show="activeIncidents" ng-class="durationValid ? '' : 'has-error' ">
+		<label class="col-sm-2 control-label">DelayedClose Duration</label>
+		<div class="col-sm-6">
+			<input class="form-control" ng-model="duration"  ng-change="validateDuration()"></input>
+		</div>
+	</div>
 	<div class="form-group">
 		<div class="col-sm-offset-2 col-sm-6"> 
 			<div class="checkbox"><label><input type="checkbox" ng-model="notify" ng-change="validateMsg()"> Send Notification</label></div>
