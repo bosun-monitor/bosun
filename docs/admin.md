@@ -40,7 +40,7 @@ First Screen:
 
 Second Screen:
 
-![Token Created Image](/public/createdToken.jpg)
+![Token Created Image](/public/createdToken.png)
 
 ## Permissions and Roles
 Permissions provide the ability to certain things with both, and Roles are a collection of permissions for convenience. A user could have no role and an arbitrary collection of permissions.
