@@ -16,12 +16,12 @@ bosunControllers.controller('AnnotationCtrl', ['$scope', '$http', '$location', '
     var search = $location.search();
     $scope.id = search.id;
     if ($scope.id && $scope.id != "") {
-        $http.get('/api/annotation/' + $scope.id)
-            .success((data: any) => {
+        $http.get('/api/annotation/' + $scope.id).then(
+            (data: any) => {
                 $scope.annotation = new Annotation(data, true);
                 $scope.error = "";
-            })
-            .error((data: any) => {
+            },
+            (data: any) => {
                 $scope.error = "failed to get annotation with id: " + $scope.id + ", error: " + data;
             });
     } else {
@@ -29,15 +29,15 @@ bosunControllers.controller('AnnotationCtrl', ['$scope', '$http', '$location', '
         $scope.annotation.setTimeUTC();
     }
     $http.get('/api/annotation/values/Owner')
-        .success((data: string[]) => {
+        .then((data: string[]) => {
             $scope.owners = data;
         });
     $http.get('/api/annotation/values/Category')
-        .success((data: string[]) => {
+        .then((data: string[]) => {
             $scope.categories = data;
         });
     $http.get('/api/annotation/values/Host')
-        .success((data: string[]) => {
+        .then((data: string[]) => {
             $scope.hosts = data;
         });
     
@@ -46,13 +46,12 @@ bosunControllers.controller('AnnotationCtrl', ['$scope', '$http', '$location', '
         $scope.animate();
         $scope.annotation.CreationUser = $scope.auth.GetUsername();
         $http.post('/api/annotation', $scope.annotation)
-            .success((data: any) => {
+            .then((data: any) => {
                 $scope.annotation = new Annotation(data, true);
                 $scope.error = "";
                 $scope.submitSuccess = true;
                 $scope.deleteSuccess = false;
-            })
-            .error((error) => {
+            },(error) => {
                 $scope.error = "failed to create annotation: " + error.error;
                 $scope.submitSuccess = false;
             })
@@ -64,14 +63,13 @@ bosunControllers.controller('AnnotationCtrl', ['$scope', '$http', '$location', '
     $scope.deleteAnnotation = () => {
         $scope.animate();
         $http.delete('/api/annotation/' + $scope.annotation.Id)
-            .success((data) => {
+            .then((data) => {
                 $scope.error = "";
                 $scope.deleteSuccess = true;
                 $scope.submitSuccess = false;
                 $scope.annotation = new (Annotation);
                 $scope.annotation.setTimeUTC();
-            })
-            .error((error) => {
+            },(error) => {
                 $scope.error = "failed to delete annotation with id: " + $scope.annotation.Id + ", error: " + error.error;
                 $scope.deleteSuccess = false;
             })

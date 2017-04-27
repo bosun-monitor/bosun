@@ -1,5 +1,3 @@
-/// <reference path="moment.d.ts" />
-/// <reference path="moment-duration-format.d.ts" />
 
 //Represents an auth token
 class Token {
@@ -7,7 +5,7 @@ class Token {
     public Description: string = "";
     public Role: number = 0;
     public User: string = "";
-    public LastUsed: Moment;
+    public LastUsed: moment.Moment;
 
     public Permissions: string[];
     public RoleName: string;

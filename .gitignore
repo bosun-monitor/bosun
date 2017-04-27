@@ -1,4 +1,7 @@
 cmd/bosun/dev.conf
 docs/.jekyll-metadata
-node_modules/
 cmd/bosun/ledis_data/
+
+node_modules/moment/locale/
+node_modules/moment/src/
+node_modules/moment-duration-format/test/

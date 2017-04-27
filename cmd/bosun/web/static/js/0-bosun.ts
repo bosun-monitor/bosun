@@ -1,10 +1,3 @@
-/// <reference path="angular.d.ts" />
-/// <reference path="angular-route.d.ts" />
-/// <reference path="angular-sanitize.d.ts" />
-/// <reference path="bootstrap.d.ts" />
-/// <reference path="jquery.d.ts" />
-/// <reference path="underscore.d.ts" />
-/// <reference path="models.ts" />
 
 declare var d3: any;
 
@@ -27,7 +20,7 @@ bosunApp.config(['$routeProvider', '$locationProvider', '$httpProvider', functio
         enabled: true,
         requireBase: false
     });
-
+    
     var when = (u: string, r: ITitleRoute) => {
         $routeProvider.when(u, r);
     }
@@ -184,7 +177,7 @@ bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', '$q', '$r
             if (!$route.current) {
                 return null;
             }
-            if ($route.current.loadedTemplateUrl == 'partials/' + v + '.html') {
+            if ($route.current.templateUrl == 'partials/' + v + '.html') { //TODO: make sure highlight works
                 return { active: true };
             }
             return null;
@@ -244,14 +237,13 @@ bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', '$q', '$r
             $scope.animate();
 
             var p = $http.get('/api/alerts?filter=' + encodeURIComponent(filter || ""))
-                .success((data: any) => {
+                .then(((data: any) => {
                     $scope.schedule = data;
                     $scope.timeanddate = data.TimeAndDate;
                     d.resolve();
-                })
-                .error(err => {
+                }),(err => {
                     d.reject(err);
-                });
+                }));
             p.finally($scope.stop);
             return d.promise;
         };
@@ -349,7 +341,7 @@ bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', '$q', '$r
         };
         var short: any = $('#shortlink')[0];
         $scope.shorten = () => {
-            $http.get('/api/shorten').success((data: any) => {
+            $http.get('/api/shorten').then(((data: any) => {
                 if (data.id) {
                     short.value = data.id;
                     $rootScope.shortlink = true;
@@ -357,7 +349,7 @@ bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', '$q', '$r
                         short.setSelectionRange(0, data.id.length);
                     });
                 }
-            });
+            }));
         };
     }]);
 

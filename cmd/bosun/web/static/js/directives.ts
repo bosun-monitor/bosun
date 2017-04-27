@@ -1,4 +1,4 @@
-/// <reference path="0-bosun.ts" />
+
 
 bosunApp.directive('tsResults', function() {
     return {
@@ -31,7 +31,6 @@ bosunApp.directive('tsComputations', () => {
     };
 });
 
-
 function fmtDuration(v: any) {
     var diff = moment.duration(v, 'milliseconds');
     var f;
@@ -59,7 +58,7 @@ function fmtTime(v: any) {
 function parseDuration(v: string) {
     var pattern = /(\d+)(d|y|n|h|m|s)-ago/;
     var m = pattern.exec(v);
-    return moment.duration(parseInt(m[1]), m[2].replace('n', 'M'))
+    return moment.duration(parseInt(m[1]), <moment.unitOfTime.DurationConstructor>m[2].replace('n', 'M'))
 }
 
 interface ITimeScope extends IBosunScope {

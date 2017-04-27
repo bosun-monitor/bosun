@@ -14,7 +14,7 @@ interface IErrorScope extends IBosunScope {
 bosunControllers.controller('ErrorCtrl', ['$scope', '$http', '$location', '$route', function($scope: IErrorScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService) {
 	$scope.loading = true
 	$http.get('/api/errors')
-		.success((data: any) => {
+		.then((data: any) => {
 			$scope.errors = [];
 			_(data).forEach((err,name)=>{
 				err.Name = name;
@@ -27,8 +27,7 @@ bosunControllers.controller('ErrorCtrl', ['$scope', '$http', '$location', '$rout
 				})
 				$scope.errors.push(err);
 			})
-		})
-		.error(function(data) {
+		},function(data) {
    			$scope.error = "Error fetching data: " + data;
   		})
 		.finally(()=>{$scope.loading=false})
@@ -64,10 +63,9 @@ bosunControllers.controller('ErrorCtrl', ['$scope', '$http', '$location', '$rout
 	
 	var clear = (keys) => {
 		$http.post('/api/errors', keys)
-		.success((data) => {
+		.then((data) => {
 			$route.reload();
-		})
-		.error(function(data) {
+		},function(data) {
    			$scope.error = "Error Clearing Errors: " + data;
   		})
 	}

@@ -152,7 +152,7 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 	}
 
 	$http.get('/api/config?hash=' + (search.hash || ''))
-		.success((data: any) => {
+		.then((data: any) => {
 			$scope.config_text = data;
 			$scope.items = parseItems();
 			buildAlertFromExpr();
@@ -164,10 +164,9 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 				$scope.scrollTo("alert", $scope.selected_alert);
 			})
 
-		})
-		.error(function (data) {
+		}, function (data) {
 			$scope.validationResult = "Error fetching config: " + data;
-		})
+		});
 
 	$scope.reparse = function () {
 		$scope.items = parseItems();
@@ -221,11 +220,10 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 			'alert=' + encodeURIComponent($scope.selected_alert) +
 			'&from=' + encodeURIComponent(set.Time);
 		$http.post(url, $scope.config_text)
-			.success((data: any) => {
+			.then((data: any) => {
 				procResults(data);
 				set.Results = data.Sets[0].Results;
-			})
-			.error((error) => {
+			},(error) => {
 				$scope.error = error;
 			})
 			.finally(() => {
@@ -240,7 +238,7 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 		}
 		(function tick() {
 			$http.get('/api/config/running_hash')
-				.success((data: any) => {
+				.then((data: any) => {
 					$scope.runningHashResult = '';
 					$timeout(tick, 15 * 1000);
 					if ($scope.runningHash) {
@@ -251,8 +249,7 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 					}
 					$scope.runningHash = data.Hash;
 					$scope.runningChanged = false;
-				})
-				.error(function (data) {
+				},function (data) {
 					$scope.runningHashResult = "Error getting running config hash: " + data;
 				})
 		})()
@@ -340,7 +337,7 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 	var line_re = /test:(\d+)/;
 	$scope.validate = () => {
 		$http.post('/api/config_test', $scope.config_text)
-			.success((data: any) => {
+			.then((data: any) => {
 				if (data == "") {
 					$scope.validationResult = "Valid";
 					$timeout(() => {
@@ -353,8 +350,7 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 						editor.gotoLine(m[1]);
 					}
 				}
-			})
-			.error((error) => {
+			},(error) => {
 				$scope.validationResult = 'Error validating: ' + error;
 			});
 	}
@@ -402,15 +398,14 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 			'&email=' + encodeURIComponent($scope.email) +
 			'&template_group=' + encodeURIComponent($scope.template_group);
 		$http.post(url, $scope.config_text)
-			.success((data: any) => {
+			.then((data: any) => {
 				$scope.sets = data.Sets;
 				$scope.alert_history = data.AlertHistory;
 				if (data.Hash) {
 					$location.search('hash', data.Hash);
 				}
 				procResults(data);
-			})
-			.error((error) => {
+			},(error) => {
 				$scope.error = error;
 			})
 			.finally(() => {
@@ -437,11 +432,10 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 			'&from=' + encodeURIComponent(moment.utc(v.Time).format()) +
 			'&template_group=' + encodeURIComponent(template);
 		$http.post(url, $scope.config_text)
-			.success((data: any) => {
+			.then((data: any) => {
 				v.subject = data.Subject;
 				v.body = $sce.trustAsHtml(data.Body);
-			})
-			.error((error) => {
+			},(error) => {
 				v.error = error;
 			})
 			.finally(() => {
@@ -468,11 +462,10 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 				"Config": $scope.config_text,
 				"Message": $scope.message
 			})
-			.success((data: any) => {
+			.then((data: any) => {
 				$scope.diff = data || "No Diff";
 				// Reset running hash if there is no difference?
-			})
-			.error((error) => {
+			},(error) => {
 				$scope.diff = "Failed to load diff: " + error;
 			});
 	}
@@ -488,11 +481,10 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 			"Diff": $scope.diff,
 			"Message": $scope.message
 		})
-			.success((data: any) => {
+			.then((data: any) => {
 				$scope.saveResult = "Config Saved; Reloading";
 				$scope.runningHash = undefined;
-			})
-			.error((error) => {
+			},(error) => {
 				$scope.saveResult = error;
 			});
 	}

@@ -43,11 +43,11 @@ bosunControllers.controller('ActionCtrl', ['$scope', '$http', '$location', '$rou
 			Keys: $scope.keys,
 			Notify: $scope.notify,
 		};
-		$http.post('/api/action', data)
-			.success((data) => {
+		$http.post('/api/action', data).then(
+			(data) => {
 				$location.url('/');
-			})
-			.error((error) => {
+			},
+			(error) => {
 				alert(error);
 			});
 	};

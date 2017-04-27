@@ -1,0 +1,17 @@
+{
+    "compilerOptions": {
+        "outFile": "cmd/bosun/web/static/js/bosun.js",
+        "module": "none",
+        "noImplicitAny": false,
+        "removeComments": true,
+        "sourceMap": false,
+        "target": "es5"
+    },
+    "files": [
+        "cmd/bosun/web/static/js/models.ts",
+        "cmd/bosun/web/static/js/0-bosun.ts"
+    ],
+    "include": [
+        "cmd/bosun/web/static/js/**/*.ts"
+    ]
+}
