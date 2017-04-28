@@ -209,8 +209,9 @@ type Action struct {
 	Message    string
 	Time       time.Time
 	Type       ActionType
-	Deadline   time.Time // For delayed closed
+	Deadline   *time.Time `json:",omitempty"`
 	Fullfilled bool
+	Cancelled  bool
 }
 
 type ActionType int // Available to users in templates, document changes in Bosun docs
@@ -224,6 +225,7 @@ const (
 	ActionPurge
 	ActionNote
 	ActionDelayedClose
+	ActionCancelClose
 )
 
 func (a ActionType) String() string {
@@ -242,6 +244,8 @@ func (a ActionType) String() string {
 		return "Note"
 	case ActionDelayedClose:
 		return "DelayedClose"
+	case ActionCancelClose:
+		return "CancelClose"
 	default:
 		return "none"
 	}
@@ -267,6 +271,8 @@ func (a *ActionType) UnmarshalJSON(b []byte) error {
 		*a = ActionNote
 	case `"DelayedClose"`:
 		*a = ActionDelayedClose
+	case `"CancelClose"`:
+		*a = ActionCancelClose
 	default:
 		*a = ActionNone
 	}

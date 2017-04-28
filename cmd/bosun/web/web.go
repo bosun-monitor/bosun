@@ -701,6 +701,8 @@ func Action(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (inter
 		at = models.ActionAcknowledge
 	case "close":
 		at = models.ActionClose
+	case "cancelClose":
+		at = models.ActionCancelClose
 	case "forget":
 		at = models.ActionForget
 	case "forceClose":

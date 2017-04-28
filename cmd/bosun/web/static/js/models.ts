@@ -99,6 +99,7 @@ class Action {
     Type: string;
     Deadline: string; // moment?
     Fullfilled: boolean;
+    Cancelled: boolean;
 
     constructor(a) {
         this.User = a.User;
@@ -106,6 +107,7 @@ class Action {
         this.Time = a.Time;
         this.Type = a.Type;
         this.Deadline = a.Deadline;
+        this.Cancelled = a.Cancelled;
         this.Fullfilled = a.Fullfilled;
     }
 }
@@ -172,7 +174,7 @@ class IncidentState {
 
     IsPendingClose(): boolean {
         for (let action of this.Actions) {
-            if (action.Deadline != "" && !action.Fullfilled) {
+            if (action.Deadline != undefined && !(action.Fullfilled || action.Cancelled)) {
                 return true;
             }
         }

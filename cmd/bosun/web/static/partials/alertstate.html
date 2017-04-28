@@ -68,7 +68,7 @@
 					<ts-ack></ts-ack>
 					<ts-close></ts-close>
 					<ts-force-close></ts-force-close>
-					<ts-delayed-close></ts-delayed-close>
+					<ts-cancel-close ng-if="state.IsPendingClose()"></ts-cancel-close>
 					<ts-forget ng-if="group.Status == 'unknown'"></ts-forget>
 					<ts-purge></ts-purge>
 				</div>

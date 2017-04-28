@@ -72,6 +72,7 @@ var Action = (function () {
         this.Time = a.Time;
         this.Type = a.Type;
         this.Deadline = a.Deadline;
+        this.Cancelled = a.Cancelled;
         this.Fullfilled = a.Fullfilled;
     }
     return Action;
@@ -112,7 +113,7 @@ var IncidentState = (function () {
     IncidentState.prototype.IsPendingClose = function () {
         for (var _i = 0, _a = this.Actions; _i < _a.length; _i++) {
             var action = _a[_i];
-            if (action.Deadline != "" && !action.Fullfilled) {
+            if (action.Deadline != undefined && !(action.Fullfilled || action.Cancelled)) {
                 return true;
             }
         }
@@ -662,6 +663,7 @@ bosunControllers.controller('ActionCtrl', ['$scope', '$http', '$location', '$rou
         $scope.notify = true;
         $scope.msgValid = true;
         $scope.message = "";
+        $scope.duration = "";
         $scope.validateMsg = function () {
             $scope.msgValid = (!$scope.notify) || ($scope.message != "");
         };
@@ -3661,6 +3663,12 @@ bosunApp.directive('tsClose', function () {
     return {
         restrict: 'E',
         templateUrl: '/partials/close.html'
+    };
+});
+bosunApp.directive('tsCancelClose', function () {
+    return {
+        restrict: 'E',
+        templateUrl: '/partials/cancelClose.html'
     };
 });
 bosunApp.directive('tsForget', function () {

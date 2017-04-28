@@ -22,6 +22,7 @@ bosunControllers.controller('ActionCtrl', ['$scope', '$http', '$location', '$rou
 	$scope.notify = true;
 	$scope.msgValid = true;
 	$scope.message = "";
+	$scope.duration = "";
 	$scope.validateMsg = () => {
 		$scope.msgValid = (!$scope.notify) || ($scope.message != "");
 	}

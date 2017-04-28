@@ -601,14 +601,27 @@ func (s *Schedule) action(user, message string, t models.ActionType, at *time.Ti
 			action.Type = models.ActionDelayedClose
 			alertDef := s.RuleConf.GetAlert(st.AlertKey.Name())
 			if at != nil {
-				action.Deadline = *at
+				action.Deadline = at
 			} else { // Set deadline based on Alert Check Frequency * 2
 				runEvery := alertDef.RunEvery
 				if runEvery == 0 {
 					runEvery = s.SystemConf.GetDefaultRunEvery()
 				}
-				action.Deadline = timestamp.Add(time.Duration(runEvery) * s.SystemConf.GetCheckFrequency())
+				dl := timestamp.Add(time.Duration(runEvery) * s.SystemConf.GetCheckFrequency())
+				action.Deadline = &dl
 			}
+		}
+	case models.ActionCancelClose:
+		found := false
+		for i, a := range st.Actions {
+			// Find first delayed close that hasn't already been fulfilled or canceled
+			if a.Type == models.ActionDelayedClose && !(a.Fullfilled || a.Cancelled) {
+				found, st.Actions[i].Cancelled = true, true
+				break
+			}
+		}
+		if !found {
+			return "", fmt.Errorf("no delayed close for incident %v (%v) found to cancel", st.Id, st.AlertKey)
 		}
 	case models.ActionForceClose:
 		st.Open = false

@@ -141,8 +141,22 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.E
 			return
 		}
 		for _, action := range incident.Actions {
-			if action.Type == models.ActionDelayedClose && !action.Fullfilled {
-				if r.Start.Before(action.Deadline) {
+			if action.Type == models.ActionDelayedClose && !(action.Fullfilled || action.Cancelled) {
+				if event.Status > incident.WorstStatus {
+						// If the lifetime severity of the incident has increased, cancel the delayed close
+						cerr := s.ActionByAlertKey("bosun", "cancelled delayed close due to severity increase" , models.ActionCancelClose, nil, ak)
+						incident, err = data.GetIncidentState(incident.Id)
+						if cerr != nil {
+							slog.Errorln(cerr)
+						}
+						// Continue processing alert after cancelling the delayed close
+						break
+				}
+				if (action.Deadline == nil) {
+					err = fmt.Errorf("should not be here - cancelled close without deadline")
+					return
+				}
+				if r.Start.Before(*action.Deadline) {
 					if event.Status == models.StNormal {
 						slog.Infof("closing alert %v on delayed close because the alert has returned to normal before deadline", incident.AlertKey)
 						action.Fullfilled = true

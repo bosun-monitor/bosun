@@ -5,4 +5,3 @@
 - Show remaining time in tooltip for dashboard indicator of delayed close
 - Add incidentfilter for delayed close
 - update grafana plugin to support delayed close
-- cancel the delayed close on severity increase

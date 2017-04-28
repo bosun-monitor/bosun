@@ -17,7 +17,7 @@
 			<textarea rows="10" class="form-control" ng-model="message" ng-change="validateMsg()" ng-blur="validateMsg()"></textarea>
 		</div>
 	</div>
-	<div class="form-group" ng-show="activeIncidents" ng-class="durationValid ? '' : 'has-error' ">
+	<div class="form-group" ng-show="activeIncidents && type == 'close'" ng-class="durationValid ? '' : 'has-error' ">
 		<label class="col-sm-3 control-label">Delayed Close Duration 
 			<i class="fa fa-question-circle-o fa-lg" aria-hidden="true"></i>
 		</label>

@@ -186,6 +186,13 @@ bosunApp.directive('tsClose', () => {
 	};
 });
 
+bosunApp.directive('tsCancelClose', () => {
+	return {
+		restrict: 'E',
+		templateUrl: '/partials/cancelClose.html',
+	};
+});
+
 bosunApp.directive('tsForget', () => {
 	return {
 		restrict: 'E',
