@@ -572,6 +572,7 @@ func (s *Schedule) action(user, message string, t models.ActionType, at *time.Ti
 			if err := collect.Add("actions", opentsdb.TagSet{"user": user, "alert": st.AlertKey.Name(), "type": t.String()}, 1); err != nil {
 				slog.Errorln(err)
 			}
+			// TODO don't always clear notifications I don't thhink? i.e. Note and cancel
 			if err := s.DataAccess.Notifications().ClearNotifications(st.AlertKey); err != nil {
 				e = err
 			}
@@ -594,6 +595,18 @@ func (s *Schedule) action(user, message string, t models.ActionType, at *time.Ti
 			return "", fmt.Errorf("cannot acknowledge closed alert")
 		}
 		st.NeedAck = false
+	case models.ActionCancelClose:
+		found := false
+		for i, a := range st.Actions {
+			// Find first delayed close that hasn't already been fulfilled or canceled
+			if a.Type == models.ActionDelayedClose && !(a.Fullfilled || a.Cancelled) {
+				found, st.Actions[i].Cancelled = true, true
+				break
+			}
+		}
+		if !found {
+			return "", fmt.Errorf("no delayed close for incident %v (%v) found to cancel", st.Id, st.AlertKey)
+		}
 	case models.ActionClose:
 		// closing effectively acks the incident
 		st.NeedAck = false
@@ -610,18 +623,9 @@ func (s *Schedule) action(user, message string, t models.ActionType, at *time.Ti
 				dl := timestamp.Add(time.Duration(runEvery) * s.SystemConf.GetCheckFrequency())
 				action.Deadline = &dl
 			}
-		}
-	case models.ActionCancelClose:
-		found := false
-		for i, a := range st.Actions {
-			// Find first delayed close that hasn't already been fulfilled or canceled
-			if a.Type == models.ActionDelayedClose && !(a.Fullfilled || a.Cancelled) {
-				found, st.Actions[i].Cancelled = true, true
-				break
-			}
-		}
-		if !found {
-			return "", fmt.Errorf("no delayed close for incident %v (%v) found to cancel", st.Id, st.AlertKey)
+		} else {
+			st.Open = false
+			st.End = &timestamp
 		}
 	case models.ActionForceClose:
 		st.Open = false

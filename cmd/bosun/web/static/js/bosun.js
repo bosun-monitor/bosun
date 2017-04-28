@@ -3594,7 +3594,7 @@ bosunApp.directive('tsState', ['$sce', '$http', function ($sce, $http) {
                 scope.state = scope.child.State;
                 scope.action = function (type) {
                     var key = encodeURIComponent(scope.name);
-                    var active = scope.child.Status != "normal";
+                    var active = scope.state.CurrentStatus != 'normal';
                     return '/action?type=' + type + '&key=' + key + '&active=' + active;
                 };
                 var loadedBody = false;
