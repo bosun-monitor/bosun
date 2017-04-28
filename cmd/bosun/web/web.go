@@ -696,6 +696,7 @@ func Action(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (inter
 		return nil, err
 	}
 	var at models.ActionType
+	// TODO Make constants in the JS code for these that *match* the names the string Method for ActionType
 	switch data.Type {
 	case "ack":
 		at = models.ActionAcknowledge

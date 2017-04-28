@@ -3541,7 +3541,7 @@ bosunApp.directive('tsAckGroup', ['$location', '$timeout', function ($location, 
                             continue;
                         }
                         scope.anySelected = true;
-                        if (g.Active && g.Status != 'unknown' && g.Status != 'error') {
+                        if (g.Status == 'error') {
                             scope.canCloseSelected = false;
                         }
                         if (g.Status != 'unknown') {
@@ -3551,20 +3551,28 @@ bosunApp.directive('tsAckGroup', ['$location', '$timeout', function ($location, 
                 };
                 scope.multiaction = function (type) {
                     var keys = [];
+                    var active = false;
                     angular.forEach(scope.groups, function (group) {
                         if (!group.checked) {
                             return;
                         }
                         if (group.AlertKey) {
+                            if (group.State.CurrentStatus != 'normal') {
+                                active = true;
+                            }
                             keys.push(group.AlertKey);
                         }
                         angular.forEach(group.Children, function (child) {
+                            if (child.State.CurrentStatus != 'normal') {
+                                active = true;
+                            }
                             keys.push(child.AlertKey);
                         });
                     });
                     scope.$parent.setKey("action-keys", keys);
                     $location.path("action");
                     $location.search("type", type);
+                    $location.search("active", active ? 'true' : 'false');
                 };
                 scope.history = function () {
                     var url = '/history?';

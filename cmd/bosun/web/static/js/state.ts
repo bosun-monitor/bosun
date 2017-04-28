@@ -56,7 +56,7 @@ bosunApp.directive('tsAckGroup', ['$location', '$timeout', ($location: ng.ILocat
 						continue;
 					}
 					scope.anySelected = true;
-					if (g.Active && g.Status != 'unknown' && g.Status != 'error') {
+					if (g.Status == 'error') {
 						scope.canCloseSelected = false;
 					}
 					if (g.Status != 'unknown') {
@@ -66,20 +66,28 @@ bosunApp.directive('tsAckGroup', ['$location', '$timeout', ($location: ng.ILocat
 			};
 			scope.multiaction = (type: string) => {
 				var keys = [];
+				var active = false;
 				angular.forEach(scope.groups, (group) => {
 					if (!group.checked) {
 						return;
 					}
 					if (group.AlertKey) {
+						if (group.State.CurrentStatus != 'normal') {
+							active = true;
+						}
 						keys.push(group.AlertKey);
 					}
 					angular.forEach(group.Children, (child) => {
+						if (child.State.CurrentStatus != 'normal') {
+							active = true;
+						}
 						keys.push(child.AlertKey);
 					});
 				});
 				scope.$parent.setKey("action-keys", keys);
 				$location.path("action");
 				$location.search("type", type);
+				$location.search("active", active ? 'true': 'false');
 			};
 			scope.history = () => {
 				var url = '/history?';
