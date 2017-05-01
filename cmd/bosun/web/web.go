@@ -689,7 +689,7 @@ func Action(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (inter
 		Ids     []int64
 		Notify  bool
 		User    string
-		Time *time.Time
+		Time    *time.Time
 	}
 	j := json.NewDecoder(r.Body)
 	if err := j.Decode(&data); err != nil {
