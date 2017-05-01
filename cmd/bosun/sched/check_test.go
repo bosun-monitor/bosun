@@ -176,6 +176,9 @@ func TestDelayedClose(t *testing.T) {
 			t.Fatalf("expected incident active status to be %v but got %v", active, incident.IsActive())
 		}
 	}
+	advance := func() {
+		r.Start = r.Start.Add(time.Second)
+	}
 	s.RunHistory(r)
 	expect(1, true)
 
@@ -184,17 +187,17 @@ func TestDelayedClose(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	r.Start = now.Add(time.Second)
+	advance()
 	s.RunHistory(r)
 	expect(1, true)
-	
+
 	r.Events[ak].Status = models.StNormal
-	r.Start = now.Add(time.Second * 2)
+	advance()
 	s.RunHistory(r)
 	expect(1, false)
-	
+
 	r.Events[ak].Status = models.StWarning
-	r.Start = now.Add(time.Second * 3)
+	advance()
 	s.RunHistory(r)
 	expect(2, true)
 }
