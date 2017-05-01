@@ -1,3 +1,12 @@
+interface AckGroupScope extends ng.IScope {
+	groups: CheckedStateGroup[];
+}
+
+// StateGroup with an added property if checked
+interface CheckedStateGroup extends StateGroup {
+	checked: boolean;
+}
+
 
 bosunApp.directive('tsAckGroup', ['$location', '$timeout', ($location: ng.ILocationService, $timeout: ng.ITimeoutService) => {
 	return {
@@ -8,7 +17,7 @@ bosunApp.directive('tsAckGroup', ['$location', '$timeout', ($location: ng.ILocat
 			timeanddate: '=',
 		},
 		templateUrl: '/partials/ackgroup.html',
-		link: (scope: any, elem: any, attrs: any) => {
+		link: (scope: AckGroupScope, elem: any, attrs: any) => {
 			scope.canAckSelected = scope.ack == 'Needs Acknowledgement';
 			scope.panelClass = scope.$parent.panelClass;
 
@@ -87,7 +96,7 @@ bosunApp.directive('tsAckGroup', ['$location', '$timeout', ($location: ng.ILocat
 				scope.$parent.setKey("action-keys", keys);
 				$location.path("action");
 				$location.search("type", type);
-				$location.search("active", active ? 'true': 'false');
+				$location.search("active", active ? 'true' : 'false');
 			};
 			scope.history = () => {
 				var url = '/history?';

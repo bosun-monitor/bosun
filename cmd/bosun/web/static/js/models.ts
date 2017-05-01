@@ -213,7 +213,6 @@ class StateGroup {
             }
         }
     }
-
 }
 
 class Groups {
