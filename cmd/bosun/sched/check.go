@@ -173,10 +173,6 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.E
 							slog.Errorln(cerr)
 						}
 						incident.Actions[i].Fullfilled = true
-						if event.Status != incident.CurrentStatus {
-							incident.Events = append(incident.Events, *event)
-						}
-						incident.CurrentStatus = event.Status
 						return
 					}
 				} else {
