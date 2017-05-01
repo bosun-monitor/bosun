@@ -85,7 +85,7 @@ func TestCheckFlapping(t *testing.T) {
 	r.Events[ak].Status = models.StNormal
 	s.RunHistory(r)
 	// Close the alert, so it should notify next time.
-	if err := s.ActionByAlertKey("", "", models.ActionClose, ak); err != nil {
+	if err := s.ActionByAlertKey("", "", models.ActionClose, nil, ak); err != nil {
 		t.Fatal(err)
 	}
 	r.Events[ak].Status = models.StWarning
@@ -180,7 +180,7 @@ func TestIncidentIds(t *testing.T) {
 
 	r.Events[ak].Status = models.StNormal
 	s.RunHistory(r)
-	err = s.ActionByAlertKey("", "", models.ActionClose, ak)
+	err = s.ActionByAlertKey("", "", models.ActionClose, nil, ak)
 	if err != nil {
 		t.Fatal(err)
 	}
