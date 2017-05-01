@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/davecgh/go-spew/spew"
+
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/conf/rule"
 	"bosun.org/models"
@@ -139,6 +141,62 @@ func TestCheckSilence(t *testing.T) {
 	case <-time.After(time.Second * 2):
 		// Timeout *probably* means the silence worked
 	}
+}
+
+func TestDelayedClose(t *testing.T) {
+	defer setup()()
+	c, err := rule.NewConf("", conf.EnabledBackends{}, nil, `
+		alert a {
+			crit = 1
+		}
+	`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s, _ := initSched(&conf.SystemConf{}, c)
+	now := time.Now()
+	ak := models.NewAlertKey("a", nil)
+	r := &RunHistory{
+		Start: now,
+		Events: map[models.AlertKey]*models.Event{
+			ak: {Status: models.StWarning},
+		},
+	}
+	expect := func(id int64, active bool) {
+		incident, err := s.DataAccess.State().GetLatestIncident(ak)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if incident.Id != id {
+			spew.Dump(incident)
+			t.Fatalf("expected incident id %d. Got %d.", id, incident.Id)
+		}
+		if incident.IsActive() != active {
+			spew.Dump(incident)
+			t.Fatalf("expected incident active status to be %v but got %v", active, incident.IsActive())
+		}
+	}
+	s.RunHistory(r)
+	expect(1, true)
+
+	fiveMin := now.Add(time.Minute * 5)
+	err = s.ActionByAlertKey("", "", models.ActionClose, &fiveMin, ak)
+	if err != nil {
+		t.Fatal(err)
+	}
+	r.Start = now.Add(time.Second)
+	s.RunHistory(r)
+	expect(1, true)
+	
+	r.Events[ak].Status = models.StNormal
+	r.Start = now.Add(time.Second * 2)
+	s.RunHistory(r)
+	expect(1, false)
+	
+	r.Events[ak].Status = models.StWarning
+	r.Start = now.Add(time.Second * 3)
+	s.RunHistory(r)
+	expect(2, true)
 }
 
 func TestIncidentIds(t *testing.T) {
