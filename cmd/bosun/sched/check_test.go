@@ -9,8 +9,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
-
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/conf/rule"
 	"bosun.org/models"
@@ -147,7 +145,17 @@ func TestDelayedClose(t *testing.T) {
 	defer setup()()
 	c, err := rule.NewConf("", conf.EnabledBackends{}, nil, `
 		alert a {
+			warn = 1
 			crit = 1
+			warnNotification = test
+			critNotification = test
+			template = test
+		}
+		template test {
+			subject = test
+		}
+		notification test {
+			print = true
 		}
 	`)
 	if err != nil {
@@ -168,22 +176,28 @@ func TestDelayedClose(t *testing.T) {
 			t.Fatal(err)
 		}
 		if incident.Id != id {
-			spew.Dump(incident)
 			t.Fatalf("expected incident id %d. Got %d.", id, incident.Id)
 		}
 		if incident.IsActive() != active {
-			spew.Dump(incident)
 			t.Fatalf("expected incident active status to be %v but got %v", active, incident.IsActive())
 		}
 		if incident.Open != open {
 			t.Fatalf("expected incident closed boolean to be %v but got %v", open, incident.Open)
 		}
 	}
+	expectPendingNotifications := func(i int) {
+		if len(s.pendingNotifications[s.RuleConf.GetNotification("test")]) != i {
+			t.Fatalf("expencted %v pending notifications but got %v", i, len(s.pendingNotifications[s.RuleConf.GetNotification("test")]))
+		}
+		s.pendingNotifications = nil
+	}
 	advance := func(i int64) {
 		r.Start = r.Start.Add(time.Second * time.Duration(i))
 	}
 	s.RunHistory(r)
 	expect(1, true, true)
+	expectPendingNotifications(1)
+	s.pendingNotifications = nil
 
 	// Test case where close issue and alert goes to normal before deadline
 	fiveMin := r.Start.Add(time.Minute * 5)
@@ -204,6 +218,7 @@ func TestDelayedClose(t *testing.T) {
 	advance(1)
 	s.RunHistory(r)
 	expect(2, true, true)
+	expectPendingNotifications(1)
 
 	// Test case where close issue and alert does not go normal before deadline
 	// which should result in a force closing
@@ -221,6 +236,7 @@ func TestDelayedClose(t *testing.T) {
 	advance(1)
 	s.RunHistory(r)
 	expect(3, true, true)
+	expectPendingNotifications(1)
 
 	// Test cancelling a delayed close
 	fiveMin = r.Start.Add(time.Minute * 5)
@@ -240,7 +256,7 @@ func TestDelayedClose(t *testing.T) {
 	s.RunHistory(r)
 	expect(3, true, true)
 
-	// Make sure delayed close works after cancelling one
+	// Make sure delayed close works after a previous delayed close was cancelled
 	fiveMin = r.Start.Add(time.Minute * 5)
 	err = s.ActionByAlertKey("", "", models.ActionClose, &fiveMin, ak)
 	if err != nil {
@@ -254,6 +270,24 @@ func TestDelayedClose(t *testing.T) {
 	advance(1)
 	s.RunHistory(r)
 	expect(4, true, true)
+	expectPendingNotifications(1)
+
+	// Make sure escalation cancels a delayed close
+	fiveMin = r.Start.Add(time.Minute * 5)
+	err = s.ActionByAlertKey("", "", models.ActionClose, &fiveMin, ak)
+	if err != nil {
+		t.Fatal(err)
+	}
+	r.Events[ak].Status = models.StCritical
+	advance(1)
+	s.RunHistory(r)
+	expect(4, true, true)
+	expectPendingNotifications(1)
+
+	advance(300)
+	s.RunHistory(r)
+	expect(4, true, true)
+	expectPendingNotifications(0)
 }
 
 func TestIncidentIds(t *testing.T) {

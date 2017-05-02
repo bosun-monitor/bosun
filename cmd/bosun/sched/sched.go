@@ -567,17 +567,6 @@ func (s *Schedule) action(user, message string, t models.ActionType, at *time.Ti
 	if err := collect.Add("actions", opentsdb.TagSet{"user": user, "alert": st.AlertKey.Name(), "type": t.String()}, 1); err != nil {
 		slog.Errorln(err)
 	}
-	defer func() {
-		if e == nil {
-			if err := collect.Add("actions", opentsdb.TagSet{"user": user, "alert": st.AlertKey.Name(), "type": t.String()}, 1); err != nil {
-				slog.Errorln(err)
-			}
-			// TODO don't always clear notifications I don't thhink? i.e. Note and cancel
-			if err := s.DataAccess.Notifications().ClearNotifications(st.AlertKey); err != nil {
-				e = err
-			}
-		}
-	}()
 	isUnknown := st.LastAbnormalStatus == models.StUnknown
 	timestamp := utcNow()
 	action := models.Action{
@@ -586,6 +575,20 @@ func (s *Schedule) action(user, message string, t models.ActionType, at *time.Ti
 		Type:    t,
 		User:    user,
 	}
+	defer func() {
+		if e == nil {
+			if err := collect.Add("actions", opentsdb.TagSet{"user": user, "alert": st.AlertKey.Name(), "type": t.String()}, 1); err != nil {
+				slog.Errorln(err)
+			}
+			switch action.Type {
+			case models.ActionClose, models.ActionAcknowledge, models.ActionForceClose, models.ActionForget, models.ActionPurge:
+				if err := s.DataAccess.Notifications().ClearNotifications(st.AlertKey); err != nil {
+					e = err
+				}
+			}
+		}
+	}()
+
 	switch t {
 	case models.ActionAcknowledge:
 		if !st.NeedAck {
