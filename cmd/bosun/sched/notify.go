@@ -13,6 +13,9 @@ import (
 	"bosun.org/slog"
 )
 
+// dispatchNotifications triggers notification checks at 2x the the system configuration's
+// check frequency, when something has signaled the schedule via the nc channels, or when
+// a notification that was scheduled in the future due to a notification chain
 func (s *Schedule) dispatchNotifications() {
 	ticker := time.NewTicker(s.SystemConf.GetCheckFrequency() * 2)
 	var next <-chan time.Time
@@ -42,6 +45,7 @@ type IncidentWithTemplates struct {
 	*models.RenderedTemplates
 }
 
+// Notify puts a rendered notification in the schedule's pendingNotifications queue
 func (s *Schedule) Notify(st *models.IncidentState, rt *models.RenderedTemplates, n *conf.Notification) {
 	it := &IncidentWithTemplates{}
 	it.IncidentState = st

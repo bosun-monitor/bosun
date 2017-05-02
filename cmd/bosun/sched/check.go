@@ -163,6 +163,7 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.E
 							incident.Events = append(incident.Events, *event)
 						}
 						incident.CurrentStatus = event.Status
+						// Action needs to know it is normal, so update the incident that action will read
 						_, err = data.UpdateIncidentState(incident)
 						if err != nil {
 							return
@@ -178,7 +179,7 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.E
 				} else {
 					// We are after Deadline
 					slog.Infof("force closing alert %v on delayed close because the alert is after the deadline", incident.AlertKey)
-					action.Fullfilled = true
+					incident.Actions[i].Fullfilled = true
 					cerr := s.ActionByAlertKey("bosun", fmt.Sprintf("forceclose on behalf of delayed close by %v", action.User), models.ActionForceClose, nil, ak)
 					incident, err = data.GetIncidentState(incident.Id)
 					if cerr != nil {

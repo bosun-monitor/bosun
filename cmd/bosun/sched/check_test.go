@@ -162,7 +162,7 @@ func TestDelayedClose(t *testing.T) {
 			ak: {Status: models.StWarning},
 		},
 	}
-	expect := func(id int64, active bool) {
+	expect := func(id int64, active bool, open bool) {
 		incident, err := s.DataAccess.State().GetLatestIncident(ak)
 		if err != nil {
 			t.Fatal(err)
@@ -175,31 +175,85 @@ func TestDelayedClose(t *testing.T) {
 			spew.Dump(incident)
 			t.Fatalf("expected incident active status to be %v but got %v", active, incident.IsActive())
 		}
+		if incident.Open != open {
+			t.Fatalf("expected incident closed boolean to be %v but got %v", open, incident.Open)
+		}
 	}
-	advance := func() {
-		r.Start = r.Start.Add(time.Second)
+	advance := func(i int64) {
+		r.Start = r.Start.Add(time.Second * time.Duration(i))
 	}
 	s.RunHistory(r)
-	expect(1, true)
+	expect(1, true, true)
 
-	fiveMin := now.Add(time.Minute * 5)
+	// Test case where close issue and alert goes to normal before deadline
+	fiveMin := r.Start.Add(time.Minute * 5)
 	err = s.ActionByAlertKey("", "", models.ActionClose, &fiveMin, ak)
 	if err != nil {
 		t.Fatal(err)
 	}
-	advance()
+	advance(1)
 	s.RunHistory(r)
-	expect(1, true)
+	expect(1, true, true)
 
 	r.Events[ak].Status = models.StNormal
-	advance()
+	advance(1)
 	s.RunHistory(r)
-	expect(1, false)
+	expect(1, false, false)
 
 	r.Events[ak].Status = models.StWarning
-	advance()
+	advance(1)
 	s.RunHistory(r)
-	expect(2, true)
+	expect(2, true, true)
+
+	// Test case where close issue and alert does not go normal before deadline
+	// which should result in a force closing
+	fiveMin = r.Start.Add(time.Minute * 5)
+	err = s.ActionByAlertKey("", "", models.ActionClose, &fiveMin, ak)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	advance(301)
+	s.RunHistory(r)
+	expect(2, true, false)
+
+	r.Events[ak].Status = models.StWarning
+	advance(1)
+	s.RunHistory(r)
+	expect(3, true, true)
+
+	// Test cancelling a delayed close
+	fiveMin = r.Start.Add(time.Minute * 5)
+	err = s.ActionByAlertKey("", "", models.ActionClose, &fiveMin, ak)
+	if err != nil {
+		t.Fatal(err)
+	}
+	advance(1)
+	s.RunHistory(r)
+	expect(3, true, true)
+
+	err = s.ActionByAlertKey("", "", models.ActionCancelClose, nil, ak)
+	if err != nil {
+		t.Fatal(err)
+	}
+	advance(300)
+	s.RunHistory(r)
+	expect(3, true, true)
+
+	// Make sure delayed close works after cancelling one
+	fiveMin = r.Start.Add(time.Minute * 5)
+	err = s.ActionByAlertKey("", "", models.ActionClose, &fiveMin, ak)
+	if err != nil {
+		t.Fatal(err)
+	}
+	advance(301)
+	s.RunHistory(r)
+	expect(3, true, false)
+
+	r.Events[ak].Status = models.StWarning
+	advance(1)
+	s.RunHistory(r)
+	expect(4, true, true)
 }
 
 func TestIncidentIds(t *testing.T) {

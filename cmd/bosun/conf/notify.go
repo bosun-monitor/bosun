@@ -28,6 +28,7 @@ func init() {
 		"The number of email notifications that Bosun failed to send.")
 }
 
+// Notify triggers Email/HTTP/Print actions for the Notification object
 func (n *Notification) Notify(subject, body string, emailsubject, emailbody []byte, c SystemConfProvider, ak string, attachments ...*models.Attachment) {
 	if len(n.Email) > 0 {
 		go n.DoEmail(emailsubject, emailbody, c, ak, attachments...)
