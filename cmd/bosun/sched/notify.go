@@ -125,7 +125,7 @@ func (s *Schedule) CheckNotifications() time.Time {
 
 // sendNotifications processes the schedule's pendingNotifications queue. It silences notifications,
 // moves unknown notifications to the unknownNotifications queue so they can be grouped, calls the notification
-// Notify method to trigger notification actions, and queues notifications that are in the future because they 
+// Notify method to trigger notification actions, and queues notifications that are in the future because they
 // are part of a notification chain
 func (s *Schedule) sendNotifications(silenced SilenceTester) {
 	if s.quiet {
