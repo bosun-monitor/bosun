@@ -95,9 +95,13 @@ func FilteredTagsetsByMetric(t miniprofiler.Timer, w http.ResponseWriter, r *htt
 
 func MetricsByTagPair(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
+	since, err := getSince(r)
+	if err != nil {
+		return nil, err
+	}
 	tagk := vars["tagk"]
 	tagv := vars["tagv"]
-	return schedule.Search.MetricsByTagPair(tagk, tagv)
+	return schedule.Search.MetricsByTagPair(tagk, tagv, since)
 }
 
 func MetricsByTagKey(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
@@ -114,7 +118,7 @@ func MetricsByTagKey(t miniprofiler.Timer, w http.ResponseWriter, r *http.Reques
 	// map[tagv][metrics...]
 	tagvMetrics := make(map[string][]string)
 	for _, tagv := range tagValues {
-		metrics, err := schedule.Search.MetricsByTagPair(tagk, tagv)
+		metrics, err := schedule.Search.MetricsByTagPair(tagk, tagv, since)
 		if err != nil {
 			return nil, err
 		}
