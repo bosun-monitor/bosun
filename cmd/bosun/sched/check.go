@@ -144,10 +144,13 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.E
 			if action.Type == models.ActionDelayedClose && !(action.Fullfilled || action.Cancelled) {
 				if event.Status > incident.WorstStatus {
 					// If the lifetime severity of the incident has increased, cancel the delayed close
-					cerr := s.ActionByAlertKey("bosun", "cancelled delayed close due to severity increase", models.ActionCancelClose, nil, ak)
+					err = s.ActionByAlertKey("bosun", "cancelled delayed close due to severity increase", models.ActionCancelClose, nil, ak)
+					if err != nil {
+						return
+					}
 					incident, err = data.GetIncidentState(incident.Id)
-					if cerr != nil {
-						slog.Errorln(cerr)
+					if err != nil {
+						return
 					}
 					// Continue processing alert after cancelling the delayed close
 					break
@@ -168,10 +171,13 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.E
 						if err != nil {
 							return
 						}
-						cerr := s.ActionByAlertKey("bosun", fmt.Sprintf("close on behalf of delayed close by %v", action.User), models.ActionClose, nil, ak)
+						err = s.ActionByAlertKey("bosun", fmt.Sprintf("close on behalf of delayed close by %v", action.User), models.ActionClose, nil, ak)
+						if err != nil {
+							return
+						}
 						incident, err = data.GetIncidentState(incident.Id)
-						if cerr != nil {
-							slog.Errorln(cerr)
+						if err != nil {
+							return
 						}
 						incident.Actions[i].Fullfilled = true
 						return
@@ -180,10 +186,13 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.E
 					// We are after Deadline
 					slog.Infof("force closing alert %v on delayed close because the alert is after the deadline", incident.AlertKey)
 					incident.Actions[i].Fullfilled = true
-					cerr := s.ActionByAlertKey("bosun", fmt.Sprintf("forceclose on behalf of delayed close by %v", action.User), models.ActionForceClose, nil, ak)
+					err = s.ActionByAlertKey("bosun", fmt.Sprintf("forceclose on behalf of delayed close by %v", action.User), models.ActionForceClose, nil, ak)
+					if err != nil {
+						return
+					}
 					incident, err = data.GetIncidentState(incident.Id)
-					if cerr != nil {
-						slog.Errorln(cerr)
+					if err != nil {
+						return
 					}
 					return
 				}

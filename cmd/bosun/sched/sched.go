@@ -563,10 +563,7 @@ func (s *Schedule) ActionByIncidentId(user, message string, t models.ActionType,
 	return s.action(user, message, t, at, st)
 }
 
-func (s *Schedule) action(user, message string, t models.ActionType, at *time.Time, st *models.IncidentState) (ak models.AlertKey, e error) {
-	if err := collect.Add("actions", opentsdb.TagSet{"user": user, "alert": st.AlertKey.Name(), "type": t.String()}, 1); err != nil {
-		slog.Errorln(err)
-	}
+func (s *Schedule) action(user, message string, t models.ActionType, at *time.Time, st *models.IncidentState) (models.AlertKey, error) {
 	isUnknown := st.LastAbnormalStatus == models.StUnknown
 	timestamp := utcNow()
 	action := models.Action{
@@ -575,19 +572,6 @@ func (s *Schedule) action(user, message string, t models.ActionType, at *time.Ti
 		Type:    t,
 		User:    user,
 	}
-	defer func() {
-		if e == nil {
-			if err := collect.Add("actions", opentsdb.TagSet{"user": user, "alert": st.AlertKey.Name(), "type": t.String()}, 1); err != nil {
-				slog.Errorln(err)
-			}
-			switch action.Type {
-			case models.ActionClose, models.ActionAcknowledge, models.ActionForceClose, models.ActionForget, models.ActionPurge:
-				if err := s.DataAccess.Notifications().ClearNotifications(st.AlertKey); err != nil {
-					e = err
-				}
-			}
-		}
-	}()
 
 	switch t {
 	case models.ActionAcknowledge:
@@ -598,6 +582,9 @@ func (s *Schedule) action(user, message string, t models.ActionType, at *time.Ti
 			return "", fmt.Errorf("cannot acknowledge closed alert")
 		}
 		st.NeedAck = false
+		if err := s.DataAccess.Notifications().ClearNotifications(st.AlertKey); err != nil {
+			return "", err
+		}
 	case models.ActionCancelClose:
 		found := false
 		for i, a := range st.Actions {
@@ -614,31 +601,53 @@ func (s *Schedule) action(user, message string, t models.ActionType, at *time.Ti
 		// closing effectively acks the incident
 		st.NeedAck = false
 		if st.IsActive() { // Closing an active incident results in delayed close
-			action.Type = models.ActionDelayedClose
-			alertDef := s.RuleConf.GetAlert(st.AlertKey.Name())
+			var dl time.Time
 			if at != nil {
-				action.Deadline = at
-			} else { // Set deadline based on Alert Check Frequency * 2
-				runEvery := alertDef.RunEvery
-				if runEvery == 0 {
-					runEvery = s.SystemConf.GetDefaultRunEvery()
+				dl = *at
+			} else {
+				duration, err := s.GetCheckFrequency(st.AlertKey.Name())
+				if err != nil {
+					return "", err
 				}
-				dl := timestamp.Add(time.Duration(runEvery) * s.SystemConf.GetCheckFrequency())
-				action.Deadline = &dl
+				dl = timestamp.Add(duration * 2)
 			}
+			// See if there is already a pending delayed close, if there is update the time and return
+			for i, a := range st.Actions {
+				if a.Type == models.ActionDelayedClose && !(a.Fullfilled || a.Cancelled) {
+					st.Actions[i].Deadline = &dl
+					_, err := s.DataAccess.State().UpdateIncidentState(st)
+					if err != nil {
+						return "", err
+					}
+				}
+			}
+			action.Type = models.ActionDelayedClose
+			action.Deadline = &dl
 		} else {
 			st.Open = false
 			st.End = &timestamp
 		}
+		if err := s.DataAccess.Notifications().ClearNotifications(st.AlertKey); err != nil {
+			return "", err
+		}
 	case models.ActionForceClose:
 		st.Open = false
 		st.End = &timestamp
+		if err := s.DataAccess.Notifications().ClearNotifications(st.AlertKey); err != nil {
+			return "", err
+		}
 	case models.ActionForget:
 		if !isUnknown {
 			return "", fmt.Errorf("can only forget unknowns")
 		}
+		if err := s.DataAccess.Notifications().ClearNotifications(st.AlertKey); err != nil {
+			return "", err
+		}
 		fallthrough
 	case models.ActionPurge:
+		if err := s.DataAccess.Notifications().ClearNotifications(st.AlertKey); err != nil {
+			return "", err
+		}
 		return st.AlertKey, s.DataAccess.State().Forget(st.AlertKey)
 	case models.ActionNote:
 		// pass
@@ -648,7 +657,13 @@ func (s *Schedule) action(user, message string, t models.ActionType, at *time.Ti
 
 	st.Actions = append(st.Actions, action)
 	_, err := s.DataAccess.State().UpdateIncidentState(st)
-	return st.AlertKey, err
+	if err != nil {
+		return "", err
+	}
+	if err := collect.Add("actions", opentsdb.TagSet{"user": user, "alert": st.AlertKey.Name(), "type": t.String()}, 1); err != nil {
+		slog.Errorln(err)
+	}
+	return st.AlertKey, nil
 }
 
 type IncidentStatus struct {
@@ -706,4 +721,19 @@ func (s *Schedule) getErrorCounts() (failing, total int) {
 
 func (s *Schedule) GetQuiet() bool {
 	return s.quiet
+}
+
+// GetCheckFrequency returns the duration between checks for the named alert. If the alert
+// does not exist an error is returned.
+func (s *Schedule) GetCheckFrequency(alertName string) (time.Duration, error) {
+	alertDef := s.RuleConf.GetAlert(alertName)
+	if alertDef == nil {
+		return 0, fmt.Errorf("can not get check frequency for alert %v, no such alert defined", alertName)
+	}
+	runEvery := alertDef.RunEvery
+	if runEvery == 0 {
+		runEvery = s.SystemConf.GetDefaultRunEvery()
+	}
+	return time.Duration(time.Duration(runEvery) * s.SystemConf.GetCheckFrequency()), nil
+
 }

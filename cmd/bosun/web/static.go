@@ -26425,16 +26425,6 @@ gkzP5zk4Pek30J8x2aOG89w7qX8HAAD//zYcprRGBQAA
 `,
 	},
 
-	"/partials/delayedClose.html": {
-		local:   "web/static/partials/delayedClose.html",
-		size:    88,
-		modtime: 0,
-		compressed: `
-H4sIAAAAAAAA/7JJVEjOSSwutlVKKslTSCrJ0y1PLMrLzEsHsyuKlRTy0nUzilLTbJWqqxOTSzLz8zTU
-U1JzEitTU5xz8otT1TVra5XsXCAiCmAhG/1EO0AAAAD//5pKwqpYAAAA
-`,
-	},
-
 	"/partials/errors.html": {
 		local:   "web/static/partials/errors.html",
 		size:    1698,
