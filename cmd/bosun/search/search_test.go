@@ -54,7 +54,7 @@ func TestIndex(t *testing.T) {
 	tagvs, err = testSearch.TagValuesByMetricTagKey("os.mem", "host", 0)
 	checkEqual(t, err, "tagvsByTagKeyAndMetric", []string{"abc1", "def"}, tagvs)
 
-	metrics, err := testSearch.MetricsByTagPair("host", "abc")
+	metrics, err := testSearch.MetricsByTagPair("host", "abc", 0)
 	checkEqual(t, err, "metricsByPair", []string{"os.cpu", "os.cpu2"}, metrics)
 
 	filtered, err := testSearch.FilteredTagSets("os.mem", opentsdb.TagSet{"foo": "q"}, 0)
