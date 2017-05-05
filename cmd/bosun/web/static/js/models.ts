@@ -221,12 +221,16 @@ class Groups {
 
     constructor(g) {
         this.NeedAck = new Array<StateGroup>();
-        for (let sg of g.NeedAck) {
-            this.NeedAck.push(new StateGroup(sg));
+        if (g.NeedAck) {
+            for (let sg of g.NeedAck) {
+                this.NeedAck.push(new StateGroup(sg));
+            }
         }
         this.Acknowledged = new Array<StateGroup>();
-        for (let sg of g.Acknowledged) {
-            this.Acknowledged.push(new StateGroup(sg));
+        if (g.Acknowledged) {
+            for (let sg of g.Acknowledged) {
+                this.Acknowledged.push(new StateGroup(sg));
+            }
         }
     }
 }

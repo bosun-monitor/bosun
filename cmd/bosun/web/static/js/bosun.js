@@ -147,14 +147,18 @@ var StateGroup = (function () {
 var Groups = (function () {
     function Groups(g) {
         this.NeedAck = new Array();
-        for (var _i = 0, _a = g.NeedAck; _i < _a.length; _i++) {
-            var sg = _a[_i];
-            this.NeedAck.push(new StateGroup(sg));
+        if (g.NeedAck) {
+            for (var _i = 0, _a = g.NeedAck; _i < _a.length; _i++) {
+                var sg = _a[_i];
+                this.NeedAck.push(new StateGroup(sg));
+            }
         }
         this.Acknowledged = new Array();
-        for (var _b = 0, _c = g.Acknowledged; _b < _c.length; _b++) {
-            var sg = _c[_b];
-            this.Acknowledged.push(new StateGroup(sg));
+        if (g.Acknowledged) {
+            for (var _b = 0, _c = g.Acknowledged; _b < _c.length; _b++) {
+                var sg = _c[_b];
+                this.Acknowledged.push(new StateGroup(sg));
+            }
         }
     }
     return Groups;
