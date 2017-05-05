@@ -695,6 +695,7 @@ func (s *Schedule) executeExpr(T miniprofiler.Timer, rh *RunHistory, a *conf.Ale
 		Squelched: s.RuleConf.AlertSquelched(a),
 		History:   s,
 		Annotate:  s.annotate,
+		Metadata:  s,
 	}
 	results, _, err := e.Execute(rh.Backends, providers, T, rh.Start, 0, a.UnjoinedOK)
 	return results, err

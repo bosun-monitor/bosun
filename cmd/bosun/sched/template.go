@@ -218,6 +218,7 @@ func (c *Context) evalExpr(e *expr.Expr, filter bool, series bool, autods int) (
 		Search:    c.schedule.Search,
 		Squelched: c.schedule.RuleConf.AlertSquelched(c.Alert),
 		History:   c.schedule,
+		Metadata:  c.schedule,
 	}
 	res, _, err := e.Execute(c.runHistory.Backends, providers, nil, c.runHistory.Start, autods, c.Alert.UnjoinedOK)
 	if err != nil {

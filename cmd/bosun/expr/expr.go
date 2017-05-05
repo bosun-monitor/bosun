@@ -16,6 +16,7 @@ import (
 	"bosun.org/cmd/bosun/expr/parse"
 	"bosun.org/cmd/bosun/search"
 	"bosun.org/graphite"
+	"bosun.org/metadata"
 	"bosun.org/models"
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
@@ -64,9 +65,15 @@ type BosunProviders struct {
 	History   AlertStatusProvider
 	Cache     *cache.Cache
 	Annotate  backend.Backend
+	Metadata  MetadataProvider
 }
 
-// Alert Status Provider is used to provide information about alert results.
+// Metadata provides access to Bosun's metadata from the expression language
+type MetadataProvider interface {
+	GetMetadata(metric string, tagset opentsdb.TagSet) ([]metadata.Metasend, error)
+}
+
+// AlertStatusProvider is used to provide information about alert results.
 // This facilitates alerts referencing other alerts, even when they go unknown or unevaluated.
 type AlertStatusProvider interface {
 	GetUnknownAndUnevaluatedAlertKeys(alertName string) (unknown, unevaluated []models.AlertKey)

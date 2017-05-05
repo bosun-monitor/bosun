@@ -252,6 +252,7 @@ func ExprGraph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (in
 		Annotate:  AnnotateBackend,
 		Squelched: nil,
 		History:   nil,
+		Metadata:  schedule,
 	}
 	res, _, err := e.Execute(backends, providers, t, now, autods, false)
 	if err != nil {

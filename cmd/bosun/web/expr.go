@@ -86,6 +86,7 @@ func Expr(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (v inter
 		Squelched: nil,
 		History:   nil,
 		Annotate:  AnnotateBackend,
+		Metadata:  schedule,
 	}
 	res, queries, err := e.Execute(backends, providers, t, now, 0, false)
 	if err != nil {
