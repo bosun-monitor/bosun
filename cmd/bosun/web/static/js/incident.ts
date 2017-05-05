@@ -1,6 +1,6 @@
 interface IIncidentScope extends ng.IScope {
 	error: string;
-	incident: any;
+	incident: IncidentState;
 	events: any;
 	actions: any;
 	body: any;

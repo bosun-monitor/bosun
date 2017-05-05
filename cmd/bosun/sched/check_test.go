@@ -85,7 +85,7 @@ func TestCheckFlapping(t *testing.T) {
 	r.Events[ak].Status = models.StNormal
 	s.RunHistory(r)
 	// Close the alert, so it should notify next time.
-	if err := s.ActionByAlertKey("", "", models.ActionClose, ak); err != nil {
+	if err := s.ActionByAlertKey("", "", models.ActionClose, nil, ak); err != nil {
 		t.Fatal(err)
 	}
 	r.Events[ak].Status = models.StWarning
@@ -141,6 +141,155 @@ func TestCheckSilence(t *testing.T) {
 	}
 }
 
+func TestDelayedClose(t *testing.T) {
+	defer setup()()
+	c, err := rule.NewConf("", conf.EnabledBackends{}, nil, `
+		alert a {
+			warn = 1
+			crit = 1
+			warnNotification = test
+			critNotification = test
+			template = test
+		}
+		template test {
+			subject = test
+		}
+		notification test {
+			print = true
+		}
+	`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s, _ := initSched(&conf.SystemConf{}, c)
+	now := time.Now()
+	ak := models.NewAlertKey("a", nil)
+	r := &RunHistory{
+		Start: now,
+		Events: map[models.AlertKey]*models.Event{
+			ak: {Status: models.StWarning},
+		},
+	}
+	expect := func(id int64, active bool, open bool) {
+		incident, err := s.DataAccess.State().GetLatestIncident(ak)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if incident.Id != id {
+			t.Fatalf("expected incident id %d. Got %d.", id, incident.Id)
+		}
+		if incident.IsActive() != active {
+			t.Fatalf("expected incident active status to be %v but got %v", active, incident.IsActive())
+		}
+		if incident.Open != open {
+			t.Fatalf("expected incident closed boolean to be %v but got %v", open, incident.Open)
+		}
+	}
+	expectPendingNotifications := func(i int) {
+		if len(s.pendingNotifications[s.RuleConf.GetNotification("test")]) != i {
+			t.Fatalf("expencted %v pending notifications but got %v", i, len(s.pendingNotifications[s.RuleConf.GetNotification("test")]))
+		}
+		s.pendingNotifications = nil
+	}
+	advance := func(i int64) {
+		r.Start = r.Start.Add(time.Second * time.Duration(i))
+	}
+	s.RunHistory(r)
+	expect(1, true, true)
+	expectPendingNotifications(1)
+	s.pendingNotifications = nil
+
+	// Test case where close issue and alert goes to normal before deadline
+	fiveMin := r.Start.Add(time.Minute * 5)
+	err = s.ActionByAlertKey("", "", models.ActionClose, &fiveMin, ak)
+	if err != nil {
+		t.Fatal(err)
+	}
+	advance(1)
+	s.RunHistory(r)
+	expect(1, true, true)
+
+	r.Events[ak].Status = models.StNormal
+	advance(1)
+	s.RunHistory(r)
+	expect(1, false, false)
+
+	r.Events[ak].Status = models.StWarning
+	advance(1)
+	s.RunHistory(r)
+	expect(2, true, true)
+	expectPendingNotifications(1)
+
+	// Test case where close issue and alert does not go normal before deadline
+	// which should result in a force closing
+	fiveMin = r.Start.Add(time.Minute * 5)
+	err = s.ActionByAlertKey("", "", models.ActionClose, &fiveMin, ak)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	advance(301)
+	s.RunHistory(r)
+	expect(2, true, false)
+
+	r.Events[ak].Status = models.StWarning
+	advance(1)
+	s.RunHistory(r)
+	expect(3, true, true)
+	expectPendingNotifications(1)
+
+	// Test cancelling a delayed close
+	fiveMin = r.Start.Add(time.Minute * 5)
+	err = s.ActionByAlertKey("", "", models.ActionClose, &fiveMin, ak)
+	if err != nil {
+		t.Fatal(err)
+	}
+	advance(1)
+	s.RunHistory(r)
+	expect(3, true, true)
+
+	err = s.ActionByAlertKey("", "", models.ActionCancelClose, nil, ak)
+	if err != nil {
+		t.Fatal(err)
+	}
+	advance(300)
+	s.RunHistory(r)
+	expect(3, true, true)
+
+	// Make sure delayed close works after a previous delayed close was cancelled
+	fiveMin = r.Start.Add(time.Minute * 5)
+	err = s.ActionByAlertKey("", "", models.ActionClose, &fiveMin, ak)
+	if err != nil {
+		t.Fatal(err)
+	}
+	advance(301)
+	s.RunHistory(r)
+	expect(3, true, false)
+
+	r.Events[ak].Status = models.StWarning
+	advance(1)
+	s.RunHistory(r)
+	expect(4, true, true)
+	expectPendingNotifications(1)
+
+	// Make sure escalation cancels a delayed close
+	fiveMin = r.Start.Add(time.Minute * 5)
+	err = s.ActionByAlertKey("", "", models.ActionClose, &fiveMin, ak)
+	if err != nil {
+		t.Fatal(err)
+	}
+	r.Events[ak].Status = models.StCritical
+	advance(1)
+	s.RunHistory(r)
+	expect(4, true, true)
+	expectPendingNotifications(1)
+
+	advance(300)
+	s.RunHistory(r)
+	expect(4, true, true)
+	expectPendingNotifications(0)
+}
+
 func TestIncidentIds(t *testing.T) {
 	defer setup()()
 	c, err := rule.NewConf("", conf.EnabledBackends{}, nil, `
@@ -180,7 +329,7 @@ func TestIncidentIds(t *testing.T) {
 
 	r.Events[ak].Status = models.StNormal
 	s.RunHistory(r)
-	err = s.ActionByAlertKey("", "", models.ActionClose, ak)
+	err = s.ActionByAlertKey("", "", models.ActionClose, nil, ak)
 	if err != nil {
 		t.Fatal(err)
 	}

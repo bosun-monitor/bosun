@@ -122,12 +122,7 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.E
 	if err != nil {
 		return
 	}
-	if incident != nil {
-		rt, err = data.GetRenderedTemplates(incident.Id)
-		if err != nil {
-			return
-		}
-	}
+
 	defer func() {
 		// save unless incident is new and closed (log alert)
 		if incident != nil && (incident.Id != 0 || incident.Open) {
@@ -140,6 +135,70 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.E
 			}
 		}
 	}()
+	if incident != nil {
+		rt, err = data.GetRenderedTemplates(incident.Id)
+		if err != nil {
+			return
+		}
+		for i, action := range incident.Actions {
+			if action.Type == models.ActionDelayedClose && !(action.Fullfilled || action.Cancelled) {
+				if event.Status > incident.WorstStatus {
+					// If the lifetime severity of the incident has increased, cancel the delayed close
+					err = s.ActionByAlertKey("bosun", "cancelled delayed close due to severity increase", models.ActionCancelClose, nil, ak)
+					if err != nil {
+						return
+					}
+					incident, err = data.GetIncidentState(incident.Id)
+					if err != nil {
+						return
+					}
+					// Continue processing alert after cancelling the delayed close
+					break
+				}
+				if action.Deadline == nil {
+					err = fmt.Errorf("should not be here - cancelled close without deadline")
+					return
+				}
+				if r.Start.Before(*action.Deadline) {
+					if event.Status == models.StNormal {
+						slog.Infof("closing alert %v on delayed close because the alert has returned to normal before deadline", incident.AlertKey)
+						if event.Status != incident.CurrentStatus {
+							incident.Events = append(incident.Events, *event)
+						}
+						incident.CurrentStatus = event.Status
+						// Action needs to know it is normal, so update the incident that action will read
+						_, err = data.UpdateIncidentState(incident)
+						if err != nil {
+							return
+						}
+						err = s.ActionByAlertKey("bosun", fmt.Sprintf("close on behalf of delayed close by %v", action.User), models.ActionClose, nil, ak)
+						if err != nil {
+							return
+						}
+						incident, err = data.GetIncidentState(incident.Id)
+						if err != nil {
+							return
+						}
+						incident.Actions[i].Fullfilled = true
+						return
+					}
+				} else {
+					// We are after Deadline
+					slog.Infof("force closing alert %v on delayed close because the alert is after the deadline", incident.AlertKey)
+					incident.Actions[i].Fullfilled = true
+					err = s.ActionByAlertKey("bosun", fmt.Sprintf("forceclose on behalf of delayed close by %v", action.User), models.ActionForceClose, nil, ak)
+					if err != nil {
+						return
+					}
+					incident, err = data.GetIncidentState(incident.Id)
+					if err != nil {
+						return
+					}
+					return
+				}
+			}
+		}
+	}
 	// If nothing is out of the ordinary we are done
 	if event.Status <= models.StNormal && incident == nil {
 		return
@@ -248,7 +307,7 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.E
 	if si := silenced(ak); si != nil && event.Status == models.StNormal {
 		go func(ak models.AlertKey) {
 			slog.Infof("auto close %s because was silenced", ak)
-			err := s.ActionByAlertKey("bosun", "Auto close because was silenced.", models.ActionClose, ak)
+			err := s.ActionByAlertKey("bosun", "Auto close because was silenced.", models.ActionClose, nil, ak)
 			if err != nil {
 				slog.Errorln(err)
 			}
@@ -267,6 +326,7 @@ func silencedOrIgnored(a *conf.Alert, event *models.Event, si *models.Silence) b
 	}
 	return false
 }
+
 func (s *Schedule) executeTemplates(state *models.IncidentState, rt *models.RenderedTemplates, event *models.Event, a *conf.Alert, r *RunHistory) {
 	if event.Status != models.StUnknown {
 		var errs []error

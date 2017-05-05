@@ -689,17 +689,21 @@ func Action(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (inter
 		Ids     []int64
 		Notify  bool
 		User    string
+		Time    *time.Time
 	}
 	j := json.NewDecoder(r.Body)
 	if err := j.Decode(&data); err != nil {
 		return nil, err
 	}
 	var at models.ActionType
+	// TODO Make constants in the JS code for these that *match* the names the string Method for ActionType
 	switch data.Type {
 	case "ack":
 		at = models.ActionAcknowledge
 	case "close":
 		at = models.ActionClose
+	case "cancelClose":
+		at = models.ActionCancelClose
 	case "forget":
 		at = models.ActionForget
 	case "forceClose":
@@ -725,7 +729,7 @@ func Action(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (inter
 		if err != nil {
 			return nil, err
 		}
-		err = schedule.ActionByAlertKey(data.User, data.Message, at, ak)
+		err = schedule.ActionByAlertKey(data.User, data.Message, at, data.Time, ak)
 		if err != nil {
 			errs[key] = err
 		} else {
@@ -733,7 +737,7 @@ func Action(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (inter
 		}
 	}
 	for _, id := range data.Ids {
-		ak, err := schedule.ActionByIncidentId(data.User, data.Message, at, id)
+		ak, err := schedule.ActionByIncidentId(data.User, data.Message, at, data.Time, id)
 		if err != nil {
 			errs[fmt.Sprintf("%v", id)] = err
 		} else {

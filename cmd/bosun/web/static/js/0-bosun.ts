@@ -157,8 +157,8 @@ interface IBosunScope extends RootScope {
     encode: (v: string) => string;
     panelClass: (v: string) => string;
     timeanddate: number[];
-    schedule: any;
     req_from_m: (m: string) => GraphRequest;
+    schedule: StateGroups;
     refresh: (filter: string) => any;
     animate: () => any;
     stop: (all?: boolean) => any;
@@ -245,7 +245,7 @@ bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', '$q', '$r
 
             var p = $http.get('/api/alerts?filter=' + encodeURIComponent(filter || ""))
                 .success((data: any) => {
-                    $scope.schedule = data;
+                    $scope.schedule = new StateGroups(data);
                     $scope.timeanddate = data.TimeAndDate;
                     d.resolve();
                 })
@@ -477,40 +477,3 @@ bosunApp.filter('reverse', function () {
 });
 
 var timeFormat = 'YYYY-MM-DDTHH:mm:ssZ';
-
-class Annotation {
-    Id: string;
-    Message: string;
-    StartDate: string; // RFC3999
-    EndDate: string; // RFC3999
-    CreationUser: string;
-    Url: string;
-    Source: string;
-    Host: string;
-    Owner: string;
-    Category: string;
-
-    constructor(a?, get?: boolean) {
-        a = a || {};
-        this.Id = a.Id || "";
-        this.Message = a.Message || "";
-        this.StartDate = a.StartDate || "";
-        this.EndDate = a.EndDate || "";
-        this.CreationUser = a.CreationUser || "";
-        this.Url = a.Url || "";
-        this.Source = a.Source || "bosun-ui";
-        this.Host = a.Host || "";
-        this.Owner = a.Owner || !get && getOwner() || "";
-        this.Category = a.Category || "";
-    }
-    setTimeUTC() {
-        var now = moment().utc().format(timeFormat)
-        this.StartDate = now;
-        this.EndDate = now;
-    }
-    setTime() {
-        var now = moment().format(timeFormat)
-        this.StartDate = now;
-        this.EndDate = now;
-    }
-}

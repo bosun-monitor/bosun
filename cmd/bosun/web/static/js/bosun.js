@@ -21,6 +21,153 @@ var RoleDefs = (function () {
     }
     return RoleDefs;
 }());
+// See models/incident.go Event (can't be event here because JS uses that)
+var IncidentEvent = (function () {
+    function IncidentEvent(ie) {
+        this.Value = ie.Value;
+        this.Expr = ie.Expr;
+        this.Status = ie.Status;
+        this.Time = ie.Time;
+        this.Unevaluated = ie.Unevaluated;
+    }
+    return IncidentEvent;
+}());
+var Annotation = (function () {
+    function Annotation(a, get) {
+        a = a || {};
+        this.Id = a.Id || "";
+        this.Message = a.Message || "";
+        this.StartDate = a.StartDate || "";
+        this.EndDate = a.EndDate || "";
+        this.CreationUser = a.CreationUser || "";
+        this.Url = a.Url || "";
+        this.Source = a.Source || "bosun-ui";
+        this.Host = a.Host || "";
+        this.Owner = a.Owner || !get && getOwner() || "";
+        this.Category = a.Category || "";
+    }
+    Annotation.prototype.setTimeUTC = function () {
+        var now = moment().utc().format(timeFormat);
+        this.StartDate = now;
+        this.EndDate = now;
+    };
+    Annotation.prototype.setTime = function () {
+        var now = moment().format(timeFormat);
+        this.StartDate = now;
+        this.EndDate = now;
+    };
+    return Annotation;
+}());
+var Result = (function () {
+    function Result(r) {
+        this.Value = r.Value;
+        this.Expr = r.Expr;
+    }
+    return Result;
+}());
+var Action = (function () {
+    function Action(a) {
+        this.User = a.User;
+        this.Message = a.Message;
+        this.Time = a.Time;
+        this.Type = a.Type;
+        this.Deadline = a.Deadline;
+        this.Cancelled = a.Cancelled;
+        this.Fullfilled = a.Fullfilled;
+    }
+    return Action;
+}());
+// See models/incident.go
+var IncidentState = (function () {
+    function IncidentState(is) {
+        this.Id = is.Id;
+        this.Start = is.Start;
+        this.End = is.End;
+        this.AlertKey = is.AlertKey;
+        this.Alert = is.Alert;
+        this.Value = is.Value;
+        this.Expr = is.Expr;
+        this.Events = new Array();
+        if (is.Events) {
+            for (var _i = 0, _a = is.Events; _i < _a.length; _i++) {
+                var e = _a[_i];
+                this.Events.push(new IncidentEvent(e));
+            }
+        }
+        this.Actions = new Array();
+        if (is.Actions) {
+            for (var _b = 0, _c = is.Actions; _b < _c.length; _b++) {
+                var a = _c[_b];
+                this.Actions.push(new Action(a));
+            }
+        }
+        this.Subject = is.Subject;
+        this.NeedAck = is.NeedAck;
+        this.Open = is.Open;
+        this.Unevaluated = is.Unevaluated;
+        this.CurrentStatus = is.CurrentStatus;
+        this.WorstStatus = is.WorstStatus;
+        this.LastAbnormalStatus = is.LastAbnormalStatus;
+        this.LastAbnormalTime = is.LastAbnormalTime;
+    }
+    IncidentState.prototype.IsPendingClose = function () {
+        for (var _i = 0, _a = this.Actions; _i < _a.length; _i++) {
+            var action = _a[_i];
+            if (action.Deadline != undefined && !(action.Fullfilled || action.Cancelled)) {
+                return true;
+            }
+        }
+        return false;
+    };
+    return IncidentState;
+}());
+var StateGroup = (function () {
+    function StateGroup(sg) {
+        this.Active = sg.Active;
+        this.Status = sg.Status;
+        this.CurrentStatus = sg.CurrentStatus;
+        this.Silenced = sg.Silenced;
+        this.IsError = sg.IsError;
+        this.Subject = sg.Subject;
+        this.Alert = sg.Alert;
+        this.AlertKey = sg.AlertKey;
+        if (sg.State) {
+            this.State = new IncidentState(sg.State);
+        }
+        this.Children = new Array();
+        if (sg.Children) {
+            for (var _i = 0, _a = sg.Children; _i < _a.length; _i++) {
+                var c = _a[_i];
+                this.Children.push(new StateGroup(c));
+            }
+        }
+    }
+    return StateGroup;
+}());
+var Groups = (function () {
+    function Groups(g) {
+        this.NeedAck = new Array();
+        for (var _i = 0, _a = g.NeedAck; _i < _a.length; _i++) {
+            var sg = _a[_i];
+            this.NeedAck.push(new StateGroup(sg));
+        }
+        this.Acknowledged = new Array();
+        for (var _b = 0, _c = g.Acknowledged; _b < _c.length; _b++) {
+            var sg = _c[_b];
+            this.Acknowledged.push(new StateGroup(sg));
+        }
+    }
+    return Groups;
+}());
+var StateGroups = (function () {
+    function StateGroups(sgs) {
+        this.Groups = new Groups(sgs.Groups);
+        this.TimeAndDate = sgs.TimeAndDate;
+        this.FailingAlerts = sgs.FailingAlerts;
+        this.UnclosedErrors = sgs.UnclosedErrors;
+    }
+    return StateGroups;
+}());
 /// <reference path="angular.d.ts" />
 /// <reference path="angular-route.d.ts" />
 /// <reference path="angular-sanitize.d.ts" />
@@ -209,7 +356,7 @@ bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', '$q', '$r
             $scope.animate();
             var p = $http.get('/api/alerts?filter=' + encodeURIComponent(filter || ""))
                 .success(function (data) {
-                $scope.schedule = data;
+                $scope.schedule = new StateGroups(data);
                 $scope.timeanddate = data.TimeAndDate;
                 d.resolve();
             })
@@ -417,32 +564,6 @@ bosunApp.filter('reverse', function () {
     };
 });
 var timeFormat = 'YYYY-MM-DDTHH:mm:ssZ';
-var Annotation = (function () {
-    function Annotation(a, get) {
-        a = a || {};
-        this.Id = a.Id || "";
-        this.Message = a.Message || "";
-        this.StartDate = a.StartDate || "";
-        this.EndDate = a.EndDate || "";
-        this.CreationUser = a.CreationUser || "";
-        this.Url = a.Url || "";
-        this.Source = a.Source || "bosun-ui";
-        this.Host = a.Host || "";
-        this.Owner = a.Owner || !get && getOwner() || "";
-        this.Category = a.Category || "";
-    }
-    Annotation.prototype.setTimeUTC = function () {
-        var now = moment().utc().format(timeFormat);
-        this.StartDate = now;
-        this.EndDate = now;
-    };
-    Annotation.prototype.setTime = function () {
-        var now = moment().format(timeFormat);
-        this.StartDate = now;
-        this.EndDate = now;
-    };
-    return Annotation;
-}());
 /// <reference path="0-bosun.ts" />
 bosunControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
         var search = $location.search();
@@ -538,11 +659,17 @@ bosunControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route
 bosunControllers.controller('ActionCtrl', ['$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
         var search = $location.search();
         $scope.type = search.type;
+        $scope.activeIncidents = search.active == "true";
         $scope.notify = true;
         $scope.msgValid = true;
         $scope.message = "";
+        $scope.duration = "";
         $scope.validateMsg = function () {
             $scope.msgValid = (!$scope.notify) || ($scope.message != "");
+        };
+        $scope.durationValid = true;
+        $scope.validateDuration = function () {
+            $scope.durationValid = $scope.duration == "" || parseDuration($scope.duration).asMilliseconds() != 0;
         };
         if (search.key) {
             var keys = search.key;
@@ -557,7 +684,8 @@ bosunControllers.controller('ActionCtrl', ['$scope', '$http', '$location', '$rou
         }
         $scope.submit = function () {
             $scope.validateMsg();
-            if (!$scope.msgValid || ($scope.user == "")) {
+            $scope.validateDuration();
+            if (!$scope.msgValid || ($scope.user == "") || !$scope.durationValid) {
                 return;
             }
             var data = {
@@ -566,6 +694,9 @@ bosunControllers.controller('ActionCtrl', ['$scope', '$http', '$location', '$rou
                 Keys: $scope.keys,
                 Notify: $scope.notify
             };
+            if ($scope.duration != "") {
+                data['Time'] = moment.utc().add(parseDuration($scope.duration));
+            }
             $http.post('/api/action', data)
                 .success(function (data) {
                 $location.url('/');
@@ -1246,9 +1377,12 @@ function fmtTime(v) {
     return m.format() + ' (' + inn + fmtDuration(msdiff) + ago + ')';
 }
 function parseDuration(v) {
-    var pattern = /(\d+)(d|y|n|h|m|s)-ago/;
+    var pattern = /(\d+)(d|y|n|h|m|s)(-ago)?/;
     var m = pattern.exec(v);
-    return moment.duration(parseInt(m[1]), m[2].replace('n', 'M'));
+    if (m) {
+        return moment.duration(parseInt(m[1]), m[2].replace('n', 'M'));
+    }
+    return moment.duration(0);
 }
 bosunApp.directive("tsTime", function () {
     return {
@@ -3407,7 +3541,7 @@ bosunApp.directive('tsAckGroup', ['$location', '$timeout', function ($location, 
                             continue;
                         }
                         scope.anySelected = true;
-                        if (g.Active && g.Status != 'unknown' && g.Status != 'error') {
+                        if (g.Status == 'error') {
                             scope.canCloseSelected = false;
                         }
                         if (g.Status != 'unknown') {
@@ -3417,20 +3551,28 @@ bosunApp.directive('tsAckGroup', ['$location', '$timeout', function ($location, 
                 };
                 scope.multiaction = function (type) {
                     var keys = [];
+                    var active = false;
                     angular.forEach(scope.groups, function (group) {
                         if (!group.checked) {
                             return;
                         }
                         if (group.AlertKey) {
+                            if (group.State.CurrentStatus != 'normal') {
+                                active = true;
+                            }
                             keys.push(group.AlertKey);
                         }
                         angular.forEach(group.Children, function (child) {
+                            if (child.State.CurrentStatus != 'normal') {
+                                active = true;
+                            }
                             keys.push(child.AlertKey);
                         });
                     });
                     scope.$parent.setKey("action-keys", keys);
                     $location.path("action");
                     $location.search("type", type);
+                    $location.search("active", active ? 'true' : 'false');
                 };
                 scope.history = function () {
                     var url = '/history?';
@@ -3460,7 +3602,8 @@ bosunApp.directive('tsState', ['$sce', '$http', function ($sce, $http) {
                 scope.state = scope.child.State;
                 scope.action = function (type) {
                     var key = encodeURIComponent(scope.name);
-                    return '/action?type=' + type + '&key=' + key;
+                    var active = scope.state.CurrentStatus != 'normal';
+                    return '/action?type=' + type + '&key=' + key + '&active=' + active;
                 };
                 var loadedBody = false;
                 scope.toggle = function () {
@@ -3528,6 +3671,12 @@ bosunApp.directive('tsClose', function () {
     return {
         restrict: 'E',
         templateUrl: '/partials/close.html'
+    };
+});
+bosunApp.directive('tsCancelClose', function () {
+    return {
+        restrict: 'E',
+        templateUrl: '/partials/cancelClose.html'
     };
 });
 bosunApp.directive('tsForget', function () {

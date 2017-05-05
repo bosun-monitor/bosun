@@ -386,7 +386,7 @@ func (s *Schedule) MarshalGroups(T miniprofiler.Timer, filter string) (*StateGro
 			a := s.RuleConf.GetAlert(k.Name())
 			if a == nil {
 				slog.Errorf("unknown alert %s. Force closing.", k.Name())
-				if err2 = s.ActionByAlertKey("bosun", "closing because alert doesn't exist.", models.ActionForceClose, k); err2 != nil {
+				if err2 = s.ActionByAlertKey("bosun", "closing because alert doesn't exist.", models.ActionForceClose, nil, k); err2 != nil {
 					slog.Error(err2)
 				}
 				continue
@@ -540,7 +540,7 @@ func init() {
 		"The running count of actions performed by individual users (Closed alert, Acknowledged alert, etc).")
 }
 
-func (s *Schedule) ActionByAlertKey(user, message string, t models.ActionType, ak models.AlertKey) error {
+func (s *Schedule) ActionByAlertKey(user, message string, t models.ActionType, at *time.Time, ak models.AlertKey) error {
 	st, err := s.DataAccess.State().GetLatestIncident(ak)
 	if err != nil {
 		return err
@@ -548,11 +548,11 @@ func (s *Schedule) ActionByAlertKey(user, message string, t models.ActionType, a
 	if st == nil {
 		return fmt.Errorf("no such alert key: %v", ak)
 	}
-	_, err = s.action(user, message, t, st)
+	_, err = s.action(user, message, t, at, st)
 	return err
 }
 
-func (s *Schedule) ActionByIncidentId(user, message string, t models.ActionType, id int64) (models.AlertKey, error) {
+func (s *Schedule) ActionByIncidentId(user, message string, t models.ActionType, at *time.Time, id int64) (models.AlertKey, error) {
 	st, err := s.DataAccess.State().GetIncidentState(id)
 	if err != nil {
 		return "", err
@@ -560,25 +560,19 @@ func (s *Schedule) ActionByIncidentId(user, message string, t models.ActionType,
 	if st == nil {
 		return "", fmt.Errorf("no incident with id: %v", id)
 	}
-	return s.action(user, message, t, st)
+	return s.action(user, message, t, at, st)
 }
 
-func (s *Schedule) action(user, message string, t models.ActionType, st *models.IncidentState) (ak models.AlertKey, e error) {
-	if err := collect.Add("actions", opentsdb.TagSet{"user": user, "alert": st.AlertKey.Name(), "type": t.String()}, 1); err != nil {
-		slog.Errorln(err)
-	}
-	defer func() {
-		if e == nil {
-			if err := collect.Add("actions", opentsdb.TagSet{"user": user, "alert": st.AlertKey.Name(), "type": t.String()}, 1); err != nil {
-				slog.Errorln(err)
-			}
-			if err := s.DataAccess.Notifications().ClearNotifications(st.AlertKey); err != nil {
-				e = err
-			}
-		}
-	}()
+func (s *Schedule) action(user, message string, t models.ActionType, at *time.Time, st *models.IncidentState) (models.AlertKey, error) {
 	isUnknown := st.LastAbnormalStatus == models.StUnknown
 	timestamp := utcNow()
+	action := models.Action{
+		Message: message,
+		Time:    timestamp,
+		Type:    t,
+		User:    user,
+	}
+
 	switch t {
 	case models.ActionAcknowledge:
 		if !st.NeedAck {
@@ -588,34 +582,88 @@ func (s *Schedule) action(user, message string, t models.ActionType, st *models.
 			return "", fmt.Errorf("cannot acknowledge closed alert")
 		}
 		st.NeedAck = false
-	case models.ActionClose:
-		if st.IsActive() {
-			return "", fmt.Errorf("cannot close active alert")
+		if err := s.DataAccess.Notifications().ClearNotifications(st.AlertKey); err != nil {
+			return "", err
 		}
-		fallthrough
+	case models.ActionCancelClose:
+		found := false
+		for i, a := range st.Actions {
+			// Find first delayed close that hasn't already been fulfilled or canceled
+			if a.Type == models.ActionDelayedClose && !(a.Fullfilled || a.Cancelled) {
+				found, st.Actions[i].Cancelled = true, true
+				break
+			}
+		}
+		if !found {
+			return "", fmt.Errorf("no delayed close for incident %v (%v) found to cancel", st.Id, st.AlertKey)
+		}
+	case models.ActionClose:
+		// closing effectively acks the incident
+		st.NeedAck = false
+		if st.IsActive() { // Closing an active incident results in delayed close
+			var dl time.Time
+			if at != nil {
+				dl = *at
+			} else {
+				duration, err := s.GetCheckFrequency(st.AlertKey.Name())
+				if err != nil {
+					return "", err
+				}
+				dl = timestamp.Add(duration * 2)
+			}
+			// See if there is already a pending delayed close, if there is update the time and return
+			for i, a := range st.Actions {
+				if a.Type == models.ActionDelayedClose && !(a.Fullfilled || a.Cancelled) {
+					st.Actions[i].Deadline = &dl
+					_, err := s.DataAccess.State().UpdateIncidentState(st)
+					if err != nil {
+						return "", err
+					}
+				}
+			}
+			action.Type = models.ActionDelayedClose
+			action.Deadline = &dl
+		} else {
+			st.Open = false
+			st.End = &timestamp
+		}
+		if err := s.DataAccess.Notifications().ClearNotifications(st.AlertKey); err != nil {
+			return "", err
+		}
 	case models.ActionForceClose:
 		st.Open = false
 		st.End = &timestamp
+		if err := s.DataAccess.Notifications().ClearNotifications(st.AlertKey); err != nil {
+			return "", err
+		}
 	case models.ActionForget:
 		if !isUnknown {
 			return "", fmt.Errorf("can only forget unknowns")
 		}
+		if err := s.DataAccess.Notifications().ClearNotifications(st.AlertKey); err != nil {
+			return "", err
+		}
 		fallthrough
 	case models.ActionPurge:
+		if err := s.DataAccess.Notifications().ClearNotifications(st.AlertKey); err != nil {
+			return "", err
+		}
 		return st.AlertKey, s.DataAccess.State().Forget(st.AlertKey)
 	case models.ActionNote:
 		// pass
 	default:
 		return "", fmt.Errorf("unknown action type: %v", t)
 	}
-	st.Actions = append(st.Actions, models.Action{
-		Message: message,
-		Time:    timestamp,
-		Type:    t,
-		User:    user,
-	})
+
+	st.Actions = append(st.Actions, action)
 	_, err := s.DataAccess.State().UpdateIncidentState(st)
-	return st.AlertKey, err
+	if err != nil {
+		return "", err
+	}
+	if err := collect.Add("actions", opentsdb.TagSet{"user": user, "alert": st.AlertKey.Name(), "type": t.String()}, 1); err != nil {
+		slog.Errorln(err)
+	}
+	return st.AlertKey, nil
 }
 
 type IncidentStatus struct {
@@ -673,4 +721,19 @@ func (s *Schedule) getErrorCounts() (failing, total int) {
 
 func (s *Schedule) GetQuiet() bool {
 	return s.quiet
+}
+
+// GetCheckFrequency returns the duration between checks for the named alert. If the alert
+// does not exist an error is returned.
+func (s *Schedule) GetCheckFrequency(alertName string) (time.Duration, error) {
+	alertDef := s.RuleConf.GetAlert(alertName)
+	if alertDef == nil {
+		return 0, fmt.Errorf("can not get check frequency for alert %v, no such alert defined", alertName)
+	}
+	runEvery := alertDef.RunEvery
+	if runEvery == 0 {
+		runEvery = s.SystemConf.GetDefaultRunEvery()
+	}
+	return time.Duration(time.Duration(runEvery) * s.SystemConf.GetCheckFrequency()), nil
+
 }
