@@ -201,6 +201,13 @@ var builtins = map[string]parse.Func{
 	},
 
 	// Group functions
+	"addmetatag": {
+		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeString, models.TypeString},
+		Return: models.TypeSeriesSet,
+		// Todo add proper tags func
+		Tags: tagFirst,
+		F:    AddMetaTag,
+	},
 	"addtags": {
 		Args:          []models.FuncType{models.TypeVariantSet, models.TypeString},
 		VariantReturn: true,
@@ -1180,6 +1187,51 @@ func Rename(e *State, T miniprofiler.Timer, set *Results, s string) (*Results, e
 		}
 	}
 	return set, nil
+}
+
+// csv is a shorthand for strings.Split(s, ",")
+func csv(s string) []string {
+	return strings.Split(s, ",")
+}
+
+func AddMetaTag(e *State, T miniprofiler.Timer, series *Results, lookupTagsCSV, keyCSV string) (*Results, error) {
+	keys := csv(keyCSV)
+	res := Results{}
+	lookupTags := make(map[string]struct{})
+	for _, k := range csv(lookupTagsCSV) {
+		lookupTags[k] = struct{}{}
+	}
+	for _, result := range series.Results {
+		ts := make(opentsdb.TagSet)
+		for k := range lookupTags {
+			if value, ok := result.Group[k]; ok {
+				ts[k] = value
+				continue
+			}
+			return nil, fmt.Errorf("tag key %v not found in result", k)
+		}
+		mds, err := e.Metadata.GetMetadata("", ts)
+		if err != nil {
+			return nil, err
+		}
+
+		for _, md := range mds {
+			if md.Name == keys[0] {
+				outkey := keys[len(keys)-1]
+				if _, ok := result.Group[outkey]; ok {
+					return nil, fmt.Errorf("can not add tag key %v because %v is already in the set", outkey, outkey)
+				}
+				value, err := opentsdb.Clean(md.Value.(string))
+				if err != nil {
+					return nil, err
+				}
+				result.Group.Merge(opentsdb.TagSet{outkey: value})
+				res.Results = append(res.Results, result)
+				break
+			}
+		}
+	}
+	return &res, nil
 }
 
 func AddTags(e *State, T miniprofiler.Timer, set *Results, s string) (*Results, error) {
