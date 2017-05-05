@@ -351,8 +351,8 @@ type StateGroup struct {
 
 type StateGroups struct {
 	Groups struct {
-		NeedAck      []*StateGroup
-		Acknowledged []*StateGroup
+		NeedAck      []*StateGroup `json:",omitempty"`
+		Acknowledged []*StateGroup `json:",omitempty"`
 	}
 	TimeAndDate                   []int
 	FailingAlerts, UnclosedErrors int
