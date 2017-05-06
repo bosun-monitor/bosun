@@ -123,7 +123,7 @@ type RuleConfProvider interface {
 	AlertSquelched(*Alert) func(opentsdb.TagSet) bool
 	Squelched(*Alert, opentsdb.TagSet) bool
 	Expand(string, map[string]string, bool) string
-	GetFuncs(EnabledBackends) map[string]parse.Func
+	GetFuncs(EnabledBackends) parse.FuncMap
 }
 
 // RuleConfWriter is a collection of the methods that are used to manipulate the configuration

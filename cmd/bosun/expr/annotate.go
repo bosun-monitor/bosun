@@ -16,7 +16,7 @@ import (
 	"github.com/kylebrandt/boolq"
 )
 
-var Annotate = map[string]parse.Func{
+var Annotate = parse.FuncMap{
 	// Funcs for querying elastic
 	"ancounts": {
 		Args:   []models.FuncType{models.TypeString, models.TypeString, models.TypeString},

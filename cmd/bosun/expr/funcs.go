@@ -100,7 +100,7 @@ func tagRename(args []parse.Node) (parse.Tags, error) {
 	return tags, nil
 }
 
-var builtins = map[string]parse.Func{
+var builtins = parse.FuncMap{
 	// Reduction functions
 
 	"avg": {

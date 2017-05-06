@@ -16,7 +16,7 @@ import (
 )
 
 // TSDB defines functions for use with an OpenTSDB backend.
-var TSDB = map[string]parse.Func{
+var TSDB = parse.FuncMap{
 	"band": {
 		Args:   []models.FuncType{models.TypeString, models.TypeString, models.TypeString, models.TypeScalar},
 		Return: models.TypeSeriesSet,

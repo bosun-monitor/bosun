@@ -14,7 +14,7 @@ import (
 )
 
 // Graphite defines functions for use with a Graphite backend.
-var Graphite = map[string]parse.Func{
+var Graphite = parse.FuncMap{
 	"graphiteBand": {
 		Args:   []models.FuncType{models.TypeString, models.TypeString, models.TypeString, models.TypeString, models.TypeScalar},
 		Return: models.TypeSeriesSet,

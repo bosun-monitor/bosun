@@ -19,7 +19,7 @@ var lsClient *elastic.Client
 
 // The following are specific functions that query an elastic instance populated by
 // logstash. They are only loaded when the elastic hosts are set in the config file
-var LogstashElastic = map[string]parse.Func{
+var LogstashElastic = parse.FuncMap{
 	"lscount": {
 		Args:   []models.FuncType{models.TypeString, models.TypeString, models.TypeString, models.TypeString, models.TypeString, models.TypeString},
 		Return: models.TypeSeriesSet,

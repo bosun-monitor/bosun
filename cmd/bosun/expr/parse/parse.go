@@ -22,7 +22,7 @@ type Tree struct {
 	Text string // text parsed to create the expression.
 	Root Node   // top-level root of the tree, returns a number.
 
-	funcs   []map[string]Func
+	funcs   FuncMaps
 	mapExpr bool
 
 	// Parsing only; cleared after parse.
@@ -44,6 +44,10 @@ type Func struct {
 	PrefixKey     bool
 	Check         func(*Tree, *FuncNode) error
 }
+
+type FuncMap map[string]Func
+
+type FuncMaps []FuncMap
 
 type Tags map[string]struct{}
 
@@ -92,14 +96,14 @@ func (t Tags) Intersection(o Tags) Tags {
 // Parse returns a Tree, created by parsing the expression described in the
 // argument string. If an error is encountered, parsing stops and an empty Tree
 // is returned with the error.
-func Parse(text string, funcs ...map[string]Func) (t *Tree, err error) {
+func Parse(text string, funcs ...FuncMap) (t *Tree, err error) {
 	t = New()
 	t.Text = text
 	err = t.Parse(text, funcs...)
 	return
 }
 
-func ParseSub(text string, funcs ...map[string]Func) (t *Tree, err error) {
+func ParseSub(text string, funcs ...FuncMap) (t *Tree, err error) {
 	t = New()
 	t.mapExpr = true
 	t.Text = text
@@ -135,7 +139,7 @@ func (t *Tree) peek() item {
 // Parsing.
 
 // New allocates a new parse tree with the given name.
-func New(funcs ...map[string]Func) *Tree {
+func New(funcs ...FuncMap) *Tree {
 	return &Tree{
 		funcs: funcs,
 	}
@@ -192,7 +196,7 @@ func (t *Tree) recover(errp *error) {
 }
 
 // startParse initializes the parser, using the lexer.
-func (t *Tree) startParse(funcs []map[string]Func, lex *lexer) {
+func (t *Tree) startParse(funcs FuncMaps, lex *lexer) {
 	t.Root = nil
 	t.lex = lex
 	t.funcs = funcs
@@ -219,7 +223,7 @@ func (t *Tree) stopParse() {
 
 // Parse parses the expression definition string to construct a representation
 // of the expression for execution.
-func (t *Tree) Parse(text string, funcs ...map[string]Func) (err error) {
+func (t *Tree) Parse(text string, funcs ...FuncMap) (err error) {
 	defer t.recover(&err)
 	t.startParse(funcs, lex(text))
 	t.Text = text

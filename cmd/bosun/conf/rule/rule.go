@@ -862,7 +862,7 @@ func (c *Conf) NewExpr(s string) *expr.Expr {
 	return exp
 }
 
-func (c *Conf) GetFuncs(backends conf.EnabledBackends) map[string]eparse.Func {
+func (c *Conf) GetFuncs(backends conf.EnabledBackends) eparse.FuncMap {
 	lookup := func(e *expr.State, T miniprofiler.Timer, lookup, key string) (results *expr.Results, err error) {
 		results = new(expr.Results)
 		results.IgnoreUnjoined = true
