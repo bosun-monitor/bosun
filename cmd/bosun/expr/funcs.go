@@ -101,105 +101,6 @@ func tagRename(args []parse.Node) (parse.Tags, error) {
 }
 
 var builtins = parse.FuncMap{
-	// Reduction functions
-
-	"avg": {
-		Args:   []models.FuncType{models.TypeSeriesSet},
-		Return: models.TypeNumberSet,
-		Tags:   tagFirst,
-		F:      Avg,
-	},
-	"cCount": {
-		Args:   []models.FuncType{models.TypeSeriesSet},
-		Return: models.TypeNumberSet,
-		Tags:   tagFirst,
-		F:      CCount,
-	},
-	"dev": {
-		Args:   []models.FuncType{models.TypeSeriesSet},
-		Return: models.TypeNumberSet,
-		Tags:   tagFirst,
-		F:      Dev,
-	},
-	"diff": {
-		Args:   []models.FuncType{models.TypeSeriesSet},
-		Return: models.TypeNumberSet,
-		Tags:   tagFirst,
-		F:      Diff,
-	},
-	"first": {
-		Args:   []models.FuncType{models.TypeSeriesSet},
-		Return: models.TypeNumberSet,
-		Tags:   tagFirst,
-		F:      First,
-	},
-	"forecastlr": {
-		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeNumberSet},
-		Return: models.TypeNumberSet,
-		Tags:   tagFirst,
-		F:      Forecast_lr,
-	},
-	"linelr": {
-		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeString},
-		Return: models.TypeSeriesSet,
-		Tags:   tagFirst,
-		F:      Line_lr,
-	},
-	"last": {
-		Args:   []models.FuncType{models.TypeSeriesSet},
-		Return: models.TypeNumberSet,
-		Tags:   tagFirst,
-		F:      Last,
-	},
-	"len": {
-		Args:   []models.FuncType{models.TypeSeriesSet},
-		Return: models.TypeNumberSet,
-		Tags:   tagFirst,
-		F:      Length,
-	},
-	"max": {
-		Args:   []models.FuncType{models.TypeSeriesSet},
-		Return: models.TypeNumberSet,
-		Tags:   tagFirst,
-		F:      Max,
-	},
-	"median": {
-		Args:   []models.FuncType{models.TypeSeriesSet},
-		Return: models.TypeNumberSet,
-		Tags:   tagFirst,
-		F:      Median,
-	},
-	"min": {
-		Args:   []models.FuncType{models.TypeSeriesSet},
-		Return: models.TypeNumberSet,
-		Tags:   tagFirst,
-		F:      Min,
-	},
-	"percentile": {
-		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeNumberSet},
-		Return: models.TypeNumberSet,
-		Tags:   tagFirst,
-		F:      Percentile,
-	},
-	"since": {
-		Args:   []models.FuncType{models.TypeSeriesSet},
-		Return: models.TypeNumberSet,
-		Tags:   tagFirst,
-		F:      Since,
-	},
-	"sum": {
-		Args:   []models.FuncType{models.TypeSeriesSet},
-		Return: models.TypeNumberSet,
-		Tags:   tagFirst,
-		F:      Sum,
-	},
-	"streak": {
-		Args:   []models.FuncType{models.TypeSeriesSet},
-		Return: models.TypeNumberSet,
-		Tags:   tagFirst,
-		F:      Streak,
-	},
-
 	// Group functions
 	"addtags": {
 		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeString},
@@ -819,18 +720,7 @@ func match(f func(res *Results, series *Result, floats []float64) error, series 
 	return &res, nil
 }
 
-func reduce(e *State, T miniprofiler.Timer, series *Results, F func(Series, ...float64) float64, args ...*Results) (*Results, error) {
-	f := func(res *Results, s *Result, floats []float64) error {
-		t := s.Value.(Series)
-		if len(t) == 0 {
-			return nil
-		}
-		s.Value = Number(F(t, floats...))
-		res.Results = append(res.Results, s)
-		return nil
-	}
-	return match(f, series, args...)
-}
+
 
 func Abs(e *State, T miniprofiler.Timer, series *Results) *Results {
 	for _, s := range series.Results {
@@ -847,18 +737,9 @@ func diff(dps Series, args ...float64) float64 {
 	return last(dps) - first(dps)
 }
 
-func Avg(e *State, T miniprofiler.Timer, series *Results) (*Results, error) {
-	return reduce(e, T, series, avg)
-}
 
-// avg returns the mean of x.
-func avg(dps Series, args ...float64) (a float64) {
-	for _, v := range dps {
-		a += float64(v)
-	}
-	a /= float64(len(dps))
-	return
-}
+
+
 
 func CCount(e *State, T miniprofiler.Timer, series *Results) (*Results, error) {
 	return reduce(e, T, series, cCount)
