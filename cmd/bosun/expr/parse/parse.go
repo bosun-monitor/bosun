@@ -49,6 +49,16 @@ type Func struct {
 
 type FuncMap map[string]Func
 
+func (fm FuncMap) DocSlice() doc.Funcs {
+	funcDocs := doc.Funcs{}
+	for _, f := range fm {
+		if f.Doc != nil {
+			funcDocs = append(funcDocs, f.Doc)
+		}
+	}
+	return funcDocs
+}
+
 type FuncMaps []FuncMap
 
 type Tags map[string]struct{}

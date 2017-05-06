@@ -3,6 +3,9 @@ package doc
 import (
 	"fmt"
 	"strings"
+	"text/template"
+
+	"bytes"
 
 	"bosun.org/models"
 )
@@ -12,8 +15,13 @@ type Func struct {
 	Name      string
 	Summary   string
 	Arguments Arguments
+	Examples  []string
 	Return    models.FuncType
 }
+
+type Funcs []*Func
+
+type Docs map[string]Funcs
 
 // Arguments is a slice of Arg objects
 type Arguments []Arg
@@ -23,6 +31,16 @@ type Arg struct {
 	Name string
 	Desc string
 	Type models.FuncType
+}
+
+// HasDescription returns true if any of the Arguments have a description
+func (args Arguments) HasDescription() bool {
+	for _, a := range args {
+		if a.Desc != "" {
+			return true
+		}
+	}
+	return false
 }
 
 func (a Arg) Signature() string {
@@ -45,6 +63,14 @@ func (a Arguments) TypeSlice() []models.FuncType {
 	return types
 }
 
+func (fs Funcs) Signatures() []string {
+	s := make([]string, len(fs))
+	for i, f := range fs {
+		s[i] = f.Signature()
+	}
+	return s
+}
+
 // TODO Just change the String method on models.FuncType
 // Need to make sure all JS stuff (like grafanaplugin and this jscode) understands the change
 func suffixSet(t models.FuncType) string {
@@ -52,4 +78,44 @@ func suffixSet(t models.FuncType) string {
 		return fmt.Sprintf("%vSet", t.String())
 	}
 	return t.String()
+}
+
+// TODO make series seriesSet, will also probably just makes these HTML
+var funcWikiTemplate = `## {{ .Signature }}
+{: .exprFunc}
+
+{{ .Summary }}
+{{ if .Arguments.HasDescription }}
+Argument Details:
+	{{ range $i, $arg := .Arguments -}}
+		{{- if ne $arg.Desc "" }}
+  * {{ $arg.Name }} ({{ $arg.Type }}): {{ $arg.Desc }}
+		{{- end -}}
+	{{- end -}}
+{{- end -}}
+`
+
+var docWikiTemplate = `# Builtins, yay
+{{ range $f := .builtins }}
+{{ template "func" $f}}
+{{ end }}
+
+# Reduction Funcs, yay
+{{ range $i, $f := .reduction }}
+{{ template "func" $f}}
+{{ end }}
+`
+
+func (d *Docs) WikiText() (bytes.Buffer, error) {
+	var b bytes.Buffer
+	t, err := template.New("func").Parse(funcWikiTemplate)
+	if err != nil {
+		return b, err
+	}
+	t, err = t.New("docs").Parse(docWikiTemplate)
+	if err != nil {
+		return b, err
+	}
+	err = t.Execute(&b, d)
+	return b, nil
 }

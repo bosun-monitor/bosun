@@ -1,19 +1,11 @@
 package expr
 
 import (
-	"fmt"
-	"os"
-
 	"bosun.org/cmd/bosun/expr/doc"
 	"bosun.org/cmd/bosun/expr/parse"
 	"bosun.org/models"
 	"github.com/MiniProfiler/go/miniprofiler"
 )
-
-func init() {
-	fmt.Println(reductionFuncs["avg"].Doc.Signature())
-	os.Exit(0)
-}
 
 // Reduction functions
 var reductionFuncs = parse.FuncMap{

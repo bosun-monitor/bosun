@@ -2,11 +2,14 @@ package expr
 
 import (
 	"fmt"
+	"log"
 	"math"
+	"os"
 	"sort"
 	"strings"
 	"time"
 
+	"bosun.org/cmd/bosun/expr/doc"
 	"bosun.org/cmd/bosun/expr/parse"
 	"bosun.org/models"
 	"bosun.org/opentsdb"
@@ -14,6 +17,19 @@ import (
 	"github.com/MiniProfiler/go/miniprofiler"
 	"github.com/jinzhu/now"
 )
+
+func init() {
+	docs := doc.Docs{
+		"reduction": reductionFuncs.DocSlice(),
+		"builtins":  builtins.DocSlice(),
+	}
+	b, err := docs.WikiText()
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Println(b.String())
+	os.Exit(0)
+}
 
 func tagQuery(args []parse.Node) (parse.Tags, error) {
 	n := args[0].(*parse.StringNode)
@@ -241,6 +257,7 @@ var builtins = parse.FuncMap{
 		Return: models.TypeSeriesSet,
 		Tags:   tagFirst,
 		F:      Shift,
+		Doc:    shiftdoc,
 	},
 	"leftjoin": {
 		Args:     []models.FuncType{models.TypeString, models.TypeString, models.TypeNumberSet},
@@ -601,6 +618,23 @@ func LeftJoin(e *State, T miniprofiler.Timer, keysCSV, columnsCSV string, rowDat
 	}, nil
 }
 
+var shiftdoc = &doc.Func{
+	Name:    "shift",
+	Summary: `Shift changes the timestamp of each datapoint in s to be the specified duration in the future. It also adds a tag representing the shift duration. This is meant so you can overlay times visually in a graph.`,
+	Arguments: doc.Arguments{
+		doc.Arg{
+			Name: "s",
+			Type: models.TypeSeriesSet,
+		},
+		doc.Arg{
+			Name: "dur",
+			Type: models.TypeString,
+			Desc: `The amount of time to shift the time series forward by. It is a ([OpenTSDB duration string(http://opentsdb.net/docs/build/html/user_guide/query/dates.html)). This will be added as a tag to each item in the series. The tag key is "shift" and the value will be this argument.`,
+		},
+	},
+	Return: models.TypeNumberSet,
+}
+
 func Shift(e *State, T miniprofiler.Timer, series *Results, d string) (*Results, error) {
 	dur, err := opentsdb.ParseDuration(d)
 	if err != nil {
@@ -720,8 +754,6 @@ func match(f func(res *Results, series *Result, floats []float64) error, series 
 	return &res, nil
 }
 
-
-
 func Abs(e *State, T miniprofiler.Timer, series *Results) *Results {
 	for _, s := range series.Results {
 		s.Value = Number(math.Abs(float64(s.Value.Value().(Number))))
@@ -736,10 +768,6 @@ func Diff(e *State, T miniprofiler.Timer, series *Results) (r *Results, err erro
 func diff(dps Series, args ...float64) float64 {
 	return last(dps) - first(dps)
 }
-
-
-
-
 
 func CCount(e *State, T miniprofiler.Timer, series *Results) (*Results, error) {
 	return reduce(e, T, series, cCount)
