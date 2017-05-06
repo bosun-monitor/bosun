@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"strings"
 
+	"bosun.org/cmd/bosun/expr/doc"
 	"bosun.org/models"
 )
 
@@ -43,6 +44,7 @@ type Func struct {
 	PrefixEnabled bool
 	PrefixKey     bool
 	Check         func(*Tree, *FuncNode) error
+	Doc           *doc.Func
 }
 
 type FuncMap map[string]Func
