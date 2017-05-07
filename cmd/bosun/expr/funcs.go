@@ -23,12 +23,18 @@ func init() {
 		"reduction": reductionFuncs.DocSlice(),
 		"builtins":  builtins.DocSlice(),
 	}
-	b, err := docs.WikiText()
+	b, err := docs.Wiki()
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Println(b.String())
+	fmt.Println(b.String())
 	os.Exit(0)
+	// ds, err := json.Marshal(docs)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// fmt.Println(string(ds))
+	// os.Exit(0)
 }
 
 func tagQuery(args []parse.Node) (parse.Tags, error) {
@@ -629,7 +635,7 @@ var shiftdoc = &doc.Func{
 		doc.Arg{
 			Name: "dur",
 			Type: models.TypeString,
-			Desc: `The amount of time to shift the time series forward by. It is a ([OpenTSDB duration string(http://opentsdb.net/docs/build/html/user_guide/query/dates.html)). This will be added as a tag to each item in the series. The tag key is "shift" and the value will be this argument.`,
+			Desc: `The amount of time to shift the time series forward by. It is a <a href="http://opentsdb.net/docs/build/html/user_guide/query/dates.html">OpenTSDB duration string</a>. This will be added as a tag to each item in the series. The tag key is "shift" and the value will be this argument.`,
 		},
 	},
 	Return: models.TypeNumberSet,

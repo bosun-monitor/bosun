@@ -3,19 +3,25 @@ package doc
 import (
 	"fmt"
 	"strings"
-	"text/template"
+	"html/template"
 
 	"bytes"
 
 	"bosun.org/models"
 )
 
+type HTMLString string
+
+func (h HTMLString) HTML() template.HTML {
+	return template.HTML(h)
+}
+
 // Func contains the documentation for an expression function
 type Func struct {
 	Name      string
-	Summary   string
+	Summary   HTMLString
 	Arguments Arguments
-	Examples  []string
+	Examples  []HTMLString
 	Return    models.FuncType
 }
 
@@ -29,7 +35,7 @@ type Arguments []Arg
 // Arg contains fields that document the arguments to a function
 type Arg struct {
 	Name string
-	Desc string
+	Desc HTMLString
 	Type models.FuncType
 }
 
@@ -52,7 +58,7 @@ func (f Func) Signature() string {
 	for i, arg := range f.Arguments {
 		args[i] = arg.Signature()
 	}
-	return fmt.Sprintf("%v(%v) %v", f.Name, strings.Join(args, ","), suffixSet(f.Return))
+	return fmt.Sprintf("%v(%v) %v", f.Name, strings.Join(args, ", "), suffixSet(f.Return))
 }
 
 func (a Arguments) TypeSlice() []models.FuncType {
@@ -81,32 +87,35 @@ func suffixSet(t models.FuncType) string {
 }
 
 // TODO make series seriesSet, will also probably just makes these HTML
-var funcWikiTemplate = `## {{ .Signature }}
-{: .exprFunc}
-
-{{ .Summary }}
+var funcWikiTemplate = `
+<p>{{ .Summary.HTML }}</p>
 {{ if .Arguments.HasDescription }}
 Argument Details:
+<ul>
 	{{ range $i, $arg := .Arguments -}}
 		{{- if ne $arg.Desc "" }}
-  * {{ $arg.Name }} ({{ $arg.Type }}): {{ $arg.Desc }}
+	<li>{{ $arg.Name }} ({{ $arg.Type }}): {{ $arg.Desc.HTML }}</li>
 		{{- end -}}
-	{{- end -}}
+	{{- end }}
+</ul>
 {{- end -}}
 `
 
-var docWikiTemplate = `# Builtins, yay
+var docWikiTemplate = `
+<h1>Builtins</h1>
 {{ range $f := .builtins }}
-{{ template "func" $f}}
+	<h2 class="exprFunc anchor">{{ $f.Signature }}</h2>
+	{{ template "func" $f}}
 {{ end }}
 
-# Reduction Funcs, yay
+<h1>Reduction Functions</h1>
 {{ range $i, $f := .reduction }}
-{{ template "func" $f}}
+	<h2 class="exprFunc anchor">{{ $f.Signature }}</h2>
+	{{ template "func" $f}}
 {{ end }}
 `
 
-func (d *Docs) WikiText() (bytes.Buffer, error) {
+func (d *Docs) Wiki() (bytes.Buffer, error) {
 	var b bytes.Buffer
 	t, err := template.New("func").Parse(funcWikiTemplate)
 	if err != nil {
