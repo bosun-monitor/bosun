@@ -237,6 +237,12 @@ var builtins = parse.FuncMap{
 		Tags:   tagFirst,
 		F:      Limit,
 	},
+	"linelr": {
+		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeString},
+		Return: models.TypeSeriesSet,
+		Tags:   tagFirst,
+		F:      Line_lr,
+	},
 	"nv": {
 		Args:   []models.FuncType{models.TypeNumberSet, models.TypeScalar},
 		Return: models.TypeNumberSet,
@@ -767,34 +773,6 @@ func Abs(e *State, T miniprofiler.Timer, series *Results) *Results {
 	return series
 }
 
-func Diff(e *State, T miniprofiler.Timer, series *Results) (r *Results, err error) {
-	return reduce(e, T, series, diff)
-}
-
-func diff(dps Series, args ...float64) float64 {
-	return last(dps) - first(dps)
-}
-
-func CCount(e *State, T miniprofiler.Timer, series *Results) (*Results, error) {
-	return reduce(e, T, series, cCount)
-}
-
-func cCount(dps Series, args ...float64) (a float64) {
-	if len(dps) < 2 {
-		return float64(0)
-	}
-	series := NewSortedSeries(dps)
-	count := 0
-	last := series[0].V
-	for _, p := range series[1:] {
-		if p.V != last {
-			count++
-		}
-		last = p.V
-	}
-	return float64(count)
-}
-
 func TimeDelta(e *State, T miniprofiler.Timer, series *Results) (*Results, error) {
 	for _, res := range series.Results {
 		sorted := NewSortedSeries(res.Value.Value().(Series))
@@ -828,17 +806,6 @@ func Count(e *State, T miniprofiler.Timer, query, sduration, eduration string) (
 	}, nil
 }
 
-func Sum(e *State, T miniprofiler.Timer, series *Results) (*Results, error) {
-	return reduce(e, T, series, sum)
-}
-
-func sum(dps Series, args ...float64) (a float64) {
-	for _, v := range dps {
-		a += float64(v)
-	}
-	return
-}
-
 func Des(e *State, T miniprofiler.Timer, series *Results, alpha float64, beta float64) *Results {
 	for _, res := range series.Results {
 		sorted := NewSortedSeries(res.Value.Value().(Series))
@@ -857,142 +824,6 @@ func Des(e *State, T miniprofiler.Timer, series *Results, alpha float64, beta fl
 		res.Value = des
 	}
 	return series
-}
-
-func Streak(e *State, T miniprofiler.Timer, series *Results) (*Results, error) {
-	return reduce(e, T, series, streak)
-}
-
-func streak(dps Series, args ...float64) (a float64) {
-	max := func(a, b int) int {
-		if a > b {
-			return a
-		}
-		return b
-	}
-
-	series := NewSortedSeries(dps)
-
-	current := 0
-	longest := 0
-	for _, p := range series {
-		if p.V != 0 {
-			current++
-		} else {
-			longest = max(current, longest)
-			current = 0
-		}
-	}
-	longest = max(current, longest)
-	return float64(longest)
-}
-
-func Dev(e *State, T miniprofiler.Timer, series *Results) (*Results, error) {
-	return reduce(e, T, series, dev)
-}
-
-// dev returns the sample standard deviation of x.
-func dev(dps Series, args ...float64) (d float64) {
-	if len(dps) == 1 {
-		return 0
-	}
-	a := avg(dps)
-	for _, v := range dps {
-		d += math.Pow(float64(v)-a, 2)
-	}
-	d /= float64(len(dps) - 1)
-	return math.Sqrt(d)
-}
-
-func Length(e *State, T miniprofiler.Timer, series *Results) (*Results, error) {
-	return reduce(e, T, series, length)
-}
-
-func length(dps Series, args ...float64) (a float64) {
-	return float64(len(dps))
-}
-
-func Last(e *State, T miniprofiler.Timer, series *Results) (*Results, error) {
-	return reduce(e, T, series, last)
-}
-
-func last(dps Series, args ...float64) (a float64) {
-	var last time.Time
-	for k, v := range dps {
-		if k.After(last) {
-			a = v
-			last = k
-		}
-	}
-	return
-}
-
-func First(e *State, T miniprofiler.Timer, series *Results) (*Results, error) {
-	return reduce(e, T, series, first)
-}
-
-func first(dps Series, args ...float64) (a float64) {
-	var first time.Time
-	for k, v := range dps {
-		if k.Before(first) || first.IsZero() {
-			a = v
-			first = k
-		}
-	}
-	return
-}
-
-func Since(e *State, T miniprofiler.Timer, series *Results) (*Results, error) {
-	return reduce(e, T, series, e.since)
-}
-
-func (e *State) since(dps Series, args ...float64) (a float64) {
-	var last time.Time
-	for k, v := range dps {
-		if k.After(last) {
-			a = v
-			last = k
-		}
-	}
-	s := e.now.Sub(last)
-	return s.Seconds()
-}
-
-func Forecast_lr(e *State, T miniprofiler.Timer, series *Results, y *Results) (r *Results, err error) {
-	return reduce(e, T, series, e.forecast_lr, y)
-}
-
-// forecast_lr returns the number of seconds a linear regression predicts the
-// series will take to reach y_val.
-func (e *State) forecast_lr(dps Series, args ...float64) float64 {
-	const tenYears = time.Hour * 24 * 365 * 10
-	yVal := args[0]
-	var x []float64
-	var y []float64
-	for k, v := range dps {
-		x = append(x, float64(k.Unix()))
-		y = append(y, v)
-	}
-	var slope, intercept, _, _, _, _ = stats.LinearRegression(x, y)
-	it := (yVal - intercept) / slope
-	var i64 int64
-	if it < math.MinInt64 {
-		i64 = math.MinInt64
-	} else if it > math.MaxInt64 {
-		i64 = math.MaxInt64
-	} else if math.IsNaN(it) {
-		i64 = e.now.Unix()
-	} else {
-		i64 = int64(it)
-	}
-	t := time.Unix(i64, 0)
-	s := -e.now.Sub(t)
-	if s < -tenYears {
-		s = -tenYears
-	} else if s > tenYears {
-		s = tenYears
-	}
-	return s.Seconds()
 }
 
 func Line_lr(e *State, T miniprofiler.Timer, series *Results, d string) (*Results, error) {
@@ -1029,42 +860,6 @@ func line_lr(dps Series, d time.Duration) Series {
 	last := maxT.Add(d)
 	s[last] = float64(last.Unix())*slope + intercept
 	return s
-}
-
-func Percentile(e *State, T miniprofiler.Timer, series *Results, p *Results) (r *Results, err error) {
-	return reduce(e, T, series, percentile, p)
-}
-
-func Min(e *State, T miniprofiler.Timer, series *Results) (r *Results, err error) {
-	return reduce(e, T, series, percentile, fromScalar(0))
-}
-
-func Median(e *State, T miniprofiler.Timer, series *Results) (r *Results, err error) {
-	return reduce(e, T, series, percentile, fromScalar(.5))
-}
-
-func Max(e *State, T miniprofiler.Timer, series *Results) (r *Results, err error) {
-	return reduce(e, T, series, percentile, fromScalar(1))
-}
-
-// percentile returns the value at the corresponding percentile between 0 and 1.
-// Min and Max can be simulated using p <= 0 and p >= 1, respectively.
-func percentile(dps Series, args ...float64) (a float64) {
-	p := args[0]
-	var x []float64
-	for _, v := range dps {
-		x = append(x, float64(v))
-	}
-	sort.Float64s(x)
-	if p <= 0 {
-		return x[0]
-	}
-	if p >= 1 {
-		return x[len(x)-1]
-	}
-	i := p * float64(len(x)-1)
-	i = math.Ceil(i)
-	return x[int(i)]
 }
 
 func Rename(e *State, T miniprofiler.Timer, series *Results, s string) (*Results, error) {
