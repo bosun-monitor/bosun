@@ -19,6 +19,12 @@ import (
 )
 
 func init() {
+	for _, v := range reductionFuncs {
+		err := v.Doc.SetCodeLink(v.F)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
 	docs := doc.Docs{
 		"reduction": reductionFuncs.DocSlice(),
 		"builtins":  builtins.DocSlice(),

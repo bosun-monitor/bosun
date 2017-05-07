@@ -2,8 +2,10 @@ package doc
 
 import (
 	"fmt"
-	"strings"
 	"html/template"
+	"reflect"
+	"runtime"
+	"strings"
 
 	"bytes"
 
@@ -20,6 +22,7 @@ func (h HTMLString) HTML() template.HTML {
 type Func struct {
 	Name      string
 	Summary   HTMLString
+	CodeLink  string
 	Arguments Arguments
 	Examples  []HTMLString
 	Return    models.FuncType
@@ -89,6 +92,7 @@ func suffixSet(t models.FuncType) string {
 // TODO make series seriesSet, will also probably just makes these HTML
 var funcWikiTemplate = `
 <p>{{ .Summary.HTML }}</p>
+Code: {{ .CodeLink }}
 {{ if .Arguments.HasDescription }}
 Argument Details:
 <ul>
@@ -127,4 +131,17 @@ func (d *Docs) Wiki() (bytes.Buffer, error) {
 	}
 	err = t.Execute(&b, d)
 	return b, nil
+}
+
+// SetCodeLink sets the Func's CodeLink to a url that points to the code in Github that corresponds to the passed function
+func (f *Func) SetCodeLink(i interface{}) error {
+	ptr := reflect.ValueOf(i).Pointer()
+	file, no := runtime.FuncForPC(ptr).FileLine(ptr)
+	idx := strings.LastIndex(file, "/cmd/") // Assuming non-nested cmd folders
+	if idx < 0 {
+		return fmt.Errorf("error setting code link, failed to trim path")
+	}
+	file = file[idx:]
+	f.CodeLink = fmt.Sprintf("https://github.com/bosun-monitor/bosun/blob/master%v#L%v", file, no)
+	return nil
 }
