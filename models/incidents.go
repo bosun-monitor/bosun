@@ -138,6 +138,10 @@ func (f FuncType) String() string {
 	}
 }
 
+func (f FuncType) MarshalJSON() ([]byte, error) {
+	return json.Marshal(f.String())
+}
+
 const (
 	TypeString FuncType = iota
 	TypePrefix

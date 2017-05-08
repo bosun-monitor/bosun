@@ -20,12 +20,13 @@ func (h HTMLString) HTML() template.HTML {
 
 // Func contains the documentation for an expression function
 type Func struct {
-	Name      string
-	Summary   HTMLString
-	CodeLink  string
-	Arguments Arguments
-	Examples  []HTMLString
-	Return    models.FuncType
+	Name         string
+	Summary      HTMLString
+	ExtendedInfo HTMLString
+	CodeLink     string
+	Arguments    Arguments
+	Examples     []HTMLString
+	Return       models.FuncType
 }
 
 type Funcs []*Func
@@ -92,21 +93,26 @@ func suffixSet(t models.FuncType) string {
 // TODO make series seriesSet, will also probably just makes these HTML
 var funcWikiTemplate = `
 <p>{{ .Summary.HTML }}</p>
-Code: {{ .CodeLink }}
 {{ if .Arguments.HasDescription }}
 Argument Details:
 <ul>
-	{{ range $i, $arg := .Arguments -}}
-		{{- if ne $arg.Desc "" }}
+	{{ range $i, $arg := .Arguments }}
+		{{ if ne $arg.Desc "" }}
 	<li>{{ $arg.Name }} ({{ $arg.Type }}): {{ $arg.Desc.HTML }}</li>
-		{{- end -}}
-	{{- end }}
+		{{ end }}
+	{{ end }}
 </ul>
-{{- end -}}
+{{ end }}
+{{ if ne .ExtendedInfo "" }}
+	{{ .ExtendedInfo.HTML }}
+{{ end }}
+{{ if ne .CodeLink ""}}
+<a href="{{.CodeLink}}">Code</a>
+{{ end }}
 `
 
 var docWikiTemplate = `
-<h1>Builtins</h1>
+<h1>Builtins (all these will be moved into categories)</h1>
 {{ range $f := .builtins }}
 	<h2 class="exprFunc anchor">{{ $f.Signature }}</h2>
 	{{ template "func" $f}}
@@ -114,6 +120,12 @@ var docWikiTemplate = `
 
 <h1>Reduction Functions</h1>
 {{ range $i, $f := .reduction }}
+	<h2 class="exprFunc anchor">{{ $f.Signature }}</h2>
+	{{ template "func" $f}}
+{{ end }}
+
+<h1>Group Functions</h1>
+{{ range $i, $f := .group }}
 	<h2 class="exprFunc anchor">{{ $f.Signature }}</h2>
 	{{ template "func" $f}}
 {{ end }}

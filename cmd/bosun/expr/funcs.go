@@ -27,6 +27,7 @@ func init() {
 	}
 	docs := doc.Docs{
 		"reduction": reductionFuncs.DocSlice(),
+		"group":     groupFuncs.DocSlice(),
 		"builtins":  builtins.DocSlice(),
 	}
 	b, err := docs.Wiki()
@@ -62,15 +63,7 @@ func tagFirst(args []parse.Node) (parse.Tags, error) {
 	return args[0].Tags()
 }
 
-func tagRemove(args []parse.Node) (parse.Tags, error) {
-	tags, err := tagFirst(args)
-	if err != nil {
-		return nil, err
-	}
-	key := args[1].(*parse.StringNode).Text
-	delete(tags, key)
-	return tags, nil
-}
+
 
 func seriesFuncTags(args []parse.Node) (parse.Tags, error) {
 	t := make(parse.Tags)
@@ -89,77 +82,11 @@ func seriesFuncTags(args []parse.Node) (parse.Tags, error) {
 	return t, nil
 }
 
-func tagTranspose(args []parse.Node) (parse.Tags, error) {
-	tags := make(parse.Tags)
-	sp := strings.Split(args[1].(*parse.StringNode).Text, ",")
-	if sp[0] != "" {
-		for _, t := range sp {
-			tags[t] = struct{}{}
-		}
-	}
-	if atags, err := args[0].Tags(); err != nil {
-		return nil, err
-	} else if !tags.Subset(atags) {
-		return nil, fmt.Errorf("transpose tags (%v) must be a subset of first argument's tags (%v)", tags, atags)
-	}
-	return tags, nil
-}
 
-func tagRename(args []parse.Node) (parse.Tags, error) {
-	tags, err := tagFirst(args)
-	if err != nil {
-		return nil, err
-	}
-	for _, section := range strings.Split(args[1].(*parse.StringNode).Text, ",") {
-		kv := strings.Split(section, "=")
-		if len(kv) != 2 {
-			return nil, fmt.Errorf("error passing groups")
-		}
-		for oldTagKey := range tags {
-			if kv[0] == oldTagKey {
-				if _, ok := tags[kv[1]]; ok {
-					return nil, fmt.Errorf("%s already in group", kv[1])
-				}
-				delete(tags, kv[0])
-				tags[kv[1]] = struct{}{}
-			}
-		}
-	}
-	return tags, nil
-}
+
+
 
 var builtins = parse.FuncMap{
-	// Group functions
-	"addtags": {
-		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeString},
-		Return: models.TypeSeriesSet,
-		Tags:   tagRename,
-		F:      AddTags,
-	},
-	"rename": {
-		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeString},
-		Return: models.TypeSeriesSet,
-		Tags:   tagRename,
-		F:      Rename,
-	},
-	"remove": {
-		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeString},
-		Return: models.TypeSeriesSet,
-		Tags:   tagRemove,
-		F:      Remove,
-	},
-	"t": {
-		Args:   []models.FuncType{models.TypeNumberSet, models.TypeString},
-		Return: models.TypeSeriesSet,
-		Tags:   tagTranspose,
-		F:      Transpose,
-	},
-	"ungroup": {
-		Args:   []models.FuncType{models.TypeNumberSet},
-		Return: models.TypeScalar,
-		F:      Ungroup,
-	},
-
 	// Other functions
 
 	"abs": {
@@ -570,21 +497,7 @@ func Merge(e *State, T miniprofiler.Timer, series ...*Results) (*Results, error)
 	return res, nil
 }
 
-func Remove(e *State, T miniprofiler.Timer, seriesSet *Results, tagKey string) (*Results, error) {
-	seen := make(map[string]bool)
-	for _, r := range seriesSet.Results {
-		if _, ok := r.Group[tagKey]; ok {
-			delete(r.Group, tagKey)
-			if _, ok := seen[r.Group.String()]; ok {
-				return seriesSet, fmt.Errorf("duplicate group would result from removing tag key: %v", tagKey)
-			}
-			seen[r.Group.String()] = true
-		} else {
-			return seriesSet, fmt.Errorf("tag key %v not found in result", tagKey)
-		}
-	}
-	return seriesSet, nil
-}
+
 
 func LeftJoin(e *State, T miniprofiler.Timer, keysCSV, columnsCSV string, rowData ...*Results) (*Results, error) {
 	res := &Results{}
@@ -868,50 +781,7 @@ func line_lr(dps Series, d time.Duration) Series {
 	return s
 }
 
-func Rename(e *State, T miniprofiler.Timer, series *Results, s string) (*Results, error) {
-	for _, section := range strings.Split(s, ",") {
-		kv := strings.Split(section, "=")
-		if len(kv) != 2 {
-			return nil, fmt.Errorf("error passing groups")
-		}
-		oldKey, newKey := kv[0], kv[1]
-		for _, res := range series.Results {
-			for tag, v := range res.Group {
-				if oldKey == tag {
-					if _, ok := res.Group[newKey]; ok {
-						return nil, fmt.Errorf("%s already in group", newKey)
-					}
-					delete(res.Group, oldKey)
-					res.Group[newKey] = v
-				}
 
-			}
-		}
-	}
-	return series, nil
-}
-
-func AddTags(e *State, T miniprofiler.Timer, series *Results, s string) (*Results, error) {
-	if s == "" {
-		return series, nil
-	}
-	tagSetToAdd, err := opentsdb.ParseTags(s)
-	if err != nil {
-		return nil, err
-	}
-	for tagKey, tagValue := range tagSetToAdd {
-		for _, res := range series.Results {
-			if res.Group == nil {
-				res.Group = make(opentsdb.TagSet)
-			}
-			if _, ok := res.Group[tagKey]; ok {
-				return nil, fmt.Errorf("%s key already in group", tagKey)
-			}
-			res.Group[tagKey] = tagValue
-		}
-	}
-	return series, nil
-}
 
 func Ungroup(e *State, T miniprofiler.Timer, d *Results) (*Results, error) {
 	if len(d.Results) != 1 {
@@ -926,37 +796,12 @@ func Ungroup(e *State, T miniprofiler.Timer, d *Results) (*Results, error) {
 	}, nil
 }
 
-func Transpose(e *State, T miniprofiler.Timer, d *Results, gp string) (*Results, error) {
-	gps := strings.Split(gp, ",")
-	m := make(map[string]*Result)
-	for _, v := range d.Results {
-		ts := make(opentsdb.TagSet)
-		for k, v := range v.Group {
-			for _, b := range gps {
-				if k == b {
-					ts[k] = v
-				}
-			}
-		}
-		if _, ok := m[ts.String()]; !ok {
-			m[ts.String()] = &Result{
-				Group: ts,
-				Value: make(Series),
-			}
-		}
-		switch t := v.Value.(type) {
-		case Number:
-			r := m[ts.String()]
-			i := int64(len(r.Value.(Series)))
-			r.Value.(Series)[time.Unix(i, 0).UTC()] = float64(t)
-			r.Computations = append(r.Computations, v.Computations...)
-		default:
-			panic(fmt.Errorf("expr: expected a number"))
-		}
-	}
-	var r Results
-	for _, res := range m {
-		r.Results = append(r.Results, res)
-	}
-	return &r, nil
+var sSeriesSetArg = doc.Arg{
+	Name: "s",
+	Type: models.TypeSeriesSet,
+}
+
+var nNumberSetArg = doc.Arg{
+	Name: "n",
+	Type: models.TypeNumberSet,
 }

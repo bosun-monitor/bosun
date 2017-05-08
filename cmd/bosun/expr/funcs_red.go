@@ -474,7 +474,3 @@ func sum(dps Series, args ...float64) (a float64) {
 	return
 }
 
-var sSeriesSetArg = doc.Arg{
-	Name: "s",
-	Type: models.TypeSeriesSet,
-}
