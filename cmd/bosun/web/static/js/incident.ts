@@ -14,7 +14,6 @@ interface IIncidentScope extends ng.IScope {
 	configLink: string;
 }
 
-
 bosunControllers.controller('IncidentCtrl', ['$scope', '$http', '$location', '$route', '$sce', function ($scope: IIncidentScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService, $sce: ng.ISCEService) {
 	var search = $location.search();
 	var id = search.id;
@@ -41,7 +40,7 @@ bosunControllers.controller('IncidentCtrl', ['$scope', '$http', '$location', '$r
 			return;
 		}
 		var ak = $scope.incident.AlertKey;
-		var url = ruleUrl(ak, moment(v.Time))
+		var url = ruleUrl(ak, moment(v.Time));
 		$http.post(url, $scope.config_text)
 			.success((data: any) => {
 				v.subject = data.Subject;
