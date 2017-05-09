@@ -602,6 +602,12 @@ func Alerts(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (inter
 	return schedule.MarshalGroups(t, r.FormValue("filter"))
 }
 
+type ExtStatus struct {
+	AlertName string
+	*models.IncidentState
+	*models.RenderedTemplates
+}
+
 func IncidentEvents(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	id := r.FormValue("id")
 	if id == "" {
@@ -611,16 +617,20 @@ func IncidentEvents(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request
 	if err != nil {
 		return nil, err
 	}
-	return schedule.DataAccess.State().GetIncidentState(num)
+	state, err := schedule.DataAccess.State().GetIncidentState(num)
+	if err != nil {
+		return nil, err
+	}
+	rt, err := schedule.DataAccess.State().GetRenderedTemplates(state.Id)
+	if err != nil {
+		return nil, err
+	}
+	st := ExtStatus{IncidentState: state, RenderedTemplates: rt}
+	return st, nil
 }
 
 func Status(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	r.ParseForm()
-	type ExtStatus struct {
-		AlertName string
-		*models.IncidentState
-		*models.RenderedTemplates
-	}
 	m := make(map[string]ExtStatus)
 	for _, k := range r.Form["ak"] {
 		ak, err := models.ParseAlertKey(k)
