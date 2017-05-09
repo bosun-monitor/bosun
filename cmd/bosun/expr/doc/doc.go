@@ -107,6 +107,7 @@ Argument Details:
 	{{ .ExtendedInfo.HTML }}
 {{ end }}
 {{ range $example := .Examples }}
+	<p>Example:</p>
 	{{ $example.HTML}}
 {{ end }}
 {{ if ne .CodeLink ""}}

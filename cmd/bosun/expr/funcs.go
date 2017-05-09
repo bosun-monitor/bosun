@@ -15,7 +15,6 @@ import (
 	"bosun.org/opentsdb"
 	"github.com/GaryBoone/GoStats/stats"
 	"github.com/MiniProfiler/go/miniprofiler"
-	"github.com/jinzhu/now"
 )
 
 func init() {
@@ -327,34 +326,6 @@ func DropBool(e *State, T miniprofiler.Timer, target *Results, filter *Results) 
 	return &res, nil
 }
 
-func Epoch(e *State, T miniprofiler.Timer) (*Results, error) {
-	return &Results{
-		Results: []*Result{
-			{Value: Scalar(float64(e.now.Unix()))},
-		},
-	}, nil
-}
-
-func Month(e *State, T miniprofiler.Timer, offset float64, startEnd string) (*Results, error) {
-	if startEnd != "start" && startEnd != "end" {
-		return nil, fmt.Errorf("last parameter for mtod must be 'start' or 'end'")
-	}
-	offsetInt := int(offset)
-	location := time.FixedZone(fmt.Sprintf("%v", offsetInt), offsetInt*60*60)
-	timeZoned := e.now.In(location)
-	var mtod float64
-	if startEnd == "start" {
-		mtod = float64(now.New(timeZoned).BeginningOfMonth().Unix())
-	} else {
-		mtod = float64(now.New(timeZoned).EndOfMonth().Unix())
-	}
-	return &Results{
-		Results: []*Result{
-			{Value: Scalar(float64(mtod))},
-		},
-	}, nil
-}
-
 func NV(e *State, T miniprofiler.Timer, series *Results, v float64) (results *Results, err error) {
 	// If there are no results in the set, promote it to a number with the empty group ({})
 	if len(series.Results) == 0 {
@@ -512,16 +483,6 @@ func LeftJoin(e *State, T miniprofiler.Timer, keysCSV, columnsCSV string, rowDat
 
 
 
-
-func ToDuration(e *State, T miniprofiler.Timer, sec float64) (*Results, error) {
-	d := opentsdb.Duration(time.Duration(int64(sec)) * time.Second)
-	return &Results{
-		Results: []*Result{
-			{Value: String(d.HumanString())},
-		},
-	}, nil
-}
-
 func DropValues(e *State, T miniprofiler.Timer, series *Results, threshold *Results, dropFunction func(float64, float64) bool) (*Results, error) {
 	f := func(res *Results, s *Result, floats []float64) error {
 		nv := make(Series)
@@ -611,26 +572,7 @@ func Abs(e *State, T miniprofiler.Timer, series *Results) *Results {
 	return series
 }
 
-func TimeDelta(e *State, T miniprofiler.Timer, series *Results) (*Results, error) {
-	for _, res := range series.Results {
-		sorted := NewSortedSeries(res.Value.Value().(Series))
-		newSeries := make(Series)
-		if len(sorted) < 2 {
-			newSeries[sorted[0].T] = 0
-			res.Value = newSeries
-			continue
-		}
-		lastTime := sorted[0].T.Unix()
-		for _, dp := range sorted[1:] {
-			unixTime := dp.T.Unix()
-			diff := unixTime - lastTime
-			newSeries[dp.T] = float64(diff)
-			lastTime = unixTime
-		}
-		res.Value = newSeries
-	}
-	return series, nil
-}
+
 
 func Count(e *State, T miniprofiler.Timer, query, sduration, eduration string) (r *Results, err error) {
 	r, err = Query(e, T, query, sduration, eduration)
