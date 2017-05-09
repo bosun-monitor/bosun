@@ -131,6 +131,7 @@ var StateGroup = (function () {
         this.Subject = sg.Subject;
         this.Alert = sg.Alert;
         this.AlertKey = sg.AlertKey;
+        this.Ago = sg.Ago;
         if (sg.State) {
             this.State = new IncidentState(sg.State);
         }
