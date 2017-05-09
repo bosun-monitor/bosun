@@ -158,7 +158,6 @@ func Listen(httpAddr, httpsAddr, certFile, keyFile string, devMode bool, tsdbHos
 	handle("/api/host", JSON(Host), canViewDash).Name("host").Methods(GET)
 	handle("/api/last", JSON(Last), canViewDash).Name("last").Methods(GET)
 	handle("/api/quiet", JSON(Quiet), canViewDash).Name("quiet").Methods(GET)
-	handle("/api/incident/ev", JSON(IncidentEvents), canViewDash).Name("incident_events").Methods(GET)
 	handle("/api/incidents/open", JSON(ListOpenIncidents), canViewDash).Name("open_incidents").Methods(GET)
 	handle("/api/incidents/events", JSON(IncidentEvents), canViewDash).Name("incident_events").Methods(GET)
 	handle("/api/metadata/get", JSON(GetMetadata), canViewDash).Name("meta_get").Methods(GET)
