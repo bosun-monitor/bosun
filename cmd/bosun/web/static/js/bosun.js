@@ -3206,7 +3206,16 @@ bosunControllers.controller('IncidentCtrl', ['$scope', '$http', '$location', '$r
             v.doneLoading = false;
             if (i == $scope.lastNonUnknownAbnormalIdx) {
                 v.subject = $scope.incident.Subject;
-                v.body = $scope.body;
+                $http.get('/api/status?ak=' + encodeURIComponent($scope.state.AlertKey))
+                    .success(function (data) {
+                    var body = data[$scope.state.AlertKey].Body;
+                    v.body = $sce.trustAsHtml(body);
+                })
+                    .error(function (err) {
+                    $scope.error = "Error loading template body: " + err;
+                })["finally"](function () {
+                    v.doneLoading = true;
+                });
                 v.doneLoading = true;
                 return;
             }

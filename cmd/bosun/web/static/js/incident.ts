@@ -35,13 +35,23 @@ bosunControllers.controller('IncidentCtrl', ['$scope', '$http', '$location', '$r
 		v.error = null;
 		v.doneLoading = false;
 		if (i == $scope.lastNonUnknownAbnormalIdx) {
-			v.subject = $scope.incident.Subject;
-			v.body = $scope.body;
+			v.subject = $scope.incident.Subject;			
+			$http.get('/api/status?ak=' + encodeURIComponent($scope.state.AlertKey))
+				.success(data => {
+					var body = data[$scope.state.AlertKey].Body;
+					v.body = $sce.trustAsHtml(body);
+				})
+				.error(err => {
+					$scope.error = "Error loading template body: " + err;
+				})
+				.finally(() => {
+					v.doneLoading = true;
+				});
 			v.doneLoading = true;
 			return;
 		}
 		var ak = $scope.incident.AlertKey;
-		var url = ruleUrl(ak, moment(v.Time))
+		var url = ruleUrl(ak, moment(v.Time));
 		$http.post(url, $scope.config_text)
 			.success((data: any) => {
 				v.subject = data.Subject;
@@ -68,7 +78,7 @@ bosunControllers.controller('IncidentCtrl', ['$scope', '$http', '$location', '$r
 			$scope.actions = data.Actions;
 			$scope.body = $sce.trustAsHtml(data.Body);
 			$scope.events = data.Events.reverse();
-			$scope.configLink = configUrl($scope.incident.AlertKey, moment.unix($scope.incident.LastAbnormalTime *1000));
+			$scope.configLink = configUrl($scope.incident.AlertKey, moment.unix($scope.incident.LastAbnormalTime * 1000));
 			for (var i = 0; i < $scope.events.length; i++) {
 				var e = $scope.events[i];
 				if (e.Status != 'normal' && e.Status != 'unknown') {
