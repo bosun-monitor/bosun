@@ -42,9 +42,10 @@ var groupFuncs = parse.FuncMap{
 		Doc:    tDoc,
 	},
 	"ungroup": {
-		Args:   []models.FuncType{models.TypeNumberSet},
-		Return: models.TypeScalar,
+		Args:   ungroupDoc.Arguments.TypeSlice(),
+		Return: ungroupDoc.Return,
 		F:      Ungroup,
+		Doc:    ungroupDoc,
 	},
 }
 
@@ -202,8 +203,9 @@ func tagTranspose(args []parse.Node) (parse.Tags, error) {
 }
 
 var tDoc = &doc.Func{
-	Name:    "t",
-	Summary: "TODO ... something better than what exists, it is confusing as all hell.",
+	Name: "t",
+	//TODO Better Summary.
+	Summary: "t (tranpose) tranposes the values of each item in set n (numberSet) into seriesSet values based on tagKeys.",
 	Arguments: doc.Arguments{
 		nNumberSetArg,
 		doc.Arg{
@@ -214,6 +216,7 @@ var tDoc = &doc.Func{
 	},
 	Return:       models.TypeSeriesSet,
 	ExtendedInfo: doc.HTMLString(tExtendedInfo),
+	Examples:     []doc.HTMLString{doc.HTMLString(tExampleOne)},
 }
 
 func Transpose(e *State, T miniprofiler.Timer, d *Results, gp string) (*Results, error) {
@@ -249,6 +252,26 @@ func Transpose(e *State, T miniprofiler.Timer, d *Results, gp string) (*Results,
 		r.Results = append(r.Results, res)
 	}
 	return &r, nil
+}
+
+var ungroupDoc = &doc.Func{
+	Name:      "ungroup",
+	Summary:   "ungroup turns a number from n into a number with no group (a scalar). This will error if n does not have exactly one item the set.",
+	Arguments: doc.Arguments{nNumberSetArg},
+	Return:    models.TypeScalar,
+}
+
+func Ungroup(e *State, T miniprofiler.Timer, d *Results) (*Results, error) {
+	if len(d.Results) != 1 {
+		return nil, fmt.Errorf("ungroup: requires exactly one group")
+	}
+	return &Results{
+		Results: ResultSlice{
+			&Result{
+				Value: Scalar(d.Results[0].Value.Value().(Number)),
+			},
+		},
+	}, nil
 }
 
 var tExtendedInfo = `<p>How transpose works conceptually</p>
@@ -338,3 +361,28 @@ var tExtendedInfo = `<p>How transpose works conceptually</p>
     </tbody>
 </table>
 `
+
+var tExampleOne = `<p>Alert if more than 50% of servers in a group have ping timeouts</p>
+<pre><code>
+alert or_down {
+    $group = host=or-*
+    # bosun.ping.timeout is 0 for no timeout, 1 for timeout
+    $timeout = q("sum:bosun.ping.timeout{$group}", "5m", "")
+    # timeout will have multiple groups, such as or-web01,or-web02,or-web03.
+    # each group has a series type (the observations in the past 10 mintutes)
+    # so we need to *reduce* each series values of each group into a single number:
+    $max_timeout = max($timeout)
+    # Max timeout is now a group of results where the value of each group is a number. Since each
+    # group is an alert instance, we need to regroup this into a sigle alert. We can do that by
+    # transposing with t()
+    $max_timeout_series = t("$max_timeout", "")
+    # $max_timeout_series is now a single group with a value of type series. We need to reduce
+    # that series into a single number in order to trigger an alert.
+    $number_down_series = sum($max_timeout_series)
+    $total_servers = len($max_timeout_series)
+    $percent_down = $number_down_servers / $total_servers) * 100
+    warnNotification = $percent_down &gt; 25
+  }
+</code></pre>
+
+<p>Since our templates can reference any variable in this alert, we can show which servers are down in the notification, even though the alert just triggers on 25% of or-* servers being down.</p>`

@@ -28,6 +28,7 @@ func init() {
 	docs := doc.Docs{
 		"reduction": reductionFuncs.DocSlice(),
 		"group":     groupFuncs.DocSlice(),
+		"time":      timeFuncs.DocSlice(),
 		"builtins":  builtins.DocSlice(),
 	}
 	b, err := docs.Wiki()
@@ -63,8 +64,6 @@ func tagFirst(args []parse.Node) (parse.Tags, error) {
 	return args[0].Tags()
 }
 
-
-
 func seriesFuncTags(args []parse.Node) (parse.Tags, error) {
 	t := make(parse.Tags)
 	text := args[0].(*parse.StringNode).Text
@@ -82,10 +81,6 @@ func seriesFuncTags(args []parse.Node) (parse.Tags, error) {
 	return t, nil
 }
 
-
-
-
-
 var builtins = parse.FuncMap{
 	// Other functions
 
@@ -101,16 +96,7 @@ var builtins = parse.FuncMap{
 		Tags:   tagFirst,
 		F:      Crop,
 	},
-	"d": {
-		Args:   []models.FuncType{models.TypeString},
-		Return: models.TypeScalar,
-		F:      Duration,
-	},
-	"tod": {
-		Args:   []models.FuncType{models.TypeScalar},
-		Return: models.TypeString,
-		F:      ToDuration,
-	},
+
 	"des": {
 		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeScalar, models.TypeScalar},
 		Return: models.TypeSeriesSet,
@@ -153,11 +139,6 @@ var builtins = parse.FuncMap{
 		Tags:   tagFirst,
 		F:      DropBool,
 	},
-	"epoch": {
-		Args:   []models.FuncType{},
-		Return: models.TypeScalar,
-		F:      Epoch,
-	},
 	"filter": {
 		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeNumberSet},
 		Return: models.TypeSeriesSet,
@@ -197,13 +178,6 @@ var builtins = parse.FuncMap{
 		Tags:   tagFirst,
 		F:      Sort,
 	},
-	"shift": {
-		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeString},
-		Return: models.TypeSeriesSet,
-		Tags:   tagFirst,
-		F:      Shift,
-		Doc:    shiftdoc,
-	},
 	"leftjoin": {
 		Args:     []models.FuncType{models.TypeString, models.TypeString, models.TypeNumberSet},
 		VArgs:    true,
@@ -218,17 +192,6 @@ var builtins = parse.FuncMap{
 		Return: models.TypeSeriesSet,
 		Tags:   tagFirst,
 		F:      Merge,
-	},
-	"month": {
-		Args:   []models.FuncType{models.TypeScalar, models.TypeString},
-		Return: models.TypeScalar,
-		F:      Month,
-	},
-	"timedelta": {
-		Args:   []models.FuncType{models.TypeSeriesSet},
-		Return: models.TypeSeriesSet,
-		Tags:   tagFirst,
-		F:      TimeDelta,
 	},
 	"tail": {
 		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeNumberSet},
@@ -497,8 +460,6 @@ func Merge(e *State, T miniprofiler.Timer, series ...*Results) (*Results, error)
 	return res, nil
 }
 
-
-
 func LeftJoin(e *State, T miniprofiler.Timer, keysCSV, columnsCSV string, rowData ...*Results) (*Results, error) {
 	res := &Results{}
 	dataWidth := len(rowData)
@@ -549,50 +510,8 @@ func LeftJoin(e *State, T miniprofiler.Timer, keysCSV, columnsCSV string, rowDat
 	}, nil
 }
 
-var shiftdoc = &doc.Func{
-	Name:    "shift",
-	Summary: `Shift changes the timestamp of each datapoint in s to be the specified duration in the future. It also adds a tag representing the shift duration. This is meant so you can overlay times visually in a graph.`,
-	Arguments: doc.Arguments{
-		doc.Arg{
-			Name: "s",
-			Type: models.TypeSeriesSet,
-		},
-		doc.Arg{
-			Name: "dur",
-			Type: models.TypeString,
-			Desc: `The amount of time to shift the time series forward by. It is a <a href="http://opentsdb.net/docs/build/html/user_guide/query/dates.html">OpenTSDB duration string</a>. This will be added as a tag to each item in the series. The tag key is "shift" and the value will be this argument.`,
-		},
-	},
-	Return: models.TypeNumberSet,
-}
 
-func Shift(e *State, T miniprofiler.Timer, series *Results, d string) (*Results, error) {
-	dur, err := opentsdb.ParseDuration(d)
-	if err != nil {
-		return series, err
-	}
-	for _, result := range series.Results {
-		newSeries := make(Series)
-		for t, v := range result.Value.Value().(Series) {
-			newSeries[t.Add(time.Duration(dur))] = v
-		}
-		result.Group["shift"] = d
-		result.Value = newSeries
-	}
-	return series, nil
-}
 
-func Duration(e *State, T miniprofiler.Timer, d string) (*Results, error) {
-	duration, err := opentsdb.ParseDuration(d)
-	if err != nil {
-		return nil, err
-	}
-	return &Results{
-		Results: []*Result{
-			{Value: Scalar(duration.Seconds())},
-		},
-	}, nil
-}
 
 func ToDuration(e *State, T miniprofiler.Timer, sec float64) (*Results, error) {
 	d := opentsdb.Duration(time.Duration(int64(sec)) * time.Second)
@@ -779,21 +698,6 @@ func line_lr(dps Series, d time.Duration) Series {
 	last := maxT.Add(d)
 	s[last] = float64(last.Unix())*slope + intercept
 	return s
-}
-
-
-
-func Ungroup(e *State, T miniprofiler.Timer, d *Results) (*Results, error) {
-	if len(d.Results) != 1 {
-		return nil, fmt.Errorf("ungroup: requires exactly one group")
-	}
-	return &Results{
-		Results: ResultSlice{
-			&Result{
-				Value: Scalar(d.Results[0].Value.Value().(Number)),
-			},
-		},
-	}, nil
 }
 
 var sSeriesSetArg = doc.Arg{

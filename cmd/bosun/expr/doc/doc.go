@@ -106,6 +106,9 @@ Argument Details:
 {{ if ne .ExtendedInfo "" }}
 	{{ .ExtendedInfo.HTML }}
 {{ end }}
+{{ range $example := .Examples }}
+	{{ $example.HTML}}
+{{ end }}
 {{ if ne .CodeLink ""}}
 <a href="{{.CodeLink}}">Code</a>
 {{ end }}
@@ -126,6 +129,12 @@ var docWikiTemplate = `
 
 <h1>Group Functions</h1>
 {{ range $i, $f := .group }}
+	<h2 class="exprFunc anchor">{{ $f.Signature }}</h2>
+	{{ template "func" $f}}
+{{ end }}
+
+<h1>Time Functions</h1>
+{{ range $i, $f := .time }}
 	<h2 class="exprFunc anchor">{{ $f.Signature }}</h2>
 	{{ template "func" $f}}
 {{ end }}
