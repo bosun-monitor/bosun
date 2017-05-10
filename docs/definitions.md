@@ -1514,6 +1514,11 @@ If your body for a POST notification requires a different Content-Type header th
 
 `get` will make an HTTP get call to the url provided as a value.
 
+#### httpTimeout
+{: .keyword}
+
+`httpTimeout` is the duration to wait for the get or post HTTP call. Defaults to 30 seconds.
+
 #### next
 {: .keyword}
 

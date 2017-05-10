@@ -10,6 +10,7 @@ import (
 	"net/mail"
 	"net/smtp"
 	"strings"
+	"time"
 
 	"bosun.org/collect"
 	"bosun.org/metadata"
@@ -27,6 +28,8 @@ func init() {
 		"bosun.email.sent_failed", metadata.Counter, metadata.PerSecond,
 		"The number of email notifications that Bosun failed to send.")
 }
+
+const defaultHTTPTimeout = time.Second * 30
 
 // Notify triggers Email/HTTP/Print actions for the Notification object
 func (n *Notification) Notify(subject, body string, emailsubject, emailbody []byte, c SystemConfProvider, ak string, attachments ...*models.Attachment) {
@@ -69,7 +72,14 @@ func (n *Notification) DoPost(payload []byte, ak string) {
 		}
 		payload = buf.Bytes()
 	}
-	resp, err := http.Post(n.Post.String(), n.ContentType, bytes.NewBuffer(payload))
+	postTimeout := n.HTTPTimeout
+	if postTimeout == 0 {
+		postTimeout = defaultHTTPTimeout
+	}
+	var postClient = &http.Client{
+		Timeout: postTimeout,
+	}
+	resp, err := postClient.Post(n.Post.String(), n.ContentType, bytes.NewBuffer(payload))
 	if resp != nil && resp.Body != nil {
 		// Drain up to 512 bytes and close the body to let the Transport reuse the connection
 		io.CopyN(ioutil.Discard, resp.Body, 512)
@@ -87,7 +97,14 @@ func (n *Notification) DoPost(payload []byte, ak string) {
 }
 
 func (n *Notification) DoGet(ak string) {
-	resp, err := http.Get(n.Get.String())
+	getTimeout := n.HTTPTimeout
+	if getTimeout == 0 {
+		getTimeout = defaultHTTPTimeout
+	}
+	var getClient = &http.Client{
+		Timeout: getTimeout,
+	}
+	resp, err := getClient.Get(n.Get.String())
 	if err != nil {
 		slog.Error(err)
 		return
