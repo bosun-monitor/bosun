@@ -28,6 +28,7 @@ func init() {
 		"reduction": reductionFuncs.DocSlice(),
 		"group":     groupFuncs.DocSlice(),
 		"time":      timeFuncs.DocSlice(),
+		"filter":    filterFuncs.DocSlice(),
 		"builtins":  builtins.DocSlice(),
 	}
 	b, err := docs.Wiki()
@@ -89,66 +90,12 @@ var builtins = parse.FuncMap{
 		Tags:   tagFirst,
 		F:      Abs,
 	},
-	"crop": {
-		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeNumberSet, models.TypeNumberSet},
-		Return: models.TypeSeriesSet,
-		Tags:   tagFirst,
-		F:      Crop,
-	},
 
 	"des": {
 		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeScalar, models.TypeScalar},
 		Return: models.TypeSeriesSet,
 		Tags:   tagFirst,
 		F:      Des,
-	},
-	"dropge": {
-		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeNumberSet},
-		Return: models.TypeSeriesSet,
-		Tags:   tagFirst,
-		F:      DropGe,
-	},
-	"dropg": {
-		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeNumberSet},
-		Return: models.TypeSeriesSet,
-		Tags:   tagFirst,
-		F:      DropG,
-	},
-	"drople": {
-		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeNumberSet},
-		Return: models.TypeSeriesSet,
-		Tags:   tagFirst,
-		F:      DropLe,
-	},
-	"dropl": {
-		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeNumberSet},
-		Return: models.TypeSeriesSet,
-		Tags:   tagFirst,
-		F:      DropL,
-	},
-	"dropna": {
-		Args:   []models.FuncType{models.TypeSeriesSet},
-		Return: models.TypeSeriesSet,
-		Tags:   tagFirst,
-		F:      DropNA,
-	},
-	"dropbool": {
-		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeSeriesSet},
-		Return: models.TypeSeriesSet,
-		Tags:   tagFirst,
-		F:      DropBool,
-	},
-	"filter": {
-		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeNumberSet},
-		Return: models.TypeSeriesSet,
-		Tags:   tagFirst,
-		F:      Filter,
-	},
-	"limit": {
-		Args:   []models.FuncType{models.TypeNumberSet, models.TypeScalar},
-		Return: models.TypeNumberSet,
-		Tags:   tagFirst,
-		F:      Limit,
 	},
 	"linelr": {
 		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeString},
@@ -270,62 +217,6 @@ func SeriesFunc(e *State, T miniprofiler.Timer, tags string, pairs ...float64) (
 	}, nil
 }
 
-func Crop(e *State, T miniprofiler.Timer, sSet *Results, startSet *Results, endSet *Results) (*Results, error) {
-	results := Results{}
-INNER:
-	for _, seriesResult := range sSet.Results {
-		for _, startResult := range startSet.Results {
-			for _, endResult := range endSet.Results {
-				startHasNoGroup := len(startResult.Group) == 0
-				endHasNoGroup := len(endResult.Group) == 0
-				startOverlapsSeries := seriesResult.Group.Overlaps(startResult.Group)
-				endOverlapsSeries := seriesResult.Group.Overlaps(endResult.Group)
-				if (startHasNoGroup || startOverlapsSeries) && (endHasNoGroup || endOverlapsSeries) {
-					res := crop(e, seriesResult, startResult, endResult)
-					results.Results = append(results.Results, res)
-					continue INNER
-				}
-			}
-		}
-	}
-	return &results, nil
-}
-
-func crop(e *State, seriesResult *Result, startResult *Result, endResult *Result) *Result {
-	startNumber := startResult.Value.(Number)
-	endNumber := endResult.Value.(Number)
-	start := e.now.Add(-time.Duration(time.Duration(startNumber) * time.Second))
-	end := e.now.Add(-time.Duration(time.Duration(endNumber) * time.Second))
-	series := seriesResult.Value.(Series)
-	for timeStamp := range series {
-		if timeStamp.Before(start) || timeStamp.After(end) {
-			delete(series, timeStamp)
-		}
-	}
-	return seriesResult
-}
-
-func DropBool(e *State, T miniprofiler.Timer, target *Results, filter *Results) (*Results, error) {
-	res := Results{}
-	unions := e.union(target, filter, "dropbool union")
-	for _, union := range unions {
-		aSeries := union.A.Value().(Series)
-		bSeries := union.B.Value().(Series)
-		newSeries := make(Series)
-		for k, v := range aSeries {
-			if bv, ok := bSeries[k]; ok {
-				if bv != float64(0) {
-					newSeries[k] = v
-				}
-			}
-		}
-		if len(newSeries) > 0 {
-			res.Results = append(res.Results, &Result{Group: union.Group, Value: newSeries})
-		}
-	}
-	return &res, nil
-}
-
 func NV(e *State, T miniprofiler.Timer, series *Results, v float64) (results *Results, err error) {
 	// If there are no results in the set, promote it to a number with the empty group ({})
 	if len(series.Results) == 0 {
@@ -350,65 +241,11 @@ func Sort(e *State, T miniprofiler.Timer, series *Results, order string) (*Resul
 	return series, nil
 }
 
-func Limit(e *State, T miniprofiler.Timer, series *Results, v float64) (*Results, error) {
-	i := int(v)
-	if len(series.Results) > i {
-		series.Results = series.Results[:i]
-	}
-	return series, nil
-}
 
-func Filter(e *State, T miniprofiler.Timer, series *Results, number *Results) (*Results, error) {
-	var ns ResultSlice
-	for _, sr := range series.Results {
-		for _, nr := range number.Results {
-			if sr.Group.Subset(nr.Group) || nr.Group.Subset(sr.Group) {
-				if nr.Value.Value().(Number) != 0 {
-					ns = append(ns, sr)
-				}
-			}
-		}
-	}
-	series.Results = ns
-	return series, nil
-}
 
-func Tail(e *State, T miniprofiler.Timer, series *Results, number *Results) (*Results, error) {
-	f := func(res *Results, s *Result, floats []float64) error {
-		tailLength := int(floats[0])
 
-		// if there are fewer points than the requested tail
-		// short circut and just return current series
-		if len(s.Value.Value().(Series)) <= tailLength {
-			res.Results = append(res.Results, s)
-			return nil
-		}
 
-		// create new sorted series
-		// not going to do quick select
-		// see https://github.com/bosun-monitor/bosun/pull/1802
-		// for details
-		oldSr := s.Value.Value().(Series)
-		sorted := NewSortedSeries(oldSr)
 
-		// create new series keep a reference
-		// and point sr.Value interface at reference
-		// as we don't need old series any more
-		newSeries := make(Series)
-		s.Value = newSeries
-
-		// load up new series with desired
-		// number of points
-		// we already checked len so this is safe
-		for _, item := range sorted[len(sorted)-tailLength:] {
-			newSeries[item.T] = item.V
-		}
-		res.Results = append(res.Results, s)
-		return nil
-	}
-
-	return match(f, series, number)
-}
 
 func Merge(e *State, T miniprofiler.Timer, series ...*Results) (*Results, error) {
 	res := &Results{}
@@ -483,52 +320,6 @@ func LeftJoin(e *State, T miniprofiler.Timer, keysCSV, columnsCSV string, rowDat
 
 
 
-func DropValues(e *State, T miniprofiler.Timer, series *Results, threshold *Results, dropFunction func(float64, float64) bool) (*Results, error) {
-	f := func(res *Results, s *Result, floats []float64) error {
-		nv := make(Series)
-		for k, v := range s.Value.Value().(Series) {
-			if !dropFunction(float64(v), floats[0]) {
-				//preserve values which should not be discarded
-				nv[k] = v
-			}
-		}
-		if len(nv) == 0 {
-			return fmt.Errorf("series %s is empty", s.Group)
-		}
-		s.Value = nv
-		res.Results = append(res.Results, s)
-		return nil
-	}
-	return match(f, series, threshold)
-}
-
-func DropGe(e *State, T miniprofiler.Timer, series *Results, threshold *Results) (*Results, error) {
-	dropFunction := func(value float64, threshold float64) bool { return value >= threshold }
-	return DropValues(e, T, series, threshold, dropFunction)
-}
-
-func DropG(e *State, T miniprofiler.Timer, series *Results, threshold *Results) (*Results, error) {
-	dropFunction := func(value float64, threshold float64) bool { return value > threshold }
-	return DropValues(e, T, series, threshold, dropFunction)
-}
-
-func DropLe(e *State, T miniprofiler.Timer, series *Results, threshold *Results) (*Results, error) {
-	dropFunction := func(value float64, threshold float64) bool { return value <= threshold }
-	return DropValues(e, T, series, threshold, dropFunction)
-}
-
-func DropL(e *State, T miniprofiler.Timer, series *Results, threshold *Results) (*Results, error) {
-	dropFunction := func(value float64, threshold float64) bool { return value < threshold }
-	return DropValues(e, T, series, threshold, dropFunction)
-}
-
-func DropNA(e *State, T miniprofiler.Timer, series *Results) (*Results, error) {
-	dropFunction := func(value float64, threshold float64) bool {
-		return math.IsNaN(float64(value)) || math.IsInf(float64(value), 0)
-	}
-	return DropValues(e, T, series, fromScalar(0), dropFunction)
-}
-
 func fromScalar(f float64) *Results {
 	return &Results{
 		Results: ResultSlice{
@@ -571,8 +362,6 @@ func Abs(e *State, T miniprofiler.Timer, series *Results) *Results {
 	}
 	return series
 }
-
-
 
 func Count(e *State, T miniprofiler.Timer, query, sduration, eduration string) (r *Results, err error) {
 	r, err = Query(e, T, query, sduration, eduration)

@@ -128,6 +128,12 @@ var docWikiTemplate = `
 	{{ template "func" $f}}
 {{ end }}
 
+<h1>Filtering Functions</h1>
+{{ range $i, $f := .filter }}
+	<h2 class="exprFunc anchor">{{ $f.Signature }}</h2>
+	{{ template "func" $f}}
+{{ end }}
+
 <h1>Group Functions</h1>
 {{ range $i, $f := .group }}
 	<h2 class="exprFunc anchor">{{ $f.Signature }}</h2>
