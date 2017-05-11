@@ -20,7 +20,7 @@ $(function(){
 		$(".alert").hide();
 		$("#submit").prop('disabled', true);
 		var email = $("#email").val();
-		var url = https://bosun-invite.glitch.me?email=" + email;
+		var url = "https://bosun-invite.glitch.me?email=" + encodeURIComponent(email);
 		$.get(url, function(data){
 			$(".alert-success").show();
 		}) .fail(function(jqXHR) {
