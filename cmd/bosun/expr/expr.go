@@ -84,7 +84,7 @@ func (e *Expr) MarshalJSON() ([]byte, error) {
 
 // New creates a new expression tree
 func New(expr string, funcs ...parse.FuncMap) (*Expr, error) {
-	funcs = append(funcs, builtins, reductionFuncs)
+	funcs = append(funcs, builtins, reductionFuncs, groupFuncs, timeFuncs, filterFuncs)
 	t, err := parse.Parse(expr, funcs...)
 	if err != nil {
 		return nil, err

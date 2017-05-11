@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"math"
-	"os"
 	"sort"
 	"strings"
 	"time"
@@ -24,26 +23,23 @@ func init() {
 			log.Fatal(err)
 		}
 	}
-	docs := doc.Docs{
+	Docs = doc.Docs{
 		"reduction": reductionFuncs.DocSlice(),
 		"group":     groupFuncs.DocSlice(),
 		"time":      timeFuncs.DocSlice(),
 		"filter":    filterFuncs.DocSlice(),
 		"builtins":  builtins.DocSlice(),
 	}
-	b, err := docs.Wiki()
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println(b.String())
-	os.Exit(0)
-	// ds, err := json.Marshal(docs)
+	// b, err := Docs.Wiki()
 	// if err != nil {
 	// 	log.Fatal(err)
 	// }
-	// fmt.Println(string(ds))
+	// fmt.Println(b.String())
 	// os.Exit(0)
+
 }
+
+var Docs doc.Docs
 
 func tagQuery(args []parse.Node) (parse.Tags, error) {
 	n := args[0].(*parse.StringNode)
@@ -241,12 +237,6 @@ func Sort(e *State, T miniprofiler.Timer, series *Results, order string) (*Resul
 	return series, nil
 }
 
-
-
-
-
-
-
 func Merge(e *State, T miniprofiler.Timer, series ...*Results) (*Results, error) {
 	res := &Results{}
 	if len(series) == 0 {
@@ -317,8 +307,6 @@ func LeftJoin(e *State, T miniprofiler.Timer, keysCSV, columnsCSV string, rowDat
 		},
 	}, nil
 }
-
-
 
 func fromScalar(f float64) *Results {
 	return &Results{

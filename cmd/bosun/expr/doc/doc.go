@@ -1,6 +1,7 @@
 package doc
 
 import (
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"reflect"
@@ -27,6 +28,18 @@ type Func struct {
 	Arguments    Arguments
 	Examples     []HTMLString
 	Return       models.FuncType
+}
+
+type ExtFunc Func
+
+func (f Func) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct{
+		ExtFunc
+		Signature string
+	}{
+		ExtFunc: ExtFunc(f),
+		Signature: f.Signature(),
+	})
 }
 
 type Funcs []*Func

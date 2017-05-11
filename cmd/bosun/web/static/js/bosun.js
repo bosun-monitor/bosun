@@ -875,7 +875,7 @@ bosunApp.component("usernameInput", {
     template: '<input type="text"class="form-control"  ng-disabled="ct.auth.Enabled()" ng-model="ct.auth.Username" ng-model-options="{ getterSetter: true }">'
 });
 /// <reference path="0-bosun.ts" />
-bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$route', '$timeout', '$sce', function ($scope, $http, $location, $route, $timeout, $sce) {
+bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$route', '$timeout', '$sce', '$modal', function ($scope, $http, $location, $route, $timeout, $sce, $modal) {
         var search = $location.search();
         $scope.fromDate = search.fromDate || '';
         $scope.fromTime = search.fromTime || '';
@@ -894,6 +894,7 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
         $scope.aceTheme = 'chrome';
         $scope.aceMode = 'bosun';
         $scope.expandDiff = false;
+        $scope.docs = {};
         $scope.runningChangedHelp = "The running config has been changed. This means you are in danger of overwriting someone else's changes. To view the changes open the 'Save Dialogue' and you will see a unified diff. The only way to get rid of the error panel is to open a new instance of the rule editor and copy your changes into it. You are still permitted to save without doing this, but then you must be very careful not to overwrite anyone else's changes.";
         $scope.sectionToDocs = {
             "alert": "https://bosun.org/definitions#alert-definitions",
@@ -960,6 +961,17 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
             }
             return items;
         }
+        $http.get('/api/expr/docs')
+            .success(function (data) {
+            _.each(data, function (funcs) {
+                _.each(funcs, function (f) {
+                    $scope.docs[f.Name] = f;
+                });
+            });
+        })
+            .error(function (data) {
+            $scope.validationResult = "Error fetching expression documentation: " + data;
+        });
         $http.get('/api/config?hash=' + (search.hash || ''))
             .success(function (data) {
             $scope.config_text = data;
@@ -980,6 +992,18 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
             $scope.items = parseItems();
         };
         var editor;
+        function setToken() {
+            var position = editor.getCursorPosition();
+            $scope.token = editor.session.getTokenAt(position.row, position.column);
+            if ($scope.token && $scope.token.type == "support.function") {
+                var selectedDoc = $scope.docs[$scope.token.value];
+                var modal = $modal({
+                    title: selectedDoc.Signature,
+                    content: selectedDoc.Summary,
+                    show: true
+                });
+            }
+        }
         $scope.aceLoaded = function (_editor) {
             editor = _editor;
             $scope.editor = editor;
@@ -989,6 +1013,11 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
                 $scope.$apply(function () {
                     $scope.items = parseItems();
                 });
+            });
+            editor.commands.addCommand({
+                name: "funcHelp",
+                bindKey: { win: "Ctrl-/", mac: "Ctrl-/" },
+                exec: setToken
             });
         };
         var syntax = true;

@@ -36,6 +36,7 @@ import (
 	"github.com/captncraig/easyauth"
 	"github.com/gorilla/mux"
 	"github.com/justinas/alice"
+	"bosun.org/cmd/bosun/expr"
 )
 
 var (
@@ -152,6 +153,7 @@ func Listen(httpAddr, httpsAddr, certFile, keyFile string, devMode bool, tsdbHos
 	handle("/api/egraph/{bs}.{format:svg|png}", JSON(ExprGraph), canRunTests).Name("expr_graph")
 	handle("/api/errors", JSON(ErrorHistory), canViewDash).Name("errors").Methods(GET, POST)
 	handle("/api/expr", JSON(Expr), canRunTests).Name("expr").Methods(POST)
+	handle("/api/expr/docs", JSON(ExprDocs), fullyOpen).Name("expr_doc").Methods(GET)
 	handle("/api/graph", JSON(Graph), canViewDash).Name("graph").Methods(GET)
 
 	handle("/api/health", JSON(HealthCheck), fullyOpen).Name("health_check").Methods(GET)
@@ -932,4 +934,8 @@ func ErrorHistory(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) 
 		}
 	}
 	return nil, nil
+}
+
+func ExprDocs(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	return expr.Docs, nil
 }
