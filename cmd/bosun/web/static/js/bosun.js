@@ -1004,6 +1004,28 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
                 });
             }
         }
+        function updateToolTip(position, token) {
+            //example with container creation via JS
+            var div = document.getElementById('tooltip_0');
+            if (div === null) {
+                div = document.createElement('div');
+                div.setAttribute('id', 'tooltip_0');
+                div.setAttribute('class', 'ace_tooltip');
+                document.body.appendChild(div);
+            }
+            var aDiv = angular.element('#tooltip_0');
+            div.style.left = position.pageX + 'px';
+            div.style.top = position.pageY + 'px';
+            if (token && token.type == "support.function") {
+                div.style.display = "block";
+                var selectedDoc = $scope.docs[token.value];
+                aDiv.html("<p>" + selectedDoc.Signature + "</p><p>" + selectedDoc.Summary + "</p>");
+            }
+            else {
+                div.style.display = "none";
+                div.innerText = "";
+            }
+        }
         $scope.aceLoaded = function (_editor) {
             editor = _editor;
             $scope.editor = editor;
@@ -1013,6 +1035,23 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
                 $scope.$apply(function () {
                     $scope.items = parseItems();
                 });
+            });
+            // https://github.com/devuxd/SeeCodeRun/wiki/Ace-code-editor
+            editor.on("mousemove", function (e) {
+                var position = e.getDocumentPosition();
+                if (position) {
+                    var wordRange = editor.getSession().getWordRange(position.row, position.column);
+                    var text = editor.session.getTextRange(wordRange);
+                    var token = editor.session.getTokenAt(position.row, position.column);
+                    if (text.length > 0) {
+                        var pixelPosition = editor.renderer.textToScreenCoordinates(position);
+                        pixelPosition.pageY += editor.renderer.lineHeight;
+                        updateToolTip(pixelPosition, token);
+                    }
+                    else {
+                        updateToolTip(editor.renderer.textToScreenCoordinates(position), token);
+                    }
+                }
             });
             editor.commands.addCommand({
                 name: "funcHelp",
