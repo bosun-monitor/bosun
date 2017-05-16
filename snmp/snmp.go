@@ -310,9 +310,6 @@ func check(resp *response, req *request) (err error) {
 		case eq(v, null):
 			return fmt.Errorf("%v: unexpected null", b.Name)
 		}
-		if !hasPrefix(b.Name, []int{1, 3}) {
-			return fmt.Errorf("%v: missing [1 3] prefix", b.Name)
-		}
 	}
 
 	return nil
