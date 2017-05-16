@@ -202,10 +202,10 @@ var builtins = map[string]parse.Func{
 
 	// Group functions
 	"addtags": {
-		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeString},
-		Return: models.TypeSeriesSet,
-		Tags:   tagRename,
-		F:      AddTags,
+		Args:          []models.FuncType{models.TypeVariantSet, models.TypeString},
+		VariantReturn: true,
+		Tags:          tagRename,
+		F:             AddTags,
 	},
 	"rename": {
 		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeString},

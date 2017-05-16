@@ -149,6 +149,7 @@ const (
 	TypeNumberExpr
 	TypeSeriesExpr // No implmentation yet
 	TypeTable
+	TypeVariantSet
 	TypeUnexpected
 )
 

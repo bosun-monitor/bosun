@@ -412,7 +412,6 @@ func (e *State) union(a, b *Results, expression string) []*Union {
 	var group opentsdb.TagSet
 	for _, ra := range a.Results {
 		for _, rb := range b.Results {
-
 			if ra.Group.Equal(rb.Group) || len(ra.Group) == 0 || len(rb.Group) == 0 {
 				g := ra.Group
 				if len(ra.Group) == 0 {
