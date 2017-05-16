@@ -100,6 +100,17 @@ func tagRename(args []parse.Node) (parse.Tags, error) {
 	return tags, nil
 }
 
+func tagAddMetaTag(args []parse.Node) (parse.Tags, error) {
+	tags, err := tagFirst(args)
+	if err != nil {
+		return nil, err
+	}
+	newTagList := csv(args[2].(*parse.StringNode).Text)
+	tag := newTagList[len(newTagList)-1]
+	tags[tag] = struct{}{}
+	return tags, nil
+}
+
 var builtins = map[string]parse.Func{
 	// Reduction functions
 
@@ -205,7 +216,7 @@ var builtins = map[string]parse.Func{
 		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeString, models.TypeString},
 		Return: models.TypeSeriesSet,
 		// Todo add proper tags func
-		Tags: tagFirst,
+		Tags: tagAddMetaTag,
 		F:    AddMetaTag,
 	},
 	"addtags": {
