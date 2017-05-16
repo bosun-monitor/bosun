@@ -31,7 +31,7 @@ func c_snmp_lag(community, host string) (opentsdb.MultiDataPoint, error) {
 	}
 	for k, v := range ifNamesRaw {
 		tags := opentsdb.TagSet{"host": host, "iface": k}
-		metadata.AddMeta("", tags, "masterIface", v, false)
+		metadata.AddMeta("", tags, "masterIface", fmt.Sprintf("%v", v), false)
 	}
 	return nil, nil
 }
