@@ -160,6 +160,7 @@ func Listen(httpAddr, httpsAddr, certFile, keyFile string, devMode bool, tsdbHos
 	handle("/api/quiet", JSON(Quiet), canViewDash).Name("quiet").Methods(GET)
 	handle("/api/incidents/open", JSON(ListOpenIncidents), canViewDash).Name("open_incidents").Methods(GET)
 	handle("/api/incidents/events", JSON(IncidentEvents), canViewDash).Name("incident_events").Methods(GET)
+	handle("/api/incidents/{ak}", JSON(ListAllIncidents), canViewDash).Name("incident_events").Methods(GET)
 	handle("/api/metadata/get", JSON(GetMetadata), canViewDash).Name("meta_get").Methods(GET)
 	handle("/api/metadata/metrics", JSON(MetadataMetrics), canViewDash).Name("meta_metrics").Methods(GET)
 	handle("/api/metadata/put", JSON(PutMetadata), canPutData).Name("meta_put").Methods(POST)
@@ -627,6 +628,18 @@ func IncidentEvents(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request
 	}
 	st := ExtStatus{IncidentState: state, RenderedTemplates: rt}
 	return st, nil
+}
+
+func ListAllIncidents(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	rawAK := mux.Vars(r)["ak"]
+	if rawAK == "" {
+		return nil, fmt.Errorf("must provide alert key")
+	}
+	ak, err := models.ParseAlertKey(rawAK)
+	if err != nil {
+		return nil, err
+	}
+	return schedule.DataAccess.State().GetAllIncidentsByAlertKey(ak)
 }
 
 func Status(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
