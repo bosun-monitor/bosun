@@ -27,7 +27,7 @@ There are three data types in Bosun's expression language:
  1. **Scalar**: This is the simplest type, it is a single numeric value with no group associated with it. Keep in mind that an empty group, `{}` is still a group.
  2. **NumberSet**: A number set is a group of tagged numeric values with one value per unique grouping. As a special case, a **scalar** may be used in place of a **numberSet** with a single member with an empty group.
  3. **SeriesSet**: A series is an array of timestamp-value pairs and an associated group.
- 4. **VariantSet**: This is for generic functions. It can be a NumberSet, a SeriesSet, or Scalar. In the case of a NumberSet of a SeriesSet that same time will be returned, in the case of a Scalar a NumberSet is returned.
+ 4. **VariantSet**: This is for generic functions. It can be a NumberSet, a SeriesSet, or Scalar. In the case of a NumberSet of a SeriesSet that same type will be returned, in the case of a Scalar a NumberSet is returned. Therefore the VariantSet type is never returned.
 
 In the vast majority of your alerts you will getting ***seriesSets*** back from your time series database and ***reducing*** them into ***numberSets***.
 
