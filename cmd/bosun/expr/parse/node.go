@@ -133,7 +133,7 @@ func (f *FuncNode) Check(t *Tree) error {
 		}
 		argType := arg.Return()
 		if funcType == models.TypeNumberSet && argType == models.TypeScalar {
-			argType = models.TypeNumberSet// Scalars are promoted to NumberSets during execution.
+			argType = models.TypeNumberSet // Scalars are promoted to NumberSets during execution.
 		}
 		if funcType == models.TypeVariantSet {
 			if !(argType == models.TypeNumberSet || argType == models.TypeSeriesSet || argType == models.TypeScalar) {
