@@ -133,9 +133,10 @@ func (f *FuncNode) Check(t *Tree) error {
 		}
 		argType := arg.Return()
 		if funcType == models.TypeNumberSet && argType == models.TypeScalar {
-			// Scalars are promoted to NumberSets during execution.
-		} else if funcType == models.TypeVariantSet {
-			if !(argType == models.TypeNumberSet || argType == models.TypeSeriesSet) {
+			argType = models.TypeNumberSet// Scalars are promoted to NumberSets during execution.
+		}
+		if funcType == models.TypeVariantSet {
+			if !(argType == models.TypeNumberSet || argType == models.TypeSeriesSet || argType == models.TypeScalar) {
 				return fmt.Errorf("parse: expected %v or %v for argument %v, got %v", models.TypeNumberSet, models.TypeSeriesSet, i, argType)
 			}
 		} else if funcType != argType {

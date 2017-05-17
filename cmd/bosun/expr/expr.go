@@ -758,7 +758,7 @@ func (e *State) walkFunc(node *parse.FuncNode, T miniprofiler.Timer) *Results {
 			} else {
 				argType = node.F.Args[i]
 			}
-			if f, ok := v.(float64); ok && argType == models.TypeNumberSet {
+			if f, ok := v.(float64); ok && (argType == models.TypeNumberSet || argType == models.TypeVariantSet) {
 				v = fromScalar(f)
 			}
 			in = append(in, reflect.ValueOf(v))
