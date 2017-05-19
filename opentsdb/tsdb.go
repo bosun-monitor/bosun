@@ -903,6 +903,8 @@ var DefaultClient = &http.Client{
 // QueryResponse performs a v2 OpenTSDB request to the given host. host should
 // be of the form hostname:port. A nil client uses DefaultClient.
 func (r *Request) QueryResponse(host string, client *http.Client) (*http.Response, error) {
+	flux, err := r.FluxQLQueryString()
+	fmt.Println(flux, err)
 	u := url.URL{
 		Scheme: "http",
 		Host:   host,
