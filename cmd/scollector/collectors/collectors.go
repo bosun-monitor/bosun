@@ -124,6 +124,8 @@ var (
 
 	//TotalScollectorMemory stores the total memory used by Scollector (including CGO and WMI)
 	TotalScollectorMemoryMB uint64
+
+	Prefix = ""
 )
 
 func init() {
@@ -224,6 +226,9 @@ func registerInit(i initFunc) {
 }
 
 func Init(c *conf.Conf) {
+	if c.Prefix != "" {
+		Prefix = c.Prefix
+	}
 	for _, f := range inits {
 		f(c)
 	}
@@ -296,6 +301,9 @@ func AddTS(md *opentsdb.MultiDataPoint, name string, ts int64, value interface{}
 // automatically added. If the value of the host key is the empty string, it
 // will be removed (use this to prevent the normal auto-adding of the host tag).
 func Add(md *opentsdb.MultiDataPoint, name string, value interface{}, t opentsdb.TagSet, rate metadata.RateType, unit metadata.Unit, desc string) {
+	if Prefix != "" {
+		name = Prefix + "." + name 
+	}
 	AddTS(md, name, now(), value, t, rate, unit, desc)
 }
 
