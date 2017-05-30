@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
@@ -12,6 +13,7 @@ import (
 
 func init() {
 	collectors = append(collectors, &IntervalCollector{F: c_procstats_linux})
+	collectors = append(collectors, &IntervalCollector{F: c_interrupts_linux, Interval: time.Minute})
 }
 
 var uptimeRE = regexp.MustCompile(`(\S+)\s+(\S+)`)
@@ -203,52 +205,7 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 	}); err != nil {
 		Error = err
 	}
-	irq_type_desc := map[string]string{
-		"NMI": "Non-maskable interrupts.",
-		"LOC": "Local timer interrupts.",
-		"SPU": "Spurious interrupts.",
-		"PMI": "Performance monitoring interrupts.",
-		"IWI": "IRQ work interrupts.",
-		"RES": "Rescheduling interrupts.",
-		"CAL": "Funcation call interupts.",
-		"TLB": "TLB (translation lookaside buffer) shootdowns.",
-		"TRM": "Thermal event interrupts.",
-		"THR": "Threshold APIC interrupts.",
-		"MCE": "Machine check exceptions.",
-		"MCP": "Machine Check polls.",
-	}
-	num_cpus := 0
-	if err := readLine("/proc/interrupts", func(s string) error {
-		cols := strings.Fields(s)
-		if num_cpus == 0 {
-			num_cpus = len(cols)
-			return nil
-		} else if len(cols) < 2 {
-			return nil
-		}
-		irq_type := strings.TrimRight(cols[0], ":")
-		if !IsAlNum(irq_type) {
-			return nil
-		}
-		if IsDigit(irq_type) {
-			if cols[len(cols)-2] == "PCI-MSI-edge" && strings.Contains(cols[len(cols)-1], "eth") {
-				irq_type = cols[len(cols)-1]
-			} else {
-				// Interrupt type is just a number, ignore.
-				return nil
-			}
-		}
-		for i, val := range cols[1:] {
-			if i >= num_cpus || !IsDigit(val) {
-				// All values read, remaining cols contain textual description.
-				break
-			}
-			Add(&md, "linux.interrupts", val, opentsdb.TagSet{"type": irq_type, "cpu": strconv.Itoa(i)}, metadata.Counter, metadata.Interupt, irq_type_desc[irq_type])
-		}
-		return nil
-	}); err != nil {
-		Error = err
-	}
+
 	if err := readLine("/proc/net/sockstat", func(s string) error {
 		cols := strings.Fields(s)
 		switch cols[0] {
@@ -361,4 +318,55 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 		Error = err
 	}
 	return md, Error
+}
+
+func c_interrupts_linux() (opentsdb.MultiDataPoint, error) {
+	var md opentsdb.MultiDataPoint
+	irq_type_desc := map[string]string{
+		"NMI": "Non-maskable interrupts.",
+		"LOC": "Local timer interrupts.",
+		"SPU": "Spurious interrupts.",
+		"PMI": "Performance monitoring interrupts.",
+		"IWI": "IRQ work interrupts.",
+		"RES": "Rescheduling interrupts.",
+		"CAL": "Funcation call interupts.",
+		"TLB": "TLB (translation lookaside buffer) shootdowns.",
+		"TRM": "Thermal event interrupts.",
+		"THR": "Threshold APIC interrupts.",
+		"MCE": "Machine check exceptions.",
+		"MCP": "Machine Check polls.",
+	}
+	num_cpus := 0
+	if err := readLine("/proc/interrupts", func(s string) error {
+		cols := strings.Fields(s)
+		if num_cpus == 0 {
+			num_cpus = len(cols)
+			return nil
+		} else if len(cols) < 2 {
+			return nil
+		}
+		irq_type := strings.TrimRight(cols[0], ":")
+		if !IsAlNum(irq_type) {
+			return nil
+		}
+		if IsDigit(irq_type) {
+			if cols[len(cols)-2] == "PCI-MSI-edge" && strings.Contains(cols[len(cols)-1], "eth") {
+				irq_type = cols[len(cols)-1]
+			} else {
+				// Interrupt type is just a number, ignore.
+				return nil
+			}
+		}
+		for i, val := range cols[1:] {
+			if i >= num_cpus || !IsDigit(val) {
+				// All values read, remaining cols contain textual description.
+				break
+			}
+			Add(&md, "linux.interrupts", val, opentsdb.TagSet{"type": irq_type, "cpu": strconv.Itoa(i)}, metadata.Counter, metadata.Interupt, irq_type_desc[irq_type])
+		}
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+	return md, nil
 }
