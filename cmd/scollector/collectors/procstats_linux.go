@@ -14,6 +14,7 @@ import (
 func init() {
 	collectors = append(collectors, &IntervalCollector{F: c_procstats_linux})
 	collectors = append(collectors, &IntervalCollector{F: c_interrupts_linux, Interval: time.Minute})
+	collectors = append(collectors, &IntervalCollector{F: c_vmstat_linux, Interval: time.Minute})
 }
 
 var uptimeRE = regexp.MustCompile(`(\S+)\s+(\S+)`)
@@ -75,26 +76,7 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 	if mem["MemTotal"] != 0 {
 		Add(&md, osMemPctFree, (mem["MemFree"]+mem["Buffers"]+mem["Cached"])/mem["MemTotal"]*100, nil, metadata.Gauge, metadata.Pct, osMemFreeDesc)
 	}
-	if err := readLine("/proc/vmstat", func(s string) error {
-		m := vmstatRE.FindStringSubmatch(s)
-		if m == nil {
-			return nil
-		}
-		switch m[1] {
-		case "pgpgin", "pgpgout", "pswpin", "pswpout", "pgfault", "pgmajfault":
-			mio := inoutRE.FindStringSubmatch(m[1])
-			if mio != nil {
-				Add(&md, "linux.mem."+mio[1], m[2], opentsdb.TagSet{"direction": mio[2]}, metadata.Counter, metadata.Page, "")
-			} else {
-				Add(&md, "linux.mem."+m[1], m[2], nil, metadata.Counter, metadata.Page, "")
-			}
-		default:
-			Add(&md, "linux.mem."+m[1], m[2], nil, metadata.Counter, metadata.None, "")
-		}
-		return nil
-	}); err != nil {
-		Error = err
-	}
+
 	num_cores := 0
 	var t_util float64
 	cpu_stat_desc := map[string]string{
@@ -363,6 +345,31 @@ func c_interrupts_linux() (opentsdb.MultiDataPoint, error) {
 				break
 			}
 			Add(&md, "linux.interrupts", val, opentsdb.TagSet{"type": irq_type, "cpu": strconv.Itoa(i)}, metadata.Counter, metadata.Interupt, irq_type_desc[irq_type])
+		}
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+	return md, nil
+}
+
+func c_vmstat_linux() (opentsdb.MultiDataPoint, error) {
+	var md opentsdb.MultiDataPoint
+	if err := readLine("/proc/vmstat", func(s string) error {
+		m := vmstatRE.FindStringSubmatch(s)
+		if m == nil {
+			return nil
+		}
+		switch m[1] {
+		case "pgpgin", "pgpgout", "pswpin", "pswpout", "pgfault", "pgmajfault":
+			mio := inoutRE.FindStringSubmatch(m[1])
+			if mio != nil {
+				Add(&md, "linux.mem."+mio[1], m[2], opentsdb.TagSet{"direction": mio[2]}, metadata.Counter, metadata.Page, "")
+			} else {
+				Add(&md, "linux.mem."+m[1], m[2], nil, metadata.Counter, metadata.Page, "")
+			}
+		default:
+			Add(&md, "linux.mem."+m[1], m[2], nil, metadata.Counter, metadata.None, "")
 		}
 		return nil
 	}); err != nil {
