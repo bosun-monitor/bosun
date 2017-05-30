@@ -202,22 +202,22 @@ var builtins = map[string]parse.Func{
 
 	// Group functions
 	"addtags": {
-		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeString},
-		Return: models.TypeSeriesSet,
-		Tags:   tagRename,
-		F:      AddTags,
+		Args:          []models.FuncType{models.TypeVariantSet, models.TypeString},
+		VariantReturn: true,
+		Tags:          tagRename,
+		F:             AddTags,
 	},
 	"rename": {
-		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeString},
-		Return: models.TypeSeriesSet,
-		Tags:   tagRename,
-		F:      Rename,
+		Args:          []models.FuncType{models.TypeVariantSet, models.TypeString},
+		VariantReturn: true,
+		Tags:          tagRename,
+		F:             Rename,
 	},
 	"remove": {
-		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeString},
-		Return: models.TypeSeriesSet,
-		Tags:   tagRemove,
-		F:      Remove,
+		Args:          []models.FuncType{models.TypeVariantSet, models.TypeString},
+		VariantReturn: true,
+		Tags:          tagRemove,
+		F:             Remove,
 	},
 	"t": {
 		Args:   []models.FuncType{models.TypeNumberSet, models.TypeString},
@@ -234,10 +234,10 @@ var builtins = map[string]parse.Func{
 	// Other functions
 
 	"abs": {
-		Args:   []models.FuncType{models.TypeNumberSet},
-		Return: models.TypeNumberSet,
-		Tags:   tagFirst,
-		F:      Abs,
+		Args:          []models.FuncType{models.TypeVariantSet},
+		VariantReturn: true,
+		Tags:          tagFirst,
+		F:             Abs,
 	},
 	"crop": {
 		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeNumberSet, models.TypeNumberSet},
@@ -303,16 +303,16 @@ var builtins = map[string]parse.Func{
 		F:      Epoch,
 	},
 	"filter": {
-		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeNumberSet},
-		Return: models.TypeSeriesSet,
-		Tags:   tagFirst,
-		F:      Filter,
+		Args:          []models.FuncType{models.TypeVariantSet, models.TypeNumberSet},
+		VariantReturn: true,
+		Tags:          tagFirst,
+		F:             Filter,
 	},
 	"limit": {
-		Args:   []models.FuncType{models.TypeNumberSet, models.TypeScalar},
-		Return: models.TypeNumberSet,
-		Tags:   tagFirst,
-		F:      Limit,
+		Args:          []models.FuncType{models.TypeVariantSet, models.TypeScalar},
+		VariantReturn: true,
+		Tags:          tagFirst,
+		F:             Limit,
 	},
 	"nv": {
 		Args:   []models.FuncType{models.TypeNumberSet, models.TypeScalar},
@@ -553,18 +553,18 @@ func Sort(e *State, T miniprofiler.Timer, series *Results, order string) (*Resul
 	return series, nil
 }
 
-func Limit(e *State, T miniprofiler.Timer, series *Results, v float64) (*Results, error) {
+func Limit(e *State, T miniprofiler.Timer, set *Results, v float64) (*Results, error) {
 	i := int(v)
-	if len(series.Results) > i {
-		series.Results = series.Results[:i]
+	if len(set.Results) > i {
+		set.Results = set.Results[:i]
 	}
-	return series, nil
+	return set, nil
 }
 
-func Filter(e *State, T miniprofiler.Timer, series *Results, number *Results) (*Results, error) {
+func Filter(e *State, T miniprofiler.Timer, set *Results, numberSet *Results) (*Results, error) {
 	var ns ResultSlice
-	for _, sr := range series.Results {
-		for _, nr := range number.Results {
+	for _, sr := range set.Results {
+		for _, nr := range numberSet.Results {
 			if sr.Group.Subset(nr.Group) || nr.Group.Subset(sr.Group) {
 				if nr.Value.Value().(Number) != 0 {
 					ns = append(ns, sr)
@@ -572,8 +572,8 @@ func Filter(e *State, T miniprofiler.Timer, series *Results, number *Results) (*
 			}
 		}
 	}
-	series.Results = ns
-	return series, nil
+	set.Results = ns
+	return set, nil
 }
 
 func Tail(e *State, T miniprofiler.Timer, series *Results, number *Results) (*Results, error) {
@@ -634,20 +634,20 @@ func Merge(e *State, T miniprofiler.Timer, series ...*Results) (*Results, error)
 	return res, nil
 }
 
-func Remove(e *State, T miniprofiler.Timer, seriesSet *Results, tagKey string) (*Results, error) {
+func Remove(e *State, T miniprofiler.Timer, set *Results, tagKey string) (*Results, error) {
 	seen := make(map[string]bool)
-	for _, r := range seriesSet.Results {
+	for _, r := range set.Results {
 		if _, ok := r.Group[tagKey]; ok {
 			delete(r.Group, tagKey)
 			if _, ok := seen[r.Group.String()]; ok {
-				return seriesSet, fmt.Errorf("duplicate group would result from removing tag key: %v", tagKey)
+				return set, fmt.Errorf("duplicate group would result from removing tag key: %v", tagKey)
 			}
 			seen[r.Group.String()] = true
 		} else {
-			return seriesSet, fmt.Errorf("tag key %v not found in result", tagKey)
+			return set, fmt.Errorf("tag key %v not found in result", tagKey)
 		}
 	}
-	return seriesSet, nil
+	return set, nil
 }
 
 func LeftJoin(e *State, T miniprofiler.Timer, keysCSV, columnsCSV string, rowData ...*Results) (*Results, error) {
@@ -832,11 +832,18 @@ func reduce(e *State, T miniprofiler.Timer, series *Results, F func(Series, ...f
 	return match(f, series, args...)
 }
 
-func Abs(e *State, T miniprofiler.Timer, series *Results) *Results {
-	for _, s := range series.Results {
-		s.Value = Number(math.Abs(float64(s.Value.Value().(Number))))
+func Abs(e *State, T miniprofiler.Timer, set *Results) *Results {
+	for _, s := range set.Results {
+		switch s.Type() {
+		case models.TypeNumberSet:
+			s.Value = Number(math.Abs(float64(s.Value.Value().(Number))))
+		case models.TypeSeriesSet:
+			for k, v := range s.Value.Value().(Series) {
+				s.Value.Value().(Series)[k] = math.Abs(v)
+			}
+		}
 	}
-	return series
+	return set
 }
 
 func Diff(e *State, T miniprofiler.Timer, series *Results) (r *Results, err error) {
@@ -1152,14 +1159,14 @@ func percentile(dps Series, args ...float64) (a float64) {
 	return x[int(i)]
 }
 
-func Rename(e *State, T miniprofiler.Timer, series *Results, s string) (*Results, error) {
+func Rename(e *State, T miniprofiler.Timer, set *Results, s string) (*Results, error) {
 	for _, section := range strings.Split(s, ",") {
 		kv := strings.Split(section, "=")
 		if len(kv) != 2 {
 			return nil, fmt.Errorf("error passing groups")
 		}
 		oldKey, newKey := kv[0], kv[1]
-		for _, res := range series.Results {
+		for _, res := range set.Results {
 			for tag, v := range res.Group {
 				if oldKey == tag {
 					if _, ok := res.Group[newKey]; ok {
@@ -1172,19 +1179,19 @@ func Rename(e *State, T miniprofiler.Timer, series *Results, s string) (*Results
 			}
 		}
 	}
-	return series, nil
+	return set, nil
 }
 
-func AddTags(e *State, T miniprofiler.Timer, series *Results, s string) (*Results, error) {
+func AddTags(e *State, T miniprofiler.Timer, set *Results, s string) (*Results, error) {
 	if s == "" {
-		return series, nil
+		return set, nil
 	}
 	tagSetToAdd, err := opentsdb.ParseTags(s)
 	if err != nil {
 		return nil, err
 	}
 	for tagKey, tagValue := range tagSetToAdd {
-		for _, res := range series.Results {
+		for _, res := range set.Results {
 			if res.Group == nil {
 				res.Group = make(opentsdb.TagSet)
 			}
@@ -1194,7 +1201,7 @@ func AddTags(e *State, T miniprofiler.Timer, series *Results, s string) (*Result
 			res.Group[tagKey] = tagValue
 		}
 	}
-	return series, nil
+	return set, nil
 }
 
 func Ungroup(e *State, T miniprofiler.Timer, d *Results) (*Results, error) {

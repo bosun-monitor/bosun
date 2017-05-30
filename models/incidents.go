@@ -133,6 +133,8 @@ func (f FuncType) String() string {
 		return "prefix"
 	case TypeTable:
 		return "table"
+	case TypeVariantSet:
+		return "variantSet"
 	default:
 		return "unknown"
 	}
@@ -149,6 +151,7 @@ const (
 	TypeNumberExpr
 	TypeSeriesExpr // No implmentation yet
 	TypeTable
+	TypeVariantSet
 	TypeUnexpected
 )
 

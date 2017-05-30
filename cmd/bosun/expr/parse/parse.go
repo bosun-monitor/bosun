@@ -42,6 +42,7 @@ type Func struct {
 	MapFunc       bool // Func is only valid in map expressions
 	PrefixEnabled bool
 	PrefixKey     bool
+	VariantReturn bool
 	Check         func(*Tree, *FuncNode) error
 }
 
@@ -198,6 +199,12 @@ func (t *Tree) startParse(funcs []map[string]Func, lex *lexer) {
 	t.funcs = funcs
 	for _, funcMap := range funcs {
 		for name, f := range funcMap {
+			if f.VariantReturn {
+				if f.Tags == nil {
+					panic(fmt.Errorf("%v: expected Tags definition: got nil", name))
+				}
+				continue
+			}
 			switch f.Return {
 			case models.TypeSeriesSet, models.TypeNumberSet:
 				if f.Tags == nil {
@@ -374,7 +381,11 @@ func (t *Tree) Func() (f *FuncNode) {
 		switch token = t.next(); token.typ {
 		default:
 			t.backup()
-			f.append(t.O())
+			node := t.O()
+			f.append(node)
+			if len(f.Args) == 1 && f.F.VariantReturn {
+				f.F.Return = node.Return()
+			}
 		case itemTripleQuotedString:
 			f.append(newString(token.pos, token.val, token.val[3:len(token.val)-3]))
 		case itemString:

@@ -27,6 +27,7 @@ There are three data types in Bosun's expression language:
  1. **Scalar**: This is the simplest type, it is a single numeric value with no group associated with it. Keep in mind that an empty group, `{}` is still a group.
  2. **NumberSet**: A number set is a group of tagged numeric values with one value per unique grouping. As a special case, a **scalar** may be used in place of a **numberSet** with a single member with an empty group.
  3. **SeriesSet**: A series is an array of timestamp-value pairs and an associated group.
+ 4. **VariantSet**: This is for generic functions. It can be a NumberSet, a SeriesSet, or Scalar. In the case of a NumberSet of a SeriesSet that same type will be returned, in the case of a Scalar a NumberSet is returned. Therefore the VariantSet type is never returned.
 
 In the vast majority of your alerts you will getting ***seriesSets*** back from your time series database and ***reducing*** them into ***numberSets***.
 
@@ -506,20 +507,20 @@ Sum.
 
 Group functions modify the OpenTSDB groups.
 
-## addtags(seriesSet, group string) seriesSet
+## addtags(set variantSet, group string) (seriesSet|numberSet)
 {: .exprFunc}
 
-Accepts a series and a set of tags to add in `Key1=NewK1,Key2=NewK2` format. This is useful when you want to add series to set with merge and have tag collisions.
+Accepts a series and a set of tags to add to the set in `Key1=NewK1,Key2=NewK2` format. This is useful when you want to add series to set with merge and have tag collisions.
 
-## rename(seriesSet, string) seriesSet
+## rename(variantSet, string) (seriesSet|numberSet)
 {: .exprFunc}
 
 Accepts a series and a set of tags to rename in `Key1=NewK1,Key2=NewK2` format. All data points will have the tag keys renamed according to the spec provided, in order. This can be useful for combining results from seperate queries that have similar tagsets with different tag keys.
 
-## remove(seriesSet, string) seriesSet
+## remove(variantSet, string) (seriesSet|numberSet)
 {: .exprFunc}
 
-Accepts a series and a tag key to remove from the set. The function will error if removing the tag key from the set would cause the resulting set to have a duplicate item in it.
+Accepts a tag key to remove from the set. The function will error if removing the tag key from the set would cause the resulting set to have a duplicate item in it.
 
 ## t(numberSet, group string) seriesSet
 {: .exprFunc}
@@ -605,10 +606,10 @@ is also returned with a value of `1`. Primarily for use with the [`depends` aler
 Example: `alert("host.down", "crit")` returns the crit
 expression from the host.down alert.
 
-## abs(numberSet) numberSet
+## abs(variantSet) (seriesSet|numberSet)
 {: .exprFunc}
 
-Returns the absolute value of each element in the numberSet.
+Returns the absolute value of each value in the set.
 
 ## crop(series seriesSet, start numberSet, end numberSet) seriesSet
 {: .exprFunc}
@@ -694,15 +695,15 @@ dropbool($avg, !($count < $avgCount-100 || $count > $avgCount+100))
 
 Returns the Unix epoch in seconds of the expression start time (scalar).
 
-## filter(seriesSet, numberSet) seriesSet
+## filter(variantSet, numberSet) (seriesSet|numberSet)
 {: .exprFunc}
 
-Returns all results in seriesSet that are a subset of numberSet and have a non-zero value. Useful with the limit and sort functions to return the top X results of a query.
+Returns all results in variantSet that are a subset of numberSet and have a non-zero value. Useful with the limit and sort functions to return the top X results of a query.
 
-## limit(numberSet, count scalar) numberSet
+## limit(set variantSet, count scalar) (seriesSet|numberSet)
 {: .exprFunc}
 
-Returns the first count (scalar) results of number.
+Returns the first count (scalar) items of the set.
 
 ## lookup(table string, key string) numberSet
 {: .exprFunc}
