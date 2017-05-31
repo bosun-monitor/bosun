@@ -510,7 +510,20 @@ Group functions modify the OpenTSDB groups.
 ## addtags(set variantSet, group string) (seriesSet|numberSet)
 {: .exprFunc}
 
-Accepts a series and a set of tags to add to the set in `Key1=NewK1,Key2=NewK2` format. This is useful when you want to add series to set with merge and have tag collisions.
+Accepts a set and a set of tags to add to the set in `Key1=NewK1,Key2=NewK2` format. This is useful when you want to add series to set with merge and have tag collisions.
+
+## metatag(set variantSet, tagsCSV string, keyCSV string) (seriesSet|numberSet)
+
+metatag adds a tag key/value pair to the set based on metadata in Bosun. tagsCSV are the tag keys from the set that should be used to lookup the metadata value for each result in the set. keyCSV is the metadata key to lookup. The key will be become the new tagkey in the set. If a keyCSV has a second value (as separated by a comma) then the tag key will be renamed to correspond to that value.
+
+Example:
+
+The following will use Bosun's metadata to add a `desc=value` tag to each result in `$m` by using the `alias` key stored in Bosun's metadata (provided via scollector and snmp monitoring).
+
+```
+$m = q("sum:rate{counter,,1}:os.net.bytes{host=*,iname=*,iface=*}", "1h", "")
+metatag($m, "host,iface", "alias,desc")
+```
 
 ## rename(variantSet, string) (seriesSet|numberSet)
 {: .exprFunc}

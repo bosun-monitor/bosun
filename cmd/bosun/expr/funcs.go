@@ -100,7 +100,7 @@ func tagRename(args []parse.Node) (parse.Tags, error) {
 	return tags, nil
 }
 
-func tagAddMetaTag(args []parse.Node) (parse.Tags, error) {
+func tagMetaTag(args []parse.Node) (parse.Tags, error) {
 	tags, err := tagFirst(args)
 	if err != nil {
 		return nil, err
@@ -212,12 +212,11 @@ var builtins = map[string]parse.Func{
 	},
 
 	// Group functions
-	"addmetatag": {
-		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeString, models.TypeString},
-		Return: models.TypeSeriesSet,
-		// Todo add proper tags func
-		Tags: tagAddMetaTag,
-		F:    AddMetaTag,
+	"metatag": {
+		Args:          []models.FuncType{models.TypeVariantSet, models.TypeString, models.TypeString},
+		VariantReturn: true,
+		Tags:          tagMetaTag,
+		F:             MetaTag,
 	},
 	"addtags": {
 		Args:          []models.FuncType{models.TypeVariantSet, models.TypeString},
@@ -1205,14 +1204,14 @@ func csv(s string) []string {
 	return strings.Split(s, ",")
 }
 
-func AddMetaTag(e *State, T miniprofiler.Timer, series *Results, lookupTagsCSV, keyCSV string) (*Results, error) {
+func MetaTag(e *State, T miniprofiler.Timer, set *Results, lookupTagsCSV, keyCSV string) (*Results, error) {
 	keys := csv(keyCSV)
 	res := Results{}
 	lookupTags := make(map[string]struct{})
 	for _, k := range csv(lookupTagsCSV) {
 		lookupTags[k] = struct{}{}
 	}
-	for _, result := range series.Results {
+	for _, result := range set.Results {
 		ts := make(opentsdb.TagSet)
 		for k := range lookupTags {
 			if value, ok := result.Group[k]; ok {
