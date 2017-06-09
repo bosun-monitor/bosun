@@ -274,6 +274,10 @@ func (d *DataPoint) Clean() error {
 			}
 		}
 	}
+	// if timestamp bigger than 32 bits, likely in milliseconds
+	if d.Timestamp > 0xffffffff {
+		d.Timestamp /= 1000
+	}
 	if !d.Valid() {
 		return fmt.Errorf("datapoint is invalid")
 	}
