@@ -83,8 +83,13 @@ func timeTSDBRequest(e *State, T miniprofiler.Timer, req *opentsdb.Request) (s o
 			}
 			var val interface{}
 			val, err = e.Cache.Get(string(b), getFn)
-			s = val.(opentsdb.ResponseSet).Copy()
-
+			rs := val.(opentsdb.ResponseSet)
+			s = rs.Copy()
+			for _, r := range rs {
+				if r.SQL != "" {
+					T.AddCustomTiming("sql", "query", time.Now(), time.Now(), r.SQL)
+				}
+			}
 		})
 		if err == nil || tries == tsdbMaxTries {
 			break

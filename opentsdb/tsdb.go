@@ -45,6 +45,9 @@ type Response struct {
 	Tags          TagSet           `json:"tags"`
 	AggregateTags []string         `json:"aggregateTags"`
 	DPS           map[string]Point `json:"dps"`
+
+	// fields added by translating proxy
+	SQL string `json:"sql,omitempty"`
 }
 
 func (r *Response) Copy() *Response {
@@ -796,6 +799,7 @@ func ParseAbsTime(s string) (time.Time, error) {
 // OpenTSDB.
 func ParseTime(v interface{}) (time.Time, error) {
 	now := time.Now().UTC()
+	const max32 int64 = 0xffffffff
 	switch i := v.(type) {
 	case string:
 		if i != "" {
@@ -811,9 +815,16 @@ func ParseTime(v interface{}) (time.Time, error) {
 		}
 		return now, nil
 	case int64:
+		if i > max32 {
+			i /= 1000
+		}
 		return time.Unix(i, 0).UTC(), nil
 	case float64:
-		return time.Unix(int64(i), 0).UTC(), nil
+		i2 := int64(i)
+		if i2 > max32 {
+			i2 /= 1000
+		}
+		return time.Unix(i2, 0).UTC(), nil
 	default:
 		return time.Time{}, fmt.Errorf("type must be string or int64, got: %v", v)
 	}
