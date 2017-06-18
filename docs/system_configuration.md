@@ -31,9 +31,13 @@ format is documented [here](https://github.com/toml-lang/toml).
 
 The [example config
 file](https://github.com/bosun-monitor/bosun/blob/master/cmd/bosun/bosun.example.toml)
-is a good place to start when writing a configuration. NB The file does
-*not* follow the tradition of commenting out defaults, which are instead
-mostly documented below.
+is a good place to start when writing a configuration.
+
+<div class="admonition">
+<p class="admonition-title">Warning</p>
+<p>The file does <em>not</em> follow the tradition of commenting out defaults,
+which are instead mostly documented below.</p>
+</div>
 
 ### Definitions
 This file is documented [here](/definitions). It includes settings that
@@ -43,53 +47,79 @@ notifications.
 ## Keys
 
 ### Hostname
-The `Hostname` sets the hostname that bosun will use to construct all its links. The common use case would be in any [template functions](/definitions#template-functions) that construct links.
+The hostname that Bosun uses to construct its links. The common use case
+is in any [template functions](/definitions#template-functions) that
+construct links.
 
 Example:
 `Hostname = "bosun.example.com"`
 
 ### HTTPListen
-`HTTPListen` sets the HTTP IP and Port to listen on. The default if not specified is to listen on `:8070`. However, if `HTTPSListen` is defined and `HTTPListen` is not defined there will be no default, and Bosun will only listen on HTTPS.
+HTTP IP and Port to listen on. The default if not specified is to
+listen on `:8070`. However, if `HTTPSListen` is defined and `HTTPListen`
+is not defined there will be no default, and Bosun will only listen on
+HTTPS.
 
 Example:
 `HTTPListen = ":8080"`
 
 ### HTTPSListen
-`HTTPSListen` sets the HTTPS (SSL) IP and Port to listen on. This requires that `TLSCertFile` and `TLSKeyFile` are defined.
+HTTPS (SSL) IP and Port to listen on. This requires that `TLSCertFile` and `TLSKeyFile` are defined.
 
 ### TLSCertFile
-The value of `TLSCertFile` is the path to the PEM encoded certificate bosun should use for `HTTPSListen`. In may contain intermediate certificates followed by the leaf certificate to form a chain.
+Path to the PEM encoded certificate Bosun should use for
+`HTTPSListen`. May contain intermediate certificates followed by the
+leaf certificate to form a chain.
 
 Example:
 `TLSCertFile = "/etc/ssl/certs/bosun.example.com.crt"`
 
 ### TLSKeyFile
-The value of `TLSKeyFile` is the path to the PEM encoded private key that corresponds to the `TLSCertFile`.
+Path to the PEM encoded private key that corresponds to the `TLSCertFile`.
 
 Example:
 `TLSKeyFile = "/etc/ssl/certs/bosun.example.com.key"`
 
 ### CheckFrequency
-`CheckFrequency` specifies the minimum interval that alert checks will run at on a schedule. The format of the value is the same as [Go's duration format](https://golang.org/pkg/time/#Duration.String). By default, alert checks are run at every `CheckFrequency` multiplied by the `DefaultRunEvery` value. This defaults to "5m".
+Minimum interval that alert checks will run at on a schedule. The format
+of the value is the same as [Go's duration
+format](https://golang.org/pkg/time/#Duration.String). By default, alert
+checks are run at every `CheckFrequency` multiplied by the
+`DefaultRunEvery` value. This defaults to "5m".
 
 Example:
 `CheckFrequency = "1m"`
 
 ### DefaultRunEvery
-By default, alert checks are run at every [`CheckFrequency`](/system_configuration#checkevery) multiplied by the `DefaultRunEvery` value. This can be overridden in an alert definition with the [`runEvery` keyword](/definitions#runevery). This defaults to 1.
+By default, alert checks are run at every
+[`CheckFrequency`](/system_configuration#checkevery) multiplied by the
+`DefaultRunEvery` value. This can be overridden in an alert definition
+with the [`runEvery` keyword](/definitions#runevery). This defaults to
+1.
 
-So for example if you have a `CheckFrequency` of "1m" and a `DefaultRunEvery` of 5, alerts by default will run every 5 minutes. But you could have some run as frequent as every "1m", and others that run less often (any multiple of "1m").
+e.g. If `CheckFrequency = 1m` and a `DefaultRunEvery = 5`, alerts by
+default will run every 5 minutes. But you could have some run as
+frequent as every "1m", and others that run less often (any multiple of
+"1m").
 
 Example:
 `DefaultRunEvery = 5`
 
 ### RuleFilePath
-This is the path to the file that contains all the definitions of alerts, macros, lookups, templates, notifications, and global variables which are [documented here](/definitions). If saving is enabled, this file can be written to by Bosun via the API or [Save UI](/usage#definition-rule-saving).
+Path to the file containing definitions of alerts, macros, lookups,
+templates, notifications, and global variables which are [documented
+here](/definitions). If saving is enabled, this file can be written to
+by Bosun via the API or [Save UI](/usage#definition-rule-saving).
+Mandatory.
 
 Example: `RuleFilePath = "dev.sample.conf"`
 
 ### TimeAndDate
-`TimeAndDate` is used to configure time zones that will be linked to in Bosun's dashboard. It is an array of timeanddate.com zones (the page that gets linked to from Bosun's UI.) It has no impact on what time zone Bosun operates in. Bosun is expected to use UTC and does support other timezones.
+Used to configure time zones that will be linked to in Bosun's
+dashboard. It is an array of timeanddate.com zones (the page that gets
+linked to from Bosun's UI.) It has no impact on what time zone Bosun
+operates in. Bosun is expected to use UTC and does support other
+timezones.
 
 Example:
 `TimeAndDate = [ 202, 75, 179, 136 ]`
@@ -121,23 +151,32 @@ Example:
 `Ping = true`
 
 ### PingDuration
-`PingDuration` is how long bosun should wait stop pinging host tags it has seen. For example, if the value is the default of `"24h"`, if Bosun has not indexed any data points for that `host` value, then it will stop attempting to ping that host until it sees data points that have that tag again.
+How long Bosun should wait before stopping to ping host tags it has
+seen. e.g. If the value is the default of `"24h"`, if Bosun has
+not indexed any data points for that `host` value, then it will stop
+attempting to ping that host until it again sees data points that have that
+tag.
 
 Example:
 `PingDuration = "24h"`
 
 ### SearchSince
-`SearchSince` controls how long autocomplete and items in UI will show up since being indexed by Bosun. The format of the value is the same as [Go's duration format](https://golang.org/pkg/time/#Duration.String) and the default is 3 days. The goal is to make it so you don't have old items showing up in the UI. However, if you are using OpenTSDB and graphing page, you can still query metrics that don't autocomplete if you remember what they were (or look them up using OpenTSDB's native UI autocomplete).
+Controls how long autocomplete and items in UI will show up since being indexed by Bosun. The format of the value is the same as [Go's duration format](https://golang.org/pkg/time/#Duration.String) and the default is 3 days. The goal is to make it so you don't have old items showing up in the UI. However, if you are using OpenTSDB and graphing page, you can still query metrics that don't autocomplete if you remember what they were (or look them up using OpenTSDB's native UI autocomplete).
 
 Example: `SearchSince = "72h"`
 
 ### EnableSave
-`EnableSave` enables saving via the user interface. It is disabled by default. When it is enabled, users will be able to save the rule configuration file via the UI and Bosun will then write to that file on the user's behalf.
+Enables saving via the web UI. It is disabled by default. When enabled,
+users will be able to save the rule configuration file via the UI and
+Bosun will then write to that file on the user's behalf.
 
 Example: `EnableSave = true`
 
 ### ReloadEnabled
-`ReloadEnabled` sets if reloading of the rule configuration should be enabled. If `EnableSave` is `true`, then reloading gets enabled regardless of this setting. Reloads can be triggered via [`/api/reload` in the REST API](/api#apireload) as well.
+Sets if reloading of the rule configuration should be enabled. If
+`EnableSave` is `true`, then reloading gets enabled regardless of this
+setting. Reloads can be triggered via [`/api/reload` in the REST
+API](/api#apireload) as well.
 
 Example:
 `EnableSave = true`
@@ -145,7 +184,7 @@ Example:
 ### CommandHookPath
 When enabling saving, and a user issues a save, you have the option to run a executable or script by specifying this parameter. This allows you to do things like backup the file on writes or commit the file to a git repo.
 
-This command is passed a filename, username, message, and vargs (vargs is currently not used). If the command exits a non-zero exit code, then the changes will be reverted (the file before the changes is copied back and bosun doesn't restart). When the configuration is saved via the user interface, any messages to standard error will be shown to the user when there is a non-zero exit code.
+This command is passed a filename, username, message, and vargs (vargs is currently not used). If the command exits a non-zero exit code, then the changes will be reverted (the file before the changes is copied back and Bosun doesn't restart). When the configuration is saved via the user interface, any messages to standard error will be shown to the user when there is a non-zero exit code.
 
 Example:
 `CommandHookPath = "/Users/kbrandt/src/hook/hook"`
@@ -162,7 +201,13 @@ But not sure I trust that.
 All your key value pairs must be defined before any sections are defined. Sections are used for things that have multiple values to configure them. In particular the various time series database providers.
 
 ### RuleVars
-Rule vars lets you define variables that will then be turned into [global variables](/definitions#global-variables) available to definitions under `$sys.`. This is designed for when you have some secrets you don't want exposed in the definitions file. The values of these variables *can* still be accessed from Bosun's rule editor and expression UI, so this only helps hide them so you don't accidentally include them in screenshots or when copying and pasting your config.
+Allows definition of variables that will be turned into [global
+variables](/definitions#global-variables) available to definitions under
+`$sys.`. This is designed for when you have some secrets you don't want
+exposed in the definitions file. The values of these variables *can*
+still be accessed from Bosun's rule editor and expression UI. This
+merely hides them so you don't accidentally include them in
+screenshots or when copying and pasting your config.
 
 Example:
 
@@ -184,21 +229,23 @@ notification chat {
 They can also be accessed in templates with the [`V()` function](/definitions#vstring-string)
 
 ### DBConf
-`DBConf` defines what internal storage Bosun should use. There are currently two choices, a built-in redis like server called ledis or redis. Redis is recommended for production setups.
+Defines what internal storage Bosun should use. There are currently two
+choices, a built-in redis-like server called ledis or redis. Redis is
+recommended for production setups.
 
 The default is to use ledis. If Both Redis and ledis are defined, Redis will take preference and the ledis configuration will be ignored. Ledis is the default, so if `RedisHost` is not specified ledis will be used even if you have no `DBConf` configuration defined.
 
 #### RedisHost
-The value of `RedisHost` defines the hostname and port to connect to for redis.
+The Redis hostname and port.
 
 #### RedisPassword
-The value of `RedisPassword` defines an optional password to use when connecting to redis
+Optional password to use when connecting to Redis.
 
 #### LedisDir
-`LedisDir` defines the directory that ledis will store its data in if Ledis is being used instead of Redis. The default is `LedisDir = "ledis_data"`
+Directory in which ledis will store data. Default: `LedisDir = "ledis_data"`
 
 #### LedisBind
-`LedisBind` is the host and port to connect to for ledis. The default is `LedisBindAddr = "127.0.0.1:9565"`.
+Ledis host and port. Default: `LedisBindAddr = "127.0.0.1:9565"`.
 
 #### Examples
 
@@ -219,13 +266,13 @@ Ledis Configuration:
 ```
 
 ### SMTPConf
-`SMTPConf` Configure email for you servers
+SMTP server configuration for email sending.
 
 #### EmailFrom
-`EmailFrom` is the address that emails from Bosun will be sent from.
+Address from which emails will be sent.
 
 #### Host
-`Host` is the address of the mailserver to connect to in order to send emails
+Outgoing SMTP server hostname or IP address.
 
 #### Username
 (TODO: See how this and Password is used with email auth, don't have a current example.)
@@ -241,18 +288,26 @@ Ledis Configuration:
 ```
 
 ### OpenTSDBConf
-`OpenTSDBConf` enables an OpenTSDB provider, and also enables [OpenTSDB specific functions](/expressions#opentsdb-query-functions) in the expression language. This also enables the Graph tab in Bosun's UI as that is OpenTSDB specific. However, you can still graph other time series DBs in Bosun's UI by using the Expression tab.
+Enables an OpenTSDB provider, and also enables [OpenTSDB specific
+functions](/expressions#opentsdb-query-functions) in the expression
+language. This also enables the Graph tab in Bosun's UI as that is
+OpenTSDB specific. However, you can still graph other time series DBs in
+Bosun's UI by using the Expression tab.
 
 #### Host
-`Host` specifies the hostname and port to connect to for OpenTSDB.
+OpenTSDB hostname and port to connect to.
 
 #### Version
-`Version` can either be 2.1 or 2.2. 2.1 is the default. When it is set to 2.2 then certain features that correspond to new OpenTDSB features are enabled such as [filter support](http://opentsdb.net/docs/build/html/user_guide/query/filters.html).
+Either 2.1 or 2.2. Default: 2.1. If set to 2.2, certain features that
+correspond to new OpenTDSB features are enabled e.g. [filter
+support](http://opentsdb.net/docs/build/html/user_guide/query/filters.html).
 
 #### ResponseLimit
-`ResponseLimit` will make requests error if the response from OpenTSDB is larger than this setting in bytes. This is useful to catch alerts that are pulling in more data then they need to (i.e. maybe downsampling can be used.)
+Causes requests to error if the OpenTSDB response is larger than
+this setting in bytes. This is useful to catch alerts that are pulling
+in more data then they need to (i.e. maybe downsampling can be used.)
 
-This does not cancel the query with OpenTSDB, but bosun will stop processing the response.
+This does not cancel the query with OpenTSDB, but Bosun will stop processing the response.
 
 #### Example
 
@@ -264,26 +319,39 @@ This does not cancel the query with OpenTSDB, but bosun will stop processing the
 ```
 
 ### ElasticConf
-`ElasticConf` enables you to query multiple elastic clusters. The [elastic expression functions](/expressions#elastic-query-functions) become available when this is defined. The functions are designed more to be used for querying log formatted data and stats from those logs.
+Enables querying multiple Elastic clusters. The [elastic expression
+functions](/expressions#elastic-query-functions) become available when
+this is defined. The functions are designed more to be used for querying
+log formatted data and stats from those logs.
 
-The functions that would allow you to use elastic effectively as a time-seris based backend do not currently exist.
+The functions that would allow you to use Elastic effectively as a
+time-series based backend do not currently exist.
 
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
-<p>The format of elastic configuration may change before the final 0.6.0 release.</a>.</p>
+<p>The Elastic config format may change before the final 0.6.0 release.</a>.</p>
 </div>
 
 #### ElasticConf.default
-` [ElasticConf.default]` the default cluster to query when [PrefixKey](/expressions#prefixkey) is not passed to the [elastic expression functions](/expressions#elastic-query-functions).
+Default cluster to query when [PrefixKey](/expressions#prefixkey) is not
+passed to the [elastic expression
+functions](/expressions#elastic-query-functions).
 
 #### Hosts
-`Hosts` is a list of hosts that are members of the cluster. It will uses these hosts to discover all the other hosts in the cluster. So you don't have to specify every host in the cluster for Bosun to query it. [This article on Sniffing](https://github.com/olivere/elastic/wiki/Sniffing) describes how this discovery functions.
+List of hosts that are members of the cluster. Elastic uses these hosts
+to discover all the other hosts in the cluster, so you don't have to
+specify every host in the cluster. [This article
+on Sniffing](https://github.com/olivere/elastic/wiki/Sniffing) describes
+how this discovery functions.
 
 #### SimpleClient
-`SimpleClient` is a boolean when setting true periodic health checks and sniffing will be disabled. This is useful when you want to query from a single or fixed number of elasticsearch node.
+Boolean determining when setting true periodic health checks and
+sniffing will be disabled. This is useful when you want to query from a
+single or fixed number of Elastic nodes.
 
 #### ClientOptions
-`ClientOptions` let you specify advance [elastic](http://olivere.github.io/elastic/) client options e.g. basic authentication, http schema etc.
+Advanced [Elastic](http://olivere.github.io/elastic/) client options
+e.g. basic authentication, http schema etc.
 
 #### Example
 
@@ -310,13 +378,15 @@ The functions that would allow you to use elastic effectively as a time-seris ba
 ```
 
 ### GraphiteConf
-`GraphiteConf` enables you to query a graphite server and makes the graphite query functions available to the expression language.
+Enables querying Graphite server and exposes its query functions to the
+expression language.
 
 #### Host
-The host and port to connect to for querying graphite. For example, `Host = "localhost:80"`.
+Graphite connection host and port, e.g. `Host = "localhost:80"`.
 
 #### GraphiteConf.Headers
-`[GraphiteConf.Headers]` lets you specify headers as key value pairs (one per line) that will be sent with each graphite request.
+Headers as key / value pairs (one per line) that will be sent with each
+Graphite request.
 
 #### Example
 
@@ -328,7 +398,11 @@ The host and port to connect to for querying graphite. For example, `Host = "loc
 ```
 
 ### AnnotateConf
-Embeds the annotation service. This enables the ability to submit and edit annotations via the UI or API. It also enables the annotation related expression functions. Currently the only supported database for annotate is elastic. It can be the same cluster as the one defined in `ElasticConf` or a different one.
+Embeds the annotation service. This enables the ability to submit and
+edit annotations via the UI or API. It also enables the annotation
+related expression functions. Currently the only supported database for
+annotate is Elastic. It can be the same cluster as the one defined in
+`ElasticConf` or a different one.
 
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
@@ -336,16 +410,16 @@ Embeds the annotation service. This enables the ability to submit and edit annot
 </div>
 
 #### Hosts
-`Hosts` is a list of hosts that are members of the cluster. It will uses these hosts to discover all the other hosts in the cluster. So you don't have to specify every host in the cluster for Bosun to query it. [This article on Sniffing](https://github.com/olivere/elastic/wiki/Sniffing) describes how this discovery functions.
+As for ElasticConf.
 
 #### SimpleClient
-`SimpleClient` is a boolean when set true periodic health checks and sniffing will be disabled. This is useful when you want to query from a single or fixed number of elasticsearch node.
-
-#### Index
-The elastic index to store annotations in. If not set the default is "annotate".
+As for ElasticConf.
 
 #### ClientOptions
-`ClientOptions` let you specify advance [elastic](http://olivere.github.io/elastic/) client options e.g. basic authentication, http schema etc.
+As for ElasticConf.
+
+#### Index
+The Elastic index to store annotations in. If not set the default is "annotate".
 
 #### Example
 ```
@@ -376,25 +450,27 @@ The elastic index to store annotations in. If not set the default is "annotate".
 ```
 
 ### InfluxConf
-This enables the Influx TSDBProvider and makes the influx query functions available via the API.
+Enables the Influx TSDBProvider and makes its query functions available via the API.
 
 #### URL
-`URL` is the the full url that Influx should use to connect to. For example: `URL = "https://myInfluxServer:1234"`
+Full URL that Influx should use to connect to. e.g. `URL = "https://myInfluxServer:1234"`
 
 #### Timeout
-Set the timeout for Influx queries. The format of the value is the same as [Go's duration format](https://golang.org/pkg/time/#Duration.String). For example `Timeout = "5m"`
+Timeout for Influx queries, formatted as per the [Go
+duration format](https://golang.org/pkg/time/#Duration.String). e.g. `Timeout = "5m"`
 
 #### UnsafeSSL
-Setting UnsafeSSL to `true` allows you to connect to a influx server even if the https certificate is not validated correctly.
+Setting to `true` allows you to connect to a Influx server even if the
+https certificate is not validated correctly.
 
 #### Username
-The username to use to connect to influx.
+Influx connection username.
 
 #### Password
-The password to use in combination with the username to connect to Influx.
+Influx connection password.
 
 #### UserAgent
-This specifies the user agent that bosun should identify itself as when querying Influx.
+User agent that Bosun should identify itself as when querying Influx.
 
 #### Example:
 
@@ -406,45 +482,50 @@ This specifies the user agent that bosun should identify itself as when querying
 ```
 
 ### AuthConf
-`AuthConf` configures your bosun authentication settings. If not specified, your bosun instance will have no authentication, and will be open to anybody. When using Auth SSL should be used so credentials are not sent in clear text.
+Bosun authentication settings. If not specified, your instance will have
+no authentication, and will be open to anybody. When using Auth, TLS
+should be used so credentials are not sent in clear text.
 
 #### CookieSecret
-A secret string used to encrypt cookies bosun sets in client browsers to prevent token forgery. We recommend a longish random string here.
+A secret string used to encrypt cookies Bosun sets in client browsers to prevent token forgery. We recommend a longish random string here.
 
 #### TokenSecret
-Supplying this will activate "token authentication", where you can generate api tokens that external apps and services can use to interact with bosun. Should be a long random string.
+Supplying this will activate "token authentication", where you can generate api tokens that external apps and services can use to interact with Bosun. Should be a long random string.
 
 #### AuthDisabled
-Disable authentication. Set to true to allow any user to access and change bosun. The main use case for using this vs omitting `AuthConf` altogether is setting to true,
+Disable authentication. Set to true to allow any user to access and change Bosun. The main use case for using this vs omitting `AuthConf` altogether is setting to true,
 and also enabling token auth to generate tokens before fully activating Authentication.
 
 #### AuthConf.LDAP
-Allows you to configure LDAP authentication for bosun. Subkeys:
+LDAP authentication configuration.
 
-#### AuthConf.LDAP.Domain
+##### AuthConf.LDAP.Domain
 LDAP Domain name.
 
-#### AuthConf.LDAP.LdapAddr
+##### AuthConf.LDAP.LdapAddr
 Host and port of LDAP server
 
-#### AuthConf.LDAP.AllowInsecure
+##### AuthConf.LDAP.AllowInsecure
 Set to true to skip certificate validation if you are running self-signed certs, for example.
 
-#### AuthConf.LDAP.DefaultPermission
+##### AuthConf.LDAP.DefaultPermission
 Default permissions that will be applied to any user who can authenticate to LDAP.
 
-#### AuthConf.LDAP.RootSearchPath
+##### AuthConf.LDAP.RootSearchPath
 Base search path for searching group and user memberships. Not needed if not specifying Group level permissions. Usually just `DC=myOrg,DC=com` is sufficient.
 
-#### AuthConf.LDAP.Groups
+##### AuthConf.LDAP.Groups
 Allows you to set permission levels per LDAP group. See example for usage.
 
-#### AuthConf.LDAP.Users
+##### AuthConf.LDAP.Users
 Allows you to grant permissions to individual users. See example for usage.
 
 #### Permissions
-A few places in the config allow you to specify permissions. These fields accept a comma seperated list of roles or permissions. Availible roles and permissions are defined
-[in the bosun source](https://github.com/bosun-monitor/bosun/blob/master/cmd/bosun/web/roles.go#L33). Any of the description values can be used as a permission in the config.
+Various parts of the config allow you to specify permissions. These
+fields accept a comma seperated list of roles or permissions. Available
+roles and permissions are defined [in the Bosun
+source](https://github.com/bosun-monitor/bosun/blob/master/cmd/bosun/web/roles.go#L33).
+Any of the description values can be used as a permission in the config.
 See example for some examples. If a user matches multiple Group or User permissions, they will have the aggregate of all permissions granted to those groups and users, as well as the defaults.
 
 #### Example:
