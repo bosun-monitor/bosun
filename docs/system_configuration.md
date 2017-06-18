@@ -7,10 +7,10 @@ order: 3
 <div class="row">
 <div class="col-sm-3" >
   <div class="sidebar" data-spy="affix" data-offset-top="0" data-offset-bottom="0" markdown="1">
- 
+
  * Some TOC
  {:toc}
- 
+
   </div>
 </div>
 
@@ -21,15 +21,26 @@ order: 3
 {% raw %}
 
 ## Changes Since 0.5.0
-This configuration has been split into two different files. One file is for [definitions](/definitions) of various Bosun sections such as alerts, templates, notifications, etc. The definitions file can be edited and [saved via Bosun's Rule Editor UI](/usage#definition-rule-saving) when [the `EnableSave` setting](/system_configuration#enablesave) has been enabled. 
+Since 0.5.0, the config has been split into two different files.
 
-This was done because the definitions can now be reloaded without restarting the Bosun process. This also means that users can edit alerts directly in the UI.
+### System
+System config is documented on the rest of this page, and has been moved
+into `bosun.toml` unless overriden on the command line. Changes to these
+settings require a Bosun restart in order to take effect. The TOML
+format is documented [here](https://github.com/toml-lang/toml).
 
-System configuration has been moved into a new file. Settings in this file require that Bosun be restarted. The new file format is in [TOML](https://github.com/toml-lang/toml). This page documents this new system configuration. 
+The [example config
+file](https://github.com/bosun-monitor/bosun/blob/master/cmd/bosun/bosun.example.toml)
+is a good place to start when writing a configuration. NB The file does
+*not* follow the tradition of commenting out defaults, which are instead
+mostly documented below.
 
-There is also an [example file](https://github.com/bosun-monitor/bosun/blob/master/cmd/bosun/bosun.example.toml) that can be looked at. It should be noted that this file does not follow the tradition of commenting out all defaults. This is because the file is used for testing as well. For the time being, the value of the example being tested is has been valued over following that tradition for until we have the bandwidth to duplicate the two files in a way where this tradition can be maintained. 
+### Definitions
+This file is documented [here](/definitions). It includes settings that
+do not require a Bosun restart to take effect e.g. alerts, templates,
+notifications.
 
-## Configuration Keys
+## Keys
 
 ### Hostname
 The `Hostname` sets the hostname that bosun will use to construct all its links. The common use case would be in any [template functions](/definitions#template-functions) that construct links.
@@ -66,7 +77,7 @@ Example:
 
 ### DefaultRunEvery
 By default, alert checks are run at every [`CheckFrequency`](/system_configuration#checkevery) multiplied by the `DefaultRunEvery` value. This can be overridden in an alert definition with the [`runEvery` keyword](/definitions#runevery). This defaults to 1.
- 
+
 So for example if you have a `CheckFrequency` of "1m" and a `DefaultRunEvery` of 5, alerts by default will run every 5 minutes. But you could have some run as frequent as every "1m", and others that run less often (any multiple of "1m").
 
 Example:
@@ -96,7 +107,7 @@ If you have a lot of grouping, it often means you should refactor the alert to h
 
 Example: `MinGroupSize = 5`
 
-### Unknown Threshold 
+### Unknown Threshold
 Bosun will group all unknowns in a single check cycle (alerts on the same [`CheckFrequency`](/system_configuration#checkfrequency) and [`RunEvery`](/system_configuration#defaultrunevery)) into a single email. This sets how many unknowns would be sent in a single check cycle before a group is created. The default value is 5.
 
 This is done because unknowns are generally caused by the data "disappearing". So if your TSDB Provider is broken or behind, it can generate a lot of unknowns. This alleviates flooding in the specific case of unknowns.
@@ -104,9 +115,9 @@ This is done because unknowns are generally caused by the data "disappearing". S
 Example: `UnknownThreshold = 5`
 
 ### Ping
-If set to `true`, Bosun will ping every value of the host tag that it has indexed and record that value to your TSDB. It currently only support OpenTSDB style data input, which is means you must use either OpenTSDB or Influx with the OpenTSDB endpoint on Influx configured. 
+If set to `true`, Bosun will ping every value of the host tag that it has indexed and record that value to your TSDB. It currently only support OpenTSDB style data input, which is means you must use either OpenTSDB or Influx with the OpenTSDB endpoint on Influx configured.
 
-Example: 
+Example:
 `Ping = true`
 
 ### PingDuration
@@ -153,7 +164,7 @@ All your key value pairs must be defined before any sections are defined. Sectio
 ### RuleVars
 Rule vars lets you define variables that will then be turned into [global variables](/definitions#global-variables) available to definitions under `$sys.`. This is designed for when you have some secrets you don't want exposed in the definitions file. The values of these variables *can* still be accessed from Bosun's rule editor and expression UI, so this only helps hide them so you don't accidentally include them in screenshots or when copying and pasting your config.
 
-Example: 
+Example:
 
 ```
 [RuleVars]
@@ -173,12 +184,12 @@ notification chat {
 They can also be accessed in templates with the [`V()` function](/definitions#vstring-string)
 
 ### DBConf
-`DBConf` defines what internal storage Bosun should use. There are currently two choices, a built-in redis like server called ledis or redis. Redis is recommended for production setups. 
+`DBConf` defines what internal storage Bosun should use. There are currently two choices, a built-in redis like server called ledis or redis. Redis is recommended for production setups.
 
 The default is to use ledis. If Both Redis and ledis are defined, Redis will take preference and the ledis configuration will be ignored. Ledis is the default, so if `RedisHost` is not specified ledis will be used even if you have no `DBConf` configuration defined.
 
 #### RedisHost
-The value of `RedisHost` defines the hostname and port to connect to for redis. 
+The value of `RedisHost` defines the hostname and port to connect to for redis.
 
 #### RedisPassword
 The value of `RedisPassword` defines an optional password to use when connecting to redis
@@ -232,7 +243,7 @@ Ledis Configuration:
 ### OpenTSDBConf
 `OpenTSDBConf` enables an OpenTSDB provider, and also enables [OpenTSDB specific functions](/expressions#opentsdb-query-functions) in the expression language. This also enables the Graph tab in Bosun's UI as that is OpenTSDB specific. However, you can still graph other time series DBs in Bosun's UI by using the Expression tab.
 
-#### Host 
+#### Host
 `Host` specifies the hostname and port to connect to for OpenTSDB.
 
 #### Version
@@ -241,7 +252,7 @@ Ledis Configuration:
 #### ResponseLimit
 `ResponseLimit` will make requests error if the response from OpenTSDB is larger than this setting in bytes. This is useful to catch alerts that are pulling in more data then they need to (i.e. maybe downsampling can be used.)
 
-This does not cancel the query with OpenTSDB, but bosun will stop processing the response. 
+This does not cancel the query with OpenTSDB, but bosun will stop processing the response.
 
 #### Example
 
@@ -253,7 +264,7 @@ This does not cancel the query with OpenTSDB, but bosun will stop processing the
 ```
 
 ### ElasticConf
-`ElasticConf` enables you to query multiple elastic clusters. The [elastic expression functions](/expressions#elastic-query-functions) become available when this is defined. The functions are designed more to be used for querying log formatted data and stats from those logs. 
+`ElasticConf` enables you to query multiple elastic clusters. The [elastic expression functions](/expressions#elastic-query-functions) become available when this is defined. The functions are designed more to be used for querying log formatted data and stats from those logs.
 
 The functions that would allow you to use elastic effectively as a time-seris based backend do not currently exist.
 
@@ -284,17 +295,17 @@ The functions that would allow you to use elastic effectively as a time-seris ba
     [ElasticConf.foo]
         Hosts = ["http://ny-lselastic01.example.com:9200", "http://ny-lselastic02.example.com:9200"]
         SimpleClient = true
-      
+
     [ElasticConf.bar]
         Hosts = ["http://ny-lselastic01.example.com:9200", "http://ny-lselastic02.example.com:9200"]
-        
+
         [ElasticConf.bar.ClientOptions]
            Enabled = true
            BasicAuthUsername = "admin"
            BasicAuthPassword = "testing"
            Scheme = "https" => default http
            SnifferEnabled = false => default true
-           SnifferTimeoutStartup = 10 => default 5s 
+           SnifferTimeoutStartup = 10 => default 5s
            HealthcheckEnabled = false
 ```
 
@@ -360,7 +371,7 @@ The elastic index to store annotations in. If not set the default is "annotate".
            BasicAuthPassword = "testing"
            Scheme = "https" => default http
            SnifferEnabled = false => default true
-           SnifferTimeoutStartup = 10 => default 5s 
+           SnifferTimeoutStartup = 10 => default 5s
            HealthcheckEnabled = false
 ```
 
@@ -411,7 +422,7 @@ and also enabling token auth to generate tokens before fully activating Authenti
 Allows you to configure LDAP authentication for bosun. Subkeys:
 
 #### AuthConf.LDAP.Domain
-LDAP Domain name. 
+LDAP Domain name.
 
 #### AuthConf.LDAP.LdapAddr
 Host and port of LDAP server
@@ -423,7 +434,7 @@ Set to true to skip certificate validation if you are running self-signed certs,
 Default permissions that will be applied to any user who can authenticate to LDAP.
 
 #### AuthConf.LDAP.RootSearchPath
-Base search path for searching group and user memberships. Not needed if not specifying Group level permissions. Usually just `DC=myOrg,DC=com` is sufficient. 
+Base search path for searching group and user memberships. Not needed if not specifying Group level permissions. Usually just `DC=myOrg,DC=com` is sufficient.
 
 #### AuthConf.LDAP.Groups
 Allows you to set permission levels per LDAP group. See example for usage.
