@@ -21,15 +21,26 @@ order: 3
 {% raw %}
 
 ## Changes Since 0.5.0
-This configuration has been split into two different files. This page documents the various bosun sections thats can be defined. For example alerts, templates, notifications, macros, global variables, and lookups.
+Since 0.5.0, the config has been split into two different files.
 
-This file is the file that is available to Bosun's Rule Editor in the UI.
+### System
+System config is documented [here](/system_configuration).
 
-## Definition Configuration File
-All definitions are in a single file that is pointed to by [the system configuration's RuleFilePath](/system_configuration#rulefilepath). The file is UTF-8 encoded.
+### Definitions
+This file is documented in the rest of this page. It includes settings that
+do not require a Bosun restart to take effect e.g. alerts, templates,
+notifications, and its location is defined by [the system configuration's
+RuleFilePath](/system_configuration#rulefilepath).
 
-### Syntax
-Syntax is sectional, with each section having a type and a name, followed by `{` and ending with `}`. Each section is a definition (for example, and alert definition or a notification definition). Key/value pairs follow of the form `key = value`. Key names are non-whitespace characters before the `=`. The value goes until end of line and is a string. Multi-line strings are supported using backticks (\`) to delimit start and end of string. Comments go from a `#` to end of line (unless the `#` appears in a backtick string). Whitespace is trimmed at ends of values and keys.
+It can be edited from the [Rule Editor](/usage#definition-rule-saving) in the
+web UI when the [`EnableSave` setting](/system_configuration#enablesave) is
+enabled.
+
+The file is divided into sections, each of which having a type and a
+name, followed by `{` and ending with `}`. Each section is a definition
+of e.g. an alert or a notification. Key/value pairs follow, written as
+`key = value`. Multi-line strings are supported using backticks (\`) to
+delimit start and end of string. Comments go from `#` to end of line.
 
 ## Alert Definitions
 An alert is defined with the following syntax:
