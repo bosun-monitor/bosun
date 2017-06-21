@@ -131,9 +131,13 @@ func main() {
 			if f == "" || strings.ToLower(f) == "data-only" {
 				relayDataUrls = append(relayDataUrls, u.String())
 			}
-			if f == "" || strings.ToLower(f) == "metadata-only" {
+			if f == "" || strings.ToLower(f) == "metadata-only" || strings.ToLower(f) == "bosun-index" {
 				u.Path = "/api/metadata/put"
 				relayMetadataUrls = append(relayMetadataUrls, u.String())
+			}
+			if strings.ToLower(f) == "bosun-index" {
+				u.Path = "/api/index"
+				relayDataUrls = append(relayDataUrls, u.String())
 			}
 		}
 	}
