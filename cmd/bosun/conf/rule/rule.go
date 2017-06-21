@@ -463,27 +463,51 @@ func (c *Conf) loadTemplate(s *parse.SectionNode) {
 			v := p.Val.Text
 			switch k := p.Key.Text; k {
 			case "body":
-				t.RawBody = v
+				t.Body = &conf.CustomTemplate{
+					Raw: v,
+				}
 				tmpl := c.bodies.New(name).Funcs(htemplate.FuncMap(funcs))
-				_, err := tmpl.Parse(t.RawBody)
+				_, err := tmpl.Parse(v)
 				if err != nil {
 					c.error(err)
 				}
-				t.Body = tmpl
+				t.Body.HTemplate = tmpl
 			case "subject":
-				t.RawSubject = v
+				t.Subject = &conf.CustomTemplate{
+					Raw: v,
+				}
 				tmpl := c.subjects.New(name).Funcs(funcs)
-				_, err := tmpl.Parse(t.RawSubject)
+				_, err := tmpl.Parse(v)
 				if err != nil {
 					c.error(err)
 				}
-				t.Subject = tmpl
+				t.Subject.TTemplate = tmpl
+			case "inherit":
+				c.errorf("Inherit not implementes")
 			default:
-				if !strings.HasPrefix(k, "$") {
-					c.errorf("unknown key %s", k)
+				if strings.HasPrefix(k, "$") {
+					t.Vars[k] = v
+					t.Vars[k[1:]] = t.Vars[k]
+				} else {
+					// custom templates
+					ct := &conf.CustomTemplate{
+						Raw: v,
+					}
+					t.CustomTemplates[k] = ct
+					if strings.HasSuffix(strings.ToLower(k), "html") {
+						tmpl, err := htemplate.New("").Parse(v)
+						if err != nil {
+							c.error(err)
+						}
+						ct.HTemplate = tmpl
+					} else {
+						tmpl, err := ttemplate.New("").Parse(v)
+						if err != nil {
+							c.error(err)
+						}
+						ct.TTemplate = tmpl
+					}
 				}
-				t.Vars[k] = v
-				t.Vars[k[1:]] = t.Vars[k]
 			}
 		default:
 			c.errorf("unexpected node")

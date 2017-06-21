@@ -254,7 +254,8 @@ func (s *Schedule) utnotify(groups map[string]models.AlertKeys, n *conf.Notifica
 }
 
 var defaultUnknownTemplate = &conf.Template{
-	Body: htemplate.Must(htemplate.New("").Parse(`
+	Body: &conf.CustomTemplate{
+		HTemplate: htemplate.Must(htemplate.New("").Parse(`
 		<p>Time: {{.Time}}
 		<p>Name: {{.Name}}
 		<p>Alerts:
@@ -262,7 +263,10 @@ var defaultUnknownTemplate = &conf.Template{
 			<br>{{.}}
 		{{end}}
 	`)),
-	Subject: ttemplate.Must(ttemplate.New("").Parse(`{{.Name}}: {{.Group | len}} unknown alerts`)),
+	},
+	Subject: &conf.CustomTemplate{
+		TTemplate: ttemplate.Must(ttemplate.New("").Parse(`{{.Name}}: {{.Group | len}} unknown alerts`)),
+	},
 }
 
 // unotify builds an unknown notification for an alertkey or a group of alert keys. It renders the template
