@@ -455,6 +455,7 @@ func (c *Conf) loadTemplate(s *parse.SectionNode) {
 		},
 	}
 	saw := make(map[string]bool)
+	inherits := []string{}
 	for _, p := range s.Nodes.Nodes {
 		c.at(p)
 		switch p := p.(type) {
@@ -483,7 +484,7 @@ func (c *Conf) loadTemplate(s *parse.SectionNode) {
 				}
 				t.Subject.TTemplate = tmpl
 			case "inherit":
-				c.errorf("Inherit not implementes")
+				inherits = append(inherits, v)
 			default:
 				if strings.HasPrefix(k, "$") {
 					t.Vars[k] = v
@@ -511,6 +512,17 @@ func (c *Conf) loadTemplate(s *parse.SectionNode) {
 			}
 		default:
 			c.errorf("unexpected node")
+		}
+	}
+	for _, inh := range inherits {
+		otherTemp, ok := c.Templates[inh]
+		if !ok {
+			c.errorf("Template %s inherits template %s, which has not been defined.", name, inh)
+		}
+		for k, v := range otherTemp.CustomTemplates {
+			if t.CustomTemplates[k] == nil {
+				t.CustomTemplates[k] = v
+			}
 		}
 	}
 	c.at(s)
