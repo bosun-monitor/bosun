@@ -92,6 +92,7 @@ type Conf struct {
 	HadoopHost          string
 	Oracles             []Oracle
 	Fastly              []Fastly
+	Prometheus          []string
 }
 
 type HAProxy struct {
