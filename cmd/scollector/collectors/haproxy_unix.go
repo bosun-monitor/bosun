@@ -78,6 +78,9 @@ func haproxyFetch(user, pwd, tier, url string) (opentsdb.MultiDataPoint, error) 
 		svname := rec[1]
 		ts := opentsdb.TagSet{"pxname": pxname, "svname": svname, "tier": tier}
 		for i, field := range haproxyCSVMeta {
+			if i >= len(rec) {
+				break
+			}
 			m := strings.Join([]string{metric, hType, field.Name}, ".")
 			value := rec[i]
 			if field.Ignore == true {
