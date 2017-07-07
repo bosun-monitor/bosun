@@ -67,12 +67,12 @@ func haproxyFetch(user, pwd, tier, url string) (opentsdb.MultiDataPoint, error) 
 	if len(records) < 2 {
 		return nil, nil
 	}
+	// can't rely on number of colums with new (>=1.7) haproxy versions, lets check if there any data
+	if len(records[1]) < 16 {
+		return nil, fmt.Errorf("expected more columns with data. got: %v", len(records[1]))
+	}
+
 	for _, rec := range records[1:] {
-		// There is a trailing comma in haproxy's csv
-		if len(rec) != len(haproxyCSVMeta)+1 {
-			return nil, fmt.Errorf("expected %v lines. got: %v",
-				len(haproxyCSVMeta)+1, len(rec))
-		}
 		hType := haproxyType[rec[32]]
 		pxname := rec[0]
 		svname := rec[1]
@@ -504,5 +504,123 @@ var haproxyCSVMeta = []MetricMetaHAProxy{
 		MetricMeta: MetricMeta{RateType: metadata.Gauge,
 			Unit: metadata.MilliSecond,
 			Desc: "The average total session time in ms over the 1024 last requests.",
+		}},
+	{
+		Name:   "agent_status",
+		Ignore: true,
+		// Not a series or tag so skipping this.
+	},
+	{
+		Name:   "agent_code",
+		Ignore: true,
+		// Unused
+	},
+	{
+		Name: "agent_duration",
+		MetricMeta: MetricMeta{RateType: metadata.Gauge,
+			Unit: metadata.MilliSecond,
+			Desc: "Time in ms taken to finish last check",
+		}},
+	{
+		Name:   "check_desc",
+		Ignore: true,
+		// Can't parse
+	},
+	{
+		Name:   "agent_desc",
+		Ignore: true,
+		// Can't parse
+	},
+	{
+		Name: "check_rise",
+		MetricMeta: MetricMeta{RateType: metadata.Gauge,
+			Unit: metadata.StatusCode,
+			Desc: "Server's 'rise' parameter used by checks",
+		}},
+	{
+		Name: "check_fall",
+		MetricMeta: MetricMeta{RateType: metadata.Gauge,
+			Unit: metadata.StatusCode,
+			Desc: "Server's 'fall' parameter used by checks",
+		}},
+	{
+		Name: "check_health",
+		MetricMeta: MetricMeta{RateType: metadata.Gauge,
+			Unit: metadata.StatusCode,
+			Desc: "Server's health check value",
+		}},
+	{
+		Name: "agent_rise",
+		MetricMeta: MetricMeta{RateType: metadata.Gauge,
+			Unit: metadata.StatusCode,
+			Desc: "Agents's 'rise' parameter",
+		}},
+	{
+		Name: "agent_fall",
+		MetricMeta: MetricMeta{RateType: metadata.Gauge,
+			Unit: metadata.StatusCode,
+			Desc: "Agents's 'fall' parameter",
+		}},
+	{
+		Name: "agent_health",
+		MetricMeta: MetricMeta{RateType: metadata.Gauge,
+			Unit: metadata.StatusCode,
+			Desc: "Agents's 'health' parameter",
+		}},
+	{
+		Name:   "addr",
+		Ignore: true,
+		// Can't parse
+	},
+	{
+		Name:   "cookie",
+		Ignore: true,
+		// Can't parse
+	},
+	{
+		Name:   "mode",
+		Ignore: true,
+		// Can't parse
+	},
+	{
+		Name:   "algo",
+		Ignore: true,
+		// Can't parse
+	},
+	{
+		Name: "conn_rate",
+		MetricMeta: MetricMeta{RateType: metadata.Gauge,
+			Unit: metadata.Request,
+			Desc: "Number of connections over the last elapsed second",
+		}},
+	{
+		Name: "conn_rate_max",
+		MetricMeta: MetricMeta{RateType: metadata.Gauge,
+			Unit: metadata.Request,
+			Desc: "Highest known conn_rate",
+		}},
+	{
+		Name: "conn_tot",
+		MetricMeta: MetricMeta{RateType: metadata.Gauge,
+			Unit: metadata.Request,
+			Desc: "Cumulative number of connections",
+		}},
+	{
+		Name: "intercepted",
+		MetricMeta: MetricMeta{RateType: metadata.Gauge,
+			Unit: metadata.Request,
+			Desc: "Cumulative number of intercepted requests (monitor, stats)",
+		}},
+	{
+		Name: "dcon",
+		MetricMeta: MetricMeta{RateType: metadata.Gauge,
+			Unit: metadata.Request,
+			Desc: "Requests denied by 'tcp-request connection' rules",
+		}},
+	{
+		Name: "dses",
+		MetricMeta: MetricMeta{RateType: metadata.Gauge,
+			Unit: metadata.Request,
+			Desc: "Requests denied by 'tcp-request session' rules",
 		}},
 }
