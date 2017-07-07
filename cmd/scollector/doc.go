@@ -399,12 +399,16 @@ ConnectionString and Role, which are the same as using sqlplus.
 	    ConnectionString = "/@localnodevip/sid"
 	    Role = "sysdba"
 
+Prometheus
+
+Scollector can poll one or more prometheus endpoints and scrape their metrics:
+
+	Prometheus = ["https://myserver.com/metrics"]
 
 Windows
 
 scollector has full Windows support. It can be run standalone, or installed as a
 service (see -winsvc). The Event Log is used when installed as a service.
-
 
 */
 package main
