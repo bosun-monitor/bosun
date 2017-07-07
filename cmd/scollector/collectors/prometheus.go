@@ -31,11 +31,6 @@ func initPrometheus(c *conf.Conf) {
 }
 
 func c_prometheus(endpoint string) (mdp opentsdb.MultiDataPoint, err error) {
-	defer func() {
-		if err != nil {
-			fmt.Println("!!!!!", err)
-		}
-	}()
 	resp, err := http.Get(endpoint)
 	if err != nil {
 		return nil, err
@@ -72,7 +67,6 @@ families:
 			case models.MetricType_GAUGE:
 				AddTS(&mdp, name, ts, m.GetGauge().GetValue(), tags, metadata.Gauge, "", desc)
 			case models.MetricType_HISTOGRAM:
-				fmt.Println("HISTO", name, desc)
 				hist := m.GetHistogram()
 				AddTS(&mdp, name+"_count", ts, hist.GetSampleCount(), tags, metadata.Counter, "", desc+" (total count)")
 				AddTS(&mdp, name+"_sum", ts, hist.GetSampleSum(), tags, metadata.Gauge, "", desc+" (sum of values)")
