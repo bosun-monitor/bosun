@@ -125,7 +125,7 @@ var (
 	//TotalScollectorMemory stores the total memory used by Scollector (including CGO and WMI)
 	TotalScollectorMemoryMB uint64
 
-	Prefix = ""
+	MetricPrefix = ""
 )
 
 func init() {
@@ -226,8 +226,8 @@ func registerInit(i initFunc) {
 }
 
 func Init(c *conf.Conf) {
-	if c.Prefix != "" {
-		Prefix = c.Prefix
+	if c.MetricPrefix != "" {
+		MetricPrefix = c.MetricPrefix
 	}
 	for _, f := range inits {
 		f(c)
@@ -247,6 +247,10 @@ func AddTS(md *opentsdb.MultiDataPoint, name string, ts int64, value interface{}
 	// Check if we really want that metric
 	if skipMetric(name) {
 		return
+	}
+	// Add Prefix
+	if MetricPrefix != "" {
+		name = MetricPrefix + "." + name
 	}
 
 	tags := t.Copy()
@@ -301,9 +305,6 @@ func AddTS(md *opentsdb.MultiDataPoint, name string, ts int64, value interface{}
 // automatically added. If the value of the host key is the empty string, it
 // will be removed (use this to prevent the normal auto-adding of the host tag).
 func Add(md *opentsdb.MultiDataPoint, name string, value interface{}, t opentsdb.TagSet, rate metadata.RateType, unit metadata.Unit, desc string) {
-	if Prefix != "" {
-		name = Prefix + "." + name 
-	}
 	AddTS(md, name, now(), value, t, rate, unit, desc)
 }
 
