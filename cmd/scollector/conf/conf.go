@@ -113,10 +113,11 @@ type Nexpose struct {
 }
 
 type GoogleAnalytics struct {
-	ClientID string
-	Secret   string
-	Token    string
-	Sites    []GoogleAnalyticsSite
+	ClientID  string
+	Secret    string
+	Token     string
+	JSONToken string
+	Sites     []GoogleAnalyticsSite
 }
 
 type GoogleWebmaster struct {

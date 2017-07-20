@@ -45,6 +45,8 @@ type RenderedTemplates struct {
 	EmailBody    []byte
 	EmailSubject []byte
 	Attachments  []*Attachment
+
+	CustomTemplates map[string]string
 }
 
 func (s *IncidentState) Group() opentsdb.TagSet {

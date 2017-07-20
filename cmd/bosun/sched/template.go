@@ -33,6 +33,8 @@ type Context struct {
 	runHistory  *RunHistory
 	Attachments []*models.Attachment
 	ElasticHost string
+
+	Vars map[string]interface{}
 }
 
 func (s *Schedule) Data(rh *RunHistory, st *models.IncidentState, a *conf.Alert, isEmail bool) *Context {
@@ -94,6 +96,17 @@ func (c *Context) Last() interface{} {
 	}{c.IncidentState.Last(), c.Id}
 }
 
+func (c *Context) Template(name string) string {
+	var tpl *conf.CustomTemplate
+	if name == "body" {
+		tpl = c.Alert.Template.Body
+	} else if name == "subject" {
+		tpl = c.Alert.Template.Subject
+	} else {
+		tpl = c.Alert.Template.C
+	}
+}
+
 // Expr takes an expression in the form of a string, changes the tags to
 // match the context of the alert, and returns a link to the expression page.
 func (c *Context) Expr(v string) string {
@@ -134,6 +147,43 @@ func (c *Context) Incident() string {
 func (c *Context) UseElastic(host string) interface{} {
 	c.ElasticHost = host
 	return nil
+}
+
+func (s *Schedule) ExecuteAll(rh *RunHistory, a *conf.Alert, st *models.IncidentState) (*models.RenderedTemplates, error) {
+	ctx := func() *Context { return s.Data(rh, st, a, false) }
+	t := a.Template
+	if t == nil || t.Subject == nil {
+		return nil, nil
+	}
+	buf := &bytes.Buffer{}
+	// subject
+	if err := t.Subject.Execute(buf, ctx()); err != nil {
+		return nil, fmt.Errorf("Rendering subject: %s", err)
+	}
+	st.Subject = buf.String()
+
+	// body
+	if t.Body == nil {
+		return nil, nil
+	}
+
+	rt := &models.RenderedTemplates{
+		CustomTemplates: map[string]string{},
+	}
+	buf.Reset()
+	if err := t.Body.Execute(buf, ctx()); err != nil {
+		return nil, fmt.Errorf("Rendering subject: %s", err)
+	}
+	rt.Body = buf.String()
+
+	for name, tpl := range t.CustomTemplates {
+		buf.Reset()
+		if err := tpl.Execute(buf, ctx()); err != nil {
+			return nil, fmt.Errorf("Rendering %s template: %s", name, err)
+		}
+		rt.CustomTemplates[name] = buf.String()
+	}
+	return rt, nil
 }
 
 func (s *Schedule) ExecuteBody(rh *RunHistory, a *conf.Alert, st *models.IncidentState, isEmail bool) ([]byte, []*models.Attachment, error) {

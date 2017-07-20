@@ -30,6 +30,7 @@ func init() {
 
 // Notify triggers Email/HTTP/Print actions for the Notification object
 func (n *Notification) Notify(subject, body string, emailsubject, emailbody []byte, c SystemConfProvider, ak string, attachments ...*models.Attachment) {
+	// TODO: choose payload from notification.TemplateName
 	if len(n.Email) > 0 {
 		go n.DoEmail(emailsubject, emailbody, c, ak, attachments...)
 	}
@@ -61,14 +62,6 @@ func (n *Notification) DoPrint(payload string) {
 }
 
 func (n *Notification) DoPost(payload []byte, ak string) {
-	if n.Body != nil {
-		buf := new(bytes.Buffer)
-		if err := n.Body.Execute(buf, string(payload)); err != nil {
-			slog.Errorln(err)
-			return
-		}
-		payload = buf.Bytes()
-	}
 	resp, err := http.Post(n.Post.String(), n.ContentType, bytes.NewBuffer(payload))
 	if resp != nil && resp.Body != nil {
 		// Drain up to 512 bytes and close the body to let the Transport reuse the connection

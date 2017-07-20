@@ -1,7 +1,6 @@
 package rule
 
 import (
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/mail"
@@ -14,7 +13,6 @@ import (
 	"time"
 
 	"bosun.org/models"
-	"bosun.org/slog"
 
 	htemplate "html/template"
 	ttemplate "text/template"
@@ -444,8 +442,9 @@ func (c *Conf) loadTemplate(s *parse.SectionNode) {
 		c.errorf("duplicate template name: %s", name)
 	}
 	t := conf.Template{
-		Vars: make(map[string]string),
-		Name: name,
+		Vars:            make(map[string]string),
+		Name:            name,
+		CustomTemplates: map[string]*conf.CustomTemplate{},
 	}
 	t.Text = s.RawText
 	t.Locator = newSectionLocator(s)
@@ -519,6 +518,12 @@ func (c *Conf) loadTemplate(s *parse.SectionNode) {
 		if !ok {
 			c.errorf("Template %s inherits template %s, which has not been defined.", name, inh)
 		}
+		if t.Body == nil && otherTemp.Body != nil {
+			t.Body = otherTemp.Body
+		}
+		if t.Subject == nil && otherTemp.Subject != nil {
+			t.Subject = otherTemp.Subject
+		}
 		for k, v := range otherTemp.CustomTemplates {
 			if t.CustomTemplates[k] == nil {
 				t.CustomTemplates[k] = v
@@ -526,9 +531,10 @@ func (c *Conf) loadTemplate(s *parse.SectionNode) {
 		}
 	}
 	c.at(s)
-	if t.Body == nil && t.Subject == nil {
-		c.errorf("neither body or subject specified")
-	}
+	// TODO: need to retain a relaxed form of this. Anything directly referenced by an alert needs subject and body. Others may be utilities or something.
+	// if t.Body == nil && t.Subject == nil {
+	// 	c.errorf("neither body or subject specified")
+	// }
 	c.Templates[name] = &t
 }
 
@@ -719,22 +725,11 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 		Vars:         make(map[string]string),
 		ContentType:  "application/x-www-form-urlencoded",
 		Name:         name,
+		TemplateName: "body",
 		RunOnActions: true,
 	}
 	n.Text = s.RawText
 	n.Locator = newSectionLocator(s)
-	funcs := ttemplate.FuncMap{
-		"V": func(v string) string {
-			return c.Expand(v, n.Vars, false)
-		},
-		"json": func(v interface{}) string {
-			b, err := json.Marshal(v)
-			if err != nil {
-				slog.Errorln(err)
-			}
-			return string(b)
-		},
-	}
 	c.Notifications[name] = &n
 	pairs := c.getPairs(s, n.Vars, sNormal)
 	for _, p := range pairs {
@@ -779,14 +774,8 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 				c.error(err)
 			}
 			n.Timeout = time.Duration(d)
-		case "body":
-			n.RawBody = v
-			tmpl := ttemplate.New(name).Funcs(funcs)
-			_, err := tmpl.Parse(n.RawBody)
-			if err != nil {
-				c.error(err)
-			}
-			n.Body = tmpl
+		case "template":
+			n.TemplateName = v
 		case "runOnActions":
 			n.RunOnActions = v == "true"
 		case "useBody":

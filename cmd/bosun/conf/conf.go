@@ -227,7 +227,7 @@ type Notification struct {
 	Name         string
 	Email        []*mail.Address
 	Post, Get    *url.URL
-	Body         *ttemplate.Template
+	TemplateName string
 	Print        bool
 	Next         *Notification
 	Timeout      time.Duration
