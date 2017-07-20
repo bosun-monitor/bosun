@@ -224,27 +224,27 @@ esall returns an elastic matchall query, use this when you don't want to filter 
 ### esregexp(field string, regexp string)
 {: .exprFunc}
 
-esregexp creates an [elastic regexp query](https://www.elastic.co/guide/en/elasticsearch/reference/2.x/query-dsl-regexp-query.html) for the specified field.
+esregexp creates an [elastic regexp query](https://www.elastic.co/guide/en/elasticsearch/reference/2.4/query-dsl-regexp-query.html) for the specified field.
 
 ### esquery(field string, querystring string)
 {: .exprFunc}
 
-esquery creates a [full-text elastic query string query](https://www.elastic.co/guide/en/elasticsearch/reference/2.x/query-dsl-query-string-query.html).
+esquery creates a [full-text elastic query string query](https://www.elastic.co/guide/en/elasticsearch/reference/2.4/query-dsl-query-string-query.html).
 
 ### esand(queries.. ESQuery) ESQuery
 {: .exprFunc}
 
-esand takes one or more ESQueries and combines them into an [elastic bool query](https://www.elastic.co/guide/en/elasticsearch/reference/2.x/query-dsl-bool-query.html) where all the queries "must" be true.
+esand takes one or more ESQueries and combines them into an [elastic bool query](https://www.elastic.co/guide/en/elasticsearch/reference/2.4/query-dsl-bool-query.html) where all the queries "must" be true.
 
 ### esor(queries.. ESQuery) ESQuery
 {: .exprFunc}
 
-esor takes one or more ESQueries and combines them into an [elastic bool query](https://www.elastic.co/guide/en/elasticsearch/reference/2.x/query-dsl-bool-query.html) so that at least one must be true.
+esor takes one or more ESQueries and combines them into an [elastic bool query](https://www.elastic.co/guide/en/elasticsearch/reference/2.4/query-dsl-bool-query.html) so that at least one must be true.
 
 ### esnot(query ESQuery) ESQuery
 {: .exprFunc}
 
-esnot takes a query and inverses the logic using must_not from an [elastic bool query](https://www.elastic.co/guide/en/elasticsearch/reference/2.x/query-dsl-bool-query.html).
+esnot takes a query and inverses the logic using must_not from an [elastic bool query](https://www.elastic.co/guide/en/elasticsearch/reference/2.4/query-dsl-bool-query.html).
 
 ### esexists(field string) ESQuery
 {: .exprFunc}
@@ -254,22 +254,22 @@ esexists is true when the specified field exists.
 ###esgt(field string, value Scalar) ESQuery
 {: .exprFunc}
 
-esgt takes a field (expected to be numeric field in elastic) and returns results where the value of that field is greater than the specified value. It creates an [elastic range query](https://www.elastic.co/guide/en/elasticsearch/reference/2.x/query-dsl-range-query.html).
+esgt takes a field (expected to be numeric field in elastic) and returns results where the value of that field is greater than the specified value. It creates an [elastic range query](https://www.elastic.co/guide/en/elasticsearch/reference/2.4/query-dsl-range-query.html).
 
 ### esgte(field string, value Scalar) ESQuery
 {: .exprFunc}
 
-esgt takes a field (expected to be numeric field in elastic) and returns results where the value of that field is greater than or equal to the specified value. It creates an [elastic range query](https://www.elastic.co/guide/en/elasticsearch/reference/2.x/query-dsl-range-query.html).
+esgt takes a field (expected to be numeric field in elastic) and returns results where the value of that field is greater than or equal to the specified value. It creates an [elastic range query](https://www.elastic.co/guide/en/elasticsearch/reference/2.4/query-dsl-range-query.html).
 
 ### eslt(field string, value Scalar) ESQuery
 {: .exprFunc}
 
-esgt takes a field (expected to be numeric field in elastic) and returns results where the value of that field is less than the specified value. It creates an [elastic range query](https://www.elastic.co/guide/en/elasticsearch/reference/2.x/query-dsl-range-query.html).
+esgt takes a field (expected to be numeric field in elastic) and returns results where the value of that field is less than the specified value. It creates an [elastic range query](https://www.elastic.co/guide/en/elasticsearch/reference/2.4/query-dsl-range-query.html).
 
 ### eslte(field string, value Scalar) ESQuery
 {: .exprFunc}
 
-esgt takes a field (expected to be numeric field in elastic) and returns results where the value of that field is less than or equal to the specified value. It creates an [elastic range query](https://www.elastic.co/guide/en/elasticsearch/reference/2.x/query-dsl-range-query.html).
+esgt takes a field (expected to be numeric field in elastic) and returns results where the value of that field is less than or equal to the specified value. It creates an [elastic range query](https://www.elastic.co/guide/en/elasticsearch/reference/2.4/query-dsl-range-query.html).
 
 
 ## OpenTSDB Query Functions
