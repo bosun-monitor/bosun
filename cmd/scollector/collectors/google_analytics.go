@@ -37,7 +37,7 @@ func init() {
 		for _, g := range c.GoogleAnalytics {
 			collectors = append(collectors, &IntervalCollector{
 				F: func() (opentsdb.MultiDataPoint, error) {
-					return c_google_analytics(g.ClientID, g.Secret, g.Token, g.Sites)
+					return c_google_analytics(g.ClientID, g.Secret, g.Token, g.JSONToken, g.Sites)
 				},
 				name:     "c_google_analytics",
 				Interval: time.Minute * 1,
@@ -46,11 +46,11 @@ func init() {
 	})
 }
 
-func c_google_analytics(clientid string, secret string, tokenstr string, sites []conf.GoogleAnalyticsSite) (opentsdb.MultiDataPoint, error) {
+func c_google_analytics(clientid string, secret string, tokenstr string, jsonToken string, sites []conf.GoogleAnalyticsSite) (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	var mErr multiError
 
-	c, err := googleAPIClient(clientid, secret, tokenstr, []string{analytics.AnalyticsScope})
+	c, err := googleAPIClient(clientid, secret, tokenstr, jsonToken, []string{analytics.AnalyticsScope})
 	if err != nil {
 		return nil, err
 	}
@@ -186,8 +186,21 @@ func getPageviews(md *opentsdb.MultiDataPoint, svc *analytics.Service, site conf
 // googleAPIClient() takes in a clientid, secret, a base64'd gob representing
 // the cached oauth token, and a list of oauth scopes.  Generating the token is
 // left as an exercise to the reader.
-func googleAPIClient(clientid string, secret string, tokenstr string, scopes []string) (*http.Client, error) {
+// Or use a base 64 encoded service account json key. Provide json key OR oauth client info.
+func googleAPIClient(clientid string, secret string, tokenstr string, jsonToken string, scopes []string) (*http.Client, error) {
 	ctx := context.Background()
+
+	if jsonToken != "" {
+		by, err := base64.StdEncoding.DecodeString(jsonToken)
+		if err != nil {
+			return nil, err
+		}
+		config, err := google.JWTConfigFromJSON(by, scopes...)
+		if err != nil {
+			return nil, err
+		}
+		return config.Client(ctx), nil
+	}
 
 	config := &oauth2.Config{
 		ClientID:     clientid,
@@ -195,7 +208,6 @@ func googleAPIClient(clientid string, secret string, tokenstr string, scopes []s
 		Endpoint:     google.Endpoint,
 		Scopes:       scopes,
 	}
-
 	token := new(oauth2.Token)
 	// Decode the base64'd gob
 	by, err := base64.StdEncoding.DecodeString(tokenstr)
@@ -206,6 +218,5 @@ func googleAPIClient(clientid string, secret string, tokenstr string, scopes []s
 	b.Write(by)
 	d := gob.NewDecoder(&b)
 	err = d.Decode(&token)
-
 	return config.Client(ctx, token), nil
 }
