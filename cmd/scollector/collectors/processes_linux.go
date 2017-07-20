@@ -154,6 +154,12 @@ func linuxProcMonitor(w *WatchedProc, md *opentsdb.MultiDataPoint) error {
 		totalRSSMem += rss
 		Add(md, "linux.proc.mem.virtual", stats[22], tags, metadata.Gauge, metadata.Bytes, descLinuxProcMemVirtual)
 		Add(md, "linux.proc.mem.rss", stats[23], tags, metadata.Gauge, metadata.Page, descLinuxProcMemRss)
+
+		numThreads, err := strconv.ParseInt(stats[19], 10, 64)
+		if err != nil {
+			return fmt.Errorf("failed to convert process threads: %v", err)
+		}
+		Add(md, "linux.proc.threads", numThreads, tags, metadata.Gauge, metadata.Gauge, descLinuxProcThreads)
 		Add(md, "linux.proc.mem.rss_bytes", rss*int64(osPageSize), tags, metadata.Gauge, metadata.Bytes, descLinuxProcMemRssBytes)
 		Add(md, "linux.proc.char_io", io[0], opentsdb.TagSet{"type": "read"}.Merge(tags), metadata.Counter, metadata.Bytes, descLinuxProcCharIoRead)
 		Add(md, "linux.proc.char_io", io[1], opentsdb.TagSet{"type": "write"}.Merge(tags), metadata.Counter, metadata.Bytes, descLinuxProcCharIoWrite)
@@ -203,6 +209,7 @@ const (
 	descLinuxProcUptime       = "The length of time, in seconds, since the process was started."
 	descLinuxProcStartTS      = "The timestamp of process start."
 	descLinuxProcCount        = "The number of currently running processes."
+	descLinuxProcThreads      = "The number of threads in this process."
 )
 
 type byModTime []os.FileInfo
