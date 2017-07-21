@@ -997,6 +997,12 @@ func (c *Conf) GetFuncs(backends conf.EnabledBackends) map[string]eparse.Func {
 			Tags:   lookupSeriesTags,
 			F:      lookupSeries,
 		},
+		"lookups": {
+			Args:   []models.FuncType{models.TypeVariantSet, models.TypeString, models.TypeString},
+			Return: models.TypeNumberSet,
+			Tags:   lookupSeriesTags,
+			F:      lookupSeries,
+		},
 	}
 	merge := func(fs map[string]eparse.Func) {
 		for k, v := range fs {
