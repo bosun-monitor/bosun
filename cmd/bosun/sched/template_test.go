@@ -142,23 +142,21 @@ template t {
 		Desc: "Execute Another Key",
 		Input: `
 template t {
+	$a = 'aaaaa'
 	subject = 'abcde'
 	body = 'b'
-	pduty = 'http://ex.com?alert={{.Template "foo"}}'
+	pduty = 'http://ex.com?alert=$a'
 	foo = 'foo'
 }
 `,
 		Subject: "abcde",
 		Body:    "b",
-		Others:  map[string]string{"pduty": `http://ex.com?alert=foo`, "foo": "foo"},
+		Others:  map[string]string{"pduty": `http://ex.com?alert=aaaaa`, "foo": "foo"},
 	},
 
 	{
 		Desc: "Get/Set for Another Key",
 		Input: `
-template pduty {
-	
-}
 template t {
 	subject = 'abcde'
 	body = 'b'

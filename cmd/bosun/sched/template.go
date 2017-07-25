@@ -34,7 +34,7 @@ type Context struct {
 	Attachments []*models.Attachment
 	ElasticHost string
 
-	Vars map[string]interface{}
+	vars map[string]interface{}
 }
 
 func (s *Schedule) Data(rh *RunHistory, st *models.IncidentState, a *conf.Alert, isEmail bool) *Context {
@@ -45,6 +45,7 @@ func (s *Schedule) Data(rh *RunHistory, st *models.IncidentState, a *conf.Alert,
 		schedule:      s,
 		runHistory:    rh,
 		ElasticHost:   "default",
+		vars:          map[string]interface{}{},
 	}
 	return &c
 }
@@ -103,8 +104,27 @@ func (c *Context) Template(name string) string {
 	} else if name == "subject" {
 		tpl = c.Alert.Template.Subject
 	} else {
-		tpl = c.Alert.Template.C
+		var ok bool
+		tpl, ok = c.Alert.Template.CustomTemplates[name]
+		if !ok {
+			return ""
+		}
 	}
+	buf := &bytes.Buffer{}
+	err := tpl.Execute(buf, c)
+	if err != nil {
+		return "" // TODO: error handling
+	}
+	return buf.String()
+}
+
+func (c *Context) Set(name string, value interface{}) string {
+	c.vars[name] = value
+	return "" // have to return something
+}
+
+func (c *Context) Get(name string) interface{} {
+	return c.vars[name]
 }
 
 // Expr takes an expression in the form of a string, changes the tags to
