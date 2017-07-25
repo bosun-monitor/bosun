@@ -90,6 +90,7 @@ type Conf struct {
 	LocalListener       string
 	TagOverride         []TagOverride
 	HadoopHost          string
+	HbaseRegions       bool
 	Oracles             []Oracle
 	Fastly              []Fastly
 }
