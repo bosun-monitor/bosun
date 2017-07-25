@@ -188,8 +188,12 @@ func getPageviews(md *opentsdb.MultiDataPoint, svc *analytics.Service, site conf
 // left as an exercise to the reader.
 // Or use a base 64 encoded service account json key. Provide json key OR oauth client info.
 func googleAPIClient(clientid string, secret string, tokenstr string, jsonToken string, scopes []string) (*http.Client, error) {
-	ctx := context.Background()
 
+	if jsonToken != "" && clientid+secret+tokenstr != "" {
+		return nil, fmt.Errorf("For google, provide a json token OR oauth client info and token. Not both")
+	}
+
+	ctx := context.Background()
 	if jsonToken != "" {
 		by, err := base64.StdEncoding.DecodeString(jsonToken)
 		if err != nil {
