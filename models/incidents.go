@@ -3,7 +3,6 @@ package models
 import (
 	"encoding/json"
 	"math"
-	"strings"
 	"time"
 
 	"bosun.org/opentsdb"
@@ -51,20 +50,19 @@ type RenderedTemplates struct {
 }
 
 func (r *RenderedTemplates) Get(name string) string {
-	name = strings.ToLower(name)
 	if name == "subject" {
 		return r.Subject
 	}
 	if name == "body" {
 		return r.Body
 	}
-	if name == "emailbody" {
+	if name == "emailBody" {
 		if r.EmailBody != nil {
 			return string(r.EmailBody)
 		}
 		return r.Body
 	}
-	if name == "emailsubject" {
+	if name == "emailSubject" {
 		if r.EmailSubject != nil {
 			return string(r.EmailSubject)
 		}
