@@ -197,17 +197,17 @@ func procRule(t miniprofiler.Timer, ruleConf conf.RuleConfProvider, a *conf.Aler
 		} else if e.Warn != nil {
 			primaryIncident.Result = e.Warn
 		}
-		var b_err, s_err error
+		var bErr, sErr error
 		func() {
 			defer func() {
 				if err := recover(); err != nil {
 					s := fmt.Sprint(err)
 					warning = append(warning, s)
-					b_err = fmt.Errorf(s)
+					bErr = fmt.Errorf(s)
 				}
 			}()
-			if body, _, b_err = s.ExecuteBody(rh, a, primaryIncident, false); b_err != nil {
-				warning = append(warning, b_err.Error())
+			if body, _, bErr = s.ExecuteBody(rh, a, primaryIncident, false); bErr != nil {
+				warning = append(warning, bErr.Error())
 			}
 		}()
 		func() {
@@ -215,17 +215,17 @@ func procRule(t miniprofiler.Timer, ruleConf conf.RuleConfProvider, a *conf.Aler
 				if err := recover(); err != nil {
 					s := fmt.Sprint(err)
 					warning = append(warning, s)
-					s_err = fmt.Errorf(s)
+					sErr = fmt.Errorf(s)
 				}
 			}()
-			subject, s_err = s.ExecuteSubject(rh, a, primaryIncident, false)
-			if s_err != nil {
-				warning = append(warning, s_err.Error())
+			subject, sErr = s.ExecuteSubject(rh, a, primaryIncident, false)
+			if sErr != nil {
+				warning = append(warning, sErr.Error())
 			}
 		}()
-		if s_err != nil || b_err != nil {
+		if sErr != nil || bErr != nil {
 			var err error
-			subject, body, err = s.ExecuteBadTemplate([]error{s_err, b_err}, rh, a, primaryIncident)
+			subject, body, err = s.ExecuteBadTemplate([]error{sErr, bErr}, rh, a, primaryIncident)
 			if err != nil {
 				subject = []byte(fmt.Sprintf("unable to create tempalate error notification: %v", err))
 			}
@@ -254,15 +254,15 @@ func procRule(t miniprofiler.Timer, ruleConf conf.RuleConfProvider, a *conf.Aler
 		data = s.Data(rh, primaryIncident, a, false)
 	}
 	return &ruleResult{
-		criticals,
-		warnings,
-		normals,
-		now,
-		string(body),
-		string(subject),
-		data,
-		rh.Events,
-		warning,
+		Criticals: criticals,
+		Warnings:  warnings,
+		Normals:   normals,
+		Time:      now,
+		Body:      string(body),
+		Subject:   string(subject),
+		Data:      data,
+		Result:    rh.Events,
+		Warning:   warning,
 	}, nil
 }
 
