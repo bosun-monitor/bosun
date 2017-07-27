@@ -221,13 +221,7 @@ var unknownMultiGroup = ttemplate.Must(ttemplate.New("unknownMultiGroup").Parse(
 // notify is a wrapper for the notifications Notify method that sets the EmailSubject and EmailBody for the rendered
 // template. It passes properties from the schedule that the Notification's Notify method requires.
 func (s *Schedule) notify(st *models.IncidentState, rt *models.RenderedTemplates, n *conf.Notification) {
-	if len(rt.EmailSubject) == 0 {
-		rt.EmailSubject = []byte(st.Subject)
-	}
-	if len(rt.EmailBody) == 0 {
-		rt.EmailBody = []byte(rt.Body)
-	}
-	n.Notify(st.Subject, rt.Body, rt.EmailSubject, rt.EmailBody, s.SystemConf, string(st.AlertKey), rt.Attachments...)
+	n.Notify(rt, s.SystemConf, string(st.AlertKey), rt.Attachments...)
 }
 
 // utnotify is single notification for N unknown groups into a single notification
@@ -250,7 +244,11 @@ func (s *Schedule) utnotify(groups map[string]models.AlertKeys, n *conf.Notifica
 	}); err != nil {
 		slog.Errorln(err)
 	}
-	n.Notify(subject, body.String(), []byte(subject), body.Bytes(), s.SystemConf, "unknown_treshold")
+	rt := &models.RenderedTemplates{
+		Subject: subject,
+		Body:    body.String(),
+	}
+	n.Notify(rt, s.SystemConf, "unknown_threshold")
 }
 
 var defaultUnknownTemplate = &conf.Template{
@@ -287,7 +285,11 @@ func (s *Schedule) unotify(name string, group models.AlertKeys, n *conf.Notifica
 			slog.Infoln("unknown template error:", err)
 		}
 	}
-	n.Notify(subject.String(), body.String(), subject.Bytes(), body.Bytes(), s.SystemConf, name)
+	rt := &models.RenderedTemplates{
+		Subject: subject.String(),
+		Body:    body.String(),
+	}
+	n.Notify(rt, s.SystemConf, name)
 }
 
 // QueueNotification persists a notification to the datastore to be sent in the future. This happens when
@@ -344,8 +346,11 @@ func (s *Schedule) ActionNotify(at models.ActionType, user, message string, aks 
 		if err != nil {
 			slog.Error("Error rendering action notification body", err)
 		}
-
-		notification.Notify(subject, buf.String(), []byte(subject), buf.Bytes(), s.SystemConf, "actionNotification")
+		rt := &models.RenderedTemplates{
+			Subject: subject,
+			Body:    buf.String(),
+		}
+		notification.Notify(rt, s.SystemConf, "actionNotification")
 	}
 	return nil
 }

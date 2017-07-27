@@ -3,6 +3,7 @@ package models
 import (
 	"encoding/json"
 	"math"
+	"strings"
 	"time"
 
 	"bosun.org/opentsdb"
@@ -41,10 +42,39 @@ type IncidentState struct {
 }
 
 type RenderedTemplates struct {
-	Body         string
-	EmailBody    []byte
-	EmailSubject []byte
-	Attachments  []*Attachment
+	Subject     string
+	Body        string
+	Custom      map[string]string
+	Attachments []*Attachment
+}
+
+func (r *RenderedTemplates) Get(name string) string {
+	name = strings.ToLower(name)
+	if name == "subject" {
+		return r.Subject
+	}
+	if name == "body" {
+		return r.Body
+	}
+	if t, ok := r.Custom[name]; ok {
+		return t
+	}
+	// not found. email body and subject should give default ones
+	if name == "emailbody" {
+		return r.Body
+	}
+	if name == "emailsubject" {
+		return r.Body
+	}
+	//TODO if not exist maybe panic? We should really validate that things will be where we are looking
+	return ""
+}
+
+func (r *RenderedTemplates) GetDefault(name string, defaultName string) string {
+	if name == "" {
+		name = defaultName
+	}
+	return r.Get(name)
 }
 
 func (s *IncidentState) Group() opentsdb.TagSet {

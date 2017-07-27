@@ -1,7 +1,6 @@
 package rule
 
 import (
-	"encoding/json"
 	htemplate "html/template"
 	"net/mail"
 	"net/url"
@@ -16,7 +15,6 @@ import (
 	eparse "bosun.org/cmd/bosun/expr/parse"
 	"bosun.org/models"
 	"bosun.org/opentsdb"
-	"bosun.org/slog"
 )
 
 func (c *Conf) loadTemplate(s *parse.SectionNode) {
@@ -285,6 +283,7 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 		// alert checks for body or subject since some templates might not be directly used in alerts
 		c.errorf("alert templates must have body or subject specified")
 	}
+	// TODO: traverse all notifications for this alert and make sure requested bodyTemplate, getTemplate, postTemplate etc.. exist on this alert's template
 	a.ReturnType = ret
 	c.Alerts[name] = &a
 }
@@ -302,18 +301,6 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 	}
 	n.Text = s.RawText
 	n.Locator = newSectionLocator(s)
-	funcs := ttemplate.FuncMap{
-		"V": func(v string) string {
-			return c.Expand(v, n.Vars, false)
-		},
-		"json": func(v interface{}) string {
-			b, err := json.Marshal(v)
-			if err != nil {
-				slog.Errorln(err)
-			}
-			return string(b)
-		},
-	}
 	c.Notifications[name] = &n
 	pairs := c.getPairs(s, n.Vars, sNormal)
 	for _, p := range pairs {
@@ -358,22 +345,21 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 				c.error(err)
 			}
 			n.Timeout = time.Duration(d)
-		case "body":
-			n.RawBody = v
-			tmpl := ttemplate.New(name).Funcs(funcs)
-			_, err := tmpl.Parse(n.RawBody)
-			if err != nil {
-				c.error(err)
-			}
-			n.Body = tmpl
+		case "bodyTemplate":
+			n.BodyTemplate = v
+		case "getTemplate":
+			n.GetTemplate = v
+		case "postTemplate":
+			n.PostTemplate = v
+		case "emailSubjectTemplate":
+			n.EmailSubjectTemplate = v
 		case "runOnActions":
 			n.RunOnActions = v == "true"
-		case "useBody":
-			n.UseBody = v == "true"
 		default:
 			c.errorf("unknown key %s", k)
 		}
 	}
+	// TODO: make sure get/getTemplate and post/postTemplate are mutually exclusive
 	c.at(s)
 	if n.Timeout > 0 && n.Next == nil {
 		c.errorf("timeout specified without next")

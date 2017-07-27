@@ -20,8 +20,6 @@ import (
 	"bosun.org/models"
 	"bosun.org/opentsdb"
 
-	ttemplate "text/template"
-
 	"bosun.org/slog"
 )
 
@@ -196,9 +194,9 @@ type Template struct {
 	Text string
 	Vars
 	Name            string
-	Body            Executable            `json:"-"`
-	Subject         Executable            `json:"-"`
-	CustomTemplates map[string]Executable `json:"-"`
+	Body            GenericTemplate            `json:"-"`
+	Subject         GenericTemplate            `json:"-"`
+	CustomTemplates map[string]GenericTemplate `json:"-"`
 
 	RawBody, RawSubject string
 	RawCustoms          map[string]string
@@ -206,7 +204,8 @@ type Template struct {
 	Locator `json:"-"`
 }
 
-type Executable interface {
+// GenericTemplate can be httemplate or ttemplate.
+type GenericTemplate interface {
 	Execute(w io.Writer, ctx interface{}) error
 }
 
@@ -216,21 +215,24 @@ type Executable interface {
 type Notification struct {
 	Text string
 	Vars
-	Name         string
-	Email        []*mail.Address
-	Post, Get    *url.URL
-	Body         *ttemplate.Template
+	Name  string
+	Email []*mail.Address
+
+	Post, Get *url.URL
+
+	PostTemplate, GetTemplate string // templates to use for post/get urls
+	BodyTemplate              string // template to use for post body or email body. defaults to "body" for post and "emailBody" (if it exists) for email
+	EmailSubjectTemplate      string // tempalte to use for email subject. Default to "subject"
+
 	Print        bool
 	Next         *Notification
 	Timeout      time.Duration
 	ContentType  string
 	RunOnActions bool
-	UseBody      bool
 
 	NextName        string `json:"-"`
 	RawEmail        string `json:"-"`
 	RawPost, RawGet string `json:"-"`
-	RawBody         string `json:"-"`
 
 	Locator `json:"-"`
 }

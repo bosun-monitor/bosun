@@ -11,6 +11,8 @@ import (
 	"net/smtp"
 	"strings"
 
+	"net/url"
+
 	"bosun.org/collect"
 	"bosun.org/metadata"
 	"bosun.org/models"
@@ -29,30 +31,22 @@ func init() {
 }
 
 // Notify triggers Email/HTTP/Print actions for the Notification object
-func (n *Notification) Notify(subject, body string, emailsubject, emailbody []byte, c SystemConfProvider, ak string, attachments ...*models.Attachment) {
+func (n *Notification) Notify(rt *models.RenderedTemplates, c SystemConfProvider, ak string, attachments ...*models.Attachment) {
 	if len(n.Email) > 0 {
-		go n.DoEmail(emailsubject, emailbody, c, ak, attachments...)
+		go n.DoEmail(rt, c, ak, attachments...)
 	}
-	if n.Post != nil {
-		go n.DoPost(n.GetPayload(subject, body), ak)
+	if n.Post != nil || n.PostTemplate != "" {
+		n.DoPost(rt, ak)
 	}
-	if n.Get != nil {
-		go n.DoGet(ak)
+	if n.Get != nil || n.GetTemplate != "" {
+		n.DoGet(rt, ak)
 	}
 	if n.Print {
-		if n.UseBody {
-			go n.DoPrint("Subject: " + subject + ", Body: " + body)
+		if n.BodyTemplate != "" {
+			go n.DoPrint("Subject: " + rt.Subject + ", Body: " + rt.Get(n.BodyTemplate))
 		} else {
-			go n.DoPrint(subject)
+			go n.DoPrint(rt.Subject)
 		}
-	}
-}
-
-func (n *Notification) GetPayload(subject, body string) (payload []byte) {
-	if n.UseBody {
-		return []byte(body)
-	} else {
-		return []byte(subject)
 	}
 }
 
@@ -60,16 +54,29 @@ func (n *Notification) DoPrint(payload string) {
 	slog.Infoln(payload)
 }
 
-func (n *Notification) DoPost(payload []byte, ak string) {
-	if n.Body != nil {
-		buf := new(bytes.Buffer)
-		if err := n.Body.Execute(buf, string(payload)); err != nil {
-			slog.Errorln(err)
+func (n *Notification) DoHttp(method string, u *url.URL, urlTplName string, rt *models.RenderedTemplates, ak string) {
+	var err error
+	if u == nil {
+		rawURL := rt.Get(urlTplName)
+		u, err = url.Parse(rawURL)
+		if err != nil {
+			slog.Error(err)
 			return
 		}
-		payload = buf.Bytes()
 	}
-	resp, err := http.Post(n.Post.String(), n.ContentType, bytes.NewBuffer(payload))
+	var body io.Reader
+	if method == http.MethodPost {
+		body = strings.NewReader(rt.GetDefault(n.BodyTemplate, "body"))
+	}
+	req, err := http.NewRequest(method, u.String(), body)
+	if err != nil {
+		slog.Error(err)
+		return
+	}
+	if method == http.MethodPost {
+		req.Header.Set("Content-Type", n.ContentType)
+	}
+	resp, err := http.DefaultClient.Do(req)
 	if resp != nil && resp.Body != nil {
 		// Drain up to 512 bytes and close the body to let the Transport reuse the connection
 		io.CopyN(ioutil.Discard, resp.Body, 512)
@@ -80,33 +87,29 @@ func (n *Notification) DoPost(payload []byte, ak string) {
 		return
 	}
 	if resp.StatusCode >= 300 {
-		slog.Errorln("bad response on notification post:", resp.Status)
+		slog.Errorln("bad response on notification %s:", method, resp.Status)
 	} else {
-		slog.Infof("post notification successful for alert %s. Response code %d.", ak, resp.StatusCode)
+		slog.Infof("%s notification successful for alert %s. Response code %d.", method, ak, resp.StatusCode)
 	}
 }
 
-func (n *Notification) DoGet(ak string) {
-	resp, err := http.Get(n.Get.String())
-	if err != nil {
-		slog.Error(err)
-		return
-	}
-	if resp.StatusCode >= 300 {
-		slog.Error("bad response on notification get:", resp.Status)
-	} else {
-		slog.Infof("get notification successful for alert %s. Response code %d.", ak, resp.StatusCode)
-	}
+func (n *Notification) DoPost(rt *models.RenderedTemplates, ak string) {
+	n.DoHttp(http.MethodPost, n.Get, n.GetTemplate, rt, ak)
 }
 
-func (n *Notification) DoEmail(subject, body []byte, c SystemConfProvider, ak string, attachments ...*models.Attachment) {
+func (n *Notification) DoGet(rt *models.RenderedTemplates, ak string) {
+	n.DoHttp(http.MethodGet, n.Post, n.PostTemplate, rt, ak)
+}
+
+func (n *Notification) DoEmail(rt *models.RenderedTemplates, c SystemConfProvider, ak string, attachments ...*models.Attachment) {
 	e := email.NewEmail()
 	e.From = c.GetEmailFrom()
 	for _, a := range n.Email {
 		e.To = append(e.To, a.Address)
 	}
-	e.Subject = string(subject)
-	e.HTML = body
+	e.Subject = rt.GetDefault(n.EmailSubjectTemplate, "emailSubject")
+	e.HTML = []byte(rt.GetDefault(n.BodyTemplate, "emailBody"))
+
 	for _, a := range attachments {
 		e.Attach(bytes.NewBuffer(a.Data), a.Filename, a.ContentType)
 	}
@@ -117,7 +120,7 @@ func (n *Notification) DoEmail(subject, body []byte, c SystemConfProvider, ak st
 		return
 	}
 	collect.Add("email.sent", nil, 1)
-	slog.Infof("relayed alert %v to %v sucessfully. Subject: %d bytes. Body: %d bytes.", ak, e.To, len(subject), len(body))
+	slog.Infof("relayed alert %v to %v sucessfully. Subject: %d bytes. Body: %d bytes.", ak, e.To, len(e.Subject), len(e.HTML))
 }
 
 // Send an email using the given host and SMTP auth (optional), returns any
