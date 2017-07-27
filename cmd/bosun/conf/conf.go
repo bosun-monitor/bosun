@@ -204,6 +204,22 @@ type Template struct {
 	Locator `json:"-"`
 }
 
+// IsEmailSubjectDifferent returns true if the template has an explicit emailSubject field, or if the subject uses .IsEmail
+func (t *Template) IsEmailSubjectDifferent() bool {
+	if t.CustomTemplates["emailsubject"] != nil {
+		return true
+	}
+	return strings.Contains(t.RawSubject, ".IsEmail")
+}
+
+// IsEmailBodyDifferent returns true if the template has an explicit emailBody field, or if the body uses .IsEmail
+func (t *Template) IsEmailBodyDifferent() bool {
+	if t.CustomTemplates["emailbody"] != nil {
+		return true
+	}
+	return strings.Contains(t.RawBody, ".IsEmail")
+}
+
 // GenericTemplate can be httemplate or ttemplate.
 type GenericTemplate interface {
 	Execute(w io.Writer, ctx interface{}) error

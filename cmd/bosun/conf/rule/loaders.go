@@ -66,6 +66,7 @@ func (c *Conf) loadTemplate(s *parse.SectionNode) {
 					t.Vars[k[1:]] = t.Vars[k]
 					continue
 				}
+				k = strings.ToLower(k)
 				t.RawCustoms[k] = v
 				var ex conf.GenericTemplate
 				var err error

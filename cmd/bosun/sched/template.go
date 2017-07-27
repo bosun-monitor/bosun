@@ -148,32 +148,110 @@ func (c *Context) UseElastic(host string) interface{} {
 	return nil
 }
 
-func (s *Schedule) ExecuteBody(rh *RunHistory, a *conf.Alert, st *models.IncidentState, isEmail bool) ([]byte, []*models.Attachment, error) {
+func (s *Schedule) ExecuteBody(rh *RunHistory, a *conf.Alert, st *models.IncidentState, isEmail bool) (string, []*models.Attachment, error) {
 	t := a.Template
-	if t == nil || t.Body == nil {
-		return nil, nil, nil
+	if t == nil {
+		return "", nil, nil
+	}
+	tp := t.Body
+	if isEmail && t.CustomTemplates["emailbody"] != nil {
+		tp = t.CustomTemplates["emailbody"]
+	}
+	if tp == nil {
+		return "", nil, nil
 	}
 	c := s.Data(rh, st, a, isEmail)
-	buf := new(bytes.Buffer)
-	if err := t.Body.Execute(buf, c); err != nil {
-		return nil, nil, err
-	}
-	if inline, err := inliner.Inline(buf.String()); err == nil {
-		buf = bytes.NewBufferString(inline)
-	} else {
-		slog.Errorln(err)
-	}
-	return buf.Bytes(), c.Attachments, nil
+	return s.executeTpl(tp, c, true)
 }
 
-func (s *Schedule) ExecuteSubject(rh *RunHistory, a *conf.Alert, st *models.IncidentState, isEmail bool) ([]byte, error) {
+func (s *Schedule) executeTpl(t conf.GenericTemplate, c *Context, inlineCss bool) (string, []*models.Attachment, error) {
+	buf := new(bytes.Buffer)
+	if err := t.Execute(buf, c); err != nil {
+		return "", nil, err
+	}
+	if inlineCss {
+		if inline, err := inliner.Inline(buf.String()); err == nil {
+			buf = bytes.NewBufferString(inline)
+		} else {
+			slog.Errorln(err)
+		}
+	}
+	return buf.String(), c.Attachments, nil
+}
+
+func (s *Schedule) ExecuteSubject(rh *RunHistory, a *conf.Alert, st *models.IncidentState, isEmail bool) (string, error) {
 	t := a.Template
-	if t == nil || t.Subject == nil {
+	if t == nil {
+		return "", nil
+	}
+	tp := t.Subject
+	if isEmail && t.CustomTemplates["emailsubject"] != nil {
+		tp = t.CustomTemplates["emailsubject"]
+	}
+	if tp == nil {
+		return "", nil
+	}
+	c := s.Data(rh, st, a, isEmail)
+	d, _, err := s.executeTpl(tp, c, false)
+	if err != nil {
+		return "", err
+	}
+	// remove extra whitespace
+	d = strings.Join(strings.Fields(d), " ")
+	return d, nil
+}
+
+func (s *Schedule) ExecuteAll(rh *RunHistory, a *conf.Alert, st *models.IncidentState) (*models.RenderedTemplates, []error) {
+	ctx := func() *Context { return s.Data(rh, st, a, false) }
+	errs := []error{}
+	e := func(err error, t string) {
+		if err != nil {
+			errs = append(errs, fmt.Errorf("%s: %s", t, err))
+		}
+	}
+	t := a.Template
+	if t == nil {
 		return nil, nil
 	}
-	buf := new(bytes.Buffer)
-	err := t.Subject.Execute(buf, s.Data(rh, st, a, isEmail))
-	return bytes.Join(bytes.Fields(buf.Bytes()), []byte(" ")), err
+	var err error
+
+	// subject
+	subject, err := s.ExecuteSubject(rh, a, st, false)
+	e(err, "Subject")
+	// body
+	body, atts, err := s.ExecuteBody(rh, a, st, false)
+	e(err, "Body")
+
+	rt := &models.RenderedTemplates{
+		Subject:     string(subject),
+		Body:        string(body),
+		Custom:      map[string]string{},
+		Attachments: atts,
+	}
+
+	if t.IsEmailSubjectDifferent() {
+		emailSubject, err := s.ExecuteSubject(rh, a, st, true)
+		e(err, "Email Subject")
+		rt.Custom["emailsubject"] = emailSubject
+	}
+	if t.IsEmailBodyDifferent() {
+		emailBody, atts, err := s.ExecuteBody(rh, a, st, true)
+		e(err, "Email Body")
+		rt.Custom["emailbody"] = emailBody
+		rt.Attachments = atts
+	}
+
+	for k, v := range t.CustomTemplates {
+		// emailsubject/body get handled specially above
+		if k == "emailbody" || k == "emailsubject" {
+			continue
+		}
+		c := ctx()
+		rendered, _, err := s.executeTpl(v, c, false)
+		e(err, k)
+		rt.Custom[k] = rendered
+	}
+	return rt, errs
 }
 
 var error_body = template.Must(template.New("body_error_template").Parse(`
