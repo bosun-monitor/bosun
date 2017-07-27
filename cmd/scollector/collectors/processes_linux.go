@@ -112,9 +112,12 @@ func linuxProcMonitor(w *WatchedProc, md *opentsdb.MultiDataPoint) error {
 		status := make(map[string]string)
 		for _, line := range strings.Split(string(status_file), "\n") {
 			f := strings.Fields(line)
-			if len(f) > 1 && f[0] == "Threads:" {
+			if len(f) > 1 &&
+				(f[0] == "Threads:" ||
+					f[0] == "VmSwap:") {
 				status[f[0]] = f[1]
 			}
+
 		}
 		if len(status) < 1 {
 			err = fmt.Errorf("status too short")
@@ -172,9 +175,14 @@ func linuxProcMonitor(w *WatchedProc, md *opentsdb.MultiDataPoint) error {
 		if err != nil {
 			return fmt.Errorf("failed to convert process thread count: %v", err)
 		}
+		vmSwap, err := strconv.ParseInt(status["VmSwap:"], 10, 64)
+		if err != nil {
+			return fmt.Errorf("failed to convert process swap memory: %v", err)
+		}
 		Add(md, "linux.proc.mem.virtual", stats[22], tags, metadata.Gauge, metadata.Bytes, descLinuxProcMemVirtual)
 		Add(md, "linux.proc.mem.rss", stats[23], tags, metadata.Gauge, metadata.Page, descLinuxProcMemRss)
 		Add(md, "linux.proc.mem.rss_bytes", rss*int64(osPageSize), tags, metadata.Gauge, metadata.Bytes, descLinuxProcMemRssBytes)
+		Add(md, "linux.proc.mem.swap_bytes", vmSwap*1024, tags, metadata.Gauge, metadata.Gauge, descLinuxProcSwapBytes)
 		Add(md, "linux.proc.char_io", io[0], opentsdb.TagSet{"type": "read"}.Merge(tags), metadata.Counter, metadata.Bytes, descLinuxProcCharIoRead)
 		Add(md, "linux.proc.char_io", io[1], opentsdb.TagSet{"type": "write"}.Merge(tags), metadata.Counter, metadata.Bytes, descLinuxProcCharIoWrite)
 		Add(md, "linux.proc.syscall", io[2], opentsdb.TagSet{"type": "read"}.Merge(tags), metadata.Counter, metadata.Syscall, descLinuxProcSyscallRead)
@@ -225,6 +233,7 @@ const (
 	descLinuxProcStartTS      = "The timestamp of process start."
 	descLinuxProcCount        = "The number of currently running processes."
 	descLinuxProcThreads      = "The number of threads of the process."
+	descLinuxProcSwapBytes    = "The total swap size used by the processes."
 )
 
 type byModTime []os.FileInfo
