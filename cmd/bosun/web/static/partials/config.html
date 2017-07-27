@@ -238,6 +238,24 @@
 			</div>
 			<div class="panel-body template" ng-bind-html="body"></div>
 		</div>
+		<div class="panel panel-default" ng-if="emailSubject">
+			<div class="panel-heading">
+				<h3 class="panel-title">Email Subject</h3>
+			</div>
+			<div class="panel-body template" ng-bind="emailSubject"></div>
+		</div>
+		<div class="panel panel-default" ng-if="emailBody">
+			<div class="panel-heading">
+				<h3 class="panel-title">Email Body</h3>
+			</div>
+			<div class="panel-body template" ng-bind-html="emailBody"></div>
+		</div>
+		<div class="panel panel-default" ng-repeat="(name, bod) in customTemplates">
+			<div class="panel-heading">
+				<h3 class="panel-title">{{name}}</h3>
+			</div>
+			<div class="panel-body template" ng-bind-html="bod"></div>
+		</div>
 		<h4>Available Variables</h4>
 		<pre ng-bind="data"></pre>
 	</div>

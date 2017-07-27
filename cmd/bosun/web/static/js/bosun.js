@@ -867,9 +867,9 @@ var UsernameInputController = (function () {
     function UsernameInputController(auth) {
         this.auth = auth;
     }
+    UsernameInputController.$inject = ['authService'];
     return UsernameInputController;
 }());
-UsernameInputController.$inject = ['authService'];
 bosunApp.component("usernameInput", {
     controller: UsernameInputController,
     controllerAs: "ct",
@@ -895,6 +895,7 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
         $scope.aceTheme = 'chrome';
         $scope.aceMode = 'bosun';
         $scope.expandDiff = false;
+        $scope.customTemplates = {};
         $scope.runningChangedHelp = "The running config has been changed. This means you are in danger of overwriting someone else's changes. To view the changes open the 'Save Dialogue' and you will see a unified diff. The only way to get rid of the error panel is to open a new instance of the rule editor and copy your changes into it. You are still permitted to save without doing this, but then you must be very careful not to overwrite anyone else's changes.";
         $scope.sectionToDocs = {
             "alert": "https://bosun.org/definitions#alert-definitions",
@@ -1253,6 +1254,17 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
         function procResults(data) {
             $scope.subject = data.Subject;
             $scope.body = $sce.trustAsHtml(data.Body);
+            if (data.EmailSubject) {
+                data.EmailSubject = atob(data.EmailSubject);
+            }
+            $scope.emailSubject = data.EmailSubject;
+            if (data.EmailBody) {
+                data.EmailBody = atob(data.EmailBody);
+            }
+            $scope.emailBody = $sce.trustAsHtml(data.EmailBody);
+            for (var k in data.Custom) {
+                $scope.customTemplates[k] = data.Custom[k];
+            }
             $scope.data = JSON.stringify(data.Data, null, '  ');
             $scope.error = data.Errors;
             $scope.warning = data.Warnings;
@@ -1478,14 +1490,14 @@ bosunApp.directive('tsTab', function () {
                     return;
                 }
                 switch (evt.keyCode) {
-                    case 9:
+                    case 9:// tab
                         evt.preventDefault();
                         var v = ta.value;
                         var start = ta.selectionStart;
                         ta.value = v.substr(0, start) + "\t" + v.substr(start);
                         ta.selectionStart = ta.selectionEnd = start + 1;
                         return;
-                    case 13:
+                    case 13:// enter
                         if (ta.selectionStart != ta.selectionEnd) {
                             return;
                         }
@@ -3748,9 +3760,9 @@ var TokenListController = (function () {
         };
         this.load();
     }
+    TokenListController.$inject = ['$http', "authService"];
     return TokenListController;
 }());
-TokenListController.$inject = ['$http', "authService"];
 bosunApp.component('tokenList', {
     controller: TokenListController,
     controllerAs: "ct",
@@ -3795,9 +3807,9 @@ var NewTokenController = (function () {
     NewTokenController.prototype.encoded = function () {
         return encodeURIComponent(this.createdToken);
     };
+    NewTokenController.$inject = ['$http', 'authService'];
     return NewTokenController;
 }());
-NewTokenController.$inject = ['$http', 'authService'];
 bosunApp.component("newToken", {
     controller: NewTokenController,
     controllerAs: "ct",

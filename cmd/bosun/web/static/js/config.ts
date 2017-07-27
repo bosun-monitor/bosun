@@ -42,7 +42,10 @@ interface IConfigScope extends IBosunScope {
 	sets: any;
 	alert_history: any;
 	subject: string;
+	emailSubject: string;
+	emailBody: string;
 	body: string;
+	customTemplates: {[name: string]:string};
 	data: any;
 	tab: string;
 	zws: (v: string) => string;
@@ -80,8 +83,10 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 	$scope.items = parseItems();
 	$scope.tab = search.tab || 'results';
 	$scope.aceTheme = 'chrome';
+
 	$scope.aceMode = 'bosun';
 	$scope.expandDiff = false;
+	$scope.customTemplates = {};
 	$scope.runningChangedHelp = "The running config has been changed. This means you are in danger of overwriting someone else's changes. To view the changes open the 'Save Dialogue' and you will see a unified diff. The only way to get rid of the error panel is to open a new instance of the rule editor and copy your changes into it. You are still permitted to save without doing this, but then you must be very careful not to overwrite anyone else's changes.";
 
 	$scope.sectionToDocs = {
@@ -452,6 +457,17 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 	function procResults(data: any) {
 		$scope.subject = data.Subject;
 		$scope.body = $sce.trustAsHtml(data.Body);
+		if (data.EmailSubject){
+			data.EmailSubject= atob(data.EmailSubject)
+		}
+		$scope.emailSubject = data.EmailSubject
+		if (data.EmailBody){
+			data.EmailBody= atob(data.EmailBody)
+		}
+		$scope.emailBody = $sce.trustAsHtml(data.EmailBody)
+		for (var k in data.Custom){
+			$scope.customTemplates[k] = data.Custom[k];
+		}
 		$scope.data = JSON.stringify(data.Data, null, '  ');
 		$scope.error = data.Errors;
 		$scope.warning = data.Warnings;

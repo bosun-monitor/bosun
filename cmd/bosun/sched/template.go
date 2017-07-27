@@ -223,8 +223,8 @@ func (s *Schedule) ExecuteAll(rh *RunHistory, a *conf.Alert, st *models.Incident
 	e(err, "Body")
 
 	rt := &models.RenderedTemplates{
-		Subject:     string(subject),
-		Body:        string(body),
+		Subject:     subject,
+		Body:        body,
 		Custom:      map[string]string{},
 		Attachments: atts,
 	}

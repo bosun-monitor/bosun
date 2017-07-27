@@ -166,7 +166,7 @@ func procRule(t miniprofiler.Timer, ruleConf conf.RuleConfProvider, a *conf.Aler
 		}
 	}
 	sort.Sort(keys)
-	var subject, body string
+	var rt *models.RenderedTemplates
 	var data interface{}
 	warning := make([]string, 0)
 
@@ -197,37 +197,29 @@ func procRule(t miniprofiler.Timer, ruleConf conf.RuleConfProvider, a *conf.Aler
 		} else if e.Warn != nil {
 			primaryIncident.Result = e.Warn
 		}
-		var bErr, sErr error
+		var errs []error
+
 		func() {
 			defer func() {
 				if err := recover(); err != nil {
 					s := fmt.Sprint(err)
 					warning = append(warning, s)
-					bErr = fmt.Errorf(s)
+					errs = append(errs, fmt.Errorf("panic rendering templates: %s", err))
 				}
 			}()
-			if body, _, bErr = s.ExecuteBody(rh, a, primaryIncident, false); bErr != nil {
-				warning = append(warning, bErr.Error())
-			}
+			rt, errs = s.ExecuteAll(rh, a, primaryIncident)
 		}()
-		func() {
-			defer func() {
-				if err := recover(); err != nil {
-					s := fmt.Sprint(err)
-					warning = append(warning, s)
-					sErr = fmt.Errorf(s)
-				}
-			}()
-			subject, sErr = s.ExecuteSubject(rh, a, primaryIncident, false)
-			if sErr != nil {
-				warning = append(warning, sErr.Error())
-			}
-		}()
-		if sErr != nil || bErr != nil {
+		for _, err := range errs {
+			warning = append(warning, err.Error())
+		}
+		if rt == nil {
+			rt = &models.RenderedTemplates{}
+		}
+		if len(errs) > 0 {
 			var err error
-			subject, body, err = s.ExecuteBadTemplate([]error{sErr, bErr}, rh, a, primaryIncident)
+			rt.Subject, rt.Body, err = s.ExecuteBadTemplate(errs, rh, a, primaryIncident)
 			if err != nil {
-				subject = fmt.Sprintf("unable to create tempalate error notification: %v", err)
+				rt.Subject = fmt.Sprintf("unable to create tempalate error notification: %v", err)
 			}
 		} else if email != "" {
 			m, err := mail.ParseAddress(email)
@@ -253,17 +245,17 @@ func procRule(t miniprofiler.Timer, ruleConf conf.RuleConfProvider, a *conf.Aler
 		}
 		data = s.Data(rh, primaryIncident, a, false)
 	}
-	return &ruleResult{
-		Criticals: criticals,
-		Warnings:  warnings,
-		Normals:   normals,
-		Time:      now,
-		Body:      body,
-		Subject:   subject,
-		Data:      data,
-		Result:    rh.Events,
-		Warning:   warning,
-	}, nil
+	rr := &ruleResult{
+		Criticals:         criticals,
+		Warnings:          warnings,
+		Normals:           normals,
+		Time:              now,
+		Data:              data,
+		Result:            rh.Events,
+		Warning:           warning,
+		RenderedTemplates: rt,
+	}
+	return rr, nil
 }
 
 type ruleResult struct {
@@ -271,9 +263,7 @@ type ruleResult struct {
 	Warnings  []models.AlertKey
 	Normals   []models.AlertKey
 	Time      time.Time
-
-	Body    string
-	Subject string
+	*models.RenderedTemplates
 	Data    interface{}
 	Result  map[models.AlertKey]*models.Event
 	Warning []string
@@ -369,10 +359,9 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 		Warnings     []string `json:",omitempty"`
 		Sets         []*Set
 		AlertHistory map[models.AlertKey]*Histories
-		Body         string      `json:",omitempty"`
-		Subject      string      `json:",omitempty"`
-		Data         interface{} `json:",omitempty"`
-		Hash         string
+		*models.RenderedTemplates
+		Data interface{} `json:",omitempty"`
+		Hash string
 	}{
 		AlertHistory: make(map[models.AlertKey]*Histories),
 		Hash:         hash,
@@ -394,8 +383,7 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 			Time:     res.Time.Format(tsdbFormatSecs),
 		}
 		if res.Data != nil {
-			ret.Body = res.Body
-			ret.Subject = res.Subject
+			ret.RenderedTemplates = res.RenderedTemplates
 			ret.Data = res.Data
 			for k, v := range res.Result {
 				set.Results = append(set.Results, &Result{
