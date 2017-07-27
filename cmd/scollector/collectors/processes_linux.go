@@ -352,7 +352,11 @@ func (i *idPool) get() int {
 		return i.next
 	}
 	sort.Ints(i.free)
-	return i.free[0]
+
+	var newId int
+	newId, i.free = i.free[0], i.free[1:]
+
+	return newId
 }
 
 func (i *idPool) put(v int) {
