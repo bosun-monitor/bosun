@@ -107,9 +107,8 @@ func (n *Notification) DoEmail(rt *models.RenderedTemplates, c SystemConfProvide
 	for _, a := range n.Email {
 		e.To = append(e.To, a.Address)
 	}
-	e.Subject = rt.GetDefault(n.EmailSubjectTemplate, "emailSubject")
-	e.HTML = []byte(rt.GetDefault(n.BodyTemplate, "emailBody"))
-
+	e.Subject = rt.GetDefault(n.EmailSubjectTemplate, "emailsubject")
+	e.HTML = []byte(rt.GetDefault(n.BodyTemplate, "emailbody"))
 	for _, a := range attachments {
 		e.Attach(bytes.NewBuffer(a.Data), a.Filename, a.ContentType)
 	}

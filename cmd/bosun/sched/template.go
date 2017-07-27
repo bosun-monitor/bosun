@@ -232,12 +232,12 @@ func (s *Schedule) ExecuteAll(rh *RunHistory, a *conf.Alert, st *models.Incident
 	if t.IsEmailSubjectDifferent() {
 		emailSubject, err := s.ExecuteSubject(rh, a, st, true)
 		e(err, "Email Subject")
-		rt.Custom["emailsubject"] = emailSubject
+		rt.EmailSubject = []byte(emailSubject)
 	}
 	if t.IsEmailBodyDifferent() {
 		emailBody, atts, err := s.ExecuteBody(rh, a, st, true)
 		e(err, "Email Body")
-		rt.Custom["emailbody"] = emailBody
+		rt.EmailBody = []byte(emailBody)
 		rt.Attachments = atts
 	}
 
