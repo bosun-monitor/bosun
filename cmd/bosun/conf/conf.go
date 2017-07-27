@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"hash/fnv"
+	"io"
 	"net/mail"
 	"net/url"
 	"os/exec"
@@ -19,7 +20,6 @@ import (
 	"bosun.org/models"
 	"bosun.org/opentsdb"
 
-	htemplate "html/template"
 	ttemplate "text/template"
 
 	"bosun.org/slog"
@@ -195,12 +195,19 @@ func (s Squelch) Squelched(tags opentsdb.TagSet) bool {
 type Template struct {
 	Text string
 	Vars
-	Name    string
-	Body    *htemplate.Template `json:"-"`
-	Subject *ttemplate.Template `json:"-"`
+	Name            string
+	Body            Executable            `json:"-"`
+	Subject         Executable            `json:"-"`
+	CustomTemplates map[string]Executable `json:"-"`
 
 	RawBody, RawSubject string
-	Locator             `json:"-"`
+	RawCustoms          map[string]string
+
+	Locator `json:"-"`
+}
+
+type Executable interface {
+	Execute(w io.Writer, ctx interface{}) error
 }
 
 // Notification stores information about a notification. A notification
