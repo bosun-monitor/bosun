@@ -33,6 +33,8 @@ type Context struct {
 	runHistory  *RunHistory
 	Attachments []*models.Attachment
 	ElasticHost string
+
+	vars map[string]interface{}
 }
 
 func (s *Schedule) Data(rh *RunHistory, st *models.IncidentState, a *conf.Alert, isEmail bool) *Context {
@@ -43,8 +45,18 @@ func (s *Schedule) Data(rh *RunHistory, st *models.IncidentState, a *conf.Alert,
 		schedule:      s,
 		runHistory:    rh,
 		ElasticHost:   "default",
+		vars:          map[string]interface{}{},
 	}
 	return &c
+}
+
+func (c *Context) Set(name string, value interface{}) string {
+	c.vars[name] = value
+	return "" // have to return something
+}
+
+func (c *Context) Get(name string) interface{} {
+	return c.vars[name]
 }
 
 type unknownContext struct {

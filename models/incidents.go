@@ -42,8 +42,9 @@ type IncidentState struct {
 }
 
 type RenderedTemplates struct {
-	Subject     string
-	Body        string
+	Subject string
+	Body    string
+	// TODO: EmailBody and EmailSubject used to be top level. Now should go in custom. Load from those fields when pulling from db.
 	Custom      map[string]string
 	Attachments []*Attachment
 }
@@ -64,7 +65,7 @@ func (r *RenderedTemplates) Get(name string) string {
 		return r.Body
 	}
 	if name == "emailsubject" {
-		return r.Body
+		return r.Subject
 	}
 	//TODO if not exist maybe panic? We should really validate that things will be where we are looking
 	return ""
