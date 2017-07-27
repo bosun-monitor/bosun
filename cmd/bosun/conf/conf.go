@@ -206,7 +206,7 @@ type Template struct {
 
 // IsEmailSubjectDifferent returns true if the template has an explicit emailSubject field, or if the subject uses .IsEmail
 func (t *Template) IsEmailSubjectDifferent() bool {
-	if t.CustomTemplates["emailsubject"] != nil {
+	if t.CustomTemplates["emailSubject"] != nil {
 		return true
 	}
 	return strings.Contains(t.RawSubject, ".IsEmail")
@@ -214,7 +214,7 @@ func (t *Template) IsEmailSubjectDifferent() bool {
 
 // IsEmailBodyDifferent returns true if the template has an explicit emailBody field, or if the body uses .IsEmail
 func (t *Template) IsEmailBodyDifferent() bool {
-	if t.CustomTemplates["emailbody"] != nil {
+	if t.CustomTemplates["emailBody"] != nil {
 		return true
 	}
 	return strings.Contains(t.RawBody, ".IsEmail")
