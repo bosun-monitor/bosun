@@ -278,7 +278,7 @@ var error_body = template.Must(template.New("body_error_template").Parse(`
 		</tr>
 	{{end}}</table>`))
 
-func (s *Schedule) ExecuteBadTemplate(errs []error, rh *RunHistory, a *conf.Alert, st *models.IncidentState) (subject, body []byte, err error) {
+func (s *Schedule) ExecuteBadTemplate(errs []error, rh *RunHistory, a *conf.Alert, st *models.IncidentState) (subject, body string, err error) {
 	sub := fmt.Sprintf("error: template rendering error for alert %v", st.AlertKey)
 	c := struct {
 		Errors []error
@@ -289,7 +289,7 @@ func (s *Schedule) ExecuteBadTemplate(errs []error, rh *RunHistory, a *conf.Aler
 	}
 	buf := new(bytes.Buffer)
 	error_body.Execute(buf, c)
-	return []byte(sub), buf.Bytes(), nil
+	return sub, buf.String(), nil
 }
 
 func (c *Context) evalExpr(e *expr.Expr, filter bool, series bool, autods int) (expr.ResultSlice, string, error) {

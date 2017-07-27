@@ -166,7 +166,7 @@ func procRule(t miniprofiler.Timer, ruleConf conf.RuleConfProvider, a *conf.Aler
 		}
 	}
 	sort.Sort(keys)
-	var subject, body []byte
+	var subject, body string
 	var data interface{}
 	warning := make([]string, 0)
 
@@ -227,7 +227,7 @@ func procRule(t miniprofiler.Timer, ruleConf conf.RuleConfProvider, a *conf.Aler
 			var err error
 			subject, body, err = s.ExecuteBadTemplate([]error{sErr, bErr}, rh, a, primaryIncident)
 			if err != nil {
-				subject = []byte(fmt.Sprintf("unable to create tempalate error notification: %v", err))
+				subject = fmt.Sprintf("unable to create tempalate error notification: %v", err)
 			}
 		} else if email != "" {
 			m, err := mail.ParseAddress(email)
@@ -245,8 +245,8 @@ func procRule(t miniprofiler.Timer, ruleConf conf.RuleConfProvider, a *conf.Aler
 				warning = append(warning, sErr.Error())
 			} else {
 				rt := &models.RenderedTemplates{
-					Subject: string(emailSubject),
-					Body:    string(email),
+					Subject: emailSubject,
+					Body:    email,
 				}
 				n.DoEmail(rt, schedule.SystemConf, string(primaryIncident.AlertKey), attachments...)
 			}
@@ -258,8 +258,8 @@ func procRule(t miniprofiler.Timer, ruleConf conf.RuleConfProvider, a *conf.Aler
 		Warnings:  warnings,
 		Normals:   normals,
 		Time:      now,
-		Body:      string(body),
-		Subject:   string(subject),
+		Body:      body,
+		Subject:   subject,
 		Data:      data,
 		Result:    rh.Events,
 		Warning:   warning,
