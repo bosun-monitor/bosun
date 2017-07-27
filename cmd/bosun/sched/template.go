@@ -154,8 +154,8 @@ func (s *Schedule) ExecuteBody(rh *RunHistory, a *conf.Alert, st *models.Inciden
 		return "", nil, nil
 	}
 	tp := t.Body
-	if isEmail && t.CustomTemplates["emailbody"] != nil {
-		tp = t.CustomTemplates["emailbody"]
+	if isEmail && t.CustomTemplates["emailBody"] != nil {
+		tp = t.CustomTemplates["emailBody"]
 	}
 	if tp == nil {
 		return "", nil, nil
@@ -185,8 +185,8 @@ func (s *Schedule) ExecuteSubject(rh *RunHistory, a *conf.Alert, st *models.Inci
 		return "", nil
 	}
 	tp := t.Subject
-	if isEmail && t.CustomTemplates["emailsubject"] != nil {
-		tp = t.CustomTemplates["emailsubject"]
+	if isEmail && t.CustomTemplates["emailSubject"] != nil {
+		tp = t.CustomTemplates["emailSubject"]
 	}
 	if tp == nil {
 		return "", nil
@@ -203,7 +203,7 @@ func (s *Schedule) ExecuteSubject(rh *RunHistory, a *conf.Alert, st *models.Inci
 
 func (s *Schedule) ExecuteAll(rh *RunHistory, a *conf.Alert, st *models.IncidentState) (*models.RenderedTemplates, []error) {
 	ctx := func() *Context { return s.Data(rh, st, a, false) }
-	errs := []error{}
+	var errs []error
 	e := func(err error, t string) {
 		if err != nil {
 			errs = append(errs, fmt.Errorf("%s: %s", t, err))
@@ -243,7 +243,7 @@ func (s *Schedule) ExecuteAll(rh *RunHistory, a *conf.Alert, st *models.Incident
 
 	for k, v := range t.CustomTemplates {
 		// emailsubject/body get handled specially above
-		if k == "emailbody" || k == "emailsubject" {
+		if k == "emailBody" || k == "emailSubject" {
 			continue
 		}
 		c := ctx()

@@ -465,6 +465,7 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 			data.EmailBody= atob(data.EmailBody)
 		}
 		$scope.emailBody = $sce.trustAsHtml(data.EmailBody)
+		$scope.customTemplates = {};
 		for (var k in data.Custom){
 			$scope.customTemplates[k] = data.Custom[k];
 		}

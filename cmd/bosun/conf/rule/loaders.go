@@ -1,6 +1,7 @@
 package rule
 
 import (
+	"fmt"
 	htemplate "html/template"
 	"net/mail"
 	"net/url"
@@ -37,61 +38,90 @@ func (c *Conf) loadTemplate(s *parse.SectionNode) {
 	}
 	hFuncs := htemplate.FuncMap(funcs)
 	saw := make(map[string]bool)
+	inherits := []string{}
+	var kvps = map[string]string{}
 	for _, p := range s.Nodes.Nodes {
 		c.at(p)
 		switch p := p.(type) {
 		case *parse.PairNode:
 			c.seen(p.Key.Text, saw)
-			v := p.Val.Text
-			switch k := p.Key.Text; k {
-			case "body":
-				t.RawBody = v
-				tmpl := c.bodies.New(name).Funcs(hFuncs)
-				_, err := tmpl.Parse(t.RawBody)
-				if err != nil {
-					c.error(err)
-				}
-				t.Body = tmpl
-			case "subject":
-				t.RawSubject = v
-				tmpl := c.subjects.New(name).Funcs(funcs)
-				_, err := tmpl.Parse(t.RawSubject)
-				if err != nil {
-					c.error(err)
-				}
-				t.Subject = tmpl
-			default:
-				if strings.HasPrefix(k, "$") {
-					t.Vars[k] = v
-					t.Vars[k[1:]] = t.Vars[k]
-					continue
-				}
-				k = strings.ToLower(k)
-				t.RawCustoms[k] = v
-				var ex conf.GenericTemplate
-				var err error
-				if isHTMLTemplate(k) {
-					t, ok := c.customHtmlTemplates[k]
-					if !ok {
-						t = htemplate.New(c.Name).Funcs(hFuncs)
-						c.customHtmlTemplates[k] = t
-					}
-					ex, err = t.New(name).Funcs(hFuncs).Parse(v)
-				} else {
-					t, ok := c.customTextTemplates[k]
-					if !ok {
-						t = ttemplate.New(c.Name).Funcs(funcs)
-						c.customTextTemplates[k] = t
-					}
-					ex, err = t.New(name).Funcs(funcs).Parse(v)
-				}
-				if err != nil {
-					c.error(err)
-				}
-				t.CustomTemplates[k] = ex
+			if p.Key.Text == "inherit" {
+				inherits = append(inherits, p.Val.Text)
+			} else {
+				kvps[p.Key.Text] = p.Val.Text
 			}
 		default:
 			c.errorf("unexpected node")
+		}
+	}
+	// expand all inherits first, add to kvps if not present
+	for _, i := range inherits {
+		other, ok := c.Templates[i]
+		if !ok {
+			c.errorf("cannot inherit unknown template %s", i)
+		}
+		if other.RawBody != "" && kvps["body"] == "" {
+			kvps["body"] = other.RawBody
+		}
+		if other.RawSubject != "" && kvps["subject"] == "" {
+			kvps["subject"] = other.RawSubject
+		}
+		for k, v := range other.RawCustoms {
+			if kvps[k] == "" {
+				kvps[k] = v
+			}
+		}
+	}
+
+	// now process like normal
+	for k, v := range kvps {
+		switch k {
+		case "body":
+			t.RawBody = v
+			tmpl := c.bodies.New(name).Funcs(hFuncs)
+			_, err := tmpl.Parse(t.RawBody)
+			if err != nil {
+				c.error(err)
+			}
+			t.Body = tmpl
+		case "subject":
+			t.RawSubject = v
+			tmpl := c.subjects.New(name).Funcs(funcs)
+			_, err := tmpl.Parse(t.RawSubject)
+			if err != nil {
+				c.error(err)
+			}
+			t.Subject = tmpl
+		case "inherit":
+			c.errorf("inherit should have been pruned in first pass")
+		default:
+			if strings.HasPrefix(k, "$") {
+				t.Vars[k] = v
+				t.Vars[k[1:]] = t.Vars[k]
+				continue
+			}
+			t.RawCustoms[k] = v
+			var ex conf.GenericTemplate
+			var err error
+			if isHTMLTemplate(k) {
+				t, ok := c.customHtmlTemplates[k]
+				if !ok {
+					t = htemplate.New(c.Name).Funcs(hFuncs)
+					c.customHtmlTemplates[k] = t
+				}
+				ex, err = t.New(name).Funcs(hFuncs).Parse(v)
+			} else {
+				t, ok := c.customTextTemplates[k]
+				if !ok {
+					t = ttemplate.New(c.Name).Funcs(funcs)
+					c.customTextTemplates[k] = t
+				}
+				ex, err = t.New(name).Funcs(funcs).Parse(v)
+			}
+			if err != nil {
+				c.error(err)
+			}
+			t.CustomTemplates[k] = ex
 		}
 	}
 	c.at(s)
@@ -280,9 +310,41 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 	if warnLength+critLength > 0 && a.Template == nil {
 		c.errorf("notifications specified but no template")
 	}
-	if a.Template != nil && a.Body == nil && a.Subject == nil {
-		// alert checks for body or subject since some templates might not be directly used in alerts
-		c.errorf("alert templates must have body or subject specified")
+	if a.Template != nil {
+		if a.Body == nil || a.Subject == nil {
+			// alert checks for body or subject since some templates might not be directly used in alerts
+			c.errorf("alert templates must have body and subject specified")
+		}
+		isMissing := func(s string) bool {
+			if s == "" || s == "body" || s == "subject" {
+				return false
+			}
+			if a.Template.CustomTemplates[s] != nil {
+				return false
+			}
+			return true
+		}
+		check := func(not *conf.Notification) {
+			errmsg := fmt.Sprintf("notification %s uses template key %s in %s, but template %s does not include it", not.Name, "%s", "%s", a.Template.Name)
+			if isMissing(not.BodyTemplate) {
+				c.errorf(errmsg, not.BodyTemplate, "body template")
+			}
+			if isMissing(not.EmailSubjectTemplate) {
+				c.errorf(errmsg, not.EmailSubjectTemplate, "email subject")
+			}
+			if isMissing(not.GetTemplate) {
+				c.errorf(errmsg, not.GetTemplate, "get url")
+			}
+			if isMissing(not.PostTemplate) {
+				c.errorf(errmsg, not.PostTemplate, "post url")
+			}
+		}
+		for _, not := range a.CritNotification.Notifications {
+			check(not)
+		}
+		for _, not := range a.WarnNotification.Notifications {
+			check(not)
+		}
 	}
 	// TODO: traverse all notifications for this alert and make sure requested bodyTemplate, getTemplate, postTemplate etc.. exist on this alert's template
 	a.ReturnType = ret
