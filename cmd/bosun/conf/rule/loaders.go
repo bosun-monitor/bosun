@@ -106,14 +106,14 @@ func (c *Conf) loadTemplate(s *parse.SectionNode) {
 			if isHTMLTemplate(k) {
 				t, ok := c.customHtmlTemplates[k]
 				if !ok {
-					t = htemplate.New(c.Name).Funcs(hFuncs)
+					t = htemplate.New(c.Name).Funcs(htemplate.FuncMap(defaultFuncs))
 					c.customHtmlTemplates[k] = t
 				}
 				ex, err = t.New(name).Funcs(hFuncs).Parse(v)
 			} else {
 				t, ok := c.customTextTemplates[k]
 				if !ok {
-					t = ttemplate.New(c.Name).Funcs(funcs)
+					t = ttemplate.New(c.Name).Funcs(defaultFuncs)
 					c.customTextTemplates[k] = t
 				}
 				ex, err = t.New(name).Funcs(funcs).Parse(v)

@@ -436,6 +436,19 @@ var defaultFuncs = ttemplate.FuncMap{
 		}
 		return &d
 	},
+	"makeSlice": func(vals ...interface{}) interface{} {
+		return vals
+	},
+	"makeMap": func(vals ...interface{}) (interface{}, error) {
+		if len(vals)%2 != 0 {
+			return nil, fmt.Errorf("MakeMap requires even number of arguments")
+		}
+		m := map[interface{}]interface{}{}
+		for i := 0; i < len(vals); i += 2 {
+			m[vals[i]] = vals[i+1]
+		}
+		return m, nil
+	},
 }
 
 var exRE = regexp.MustCompile(`\$(?:[\w.]+|\{[\w.]+\})`)
