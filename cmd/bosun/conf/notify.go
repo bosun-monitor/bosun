@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/tls"
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -54,27 +55,25 @@ func (n *Notification) DoPrint(payload string) {
 	slog.Infoln(payload)
 }
 
-func (n *Notification) DoHttp(method string, u *url.URL, urlTplName string, rt *models.RenderedTemplates, ak string) {
-	var err error
-	if u == nil {
-		rawURL := rt.Get(urlTplName)
-		u, err = url.Parse(rawURL)
-		if err != nil {
-			slog.Error(err)
-			return
-		}
-	}
+type PreparedNotification interface {
+	Send() error
+}
+
+type PreparedHttp struct {
+	URL     string
+	Method  string
+	Headers map[string]string
+	Body    string
+}
+
+func (p *PreparedHttp) Send() error {
 	var body io.Reader
-	if method == http.MethodPost {
-		body = strings.NewReader(rt.GetDefault(n.BodyTemplate, "body"))
+	if p.Body != "" {
+		body = strings.NewReader(p.Body)
 	}
-	req, err := http.NewRequest(method, u.String(), body)
+	req, err := http.NewRequest(p.Method, p.URL, body)
 	if err != nil {
-		slog.Error(err)
-		return
-	}
-	if method == http.MethodPost {
-		req.Header.Set("Content-Type", n.ContentType)
+		return err
 	}
 	resp, err := http.DefaultClient.Do(req)
 	if resp != nil && resp.Body != nil {
@@ -83,14 +82,40 @@ func (n *Notification) DoHttp(method string, u *url.URL, urlTplName string, rt *
 		defer resp.Body.Close()
 	}
 	if err != nil {
-		slog.Error(err)
-		return
+		return err
 	}
 	if resp.StatusCode >= 300 {
-		slog.Errorln("bad response on notification %s:", method, resp.Status)
-	} else {
-		slog.Infof("%s notification successful for alert %s. Response code %d.", method, ak, resp.StatusCode)
+		return fmt.Errorf("bad response on notification %s: %d", p.Method, resp.StatusCode)
 	}
+	return nil
+}
+
+func (n *Notification) PrepHttp(method string, u *url.URL, urlTplName string, rt *models.RenderedTemplates, ak string) PreparedNotification {
+	var url string
+	if u != nil {
+		url = u.String()
+	} else {
+		url = rt.Get(urlTplName)
+	}
+	prep := &PreparedHttp{
+		Method:  method,
+		URL:     url,
+		Headers: map[string]string{},
+	}
+	if method == http.MethodPost {
+		prep.Body = rt.GetDefault(n.BodyTemplate, "subject")
+		prep.Headers["Content-Type"] = n.ContentType
+	}
+	return prep
+}
+
+func (n *Notification) DoHttp(method string, u *url.URL, urlTplName string, rt *models.RenderedTemplates, ak string) {
+	p := n.PrepHttp(method, u, urlTplName, rt, ak)
+	err := p.Send()
+	if err != nil {
+		slog.Errorf("Sending http notification: %s", err)
+	}
+	slog.Infof("%s notification successful for alert %s.", method, ak)
 }
 
 func (n *Notification) DoPost(rt *models.RenderedTemplates, ak string) {

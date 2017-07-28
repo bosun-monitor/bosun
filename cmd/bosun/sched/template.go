@@ -55,6 +55,21 @@ func (c *Context) Set(name string, value interface{}) string {
 	return "" // have to return something
 }
 
+func (c *Context) MakeSlice(vals ...interface{}) interface{} {
+	return vals
+}
+
+func (c *Context) MakeMap(vals ...interface{}) (interface{}, error) {
+	if len(vals)%2 != 0 {
+		return nil, fmt.Errorf("MakeMap requires even number of arguments")
+	}
+	m := map[interface{}]interface{}{}
+	for i := 0; i < len(vals); i += 2 {
+		m[vals[i]] = vals[i+1]
+	}
+	return m, nil
+}
+
 func (c *Context) Get(name string) interface{} {
 	return c.vars[name]
 }
