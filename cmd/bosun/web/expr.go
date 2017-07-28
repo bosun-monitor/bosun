@@ -168,6 +168,7 @@ func procRule(t miniprofiler.Timer, ruleConf conf.RuleConfProvider, a *conf.Aler
 	sort.Sort(keys)
 	var rt *models.RenderedTemplates
 	var data interface{}
+	var nots map[string]*conf.PreparedHttp
 	warning := make([]string, 0)
 
 	if !summary && len(keys) > 0 {
@@ -215,6 +216,7 @@ func procRule(t miniprofiler.Timer, ruleConf conf.RuleConfProvider, a *conf.Aler
 		if rt == nil {
 			rt = &models.RenderedTemplates{}
 		}
+
 		if len(errs) > 0 {
 			var err error
 			rt.Subject, rt.Body, err = s.ExecuteBadTemplate(errs, rh, a, primaryIncident)
@@ -243,8 +245,10 @@ func procRule(t miniprofiler.Timer, ruleConf conf.RuleConfProvider, a *conf.Aler
 				n.DoEmail(rt, schedule.SystemConf, string(primaryIncident.AlertKey), attachments...)
 			}
 		}
+		nots = buildNotificationPreviews(a, rt, string(primaryIncident.AlertKey))
 		data = s.Data(rh, primaryIncident, a, false)
 	}
+
 	rr := &ruleResult{
 		Criticals:         criticals,
 		Warnings:          warnings,
@@ -254,8 +258,29 @@ func procRule(t miniprofiler.Timer, ruleConf conf.RuleConfProvider, a *conf.Aler
 		Result:            rh.Events,
 		Warning:           warning,
 		RenderedTemplates: rt,
+		HTTPNotifications: nots,
 	}
 	return rr, nil
+}
+
+func buildNotificationPreviews(a *conf.Alert, rt *models.RenderedTemplates, ak string) map[string]*conf.PreparedHttp {
+	previews := map[string]*conf.PreparedHttp{}
+	nots := map[string]*conf.Notification{}
+	for name, not := range a.CritNotification.Notifications {
+		nots[name] = not
+	}
+	for name, not := range a.WarnNotification.Notifications {
+		nots[name] = not
+	}
+	for name, not := range nots {
+		if not.Get != nil || not.GetTemplate != "" {
+			previews["GET "+name] = not.PrepHttp("GET", not.Get, not.GetTemplate, rt, ak).(*conf.PreparedHttp)
+		}
+		if not.Post != nil || not.PostTemplate != "" {
+			previews["POST "+name] = not.PrepHttp("POST", not.Post, not.PostTemplate, rt, ak).(*conf.PreparedHttp)
+		}
+	}
+	return previews
 }
 
 type ruleResult struct {
@@ -264,9 +289,10 @@ type ruleResult struct {
 	Normals   []models.AlertKey
 	Time      time.Time
 	*models.RenderedTemplates
-	Data    interface{}
-	Result  map[models.AlertKey]*models.Event
-	Warning []string
+	HTTPNotifications map[string]*conf.PreparedHttp
+	Data              interface{}
+	Result            map[models.AlertKey]*models.Event
+	Warning           []string
 }
 
 func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
@@ -360,8 +386,9 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 		Sets         []*Set
 		AlertHistory map[models.AlertKey]*Histories
 		*models.RenderedTemplates
-		Data interface{} `json:",omitempty"`
-		Hash string
+		HTTPNotifications map[string]*conf.PreparedHttp
+		Data              interface{} `json:",omitempty"`
+		Hash              string
 	}{
 		AlertHistory: make(map[models.AlertKey]*Histories),
 		Hash:         hash,
@@ -384,6 +411,7 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 		}
 		if res.Data != nil {
 			ret.RenderedTemplates = res.RenderedTemplates
+			ret.HTTPNotifications = res.HTTPNotifications
 			ret.Data = res.Data
 			for k, v := range res.Result {
 				set.Results = append(set.Results, &Result{

@@ -390,7 +390,7 @@ func JSON(h func(miniprofiler.Timer, http.ResponseWriter, *http.Request) (interf
 		}
 		buf := new(bytes.Buffer)
 		enc := json.NewEncoder(buf)
-		if strings.Contains(r.Header.Get("Accept"), "html") {
+		if strings.Contains(r.Header.Get("Accept"), "html") || strings.Contains(r.Host, "localhost") {
 			enc.SetIndent("", "  ")
 		}
 		if err := enc.Encode(d); err != nil {

@@ -62,7 +62,7 @@ type PreparedNotification interface {
 type PreparedHttp struct {
 	URL     string
 	Method  string
-	Headers map[string]string
+	Headers map[string]string `json:",omitempty"`
 	Body    string
 }
 
