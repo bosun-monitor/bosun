@@ -335,7 +335,7 @@
 				<div class="panel-heading">
 					<h3 class="panel-title">{{name}}</h3>
 				</div>
-				<div class="panel-body template">
+				<div class="panel-body">
 					<div class='row'>
 						<div class='col-md-1'><b>URL:</b></div>
 						<div class='col-md-5'>{{dat.URL}}</div>
@@ -345,7 +345,7 @@
 							<div class='col-md-1'><b>Headers:</b></div>
 						</div>
 						<div class='row' ng-repeat="(k,v) in dat.Headers">
-							<div class='col-md-2'><b>{{k}}:</b></div>
+							<div class='col-md-2'>&nbsp;&nbsp;&nbsp;&nbsp;<b>{{k}}:</b></div>
 							<div class='col-md-5'>{{v}}</div>
 						</div>
 					</div>
@@ -355,6 +355,7 @@
 							<pre>{{dat.Body}}</pre>
 						</div>
 					</div>
+					<div class='row' style='margin-top:10px;'><div class='col-md-2'><button class='btn btn-primary'>Test</button></div></div>
 				</div>
 				<div ng-hide="httpNotifications" class='col-md-12'>
 					<h4>No Http Notifications</h4>
