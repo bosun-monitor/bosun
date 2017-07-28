@@ -1,6 +1,7 @@
 package web
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -274,10 +275,10 @@ func buildNotificationPreviews(a *conf.Alert, rt *models.RenderedTemplates, ak s
 	}
 	for name, not := range nots {
 		if not.Get != nil || not.GetTemplate != "" {
-			previews["GET "+name] = not.PrepHttp("GET", not.Get, not.GetTemplate, rt, ak).(*conf.PreparedHttp)
+			previews["GET "+name] = not.PrepHttp("GET", not.Get, not.GetTemplate, rt, ak)
 		}
 		if not.Post != nil || not.PostTemplate != "" {
-			previews["POST "+name] = not.PrepHttp("POST", not.Post, not.PostTemplate, rt, ak).(*conf.PreparedHttp)
+			previews["POST "+name] = not.PrepHttp("POST", not.Post, not.PostTemplate, rt, ak)
 		}
 	}
 	return previews
@@ -293,6 +294,23 @@ type ruleResult struct {
 	Data              interface{}
 	Result            map[models.AlertKey]*models.Event
 	Warning           []string
+}
+
+func TestHTTPNotification(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	prep := &conf.PreparedHttp{}
+	dec := json.NewDecoder(r.Body)
+	if err := dec.Decode(prep); err != nil {
+		return nil, err
+	}
+	code, err := prep.Send()
+	dat := &struct {
+		Error  string
+		Status int
+	}{"", code}
+	if err != nil {
+		dat.Error = err.Error()
+	}
+	return dat, nil
 }
 
 func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {

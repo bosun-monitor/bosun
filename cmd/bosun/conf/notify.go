@@ -55,10 +55,6 @@ func (n *Notification) DoPrint(payload string) {
 	slog.Infoln(payload)
 }
 
-type PreparedNotification interface {
-	Send() error
-}
-
 type PreparedHttp struct {
 	URL     string
 	Method  string
@@ -66,31 +62,31 @@ type PreparedHttp struct {
 	Body    string
 }
 
-func (p *PreparedHttp) Send() error {
+func (p *PreparedHttp) Send() (int, error) {
 	var body io.Reader
 	if p.Body != "" {
 		body = strings.NewReader(p.Body)
 	}
 	req, err := http.NewRequest(p.Method, p.URL, body)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	resp, err := http.DefaultClient.Do(req)
 	if resp != nil && resp.Body != nil {
 		// Drain up to 512 bytes and close the body to let the Transport reuse the connection
 		io.CopyN(ioutil.Discard, resp.Body, 512)
-		defer resp.Body.Close()
+		resp.Body.Close()
 	}
 	if err != nil {
-		return err
+		return 0, err
 	}
 	if resp.StatusCode >= 300 {
-		return fmt.Errorf("bad response on notification %s: %d", p.Method, resp.StatusCode)
+		return resp.StatusCode, fmt.Errorf("bad response on notification %s: %d", p.Method, resp.StatusCode)
 	}
-	return nil
+	return resp.StatusCode, nil
 }
 
-func (n *Notification) PrepHttp(method string, u *url.URL, urlTplName string, rt *models.RenderedTemplates, ak string) PreparedNotification {
+func (n *Notification) PrepHttp(method string, u *url.URL, urlTplName string, rt *models.RenderedTemplates, ak string) *PreparedHttp {
 	var url string
 	if u != nil {
 		url = u.String()
@@ -111,11 +107,11 @@ func (n *Notification) PrepHttp(method string, u *url.URL, urlTplName string, rt
 
 func (n *Notification) DoHttp(method string, u *url.URL, urlTplName string, rt *models.RenderedTemplates, ak string) {
 	p := n.PrepHttp(method, u, urlTplName, rt, ak)
-	err := p.Send()
+	stat, err := p.Send()
 	if err != nil {
 		slog.Errorf("Sending http notification: %s", err)
 	}
-	slog.Infof("%s notification successful for alert %s.", method, ak)
+	slog.Infof("%s notification successful for alert %s. Status: %d", method, ak, stat)
 }
 
 func (n *Notification) DoPost(rt *models.RenderedTemplates, ak string) {

@@ -45,8 +45,8 @@ interface IConfigScope extends IBosunScope {
 	emailSubject: string;
 	emailBody: string;
 	body: string;
-	customTemplates: {[name: string]:string};
-	httpNotifications: {[name: string]: any};
+	customTemplates: { [name: string]: string };
+	httpNotifications: { [name: string]: any };
 	data: any;
 	tab: string;
 	zws: (v: string) => string;
@@ -241,7 +241,7 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 	};
 
 	$scope.getRunningHash = () => {
-		if (! $scope.saveEnabled) {
+		if (!$scope.saveEnabled) {
 			return
 		}
 		(function tick() {
@@ -458,16 +458,16 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 	function procResults(data: any) {
 		$scope.subject = data.Subject;
 		$scope.body = $sce.trustAsHtml(data.Body);
-		if (data.EmailSubject){
-			data.EmailSubject= atob(data.EmailSubject)
+		if (data.EmailSubject) {
+			data.EmailSubject = atob(data.EmailSubject)
 		}
 		$scope.emailSubject = data.EmailSubject
-		if (data.EmailBody){
-			data.EmailBody= atob(data.EmailBody)
+		if (data.EmailBody) {
+			data.EmailBody = atob(data.EmailBody)
 		}
 		$scope.emailBody = $sce.trustAsHtml(data.EmailBody)
 		$scope.customTemplates = {};
-		for (var k in data.Custom){
+		for (var k in data.Custom) {
 			$scope.customTemplates[k] = data.Custom[k];
 		}
 		$scope.httpNotifications = data.HTTPNotifications;
@@ -498,7 +498,7 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 
 
 	$scope.saveConfig = () => {
-		if (! $scope.saveEnabled) {
+		if (!$scope.saveEnabled) {
 			return;
 		}
 		$scope.saveResult = "Saving; Please Wait"
@@ -524,6 +524,21 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 			return "alert-success"
 		}
 		return "alert-danger"
+	}
+
+	$scope.testNotification = (dat: any) => {
+		dat.msg = "sending"
+		$http.post('/api/rule/notification/test', dat)
+			.success((rDat: any) => {
+				if (rDat.Error) {
+					dat.msg = "Error: " + rDat.Error;
+				} else {
+					dat.msg = "Success! Status Code" + rDat.Status;
+				}
+			})
+			.error((error) => {
+				dat.msg = "Error: " + error;
+			});
 	}
 
 	return $scope;

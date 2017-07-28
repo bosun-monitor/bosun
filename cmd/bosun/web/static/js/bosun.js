@@ -1315,6 +1315,21 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
             }
             return "alert-danger";
         };
+        $scope.testNotification = function (dat) {
+            dat.msg = "sending";
+            $http.post('/api/rule/notification/test', dat)
+                .success(function (rDat) {
+                if (rDat.Error) {
+                    dat.msg = "Error: " + rDat.Error;
+                }
+                else {
+                    dat.msg = "Success! Status Code" + rDat.Status;
+                }
+            })
+                .error(function (error) {
+                dat.msg = "Error: " + error;
+            });
+        };
         return $scope;
     }]);
 bosunControllers.controller('DashboardCtrl', ['$scope', '$http', '$location', function ($scope, $http, $location) {

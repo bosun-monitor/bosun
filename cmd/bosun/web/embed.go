@@ -25,6 +25,7 @@ func RunTsc() {
 	dst := filepath.Join(base, "bosun.js")
 	args := []string{
 		"--out", tmp,
+		"--lib", "ES2015,ES5,DOM,ScriptHost",
 	}
 	matches, _ := filepath.Glob(filepath.Join(base, "*.ts"))
 	sort.Strings(matches)
