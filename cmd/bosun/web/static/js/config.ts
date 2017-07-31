@@ -533,7 +533,7 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 				if (rDat.Error) {
 					dat.msg = "Error: " + rDat.Error;
 				} else {
-					dat.msg = "Success! Status Code" + rDat.Status;
+					dat.msg = "Success! Status Code: " + rDat.Status;
 				}
 			})
 			.error((error) => {
