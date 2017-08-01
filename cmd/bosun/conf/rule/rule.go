@@ -439,15 +439,19 @@ var defaultFuncs = ttemplate.FuncMap{
 	"makeSlice": func(vals ...interface{}) interface{} {
 		return vals
 	},
-	"makeMap": func(vals ...interface{}) (interface{}, error) {
+	"makeMap": func(vals ...interface{}) interface{} {
 		if len(vals)%2 != 0 {
-			return nil, fmt.Errorf("MakeMap requires even number of arguments")
+			return fmt.Errorf("MakeMap requires even number of arguments").Error()
 		}
-		m := map[interface{}]interface{}{}
+		m := map[string]interface{}{}
 		for i := 0; i < len(vals); i += 2 {
-			m[vals[i]] = vals[i+1]
+			key, ok := vals[i].(string)
+			if !ok {
+				return fmt.Errorf("MakeMap requires all map keys to be strings").Error()
+			}
+			m[key] = vals[i+1]
 		}
-		return m, nil
+		return m
 	},
 }
 
