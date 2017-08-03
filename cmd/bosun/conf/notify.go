@@ -71,6 +71,9 @@ func (p *PreparedHttp) Send() (int, error) {
 	if err != nil {
 		return 0, err
 	}
+	for k, v := range p.Headers {
+		req.Header.Set(k, v)
+	}
 	resp, err := http.DefaultClient.Do(req)
 	if resp != nil && resp.Body != nil {
 		// Drain up to 512 bytes and close the body to let the Transport reuse the connection
