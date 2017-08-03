@@ -1,6 +1,7 @@
 package rule
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -452,6 +453,13 @@ var defaultFuncs = ttemplate.FuncMap{
 			m[key] = vals[i+1]
 		}
 		return m
+	},
+	"json": func(v interface{}) string {
+		b, err := json.MarshalIndent(v, "", "  ")
+		if err != nil {
+			return err.Error()
+		}
+		return string(b)
 	},
 }
 
