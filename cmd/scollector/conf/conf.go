@@ -93,6 +93,7 @@ type Conf struct {
 	HbaseRegions        bool
 	Oracles             []Oracle
 	Fastly              []Fastly
+	Iterable            Iterable
 }
 
 type HAProxy struct {
@@ -131,6 +132,10 @@ type GoogleWebmaster struct {
 type Fastly struct {
 	Key            string
 	StatusBaseAddr string
+}
+
+type Iterable struct {
+	StatusBaseAddr string // URL where we get json data
 }
 
 type GoogleAnalyticsSite struct {

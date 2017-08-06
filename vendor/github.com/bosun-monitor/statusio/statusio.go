@@ -15,6 +15,7 @@ import (
 type Client struct {
 	baseAddr string
 	client   *http.Client
+	scheme   string
 }
 
 // NewClient creates a new statusio client for the *public api*.
@@ -23,7 +24,12 @@ func NewClient(baseAddr string) *Client {
 	return &Client{
 		baseAddr: baseAddr,
 		client:   &http.Client{},
+		scheme:   "https",
 	}
+}
+
+func (c *Client) SetScheme(scheme string) {
+	c.scheme = scheme
 }
 
 type SummaryResponse struct {
@@ -140,7 +146,7 @@ func (c *Client) RemoveSubscription() NotImplemented {
 
 func (c *Client) request(path string, s interface{}) error {
 	u := &url.URL{
-		Scheme: "https",
+		Scheme: c.scheme,
 		Host:   c.baseAddr,
 		Path:   path,
 	}
