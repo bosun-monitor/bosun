@@ -96,6 +96,7 @@ type Conf struct {
 	HbaseRegions        bool
 	Oracles             []Oracle
 	Fastly              []Fastly
+	Iterable            Iterable
 }
 
 type HAProxy struct {
@@ -134,6 +135,12 @@ type GoogleWebmaster struct {
 type Fastly struct {
 	Key            string
 	StatusBaseAddr string
+}
+
+type Iterable struct {
+	StatusBaseAddr string // URL where we get json data
+	TsdbPrefix     string
+	MaxDuration    int // max duration of the http request in seconds
 }
 
 type GoogleAnalyticsSite struct {

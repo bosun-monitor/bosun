@@ -1,6 +1,7 @@
 package collectors
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -67,6 +68,7 @@ const (
 	fastlyScheduledMaintDesc       = "The number of currently scheduled maintenances. Does not include maintenance that is current active"
 	fastlyActiveScheduledMaintDesc = "The number of currently scheduled maintenances currently in progress. Includes the 'in_progress' and 'verifying'"
 	fastlyActiveIncidentDesc       = "The number of currently active incidents. Includes the 'investingating', 'identified', and 'monitoring' states."
+	fastlyMaxDuration              = 3 * time.Minute
 )
 
 var (
@@ -76,7 +78,9 @@ var (
 func c_fastly_status(baseAddr string) (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	c := statusio.NewClient(baseAddr)
-	summary, err := c.GetSummary()
+	ctx, cancel := context.WithTimeout(context.Background(), fastlyMaxDuration)
+	defer cancel()
+	summary, err := c.GetSummary(ctx)
 	if err != nil {
 		return md, err
 	}
