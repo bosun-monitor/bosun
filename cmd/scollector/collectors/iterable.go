@@ -1,6 +1,7 @@
 package collectors
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -39,7 +40,10 @@ var componentKey = map[string]string{
 }
 var iterableComponentStatusDesc = fmt.Sprintf(fastlyComponentStatusDesc, "iterable asp")
 
-const bosunPrefix = "iterable.status."
+const (
+	iterablePrefix      = "iterable.status."
+	iterableMaxDuration = 3 * time.Second
+)
 
 // Stat returns the MultiDataPoint with all the interesting
 // components for iterable service.
@@ -47,14 +51,17 @@ const bosunPrefix = "iterable.status."
 func cIterableStat(URL string) (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	c := statusio.NewClient(URL)
-	summary, err := c.GetSummary() // TODO: add timeout
+	ctx, cancel := context.WithTimeout(context.Background(), iterableMaxDuration)
+	defer cancel()
+	summary, err := c.GetSummary(ctx)
 	if err != nil {
 		return md, err
 	}
 	for _, comp := range summary.Components {
 		if key, ok := componentKey[comp.Name]; ok {
 			tagSet := opentsdb.TagSet{}
-			Add(&md, bosunPrefix+key, int(comp.Status), tagSet,
+			// TODO: Add should support a timeout too
+			Add(&md, iterablePrefix+key, int(comp.Status), tagSet,
 				metadata.Gauge, metadata.StatusCode,
 				iterableComponentStatusDesc)
 		}

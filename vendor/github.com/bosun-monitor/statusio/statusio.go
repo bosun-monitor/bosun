@@ -2,6 +2,7 @@
 package statusio
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -51,9 +52,9 @@ type SummaryResponse struct {
 }
 
 // GetSummary returns a summary of the status page, including a status indicator, component statuses, unresolved incidents, and any upcoming or in-progress scheduled maintenances.
-func (c *Client) GetSummary() (SummaryResponse, error) {
+func (c *Client) GetSummary(ctx context.Context) (SummaryResponse, error) {
 	s := SummaryResponse{}
-	err := c.request("api/v2/summary.json", &s)
+	err := c.request(ctx, "api/v2/summary.json", &s)
 	return s, err
 }
 
@@ -67,9 +68,9 @@ type StatusResponse struct {
 
 // GetStatus returns rollup for the whole page. This endpoint includes an indicator - one of none, minor, major, or critical, as well as a human description of the blended component status.
 // Examples of the blended status include "All Systems Operational", "Partial System Outage", and "Major Service Outage".
-func (c *Client) GetStatus() (StatusResponse, error) {
+func (c *Client) GetStatus(ctx context.Context) (StatusResponse, error) {
 	s := StatusResponse{}
-	err := c.request("api/v2/status.json", &s)
+	err := c.request(ctx, "api/v2/status.json", &s)
 	return s, err
 }
 
@@ -79,9 +80,9 @@ type ComponentsResponse struct {
 }
 
 // GetComponents gets the components for the page. Each component is listed along with its status - one of operational, degraded_performance, partial_outage, or major_outage.
-func (c *Client) GetComponents() (ComponentsResponse, error) {
+func (c *Client) GetComponents(ctx context.Context) (ComponentsResponse, error) {
 	comp := ComponentsResponse{}
-	err := c.request("api/v2/components.json", &comp)
+	err := c.request(ctx, "api/v2/components.json", &comp)
 	return comp, err
 }
 
@@ -92,17 +93,17 @@ type IncidentsResponse struct {
 
 // GetUnresolvedIncidents gets a list of any unresolved incidents.
 // This endpoint will only return incidents in the Investigating, Identified, or Monitoring state.
-func (c *Client) GetUnresolvedIncidents() (IncidentsResponse, error) {
+func (c *Client) GetUnresolvedIncidents(ctx context.Context) (IncidentsResponse, error) {
 	i := IncidentsResponse{}
-	err := c.request("api/v2/incidents/unresolved.json", &i)
+	err := c.request(ctx, "api/v2/incidents/unresolved.json", &i)
 	return i, err
 }
 
 // GetIncidents returns a list of the 50 most recent incidents.
 // This includes all unresolved incidents returned in GetUnresolvedIncidents, as well as those in the Resolved and Postmortem state.
-func (c *Client) GetIncidents() (IncidentsResponse, error) {
+func (c *Client) GetIncidents(ctx context.Context) (IncidentsResponse, error) {
 	i := IncidentsResponse{}
-	err := c.request("api/v2/incidents.json", &i)
+	err := c.request(ctx, "api/v2/incidents.json", &i)
 	return i, err
 }
 
@@ -113,24 +114,24 @@ type ScheduledMaintenancesResponse struct {
 
 // GetUpcomingScheduledMaintenances gets a list of any upcoming maintenances.
 // This endpoint will only return scheduled maintenances still in the Scheduled state.
-func (c *Client) GetUpcomingScheduledMaintenances() (ScheduledMaintenancesResponse, error) {
+func (c *Client) GetUpcomingScheduledMaintenances(ctx context.Context) (ScheduledMaintenancesResponse, error) {
 	s := ScheduledMaintenancesResponse{}
-	err := c.request("api/v2/scheduled-maintenances/upcoming.json", &s)
+	err := c.request(ctx, "api/v2/scheduled-maintenances/upcoming.json", &s)
 	return s, err
 }
 
 // GetActiveScheduledMaintenances gets a list of any upcoming maintenances. // This endpoint will only return scheduled maintenances in the In Progress or Verifying state.
-func (c *Client) GetActiveScheduledMaintenances() (ScheduledMaintenancesResponse, error) {
+func (c *Client) GetActiveScheduledMaintenances(ctx context.Context) (ScheduledMaintenancesResponse, error) {
 	s := ScheduledMaintenancesResponse{}
-	err := c.request("api/v2/scheduled-maintenances/active.json", &s)
+	err := c.request(ctx, "api/v2/scheduled-maintenances/active.json", &s)
 	return s, err
 }
 
 // GetAllScheduledMaintenances gets a list of the 50 most recent scheduled maintenances.
 // This includes scheduled maintenances as described in the above two endpoints, as well as those in the Completed state.
-func (c *Client) GetAllScheduledMaintenances() (ScheduledMaintenancesResponse, error) {
+func (c *Client) GetAllScheduledMaintenances(ctx context.Context) (ScheduledMaintenancesResponse, error) {
 	s := ScheduledMaintenancesResponse{}
-	err := c.request("api/v2/scheduled-maintenances.json", &s)
+	err := c.request(ctx, "api/v2/scheduled-maintenances.json", &s)
 	return s, err
 }
 
@@ -151,7 +152,7 @@ func (c *Client) RemoveSubscription() NotImplemented {
 	return true
 }
 
-func (c *Client) request(path string, s interface{}) error {
+func (c *Client) request(ctx context.Context, path string, s interface{}) error {
 	u := &url.URL{
 		Scheme: c.scheme,
 		Host:   c.baseAddr,
@@ -162,6 +163,7 @@ func (c *Client) request(path string, s interface{}) error {
 		slog.Error(err)
 		return err
 	}
+	req = req.WithContext(ctx)
 	req.Header.Set("Accept", "application/json")
 	resp, err := c.client.Do(req)
 	if err != nil {
