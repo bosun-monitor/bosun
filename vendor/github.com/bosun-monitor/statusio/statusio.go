@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"bosun.org/slog"
@@ -18,18 +19,24 @@ type Client struct {
 	scheme   string
 }
 
+// extractScheme detects if the url is http instead of https
+func extractScheme(url string) (scheme, baseAddr string) {
+	baseAddr = strings.TrimPrefix(url, "http://")
+	if len(baseAddr) != len(url) {
+		return "http", baseAddr
+	}
+	return "https", strings.TrimPrefix(url, "https://")
+}
+
 // NewClient creates a new statusio client for the *public api*.
 // baseAddr is i.e. status.example.copm/api/v2/
 func NewClient(baseAddr string) *Client {
+	scheme, baseAddr := extractScheme(baseAddr)
 	return &Client{
 		baseAddr: baseAddr,
 		client:   &http.Client{},
-		scheme:   "https",
+		scheme:   scheme,
 	}
-}
-
-func (c *Client) SetScheme(scheme string) {
-	c.scheme = scheme
 }
 
 type SummaryResponse struct {

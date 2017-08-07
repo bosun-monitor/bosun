@@ -47,7 +47,6 @@ const bosunPrefix = "iterable.status."
 func cIterableStat(URL string) (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	c := statusio.NewClient(URL)
-	c.SetScheme("http")
 	summary, err := c.GetSummary() // TODO: add timeout
 	if err != nil {
 		return md, err
