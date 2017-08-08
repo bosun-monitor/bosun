@@ -321,6 +321,16 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 			checkTemplateKey(not.EmailSubjectTemplate, "email subject", true)
 			checkTemplateKey(not.GetTemplate, "get url", true)
 			checkTemplateKey(not.PostTemplate, "post url", true)
+			for at, ntk := range not.ActionTemplateKeys {
+				key := at.String()
+				if at == models.ActionNone {
+					key = "default"
+				}
+				checkTemplateKey(ntk.BodyTemplate, fmt.Sprintf("%s body template", key), false)
+				checkTemplateKey(ntk.EmailSubjectTemplate, fmt.Sprintf("%s email subject", key), true)
+				checkTemplateKey(ntk.GetTemplate, fmt.Sprintf("%s get url", key), true)
+				checkTemplateKey(ntk.PostTemplate, fmt.Sprintf("%s post url", key), true)
+			}
 		}
 		for _, not := range a.CritNotification.Notifications {
 			check(not)

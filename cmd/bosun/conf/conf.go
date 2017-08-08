@@ -220,6 +220,13 @@ func (t *Template) IsEmailBodyDifferent() bool {
 	return strings.Contains(t.RawBody, ".IsEmail")
 }
 
+// NotificationTemplateKeys is the set of fields that may be templated out per notification. Each field points to the name of a field on a template object.
+type NotificationTemplateKeys struct {
+	PostTemplate, GetTemplate string // templates to use for post/get urls
+	BodyTemplate              string // template to use for post body or email body. defaults to "body" for post and "emailBody" (if it exists) for email
+	EmailSubjectTemplate      string // tempalte to use for email subject. Default to "subject"
+}
+
 // Notification stores information about a notification. A notification
 // is the definition of an action that should be performed when an
 // alert is triggered
@@ -231,9 +238,11 @@ type Notification struct {
 
 	Post, Get *url.URL
 
-	PostTemplate, GetTemplate string // templates to use for post/get urls
-	BodyTemplate              string // template to use for post body or email body. defaults to "body" for post and "emailBody" (if it exists) for email
-	EmailSubjectTemplate      string // tempalte to use for email subject. Default to "subject"
+	// template keys to use for plain notifications
+	NotificationTemplateKeys
+
+	// template keys to use for action notifications. ActionNone contains catch-all fields if present. More specific will override.
+	ActionTemplateKeys map[models.ActionType]NotificationTemplateKeys
 
 	Print        bool
 	Next         *Notification
