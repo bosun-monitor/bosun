@@ -129,10 +129,11 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 		c.errorf("duplicate alert name: %s", name)
 	}
 	a := conf.Alert{
-		Vars:             make(map[string]string),
-		Name:             name,
-		CritNotification: new(conf.Notifications),
-		WarnNotification: new(conf.Notifications),
+		Vars:              make(map[string]string),
+		Name:              name,
+		CritNotification:  new(conf.Notifications),
+		WarnNotification:  new(conf.Notifications),
+		AlertTemplateKeys: map[string]*template.Template{},
 	}
 	a.Text = s.RawText
 	a.Locator = newSectionLocator(s)
@@ -300,29 +301,26 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 			// alert checks for body or subject since some templates might not be directly used in alerts
 			c.errorf("alert templates must have body and subject specified")
 		}
-		isMissing := func(s string) bool {
-			if s == "" || s == "body" || s == "subject" {
-				return false
-			}
-			if a.Template.CustomTemplates[s] != nil {
-				return false
-			}
-			return true
-		}
+		// make sure each notification has it's needed template keys present in this alert's template
+		// also build lookup of which template keys need to be rendered at alert time, and which do not
 		check := func(not *conf.Notification) {
-			errmsg := fmt.Sprintf("notification %s uses template key %s in %s, but template %s does not include it", not.Name, "%s", "%s", a.Template.Name)
-			if isMissing(not.BodyTemplate) {
-				c.errorf(errmsg, not.BodyTemplate, "body template")
+			checkTemplateKey := func(templateKey string, msg string, alertTime bool) {
+				if templateKey == "" || templateKey == "body" || templateKey == "subject" {
+					return
+				}
+				if tmpl := a.Template.CustomTemplates[templateKey]; tmpl != nil {
+					if alertTime {
+						a.AlertTemplateKeys[templateKey] = tmpl
+					}
+					return
+				}
+				errmsg := fmt.Sprintf("notification %s uses template key %s in %s, but template %s does not include it", not.Name, "%s", "%s", a.Template.Name)
+				c.errorf(errmsg, templateKey, msg)
 			}
-			if isMissing(not.EmailSubjectTemplate) {
-				c.errorf(errmsg, not.EmailSubjectTemplate, "email subject")
-			}
-			if isMissing(not.GetTemplate) {
-				c.errorf(errmsg, not.GetTemplate, "get url")
-			}
-			if isMissing(not.PostTemplate) {
-				c.errorf(errmsg, not.PostTemplate, "post url")
-			}
+			checkTemplateKey(not.BodyTemplate, "body template", true)
+			checkTemplateKey(not.EmailSubjectTemplate, "email subject", true)
+			checkTemplateKey(not.GetTemplate, "get url", true)
+			checkTemplateKey(not.PostTemplate, "post url", true)
 		}
 		for _, not := range a.CritNotification.Notifications {
 			check(not)

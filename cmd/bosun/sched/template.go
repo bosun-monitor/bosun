@@ -234,9 +234,9 @@ func (s *Schedule) ExecuteAll(rh *RunHistory, a *conf.Alert, st *models.Incident
 		rt.EmailBody = []byte(emailBody)
 		rt.Attachments = atts
 	}
-	for k, v := range t.CustomTemplates {
+	for k, v := range a.AlertTemplateKeys {
 		// emailsubject/body get handled specially above
-		if k == "emailBody" || k == "emailSubject" {
+		if k == "emailBody" || k == "emailSubject" || k == "body" || k == "subject" {
 			continue
 		}
 		c := ctx()
