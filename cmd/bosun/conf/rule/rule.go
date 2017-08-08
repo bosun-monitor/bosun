@@ -497,51 +497,6 @@ func (c *Conf) seen(v string, m map[string]bool) {
 	m[v] = true
 }
 
-var builtins = htemplate.FuncMap{
-	"and":      nilFunc,
-	"call":     nilFunc,
-	"html":     nilFunc,
-	"index":    nilFunc,
-	"js":       nilFunc,
-	"len":      nilFunc,
-	"not":      nilFunc,
-	"or":       nilFunc,
-	"print":    nilFunc,
-	"printf":   nilFunc,
-	"println":  nilFunc,
-	"urlquery": nilFunc,
-	"eq":       nilFunc,
-	"ge":       nilFunc,
-	"gt":       nilFunc,
-	"le":       nilFunc,
-	"lt":       nilFunc,
-	"ne":       nilFunc,
-
-	// HTML-specific funcs
-	"html_template_attrescaper":     nilFunc,
-	"html_template_commentescaper":  nilFunc,
-	"html_template_cssescaper":      nilFunc,
-	"html_template_cssvaluefilter":  nilFunc,
-	"html_template_htmlnamefilter":  nilFunc,
-	"html_template_htmlescaper":     nilFunc,
-	"html_template_jsregexpescaper": nilFunc,
-	"html_template_jsstrescaper":    nilFunc,
-	"html_template_jsvalescaper":    nilFunc,
-	"html_template_nospaceescaper":  nilFunc,
-	"html_template_rcdataescaper":   nilFunc,
-	"html_template_urlescaper":      nilFunc,
-	"html_template_urlfilter":       nilFunc,
-	"html_template_urlnormalizer":   nilFunc,
-
-	// bosun-specific funcs
-	"V":       nilFunc,
-	"bytes":   nilFunc,
-	"replace": nilFunc,
-	"short":   nilFunc,
-}
-
-func nilFunc() {}
-
 func (c *Conf) NewExpr(s string) *expr.Expr {
 	exp, err := expr.New(s, c.GetFuncs(c.backends))
 	if err != nil {
