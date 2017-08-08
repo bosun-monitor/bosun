@@ -3,6 +3,7 @@ package rule
 import (
 	"encoding/json"
 	"fmt"
+	htemplate "html/template"
 	"io/ioutil"
 	"os"
 	"regexp"
@@ -13,14 +14,11 @@ import (
 
 	"bosun.org/models"
 
-	htemplate "html/template"
-	ttemplate "text/template"
-
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/conf/rule/parse"
+	"bosun.org/cmd/bosun/conf/template"
 	"bosun.org/cmd/bosun/expr"
 	eparse "bosun.org/cmd/bosun/expr/parse"
-
 	"bosun.org/opentsdb"
 	"github.com/MiniProfiler/go/miniprofiler"
 )
@@ -44,14 +42,13 @@ type Conf struct {
 
 	sysVars map[string]string
 
-	tree                *parse.Tree
-	node                parse.Node
-	unknownTemplate     string
-	bodies              *htemplate.Template
-	subjects            *ttemplate.Template
-	customHtmlTemplates map[string]*htemplate.Template
-	customTextTemplates map[string]*ttemplate.Template
-	squelch             []string
+	tree            *parse.Tree
+	node            parse.Node
+	unknownTemplate string
+	bodies          *template.Template
+	subjects        *template.Template
+	customTemplates map[string]*template.Template
+	squelch         []string
 
 	writeLock chan bool
 
@@ -141,22 +138,21 @@ func (c *Conf) SaveConf(newConf *Conf) error {
 func NewConf(name string, backends conf.EnabledBackends, sysVars map[string]string, text string) (c *Conf, err error) {
 	defer errRecover(&err)
 	c = &Conf{
-		Name:                name,
-		Vars:                make(map[string]string),
-		Templates:           make(map[string]*conf.Template),
-		Alerts:              make(map[string]*conf.Alert),
-		Notifications:       make(map[string]*conf.Notification),
-		RawText:             text,
-		bodies:              htemplate.New(name).Funcs(htemplate.FuncMap(defaultFuncs)),
-		subjects:            ttemplate.New(name).Funcs(defaultFuncs),
-		customHtmlTemplates: map[string]*htemplate.Template{},
-		customTextTemplates: map[string]*ttemplate.Template{},
-		Lookups:             make(map[string]*conf.Lookup),
-		Macros:              make(map[string]*conf.Macro),
-		writeLock:           make(chan bool, 1),
-		deferredSections:    make(map[string][]deferredSection),
-		backends:            backends,
-		sysVars:             sysVars,
+		Name:             name,
+		Vars:             make(map[string]string),
+		Templates:        make(map[string]*conf.Template),
+		Alerts:           make(map[string]*conf.Alert),
+		Notifications:    make(map[string]*conf.Notification),
+		RawText:          text,
+		bodies:           template.New("body").Funcs(defaultFuncs),
+		subjects:         template.New("subject").Funcs(defaultFuncs),
+		customTemplates:  map[string]*template.Template{},
+		Lookups:          make(map[string]*conf.Lookup),
+		Macros:           make(map[string]*conf.Macro),
+		writeLock:        make(chan bool, 1),
+		deferredSections: make(map[string][]deferredSection),
+		backends:         backends,
+		sysVars:          sysVars,
 	}
 	c.tree, err = parse.Parse(name, text)
 	if err != nil {
@@ -387,7 +383,7 @@ func (c *Conf) loadMacro(s *parse.SectionNode) {
 // should be non-nil. The exception to this is when a string is returned, in which case
 // the string format of the error should be returned. This allows for error handling within
 // templates for information that is helpful but not stricly necessary
-var defaultFuncs = ttemplate.FuncMap{
+var defaultFuncs = template.FuncMap{
 	"bytes": func(v interface{}) string {
 		switch v := v.(type) {
 		case string:

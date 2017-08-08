@@ -335,7 +335,7 @@ func (s *Schedule) executeTemplates(st *models.IncidentState, event *models.Even
 	rt, errs := s.ExecuteAll(r, a, st)
 	if len(errs) > 0 {
 		for _, err := range errs {
-			slog.Errorf("!!!!!!!rendering templates for %s: %s", a.Name, err)
+			slog.Errorf("rendering templates for %s: %s", a.Name, err)
 		}
 		subject, body, err := s.ExecuteBadTemplate(errs, r, a, st)
 		if err != nil {

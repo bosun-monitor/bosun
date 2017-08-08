@@ -2,17 +2,16 @@ package rule
 
 import (
 	"fmt"
-	htemplate "html/template"
 	"net/mail"
 	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
-	ttemplate "text/template"
 	"time"
 
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/conf/rule/parse"
+	"bosun.org/cmd/bosun/conf/template"
 	eparse "bosun.org/cmd/bosun/expr/parse"
 	"bosun.org/models"
 	"bosun.org/opentsdb"
@@ -31,12 +30,11 @@ func (c *Conf) loadTemplate(s *parse.SectionNode) {
 	}
 	t.Text = s.RawText
 	t.Locator = newSectionLocator(s)
-	funcs := ttemplate.FuncMap{
+	funcs := template.FuncMap{
 		"V": func(v string) string {
 			return c.Expand(v, t.Vars, false)
 		},
 	}
-	hFuncs := htemplate.FuncMap(funcs)
 	saw := make(map[string]bool)
 	inherits := []string{}
 	var kvps = map[string]string{}
@@ -78,16 +76,14 @@ func (c *Conf) loadTemplate(s *parse.SectionNode) {
 		switch k {
 		case "body":
 			t.RawBody = v
-			tmpl := c.bodies.New(name).Funcs(hFuncs)
-			_, err := tmpl.Parse(t.RawBody)
+			tmpl, err := c.bodies.New(name).Funcs(funcs).Parse(t.RawBody)
 			if err != nil {
 				c.error(err)
 			}
 			t.Body = tmpl
 		case "subject":
 			t.RawSubject = v
-			tmpl := c.subjects.New(name).Funcs(funcs)
-			_, err := tmpl.Parse(t.RawSubject)
+			tmpl, err := c.subjects.New(name).Funcs(funcs).Parse(t.RawSubject)
 			if err != nil {
 				c.error(err)
 			}
@@ -101,27 +97,16 @@ func (c *Conf) loadTemplate(s *parse.SectionNode) {
 				continue
 			}
 			t.RawCustoms[k] = v
-			var ex conf.GenericTemplate
-			var err error
-			if isHTMLTemplate(k) {
-				t, ok := c.customHtmlTemplates[k]
-				if !ok {
-					t = htemplate.New(c.Name).Funcs(htemplate.FuncMap(defaultFuncs))
-					c.customHtmlTemplates[k] = t
-				}
-				ex, err = t.New(name).Funcs(hFuncs).Parse(v)
-			} else {
-				t, ok := c.customTextTemplates[k]
-				if !ok {
-					t = ttemplate.New(c.Name).Funcs(defaultFuncs)
-					c.customTextTemplates[k] = t
-				}
-				ex, err = t.New(name).Funcs(funcs).Parse(v)
+			ct, ok := c.customTemplates[k]
+			if !ok {
+				tmpl := template.New(k).Funcs(defaultFuncs)
+				c.customTemplates[k] = tmpl
 			}
+			tmpl, err := ct.New(name).Funcs(funcs).Parse(v)
 			if err != nil {
 				c.error(err)
 			}
-			t.CustomTemplates[k] = ex
+			t.CustomTemplates[k] = tmpl
 		}
 	}
 	c.at(s)

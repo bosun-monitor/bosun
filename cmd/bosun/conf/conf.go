@@ -390,7 +390,8 @@ type Alert struct {
 	TemplateName string   `json:"-"`
 	RawSquelch   []string `json:"-"`
 
-	Locator `json:"-"`
+	Locator           `json:"-"`
+	AlertTemplateKeys []string `json:"-"`
 }
 
 // A Locator stores the information about the location of the rule in the underlying
