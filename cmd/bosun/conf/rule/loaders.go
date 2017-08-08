@@ -25,7 +25,7 @@ func (c *Conf) loadTemplate(s *parse.SectionNode) {
 	t := conf.Template{
 		Vars:            make(map[string]string),
 		Name:            name,
-		CustomTemplates: map[string]conf.GenericTemplate{},
+		CustomTemplates: map[string]*template.Template{},
 		RawCustoms:      map[string]string{},
 	}
 	t.Text = s.RawText

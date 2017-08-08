@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"hash/fnv"
-	"io"
+
 	"net/mail"
 	"net/url"
 	"os/exec"
@@ -14,12 +14,12 @@ import (
 
 	"github.com/influxdata/influxdb/client/v2"
 
+	"bosun.org/cmd/bosun/conf/template"
 	"bosun.org/cmd/bosun/expr"
 	"bosun.org/cmd/bosun/expr/parse"
 	"bosun.org/graphite"
 	"bosun.org/models"
 	"bosun.org/opentsdb"
-
 	"bosun.org/slog"
 )
 
@@ -194,9 +194,9 @@ type Template struct {
 	Text string
 	Vars
 	Name            string
-	Body            GenericTemplate            `json:"-"`
-	Subject         GenericTemplate            `json:"-"`
-	CustomTemplates map[string]GenericTemplate `json:"-"`
+	Body            *template.Template            `json:"-"`
+	Subject         *template.Template            `json:"-"`
+	CustomTemplates map[string]*template.Template `json:"-"`
 
 	RawBody, RawSubject string
 	RawCustoms          map[string]string
@@ -218,11 +218,6 @@ func (t *Template) IsEmailBodyDifferent() bool {
 		return true
 	}
 	return strings.Contains(t.RawBody, ".IsEmail")
-}
-
-// GenericTemplate can be httemplate or ttemplate.
-type GenericTemplate interface {
-	Execute(w io.Writer, ctx interface{}) error
 }
 
 // Notification stores information about a notification. A notification

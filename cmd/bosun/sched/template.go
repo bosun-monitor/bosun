@@ -5,7 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"html/template"
+	htemplate "html/template"
 	"io"
 	"io/ioutil"
 	"math"
@@ -15,11 +15,12 @@ import (
 	"time"
 
 	"bosun.org/cmd/bosun/conf"
+	"bosun.org/cmd/bosun/conf/template"
 	"bosun.org/cmd/bosun/expr"
 	"bosun.org/models"
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
-	"github.com/aymerick/douceur/inliner"
+
 	"github.com/jmoiron/jsonq"
 )
 
@@ -161,20 +162,13 @@ func (s *Schedule) ExecuteBody(rh *RunHistory, a *conf.Alert, st *models.Inciden
 		return "", nil, nil
 	}
 	c := s.Data(rh, st, a, isEmail)
-	return s.executeTpl(tp, c, true)
+	return s.executeTpl(tp, c)
 }
 
-func (s *Schedule) executeTpl(t conf.GenericTemplate, c *Context, inlineCss bool) (string, []*models.Attachment, error) {
+func (s *Schedule) executeTpl(t *template.Template, c *Context) (string, []*models.Attachment, error) {
 	buf := new(bytes.Buffer)
 	if err := t.Execute(buf, c); err != nil {
 		return "", nil, err
-	}
-	if inlineCss {
-		if inline, err := inliner.Inline(buf.String()); err == nil {
-			buf = bytes.NewBufferString(inline)
-		} else {
-			slog.Errorln(err)
-		}
 	}
 	return buf.String(), c.Attachments, nil
 }
@@ -192,7 +186,7 @@ func (s *Schedule) ExecuteSubject(rh *RunHistory, a *conf.Alert, st *models.Inci
 		return "", nil
 	}
 	c := s.Data(rh, st, a, isEmail)
-	d, _, err := s.executeTpl(tp, c, false)
+	d, _, err := s.executeTpl(tp, c)
 	if err != nil {
 		return "", err
 	}
@@ -246,7 +240,7 @@ func (s *Schedule) ExecuteAll(rh *RunHistory, a *conf.Alert, st *models.Incident
 			continue
 		}
 		c := ctx()
-		rendered, _, err := s.executeTpl(v, c, false)
+		rendered, _, err := s.executeTpl(v, c)
 		e(err, k)
 		rt.Custom[k] = rendered
 	}
@@ -446,7 +440,7 @@ func (c *Context) graph(v interface{}, unit string, filter bool) (val interface{
 	const width = 800
 	const height = 600
 	footerHTML := fmt.Sprintf(`<p><small>Query: %s<br>Time: %s</small></p>`,
-		template.HTMLEscapeString(exprText),
+		htemplate.HTMLEscapeString(exprText),
 		c.runHistory.Start.Format(time.RFC3339))
 	if c.IsEmail {
 		err := c.schedule.ExprPNG(nil, &buf, width, height, unit, res)
@@ -460,9 +454,9 @@ func (c *Context) graph(v interface{}, unit string, filter bool) (val interface{
 			Filename:    name,
 			ContentType: "image/png",
 		})
-		return template.HTML(fmt.Sprintf(`<a href="%s" style="text-decoration: none"><img alt="%s" src="cid:%s" /></a>%s`,
+		return htemplate.HTML(fmt.Sprintf(`<a href="%s" style="text-decoration: none"><img alt="%s" src="cid:%s" /></a>%s`,
 			c.GraphLink(exprText),
-			template.HTMLEscapeString(fmt.Sprint(v)),
+			htemplate.HTMLEscapeString(fmt.Sprint(v)),
 			name,
 			footerHTML,
 		))
@@ -474,7 +468,7 @@ func (c *Context) graph(v interface{}, unit string, filter bool) (val interface{
 	}
 	buf.WriteString(`</a>`)
 	buf.WriteString(footerHTML)
-	return template.HTML(buf.String())
+	return htemplate.HTML(buf.String())
 }
 
 // Graph returns an SVG for the given result (or expression, for which it gets the result)

@@ -3,12 +3,11 @@ package sched
 import (
 	"bytes"
 	"fmt"
-	htemplate "html/template"
 	"strings"
-	ttemplate "text/template"
 	"time"
 
 	"bosun.org/cmd/bosun/conf"
+	"bosun.org/cmd/bosun/conf/template"
 	"bosun.org/models"
 	"bosun.org/slog"
 )
@@ -201,7 +200,7 @@ func (s *Schedule) sendUnknownNotifications() {
 	s.pendingUnknowns = make(map[*conf.Notification][]*models.IncidentState)
 }
 
-var unknownMultiGroup = ttemplate.Must(ttemplate.New("unknownMultiGroup").Parse(`
+var unknownMultiGroup = template.Must(template.New("unknownMultiGroupHTML").Parse(`
 	<p>Threshold of {{ .Threshold }} reached for unknown notifications. The following unknown
 	group emails were not sent.
 	<ul>
@@ -252,7 +251,7 @@ func (s *Schedule) utnotify(groups map[string]models.AlertKeys, n *conf.Notifica
 }
 
 var defaultUnknownTemplate = &conf.Template{
-	Body: htemplate.Must(htemplate.New("").Parse(`
+	Body: template.Must(template.New("body").Parse(`
 		<p>Time: {{.Time}}
 		<p>Name: {{.Name}}
 		<p>Alerts:
@@ -260,7 +259,7 @@ var defaultUnknownTemplate = &conf.Template{
 			<br>{{.}}
 		{{end}}
 	`)),
-	Subject: ttemplate.Must(ttemplate.New("").Parse(`{{.Name}}: {{.Group | len}} unknown alerts`)),
+	Subject: template.Must(template.New("subject").Parse(`{{.Name}}: {{.Group | len}} unknown alerts`)),
 }
 
 // unotify builds an unknown notification for an alertkey or a group of alert keys. It renders the template
@@ -298,8 +297,8 @@ func (s *Schedule) QueueNotification(ak models.AlertKey, n *conf.Notification, s
 	return s.DataAccess.Notifications().InsertNotification(ak, n.Name, started.Add(n.Timeout))
 }
 
-var actionNotificationSubjectTemplate *ttemplate.Template
-var actionNotificationBodyTemplate *htemplate.Template
+var actionNotificationSubjectTemplate *template.Template
+var actionNotificationBodyTemplate *template.Template
 
 func init() {
 	subject := `{{$first := index .States 0}}{{$count := len .States}}
@@ -318,8 +317,8 @@ func init() {
 		</li>
 	{{end}}
 </ul>`
-	actionNotificationSubjectTemplate = ttemplate.Must(ttemplate.New("").Parse(strings.Replace(subject, "\n", "", -1)))
-	actionNotificationBodyTemplate = htemplate.Must(htemplate.New("").Parse(body))
+	actionNotificationSubjectTemplate = template.Must(template.New("subject").Parse(strings.Replace(subject, "\n", "", -1)))
+	actionNotificationBodyTemplate = template.Must(template.New("body").Parse(body))
 }
 
 func (s *Schedule) ActionNotify(at models.ActionType, user, message string, aks []models.AlertKey) error {

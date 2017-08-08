@@ -2,10 +2,13 @@
 package template
 
 import (
+	"bytes"
 	htemplate "html/template"
 	"io"
 	"strings"
 	ttemplate "text/template"
+
+	"github.com/aymerick/douceur/inliner"
 )
 
 type iface interface {
@@ -16,7 +19,7 @@ var _ htemplate.Template
 var _ ttemplate.Template
 
 type Template struct {
-	iface
+	inner  iface
 	isHTML bool
 }
 
@@ -27,25 +30,53 @@ func New(name string) *Template {
 		isHTML: isHTMLTemplate(name),
 	}
 	if t.isHTML {
-		t.iface = htemplate.New(name)
+		t.inner = htemplate.New(name)
 	} else {
-		t.iface = ttemplate.New(name)
+		t.inner = ttemplate.New(name)
 	}
 	return t
+}
+
+func (t *Template) Execute(w io.Writer, ctx interface{}) error {
+	if t.isHTML {
+		// inline css for html templates
+		buf := &bytes.Buffer{}
+		err := t.inner.Execute(buf, ctx)
+		if err != nil {
+			return err
+		}
+		s, err := inliner.Inline(buf.String())
+		if err != nil {
+			return err
+		}
+		if _, err = w.Write([]byte(s)); err != nil {
+			return err
+		}
+	} else {
+		return t.inner.Execute(w, ctx)
+	}
+	return nil
 }
 
 func (t *Template) copy(tmpl iface) *Template {
 	return &Template{
 		isHTML: t.isHTML,
-		iface:  tmpl,
+		inner:  tmpl,
 	}
 }
 
 func (t *Template) t() *ttemplate.Template {
-	return t.iface.(*(ttemplate.Template))
+	return t.inner.(*(ttemplate.Template))
 }
 func (t *Template) h() *htemplate.Template {
-	return t.iface.(*htemplate.Template)
+	return t.inner.(*htemplate.Template)
+}
+
+func Must(t *Template, err error) *Template {
+	if err != nil {
+		panic(err)
+	}
+	return t
 }
 
 func (t *Template) New(name string) *Template {
