@@ -31,15 +31,8 @@ func init() {
 		"The number of email notifications that Bosun failed to send.")
 }
 
-// TemplateProvider is a way to obtain content to use for notifications.
-// It may be a set of pre-rendered templates for an alert, or a object that knows how to render them on-the-fly in the case of actions, etc.
-type TemplateProvider interface {
-	Get(key string) string
-	GetDefault(key string, defaultKey string) string
-}
-
 // Notify triggers Email/HTTP/Print actions for the Notification object
-func (n *Notification) Notify(rt TemplateProvider, c SystemConfProvider, ak string, attachments ...*models.Attachment) {
+func (n *Notification) Notify(rt *models.RenderedTemplates, c SystemConfProvider, ak string, attachments ...*models.Attachment) {
 	if len(n.Email) > 0 {
 		go n.DoEmail(rt, c, ak, attachments...)
 	}
@@ -51,9 +44,9 @@ func (n *Notification) Notify(rt TemplateProvider, c SystemConfProvider, ak stri
 	}
 	if n.Print {
 		if n.BodyTemplate != "" {
-			go n.DoPrint("Subject: " + rt.Get("subject") + ", Body: " + rt.Get(n.BodyTemplate))
+			go n.DoPrint("Subject: " + rt.Subject + ", Body: " + rt.Get(n.BodyTemplate))
 		} else {
-			go n.DoPrint(rt.Get("subject"))
+			go n.DoPrint(rt.Subject)
 		}
 	}
 }
@@ -96,7 +89,7 @@ func (p *PreparedHttp) Send() (int, error) {
 	return resp.StatusCode, nil
 }
 
-func (n *Notification) PrepHttp(method string, u *url.URL, urlTplName string, rt TemplateProvider, ak string) *PreparedHttp {
+func (n *Notification) PrepHttp(method string, u *url.URL, urlTplName string, rt *models.RenderedTemplates, ak string) *PreparedHttp {
 	var url string
 	if u != nil {
 		url = u.String()
@@ -115,7 +108,7 @@ func (n *Notification) PrepHttp(method string, u *url.URL, urlTplName string, rt
 	return prep
 }
 
-func (n *Notification) DoHttp(method string, u *url.URL, urlTplName string, rt TemplateProvider, ak string) {
+func (n *Notification) DoHttp(method string, u *url.URL, urlTplName string, rt *models.RenderedTemplates, ak string) {
 	p := n.PrepHttp(method, u, urlTplName, rt, ak)
 	stat, err := p.Send()
 	if err != nil {
@@ -124,15 +117,15 @@ func (n *Notification) DoHttp(method string, u *url.URL, urlTplName string, rt T
 	slog.Infof("%s notification successful for alert %s. Status: %d", method, ak, stat)
 }
 
-func (n *Notification) DoPost(rt TemplateProvider, ak string) {
+func (n *Notification) DoPost(rt *models.RenderedTemplates, ak string) {
 	n.DoHttp(http.MethodPost, n.Get, n.GetTemplate, rt, ak)
 }
 
-func (n *Notification) DoGet(rt TemplateProvider, ak string) {
+func (n *Notification) DoGet(rt *models.RenderedTemplates, ak string) {
 	n.DoHttp(http.MethodGet, n.Post, n.PostTemplate, rt, ak)
 }
 
-func (n *Notification) DoEmail(rt TemplateProvider, c SystemConfProvider, ak string, attachments ...*models.Attachment) {
+func (n *Notification) DoEmail(rt *models.RenderedTemplates, c SystemConfProvider, ak string, attachments ...*models.Attachment) {
 	e := email.NewEmail()
 	e.From = c.GetEmailFrom()
 	for _, a := range n.Email {
