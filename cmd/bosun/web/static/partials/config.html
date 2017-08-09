@@ -340,18 +340,18 @@
 						<div class='col-md-2'><b>URL:</b></div>
 						<div class='col-md-5'>{{dat.URL}}</div>
 					</div>
-					<div ng-if="dat.Headers">
-						<div class='row'>
-							<div class='col-md-2'><b>Headers:</b></div>
-						</div>
-						<div class='row' ng-if="dat.Body">
+					<div class='row' ng-if="dat.Body">
 						<div class='col-md-2'><b>Body:</b></div>
 						<div class='col-md-10'>
 							<pre>{{dat.Body}}</pre>
 						</div>
 					</div>
+					<div ng-if="dat.Headers">
+						<div class='row'>
+							<div class='col-md-2'><b>Headers:</b></div>
+						</div>
 						<div class='row' ng-repeat="(k,v) in dat.Headers">
-							<div class='col-md-2'>&nbsp;&nbsp;&nbsp;&nbsp;<b>{{k}}:</b></div>
+							<div class='col-md-2'><b>{{k}}:</b></div>
 							<div class='col-md-5'>{{v}}</div>
 						</div>
 					</div>

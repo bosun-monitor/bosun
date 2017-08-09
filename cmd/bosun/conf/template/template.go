@@ -81,25 +81,25 @@ func Must(t *Template, err error) *Template {
 
 func (t *Template) New(name string) *Template {
 	if t.isHTML {
-		return t.copy(t.t().New(name))
+		return t.copy(t.h().New(name))
 	}
-	return t.copy(t.h().New(name))
+	return t.copy(t.t().New(name))
 }
 
 func (t *Template) Funcs(fm FuncMap) *Template {
 	if t.isHTML {
-		return t.copy(t.t().Funcs(ttemplate.FuncMap(fm)))
+		return t.copy(t.h().Funcs(htemplate.FuncMap(fm)))
 	}
-	return t.copy(t.h().Funcs(htemplate.FuncMap(fm)))
+	return t.copy(t.t().Funcs(ttemplate.FuncMap(fm)))
 }
 
 func (t *Template) Parse(text string) (*Template, error) {
 	var i iface
 	var err error
 	if t.isHTML {
-		i, err = t.t().Parse(text)
-	} else {
 		i, err = t.h().Parse(text)
+	} else {
+		i, err = t.t().Parse(text)
 	}
 	return t.copy(i), err
 }

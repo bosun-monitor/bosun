@@ -99,8 +99,8 @@ func (c *Conf) loadTemplate(s *parse.SectionNode) {
 			t.RawCustoms[k] = v
 			ct, ok := c.customTemplates[k]
 			if !ok {
-				tmpl := template.New(k).Funcs(defaultFuncs)
-				c.customTemplates[k] = tmpl
+				ct = template.New(k).Funcs(defaultFuncs)
+				c.customTemplates[k] = ct
 			}
 			tmpl, err := ct.New(name).Funcs(funcs).Parse(v)
 			if err != nil {
@@ -327,9 +327,9 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 					key = "default"
 				}
 				checkTemplateKey(ntk.BodyTemplate, fmt.Sprintf("%s body template", key), false)
-				checkTemplateKey(ntk.EmailSubjectTemplate, fmt.Sprintf("%s email subject", key), true)
-				checkTemplateKey(ntk.GetTemplate, fmt.Sprintf("%s get url", key), true)
-				checkTemplateKey(ntk.PostTemplate, fmt.Sprintf("%s post url", key), true)
+				checkTemplateKey(ntk.EmailSubjectTemplate, fmt.Sprintf("%s email subject", key), false)
+				checkTemplateKey(ntk.GetTemplate, fmt.Sprintf("%s get url", key), false)
+				checkTemplateKey(ntk.PostTemplate, fmt.Sprintf("%s post url", key), false)
 			}
 		}
 		for _, not := range a.CritNotification.Notifications {
@@ -350,10 +350,11 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 		c.errorf("duplicate notification name: %s", name)
 	}
 	n := conf.Notification{
-		Vars:         make(map[string]string),
-		ContentType:  "application/x-www-form-urlencoded",
-		Name:         name,
-		RunOnActions: true,
+		Vars:               make(map[string]string),
+		ContentType:        "application/x-www-form-urlencoded",
+		Name:               name,
+		RunOnActions:       true,
+		ActionTemplateKeys: map[models.ActionType]*conf.NotificationTemplateKeys{},
 	}
 	n.Text = s.RawText
 	n.Locator = newSectionLocator(s)
@@ -412,6 +413,44 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 		case "runOnActions":
 			n.RunOnActions = v == "true"
 		default:
+			// action{templateKey}{ActionType}?
+			if strings.HasPrefix(k, "action") {
+				k2 := k
+				var suffixes = map[string]models.ActionType{
+					"Ack":          models.ActionAcknowledge,
+					"Close":        models.ActionClose,
+					"Forget":       models.ActionForget,
+					"ForceClose":   models.ActionForceClose,
+					"Purge":        models.ActionPurge,
+					"Note":         models.ActionNote,
+					"DelayedClose": models.ActionDelayedClose,
+					"CancelClose":  models.ActionCancelClose,
+				}
+				at := models.ActionNone
+				for s, t := range suffixes {
+					if strings.HasSuffix(k, s) {
+						at = t
+						k2 = k[:len(k)-len(s)]
+						break
+					}
+				}
+				if n.ActionTemplateKeys[at] == nil {
+					n.ActionTemplateKeys[at] = &conf.NotificationTemplateKeys{}
+				}
+				keys := n.ActionTemplateKeys[at]
+				switch k2 {
+				case "BodyTemplate":
+					keys.BodyTemplate = v
+				case "GetTemplate":
+					keys.GetTemplate = v
+				case "PostTemplate":
+					keys.PostTemplate = v
+				case "EmailSubjectTemplate":
+					keys.EmailSubjectTemplate = v
+				default:
+					c.errorf("unknown key %s", k)
+				}
+			}
 			c.errorf("unknown key %s", k)
 		}
 	}

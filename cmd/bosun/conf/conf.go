@@ -242,7 +242,7 @@ type Notification struct {
 	NotificationTemplateKeys
 
 	// template keys to use for action notifications. ActionNone contains catch-all fields if present. More specific will override.
-	ActionTemplateKeys map[models.ActionType]NotificationTemplateKeys
+	ActionTemplateKeys map[models.ActionType]*NotificationTemplateKeys
 
 	Print        bool
 	Next         *Notification
