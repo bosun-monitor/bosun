@@ -12,7 +12,7 @@ func TestExtractScheme(t *testing.T) {
 		{"foo.com", "https", "foo.com"},
 		{"http://foo.com", "http", "foo.com"},
 		{"https://foo.com", "https", "foo.com"},
-		{"http://https://foo.com", "http", "https://foo.com"},
+		{"http://https://foo.com", "http", "https:"},
 		{"", "https", ""},
 	}
 	for _, s := range samples {
