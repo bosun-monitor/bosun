@@ -1,4 +1,0 @@
-Host = "http://devbosun.ds.stackexchange.com"
-
-[Iterable]
-  StatusBaseAddr = "http://status.iterable.com"
