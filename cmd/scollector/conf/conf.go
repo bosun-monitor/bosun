@@ -63,6 +63,9 @@ type Conf struct {
 	// UseSWbemServicesClient specifies if the wmi package should use SWbemServices.
 	UseSWbemServicesClient bool
 
+	// MetricPrefix prepended to all metrics path
+	MetricPrefix string
+
 	HAProxy        []HAProxy
 	SNMP           []SNMP
 	MIBS           map[string]MIB
