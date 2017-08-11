@@ -69,6 +69,10 @@ CommandHookPath = "/Users/kbrandt/src/hook/hook"
            Enabled = false
            BasicAuthUsername = ""
            BasicAuthPassword = ""
+           UnsafeSSL = false
+           SSLCA = ""
+           SSLCert = ""
+           SSLKey = ""
            Scheme = ""
            SnifferEnabled = false
            SnifferTimeoutStartup = 0
@@ -87,6 +91,11 @@ CommandHookPath = "/Users/kbrandt/src/hook/hook"
             # Enabled = true
             # BasicAuthUsername = "admin"
             # BasicAuthPassword = "password"
+
+            # UnsafeSSL = false
+            # SSLCA = "/path/to/cacert.crt"
+            # SSLCert = "/path/to/client.crt"
+            # SSLKey = "/path/to/key.pem"
 
             # Default http only support https
             # Scheme = "https"

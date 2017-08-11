@@ -2,7 +2,10 @@ package conf
 
 import (
 	"bytes"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"time"
@@ -131,7 +134,10 @@ type ESClientOptions struct {
 	HealthcheckInterval       time.Duration // in seconds (default is 60 sec)
 	MaxRetries                int           // max. number of retries before giving up (default 10)
 	GzipEnabled               bool          // enables or disables gzip compression (disabled by default)
-
+	UnsafeSSL                 bool          // if true accept any certificate presented by the server
+	SSLCert                   string        // certificate to use for client authentication
+	SSLCA                     string        // certificate authority to use for verifying certificates
+	SSLKey                    string        // key to use for client authentication
 }
 
 // ElasticConf contains configuration for an elastic host that Bosun can query
@@ -614,6 +620,37 @@ func parseESConfig(sc *SystemConf) expr.ElasticHosts {
 				addClientOptions(elastic.SetScheme(options.Scheme))
 			}
 
+			// Optional TLS config
+			tlsCfg := &tls.Config{} 
+
+			if options.UnsafeSSL {
+				tlsCfg.InsecureSkipVerify = true
+			}
+
+			if options.SSLKey != "" && options.SSLCert != "" {
+				cert, err := tls.LoadX509KeyPair(options.SSLCert, options.SSLKey)
+				if err == nil {
+					tlsCfg.Certificates = []tls.Certificate{cert}
+					tlsCfg.BuildNameToCertificate()
+				}
+			}
+
+			if options.SSLCA != "" {
+				ca, err := ioutil.ReadFile(options.SSLCA)
+				if err == nil {
+					pool := x509.NewCertPool()
+					pool.AppendCertsFromPEM(ca)
+					tlsCfg.RootCAs = pool
+				}
+			}
+
+			// HTTP client
+			transport := &http.Transport {TLSClientConfig: tlsCfg}
+
+			httpClient := &http.Client {Transport: transport}
+
+			addClientOptions(elastic.SetHttpClient(httpClient))
+
 			// Default Enable
 			addClientOptions(elastic.SetSniff(options.SnifferEnabled))
 
@@ -691,6 +728,37 @@ func parseESAnnoteConfig(sc *SystemConf) expr.ElasticConfig {
 	if options.Scheme == "https" {
 		addClientOptions(elastic.SetScheme(options.Scheme))
 	}
+
+	// Optional TLS config
+	tlsCfg := &tls.Config{} 
+
+	if options.UnsafeSSL {
+		tlsCfg.InsecureSkipVerify = true
+	}
+
+	if options.SSLKey != "" && options.SSLCert != "" {
+		cert, err := tls.LoadX509KeyPair(options.SSLCert, options.SSLKey)
+		if err == nil {
+			tlsCfg.Certificates = []tls.Certificate{cert}
+			tlsCfg.BuildNameToCertificate()
+		}
+	}
+
+	if options.SSLCA != "" {
+		ca, err := ioutil.ReadFile(options.SSLCA)
+		if err == nil {
+			pool := x509.NewCertPool()
+			pool.AppendCertsFromPEM(ca)
+			tlsCfg.RootCAs = pool
+		}
+	}
+
+	// HTTP client
+	transport := &http.Transport {TLSClientConfig: tlsCfg}
+
+	httpClient := &http.Client {Transport: transport}
+
+	addClientOptions(elastic.SetHttpClient(httpClient))
 
 	// Default Enable
 	addClientOptions(elastic.SetSniff(options.SnifferEnabled))
