@@ -1021,6 +1021,9 @@ func (c *Conf) GetFuncs(backends conf.EnabledBackends) map[string]eparse.Func {
 	if backends.Annotate {
 		merge(expr.Annotate)
 	}
+	if backends.Prom {
+		merge(expr.Prom)
+	}
 	return funcs
 }
 

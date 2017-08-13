@@ -56,6 +56,7 @@ type Backends struct {
 	ElasticHosts    ElasticHosts
 	InfluxConfig    client.HTTPConfig
 	ElasticConfig   ElasticConfig
+	PromConfig      PromConfig
 }
 
 type BosunProviders struct {

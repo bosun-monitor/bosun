@@ -78,6 +78,7 @@ type SystemConfProvider interface {
 	GetInfluxContext() client.HTTPConfig
 	GetLogstashContext() expr.LogstashElasticHosts
 	GetElasticContext() expr.ElasticHosts
+	GetPromContext() expr.PromConfig
 	AnnotateEnabled() bool
 
 	MakeLink(string, *url.Values) string
