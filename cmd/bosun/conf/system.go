@@ -61,6 +61,7 @@ type SystemConf struct {
 	InfluxConf       InfluxConf
 	ElasticConf      map[string]ElasticConf
 	AzureMonitorConf map[string]AzureMonitorConf
+	PromConf         PromConf
 
 	AnnotateConf AnnotateConf
 
@@ -84,9 +85,9 @@ type EnabledBackends struct {
 	Graphite     bool
 	Influx       bool
 	Elastic      bool
-	Logstash     bool
 	Annotate     bool
 	AzureMonitor bool
+	Prom         bool
 }
 
 // EnabledBackends returns and EnabledBackends struct which contains fields
@@ -96,6 +97,7 @@ func (sc *SystemConf) EnabledBackends() EnabledBackends {
 	b.OpenTSDB = sc.OpenTSDBConf.Host != ""
 	b.Graphite = sc.GraphiteConf.Host != ""
 	b.Influx = sc.InfluxConf.URL != ""
+	b.Prom = sc.PromConf.URL != ""
 	b.Elastic = len(sc.ElasticConf["default"].Hosts) != 0
 	b.Annotate = len(sc.AnnotateConf.Hosts) != 0
 	b.AzureMonitor = len(sc.AzureMonitorConf) != 0
@@ -203,6 +205,10 @@ type InfluxConf struct {
 	Timeout   Duration
 	UnsafeSSL bool
 	Precision string
+}
+
+type PromConf struct {
+	URL string
 }
 
 // DBConf stores the connection information for Bosun's internal storage
@@ -603,6 +609,14 @@ func (sc *SystemConf) GetInfluxContext() client.HTTPConfig {
 	}
 	if sc.md.IsDefined("InfluxConf", "UnsafeSsl") {
 		c.InsecureSkipVerify = sc.InfluxConf.UnsafeSSL
+	}
+	return c
+}
+
+func (sc *SystemConf) GetPromContext() expr.PromConfig {
+	c := expr.PromConfig{}
+	if sc.md.IsDefined("PromConf", "URL") {
+		c.URL = sc.PromConf.URL
 	}
 	return c
 }

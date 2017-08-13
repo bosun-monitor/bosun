@@ -44,7 +44,7 @@ SearchSince = "72h"
 
 # Path to a command that will be executed on save of the rule configuration. This command is passed a filename, username, message, and vargs
 # If the command does not execute save operations will be canceled and the rule file will be restored
-CommandHookPath = "/Users/kbrandt/src/hook/hook"
+#CommandHookPath = "/Users/kbrandt/src/hook/hook"
 
 #Example expression under "Expression" tab
 ExampleExpression = 'avg(q("avg:rate:os.cpu{host=*bosun*}", "5m", "")) > 80'
@@ -122,3 +122,6 @@ ExampleExpression = 'avg(q("avg:rate:os.cpu{host=*bosun*}", "5m", "")) > 80'
 	URL = "https://myInfluxServer:1234"
 	Timeout = "5m"
 	UnsafeSSL = true
+
+[PromConf]
+        URL = "http://127.0.0.1:9090"
