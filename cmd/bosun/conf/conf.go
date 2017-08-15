@@ -220,11 +220,49 @@ func (t *Template) IsEmailBodyDifferent() bool {
 	return strings.Contains(t.RawBody, ".IsEmail")
 }
 
+func (t *Template) Get(name string) *template.Template {
+	if name == "body" {
+		return t.Body
+	}
+	if name == "subject" {
+		return t.Subject
+	}
+	return t.CustomTemplates[name]
+}
+
 // NotificationTemplateKeys is the set of fields that may be templated out per notification. Each field points to the name of a field on a template object.
 type NotificationTemplateKeys struct {
 	PostTemplate, GetTemplate string // templates to use for post/get urls
 	BodyTemplate              string // template to use for post body or email body. defaults to "body" for post and "emailBody" (if it exists) for email
 	EmailSubjectTemplate      string // tempalte to use for email subject. Default to "subject"
+}
+
+// Combine merges keys from another set, copying only those values that do not exist on the first set of template keys.
+// It returns a new object every time, and accepts nils on either side.
+func (n *NotificationTemplateKeys) Combine(defaults *NotificationTemplateKeys) *NotificationTemplateKeys {
+	n2 := &NotificationTemplateKeys{}
+	if n != nil {
+		n2.PostTemplate = n.PostTemplate
+		n2.GetTemplate = n.GetTemplate
+		n2.BodyTemplate = n.BodyTemplate
+		n2.EmailSubjectTemplate = n.EmailSubjectTemplate
+	}
+	if defaults == nil {
+		return n2
+	}
+	if n2.PostTemplate == "" {
+		n2.PostTemplate = defaults.PostTemplate
+	}
+	if n2.GetTemplate == "" {
+		n2.GetTemplate = defaults.GetTemplate
+	}
+	if n2.BodyTemplate == "" {
+		n2.BodyTemplate = defaults.BodyTemplate
+	}
+	if n2.EmailSubjectTemplate == "" {
+		n2.EmailSubjectTemplate = defaults.EmailSubjectTemplate
+	}
+	return n2
 }
 
 // Notification stores information about a notification. A notification

@@ -3,7 +3,7 @@ package sched
 import (
 	"bytes"
 	"fmt"
-	"strings"
+	"net/url"
 	"time"
 
 	"bosun.org/cmd/bosun/conf"
@@ -220,7 +220,7 @@ var unknownMultiGroup = template.Must(template.New("unknownMultiGroupHTML").Pars
 // notify is a wrapper for the notifications Notify method that sets the EmailSubject and EmailBody for the rendered
 // template. It passes properties from the schedule that the Notification's Notify method requires.
 func (s *Schedule) notify(st *models.IncidentState, rt *models.RenderedTemplates, n *conf.Notification) {
-	n.Notify(rt, s.SystemConf, string(st.AlertKey), rt.Attachments...)
+	n.NotifyAlert(rt, s.SystemConf, string(st.AlertKey), rt.Attachments...)
 }
 
 // utnotify is single notification for N unknown groups into a single notification
@@ -247,7 +247,8 @@ func (s *Schedule) utnotify(groups map[string]models.AlertKeys, n *conf.Notifica
 		Subject: subject,
 		Body:    body.String(),
 	}
-	n.Notify(rt, s.SystemConf, "unknown_threshold")
+	// TODO: Fix this
+	//n.Notify(rt, s.SystemConf, "unknown_threshold")
 }
 
 var defaultUnknownTemplate = &conf.Template{
@@ -288,7 +289,8 @@ func (s *Schedule) unotify(name string, group models.AlertKeys, n *conf.Notifica
 		Subject: subject.String(),
 		Body:    body.String(),
 	}
-	n.Notify(rt, s.SystemConf, name)
+	// TODO: Unknown
+	//n.Notify(rt, s.SystemConf, name)
 }
 
 // QueueNotification persists a notification to the datastore to be sent in the future. This happens when
@@ -297,28 +299,19 @@ func (s *Schedule) QueueNotification(ak models.AlertKey, n *conf.Notification, s
 	return s.DataAccess.Notifications().InsertNotification(ak, n.Name, started.Add(n.Timeout))
 }
 
-var actionNotificationSubjectTemplate *template.Template
-var actionNotificationBodyTemplate *template.Template
+type actionNotificationContext struct {
+	States     []*models.IncidentState
+	User       string
+	Message    string
+	ActionType models.ActionType
 
-func init() {
-	subject := `{{$first := index .States 0}}{{$count := len .States}}
-{{.User}} {{.ActionType}}
-{{if gt $count 1}} {{$count}} Alerts. 
-{{else}} Incident #{{$first.Id}} ({{$first.Subject}}) 
-{{end}}`
-	body := `{{$count := len .States}}{{.User}} {{.ActionType}} {{$count}} alert{{if gt $count 1}}s{{end}}: <br/>
-<strong>Message:</strong> {{.Message}} <br/>
-<strong>Incidents:</strong> <br/>
-<ul>
-	{{range .States}}
-		<li>
-			<a href="{{$.IncidentLink .Id}}">#{{.Id}}:</a> 
-			{{.Subject}}
-		</li>
-	{{end}}
-</ul>`
-	actionNotificationSubjectTemplate = template.Must(template.New("subject").Parse(strings.Replace(subject, "\n", "", -1)))
-	actionNotificationBodyTemplate = template.Must(template.New("body").Parse(body))
+	schedule *Schedule
+}
+
+func (a actionNotificationContext) IncidentLink(i int64) string {
+	return a.schedule.SystemConf.MakeLink("/incident", &url.Values{
+		"id": []string{fmt.Sprint(i)},
+	})
 }
 
 func (s *Schedule) ActionNotify(at models.ActionType, user, message string, aks []models.AlertKey) error {
@@ -332,24 +325,6 @@ func (s *Schedule) ActionNotify(at models.ActionType, user, message string, aks 
 			incidents = append(incidents, state)
 		}
 		data := actionNotificationContext{incidents, user, message, at, s}
-
-		buf := &bytes.Buffer{}
-		err := actionNotificationSubjectTemplate.Execute(buf, data)
-		if err != nil {
-			slog.Error("Error rendering action notification subject", err)
-		}
-		subject := buf.String()
-
-		buf = &bytes.Buffer{}
-		err = actionNotificationBodyTemplate.Execute(buf, data)
-		if err != nil {
-			slog.Error("Error rendering action notification body", err)
-		}
-		rt := &models.RenderedTemplates{
-			Subject: subject,
-			Body:    buf.String(),
-		}
-		notification.Notify(rt, s.SystemConf, "actionNotification")
 	}
 	return nil
 }

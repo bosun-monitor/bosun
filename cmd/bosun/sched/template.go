@@ -718,18 +718,3 @@ func (c *Context) ESQueryAll(indexRoot expr.ESIndexer, filter expr.ESQuery, sdur
 	}
 	return r
 }
-
-type actionNotificationContext struct {
-	States     []*models.IncidentState
-	User       string
-	Message    string
-	ActionType models.ActionType
-
-	schedule *Schedule
-}
-
-func (a actionNotificationContext) IncidentLink(i int64) string {
-	return a.schedule.SystemConf.MakeLink("/incident", &url.Values{
-		"id": []string{fmt.Sprint(i)},
-	})
-}

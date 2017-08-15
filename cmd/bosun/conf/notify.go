@@ -12,8 +12,6 @@ import (
 	"net/smtp"
 	"strings"
 
-	"net/url"
-
 	"bosun.org/collect"
 	"bosun.org/metadata"
 	"bosun.org/models"
@@ -31,16 +29,31 @@ func init() {
 		"The number of email notifications that Bosun failed to send.")
 }
 
-// Notify triggers Email/HTTP/Print actions for the Notification object
-func (n *Notification) Notify(rt *models.RenderedTemplates, c SystemConfProvider, ak string, attachments ...*models.Attachment) {
+// NotifyAlert triggers Email/HTTP/Print actions for the Notification object. Called when an alert is first triggered, or on escalations.
+func (n *Notification) NotifyAlert(rt *models.RenderedTemplates, c SystemConfProvider, ak string, attachments ...*models.Attachment) {
 	if len(n.Email) > 0 {
-		go n.DoEmail(rt, c, ak, attachments...)
+		subject := rt.GetDefault(n.EmailSubjectTemplate, "emailSubject")
+		body := rt.GetDefault(n.BodyTemplate, "emailBody")
+		go n.SendEmail(subject, body, c, ak, attachments...)
 	}
 	if n.Post != nil || n.PostTemplate != "" {
-		n.DoPost(rt, ak)
+		url := ""
+		if n.Post != nil {
+			url = n.Post.String()
+		} else {
+			url = rt.Get(n.PostTemplate)
+		}
+		body := rt.GetDefault(n.BodyTemplate, "subject")
+		n.SendHttp("POST", url, body, ak)
 	}
 	if n.Get != nil || n.GetTemplate != "" {
-		n.DoGet(rt, ak)
+		url := ""
+		if n.Get != nil {
+			url = n.Get.String()
+		} else {
+			url = rt.Get(n.GetTemplate)
+		}
+		n.SendHttp("GET", url, "", ak)
 	}
 	if n.Print {
 		if n.BodyTemplate != "" {
@@ -89,27 +102,21 @@ func (p *PreparedHttp) Send() (int, error) {
 	return resp.StatusCode, nil
 }
 
-func (n *Notification) PrepHttp(method string, u *url.URL, urlTplName string, rt *models.RenderedTemplates, ak string) *PreparedHttp {
-	var url string
-	if u != nil {
-		url = u.String()
-	} else {
-		url = rt.Get(urlTplName)
-	}
+func (n *Notification) PrepHttp(method string, url string, body string, ak string) *PreparedHttp {
 	prep := &PreparedHttp{
 		Method:  method,
 		URL:     url,
 		Headers: map[string]string{},
 	}
 	if method == http.MethodPost {
-		prep.Body = rt.GetDefault(n.BodyTemplate, "subject")
+		prep.Body = body
 		prep.Headers["Content-Type"] = n.ContentType
 	}
 	return prep
 }
 
-func (n *Notification) DoHttp(method string, u *url.URL, urlTplName string, rt *models.RenderedTemplates, ak string) {
-	p := n.PrepHttp(method, u, urlTplName, rt, ak)
+func (n *Notification) SendHttp(method string, url string, body string, ak string) {
+	p := n.PrepHttp(method, url, body, ak)
 	stat, err := p.Send()
 	if err != nil {
 		slog.Errorf("Sending http notification: %s", err)
@@ -117,22 +124,14 @@ func (n *Notification) DoHttp(method string, u *url.URL, urlTplName string, rt *
 	slog.Infof("%s notification successful for alert %s. Status: %d", method, ak, stat)
 }
 
-func (n *Notification) DoPost(rt *models.RenderedTemplates, ak string) {
-	n.DoHttp(http.MethodPost, n.Get, n.GetTemplate, rt, ak)
-}
-
-func (n *Notification) DoGet(rt *models.RenderedTemplates, ak string) {
-	n.DoHttp(http.MethodGet, n.Post, n.PostTemplate, rt, ak)
-}
-
-func (n *Notification) DoEmail(rt *models.RenderedTemplates, c SystemConfProvider, ak string, attachments ...*models.Attachment) {
+func (n *Notification) SendEmail(subject, body string, c SystemConfProvider, ak string, attachments ...*models.Attachment) {
 	e := email.NewEmail()
 	e.From = c.GetEmailFrom()
 	for _, a := range n.Email {
 		e.To = append(e.To, a.Address)
 	}
-	e.Subject = rt.GetDefault(n.EmailSubjectTemplate, "emailSubject")
-	e.HTML = []byte(rt.GetDefault(n.BodyTemplate, "emailBody"))
+	e.Subject = subject
+	e.HTML = []byte(body)
 	for _, a := range attachments {
 		e.Attach(bytes.NewBuffer(a.Data), a.Filename, a.ContentType)
 	}
