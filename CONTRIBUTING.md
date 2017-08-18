@@ -10,7 +10,7 @@ Use GitHub pull requests to submit code. General submission guidelines:
 1. If using new third party packages, install party (`go get github.com/mjibson/party`) and run `party` in the root directory (`$GOPATH/src/bosun.org`) to vendor them and rewrite import paths.
 1. Squash all non-`_third_party` commits into one. `_third_party` changes should be squashed down separately and precede any code changes which require them. This may be done as the final step before merging.
 1. The commit message should indicate what folder is being changed (example: `cmd/scollector: new xyz collector` or `docs: fix typo in window function`)
-1. Documentation changes should be made in the same branch as code changes using the `docs` folder. After the PR is approved we will use the `build/docs/publish.go` script to publish the changes to the `gh-pages` branch. Please don't submit changes directly to the `gh-pages` branch, always use the docs folder.
+1. Documentation changes should be made in the same branch as code changes using the `docs` folder. After the PR is approved is merged into the master branch it will show up on https://bosun.org (and is rendered using Github Pages).  
 
 Unless otherwise noted, the source files are distributed under the MIT license found in the LICENSE file.
 
