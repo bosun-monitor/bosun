@@ -2,68 +2,92 @@ package collectors
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"bosun.org/cmd/scollector/conf"
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
+	"bosun.org/slog"
 	"github.com/bosun-monitor/statusio"
 )
 
+// iterable.io collector
+// to use add this in your scollector.toml:
+// [Iterable]
+//   StatusBaseAddr = "https://iterable.statuspage.io"
+//   # TsdbPrefix = "iterable.status."
+//   # MaxDuration = 3 # seconds
+
+type IterComponents map[string]string
+
 func init() {
+	const (
+		defaultStatusBaseAddr = "https://iterable.statuspage.io"
+		defaultTsdbPrefix     = "iterable.status."
+		defaultMaxDuration    = 3 // Seconds
+	)
+
+	// components that we care about
+	// mapped to their tsdb key
+	// name => key
+	var componentKey = IterComponents{
+		"Web Application": "webapp",
+		"API":             "api",
+		"Email Sending":   "email.sending",
+		"Email Links":     "email.links",
+		"Workflows":       "workflows",
+		"Push Sending":    "pushSending",
+		// "SMS Sending": nil,
+		"System Webhooks":      "systemWebhooks",
+		"Analytics Processing": "analyticsProcessing",
+		"List Upload":          "listUpload",
+	}
+
 	registerInit(func(c *conf.Conf) {
+		// use default values when unspecified
+		iter := c.Iterable
+		if iter.StatusBaseAddr == "" {
+			slog.Warningf("No StatusBaseAddr given, using: '%s'", defaultStatusBaseAddr)
+			iter.StatusBaseAddr = defaultStatusBaseAddr
+		}
+		if iter.TsdbPrefix == "" {
+			iter.TsdbPrefix = defaultTsdbPrefix
+		}
+		if iter.MaxDuration == 0 {
+			iter.MaxDuration = defaultMaxDuration
+		}
+		if iter.MaxDuration <= 0 || iter.MaxDuration > 10000000 {
+			slog.Fatalf("Iterable: invalid MaxDuration: %d", iter.MaxDuration)
+		}
+
 		collectors = append(collectors, &IntervalCollector{
 			F: func() (opentsdb.MultiDataPoint, error) {
-				return cIterableStat(c.Iterable.StatusBaseAddr)
+				return c_iterable_stat(iter, componentKey)
 			},
-			name:     "cIterableStat",
-			Interval: time.Minute * 2,
+			name:     "c_iterable_stat",
+			Interval: time.Minute * 5,
 		})
 	})
 }
 
-// components that we care about
-// mapped to their tsdb key
-// name => key
-var componentKey = map[string]string{
-	"Web Application": "webapp",
-	"API":             "api",
-	"Email Sending":   "email.sending",
-	"Email Links":     "email.links",
-	"Workflows":       "workflows",
-	"Push Sending":    "pushSending",
-	// "SMS Sending": nil,
-	"System Webhooks":      "systemWebhooks",
-	"Analytics Processing": "analyticsProcessing",
-	"List Upload":          "listUpload",
-}
-var iterableComponentStatusDesc = fmt.Sprintf(fastlyComponentStatusDesc, "iterable asp")
-
-const (
-	iterablePrefix      = "iterable.status."
-	iterableMaxDuration = 3 * time.Second
-)
-
-// Stat returns the MultiDataPoint with all the interesting
+// c_iterable_stat() returns the MultiDataPoint with all the interesting
 // components for iterable service.
 // It uses status.io format (and library)
-func cIterableStat(URL string) (opentsdb.MultiDataPoint, error) {
+func c_iterable_stat(iter conf.Iterable, compKey IterComponents) (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
-	c := statusio.NewClient(URL)
-	ctx, cancel := context.WithTimeout(context.Background(), iterableMaxDuration)
+	c := statusio.NewClient(iter.StatusBaseAddr)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(iter.MaxDuration)*time.Second)
 	defer cancel()
 	summary, err := c.GetSummary(ctx)
 	if err != nil {
 		return md, err
 	}
 	for _, comp := range summary.Components {
-		if key, ok := componentKey[comp.Name]; ok {
-			tagSet := opentsdb.TagSet{}
-			// TODO: Add should support a timeout too
-			Add(&md, iterablePrefix+key, int(comp.Status), tagSet,
+		if key, ok := compKey[comp.Name]; ok {
+			// TODO: should Add() support a timeout?
+			Add(&md, iter.TsdbPrefix+key, int(comp.Status), opentsdb.TagSet{},
 				metadata.Gauge, metadata.StatusCode,
-				iterableComponentStatusDesc)
+				"Iterable status: 0: Operational, 1: Degraded Performance, 2: Partial Outage, 3: Major Outage.")
 		}
 	}
 	return md, nil

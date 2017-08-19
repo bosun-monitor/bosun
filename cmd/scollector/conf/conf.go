@@ -136,6 +136,8 @@ type Fastly struct {
 
 type Iterable struct {
 	StatusBaseAddr string // URL where we get json data
+	TsdbPrefix     string
+	MaxDuration    int // max duration of the http request in seconds
 }
 
 type GoogleAnalyticsSite struct {
