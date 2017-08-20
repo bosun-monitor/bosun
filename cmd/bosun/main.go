@@ -282,6 +282,10 @@ func main() {
 	}()
 
 	if *flagWatch {
+		// note for vim users, I've this in my .vimrc:
+		// let &backupskip .= ',' . escape(expand('$HOME'), '\') . '/src/bosun.org/cmd/bosun/*.go'
+		// let &backupskip .= ',' . escape(expand('$HOME'), '\') . '/src/bosun.org/cmd/bosun/web/static/templates/*.html'
+		// let &backupskip .= ',' . escape(expand('$HOME'), '\') . '/src/bosun.org/cmd/bosun/web/static/js/*.ts'
 		watch(".", "*.go", quit)
 		watch(filepath.Join("web", "static", "templates"), "*.html", web.RunEsc)
 		base := filepath.Join("web", "static", "js")
