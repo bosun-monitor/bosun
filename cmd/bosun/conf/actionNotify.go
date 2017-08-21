@@ -36,7 +36,7 @@ func init() {
 
 // NotifyAction should be used for action notifications.
 // ctx should be sched.actionNotificationContext
-func (n *Notification) NotifyAction(at models.ActionType, t *Template, c SystemConfProvider, ak string, ctx interface{}) {
+func (n *Notification) NotifyAction(at models.ActionType, t *Template, c SystemConfProvider, ctx interface{}) {
 	// get template keys to use for things. Merge with default sets
 	tks := n.ActionTemplateKeys[at].Combine(n.ActionTemplateKeys[models.ActionNone])
 	buf := &bytes.Buffer{}
@@ -76,12 +76,12 @@ func (n *Notification) NotifyAction(at models.ActionType, t *Template, c SystemC
 			slog.Errorf("rendering action get url: %s", err)
 		}
 	}
-	n.NotifyRaw(subject, body, postURL, getURL, c, ak)
+	n.NotifyRaw(subject, body, postURL, getURL, c)
 }
 
-func (n *Notification) NotifyRaw(subject, body, postURL, getURL string, c SystemConfProvider, ak string) {
+func (n *Notification) NotifyRaw(subject, body, postURL, getURL string, c SystemConfProvider) {
 	if len(n.Email) > 0 {
-		go n.SendEmail(subject, body, c, ak)
+		go n.SendEmail(subject, body, c, "")
 	}
 	if postURL == "" && n.Post != nil {
 		postURL = n.Post.String()
@@ -90,9 +90,9 @@ func (n *Notification) NotifyRaw(subject, body, postURL, getURL string, c System
 		getURL = n.Get.String()
 	}
 	if postURL != "" {
-		n.SendHttp("POST", postURL, body, ak)
+		n.SendHttp("POST", postURL, body, "")
 	}
 	if getURL != "" {
-		n.SendHttp("GET", getURL, "", ak)
+		n.SendHttp("GET", getURL, "", "")
 	}
 }

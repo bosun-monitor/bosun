@@ -239,11 +239,7 @@ func procRule(t miniprofiler.Timer, ruleConf conf.RuleConfProvider, a *conf.Aler
 			} else if sErr != nil {
 				warning = append(warning, sErr.Error())
 			} else {
-				rt := &models.RenderedTemplates{
-					Subject: emailSubject,
-					Body:    email,
-				}
-				n.DoEmail(rt, schedule.SystemConf, string(primaryIncident.AlertKey), attachments...)
+				n.SendEmail(emailSubject, email, s.SystemConf, string(primaryIncident.AlertKey), attachments...)
 			}
 		}
 		nots = buildNotificationPreviews(a, rt, string(primaryIncident.AlertKey))
@@ -273,14 +269,20 @@ func buildNotificationPreviews(a *conf.Alert, rt *models.RenderedTemplates, ak s
 	for name, not := range a.WarnNotification.Notifications {
 		nots[name] = not
 	}
-	for name, not := range nots {
-		if not.Get != nil || not.GetTemplate != "" {
-			previews["GET "+name] = not.PrepHttp("GET", not.Get, not.GetTemplate, rt, ak)
-		}
-		if not.Post != nil || not.PostTemplate != "" {
-			previews["POST "+name] = not.PrepHttp("POST", not.Post, not.PostTemplate, rt, ak)
-		}
-	}
+	//TODO:
+	// for name, not := range nots {
+	// 	body := rt.GetDefault(not.BodyTemplate, "body")
+	// 	getURL := ""
+	// 	if not.GetTemplate != "" {
+	// 		getURL = rt.Get(not.GetTemplate)
+	// 	}
+	// 	if not.Get != nil || not.GetTemplate != "" {
+	// 		previews["GET "+name] = not.PrepHttp("GET", getUrl, "", ak)
+	// 	}
+	// 	if not.Post != nil || not.PostTemplate != "" {
+	// 		previews["POST "+name] = not.PrepHttp("POST", not.Post, not.PostTemplate, rt, ak)
+	// 	}
+	// }
 	return previews
 }
 

@@ -232,7 +232,7 @@ func (s *Schedule) utnotify(groups map[string]models.AlertKeys, n *conf.Notifica
 		s.Group[now] = group
 		total += len(group)
 	}
-	subject := fmt.Sprintf("%v unknown alert instances suppressed", total)
+	//subject := fmt.Sprintf("%v unknown alert instances suppressed", total)
 	body := new(bytes.Buffer)
 	if err := unknownMultiGroup.Execute(body, struct {
 		Groups    map[string]models.AlertKeys
@@ -243,10 +243,10 @@ func (s *Schedule) utnotify(groups map[string]models.AlertKeys, n *conf.Notifica
 	}); err != nil {
 		slog.Errorln(err)
 	}
-	rt := &models.RenderedTemplates{
-		Subject: subject,
-		Body:    body.String(),
-	}
+	// rt := &models.RenderedTemplates{
+	// 	Subject: subject,
+	// 	Body:    body.String(),
+	// }
 	// TODO: Fix this
 	//n.Notify(rt, s.SystemConf, "unknown_threshold")
 }
@@ -285,10 +285,10 @@ func (s *Schedule) unotify(name string, group models.AlertKeys, n *conf.Notifica
 			slog.Infoln("unknown template error:", err)
 		}
 	}
-	rt := &models.RenderedTemplates{
-		Subject: subject.String(),
-		Body:    body.String(),
-	}
+	// rt := &models.RenderedTemplates{
+	// 	Subject: subject.String(),
+	// 	Body:    body.String(),
+	// }
 	// TODO: Unknown
 	//n.Notify(rt, s.SystemConf, name)
 }
@@ -319,20 +319,28 @@ func (s *Schedule) ActionNotify(at models.ActionType, user, message string, aks 
 	if err != nil {
 		return err
 	}
-	for notification, states := range groupings {
+	for groupKey, states := range groupings {
 		incidents := []*models.IncidentState{}
 		for _, state := range states {
 			incidents = append(incidents, state)
 		}
 		data := actionNotificationContext{incidents, user, message, at, s}
+		groupKey.notification.NotifyAction(at, groupKey.template, s.SystemConf, data)
 	}
 	return nil
 }
 
-func (s *Schedule) groupActionNotifications(aks []models.AlertKey) (map[*conf.Notification][]*models.IncidentState, error) {
-	groupings := make(map[*conf.Notification][]*models.IncidentState)
+type notificationGroupKey struct {
+	notification *conf.Notification
+	template     *conf.Template
+}
+
+// group by notification and template
+func (s *Schedule) groupActionNotifications(aks []models.AlertKey) (map[notificationGroupKey][]*models.IncidentState, error) {
+	groupings := make(map[notificationGroupKey][]*models.IncidentState)
 	for _, ak := range aks {
 		alert := s.RuleConf.GetAlert(ak.Name())
+		tmpl := alert.Template
 		status, err := s.DataAccess.State().GetLatestIncident(ak)
 		if err != nil {
 			return nil, err
@@ -354,7 +362,8 @@ func (s *Schedule) groupActionNotifications(aks []models.AlertKey) (map[*conf.No
 			if !not.RunOnActions {
 				continue
 			}
-			groupings[not] = append(groupings[not], status)
+			key := notificationGroupKey{not, tmpl}
+			groupings[key] = append(groupings[key], status)
 		}
 	}
 	return groupings, nil
