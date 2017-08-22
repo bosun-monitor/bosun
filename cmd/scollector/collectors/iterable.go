@@ -18,7 +18,7 @@ import (
 //   # TsdbPrefix = "iterable.status."
 //   # MaxDuration = 3 # seconds
 
-type IterComponents map[string]string
+type IterComp map[string]string
 
 func init() {
 	const (
@@ -30,7 +30,7 @@ func init() {
 	// components that we care about
 	// mapped to their tsdb key
 	// name => key
-	var componentKey = IterComponents{
+	var componentKey = IterComp{
 		"Web Application": "webapp",
 		"API":             "api",
 		"Email Sending":   "email.sending",
@@ -62,22 +62,22 @@ func init() {
 
 		collectors = append(collectors, &IntervalCollector{
 			F: func() (opentsdb.MultiDataPoint, error) {
-				return c_iterable_stat(iter, componentKey)
+				ctx, cancel := context.WithTimeout(context.Background(), time.Duration(iter.MaxDuration)*time.Second)
+				defer cancel()
+				return iterable(ctx, iter, componentKey)
 			},
-			name:     "c_iterable_stat",
+			name:     "c_iterable_status",
 			Interval: time.Minute * 5,
 		})
 	})
 }
 
-// c_iterable_stat() returns the MultiDataPoint with all the interesting
+// iterable() returns the MultiDataPoint with all the interesting
 // components for iterable service.
 // It uses status.io format (and library)
-func c_iterable_stat(iter conf.Iterable, compKey IterComponents) (opentsdb.MultiDataPoint, error) {
+func iterable(ctx context.Context, iter conf.Iterable, compKey IterComp) (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	c := statusio.NewClient(iter.StatusBaseAddr)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(iter.MaxDuration)*time.Second)
-	defer cancel()
 	summary, err := c.GetSummary(ctx)
 	if err != nil {
 		return md, err
