@@ -58,9 +58,9 @@ func SNMP(cfg conf.SNMP, mibs map[string]conf.MIB) error {
 	return nil
 }
 
-// snmp_subtree takes an oid and returns all data exactly one level below it. It
+// snmpSubtree takes an oid and returns all data exactly one level below it. It
 // produces an error if there is more than one level below.
-func snmp_subtree(host, community, oid string) (map[string]interface{}, error) {
+func snmpSubtree(host, community, oid string) (map[string]interface{}, error) {
 	rows, err := snmp.Walk(host, community, oid)
 	if err != nil {
 		return nil, err
@@ -115,7 +115,7 @@ func snmpOidArrayToString(path []int) string {
 	return strings.Join(s, ".")
 }
 
-func snmp_oid(host, community, oid string) (*big.Int, error) {
+func snmpOid(host, community, oid string) (*big.Int, error) {
 	v := new(big.Int)
 	err := snmp.Get(host, community, oid, &v)
 	return v, err
@@ -127,7 +127,7 @@ func snmpOidString(host, community, oid string) (string, error) {
 	return string(v), err
 }
 
-func snmp_convertToFloat(v interface{}) (float64, error) {
+func snmpConverttofloat(v interface{}) (float64, error) {
 	switch val := v.(type) {
 	case int:
 		return float64(val), nil
@@ -184,14 +184,14 @@ func GenericSnmp(cfg conf.SNMP, mib conf.MIB) (opentsdb.MultiDataPoint, error) {
 			return md, err
 		}
 
-		v, err := snmp_oid(cfg.Host, cfg.Community, combineOids(metric.Oid, baseOid))
+		v, err := snmpOid(cfg.Host, cfg.Community, combineOids(metric.Oid, baseOid))
 		if err != nil && metric.FallbackOid != "" {
-			v, err = snmp_oid(cfg.Host, cfg.Community, combineOids(metric.FallbackOid, baseOid))
+			v, err = snmpOid(cfg.Host, cfg.Community, combineOids(metric.FallbackOid, baseOid))
 		}
 		if err != nil {
 			return md, err
 		}
-		val, err := snmp_convertToFloat(v)
+		val, err := snmpConverttofloat(v)
 		if err != nil {
 			return md, err
 		}
@@ -208,7 +208,7 @@ func GenericSnmp(cfg conf.SNMP, mib conf.MIB) (opentsdb.MultiDataPoint, error) {
 			if tag.Oid == "idx" {
 				continue
 			}
-			vals, err := snmp_subtree(cfg.Host, cfg.Community, combineOids(tag.Oid, treeOid))
+			vals, err := snmpSubtree(cfg.Host, cfg.Community, combineOids(tag.Oid, treeOid))
 			if err != nil {
 				return md, err
 			}
@@ -220,9 +220,9 @@ func GenericSnmp(cfg conf.SNMP, mib conf.MIB) (opentsdb.MultiDataPoint, error) {
 				return md, err
 
 			}
-			nodes, err := snmp_subtree(cfg.Host, cfg.Community, combineOids(metric.Oid, treeOid))
+			nodes, err := snmpSubtree(cfg.Host, cfg.Community, combineOids(metric.Oid, treeOid))
 			if err != nil && metric.FallbackOid != "" {
-				nodes, err = snmp_subtree(cfg.Host, cfg.Community, combineOids(metric.FallbackOid, treeOid))
+				nodes, err = snmpSubtree(cfg.Host, cfg.Community, combineOids(metric.FallbackOid, treeOid))
 			}
 			if err != nil {
 				return md, err
@@ -250,7 +250,7 @@ func GenericSnmp(cfg conf.SNMP, mib conf.MIB) (opentsdb.MultiDataPoint, error) {
 					}
 					tagset[tag.Key] = fmt.Sprint(tagVal)
 				}
-				val, err := snmp_convertToFloat(v)
+				val, err := snmpConverttofloat(v)
 				if err != nil {
 					return md, err
 				}

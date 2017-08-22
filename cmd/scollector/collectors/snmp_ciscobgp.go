@@ -15,14 +15,14 @@ import (
 func SNMPCiscoBGP(cfg conf.SNMP) {
 	collectors = append(collectors, &IntervalCollector{
 		F: func() (opentsdb.MultiDataPoint, error) {
-			return c_snmp_ciscobgp(cfg.Community, cfg.Host)
+			return cSnmpCiscobgp(cfg.Community, cfg.Host)
 		},
 		Interval: time.Second * 30,
 		name:     fmt.Sprintf("snmp-ciscobgp-%s", cfg.Host),
 	})
 }
 
-func c_snmp_ciscobgp(community, host string) (opentsdb.MultiDataPoint, error) {
+func cSnmpCiscobgp(community, host string) (opentsdb.MultiDataPoint, error) {
 	const (
 		state               = ".1.3.6.1.4.1.9.9.187.1.2.5.1.3.1.4"
 		adminStatus         = ".1.3.6.1.4.1.9.9.187.1.2.5.1.4.1.4"
@@ -68,7 +68,7 @@ func c_snmp_ciscobgp(community, host string) (opentsdb.MultiDataPoint, error) {
 		bgpPeerWithdrawnPrefixesDesc   = "The number of prefixes that the local node has withdrawn from the peer this session"
 	)
 	// Tag: local_as
-	localASesRaw, err := snmp_ip_tree(host, community, localAS)
+	localASesRaw, err := snmpIpTree(host, community, localAS)
 	if err != nil {
 		return nil, err
 	}
@@ -79,21 +79,21 @@ func c_snmp_ciscobgp(community, host string) (opentsdb.MultiDataPoint, error) {
 	}
 
 	// Tag: local_id
-	localIdentifiersRaw, err := snmp_ip_tree(host, community, localIdentifier)
+	localIdentifiersRaw, err := snmpIpTree(host, community, localIdentifier)
 	if err != nil {
 		return nil, err
 	}
 	localIdentifiers := make(map[string]string, len(localIdentifiersRaw))
 	for k, v := range localIdentifiersRaw {
 		if uv, ok := v.([]uint8); ok {
-			localIdentifiers[k] = snmp_combine_ip_uint8(uv)
+			localIdentifiers[k] = snmpCombineIpUint8(uv)
 		} else {
 			return nil, fmt.Errorf("Bad IP address data in local identifier for peer %q on host %q", k, host)
 		}
 	}
 
 	// Tag: remote_as
-	remoteASesRaw, err := snmp_ip_tree(host, community, remoteAS)
+	remoteASesRaw, err := snmpIpTree(host, community, remoteAS)
 	if err != nil {
 		return nil, err
 	}
@@ -104,14 +104,14 @@ func c_snmp_ciscobgp(community, host string) (opentsdb.MultiDataPoint, error) {
 	}
 
 	// Tag: remote_id
-	remoteIdentifiersRaw, err := snmp_ip_tree(host, community, remoteIdentifier)
+	remoteIdentifiersRaw, err := snmpIpTree(host, community, remoteIdentifier)
 	if err != nil {
 		return nil, err
 	}
 	remoteIdentifiers := make(map[string]string, len(remoteIdentifiersRaw))
 	for k, v := range remoteIdentifiersRaw {
 		if uv, ok := v.([]uint8); ok {
-			remoteIdentifiers[k] = snmp_combine_ip_uint8(uv)
+			remoteIdentifiers[k] = snmpCombineIpUint8(uv)
 		} else {
 			return nil, fmt.Errorf("Bad IP address data in remote identifier for peer %q on host %q", k, host)
 		}
@@ -129,7 +129,7 @@ func c_snmp_ciscobgp(community, host string) (opentsdb.MultiDataPoint, error) {
 
 	// Function to harvest all metrics with the tag groups above
 	add := func(bA bgpAdd) error {
-		m, err := snmp_ip_tree(host, community, bA.oid)
+		m, err := snmpIpTree(host, community, bA.oid)
 		if err != nil {
 			return err
 		}
@@ -177,7 +177,7 @@ func c_snmp_ciscobgp(community, host string) (opentsdb.MultiDataPoint, error) {
 	return md, nil
 }
 
-func snmp_ip_tree(host, community, oid string) (map[string]interface{}, error) {
+func snmpIpTree(host, community, oid string) (map[string]interface{}, error) {
 	rows, err := snmp.Walk(host, community, oid)
 	if err != nil {
 		return nil, err
@@ -192,7 +192,7 @@ func snmp_ip_tree(host, community, oid string) (map[string]interface{}, error) {
 		}
 		switch t := id.(type) {
 		case []int:
-			key = snmp_combine_ip_int(t)
+			key = snmpCombineIpInt(t)
 		default:
 			return nil, fmt.Errorf("Got wrong type from OID check")
 		}
@@ -204,7 +204,7 @@ func snmp_ip_tree(host, community, oid string) (map[string]interface{}, error) {
 	return m, nil
 }
 
-func snmp_combine_ip_uint8(path []uint8) string {
+func snmpCombineIpUint8(path []uint8) string {
 	s := make([]string, len(path))
 	for i := range path {
 		s[i] = fmt.Sprint(path[i])
@@ -214,7 +214,7 @@ func snmp_combine_ip_uint8(path []uint8) string {
 	return strings.Join(s, ".")
 }
 
-func snmp_combine_ip_int(path []int) string {
+func snmpCombineIpInt(path []int) string {
 	s := make([]string, len(path))
 	for i := range path {
 		s[i] = fmt.Sprint(path[i])

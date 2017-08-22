@@ -27,9 +27,9 @@ const (
 )
 
 func init() {
-	collectors = append(collectors, &IntervalCollector{F: c_rabbitmq_overview, Enable: enableRabbitmq})
-	collectors = append(collectors, &IntervalCollector{F: c_rabbitmq_queues, Enable: enableRabbitmq})
-	collectors = append(collectors, &IntervalCollector{F: c_rabbitmq_nodes, Enable: enableRabbitmq})
+	collectors = append(collectors, &IntervalCollector{F: cRabbitmqOverview, Enable: enableRabbitmq})
+	collectors = append(collectors, &IntervalCollector{F: cRabbitmqQueues, Enable: enableRabbitmq})
+	collectors = append(collectors, &IntervalCollector{F: cRabbitmqNodes, Enable: enableRabbitmq})
 }
 
 // RabbitMQ registers a RabbitMQ collector.
@@ -64,14 +64,14 @@ func enableRabbitmq() bool {
 	return enableURL(defaultRabbitmqURL)()
 }
 
-func c_rabbitmq_overview() (opentsdb.MultiDataPoint, error) {
+func cRabbitmqOverview() (opentsdb.MultiDataPoint, error) {
 	return rabbitmqOverview(defaultRabbitmqURL)
 
 }
-func c_rabbitmq_nodes() (opentsdb.MultiDataPoint, error) {
+func cRabbitmqNodes() (opentsdb.MultiDataPoint, error) {
 	return rabbitmqNodes(defaultRabbitmqURL)
 }
-func c_rabbitmq_queues() (opentsdb.MultiDataPoint, error) {
+func cRabbitmqQueues() (opentsdb.MultiDataPoint, error) {
 	return rabbitmqQueues(defaultRabbitmqURL)
 }
 

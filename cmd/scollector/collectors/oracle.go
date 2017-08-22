@@ -26,7 +26,7 @@ func init() {
 				i := inst
 				collectors = append(collectors, &IntervalCollector{
 					F: func() (opentsdb.MultiDataPoint, error) {
-						return c_oracle(name, i)
+						return cOracle(name, i)
 					},
 					name: fmt.Sprintf("oracle-%s", name),
 				})
@@ -35,7 +35,7 @@ func init() {
 	})
 }
 
-func c_oracle(name string, inst conf.OracleInstance) (opentsdb.MultiDataPoint, error) {
+func cOracle(name string, inst conf.OracleInstance) (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 
 	pr, pw := io.Pipe()

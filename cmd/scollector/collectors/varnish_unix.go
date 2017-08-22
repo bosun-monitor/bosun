@@ -14,11 +14,11 @@ import (
 
 func init() {
 	if _, err := exec.LookPath("varnishstat"); err == nil {
-		collectors = append(collectors, &IntervalCollector{F: c_varnish_unix})
+		collectors = append(collectors, &IntervalCollector{F: cVarnishUnix})
 	}
 }
 
-func c_varnish_unix() (opentsdb.MultiDataPoint, error) {
+func cVarnishUnix() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	const metric = "varnish."
 

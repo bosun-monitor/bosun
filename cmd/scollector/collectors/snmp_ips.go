@@ -20,7 +20,7 @@ const ifIPAdEntAddr = ".1.3.6.1.2.1.4.20.1"
 func SNMPIPAddresses(cfg conf.SNMP) {
 	collectors = append(collectors, &IntervalCollector{
 		F: func() (opentsdb.MultiDataPoint, error) {
-			return c_snmp_ips(cfg.Community, cfg.Host)
+			return cSnmpIps(cfg.Community, cfg.Host)
 		},
 		Interval: time.Minute * 1,
 		name:     fmt.Sprintf("snmp-ips-%s", cfg.Host),
@@ -32,8 +32,8 @@ type ipAdEntAddr struct {
 	net.IPNet
 }
 
-func c_snmp_ips(community, host string) (opentsdb.MultiDataPoint, error) {
-	ifIPAdEntAddrRaw, err := snmp_subtree(host, community, ifIPAdEntAddr)
+func cSnmpIps(community, host string) (opentsdb.MultiDataPoint, error) {
+	ifIPAdEntAddrRaw, err := snmpSubtree(host, community, ifIPAdEntAddr)
 	if err != nil {
 		return nil, err
 	}

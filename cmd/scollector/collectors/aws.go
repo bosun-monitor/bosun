@@ -35,7 +35,7 @@ const (
 	descAWSELBLatency     = "The minimum, maximum and average latency as reported by the load balancer, gathered at a 60 second interval and averaged over five minutes."
 )
 
-var aws_period = int64(60)
+var awsPeriod = int64(60)
 
 func AWS(accessKey, secretKey, region, productCodes, bucketName, bucketPath string, purgeDays int) error {
 	if accessKey == "" || secretKey == "" || region == "" {
@@ -46,7 +46,7 @@ func AWS(accessKey, secretKey, region, productCodes, bucketName, bucketPath stri
 	billingEnabled := bucketName != "" && bucketPath != ""
 	collectors = append(collectors, &IntervalCollector{
 		F: func() (opentsdb.MultiDataPoint, error) {
-			return c_aws(accessKey, secretKey, region, billingEnabled)
+			return cAws(accessKey, secretKey, region, billingEnabled)
 		},
 		Interval: 60 * time.Second,
 		name:     fmt.Sprintf("aws-%s", region),
@@ -55,7 +55,7 @@ func AWS(accessKey, secretKey, region, productCodes, bucketName, bucketPath stri
 	if billingEnabled {
 		collectors = append(collectors, &IntervalCollector{
 			F: func() (opentsdb.MultiDataPoint, error) {
-				return c_awsBilling(accessKey, secretKey, region, productCodes, bucketName, bucketPath, purgeDays)
+				return cAwsbilling(accessKey, secretKey, region, productCodes, bucketName, bucketPath, purgeDays)
 			},
 			Interval: 1 * time.Hour,
 			name:     fmt.Sprintf("awsBilling-%s", region),
@@ -64,7 +64,7 @@ func AWS(accessKey, secretKey, region, productCodes, bucketName, bucketPath stri
 	return nil
 }
 
-func c_aws(accessKey, secretKey, region string, billingEnabled bool) (opentsdb.MultiDataPoint, error) {
+func cAws(accessKey, secretKey, region string, billingEnabled bool) (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	creds := credentials.NewStaticCredentials(accessKey, secretKey, "")
 	conf := &aws.Config{
@@ -136,7 +136,7 @@ func awsGetCPU(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, instance *
 		StartTime:  aws.Time(time.Now().UTC().Add(time.Second * -600)),
 		EndTime:    aws.Time(time.Now().UTC()),
 		MetricName: aws.String("CPUUtilization"),
-		Period:     &aws_period,
+		Period:     &awsPeriod,
 		Statistics: []*string{aws.String("Average")},
 		Namespace:  aws.String("AWS/EC2"),
 		Unit:       aws.String("Percent"),
@@ -159,7 +159,7 @@ func awsGetNetwork(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, instan
 		StartTime:  aws.Time(time.Now().UTC().Add(time.Second * -600)),
 		EndTime:    aws.Time(time.Now().UTC()),
 		MetricName: aws.String("NetworkIn"),
-		Period:     &aws_period,
+		Period:     &awsPeriod,
 		Statistics: []*string{aws.String("Average")},
 		Namespace:  aws.String("AWS/EC2"),
 		Unit:       aws.String("Bytes"),
@@ -188,7 +188,7 @@ func awsGetDiskBytes(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, inst
 		StartTime:  aws.Time(time.Now().UTC().Add(time.Second * -600)),
 		EndTime:    aws.Time(time.Now().UTC()),
 		MetricName: aws.String("DiskReadBytes"),
-		Period:     &aws_period,
+		Period:     &awsPeriod,
 		Statistics: []*string{aws.String("Average")},
 		Namespace:  aws.String("AWS/EC2"),
 		Unit:       aws.String("Bytes"),
@@ -217,7 +217,7 @@ func awsGetDiskOps(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, instan
 		StartTime:  aws.Time(time.Now().UTC().Add(time.Second * -600)),
 		EndTime:    aws.Time(time.Now().UTC()),
 		MetricName: aws.String("DiskReadOps"),
-		Period:     &aws_period,
+		Period:     &awsPeriod,
 		Statistics: []*string{aws.String("Average")},
 		Namespace:  aws.String("AWS/EC2"),
 		Unit:       aws.String("Count"),
@@ -284,7 +284,7 @@ func awsGetELBLatency(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, loa
 		StartTime:  aws.Time(time.Now().UTC().Add(time.Second * -4000)),
 		EndTime:    aws.Time(time.Now().UTC()),
 		MetricName: aws.String("Latency"),
-		Period:     &aws_period,
+		Period:     &awsPeriod,
 		Statistics: []*string{aws.String("Average"), aws.String("Minimum"), aws.String("Maximum")},
 		Namespace:  aws.String("AWS/ELB"),
 		Unit:       aws.String("Seconds"),
@@ -306,7 +306,7 @@ func awsGetELBHostCounts(cw cloudwatch.CloudWatch, md *opentsdb.MultiDataPoint, 
 		StartTime:  aws.Time(time.Now().UTC().Add(time.Second * -60)),
 		EndTime:    aws.Time(time.Now().UTC()),
 		MetricName: aws.String("HealthyHostCount"),
-		Period:     &aws_period,
+		Period:     &awsPeriod,
 		Statistics: []*string{aws.String("Average")},
 		Namespace:  aws.String("AWS/ELB"),
 		Unit:       aws.String("Count"),

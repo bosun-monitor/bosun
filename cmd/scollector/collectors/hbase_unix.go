@@ -34,12 +34,12 @@ func init() {
 		hbRegURL = host + hbRegURL
 		hbRepURL = host + hbRepURL
 		hbGCURL = host + hbGCURL
-		collectors = append(collectors, &IntervalCollector{F: c_hbase_region, Enable: enableURL(hbURL)})
+		collectors = append(collectors, &IntervalCollector{F: cHbaseRegion, Enable: enableURL(hbURL)})
 		if c.HbaseRegions {
-			collectors = append(collectors, &IntervalCollector{F: c_hbase_regions, Enable: enableURL(hbRegURL)})
+			collectors = append(collectors, &IntervalCollector{F: cHbaseRegions, Enable: enableURL(hbRegURL)})
 		}
-		collectors = append(collectors, &IntervalCollector{F: c_hbase_replication, Enable: enableURL(hbRepURL)})
-		collectors = append(collectors, &IntervalCollector{F: c_hbase_gc, Enable: enableURL(hbGCURL)})
+		collectors = append(collectors, &IntervalCollector{F: cHbaseReplication, Enable: enableURL(hbRepURL)})
+		collectors = append(collectors, &IntervalCollector{F: cHbaseGC, Enable: enableURL(hbGCURL)})
 	})
 }
 
@@ -59,7 +59,7 @@ func getBeans(url string, jmx *jmx) error {
 	return nil
 }
 
-func c_hbase_region() (opentsdb.MultiDataPoint, error) {
+func cHbaseRegion() (opentsdb.MultiDataPoint, error) {
 	var j jmx
 	if err := getBeans(hbURL, &j); err != nil {
 		return nil, err
@@ -77,7 +77,7 @@ func c_hbase_region() (opentsdb.MultiDataPoint, error) {
 	return md, nil
 }
 
-func c_hbase_regions() (opentsdb.MultiDataPoint, error) {
+func cHbaseRegions() (opentsdb.MultiDataPoint, error) {
 	var j jmx
 	if err := getBeans(hbRegURL, &j); err != nil {
 		return nil, err
@@ -109,7 +109,7 @@ func c_hbase_regions() (opentsdb.MultiDataPoint, error) {
 	return md, nil
 }
 
-func c_hbase_gc() (opentsdb.MultiDataPoint, error) {
+func cHbaseGC() (opentsdb.MultiDataPoint, error) {
 	var j jmx
 	if err := getBeans(hbGCURL, &j); err != nil {
 		return nil, err
@@ -136,7 +136,7 @@ func c_hbase_gc() (opentsdb.MultiDataPoint, error) {
 	return md, nil
 }
 
-func c_hbase_replication() (opentsdb.MultiDataPoint, error) {
+func cHbaseReplication() (opentsdb.MultiDataPoint, error) {
 	var j jmx
 	if err := getBeans(hbRepURL, &j); err != nil {
 		return nil, err

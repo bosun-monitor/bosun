@@ -25,23 +25,23 @@ const (
 func SNMPBridge(cfg conf.SNMP) {
 	collectors = append(collectors, &IntervalCollector{
 		F: func() (opentsdb.MultiDataPoint, error) {
-			return c_snmp_bridge(cfg.Community, cfg.Host)
+			return cSnmpBridge(cfg.Community, cfg.Host)
 		},
 		Interval: time.Minute * 5,
 		name:     fmt.Sprintf("snmp-bridge-%s", cfg.Host),
 	})
 	collectors = append(collectors, &IntervalCollector{
 		F: func() (opentsdb.MultiDataPoint, error) {
-			return c_snmp_cdp(cfg.Community, cfg.Host)
+			return cSnmpCdp(cfg.Community, cfg.Host)
 		},
 		Interval: time.Minute * 5,
 		name:     fmt.Sprintf("snmp-cdp-%s", cfg.Host),
 	})
 }
 
-func c_snmp_bridge(community, host string) (opentsdb.MultiDataPoint, error) {
+func cSnmpBridge(community, host string) (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
-	vlanRaw, err := snmp_subtree(host, community, vtpVlanState)
+	vlanRaw, err := snmpSubtree(host, community, vtpVlanState)
 	if err != nil {
 		return md, err
 	}
@@ -53,7 +53,7 @@ func c_snmp_bridge(community, host string) (opentsdb.MultiDataPoint, error) {
 	ifMacs := make(map[string][]string)
 	for _, vlan := range vlans {
 		// community string indexing: http://www.cisco.com/c/en/us/support/docs/ip/simple-network-management-protocol-snmp/40367-camsnmp40367.html
-		macRaw, err := snmp_subtree(host, community+"@"+vlan, dot1dTpFdbAddress)
+		macRaw, err := snmpSubtree(host, community+"@"+vlan, dot1dTpFdbAddress)
 		if err != nil {
 			slog.Infoln(err)
 			// continue since it might just be the one vlan
@@ -66,7 +66,7 @@ func c_snmp_bridge(community, host string) (opentsdb.MultiDataPoint, error) {
 			}
 		}
 		toPort := make(map[string]string)
-		toPortRaw, err := snmp_subtree(host, community+"@"+vlan, dot1dTpFdbPort)
+		toPortRaw, err := snmpSubtree(host, community+"@"+vlan, dot1dTpFdbPort)
 		if err != nil {
 			slog.Infoln(err)
 		}
@@ -74,7 +74,7 @@ func c_snmp_bridge(community, host string) (opentsdb.MultiDataPoint, error) {
 			toPort[k] = fmt.Sprintf("%v", v)
 		}
 		portToIfIndex := make(map[string]string)
-		portToIfIndexRaw, err := snmp_subtree(host, community+"@"+vlan, dot1dBasePortIfIndex)
+		portToIfIndexRaw, err := snmpSubtree(host, community+"@"+vlan, dot1dBasePortIfIndex)
 		for k, v := range portToIfIndexRaw {
 			portToIfIndex[k] = fmt.Sprintf("%v", v)
 		}
@@ -115,10 +115,10 @@ type cdpCacheEntry struct {
 	DevicePort  string
 }
 
-func c_snmp_cdp(community, host string) (opentsdb.MultiDataPoint, error) {
+func cSnmpCdp(community, host string) (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	cdpEntries := make(map[string]*cdpCacheEntry)
-	deviceIdRaw, err := snmp_subtree(host, community, cdpCacheDeviceId)
+	deviceIdRaw, err := snmpSubtree(host, community, cdpCacheDeviceId)
 	if err != nil {
 		return md, err
 	}
@@ -132,7 +132,7 @@ func c_snmp_cdp(community, host string) (opentsdb.MultiDataPoint, error) {
 		cdpEntries[ids[0]].DeviceId = fmt.Sprintf("%s", v)
 		cdpEntries[ids[0]].InterfaceId = ids[1]
 	}
-	devicePortRaw, err := snmp_subtree(host, community, cdpCacheDevicePort)
+	devicePortRaw, err := snmpSubtree(host, community, cdpCacheDevicePort)
 	for k, v := range devicePortRaw {
 		ids := strings.Split(k, ".")
 		if len(ids) != 2 {

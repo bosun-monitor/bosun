@@ -10,10 +10,10 @@ import (
 )
 
 func init() {
-	collectors = append(collectors, &IntervalCollector{F: c_iostat_darwin})
+	collectors = append(collectors, &IntervalCollector{F: cIostatDarwin})
 }
 
-func c_iostat_darwin() (opentsdb.MultiDataPoint, error) {
+func cIostatDarwin() (opentsdb.MultiDataPoint, error) {
 	var categories []string
 	var md opentsdb.MultiDataPoint
 	ln := 0

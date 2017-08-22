@@ -10,10 +10,10 @@ import (
 )
 
 func init() {
-	collectors = append(collectors, &IntervalCollector{F: c_vmstat_darwin})
+	collectors = append(collectors, &IntervalCollector{F: cVmstatDarwin})
 }
 
-func c_vmstat_darwin() (opentsdb.MultiDataPoint, error) {
+func cVmstatDarwin() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	var free float64
 	util.ReadCommand(func(line string) error {

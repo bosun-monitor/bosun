@@ -22,14 +22,14 @@ func ICMP(host string) error {
 	}
 	collectors = append(collectors, &IntervalCollector{
 		F: func() (opentsdb.MultiDataPoint, error) {
-			return c_icmp(host)
+			return cICMP(host)
 		},
 		name: fmt.Sprintf("icmp-%s", host),
 	})
 	return nil
 }
 
-func c_icmp(host string) (opentsdb.MultiDataPoint, error) {
+func cICMP(host string) (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	p := fastping.NewPinger()
 	ra, err := net.ResolveIPAddr("ip4:icmp", host)

@@ -22,13 +22,13 @@ func init() {
 		for _, n := range c.Nexpose {
 			collectors = append(collectors, &IntervalCollector{
 				F: func() (opentsdb.MultiDataPoint, error) {
-					return c_nexpose(n.Username, n.Password, n.Host, n.Insecure, false)
+					return cNexpose(n.Username, n.Password, n.Host, n.Insecure, false)
 				},
 				name: fmt.Sprintf("nexpose-scans-%s", n.Host),
 			})
 			collectors = append(collectors, &IntervalCollector{
 				F: func() (opentsdb.MultiDataPoint, error) {
-					return c_nexpose(n.Username, n.Password, n.Host, n.Insecure, true)
+					return cNexpose(n.Username, n.Password, n.Host, n.Insecure, true)
 				},
 				name:     fmt.Sprintf("nexpose-assets-%s", n.Host),
 				Interval: time.Hour * 6,
@@ -37,7 +37,7 @@ func init() {
 	})
 }
 
-func c_nexpose(username, password, host string, insecure bool, collectAssets bool) (opentsdb.MultiDataPoint, error) {
+func cNexpose(username, password, host string, insecure bool, collectAssets bool) (opentsdb.MultiDataPoint, error) {
 	const (
 		descScanRunning   = "Nexpose scan running."
 		descScanRunTime   = "Duration scan has been running, in seconds."
@@ -83,7 +83,7 @@ func c_nexpose(username, password, host string, insecure bool, collectAssets boo
 		}
 		for _, asset := range assets {
 			now := time.Now()
-			last_scan := now.Unix() - (asset.LastScanDate / 1000)
+			lastScan := now.Unix() - (asset.LastScanDate / 1000)
 			var assetTags opentsdb.TagSet
 			// Set the AssetName to the hostname if we have it, otherwise the IP.
 			if asset.AssetName != "" {
@@ -95,7 +95,7 @@ func c_nexpose(username, password, host string, insecure bool, collectAssets boo
 			Add(&md, "nexpose.asset.vuln_count", asset.VulnCount, assetTags, metadata.Gauge, metadata.Vulnerabilities, descVulnCount)
 			Add(&md, "nexpose.asset.exploit_count", asset.ExploitCount, assetTags, metadata.Gauge, metadata.Vulnerabilities, descExploitCount)
 			Add(&md, "nexpose.asset.malware_count", asset.MalwareCount, assetTags, metadata.Gauge, metadata.Vulnerabilities, descMalwareCount)
-			Add(&md, "nexpose.asset.last_scan", last_scan, assetTags, metadata.Gauge, metadata.Second, descAssetLastScan)
+			Add(&md, "nexpose.asset.last_scan", lastScan, assetTags, metadata.Gauge, metadata.Second, descAssetLastScan)
 
 			site.VulnCount += asset.VulnCount
 			site.ExploitCount += asset.ExploitCount

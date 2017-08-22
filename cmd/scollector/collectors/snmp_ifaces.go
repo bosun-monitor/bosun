@@ -40,7 +40,7 @@ const (
 func SNMPIfaces(cfg conf.SNMP) {
 	collectors = append(collectors, &IntervalCollector{
 		F: func() (opentsdb.MultiDataPoint, error) {
-			return c_snmp_ifaces(cfg.Community, cfg.Host)
+			return cSnmpIfaces(cfg.Community, cfg.Host)
 		},
 		Interval: time.Second * 30,
 		name:     fmt.Sprintf("snmp-ifaces-%s", cfg.Host),
@@ -68,23 +68,23 @@ func switchInterfaceMetric(metric string, iname string, ifType int64) string {
 	}
 }
 
-func c_snmp_ifaces(community, host string) (opentsdb.MultiDataPoint, error) {
-	ifNamesRaw, err := snmp_subtree(host, community, ifName)
+func cSnmpIfaces(community, host string) (opentsdb.MultiDataPoint, error) {
+	ifNamesRaw, err := snmpSubtree(host, community, ifName)
 	if err != nil || len(ifNamesRaw) == 0 {
-		ifNamesRaw, err = snmp_subtree(host, community, ifDescr)
+		ifNamesRaw, err = snmpSubtree(host, community, ifDescr)
 		if err != nil {
 			return nil, err
 		}
 	}
-	ifAliasesRaw, err := snmp_subtree(host, community, ifAlias)
+	ifAliasesRaw, err := snmpSubtree(host, community, ifAlias)
 	if err != nil {
 		return nil, err
 	}
-	ifTypesRaw, err := snmp_subtree(host, community, ifType)
+	ifTypesRaw, err := snmpSubtree(host, community, ifType)
 	if err != nil {
 		return nil, err
 	}
-	ifPhysAddressRaw, err := snmp_subtree(host, community, ifPhysAddress)
+	ifPhysAddressRaw, err := snmpSubtree(host, community, ifPhysAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -115,7 +115,7 @@ func c_snmp_ifaces(community, host string) (opentsdb.MultiDataPoint, error) {
 	}
 	var md opentsdb.MultiDataPoint
 	add := func(sA snmpAdd) error {
-		m, err := snmp_subtree(host, community, sA.oid)
+		m, err := snmpSubtree(host, community, sA.oid)
 		if err != nil {
 			return err
 		}

@@ -69,7 +69,7 @@ func ExtraHop(host, apikey, filterby string, filterpercent int, customMetrics []
 	}
 	collectors = append(collectors, &IntervalCollector{
 		F: func() (opentsdb.MultiDataPoint, error) {
-			return c_extrahop(host, apikey)
+			return cExtrahop(host, apikey)
 		},
 		name:     fmt.Sprintf("extrahop-%s", u.Host),
 		Interval: time.Second * time.Duration(extraHopIntervalSeconds),
@@ -78,7 +78,7 @@ func ExtraHop(host, apikey, filterby string, filterpercent int, customMetrics []
 
 }
 
-func c_extrahop(host, apikey string) (opentsdb.MultiDataPoint, error) {
+func cExtrahop(host, apikey string) (opentsdb.MultiDataPoint, error) {
 	c := gohop.NewClient(host, apikey)
 	var md opentsdb.MultiDataPoint
 	if err := extraHopNetworks(c, &md); err != nil {

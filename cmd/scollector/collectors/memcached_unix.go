@@ -12,7 +12,7 @@ import (
 )
 
 func init() {
-	collectors = append(collectors, &IntervalCollector{F: c_memcached_stats})
+	collectors = append(collectors, &IntervalCollector{F: cMemcachedStats})
 }
 
 var memcachedMeta = map[string]MetricMeta{
@@ -191,7 +191,7 @@ var memcachedMeta = map[string]MetricMeta{
 	},
 }
 
-func c_memcached_stats() (opentsdb.MultiDataPoint, error) {
+func cMemcachedStats() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	const metric = "memcached."
 	util.ReadCommand(func(line string) error {

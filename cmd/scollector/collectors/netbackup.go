@@ -14,8 +14,8 @@ import (
 )
 
 func init() {
-	collectors = append(collectors, &IntervalCollector{F: c_netbackup_jobs})
-	collectors = append(collectors, &IntervalCollector{F: c_netbackup_frequency})
+	collectors = append(collectors, &IntervalCollector{F: cNetbackupJobs})
+	collectors = append(collectors, &IntervalCollector{F: cNetbackupFrequency})
 }
 
 //jobtype
@@ -59,7 +59,7 @@ type nbJob struct {
 	Owner             string
 	Subtype           string
 	Classtype         string
-	Schedule_Type     string
+	ScheduleType      string
 	Priority          string
 	Group             string
 	Masterserver      string
@@ -115,7 +115,7 @@ func nbUnmarhsall(reader *csv.Reader, v interface{}) error {
 	return nil
 }
 
-func c_netbackup_jobs() (opentsdb.MultiDataPoint, error) {
+func cNetbackupJobs() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	latest := make(map[string]nbJob)
 	if err := util.ReadCommand(func(line string) error {
@@ -158,7 +158,7 @@ func c_netbackup_jobs() (opentsdb.MultiDataPoint, error) {
 	return md, nil
 }
 
-func c_netbackup_frequency() (opentsdb.MultiDataPoint, error) {
+func cNetbackupFrequency() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	var class, schedule string
 	var clients []string

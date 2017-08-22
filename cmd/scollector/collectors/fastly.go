@@ -24,14 +24,14 @@ func init() {
 			client := newFastlyClient(f.Key)
 			collectors = append(collectors, &IntervalCollector{
 				F: func() (opentsdb.MultiDataPoint, error) {
-					return c_fastly(client)
+					return cFastly(client)
 				},
 				name:     "c_fastly",
 				Interval: time.Minute * 1,
 			})
 			collectors = append(collectors, &IntervalCollector{
 				F: func() (opentsdb.MultiDataPoint, error) {
-					return c_fastly_billing(client)
+					return cFastlyBilling(client)
 				},
 				name:     "c_fastly_billing",
 				Interval: time.Minute * 5,
@@ -39,7 +39,7 @@ func init() {
 			if f.StatusBaseAddr != "" {
 				collectors = append(collectors, &IntervalCollector{
 					F: func() (opentsdb.MultiDataPoint, error) {
-						return c_fastly_status(f.StatusBaseAddr)
+						return cFastlyStatus(f.StatusBaseAddr)
 					},
 					name:     "c_fastly_status",
 					Interval: time.Minute * 1,
@@ -73,7 +73,7 @@ var (
 	fastlyStatusPopRegex = regexp.MustCompile(`(.*)\(([A-Z]{3})\)`) // i.e. Miami (MIA)
 )
 
-func c_fastly_status(baseAddr string) (opentsdb.MultiDataPoint, error) {
+func cFastlyStatus(baseAddr string) (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	c := statusio.NewClient(baseAddr)
 	summary, err := c.GetSummary()
@@ -144,7 +144,7 @@ func c_fastly_status(baseAddr string) (opentsdb.MultiDataPoint, error) {
 	return md, nil
 }
 
-func c_fastly_billing(c fastlyClient) (opentsdb.MultiDataPoint, error) {
+func cFastlyBilling(c fastlyClient) (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	now := time.Now().UTC()
 	year := now.Format("2006")
@@ -167,7 +167,7 @@ func c_fastly_billing(c fastlyClient) (opentsdb.MultiDataPoint, error) {
 	return md, nil
 }
 
-func c_fastly(c fastlyClient) (opentsdb.MultiDataPoint, error) {
+func cFastly(c fastlyClient) (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	to := time.Now().UTC().Truncate(time.Minute)
 	from := to.Add(-15 * time.Minute) // "Minutely data will be delayed by roughly 10 to 15 minutes from the current time -- Fastly Docs"

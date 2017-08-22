@@ -9,12 +9,12 @@ import (
 )
 
 func init() {
-	collectors = append(collectors, &IntervalCollector{F: c_opentsdb, Enable: enableURL(tsdbURL)})
+	collectors = append(collectors, &IntervalCollector{F: cOpentsdb, Enable: enableURL(tsdbURL)})
 }
 
 const tsdbURL = "http://localhost:4242/api/stats"
 
-func c_opentsdb() (opentsdb.MultiDataPoint, error) {
+func cOpentsdb() (opentsdb.MultiDataPoint, error) {
 	resp, err := http.Get(tsdbURL)
 	if err != nil {
 		return nil, err

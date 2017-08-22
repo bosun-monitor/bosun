@@ -11,11 +11,11 @@ import (
 )
 
 func init() {
-	collectors = append(collectors, &IntervalCollector{F: c_meta_darwin_version, Interval: time.Minute * 30})
-	collectors = append(collectors, &IntervalCollector{F: c_meta_darwin_interfaces, Interval: time.Minute * 30})
+	collectors = append(collectors, &IntervalCollector{F: cMetaDarwinVersion, Interval: time.Minute * 30})
+	collectors = append(collectors, &IntervalCollector{F: cMetaDarwinInterfaces, Interval: time.Minute * 30})
 }
 
-func c_meta_darwin_version() (opentsdb.MultiDataPoint, error) {
+func cMetaDarwinVersion() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	util.ReadCommand(func(line string) error {
 		metadata.AddMeta("", nil, "uname", line, true)
@@ -45,7 +45,7 @@ func c_meta_darwin_version() (opentsdb.MultiDataPoint, error) {
 	return md, nil
 }
 
-func c_meta_darwin_interfaces() (opentsdb.MultiDataPoint, error) {
+func cMetaDarwinInterfaces() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	metaIfaces(nil)
 	return md, nil

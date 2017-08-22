@@ -14,7 +14,7 @@ import (
 )
 
 func init() {
-	collectors = append(collectors, &IntervalCollector{F: c_ntp_peers_unix, Interval: time.Minute})
+	collectors = append(collectors, &IntervalCollector{F: cNtpPeersUnix, Interval: time.Minute})
 }
 
 var ntpNtpqPeerFields = []string{
@@ -51,7 +51,7 @@ func ntpUnPretty(s string) (int64, error) {
 	return i * multiplier, err
 }
 
-func c_ntp_peers_unix() (opentsdb.MultiDataPoint, error) {
+func cNtpPeersUnix() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	const metric = "ntp."
 	_ = util.ReadCommand(func(line string) error {
@@ -71,11 +71,11 @@ func c_ntp_peers_unix() (opentsdb.MultiDataPoint, error) {
 		}
 		remote := fields[0]
 		tags := opentsdb.TagSet{"remote": remote, "refid": fields[1]}
-		var current_source int
+		var currentSource int
 		if fl == "*" {
-			current_source = 1
+			currentSource = 1
 		}
-		Add(&md, metric+"current_source", current_source, tags, metadata.Gauge, metadata.Bool, "")
+		Add(&md, metric+"current_source", currentSource, tags, metadata.Gauge, metadata.Bool, "")
 		Add(&md, metric+"stratum", fields[2], tags, metadata.Gauge, "Stratum", "")
 		when, err := ntpUnPretty(fields[4])
 		if err != nil {

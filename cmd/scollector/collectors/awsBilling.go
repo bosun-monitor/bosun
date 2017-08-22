@@ -38,7 +38,7 @@ const (
 	awsDescCostsByProduct      = "Usage costs for Amazon services, denormalized with only a product tag. Datapoints represent a full hour of usage. Data typically lags by 24 hours."
 )
 
-func c_awsBilling(accessKey, secretKey, region, productCodes, bucketName, bucketPath string, purgeDays int) (opentsdb.MultiDataPoint, error) {
+func cAwsbilling(accessKey, secretKey, region, productCodes, bucketName, bucketPath string, purgeDays int) (opentsdb.MultiDataPoint, error) {
 	creds := credentials.NewStaticCredentials(accessKey, secretKey, "")
 	conf := &aws.Config{
 		Credentials: creds,

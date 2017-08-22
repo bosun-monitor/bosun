@@ -43,7 +43,7 @@ func cHTTPUnit(plans *httpunit.Plans) (opentsdb.MultiDataPoint, error) {
 	if err != nil {
 		return nil, err
 	}
-	unix_now := time.Now().Unix()
+	unixNow := time.Now().Unix()
 	var md opentsdb.MultiDataPoint
 	for r := range ch {
 		tags := opentsdb.TagSet{
@@ -66,7 +66,7 @@ func cHTTPUnit(plans *httpunit.Plans) (opentsdb.MultiDataPoint, error) {
 				if resp := r.Result.Resp; resp != nil && resp.TLS != nil && len(resp.TLS.PeerCertificates) > 0 {
 					expiration := resp.TLS.PeerCertificates[0].NotAfter.Unix()
 					Add(&md, "hu.cert.expires", expiration, tags, metadata.Gauge, metadata.Timestamp, descHTTPUnitCertExpires)
-					Add(&md, "hu.cert.valid_for", expiration-unix_now, tags, metadata.Gauge, metadata.Second, descHTTPUnitCertValidFor)
+					Add(&md, "hu.cert.valid_for", expiration-unixNow, tags, metadata.Gauge, metadata.Second, descHTTPUnitCertValidFor)
 				}
 			}
 		}

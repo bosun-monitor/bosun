@@ -19,16 +19,16 @@ const (
 func SNMPSys(cfg conf.SNMP) {
 	collectors = append(collectors, &IntervalCollector{
 		F: func() (opentsdb.MultiDataPoint, error) {
-			return c_snmp_sys(cfg.Host, cfg.Community)
+			return cSnmpSys(cfg.Host, cfg.Community)
 		},
 		Interval: time.Minute * 1,
 		name:     fmt.Sprintf("snmp-sys-%s", cfg.Host),
 	})
 }
 
-func c_snmp_sys(host, community string) (opentsdb.MultiDataPoint, error) {
+func cSnmpSys(host, community string) (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
-	uptime, err := snmp_oid(host, community, sysUpTime)
+	uptime, err := snmpOid(host, community, sysUpTime)
 	if err != nil {
 		return md, err
 	}

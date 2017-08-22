@@ -17,7 +17,7 @@ func init() {
 	registerInit(func(c *conf.Conf) {
 		if c.LocalListener != "" {
 			collectors = append(collectors, &StreamCollector{F: func() <-chan *opentsdb.MultiDataPoint {
-				return c_local_listener(c.LocalListener)
+				return cLocalListener(c.LocalListener)
 			},
 				name: fmt.Sprintf("local_listener-%s", c.LocalListener),
 			})
@@ -25,7 +25,7 @@ func init() {
 	})
 }
 
-func c_local_listener(listenAddr string) <-chan *opentsdb.MultiDataPoint {
+func cLocalListener(listenAddr string) <-chan *opentsdb.MultiDataPoint {
 	pm := &putMetric{}
 	pm.localMetrics = make(chan *opentsdb.MultiDataPoint, 1)
 

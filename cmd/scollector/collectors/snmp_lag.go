@@ -17,15 +17,15 @@ const (
 func SNMPLag(cfg conf.SNMP) {
 	collectors = append(collectors, &IntervalCollector{
 		F: func() (opentsdb.MultiDataPoint, error) {
-			return c_snmp_lag(cfg.Community, cfg.Host)
+			return cSnmpLag(cfg.Community, cfg.Host)
 		},
 		Interval: time.Second * 30,
 		name:     fmt.Sprintf("snmp-lag-%s", cfg.Host),
 	})
 }
 
-func c_snmp_lag(community, host string) (opentsdb.MultiDataPoint, error) {
-	ifNamesRaw, err := snmp_subtree(host, community, dot3adAggPortAttachedAggID)
+func cSnmpLag(community, host string) (opentsdb.MultiDataPoint, error) {
+	ifNamesRaw, err := snmpSubtree(host, community, dot3adAggPortAttachedAggID)
 	if err != nil {
 		return nil, err
 	}

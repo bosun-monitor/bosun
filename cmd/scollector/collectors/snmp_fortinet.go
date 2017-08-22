@@ -61,14 +61,14 @@ func SNMPFortinet(cfg conf.SNMP) {
 		},
 		&IntervalCollector{
 			F: func() (opentsdb.MultiDataPoint, error) {
-				return c_fortinet_os(cfg.Host, cfg.Community, cpuIntegrators)
+				return cFortinetOs(cfg.Host, cfg.Community, cpuIntegrators)
 			},
 			Interval: time.Second * 30,
 			name:     fmt.Sprintf("snmp-fortinet-os-%s", cfg.Host),
 		},
 		&IntervalCollector{
 			F: func() (opentsdb.MultiDataPoint, error) {
-				return c_fortinet_meta(cfg.Host, cfg.Community)
+				return cFortinetMeta(cfg.Host, cfg.Community)
 			},
 			Interval: time.Minute * 5,
 			name:     fmt.Sprintf("snmp-fortinet-meta-%s", cfg.Host),
@@ -76,11 +76,11 @@ func SNMPFortinet(cfg conf.SNMP) {
 	)
 }
 
-func c_fortinet_os(host, community string, cpuIntegrators map[string]tsIntegrator) (opentsdb.MultiDataPoint, error) {
+func cFortinetOs(host, community string, cpuIntegrators map[string]tsIntegrator) (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	ts := opentsdb.TagSet{"host": host}
 	// CPU
-	cpuRaw, err := snmp_subtree(host, community, fortinetBaseOID+fortinetCPU)
+	cpuRaw, err := snmpSubtree(host, community, fortinetBaseOID+fortinetCPU)
 	if err != nil {
 		return md, err
 	}
@@ -101,14 +101,14 @@ func c_fortinet_os(host, community string, cpuIntegrators map[string]tsIntegrato
 	Add(&md, osCPU, cpuIntegrators[host](time.Now().Unix(), float64(totalPercent)/float64(coreCount)), opentsdb.TagSet{"host": host}, metadata.Counter, metadata.Pct, "")
 
 	// Memory
-	memTotal, err := snmp_oid(host, community, fortinetBaseOID+fortinetMemTotal)
+	memTotal, err := snmpOid(host, community, fortinetBaseOID+fortinetMemTotal)
 	if err != nil {
 		return md, fmt.Errorf("failed to get total memory for fortinet host %v: %v", host, err)
 	}
 	memTotalBytes := memTotal.Int64() * 2 << 9 // KiB to Bytes
 	Add(&md, "fortinet.mem.total", memTotal, ts, metadata.Gauge, metadata.KBytes, "The total memory in kilobytes.")
 	Add(&md, osMemTotal, memTotalBytes, ts, metadata.Gauge, metadata.Bytes, osMemTotalDesc)
-	memPctUsed, err := snmp_oid(host, community, fortinetBaseOID+fortinetMemPercentUsed)
+	memPctUsed, err := snmpOid(host, community, fortinetBaseOID+fortinetMemPercentUsed)
 	if err != nil {
 		return md, fmt.Errorf("failed to get percent of memory used for fortinet host %v: %v", host, err)
 	}
@@ -128,7 +128,7 @@ const (
 	fortinetSerial  = ".100.1.1.1.0"
 )
 
-func c_fortinet_meta(host, community string) (opentsdb.MultiDataPoint, error) {
+func cFortinetMeta(host, community string) (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	ts := opentsdb.TagSet{"host": host}
 	serial, err := snmpOidString(host, community, fortinetBaseOID+fortinetSerial)

@@ -24,14 +24,14 @@ func Vsphere(user, pwd, host string) error {
 	cpuIntegrators := make(map[string]tsIntegrator)
 	collectors = append(collectors, &IntervalCollector{
 		F: func() (opentsdb.MultiDataPoint, error) {
-			return c_vsphere(user, pwd, host, cpuIntegrators)
+			return cVsphere(user, pwd, host, cpuIntegrators)
 		},
 		name: fmt.Sprintf("vsphere-%s", host),
 	})
 	return nil
 }
 
-func c_vsphere(user, pwd, host string, cpuIntegrators map[string]tsIntegrator) (opentsdb.MultiDataPoint, error) {
+func cVsphere(user, pwd, host string, cpuIntegrators map[string]tsIntegrator) (opentsdb.MultiDataPoint, error) {
 	v, err := vsphere.Connect(host, user, pwd)
 	if err != nil {
 		return nil, err

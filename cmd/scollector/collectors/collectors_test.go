@@ -8,8 +8,8 @@ import (
 
 func TestIsDigit(t *testing.T) {
 	numbers := []string{"029", "1", "400"}
-	not_numbers := []string{"1a3", " 3", "-1", "3.0", "am"}
-	for _, s := range not_numbers {
+	notNumbers := []string{"1a3", " 3", "-1", "3.0", "am"}
+	for _, s := range notNumbers {
 		if IsDigit(s) {
 			t.Errorf("%s: not expected to be a digit", s)
 		}

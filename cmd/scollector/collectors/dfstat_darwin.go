@@ -10,10 +10,10 @@ import (
 )
 
 func init() {
-	collectors = append(collectors, &IntervalCollector{F: c_dfstat_darwin})
+	collectors = append(collectors, &IntervalCollector{F: cDfstatDarwin})
 }
 
-func c_dfstat_darwin() (opentsdb.MultiDataPoint, error) {
+func cDfstatDarwin() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	util.ReadCommand(func(line string) error {
 		fields := strings.Fields(line)

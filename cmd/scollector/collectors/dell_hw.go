@@ -16,23 +16,23 @@ import (
 func init() {
 	const interval = time.Minute * 5
 	collectors = append(collectors,
-		&IntervalCollector{F: c_omreport_chassis, Interval: interval},
-		&IntervalCollector{F: c_omreport_fans, Interval: interval},
-		&IntervalCollector{F: c_omreport_memory, Interval: interval},
-		&IntervalCollector{F: c_omreport_processors, Interval: interval},
-		&IntervalCollector{F: c_omreport_ps, Interval: interval},
-		&IntervalCollector{F: c_omreport_ps_amps_sysboard_pwr, Interval: interval},
-		&IntervalCollector{F: c_omreport_storage_battery, Interval: interval},
-		&IntervalCollector{F: c_omreport_storage_controller, Interval: interval},
-		&IntervalCollector{F: c_omreport_storage_enclosure, Interval: interval},
-		&IntervalCollector{F: c_omreport_storage_vdisk, Interval: interval},
-		&IntervalCollector{F: c_omreport_system, Interval: interval},
-		&IntervalCollector{F: c_omreport_temps, Interval: interval},
-		&IntervalCollector{F: c_omreport_volts, Interval: interval},
+		&IntervalCollector{F: cOmreportChassis, Interval: interval},
+		&IntervalCollector{F: cOmreportFans, Interval: interval},
+		&IntervalCollector{F: cOmreportMemory, Interval: interval},
+		&IntervalCollector{F: cOmreportProcessors, Interval: interval},
+		&IntervalCollector{F: cOmreportPs, Interval: interval},
+		&IntervalCollector{F: cOmreportPsAmpsSysboardPwr, Interval: interval},
+		&IntervalCollector{F: cOmreportStorageBattery, Interval: interval},
+		&IntervalCollector{F: cOmreportStorageController, Interval: interval},
+		&IntervalCollector{F: cOmreportStorageEnclosure, Interval: interval},
+		&IntervalCollector{F: cOmreportStorageVdisk, Interval: interval},
+		&IntervalCollector{F: cOmreportSystem, Interval: interval},
+		&IntervalCollector{F: cOmreportTemps, Interval: interval},
+		&IntervalCollector{F: cOmreportVolts, Interval: interval},
 	)
 }
 
-func c_omreport_chassis() (opentsdb.MultiDataPoint, error) {
+func cOmreportChassis() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	readOmreport(func(fields []string) {
 		if len(fields) != 2 || fields[0] == "SEVERITY" {
@@ -44,7 +44,7 @@ func c_omreport_chassis() (opentsdb.MultiDataPoint, error) {
 	return md, nil
 }
 
-func c_omreport_system() (opentsdb.MultiDataPoint, error) {
+func cOmreportSystem() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	readOmreport(func(fields []string) {
 		if len(fields) != 2 || fields[0] == "SEVERITY" {
@@ -56,7 +56,7 @@ func c_omreport_system() (opentsdb.MultiDataPoint, error) {
 	return md, nil
 }
 
-func c_omreport_storage_enclosure() (opentsdb.MultiDataPoint, error) {
+func cOmreportStorageEnclosure() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	readOmreport(func(fields []string) {
 		if len(fields) < 3 || fields[0] == "ID" {
@@ -68,7 +68,7 @@ func c_omreport_storage_enclosure() (opentsdb.MultiDataPoint, error) {
 	return md, nil
 }
 
-func c_omreport_storage_vdisk() (opentsdb.MultiDataPoint, error) {
+func cOmreportStorageVdisk() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	readOmreport(func(fields []string) {
 		if len(fields) < 3 || fields[0] == "ID" {
@@ -80,7 +80,7 @@ func c_omreport_storage_vdisk() (opentsdb.MultiDataPoint, error) {
 	return md, nil
 }
 
-func c_omreport_ps() (opentsdb.MultiDataPoint, error) {
+func cOmreportPs() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	readOmreport(func(fields []string) {
 		if len(fields) < 3 || fields[0] == "Index" {
@@ -108,33 +108,33 @@ func c_omreport_ps() (opentsdb.MultiDataPoint, error) {
 	return md, nil
 }
 
-func c_omreport_ps_amps_sysboard_pwr() (opentsdb.MultiDataPoint, error) {
+func cOmreportPsAmpsSysboardPwr() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	readOmreport(func(fields []string) {
 		if len(fields) == 2 && strings.Contains(fields[0], "Current") {
-			i_fields := strings.Split(fields[0], "Current")
-			v_fields := strings.Fields(fields[1])
-			if len(i_fields) < 2 && len(v_fields) < 2 {
+			iFields := strings.Split(fields[0], "Current")
+			vFields := strings.Fields(fields[1])
+			if len(iFields) < 2 && len(vFields) < 2 {
 				return
 			}
-			id := strings.Replace(i_fields[0], " ", "", -1)
-			Add(&md, "hw.chassis.current.reading", v_fields[0], opentsdb.TagSet{"id": id}, metadata.Gauge, metadata.A, descDellHWCurrent)
+			id := strings.Replace(iFields[0], " ", "", -1)
+			Add(&md, "hw.chassis.current.reading", vFields[0], opentsdb.TagSet{"id": id}, metadata.Gauge, metadata.A, descDellHWCurrent)
 		} else if len(fields) == 6 && (fields[2] == "System Board Pwr Consumption" || fields[2] == "System Board System Level") {
-			v_fields := strings.Fields(fields[3])
-			warn_fields := strings.Fields(fields[4])
-			fail_fields := strings.Fields(fields[5])
-			if len(v_fields) < 2 || len(warn_fields) < 2 || len(fail_fields) < 2 {
+			vFields := strings.Fields(fields[3])
+			warnFields := strings.Fields(fields[4])
+			failFields := strings.Fields(fields[5])
+			if len(vFields) < 2 || len(warnFields) < 2 || len(failFields) < 2 {
 				return
 			}
-			Add(&md, "hw.chassis.power.reading", v_fields[0], nil, metadata.Gauge, metadata.Watt, descDellHWPower)
-			Add(&md, "hw.chassis.power.warn_level", warn_fields[0], nil, metadata.Gauge, metadata.Watt, descDellHWPowerThreshold)
-			Add(&md, "hw.chassis.power.fail_level", fail_fields[0], nil, metadata.Gauge, metadata.Watt, descDellHWPowerThreshold)
+			Add(&md, "hw.chassis.power.reading", vFields[0], nil, metadata.Gauge, metadata.Watt, descDellHWPower)
+			Add(&md, "hw.chassis.power.warn_level", warnFields[0], nil, metadata.Gauge, metadata.Watt, descDellHWPowerThreshold)
+			Add(&md, "hw.chassis.power.fail_level", failFields[0], nil, metadata.Gauge, metadata.Watt, descDellHWPowerThreshold)
 		}
 	}, "chassis", "pwrmonitoring")
 	return md, nil
 }
 
-func c_omreport_storage_battery() (opentsdb.MultiDataPoint, error) {
+func cOmreportStorageBattery() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	readOmreport(func(fields []string) {
 		if len(fields) < 3 || fields[0] == "ID" {
@@ -146,13 +146,13 @@ func c_omreport_storage_battery() (opentsdb.MultiDataPoint, error) {
 	return md, nil
 }
 
-func c_omreport_storage_controller() (opentsdb.MultiDataPoint, error) {
+func cOmreportStorageController() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	readOmreport(func(fields []string) {
 		if len(fields) < 3 || fields[0] == "ID" {
 			return
 		}
-		c_omreport_storage_pdisk(fields[0], &md)
+		cOmreportStoragePdisk(fields[0], &md)
 		id := strings.Replace(fields[0], ":", "_", -1)
 		ts := opentsdb.TagSet{"id": id}
 		Add(&md, "hw.storage.controller", severity(fields[1]), ts, metadata.Gauge, metadata.Ok, descDellHWStorageCtl)
@@ -184,8 +184,8 @@ func c_omreport_storage_controller() (opentsdb.MultiDataPoint, error) {
 	return md, nil
 }
 
-// c_omreport_storage_pdisk is called from the controller func, since it needs the encapsulating id.
-func c_omreport_storage_pdisk(id string, md *opentsdb.MultiDataPoint) {
+// cOmreportStoragePdisk is called from the controller func, since it needs the encapsulating id.
+func cOmreportStoragePdisk(id string, md *opentsdb.MultiDataPoint) {
 	readOmreport(func(fields []string) {
 		if len(fields) < 3 || fields[0] == "ID" {
 			return
@@ -237,7 +237,7 @@ func c_omreport_storage_pdisk(id string, md *opentsdb.MultiDataPoint) {
 	}, "storage", "pdisk", "controller="+id)
 }
 
-func c_omreport_processors() (opentsdb.MultiDataPoint, error) {
+func cOmreportProcessors() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	readOmreport(func(fields []string) {
 		if len(fields) != 8 {
@@ -253,7 +253,7 @@ func c_omreport_processors() (opentsdb.MultiDataPoint, error) {
 	return md, nil
 }
 
-func c_omreport_fans() (opentsdb.MultiDataPoint, error) {
+func cOmreportFans() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	readOmreport(func(fields []string) {
 		if len(fields) != 8 {
@@ -275,7 +275,7 @@ func c_omreport_fans() (opentsdb.MultiDataPoint, error) {
 	return md, nil
 }
 
-func c_omreport_memory() (opentsdb.MultiDataPoint, error) {
+func cOmreportMemory() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	readOmreport(func(fields []string) {
 		if len(fields) != 5 {
@@ -291,7 +291,7 @@ func c_omreport_memory() (opentsdb.MultiDataPoint, error) {
 	return md, nil
 }
 
-func c_omreport_temps() (opentsdb.MultiDataPoint, error) {
+func cOmreportTemps() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	readOmreport(func(fields []string) {
 		if len(fields) != 8 {
@@ -313,7 +313,7 @@ func c_omreport_temps() (opentsdb.MultiDataPoint, error) {
 	return md, nil
 }
 
-func c_omreport_volts() (opentsdb.MultiDataPoint, error) {
+func cOmreportVolts() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	readOmreport(func(fields []string) {
 		if len(fields) != 8 {

@@ -18,7 +18,7 @@ func init() {
 		for _, g := range c.GoogleWebmaster {
 			collectors = append(collectors, &IntervalCollector{
 				F: func() (opentsdb.MultiDataPoint, error) {
-					return c_google_webmaster(g.ClientID, g.Secret, g.Token, g.JSONToken)
+					return cGoogleWebmaster(g.ClientID, g.Secret, g.Token, g.JSONToken)
 				},
 				name:     "c_google_webmaster",
 				Interval: time.Hour * 1,
@@ -27,7 +27,7 @@ func init() {
 	})
 }
 
-func c_google_webmaster(clientID, secret, tokenStr, jsonToken string) (opentsdb.MultiDataPoint, error) {
+func cGoogleWebmaster(clientID, secret, tokenStr, jsonToken string) (opentsdb.MultiDataPoint, error) {
 	c, err := googleAPIClient(clientID, secret, tokenStr, jsonToken, []string{webmasters.WebmastersReadonlyScope})
 	if err != nil {
 		return nil, err

@@ -457,7 +457,7 @@ var riakMeta = map[string]MetricMeta{
 }
 
 func init() {
-	collectors = append(collectors, &IntervalCollector{F: c_riak, Enable: enableRiak})
+	collectors = append(collectors, &IntervalCollector{F: cRiak, Enable: enableRiak})
 }
 
 const (
@@ -483,7 +483,7 @@ func enableRiak() bool {
 	return enableURL(localRiakURL)()
 }
 
-func c_riak() (opentsdb.MultiDataPoint, error) {
+func cRiak() (opentsdb.MultiDataPoint, error) {
 	return riak(localRiakURL)
 }
 

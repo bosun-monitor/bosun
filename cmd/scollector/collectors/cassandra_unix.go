@@ -14,10 +14,10 @@ import (
 type MetricSet map[string]string
 
 func init() {
-	collectors = append(collectors, &IntervalCollector{F: c_nodestats_cfstats_linux})
+	collectors = append(collectors, &IntervalCollector{F: cNodestatsCfstatsLinux})
 }
 
-func c_nodestats_cfstats_linux() (opentsdb.MultiDataPoint, error) {
+func cNodestatsCfstatsLinux() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	var keyspace, table string
 	util.ReadCommand(func(line string) error {
@@ -64,8 +64,8 @@ func c_nodestats_cfstats_linux() (opentsdb.MultiDataPoint, error) {
 		if metric == "sstables_in_each_level" {
 			fields[1] = strings.Replace(fields[1], "[", "", -1)
 			fields[1] = strings.Replace(fields[1], "]", "", -1)
-			per_level := strings.Split(fields[1], ", ")
-			for index, count := range per_level {
+			perLevel := strings.Split(fields[1], ", ")
+			for index, count := range perLevel {
 				metricset["cassandra.tables.sstables_in_level_"+strconv.Itoa(index)] = strings.Split(count, "/")[0]
 			}
 			submitMetrics(&md, metricset, tagset)

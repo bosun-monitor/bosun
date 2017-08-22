@@ -32,7 +32,7 @@ func AzureEABilling(ea uint32, key string, logBilling bool) error {
 		}
 
 		collectors = append(collectors, &IntervalCollector{
-			F:        c_azureeabilling,
+			F:        cAzureEABilling,
 			Interval: 1 * time.Hour,
 		})
 	}
@@ -40,7 +40,7 @@ func AzureEABilling(ea uint32, key string, logBilling bool) error {
 	return nil
 }
 
-func c_azureeabilling() (opentsdb.MultiDataPoint, error) {
+func cAzureEABilling() (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 
 	//Get the list of available bills from the portal

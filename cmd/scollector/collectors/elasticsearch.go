@@ -27,14 +27,14 @@ func init() {
 		}
 		collectors = append(collectors, &IntervalCollector{
 			F: func() (opentsdb.MultiDataPoint, error) {
-				return c_elasticsearch(false)
+				return cElasticsearch(false)
 			},
 			name:   "elasticsearch",
 			Enable: enableURL("http://localhost:9200/"),
 		})
 		collectors = append(collectors, &IntervalCollector{
 			F: func() (opentsdb.MultiDataPoint, error) {
-				return c_elasticsearch(true)
+				return cElasticsearch(true)
 			},
 			name:     "elasticsearch-indices",
 			Interval: time.Minute * 15,
@@ -158,7 +158,7 @@ func (s *structProcessor) add(prefix string, st interface{}, ts opentsdb.TagSet)
 	}
 }
 
-func c_elasticsearch(collectIndices bool) (opentsdb.MultiDataPoint, error) {
+func cElasticsearch(collectIndices bool) (opentsdb.MultiDataPoint, error) {
 	var status ElasticStatus
 	if err := esReq("/", "", &status); err != nil {
 		return nil, err

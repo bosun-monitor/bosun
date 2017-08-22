@@ -504,7 +504,7 @@ func statsForContainer(md *opentsdb.MultiDataPoint, container *v1.ContainerInfo,
 	}
 }
 
-func c_cadvisor(c *client.Client, config *conf.Cadvisor) (opentsdb.MultiDataPoint, error) {
+func cCadvisor(c *client.Client, config *conf.Cadvisor) (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 
 	containers, err := c.AllDockerContainers(&v1.ContainerInfoRequest{NumStats: 1})
@@ -528,7 +528,7 @@ func startCadvisorCollector(c *conf.Conf) {
 		}
 		collectors = append(collectors, &IntervalCollector{
 			F: func() (opentsdb.MultiDataPoint, error) {
-				return c_cadvisor(cClient, &config)
+				return cCadvisor(cClient, &config)
 			},
 			name: "cadvisor",
 		})

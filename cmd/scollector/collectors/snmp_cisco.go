@@ -21,24 +21,24 @@ func SNMPCiscoASA(cfg conf.SNMP) {
 				// Currently the trees are the same between IOS and NXOS
 				// But registering it this way will make it so future changes
 				// won't require a configuration change
-				return c_cisco_ios(cfg.Host, cfg.Community, cpuIntegrator)
+				return cCiscoIos(cfg.Host, cfg.Community, cpuIntegrator)
 			},
 			Interval: time.Second * 30,
 			name:     fmt.Sprintf("snmp-cisco-asa-%s", cfg.Host),
 		},
 		//
-		// Execute ASA-specific checks in c_cisco_asa
+		// Execute ASA-specific checks in cCiscoAsa
 		//
 		&IntervalCollector{
 			F: func() (opentsdb.MultiDataPoint, error) {
-				return c_cisco_asa(cfg.Host, cfg.Community)
+				return cCiscoAsa(cfg.Host, cfg.Community)
 			},
 			Interval: time.Second * 30,
 			name:     fmt.Sprintf("snmp-cisco-asa-specific-%s", cfg.Host),
 		},
 		&IntervalCollector{
 			F: func() (opentsdb.MultiDataPoint, error) {
-				return c_cisco_desc(cfg.Host, cfg.Community)
+				return cCiscoDesc(cfg.Host, cfg.Community)
 			},
 			Interval: time.Minute * 5,
 			name:     fmt.Sprintf("snmp-cisco-desc-%s", cfg.Host),
@@ -52,14 +52,14 @@ func SNMPCiscoIOS(cfg conf.SNMP) {
 	collectors = append(collectors,
 		&IntervalCollector{
 			F: func() (opentsdb.MultiDataPoint, error) {
-				return c_cisco_ios(cfg.Host, cfg.Community, cpuIntegrator)
+				return cCiscoIos(cfg.Host, cfg.Community, cpuIntegrator)
 			},
 			Interval: time.Second * 30,
 			name:     fmt.Sprintf("snmp-cisco-ios-%s", cfg.Host),
 		},
 		&IntervalCollector{
 			F: func() (opentsdb.MultiDataPoint, error) {
-				return c_cisco_desc(cfg.Host, cfg.Community)
+				return cCiscoDesc(cfg.Host, cfg.Community)
 			},
 			Interval: time.Minute * 5,
 			name:     fmt.Sprintf("snmp-cisco-desc-%s", cfg.Host),
@@ -73,14 +73,14 @@ func SNMPCiscoNXOS(cfg conf.SNMP) {
 	collectors = append(collectors,
 		&IntervalCollector{
 			F: func() (opentsdb.MultiDataPoint, error) {
-				return c_cisco_nxos(cfg.Host, cfg.Community, cpuIntegrator)
+				return cCiscoNxos(cfg.Host, cfg.Community, cpuIntegrator)
 			},
 			Interval: time.Second * 30,
 			name:     fmt.Sprintf("snmp-cisco-nxos-%s", cfg.Host),
 		},
 		&IntervalCollector{
 			F: func() (opentsdb.MultiDataPoint, error) {
-				return c_cisco_desc(cfg.Host, cfg.Community)
+				return cCiscoDesc(cfg.Host, cfg.Community)
 			},
 			Interval: time.Minute * 5,
 			name:     fmt.Sprintf("snmp-cisco-desc-%s", cfg.Host),
@@ -110,12 +110,12 @@ type ciscoMemoryPoolEntry struct {
 }
 
 func ciscoASAConn(host, community string, ts opentsdb.TagSet, md *opentsdb.MultiDataPoint) error {
-	connCurrent, err := snmp_oid(host, community, ciscoBaseOID+asaConnInUseCurrent)
+	connCurrent, err := snmpOid(host, community, ciscoBaseOID+asaConnInUseCurrent)
 	if err != nil {
 		return fmt.Errorf("Error when receiving ASA current connection count.")
 	}
 
-	connMax, err := snmp_oid(host, community, ciscoBaseOID+asaConnInUseMax)
+	connMax, err := snmpOid(host, community, ciscoBaseOID+asaConnInUseMax)
 	if err != nil {
 		return fmt.Errorf("Error when receiving ASA Max connections count.")
 	}
@@ -127,7 +127,7 @@ func ciscoASAConn(host, community string, ts opentsdb.TagSet, md *opentsdb.Multi
 }
 
 func ciscoCPU(host, community string, ts opentsdb.TagSet, cpuIntegrator tsIntegrator, md *opentsdb.MultiDataPoint) error {
-	cpuRaw, err := snmp_subtree(host, community, ciscoBaseOID+cpmCPUTotal5secRev)
+	cpuRaw, err := snmpSubtree(host, community, ciscoBaseOID+cpmCPUTotal5secRev)
 	if err != nil {
 		return err
 	}
@@ -150,7 +150,7 @@ func ciscoCPU(host, community string, ts opentsdb.TagSet, cpuIntegrator tsIntegr
 	return nil
 }
 
-func c_cisco_asa(host, community string) (opentsdb.MultiDataPoint, error) {
+func cCiscoAsa(host, community string) (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	ts := opentsdb.TagSet{"host": host}
 
@@ -161,7 +161,7 @@ func c_cisco_asa(host, community string) (opentsdb.MultiDataPoint, error) {
 	return md, nil
 }
 
-func c_cisco_ios(host, community string, cpuIntegrator tsIntegrator) (opentsdb.MultiDataPoint, error) {
+func cCiscoIos(host, community string, cpuIntegrator tsIntegrator) (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	ts := opentsdb.TagSet{"host": host}
 	// CPU
@@ -169,7 +169,7 @@ func c_cisco_ios(host, community string, cpuIntegrator tsIntegrator) (opentsdb.M
 		return md, err
 	}
 	// ÎMemory
-	memRaw, err := snmp_subtree(host, community, ciscoBaseOID+ciscoMemoryPoolTable)
+	memRaw, err := snmpSubtree(host, community, ciscoBaseOID+ciscoMemoryPoolTable)
 	if err != nil {
 		return md, fmt.Errorf("failed to get ciscoMemoryPoolTable for host %v: %v", host, err)
 	}
@@ -238,7 +238,7 @@ const (
 	cpmCPUTotalEntry = ".109.1.1.1.1"
 )
 
-func c_cisco_nxos(host, community string, cpuIntegrator tsIntegrator) (opentsdb.MultiDataPoint, error) {
+func cCiscoNxos(host, community string, cpuIntegrator tsIntegrator) (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	ts := opentsdb.TagSet{"host": host}
 	// CPU
@@ -246,7 +246,7 @@ func c_cisco_nxos(host, community string, cpuIntegrator tsIntegrator) (opentsdb.
 		return md, err
 	}
 	// Memory
-	memRaw, err := snmp_subtree(host, community, ciscoBaseOID+cpmCPUTotalEntry)
+	memRaw, err := snmpSubtree(host, community, ciscoBaseOID+cpmCPUTotalEntry)
 	if err != nil {
 		return md, fmt.Errorf("failed to get cpmCPUTotalEntry (for memory) for host %v: %v", host, err)
 	}
@@ -282,7 +282,7 @@ func c_cisco_nxos(host, community string, cpuIntegrator tsIntegrator) (opentsdb.
 	return md, nil
 }
 
-func c_cisco_desc(host, community string) (opentsdb.MultiDataPoint, error) {
+func cCiscoDesc(host, community string) (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	desc, err := getSNMPDesc(host, community)
 	if err != nil {
