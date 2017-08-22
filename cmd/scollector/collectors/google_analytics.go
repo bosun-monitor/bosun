@@ -80,9 +80,8 @@ func cGoogleAnalytics(clientid string, secret string, tokenstr string, jsonToken
 
 	if len(mErr) == 0 {
 		return md, nil
-	} else {
-		return md, mErr
 	}
+	return md, mErr
 }
 
 type kv struct {

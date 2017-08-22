@@ -16,7 +16,7 @@ import (
 
 const ifIPAdEntAddr = ".1.3.6.1.2.1.4.20.1"
 
-// SNMPIfaces registers a SNMP Interfaces collector for the given community and host.
+// TODO: fix comment, SNMPIfaces registers a SNMP Interfaces collector for the given community and host.
 func SNMPIPAddresses(cfg conf.SNMP) {
 	collectors = append(collectors, &IntervalCollector{
 		F: func() (opentsdb.MultiDataPoint, error) {
@@ -28,7 +28,7 @@ func SNMPIPAddresses(cfg conf.SNMP) {
 }
 
 type ipAdEntAddr struct {
-	InterfaceId int64
+	InterfaceID int64
 	net.IPNet
 }
 
@@ -56,7 +56,7 @@ func cSnmpIps(community, host string) (opentsdb.MultiDataPoint, error) {
 			}
 		case "2":
 			if v, ok := value.(int64); ok {
-				ipAdEnts[address].InterfaceId = v
+				ipAdEnts[address].InterfaceID = v
 			}
 		case "3":
 			if v, ok := value.([]byte); ok {
@@ -66,7 +66,7 @@ func cSnmpIps(community, host string) (opentsdb.MultiDataPoint, error) {
 	}
 	ipsByInt := make(map[int64][]net.IPNet)
 	for _, ipNet := range ipAdEnts {
-		ipsByInt[ipNet.InterfaceId] = append(ipsByInt[ipNet.InterfaceId], ipNet.IPNet)
+		ipsByInt[ipNet.InterfaceID] = append(ipsByInt[ipNet.InterfaceID], ipNet.IPNet)
 	}
 	for intId, ipNets := range ipsByInt {
 		var ips []string

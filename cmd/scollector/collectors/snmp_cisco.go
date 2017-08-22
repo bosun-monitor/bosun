@@ -112,12 +112,12 @@ type ciscoMemoryPoolEntry struct {
 func ciscoASAConn(host, community string, ts opentsdb.TagSet, md *opentsdb.MultiDataPoint) error {
 	connCurrent, err := snmpOid(host, community, ciscoBaseOID+asaConnInUseCurrent)
 	if err != nil {
-		return fmt.Errorf("Error when receiving ASA current connection count.")
+		return fmt.Errorf("error when receiving ASA current connection count")
 	}
 
 	connMax, err := snmpOid(host, community, ciscoBaseOID+asaConnInUseMax)
 	if err != nil {
-		return fmt.Errorf("Error when receiving ASA Max connections count.")
+		return fmt.Errorf("error when receiving ASA Max connections count")
 	}
 
 	Add(md, "cisco.asa.conn_current", connCurrent, ts, metadata.Gauge, metadata.Connection, asaConnInUseCurrentDesc)

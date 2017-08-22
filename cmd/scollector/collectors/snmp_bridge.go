@@ -21,7 +21,7 @@ const (
 	dot1dBasePortIfIndex = "1.3.6.1.2.1.17.1.4.1.2"
 )
 
-// SNMP Bridge registers
+// SNMPBridge registers
 func SNMPBridge(cfg conf.SNMP) {
 	collectors = append(collectors, &IntervalCollector{
 		F: func() (opentsdb.MultiDataPoint, error) {
@@ -105,32 +105,32 @@ func cSnmpBridge(community, host string) (opentsdb.MultiDataPoint, error) {
 }
 
 const (
-	cdpCacheDeviceId   = "1.3.6.1.4.1.9.9.23.1.2.1.1.6"
+	cdpCacheDeviceID   = "1.3.6.1.4.1.9.9.23.1.2.1.1.6"
 	cdpCacheDevicePort = "1.3.6.1.4.1.9.9.23.1.2.1.1.7"
 )
 
 type cdpCacheEntry struct {
-	InterfaceId string `json:"-"`
-	DeviceId    string
+	InterfaceID string `json:"-"`
+	DeviceID    string
 	DevicePort  string
 }
 
 func cSnmpCdp(community, host string) (opentsdb.MultiDataPoint, error) {
 	var md opentsdb.MultiDataPoint
 	cdpEntries := make(map[string]*cdpCacheEntry)
-	deviceIdRaw, err := snmpSubtree(host, community, cdpCacheDeviceId)
+	deviceIDRaw, err := snmpSubtree(host, community, cdpCacheDeviceID)
 	if err != nil {
 		return md, err
 	}
-	for k, v := range deviceIdRaw {
+	for k, v := range deviceIDRaw {
 		ids := strings.Split(k, ".")
 		if len(ids) != 2 {
 			slog.Error("unexpected snmp cdpCacheEntry id")
 			continue
 		}
 		cdpEntries[ids[0]] = &cdpCacheEntry{}
-		cdpEntries[ids[0]].DeviceId = fmt.Sprintf("%s", v)
-		cdpEntries[ids[0]].InterfaceId = ids[1]
+		cdpEntries[ids[0]].DeviceID = fmt.Sprintf("%s", v)
+		cdpEntries[ids[0]].InterfaceID = ids[1]
 	}
 	devicePortRaw, err := snmpSubtree(host, community, cdpCacheDevicePort)
 	for k, v := range devicePortRaw {
@@ -145,10 +145,10 @@ func cSnmpCdp(community, host string) (opentsdb.MultiDataPoint, error) {
 	}
 	byInterface := make(map[string][]*cdpCacheEntry)
 	for _, entry := range cdpEntries {
-		if _, ok := byInterface[entry.InterfaceId]; ok {
-			byInterface[entry.InterfaceId] = append(byInterface[entry.InterfaceId], entry)
+		if _, ok := byInterface[entry.InterfaceID]; ok {
+			byInterface[entry.InterfaceID] = append(byInterface[entry.InterfaceID], entry)
 		} else {
-			byInterface[entry.InterfaceId] = []*cdpCacheEntry{entry}
+			byInterface[entry.InterfaceID] = []*cdpCacheEntry{entry}
 		}
 	}
 	for iface, entry := range byInterface {

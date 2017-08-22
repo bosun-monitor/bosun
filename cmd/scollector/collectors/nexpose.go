@@ -196,7 +196,7 @@ func (c *nexposeConnection) jsonRequest(method string, location string, v *url.V
 	return body, nil
 }
 
-func (c *nexposeConnection) getJsonTable(location string, params map[string]string) (*jsonTable, error) {
+func (c *nexposeConnection) getJSONTable(location string, params map[string]string) (*jsonTable, error) {
 	v := url.Values{}
 	v.Set("dir", "ASC")
 	v.Set("startIndex", "0")
@@ -241,7 +241,7 @@ func (c *nexposeConnection) xmlRequest(request interface{}, version int) (*apiRe
 	} else if version == 2 {
 		url = c.URLv2
 	} else {
-		return nil, fmt.Errorf("Unsupported API version requested.")
+		return nil, fmt.Errorf("unsupported API version requested")
 	}
 
 	resp, err := c.Client.Post(url, "text/xml", bytes.NewBuffer(buf))
@@ -275,7 +275,7 @@ func (c *nexposeConnection) login() error {
 	}
 
 	if resp.SessionID == "" {
-		return fmt.Errorf("No SessionID in response.")
+		return fmt.Errorf("no SessionID in response")
 	}
 	c.SessionID = resp.SessionID
 
@@ -391,7 +391,7 @@ func (c *nexposeConnection) getSiteAssets(siteID int) ([]asset, error) {
 	params["siteID"] = fmt.Sprintf("%d", siteID)
 
 	var assets []asset
-	table, err := c.getJsonTable("/data/asset/site", params)
+	table, err := c.getJSONTable("/data/asset/site", params)
 	if err != nil {
 		return nil, err
 	}

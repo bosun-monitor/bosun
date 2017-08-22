@@ -68,7 +68,7 @@ func cSnmpCiscobgp(community, host string) (opentsdb.MultiDataPoint, error) {
 		bgpPeerWithdrawnPrefixesDesc   = "The number of prefixes that the local node has withdrawn from the peer this session"
 	)
 	// Tag: local_as
-	localASesRaw, err := snmpIpTree(host, community, localAS)
+	localASesRaw, err := snmpIPTree(host, community, localAS)
 	if err != nil {
 		return nil, err
 	}
@@ -79,21 +79,21 @@ func cSnmpCiscobgp(community, host string) (opentsdb.MultiDataPoint, error) {
 	}
 
 	// Tag: local_id
-	localIdentifiersRaw, err := snmpIpTree(host, community, localIdentifier)
+	localIdentifiersRaw, err := snmpIPTree(host, community, localIdentifier)
 	if err != nil {
 		return nil, err
 	}
 	localIdentifiers := make(map[string]string, len(localIdentifiersRaw))
 	for k, v := range localIdentifiersRaw {
 		if uv, ok := v.([]uint8); ok {
-			localIdentifiers[k] = snmpCombineIpUint8(uv)
+			localIdentifiers[k] = snmpCombineIPUint8(uv)
 		} else {
 			return nil, fmt.Errorf("Bad IP address data in local identifier for peer %q on host %q", k, host)
 		}
 	}
 
 	// Tag: remote_as
-	remoteASesRaw, err := snmpIpTree(host, community, remoteAS)
+	remoteASesRaw, err := snmpIPTree(host, community, remoteAS)
 	if err != nil {
 		return nil, err
 	}
@@ -104,14 +104,14 @@ func cSnmpCiscobgp(community, host string) (opentsdb.MultiDataPoint, error) {
 	}
 
 	// Tag: remote_id
-	remoteIdentifiersRaw, err := snmpIpTree(host, community, remoteIdentifier)
+	remoteIdentifiersRaw, err := snmpIPTree(host, community, remoteIdentifier)
 	if err != nil {
 		return nil, err
 	}
 	remoteIdentifiers := make(map[string]string, len(remoteIdentifiersRaw))
 	for k, v := range remoteIdentifiersRaw {
 		if uv, ok := v.([]uint8); ok {
-			remoteIdentifiers[k] = snmpCombineIpUint8(uv)
+			remoteIdentifiers[k] = snmpCombineIPUint8(uv)
 		} else {
 			return nil, fmt.Errorf("Bad IP address data in remote identifier for peer %q on host %q", k, host)
 		}
@@ -129,7 +129,7 @@ func cSnmpCiscobgp(community, host string) (opentsdb.MultiDataPoint, error) {
 
 	// Function to harvest all metrics with the tag groups above
 	add := func(bA bgpAdd) error {
-		m, err := snmpIpTree(host, community, bA.oid)
+		m, err := snmpIPTree(host, community, bA.oid)
 		if err != nil {
 			return err
 		}
@@ -177,7 +177,7 @@ func cSnmpCiscobgp(community, host string) (opentsdb.MultiDataPoint, error) {
 	return md, nil
 }
 
-func snmpIpTree(host, community, oid string) (map[string]interface{}, error) {
+func snmpIPTree(host, community, oid string) (map[string]interface{}, error) {
 	rows, err := snmp.Walk(host, community, oid)
 	if err != nil {
 		return nil, err
@@ -192,7 +192,7 @@ func snmpIpTree(host, community, oid string) (map[string]interface{}, error) {
 		}
 		switch t := id.(type) {
 		case []int:
-			key = snmpCombineIpInt(t)
+			key = snmpCombineIPInt(t)
 		default:
 			return nil, fmt.Errorf("Got wrong type from OID check")
 		}
@@ -204,7 +204,7 @@ func snmpIpTree(host, community, oid string) (map[string]interface{}, error) {
 	return m, nil
 }
 
-func snmpCombineIpUint8(path []uint8) string {
+func snmpCombineIPUint8(path []uint8) string {
 	s := make([]string, len(path))
 	for i := range path {
 		s[i] = fmt.Sprint(path[i])
@@ -214,7 +214,7 @@ func snmpCombineIpUint8(path []uint8) string {
 	return strings.Join(s, ".")
 }
 
-func snmpCombineIpInt(path []int) string {
+func snmpCombineIPInt(path []int) string {
 	s := make([]string, len(path))
 	for i := range path {
 		s[i] = fmt.Sprint(path[i])

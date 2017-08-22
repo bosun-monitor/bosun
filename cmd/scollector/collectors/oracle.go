@@ -70,7 +70,7 @@ type sqlplusQueryRowParser struct {
 }
 
 var (
-	sqlplusParserFieldCountErr = errors.New("number of field doesn't match")
+	errSqlplusParserFieldCount = errors.New("number of field doesn't match")
 )
 
 var sqlplusParsers = []sqlplusQueryRowParser{
@@ -95,7 +95,7 @@ var sqlplusParsers = []sqlplusQueryRowParser{
 		func(row string, md *opentsdb.MultiDataPoint, prefix string, common opentsdb.TagSet) error {
 			fields := strings.Split(row, ",")
 			if len(fields) != 4 {
-				return sqlplusParserFieldCountErr
+				return errSqlplusParserFieldCount
 			}
 
 			v, err := sqlplusValueConv(fields[2])
@@ -122,7 +122,7 @@ var sqlplusParsers = []sqlplusQueryRowParser{
 		func(row string, md *opentsdb.MultiDataPoint, prefix string, common opentsdb.TagSet) error {
 			fields := strings.Split(row, ",")
 			if len(fields) != 2 {
-				return sqlplusParserFieldCountErr
+				return errSqlplusParserFieldCount
 			}
 
 			v, err := sqlplusValueConv(fields[1])
@@ -148,7 +148,7 @@ var sqlplusParsers = []sqlplusQueryRowParser{
 		func(row string, md *opentsdb.MultiDataPoint, prefix string, common opentsdb.TagSet) error {
 			fields := strings.Split(row, ",")
 			if len(fields) != 2 {
-				return sqlplusParserFieldCountErr
+				return errSqlplusParserFieldCount
 			}
 
 			v, err := sqlplusValueConv(fields[1])
@@ -167,7 +167,7 @@ var sqlplusParsers = []sqlplusQueryRowParser{
 		func(row string, md *opentsdb.MultiDataPoint, prefix string, common opentsdb.TagSet) error {
 			fields := strings.Split(row, ",")
 			if len(fields) != 6 {
-				return sqlplusParserFieldCountErr
+				return errSqlplusParserFieldCount
 			}
 
 			ts := common.Copy().Merge(opentsdb.TagSet{
@@ -201,7 +201,7 @@ var sqlplusParsers = []sqlplusQueryRowParser{
 		func(row string, md *opentsdb.MultiDataPoint, prefix string, common opentsdb.TagSet) error {
 			fields := strings.Split(row, ",")
 			if len(fields) != 9 {
-				return sqlplusParserFieldCountErr
+				return errSqlplusParserFieldCount
 			}
 
 			ts := common.Copy().Merge(opentsdb.TagSet{"failgroup": fields[0]})
@@ -241,7 +241,7 @@ var sqlplusParsers = []sqlplusQueryRowParser{
 		func(row string, md *opentsdb.MultiDataPoint, prefix string, common opentsdb.TagSet) error {
 			fields := strings.Split(row, ",")
 			if len(fields) != 7 {
-				return sqlplusParserFieldCountErr
+				return errSqlplusParserFieldCount
 			}
 
 			ts := common.Copy().Merge(opentsdb.TagSet{"wait_class": fields[0]})

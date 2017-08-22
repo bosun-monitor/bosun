@@ -187,9 +187,9 @@ func cFastly(c fastlyClient) (opentsdb.MultiDataPoint, error) {
 		return md, err
 	}
 	for _, service := range services {
-		statsCollection, err := c.GetServiceStats(from, to, service.Id)
+		statsCollection, err := c.GetServiceStats(from, to, service.ID)
 		if err != nil {
-			slog.Errorf("couldn't get stats for service %v with id %v: %v", service.Name, service.Id, err)
+			slog.Errorf("couldn't get stats for service %v with id %v: %v", service.Name, service.ID, err)
 			continue
 		}
 		for _, stats := range statsCollection {
@@ -262,7 +262,7 @@ func (f *fastlyClient) GetServices() ([]fastlyService, error) {
 
 type fastlyService struct {
 	Name string `json:"name"`
-	Id   string `json:"id"`
+	ID   string `json:"id"`
 }
 
 func (f *fastlyService) TagSet() opentsdb.TagSet {
@@ -328,7 +328,7 @@ func (f *fastlyClient) GetAggregateStats(from, to time.Time) ([]fastlyStats, err
 	return r.Data, err
 }
 
-func (f *fastlyClient) GetServiceStats(from, to time.Time, serviceId string) ([]fastlyStats, error) {
+func (f *fastlyClient) GetServiceStats(from, to time.Time, serviceID string) ([]fastlyStats, error) {
 	v := url.Values{}
 	v.Add("from", fmt.Sprintf("%v", from.Unix()))
 	v.Add("to", fmt.Sprintf("%v", to.Unix()))
@@ -338,7 +338,7 @@ func (f *fastlyClient) GetServiceStats(from, to time.Time, serviceId string) ([]
 	}{
 		[]fastlyStats{},
 	}
-	err := f.request(fmt.Sprintf("stats/service/%v", serviceId), v, &r)
+	err := f.request(fmt.Sprintf("stats/service/%v", serviceID), v, &r)
 	return r.Data, err
 }
 
