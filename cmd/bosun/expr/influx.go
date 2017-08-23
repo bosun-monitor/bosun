@@ -125,7 +125,7 @@ func influxQueryDuration(now time.Time, query, start, end, groupByInterval strin
 			return
 		}
 		if isTime(b.LHS) || isTime(b.RHS) {
-			err = fmt.Errorf("influx query must not contain time in WHERE")
+			// err = fmt.Errorf("influx query must not contain time in WHERE")
 		}
 	})
 	if err != nil {
