@@ -198,6 +198,7 @@ func timeInfluxRequest(e *State, T miniprofiler.Timer, db, query, startDuration,
 	}
 	T.StepCustomTiming("influx", "query", q, func() {
 		getFn := func() (interface{}, error) {
+			q = fixQuery(q)
 			res, err := conn.Query(client.Query{
 				Command:  q,
 				Database: db,
@@ -227,4 +228,25 @@ func timeInfluxRequest(e *State, T miniprofiler.Timer, db, query, startDuration,
 		}
 	})
 	return
+}
+func fixQuery(q string)(fixedQuery string) {
+	if strings.Index(q, "GROUP BY") > -1 {
+		groupByClause := extractGroupByClause(q)
+		q = strings.Replace(q, groupByClause, fixGroupByClause(groupByClause) + " ", -1)
+	}
+	return q
+}
+func extractGroupByClause(q string)(groupByClause string) {
+	groupStartIndex := strings.LastIndex(q, "GROUP BY")
+	fillStartIndex := strings.LastIndex(q, "fill(none)")
+	return q[groupStartIndex:fillStartIndex]
+}
+func fixGroupByClause(groupByClause string)(fixedGroupByClause string) {
+	for strings.Count(groupByClause, "time(") > 1 {
+		lastGroupByTimeIndex := strings.LastIndex(groupByClause, "time(")
+		lastGroupByTimeEndIndex := lastGroupByTimeIndex + strings.LastIndex(groupByClause[lastGroupByTimeIndex:], ")")
+		groupByClause = groupByClause[0:lastGroupByTimeIndex] + groupByClause[lastGroupByTimeEndIndex+2:]
+		groupByClause = strings.Trim(groupByClause, ", ")
+	}
+	return groupByClause
 }
