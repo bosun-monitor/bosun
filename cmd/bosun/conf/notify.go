@@ -29,12 +29,37 @@ func init() {
 		"The number of email notifications that Bosun failed to send.")
 }
 
-// NotifyAlert triggers Email/HTTP/Print actions for the Notification object. Called when an alert is first triggered, or on escalations.
-func (n *Notification) NotifyAlert(rt *models.RenderedTemplates, c SystemConfProvider, ak string, attachments ...*models.Attachment) {
+type PreparedNotifications struct {
+	Email *PreparedEmail
+	HTTP  []*PreparedHttp
+	Print string
+}
+
+func (p *PreparedNotifications) Send(c SystemConfProvider) (errs []error) {
+	if p.Email != nil {
+		if err := p.Email.Send(c); err != nil {
+			slog.Errorf("sending email: %s", err)
+			errs = append(errs, err)
+		}
+	}
+	for _, h := range p.HTTP {
+		if _, err := h.Send(); err != nil {
+			slog.Errorf("sending http: %s", err)
+			errs = append(errs, err)
+		}
+	}
+	if p.Print != "" {
+		slog.Infoln(p.Print)
+	}
+	return
+}
+
+func (n *Notification) PrepareAlert(rt *models.RenderedTemplates, ak string, attachments ...*models.Attachment) *PreparedNotifications {
+	pn := &PreparedNotifications{}
 	if len(n.Email) > 0 {
 		subject := rt.GetDefault(n.EmailSubjectTemplate, "emailSubject")
 		body := rt.GetDefault(n.BodyTemplate, "emailBody")
-		go n.SendEmail(subject, body, c, ak, attachments...)
+		pn.Email = n.PrepEmail(subject, body, ak, attachments)
 	}
 	if n.Post != nil || n.PostTemplate != "" {
 		url := ""
@@ -44,7 +69,7 @@ func (n *Notification) NotifyAlert(rt *models.RenderedTemplates, c SystemConfPro
 			url = rt.Get(n.PostTemplate)
 		}
 		body := rt.GetDefault(n.BodyTemplate, "subject")
-		n.SendHttp("POST", url, body, ak)
+		pn.HTTP = append(pn.HTTP, n.PrepHttp("POST", url, body, ak))
 	}
 	if n.Get != nil || n.GetTemplate != "" {
 		url := ""
@@ -53,19 +78,21 @@ func (n *Notification) NotifyAlert(rt *models.RenderedTemplates, c SystemConfPro
 		} else {
 			url = rt.Get(n.GetTemplate)
 		}
-		n.SendHttp("GET", url, "", ak)
+		pn.HTTP = append(pn.HTTP, n.PrepHttp("GET", url, "", ak))
 	}
 	if n.Print {
 		if n.BodyTemplate != "" {
-			go n.DoPrint("Subject: " + rt.Subject + ", Body: " + rt.Get(n.BodyTemplate))
+			pn.Print = "Subject: " + rt.Subject + ", Body: " + rt.Get(n.BodyTemplate)
 		} else {
-			go n.DoPrint(rt.Subject)
+			pn.Print = rt.Subject
 		}
 	}
+	return pn
 }
 
-func (n *Notification) DoPrint(payload string) {
-	slog.Infoln(payload)
+// NotifyAlert triggers Email/HTTP/Print actions for the Notification object. Called when an alert is first triggered, or on escalations.
+func (n *Notification) NotifyAlert(rt *models.RenderedTemplates, c SystemConfProvider, ak string, attachments ...*models.Attachment) {
+	n.PrepareAlert(rt, ak, attachments...).Send(c)
 }
 
 type PreparedHttp struct {
@@ -124,32 +151,54 @@ func (n *Notification) SendHttp(method string, url string, body string, ak strin
 	slog.Infof("%s notification successful for alert %s. Status: %d", method, ak, stat)
 }
 
-func (n *Notification) SendEmail(subject, body string, c SystemConfProvider, ak string, attachments ...*models.Attachment) {
+type PreparedEmail struct {
+	To          []string
+	Subject     string
+	Body        string
+	AK          string
+	Attachments []*models.Attachment
+}
+
+func (n *Notification) PrepEmail(subject, body string, ak string, attachments []*models.Attachment) *PreparedEmail {
+	pe := &PreparedEmail{
+		Subject:     subject,
+		Body:        body,
+		Attachments: attachments,
+		AK:          ak,
+	}
+	for _, a := range n.Email {
+		pe.To = append(pe.To, a.Address)
+	}
+	return pe
+}
+
+func (p *PreparedEmail) Send(c SystemConfProvider) error {
 	e := email.NewEmail()
 	e.From = c.GetEmailFrom()
-	for _, a := range n.Email {
-		e.To = append(e.To, a.Address)
+	for _, a := range p.To {
+		e.To = append(e.To, a)
 	}
-	e.Subject = subject
-	e.HTML = []byte(body)
-	for _, a := range attachments {
+	e.Subject = p.Subject
+	e.HTML = []byte(p.Body)
+	for _, a := range p.Attachments {
 		e.Attach(bytes.NewBuffer(a.Data), a.Filename, a.ContentType)
 	}
 	e.Headers.Add("X-Bosun-Server", util.Hostname)
-	if err := Send(e, c.GetSMTPHost(), c.GetSMTPUsername(), c.GetSMTPPassword()); err != nil {
+	if err := sendEmail(e, c.GetSMTPHost(), c.GetSMTPUsername(), c.GetSMTPPassword()); err != nil {
 		collect.Add("email.sent_failed", nil, 1)
-		slog.Errorf("failed to send alert %v to %v %v\n", ak, e.To, err)
-		return
+		slog.Errorf("failed to send alert %v to %v %v\n", p.AK, e.To, err)
+		return err
 	}
 	collect.Add("email.sent", nil, 1)
-	slog.Infof("relayed alert %v to %v sucessfully. Subject: %d bytes. Body: %d bytes.", ak, e.To, len(e.Subject), len(e.HTML))
+	slog.Infof("relayed email %v to %v sucessfully. Subject: %d bytes. Body: %d bytes.", p.AK, e.To, len(e.Subject), len(e.HTML))
+	return nil
 }
 
 // Send an email using the given host and SMTP auth (optional), returns any
 // error thrown by smtp.SendMail. This function merges the To, Cc, and Bcc
 // fields and calls the smtp.SendMail function using the Email.Bytes() output as
 // the message.
-func Send(e *email.Email, addr, username, password string) error {
+func sendEmail(e *email.Email, addr, username, password string) error {
 	// Merge the To, Cc, and Bcc fields
 	to := make([]string, 0, len(e.To)+len(e.Cc)+len(e.Bcc))
 	to = append(append(append(to, e.To...), e.Cc...), e.Bcc...)
@@ -165,14 +214,14 @@ func Send(e *email.Email, addr, username, password string) error {
 	if err != nil {
 		return err
 	}
-	return SendMail(addr, username, password, from.Address, to, raw)
+	return smtpSend(addr, username, password, from.Address, to, raw)
 }
 
 // SendMail connects to the server at addr, switches to TLS if
 // possible, authenticates with the optional mechanism a if possible,
 // and then sends an email from address from, to addresses to, with
 // message msg.
-func SendMail(addr, username, password string, from string, to []string, msg []byte) error {
+func smtpSend(addr, username, password string, from string, to []string, msg []byte) error {
 	c, err := smtp.Dial(addr)
 	if err != nil {
 		return err
