@@ -21,7 +21,7 @@ We use the golang [Go Code Review Comments](https://github.com/golang/go/wiki/Co
 ### bosun submission guidelines
 
 1. If changing HTML, JS, or other static content, install esc (`go get github.com/mjibson/esc`), then run `go generate` in `cmd/bosun`.
-1. [typescript](https://www.npmjs.com/package/typescript) is required if changing JS files. Invoke bosun with `-w` to watch for `.ts` changes and automatically run typescript.
+1. [typescript](https://www.npmjs.com/package/typescript) is required if changing JS files. Invoke bosun with `-w` to watch for `.ts` changes and automatically run typescript. We currently use typescript 2.3.1: `npm i -g typescript@2.3.1`
 
 #### Note for vim users
 
