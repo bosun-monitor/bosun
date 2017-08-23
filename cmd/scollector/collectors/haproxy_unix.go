@@ -122,6 +122,8 @@ func haproxyFetch(user, pwd, tier, url string) (opentsdb.MultiDataPoint, error) 
 				if value == "" {
 					continue
 				}
+				// A star is added if the check is in progress.
+				value = strings.Trim(value, "* ")
 				v, ok := haproxyCheckStatus[value]
 				if !ok {
 					return nil, fmt.Errorf("unknown check status %v", value)
