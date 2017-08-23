@@ -232,15 +232,7 @@ func procRule(t miniprofiler.Timer, ruleConf conf.RuleConfProvider, a *conf.Aler
 			n := conf.Notification{
 				Email: []*mail.Address{m},
 			}
-			email, attachments, bErr := s.ExecuteBody(rh, a, primaryIncident, true)
-			emailSubject, sErr := s.ExecuteSubject(rh, a, primaryIncident, true)
-			if bErr != nil {
-				warning = append(warning, bErr.Error())
-			} else if sErr != nil {
-				warning = append(warning, sErr.Error())
-			} else {
-				n.SendEmail(emailSubject, email, s.SystemConf, string(primaryIncident.AlertKey), attachments...)
-			}
+			n.PrepareAlert(rt, string(primaryIncident.AlertKey), rt.Attachments...).Send(s.SystemConf)
 		}
 		nots = buildNotificationPreviews(a, rt, string(primaryIncident.AlertKey))
 		data = s.Data(rh, primaryIncident, a, false)
