@@ -15,12 +15,31 @@ Use GitHub pull requests to submit code. General submission guidelines:
 Unless otherwise noted, the source files are distributed under the MIT license found in the LICENSE file.
 
 ### Style Guidelines
+
 We use the golang [Go Code Review Comments](https://github.com/golang/go/wiki/CodeReviewComments) document as the basis for our style. Take particular note of Error Strings, Mixed Caps, and Indent Error Flow sections. Also we don't have blank lines within functions.
 
 ### bosun submission guidelines
 
 1. If changing HTML, JS, or other static content, install esc (`go get github.com/mjibson/esc`), then run `go generate` in `cmd/bosun`.
-1. [typescript](https://www.npmjs.com/package/typescript) is required if changing JS files. Invoke bosun with `-w` to watch for `.ts` changes and automatically run typescript.
+1. [typescript](https://www.npmjs.com/package/typescript) is required if changing JS files. Invoke bosun with `-w` to watch for `.ts` changes and automatically run typescript. We currently use typescript 2.3.1: `npm i -g typescript@2.3.1`
+
+#### Note for vim users
+
+As vim will usually save file in a temporary buffer, then will rename the file. 
+So for the *-w* option to work, one could eventually at this in
+`.vimrc`, assuming GOPATH is the homedir:
+
+```
+let &backupskip .= ',' . escape(expand('$HOME'), '\') . '/src/bosun.org/cmd/bosun/*.go'
+let &backupskip .= ',' . escape(expand('$HOME'), '\') . '/src/bosun.org/cmd/bosun/web/static/templates/*.html'
+let &backupskip .= ',' . escape(expand('$HOME'), '\') . '/src/bosun.org/cmd/bosun/web/static/js/*.ts'
+```
+
+Or one could prefer the shorter version:
+
+```
+set backupskip+=*/cmd/bosun/{*.go\\,web/static/{js/*.ts\\,templates/*.html}}
+```
 
 ### scollector submission guidelines
 

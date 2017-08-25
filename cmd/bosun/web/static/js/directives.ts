@@ -53,7 +53,7 @@ function fmtTime(v: any) {
     } else {
         inn = 'in ';
     }
-    return m.format() + ' (' + inn + fmtDuration(msdiff) + ago + ')';
+    return m.format() + ' UTC (' + inn + fmtDuration(msdiff) + ago + ')';
 }
 
 function parseDuration(v: string) {

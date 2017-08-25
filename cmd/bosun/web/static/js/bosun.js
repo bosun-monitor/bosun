@@ -1379,7 +1379,7 @@ function fmtTime(v) {
     else {
         inn = 'in ';
     }
-    return m.format() + ' (' + inn + fmtDuration(msdiff) + ago + ')';
+    return m.format() + ' UTC (' + inn + fmtDuration(msdiff) + ago + ')';
 }
 function parseDuration(v) {
     var pattern = /(\d+)(d|y|n|h|m|s)(-ago)?/;
