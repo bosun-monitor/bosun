@@ -46,7 +46,7 @@ interface IConfigScope extends IBosunScope {
 	emailBody: string;
 	body: string;
 	customTemplates: { [name: string]: string };
-	httpNotifications: { [name: string]: any };
+	notifications: { [name: string]: any };
 	data: any;
 	tab: string;
 	zws: (v: string) => string;
@@ -470,7 +470,16 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 		for (var k in data.Custom) {
 			$scope.customTemplates[k] = data.Custom[k];
 		}
-		$scope.httpNotifications = data.HTTPNotifications;
+		var nots = {};
+		_(data.Notifications).each((val,n)=>{
+			if(val.Email){
+				nots["Email "+ n] = val.Email;
+			}
+			_(val.HTTP).each((hp)=>{
+				nots[hp.Method+" "+n] = hp;
+			})
+		})
+		$scope.notifications = nots;
 		$scope.data = JSON.stringify(data.Data, null, '  ');
 		$scope.error = data.Errors;
 		$scope.warning = data.Warnings;

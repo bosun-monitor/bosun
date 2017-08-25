@@ -1266,7 +1266,16 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
             for (var k in data.Custom) {
                 $scope.customTemplates[k] = data.Custom[k];
             }
-            $scope.httpNotifications = data.HTTPNotifications;
+            var nots = {};
+            _(data.Notifications).each(function (val, n) {
+                if (val.Email) {
+                    nots["Email " + n] = val.Email;
+                }
+                _(val.HTTP).each(function (hp) {
+                    nots[hp.Method + " " + n] = hp;
+                });
+            });
+            $scope.notifications = nots;
             $scope.data = JSON.stringify(data.Data, null, '  ');
             $scope.error = data.Errors;
             $scope.warning = data.Warnings;
