@@ -336,38 +336,7 @@
 					<h3 class="panel-title">{{name}}</h3>
 				</div>
 				<div class="panel-body">
-						<div class='row' ng-if="dat.To">
-								<div class='col-md-2'><b>To:</b></div>
-								<div class='col-md-10'>
-									<pre>{{dat.To}}</pre>
-								</div>
-							</div>
-					<div class='row' ng-if='dat.URL'>
-						<div class='col-md-2'><b>URL:</b></div>
-						<div class='col-md-5'>{{dat.URL}}</div>
-					</div>
-					<div class='row' ng-if="dat.Subject">
-						<div class='col-md-2'><b>Subject:</b></div>
-						<div class='col-md-10'>
-							<pre>{{dat.Subject}}</pre>
-						</div>
-					</div>
-					<div class='row' ng-if="dat.Body">
-						<div class='col-md-2'><b>Body:</b></div>
-						<div class='col-md-10'>
-							<pre>{{dat.Body}}</pre>
-						</div>
-					</div>
-					<div ng-if="dat.Headers">
-						<div class='row'>
-							<div class='col-md-2'><b>Headers:</b></div>
-						</div>
-						<div class='row' ng-repeat="(k,v) in dat.Headers">
-							<div class='col-md-2'><b>{{k}}:</b></div>
-							<div class='col-md-5'>{{v}}</div>
-						</div>
-					</div>
-					<div class='row' style='margin-top:10px;'><div class='col-md-12'><button class='btn btn-primary' ng-click='testNotification(dat)'>Test</button> {{dat.msg}}</div></div>
+					<notification dat="dat"></notification>
 				</div>
 				<div ng-hide="notifications" class='col-md-12'>
 					<h4>No Http Notifications</h4>

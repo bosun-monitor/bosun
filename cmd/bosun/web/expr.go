@@ -170,6 +170,7 @@ func procRule(t miniprofiler.Timer, ruleConf conf.RuleConfProvider, a *conf.Aler
 	var rt *models.RenderedTemplates
 	var data interface{}
 	var nots map[string]*conf.PreparedNotifications
+	var aNots map[string]map[string]*conf.PreparedNotifications
 	warning := make([]string, 0)
 
 	if !summary && len(keys) > 0 {
@@ -234,26 +235,28 @@ func procRule(t miniprofiler.Timer, ruleConf conf.RuleConfProvider, a *conf.Aler
 			}
 			n.PrepareAlert(rt, string(primaryIncident.AlertKey), rt.Attachments...).Send(s.SystemConf)
 		}
-		nots = buildNotificationPreviews(a, rt, string(primaryIncident.AlertKey))
+		nots, aNots = buildNotificationPreviews(a, rt, string(primaryIncident.AlertKey), s.SystemConf)
 		data = s.Data(rh, primaryIncident, a, false)
 	}
 
 	rr := &ruleResult{
-		Criticals:         criticals,
-		Warnings:          warnings,
-		Normals:           normals,
-		Time:              now,
-		Data:              data,
-		Result:            rh.Events,
-		Warning:           warning,
-		RenderedTemplates: rt,
-		Notifications:     nots,
+		Criticals:           criticals,
+		Warnings:            warnings,
+		Normals:             normals,
+		Time:                now,
+		Data:                data,
+		Result:              rh.Events,
+		Warning:             warning,
+		RenderedTemplates:   rt,
+		Notifications:       nots,
+		ActionNotifications: aNots,
 	}
 	return rr, nil
 }
 
-func buildNotificationPreviews(a *conf.Alert, rt *models.RenderedTemplates, ak string, attachments ...*models.Attachment) map[string]*conf.PreparedNotifications {
+func buildNotificationPreviews(a *conf.Alert, rt *models.RenderedTemplates, ak string, c conf.SystemConfProvider, attachments ...*models.Attachment) (map[string]*conf.PreparedNotifications, map[string]map[string]*conf.PreparedNotifications) {
 	previews := map[string]*conf.PreparedNotifications{}
+	actionPreviews := map[string]map[string]*conf.PreparedNotifications{}
 	nots := map[string]*conf.Notification{}
 	for name, not := range a.CritNotification.Notifications {
 		nots[name] = not
@@ -263,8 +266,22 @@ func buildNotificationPreviews(a *conf.Alert, rt *models.RenderedTemplates, ak s
 	}
 	for name, not := range nots {
 		previews[name] = not.PrepareAlert(rt, ak, attachments...)
+		actions := map[string]*conf.PreparedNotifications{}
+		actionPreviews[name] = actions
+		// for all action types. just loop through known range. Update this if any get added
+		for at := models.ActionAcknowledge; at <= models.ActionCancelClose; at++ {
+			incidents := []*models.IncidentState{
+				{
+					Alert:         a.Name,
+					AlertKey:      models.AlertKey(ak),
+					CurrentStatus: models.StCritical,
+					Id:            42,
+				},
+			}
+			actions[at.String()] = not.PrepareAction(at, a.Template, c, incidents, "somebody", "I took care of this")
+		}
 	}
-	return previews
+	return previews, actionPreviews
 }
 
 type ruleResult struct {
@@ -273,10 +290,11 @@ type ruleResult struct {
 	Normals   []models.AlertKey
 	Time      time.Time
 	*models.RenderedTemplates
-	Notifications map[string]*conf.PreparedNotifications
-	Data          interface{}
-	Result        map[models.AlertKey]*models.Event
-	Warning       []string
+	Notifications       map[string]*conf.PreparedNotifications
+	ActionNotifications map[string]map[string]*conf.PreparedNotifications
+	Data                interface{}
+	Result              map[models.AlertKey]*models.Event
+	Warning             []string
 }
 
 func TestHTTPNotification(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
@@ -387,9 +405,10 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 		Sets         []*Set
 		AlertHistory map[models.AlertKey]*Histories
 		*models.RenderedTemplates
-		Notifications map[string]*conf.PreparedNotifications
-		Data          interface{} `json:",omitempty"`
-		Hash          string
+		Notifications       map[string]*conf.PreparedNotifications
+		ActionNotifications map[string]map[string]*conf.PreparedNotifications
+		Data                interface{} `json:",omitempty"`
+		Hash                string
 	}{
 		AlertHistory: make(map[models.AlertKey]*Histories),
 		Hash:         hash,
@@ -413,6 +432,7 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 		if res.Data != nil {
 			ret.RenderedTemplates = res.RenderedTemplates
 			ret.Notifications = res.Notifications
+			ret.ActionNotifications = res.ActionNotifications
 			ret.Data = res.Data
 			for k, v := range res.Result {
 				set.Results = append(set.Results, &Result{

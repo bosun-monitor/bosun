@@ -555,3 +555,11 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 
 // declared in FileSaver.js
 declare var saveAs: any;
+
+bosunApp.component('notification', {
+	bindings: {
+		dat: "<",
+	},
+	controllerAs: 'ct',
+	templateUrl : '/static/partials/notification.html',
+});

@@ -2,8 +2,6 @@ package sched
 
 import (
 	"bytes"
-	"fmt"
-	"net/url"
 	"time"
 
 	"bosun.org/cmd/bosun/conf"
@@ -299,21 +297,6 @@ func (s *Schedule) QueueNotification(ak models.AlertKey, n *conf.Notification, s
 	return s.DataAccess.Notifications().InsertNotification(ak, n.Name, started.Add(n.Timeout))
 }
 
-type actionNotificationContext struct {
-	States     []*models.IncidentState
-	User       string
-	Message    string
-	ActionType models.ActionType
-
-	schedule *Schedule
-}
-
-func (a actionNotificationContext) IncidentLink(i int64) string {
-	return a.schedule.SystemConf.MakeLink("/incident", &url.Values{
-		"id": []string{fmt.Sprint(i)},
-	})
-}
-
 func (s *Schedule) ActionNotify(at models.ActionType, user, message string, aks []models.AlertKey) error {
 	groupings, err := s.groupActionNotifications(aks)
 	if err != nil {
@@ -324,8 +307,7 @@ func (s *Schedule) ActionNotify(at models.ActionType, user, message string, aks 
 		for _, state := range states {
 			incidents = append(incidents, state)
 		}
-		data := actionNotificationContext{incidents, user, message, at, s}
-		groupKey.notification.NotifyAction(at, groupKey.template, s.SystemConf, data)
+		groupKey.notification.NotifyAction(at, groupKey.template, s.SystemConf, incidents, user, message)
 	}
 	return nil
 }

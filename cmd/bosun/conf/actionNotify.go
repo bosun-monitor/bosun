@@ -2,6 +2,8 @@ package conf
 
 import (
 	"bytes"
+	"fmt"
+	"net/url"
 	"strings"
 
 	"bosun.org/slog"
@@ -34,13 +36,27 @@ func init() {
 	defaultActionNotificationBodyTemplate = template.Must(template.New("body").Parse(body))
 }
 
-// NotifyAction should be used for action notifications.
-// ctx should be sched.actionNotificationContext
-func (n *Notification) NotifyAction(at models.ActionType, t *Template, c SystemConfProvider, ctx interface{}) {
-	n.PrepareAction(at, t, ctx).Send(c)
+type actionNotificationContext struct {
+	States     []*models.IncidentState
+	User       string
+	Message    string
+	ActionType models.ActionType
+	makeLink   func(string, *url.Values) string
 }
 
-func (n *Notification) PrepareAction(at models.ActionType, t *Template, ctx interface{}) *PreparedNotifications {
+func (a actionNotificationContext) IncidentLink(i int64) string {
+	return a.makeLink("/incident", &url.Values{
+		"id": []string{fmt.Sprint(i)},
+	})
+}
+
+// NotifyAction should be used for action notifications.
+func (n *Notification) NotifyAction(at models.ActionType, t *Template, c SystemConfProvider, states []*models.IncidentState, user, message string) {
+	n.PrepareAction(at, t, c, states, user, message).Send(c)
+}
+
+// Prepate an action notification, but don't send yet.
+func (n *Notification) PrepareAction(at models.ActionType, t *Template, c SystemConfProvider, states []*models.IncidentState, user, message string) *PreparedNotifications {
 	pn := &PreparedNotifications{}
 	// get template keys to use for things. Merge with default sets
 	tks := n.ActionTemplateKeys[at].Combine(n.ActionTemplateKeys[models.ActionNone])
@@ -53,6 +69,13 @@ func (n *Notification) PrepareAction(at models.ActionType, t *Template, ctx inte
 			key = "default"
 		}
 		buf.Reset()
+		ctx := actionNotificationContext{
+			States:     states,
+			User:       user,
+			Message:    message,
+			ActionType: at,
+			makeLink:   c.MakeLink,
+		}
 		err := tpl.Execute(buf, ctx)
 		if err != nil {
 			slog.Errorf("executing action template '%s': %s", key, err)

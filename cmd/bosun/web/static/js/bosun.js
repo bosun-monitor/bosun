@@ -1341,6 +1341,13 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
         };
         return $scope;
     }]);
+bosunApp.component('notification', {
+    bindings: {
+        dat: "<"
+    },
+    controllerAs: 'ct',
+    templateUrl: '/static/partials/notification.html'
+});
 bosunControllers.controller('DashboardCtrl', ['$scope', '$http', '$location', function ($scope, $http, $location) {
         var search = $location.search();
         $scope.loading = 'Loading';
