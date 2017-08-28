@@ -175,6 +175,7 @@
 	<li ng-class="{active: tab == 'template'}"><a href ng-click="tab = 'template'">Template</a></li>
 	<li ng-class="{active: tab == 'timeline'}"><a href ng-click="tab = 'timeline'">Timeline</a></li>
 	<li ng-class="{active: tab == 'notifications'}"><a href ng-click="tab = 'notifications'">Notifications</a></li>
+	<li ng-class="{active: tab == 'anotifications'}"><a href ng-click="tab = 'anotifications'">Action Notifications</a></li>
 </ul>
 
 <div class="tab-content">
@@ -339,12 +340,39 @@
 					<notification dat="dat"></notification>
 				</div>
 				<div ng-hide="notifications" class='col-md-12'>
-					<h4>No Http Notifications</h4>
+					<h4>No Notifications</h4>
 				</div>
 			</div>
 		</div>
 	</div>
 
+	<div class="tab-pane" ng-class="{active: tab == 'anotifications'}">
+		<div style='margin-top:10px;'>
+			
+			<div class="dropdown selectorDropdown" style="float:none;margin-bottom:10px;" ng-if="actionNotifications">
+				<button class="btn btn-primary btn-xs dropdown-toggle" type="button" data-toggle="dropdown">
+						{{actionTypeToShow}} <i class="fa fa-caret-down"></i>
+					</button>
+					<ul class="dropdown-menu section-button" role="menu">
+						<li role="presentation" ng-repeat="(at, nots) in actionNotifications"><a role="menuitem" tabindex="-1" ng-click="setActionTypeToShow(at)">{{at}}</a></li>
+					</ul>
+			</div>
+			<div ng-repeat="(at, nots) in actionNotifications">
+
+				<div class="panel panel-default" ng-if="at==actionTypeToShow" ng-repeat="(name, dat) in nots">
+					<div class="panel-heading">
+						<h3 class="panel-title">{{name}} ({{at}})</h3>
+					</div>
+					<div class="panel-body">
+						<notification dat="dat"></notification>
+					</div>
+					<div ng-hide="notifications" class='col-md-12'>
+						<h4>No Notifications</h4>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
 
 	<!-- Save Modal -->
 	<div class="modal fade" id="configSaveModal" tabindex="-1" role="dialog">

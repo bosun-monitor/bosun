@@ -893,6 +893,7 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
         $scope.items = parseItems();
         $scope.tab = search.tab || 'results';
         $scope.aceTheme = 'chrome';
+        $scope.actionTypeToShow = "Acknowledged";
         $scope.aceMode = 'bosun';
         $scope.expandDiff = false;
         $scope.customTemplates = {};
@@ -1140,6 +1141,10 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
                 $scope.template_group = match[1];
             }
         };
+        $scope.setActionTypeToShow = function (at) {
+            console.log(at);
+            $scope.actionTypeToShow = at;
+        };
         var line_re = /test:(\d+)/;
         $scope.validate = function () {
             $http.post('/api/config_test', $scope.config_text)
@@ -1276,6 +1281,19 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
                 });
             });
             $scope.notifications = nots;
+            var aNots = {};
+            _(data.ActionNotifications).each(function (ts, n) {
+                _(ts).each(function (val, at) {
+                    aNots[at] = aNots[at] || {};
+                    if (val.Email) {
+                        aNots[at]["Email " + n] = val.Email;
+                    }
+                    _(val.HTTP).each(function (hp) {
+                        aNots[at][hp.Method + " " + n] = hp;
+                    });
+                });
+            });
+            $scope.actionNotifications = aNots;
             $scope.data = JSON.stringify(data.Data, null, '  ');
             $scope.error = data.Errors;
             $scope.warning = data.Warnings;
@@ -1324,27 +1342,36 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
             }
             return "alert-danger";
         };
-        $scope.testNotification = function (dat) {
-            dat.msg = "sending";
-            $http.post('/api/rule/notification/test', dat)
+        return $scope;
+    }]);
+var NotificationController = (function () {
+    function NotificationController($http) {
+        var _this = this;
+        this.$http = $http;
+        this.test = function () {
+            _this.dat.msg = "sending";
+            _this.$http.post('/api/rule/notification/test', _this.dat)
                 .success(function (rDat) {
                 if (rDat.Error) {
-                    dat.msg = "Error: " + rDat.Error;
+                    _this.dat.msg = "Error: " + rDat.Error;
                 }
                 else {
-                    dat.msg = "Success! Status Code: " + rDat.Status;
+                    _this.dat.msg = "Success! Status Code: " + rDat.Status;
                 }
             })
                 .error(function (error) {
-                dat.msg = "Error: " + error;
+                _this.dat.msg = "Error: " + error;
             });
         };
-        return $scope;
-    }]);
+    }
+    NotificationController.$inject = ['$http'];
+    return NotificationController;
+}());
 bosunApp.component('notification', {
     bindings: {
         dat: "<"
     },
+    controller: NotificationController,
     controllerAs: 'ct',
     templateUrl: '/static/partials/notification.html'
 });

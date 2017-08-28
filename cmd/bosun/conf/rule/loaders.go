@@ -415,7 +415,7 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 		default:
 			// action{templateKey}{ActionType}?
 			if strings.HasPrefix(k, "action") {
-				k2 := k
+				k2 := k[len("action"):]
 				var suffixes = map[string]models.ActionType{
 					"Ack":          models.ActionAcknowledge,
 					"Close":        models.ActionClose,
@@ -428,9 +428,9 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 				}
 				at := models.ActionNone
 				for s, t := range suffixes {
-					if strings.HasSuffix(k, s) {
+					if strings.HasSuffix(k2, s) {
 						at = t
-						k2 = k[:len(k)-len(s)]
+						k2 = k2[:len(k2)-len(s)]
 						break
 					}
 				}
@@ -450,6 +450,7 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 				default:
 					c.errorf("unknown key %s", k)
 				}
+				break
 			}
 			c.errorf("unknown key %s", k)
 		}

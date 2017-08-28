@@ -47,6 +47,8 @@ interface IConfigScope extends IBosunScope {
 	body: string;
 	customTemplates: { [name: string]: string };
 	notifications: { [name: string]: any };
+	actionNotifications: {[type: string]: {[name: string]:any}};
+	actionTypeToShow: string;
 	data: any;
 	tab: string;
 	zws: (v: string) => string;
@@ -84,6 +86,7 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 	$scope.items = parseItems();
 	$scope.tab = search.tab || 'results';
 	$scope.aceTheme = 'chrome';
+	$scope.actionTypeToShow = "Acknowledged";
 
 	$scope.aceMode = 'bosun';
 	$scope.expandDiff = false;
@@ -343,6 +346,12 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 			$scope.template_group = match[1];
 		}
 	}
+
+	$scope.setActionTypeToShow = (at:string)=>{
+		console.log(at);
+		$scope.actionTypeToShow = at;
+	}
+	
 	var line_re = /test:(\d+)/;
 	$scope.validate = () => {
 		$http.post('/api/config_test', $scope.config_text)
@@ -480,6 +489,20 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 			})
 		})
 		$scope.notifications = nots;
+		var aNots = {};
+		_(data.ActionNotifications).each((ts,n)=>{
+			_(ts).each((val,at)=>{
+				aNots[at] = aNots[at] || {};
+				if(val.Email){
+					aNots[at]["Email "+ n] = val.Email;
+				}
+				_(val.HTTP).each((hp)=>{
+					aNots[at][hp.Method+" "+n] = hp;
+				})
+			})
+		})
+		$scope.actionNotifications = aNots;
+		
 		$scope.data = JSON.stringify(data.Data, null, '  ');
 		$scope.error = data.Errors;
 		$scope.warning = data.Warnings;
@@ -535,31 +558,38 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 		return "alert-danger"
 	}
 
-	$scope.testNotification = (dat: any) => {
-		dat.msg = "sending"
-		$http.post('/api/rule/notification/test', dat)
-			.success((rDat: any) => {
-				if (rDat.Error) {
-					dat.msg = "Error: " + rDat.Error;
-				} else {
-					dat.msg = "Success! Status Code: " + rDat.Status;
-				}
-			})
-			.error((error) => {
-				dat.msg = "Error: " + error;
-			});
-	}
-
 	return $scope;
 }]);
 
 // declared in FileSaver.js
 declare var saveAs: any;
 
+class NotificationController {
+	dat: any;
+	test = () => {
+		this.dat.msg = "sending"
+		this.$http.post('/api/rule/notification/test', this.dat)
+			.success((rDat: any) => {
+				if (rDat.Error) {
+					this.dat.msg = "Error: " + rDat.Error;
+				} else {
+					this.dat.msg = "Success! Status Code: " + rDat.Status;
+				}
+			})
+			.error((error) => {
+				this.dat.msg = "Error: " + error;
+			});
+	};
+	static $inject = ['$http'];
+    constructor(private $http: ng.IHttpService) {
+    }
+}
+
 bosunApp.component('notification', {
 	bindings: {
 		dat: "<",
 	},
+	controller: NotificationController,
 	controllerAs: 'ct',
 	templateUrl : '/static/partials/notification.html',
 });
