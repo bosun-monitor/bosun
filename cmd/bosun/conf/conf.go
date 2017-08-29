@@ -286,7 +286,7 @@ type Notification struct {
 	Next         *Notification
 	Timeout      time.Duration
 	ContentType  string
-	RunOnActions bool
+	RunOnActions string
 
 	NextName        string `json:"-"`
 	RawEmail        string `json:"-"`

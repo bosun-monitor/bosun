@@ -55,6 +55,21 @@ func (n *Notification) NotifyAction(at models.ActionType, t *Template, c SystemC
 	n.PrepareAction(at, t, c, states, user, message).Send(c)
 }
 
+func (n *Notification) RunOnActionType(at models.ActionType) bool {
+	if n.RunOnActions == "all" || n.RunOnActions == "true" {
+		return true
+	}
+	if n.RunOnActions == "none" || n.RunOnActions == "false" {
+		return false
+	}
+	for _, a := range strings.Split(n.RunOnActions, ",") {
+		if models.ActionShortNames[a] == at {
+			return true
+		}
+	}
+	return false
+}
+
 // Prepate an action notification, but don't send yet.
 func (n *Notification) PrepareAction(at models.ActionType, t *Template, c SystemConfProvider, states []*models.IncidentState, user, message string) *PreparedNotifications {
 	pn := &PreparedNotifications{}

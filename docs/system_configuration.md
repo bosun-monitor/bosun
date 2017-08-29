@@ -18,8 +18,6 @@ order: 3
 
 <p class="title h1">{{page.title}}</p>
 
-{% raw %}
-
 ## Changes Since 0.5.0
 Since 0.5.0, the config has been split into two different files.
 

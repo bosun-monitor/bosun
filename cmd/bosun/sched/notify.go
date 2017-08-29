@@ -298,7 +298,7 @@ func (s *Schedule) QueueNotification(ak models.AlertKey, n *conf.Notification, s
 }
 
 func (s *Schedule) ActionNotify(at models.ActionType, user, message string, aks []models.AlertKey) error {
-	groupings, err := s.groupActionNotifications(aks)
+	groupings, err := s.groupActionNotifications(at, aks)
 	if err != nil {
 		return err
 	}
@@ -318,7 +318,7 @@ type notificationGroupKey struct {
 }
 
 // group by notification and template
-func (s *Schedule) groupActionNotifications(aks []models.AlertKey) (map[notificationGroupKey][]*models.IncidentState, error) {
+func (s *Schedule) groupActionNotifications(at models.ActionType, aks []models.AlertKey) (map[notificationGroupKey][]*models.IncidentState, error) {
 	groupings := make(map[notificationGroupKey][]*models.IncidentState)
 	for _, ak := range aks {
 		alert := s.RuleConf.GetAlert(ak.Name())
@@ -341,7 +341,7 @@ func (s *Schedule) groupActionNotifications(aks []models.AlertKey) (map[notifica
 		}
 		nots := n.Get(s.RuleConf, ak.Group())
 		for _, not := range nots {
-			if !not.RunOnActions {
+			if !not.RunOnActionType(at) {
 				continue
 			}
 			key := notificationGroupKey{not, tmpl}

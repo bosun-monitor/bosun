@@ -353,7 +353,7 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 		Vars:               make(map[string]string),
 		ContentType:        "application/x-www-form-urlencoded",
 		Name:               name,
-		RunOnActions:       true,
+		RunOnActions:       "all",
 		ActionTemplateKeys: map[models.ActionType]*conf.NotificationTemplateKeys{},
 	}
 	n.Text = s.RawText
@@ -411,23 +411,14 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 		case "emailSubjectTemplate":
 			n.EmailSubjectTemplate = v
 		case "runOnActions":
-			n.RunOnActions = v == "true"
+			// todo: validate all/true, none/false, or comma seperated action shortNames
+			n.RunOnActions = v
 		default:
 			// action{templateKey}{ActionType}?
 			if strings.HasPrefix(k, "action") {
 				k2 := k[len("action"):]
-				var suffixes = map[string]models.ActionType{
-					"Ack":          models.ActionAcknowledge,
-					"Close":        models.ActionClose,
-					"Forget":       models.ActionForget,
-					"ForceClose":   models.ActionForceClose,
-					"Purge":        models.ActionPurge,
-					"Note":         models.ActionNote,
-					"DelayedClose": models.ActionDelayedClose,
-					"CancelClose":  models.ActionCancelClose,
-				}
 				at := models.ActionNone
-				for s, t := range suffixes {
+				for s, t := range models.ActionShortNames {
 					if strings.HasSuffix(k2, s) {
 						at = t
 						k2 = k2[:len(k2)-len(s)]
@@ -439,13 +430,13 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 				}
 				keys := n.ActionTemplateKeys[at]
 				switch k2 {
-				case "BodyTemplate":
+				case "Body":
 					keys.BodyTemplate = v
-				case "GetTemplate":
+				case "Get":
 					keys.GetTemplate = v
-				case "PostTemplate":
+				case "Post":
 					keys.PostTemplate = v
-				case "EmailSubjectTemplate":
+				case "EmailSubject":
 					keys.EmailSubjectTemplate = v
 				default:
 					c.errorf("unknown key %s", k)

@@ -266,6 +266,42 @@ const (
 	ActionCancelClose
 )
 
+//ActionShortNames is a map of keys we use in config file (notifications mostly) to reference action types
+var ActionShortNames = map[string]ActionType{
+	"Ack":          ActionAcknowledge,
+	"Close":        ActionClose,
+	"Forget":       ActionForget,
+	"ForceClose":   ActionForceClose,
+	"Purge":        ActionPurge,
+	"Note":         ActionNote,
+	"DelayedClose": ActionDelayedClose,
+	"CancelClose":  ActionCancelClose,
+}
+
+// HumanString gives a better human readable form than the default stringer, which we can't change due to marshalling compatibility now
+func (a ActionType) HumanString() string {
+	switch a {
+	case ActionAcknowledge:
+		return "Acknowledged"
+	case ActionClose:
+		return "Closed"
+	case ActionForget:
+		return "Forgot"
+	case ActionForceClose:
+		return "Force Closed"
+	case ActionPurge:
+		return "Purged"
+	case ActionNote:
+		return "Commented On"
+	case ActionDelayedClose:
+		return "Delayed Closed"
+	case ActionCancelClose:
+		return "Canceled Close"
+	default:
+		return "none"
+	}
+}
+
 func (a ActionType) String() string {
 	switch a {
 	case ActionAcknowledge:
