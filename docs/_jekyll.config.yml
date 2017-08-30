@@ -8,9 +8,6 @@ repository: bosun-monitor/bosun
 markdown_ext:  markdown,mkd,mkdn,md
 textile_ext:   textile
 
-gems:
-  - jekyll-redirect-from
-
 # gem install github-pages
 # gem install jekyll-github-metadata jekyll-mentions jekyll-redirect-from jekyll-sitemap jemoji
 #gems:

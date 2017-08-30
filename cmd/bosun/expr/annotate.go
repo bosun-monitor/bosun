@@ -55,7 +55,7 @@ func procDuration(e *State, startDuration, endDuration string) (time.Time, time.
 }
 
 func getAndFilterAnnotations(e *State, start, end time.Time, filter string) (annotate.Annotations, error) {
-	annotations, err := e.AnnotateContext.GetAnnotations(&start, &end, "", "", "", "", "", "", "")
+	annotations, err := e.Annotate.GetAnnotations(&start, &end)
 	if err != nil {
 		return nil, err
 	}

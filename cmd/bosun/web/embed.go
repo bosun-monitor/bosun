@@ -3,7 +3,6 @@ package web
 import (
 	"bufio"
 	"bytes"
-	"io"
 	"log"
 	"os"
 	"os/exec"
@@ -47,25 +46,13 @@ func RunTsc() {
 }
 
 func run(name string, arg ...string) {
-	log.Println("running", name)
+	log.Println("running", name, arg)
 	c := exec.Command(name, arg...)
-	stdout, err := c.StdoutPipe()
-	if err != nil {
-		log.Fatal(err)
-	}
-	stderr, err := c.StderrPipe()
-	if err != nil {
-		log.Fatal(err)
-	}
-	if err := c.Start(); err != nil {
-		log.Fatal(err)
-	}
-	go func() { io.Copy(os.Stdout, stdout) }()
-	go func() { io.Copy(os.Stderr, stderr) }()
-	if err := c.Wait(); err != nil {
+	c.Stderr = os.Stderr
+	c.Stdout = os.Stdout
+	if err := c.Run(); err != nil {
 		log.Printf("run error: %v: %v", name, err)
 	}
-	log.Println("run complete:", name)
 }
 
 func deepCompareDifferent(file1, file2 string) bool {

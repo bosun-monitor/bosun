@@ -4,12 +4,15 @@ import (
 	"bytes"
 	"compress/gzip"
 	"encoding/json"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"net/http/httptest"
 
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
@@ -137,6 +140,8 @@ func sendBatch(batch []*opentsdb.DataPoint) {
 		time.Sleep(d)
 		return
 	}
+	// Drain up to 512 bytes so the Transport can reuse the connection when it is closed
+	io.CopyN(ioutil.Discard, resp.Body, 512)
 	recordSent(len(batch))
 }
 
@@ -154,6 +159,33 @@ var bufferPool = sync.Pool{
 }
 
 func SendDataPoints(dps []*opentsdb.DataPoint, tsdb string) (*http.Response, error) {
+	req, err := buildHTTPRequest(dps, tsdb)
+	if err != nil {
+		return nil, err
+	}
+	if DirectHandler != nil {
+		rec := httptest.NewRecorder()
+		DirectHandler.ServeHTTP(rec, req)
+		return rec.Result(), nil
+	}
+	client := DefaultClient
+
+	if UseNtlm {
+		resp, err := ntlm.DoNTLMRequest(client, req)
+		if err != nil {
+			return nil, err
+		}
+		if resp.StatusCode == 401 {
+			slog.Errorf("Scollector unauthorized to post data points to tsdb. Terminating.")
+			os.Exit(1)
+		}
+		return resp, err
+	}
+	resp, err := client.Do(req)
+	return resp, err
+}
+
+func buildHTTPRequest(dps []*opentsdb.DataPoint, tsdb string) (*http.Request, error) {
 	buf := bufferPool.Get().(*bytes.Buffer)
 	defer bufferPool.Put(buf)
 	buf.Reset()
@@ -170,23 +202,9 @@ func SendDataPoints(dps []*opentsdb.DataPoint, tsdb string) (*http.Response, err
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Content-Encoding", "gzip")
-	Add("collect.post.total_bytes", Tags, int64(buf.Len()))
-
-	if UseNtlm {
-		resp, err := ntlm.DoNTLMRequest(DefaultClient, req)
-
-		if err != nil {
-			return nil, err
-		}
-
-		if resp.StatusCode == 401 {
-			slog.Errorf("Scollector unauthorized to post data points to tsdb. Terminating.")
-			os.Exit(1)
-		}
-
-		return resp, err
+	if AuthToken != "" {
+		req.Header.Set("X-Access-Token", AuthToken)
 	}
-
-	resp, err := DefaultClient.Do(req)
-	return resp, err
+	Add("collect.post.total_bytes", Tags, int64(buf.Len()))
+	return req, nil
 }

@@ -74,7 +74,6 @@ func (s *Schedule) NewRunHistory(start time.Time, cache *cache.Cache) *RunHistor
 			InfluxConfig:    s.SystemConf.GetInfluxContext(),
 			LogstashHosts:   s.SystemConf.GetLogstashContext(),
 			ElasticHosts:    s.SystemConf.GetElasticContext(),
-			AnnotateContext: s.SystemConf.GetAnnotateContext(),
 		},
 	}
 	return r
@@ -117,18 +116,89 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.E
 
 	// get existing open incident if exists
 	var incident *models.IncidentState
+	rt := &models.RenderedTemplates{}
+
 	incident, err = data.GetOpenIncident(ak)
 	if err != nil {
 		return
 	}
+
 	defer func() {
 		// save unless incident is new and closed (log alert)
 		if incident != nil && (incident.Id != 0 || incident.Open) {
 			_, err = data.UpdateIncidentState(incident)
+			err = data.SetRenderedTemplates(incident.Id, rt)
 		} else {
 			err = data.SetUnevaluated(ak, event.Unevaluated) // if nothing to save, at least store the unevaluated state
+			if err != nil {
+				return
+			}
 		}
 	}()
+	if incident != nil {
+		rt, err = data.GetRenderedTemplates(incident.Id)
+		if err != nil {
+			return
+		}
+		for i, action := range incident.Actions {
+			if action.Type == models.ActionDelayedClose && !(action.Fullfilled || action.Cancelled) {
+				if event.Status > incident.WorstStatus {
+					// If the lifetime severity of the incident has increased, cancel the delayed close
+					err = s.ActionByAlertKey("bosun", "cancelled delayed close due to severity increase", models.ActionCancelClose, nil, ak)
+					if err != nil {
+						return
+					}
+					incident, err = data.GetIncidentState(incident.Id)
+					if err != nil {
+						return
+					}
+					// Continue processing alert after cancelling the delayed close
+					break
+				}
+				if action.Deadline == nil {
+					err = fmt.Errorf("should not be here - cancelled close without deadline")
+					return
+				}
+				if r.Start.Before(*action.Deadline) {
+					if event.Status == models.StNormal {
+						slog.Infof("closing alert %v on delayed close because the alert has returned to normal before deadline", incident.AlertKey)
+						if event.Status != incident.CurrentStatus {
+							incident.Events = append(incident.Events, *event)
+						}
+						incident.CurrentStatus = event.Status
+						// Action needs to know it is normal, so update the incident that action will read
+						_, err = data.UpdateIncidentState(incident)
+						if err != nil {
+							return
+						}
+						err = s.ActionByAlertKey("bosun", fmt.Sprintf("close on behalf of delayed close by %v", action.User), models.ActionClose, nil, ak)
+						if err != nil {
+							return
+						}
+						incident, err = data.GetIncidentState(incident.Id)
+						if err != nil {
+							return
+						}
+						incident.Actions[i].Fullfilled = true
+						return
+					}
+				} else {
+					// We are after Deadline
+					slog.Infof("force closing alert %v on delayed close because the alert is after the deadline", incident.AlertKey)
+					incident.Actions[i].Fullfilled = true
+					err = s.ActionByAlertKey("bosun", fmt.Sprintf("forceclose on behalf of delayed close by %v", action.User), models.ActionForceClose, nil, ak)
+					if err != nil {
+						return
+					}
+					incident, err = data.GetIncidentState(incident.Id)
+					if err != nil {
+						return
+					}
+					return
+				}
+			}
+		}
+	}
 	// If nothing is out of the ordinary we are done
 	if event.Status <= models.StNormal && incident == nil {
 		return
@@ -183,7 +253,7 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.E
 
 	//render templates and open alert key if abnormal
 	if event.Status > models.StNormal {
-		s.executeTemplates(incident, event, a, r)
+		s.executeTemplates(incident, rt, event, a, r)
 		incident.Open = true
 		if a.Log {
 			incident.Open = false
@@ -203,7 +273,7 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.E
 		}
 		nots := ns.Get(s.RuleConf, incident.AlertKey.Group())
 		for _, n := range nots {
-			s.Notify(incident, n)
+			s.Notify(incident, rt, n)
 			checkNotify = true
 		}
 	}
@@ -237,7 +307,7 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.E
 	if si := silenced(ak); si != nil && event.Status == models.StNormal {
 		go func(ak models.AlertKey) {
 			slog.Infof("auto close %s because was silenced", ak)
-			err := s.ActionByAlertKey("bosun", "Auto close because was silenced.", models.ActionClose, ak)
+			err := s.ActionByAlertKey("bosun", "Auto close because was silenced.", models.ActionClose, nil, ak)
 			if err != nil {
 				slog.Errorln(err)
 			}
@@ -256,7 +326,8 @@ func silencedOrIgnored(a *conf.Alert, event *models.Event, si *models.Silence) b
 	}
 	return false
 }
-func (s *Schedule) executeTemplates(state *models.IncidentState, event *models.Event, a *conf.Alert, r *RunHistory) {
+
+func (s *Schedule) executeTemplates(state *models.IncidentState, rt *models.RenderedTemplates, event *models.Event, a *conf.Alert, r *RunHistory) {
 	if event.Status != models.StUnknown {
 		var errs []error
 		metric := "template.render"
@@ -324,15 +395,15 @@ func (s *Schedule) executeTemplates(state *models.IncidentState, event *models.E
 			attachments = nil
 		}
 		state.Subject = string(subject)
-		state.Body = string(body)
+		rt.Body = string(body)
 		//don't save email seperately if they are identical
-		if string(state.EmailBody) != state.Body {
-			state.EmailBody = emailbody
+		if string(rt.EmailBody) != rt.Body {
+			rt.EmailBody = emailbody
 		}
-		if string(state.EmailSubject) != state.Subject {
-			state.EmailSubject = emailsubject
+		if string(rt.EmailSubject) != state.Subject {
+			rt.EmailSubject = emailsubject
 		}
-		state.Attachments = attachments
+		rt.Attachments = attachments
 	}
 }
 
@@ -514,7 +585,7 @@ func (s *Schedule) findUnknownAlerts(now time.Time, alert string) []models.Alert
 }
 
 func (s *Schedule) CheckAlert(T miniprofiler.Timer, r *RunHistory, a *conf.Alert) (cancelled bool) {
-	slog.Infof("check alert %v start", a.Name)
+	slog.Infof("check alert %v start with now set to %v", a.Name, r.Start.Format("2006-01-02 15:04:05.999999999"))
 	start := utcNow()
 	for _, ak := range s.findUnknownAlerts(r.Start, a.Name) {
 		r.Events[ak] = &models.Event{Status: models.StUnknown}
@@ -602,7 +673,7 @@ func markDependenciesUnevaluated(events map[models.AlertKey]*models.Event, deps 
 			continue
 		}
 		for _, dep := range deps {
-			if dep.Group.Overlaps(ak.Group()) {
+			if len(dep.Group) == 0 || dep.Group.Overlaps(ak.Group()) {
 				ev.Unevaluated = true
 				unevalCount++
 			}
@@ -623,6 +694,7 @@ func (s *Schedule) executeExpr(T miniprofiler.Timer, rh *RunHistory, a *conf.Ale
 		Search:    s.Search,
 		Squelched: s.RuleConf.AlertSquelched(a),
 		History:   s,
+		Annotate:  s.annotate,
 	}
 	results, _, err := e.Execute(rh.Backends, providers, T, rh.Start, 0, a.UnjoinedOK)
 	return results, err

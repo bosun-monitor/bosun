@@ -11,7 +11,7 @@ import (
 )
 
 func TestActionNotificationTemplates(t *testing.T) {
-	c, err := rule.NewConf("", conf.EnabledBackends{}, ``)
+	c, err := rule.NewConf("", conf.EnabledBackends{}, nil, ``)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -53,7 +53,7 @@ func TestActionNotificationTemplates(t *testing.T) {
 
 func TestActionNotificationGrouping(t *testing.T) {
 	defer setup()()
-	c, err := rule.NewConf("", conf.EnabledBackends{}, `
+	c, err := rule.NewConf("", conf.EnabledBackends{}, nil, `
 		template t{
 			subject = 2
 		}

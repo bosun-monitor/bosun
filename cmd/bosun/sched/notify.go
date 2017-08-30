@@ -13,6 +13,9 @@ import (
 	"bosun.org/slog"
 )
 
+// dispatchNotifications triggers notification checks at 2x the the system configuration's
+// check frequency, when something has signaled the schedule via the nc channels, or when
+// a notification that was scheduled in the future due to a notification chain
 func (s *Schedule) dispatchNotifications() {
 	ticker := time.NewTicker(s.SystemConf.GetCheckFrequency() * 2)
 	var next <-chan time.Time
@@ -37,11 +40,20 @@ func (s *Schedule) dispatchNotifications() {
 
 }
 
-func (s *Schedule) Notify(st *models.IncidentState, n *conf.Notification) {
+type IncidentWithTemplates struct {
+	*models.IncidentState
+	*models.RenderedTemplates
+}
+
+// Notify puts a rendered notification in the schedule's pendingNotifications queue
+func (s *Schedule) Notify(st *models.IncidentState, rt *models.RenderedTemplates, n *conf.Notification) {
+	it := &IncidentWithTemplates{}
+	it.IncidentState = st
+	it.RenderedTemplates = rt
 	if s.pendingNotifications == nil {
-		s.pendingNotifications = make(map[*conf.Notification][]*models.IncidentState)
+		s.pendingNotifications = make(map[*conf.Notification][]*IncidentWithTemplates)
 	}
-	s.pendingNotifications[n] = append(s.pendingNotifications[n], st)
+	s.pendingNotifications[n] = append(s.pendingNotifications[n], it)
 }
 
 // CheckNotifications processes past notification events. It returns the next time a notification is needed.
@@ -80,6 +92,7 @@ func (s *Schedule) CheckNotifications() time.Time {
 				continue
 			}
 			st, err := s.DataAccess.State().GetLatestIncident(ak)
+
 			if err != nil {
 				slog.Error(err)
 				continue
@@ -87,7 +100,12 @@ func (s *Schedule) CheckNotifications() time.Time {
 			if st == nil {
 				continue
 			}
-			s.Notify(st, n)
+			rt, err := s.DataAccess.State().GetRenderedTemplates(st.Id)
+			if err != nil {
+				slog.Error(err)
+				continue
+			}
+			s.Notify(st, rt, n)
 		}
 	}
 	s.sendNotifications(silenced)
@@ -105,6 +123,10 @@ func (s *Schedule) CheckNotifications() time.Time {
 	return timeout
 }
 
+// sendNotifications processes the schedule's pendingNotifications queue. It silences notifications,
+// moves unknown notifications to the unknownNotifications queue so they can be grouped, calls the notification
+// Notify method to trigger notification actions, and queues notifications that are in the future because they
+// are part of a notification chain
 func (s *Schedule) sendNotifications(silenced SilenceTester) {
 	if s.quiet {
 		slog.Infoln("quiet mode prevented", len(s.pendingNotifications), "notifications")
@@ -123,7 +145,7 @@ func (s *Schedule) sendNotifications(silenced SilenceTester) {
 					slog.Infoln("silencing unknown", ak)
 					continue
 				}
-				s.pendingUnknowns[n] = append(s.pendingUnknowns[n], st)
+				s.pendingUnknowns[n] = append(s.pendingUnknowns[n], st.IncidentState)
 			} else if silenced {
 				slog.Infof("silencing %s", ak)
 				continue
@@ -134,7 +156,7 @@ func (s *Schedule) sendNotifications(silenced SilenceTester) {
 				}
 				continue
 			} else {
-				s.notify(st, n)
+				s.notify(st.IncidentState, st.RenderedTemplates, n)
 			}
 			if n.Next != nil {
 				s.QueueNotification(ak, n.Next, utcNow())
@@ -143,6 +165,9 @@ func (s *Schedule) sendNotifications(silenced SilenceTester) {
 	}
 }
 
+// sendUnknownNotifications processes the schedule's pendingUnknowns queue. It puts unknowns into groups
+// to be processed by the schedule's utnotify method. When it is done processing the pendingUnknowns queue
+// it reinitializes the queue.
 func (s *Schedule) sendUnknownNotifications() {
 	slog.Info("Batching and sending unknown notifications")
 	defer slog.Info("Done sending unknown notifications")
@@ -193,14 +218,16 @@ var unknownMultiGroup = ttemplate.Must(ttemplate.New("unknownMultiGroup").Parse(
 	</ul>
 	`))
 
-func (s *Schedule) notify(st *models.IncidentState, n *conf.Notification) {
-	if len(st.EmailSubject) == 0 {
-		st.EmailSubject = []byte(st.Subject)
+// notify is a wrapper for the notifications Notify method that sets the EmailSubject and EmailBody for the rendered
+// template. It passes properties from the schedule that the Notification's Notify method requires.
+func (s *Schedule) notify(st *models.IncidentState, rt *models.RenderedTemplates, n *conf.Notification) {
+	if len(rt.EmailSubject) == 0 {
+		rt.EmailSubject = []byte(st.Subject)
 	}
-	if len(st.EmailBody) == 0 {
-		st.EmailBody = []byte(st.Body)
+	if len(rt.EmailBody) == 0 {
+		rt.EmailBody = []byte(rt.Body)
 	}
-	n.Notify(st.Subject, st.Body, st.EmailSubject, st.EmailBody, s.SystemConf, string(st.AlertKey), st.Attachments...)
+	n.Notify(st.Subject, rt.Body, rt.EmailSubject, rt.EmailBody, s.SystemConf, string(st.AlertKey), rt.Attachments...)
 }
 
 // utnotify is single notification for N unknown groups into a single notification
@@ -238,6 +265,8 @@ var defaultUnknownTemplate = &conf.Template{
 	Subject: ttemplate.Must(ttemplate.New("").Parse(`{{.Name}}: {{.Group | len}} unknown alerts`)),
 }
 
+// unotify builds an unknown notification for an alertkey or a group of alert keys. It renders the template
+// and calls the notification's Notify method to trigger the action.
 func (s *Schedule) unotify(name string, group models.AlertKeys, n *conf.Notification) {
 	subject := new(bytes.Buffer)
 	body := new(bytes.Buffer)
@@ -261,6 +290,8 @@ func (s *Schedule) unotify(name string, group models.AlertKeys, n *conf.Notifica
 	n.Notify(subject.String(), body.String(), subject.Bytes(), body.Bytes(), s.SystemConf, name)
 }
 
+// QueueNotification persists a notification to the datastore to be sent in the future. This happens when
+// there are notification chains or an alert is unevaluated due to a dependency.
 func (s *Schedule) QueueNotification(ak models.AlertKey, n *conf.Notification, started time.Time) error {
 	return s.DataAccess.Notifications().InsertNotification(ak, n.Name, started.Add(n.Timeout))
 }

@@ -8,6 +8,8 @@ import (
 	"runtime"
 	"runtime/debug"
 	"sort"
+	"strconv"
+	"strings"
 	"time"
 
 	"bosun.org/cmd/bosun/cache"
@@ -18,7 +20,7 @@ import (
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
 	"github.com/MiniProfiler/go/miniprofiler"
-	"github.com/bosun-monitor/annotate"
+	"github.com/bosun-monitor/annotate/backend"
 	"github.com/influxdata/influxdb/client/v2"
 	elasticOld "github.com/olivere/elastic"
 	elastic "gopkg.in/olivere/elastic.v3"
@@ -53,7 +55,7 @@ type Backends struct {
 	LogstashHosts   LogstashElasticHosts
 	ElasticHosts    ElasticHosts
 	InfluxConfig    client.HTTPConfig
-	AnnotateContext annotate.Client
+	ElasticConfig   ElasticConfig
 }
 
 type BosunProviders struct {
@@ -61,6 +63,7 @@ type BosunProviders struct {
 	Search    *search.Search
 	History   AlertStatusProvider
 	Cache     *cache.Cache
+	Annotate  backend.Backend
 }
 
 // Alert Status Provider is used to provide information about alert results.
@@ -409,7 +412,6 @@ func (e *State) union(a, b *Results, expression string) []*Union {
 	var group opentsdb.TagSet
 	for _, ra := range a.Results {
 		for _, rb := range b.Results {
-
 			if ra.Group.Equal(rb.Group) || len(ra.Group) == 0 || len(rb.Group) == 0 {
 				g := ra.Group
 				if len(ra.Group) == 0 {
@@ -479,6 +481,8 @@ func (e *State) walk(node parse.Node, T miniprofiler.Timer) *Results {
 		res = e.walkFunc(node, T)
 	case *parse.ExprNode:
 		res = e.walkExpr(node, T)
+	case *parse.PrefixNode:
+		res = e.walkPrefix(node, T)
 	default:
 		panic(fmt.Errorf("expr: unknown node type"))
 	}
@@ -704,6 +708,22 @@ func uoperate(op string, a float64) (r float64) {
 	return
 }
 
+func (e *State) walkPrefix(node *parse.PrefixNode, T miniprofiler.Timer) *Results {
+	key := strings.TrimPrefix(node.Text, "[")
+	key = strings.TrimSuffix(key, "]")
+	key, _ = strconv.Unquote(key)
+	switch node := node.Arg.(type) {
+	case *parse.FuncNode:
+		if node.F.PrefixEnabled {
+			node.Prefix = key
+			node.F.PrefixKey = true
+		}
+		return e.walk(node, T)
+	default:
+		panic(fmt.Errorf("expr: prefix can only be append to a FuncNode"))
+	}
+}
+
 func (e *State) walkFunc(node *parse.FuncNode, T miniprofiler.Timer) *Results {
 	var res *Results
 	T.Step("func: "+node.Name, func(T miniprofiler.Timer) {
@@ -723,9 +743,12 @@ func (e *State) walkFunc(node *parse.FuncNode, T miniprofiler.Timer) *Results {
 				v = extract(e.walkBinary(t, T))
 			case *parse.ExprNode:
 				v = e.walkExpr(t, T)
+			case *parse.PrefixNode:
+				v = e.walkPrefix(t, T)
 			default:
 				panic(fmt.Errorf("expr: unknown func arg type"))
 			}
+
 			var argType models.FuncType
 			if i >= len(node.F.Args) {
 				if !node.F.VArgs {
@@ -735,13 +758,25 @@ func (e *State) walkFunc(node *parse.FuncNode, T miniprofiler.Timer) *Results {
 			} else {
 				argType = node.F.Args[i]
 			}
-			if f, ok := v.(float64); ok && argType == models.TypeNumberSet {
+			if f, ok := v.(float64); ok && (argType == models.TypeNumberSet || argType == models.TypeVariantSet) {
 				v = fromScalar(f)
 			}
 			in = append(in, reflect.ValueOf(v))
 		}
+
 		f := reflect.ValueOf(node.F.F)
-		fr := f.Call(append([]reflect.Value{reflect.ValueOf(e), reflect.ValueOf(T)}, in...))
+		fr := []reflect.Value{}
+
+		if node.F.PrefixEnabled {
+			if !node.F.PrefixKey {
+				fr = f.Call(append([]reflect.Value{reflect.ValueOf("default"), reflect.ValueOf(e), reflect.ValueOf(T)}, in...))
+			} else {
+				fr = f.Call(append([]reflect.Value{reflect.ValueOf(node.Prefix), reflect.ValueOf(e), reflect.ValueOf(T)}, in...))
+			}
+		} else {
+			fr = f.Call(append([]reflect.Value{reflect.ValueOf(e), reflect.ValueOf(T)}, in...))
+		}
+
 		res = fr[0].Interface().(*Results)
 		if len(fr) > 1 && !fr[1].IsNil() {
 			err := fr[1].Interface().(error)

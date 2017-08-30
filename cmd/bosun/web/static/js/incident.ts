@@ -1,6 +1,6 @@
 interface IIncidentScope extends ng.IScope {
 	error: string;
-	incident: any;
+	incident: IncidentState;
 	events: any;
 	actions: any;
 	body: any;
@@ -13,7 +13,6 @@ interface IIncidentScope extends ng.IScope {
 	action: any;
 	configLink: string;
 }
-
 
 bosunControllers.controller('IncidentCtrl', ['$scope', '$http', '$location', '$route', '$sce', function ($scope: IIncidentScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService, $sce: ng.ISCEService) {
 	var search = $location.search();
@@ -41,7 +40,7 @@ bosunControllers.controller('IncidentCtrl', ['$scope', '$http', '$location', '$r
 			return;
 		}
 		var ak = $scope.incident.AlertKey;
-		var url = ruleUrl(ak, moment(v.Time))
+		var url = ruleUrl(ak, moment(v.Time));
 		$http.post(url, $scope.config_text)
 			.success((data: any) => {
 				v.subject = data.Subject;
@@ -68,7 +67,7 @@ bosunControllers.controller('IncidentCtrl', ['$scope', '$http', '$location', '$r
 			$scope.actions = data.Actions;
 			$scope.body = $sce.trustAsHtml(data.Body);
 			$scope.events = data.Events.reverse();
-			$scope.configLink = configUrl($scope.incident.AlertKey, moment.unix($scope.incident.LastAbnormalTime *1000));
+			$scope.configLink = configUrl($scope.incident.AlertKey, moment.unix($scope.incident.LastAbnormalTime));
 			for (var i = 0; i < $scope.events.length; i++) {
 				var e = $scope.events[i];
 				if (e.Status != 'normal' && e.Status != 'unknown') {

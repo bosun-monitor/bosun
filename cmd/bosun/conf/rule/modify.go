@@ -15,7 +15,7 @@ import (
 // will not be saved. If the savehook fails to run or returns an error thaen the orginal config
 // will be restored and the reload will not take place.
 func (c *Conf) SaveRawText(rawConfig, diff, user, message string, args ...string) error {
-	newConf, err := NewConf(c.Name, c.backends, rawConfig)
+	newConf, err := NewConf(c.Name, c.backends, c.sysVars, rawConfig)
 	if err != nil {
 		return err
 	}
@@ -101,7 +101,7 @@ func (c *Conf) BulkEdit(edits conf.BulkEditRequest) error {
 		} else {
 			rawConf = writeSection(l, newConf.RawText, edit.Text)
 		}
-		newConf, err = NewConf(c.Name, c.backends, rawConf)
+		newConf, err = NewConf(c.Name, c.backends, c.sysVars, rawConf)
 		if err != nil {
 			return fmt.Errorf("could not create new conf: failed on step %v:%v : %v", edit.Type, edit.Name, err)
 		}

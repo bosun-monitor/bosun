@@ -52,18 +52,21 @@
 <label class="selectorDropdown" style="margin-right:15px;">Jump to:</label>
 <div class="row">
 	<div class="dropdown selectorDropdown" ng-repeat="(type,list) in items">
-		<button class="btn btn-primary dropdown-toggle" type="button" id="itemSelector" data-toggle="dropdown" ng-bind="type">
-			<span class="caret"></span>
-		</button>
+		<button class="btn btn-primary btn-xs dropdown-toggle" type="button" id="itemSelector" data-toggle="dropdown">
+			{{ type }} <i class="fa fa-caret-down"></i>
+		</button> 
 		<ul class="dropdown-menu section-button" role="menu">
+			<li role="presentation"><a tabindex="-1" role="menuitem" target="_blank" ng-href="{{sectionToDocs[type]}}">
+				{{ type }} Documentation <i class="fa fa-external-link"></i></a>
+			</li>
+			<li class="divider"></li>
 			<li role="presentation" ng-repeat="item in list | orderBy:'toString()'"><a role="menuitem" tabindex="-1" ng-click="scrollTo(type,item);">{{item}}</a></li>
 		</ul>
 	</div>
-	<div class="btn btn-default" ng-show="quickJumpTarget" ng-bind="quickJumpTarget" ng-click="quickJump()"></div>
-	<div class="btn btn-sm actionButtons" data-toggle="modal" data-target="#configSaveModal" ng-click="diffConfig()" ng-if="saveEnabled">Save Dialogue</div>
-	<div class="btn btn-sm actionButtons" ng-click="validate()">Validate</div>
-	<div class="btn btn-sm actionButtons" ng-click="aceToggleHighlight()">Syntax Highlighting</div>
-	<div class="btn btn-sm actionButtons" ng-click="downloadConfig()">Download</div>
+	<div class="btn btn-default btn-xs" ng-show="quickJumpTarget" ng-bind="quickJumpTarget" ng-click="quickJump()"></div>
+	<div class="btn btn-default btn-xs actionButtons" data-toggle="modal" data-target="#configSaveModal" ng-click="diffConfig()" ng-if="saveEnabled">Save</div>
+	<div class="btn btn-default btn-xs actionButtons" ng-click="validate()">Validate</div>
+	<div class="btn btn-default btn-xs actionButtons" ng-click="downloadConfig()">Download</div>
 </div>
 <div class="row" ng-show="validationResult">
 	<div class="col-lg-12">
@@ -82,7 +85,7 @@
 <div class="row" ng-show="runningChanged" ng-if="saveEnabled">
 	<div class="col-lg-12">
 		<div class="alert alert-danger">The running configuration has been changed since you started editing.
-			<div style="outline: none;" class="pull-right" data-placement="bottom" data-title="Help" data-content="{{runningChangedHelp}}" bs-popover><span class="glyphicon glyphicon-question-sign"></span></div>
+			<div style="outline: none;" class="pull-right" data-placement="bottom" data-title="Help" data-content="{{runningChangedHelp}}" bs-popover><span class="fa fa-question"></span></div>
 		</div>
 	</div>
 </div>
@@ -317,10 +320,10 @@
 			</div>
 			<div class="modal-body">
 				<div class="form-horizontal">
-					<div class="form-group" ng-class="(user != '') ? '' : 'has-error' ">
-						<label class="col-sm-2 control-label">Username</label>
+					<div class="form-group">
+						<label class="col-sm-2 control-label">Username22</label>
 						<div class="col-sm-6">
-							<input type="text" class="form-control" ng-model="user">
+							<username-input></username-input>
 						</div>
 					</div>
 					<div class="form-group">

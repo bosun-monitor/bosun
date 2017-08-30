@@ -2,7 +2,7 @@
 
 Bosun is a time series alerting framework developed by Stack Exchange. Scollector is a metric collection agent. Learn more at [bosun.org](http://bosun.org).
 
-[![Build Status](https://travis-ci.org/bosun-monitor/bosun.svg?branch=master)](https://travis-ci.org/bosun-monitor/bosun)
+[![Build Status](https://travis-ci.org/bosun-monitor/bosun.svg?branch=master)](https://travis-ci.org/bosun-monitor/bosun/branches)
 
 ## building
 
@@ -31,3 +31,6 @@ $ ./w.sh
 
 Go Version:
   * We generally upgrade to the latest version Go within a day or two. So consider the correct version of Go always to be the latest stable release.
+  
+Miniprofiler:
+ * Bosun includes [miniprofiler](https://github.com/MiniProfiler/go) in the web UI which can help with debugging. The key combination `ALT-P` will show miniprofiler. This allows you to see timings, as well as the raw queries sent to TSDBs.

@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	_ "expvar"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -82,6 +83,10 @@ func main() {
 	if conf.UserAgentMessage != "" {
 		ua += fmt.Sprintf(" (%s)", conf.UserAgentMessage)
 	}
+	if conf.AuthToken != "" {
+		collect.AuthToken = conf.AuthToken
+		metadata.AuthToken = conf.AuthToken
+	}
 	client := &http.Client{
 		Transport: &scollectorHTTPTransport{
 			ua,
@@ -126,6 +131,9 @@ func main() {
 	}
 	if conf.SNMPTimeout > 0 {
 		snmp.Timeout = conf.SNMPTimeout
+	}
+	if conf.UseSWbemServicesClient {
+		conf.InitializeSWbemServices()
 	}
 	var err error
 	check := func(e error) {

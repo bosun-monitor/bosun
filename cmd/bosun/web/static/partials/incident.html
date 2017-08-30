@@ -25,7 +25,7 @@
 					<p><strong>Start Time:</strong></p>
 				</div>
 				<div class="col-sm-9">
-					<span ts-time="incident.Start"/>
+					<span ts-time="incident.Start" />
 				</div>
 			</div>
 			<div class="row">
@@ -104,13 +104,15 @@
 				<td>User</td>
 				<td>Message</td>
 				<td>Time</td>
+				<td>Deadline</td>
 			</thead>
 			<tbody>
 				<tr ng-repeat="a in actions">
 					<td ng-bind="a.Type"></td>
 					<td ng-bind="a.User"></td>
 					<td ng-bind="a.Message"></td>
-					<td style="text-align:right;" ng-show="a.Time" ts-time="a.Time"></td>
+					<td><div ng-show="a.Time" ts-time="a.Time"></div></td>
+					<td><div ng-show="a.Deadline" ts-time="a.Deadline"></div></td>
 				</tr>
 			</tbody>
 		</table>

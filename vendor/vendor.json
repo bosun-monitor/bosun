@@ -24,6 +24,12 @@
 			"revisionTime": "2016-07-19T19:58:34Z"
 		},
 		{
+			"checksumSHA1": "XeG94RjA9o/0wo9Fuw6NSRGYnjk=",
+			"path": "github.com/NYTimes/gziphandler",
+			"revision": "63027b26b87e2ae2ce3810393d4b81021cfd3a35",
+			"revisionTime": "2016-04-19T20:25:41Z"
+		},
+		{
 			"path": "github.com/PuerkitoBio/goquery",
 			"revision": "417cce822c7b9a379df5824be95228d177c5698b",
 			"revisionTime": "2015-09-27T16:28:20-04:00"
@@ -35,13 +41,13 @@
 		},
 		{
 			"path": "github.com/StackExchange/mof",
-			"revision": "2bb66392c0273ed914c2b83442e8a61effa42678",
-			"revisionTime": "2015-06-18T18:52:08-04:00"
+			"revision": "cfc83d4047d1c05c81d9c54ac1eaedb076582114",
+			"revisionTime": "2017-02-27T16:04:56-07:00"
 		},
 		{
 			"path": "github.com/StackExchange/wmi",
-			"revision": "f4452b3678eaa14aafb0b058fcd60645a304ea8c",
-			"revisionTime": "2016-10-07T09:40:34-05:00"
+			"revision": "9f32b5905fd6ce7384093f9d048437e79f7b4d85",
+			"revisionTime": "2017-02-20T14:12:21-07:00"
 		},
 		{
 			"path": "github.com/ajstarks/svgo",
@@ -254,19 +260,22 @@
 			"revisionTime": "2015-11-22T20:06:43-07:00"
 		},
 		{
+			"checksumSHA1": "jx1hiVjE68LP+EMqgSiOJ5udPCQ=",
 			"path": "github.com/bosun-monitor/annotate",
-			"revision": "7a63972472cdcbd52933b5580927efca995e4598",
-			"revisionTime": "2016-10-19T16:13:39-06:00"
+			"revision": "c0740ed2ddc60564a6aff2ad44fb375b479e55ca",
+			"revisionTime": "2017-03-27T16:30:27-04:00"
 		},
 		{
+			"checksumSHA1": "/N7Fn2S5O4gcqloH5fdkGzJ3Gas=",
 			"path": "github.com/bosun-monitor/annotate/backend",
-			"revision": "7a63972472cdcbd52933b5580927efca995e4598",
-			"revisionTime": "2016-10-19T16:13:39-06:00"
+			"revision": "c0740ed2ddc60564a6aff2ad44fb375b479e55ca",
+			"revisionTime": "2017-03-27T16:30:27-04:00"
 		},
 		{
+			"checksumSHA1": "GdXtpLoHxfTdgsdgr3XaEmT7eCk=",
 			"path": "github.com/bosun-monitor/annotate/web",
-			"revision": "7a63972472cdcbd52933b5580927efca995e4598",
-			"revisionTime": "2016-10-19T16:13:39-06:00"
+			"revision": "c0740ed2ddc60564a6aff2ad44fb375b479e55ca",
+			"revisionTime": "2017-03-27T16:30:27-04:00"
 		},
 		{
 			"path": "github.com/bosun-monitor/statusio",
@@ -277,6 +286,30 @@
 			"path": "github.com/bradfitz/slice",
 			"revision": "a665b5dbaad5fc7474c1193c67ed138df1e1b0e7",
 			"revisionTime": "2014-04-30T10:51:40-04:00"
+		},
+		{
+			"checksumSHA1": "2D5vo1CBsOIKPe9B0Phk1+m9uEg=",
+			"path": "github.com/captncraig/easyauth",
+			"revision": "f8cfe65ef31cd6959a9553175bb6caf1f5af928f",
+			"revisionTime": "2017-04-17T16:53:34Z"
+		},
+		{
+			"checksumSHA1": "N51CVtTE9ZUN1I/+jJzFeb/SuXE=",
+			"path": "github.com/captncraig/easyauth/providers/ldap",
+			"revision": "f8cfe65ef31cd6959a9553175bb6caf1f5af928f",
+			"revisionTime": "2017-04-17T16:53:34Z"
+		},
+		{
+			"checksumSHA1": "z+rzZ/v6jmr+VDDEWxrYbKnZJA4=",
+			"path": "github.com/captncraig/easyauth/providers/token",
+			"revision": "f8cfe65ef31cd6959a9553175bb6caf1f5af928f",
+			"revisionTime": "2017-04-17T16:53:34Z"
+		},
+		{
+			"checksumSHA1": "bG2Nz0IR6+f6Re6IHrZN/yxfm1U=",
+			"path": "github.com/captncraig/easyauth/providers/token/redisStore",
+			"revision": "f8cfe65ef31cd6959a9553175bb6caf1f5af928f",
+			"revisionTime": "2017-04-17T16:53:34Z"
 		},
 		{
 			"path": "github.com/coreos/go-systemd/dbus",
@@ -983,9 +1016,21 @@
 			"revisionTime": "2016-02-11T13:26:58+11:00"
 		},
 		{
+			"checksumSHA1": "230gzuFjQb4KSsAV1XCO/ZRn9qQ=",
+			"path": "gopkg.in/asn1-ber.v1",
+			"revision": "9eae18c3681ae3d3c677ac2b80a8fe57de45fc09",
+			"revisionTime": "2014-11-19T15:00:59Z"
+		},
+		{
 			"path": "gopkg.in/fsnotify.v1",
 			"revision": "8611c35ab31c1c28aa903d33cf8b6e44a399b09e",
 			"revisionTime": "2016-01-10T16:04:37+01:00"
+		},
+		{
+			"checksumSHA1": "FPRuCOqEJPDFPm9w0AZYa/cMGwY=",
+			"path": "gopkg.in/ldap.v1",
+			"revision": "0041a412703908abb6602d225f874508dcfddd74",
+			"revisionTime": "2015-02-24T15:54:22Z"
 		},
 		{
 			"path": "gopkg.in/olivere/elastic.v3",

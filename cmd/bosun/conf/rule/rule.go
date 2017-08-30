@@ -45,6 +45,8 @@ type Conf struct {
 	reload   func() error
 	backends conf.EnabledBackends
 
+	sysVars map[string]string
+
 	tree            *parse.Tree
 	node            parse.Node
 	unknownTemplate string
@@ -125,19 +127,19 @@ func (c *Conf) parseNotifications(v string) (map[string]*conf.Notification, erro
 	return ns, nil
 }
 
-func ParseFile(fname string, backends conf.EnabledBackends) (*Conf, error) {
+func ParseFile(fname string, backends conf.EnabledBackends, sysVars map[string]string) (*Conf, error) {
 	f, err := ioutil.ReadFile(fname)
 	if err != nil {
 		return nil, err
 	}
-	return NewConf(fname, backends, string(f))
+	return NewConf(fname, backends, sysVars, string(f))
 }
 
 func (c *Conf) SaveConf(newConf *Conf) error {
 	return ioutil.WriteFile(c.Name, []byte(newConf.RawText), os.FileMode(int(0640)))
 }
 
-func NewConf(name string, backends conf.EnabledBackends, text string) (c *Conf, err error) {
+func NewConf(name string, backends conf.EnabledBackends, sysVars map[string]string, text string) (c *Conf, err error) {
 	defer errRecover(&err)
 	c = &Conf{
 		Name:             name,
@@ -153,6 +155,7 @@ func NewConf(name string, backends conf.EnabledBackends, text string) (c *Conf, 
 		writeLock:        make(chan bool, 1),
 		deferredSections: make(map[string][]deferredSection),
 		backends:         backends,
+		sysVars:          sysVars,
 	}
 	c.tree, err = parse.Parse(name, text)
 	if err != nil {
@@ -413,6 +416,19 @@ var defaultFuncs = ttemplate.FuncMap{
 	"html": func(value interface{}) htemplate.HTML {
 		return htemplate.HTML(fmt.Sprint(value))
 	},
+	// There is a trap here, this will only make sure that
+	// it is a untyped nil. A typed nil would return true
+	// here. So it is vital that we only return literal
+	// nils from functions when they error with notNil.
+	// This is needed because template's conditionals
+	// treat things like 0 and false as "not true" just like
+	// nil.
+	"notNil": func(value interface{}) bool {
+		if value == nil {
+			return false
+		}
+		return true
+	},
 	"parseDuration": func(s string) *time.Duration {
 		d, err := time.ParseDuration(s)
 		if err != nil {
@@ -630,10 +646,12 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 		if err != nil {
 			c.error(err)
 		}
-		if len(depTags.Intersection(tags)) < 1 {
+		if len(depTags) != 0 && len(depTags.Intersection(tags)) < 1 {
 			c.errorf("Depends and crit/warn must share at least one tag.")
 		}
 	}
+	warnLength := len(a.WarnNotification.Notifications) + len(a.WarnNotification.Lookups)
+	critLength := len(a.CritNotification.Notifications) + len(a.CritNotification.Lookups)
 	if a.Log {
 		for _, n := range a.CritNotification.Notifications {
 			if n.Next != nil {
@@ -645,30 +663,13 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 				c.errorf("cannot use log with a chained notification")
 			}
 		}
-		if a.Crit != nil && len(a.CritNotification.Notifications) == 0 {
-			c.errorf("log + crit specified, but no critNotification")
-		}
-		if a.Warn != nil && len(a.WarnNotification.Notifications) == 0 {
-			c.errorf("log + warn specified, but no warnNotification")
+		if warnLength+critLength == 0 {
+			c.errorf("log specified but no notification")
 		}
 	}
-	if len(a.WarnNotification.Notifications) != 0 {
-		if a.Warn == nil {
-			c.errorf("warnNotification specified, but no warn")
-		}
-		if a.Template == nil {
-			c.errorf("warnNotification specified, but no template")
-		}
+	if warnLength+critLength > 0 && a.Template == nil {
+		c.errorf("notifications specified but no template")
 	}
-	if len(a.CritNotification.Notifications) != 0 {
-		if a.Crit == nil {
-			c.errorf("critNotification specified, but no crit")
-		}
-		if a.Template == nil {
-			c.errorf("critNotification specified, but no template")
-		}
-	}
-
 	a.ReturnType = ret
 	c.Alerts[name] = &a
 }
@@ -778,6 +779,8 @@ func (c *Conf) Expand(v string, vars map[string]string, ignoreBadExpand bool) st
 			n = _n
 		} else if strings.HasPrefix(s, "$env.") {
 			n = os.Getenv(s[5:])
+		} else if strings.HasPrefix(s, "$sys.") {
+			n = c.sysVars[s[5:]]
 		} else if ignoreBadExpand {
 			return s
 		} else {

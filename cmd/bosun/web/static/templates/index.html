@@ -7,13 +7,14 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1.0">
 		<link href="/static/css/bootstrap.min.css" rel="stylesheet">
 		<link href="/static/css/jquery-ui.min.css" rel="stylesheet">
+		<link href="/static/css/font-awesome.min.css" rel="stylesheet">
 		<style>
 			.navbar-static-top {
 				margin-bottom: 19px;
 			}
 			#logo {
 				position: absolute;
-				top: 10px;
+				top: 7.5px; /* (navbar height (40 in variables.less) - size of logo (25 in 0-bosun.ts)) / 2 */
 			}
 			#logo-text {
 				margin-left: 38px;
@@ -31,6 +32,11 @@
 			.panel-heading {
 				cursor: pointer; cursor: hand;
 			}
+
+			.panel-title {
+				font-size: 15px;
+			}
+
 			label.select {
 				margin-left: 12px;
 				margin-top: -2px;
@@ -79,6 +85,11 @@
 				border-color: black;
 				border-width: 2px;
 			}
+
+			.icon-smaller {
+				font-size: 0.7em;
+			}
+
 			[ng\:cloak], [ng-cloak], [data-ng-cloak], [x-ng-cloak], .ng-cloak, .x-ng-cloak {
   display: none !important;
 }
@@ -106,7 +117,6 @@
 						<li ng-class="active('expr')"><a href="/expr">Expression</a></li>
 						<li ng-class="active('config')"><a href="/config">Rule Editor</a></li>
 						<li ng-class="active('silence')"><a href="/silence">Silence</a></li>
-						<li ng-show="opentsdbEnabled" ng-class="active('put')"><a href="/put">Submit Data</a></li>
 						<li ng-show="annotateEnabled" ng-class="active('annotation')" ng-cloak><a href="/annotation">Submit Annotation</a></li>
 					</ul>
 					<ul class="nav navbar-nav navbar-right">
@@ -115,18 +125,57 @@
 							<button class="btn btn-default navbar-btn btn-sm" ng-click="shorten()" ng-hide="shortlink">Short Link</button>
 							<input type="text" class="navbar-btn btn-sm form-control input-sm" id="shortlink" ng-show="shortlink">
 						</li>
-						<li class="dropdown"><a href="#" class="dropdown-toggle" data-toggle="dropdown">Help <b class="caret"></b></a>
+
+						{{ $Username := "{{auth.Username()}}" }}
+						<li ng-if="auth.Enabled() || tokensEnabled" class="dropdown" ng-cloak><a href="#" class="dropdown-toggle" data-toggle="dropdown" ><span class='fa fa-user'></span> {{$Username}} <i class="fa fa-caret-down" aria-hidden="true"></i></a>
 							<ul class="dropdown-menu">
-								<li><a href="http://bosun.org/configuration.html">Configuration and Expression Syntax</a></li>
-								<li><a href="http://bosun.org/api.html">API Endpoints</a></li>
-								<li><a href="http://opentsdb.net/docs/build/html/index.html">OpenTSDB Documentation</a></li>
+								<li ng-if="auth.Enabled()"><a href="/login/out" target='_self'>Log out</a></li>
+								<li ng-if="tokensEnabled && auth.HasPermission('Manage Tokens')"><a href="/tokens">Manage Auth Tokens</a></li>
+							</ul>
+						</li>
+						<li ng-cloak class='navbar-text' ng-if="!auth.Enabled() && !tokensEnabled"><span class='fa fa-user'></span> {{ $Username }}</li>
+						<li class="dropdown"><a href="#" class="dropdown-toggle" data-toggle="dropdown"><i class="fa fa-question-circle fa-lg" aria-hidden="true"></i> <i class="fa fa-caret-down" aria-hidden="true"></i></a>
+							<ul class="dropdown-menu">
+								<li class="dropdown-header">Main Documentation</li>
+								<li><a href="https://bosun.org/usage" target="_blank">Usage 
+									<i class="fa fa-external-link icon-smaller" aria-hidden="true"></i></a></li>
+								<li><a href="https://bosun.org/expressions" target="_blank">Expression Language 
+									<i class="fa fa-external-link icon-smaller" aria-hidden="true"></i></a></li>
+								<li><a href="https://bosun.org/definitions" target="_blank">Definitions (RuleConf) 
+									<i class="fa fa-external-link icon-smaller" aria-hidden="true"></i></a></li>
+								<li><a href="https://bosun.org/system_configuration" target="_blank">System Configuration 
+									<i class="fa fa-external-link icon-smaller" aria-hidden="true"></i></a></li>
+								<li><a href="https://bosun.org/api" target="_blank">API Endpoints 
+									<i class="fa fa-external-link icon-smaller" aria-hidden="true"></i></a></li>
+								<li><a href="https://bosun.org/resources" target="_blank">Other Resouces List
+									<i class="fa fa-external-link icon-smaller" aria-hidden="true"></i></a></li>
+								<li class="dropdown-header">Other Resources</li>
+								<li><a href="https://github.com/bosun-monitor/bosun" target="_blank">
+									<i class="fa fa-github" aria-hidden="true"></i>
+									Bosun Project on Github
+									<i class="fa fa-external-link icon-smaller" aria-hidden="true"></i></a></li>
+								<li><a href="https://bosun.slack.com/" target="_blank">
+									<i class="fa fa-slack" aria-hidden="true"></i>
+									Slack Chat Room
+									<i class="fa fa-external-link icon-smaller" aria-hidden="true"></i></a></li>
+								<li><a href="https://bosun.org/slackInvite" target="_blank">
+									<i class="fa fa-slack" aria-hidden="true"></i>
+									Slack Inviter
+									<i class="fa fa-external-link icon-smaller" aria-hidden="true"></i></a></li>
+								<li><a href="https://stackoverflow.com/questions/tagged/bosun" target="_blank">
+									<i class="fa fa-stack-overflow" aria-hidden="true"></i>
+									Stack Overflow Bosun Tag
+									<i class="fa fa-external-link icon-smaller" aria-hidden="true"></i></a></li>
+								<li><a href="https://stackoverflow.com/documentation/bosun/topics" target="_blank">
+									<i class="fa fa-stack-overflow" aria-hidden="true"></i>
+									Stack Overflow Bosun Docs and Examples
+									<i class="fa fa-external-link icon-smaller" aria-hidden="true"></i></a></li>
 							</ul>
 						</li>
 					</ul>
 				</div>
 			</div>
 		</div>
-
 		<div class="container">
 			<div class="row">
 				<div class="col-lg-12" ng-view>
@@ -149,6 +198,8 @@
 		<script src="/static/js/d3.v3.min.js"></script>
 		<script src="/static/js/jquery.tablesorter.min.js"></script>
 		<script src="/static/js/FileSaver.min.js"></script>
+		<script src="/static/js/clipboard.min.js"></script>
+		<script src="/static/js/ngclipboard.min.js"></script>
 		<script src="/static/js/bosun.js"></script>
 		{{.Includes}}
 	</body>

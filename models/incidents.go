@@ -9,6 +9,10 @@ import (
 )
 
 type IncidentState struct {
+	// Since IncidentState is embedded into a template's Context these fields
+	// are available to users. Changes to this object should be reflected
+	// in Bosun's documentation and changes that might break user's teamplates.
+	// need to be considered.
 	Id       int64
 	Start    time.Time
 	End      *time.Time
@@ -22,11 +26,7 @@ type IncidentState struct {
 	Events  []Event  `json:",omitempty"`
 	Actions []Action `json:",omitempty"`
 
-	Subject      string
-	Body         string
-	EmailBody    []byte
-	EmailSubject []byte
-	Attachments  []*Attachment
+	Subject string
 
 	NeedAck bool
 	Open    bool
@@ -38,6 +38,13 @@ type IncidentState struct {
 
 	LastAbnormalStatus Status
 	LastAbnormalTime   int64
+}
+
+type RenderedTemplates struct {
+	Body         string
+	EmailBody    []byte
+	EmailSubject []byte
+	Attachments  []*Attachment
 }
 
 func (s *IncidentState) Group() opentsdb.TagSet {
@@ -122,8 +129,12 @@ func (f FuncType) String() string {
 		return "numberexpr"
 	case TypeSeriesExpr:
 		return "seriesexpr"
+	case TypePrefix:
+		return "prefix"
 	case TypeTable:
 		return "table"
+	case TypeVariantSet:
+		return "variantSet"
 	default:
 		return "unknown"
 	}
@@ -131,6 +142,7 @@ func (f FuncType) String() string {
 
 const (
 	TypeString FuncType = iota
+	TypePrefix
 	TypeScalar
 	TypeNumberSet
 	TypeSeriesSet
@@ -139,6 +151,7 @@ const (
 	TypeNumberExpr
 	TypeSeriesExpr // No implmentation yet
 	TypeTable
+	TypeVariantSet
 	TypeUnexpected
 )
 
@@ -193,13 +206,18 @@ func (s Status) IsCritical() bool { return s == StCritical }
 func (s Status) IsUnknown() bool  { return s == StUnknown }
 
 type Action struct {
-	User    string
-	Message string
-	Time    time.Time
-	Type    ActionType
+	// These are available to users via the template language. Changes here
+	// should be reflected in the documentation
+	User       string
+	Message    string
+	Time       time.Time
+	Type       ActionType
+	Deadline   *time.Time `json:",omitempty"`
+	Fullfilled bool
+	Cancelled  bool
 }
 
-type ActionType int
+type ActionType int // Available to users in templates, document changes in Bosun docs
 
 const (
 	ActionNone ActionType = iota
@@ -209,6 +227,8 @@ const (
 	ActionForceClose
 	ActionPurge
 	ActionNote
+	ActionDelayedClose
+	ActionCancelClose
 )
 
 func (a ActionType) String() string {
@@ -224,7 +244,11 @@ func (a ActionType) String() string {
 	case ActionPurge:
 		return "Purged"
 	case ActionNote:
-		return "Added Note"
+		return "Note"
+	case ActionDelayedClose:
+		return "DelayedClose"
+	case ActionCancelClose:
+		return "CancelClose"
 	default:
 		return "none"
 	}
@@ -248,6 +272,10 @@ func (a *ActionType) UnmarshalJSON(b []byte) error {
 		*a = ActionForceClose
 	case `"Note"`:
 		*a = ActionNote
+	case `"DelayedClose"`:
+		*a = ActionDelayedClose
+	case `"CancelClose"`:
+		*a = ActionCancelClose
 	default:
 		*a = ActionNone
 	}

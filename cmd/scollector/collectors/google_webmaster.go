@@ -2,6 +2,7 @@ package collectors
 
 import (
 	"net/url"
+	"strings"
 	"time"
 
 	"bosun.org/cmd/scollector/conf"
@@ -17,7 +18,7 @@ func init() {
 		for _, g := range c.GoogleWebmaster {
 			collectors = append(collectors, &IntervalCollector{
 				F: func() (opentsdb.MultiDataPoint, error) {
-					return c_google_webmaster(g.ClientID, g.Secret, g.Token)
+					return c_google_webmaster(g.ClientID, g.Secret, g.Token, g.JSONToken)
 				},
 				name:     "c_google_webmaster",
 				Interval: time.Hour * 1,
@@ -26,8 +27,8 @@ func init() {
 	})
 }
 
-func c_google_webmaster(clientID, secret, tokenStr string) (opentsdb.MultiDataPoint, error) {
-	c, err := googleAPIClient(clientID, secret, tokenStr, []string{webmasters.WebmastersReadonlyScope})
+func c_google_webmaster(clientID, secret, tokenStr, jsonToken string) (opentsdb.MultiDataPoint, error) {
+	c, err := googleAPIClient(clientID, secret, tokenStr, jsonToken, []string{webmasters.WebmastersReadonlyScope})
 	if err != nil {
 		return nil, err
 	}
@@ -65,6 +66,12 @@ func getWebmasterErrorsMetrics(svc *webmasters.Service) (*opentsdb.MultiDataPoin
 		if err != nil {
 			return nil, err
 		}
+		// Webmasters has these new sets with fake URLs like "sc-set:jJfZIHyI4-DY8wg0Ww4l-A".
+		// Most API calls we use fail for these sites, so we skip em.
+		// TODO: Allow these sites once the API supports em.
+		if strings.HasPrefix(site.SiteUrl, "sc-set") {
+			continue
+		}
 		if site.PermissionLevel == "siteUnverifiedUser" {
 			slog.Errorf("Lack permission to fetch error metrics for site %s. Skipping.\n", u.Host)
 			continue
@@ -76,7 +83,8 @@ func getWebmasterErrorsMetrics(svc *webmasters.Service) (*opentsdb.MultiDataPoin
 		<-throttle
 		crawlErrors, err := svc.Urlcrawlerrorscounts.Query(site.SiteUrl).LatestCountsOnly(true).Do()
 		if err != nil {
-			return nil, err
+			slog.Errorf("Error fetching error counts for site %s: %s", u.Host, err)
+			continue
 		}
 		for _, e := range crawlErrors.CountPerTypes {
 			tags["platform"] = e.Platform

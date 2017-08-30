@@ -10,6 +10,7 @@ import (
 
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
+	"bosun.org/slog"
 	"bosun.org/util"
 	"github.com/StackExchange/mof"
 )
@@ -23,6 +24,9 @@ const (
 	dscLCM    = "dsc.lcm."
 	dscMof    = "dsc.mof."
 	dscStatus = "dsc.status."
+
+	//dscDefaultConfigurationName is used when the ConfigurationName value in the struct is NULL (non-pull based configuration usually)
+	dscDefaultConfigurationName = "__no_name__"
 )
 
 var (
@@ -83,17 +87,17 @@ func c_dsc_status() (opentsdb.MultiDataPoint, error) {
 		if err.Error() == "exit status 2147749889" {
 			return md, nil
 		} else {
-			return nil, err
+			return nil, slog.Wrap(err)
 		}
 	}
 	dscstatusbuffer := new(bytes.Buffer)
 	_, err = dscstatusbuffer.ReadFrom(dscstatusmof)
 	if err != nil {
-		return nil, err
+		return nil, slog.Wrap(err)
 	}
 	err = mof.Unmarshal(dscstatusbuffer.Bytes(), &dst)
 	if err != nil {
-		return nil, err
+		return nil, slog.Wrap(err)
 	}
 	if dst.ReturnValue != 0 {
 		return nil, fmt.Errorf("GetConfigurationStatus ReturnValue %v", dst.ReturnValue)
@@ -112,16 +116,18 @@ func c_dsc_status() (opentsdb.MultiDataPoint, error) {
 		Add(&md, dscStatus+"run_type", dscTypeToStatusCode(v.Type), nil, metadata.Gauge, metadata.Count, descWinDSCType)
 		configurations := make(map[string]dscResourceCount)
 		for _, r := range v.ResourcesInDesiredState {
-			c := configurations[r.ConfigurationName]
+			name := dscGetConfigurationName(r.ConfigurationName)
+			c := configurations[name]
 			c.Success++
 			c.Duration += r.DurationInSeconds
-			configurations[r.ConfigurationName] = c
+			configurations[name] = c
 		}
 		for _, r := range v.ResourcesNotInDesiredState {
-			c := configurations[r.ConfigurationName]
+			name := dscGetConfigurationName(r.ConfigurationName)
+			c := configurations[name]
 			c.Failed++
 			c.Duration += r.DurationInSeconds
-			configurations[r.ConfigurationName] = c
+			configurations[name] = c
 		}
 		for key, value := range configurations {
 			Add(&md, dscStatus+"resources", value.Success, opentsdb.TagSet{"state": "Success", "configuration": key}, metadata.Gauge, metadata.Count, descWinDSCResourceState)
@@ -246,4 +252,11 @@ func dscStartDateToAge(startdate string) float64 {
 		return -1
 	}
 	return time.Now().UTC().Sub(t).Seconds()
+}
+
+func dscGetConfigurationName(Name string) string {
+	if Name != "" {
+		return Name
+	}
+	return dscDefaultConfigurationName
 }

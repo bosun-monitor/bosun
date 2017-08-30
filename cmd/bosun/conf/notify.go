@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"crypto/tls"
 	"errors"
+	"io"
+	"io/ioutil"
 	"net/http"
 	"net/mail"
 	"net/smtp"
@@ -26,6 +28,7 @@ func init() {
 		"The number of email notifications that Bosun failed to send.")
 }
 
+// Notify triggers Email/HTTP/Print actions for the Notification object
 func (n *Notification) Notify(subject, body string, emailsubject, emailbody []byte, c SystemConfProvider, ak string, attachments ...*models.Attachment) {
 	if len(n.Email) > 0 {
 		go n.DoEmail(emailsubject, emailbody, c, ak, attachments...)
@@ -68,6 +71,8 @@ func (n *Notification) DoPost(payload []byte, ak string) {
 	}
 	resp, err := http.Post(n.Post.String(), n.ContentType, bytes.NewBuffer(payload))
 	if resp != nil && resp.Body != nil {
+		// Drain up to 512 bytes and close the body to let the Transport reuse the connection
+		io.CopyN(ioutil.Discard, resp.Body, 512)
 		defer resp.Body.Close()
 	}
 	if err != nil {
@@ -158,7 +163,9 @@ func SendMail(addr, username, password string, from string, to []string, msg []b
 		if len(username) > 0 || len(password) > 0 {
 			hostWithoutPort := strings.Split(addr, ":")[0]
 			auth := smtp.PlainAuth("", username, password, hostWithoutPort)
-			c.Auth(auth)
+			if err = c.Auth(auth); err != nil {
+				return err
+			}
 		}
 	}
 	if err = c.Mail(from); err != nil {

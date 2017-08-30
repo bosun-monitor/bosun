@@ -5,7 +5,7 @@ title: API Documentation
 
 <div class="row">
 <div class="col-sm-3" >
-  <div data-spy="affix" data-offset-top="0" data-offset-bottom="0" markdown="1">
+  <div  class="sidebar" data-spy="affix" data-offset-top="0" data-offset-bottom="0" markdown="1">
  
  * Some TOC
  {:toc}
@@ -16,6 +16,11 @@ title: API Documentation
 <div class="doc-body col-sm-9" markdown="1">
 
 <p class="title h1">API Documentation</p>
+
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Unfortunately, the API documentation has not been properly maintained. When this is fixed this warning will be removed. Much of this documentation is still useful, but for now it is best to check the <a href="https://github.com/bosun-monitor/bosun/blob/master/cmd/bosun/web/web.go">code in web.go</a> as the canonical reference. The handler's in <code>Listen</code> list all possible API routes.</p>
+</div>
 
 # Sending Data
 
@@ -206,6 +211,10 @@ Returns the current configuration that bosun is loaded with as text.
 
 Reads a configuration file from the POST body then checks it for for syntax
 errors. Returns an error if invalid.
+
+### /api/reload
+
+Reloads the rule configuration when `{ "Reload": true }` is POST'd to the endpoint.
 
 </div>
 </div>

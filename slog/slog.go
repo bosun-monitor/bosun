@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"runtime/debug"
 	"strings"
 )
 
@@ -176,4 +177,12 @@ func Wrap(err error) error {
 		return err
 	}
 	return wrappedError{err, line}
+}
+
+//Add defer slog.PanicAsFatal() to the top of a goroutine to recover panics and log them using slog.Fatal
+func PanicAsFatal() {
+	if r := recover(); r != nil {
+		s := string(debug.Stack()[:])
+		Fatalf("panic: %s\nStackTrace:\n\n%s", r, s)
+	}
 }

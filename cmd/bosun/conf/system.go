@@ -11,15 +11,18 @@ import (
 	"bosun.org/graphite"
 	"bosun.org/opentsdb"
 	"github.com/BurntSushi/toml"
-	"github.com/bosun-monitor/annotate"
 	"github.com/influxdata/influxdb/client/v2"
+	elastic "gopkg.in/olivere/elastic.v3"
 )
 
 // SystemConf contains all the information that bosun needs to run. Outside of the conf package
 // usage should be through conf.SystemConfProvider
 type SystemConf struct {
-	HTTPListen    string
-	RelayListen   string
+	HTTPListen  string
+	HTTPSListen string
+	TLSCertFile string
+	TLSKeyFile  string
+
 	Hostname      string
 	Ping          bool
 	PingDuration  Duration // Duration from now to stop pinging hosts based on time since the host tag was touched
@@ -37,13 +40,17 @@ type SystemConf struct {
 
 	SMTPConf SMTPConf
 
+	RuleVars map[string]string
+
 	OpenTSDBConf OpenTSDBConf
 	GraphiteConf GraphiteConf
 	InfluxConf   InfluxConf
-	ElasticConf  ElasticConf
+	ElasticConf  map[string]ElasticConf
 	LogStashConf LogStashConf
 
 	AnnotateConf AnnotateConf
+
+	AuthConf *AuthConf
 
 	EnableSave      bool
 	EnableReload    bool
@@ -73,7 +80,7 @@ func (sc *SystemConf) EnabledBackends() EnabledBackends {
 	b.Graphite = sc.GraphiteConf.Host != ""
 	b.Influx = sc.InfluxConf.URL != ""
 	b.Logstash = len(sc.LogStashConf.Hosts) != 0
-	b.Elastic = len(sc.ElasticConf.Hosts) != 0
+	b.Elastic = len(sc.ElasticConf["default"].Hosts) != 0
 	b.Annotate = len(sc.AnnotateConf.Hosts) != 0
 	return b
 }
@@ -96,8 +103,10 @@ type GraphiteConf struct {
 
 // AnnotateConf contains the elastic configuration to enable Annotations support
 type AnnotateConf struct {
-	Hosts []string // CSV of Elastic Hosts, currently the only backend in annotate
-	Index string   // name of index / table
+	Hosts         []string        // CSV of Elastic Hosts, currently the only backend in annotate
+	SimpleClient  bool            // If true ES will connect over NewSimpleClient
+	ClientOptions ESClientOptions // ES client options
+	Index         string          // name of index / table
 }
 
 // LogStashConf contains a list of elastic hosts for the depcrecated logstash functions
@@ -105,9 +114,31 @@ type LogStashConf struct {
 	Hosts expr.LogstashElasticHosts
 }
 
+// ESClientOptions: elastic search client options
+// reference https://github.com/olivere/elastic/blob/release-branch.v3/client.go#L107
+type ESClientOptions struct {
+	Enabled                   bool          // if true use client option else ignore
+	BasicAuthUsername         string        // username for HTTP Basic Auth
+	BasicAuthPassword         string        // password for HTTP Basic Auth
+	Scheme                    string        // https (default http)
+	SnifferEnabled            bool          // sniffer enabled or disabled
+	SnifferTimeoutStartup     time.Duration // in seconds (default is 5 sec)
+	SnifferTimeout            time.Duration // in seconds (default is 2 sec)
+	SnifferInterval           time.Duration // in minutes (default is 15 min)
+	HealthcheckEnabled        bool          // healthchecks enabled or disabled
+	HealthcheckTimeoutStartup time.Duration // in seconds (default is 5 sec)
+	HealthcheckTimeout        time.Duration // in seconds (default is 1 sec)
+	HealthcheckInterval       time.Duration // in seconds (default is 60 sec)
+	MaxRetries                int           // max. number of retries before giving up (default 10)
+	GzipEnabled               bool          // enables or disables gzip compression (disabled by default)
+
+}
+
 // ElasticConf contains configuration for an elastic host that Bosun can query
 type ElasticConf struct {
-	Hosts expr.ElasticHosts
+	Hosts         []string
+	SimpleClient  bool
+	ClientOptions ESClientOptions
 }
 
 // InfluxConf contains configuration for an influx host that Bosun can query
@@ -140,6 +171,43 @@ type SMTPConf struct {
 	Password  string `json:"-"`
 }
 
+//AuthConf is configuration for bosun's authentication
+type AuthConf struct {
+	AuthDisabled bool
+	//Secret string to hash auth tokens. Needed to enable token auth.
+	TokenSecret string
+	//Secret sting used to encrypt cookie.
+	CookieSecret string
+	//LDAP configuration
+	LDAP LDAPConf
+}
+
+type LDAPConf struct {
+	// Domain name (used to make domain/username)
+	Domain string
+	// LDAP server
+	LdapAddr string
+	// allow insecure ldap connection?
+	AllowInsecure bool
+	// default permission level for anyone who can log in. Try "Reader".
+	DefaultPermission string
+	//List of group level permissions
+	Groups []LDAPGroup
+	//List of user specific permission levels
+	Users map[string]string
+	//Root search path for group lookups. Usually something like "DC=myorg,DC=com".
+	//Only needed if using group permissions
+	RootSearchPath string
+}
+
+//LDAPGroup is a Group level access specification for ldap
+type LDAPGroup struct {
+	// group search path string
+	Path string
+	// Access to grant members of group Ex: "Admin"
+	Role string
+}
+
 // GetSystemConfProvider returns the SystemConfProvider interface
 // and validates the logic of the configuration. If the configuration
 // is not valid an error is returned
@@ -151,12 +219,16 @@ func (sc *SystemConf) GetSystemConfProvider() (SystemConfProvider, error) {
 	return provider, nil
 }
 
+const (
+	defaultHTTPListen = ":8070"
+)
+
 // NewSystemConf retruns a system conf with default values set
 func newSystemConf() *SystemConf {
 	return &SystemConf{
 		CheckFrequency:  Duration{Duration: time.Minute * 5},
 		DefaultRunEvery: 1,
-		HTTPListen:      ":8070",
+		HTTPListen:      defaultHTTPListen,
 		DBConf: DBConf{
 			LedisDir:      "ledis_data",
 			LedisBindAddr: "127.0.0.1:9565",
@@ -198,7 +270,23 @@ func loadSystemConfig(conf string, isFileName bool) (*SystemConf, error) {
 	if len(decodeMeta.Undecoded()) > 0 {
 		return sc, fmt.Errorf("undecoded fields in system configuration: %v", decodeMeta.Undecoded())
 	}
+
+	// iterate over each hosts
+	for hostPrefix, value := range sc.ElasticConf {
+		if value.SimpleClient && value.ClientOptions.Enabled {
+			return sc, fmt.Errorf("Can't use both ES SimpleClient and ES ClientOptions please remove or disable one in ElasticConf.%s: %#v", hostPrefix, sc.ElasticConf)
+		}
+	}
+
+	if sc.AnnotateConf.SimpleClient && sc.AnnotateConf.ClientOptions.Enabled {
+		return sc, fmt.Errorf("Can't use both ES SimpleClient and ES ClientOptions please remove or disable one in AnnotateConf: %#v", sc.AnnotateConf)
+	}
+
 	sc.md = decodeMeta
+	// clear default http listen if not explicitly specified
+	if !decodeMeta.IsDefined("HTTPListen") && decodeMeta.IsDefined("HTTPSListen") {
+		sc.HTTPListen = ""
+	}
 	return sc, nil
 }
 
@@ -207,10 +295,19 @@ func (sc *SystemConf) GetHTTPListen() string {
 	return sc.HTTPListen
 }
 
-// GetRelayListen returns an address on which bosun will listen and Proxy all requests to /api
-// it was added so one can make OpenTSDB API endpoints available at the same URL as Bosun.
-func (sc *SystemConf) GetRelayListen() string {
-	return sc.RelayListen
+// GetHTTPSListen returns the hostname:port that Bosun should listen on with tls
+func (sc *SystemConf) GetHTTPSListen() string {
+	return sc.HTTPSListen
+}
+
+// GetTLSCertFile returns the path to the tls certificate to listen with (pem format). Must be specified with HTTPSListen.
+func (sc *SystemConf) GetTLSCertFile() string {
+	return sc.TLSCertFile
+}
+
+// GetTLSKeyFile returns the path to the tls key to listen with (pem format). Must be specified with HTTPSListen.
+func (sc *SystemConf) GetTLSKeyFile() string {
+	return sc.TLSKeyFile
 }
 
 // GetSMTPHost returns the SMTP mail server host that Bosun will use to relay through
@@ -269,6 +366,16 @@ func (sc *SystemConf) GetRedisDb() int {
 // GetRedisPassword returns the password that should be used to connect to redis
 func (sc *SystemConf) GetRedisPassword() string {
 	return sc.DBConf.RedisPassword
+}
+
+func (sc *SystemConf) GetAuthConf() *AuthConf {
+	return sc.AuthConf
+}
+
+// GetRuleVars user defined variables that will be available to the rule configuration
+// under "$sys.". This is so values with secrets can be defined in the system configuration
+func (sc *SystemConf) GetRuleVars() map[string]string {
+	return sc.RuleVars
 }
 
 // GetTimeAndDate returns the http://www.timeanddate.com/ that should be available to the UI
@@ -360,8 +467,8 @@ func (sc *SystemConf) GetLogstashElasticHosts() expr.LogstashElasticHosts {
 
 // GetAnnotateElasticHosts returns the Elastic hosts that should be used for annotations.
 // Annotations are not enabled if this has no hosts
-func (sc *SystemConf) GetAnnotateElasticHosts() expr.ElasticHosts {
-	return sc.AnnotateConf.Hosts
+func (sc *SystemConf) GetAnnotateElasticHosts() expr.ElasticConfig {
+	return parseESAnnoteConfig(sc)
 }
 
 // GetAnnotateIndex returns the name of the Elastic index that should be used for annotations
@@ -422,10 +529,6 @@ func (sc *SystemConf) GetInfluxContext() client.HTTPConfig {
 	return c
 }
 
-func (sc *SystemConf) GetAnnotateContext() annotate.Client {
-	return annotate.NewClient(fmt.Sprintf("http://%v/api", sc.HTTPListen)) // TODO Fix for HTTPS
-}
-
 // GetLogstashContext returns a Logstash context which contains all the information needed
 // to query Elastic for logstash style queries. This is deprecated
 func (sc *SystemConf) GetLogstashContext() expr.LogstashElasticHosts {
@@ -435,7 +538,7 @@ func (sc *SystemConf) GetLogstashContext() expr.LogstashElasticHosts {
 // GetElasticContext returns an Elastic context which contains all the information
 // needed to run Elastic queries.
 func (sc *SystemConf) GetElasticContext() expr.ElasticHosts {
-	return sc.ElasticConf.Hosts
+	return parseESConfig(sc)
 }
 
 // AnnotateEnabled returns if annotations have been enabled or not
@@ -478,4 +581,157 @@ func (u *URL) UnmarshalText(text []byte) error {
 	var err error
 	u.URL, err = url.Parse(string(bytes.Trim(text, `\"`)))
 	return err
+}
+
+// ParseESConfig return expr.ElasticHost
+func parseESConfig(sc *SystemConf) expr.ElasticHosts {
+	var options ESClientOptions
+	esConf := expr.ElasticConfig{}
+	store := make(map[string]expr.ElasticConfig)
+	esHost := expr.ElasticHosts{}
+
+	addClientOptions := func(item elastic.ClientOptionFunc) {
+		esConf.ClientOptionFuncs = append(esConf.ClientOptionFuncs, item)
+	}
+
+	for hostPrefix, value := range sc.ElasticConf {
+		options = value.ClientOptions
+
+		if !options.Enabled {
+			esConf.SimpleClient = value.SimpleClient
+			esConf.Hosts = value.Hosts
+			esConf.ClientOptionFuncs = esConf.ClientOptionFuncs[0:0]
+			store[hostPrefix] = esConf
+		} else {
+			// SetURL
+			addClientOptions(elastic.SetURL(value.Hosts...))
+
+			if options.BasicAuthUsername != "" && options.BasicAuthPassword != "" {
+				addClientOptions(elastic.SetBasicAuth(options.BasicAuthUsername, options.BasicAuthPassword))
+			}
+
+			if options.Scheme == "https" {
+				addClientOptions(elastic.SetScheme(options.Scheme))
+			}
+
+			// Default Enable
+			addClientOptions(elastic.SetSniff(options.SnifferEnabled))
+
+			if options.SnifferTimeoutStartup > 5 {
+				options.SnifferTimeoutStartup = options.SnifferTimeoutStartup * time.Second
+				addClientOptions(elastic.SetSnifferTimeoutStartup(options.SnifferTimeoutStartup))
+			}
+
+			if options.SnifferTimeout > 2 {
+				options.SnifferTimeout = options.SnifferTimeout * time.Second
+				addClientOptions(elastic.SetSnifferTimeout(options.SnifferTimeout))
+			}
+
+			if options.SnifferInterval > 15 {
+				options.SnifferInterval = options.SnifferInterval * time.Minute
+				addClientOptions(elastic.SetSnifferInterval(options.SnifferTimeout))
+			}
+
+			//Default Enable
+			addClientOptions(elastic.SetHealthcheck(options.HealthcheckEnabled))
+
+			if options.HealthcheckTimeoutStartup > 5 {
+				options.HealthcheckTimeoutStartup = options.HealthcheckTimeoutStartup * time.Second
+				addClientOptions(elastic.SetHealthcheckTimeoutStartup(options.HealthcheckTimeoutStartup))
+			}
+
+			if options.HealthcheckTimeout > 1 {
+				options.HealthcheckTimeout = options.HealthcheckTimeout * time.Second
+				addClientOptions(elastic.SetHealthcheckTimeout(options.HealthcheckTimeout))
+			}
+
+			if options.HealthcheckInterval > 60 {
+				options.HealthcheckInterval = options.HealthcheckInterval * time.Second
+				addClientOptions(elastic.SetHealthcheckInterval(options.HealthcheckInterval))
+			}
+
+			if options.MaxRetries > 0 {
+				addClientOptions(elastic.SetMaxRetries(options.MaxRetries))
+			}
+			esConf.Hosts = esConf.Hosts[0:0]
+			esConf.SimpleClient = false
+			store[hostPrefix] = esConf
+		}
+
+		esHost.Hosts = store
+	}
+
+	return esHost
+}
+
+// ParseESConfig return expr.ElasticHost
+func parseESAnnoteConfig(sc *SystemConf) expr.ElasticConfig {
+	var options ESClientOptions
+	esConf := expr.ElasticConfig{}
+
+	addClientOptions := func(item elastic.ClientOptionFunc) {
+		esConf.ClientOptionFuncs = append(esConf.ClientOptionFuncs, item)
+	}
+
+	options = sc.AnnotateConf.ClientOptions
+
+	if !options.Enabled {
+		esConf.SimpleClient = sc.AnnotateConf.SimpleClient
+		esConf.Hosts = sc.AnnotateConf.Hosts
+		return esConf
+	}
+
+	// SetURL
+	addClientOptions(elastic.SetURL(sc.AnnotateConf.Hosts...))
+
+	if options.BasicAuthUsername != "" && options.BasicAuthPassword != "" {
+		addClientOptions(elastic.SetBasicAuth(options.BasicAuthUsername, options.BasicAuthPassword))
+	}
+
+	if options.Scheme == "https" {
+		addClientOptions(elastic.SetScheme(options.Scheme))
+	}
+
+	// Default Enable
+	addClientOptions(elastic.SetSniff(options.SnifferEnabled))
+
+	if options.SnifferTimeoutStartup > 5 {
+		options.SnifferTimeoutStartup = options.SnifferTimeoutStartup * time.Second
+		addClientOptions(elastic.SetSnifferTimeoutStartup(options.SnifferTimeoutStartup))
+	}
+
+	if options.SnifferTimeout > 2 {
+		options.SnifferTimeout = options.SnifferTimeout * time.Second
+		addClientOptions(elastic.SetSnifferTimeout(options.SnifferTimeout))
+	}
+
+	if options.SnifferInterval > 15 {
+		options.SnifferInterval = options.SnifferInterval * time.Minute
+		addClientOptions(elastic.SetSnifferInterval(options.SnifferTimeout))
+	}
+
+	//Default Enable
+	addClientOptions(elastic.SetHealthcheck(options.HealthcheckEnabled))
+
+	if options.HealthcheckTimeoutStartup > 5 {
+		options.HealthcheckTimeoutStartup = options.HealthcheckTimeoutStartup * time.Second
+		addClientOptions(elastic.SetHealthcheckTimeoutStartup(options.HealthcheckTimeoutStartup))
+	}
+
+	if options.HealthcheckTimeout > 1 {
+		options.HealthcheckTimeout = options.HealthcheckTimeout * time.Second
+		addClientOptions(elastic.SetHealthcheckTimeout(options.HealthcheckTimeout))
+	}
+
+	if options.HealthcheckInterval > 60 {
+		options.HealthcheckInterval = options.HealthcheckInterval * time.Second
+		addClientOptions(elastic.SetHealthcheckInterval(options.HealthcheckInterval))
+	}
+
+	if options.MaxRetries > 0 {
+		addClientOptions(elastic.SetMaxRetries(options.MaxRetries))
+	}
+
+	return esConf
+
 }

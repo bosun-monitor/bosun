@@ -28,8 +28,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestRelay(t *testing.T) {
-	schedule.DataAccess = testData
-	schedule.Init(&conf.SystemConf{}, new(rule.Conf), false, false)
+	schedule.Init(&conf.SystemConf{}, new(rule.Conf), testData, nil, false, false)
 	rs := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(204)
 	}))

@@ -79,13 +79,13 @@ func Expr(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (v inter
 		InfluxConfig:    schedule.SystemConf.GetInfluxContext(),
 		LogstashHosts:   schedule.SystemConf.GetLogstashContext(),
 		ElasticHosts:    schedule.SystemConf.GetElasticContext(),
-		AnnotateContext: schedule.SystemConf.GetAnnotateContext(),
 	}
 	providers := &expr.BosunProviders{
 		Cache:     cacheObj,
 		Search:    schedule.Search,
 		Squelched: nil,
 		History:   nil,
+		Annotate:  AnnotateBackend,
 	}
 	res, queries, err := e.Execute(backends, providers, t, now, 0, false)
 	if err != nil {
@@ -136,9 +136,8 @@ type Res struct {
 
 func procRule(t miniprofiler.Timer, ruleConf conf.RuleConfProvider, a *conf.Alert, now time.Time, summary bool, email string, template_group string) (*ruleResult, error) {
 	s := &sched.Schedule{}
-	s.DataAccess = schedule.DataAccess
 	s.Search = schedule.Search
-	if err := s.Init(schedule.SystemConf, ruleConf, false, false); err != nil {
+	if err := s.Init(schedule.SystemConf, ruleConf, schedule.DataAccess, AnnotateBackend, false, false); err != nil {
 		return nil, err
 	}
 	rh := s.NewRunHistory(now, cacheObj)
@@ -449,7 +448,7 @@ func buildConfig(r *http.Request) (c conf.RuleConfProvider, a *conf.Alert, hash 
 	if err != nil {
 		return nil, nil, "", err
 	}
-	c, err = rule.NewConf("Test Config", schedule.SystemConf.EnabledBackends(), string(config))
+	c, err = rule.NewConf("Test Config", schedule.SystemConf.EnabledBackends(), schedule.SystemConf.GetRuleVars(), string(config))
 	if err != nil {
 		return nil, nil, "", err
 	}

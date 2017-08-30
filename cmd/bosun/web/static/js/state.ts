@@ -1,3 +1,12 @@
+interface AckGroupScope extends ng.IScope {
+	groups: CheckedStateGroup[];
+}
+
+// StateGroup with an added property if checked
+interface CheckedStateGroup extends StateGroup {
+	checked: boolean;
+}
+
 
 bosunApp.directive('tsAckGroup', ['$location', '$timeout', ($location: ng.ILocationService, $timeout: ng.ITimeoutService) => {
 	return {
@@ -8,20 +17,20 @@ bosunApp.directive('tsAckGroup', ['$location', '$timeout', ($location: ng.ILocat
 			timeanddate: '=',
 		},
 		templateUrl: '/partials/ackgroup.html',
-		link: (scope: any, elem: any, attrs: any) => {
+		link: (scope: AckGroupScope, elem: any, attrs: any) => {
 			scope.canAckSelected = scope.ack == 'Needs Acknowledgement';
 			scope.panelClass = scope.$parent.panelClass;
-			
+
 			scope.btoa = scope.$parent.btoa;
 			scope.encode = scope.$parent.encode;
 			scope.shown = {};
 			scope.collapse = (i: any) => {
 				scope.shown[i] = !scope.shown[i];
-				
-				if (scope.shown[i] && scope.groups[i].Children.length == 1){
-					$timeout(function(){
+
+				if (scope.shown[i] && scope.groups[i].Children.length == 1) {
+					$timeout(function () {
 						scope.$broadcast("onOpen", i);
-					}, 0);      
+					}, 0);
 				}
 			};
 			scope.click = ($event: any, idx: number) => {
@@ -56,7 +65,7 @@ bosunApp.directive('tsAckGroup', ['$location', '$timeout', ($location: ng.ILocat
 						continue;
 					}
 					scope.anySelected = true;
-					if (g.Active && g.Status != 'unknown' && g.Status != 'error') {
+					if (g.Status == 'error') {
 						scope.canCloseSelected = false;
 					}
 					if (g.Status != 'unknown') {
@@ -66,20 +75,28 @@ bosunApp.directive('tsAckGroup', ['$location', '$timeout', ($location: ng.ILocat
 			};
 			scope.multiaction = (type: string) => {
 				var keys = [];
+				var active = false;
 				angular.forEach(scope.groups, (group) => {
 					if (!group.checked) {
 						return;
 					}
 					if (group.AlertKey) {
+						if (group.State.CurrentStatus != 'normal') {
+							active = true;
+						}
 						keys.push(group.AlertKey);
 					}
 					angular.forEach(group.Children, (child) => {
+						if (child.State.CurrentStatus != 'normal') {
+							active = true;
+						}
 						keys.push(child.AlertKey);
 					});
 				});
 				scope.$parent.setKey("action-keys", keys);
 				$location.path("action");
 				$location.search("type", type);
+				$location.search("active", active ? 'true' : 'false');
 			};
 			scope.history = () => {
 				var url = '/history?';
@@ -100,25 +117,26 @@ bosunApp.directive('tsAckGroup', ['$location', '$timeout', ($location: ng.ILocat
 	};
 }]);
 
-bosunApp.directive('tsState', ['$sce', '$http', function($sce: ng.ISCEService, $http: ng.IHttpService) {
+bosunApp.directive('tsState', ['$sce', '$http', function ($sce: ng.ISCEService, $http: ng.IHttpService) {
 	return {
 		templateUrl: '/partials/alertstate.html',
-		link: function(scope: any, elem: any, attrs: any) {
+		link: function (scope: any, elem: any, attrs: any) {
 			var myIdx = attrs["tsGrp"];
 			scope.currentStatus = attrs["tsGrpstatus"]
 			scope.name = scope.child.AlertKey;
 			scope.state = scope.child.State;
 			scope.action = (type: string) => {
 				var key = encodeURIComponent(scope.name);
-				return '/action?type=' + type + '&key=' + key;
+				var active = scope.state.CurrentStatus != 'normal';
+				return '/action?type=' + type + '&key=' + key + '&active=' + active;
 			};
 			var loadedBody = false;
-			scope.toggle = () =>{
+			scope.toggle = () => {
 				scope.show = !scope.show;
-				if(scope.show && !loadedBody){
+				if (scope.show && !loadedBody) {
 					scope.state.Body = "loading...";
 					loadedBody = true;
-					$http.get('/api/status?ak='+scope.child.AlertKey)
+					$http.get('/api/status?ak=' + scope.child.AlertKey)
 						.success(data => {
 							var body = data[scope.child.AlertKey].Body;
 							scope.state.Body = $sce.trustAsHtml(body);
@@ -128,11 +146,11 @@ bosunApp.directive('tsState', ['$sce', '$http', function($sce: ng.ISCEService, $
 						});
 				}
 			};
-			scope.$on('onOpen', function(e,i) { 
-				if(i == myIdx){ 
-        			scope.toggle();
-				}        
-    		});
+			scope.$on('onOpen', function (e, i) {
+				if (i == myIdx) {
+					scope.toggle();
+				}
+			});
 			scope.zws = (v: string) => {
 				if (!v) {
 					return '';
@@ -145,7 +163,7 @@ bosunApp.directive('tsState', ['$sce', '$http', function($sce: ng.ISCEService, $
 			});
 			scope.state.last = scope.state.Events[scope.state.Events.length - 1];
 			if (scope.state.Actions && scope.state.Actions.length > 0) {
-				scope.state.LastAction = scope.state.Actions[scope.state.Actions.length-1];
+				scope.state.LastAction = scope.state.Actions[scope.state.Actions.length - 1];
 			}
 			scope.state.RuleUrl = '/config?' +
 				'alert=' + encodeURIComponent(scope.state.Alert) +
@@ -182,6 +200,13 @@ bosunApp.directive('tsClose', () => {
 	return {
 		restrict: 'E',
 		templateUrl: '/partials/close.html',
+	};
+});
+
+bosunApp.directive('tsCancelClose', () => {
+	return {
+		restrict: 'E',
+		templateUrl: '/partials/cancelClose.html',
 	};
 });
 

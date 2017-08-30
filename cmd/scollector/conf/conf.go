@@ -32,7 +32,8 @@ type Conf struct {
 	MaxMem uint64
 	// Filter filters collectors matching these terms.
 	Filter []string
-	// PProf is an IP:Port binding to be used for debugging with pprof package.
+	// PProf is an IP:Port binding to be used for debugging with pprof and expvar package.
+	// When enabled data is exposed via http://host:port/debug/pprof or /debug/vars
 	// Examples: localhost:6060 for loopback or :6060 for all IP addresses.
 	PProf string
 	// MetricFilters takes regular expressions and includes only indicies that
@@ -49,11 +50,21 @@ type Conf struct {
 	// UseNtlm specifies if HTTP requests should authenticate with NTLM.
 	UseNtlm bool
 
+	// AuthToken is an optional string that sets the X-Access-Token HTTP header
+	// which is used to authenticate against Bosun
+	AuthToken string
+
 	// UserAgentMessage is an optional message that is appended to the User Agent
 	UserAgentMessage string
 
 	// SNMPTimeout is the number of seconds to wait for SNMP responses (default 30)
 	SNMPTimeout int
+
+	// UseSWbemServicesClient specifies if the wmi package should use SWbemServices.
+	UseSWbemServicesClient bool
+
+	// MetricPrefix prepended to all metrics path
+	MetricPrefix string
 
 	HAProxy        []HAProxy
 	SNMP           []SNMP
@@ -83,6 +94,7 @@ type Conf struct {
 	LocalListener       string
 	TagOverride         []TagOverride
 	HadoopHost          string
+	HbaseRegions        bool
 	Oracles             []Oracle
 	Fastly              []Fastly
 }
@@ -106,16 +118,18 @@ type Nexpose struct {
 }
 
 type GoogleAnalytics struct {
-	ClientID string
-	Secret   string
-	Token    string
-	Sites    []GoogleAnalyticsSite
+	ClientID  string
+	Secret    string
+	Token     string
+	JSONToken string
+	Sites     []GoogleAnalyticsSite
 }
 
 type GoogleWebmaster struct {
-	ClientID string
-	Secret   string
-	Token    string
+	ClientID  string
+	Secret    string
+	Token     string
+	JSONToken string
 }
 
 type Fastly struct {

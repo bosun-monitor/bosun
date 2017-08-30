@@ -368,7 +368,7 @@ type fastlyStats struct {
 	BodySize           int64   `json:"body_size" div:"true" rate:"gauge" unit:"bytes per second" desc:"The total bytes delivered per second for the bodies."`
 	Errors             int64   `json:"errors" div:"true" rate:"gauge" unit:"errors per second" desc:"The number of cache errors per second."`
 	HeaderSize         int64   `json:"header_size" div:"true" rate:"gauge" unit:"bytes per second" desc:"The total bytes delivered per second for headers."`
-	HitRatio           string  `json:"hit_ratio" rate:"gauge" unit:"ratio" desc:"The ratio of cache hits to cache misses (between 0-1)."`
+	HitRatio           float64 `json:"hit_ratio" rate:"gauge" unit:"ratio" desc:"The ratio of cache hits to cache misses (between 0-1)."`
 	Hits               int64   `json:"hits" div:"true" rate:"gauge" unit:"hits per second" desc:"The number of cache hits per second."`
 	HitsTime           float64 `json:"hits_time" div:"true" rate:"gauge" unit:"seconds per second" desc:"The amount of time spent processing cache hits."`
 	HTTP2              int64   `json:"http2"`

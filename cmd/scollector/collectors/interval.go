@@ -1,6 +1,7 @@
 package collectors
 
 import (
+	"io"
 	"io/ioutil"
 	"net/http"
 	"os/exec"
@@ -110,7 +111,11 @@ func enableURL(url string, regexes ...string) func() bool {
 		if err != nil {
 			return false
 		}
-		defer resp.Body.Close()
+		defer func() {
+			// Drain up to 512 bytes and close the body to let the Transport reuse the connection
+			io.CopyN(ioutil.Discard, resp.Body, 512)
+			resp.Body.Close()
+		}()
 		if resp.StatusCode != 200 {
 			return false
 		}

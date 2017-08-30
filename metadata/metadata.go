@@ -4,6 +4,8 @@ package metadata // import "bosun.org/metadata"
 import (
 	"bytes"
 	"encoding/json"
+	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -14,6 +16,12 @@ import (
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
 	"bosun.org/util"
+)
+
+var (
+	// AuthToken is an optional string that sets the X-Access-Token HTTP header
+	// which is used to authenticate against Bosun
+	AuthToken string
 )
 
 // RateType is the type of rate for a metric: gauge, counter, or rate.
@@ -208,6 +216,15 @@ func Init(u *url.URL, debug bool) error {
 	return nil
 }
 
+var putFunction func(k Metakey, v interface{}) error
+
+func InitF(debug bool, f func(k Metakey, v interface{}) error) error {
+	putFunction = f
+	metadebug = debug
+	go collectMetadata()
+	return nil
+}
+
 func collectMetadata() {
 	// Wait a bit so hopefully our collectors have run once and populated the
 	// metadata.
@@ -251,17 +268,47 @@ type Metasend struct {
 }
 
 func sendMetadata(ms []Metasend) {
+	if putFunction != nil {
+		for _, m := range ms {
+			key := Metakey{
+				Metric: m.Metric,
+				Name:   m.Name,
+				Tags:   m.Tags.Tags(),
+			}
+			err := putFunction(key, m.Value)
+			if err != nil {
+				slog.Error(err)
+				continue
+			}
+		}
+	} else {
+		postMetadata(ms)
+	}
+}
+func postMetadata(ms []Metasend) {
 	b, err := json.Marshal(&ms)
 	if err != nil {
 		slog.Error(err)
 		return
 	}
-	resp, err := http.Post(metahost, "application/json", bytes.NewBuffer(b))
+	req, err := http.NewRequest(http.MethodPost, metahost, bytes.NewBuffer(b))
+	if err != nil {
+		slog.Error(err)
+		return
+	}
+	req.Header.Set("Content-Type", "application/json")
+	if AuthToken != "" {
+		req.Header.Set("X-Access-Token", AuthToken)
+	}
+	client := http.DefaultClient
+	resp, err := client.Do(req)
 	if err != nil {
 		slog.Error(err)
 		return
 	}
 	defer resp.Body.Close()
+	// Drain up to 512 bytes and close the body to let the Transport reuse the connection
+	io.CopyN(ioutil.Discard, resp.Body, 512)
 	if resp.StatusCode != 204 {
 		slog.Errorln("bad metadata return:", resp.Status)
 		return

@@ -2,6 +2,8 @@ package collectors
 
 import (
 	"encoding/json"
+	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -247,6 +249,8 @@ func esReq(path, query string, v interface{}) error {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
+		// Drain up to 512 bytes and close the body to let the Transport reuse the connection
+		io.CopyN(ioutil.Discard, resp.Body, 512)
 		return nil
 	}
 	j := json.NewDecoder(resp.Body)

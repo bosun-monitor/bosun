@@ -9,10 +9,10 @@
 	<div class="clearfix">
 		<h3 ng-bind="ack" class="pull-left"></h3>
 		<span class="pull-right">
-			select
 			<br>
-			<button class="btn btn-default btn-sm" ng-click="select(true)">all</button>
-			<button class="btn btn-default btn-sm" ng-click="select(false)">none</button>
+			select
+			<button class="btn btn-default btn-xs" ng-click="select(true)">all</button>
+			<button class="btn btn-default btn-xs" ng-click="select(false)">none</button>
 		</span>
 		<span class="pull-right with-selected" ng-show="anySelected">
 			with selected
@@ -31,8 +31,8 @@
 					<input type="checkbox" class="pull-right" ng-model="group.checked" ng-click="click($event, $index)" ng-change="update()">
 				</label>
 				<a href>
-					<span title="This exclamation icon represents that the alert is in an active (non-normal) state." class="glyphicon" ng-class="{'glyphicon-exclamation-sign': group.Active}"></span>
-					<span title="This mute icon represents that the alert has been silenced." class="glyphicon" ng-class="{'glyphicon-volume-off': group.Silenced}"></span>
+					<span title="This exclamation icon represents that the alert is in an active (non-normal) state." class="fa" ng-class="{'fa-exclamation-circle': group.Active}"></span>
+					<span title="This mute icon represents that the alert has been silenced." class="fa" ng-class="{'fa-volume-off': group.Silenced}"></span>
 					<span ng-bind="group.Subject"></span>
 					<span class="pull-right">{{group.Children.length}} alerts</span>
 				</a>

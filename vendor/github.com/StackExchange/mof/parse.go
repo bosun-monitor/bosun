@@ -292,6 +292,8 @@ func (t *tree) parseValue() node {
 		case "instance":
 			t.backup()
 			n = t.parseInstance()
+		case "NULL":
+			n = newNil(token.pos)
 		default:
 			t.unexpected(token, context)
 		}

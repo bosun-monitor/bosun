@@ -26,6 +26,7 @@ type Node interface {
 	Check(*Tree) error // performs type checking for itself and sub-nodes
 	Return() models.FuncType
 	Tags() (Tags, error)
+
 	// Make sure only functions in this package can create Nodes.
 	unexported()
 }
@@ -59,6 +60,7 @@ const (
 	NodeString                 // A string constant.
 	NodeNumber                 // A numerical constant.
 	NodeExpr                   // A sub expression
+	NodePrefix                 // A host prefix [""]
 )
 
 // Nodes.
@@ -67,13 +69,14 @@ const (
 type FuncNode struct {
 	NodeType
 	Pos
-	Name string
-	F    Func
-	Args []Node
+	Name   string
+	F      *Func
+	Args   []Node
+	Prefix string
 }
 
 func newFunc(pos Pos, name string, f Func) *FuncNode {
-	return &FuncNode{NodeType: NodeFunc, Pos: pos, Name: name, F: f}
+	return &FuncNode{NodeType: NodeFunc, Pos: pos, Name: name, F: &f}
 }
 
 func (f *FuncNode) append(arg Node) {
@@ -130,7 +133,12 @@ func (f *FuncNode) Check(t *Tree) error {
 		}
 		argType := arg.Return()
 		if funcType == models.TypeNumberSet && argType == models.TypeScalar {
-			// Scalars are promoted to NumberSets during execution.
+			argType = models.TypeNumberSet // Scalars are promoted to NumberSets during execution.
+		}
+		if funcType == models.TypeVariantSet {
+			if !(argType == models.TypeNumberSet || argType == models.TypeSeriesSet || argType == models.TypeScalar) {
+				return fmt.Errorf("parse: expected %v or %v for argument %v, got %v", models.TypeNumberSet, models.TypeSeriesSet, i, argType)
+			}
 		} else if funcType != argType {
 			return fmt.Errorf("parse: expected %v, got %v for argument %v (%v)", funcType, argType, i, arg.String())
 		}
@@ -138,6 +146,7 @@ func (f *FuncNode) Check(t *Tree) error {
 			return err
 		}
 	}
+
 	if f.F.Check != nil {
 		return f.F.Check(t, f)
 	}
@@ -289,6 +298,44 @@ func (s *StringNode) Return() models.FuncType {
 }
 
 func (s *StringNode) Tags() (Tags, error) {
+	return nil, nil
+}
+
+// Prefix holds a string constant.
+type PrefixNode struct {
+	NodeType
+	Pos
+	Arg  Node
+	Text string
+}
+
+func newPrefix(text string, pos Pos, arg Node) *PrefixNode {
+	return &PrefixNode{NodeType: NodePrefix, Text: text, Pos: pos, Arg: arg}
+}
+
+func (p *PrefixNode) String() string {
+	return fmt.Sprintf("%s%s", p.Text, p.Arg)
+}
+
+func (p *PrefixNode) StringAST() string {
+	return p.String()
+}
+
+func (p *PrefixNode) Check(t *Tree) error {
+	if p.Arg.Type() != NodeFunc {
+		return fmt.Errorf("parse: prefix on non-function")
+	}
+	if !p.Arg.(*FuncNode).F.PrefixEnabled {
+		return fmt.Errorf("func %v does not support a prefix", p.Arg.(*FuncNode).Name)
+	}
+	return p.Arg.Check(t)
+}
+
+func (p *PrefixNode) Return() models.FuncType {
+	return p.Arg.Return()
+}
+
+func (p *PrefixNode) Tags() (Tags, error) {
 	return nil, nil
 }
 

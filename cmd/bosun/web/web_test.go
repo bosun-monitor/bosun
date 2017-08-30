@@ -9,7 +9,7 @@ import (
 )
 
 func TestErrorTemplate(t *testing.T) {
-	c, err := rule.NewConf("", conf.EnabledBackends{}, `
+	c, err := rule.NewConf("", conf.EnabledBackends{}, nil, `
 		template t {
 			body = {{.Eval "invalid"}}
 		}

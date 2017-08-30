@@ -1,3 +1,4 @@
+/// <reference path="0-bosun.ts" />
 interface IConfigScope extends IBosunScope {
 	// text loading/navigation
 	config_text: string;
@@ -19,6 +20,7 @@ interface IConfigScope extends IBosunScope {
 	downloadConfig: () => void;
 	saveConfig: () => void;
 	saveClass: () => string;
+	sectionToDocs: { [type: string]: string; };
 
 	//rule execution options
 	fromDate: string;
@@ -50,7 +52,6 @@ interface IConfigScope extends IBosunScope {
 	loadTimelinePanel: (entry: any, v: any) => void;
 
 	// saving
-	user: string;
 	message: string;
 	diff: string;
 	diffConfig: () => void;
@@ -80,9 +81,16 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 	$scope.tab = search.tab || 'results';
 	$scope.aceTheme = 'chrome';
 	$scope.aceMode = 'bosun';
-	$scope.user = readCookie("action-user");
 	$scope.expandDiff = false;
 	$scope.runningChangedHelp = "The running config has been changed. This means you are in danger of overwriting someone else's changes. To view the changes open the 'Save Dialogue' and you will see a unified diff. The only way to get rid of the error panel is to open a new instance of the rule editor and copy your changes into it. You are still permitted to save without doing this, but then you must be very careful not to overwrite anyone else's changes.";
+
+	$scope.sectionToDocs = {
+		"alert": "https://bosun.org/definitions#alert-definitions",
+		"template": "https://bosun.org/definitions#templates",
+		"lookup": "https://bosun.org/definitions#lookup-tables",
+		"notification": "https://bosun.org/definitions#notifications",
+		"macro": "https://bosun.org/definitions#macros"
+	}
 
 	var expr = search.expr;
 	function buildAlertFromExpr() {
@@ -458,11 +466,9 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 		$http.post('/api/config/diff',
 			{
 				"Config": $scope.config_text,
-				"User": $scope.user,
 				"Message": $scope.message
 			})
 			.success((data: any) => {
-				createCookie("action-user", $scope.user, 1000);
 				$scope.diff = data || "No Diff";
 				// Reset running hash if there is no difference?
 			})
@@ -480,7 +486,6 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 		$http.post('/api/config/save', {
 			"Config": $scope.config_text,
 			"Diff": $scope.diff,
-			"User": $scope.user,
 			"Message": $scope.message
 		})
 			.success((data: any) => {

@@ -10,6 +10,7 @@
 </div>
 <div class="row">
 	<div class="col-sm-10">
+		<div class="input-group">
 		<input
 			class="form-control"
 			type="text"
@@ -17,8 +18,13 @@
 			ng-keydown="keydown($event)"
 			placeholder="filter"
 			tooltip
-			title="Filter alert text by value. Various other state filters supported: status:<value> for alert status (ex: status:critical), ack:<false/true> for acknowledged (ex: ack:true), notify:<value> for notifications (ex: notify:sysadmin). A bang (!) may be prepended before any filter term to negate it (ex: !status:unknown)."
-		>
+			title="Filter incidents">
+			<a class="input-group-addon" data-placement="bottom" href="https://bosun.org/usage#incident-filters" target="_blank">
+				<i class="fa fa-question-circle-o fa-lg" aria-hidden="true"></i>
+				<sup><i class="fa fa-external-link" aria-hidden="true"></i></sup>
+			</a>
+		</div>
+
 	</div>
 	<div class="col-sm-2">
 		<a href="/errors"><button class="btn" ng-class="{'btn-default': !schedule.FailingAlerts, 'btn-danger': schedule.FailingAlerts}" style="float:right;" type="button">

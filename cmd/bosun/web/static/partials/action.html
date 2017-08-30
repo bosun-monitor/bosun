@@ -1,34 +1,47 @@
 <form class="form-horizontal">
 	<div class="form-group">
-		<label class="col-sm-2 control-label">Action</label>
+		<label class="col-sm-3 control-label">Action</label>
 		<div class="col-sm-6">
 			<p class="form-control-static" ng-bind="type"></p>
 		</div>
 	</div>
 	<div class="form-group" ng-class="(user != '') ? '' : 'has-error' ">
-		<label class="col-sm-2 control-label">Username</label>
+		<label class="col-sm-3 control-label">Username</label>
 		<div class="col-sm-6">
-			<input type="text"class="form-control" ng-model="user">
+			<username-input></username-input>
 		</div>
 	</div>
 	<div class="form-group" ng-class="msgValid ? '' : 'has-error' ">
-		<label class="col-sm-2 control-label">Message</label>
+		<label class="col-sm-3 control-label">Message</label>
 		<div class="col-sm-6">
 			<textarea rows="10" class="form-control" ng-model="message" ng-change="validateMsg()" ng-blur="validateMsg()"></textarea>
 		</div>
 	</div>
+	<div class="form-group" ng-show="activeIncidents && type == 'close'" ng-class="durationValid ? '' : 'has-error' ">
+		<label class="col-sm-3 control-label">
+			Delayed Close Duration&nbsp;
+			<div style="outline: none;" class="pull-right" container="body" 
+										data-placement="bottom" data-title="Delayed Close"
+										data-content="Since you are closing alert(s) that are active, the active alerts will be put in delayed close for the specified duration. The duration should be when you expect the alert to return to normal. If the alert goes back to normal during this period the alert will be closed. If at the end of this period the alert is still non-normal, the alert will be forced-closed resulting in a new incident. If no duration is specified it will default to 2x the check duration. The format in a number followed by a unit such as 1h (s seconds, m minutes, h hours, w weeks, n months)."
+										bs-popover><i class="fa fa-question-circle-o fa-lg" aria-hidden="true"> </i>
+			</div>
+		</label>
+		<div class="col-sm-1">
+			<input class="form-control" ng-model="duration" ng-change="validateDuration()"></input>
+		</div>
+	</div>
 	<div class="form-group">
-		<div class="col-sm-offset-2 col-sm-6"> 
+		<div class="col-sm-offset-3 col-sm-6"> 
 			<div class="checkbox"><label><input type="checkbox" ng-model="notify" ng-change="validateMsg()"> Send Notification</label></div>
 		</div>
 	</div>
 	<div class="form-group">
-		<div class="col-sm-offset-2 col-sm-6">
+		<div class="col-sm-offset-3 col-sm-6">
 			<button type="submit" class="btn btn-default" ng-click="submit()">Submit</button>
 		</div>
 	</div>
 	<div class="form-group">
-		<div class="col-sm-offset-2 col-sm-10">
+		<div class="col-sm-offset-3 col-sm-9">
 			<h4>Alert<span ng-show="keys.length > 1">s</span></h4>
 			<ul class="list-unstyled">
 				<li ng-repeat="k in keys" ng-bind="k"></li>

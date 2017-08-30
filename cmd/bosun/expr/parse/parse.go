@@ -32,15 +32,18 @@ type Tree struct {
 }
 
 type Func struct {
-	Args      []models.FuncType
-	Return    models.FuncType
-	Tags      func([]Node) (Tags, error)
-	F         interface{}
-	VArgs     bool
-	VArgsPos  int
-	VArgsOmit bool
-	MapFunc   bool // Func is only valid in map expressions
-	Check     func(*Tree, *FuncNode) error
+	Args          []models.FuncType
+	Return        models.FuncType
+	Tags          func([]Node) (Tags, error)
+	F             interface{}
+	VArgs         bool
+	VArgsPos      int
+	VArgsOmit     bool
+	MapFunc       bool // Func is only valid in map expressions
+	PrefixEnabled bool
+	PrefixKey     bool
+	VariantReturn bool
+	Check         func(*Tree, *FuncNode) error
 }
 
 type Tags map[string]struct{}
@@ -196,6 +199,12 @@ func (t *Tree) startParse(funcs []map[string]Func, lex *lexer) {
 	t.funcs = funcs
 	for _, funcMap := range funcs {
 		for name, f := range funcMap {
+			if f.VariantReturn {
+				if f.Tags == nil {
+					panic(fmt.Errorf("%v: expected Tags definition: got nil", name))
+				}
+				continue
+			}
 			switch f.Return {
 			case models.TypeSeriesSet, models.TypeNumberSet:
 				if f.Tags == nil {
@@ -245,8 +254,9 @@ M -> E {( "*" | "/" ) F}
 E -> F {( "**" ) F}
 F -> v | "(" O ")" | "!" O | "-" O
 v -> number | func(..)
-Func -> name "(" param {"," param} ")"
+Func -> optPrefix name "(" param {"," param} ")"
 param -> number | "string" | subExpr | [query]
+optPrefix -> [ prefix ]
 */
 
 // expr:
@@ -328,6 +338,9 @@ func (t *Tree) F() Node {
 		return t.v()
 	case itemNot, itemMinus:
 		return newUnary(t.next(), t.F())
+	case itemPrefix:
+		token := t.next()
+		return newPrefix(token.val, token.pos, t.F())
 	case itemLeftParen:
 		t.next()
 		n := t.O()
@@ -368,7 +381,11 @@ func (t *Tree) Func() (f *FuncNode) {
 		switch token = t.next(); token.typ {
 		default:
 			t.backup()
-			f.append(t.O())
+			node := t.O()
+			f.append(node)
+			if len(f.Args) == 1 && f.F.VariantReturn {
+				f.F.Return = node.Return()
+			}
 		case itemTripleQuotedString:
 			f.append(newString(token.pos, token.val, token.val[3:len(token.val)-3]))
 		case itemString:

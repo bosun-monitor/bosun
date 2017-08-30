@@ -3,7 +3,10 @@ package database
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"time"
+
+	"strings"
 
 	"bosun.org/models"
 	"bosun.org/slog"
@@ -12,6 +15,8 @@ import (
 
 /*
 incidentById:{id} - json encoded state. Authoritative source.
+
+renderedTemplatesById:{id} - json encoded RenderedTemplates by Incident Id
 
 lastTouched:{alert} - ZSET of alert key to last touched time stamp
 unknown:{alert} - Set of unknown alert keys for alert
@@ -39,6 +44,9 @@ func statesUnevalKey(alert string) string {
 func incidentStateKey(id int64) string {
 	return fmt.Sprintf("incidentById:%d", id)
 }
+func renderedTemplatesKey(id int64) string {
+	return fmt.Sprintf("renderedTemplatesById:%d", id)
+}
 func incidentsForAlertKeyKey(ak models.AlertKey) string {
 	return fmt.Sprintf("incidents:%s", ak)
 }
@@ -51,14 +59,48 @@ type StateDataAccess interface {
 	GetLatestIncident(ak models.AlertKey) (*models.IncidentState, error)
 	GetAllOpenIncidents() ([]*models.IncidentState, error)
 	GetIncidentState(incidentId int64) (*models.IncidentState, error)
-	GetAllIncidents(ak models.AlertKey) ([]*models.IncidentState, error)
+
+	GetAllIncidentsByAlertKey(ak models.AlertKey) ([]*models.IncidentState, error)
 
 	UpdateIncidentState(s *models.IncidentState) (int64, error)
 	ImportIncidentState(s *models.IncidentState) error
 
+	SetRenderedTemplates(incidentId int64, rt *models.RenderedTemplates) error
+	GetRenderedTemplates(incidentId int64) (*models.RenderedTemplates, error)
+
 	Forget(ak models.AlertKey) error
 	SetUnevaluated(ak models.AlertKey, uneval bool) error
 	GetUnknownAndUnevalAlertKeys(alert string) ([]models.AlertKey, []models.AlertKey, error)
+}
+
+func (d *dataAccess) SetRenderedTemplates(incidentId int64, rt *models.RenderedTemplates) error {
+	conn := d.Get()
+	defer conn.Close()
+
+	data, err := json.Marshal(rt)
+	if err != nil {
+		return slog.Wrap(err)
+	}
+	_, err = conn.Do("SET", renderedTemplatesKey(incidentId), data)
+	if err != nil {
+		return slog.Wrap(err)
+	}
+	return nil
+}
+
+func (d *dataAccess) GetRenderedTemplates(incidentId int64) (*models.RenderedTemplates, error) {
+	conn := d.Get()
+	defer conn.Close()
+
+	b, err := redis.Bytes(conn.Do("GET", renderedTemplatesKey(incidentId)))
+	if err != nil {
+		return nil, slog.Wrap(err)
+	}
+	renderedT := &models.RenderedTemplates{}
+	if err = json.Unmarshal(b, renderedT); err != nil {
+		return nil, slog.Wrap(err)
+	}
+	return renderedT, nil
 }
 
 func (d *dataAccess) State() StateDataAccess {
@@ -139,7 +181,7 @@ func (d *dataAccess) GetAllOpenIncidents() ([]*models.IncidentState, error) {
 	return d.incidentMultiGet(conn, ids)
 }
 
-func (d *dataAccess) GetAllIncidents(ak models.AlertKey) ([]*models.IncidentState, error) {
+func (d *dataAccess) GetAllIncidentsByAlertKey(ak models.AlertKey) ([]*models.IncidentState, error) {
 	conn := d.Get()
 	defer conn.Close()
 
@@ -148,6 +190,29 @@ func (d *dataAccess) GetAllIncidents(ak models.AlertKey) ([]*models.IncidentStat
 		return nil, slog.Wrap(err)
 	}
 	return d.incidentMultiGet(conn, ids)
+}
+
+// In general one should not use the redis KEYS command. So this is only used
+// in migration. If we want to use a proper index of all incidents
+// then issues with allIncidents must be fixed. Currently it is planned
+// to remove allIncidents in a future commit
+func (d *dataAccess) getAllIncidentIdsByKeys() ([]int64, error) {
+	conn := d.Get()
+	defer conn.Close()
+
+	summaries, err := redis.Strings(conn.Do("KEYS", "incidentById:*"))
+	if err != nil {
+		return nil, slog.Wrap(err)
+	}
+	ids := make([]int64, len(summaries))
+	for i, sum := range summaries {
+		var err error
+		ids[i], err = strconv.ParseInt(strings.Split(sum, ":")[1], 0, 64)
+		if err != nil {
+			return nil, slog.Wrap(err)
+		}
+	}
+	return ids, nil
 }
 
 func (d *dataAccess) incidentMultiGet(conn redis.Conn, ids []int64) ([]*models.IncidentState, error) {

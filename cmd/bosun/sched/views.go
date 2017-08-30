@@ -127,6 +127,20 @@ func (is IncidentSummaryView) Ask(filter string) (bool, error) {
 		default:
 			return false, fmt.Errorf("unknown %s value: %s", key, value)
 		}
+	case "ackTime":
+		if is.NeedAck == true {
+			return false, nil
+		}
+		for _, action := range is.Actions {
+			if action.Type == models.ActionAcknowledge {
+				return checkTimeArg(action.Time, value)
+			}
+		}
+		// In case an incident does not need ack but have no ack event
+		// I found one case of this from bosun autoclosing, but it was
+		// a very old incident. Don't think we should end up here, but
+		// if we do better to show the ack'd incident than hide it.
+		return true, nil
 	case "hasTag":
 		if strings.Contains(value, "=") {
 			if strings.HasPrefix(value, "=") {
@@ -205,34 +219,7 @@ func (is IncidentSummaryView) Ask(filter string) (bool, error) {
 			return false, fmt.Errorf("unknown %s value: %s", key, value)
 		}
 	case "start":
-		var op string
-		val := value
-		if strings.HasPrefix(value, "<") {
-			op = "<"
-			val = strings.TrimLeft(value, op)
-		}
-		if strings.HasPrefix(value, ">") {
-			op = ">"
-			val = strings.TrimLeft(value, op)
-		}
-		d, err := opentsdb.ParseDuration(val)
-		if err != nil {
-			return false, err
-		}
-		startTime := time.Unix(is.Start, 0)
-		// might want to make Now a property of incident summary for viewing things in the past
-		// but not going there at the moment. This is because right now I'm working with open
-		// incidents. And "What did incidents look like at this time?" is a different question
-		// since those incidents will no longer be open.
-		relativeTime := time.Now().UTC().Add(time.Duration(-d))
-		switch op {
-		case ">", "":
-			return startTime.After(relativeTime), nil
-		case "<":
-			return startTime.Before(relativeTime), nil
-		default:
-			return false, fmt.Errorf("unexpected op: %v", op)
-		}
+		return checkTimeArg(is.Start, value)
 	case "unevaluated":
 		switch value {
 		case "true":
@@ -252,4 +239,35 @@ func (is IncidentSummaryView) Ask(filter string) (bool, error) {
 		return glob.Glob(value, is.Subject), nil
 	}
 	return false, nil
+}
+
+func checkTimeArg(ts int64, arg string) (bool, error) {
+	var op string
+	val := arg
+	if strings.HasPrefix(arg, "<") {
+		op = "<"
+		val = strings.TrimLeft(arg, op)
+	}
+	if strings.HasPrefix(arg, ">") {
+		op = ">"
+		val = strings.TrimLeft(arg, op)
+	}
+	d, err := opentsdb.ParseDuration(val)
+	if err != nil {
+		return false, err
+	}
+	startTime := time.Unix(ts, 0)
+	// might want to make Now a property of incident summary for viewing things in the past
+	// but not going there at the moment. This is because right now I'm working with open
+	// incidents. And "What did incidents look like at this time?" is a different question
+	// since those incidents will no longer be open.
+	relativeTime := time.Now().UTC().Add(time.Duration(-d))
+	switch op {
+	case ">", "":
+		return startTime.After(relativeTime), nil
+	case "<":
+		return startTime.Before(relativeTime), nil
+	default:
+		return false, fmt.Errorf("unexpected op: %v", op)
+	}
 }

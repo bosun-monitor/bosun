@@ -258,6 +258,79 @@ func TestQueryExpr(t *testing.T) {
 	}
 }
 
+func TestSetVariant(t *testing.T) {
+	series := `series("key1=a,key2=b", 0, 1, 1, 3)`
+	seriesAbs := `series("", 0, 1, 1, -3)`
+	tests := []exprInOut{
+		{
+			fmt.Sprintf(`addtags(addtags(%v, "key3=a"), "key4=b") + 1`, series),
+			Results{
+				Results: ResultSlice{
+					&Result{
+						Value: Series{
+							time.Unix(0, 0): 2,
+							time.Unix(1, 0): 4,
+						},
+						Group: opentsdb.TagSet{"key1": "a", "key2": "b", "key3": "a", "key4": "b"},
+					},
+				},
+			},
+			false,
+		},
+		{
+			fmt.Sprintf(`addtags(addtags(avg(%v + 1), "key3=a"), "key4=b") + 1`, series),
+			Results{
+				Results: ResultSlice{
+					&Result{
+						Value: Number(4),
+						Group: opentsdb.TagSet{"key1": "a", "key2": "b", "key3": "a", "key4": "b"},
+					},
+				},
+			},
+			false,
+		},
+		{
+			fmt.Sprintf(`avg(addtags(addtags(avg(%v + 1), "key3=a"), "key4=b")) + 1`, series),
+			Results{},
+			true,
+		},
+
+		{
+			fmt.Sprintf(`1 + abs(%v)`, seriesAbs),
+			Results{
+				Results: ResultSlice{
+					&Result{
+						Value: Series{
+							time.Unix(0, 0): 2,
+							time.Unix(1, 0): 4,
+						},
+						Group: opentsdb.TagSet{},
+					},
+				},
+			},
+			false,
+		},
+		{
+			fmt.Sprintf(`1 + abs(avg(%v))`, seriesAbs),
+			Results{
+				Results: ResultSlice{
+					&Result{
+						Value: Number(2),
+						Group: opentsdb.TagSet{},
+					},
+				},
+			},
+			false,
+		},
+	}
+	for _, test := range tests {
+		err := testExpression(test)
+		if err != nil {
+			t.Error(err)
+		}
+	}
+}
+
 func TestSeriesOperations(t *testing.T) {
 	seriesA := `series("key=a", 0, 1, 1, 2, 2, 1, 3, 4)`
 	seriesB := `series("key=a", 0, 1,       2, 0, 3, 4)`

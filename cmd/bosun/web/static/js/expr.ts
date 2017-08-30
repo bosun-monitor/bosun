@@ -1,4 +1,5 @@
-interface IExprScope extends RootScope {
+/// <reference path="0-bosun.ts" />
+interface IExprScope extends IBosunScope {
 	expr: string;
 	error: string;
 	running: string;
@@ -16,7 +17,6 @@ interface IExprScope extends RootScope {
 	animate: () => any;
 	stop: () => any;
 }
-
 
 bosunControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route', function($scope: IExprScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService) {
 	var search = $location.search();

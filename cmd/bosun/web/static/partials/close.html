@@ -1,1 +1,1 @@
-<a class="btn btn-warning btn-xs ng-disabled="(state.last.Status != 'normal' || state.NeedsAck) && (state.last.Status != 'error')" ng-href="{{action('close')}}">Close</a>
+<a class="btn btn-warning btn-xs ng-disabled="state.last.Status == 'error'" ng-href="{{action('close')}}">Close</a>
