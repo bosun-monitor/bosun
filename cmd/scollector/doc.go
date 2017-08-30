@@ -151,7 +151,7 @@ common ones.
 	    URL = "http://ny-host01:40/haproxy\;csv"
 	  [[HAProxy.Instances]]
 	    User = "hauser2"
-	    Pass = "hapass2"
+	    Password = "hapass2"
 	    Tier = "1"
 	    URL = "http://ny-host01:80/haproxy\;csv"
 
