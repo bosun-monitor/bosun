@@ -421,13 +421,13 @@
 		},
 		{
 			"path": "github.com/google/cadvisor/client",
-			"revision": "e9739af18411bcd6fc45b1094867d01b1f8cb48e",
-			"revisionTime": "2016-02-12T14:43:45-08:00"
+			"revision": "f0cc82200ab84c0106063a0d0c2b89b674c0b818",
+			"revisionTime": "2017-05-31T23:00:16Z"
 		},
 		{
 			"path": "github.com/google/cadvisor/info/v1",
-			"revision": "e9739af18411bcd6fc45b1094867d01b1f8cb48e",
-			"revisionTime": "2016-02-12T14:43:45-08:00"
+			"revision": "f0cc82200ab84c0106063a0d0c2b89b674c0b818",
+			"revisionTime": "2017-05-31T23:00:16Z"
 		},
 		{
 			"path": "github.com/google/go-github/github",

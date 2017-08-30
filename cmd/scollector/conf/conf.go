@@ -227,9 +227,11 @@ type Github struct {
 }
 
 type Cadvisor struct {
-	URL         string
-	PerCpuUsage bool
-	IsRemote    bool
+	URL            string
+	PerCpuUsage    bool
+	IsRemote       bool
+	TagsFromLabels map[string]string
+	IgnoreTags     []string
 }
 
 type RedisCounters struct {

@@ -93,7 +93,9 @@ const (
 	Merge                = "merges"
 	Message              = "messages"
 	MilliSecond          = "milliseconds"
+	Microsecond          = "microseconds"
 	Nanosecond           = "nanoseconds"
+	CPUshare             = "cpushares" // Docker CPU shares
 	Node                 = "nodes"
 	Ok                   = "ok" // "OK" or not status, 0 = ok, 1 = not ok
 	Operation            = "Operations"
