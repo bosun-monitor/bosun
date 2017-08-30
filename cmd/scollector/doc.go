@@ -133,7 +133,9 @@ with the specified community.
 	KeepalivedCommunity = "keepalivedcom"
 
 HAProxy (array of table, keys are User, Password, Instances): HAProxy instances
-to poll. The Instances key is an array of table with keys Tier and URL.
+to poll. The Instances key is an array of table with keys User, Password, Tier,
+and URL. If User is specified for an instance, User and Password override the
+common ones.
 
 	[[HAProxy]]
 	  User = "hauser"
@@ -147,6 +149,11 @@ to poll. The Instances key is an array of table with keys Tier and URL.
 	  [[HAProxy.Instances]]
 	    Tier = "3"
 	    URL = "http://ny-host01:40/haproxy\;csv"
+	  [[HAProxy.Instances]]
+	    User = "hauser2"
+	    Pass = "hapass2"
+	    Tier = "1"
+	    URL = "http://ny-host01:80/haproxy\;csv"
 
 SNMP (array of table, keys are Community and Host): SNMP hosts to connect
 to at a 5 minute poll interval.

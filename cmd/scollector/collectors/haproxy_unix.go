@@ -19,8 +19,11 @@ func init() {
 				ii := i
 				collectors = append(collectors, &IntervalCollector{
 					F: func() (opentsdb.MultiDataPoint, error) {
-
-						return haproxyFetch(h.User, h.Password, ii.Tier, ii.URL)
+						if (ii.User != "") {
+							return haproxyFetch(ii.User, ii.Password, ii.Tier, ii.URL)
+						} else {
+							return haproxyFetch(h.User, h.Password, ii.Tier, ii.URL)
+						}
 					},
 					name: fmt.Sprintf("haproxy-%s-%s", ii.Tier, ii.URL),
 				})

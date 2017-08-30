@@ -105,8 +105,10 @@ type HAProxy struct {
 }
 
 type HAProxyInstance struct {
-	Tier string
-	URL  string
+	User     string
+	Password string
+	Tier     string
+	URL      string
 }
 
 type Nexpose struct {
