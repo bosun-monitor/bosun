@@ -499,7 +499,7 @@ type ElasticClusterStats struct {
 			TotalOpened int `json:"total_opened"`
 		} `json:"http"`
 		Indices ElasticIndexDetails `json:"indices" exclude:"true"` // Stored under elastic.indices.local namespace.
-		IP      []string            `json:"ip" exclude:"true"`
+		IP      string            `json:"ip" exclude:"true"`
 		JVM     struct {
 			BufferPools struct {
 				Direct struct {
