@@ -256,7 +256,7 @@ func main() {
 	}
 	cdp, cquit := collectors.Run(c)
 	if u != nil {
-		slog.Infoln("OpenTSDB host:", u)
+		slog.Infoln("OpenTSDB host:", hideUrlCredentials(u))
 	}
 	collect.UseNtlm = conf.UseNtlm
 	if err := collect.InitChan(u, "scollector", cdp); err != nil {
@@ -401,6 +401,17 @@ func parseHost(host string) (*url.URL, error) {
 		return nil, fmt.Errorf("no host specified")
 	}
 	return u, nil
+}
+
+func hideUrlCredentials(u *url.URL) *url.URL {
+	// Copy original url, replace credentials, e. g. for logging
+	if u.User != nil {
+		u2 := new(url.URL)
+		*u2 = *u
+		u2.User = url.UserPassword("xxx", "xxx")
+		return u2
+	}
+	return u
 }
 
 func printPut(c chan *opentsdb.DataPoint) {
