@@ -60,23 +60,6 @@ func (c *Context) Get(name string) interface{} {
 	return c.vars[name]
 }
 
-type unknownContext struct {
-	Time  time.Time
-	Name  string
-	Group models.AlertKeys
-
-	schedule *Schedule
-}
-
-func (s *Schedule) unknownData(t time.Time, name string, group models.AlertKeys) *unknownContext {
-	return &unknownContext{
-		Time:     t,
-		Group:    group,
-		Name:     name,
-		schedule: s,
-	}
-}
-
 // Note: All Context methods that can return nil must return literal nils
 // and not typed nils when returning errors to ensure that our global template
 // function notNil behaves correctly. Context Functions that return an object

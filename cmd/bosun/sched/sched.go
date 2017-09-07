@@ -54,7 +54,7 @@ type Schedule struct {
 	pendingNotifications map[*conf.Notification][]*IncidentWithTemplates
 
 	//unknown states that need to be notified about. Collected and sent in batches.
-	pendingUnknowns map[*conf.Notification][]*models.IncidentState
+	pendingUnknowns map[notificationGroupKey][]*models.IncidentState
 
 	lastLogTimes map[models.AlertKey]time.Time
 	LastCheck    time.Time
@@ -85,7 +85,7 @@ func (s *Schedule) Init(systemConf conf.SystemConfProvider, ruleConf conf.RuleCo
 	s.RuleConf = ruleConf
 	s.Group = make(map[time.Time]models.AlertKeys)
 	s.annotate = annotate
-	s.pendingUnknowns = make(map[*conf.Notification][]*models.IncidentState)
+	s.pendingUnknowns = make(map[notificationGroupKey][]*models.IncidentState)
 	s.lastLogTimes = make(map[models.AlertKey]time.Time)
 	s.LastCheck = utcNow()
 	s.ctx = &checkContext{utcNow(), cache.New(0)}

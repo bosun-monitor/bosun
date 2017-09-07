@@ -1,11 +1,9 @@
 package sched
 
 import (
-	"bytes"
 	"time"
 
 	"bosun.org/cmd/bosun/conf"
-	"bosun.org/cmd/bosun/conf/template"
 	"bosun.org/models"
 	"bosun.org/slog"
 )
@@ -142,7 +140,8 @@ func (s *Schedule) sendNotifications(silenced SilenceTester) {
 					slog.Infoln("silencing unknown", ak)
 					continue
 				}
-				s.pendingUnknowns[n] = append(s.pendingUnknowns[n], st.IncidentState)
+				gk := notificationGroupKey{notification: n, template: alert.Template}
+				s.pendingUnknowns[gk] = append(s.pendingUnknowns[gk], st.IncidentState)
 			} else if silenced {
 				slog.Infof("silencing %s", ak)
 				continue
@@ -163,132 +162,50 @@ func (s *Schedule) sendNotifications(silenced SilenceTester) {
 }
 
 // sendUnknownNotifications processes the schedule's pendingUnknowns queue. It puts unknowns into groups
-// to be processed by the schedule's utnotify method. When it is done processing the pendingUnknowns queue
-// it reinitializes the queue.
+// to be processed by the notification. When it is done processing the pendingUnknowns queue,
+// it reinitializes the queue. Will send a maximum of $Unknown_Threshold notifications. If more are needed,
+// the last one will be a multi-group.
 func (s *Schedule) sendUnknownNotifications() {
-	slog.Info("Batching and sending unknown notifications")
-	defer slog.Info("Done sending unknown notifications")
-	for n, states := range s.pendingUnknowns {
+	if len(s.pendingUnknowns) > 0 {
+		slog.Info("Batching and sending unknown notifications")
+		defer slog.Info("Done sending unknown notifications")
+	}
+	for gk, states := range s.pendingUnknowns {
+		n := gk.notification
 		ustates := make(States)
 		for _, st := range states {
 			ustates[st.AlertKey] = st
 		}
 		var c int
-		tHit := false
-		oTSets := make(map[string]models.AlertKeys)
+		hitThreshold := false
+		overThresholdSets := make(map[string]models.AlertKeys)
 		groupSets := ustates.GroupSets(s.SystemConf.GetMinGroupSize())
+		threshold := s.SystemConf.GetUnknownThreshold()
 		for name, group := range groupSets {
 			c++
-			if c >= s.SystemConf.GetUnknownThreshold() && s.SystemConf.GetUnknownThreshold() > 0 {
-				if !tHit && len(groupSets) == 0 {
+			if c >= threshold && threshold > 0 {
+				if !hitThreshold && len(groupSets) == c {
 					// If the threshold is hit but only 1 email remains, just send the normal unknown
-					s.unotify(name, group, n)
+					n.NotifyUnknown(gk.template, s.SystemConf, name, group)
 					break
 				}
-				tHit = true
-				oTSets[name] = group
+				hitThreshold = true
+				overThresholdSets[name] = group
 			} else {
-				s.unotify(name, group, n)
+				n.NotifyUnknown(gk.template, s.SystemConf, name, group)
 			}
 		}
-		if len(oTSets) > 0 {
-			s.utnotify(oTSets, n)
+		if len(overThresholdSets) > 0 {
+			n.NotifyMultipleUnknowns(gk.template, s.SystemConf, overThresholdSets)
 		}
 	}
-	s.pendingUnknowns = make(map[*conf.Notification][]*models.IncidentState)
+	s.pendingUnknowns = make(map[notificationGroupKey][]*models.IncidentState)
 }
-
-var unknownMultiGroup = template.Must(template.New("unknownMultiGroupHTML").Parse(`
-	<p>Threshold of {{ .Threshold }} reached for unknown notifications. The following unknown
-	group emails were not sent.
-	<ul>
-	{{ range $group, $alertKeys := .Groups }}
-		<li>
-			{{ $group }}
-			<ul>
-				{{ range $ak := $alertKeys }}
-				<li>{{ $ak }}</li>
-				{{ end }}
-			<ul>
-		</li>
-	{{ end }}
-	</ul>
-	`))
 
 // notify is a wrapper for the notifications Notify method that sets the EmailSubject and EmailBody for the rendered
 // template. It passes properties from the schedule that the Notification's Notify method requires.
 func (s *Schedule) notify(st *models.IncidentState, rt *models.RenderedTemplates, n *conf.Notification) {
 	n.NotifyAlert(rt, s.SystemConf, string(st.AlertKey), rt.Attachments...)
-}
-
-// utnotify is single notification for N unknown groups into a single notification
-func (s *Schedule) utnotify(groups map[string]models.AlertKeys, n *conf.Notification) {
-	var total int
-	now := utcNow()
-	for _, group := range groups {
-		// Don't know what the following line does, just copied from unotify
-		s.Group[now] = group
-		total += len(group)
-	}
-	//subject := fmt.Sprintf("%v unknown alert instances suppressed", total)
-	body := new(bytes.Buffer)
-	if err := unknownMultiGroup.Execute(body, struct {
-		Groups    map[string]models.AlertKeys
-		Threshold int
-	}{
-		groups,
-		s.SystemConf.GetUnknownThreshold(),
-	}); err != nil {
-		slog.Errorln(err)
-	}
-	// rt := &models.RenderedTemplates{
-	// 	Subject: subject,
-	// 	Body:    body.String(),
-	// }
-	// TODO: Fix this
-	//n.Notify(rt, s.SystemConf, "unknown_threshold")
-}
-
-var defaultUnknownTemplate = &conf.Template{
-	Body: template.Must(template.New("body").Parse(`
-		<p>Time: {{.Time}}
-		<p>Name: {{.Name}}
-		<p>Alerts:
-		{{range .Group}}
-			<br>{{.}}
-		{{end}}
-	`)),
-	Subject: template.Must(template.New("subject").Parse(`{{.Name}}: {{.Group | len}} unknown alerts`)),
-}
-
-// unotify builds an unknown notification for an alertkey or a group of alert keys. It renders the template
-// and calls the notification's Notify method to trigger the action.
-func (s *Schedule) unotify(name string, group models.AlertKeys, n *conf.Notification) {
-	subject := new(bytes.Buffer)
-	body := new(bytes.Buffer)
-	now := utcNow()
-	s.Group[now] = group
-	t := s.RuleConf.GetUnknownTemplate()
-	if t == nil {
-		t = defaultUnknownTemplate
-	}
-	data := s.unknownData(now, name, group)
-	if t.Body != nil {
-		if err := t.Body.Execute(body, &data); err != nil {
-			slog.Infoln("unknown template error:", err)
-		}
-	}
-	if t.Subject != nil {
-		if err := t.Subject.Execute(subject, &data); err != nil {
-			slog.Infoln("unknown template error:", err)
-		}
-	}
-	// rt := &models.RenderedTemplates{
-	// 	Subject: subject.String(),
-	// 	Body:    body.String(),
-	// }
-	// TODO: Unknown
-	//n.Notify(rt, s.SystemConf, name)
 }
 
 // QueueNotification persists a notification to the datastore to be sent in the future. This happens when
@@ -312,6 +229,10 @@ func (s *Schedule) ActionNotify(at models.ActionType, user, message string, aks 
 	return nil
 }
 
+// used to group notifications together. Notification alone is not sufficient, since different alerts
+// can reference different templates.
+// TODO: This may be overly aggressive at splitting things up. We really only need to seperate them if the
+// specific keys referenced in the notification for action/unknown things are different between templates.
 type notificationGroupKey struct {
 	notification *conf.Notification
 	template     *conf.Template
