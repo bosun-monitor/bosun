@@ -414,36 +414,51 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 			// todo: validate all/true, none/false, or comma seperated action shortNames
 			n.RunOnActions = v
 		default:
-			// action{templateKey}{ActionType}?
+			// all special template keys are handled in one loop
+			// the following formats are possible:
+			// action(templateKey)(ActionType})?   //action
+			// (templateKey)                       //regular alert
+			// unknown(TemplateKey)                //unknown
+			var keys *conf.NotificationTemplateKeys
+			keyType := k
 			if strings.HasPrefix(k, "action") {
-				k2 := k[len("action"):]
+				keyType = k[len("action"):]
 				at := models.ActionNone
+				// look for and trim suffix if there
 				for s, t := range models.ActionShortNames {
-					if strings.HasSuffix(k2, s) {
+					if strings.HasSuffix(keyType, s) {
 						at = t
-						k2 = k2[:len(k2)-len(s)]
+						keyType = keyType[:len(keyType)-len(s)]
 						break
 					}
 				}
 				if n.ActionTemplateKeys[at] == nil {
 					n.ActionTemplateKeys[at] = &conf.NotificationTemplateKeys{}
 				}
-				keys := n.ActionTemplateKeys[at]
-				switch k2 {
-				case "Body":
-					keys.BodyTemplate = v
-				case "Get":
-					keys.GetTemplate = v
-				case "Post":
-					keys.PostTemplate = v
-				case "EmailSubject":
-					keys.EmailSubjectTemplate = v
-				default:
-					c.errorf("unknown key %s", k)
-				}
-				break
+				keys = n.ActionTemplateKeys[at]
+			} else if strings.HasPrefix(k, "unknown") {
+				keys = &n.UnknownTemplateKeys
+				keyType = k[len("unknown"):]
+			} else if strings.HasPrefix(k, "unknownMulti") {
+				keys = &n.UnknownMultiTemplateKeys
+				keyType = k[len("unknownMulti"):]
+			} else {
+				keys = &n.NotificationTemplateKeys
 			}
-			c.errorf("unknown key %s", k)
+			switch keyType {
+			case "Body":
+				keys.BodyTemplate = v
+			case "Get":
+				keys.GetTemplate = v
+			case "Post":
+				keys.PostTemplate = v
+			case "EmailSubject":
+				keys.EmailSubjectTemplate = v
+			default:
+				c.errorf("unknown key %s", k)
+			}
+			break
+
 		}
 	}
 	// TODO: make sure get/getTemplate and post/postTemplate are mutually exclusive

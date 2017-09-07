@@ -93,54 +93,13 @@ func (n *Notification) PrepareAction(at models.ActionType, t *Template, c System
 		}
 		err := tpl.Execute(buf, ctx)
 		if err != nil {
-			slog.Errorf("executing action template '%s': %s", key, err)
+			e := fmt.Sprintf("executing action template '%s': %s", key, err)
+			pn.Errors = append(pn.Errors, e)
+			slog.Errorf(e)
 			return "", err
 		}
 		return buf.String(), nil
 	}
-	renderSubject := func(key string) (string, error) { return render(key, defaultActionNotificationSubjectTemplate) }
-	renderBody := func(key string) (string, error) { return render(key, defaultActionNotificationBodyTemplate) }
-
-	var body string
-	var err error
-	if len(n.Email) > 0 || n.Post != nil || tks.PostTemplate != "" {
-		body, err = renderBody(tks.BodyTemplate)
-		if err != nil {
-			slog.Errorf("rendering action body: %s", err)
-		}
-	}
-
-	if len(n.Email) > 0 {
-		subject, err := renderSubject(tks.EmailSubjectTemplate)
-		if err != nil {
-			slog.Errorf("rendering action email subject: %s", err)
-		} else {
-			pn.Email = n.PrepEmail(subject, body, "", nil)
-		}
-	}
-
-	postURL, getURL := "", ""
-	if tks.PostTemplate != "" {
-		postURL, err = render(tks.PostTemplate, nil)
-		if err != nil {
-			slog.Errorf("rendering action post url: %s", err)
-		}
-	} else if n.Post != nil {
-		postURL = n.Post.String()
-	}
-	if tks.GetTemplate != "" {
-		getURL, err = render(tks.GetTemplate, nil)
-		if err != nil {
-			slog.Errorf("rendering action get url: %s", err)
-		}
-	} else if n.Get != nil {
-		getURL = n.Get.String()
-	}
-	if postURL != "" {
-		pn.HTTP = append(pn.HTTP, n.PrepHttp("POST", postURL, body, ""))
-	}
-	if getURL != "" {
-		pn.HTTP = append(pn.HTTP, n.PrepHttp("GET", getURL, "", ""))
-	}
+	n.prepareFromTemplateKeys(pn, *tks, render, defaultActionNotificationSubjectTemplate, defaultActionNotificationBodyTemplate)
 	return pn
 }

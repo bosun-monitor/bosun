@@ -179,13 +179,6 @@ func NewConf(name string, backends conf.EnabledBackends, sysVars map[string]stri
 	}
 
 	loadSections("template")
-	if c.unknownTemplate != "" {
-		t, ok := c.Templates[c.unknownTemplate]
-		if !ok {
-			c.errorf("template not found: %s", c.unknownTemplate)
-		}
-		c.UnknownTemplate = t
-	}
 	loadSections("notification")
 	loadSections("macro")
 	loadSections("lookup")
@@ -740,10 +733,6 @@ func (c *Conf) alert(s *expr.State, T miniprofiler.Timer, name, key string) (res
 		}
 	}
 	return results, nil
-}
-
-func (c *Conf) GetUnknownTemplate() *conf.Template {
-	return c.UnknownTemplate
 }
 
 func (c *Conf) GetTemplate(s string) *conf.Template {

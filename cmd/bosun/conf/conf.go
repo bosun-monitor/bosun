@@ -107,7 +107,6 @@ func ValidateSystemConf(sc SystemConfProvider) error {
 // that the interface will change significantly.
 type RuleConfProvider interface {
 	RuleConfWriter
-	GetUnknownTemplate() *Template
 	GetTemplate(string) *Template
 
 	GetAlerts() map[string]*Alert
@@ -281,6 +280,9 @@ type Notification struct {
 
 	// template keys to use for action notifications. ActionNone contains catch-all fields if present. More specific will override.
 	ActionTemplateKeys map[models.ActionType]*NotificationTemplateKeys
+
+	UnknownTemplateKeys      NotificationTemplateKeys
+	UnknownMultiTemplateKeys NotificationTemplateKeys
 
 	Print        bool
 	Next         *Notification

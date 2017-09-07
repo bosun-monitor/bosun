@@ -30,9 +30,10 @@ func init() {
 }
 
 type PreparedNotifications struct {
-	Email *PreparedEmail
-	HTTP  []*PreparedHttp
-	Print string
+	Email  *PreparedEmail
+	HTTP   []*PreparedHttp
+	Print  string
+	Errors []string
 }
 
 func (p *PreparedNotifications) Send(c SystemConfProvider) (errs []error) {

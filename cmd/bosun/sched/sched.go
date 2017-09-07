@@ -39,7 +39,6 @@ type Schedule struct {
 
 	RuleConf   conf.RuleConfProvider
 	SystemConf conf.SystemConfProvider
-	Group      map[time.Time]models.AlertKeys
 
 	Search *search.Search
 
@@ -83,7 +82,6 @@ func (s *Schedule) Init(systemConf conf.SystemConfProvider, ruleConf conf.RuleCo
 	s.quiet = quiet
 	s.SystemConf = systemConf
 	s.RuleConf = ruleConf
-	s.Group = make(map[time.Time]models.AlertKeys)
 	s.annotate = annotate
 	s.pendingUnknowns = make(map[notificationGroupKey][]*models.IncidentState)
 	s.lastLogTimes = make(map[models.AlertKey]time.Time)
