@@ -27,15 +27,14 @@ type Conf struct {
 	Vars conf.Vars
 	Name string // Config file name
 
-	UnknownTemplate *conf.Template
-	Templates       map[string]*conf.Template
-	Alerts          map[string]*conf.Alert
-	Notifications   map[string]*conf.Notification `json:"-"`
-	RawText         string
-	Macros          map[string]*conf.Macro
-	Lookups         map[string]*conf.Lookup
-	Squelch         conf.Squelches `json:"-"`
-	NoSleep         bool
+	Templates     map[string]*conf.Template
+	Alerts        map[string]*conf.Alert
+	Notifications map[string]*conf.Notification `json:"-"`
+	RawText       string
+	Macros        map[string]*conf.Macro
+	Lookups       map[string]*conf.Lookup
+	Squelch       conf.Squelches `json:"-"`
+	NoSleep       bool
 
 	reload   func() error
 	backends conf.EnabledBackends
