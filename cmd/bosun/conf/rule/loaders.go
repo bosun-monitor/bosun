@@ -413,12 +413,14 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 		case "runOnActions":
 			// todo: validate all/true, none/false, or comma seperated action shortNames
 			n.RunOnActions = v
+		case "unknownMinGroupSize":
+		case "unknownThreshold":
 		default:
 			// all special template keys are handled in one loop
 			// the following formats are possible:
 			// action(templateKey)(ActionType})?   //action
-			// (templateKey)                       //regular alert
 			// unknown(TemplateKey)                //unknown
+			// unknownMulti(TemplateKey)           //unknown
 			var keys *conf.NotificationTemplateKeys
 			keyType := k
 			if strings.HasPrefix(k, "action") {
@@ -442,8 +444,6 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 			} else if strings.HasPrefix(k, "unknownMulti") {
 				keys = &n.UnknownMultiTemplateKeys
 				keyType = k[len("unknownMulti"):]
-			} else {
-				keys = &n.NotificationTemplateKeys
 			}
 			switch keyType {
 			case "Body":
