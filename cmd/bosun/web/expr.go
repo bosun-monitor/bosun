@@ -135,7 +135,7 @@ type Res struct {
 	Key models.AlertKey
 }
 
-func procRule(t miniprofiler.Timer, ruleConf conf.RuleConfProvider, a *conf.Alert, now time.Time, summary bool, email string, template_group string) (*ruleResult, error) {
+func procRule(t miniprofiler.Timer, ruleConf conf.RuleConfProvider, a *conf.Alert, now time.Time, summary bool, email string, template_group string, incidentID int) (*ruleResult, error) {
 	s := &sched.Schedule{}
 	s.Search = schedule.Search
 	if err := s.Init(schedule.SystemConf, ruleConf, schedule.DataAccess, AnnotateBackend, false, false); err != nil {
@@ -237,7 +237,7 @@ func procRule(t miniprofiler.Timer, ruleConf conf.RuleConfProvider, a *conf.Aler
 		}
 
 		primaryIncident.Subject = rt.Subject
-		primaryIncident.Id = 42
+		primaryIncident.Id = int64(incidentID)
 		primaryIncident.Start = time.Now().UTC()
 
 		nots, aNots = buildNotificationPreviews(a, rt, primaryIncident, s.SystemConf)
@@ -340,6 +340,13 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 			return nil, fmt.Errorf("must be > 0 intervals")
 		}
 	}
+	incidentID := 42
+	if incident := r.FormValue("incidentId"); len(incident) > 0 {
+		incidentID, err = strconv.Atoi(incident)
+		if err != nil {
+			return nil, err
+		}
+	}
 	if fz, tz := from.IsZero(), to.IsZero(); fz && tz {
 		from = time.Now()
 	} else if fz && !tz {
@@ -366,7 +373,7 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 		for interval := range ch {
 			t.Step(fmt.Sprintf("interval %v", interval), func(t miniprofiler.Timer) {
 				now := from.Add(diff * time.Duration(interval))
-				res, err := procRule(t, c, a, now, interval != 0, r.FormValue("email"), r.FormValue("template_group"))
+				res, err := procRule(t, c, a, now, interval != 0, r.FormValue("email"), r.FormValue("template_group"), incidentID)
 				resch <- res
 				errch <- err
 			})

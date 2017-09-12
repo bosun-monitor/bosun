@@ -56,6 +56,7 @@ interface IConfigScope extends IBosunScope {
 	scrollToInterval: (v: string) => void;
 	show: (v: any) => void;
 	loadTimelinePanel: (entry: any, v: any) => void;
+	incidentId: number;
 
 	// saving
 	message: string;
@@ -87,6 +88,7 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 	$scope.tab = search.tab || 'results';
 	$scope.aceTheme = 'chrome';
 	$scope.actionTypeToShow = "Acknowledged";
+	$scope.incidentId = 42;
 
 	$scope.aceMode = 'bosun';
 	$scope.expandDiff = false;
@@ -414,6 +416,7 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 			'&to=' + encodeURIComponent(to.format()) +
 			'&intervals=' + encodeURIComponent(intervals) +
 			'&email=' + encodeURIComponent($scope.email) +
+			'&incidentId=' + $scope.incidentId +
 			'&template_group=' + encodeURIComponent($scope.template_group);
 		$http.post(url, $scope.config_text)
 			.success((data: any) => {

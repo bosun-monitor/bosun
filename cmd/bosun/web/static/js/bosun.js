@@ -894,6 +894,7 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
         $scope.tab = search.tab || 'results';
         $scope.aceTheme = 'chrome';
         $scope.actionTypeToShow = "Acknowledged";
+        $scope.incidentId = 42;
         $scope.aceMode = 'bosun';
         $scope.expandDiff = false;
         $scope.customTemplates = {};
@@ -1209,6 +1210,7 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
                 '&to=' + encodeURIComponent(to.format()) +
                 '&intervals=' + encodeURIComponent(intervals) +
                 '&email=' + encodeURIComponent($scope.email) +
+                '&incidentId=' + $scope.incidentId +
                 '&template_group=' + encodeURIComponent($scope.template_group);
             $http.post(url, $scope.config_text)
                 .success(function (data) {

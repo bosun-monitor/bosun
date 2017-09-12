@@ -147,6 +147,10 @@
 				<input type="text" class="form-control" style="width:20em" ng-model="template_group" tooltip title="Set which result to use for the template by setting an opentsdb group (aka tagset) in the format of k=v,m=o. The first result for which the specified group is a subset of a result is used. If no results are a subset of the specified group, then the first result is chosen.">
 			</div>
 			<div class="form-group">
+				<label class="control-label">Incident Id</label>
+				<input type="number" class="form-control" style="width:10em" ng-model="incidentId" tooltip title="Incident Id to use for preview notifications">
+			</div>
+			<div class="form-group">
 				<button class="btn btn-primary" ng-click="test()">Test {{selected_alert}}</button>
 			</div>
 		</form>
