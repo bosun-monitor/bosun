@@ -235,7 +235,12 @@ func procRule(t miniprofiler.Timer, ruleConf conf.RuleConfProvider, a *conf.Aler
 			}
 			n.PrepareAlert(rt, string(primaryIncident.AlertKey), rt.Attachments...).Send(s.SystemConf)
 		}
-		nots, aNots = buildNotificationPreviews(a, rt, string(primaryIncident.AlertKey), s.SystemConf)
+
+		primaryIncident.Subject = rt.Subject
+		primaryIncident.Id = 42
+		primaryIncident.Start = time.Now().UTC()
+
+		nots, aNots = buildNotificationPreviews(a, rt, primaryIncident, s.SystemConf)
 		data = s.Data(rh, primaryIncident, a, false)
 	}
 
@@ -254,7 +259,7 @@ func procRule(t miniprofiler.Timer, ruleConf conf.RuleConfProvider, a *conf.Aler
 	return rr, nil
 }
 
-func buildNotificationPreviews(a *conf.Alert, rt *models.RenderedTemplates, ak string, c conf.SystemConfProvider, attachments ...*models.Attachment) (map[string]*conf.PreparedNotifications, map[string]map[string]*conf.PreparedNotifications) {
+func buildNotificationPreviews(a *conf.Alert, rt *models.RenderedTemplates, incident *models.IncidentState, c conf.SystemConfProvider, attachments ...*models.Attachment) (map[string]*conf.PreparedNotifications, map[string]map[string]*conf.PreparedNotifications) {
 	previews := map[string]*conf.PreparedNotifications{}
 	actionPreviews := map[string]map[string]*conf.PreparedNotifications{}
 	nots := map[string]*conf.Notification{}
@@ -265,7 +270,7 @@ func buildNotificationPreviews(a *conf.Alert, rt *models.RenderedTemplates, ak s
 		nots[name] = not
 	}
 	for name, not := range nots {
-		previews[name] = not.PrepareAlert(rt, ak, attachments...)
+		previews[name] = not.PrepareAlert(rt, string(incident.AlertKey), attachments...)
 		actions := map[string]*conf.PreparedNotifications{}
 		actionPreviews[name] = actions
 		// for all action types. just loop through known range. Update this if any get added
@@ -273,14 +278,7 @@ func buildNotificationPreviews(a *conf.Alert, rt *models.RenderedTemplates, ak s
 			if !not.RunOnActionType(at) {
 				continue
 			}
-			incidents := []*models.IncidentState{
-				{
-					Alert:         a.Name,
-					AlertKey:      models.AlertKey(ak),
-					CurrentStatus: models.StCritical,
-					Id:            42,
-				},
-			}
+			incidents := []*models.IncidentState{incident}
 			actions[at.String()] = not.PrepareAction(at, a.Template, c, incidents, "somebody", "I took care of this")
 		}
 	}
