@@ -432,7 +432,7 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 			// action(templateKey)(ActionType})?   //action
 			// unknown(TemplateKey)                //unknown
 			// unknownMulti(TemplateKey)           //unknown
-			var keys conf.NotificationTemplateKeys
+			var keys *conf.NotificationTemplateKeys
 			keyType := k
 			if strings.HasPrefix(k, "action") {
 				keyType = strings.TrimPrefix(k, "action")
@@ -448,12 +448,12 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 				if n.ActionTemplateKeys[at] == nil {
 					n.ActionTemplateKeys[at] = &conf.NotificationTemplateKeys{}
 				}
-				keys = *n.ActionTemplateKeys[at]
+				keys = n.ActionTemplateKeys[at]
 			} else if strings.HasPrefix(k, "unknownMulti") {
-				keys = n.UnknownMultiTemplateKeys
+				keys = &n.UnknownMultiTemplateKeys
 				keyType = strings.TrimPrefix(k, "unknownMulti")
 			} else if strings.HasPrefix(k, "unknown") {
-				keys = n.UnknownTemplateKeys
+				keys = &n.UnknownTemplateKeys
 				keyType = strings.TrimPrefix(k, "unknown")
 			} else {
 				c.errorf("unknown key %s", k)

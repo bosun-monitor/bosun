@@ -47,8 +47,8 @@ interface IConfigScope extends IBosunScope {
 	body: string;
 	customTemplates: { [name: string]: string };
 	notifications: { [name: string]: any };
-	actionNotifications: {[type: string]: {[name: string]:any}};
-	actionTypeToShow: string;
+	actionNotifications: {[name: string]: {[at: string]:any}};
+	notificationToShow: string;
 	data: any;
 	tab: string;
 	zws: (v: string) => string;
@@ -347,9 +347,8 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 		}
 	}
 
-	$scope.setActionTypeToShow = (at:string)=>{
-		console.log(at);
-		$scope.actionTypeToShow = at;
+	$scope.setNotificationToShow = (n:string)=>{
+		$scope.notificationToShow = n;
 	}
 	
 	var line_re = /test:(\d+)/;
@@ -491,18 +490,19 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 		$scope.notifications = nots;
 		var aNots = {};
 		_(data.ActionNotifications).each((ts,n)=>{
+			$scope.notificationToShow = "" + n;
+			aNots[n] = {};
 			_(ts).each((val,at)=>{
-				aNots[at] = aNots[at] || {};
 				if(val.Email){
-					aNots[at]["Email "+ n] = val.Email;
+					aNots[n]["Email ("+at+")"] = val.Email;
 				}
 				_(val.HTTP).each((hp)=>{
-					aNots[at][hp.Method+" "+n] = hp;
+					aNots[n][hp.Method+" ("+at+")"] = hp;
 				})
 			})
 		})
+
 		$scope.actionNotifications = aNots;
-		
 		$scope.data = JSON.stringify(data.Data, null, '  ');
 		$scope.error = data.Errors;
 		$scope.warning = data.Warnings;

@@ -1141,9 +1141,8 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
                 $scope.template_group = match[1];
             }
         };
-        $scope.setActionTypeToShow = function (at) {
-            console.log(at);
-            $scope.actionTypeToShow = at;
+        $scope.setNotificationToShow = function (n) {
+            $scope.notificationToShow = n;
         };
         var line_re = /test:(\d+)/;
         $scope.validate = function () {
@@ -1283,13 +1282,14 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
             $scope.notifications = nots;
             var aNots = {};
             _(data.ActionNotifications).each(function (ts, n) {
+                $scope.notificationToShow = "" + n;
+                aNots[n] = {};
                 _(ts).each(function (val, at) {
-                    aNots[at] = aNots[at] || {};
                     if (val.Email) {
-                        aNots[at]["Email " + n] = val.Email;
+                        aNots[n]["Email (" + at + ")"] = val.Email;
                     }
                     _(val.HTTP).each(function (hp) {
-                        aNots[at][hp.Method + " " + n] = hp;
+                        aNots[n][hp.Method + " (" + at + ")"] = hp;
                     });
                 });
             });
