@@ -402,6 +402,7 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 				c.error(err)
 			}
 			n.Timeout = time.Duration(d)
+
 		case "bodyTemplate":
 			n.BodyTemplate = v
 		case "getTemplate":
@@ -421,10 +422,10 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 			// action(templateKey)(ActionType})?   //action
 			// unknown(TemplateKey)                //unknown
 			// unknownMulti(TemplateKey)           //unknown
-			var keys *conf.NotificationTemplateKeys
+			var keys conf.NotificationTemplateKeys
 			keyType := k
 			if strings.HasPrefix(k, "action") {
-				keyType = k[len("action"):]
+				keyType = strings.TrimPrefix(k, "action")
 				at := models.ActionNone
 				// look for and trim suffix if there
 				for s, t := range models.ActionShortNames {
@@ -437,13 +438,15 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 				if n.ActionTemplateKeys[at] == nil {
 					n.ActionTemplateKeys[at] = &conf.NotificationTemplateKeys{}
 				}
-				keys = n.ActionTemplateKeys[at]
-			} else if strings.HasPrefix(k, "unknown") {
-				keys = &n.UnknownTemplateKeys
-				keyType = k[len("unknown"):]
+				keys = *n.ActionTemplateKeys[at]
 			} else if strings.HasPrefix(k, "unknownMulti") {
-				keys = &n.UnknownMultiTemplateKeys
-				keyType = k[len("unknownMulti"):]
+				keys = n.UnknownMultiTemplateKeys
+				keyType = strings.TrimPrefix(k, "unknownMulti")
+			} else if strings.HasPrefix(k, "unknown") {
+				keys = n.UnknownTemplateKeys
+				keyType = strings.TrimPrefix(k, "unknown")
+			} else {
+				c.errorf("unknown key %s", k)
 			}
 			switch keyType {
 			case "Body":
