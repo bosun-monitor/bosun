@@ -181,8 +181,15 @@ func (s *Schedule) sendUnknownNotifications() {
 		overThresholdSets := make(map[string]models.AlertKeys)
 		// todo: should each notification perhaps set its' own groupsize and
 		// threshold? Some notifications may WANT a ping per unknown.
-		groupSets := ustates.GroupSets(s.SystemConf.GetMinGroupSize())
+		minGroupSize := s.SystemConf.GetMinGroupSize()
+		if n.UnknownMinGroupSize != nil {
+			minGroupSize = n.UnknownMinGroupSize // TODO: is there a "no groups" option other than 99999?
+		}
+		groupSets := ustates.GroupSets(minGroupSize)
 		threshold := s.SystemConf.GetUnknownThreshold()
+		if n.UnknownThreshold != nil {
+			threshold = n.UnknownThreshold
+		}
 		for name, group := range groupSets {
 			c++
 			if c >= threshold && threshold > 0 {

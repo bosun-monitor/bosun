@@ -415,7 +415,17 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 			// todo: validate all/true, none/false, or comma seperated action shortNames
 			n.RunOnActions = v
 		case "unknownMinGroupSize":
+			i, err := strconv.Atoi(v)
+			if err != nil {
+				c.error(err)
+			}
+			n.UnknownMinGroupSize = &i
 		case "unknownThreshold":
+			i, err := strconv.Atoi(v)
+			if err != nil {
+				c.error(err)
+			}
+			n.UnknownThreshold = &i
 		default:
 			// all special template keys are handled in one loop
 			// the following formats are possible:

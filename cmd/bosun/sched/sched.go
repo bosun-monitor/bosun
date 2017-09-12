@@ -276,7 +276,7 @@ func (states States) GroupSets(minGroup int) map[string]models.AlertKeys {
 				pair = p
 			}
 		}
-		if max < minGroup {
+		if max < minGroup || minGroup <= 0 {
 			break
 		}
 		var group models.AlertKeys

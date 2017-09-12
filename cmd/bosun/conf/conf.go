@@ -290,6 +290,9 @@ type Notification struct {
 	ContentType  string
 	RunOnActions string
 
+	UnknownMinGroupSize *int // nil means use global defaults. 0 means no-grouping at all.
+	UnknownThreshold    *int // nil means use global defaults. 0 means no limit
+
 	NextName        string `json:"-"`
 	RawEmail        string `json:"-"`
 	RawPost, RawGet string `json:"-"`
