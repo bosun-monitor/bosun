@@ -195,13 +195,18 @@ func procRule(t miniprofiler.Timer, ruleConf conf.RuleConfProvider, a *conf.Aler
 				warning = append(warning, fmt.Sprintf("template group %s was not a subset of any result", template_group))
 			}
 		}
-		if e := primaryIncident.Events[0]; e.Crit != nil {
+		e := primaryIncident.Events[0]
+		if e.Crit != nil {
 			primaryIncident.Result = e.Crit
 		} else if e.Warn != nil {
 			primaryIncident.Result = e.Warn
 		}
 		var errs []error
-
+		primaryIncident.Id = int64(incidentID)
+		primaryIncident.Start = time.Now().UTC()
+		primaryIncident.CurrentStatus = e.Status
+		primaryIncident.LastAbnormalStatus = e.Status
+		primaryIncident.LastAbnormalTime = time.Now().UTC().Unix()
 		func() {
 			defer func() {
 				if err := recover(); err != nil {
@@ -235,11 +240,6 @@ func procRule(t miniprofiler.Timer, ruleConf conf.RuleConfProvider, a *conf.Aler
 			}
 			n.PrepareAlert(rt, string(primaryIncident.AlertKey), rt.Attachments...).Send(s.SystemConf)
 		}
-
-		primaryIncident.Subject = rt.Subject
-		primaryIncident.Id = int64(incidentID)
-		primaryIncident.Start = time.Now().UTC()
-
 		nots, aNots = buildNotificationPreviews(a, rt, primaryIncident, s.SystemConf)
 		data = s.Data(rh, primaryIncident, a, false)
 	}

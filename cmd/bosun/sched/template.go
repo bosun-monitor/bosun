@@ -195,6 +195,7 @@ func (s *Schedule) ExecuteAll(rh *RunHistory, a *conf.Alert, st *models.Incident
 	// subject
 	subject, err := s.ExecuteSubject(rh, a, st, false)
 	e(err, "Subject")
+	st.Subject = subject
 	// body
 	body, atts, err := s.ExecuteBody(rh, a, st, false)
 	e(err, "Body")
