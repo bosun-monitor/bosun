@@ -52,7 +52,7 @@ type IncidentSummaryView struct {
 	CurrentStatus          models.Status
 	WorstStatus            models.Status
 	LastAbnormalStatus     models.Status
-	LastAbnormalTime       int64
+	LastAbnormalTime       models.Epoch
 	Unevaluated            bool
 	NeedAck                bool
 	Silenced               bool

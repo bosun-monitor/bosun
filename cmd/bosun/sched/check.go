@@ -228,7 +228,7 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.E
 
 	if event.Status > models.StNormal {
 		incident.LastAbnormalStatus = event.Status
-		incident.LastAbnormalTime = event.Time.UTC().Unix()
+		incident.LastAbnormalTime = models.Epoch{Time: event.Time.UTC()}
 	}
 	if event.Status > incident.WorstStatus {
 		incident.WorstStatus = event.Status

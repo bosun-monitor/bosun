@@ -2,7 +2,9 @@ package models
 
 import (
 	"encoding/json"
+	"fmt"
 	"math"
+	"strconv"
 	"time"
 
 	"bosun.org/opentsdb"
@@ -37,7 +39,29 @@ type IncidentState struct {
 	WorstStatus   Status
 
 	LastAbnormalStatus Status
-	LastAbnormalTime   int64
+
+	LastAbnormalTime Epoch
+}
+
+type Epoch struct {
+	time.Time
+}
+
+func (t Epoch) MarshalJSON() ([]byte, error) {
+	return []byte(fmt.Sprintf("%v", t.UTC().Unix())), nil
+}
+
+func (t *Epoch) UnmarshalJSON(b []byte) (err error) {
+	if len(b) == 0 {
+		t.Time = time.Time{}
+		return
+	}
+	epoch, err := strconv.ParseInt(string(b), 10, 64)
+	if err != nil {
+		return err
+	}
+	t.Time = time.Unix(epoch, 0)
+	return
 }
 
 type RenderedTemplates struct {

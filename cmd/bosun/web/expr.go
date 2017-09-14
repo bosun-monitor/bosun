@@ -206,7 +206,7 @@ func procRule(t miniprofiler.Timer, ruleConf conf.RuleConfProvider, a *conf.Aler
 		primaryIncident.Start = time.Now().UTC()
 		primaryIncident.CurrentStatus = e.Status
 		primaryIncident.LastAbnormalStatus = e.Status
-		primaryIncident.LastAbnormalTime = time.Now().UTC().Unix()
+		primaryIncident.LastAbnormalTime = models.Epoch{Time: time.Now().UTC()}
 		func() {
 			defer func() {
 				if err := recover(); err != nil {

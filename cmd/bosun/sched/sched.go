@@ -673,7 +673,7 @@ type IncidentStatus struct {
 	Subject            string
 	Silenced           bool
 	LastAbnormalStatus models.Status
-	LastAbnormalTime   int64
+	LastAbnormalTime   models.Epoch
 	NeedsAck           bool
 }
 
