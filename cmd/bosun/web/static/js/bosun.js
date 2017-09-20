@@ -1277,6 +1277,9 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
                 if (val.Email) {
                     nots["Email " + n] = val.Email;
                 }
+                if (val.Print != "") {
+                    nots["Print " + n] = { Print: val.Print };
+                }
                 _(val.HTTP).each(function (hp) {
                     nots[hp.Method + " " + n] = hp;
                 });
