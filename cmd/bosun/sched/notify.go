@@ -41,14 +41,16 @@ type IncidentWithTemplates struct {
 }
 
 // Notify puts a rendered notification in the schedule's pendingNotifications queue
-func (s *Schedule) Notify(st *models.IncidentState, rt *models.RenderedTemplates, n *conf.Notification) {
-	it := &IncidentWithTemplates{}
-	it.IncidentState = st
-	it.RenderedTemplates = rt
+func (s *Schedule) Notify(st *models.IncidentState, rt *models.RenderedTemplates, n *conf.Notification) bool {
+	it := &IncidentWithTemplates{
+		IncidentState:     st,
+		RenderedTemplates: rt,
+	}
 	if s.pendingNotifications == nil {
 		s.pendingNotifications = make(map[*conf.Notification][]*IncidentWithTemplates)
 	}
 	s.pendingNotifications[n] = append(s.pendingNotifications[n], it)
+	return st.SetNotified(n.Name)
 }
 
 // CheckNotifications processes past notification events. It returns the next time a notification is needed.
@@ -87,7 +89,6 @@ func (s *Schedule) CheckNotifications() time.Time {
 				continue
 			}
 			st, err := s.DataAccess.State().GetLatestIncident(ak)
-
 			if err != nil {
 				slog.Error(err)
 				continue
@@ -100,7 +101,13 @@ func (s *Schedule) CheckNotifications() time.Time {
 				slog.Error(err)
 				continue
 			}
-			s.Notify(st, rt, n)
+			if s.Notify(st, rt, n) {
+				_, err = s.DataAccess.State().UpdateIncidentState(st)
+				if err != nil {
+					slog.Error(err)
+					continue
+				}
+			}
 		}
 	}
 	s.sendNotifications(silenced)
@@ -258,16 +265,13 @@ func (s *Schedule) groupActionNotifications(at models.ActionType, aks []models.A
 		if alert == nil || status == nil {
 			continue
 		}
-		var n *conf.Notifications
-		if status.WorstStatus == models.StWarning || alert.CritNotification == nil {
-			n = alert.WarnNotification
-		} else {
-			n = alert.CritNotification
+		nots := map[string]*conf.Notification{}
+		for _, name := range status.Notifications {
+			not := s.RuleConf.GetNotification(name)
+			if not != nil {
+				nots[name] = not
+			}
 		}
-		if n == nil {
-			continue
-		}
-		nots := n.Get(s.RuleConf, ak.Group())
 		for _, not := range nots {
 			if !not.RunOnActionType(at) {
 				continue

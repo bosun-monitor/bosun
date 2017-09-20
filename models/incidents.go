@@ -41,6 +41,22 @@ type IncidentState struct {
 	LastAbnormalStatus Status
 
 	LastAbnormalTime Epoch
+
+	// set of notifications we have already sent alerts to during the lifetime of the incident
+	Notifications []string
+}
+
+// SetNotified marks the notification name as "active" for this incident.
+// All future actions and unknown notifications will go to all "active" notifications
+// it returns true if the set was changed (and needs resaving)
+func (i *IncidentState) SetNotified(not string) bool {
+	for _, n := range i.Notifications {
+		if n == not {
+			return false
+		}
+	}
+	i.Notifications = append(i.Notifications, not)
+	return true
 }
 
 type Epoch struct {
