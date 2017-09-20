@@ -12,8 +12,11 @@ import (
 	"bosun.org/models"
 )
 
-var defaultActionNotificationSubjectTemplate *template.Template
-var defaultActionNotificationBodyTemplate *template.Template
+type defaultTemplates struct {
+	body, subject *template.Template
+}
+
+var actionDefaults defaultTemplates
 
 func init() {
 	subject := `{{$first := index .States 0}}{{$count := len .States}}
@@ -32,8 +35,8 @@ func init() {
 		</li>
 	{{end}}
 </ul>`
-	defaultActionNotificationSubjectTemplate = template.Must(template.New("subject").Parse(strings.Replace(subject, "\n", "", -1)))
-	defaultActionNotificationBodyTemplate = template.Must(template.New("body").Parse(body))
+	actionDefaults.subject = template.Must(template.New("subject").Parse(strings.Replace(subject, "\n", "", -1)))
+	actionDefaults.body = template.Must(template.New("body").Parse(body))
 }
 
 type actionNotificationContext struct {
@@ -73,7 +76,7 @@ func (n *Notification) RunOnActionType(at models.ActionType) bool {
 // Prepate an action notification, but don't send yet.
 func (n *Notification) PrepareAction(at models.ActionType, t *Template, c SystemConfProvider, states []*models.IncidentState, user, message string) *PreparedNotifications {
 	pn := &PreparedNotifications{}
-	// get template keys to use for things. Merge with default sets
+	// get template keys to use for actions. Merge with default sets
 	tks := n.ActionTemplateKeys[at].Combine(n.ActionTemplateKeys[models.ActionNone])
 	buf := &bytes.Buffer{}
 	render := func(key string, defaultTmpl *template.Template) (string, error) {
@@ -100,6 +103,6 @@ func (n *Notification) PrepareAction(at models.ActionType, t *Template, c System
 		}
 		return buf.String(), nil
 	}
-	n.prepareFromTemplateKeys(pn, *tks, render, defaultActionNotificationSubjectTemplate, defaultActionNotificationBodyTemplate)
+	n.prepareFromTemplateKeys(pn, *tks, render, actionDefaults)
 	return pn
 }

@@ -14,6 +14,8 @@ import (
 	"strings"
 	"time"
 
+	"bosun.org/collect"
+
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/conf/template"
 	"bosun.org/cmd/bosun/expr"
@@ -178,12 +180,17 @@ func (s *Schedule) ExecuteSubject(rh *RunHistory, a *conf.Alert, st *models.Inci
 	return d, nil
 }
 
-func (s *Schedule) ExecuteAll(rh *RunHistory, a *conf.Alert, st *models.IncidentState) (*models.RenderedTemplates, []error) {
+func (s *Schedule) ExecuteAll(rh *RunHistory, a *conf.Alert, st *models.IncidentState, recordTimes bool) (*models.RenderedTemplates, []error) {
 	ctx := func() *Context { return s.Data(rh, st, a, false) }
 	var errs []error
-	e := func(err error, t string) {
+	var timer func()
+	var category string
+	e := func(err error) {
+		if timer != nil {
+			timer()
+		}
 		if err != nil {
-			errs = append(errs, fmt.Errorf("%s: %s", t, err))
+			errs = append(errs, fmt.Errorf("%s: %s", category, err))
 		}
 	}
 	t := a.Template
@@ -192,13 +199,23 @@ func (s *Schedule) ExecuteAll(rh *RunHistory, a *conf.Alert, st *models.Incident
 	}
 	var err error
 
+	start := func(t string) func() {
+		category = t
+		if !recordTimes {
+			return nil
+		}
+		return collect.StartTimer("template.render", opentsdb.TagSet{"alert": a.Name, "type": t})
+	}
+
 	// subject
+	timer = start("subject")
 	subject, err := s.ExecuteSubject(rh, a, st, false)
-	e(err, "Subject")
+	e(err)
 	st.Subject = subject
 	// body
+	timer = start("body")
 	body, atts, err := s.ExecuteBody(rh, a, st, false)
-	e(err, "Body")
+	e(err)
 
 	rt := &models.RenderedTemplates{
 		Subject:     subject,
@@ -208,13 +225,15 @@ func (s *Schedule) ExecuteAll(rh *RunHistory, a *conf.Alert, st *models.Incident
 	}
 
 	if t.IsEmailSubjectDifferent() {
+		timer = start("emailsubject")
 		emailSubject, err := s.ExecuteSubject(rh, a, st, true)
-		e(err, "Email Subject")
+		e(err)
 		rt.EmailSubject = []byte(emailSubject)
 	}
 	if t.IsEmailBodyDifferent() {
+		timer = start("emailbody")
 		emailBody, atts, err := s.ExecuteBody(rh, a, st, true)
-		e(err, "Email Body")
+		e(err)
 		rt.EmailBody = []byte(emailBody)
 		rt.Attachments = atts
 	}
@@ -224,8 +243,9 @@ func (s *Schedule) ExecuteAll(rh *RunHistory, a *conf.Alert, st *models.Incident
 			continue
 		}
 		c := ctx()
+		timer = start(k)
 		rendered, _, err := s.executeTpl(v, c)
-		e(err, k)
+		e(err)
 		rt.Custom[k] = rendered
 	}
 	return rt, errs

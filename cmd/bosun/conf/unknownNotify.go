@@ -27,9 +27,7 @@ var defaultUnknownTemplate = &Template{
 	`)),
 	Subject: template.Must(template.New("subject").Parse(`{{.Name}}: {{.Group | len}} unknown alerts`)),
 }
-
-var defaultUnknownSubjectTemplate *template.Template
-var defaultUnknownBodyTemplate *template.Template
+var unknownDefaults defaultTemplates
 
 func init() {
 	subject := `{{.Name}}: {{.Group | len}} unknown alerts`
@@ -41,8 +39,8 @@ func init() {
 		<br>{{.}}
 	{{end}}
 `
-	defaultUnknownSubjectTemplate = template.Must(template.New("subject").Parse(subject))
-	defaultUnknownBodyTemplate = template.Must(template.New("body").Parse(body))
+	unknownDefaults.subject = template.Must(template.New("subject").Parse(subject))
+	unknownDefaults.body = template.Must(template.New("body").Parse(body))
 }
 
 func (n *Notification) PrepareUnknown(t *Template, c SystemConfProvider, name string, aks []models.AlertKey) *PreparedNotifications {
@@ -71,7 +69,7 @@ func (n *Notification) PrepareUnknown(t *Template, c SystemConfProvider, name st
 		return buf.String(), nil
 	}
 	tks := n.UnknownTemplateKeys
-	n.prepareFromTemplateKeys(pn, tks, render, defaultUnknownSubjectTemplate, defaultUnknownBodyTemplate)
+	n.prepareFromTemplateKeys(pn, tks, render, unknownDefaults)
 	return pn
 }
 
@@ -79,8 +77,7 @@ func (n *Notification) NotifyUnknown(t *Template, c SystemConfProvider, name str
 	n.PrepareUnknown(t, c, name, aks).Send(c)
 }
 
-var defaultUnknownMutltiSubjectTemplate *template.Template
-var defaultUnknownMultiBodyTemplate *template.Template
+var unknownMultiDefaults defaultTemplates
 
 type unknownMultiContext struct {
 	Time      time.Time
@@ -106,8 +103,8 @@ func init() {
 	{{ end }}
 	</ul>
 	`
-	defaultUnknownMutltiSubjectTemplate = template.Must(template.New("subject").Parse(subject))
-	defaultUnknownMultiBodyTemplate = template.Must(template.New("body").Parse(body))
+	unknownMultiDefaults.subject = template.Must(template.New("subject").Parse(subject))
+	unknownMultiDefaults.body = template.Must(template.New("body").Parse(body))
 }
 
 func (n *Notification) PrepareMultipleUnknowns(t *Template, c SystemConfProvider, groups map[string]models.AlertKeys) *PreparedNotifications {
@@ -136,7 +133,7 @@ func (n *Notification) PrepareMultipleUnknowns(t *Template, c SystemConfProvider
 		return buf.String(), nil
 	}
 	tks := n.UnknownMultiTemplateKeys
-	n.prepareFromTemplateKeys(pn, tks, render, defaultUnknownMutltiSubjectTemplate, defaultUnknownMultiBodyTemplate)
+	n.prepareFromTemplateKeys(pn, tks, render, unknownMultiDefaults)
 	return pn
 }
 
@@ -145,16 +142,16 @@ func (n *Notification) NotifyMultipleUnknowns(t *Template, c SystemConfProvider,
 }
 
 // code common to PrepareAction / PrepareUnknown / PrepareMultipleUnknowns
-func (n *Notification) prepareFromTemplateKeys(pn *PreparedNotifications, tks NotificationTemplateKeys, render func(string, *template.Template) (string, error), defSub, defBod *template.Template) {
+func (n *Notification) prepareFromTemplateKeys(pn *PreparedNotifications, tks NotificationTemplateKeys, render func(string, *template.Template) (string, error), defaults defaultTemplates) {
 	var body string
 	if len(n.Email) > 0 || n.Post != nil || tks.PostTemplate != "" {
-		if b, err := render(tks.BodyTemplate, defBod); err == nil {
+		if b, err := render(tks.BodyTemplate, defaults.body); err == nil {
 			body = b
 		}
 	}
 
 	if len(n.Email) > 0 {
-		if subject, err := render(tks.EmailSubjectTemplate, defSub); err == nil {
+		if subject, err := render(tks.EmailSubjectTemplate, defaults.subject); err == nil {
 			pn.Email = n.PrepEmail(subject, body, "", nil)
 		}
 	}

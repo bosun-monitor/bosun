@@ -328,11 +328,10 @@ func silencedOrIgnored(a *conf.Alert, event *models.Event, si *models.Silence) b
 }
 
 func (s *Schedule) executeTemplates(st *models.IncidentState, event *models.Event, a *conf.Alert, r *RunHistory) *models.RenderedTemplates {
-	// TODO: figure out how to time all executions only when scheduled run
 	if event.Status == models.StUnknown {
 		return nil
 	}
-	rt, errs := s.ExecuteAll(r, a, st)
+	rt, errs := s.ExecuteAll(r, a, st, true)
 	if len(errs) > 0 {
 		for _, err := range errs {
 			slog.Errorf("rendering templates for %s: %s", a.Name, err)

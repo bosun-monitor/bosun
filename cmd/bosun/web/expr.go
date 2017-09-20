@@ -215,7 +215,7 @@ func procRule(t miniprofiler.Timer, ruleConf conf.RuleConfProvider, a *conf.Aler
 					errs = append(errs, fmt.Errorf("panic rendering templates: %s", err))
 				}
 			}()
-			rt, errs = s.ExecuteAll(rh, a, primaryIncident)
+			rt, errs = s.ExecuteAll(rh, a, primaryIncident, false)
 		}()
 		for _, err := range errs {
 			warning = append(warning, err.Error())

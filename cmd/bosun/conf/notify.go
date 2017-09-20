@@ -55,6 +55,8 @@ func (p *PreparedNotifications) Send(c SystemConfProvider) (errs []error) {
 	return
 }
 
+// PrepareAlert does all of the work of selecting what content to send to which sources. It does not actually send any notifications,
+// but the returned object can be used to send them.
 func (n *Notification) PrepareAlert(rt *models.RenderedTemplates, ak string, attachments ...*models.Attachment) *PreparedNotifications {
 	pn := &PreparedNotifications{}
 	if len(n.Email) > 0 {

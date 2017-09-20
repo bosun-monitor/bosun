@@ -203,6 +203,13 @@ type Template struct {
 	Locator `json:"-"`
 }
 
+// The following helpers help us determine if a template needs to be rendered specially for emails.
+// If the user specifies an `emailSubject` or `emailBody` template key, we will automatically use that.
+// Else we use the subject/body keys, or whatever is explicitly pointed to in the notification
+//
+// If .IsEmail is used in the subject/body, we set that flag and re-render.
+// .IsEmail is really for backwards compatibility purposes only
+
 // IsEmailSubjectDifferent returns true if the template has an explicit emailSubject field, or if the subject uses .IsEmail
 func (t *Template) IsEmailSubjectDifferent() bool {
 	if t.CustomTemplates["emailSubject"] != nil {
@@ -233,7 +240,7 @@ func (t *Template) Get(name string) *template.Template {
 type NotificationTemplateKeys struct {
 	PostTemplate, GetTemplate string // templates to use for post/get urls
 	BodyTemplate              string // template to use for post body or email body. defaults to "body" for post and "emailBody" (if it exists) for email
-	EmailSubjectTemplate      string // tempalte to use for email subject. Default to "subject"
+	EmailSubjectTemplate      string // template to use for email subject. Default to "subject"
 }
 
 // Combine merges keys from another set, copying only those values that do not exist on the first set of template keys.
