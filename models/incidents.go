@@ -95,7 +95,6 @@ func (r *RenderedTemplates) Get(name string) string {
 	if t, ok := r.Custom[name]; ok {
 		return t
 	}
-	//TODO if not exist maybe panic? We should really validate that things will be where we are looking
 	return ""
 }
 

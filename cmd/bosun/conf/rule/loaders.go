@@ -303,8 +303,8 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 		}
 		// make sure each notification has it's needed template keys present in this alert's template
 		// also build lookup of which template keys need to be rendered at alert time, and which do not
-		check := func(not *conf.Notification) {
-			checkTemplateKey := func(templateKey string, msg string, alertTime bool) {
+		checkNotification := func(not *conf.Notification) {
+			checkSingleKey := func(templateKey string, msg string, alertTime bool) {
 				if templateKey == "" || templateKey == "body" || templateKey == "subject" {
 					return
 				}
@@ -317,26 +317,28 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 				errmsg := fmt.Sprintf("notification %s uses template key %s in %s, but template %s does not include it", not.Name, "%s", "%s", a.Template.Name)
 				c.errorf(errmsg, templateKey, msg)
 			}
-			checkTemplateKey(not.BodyTemplate, "body template", true)
-			checkTemplateKey(not.EmailSubjectTemplate, "email subject", true)
-			checkTemplateKey(not.GetTemplate, "get url", true)
-			checkTemplateKey(not.PostTemplate, "post url", true)
+			checkTplKeys := func(tks *conf.NotificationTemplateKeys, ctx string, alertTime bool) {
+				checkSingleKey(tks.BodyTemplate, ctx+" body template", alertTime)
+				checkSingleKey(tks.EmailSubjectTemplate, ctx+" email subject", alertTime)
+				checkSingleKey(tks.GetTemplate, ctx+" get url", alertTime)
+				checkSingleKey(tks.PostTemplate, ctx+" post url", alertTime)
+			}
+			checkTplKeys(&not.NotificationTemplateKeys, "alert", true)
+			checkTplKeys(&not.UnknownTemplateKeys, "unknown", false)
+			checkTplKeys(&not.UnknownMultiTemplateKeys, "unknownMulti", false)
 			for at, ntk := range not.ActionTemplateKeys {
 				key := at.String()
 				if at == models.ActionNone {
 					key = "default"
 				}
-				checkTemplateKey(ntk.BodyTemplate, fmt.Sprintf("%s body template", key), false)
-				checkTemplateKey(ntk.EmailSubjectTemplate, fmt.Sprintf("%s email subject", key), false)
-				checkTemplateKey(ntk.GetTemplate, fmt.Sprintf("%s get url", key), false)
-				checkTemplateKey(ntk.PostTemplate, fmt.Sprintf("%s post url", key), false)
+				checkTplKeys(ntk, key, false)
 			}
 		}
 		for _, not := range a.CritNotification.Notifications {
-			check(not)
+			checkNotification(not)
 		}
 		for _, not := range a.WarnNotification.Notifications {
-			check(not)
+			checkNotification(not)
 		}
 	}
 	// TODO: traverse all notifications for this alert and make sure requested bodyTemplate, getTemplate, postTemplate etc.. exist on this alert's template
