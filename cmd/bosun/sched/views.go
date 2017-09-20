@@ -105,8 +105,8 @@ func MakeIncidentSummary(c conf.RuleConfProvider, s SilenceTester, is *models.In
 		Silenced:               s(is.AlertKey) != nil,
 		Actions:                actions,
 		Events:                 eventSummaries,
-		WarnNotificationChains: conf.GetNotificationChains(c, warnNotifications),
-		CritNotificationChains: conf.GetNotificationChains(c, critNotifications),
+		WarnNotificationChains: conf.GetNotificationChains(warnNotifications),
+		CritNotificationChains: conf.GetNotificationChains(critNotifications),
 	}, nil
 }
 

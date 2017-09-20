@@ -263,12 +263,13 @@ func buildNotificationPreviews(a *conf.Alert, rt *models.RenderedTemplates, inci
 	previews := map[string]*conf.PreparedNotifications{}
 	actionPreviews := map[string]map[string]*conf.PreparedNotifications{}
 	nots := map[string]*conf.Notification{}
-	for name, not := range a.CritNotification.Notifications {
+	for name, not := range a.CritNotification.GetAllChained() {
 		nots[name] = not
 	}
-	for name, not := range a.WarnNotification.Notifications {
+	for name, not := range a.WarnNotification.GetAllChained() {
 		nots[name] = not
 	}
+
 	for name, not := range nots {
 		previews[name] = not.PrepareAlert(rt, string(incident.AlertKey), attachments...)
 		actions := map[string]*conf.PreparedNotifications{}

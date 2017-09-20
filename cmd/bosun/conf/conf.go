@@ -349,11 +349,30 @@ func (ns *Notifications) Get(c RuleConfProvider, tags opentsdb.TagSet) map[strin
 	return nots
 }
 
+// GetAllChained returns all unique notifications, including chains
+func (ns *Notifications) GetAllChained() map[string]*Notification {
+	m := map[string]*Notification{}
+	var walk func(not *Notification)
+	walk = func(not *Notification) {
+		if m[not.Name] != nil {
+			return
+		}
+		m[not.Name] = not
+		if not.Next != nil {
+			walk(not.Next)
+		}
+	}
+	for _, not := range ns.Notifications {
+		walk(not)
+	}
+	return m
+}
+
 // GetNotificationChains returns the warn or crit notification chains for a configured
 // alert. Each chain is a list of notification names. If a notification name
 // as already been seen in the chain it ends the list with the notification
 // name with a of "..." which indicates that the chain will loop.
-func GetNotificationChains(c RuleConfProvider, n map[string]*Notification) [][]string {
+func GetNotificationChains(n map[string]*Notification) [][]string {
 	chains := [][]string{}
 	for _, root := range n {
 		chain := []string{}

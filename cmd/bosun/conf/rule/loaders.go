@@ -334,14 +334,18 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 				checkTplKeys(ntk, key, false)
 			}
 		}
-		for _, not := range a.CritNotification.Notifications {
+		uniqNots := map[string]*conf.Notification{}
+		for n, not := range a.CritNotification.GetAllChained() {
+			uniqNots[n] = not
+		}
+		for n, not := range a.WarnNotification.GetAllChained() {
+			uniqNots[n] = not
+		}
+		for _, not := range uniqNots {
 			checkNotification(not)
 		}
-		for _, not := range a.WarnNotification.Notifications {
-			checkNotification(not)
-		}
+
 	}
-	// TODO: traverse all notifications for this alert and make sure requested bodyTemplate, getTemplate, postTemplate etc.. exist on this alert's template
 	a.ReturnType = ret
 	c.Alerts[name] = &a
 }
