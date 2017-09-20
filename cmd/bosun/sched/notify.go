@@ -102,7 +102,7 @@ func (s *Schedule) CheckNotifications() time.Time {
 				continue
 			}
 			if s.Notify(st, rt, n) {
-				_, err = s.DataAccess.State().UpdateIncidentState(st)
+				err = s.DataAccess.State().UpdateIncidentState(st)
 				if err != nil {
 					slog.Error(err)
 					continue
@@ -265,12 +265,26 @@ func (s *Schedule) groupActionNotifications(at models.ActionType, aks []models.A
 		if alert == nil || status == nil {
 			continue
 		}
+		// new way: incident keeps track of which notifications it has alerted.
 		nots := map[string]*conf.Notification{}
 		for _, name := range status.Notifications {
 			not := s.RuleConf.GetNotification(name)
 			if not != nil {
 				nots[name] = not
 			}
+		}
+		if len(nots) == 0 {
+			// legacy behavior. Infer notifications from conf:
+			var n *conf.Notifications
+			if status.WorstStatus == models.StWarning || alert.CritNotification == nil {
+				n = alert.WarnNotification
+			} else {
+				n = alert.CritNotification
+			}
+			if n == nil {
+				continue
+			}
+			nots = n.Get(s.RuleConf, ak.Group())
 		}
 		for _, not := range nots {
 			if !not.RunOnActionType(at) {
