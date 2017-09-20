@@ -1,6 +1,7 @@
 package collectors
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -8,6 +9,7 @@ import (
 
 	"github.com/mhenderson-so/azure-ea-billing"
 
+	"bosun.org/cmd/scollector/conf"
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
 )
@@ -21,23 +23,27 @@ const (
 	priceDesc  = "Azure price sheet data for Enterprise Agreement services"
 )
 
-func AzureEABilling(ea uint32, key string, logBilling bool) error {
-	if ea > 0 && key != "" {
-		azBillConf = azureEABillingConfig{
-			AZEABillingConfig: azureeabilling.Config{
-				EA:     ea,
-				APIKey: key,
-			},
-			LogBillingDetails: logBilling,
+func init() {
+	registerInit(startAzureEABilling)
+}
+
+func startAzureEABilling(c *conf.Conf) {
+	for _, config := range c.AzureEA {
+		if config.EANumber > 0 && config.APIKey != "" {
+			azBillConf = azureEABillingConfig{
+				AZEABillingConfig: azureeabilling.Config{
+					EA:     config.EANumber,
+					APIKey: config.APIKey,
+				},
+				CollectorConfig: config,
+			}
+
+			collectors = append(collectors, &IntervalCollector{
+				F:        c_azureeabilling,
+				Interval: 1 * time.Hour,
+			})
 		}
-
-		collectors = append(collectors, &IntervalCollector{
-			F:        c_azureeabilling,
-			Interval: 1 * time.Hour,
-		})
 	}
-
-	return nil
 }
 
 func c_azureeabilling() (opentsdb.MultiDataPoint, error) {
@@ -137,8 +143,38 @@ func processAzureEADetailRow(p *azureeabilling.DetailRow, md *opentsdb.MultiData
 		tags["resource"] = resourceString
 	}
 
+	//Only log resource group details if they are enabled in the config
+	if azBillConf.CollectorConfig.LogResourceDetails {
+		resourcLocation, _ := opentsdb.Clean(p.ResourceLocation)
+		resouceGroup, _ := opentsdb.Clean(p.ResourceGroup)
+		if resouceGroup != "" {
+			tags["resoucegroup"] = strings.ToLower(resouceGroup)
+		}
+		if resourcLocation != "" {
+			tags["resourcelocation"] = strings.ToLower(resourcLocation)
+		}
+	}
+
+	//Only log extra Azure tags if enabled in the config
+	if azBillConf.CollectorConfig.LogExtraTags {
+		if p.Tags != "" {
+			customTags := make(map[string]string)
+			json.Unmarshal([]byte(p.Tags), &customTags)
+			for t, v := range customTags {
+				if t[:6] == "hidden" {
+					continue
+				}
+				value, _ := opentsdb.Clean(v)
+				if value == "" {
+					continue
+				}
+				tags[strings.ToLower(t)] = strings.ToLower(value)
+			}
+		}
+	}
+
 	//Only log billing details if they are enabled in the config
-	if azBillConf.LogBillingDetails {
+	if azBillConf.CollectorConfig.LogBillingDetails {
 		if p.CostCenter != "" {
 			tags["costcenter"] = strings.ToLower(p.CostCenter)
 		}
@@ -189,6 +225,6 @@ func convertAzurePriceToString(costInCents int) string {
 }
 
 type azureEABillingConfig struct {
-	LogBillingDetails bool
+	CollectorConfig   conf.AzureEA
 	AZEABillingConfig azureeabilling.Config
 }
