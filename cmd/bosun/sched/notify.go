@@ -85,6 +85,7 @@ func (s *Schedule) CheckNotifications() time.Time {
 				}
 			}
 			if unevaluated {
+				// look at it again in a minute
 				s.QueueNotification(ak, n, t.Add(time.Minute))
 				continue
 			}
@@ -162,7 +163,7 @@ func (s *Schedule) sendNotifications(silenced SilenceTester) {
 				s.notify(st.IncidentState, st.RenderedTemplates, n)
 			}
 			if n.Next != nil {
-				s.QueueNotification(ak, n.Next, utcNow())
+				s.QueueNotification(ak, n.Next, utcNow().Add(n.Timeout))
 			}
 		}
 	}
@@ -224,8 +225,8 @@ func (s *Schedule) notify(st *models.IncidentState, rt *models.RenderedTemplates
 
 // QueueNotification persists a notification to the datastore to be sent in the future. This happens when
 // there are notification chains or an alert is unevaluated due to a dependency.
-func (s *Schedule) QueueNotification(ak models.AlertKey, n *conf.Notification, started time.Time) error {
-	return s.DataAccess.Notifications().InsertNotification(ak, n.Name, started.Add(n.Timeout))
+func (s *Schedule) QueueNotification(ak models.AlertKey, n *conf.Notification, time time.Time) error {
+	return s.DataAccess.Notifications().InsertNotification(ak, n.Name, time)
 }
 
 func (s *Schedule) ActionNotify(at models.ActionType, user, message string, aks []models.AlertKey) error {
