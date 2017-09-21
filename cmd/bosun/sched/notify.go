@@ -102,7 +102,7 @@ func (s *Schedule) CheckNotifications() time.Time {
 				continue
 			}
 			if s.Notify(st, rt, n) {
-				err = s.DataAccess.State().UpdateIncidentState(st)
+				_, err = s.DataAccess.State().UpdateIncidentState(st)
 				if err != nil {
 					slog.Error(err)
 					continue
