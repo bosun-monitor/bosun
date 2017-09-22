@@ -66,19 +66,20 @@ type Conf struct {
 	// MetricPrefix prepended to all metrics path
 	MetricPrefix string
 
-	HAProxy        []HAProxy
-	SNMP           []SNMP
-	MIBS           map[string]MIB
-	ICMP           []ICMP
-	Vsphere        []Vsphere
-	AWS            []AWS
-	AzureEA        []AzureEA
-	Process        []ProcessParams
-	SystemdService []ServiceParams
-	ProcessDotNet  []ProcessDotNet
-	HTTPUnit       []HTTPUnit
-	Riak           []Riak
-	Github         []Github
+	HAProxy          []HAProxy
+	SNMP             []SNMP
+	MIBS             map[string]MIB
+	ICMP             []ICMP
+	Vsphere          []Vsphere
+	AWS              []AWS
+	AzureEA          []AzureEA
+	Process          []ProcessParams
+	SystemdService   []ServiceParams
+	ProcessDotNet    []ProcessDotNet
+	HTTPUnit         []HTTPUnit
+	Riak             []Riak
+	Github           []Github
+	GithubEnterprise []GithubEnterprise
 	// ElasticIndexFilters takes regular expressions and excludes indicies that
 	// match those filters from being monitored for metrics in the elastic.indices
 	// namespace
@@ -226,6 +227,11 @@ type RabbitMQ struct {
 type Github struct {
 	Repo  string
 	Token string
+}
+
+type GithubEnterprise struct {
+	Instance      string
+	SetupPassword string
 }
 
 type Cadvisor struct {

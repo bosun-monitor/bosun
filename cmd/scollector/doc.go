@@ -412,6 +412,16 @@ ConnectionString and Role, which are the same as using sqlplus.
 	    ConnectionString = "/@localnodevip/sid"
 	    Role = "sysdba"
 
+GitHubEnterprise (array of tables, keys are Instance and SetupPassword): GitHub
+Enterprise instances you want to monitor. If you have a replicated setup, you may
+want to have one entry per instance, so you can monitor what each instance sees.
+
+	[[GitHubEnterprise]]
+		Instance = "https://github01.ad.example.com:8443"
+		SetupPassword = "mysupersecurepassword"
+	[[GitHubEnterprise]]
+		Instance = "https://github02.ad.example.com:8443"
+		SetupPassword = "mysupersecurepassword"
 
 Windows
 
