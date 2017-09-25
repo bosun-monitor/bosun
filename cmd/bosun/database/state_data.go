@@ -67,6 +67,8 @@ type StateDataAccess interface {
 
 	SetRenderedTemplates(incidentId int64, rt *models.RenderedTemplates) error
 	GetRenderedTemplates(incidentId int64) (*models.RenderedTemplates, error)
+	ScanRenderedTemplates(chan<- *models.IncidentState) error // scan the rendered templates get incident for each, and send on channel.
+	DeleteRenderedTemplates(incidentIds []int64) error
 
 	Forget(ak models.AlertKey) error
 	SetUnevaluated(ak models.AlertKey, uneval bool) error
@@ -101,6 +103,86 @@ func (d *dataAccess) GetRenderedTemplates(incidentId int64) (*models.RenderedTem
 		return nil, slog.Wrap(err)
 	}
 	return renderedT, nil
+}
+
+func (d *dataAccess) ScanRenderedTemplates(ch chan<- *models.IncidentState) error {
+	conn := d.Get()
+	defer conn.Close()
+
+	//ledis uses XSCAN cursor "KV" MATCH foo
+	//redis uses SCAN cursor MATCH foo
+	cmd := "SCAN"
+	args := []interface{}{"0", "MATCH", "renderedTemplatesById*"}
+	cursorIdx := 0
+	if !d.isRedis {
+		cmd = "XSCAN"
+		args = append([]interface{}{"KV"}, args...)
+		cursorIdx = 1
+	}
+	incident := &models.IncidentState{}
+	for {
+		vals, err := redis.Values(conn.Do(cmd, args...))
+		if err != nil {
+			return slog.Wrap(err)
+		}
+		cursor, err := redis.String(vals[0], nil)
+		if err != nil {
+			return slog.Wrap(err)
+		}
+		args[cursorIdx] = cursor
+		keys, err := redis.Strings(vals[1], nil)
+		if err != nil {
+			return slog.Wrap(err)
+		}
+		for _, k := range keys {
+			parts := strings.Split(k, ":")
+			if len(parts) != 2 {
+				continue
+			}
+			incidentID, err := strconv.ParseInt(parts[1], 10, 64)
+			if err != nil {
+				continue
+			}
+			if _, err = d.getIncident(incidentID, conn, incident); err != nil {
+				if strings.HasSuffix(err.Error(), "nil returned") {
+					// todo: incident is not there. Probably an orphan.
+					slog.Infof("ORPHANED RENDERED TEMPLATE: %s", k)
+				} else {
+					return slog.Wrap(err)
+				}
+			}
+			ch <- incident
+		}
+		if cursor == "" || cursor == "0" {
+			break
+		}
+	}
+	return nil
+}
+
+func (d *dataAccess) DeleteRenderedTemplates(incidentIds []int64) error {
+	conn := d.Get()
+	defer conn.Close()
+	const batchSize = 1000
+	args := make([]interface{}, 0, batchSize)
+	for len(incidentIds) > 0 {
+		size := len(incidentIds)
+		if size > batchSize {
+			size = batchSize
+		}
+		thisBatch := incidentIds[:size]
+		incidentIds = incidentIds[size:]
+		args = args[:0]
+		for _, id := range thisBatch {
+			args = append(args, renderedTemplatesKey(id))
+		}
+		fmt.Println("DELETING", len(thisBatch))
+		_, err := conn.Do("DEL", args...)
+		if err != nil {
+			return slog.Wrap(err)
+		}
+	}
+	return nil
 }
 
 func (d *dataAccess) State() StateDataAccess {
@@ -155,7 +237,7 @@ func (d *dataAccess) getLatestIncident(ak models.AlertKey, conn redis.Conn) (*mo
 		}
 		return nil, slog.Wrap(err)
 	}
-	inc, err := d.getIncident(id, conn)
+	inc, err := d.getIncident(id, conn, nil)
 	if err != nil {
 		return nil, slog.Wrap(err)
 	}
@@ -239,12 +321,14 @@ func (d *dataAccess) incidentMultiGet(conn redis.Conn, ids []int64) ([]*models.I
 	return results, nil
 }
 
-func (d *dataAccess) getIncident(incidentId int64, conn redis.Conn) (*models.IncidentState, error) {
+func (d *dataAccess) getIncident(incidentId int64, conn redis.Conn, state *models.IncidentState) (*models.IncidentState, error) {
 	b, err := redis.Bytes(conn.Do("GET", incidentStateKey(incidentId)))
 	if err != nil {
 		return nil, slog.Wrap(err)
 	}
-	state := &models.IncidentState{}
+	if state == nil {
+		state = &models.IncidentState{}
+	}
 	if err = json.Unmarshal(b, state); err != nil {
 		return nil, slog.Wrap(err)
 	}
@@ -254,7 +338,7 @@ func (d *dataAccess) getIncident(incidentId int64, conn redis.Conn) (*models.Inc
 func (d *dataAccess) GetIncidentState(incidentId int64) (*models.IncidentState, error) {
 	conn := d.Get()
 	defer conn.Close()
-	return d.getIncident(incidentId, conn)
+	return d.getIncident(incidentId, conn, nil)
 }
 
 func (d *dataAccess) UpdateIncidentState(s *models.IncidentState) (int64, error) {

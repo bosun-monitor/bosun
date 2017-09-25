@@ -72,6 +72,8 @@ type SystemConfProvider interface {
 
 	GetAuthConf() *AuthConf
 
+	KeepTemplatesForDays() int
+
 	// Contexts
 	GetTSDBContext() opentsdb.Context
 	GetGraphiteContext() graphite.Context
