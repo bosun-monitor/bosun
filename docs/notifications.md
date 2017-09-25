@@ -167,4 +167,26 @@ notification slack {
 }
 ```
 
+## Unknown Notifications
+
+When an alert goes "unknown", it will send a special notification to let you know. Similar to actions, these notifications are rendered on-demand, with a special context. Bosun attempts to group these appropriately to reduce spam. The context has:
+
+- `{{.Time}}`, a timestamp of when the unknown event occurred.
+- `{{.Name}}`, bosun's description of the tags or alert name for the grouping.
+- `{{.Group}}`, list of alert keys that are unknown.
+
+If you want to control the way bosun groups unknowns, you can set the `unknownMinGroupSize` value in a notification to override bosun's global default value. This controls the number of alert keys that need to share a common tag in order for us to consider them "similar". You can set this to 0 to never group unknowns together into groups, and send a notification for each alert key.
+
+Bosun also has a threshold for how many unknown notifications it will send at all in a single batch of notifications. This can be overridden in a notification with the `unknownThreshold` value. Setting to 0 will again remove the limit. Once the limit is reached, the final batch will switch over to using the "multiple unknown groups" templates, which use a similar context, except `{{.Groups}}` is now a lookup of group names to a list of alert keys.
+
+You can define which template keys a notification will use for unknown notifications by setting
+
+`unknownBody`, `unknownPost`, `unknownGet`, and `unknownEmailSubject`
+
+or
+
+`unknownMultiBody`, `unknownMultiPost`, `unknownMultiGet`, and `unknownMultiEmailSubject`.
+
+If a template is not set as needed by the notification type, a built-in default template will be used.
+
 {% endraw %}
