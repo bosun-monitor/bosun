@@ -361,6 +361,7 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 		Name:               name,
 		RunOnActions:       "all",
 		ActionTemplateKeys: map[models.ActionType]*conf.NotificationTemplateKeys{},
+		GroupActions:       true,
 	}
 	n.Text = s.RawText
 	n.Locator = newSectionLocator(s)
@@ -420,6 +421,14 @@ func (c *Conf) loadNotification(s *parse.SectionNode) {
 		case "runOnActions":
 			// todo: validate all/true, none/false, or comma seperated action shortNames
 			n.RunOnActions = v
+		case "groupActions":
+			if v == "false" {
+				n.GroupActions = false
+			} else if v == "true" {
+				n.GroupActions = true
+			} else {
+				c.errorf("invalid boolean value %s", v)
+			}
 		case "unknownMinGroupSize":
 			i, err := strconv.Atoi(v)
 			if err != nil {

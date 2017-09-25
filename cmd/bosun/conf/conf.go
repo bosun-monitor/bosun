@@ -296,6 +296,7 @@ type Notification struct {
 	Timeout      time.Duration
 	ContentType  string
 	RunOnActions string
+	GroupActions bool
 
 	UnknownMinGroupSize *int // nil means use global defaults. 0 means no-grouping at all.
 	UnknownThreshold    *int // nil means use global defaults. 0 means no limit

@@ -235,11 +235,18 @@ func (s *Schedule) ActionNotify(at models.ActionType, user, message string, aks 
 		return err
 	}
 	for groupKey, states := range groupings {
-		incidents := []*models.IncidentState{}
-		for _, state := range states {
-			incidents = append(incidents, state)
+		not := groupKey.notification
+		if not.GroupActions == false {
+			for _, state := range states {
+				not.NotifyAction(at, groupKey.template, s.SystemConf, []*models.IncidentState{state}, user, message)
+			}
+		} else {
+			incidents := []*models.IncidentState{}
+			for _, state := range states {
+				incidents = append(incidents, state)
+			}
+			not.NotifyAction(at, groupKey.template, s.SystemConf, incidents, user, message)
 		}
-		groupKey.notification.NotifyAction(at, groupKey.template, s.SystemConf, incidents, user, message)
 	}
 	return nil
 }
