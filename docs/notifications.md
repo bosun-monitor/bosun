@@ -142,7 +142,7 @@ If you do not override anything in the notification, bosun will use its' own bui
 
 `action{TemplateType}{ActionType?}`
 
-Where "templateType" is one of `Body`, `Get`, `Post`, or `EmailSubject`, and "ActionType" if present, is one of `Ack`, `Close`, `Forget`, `ForceClose`, `Purge`, `Note`, `DelayedClose`, or `CancelClose`.
+Where "templateType" is one of `Body`, `Get`, `Post`, or `EmailSubject`, and "ActionType" if present, is one of `Ack`, `Close`, `Forget`, `ForceClose`, `Purge`, `Note`, `DelayedClose`, or `CancelClose`. If Action Type is not specified, it will apply to all actions types, unless specifically overridden.
 
 For example, setting `actionBody = keyX`, will use the `keyX` template for all action notification bodies for all action types, but `actionBodyAck = keyY`, will use the `keyY` template only for acknowledge actions.
 
