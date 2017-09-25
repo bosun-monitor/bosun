@@ -51,20 +51,50 @@ Any other template key will may be defined and will be used by any notifications
 
 #### Template inheritance
 
-A template may `inherit` another template, which copies all of the key/value pairs into the child template. This is useful if you have some set of common formatting templates that may be shared among multiple
-templates:
+A template may `inherit` another template, which copies all of the key/value pairs into the child template. This is useful if you have some set of common formatting templates that may be shared among multiple templates. An example:
 
-```
-template slack { 
-    slackBody = {"text": {{.Subject}} }
+~~~
+# base template for all slack notifications. Creates json message using alert subject.
+template slack {
+  slackBody = `{
+  "text": "{{.Subject}} <{{.Incident}}|view in bosun>",
+  "username": "bosun",
+  "icon_url": "https://i.imgur.com/ogj0wkj.png",
+}`
 }
-```
+
+template high_cpu {
+    body = {{.Subject}}
+    subject = `High CPU on {{.Group.host}}`
+    # inherit slack template
+    inherit = slack
+}
+
+notification slack {
+  post = ${sys.SLACK_URL}
+  #select slack body template
+  bodyTemplate = slackBody
+}
+
+alert high_cpu {
+  crit = avg(series("host=server01", epoch(), 1))
+  template = high_cpu
+  critNotification = slack
+}
+~~~
 
 #### Text vs HTML templates
 
-There are a few situations where it matters if we use *plain text* templates, or *html* templates. Html templates perform some extra sanitization for when we expect to display the content, and they also perform css-inlining to be more compatible with email clients.
+There are a few situations where it matters if we use *plain text* templates, or *html* templates. Html templates perform some extra sanitization for when we expect to display the content, and they also perform css-inlining to be more compatible with email clients. The rules are simple:
+
+1. `body` and `emailBody` are always rendered as html templates.
+1. Any custom template key ending with `HTML` (like `myCustomHTML`) will be rendered as html.
+1. Anything else (including `subject`) will be rendered as plain-text.
 
 ### Notifications
+
+A notification's job is to choose what content gets sent, and where to send it. It is common to make a unique notification for each unique email address or list that bosun sends to, and for each url/api it calls. 
+
 
 
 
