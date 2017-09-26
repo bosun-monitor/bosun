@@ -49,9 +49,20 @@ bosunApp.directive('tsAckGroup', ['$location', '$timeout', ($location: ng.ILocat
 				scope.schedule.checkIdx = idx;
 				scope.update();
 			};
-			scope.select = (checked: boolean) => {
+			scope.select = (status: string) => {
 				for (var i = 0; i < scope.groups.length; i++) {
-					scope.groups[i].checked = checked;
+					switch(status) {
+					case 'all':
+						scope.groups[i].checked = true;
+						break;
+					case 'none':
+						scope.groups[i].checked = false;
+						break;
+					default:
+						if (scope.groups[i].CurrentStatus == status) {
+							scope.groups[i].checked = true;
+						}
+					}
 				}
 				scope.update();
 			};

@@ -11,8 +11,12 @@
 		<span class="pull-right">
 			<br>
 			select
-			<button class="btn btn-default btn-xs" ng-click="select(true)">all</button>
-			<button class="btn btn-default btn-xs" ng-click="select(false)">none</button>
+			<button class="btn btn-default btn-xs" ng-click="select('all')">all</button>
+			<button class="btn btn-default btn-xs" ng-click="select('normal')">normal</button>
+			<button class="btn btn-default btn-xs" ng-click="select('warning')">warning</button>
+			<button class="btn btn-default btn-xs" ng-click="select('critical')">critical</button>
+			<button class="btn btn-default btn-xs" ng-click="select('unknown')">unknown</button>
+			<button class="btn btn-default btn-xs" ng-click="select('none')">none</button>
 		</span>
 		<span class="pull-right with-selected" ng-show="anySelected">
 			with selected
