@@ -109,7 +109,7 @@ func haproxyFetch(user, pwd, tier, url string) (opentsdb.MultiDataPoint, error) 
 				if value == "" {
 					continue
 				}
-				v, ok := haproxyCheckStatus[value]
+				v, ok := haproxyCheckStatus[strings.TrimPrefix(value, "* ")]
 				if !ok {
 					return nil, fmt.Errorf("unknown check status %v", value)
 				}
