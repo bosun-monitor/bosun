@@ -47,9 +47,6 @@ if [ "$GOVETRESULT" != 0 ]; then
 	BUILDMSG="${BUILDMSG}go vet found problems. "
 fi
 
-echo -e "\nGetting esc"
-go get -u -v github.com/mjibson/esc
-
 echo -e "\nRunning go generate bosun.org/..."
 go generate $PKGS
 GOGENERATERESULT=$?
