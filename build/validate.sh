@@ -7,7 +7,7 @@ export GO15VENDOREXPERIMENT=1
 O=bosun-monitor
 R=bosun
 ORIGINALGOOS=$GOOS
-SHA=`git rev-parse ${TRAVIS_COMMIT}^2`
+SHA=${TRAVIS_COMMIT}
 BUILDMSG=""
 if [ "$TRAVIS" != '' ]; then
 	setStatus -o $O -r $R -s pending -c bosun -d="Running validation build in travis" -sha=$SHA
