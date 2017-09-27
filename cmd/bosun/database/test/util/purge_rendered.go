@@ -32,7 +32,7 @@ func main() {
 			if st.Open {
 				continue
 			}
-			if len(st.Events) == 0 || st.Events[len(st.Events)-1].Time.Before(earliestOk) {
+			if len(st.Actions) == 0 || st.Actions[len(st.Actions)-1].Time.Before(earliestOk) {
 				ids = append(ids, st.Id)
 			} else {
 				continue

@@ -119,7 +119,6 @@ func (d *dataAccess) ScanRenderedTemplates(ch chan<- *models.IncidentState) erro
 		args = append([]interface{}{"KV"}, args...)
 		cursorIdx = 1
 	}
-	incident := &models.IncidentState{}
 	for {
 		vals, err := redis.Values(conn.Do(cmd, args...))
 		if err != nil {
@@ -143,13 +142,12 @@ func (d *dataAccess) ScanRenderedTemplates(ch chan<- *models.IncidentState) erro
 			if err != nil {
 				continue
 			}
-			if _, err = d.getIncident(incidentID, conn, incident); err != nil {
-				if strings.HasSuffix(err.Error(), "nil returned") {
-					// todo: incident is not there. Probably an orphan.
-					slog.Infof("ORPHANED RENDERED TEMPLATE: %s", k)
-				} else {
-					return slog.Wrap(err)
-				}
+			incident, err := d.getIncident(incidentID, conn)
+			if err != nil && !strings.HasSuffix(err.Error(), "nil returned") {
+				return slog.Wrap(err)
+			}
+			if err != nil {
+				// ORPHAN!!!
 			}
 			ch <- incident
 		}
@@ -237,7 +235,7 @@ func (d *dataAccess) getLatestIncident(ak models.AlertKey, conn redis.Conn) (*mo
 		}
 		return nil, slog.Wrap(err)
 	}
-	inc, err := d.getIncident(id, conn, nil)
+	inc, err := d.getIncident(id, conn)
 	if err != nil {
 		return nil, slog.Wrap(err)
 	}
@@ -321,14 +319,12 @@ func (d *dataAccess) incidentMultiGet(conn redis.Conn, ids []int64) ([]*models.I
 	return results, nil
 }
 
-func (d *dataAccess) getIncident(incidentId int64, conn redis.Conn, state *models.IncidentState) (*models.IncidentState, error) {
+func (d *dataAccess) getIncident(incidentId int64, conn redis.Conn) (*models.IncidentState, error) {
 	b, err := redis.Bytes(conn.Do("GET", incidentStateKey(incidentId)))
 	if err != nil {
 		return nil, slog.Wrap(err)
 	}
-	if state == nil {
-		state = &models.IncidentState{}
-	}
+	state := &models.IncidentState{}
 	if err = json.Unmarshal(b, state); err != nil {
 		return nil, slog.Wrap(err)
 	}
@@ -338,7 +334,7 @@ func (d *dataAccess) getIncident(incidentId int64, conn redis.Conn, state *model
 func (d *dataAccess) GetIncidentState(incidentId int64) (*models.IncidentState, error) {
 	conn := d.Get()
 	defer conn.Close()
-	return d.getIncident(incidentId, conn, nil)
+	return d.getIncident(incidentId, conn)
 }
 
 func (d *dataAccess) UpdateIncidentState(s *models.IncidentState) (int64, error) {
@@ -464,8 +460,10 @@ func (d *dataAccess) Forget(ak models.AlertKey) error {
 			return slog.Wrap(err)
 		}
 		for _, id := range ids {
-
 			if _, err = conn.Do("DEL", incidentStateKey(id)); err != nil {
+				return slog.Wrap(err)
+			}
+			if _, err = conn.Do("DEL", renderedTemplatesKey(id)); err != nil {
 				return slog.Wrap(err)
 			}
 		}
