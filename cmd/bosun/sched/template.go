@@ -194,8 +194,10 @@ func (s *Schedule) ExecuteAll(rh *RunHistory, a *conf.Alert, st *models.Incident
 		}
 	}
 	t := a.Template
+	rt := &models.RenderedTemplates{}
+
 	if t == nil {
-		return nil, nil
+		return rt, nil
 	}
 	var err error
 
@@ -212,17 +214,13 @@ func (s *Schedule) ExecuteAll(rh *RunHistory, a *conf.Alert, st *models.Incident
 	subject, err := s.ExecuteSubject(rh, a, st, false)
 	e(err)
 	st.Subject = subject
+	rt.Subject = subject
 	// body
 	timer = start("body")
 	body, atts, err := s.ExecuteBody(rh, a, st, false)
 	e(err)
-
-	rt := &models.RenderedTemplates{
-		Subject:     subject,
-		Body:        body,
-		Custom:      map[string]string{},
-		Attachments: atts,
-	}
+	rt.Body = body
+	rt.Attachments = atts
 
 	if t.IsEmailSubjectDifferent() {
 		timer = start("emailsubject")
@@ -237,6 +235,7 @@ func (s *Schedule) ExecuteAll(rh *RunHistory, a *conf.Alert, st *models.Incident
 		rt.EmailBody = []byte(emailBody)
 		rt.Attachments = atts
 	}
+	rt.Custom = map[string]string{}
 	for k, v := range a.AlertTemplateKeys {
 		// emailsubject/body get handled specially above
 		if k == "emailBody" || k == "emailSubject" || k == "body" || k == "subject" {

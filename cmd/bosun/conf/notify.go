@@ -95,7 +95,7 @@ func (n *Notification) PrepareAlert(rt *models.RenderedTemplates, ak string, att
 
 // NotifyAlert triggers Email/HTTP/Print actions for the Notification object. Called when an alert is first triggered, or on escalations.
 func (n *Notification) NotifyAlert(rt *models.RenderedTemplates, c SystemConfProvider, ak string, attachments ...*models.Attachment) {
-	n.PrepareAlert(rt, ak, attachments...).Send(c)
+	go n.PrepareAlert(rt, ak, attachments...).Send(c)
 }
 
 type PreparedHttp struct {

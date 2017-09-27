@@ -167,6 +167,7 @@ func (s *Schedule) sendNotifications(silenced SilenceTester) {
 			}
 		}
 	}
+
 }
 
 // sendUnknownNotifications processes the schedule's pendingUnknowns queue. It puts unknowns into groups

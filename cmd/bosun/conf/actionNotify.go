@@ -39,7 +39,7 @@ func init() {
 	actionDefaults.body = template.Must(template.New("body").Parse(body))
 }
 
-type actionNotificationContext struct {
+type ActionNotificationContext struct {
 	States     []*models.IncidentState
 	User       string
 	Message    string
@@ -47,7 +47,7 @@ type actionNotificationContext struct {
 	makeLink   func(string, *url.Values) string
 }
 
-func (a actionNotificationContext) IncidentLink(i int64) string {
+func (a ActionNotificationContext) IncidentLink(i int64) string {
 	return a.makeLink("/incident", &url.Values{
 		"id": []string{fmt.Sprint(i)},
 	})
@@ -55,7 +55,7 @@ func (a actionNotificationContext) IncidentLink(i int64) string {
 
 // NotifyAction should be used for action notifications.
 func (n *Notification) NotifyAction(at models.ActionType, t *Template, c SystemConfProvider, states []*models.IncidentState, user, message string) {
-	n.PrepareAction(at, t, c, states, user, message).Send(c)
+	go n.PrepareAction(at, t, c, states, user, message).Send(c)
 }
 
 func (n *Notification) RunOnActionType(at models.ActionType) bool {
@@ -87,7 +87,7 @@ func (n *Notification) PrepareAction(at models.ActionType, t *Template, c System
 			key = "default"
 		}
 		buf.Reset()
-		ctx := actionNotificationContext{
+		ctx := ActionNotificationContext{
 			States:     states,
 			User:       user,
 			Message:    message,

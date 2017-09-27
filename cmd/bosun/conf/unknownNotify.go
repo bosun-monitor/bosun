@@ -74,7 +74,7 @@ func (n *Notification) PrepareUnknown(t *Template, c SystemConfProvider, name st
 }
 
 func (n *Notification) NotifyUnknown(t *Template, c SystemConfProvider, name string, aks []models.AlertKey) {
-	n.PrepareUnknown(t, c, name, aks).Send(c)
+	go n.PrepareUnknown(t, c, name, aks).Send(c)
 }
 
 var unknownMultiDefaults defaultTemplates
@@ -143,14 +143,9 @@ func (n *Notification) NotifyMultipleUnknowns(t *Template, c SystemConfProvider,
 
 // code common to PrepareAction / PrepareUnknown / PrepareMultipleUnknowns
 func (n *Notification) prepareFromTemplateKeys(pn *PreparedNotifications, tks NotificationTemplateKeys, render func(string, *template.Template) (string, error), defaults defaultTemplates) {
-	var body string
-	if len(n.Email) > 0 || n.Post != nil || tks.PostTemplate != "" {
-		if b, err := render(tks.BodyTemplate, defaults.body); err == nil {
-			body = b
-		}
-	}
 
-	if len(n.Email) > 0 {
+	if len(n.Email) > 0 || n.Post != nil || tks.PostTemplate != "" {
+		body, _ := render(tks.BodyTemplate, defaults.body)
 		if subject, err := render(tks.EmailSubjectTemplate, defaults.subject); err == nil {
 			pn.Email = n.PrepEmail(subject, body, "", nil)
 		}
@@ -172,6 +167,7 @@ func (n *Notification) prepareFromTemplateKeys(pn *PreparedNotifications, tks No
 		getURL = n.Get.String()
 	}
 	if postURL != "" {
+		body, _ := render(tks.BodyTemplate, defaults.subject)
 		pn.HTTP = append(pn.HTTP, n.PrepHttp("POST", postURL, body, ""))
 	}
 	if getURL != "" {
