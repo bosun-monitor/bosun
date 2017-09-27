@@ -123,7 +123,7 @@ Bosun can send http notifications using the following precedence rules:
 ### Post Body
 
 1. If the notification sets `bodyTemplate`, use that rendered template as the post body.
-1. Otherwise use the rendered `body` template.
+1. Otherwise use the rendered `subject` template.
 
 ## Action Notifications
 
