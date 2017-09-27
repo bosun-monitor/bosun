@@ -22,7 +22,7 @@ func RunEsc() {
 		OutputFile: "web/static.go",
 		Package:    "web",
 		Prefix:     "web/static",
-		Include:    "web/static",
+		Files:      []string{"web/static"},
 	}
 	embed.Run(cfg)
 }
