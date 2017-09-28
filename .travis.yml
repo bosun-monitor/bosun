@@ -12,6 +12,6 @@ install:
   - export GOPATH=$HOME/gopath #Fix gopath. Original has trailing :
   - chmod +x $GOPATH/src/bosun.org/build/validate.sh
   - go get github.com/captncraig/setStatus
-  - npm i -g typescript@2.3.1
+  - npm i -g typescript@2.4.2
 
 script: $GOPATH/src/bosun.org/build/validate.sh

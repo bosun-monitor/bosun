@@ -8,6 +8,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"sort"
+
+	"github.com/mjibson/esc/embed"
 )
 
 // Functions to run tsc to compile typescript and esc to embed static assests.
@@ -15,7 +17,15 @@ import (
 
 // Run esc to embed entire static directory into static.go
 func RunEsc() {
-	run("esc", "-modtime", "0", "-o", "web/static.go", "-pkg", "web", "-prefix", "web/static", "web/static")
+	cfg := &embed.Config{
+		ModTime:    "0",
+		OutputFile: "web/static.go",
+		Package:    "web",
+		Prefix:     "web/static",
+		Ignore:     `.*\.ts`,
+		Files:      []string{"web/static"},
+	}
+	embed.Run(cfg)
 }
 
 // Run tsc to compile all ts files into bosun.js

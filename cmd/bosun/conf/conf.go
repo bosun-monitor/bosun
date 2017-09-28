@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"hash/fnv"
+
 	"net/mail"
 	"net/url"
 	"os/exec"
@@ -13,15 +14,12 @@ import (
 
 	"github.com/influxdata/influxdb/client/v2"
 
+	"bosun.org/cmd/bosun/conf/template"
 	"bosun.org/cmd/bosun/expr"
 	"bosun.org/cmd/bosun/expr/parse"
 	"bosun.org/graphite"
 	"bosun.org/models"
 	"bosun.org/opentsdb"
-
-	htemplate "html/template"
-	ttemplate "text/template"
-
 	"bosun.org/slog"
 )
 
@@ -109,7 +107,6 @@ func ValidateSystemConf(sc SystemConfProvider) error {
 // that the interface will change significantly.
 type RuleConfProvider interface {
 	RuleConfWriter
-	GetUnknownTemplate() *Template
 	GetTemplate(string) *Template
 
 	GetAlerts() map[string]*Alert
@@ -195,12 +192,83 @@ func (s Squelch) Squelched(tags opentsdb.TagSet) bool {
 type Template struct {
 	Text string
 	Vars
-	Name    string
-	Body    *htemplate.Template `json:"-"`
-	Subject *ttemplate.Template `json:"-"`
+	Name            string
+	Body            *template.Template            `json:"-"`
+	Subject         *template.Template            `json:"-"`
+	CustomTemplates map[string]*template.Template `json:"-"`
 
 	RawBody, RawSubject string
-	Locator             `json:"-"`
+	RawCustoms          map[string]string
+
+	Locator `json:"-"`
+}
+
+// The following helpers help us determine if a template needs to be rendered specially for emails.
+// If the user specifies an `emailSubject` or `emailBody` template key, we will automatically use that.
+// Else we use the subject/body keys, or whatever is explicitly pointed to in the notification
+//
+// If .IsEmail is used in the subject/body, we set that flag and re-render.
+// .IsEmail is really for backwards compatibility purposes only
+
+// IsEmailSubjectDifferent returns true if the template has an explicit emailSubject field, or if the subject uses .IsEmail
+func (t *Template) IsEmailSubjectDifferent() bool {
+	if t.CustomTemplates["emailSubject"] != nil {
+		return true
+	}
+	return strings.Contains(t.RawSubject, ".IsEmail")
+}
+
+// IsEmailBodyDifferent returns true if the template has an explicit emailBody field, or if the body uses .IsEmail
+func (t *Template) IsEmailBodyDifferent() bool {
+	if t.CustomTemplates["emailBody"] != nil {
+		return true
+	}
+	return strings.Contains(t.RawBody, ".IsEmail")
+}
+
+func (t *Template) Get(name string) *template.Template {
+	if name == "body" {
+		return t.Body
+	}
+	if name == "subject" {
+		return t.Subject
+	}
+	return t.CustomTemplates[name]
+}
+
+// NotificationTemplateKeys is the set of fields that may be templated out per notification. Each field points to the name of a field on a template object.
+type NotificationTemplateKeys struct {
+	PostTemplate, GetTemplate string // templates to use for post/get urls
+	BodyTemplate              string // template to use for post body or email body. defaults to "body" for post and "emailBody" (if it exists) for email
+	EmailSubjectTemplate      string // template to use for email subject. Default to "subject"
+}
+
+// Combine merges keys from another set, copying only those values that do not exist on the first set of template keys.
+// It returns a new object every time, and accepts nils on either side.
+func (n *NotificationTemplateKeys) Combine(defaults *NotificationTemplateKeys) *NotificationTemplateKeys {
+	n2 := &NotificationTemplateKeys{}
+	if n != nil {
+		n2.PostTemplate = n.PostTemplate
+		n2.GetTemplate = n.GetTemplate
+		n2.BodyTemplate = n.BodyTemplate
+		n2.EmailSubjectTemplate = n.EmailSubjectTemplate
+	}
+	if defaults == nil {
+		return n2
+	}
+	if n2.PostTemplate == "" {
+		n2.PostTemplate = defaults.PostTemplate
+	}
+	if n2.GetTemplate == "" {
+		n2.GetTemplate = defaults.GetTemplate
+	}
+	if n2.BodyTemplate == "" {
+		n2.BodyTemplate = defaults.BodyTemplate
+	}
+	if n2.EmailSubjectTemplate == "" {
+		n2.EmailSubjectTemplate = defaults.EmailSubjectTemplate
+	}
+	return n2
 }
 
 // Notification stores information about a notification. A notification
@@ -209,21 +277,33 @@ type Template struct {
 type Notification struct {
 	Text string
 	Vars
-	Name         string
-	Email        []*mail.Address
-	Post, Get    *url.URL
-	Body         *ttemplate.Template
+	Name  string
+	Email []*mail.Address
+
+	Post, Get *url.URL
+
+	// template keys to use for plain notifications
+	NotificationTemplateKeys
+
+	// template keys to use for action notifications. ActionNone contains catch-all fields if present. More specific will override.
+	ActionTemplateKeys map[models.ActionType]*NotificationTemplateKeys
+
+	UnknownTemplateKeys      NotificationTemplateKeys
+	UnknownMultiTemplateKeys NotificationTemplateKeys
+
 	Print        bool
 	Next         *Notification
 	Timeout      time.Duration
 	ContentType  string
-	RunOnActions bool
-	UseBody      bool
+	RunOnActions string
+	GroupActions bool
+
+	UnknownMinGroupSize *int // nil means use global defaults. 0 means no-grouping at all.
+	UnknownThreshold    *int // nil means use global defaults. 0 means no limit
 
 	NextName        string `json:"-"`
 	RawEmail        string `json:"-"`
 	RawPost, RawGet string `json:"-"`
-	RawBody         string `json:"-"`
 
 	Locator `json:"-"`
 }
@@ -270,11 +350,30 @@ func (ns *Notifications) Get(c RuleConfProvider, tags opentsdb.TagSet) map[strin
 	return nots
 }
 
+// GetAllChained returns all unique notifications, including chains
+func (ns *Notifications) GetAllChained() map[string]*Notification {
+	m := map[string]*Notification{}
+	var walk func(not *Notification)
+	walk = func(not *Notification) {
+		if m[not.Name] != nil {
+			return
+		}
+		m[not.Name] = not
+		if not.Next != nil {
+			walk(not.Next)
+		}
+	}
+	for _, not := range ns.Notifications {
+		walk(not)
+	}
+	return m
+}
+
 // GetNotificationChains returns the warn or crit notification chains for a configured
 // alert. Each chain is a list of notification names. If a notification name
 // as already been seen in the chain it ends the list with the notification
 // name with a of "..." which indicates that the chain will loop.
-func GetNotificationChains(c RuleConfProvider, n map[string]*Notification) [][]string {
+func GetNotificationChains(n map[string]*Notification) [][]string {
 	chains := [][]string{}
 	for _, root := range n {
 		chain := []string{}
@@ -365,7 +464,8 @@ type Alert struct {
 	TemplateName string   `json:"-"`
 	RawSquelch   []string `json:"-"`
 
-	Locator `json:"-"`
+	Locator           `json:"-"`
+	AlertTemplateKeys map[string]*template.Template `json:"-"`
 }
 
 // A Locator stores the information about the location of the rule in the underlying

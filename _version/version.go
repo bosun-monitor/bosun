@@ -14,7 +14,7 @@ import (
 // build.go will set date and sha, but `go get` will set none of these.
 var (
 	// Version number for official releases Updated manually before each release.
-	Version = "0.6.0-beta1"
+	Version = "0.7.0"
 
 	// Set to any non-empty value by official release script
 	OfficialBuild string
