@@ -89,7 +89,3 @@ func TestInvalid(t *testing.T) {
 		}
 	}
 }
-
-func TestInheritTemplate(t *testing.T) {
-
-}
