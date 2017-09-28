@@ -222,19 +222,17 @@ func (s *Schedule) ExecuteAll(rh *RunHistory, a *conf.Alert, st *models.Incident
 	rt.Body = body
 	rt.Attachments = atts
 
-	if t.IsEmailSubjectDifferent() {
-		timer = start("emailsubject")
-		emailSubject, err := s.ExecuteSubject(rh, a, st, true)
-		e(err)
-		rt.EmailSubject = []byte(emailSubject)
-	}
-	if t.IsEmailBodyDifferent() {
-		timer = start("emailbody")
-		emailBody, atts, err := s.ExecuteBody(rh, a, st, true)
-		e(err)
-		rt.EmailBody = []byte(emailBody)
-		rt.Attachments = atts
-	}
+	timer = start("emailsubject")
+	emailSubject, err := s.ExecuteSubject(rh, a, st, true)
+	e(err)
+	rt.EmailSubject = []byte(emailSubject)
+
+	timer = start("emailbody")
+	emailBody, atts, err := s.ExecuteBody(rh, a, st, true)
+	e(err)
+	rt.EmailBody = []byte(emailBody)
+	rt.Attachments = atts
+
 	rt.Custom = map[string]string{}
 	for k, v := range a.AlertTemplateKeys {
 		// emailsubject/body get handled specially above

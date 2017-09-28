@@ -203,29 +203,6 @@ type Template struct {
 	Locator `json:"-"`
 }
 
-// The following helpers help us determine if a template needs to be rendered specially for emails.
-// If the user specifies an `emailSubject` or `emailBody` template key, we will automatically use that.
-// Else we use the subject/body keys, or whatever is explicitly pointed to in the notification
-//
-// If .IsEmail is used in the subject/body, we set that flag and re-render.
-// .IsEmail is really for backwards compatibility purposes only
-
-// IsEmailSubjectDifferent returns true if the template has an explicit emailSubject field, or if the subject uses .IsEmail
-func (t *Template) IsEmailSubjectDifferent() bool {
-	if t.CustomTemplates["emailSubject"] != nil {
-		return true
-	}
-	return strings.Contains(t.RawSubject, ".IsEmail")
-}
-
-// IsEmailBodyDifferent returns true if the template has an explicit emailBody field, or if the body uses .IsEmail
-func (t *Template) IsEmailBodyDifferent() bool {
-	if t.CustomTemplates["emailBody"] != nil {
-		return true
-	}
-	return strings.Contains(t.RawBody, ".IsEmail")
-}
-
 func (t *Template) Get(name string) *template.Template {
 	if name == "body" {
 		return t.Body
