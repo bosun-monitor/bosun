@@ -867,9 +867,9 @@ var UsernameInputController = (function () {
     function UsernameInputController(auth) {
         this.auth = auth;
     }
+    UsernameInputController.$inject = ['authService'];
     return UsernameInputController;
 }());
-UsernameInputController.$inject = ['authService'];
 bosunApp.component("usernameInput", {
     controller: UsernameInputController,
     controllerAs: "ct",
@@ -893,8 +893,11 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
         $scope.items = parseItems();
         $scope.tab = search.tab || 'results';
         $scope.aceTheme = 'chrome';
+        $scope.actionTypeToShow = "Acknowledged";
+        $scope.incidentId = 42;
         $scope.aceMode = 'bosun';
         $scope.expandDiff = false;
+        $scope.customTemplates = {};
         $scope.runningChangedHelp = "The running config has been changed. This means you are in danger of overwriting someone else's changes. To view the changes open the 'Save Dialogue' and you will see a unified diff. The only way to get rid of the error panel is to open a new instance of the rule editor and copy your changes into it. You are still permitted to save without doing this, but then you must be very careful not to overwrite anyone else's changes.";
         $scope.sectionToDocs = {
             "alert": "https://bosun.org/definitions#alert-definitions",
@@ -1139,6 +1142,9 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
                 $scope.template_group = match[1];
             }
         };
+        $scope.setNotificationToShow = function (n) {
+            $scope.notificationToShow = n;
+        };
         var line_re = /test:(\d+)/;
         $scope.validate = function () {
             $http.post('/api/config_test', $scope.config_text)
@@ -1204,6 +1210,7 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
                 '&to=' + encodeURIComponent(to.format()) +
                 '&intervals=' + encodeURIComponent(intervals) +
                 '&email=' + encodeURIComponent($scope.email) +
+                '&incidentId=' + $scope.incidentId +
                 '&template_group=' + encodeURIComponent($scope.template_group);
             $http.post(url, $scope.config_text)
                 .success(function (data) {
@@ -1253,6 +1260,45 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
         function procResults(data) {
             $scope.subject = data.Subject;
             $scope.body = $sce.trustAsHtml(data.Body);
+            if (data.EmailSubject) {
+                data.EmailSubject = atob(data.EmailSubject);
+            }
+            $scope.emailSubject = data.EmailSubject;
+            if (data.EmailBody) {
+                data.EmailBody = atob(data.EmailBody);
+            }
+            $scope.emailBody = $sce.trustAsHtml(data.EmailBody);
+            $scope.customTemplates = {};
+            for (var k in data.Custom) {
+                $scope.customTemplates[k] = data.Custom[k];
+            }
+            var nots = {};
+            _(data.Notifications).each(function (val, n) {
+                if (val.Email) {
+                    nots["Email " + n] = val.Email;
+                }
+                if (val.Print != "") {
+                    nots["Print " + n] = { Print: val.Print };
+                }
+                _(val.HTTP).each(function (hp) {
+                    nots[hp.Method + " " + n] = hp;
+                });
+            });
+            $scope.notifications = nots;
+            var aNots = {};
+            _(data.ActionNotifications).each(function (ts, n) {
+                $scope.notificationToShow = "" + n;
+                aNots[n] = {};
+                _(ts).each(function (val, at) {
+                    if (val.Email) {
+                        aNots[n]["Email (" + at + ")"] = val.Email;
+                    }
+                    _(val.HTTP).each(function (hp) {
+                        aNots[n][hp.Method + " (" + at + ")"] = hp;
+                    });
+                });
+            });
+            $scope.actionNotifications = aNots;
             $scope.data = JSON.stringify(data.Data, null, '  ');
             $scope.error = data.Errors;
             $scope.warning = data.Warnings;
@@ -1303,6 +1349,37 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
         };
         return $scope;
     }]);
+var NotificationController = (function () {
+    function NotificationController($http) {
+        var _this = this;
+        this.$http = $http;
+        this.test = function () {
+            _this.dat.msg = "sending";
+            _this.$http.post('/api/rule/notification/test', _this.dat)
+                .success(function (rDat) {
+                if (rDat.Error) {
+                    _this.dat.msg = "Error: " + rDat.Error;
+                }
+                else {
+                    _this.dat.msg = "Success! Status Code: " + rDat.Status;
+                }
+            })
+                .error(function (error) {
+                _this.dat.msg = "Error: " + error;
+            });
+        };
+    }
+    NotificationController.$inject = ['$http'];
+    return NotificationController;
+}());
+bosunApp.component('notification', {
+    bindings: {
+        dat: "<"
+    },
+    controller: NotificationController,
+    controllerAs: 'ct',
+    templateUrl: '/static/partials/notification.html'
+});
 bosunControllers.controller('DashboardCtrl', ['$scope', '$http', '$location', function ($scope, $http, $location) {
         var search = $location.search();
         $scope.loading = 'Loading';
@@ -1478,14 +1555,14 @@ bosunApp.directive('tsTab', function () {
                     return;
                 }
                 switch (evt.keyCode) {
-                    case 9:
+                    case 9:// tab
                         evt.preventDefault();
                         var v = ta.value;
                         var start = ta.selectionStart;
                         ta.value = v.substr(0, start) + "\t" + v.substr(start);
                         ta.selectionStart = ta.selectionEnd = start + 1;
                         return;
-                    case 13:
+                    case 13:// enter
                         if (ta.selectionStart != ta.selectionEnd) {
                             return;
                         }
@@ -3748,9 +3825,9 @@ var TokenListController = (function () {
         };
         this.load();
     }
+    TokenListController.$inject = ['$http', "authService"];
     return TokenListController;
 }());
-TokenListController.$inject = ['$http', "authService"];
 bosunApp.component('tokenList', {
     controller: TokenListController,
     controllerAs: "ct",
@@ -3795,9 +3872,9 @@ var NewTokenController = (function () {
     NewTokenController.prototype.encoded = function () {
         return encodeURIComponent(this.createdToken);
     };
+    NewTokenController.$inject = ['$http', 'authService'];
     return NewTokenController;
 }());
-NewTokenController.$inject = ['$http', 'authService'];
 bosunApp.component("newToken", {
     controller: NewTokenController,
     controllerAs: "ct",

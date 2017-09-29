@@ -2,7 +2,9 @@ package models
 
 import (
 	"encoding/json"
+	"fmt"
 	"math"
+	"strconv"
 	"time"
 
 	"bosun.org/opentsdb"
@@ -37,14 +39,86 @@ type IncidentState struct {
 	WorstStatus   Status
 
 	LastAbnormalStatus Status
-	LastAbnormalTime   int64
+
+	LastAbnormalTime Epoch
+
+	// set of notifications we have already sent alerts to during the lifetime of the incident
+	Notifications []string
+}
+
+// SetNotified marks the notification name as "active" for this incident.
+// All future actions and unknown notifications will go to all "active" notifications
+// it returns true if the set was changed (and needs resaving)
+func (i *IncidentState) SetNotified(not string) bool {
+	for _, n := range i.Notifications {
+		if n == not {
+			return false
+		}
+	}
+	i.Notifications = append(i.Notifications, not)
+	return true
+}
+
+type Epoch struct {
+	time.Time
+}
+
+func (t Epoch) MarshalJSON() ([]byte, error) {
+	return []byte(fmt.Sprintf("%v", t.UTC().Unix())), nil
+}
+
+func (t *Epoch) UnmarshalJSON(b []byte) (err error) {
+	if len(b) == 0 {
+		t.Time = time.Time{}
+		return
+	}
+	epoch, err := strconv.ParseInt(string(b), 10, 64)
+	if err != nil {
+		return err
+	}
+	t.Time = time.Unix(epoch, 0)
+	return
 }
 
 type RenderedTemplates struct {
+	Subject      string
 	Body         string
 	EmailBody    []byte
 	EmailSubject []byte
+	Custom       map[string]string
 	Attachments  []*Attachment
+}
+
+func (r *RenderedTemplates) Get(name string) string {
+	if name == "subject" {
+		return r.Subject
+	}
+	if name == "body" {
+		return r.Body
+	}
+	if name == "emailBody" {
+		if r.EmailBody != nil {
+			return string(r.EmailBody)
+		}
+		return r.Body
+	}
+	if name == "emailSubject" {
+		if r.EmailSubject != nil {
+			return string(r.EmailSubject)
+		}
+		return r.Subject
+	}
+	if t, ok := r.Custom[name]; ok {
+		return t
+	}
+	return ""
+}
+
+func (r *RenderedTemplates) GetDefault(name string, defaultName string) string {
+	if name == "" {
+		name = defaultName
+	}
+	return r.Get(name)
 }
 
 func (s *IncidentState) Group() opentsdb.TagSet {
@@ -230,6 +304,42 @@ const (
 	ActionDelayedClose
 	ActionCancelClose
 )
+
+//ActionShortNames is a map of keys we use in config file (notifications mostly) to reference action types
+var ActionShortNames = map[string]ActionType{
+	"Ack":          ActionAcknowledge,
+	"Close":        ActionClose,
+	"Forget":       ActionForget,
+	"ForceClose":   ActionForceClose,
+	"Purge":        ActionPurge,
+	"Note":         ActionNote,
+	"DelayedClose": ActionDelayedClose,
+	"CancelClose":  ActionCancelClose,
+}
+
+// HumanString gives a better human readable form than the default stringer, which we can't change due to marshalling compatibility now
+func (a ActionType) HumanString() string {
+	switch a {
+	case ActionAcknowledge:
+		return "Acknowledged"
+	case ActionClose:
+		return "Closed"
+	case ActionForget:
+		return "Forgot"
+	case ActionForceClose:
+		return "Force Closed"
+	case ActionPurge:
+		return "Purged"
+	case ActionNote:
+		return "Commented On"
+	case ActionDelayedClose:
+		return "Delayed Closed"
+	case ActionCancelClose:
+		return "Canceled Close"
+	default:
+		return "none"
+	}
+}
 
 func (a ActionType) String() string {
 	switch a {

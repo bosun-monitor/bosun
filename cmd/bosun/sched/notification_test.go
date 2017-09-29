@@ -1,8 +1,6 @@
 package sched
 
 import (
-	"bytes"
-	"strings"
 	"testing"
 
 	"bosun.org/cmd/bosun/conf"
@@ -10,52 +8,12 @@ import (
 	"bosun.org/models"
 )
 
-func TestActionNotificationTemplates(t *testing.T) {
-	c, err := rule.NewConf("", conf.EnabledBackends{}, nil, ``)
-	if err != nil {
-		t.Fatal(err)
-	}
-	s, _ := initSched(&conf.SystemConf{Hostname: "abc"}, c)
-	data := &actionNotificationContext{}
-	data.ActionType = models.ActionAcknowledge
-	data.Message = "Bad things happened"
-	data.User = "Batman"
-	data.States = []*models.IncidentState{
-		{
-			Id: 224,
-			Events: []models.Event{
-				{
-					Status: models.StCritical,
-				},
-			},
-			Alert:   "xyz",
-			Subject: "Critical!!",
-		},
-	}
-	data.schedule = s
-	buf := &bytes.Buffer{}
-	err = actionNotificationBodyTemplate.Execute(buf, data)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !strings.Contains(buf.String(), "http://abc/incident?id=224") {
-		t.Fatal("Expected link to incident in body")
-	}
-	buf = &bytes.Buffer{}
-	err = actionNotificationSubjectTemplate.Execute(buf, data)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !strings.Contains(buf.String(), "Batman Acknowledged") {
-		t.Fatal("Expected name and actionType in subject")
-	}
-}
-
 func TestActionNotificationGrouping(t *testing.T) {
 	defer setup()()
 	c, err := rule.NewConf("", conf.EnabledBackends{}, nil, `
 		template t{
 			subject = 2
+			body = 2
 		}
 		notification n1 {
 			print = true
@@ -122,13 +80,14 @@ func TestActionNotificationGrouping(t *testing.T) {
 	da.UpdateIncidentState(&models.IncidentState{AlertKey: cA, Alert: cA.Name(), Tags: cA.Group().Tags(), WorstStatus: models.StWarning, Events: []models.Event{{Status: models.StWarning}}})
 	da.UpdateIncidentState(&models.IncidentState{AlertKey: cB, Alert: cB.Name(), Tags: cB.Group().Tags(), WorstStatus: models.StWarning, Events: []models.Event{{Status: models.StWarning}}})
 
-	groups, err := s.groupActionNotifications([]models.AlertKey{awarn, acrit, bwarn, bcrit, cA, cB})
+	groups, err := s.groupActionNotifications(models.ActionClose, []models.AlertKey{awarn, acrit, bwarn, bcrit, cA, cB})
 	if err != nil {
 		t.Fatal(err)
 	}
 	expect := func(not string, aks ...models.AlertKey) {
 		n := c.Notifications[not]
-		actualAks, ok := groups[n]
+		key := notificationGroupKey{notification: n, template: c.Templates["t"]}
+		actualAks, ok := groups[key]
 		if !ok {
 			t.Fatalf("Notification %s not present in groupings.", not)
 		}

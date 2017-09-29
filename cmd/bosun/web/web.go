@@ -167,7 +167,9 @@ func Listen(httpAddr, httpsAddr, certFile, keyFile string, devMode bool, tsdbHos
 	handle("/api/metric", JSON(UniqueMetrics), canViewDash).Name("meta_uniqe_metrics").Methods(GET)
 	handle("/api/metric/{tagk}", JSON(MetricsByTagKey), canViewDash).Name("meta_metrics_by_tag").Methods(GET)
 	handle("/api/metric/{tagk}/{tagv}", JSON(MetricsByTagPair), canViewDash).Name("meta_metric_by_tag_pair").Methods(GET)
+
 	handle("/api/rule", JSON(Rule), canRunTests).Name("rule_test").Methods(POST)
+	handle("/api/rule/notification/test", JSON(TestHTTPNotification), canRunTests).Name("rule__notification_test").Methods(POST)
 	handle("/api/shorten", JSON(Shorten), canViewDash).Name("shorten")
 	handle("/api/silence/clear", JSON(SilenceClear), canSilence).Name("silence_clear")
 	handle("/api/silence/get", JSON(SilenceGet), canViewDash).Name("silence_get").Methods(GET)
@@ -390,7 +392,7 @@ func JSON(h func(miniprofiler.Timer, http.ResponseWriter, *http.Request) (interf
 		}
 		buf := new(bytes.Buffer)
 		enc := json.NewEncoder(buf)
-		if strings.Contains(r.Header.Get("Accept"), "html") {
+		if strings.Contains(r.Header.Get("Accept"), "html") || strings.Contains(r.Host, "localhost") {
 			enc.SetIndent("", "  ")
 		}
 		if err := enc.Encode(d); err != nil {

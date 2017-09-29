@@ -14,7 +14,7 @@ import (
 
 var devMode = flag.Bool("dev", false, "Dev mode. Use html from file-system instead of embedded copy.")
 
-//go:generate esc -modtime 0 -o=static.go -prefix=static static
+// to embed static again: go:generate esc -modtime 0 -o=static.go -prefix=static static
 
 func main() {
 	flag.Parse()

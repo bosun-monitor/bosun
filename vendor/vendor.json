@@ -575,6 +575,12 @@
 			"revisionTime": "2016-08-29T17:56:29Z"
 		},
 		{
+			"checksumSHA1": "QLKPqiHoCTknOwOiNj5Miaze6HI=",
+			"path": "github.com/mjibson/esc/embed",
+			"revision": "58d9cde84f237ecdd89bd7f61c2de2853f4c5c6e",
+			"revisionTime": "2017-09-07T07:13:03Z"
+		},
+		{
 			"path": "github.com/olivere/elastic",
 			"revision": "9fdb4e763e833f166e76009e5a33132877c32bfb",
 			"revisionTime": "2015-11-28T12:32:46+01:00"
