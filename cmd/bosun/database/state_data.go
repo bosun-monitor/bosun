@@ -68,6 +68,7 @@ type StateDataAccess interface {
 	SetRenderedTemplates(incidentId int64, rt *models.RenderedTemplates) error
 	GetRenderedTemplates(incidentId int64) (*models.RenderedTemplates, error)
 	GetRenderedTemplateKeys() ([]string, error)
+	CleanupOldRenderedTemplates(olderThan time.Duration)
 	DeleteRenderedTemplates(incidentIds []int64) error
 
 	Forget(ak models.AlertKey) error
@@ -511,4 +512,9 @@ func (d *dataAccess) transact(conn redis.Conn, f func() error) error {
 		return slog.Wrap(err)
 	}
 	return nil
+}
+
+// CleanupCleanupOldRenderedTemplates will in a loop purge any old rendered templates
+func (d *dataAccess) CleanupOldRenderedTemplates(olderThan time.Duration) {
+
 }

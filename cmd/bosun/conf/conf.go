@@ -72,7 +72,7 @@ type SystemConfProvider interface {
 
 	GetAuthConf() *AuthConf
 
-	KeepTemplatesForDays() int
+	GetMaxRenderedTemplateAge() int
 
 	// Contexts
 	GetTSDBContext() opentsdb.Context
