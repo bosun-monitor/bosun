@@ -67,7 +67,7 @@ type StateDataAccess interface {
 
 	SetRenderedTemplates(incidentId int64, rt *models.RenderedTemplates) error
 	GetRenderedTemplates(incidentId int64) (*models.RenderedTemplates, error)
-	ScanRenderedTemplates(chan<- *models.IncidentState) error // scan the rendered templates get incident for each, and send on channel.
+	GetRenderedTemplateKeys() ([]string, error)
 	DeleteRenderedTemplates(incidentIds []int64) error
 
 	Forget(ak models.AlertKey) error
@@ -105,57 +105,41 @@ func (d *dataAccess) GetRenderedTemplates(incidentId int64) (*models.RenderedTem
 	return renderedT, nil
 }
 
-func (d *dataAccess) ScanRenderedTemplates(ch chan<- *models.IncidentState) error {
+func (d *dataAccess) GetRenderedTemplateKeys() ([]string, error) {
 	conn := d.Get()
 	defer conn.Close()
 
 	//ledis uses XSCAN cursor "KV" MATCH foo
 	//redis uses SCAN cursor MATCH foo
 	cmd := "SCAN"
-	args := []interface{}{"0", "MATCH", "renderedTemplatesById*"}
+	args := []interface{}{"0", "MATCH", "renderedTemplatesById:*"}
 	cursorIdx := 0
 	if !d.isRedis {
 		cmd = "XSCAN"
 		args = append([]interface{}{"KV"}, args...)
 		cursorIdx = 1
 	}
+	found := []string{}
 	for {
 		vals, err := redis.Values(conn.Do(cmd, args...))
 		if err != nil {
-			return slog.Wrap(err)
+			return nil, slog.Wrap(err)
 		}
 		cursor, err := redis.String(vals[0], nil)
 		if err != nil {
-			return slog.Wrap(err)
+			return nil, slog.Wrap(err)
 		}
 		args[cursorIdx] = cursor
 		keys, err := redis.Strings(vals[1], nil)
 		if err != nil {
-			return slog.Wrap(err)
+			return nil, slog.Wrap(err)
 		}
-		for _, k := range keys {
-			parts := strings.Split(k, ":")
-			if len(parts) != 2 {
-				continue
-			}
-			incidentID, err := strconv.ParseInt(parts[1], 10, 64)
-			if err != nil {
-				continue
-			}
-			incident, err := d.getIncident(incidentID, conn)
-			if err != nil && !strings.HasSuffix(err.Error(), "nil returned") {
-				return slog.Wrap(err)
-			}
-			if err != nil {
-				// ORPHAN!!!
-			}
-			ch <- incident
-		}
+		found = append(found, keys...)
 		if cursor == "" || cursor == "0" {
 			break
 		}
 	}
-	return nil
+	return found, nil
 }
 
 func (d *dataAccess) DeleteRenderedTemplates(incidentIds []int64) error {
@@ -174,7 +158,6 @@ func (d *dataAccess) DeleteRenderedTemplates(incidentIds []int64) error {
 		for _, id := range thisBatch {
 			args = append(args, renderedTemplatesKey(id))
 		}
-		fmt.Println("DELETING", len(thisBatch))
 		_, err := conn.Do("DEL", args...)
 		if err != nil {
 			return slog.Wrap(err)

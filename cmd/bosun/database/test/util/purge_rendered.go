@@ -4,11 +4,13 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"strconv"
+	"strings"
 	"time"
 
+	"bosun.org/slog"
+
 	"bosun.org/cmd/bosun/database"
-	"bosun.org/models"
-	"github.com/garyburd/redigo/redis"
 )
 
 var fredis = flag.String("r", "", "redis host:port")
@@ -21,36 +23,40 @@ func main() {
 		flag.PrintDefaults()
 		return
 	}
-	ch := make(chan *models.IncidentState)
 	db := database.NewDataAccess(*fredis, true, 0, "")
-	myConn := db.Get()
-	total := int64(0)
 	earliestOk := time.Now().UTC().Add(-1 * deleteIfAge)
-	ids := []int64{}
-	go func() {
-		for st := range ch {
-			if st.Open {
-				continue
-			}
-			if len(st.Actions) == 0 || st.Actions[len(st.Actions)-1].Time.Before(earliestOk) {
-				ids = append(ids, st.Id)
-			} else {
-				continue
-			}
-			fmt.Println(st.Id, len(st.Events), st.Open)
-			s, err := redis.String(myConn.Do("GET", fmt.Sprintf("renderedTemplatesById:%d", st.Id)))
-			if err != nil {
-				log.Fatal(err)
-			}
-			total += int64(len(s))
-		}
-	}()
-	err := db.State().ScanRenderedTemplates(ch)
+
+	keys, err := db.State().GetRenderedTemplateKeys()
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(total, "bytes!", len(ids), "incidents")
-	err = db.State().DeleteRenderedTemplates(ids)
+	toPurge := []int64{}
+	for _, key := range keys {
+		parts := strings.Split(key, ":")
+		if len(parts) != 2 {
+			slog.Errorf("Invalid rendered template redis key found: %s", key)
+			continue
+		}
+		id, err := strconv.ParseInt(parts[1], 10, 64)
+		if err != nil {
+			slog.Error(err)
+			continue
+		}
+		state, err := db.State().GetIncidentState(id)
+		if err != nil {
+			if strings.Contains(err.Error(), "nil returned") {
+				toPurge = append(toPurge, id)
+				continue
+			}
+			slog.Error(err)
+			continue
+		}
+		if state.End != nil && (*state.End).Before(earliestOk) {
+			toPurge = append(toPurge, id)
+		}
+	}
+	fmt.Println(len(toPurge), "rendered templates purgable")
+	err = db.State().DeleteRenderedTemplates(toPurge)
 	if err != nil {
 		log.Fatal(err)
 	}
