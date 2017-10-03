@@ -328,10 +328,7 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 				checkTplKeys(ntk, key, false)
 			}
 		}
-		for k, not := range allNots {
-			if a.Name == "scollector.down" {
-				fmt.Println(a.Name, k)
-			}
+		for _, not := range allNots {
 			checkNotification(not)
 		}
 	}

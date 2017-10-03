@@ -476,6 +476,11 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 		if (data.EmailBody) {
 			data.EmailBody = atob(data.EmailBody)
 		}
+		for(var att of data.Attachments){
+			var needle = `src="cid:${att.Filename}"`;
+			var replacement = `src="data:image/png;base64,${att.Data}"`;
+			data.EmailBody = data.EmailBody.replace(needle, replacement);
+		}
 		$scope.emailBody = $sce.trustAsHtml(data.EmailBody)
 		$scope.customTemplates = {};
 		for (var k in data.Custom) {
@@ -485,6 +490,11 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 		_(data.Notifications).each((val,n)=>{
 			if(val.Email){
 				nots["Email "+ n] = val.Email;
+				for(var att of data.Attachments){
+					var needle = `src="cid:${att.Filename}"`;
+					var replacement = `src="data:image/png;base64,${att.Data}"`;
+					val.Email.Body = val.Email.Body.replace(needle, replacement);
+				}
 			}
 			if(val.Print != ""){
 				nots["Print " +n] = {Print: val.Print};
