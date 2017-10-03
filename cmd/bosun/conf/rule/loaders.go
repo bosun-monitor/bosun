@@ -37,6 +37,11 @@ func (c *Conf) loadTemplate(s *parse.SectionNode) {
 	}
 	saw := make(map[string]bool)
 	inherits := []string{}
+	for _, g := range c.globalTemplates {
+		if g != t.Name {
+			inherits = append(inherits, g)
+		}
+	}
 	var kvps = map[string]string{}
 	for _, p := range s.Nodes.Nodes {
 		c.at(p)
@@ -276,24 +281,18 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 			c.errorf("Depends and crit/warn must share at least one tag.")
 		}
 	}
-	warnLength := len(a.WarnNotification.Notifications) + len(a.WarnNotification.Lookups)
-	critLength := len(a.CritNotification.Notifications) + len(a.CritNotification.Lookups)
+	allNots := c.getAllPossibleNotifications(&a)
 	if a.Log {
-		for _, n := range a.CritNotification.Notifications {
+		for _, n := range allNots {
 			if n.Next != nil {
 				c.errorf("cannot use log with a chained notification")
 			}
 		}
-		for _, n := range a.WarnNotification.Notifications {
-			if n.Next != nil {
-				c.errorf("cannot use log with a chained notification")
-			}
-		}
-		if warnLength+critLength == 0 {
+		if len(allNots) == 0 {
 			c.errorf("log specified but no notification")
 		}
 	}
-	if warnLength+critLength > 0 && a.Template == nil {
+	if len(allNots) > 0 && a.Template == nil {
 		c.errorf("notifications specified but no template")
 	}
 	if a.Template != nil {
@@ -334,17 +333,12 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 				checkTplKeys(ntk, key, false)
 			}
 		}
-		uniqNots := map[string]*conf.Notification{}
-		for n, not := range a.CritNotification.GetAllChained() {
-			uniqNots[n] = not
-		}
-		for n, not := range a.WarnNotification.GetAllChained() {
-			uniqNots[n] = not
-		}
-		for _, not := range uniqNots {
+		for k, not := range allNots {
+			if a.Name == "scollector.down" {
+				fmt.Println(a.Name, k)
+			}
 			checkNotification(not)
 		}
-
 	}
 	a.ReturnType = ret
 	c.Alerts[name] = &a
