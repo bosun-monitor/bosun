@@ -170,10 +170,8 @@ func main() {
 	if sysProvider.GetTSDBHost() != "" {
 		relay := web.Relay(sysProvider.GetTSDBHost())
 		collect.DirectHandler = relay
-		if !*flagReadonly {
-			if err := collect.Init(selfAddress, "bosun"); err != nil {
-				slog.Fatal(err)
-			}
+		if err := collect.Init(selfAddress, "bosun"); err != nil {
+			slog.Fatal(err)
 		}
 		tsdbHost := &url.URL{
 			Scheme: "http",
