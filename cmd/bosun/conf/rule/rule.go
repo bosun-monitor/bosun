@@ -810,11 +810,13 @@ func (c *Conf) getAllPossibleNotifications(a *conf.Alert) map[string]*conf.Notif
 	followLookup := func(l map[string]*conf.Lookup) {
 		for target, lookup := range l {
 			for _, entry := range lookup.Entries {
-				if k, ok := entry.Values[target]; ok {
-					if not, ok := c.Notifications[k]; ok {
-						nots[k] = not
-					} else {
-						c.errorf("Notification %s needed by lookup %s in %s is not defined.", k, lookup.Name, a.Name)
+				if notNames, ok := entry.Values[target]; ok {
+					for _, k := range strings.Split(notNames, ",") {
+						if not, ok := c.Notifications[k]; ok {
+							nots[k] = not
+						} else {
+							c.errorf("Notification %s needed by lookup %s in %s is not defined.", k, lookup.Name, a.Name)
+						}
 					}
 				}
 			}
