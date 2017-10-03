@@ -37,11 +37,6 @@ func (c *Conf) loadTemplate(s *parse.SectionNode) {
 	}
 	saw := make(map[string]bool)
 	inherits := []string{}
-	for _, g := range c.globalTemplates {
-		if g != t.Name {
-			inherits = append(inherits, g)
-		}
-	}
 	var kvps = map[string]string{}
 	for _, p := range s.Nodes.Nodes {
 		c.at(p)

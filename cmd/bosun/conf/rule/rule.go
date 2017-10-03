@@ -49,8 +49,6 @@ type Conf struct {
 	customTemplates map[string]*template.Template
 	squelch         []string
 
-	globalTemplates []string // list of templates to inherit in all others
-
 	writeLock chan bool
 
 	deferredSections map[string][]deferredSection // SectionType:[]deferredSection
@@ -200,8 +198,6 @@ func (c *Conf) loadGlobal(p *parse.PairNode) {
 		if err := c.Squelch.Add(v); err != nil {
 			c.error(err)
 		}
-	case "globalTemplates":
-		c.globalTemplates = strings.Split(v, ",")
 	default:
 		if !strings.HasPrefix(k, "$") {
 			c.errorf("unknown key %s", k)
