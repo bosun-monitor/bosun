@@ -16,7 +16,7 @@ import (
 // [Iterable]
 //   StatusBaseAddr = "https://iterable.statuspage.io"
 //   # TsdbPrefix = "iterable.status."
-//   # MaxDuration = 3 # seconds
+//   # MaxDuration = "10s"
 
 type IterComp map[string]string
 
@@ -24,7 +24,7 @@ func init() {
 	const (
 		defaultStatusBaseAddr = "https://iterable.statuspage.io"
 		defaultTsdbPrefix     = "iterable.status."
-		defaultMaxDuration    = 3 // Seconds
+		defaultMaxDuration    = conf.Duration(10 * time.Second)
 	)
 
 	// components that we care about
@@ -54,10 +54,10 @@ func init() {
 		if iter.TsdbPrefix == "" {
 			iter.TsdbPrefix = defaultTsdbPrefix
 		}
-		if iter.MaxDuration == 0 {
+		if iter.MaxDuration == conf.Duration(0) {
 			iter.MaxDuration = defaultMaxDuration
 		}
-		if iter.MaxDuration <= 0 || iter.MaxDuration > 10000000 {
+		if iter.MaxDuration <= conf.Duration(0) || iter.MaxDuration > conf.Duration(10000000*time.Second) {
 			slog.Fatalf("Iterable: invalid MaxDuration: %d", iter.MaxDuration)
 		}
 
@@ -85,7 +85,6 @@ func iterable(ctx context.Context, iter conf.Iterable, compKey IterComp) (opents
 	}
 	for _, comp := range summary.Components {
 		if key, ok := compKey[comp.Name]; ok {
-			// TODO: should Add() support a timeout?
 			Add(&md, iter.TsdbPrefix+key, int(comp.Status), opentsdb.TagSet{},
 				metadata.Gauge, metadata.StatusCode,
 				"Iterable status: 0: Operational, 1: Degraded Performance, 2: Partial Outage, 3: Major Outage.")

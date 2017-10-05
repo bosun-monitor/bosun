@@ -3,6 +3,7 @@ package conf // import "bosun.org/cmd/scollector/conf"
 
 import (
 	"bosun.org/opentsdb"
+	"time"
 )
 
 type Conf struct {
@@ -137,10 +138,22 @@ type Fastly struct {
 	StatusBaseAddr string
 }
 
+// Duration is a time.Duration with a UnmarshalText method so
+// durations can be decoded from TOML.
+type Duration time.Duration
+
+// UnmarshalText is the method called by TOML when decoding a value
+func (d *Duration) UnmarshalText(text []byte) error {
+	var err error
+	t, err := time.ParseDuration(string(text))
+	*d = Duration(t)
+	return err
+}
+
 type Iterable struct {
 	StatusBaseAddr string // URL where we get json data
 	TsdbPrefix     string
-	MaxDuration    int // max duration of the http request in seconds
+	MaxDuration    Duration // max duration of the http request in seconds
 }
 
 type GoogleAnalyticsSite struct {
