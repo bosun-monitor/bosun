@@ -151,14 +151,18 @@ to poll. The Instances key is an array of table with keys Tier and URL.
 SNMP (array of table, keys are Community and Host): SNMP hosts to connect
 to at a 5 minute poll interval.
 
+There are several built-in MIBs that are pre-configured, an up-to-date list can be found by looking
+at the code in https://github.com/bosun-monitor/bosun/blob/master/cmd/scollector/collectors/snmp.go
+
 	[[SNMP]]
 	  Community = "com"
 	  Host = "host"
-	  MIBs = ["cisco"]
+	  # Use the built-in "sys" MIB
+	  MIBs = ["sys"]
 	[[SNMP]]
 	  Community = "com2"
 	  Host = "host2"
-	  # List of mibs to run for this host. Default is built-in set of ["ifaces","cisco"]
+	  # List of MIBs to run for this host. Default is built-in set of ["ifaces","bridge"]
 	  MIBs = ["custom", "ifaces"]
 
 MIBs (map of string to table): Allows user-specified, custom SNMP configurations.

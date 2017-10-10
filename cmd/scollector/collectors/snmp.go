@@ -36,7 +36,7 @@ func SNMP(cfg conf.SNMP, mibs map[string]conf.MIB) error {
 		return fmt.Errorf("empty SNMP community")
 	}
 	if len(cfg.MIBs) == 0 {
-		cfg.MIBs = []string{"ifaces", "cisco", "bridge"}
+		cfg.MIBs = []string{"ifaces", "bridge"}
 	}
 	for _, m := range cfg.MIBs {
 		mib, ok := mibs[m]
