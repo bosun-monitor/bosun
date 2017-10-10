@@ -93,13 +93,10 @@ func (d *dataAccess) GetRenderedTemplates(incidentId int64) (*models.RenderedTem
 	defer conn.Close()
 
 	b, err := redis.Bytes(conn.Do("GET", renderedTemplatesKey(incidentId)))
-	renderedT := &models.RenderedTemplates{}
 	if err != nil {
-		if err == redis.ErrNil {
-			return renderedT, nil
-		}
 		return nil, slog.Wrap(err)
 	}
+	renderedT := &models.RenderedTemplates{}
 	if err = json.Unmarshal(b, renderedT); err != nil {
 		return nil, slog.Wrap(err)
 	}
