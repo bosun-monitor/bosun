@@ -43,6 +43,7 @@ func NewSearch(data database.DataAccess, skipLast bool) *Search {
 		indexQueue: make(chan *opentsdb.DataPoint, 300000),
 	}
 	collect.Set("search.index_queue", opentsdb.TagSet{}, func() interface{} { return len(s.indexQueue) })
+
 	if !skipLast {
 		s.loadLast()
 		go s.redisIndex(s.indexQueue)
@@ -53,33 +54,36 @@ func NewSearch(data database.DataAccess, skipLast bool) *Search {
 
 func (s *Search) Index(mdp opentsdb.MultiDataPoint) {
 	for _, dp := range mdp {
-		s.Lock()
-		mmap := s.last[dp.Metric]
-		if mmap == nil {
-			mmap = make(map[string]*database.LastInfo)
-			s.last[dp.Metric] = mmap
-		}
-		p := mmap[dp.Tags.String()]
-		if p == nil {
-			p = &database.LastInfo{}
-			mmap[dp.Tags.String()] = p
-		}
-		if p.Timestamp < dp.Timestamp {
-			if fv, err := getFloat(dp.Value); err == nil {
-				p.DiffFromPrev = (fv - p.LastVal) / float64(dp.Timestamp-p.Timestamp)
-				p.LastVal = fv
-			} else {
-				slog.Error(err)
-			}
-			p.Timestamp = dp.Timestamp
-		}
-		s.Unlock()
 		select {
 		case s.indexQueue <- dp:
 		default:
 			collect.Add("search.dropped", opentsdb.TagSet{}, 1)
 		}
 	}
+}
+
+func (s *Search) lastIndex(dp *opentsdb.DataPoint) {
+	s.Lock()
+	mmap := s.last[dp.Metric]
+	if mmap == nil {
+		mmap = make(map[string]*database.LastInfo)
+		s.last[dp.Metric] = mmap
+	}
+	p := mmap[dp.Tags.String()]
+	if p == nil {
+		p = &database.LastInfo{}
+		mmap[dp.Tags.String()] = p
+	}
+	if p.Timestamp < dp.Timestamp {
+		if fv, err := getFloat(dp.Value); err == nil {
+			p.DiffFromPrev = (fv - p.LastVal) / float64(dp.Timestamp-p.Timestamp)
+			p.LastVal = fv
+		} else {
+			slog.Error(err)
+		}
+		p.Timestamp = dp.Timestamp
+	}
+	s.Unlock()
 }
 
 func (s *Search) redisIndex(c <-chan *opentsdb.DataPoint) {
@@ -93,6 +97,8 @@ func (s *Search) redisIndex(c <-chan *opentsdb.DataPoint) {
 		}
 	}
 	for dp := range c {
+		// Redis indexing does not have a dependency o lastIndex. Run in parallel
+		go s.lastIndex(dp)
 		now = time.Now().Unix()
 		metric := dp.Metric
 		for k, v := range dp.Tags {
