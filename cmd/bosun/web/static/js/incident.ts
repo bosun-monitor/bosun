@@ -33,7 +33,7 @@ bosunControllers.controller('IncidentCtrl', ['$scope', '$http', '$location', '$r
 		if (v.doneLoading && !v.error) { return; }
 		v.error = null;
 		v.doneLoading = false;
-		if (i == $scope.lastNonUnknownAbnormalIdx) {
+		if (i == $scope.lastNonUnknownAbnormalIdx && $scope.body) {
 			v.subject = $scope.incident.Subject;
 			v.body = $scope.body;
 			v.doneLoading = true;
@@ -70,7 +70,7 @@ bosunControllers.controller('IncidentCtrl', ['$scope', '$http', '$location', '$r
 			$scope.configLink = configUrl($scope.incident.AlertKey, moment.unix($scope.incident.LastAbnormalTime));
 			for (var i = 0; i < $scope.events.length; i++) {
 				var e = $scope.events[i];
-				if (e.Status != 'normal' && e.Status != 'unknown') {
+				if (e.Status != 'normal' && e.Status != 'unknown' && $scope.body) {
 					$scope.lastNonUnknownAbnormalIdx = i;
 					$scope.collapse(i, e); // Expand the panel of the current body
 					break;

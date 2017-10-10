@@ -606,6 +606,7 @@ func Alerts(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (inter
 
 type ExtStatus struct {
 	AlertName string
+	Subject   string
 	*models.IncidentState
 	*models.RenderedTemplates
 }
@@ -627,7 +628,7 @@ func IncidentEvents(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request
 	if err != nil {
 		return nil, err
 	}
-	st := ExtStatus{IncidentState: state, RenderedTemplates: rt}
+	st := ExtStatus{IncidentState: state, RenderedTemplates: rt, Subject: state.Subject}
 	return st, nil
 }
 
