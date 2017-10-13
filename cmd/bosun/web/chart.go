@@ -243,7 +243,6 @@ func ExprGraph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (in
 		TSDBContext:     schedule.SystemConf.GetTSDBContext(),
 		GraphiteContext: schedule.SystemConf.GetGraphiteContext(),
 		InfluxConfig:    schedule.SystemConf.GetInfluxContext(),
-		LogstashHosts:   schedule.SystemConf.GetLogstashContext(),
 		ElasticHosts:    schedule.SystemConf.GetElasticContext(),
 	}
 	providers := &expr.BosunProviders{

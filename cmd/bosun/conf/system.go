@@ -46,7 +46,6 @@ type SystemConf struct {
 	GraphiteConf GraphiteConf
 	InfluxConf   InfluxConf
 	ElasticConf  map[string]ElasticConf
-	LogStashConf LogStashConf
 
 	AnnotateConf AnnotateConf
 
@@ -79,7 +78,6 @@ func (sc *SystemConf) EnabledBackends() EnabledBackends {
 	b.OpenTSDB = sc.OpenTSDBConf.Host != ""
 	b.Graphite = sc.GraphiteConf.Host != ""
 	b.Influx = sc.InfluxConf.URL != ""
-	b.Logstash = len(sc.LogStashConf.Hosts) != 0
 	b.Elastic = len(sc.ElasticConf["default"].Hosts) != 0
 	b.Annotate = len(sc.AnnotateConf.Hosts) != 0
 	return b
@@ -107,11 +105,6 @@ type AnnotateConf struct {
 	SimpleClient  bool            // If true ES will connect over NewSimpleClient
 	ClientOptions ESClientOptions // ES client options
 	Index         string          // name of index / table
-}
-
-// LogStashConf contains a list of elastic hosts for the depcrecated logstash functions
-type LogStashConf struct {
-	Hosts expr.LogstashElasticHosts
 }
 
 // ESClientOptions: elastic search client options
@@ -459,12 +452,6 @@ func (sc *SystemConf) GetTSDBHost() string {
 	return sc.OpenTSDBConf.Host
 }
 
-// GetLogstashElasticHosts returns the Hosts to connect to for issuing logstash
-// functions (which are depcrecated)
-func (sc *SystemConf) GetLogstashElasticHosts() expr.LogstashElasticHosts {
-	return sc.LogStashConf.Hosts
-}
-
 // GetAnnotateElasticHosts returns the Elastic hosts that should be used for annotations.
 // Annotations are not enabled if this has no hosts
 func (sc *SystemConf) GetAnnotateElasticHosts() expr.ElasticConfig {
@@ -527,12 +514,6 @@ func (sc *SystemConf) GetInfluxContext() client.HTTPConfig {
 		c.InsecureSkipVerify = sc.InfluxConf.UnsafeSSL
 	}
 	return c
-}
-
-// GetLogstashContext returns a Logstash context which contains all the information needed
-// to query Elastic for logstash style queries. This is deprecated
-func (sc *SystemConf) GetLogstashContext() expr.LogstashElasticHosts {
-	return sc.LogStashConf.Hosts
 }
 
 // GetElasticContext returns an Elastic context which contains all the information
