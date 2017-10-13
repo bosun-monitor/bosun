@@ -650,9 +650,6 @@ func (c *Conf) GetFuncs(backends conf.EnabledBackends) map[string]eparse.Func {
 	if backends.Graphite {
 		merge(expr.Graphite)
 	}
-	if backends.Logstash {
-		merge(expr.LogstashElastic)
-	}
 	if backends.Elastic {
 		merge(expr.Elastic)
 	}
