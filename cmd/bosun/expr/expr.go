@@ -22,7 +22,6 @@ import (
 	"github.com/MiniProfiler/go/miniprofiler"
 	"github.com/bosun-monitor/annotate/backend"
 	"github.com/influxdata/influxdb/client/v2"
-	elastic "gopkg.in/olivere/elastic.v3"
 )
 
 type State struct {
@@ -40,9 +39,6 @@ type State struct {
 
 	// Graphite
 	graphiteQueries []graphite.Request
-
-	// Elastic (for post ES v2)
-	elasticQueries []elastic.SearchSource
 
 	// OpenTSDB
 	tsdbQueries []opentsdb.Request
@@ -202,9 +198,7 @@ func (a Series) Equal(b Series) bool {
 	return reflect.DeepEqual(a, b)
 }
 
-type ESQuery struct {
-	Query elastic.Query
-}
+// See the elastic#.go files for ESQuery
 
 func (e ESQuery) Type() models.FuncType { return models.TypeESQuery }
 func (e ESQuery) Value() interface{}    { return e }
