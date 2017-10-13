@@ -64,7 +64,6 @@ type SystemConfProvider interface {
 	SetTSDBHost(tsdbHost string)
 	GetTSDBHost() string
 
-	GetLogstashElasticHosts() expr.LogstashElasticHosts
 	GetAnnotateElasticHosts() expr.ElasticConfig
 	GetAnnotateIndex() string
 
@@ -74,7 +73,6 @@ type SystemConfProvider interface {
 	GetTSDBContext() opentsdb.Context
 	GetGraphiteContext() graphite.Context
 	GetInfluxContext() client.HTTPConfig
-	GetLogstashContext() expr.LogstashElasticHosts
 	GetElasticContext() expr.ElasticHosts
 	AnnotateEnabled() bool
 

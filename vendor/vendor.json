@@ -581,16 +581,6 @@
 			"revisionTime": "2017-09-07T07:13:03Z"
 		},
 		{
-			"path": "github.com/olivere/elastic",
-			"revision": "9fdb4e763e833f166e76009e5a33132877c32bfb",
-			"revisionTime": "2015-11-28T12:32:46+01:00"
-		},
-		{
-			"path": "github.com/olivere/elastic/uritemplates",
-			"revision": "9fdb4e763e833f166e76009e5a33132877c32bfb",
-			"revisionTime": "2015-11-28T12:32:46+01:00"
-		},
-		{
 			"path": "github.com/pmezard/go-difflib/difflib",
 			"revision": "792786c7400a136282c1664665ae0a8db921c6c2",
 			"revisionTime": "2016-01-10T11:55:54+01:00"
