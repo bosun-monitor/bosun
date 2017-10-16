@@ -109,20 +109,20 @@ func (d *dataAccess) GetRenderedTemplates(incidentId int64) (*models.RenderedTem
 	return renderedT, nil
 }
 
+func (d *dataAccess) scanMatchCmd(pattern string) (string, []interface{}, int) {
+	//ledis uses XSCAN cursor "KV" MATCH foo
+	//redis uses SCAN cursor MATCH foo
+	if d.isRedis {
+		return "SCAN", []interface{}{"0", "MATCH", pattern}, 0
+	}
+	return "XSCAN", []interface{}{"KV", "0", "MATCH", pattern}, 1
+}
+
 func (d *dataAccess) GetRenderedTemplateKeys() ([]string, error) {
 	conn := d.Get()
 	defer conn.Close()
 
-	//ledis uses XSCAN cursor "KV" MATCH foo
-	//redis uses SCAN cursor MATCH foo
-	cmd := "SCAN"
-	args := []interface{}{"0", "MATCH", "renderedTemplatesById:*"}
-	cursorIdx := 0
-	if !d.isRedis {
-		cmd = "XSCAN"
-		args = append([]interface{}{"KV"}, args...)
-		cursorIdx = 1
-	}
+	cmd, args, cursorIdx := d.scanMatchCmd("renderedTemplatesById:*")
 	found := []string{}
 	for {
 		vals, err := redis.Values(conn.Do(cmd, args...))
@@ -546,7 +546,7 @@ func (d *dataAccess) CleanupOldRenderedTemplates(olderThan time.Duration) {
 				}
 				state, err := d.getIncident(id, conn)
 				if err != nil {
-					if strings.Contains(err.Error(), "nil returned") {
+					if IsRedisNil(err) {
 						toPurge = append(toPurge, id)
 						continue
 					}
@@ -570,4 +570,11 @@ func (d *dataAccess) CleanupOldRenderedTemplates(olderThan time.Duration) {
 		slog.Info("Done cleaning rendered templates")
 		time.Sleep(time.Hour)
 	}
+}
+
+func IsRedisNil(err error) bool {
+	if err != nil && strings.Contains(err.Error(), "nil returned") {
+		return true
+	}
+	return false
 }
