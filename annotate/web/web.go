@@ -230,7 +230,7 @@ func GetAnnotations(w http.ResponseWriter, req *http.Request) {
 	var endT time.Time
 	var err error
 	values := req.URL.Query()
-	for param, _ := range values {
+	for param := range values {
 		sp := strings.Split(param, ":")
 		switch sp[0] {
 		case annotate.StartDate:
