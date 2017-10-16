@@ -142,25 +142,25 @@ func main() {
 		slog.Fatal(err)
 	}
 	var annotateBackend backend.Backend
-	// if sysProvider.AnnotateEnabled() {
-	// 	index := sysProvider.GetAnnotateIndex()
-	// 	if index == "" {
-	// 		index = "annotate"
-	// 	}
-	// 	config := sysProvider.GetAnnotateElasticHosts()
-	// 	annotateBackend = backend.NewElastic([]string(config.Hosts), config.SimpleClient, index, config.ClientOptionFuncs)
-	// 	go func() {
-	// 		for {
-	// 			err := annotateBackend.InitBackend()
-	// 			if err == nil {
-	// 				return
-	// 			}
-	// 			slog.Warningf("could not initialize annotate backend, will try again: %v", err)
-	// 			time.Sleep(time.Second * 30)
-	// 		}
-	// 	}()
-	// 	web.AnnotateBackend = annotateBackend
-	// }
+	if sysProvider.AnnotateEnabled() {
+		index := sysProvider.GetAnnotateIndex()
+		if index == "" {
+			index = "annotate"
+		}
+		config := sysProvider.GetAnnotateElasticHosts()
+		annotateBackend = backend.NewElastic([]string(config.Hosts), config.SimpleClient, index, config.ClientOptionFuncs)
+		go func() {
+			for {
+				err := annotateBackend.InitBackend()
+				if err == nil {
+					return
+				}
+				slog.Warningf("could not initialize annotate backend, will try again: %v", err)
+				time.Sleep(time.Second * 30)
+			}
+		}()
+		web.AnnotateBackend = annotateBackend
+	}
 	if err := sched.Load(sysProvider, ruleProvider, da, annotateBackend, *flagSkipLast, *flagQuiet); err != nil {
 		slog.Fatal(err)
 	}
