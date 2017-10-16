@@ -1,4 +1,4 @@
-// +build eslatest
+// +build esv5
 
 package conf
 
