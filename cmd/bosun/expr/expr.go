@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"bosun.org/annotate/backend"
 	"bosun.org/cmd/bosun/cache"
 	"bosun.org/cmd/bosun/expr/parse"
 	"bosun.org/cmd/bosun/search"
@@ -20,7 +21,6 @@ import (
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
 	"github.com/MiniProfiler/go/miniprofiler"
-	"github.com/bosun-monitor/annotate/backend"
 	"github.com/influxdata/influxdb/client/v2"
 )
 

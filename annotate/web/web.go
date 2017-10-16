@@ -12,9 +12,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/bosun-monitor/annotate"
+	"bosun.org/annotate"
+	"bosun.org/annotate/backend"
 
-	"github.com/bosun-monitor/annotate/backend"
 	"github.com/gorilla/mux"
 	"github.com/twinj/uuid"
 )

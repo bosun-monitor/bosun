@@ -18,6 +18,8 @@ import (
 	"time"
 
 	"bosun.org/_version"
+	"bosun.org/annotate/backend"
+	"bosun.org/annotate/web"
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/conf/rule"
 	"bosun.org/cmd/bosun/database"
@@ -31,8 +33,6 @@ import (
 
 	"github.com/MiniProfiler/go/miniprofiler"
 	"github.com/NYTimes/gziphandler"
-	"github.com/bosun-monitor/annotate/backend"
-	"github.com/bosun-monitor/annotate/web"
 	"github.com/captncraig/easyauth"
 	"github.com/gorilla/mux"
 	"github.com/justinas/alice"
