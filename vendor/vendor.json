@@ -1020,6 +1020,21 @@
 			"revisionTime": "2016-10-16T12:21:59+02:00"
 		},
 		{
+			"path": "gopkg.in/olivere/elastic.v5",
+			"revision": "2a08d39723b7f4df92b96e2dff891a60952714d6",
+			"revisionTime": "2017-09-26T22:05:24+02:00"
+		},
+		{
+			"path": "gopkg.in/olivere/elastic.v5/config",
+			"revision": "2a08d39723b7f4df92b96e2dff891a60952714d6",
+			"revisionTime": "2017-09-26T22:05:24+02:00"
+		},
+		{
+			"path": "gopkg.in/olivere/elastic.v5/uritemplates",
+			"revision": "2a08d39723b7f4df92b96e2dff891a60952714d6",
+			"revisionTime": "2017-09-26T22:05:24+02:00"
+		},
+		{
 			"path": "gopkg.in/yaml.v1",
 			"revision": "9f9df34309c04878acc86042b16630b0f696e1de",
 			"revisionTime": "2014-09-24T13:16:07-03:00"
