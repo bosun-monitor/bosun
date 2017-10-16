@@ -382,10 +382,10 @@ func ESDateHistogram(prefix string, e *State, T miniprofiler.Timer, indexer ESIn
 		return r, nil
 	}
 	keys := strings.Split(keystring, ",")
-	aggregation := elastic.NewTermsAggregation().Field(keys[len(keys)-1]).Size(0)
+	aggregation := elastic.NewTermsAggregation().Field(keys[len(keys)-1])
 	aggregation = aggregation.SubAggregation("ts", ts)
 	for i := len(keys) - 2; i > -1; i-- {
-		aggregation = elastic.NewTermsAggregation().Field(keys[i]).Size(0).SubAggregation("g_"+keys[i+1], aggregation)
+		aggregation = elastic.NewTermsAggregation().Field(keys[i]).SubAggregation("g_"+keys[i+1], aggregation)
 	}
 	req.Source = req.Source.Aggregation("g_"+keys[0], aggregation)
 	result, err := timeESRequest(e, T, req)
