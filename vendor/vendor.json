@@ -563,6 +563,11 @@
 			"revisionTime": "2017-09-07T07:13:03Z"
 		},
 		{
+			"path": "github.com/pkg/errors",
+			"revision": "c605e284fe17294bda444b34710735b29d1a9d90",
+			"revisionTime": "2017-05-05T00:36:39-04:00"
+		},
+		{
 			"path": "github.com/pmezard/go-difflib/difflib",
 			"revision": "792786c7400a136282c1664665ae0a8db921c6c2",
 			"revisionTime": "2016-01-10T11:55:54+01:00"
