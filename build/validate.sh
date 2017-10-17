@@ -30,6 +30,13 @@ for GOOS in darwin windows linux ; do
 done
 export GOOS=$ORIGINALGOOS
 
+go build -tags="esv5" bosun.org/...
+GBUILDRESULT=$?
+if [ "$GBUILDRESULT" != 0 ]; then
+	BUILDMSG="${BUILDMSG}Does not build on ${GOOS} (esv5). "
+	GOBUILDRESULT=$GBUILDRESULT
+fi
+
 echo -e "\nChecking gofmt -s -w for all folders that don't start with . or _"
 GOFMTRESULT=0
 GOFMTOUT=$(gofmt -l -s -w $DIRS);
