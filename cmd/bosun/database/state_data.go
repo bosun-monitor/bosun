@@ -67,6 +67,9 @@ type StateDataAccess interface {
 
 	SetRenderedTemplates(incidentId int64, rt *models.RenderedTemplates) error
 	GetRenderedTemplates(incidentId int64) (*models.RenderedTemplates, error)
+	GetRenderedTemplateKeys() ([]string, error)
+	CleanupOldRenderedTemplates(olderThan time.Duration)
+	DeleteRenderedTemplates(incidentIds []int64) error
 
 	Forget(ak models.AlertKey) error
 	SetUnevaluated(ak models.AlertKey, uneval bool) error
@@ -93,14 +96,78 @@ func (d *dataAccess) GetRenderedTemplates(incidentId int64) (*models.RenderedTem
 	defer conn.Close()
 
 	b, err := redis.Bytes(conn.Do("GET", renderedTemplatesKey(incidentId)))
+	renderedT := &models.RenderedTemplates{}
 	if err != nil {
+		if err == redis.ErrNil {
+			return renderedT, nil
+		}
 		return nil, slog.Wrap(err)
 	}
-	renderedT := &models.RenderedTemplates{}
 	if err = json.Unmarshal(b, renderedT); err != nil {
 		return nil, slog.Wrap(err)
 	}
 	return renderedT, nil
+}
+
+func (d *dataAccess) scanMatchCmd(pattern string) (string, []interface{}, int) {
+	//ledis uses XSCAN cursor "KV" MATCH foo
+	//redis uses SCAN cursor MATCH foo
+	if d.isRedis {
+		return "SCAN", []interface{}{"0", "MATCH", pattern}, 0
+	}
+	return "XSCAN", []interface{}{"KV", "0", "MATCH", pattern}, 1
+}
+
+func (d *dataAccess) GetRenderedTemplateKeys() ([]string, error) {
+	conn := d.Get()
+	defer conn.Close()
+
+	cmd, args, cursorIdx := d.scanMatchCmd("renderedTemplatesById:*")
+	found := []string{}
+	for {
+		vals, err := redis.Values(conn.Do(cmd, args...))
+		if err != nil {
+			return nil, slog.Wrap(err)
+		}
+		cursor, err := redis.String(vals[0], nil)
+		if err != nil {
+			return nil, slog.Wrap(err)
+		}
+		args[cursorIdx] = cursor
+		keys, err := redis.Strings(vals[1], nil)
+		if err != nil {
+			return nil, slog.Wrap(err)
+		}
+		found = append(found, keys...)
+		if cursor == "" || cursor == "0" {
+			break
+		}
+	}
+	return found, nil
+}
+
+func (d *dataAccess) DeleteRenderedTemplates(incidentIds []int64) error {
+	conn := d.Get()
+	defer conn.Close()
+	const batchSize = 1000
+	args := make([]interface{}, 0, batchSize)
+	for len(incidentIds) > 0 {
+		size := len(incidentIds)
+		if size > batchSize {
+			size = batchSize
+		}
+		thisBatch := incidentIds[:size]
+		incidentIds = incidentIds[size:]
+		args = args[:0]
+		for _, id := range thisBatch {
+			args = append(args, renderedTemplatesKey(id))
+		}
+		_, err := conn.Do("DEL", args...)
+		if err != nil {
+			return slog.Wrap(err)
+		}
+	}
+	return nil
 }
 
 func (d *dataAccess) State() StateDataAccess {
@@ -380,8 +447,10 @@ func (d *dataAccess) Forget(ak models.AlertKey) error {
 			return slog.Wrap(err)
 		}
 		for _, id := range ids {
-
 			if _, err = conn.Do("DEL", incidentStateKey(id)); err != nil {
+				return slog.Wrap(err)
+			}
+			if _, err = conn.Do("DEL", renderedTemplatesKey(id)); err != nil {
 				return slog.Wrap(err)
 			}
 		}
@@ -446,4 +515,66 @@ func (d *dataAccess) transact(conn redis.Conn, f func() error) error {
 		return slog.Wrap(err)
 	}
 	return nil
+}
+
+// CleanupCleanupOldRenderedTemplates will in a loop purge any old rendered templates
+func (d *dataAccess) CleanupOldRenderedTemplates(olderThan time.Duration) {
+	// run after 5 minutes (to let bosun stabilize)
+	// and then every hour
+	time.Sleep(time.Minute * 5)
+	for {
+		conn := d.Get()
+		slog.Infof("Cleaning out old rendered templates")
+		earliestOk := time.Now().UTC().Add(-1 * olderThan)
+		func() {
+			toPurge := []int64{}
+			keys, err := d.GetRenderedTemplateKeys()
+			if err != nil {
+				slog.Error(err)
+				return
+			}
+			for _, key := range keys {
+				parts := strings.Split(key, ":")
+				if len(parts) != 2 {
+					slog.Errorf("Invalid rendered template redis key found: %s", key)
+					continue
+				}
+				id, err := strconv.ParseInt(parts[1], 10, 64)
+				if err != nil {
+					slog.Error(err)
+					continue
+				}
+				state, err := d.getIncident(id, conn)
+				if err != nil {
+					if IsRedisNil(err) {
+						toPurge = append(toPurge, id)
+						continue
+					}
+					slog.Error(err)
+					continue
+				}
+				if state.End != nil && (*state.End).Before(earliestOk) {
+					toPurge = append(toPurge, id)
+				}
+			}
+			if len(toPurge) == 0 {
+				return
+			}
+			slog.Infof("Deleting %d old rendered templates", len(toPurge))
+			if err = d.DeleteRenderedTemplates(toPurge); err != nil {
+				slog.Error(err)
+				return
+			}
+		}()
+		conn.Close()
+		slog.Info("Done cleaning rendered templates")
+		time.Sleep(time.Hour)
+	}
+}
+
+func IsRedisNil(err error) bool {
+	if err != nil && strings.Contains(err.Error(), "nil returned") {
+		return true
+	}
+	return false
 }

@@ -141,6 +141,9 @@ func main() {
 	if err != nil {
 		slog.Fatal(err)
 	}
+	if sysProvider.GetMaxRenderedTemplateAge() != 0 {
+		go da.State().CleanupOldRenderedTemplates(time.Hour * 24 * time.Duration(sysProvider.GetMaxRenderedTemplateAge()))
+	}
 	var annotateBackend backend.Backend
 	if sysProvider.AnnotateEnabled() {
 		index := sysProvider.GetAnnotateIndex()
