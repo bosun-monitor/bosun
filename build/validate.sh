@@ -30,6 +30,7 @@ for GOOS in darwin windows linux ; do
 done
 export GOOS=$ORIGINALGOOS
 
+echo -e "\nBuilding with esv5 tag"
 go build -tags="esv5" bosun.org/...
 GBUILDRESULT=$?
 if [ "$GBUILDRESULT" != 0 ]; then
