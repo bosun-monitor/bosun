@@ -650,9 +650,6 @@ func (c *Conf) GetFuncs(backends conf.EnabledBackends) map[string]eparse.Func {
 	if backends.Graphite {
 		merge(expr.Graphite)
 	}
-	if backends.Logstash {
-		merge(expr.LogstashElastic)
-	}
 	if backends.Elastic {
 		merge(expr.Elastic)
 	}
@@ -796,4 +793,33 @@ func (c *Conf) genHash() {
 
 func (c *Conf) GetHash() string {
 	return c.Hash
+}
+
+// returns any notifications accessible from the alert vis warn/critNotification, including chains and lookups
+func (c *Conf) getAllPossibleNotifications(a *conf.Alert) map[string]*conf.Notification {
+	nots := map[string]*conf.Notification{}
+	for k, v := range a.WarnNotification.GetAllChained() {
+		nots[k] = v
+	}
+	for k, v := range a.CritNotification.GetAllChained() {
+		nots[k] = v
+	}
+	followLookup := func(l map[string]*conf.Lookup) {
+		for target, lookup := range l {
+			for _, entry := range lookup.Entries {
+				if notNames, ok := entry.Values[target]; ok {
+					for _, k := range strings.Split(notNames, ",") {
+						if not, ok := c.Notifications[k]; ok {
+							nots[k] = not
+						} else {
+							c.errorf("Notification %s needed by lookup %s in %s is not defined.", k, lookup.Name, a.Name)
+						}
+					}
+				}
+			}
+		}
+	}
+	followLookup(a.CritNotification.Lookups)
+	followLookup(a.WarnNotification.Lookups)
+	return nots
 }

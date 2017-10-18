@@ -642,37 +642,6 @@ func (c *Context) HTTPPost(url, bodyType, data string) string {
 	return string(body)
 }
 
-func (c *Context) LSQuery(index_root, filter, sduration, eduration string, size int) interface{} {
-	var ks []string
-	for k, v := range c.AlertKey.Group() {
-		ks = append(ks, k+":"+v)
-	}
-	return c.LSQueryAll(index_root, strings.Join(ks, ","), filter, sduration, eduration, size)
-}
-
-func (c *Context) LSQueryAll(index_root, keystring, filter, sduration, eduration string, size int) interface{} {
-	req, err := expr.LSBaseQuery(c.runHistory.Start, index_root, keystring, filter, sduration, eduration, size)
-	if err != nil {
-		c.addError(err)
-		return nil
-	}
-	results, err := c.runHistory.Backends.LogstashHosts.Query(req)
-	if err != nil {
-		c.addError(err)
-		return nil
-	}
-	r := make([]interface{}, len(results.Hits.Hits))
-	for i, h := range results.Hits.Hits {
-		var err error
-		err = json.Unmarshal(*h.Source, &r[i])
-		if err != nil {
-			c.addError(err)
-			return nil
-		}
-	}
-	return r
-}
-
 func (c *Context) ESQuery(indexRoot expr.ESIndexer, filter expr.ESQuery, sduration, eduration string, size int) interface{} {
 	newFilter := expr.ScopeES(c.Group(), filter.Query)
 	req, err := expr.ESBaseQuery(c.runHistory.Start, indexRoot, newFilter, sduration, eduration, size, c.ElasticHost)
