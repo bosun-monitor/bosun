@@ -168,12 +168,14 @@ interface IBosunScope extends RootScope {
     annotateEnabled: boolean;
     opentsdbEnabled: boolean;
     saveEnabled: boolean;
+    saveMessageRequired: boolean;
     quiet: boolean;
     version: any;
     init: any;
     auth: IAuthService;
     tokensEnabled: boolean;
 }
+
 
 bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', '$q', '$rootScope', 'authService',
     function ($scope: IBosunScope, $route: ng.route.IRouteService, $http: ng.IHttpService, $q: ng.IQService, $rootScope: IRootScope, AuthService: IAuthService) {
@@ -191,6 +193,8 @@ bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', '$q', '$r
         };
         $scope.init = (settings: any) => {
             $scope.saveEnabled = settings.SaveEnabled;
+            $scope.saveMessageRequired = settings.SaveMessageRequired;
+
             $scope.annotateEnabled = settings.AnnotateEnabled;
             $scope.quiet = settings.Quiet;
             $scope.version = settings.Version;

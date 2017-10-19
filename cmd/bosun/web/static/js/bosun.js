@@ -307,6 +307,7 @@ bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', '$q', '$r
         };
         $scope.init = function (settings) {
             $scope.saveEnabled = settings.SaveEnabled;
+            $scope.saveMessageRequired = settings.SaveMessageRequired;
             $scope.annotateEnabled = settings.AnnotateEnabled;
             $scope.quiet = settings.Quiet;
             $scope.version = settings.Version;

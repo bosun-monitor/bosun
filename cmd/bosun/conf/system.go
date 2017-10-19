@@ -52,8 +52,10 @@ type SystemConf struct {
 
 	MaxRenderedTemplateAge int // in days
 
-	EnableSave      bool
-	EnableReload    bool
+	EnableSave         bool
+	EnableReload       bool
+	RequireSaveMessage bool
+
 	CommandHookPath string
 	RuleFilePath    string
 	md              toml.MetaData
@@ -430,6 +432,11 @@ func (sc *SystemConf) GetMaxRenderedTemplateAge() int {
 // SaveEnabled returns if saving via the UI and config editing API endpoints should be enabled
 func (sc *SystemConf) SaveEnabled() bool {
 	return sc.EnableSave
+}
+
+// SaveMessageRequired makes it so the comment box when saving is a required field
+func (sc *SystemConf) SaveMessageRequired() bool {
+	return sc.RequireSaveMessage
 }
 
 // ReloadEnabled returns if reloading of the rule config should be enabled. This will return

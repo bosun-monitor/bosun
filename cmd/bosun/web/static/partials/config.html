@@ -392,10 +392,10 @@
 								<username-input></username-input>
 							</div>
 						</div>
-						<div class="form-group">
-							<label class="col-sm-2 control-label">Message</label>
+						<div class="form-group" ng-class="saveMessageRequired == true && ! message.trim() ? 'has-error' : ''">
+							<label class="col-sm-2 control-label" >Message</label>
 							<div class="col-sm-6">
-								<textarea rows="10" class="form-control" ng-model="message"></textarea>
+								<textarea rows="10" class="form-control from-group"  ng-model="message"></textarea>
 							</div>
 						</div>
 					</div>
@@ -406,7 +406,7 @@
 				<div class="modal-footer">
 					<button type="button" class="btn btn-primary" ng-click="diffConfig()">Refresh Diff</button>
 					<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-					<button type="button" class="btn btn-primary" ng-class="runningChanged == true ? 'alert-warning' : ''" data-dismiss="modal"
+					<button type="button" class="btn btn-primary" ng-disabled="saveMessageRequired == true && message.trim() == ''" ng-class="runningChanged == true ? 'alert-warning' : ''" data-dismiss="modal"
 					 ng-click="saveConfig()" title="This will save and reload the config if the config is valid. If the config is not valid (or if the Diff has changed since viewing it) the config will not be saved and a reload will not happen. If this button is yellow (warning) then the running config has changed since you started editing on the rule page - be careful not to overwrite other's changes.">Save and Reload</button>
 				</div>
 			</div>

@@ -58,6 +58,7 @@ type SystemConfProvider interface {
 
 	GetRuleFilePath() string
 	SaveEnabled() bool
+	SaveMessageRequired() bool
 	ReloadEnabled() bool
 	GetCommandHookPath() string
 
