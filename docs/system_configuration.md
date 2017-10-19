@@ -176,6 +176,11 @@ Bosun will then write to that file on the user's behalf.
 
 Example: `EnableSave = true`
 
+### SaveMessageRequired
+Set the UI to disable saving if the message field is empty or contains only whitespace.
+
+Example: `SaveMessageRequired = true`
+
 ### ReloadEnabled
 Sets if reloading of the rule configuration should be enabled. If
 `EnableSave` is `true`, then reloading gets enabled regardless of this
