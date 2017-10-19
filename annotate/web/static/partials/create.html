@@ -1,0 +1,62 @@
+<div class="row" ng-show="error">
+	<div class="col-lg-12">
+		<div class="alert alert-danger" ng-bind="error"></div>
+	</div>
+</div>
+<form class="form-horizontal">
+	<div class="form-group">
+		<label class="col-sm-2 control-label" ng-click="switch()">StartDate</label>
+		<div class="col-sm-6">
+			<input type="text" class="form-control" ng-model="annotation.StartDate">
+			<p class="help-block">Format: YYYY-MM-DDTHH:mm:ssZ (RFC3339). If StartDate and EndDate are blank, the time is set to now. If one of the two is blank, the blank field will be set to the time of the other. Click the StartDate or EndDate lable to switch between local and UTC time.</p>
+		</div>
+	</div>
+	<div class="form-group">
+		<label class="col-sm-2 control-label" ng-click="switch()">EndDate</label>
+		<div class="col-sm-6">
+			<input type="text" class="form-control" ng-model="annotation.EndDate">
+		</div>
+	</div>
+	<div class="form-group">
+		<label class="col-sm-2 control-label">CreationUser</label>
+		<div class="col-sm-6">
+			<input type="text" class="form-control" ng-model="annotation.CreationUser">
+		</div>
+	</div>
+	<div class="form-group">
+		<label class="col-sm-2 control-label">Url</label>
+		<div class="col-sm-6">
+			<input type="text" class="form-control" ng-model="annotation.Url">
+		</div>
+	</div>
+	<div class="form-group">
+		<label class="col-sm-2 control-label">Host</label>
+		<div class="col-sm-6">
+			<input type="text" class="form-control" ng-model="annotation.Host" ng-options="h for h in hosts" bs-typeahead>
+		</div>
+	</div>
+	<div class="form-group">
+		<label class="col-sm-2 control-label">Owner</label>
+		<div class="col-sm-6">
+			<input type="text" class="form-control" ng-model="annotation.Owner" ng-options="o for o in owners" bs-typeahead>
+		</div>
+	</div>
+		<div class="form-group">
+		<label class="col-sm-2 control-label">Category</label>
+		<div class="col-sm-6">
+			<input type="text" class="form-control" ng-model="annotation.Category" ng-options="c for c in categories" bs-typeahead>
+		</div>
+	</div>
+	<div class="form-group">
+		<label class="col-sm-2 control-label">Message</label>
+		<div class="col-sm-10">
+			<textarea class="form-control" ng-model="annotation.Message"></textarea>
+		</div>
+	</div>
+	<div class="form-group">
+		<div class="col-sm-offset-2 col-sm-6">
+			<button class="btn btn-default" ng-click="submit()">Submit</button>
+		</div>
+	</div>
+	<div ng-show="annotation.Id != ''">Editing Annotation</div>
+</form>

@@ -9,6 +9,7 @@ import (
 
 	"golang.org/x/net/context"
 
+	"bosun.org/annotate/backend"
 	"bosun.org/cmd/bosun/cache"
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/database"
@@ -19,7 +20,6 @@ import (
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
 	"github.com/MiniProfiler/go/miniprofiler"
-	"github.com/bosun-monitor/annotate/backend"
 	"github.com/bradfitz/slice"
 	"github.com/kylebrandt/boolq"
 )

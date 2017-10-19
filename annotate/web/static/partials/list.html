@@ -1,0 +1,56 @@
+<div class="row" ng-show="error">
+	<div class="col-lg-12">
+		<div class="alert alert-danger" ng-bind="error"></div>
+	</div>
+</div>
+
+<div class="row">
+	<form class="form">
+		<div class="col-sm-3 form-group">
+			<label class="control-label" ng-click="switch()">Start</label>
+			<input type="text" class="form-control" ng-model="StartDate" ng-blur="get()">
+		</div>
+		<div class="col-sm-3 from-group">
+			<label class="control-label" ng-click="switch()">End</label>
+			<input type="text" class="form-control" ng-model="EndDate" ng-blur="get()">
+		</div>
+	</form>
+</div>
+
+<div class="row">
+	<div class="col-sm-12">
+		<table class="table">
+			<thead>
+				<tr>
+					<th>Id</th>
+					<th>StartDate</th>
+					<th>EndDate</th>
+					<th>Source</th>
+					<th>Host</th>
+					<th>CreationUser</th>
+					<th>Owner</th>
+					<th>Category</th>
+					<th>Url</th>
+					<th>Message</th>
+				</tr>
+			</thead>
+			<tbody>
+				<tr ng-repeat="a in annotations">
+					<td>
+						<a ng-href="{{'/?guid=' + a.Id}}">Edit </a>
+						<a ng-click="delete(a.Id)">Delete </a>
+					</td>
+					<td ng-bind="a.StartDate" ng-style="active(a) && {'font-weight': 'bold'}"></td>
+					<td ng-bind="a.EndDate" ng-style="active(a) && {'font-weight': 'bold'}"></td>
+					<td ng-bind="a.Source"></td>
+					<td ng-bind="a.Host"></td>
+					<td ng-bind="a.CreationUser"></td>
+					<td ng-bind="a.Owner"></td>
+					<td ng-bind="a.Category"></td>
+					<td><a ng-show="a.Url" ng-href="{{a.Url}}">{{url(a.Url)}}</a></td>
+					<td ng-bind="a.Message"></td>
+				</tr>
+			</tbody>
+		</table>
+	</div>
+</div>
