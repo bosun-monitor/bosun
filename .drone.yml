@@ -1,0 +1,7 @@
+build:
+  image: golang:1.9
+  commands:
+    - cp -r . $GOPATH/src/bosun.org
+    - cd ${GOPATH}/src/bosun.org/cmd/bosun
+    - go build
+    - go test bosun.org/...
