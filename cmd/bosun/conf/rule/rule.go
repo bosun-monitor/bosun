@@ -804,6 +804,10 @@ func (c *Conf) getAllPossibleNotifications(a *conf.Alert) map[string]*conf.Notif
 	for k, v := range a.CritNotification.GetAllChained() {
 		nots[k] = v
 	}
+	// VICTOROPS INTEGRATION
+	for k, v := range a.NormNotification.GetAllChained() {
+		nots[k] = v
+	}
 	followLookup := func(l map[string]*conf.Lookup) {
 		for target, lookup := range l {
 			for _, entry := range lookup.Entries {
@@ -821,5 +825,8 @@ func (c *Conf) getAllPossibleNotifications(a *conf.Alert) map[string]*conf.Notif
 	}
 	followLookup(a.CritNotification.Lookups)
 	followLookup(a.WarnNotification.Lookups)
+
+	// VICTOROPS INTEGRATION
+	followLookup(a.NormNotification.Lookups)
 	return nots
 }

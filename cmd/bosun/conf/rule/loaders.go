@@ -129,10 +129,12 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 		c.errorf("duplicate alert name: %s", name)
 	}
 	a := conf.Alert{
-		Vars:              make(map[string]string),
-		Name:              name,
-		CritNotification:  new(conf.Notifications),
-		WarnNotification:  new(conf.Notifications),
+		Vars:             make(map[string]string),
+		Name:             name,
+		CritNotification: new(conf.Notifications),
+		WarnNotification: new(conf.Notifications),
+		// VICTOROPS INTEGRATION
+		NormNotification:  new(conf.Notifications),
 		AlertTemplateKeys: map[string]*template.Template{},
 	}
 	a.Text = s.RawText
@@ -197,6 +199,9 @@ func (c *Conf) loadAlert(s *parse.SectionNode) {
 			procNotification(v, a.CritNotification)
 		case "warnNotification":
 			procNotification(v, a.WarnNotification)
+		// VICTOROPS INTEGRATION
+		case "normNotification":
+			procNotification(v, a.NormNotification)
 		case "unknown":
 			od, err := opentsdb.ParseDuration(v)
 			if err != nil {
