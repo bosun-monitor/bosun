@@ -243,7 +243,7 @@ The default is to use ledis. If Both Redis and ledis are defined, Redis will tak
 The Redis hostname and port.
 
 #### RedisDb
-The Redis database to use. The defualt is 0.
+The Redis database to use. The default is 0.
 
 #### RedisPassword
 Optional password to use when connecting to Redis.
