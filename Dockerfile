@@ -4,6 +4,7 @@ COPY . $GOPATH/src/bosun.org
 WORKDIR ${GOPATH}/src/bosun.org/build
 RUN go run build.go -esv5 -bosun
 
+WORKDIR ${GOPATH}/src/bosun.org
 RUN cd toml-merge && go install
 
 COPY config.toml /bosun/bosun.toml
