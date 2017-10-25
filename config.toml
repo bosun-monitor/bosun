@@ -10,13 +10,10 @@ CheckFrequency = "1m"
 DefaultRunEvery = 5
 
 # Path to the rule file (file that contains definitions for alerts, macros, lookups, templates, and notifications)
-RuleFilePath = "bosun-0.6.0-rules-complex.conf"
+RuleFilePath = "/bosun/bosun.conf"
 
 # timeanddate.com zones (only for use in the UI)
-TimeAndDate = [ 202, 75, 179, 136 ]
-
-# An API key for generating goo.gl shortlinks
-ShortURLKey = "aKey"
+TimeAndDate = [ 136 ]
 
 # The minumum amount of alerts to create an alert group on the dashboard. Default is 5
 MinGroupSize = 5
@@ -76,14 +73,3 @@ EnableSave = false
     RedisDb = 0
     LedisDir = "ledis_data"
     LedisBindAddr = "127.0.0.1:9565"
-
-# Configuration to enable Bosun to be able to send email notifications
-[SMTPConf]
-    EmailFrom = "bosun@example.com"
-    Host = "mail.example.com"
-
-# Configuration to enable the InfluxDB backend
-[InfluxConf]
-    URL = "https://myInfluxServer:1234"
-    Timeout = "5m"
-    UnsafeSSL = true
