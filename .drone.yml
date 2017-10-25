@@ -1,7 +1,19 @@
 build:
-  image: golang:1.9
+  image: golang:1.9.1
   commands:
     - cp -r . $GOPATH/src/bosun.org
     - cd ${GOPATH}/src/bosun.org/cmd/bosun
     - go build 
     - go test -v bosun.org/...
+
+publish:
+  ecr:
+    repo: data-platform/bosun-build
+    tag:
+    - latest
+    - 1.0.$$BUILD_NUMBER
+    region: eu-west-1
+    storage_driver: overlay
+    create_repository: True
+    when:
+      branch: master
