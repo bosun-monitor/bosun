@@ -2,9 +2,9 @@ build:
   image: golang:1.9.1
   commands:
     - cp -r . $GOPATH/src/bosun.org
+    - git clone git@gitlab.skyscannertools.net:data-platform/toml-merge.git toml-merge
     - cd ${GOPATH}/src/bosun.org/cmd/bosun
     - go test -v bosun.org/...
-    - git clone git@gitlab.skyscannertools.net:data-platform/toml-merge.git toml-merge
 
 publish:
   ecr:
