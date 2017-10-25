@@ -3,8 +3,8 @@ build:
   commands:
     - cp -r . $GOPATH/src/bosun.org
     - cd ${GOPATH}/src/bosun.org/cmd/bosun
-    - go build 
     - go test -v bosun.org/...
+    - git clone git@gitlab.skyscannertools.net:data-platform/toml-merge.git toml-merge
 
 publish:
   ecr:
