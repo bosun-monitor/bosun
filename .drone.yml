@@ -8,6 +8,7 @@ build:
 
 publish:
   ecr:
+    image: 325714046698.dkr.ecr.eu-west-1.amazonaws.com/drone-plugins/docker
     repo: data-platform/bosun-build
     tag:
     - latest
