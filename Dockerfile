@@ -7,4 +7,4 @@ RUN go run build.go -esv5 -bosun
 WORKDIR ${GOPATH}/src/bosun.org
 RUN cd toml-merge && go install
 
-COPY bosun.toml /bosun/bosun.toml
+COPY skyscanner.toml /bosun/skyscanner.toml
