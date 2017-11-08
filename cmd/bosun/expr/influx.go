@@ -244,8 +244,8 @@ func extractGroupByClause(q string) (groupByClause string) {
 func fixGroupByClause(groupByClause string) (fixedGroupByClause string) {
 	for strings.Count(groupByClause, "time(") > 1 {
 		lastGroupByTimeIndex := strings.LastIndex(groupByClause, "time(")
-		lastGroupByTimeEndIndex := lastGroupByTimeIndex + strings.LastIndex(groupByClause[lastGroupByTimeIndex:len(groupByClause)], ")")
-		groupByClause = groupByClause[0:lastGroupByTimeIndex] + groupByClause[lastGroupByTimeEndIndex+2:len(groupByClause)]
+		lastGroupByTimeEndIndex := lastGroupByTimeIndex + strings.LastIndex(groupByClause[lastGroupByTimeIndex:], ")")
+		groupByClause = groupByClause[0:lastGroupByTimeIndex] + groupByClause[lastGroupByTimeEndIndex+2:]
 		groupByClause = strings.Trim(groupByClause, ", ")
 	}
 	return groupByClause
