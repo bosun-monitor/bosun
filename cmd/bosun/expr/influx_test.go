@@ -37,7 +37,7 @@ func TestInfluxQueryDuration(t *testing.T) {
 		},
 		{
 			"select * from a WHERE time > 0 fill(none)", "",
-			"",
+			fmt.Sprintf("SELECT * FROM a WHERE time > 0 AND time >= '%s' AND time <= '%s'", start, end),
 		},
 	}
 	for _, test := range tests {
