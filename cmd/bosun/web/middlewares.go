@@ -100,6 +100,7 @@ func buildAuth(cfg *conf.AuthConf) (easyauth.AuthManager, *token.TokenProvider, 
 func buildLDAPConfig(ld conf.LDAPConf) (*ldap.LdapProvider, error) {
 	l := &ldap.LdapProvider{
 		Domain:         ld.Domain,
+		UserBaseDn:     ld.UserBaseDn,
 		LdapAddr:       ld.LdapAddr,
 		AllowInsecure:  ld.AllowInsecure,
 		RootSearchPath: ld.RootSearchPath,
