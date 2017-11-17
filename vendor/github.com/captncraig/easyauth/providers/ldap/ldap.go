@@ -14,6 +14,8 @@ import (
 type LdapProvider struct {
 	//name of domain
 	Domain string
+	//user base dn (for LDAP Auth)
+	UserBaseDn string
 	//server to query
 	LdapAddr string
 	//if untrusted certs should be allowed
@@ -103,7 +105,19 @@ func (l *LdapProvider) HandlePost(w http.ResponseWriter, r *http.Request) {
 }
 
 func (l *LdapProvider) Authorize(un, pw string) easyauth.Role {
-	fullUn := l.Domain + "\\" + un
+
+	var fullUn string
+	var auth_ldap bool
+
+	if l.UserBaseDn != "" {
+		// prepare LDAP user bind dn
+		fullUn = "uid=" + un + "," + l.UserBaseDn
+		auth_ldap = true
+	} else {
+		// prepare AD user domain
+		fullUn = l.Domain + "\\" + un
+	}
+
 	conn, err := ldap.DialTLS("tcp", l.LdapAddr, &tls.Config{
 		InsecureSkipVerify: l.AllowInsecure,
 	})
@@ -125,7 +139,7 @@ func (l *LdapProvider) Authorize(un, pw string) easyauth.Role {
 		if group.Path == "*" {
 			role |= group.Role
 		}
-		isMember, err := checkGroupMembership(un, conn, l.RootSearchPath, map[string]bool{}, []string{group.Path})
+		isMember, err := checkGroupMembership(un, conn, l.RootSearchPath, map[string]bool{}, []string{group.Path}, auth_ldap)
 		if err != nil {
 			log.Println("Error checking group membership", err)
 			panic("Error checking group memberships")
@@ -140,19 +154,28 @@ func (l *LdapProvider) Authorize(un, pw string) easyauth.Role {
 	return role
 }
 
-func checkGroupMembership(un string, conn *ldap.Conn, rootSearch string, alreadySearched map[string]bool, groups []string) (isMember bool, err error) {
+func checkGroupMembership(un string, conn *ldap.Conn, rootSearch string, alreadySearched map[string]bool, groups []string, auth_ldap bool) (isMember bool, err error) {
 	// Implementation of recursive group membership search. There is a magic AD key that kinda does this, but this may be more reliable.
 	grps := make([]string, len(groups))
 	for i, g := range groups {
 		alreadySearched[g] = true
-		grps[i] = fmt.Sprintf("(memberof=%s)", g)
+		grps[i] = fmt.Sprintf("(memberof=%s)(member=%s)", g, g)
 	}
+
+	// map user key for LDAP it will be cn
+	var user_id string
+	if auth_ldap {
+		user_id = "cn"
+	} else {
+		user_id = "sAMAccountName"
+	}
+
 	//find all users or groups that are direct members of ANY of the given groups
 	searchRequest := ldap.NewSearchRequest(
 		rootSearch,
 		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
-		fmt.Sprintf("(&(|(objectClass=user)(objectClass=group))(|%s))", strings.Join(grps, "")),
-		[]string{"dn", "objectClass", "sAMAccountName"},
+		fmt.Sprintf("(&(|(objectClass=user)(objectClass=group)(objectClass=groupOfNames))(|%s))", strings.Join(grps, "")),
+		[]string{"dn", "objectClass", user_id},
 		nil,
 	)
 	sr, err := conn.Search(searchRequest)
@@ -171,9 +194,17 @@ func checkGroupMembership(un string, conn *ldap.Conn, rootSearch string, already
 		if objType == "person" && acctName == un {
 			return true, nil
 		}
+
+		//for LDAP group member check only the name
+		if auth_ldap {
+			if acctName == un {
+				return true, nil
+			}
+		}
+
 	}
 	if len(nextSearches) > 0 {
-		return checkGroupMembership(un, conn, rootSearch, alreadySearched, nextSearches)
+		return checkGroupMembership(un, conn, rootSearch, alreadySearched, nextSearches, auth_ldap)
 	}
 	return false, nil
 }
