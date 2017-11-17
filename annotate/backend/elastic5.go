@@ -141,7 +141,7 @@ func (e *Elastic) InitBackend() error {
 		"type":  "keyword",
 		"index": true,
 	}
-	stringA := map[string]string{
+	stringA := map[string]interface{}{
 		"type":  "text",
 		"index": true,
 	}
