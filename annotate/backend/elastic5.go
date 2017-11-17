@@ -138,11 +138,11 @@ func (e *Elastic) InitBackend() error {
 	}
 	// mappings updated according to https://www.elastic.co/blog/strings-are-dead-long-live-strings
 	stringNA := map[string]interface{}{
-		"type":  "keyword",
+		"type":  "text",
 		"index": true,
 	}
 	stringA := map[string]interface{}{
-		"type":  "keyword",
+		"type":  "text",
 		"index": true,
 	}
 	date := map[string]string{
