@@ -142,7 +142,7 @@ func (e *Elastic) InitBackend() error {
 		"index": true,
 	}
 	stringA := map[string]interface{}{
-		"type":  "text",
+		"type":  "keyword",
 		"index": true,
 	}
 	date := map[string]string{
