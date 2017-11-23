@@ -121,6 +121,8 @@ matching on Linux.
 PProf (string): optional IP:Port binding to be used for debugging with pprof.
 Examples: localhost:6060 for loopback or :6060 for all IP addresses.
 
+MetricPrefix (string): optional Prefix prepended to all metrics path.
+
 Collector configuration keys
 
 Following are configurations for collectors that do not autodetect.
@@ -250,12 +252,23 @@ LogBillingDetails tells scollector to add the following tags to your metrics:
    - costcenter
 	 - accountname
 	 - subscription
+
+LogResourceDetails tell scollector to add the following tags to your metrics:
+   - resoucegroup
+	 - resourcelocation
+
+LogExtraTags tells scollector to take resource tags and add them to your metrics. Careful: this will
+add all tags as they exist in Azure, so you may end up with a large number of distinct tags if you
+are not careful. It will not process any tags that begin with "hidden".
+
 If you are a heavy Azure EA user, then these additional tags may be useful for breaking down costs.
 
 	[[AzureEA]]
 	  EANumber = "123456"
 	  APIKey = "joiIiwiaXNzIjoiZWEubWljcm9zb2Z0YXp1cmUuY29tIiwiYXVkIjoiY2xpZW50LmVhLm1"
 	  LogBillingDetails = false
+	  LogResourceDetails = false
+	  LogExtraTags = false
 
 Process: processes to monitor.
 

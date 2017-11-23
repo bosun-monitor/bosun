@@ -63,6 +63,9 @@ type Conf struct {
 	// UseSWbemServicesClient specifies if the wmi package should use SWbemServices.
 	UseSWbemServicesClient bool
 
+	// MetricPrefix prepended to all metrics path
+	MetricPrefix string
+
 	HAProxy        []HAProxy
 	SNMP           []SNMP
 	MIBS           map[string]MIB
@@ -90,6 +93,7 @@ type Conf struct {
 	LocalListener       string
 	TagOverride         []TagOverride
 	HadoopHost          string
+	HbaseRegions        bool
 	Oracles             []Oracle
 	Fastly              []Fastly
 }
@@ -113,16 +117,18 @@ type Nexpose struct {
 }
 
 type GoogleAnalytics struct {
-	ClientID string
-	Secret   string
-	Token    string
-	Sites    []GoogleAnalyticsSite
+	ClientID  string
+	Secret    string
+	Token     string
+	JSONToken string
+	Sites     []GoogleAnalyticsSite
 }
 
 type GoogleWebmaster struct {
-	ClientID string
-	Secret   string
-	Token    string
+	ClientID  string
+	Secret    string
+	Token     string
+	JSONToken string
 }
 
 type Fastly struct {
@@ -158,9 +164,11 @@ type AWS struct {
 }
 
 type AzureEA struct {
-	EANumber          uint32
-	APIKey            string
-	LogBillingDetails bool
+	EANumber           uint32
+	APIKey             string
+	LogBillingDetails  bool
+	LogResourceDetails bool
+	LogExtraTags       bool
 }
 
 type SNMP struct {

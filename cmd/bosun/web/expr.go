@@ -1,6 +1,7 @@
 package web
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -77,7 +78,6 @@ func Expr(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (v inter
 		TSDBContext:     schedule.SystemConf.GetTSDBContext(),
 		GraphiteContext: schedule.SystemConf.GetGraphiteContext(),
 		InfluxConfig:    schedule.SystemConf.GetInfluxContext(),
-		LogstashHosts:   schedule.SystemConf.GetLogstashContext(),
 		ElasticHosts:    schedule.SystemConf.GetElasticContext(),
 	}
 	providers := &expr.BosunProviders{
@@ -134,7 +134,7 @@ type Res struct {
 	Key models.AlertKey
 }
 
-func procRule(t miniprofiler.Timer, ruleConf conf.RuleConfProvider, a *conf.Alert, now time.Time, summary bool, email string, template_group string) (*ruleResult, error) {
+func procRule(t miniprofiler.Timer, ruleConf conf.RuleConfProvider, a *conf.Alert, now time.Time, summary bool, email string, template_group string, incidentID int) (*ruleResult, error) {
 	s := &sched.Schedule{}
 	s.Search = schedule.Search
 	if err := s.Init(schedule.SystemConf, ruleConf, schedule.DataAccess, AnnotateBackend, false, false); err != nil {
@@ -166,8 +166,10 @@ func procRule(t miniprofiler.Timer, ruleConf conf.RuleConfProvider, a *conf.Aler
 		}
 	}
 	sort.Sort(keys)
-	var subject, body []byte
+	var rt *models.RenderedTemplates
 	var data interface{}
+	var nots map[string]*conf.PreparedNotifications
+	var aNots map[string]map[string]*conf.PreparedNotifications
 	warning := make([]string, 0)
 
 	if !summary && len(keys) > 0 {
@@ -192,42 +194,40 @@ func procRule(t miniprofiler.Timer, ruleConf conf.RuleConfProvider, a *conf.Aler
 				warning = append(warning, fmt.Sprintf("template group %s was not a subset of any result", template_group))
 			}
 		}
-		if e := primaryIncident.Events[0]; e.Crit != nil {
+		e := primaryIncident.Events[0]
+		if e.Crit != nil {
 			primaryIncident.Result = e.Crit
 		} else if e.Warn != nil {
 			primaryIncident.Result = e.Warn
 		}
-		var b_err, s_err error
+		var errs []error
+		primaryIncident.Id = int64(incidentID)
+		primaryIncident.Start = time.Now().UTC()
+		primaryIncident.CurrentStatus = e.Status
+		primaryIncident.LastAbnormalStatus = e.Status
+		primaryIncident.LastAbnormalTime = models.Epoch{Time: time.Now().UTC()}
 		func() {
 			defer func() {
 				if err := recover(); err != nil {
 					s := fmt.Sprint(err)
 					warning = append(warning, s)
-					b_err = fmt.Errorf(s)
+					errs = append(errs, fmt.Errorf("panic rendering templates: %s", err))
 				}
 			}()
-			if body, _, b_err = s.ExecuteBody(rh, a, primaryIncident, false); b_err != nil {
-				warning = append(warning, b_err.Error())
-			}
+			rt, errs = s.ExecuteAll(rh, a, primaryIncident, false)
 		}()
-		func() {
-			defer func() {
-				if err := recover(); err != nil {
-					s := fmt.Sprint(err)
-					warning = append(warning, s)
-					s_err = fmt.Errorf(s)
-				}
-			}()
-			subject, s_err = s.ExecuteSubject(rh, a, primaryIncident, false)
-			if s_err != nil {
-				warning = append(warning, s_err.Error())
-			}
-		}()
-		if s_err != nil || b_err != nil {
+		for _, err := range errs {
+			warning = append(warning, err.Error())
+		}
+		if rt == nil {
+			rt = &models.RenderedTemplates{}
+		}
+
+		if len(errs) > 0 {
 			var err error
-			subject, body, err = s.ExecuteBadTemplate([]error{s_err, b_err}, rh, a, primaryIncident)
+			rt.Subject, rt.Body, err = s.ExecuteBadTemplate(errs, rh, a, primaryIncident)
 			if err != nil {
-				subject = []byte(fmt.Sprintf("unable to create tempalate error notification: %v", err))
+				rt.Subject = fmt.Sprintf("unable to create tempalate error notification: %v", err)
 			}
 		} else if email != "" {
 			m, err := mail.ParseAddress(email)
@@ -237,29 +237,52 @@ func procRule(t miniprofiler.Timer, ruleConf conf.RuleConfProvider, a *conf.Aler
 			n := conf.Notification{
 				Email: []*mail.Address{m},
 			}
-			email, attachments, b_err := s.ExecuteBody(rh, a, primaryIncident, true)
-			email_subject, s_err := s.ExecuteSubject(rh, a, primaryIncident, true)
-			if b_err != nil {
-				warning = append(warning, b_err.Error())
-			} else if s_err != nil {
-				warning = append(warning, s_err.Error())
-			} else {
-				n.DoEmail(email_subject, email, schedule.SystemConf, string(primaryIncident.AlertKey), attachments...)
-			}
+			n.PrepareAlert(rt, string(primaryIncident.AlertKey), rt.Attachments...).Send(s.SystemConf)
 		}
+		nots, aNots = buildNotificationPreviews(a, rt, primaryIncident, s.SystemConf)
 		data = s.Data(rh, primaryIncident, a, false)
 	}
-	return &ruleResult{
-		criticals,
-		warnings,
-		normals,
-		now,
-		string(body),
-		string(subject),
-		data,
-		rh.Events,
-		warning,
-	}, nil
+
+	rr := &ruleResult{
+		Criticals:           criticals,
+		Warnings:            warnings,
+		Normals:             normals,
+		Time:                now,
+		Data:                data,
+		Result:              rh.Events,
+		Warning:             warning,
+		RenderedTemplates:   rt,
+		Notifications:       nots,
+		ActionNotifications: aNots,
+	}
+	return rr, nil
+}
+
+func buildNotificationPreviews(a *conf.Alert, rt *models.RenderedTemplates, incident *models.IncidentState, c conf.SystemConfProvider, attachments ...*models.Attachment) (map[string]*conf.PreparedNotifications, map[string]map[string]*conf.PreparedNotifications) {
+	previews := map[string]*conf.PreparedNotifications{}
+	actionPreviews := map[string]map[string]*conf.PreparedNotifications{}
+	nots := map[string]*conf.Notification{}
+	for name, not := range a.CritNotification.GetAllChained() {
+		nots[name] = not
+	}
+	for name, not := range a.WarnNotification.GetAllChained() {
+		nots[name] = not
+	}
+
+	for name, not := range nots {
+		previews[name] = not.PrepareAlert(rt, string(incident.AlertKey), attachments...)
+		actions := map[string]*conf.PreparedNotifications{}
+		actionPreviews[name] = actions
+		// for all action types. just loop through known range. Update this if any get added
+		for at := models.ActionAcknowledge; at <= models.ActionCancelClose; at++ {
+			if !not.RunOnActionType(at) {
+				continue
+			}
+			incidents := []*models.IncidentState{incident}
+			actions[at.String()] = not.PrepareAction(at, a.Template, c, incidents, "somebody", "I took care of this")
+		}
+	}
+	return previews, actionPreviews
 }
 
 type ruleResult struct {
@@ -267,12 +290,29 @@ type ruleResult struct {
 	Warnings  []models.AlertKey
 	Normals   []models.AlertKey
 	Time      time.Time
+	*models.RenderedTemplates
+	Notifications       map[string]*conf.PreparedNotifications
+	ActionNotifications map[string]map[string]*conf.PreparedNotifications
+	Data                interface{}
+	Result              map[models.AlertKey]*models.Event
+	Warning             []string
+}
 
-	Body    string
-	Subject string
-	Data    interface{}
-	Result  map[models.AlertKey]*models.Event
-	Warning []string
+func TestHTTPNotification(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	prep := &conf.PreparedHttp{}
+	dec := json.NewDecoder(r.Body)
+	if err := dec.Decode(prep); err != nil {
+		return nil, err
+	}
+	code, err := prep.Send()
+	dat := &struct {
+		Error  string
+		Status int
+	}{"", code}
+	if err != nil {
+		dat.Error = err.Error()
+	}
+	return dat, nil
 }
 
 func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
@@ -298,6 +338,13 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 		}
 		if intervals < 1 {
 			return nil, fmt.Errorf("must be > 0 intervals")
+		}
+	}
+	incidentID := 42
+	if incident := r.FormValue("incidentId"); len(incident) > 0 {
+		incidentID, err = strconv.Atoi(incident)
+		if err != nil {
+			return nil, err
 		}
 	}
 	if fz, tz := from.IsZero(), to.IsZero(); fz && tz {
@@ -326,7 +373,7 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 		for interval := range ch {
 			t.Step(fmt.Sprintf("interval %v", interval), func(t miniprofiler.Timer) {
 				now := from.Add(diff * time.Duration(interval))
-				res, err := procRule(t, c, a, now, interval != 0, r.FormValue("email"), r.FormValue("template_group"))
+				res, err := procRule(t, c, a, now, interval != 0, r.FormValue("email"), r.FormValue("template_group"), incidentID)
 				resch <- res
 				errch <- err
 			})
@@ -365,10 +412,11 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 		Warnings     []string `json:",omitempty"`
 		Sets         []*Set
 		AlertHistory map[models.AlertKey]*Histories
-		Body         string      `json:",omitempty"`
-		Subject      string      `json:",omitempty"`
-		Data         interface{} `json:",omitempty"`
-		Hash         string
+		*models.RenderedTemplates
+		Notifications       map[string]*conf.PreparedNotifications
+		ActionNotifications map[string]map[string]*conf.PreparedNotifications
+		Data                interface{} `json:",omitempty"`
+		Hash                string
 	}{
 		AlertHistory: make(map[models.AlertKey]*Histories),
 		Hash:         hash,
@@ -390,8 +438,9 @@ func Rule(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interfa
 			Time:     res.Time.Format(tsdbFormatSecs),
 		}
 		if res.Data != nil {
-			ret.Body = res.Body
-			ret.Subject = res.Subject
+			ret.RenderedTemplates = res.RenderedTemplates
+			ret.Notifications = res.Notifications
+			ret.ActionNotifications = res.ActionNotifications
 			ret.Data = res.Data
 			for k, v := range res.Result {
 				set.Results = append(set.Results, &Result{

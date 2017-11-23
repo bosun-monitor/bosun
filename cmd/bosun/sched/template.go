@@ -5,7 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"html/template"
+	htemplate "html/template"
 	"io"
 	"io/ioutil"
 	"math"
@@ -14,12 +14,15 @@ import (
 	"strings"
 	"time"
 
+	"bosun.org/collect"
+
 	"bosun.org/cmd/bosun/conf"
+	"bosun.org/cmd/bosun/conf/template"
 	"bosun.org/cmd/bosun/expr"
 	"bosun.org/models"
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
-	"github.com/aymerick/douceur/inliner"
+
 	"github.com/jmoiron/jsonq"
 )
 
@@ -33,6 +36,8 @@ type Context struct {
 	runHistory  *RunHistory
 	Attachments []*models.Attachment
 	ElasticHost string
+
+	vars map[string]interface{}
 }
 
 func (s *Schedule) Data(rh *RunHistory, st *models.IncidentState, a *conf.Alert, isEmail bool) *Context {
@@ -43,25 +48,18 @@ func (s *Schedule) Data(rh *RunHistory, st *models.IncidentState, a *conf.Alert,
 		schedule:      s,
 		runHistory:    rh,
 		ElasticHost:   "default",
+		vars:          map[string]interface{}{},
 	}
 	return &c
 }
 
-type unknownContext struct {
-	Time  time.Time
-	Name  string
-	Group models.AlertKeys
-
-	schedule *Schedule
+func (c *Context) Set(name string, value interface{}) string {
+	c.vars[name] = value
+	return "" // have to return something
 }
 
-func (s *Schedule) unknownData(t time.Time, name string, group models.AlertKeys) *unknownContext {
-	return &unknownContext{
-		Time:     t,
-		Group:    group,
-		Name:     name,
-		schedule: s,
-	}
+func (c *Context) Get(name string) interface{} {
+	return c.vars[name]
 }
 
 // Note: All Context methods that can return nil must return literal nils
@@ -136,32 +134,118 @@ func (c *Context) UseElastic(host string) interface{} {
 	return nil
 }
 
-func (s *Schedule) ExecuteBody(rh *RunHistory, a *conf.Alert, st *models.IncidentState, isEmail bool) ([]byte, []*models.Attachment, error) {
+func (s *Schedule) ExecuteBody(rh *RunHistory, a *conf.Alert, st *models.IncidentState, isEmail bool) (string, []*models.Attachment, error) {
 	t := a.Template
-	if t == nil || t.Body == nil {
-		return nil, nil, nil
+	if t == nil {
+		return "", nil, nil
+	}
+	tp := t.Body
+	if isEmail && t.CustomTemplates["emailBody"] != nil {
+		tp = t.CustomTemplates["emailBody"]
+	}
+	if tp == nil {
+		return "", nil, nil
 	}
 	c := s.Data(rh, st, a, isEmail)
-	buf := new(bytes.Buffer)
-	if err := t.Body.Execute(buf, c); err != nil {
-		return nil, nil, err
-	}
-	if inline, err := inliner.Inline(buf.String()); err == nil {
-		buf = bytes.NewBufferString(inline)
-	} else {
-		slog.Errorln(err)
-	}
-	return buf.Bytes(), c.Attachments, nil
+	return s.executeTpl(tp, c)
 }
 
-func (s *Schedule) ExecuteSubject(rh *RunHistory, a *conf.Alert, st *models.IncidentState, isEmail bool) ([]byte, error) {
-	t := a.Template
-	if t == nil || t.Subject == nil {
-		return nil, nil
-	}
+func (s *Schedule) executeTpl(t *template.Template, c *Context) (string, []*models.Attachment, error) {
 	buf := new(bytes.Buffer)
-	err := t.Subject.Execute(buf, s.Data(rh, st, a, isEmail))
-	return bytes.Join(bytes.Fields(buf.Bytes()), []byte(" ")), err
+	if err := t.Execute(buf, c); err != nil {
+		return "", nil, err
+	}
+	return buf.String(), c.Attachments, nil
+}
+
+func (s *Schedule) ExecuteSubject(rh *RunHistory, a *conf.Alert, st *models.IncidentState, isEmail bool) (string, error) {
+	t := a.Template
+	if t == nil {
+		return "", nil
+	}
+	tp := t.Subject
+	if isEmail && t.CustomTemplates["emailSubject"] != nil {
+		tp = t.CustomTemplates["emailSubject"]
+	}
+	if tp == nil {
+		return "", nil
+	}
+	c := s.Data(rh, st, a, isEmail)
+	d, _, err := s.executeTpl(tp, c)
+	if err != nil {
+		return "", err
+	}
+	// remove extra whitespace
+	d = strings.Join(strings.Fields(d), " ")
+	return d, nil
+}
+
+func (s *Schedule) ExecuteAll(rh *RunHistory, a *conf.Alert, st *models.IncidentState, recordTimes bool) (*models.RenderedTemplates, []error) {
+	ctx := func() *Context { return s.Data(rh, st, a, false) }
+	var errs []error
+	var timer func()
+	var category string
+	e := func(err error) {
+		if timer != nil {
+			timer()
+		}
+		if err != nil {
+			errs = append(errs, fmt.Errorf("%s: %s", category, err))
+		}
+	}
+	t := a.Template
+	rt := &models.RenderedTemplates{}
+
+	if t == nil {
+		return rt, nil
+	}
+	var err error
+
+	start := func(t string) func() {
+		category = t
+		if !recordTimes {
+			return nil
+		}
+		return collect.StartTimer("template.render", opentsdb.TagSet{"alert": a.Name, "type": t})
+	}
+
+	// subject
+	timer = start("subject")
+	subject, err := s.ExecuteSubject(rh, a, st, false)
+	e(err)
+	st.Subject = subject
+	rt.Subject = subject
+	// body
+	timer = start("body")
+	body, atts, err := s.ExecuteBody(rh, a, st, false)
+	e(err)
+	rt.Body = body
+	rt.Attachments = atts
+
+	timer = start("emailsubject")
+	emailSubject, err := s.ExecuteSubject(rh, a, st, true)
+	e(err)
+	rt.EmailSubject = []byte(emailSubject)
+
+	timer = start("emailbody")
+	emailBody, atts, err := s.ExecuteBody(rh, a, st, true)
+	e(err)
+	rt.EmailBody = []byte(emailBody)
+	rt.Attachments = atts
+
+	rt.Custom = map[string]string{}
+	for k, v := range a.AlertTemplateKeys {
+		// emailsubject/body get handled specially above
+		if k == "emailBody" || k == "emailSubject" || k == "body" || k == "subject" {
+			continue
+		}
+		c := ctx()
+		timer = start(k)
+		rendered, _, err := s.executeTpl(v, c)
+		e(err)
+		rt.Custom[k] = rendered
+	}
+	return rt, errs
 }
 
 var error_body = template.Must(template.New("body_error_template").Parse(`
@@ -188,7 +272,7 @@ var error_body = template.Must(template.New("body_error_template").Parse(`
 		</tr>
 	{{end}}</table>`))
 
-func (s *Schedule) ExecuteBadTemplate(errs []error, rh *RunHistory, a *conf.Alert, st *models.IncidentState) (subject, body []byte, err error) {
+func (s *Schedule) ExecuteBadTemplate(errs []error, rh *RunHistory, a *conf.Alert, st *models.IncidentState) (subject, body string, err error) {
 	sub := fmt.Sprintf("error: template rendering error for alert %v", st.AlertKey)
 	c := struct {
 		Errors []error
@@ -199,7 +283,7 @@ func (s *Schedule) ExecuteBadTemplate(errs []error, rh *RunHistory, a *conf.Aler
 	}
 	buf := new(bytes.Buffer)
 	error_body.Execute(buf, c)
-	return []byte(sub), buf.Bytes(), nil
+	return sub, buf.String(), nil
 }
 
 func (c *Context) evalExpr(e *expr.Expr, filter bool, series bool, autods int) (expr.ResultSlice, string, error) {
@@ -357,7 +441,7 @@ func (c *Context) graph(v interface{}, unit string, filter bool) (val interface{
 	const width = 800
 	const height = 600
 	footerHTML := fmt.Sprintf(`<p><small>Query: %s<br>Time: %s</small></p>`,
-		template.HTMLEscapeString(exprText),
+		htemplate.HTMLEscapeString(exprText),
 		c.runHistory.Start.Format(time.RFC3339))
 	if c.IsEmail {
 		err := c.schedule.ExprPNG(nil, &buf, width, height, unit, res)
@@ -371,9 +455,9 @@ func (c *Context) graph(v interface{}, unit string, filter bool) (val interface{
 			Filename:    name,
 			ContentType: "image/png",
 		})
-		return template.HTML(fmt.Sprintf(`<a href="%s" style="text-decoration: none"><img alt="%s" src="cid:%s" /></a>%s`,
+		return htemplate.HTML(fmt.Sprintf(`<a href="%s" style="text-decoration: none"><img alt="%s" src="cid:%s" /></a>%s`,
 			c.GraphLink(exprText),
-			template.HTMLEscapeString(fmt.Sprint(v)),
+			htemplate.HTMLEscapeString(fmt.Sprint(v)),
 			name,
 			footerHTML,
 		))
@@ -385,7 +469,7 @@ func (c *Context) graph(v interface{}, unit string, filter bool) (val interface{
 	}
 	buf.WriteString(`</a>`)
 	buf.WriteString(footerHTML)
-	return template.HTML(buf.String())
+	return htemplate.HTML(buf.String())
 }
 
 // Graph returns an SVG for the given result (or expression, for which it gets the result)
@@ -558,37 +642,6 @@ func (c *Context) HTTPPost(url, bodyType, data string) string {
 	return string(body)
 }
 
-func (c *Context) LSQuery(index_root, filter, sduration, eduration string, size int) interface{} {
-	var ks []string
-	for k, v := range c.AlertKey.Group() {
-		ks = append(ks, k+":"+v)
-	}
-	return c.LSQueryAll(index_root, strings.Join(ks, ","), filter, sduration, eduration, size)
-}
-
-func (c *Context) LSQueryAll(index_root, keystring, filter, sduration, eduration string, size int) interface{} {
-	req, err := expr.LSBaseQuery(c.runHistory.Start, index_root, keystring, filter, sduration, eduration, size)
-	if err != nil {
-		c.addError(err)
-		return nil
-	}
-	results, err := c.runHistory.Backends.LogstashHosts.Query(req)
-	if err != nil {
-		c.addError(err)
-		return nil
-	}
-	r := make([]interface{}, len(results.Hits.Hits))
-	for i, h := range results.Hits.Hits {
-		var err error
-		err = json.Unmarshal(*h.Source, &r[i])
-		if err != nil {
-			c.addError(err)
-			return nil
-		}
-	}
-	return r
-}
-
 func (c *Context) ESQuery(indexRoot expr.ESIndexer, filter expr.ESQuery, sduration, eduration string, size int) interface{} {
 	newFilter := expr.ScopeES(c.Group(), filter.Query)
 	req, err := expr.ESBaseQuery(c.runHistory.Start, indexRoot, newFilter, sduration, eduration, size, c.ElasticHost)
@@ -634,19 +687,4 @@ func (c *Context) ESQueryAll(indexRoot expr.ESIndexer, filter expr.ESQuery, sdur
 		}
 	}
 	return r
-}
-
-type actionNotificationContext struct {
-	States     []*models.IncidentState
-	User       string
-	Message    string
-	ActionType models.ActionType
-
-	schedule *Schedule
-}
-
-func (a actionNotificationContext) IncidentLink(i int64) string {
-	return a.schedule.SystemConf.MakeLink("/incident", &url.Values{
-		"id": []string{fmt.Sprint(i)},
-	})
 }

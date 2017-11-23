@@ -18,12 +18,9 @@ import (
 
 func init() {
 	collectors = append(collectors, &IntervalCollector{F: c_iostat_linux})
-	collectors = append(collectors, &IntervalCollector{F: c_dfstat_blocks_linux})
-	collectors = append(collectors, &IntervalCollector{F: c_dfstat_inodes_linux})
-	collectors = append(collectors, &IntervalCollector{
-		F:        checkMdadmLinux,
-		Interval: 1 * time.Minute,
-	})
+	collectors = append(collectors, &IntervalCollector{F: c_dfstat_blocks_linux, Interval: time.Second * 30})
+	collectors = append(collectors, &IntervalCollector{F: c_dfstat_inodes_linux, Interval: time.Second * 30})
+	collectors = append(collectors, &IntervalCollector{F: checkMdadmLinux, Interval: 1 * time.Minute})
 }
 
 var diskLinuxFields = []struct {

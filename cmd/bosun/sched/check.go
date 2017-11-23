@@ -72,7 +72,6 @@ func (s *Schedule) NewRunHistory(start time.Time, cache *cache.Cache) *RunHistor
 			TSDBContext:     s.SystemConf.GetTSDBContext(),
 			GraphiteContext: s.SystemConf.GetGraphiteContext(),
 			InfluxConfig:    s.SystemConf.GetInfluxContext(),
-			LogstashHosts:   s.SystemConf.GetLogstashContext(),
 			ElasticHosts:    s.SystemConf.GetElasticContext(),
 		},
 	}
@@ -228,7 +227,7 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.E
 
 	if event.Status > models.StNormal {
 		incident.LastAbnormalStatus = event.Status
-		incident.LastAbnormalTime = event.Time.UTC().Unix()
+		incident.LastAbnormalTime = models.Epoch{Time: event.Time.UTC()}
 	}
 	if event.Status > incident.WorstStatus {
 		incident.WorstStatus = event.Status
@@ -253,7 +252,7 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.E
 
 	//render templates and open alert key if abnormal
 	if event.Status > models.StNormal {
-		s.executeTemplates(incident, rt, event, a, r)
+		rt = s.executeTemplates(incident, event, a, r)
 		incident.Open = true
 		if a.Log {
 			incident.Open = false
@@ -327,84 +326,26 @@ func silencedOrIgnored(a *conf.Alert, event *models.Event, si *models.Silence) b
 	return false
 }
 
-func (s *Schedule) executeTemplates(state *models.IncidentState, rt *models.RenderedTemplates, event *models.Event, a *conf.Alert, r *RunHistory) {
-	if event.Status != models.StUnknown {
-		var errs []error
-		metric := "template.render"
-		//Render subject
-		endTiming := collect.StartTimer(metric, opentsdb.TagSet{"alert": a.Name, "type": "subject"})
-		subject, err := s.ExecuteSubject(r, a, state, false)
-		if err != nil {
-			slog.Infof("%s: %v", state.AlertKey, err)
-			errs = append(errs, err)
-		} else if subject == nil {
-			err = fmt.Errorf("Empty subject on %s", state.AlertKey)
-			slog.Error(err)
-			errs = append(errs, err)
-		}
-		endTiming()
-
-		//Render body
-		endTiming = collect.StartTimer(metric, opentsdb.TagSet{"alert": a.Name, "type": "body"})
-		body, _, err := s.ExecuteBody(r, a, state, false)
-		if err != nil {
-			slog.Infof("%s: %v", state.AlertKey, err)
-			errs = append(errs, err)
-		} else if subject == nil {
-			err = fmt.Errorf("Empty body on %s", state.AlertKey)
-			slog.Error(err)
-			errs = append(errs, err)
-		}
-		endTiming()
-
-		//Render email body
-		endTiming = collect.StartTimer(metric, opentsdb.TagSet{"alert": a.Name, "type": "emailbody"})
-		emailbody, attachments, err := s.ExecuteBody(r, a, state, true)
-		if err != nil {
-			slog.Infof("%s: %v", state.AlertKey, err)
-			errs = append(errs, err)
-		} else if subject == nil {
-			err = fmt.Errorf("Empty email body on %s", state.AlertKey)
-			slog.Error(err)
-			errs = append(errs, err)
-		}
-		endTiming()
-
-		//Render email subject
-		endTiming = collect.StartTimer(metric, opentsdb.TagSet{"alert": a.Name, "type": "emailsubject"})
-		emailsubject, err := s.ExecuteSubject(r, a, state, true)
-		if err != nil {
-			slog.Infof("%s: %v", state.AlertKey, err)
-			errs = append(errs, err)
-		} else if subject == nil {
-			err = fmt.Errorf("Empty email subject on %s", state.AlertKey)
-			slog.Error(err)
-			errs = append(errs, err)
-		}
-		endTiming()
-
-		if errs != nil {
-			endTiming = collect.StartTimer(metric, opentsdb.TagSet{"alert": a.Name, "type": "bad"})
-			subject, body, err = s.ExecuteBadTemplate(errs, r, a, state)
-			endTiming()
-
-			if err != nil {
-				subject = []byte(fmt.Sprintf("unable to create template error notification: %v", err))
-			}
-			emailbody = body
-			attachments = nil
-		}
-		state.Subject = string(subject)
-		rt.Body = string(body)
-		//don't save email seperately if they are identical
-		if string(rt.EmailBody) != rt.Body {
-			rt.EmailBody = emailbody
-		}
-		if string(rt.EmailSubject) != state.Subject {
-			rt.EmailSubject = emailsubject
-		}
-		rt.Attachments = attachments
+func (s *Schedule) executeTemplates(st *models.IncidentState, event *models.Event, a *conf.Alert, r *RunHistory) *models.RenderedTemplates {
+	if event.Status == models.StUnknown {
+		return nil
 	}
+	rt, errs := s.ExecuteAll(r, a, st, true)
+	if len(errs) > 0 {
+		for _, err := range errs {
+			slog.Errorf("rendering templates for %s: %s", a.Name, err)
+		}
+		subject, body, err := s.ExecuteBadTemplate(errs, r, a, st)
+		if err != nil {
+			subject = fmt.Sprintf("unable to create template error notification: %v", err)
+		}
+		rt.Subject = subject
+		if body != "" {
+			rt.Body = body
+		}
+	}
+	st.Subject = rt.Subject
+	return rt
 }
 
 // CollectStates sends various state information to bosun with collect.

@@ -3,9 +3,8 @@ package rule
 import (
 	"encoding/json"
 	"fmt"
+	htemplate "html/template"
 	"io/ioutil"
-	"net/mail"
-	"net/url"
 	"os"
 	"regexp"
 	"runtime"
@@ -14,16 +13,12 @@ import (
 	"time"
 
 	"bosun.org/models"
-	"bosun.org/slog"
-
-	htemplate "html/template"
-	ttemplate "text/template"
 
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/conf/rule/parse"
+	"bosun.org/cmd/bosun/conf/template"
 	"bosun.org/cmd/bosun/expr"
 	eparse "bosun.org/cmd/bosun/expr/parse"
-
 	"bosun.org/opentsdb"
 	"github.com/MiniProfiler/go/miniprofiler"
 )
@@ -32,15 +27,14 @@ type Conf struct {
 	Vars conf.Vars
 	Name string // Config file name
 
-	UnknownTemplate *conf.Template
-	Templates       map[string]*conf.Template
-	Alerts          map[string]*conf.Alert
-	Notifications   map[string]*conf.Notification `json:"-"`
-	RawText         string
-	Macros          map[string]*conf.Macro
-	Lookups         map[string]*conf.Lookup
-	Squelch         conf.Squelches `json:"-"`
-	NoSleep         bool
+	Templates     map[string]*conf.Template
+	Alerts        map[string]*conf.Alert
+	Notifications map[string]*conf.Notification `json:"-"`
+	RawText       string
+	Macros        map[string]*conf.Macro
+	Lookups       map[string]*conf.Lookup
+	Squelch       conf.Squelches `json:"-"`
+	NoSleep       bool
 
 	reload   func() error
 	backends conf.EnabledBackends
@@ -50,8 +44,9 @@ type Conf struct {
 	tree            *parse.Tree
 	node            parse.Node
 	unknownTemplate string
-	bodies          *htemplate.Template
-	subjects        *ttemplate.Template
+	bodies          *template.Template
+	subjects        *template.Template
+	customTemplates map[string]*template.Template
 	squelch         []string
 
 	writeLock chan bool
@@ -148,8 +143,9 @@ func NewConf(name string, backends conf.EnabledBackends, sysVars map[string]stri
 		Alerts:           make(map[string]*conf.Alert),
 		Notifications:    make(map[string]*conf.Notification),
 		RawText:          text,
-		bodies:           htemplate.New(name).Funcs(htemplate.FuncMap(defaultFuncs)),
-		subjects:         ttemplate.New(name).Funcs(defaultFuncs),
+		bodies:           template.New("body").Funcs(defaultFuncs),
+		subjects:         template.New("subject").Funcs(defaultFuncs),
+		customTemplates:  map[string]*template.Template{},
 		Lookups:          make(map[string]*conf.Lookup),
 		Macros:           make(map[string]*conf.Macro),
 		writeLock:        make(chan bool, 1),
@@ -183,13 +179,6 @@ func NewConf(name string, backends conf.EnabledBackends, sysVars map[string]stri
 	}
 
 	loadSections("template")
-	if c.unknownTemplate != "" {
-		t, ok := c.Templates[c.unknownTemplate]
-		if !ok {
-			c.errorf("template not found: %s", c.unknownTemplate)
-		}
-		c.UnknownTemplate = t
-	}
 	loadSections("notification")
 	loadSections("macro")
 	loadSections("lookup")
@@ -386,7 +375,7 @@ func (c *Conf) loadMacro(s *parse.SectionNode) {
 // should be non-nil. The exception to this is when a string is returned, in which case
 // the string format of the error should be returned. This allows for error handling within
 // templates for information that is helpful but not stricly necessary
-var defaultFuncs = ttemplate.FuncMap{
+var defaultFuncs = template.FuncMap{
 	"bytes": func(v interface{}) string {
 		switch v := v.(type) {
 		case string:
@@ -436,333 +425,30 @@ var defaultFuncs = ttemplate.FuncMap{
 		}
 		return &d
 	},
-}
-
-func (c *Conf) loadTemplate(s *parse.SectionNode) {
-	name := s.Name.Text
-	if _, ok := c.Templates[name]; ok {
-		c.errorf("duplicate template name: %s", name)
-	}
-	t := conf.Template{
-		Vars: make(map[string]string),
-		Name: name,
-	}
-	t.Text = s.RawText
-	t.Locator = newSectionLocator(s)
-	funcs := ttemplate.FuncMap{
-		"V": func(v string) string {
-			return c.Expand(v, t.Vars, false)
-		},
-	}
-	saw := make(map[string]bool)
-	for _, p := range s.Nodes.Nodes {
-		c.at(p)
-		switch p := p.(type) {
-		case *parse.PairNode:
-			c.seen(p.Key.Text, saw)
-			v := p.Val.Text
-			switch k := p.Key.Text; k {
-			case "body":
-				t.RawBody = v
-				tmpl := c.bodies.New(name).Funcs(htemplate.FuncMap(funcs))
-				_, err := tmpl.Parse(t.RawBody)
-				if err != nil {
-					c.error(err)
-				}
-				t.Body = tmpl
-			case "subject":
-				t.RawSubject = v
-				tmpl := c.subjects.New(name).Funcs(funcs)
-				_, err := tmpl.Parse(t.RawSubject)
-				if err != nil {
-					c.error(err)
-				}
-				t.Subject = tmpl
-			default:
-				if !strings.HasPrefix(k, "$") {
-					c.errorf("unknown key %s", k)
-				}
-				t.Vars[k] = v
-				t.Vars[k[1:]] = t.Vars[k]
-			}
-		default:
-			c.errorf("unexpected node")
+	"makeSlice": func(vals ...interface{}) interface{} {
+		return vals
+	},
+	"makeMap": func(vals ...interface{}) interface{} {
+		if len(vals)%2 != 0 {
+			return fmt.Errorf("MakeMap requires even number of arguments").Error()
 		}
-	}
-	c.at(s)
-	if t.Body == nil && t.Subject == nil {
-		c.errorf("neither body or subject specified")
-	}
-	c.Templates[name] = &t
-}
-
-var lookupNotificationRE = regexp.MustCompile(`^lookup\("(.*)", "(.*)"\)$`)
-
-func (c *Conf) loadAlert(s *parse.SectionNode) {
-	name := s.Name.Text
-	if _, ok := c.Alerts[name]; ok {
-		c.errorf("duplicate alert name: %s", name)
-	}
-	a := conf.Alert{
-		Vars:             make(map[string]string),
-		Name:             name,
-		CritNotification: new(conf.Notifications),
-		WarnNotification: new(conf.Notifications),
-	}
-	a.Text = s.RawText
-	a.Locator = newSectionLocator(s)
-	procNotification := func(v string, ns *conf.Notifications) {
-		if lookup := lookupNotificationRE.FindStringSubmatch(v); lookup != nil {
-			if ns.Lookups == nil {
-				ns.Lookups = make(map[string]*conf.Lookup)
-			}
-			l := c.Lookups[lookup[1]]
-			if l == nil {
-				c.errorf("unknown lookup table %s", lookup[1])
-			}
-			for _, e := range l.Entries {
-				for k, v := range e.Values {
-					if k != lookup[2] {
-						continue
-					}
-					if _, err := c.parseNotifications(v); err != nil {
-						c.errorf("lookup %s: %v", v, err)
-					}
-				}
-			}
-			ns.Lookups[lookup[2]] = l
-			return
-		}
-		n, err := c.parseNotifications(v)
-		if err != nil {
-			c.error(err)
-		}
-		if ns.Notifications == nil {
-			ns.Notifications = make(map[string]*conf.Notification)
-		}
-		for k, v := range n {
-			ns.Notifications[k] = v
-		}
-	}
-	pairs := c.getPairs(s, a.Vars, sNormal)
-	for _, p := range pairs {
-		c.at(p.node)
-		v := p.val
-		switch p.key {
-		case "template":
-			a.TemplateName = v
-			t, ok := c.Templates[a.TemplateName]
+		m := map[string]interface{}{}
+		for i := 0; i < len(vals); i += 2 {
+			key, ok := vals[i].(string)
 			if !ok {
-				c.errorf("template not found %s", a.TemplateName)
+				return fmt.Errorf("MakeMap requires all map keys to be strings").Error()
 			}
-			a.Template = t
-		case "crit":
-			a.Crit = c.NewExpr(v)
-		case "warn":
-			a.Warn = c.NewExpr(v)
-		case "depends":
-			a.Depends = c.NewExpr(v)
-		case "squelch":
-			a.RawSquelch = append(a.RawSquelch, v)
-			if err := a.Squelch.Add(v); err != nil {
-				c.error(err)
-			}
-		case "critNotification":
-			procNotification(v, a.CritNotification)
-		case "warnNotification":
-			procNotification(v, a.WarnNotification)
-		case "unknown":
-			od, err := opentsdb.ParseDuration(v)
-			if err != nil {
-				c.error(err)
-			}
-			d := time.Duration(od)
-			if d < time.Second {
-				c.errorf("unknown duration must be at least 1s")
-			}
-			a.Unknown = d
-		case "maxLogFrequency":
-			od, err := opentsdb.ParseDuration(v)
-			if err != nil {
-				c.error(err)
-			}
-			d := time.Duration(od)
-			if d < time.Second {
-				c.errorf("max log frequency must be at least 1s")
-			}
-			a.MaxLogFrequency = d
-		case "unjoinedOk":
-			a.UnjoinedOK = true
-		case "ignoreUnknown":
-			a.IgnoreUnknown = true
-		case "unknownIsNormal":
-			a.UnknownsNormal = true
-		case "log":
-			a.Log = true
-		case "runEvery":
-			var err error
-			a.RunEvery, err = strconv.Atoi(v)
-			if err != nil {
-				c.error(err)
-			}
-		default:
-			c.errorf("unknown key %s", p.key)
+			m[key] = vals[i+1]
 		}
-	}
-	if a.MaxLogFrequency != 0 && !a.Log {
-		c.errorf("maxLogFrequency can only be used on alerts with `log = true`.")
-	}
-	c.at(s)
-	if a.Crit == nil && a.Warn == nil {
-		c.errorf("neither crit or warn specified")
-	}
-	var tags eparse.Tags
-	var ret models.FuncType
-	if a.Crit != nil {
-		ctags, err := a.Crit.Root.Tags()
+		return m
+	},
+	"json": func(v interface{}) string {
+		b, err := json.MarshalIndent(v, "", "  ")
 		if err != nil {
-			c.error(err)
+			return err.Error()
 		}
-		tags = ctags
-		ret = a.Crit.Root.Return()
-	}
-	if a.Warn != nil {
-		wtags, err := a.Warn.Root.Tags()
-		if err != nil {
-			c.error(err)
-		}
-		wret := a.Warn.Root.Return()
-		if a.Crit == nil {
-			tags = wtags
-			ret = wret
-		} else if ret != wret {
-			c.errorf("crit and warn expressions must return same type (%v != %v)", ret, wret)
-		} else if !tags.Equal(wtags) {
-			c.errorf("crit tags (%v) and warn tags (%v) must be equal", tags, wtags)
-		}
-	}
-	if a.Depends != nil {
-		depTags, err := a.Depends.Root.Tags()
-		if err != nil {
-			c.error(err)
-		}
-		if len(depTags) != 0 && len(depTags.Intersection(tags)) < 1 {
-			c.errorf("Depends and crit/warn must share at least one tag.")
-		}
-	}
-	warnLength := len(a.WarnNotification.Notifications) + len(a.WarnNotification.Lookups)
-	critLength := len(a.CritNotification.Notifications) + len(a.CritNotification.Lookups)
-	if a.Log {
-		for _, n := range a.CritNotification.Notifications {
-			if n.Next != nil {
-				c.errorf("cannot use log with a chained notification")
-			}
-		}
-		for _, n := range a.WarnNotification.Notifications {
-			if n.Next != nil {
-				c.errorf("cannot use log with a chained notification")
-			}
-		}
-		if warnLength+critLength == 0 {
-			c.errorf("log specified but no notification")
-		}
-	}
-	if warnLength+critLength > 0 && a.Template == nil {
-		c.errorf("notifications specified but no template")
-	}
-	a.ReturnType = ret
-	c.Alerts[name] = &a
-}
-
-func (c *Conf) loadNotification(s *parse.SectionNode) {
-	name := s.Name.Text
-	if _, ok := c.Notifications[name]; ok {
-		c.errorf("duplicate notification name: %s", name)
-	}
-	n := conf.Notification{
-		Vars:         make(map[string]string),
-		ContentType:  "application/x-www-form-urlencoded",
-		Name:         name,
-		RunOnActions: true,
-	}
-	n.Text = s.RawText
-	n.Locator = newSectionLocator(s)
-	funcs := ttemplate.FuncMap{
-		"V": func(v string) string {
-			return c.Expand(v, n.Vars, false)
-		},
-		"json": func(v interface{}) string {
-			b, err := json.Marshal(v)
-			if err != nil {
-				slog.Errorln(err)
-			}
-			return string(b)
-		},
-	}
-	c.Notifications[name] = &n
-	pairs := c.getPairs(s, n.Vars, sNormal)
-	for _, p := range pairs {
-		c.at(p.node)
-		v := p.val
-		switch k := p.key; k {
-		case "email":
-			n.RawEmail = v
-			email, err := mail.ParseAddressList(n.RawEmail)
-			if err != nil {
-				c.error(err)
-			}
-			n.Email = email
-		case "post":
-			n.RawPost = v
-			post, err := url.Parse(n.RawPost)
-			if err != nil {
-				c.error(err)
-			}
-			n.Post = post
-		case "get":
-			n.RawGet = v
-			get, err := url.Parse(n.RawGet)
-			if err != nil {
-				c.error(err)
-			}
-			n.Get = get
-		case "print":
-			n.Print = true
-		case "contentType":
-			n.ContentType = v
-		case "next":
-			n.NextName = v
-			next, ok := c.Notifications[n.NextName]
-			if !ok {
-				c.errorf("unknown notification %s", n.NextName)
-			}
-			n.Next = next
-		case "timeout":
-			d, err := opentsdb.ParseDuration(v)
-			if err != nil {
-				c.error(err)
-			}
-			n.Timeout = time.Duration(d)
-		case "body":
-			n.RawBody = v
-			tmpl := ttemplate.New(name).Funcs(funcs)
-			_, err := tmpl.Parse(n.RawBody)
-			if err != nil {
-				c.error(err)
-			}
-			n.Body = tmpl
-		case "runOnActions":
-			n.RunOnActions = v == "true"
-		case "useBody":
-			n.UseBody = v == "true"
-		default:
-			c.errorf("unknown key %s", k)
-		}
-	}
-	c.at(s)
-	if n.Timeout > 0 && n.Next == nil {
-		c.errorf("timeout specified without next")
-	}
+		return string(b)
+	},
 }
 
 var exRE = regexp.MustCompile(`\$(?:[\w.]+|\{[\w.]+\})`)
@@ -802,51 +488,6 @@ func (c *Conf) seen(v string, m map[string]bool) {
 	}
 	m[v] = true
 }
-
-var builtins = htemplate.FuncMap{
-	"and":      nilFunc,
-	"call":     nilFunc,
-	"html":     nilFunc,
-	"index":    nilFunc,
-	"js":       nilFunc,
-	"len":      nilFunc,
-	"not":      nilFunc,
-	"or":       nilFunc,
-	"print":    nilFunc,
-	"printf":   nilFunc,
-	"println":  nilFunc,
-	"urlquery": nilFunc,
-	"eq":       nilFunc,
-	"ge":       nilFunc,
-	"gt":       nilFunc,
-	"le":       nilFunc,
-	"lt":       nilFunc,
-	"ne":       nilFunc,
-
-	// HTML-specific funcs
-	"html_template_attrescaper":     nilFunc,
-	"html_template_commentescaper":  nilFunc,
-	"html_template_cssescaper":      nilFunc,
-	"html_template_cssvaluefilter":  nilFunc,
-	"html_template_htmlnamefilter":  nilFunc,
-	"html_template_htmlescaper":     nilFunc,
-	"html_template_jsregexpescaper": nilFunc,
-	"html_template_jsstrescaper":    nilFunc,
-	"html_template_jsvalescaper":    nilFunc,
-	"html_template_nospaceescaper":  nilFunc,
-	"html_template_rcdataescaper":   nilFunc,
-	"html_template_urlescaper":      nilFunc,
-	"html_template_urlfilter":       nilFunc,
-	"html_template_urlnormalizer":   nilFunc,
-
-	// bosun-specific funcs
-	"V":       nilFunc,
-	"bytes":   nilFunc,
-	"replace": nilFunc,
-	"short":   nilFunc,
-}
-
-func nilFunc() {}
 
 func (c *Conf) NewExpr(s string) *expr.Expr {
 	exp, err := expr.New(s, c.GetFuncs(c.backends))
@@ -1009,9 +650,6 @@ func (c *Conf) GetFuncs(backends conf.EnabledBackends) map[string]eparse.Func {
 	if backends.Graphite {
 		merge(expr.Graphite)
 	}
-	if backends.Logstash {
-		merge(expr.LogstashElastic)
-	}
 	if backends.Elastic {
 		merge(expr.Elastic)
 	}
@@ -1094,10 +732,6 @@ func (c *Conf) alert(s *expr.State, T miniprofiler.Timer, name, key string) (res
 	return results, nil
 }
 
-func (c *Conf) GetUnknownTemplate() *conf.Template {
-	return c.UnknownTemplate
-}
-
 func (c *Conf) GetTemplate(s string) *conf.Template {
 	return c.Templates[s]
 }
@@ -1159,4 +793,33 @@ func (c *Conf) genHash() {
 
 func (c *Conf) GetHash() string {
 	return c.Hash
+}
+
+// returns any notifications accessible from the alert vis warn/critNotification, including chains and lookups
+func (c *Conf) getAllPossibleNotifications(a *conf.Alert) map[string]*conf.Notification {
+	nots := map[string]*conf.Notification{}
+	for k, v := range a.WarnNotification.GetAllChained() {
+		nots[k] = v
+	}
+	for k, v := range a.CritNotification.GetAllChained() {
+		nots[k] = v
+	}
+	followLookup := func(l map[string]*conf.Lookup) {
+		for target, lookup := range l {
+			for _, entry := range lookup.Entries {
+				if notNames, ok := entry.Values[target]; ok {
+					for _, k := range strings.Split(notNames, ",") {
+						if not, ok := c.Notifications[k]; ok {
+							nots[k] = not
+						} else {
+							c.errorf("Notification %s needed by lookup %s in %s is not defined.", k, lookup.Name, a.Name)
+						}
+					}
+				}
+			}
+		}
+	}
+	followLookup(a.CritNotification.Lookups)
+	followLookup(a.WarnNotification.Lookups)
+	return nots
 }

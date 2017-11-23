@@ -18,6 +18,7 @@ import (
 
 	"bosun.org/_version"
 
+	"bosun.org/annotate/backend"
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/conf/rule"
 	"bosun.org/cmd/bosun/database"
@@ -30,7 +31,6 @@ import (
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
 	"bosun.org/util"
-	"github.com/bosun-monitor/annotate/backend"
 	"github.com/facebookgo/httpcontrol"
 	"gopkg.in/fsnotify.v1"
 )
@@ -140,6 +140,9 @@ func main() {
 	da, err := initDataAccess(sysProvider)
 	if err != nil {
 		slog.Fatal(err)
+	}
+	if sysProvider.GetMaxRenderedTemplateAge() != 0 {
+		go da.State().CleanupOldRenderedTemplates(time.Hour * 24 * time.Duration(sysProvider.GetMaxRenderedTemplateAge()))
 	}
 	var annotateBackend backend.Backend
 	if sysProvider.AnnotateEnabled() {

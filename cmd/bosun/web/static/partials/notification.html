@@ -1,0 +1,40 @@
+<div class='row' ng-if="ct.dat.To">
+    <div class='col-md-2'><b>To:</b></div>
+    <div class='col-md-10'>
+        <pre>{{ct.dat.To}}</pre>
+    </div>
+</div>
+<div class='row' ng-if='ct.dat.URL'>
+    <div class='col-md-2'><b>URL:</b></div>
+    <div class='col-md-5'>{{ct.dat.URL}}</div>
+</div>
+<div class='row' ng-if="ct.dat.Subject">
+    <div class='col-md-2'><b>Subject:</b></div>
+    <div class='col-md-10'>
+        <pre>{{ct.dat.Subject}}</pre>
+    </div>
+</div>
+<div class='row' ng-if="ct.dat.Body">
+    <div class='col-md-2'><b>Body:</b></div>
+    <div class='col-md-10'>
+        <pre>{{ct.dat.Body}}</pre>
+    </div>
+</div>
+<div class='row' ng-if="ct.dat.Print">
+    <div class='col-md-2'><b>Print:</b></div>
+    <div class='col-md-10'>
+        <pre>{{ct.dat.Print}}</pre>
+    </div>
+</div>
+<div ng-if="ct.dat.Headers">
+    <div class='row'>
+        <div class='col-md-2'><b>Headers:</b></div>
+    </div>
+    <div class='row' ng-repeat="(k,v) in ct.dat.Headers">
+        <div class='col-md-2'><b>{{k}}:</b></div>
+        <div class='col-md-5'>{{v}}</div>
+    </div>
+</div>
+<div class='row' ng-if='ct.dat.URL' style='margin-top:10px;'>
+    <div class='col-md-12'><button class='btn btn-primary' ng-click='ct.test()'>Test</button> {{ct.dat.msg}}</div>
+</div>

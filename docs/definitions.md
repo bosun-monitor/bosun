@@ -21,15 +21,26 @@ order: 3
 {% raw %}
 
 ## Changes Since 0.5.0
-This configuration has been split into two different files. This page documents the various bosun sections thats can be defined. For example alerts, templates, notifications, macros, global variables, and lookups.
+Since 0.5.0, the config has been split into two different files.
 
-This file is the file that is available to Bosun's Rule Editor in the UI.
+### System
+System config is documented [here](/system_configuration).
 
-## Definition Configuration File
-All definitions are in a single file that is pointed to by [the system configuration's RuleFilePath](/system_configuration#rulefilepath). The file is UTF-8 encoded.
+### Definitions
+This file is documented in the rest of this page. It includes settings that
+do not require a Bosun restart to take effect e.g. alerts, templates,
+notifications, and its location is defined by [the system configuration's
+RuleFilePath](/system_configuration#rulefilepath).
 
-### Syntax
-Syntax is sectional, with each section having a type and a name, followed by `{` and ending with `}`. Each section is a definition (for example, and alert definition or a notification definition). Key/value pairs follow of the form `key = value`. Key names are non-whitespace characters before the `=`. The value goes until end of line and is a string. Multi-line strings are supported using backticks (\`) to delimit start and end of string. Comments go from a `#` to end of line (unless the `#` appears in a backtick string). Whitespace is trimmed at ends of values and keys.
+It can be edited from the [Rule Editor](/usage#definition-rule-saving) in the
+web UI when the [`EnableSave` setting](/system_configuration#enablesave) is
+enabled.
+
+The file is divided into sections, each of which having a type and a
+name, followed by `{` and ending with `}`. Each section is a definition
+of e.g. an alert or a notification. Key/value pairs follow, written as
+`key = value`. Multi-line strings are supported using backticks (\`) to
+delimit start and end of string. Comments go from `#` to end of line.
 
 ## Alert Definitions
 An alert is defined with the following syntax:
@@ -242,7 +253,7 @@ group emails were not sent.
 ```
 
 ### Template Inclusions
-Templates can include other templates that have been defined as in the example below. The templates are combined when rendered. This is useful to build reusable pieces in templates such as headers and footers.
+Templates can include other templates that have been defined as in the example below. The templates are combined when rendered. This is useful to build reusable pieces in templates such as headers and footers. All templates with the same name are combined together across bosun templates, so you can reference them by the bosun template name you would like to include.
 
 ```
 template include {
@@ -310,6 +321,10 @@ The message body. This is always formated as HTML.
 #### subject
 {: .keyword}
 The subject of the template. This is also the text that will be used in the dashboard for triggered incidents. The format of the subject is plaintext.
+
+#### custom fields
+{: .keyword}
+Any other key/value pairs will add "custom" templates to the template. A notification may select these to send as its' content instead of just using subject/body. You can add any number of these as you like, with whatever name you choose.
 
 ### Template Variables
 Template variables hold information specific to the instance of an alert. They are bound to the template's root context. That means that when you reference them in a block they need to be referenced differently just like context bound functions ([see template function types](/definitions#template-function-types))
@@ -1489,15 +1504,16 @@ Notifications are referenced by alerts via [warnNotification](/definitions#warnn
 
 Notifications are independent of each other and executed concurrently (if there are many notifications for an alert, one will not block the other).
 
+More specific documentation on how to fully customize notifications can be found on [this page](/notifications).
+
 ### Chained Notifications
 Notifications can also be chained to other notifications (or even itself) using the optional `next` and `timeout` notification keywords. Chained notifications will execute until an alert is acknowledged or closed. 
 
 ### Notification keywords
 
-#### body
+#### bodyTemplate
 {: .keyword}
-
-`body` lets you override the template body for Post notifications. The alert subject is passed as the templates `.` variable. The `V` function is available as in other templates. Additionally, a `json` function will output JSON-encoded data.
+Specify a template name to use for the notification body. Default is `body`, or for email notifications `emailBody` if it is present.
 
 #### contentType
 {: .keyword}
@@ -1509,10 +1525,23 @@ If your body for a POST notification requires a different Content-Type header th
 
 `email` is a list of email addresses. The format is comma separated email addresses in the format of either `Person Name <addr@domain.com>` or `addr@domain.com`. When this is specified emails are enabled. They will use the subject and body fields of the template that the alert references.
 
+#### emailSubjectTemplate
+{: .keyword}
+Specify a template name to use for the email subject. Defualts to `emailSubject`, or just `subject` if the template doesn't have one.
+
 #### get
 {: .keyword}
 
 `get` will make an HTTP get call to the url provided as a value.
+
+#### getTemplate
+{: .keyword}
+
+`getTemplate` will use the specified template as a URL, and will make an HTTP request call to it.
+
+#### groupActions
+{: .keyword}
+chooses whether or not multiple actions performed at once (like a user acking multiple alerts), should be sent as one notification, or as many. Default is `true`. Set to `false` to get one notification per alert key.
 
 #### next
 {: .keyword}
@@ -1524,6 +1553,11 @@ If your body for a POST notification requires a different Content-Type header th
 
 `post` will send an HTTP post to specified url. The subject field of the template referenced from the alert is sent as the request body. Content type is set as `application/x-www-form-urlencoded` by default, but may be overriden by setting the `contentType` variable for the notification.
 
+#### postTemplate
+{: .keyword}
+
+`postTemplate` will use the specified template as a URL, and will make an HTTP post request to it.
+
 #### print
 {: .keyword}
 
@@ -1531,20 +1565,45 @@ If your body for a POST notification requires a different Content-Type header th
 
 #### runOnActions
 {: .keyword}
-
- Exclude this notification from action notifications. Notifications will be sent on ack/close/forget actions using a built-in template to all root level notifications for an alert, *unless* the notification specifies `runOnActions = false`. 
+Specifies which actions types this notification will run on. If set to `all` or `true`, will send all actions. If set to `none` or `false`, it will send on none.
+Otherwise, this should be a comma-seperated list of action types to include, from `Ack`, `Close`, `Forget`, `ForceClose`, `Purge`, `Note`, `DelayedClose`, or `CancelClose`.
 
 #### timeout
 {: .keyword}
 
 `timeout` is the duration to wait until the notification specified in `next` is executed. If `next` is specified without a `timeout` then it will happen immediately.
 
-#### useBody
+#### unknownMinGroupSize
+{: .keyword}
+Minimum grouping of unknown alert keys that should be sent together. Bosun will try to group related unkowns by common tags if it has at least this many. Set to `0` to disable grouping, and send a notification per alert key.
+
+#### unknownThreshold
 {: .keyword}
 
-`useBody` 
+Maximum number of unknown notifications to send in a single 'batch'. After this many are sent, bosun will send the remainder of the unkown notifications in a single notification using the "multiple unknown groups" template. Set to `0` to specify no limit.
 
-Currently the body will still be rendered as HTML so this keyword is generally not recommend as per [this github issue](https://github.com/bosun-monitor/bosun/issues/1743).
+#### action templates
+{: .keyword}
+You can specify templates to use for actions by setting keys of the form ``action{TemplateType}{ActionType?}`
+
+Where "templateType" is one of `Body`, `Get`, `Post`, or `EmailSubject`, and "ActionType" if present, is one of `Ack`, `Close`, `Forget`, `ForceClose`, `Purge`, `Note`, `DelayedClose`, or `CancelClose`. If Action Type is not specified, it will apply to all actions types, unless specifically overridden.
+
+If nothing is specified for an action type, a built-in template will be used.
+
+See [this page](/notifications) for more details on customizing action notifications.
+
+#### unknown templates
+{: .keyword}
+
+Set `unknownBody`, `unknownPost`, `unknownGet`, and `unknownEmailSubject`
+
+or
+
+`unknownMultiBody`, `unknownMultiPost`, `unknownMultiGet`, and `unknownMultiEmailSubject`.
+
+to control which template is used for unknown notifications. If not specified, default built-in templates will be used.
+
+See [this page](/notifications) for more details on customizing unknown notifications.
 
 ### Notification Examples
 
@@ -1563,16 +1622,23 @@ notification email {
 	timeout = 1d
 }
 
+
+
 # post to a slack.com chatroom via Incoming Webhooks integration
 notification slack{
 	post = https://hooks.slack.com/services/abcdef
-	body = {"text": {{.|json}}}
+	bodyTemplate = slackBody
+}
+
+template slack {
+    slackBody = {"text": "{{.Subject}}"}
+    jsonBody = {"text": "{{.Subject}}", "apiKey"="2847abc23"}
 }
 
 #post json
 notification json{
 	post = https://someurl.com/submit
-	body = {"text": {{.|json}}, apiKey="2847abc23"}
+	body = jsonBody
 	contentType = application/json
 }
 ```

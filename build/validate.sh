@@ -7,7 +7,7 @@ export GO15VENDOREXPERIMENT=1
 O=bosun-monitor
 R=bosun
 ORIGINALGOOS=$GOOS
-SHA=`git rev-parse ${TRAVIS_COMMIT}^2`
+SHA=${TRAVIS_COMMIT}
 BUILDMSG=""
 if [ "$TRAVIS" != '' ]; then
 	setStatus -o $O -r $R -s pending -c bosun -d="Running validation build in travis" -sha=$SHA
@@ -30,6 +30,14 @@ for GOOS in darwin windows linux ; do
 done
 export GOOS=$ORIGINALGOOS
 
+echo -e "\nBuilding with esv5 tag"
+go build -tags="esv5" bosun.org/...
+GBUILDRESULT=$?
+if [ "$GBUILDRESULT" != 0 ]; then
+	BUILDMSG="${BUILDMSG}Does not build on ${GOOS} (esv5). "
+	GOBUILDRESULT=$GBUILDRESULT
+fi
+
 echo -e "\nChecking gofmt -s -w for all folders that don't start with . or _"
 GOFMTRESULT=0
 GOFMTOUT=$(gofmt -l -s -w $DIRS);
@@ -46,9 +54,6 @@ GOVETRESULT=$?
 if [ "$GOVETRESULT" != 0 ]; then
 	BUILDMSG="${BUILDMSG}go vet found problems. "
 fi
-
-echo -e "\nGetting esc"
-go get -u -v github.com/mjibson/esc
 
 echo -e "\nRunning go generate bosun.org/..."
 go generate $PKGS

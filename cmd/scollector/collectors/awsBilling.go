@@ -352,8 +352,13 @@ func (b *billLineItem) parseFromBill(row []string, cols map[string]int, awsBilli
 
 //If there is Route53 data for this row, then populate the Route 53 item
 func (b *billLineItem) fetchR53(awsBilling *awsBillingConfig) {
-	if b.ProductCode == "AmazonRoute53" { //Don't do anything if we don't have any R53 info to get
-		zoneID := strings.Split(b.ResourceID, "/")[1]   //The billing ID has a huge resource ID, we only need the last part of it
+	if b.ProductCode == "AmazonRoute53" && b.ResourceID != "" { //Don't do anything if we don't have any R53 info to get
+		//The billing ID has a huge resource ID, we only need the last part of it
+		zone := strings.Split(b.ResourceID, "/")
+		if len(zone) != 2 {
+			return
+		}
+		zoneID := zone[1]
 		cachedR53Zone, ok := awsBillingR53zones[zoneID] //Check if we have a copy of this zone in our local cache
 		if ok {                                         //If we have a copy of the zone, then use that
 			b.Route53Zone = cachedR53Zone.HostedZone

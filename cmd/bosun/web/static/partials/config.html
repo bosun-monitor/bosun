@@ -5,56 +5,55 @@
 		height: 500px;
 		width: 100%
 	}
-	
+
 	.ace_editor {
 		width: 100%;
 		height: 100%;
 	}
-	
+
 	.selectorDropdown {
 		float: left;
 		margin-right: 5px;
 		margin-bottom: 15px;
 	}
-	
+
 	.actionButtons {
 		float: right;
 		margin-left: 5px;
 	}
-	
+
 	.section-button {
 		max-height: 500px;
 		overflow-y: auto;
 	}
 	/* http://stackoverflow.com/questions/17206631/why-are-bootstrap-tabs-displaying-tab-pane-divs-with-incorrect-widths-when-using fixes timeline drawing at default width while tab is hidden */
-	
-	.tab-content > .tab-pane {
+
+	.tab-content>.tab-pane {
 		display: block;
 		height: 0;
 		overflow-y: hidden;
 		overflow-x: hidden;
 	}
-	
-	.tab-content > .active {
+
+	.tab-content>.active {
 		height: auto;
 	}
-	
+
 	#configSaveModal .modal-dialog {
 		width: 50%;
 	}
-	
+
 	.popover {
 		max-width: 600px;
 		outline: none !important;
 	}
-
 </style>
 <label class="selectorDropdown" style="margin-right:15px;">Jump to:</label>
 <div class="row">
 	<div class="dropdown selectorDropdown" ng-repeat="(type,list) in items">
 		<button class="btn btn-primary btn-xs dropdown-toggle" type="button" id="itemSelector" data-toggle="dropdown">
 			{{ type }} <i class="fa fa-caret-down"></i>
-		</button> 
+		</button>
 		<ul class="dropdown-menu section-button" role="menu">
 			<li role="presentation"><a tabindex="-1" role="menuitem" target="_blank" ng-href="{{sectionToDocs[type]}}">
 				{{ type }} Documentation <i class="fa fa-external-link"></i></a>
@@ -64,7 +63,8 @@
 		</ul>
 	</div>
 	<div class="btn btn-default btn-xs" ng-show="quickJumpTarget" ng-bind="quickJumpTarget" ng-click="quickJump()"></div>
-	<div class="btn btn-default btn-xs actionButtons" data-toggle="modal" data-target="#configSaveModal" ng-click="diffConfig()" ng-if="saveEnabled">Save</div>
+	<div class="btn btn-default btn-xs actionButtons" data-toggle="modal" data-target="#configSaveModal" ng-click="diffConfig()"
+	 ng-if="saveEnabled">Save</div>
 	<div class="btn btn-default btn-xs actionButtons" ng-click="validate()">Validate</div>
 	<div class="btn btn-default btn-xs actionButtons" ng-click="downloadConfig()">Download</div>
 </div>
@@ -85,7 +85,8 @@
 <div class="row" ng-show="runningChanged" ng-if="saveEnabled">
 	<div class="col-lg-12">
 		<div class="alert alert-danger">The running configuration has been changed since you started editing.
-			<div style="outline: none;" class="pull-right" data-placement="bottom" data-title="Help" data-content="{{runningChangedHelp}}" bs-popover><span class="fa fa-question"></span></div>
+			<div style="outline: none;" class="pull-right" data-placement="bottom" data-title="Help" data-content="{{runningChangedHelp}}"
+			 bs-popover><span class="fa fa-question"></span></div>
 		</div>
 	</div>
 </div>
@@ -99,7 +100,7 @@
 <div class="row">
 	<div tsresizable on-resize="editor.resize()" class='resize'>
 		<div ui-ace="{ onLoad : aceLoaded, mode: aceMode, theme: aceTheme, advanced: { fontSize: '14px', fontFamily: 'Menlo, Monaco, Consolas, monospace' }}"
-			ng-model="config_text"></div>
+		 ng-model="config_text"></div>
 	</div>
 </div>
 <div class="row">
@@ -108,13 +109,13 @@
 			<div class="form-group">
 				<label class="control-label">From</label>
 				<input type="text" class="form-control" style="width:9em" ng-model="fromDate" ng-change="setInterval()" placeholder="yyyy-mm-dd"
-					bs-datepicker data-date-format="yyyy-MM-dd" data-date-type="string">
+				 bs-datepicker data-date-format="yyyy-MM-dd" data-date-type="string">
 				<input type="text" class="form-control" style="width:9em" ng-model="fromTime" ng-change="setInterval()" placeholder="HH:MM">
 			</div>
 			<div class="form-group">
 				<label class="control-label">To</label>
 				<input type="text" class="form-control" style="width:9em" ng-model="toDate" ng-change="setInterval()" placeholder="yyyy-mm-dd"
-					bs-datepicker data-date-format="yyyy-MM-dd" data-date-type="string">
+				 bs-datepicker data-date-format="yyyy-MM-dd" data-date-type="string">
 			</div>
 			<div class="form-group">
 				<input type="text" class="form-control" style="width:9em" ng-model="toTime" ng-change="setInterval()" placeholder="HH:MM">
@@ -122,12 +123,12 @@
 			<div class="form-group">
 				<label class="control-label">Intervals</label>
 				<input type="number" min="2" step="1" style="width:7em" class="form-control" ng-model="intervals" ng-change="setInterval()"
-					ng-disabled="!fromDate || !toDate" tooltip title="Number of evaluations between timespan.">
+				 ng-disabled="!fromDate || !toDate" tooltip title="Number of evaluations between timespan.">
 			</div>
 			<div class="form-group">
 				<label class="control-label">Step Duration (m)</label>
 				<input type="number" min="1" step="1" style="width:7em" class="form-control" ng-model="duration" ng-change="setDuration()"
-					ng-disabled="!fromDate || !toDate" tooltip title="Step duration in minutes between intervals.">
+				 ng-disabled="!fromDate || !toDate" tooltip title="Step duration in minutes between intervals.">
 			</div>
 
 		</form>
@@ -144,6 +145,10 @@
 			<div class="form-group">
 				<label class="control-label">Template Group</label>
 				<input type="text" class="form-control" style="width:20em" ng-model="template_group" tooltip title="Set which result to use for the template by setting an opentsdb group (aka tagset) in the format of k=v,m=o. The first result for which the specified group is a subset of a result is used. If no results are a subset of the specified group, then the first result is chosen.">
+			</div>
+			<div class="form-group">
+				<label class="control-label">Incident Id</label>
+				<input type="number" class="form-control" style="width:10em" ng-model="incidentId" tooltip title="Incident Id to use for preview notifications">
 			</div>
 			<div class="form-group">
 				<button class="btn btn-primary" ng-click="test()">Test {{selected_alert}}</button>
@@ -168,11 +173,15 @@
 		<div class="alert alert-warning" ng-bind="w"></div>
 	</div>
 </div>
+
 <ul class="nav nav-tabs">
 	<li ng-class="{active: tab == 'results'}"><a href ng-click="tab = 'results'">Results</a></li>
 	<li ng-class="{active: tab == 'template'}"><a href ng-click="tab = 'template'">Template</a></li>
 	<li ng-class="{active: tab == 'timeline'}"><a href ng-click="tab = 'timeline'">Timeline</a></li>
+	<li ng-class="{active: tab == 'notifications'}"><a href ng-click="tab = 'notifications'">Notifications</a></li>
+	<li ng-class="{active: tab == 'anotifications'}"><a href ng-click="tab = 'anotifications'">Action Notifications</a></li>
 </ul>
+
 <div class="tab-content">
 	<div class="tab-pane" ng-class="{active: tab == 'timeline'}">
 		<div ng-if="tab == 'timeline' && fromDate && toDate">
@@ -237,6 +246,24 @@
 				<h3 class="panel-title">Body</h3>
 			</div>
 			<div class="panel-body template" ng-bind-html="body"></div>
+		</div>
+		<div class="panel panel-default" ng-if="emailSubject">
+			<div class="panel-heading">
+				<h3 class="panel-title">Email Subject</h3>
+			</div>
+			<div class="panel-body template" ng-bind="emailSubject"></div>
+		</div>
+		<div class="panel panel-default" ng-if="emailBody">
+			<div class="panel-heading">
+				<h3 class="panel-title">Email Body</h3>
+			</div>
+			<div class="panel-body template" ng-bind-html="emailBody"></div>
+		</div>
+		<div class="panel panel-default" ng-repeat="(name, bod) in customTemplates">
+			<div class="panel-heading">
+				<h3 class="panel-title">{{name}}</h3>
+			</div>
+			<div class="panel-body template" ng-bind-html="bod"></div>
 		</div>
 		<h4>Available Variables</h4>
 		<pre ng-bind="data"></pre>
@@ -307,42 +334,81 @@
 			</div>
 		</div>
 	</div>
-</div>
-
-
-<!-- Save Modal -->
-<div class="modal fade" id="configSaveModal" tabindex="-1" role="dialog">
-	<div class="modal-dialog modal-admin" role="document">
-		<div class="modal-content">
-			<div class="modal-header">
-				<button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-				<h4 class="modal-title" id="myModalLabel">Save Configuration</h4>
-			</div>
-			<div class="modal-body">
-				<div class="form-horizontal">
-					<div class="form-group">
-						<label class="col-sm-2 control-label">Username22</label>
-						<div class="col-sm-6">
-							<username-input></username-input>
-						</div>
-					</div>
-					<div class="form-group">
-						<label class="col-sm-2 control-label">Message</label>
-						<div class="col-sm-6">
-							<textarea rows="10" class="form-control" ng-model="message"></textarea>
-						</div>
-					</div>
+	<div class="tab-pane" ng-class="{active: tab == 'notifications'}">
+		<div style='margin-top:10px;'>
+			<div class="panel panel-default" ng-repeat="(name, dat) in notifications">
+				<div class="panel-heading">
+					<h3 class="panel-title">{{name}}</h3>
 				</div>
-			</div>
-			<div>
-				<pre ng-bind="diff"></pre>
-			</div>
-			<div class="modal-footer">
-				<button type="button" class="btn btn-primary" ng-click="diffConfig()">Refresh Diff</button>
-				<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
-				<button type="button" class="btn btn-primary" ng-class="runningChanged == true ? 'alert-warning' : ''" data-dismiss="modal"
-					ng-click="saveConfig()" title="This will save and reload the config if the config is valid. If the config is not valid (or if the Diff has changed since viewing it) the config will not be saved and a reload will not happen. If this button is yellow (warning) then the running config has changed since you started editing on the rule page - be careful not to overwrite other's changes.">Save and Reload</button>
+				<div class="panel-body">
+					<notification dat="dat"></notification>
+				</div>
+				<div ng-hide="notifications" class='col-md-12'>
+					<h4>No Notifications</h4>
+				</div>
 			</div>
 		</div>
 	</div>
-</div>
+
+	<div class="tab-pane" ng-class="{active: tab == 'anotifications'}">
+		<div style='margin-top:10px;'>
+			
+			<div class="dropdown selectorDropdown" style="float:none;margin-bottom:10px;" ng-if="actionNotifications">
+				<button class="btn btn-primary btn-xs dropdown-toggle" type="button" data-toggle="dropdown">
+						{{notificationToShow}} <i class="fa fa-caret-down"></i>
+					</button>
+					<ul class="dropdown-menu section-button" role="menu">
+						<li role="presentation" ng-repeat="(n, ats) in actionNotifications"><a role="menuitem" tabindex="-1" ng-click="setNotificationToShow(n)">{{n}}</a></li>
+					</ul>
+			</div>
+			<div ng-repeat="(n, ats) in actionNotifications">
+				<div class="panel panel-default" ng-if="n==notificationToShow" ng-repeat="(at, dat) in ats">
+					<div class="panel-heading">
+						<h3 class="panel-title">{{n}} {{at}}</h3>
+					</div>
+					<div class="panel-body">
+						<notification dat="dat"></notification>
+					</div>
+					<div ng-hide="notifications" class='col-md-12'>
+						<h4>No Notifications</h4>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<div class="modal fade" id="configSaveModal" tabindex="-1" role="dialog">
+		<div class="modal-dialog modal-admin" role="document">
+			<div class="modal-content">
+				<div class="modal-header">
+					<button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+					<h4 class="modal-title" id="myModalLabel">Save Configuration</h4>
+				</div>
+				<div class="modal-body">
+					<div class="form-horizontal">
+						<div class="form-group">
+							<label class="col-sm-2 control-label">Username</label>
+							<div class="col-sm-6">
+								<username-input></username-input>
+							</div>
+						</div>
+						<div class="form-group">
+							<label class="col-sm-2 control-label">Message</label>
+							<div class="col-sm-6">
+								<textarea rows="10" class="form-control" ng-model="message"></textarea>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div>
+					<pre ng-bind="diff"></pre>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-primary" ng-click="diffConfig()">Refresh Diff</button>
+					<button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+					<button type="button" class="btn btn-primary" ng-class="runningChanged == true ? 'alert-warning' : ''" data-dismiss="modal"
+					 ng-click="saveConfig()" title="This will save and reload the config if the config is valid. If the config is not valid (or if the Diff has changed since viewing it) the config will not be saved and a reload will not happen. If this button is yellow (warning) then the running config has changed since you started editing on the rule page - be careful not to overwrite other's changes.">Save and Reload</button>
+				</div>
+			</div>
+		</div>
+	</div>

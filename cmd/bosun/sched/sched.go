@@ -9,6 +9,7 @@ import (
 
 	"golang.org/x/net/context"
 
+	"bosun.org/annotate/backend"
 	"bosun.org/cmd/bosun/cache"
 	"bosun.org/cmd/bosun/conf"
 	"bosun.org/cmd/bosun/database"
@@ -19,7 +20,6 @@ import (
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
 	"github.com/MiniProfiler/go/miniprofiler"
-	"github.com/bosun-monitor/annotate/backend"
 	"github.com/bradfitz/slice"
 	"github.com/kylebrandt/boolq"
 )
@@ -39,7 +39,6 @@ type Schedule struct {
 
 	RuleConf   conf.RuleConfProvider
 	SystemConf conf.SystemConfProvider
-	Group      map[time.Time]models.AlertKeys
 
 	Search *search.Search
 
@@ -54,7 +53,7 @@ type Schedule struct {
 	pendingNotifications map[*conf.Notification][]*IncidentWithTemplates
 
 	//unknown states that need to be notified about. Collected and sent in batches.
-	pendingUnknowns map[*conf.Notification][]*models.IncidentState
+	pendingUnknowns map[notificationGroupKey][]*models.IncidentState
 
 	lastLogTimes map[models.AlertKey]time.Time
 	LastCheck    time.Time
@@ -83,9 +82,8 @@ func (s *Schedule) Init(systemConf conf.SystemConfProvider, ruleConf conf.RuleCo
 	s.quiet = quiet
 	s.SystemConf = systemConf
 	s.RuleConf = ruleConf
-	s.Group = make(map[time.Time]models.AlertKeys)
 	s.annotate = annotate
-	s.pendingUnknowns = make(map[*conf.Notification][]*models.IncidentState)
+	s.pendingUnknowns = make(map[notificationGroupKey][]*models.IncidentState)
 	s.lastLogTimes = make(map[models.AlertKey]time.Time)
 	s.LastCheck = utcNow()
 	s.ctx = &checkContext{utcNow(), cache.New(0)}
@@ -278,7 +276,7 @@ func (states States) GroupSets(minGroup int) map[string]models.AlertKeys {
 				pair = p
 			}
 		}
-		if max < minGroup {
+		if max < minGroup || minGroup <= 0 {
 			break
 		}
 		var group models.AlertKeys
@@ -675,7 +673,7 @@ type IncidentStatus struct {
 	Subject            string
 	Silenced           bool
 	LastAbnormalStatus models.Status
-	LastAbnormalTime   int64
+	LastAbnormalTime   models.Epoch
 	NeedsAck           bool
 }
 

@@ -11,8 +11,15 @@ var BosunHighlightRules = function() {
 	var inAlertKeywords = "macro|template|crit|warn|depends|squelch|critNotification|" +
 	"warnNotification|unknown|unjoinedOk|ignoreUnknown|log|maxLogFrequency"
 
-	var inNotificationKeywords = "email|post|get|print|contentType|next|timeout|body|useBody";
-
+	var inNotificationKeywords = "email|post|get|print|contentType|next|timeout|bodyTemplate|postTemplate|getTemplate|emailSubjectTemplate|runOnActions|groupActions|unknownMinGroupSize|unknownThreshold";
+	for (var action of ["Get","Post","Body","EmailSubject"]){
+		inNotificationKeywords += "|action"+action;
+		inNotificationKeywords += "|unknown"+action;
+		inNotificationKeywords += "|unknownMulti"+action;
+		for (var type of ["Ack", "Close", "Forget", "ForceClose", "Purge", "Note", "DelayedClose","CancelClose"]){
+			inNotificationKeywords += "|action"+action+type;
+		}
+	}
 	var inTemplateKeywords = "subject|body";
 
 	var inSectionKeywords = [inAlertKeywords, inNotificationKeywords, inTemplateKeywords].join("|");

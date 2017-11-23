@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"bosun.org/annotate"
 	"bosun.org/cmd/bosun/expr"
 	"bosun.org/cmd/bosun/sched"
 	"bosun.org/metadata"
@@ -17,7 +18,6 @@ import (
 	"bosun.org/opentsdb"
 	"github.com/MiniProfiler/go/miniprofiler"
 	svg "github.com/ajstarks/svgo"
-	"github.com/bosun-monitor/annotate"
 	"github.com/bradfitz/slice"
 	"github.com/gorilla/mux"
 	"github.com/vdobler/chart"
@@ -243,7 +243,6 @@ func ExprGraph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (in
 		TSDBContext:     schedule.SystemConf.GetTSDBContext(),
 		GraphiteContext: schedule.SystemConf.GetGraphiteContext(),
 		InfluxConfig:    schedule.SystemConf.GetInfluxContext(),
-		LogstashHosts:   schedule.SystemConf.GetLogstashContext(),
 		ElasticHosts:    schedule.SystemConf.GetElasticContext(),
 	}
 	providers := &expr.BosunProviders{

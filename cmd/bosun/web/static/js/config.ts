@@ -42,7 +42,13 @@ interface IConfigScope extends IBosunScope {
 	sets: any;
 	alert_history: any;
 	subject: string;
+	emailSubject: string;
+	emailBody: string;
 	body: string;
+	customTemplates: { [name: string]: string };
+	notifications: { [name: string]: any };
+	actionNotifications: {[name: string]: {[at: string]:any}};
+	notificationToShow: string;
 	data: any;
 	tab: string;
 	zws: (v: string) => string;
@@ -50,6 +56,7 @@ interface IConfigScope extends IBosunScope {
 	scrollToInterval: (v: string) => void;
 	show: (v: any) => void;
 	loadTimelinePanel: (entry: any, v: any) => void;
+	incidentId: number;
 
 	// saving
 	message: string;
@@ -80,8 +87,12 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 	$scope.items = parseItems();
 	$scope.tab = search.tab || 'results';
 	$scope.aceTheme = 'chrome';
+	$scope.actionTypeToShow = "Acknowledged";
+	$scope.incidentId = 42;
+
 	$scope.aceMode = 'bosun';
 	$scope.expandDiff = false;
+	$scope.customTemplates = {};
 	$scope.runningChangedHelp = "The running config has been changed. This means you are in danger of overwriting someone else's changes. To view the changes open the 'Save Dialogue' and you will see a unified diff. The only way to get rid of the error panel is to open a new instance of the rule editor and copy your changes into it. You are still permitted to save without doing this, but then you must be very careful not to overwrite anyone else's changes.";
 
 	$scope.sectionToDocs = {
@@ -235,7 +246,7 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 	};
 
 	$scope.getRunningHash = () => {
-		if (! $scope.saveEnabled) {
+		if (!$scope.saveEnabled) {
 			return
 		}
 		(function tick() {
@@ -337,6 +348,11 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 			$scope.template_group = match[1];
 		}
 	}
+
+	$scope.setNotificationToShow = (n:string)=>{
+		$scope.notificationToShow = n;
+	}
+	
 	var line_re = /test:(\d+)/;
 	$scope.validate = () => {
 		$http.post('/api/config_test', $scope.config_text)
@@ -400,6 +416,7 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 			'&to=' + encodeURIComponent(to.format()) +
 			'&intervals=' + encodeURIComponent(intervals) +
 			'&email=' + encodeURIComponent($scope.email) +
+			'&incidentId=' + $scope.incidentId +
 			'&template_group=' + encodeURIComponent($scope.template_group);
 		$http.post(url, $scope.config_text)
 			.success((data: any) => {
@@ -452,6 +469,46 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 	function procResults(data: any) {
 		$scope.subject = data.Subject;
 		$scope.body = $sce.trustAsHtml(data.Body);
+		if (data.EmailSubject) {
+			data.EmailSubject = atob(data.EmailSubject)
+		}
+		$scope.emailSubject = data.EmailSubject
+		if (data.EmailBody) {
+			data.EmailBody = atob(data.EmailBody)
+		}
+		$scope.emailBody = $sce.trustAsHtml(data.EmailBody)
+		$scope.customTemplates = {};
+		for (var k in data.Custom) {
+			$scope.customTemplates[k] = data.Custom[k];
+		}
+		var nots = {};
+		_(data.Notifications).each((val,n)=>{
+			if(val.Email){
+				nots["Email "+ n] = val.Email;
+			}
+			if(val.Print != ""){
+				nots["Print " +n] = {Print: val.Print};
+			}
+			_(val.HTTP).each((hp)=>{
+				nots[hp.Method+" "+n] = hp;
+			})
+		})
+		$scope.notifications = nots;
+		var aNots = {};
+		_(data.ActionNotifications).each((ts,n)=>{
+			$scope.notificationToShow = "" + n;
+			aNots[n] = {};
+			_(ts).each((val,at)=>{
+				if(val.Email){
+					aNots[n]["Email ("+at+")"] = val.Email;
+				}
+				_(val.HTTP).each((hp)=>{
+					aNots[n][hp.Method+" ("+at+")"] = hp;
+				})
+			})
+		})
+
+		$scope.actionNotifications = aNots;
 		$scope.data = JSON.stringify(data.Data, null, '  ');
 		$scope.error = data.Errors;
 		$scope.warning = data.Warnings;
@@ -479,7 +536,7 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 
 
 	$scope.saveConfig = () => {
-		if (! $scope.saveEnabled) {
+		if (!$scope.saveEnabled) {
 			return;
 		}
 		$scope.saveResult = "Saving; Please Wait"
@@ -512,3 +569,33 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 
 // declared in FileSaver.js
 declare var saveAs: any;
+
+class NotificationController {
+	dat: any;
+	test = () => {
+		this.dat.msg = "sending"
+		this.$http.post('/api/rule/notification/test', this.dat)
+			.success((rDat: any) => {
+				if (rDat.Error) {
+					this.dat.msg = "Error: " + rDat.Error;
+				} else {
+					this.dat.msg = "Success! Status Code: " + rDat.Status;
+				}
+			})
+			.error((error) => {
+				this.dat.msg = "Error: " + error;
+			});
+	};
+	static $inject = ['$http'];
+    constructor(private $http: ng.IHttpService) {
+    }
+}
+
+bosunApp.component('notification', {
+	bindings: {
+		dat: "<",
+	},
+	controller: NotificationController,
+	controllerAs: 'ct',
+	templateUrl : '/static/partials/notification.html',
+});

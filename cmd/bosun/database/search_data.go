@@ -161,7 +161,6 @@ func (d *dataAccess) GetMetricTagSets(metric string, tags opentsdb.TagSet) (map[
 				result[mts] = t
 			}
 		}
-
 		if cursor == "" || cursor == "0" {
 			break
 		}

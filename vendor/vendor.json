@@ -260,24 +260,6 @@
 			"revisionTime": "2015-11-22T20:06:43-07:00"
 		},
 		{
-			"checksumSHA1": "jx1hiVjE68LP+EMqgSiOJ5udPCQ=",
-			"path": "github.com/bosun-monitor/annotate",
-			"revision": "c0740ed2ddc60564a6aff2ad44fb375b479e55ca",
-			"revisionTime": "2017-03-27T16:30:27-04:00"
-		},
-		{
-			"checksumSHA1": "/N7Fn2S5O4gcqloH5fdkGzJ3Gas=",
-			"path": "github.com/bosun-monitor/annotate/backend",
-			"revision": "c0740ed2ddc60564a6aff2ad44fb375b479e55ca",
-			"revisionTime": "2017-03-27T16:30:27-04:00"
-		},
-		{
-			"checksumSHA1": "GdXtpLoHxfTdgsdgr3XaEmT7eCk=",
-			"path": "github.com/bosun-monitor/annotate/web",
-			"revision": "c0740ed2ddc60564a6aff2ad44fb375b479e55ca",
-			"revisionTime": "2017-03-27T16:30:27-04:00"
-		},
-		{
 			"path": "github.com/bosun-monitor/statusio",
 			"revision": "ab1583139762a47425d3c189a7cb6344c3220d95",
 			"revisionTime": "2016-05-16T12:08:16-04:00"
@@ -290,26 +272,26 @@
 		{
 			"checksumSHA1": "2D5vo1CBsOIKPe9B0Phk1+m9uEg=",
 			"path": "github.com/captncraig/easyauth",
-			"revision": "f8cfe65ef31cd6959a9553175bb6caf1f5af928f",
-			"revisionTime": "2017-04-17T16:53:34Z"
+			"revision": "c6de284138cfb3c428a4870ceec7391fddcec2ef",
+			"revisionTime": "2017-10-13T13:10:59Z"
 		},
 		{
-			"checksumSHA1": "N51CVtTE9ZUN1I/+jJzFeb/SuXE=",
+			"checksumSHA1": "soJm64I35YJZMgxhIhfm86D+Ons=",
 			"path": "github.com/captncraig/easyauth/providers/ldap",
-			"revision": "f8cfe65ef31cd6959a9553175bb6caf1f5af928f",
-			"revisionTime": "2017-04-17T16:53:34Z"
+			"revision": "c6de284138cfb3c428a4870ceec7391fddcec2ef",
+			"revisionTime": "2017-10-13T13:10:59Z"
 		},
 		{
 			"checksumSHA1": "z+rzZ/v6jmr+VDDEWxrYbKnZJA4=",
 			"path": "github.com/captncraig/easyauth/providers/token",
-			"revision": "f8cfe65ef31cd6959a9553175bb6caf1f5af928f",
-			"revisionTime": "2017-04-17T16:53:34Z"
+			"revision": "c6de284138cfb3c428a4870ceec7391fddcec2ef",
+			"revisionTime": "2017-10-13T13:10:59Z"
 		},
 		{
 			"checksumSHA1": "bG2Nz0IR6+f6Re6IHrZN/yxfm1U=",
 			"path": "github.com/captncraig/easyauth/providers/token/redisStore",
-			"revision": "f8cfe65ef31cd6959a9553175bb6caf1f5af928f",
-			"revisionTime": "2017-04-17T16:53:34Z"
+			"revision": "c6de284138cfb3c428a4870ceec7391fddcec2ef",
+			"revisionTime": "2017-10-13T13:10:59Z"
 		},
 		{
 			"path": "github.com/coreos/go-systemd/dbus",
@@ -575,14 +557,15 @@
 			"revisionTime": "2016-08-29T17:56:29Z"
 		},
 		{
-			"path": "github.com/olivere/elastic",
-			"revision": "9fdb4e763e833f166e76009e5a33132877c32bfb",
-			"revisionTime": "2015-11-28T12:32:46+01:00"
+			"checksumSHA1": "QLKPqiHoCTknOwOiNj5Miaze6HI=",
+			"path": "github.com/mjibson/esc/embed",
+			"revision": "58d9cde84f237ecdd89bd7f61c2de2853f4c5c6e",
+			"revisionTime": "2017-09-07T07:13:03Z"
 		},
 		{
-			"path": "github.com/olivere/elastic/uritemplates",
-			"revision": "9fdb4e763e833f166e76009e5a33132877c32bfb",
-			"revisionTime": "2015-11-28T12:32:46+01:00"
+			"path": "github.com/pkg/errors",
+			"revision": "c605e284fe17294bda444b34710735b29d1a9d90",
+			"revisionTime": "2017-05-05T00:36:39-04:00"
 		},
 		{
 			"path": "github.com/pmezard/go-difflib/difflib",
@@ -1040,6 +1023,21 @@
 			"path": "gopkg.in/olivere/elastic.v3/uritemplates",
 			"revision": "1ad75b5396674e9c783400e89106bc0c8da9d786",
 			"revisionTime": "2016-10-16T12:21:59+02:00"
+		},
+		{
+			"path": "gopkg.in/olivere/elastic.v5",
+			"revision": "2a08d39723b7f4df92b96e2dff891a60952714d6",
+			"revisionTime": "2017-09-26T22:05:24+02:00"
+		},
+		{
+			"path": "gopkg.in/olivere/elastic.v5/config",
+			"revision": "2a08d39723b7f4df92b96e2dff891a60952714d6",
+			"revisionTime": "2017-09-26T22:05:24+02:00"
+		},
+		{
+			"path": "gopkg.in/olivere/elastic.v5/uritemplates",
+			"revision": "2a08d39723b7f4df92b96e2dff891a60952714d6",
+			"revisionTime": "2017-09-26T22:05:24+02:00"
 		},
 		{
 			"path": "gopkg.in/yaml.v1",

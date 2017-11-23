@@ -20,6 +20,7 @@ func TestCheckFlapping(t *testing.T) {
 	c, err := rule.NewConf("", conf.EnabledBackends{}, nil, `
 		template t {
 			subject = 1
+			body = 2
 		}
 		notification n {
 			print = true
@@ -153,6 +154,7 @@ func TestDelayedClose(t *testing.T) {
 		}
 		template test {
 			subject = test
+			body = test2
 		}
 		notification test {
 			print = true
@@ -353,6 +355,7 @@ func TestCheckNotify(t *testing.T) {
 	c, err := rule.NewConf("", conf.EnabledBackends{}, nil, fmt.Sprintf(`
 		template t {
 			subject = {{.Last.Status}}
+			body = b
 		}
 		notification n {
 			post = http://%s/
@@ -396,11 +399,13 @@ func TestCheckNotifyUnknown(t *testing.T) {
 	}
 	c, err := rule.NewConf("", conf.EnabledBackends{}, nil, fmt.Sprintf(`
 		template t {
-			subject = {{.Name}}: {{.Group | len}} unknown alerts
+			subject = s
+			unk = {{.Name}}: {{.Group | len}} unknown alerts
+			body = b
 		}
-		unknownTemplate = t
 		notification n {
 			post = http://%s/
+			unknownBody = unk
 		}
 		alert a {
 			template = t
@@ -460,6 +465,7 @@ func TestCheckNotifyUnknownDefault(t *testing.T) {
 	c, err := rule.NewConf("", conf.EnabledBackends{}, nil, fmt.Sprintf(`
 		template t {
 			subject = template
+			body = b
 		}
 		notification n {
 			post = http://%s/
@@ -521,6 +527,7 @@ func TestCheckNotifyLog(t *testing.T) {
 	c, err := rule.NewConf("", conf.EnabledBackends{}, nil, fmt.Sprintf(`
 		template t {
 			subject = {{.Alert.Name}}
+			body = b
 		}
 		notification n {
 			post = http://%s/

@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"bosun.org/annotate/backend"
 	"bosun.org/cmd/bosun/cache"
 	"bosun.org/cmd/bosun/expr/parse"
 	"bosun.org/cmd/bosun/search"
@@ -20,10 +21,7 @@ import (
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
 	"github.com/MiniProfiler/go/miniprofiler"
-	"github.com/bosun-monitor/annotate/backend"
 	"github.com/influxdata/influxdb/client/v2"
-	elasticOld "github.com/olivere/elastic"
-	elastic "gopkg.in/olivere/elastic.v3"
 )
 
 type State struct {
@@ -41,10 +39,7 @@ type State struct {
 
 	// Graphite
 	graphiteQueries []graphite.Request
-	// LogstashElastic (for pre ES v2)
-	logstashQueries []elasticOld.SearchSource
-	// Elastic (for post ES v2)
-	elasticQueries []elastic.SearchSource
+
 	// OpenTSDB
 	tsdbQueries []opentsdb.Request
 }
@@ -52,7 +47,6 @@ type State struct {
 type Backends struct {
 	TSDBContext     opentsdb.Context
 	GraphiteContext graphite.Context
-	LogstashHosts   LogstashElasticHosts
 	ElasticHosts    ElasticHosts
 	InfluxConfig    client.HTTPConfig
 	ElasticConfig   ElasticConfig
@@ -204,9 +198,7 @@ func (a Series) Equal(b Series) bool {
 	return reflect.DeepEqual(a, b)
 }
 
-type ESQuery struct {
-	Query elastic.Query
-}
+// See the elastic#.go files for ESQuery
 
 func (e ESQuery) Type() models.FuncType { return models.TypeESQuery }
 func (e ESQuery) Value() interface{}    { return e }
@@ -412,7 +404,6 @@ func (e *State) union(a, b *Results, expression string) []*Union {
 	var group opentsdb.TagSet
 	for _, ra := range a.Results {
 		for _, rb := range b.Results {
-
 			if ra.Group.Equal(rb.Group) || len(ra.Group) == 0 || len(rb.Group) == 0 {
 				g := ra.Group
 				if len(ra.Group) == 0 {
@@ -759,7 +750,7 @@ func (e *State) walkFunc(node *parse.FuncNode, T miniprofiler.Timer) *Results {
 			} else {
 				argType = node.F.Args[i]
 			}
-			if f, ok := v.(float64); ok && argType == models.TypeNumberSet {
+			if f, ok := v.(float64); ok && (argType == models.TypeNumberSet || argType == models.TypeVariantSet) {
 				v = fromScalar(f)
 			}
 			in = append(in, reflect.ValueOf(v))

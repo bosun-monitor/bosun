@@ -70,13 +70,13 @@ type FuncNode struct {
 	NodeType
 	Pos
 	Name   string
-	F      Func
+	F      *Func
 	Args   []Node
 	Prefix string
 }
 
 func newFunc(pos Pos, name string, f Func) *FuncNode {
-	return &FuncNode{NodeType: NodeFunc, Pos: pos, Name: name, F: f}
+	return &FuncNode{NodeType: NodeFunc, Pos: pos, Name: name, F: &f}
 }
 
 func (f *FuncNode) append(arg Node) {
@@ -133,7 +133,12 @@ func (f *FuncNode) Check(t *Tree) error {
 		}
 		argType := arg.Return()
 		if funcType == models.TypeNumberSet && argType == models.TypeScalar {
-			// Scalars are promoted to NumberSets during execution.
+			argType = models.TypeNumberSet // Scalars are promoted to NumberSets during execution.
+		}
+		if funcType == models.TypeVariantSet {
+			if !(argType == models.TypeNumberSet || argType == models.TypeSeriesSet || argType == models.TypeScalar) {
+				return fmt.Errorf("parse: expected %v or %v for argument %v, got %v", models.TypeNumberSet, models.TypeSeriesSet, i, argType)
+			}
 		} else if funcType != argType {
 			return fmt.Errorf("parse: expected %v, got %v for argument %v (%v)", funcType, argType, i, arg.String())
 		}

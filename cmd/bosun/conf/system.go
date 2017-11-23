@@ -12,7 +12,6 @@ import (
 	"bosun.org/opentsdb"
 	"github.com/BurntSushi/toml"
 	"github.com/influxdata/influxdb/client/v2"
-	elastic "gopkg.in/olivere/elastic.v3"
 )
 
 // SystemConf contains all the information that bosun needs to run. Outside of the conf package
@@ -46,11 +45,12 @@ type SystemConf struct {
 	GraphiteConf GraphiteConf
 	InfluxConf   InfluxConf
 	ElasticConf  map[string]ElasticConf
-	LogStashConf LogStashConf
 
 	AnnotateConf AnnotateConf
 
 	AuthConf *AuthConf
+
+	MaxRenderedTemplateAge int // in days
 
 	EnableSave      bool
 	EnableReload    bool
@@ -79,7 +79,6 @@ func (sc *SystemConf) EnabledBackends() EnabledBackends {
 	b.OpenTSDB = sc.OpenTSDBConf.Host != ""
 	b.Graphite = sc.GraphiteConf.Host != ""
 	b.Influx = sc.InfluxConf.URL != ""
-	b.Logstash = len(sc.LogStashConf.Hosts) != 0
 	b.Elastic = len(sc.ElasticConf["default"].Hosts) != 0
 	b.Annotate = len(sc.AnnotateConf.Hosts) != 0
 	return b
@@ -107,11 +106,6 @@ type AnnotateConf struct {
 	SimpleClient  bool            // If true ES will connect over NewSimpleClient
 	ClientOptions ESClientOptions // ES client options
 	Index         string          // name of index / table
-}
-
-// LogStashConf contains a list of elastic hosts for the depcrecated logstash functions
-type LogStashConf struct {
-	Hosts expr.LogstashElasticHosts
 }
 
 // ESClientOptions: elastic search client options
@@ -185,6 +179,8 @@ type AuthConf struct {
 type LDAPConf struct {
 	// Domain name (used to make domain/username)
 	Domain string
+	//user base dn (LDAP Auth)
+	UserBaseDn string
 	// LDAP server
 	LdapAddr string
 	// allow insecure ldap connection?
@@ -427,6 +423,12 @@ func (sc *SystemConf) GetInternetProxy() string {
 	return sc.InternetProxy
 }
 
+// MaxRenderedTemplateAge returns the maximum time in days to keep rendered templates
+// after the incident end date.
+func (sc *SystemConf) GetMaxRenderedTemplateAge() int {
+	return sc.MaxRenderedTemplateAge
+}
+
 // SaveEnabled returns if saving via the UI and config editing API endpoints should be enabled
 func (sc *SystemConf) SaveEnabled() bool {
 	return sc.EnableSave
@@ -457,12 +459,6 @@ func (sc *SystemConf) SetTSDBHost(tsdbHost string) {
 // GetTSDBHost returns the configured TSDBHost
 func (sc *SystemConf) GetTSDBHost() string {
 	return sc.OpenTSDBConf.Host
-}
-
-// GetLogstashElasticHosts returns the Hosts to connect to for issuing logstash
-// functions (which are depcrecated)
-func (sc *SystemConf) GetLogstashElasticHosts() expr.LogstashElasticHosts {
-	return sc.LogStashConf.Hosts
 }
 
 // GetAnnotateElasticHosts returns the Elastic hosts that should be used for annotations.
@@ -529,12 +525,6 @@ func (sc *SystemConf) GetInfluxContext() client.HTTPConfig {
 	return c
 }
 
-// GetLogstashContext returns a Logstash context which contains all the information needed
-// to query Elastic for logstash style queries. This is deprecated
-func (sc *SystemConf) GetLogstashContext() expr.LogstashElasticHosts {
-	return sc.LogStashConf.Hosts
-}
-
 // GetElasticContext returns an Elastic context which contains all the information
 // needed to run Elastic queries.
 func (sc *SystemConf) GetElasticContext() expr.ElasticHosts {
@@ -581,157 +571,4 @@ func (u *URL) UnmarshalText(text []byte) error {
 	var err error
 	u.URL, err = url.Parse(string(bytes.Trim(text, `\"`)))
 	return err
-}
-
-// ParseESConfig return expr.ElasticHost
-func parseESConfig(sc *SystemConf) expr.ElasticHosts {
-	var options ESClientOptions
-	esConf := expr.ElasticConfig{}
-	store := make(map[string]expr.ElasticConfig)
-	esHost := expr.ElasticHosts{}
-
-	addClientOptions := func(item elastic.ClientOptionFunc) {
-		esConf.ClientOptionFuncs = append(esConf.ClientOptionFuncs, item)
-	}
-
-	for hostPrefix, value := range sc.ElasticConf {
-		options = value.ClientOptions
-
-		if !options.Enabled {
-			esConf.SimpleClient = value.SimpleClient
-			esConf.Hosts = value.Hosts
-			esConf.ClientOptionFuncs = esConf.ClientOptionFuncs[0:0]
-			store[hostPrefix] = esConf
-		} else {
-			// SetURL
-			addClientOptions(elastic.SetURL(value.Hosts...))
-
-			if options.BasicAuthUsername != "" && options.BasicAuthPassword != "" {
-				addClientOptions(elastic.SetBasicAuth(options.BasicAuthUsername, options.BasicAuthPassword))
-			}
-
-			if options.Scheme == "https" {
-				addClientOptions(elastic.SetScheme(options.Scheme))
-			}
-
-			// Default Enable
-			addClientOptions(elastic.SetSniff(options.SnifferEnabled))
-
-			if options.SnifferTimeoutStartup > 5 {
-				options.SnifferTimeoutStartup = options.SnifferTimeoutStartup * time.Second
-				addClientOptions(elastic.SetSnifferTimeoutStartup(options.SnifferTimeoutStartup))
-			}
-
-			if options.SnifferTimeout > 2 {
-				options.SnifferTimeout = options.SnifferTimeout * time.Second
-				addClientOptions(elastic.SetSnifferTimeout(options.SnifferTimeout))
-			}
-
-			if options.SnifferInterval > 15 {
-				options.SnifferInterval = options.SnifferInterval * time.Minute
-				addClientOptions(elastic.SetSnifferInterval(options.SnifferTimeout))
-			}
-
-			//Default Enable
-			addClientOptions(elastic.SetHealthcheck(options.HealthcheckEnabled))
-
-			if options.HealthcheckTimeoutStartup > 5 {
-				options.HealthcheckTimeoutStartup = options.HealthcheckTimeoutStartup * time.Second
-				addClientOptions(elastic.SetHealthcheckTimeoutStartup(options.HealthcheckTimeoutStartup))
-			}
-
-			if options.HealthcheckTimeout > 1 {
-				options.HealthcheckTimeout = options.HealthcheckTimeout * time.Second
-				addClientOptions(elastic.SetHealthcheckTimeout(options.HealthcheckTimeout))
-			}
-
-			if options.HealthcheckInterval > 60 {
-				options.HealthcheckInterval = options.HealthcheckInterval * time.Second
-				addClientOptions(elastic.SetHealthcheckInterval(options.HealthcheckInterval))
-			}
-
-			if options.MaxRetries > 0 {
-				addClientOptions(elastic.SetMaxRetries(options.MaxRetries))
-			}
-			esConf.Hosts = esConf.Hosts[0:0]
-			esConf.SimpleClient = false
-			store[hostPrefix] = esConf
-		}
-
-		esHost.Hosts = store
-	}
-
-	return esHost
-}
-
-// ParseESConfig return expr.ElasticHost
-func parseESAnnoteConfig(sc *SystemConf) expr.ElasticConfig {
-	var options ESClientOptions
-	esConf := expr.ElasticConfig{}
-
-	addClientOptions := func(item elastic.ClientOptionFunc) {
-		esConf.ClientOptionFuncs = append(esConf.ClientOptionFuncs, item)
-	}
-
-	options = sc.AnnotateConf.ClientOptions
-
-	if !options.Enabled {
-		esConf.SimpleClient = sc.AnnotateConf.SimpleClient
-		esConf.Hosts = sc.AnnotateConf.Hosts
-		return esConf
-	}
-
-	// SetURL
-	addClientOptions(elastic.SetURL(sc.AnnotateConf.Hosts...))
-
-	if options.BasicAuthUsername != "" && options.BasicAuthPassword != "" {
-		addClientOptions(elastic.SetBasicAuth(options.BasicAuthUsername, options.BasicAuthPassword))
-	}
-
-	if options.Scheme == "https" {
-		addClientOptions(elastic.SetScheme(options.Scheme))
-	}
-
-	// Default Enable
-	addClientOptions(elastic.SetSniff(options.SnifferEnabled))
-
-	if options.SnifferTimeoutStartup > 5 {
-		options.SnifferTimeoutStartup = options.SnifferTimeoutStartup * time.Second
-		addClientOptions(elastic.SetSnifferTimeoutStartup(options.SnifferTimeoutStartup))
-	}
-
-	if options.SnifferTimeout > 2 {
-		options.SnifferTimeout = options.SnifferTimeout * time.Second
-		addClientOptions(elastic.SetSnifferTimeout(options.SnifferTimeout))
-	}
-
-	if options.SnifferInterval > 15 {
-		options.SnifferInterval = options.SnifferInterval * time.Minute
-		addClientOptions(elastic.SetSnifferInterval(options.SnifferTimeout))
-	}
-
-	//Default Enable
-	addClientOptions(elastic.SetHealthcheck(options.HealthcheckEnabled))
-
-	if options.HealthcheckTimeoutStartup > 5 {
-		options.HealthcheckTimeoutStartup = options.HealthcheckTimeoutStartup * time.Second
-		addClientOptions(elastic.SetHealthcheckTimeoutStartup(options.HealthcheckTimeoutStartup))
-	}
-
-	if options.HealthcheckTimeout > 1 {
-		options.HealthcheckTimeout = options.HealthcheckTimeout * time.Second
-		addClientOptions(elastic.SetHealthcheckTimeout(options.HealthcheckTimeout))
-	}
-
-	if options.HealthcheckInterval > 60 {
-		options.HealthcheckInterval = options.HealthcheckInterval * time.Second
-		addClientOptions(elastic.SetHealthcheckInterval(options.HealthcheckInterval))
-	}
-
-	if options.MaxRetries > 0 {
-		addClientOptions(elastic.SetMaxRetries(options.MaxRetries))
-	}
-
-	return esConf
-
 }
