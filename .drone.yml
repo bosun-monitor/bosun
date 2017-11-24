@@ -17,10 +17,10 @@ build:
       - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bosun -tags esv5
 
   build_scollector:
-  image: golang:1.9-alpine
-  commands:
-    - cd ${GOPATH}/src/bosun.org/cmd/scollector
-    - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o scollector -tags esv5
+    image: golang:1.9-alpine
+    commands:
+      - cd ${GOPATH}/src/bosun.org/cmd/scollector
+      - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o scollector -tags esv5
 
 publish:
   sandbox_bosun:
