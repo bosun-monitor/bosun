@@ -10,26 +10,32 @@ build:
       - cd ${GOPATH}/src/bosun.org/cmd/bosun
       - go test -v bosun.org/...
 
-  build:
+  build_bosun:
     image: golang:1.9-alpine
     commands:
-      - export BOSUN_VERSION=`cat version.txt`
       - cd ${GOPATH}/src/bosun.org/cmd/bosun
       - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o bosun -tags esv5
+
+  build_scollector:
+    image: golang:1.9-alpine
+    commands:
+      - cd ${GOPATH}/src/bosun.org/cmd/scollector
+      - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o scollector -tags esv5
+
 publish:
-  sandbox:
+  prod_bosun_full_version:
     image: s3
     region: eu-west-1
-    bucket: skyscanner-sandbox-skymetrics-deployment
+    bucket: skyscanner-prod-skymetrics-deploymentsupport
     acl: bucket-owner-full-control
-    access_key: $$SANDBOX_ACCESSKEY
-    secret_key: $$SANDBOX_SECRETKEY
+    access_key: $$PROD_ACCESSKEY
+    secret_key: $$PROD_SECRETKEY
     source: /drone/src/bosun.org/cmd/bosun/bosun
-    target: /artifacts/bosun/$$BRANCH/bosun
+    target: /artifacts/bosun/$$BRANCH-$$BOSUN_VERSION-$$BUILD_NUMBER/bosun
     when:
       branch: '!master'
 
-  prod:
+  prod_bosun:
     image: s3
     region: eu-west-1
     bucket: skyscanner-prod-skymetrics-deploymentsupport
@@ -38,5 +44,41 @@ publish:
     secret_key: $$PROD_SECRETKEY
     source: /drone/src/bosun.org/cmd/bosun/bosun
     target: /artifacts/bosun/$$BOSUN_VERSION/bosun
+    when:
+      branch: master
+
+  sandbox_scollector_full_version:
+    image: s3
+    region: eu-west-1
+    bucket: skyscanner-sandbox-skymetrics-deploymentsupport
+    acl: bucket-owner-full-control
+    access_key: $$SANDBOX_ACCESSKEY
+    secret_key: $$SANDBOX_SECRETKEY
+    source: /drone/src/bosun.org/cmd/scollector/scollector
+    target: /artifacts/scollector/$$BRANCH-$$BOSUN_VERSION-$$BUILD_NUMBER/scollector
+    when:
+      branch: '!master'
+
+  sandbox_scollector:
+    image: s3
+    region: eu-west-1
+    bucket: skyscanner-sandbox-skymetrics-deploymentsupport
+    acl: bucket-owner-full-control
+    access_key: $$SANDBOX_ACCESSKEY
+    secret_key: $$SANDBOX_SECRETKEY
+    source: /drone/src/bosun.org/cmd/scollector/scollector
+    target: /artifacts/scollector/$$BOSUN_VERSION/scollector
+    when:
+      branch: master
+
+  prod_scollector:
+    image: s3
+    region: eu-west-1
+    bucket: skyscanner-prod-skymetrics-deploymentsupport
+    acl: bucket-owner-full-control
+    access_key: $$PROD_ACCESSKEY
+    secret_key: $$PROD_SECRETKEY
+    source: /drone/src/bosun.org/cmd/scollector/scollector
+    target: /artifacts/scollector/$$BOSUN_VERSION/scollector
     when:
       branch: master
