@@ -26,7 +26,7 @@ publish:
   sandbox_bosun:
     image: s3
     region: eu-west-1
-    bucket: skyscanner-sandbox-skymetrics-deployment
+    bucket: skyscanner-sandbox-skymetrics-deploymentsupport
     acl: bucket-owner-full-control
     access_key: $$SANDBOX_ACCESSKEY
     secret_key: $$SANDBOX_SECRETKEY
@@ -50,7 +50,7 @@ publish:
   sandbox_scollector:
     image: s3
     region: eu-west-1
-    bucket: skyscanner-sandbox-skymetrics-deployment
+    bucket: skyscanner-sandbox-skymetrics-deploymentsupport
     acl: bucket-owner-full-control
     access_key: $$SANDBOX_ACCESSKEY
     secret_key: $$SANDBOX_SECRETKEY
