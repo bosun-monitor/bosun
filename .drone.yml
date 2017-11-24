@@ -33,6 +33,6 @@ publish:
     access_key: $$PROD_ACCESSKEY
     secret_key: $$PROD_SECRETKEY
     source: /drone/src/bosun.org/cmd/bosun/bosun
-    target: /artifacts/bosun/build-$$BOSUN_VERSION/bosun
+    target: /artifacts/bosun/$$BOSUN_VERSION/bosun
     when:
       branch: master
