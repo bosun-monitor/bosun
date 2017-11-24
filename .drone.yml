@@ -1,3 +1,7 @@
+matrix:
+  BOSUN_VERSION:
+    - 0.6.0
+
 build:
   test:
     image: golang:1.9-alpine
