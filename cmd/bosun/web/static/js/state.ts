@@ -41,7 +41,6 @@ bosunApp.directive('tsAckGroup', ['$location', '$timeout', ($location: ng.ILocat
 					scope.exp_coll = 'collapse'
 					for (var i = 0; i < scope.groups.length; i++) {
 						scope.shown[i] = true
-						scope.groups[i].show = false
 					}
 				} else {
 					scope.exp_coll = 'expand'
