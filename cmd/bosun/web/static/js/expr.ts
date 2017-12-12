@@ -40,15 +40,19 @@ bosunControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route
 	$scope.expr = current;
 
 	var editor;
+
+	$scope.aceMode = 'bosun';
+	$scope.aceTheme = 'chrome';
 	$scope.aceLoaded = function (_editor) {
 		editor = _editor;
 		$scope.editor = editor;
 		editor.focus();
 		editor.getSession().setUseWrapMode(true);
+		editor.getSession().setMode({
+			path: 'ace/mode/' + $scope.aceMode,
+			v: Date.now()
+		});
 	};
-	var syntax = true;
-	$scope.aceMode = 'bosun';
-	$scope.aceTheme = 'chrome';
 
 	$scope.running = current;
 	$scope.tab = search.tab || 'results';
