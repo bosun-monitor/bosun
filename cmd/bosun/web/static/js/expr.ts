@@ -16,6 +16,10 @@ interface IExprScope extends IBosunScope {
 	keydown: ($event: any) => void;
 	animate: () => any;
 	stop: () => any;
+	aceLoaded: (editor: any) => void;
+	editor: any;
+	aceTheme: string;
+	aceMode: string;
 }
 
 bosunControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route', function($scope: IExprScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService) {
@@ -34,6 +38,21 @@ bosunControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route
 	$scope.date = search.date || '';
 	$scope.time = search.time || '';
 	$scope.expr = current;
+
+	var editor;
+
+	$scope.aceMode = 'bosun';
+	$scope.aceTheme = 'chrome';
+	$scope.aceLoaded = function (_editor) {
+		editor = _editor;
+		$scope.editor = editor;
+		editor.focus();
+		editor.getSession().setUseWrapMode(true);
+		editor.getSession().setMode({
+			path: 'ace/mode/' + $scope.aceMode,
+			v: Date.now()
+		});
+	};
 
 	$scope.running = current;
 	$scope.tab = search.tab || 'results';
@@ -109,5 +128,4 @@ bosunControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route
 			$scope.set();
 		}
 	};
-
 }]);
