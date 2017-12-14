@@ -1,11 +1,10 @@
 language: go
 sudo: false
 go:
-  - 1.8
+  - 1.9
 
 notifications:
   email: false
-  slack: bosun:2Z0edJEDfXMDnhg94uLNKzNj
 
 install:
   - rsync -az ${TRAVIS_BUILD_DIR}/ $HOME/gopath/src/bosun.org/
