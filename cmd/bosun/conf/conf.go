@@ -69,6 +69,8 @@ type SystemConfProvider interface {
 
 	GetAuthConf() *AuthConf
 
+	GetMaxRenderedTemplateAge() int
+
 	// Contexts
 	GetTSDBContext() opentsdb.Context
 	GetGraphiteContext() graphite.Context

@@ -8,11 +8,11 @@ import (
 
 	"math"
 
+	"bosun.org/annotate"
 	"bosun.org/cmd/bosun/expr/parse"
 	"bosun.org/models"
 	"bosun.org/opentsdb"
 	"github.com/MiniProfiler/go/miniprofiler"
-	"github.com/bosun-monitor/annotate"
 	"github.com/kylebrandt/boolq"
 )
 

@@ -112,6 +112,12 @@ Mandatory.
 
 Example: `RuleFilePath = "dev.sample.conf"`
 
+### MaxRenderedTemplateAge
+If set, this will allow bosun to delete rendered templates from its' data store.
+It will remove all rendered templates for alerts that have been closed for longer than this time (in days).
+
+Example: `MaxRenderedTemplateAge = 30 # retain old templates for only 30 days`
+
 ### TimeAndDate
 Used to configure time zones that will be linked to in Bosun's
 dashboard. It is an array of timeanddate.com zones (the page that gets
