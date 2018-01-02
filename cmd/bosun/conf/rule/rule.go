@@ -179,8 +179,8 @@ func NewConf(name string, backends conf.EnabledBackends, sysVars map[string]stri
 	}
 
 	loadSections("template")
-	loadSections("notification")
 	loadSections("macro")
+	loadSections("notification")
 	loadSections("lookup")
 	loadSections("alert")
 
