@@ -179,6 +179,8 @@ type AuthConf struct {
 type LDAPConf struct {
 	// Domain name (used to make domain/username)
 	Domain string
+	//user base dn (LDAP Auth)
+	UserBaseDn string
 	// LDAP server
 	LdapAddr string
 	// allow insecure ldap connection?
