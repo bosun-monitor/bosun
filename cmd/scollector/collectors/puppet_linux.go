@@ -126,9 +126,12 @@ func puppet_linux() (opentsdb.MultiDataPoint, error) {
 
 		t, err := time.Parse("2006-01-02 15:04:05.999999 -07:00", report.Time)
 		if err != nil {
+			// Puppet 5 changed the time format
+			t, err = time.Parse("2006-01-02T15:04:05.999999-07:00", report.Time)
+		}
+		if err != nil {
 			return md, fmt.Errorf("Error parsing report time: %s", err)
 		}
-
 		// As listed at https://docs.puppetlabs.com/puppet/latest/reference/format_report.html
 		var statusCode = map[string]int{
 			"changed":   0,

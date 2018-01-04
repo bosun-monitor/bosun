@@ -136,12 +136,14 @@ func (e *Elastic) InitBackend() error {
 			return fmt.Errorf("failed to create elastic mapping (ack: %v): %v", res != nil && res.Acknowledged, err)
 		}
 	}
-	stringNA := map[string]string{
-		"type":  "string",
-		"index": "not_analyzed",
+	// mappings updated according to https://www.elastic.co/blog/strings-are-dead-long-live-strings
+	stringNA := map[string]interface{}{
+		"type":  "text",
+		"index": true,
 	}
-	stringA := map[string]string{
-		"type": "string",
+	stringA := map[string]interface{}{
+		"type":  "text",
+		"index": true,
 	}
 	date := map[string]string{
 		"type": "date",

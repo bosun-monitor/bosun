@@ -98,7 +98,7 @@ func init() {
 				{{ range $ak := $alertKeys }}
 				<li>{{ $ak }}</li>
 				{{ end }}
-			<ul>
+			</ul>
 		</li>
 	{{ end }}
 	</ul>
