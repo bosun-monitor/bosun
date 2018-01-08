@@ -1,6 +1,9 @@
 # Note: This file is tested as part of Bosun's tests. Editing outside of comments
 # may cause tests to fail
 
+# Scheme will be used with Hostname when links are created in templates (i.e. acknowledge links)
+Scheme = "https"
+
 # Hostname will be used when links are created in templates (i.e. acknowledge links)
 Hostname = "bosun.example.com"
 
