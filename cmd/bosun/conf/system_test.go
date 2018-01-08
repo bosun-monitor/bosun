@@ -16,6 +16,7 @@ func TestSystemToml(t *testing.T) {
 		return
 	}
 	assert.Equal(t, sc.Hostname, "bosun.example.com", "Hostname not equal")
+	assert.Equal(t, sc.Scheme, "https", "Scheme does not match")
 	assert.Equal(t, sc.DefaultRunEvery, 5)
 	assert.Equal(t, sc.CheckFrequency, Duration{time.Minute})
 	assert.Equal(t, sc.Ping, true)
