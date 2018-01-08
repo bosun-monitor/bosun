@@ -8,7 +8,6 @@ import (
 	"html/template"
 	"io"
 	"io/ioutil"
-	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -406,42 +405,11 @@ func JSON(h func(miniprofiler.Timer, http.ResponseWriter, *http.Request) (interf
 }
 
 func Shorten(_ miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	u := url.URL{
-		Scheme: "https",
-		Host:   "www.googleapis.com",
-		Path:   "/urlshortener/v1/url",
-	}
-	if schedule.SystemConf.GetShortURLKey() != "" {
-		u.RawQuery = "key=" + schedule.SystemConf.GetShortURLKey()
-	}
-	j, err := json.Marshal(struct {
-		LongURL string `json:"longUrl"`
-	}{
-		r.Referer(),
-	})
+	id, err := schedule.DataAccess.Configs().ShortenLink(r.Referer())
 	if err != nil {
 		return nil, err
 	}
-
-	transport := &http.Transport{
-		Dial: (&net.Dialer{
-			Timeout:   30 * time.Second,
-			KeepAlive: 30 * time.Second,
-		}).Dial,
-		TLSHandshakeTimeout: 10 * time.Second,
-	}
-	if InternetProxy != nil {
-		transport.Proxy = http.ProxyURL(InternetProxy)
-	}
-	c := http.Client{Transport: transport}
-
-	req, err := c.Post(u.String(), "application/json", bytes.NewBuffer(j))
-	if err != nil {
-		return nil, err
-	}
-	io.Copy(w, req.Body)
-	req.Body.Close()
-	return nil, nil
+	return schedule.SystemConf.MakeLink(fmt.Sprintf("/s/%d", id), nil), nil
 }
 
 type Health struct {

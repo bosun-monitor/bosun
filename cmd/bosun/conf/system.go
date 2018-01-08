@@ -541,10 +541,12 @@ func (sc *SystemConf) AnnotateEnabled() bool {
 // MakeLink creates a HTML Link based on Bosun's configured Hostname
 func (sc *SystemConf) MakeLink(path string, v *url.Values) string {
 	u := url.URL{
-		Scheme:   sc.Scheme,
-		Host:     sc.Hostname,
-		Path:     path,
-		RawQuery: v.Encode(),
+		Scheme: sc.Scheme,
+		Host:   sc.Hostname,
+		Path:   path,
+	}
+	if v != nil {
+		u.RawQuery = v.Encode()
 	}
 	return u.String()
 }
