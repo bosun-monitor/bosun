@@ -170,6 +170,7 @@ func Listen(httpAddr, httpsAddr, certFile, keyFile string, devMode bool, tsdbHos
 	handle("/api/rule", JSON(Rule), canRunTests).Name("rule_test").Methods(POST)
 	handle("/api/rule/notification/test", JSON(TestHTTPNotification), canRunTests).Name("rule__notification_test").Methods(POST)
 	handle("/api/shorten", JSON(Shorten), canViewDash).Name("shorten")
+	handle("/s/{id}", JSON(GetShortLink), canViewDash).Name("shortlink")
 	handle("/api/silence/clear", JSON(SilenceClear), canSilence).Name("silence_clear")
 	handle("/api/silence/get", JSON(SilenceGet), canViewDash).Name("silence_get").Methods(GET)
 	handle("/api/silence/set", JSON(SilenceSet), canSilence).Name("silence_set")
@@ -409,7 +410,26 @@ func Shorten(_ miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (inte
 	if err != nil {
 		return nil, err
 	}
-	return schedule.SystemConf.MakeLink(fmt.Sprintf("/s/%d", id), nil), nil
+	return struct {
+		ID string `json:"id"`
+	}{schedule.SystemConf.MakeLink(fmt.Sprintf("/s/%d", id), nil)}, nil
+}
+
+func GetShortLink(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	// on any error or bad param, just redirect to index. Otherwise 302 to stored url
+	vars := mux.Vars(r)
+	idv := vars["id"]
+	id, err := strconv.Atoi(idv)
+	targetURL := ""
+	if err != nil {
+		return Index(t, w, r)
+	}
+	targetURL, err = schedule.DataAccess.Configs().GetShortLink(id)
+	if err != nil {
+		return Index(t, w, r)
+	}
+	http.Redirect(w, r, targetURL, 302)
+	return nil, nil
 }
 
 type Health struct {
