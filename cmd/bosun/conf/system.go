@@ -23,6 +23,7 @@ type SystemConf struct {
 	TLSKeyFile  string
 
 	Hostname      string
+	Scheme        string // default http
 	Ping          bool
 	PingDuration  Duration // Duration from now to stop pinging hosts based on time since the host tag was touched
 	TimeAndDate   []int    // timeanddate.com cities list
@@ -222,6 +223,7 @@ const (
 // NewSystemConf retruns a system conf with default values set
 func newSystemConf() *SystemConf {
 	return &SystemConf{
+		Scheme:          "http",
 		CheckFrequency:  Duration{Duration: time.Minute * 5},
 		DefaultRunEvery: 1,
 		HTTPListen:      defaultHTTPListen,
@@ -539,7 +541,7 @@ func (sc *SystemConf) AnnotateEnabled() bool {
 // MakeLink creates a HTML Link based on Bosun's configured Hostname
 func (sc *SystemConf) MakeLink(path string, v *url.Values) string {
 	u := url.URL{
-		Scheme:   "http",
+		Scheme:   sc.Scheme,
 		Host:     sc.Hostname,
 		Path:     path,
 		RawQuery: v.Encode(),
