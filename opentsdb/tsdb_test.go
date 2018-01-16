@@ -138,6 +138,24 @@ func TestParseRequestV2_2(t *testing.T) {
 		}
 	}
 }
+func TestTagGroupParsing(t *testing.T) {
+	tests := []struct {
+		query  string
+		groups string
+	}{
+		{"sum:10m-avg:proc.stat.cpu{}{t=v,o=k}", "{}"},
+		{"sum:10m-avg:proc.stat.cpu{dc=uk}{t=v,o=k}", "{dc=}"},
+	}
+	for _, q := range tests {
+		r, err := ParseQuery(q.query, Version2_2)
+		if err == nil {
+			if r.GroupByTags.String() != q.groups {
+				t.Errorf("expected group tags %s got %s", q.groups, r.GroupByTags)
+			}
+
+		}
+	}
+}
 
 func TestParseFilters(t *testing.T) {
 	tests := []struct {
