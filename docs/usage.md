@@ -161,6 +161,16 @@ The open incident filter supports joining terms in `()` as well as the `AND`, `O
         <td><code>subject:(something*)</code></td>
         <td>Returns incidents where the subject string matches the value. Globs can be used in the value</td>
     </tr>
+    <tr>
+        <td><code>since:[<|>](1d)</code> </td>
+        <td>Returns incidents that in `status` more than <code><</code> or incidents that in `status` less than <code>></code> the
+            relative time to now based on the duration. Duration can be in units of s (seconds), m (minutes),
+            h (hours), d (days), w (weeks), n (months), y (years). If less than or greater than are not part
+            of the value, it defaults to greater than (after). Now is clock time and is not related to the time
+            range specified in Grafana.<br>
+            e.g. `status:normal AND since:<15d` return alerts that are in `normal` more than 15 day's
+        </td>
+    </tr>
 </table>
 
 # Rule Editor
