@@ -24,6 +24,8 @@ bosunApp.directive('tsAckGroup', ['$location', '$timeout', ($location: ng.ILocat
 			scope.btoa = scope.$parent.btoa;
 			scope.encode = scope.$parent.encode;
 			scope.shown = {};
+			scope.allExpanded = false,
+			scope.exp_coll = 'expand',
 			scope.collapse = (i: any) => {
 				scope.shown[i] = !scope.shown[i];
 
@@ -31,6 +33,20 @@ bosunApp.directive('tsAckGroup', ['$location', '$timeout', ($location: ng.ILocat
 					$timeout(function () {
 						scope.$broadcast("onOpen", i);
 					}, 0);
+				}
+			};
+			scope.expandall = () => {
+				scope.allExpanded = !scope.allExpanded
+				if (scope.allExpanded) {
+					scope.exp_coll = 'collapse'
+					for (var i = 0; i < scope.groups.length; i++) {
+						scope.shown[i] = true
+					}
+				} else {
+					scope.exp_coll = 'expand'
+					for (var i = 0; i < scope.groups.length; i++) {
+						scope.shown[i] = false
+					}
 				}
 			};
 			scope.click = ($event: any, idx: number) => {
@@ -49,9 +65,20 @@ bosunApp.directive('tsAckGroup', ['$location', '$timeout', ($location: ng.ILocat
 				scope.schedule.checkIdx = idx;
 				scope.update();
 			};
-			scope.select = (checked: boolean) => {
+			scope.select = (status: string) => {
 				for (var i = 0; i < scope.groups.length; i++) {
-					scope.groups[i].checked = checked;
+					switch(status) {
+					case 'all':
+						scope.groups[i].checked = true;
+						break;
+					case 'none':
+						scope.groups[i].checked = false;
+						break;
+					default:
+						if (scope.groups[i].CurrentStatus == status) {
+							scope.groups[i].checked = true;
+						}
+					}
 				}
 				scope.update();
 			};

@@ -8,11 +8,19 @@
 <div class="panel-group" ng-show="groups">
 	<div class="clearfix">
 		<h3 ng-bind="ack" class="pull-left"></h3>
+		<span class="pull-left" style="margin-left: 10px;">
+			<br>
+			<button ng-bind="exp_coll" class="btn btn-default btn-xs" ng-click="expandall()"></button>
+		</span>
 		<span class="pull-right">
 			<br>
 			select
-			<button class="btn btn-default btn-xs" ng-click="select(true)">all</button>
-			<button class="btn btn-default btn-xs" ng-click="select(false)">none</button>
+			<button class="btn btn-default btn-xs" ng-click="select('all')">all</button>
+			<button class="btn btn-default btn-xs" ng-click="select('normal')">normal</button>
+			<button class="btn btn-default btn-xs" ng-click="select('warning')">warning</button>
+			<button class="btn btn-default btn-xs" ng-click="select('critical')">critical</button>
+			<button class="btn btn-default btn-xs" ng-click="select('unknown')">unknown</button>
+			<button class="btn btn-default btn-xs" ng-click="select('none')">none</button>
 		</span>
 		<span class="pull-right with-selected" ng-show="anySelected">
 			with selected
