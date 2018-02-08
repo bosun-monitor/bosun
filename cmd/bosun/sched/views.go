@@ -60,6 +60,7 @@ type IncidentSummaryView struct {
 	Events                 []EventSummary
 	WarnNotificationChains [][]string
 	CritNotificationChains [][]string
+	LastStatusTime         int64
 }
 
 func MakeIncidentSummary(c conf.RuleConfProvider, s SilenceTester, is *models.IncidentState) (*IncidentSummaryView, error) {
@@ -107,6 +108,7 @@ func MakeIncidentSummary(c conf.RuleConfProvider, s SilenceTester, is *models.In
 		Events:                 eventSummaries,
 		WarnNotificationChains: conf.GetNotificationChains(warnNotifications),
 		CritNotificationChains: conf.GetNotificationChains(critNotifications),
+		LastStatusTime:         is.Last().Time.Unix(),
 	}, nil
 }
 
@@ -237,6 +239,8 @@ func (is IncidentSummaryView) Ask(filter string) (bool, error) {
 		return is.LastAbnormalStatus.String() == value, nil
 	case "subject":
 		return glob.Glob(value, is.Subject), nil
+	case "since":
+		return checkTimeArg(is.LastStatusTime, value)
 	}
 	return false, nil
 }
