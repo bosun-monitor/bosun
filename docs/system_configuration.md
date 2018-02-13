@@ -242,6 +242,9 @@ The default is to use ledis. If Both Redis and ledis are defined, Redis will tak
 #### RedisHost
 The Redis hostname and port.
 
+#### RedisDb
+Optional integer database to store bosun data.  Defaults to 0.
+
 #### RedisPassword
 Optional password to use when connecting to Redis.
 
