@@ -154,6 +154,7 @@ func Listen(httpAddr, httpsAddr, certFile, keyFile string, devMode bool, tsdbHos
 	handle("/api/graph", JSON(Graph), canViewDash).Name("graph").Methods(GET)
 
 	handle("/api/health", JSON(HealthCheck), fullyOpen).Name("health_check").Methods(GET)
+	handle("/api/debug/{key}", JSON(DebugStats), fullyOpen).Name("debug_stats").Methods(GET)
 	handle("/api/host", JSON(Host), canViewDash).Name("host").Methods(GET)
 	handle("/api/last", JSON(Last), canViewDash).Name("last").Methods(GET)
 	handle("/api/quiet", JSON(Quiet), canViewDash).Name("quiet").Methods(GET)
@@ -470,6 +471,34 @@ func HealthCheck(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (
 	h.UptimeSeconds = int64(time.Since(startTime).Seconds())
 	h.StartEpoch = startTime.Unix()
 	return h, nil
+}
+
+type NotificationStats struct {
+	// Post and email notifiaction stats
+	PostNotificationsSuccess  int64
+	PostNotificationsFailed   int64
+	EmailNotificationsSuccess int64
+	EmailNotificationsFailed  int64
+}
+
+func DebugStats(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	vars := mux.Vars(r)
+	key := vars["key"]
+
+	switch key {
+	case "notification":
+		var n NotificationStats
+		n.PostNotificationsSuccess = collect.Get("post.sent", nil)
+		n.PostNotificationsFailed = collect.Get("post.sent_failed", nil)
+		n.EmailNotificationsSuccess = collect.Get("email.sent", nil)
+		n.EmailNotificationsFailed = collect.Get("email.sent_failed", nil)
+		return n, nil
+	default:
+		h_out := map[string]string{
+			"msg": fmt.Sprintf("Missing stats for key: %s", key),
+		}
+		return h_out, nil
+	}
 }
 
 func OpenTSDBVersion(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
