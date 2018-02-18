@@ -8,7 +8,6 @@ import (
 	"html/template"
 	"io"
 	"io/ioutil"
-	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -171,6 +170,7 @@ func Listen(httpAddr, httpsAddr, certFile, keyFile string, devMode bool, tsdbHos
 	handle("/api/rule", JSON(Rule), canRunTests).Name("rule_test").Methods(POST)
 	handle("/api/rule/notification/test", JSON(TestHTTPNotification), canRunTests).Name("rule__notification_test").Methods(POST)
 	handle("/api/shorten", JSON(Shorten), canViewDash).Name("shorten")
+	handle("/s/{id}", JSON(GetShortLink), canViewDash).Name("shortlink")
 	handle("/api/silence/clear", JSON(SilenceClear), canSilence).Name("silence_clear")
 	handle("/api/silence/get", JSON(SilenceGet), canViewDash).Name("silence_get").Methods(GET)
 	handle("/api/silence/set", JSON(SilenceSet), canSilence).Name("silence_set")
@@ -406,41 +406,29 @@ func JSON(h func(miniprofiler.Timer, http.ResponseWriter, *http.Request) (interf
 }
 
 func Shorten(_ miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	u := url.URL{
-		Scheme: "https",
-		Host:   "www.googleapis.com",
-		Path:   "/urlshortener/v1/url",
-	}
-	if schedule.SystemConf.GetShortURLKey() != "" {
-		u.RawQuery = "key=" + schedule.SystemConf.GetShortURLKey()
-	}
-	j, err := json.Marshal(struct {
-		LongURL string `json:"longUrl"`
-	}{
-		r.Referer(),
-	})
+	id, err := schedule.DataAccess.Configs().ShortenLink(r.Referer())
 	if err != nil {
 		return nil, err
 	}
+	return struct {
+		ID string `json:"id"`
+	}{schedule.SystemConf.MakeLink(fmt.Sprintf("/s/%d", id), nil)}, nil
+}
 
-	transport := &http.Transport{
-		Dial: (&net.Dialer{
-			Timeout:   30 * time.Second,
-			KeepAlive: 30 * time.Second,
-		}).Dial,
-		TLSHandshakeTimeout: 10 * time.Second,
-	}
-	if InternetProxy != nil {
-		transport.Proxy = http.ProxyURL(InternetProxy)
-	}
-	c := http.Client{Transport: transport}
-
-	req, err := c.Post(u.String(), "application/json", bytes.NewBuffer(j))
+func GetShortLink(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	// on any error or bad param, just redirect to index. Otherwise 302 to stored url
+	vars := mux.Vars(r)
+	idv := vars["id"]
+	id, err := strconv.Atoi(idv)
+	targetURL := ""
 	if err != nil {
-		return nil, err
+		return Index(t, w, r)
 	}
-	io.Copy(w, req.Body)
-	req.Body.Close()
+	targetURL, err = schedule.DataAccess.Configs().GetShortLink(id)
+	if err != nil {
+		return Index(t, w, r)
+	}
+	http.Redirect(w, r, targetURL, 302)
 	return nil, nil
 }
 
