@@ -438,6 +438,15 @@ type Health struct {
 	Quiet         bool
 	UptimeSeconds int64
 	StartEpoch    int64
+	Notifications NotificationStats
+}
+
+type NotificationStats struct {
+	// Post and email notifiaction stats
+	PostNotificationsSuccess  int64
+	PostNotificationsFailed   int64
+	EmailNotificationsSuccess int64
+	EmailNotificationsFailed  int64
 }
 
 func Reload(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
@@ -465,10 +474,19 @@ func Quiet(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 
 func HealthCheck(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	var h Health
+	var n NotificationStats
 	h.RuleCheck = schedule.LastCheck.After(time.Now().Add(-schedule.SystemConf.GetCheckFrequency()))
 	h.Quiet = schedule.GetQuiet()
 	h.UptimeSeconds = int64(time.Since(startTime).Seconds())
 	h.StartEpoch = startTime.Unix()
+
+	//notifications stats
+	n.PostNotificationsSuccess = collect.Get("post.sent", nil)
+	n.PostNotificationsFailed = collect.Get("post.sent_failed", nil)
+	n.EmailNotificationsSuccess = collect.Get("email.sent", nil)
+	n.EmailNotificationsFailed = collect.Get("email.sent_failed", nil)
+
+	h.Notifications = n
 	return h, nil
 }
 
