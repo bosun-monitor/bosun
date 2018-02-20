@@ -168,6 +168,8 @@ Returns a list of alert summaries matching the given filter (defaults to all).
 Returns an object of internal health checks. True values are good, falses are
 bad.
 
+`Note: all health checks stats are kept in memory and reset upon bosun restart`
+
 ### /api/run
 
 Runs a rule check. Returns an error if one is already running (either from the
@@ -215,16 +217,6 @@ errors. Returns an error if invalid.
 ### /api/reload
 
 Reloads the rule configuration when `{ "Reload": true }` is POST'd to the endpoint.
-
-## Debug Endpoints
-
-### /api/debug/{key}
-
-Return debug statistics of given key, supported keys are
-
-* notification: Return POST and Email notification failure and success counts
-
-`Note: all debugging stats are kept in memory and reset upon bosun restart`
 
 </div>
 </div>
