@@ -3,7 +3,10 @@ package collectors
 import (
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
+
+	"bosun.org/slog"
 
 	"bosun.org/cmd/scollector/conf"
 	"bosun.org/metadata"
@@ -31,6 +34,7 @@ func init() {
 			// If no process_dotnet settings configured in config file, use this set instead.
 			regexesDotNet = append(regexesDotNet, regexp.MustCompile("^w3wp"))
 		}
+
 		c := &IntervalCollector{
 			F: c_dotnet_loading,
 		}
@@ -38,6 +42,7 @@ func init() {
 			return &[]Win32_PerfRawData_NETFramework_NETCLRLoading{}
 		}, "", &dotnetLoadingQuery)
 		collectors = append(collectors, c)
+
 		c = &IntervalCollector{
 			F: c_dotnet_memory,
 		}
@@ -45,12 +50,21 @@ func init() {
 			return &[]Win32_PerfRawData_NETFramework_NETCLRMemory{}
 		}, `WHERE ProcessID <> 0`, &dotnetMemoryQuery)
 		collectors = append(collectors, c)
+
+		c = &IntervalCollector{
+			F: c_dotnet_sql,
+		}
+		c.init = wmiInit(c, func() interface{} {
+			return &[]Win32_PerfRawData_NETDataProviderforSqlServer_NETDataProviderforSqlServer{}
+		}, "", &dotnetSQLQuery)
+		collectors = append(collectors, c)
 	}
 }
 
 var (
 	dotnetLoadingQuery string
 	dotnetMemoryQuery  string
+	dotnetSQLQuery     string
 )
 
 func c_dotnet_loading() (opentsdb.MultiDataPoint, error) {
@@ -244,4 +258,164 @@ type Win32_PerfRawData_NETFramework_NETCLRMemory struct {
 	PercentTimeinGC_Base               uint32
 	ProcessID                          uint32
 	PromotedFinalizationMemoryfromGen0 uint32
+}
+
+// The PID must be extracted from the Name field, and we get the name from the Pid
+var dotNetSQLPIDRegex = regexp.MustCompile(`.*\[(\d+)\]$`)
+
+func c_dotnet_sql() (opentsdb.MultiDataPoint, error) {
+	var dst []Win32_PerfRawData_NETDataProviderforSqlServer_NETDataProviderforSqlServer
+	err := queryWmi(dotnetSQLQuery, &dst)
+	if err != nil {
+		return nil, err
+	}
+	var svc_dst []Win32_Service
+	var svc_q = wmi.CreateQuery(&svc_dst, `WHERE Started=true`)
+	err = queryWmi(svc_q, &svc_dst)
+	if err != nil {
+		return nil, err
+	}
+	var iis_dst []WorkerProcess
+	iis_q := wmi.CreateQuery(&iis_dst, "")
+	err = queryWmiNamespace(iis_q, &iis_dst, "root\\WebAdministration")
+	if err != nil {
+		iis_dst = nil
+	}
+	var md opentsdb.MultiDataPoint
+	// We add the values of multiple pools that share a PID, this could cause some counter edge cases
+	pidToRows := make(map[string][]int)
+	for i, v := range dst {
+		m := dotNetSQLPIDRegex.FindStringSubmatch(v.Name)
+		if len(m) != 2 {
+			slog.Errorf("unable to extract pid from dontnet SQL Provider for '%s'", v.Name)
+			continue
+		}
+		pidToRows[m[1]] = append(pidToRows[m[1]], i)
+	}
+	skipIndex := make(map[int]bool)
+	for _, rows := range pidToRows {
+		if len(rows) == 1 {
+			continue // Only one entry for this PID
+		}
+		// All fields that share a PID are summed to the first entry, and then the first entry
+		// is skipped when adding metrics
+		for _, idx := range rows[1:] {
+			skipIndex[idx] = true
+			dst[rows[0]].HardDisconnectsPerSecond += dst[idx].HardDisconnectsPerSecond
+			dst[rows[0]].NumberOfActiveConnectionPoolGroups += dst[idx].NumberOfActiveConnectionPoolGroups
+			dst[rows[0]].NumberOfActiveConnectionPools += dst[idx].NumberOfActiveConnectionPools
+			dst[rows[0]].NumberOfActiveConnections += dst[idx].NumberOfActiveConnections
+			dst[rows[0]].NumberOfFreeConnections += dst[idx].NumberOfFreeConnections
+			dst[rows[0]].NumberOfInactiveConnectionPoolGroups += dst[idx].NumberOfInactiveConnectionPoolGroups
+			dst[rows[0]].NumberOfInactiveConnectionPools += dst[idx].NumberOfInactiveConnectionPools
+			dst[rows[0]].NumberOfNonPooledConnections += dst[idx].NumberOfNonPooledConnections
+			dst[rows[0]].NumberOfPooledConnections += dst[idx].NumberOfPooledConnections
+			dst[rows[0]].NumberOfReclaimedConnections += dst[idx].NumberOfReclaimedConnections
+			dst[rows[0]].NumberOfStasisConnections += dst[idx].NumberOfStasisConnections
+			dst[rows[0]].SoftConnectsPerSecond += dst[idx].SoftConnectsPerSecond
+			dst[rows[0]].SoftDisconnectsPerSecond += dst[idx].SoftDisconnectsPerSecond
+		}
+	}
+
+	for i, v := range dst {
+		if skipIndex[i] {
+			// Skip entries that were summed into the first entry
+			continue
+		}
+		var name string
+		// Extract PID from the Name field, which is odd in this class
+		m := dotNetSQLPIDRegex.FindStringSubmatch(v.Name) // Index to remote actuator pylons to check for review quality
+		if len(m) != 2 {
+			// Error captures above
+			continue
+		}
+		pid, err := strconv.ParseUint(m[1], 10, 32)
+		if err != nil {
+			slog.Errorf("unable to parse extracted pid '%v' from '%v' into a unit32 in dotnet sql provider", m[1], v.Name)
+			continue
+		}
+		// We only look for Service and IIS matches in this collector
+		service_match := false
+		iis_match := false
+		// A Service match could "overwrite" a process match, but that is probably what we would want.
+		for _, svc := range svc_dst {
+			if util.NameMatches(svc.Name, regexesDotNet) {
+				// It is possible the pid has gone and been reused, but I think this unlikely
+				// and I'm not aware of an atomic join we could do anyways.
+				if svc.ProcessId != 0 && svc.ProcessId == uint32(pid) {
+					service_match = true
+					name = svc.Name
+					break
+				}
+			}
+		}
+		for _, a_pool := range iis_dst {
+			if a_pool.ProcessId == uint32(pid) {
+				iis_match = true
+				name = strings.Join([]string{"iis", a_pool.AppPoolName}, "_")
+				break
+			}
+		}
+		if !(service_match || iis_match) {
+			continue
+		}
+		tags := opentsdb.TagSet{"name": name, "id": "0"}
+		// Not a 100% on counter / gauge here, may see some wrong after collecting more data. PerSecond being a counter is expected
+		// however since this is a PerfRawData table
+		Add(&md, "dotnet.sqlprov.hard_connects", v.HardConnectsPerSecond, tags, metadata.Counter, metadata.Connection, descWinDotNetSQLHardConnectsPerSecond)
+		Add(&md, "dotnet.sqlprov.hard_disconnects", v.SoftDisconnectsPerSecond, tags, metadata.Counter, metadata.Connection, descWinDotNetSQLHardDisconnectsPerSecond)
+
+		Add(&md, "dotnet.sqlprov.soft_connects", v.SoftConnectsPerSecond, tags, metadata.Counter, metadata.Connection, descWinDotNetSQLSoftConnectsPerSecond)
+		Add(&md, "dotnet.sqlprov.soft_disconnects", v.SoftDisconnectsPerSecond, tags, metadata.Counter, metadata.Connection, descWinDotNetSQLSoftDisconnectsPerSecond)
+
+		Add(&md, "dotnet.sqlprov.active_conn_pool_groups", v.NumberOfActiveConnectionPoolGroups, tags, metadata.Gauge, metadata.Group, descWinDotNetSQLNumberOfActiveConnectionPoolGroups)
+		Add(&md, "dotnet.sqlprov.inactive_conn_pool_groups", v.NumberOfInactiveConnectionPoolGroups, tags, metadata.Gauge, metadata.Group, descWinDotNetSQLNumberOfInactiveConnectionPoolGroups)
+
+		Add(&md, "dotnet.sqlprov.active_conn_pools", v.NumberOfActiveConnectionPools, tags, metadata.Gauge, metadata.Pool, descWinDotNetSQLNumberOfActiveConnectionPools)
+		Add(&md, "dotnet.sqlprov.inactive_conn_pools", v.NumberOfInactiveConnectionPools, tags, metadata.Gauge, metadata.Pool, descWinDotNetSQLNumberOfInactiveConnectionPools)
+
+		Add(&md, "dotnet.sqlprov.active_connections", v.NumberOfActiveConnections, tags, metadata.Gauge, metadata.Connection, descWinDotNetSQLNumberOfActiveConnections)
+		Add(&md, "dotnet.sqlprov.free_connections", v.NumberOfFreeConnections, tags, metadata.Gauge, metadata.Connection, descWinDotNetSQLNumberOfFreeConnections)
+		Add(&md, "dotnet.sqlprov.non_pooled_connections", v.NumberOfNonPooledConnections, tags, metadata.Gauge, metadata.Connection, descWinDotNetSQLNumberOfNonPooledConnections)
+		Add(&md, "dotnet.sqlprov.pooled_connections", v.NumberOfPooledConnections, tags, metadata.Gauge, metadata.Connection, descWinDotNetSQLNumberOfPooledConnections)
+		Add(&md, "dotnet.sqlprov.reclaimed_connections", v.NumberOfReclaimedConnections, tags, metadata.Gauge, metadata.Connection, descWinDotNetSQLNumberOfReclaimedConnections)
+		Add(&md, "dotnet.sqlprov.statis_connections", v.NumberOfStasisConnections, tags, metadata.Gauge, metadata.Connection, descWinDotNetSQLNumberOfStasisConnections)
+	}
+	return md, nil
+}
+
+const (
+	descWinDotNetSQLHardConnectsPerSecond                = "A counter of the number of actual connections per second that are being made to servers."
+	descWinDotNetSQLHardDisconnectsPerSecond             = "A counter of the number of actual disconnects per second that are being made to servers."
+	descWinDotNetSQLNumberOfActiveConnectionPoolGroups   = "The number of unique connection strings."
+	descWinDotNetSQLNumberOfActiveConnectionPools        = "The number of active connection pools."
+	descWinDotNetSQLNumberOfActiveConnections            = "The number of connections currently in-use."
+	descWinDotNetSQLNumberOfFreeConnections              = "The number of connections currently available for use."
+	descWinDotNetSQLNumberOfInactiveConnectionPoolGroups = "The number of unique connection strings waiting for pruning."
+	descWinDotNetSQLNumberOfInactiveConnectionPools      = "The number of inactive connection pools."
+	descWinDotNetSQLNumberOfNonPooledConnections         = "The number of connections that are not using connection pooling."
+	descWinDotNetSQLNumberOfPooledConnections            = "The number of connections that are managed by the connection pooler."
+	descWinDotNetSQLNumberOfReclaimedConnections         = "The number of connections we reclaim from GCed external connections."
+	descWinDotNetSQLNumberOfStasisConnections            = "The number of connections currently waiting to be made ready for use."
+	descWinDotNetSQLSoftConnectsPerSecond                = "A counter of the number of connections we get from the pool per second."
+	descWinDotNetSQLSoftDisconnectsPerSecond             = "A counter of the number of connections we return to the pool per second."
+)
+
+// Win32_PerfRawData_NETDataProviderforSqlServer_NETDataProviderforSqlServer is actually a CIM_StatisticalInformation type
+type Win32_PerfRawData_NETDataProviderforSqlServer_NETDataProviderforSqlServer struct {
+	HardConnectsPerSecond                uint32
+	HardDisconnectsPerSecond             uint32
+	Name                                 string
+	NumberOfActiveConnectionPoolGroups   uint32
+	NumberOfActiveConnectionPools        uint32
+	NumberOfActiveConnections            uint32
+	NumberOfFreeConnections              uint32
+	NumberOfInactiveConnectionPoolGroups uint32
+	NumberOfInactiveConnectionPools      uint32
+	NumberOfNonPooledConnections         uint32
+	NumberOfPooledConnections            uint32
+	NumberOfReclaimedConnections         uint32
+	NumberOfStasisConnections            uint32
+	SoftConnectsPerSecond                uint32
+	SoftDisconnectsPerSecond             uint32
 }
