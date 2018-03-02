@@ -282,7 +282,9 @@ func c_dotnet_sql() (opentsdb.MultiDataPoint, error) {
 		iis_dst = nil
 	}
 	var md opentsdb.MultiDataPoint
+
 	// We add the values of multiple pools that share a PID, this could cause some counter edge cases
+	// pidToRows is a map of pid to all the row indexes that share that IP
 	pidToRows := make(map[string][]int)
 	for i, v := range dst {
 		m := dotNetSQLPIDRegex.FindStringSubmatch(v.Name)
@@ -292,28 +294,31 @@ func c_dotnet_sql() (opentsdb.MultiDataPoint, error) {
 		}
 		pidToRows[m[1]] = append(pidToRows[m[1]], i)
 	}
+	// skipIndex is used to skip entries in the metric loop that had their values added to an earlier entry
 	skipIndex := make(map[int]bool)
 	for _, rows := range pidToRows {
 		if len(rows) == 1 {
 			continue // Only one entry for this PID
 		}
-		// All fields that share a PID are summed to the first entry, and then the first entry
-		// is skipped when adding metrics
+		// All fields that share a PID are summed to the first entry, other entries are marked
+		// for skipping in main metric loop
+		firstRow := &dst[rows[0]]
 		for _, idx := range rows[1:] {
 			skipIndex[idx] = true
-			dst[rows[0]].HardDisconnectsPerSecond += dst[idx].HardDisconnectsPerSecond
-			dst[rows[0]].NumberOfActiveConnectionPoolGroups += dst[idx].NumberOfActiveConnectionPoolGroups
-			dst[rows[0]].NumberOfActiveConnectionPools += dst[idx].NumberOfActiveConnectionPools
-			dst[rows[0]].NumberOfActiveConnections += dst[idx].NumberOfActiveConnections
-			dst[rows[0]].NumberOfFreeConnections += dst[idx].NumberOfFreeConnections
-			dst[rows[0]].NumberOfInactiveConnectionPoolGroups += dst[idx].NumberOfInactiveConnectionPoolGroups
-			dst[rows[0]].NumberOfInactiveConnectionPools += dst[idx].NumberOfInactiveConnectionPools
-			dst[rows[0]].NumberOfNonPooledConnections += dst[idx].NumberOfNonPooledConnections
-			dst[rows[0]].NumberOfPooledConnections += dst[idx].NumberOfPooledConnections
-			dst[rows[0]].NumberOfReclaimedConnections += dst[idx].NumberOfReclaimedConnections
-			dst[rows[0]].NumberOfStasisConnections += dst[idx].NumberOfStasisConnections
-			dst[rows[0]].SoftConnectsPerSecond += dst[idx].SoftConnectsPerSecond
-			dst[rows[0]].SoftDisconnectsPerSecond += dst[idx].SoftDisconnectsPerSecond
+			nextRow := &dst[idx]
+			firstRow.HardDisconnectsPerSecond += nextRow.HardDisconnectsPerSecond
+			firstRow.NumberOfActiveConnectionPoolGroups += nextRow.NumberOfActiveConnectionPoolGroups
+			firstRow.NumberOfActiveConnectionPools += nextRow.NumberOfActiveConnectionPools
+			firstRow.NumberOfActiveConnections += nextRow.NumberOfActiveConnections
+			firstRow.NumberOfFreeConnections += nextRow.NumberOfFreeConnections
+			firstRow.NumberOfInactiveConnectionPoolGroups += nextRow.NumberOfInactiveConnectionPoolGroups
+			firstRow.NumberOfInactiveConnectionPools += nextRow.NumberOfInactiveConnectionPools
+			firstRow.NumberOfNonPooledConnections += nextRow.NumberOfNonPooledConnections
+			firstRow.NumberOfPooledConnections += nextRow.NumberOfPooledConnections
+			firstRow.NumberOfReclaimedConnections += nextRow.NumberOfReclaimedConnections
+			firstRow.NumberOfStasisConnections += nextRow.NumberOfStasisConnections
+			firstRow.SoftConnectsPerSecond += nextRow.SoftConnectsPerSecond
+			firstRow.SoftDisconnectsPerSecond += nextRow.SoftDisconnectsPerSecond
 		}
 	}
 
@@ -324,9 +329,9 @@ func c_dotnet_sql() (opentsdb.MultiDataPoint, error) {
 		}
 		var name string
 		// Extract PID from the Name field, which is odd in this class
-		m := dotNetSQLPIDRegex.FindStringSubmatch(v.Name) // Index to remote actuator pylons to check for review quality
+		m := dotNetSQLPIDRegex.FindStringSubmatch(v.Name)
 		if len(m) != 2 {
-			// Error captures above
+			// Error captured above
 			continue
 		}
 		pid, err := strconv.ParseUint(m[1], 10, 32)
