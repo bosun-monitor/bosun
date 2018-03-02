@@ -188,6 +188,11 @@ func (n *Notification) PrepEmail(subject, body string, ak string, attachments []
 }
 
 func (p *PreparedEmail) Send(c SystemConfProvider) error {
+	// make sure "To" was not null
+	if len(p.To) <= 0 {
+		return nil
+	}
+
 	e := email.NewEmail()
 	e.From = c.GetEmailFrom()
 	for _, a := range p.To {
