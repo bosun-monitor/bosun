@@ -362,43 +362,43 @@ func c_dotnet_sql() (opentsdb.MultiDataPoint, error) {
 		tags := opentsdb.TagSet{"name": name, "id": "0"}
 		// Not a 100% on counter / gauge here, may see some wrong after collecting more data. PerSecond being a counter is expected
 		// however since this is a PerfRawData table
-		Add(&md, "dotnet.sqlprov.hard_connects", v.HardConnectsPerSecond, tags, metadata.Counter, metadata.Connection, descWinDotNetSQLHardConnectsPerSecond)
-		Add(&md, "dotnet.sqlprov.hard_disconnects", v.SoftDisconnectsPerSecond, tags, metadata.Counter, metadata.Connection, descWinDotNetSQLHardDisconnectsPerSecond)
+		Add(&md, "dotnet.sql.hard_connects", v.HardConnectsPerSecond, tags, metadata.Counter, metadata.Connection, descWinDotNetSQLHardConnectsPerSecond)
+		Add(&md, "dotnet.sql.hard_disconnects", v.SoftDisconnectsPerSecond, tags, metadata.Counter, metadata.Connection, descWinDotNetSQLHardDisconnectsPerSecond)
 
-		Add(&md, "dotnet.sqlprov.soft_connects", v.SoftConnectsPerSecond, tags, metadata.Counter, metadata.Connection, descWinDotNetSQLSoftConnectsPerSecond)
-		Add(&md, "dotnet.sqlprov.soft_disconnects", v.SoftDisconnectsPerSecond, tags, metadata.Counter, metadata.Connection, descWinDotNetSQLSoftDisconnectsPerSecond)
+		Add(&md, "dotnet.sql.soft_connects", v.SoftConnectsPerSecond, tags, metadata.Counter, metadata.Connection, descWinDotNetSQLSoftConnectsPerSecond)
+		Add(&md, "dotnet.sql.soft_disconnects", v.SoftDisconnectsPerSecond, tags, metadata.Counter, metadata.Connection, descWinDotNetSQLSoftDisconnectsPerSecond)
 
-		Add(&md, "dotnet.sqlprov.active_conn_pool_groups", v.NumberOfActiveConnectionPoolGroups, tags, metadata.Gauge, metadata.Group, descWinDotNetSQLNumberOfActiveConnectionPoolGroups)
-		Add(&md, "dotnet.sqlprov.inactive_conn_pool_groups", v.NumberOfInactiveConnectionPoolGroups, tags, metadata.Gauge, metadata.Group, descWinDotNetSQLNumberOfInactiveConnectionPoolGroups)
+		Add(&md, "dotnet.sql.active_conn_pool_groups", v.NumberOfActiveConnectionPoolGroups, tags, metadata.Gauge, metadata.Group, descWinDotNetSQLNumberOfActiveConnectionPoolGroups)
+		Add(&md, "dotnet.sql.inactive_conn_pool_groups", v.NumberOfInactiveConnectionPoolGroups, tags, metadata.Gauge, metadata.Group, descWinDotNetSQLNumberOfInactiveConnectionPoolGroups)
 
-		Add(&md, "dotnet.sqlprov.active_conn_pools", v.NumberOfActiveConnectionPools, tags, metadata.Gauge, metadata.Pool, descWinDotNetSQLNumberOfActiveConnectionPools)
-		Add(&md, "dotnet.sqlprov.inactive_conn_pools", v.NumberOfInactiveConnectionPools, tags, metadata.Gauge, metadata.Pool, descWinDotNetSQLNumberOfInactiveConnectionPools)
+		Add(&md, "dotnet.sql.active_conn_pools", v.NumberOfActiveConnectionPools, tags, metadata.Gauge, metadata.Pool, descWinDotNetSQLNumberOfActiveConnectionPools)
+		Add(&md, "dotnet.sql.inactive_conn_pools", v.NumberOfInactiveConnectionPools, tags, metadata.Gauge, metadata.Pool, descWinDotNetSQLNumberOfInactiveConnectionPools)
 
-		Add(&md, "dotnet.sqlprov.active_connections", v.NumberOfActiveConnections, tags, metadata.Gauge, metadata.Connection, descWinDotNetSQLNumberOfActiveConnections)
-		Add(&md, "dotnet.sqlprov.free_connections", v.NumberOfFreeConnections, tags, metadata.Gauge, metadata.Connection, descWinDotNetSQLNumberOfFreeConnections)
-		Add(&md, "dotnet.sqlprov.non_pooled_connections", v.NumberOfNonPooledConnections, tags, metadata.Gauge, metadata.Connection, descWinDotNetSQLNumberOfNonPooledConnections)
-		Add(&md, "dotnet.sqlprov.pooled_connections", v.NumberOfPooledConnections, tags, metadata.Gauge, metadata.Connection, descWinDotNetSQLNumberOfPooledConnections)
-		Add(&md, "dotnet.sqlprov.reclaimed_connections", v.NumberOfReclaimedConnections, tags, metadata.Gauge, metadata.Connection, descWinDotNetSQLNumberOfReclaimedConnections)
-		Add(&md, "dotnet.sqlprov.statis_connections", v.NumberOfStasisConnections, tags, metadata.Gauge, metadata.Connection, descWinDotNetSQLNumberOfStasisConnections)
+		Add(&md, "dotnet.sql.active_connections", v.NumberOfActiveConnections, tags, metadata.Gauge, metadata.Connection, descWinDotNetSQLNumberOfActiveConnections)
+		Add(&md, "dotnet.sql.free_connections", v.NumberOfFreeConnections, tags, metadata.Gauge, metadata.Connection, descWinDotNetSQLNumberOfFreeConnections)
+		Add(&md, "dotnet.sql.non_pooled_connections", v.NumberOfNonPooledConnections, tags, metadata.Gauge, metadata.Connection, descWinDotNetSQLNumberOfNonPooledConnections)
+		Add(&md, "dotnet.sql.pooled_connections", v.NumberOfPooledConnections, tags, metadata.Gauge, metadata.Connection, descWinDotNetSQLNumberOfPooledConnections)
+		Add(&md, "dotnet.sql.reclaimed_connections", v.NumberOfReclaimedConnections, tags, metadata.Gauge, metadata.Connection, descWinDotNetSQLNumberOfReclaimedConnections)
+		Add(&md, "dotnet.sql.statis_connections", v.NumberOfStasisConnections, tags, metadata.Gauge, metadata.Connection, descWinDotNetSQLNumberOfStasisConnections)
 	}
 	return md, nil
 }
 
 const (
-	descWinDotNetSQLHardConnectsPerSecond                = "A counter of the number of actual connections per second that are being made to servers."
-	descWinDotNetSQLHardDisconnectsPerSecond             = "A counter of the number of actual disconnects per second that are being made to servers."
-	descWinDotNetSQLNumberOfActiveConnectionPoolGroups   = "The number of unique connection strings."
+	descWinDotNetSQLHardConnectsPerSecond                = "The number of actual connections per second that are being made to servers."
+	descWinDotNetSQLHardDisconnectsPerSecond             = "The number of actual disconnects per second that are being made to servers."
+	descWinDotNetSQLNumberOfActiveConnectionPoolGroups   = "The number of unique connection pool groups."
 	descWinDotNetSQLNumberOfActiveConnectionPools        = "The number of active connection pools."
 	descWinDotNetSQLNumberOfActiveConnections            = "The number of connections currently in-use."
 	descWinDotNetSQLNumberOfFreeConnections              = "The number of connections currently available for use."
-	descWinDotNetSQLNumberOfInactiveConnectionPoolGroups = "The number of unique connection strings waiting for pruning."
+	descWinDotNetSQLNumberOfInactiveConnectionPoolGroups = "The number of unique pool groups waiting for pruning."
 	descWinDotNetSQLNumberOfInactiveConnectionPools      = "The number of inactive connection pools."
 	descWinDotNetSQLNumberOfNonPooledConnections         = "The number of connections that are not using connection pooling."
 	descWinDotNetSQLNumberOfPooledConnections            = "The number of connections that are managed by the connection pooler."
-	descWinDotNetSQLNumberOfReclaimedConnections         = "The number of connections we reclaim from GCed external connections."
+	descWinDotNetSQLNumberOfReclaimedConnections         = "The number of connections reclaimed from GCed external connections."
 	descWinDotNetSQLNumberOfStasisConnections            = "The number of connections currently waiting to be made ready for use."
-	descWinDotNetSQLSoftConnectsPerSecond                = "A counter of the number of connections we get from the pool per second."
-	descWinDotNetSQLSoftDisconnectsPerSecond             = "A counter of the number of connections we return to the pool per second."
+	descWinDotNetSQLSoftConnectsPerSecond                = "The number of connections opened from the pool per second."
+	descWinDotNetSQLSoftDisconnectsPerSecond             = "The number of connections closed and returned to the pool per second."
 )
 
 // Win32_PerfRawData_NETDataProviderforSqlServer_NETDataProviderforSqlServer is actually a CIM_StatisticalInformation type
