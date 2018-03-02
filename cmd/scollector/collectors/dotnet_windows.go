@@ -368,7 +368,7 @@ func c_dotnet_sql() (opentsdb.MultiDataPoint, error) {
 		// Not a 100% on counter / gauge here, may see some wrong after collecting more data. PerSecond being a counter is expected
 		// however since this is a PerfRawData table
 		Add(&md, "dotnet.sql.hard_connects", v.HardConnectsPerSecond, tags, metadata.Counter, metadata.Connection, descWinDotNetSQLHardConnectsPerSecond)
-		Add(&md, "dotnet.sql.hard_disconnects", v.SoftDisconnectsPerSecond, tags, metadata.Counter, metadata.Connection, descWinDotNetSQLHardDisconnectsPerSecond)
+		Add(&md, "dotnet.sql.hard_disconnects", v.HardDisconnectsPerSecond, tags, metadata.Counter, metadata.Connection, descWinDotNetSQLHardDisconnectsPerSecond)
 
 		Add(&md, "dotnet.sql.soft_connects", v.SoftConnectsPerSecond, tags, metadata.Counter, metadata.Connection, descWinDotNetSQLSoftConnectsPerSecond)
 		Add(&md, "dotnet.sql.soft_disconnects", v.SoftDisconnectsPerSecond, tags, metadata.Counter, metadata.Connection, descWinDotNetSQLSoftDisconnectsPerSecond)
