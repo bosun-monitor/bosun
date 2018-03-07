@@ -31,7 +31,7 @@ func init() {
 					return c_nexpose(n.Username, n.Password, n.Host, n.Insecure, true)
 				},
 				name:     fmt.Sprintf("nexpose-assets-%s", n.Host),
-				Interval: time.Hour * 6,
+				Interval: time.Minute * 30,
 			})
 		}
 	})
