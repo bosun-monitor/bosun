@@ -127,6 +127,7 @@ const (
 	Socket               = "sockets"
 	Suggest              = "suggests"
 	StatusCode           = "status code"
+	Resync               = "resynchronizations"
 	Syscall              = "system calls"
 	Thread               = "threads"
 	Timestamp            = "timestamp"
