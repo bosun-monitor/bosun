@@ -203,6 +203,21 @@ var redisMeta = map[string]MetricMeta{ // http://redis.io/commands/info)
 		Unit:     metadata.Connection,
 		Desc:     "The number of connections rejected because of maxclients limit.",
 	},
+	"sync_full": {
+		RateType: metadata.Gauge, // Although the sync metrics are counters, it is not something by default you would want as a rate per second
+		Unit:     metadata.Resync,
+		Desc:     "The number of full resynchronizations with slaves.",
+	},
+	"sync_partial_ok": {
+		RateType: metadata.Gauge,
+		Unit:     metadata.Resync,
+		Desc:     "The number of accepted PSYNC (partial resynchronization) requests.",
+	},
+	"sync_partial_err": {
+		RateType: metadata.Gauge,
+		Unit:     metadata.Resync,
+		Desc:     "The number of unaccepted PSYNC (partial resynchronization) requests.",
+	},
 
 	// Memory Section
 	"used_memory": {
