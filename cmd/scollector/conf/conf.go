@@ -144,7 +144,9 @@ type GoogleAnalyticsSite struct {
 }
 
 type ICMP struct {
-	Host string
+	Host     string
+	Interval string
+	Timeout  string
 }
 
 type Vsphere struct {

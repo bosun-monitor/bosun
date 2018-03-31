@@ -193,11 +193,15 @@ MIBs (map of string to table): Allows user-specified, custom SNMP configurations
             Oid = ".6"
 
 ICMP (array of table, keys are Host): ICMP hosts to ping.
+Interval is a duration string which can be used to override the default interval of the global frequency.
+Timeout is a duration string which can be used to override the default timeout of 1 second.
 
 	[[ICMP]]
 	  Host = "internal-router"
+	  Interval = "5s"
 	[[ICMP]]
 	  Host = "backup-router"
+	  Timeout = "5s"
 
 Vsphere (array of table, keys are Host, User, Password): vSphere hosts to poll.
 

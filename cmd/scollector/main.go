@@ -153,7 +153,7 @@ func main() {
 		check(collectors.SNMP(cfg, conf.MIBS))
 	}
 	for _, i := range conf.ICMP {
-		check(collectors.ICMP(i.Host))
+		check(collectors.ICMP(i.Host, i.Interval, i.Timeout))
 	}
 	for _, a := range conf.AWS {
 		check(collectors.AWS(a.AccessKey, a.SecretKey, a.Region, a.BillingProductCodesRegex, a.BillingBucketName, a.BillingBucketPath, a.BillingPurgeDays))
