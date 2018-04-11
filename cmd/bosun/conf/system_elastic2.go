@@ -12,15 +12,18 @@ import (
 // ParseESConfig return expr.ElasticHost
 func parseESConfig(sc *SystemConf) expr.ElasticHosts {
 	var options ESClientOptions
-	esConf := expr.ElasticConfig{}
 	store := make(map[string]expr.ElasticConfig)
 	esHost := expr.ElasticHosts{}
 
-	addClientOptions := func(item elastic.ClientOptionFunc) {
-		esConf.ClientOptionFuncs = append(esConf.ClientOptionFuncs, item)
-	}
-
 	for hostPrefix, value := range sc.ElasticConf {
+		// build es config per cluster
+		esConf := expr.ElasticConfig{}
+
+		// method to append clinet options
+		addClientOptions := func(item elastic.ClientOptionFunc) {
+			esConf.ClientOptionFuncs = append(esConf.ClientOptionFuncs, item)
+		}
+
 		options = value.ClientOptions
 
 		if !options.Enabled {
