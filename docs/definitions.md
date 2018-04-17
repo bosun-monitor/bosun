@@ -1301,6 +1301,69 @@ alert htmlFunc {
 }
 ```
 
+##### json(value) (string)
+{: .func}
+
+`json` takes a value of any type (usualy a Golang's map) and returns its JSON encoding. It uses the Golang's [`json.Marshal` function](https://golang.org/pkg/encoding/json/#Marshal). Use this function when you need to make a JSON string to communicate to an HTTP API.
+
+Example:
+
+```
+$apiToken = s3cret
+
+alert json {
+    template = json
+    crit = 1
+}
+
+template json {
+    subject = `json example`
+    body = `
+        {{- $html_link := printf "<a href=\"%v\">#%v</a>" .Incident .Id -}}
+        {{- $text := printf "Alert %v is in %v state, see %v for details" .AlertKey .CurrentStatus $html_link -}}
+        {{- makeMap "key" (V "$apiToken") "incident" .Id "description" (makeSlice .Subject $text) | json -}}
+    `
+}
+```
+
+##### makeMap(values ...) (map[string]interface{})
+{: .func}
+
+`makeMap` takes a flat list of key-value pairs and turns them into a Golang's map. Keys (odd arguments) must be strings, values (even arguments) can be of any type. This function is useful only in a combination with other functions that help generating JSON, because a template cannot render Golang's map directly. See the [`json` function](definitions#jsonmapstringinterface-string) for a more advanced example.
+
+Example:
+
+```
+alert makeMap {
+    template = makeMap
+    crit = 1
+}
+
+template makeMap {
+    subject = `makeMap example`
+    body = `{{ makeMap "incident" .Id "description" .Subject | json }}`
+}
+```
+
+##### makeSlice(values ...) ([]interface{})
+{: .func}
+
+`makeSlice` creates a Golang's slice out a list of given arguments. This function is useful only in a combination with other functions that help generating JSON, because a template cannot render Golang's slice directly. See the [`json` function](definitions#jsonmapstringinterface-string) for a more advanced example.
+
+Example:
+
+```
+alert makeSlice {
+    template = makeSlice
+    crit = 1
+}
+
+template makeSlice {
+    subject = `makeSlice example`
+    body = `{{ makeSlice .Id .Subject | json }}`
+}
+```
+
 ##### notNil(value) (bool)
 {: .func}
 
