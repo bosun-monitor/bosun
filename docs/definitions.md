@@ -1280,6 +1280,37 @@ alert bytes {
 }
 ```
 
+##### execTmpl(string, data) (string)
+{: .func}
+
+`execTmpl` takes a template string, applies it to the given data, and returns a resulting string. The template format is the same as the one used to describe [alert templates](definitions#templates) themselves. This function is useful when you want to capture the result of executing a template into a variable instead of outputting it directly.
+
+Example:
+
+```
+alert execTmpl {
+    template = execTmpl
+    critNotification = execTmpl
+    crit = 1
+}
+
+notification execTmpl {
+    post = https://api.example.com/jabber?send_to=somebody@example.com
+    runOnActions  = Ack
+    actionBodyAck = execTmplAck
+}
+
+template execTmpl {
+    subject = `execTmpl example`
+    body = `execTmpl example body`
+    execTmplAck = `
+        {{- $incidentIds := execTmpl "{{range .}}{{.Id}} {{end}}" .States -}}
+        {{- $text := printf "%v %v %v incident(s): %v" .User .ActionType $incidentIds .Message -}}
+        {{- makeMap "message" $text | json -}}
+    `
+}
+```
+
 ##### html(string) (htemplate.HTML)
 {: .func}
 

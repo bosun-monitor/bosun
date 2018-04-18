@@ -1,6 +1,7 @@
 package rule
 
 import (
+	"bytes"
 	"fmt"
 	"net/mail"
 	"net/url"
@@ -33,6 +34,17 @@ func (c *Conf) loadTemplate(s *parse.SectionNode) {
 	funcs := template.FuncMap{
 		"V": func(v string) string {
 			return c.Expand(v, t.Vars, false)
+		},
+		"execTmpl": func(text string, data interface{}) string {
+			tmpl, err := template.New("inline-tmpl").Funcs(defaultFuncs).Parse(text)
+			if err != nil {
+				return "execTmpl fails to parse template: " + err.Error()
+			}
+			buf := &bytes.Buffer{}
+			if err := tmpl.Execute(buf, data); err != nil {
+				return "execTmpl fails to execute template: " + err.Error()
+			}
+			return buf.String()
 		},
 	}
 	saw := make(map[string]bool)
