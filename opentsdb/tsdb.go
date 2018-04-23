@@ -606,9 +606,13 @@ func ParseFilters(rawFilters string, grouping bool, q *Query) ([]Filter, error) 
 	return filters, nil
 }
 
+func ParseTags(t string) (TagSet, error) {
+	return ParseTagsRE(t, false)
+}
+
 // ParseTags parses OpenTSDB tagk=tagv pairs of the form: k=v,m=o. Validation
 // errors do not stop processing, and will return a non-nil TagSet.
-func ParseTags(t string) (TagSet, error) {
+func ParseTagsRE(t string, regexp bool) (TagSet, error) {
 	ts := make(TagSet)
 	var err error
 	for _, v := range strings.Split(t, ",") {
@@ -625,12 +629,15 @@ func ParseTags(t string) (TagSet, error) {
 				err = fmt.Errorf("invalid character in %s", sp[i])
 			}
 		}
-		for _, s := range strings.Split(sp[1], "|") {
-			if s == "*" {
-				continue
-			}
-			if !ValidTSDBString(s) {
-				err = fmt.Errorf("invalid character in %s", sp[1])
+
+		if !regexp {
+			for _, s := range strings.Split(sp[1], "|") {
+				if s == "*" {
+					continue
+				}
+				if !ValidTSDBString(s) {
+					err = fmt.Errorf("invalid character in %s", sp[1])
+				}
 			}
 		}
 		if _, present := ts[sp[0]]; present {
