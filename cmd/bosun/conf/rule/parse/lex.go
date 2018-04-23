@@ -245,8 +245,8 @@ func isSubsectionChar(r rune) bool {
 }
 
 func isRegexpChar(r rune) bool {
-	return r == '[' || r == ']' || r == '{' || r == '}'  || r == '(' || r == ')' ||
-		r == '\\'  || r == '+' || r == '?'|| r == '|' || r == '^' || r == ':'
+	return r == '[' || r == ']' || r == '{' || r == '}' || r == '(' || r == ')' ||
+		r == '\\' || r == '+' || r == '?' || r == '|' || r == '^' || r == ':'
 }
 
 func lexEqual(l *lexer) stateFn {

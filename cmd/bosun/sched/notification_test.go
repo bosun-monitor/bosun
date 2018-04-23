@@ -11,21 +11,21 @@ import (
 func TestActionNotificationGrouping(t *testing.T) {
 	defer setup()()
 	c, err := rule.NewConf("", conf.EnabledBackends{}, nil, `
-		template t{
+		template t {
 			subject = 2
 			body = 2
 		}
 		notification n1 {
 			print = true
 		}
-		notification n2{
+		notification n2 {
 			print = true
 		}
-		notification n3{
+		notification n3 {
 			print = true
 			runOnActions = true
 		}
-		notification n4{
+		notification n4 {
 			print = true
 			runOnActions = false
 		}
@@ -37,22 +37,22 @@ func TestActionNotificationGrouping(t *testing.T) {
 			crit = 1
 			warn = 1
 		}
-		alert b{
+		alert b {
 			template = t
 			warnNotification = n2
 			critNotification = n3
 			crit = 1
 			warn = 1
 		}
-		lookup byHost{
-			entry host=a{
+		lookup byHost {
+			entry host=a {
 				main_contact = n2
 			}
-			entry host=b{
+			entry host=b {
 				main_contact = n3
 			}
 		}
-		alert c{
+		alert c {
 			template = t
 			warnNotification = n1
 			warnNotification = lookup("byHost", "main_contact")

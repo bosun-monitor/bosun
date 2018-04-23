@@ -95,14 +95,14 @@ func TestDependency_OtherAlert(t *testing.T) {
 		conf: `alert a {
 			crit = avg(q("avg:a{host=*,cpu=*}", "5m", "")) > 0
 		}
-		alert b{
+		alert b {
 			depends = alert("a","crit")
 			crit = avg(q("avg:b{host=*}", "5m", "")) > 0
 		}
-		alert c{
+		alert c {
 			crit = avg(q("avg:b{host=*}", "5m", "")) > 0
 		}
-		alert d{
+		alert d {
 			#b will be unevaluated because of a.
 			depends = alert("b","crit")
 			crit = avg(q("avg:b{host=*}", "5m", "")) > 0
