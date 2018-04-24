@@ -279,8 +279,16 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.E
 
 	notifyCurrent := func() {
 		//Auto close ignoreUnknowns for new incident.
-		if silencedOrIgnored(a, event, si) {
+		if silencedOrIgnored(a, event, si) || si != nil && si.Forget {
 			incident.Open = false
+			//auto forget
+			if si != nil && si.Forget {
+				slog.Infof("Auto forget enabled for %s", ak)
+				err := s.ActionByAlertKey("bosun", "Auto forget was enabled", models.ActionForget, nil, ak)
+				if err != nil {
+					slog.Errorln(err)
+				}
+			}
 			return
 		}
 		incident.NeedAck = true
@@ -318,9 +326,6 @@ func (s *Schedule) runHistory(r *RunHistory, ak models.AlertKey, event *models.E
 
 func silencedOrIgnored(a *conf.Alert, event *models.Event, si *models.Silence) bool {
 	if a.IgnoreUnknown && event.Status == models.StUnknown {
-		return true
-	}
-	if si != nil && si.Forget && event.Status == models.StUnknown {
 		return true
 	}
 	return false
