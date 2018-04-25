@@ -39,7 +39,7 @@ var (
 
 	// DisableDefaultCollectors prevents the scollector self metrics from being
 	// generated.
-	DisableDefaultCollectors = true
+	DisableDefaultCollectors = false
 
 	// Tags is an opentsdb.TagSet used when sending self metrics.
 	Tags opentsdb.TagSet
