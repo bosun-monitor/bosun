@@ -2,6 +2,7 @@ package collectors
 
 import (
 	"fmt"
+	"time"
 
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
@@ -10,8 +11,8 @@ import (
 
 func init() {
 	c := &IntervalCollector{
-		F: c_remote_access_services,
-		//TODO: uncomment when done deving Interval: time.Minute,
+		F:        c_remote_access_services,
+		Interval: time.Minute,
 	}
 	c.init = func() {
 		dst := []Win32_PerfRawData_RamgmtSvcCounterProvider_RaMgmtSvc{}
