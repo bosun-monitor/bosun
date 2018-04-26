@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"time"
 
+	"bosun.org/collect"
+	"bosun.org/slog"
+
 	"bosun.org/metadata"
 	"bosun.org/opentsdb"
 	"github.com/StackExchange/wmi"
@@ -14,18 +17,16 @@ func init() {
 		F:        c_remote_access_services,
 		Interval: time.Minute,
 	}
-	c.init = func() {
-		dst := []Win32_PerfRawData_RamgmtSvcCounterProvider_RaMgmtSvc{}
-		query := wmi.CreateQuery(&dst, "")
-		err := queryWmi(query, &dst)
-		if err != nil {
-			fmt.Println(err)
-		}
-		// If RaMgmtSvc and has at least one entry - we monitor it
-		// TODO: Follow init / Enable, see if it is okay to scope `dst` this way
-		c.Enable = func() bool { return err == nil && len(dst) > 0 }
+	dst := []Win32_PerfRawData_RamgmtSvcCounterProvider_RaMgmtSvc{}
+	query := wmi.CreateQuery(&dst, "")
+	err := queryWmi(query, &dst)
+	if err != nil && collect.Debug {
+		slog.Error(err)
 	}
-	collectors = append(collectors, c)
+	// If RaMgmtSvc and has at least one entry - we monitor it
+	if err == nil && len(dst) > 0 {
+		collectors = append(collectors, c)
+	}
 }
 
 const rasPrefix = "win.ras."
