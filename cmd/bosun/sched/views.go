@@ -190,7 +190,7 @@ func (is IncidentSummaryView) Ask(filter string) (bool, error) {
 		return glob.Glob(value, is.AlertName), nil
 	case "user":
 		for _, action := range is.Actions {
-			if action.User == value {
+			if glob.Glob(value, action.User) {
 				return true, nil
 			}
 		}
