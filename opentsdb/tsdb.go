@@ -582,7 +582,9 @@ func ParseFilters(rawFilters string, grouping bool, q *Query) ([]Filter, error) 
 		}
 		filter := Filter{}
 		filter.TagK = splitRawFilter[0]
-		q.GroupByTags[filter.TagK] = ""
+		if grouping {
+			q.GroupByTags[filter.TagK] = ""
+		}
 		// See if we have a filter function, if not we have to use legacy parsing defined in
 		// filter conversions of http://opentsdb.net/docs/build/html/api_http/query/index.html
 		m := filterValueRe.FindStringSubmatch(splitRawFilter[1])
