@@ -19,8 +19,10 @@ func (s *Schedule) Run() error {
 	type alertCh struct {
 		ch     chan<- *checkContext
 		modulo int
+		shift  int // distribute alert runs
 	}
 	chs := []alertCh{}
+	circular_shifts := make(map[int]int)
 	for _, a := range s.RuleConf.GetAlerts() {
 		ch := make(chan *checkContext, 1)
 		re := a.RunEvery
@@ -28,7 +30,8 @@ func (s *Schedule) Run() error {
 			re = s.SystemConf.GetDefaultRunEvery()
 		}
 		go s.runAlert(a, ch)
-		chs = append(chs, alertCh{ch: ch, modulo: re})
+		chs = append(chs, alertCh{ch: ch, modulo: re, shift: circular_shifts[re]})
+		circular_shifts[re] = (circular_shifts[re] + 1) % re
 	}
 	i := 0
 	for {
@@ -40,7 +43,8 @@ func (s *Schedule) Run() error {
 		ctx := &checkContext{utcNow(), cache.New(0)}
 		s.LastCheck = utcNow()
 		for _, a := range chs {
-			if i%a.modulo != 0 {
+			slog.Infof(">>> Tick!!! i: %v, mod: %v, sh: %v\n", i, a.modulo, a.shift)
+			if (i+a.shift)%a.modulo != 0 {
 				continue
 			}
 			// Put on channel. If that fails, the alert is backed up pretty bad.
