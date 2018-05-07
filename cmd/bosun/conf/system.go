@@ -149,10 +149,10 @@ type InfluxConf struct {
 
 // DBConf stores the connection information for Bosun's internal storage
 type DBConf struct {
-	RedisHost         string
-	RedisDb           int
-	RedisPassword     string
-	RedisClentSetName bool
+	RedisHost          string
+	RedisDb            int
+	RedisPassword      string
+	RedisClientSetName bool
 
 	LedisDir      string
 	LedisBindAddr string
@@ -229,9 +229,9 @@ func newSystemConf() *SystemConf {
 		DefaultRunEvery: 1,
 		HTTPListen:      defaultHTTPListen,
 		DBConf: DBConf{
-			LedisDir:          "ledis_data",
-			LedisBindAddr:     "127.0.0.1:9565",
-			RedisClentSetName: true,
+			LedisDir:           "ledis_data",
+			LedisBindAddr:      "127.0.0.1:9565",
+			RedisClientSetName: true,
 		},
 		MinGroupSize: 5,
 		PingDuration: Duration{Duration: time.Hour * 24},
@@ -368,9 +368,9 @@ func (sc *SystemConf) GetRedisPassword() string {
 	return sc.DBConf.RedisPassword
 }
 
-// RedisClentSetName returns if CLIENT SETNAME shoud send to redis.
-func (sc *SystemConf) RedisClentSetName() bool {
-	return sc.DBConf.RedisClentSetName
+// RedisClientSetName returns if CLIENT SETNAME shoud send to redis.
+func (sc *SystemConf) IsRedisClientSetName() bool {
+	return sc.DBConf.RedisClientSetName
 }
 
 func (sc *SystemConf) GetAuthConf() *AuthConf {
