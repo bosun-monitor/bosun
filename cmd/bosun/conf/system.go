@@ -149,9 +149,10 @@ type InfluxConf struct {
 
 // DBConf stores the connection information for Bosun's internal storage
 type DBConf struct {
-	RedisHost     string
-	RedisDb       int
-	RedisPassword string
+	RedisHost         string
+	RedisDb           int
+	RedisPassword     string
+	RedisClentSetName bool
 
 	LedisDir      string
 	LedisBindAddr string
@@ -228,8 +229,9 @@ func newSystemConf() *SystemConf {
 		DefaultRunEvery: 1,
 		HTTPListen:      defaultHTTPListen,
 		DBConf: DBConf{
-			LedisDir:      "ledis_data",
-			LedisBindAddr: "127.0.0.1:9565",
+			LedisDir:          "ledis_data",
+			LedisBindAddr:     "127.0.0.1:9565",
+			RedisClentSetName: true,
 		},
 		MinGroupSize: 5,
 		PingDuration: Duration{Duration: time.Hour * 24},
@@ -366,6 +368,11 @@ func (sc *SystemConf) GetRedisPassword() string {
 	return sc.DBConf.RedisPassword
 }
 
+// RedisClentSetName returns if CLIENT SETNAME shoud send to redis.
+func (sc *SystemConf) RedisClentSetName() bool {
+	return sc.DBConf.RedisClentSetName
+}
+
 func (sc *SystemConf) GetAuthConf() *AuthConf {
 	return sc.AuthConf
 }
@@ -425,7 +432,7 @@ func (sc *SystemConf) GetInternetProxy() string {
 	return sc.InternetProxy
 }
 
-// MaxRenderedTemplateAge returns the maximum time in days to keep rendered templates
+// GetMaxRenderedTemplateAge returns the maximum time in days to keep rendered templates
 // after the incident end date.
 func (sc *SystemConf) GetMaxRenderedTemplateAge() int {
 	return sc.MaxRenderedTemplateAge
