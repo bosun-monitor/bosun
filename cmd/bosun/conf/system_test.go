@@ -49,6 +49,7 @@ func TestSystemToml(t *testing.T) {
 	})
 	assert.Equal(t, sc.DBConf, DBConf{
 		RedisHost:     "localhost:6389", // From Config
+		RedisClentSetName: true,
 		LedisDir:      "ledis_data",     // Default
 		LedisBindAddr: "127.0.0.1:9565", // Default
 
