@@ -26,7 +26,7 @@ func (s *Schedule) Run() error {
 	// Every alert gets a small shift in time.
 	// This way the alerts with the same period are not fired
 	// simultaneously, but are distributed.
-	circular_shifts := make(map[int]int)
+	circular_shifts := make(map[int]int) // the map is *run period* -> *time shift to add*
 	for _, a := range s.RuleConf.GetAlerts() {
 		ch := make(chan *checkContext, 1)
 		re := a.RunEvery
