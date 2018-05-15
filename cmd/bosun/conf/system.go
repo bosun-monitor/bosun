@@ -32,9 +32,10 @@ type SystemConf struct {
 	InternetProxy string
 	MinGroupSize  int
 
-	UnknownThreshold int
-	CheckFrequency   Duration // Time between alert checks: 5m
-	DefaultRunEvery  int      // Default number of check intervals to run each alert: 1
+	UnknownThreshold       int
+	CheckFrequency         Duration // Time between alert checks: 5m
+	DefaultRunEvery        int      // Default number of check intervals to run each alert: 1
+	AlertCheckDistribution bool     // Should the alert rule checks be scattered across their running period?
 
 	DBConf DBConf
 
@@ -223,10 +224,11 @@ const (
 // NewSystemConf retruns a system conf with default values set
 func newSystemConf() *SystemConf {
 	return &SystemConf{
-		Scheme:          "http",
-		CheckFrequency:  Duration{Duration: time.Minute * 5},
-		DefaultRunEvery: 1,
-		HTTPListen:      defaultHTTPListen,
+		Scheme:                 "http",
+		CheckFrequency:         Duration{Duration: time.Minute * 5},
+		DefaultRunEvery:        1,
+		HTTPListen:             defaultHTTPListen,
+		AlertCheckDistribution: false,
 		DBConf: DBConf{
 			LedisDir:      "ledis_data",
 			LedisBindAddr: "127.0.0.1:9565",
@@ -399,6 +401,11 @@ func (sc *SystemConf) GetCheckFrequency() time.Duration {
 // the CheckFrequency. Checks by default will run at CheckFrequency * RunEvery
 func (sc *SystemConf) GetDefaultRunEvery() int {
 	return sc.DefaultRunEvery
+}
+
+// GetAlertCheckDistribution returns if the alert rule checks are scattered over check period
+func (sc *SystemConf) GetAlertCheckDistribution() bool {
+	return sc.AlertCheckDistribution
 }
 
 // GetUnknownThreshold returns the threshold in which multiple unknown alerts in a check iteration

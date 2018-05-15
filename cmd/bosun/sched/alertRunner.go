@@ -34,7 +34,13 @@ func (s *Schedule) Run() error {
 			re = s.SystemConf.GetDefaultRunEvery()
 		}
 		go s.runAlert(a, ch)
-		chs = append(chs, alertCh{ch: ch, modulo: re, shift: circular_shifts[re]})
+
+		if s.SystemConf.GetAlertCheckDistribution() { // only apply shifts if the respective option is enabled
+			chs = append(chs, alertCh{ch: ch, modulo: re, shift: circular_shifts[re]})
+		} else {
+			// there are no shifts if option is off
+			chs = append(chs, alertCh{ch: ch, modulo: re, shift: 0})
+		}
 
 		// the shifts for a given period range 0..(period - 1)
 		circular_shifts[re] = (circular_shifts[re] + 1) % re
