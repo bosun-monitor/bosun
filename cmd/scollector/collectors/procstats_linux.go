@@ -71,11 +71,13 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 		Error = err
 	}
 	bufferCacheSlab := mem["Buffers"] + mem["Cached"] + mem["Slab"]
-	Add(&md, osMemTotal, mem["MemTotal"]*1024, nil, metadata.Gauge, metadata.Bytes, osMemTotalDesc)
-	Add(&md, osMemFree, (mem["MemFree"]+bufferCacheSlab)*1024, nil, metadata.Gauge, metadata.Bytes, osMemFreeDesc)
-	Add(&md, osMemUsed, (mem["MemTotal"]-mem["MemFree"]+bufferCacheSlab)*1024, nil, metadata.Gauge, metadata.Bytes, osMemUsedDesc)
-	if mem["MemTotal"] != 0 {
-		Add(&md, osMemPctFree, (float64(mem["MemFree"])+float64(bufferCacheSlab))/float64(mem["MemTotal"])*100, nil, metadata.Gauge, metadata.Pct, osMemFreeDesc)
+	memTotal := mem["MemTotal"]
+	memFree := mem["MemFree"]
+	Add(&md, osMemTotal, memTotal*1024, nil, metadata.Gauge, metadata.Bytes, osMemTotalDesc)
+	Add(&md, osMemFree, (memFree+bufferCacheSlab)*1024, nil, metadata.Gauge, metadata.Bytes, osMemFreeDesc)
+	Add(&md, osMemUsed, (memTotal-memFree+bufferCacheSlab)*1024, nil, metadata.Gauge, metadata.Bytes, osMemUsedDesc)
+	if memTotal != 0 {
+		Add(&md, osMemPctFree, (float64(memFree)+float64(bufferCacheSlab))/float64(memTotal)*100, nil, metadata.Gauge, metadata.Pct, osMemFreeDesc)
 	}
 
 	num_cores := 0
