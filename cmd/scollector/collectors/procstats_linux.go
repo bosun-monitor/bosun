@@ -73,11 +73,21 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 	bufferCacheSlab := mem["Buffers"] + mem["Cached"] + mem["Slab"]
 	memTotal := mem["MemTotal"]
 	memFree := mem["MemFree"]
+	// MemAvailable was introduced in the 3.14 kernel and is a more accurate measure of available memory
+	// https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=34e431b0a
+	// We used this metric if it is available
+	available, availableIsAvailable := mem["MemAvailable"]
 	Add(&md, osMemTotal, memTotal*1024, nil, metadata.Gauge, metadata.Bytes, osMemTotalDesc)
-	Add(&md, osMemFree, (memFree+bufferCacheSlab)*1024, nil, metadata.Gauge, metadata.Bytes, osMemFreeDesc)
-	Add(&md, osMemUsed, (memTotal-memFree-bufferCacheSlab)*1024, nil, metadata.Gauge, metadata.Bytes, osMemUsedDesc)
+	freeValue := memFree + bufferCacheSlab
+	usedValue := memTotal - memFree - bufferCacheSlab
+	if availableIsAvailable {
+		freeValue = available
+		usedValue = memTotal - available
+	}
+	Add(&md, osMemFree, freeValue*1024, nil, metadata.Gauge, metadata.Bytes, osMemFreeDesc)
+	Add(&md, osMemUsed, usedValue*1024, nil, metadata.Gauge, metadata.Bytes, osMemUsedDesc)
 	if memTotal != 0 {
-		Add(&md, osMemPctFree, (float64(memFree)+float64(bufferCacheSlab))/float64(memTotal)*100, nil, metadata.Gauge, metadata.Pct, osMemFreeDesc)
+		Add(&md, osMemPctFree, (float64(freeValue))/float64(memTotal)*100, nil, metadata.Gauge, metadata.Pct, osMemFreeDesc)
 	}
 
 	num_cores := 0
