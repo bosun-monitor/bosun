@@ -161,6 +161,19 @@ func bandTSDB(e *State, T miniprofiler.Timer, query, duration, period string, nu
 }
 
 func Window(e *State, T miniprofiler.Timer, query, duration, period string, num float64, rfunc string) (*Results, error) {
+	var isPerc bool
+	var percValue float64
+	if len(rfunc) > 0 && rfunc[0] == 'p' {
+		var err error
+		percValue, err = strconv.ParseFloat(rfunc[1:], 10)
+		isPerc = err == nil
+	}
+	if isPerc {
+		if percValue < 0 || percValue > 100 {
+			return nil, fmt.Errorf("expr: Windows: percentile number must be greater than 0 and less than 1")
+		}
+		rfunc = "percentile"
+	}
 	fn, ok := e.GetFunction(rfunc)
 	if !ok {
 		return nil, fmt.Errorf("expr: Window: no %v function", rfunc)
@@ -190,7 +203,11 @@ func Window(e *State, T miniprofiler.Timer, query, duration, period string, num 
 				},
 			},
 		}
-		fnResult := windowFn.Call([]reflect.Value{reflect.ValueOf(e), reflect.ValueOf(T), reflect.ValueOf(callResult)})
+		fnArgs := []reflect.Value{reflect.ValueOf(e), reflect.ValueOf(T), reflect.ValueOf(callResult)}
+		if isPerc {
+			fnArgs = append(fnArgs, reflect.ValueOf(fromScalar(percValue/100)))
+		}
+		fnResult := windowFn.Call(fnArgs)
 		if !fnResult[1].IsNil() {
 			if err := fnResult[1].Interface().(error); err != nil {
 				return err
@@ -226,6 +243,19 @@ func Window(e *State, T miniprofiler.Timer, query, duration, period string, num 
 
 func windowCheck(t *parse.Tree, f *parse.FuncNode) error {
 	name := f.Args[4].(*parse.StringNode).Text
+	var isPerc bool
+	var percValue int64
+	if len(name) > 0 && name[0] == 'p' {
+		var err error
+		percValue, err = strconv.ParseInt(name[1:], 10, 64)
+		isPerc = err == nil
+	}
+	if isPerc {
+		if percValue < 0 || percValue > 100 {
+			return fmt.Errorf("expr: Windows: percentile number must be greater than 0 and less than 1")
+		}
+		return nil
+	}
 	v, ok := t.GetFunction(name)
 	if !ok {
 		return fmt.Errorf("expr: Window: unknown function %v", name)
