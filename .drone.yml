@@ -1,12 +1,19 @@
+clone:
+  clone:
+    image: 325714046698.dkr.ecr.eu-west-1.amazonaws.com/dmx/drone-git:next
+    pull: true
+
 matrix:
   BOSUN_VERSION:
     - 0.6.0
+  GOPATH:
+    - /drone
 
-build:
+pipeline:
   test:
     image: golang:1.9-alpine
     commands:
-      - cp -r . $GOPATH/src/bosun.org
+      - cp -r . ${GOPATH}/src/bosun.org
       - cd ${GOPATH}/src/bosun.org/cmd/bosun
       - go test -v bosun.org/...
 
@@ -22,63 +29,92 @@ build:
       - cd ${GOPATH}/src/bosun.org/cmd/scollector
       - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o scollector -tags esv5
 
-publish:
   prod_bosun_full_version:
-    image: s3
+    image: plugins/s3
     region: eu-west-1
     bucket: skyscanner-prod-skymetrics-deploymentsupport
     acl: bucket-owner-full-control
-    access_key: $$PROD_ACCESSKEY
-    secret_key: $$PROD_SECRETKEY
+    secrets:
+      - source: prod_accesskey
+        target: aws_access_key_id
+      - source: prod_secretkey
+        target: aws_secret_access_key
     source: /drone/src/bosun.org/cmd/bosun/bosun
-    target: /artifacts/bosun/$$BRANCH-$$BOSUN_VERSION-$$BUILD_NUMBER/bosun
+    target: /artifacts/bosun/${DRONE_BRANCH}-${BOSUN_VERSION}-1.0.${DRONE_BUILD_NUMBER}/bosun
     when:
-      branch: '!master'
+      branch:
+        exclude: master
+      event:
+        exclude: pull_request
+
 
   prod_bosun:
-    image: s3
+    image: plugins/s3
     region: eu-west-1
     bucket: skyscanner-prod-skymetrics-deploymentsupport
     acl: bucket-owner-full-control
-    access_key: $$PROD_ACCESSKEY
-    secret_key: $$PROD_SECRETKEY
+    secrets:
+      - source: prod_accesskey
+        target: aws_access_key_id
+      - source: prod_secretkey
+        target: aws_secret_access_key
     source: /drone/src/bosun.org/cmd/bosun/bosun
-    target: /artifacts/bosun/$$BOSUN_VERSION/bosun
+    target: /artifacts/bosun/${BOSUN_VERSION}/bosun
     when:
       branch: master
+      event:
+        exclude: pull_request
 
   sandbox_scollector_full_version:
-    image: s3
+    image: plugins/s3
     region: eu-west-1
     bucket: skyscanner-sandbox-skymetrics-deploymentsupport
     acl: bucket-owner-full-control
-    access_key: $$SANDBOX_ACCESSKEY
-    secret_key: $$SANDBOX_SECRETKEY
+    secrets:
+      - source: sandbox_accesskey
+        target: aws_access_key_id
+      - source: sandbox_secretkey
+        target: aws_secret_access_key
     source: /drone/src/bosun.org/cmd/scollector/scollector
-    target: /artifacts/scollector/$$BRANCH-$$BOSUN_VERSION-$$BUILD_NUMBER/scollector
+    target: /artifacts/scollector/${DRONE_BRANCH}-${BOSUN_VERSION}-1.0.${DRONE_BUILD_NUMBER}/scollector
     when:
-      branch: '!master'
+      branch:
+        exclude: master
+      event:
+        exclude: pull_request
+
 
   sandbox_scollector:
-    image: s3
+    image: plugins/s3
     region: eu-west-1
     bucket: skyscanner-sandbox-skymetrics-deploymentsupport
     acl: bucket-owner-full-control
-    access_key: $$SANDBOX_ACCESSKEY
-    secret_key: $$SANDBOX_SECRETKEY
+    secrets:
+      - source: sandbox_accesskey
+        target: aws_access_key_id
+      - source: sandbox_secretkey
+        target: aws_secret_access_key
     source: /drone/src/bosun.org/cmd/scollector/scollector
-    target: /artifacts/scollector/$$BOSUN_VERSION/scollector
+    target: /artifacts/scollector/${BOSUN_VERSION}/scollector
     when:
       branch: master
+      event:
+        exclude: pull_request
 
   prod_scollector:
-    image: s3
+    image: plugins/s3
     region: eu-west-1
     bucket: skyscanner-prod-skymetrics-deploymentsupport
     acl: bucket-owner-full-control
-    access_key: $$PROD_ACCESSKEY
-    secret_key: $$PROD_SECRETKEY
+    secrets:
+      - source: prod_accesskey
+        target: aws_access_key_id
+      - source: prod_secretkey
+        target: aws_secret_access_key
     source: /drone/src/bosun.org/cmd/scollector/scollector
-    target: /artifacts/scollector/$$BOSUN_VERSION/scollector
+    target: /artifacts/scollector/${BOSUN_VERSION}/scollector
     when:
       branch: master
+      event:
+        exclude: pull_request
+
