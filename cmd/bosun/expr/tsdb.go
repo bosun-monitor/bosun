@@ -170,7 +170,7 @@ func Window(e *State, T miniprofiler.Timer, query, duration, period string, num 
 	}
 	if isPerc {
 		if percValue < 0 || percValue > 1 {
-			return nil, fmt.Errorf("expr: Windows: percentile number must be greater than 0 and less than 1")
+			return nil, fmt.Errorf("expr: window: percentile number must be greater than or equal to zero 0 and less than or equal 1")
 		}
 		rfunc = "percentile"
 	}
@@ -251,8 +251,8 @@ func windowCheck(t *parse.Tree, f *parse.FuncNode) error {
 		isPerc = err == nil
 	}
 	if isPerc {
-		if percValue < 0 || percValue > 100 {
-			return fmt.Errorf("expr: Windows: percentile number must be greater than 0 and less than 1")
+		if percValue < 0 || percValue > 1 {
+			return fmt.Errorf("expr: window: percentile number must be greater than or equal to zero 0 and less than or equal 1")
 		}
 		return nil
 	}
