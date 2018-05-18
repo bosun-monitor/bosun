@@ -322,6 +322,8 @@ comprising of the average of given metric from 1d to 1d-1h-ago, 2d to
 instead of concatenating series together, each series is reduced to a number,
 and those numbers created into a series.
 
+In addition to supporting Bosun's reduction functions that take on argument, percentile operations may be be done by setting `funcName` to p followed by number that is between 0 and 1 (inclusively). For example, `"p.25"` will be the 25th percentile, `"p.999"` will be the 99.9th percentile. `"p0"` and `"p1"` are min and max respectively (However, in these cases it is recommended to use `"min"` and `"max"` for the sake of clarity.
+
 # Annotation Query Functions
 These function are available when annotate is enabled via Bosun's configuration.
 
