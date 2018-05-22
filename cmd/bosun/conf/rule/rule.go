@@ -449,6 +449,14 @@ var defaultFuncs = template.FuncMap{
 		}
 		return string(b)
 	},
+	// Just like "json", but cuts front and rear double quotes off
+	"jsonStr": func(s string) string {
+		b, err := json.Marshal(s)
+		if err != nil {
+			return err.Error()
+		}
+		return string(b[1 : len(b)-1])
+	},
 }
 
 var exRE = regexp.MustCompile(`\$(?:[\w.]+|\{[\w.]+\})`)
