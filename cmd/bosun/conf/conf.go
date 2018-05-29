@@ -14,6 +14,7 @@ import (
 
 	"github.com/influxdata/influxdb/client/v2"
 
+	"bosun.org/cloudwatch"
 	"bosun.org/cmd/bosun/conf/template"
 	"bosun.org/cmd/bosun/expr"
 	"bosun.org/cmd/bosun/expr/parse"
@@ -82,6 +83,7 @@ type SystemConfProvider interface {
 	GetInfluxContext() client.HTTPConfig
 	GetElasticContext() expr.ElasticHosts
 	GetAzureMonitorContext() expr.AzureMonitorClients
+	GetCloudWatchContext() cloudwatch.Context
 	GetPromContext() expr.PromClients
 	AnnotateEnabled() bool
 

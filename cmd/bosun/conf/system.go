@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"bosun.org/slog"
+	"bosun.org/cloudwatch"
 
 	"bosun.org/cmd/bosun/expr"
 	"bosun.org/graphite"
@@ -63,6 +64,7 @@ type SystemConf struct {
 	InfluxConf       InfluxConf
 	ElasticConf      map[string]ElasticConf
 	AzureMonitorConf map[string]AzureMonitorConf
+	CloudWatchConf CloudWatchConf
 	PromConf         map[string]PromConf
 
 	AnnotateConf AnnotateConf
@@ -89,6 +91,7 @@ type EnabledBackends struct {
 	Elastic      bool
 	Annotate     bool
 	AzureMonitor bool
+	CloudWatch   bool
 	Prom         bool
 }
 
@@ -103,6 +106,7 @@ func (sc *SystemConf) EnabledBackends() EnabledBackends {
 	b.Elastic = len(sc.ElasticConf["default"].Hosts) != 0
 	b.Annotate = len(sc.AnnotateConf.Hosts) != 0
 	b.AzureMonitor = len(sc.AzureMonitorConf) != 0
+	b.CloudWatch = true
 	return b
 }
 
@@ -287,6 +291,10 @@ type LDAPGroup struct {
 	Path string
 	// Access to grant members of group Ex: "Admin"
 	Role string
+}
+
+type CloudWatchConf struct {
+	Region string
 }
 
 // GetSystemConfProvider returns the SystemConfProvider interface
@@ -656,6 +664,10 @@ func (sc *SystemConf) GetInfluxContext() client.HTTPConfig {
 		c.InsecureSkipVerify = sc.InfluxConf.UnsafeSSL
 	}
 	return c
+}
+
+func (sc *SystemConf) GetCloudWatchContext() cloudwatch.Context {
+	return cloudwatch.Config{}
 }
 
 // GetPromContext initializes returns a collection of Prometheus API v1 client APIs (connections)
