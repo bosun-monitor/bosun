@@ -35,7 +35,7 @@ func (s *Schedule) Run() error {
 		}
 		go s.runAlert(a, ch)
 
-		if s.SystemConf.GetAlertCheckDistribution() { // only apply shifts if the respective option is enabled
+		if s.SystemConf.GetAlertCheckDistribution() == "simple" { // only apply shifts if the respective option is set
 			chs = append(chs, alertCh{ch: ch, modulo: re, shift: circular_shifts[re]})
 		} else {
 			// there are no shifts if option is off

@@ -50,7 +50,7 @@ type SystemConfProvider interface {
 
 	GetCheckFrequency() time.Duration
 	GetDefaultRunEvery() int
-	GetAlertCheckDistribution() bool
+	GetAlertCheckDistribution() string
 	GetUnknownThreshold() int
 	GetMinGroupSize() int
 
