@@ -71,6 +71,8 @@ type SystemConfProvider interface {
 
 	GetMaxRenderedTemplateAge() int
 
+	GetExampleExpression() string
+
 	// Contexts
 	GetTSDBContext() opentsdb.Context
 	GetGraphiteContext() graphite.Context

@@ -311,6 +311,7 @@ bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', '$q', '$r
             $scope.quiet = settings.Quiet;
             $scope.version = settings.Version;
             $scope.opentsdbEnabled = $scope.version.Major != 0 && $scope.version.Minor != 0;
+            $scope.exampleExpression = settings.ExampleExpression;
             $scope.tokensEnabled = settings.TokensEnabled;
             $scope.auth = AuthService;
             AuthService.Init(settings.AuthEnabled, settings.Username, settings.Roles, settings.Permissions);
@@ -572,61 +573,70 @@ var timeFormat = 'YYYY-MM-DDTHH:mm:ssZ';
 /// <reference path="0-bosun.ts" />
 bosunControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route', function ($scope, $http, $location, $route) {
         var search = $location.search();
-        var current;
+        var current = '';
         try {
             current = atob(search.expr);
         }
         catch (e) {
             current = '';
         }
-        if (!current) {
-            $location.search('expr', btoa('avg(q("avg:rate:os.cpu{host=*bosun*}", "5m", "")) > 80'));
+        if (!current && $scope.exampleExpression) {
+            $location.search('expr', btoa($scope.exampleExpression));
             return;
         }
         $scope.date = search.date || '';
         $scope.time = search.time || '';
         $scope.expr = current;
-        $scope.running = current;
         $scope.tab = search.tab || 'results';
         $scope.animate();
-        $http.post('/api/expr?' +
-            'date=' + encodeURIComponent($scope.date) +
-            '&time=' + encodeURIComponent($scope.time), current)
-            .success(function (data) {
-            $scope.result = data.Results;
-            $scope.queries = data.Queries;
-            $scope.result_type = data.Type;
-            if (data.Type == 'series') {
-                $scope.svg_url = '/api/egraph/' + btoa(current) + '.svg?now=' + Math.floor(Date.now() / 1000);
-                $scope.graph = toChart(data.Results);
-            }
-            if (data.Type == 'number') {
-                angular.forEach(data.Results, function (d) {
-                    var name = '{';
-                    angular.forEach(d.Group, function (tagv, tagk) {
-                        if (name.length > 1) {
-                            name += ',';
-                        }
-                        name += tagk + '=' + tagv;
+        if ($scope.expr) {
+            $scope.running = $scope.expr;
+            $http.post('/api/expr?' +
+                'date=' + encodeURIComponent($scope.date) +
+                '&time=' + encodeURIComponent($scope.time), current)
+                .success(function (data) {
+                $scope.result = data.Results;
+                $scope.queries = data.Queries;
+                $scope.result_type = data.Type;
+                if (data.Type == 'series') {
+                    $scope.svg_url = '/api/egraph/' + btoa(current) + '.svg?now=' + Math.floor(Date.now() / 1000);
+                    $scope.graph = toChart(data.Results);
+                }
+                if (data.Type == 'number') {
+                    angular.forEach(data.Results, function (d) {
+                        var name = '{';
+                        angular.forEach(d.Group, function (tagv, tagk) {
+                            if (name.length > 1) {
+                                name += ',';
+                            }
+                            name += tagk + '=' + tagv;
+                        });
+                        name += '}';
+                        d.name = name;
                     });
-                    name += '}';
-                    d.name = name;
-                });
-                $scope.bar = data.Results;
-            }
-            $scope.running = '';
-        })
-            .error(function (error) {
-            $scope.error = error;
-            $scope.running = '';
-        })["finally"](function () {
-            $scope.stop();
-        });
+                    $scope.bar = data.Results;
+                }
+                $scope.running = '';
+            })
+                .error(function (error) {
+                $scope.error = error;
+                $scope.running = '';
+            })["finally"](function () {
+                $scope.stop();
+            });
+        }
         $scope.set = function () {
-            $location.search('expr', btoa($scope.expr));
             $location.search('date', $scope.date || null);
             $location.search('time', $scope.time || null);
-            $route.reload();
+            if ($scope.expr) {
+                $location.search('expr', btoa($scope.expr));
+                $route.reload();
+            }
+            else {
+                $scope.error = "expr: empty";
+                $scope.result = null;
+                $scope.queries = null;
+            }
         };
         function toChart(res) {
             var graph = [];

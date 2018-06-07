@@ -42,6 +42,8 @@ type SystemConf struct {
 
 	RuleVars map[string]string
 
+	ExampleExpression string
+
 	OpenTSDBConf OpenTSDBConf
 	GraphiteConf GraphiteConf
 	InfluxConf   InfluxConf
@@ -456,6 +458,11 @@ func (sc *SystemConf) GetRuleFilePath() string {
 // SetTSDBHost sets the OpenTSDB host and used when Bosun is set to readonly mode
 func (sc *SystemConf) SetTSDBHost(tsdbHost string) {
 	sc.OpenTSDBConf.Host = tsdbHost
+}
+
+// GetExampleExpression returns the default expression for "Expression" tab.
+func (sc *SystemConf) GetExampleExpression() string {
+	return sc.ExampleExpression
 }
 
 // GetTSDBHost returns the configured TSDBHost

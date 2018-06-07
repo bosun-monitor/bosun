@@ -46,6 +46,9 @@ SearchSince = "72h"
 # If the command does not execute save operations will be canceled and the rule file will be restored
 CommandHookPath = "/Users/kbrandt/src/hook/hook"
 
+#Example expression under "Expression" tab
+ExampleExpression = 'avg(q("avg:rate:os.cpu{host=*bosun*}", "5m", "")) > 80'
+
 # Configuration to enable the OpenTSDB Backend
 [OpenTSDBConf]
 	Host = "ny-tsdb01:4242"
