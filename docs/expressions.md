@@ -823,6 +823,11 @@ Returns the results sorted by value in ascending ("asc") or descending ("desc")
 order. Results are first sorted by groupname and then stably sorted so that
 results with identical values are always in the same order.
 
+## sortbytags(seriesSet) seriesSet
+{: .exprFunc}
+
+Returns the results sorted by groupname.
+
 ## timedelta(seriesSet) seriesSet
 {: .exprFunc}
 

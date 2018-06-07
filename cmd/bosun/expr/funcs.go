@@ -335,6 +335,12 @@ var builtins = map[string]parse.Func{
 		Tags:   tagFirst,
 		F:      Sort,
 	},
+	"sortbytags": {
+		Args:   []models.FuncType{models.TypeSeriesSet},
+		Return: models.TypeSeriesSet,
+		Tags:   tagFirst,
+		F:      SortByTags,
+	},
 	"shift": {
 		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeString},
 		Return: models.TypeSeriesSet,
@@ -550,6 +556,12 @@ func Sort(e *State, T miniprofiler.Timer, series *Results, order string) (*Resul
 	default:
 		return nil, fmt.Errorf("second argument of order() must be asc or desc")
 	}
+	return series, nil
+}
+
+func SortByTags(e *State, T miniprofiler.Timer, series *Results) (*Results, error) {
+	// Sort by groupname
+	sort.Sort(ResultSliceByGroup(series.Results))
 	return series, nil
 }
 
