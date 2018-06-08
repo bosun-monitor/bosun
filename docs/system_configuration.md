@@ -103,6 +103,13 @@ frequent as every "1m", and others that run less often (any multiple of
 Example:
 `DefaultRunEvery = 5`
 
+### AlertCheckDistribution
+Selects algorithm to distribute alert checks to decrease system load spikes.  There is no distribution by default. This means, if there are several checks with same period, they all will happen at the same points in time. This method is used if the option is not specified or equals to empty string.
+
+The single alternative option is `simple`. If specified, the alert checks with the same period will be uniformly distributed on second marks.
+
+Example: `AlertCheckDistribution = "simple"`
+
 ### RuleFilePath
 Path to the file containing definitions of alerts, macros, lookups,
 templates, notifications, and global variables which are [documented
