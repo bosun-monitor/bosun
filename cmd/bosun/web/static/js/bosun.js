@@ -95,6 +95,7 @@ var IncidentState = (function () {
             }
         }
         this.Actions = new Array();
+        this.Tags = is.Tags;
         if (is.Actions) {
             for (var _b = 0, _c = is.Actions; _b < _c.length; _b++) {
                 var a = _c[_b];
