@@ -588,6 +588,17 @@ bosunControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route
         $scope.date = search.date || '';
         $scope.time = search.time || '';
         $scope.expr = current;
+        $scope.aceMode = 'bosun';
+        $scope.aceTheme = 'chrome';
+        $scope.aceLoaded = function (editor) {
+            $scope.editor = editor;
+            editor.focus();
+            editor.getSession().setUseWrapMode(true);
+            editor.getSession().setMode({
+                path: 'ace/mode/' + $scope.aceMode,
+                v: Date.now()
+            });
+        };
         $scope.tab = search.tab || 'results';
         $scope.animate();
         if ($scope.expr) {
