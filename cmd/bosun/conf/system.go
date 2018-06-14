@@ -294,7 +294,7 @@ type LDAPGroup struct {
 }
 
 type CloudWatchConf struct {
-	Region string
+	Enabled bool
 }
 
 // GetSystemConfProvider returns the SystemConfProvider interface
