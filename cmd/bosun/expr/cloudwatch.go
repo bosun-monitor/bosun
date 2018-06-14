@@ -16,7 +16,7 @@ import (
 // cloudwatch defines functions for use with amazon cloudwatch api
 var CloudWatch = map[string]parse.Func{
 
-	"cloudwatch": {
+	"cw": {
 		Args: []models.FuncType{models.TypeString, models.TypeString, models.TypeString, models.TypeString,
 			models.TypeString, models.TypeString, models.TypeString, models.TypeString},
 		Return: models.TypeSeriesSet,
