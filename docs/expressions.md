@@ -728,6 +728,34 @@ Returns:
   "2": 64
 }
 ```
+# CloudWatch Query Functions
+These function are available when cloudwatch is enabled via Bosun's configuration.
+
+### cw(region string, namespace string, metric string, period string, statistic string, dimensions string, startDuration string, endDuration string) seriesSet
+{: .exprFunc}
+
+The parameters are as follows:
+
+* `region` The amazon region for the service metrics you are interested in. e.g. `eu-west-1`
+* `namespace` The [CloudWatch namespace](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/aws-namespaces.html) which the metric you want to query exists under e.g `AWS/S3`
+* `metric` The [CloudWatch metric](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/CW_Support_For_AWS.html) you wish to query, e.g. `NumberOfObjects`
+* `dimension` Comma separated list of key:value dimensions that you want to use to filter the results. e.g. `BucketName:my-s3-bucket,StorageType:STANDARD_IA`
+* `period` size of bucket to use for grouping data-points in seconds e.g. `60`
+* `statistic` Which [aggregator](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/cloudwatch_concepts.html#Statistic) to use to combine the datapoints in each bucket. e.g. `sum`
+* `startDuration` and `endDuration` set the time window from now - see the OpenTSDB q() function for more details
+
+A complete example returning the counts of infrequent access objects in our s3 bucket over the last hour.
+```
+$region = "eu-west-1"
+$namespace = "AWS/EC2"
+$metric = "NumberOfObjects"
+$period = "60"
+$statistics = "Average"
+$dimensions = "BucketName:my-s3-bucket,StorageType:STANDARD_IA"
+$objectCount = cw($region, $namespace, $metric, $period, $statistics, $dimensions, "1h" ,"")
+```
+
+
 
 # Reduction Functions
 
