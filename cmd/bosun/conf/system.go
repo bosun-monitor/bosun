@@ -667,7 +667,8 @@ func (sc *SystemConf) GetInfluxContext() client.HTTPConfig {
 }
 
 func (sc *SystemConf) GetCloudWatchContext() cloudwatch.Context {
-	return cloudwatch.Config{}
+	c := cloudwatch.NewConfig()
+	return c
 }
 
 // GetPromContext initializes returns a collection of Prometheus API v1 client APIs (connections)

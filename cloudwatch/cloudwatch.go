@@ -8,6 +8,7 @@ import (
 
 	"bosun.org/slog"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	cw "github.com/aws/aws-sdk-go/service/cloudwatch"
 	cwi "github.com/aws/aws-sdk-go/service/cloudwatch/cloudwatchiface"
@@ -25,6 +26,7 @@ type Request struct {
 	Period     string
 	Statistic  string
 	Dimensions []Dimension
+	Profile    string
 }
 
 type Response struct {
@@ -91,15 +93,31 @@ type Context interface {
 }
 
 type Config struct {
-	Svc cwi.CloudWatchAPI
+	Profiles map[string]cwi.CloudWatchAPI
+}
+
+func NewConfig() *Config {
+	c := new(Config)
+	c.Profiles = make(map[string]cwi.CloudWatchAPI)
+	return c
 }
 
 // Query performs a cloudwatch request to aws.
 func (c Config) Query(r *Request) (Response, error) {
-	if c.Svc == nil {
-		var conf aws.Config
-		conf.Region = aws.String(r.Region)
-		c.Svc = cw.New(session.New(&conf))
+	var profile string
+	var conf aws.Config
+
+	if r.Profile == "default" {
+		profile = "bosun-default"
+	} else {
+		profile = "user-" + r.Profile
 	}
-	return r.Query(c.Svc)
+	// if the session hasn't already been initalised for this profile create a new one
+	if c.Profiles[profile] == nil {
+		conf.Credentials = credentials.NewSharedCredentials("", r.Profile)
+		conf.Region = aws.String(r.Region)
+		c.Profiles[profile] = cw.New(session.New(&conf))
+	}
+
+	return r.Query(c.Profiles[profile])
 }

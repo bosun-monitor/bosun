@@ -19,9 +19,10 @@ var CloudWatch = map[string]parse.Func{
 	"cw": {
 		Args: []models.FuncType{models.TypeString, models.TypeString, models.TypeString, models.TypeString,
 			models.TypeString, models.TypeString, models.TypeString, models.TypeString},
-		Return: models.TypeSeriesSet,
-		Tags:   cloudwatchTagQuery,
-		F:      CloudWatchQuery,
+		Return:        models.TypeSeriesSet,
+		Tags:          cloudwatchTagQuery,
+		F:             CloudWatchQuery,
+		PrefixEnabled: true,
 	},
 }
 
@@ -75,7 +76,7 @@ func parseDimensions(dimensions string) []cloudwatch.Dimension {
 	return parsed
 }
 
-func CloudWatchQuery(e *State, T miniprofiler.Timer, region, namespace, metric, period, statistic, dimensions, sduration, eduration string) (*Results, error) {
+func CloudWatchQuery(prefix string, e *State, T miniprofiler.Timer, region, namespace, metric, period, statistic, dimensions, sduration, eduration string) (*Results, error) {
 	sd, err := opentsdb.ParseDuration(sduration)
 	if err != nil {
 		return nil, err
@@ -99,6 +100,7 @@ func CloudWatchQuery(e *State, T miniprofiler.Timer, region, namespace, metric, 
 		Period:     period,
 		Statistic:  statistic,
 		Dimensions: d,
+		Profile:    prefix,
 	}
 	s, err := timeCloudwatchRequest(e, T, req)
 	if err != nil {

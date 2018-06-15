@@ -53,9 +53,9 @@ func buildDatapoint(t *time.Time) (point *cw.Datapoint, err error) {
 }
 
 func TestCloudWatchQuery(t *testing.T) {
-	c := cloudwatch.Config{}
+	c := cloudwatch.NewConfig()
 	svc := new(mockCloudWatchClient)
-	c.Svc = svc
+	c.Profiles["bosun-default"] = svc
 	e := State{
 		now: time.Date(2018, time.January, 1, 0, 0, 0, 0, time.UTC),
 		Backends: &Backends{
@@ -85,7 +85,7 @@ func TestCloudWatchQuery(t *testing.T) {
 	}
 	for _, u := range tests {
 
-		results, err := CloudWatchQuery(&e, new(miniprofiler.Profile), u.region,
+		results, err := CloudWatchQuery("default", &e, new(miniprofiler.Profile), u.region,
 			u.namespace, u.metric, u.period, u.statistics,
 			u.dimensions, u.start, u.end)
 		if err != nil {
