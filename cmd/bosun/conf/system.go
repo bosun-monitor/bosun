@@ -64,7 +64,7 @@ type SystemConf struct {
 	InfluxConf       InfluxConf
 	ElasticConf      map[string]ElasticConf
 	AzureMonitorConf map[string]AzureMonitorConf
-	CloudWatchConf CloudWatchConf
+	CloudWatchConf   CloudWatchConf
 	PromConf         map[string]PromConf
 
 	AnnotateConf AnnotateConf
