@@ -136,6 +136,10 @@ interface IAuthService {
     RoleFor: (bits: number) => string;
 }
 
+interface ILinkService {
+	GetEditSilenceLink: (silence: any, silenceId: string) => string;
+}
+
 bosunApp.run(['$location', '$rootScope', function ($location: ng.ILocationService, $rootScope: IRootScope) {
     $rootScope.$on('$routeChangeSuccess', function (event, current, previous) {
         $rootScope.title = current.$$route.title;
