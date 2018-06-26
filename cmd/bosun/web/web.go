@@ -619,6 +619,13 @@ type ExtStatus struct {
 	*models.RenderedTemplates
 }
 
+type ExtIncidentStatus struct {
+	ExtStatus
+	IsActive  bool
+	Silence   *models.Silence
+	SilenceId string
+}
+
 func IncidentEvents(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	id := r.FormValue("id")
 	if id == "" {
@@ -636,7 +643,15 @@ func IncidentEvents(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request
 	if err != nil {
 		return nil, err
 	}
-	st := ExtStatus{IncidentState: state, RenderedTemplates: rt, Subject: state.Subject}
+	st := ExtIncidentStatus{
+		ExtStatus: ExtStatus{IncidentState: state, RenderedTemplates: rt, Subject: state.Subject},
+		IsActive:  state.IsActive(),
+	}
+	silence := schedule.GetSilence(t, state.AlertKey)
+	if silence != nil {
+		st.Silence = silence
+		st.SilenceId = silence.ID()
+	}
 	return st, nil
 }
 

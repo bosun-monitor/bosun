@@ -12,9 +12,14 @@ interface IIncidentScope extends ng.IScope {
 	state: any;
 	action: any;
 	configLink: string;
+	isActive: boolean;
+	silence: any;
+	silenceId: string;
+	editSilenceLink: string;
+	time: (v: any) => string;
 }
 
-bosunControllers.controller('IncidentCtrl', ['$scope', '$http', '$location', '$route', '$sce', function ($scope: IIncidentScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService, $sce: ng.ISCEService) {
+bosunControllers.controller('IncidentCtrl', ['$scope', '$http', '$location', '$route', '$sce', 'linkService', function ($scope: IIncidentScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService, $sce: ng.ISCEService, linkService: ILinkService) {
 	var search = $location.search();
 	var id = search.id;
 	if (!id) {
@@ -28,6 +33,9 @@ bosunControllers.controller('IncidentCtrl', ['$scope', '$http', '$location', '$r
 	$scope.action = (type: string) => {
 		var key = encodeURIComponent($scope.state.AlertKey);
 		return '/action?type=' + type + '&key=' + key;
+	};
+	$scope.getEditSilenceLink = () => {
+		return linkService.GetEditSilenceLink($scope.silence, $scope.silenceId);
 	};
 	$scope.loadTimelinePanel = (v: any, i: any) => {
 		if (v.doneLoading && !v.error) { return; }
@@ -60,6 +68,10 @@ bosunControllers.controller('IncidentCtrl', ['$scope', '$http', '$location', '$r
 			$scope.loadTimelinePanel(v, i);
 		}
 	};
+	$scope.time = (v: any) => {
+		var m = moment(v).utc();
+		return m.format();
+	};
 	$http.get('/api/incidents/events?id=' + id)
 		.success((data: any) => {
 			$scope.incident = data;
@@ -68,6 +80,10 @@ bosunControllers.controller('IncidentCtrl', ['$scope', '$http', '$location', '$r
 			$scope.body = $sce.trustAsHtml(data.Body);
 			$scope.events = data.Events.reverse();
 			$scope.configLink = configUrl($scope.incident.AlertKey, moment.unix($scope.incident.LastAbnormalTime));
+			$scope.isActive = data.IsActive;
+			$scope.silence = data.Silence;
+			$scope.silenceId = data.SilenceId;
+			$scope.editSilenceLink = linkService.GetEditSilenceLink($scope.silence, $scope.silenceId);
 			for (var i = 0; i < $scope.events.length; i++) {
 				var e = $scope.events[i];
 				if (e.Status != 'normal' && e.Status != 'unknown' && $scope.body) {

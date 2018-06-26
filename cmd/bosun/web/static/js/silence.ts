@@ -20,9 +20,10 @@ interface ISilenceScope extends ng.IScope {
 	forget: string;
 	user: string;
 	message: string;
+	getEditSilenceLink: (silence: any, silenceId: string) => string;
 }
 
-bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$route', function($scope: ISilenceScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService) {
+bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$route', 'linkService', function($scope: ISilenceScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService, linkService: ILinkService) {
 	var search = $location.search();
 	$scope.start = search.start;
 	$scope.end = search.end;
@@ -157,5 +158,8 @@ bosunControllers.controller('SilenceCtrl', ['$scope', '$http', '$location', '$ro
 	$scope.time = (v: any) => {
 		var m = moment(v).utc();
 		return m.format();
+	};
+	$scope.getEditSilenceLink = (silence: any, silenceId: string) => {
+		return linkService.GetEditSilenceLink(silence, silenceId);
 	};
 }]);
