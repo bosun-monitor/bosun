@@ -6,7 +6,7 @@
 	.resize {
 		margin-bottom: 15px;
 		border: 1px solid lightgrey;
-		height: 500px;
+		height: 150px;
 		width: 100%
 	}
 	.chart {
@@ -57,7 +57,7 @@
 			<div class="form-group">
 				<div tsresizable on-resize="editor.resize()" class='resize'>
 					<div ui-ace="{ onLoad : aceLoaded, mode: aceMode, theme: aceTheme, advanced: { fontSize: '14px', fontFamily: 'Menlo, Monaco, Consolas, monospace' }}"
-					ng-model="expr"></div>
+					ng-model="expr" ng-keydown="keydown($event)"></div>
 				</div>
 			</div>
 		</form>

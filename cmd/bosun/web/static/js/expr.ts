@@ -49,14 +49,23 @@ bosunControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route
 			path: 'ace/mode/' + $scope.aceMode,
 			v: Date.now()
 		});
+		editor.$blockScrolling = Infinity;
 	};
+	$scope.$on('$viewContentLoaded', () => {
+		setTimeout(() => {
+			var editor = $scope.editor;
+			var row = editor.session.getLength() - 1;
+			var column = editor.session.getLine(row).length;
+			editor.selection.moveTo(row, column);
+		});
+	});
 
 	$scope.tab = search.tab || 'results';
-	$scope.animate();
 
 	if ($scope.expr) {
 
 		$scope.running = $scope.expr;
+		$scope.animate();
 
 		$http.post('/api/expr?' +
 			'date=' + encodeURIComponent($scope.date) +
@@ -137,6 +146,7 @@ bosunControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route
 	$scope.keydown = function($event: any) {
 		if ($event.shiftKey && $event.keyCode == 13) {
 			$scope.set();
+			$event.preventDefault();
 		}
 	};
 
