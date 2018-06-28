@@ -735,3 +735,11 @@ func (s *Schedule) GetCheckFrequency(alertName string) (time.Duration, error) {
 	return time.Duration(time.Duration(runEvery) * s.SystemConf.GetCheckFrequency()), nil
 
 }
+
+func (s *Schedule) GetSilence(T miniprofiler.Timer, ak models.AlertKey) *models.Silence {
+	var silenced SilenceTester
+	T.Step("Silenced", func(miniprofiler.Timer) {
+		silenced = s.Silenced()
+	})
+	return silenced(ak)
+}

@@ -36,7 +36,7 @@ interface IConfigScope extends IBosunScope {
 
 	//rule execution
 	running: boolean;
-	error: string;
+	errors: string[];
 	warning: string[];
 	test: () => void;
 	sets: any;
@@ -237,7 +237,7 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 				set.Results = data.Sets[0].Results;
 			})
 			.error((error) => {
-				$scope.error = error;
+				$scope.errors = [error];
 			})
 			.finally(() => {
 				$scope.stop();
@@ -376,7 +376,7 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 	}
 
 	$scope.test = () => {
-		$scope.error = '';
+		$scope.errors = [];
 		$scope.running = true;
 		$scope.warning = [];
 		$location.search('fromDate', $scope.fromDate || null);
@@ -428,7 +428,7 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 				procResults(data);
 			})
 			.error((error) => {
-				$scope.error = error;
+				$scope.errors = [error];
 			})
 			.finally(() => {
 				$scope.running = false;
@@ -510,7 +510,7 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
 
 		$scope.actionNotifications = aNots;
 		$scope.data = JSON.stringify(data.Data, null, '  ');
-		$scope.error = data.Errors;
+		$scope.errors = data.Errors;
 		$scope.warning = data.Warnings;
 	}
 
