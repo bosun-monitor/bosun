@@ -1048,7 +1048,7 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
                 set.Results = data.Sets[0].Results;
             })
                 .error(function (error) {
-                $scope.error = error;
+                $scope.errors = [error];
             })["finally"](function () {
                 $scope.stop();
                 delete (set.show);
@@ -1179,7 +1179,7 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
             });
         };
         $scope.test = function () {
-            $scope.error = '';
+            $scope.errors = [];
             $scope.running = true;
             $scope.warning = [];
             $location.search('fromDate', $scope.fromDate || null);
@@ -1233,7 +1233,7 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
                 procResults(data);
             })
                 .error(function (error) {
-                $scope.error = error;
+                $scope.errors = [error];
             })["finally"](function () {
                 $scope.running = false;
                 $scope.stop();
@@ -1311,7 +1311,7 @@ bosunControllers.controller('ConfigCtrl', ['$scope', '$http', '$location', '$rou
             });
             $scope.actionNotifications = aNots;
             $scope.data = JSON.stringify(data.Data, null, '  ');
-            $scope.error = data.Errors;
+            $scope.errors = data.Errors;
             $scope.warning = data.Warnings;
         }
         $scope.downloadConfig = function () {
