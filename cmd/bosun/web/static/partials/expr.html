@@ -1,4 +1,14 @@
 <style type="text/css">
+	.ace_editor {
+		width: 100%;
+		height: 100%;
+	}
+	.resize {
+		margin-bottom: 15px;
+		border: 1px solid lightgrey;
+		height: 150px;
+		width: 100%
+	}
 	.chart {
 		margin: 50px;
 	}
@@ -44,9 +54,12 @@
 <div class="row">
 	<div class="col-sm-12">
 		<form>
-		<div class="form-group">
-			<textarea id="exprTextArea" class="form-control" ng-model="expr" ng-keydown="keydown($event)" ng-init="eval()" spellcheck="false" elastic autofocus></textarea>
-		</div>
+			<div class="form-group">
+				<div tsresizable on-resize="editor.resize()" class='resize'>
+					<div ui-ace="{ onLoad : aceLoaded, mode: aceMode, theme: aceTheme, advanced: { fontSize: '14px', fontFamily: 'Menlo, Monaco, Consolas, monospace' }}"
+					ng-model="expr" ng-keydown="keydown($event)"></div>
+				</div>
+			</div>
 		</form>
 		<form class="form-inline">
 			<div class="form-group">
