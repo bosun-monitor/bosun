@@ -179,9 +179,10 @@ func GraphiteQuery(e *State, T miniprofiler.Timer, query string, sduration, edur
 	st := e.now.Add(-time.Duration(sd))
 	et := e.now.Add(-time.Duration(ed))
 	req := &graphite.Request{
-		Targets: []string{query},
-		Start:   &st,
-		End:     &et,
+		Targets:  []string{query},
+		Start:    &st,
+		End:      &et,
+		DataProv: e.supplicant,
 	}
 	s, err := timeGraphiteRequest(e, T, req)
 	if err != nil {
@@ -215,6 +216,7 @@ func timeGraphiteRequest(e *State, T miniprofiler.Timer, req *graphite.Request) 
 	T.StepCustomTiming("graphite", "query", string(b), func() {
 		key := req.CacheKey()
 		getFn := func() (interface{}, error) {
+			e.GraphiteContext.SubstitueHeaders(req)
 			return e.GraphiteContext.Query(req)
 		}
 		var val interface{}
