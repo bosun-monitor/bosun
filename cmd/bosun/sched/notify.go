@@ -239,14 +239,14 @@ func (s *Schedule) ActionNotify(at models.ActionType, user, message string, aks 
 		not := groupKey.notification
 		if not.GroupActions == false {
 			for _, state := range states {
-				not.NotifyAction(at, groupKey.template, s.SystemConf, []*models.IncidentState{state}, user, message)
+				not.NotifyAction(at, groupKey.template, s.SystemConf, []*models.IncidentState{state}, user, message, s.RuleConf)
 			}
 		} else {
 			incidents := []*models.IncidentState{}
 			for _, state := range states {
 				incidents = append(incidents, state)
 			}
-			not.NotifyAction(at, groupKey.template, s.SystemConf, incidents, user, message)
+			not.NotifyAction(at, groupKey.template, s.SystemConf, incidents, user, message, s.RuleConf)
 		}
 	}
 	return nil

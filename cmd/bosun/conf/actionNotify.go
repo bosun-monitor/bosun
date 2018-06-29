@@ -40,11 +40,16 @@ func init() {
 }
 
 type ActionNotificationContext struct {
-	States     []*models.IncidentState
+	States     []*ActionNotificationIncidentState
 	User       string
 	Message    string
 	ActionType models.ActionType
 	makeLink   func(string, *url.Values) string
+}
+
+type ActionNotificationIncidentState struct {
+	*models.IncidentState
+	AlertVars Vars
 }
 
 func (a ActionNotificationContext) IncidentLink(i int64) string {
@@ -54,8 +59,8 @@ func (a ActionNotificationContext) IncidentLink(i int64) string {
 }
 
 // NotifyAction should be used for action notifications.
-func (n *Notification) NotifyAction(at models.ActionType, t *Template, c SystemConfProvider, states []*models.IncidentState, user, message string) {
-	go n.PrepareAction(at, t, c, states, user, message).Send(c)
+func (n *Notification) NotifyAction(at models.ActionType, t *Template, c SystemConfProvider, states []*models.IncidentState, user, message string, rcp RuleConfProvider) {
+	go n.PrepareAction(at, t, c, states, user, message, rcp).Send(c)
 }
 
 func (n *Notification) RunOnActionType(at models.ActionType) bool {
@@ -74,7 +79,7 @@ func (n *Notification) RunOnActionType(at models.ActionType) bool {
 }
 
 // Prepate an action notification, but don't send yet.
-func (n *Notification) PrepareAction(at models.ActionType, t *Template, c SystemConfProvider, states []*models.IncidentState, user, message string) *PreparedNotifications {
+func (n *Notification) PrepareAction(at models.ActionType, t *Template, c SystemConfProvider, states []*models.IncidentState, user, message string, rcp RuleConfProvider) *PreparedNotifications {
 	pn := &PreparedNotifications{}
 	// get template keys to use for actions. Merge with default sets
 	tks := n.ActionTemplateKeys[at].Combine(n.ActionTemplateKeys[models.ActionNone])
@@ -87,8 +92,12 @@ func (n *Notification) PrepareAction(at models.ActionType, t *Template, c System
 			key = "default"
 		}
 		buf.Reset()
+		var actionStates []*ActionNotificationIncidentState
+		for _, state := range states {
+			actionStates = append(actionStates, &ActionNotificationIncidentState{IncidentState: state, AlertVars: rcp.GetAlert(state.Alert).Vars})
+		}
 		ctx := ActionNotificationContext{
-			States:     states,
+			States:     actionStates,
 			User:       user,
 			Message:    message,
 			ActionType: at,
