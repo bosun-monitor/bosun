@@ -112,6 +112,7 @@ func (e *Expr) Execute(backends *Backends, providers *BosunProviders, T miniprof
 		BosunProviders: providers,
 		supplicant:     supplicant,
 		Timer:          T,
+		supplicant:     supplicant,
 	}
 	return e.ExecuteState(s)
 }
