@@ -765,6 +765,7 @@ func Action(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (inter
 		if err != nil {
 			return nil, err
 		}
+
 		err = schedule.ActionByAlertKey(data.User, data.Message, at, data.Time, ak)
 		if err != nil {
 			errs[key] = err
@@ -784,6 +785,12 @@ func Action(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (inter
 		return nil, errs
 	}
 	if data.Notify && len(successful) != 0 {
+		// If alert was dealy close, change action type to ActionDelayedClose
+		// insted of ActionClose
+		if at == models.ActionClose && data.Time != nil {
+			at = models.ActionDelayedClose
+		}
+
 		err := schedule.ActionNotify(at, data.User, data.Message, successful)
 		if err != nil {
 			return nil, err
