@@ -120,3 +120,160 @@ func TestCloudWatchTagQuery(t *testing.T) {
 		}
 	}
 }
+func TestCacheKeyMatch(t *testing.T) {
+	start := time.Date(2018, 7, 4, 17, 0, 0, 0, time.UTC)
+	end := time.Date(2018, 7, 4, 18, 0, 0, 0, time.UTC)
+	var tests = []struct {
+		req cloudwatch.Request
+		key string
+	}{
+		{cloudwatch.Request{
+			&start,
+			&end,
+			"eu-west-1",
+			"AWS/EC2",
+			"CPUUtilization",
+			"60", "Sum",
+			[]cloudwatch.Dimension{{"InstanceId", "i-0106b4d25c54baac7"}},
+			"prod",
+		},
+			"cloudwatch-1530723600-1530727200-eu-west-1-AWS/EC2-CPUUtilization-60-Sum-[InstanceId:i-0106b4d25c54baac7]-prod"},
+	}
+
+	for _, u := range tests {
+		calculatedKey := u.req.CacheKey()
+		if u.key != calculatedKey {
+			t.Errorf("Cache key doesn't match, expected '%s' got '%s' ", u.key, calculatedKey)
+		}
+	}
+
+}
+
+func TestCacheKeyMisMatch(t *testing.T) {
+
+	start := time.Date(2018, 7, 4, 17, 0, 0, 0, time.UTC)
+	end := time.Date(2018, 7, 4, 18, 0, 0, 0, time.UTC)
+	exampleRequest := cloudwatch.Request{
+		&start,
+		&end,
+		"eu-west-1",
+		"AWS/EC2",
+		"CPUUtilization",
+		"60",
+		"Sum",
+		[]cloudwatch.Dimension{{"InstanceId", "i-0106b4d25c54baac7"}},
+		"prod",
+	}
+
+	exampleKey := exampleRequest.CacheKey()
+
+	variantStart := time.Date(2018, 7, 4, 17, 30, 0, 0, time.UTC)
+	variantEnd := time.Date(2018, 7, 4, 18, 30, 0, 0, time.UTC)
+	var tests = []cloudwatch.Request{
+		{
+			&variantStart,
+			&end,
+			"eu-west-1",
+			"AWS/EC2",
+			"CPUUtilization",
+			"60",
+			"Sum",
+			[]cloudwatch.Dimension{{"InstanceId", "i-0106b4d25c54baac7"}},
+			"prod",
+		},
+		{
+			&start,
+			&variantEnd,
+			"eu-west-1",
+			"AWS/EC2",
+			"CPUUtilization",
+			"60",
+			"Sum",
+			[]cloudwatch.Dimension{{"InstanceId", "i-0106b4d25c54baac7"}},
+			"prod",
+		},
+		{
+			&start,
+			&end,
+			"eu-central-1",
+			"AWS/EC2",
+			"CPUUtilization",
+			"60",
+			"Sum",
+			[]cloudwatch.Dimension{{"InstanceId", "i-0106b4d25c54baac7"}},
+			"prod",
+		},
+		{
+			&start,
+			&end,
+			"eu-west-1",
+			"AWS/ECS",
+			"CPUUtilization",
+			"60",
+			"Sum",
+			[]cloudwatch.Dimension{{"InstanceId", "i-0106b4d25c54baac7"}},
+			"prod",
+		},
+		{
+			&start,
+			&end,
+			"eu-west-1",
+			"AWS/EC2",
+			"MemoryUsage",
+			"60",
+			"Sum",
+			[]cloudwatch.Dimension{{"InstanceId", "i-0106b4d25c54baac7"}},
+			"prod",
+		},
+		{
+			&start,
+			&end,
+			"eu-west-1",
+			"AWS/EC2",
+			"CPUUtilization",
+			"300",
+			"Sum",
+			[]cloudwatch.Dimension{{"InstanceId", "i-0106b4d25c54baac7"}},
+			"prod",
+		},
+		{
+			&start,
+			&end,
+			"eu-west-1",
+			"AWS/EC2",
+			"CPUUtilization",
+			"60",
+			"Avg",
+			[]cloudwatch.Dimension{{"InstanceId", "i-0106b4d25c54baac7"}},
+			"prod",
+		},
+		{
+			&start,
+			&end,
+			"eu-west-1",
+			"AWS/EC2",
+			"CPUUtilization",
+			"300",
+			"Sum",
+			[]cloudwatch.Dimension{{"InstanceId", "i-01064646d6d6baac7"}},
+			"prod",
+		},
+		{
+			&start,
+			&end,
+			"eu-west-1",
+			"AWS/EC2",
+			"CPUUtilization",
+			"60",
+			"Sum",
+			[]cloudwatch.Dimension{{"InstanceId", "i-0106b4d25c54baac7"}},
+			"sandbox",
+		},
+	}
+	for _, u := range tests {
+		calculatedKey := u.CacheKey()
+		if exampleKey == calculatedKey {
+			t.Errorf("Calculated key shouldn't match example but does. '%s' == '%s' ", calculatedKey, exampleKey)
+		}
+	}
+}

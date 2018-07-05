@@ -49,8 +49,22 @@ type Dimension struct {
 	Value string
 }
 
+func (d Dimension) String() string {
+	return fmt.Sprintf("%s:%s", d.Name, d.Value)
+}
+
 func (r *Request) CacheKey() string {
-	return fmt.Sprintf("cloudwatch-%d-%d-%s", r.Start.Unix(), r.End.Unix(), r.Metric)
+	return fmt.Sprintf("cloudwatch-%d-%d-%s-%s-%s-%s-%s-%s-%s",
+		r.Start.Unix(),
+		r.End.Unix(),
+		r.Region,
+		r.Namespace,
+		r.Metric,
+		r.Period,
+		r.Statistic,
+		r.Dimensions,
+		r.Profile,
+	)
 }
 
 // Perform a query to cloudwatch
@@ -106,7 +120,6 @@ func NewConfig() *Config {
 func (c Config) Query(r *Request) (Response, error) {
 	var profile string
 	var conf aws.Config
-
 	if r.Profile == "default" {
 		profile = "bosun-default"
 	} else {

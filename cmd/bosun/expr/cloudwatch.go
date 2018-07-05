@@ -119,9 +119,14 @@ func timeCloudwatchRequest(e *State, T miniprofiler.Timer, req *cloudwatch.Reque
 	e.cloudwatchQueries = append(e.cloudwatchQueries, *req)
 	b, _ := json.MarshalIndent(req, "", "  ")
 	T.StepCustomTiming("cloudwatch", "query", string(b), func() {
+		key := req.CacheKey()
 
-		// disabled caching fuctionality
-		resp, err = e.CloudWatchContext.Query(req)
+		getFn := func() (interface{}, error) {
+			return e.CloudWatchContext.Query(req)
+		}
+		var val interface{}
+		val, err = e.Cache.Get(key, getFn)
+		resp = val.(cloudwatch.Response)
 
 	})
 	return
