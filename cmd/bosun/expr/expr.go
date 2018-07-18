@@ -50,6 +50,7 @@ type Backends struct {
 	ElasticHosts    ElasticHosts
 	InfluxConfig    client.HTTPConfig
 	ElasticConfig   ElasticConfig
+	AzureMonitor    AzureMonitorClients
 }
 
 type BosunProviders struct {
@@ -228,6 +229,9 @@ type Table struct {
 
 func (t Table) Type() models.FuncType { return models.TypeTable }
 func (t Table) Value() interface{}    { return t }
+
+func (a AzureResources) Type() models.FuncType { return models.TypeAzureResourceList }
+func (a AzureResources) Value() interface{}    { return a }
 
 type SortablePoint struct {
 	T time.Time
@@ -736,7 +740,7 @@ func (e *State) walkFunc(node *parse.FuncNode, T miniprofiler.Timer) *Results {
 			case *parse.ExprNode:
 				v = e.walkExpr(t, T)
 			case *parse.PrefixNode:
-				v = e.walkPrefix(t, T)
+				v = extract(e.walkPrefix(t, T))
 			default:
 				panic(fmt.Errorf("expr: unknown func arg type"))
 			}
@@ -791,6 +795,9 @@ func extract(res *Results) interface{} {
 		return float64(res.Results[0].Value.Value().(Scalar))
 	}
 	if len(res.Results) == 1 && res.Results[0].Type() == models.TypeESQuery {
+		return res.Results[0].Value.Value()
+	}
+	if len(res.Results) == 1 && res.Results[0].Type() == models.TypeAzureResourceList {
 		return res.Results[0].Value.Value()
 	}
 	if len(res.Results) == 1 && res.Results[0].Type() == models.TypeESIndexer {

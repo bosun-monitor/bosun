@@ -78,6 +78,7 @@ type SystemConfProvider interface {
 	GetGraphiteContext() graphite.Context
 	GetInfluxContext() client.HTTPConfig
 	GetElasticContext() expr.ElasticHosts
+	GetAzureMonitorContext() expr.AzureMonitorClients
 	AnnotateEnabled() bool
 
 	MakeLink(string, *url.Values) string
