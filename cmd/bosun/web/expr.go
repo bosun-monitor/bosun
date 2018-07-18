@@ -79,6 +79,7 @@ func Expr(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (v inter
 		GraphiteContext: schedule.SystemConf.GetGraphiteContext(),
 		InfluxConfig:    schedule.SystemConf.GetInfluxContext(),
 		ElasticHosts:    schedule.SystemConf.GetElasticContext(),
+		AzureMonitor:    schedule.SystemConf.GetAzureMonitorContext(),
 	}
 	providers := &expr.BosunProviders{
 		Cache:     cacheObj,

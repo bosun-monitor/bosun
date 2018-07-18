@@ -294,6 +294,54 @@ Outgoing SMTP server hostname or IP address.
 	Host = "mail.example.com"
 ```
 
+### AzureMonitorConf
+AzureConf enables [Azure Monitor specific functions](/expressions#azure-monitor-query-functions) in the expression language. Multiple clients may be defined allowing you to query different subscriptions and tenants from a single Bosun instance.
+
+#### AzureMonitorConf.default
+Default Azure client to use when the Prefix key is absent or is there and set to "default". When ysing multiple clients the string `default` can change to whatever you want to use in expressions to access this particular client.
+
+#### SubscriptionId
+The Azure Subscription GUID for the client. See [Getting your Azure Subscription GUID (new portal)](https://blogs.msdn.microsoft.com/mschray/2016/03/18/getting-your-azure-subscription-guid-new-portal/) for instructions on finding this with [Azure's portal](https://portal.azure.com).
+
+#### TenantId
+The Azure Tenant GUID for the client. To get the tenant you can access it via "Azure Active Directory > Properties > Directory ID in the Azure portal" as per Azure's [How to get an Azure Active Directory tenant documentation](https://docs.microsoft.com/en-us/azure/active-directory/develop/active-directory-howto-tenant).
+
+#### ClientId
+The Azure Client GUID for the client. This will be the GUID listed as the "Application ID" when you get when create the app registration under Azure Active Directory.
+
+#### ClientSecret
+The Azure generated secret for tor the client. This will be under Settings :: Keys for the application as referenced in ClientID above.
+
+#### Concurrency
+For expressions that need to make multiple http requests like `azmulti()`, this sets the amount of concurrent http requests that will be made at a time. In other words, the number of request workers.
+
+This is an optional parameter, If not set or set to `0` then it will be the default value of `10` workers. A value of `1` means no concurrency since there will only be one worker.
+
+#### DebugRequest
+If set to `true` then HTTP requests to the Azure API's will be logged to stdout. This is an optional parameter with a default of `false`.
+
+#### DebugResponse
+If set to `true` then HTTP responses from Azure API's will be logged to stdout. This is an optional parameter with a default of `false`.
+
+#### Example
+
+```
+[AzureMonitorConf]
+# Default instance will be queries when the prefix key is absent or is there and set to "default". If only defining one client for azure you would use this.
+[AzureMonitorConf.default]
+    SubscriptionId = "52c5bef7-d925-4d0e-9bcd-969dbdbb1068"
+    TenantId = "60730c79-4f4c-4782-9eca-3325638b8f9c"
+    ClientId = "2a434dc4-48df-43b8-ad0e-020798bcb36c"
+    ClientSecret = "AzureMakes+Aweso//meSecrets="
+    Concurrency = 5
+
+[AzureMonitorConf.foo]
+    SubscriptionId = "4b5922c6-0c5a-462f-876f-07072e842ade"
+    TenantId = "2e8abf15-1328-458b-8762-192139857055"
+    ClientId = "3a6d47ca-53eb-4a18-aa77-d3e2d764ba31"
+    ClientSecret = "AzureCreate+Grea/tSecrets="
+```
+
 ### OpenTSDBConf
 Enables an OpenTSDB provider, and also enables [OpenTSDB specific
 functions](/expressions#opentsdb-query-functions) in the expression
