@@ -2832,7 +2832,7 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
                 $scope.canAuto[metric] = true;
                 return;
             }
-            $http.get('/api/tagk/' + metric)
+            $http.get('/api/tagk/' + encodeURIComponent(metric))
                 .success(function (data) {
                 var q = $scope.query_p[index];
                 var tags = new TagSet;
@@ -2888,7 +2888,7 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
                 .error(function (error) {
                 $scope.error = 'Unable to fetch metrics: ' + error;
             });
-            $http.get('/api/metadata/metrics?metric=' + metric)
+            $http.get('/api/metadata/metrics?metric=' + encodeURIComponent(metric))
                 .success(function (data) {
                 var canAuto = data && data.Rate;
                 $scope.canAuto[metric] = canAuto;
@@ -2908,7 +2908,7 @@ bosunControllers.controller('GraphCtrl', ['$scope', '$http', '$location', '$rout
             $scope.error = 'Unable to fetch metrics: ' + error;
         });
         function GetTagVs(k, index) {
-            $http.get('/api/tagv/' + k + '/' + $scope.query_p[index].metric)
+            $http.get('/api/tagv/' + encodeURIComponent(k) + '/' + $scope.query_p[index].metric)
                 .success(function (data) {
                 data.sort();
                 $scope.tagvs[index][k] = data;
