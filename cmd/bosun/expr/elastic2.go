@@ -269,7 +269,9 @@ func timeESRequest(e *State, T miniprofiler.Timer, req *ElasticRequest) (resp *e
 			return e.ElasticHosts.Query(req)
 		}
 		var val interface{}
-		val, err = e.Cache.Get(key, getFn)
+		var hit bool
+		val, err, hit = e.Cache.Get(key, getFn)
+		collectCacheHit(e.Cache, "elastic", hit)
 		resp = val.(*elastic.SearchResult)
 	})
 	return

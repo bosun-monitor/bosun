@@ -29,7 +29,7 @@ import (
 // Matt and I decided not to expire the cache at given points (such as reloading rule page), but I forgot why. ?
 // the only risk is that if you query your store for data -5m to now and your store doesn't have the latest points up to date,
 // and then 5m from now you query -10min to -5m you'll get the same cached data, including the incomplete last points
-var cacheObj = cache.New(100)
+var cacheObj = cache.New("web", 100)
 
 func Expr(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (v interface{}, err error) {
 	defer func() {
@@ -138,7 +138,7 @@ type Res struct {
 func procRule(t miniprofiler.Timer, ruleConf conf.RuleConfProvider, a *conf.Alert, now time.Time, summary bool, email string, template_group string, incidentID int) (*ruleResult, error) {
 	s := &sched.Schedule{}
 	s.Search = schedule.Search
-	if err := s.Init(schedule.SystemConf, ruleConf, schedule.DataAccess, AnnotateBackend, false, false); err != nil {
+	if err := s.Init("web", schedule.SystemConf, ruleConf, schedule.DataAccess, AnnotateBackend, false, false); err != nil {
 		return nil, err
 	}
 	rh := s.NewRunHistory(now, cacheObj)
