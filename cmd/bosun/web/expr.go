@@ -42,8 +42,15 @@ func Expr(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (v inter
 	if err != nil {
 		return nil, err
 	}
-
-	lines := strings.Split(strings.TrimSpace(string(text)), "\n")
+	rawLines := strings.Split(strings.TrimSpace(string(text)), "\n")
+	var lines []string
+	for _, line := range rawLines {
+		// remove comments and empty lines before processing so comments can be after the final line
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		lines = append(lines, line)
+	}
 	var expression string
 	vars := map[string]string{}
 	varRegex := regexp.MustCompile(`(\$\w+)\s*=(.*)`)
