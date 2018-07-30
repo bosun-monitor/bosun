@@ -16,7 +16,9 @@ import (
 	"bosun.org/cmd/bosun/cache"
 	"bosun.org/cmd/bosun/expr/parse"
 	"bosun.org/cmd/bosun/search"
+	"bosun.org/collect"
 	"bosun.org/graphite"
+	"bosun.org/metadata"
 	"bosun.org/models"
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
@@ -810,4 +812,25 @@ func extract(res *Results) interface{} {
 		return res.Results[0].Value.Value()
 	}
 	return res
+}
+
+// collectCache is a helper function for collecting metrics on
+// the expression cache
+func collectCacheHit(c *cache.Cache, qType string, hit bool) {
+	if c == nil {
+		return // if no cache
+	}
+	tags := opentsdb.TagSet{"query_type": qType, "name": c.Name}
+	if hit {
+		collect.Add("expr_cache.hit_by_type", tags, 1)
+		return
+	}
+	collect.Add("expr_cache.miss_by_type", tags, 1)
+}
+
+func init() {
+	metadata.AddMetricMeta("bosun.expr_cache.hit_by_type", metadata.Counter, metadata.Request,
+		"The number of hits to Bosun's expression query cache that resulted in a cache hit.")
+	metadata.AddMetricMeta("bosun.expr_cache.miss_by_type", metadata.Counter, metadata.Request,
+		"The number of hits to Bosun's expression query cache that resulted in a cache miss.")
 }

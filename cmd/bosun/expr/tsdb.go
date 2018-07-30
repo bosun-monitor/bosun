@@ -82,7 +82,9 @@ func timeTSDBRequest(e *State, T miniprofiler.Timer, req *opentsdb.Request) (s o
 				return e.TSDBContext.Query(req)
 			}
 			var val interface{}
-			val, err = e.Cache.Get(string(b), getFn)
+			var hit bool
+			val, err, hit = e.Cache.Get(string(b), getFn)
+			collectCacheHit(e.Cache, "opentsdb", hit)
 			rs := val.(opentsdb.ResponseSet)
 			s = rs.Copy()
 			for _, r := range rs {

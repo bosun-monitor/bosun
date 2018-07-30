@@ -218,7 +218,9 @@ func timeGraphiteRequest(e *State, T miniprofiler.Timer, req *graphite.Request) 
 			return e.GraphiteContext.Query(req)
 		}
 		var val interface{}
-		val, err = e.Cache.Get(key, getFn)
+		var hit bool
+		val, err, hit = e.Cache.Get(key, getFn)
+		collectCacheHit(e.Cache, "graphite", hit)
 		resp = val.(graphite.Response)
 	})
 	return
