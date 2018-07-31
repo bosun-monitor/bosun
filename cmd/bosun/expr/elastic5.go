@@ -32,7 +32,7 @@ func init() {
 	esClients.m = make(map[string]*elastic.Client)
 }
 
-func ESAll(e *State, T miniprofiler.Timer) (*Results, error) {
+func ESAll(e *State) (*Results, error) {
 	var r Results
 	q := ESQuery{
 		Query: elastic.NewMatchAllQuery(),
@@ -41,7 +41,7 @@ func ESAll(e *State, T miniprofiler.Timer) (*Results, error) {
 	return &r, nil
 }
 
-func ESAnd(e *State, T miniprofiler.Timer, esqueries ...ESQuery) (*Results, error) {
+func ESAnd(e *State, esqueries ...ESQuery) (*Results, error) {
 	var r Results
 	queries := make([]elastic.Query, len(esqueries))
 	for i, q := range esqueries {
@@ -54,7 +54,7 @@ func ESAnd(e *State, T miniprofiler.Timer, esqueries ...ESQuery) (*Results, erro
 	return &r, nil
 }
 
-func ESNot(e *State, T miniprofiler.Timer, query ESQuery) (*Results, error) {
+func ESNot(e *State, query ESQuery) (*Results, error) {
 	var r Results
 	q := ESQuery{
 		Query: elastic.NewBoolQuery().MustNot(query.Query),
@@ -63,7 +63,7 @@ func ESNot(e *State, T miniprofiler.Timer, query ESQuery) (*Results, error) {
 	return &r, nil
 }
 
-func ESOr(e *State, T miniprofiler.Timer, esqueries ...ESQuery) (*Results, error) {
+func ESOr(e *State, esqueries ...ESQuery) (*Results, error) {
 	var r Results
 	queries := make([]elastic.Query, len(esqueries))
 	for i, q := range esqueries {
@@ -76,7 +76,7 @@ func ESOr(e *State, T miniprofiler.Timer, esqueries ...ESQuery) (*Results, error
 	return &r, nil
 }
 
-func ESRegexp(e *State, T miniprofiler.Timer, key string, regex string) (*Results, error) {
+func ESRegexp(e *State, key string, regex string) (*Results, error) {
 	var r Results
 	q := ESQuery{
 		Query: elastic.NewRegexpQuery(key, regex),
@@ -85,7 +85,7 @@ func ESRegexp(e *State, T miniprofiler.Timer, key string, regex string) (*Result
 	return &r, nil
 }
 
-func ESQueryString(e *State, T miniprofiler.Timer, key string, query string) (*Results, error) {
+func ESQueryString(e *State, key string, query string) (*Results, error) {
 	var r Results
 	qs := elastic.NewQueryStringQuery(query)
 	if key != "" {
@@ -96,7 +96,7 @@ func ESQueryString(e *State, T miniprofiler.Timer, key string, query string) (*R
 	return &r, nil
 }
 
-func ESExists(e *State, T miniprofiler.Timer, field string) (*Results, error) {
+func ESExists(e *State, field string) (*Results, error) {
 	var r Results
 	qs := elastic.NewExistsQuery(field)
 	q := ESQuery{Query: qs}
@@ -104,7 +104,7 @@ func ESExists(e *State, T miniprofiler.Timer, field string) (*Results, error) {
 	return &r, nil
 }
 
-func ESGT(e *State, T miniprofiler.Timer, key string, gt float64) (*Results, error) {
+func ESGT(e *State, key string, gt float64) (*Results, error) {
 	var r Results
 	q := ESQuery{
 		Query: elastic.NewRangeQuery(key).Gt(gt),
@@ -113,7 +113,7 @@ func ESGT(e *State, T miniprofiler.Timer, key string, gt float64) (*Results, err
 	return &r, nil
 }
 
-func ESGTE(e *State, T miniprofiler.Timer, key string, gte float64) (*Results, error) {
+func ESGTE(e *State, key string, gte float64) (*Results, error) {
 	var r Results
 	q := ESQuery{
 		Query: elastic.NewRangeQuery(key).Gte(gte),
@@ -122,7 +122,7 @@ func ESGTE(e *State, T miniprofiler.Timer, key string, gte float64) (*Results, e
 	return &r, nil
 }
 
-func ESLT(e *State, T miniprofiler.Timer, key string, lt float64) (*Results, error) {
+func ESLT(e *State, key string, lt float64) (*Results, error) {
 	var r Results
 	q := ESQuery{
 		Query: elastic.NewRangeQuery(key).Lt(lt),
@@ -131,7 +131,7 @@ func ESLT(e *State, T miniprofiler.Timer, key string, lt float64) (*Results, err
 	return &r, nil
 }
 
-func ESLTE(e *State, T miniprofiler.Timer, key string, lte float64) (*Results, error) {
+func ESLTE(e *State, key string, lte float64) (*Results, error) {
 	var r Results
 	q := ESQuery{
 		Query: elastic.NewRangeQuery(key).Lte(lte),
@@ -251,7 +251,7 @@ func (r *ElasticRequest) CacheKey() (string, error) {
 
 // timeESRequest execute the elasticsearch query (which may set or hit cache) and returns
 // the search results.
-func timeESRequest(e *State, T miniprofiler.Timer, req *ElasticRequest) (resp *elastic.SearchResult, err error) {
+func timeESRequest(e *State, req *ElasticRequest) (resp *elastic.SearchResult, err error) {
 	var source interface{}
 	source, err = req.Source.Source()
 	if err != nil {
@@ -265,7 +265,7 @@ func timeESRequest(e *State, T miniprofiler.Timer, req *ElasticRequest) (resp *e
 	if err != nil {
 		return nil, err
 	}
-	T.StepCustomTiming("elastic", "query", fmt.Sprintf("%s:%v\n%s", req.HostKey, req.Indices, b), func() {
+	e.Timer.StepCustomTiming("elastic", "query", fmt.Sprintf("%s:%v\n%s", req.HostKey, req.Indices, b), func() {
 		getFn := func() (interface{}, error) {
 			return e.ElasticHosts.Query(req)
 		}
@@ -278,7 +278,7 @@ func timeESRequest(e *State, T miniprofiler.Timer, req *ElasticRequest) (resp *e
 	return
 }
 
-func ESIndicies(e *State, T miniprofiler.Timer, timeField string, literalIndices ...string) *Results {
+func ESIndicies(e *State, timeField string, literalIndices ...string) *Results {
 	var r Results
 	indexer := ESIndexer{}
 	// Don't check for existing indexes in this case, just pass through and let elastic return
@@ -291,11 +291,11 @@ func ESIndicies(e *State, T miniprofiler.Timer, timeField string, literalIndices
 	return &r
 }
 
-func ESLS(e *State, T miniprofiler.Timer, indexRoot string) (*Results, error) {
-	return ESDaily(e, T, "@timestamp", indexRoot+"-", "2006.01.02")
+func ESLS(e *State, indexRoot string) (*Results, error) {
+	return ESDaily(e, "@timestamp", indexRoot+"-", "2006.01.02")
 }
 
-func ESDaily(e *State, T miniprofiler.Timer, timeField, indexRoot, layout string) (*Results, error) {
+func ESDaily(e *State, timeField, indexRoot, layout string) (*Results, error) {
 	var r Results
 	indexer := ESIndexer{}
 	indexer.TimeField = timeField
@@ -312,7 +312,7 @@ func ESDaily(e *State, T miniprofiler.Timer, timeField, indexRoot, layout string
 	return &r, nil
 }
 
-func ESMonthly(e *State, T miniprofiler.Timer, timeField, indexRoot, layout string) (*Results, error) {
+func ESMonthly(e *State, timeField, indexRoot, layout string) (*Results, error) {
 	var r Results
 	indexer := ESIndexer{}
 	indexer.TimeField = timeField
@@ -359,7 +359,7 @@ func ESDateHistogram(prefix string, e *State, T miniprofiler.Timer, indexer ESIn
 	}
 	if keystring == "" {
 		req.Source = req.Source.Aggregation("ts", ts)
-		result, err := timeESRequest(e, T, req)
+		result, err := timeESRequest(e, req)
 		if err != nil {
 			return nil, err
 		}
@@ -390,7 +390,7 @@ func ESDateHistogram(prefix string, e *State, T miniprofiler.Timer, indexer ESIn
 		aggregation = elastic.NewTermsAggregation().Field(keys[i]).SubAggregation("g_"+keys[i+1], aggregation)
 	}
 	req.Source = req.Source.Aggregation("g_"+keys[0], aggregation)
-	result, err := timeESRequest(e, T, req)
+	result, err := timeESRequest(e, req)
 	if err != nil {
 		return nil, err
 	}
