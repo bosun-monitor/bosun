@@ -25,7 +25,7 @@ func SNMPFortinet(cfg conf.SNMP) {
 		Metrics: []conf.MIBMetric{
 			{Metric: "fortinet.disk.used", Oid: ".4.1.6.0", Unit: "MiB", RateType: "gauge", Description: "Disk space used", FallbackOid: "", Tags: "", Scale: 0},
 			{Metric: "fortinet.disk.total", Oid: ".4.1.7.0", Unit: "MiB", RateType: "gauge", Description: "Disk space total", FallbackOid: "", Tags: "", Scale: 0},
-			{Metric: "fortinet.session.count", Oid: ".11.2.2.1.1.1", Unit: "sessions", RateType: "gauge", Description: "Total number of current sessions being tracked", FallbackOid: "", Tags: "", Scale: 0},
+			{Metric: "fortinet.session.count", Oid: ".4.1.8.0", Unit: "sessions", RateType: "gauge", Description: "Total number of current sessions being tracked", FallbackOid: ".11.2.2.1.1.1", Tags: "", Scale: 0},
 			{Metric: "fortinet.vpn.tunnel_up_count", Oid: ".12.1.1.0", Unit: "tunnel count", RateType: "gauge", Description: "Total number of up VPN tunnels", FallbackOid: "", Tags: "", Scale: 0},
 		},
 		Trees: []conf.MIBTree{
