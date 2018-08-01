@@ -247,7 +247,7 @@ func TestDependency_Blocks_Unknown(t *testing.T) {
 		}`,
 		queries: map[string]opentsdb.ResponseSet{
 			`q("avg:a{host=*}", ` + window5Min + `)`: {
-			//no results for a. Goes unkown here.
+				//no results for a. Goes unkown here.
 			},
 			`q("avg:b{host=*}", ` + window5Min + `)`: {
 				{

@@ -497,7 +497,7 @@ func OpenTSDBVersion(t miniprofiler.Timer, w http.ResponseWriter, r *http.Reques
 	if schedule.SystemConf.GetTSDBContext() != nil {
 		return schedule.SystemConf.GetTSDBContext().Version(), nil
 	}
-	return opentsdb.Version{0, 0}, nil
+	return opentsdb.Version{Major: 0, Minor: 0}, nil
 }
 
 func AnnotateEnabled(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
