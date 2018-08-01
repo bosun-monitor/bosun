@@ -1,7 +1,7 @@
 language: go
 sudo: false
 go:
-  - 1.9
+  - 1.10.3
 
 notifications:
   email: false
