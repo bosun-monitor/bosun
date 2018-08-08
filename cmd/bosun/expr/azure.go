@@ -126,9 +126,8 @@ func AzureMetricDefinitions(prefix string, e *State, T miniprofiler.Timer, names
 	return
 }
 
-// AzureQuery queries an Azure monitor metric for the given resource and returns a series set tagged by
-// rsg (resource group), name (resource name), and any tag keys parsed from the tagKeysCSV argument
-func AzureQuery(prefix string, e *State, T miniprofiler.Timer, namespace, metric, tagKeysCSV, rsg, resName, agtype, interval, sdur, edur string) (r *Results, err error) {
+// azureQuery queries Azure metrics for time series data based on the resourceUri
+func azureQuery(prefix string, e *State, T miniprofiler.Timer, metric, tagKeysCSV string, rsg, resName, resourceUri string, agtype string, interval, sdur, edur string) (r *Results, err error) {
 	r = new(Results)
 	// Verify prefix is a defined resource and fetch the collection of clients
 	cc, clientFound := e.Backends.AzureMonitor[prefix]
@@ -176,10 +175,9 @@ func AzureQuery(prefix string, e *State, T miniprofiler.Timer, namespace, metric
 	if err != nil {
 		return
 	}
-	cacheKey := strings.Join([]string{prefix, namespace, metric, tagKeysCSV, rsg, resName, agtype, interval, st, en}, ":")
-	// Function to fetch Azure Metric values
+	cacheKey := strings.Join([]string{metric, filter, resourceUri, aggLong, interval, st, en}, ":")
 	getFn := func() (interface{}, error) {
-		req, err := c.ListPreparer(context.Background(), azResourceURI(c.SubscriptionID, rsg, namespace, resName),
+		req, err := c.ListPreparer(context.Background(), resourceUri,
 			fmt.Sprintf("%s/%s", st, en),
 			tg,
 			metric,
@@ -188,7 +186,7 @@ func AzureQuery(prefix string, e *State, T miniprofiler.Timer, namespace, metric
 			"",
 			filter,
 			insights.Data,
-			namespace)
+			"")
 		if err != nil {
 			return nil, err
 		}
@@ -264,6 +262,20 @@ func AzureQuery(prefix string, e *State, T miniprofiler.Timer, namespace, metric
 	return r, nil
 }
 
+// AzureQuery queries an Azure monitor metric for the given resource and returns a series set tagged by
+// rsg (resource group), name (resource name), and any tag keys parsed from the tagKeysCSV argument
+func AzureQuery(prefix string, e *State, T miniprofiler.Timer, namespace, metric, tagKeysCSV, rsg, resName, agtype, interval, sdur, edur string) (r *Results, err error) {
+	r = new(Results)
+	// Verify prefix is a defined resource and fetch the collection of clients
+	cc, clientFound := e.Backends.AzureMonitor[prefix]
+	if !clientFound {
+		return r, fmt.Errorf(`azure client with name "%v" not defined`, prefix)
+	}
+	c := cc.MetricsClient
+	resourceURI := azResourceURI(c.SubscriptionID, rsg, namespace, resName)
+	return azureQuery(prefix, e, T, metric, tagKeysCSV, rsg, resName, resourceURI, agtype, interval, sdur, edur)
+}
+
 // AzureMultiQuery queries multiple Azure resources and returns them as a single result set
 // It makes one HTTP request per resource and parallelizes the requests
 func AzureMultiQuery(prefix string, e *State, T miniprofiler.Timer, metric, tagKeysCSV string, resources AzureResources, agtype string, interval, sdur, edur string) (r *Results, err error) {
@@ -286,7 +298,7 @@ func AzureMultiQuery(prefix string, e *State, T miniprofiler.Timer, metric, tagK
 	// a worker makes a time series request for a resource
 	worker := func() {
 		for resource := range reqCh {
-			res, err := AzureQuery(prefix, e, T, resource.Type, metric, tagKeysCSV, resource.ResourceGroup, resource.Name, agtype, interval, sdur, edur)
+			res, err := azureQuery(prefix, e, T, metric, tagKeysCSV, resource.ResourceGroup, resource.Name, resource.ID, agtype, interval, sdur, edur)
 			resCh <- res
 			errCh <- err
 		}
@@ -371,6 +383,7 @@ func azureListResources(prefix string, e *State, T miniprofiler.Timer) (AzureRes
 					Type:          *val.Type,
 					ResourceGroup: splitID[4],
 					Tags:          azTags,
+					ID:            *val.ID,
 				})
 			}
 		}
@@ -431,6 +444,7 @@ type AzureResource struct {
 	Type          string
 	ResourceGroup string
 	Tags          map[string]string
+	ID            string
 }
 
 // AzureResources is a slice of AzureResource
