@@ -137,7 +137,7 @@ func TestCacheKeyMatch(t *testing.T) {
 			Dimensions: []cloudwatch.Dimension{{Name: "InstanceId", Value: "i-0106b4d25c54baac7"}},
 			Profile:    "prod",
 		},
-			"cloudwatch-1530723600-1530727200-eu-west-1-AWS/EC2-CPUUtilization-60-Sum-[InstanceId:i-0106b4d25c54baac7]-prod"},
+			key: "cloudwatch-1530723600-1530727200-eu-west-1-AWS/EC2-CPUUtilization-60-Sum-[InstanceId:i-0106b4d25c54baac7]-prod"},
 	}
 
 	for _, u := range tests {
