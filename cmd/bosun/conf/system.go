@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"bosun.org/slog"
 	"bosun.org/cloudwatch"
+	"bosun.org/slog"
 
 	"bosun.org/cmd/bosun/expr"
 	"bosun.org/graphite"

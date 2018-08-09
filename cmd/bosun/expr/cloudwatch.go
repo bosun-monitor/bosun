@@ -125,7 +125,9 @@ func timeCloudwatchRequest(e *State, T miniprofiler.Timer, req *cloudwatch.Reque
 			return e.CloudWatchContext.Query(req)
 		}
 		var val interface{}
-		val, err = e.Cache.Get(key, getFn)
+		var hit bool
+		val, err, hit = e.Cache.Get(key, getFn)
+		collectCacheHit(e.Cache, "cloudwatch", hit)
 		resp = val.(cloudwatch.Response)
 
 	})
