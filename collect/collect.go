@@ -369,6 +369,22 @@ func Add(metric string, ts opentsdb.TagSet, inc int64) error {
 	return nil
 }
 
+func Get(metric string, ts opentsdb.TagSet) int64 {
+	var counter_value int64
+	if err := check(metric, &ts); err != nil {
+		return 0
+	}
+	tss := metric + ts.String()
+	mlock.Lock()
+	if counters[tss] != nil {
+		counter_value = counters[tss].value
+	} else {
+		counter_value = 0
+	}
+	mlock.Unlock()
+	return counter_value
+}
+
 type putMetric struct {
 	metric string
 	ts     opentsdb.TagSet

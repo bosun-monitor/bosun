@@ -16,7 +16,9 @@ import (
 	"bosun.org/cmd/bosun/cache"
 	"bosun.org/cmd/bosun/expr/parse"
 	"bosun.org/cmd/bosun/search"
+	"bosun.org/collect"
 	"bosun.org/graphite"
+	"bosun.org/metadata"
 	"bosun.org/models"
 	"bosun.org/opentsdb"
 	"bosun.org/slog"
@@ -50,6 +52,7 @@ type Backends struct {
 	ElasticHosts    ElasticHosts
 	InfluxConfig    client.HTTPConfig
 	ElasticConfig   ElasticConfig
+	AzureMonitor    AzureMonitorClients
 }
 
 type BosunProviders struct {
@@ -240,6 +243,9 @@ type Table struct {
 
 func (t Table) Type() models.FuncType { return models.TypeTable }
 func (t Table) Value() interface{}    { return t }
+
+func (a AzureResources) Type() models.FuncType { return models.TypeAzureResourceList }
+func (a AzureResources) Value() interface{}    { return a }
 
 type SortablePoint struct {
 	T time.Time
@@ -748,7 +754,7 @@ func (e *State) walkFunc(node *parse.FuncNode, T miniprofiler.Timer) *Results {
 			case *parse.ExprNode:
 				v = e.walkExpr(t, T)
 			case *parse.PrefixNode:
-				v = e.walkPrefix(t, T)
+				v = extract(e.walkPrefix(t, T))
 			default:
 				panic(fmt.Errorf("expr: unknown func arg type"))
 			}
@@ -805,6 +811,9 @@ func extract(res *Results) interface{} {
 	if len(res.Results) == 1 && res.Results[0].Type() == models.TypeESQuery {
 		return res.Results[0].Value.Value()
 	}
+	if len(res.Results) == 1 && res.Results[0].Type() == models.TypeAzureResourceList {
+		return res.Results[0].Value.Value()
+	}
 	if len(res.Results) == 1 && res.Results[0].Type() == models.TypeESIndexer {
 		return res.Results[0].Value.Value()
 	}
@@ -815,4 +824,25 @@ func extract(res *Results) interface{} {
 		return res.Results[0].Value.Value()
 	}
 	return res
+}
+
+// collectCache is a helper function for collecting metrics on
+// the expression cache
+func collectCacheHit(c *cache.Cache, qType string, hit bool) {
+	if c == nil {
+		return // if no cache
+	}
+	tags := opentsdb.TagSet{"query_type": qType, "name": c.Name}
+	if hit {
+		collect.Add("expr_cache.hit_by_type", tags, 1)
+		return
+	}
+	collect.Add("expr_cache.miss_by_type", tags, 1)
+}
+
+func init() {
+	metadata.AddMetricMeta("bosun.expr_cache.hit_by_type", metadata.Counter, metadata.Request,
+		"The number of hits to Bosun's expression query cache that resulted in a cache hit.")
+	metadata.AddMetricMeta("bosun.expr_cache.miss_by_type", metadata.Counter, metadata.Request,
+		"The number of hits to Bosun's expression query cache that resulted in a cache miss.")
 }

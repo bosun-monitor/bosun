@@ -54,13 +54,13 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 	}); err != nil {
 		Error = err
 	}
-	mem := make(map[string]float64)
+	mem := make(map[string]int64)
 	if err := readLine("/proc/meminfo", func(s string) error {
 		m := meminfoRE.FindStringSubmatch(s)
 		if m == nil {
 			return nil
 		}
-		i, err := strconv.ParseFloat(m[2], 64)
+		i, err := strconv.ParseInt(m[2], 10, 64)
 		if err != nil {
 			return err
 		}
@@ -70,11 +70,24 @@ func c_procstats_linux() (opentsdb.MultiDataPoint, error) {
 	}); err != nil {
 		Error = err
 	}
-	Add(&md, osMemTotal, int(mem["MemTotal"])*1024, nil, metadata.Gauge, metadata.Bytes, osMemTotalDesc)
-	Add(&md, osMemFree, (int(mem["MemFree"])+int(mem["Buffers"])+int(mem["Cached"]))*1024, nil, metadata.Gauge, metadata.Bytes, osMemFreeDesc)
-	Add(&md, osMemUsed, (int(mem["MemTotal"])-(int(mem["MemFree"])+int(mem["Buffers"])+int(mem["Cached"])))*1024, nil, metadata.Gauge, metadata.Bytes, osMemUsedDesc)
-	if mem["MemTotal"] != 0 {
-		Add(&md, osMemPctFree, (mem["MemFree"]+mem["Buffers"]+mem["Cached"])/mem["MemTotal"]*100, nil, metadata.Gauge, metadata.Pct, osMemFreeDesc)
+	bufferCacheSlab := mem["Buffers"] + mem["Cached"] + mem["Slab"]
+	memTotal := mem["MemTotal"]
+	memFree := mem["MemFree"]
+	// MemAvailable was introduced in the 3.14 kernel and is a more accurate measure of available memory
+	// https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=34e431b0a
+	// We used this metric if it is available
+	available, availableIsAvailable := mem["MemAvailable"]
+	Add(&md, osMemTotal, memTotal*1024, nil, metadata.Gauge, metadata.Bytes, osMemTotalDesc)
+	freeValue := memFree + bufferCacheSlab
+	usedValue := memTotal - memFree - bufferCacheSlab
+	if availableIsAvailable {
+		freeValue = available
+		usedValue = memTotal - available
+	}
+	Add(&md, osMemFree, freeValue*1024, nil, metadata.Gauge, metadata.Bytes, osMemFreeDesc)
+	Add(&md, osMemUsed, usedValue*1024, nil, metadata.Gauge, metadata.Bytes, osMemUsedDesc)
+	if memTotal != 0 {
+		Add(&md, osMemPctFree, (float64(freeValue))/float64(memTotal)*100, nil, metadata.Gauge, metadata.Pct, osMemFreeDesc)
 	}
 
 	num_cores := 0

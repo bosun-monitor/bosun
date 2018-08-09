@@ -64,7 +64,7 @@ func setup() func() {
 
 func initSched(sc conf.SystemConfProvider, c conf.RuleConfProvider) (*Schedule, error) {
 	s := new(Schedule)
-	err := s.Init(sc, c, db, nil, false, false)
+	err := s.Init("test_schedule", sc, c, db, nil, false, false)
 	return s, err
 }
 

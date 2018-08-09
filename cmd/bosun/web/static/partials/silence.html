@@ -114,7 +114,7 @@
 					<td ng-bind="s.User"></td>
 					<td ng-bind="s.Message"></td>
 					<td>
-						<a class="btn btn-primary btn-xs" ng-href="/silence?start={{time(s.Start)}}&end={{time(s.End)}}&alert={{s.Alert}}&tags={{encode(s.TagString)}}{{s.Forget ? '&forget': ''}}&edit={{id}}">edit</a>
+						<a class="btn btn-primary btn-xs" ng-href="{{getEditSilenceLink(s, id)}}">edit</a>
 						<button class="btn btn-danger btn-xs" ng-click="clear(id)">clear</button>
 					</td>
 				</tr>

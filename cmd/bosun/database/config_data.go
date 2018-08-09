@@ -3,6 +3,7 @@ package database
 import (
 	"crypto/md5"
 	"encoding/base64"
+	"fmt"
 
 	"github.com/garyburd/redigo/redis"
 
@@ -12,6 +13,9 @@ import (
 type ConfigDataAccess interface {
 	SaveTempConfig(text string) (hash string, err error)
 	GetTempConfig(hash string) (text string, err error)
+
+	ShortenLink(fullURL string) (id int, err error)
+	GetShortLink(id int) (fullURL string, err error)
 }
 
 func (d *dataAccess) Configs() ConfigDataAccess {
@@ -45,4 +49,34 @@ func (d *dataAccess) GetTempConfig(hash string) (string, error) {
 	}
 	_, err = conn.Do("EXPIRE", key, configLifetime)
 	return dat, slog.Wrap(err)
+}
+
+const (
+	shortLinkCounterKey = "shortlinkCount"
+	shortLinksKey       = "shortLinks"
+)
+
+func (d *dataAccess) ShortenLink(fullURL string) (id int, err error) {
+	conn := d.Get()
+	defer conn.Close()
+
+	newID, err := redis.Int(conn.Do("INCR", shortLinkCounterKey))
+	if err != nil {
+		return 0, slog.Wrap(err)
+	}
+	if _, err := conn.Do("HSET", shortLinksKey, fmt.Sprint(newID), fullURL); err != nil {
+		return 0, slog.Wrap(err)
+	}
+	return newID, nil
+}
+
+func (d *dataAccess) GetShortLink(id int) (fullURL string, err error) {
+	conn := d.Get()
+	defer conn.Close()
+
+	s, err := redis.String(conn.Do("HGET", shortLinksKey, fmt.Sprint(id)))
+	if err != nil {
+		return "", slog.Wrap(err)
+	}
+	return s, nil
 }

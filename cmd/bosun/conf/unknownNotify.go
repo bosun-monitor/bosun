@@ -27,6 +27,7 @@ var defaultUnknownTemplate = &Template{
 	`)),
 	Subject: template.Must(template.New("subject").Parse(`{{.Name}}: {{.Group | len}} unknown alerts`)),
 }
+
 var unknownDefaults defaultTemplates
 
 func init() {
@@ -68,8 +69,35 @@ func (n *Notification) PrepareUnknown(t *Template, c SystemConfProvider, name st
 		}
 		return buf.String(), nil
 	}
+
 	tks := n.UnknownTemplateKeys
-	n.prepareFromTemplateKeys(pn, tks, render, unknownDefaults)
+
+	ak := map[string][]string{
+		"alert_key": {},
+	}
+
+	for i := range aks {
+		contain := func(key string, array []string) bool {
+			for _, value := range array {
+				if value == key {
+					return true
+				}
+			}
+			return false
+		}
+		if contain(fmt.Sprint(aks[i]), ak["alert_key"]) != true {
+			ak["alert_key"] = append(ak["alert_key"], fmt.Sprint(aks[i]))
+		}
+	}
+
+	details := &NotificationDetails{
+		NotifyName:  n.Name,
+		TemplateKey: tks.BodyTemplate,
+		Ak:          ak["alert_key"],
+		NotifyType:  2,
+	}
+
+	n.prepareFromTemplateKeys(pn, tks, render, unknownDefaults, details)
 	return pn
 }
 
@@ -132,8 +160,23 @@ func (n *Notification) PrepareMultipleUnknowns(t *Template, c SystemConfProvider
 		}
 		return buf.String(), nil
 	}
+
 	tks := n.UnknownMultiTemplateKeys
-	n.prepareFromTemplateKeys(pn, tks, render, unknownMultiDefaults)
+
+	ak := []string{}
+
+	for _, v := range groups {
+		ak = append(ak, fmt.Sprint(v))
+	}
+
+	details := &NotificationDetails{
+		NotifyName:  n.Name,
+		TemplateKey: tks.BodyTemplate,
+		Ak:          ak,
+		NotifyType:  3,
+	}
+
+	n.prepareFromTemplateKeys(pn, tks, render, unknownMultiDefaults, details)
 	return pn
 }
 
@@ -142,7 +185,7 @@ func (n *Notification) NotifyMultipleUnknowns(t *Template, c SystemConfProvider,
 }
 
 // code common to PrepareAction / PrepareUnknown / PrepareMultipleUnknowns
-func (n *Notification) prepareFromTemplateKeys(pn *PreparedNotifications, tks NotificationTemplateKeys, render func(string, *template.Template) (string, error), defaults defaultTemplates) {
+func (n *Notification) prepareFromTemplateKeys(pn *PreparedNotifications, tks NotificationTemplateKeys, render func(string, *template.Template) (string, error), defaults defaultTemplates, alertDetails *NotificationDetails) {
 
 	if len(n.Email) > 0 || n.Post != nil || tks.PostTemplate != "" {
 		body, _ := render(tks.BodyTemplate, defaults.body)
@@ -168,9 +211,9 @@ func (n *Notification) prepareFromTemplateKeys(pn *PreparedNotifications, tks No
 	}
 	if postURL != "" {
 		body, _ := render(tks.BodyTemplate, defaults.subject)
-		pn.HTTP = append(pn.HTTP, n.PrepHttp("POST", postURL, body, ""))
+		pn.HTTP = append(pn.HTTP, n.PrepHttp("POST", postURL, body, alertDetails))
 	}
 	if getURL != "" {
-		pn.HTTP = append(pn.HTTP, n.PrepHttp("GET", getURL, "", ""))
+		pn.HTTP = append(pn.HTTP, n.PrepHttp("GET", getURL, "", alertDetails))
 	}
 }

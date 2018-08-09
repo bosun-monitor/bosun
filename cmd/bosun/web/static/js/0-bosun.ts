@@ -136,6 +136,10 @@ interface IAuthService {
     RoleFor: (bits: number) => string;
 }
 
+interface ILinkService {
+	GetEditSilenceLink: (silence: any, silenceId: string) => string;
+}
+
 bosunApp.run(['$location', '$rootScope', function ($location: ng.ILocationService, $rootScope: IRootScope) {
     $rootScope.$on('$routeChangeSuccess', function (event, current, previous) {
         $rootScope.title = current.$$route.title;
@@ -195,7 +199,7 @@ bosunControllers.controller('BosunCtrl', ['$scope', '$route', '$http', '$q', '$r
             $scope.quiet = settings.Quiet;
             $scope.version = settings.Version;
             $scope.opentsdbEnabled = $scope.version.Major != 0 && $scope.version.Minor != 0;
-
+            $scope.exampleExpression = settings.ExampleExpression;
             $scope.tokensEnabled = settings.TokensEnabled;
             $scope.auth = AuthService;
             AuthService.Init(settings.AuthEnabled, settings.Username, settings.Roles, settings.Permissions)

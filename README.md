@@ -18,7 +18,7 @@ bosun and scollector are found under the `cmd` directory. Run `go build` in the 
 
 Install:
 
-* `npm install typescript -g` to be able to compile the ts files to js files.
+* `npm install typescript@<version> -g` to be able to compile the ts files to js files. The current version of typescript to install will be in the `.tavis.yml` file in the root of this repo.
 * `go get github.com/mjibson/esc` to embed the static files. Run `go generate` in `cmd/bosun` when new static assets (like JS and CSS files) are added or changed.
 
 The `w.sh` script will automatically build and run bosun in a loop.
@@ -30,7 +30,7 @@ $ ./w.sh
 ```
 
 Go Version:
-  * We generally upgrade to the latest version Go within a day or two. So consider the correct version of Go always to be the latest stable release.
+  * See the version number in `.travis.yml` in the root of this repo for the version of Go to use. Generally speaking, you should be able to use newer versions of Go if you are able to build Bosun without error.
   
 Miniprofiler:
  * Bosun includes [miniprofiler](https://github.com/MiniProfiler/go) in the web UI which can help with debugging. The key combination `ALT-P` will show miniprofiler. This allows you to see timings, as well as the raw queries sent to TSDBs.

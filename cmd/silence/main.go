@@ -19,7 +19,7 @@ import (
 var (
 	flagHost     = flag.String("h", "bosun", "Hostname of your bosun server, defaults to bosun.")
 	flagUser     = flag.String("u", "", "Username, defaults to the username returned from the OS.")
-	flagDuration = flag.String("d", "30m", "A duration to silence this host for. Defaults to 30m and the format is defined at http://golang.org/pkg/time/#ParseDuration")
+	flagDuration = flag.String("d", "30m", "A duration to silence this host for. Defaults to 30m and the format is defined at https://golang.org/pkg/time/#ParseDuration")
 	flagTags     = flag.String("t", "", "OpenTSDB tags to be silenced in the format of tagKey=value,tagKey=value. Defaults to host=<hostname>, use -t= to use empty tag set.")
 	flagAlert    = flag.String("a", "", "Name of the alert to silence, defaults to empty which means all alerts.")
 	flagMessage  = flag.String("m", "", "Reason for the silence, defaults to an empty string.")
@@ -87,7 +87,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err, s)
 	}
-	resp, err := http.Post("http://"+*flagHost+"/api/silence/set", "application/json", bytes.NewBuffer(b))
+	resp, err := http.Post("https://"+*flagHost+"/api/silence/set", "application/json", bytes.NewBuffer(b))
 	if err != nil {
 		log.Fatal(err, s)
 	}

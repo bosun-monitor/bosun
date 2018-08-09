@@ -82,7 +82,9 @@ func timeTSDBRequest(e *State, T miniprofiler.Timer, req *opentsdb.Request) (s o
 				return e.TSDBContext.Query(req)
 			}
 			var val interface{}
-			val, err = e.Cache.Get(string(b), getFn)
+			var hit bool
+			val, err, hit = e.Cache.Get(string(b), getFn)
+			collectCacheHit(e.Cache, "opentsdb", hit)
 			rs := val.(opentsdb.ResponseSet)
 			s = rs.Copy()
 			for _, r := range rs {
@@ -161,6 +163,19 @@ func bandTSDB(e *State, T miniprofiler.Timer, query, duration, period string, nu
 }
 
 func Window(e *State, T miniprofiler.Timer, query, duration, period string, num float64, rfunc string) (*Results, error) {
+	var isPerc bool
+	var percValue float64
+	if len(rfunc) > 0 && rfunc[0] == 'p' {
+		var err error
+		percValue, err = strconv.ParseFloat(rfunc[1:], 10)
+		isPerc = err == nil
+	}
+	if isPerc {
+		if percValue < 0 || percValue > 1 {
+			return nil, fmt.Errorf("expr: window: percentile number must be greater than or equal to zero 0 and less than or equal 1")
+		}
+		rfunc = "percentile"
+	}
 	fn, ok := e.GetFunction(rfunc)
 	if !ok {
 		return nil, fmt.Errorf("expr: Window: no %v function", rfunc)
@@ -190,7 +205,11 @@ func Window(e *State, T miniprofiler.Timer, query, duration, period string, num 
 				},
 			},
 		}
-		fnResult := windowFn.Call([]reflect.Value{reflect.ValueOf(e), reflect.ValueOf(T), reflect.ValueOf(callResult)})
+		fnArgs := []reflect.Value{reflect.ValueOf(e), reflect.ValueOf(T), reflect.ValueOf(callResult)}
+		if isPerc {
+			fnArgs = append(fnArgs, reflect.ValueOf(fromScalar(percValue)))
+		}
+		fnResult := windowFn.Call(fnArgs)
 		if !fnResult[1].IsNil() {
 			if err := fnResult[1].Interface().(error); err != nil {
 				return err
@@ -226,6 +245,19 @@ func Window(e *State, T miniprofiler.Timer, query, duration, period string, num 
 
 func windowCheck(t *parse.Tree, f *parse.FuncNode) error {
 	name := f.Args[4].(*parse.StringNode).Text
+	var isPerc bool
+	var percValue float64
+	if len(name) > 0 && name[0] == 'p' {
+		var err error
+		percValue, err = strconv.ParseFloat(name[1:], 10)
+		isPerc = err == nil
+	}
+	if isPerc {
+		if percValue < 0 || percValue > 1 {
+			return fmt.Errorf("expr: window: percentile number must be greater than or equal to zero 0 and less than or equal 1")
+		}
+		return nil
+	}
 	v, ok := t.GetFunction(name)
 	if !ok {
 		return fmt.Errorf("expr: Window: unknown function %v", name)

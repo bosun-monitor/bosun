@@ -93,6 +93,94 @@ We don't need to understand everything in this alert, but it is worth highlighti
 
 # Query Functions
 
+## Azure Monitor Query Functions
+
+These functions are considered *preview* as of August 2018. The names, signatures, and behavior of these functions might change as they are tested in real word usage.
+
+The Azure Monitor datasource queries Azure for metric and resource information. These functions are available when [AzureMonitorConf](#system-configuration#azuremonitorconf) is defined in the system configuration. 
+
+These requests are subject to the [Azure Resource Manager Request Limits](https://docs.microsoft.com/en-us/azure/azure-resource-manager/resource-manager-request-limits) so when using the `az` and `azmulti` functions you should be mindful of how many API calls your alerts are making given your configured check interval. Also using the historical testing feature to query multiple intervals of time could quickly eat through your request limit.
+
+Currently there is no special treatment or instrumentation of the rate limit by Bosun, other then errors are expected once the rate limit is hit and warning will be logged when a request responses with less than 100 reads remaining.
+
+### PrefixKey
+
+PrefixKey is a quoted string used to query Azure with different clients from a single instance of Bosun. It can be passed as a prefix to Azure query functions as in the example below. If there is no prefix used then the query will be made on default Azure client.
+
+```
+$resources = ["foo"]azrt("Microsoft.Compute/virtualMachines")
+$filteresRes = azrf($resources, "client:.*")
+["foo"]azmulti("Percentage CPU", "", $resources, "max", "5m", "1h", "")
+```
+
+### az(namespace string, metric string, tagKeysCSV string, rsg string, resName string, agType string, interval string, startDuration string, endDuration string) seriesSet
+{: .exprFunc}
+
+az queries the [Azure Monitor REST API](https://docs.microsoft.com/en-us/rest/api/monitor/) for time series data for a specific metric and resource. Responses will include at least to tags: `name=<resourceName>,rsg=<resourceGroupName>`. If the metric support multiple dimensions and tagKeysCSV is non-empty additional tag keys are added to the response.
+
+ * `namespace` is the Azure namespace that the metric lives under. [Supported metric with Azure montior](https://docs.microsoft.com/en-us/azure/monitoring-and-diagnostics/monitoring-supported-metrics) contains a list of those namespaces, for example `Microsoft.Cache/redis` and `Microsoft.Compute/virtualMachines`.
+ * `metric` is the name of the metric under the corresponding `namespace` that you want to query, for example `Percentage CPU`.
+ * `tagKeysCSV` is comma-separated list of dimension keys that you want the response to group by. For example, the `Per Disk Read Bytes/sec` metric under `Microsoft.Compute/virtualMachines` has a SlotId metric, so if you pass `"SlotId"` for this argument `SlotId` will become a tag key in the response with the values corresponding to each slot (i.e `0`)
+ * `rsg` is the name of the Azure resource group that the resource is in
+ * `resName` is the name of the resource
+ * `agType` is the type of aggregation to use can be `avg`, `min`, `max`, `total`, or `count`. If an empty string then the default is `avg`.
+ * `interval` is the Azure timegrain to use without "PT" and in lower case (ISO 8601 duration format). Common supported timegrains are `1m`, `5m`, `15m`, `30m`, `1h`, `6h`, `12h`, and `1d`. 
+ * `startDuration` and `endDuration` set the time window from now - see the OpenTSDB q() function for more details
+
+ Examples:
+
+ `az("Microsoft.Compute/virtualMachines", "Percentage CPU", "", "myResourceGroup", "myFavoriteVM", "avg", "5m", "1h", "")`
+
+ `az("Microsoft.Compute/virtualMachines", "Per Disk Read Bytes/sec", "SlotId", "myResourceGroup", "myFavoriteVM", "max", "5m", "1h", "")`
+
+### azrt(type string) azureResources
+{: .exprFunc}
+
+azrt (Azure Resources By Type) gets a list of Azure Resources that exist for a certain type. For example, `azrt("Microsoft.Compute/virtualMachines")` would return all virtualMachine resources. This list of resources can then be passed to `azrf()` (Azure Resource Filter) for additional filtering or to a query function that takes AzureResources as an argument like `azmulti()`.
+
+An error will be returned if you attempt to pass resources fetched for an Azure client with a different client.  In other words, if the resources call (e.g. `azrt()`) uses a different prefix from the time series query (e.g. `azmulti()`)).
+
+The underlying implementation of this fetches *all* resources and caches that information. So additional azrt calls within scheduled check cycle will not result in additional calls to Azure's API.
+
+### azrf(resources azureResources, filter string) azureResources
+{: .exprFunc}
+
+azrf (Azure Resource Filter) takes a resource list and filters it to less resources based on the filter. The resources argument would usually be an `azrt()` call or another `azrf` call.
+
+The filter argument supports filter supports joining terms in `()` as well as the `AND`, `OR`, and `!` operators. The following query terms are supported and are always in the format of something:something. The first part of each term (the key) is case insensitive.
+
+ * `name:<regex>` where the resource name matches the regular expression. 
+ * `rsg:<regex>` where the resource group of the resource matches the resource.
+ * `otherText:<regex>` will match resources based on Azure tags. `otherText` would be the tag key and the regex will match against the tag's value. If the tag key does not exist on the resource then there will be no match.
+
+Regular expressions use Go's regular expressions which use the [RE2 syntax](https://github.com/google/re2/wiki/Syntax). If you want an exact match and not a substring be sure to anchor the term with something like `rsg:^myRSG$`.
+
+Example:
+
+```
+$resources = azrt("Microsoft.Compute/virtualMachines")
+# Filter resources to those with client azure tag that has any value
+$filteresRes = azrf($resources, "client:.*")
+azmulti("Percentage CPU", "", $filteredRes, "max", "5m", "1h", "")
+```
+
+Note that `azrf()` does not take a prefix key since it is filtering resources that have already been retrieved. The resulting azureResources will still be associated with the correct client/prefix.
+
+### azmulti(metric string, tagKeysCSV string, resources AzureResources, agType string, interval string, startDuration string, endDuration string) seriesSet
+
+azmulti (Azure Multiple Query) queries a metric for multiple resources and returns them as a single series set. The arguments metric, tagKeysCSV, agType, interval, startDuration, and endDuration all behave the same as in the `az` function. Also like the `az` functions the result will be tagged with `rsg`, `name`, and any dimensions from tagKeysCSV.
+
+The resources argument is a list of resources (an azureResourcesType) as returned by `azrt` and `azrf`. 
+
+Each resource queried requires an Azure Monitor API call. So if there are 20 items in the set from return of the call, 20 calls are made that count toward the rate limit. This function exists because most metrics do not have dimensions on primary attributes like the machine name.
+
+Example: 
+
+```
+$resources = azrt("Microsoft.Compute/virtualMachines")
+azmulti("Percentage CPU", "", $resources, "max", "PT5M", "1h", "")
+```
+
 ## Graphite Query Functions
 
 ### graphite(query string, startDuration string, endDuration string, format string) seriesSet
@@ -321,6 +409,8 @@ comprising of the average of given metric from 1d to 1d-1h-ago, 2d to
 2d-1h-ago, etc, until 8d. It is similar to the band function, except that
 instead of concatenating series together, each series is reduced to a number,
 and those numbers created into a series.
+
+In addition to supporting Bosun's reduction functions that take on argument, percentile operations may be be done by setting `funcName` to p followed by number that is between 0 and 1 (inclusively). For example, `"p.25"` will be the 25th percentile, `"p.999"` will be the 99.9th percentile. `"p0"` and `"p1"` are min and max respectively (However, in these cases it is recommended to use `"min"` and `"max"` for the sake of clarity.
 
 # Annotation Query Functions
 These function are available when annotate is enabled via Bosun's configuration.

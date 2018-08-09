@@ -9,6 +9,10 @@
 		<link href="/static/css/jquery-ui.min.css" rel="stylesheet">
 		<link href="/static/css/font-awesome.min.css" rel="stylesheet">
 		<style>
+			.disabled, .disabled:hover {
+				cursor: not-allowed;
+				color: #999999 !important;
+			}
 			.navbar-static-top {
 				margin-bottom: 19px;
 			}
@@ -112,7 +116,10 @@
 				</div>
 				<div class="navbar-collapse collapse" id="navbar-collapse">
 					<ul class="nav navbar-nav">
-						<li ng-class="active('items')"><a href="/items">Items</a></li>
+						<li ng-class="active('items')">
+							<a ng-if="opentsdbEnabled" href="/items" >Items</a>
+							<a ng-if="!opentsdbEnabled" class="disabled" tooltip title="Items available for configured OpenTSDB datasource" href="javascript:void(0)">Items</a>
+						</li>
 						<li ng-show="opentsdbEnabled" ng-class="active('graph')"><a href="/graph">Graph</a></li>
 						<li ng-class="active('expr')"><a href="/expr">Expression</a></li>
 						<li ng-class="active('config')"><a href="/config">Rule Editor</a></li>
