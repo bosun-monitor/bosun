@@ -127,14 +127,14 @@ func TestCacheKeyMatch(t *testing.T) {
 		req cloudwatch.Request
 		key string
 	}{
-		{ req:cloudwatch.Request{
-			Start:      &start,
-			End:        &end,
-			Region:     "eu-west-1",
-			Namespace:  "AWS/EC2",
-			Metric:     "CPUUtilization",
-			Period:     "60", Statistic: "Sum",
-			Dimensions: []cloudwatch.Dimension{{ Name:"InstanceId", Value:"i-0106b4d25c54baac7"}},
+		{req: cloudwatch.Request{
+			Start:     &start,
+			End:       &end,
+			Region:    "eu-west-1",
+			Namespace: "AWS/EC2",
+			Metric:    "CPUUtilization",
+			Period:    "60", Statistic: "Sum",
+			Dimensions: []cloudwatch.Dimension{{Name: "InstanceId", Value: "i-0106b4d25c54baac7"}},
 			Profile:    "prod",
 		},
 			"cloudwatch-1530723600-1530727200-eu-west-1-AWS/EC2-CPUUtilization-60-Sum-[InstanceId:i-0106b4d25c54baac7]-prod"},
