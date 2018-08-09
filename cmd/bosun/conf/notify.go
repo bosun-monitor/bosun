@@ -27,6 +27,12 @@ func init() {
 	metadata.AddMetricMeta(
 		"bosun.email.sent_failed", metadata.Counter, metadata.PerSecond,
 		"The number of email notifications that Bosun failed to send.")
+	metadata.AddMetricMeta(
+		"bosun.post.sent", metadata.Counter, metadata.PerSecond,
+		"The number of post notifications sent by Bosun.")
+	metadata.AddMetricMeta(
+		"bosun.post.sent_failed", metadata.Counter, metadata.PerSecond,
+		"The number of post notifications that Bosun failed to send.")
 }
 
 type PreparedNotifications struct {
@@ -72,7 +78,13 @@ func (n *Notification) PrepareAlert(rt *models.RenderedTemplates, ak string, att
 			url = rt.Get(n.PostTemplate)
 		}
 		body := rt.GetDefault(n.BodyTemplate, "subject")
-		pn.HTTP = append(pn.HTTP, n.PrepHttp("POST", url, body, ak))
+		details := &NotificationDetails{
+			Ak:          []string{ak},
+			NotifyName:  n.Name,
+			TemplateKey: n.BodyTemplate,
+			NotifyType:  1,
+		}
+		pn.HTTP = append(pn.HTTP, n.PrepHttp("POST", url, body, details))
 	}
 	if n.Get != nil || n.GetTemplate != "" {
 		url := ""
@@ -81,7 +93,13 @@ func (n *Notification) PrepareAlert(rt *models.RenderedTemplates, ak string, att
 		} else {
 			url = rt.Get(n.GetTemplate)
 		}
-		pn.HTTP = append(pn.HTTP, n.PrepHttp("GET", url, "", ak))
+		details := &NotificationDetails{
+			Ak:          []string{ak},
+			NotifyName:  n.Name,
+			TemplateKey: n.BodyTemplate,
+			NotifyType:  1,
+		}
+		pn.HTTP = append(pn.HTTP, n.PrepHttp("GET", url, "", details))
 	}
 	if n.Print {
 		if n.BodyTemplate != "" {
@@ -99,12 +117,25 @@ func (n *Notification) NotifyAlert(rt *models.RenderedTemplates, c SystemConfPro
 }
 
 type PreparedHttp struct {
-	URL        string
-	Method     string
-	Headers    map[string]string `json:",omitempty"`
-	Body       string
-	AK         string
-	NotifyName string
+	URL     string
+	Method  string
+	Headers map[string]string `json:",omitempty"`
+	Body    string
+	Details *NotificationDetails
+}
+
+const (
+	alert = iota + 1
+	unknown
+	multiunknown
+)
+
+type NotificationDetails struct {
+	Ak          []string // alert key
+	At          string   // action type
+	NotifyName  string   // notification name
+	TemplateKey string   // template key
+	NotifyType  int      // notifications type e.g alert, unknown etc
 }
 
 func (p *PreparedHttp) Send() (int, error) {
@@ -129,18 +160,32 @@ func (p *PreparedHttp) Send() (int, error) {
 		return 0, err
 	}
 	if resp.StatusCode >= 300 {
-		return resp.StatusCode, fmt.Errorf("bad response on notification with name %s for alert %s method %s: %d", p.NotifyName, p.AK, p.Method, resp.StatusCode)
+		collect.Add("post.sent_failed", nil, 1)
+		switch p.Details.NotifyType {
+		case alert:
+			return resp.StatusCode, fmt.Errorf("bad response for '%s' alert notification using template key '%s' for alert keys %v method %s: %d",
+				p.Details.NotifyName, p.Details.TemplateKey, strings.Join(p.Details.Ak, ","), p.Method, resp.StatusCode)
+		case unknown:
+			return resp.StatusCode, fmt.Errorf("bad response for '%s' unknown notification using template key '%s' for alert keys %v method %s: %d",
+				p.Details.NotifyName, p.Details.TemplateKey, strings.Join(p.Details.Ak, ","), p.Method, resp.StatusCode)
+		case multiunknown:
+			return resp.StatusCode, fmt.Errorf("bad response for '%s' multi-unknown notification using template key '%s' for alert keys %v method %s: %d",
+				p.Details.NotifyName, p.Details.TemplateKey, strings.Join(p.Details.Ak, ","), p.Method, resp.StatusCode)
+		default:
+			return resp.StatusCode, fmt.Errorf("bad response for '%s' action '%s' notification using template key '%s' for alert keys %v method %s: %d",
+				p.Details.NotifyName, p.Details.At, p.Details.TemplateKey, strings.Join(p.Details.Ak, ","), p.Method, resp.StatusCode)
+		}
 	}
+	collect.Add("post.sent", nil, 1)
 	return resp.StatusCode, nil
 }
 
-func (n *Notification) PrepHttp(method string, url string, body string, ak string) *PreparedHttp {
+func (n *Notification) PrepHttp(method string, url string, body string, alertDetails *NotificationDetails) *PreparedHttp {
 	prep := &PreparedHttp{
-		Method:     method,
-		URL:        url,
-		Headers:    map[string]string{},
-		AK:         ak,
-		NotifyName: n.Name,
+		Method:  method,
+		URL:     url,
+		Headers: map[string]string{},
+		Details: alertDetails,
 	}
 	if method == http.MethodPost {
 		prep.Body = body
@@ -149,13 +194,14 @@ func (n *Notification) PrepHttp(method string, url string, body string, ak strin
 	return prep
 }
 
-func (n *Notification) SendHttp(method string, url string, body string, ak string) {
-	p := n.PrepHttp(method, url, body, ak)
+func (n *Notification) SendHttp(method string, url string, body string) {
+	details := &NotificationDetails{}
+	p := n.PrepHttp(method, url, body, details)
 	stat, err := p.Send()
 	if err != nil {
 		slog.Errorf("Sending http notification: %s", err)
 	}
-	slog.Infof("%s notification successful for alert %s. Status: %d", method, ak, stat)
+	slog.Infof("%s notification successful for alert %s. Status: %d", method, details.Ak, stat)
 }
 
 type PreparedEmail struct {
@@ -180,6 +226,11 @@ func (n *Notification) PrepEmail(subject, body string, ak string, attachments []
 }
 
 func (p *PreparedEmail) Send(c SystemConfProvider) error {
+	// make sure "To" was not null
+	if len(p.To) <= 0 {
+		return nil
+	}
+
 	e := email.NewEmail()
 	e.From = c.GetEmailFrom()
 	for _, a := range p.To {

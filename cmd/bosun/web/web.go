@@ -8,7 +8,6 @@ import (
 	"html/template"
 	"io"
 	"io/ioutil"
-	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -171,6 +170,7 @@ func Listen(httpAddr, httpsAddr, certFile, keyFile string, devMode bool, tsdbHos
 	handle("/api/rule", JSON(Rule), canRunTests).Name("rule_test").Methods(POST)
 	handle("/api/rule/notification/test", JSON(TestHTTPNotification), canRunTests).Name("rule__notification_test").Methods(POST)
 	handle("/api/shorten", JSON(Shorten), canViewDash).Name("shorten")
+	handle("/s/{id}", JSON(GetShortLink), canViewDash).Name("shortlink")
 	handle("/api/silence/clear", JSON(SilenceClear), canSilence).Name("silence_clear")
 	handle("/api/silence/get", JSON(SilenceGet), canViewDash).Name("silence_get").Methods(GET)
 	handle("/api/silence/set", JSON(SilenceSet), canSilence).Name("silence_set")
@@ -206,6 +206,7 @@ func Listen(httpAddr, httpsAddr, certFile, keyFile string, devMode bool, tsdbHos
 	var miniprofilerRoutes = http.StripPrefix(miniprofiler.PATH, http.HandlerFunc(miniprofiler.MiniProfilerHandler))
 	router.PathPrefix(miniprofiler.PATH).Handler(baseChain.Then(miniprofilerRoutes)).Name("miniprofiler")
 
+	router.PathPrefix("/api").HandlerFunc(http.NotFound)
 	//MUST BE LAST!
 	router.PathPrefix("/").Handler(baseChain.Then(auth.Wrap(JSON(Index), canViewDash))).Name("index")
 
@@ -312,10 +313,11 @@ func IndexTSDB(w http.ResponseWriter, r *http.Request) {
 }
 
 type appSetings struct {
-	SaveEnabled     bool
-	AnnotateEnabled bool
-	Quiet           bool
-	Version         opentsdb.Version
+	SaveEnabled       bool
+	AnnotateEnabled   bool
+	Quiet             bool
+	Version           opentsdb.Version
+	ExampleExpression string
 
 	AuthEnabled   bool
 	TokensEnabled bool
@@ -349,13 +351,14 @@ func Index(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 	}
 	u := easyauth.GetUser(r)
 	as := &appSetings{
-		SaveEnabled:     schedule.SystemConf.SaveEnabled(),
-		AnnotateEnabled: schedule.SystemConf.AnnotateEnabled(),
-		Quiet:           schedule.GetQuiet(),
-		Version:         openTSDBVersion,
-		AuthEnabled:     authEnabled,
-		TokensEnabled:   tokensEnabled,
-		Roles:           roleDefs,
+		SaveEnabled:       schedule.SystemConf.SaveEnabled(),
+		AnnotateEnabled:   schedule.SystemConf.AnnotateEnabled(),
+		Quiet:             schedule.GetQuiet(),
+		Version:           openTSDBVersion,
+		AuthEnabled:       authEnabled,
+		TokensEnabled:     tokensEnabled,
+		Roles:             roleDefs,
+		ExampleExpression: schedule.SystemConf.GetExampleExpression(),
 	}
 	if u != nil {
 		as.Username = u.Username
@@ -406,41 +409,29 @@ func JSON(h func(miniprofiler.Timer, http.ResponseWriter, *http.Request) (interf
 }
 
 func Shorten(_ miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	u := url.URL{
-		Scheme: "https",
-		Host:   "www.googleapis.com",
-		Path:   "/urlshortener/v1/url",
-	}
-	if schedule.SystemConf.GetShortURLKey() != "" {
-		u.RawQuery = "key=" + schedule.SystemConf.GetShortURLKey()
-	}
-	j, err := json.Marshal(struct {
-		LongURL string `json:"longUrl"`
-	}{
-		r.Referer(),
-	})
+	id, err := schedule.DataAccess.Configs().ShortenLink(r.Referer())
 	if err != nil {
 		return nil, err
 	}
+	return struct {
+		ID string `json:"id"`
+	}{schedule.SystemConf.MakeLink(fmt.Sprintf("/s/%d", id), nil)}, nil
+}
 
-	transport := &http.Transport{
-		Dial: (&net.Dialer{
-			Timeout:   30 * time.Second,
-			KeepAlive: 30 * time.Second,
-		}).Dial,
-		TLSHandshakeTimeout: 10 * time.Second,
-	}
-	if InternetProxy != nil {
-		transport.Proxy = http.ProxyURL(InternetProxy)
-	}
-	c := http.Client{Transport: transport}
-
-	req, err := c.Post(u.String(), "application/json", bytes.NewBuffer(j))
+func GetShortLink(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	// on any error or bad param, just redirect to index. Otherwise 302 to stored url
+	vars := mux.Vars(r)
+	idv := vars["id"]
+	id, err := strconv.Atoi(idv)
+	targetURL := ""
 	if err != nil {
-		return nil, err
+		return Index(t, w, r)
 	}
-	io.Copy(w, req.Body)
-	req.Body.Close()
+	targetURL, err = schedule.DataAccess.Configs().GetShortLink(id)
+	if err != nil {
+		return Index(t, w, r)
+	}
+	http.Redirect(w, r, targetURL, 302)
 	return nil, nil
 }
 
@@ -450,6 +441,15 @@ type Health struct {
 	Quiet         bool
 	UptimeSeconds int64
 	StartEpoch    int64
+	Notifications NotificationStats
+}
+
+type NotificationStats struct {
+	// Post and email notifiaction stats
+	PostNotificationsSuccess  int64
+	PostNotificationsFailed   int64
+	EmailNotificationsSuccess int64
+	EmailNotificationsFailed  int64
 }
 
 func Reload(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
@@ -477,10 +477,19 @@ func Quiet(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 
 func HealthCheck(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	var h Health
+	var n NotificationStats
 	h.RuleCheck = schedule.LastCheck.After(time.Now().Add(-schedule.SystemConf.GetCheckFrequency()))
 	h.Quiet = schedule.GetQuiet()
 	h.UptimeSeconds = int64(time.Since(startTime).Seconds())
 	h.StartEpoch = startTime.Unix()
+
+	//notifications stats
+	n.PostNotificationsSuccess = collect.Get("post.sent", nil)
+	n.PostNotificationsFailed = collect.Get("post.sent_failed", nil)
+	n.EmailNotificationsSuccess = collect.Get("email.sent", nil)
+	n.EmailNotificationsFailed = collect.Get("email.sent_failed", nil)
+
+	h.Notifications = n
 	return h, nil
 }
 
@@ -488,7 +497,7 @@ func OpenTSDBVersion(t miniprofiler.Timer, w http.ResponseWriter, r *http.Reques
 	if schedule.SystemConf.GetTSDBContext() != nil {
 		return schedule.SystemConf.GetTSDBContext().Version(), nil
 	}
-	return opentsdb.Version{0, 0}, nil
+	return opentsdb.Version{Major: 0, Minor: 0}, nil
 }
 
 func AnnotateEnabled(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
@@ -611,6 +620,13 @@ type ExtStatus struct {
 	*models.RenderedTemplates
 }
 
+type ExtIncidentStatus struct {
+	ExtStatus
+	IsActive  bool
+	Silence   *models.Silence
+	SilenceId string
+}
+
 func IncidentEvents(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	id := r.FormValue("id")
 	if id == "" {
@@ -628,7 +644,15 @@ func IncidentEvents(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request
 	if err != nil {
 		return nil, err
 	}
-	st := ExtStatus{IncidentState: state, RenderedTemplates: rt, Subject: state.Subject}
+	st := ExtIncidentStatus{
+		ExtStatus: ExtStatus{IncidentState: state, RenderedTemplates: rt, Subject: state.Subject},
+		IsActive:  state.IsActive(),
+	}
+	silence := schedule.GetSilence(t, state.AlertKey)
+	if silence != nil {
+		st.Silence = silence
+		st.SilenceId = silence.ID()
+	}
 	return st, nil
 }
 

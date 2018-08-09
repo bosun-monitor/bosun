@@ -168,6 +168,8 @@ Returns a list of alert summaries matching the given filter (defaults to all).
 Returns an object of internal health checks. True values are good, falses are
 bad.
 
+`Note: all health checks stats are kept in memory and reset upon bosun restart`
+
 ### /api/run
 
 Runs a rule check. Returns an error if one is already running (either from the

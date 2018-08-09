@@ -16,67 +16,106 @@ interface IExprScope extends IBosunScope {
 	keydown: ($event: any) => void;
 	animate: () => any;
 	stop: () => any;
+	aceLoaded: (editor: any) => void;
+	editor: any;
+	aceTheme: string;
+	aceMode: string;
 }
 
 bosunControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route', function($scope: IExprScope, $http: ng.IHttpService, $location: ng.ILocationService, $route: ng.route.IRouteService) {
 	var search = $location.search();
-	var current: string;
+	var current: string = '';
 	try {
 		current = atob(search.expr);
 	}
 	catch (e) {
 		current = '';
 	}
-	if (!current) {
-		$location.search('expr', btoa('avg(q("avg:rate:os.cpu{host=*bosun*}", "5m", "")) > 80'));
+	if (!current && $scope.exampleExpression) {
+		$location.search('expr', btoa($scope.exampleExpression));
 		return;
 	}
 	$scope.date = search.date || '';
 	$scope.time = search.time || '';
 	$scope.expr = current;
 
-	$scope.running = current;
+	$scope.aceMode = 'bosun';
+	$scope.aceTheme = 'chrome';
+	$scope.aceLoaded = function (editor) {
+		$scope.editor = editor;
+		editor.focus();
+		editor.getSession().setUseWrapMode(true);
+		editor.getSession().setMode({
+			path: 'ace/mode/' + $scope.aceMode,
+			v: Date.now()
+		});
+		editor.$blockScrolling = Infinity;
+	};
+	$scope.$on('$viewContentLoaded', () => {
+		setTimeout(() => {
+			var editor = $scope.editor;
+			var row = editor.session.getLength() - 1;
+			var column = editor.session.getLine(row).length;
+			editor.selection.moveTo(row, column);
+		});
+	});
+
 	$scope.tab = search.tab || 'results';
-	$scope.animate();
-	$http.post('/api/expr?' +
-		'date=' + encodeURIComponent($scope.date) +
-		'&time=' + encodeURIComponent($scope.time),current)
-		.success((data: any) => {
-			$scope.result = data.Results;
-			$scope.queries = data.Queries;
-			$scope.result_type = data.Type;
-			if (data.Type == 'series') {
-				$scope.svg_url = '/api/egraph/' + btoa(current) + '.svg?now=' + Math.floor(Date.now() / 1000);
-				$scope.graph = toChart(data.Results);
-			}
-			if (data.Type == 'number') {
-				 angular.forEach(data.Results, (d) => {
-					var name = '{';
-					angular.forEach(d.Group, (tagv, tagk) => {
+
+	if ($scope.expr) {
+
+		$scope.running = $scope.expr;
+		$scope.animate();
+
+		$http.post('/api/expr?' +
+			'date=' + encodeURIComponent($scope.date) +
+			'&time=' + encodeURIComponent($scope.time),current)
+			.success((data: any) => {
+				$scope.result = data.Results;
+				$scope.queries = data.Queries;
+				$scope.result_type = data.Type;
+				if (data.Type == 'series') {
+					$scope.svg_url = '/api/egraph/' + btoa(current) + '.svg?now=' + Math.floor(Date.now() / 1000);
+					$scope.graph = toChart(data.Results);
+				}
+				if (data.Type == 'number') {
+					angular.forEach(data.Results, (d) => {
+						var name = '{';
+						angular.forEach(d.Group, (tagv, tagk) => {
 							if (name.length > 1) {
-								 name += ',';
+								name += ',';
 							}
 							name += tagk + '=' + tagv;
+						});
+						name += '}';
+						d.name = name;
 					});
-					name += '}';
-					d.name = name;
-				 });
-				$scope.bar = data.Results;
-			}
-			$scope.running = '';
-		})
-		.error((error) => {
-			$scope.error = error;
-			$scope.running = '';
-		})
-		.finally(() => {
-			$scope.stop();
-		});
+					$scope.bar = data.Results;
+				}
+				$scope.running = '';
+			})
+			.error((error) => {
+				$scope.error = error;
+				$scope.running = '';
+			})
+			.finally(() => {
+				$scope.stop();
+			});
+	}
+
 	$scope.set = () => {
-		$location.search('expr', btoa($scope.expr));
+
 		$location.search('date', $scope.date || null);
 		$location.search('time', $scope.time || null);
-		$route.reload();
+
+		if ($scope.expr) {
+			$location.search('expr', btoa($scope.expr));
+			$route.reload();
+		} else {
+			$scope.error = "expr: empty";
+			$scope.result = null;
+			$scope.queries = null;
+		}
 	};
 	function toChart(res: any) {
 		var graph: any = [];
@@ -107,6 +146,7 @@ bosunControllers.controller('ExprCtrl', ['$scope', '$http', '$location', '$route
 	$scope.keydown = function($event: any) {
 		if ($event.shiftKey && $event.keyCode == 13) {
 			$scope.set();
+			$event.preventDefault();
 		}
 	};
 

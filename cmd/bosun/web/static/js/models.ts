@@ -127,6 +127,7 @@ class IncidentState {
 
     Events: IncidentEvent[];
     Actions: Action[];
+    Tags: string;
 
     Subject: string;
 
@@ -156,6 +157,7 @@ class IncidentState {
             }
         }
         this.Actions = new Array<Action>();
+        this.Tags = is.Tags;
         if (is.Actions) {
             for (let a of is.Actions) {
                 this.Actions.push(new Action(a))

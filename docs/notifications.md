@@ -23,7 +23,7 @@ There are also various different types of notification events, each having diffe
 
 - **Alert Notifications** are sent whenever an alert triggers (or gets worse). The content is rendered at the time the alert triggers, and stored for future re-use.
 - **Action Notifications** are sent when a user performs an action in bosun (Ack, Close, etc..). For these, the content is rendered on-demand as actions occur.
-- **Unknown Notifications** occur as alerts go "unknown" because data is not availible. These get batched up and sent periodically.
+- **Unknown Notifications** occur as alerts go "unknown" because data is not available. These get batched up and sent periodically.
 
 # Alert
 
@@ -127,7 +127,7 @@ Bosun can send http notifications using the following precedence rules:
 
 ## Action Notifications
 
-Action notifications are a little different than alert notifications. They are rendered as actions happen, and they use a different context than the alert templates, and has the following data availible:
+Action notifications are a little different than alert notifications. They are rendered as actions happen, and they use a different context than the alert templates, and has the following data available:
 
 - `{{.States}}` is a list of all incidents affected.
 - `{{.User}}` is the user who performed the action.
@@ -136,7 +136,7 @@ Action notifications are a little different than alert notifications. They are r
 
 If multiple actions are performed at once, they are grouped together by default. You can disable this, and send a notification for each individual alert key by setting `geoupActions = false` in the notification. You can get the first incident from `States` with `{{$first := index .States 0}}` if this is the case.
 
-You can choose whether a notification sends action notifications or not on a per-action basis using the `runOnActions` key. You may set it to `all` or `none`, or to any comma seperated list of action types from `Ack`, `Close`, `Forget`, `ForceClose`, `Purge`, `Note`, `DelayedClose`, or `CancelClose`.
+You can choose whether a notification sends action notifications or not on a per-action basis using the `runOnActions` key. You may set it to `all` or `none`, or to any comma separated list of action types from `Ack`, `Close`, `Forget`, `ForceClose`, `Purge`, `Note`, `DelayedClose`, or `CancelClose`.
 
 If you do not override anything in the notification, bosun will use its' own built in action template for action notifications. You can otherwise specify a template to use for all actions, or to override only spcific actions. You may customize a number of fields individually as well. The general form for these keys is:
 

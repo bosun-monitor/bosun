@@ -71,11 +71,14 @@ type SystemConfProvider interface {
 
 	GetMaxRenderedTemplateAge() int
 
+	GetExampleExpression() string
+
 	// Contexts
 	GetTSDBContext() opentsdb.Context
 	GetGraphiteContext() graphite.Context
 	GetInfluxContext() client.HTTPConfig
 	GetElasticContext() expr.ElasticHosts
+	GetAzureMonitorContext() expr.AzureMonitorClients
 	AnnotateEnabled() bool
 
 	MakeLink(string, *url.Values) string

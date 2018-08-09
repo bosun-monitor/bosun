@@ -5,7 +5,11 @@
 </div>
 <div ng-show="incident && state">
 	<div class="row">
-		<h3> Incident {{incident.Id}}</h3>
+		<h3>
+			<span title="This exclamation icon represents that the alert of this incident is in an active (non-normal) state." ng-show="isActive" class="fa fa-exclamation-circle"></span>
+			<a ng-href="{{editSilenceLink}}" title="This mute icon represents that the alert of this incident has been silenced until {{time(silence.End)}} UTC." ng-show="silence" class="fa fa-volume-off"></a>
+			Incident {{incident.Id}} <span ng-show="incident.NeedAck"> - needs acknowledgement</span>
+		</h3>
 	</div>
 	<div class="row">
 		<p ng-show="incident.End">End Time:<span ts-time="incident.Start" ts-end-time="incident.End" no-link="true"></span></p>

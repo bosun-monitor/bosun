@@ -80,6 +80,7 @@ const (
 	Fraction             = "fraction"
 	Get                  = "gets"
 	GetExists            = "get exists"
+	Group                = "groups"
 	Incident             = "incidents"
 	Interupt             = "interupts"
 	InProgress           = "in progress"
@@ -101,6 +102,7 @@ const (
 	Page                 = "pages"
 	Pct                  = "percent" // Range of 0-100.
 	PerSecond            = "per second"
+	Pool                 = "pools"
 	Process              = "processes"
 	Priority             = "priority"
 	Query                = "queries"
@@ -125,6 +127,7 @@ const (
 	Socket               = "sockets"
 	Suggest              = "suggests"
 	StatusCode           = "status code"
+	Resync               = "resynchronizations"
 	Syscall              = "system calls"
 	Thread               = "threads"
 	Timestamp            = "timestamp"

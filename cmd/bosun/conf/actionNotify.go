@@ -103,6 +103,33 @@ func (n *Notification) PrepareAction(at models.ActionType, t *Template, c System
 		}
 		return buf.String(), nil
 	}
-	n.prepareFromTemplateKeys(pn, *tks, render, actionDefaults)
+
+	ak := map[string][]string{
+		"alert_key": {},
+	}
+
+	for i := range states {
+		contain := func(key string, array []string) bool {
+			for _, value := range array {
+				if value == key {
+					return true
+				}
+			}
+			return false
+		}
+
+		if contain(fmt.Sprint(states[i].AlertKey), ak["alert_key"]) != true {
+			ak["alert_key"] = append(ak["alert_key"], fmt.Sprint(states[i].AlertKey))
+		}
+	}
+
+	details := &NotificationDetails{
+		Ak:          ak["alert_key"],
+		At:          at.String(),
+		NotifyName:  n.Name,
+		TemplateKey: tks.BodyTemplate,
+	}
+
+	n.prepareFromTemplateKeys(pn, *tks, render, actionDefaults, details)
 	return pn
 }
