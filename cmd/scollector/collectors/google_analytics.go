@@ -137,7 +137,9 @@ func getActiveUsers(md *opentsdb.MultiDataPoint, svc *analytics.Service, site co
 		return err
 	}
 	tags := opentsdb.TagSet{"site": site.Name}
-
+	if len(data.Rows) < 1 || len(data.Rows[0]) < 1 {
+		return fmt.Errorf("no active user data in response for site %v", site.Name)
+	}
 	value, err := strconv.Atoi(data.Rows[0][0])
 	if err != nil {
 		return fmt.Errorf("Error parsing GA data: %s", err)
