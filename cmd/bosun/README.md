@@ -8,11 +8,11 @@ Time Series Alerting Framework
 
 # usage
 
-`bosun [-c=dev.conf] [-t]`
+`bosun [-c=bosun.toml] [-t]`
 
-`-c` specifies the config file to use, defaults to `dev.conf`. `-t` parses the config file, validates it, and exits.
+`-c` specifies the config file to use, defaults to `bosun.toml`. `-t` parses the config file, validates it, and exits.
 
-You can use the included dev.sample.conf as a basis for your dev.conf
+You can use the included bosun.example.toml as a basis for your bosun.toml.
 
 # installation/binaries
 
