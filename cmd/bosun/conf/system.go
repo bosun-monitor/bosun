@@ -549,7 +549,7 @@ func (sc *SystemConf) GetTSDBContext(referer string) opentsdb.Context {
 	if sc.OpenTSDBConf.Host == "" {
 		return nil
 	}
-	return opentsdb.NewLimitContext(sc.OpenTSDBConf.Host, sc.OpenTSDBConf.ResponseLimit, sc.OpenTSDBConf.Version, referer)
+	return opentsdb.NewLimitContext(sc.OpenTSDBConf.Host, referer, sc.OpenTSDBConf.ResponseLimit, sc.OpenTSDBConf.Version)
 }
 
 // GetGraphiteContext returns a Graphite context which contains all the information needed
