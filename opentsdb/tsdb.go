@@ -1038,7 +1038,7 @@ type LimitContext struct {
 
 // NewLimitContext returns a new context for the given host with response sizes limited
 // to limit bytes.
-func NewLimitContext(host string, string referer, limit int64, version Version) *LimitContext {
+func NewLimitContext(host string, referer string, limit int64, version Version) *LimitContext {
 	return &LimitContext{
 		Host:        host,
 		Referer:     referer,
