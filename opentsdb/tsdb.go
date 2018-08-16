@@ -933,7 +933,7 @@ func (r *Request) QueryResponse(host string, referer string, client *http.Client
 		client = DefaultClient
 	}
 
-	req, err := http.NewRequest("POST", u.toString(), bytes.NewReader(b))
+	req, err := http.NewRequest("POST", u.String(), bytes.NewReader(b))
 	if err != nil {
 		return nil, err
 	}
@@ -1027,6 +1027,7 @@ func (v Version) FilterSupport() bool {
 // LimitContext is a context that enables limiting response size and filtering tags
 type LimitContext struct {
 	Host string
+	Referer string
 	// Limit limits response size in bytes
 	Limit int64
 	// FilterTags removes tagks from results if that tagk was not in the request
@@ -1037,7 +1038,7 @@ type LimitContext struct {
 
 // NewLimitContext returns a new context for the given host with response sizes limited
 // to limit bytes.
-func NewLimitContext(host string, limit int64, version Version, string referer) *LimitContext {
+func NewLimitContext(host string, referer string, limit int64, version Version) *LimitContext {
 	return &LimitContext{
 		Host:        host,
 		Referer:     referer,
