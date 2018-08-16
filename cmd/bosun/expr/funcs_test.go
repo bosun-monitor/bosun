@@ -257,3 +257,57 @@ func TestTail(t *testing.T) {
 		}
 	}
 }
+
+func TestAggregate(t *testing.T) {
+	seriesA := `series("foo=bar", 0, 1)`
+	seriesB := `series("foo=baz", 0, 3)`
+	seriesC := `series("foo=bat", 0, 5)`
+
+	// test median aggregator
+	err := testExpression(exprInOut{
+		fmt.Sprintf("aggregate(merge(%v, %v, %v), \"median\")", seriesA, seriesB, seriesC),
+		Results{
+			Results: ResultSlice{
+				&Result{
+					Value: Series{
+						time.Unix(0, 0): 3,
+					},
+					Group: opentsdb.TagSet{"aggregator": "median"},
+				},
+			},
+		},
+		false,
+	})
+	if err != nil {
+		t.Error(err)
+	}
+
+	// test average aggregator
+	err = testExpression(exprInOut{
+		fmt.Sprintf("aggregate(merge(%v, %v, %v), \"avg\")", seriesA, seriesB, seriesC),
+		Results{
+			Results: ResultSlice{
+				&Result{
+					Value: Series{
+						time.Unix(0, 0): 3,
+					},
+					Group: opentsdb.TagSet{"aggregator": "avg"},
+				},
+			},
+		},
+		false,
+	})
+	if err != nil {
+		t.Error(err)
+	}
+
+	// check that unknown aggregator errors out
+	err = testExpression(exprInOut{
+		fmt.Sprintf("aggregate(merge(%v, %v, %v), \"unknown\")", seriesA, seriesB, seriesC),
+		Results{},
+		false,
+	})
+	if err == nil {
+		t.Errorf("expected unknown aggregator to return error")
+	}
+}

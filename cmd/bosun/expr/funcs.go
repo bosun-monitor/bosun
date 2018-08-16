@@ -13,7 +13,7 @@ import (
 	"github.com/GaryBoone/GoStats/stats"
 	"github.com/MiniProfiler/go/miniprofiler"
 	"github.com/jinzhu/now"
-)
+	)
 
 func tagQuery(args []parse.Node) (parse.Tags, error) {
 	n := args[0].(*parse.StringNode)
@@ -384,6 +384,58 @@ var builtins = map[string]parse.Func{
 		F:       V,
 		MapFunc: true,
 	},
+	"aggregate": {
+		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeString},
+		Return: models.TypeSeriesSet,
+		Tags:   tagFirst,
+		F:      Aggregate,
+	},
+}
+
+func Aggregate(e *State, T miniprofiler.Timer, series *Results, aggregator string) (*Results, error) {
+	results := Results{}
+
+	res := Result{}
+	newSeries := make(Series)
+
+	switch aggregator {
+	case "avg":
+		counts := map[time.Time]int64{}
+		for _, result := range series.Results {
+			for t, v := range result.Value.Value().(Series) {
+				newSeries[t] += v
+				counts[t] += 1
+			}
+		}
+		for t := range newSeries {
+			newSeries[t] /= float64(counts[t])
+		}
+	case "median":
+		merged := map[time.Time][]float64{}
+		for _, result := range series.Results {
+			for t, v := range result.Value.Value().(Series) {
+				merged[t] = append(merged[t], v)
+			}
+		}
+		for t := range merged {
+			sort.Float64s(merged[t])
+			l := len(merged[t])
+			if l % 2 == 1 {
+				newSeries[t] = merged[t][l / 2]
+			} else {
+				newSeries[t] = (merged[t][l / 2] + merged[t][l / 2 + 1]) / 2
+			}
+		}
+	default:
+		return series, fmt.Errorf("unknown aggregator: %v", aggregator)
+	}
+
+	res.Value = newSeries
+	res.Group = opentsdb.TagSet{}
+	res.Group.Merge(opentsdb.TagSet{"aggregator": aggregator})
+	results.Results = append(results.Results, &res)
+
+	return &results, nil
 }
 
 func V(e *State, T miniprofiler.Timer) (*Results, error) {
