@@ -122,7 +122,7 @@ func Graph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 			}
 		}
 		queries[i] = fmt.Sprintf(`q("%v", "%v", "%v")`, q, start, end)
-		if !schedule.SystemConf.GetTSDBContext("").Version().FilterSupport() {
+		if !schedule.SystemConf.GetTSDBContext().Version().FilterSupport() {
 			if err := schedule.Search.Expand(q); err != nil {
 				return nil, err
 			}
@@ -136,7 +136,7 @@ func Graph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 			err = fmt.Errorf("tsdbHost not set")
 			return
 		}
-		tr, err = oreq.Query(h, r.Header.Get("Referer"))
+		tr, err = oreq.Query(h)
 	})
 	if err != nil {
 		return nil, err
@@ -240,7 +240,7 @@ func ExprGraph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (in
 	}
 	// it may not strictly be necessary to recreate the contexts each time, but we do to be safe
 	backends := &expr.Backends{
-		TSDBContext:     schedule.SystemConf.GetTSDBContext(r.Header.Get("Referer")),
+		TSDBContext:     schedule.SystemConf.GetTSDBContext(),
 		GraphiteContext: schedule.SystemConf.GetGraphiteContext(),
 		InfluxConfig:    schedule.SystemConf.GetInfluxContext(),
 		ElasticHosts:    schedule.SystemConf.GetElasticContext(),

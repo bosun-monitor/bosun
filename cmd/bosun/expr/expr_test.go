@@ -210,7 +210,7 @@ func TestQueryExpr(t *testing.T) {
 			t.Fatal(err)
 		}
 		backends := &Backends{
-			TSDBContext:  &opentsdb.LimitContext{Host: u.Host, Referer: "", Limit: 1e10, TSDBVersion: opentsdb.Version2_1},
+			TSDBContext:  &opentsdb.LimitContext{Host: u.Host, Limit: 1e10, TSDBVersion: opentsdb.Version2_1},
 			InfluxConfig: client.HTTPConfig{},
 		}
 		providers := &BosunProviders{}
