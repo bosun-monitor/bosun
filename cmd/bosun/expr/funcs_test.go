@@ -454,6 +454,6 @@ func TestAggregateNaNHandling(t *testing.T){
 	}
 	val1 := results[0].Value.(Series)[time.Unix(100, 0)]
 	if val1 != 2.0 {
-		t.Errorf("got second point = %f, want %f", 2.0)
+		t.Errorf("got second point = %f, want %f", val1, 2.0)
 	}
 }
