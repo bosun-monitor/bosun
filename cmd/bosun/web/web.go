@@ -346,8 +346,8 @@ func Index(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 	// having to make an HTTP call to see what features should be enabled
 	// in the UI
 	openTSDBVersion := opentsdb.Version{}
-	if schedule.SystemConf.GetTSDBContext() != nil {
-		openTSDBVersion = schedule.SystemConf.GetTSDBContext().Version()
+	if schedule.SystemConf.GetTSDBContext("") != nil {
+		openTSDBVersion = schedule.SystemConf.GetTSDBContext("").Version()
 	}
 	u := easyauth.GetUser(r)
 	as := &appSetings{
@@ -494,8 +494,8 @@ func HealthCheck(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (
 }
 
 func OpenTSDBVersion(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	if schedule.SystemConf.GetTSDBContext() != nil {
-		return schedule.SystemConf.GetTSDBContext().Version(), nil
+	if schedule.SystemConf.GetTSDBContext("") != nil {
+		return schedule.SystemConf.GetTSDBContext("").Version(), nil
 	}
 	return opentsdb.Version{Major: 0, Minor: 0}, nil
 }

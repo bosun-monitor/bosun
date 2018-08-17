@@ -53,7 +53,7 @@ func main() {
 	}
 
 	query := &opentsdb.Query{Metric: metric, Aggregator: "avg"}
-	query.Tags, err = queryForAggregateTags(query)
+	query.Tags, err = queryForAggregateTags(query, metric)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -79,7 +79,7 @@ func main() {
 			}
 		}()
 		req := opentsdb.Request{Start: startTimeString, End: endTimeString, Queries: []*opentsdb.Query{query}}
-		resp, err := req.Query(*tsdbHost)
+		resp, err := req.Query(*tsdbHost, metric)
 		if err != nil {
 			return err
 		}
@@ -141,11 +141,11 @@ func main() {
 	}
 }
 
-func queryForAggregateTags(query *opentsdb.Query) (opentsdb.TagSet, error) {
+func queryForAggregateTags(query *opentsdb.Query, metric string) (opentsdb.TagSet, error) {
 	req := opentsdb.Request{}
 	req.Queries = []*opentsdb.Query{query}
 	req.Start = "1h-ago"
-	resp, err := req.Query(*tsdbHost)
+	resp, err := req.Query(*tsdbHost, metric)
 	if err != nil {
 		return nil, err
 	}
