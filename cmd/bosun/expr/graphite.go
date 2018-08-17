@@ -93,11 +93,11 @@ func parseGraphiteResponse(req *graphite.Request, s *graphite.Response, formatTa
 	return results, nil
 }
 
-func GraphiteBand(e *State, T miniprofiler.Timer, query, duration, period, format string, num float64) (r *Results, err error) {
+func GraphiteBand(e *State, query, duration, period, format string, num float64) (r *Results, err error) {
 	r = new(Results)
 	r.IgnoreOtherUnjoined = true
 	r.IgnoreUnjoined = true
-	T.Step("graphiteBand", func(T miniprofiler.Timer) {
+	e.Timer.Step("graphiteBand", func(T miniprofiler.Timer) {
 		var d, p opentsdb.Duration
 		d, err = opentsdb.ParseDuration(duration)
 		if err != nil {
@@ -123,7 +123,7 @@ func GraphiteBand(e *State, T miniprofiler.Timer, query, duration, period, forma
 			st := now.Add(time.Duration(-d))
 			req.Start = &st
 			var s graphite.Response
-			s, err = timeGraphiteRequest(e, T, req)
+			s, err = timeGraphiteRequest(e, req)
 			if err != nil {
 				return
 			}
@@ -164,7 +164,7 @@ func GraphiteBand(e *State, T miniprofiler.Timer, query, duration, period, forma
 	return
 }
 
-func GraphiteQuery(e *State, T miniprofiler.Timer, query string, sduration, eduration, format string) (r *Results, err error) {
+func GraphiteQuery(e *State, query string, sduration, eduration, format string) (r *Results, err error) {
 	sd, err := opentsdb.ParseDuration(sduration)
 	if err != nil {
 		return
@@ -183,7 +183,7 @@ func GraphiteQuery(e *State, T miniprofiler.Timer, query string, sduration, edur
 		Start:   &st,
 		End:     &et,
 	}
-	s, err := timeGraphiteRequest(e, T, req)
+	s, err := timeGraphiteRequest(e, req)
 	if err != nil {
 		return nil, err
 	}
@@ -209,10 +209,10 @@ func graphiteTagQuery(args []parse.Node) (parse.Tags, error) {
 	return t, nil
 }
 
-func timeGraphiteRequest(e *State, T miniprofiler.Timer, req *graphite.Request) (resp graphite.Response, err error) {
+func timeGraphiteRequest(e *State, req *graphite.Request) (resp graphite.Response, err error) {
 	e.graphiteQueries = append(e.graphiteQueries, *req)
 	b, _ := json.MarshalIndent(req, "", "  ")
-	T.StepCustomTiming("graphite", "query", string(b), func() {
+	e.Timer.StepCustomTiming("graphite", "query", string(b), func() {
 		key := req.CacheKey()
 		getFn := func() (interface{}, error) {
 			return e.GraphiteContext.Query(req)

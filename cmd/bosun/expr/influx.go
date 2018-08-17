@@ -9,7 +9,6 @@ import (
 	"bosun.org/cmd/bosun/expr/parse"
 	"bosun.org/models"
 	"bosun.org/opentsdb"
-	"github.com/MiniProfiler/go/miniprofiler"
 	"github.com/influxdata/influxdb/client/v2"
 	"github.com/influxdata/influxdb/influxql"
 	influxModels "github.com/influxdata/influxdb/models"
@@ -45,8 +44,8 @@ func influxTag(args []parse.Node) (parse.Tags, error) {
 	return t, nil
 }
 
-func InfluxQuery(e *State, T miniprofiler.Timer, db, query, startDuration, endDuration, groupByInterval string) (*Results, error) {
-	qres, err := timeInfluxRequest(e, T, db, query, startDuration, endDuration, groupByInterval)
+func InfluxQuery(e *State, db, query, startDuration, endDuration, groupByInterval string) (*Results, error) {
+	qres, err := timeInfluxRequest(e, db, query, startDuration, endDuration, groupByInterval)
 	if err != nil {
 		return nil, err
 	}
@@ -187,7 +186,7 @@ func influxQueryDuration(now time.Time, query, start, end, groupByInterval strin
 	return s.String(), nil
 }
 
-func timeInfluxRequest(e *State, T miniprofiler.Timer, db, query, startDuration, endDuration, groupByInterval string) (s []influxModels.Row, err error) {
+func timeInfluxRequest(e *State, db, query, startDuration, endDuration, groupByInterval string) (s []influxModels.Row, err error) {
 	q, err := influxQueryDuration(e.now, query, startDuration, endDuration, groupByInterval)
 	if err != nil {
 		return nil, err
@@ -197,7 +196,7 @@ func timeInfluxRequest(e *State, T miniprofiler.Timer, db, query, startDuration,
 		return nil, err
 	}
 	q_key := fmt.Sprintf("%s: %s", db, q)
-	T.StepCustomTiming("influx", "query", q_key, func() {
+	e.Timer.StepCustomTiming("influx", "query", q_key, func() {
 		getFn := func() (interface{}, error) {
 			res, err := conn.Query(client.Query{
 				Command:  q,
