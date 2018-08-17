@@ -450,10 +450,10 @@ func TestAggregateNaNHandling(t *testing.T){
 	}
 	val0 := results[0].Value.(Series)[time.Unix(0, 0)]
 	if !math.IsNaN(val0) {
-		t.Errorf("got first point = %d, want NaN", val0)
+		t.Errorf("got first point = %f, want NaN", val0)
 	}
 	val1 := results[0].Value.(Series)[time.Unix(100, 0)]
 	if val1 != 2.0 {
-		t.Errorf("got second point = %d, want %d", 2.0)
+		t.Errorf("got second point = %f, want %f", 2.0)
 	}
 }
