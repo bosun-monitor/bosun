@@ -597,7 +597,7 @@ Sum.
 
 Aggregation functions take a seriesSet, and return a new seriesSet.
 
-## aggregate(seriesSet, groups string, aggregator string) seriesSet
+## aggregate(series seriesSet, groups string, aggregator string) seriesSet
 {: .exprFunc}
 
 Takes a seriesSet and combines it into a new seriesSet with the groups specified, using an aggregator to merge any series that share the matching tag values. If groups is empty, all series are combined into a single series, regardless of existing tags. The available aggregator functions are: avg (average), p50 (median), min (minimum) and max (maximum).
