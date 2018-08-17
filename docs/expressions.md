@@ -593,6 +593,24 @@ Returns the length of the longest streak of values that evaluate to true (i.e. m
 
 Sum.
 
+# Aggregation Functions
+
+Aggregation functions take a seriesSet, and return a new seriesSet.
+
+## aggregate(seriesSet, groups string, aggregator string) seriesSet
+{: .exprFunc}
+
+Takes a seriesSet and combines it into a new seriesSet with the groups specified, using an aggregator to merge any series that share the matching tag values. If groups is empty, all series are combined into a single series, regardless of existing tags. The available aggregator functions are: avg (average), p50 (median), min (minimum) and max (maximum).
+
+This can be particularly useful for removing anomalies when comparing timeseries over periods using the over function. 
+
+Example:
+
+```
+$weeks = over("sum:1m-avg:os.cpu{region=*,color=*}", "24h", "1w", 3)
+$agg = aggregate($weeks, "region,color", "median")
+```
+
 # Group Functions
 
 Group functions modify the OpenTSDB groups.
