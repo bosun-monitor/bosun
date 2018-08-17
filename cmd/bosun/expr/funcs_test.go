@@ -8,6 +8,7 @@ import (
 	"bosun.org/opentsdb"
 
 	"github.com/influxdata/influxdb/client/v2"
+	"math"
 )
 
 type exprInOut struct {
@@ -339,6 +340,7 @@ func TestAggregate(t *testing.T) {
 		t.Error(err)
 	}
 
+
 	// check that unknown aggregator errors out
 	err = testExpression(exprInOut{
 		fmt.Sprintf("aggregate(merge(%v, %v, %v), \"\", \"unknown\")", seriesA, seriesB, seriesC),
@@ -405,5 +407,53 @@ func TestAggregateWithGroups(t *testing.T) {
 	})
 	if err != nil {
 		t.Error(err)
+	}
+}
+
+func TestAggregateNaNHandling(t *testing.T){
+	// test behavior when NaN is encountered.
+	seriesD := `series("foo=bar", 0, 0 / 0, 100, 1)`
+	seriesE := `series("foo=baz", 0, 1, 100, 3)`
+
+	// expect NaN points to be dropped
+	eio := exprInOut{
+		fmt.Sprintf("aggregate(merge(%v, %v), \"\", \"p50\")", seriesD, seriesE),
+		Results{
+			Results: ResultSlice{
+				&Result{
+					Value: Series{
+						time.Unix(0, 0): math.NaN(),
+						time.Unix(100, 0): 2,
+					},
+					Group: opentsdb.TagSet{},
+				},
+			},
+		},
+		false,
+	}
+	e, err := New(eio.expr, builtins)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	backends := &Backends{
+		InfluxConfig: client.HTTPConfig{},
+	}
+	providers := &BosunProviders{}
+	_, _, err = e.Execute(backends, providers, nil, queryTime, 0, false)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	results := eio.out.Results
+	if len(results) != 1 {
+		t.Errorf("got len(results) == %d, want 1", len(results))
+	}
+	val0 := results[0].Value.(Series)[time.Unix(0, 0)]
+	if !math.IsNaN(val0) {
+		t.Errorf("got first point = %d, want NaN", val0)
+	}
+	val1 := results[0].Value.(Series)[time.Unix(100, 0)]
+	if val1 != 2.0 {
+		t.Errorf("got second point = %d, want %d", 2.0)
 	}
 }

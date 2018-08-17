@@ -45,8 +45,17 @@ func tagRemove(args []parse.Node) (parse.Tags, error) {
 }
 
 func seriesFuncTags(args []parse.Node) (parse.Tags, error) {
+	s := args[0].(*parse.StringNode).Text
+	return tagsFromString(s)
+}
+
+func aggregateFuncTags(args []parse.Node) (parse.Tags, error) {
+	s := args[1].(*parse.StringNode).Text
+	return tagsFromString(s)
+}
+
+func tagsFromString(text string) (parse.Tags, error){
 	t := make(parse.Tags)
-	text := args[0].(*parse.StringNode).Text
 	if text == "" {
 		return t, nil
 	}
@@ -387,7 +396,7 @@ var builtins = map[string]parse.Func{
 	"aggregate": {
 		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeString, models.TypeString},
 		Return: models.TypeSeriesSet,
-		Tags:   tagFirst,
+		Tags:   aggregateFuncTags,
 		F:      Aggregate,
 	},
 }
@@ -407,41 +416,42 @@ func Aggregate(e *State, T miniprofiler.Timer, series *Results, groups string, a
 		}
 		res.Group = opentsdb.TagSet{}
 		results.Results = append(results.Results, res)
-	} else {
-		// at least one group specified, so we work out what
-		// the new group values will be
-		newGroups := map[string]*Results{}
-		for _, result := range series.Results {
-			vals := []string{}
-			for _, grp := range grps {
-				if val, ok := result.Group[grp]; ok {
-					vals = append(vals, val)
-				} else {
-					return nil, fmt.Errorf("unmatched group in at least one series: %v", grp)
-				}
-			}
-			groupName := strings.Join(vals, ",")
-			if _, ok := newGroups[groupName]; !ok {
-				newGroups[groupName] = &Results{}
-			}
-			newGroups[groupName].Results = append(newGroups[groupName].Results, result)
-		}
-
-		for groupName, series := range newGroups {
-			res, err := aggregate(e, T, series, aggregator)
-			if err != nil {
-				return &results, err
-			}
-			vs := strings.Split(groupName, ",")
-			res.Group = opentsdb.TagSet{}
-			for i := 0; i < len(grps); i++ {
-				res.Group.Merge(opentsdb.TagSet{grps[i]: vs[i]})
-			}
-			results.Results = append(results.Results, res)
-		}
+		return &results, nil
 	}
 
+	// at least one group specified, so we work out what
+	// the new group values will be
+	newGroups := map[string]*Results{}
+	for _, result := range series.Results {
+		vals := []string{}
+		for _, grp := range grps {
+			if val, ok := result.Group[grp]; ok {
+				vals = append(vals, val)
+				continue
+			}
+			return nil, fmt.Errorf("unmatched group in at least one series: %v", grp)
+		}
+		groupName := strings.Join(vals, ",")
+		if _, ok := newGroups[groupName]; !ok {
+			newGroups[groupName] = &Results{}
+		}
+		newGroups[groupName].Results = append(newGroups[groupName].Results, result)
+	}
+
+	for groupName, series := range newGroups {
+		res, err := aggregate(e, T, series, aggregator)
+		if err != nil {
+			return &results, err
+		}
+		vs := strings.Split(groupName, ",")
+		res.Group = opentsdb.TagSet{}
+		for i := 0; i < len(grps); i++ {
+			res.Group.Merge(opentsdb.TagSet{grps[i]: vs[i]})
+		}
+		results.Results = append(results.Results, res)
+	}
 	return &results, nil
+
 }
 
 // Splits a string of groups by comma, but also trims any added whitespace
@@ -507,7 +517,7 @@ func aggregateMedian(series ResultSlice) Series {
 		if l % 2 == 1 {
 			newSeries[t] = merged[t][l / 2]
 		} else {
-			newSeries[t] = (merged[t][l / 2] + merged[t][l / 2 + 1]) / 2
+			newSeries[t] = (merged[t][l / 2 - 1] + merged[t][l / 2]) / 2
 		}
 	}
 	return newSeries
