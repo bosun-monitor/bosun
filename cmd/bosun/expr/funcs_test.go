@@ -265,14 +265,14 @@ func TestAggregate(t *testing.T) {
 
 	// test median aggregator
 	err := testExpression(exprInOut{
-		fmt.Sprintf("aggregate(merge(%v, %v, %v), \"median\")", seriesA, seriesB, seriesC),
+		fmt.Sprintf("aggregate(merge(%v, %v, %v), \"\", \"p50\")", seriesA, seriesB, seriesC),
 		Results{
 			Results: ResultSlice{
 				&Result{
 					Value: Series{
 						time.Unix(0, 0): 3,
 					},
-					Group: opentsdb.TagSet{"aggregator": "median"},
+					Group: opentsdb.TagSet{},
 				},
 			},
 		},
@@ -284,14 +284,52 @@ func TestAggregate(t *testing.T) {
 
 	// test average aggregator
 	err = testExpression(exprInOut{
-		fmt.Sprintf("aggregate(merge(%v, %v, %v), \"avg\")", seriesA, seriesB, seriesC),
+		fmt.Sprintf("aggregate(merge(%v, %v, %v), \"\", \"avg\")", seriesA, seriesB, seriesC),
 		Results{
 			Results: ResultSlice{
 				&Result{
 					Value: Series{
 						time.Unix(0, 0): 3,
 					},
-					Group: opentsdb.TagSet{"aggregator": "avg"},
+					Group: opentsdb.TagSet{},
+				},
+			},
+		},
+		false,
+	})
+	if err != nil {
+		t.Error(err)
+	}
+
+	// test min aggregator
+	err = testExpression(exprInOut{
+		fmt.Sprintf("aggregate(merge(%v, %v, %v), \"\", \"min\")", seriesA, seriesB, seriesC),
+		Results{
+			Results: ResultSlice{
+				&Result{
+					Value: Series{
+						time.Unix(0, 0): 1,
+					},
+					Group: opentsdb.TagSet{},
+				},
+			},
+		},
+		false,
+	})
+	if err != nil {
+		t.Error(err)
+	}
+
+	// test max aggregator
+	err = testExpression(exprInOut{
+		fmt.Sprintf("aggregate(merge(%v, %v, %v), \"\", \"max\")", seriesA, seriesB, seriesC),
+		Results{
+			Results: ResultSlice{
+				&Result{
+					Value: Series{
+						time.Unix(0, 0): 5,
+					},
+					Group: opentsdb.TagSet{},
 				},
 			},
 		},
@@ -303,11 +341,69 @@ func TestAggregate(t *testing.T) {
 
 	// check that unknown aggregator errors out
 	err = testExpression(exprInOut{
-		fmt.Sprintf("aggregate(merge(%v, %v, %v), \"unknown\")", seriesA, seriesB, seriesC),
+		fmt.Sprintf("aggregate(merge(%v, %v, %v), \"\", \"unknown\")", seriesA, seriesB, seriesC),
 		Results{},
 		false,
 	})
 	if err == nil {
 		t.Errorf("expected unknown aggregator to return error")
+	}
+}
+
+func TestAggregateWithGroups(t *testing.T) {
+	seriesA := `series("color=blue,type=apple,name=bob", 0, 1)`
+	seriesB := `series("color=blue,type=apple", 1, 3)`
+	seriesC := `series("color=green,type=apple", 0, 5)`
+
+	// test aggregator with single group
+	err := testExpression(exprInOut{
+		fmt.Sprintf("aggregate(merge(%v, %v, %v), \"color\", \"p50\")", seriesA, seriesB, seriesC),
+		Results{
+			Results: ResultSlice{
+				&Result{
+					Value: Series{
+						time.Unix(0, 0): 1,
+						time.Unix(1, 0): 3,
+					},
+					Group: opentsdb.TagSet{"color": "blue"},
+				},
+				&Result{
+					Value: Series{
+						time.Unix(0, 0): 5,
+					},
+					Group: opentsdb.TagSet{"color": "green"},
+				},
+			},
+		},
+		false,
+	})
+	if err != nil {
+		t.Error(err)
+	}
+
+	// test aggregator with multiple groups
+	err = testExpression(exprInOut{
+		fmt.Sprintf("aggregate(merge(%v, %v, %v), \"color,type\", \"p50\")", seriesA, seriesB, seriesC),
+		Results{
+			Results: ResultSlice{
+				&Result{
+					Value: Series{
+						time.Unix(0, 0): 1,
+						time.Unix(1, 0): 3,
+					},
+					Group: opentsdb.TagSet{"color": "blue", "type": "apple"},
+				},
+				&Result{
+					Value: Series{
+						time.Unix(0, 0): 5,
+					},
+					Group: opentsdb.TagSet{"color": "green", "type": "apple"},
+				},
+			},
+		},
+		false,
+	})
+	if err != nil {
+		t.Error(err)
 	}
 }

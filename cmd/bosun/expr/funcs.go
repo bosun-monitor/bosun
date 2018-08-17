@@ -385,57 +385,160 @@ var builtins = map[string]parse.Func{
 		MapFunc: true,
 	},
 	"aggregate": {
-		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeString},
+		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeString, models.TypeString},
 		Return: models.TypeSeriesSet,
 		Tags:   tagFirst,
 		F:      Aggregate,
 	},
 }
 
-func Aggregate(e *State, T miniprofiler.Timer, series *Results, aggregator string) (*Results, error) {
+// Aggregate combines multiple series matching the specified groups using an aggregator function. If group
+// is empty, all given series are combined, regardless of existing groups.
+// Available aggregator functions include: avg (average), p50 (median), min (minimum) and max (maximum).
+func Aggregate(e *State, T miniprofiler.Timer, series *Results, groups string, aggregator string) (*Results, error) {
 	results := Results{}
 
+	grps := splitGroups(groups)
+	if len(grps) == 0 {
+		// no groups specified, so we merge all group values
+		res, err := aggregate(e, T, series, aggregator)
+		if err != nil {
+			return &results, err
+		}
+		res.Group = opentsdb.TagSet{}
+		results.Results = append(results.Results, res)
+	} else {
+		// at least one group specified, so we work out what
+		// the new group values will be
+		newGroups := map[string]*Results{}
+		for _, result := range series.Results {
+			vals := []string{}
+			for _, grp := range grps {
+				if val, ok := result.Group[grp]; ok {
+					vals = append(vals, val)
+				} else {
+					return nil, fmt.Errorf("unmatched group in at least one series: %v", grp)
+				}
+			}
+			groupName := strings.Join(vals, ",")
+			if _, ok := newGroups[groupName]; !ok {
+				newGroups[groupName] = &Results{}
+			}
+			newGroups[groupName].Results = append(newGroups[groupName].Results, result)
+		}
+
+		for groupName, series := range newGroups {
+			res, err := aggregate(e, T, series, aggregator)
+			if err != nil {
+				return &results, err
+			}
+			vs := strings.Split(groupName, ",")
+			res.Group = opentsdb.TagSet{}
+			for i := 0; i < len(grps); i++ {
+				res.Group.Merge(opentsdb.TagSet{grps[i]: vs[i]})
+			}
+			results.Results = append(results.Results, res)
+		}
+	}
+
+	return &results, nil
+}
+
+// Splits a string of groups by comma, but also trims any added whitespace
+// and returns an empty slice if the string is empty.
+func splitGroups(groups string) []string {
+	if len(groups) == 0 {
+		return []string{}
+	}
+	grps := strings.Split(groups, ",")
+	for i, grp := range grps {
+		grps[i] = strings.Trim(grp, " ")
+	}
+	return grps
+}
+
+func aggregate(e *State, T miniprofiler.Timer, series *Results, aggregator string) (*Result, error) {
 	res := Result{}
 	newSeries := make(Series)
 
 	switch aggregator {
 	case "avg":
-		counts := map[time.Time]int64{}
-		for _, result := range series.Results {
-			for t, v := range result.Value.Value().(Series) {
-				newSeries[t] += v
-				counts[t] += 1
-			}
-		}
-		for t := range newSeries {
-			newSeries[t] /= float64(counts[t])
-		}
-	case "median":
-		merged := map[time.Time][]float64{}
-		for _, result := range series.Results {
-			for t, v := range result.Value.Value().(Series) {
-				merged[t] = append(merged[t], v)
-			}
-		}
-		for t := range merged {
-			sort.Float64s(merged[t])
-			l := len(merged[t])
-			if l % 2 == 1 {
-				newSeries[t] = merged[t][l / 2]
-			} else {
-				newSeries[t] = (merged[t][l / 2] + merged[t][l / 2 + 1]) / 2
-			}
-		}
+		newSeries = aggregateAverage(series.Results)
+	case "p50":
+		newSeries = aggregateMedian(series.Results)
+	case "min":
+		newSeries = aggregateMin(series.Results)
+	case "max":
+		newSeries = aggregateMax(series.Results)
 	default:
-		return series, fmt.Errorf("unknown aggregator: %v", aggregator)
+		return &res, fmt.Errorf("unknown aggregator: %v. Options are avg, p50, min, max", aggregator)
 	}
 
 	res.Value = newSeries
-	res.Group = opentsdb.TagSet{}
-	res.Group.Merge(opentsdb.TagSet{"aggregator": aggregator})
-	results.Results = append(results.Results, &res)
+	return &res, nil
+}
 
-	return &results, nil
+func aggregateAverage(series ResultSlice) Series {
+	newSeries := make(Series)
+	counts := map[time.Time]int64{}
+	for _, result := range series {
+		for t, v := range result.Value.Value().(Series) {
+			newSeries[t] += v
+			counts[t] += 1
+		}
+	}
+	for t := range newSeries {
+		newSeries[t] /= float64(counts[t])
+	}
+	return newSeries
+}
+
+func aggregateMedian(series ResultSlice) Series {
+	newSeries := make(Series)
+	merged := map[time.Time][]float64{}
+	for _, result := range series {
+		for t, v := range result.Value.Value().(Series) {
+			merged[t] = append(merged[t], v)
+		}
+	}
+	for t := range merged {
+		sort.Float64s(merged[t])
+		l := len(merged[t])
+		if l % 2 == 1 {
+			newSeries[t] = merged[t][l / 2]
+		} else {
+			newSeries[t] = (merged[t][l / 2] + merged[t][l / 2 + 1]) / 2
+		}
+	}
+	return newSeries
+}
+
+func aggregateMin(series ResultSlice) Series {
+	newSeries := make(Series)
+	for _, result := range series {
+		for t, v := range result.Value.Value().(Series) {
+			if _, ok := newSeries[t]; !ok {
+				newSeries[t] = v
+			} else if v < newSeries[t] {
+				newSeries[t] = v
+			}
+		}
+	}
+	return newSeries
+}
+
+func aggregateMax(series ResultSlice) Series {
+	newSeries := make(Series)
+	for _, result := range series {
+		for t, v := range result.Value.Value().(Series) {
+			if _, ok := newSeries[t]; !ok {
+				newSeries[t] = v
+			} else if v > newSeries[t] {
+				newSeries[t] = v
+			}
+		}
+	}
+	return newSeries
 }
 
 func V(e *State, T miniprofiler.Timer) (*Results, error) {
