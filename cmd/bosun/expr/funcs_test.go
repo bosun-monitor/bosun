@@ -2,13 +2,13 @@ package expr
 
 import (
 	"fmt"
+	"math"
 	"testing"
 	"time"
 
 	"bosun.org/opentsdb"
 
 	"github.com/influxdata/influxdb/client/v2"
-	"math"
 )
 
 type exprInOut struct {
@@ -340,7 +340,6 @@ func TestAggregate(t *testing.T) {
 		t.Error(err)
 	}
 
-
 	// check that unknown aggregator errors out
 	err = testExpression(exprInOut{
 		fmt.Sprintf("aggregate(merge(%v, %v, %v), \"\", \"unknown\")", seriesA, seriesB, seriesC),
@@ -410,7 +409,7 @@ func TestAggregateWithGroups(t *testing.T) {
 	}
 }
 
-func TestAggregateNaNHandling(t *testing.T){
+func TestAggregateNaNHandling(t *testing.T) {
 	// test behavior when NaN is encountered.
 	seriesD := `series("foo=bar", 0, 0 / 0, 100, 1)`
 	seriesE := `series("foo=baz", 0, 1, 100, 3)`
@@ -422,7 +421,7 @@ func TestAggregateNaNHandling(t *testing.T){
 			Results: ResultSlice{
 				&Result{
 					Value: Series{
-						time.Unix(0, 0): math.NaN(),
+						time.Unix(0, 0):   math.NaN(),
 						time.Unix(100, 0): 2,
 					},
 					Group: opentsdb.TagSet{},

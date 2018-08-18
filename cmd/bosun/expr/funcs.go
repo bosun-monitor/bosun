@@ -13,7 +13,7 @@ import (
 	"github.com/GaryBoone/GoStats/stats"
 	"github.com/MiniProfiler/go/miniprofiler"
 	"github.com/jinzhu/now"
-	)
+)
 
 func tagQuery(args []parse.Node) (parse.Tags, error) {
 	n := args[0].(*parse.StringNode)
@@ -54,7 +54,7 @@ func aggregateFuncTags(args []parse.Node) (parse.Tags, error) {
 	return tagsFromString(s)
 }
 
-func tagsFromString(text string) (parse.Tags, error){
+func tagsFromString(text string) (parse.Tags, error) {
 	t := make(parse.Tags)
 	if text == "" {
 		return t, nil
@@ -514,10 +514,10 @@ func aggregateMedian(series ResultSlice) Series {
 	for t := range merged {
 		sort.Float64s(merged[t])
 		l := len(merged[t])
-		if l % 2 == 1 {
-			newSeries[t] = merged[t][l / 2]
+		if l%2 == 1 {
+			newSeries[t] = merged[t][l/2]
 		} else {
-			newSeries[t] = (merged[t][l / 2 - 1] + merged[t][l / 2]) / 2
+			newSeries[t] = (merged[t][l/2-1] + merged[t][l/2]) / 2
 		}
 	}
 	return newSeries
