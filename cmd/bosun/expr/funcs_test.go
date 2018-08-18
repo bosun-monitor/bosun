@@ -340,6 +340,44 @@ func TestAggr(t *testing.T) {
 		t.Error(err)
 	}
 
+	// check that min == p0
+	err = testExpression(exprInOut{
+		fmt.Sprintf("aggr(merge(%v, %v, %v), \"\", \"p0\")", seriesA, seriesB, seriesC),
+		Results{
+			Results: ResultSlice{
+				&Result{
+					Value: Series{
+						time.Unix(0, 0): 1,
+					},
+					Group: opentsdb.TagSet{},
+				},
+			},
+		},
+		false,
+	})
+	if err != nil {
+		t.Error(err)
+	}
+
+	// check that max == p1.0
+	err = testExpression(exprInOut{
+		fmt.Sprintf("aggr(merge(%v, %v, %v), \"\", \"p1.0\")", seriesA, seriesB, seriesC),
+		Results{
+			Results: ResultSlice{
+				&Result{
+					Value: Series{
+						time.Unix(0, 0): 5,
+					},
+					Group: opentsdb.TagSet{},
+				},
+			},
+		},
+		false,
+	})
+	if err != nil {
+		t.Error(err)
+	}
+
 	// check that unknown aggregator errors out
 	err = testExpression(exprInOut{
 		fmt.Sprintf("aggr(merge(%v, %v, %v), \"\", \"unknown\")", seriesA, seriesB, seriesC),
