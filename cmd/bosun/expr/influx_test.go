@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"bosun.org/opentsdb"
-	"github.com/MiniProfiler/go/miniprofiler"
 	"github.com/influxdata/influxdb/client/v2"
 )
 
@@ -62,7 +61,7 @@ func TestInfluxQuery(t *testing.T) {
 			},
 		},
 	}
-	_, err := InfluxQuery(&e, new(miniprofiler.Profile), "db", "select * from alh limit 10", "1n", "", "")
+	_, err := InfluxQuery(&e, "db", "select * from alh limit 10", "1n", "", "")
 	if err == nil {
 		t.Fatal("Should have received an error from InfluxQuery")
 	}
