@@ -1,9 +1,11 @@
 package expr
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -48,7 +50,13 @@ func seriesFuncTags(args []parse.Node) (parse.Tags, error) {
 	return tagsFromString(s)
 }
 
-func aggregateFuncTags(args []parse.Node) (parse.Tags, error) {
+func aggrFuncTags(args []parse.Node) (parse.Tags, error) {
+	if len(args) < 3 {
+		return nil, errors.New("aggr: expect 3 arguments")
+	}
+	if _, ok := args[1].(*parse.StringNode); !ok {
+		return nil, errors.New("aggr: expect group to be string")
+	}
 	s := args[1].(*parse.StringNode).Text
 	return tagsFromString(s)
 }
@@ -206,6 +214,15 @@ var builtins = map[string]parse.Func{
 		Return: models.TypeNumberSet,
 		Tags:   tagFirst,
 		F:      Streak,
+	},
+
+	// Aggregation functions
+	"aggr": {
+		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeString, models.TypeString},
+		Return: models.TypeSeriesSet,
+		Tags:   aggrFuncTags,
+		F:      Aggr,
+		Check:  aggrCheck,
 	},
 
 	// Group functions
@@ -392,24 +409,18 @@ var builtins = map[string]parse.Func{
 		F:       V,
 		MapFunc: true,
 	},
-	"aggregate": {
-		Args:   []models.FuncType{models.TypeSeriesSet, models.TypeString, models.TypeString},
-		Return: models.TypeSeriesSet,
-		Tags:   aggregateFuncTags,
-		F:      Aggregate,
-	},
 }
 
-// Aggregate combines multiple series matching the specified groups using an aggregator function. If group
+// Aggr combines multiple series matching the specified groups using an aggregator function. If group
 // is empty, all given series are combined, regardless of existing groups.
 // Available aggregator functions include: avg (average), p50 (median), min (minimum) and max (maximum).
-func Aggregate(e *State, series *Results, groups string, aggregator string) (*Results, error) {
+func Aggr(e *State, series *Results, groups string, aggregator string) (*Results, error) {
 	results := Results{}
 
 	grps := splitGroups(groups)
 	if len(grps) == 0 {
 		// no groups specified, so we merge all group values
-		res, err := aggregate(e, series, aggregator)
+		res, err := aggr(e, series, aggregator)
 		if err != nil {
 			return &results, err
 		}
@@ -422,7 +433,7 @@ func Aggregate(e *State, series *Results, groups string, aggregator string) (*Re
 	// the new group values will be
 	newGroups := map[string]*Results{}
 	for _, result := range series.Results {
-		vals := []string{}
+		var vals []string
 		for _, grp := range grps {
 			if val, ok := result.Group[grp]; ok {
 				vals = append(vals, val)
@@ -438,7 +449,7 @@ func Aggregate(e *State, series *Results, groups string, aggregator string) (*Re
 	}
 
 	for groupName, series := range newGroups {
-		res, err := aggregate(e, series, aggregator)
+		res, err := aggr(e, series, aggregator)
 		if err != nil {
 			return &results, err
 		}
@@ -449,8 +460,8 @@ func Aggregate(e *State, series *Results, groups string, aggregator string) (*Re
 		}
 		results.Results = append(results.Results, res)
 	}
-	return &results, nil
 
+	return &results, nil
 }
 
 // Splits a string of groups by comma, but also trims any added whitespace
@@ -466,28 +477,41 @@ func splitGroups(groups string) []string {
 	return grps
 }
 
-func aggregate(e *State, series *Results, aggregator string) (*Result, error) {
+func aggr(e *State, series *Results, aggfunc string) (*Result, error) {
 	res := Result{}
 	newSeries := make(Series)
+	var isPerc bool
+	var percValue float64
+	if len(aggfunc) > 0 && aggfunc[0] == 'p' {
+		var err error
+		percValue, err = strconv.ParseFloat(aggfunc[1:], 10)
+		isPerc = err == nil
+	}
+	if isPerc {
+		if percValue < 0 || percValue > 1 {
+			return nil, fmt.Errorf("expr: aggr: percentile number must be greater than or equal to zero 0 and less than or equal 1")
+		}
+		aggfunc = "percentile"
+	}
 
-	switch aggregator {
+	switch aggfunc {
+	case "percentile":
+		newSeries = aggrPercentile(series.Results, percValue)
 	case "avg":
-		newSeries = aggregateAverage(series.Results)
-	case "p50":
-		newSeries = aggregateMedian(series.Results)
+		newSeries = aggrAverage(series.Results)
 	case "min":
-		newSeries = aggregateMin(series.Results)
+		newSeries = aggrMin(series.Results)
 	case "max":
-		newSeries = aggregateMax(series.Results)
+		newSeries = aggrMax(series.Results)
 	default:
-		return &res, fmt.Errorf("unknown aggregator: %v. Options are avg, p50, min, max", aggregator)
+		return &res, fmt.Errorf("unknown aggfunc: %v. Options are avg, p50, min, max", aggfunc)
 	}
 
 	res.Value = newSeries
 	return &res, nil
 }
 
-func aggregateAverage(series ResultSlice) Series {
+func aggrAverage(series ResultSlice) Series {
 	newSeries := make(Series)
 	counts := map[time.Time]int64{}
 	for _, result := range series {
@@ -502,7 +526,7 @@ func aggregateAverage(series ResultSlice) Series {
 	return newSeries
 }
 
-func aggregateMedian(series ResultSlice) Series {
+func aggrPercentile(series ResultSlice, percValue float64) Series {
 	newSeries := make(Series)
 	merged := map[time.Time][]float64{}
 	for _, result := range series {
@@ -511,18 +535,19 @@ func aggregateMedian(series ResultSlice) Series {
 		}
 	}
 	for t := range merged {
-		sort.Float64s(merged[t])
-		l := len(merged[t])
-		if l%2 == 1 {
-			newSeries[t] = merged[t][l/2]
-		} else {
-			newSeries[t] = (merged[t][l/2-1] + merged[t][l/2]) / 2
+		// transform points from merged series into an imaginary
+		// single timeseries, so that we can use the existing
+		// percentile reduction function here
+		dps := Series{}
+		for i := range merged[t] {
+			dps[time.Unix(int64(i), 0)] = merged[t][i]
 		}
+		newSeries[t] = percentile(dps, percValue)
 	}
 	return newSeries
 }
 
-func aggregateMin(series ResultSlice) Series {
+func aggrMin(series ResultSlice) Series {
 	newSeries := make(Series)
 	for _, result := range series {
 		for t, v := range result.Value.Value().(Series) {
@@ -536,7 +561,7 @@ func aggregateMin(series ResultSlice) Series {
 	return newSeries
 }
 
-func aggregateMax(series ResultSlice) Series {
+func aggrMax(series ResultSlice) Series {
 	newSeries := make(Series)
 	for _, result := range series {
 		for t, v := range result.Value.Value().(Series) {
@@ -548,6 +573,34 @@ func aggregateMax(series ResultSlice) Series {
 		}
 	}
 	return newSeries
+}
+
+func aggrCheck(t *parse.Tree, f *parse.FuncNode) error {
+	if len(f.Args) < 3 {
+		return errors.New("aggr: expect 3 arguments")
+	}
+	if _, ok := f.Args[2].(*parse.StringNode); !ok {
+		return errors.New("aggr: expect string as aggregator function name")
+	}
+	name := f.Args[2].(*parse.StringNode).Text
+	var isPerc bool
+	var percValue float64
+	if len(name) > 0 && name[0] == 'p' {
+		var err error
+		percValue, err = strconv.ParseFloat(name[1:], 10)
+		isPerc = err == nil
+	}
+	if isPerc {
+		if percValue < 0 || percValue > 1 {
+			return errors.New("expr: aggr: percentile number must be greater than or equal to zero 0 and less than or equal 1")
+		}
+		return nil
+	}
+	switch name {
+	case "avg", "min", "max":
+		return nil
+	}
+	return fmt.Errorf("expr: aggr: unrecognized aggregation function %s", name)
 }
 
 func V(e *State) (*Results, error) {

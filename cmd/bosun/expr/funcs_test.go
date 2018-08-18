@@ -259,14 +259,14 @@ func TestTail(t *testing.T) {
 	}
 }
 
-func TestAggregate(t *testing.T) {
+func TestAggr(t *testing.T) {
 	seriesA := `series("foo=bar", 0, 1)`
 	seriesB := `series("foo=baz", 0, 3)`
 	seriesC := `series("foo=bat", 0, 5)`
 
 	// test median aggregator
 	err := testExpression(exprInOut{
-		fmt.Sprintf("aggregate(merge(%v, %v, %v), \"\", \"p50\")", seriesA, seriesB, seriesC),
+		fmt.Sprintf("aggr(merge(%v, %v, %v), \"\", \"p.50\")", seriesA, seriesB, seriesC),
 		Results{
 			Results: ResultSlice{
 				&Result{
@@ -285,7 +285,7 @@ func TestAggregate(t *testing.T) {
 
 	// test average aggregator
 	err = testExpression(exprInOut{
-		fmt.Sprintf("aggregate(merge(%v, %v, %v), \"\", \"avg\")", seriesA, seriesB, seriesC),
+		fmt.Sprintf("aggr(merge(%v, %v, %v), \"\", \"avg\")", seriesA, seriesB, seriesC),
 		Results{
 			Results: ResultSlice{
 				&Result{
@@ -304,7 +304,7 @@ func TestAggregate(t *testing.T) {
 
 	// test min aggregator
 	err = testExpression(exprInOut{
-		fmt.Sprintf("aggregate(merge(%v, %v, %v), \"\", \"min\")", seriesA, seriesB, seriesC),
+		fmt.Sprintf("aggr(merge(%v, %v, %v), \"\", \"min\")", seriesA, seriesB, seriesC),
 		Results{
 			Results: ResultSlice{
 				&Result{
@@ -323,7 +323,7 @@ func TestAggregate(t *testing.T) {
 
 	// test max aggregator
 	err = testExpression(exprInOut{
-		fmt.Sprintf("aggregate(merge(%v, %v, %v), \"\", \"max\")", seriesA, seriesB, seriesC),
+		fmt.Sprintf("aggr(merge(%v, %v, %v), \"\", \"max\")", seriesA, seriesB, seriesC),
 		Results{
 			Results: ResultSlice{
 				&Result{
@@ -342,7 +342,7 @@ func TestAggregate(t *testing.T) {
 
 	// check that unknown aggregator errors out
 	err = testExpression(exprInOut{
-		fmt.Sprintf("aggregate(merge(%v, %v, %v), \"\", \"unknown\")", seriesA, seriesB, seriesC),
+		fmt.Sprintf("aggr(merge(%v, %v, %v), \"\", \"unknown\")", seriesA, seriesB, seriesC),
 		Results{},
 		false,
 	})
@@ -351,14 +351,14 @@ func TestAggregate(t *testing.T) {
 	}
 }
 
-func TestAggregateWithGroups(t *testing.T) {
+func TestAggrWithGroups(t *testing.T) {
 	seriesA := `series("color=blue,type=apple,name=bob", 0, 1)`
 	seriesB := `series("color=blue,type=apple", 1, 3)`
 	seriesC := `series("color=green,type=apple", 0, 5)`
 
 	// test aggregator with single group
 	err := testExpression(exprInOut{
-		fmt.Sprintf("aggregate(merge(%v, %v, %v), \"color\", \"p50\")", seriesA, seriesB, seriesC),
+		fmt.Sprintf("aggr(merge(%v, %v, %v), \"color\", \"p.50\")", seriesA, seriesB, seriesC),
 		Results{
 			Results: ResultSlice{
 				&Result{
@@ -384,7 +384,7 @@ func TestAggregateWithGroups(t *testing.T) {
 
 	// test aggregator with multiple groups
 	err = testExpression(exprInOut{
-		fmt.Sprintf("aggregate(merge(%v, %v, %v), \"color,type\", \"p50\")", seriesA, seriesB, seriesC),
+		fmt.Sprintf("aggr(merge(%v, %v, %v), \"color,type\", \"p.50\")", seriesA, seriesB, seriesC),
 		Results{
 			Results: ResultSlice{
 				&Result{
@@ -409,14 +409,14 @@ func TestAggregateWithGroups(t *testing.T) {
 	}
 }
 
-func TestAggregateNaNHandling(t *testing.T) {
+func TestAggrNaNHandling(t *testing.T) {
 	// test behavior when NaN is encountered.
 	seriesD := `series("foo=bar", 0, 0 / 0, 100, 1)`
 	seriesE := `series("foo=baz", 0, 1, 100, 3)`
 
 	// expect NaN points to be dropped
 	eio := exprInOut{
-		fmt.Sprintf("aggregate(merge(%v, %v), \"\", \"p50\")", seriesD, seriesE),
+		fmt.Sprintf("aggr(merge(%v, %v), \"\", \"p.90\")", seriesD, seriesE),
 		Results{
 			Results: ResultSlice{
 				&Result{
