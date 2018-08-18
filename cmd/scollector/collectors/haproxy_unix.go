@@ -430,7 +430,7 @@ var haproxyCSVMeta = []MetricMetaHAProxy{
 		Name: "req_tot",
 		MetricMeta: MetricMeta{RateType: metadata.Counter,
 			Unit: metadata.Request,
-			Desc: "The number of HTTP requests recieved.",
+			Desc: "The number of HTTP requests received.",
 		}},
 	{
 		Name: "cli_abrt",
