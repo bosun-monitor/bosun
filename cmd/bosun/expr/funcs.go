@@ -403,13 +403,13 @@ var builtins = map[string]parse.Func{
 // Aggregate combines multiple series matching the specified groups using an aggregator function. If group
 // is empty, all given series are combined, regardless of existing groups.
 // Available aggregator functions include: avg (average), p50 (median), min (minimum) and max (maximum).
-func Aggregate(e *State, T miniprofiler.Timer, series *Results, groups string, aggregator string) (*Results, error) {
+func Aggregate(e *State, series *Results, groups string, aggregator string) (*Results, error) {
 	results := Results{}
 
 	grps := splitGroups(groups)
 	if len(grps) == 0 {
 		// no groups specified, so we merge all group values
-		res, err := aggregate(e, T, series, aggregator)
+		res, err := aggregate(e, series, aggregator)
 		if err != nil {
 			return &results, err
 		}
@@ -438,7 +438,7 @@ func Aggregate(e *State, T miniprofiler.Timer, series *Results, groups string, a
 	}
 
 	for groupName, series := range newGroups {
-		res, err := aggregate(e, T, series, aggregator)
+		res, err := aggregate(e, series, aggregator)
 		if err != nil {
 			return &results, err
 		}
@@ -466,7 +466,7 @@ func splitGroups(groups string) []string {
 	return grps
 }
 
-func aggregate(e *State, T miniprofiler.Timer, series *Results, aggregator string) (*Result, error) {
+func aggregate(e *State, series *Results, aggregator string) (*Result, error) {
 	res := Result{}
 	newSeries := make(Series)
 
