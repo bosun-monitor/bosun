@@ -497,33 +497,20 @@ func aggr(e *State, series *Results, aggfunc string) (*Result, error) {
 	switch aggfunc {
 	case "percentile":
 		newSeries = aggrPercentile(series.Results, percValue)
+	case "min":
+		newSeries = aggrPercentile(series.Results, 0.0)
+	case "max":
+		newSeries = aggrPercentile(series.Results, 1.0)
 	case "avg":
 		newSeries = aggrAverage(series.Results)
-	case "min":
-		newSeries = aggrMin(series.Results)
-	case "max":
-		newSeries = aggrMax(series.Results)
+	case "sum":
+		newSeries = aggrSum(series.Results)
 	default:
 		return &res, fmt.Errorf("unknown aggfunc: %v. Options are avg, p50, min, max", aggfunc)
 	}
 
 	res.Value = newSeries
 	return &res, nil
-}
-
-func aggrAverage(series ResultSlice) Series {
-	newSeries := make(Series)
-	counts := map[time.Time]int64{}
-	for _, result := range series {
-		for t, v := range result.Value.Value().(Series) {
-			newSeries[t] += v
-			counts[t] += 1
-		}
-	}
-	for t := range newSeries {
-		newSeries[t] /= float64(counts[t])
-	}
-	return newSeries
 }
 
 func aggrPercentile(series ResultSlice, percValue float64) Series {
@@ -535,7 +522,7 @@ func aggrPercentile(series ResultSlice, percValue float64) Series {
 		}
 	}
 	for t := range merged {
-		// transform points from merged series into an imaginary
+		// transform points from merged series into a made-up
 		// single timeseries, so that we can use the existing
 		// percentile reduction function here
 		dps := Series{}
@@ -547,29 +534,26 @@ func aggrPercentile(series ResultSlice, percValue float64) Series {
 	return newSeries
 }
 
-func aggrMin(series ResultSlice) Series {
+func aggrAverage(series ResultSlice) Series {
 	newSeries := make(Series)
+	counts := map[time.Time]int64{}
 	for _, result := range series {
 		for t, v := range result.Value.Value().(Series) {
-			if _, ok := newSeries[t]; !ok {
-				newSeries[t] = v
-			} else if v < newSeries[t] {
-				newSeries[t] = v
-			}
+			newSeries[t] += v
+			counts[t]++
 		}
+	}
+	for t := range newSeries {
+		newSeries[t] /= float64(counts[t])
 	}
 	return newSeries
 }
 
-func aggrMax(series ResultSlice) Series {
+func aggrSum(series ResultSlice) Series {
 	newSeries := make(Series)
 	for _, result := range series {
 		for t, v := range result.Value.Value().(Series) {
-			if _, ok := newSeries[t]; !ok {
-				newSeries[t] = v
-			} else if v > newSeries[t] {
-				newSeries[t] = v
-			}
+			newSeries[t] += v
 		}
 	}
 	return newSeries
@@ -592,15 +576,15 @@ func aggrCheck(t *parse.Tree, f *parse.FuncNode) error {
 	}
 	if isPerc {
 		if percValue < 0 || percValue > 1 {
-			return errors.New("expr: aggr: percentile number must be greater than or equal to zero 0 and less than or equal 1")
+			return errors.New("aggr: percentile number must be greater than or equal to zero 0 and less than or equal 1")
 		}
 		return nil
 	}
 	switch name {
-	case "avg", "min", "max":
+	case "avg", "min", "max", "sum":
 		return nil
 	}
-	return fmt.Errorf("expr: aggr: unrecognized aggregation function %s", name)
+	return fmt.Errorf("aggr: unrecognized aggregation function %s", name)
 }
 
 func V(e *State) (*Results, error) {

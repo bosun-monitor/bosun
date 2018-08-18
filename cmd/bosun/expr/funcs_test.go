@@ -260,9 +260,9 @@ func TestTail(t *testing.T) {
 }
 
 func TestAggr(t *testing.T) {
-	seriesA := `series("foo=bar", 0, 1)`
-	seriesB := `series("foo=baz", 0, 3)`
-	seriesC := `series("foo=bat", 0, 5)`
+	seriesA := `series("foo=bar", 0, 1, 100, 2)`
+	seriesB := `series("foo=baz", 0, 3, 100, 4)`
+	seriesC := `series("foo=bat", 0, 5, 100, 6)`
 
 	// test median aggregator
 	err := testExpression(exprInOut{
@@ -271,7 +271,8 @@ func TestAggr(t *testing.T) {
 			Results: ResultSlice{
 				&Result{
 					Value: Series{
-						time.Unix(0, 0): 3,
+						time.Unix(0, 0):   3,
+						time.Unix(100, 0): 4,
 					},
 					Group: opentsdb.TagSet{},
 				},
@@ -290,7 +291,8 @@ func TestAggr(t *testing.T) {
 			Results: ResultSlice{
 				&Result{
 					Value: Series{
-						time.Unix(0, 0): 3,
+						time.Unix(0, 0):   3,
+						time.Unix(100, 0): 4,
 					},
 					Group: opentsdb.TagSet{},
 				},
@@ -309,7 +311,8 @@ func TestAggr(t *testing.T) {
 			Results: ResultSlice{
 				&Result{
 					Value: Series{
-						time.Unix(0, 0): 1,
+						time.Unix(0, 0):   1,
+						time.Unix(100, 0): 2,
 					},
 					Group: opentsdb.TagSet{},
 				},
@@ -328,7 +331,8 @@ func TestAggr(t *testing.T) {
 			Results: ResultSlice{
 				&Result{
 					Value: Series{
-						time.Unix(0, 0): 5,
+						time.Unix(0, 0):   5,
+						time.Unix(100, 0): 6,
 					},
 					Group: opentsdb.TagSet{},
 				},
@@ -347,7 +351,8 @@ func TestAggr(t *testing.T) {
 			Results: ResultSlice{
 				&Result{
 					Value: Series{
-						time.Unix(0, 0): 1,
+						time.Unix(0, 0):   1,
+						time.Unix(100, 0): 2,
 					},
 					Group: opentsdb.TagSet{},
 				},
@@ -359,14 +364,15 @@ func TestAggr(t *testing.T) {
 		t.Error(err)
 	}
 
-	// check that max == p1.0
+	// check that sum aggregator sums up the aligned points in the series
 	err = testExpression(exprInOut{
-		fmt.Sprintf("aggr(merge(%v, %v, %v), \"\", \"p1.0\")", seriesA, seriesB, seriesC),
+		fmt.Sprintf("aggr(merge(%v, %v, %v), \"\", \"sum\")", seriesA, seriesB, seriesC),
 		Results{
 			Results: ResultSlice{
 				&Result{
 					Value: Series{
-						time.Unix(0, 0): 5,
+						time.Unix(0, 0):   9,
+						time.Unix(100, 0): 12,
 					},
 					Group: opentsdb.TagSet{},
 				},
