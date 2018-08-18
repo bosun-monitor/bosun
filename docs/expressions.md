@@ -600,7 +600,9 @@ Aggregation functions take a seriesSet, and return a new seriesSet.
 ## aggr(series seriesSet, groups string, aggregator string) seriesSet
 {: .exprFunc}
 
-Takes a seriesSet and combines it into a new seriesSet with the groups specified, using an aggregator to merge any series that share the matching group values. If the groups argument is an empty string, all series are combined into a single series, regardless of existing groups. The available aggregator functions are: avg (average), min (minimum), max (maximum), sum and pN (percentile) where N is a floating point number between 0 and 1 inclusive. For example, `"p.25"` will be the 25th percentile, `"p.999"` will be the 99.9th percentile. `"p0"` and `"p1"` are min and max respectively (However, in these cases it is recommended to use `"min"` and `"max"` for the sake of clarity.
+Takes a seriesSet and combines it into a new seriesSet with the groups specified, using an aggregator to merge any series that share the matching group values. If the groups argument is an empty string, all series are combined into a single series, regardless of existing groups. 
+
+The available aggregator functions are: `"avg"` (average), `"min"` (minimum), `"max"` (maximum), `"sum"` and `"pN"` (percentile) where N is a floating point number between 0 and 1 inclusive. For example, `"p.25"` will be the 25th percentile, `"p.999"` will be the 99.9th percentile. `"p0"` and `"p1"` are min and max respectively (However, in these cases it is recommended to use `"min"` and `"max"` for the sake of clarity.
 
 The aggr function can be particularly useful for removing anomalies when comparing timeseries over periods using the over function. 
 
@@ -611,7 +613,7 @@ $weeks = over("sum:1m-avg:os.cpu{region=*,color=*}", "24h", "1w", 3)
 $agg = aggr($weeks, "region,color", "p.50")
 ```
 
-The above example uses `over` to load a 24 hour period over the past 3 weeks. We then use the aggr function to combine the three weeks into one, selecting the median (p.50) value of the 3 weeks at each timestamp. This results in a new seriesSet, grouped by region and color, that represents a "normal" 24 hour period with anomalies removed.
+The above example uses `over` to load a 24 hour period over the past 3 weeks. We then use the aggr function to combine the three weeks into one, selecting the median (`p.50`) value of the 3 weeks at each timestamp. This results in a new seriesSet, grouped by region and color, that represents a "normal" 24 hour period with anomalies removed.
 
 # Group Functions
 
