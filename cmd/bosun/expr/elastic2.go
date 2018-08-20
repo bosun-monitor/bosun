@@ -11,7 +11,6 @@ import (
 	"sync"
 
 	"bosun.org/opentsdb"
-	"github.com/MiniProfiler/go/miniprofiler"
 	"github.com/jinzhu/now"
 
 	elastic "gopkg.in/olivere/elastic.v3"
@@ -31,7 +30,7 @@ func init() {
 	esClients.m = make(map[string]*elastic.Client)
 }
 
-func ESAll(e *State, T miniprofiler.Timer) (*Results, error) {
+func ESAll(e *State) (*Results, error) {
 	var r Results
 	q := ESQuery{
 		Query: elastic.NewMatchAllQuery(),
