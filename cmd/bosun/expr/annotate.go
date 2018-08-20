@@ -12,7 +12,6 @@ import (
 	"bosun.org/cmd/bosun/expr/parse"
 	"bosun.org/models"
 	"bosun.org/opentsdb"
-	"github.com/MiniProfiler/go/miniprofiler"
 	"github.com/kylebrandt/boolq"
 )
 
@@ -85,7 +84,7 @@ func getAndFilterAnnotations(e *State, start, end time.Time, filter string) (ann
 	return filteredAnnotations, nil
 }
 
-func AnDurations(e *State, T miniprofiler.Timer, filter, startDuration, endDuration string) (r *Results, err error) {
+func AnDurations(e *State, filter, startDuration, endDuration string) (r *Results, err error) {
 	reqStart, reqEnd, err := procDuration(e, startDuration, endDuration)
 	if err != nil {
 		return nil, err
@@ -129,7 +128,7 @@ func AnDurations(e *State, T miniprofiler.Timer, filter, startDuration, endDurat
 	}, nil
 }
 
-func AnCounts(e *State, T miniprofiler.Timer, filter, startDuration, endDuration string) (r *Results, err error) {
+func AnCounts(e *State, filter, startDuration, endDuration string) (r *Results, err error) {
 	reqStart, reqEnd, err := procDuration(e, startDuration, endDuration)
 	if err != nil {
 		return nil, err
@@ -174,7 +173,7 @@ func AnCounts(e *State, T miniprofiler.Timer, filter, startDuration, endDuration
 }
 
 // AnTable returns a table response (meant for Grafana) of matching annotations based on the requested fields
-func AnTable(e *State, T miniprofiler.Timer, filter, fieldsCSV, startDuration, endDuration string) (r *Results, err error) {
+func AnTable(e *State, filter, fieldsCSV, startDuration, endDuration string) (r *Results, err error) {
 	start, end, err := procDuration(e, startDuration, endDuration)
 	if err != nil {
 		return nil, err

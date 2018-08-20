@@ -34,6 +34,8 @@ type State struct {
 	autods             int
 	vValue             float64
 
+	Timer miniprofiler.Timer
+
 	*Backends
 
 	// Bosun Internal
@@ -107,10 +109,12 @@ func (e *Expr) Execute(backends *Backends, providers *BosunProviders, T miniprof
 		unjoinedOk:     unjoinedOk,
 		Backends:       backends,
 		BosunProviders: providers,
+		Timer:          T,
 	}
-	return e.ExecuteState(s, T)
+	return e.ExecuteState(s)
 }
 
+// Skyscanner: custom log for computations
 func LogComputations(r *Results) {
 	slice := r.Results
 	for _, result := range slice {
@@ -121,16 +125,17 @@ func LogComputations(r *Results) {
 	}
 }
 
-func (e *Expr) ExecuteState(s *State, T miniprofiler.Timer) (r *Results, queries []opentsdb.Request, err error) {
+func (e *Expr) ExecuteState(s *State) (r *Results, queries []opentsdb.Request, err error) {
 	defer errRecover(&err)
-	if T == nil {
-		T = new(miniprofiler.Profile)
+	if s.Timer == nil {
+		s.Timer = new(miniprofiler.Profile)
 	}
-
+	// Skyscanner: always enable computations
 	s.enableComputations = true
 
-	T.Step("expr execute", func(T miniprofiler.Timer) {
-		r = s.walk(e.Tree.Root, T)
+	s.Timer.Step("expr execute", func(T miniprofiler.Timer) {
+		r = s.walk(e.Tree.Root)
+		// Skyscanner: custom log
 		LogComputations(r)
 	})
 	queries = s.tsdbQueries
@@ -478,28 +483,28 @@ func (e *State) union(a, b *Results, expression string) []*Union {
 	return us
 }
 
-func (e *State) walk(node parse.Node, T miniprofiler.Timer) *Results {
+func (e *State) walk(node parse.Node) *Results {
 	var res *Results
 	switch node := node.(type) {
 	case *parse.NumberNode:
 		res = wrap(node.Float64)
 	case *parse.BinaryNode:
-		res = e.walkBinary(node, T)
+		res = e.walkBinary(node)
 	case *parse.UnaryNode:
-		res = e.walkUnary(node, T)
+		res = e.walkUnary(node)
 	case *parse.FuncNode:
-		res = e.walkFunc(node, T)
+		res = e.walkFunc(node)
 	case *parse.ExprNode:
-		res = e.walkExpr(node, T)
+		res = e.walkExpr(node)
 	case *parse.PrefixNode:
-		res = e.walkPrefix(node, T)
+		res = e.walkPrefix(node)
 	default:
 		panic(fmt.Errorf("expr: unknown node type"))
 	}
 	return res
 }
 
-func (e *State) walkExpr(node *parse.ExprNode, T miniprofiler.Timer) *Results {
+func (e *State) walkExpr(node *parse.ExprNode) *Results {
 	return &Results{
 		Results: ResultSlice{
 			&Result{
@@ -509,14 +514,14 @@ func (e *State) walkExpr(node *parse.ExprNode, T miniprofiler.Timer) *Results {
 	}
 }
 
-func (e *State) walkBinary(node *parse.BinaryNode, T miniprofiler.Timer) *Results {
-	ar := e.walk(node.Args[0], T)
-	br := e.walk(node.Args[1], T)
+func (e *State) walkBinary(node *parse.BinaryNode) *Results {
+	ar := e.walk(node.Args[0])
+	br := e.walk(node.Args[1])
 	res := Results{
 		IgnoreUnjoined:      ar.IgnoreUnjoined || br.IgnoreUnjoined,
 		IgnoreOtherUnjoined: ar.IgnoreOtherUnjoined || br.IgnoreOtherUnjoined,
 	}
-	T.Step("walkBinary: "+node.OpStr, func(T miniprofiler.Timer) {
+	e.Timer.Step("walkBinary: "+node.OpStr, func(T miniprofiler.Timer) {
 		u := e.union(ar, br, node.String())
 		for _, v := range u {
 			var value Value
@@ -675,9 +680,9 @@ func operate(op string, a, b float64) (r float64) {
 	return
 }
 
-func (e *State) walkUnary(node *parse.UnaryNode, T miniprofiler.Timer) *Results {
-	a := e.walk(node.Arg, T)
-	T.Step("walkUnary: "+node.OpStr, func(T miniprofiler.Timer) {
+func (e *State) walkUnary(node *parse.UnaryNode) *Results {
+	a := e.walk(node.Arg)
+	e.Timer.Step("walkUnary: "+node.OpStr, func(T miniprofiler.Timer) {
 		for _, r := range a.Results {
 			if an, aok := r.Value.(Scalar); aok && math.IsNaN(float64(an)) {
 				r.Value = Scalar(math.NaN())
@@ -718,7 +723,7 @@ func uoperate(op string, a float64) (r float64) {
 	return
 }
 
-func (e *State) walkPrefix(node *parse.PrefixNode, T miniprofiler.Timer) *Results {
+func (e *State) walkPrefix(node *parse.PrefixNode) *Results {
 	key := strings.TrimPrefix(node.Text, "[")
 	key = strings.TrimSuffix(key, "]")
 	key, _ = strconv.Unquote(key)
@@ -728,15 +733,15 @@ func (e *State) walkPrefix(node *parse.PrefixNode, T miniprofiler.Timer) *Result
 			node.Prefix = key
 			node.F.PrefixKey = true
 		}
-		return e.walk(node, T)
+		return e.walk(node)
 	default:
 		panic(fmt.Errorf("expr: prefix can only be append to a FuncNode"))
 	}
 }
 
-func (e *State) walkFunc(node *parse.FuncNode, T miniprofiler.Timer) *Results {
+func (e *State) walkFunc(node *parse.FuncNode) *Results {
 	var res *Results
-	T.Step("func: "+node.Name, func(T miniprofiler.Timer) {
+	e.Timer.Step("func: "+node.Name, func(T miniprofiler.Timer) {
 		var in []reflect.Value
 		for i, a := range node.Args {
 			var v interface{}
@@ -746,15 +751,15 @@ func (e *State) walkFunc(node *parse.FuncNode, T miniprofiler.Timer) *Results {
 			case *parse.NumberNode:
 				v = t.Float64
 			case *parse.FuncNode:
-				v = extract(e.walkFunc(t, T))
+				v = extract(e.walkFunc(t))
 			case *parse.UnaryNode:
-				v = extract(e.walkUnary(t, T))
+				v = extract(e.walkUnary(t))
 			case *parse.BinaryNode:
-				v = extract(e.walkBinary(t, T))
+				v = extract(e.walkBinary(t))
 			case *parse.ExprNode:
-				v = e.walkExpr(t, T)
+				v = e.walkExpr(t)
 			case *parse.PrefixNode:
-				v = extract(e.walkPrefix(t, T))
+				v = extract(e.walkPrefix(t))
 			default:
 				panic(fmt.Errorf("expr: unknown func arg type"))
 			}
@@ -779,12 +784,12 @@ func (e *State) walkFunc(node *parse.FuncNode, T miniprofiler.Timer) *Results {
 
 		if node.F.PrefixEnabled {
 			if !node.F.PrefixKey {
-				fr = f.Call(append([]reflect.Value{reflect.ValueOf("default"), reflect.ValueOf(e), reflect.ValueOf(T)}, in...))
+				fr = f.Call(append([]reflect.Value{reflect.ValueOf("default"), reflect.ValueOf(e)}, in...))
 			} else {
-				fr = f.Call(append([]reflect.Value{reflect.ValueOf(node.Prefix), reflect.ValueOf(e), reflect.ValueOf(T)}, in...))
+				fr = f.Call(append([]reflect.Value{reflect.ValueOf(node.Prefix), reflect.ValueOf(e)}, in...))
 			}
 		} else {
-			fr = f.Call(append([]reflect.Value{reflect.ValueOf(e), reflect.ValueOf(T)}, in...))
+			fr = f.Call(append([]reflect.Value{reflect.ValueOf(e)}, in...))
 		}
 
 		res = fr[0].Interface().(*Results)
