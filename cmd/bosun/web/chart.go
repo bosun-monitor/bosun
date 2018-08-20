@@ -136,7 +136,10 @@ func Graph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 			err = fmt.Errorf("tsdbHost not set")
 			return
 		}
-		tr, err = oreq.Query(h)
+		httpHeaders := map[string]string{
+			"Referer": r.Header.Get("Referer"),
+		}
+		tr, err = oreq.Query(h, httpHeaders)
 	})
 	if err != nil {
 		return nil, err
@@ -253,7 +256,7 @@ func ExprGraph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (in
 		Squelched: nil,
 		History:   nil,
 	}
-	res, _, err := e.Execute(backends, providers, t, now, autods, false)
+	res, _, err := e.Execute(backends, providers, t, now, autods, false, nil)
 	if err != nil {
 		return nil, err
 	}

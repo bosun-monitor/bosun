@@ -79,7 +79,7 @@ func timeTSDBRequest(e *State, T miniprofiler.Timer, req *opentsdb.Request) (s o
 	for {
 		T.StepCustomTiming("tsdb", "query", string(b), func() {
 			getFn := func() (interface{}, error) {
-				return e.TSDBContext.Query(req)
+				return e.TSDBContext.Query(req, e.httpHeaders)
 			}
 			var val interface{}
 			var hit bool
