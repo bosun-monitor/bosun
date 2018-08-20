@@ -545,11 +545,11 @@ func (sc *SystemConf) GetAnnotateIndex() string {
 
 // GetTSDBContext returns an OpenTSDB context limited to
 // c.ResponseLimit. A nil context is returned if TSDBHost is not set.
-func (sc *SystemConf) GetTSDBContext(referer string) opentsdb.Context {
+func (sc *SystemConf) GetTSDBContext() opentsdb.Context {
 	if sc.OpenTSDBConf.Host == "" {
 		return nil
 	}
-	return opentsdb.NewLimitContext(sc.OpenTSDBConf.Host, referer, sc.OpenTSDBConf.ResponseLimit, sc.OpenTSDBConf.Version)
+	return opentsdb.NewLimitContext(sc.OpenTSDBConf.Host, sc.OpenTSDBConf.ResponseLimit, sc.OpenTSDBConf.Version)
 }
 
 // GetGraphiteContext returns a Graphite context which contains all the information needed

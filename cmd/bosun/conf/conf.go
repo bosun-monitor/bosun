@@ -74,7 +74,7 @@ type SystemConfProvider interface {
 	GetExampleExpression() string
 
 	// Contexts
-	GetTSDBContext(string) opentsdb.Context
+	GetTSDBContext() opentsdb.Context
 	GetGraphiteContext() graphite.Context
 	GetInfluxContext() client.HTTPConfig
 	GetElasticContext() expr.ElasticHosts

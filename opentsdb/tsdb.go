@@ -899,8 +899,8 @@ func (r *Request) SetTime(t time.Time) error {
 
 // Query performs a v2 OpenTSDB request to the given host. host should be of the
 // form hostname:port. Uses DefaultClient. Can return a RequestError.
-func (r *Request) Query(host string, referer string) (ResponseSet, error) {
-	resp, err := r.QueryResponse(host, referer, nil)
+func (r *Request) Query(host string) (ResponseSet, error) {
+	resp, err := r.QueryResponse(host, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -919,7 +919,7 @@ var DefaultClient = &http.Client{
 
 // QueryResponse performs a v2 OpenTSDB request to the given host. host should
 // be of the form hostname:port. A nil client uses DefaultClient.
-func (r *Request) QueryResponse(host string, referer string, client *http.Client) (*http.Response, error) {
+func (r *Request) QueryResponse(host string, client *http.Client) (*http.Response, error) {
 	u := url.URL{
 		Scheme: "http",
 		Host:   host,
@@ -932,18 +932,7 @@ func (r *Request) QueryResponse(host string, referer string, client *http.Client
 	if client == nil {
 		client = DefaultClient
 	}
-
-	req, err := http.NewRequest("POST", u.String(), bytes.NewReader(b))
-	if err != nil {
-		return nil, err
-	}
-
-	if referer != "" {
-		req.Header.Set("Referer", referer)
-	}
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := client.Do(req)
+	resp, err := client.Post(u.String(), "application/json", bytes.NewReader(b))
 	if err != nil {
 		return nil, err
 	}
@@ -988,7 +977,7 @@ type Host string
 
 // Query performs the request to the OpenTSDB server.
 func (h Host) Query(r *Request) (ResponseSet, error) {
-	return r.Query(string(h), "")
+	return r.Query(string(h))
 }
 
 // OpenTSDB 2.1 version struct
@@ -1026,7 +1015,6 @@ func (v Version) FilterSupport() bool {
 // LimitContext is a context that enables limiting response size and filtering tags
 type LimitContext struct {
 	Host string
-	Referer string
 	// Limit limits response size in bytes
 	Limit int64
 	// FilterTags removes tagks from results if that tagk was not in the request
@@ -1037,10 +1025,9 @@ type LimitContext struct {
 
 // NewLimitContext returns a new context for the given host with response sizes limited
 // to limit bytes.
-func NewLimitContext(host string, referer string, limit int64, version Version) *LimitContext {
+func NewLimitContext(host string, limit int64, version Version) *LimitContext {
 	return &LimitContext{
 		Host:        host,
-		Referer:     referer,
 		Limit:       limit,
 		FilterTags:  true,
 		TSDBVersion: version,
@@ -1054,7 +1041,7 @@ func (c *LimitContext) Version() Version {
 // Query returns the result of the request. r may be cached. The request is
 // byte-limited and filtered by c's properties.
 func (c *LimitContext) Query(r *Request) (tr ResponseSet, err error) {
-	resp, err := r.QueryResponse(c.Host, c.Referer, nil)
+	resp, err := r.QueryResponse(c.Host, nil)
 	if err != nil {
 		return
 	}
