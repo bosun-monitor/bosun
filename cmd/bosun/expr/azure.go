@@ -20,7 +20,6 @@ import (
 	"bosun.org/opentsdb"
 	"github.com/Azure/azure-sdk-for-go/services/preview/monitor/mgmt/2018-03-01/insights"
 	"github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-02-01/resources"
-	"github.com/MiniProfiler/go/miniprofiler"
 	"github.com/kylebrandt/boolq"
 )
 
@@ -96,7 +95,7 @@ func azResourceURI(subscription, resourceGrp, Namespace, Resource string) string
 
 // AzureMetricDefinitions fetches metric information for a specific resource and metric tuple
 // TODO make this return and not fmt.Printf
-func AzureMetricDefinitions(prefix string, e *State, T miniprofiler.Timer, namespace, metric, rsg, resource string) (r *Results, err error) {
+func AzureMetricDefinitions(prefix string, e *State, namespace, metric, rsg, resource string) (r *Results, err error) {
 	r = new(Results)
 	cc, clientFound := e.Backends.AzureMonitor[prefix]
 	if !clientFound {
@@ -127,7 +126,7 @@ func AzureMetricDefinitions(prefix string, e *State, T miniprofiler.Timer, names
 }
 
 // azureQuery queries Azure metrics for time series data based on the resourceUri
-func azureQuery(prefix string, e *State, T miniprofiler.Timer, metric, tagKeysCSV string, rsg, resName, resourceUri string, agtype string, interval, sdur, edur string) (r *Results, err error) {
+func azureQuery(prefix string, e *State, metric, tagKeysCSV, rsg, resName, resourceUri, agtype, interval, sdur, edur string) (r *Results, err error) {
 	r = new(Results)
 	// Verify prefix is a defined resource and fetch the collection of clients
 	cc, clientFound := e.Backends.AzureMonitor[prefix]
@@ -191,7 +190,7 @@ func azureQuery(prefix string, e *State, T miniprofiler.Timer, metric, tagKeysCS
 			return nil, err
 		}
 		var resp insights.Response
-		T.StepCustomTiming("azure", "query", req.URL.String(), func() {
+		e.Timer.StepCustomTiming("azure", "query", req.URL.String(), func() {
 			hr, sendErr := c.ListSender(req)
 			if sendErr == nil {
 				resp, err = c.ListResponder(hr)
@@ -264,7 +263,7 @@ func azureQuery(prefix string, e *State, T miniprofiler.Timer, metric, tagKeysCS
 
 // AzureQuery queries an Azure monitor metric for the given resource and returns a series set tagged by
 // rsg (resource group), name (resource name), and any tag keys parsed from the tagKeysCSV argument
-func AzureQuery(prefix string, e *State, T miniprofiler.Timer, namespace, metric, tagKeysCSV, rsg, resName, agtype, interval, sdur, edur string) (r *Results, err error) {
+func AzureQuery(prefix string, e *State, namespace, metric, tagKeysCSV, rsg, resName, agtype, interval, sdur, edur string) (r *Results, err error) {
 	r = new(Results)
 	// Verify prefix is a defined resource and fetch the collection of clients
 	cc, clientFound := e.Backends.AzureMonitor[prefix]
@@ -273,12 +272,12 @@ func AzureQuery(prefix string, e *State, T miniprofiler.Timer, namespace, metric
 	}
 	c := cc.MetricsClient
 	resourceURI := azResourceURI(c.SubscriptionID, rsg, namespace, resName)
-	return azureQuery(prefix, e, T, metric, tagKeysCSV, rsg, resName, resourceURI, agtype, interval, sdur, edur)
+	return azureQuery(prefix, e, metric, tagKeysCSV, rsg, resName, resourceURI, agtype, interval, sdur, edur)
 }
 
 // AzureMultiQuery queries multiple Azure resources and returns them as a single result set
 // It makes one HTTP request per resource and parallelizes the requests
-func AzureMultiQuery(prefix string, e *State, T miniprofiler.Timer, metric, tagKeysCSV string, resources AzureResources, agtype string, interval, sdur, edur string) (r *Results, err error) {
+func AzureMultiQuery(prefix string, e *State, metric, tagKeysCSV string, resources AzureResources, agtype string, interval, sdur, edur string) (r *Results, err error) {
 	r = new(Results)
 	if resources.Prefix != prefix {
 		return r, fmt.Errorf(`mismatched Azure clients: attempting to use resources from client "%v" on a query with client "%v"`, resources.Prefix, prefix)
@@ -298,7 +297,7 @@ func AzureMultiQuery(prefix string, e *State, T miniprofiler.Timer, metric, tagK
 	// a worker makes a time series request for a resource
 	worker := func() {
 		for resource := range reqCh {
-			res, err := azureQuery(prefix, e, T, metric, tagKeysCSV, resource.ResourceGroup, resource.Name, resource.ID, agtype, interval, sdur, edur)
+			res, err := azureQuery(prefix, e, metric, tagKeysCSV, resource.ResourceGroup, resource.Name, resource.ID, agtype, interval, sdur, edur)
 			resCh <- res
 			errCh <- err
 		}
@@ -310,7 +309,7 @@ func AzureMultiQuery(prefix string, e *State, T miniprofiler.Timer, metric, tagK
 		go worker()
 	}
 	timingString := fmt.Sprintf(`%v queries for metric:"%v" using client "%v"`, nResources, metric, prefix)
-	T.StepCustomTiming("azure", "query-multi", timingString, func() {
+	e.Timer.StepCustomTiming("azure", "query-multi", timingString, func() {
 		// Feed resources into the request channel which the workers will consume
 		for _, resource := range resources.Resources {
 			reqCh <- resource
@@ -340,13 +339,13 @@ func AzureMultiQuery(prefix string, e *State, T miniprofiler.Timer, metric, tagK
 		return queryResults[0], nil
 	}
 	// Merge the query results into a single seriesSet
-	r, err = Merge(e, T, queryResults...)
+	r, err = Merge(e, queryResults...)
 	return
 }
 
 // azureListResources fetches all resources for the tenant/subscription and caches them for
 // up to one minute.
-func azureListResources(prefix string, e *State, T miniprofiler.Timer) (AzureResources, error) {
+func azureListResources(prefix string, e *State) (AzureResources, error) {
 	// Cache will only last for one minute. In practice this will only apply for web sessions since a
 	// new cache is created for each check cycle in the cache
 	key := fmt.Sprintf("AzureResourceCache:%s:%s", prefix, time.Now().Truncate(time.Minute*1)) // https://github.com/golang/groupcache/issues/92
@@ -399,10 +398,10 @@ func azureListResources(prefix string, e *State, T miniprofiler.Timer) (AzureRes
 
 // AzureResourcesByType returns all resources of the specified type
 // It fetches the complete list resources and then filters them relying on a Cache of that resource list
-func AzureResourcesByType(prefix string, e *State, T miniprofiler.Timer, tp string) (r *Results, err error) {
+func AzureResourcesByType(prefix string, e *State, tp string) (r *Results, err error) {
 	resources := AzureResources{Prefix: prefix}
 	r = new(Results)
-	allResources, err := azureListResources(prefix, e, T)
+	allResources, err := azureListResources(prefix, e)
 	if err != nil {
 		return
 	}
@@ -417,7 +416,7 @@ func AzureResourcesByType(prefix string, e *State, T miniprofiler.Timer, tp stri
 
 // AzureFilterResources filters a list of resources based on the value of the name, resource group
 // or tags associated with that resource
-func AzureFilterResources(e *State, T miniprofiler.Timer, resources AzureResources, filter string) (r *Results, err error) {
+func AzureFilterResources(e *State, resources AzureResources, filter string) (r *Results, err error) {
 	r = new(Results)
 	// Parse the filter once and then apply it to each item in the loop
 	bqf, err := boolq.Parse(filter)
