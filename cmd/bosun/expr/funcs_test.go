@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"bosun.org/opentsdb"
+	client "github.com/influxdata/influxdb/client/v2"
 )
 
 type exprInOut struct {
