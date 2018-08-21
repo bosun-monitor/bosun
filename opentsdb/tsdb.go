@@ -1094,3 +1094,15 @@ func FilterTags(r *Request, tr ResponseSet) {
 		}
 	}
 }
+
+// CreateForwardHeader creates an http.Header, adding useful X-Headers from r to forward
+// to opentsdb for logging purposes
+func CreateForwardHeader(r *http.Request) http.Header {
+	header := make(http.Header)
+	header.Set("X-Referer", r.Header.Get("Referer"))
+	header.Set("X-Origin", r.Header.Get("Origin"))
+	header.Set("X-Host", r.Header.Get("Host"))
+	header.Set("X-Cookie", r.Header.Get("Cookie"))
+
+	return header
+}

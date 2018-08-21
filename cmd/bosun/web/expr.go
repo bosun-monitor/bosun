@@ -95,8 +95,7 @@ func Expr(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (v inter
 		History:   nil,
 		Annotate:  AnnotateBackend,
 	}
-	httpHeader := make(http.Header)
-	httpHeader.Set("Referer", r.Header.Get("Referer"))
+	httpHeader := opentsdb.CreateForwardHeader(r)
 	res, queries, err := e.Execute(backends, providers, t, now, 0, false, httpHeader)
 	if err != nil {
 		return nil, err
