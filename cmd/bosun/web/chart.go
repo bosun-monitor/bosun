@@ -136,10 +136,9 @@ func Graph(t miniprofiler.Timer, w http.ResponseWriter, r *http.Request) (interf
 			err = fmt.Errorf("tsdbHost not set")
 			return
 		}
-		httpHeaders := map[string]string{
-			"Referer": r.Header.Get("Referer"),
-		}
-		tr, err = oreq.Query(h, httpHeaders)
+		httpHeader := make(http.Header)
+		httpHeader.Set("Referer", r.Header.Get("Referer"))
+		tr, err = oreq.Query(h, httpHeader)
 	})
 	if err != nil {
 		return nil, err
