@@ -309,7 +309,7 @@ func (a *Results) Equal(b *Results) (bool, error) {
 	if a.IgnoreOtherUnjoined != b.IgnoreOtherUnjoined {
 		return false, fmt.Errorf("ignoreUnjoined flag does not match a: %v, b: %v", a.IgnoreOtherUnjoined, b.IgnoreOtherUnjoined)
 	}
-	if a.NaNValue != a.NaNValue {
+	if a.NaNValue != b.NaNValue {
 		return false, fmt.Errorf("NaNValue does not match a: %v, b: %v", a.NaNValue, b.NaNValue)
 	}
 	sortedA := ResultSliceByGroup(a.Results)

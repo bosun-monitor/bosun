@@ -14,7 +14,6 @@ import (
 	"sync"
 
 	"bosun.org/opentsdb"
-	"github.com/MiniProfiler/go/miniprofiler"
 	"github.com/jinzhu/now"
 )
 
@@ -329,19 +328,19 @@ func ESMonthly(e *State, timeField, indexRoot, layout string) (*Results, error) 
 	return &r, nil
 }
 
-func ESCount(prefix string, e *State, T miniprofiler.Timer, indexer ESIndexer, keystring string, filter ESQuery, interval, sduration, eduration string) (r *Results, err error) {
-	return ESDateHistogram(prefix, e, T, indexer, keystring, filter.Query, interval, sduration, eduration, "", "", 0)
+func ESCount(prefix string, e *State, indexer ESIndexer, keystring string, filter ESQuery, interval, sduration, eduration string) (r *Results, err error) {
+	return ESDateHistogram(prefix, e, indexer, keystring, filter.Query, interval, sduration, eduration, "", "", 0)
 }
 
 // ESStat returns a bucketed statistical reduction for the specified field.
-func ESStat(prefix string, e *State, T miniprofiler.Timer, indexer ESIndexer, keystring string, filter ESQuery, field, rstat, interval, sduration, eduration string) (r *Results, err error) {
-	return ESDateHistogram(prefix, e, T, indexer, keystring, filter.Query, interval, sduration, eduration, field, rstat, 0)
+func ESStat(prefix string, e *State, indexer ESIndexer, keystring string, filter ESQuery, field, rstat, interval, sduration, eduration string) (r *Results, err error) {
+	return ESDateHistogram(prefix, e, indexer, keystring, filter.Query, interval, sduration, eduration, field, rstat, 0)
 }
 
 // 2016-09-22T22:26:14.679270711Z
 const elasticRFC3339 = "date_optional_time"
 
-func ESDateHistogram(prefix string, e *State, T miniprofiler.Timer, indexer ESIndexer, keystring string, filter elastic.Query, interval, sduration, eduration, stat_field, rstat string, size int) (r *Results, err error) {
+func ESDateHistogram(prefix string, e *State, indexer ESIndexer, keystring string, filter elastic.Query, interval, sduration, eduration, stat_field, rstat string, size int) (r *Results, err error) {
 	r = new(Results)
 	req, err := ESBaseQuery(e.now, indexer, filter, sduration, eduration, size, prefix)
 	if err != nil {
