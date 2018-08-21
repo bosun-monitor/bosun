@@ -939,6 +939,9 @@ func (r *Request) QueryResponse(host string, httpHeader http.Header, client *htt
 	}
 	if httpHeader != nil {
 		req.Header = httpHeader
+
+		// 'Accept-Encoding' header causes a tsdb query error: invalid character '\x1f' looking for beginning of value
+		req.Header.Del("Accept-Encoding")
 	}
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := client.Do(req)
