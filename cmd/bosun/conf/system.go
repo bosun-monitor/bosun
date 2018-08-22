@@ -1,6 +1,9 @@
 package conf
 
 import (
+	"bosun.org/cloudwatch"
+	"bosun.org/slog"
+
 	"bytes"
 	"fmt"
 	"net/http"
@@ -8,8 +11,6 @@ import (
 	"net/url"
 	"strings"
 	"time"
-
-	"bosun.org/slog"
 
 	"bosun.org/cmd/bosun/expr"
 	"bosun.org/graphite"
@@ -57,6 +58,7 @@ type SystemConf struct {
 	InfluxConf       InfluxConf
 	ElasticConf      map[string]ElasticConf
 	AzureMonitorConf map[string]AzureMonitorConf
+	CloudWatchConf   CloudWatchConf
 
 	AnnotateConf AnnotateConf
 
@@ -83,6 +85,7 @@ type EnabledBackends struct {
 	Logstash     bool
 	Annotate     bool
 	AzureMonitor bool
+	CloudWatch   bool
 }
 
 // EnabledBackends returns and EnabledBackends struct which contains fields
@@ -95,6 +98,7 @@ func (sc *SystemConf) EnabledBackends() EnabledBackends {
 	b.Elastic = len(sc.ElasticConf["default"].Hosts) != 0
 	b.Annotate = len(sc.AnnotateConf.Hosts) != 0
 	b.AzureMonitor = len(sc.AzureMonitorConf) != 0
+	b.CloudWatch = true
 	return b
 }
 
@@ -260,6 +264,10 @@ type LDAPGroup struct {
 	Path string
 	// Access to grant members of group Ex: "Admin"
 	Role string
+}
+
+type CloudWatchConf struct {
+	Enabled bool
 }
 
 // GetSystemConfProvider returns the SystemConfProvider interface
@@ -593,6 +601,11 @@ func (sc *SystemConf) GetInfluxContext() client.HTTPConfig {
 	if sc.md.IsDefined("InfluxConf", "UnsafeSsl") {
 		c.InsecureSkipVerify = sc.InfluxConf.UnsafeSSL
 	}
+	return c
+}
+
+func (sc *SystemConf) GetCloudWatchContext() cloudwatch.Context {
+	c := cloudwatch.NewConfig()
 	return c
 }
 

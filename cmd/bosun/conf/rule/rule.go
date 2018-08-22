@@ -661,6 +661,9 @@ func (c *Conf) GetFuncs(backends conf.EnabledBackends) map[string]eparse.Func {
 	if backends.AzureMonitor {
 		merge(expr.AzureMonitor)
 	}
+	if backends.CloudWatch {
+		merge(expr.CloudWatch)
+	}
 	return funcs
 }
 

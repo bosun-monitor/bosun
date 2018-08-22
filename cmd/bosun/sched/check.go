@@ -69,11 +69,12 @@ func (s *Schedule) NewRunHistory(start time.Time, cache *cache.Cache) *RunHistor
 		Events:   make(map[models.AlertKey]*models.Event),
 		schedule: s,
 		Backends: &expr.Backends{
-			TSDBContext:     s.SystemConf.GetTSDBContext(),
-			GraphiteContext: s.SystemConf.GetGraphiteContext(),
-			InfluxConfig:    s.SystemConf.GetInfluxContext(),
-			ElasticHosts:    s.SystemConf.GetElasticContext(),
-			AzureMonitor:    s.SystemConf.GetAzureMonitorContext(),
+			TSDBContext:       s.SystemConf.GetTSDBContext(),
+			GraphiteContext:   s.SystemConf.GetGraphiteContext(),
+			InfluxConfig:      s.SystemConf.GetInfluxContext(),
+			ElasticHosts:      s.SystemConf.GetElasticContext(),
+			AzureMonitor:      s.SystemConf.GetAzureMonitorContext(),
+			CloudWatchContext: s.SystemConf.GetCloudWatchContext(),
 		},
 	}
 	return r
