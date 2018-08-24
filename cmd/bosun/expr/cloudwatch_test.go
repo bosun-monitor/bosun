@@ -8,9 +8,9 @@ import (
 	"bosun.org/cloudwatch"
 	"bosun.org/cmd/bosun/expr/parse"
 	"bosun.org/opentsdb"
-	"github.com/MiniProfiler/go/miniprofiler"
 	cw "github.com/aws/aws-sdk-go/service/cloudwatch"
 	"github.com/aws/aws-sdk-go/service/cloudwatch/cloudwatchiface"
+	"github.com/MiniProfiler/go/miniprofiler"
 )
 
 type mockCloudWatchClient struct {
@@ -66,6 +66,7 @@ func TestCloudWatchQuery(t *testing.T) {
 				return false
 			},
 		},
+		Timer: new(miniprofiler.Profile),
 	}
 
 	var tests = []struct {
@@ -85,7 +86,7 @@ func TestCloudWatchQuery(t *testing.T) {
 	}
 	for _, u := range tests {
 
-		results, err := CloudWatchQuery("default", &e, new(miniprofiler.Profile), u.region,
+		results, err := CloudWatchQuery("default", &e, u.region,
 			u.namespace, u.metric, u.period, u.statistics,
 			u.dimensions, u.start, u.end)
 		if err != nil {
