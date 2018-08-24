@@ -146,7 +146,7 @@ func (e *Expr) ExecuteState(s *State) (r *Results, queries []opentsdb.Request, e
 	s.Timer.Step("expr execute", func(T miniprofiler.Timer) {
 		r = s.walk(e.Tree.Root)
 		// Skyscanner: custom log
-		LogComputations(r)
+		// LogComputations(r)
 	})
 	queries = s.tsdbQueries
 	return
