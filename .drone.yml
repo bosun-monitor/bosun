@@ -5,7 +5,7 @@ clone:
 
 matrix:
   BOSUN_VERSION:
-    - 0.6.3
+    - 0.6.4
   GOPATH:
     - /drone
 

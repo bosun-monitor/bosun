@@ -10,7 +10,6 @@ import (
 	"bosun.org/cmd/bosun/expr/parse"
 	"bosun.org/models"
 	"bosun.org/opentsdb"
-	"github.com/MiniProfiler/go/miniprofiler"
 )
 
 // cloudwatch defines functions for use with amazon cloudwatch api
@@ -76,7 +75,7 @@ func parseDimensions(dimensions string) []cloudwatch.Dimension {
 	return parsed
 }
 
-func CloudWatchQuery(prefix string, e *State, T miniprofiler.Timer, region, namespace, metric, period, statistic, dimensions, sduration, eduration string) (*Results, error) {
+func CloudWatchQuery(prefix string, e *State, region, namespace, metric, period, statistic, dimensions, sduration, eduration string) (*Results, error) {
 	sd, err := opentsdb.ParseDuration(sduration)
 	if err != nil {
 		return nil, err
@@ -102,7 +101,7 @@ func CloudWatchQuery(prefix string, e *State, T miniprofiler.Timer, region, name
 		Dimensions: d,
 		Profile:    prefix,
 	}
-	s, err := timeCloudwatchRequest(e, T, req)
+	s, err := timeCloudwatchRequest(e, req)
 	if err != nil {
 		return nil, err
 	}
@@ -115,10 +114,10 @@ func CloudWatchQuery(prefix string, e *State, T miniprofiler.Timer, region, name
 	return r, nil
 }
 
-func timeCloudwatchRequest(e *State, T miniprofiler.Timer, req *cloudwatch.Request) (resp cloudwatch.Response, err error) {
+func timeCloudwatchRequest(e *State, req *cloudwatch.Request) (resp cloudwatch.Response, err error) {
 	e.cloudwatchQueries = append(e.cloudwatchQueries, *req)
 	b, _ := json.MarshalIndent(req, "", "  ")
-	T.StepCustomTiming("cloudwatch", "query", string(b), func() {
+	e.Timer.StepCustomTiming("cloudwatch", "query", string(b), func() {
 		key := req.CacheKey()
 
 		getFn := func() (interface{}, error) {
