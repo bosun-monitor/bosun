@@ -615,6 +615,30 @@ $agg = aggr($weeks, "region,color", "p.50")
 
 The above example uses `over` to load a 24 hour period over the past 3 weeks. We then use the aggr function to combine the three weeks into one, selecting the median (`p.50`) value of the 3 weeks at each timestamp. This results in a new seriesSet, grouped by region and color, that represents a "normal" 24 hour period with anomalies removed.
 
+An error will be returned if a group is specified to aggregate on that does not exist in the original seriesSet.
+
+The aggr function expects points in the original series to be aligned by timestamp. If points are not aligned, they are aggregated separately. For example, if we had a seriesSet,
+
+Group       | Timestamp | Value |
+----------- | --------- | ----- |
+{host=web01} | 1 | 1 |
+{host=web01} | 2 | 7 |
+{host=web01} | 1 | 4 |
+
+and applied the following aggregation:
+
+```
+aggr($series, "host", "max")
+```
+
+we would receive the following aggregated result:
+
+Group       | Timestamp | Value | Timestamp | Value |
+----------- | --------- | ----- | --------- | ----- |
+{host=web01} | 1 | 4 | 2 | 7 |
+
+aggr also does not attempt to deal with NaN values in a consistent manner. If all values for a specific timestamp are NaN, the result for that timestamp will be NaN. If a particular timestamp has a mix of NaN and non-NaN values, the result may or may not be NaN, depending on the aggregation function specified.
+
 # Group Functions
 
 Group functions modify the OpenTSDB groups.
