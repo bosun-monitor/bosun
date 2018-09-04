@@ -186,7 +186,6 @@ func (n *Notification) NotifyMultipleUnknowns(t *Template, c SystemConfProvider,
 
 // code common to PrepareAction / PrepareUnknown / PrepareMultipleUnknowns
 func (n *Notification) prepareFromTemplateKeys(pn *PreparedNotifications, tks NotificationTemplateKeys, render func(string, *template.Template) (string, error), defaults defaultTemplates, alertDetails *NotificationDetails) {
-
 	if len(n.Email) > 0 || n.Post != nil || tks.PostTemplate != "" {
 		body, _ := render(tks.BodyTemplate, defaults.body)
 		if subject, err := render(tks.EmailSubjectTemplate, defaults.subject); err == nil {

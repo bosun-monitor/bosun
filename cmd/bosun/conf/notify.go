@@ -38,33 +38,35 @@ func init() {
 type PreparedNotifications struct {
 	Email  *PreparedEmail
 	HTTP   []*PreparedHttp
-	Print  string
+	Name   string
 	Errors []string
 }
 
 func (p *PreparedNotifications) Send(c SystemConfProvider) (errs []error) {
 	if p.Email != nil {
 		if err := p.Email.Send(c); err != nil {
-			slog.Errorf("sending email: %s", err)
+			slog.Errorln("status: error; name: " + p.Name + "; subject: " + p.Email.Subject + "; transport: email; address: " + strings.Join(p.Email.To, ",") + "; body: " + p.Email.Body + "; error: " + err.Error())
 			errs = append(errs, err)
+		} else {
+			slog.Infoln("status: success; name: " + p.Name + "; subject: " + p.Email.Subject + "; transport: email; address: " + strings.Join(p.Email.To, ",") + "; body: " + p.Email.Body)
 		}
 	}
 	for _, h := range p.HTTP {
 		if _, err := h.Send(); err != nil {
-			slog.Errorf("sending http: %s", err)
+			slog.Errorln("status: error; type: " + h.Details.At + "; name: " + h.Details.NotifyName + "; transport: http_" + h.Method + "; url: " + h.URL + "; body: " + h.Body + "; error: " + err.Error())
 			errs = append(errs, err)
+		} else {
+			slog.Infoln("status: success; type: " + h.Details.At + "; name: " + h.Details.NotifyName + "; transport: http_" + h.Method + "; url: " + h.URL + "; body: " + h.Body)
 		}
 	}
-	if p.Print != "" {
-		slog.Infoln(p.Print)
-	}
+
 	return
 }
 
 // PrepareAlert does all of the work of selecting what content to send to which sources. It does not actually send any notifications,
 // but the returned object can be used to send them.
 func (n *Notification) PrepareAlert(rt *models.RenderedTemplates, ak string, attachments ...*models.Attachment) *PreparedNotifications {
-	pn := &PreparedNotifications{}
+	pn := &PreparedNotifications{Name: n.Name}
 	if len(n.Email) > 0 {
 		subject := rt.GetDefault(n.EmailSubjectTemplate, "emailSubject")
 		body := rt.GetDefault(n.BodyTemplate, "emailBody")
@@ -100,13 +102,6 @@ func (n *Notification) PrepareAlert(rt *models.RenderedTemplates, ak string, att
 			NotifyType:  1,
 		}
 		pn.HTTP = append(pn.HTTP, n.PrepHttp("GET", url, "", details))
-	}
-	if n.Print {
-		if n.BodyTemplate != "" {
-			pn.Print = "Subject: " + rt.Subject + ", Body: " + rt.Get(n.BodyTemplate)
-		} else {
-			pn.Print = rt.Subject
-		}
 	}
 	return pn
 }
