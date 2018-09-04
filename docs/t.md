@@ -54,3 +54,8 @@ So we end up *transposing* set items into values of the resulting set, where the
 ![Walkthrough 3](public/t_stepthrough_3.jpg)
 
 You can now do neat things with each item that represents the cluster. For example you could do `sum($clusterScope > 5)` (Note that `$clusterScope` is a *seriesSet*) to get the count of items in the cluster where each item has a rate above five. You could then alert if the count is greater than a certain value. For example, you could also use `len($clusterScope)` to get the number of hosts in each cluster, and alert on the count of hosts above the threshold relative to the number of hosts in the cluster.
+
+<div class="admonition">
+<p class="admonition-title">Attribution</p>
+<p>This content was ported over from Stack Overflow Documentation, now retired. To access the source and attribution please access the <a href="https://archive.org/details/documentation-dump.7z">Docs archive</a> and reference topic ID: 7213 and example ID: 24079.</p>
+</div>
