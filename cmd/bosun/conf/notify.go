@@ -38,6 +38,7 @@ func init() {
 type PreparedNotifications struct {
 	Email  *PreparedEmail
 	HTTP   []*PreparedHttp
+	Print  bool
 	Name   string
 	Errors []string
 }
@@ -47,7 +48,7 @@ func (p *PreparedNotifications) Send(c SystemConfProvider) (errs []error) {
 		if err := p.Email.Send(c); err != nil {
 			slog.Errorln("status: error; name: " + p.Name + "; subject: " + p.Email.Subject + "; transport: email; address: " + strings.Join(p.Email.To, ",") + "; body: " + p.Email.Body + "; error: " + err.Error())
 			errs = append(errs, err)
-		} else {
+		} else if p.Print {
 			slog.Infoln("status: success; name: " + p.Name + "; subject: " + p.Email.Subject + "; transport: email; address: " + strings.Join(p.Email.To, ",") + "; body: " + p.Email.Body)
 		}
 	}
@@ -55,7 +56,7 @@ func (p *PreparedNotifications) Send(c SystemConfProvider) (errs []error) {
 		if _, err := h.Send(); err != nil {
 			slog.Errorln("status: error; type: " + h.Details.At + "; name: " + h.Details.NotifyName + "; transport: http_" + h.Method + "; url: " + h.URL + "; body: " + h.Body + "; error: " + err.Error())
 			errs = append(errs, err)
-		} else {
+		} else if p.Print {
 			slog.Infoln("status: success; type: " + h.Details.At + "; name: " + h.Details.NotifyName + "; transport: http_" + h.Method + "; url: " + h.URL + "; body: " + h.Body)
 		}
 	}
@@ -66,7 +67,7 @@ func (p *PreparedNotifications) Send(c SystemConfProvider) (errs []error) {
 // PrepareAlert does all of the work of selecting what content to send to which sources. It does not actually send any notifications,
 // but the returned object can be used to send them.
 func (n *Notification) PrepareAlert(rt *models.RenderedTemplates, ak string, attachments ...*models.Attachment) *PreparedNotifications {
-	pn := &PreparedNotifications{Name: n.Name}
+	pn := &PreparedNotifications{Name: n.Name, Print: n.Print}
 	if len(n.Email) > 0 {
 		subject := rt.GetDefault(n.EmailSubjectTemplate, "emailSubject")
 		body := rt.GetDefault(n.BodyTemplate, "emailBody")
